@@ -1,15 +1,14 @@
-// PROTOTYPE, DÙNG XONG BỎ: công cụ dùng chung cho các bộ hình thử nghiệm.
-// Xem docs/thiet-ke.md và thanh chuyển ?variant= trong game.
+// Công cụ dựng hình: ghép nhiều khối có màu thành một mesh (một lần vẽ),
+// mái nhà sàn hình thuyền, nhân bản cây cối bằng InstancedMesh.
 
 import * as THREE from 'three';
 import { mergeGeometries, mergeVertices } from 'three/addons/utils/BufferGeometryUtils.js';
-import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
 
 const tmpColor = new THREE.Color();
 
 type Rot = [number, number, number];
 
-/** Ghép nhiều hình (hộp bo góc, cầu, trụ, nón, viên nang...) có màu thành một geometry. */
+/** Ghép nhiều hình (hộp, cầu, trụ, nón, viên nang...) có màu thành một geometry. */
 export class ShapeBuilder {
   private parts: THREE.BufferGeometry[] = [];
 
@@ -44,11 +43,6 @@ export class ShapeBuilder {
 
   box(w: number, h: number, d: number, color: THREE.ColorRepresentation, x: number, y: number, z: number, rot?: Rot): this {
     return this.add(new THREE.BoxGeometry(w, h, d), color, x, y, z, rot);
-  }
-
-  rbox(w: number, h: number, d: number, r: number, color: THREE.ColorRepresentation, x: number, y: number, z: number, rot?: Rot): this {
-    const radius = Math.min(r, w / 2 - 0.001, h / 2 - 0.001, d / 2 - 0.001);
-    return this.add(new RoundedBoxGeometry(w, h, d, 2, Math.max(radius, 0.001)), color, x, y, z, rot);
   }
 
   sphere(r: number, color: THREE.ColorRepresentation, x: number, y: number, z: number, scale: [number, number, number] = [1, 1, 1], seg = this.lowPoly ? 7 : 12): this {
@@ -203,4 +197,15 @@ export function smoothForOutline(geo: THREE.BufferGeometry): THREE.BufferGeometr
   const merged = mergeVertices(g, 1e-3);
   merged.computeVertexNormals();
   return merged;
+}
+
+/** Số ngẫu nhiên lặp lại được theo hạt giống, để cây cối không đổi chỗ mỗi lần vẽ. */
+export function seeded(seed: number): () => number {
+  let t = seed >>> 0;
+  return () => {
+    t = (t + 0x6d2b79f5) >>> 0;
+    let r = Math.imul(t ^ (t >>> 15), 1 | t);
+    r = (r + Math.imul(r ^ (r >>> 7), 61 | r)) ^ r;
+    return ((r ^ (r >>> 14)) >>> 0) / 4294967296;
+  };
 }

@@ -12,8 +12,14 @@ Tài liệu này ghi lại các quyết định đã chốt với chủ dự án
 
 ## Hình ảnh, âm thanh, công nghệ
 
-- 3D bằng Three.js. Mọi thứ ghép từ **khối hộp phong cách chibi**, dựng hoàn toàn bằng code, không dùng ảnh ngoài.
-- Chi tiết theo **văn hóa Đông Sơn**: nhà sàn mái cong hình thuyền, trống đồng, giáo đồng, người đóng khố, búi tóc, lũy tre. Tông màu đất ấm, điểm nhấn màu đồng và đỏ son.
+- 3D bằng Three.js, dựng hoàn toàn bằng code, không dùng ảnh ngoài.
+- Phong cách **"Nét Đông Sơn"**:
+  - tô màu kiểu hoạt hình 3 dải sáng (MeshToonMaterial), mọi công trình, người và cây có **viền mực đen**;
+  - **hoa văn trống đồng** (vòng tròn tiếp tuyến, răng cưa, mặt trống có sao và chim bay) vẽ bằng canvas, đắp lên mái, tường, trống;
+  - nhà sàn **mái hình thuyền cong vút** có chim đồng đậu hai đầu nóc;
+  - người chibi đầu to, **đội mũ lông chim** như hình người trên mặt trống đồng;
+  - bảng màu: nền kem như giấy, đất vàng ô liu, nước xanh lam đục, điểm nhấn đồng, đỏ son và mực đen.
+- Phong cách này được chọn qua bản dùng thử so sánh 4 phương án: khối hộp ban đầu, voxel tinh xảo, đồ chơi bo tròn, và Nét Đông Sơn. Cả bộ dùng thử được cất ở branch `prototype/phong-cach-hinh-anh`.
 - Màn hình dọc, camera isometric, kéo và phóng to bằng chạm. Giao diện bằng HTML đặt đè lên cảnh 3D.
 - Máy thử chính là **Samsung Galaxy Z Fold5**. Màn hình ngoài (dài, hẹp) dùng bảng trượt lên từ dưới. Màn hình trong (gần vuông) dùng bảng bên cạnh.
 - Mục tiêu 60 khung hình/giây trên Fold5, ít nhất 30 trên máy Android tầm trung đời cũ. Bãi chiến tối đa khoảng 40–60 lính.

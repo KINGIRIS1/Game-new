@@ -2,7 +2,7 @@
 
 import './style.css';
 import { play, setMuted, unlockAudio } from './audio/sfx';
-import { BUILDINGS, QUESTS, RESOURCE_IDS, type BuildingType, type Cost } from './game/defs';
+import { BUILDINGS, RESOURCE_IDS, type BuildingType, type Cost } from './game/defs';
 import {
   applyOffline,
   buildingAt,
@@ -19,11 +19,9 @@ import {
 } from './game/game';
 import { GRID, RIVER_START } from './game/map';
 import { fromCode, loadFromStorage, saveToStorage, toCode } from './game/save';
-import { boxArt } from './render/art';
 import { World } from './render/world';
 import { vi } from './text/vi';
 import { Hud, type HudAction } from './ui/hud';
-import { mountPrototypeSwitcher } from './ui/prototype-switcher';
 
 type Mode =
   | { kind: 'view'; selected: number | null }
@@ -36,29 +34,19 @@ const OFFLINE_NOTICE_MS = 60_000;
 const GAP_AS_OFFLINE_MS = 5_000;
 const AUTOSAVE_MS = 10_000;
 
-async function start(): Promise<void> {
+function start(): void {
   const canvas = document.querySelector<HTMLCanvasElement>('#scene')!;
   const hudRoot = document.querySelector<HTMLElement>('#hud')!;
 
-  // PROTOTYPE, DÙNG XONG BỎ: ?variant= bật chế độ trưng bày để so sánh các phong cách hình ảnh.
-  const variant = new URLSearchParams(window.location.search).get('variant');
-  const showcase = variant !== null;
-  let art = boxArt;
-  if (showcase) {
-    const proto = await import('./render/prototype-art');
-    art = proto.artFor(variant);
-    mountPrototypeSwitcher(proto.VARIANTS, art.key);
-  }
-
   let world: World;
   try {
-    world = new World(canvas, art);
+    world = new World(canvas);
   } catch {
     document.body.innerHTML = `<div class="fatal">${vi.ui.webglFailed}</div>`;
     return;
   }
 
-  let state: GameState = showcase ? showcaseState(Date.now()) : (loadFromStorage(localStorage) ?? createInitialState(Date.now()));
+  let state: GameState = loadFromStorage(localStorage) ?? createInitialState(Date.now());
   let mode: Mode = { kind: 'view', selected: null };
   let saveWarned = false;
   setMuted(state.settings.muted);
@@ -66,8 +54,6 @@ async function start(): Promise<void> {
   const hud = new Hud(hudRoot, handle);
 
   const save = () => {
-    // Chế độ trưng bày chỉ sống trong bộ nhớ, không được ghi đè game thật của người chơi.
-    if (showcase) return;
     if (!saveToStorage(localStorage, state) && !saveWarned) {
       saveWarned = true;
       hud.toast(vi.ui.saveFailed, true);
@@ -316,12 +302,6 @@ async function start(): Promise<void> {
   const offline = applyOffline(state, Date.now());
   commit();
   showOfflineIfLong(offline.ms, offline.gained);
-  if (showcase) {
-    // Nhìn gần Điện Vua Hùng để thấy rõ chi tiết mô hình.
-    world.view.target.set(18 - GRID / 2, 0, 19 - GRID / 2);
-    world.view.zoom = 1.45;
-    world.view.apply();
-  }
 
   window.addEventListener('pointerdown', unlockAudio, { passive: true });
   window.addEventListener('resize', () => world.resize());
@@ -372,24 +352,4 @@ async function start(): Promise<void> {
   };
 }
 
-/** PROTOTYPE, DÙNG XONG BỎ: kinh đô dựng sẵn đủ loại công trình và nhiều cấp để so sánh phong cách. */
-function showcaseState(now: number): GameState {
-  const s = createInitialState(now);
-  s.buildings = [
-    { id: 1, type: 'dien', x: 16, z: 16, level: 3 },
-    { id: 2, type: 'ruong', x: 12, z: 16, level: 1 },
-    { id: 3, type: 'ruong', x: 12, z: 20, level: 3 },
-    { id: 4, type: 'ruong', x: 16, z: 21, level: 5 },
-    { id: 5, type: 'ben', x: 25, z: 17, level: 1 },
-    { id: 6, type: 'ben', x: 21, z: 25, level: 4 },
-  ];
-  let id = 7;
-  for (let x = 11; x < 22; x++) s.buildings.push({ id: id++, type: 'luy', x, z: 13, level: 1 });
-  for (let z = 14; z < 23; z++) s.buildings.push({ id: id++, type: 'luy', x: 10, z, level: 1 });
-  s.nextId = id;
-  s.questIndex = QUESTS.length;
-  s.resources = { gao: 2000, voOc: 2000, datDa: 0, sat: 0 };
-  return s;
-}
-
-void start();
+start();

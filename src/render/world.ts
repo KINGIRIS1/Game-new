@@ -4,17 +4,66 @@ import * as THREE from 'three';
 import { BUILDINGS, type BuildingType } from '../game/defs';
 import { dienLevel, type Building, type GameState } from '../game/game';
 import { GRID, RIVER_START, areaStart, isUnlocked } from '../game/map';
-import { InstancedBoxes, boxArt, buildStaticTerrain, type ArtSet, type PersonKind, type TreeSpot, type WallSpot } from './art';
-import { seeded } from './boxes';
 import { IsoCamera } from './camera';
+import { buildForest, buildWalls, makeBen, makeBoat, makeDien, makePerson, makeRuong, type PersonKind, type TreeSpot, type WallSpot } from './models';
+import { C } from './palette';
+import { ShapeBuilder, seeded } from './shapes';
 
 const HALF = GRID / 2;
 /** Mặt nước nằm thấp hơn mặt đất. */
 const WATER_Y = -0.28;
 
+/** Mật độ rừng: thưa để công trình nổi bật, không rối mắt. */
+const FOREST_DENSITY = 0.7;
+
+/** Đất, nước và ô lưới dùng chất liệu Lambert đơn giản, công trình và cây mới dùng tô màu hoạt hình. */
+const groundMaterial = new THREE.MeshLambertMaterial({ vertexColors: true });
+
 /** Tọa độ thế giới của góc ô (x, z). */
 const wx = (x: number) => x - HALF;
 const wz = (z: number) => z - HALF;
+
+/** Nhiều khối hộp vẽ trong một lần, mỗi khối có màu riêng. */
+export class InstancedBoxes {
+  readonly mesh: THREE.InstancedMesh;
+  private count = 0;
+  private readonly m = new THREE.Matrix4();
+  private readonly q = new THREE.Quaternion();
+  private readonly e = new THREE.Euler();
+  private readonly p = new THREE.Vector3();
+  private readonly s = new THREE.Vector3();
+  private readonly c = new THREE.Color();
+
+  constructor(capacity: number, opts: { shadow?: boolean } = {}) {
+    const geo = new THREE.BoxGeometry(1, 1, 1);
+    const mat = new THREE.MeshLambertMaterial();
+    this.mesh = new THREE.InstancedMesh(geo, mat, capacity);
+    this.mesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+    this.mesh.castShadow = !!opts.shadow;
+    this.mesh.receiveShadow = true;
+    this.mesh.count = 0;
+    this.mesh.frustumCulled = false;
+  }
+
+  begin(): void {
+    this.count = 0;
+  }
+
+  add(w: number, h: number, d: number, color: THREE.ColorRepresentation, x: number, y: number, z: number, rx = 0, ry = 0, rz = 0): void {
+    if (this.count >= this.mesh.instanceMatrix.count) return;
+    this.q.setFromEuler(this.e.set(rx, ry, rz));
+    this.m.compose(this.p.set(x, y, z), this.q, this.s.set(w, h, d));
+    this.mesh.setMatrixAt(this.count, this.m);
+    this.mesh.setColorAt(this.count, this.c.set(color));
+    this.count++;
+  }
+
+  end(): void {
+    this.mesh.count = this.count;
+    this.mesh.instanceMatrix.needsUpdate = true;
+    if (this.mesh.instanceColor) this.mesh.instanceColor.needsUpdate = true;
+  }
+}
 
 interface BuildingView {
   group: THREE.Group;
@@ -53,26 +102,23 @@ export class World {
   private wallKey = '';
   private time = 0;
 
-  constructor(
-    canvas: HTMLCanvasElement,
-    private readonly art: ArtSet = boxArt,
-  ) {
+  constructor(canvas: HTMLCanvasElement) {
     this.renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' });
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
     this.renderer.shadowMap.enabled = true;
-    art.setupRenderer(this.renderer);
+    this.renderer.shadowMap.type = THREE.PCFShadowMap;
 
-    this.scene.background = new THREE.Color(art.sky);
-    this.scene.fog = new THREE.Fog(art.sky, 75, 125);
+    this.scene.background = new THREE.Color(C.sky);
+    this.scene.fog = new THREE.Fog(C.sky, 75, 125);
     this.view = new IsoCamera(canvas);
     this.view.onUserMove = () => {
       this.panGoal = null;
     };
     this.view.target.set(wx(19), 0, wz(19));
 
-    art.lights(this.scene);
-    this.scene.add(buildStaticTerrain(art, HALF, RIVER_START, WATER_Y));
-    this.scene.add(art.buildForest(this.outerForestSpots()));
+    this.addLights();
+    this.scene.add(this.staticTerrain());
+    this.scene.add(buildForest(this.outerForestSpots()));
     this.scene.add(this.land.mesh, this.ripples.mesh, this.buildingsRoot);
     this.addBoats();
     this.initRipples();
@@ -98,21 +144,61 @@ export class World {
     this.resize();
   }
 
+  /** Ánh sáng bầu trời dịu cộng nắng mạnh, để tô màu hoạt hình tách rõ 3 dải sáng. */
+  private addLights(): void {
+    this.scene.add(new THREE.HemisphereLight(0xfff3dc, 0x6d6a45, 0.9));
+    const sun = new THREE.DirectionalLight(0xfff0d8, 2.6);
+    sun.position.set(-10, 24, 14);
+    sun.castShadow = true;
+    const cam = sun.shadow.camera;
+    cam.left = -24;
+    cam.right = 24;
+    cam.top = 24;
+    cam.bottom = -24;
+    cam.near = 1;
+    cam.far = 70;
+    sun.shadow.mapSize.set(2048, 2048);
+    sun.shadow.bias = -0.0006;
+    sun.shadow.normalBias = 0.03;
+    this.scene.add(sun, sun.target);
+  }
+
+  /** Đất ngoài lưới, hai dòng sông và bờ bên kia. */
+  private staticTerrain(): THREE.Object3D {
+    const group = new THREE.Group();
+    const far = 70;
+    const river = RIVER_START - HALF;
+    const land = new ShapeBuilder();
+    // Đất bên này sông (phía rừng), nằm dưới các ô lưới.
+    land.box(far + river, 1, far + river, C.grassLocked[0], (river - far) / 2, -0.52, (river - far) / 2);
+    // Bờ bên kia sông Thao (phía đông) và sông Đà (phía nam).
+    land.box(far - HALF, 1, 2 * far, C.grassLocked[1], (HALF + far) / 2, -0.52, 0);
+    land.box(far + river, 1, far - HALF, C.grassLocked[2], (river - far) / 2, -0.52, (HALF + far) / 2);
+    const water = new ShapeBuilder();
+    water.box(HALF - river, 1, 2 * far, C.water[0], (river + HALF) / 2, WATER_Y - 0.5, 0);
+    water.box(far + river, 1, HALF - river, C.water[1], (river - far) / 2, WATER_Y - 0.5, (river + HALF) / 2);
+    for (const b of [land, water]) {
+      const mesh = b.mesh(groundMaterial);
+      mesh.castShadow = false;
+      group.add(mesh);
+    }
+    return group;
+  }
+
   /** Rừng bao ngoài lưới và cây thưa ở bờ bên kia. */
   private outerForestSpots(): TreeSpot[] {
     const spots: TreeSpot[] = [];
     const rand = seeded(7);
-    const density = this.art.forestDensity;
     for (let x = -10; x < GRID + 8; x++) {
       for (let z = -10; z < GRID + 8; z++) {
         const insideGrid = x >= 0 && z >= 0 && x < GRID && z < GRID;
         const inRiver = (x >= RIVER_START && x < GRID) || (z >= RIVER_START && z < GRID);
         if (insideGrid || inRiver) continue;
         const farBank = x >= GRID || z >= GRID;
-        if (rand() > (farBank ? 0.25 : 0.6) * density) continue;
+        if (rand() > (farBank ? 0.25 : 0.6) * FOREST_DENSITY) continue;
         const cx = wx(x) + 0.5 + (rand() - 0.5) * 0.4;
         const cz = wz(z) + 0.5 + (rand() - 0.5) * 0.4;
-        spots.push({ x: cx, z: cz, kind: rand() < 0.3 ? 'bamboo' : 'tree', seed: Math.floor(rand() * 1e9), farBank });
+        spots.push({ x: cx, z: cz, kind: rand() < 0.3 ? 'bamboo' : 'tree', seed: Math.floor(rand() * 1e9) });
       }
     }
     return spots;
@@ -126,7 +212,7 @@ export class World {
       { axis: 'x', speed: 0.9, pos: -20 },
     ];
     for (const r of routes) {
-      const obj = this.art.makeBoat();
+      const obj = makeBoat();
       obj.position.y = WATER_Y - 0.02;
       if (r.axis === 'z') {
         obj.position.x = river;
@@ -197,7 +283,7 @@ export class World {
       this.wallKey = key;
       if (this.walls) this.scene.remove(this.walls);
       const spots: WallSpot[] = walls.map((w) => ({ x: wx(w.x) + 0.5, z: wz(w.z) + 0.5, seed: w.x * 92821 + w.z * 68917 }));
-      this.walls = this.art.buildWalls(spots);
+      this.walls = buildWalls(spots);
       this.scene.add(this.walls);
     }
   }
@@ -213,14 +299,14 @@ export class World {
     const p = PERSON_OF[b.type];
     let person: THREE.Object3D | undefined;
     if (p) {
-      person = this.art.makePerson(p.kind);
+      person = makePerson(p.kind);
       person.position.set(p.x, p.y, p.z);
       person.rotation.y = p.ry;
       person.userData.baseY = p.y;
       group.add(person);
     }
     if (b.type === 'ben') {
-      const boat = this.art.makeBoat();
+      const boat = makeBoat();
       boat.position.set(-0.15, WATER_Y - 0.02, 1.75);
       boat.userData.dock = true;
       group.add(boat);
@@ -230,9 +316,9 @@ export class World {
   }
 
   private makeBuilding(type: BuildingType, level: number): THREE.Group {
-    if (type === 'dien') return this.art.makeDien(level);
-    if (type === 'ruong') return this.art.makeRuong(level);
-    if (type === 'ben') return this.art.makeBen(level);
+    if (type === 'dien') return makeDien(level);
+    if (type === 'ruong') return makeRuong(level);
+    if (type === 'ben') return makeBen(level);
     return new THREE.Group();
   }
 
@@ -241,7 +327,7 @@ export class World {
     for (let x = 0; x < RIVER_START; x++) {
       for (let z = 0; z < RIVER_START; z++) {
         const open = isUnlocked(x, z, level);
-        const palette = open ? this.art.grass : this.art.grassLocked;
+        const palette = open ? C.grass : C.grassLocked;
         const shade = palette[(x * 7 + z * 13) % 3];
         this.land.add(1, 0.4, 1, shade, wx(x) + 0.5, -0.2, wz(z) + 0.5);
       }
@@ -252,7 +338,6 @@ export class World {
   private rebuildForest(level: number): void {
     if (this.forest) this.scene.remove(this.forest);
     const spots: TreeSpot[] = [];
-    const density = this.art.forestDensity;
     const lo = areaStart(level);
     for (let x = 0; x < RIVER_START; x++) {
       for (let z = 0; z < RIVER_START; z++) {
@@ -260,13 +345,13 @@ export class World {
         const rand = seeded(x * 73856093 + z * 19349663);
         // Chừa một dải đất trống sát vùng đã mở cho dễ nhìn.
         const nearEdge = x >= lo - 1 && z >= lo - 1;
-        if (rand() > (nearEdge ? 0.25 : 0.65) * density) continue;
+        if (rand() > (nearEdge ? 0.25 : 0.65) * FOREST_DENSITY) continue;
         const cx = wx(x) + 0.5 + (rand() - 0.5) * 0.3;
         const cz = wz(z) + 0.5 + (rand() - 0.5) * 0.3;
-        spots.push({ x: cx, z: cz, kind: rand() < 0.35 ? 'bamboo' : 'tree', seed: Math.floor(rand() * 1e9), farBank: false });
+        spots.push({ x: cx, z: cz, kind: rand() < 0.35 ? 'bamboo' : 'tree', seed: Math.floor(rand() * 1e9) });
       }
     }
-    this.forest = this.art.buildForest(spots);
+    this.forest = buildForest(spots);
     this.scene.add(this.forest);
   }
 
@@ -437,7 +522,7 @@ export class World {
       const z = r.axis === 'x' ? r.lane : r.pos;
       const w = r.axis === 'x' ? r.len : 0.06;
       const d = r.axis === 'x' ? 0.06 : r.len;
-      this.ripples.add(w, 0.02, d, 0xbfe3f0, x, WATER_Y + 0.01, z);
+      this.ripples.add(w, 0.02, d, C.ripple, x, WATER_Y + 0.01, z);
     }
     this.ripples.end();
 
