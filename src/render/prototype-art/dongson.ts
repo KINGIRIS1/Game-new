@@ -1,0 +1,395 @@
+// PROTOTYPE, DÙNG XONG BỎ: biến thể C "Nét Đông Sơn".
+// Tô màu hoạt hình 3 dải sáng, viền mực đen, hoa văn trống đồng vẽ bằng canvas.
+
+import * as THREE from 'three';
+import { seeded } from '../boxes';
+import { addSunAndSky, type ArtSet, type PersonKind } from '../art';
+import { ShapeBuilder, instanceTemplates, saddleRoof, smoothForOutline, type Placement } from './common';
+
+const D = {
+  ink: 0x1d140c,
+  cream: 0xf3e6c4,
+  wood: 0x8c5a32,
+  woodDark: 0x5a3720,
+  woodLight: 0xb98652,
+  thatch: 0xd6a65a,
+  bronze: 0xb88a3a,
+  bronzeDark: 0x7d5a22,
+  bronzeLight: 0xdcb065,
+  red: 0xa8322a,
+  skin: 0xe0a878,
+  hair: 0x22180f,
+  soil: 0x9a7448,
+  water: 0x4f8f96,
+  rice: 0x8fae4a,
+  ripe: 0xe0b440,
+  leaf: [0x5f7f3a, 0x6f8f44, 0x4f6f30, 0x86a34f],
+  trunk: 0x6a4527,
+  bamboo: 0x7f9c45,
+};
+
+function gradientMap(): THREE.DataTexture {
+  const tex = new THREE.DataTexture(new Uint8Array([95, 175, 255]), 3, 1, THREE.RedFormat);
+  tex.minFilter = THREE.NearestFilter;
+  tex.magFilter = THREE.NearestFilter;
+  tex.needsUpdate = true;
+  return tex;
+}
+const ramp = gradientMap();
+
+function canvasTexture(w: number, h: number, draw: (g: CanvasRenderingContext2D) => void, repeat?: [number, number]): THREE.CanvasTexture {
+  const c = document.createElement('canvas');
+  c.width = w;
+  c.height = h;
+  const g = c.getContext('2d')!;
+  g.fillStyle = '#ffffff';
+  g.fillRect(0, 0, w, h);
+  g.strokeStyle = '#2a1d12';
+  g.fillStyle = '#2a1d12';
+  draw(g);
+  const tex = new THREE.CanvasTexture(c);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  tex.anisotropy = 4;
+  if (repeat) {
+    tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+    tex.repeat.set(...repeat);
+  }
+  return tex;
+}
+
+/** Dải hoa văn: vòng tròn tiếp tuyến và răng cưa, như vành trống đồng. */
+const bandTex = canvasTexture(
+  256,
+  128,
+  (g) => {
+    g.lineWidth = 5;
+    for (const y of [8, 120]) {
+      g.beginPath();
+      g.moveTo(0, y);
+      g.lineTo(256, y);
+      g.stroke();
+    }
+    g.lineWidth = 4;
+    for (let i = 0; i < 4; i++) {
+      const cx = 32 + i * 64;
+      g.beginPath();
+      g.arc(cx, 44, 20, 0, Math.PI * 2);
+      g.stroke();
+      g.beginPath();
+      g.arc(cx, 44, 6, 0, Math.PI * 2);
+      g.fill();
+      g.beginPath();
+      g.moveTo(cx + 20, 24);
+      g.lineTo(cx + 44, 64);
+      g.stroke();
+    }
+    g.beginPath();
+    for (let x = 0; x <= 256; x += 16) g.lineTo(x, x % 32 ? 88 : 108);
+    g.stroke();
+  },
+  [3, 1],
+);
+
+/** Mặt trống đồng: ngôi sao giữa, các vành tròn, vành chim bay. */
+const drumTex = canvasTexture(256, 256, (g) => {
+  g.fillStyle = '#f0d9a0';
+  g.fillRect(0, 0, 256, 256);
+  g.fillStyle = '#2a1d12';
+  g.lineWidth = 3;
+  const c = 128;
+  for (let i = 0; i < 12; i++) {
+    const a = (i / 12) * Math.PI * 2;
+    g.beginPath();
+    g.moveTo(c + Math.cos(a - 0.12) * 10, c + Math.sin(a - 0.12) * 10);
+    g.lineTo(c + Math.cos(a) * 34, c + Math.sin(a) * 34);
+    g.lineTo(c + Math.cos(a + 0.12) * 10, c + Math.sin(a + 0.12) * 10);
+    g.fill();
+  }
+  for (const r of [40, 46, 70, 76, 112, 118]) {
+    g.beginPath();
+    g.arc(c, c, r, 0, Math.PI * 2);
+    g.stroke();
+  }
+  for (let i = 0; i < 18; i++) {
+    const a = (i / 18) * Math.PI * 2;
+    g.beginPath();
+    g.arc(c + Math.cos(a) * 58, c + Math.sin(a) * 58, 5, 0, Math.PI * 2);
+    g.stroke();
+  }
+  for (let i = 0; i < 8; i++) {
+    const a = (i / 8) * Math.PI * 2;
+    g.save();
+    g.translate(c + Math.cos(a) * 94, c + Math.sin(a) * 94);
+    g.rotate(a + Math.PI / 2);
+    g.beginPath();
+    g.moveTo(-14, 4);
+    g.lineTo(0, -4);
+    g.lineTo(14, 4);
+    g.moveTo(0, -4);
+    g.lineTo(0, -16);
+    g.stroke();
+    g.restore();
+  }
+});
+
+const toon = new THREE.MeshToonMaterial({ vertexColors: true, gradientMap: ramp });
+const toonBand = new THREE.MeshToonMaterial({ vertexColors: true, gradientMap: ramp, map: bandTex });
+const toonDrum = new THREE.MeshToonMaterial({ vertexColors: true, gradientMap: ramp, map: drumTex });
+
+function inkMaterial(thickness: number): THREE.MeshBasicMaterial {
+  const m = new THREE.MeshBasicMaterial({ color: D.ink, side: THREE.BackSide });
+  m.onBeforeCompile = (shader) => {
+    shader.vertexShader = shader.vertexShader.replace('#include <begin_vertex>', `vec3 transformed = position + normal * ${thickness.toFixed(4)};`);
+  };
+  m.customProgramCacheKey = () => `ink-${thickness}`;
+  return m;
+}
+const inkThick = inkMaterial(0.03);
+const inkThin = inkMaterial(0.016);
+
+function outlineOf(geo: THREE.BufferGeometry, ink = inkThick): THREE.Mesh {
+  const o = new THREE.Mesh(smoothForOutline(geo), ink);
+  o.castShadow = false;
+  return o;
+}
+
+/** Một mô hình gồm phần màu trơn, phần có hoa văn dải và phần mặt trống, mỗi phần có viền mực. */
+class Model {
+  readonly plain = new ShapeBuilder();
+  readonly band = new ShapeBuilder(true);
+  readonly drum = new ShapeBuilder(true);
+  constructor(private readonly ink = inkThick) {}
+  group(): THREE.Group {
+    const out = new THREE.Group();
+    const parts: [ShapeBuilder, THREE.Material][] = [
+      [this.plain, toon],
+      [this.band, toonBand],
+      [this.drum, toonDrum],
+    ];
+    for (const [b, mat] of parts) {
+      if (b.empty) continue;
+      const mesh = b.mesh(mat);
+      out.add(mesh, outlineOf(mesh.geometry, this.ink));
+    }
+    return out;
+  }
+}
+
+function bird(m: Model, x: number, y: number, dir: number, s = 1): void {
+  m.plain.capsule(0.06 * s, 0.22 * s, D.bronze, x, y, 0, [0, 0, Math.PI / 2]);
+  m.plain.capsule(0.03 * s, 0.26 * s, D.bronze, x + dir * 0.2 * s, y + 0.12 * s, 0, [0, 0, -dir * 0.6]);
+  m.plain.cone(0.03 * s, 0.22 * s, D.bronzeLight, x + dir * 0.4 * s, y + 0.2 * s, 0, [0, 0, -dir * Math.PI / 2]);
+  m.plain.box(0.18 * s, 0.03, 0.14 * s, D.bronzeDark, x - dir * 0.16 * s, y + 0.06 * s, 0, [0, 0, dir * 0.6]);
+}
+
+function drum(m: Model, x: number, z: number, s = 1): void {
+  m.band.cyl(0.36 * s, 0.32 * s, 0.32 * s, D.bronze, x, 0.16 * s + 0.08, z, undefined, 16);
+  m.drum.cyl(0.38 * s, 0.38 * s, 0.04 * s, 0xffffff, x, 0.34 * s + 0.08, z, undefined, 20);
+}
+
+function makeDien(level: number): THREE.Group {
+  const m = new Model();
+  const p = m.plain;
+  p.box(3.9, 0.16, 3.9, D.soil, 0, 0.08, 0);
+  for (const x of [-1.3, 0, 1.3]) for (const z of [-0.9, 0, 0.9]) p.cyl(0.08, 0.1, 1.2, D.woodDark, x, 0.76, z);
+  p.box(3.2, 0.14, 2.4, D.wood, 0, 1.4, 0);
+  m.band.box(2.5, 0.7, 1.7, D.woodLight, 0, 1.82, -0.05);
+  p.box(0.56, 0.56, 0.06, D.woodDark, 0, 1.76, 0.82);
+  for (let i = 0; i < 5; i++) p.box(0.5, 0.06, 0.2, D.woodDark, 0, 1.3 - i * 0.26, 1.3 + i * 0.18);
+  m.band.add(saddleRoof({ length: 4.7, width: 2.9, lift: 1.1, drop: 1.15, thickness: 0.12 }), D.thatch, 0, 3.15, -0.05);
+  bird(m, 2.35, 4.35, 1, 1.2);
+  bird(m, -2.35, 4.35, -1, 1.2);
+  drum(m, 1.4, 1.6);
+  p.cyl(0.035, 0.04, 2.6, D.woodDark, -1.65, 1.4, 1.5);
+  for (let i = 0; i < 3; i++) p.box(0.05, 0.42, 0.04, i === 1 ? D.red : D.cream, -1.65 + (i - 1) * 0.1, 2.85, 1.5, [0, 0, (i - 1) * 0.4]);
+  if (level >= 3) {
+    p.box(0.9, 0.1, 1.8, D.wood, -1.95, 1.0, 0);
+    drum(m, -1.0, 1.65, 0.75);
+  }
+  if (level >= 4) {
+    for (const x of [-0.65, 0.65]) {
+      p.cyl(0.03, 0.04, 1.5, D.woodDark, x, 0.85, 1.95);
+      for (let i = 0; i < 3; i++) p.box(0.05, 0.3, 0.03, i === 1 ? D.red : D.cream, x + (i - 1) * 0.08, 1.7, 1.95, [0, 0, (i - 1) * 0.45]);
+    }
+  }
+  if (level >= 5) p.box(1.4, 0.05, 0.16, D.bronzeLight, 0, 3.2, -0.05);
+  const g = m.group();
+  g.scale.setScalar(0.9 + 0.04 * level);
+  return g;
+}
+
+function makeRuong(level: number): THREE.Group {
+  const m = new Model();
+  const p = m.plain;
+  for (const s of [-1, 1]) {
+    p.box(2.95, 0.14, 0.18, D.soil, 0, 0.07, s * 1.38);
+    p.box(0.18, 0.14, 2.95, D.soil, s * 1.38, 0.07, 0);
+  }
+  p.box(2.6, 0.12, 0.14, D.soil, 0, 0.06, 0);
+  p.box(2.6, 0.04, 2.6, D.water, 0, 0.05, 0);
+  const color = new THREE.Color(D.rice).lerp(new THREE.Color(D.ripe), (level - 1) / 4);
+  const h = 0.24 + level * 0.05;
+  for (let i = 0; i < 5; i++) {
+    for (let j = 0; j < 5; j++) {
+      if (j === 2) continue;
+      p.cone(0.09, h, color, -1.0 + i * 0.5, 0.06 + h / 2, -1.0 + j * 0.5, undefined, 5);
+    }
+  }
+  return m.group();
+}
+
+function makeBen(level: number): THREE.Group {
+  const m = new Model();
+  const p = m.plain;
+  for (const x of [-0.8, 0.8]) for (const z of [-0.8, 0.2]) p.cyl(0.06, 0.07, 0.45, D.woodDark, x, 0.22, z);
+  p.box(1.95, 0.1, 1.45, D.woodLight, 0, 0.45, -0.25);
+  p.box(0.5, 0.08, 1.7, D.wood, 0.55, 0.33, 1.3);
+  for (const z of [0.9, 1.6, 2.1]) p.cyl(0.05, 0.05, 0.8, D.woodDark, 0.55, -0.05, z);
+  m.band.box(0.95, 0.5, 0.72, D.woodLight, -0.4, 0.75, -0.45);
+  m.band.add(saddleRoof({ length: 1.6, width: 1.0, lift: 0.35, drop: 0.4, thickness: 0.06 }), D.thatch, -0.4, 1.42, -0.45);
+  p.cyl(0.15, 0.11, 0.16, D.thatch, 0.45, 0.58, -0.6);
+  p.cyl(0.13, 0.1, 0.24, D.soil, 0.75, 0.62, -0.25);
+  if (level >= 2) p.cyl(0.15, 0.11, 0.16, D.thatch, 0.15, 0.58, 0.15);
+  if (level >= 3) {
+    p.cyl(0.03, 0.035, 1.2, D.woodDark, 0.9, 1.05, 0.35);
+    p.box(0.4, 0.24, 0.03, D.red, 0.68, 1.48, 0.35);
+  }
+  if (level >= 4) p.cyl(0.13, 0.1, 0.24, D.soil, -0.85, 0.62, 0.25);
+  if (level >= 5) drum(m, 0.1, -0.1, 0.5);
+  return m.group();
+}
+
+function makePerson(kind: PersonKind): THREE.Object3D {
+  const m = new Model(inkThin);
+  const p = m.plain;
+  for (const x of [-0.06, 0.06]) p.cyl(0.04, 0.045, 0.18, D.skin, x, 0.09, 0, undefined, 6);
+  m.band.cyl(0.13, 0.17, 0.24, kind === 'buon' ? 0x3f5a8a : D.red, 0, 0.28, 0, undefined, 8);
+  p.cyl(0.1, 0.12, 0.14, D.skin, 0, 0.45, 0, undefined, 8);
+  for (const s of [-1, 1]) p.cyl(0.035, 0.035, 0.22, D.skin, s * 0.15, 0.38, 0, [0, 0, s * 0.35], 6);
+  p.sphere(0.23, D.skin, 0, 0.7, 0, [1, 0.95, 0.95], 14);
+  p.sphere(0.24, D.hair, 0, 0.78, -0.04, [1, 0.62, 0.98], 14);
+  for (const s of [-1, 1]) p.sphere(0.03, D.ink, s * 0.08, 0.69, 0.2, [1, 1.4, 0.5], 8);
+  // Mũ lông chim như hình người trên mặt trống đồng.
+  for (let i = -2; i <= 2; i++) {
+    p.box(0.06, 0.38, 0.03, i % 2 ? D.cream : D.red, i * 0.06, 1.06, -0.06, [0, 0, -i * 0.28]);
+  }
+  if (kind === 'linh') {
+    p.cyl(0.018, 0.018, 1.15, D.woodDark, 0.24, 0.6, 0.06, undefined, 6);
+    p.cone(0.05, 0.2, D.bronze, 0.24, 1.25, 0.06, undefined, 4);
+  }
+  if (kind === 'buon') p.cyl(0.17, 0.12, 0.1, D.thatch, 0, 0.98, 0.05, undefined, 10);
+  if (kind === 'nong') p.cyl(0.016, 0.016, 0.65, D.woodDark, -0.22, 0.34, 0.08, [0.35, 0, 0], 6);
+  if (kind === 'laiDo') p.cyl(0.016, 0.016, 0.75, D.woodDark, 0.2, 0.38, 0.12, [0.9, 0, 0], 6);
+  return m.group();
+}
+
+/** Thuyền như trên trống đồng: mũi và đuôi cong vút, đầu chim. */
+function makeBoat(): THREE.Object3D {
+  const m = new Model();
+  const p = m.plain;
+  m.band.box(1.3, 0.16, 0.38, D.woodDark, 0, 0.08, 0);
+  for (const dir of [1, -1]) {
+    p.box(0.42, 0.1, 0.3, D.woodDark, dir * 0.78, 0.2, 0, [0, 0, dir * 0.6]);
+    p.box(0.12, 0.26, 0.12, D.woodDark, dir * 0.98, 0.42, 0);
+    p.cone(0.04, 0.16, D.bronze, dir * 1.08, 0.5, 0, [0, 0, -dir * Math.PI / 2], 4);
+  }
+  p.box(0.5, 0.24, 0.42, D.thatch, -0.1, 0.28, 0);
+  const g = m.group();
+  const rower = makePerson('laiDo');
+  rower.scale.setScalar(0.75);
+  rower.position.set(-0.55, 0.12, 0);
+  rower.rotation.y = Math.PI / 2;
+  g.add(rower);
+  return g;
+}
+
+// ---------- Cây cối ----------
+
+function treeTemplates(): THREE.Mesh[] {
+  const out: THREE.Mesh[] = [];
+  // 0: cây tán tầng cách điệu.
+  let b = new ShapeBuilder();
+  b.cyl(0.06, 0.1, 0.7, D.trunk, 0, 0.35, 0, undefined, 6);
+  b.cone(0.55, 0.45, D.leaf[2], 0, 0.85, 0, undefined, 7);
+  b.cone(0.42, 0.4, D.leaf[1], 0, 1.15, 0, undefined, 7);
+  b.cone(0.28, 0.36, D.leaf[3], 0, 1.43, 0, undefined, 7);
+  out.push(b.mesh(toon));
+  // 1: cây tán dẹt.
+  b = new ShapeBuilder();
+  b.cyl(0.06, 0.1, 0.9, D.trunk, 0, 0.45, 0, undefined, 6);
+  b.sphere(0.5, D.leaf[0], 0, 1.05, 0, [1.2, 0.55, 1.2], 9);
+  b.sphere(0.34, D.leaf[3], 0.05, 1.32, 0, [1.1, 0.5, 1.1], 9);
+  out.push(b.mesh(toon));
+  // 2: cây cau.
+  b = new ShapeBuilder();
+  b.cyl(0.035, 0.055, 1.9, 0x8a7458, 0, 0.95, 0, undefined, 6);
+  for (let i = 0; i < 6; i++) {
+    const a = (i / 6) * Math.PI * 2;
+    b.box(0.6, 0.03, 0.12, D.leaf[i % 3], Math.cos(a) * 0.28, 1.84, Math.sin(a) * 0.28, [0, -a, -0.45]);
+  }
+  out.push(b.mesh(toon));
+  // 3: bụi tre.
+  out.push(bambooClump(5, 2.1, 4, false));
+  return out;
+}
+
+function bambooClump(stalks: number, height: number, seed: number, mound: boolean): THREE.Mesh {
+  const b = new ShapeBuilder(false, true);
+  const rand = seeded(seed);
+  if (mound) b.box(0.96, 0.12, 0.96, D.soil, 0, 0.06, 0);
+  for (let i = 0; i < stalks; i++) {
+    const x = (rand() - 0.5) * 0.55;
+    const z = (rand() - 0.5) * 0.55;
+    const h = height * (0.8 + rand() * 0.3);
+    b.cyl(0.035, 0.04, h, D.bamboo, x, h / 2, z, undefined, 5);
+    for (let k = 1; k < 4; k++) b.cyl(0.045, 0.045, 0.03, D.bronzeDark, x, (h * k) / 4, z, undefined, 5);
+    for (let l = 0; l < 4; l++) {
+      const a = rand() * Math.PI * 2;
+      b.box(0.36, 0.02, 0.08, D.leaf[(i + l) % 4], x + Math.cos(a) * 0.15, h - l * 0.2, z + Math.sin(a) * 0.15, [0, -a, -0.5]);
+    }
+  }
+  return b.mesh(toon);
+}
+
+let cachedTrees: THREE.Mesh[] | null = null;
+let cachedWalls: THREE.Mesh[] | null = null;
+const treeOutline = (geo: THREE.BufferGeometry) => outlineOf(geo, inkThick);
+
+export const dongSonArt: ArtSet = {
+  key: 'C',
+  name: 'Nét Đông Sơn',
+  sky: 0xf2e4c4,
+  grass: [0xa9b46a, 0xa1ad62, 0xb0bb72],
+  grassLocked: [0x7c8a4a, 0x758345, 0x83914f],
+  water: [0x3f7f8a, 0x3a7883, 0x448692],
+  forestDensity: 0.7,
+  setupRenderer(renderer) {
+    renderer.shadowMap.type = THREE.PCFShadowMap;
+  },
+  lights(scene) {
+    addSunAndSky(scene, { sky: 0xfff3dc, ground: 0x6d6a45, hemi: 0.9, sun: 2.6, sunColor: 0xfff0d8 });
+  },
+  makeDien,
+  makeRuong,
+  makeBen,
+  makePerson,
+  makeBoat,
+  buildForest(spots) {
+    cachedTrees ??= treeTemplates();
+    const placements: Placement[] = spots.map((s) => {
+      const r = seeded(s.seed);
+      const pick = r();
+      const t = s.kind === 'bamboo' ? 3 : pick < 0.45 ? 0 : pick < 0.75 ? 1 : 2;
+      return { t, x: s.x, z: s.z, s: 0.85 + r() * 0.3, ry: r() * Math.PI * 2 };
+    });
+    return instanceTemplates(cachedTrees, placements, treeOutline);
+  },
+  buildWalls(spots) {
+    cachedWalls ??= [bambooClump(5, 1.7, 3, true), bambooClump(5, 1.8, 9, true)];
+    return instanceTemplates(
+      cachedWalls,
+      spots.map((s) => ({ t: s.seed % 2, x: s.x, z: s.z, s: 1, ry: (s.seed % 4) * (Math.PI / 2) })),
+      treeOutline,
+    );
+  },
+};

@@ -4,10 +4,9 @@ import * as THREE from 'three';
 import { BUILDINGS, type BuildingType } from '../game/defs';
 import { dienLevel, type Building, type GameState } from '../game/game';
 import { GRID, RIVER_START, areaStart, isUnlocked } from '../game/map';
-import { BoxBuilder, seeded } from './boxes';
+import { InstancedBoxes, boxArt, buildStaticTerrain, type ArtSet, type PersonKind, type TreeSpot, type WallSpot } from './art';
+import { seeded } from './boxes';
 import { IsoCamera } from './camera';
-import { makeBen, makeBoat, makeDien, makePerson, makeRuong, type PersonKind } from './models';
-import { C } from './palette';
 
 const HALF = GRID / 2;
 /** Mặt nước nằm thấp hơn mặt đất. */
@@ -16,69 +15,6 @@ const WATER_Y = -0.28;
 /** Tọa độ thế giới của góc ô (x, z). */
 const wx = (x: number) => x - HALF;
 const wz = (z: number) => z - HALF;
-
-/** Nhiều khối hộp vẽ trong một lần, mỗi khối có màu riêng. */
-class InstancedBoxes {
-  readonly mesh: THREE.InstancedMesh;
-  private count = 0;
-  private readonly m = new THREE.Matrix4();
-  private readonly q = new THREE.Quaternion();
-  private readonly e = new THREE.Euler();
-  private readonly p = new THREE.Vector3();
-  private readonly s = new THREE.Vector3();
-  private readonly c = new THREE.Color();
-
-  constructor(capacity: number, opts: { shadow?: boolean } = {}) {
-    const geo = new THREE.BoxGeometry(1, 1, 1);
-    const mat = new THREE.MeshLambertMaterial();
-    this.mesh = new THREE.InstancedMesh(geo, mat, capacity);
-    this.mesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
-    this.mesh.castShadow = !!opts.shadow;
-    this.mesh.receiveShadow = true;
-    this.mesh.count = 0;
-    this.mesh.frustumCulled = false;
-  }
-
-  begin(): void {
-    this.count = 0;
-  }
-
-  add(w: number, h: number, d: number, color: THREE.ColorRepresentation, x: number, y: number, z: number, rx = 0, ry = 0, rz = 0): void {
-    if (this.count >= this.mesh.instanceMatrix.count) return;
-    this.q.setFromEuler(this.e.set(rx, ry, rz));
-    this.m.compose(this.p.set(x, y, z), this.q, this.s.set(w, h, d));
-    this.mesh.setMatrixAt(this.count, this.m);
-    this.mesh.setColorAt(this.count, this.c.set(color));
-    this.count++;
-  }
-
-  end(): void {
-    this.mesh.count = this.count;
-    this.mesh.instanceMatrix.needsUpdate = true;
-    if (this.mesh.instanceColor) this.mesh.instanceColor.needsUpdate = true;
-  }
-}
-
-/** Một bụi tre: vài cây tre cao, lá ở ngọn. */
-function addBamboo(target: InstancedBoxes, cx: number, cz: number, rand: () => number, stalks: number, height: number): void {
-  for (let i = 0; i < stalks; i++) {
-    const x = cx + (rand() - 0.5) * 0.6;
-    const z = cz + (rand() - 0.5) * 0.6;
-    const h = height * (0.75 + rand() * 0.45);
-    const lean = (rand() - 0.5) * 0.25;
-    target.add(0.08, h, 0.08, i % 2 ? C.bamboo : C.bambooDark, x, h / 2, z, lean, 0, lean);
-    target.add(0.34, 0.16, 0.34, C.leaf[i % 3], x + lean * h * 0.5, h, z - lean * h * 0.5, 0, rand() * 1.5, 0);
-    target.add(0.22, 0.14, 0.22, C.leaf[(i + 1) % 3], x + lean * h * 0.4, h - 0.25, z - lean * h * 0.4, 0, rand() * 1.5, 0);
-  }
-}
-
-function addTree(target: InstancedBoxes, cx: number, cz: number, rand: () => number): void {
-  const s = 0.8 + rand() * 0.5;
-  const leaf = C.leaf[Math.floor(rand() * 3)];
-  target.add(0.18 * s, 0.7 * s, 0.18 * s, C.trunk, cx, 0.35 * s, cz);
-  target.add(0.95 * s, 0.6 * s, 0.95 * s, leaf, cx, 0.95 * s, cz, 0, rand(), 0);
-  target.add(0.6 * s, 0.45 * s, 0.6 * s, leaf, cx, 1.4 * s, cz, 0, rand(), 0);
-}
 
 interface BuildingView {
   group: THREE.Group;
@@ -101,12 +37,12 @@ export class World {
   readonly view: IsoCamera;
 
   private readonly land = new InstancedBoxes(RIVER_START * RIVER_START);
-  private readonly forest = new InstancedBoxes(9000, { shadow: true });
-  private readonly walls = new InstancedBoxes(2000, { shadow: true });
+  private forest?: THREE.Object3D;
+  private walls?: THREE.Object3D;
   private readonly ripples = new InstancedBoxes(60);
   private readonly buildingsRoot = new THREE.Group();
   private readonly views = new Map<number, BuildingView>();
-  private readonly boats: { obj: THREE.Group; axis: 'x' | 'z'; speed: number; pos: number }[] = [];
+  private readonly boats: { obj: THREE.Object3D; axis: 'x' | 'z'; speed: number; pos: number }[] = [];
   private readonly rippleState: { axis: 'x' | 'z'; pos: number; lane: number; len: number }[] = [];
   private gridOverlay?: THREE.LineSegments;
   private ghost?: THREE.Group;
@@ -117,23 +53,27 @@ export class World {
   private wallKey = '';
   private time = 0;
 
-  constructor(canvas: HTMLCanvasElement) {
+  constructor(
+    canvas: HTMLCanvasElement,
+    private readonly art: ArtSet = boxArt,
+  ) {
     this.renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' });
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
     this.renderer.shadowMap.enabled = true;
-    this.renderer.shadowMap.type = THREE.PCFShadowMap;
+    art.setupRenderer(this.renderer);
 
-    this.scene.background = new THREE.Color(C.sky);
-    this.scene.fog = new THREE.Fog(C.sky, 75, 125);
+    this.scene.background = new THREE.Color(art.sky);
+    this.scene.fog = new THREE.Fog(art.sky, 75, 125);
     this.view = new IsoCamera(canvas);
     this.view.onUserMove = () => {
       this.panGoal = null;
     };
     this.view.target.set(wx(19), 0, wz(19));
 
-    this.addLights();
-    this.addStaticTerrain();
-    this.scene.add(this.land.mesh, this.forest.mesh, this.walls.mesh, this.ripples.mesh, this.buildingsRoot);
+    art.lights(this.scene);
+    this.scene.add(buildStaticTerrain(art, HALF, RIVER_START, WATER_Y));
+    this.scene.add(art.buildForest(this.outerForestSpots()));
+    this.scene.add(this.land.mesh, this.ripples.mesh, this.buildingsRoot);
     this.addBoats();
     this.initRipples();
 
@@ -158,68 +98,24 @@ export class World {
     this.resize();
   }
 
-  private addLights(): void {
-    this.scene.add(new THREE.HemisphereLight(0xfff4dc, 0x6d7a45, 1.6));
-    const sun = new THREE.DirectionalLight(0xffe7c2, 2.2);
-    sun.position.set(-10, 24, 14);
-    sun.castShadow = true;
-    const cam = sun.shadow.camera;
-    cam.left = -24;
-    cam.right = 24;
-    cam.top = 24;
-    cam.bottom = -24;
-    cam.near = 1;
-    cam.far = 70;
-    sun.shadow.mapSize.set(2048, 2048);
-    sun.shadow.bias = -0.0006;
-    sun.shadow.normalBias = 0.03;
-    this.scene.add(sun, sun.target);
-  }
-
-  /** Đất ngoài lưới, hai dòng sông và bờ bên kia. */
-  private addStaticTerrain(): void {
-    const b = new BoxBuilder();
-    const far = 70;
-    const river = RIVER_START - HALF;
-    // Đất bên này sông (phía rừng), nằm dưới các ô lưới.
-    b.box(far + river, 1, far + river, C.grassLocked[0], (river - far) / 2, -0.52, (river - far) / 2);
-    // Bờ bên kia sông Thao (phía đông) và sông Đà (phía nam).
-    b.box(far - HALF, 1, 2 * far, C.grassLocked[1], (HALF + far) / 2, -0.52, 0);
-    b.box(far + river, 1, far - HALF, C.grassLocked[2], (river - far) / 2, -0.52, (HALF + far) / 2);
-    const terrain = b.build();
-    terrain.castShadow = false;
-    this.scene.add(terrain);
-
-    const water = new BoxBuilder();
-    water.box(HALF - river, 1, 2 * far, C.water[0], (river + HALF) / 2, WATER_Y - 0.5, 0);
-    water.box(far + river, 1, HALF - river, C.water[1], (river - far) / 2, WATER_Y - 0.5, (river + HALF) / 2);
-    const waterMesh = water.build();
-    waterMesh.castShadow = false;
-    this.scene.add(waterMesh);
-
-    // Rừng bao ngoài lưới và cây thưa ở bờ bên kia.
-    this.scene.add(this.outerForest());
-  }
-
-  private outerForest(): THREE.InstancedMesh {
-    const trees = new InstancedBoxes(4000, { shadow: true });
-    trees.begin();
+  /** Rừng bao ngoài lưới và cây thưa ở bờ bên kia. */
+  private outerForestSpots(): TreeSpot[] {
+    const spots: TreeSpot[] = [];
     const rand = seeded(7);
+    const density = this.art.forestDensity;
     for (let x = -10; x < GRID + 8; x++) {
       for (let z = -10; z < GRID + 8; z++) {
         const insideGrid = x >= 0 && z >= 0 && x < GRID && z < GRID;
         const inRiver = (x >= RIVER_START && x < GRID) || (z >= RIVER_START && z < GRID);
         if (insideGrid || inRiver) continue;
         const farBank = x >= GRID || z >= GRID;
-        if (rand() > (farBank ? 0.25 : 0.6)) continue;
+        if (rand() > (farBank ? 0.25 : 0.6) * density) continue;
         const cx = wx(x) + 0.5 + (rand() - 0.5) * 0.4;
         const cz = wz(z) + 0.5 + (rand() - 0.5) * 0.4;
-        if (rand() < 0.3) addBamboo(trees, cx, cz, rand, 4, 2.0);
-        else addTree(trees, cx, cz, rand);
+        spots.push({ x: cx, z: cz, kind: rand() < 0.3 ? 'bamboo' : 'tree', seed: Math.floor(rand() * 1e9), farBank });
       }
     }
-    trees.end();
-    return trees.mesh;
+    return spots;
   }
 
   private addBoats(): void {
@@ -230,7 +126,7 @@ export class World {
       { axis: 'x', speed: 0.9, pos: -20 },
     ];
     for (const r of routes) {
-      const obj = makeBoat();
+      const obj = this.art.makeBoat();
       obj.position.y = WATER_Y - 0.02;
       if (r.axis === 'z') {
         obj.position.x = river;
@@ -299,14 +195,10 @@ export class World {
     const key = walls.map((b) => b.id).join(',');
     if (key !== this.wallKey) {
       this.wallKey = key;
-      this.walls.begin();
-      for (const w of walls) {
-        const cx = wx(w.x) + 0.5;
-        const cz = wz(w.z) + 0.5;
-        this.walls.add(0.96, 0.12, 0.96, C.soil, cx, 0.06, cz);
-        addBamboo(this.walls, cx, cz, seeded(w.x * 92821 + w.z * 68917), 5, 1.7);
-      }
-      this.walls.end();
+      if (this.walls) this.scene.remove(this.walls);
+      const spots: WallSpot[] = walls.map((w) => ({ x: wx(w.x) + 0.5, z: wz(w.z) + 0.5, seed: w.x * 92821 + w.z * 68917 }));
+      this.walls = this.art.buildWalls(spots);
+      this.scene.add(this.walls);
     }
   }
 
@@ -314,21 +206,21 @@ export class World {
     const old = this.views.get(b.id);
     if (old) this.buildingsRoot.remove(old.group);
     const def = BUILDINGS[b.type];
-    const group = b.type === 'dien' ? makeDien(b.level) : b.type === 'ruong' ? makeRuong(b.level) : makeBen(b.level);
+    const group = this.makeBuilding(b.type, b.level);
     if (b.type === 'ben') group.rotation.y = b.x + def.w === RIVER_START ? Math.PI / 2 : 0;
     group.position.set(wx(b.x) + def.w / 2, 0, wz(b.z) + def.d / 2);
     group.userData.buildingId = b.id;
     const p = PERSON_OF[b.type];
     let person: THREE.Object3D | undefined;
     if (p) {
-      person = makePerson(p.kind);
+      person = this.art.makePerson(p.kind);
       person.position.set(p.x, p.y, p.z);
       person.rotation.y = p.ry;
       person.userData.baseY = p.y;
       group.add(person);
     }
     if (b.type === 'ben') {
-      const boat = makeBoat();
+      const boat = this.art.makeBoat();
       boat.position.set(-0.15, WATER_Y - 0.02, 1.75);
       boat.userData.dock = true;
       group.add(boat);
@@ -337,12 +229,19 @@ export class World {
     this.views.set(b.id, { group, type: b.type, level: b.level, person, popAge: 0, baseScale: group.scale.x });
   }
 
+  private makeBuilding(type: BuildingType, level: number): THREE.Group {
+    if (type === 'dien') return this.art.makeDien(level);
+    if (type === 'ruong') return this.art.makeRuong(level);
+    if (type === 'ben') return this.art.makeBen(level);
+    return new THREE.Group();
+  }
+
   private rebuildLand(level: number): void {
     this.land.begin();
     for (let x = 0; x < RIVER_START; x++) {
       for (let z = 0; z < RIVER_START; z++) {
         const open = isUnlocked(x, z, level);
-        const palette = open ? C.grass : C.grassLocked;
+        const palette = open ? this.art.grass : this.art.grassLocked;
         const shade = palette[(x * 7 + z * 13) % 3];
         this.land.add(1, 0.4, 1, shade, wx(x) + 0.5, -0.2, wz(z) + 0.5);
       }
@@ -351,7 +250,9 @@ export class World {
   }
 
   private rebuildForest(level: number): void {
-    this.forest.begin();
+    if (this.forest) this.scene.remove(this.forest);
+    const spots: TreeSpot[] = [];
+    const density = this.art.forestDensity;
     const lo = areaStart(level);
     for (let x = 0; x < RIVER_START; x++) {
       for (let z = 0; z < RIVER_START; z++) {
@@ -359,14 +260,14 @@ export class World {
         const rand = seeded(x * 73856093 + z * 19349663);
         // Chừa một dải đất trống sát vùng đã mở cho dễ nhìn.
         const nearEdge = x >= lo - 1 && z >= lo - 1;
-        if (rand() > (nearEdge ? 0.25 : 0.65)) continue;
+        if (rand() > (nearEdge ? 0.25 : 0.65) * density) continue;
         const cx = wx(x) + 0.5 + (rand() - 0.5) * 0.3;
         const cz = wz(z) + 0.5 + (rand() - 0.5) * 0.3;
-        if (rand() < 0.35) addBamboo(this.forest, cx, cz, rand, 4, 2.0);
-        else addTree(this.forest, cx, cz, rand);
+        spots.push({ x: cx, z: cz, kind: rand() < 0.35 ? 'bamboo' : 'tree', seed: Math.floor(rand() * 1e9), farBank: false });
       }
     }
-    this.forest.end();
+    this.forest = this.art.buildForest(spots);
+    this.scene.add(this.forest);
   }
 
   private rebuildGridOverlay(level: number): void {
@@ -451,12 +352,19 @@ export class World {
     const def = BUILDINGS[type];
     if (!this.ghost || this.ghost.userData.type !== type) {
       if (this.ghost) this.scene.remove(this.ghost);
-      this.ghost = type === 'luy' ? new THREE.Group() : type === 'ruong' ? makeRuong(1) : type === 'ben' ? makeBen(1) : makeDien(1);
+      this.ghost = this.makeBuilding(type, 1);
       this.ghost.userData.type = type;
-      const mat = new THREE.MeshLambertMaterial({ vertexColors: true, transparent: true, opacity: 0.6, depthWrite: false });
+      // Mỗi bộ hình có chất liệu riêng, nên làm mờ bằng cách nhân bản chất liệu của chính nó.
       this.ghost.traverse((o) => {
         if (o instanceof THREE.Mesh) {
-          o.material = mat;
+          const toGhost = (m: THREE.Material) => {
+            const g = m.clone();
+            g.transparent = true;
+            g.opacity = 0.6;
+            g.depthWrite = false;
+            return g;
+          };
+          o.material = Array.isArray(o.material) ? o.material.map(toGhost) : toGhost(o.material);
           o.castShadow = false;
         }
       });
