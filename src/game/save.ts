@@ -1,8 +1,8 @@
 // Lưu game vào localStorage và xuất/nhập mã lưu để sao lưu hoặc chuyển máy.
-// Bản lưu cũ (phiên bản 1, lát cắt 1) được nâng lên phiên bản 2 khi nạp.
+// Bản lưu cũ (phiên bản 1 của lát cắt 1, phiên bản 2 của lát cắt 2a) được nâng lên phiên bản hiện tại khi nạp.
 
 import { BUILDINGS, MERCHANT_FIRST_MS, RESOURCE_IDS, type BuildingType } from './defs';
-import { autoAssign, housing, type GameState } from './game';
+import { autoAssign, housing, initialRaid, type GameState } from './game';
 
 /** Giữ nguyên khóa cũ để người chơi lát cắt 1 không mất tiến trình. */
 export const SAVE_KEY = 'thoi-dai-van-lang/save/v1';
@@ -29,19 +29,36 @@ type Raw = Record<string, unknown>;
 const isObj = (v: unknown): v is Raw => !!v && typeof v === 'object';
 const isNum = (v: unknown): v is number => typeof v === 'number' && Number.isFinite(v);
 
-/** Phiên bản 1 → 2: thêm dân, người làm, đồng hồ chơi và thuyền buôn. */
+/** Nâng dần bản lưu cũ lên phiên bản hiện tại. */
 function migrate(raw: unknown): unknown {
-  if (!isObj(raw) || raw.version !== 1 || !Array.isArray(raw.buildings)) return raw;
-  const s = raw as unknown as GameState & Raw;
-  for (const b of s.buildings as unknown as Raw[]) b.workers = 0;
+  let v = raw;
+  if (isObj(v) && v.version === 1 && Array.isArray(v.buildings)) v = migrate1to2(v);
+  if (isObj(v) && v.version === 2) v = migrate2to3(v);
+  return v;
+}
+
+/** Phiên bản 1 → 2 (lát cắt 2a): thêm dân, người làm, đồng hồ chơi và thuyền buôn. */
+function migrate1to2(s: Raw): Raw {
+  for (const b of s.buildings as Raw[]) b.workers = 0;
   s.version = 2;
   s.clock = 0;
   s.danProgress = 0;
   s.merchant = { nextAt: MERCHANT_FIRST_MS, visit: null, seq: 0 };
   if (!isValidBuildings(s.buildings)) return s;
   // Người chơi cũ đã có ruộng, bến đang làm ăn: cho đủ dân ở và chia vào làm ngay.
-  s.dan = housing(s);
-  autoAssign(s);
+  // Phần quân đội thêm sớm ở đây để tính được gạo ăn; bước 2 → 3 đặt lại y như vậy.
+  s.troops = { giao: 0, cung: 0, voi: 0 };
+  const state = s as unknown as GameState;
+  state.dan = housing(state);
+  autoAssign(state);
+  return s;
+}
+
+/** Phiên bản 2 → 3 (lát cắt 2b): thêm quân đội và lịch giặc. */
+function migrate2to3(s: Raw): Raw {
+  s.version = 3;
+  s.troops = { giao: 0, cung: 0, voi: 0 };
+  s.raid = initialRaid();
   return s;
 }
 
@@ -66,7 +83,12 @@ function isValidBuildings(list: unknown): boolean {
 }
 
 function isGameState(v: unknown): v is GameState {
-  if (!isObj(v) || v.version !== 2) return false;
+  if (!isObj(v) || v.version !== 3) return false;
+  const troops = v.troops;
+  if (!isObj(troops) || !['giao', 'cung', 'voi'].every((k) => isNum(troops[k]) && troops[k] >= 0)) return false;
+  const raid = v.raid;
+  if (!isObj(raid) || !isNum(raid.wave) || !isNum(raid.won) || !(raid.nextAt === null || isNum(raid.nextAt))) return false;
+  if (!['idle', 'warning', 'battle'].includes(raid.phase as string)) return false;
   const res = v.resources;
   if (!isObj(res) || !RESOURCE_IDS.every((r) => isNum(res[r]))) return false;
   if (!isValidBuildings(v.buildings)) return false;

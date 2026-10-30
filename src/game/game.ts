@@ -1,9 +1,11 @@
 // Luật chơi: trạng thái, truy vấn, thao tác và dòng thời gian.
 // Không phụ thuộc DOM hay Three.js để test được bằng Vitest.
 
+import { startBattle, stepBattle, type Battle, type RaidSide } from './battle';
 import {
   BUILDINGS,
   DAN_GROW_MS,
+  FIRST_RAID_MS,
   GAO_PER_DAN,
   MERCHANT_EVERY_MS,
   MERCHANT_FIRST_MS,
@@ -11,6 +13,9 @@ import {
   OFFLINE_CAP_MS,
   OFFLINE_RATE,
   QUESTS,
+  RAID_EVERY_MS,
+  RAID_WARNING_MS,
+  REPAIR_FRACTION,
   RESOURCE_IDS,
   STARVING_RATE,
   START_DAN,
@@ -18,11 +23,14 @@ import {
   STORAGE_CAP,
   TRADE_BONUS,
   TRADE_VALUE,
+  UNITS,
+  UNIT_TYPES,
   type BuildingType,
   type Cost,
   type QuestDef,
   type ResourceId,
   type Resources,
+  type UnitType,
 } from './defs';
 import { GRID, inGrid, isUnlocked, touchesRiver } from './map';
 
@@ -34,6 +42,34 @@ export interface Building {
   level: number;
   /** Số dân đang làm việc ở đây. */
   workers: number;
+  /** Bị giặc phá: không làm ra gì, không chắn đường, cần sửa. */
+  damaged?: boolean;
+}
+
+export interface RaidResult {
+  wave: number;
+  won: boolean;
+  killed: number;
+  total: number;
+  lost: Record<UnitType, number>;
+  wrecked: number[];
+  stolen: Resources;
+}
+
+export interface RaidState {
+  /** Số đợt giặc đã đánh xong. */
+  wave: number;
+  /** Số đợt đã đánh lui hoàn toàn. */
+  won: number;
+  /** Lúc (đồng hồ chơi) trinh sát báo đợt tới. Null khi chưa có doanh trại. */
+  nextAt: number | null;
+  phase: 'idle' | 'warning' | 'battle';
+  side: RaidSide;
+  /** Lúc giặc tràn vào (hết thời gian báo trước). */
+  startsAt: number;
+  battle: Battle | null;
+  /** Kết quả đợt vừa rồi, giữ tới khi người chơi xem xong. */
+  lastResult: RaidResult | null;
 }
 
 /** Một lời mời đổi hàng của thuyền buôn: đưa `give`, nhận `get`. */
@@ -53,7 +89,7 @@ export interface Merchant {
 }
 
 export interface GameState {
-  version: 2;
+  version: 3;
   resources: Resources;
   /** Số dân (không tính lính). */
   dan: number;
@@ -68,6 +104,9 @@ export interface GameState {
   /** Tổng thời gian đang mở game (ms). Thuyền buôn và giặc chỉ đến theo đồng hồ này. */
   clock: number;
   merchant: Merchant;
+  /** Số lính mỗi loại đang có (lính không tính vào dân). */
+  troops: Record<UnitType, number>;
+  raid: RaidState;
   settings: { muted: boolean };
 }
 
@@ -86,16 +125,25 @@ export type FailReason =
   | 'thieuDan'
   | 'khongCoNguoiLam'
   | 'thuyenDaDi'
-  | 'daDoi';
+  | 'daDoi'
+  | 'canDoanhTrai'
+  | 'datGioiHanQuan'
+  | 'thieuGao'
+  | 'dangCoGiac'
+  | 'khongHuHong';
 
 export type Result<T = undefined> = { ok: true; value: T } | { ok: false; reason: FailReason };
 
 const ok = <T>(value: T): Result<T> => ({ ok: true, value });
 const fail = (reason: FailReason): Result<never> => ({ ok: false, reason });
 
+export function initialRaid(): RaidState {
+  return { wave: 0, won: 0, nextAt: null, phase: 'idle', side: 'bac', startsAt: 0, battle: null, lastResult: null };
+}
+
 export function createInitialState(now: number): GameState {
   return {
-    version: 2,
+    version: 3,
     resources: { ...START_RESOURCES },
     dan: START_DAN,
     danProgress: 0,
@@ -105,6 +153,8 @@ export function createInitialState(now: number): GameState {
     lastSeen: now,
     clock: 0,
     merchant: { nextAt: MERCHANT_FIRST_MS, visit: null, seq: 0 },
+    troops: { giao: 0, cung: 0, voi: 0 },
+    raid: initialRaid(),
     settings: { muted: false },
   };
 }
@@ -153,9 +203,30 @@ export function freeDan(state: GameState): number {
   return state.dan - workingDan(state);
 }
 
-/** Gạo cả kinh đô ăn mỗi phút. */
+/** Gạo cả kinh đô ăn mỗi phút: dân và lính. */
 export function upkeepPerMinute(state: GameState): number {
-  return state.dan * GAO_PER_DAN;
+  let total = state.dan * GAO_PER_DAN;
+  for (const k of UNIT_TYPES) total += state.troops[k] * UNITS[k].upkeep;
+  return total;
+}
+
+export function troopCount(state: GameState): number {
+  return UNIT_TYPES.reduce((n, k) => n + state.troops[k], 0);
+}
+
+/** Số chỗ quân đang dùng (voi chiến chiếm nhiều chỗ). */
+export function troopSpace(state: GameState): number {
+  return UNIT_TYPES.reduce((n, k) => n + state.troops[k] * UNITS[k].space, 0);
+}
+
+export function troopCap(state: GameState): number {
+  let cap = 0;
+  for (const b of state.buildings) cap += BUILDINGS[b.type].troopCap?.[b.level - 1] ?? 0;
+  return cap;
+}
+
+export function barracksLevel(state: GameState): number {
+  return state.buildings.filter((b) => b.type === 'doanhTrai').reduce((m, b) => Math.max(m, b.level), 0);
 }
 
 /** Lưới GRID×GRID, mỗi ô chứa id công trình đang chiếm hoặc 0. */
@@ -182,6 +253,7 @@ export function canAfford(state: GameState, cost: Cost): boolean {
 
 /** Sản lượng mỗi phút của một công trình, tỉ lệ theo số người đang làm. */
 export function outputOf(b: Building): Cost {
+  if (b.damaged) return {};
   const prod = BUILDINGS[b.type].production[b.level - 1] ?? {};
   const slots = slotsOf(b);
   const k = slots ? Math.min(b.workers, slots) / slots : 1;
@@ -273,6 +345,12 @@ export function questProgress(state: GameState): { have: number; need: number } 
     need = goal.amount;
   } else if (goal.kind === 'workers') {
     have = state.buildings.filter((b) => b.type === goal.building).reduce((s, b) => s + b.workers, 0);
+    need = goal.amount;
+  } else if (goal.kind === 'troops') {
+    have = troopCount(state);
+    need = goal.amount;
+  } else if (goal.kind === 'raidsWon') {
+    have = state.raid.won;
     need = goal.amount;
   } else {
     have = dienLevel(state);
@@ -378,6 +456,137 @@ export function claimQuest(state: GameState): Result<Cost> {
   return ok(quest.reward);
 }
 
+// ---------- Quân đội ----------
+
+export function canTrain(state: GameState, kind: UnitType): Result {
+  const def = UNITS[kind];
+  if (barracksLevel(state) < def.barracksLevel) return fail('canDoanhTrai');
+  if (state.raid.phase === 'battle') return fail('dangCoGiac');
+  if (isStarving(state)) return fail('thieuGao');
+  if (freeDan(state) < 1) return fail('thieuDan');
+  if (troopSpace(state) + def.space > troopCap(state)) return fail('datGioiHanQuan');
+  if (!canAfford(state, def.cost)) return fail('thieuTaiNguyen');
+  return ok(undefined);
+}
+
+/** Luyện một người lính: lấy một người dân rảnh, tốn gạo và sắt, xong ngay. */
+export function train(state: GameState, kind: UnitType): Result<UnitType> {
+  const check = canTrain(state, kind);
+  if (!check.ok) return check;
+  pay(state, UNITS[kind].cost);
+  state.dan -= 1;
+  state.troops[kind] += 1;
+  return ok(kind);
+}
+
+export function repairCost(b: Building): Cost {
+  const def = BUILDINGS[b.type];
+  const base = b.level > 1 ? def.upgradeCost[b.level] : def.buildCost;
+  const cost: Cost = {};
+  for (const r of RESOURCE_IDS) if (base[r]) cost[r] = Math.max(5, Math.round((base[r]! * REPAIR_FRACTION) / 5) * 5);
+  return cost;
+}
+
+export function repair(state: GameState, id: number): Result<Building> {
+  const b = findBuilding(state, id);
+  if (!b) return fail('khongTimThay');
+  if (!b.damaged) return fail('khongHuHong');
+  if (state.raid.phase === 'battle') return fail('dangCoGiac');
+  const cost = repairCost(b);
+  if (!canAfford(state, cost)) return fail('thieuTaiNguyen');
+  pay(state, cost);
+  b.damaged = false;
+  return ok(b);
+}
+
+export function repairAllCost(state: GameState): Cost {
+  const total: Cost = {};
+  for (const b of state.buildings) {
+    if (!b.damaged) continue;
+    const c = repairCost(b);
+    for (const r of RESOURCE_IDS) if (c[r]) total[r] = (total[r] ?? 0) + c[r]!;
+  }
+  return total;
+}
+
+/** Sửa mọi công trình hư hỏng còn đủ tiền sửa, ưu tiên theo thứ tự trong kinh đô. */
+export function repairAll(state: GameState): number {
+  let fixed = 0;
+  for (const b of state.buildings) if (b.damaged && repair(state, b.id).ok) fixed++;
+  return fixed;
+}
+
+// ---------- Giặc Ân đánh kinh đô ----------
+
+/** Bước nhỏ của mô phỏng trận, giây. */
+const BATTLE_STEP = 0.05;
+
+function finishRaid(state: GameState): void {
+  const raid = state.raid;
+  const battle = raid.battle!;
+  // Lính ta còn sống trở về doanh trại, lính tử trận mất hẳn.
+  for (const k of UNIT_TYPES) state.troops[k] = Math.max(0, state.troops[k] - battle.lost[k]);
+  const stolenAny = RESOURCE_IDS.some((r) => battle.stolen[r] > 0);
+  const won = battle.killed === battle.total && !stolenAny;
+  raid.lastResult = {
+    wave: battle.wave,
+    won,
+    killed: battle.killed,
+    total: battle.total,
+    lost: { ...battle.lost },
+    wrecked: [...battle.wrecked],
+    stolen: { ...battle.stolen },
+  };
+  if (won) raid.won += 1;
+  raid.wave = battle.wave;
+  raid.phase = 'idle';
+  raid.battle = null;
+  raid.nextAt = state.clock + RAID_EVERY_MS;
+}
+
+/** Lịch giặc: báo trước, tràn vào, đánh, rồi hẹn đợt sau. Chỉ chạy theo đồng hồ chơi. */
+function updateRaid(state: GameState, ms: number): void {
+  const raid = state.raid;
+  if (raid.nextAt === null) {
+    if (countOf(state, 'doanhTrai') > 0) raid.nextAt = state.clock + FIRST_RAID_MS;
+    return;
+  }
+  if (raid.phase === 'idle' && state.clock >= raid.nextAt) {
+    raid.phase = 'warning';
+    raid.side = (raid.wave * 2654435761) % 7 < 4 ? 'bac' : 'tay';
+    raid.startsAt = state.clock + RAID_WARNING_MS;
+  }
+  if (raid.phase === 'warning' && state.clock >= raid.startsAt) {
+    raid.phase = 'battle';
+    raid.battle = startBattle(state, raid.wave + 1, raid.side);
+    return;
+  }
+  if (raid.phase === 'battle' && raid.battle) {
+    let left = ms / 1000;
+    while (left > 1e-9) {
+      const dt = Math.min(BATTLE_STEP, left);
+      left -= dt;
+      if (stepBattle(state, raid.battle, dt)) {
+        finishRaid(state);
+        return;
+      }
+    }
+  }
+}
+
+/** Gọi tới ngay đợt giặc tiếp theo (trinh sát báo luôn). Dùng cho nút "Nghênh chiến" và kiểm thử. */
+export function callRaidNow(state: GameState): Result {
+  if (countOf(state, 'doanhTrai') === 0) return fail('canDoanhTrai');
+  if (state.raid.phase !== 'idle') return fail('dangCoGiac');
+  state.raid.nextAt = state.clock;
+  updateRaid(state, 0);
+  return ok(undefined);
+}
+
+export function dismissRaidResult(state: GameState): void {
+  state.raid.lastResult = null;
+}
+
 // ---------- Thuyền buôn ----------
 
 const round5 = (n: number) => Math.max(5, Math.round(n / 5) * 5);
@@ -471,6 +680,7 @@ export function tick(state: GameState, ms: number): Resources {
   const gained = produce(state, ms, 1);
   state.clock += ms;
   updateMerchant(state);
+  updateRaid(state, ms);
   return gained;
 }
 

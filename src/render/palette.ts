@@ -34,4 +34,10 @@ export const C = {
   ember: 0xffd04d,
   earth: 0xa77e4e,
   earthDark: 0x8a6440,
+  enemyCloth: 0x3b3330,
+  enemyRed: 0x6b2a2a,
+  elephant: 0x8f8a86,
+  horse: 0x7a5232,
+  smoke: 0x5f5a55,
+  arrow: 0x3a2a1a,
 } as const;

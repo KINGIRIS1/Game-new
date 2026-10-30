@@ -84,6 +84,45 @@ Tài liệu này ghi lại các quyết định đã chốt với chủ dự án
 - **Phó bản**: bản đồ chương 1 có khoảng 8 màn và trùm cuối. Màn đã qua đánh lại được để kiếm tài nguyên. Lính chết trong trận thì mất, dù thắng hay thua. Thua thì không có thưởng, ngoài ra không mất gì.
 - **Giữ kinh đô**: khoảng 15 phút chơi có một đợt giặc Ân. Trinh sát báo trước 60 giây, kèm hướng giặc tới (một trong hai cạnh rừng). Giặc tìm đường tới kho và Điện, gặp lũy thì phải phá. Phòng thủ bằng chòi canh, bẫy chông và quân nhà. Thua thì chỉ mất một phần kho và vài công trình hư hỏng, sửa lại được.
 
+### Giữ kinh đô (đã làm ở lát cắt 2b)
+
+- **Doanh trại** cần Điện cấp 2. Sức chứa quân theo cấp: 8, 14, 20, 28, 38 chỗ.
+- **Các binh chủng ta:**
+
+  | Binh chủng | Cần doanh trại | Giá | Máu | Sát thương | Ghi chú |
+  |---|---|---|---|---|---|
+  | Giáo binh | cấp 1 | 20 gạo, 4 sắt | 60 | 8 | |
+  | Cung thủ | cấp 2 | 25 gạo, 6 sắt | 40 | 7 | tầm bắn 3,8 ô |
+  | Voi chiến | cấp 3 | 60 gạo, 15 sắt | 200 | 15 | chiếm 3 chỗ |
+
+  Mỗi lính lấy đi một người dân rảnh. Lính ăn 0,6 gạo/phút, riêng voi ăn 1,5. Đánh đúng thế khắc chế thì sát thương gấp đôi.
+- **Giặc Ân:**
+
+  | Loại | Máu | Sát thương | Ghi chú |
+  |---|---|---|---|
+  | Lính giáo | 75 | 9 | |
+  | Cung thủ | 45 | 8 | tầm 3,5 ô |
+  | Chiến xa | 230 | 20 | nhanh, gấp đôi sát thương lên cung thủ ta |
+
+  - Đợt thứ n có `3 + n` lính giáo. Từ đợt 2 có `n` cung thủ, từ đợt 3 có `n − 2` chiến xa.
+  - Máu giặc tăng 12% mỗi đợt.
+- **Chòi canh**: tự bắn trong tầm 4,5 ô, sát thương 7–19 theo cấp.
+- **Bẫy chông**: gây 45 sát thương cho giặc giẫm vào, mỗi đợt dùng một lần.
+- **Lịch giặc** (theo đồng hồ chơi):
+  - Đợt đầu đến 4 phút sau khi có doanh trại, sau đó 15 phút một đợt.
+  - Trinh sát báo trước 60 giây, kèm hướng tới (cạnh rừng phía Bắc hoặc phía Tây), có dải đỏ nhấp nháy ở bìa rừng.
+  - Nút "Nghênh chiến ngay" trong doanh trại gọi giặc tới sớm.
+- **Trận đánh**:
+  - Giặc tìm đường (A* 8 hướng) tới kho trước, rồi tới Điện. Lũy và công trình chắn đường thì giặc phá. Lũy có chỗ hở thì giặc đi vòng.
+  - Quân ta ra từ doanh trại, đánh giặc gần nhất. Chòi canh bắn, bẫy chông đâm.
+  - Quá 3 phút thì giặc rút.
+- **Hậu quả**:
+  - Giặc phá được kho thì cướp 15% mỗi loại tài nguyên, phá được Điện thì cướp 8%, rồi bỏ chạy.
+  - Công trình bị phá thì hư hỏng: không làm ra gì, không chắn đường. Sửa tốn 30% giá.
+  - Lính tử trận mất hẳn.
+  - Thắng (diệt hết, không mất của) mới tính là giữ được kinh đô.
+- Độ khó đo bằng test: đợt 1 cần khoảng 6 giáo binh và 1 chòi canh để thắng. Đợt 4 trở đi cần cung thủ, voi, lũy và nhiều chòi hơn.
+
 ## Thánh Gióng và cốt truyện chương 1
 
 1. **Giặc Ân xâm lược.** Lạc hầu hướng dẫn xây lũy tre, ruộng, chợ thuyền. Các trận đầu do Lạc tướng cầm quân thường.
@@ -108,11 +147,11 @@ Tài liệu này ghi lại các quyết định đã chốt với chủ dự án
 
 6 bước: xây lũy tre → đặt ruộng → phân công dân → nâng Điện Vua Hùng → luyện quân → đánh màn 1 và giữ kinh đô qua đợt giặc đầu tiên.
 
-Đã làm (lát cắt 2a): lũy tre → ruộng → bến → Điện cấp 2 → nhà sàn → bãi đất đá có 2 người làm → kho thóc → lò rèn → Điện cấp 3. Các bước luyện quân, giữ kinh đô và phó bản sẽ thêm ở lát cắt 2b và 3.
+Đã làm (lát cắt 2): lũy tre → ruộng → bến → Điện cấp 2 → nhà sàn → bãi đất đá có 2 người làm → kho thóc → lò rèn → Điện cấp 3 → doanh trại → luyện 5 lính → chòi canh → đánh lui đợt giặc đầu tiên. Phó bản và Thánh Gióng thêm ở lát cắt 3.
 
 ## Thứ tự làm
 
 1. **Lát cắt 1** (đã làm): kinh đô 3D với Điện Vua Hùng, ruộng lúa, bến chợ thuyền, lũy tre. Đặt công trình trên lưới, nâng cấp, sản xuất, mở rộng đất, tính phần vắng mặt, lưu và xuất/nhập mã lưu, âm thanh, bốn nhiệm vụ đầu của Lạc hầu (lũy tre → ruộng → bến → nâng Điện). Lát cắt này chỉ dùng gạo và vỏ ốc.
 2. **Lát cắt 2a** (đã làm): dân làng và phân công, nhà sàn, bãi đất đá, lò rèn, kho thóc, thành đất, thuyền buôn, thiếu gạo, nâng bản lưu cũ.
-   **Lát cắt 2b**: doanh trại và quân đội, chòi canh, bẫy chông, giữ kinh đô trước giặc Ân.
+   **Lát cắt 2b** (đã làm): doanh trại và quân đội, chòi canh, bẫy chông, giữ kinh đô trước giặc Ân, hư hỏng và sửa chữa.
 3. **Lát cắt 3**: phó bản chương 1, Thánh Gióng, cốt truyện.

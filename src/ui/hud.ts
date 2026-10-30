@@ -1,8 +1,20 @@
 // Giao diện HTML đặt đè lên cảnh 3D: thanh tài nguyên, nhiệm vụ, bảng xây dựng, bảng công trình, cài đặt.
 
-import { BUILDINGS, RESOURCE_IDS, type BuildingType, type Cost, type ResourceId, type Resources } from '../game/defs';
+import { enemiesLeft, alliesLeft } from '../game/battle';
+import {
+  BUILDINGS,
+  RESOURCE_IDS,
+  UNITS,
+  UNIT_TYPES,
+  type BuildingType,
+  type Cost,
+  type ResourceId,
+  type Resources,
+  type UnitType,
+} from '../game/defs';
 import {
   canAfford,
+  canTrain,
   canUpgrade,
   countOf,
   currentQuest,
@@ -17,17 +29,22 @@ import {
   outputOf,
   questDone,
   questProgress,
+  repairAllCost,
+  repairCost,
   slotsOf,
   storageCap,
+  troopCap,
+  troopSpace,
   upgradeCostOf,
   type Building,
   type GameState,
+  type RaidResult,
 } from '../game/game';
 import { AREA_SIZE } from '../game/map';
 import { formatDuration, vi } from '../text/vi';
 
 const SHOWN_RESOURCES: ResourceId[] = ['gao', 'voOc', 'datDa', 'sat'];
-const BUILD_MENU: BuildingType[] = ['luy', 'ruong', 'ben', 'nhaSan', 'baiDa', 'kho', 'loRen'];
+const BUILD_MENU: BuildingType[] = ['luy', 'ruong', 'ben', 'nhaSan', 'baiDa', 'kho', 'loRen', 'doanhTrai', 'choiCanh', 'bayChong'];
 
 /** Tên hiển thị của công trình, tính cả lũy tre đã đắp thành đất. */
 export function buildingName(b: Pick<Building, 'type' | 'level'>): string {
@@ -51,9 +68,16 @@ export type HudAction =
   | { kind: 'workers'; id: number; delta: number }
   | { kind: 'danInfo' }
   | { kind: 'openMerchant' }
-  | { kind: 'acceptOffer'; index: number };
+  | { kind: 'acceptOffer'; index: number }
+  | { kind: 'train'; unit: UnitType }
+  | { kind: 'repair'; id: number }
+  | { kind: 'repairAll' }
+  | { kind: 'callRaid' }
+  | { kind: 'lookRaid' }
+  | { kind: 'openBarracks' }
+  | { kind: 'dismissRaid' };
 
-export type HudMode = 'view' | 'place' | 'wall';
+export type HudMode = 'view' | 'place' | 'paint';
 
 type Sheet = { kind: 'build' } | { kind: 'building'; id: number } | { kind: 'settings' } | { kind: 'merchant' } | null;
 
@@ -131,6 +155,10 @@ export class Hud {
         return this.onAction({ kind: 'workers', id, delta: Number(el.dataset.delta) });
       case 'acceptOffer':
         return this.onAction({ kind: 'acceptOffer', index: id });
+      case 'repair':
+        return this.onAction({ kind: 'repair', id });
+      case 'train':
+        return this.onAction({ kind: 'train', unit: el.dataset.unit as UnitType });
       case 'importCode': {
         const box = this.sheetEl.querySelector<HTMLTextAreaElement>('#import-box');
         return this.onAction({ kind: 'importCode', code: box?.value ?? '' });
@@ -143,13 +171,13 @@ export class Hud {
   // ---------- Thanh trên ----------
 
   updateTop(state: GameState): void {
-    const cap = storageCap(state);
+    const store = storageCap(state);
     const rate = netPerMinute(state);
     const res = SHOWN_RESOURCES.map((r) => {
       const v = state.resources[r];
       const n = Math.round(rate[r]);
-      return `<div class="chip ${v >= cap ? 'full' : ''}" title="${vi.resources[r].name}">
-        ${vi.resources[r].icon} <b>${fmt(v)}</b><small>/${fmt(cap)}</small>
+      return `<div class="chip ${v >= store ? 'full' : ''}" title="${vi.resources[r].name}">
+        ${vi.resources[r].icon} <b>${fmt(v)}</b><small>/${fmt(store)}</small>
         <span class="rate ${n < 0 ? 'neg' : ''}">${n < 0 ? '−' + fmt(-n) : '+' + fmt(n)}</span>
       </div>`;
     }).join('');
@@ -157,7 +185,11 @@ export class Hud {
     const room = housing(state);
     const dan = `<button class="chip dan ${free > 0 ? 'idle' : ''}" data-act="danInfo" title="${vi.ui.danTitle(state.dan, room, free)}">
       👥 <b>${state.dan}</b><small>/${room}</small>${free > 0 ? `<span class="rate">${free} rảnh</span>` : ''}</button>`;
-    const html = `<div class="chip level" title="${vi.buildings.dien.name}">🏯 ${dienLevel(state)}</div>${res}${dan}
+    const cap = troopCap(state);
+    const army = cap
+      ? `<button class="chip dan" data-act="openBarracks" title="${vi.ui.troopSpace(troopSpace(state), cap)}">⚔️ <b>${troopSpace(state)}</b><small>/${cap}</small></button>`
+      : '';
+    const html = `<div class="chip level" title="${vi.buildings.dien.name}">🏯 ${dienLevel(state)}</div>${res}${dan}${army}
       <span class="spacer"></span>
       <button class="icon-btn" data-act="openSettings" aria-label="${vi.ui.settings}">⚙️</button>`;
     // So với chuỗi đã vẽ lần trước (không so với innerHTML vì trình duyệt chuẩn hóa lại chuỗi),
@@ -172,6 +204,16 @@ export class Hud {
 
   updateBanners(state: GameState): void {
     const parts: string[] = [];
+    const raid = state.raid;
+    if (raid.phase === 'warning') {
+      const secs = Math.max(0, Math.ceil((raid.startsAt - state.clock) / 1000));
+      const side = raid.side === 'bac' ? vi.ui.sideBac : vi.ui.sideTay;
+      parts.push(`<div class="banner bad">⚠️ ${vi.ui.raidWarning(side, secs)}
+        <button class="btn small" data-act="lookRaid">${vi.ui.raidLook}</button></div>`);
+    }
+    if (raid.phase === 'battle' && raid.battle) {
+      parts.push(`<div class="banner bad">⚔️ ${vi.ui.raidBattle(enemiesLeft(raid.battle), alliesLeft(raid.battle))}</div>`);
+    }
     if (isStarving(state)) parts.push(`<div class="banner bad">🍚 ${vi.ui.starving}</div>`);
     const visit = state.merchant.visit;
     if (visit) {
@@ -215,7 +257,7 @@ export class Hud {
 
   // ---------- Thanh dưới ----------
 
-  setMode(mode: HudMode, placeValid = true): void {
+  setMode(mode: HudMode, placeValid = true, hint?: string): void {
     if (mode === 'view') {
       this.bottombar.innerHTML = `<button class="btn" data-act="openBuild">🔨 ${vi.ui.build}</button>`;
       this.hint.hidden = true;
@@ -228,7 +270,7 @@ export class Hud {
     } else {
       this.bottombar.innerHTML = `<button class="btn" data-act="cancelPlace">✓ ${vi.ui.done}</button>`;
       this.hint.hidden = false;
-      this.hint.textContent = vi.ui.wallHint;
+      this.hint.textContent = hint ?? vi.ui.wallHint;
     }
   }
 
@@ -380,7 +422,15 @@ export class Hud {
       rows.push(`<div class="stat"><span>Đất kinh đô</span><span>${size}×${size}${next}</span></div>`);
     }
 
+    if (b.type === 'doanhTrai') rows.push(this.barracksHtml(state));
+
     const actions: string[] = [];
+    if (b.damaged) {
+      const rc = repairCost(b);
+      actions.push(`<div class="why">${vi.ui.damaged}</div>`);
+      actions.push(`<button class="btn bronze" data-act="repair" data-id="${b.id}" ${canAfford(state, rc) && state.raid.phase !== 'battle' ? '' : 'disabled'}>
+        ${vi.ui.repair} · ${costHtml(state, rc)}</button>`);
+    }
     const cost = upgradeCostOf(b);
     if (cost) {
       const check = canUpgrade(state, b.id);
@@ -397,6 +447,29 @@ export class Hud {
     if (def.removable) actions.push(`<button class="btn ghost" data-act="removeWall" data-id="${b.id}">${vi.ui.remove}</button>`);
 
     return `<div class="info"><p>${esc(vi.buildings[b.type].desc)}</p>${rows.join('')}<div class="actions">${actions.join('')}</div></div>`;
+  }
+
+  private barracksHtml(state: GameState): string {
+    const rows = UNIT_TYPES.map((k) => {
+      const def = UNITS[k];
+      const check = canTrain(state, k);
+      const why = check.ok ? '' : check.reason === 'canDoanhTrai' ? `Cần doanh trại cấp ${def.barracksLevel}` : vi.reasons[check.reason];
+      return `<div class="unit-row">
+        <span class="unit-icon">${vi.units[k].icon}</span>
+        <span class="unit-info"><b>${vi.units[k].name}</b> × ${state.troops[k]}
+          <small>${vi.units[k].desc}</small>
+          ${why ? `<small class="lack">${why}</small>` : ''}</span>
+        <button class="btn small" data-act="train" data-unit="${k}" ${check.ok ? '' : 'disabled'}>${vi.ui.train}<br>${costHtml(state, def.cost)}</button>
+      </div>`;
+    }).join('');
+    const raid = state.raid;
+    let next = '';
+    if (raid.phase === 'idle') {
+      next = raid.nextAt === null ? vi.ui.noRaidYet : vi.ui.nextRaid(Math.ceil((raid.nextAt - state.clock) / 60000));
+    }
+    return `<div class="stat"><span>${vi.ui.troopSpace(troopSpace(state), troopCap(state))}</span></div>
+      <div class="units">${rows}</div>
+      ${next ? `<p class="muted">${next}</p><button class="btn ghost small" data-act="callRaid">${vi.ui.callRaid}</button>` : ''}`;
   }
 
   private merchantHtml(state: GameState): string {
@@ -427,7 +500,7 @@ export class Hud {
       <textarea id="import-box" placeholder="TDVL1:..."></textarea>
       <button class="btn small ghost" data-act="importCode">📥 ${vi.ui.importSave}</button>
       <div class="actions"><button class="btn ghost" data-act="reset">🔄 ${vi.ui.reset}</button></div>
-      <p class="muted" style="text-align:center;margin-top:14px">${vi.gameTitle} · bản thử 0.2</p>`;
+      <p class="muted" style="text-align:center;margin-top:14px">${vi.gameTitle} · bản thử 0.3</p>`;
   }
 
   // ---------- Thông báo ----------
@@ -453,6 +526,34 @@ export class Hud {
       <button class="btn bronze">${vi.ui.ok}</button></div>`;
     back.querySelector('button')!.addEventListener('click', () => back.remove());
     this.root.appendChild(back);
+  }
+
+  /** Bảng tổng kết sau một đợt giặc. */
+  showRaidResult(state: GameState, r: RaidResult): void {
+    this.root.querySelector('.modal-back.raid')?.remove();
+    const back = document.createElement('div');
+    back.className = 'modal-back raid';
+    const lost = UNIT_TYPES.filter((k) => r.lost[k] > 0).map((k) => `${vi.units[k].icon} ${r.lost[k]}`).join(' ') || vi.ui.raidNone;
+    const stolen = RESOURCE_IDS.filter((x) => r.stolen[x] > 0).map((x) => `${vi.resources[x].icon} ${fmt(r.stolen[x])}`).join(' ') || vi.ui.raidNone;
+    const damaged = state.buildings.filter((b) => b.damaged).length;
+    const cost = repairAllCost(state);
+    back.innerHTML = `<div class="modal">
+      <h2>${r.won ? '🥁 ' + vi.ui.raidWonTitle : '🔥 ' + vi.ui.raidLostTitle}</h2>
+      <div class="result-rows">
+        <div>${vi.ui.raidKilled(r.killed, r.total)}</div>
+        <div>${vi.ui.raidLostTroops}: ${lost}</div>
+        <div>${vi.ui.raidStolen}: ${stolen}</div>
+        <div>${vi.ui.raidWrecked(r.wrecked.length)}</div>
+      </div>
+      <div class="actions">
+        ${damaged ? `<button class="btn bronze" data-act="repairAll">${vi.ui.repairAll} · ${costHtml(state, cost)}</button>` : ''}
+        <button class="btn ghost" data-act="dismissRaid">${vi.ui.ok}</button>
+      </div></div>`;
+    this.root.appendChild(back);
+  }
+
+  closeRaidResult(): void {
+    this.root.querySelector('.modal-back.raid')?.remove();
   }
 
   /** Kiểm tra nhanh xem có thể đặt công trình loại này ở đâu đó trên vùng đã mở không (dùng để báo lỗi sớm). */

@@ -1,6 +1,6 @@
 // Mọi chữ hiển thị trong game. Tách riêng để sau này dịch sang tiếng Anh.
 
-import type { BuildingType, ResourceId } from '../game/defs';
+import type { BuildingType, EnemyType, ResourceId, UnitType } from '../game/defs';
 import type { FailReason } from '../game/game';
 
 export const vi = {
@@ -52,7 +52,22 @@ export const vi = {
     kho: {
       name: 'Kho thóc',
       icon: '🏚️',
-      desc: 'Kho sàn cao chứa thóc và của cải. Mỗi kho cho thêm sức chứa mọi loại tài nguyên.',
+      desc: 'Kho sàn cao chứa thóc và của cải. Mỗi kho cho thêm sức chứa mọi loại tài nguyên. Giặc Ân nhắm kho trước tiên.',
+    },
+    doanhTrai: {
+      name: 'Doanh trại',
+      icon: '⛺',
+      desc: 'Nơi Lạc tướng luyện quân. Mỗi người lính lấy đi một người dân và ăn gạo. Cấp càng cao càng nuôi được nhiều quân và mở thêm binh chủng.',
+    },
+    choiCanh: {
+      name: 'Chòi canh',
+      icon: '🗼',
+      desc: 'Chòi cao có cung thủ, tự bắn giặc Ân trong tầm.',
+    },
+    bayChong: {
+      name: 'Bẫy chông tre',
+      icon: '🔱',
+      desc: 'Hố cắm chông tre vót nhọn. Giặc giẫm vào thì bị thương nặng. Mỗi đợt giặc dùng được một lần, đánh xong tự gài lại.',
     },
   } satisfies Record<BuildingType, { name: string; icon: string; desc: string }>,
 
@@ -72,6 +87,11 @@ export const vi = {
     khongCoNguoiLam: 'Công trình này không cần người làm',
     thuyenDaDi: 'Thuyền buôn đã rời bến',
     daDoi: 'Đã đổi món này rồi',
+    canDoanhTrai: 'Cần nâng doanh trại',
+    datGioiHanQuan: 'Doanh trại đã đầy, hãy nâng cấp',
+    thieuGao: 'Đang thiếu gạo, chưa luyện quân được',
+    dangCoGiac: 'Đang có giặc!',
+    khongHuHong: 'Công trình này không hư hỏng',
   } satisfies Record<FailReason, string>,
 
   quests: {
@@ -84,9 +104,25 @@ export const vi = {
     kho: 'Của cải nhiều lên, kho không đủ chứa. Xin dựng một kho thóc.',
     loRen: 'Giặc Ân có giáo đồng sắc bén. Xin dựng lò rèn để làm ra sắt.',
     dien3: 'Kinh đô đã vững. Xin nâng Điện Vua Hùng lên cấp 3, khi ấy có thể đắp thành đất.',
+    doanhTrai: 'Giặc Ân sắp kéo tới. Xin dựng doanh trại để Lạc tướng luyện quân.',
+    luyenQuan: 'Xin bệ hạ cho luyện 5 người lính. Giáo binh khắc chế chiến xa của giặc.',
+    choiCanh: 'Xin dựng chòi canh, cung thủ trên chòi sẽ bắn giặc từ xa.',
+    giuKinhDo: 'Trinh sát sẽ báo khi giặc Ân tới. Xin bệ hạ giữ vững kinh đô, đánh lui đợt giặc đầu tiên.',
     allDone:
-      'Kinh tế kinh đô đã vững. Việc luyện quân và giữ kinh đô trước giặc Ân sẽ có ở bản sau.',
+      'Kinh đô đã giữ vững trước giặc Ân. Thánh Gióng và phó bản đánh giặc sẽ có ở bản sau.',
   } as Record<string, string>,
+
+  units: {
+    giao: { name: 'Giáo binh', icon: '🗡️', desc: 'Lính giáo đồng, chắc chắn. Khắc chế chiến xa của giặc.' },
+    cung: { name: 'Cung thủ', icon: '🏹', desc: 'Bắn từ xa. Khắc chế lính giáo Ân. Cần doanh trại cấp 2.' },
+    voi: { name: 'Voi chiến', icon: '🐘', desc: 'Rất khỏe, chiếm 3 chỗ. Khắc chế cung thủ Ân. Cần doanh trại cấp 3.' },
+  } satisfies Record<UnitType, { name: string; icon: string; desc: string }>,
+
+  enemies: {
+    giaoAn: 'lính giáo Ân',
+    cungAn: 'cung thủ Ân',
+    chienXa: 'chiến xa Ân',
+  } satisfies Record<EnemyType, string>,
 
   ui: {
     lacHau: 'Lạc hầu',
@@ -134,6 +170,31 @@ export const vi = {
     tradeDone: 'Đổi hàng xong',
     give: 'Đưa',
     get: 'Nhận',
+    troops: 'Quân',
+    troopSpace: (used: number, cap: number) => `Quân trong doanh trại: ${used}/${cap} chỗ`,
+    troopUpkeep: (g: number) => `Lính ăn ${g} gạo/phút`,
+    train: 'Luyện',
+    trained: (name: string) => `Đã luyện một ${name.toLowerCase()}`,
+    nextRaid: (min: number) => (min <= 0 ? 'Giặc Ân sắp tới' : `Đợt giặc tới sau khoảng ${min} phút chơi`),
+    noRaidYet: 'Có doanh trại rồi, ít phút nữa trinh sát sẽ báo giặc tới.',
+    callRaid: '⚔️ Nghênh chiến ngay',
+    sideBac: 'phía Bắc',
+    sideTay: 'phía Tây',
+    raidWarning: (side: string, s: number) => `Trinh sát báo: giặc Ân kéo tới từ ${side}! Còn ${s} giây`,
+    raidLook: 'Xem hướng',
+    raidBattle: (left: number, ours: number) => `Giặc Ân đang đánh kinh đô! Còn ${left} giặc, quân ta ${ours}`,
+    raidWonTitle: 'Đánh lui giặc Ân!',
+    raidLostTitle: 'Giặc Ân đã cướp phá kinh đô',
+    raidKilled: (k: number, t: number) => `Diệt ${k}/${t} giặc`,
+    raidLostTroops: 'Quân ta tử trận',
+    raidStolen: 'Bị cướp',
+    raidWrecked: (n: number) => `Công trình hư hỏng: ${n}`,
+    raidNone: 'không',
+    damaged: 'Đang hư hỏng: không làm việc, không chắn giặc. Cần sửa.',
+    repair: '🔧 Sửa',
+    repairAll: '🔧 Sửa tất cả',
+    repaired: (n: number) => (n ? `Đã sửa ${n} công trình` : 'Chưa đủ tài nguyên để sửa'),
+    trapHint: 'Chạm vào từng ô đất để gài bẫy',
     settings: 'Cài đặt',
     sound: 'Âm thanh',
     on: 'Bật',

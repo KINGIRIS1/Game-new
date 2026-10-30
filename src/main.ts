@@ -16,8 +16,13 @@ import {
   findBuilding as getBuilding,
   freeDan,
   housing,
+  callRaidNow,
+  dismissRaidResult,
   remove,
+  repair,
+  repairAll,
   setWorkers,
+  train,
   tick,
   upgrade,
   type FailReason,
@@ -32,7 +37,7 @@ import { Hud, buildingName, type HudAction } from './ui/hud';
 type Mode =
   | { kind: 'view'; selected: number | null }
   | { kind: 'place'; type: BuildingType; x: number; z: number }
-  | { kind: 'wall' };
+  | { kind: 'paint'; type: 'luy' | 'bayChong' };
 
 /** Vắng mặt lâu hơn mức này thì hiện bảng báo thu hoạch. */
 const OFFLINE_NOTICE_MS = 60_000;
@@ -152,9 +157,9 @@ function start(): void {
       updateGhost();
       return;
     }
-    if (mode.kind === 'wall') {
+    if (mode.kind === 'paint') {
       if (!tile) return;
-      const r = place(state, 'luy', tile.x, tile.z);
+      const r = place(state, mode.type, tile.x, tile.z);
       if (!r.ok) return fail(r.reason);
       play('place');
       commit();
@@ -186,9 +191,9 @@ function start(): void {
         hud.closeSheet();
         world.showGrid(true);
         play('tap');
-        if (a.type === 'luy') {
-          mode = { kind: 'wall' };
-          hud.setMode('wall');
+        if (a.type === 'luy' || a.type === 'bayChong') {
+          mode = { kind: 'paint', type: a.type };
+          hud.setMode('paint', true, a.type === 'luy' ? vi.ui.wallHint : vi.ui.trapHint);
           return;
         }
         mode = { kind: 'place', type: a.type, ...nearestSpot(a.type) };
@@ -342,6 +347,63 @@ function start(): void {
         return;
       }
 
+      case 'train': {
+        const r = train(state, a.unit);
+        if (!r.ok) return fail(r.reason);
+        play('place');
+        hud.toast(vi.ui.trained(vi.units[a.unit].name));
+        commit();
+        return;
+      }
+
+      case 'repair': {
+        const r = repair(state, a.id);
+        if (!r.ok) return fail(r.reason);
+        play('upgrade');
+        commit();
+        world.pop(r.value.id);
+        return;
+      }
+
+      case 'repairAll': {
+        const n = repairAll(state);
+        play(n ? 'upgrade' : 'error');
+        hud.toast(vi.ui.repaired(n), !n);
+        dismissRaidResult(state);
+        hud.closeRaidResult();
+        commit();
+        return;
+      }
+
+      case 'dismissRaid':
+        dismissRaidResult(state);
+        hud.closeRaidResult();
+        save();
+        return;
+
+      case 'callRaid': {
+        const r = callRaidNow(state);
+        if (!r.ok) return fail(r.reason);
+        play('claim');
+        select(null);
+        commit();
+        return;
+      }
+
+      case 'lookRaid':
+        world.lookAtEdge(state.raid.side);
+        return;
+
+      case 'openBarracks': {
+        const barracks = state.buildings.find((b) => b.type === 'doanhTrai');
+        if (barracks) {
+          if (mode.kind !== 'view') exitMode();
+          play('tap');
+          select(barracks.id);
+        }
+        return;
+      }
+
       case 'closeSheet':
         select(null);
         return;
@@ -353,6 +415,26 @@ function start(): void {
   const offline = applyOffline(state, Date.now());
   commit();
   showOfflineIfLong(offline.ms, offline.gained);
+  if (state.raid.lastResult) hud.showRaidResult(state, state.raid.lastResult);
+
+  /** Theo dõi giai đoạn giặc để phát âm thanh, hiện cảnh báo và bảng kết quả đúng lúc. */
+  let shownPhase = state.raid.phase;
+  const watchRaid = () => {
+    const phase = state.raid.phase;
+    world.setRaidWarning(phase === 'warning' ? state.raid.side : null);
+    if (phase === shownPhase) return;
+    if (phase === 'warning') {
+      play('claim');
+      navigator.vibrate?.([60, 80, 60]);
+    }
+    if (phase === 'battle') play('claim');
+    if (phase === 'idle' && shownPhase === 'battle' && state.raid.lastResult) {
+      play(state.raid.lastResult.won ? 'upgrade' : 'error');
+      commit();
+      hud.showRaidResult(state, state.raid.lastResult);
+    }
+    shownPhase = phase;
+  };
 
   window.addEventListener('pointerdown', unlockAudio, { passive: true });
   window.addEventListener('resize', () => world.resize());
@@ -382,9 +464,13 @@ function start(): void {
       state.lastSeen = wall;
     }
 
+    world.updateBattle(state.raid.battle, dt);
     world.update(dt);
+    watchRaid();
     if (now - lastUi > 250) {
       lastUi = now;
+      // Trong trận, công trình có thể bị phá bất cứ lúc nào: vẽ lại cảnh theo state.
+      if (state.raid.phase === 'battle') world.sync(state);
       refreshUi();
     }
     if (now - lastSave > AUTOSAVE_MS) {
@@ -400,6 +486,10 @@ function start(): void {
     state: () => state,
     tileToScreen: (x: number, z: number) => world.tileToScreen(x, z),
     renderInfo: () => ({ ...world.renderer.info.render }),
+    advance: (ms: number) => {
+      tick(state, ms);
+      commit();
+    },
   };
 }
 

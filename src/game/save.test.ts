@@ -19,7 +19,7 @@ describe('lưu game', () => {
       settings: { muted: true },
     };
     const s = deserialize(JSON.stringify(v1));
-    expect(s?.version).toBe(2);
+    expect(s?.version).toBe(3);
     expect(s?.dan).toBe(5);
     expect(s?.buildings.find((b) => b.type === 'ruong')?.workers).toBe(2);
     expect(s?.buildings.find((b) => b.type === 'ben')?.workers).toBe(1);

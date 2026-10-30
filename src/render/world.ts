@@ -2,6 +2,7 @@
 
 import * as THREE from 'three';
 import { BUILDINGS, type BuildingType } from '../game/defs';
+import type { Battle, RaidSide } from '../game/battle';
 import { dienLevel, type Building, type GameState } from '../game/game';
 import { GRID, RIVER_START, areaStart, isUnlocked } from '../game/map';
 import { IsoCamera } from './camera';
@@ -9,9 +10,13 @@ import {
   buildForest,
   buildWalls,
   makeBaiDa,
+  makeBayChong,
   makeBen,
   makeBoat,
+  makeChoiCanh,
   makeDien,
+  makeDoanhTrai,
+  makeFighter,
   makeKho,
   makeLoRen,
   makeNhaSan,
@@ -84,6 +89,7 @@ interface BuildingView {
   group: THREE.Group;
   type: BuildingType;
   level: number;
+  damaged: boolean;
   person?: THREE.Object3D;
   popAge: number;
   baseScale: number;
@@ -115,6 +121,11 @@ export class World {
   private readonly footprint: THREE.Mesh;
   private readonly selection: THREE.LineLoop;
   private panGoal: THREE.Vector3 | null = null;
+  private readonly fighters = new Map<number, { obj: THREE.Group; deadAge: number }>();
+  private readonly arrows: { mesh: THREE.Mesh; from: THREE.Vector3; to: THREE.Vector3; age: number; dur: number }[] = [];
+  private battleWave = 0;
+  private lastEventSeq = 0;
+  private readonly warning: THREE.Mesh;
   private merchantBoat?: THREE.Object3D;
   private shownLevel = 0;
   private wallKey = '';
@@ -158,6 +169,14 @@ export class World {
     this.selection = new THREE.LineLoop(ring, new THREE.LineBasicMaterial({ color: 0xffd54a, transparent: true }));
     this.selection.visible = false;
     this.scene.add(this.selection);
+
+    this.warning = new THREE.Mesh(
+      new THREE.PlaneGeometry(1, 1).rotateX(-Math.PI / 2),
+      new THREE.MeshBasicMaterial({ color: 0xd0342c, transparent: true, opacity: 0.35, depthWrite: false }),
+    );
+    this.warning.visible = false;
+    this.warning.renderOrder = 2;
+    this.scene.add(this.warning);
 
     this.resize();
   }
@@ -288,7 +307,7 @@ export class World {
       if (b.type === 'luy') continue;
       alive.add(b.id);
       const v = this.views.get(b.id);
-      if (!v || v.level !== b.level) this.createView(b);
+      if (!v || v.level !== b.level || v.damaged !== !!b.damaged) this.createView(b);
     }
     for (const [id, v] of this.views) {
       if (!alive.has(id)) {
@@ -300,11 +319,11 @@ export class World {
     this.syncMerchant(state);
 
     const walls = state.buildings.filter((b) => b.type === 'luy');
-    const key = walls.map((b) => `${b.id}:${b.level}`).join(',');
+    const key = walls.map((b) => `${b.id}:${b.level}:${b.damaged ? 1 : 0}`).join(',');
     if (key !== this.wallKey) {
       this.wallKey = key;
       if (this.walls) this.scene.remove(this.walls);
-      const spots: WallSpot[] = walls.map((w) => ({ x: wx(w.x) + 0.5, z: wz(w.z) + 0.5, seed: w.x * 92821 + w.z * 68917, level: w.level }));
+      const spots: WallSpot[] = walls.map((w) => ({ x: wx(w.x) + 0.5, z: wz(w.z) + 0.5, seed: w.x * 92821 + w.z * 68917, level: w.level, damaged: !!w.damaged }));
       this.walls = buildWalls(spots);
       this.scene.add(this.walls);
     }
@@ -355,8 +374,23 @@ export class World {
       boat.userData.dock = true;
       group.add(boat);
     }
+    if (b.damaged) {
+      // Công trình bị phá: nghiêng đổ, khói đen bốc lên.
+      group.rotation.z = 0.12;
+      group.scale.y *= 0.85;
+      const smoke = new THREE.Group();
+      smoke.userData.smoke = true;
+      const mat = new THREE.MeshBasicMaterial({ color: C.smoke, transparent: true, opacity: 0.5, depthWrite: false });
+      for (let i = 0; i < 4; i++) {
+        const puff = new THREE.Mesh(new THREE.SphereGeometry(0.22, 7, 5), mat);
+        puff.userData.phase = i / 4;
+        smoke.add(puff);
+      }
+      smoke.position.y = 1.2;
+      group.add(smoke);
+    }
     this.buildingsRoot.add(group);
-    this.views.set(b.id, { group, type: b.type, level: b.level, person, popAge: 0, baseScale: group.scale.x });
+    this.views.set(b.id, { group, type: b.type, level: b.level, damaged: !!b.damaged, person, popAge: 0, baseScale: group.scale.x });
   }
 
   private makeBuilding(type: BuildingType, level: number): THREE.Group {
@@ -367,6 +401,9 @@ export class World {
     if (type === 'baiDa') return makeBaiDa(level);
     if (type === 'loRen') return makeLoRen(level);
     if (type === 'kho') return makeKho(level);
+    if (type === 'doanhTrai') return makeDoanhTrai(level);
+    if (type === 'choiCanh') return makeChoiCanh(level);
+    if (type === 'bayChong') return makeBayChong();
     return new THREE.Group();
   }
 
@@ -474,6 +511,81 @@ export class World {
     this.panGoal = goal;
   }
 
+  /** Dải đỏ nhấp nháy ở bìa rừng phía giặc sắp tới; null để tắt. */
+  setRaidWarning(side: RaidSide | null): void {
+    this.warning.visible = !!side;
+    if (!side) return;
+    const len = RIVER_START;
+    if (side === 'bac') {
+      this.warning.scale.set(len, 1, 3);
+      this.warning.position.set(wx(0) + len / 2, 0.05, wz(0) + 1.5);
+    } else {
+      this.warning.scale.set(3, 1, len);
+      this.warning.position.set(wx(0) + 1.5, 0.05, wz(0) + len / 2);
+    }
+  }
+
+  /** Lướt camera tới bìa rừng phía giặc tới. */
+  lookAtEdge(side: RaidSide): void {
+    this.panGoal = side === 'bac' ? new THREE.Vector3(wx(15), 0, wz(5)) : new THREE.Vector3(wx(5), 0, wz(15));
+  }
+
+  /** Vẽ lính hai bên theo trận đang diễn ra; null khi không có trận. */
+  updateBattle(battle: Battle | null, dt: number): void {
+    if (!battle || battle.wave !== this.battleWave) {
+      for (const f of this.fighters.values()) this.scene.remove(f.obj);
+      this.fighters.clear();
+      for (const a of this.arrows) this.scene.remove(a.mesh);
+      this.arrows.length = 0;
+      this.lastEventSeq = 0;
+      this.battleWave = battle ? battle.wave : 0;
+      if (!battle) return;
+    }
+    for (const f of battle.fighters) {
+      let view = this.fighters.get(f.id);
+      if (f.state === 'gone') {
+        if (view) {
+          this.scene.remove(view.obj);
+          this.fighters.delete(f.id);
+        }
+        continue;
+      }
+      if (!view) {
+        if (f.state === 'dead') continue;
+        const obj = makeFighter(f.kind);
+        obj.scale.setScalar(f.kind === 'voi' || f.kind === 'chienXa' ? 0.75 : 0.8);
+        this.scene.add(obj);
+        view = { obj, deadAge: 0 };
+        this.fighters.set(f.id, view);
+      }
+      const obj = view.obj;
+      obj.position.x = f.x - HALF;
+      obj.position.z = f.z - HALF;
+      obj.rotation.y = f.face;
+      if (f.state === 'dead') {
+        view.deadAge += dt;
+        obj.rotation.x = Math.min(view.deadAge * 4, Math.PI / 2) * -1;
+        obj.position.y = view.deadAge > 1.2 ? -(view.deadAge - 1.2) * 0.6 : 0;
+        if (view.deadAge > 2.5) obj.visible = false;
+        continue;
+      }
+      obj.rotation.x = f.swing > 0 ? -0.5 * (f.swing / 0.3) : 0;
+      obj.position.y = f.state === 'move' ? Math.abs(Math.sin(this.time * 10 + f.id)) * 0.06 : 0;
+    }
+    for (const e of battle.events) {
+      if (e.seq <= this.lastEventSeq) continue;
+      if (e.kind === 'shot' && e.tx !== undefined && e.tz !== undefined) {
+        const mesh = new THREE.Mesh(new THREE.BoxGeometry(0.03, 0.03, 0.45), new THREE.MeshBasicMaterial({ color: C.arrow }));
+        const from = new THREE.Vector3(e.x - HALF, 0.8, e.z - HALF);
+        const to = new THREE.Vector3(e.tx - HALF, 0.5, e.tz - HALF);
+        mesh.position.copy(from);
+        this.scene.add(mesh);
+        this.arrows.push({ mesh, from, to, age: 0, dur: Math.max(0.15, from.distanceTo(to) / 12) });
+      }
+    }
+    this.lastEventSeq = battle.seq;
+  }
+
   /** Bóng mờ của công trình sắp đặt, viền xanh nếu đặt được, đỏ nếu không. */
   setGhost(type: BuildingType | null, x = 0, z = 0, valid = true): void {
     if (!type) {
@@ -550,6 +662,14 @@ export class World {
       for (const child of v.group.children) {
         if (child.userData.dock) child.position.y = WATER_Y - 0.02 + Math.sin(t * 1.6 + v.group.id) * 0.03;
         if (child.userData.flame) child.scale.y = 0.75 + 0.35 * Math.abs(Math.sin(t * 9 + child.id));
+        if (child.userData.smoke) {
+          for (const puff of child.children) {
+            const k = (t * 0.35 + (puff.userData.phase as number)) % 1;
+            puff.position.set(Math.sin(k * 6 + puff.id) * 0.2, k * 1.6, Math.cos(k * 5) * 0.15);
+            puff.scale.setScalar(0.6 + k * 1.2);
+            ((puff as THREE.Mesh).material as THREE.MeshBasicMaterial).opacity = 0.5 * (1 - k);
+          }
+        }
       }
     }
 
@@ -578,6 +698,25 @@ export class World {
       this.ripples.add(w, 0.02, d, C.ripple, x, WATER_Y + 0.01, z);
     }
     this.ripples.end();
+
+    for (let i = this.arrows.length - 1; i >= 0; i--) {
+      const a = this.arrows[i];
+      a.age += dt;
+      const k = Math.min(a.age / a.dur, 1);
+      const prev = a.mesh.position.clone();
+      a.mesh.position.lerpVectors(a.from, a.to, k);
+      a.mesh.position.y += Math.sin(Math.PI * k) * 0.6;
+      a.mesh.lookAt(a.mesh.position.clone().add(a.mesh.position.clone().sub(prev)));
+      if (k >= 1) {
+        this.scene.remove(a.mesh);
+        a.mesh.geometry.dispose();
+        this.arrows.splice(i, 1);
+      }
+    }
+
+    if (this.warning.visible) {
+      (this.warning.material as THREE.MeshBasicMaterial).opacity = 0.2 + Math.abs(Math.sin(t * 4)) * 0.3;
+    }
 
     if (this.selection.visible) {
       (this.selection.material as THREE.LineBasicMaterial).opacity = 0.6 + Math.sin(t * 5) * 0.4;
