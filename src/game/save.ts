@@ -1,8 +1,10 @@
 // Lưu game vào localStorage và xuất/nhập mã lưu để sao lưu hoặc chuyển máy.
+// Bản lưu cũ (phiên bản 1, lát cắt 1) được nâng lên phiên bản 2 khi nạp.
 
-import { BUILDINGS, RESOURCE_IDS, type BuildingType } from './defs';
-import type { GameState } from './game';
+import { BUILDINGS, MERCHANT_FIRST_MS, RESOURCE_IDS, type BuildingType } from './defs';
+import { autoAssign, housing, type GameState } from './game';
 
+/** Giữ nguyên khóa cũ để người chơi lát cắt 1 không mất tiến trình. */
 export const SAVE_KEY = 'thoi-dai-van-lang/save/v1';
 const CODE_PREFIX = 'TDVL1:';
 
@@ -18,37 +20,67 @@ export function deserialize(json: string): GameState | undefined {
   } catch {
     return undefined;
   }
-  return isGameState(raw) ? raw : undefined;
+  const upgraded = migrate(raw);
+  return isGameState(upgraded) ? upgraded : undefined;
+}
+
+type Raw = Record<string, unknown>;
+
+const isObj = (v: unknown): v is Raw => !!v && typeof v === 'object';
+const isNum = (v: unknown): v is number => typeof v === 'number' && Number.isFinite(v);
+
+/** Phiên bản 1 → 2: thêm dân, người làm, đồng hồ chơi và thuyền buôn. */
+function migrate(raw: unknown): unknown {
+  if (!isObj(raw) || raw.version !== 1 || !Array.isArray(raw.buildings)) return raw;
+  const s = raw as unknown as GameState & Raw;
+  for (const b of s.buildings as unknown as Raw[]) b.workers = 0;
+  s.version = 2;
+  s.clock = 0;
+  s.danProgress = 0;
+  s.merchant = { nextAt: MERCHANT_FIRST_MS, visit: null, seq: 0 };
+  if (!isValidBuildings(s.buildings)) return s;
+  // Người chơi cũ đã có ruộng, bến đang làm ăn: cho đủ dân ở và chia vào làm ngay.
+  s.dan = housing(s);
+  autoAssign(s);
+  return s;
+}
+
+function isValidBuildings(list: unknown): boolean {
+  if (!Array.isArray(list)) return false;
+  const ok = list.every((b: unknown) => {
+    if (!isObj(b)) return false;
+    return (
+      isNum(b.id) &&
+      isNum(b.x) &&
+      isNum(b.z) &&
+      isNum(b.level) &&
+      isNum(b.workers) &&
+      b.workers >= 0 &&
+      typeof b.type === 'string' &&
+      b.type in BUILDINGS &&
+      b.level >= 1 &&
+      b.level <= BUILDINGS[b.type as BuildingType].maxLevel
+    );
+  });
+  return ok && list.some((b: Raw) => b.type === 'dien');
 }
 
 function isGameState(v: unknown): v is GameState {
-  if (!v || typeof v !== 'object') return false;
-  const s = v as Record<string, unknown>;
-  if (s.version !== 1) return false;
-  const res = s.resources as Record<string, unknown> | undefined;
-  if (!res || !RESOURCE_IDS.every((r) => typeof res[r] === 'number' && Number.isFinite(res[r]))) return false;
-  if (!Array.isArray(s.buildings)) return false;
-  const buildingsOk = s.buildings.every((b: unknown) => {
-    if (!b || typeof b !== 'object') return false;
-    const o = b as Record<string, unknown>;
-    return (
-      typeof o.id === 'number' &&
-      typeof o.x === 'number' &&
-      typeof o.z === 'number' &&
-      typeof o.level === 'number' &&
-      typeof o.type === 'string' &&
-      o.type in BUILDINGS &&
-      o.level >= 1 &&
-      o.level <= BUILDINGS[o.type as BuildingType].maxLevel
-    );
-  });
-  if (!buildingsOk || !s.buildings.some((b: { type: string }) => b.type === 'dien')) return false;
-  const settings = s.settings as Record<string, unknown> | undefined;
+  if (!isObj(v) || v.version !== 2) return false;
+  const res = v.resources;
+  if (!isObj(res) || !RESOURCE_IDS.every((r) => isNum(res[r]))) return false;
+  if (!isValidBuildings(v.buildings)) return false;
+  const m = v.merchant;
+  if (!isObj(m) || !isNum(m.nextAt) || !isNum(m.seq) || !(m.visit === null || isObj(m.visit))) return false;
+  const settings = v.settings;
   return (
-    typeof s.nextId === 'number' &&
-    typeof s.questIndex === 'number' &&
-    typeof s.lastSeen === 'number' &&
-    !!settings &&
+    isNum(v.dan) &&
+    isNum(v.danProgress) &&
+    isNum(v.clock) &&
+    isNum(v.nextId) &&
+    isNum(v.questIndex) &&
+    isNum(v.lastSeen) &&
+    isObj(settings) &&
     typeof settings.muted === 'boolean'
   );
 }

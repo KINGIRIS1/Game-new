@@ -67,12 +67,27 @@ button {
 
 /* ---------- Thanh trên ---------- */
 
-.topbar {
+/* Khu trên cùng: thanh tài nguyên, thông báo nổi, nhiệm vụ, xếp dọc để không chồng lên nhau. */
+.top-area {
   position: absolute;
   top: calc(8px + var(--safe-top));
   left: 8px;
   right: 8px;
   display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+  pointer-events: none;
+}
+
+.top-area > * {
+  pointer-events: auto;
+}
+
+.topbar {
+  width: 100%;
+  display: flex;
+  flex-wrap: wrap;
   gap: 6px;
   align-items: center;
   pointer-events: none;
@@ -80,6 +95,53 @@ button {
 
 .topbar > * {
   pointer-events: auto;
+}
+
+.chip .rate.neg {
+  color: var(--red);
+}
+
+.chip.dan {
+  font: inherit;
+  font-size: 14px;
+  color: inherit;
+}
+
+.chip.dan.idle {
+  border-color: var(--green);
+}
+
+.banners {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: min(420px, 100%);
+}
+
+.banners:empty {
+  display: none;
+}
+
+.banner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  border-radius: 12px;
+  background: rgba(247, 236, 212, 0.95);
+  border: 1.5px solid var(--bronze);
+  box-shadow: var(--shadow);
+  font-size: 13px;
+}
+
+.banner .btn {
+  margin-left: auto;
+}
+
+.banner.bad {
+  border-color: var(--red);
+  color: var(--red-dark);
+  font-weight: 600;
 }
 
 .chip {
@@ -156,10 +218,7 @@ button {
 /* ---------- Nhiệm vụ Lạc hầu ---------- */
 
 .quest {
-  position: absolute;
-  top: calc(56px + var(--safe-top));
-  left: 8px;
-  width: min(420px, calc(100% - 16px));
+  width: min(420px, 100%);
   padding: 8px 10px;
   border-radius: 12px;
   background: rgba(247, 236, 212, 0.95);
@@ -489,6 +548,70 @@ button {
 .level-pips i.on {
   background: var(--bronze);
   border-color: var(--bronze-dark);
+}
+
+/* ---------- Người làm, thuyền buôn ---------- */
+
+.stat.workers b {
+  display: inline-block;
+  min-width: 42px;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+.step {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: var(--paper-2);
+  border: 1.5px solid var(--line);
+  font-size: 18px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.step:disabled {
+  opacity: 0.4;
+}
+
+.offers {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.offer {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px;
+  border-radius: 12px;
+  background: #fffaf0;
+  border: 1.5px solid var(--line);
+}
+
+.offer.taken {
+  opacity: 0.55;
+}
+
+.offer .trade {
+  flex: 1;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.offer .trade small {
+  font-weight: 400;
+  color: var(--ink-soft);
+}
+
+.offer .arrow {
+  color: var(--bronze-dark);
+  margin: 0 2px;
+}
+
+.lack {
+  color: var(--red);
 }
 
 /* ---------- Cài đặt ---------- */

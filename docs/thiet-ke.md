@@ -40,6 +40,23 @@ Tài liệu này ghi lại các quyết định đã chốt với chủ dự án
 - Nâng cấp **xong ngay** khi đủ tài nguyên. Không có đồng hồ đếm ngược hàng giờ.
 - **Điện Vua Hùng** lên tối đa cấp 5 trong chương 1. Không công trình nào được vượt cấp Điện Vua Hùng.
 
+### Dân làng (đã làm ở lát cắt 2a)
+
+- Bắt đầu có 4 dân. Điện Vua Hùng cho 4–8 chỗ ở theo cấp, mỗi nhà sàn cho 4–12 chỗ.
+- Còn chỗ ở và không thiếu gạo thì cứ **30 giây có thêm một người dân**.
+- Mỗi người dân ăn **0,4 gạo/phút**.
+- Ruộng, bến chợ thuyền, bãi đất đá, lò rèn có **số chỗ làm theo cấp**, và chỉ làm ra đủ sản lượng khi đủ người.
+- Xây hay nâng cấp xong, dân rảnh tự vào làm. Người chơi chỉnh bằng nút − / + trong bảng công trình, hoặc chạm vào ô dân 👥 để chia đều dân rảnh.
+- **Thiếu gạo** (hết gạo mà gạo làm ra không đủ ăn) thì mọi sản lượng còn một nửa và dân không về thêm.
+- **Kho thóc** cộng thêm sức chứa cho mọi tài nguyên. **Lò rèn** cần Điện cấp 2.
+- **Thành đất**: là lũy tre nâng lên cấp 2, tốn đất đá, cần Điện cấp 3.
+- **Thuyền buôn**:
+  - Chỉ đến khi có bến, lần đầu sau khoảng 2 phút chơi, sau đó 5 phút một lần, mỗi lần đậu 90 giây.
+  - Mỗi chuyến có 3 lời mời đổi hàng, trả hơn giá trị khoảng 15%. Chưa có Điện cấp 2 thì chưa buôn sắt.
+  - Thuyền buôn và giặc chỉ đến theo **đồng hồ chơi**, tức là thời gian đang mở game.
+- Bản lưu lát cắt 1 được tự nâng lên: có đủ dân ở và chia vào làm ngay.
+- Nhịp đo bằng test mô phỏng một người chơi biết dành dụm: lên Điện cấp 2 khoảng 5 phút, cấp 3 khoảng 22 phút, cấp 5 khoảng 63 phút. Phần thưởng phó bản ở lát cắt 3 sẽ rút ngắn thêm.
+
 ### Công trình
 
 | Công trình | Công dụng |
@@ -91,8 +108,11 @@ Tài liệu này ghi lại các quyết định đã chốt với chủ dự án
 
 6 bước: xây lũy tre → đặt ruộng → phân công dân → nâng Điện Vua Hùng → luyện quân → đánh màn 1 và giữ kinh đô qua đợt giặc đầu tiên.
 
+Đã làm (lát cắt 2a): lũy tre → ruộng → bến → Điện cấp 2 → nhà sàn → bãi đất đá có 2 người làm → kho thóc → lò rèn → Điện cấp 3. Các bước luyện quân, giữ kinh đô và phó bản sẽ thêm ở lát cắt 2b và 3.
+
 ## Thứ tự làm
 
 1. **Lát cắt 1** (đã làm): kinh đô 3D với Điện Vua Hùng, ruộng lúa, bến chợ thuyền, lũy tre. Đặt công trình trên lưới, nâng cấp, sản xuất, mở rộng đất, tính phần vắng mặt, lưu và xuất/nhập mã lưu, âm thanh, bốn nhiệm vụ đầu của Lạc hầu (lũy tre → ruộng → bến → nâng Điện). Lát cắt này chỉ dùng gạo và vỏ ốc.
-2. **Lát cắt 2**: đủ kinh tế (dân, nhà sàn, đất đá, sắt, kho, thuyền buôn), doanh trại và quân đội, giữ kinh đô.
+2. **Lát cắt 2a** (đã làm): dân làng và phân công, nhà sàn, bãi đất đá, lò rèn, kho thóc, thành đất, thuyền buôn, thiếu gạo, nâng bản lưu cũ.
+   **Lát cắt 2b**: doanh trại và quân đội, chòi canh, bẫy chông, giữ kinh đô trước giặc Ân.
 3. **Lát cắt 3**: phó bản chương 1, Thánh Gióng, cốt truyện.

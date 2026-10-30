@@ -7,21 +7,32 @@ import {
   countOf,
   currentQuest,
   dienLevel,
+  dienNeededFor,
   findBuilding,
+  freeDan,
+  housing,
+  isStarving,
   limitOf,
-  productionPerMinute,
+  netPerMinute,
+  outputOf,
   questDone,
   questProgress,
+  slotsOf,
   storageCap,
   upgradeCostOf,
+  type Building,
   type GameState,
 } from '../game/game';
 import { AREA_SIZE } from '../game/map';
 import { formatDuration, vi } from '../text/vi';
 
-/** Lát cắt 1 chỉ dùng gạo và vỏ ốc. */
-const SHOWN_RESOURCES: ResourceId[] = ['gao', 'voOc'];
-const BUILD_MENU: BuildingType[] = ['luy', 'ruong', 'ben'];
+const SHOWN_RESOURCES: ResourceId[] = ['gao', 'voOc', 'datDa', 'sat'];
+const BUILD_MENU: BuildingType[] = ['luy', 'ruong', 'ben', 'nhaSan', 'baiDa', 'kho', 'loRen'];
+
+/** Tên hiển thị của công trình, tính cả lũy tre đã đắp thành đất. */
+export function buildingName(b: Pick<Building, 'type' | 'level'>): string {
+  return b.type === 'luy' && b.level >= 2 ? vi.ui.wallEarth : vi.buildings[b.type].name;
+}
 
 export type HudAction =
   | { kind: 'openBuild' }
@@ -36,11 +47,15 @@ export type HudAction =
   | { kind: 'copyCode' }
   | { kind: 'importCode'; code: string }
   | { kind: 'reset' }
-  | { kind: 'closeSheet' };
+  | { kind: 'closeSheet' }
+  | { kind: 'workers'; id: number; delta: number }
+  | { kind: 'danInfo' }
+  | { kind: 'openMerchant' }
+  | { kind: 'acceptOffer'; index: number };
 
 export type HudMode = 'view' | 'place' | 'wall';
 
-type Sheet = { kind: 'build' } | { kind: 'building'; id: number } | { kind: 'settings' } | null;
+type Sheet = { kind: 'build' } | { kind: 'building'; id: number } | { kind: 'settings' } | { kind: 'merchant' } | null;
 
 const esc = (s: string) => s.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]!);
 const fmt = (n: number) => Math.floor(n).toLocaleString('vi-VN');
@@ -61,6 +76,7 @@ function prodHtml(prod: Cost): string {
 export class Hud {
   private readonly root: HTMLElement;
   private readonly topbar: HTMLElement;
+  private readonly banners: HTMLElement;
   private readonly quest: HTMLElement;
   private readonly bottombar: HTMLElement;
   private readonly hint: HTMLElement;
@@ -70,18 +86,23 @@ export class Hud {
   private sheetHtml = '';
   private questHtml = '';
   private topHtml = '';
+  private bannerHtml = '';
   private questCollapsed = false;
 
   constructor(root: HTMLElement, private readonly onAction: (a: HudAction) => void) {
     this.root = root;
     root.innerHTML = `
-      <header class="topbar"></header>
-      <section class="quest"></section>
+      <div class="top-area">
+        <header class="topbar"></header>
+        <div class="banners"></div>
+        <section class="quest"></section>
+      </div>
       <div class="hint" hidden></div>
       <footer class="bottombar"></footer>
       <aside class="sheet" aria-live="polite"></aside>
       <div class="toasts"></div>`;
     this.topbar = root.querySelector('.topbar')!;
+    this.banners = root.querySelector('.banners')!;
     this.quest = root.querySelector('.quest')!;
     this.bottombar = root.querySelector('.bottombar')!;
     this.hint = root.querySelector('.hint')!;
@@ -106,6 +127,10 @@ export class Hud {
       case 'upgrade':
       case 'removeWall':
         return this.onAction({ kind: act, id });
+      case 'workers':
+        return this.onAction({ kind: 'workers', id, delta: Number(el.dataset.delta) });
+      case 'acceptOffer':
+        return this.onAction({ kind: 'acceptOffer', index: id });
       case 'importCode': {
         const box = this.sheetEl.querySelector<HTMLTextAreaElement>('#import-box');
         return this.onAction({ kind: 'importCode', code: box?.value ?? '' });
@@ -119,15 +144,20 @@ export class Hud {
 
   updateTop(state: GameState): void {
     const cap = storageCap(state);
-    const rate = productionPerMinute(state);
+    const rate = netPerMinute(state);
     const res = SHOWN_RESOURCES.map((r) => {
       const v = state.resources[r];
+      const n = Math.round(rate[r]);
       return `<div class="chip ${v >= cap ? 'full' : ''}" title="${vi.resources[r].name}">
         ${vi.resources[r].icon} <b>${fmt(v)}</b><small>/${fmt(cap)}</small>
-        <span class="rate">+${fmt(rate[r])}</span>
+        <span class="rate ${n < 0 ? 'neg' : ''}">${n < 0 ? '−' + fmt(-n) : '+' + fmt(n)}</span>
       </div>`;
     }).join('');
-    const html = `<div class="chip level" title="${vi.buildings.dien.name}">🏯 ${dienLevel(state)}</div>${res}
+    const free = freeDan(state);
+    const room = housing(state);
+    const dan = `<button class="chip dan ${free > 0 ? 'idle' : ''}" data-act="danInfo" title="${vi.ui.danTitle(state.dan, room, free)}">
+      👥 <b>${state.dan}</b><small>/${room}</small>${free > 0 ? `<span class="rate">${free} rảnh</span>` : ''}</button>`;
+    const html = `<div class="chip level" title="${vi.buildings.dien.name}">🏯 ${dienLevel(state)}</div>${res}${dan}
       <span class="spacer"></span>
       <button class="icon-btn" data-act="openSettings" aria-label="${vi.ui.settings}">⚙️</button>`;
     // So với chuỗi đã vẽ lần trước (không so với innerHTML vì trình duyệt chuẩn hóa lại chuỗi),
@@ -135,6 +165,24 @@ export class Hud {
     if (html !== this.topHtml) {
       this.topHtml = html;
       this.topbar.innerHTML = html;
+    }
+  }
+
+  // ---------- Thông báo nổi: thiếu gạo, thuyền buôn ----------
+
+  updateBanners(state: GameState): void {
+    const parts: string[] = [];
+    if (isStarving(state)) parts.push(`<div class="banner bad">🍚 ${vi.ui.starving}</div>`);
+    const visit = state.merchant.visit;
+    if (visit) {
+      const secs = Math.max(0, Math.ceil((visit.leavesAt - state.clock) / 1000));
+      parts.push(`<div class="banner">⛵ ${vi.ui.merchantHere(secs)}
+        <button class="btn small bronze" data-act="openMerchant">${vi.ui.merchantOpen}</button></div>`);
+    }
+    const html = parts.join('');
+    if (html !== this.bannerHtml) {
+      this.bannerHtml = html;
+      this.banners.innerHTML = html;
     }
   }
 
@@ -212,6 +260,11 @@ export class Hud {
     this.refreshSheet(state);
   }
 
+  showMerchant(state: GameState): void {
+    this.sheet = { kind: 'merchant' };
+    this.refreshSheet(state);
+  }
+
   showSettings(state: GameState): void {
     this.sheet = { kind: 'settings' };
     this.refreshSheet(state, true);
@@ -246,8 +299,12 @@ export class Hud {
     } else if (this.sheet.kind === 'building') {
       const b = findBuilding(state, this.sheet.id);
       if (!b) return this.closeSheet();
-      title = `${vi.buildings[b.type].icon} ${vi.buildings[b.type].name}`;
+      title = `${vi.buildings[b.type].icon} ${buildingName(b)}`;
       body = this.buildingHtml(state, b.id);
+    } else if (this.sheet.kind === 'merchant') {
+      if (!state.merchant.visit) return this.closeSheet();
+      title = `⛵ ${vi.ui.merchantTitle}`;
+      body = this.merchantHtml(state);
     } else {
       title = `⚙️ ${vi.ui.settings}`;
       body = this.settingsHtml(state);
@@ -268,7 +325,8 @@ export class Hud {
       const have = countOf(state, type);
       const max = limitOf(state, type);
       let why = '';
-      if (have >= max) why = vi.reasons.datGioiHan;
+      if (dienLevel(state) < def.minDien) why = `Cần Điện cấp ${def.minDien}`;
+      else if (have >= max) why = vi.reasons.datGioiHan;
       else if (!canAfford(state, def.buildCost)) why = vi.reasons.thieuTaiNguyen;
       return `<button class="card ${why ? 'locked' : ''}" data-act="chooseBuild" data-type="${type}">
         <span class="icon">${vi.buildings[type].icon}</span>
@@ -291,15 +349,34 @@ export class Hud {
     }
     const prod = def.production[b.level - 1];
     if (RESOURCE_IDS.some((r) => (prod[r] ?? 0) > 0)) {
-      rows.push(`<div class="stat"><span>${vi.ui.production}</span><span>${prodHtml(prod)}</span></div>`);
+      rows.push(`<div class="stat"><span>${vi.ui.production}</span><span>${prodHtml(outputOf(b))}</span></div>`);
       if (b.level < def.maxLevel) {
         rows.push(`<div class="stat"><span>${vi.ui.nextLevel}</span><span>${prodHtml(def.production[b.level])}</span></div>`);
       }
+    }
+    const slots = slotsOf(b);
+    if (slots) {
+      const free = freeDan(state);
+      rows.push(`<div class="stat workers"><span>${vi.ui.workers}</span><span>
+        <button class="step" data-act="workers" data-id="${b.id}" data-delta="-1" ${b.workers > 0 ? '' : 'disabled'} aria-label="Bớt một người">−</button>
+        <b>${b.workers}/${slots}</b>
+        <button class="step" data-act="workers" data-id="${b.id}" data-delta="1" ${b.workers < slots && free > 0 ? '' : 'disabled'} aria-label="Thêm một người">+</button>
+      </span></div>`);
+      rows.push(`<div class="stat"><span></span><span class="muted">${vi.ui.freeDan(free)}</span></div>`);
+    }
+    if (def.housing) {
+      const next = b.level < def.maxLevel ? ` → ${def.housing[b.level]}` : '';
+      rows.push(`<div class="stat"><span>${vi.ui.housing}</span><span>${def.housing[b.level - 1]}${next}</span></div>`);
+    }
+    if (def.storage) {
+      const next = b.level < def.maxLevel ? ` → +${fmt(def.storage[b.level])}` : '';
+      rows.push(`<div class="stat"><span>${vi.ui.storage}</span><span>+${fmt(def.storage[b.level - 1])}${next}</span></div>`);
     }
     if (b.type === 'dien') {
       const size = AREA_SIZE[b.level - 1];
       const next = b.level < def.maxLevel ? ` → ${AREA_SIZE[b.level]}×${AREA_SIZE[b.level]}` : '';
       rows.push(`<div class="stat"><span>${vi.ui.storage}</span><span>${fmt(storageCap(state))}</span></div>`);
+      rows.push(`<div class="stat"><span>${vi.ui.dan}</span><span>${state.dan}/${housing(state)}</span></div>`);
       rows.push(`<div class="stat"><span>Đất kinh đô</span><span>${size}×${size}${next}</span></div>`);
     }
 
@@ -307,15 +384,35 @@ export class Hud {
     const cost = upgradeCostOf(b);
     if (cost) {
       const check = canUpgrade(state, b.id);
+      const label = b.type === 'luy' ? `🧱 Đắp ${vi.ui.wallEarth.toLowerCase()}` : `⬆ ${vi.ui.upgradeTo(b.level + 1)}`;
       actions.push(`<button class="btn" data-act="upgrade" data-id="${b.id}" ${check.ok ? '' : 'disabled'}>
-        ⬆ ${vi.ui.upgradeTo(b.level + 1)} · ${costHtml(state, cost)}</button>`);
-      if (!check.ok) actions.push(`<div class="why">${vi.reasons[check.reason]}</div>`);
+        ${label} · ${costHtml(state, cost)}</button>`);
+      if (!check.ok) {
+        const why = check.reason === 'chuaDuCapDien' ? `Cần Điện cấp ${dienNeededFor(b.type, b.level + 1)}` : vi.reasons[check.reason];
+        actions.push(`<div class="why">${why}</div>`);
+      }
     } else if (def.maxLevel > 1) {
       actions.push(`<div class="muted" style="text-align:center">${vi.ui.maxLevel}</div>`);
     }
     if (def.removable) actions.push(`<button class="btn ghost" data-act="removeWall" data-id="${b.id}">${vi.ui.remove}</button>`);
 
     return `<div class="info"><p>${esc(vi.buildings[b.type].desc)}</p>${rows.join('')}<div class="actions">${actions.join('')}</div></div>`;
+  }
+
+  private merchantHtml(state: GameState): string {
+    const visit = state.merchant.visit!;
+    const secs = Math.max(0, Math.ceil((visit.leavesAt - state.clock) / 1000));
+    const rows = visit.offers
+      .map((o, i) => {
+        const can = !o.taken && state.resources[o.give.r] >= o.give.n;
+        const give = `<span class="${state.resources[o.give.r] < o.give.n && !o.taken ? 'lack' : ''}">${vi.resources[o.give.r].icon} ${fmt(o.give.n)}</span>`;
+        return `<div class="offer ${o.taken ? 'taken' : ''}">
+          <span class="trade"><small>${vi.ui.give}</small> ${give} <span class="arrow">→</span> <small>${vi.ui.get}</small> ${vi.resources[o.get.r].icon} ${fmt(o.get.n)}</span>
+          <button class="btn small" data-act="acceptOffer" data-id="${i}" ${can ? '' : 'disabled'}>${o.taken ? vi.ui.traded : vi.ui.trade}</button>
+        </div>`;
+      })
+      .join('');
+    return `<p class="muted">${vi.ui.merchantHint} (${secs}s)</p><div class="offers">${rows}</div>`;
   }
 
   private settingsHtml(state: GameState): string {
@@ -330,7 +427,7 @@ export class Hud {
       <textarea id="import-box" placeholder="TDVL1:..."></textarea>
       <button class="btn small ghost" data-act="importCode">📥 ${vi.ui.importSave}</button>
       <div class="actions"><button class="btn ghost" data-act="reset">🔄 ${vi.ui.reset}</button></div>
-      <p class="muted" style="text-align:center;margin-top:14px">${vi.gameTitle} · bản thử 0.1</p>`;
+      <p class="muted" style="text-align:center;margin-top:14px">${vi.gameTitle} · bản thử 0.2</p>`;
   }
 
   // ---------- Thông báo ----------
@@ -360,6 +457,7 @@ export class Hud {
 
   /** Kiểm tra nhanh xem có thể đặt công trình loại này ở đâu đó trên vùng đã mở không (dùng để báo lỗi sớm). */
   static placeBlocker(state: GameState, type: BuildingType): string | null {
+    if (dienLevel(state) < BUILDINGS[type].minDien) return `Cần Điện cấp ${BUILDINGS[type].minDien}`;
     if (countOf(state, type) >= limitOf(state, type)) return vi.reasons.datGioiHan;
     if (!canAfford(state, BUILDINGS[type].buildCost)) return vi.reasons.thieuTaiNguyen;
     return null;

@@ -27,4 +27,11 @@ export const C = {
   trunk: 0x6a4527,
   palm: 0x8a7458,
   bamboo: 0x7f9c45,
+  rock: 0x9c9081,
+  rockDark: 0x7a6f62,
+  iron: 0x4a4744,
+  fire: 0xff8a2a,
+  ember: 0xffd04d,
+  earth: 0xa77e4e,
+  earthDark: 0x8a6440,
 } as const;

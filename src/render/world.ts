@@ -5,7 +5,22 @@ import { BUILDINGS, type BuildingType } from '../game/defs';
 import { dienLevel, type Building, type GameState } from '../game/game';
 import { GRID, RIVER_START, areaStart, isUnlocked } from '../game/map';
 import { IsoCamera } from './camera';
-import { buildForest, buildWalls, makeBen, makeBoat, makeDien, makePerson, makeRuong, type PersonKind, type TreeSpot, type WallSpot } from './models';
+import {
+  buildForest,
+  buildWalls,
+  makeBaiDa,
+  makeBen,
+  makeBoat,
+  makeDien,
+  makeKho,
+  makeLoRen,
+  makeNhaSan,
+  makePerson,
+  makeRuong,
+  type PersonKind,
+  type TreeSpot,
+  type WallSpot,
+} from './models';
 import { C } from './palette';
 import { ShapeBuilder, seeded } from './shapes';
 
@@ -78,6 +93,8 @@ const PERSON_OF: Partial<Record<BuildingType, { kind: PersonKind; x: number; y: 
   dien: { kind: 'linh', x: 0.75, y: 0.12, z: 1.85, ry: 0 },
   ruong: { kind: 'nong', x: 0.25, y: 0.14, z: 0.05, ry: 0.6 },
   ben: { kind: 'buon', x: 0.15, y: 0.48, z: -0.1, ry: 0.4 },
+  baiDa: { kind: 'nong', x: -0.1, y: 0.1, z: 0.3, ry: 0.5 },
+  loRen: { kind: 'linh', x: 0.4, y: 0.1, z: 0.6, ry: -0.4 },
 };
 
 export class World {
@@ -98,6 +115,7 @@ export class World {
   private readonly footprint: THREE.Mesh;
   private readonly selection: THREE.LineLoop;
   private panGoal: THREE.Vector3 | null = null;
+  private merchantBoat?: THREE.Object3D;
   private shownLevel = 0;
   private wallKey = '';
   private time = 0;
@@ -251,6 +269,8 @@ export class World {
     this.wallKey = '';
     this.shownLevel = 0;
     this.setSelection(null);
+    if (this.merchantBoat) this.scene.remove(this.merchantBoat);
+    this.merchantBoat = undefined;
   }
 
   /** Cập nhật cảnh theo state. Chỉ dựng lại phần đã thay đổi. */
@@ -277,14 +297,38 @@ export class World {
       }
     }
 
+    this.syncMerchant(state);
+
     const walls = state.buildings.filter((b) => b.type === 'luy');
-    const key = walls.map((b) => b.id).join(',');
+    const key = walls.map((b) => `${b.id}:${b.level}`).join(',');
     if (key !== this.wallKey) {
       this.wallKey = key;
       if (this.walls) this.scene.remove(this.walls);
-      const spots: WallSpot[] = walls.map((w) => ({ x: wx(w.x) + 0.5, z: wz(w.z) + 0.5, seed: w.x * 92821 + w.z * 68917 }));
+      const spots: WallSpot[] = walls.map((w) => ({ x: wx(w.x) + 0.5, z: wz(w.z) + 0.5, seed: w.x * 92821 + w.z * 68917, level: w.level }));
       this.walls = buildWalls(spots);
       this.scene.add(this.walls);
+    }
+  }
+
+  /** Thuyền buôn lớn neo cạnh bến đầu tiên trong lúc đang đậu. */
+  private syncMerchant(state: GameState): void {
+    const ben = state.buildings.find((b) => b.type === 'ben');
+    const here = !!state.merchant.visit && !!ben;
+    if (!here && this.merchantBoat) {
+      this.scene.remove(this.merchantBoat);
+      this.merchantBoat = undefined;
+    }
+    if (here && !this.merchantBoat && ben) {
+      const boat = makeBoat();
+      boat.scale.setScalar(1.5);
+      const def = BUILDINGS.ben;
+      const east = ben.x + def.w === RIVER_START;
+      const cx = wx(ben.x) + def.w / 2;
+      const cz = wz(ben.z) + def.d / 2;
+      boat.position.set(east ? cx + 2.4 : cx - 0.6, WATER_Y - 0.02, east ? cz - 0.6 : cz + 2.4);
+      boat.rotation.y = east ? -Math.PI / 2 : 0;
+      this.scene.add(boat);
+      this.merchantBoat = boat;
     }
   }
 
@@ -319,6 +363,10 @@ export class World {
     if (type === 'dien') return makeDien(level);
     if (type === 'ruong') return makeRuong(level);
     if (type === 'ben') return makeBen(level);
+    if (type === 'nhaSan') return makeNhaSan(level);
+    if (type === 'baiDa') return makeBaiDa(level);
+    if (type === 'loRen') return makeLoRen(level);
+    if (type === 'kho') return makeKho(level);
     return new THREE.Group();
   }
 
@@ -501,7 +549,12 @@ export class World {
       }
       for (const child of v.group.children) {
         if (child.userData.dock) child.position.y = WATER_Y - 0.02 + Math.sin(t * 1.6 + v.group.id) * 0.03;
+        if (child.userData.flame) child.scale.y = 0.75 + 0.35 * Math.abs(Math.sin(t * 9 + child.id));
       }
+    }
+
+    if (this.merchantBoat) {
+      this.merchantBoat.position.y = WATER_Y - 0.02 + Math.sin(t * 1.2) * 0.04;
     }
 
     for (const boat of this.boats) {

@@ -1,17 +1,26 @@
 import { describe, expect, it } from 'vitest';
-import { BUILDINGS, OFFLINE_CAP_MS, QUESTS, STORAGE_CAP } from './defs';
+import { BUILDINGS, DAN_GROW_MS, MERCHANT_FIRST_MS, MERCHANT_STAY_MS, OFFLINE_CAP_MS, QUESTS, STORAGE_CAP } from './defs';
 import {
+  acceptOffer,
   applyOffline,
+  autoAssign,
   buildingAt,
   canPlace,
   claimQuest,
   countOf,
   createInitialState,
   dienLevel,
+  freeDan,
+  housing,
+  isStarving,
+  makeOffers,
+  netPerMinute,
   place,
   productionPerMinute,
   questDone,
   remove,
+  setWorkers,
+  storageCap,
   tick,
   upgrade,
   type GameState,
@@ -22,16 +31,24 @@ const T0 = 1_000_000;
 
 function rich(): GameState {
   const s = createInitialState(T0);
-  s.resources = { gao: 400, voOc: 400, datDa: 0, sat: 0 };
+  s.resources = { gao: 400, voOc: 400, datDa: 400, sat: 100 };
   return s;
 }
 
+function placeOk(s: GameState, ...args: Parameters<typeof place> extends [GameState, ...infer R] ? R : never) {
+  const r = place(s, ...args);
+  if (!r.ok) throw new Error(`đặt ${args[0]} thất bại: ${r.reason}`);
+  return r.value;
+}
+
 describe('trạng thái ban đầu', () => {
-  it('có Điện Vua Hùng cấp 1 nằm trong vùng xây được', () => {
+  it('có Điện Vua Hùng cấp 1 nằm trong vùng xây được và 4 người dân', () => {
     const s = createInitialState(T0);
     const dien = s.buildings[0];
     expect(dien.type).toBe('dien');
     expect(dienLevel(s)).toBe(1);
+    expect(s.dan).toBe(4);
+    expect(housing(s)).toBe(4);
     for (let dx = 0; dx < BUILDINGS.dien.w; dx++) {
       expect(isUnlocked(dien.x + dx, dien.z, 1)).toBe(true);
     }
@@ -39,18 +56,18 @@ describe('trạng thái ban đầu', () => {
 });
 
 describe('đặt công trình', () => {
-  it('đặt ruộng trừ đúng giá và chiếm đủ 3×3 ô', () => {
+  it('đặt ruộng trừ đúng giá, chiếm đủ 3×3 ô và tự có người làm', () => {
     const s = rich();
-    const r = place(s, 'ruong', 12, 12);
-    expect(r.ok).toBe(true);
+    const r = placeOk(s, 'ruong', 12, 12);
     expect(s.resources.voOc).toBe(400 - 30);
     expect(buildingAt(s, 14, 14)?.type).toBe('ruong');
     expect(buildingAt(s, 15, 15)).toBeUndefined();
+    expect(r.workers).toBe(2);
+    expect(freeDan(s)).toBe(2);
   });
 
   it('không cho đặt chồng lên công trình khác', () => {
-    const s = rich();
-    expect(canPlace(s, 'ruong', 15, 15)).toEqual({ ok: false, reason: 'datBiChiem' });
+    expect(canPlace(rich(), 'ruong', 15, 15)).toEqual({ ok: false, reason: 'datBiChiem' });
   });
 
   it('không cho đặt ngoài vùng đã mở hoặc xuống sông', () => {
@@ -77,9 +94,16 @@ describe('đặt công trình', () => {
   it('giới hạn số lượng theo cấp Điện', () => {
     const s = rich();
     s.resources.voOc = 10_000;
-    expect(place(s, 'ruong', 11, 11).ok).toBe(true);
-    expect(place(s, 'ruong', 11, 20).ok).toBe(true);
+    placeOk(s, 'ruong', 11, 11);
+    placeOk(s, 'ruong', 11, 20);
     expect(canPlace(s, 'ruong', 21, 11)).toEqual({ ok: false, reason: 'datGioiHan' });
+  });
+
+  it('lò rèn cần Điện cấp 2', () => {
+    const s = rich();
+    expect(canPlace(s, 'loRen', 12, 12)).toEqual({ ok: false, reason: 'chuaDuCapDien' });
+    s.buildings[0].level = 2;
+    expect(canPlace(s, 'loRen', 12, 12).ok).toBe(true);
   });
 
   it('không tự xây thêm Điện Vua Hùng', () => {
@@ -88,8 +112,8 @@ describe('đặt công trình', () => {
 
   it('chỉ phá được lũy tre', () => {
     const s = rich();
-    const luy = place(s, 'luy', 12, 12);
-    expect(luy.ok && remove(s, luy.value.id).ok).toBe(true);
+    const luy = placeOk(s, 'luy', 12, 12);
+    expect(remove(s, luy.id).ok).toBe(true);
     expect(countOf(s, 'luy')).toBe(0);
     expect(remove(s, 1)).toEqual({ ok: false, reason: 'khongTheDo' });
   });
@@ -98,20 +122,29 @@ describe('đặt công trình', () => {
 describe('nâng cấp', () => {
   it('công trình không được vượt cấp Điện', () => {
     const s = rich();
-    const r = place(s, 'ruong', 12, 12);
-    if (!r.ok) throw new Error('đặt ruộng thất bại');
-    expect(upgrade(s, r.value.id)).toEqual({ ok: false, reason: 'chuaDuCapDien' });
-    s.resources = { gao: 1000, voOc: 1000, datDa: 0, sat: 0 };
+    const r = placeOk(s, 'ruong', 12, 12);
+    expect(upgrade(s, r.id)).toEqual({ ok: false, reason: 'chuaDuCapDien' });
+    s.resources = { gao: 1000, voOc: 1000, datDa: 1000, sat: 100 };
     expect(upgrade(s, 1).ok).toBe(true);
-    expect(upgrade(s, r.value.id).ok).toBe(true);
-    expect(r.value.level).toBe(2);
+    expect(upgrade(s, r.id).ok).toBe(true);
+    expect(r.level).toBe(2);
+  });
+
+  it('lũy tre lên thành đất cần Điện cấp 3', () => {
+    const s = rich();
+    const luy = placeOk(s, 'luy', 12, 12);
+    s.buildings[0].level = 2;
+    expect(upgrade(s, luy.id)).toEqual({ ok: false, reason: 'chuaDuCapDien' });
+    s.buildings[0].level = 3;
+    expect(upgrade(s, luy.id).ok).toBe(true);
+    expect(luy.level).toBe(2);
   });
 
   it('nâng Điện thì mở rộng đất', () => {
     const s = rich();
     const lo1 = areaStart(1);
     expect(isUnlocked(lo1 - 1, lo1, dienLevel(s))).toBe(false);
-    s.resources = { gao: 1000, voOc: 1000, datDa: 0, sat: 0 };
+    s.resources = { gao: 1000, voOc: 1000, datDa: 1000, sat: 100 };
     upgrade(s, 1);
     expect(isUnlocked(lo1 - 1, lo1, dienLevel(s))).toBe(true);
   });
@@ -125,31 +158,93 @@ describe('nâng cấp', () => {
   it('giá nâng Điện luôn vừa sức chứa của cấp hiện tại', () => {
     for (let level = 1; level < BUILDINGS.dien.maxLevel; level++) {
       const cost = BUILDINGS.dien.upgradeCost[level + 1];
-      expect(Math.max(cost.gao ?? 0, cost.voOc ?? 0)).toBeLessThanOrEqual(STORAGE_CAP[level - 1]);
+      expect(Math.max(...Object.values(cost))).toBeLessThanOrEqual(STORAGE_CAP[level - 1]);
     }
+  });
+
+  it('kho thóc tăng sức chứa', () => {
+    const s = rich();
+    const before = storageCap(s);
+    placeOk(s, 'kho', 12, 12);
+    expect(storageCap(s)).toBe(before + BUILDINGS.kho.storage![0]);
+  });
+});
+
+describe('dân làng', () => {
+  it('ruộng thiếu người thì làm ra ít gạo hơn', () => {
+    const s = rich();
+    const r = placeOk(s, 'ruong', 12, 12);
+    const full = productionPerMinute(s).gao;
+    expect(setWorkers(s, r.id, 1).ok).toBe(true);
+    expect(productionPerMinute(s).gao).toBeCloseTo(full - BUILDINGS.ruong.production[0].gao! / 2);
+    expect(setWorkers(s, r.id, 0).ok).toBe(true);
+    expect(productionPerMinute(s).gao).toBe(BUILDINGS.dien.production[0].gao);
+  });
+
+  it('không phân công quá số dân rảnh', () => {
+    const s = rich();
+    s.dan = 1;
+    const r = placeOk(s, 'ruong', 12, 12);
+    expect(r.workers).toBe(1);
+    expect(setWorkers(s, r.id, 2)).toEqual({ ok: false, reason: 'thieuDan' });
+  });
+
+  it('tự phân công chia đều, ưu tiên ruộng', () => {
+    const s = rich();
+    s.dan = 0;
+    const a = placeOk(s, 'ruong', 11, 11);
+    const b = placeOk(s, 'ben', RIVER_START - 2, 12);
+    s.dan = 2;
+    expect(autoAssign(s)).toBe(2);
+    expect(a.workers).toBe(1);
+    expect(b.workers).toBe(1);
+  });
+
+  it('nhà sàn cho thêm chỗ ở, dân tới dần theo thời gian', () => {
+    const s = rich();
+    placeOk(s, 'nhaSan', 12, 12);
+    expect(housing(s)).toBe(8);
+    tick(s, DAN_GROW_MS * 2 + 1);
+    expect(s.dan).toBe(6);
+    tick(s, DAN_GROW_MS * 10);
+    expect(s.dan).toBe(8);
+  });
+
+  it('hết gạo thì thiếu ăn: sản xuất chậm một nửa, không sinh thêm dân', () => {
+    const s = rich();
+    placeOk(s, 'nhaSan', 12, 12);
+    s.resources.gao = 0;
+    s.dan = 20;
+    expect(isStarving(s)).toBe(true);
+    const net = netPerMinute(s);
+    expect(net.voOc).toBeCloseTo(BUILDINGS.dien.production[0].voOc! * 0.5);
+    tick(s, 60_000);
+    expect(s.resources.gao).toBe(0);
+    expect(s.dan).toBe(20);
   });
 });
 
 describe('dòng thời gian', () => {
-  it('sản xuất theo phút và dừng ở sức chứa', () => {
+  it('sản xuất theo phút (đã trừ gạo ăn) và dừng ở sức chứa', () => {
     const s = createInitialState(T0);
-    const perMin = productionPerMinute(s);
+    const net = netPerMinute(s);
     tick(s, 60_000);
-    expect(s.resources.gao).toBeCloseTo(150 + perMin.gao);
+    expect(s.resources.gao).toBeCloseTo(150 + net.gao);
     tick(s, 10 * 60 * 60_000);
     expect(s.resources.gao).toBe(STORAGE_CAP[0]);
   });
 
-  it('khi vắng mặt chỉ được một nửa và tối đa 8 giờ', () => {
+  it('khi vắng mặt chỉ được một nửa, tối đa 8 giờ, và đồng hồ chơi đứng yên', () => {
     const s = createInitialState(T0);
     s.resources = { gao: 0, voOc: 0, datDa: 0, sat: 0 };
-    const perMin = productionPerMinute(s).gao;
+    s.resources.gao = 100;
+    const net = netPerMinute(s).voOc;
     const r = applyOffline(s, T0 + 10 * 60_000);
-    expect(r.gained.gao).toBeCloseTo(perMin * 10 * 0.5);
+    expect(r.gained.voOc).toBeCloseTo(net * 10 * 0.5);
     expect(s.lastSeen).toBe(T0 + 10 * 60_000);
+    expect(s.clock).toBe(0);
 
     const t = createInitialState(T0);
-    t.resources.gao = 0;
     expect(applyOffline(t, T0 + 3 * OFFLINE_CAP_MS).ms).toBe(OFFLINE_CAP_MS);
   });
 
@@ -157,6 +252,43 @@ describe('dòng thời gian', () => {
     const s = createInitialState(T0);
     expect(applyOffline(s, T0 - 5000).ms).toBe(0);
     expect(s.resources.gao).toBe(150);
+  });
+});
+
+describe('thuyền buôn', () => {
+  it('chỉ đến khi đã có bến, đậu một lúc rồi đi', () => {
+    const s = rich();
+    tick(s, MERCHANT_FIRST_MS + 1000);
+    expect(s.merchant.visit).toBeNull();
+    placeOk(s, 'ben', RIVER_START - 2, 12);
+    tick(s, 31_000);
+    expect(s.merchant.visit?.offers).toHaveLength(3);
+    tick(s, MERCHANT_STAY_MS + 1000);
+    expect(s.merchant.visit).toBeNull();
+  });
+
+  it('đổi hàng trừ thứ đưa, cộng thứ nhận, mỗi lời mời một lần', () => {
+    const s = rich();
+    placeOk(s, 'ben', RIVER_START - 2, 12);
+    tick(s, MERCHANT_FIRST_MS + 1000);
+    const offer = s.merchant.visit!.offers[0];
+    const give = s.resources[offer.give.r];
+    const get = s.resources[offer.get.r];
+    expect(acceptOffer(s, 0).ok).toBe(true);
+    expect(s.resources[offer.give.r]).toBe(give - offer.give.n);
+    expect(s.resources[offer.get.r]).toBe(Math.min(storageCap(s), get + offer.get.n));
+    expect(acceptOffer(s, 0)).toEqual({ ok: false, reason: 'daDoi' });
+  });
+
+  it('lời mời luôn có lời cho người chơi và không đổi một thứ lấy chính nó', () => {
+    for (let seq = 1; seq < 50; seq++) {
+      for (const o of makeOffers(seq, 3)) {
+        expect(o.give.r).not.toBe(o.get.r);
+        expect(o.give.n).toBeGreaterThan(0);
+        expect(o.get.n).toBeGreaterThan(0);
+      }
+    }
+    expect(makeOffers(1, 1).every((o) => o.give.r !== 'sat' && o.get.r !== 'sat')).toBe(true);
   });
 });
 

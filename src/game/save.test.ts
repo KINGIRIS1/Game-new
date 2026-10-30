@@ -3,6 +3,29 @@ import { createInitialState, place } from './game';
 import { deserialize, fromCode, serialize, toCode } from './save';
 
 describe('lưu game', () => {
+  it('nâng bản lưu của lát cắt 1 lên bản mới, có đủ dân và người làm', () => {
+    const v1 = {
+      version: 1,
+      resources: { gao: 300, voOc: 200, datDa: 0, sat: 0 },
+      buildings: [
+        { id: 1, type: 'dien', x: 16, z: 16, level: 2 },
+        { id: 2, type: 'ruong', x: 12, z: 12, level: 1 },
+        { id: 3, type: 'ben', x: 25, z: 12, level: 1 },
+        { id: 4, type: 'luy', x: 13, z: 10, level: 1 },
+      ],
+      nextId: 5,
+      questIndex: 4,
+      lastSeen: 123,
+      settings: { muted: true },
+    };
+    const s = deserialize(JSON.stringify(v1));
+    expect(s?.version).toBe(2);
+    expect(s?.dan).toBe(5);
+    expect(s?.buildings.find((b) => b.type === 'ruong')?.workers).toBe(2);
+    expect(s?.buildings.find((b) => b.type === 'ben')?.workers).toBe(1);
+    expect(s?.settings.muted).toBe(true);
+  });
+
   it('xuất rồi nhập mã lưu ra đúng state cũ', () => {
     const s = createInitialState(123);
     place(s, 'luy', 12, 12);

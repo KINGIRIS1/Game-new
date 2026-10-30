@@ -16,11 +16,12 @@ export interface TreeSpot {
   seed: number;
 }
 
-/** Một đoạn lũy tre, tọa độ thế giới của tâm ô. */
+/** Một đoạn lũy, tọa độ thế giới của tâm ô. Cấp 1 là lũy tre, cấp 2 là thành đất. */
 export interface WallSpot {
   x: number;
   z: number;
   seed: number;
+  level: number;
 }
 
 function bird(m: ToonModel, x: number, y: number, dir: number, s = 1): void {
@@ -131,6 +132,99 @@ export function makePerson(kind: PersonKind): THREE.Object3D {
   return m.group();
 }
 
+/** Nhà sàn của dân: bốn cột, sàn gỗ, mái thuyền nhỏ, thang tre. */
+export function makeNhaSan(level: number): THREE.Group {
+  const m = new ToonModel();
+  const p = m.plain;
+  p.box(1.9, 0.08, 1.9, C.soil, 0, 0.04, 0);
+  for (const x of [-0.6, 0.6]) for (const z of [-0.5, 0.5]) p.cyl(0.06, 0.07, 0.8, C.woodDark, x, 0.44, z);
+  p.box(1.5, 0.1, 1.2, C.wood, 0, 0.88, 0);
+  m.band.box(1.2, 0.5, 0.9, C.woodLight, 0, 1.18, -0.02);
+  p.box(0.32, 0.38, 0.05, C.woodDark, 0.2, 1.12, 0.44);
+  for (let i = 0; i < 3; i++) p.box(0.32, 0.05, 0.12, C.woodDark, 0.2, 0.7 - i * 0.24, 0.72 + i * 0.12);
+  m.band.add(saddleRoof({ length: 2.2, width: 1.6, lift: 0.45, drop: 0.62, thickness: 0.07 }), C.thatch, 0, 2.0, -0.02);
+  p.cyl(0.13, 0.1, 0.22, C.soil, -0.65, 0.19, 0.7, undefined, 8);
+  if (level >= 3) p.box(0.5, 0.06, 1.2, C.wood, -0.95, 0.7, 0);
+  if (level >= 4) bird(m, 1.05, 2.5, 1, 0.7);
+  const g = m.group();
+  g.scale.setScalar(0.88 + 0.05 * level);
+  return g;
+}
+
+/** Bãi đất đá: đống đá, khối đá đã đẽo, thúng đất, khung tời gỗ ở cấp cao. */
+export function makeBaiDa(level: number): THREE.Group {
+  const m = new ToonModel();
+  const p = m.plain;
+  p.box(1.95, 0.1, 1.95, C.earth, 0, 0.05, 0);
+  const rand = seeded(17);
+  const piles = 2 + Math.min(level, 4);
+  for (let i = 0; i < piles; i++) {
+    const x = -0.55 + rand() * 1.1;
+    const z = -0.55 + rand() * 0.8;
+    p.sphere(0.22 + rand() * 0.12, i % 2 ? C.rock : C.rockDark, x, 0.16, z, [1.2, 0.7, 1], 6);
+  }
+  for (let i = 0; i < 3; i++) p.box(0.32, 0.18, 0.24, C.rock, 0.5, 0.19 + i * 0.18, 0.55, [0, i * 0.3, 0]);
+  p.cyl(0.16, 0.12, 0.16, C.thatch, -0.6, 0.18, 0.62, undefined, 8);
+  p.sphere(0.13, C.earthDark, -0.6, 0.27, 0.62, [1, 0.5, 1], 6);
+  p.cyl(0.02, 0.02, 0.6, C.woodDark, -0.2, 0.3, 0.75, [0.5, 0, 0.3], 5);
+  p.box(0.16, 0.05, 0.05, C.iron, -0.2, 0.58, 0.88, [0.5, 0, 0.3]);
+  if (level >= 3) {
+    // Khung tời gỗ hình chữ A để kéo đá.
+    for (const s of [-1, 1]) p.cyl(0.035, 0.04, 1.5, C.woodDark, s * 0.35, 0.72, -0.6, [0, 0, s * 0.3], 5);
+    p.cyl(0.03, 0.03, 0.9, C.wood, 0, 1.35, -0.6, [0, 0, Math.PI / 2], 5);
+    p.box(0.22, 0.2, 0.2, C.rock, 0, 0.85, -0.6);
+  }
+  return m.group();
+}
+
+/** Lò rèn: lán mái tranh, lò đất nung có lửa, đe sắt, bễ thổi lửa, thanh sắt. */
+export function makeLoRen(level: number): THREE.Group {
+  const m = new ToonModel();
+  const p = m.plain;
+  p.box(1.95, 0.1, 1.95, C.earthDark, 0, 0.05, 0);
+  for (const x of [-0.75, 0.75]) for (const z of [-0.7, 0.7]) p.cyl(0.05, 0.06, 1.2, C.woodDark, x, 0.65, z);
+  m.band.add(saddleRoof({ length: 2.2, width: 1.9, lift: 0.35, drop: 0.5, thickness: 0.06 }), C.thatch, 0, 1.68, 0);
+  p.cyl(0.3, 0.38, 0.6, C.soil, -0.35, 0.4, -0.25, undefined, 10);
+  p.cyl(0.18, 0.22, 0.12, C.earthDark, -0.35, 0.74, -0.25, undefined, 10);
+  p.box(0.3, 0.16, 0.16, C.iron, 0.4, 0.38, 0.2);
+  p.box(0.12, 0.22, 0.12, C.woodDark, 0.4, 0.2, 0.2);
+  p.box(0.36, 0.16, 0.26, C.wood, -0.35, 0.18, 0.45);
+  for (let i = 0; i < level + 1; i++) p.box(0.5, 0.05, 0.06, C.iron, 0.45, 0.13 + i * 0.06, -0.55);
+  const g = m.group();
+  // Lửa lò: không chịu ánh sáng để trông như phát sáng, World làm nó bập bùng.
+  const flame = new THREE.Mesh(new THREE.ConeGeometry(0.14, 0.34, 6), new THREE.MeshBasicMaterial({ color: C.fire }));
+  flame.position.set(-0.35, 0.95, -0.25);
+  flame.userData.flame = true;
+  const ember = new THREE.Mesh(new THREE.ConeGeometry(0.08, 0.22, 6), new THREE.MeshBasicMaterial({ color: C.ember }));
+  ember.position.set(-0.35, 0.92, -0.25);
+  ember.userData.flame = true;
+  g.add(flame, ember);
+  g.scale.setScalar(0.92 + 0.04 * level);
+  return g;
+}
+
+/** Kho thóc: sàn cao trên cột cho khỏi chuột và ẩm, mái thuyền phủ thấp, thúng thóc. */
+export function makeKho(level: number): THREE.Group {
+  const m = new ToonModel();
+  const p = m.plain;
+  p.box(1.9, 0.08, 1.9, C.soil, 0, 0.04, 0);
+  for (const x of [-0.5, 0.5]) for (const z of [-0.5, 0.5]) {
+    p.cyl(0.07, 0.08, 1.0, C.woodDark, x, 0.54, z);
+    p.cyl(0.12, 0.12, 0.05, C.rock, x, 0.9, z);
+  }
+  p.box(1.3, 0.1, 1.3, C.wood, 0, 1.05, 0);
+  m.band.box(1.1, 0.55, 1.1, C.woodLight, 0, 1.38, 0);
+  m.band.add(saddleRoof({ length: 1.9, width: 1.7, lift: 0.5, drop: 0.75, thickness: 0.07 }), C.thatch, 0, 2.28, 0);
+  for (let i = 0; i < Math.min(level + 1, 4); i++) {
+    const a = i * 1.7;
+    p.cyl(0.14, 0.11, 0.2, C.thatch, Math.cos(a) * 0.75, 0.18, 0.75 + Math.sin(a) * 0.1, undefined, 8);
+    p.sphere(0.12, C.ripe, Math.cos(a) * 0.75, 0.28, 0.75 + Math.sin(a) * 0.1, [1, 0.5, 1], 6);
+  }
+  const g = m.group();
+  g.scale.setScalar(0.88 + 0.05 * level);
+  return g;
+}
+
 /** Thuyền như trên trống đồng: mũi và đuôi cong vút, đầu chim. */
 export function makeBoat(): THREE.Object3D {
   const m = new ToonModel();
@@ -199,6 +293,21 @@ function bambooClump(stalks: number, height: number, seed: number, mound: boolea
   return b.mesh(toon);
 }
 
+/** Thành đất đắp: các lớp đất nện thu nhỏ dần lên trên, cắm cọc tre vót nhọn. */
+function earthWall(seed: number): THREE.Mesh {
+  const b = new ShapeBuilder(false, true);
+  const rand = seeded(seed);
+  b.box(1.0, 0.36, 1.0, C.earthDark, 0, 0.18, 0);
+  b.box(0.9, 0.34, 0.9, C.earth, 0, 0.53, 0);
+  b.box(0.78, 0.26, 0.78, C.earthDark, 0, 0.83, 0);
+  for (let i = 0; i < 4; i++) {
+    const x = (rand() - 0.5) * 0.5;
+    const z = (rand() - 0.5) * 0.5;
+    b.cone(0.04, 0.4, C.bamboo, x, 1.15, z, [(rand() - 0.5) * 0.3, 0, (rand() - 0.5) * 0.3], 4);
+  }
+  return b.mesh(toon);
+}
+
 let cachedTrees: THREE.Mesh[] | null = null;
 let cachedWalls: THREE.Mesh[] | null = null;
 const treeOutline = (geo: THREE.BufferGeometry) => outlineOf(geo, inkThick);
@@ -215,12 +324,12 @@ export function buildForest(spots: TreeSpot[]): THREE.Object3D {
   return instanceTemplates(cachedTrees, placements, treeOutline);
 }
 
-/** Dựng toàn bộ lũy tre: mỗi đoạn một bụi tre trên mô đất, xoay ngẫu nhiên. */
+/** Dựng toàn bộ lũy: lũy tre là bụi tre trên mô đất, thành đất là khối đất nện, xoay ngẫu nhiên. */
 export function buildWalls(spots: WallSpot[]): THREE.Object3D {
-  cachedWalls ??= [bambooClump(5, 1.7, 3, true), bambooClump(5, 1.8, 9, true)];
+  cachedWalls ??= [bambooClump(5, 1.7, 3, true), bambooClump(5, 1.8, 9, true), earthWall(5), earthWall(11)];
   return instanceTemplates(
     cachedWalls,
-    spots.map((s) => ({ t: s.seed % 2, x: s.x, z: s.z, s: 1, ry: (s.seed % 4) * (Math.PI / 2) })),
+    spots.map((s) => ({ t: (s.level >= 2 ? 2 : 0) + (s.seed % 2), x: s.x, z: s.z, s: 1, ry: (s.seed % 4) * (Math.PI / 2) })),
     treeOutline,
   );
 }

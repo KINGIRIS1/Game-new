@@ -11,7 +11,13 @@ import {
   createInitialState,
   findBuilding,
   place,
+  acceptOffer,
+  autoAssign,
+  findBuilding as getBuilding,
+  freeDan,
+  housing,
   remove,
+  setWorkers,
   tick,
   upgrade,
   type FailReason,
@@ -21,7 +27,7 @@ import { GRID, RIVER_START } from './game/map';
 import { fromCode, loadFromStorage, saveToStorage, toCode } from './game/save';
 import { World } from './render/world';
 import { vi } from './text/vi';
-import { Hud, type HudAction } from './ui/hud';
+import { Hud, buildingName, type HudAction } from './ui/hud';
 
 type Mode =
   | { kind: 'view'; selected: number | null }
@@ -62,6 +68,7 @@ function start(): void {
 
   const refreshUi = () => {
     hud.updateTop(state);
+    hud.updateBanners(state);
     hud.updateQuest(state);
     hud.refreshSheet(state);
   };
@@ -195,7 +202,7 @@ function start(): void {
         const r = place(state, mode.type, mode.x, mode.z);
         if (!r.ok) return fail(r.reason);
         play('place');
-        hud.toast(vi.ui.placed(vi.buildings[r.value.type].name));
+        hud.toast(vi.ui.placed(buildingName(r.value)));
         exitMode();
         commit();
         world.pop(r.value.id);
@@ -210,7 +217,13 @@ function start(): void {
         const r = upgrade(state, a.id);
         if (!r.ok) return fail(r.reason);
         play('upgrade');
-        hud.toast(r.value.type === 'dien' ? vi.ui.landExpanded : vi.ui.upgraded(vi.buildings[r.value.type].name, r.value.level));
+        hud.toast(
+          r.value.type === 'dien'
+            ? vi.ui.landExpanded
+            : r.value.type === 'luy'
+              ? vi.ui.placed(buildingName(r.value))
+              : vi.ui.upgraded(buildingName(r.value), r.value.level),
+        );
         commit();
         world.pop(r.value.id);
         world.setSelection(r.value);
@@ -290,6 +303,44 @@ function start(): void {
         hud.closeSheet();
         commit();
         return;
+
+      case 'workers': {
+        const b = getBuilding(state, a.id);
+        if (!b) return;
+        const r = setWorkers(state, a.id, b.workers + a.delta);
+        if (!r.ok) return fail(r.reason);
+        play('tap');
+        commit();
+        return;
+      }
+
+      case 'danInfo': {
+        if (freeDan(state) > 0) {
+          const n = autoAssign(state);
+          play(n ? 'place' : 'error');
+          hud.toast(vi.ui.assigned(n), !n);
+          if (n) commit();
+        } else {
+          hud.toast(vi.ui.danTitle(state.dan, housing(state), freeDan(state)));
+        }
+        return;
+      }
+
+      case 'openMerchant':
+        if (mode.kind !== 'view') exitMode();
+        select(null);
+        play('tap');
+        hud.showMerchant(state);
+        return;
+
+      case 'acceptOffer': {
+        const r = acceptOffer(state, a.index);
+        if (!r.ok) return fail(r.reason);
+        play('claim');
+        hud.toast(vi.ui.tradeDone);
+        commit();
+        return;
+      }
 
       case 'closeSheet':
         select(null);
