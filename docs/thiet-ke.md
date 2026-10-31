@@ -176,6 +176,9 @@ Tài liệu này ghi lại các quyết định đã chốt với chủ dự án
   - **mỗi binh chủng đứng một hàng**, chạm để đổi hàng. Mặc định giáo binh ở tiền quân, voi ở trung quân, cung thủ ở hậu quân. Lần sau nhớ hàng đã chọn.
 - **Bãi chiến**:
   - cảnh 3D riêng, rộng 9 ô, dài 22 ô; nền theo màn: rừng tre, bến sông, làng, đồn giặc, chân núi;
+  - mặt bãi phẳng một màu cho dễ nhìn lính, mép lượn có viền đậm như nét vẽ tay;
+  - đất quanh bãi nhấp nhô thành gò rồi thành đồi, có mảng cỏ khác màu, dựng bằng noise có hạt giống (thư viện `simplex-noise`) nên mỗi màn luôn ra đúng một dáng đất. Bến sông có bãi cát dọc bờ, chân núi có sườn đá dâng lên sau lưng giặc;
+  - rừng mọc thành cụm có trảng trống, tre thành khóm riêng, thưa dần ra mép;
   - hai bên dàn ba hàng cách nhau 10 ô rồi xông vào đánh kẻ gần nhất;
   - lính đẩy nhau ra, không đứng chồng lên nhau;
   - ngoài bãi mọi người bền gấp 1,6 lần, để trận kéo dài chừng 10–35 giây và kịp bấm Trống trận.
