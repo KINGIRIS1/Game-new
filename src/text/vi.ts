@@ -1,5 +1,6 @@
 // Mọi chữ hiển thị trong game. Tách riêng để sau này dịch sang tiếng Anh.
 
+import type { AdvLook } from '../game/coLoa';
 import type { BuildingType, EnemyType, GearId, GiftId, ResourceId, Row, SkillId, UnitType } from '../game/defs';
 import type { FailReason, StoryId } from '../game/game';
 import type { GiongLook } from '../game/giong';
@@ -7,7 +8,20 @@ import type { SonLook } from '../game/son';
 import type { Resolution } from '../render/world';
 
 /** Người nói trong các đoạn truyện. */
-type Speaker = 'ke' | 'lacHau' | 'vua' | 'giong' | 'trangSi' | 'miNuong' | 'sonTinh' | 'thuyTinh';
+type Speaker =
+  | 'ke'
+  | 'lacHau'
+  | 'vua'
+  | 'giong'
+  | 'trangSi'
+  | 'miNuong'
+  | 'sonTinh'
+  | 'thuyTinh'
+  | 'thucPhan'
+  | 'anDuong'
+  | 'ruaVang'
+  | 'caoLo'
+  | 'trieuDa';
 
 export const vi = {
   gameTitle: 'Thời đại Văn Lang',
@@ -90,6 +104,16 @@ export const vi = {
       icon: '⛰️',
       desc: 'Đền thờ Sơn Tinh, Tản Viên Sơn Thánh. Đền còn nguyên thì mỗi mùa lũ nước dâng thấp đi một bậc. Chỉ dựng được sau khi đánh lui Thủy Tinh.',
     },
+    thanh: {
+      name: 'Thành Cổ Loa',
+      icon: '🏰',
+      desc: 'Đoạn thành đất nện cao và chắc, đắp quanh Điện như thành Cổ Loa nhiều vòng. Giặc phải phá qua bao nhiêu lớp thành mới tới được Điện thì có bấy nhiêu vòng. Các đoạn phải nối liền theo cạnh ô (chéo góc là hở), dựa vào bờ sông cũng kín. Đắp đè lên lũy tre được. Yêu tinh núi Thất Diệu nhắm phá thành trước tiên.',
+    },
+    denCoLoa: {
+      name: 'Đền Cổ Loa',
+      icon: '🐢',
+      desc: 'Đền thờ An Dương Vương, ghi công thần Kim Quy và tướng Cao Lỗ. Đền còn nguyên thì lính nỏ trên chòi canh bắn mạnh gấp rưỡi và xa thêm 1 ô. Chỉ dựng được sau khi đánh tan Triệu Đà.',
+    },
   } satisfies Record<BuildingType, { name: string; icon: string; desc: string }>,
 
   reasons: {
@@ -132,6 +156,12 @@ export const vi = {
     sonKietSuc: 'Sơn Tinh đang kiệt sức, chờ một lát',
     daCoLeVat: 'Đã có lễ vật này',
     leVatPhoBan: 'Lễ vật này phải giành ở phó bản',
+    canChuong3: 'Mở ở chương 3: An Dương Vương',
+    canKetChuong3: 'Chỉ dựng được sau khi đánh tan Triệu Đà',
+    canRuaVang: 'Phải diệt yêu tinh núi Thất Diệu (màn 19) để Rùa Vàng hiện lên',
+    thieuVongThanh: 'Thành Cổ Loa chưa đủ 3 vòng quanh Điện',
+    canAnDuong: 'Màn này cần An Dương Vương đã có nỏ thần',
+    advKietSuc: 'An Dương Vương đang kiệt sức, chờ một lát',
   } satisfies Record<FailReason, string>,
 
   quests: {
@@ -165,7 +195,17 @@ export const vi = {
     quaMan14: 'Sóng dữ sông Đà nổi lên. Xin đánh qua màn 14, mở đường cho Sơn Tinh dời non.',
     tanVien: 'Thủy Tinh dồn quân lên đỉnh Tản Viên. Xin bệ hạ cùng Sơn Tinh đánh trận quyết chiến ở màn 16.',
     denTanVien: 'Thủy Tinh đã rút quân. Xin bệ hạ dựng Đền Tản Viên thờ Sơn Tinh, giữ nước cho muôn đời.',
-    allDone: 'Chương 2 đã xong: Thủy Tinh rút về biển, năm nào cũng dâng nước nhưng năm nào cũng thua. Xin giữ đê cho vững mỗi mùa lũ.',
+    thanh1: 'Bệ hạ truyền đắp thành Cổ Loa. Xin đắp một vòng thành liền quanh Điện, dựa vào bờ sông cũng được.',
+    quaMan17: 'Yêu tinh núi Thất Diệu đêm đêm kéo về phá thành. Xin cho quân lên chân núi Thất Diệu đánh màn 17.',
+    thanh2: 'Thành xây đến đâu đổ đến đấy. Xin đắp thêm một vòng nữa, cho giặc phải phá qua hai lớp thành mới tới Điện.',
+    quaMan19: 'Con gà trắng nghìn năm là đầu sỏ lũ yêu tinh, đậu trên đỉnh Thất Diệu. Xin đánh màn 19 diệt tận gốc.',
+    thanh3: 'Rùa Vàng đã giúp sức, thành không đổ nữa. Xin đắp đủ ba vòng thành Cổ Loa quanh Điện.',
+    noThan: 'Xin bệ hạ cho Cao Lỗ lấy vuốt Rùa Vàng làm lẫy, chế nỏ thần ở lò rèn. Chạm vào An Dương Vương trước Điện để xem.',
+    chongTrieu: 'Triệu Đà ở nước Nam Việt dòm ngó Âu Lạc. Xin bệ hạ giữ vững kinh đô, đánh lui một đợt quân Triệu.',
+    quaMan22: 'Triệu Đà đóng đại doanh ở núi Tiên Du. Xin đánh qua màn 22, phá doanh trại giặc.',
+    coLoa: 'Triệu Đà dốc toàn quân tới chân thành Cổ Loa. Xin bệ hạ cầm nỏ thần đánh trận quyết chiến ở màn 24.',
+    denCoLoa: 'Triệu Đà đã thua chạy. Xin dựng Đền Cổ Loa, ghi công thần Kim Quy và nỏ thần giữ nước.',
+    allDone: 'Chương 3 đã xong: Triệu Đà thua chạy về phương Bắc. Thủy Tinh vẫn dâng nước mỗi mùa, quân Triệu vẫn dòm ngó. Xin giữ thành, giữ đê cho vững.',
   } as Record<string, string>,
 
   units: {
@@ -185,6 +225,14 @@ export const vi = {
     caSau: 'cá sấu',
     thuongLuong: 'thuồng luồng',
     thuyTinh: 'Thủy Tinh',
+    quyNui: 'quỷ núi',
+    maTroi: 'ma trơi',
+    hoTinh: 'hổ tinh',
+    gaTrang: 'gà trắng nghìn năm',
+    linhTrieu: 'lính khiên Triệu',
+    noTrieu: 'nỏ thủ Triệu',
+    kyBinh: 'kỵ binh Triệu',
+    trieuDa: 'Triệu Đà',
   } satisfies Record<EnemyType, string>,
 
   enemyIcons: {
@@ -198,6 +246,14 @@ export const vi = {
     caSau: '🐊',
     thuongLuong: '🐉',
     thuyTinh: '🌊',
+    quyNui: '👿',
+    maTroi: '👻',
+    hoTinh: '🐯',
+    gaTrang: '🐔',
+    linhTrieu: '🛡️',
+    noTrieu: '🎯',
+    kyBinh: '🐎',
+    trieuDa: '🚩',
   } satisfies Record<EnemyType, string>,
 
   /** Tên và lời dẫn từng màn phó bản, theo thứ tự trong STAGES. */
@@ -218,6 +274,14 @@ export const vi = {
     { name: 'Sông Đà cuồn cuộn', intro: 'Sóng dữ sông Đà nổi lên, thủy binh đông nghịt mặt nước.' },
     { name: 'Chân núi Tản', intro: 'Thủy Tinh dồn quân tới chân núi Tản, quyết đuổi kịp Sơn Tinh.' },
     { name: 'Đỉnh Tản Viên', intro: 'Nước dâng lưng chừng núi. Thủy Tinh đích thân ra trận. Trận quyết chiến!' },
+    { name: 'Chân núi Thất Diệu', intro: 'Lần theo dấu yêu tinh phá thành tới chân núi Thất Diệu. Quỷ núi và ma trơi đã chờ sẵn.' },
+    { name: 'Rừng ma', intro: 'Rừng già lưng chừng núi, ma trơi lập lòe, hổ tinh rình trong bụi rậm.' },
+    { name: 'Đỉnh Thất Diệu', intro: 'Con gà trắng sống nghìn năm thành tinh, đầu sỏ lũ yêu tinh, đậu trên đỉnh núi. Diệt nó thì thành hết đổ. Trận quyết chiến!' },
+    { name: 'Rừng biên ải', intro: 'Quân Triệu Đà vượt biên ải phương Bắc, men rừng tiến xuống Âu Lạc.' },
+    { name: 'Bến sông Đuống', intro: 'Giặc giữ bến sông Thiên Đức, kết bè chở kỵ binh sang sông.' },
+    { name: 'Núi Tiên Du', intro: 'Triệu Đà đóng đại doanh ở núi Tiên Du, chờ ngày đánh thành.' },
+    { name: 'Làng ven Cổ Loa', intro: 'Kỵ binh Triệu tràn vào làng ven thành Cổ Loa, cướp lúa đốt nhà. Mau cứu lấy dân!' },
+    { name: 'Chân thành Cổ Loa', intro: 'Triệu Đà dốc toàn quân tới chân thành Cổ Loa. Nỏ thần đã lên dây. Trận quyết chiến!' },
   ],
 
   rows: { tien: 'Tiền quân', trung: 'Trung quân', hau: 'Hậu quân' } satisfies Record<Row, string>,
@@ -230,6 +294,8 @@ export const vi = {
     nhoTre: { name: 'Nhổ tre', icon: '🎋', desc: 'Gióng nhổ bụi tre quật quanh mình, giặc ngã rạp, bị hất lùi ra.' },
     bocDoi: { name: 'Bốc đồi', icon: '⛰️', desc: 'Sơn Tinh nhấc bổng một quả đồi, ném xuống chỗ giặc đứng đông nhất.' },
     doiNon: { name: 'Dời non', icon: '🪨', desc: 'Sơn Tinh dời non dựng núi: đá mọc lên dưới chân giặc quanh mình, giữ chân chúng vài giây.' },
+    noThan: { name: 'Nỏ thần', icon: '🏹', desc: 'An Dương Vương bắn nỏ thần: một phát tên bay ra hóa muôn mũi, trúng mọi kẻ địch trên bãi.' },
+    ruaVang: { name: 'Rùa Vàng', icon: '🐢', desc: 'Rùa Vàng nổi lên che chở: quân ta hồi máu, chỉ chịu nửa sát thương trong chốc lát.' },
   } satisfies Record<SkillId, { name: string; icon: string; desc: string }>,
 
   gear: {
@@ -251,6 +317,11 @@ export const vi = {
     trangSi: { name: 'Sơn Tinh, chúa vùng non cao', icon: '⛰️' },
   } satisfies Record<SonLook, { name: string; icon: string }>,
 
+  advLooks: {
+    vua: { name: 'An Dương Vương', icon: '🏰' },
+    noThan: { name: 'An Dương Vương cầm nỏ thần', icon: '🏹' },
+  } satisfies Record<AdvLook, { name: string; icon: string }>,
+
   giongLooks: {
     be: { name: 'Cậu bé lên ba', icon: '👶' },
     thieuNien: { name: 'Cậu bé lớn nhanh như thổi', icon: '🧒' },
@@ -266,9 +337,17 @@ export const vi = {
     miNuong: { name: 'Mị Nương', icon: '👸' },
     sonTinh: { name: 'Sơn Tinh', icon: '⛰️' },
     thuyTinh: { name: 'Thủy Tinh', icon: '🌊' },
+    thucPhan: { name: 'Thục Phán', icon: '🏹' },
+    anDuong: { name: 'An Dương Vương', icon: '🏹' },
+    ruaVang: { name: 'Rùa Vàng', icon: '🐢' },
+    caoLo: { name: 'Cao Lỗ', icon: '🔨' },
+    trieuDa: { name: 'Triệu Đà', icon: '🚩' },
   } satisfies Record<Speaker, { name: string; icon: string }>,
 
-  /** Các đoạn truyện: chương 1 theo truyền thuyết Thánh Gióng, chương 2 theo truyền thuyết Sơn Tinh, Thủy Tinh. */
+  /**
+   * Các đoạn truyện: chương 1 theo truyền thuyết Thánh Gióng, chương 2 theo truyền thuyết Sơn Tinh, Thủy Tinh,
+   * chương 3 theo truyền thuyết An Dương Vương, thành Cổ Loa và nỏ thần (dừng ở chiến thắng Triệu Đà).
+   */
   stories: {
     mo: {
       title: 'Giặc Ân xâm lược',
@@ -355,6 +434,60 @@ export const vi = {
         { who: 'ke', text: 'Từ đó, oán nặng thù sâu, năm nào Thủy Tinh cũng dâng nước đánh Sơn Tinh, nhưng năm nào cũng thua, đành rút về.' },
         { who: 'vua', text: 'Ta lập đền thờ Sơn Tinh, Tản Viên Sơn Thánh, để muôn đời ghi công giữ nước.' },
         { who: 'lacHau', text: 'Tâu bệ hạ, xin dựng Đền Tản Viên ở kinh đô: đền còn nguyên thì mỗi mùa lũ nước dâng thấp đi một bậc. Mùa lũ vẫn tới, xin giữ đê cho vững.' },
+      ],
+    },
+    cotDa: {
+      title: 'Cột đá thề',
+      lines: [
+        { who: 'ke', text: 'Hùng Vương thứ mười tám tuổi đã cao. Mị Nương theo Sơn Tinh về núi, nhà vua không có con trai nối ngôi.' },
+        { who: 'ke', text: 'Ở phương Bắc có Thục Phán, thủ lĩnh người Âu Việt, tài giỏi, giàu mưu lược.' },
+        { who: 'vua', text: 'Ta truyền ngôi cho Thục Phán. Từ nay người Lạc Việt với người Âu Việt là một nhà.' },
+        { who: 'thucPhan', text: 'Thần xin dựng cột đá thề trước đền: đời đời giữ gìn đền thờ các vua Hùng, giữ yên non sông.' },
+        { who: 'ke', text: 'Thục Phán lên ngôi, xưng là An Dương Vương, đặt tên nước là Âu Lạc, cho đắp thành lớn nhiều vòng xoáy như vỏ ốc, gọi là thành Cổ Loa.' },
+        { who: 'ke', text: 'Nhưng thành đắp tới đâu lở tới đó. Đêm đêm yêu tinh núi Thất Diệu kéo về phá.' },
+        { who: 'lacHau', text: 'Tâu bệ hạ, xin đắp thành Cổ Loa quanh Điện. Các đoạn thành phải nối liền theo cạnh ô, dựa vào bờ sông cũng được. Giặc phải phá qua mấy lớp thành mới tới Điện thì thành có mấy vòng.' },
+        { who: 'lacHau', text: 'Đêm yêu tinh kéo về, chúng nhắm phá thành trước tiên. Xin giữ thành, và mở phó bản chương 3 lên núi Thất Diệu diệt tận gốc. Chạm vào An Dương Vương trước Điện để xem.' },
+      ],
+    },
+    dietYeu: {
+      title: 'Rùa Vàng hiện lên',
+      lines: [
+        { who: 'ke', text: 'Con gà trắng nghìn năm vừa ngã xuống, mặt sông bỗng nổi sóng. Một con rùa lớn mai vàng óng từ phương Đông bơi tới, tự xưng là sứ Thanh Giang.' },
+        { who: 'ruaVang', text: 'Yêu tinh núi Thất Diệu đã tan. Từ nay thành đắp tới đâu vững tới đó.' },
+        { who: 'anDuong', text: 'Đa tạ thần Kim Quy. Xin thần ở lại giúp ta xây xong thành.' },
+        { who: 'ruaVang', text: 'Thành đủ ba vòng, ta sẽ để lại cho nhà vua một vật giữ nước.' },
+        { who: 'lacHau', text: 'Tâu bệ hạ, yêu tinh không còn kéo về phá thành nữa. Xin đắp đủ ba vòng thành Cổ Loa, và nâng lò rèn lên cấp 5 để sẵn sàng chế nỏ.' },
+      ],
+    },
+    noThan: {
+      title: 'Nỏ thần',
+      lines: [
+        { who: 'ke', text: 'Thành xây xong, Rùa Vàng từ biệt, tháo một chiếc vuốt trao cho nhà vua.' },
+        { who: 'ruaVang', text: 'Đem vuốt này làm lẫy nỏ. Có giặc, cứ nhằm mà bắn thì không lo gì nữa.' },
+        { who: 'caoLo', text: 'Thần đã lấy vuốt thần làm lẫy, chế xong chiếc nỏ bắn một phát ra muôn mũi tên.' },
+        { who: 'ke', text: 'Ở nước Nam Việt phương Bắc, Triệu Đà nghe tin, vẫn cất quân sang đánh Âu Lạc.' },
+        { who: 'trieuDa', text: 'Một chiếc nỏ thì làm gì được trăm vạn quân ta!' },
+        { who: 'lacHau', text: 'Tâu bệ hạ, từ nay bệ hạ cầm nỏ thần cùng ra trận ở phó bản chương 3 và khi quân Triệu đánh kinh đô. Trong trận, bấm 🏹 để bắn nỏ thần.' },
+        { who: 'lacHau', text: 'Thủy Tinh vẫn dâng nước mỗi mùa. Quân Triệu và mùa lũ sẽ thay phiên nhau tới.' },
+      ],
+    },
+    kimQuy: {
+      title: 'Rùa Vàng hộ quân',
+      lines: [
+        { who: 'ke', text: 'Quân Triệu thua ở núi Tiên Du, rút về giữ trại. Đêm ấy Rùa Vàng lại nổi lên bên bờ sông.' },
+        { who: 'ruaVang', text: 'Khi quân nhà vua núng thế, cứ gọi ta. Mai ta sẽ che cho quân sĩ.' },
+        { who: 'lacHau', text: 'Tâu bệ hạ, nay có thêm Rùa Vàng 🐢: quân ta hồi máu, chỉ chịu nửa sát thương trong chốc lát.' },
+      ],
+    },
+    ketChuong3: {
+      title: 'Triệu Đà thua chạy',
+      lines: [
+        { who: 'ke', text: 'Quân Triệu kéo tới chân thành Cổ Loa. An Dương Vương giương nỏ thần bắn, mỗi phát tên giặc chết hàng trăm.' },
+        { who: 'trieuDa', text: 'Thành vững, nỏ thần linh, đánh mãi không được. Rút quân!' },
+        { who: 'ke', text: 'Triệu Đà thua to, chạy về phương Bắc, không dám đánh nữa, đành sai sứ sang xin giảng hòa.' },
+        { who: 'anDuong', text: 'Ta lập đền thờ, ghi công thần Kim Quy và tướng Cao Lỗ, cho muôn đời biết nỏ thần giữ nước.' },
+        { who: 'lacHau', text: 'Tâu bệ hạ, xin dựng Đền Cổ Loa: đền còn nguyên thì lính nỏ trên chòi canh bắn mạnh hơn, xa hơn. Quân Triệu và mùa lũ vẫn tới, xin giữ thành, giữ đê.' },
+        { who: 'ke', text: 'Còn chuyện chiếc nỏ thần, nàng Mỵ Châu và chàng Trọng Thủy, lại là chuyện về sau.' },
       ],
     },
   } satisfies Record<StoryId, { title: string; lines: { who: Speaker; text: string }[] }>,
@@ -538,6 +671,40 @@ export const vi = {
     campaignHint2: 'Ba màn đầu giành lễ vật cho Sơn Tinh. Từ màn 12, Sơn Tinh cùng ra trận.',
     chapterTab: (n: number) => `Chương ${n}`,
     sonWinTitle: 'Thủy Tinh rút quân!',
+    adv: 'An Dương Vương',
+    citadelTitle: 'Thành Cổ Loa',
+    rings: (n: number, max: number) => `Thành có ${n}/${max} vòng quanh Điện`,
+    ringsHint: 'Giặc phải phá qua bao nhiêu lớp thành mới tới được Điện thì có bấy nhiêu vòng. Các đoạn thành phải nối liền theo cạnh ô (chéo góc là hở), dựa vào bờ sông cũng kín.',
+    ringsNow: (n: number) => `Thành có ${n} vòng quanh Điện`,
+    citadelHint: (n: number) => `Chạm từng ô để đắp thành, đè lên lũy được. Đang có ${n} vòng quanh Điện`,
+    removeCitadel: 'Dỡ thành',
+    noThanTitle: 'Nỏ thần',
+    stepYeu: 'Diệt yêu tinh núi Thất Diệu (thắng màn 19)',
+    stepRings: (n: number, max: number) => `Đắp đủ ${max} vòng thành (đang có ${n})`,
+    stepForge: (need: number, lv: number) => `Lò rèn cấp ${need} (đang cấp ${lv})`,
+    forgeNoThan: 'Chế nỏ thần',
+    noThanToast: 'Cao Lỗ đã chế xong nỏ thần!',
+    advWaiting: 'Diệt yêu tinh, đắp đủ ba vòng thành và có lò rèn cấp 5 thì Cao Lỗ chế được nỏ thần. Có nỏ thần, An Dương Vương cùng ra trận.',
+    advReady: 'An Dương Vương cầm nỏ thần: cùng ra trận ở phó bản chương 3 và khi quân Triệu đánh kinh đô.',
+    advResting: (s: number) => `An Dương Vương đang kiệt sức, nghỉ thêm ${s} giây nữa mới ra trận được.`,
+    advWon: 'Triệu Đà đã thua chạy. An Dương Vương vẫn cầm nỏ thần cùng ra trận ở phó bản chương 3 và khi quân Triệu tới.',
+    advJoins: 'An Dương Vương cầm nỏ thần cùng ra trận',
+    sonHienLinhJoins: 'Sơn Tinh hiển linh cùng ra trận',
+    yeuWarning: (side: string, s: number) => `Trinh sát báo: yêu tinh núi Thất Diệu kéo tới từ ${side}, nhắm phá thành! Còn ${s} giây`,
+    trieuWarning: (side: string, s: number) => `Trinh sát báo: quân Triệu Đà kéo tới từ ${side}! Còn ${s} giây`,
+    yeuBattle: (left: number, ours: number) => `Yêu tinh đang phá thành! Còn ${left} yêu tinh, quân ta ${ours}`,
+    trieuBattle: (left: number, ours: number) => `Quân Triệu đang đánh kinh đô! Còn ${left} giặc, quân ta ${ours}`,
+    yeuWonTitle: 'Thành vẫn vững, yêu tinh tan!',
+    yeuHeldTitle: 'Yêu tinh tan, nhưng thành đã sứt mẻ',
+    yeuLostTitle: 'Yêu tinh đã phá thành',
+    trieuWonTitle: 'Đánh lui quân Triệu!',
+    trieuLostTitle: 'Quân Triệu đã cướp phá kinh đô',
+    nextYeu: (min: number) => (min <= 0 ? 'Đêm yêu tinh sắp tới' : `Đêm yêu tinh tới sau khoảng ${min} phút chơi`),
+    nextTrieu: (min: number) => (min <= 0 ? 'Quân Triệu sắp tới' : `Quân Triệu tới sau khoảng ${min} phút chơi`),
+    calmBeforeNoThan: 'Yêu tinh đã tan. Có nỏ thần thì quân Triệu Đà sẽ kéo sang; trước đó chỉ có mùa lũ.',
+    campaignTitle3: 'Giữ thành Cổ Loa',
+    campaignHint3: 'Ba màn đầu lên núi Thất Diệu diệt yêu tinh. Từ màn 20, An Dương Vương cầm nỏ thần cùng ra trận đánh quân Triệu Đà.',
+    advWinTitle: 'Triệu Đà thua chạy!',
   },
 };
 

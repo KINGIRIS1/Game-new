@@ -4,6 +4,7 @@ import './style.css';
 import { play, setMuted, stopRally, unlockAudio } from './audio/sfx';
 import { useSkill } from './game/battle';
 import { leaveBattlefield, retreat, startStage } from './game/campaign';
+import { forgeNoThan, inChapter3, wallRings } from './game/coLoa';
 import { feedGiong, forgeGear } from './game/giong';
 import { inChapter2, offerGift } from './game/son';
 import { markStory, pendingStory } from './game/story';
@@ -44,8 +45,9 @@ import { RESOLUTIONS, World, type Resolution } from './render/world';
 import { vi } from './text/vi';
 import { Hud, buildingName, type HudAction } from './ui/hud';
 
-/** Chạm từng ô để dựng lũy, gài bẫy, đắp đê, hay đắp đất (`raise`). */
-type PaintType = 'luy' | 'bayChong' | 'de' | 'raise';
+/** Chạm từng ô để dựng lũy, gài bẫy, đắp đê, đắp thành Cổ Loa, hay đắp đất (`raise`). */
+type PaintType = 'luy' | 'bayChong' | 'de' | 'thanh' | 'raise';
+const PAINTED: BuildingType[] = ['luy', 'bayChong', 'de', 'thanh'];
 
 type Mode =
   | { kind: 'view'; selected: number | null }
@@ -192,11 +194,12 @@ function start(): void {
   world.view.onTap = (cx, cy) => {
     // Trên bãi chiến chỉ xem, không chọn gì.
     if (world.inField) return;
-    const hero = mode.kind === 'view' ? world.pickHero(cx, cy) : null;
+    const hero: string | null = mode.kind === 'view' ? world.pickHero(cx, cy) : null;
     if (hero) {
       play('tap');
       select(null);
       if (hero === 'giong') hud.showGiong(state);
+      else if (hero === 'adv') hud.showAdv(state);
       else hud.showSon(state);
       return;
     }
@@ -224,6 +227,7 @@ function start(): void {
       const r = place(state, mode.type, tile.x, tile.z);
       if (!r.ok) return fail(r.reason);
       play('place');
+      if (mode.type === 'thanh') hud.setHint(vi.ui.citadelHint(wallRings(state)));
       commit();
       return;
     }
@@ -253,9 +257,17 @@ function start(): void {
         hud.closeSheet();
         world.showGrid(true);
         play('tap');
-        if (a.type === 'luy' || a.type === 'bayChong' || a.type === 'de') {
-          mode = { kind: 'paint', type: a.type };
-          hud.setMode('paint', true, a.type === 'luy' ? vi.ui.wallHint : a.type === 'de' ? vi.ui.dikeHint : vi.ui.trapHint);
+        if (PAINTED.includes(a.type)) {
+          mode = { kind: 'paint', type: a.type as PaintType };
+          const hint =
+            a.type === 'luy'
+              ? vi.ui.wallHint
+              : a.type === 'de'
+                ? vi.ui.dikeHint
+                : a.type === 'thanh'
+                  ? vi.ui.citadelHint(wallRings(state))
+                  : vi.ui.trapHint;
+          hud.setMode('paint', true, hint);
           refreshFloodPreview();
           if (a.type === 'de') hud.toast(vi.ui.floodPreview(nextFloodLevel(state)));
           return;
@@ -306,6 +318,23 @@ function start(): void {
         play('tap');
         hud.showSon(state);
         return;
+
+      case 'openAdv':
+        if (mode.kind !== 'view') exitMode();
+        select(null);
+        play('tap');
+        hud.showAdv(state);
+        return;
+
+      case 'forgeNoThan': {
+        if (!inChapter3(state)) return fail('canChuong3');
+        const r = forgeNoThan(state);
+        if (!r.ok) return fail(r.reason);
+        play('upgrade');
+        hud.toast(vi.ui.noThanToast);
+        commit();
+        return;
+      }
 
       case 'offerGift': {
         const r = offerGift(state, a.gift);
@@ -619,7 +648,8 @@ function start(): void {
 
   /**
    * Sang bãi chiến khi xuất quân, về kinh đô khi xem xong kết quả, hiện bảng kết quả đúng một lần.
-   * Bảng kết quả hiện trễ một chút để kịp thấy đòn cuối; trận cuối chương chờ lâu hơn để xem Gióng bay về trời.
+   * Bảng kết quả hiện trễ một chút để kịp thấy đòn cuối; trận cuối chương chờ lâu hơn để xem cảnh kết chương
+   * (Gióng bay về trời, núi Tản Viên dâng cao, Rùa Vàng nổi lên).
    */
   let shownStage: StageResult | null = null;
   let resultAt = 0;
@@ -644,7 +674,7 @@ function start(): void {
     if (r === shownStage) return;
     if (!resultAt) {
       stopRally();
-      resultAt = now + (battle?.ascend || battle?.sonWin ? 3500 : 700);
+      resultAt = now + (battle?.ascend || battle?.sonWin || battle?.advWin ? 3500 : 700);
       play(r.outcome === 'win' ? 'upgrade' : 'error');
       commit();
     }

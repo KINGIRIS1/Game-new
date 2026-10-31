@@ -2,14 +2,17 @@
 // bản đồ phó bản và các nút trong trận.
 
 import { enemiesLeft, alliesLeft, skillReady, type Battle } from '../game/battle';
+import { advJoined, advLook, advResting, inChapter3, ruaVangCame, wallRings } from '../game/coLoa';
 import {
   BUILDINGS,
   FIELD,
   RESOURCE_IDS,
+  RINGS_NEEDED,
   STAGES,
   UNITS,
   UNIT_TYPES,
   type BuildingType,
+  type Chapter,
   type Cost,
   type ResourceId,
   type Resources,
@@ -37,6 +40,7 @@ import {
   nextFloodLevel,
   raiseCostOf,
   netPerMinute,
+  nextFoe,
   outputOf,
   questDone,
   questProgress,
@@ -46,6 +50,7 @@ import {
   storageCap,
   troopCap,
   troopSpace,
+  UNLOCK_REASON,
   unlocked,
   upgradeCostOf,
   type Building,
@@ -62,6 +67,7 @@ import { floodToleranceOf, groundOf } from '../game/terrain';
 import type { Resolution } from '../render/world';
 import { formatDuration, vi } from '../text/vi';
 import { armyHtml, defaultPick, mapHtml, nextRow, stageHtml, stageResultHtml, type ArmyPick } from './campaign';
+import { advHtml } from './coLoa';
 import { costHtml, esc, fmt } from './format';
 import { giongHtml, storyHtml } from './giong';
 import { sonHtml } from './son';
@@ -81,7 +87,11 @@ const BUILD_MENU: BuildingType[] = [
   'denPhuDong',
   'de',
   'denTanVien',
+  'thanh',
+  'denCoLoa',
 ];
+/** Công trình chỉ hiện trong bảng Xây dựng khi đã sang chương có nó. */
+const CHAPTER_OF: Partial<Record<string, Chapter>> = { chuong2: 2, ketChuong2: 2, chuong3: 3, ketChuong3: 3 };
 
 /** Tên hiển thị của công trình, tính cả lũy tre đã đắp thành đất và đê đã kè đá. */
 export function buildingName(b: Pick<Building, 'type' | 'level'>): string {
@@ -94,7 +104,12 @@ export function buildingName(b: Pick<Building, 'type' | 'level'>): string {
 function unlockWhy(state: GameState, type: BuildingType): string {
   const u = BUILDINGS[type].unlock;
   if (!u || unlocked(state, u)) return '';
-  return u === 'ketChuong1' ? vi.reasons.canKetChuong : u === 'chuong2' ? vi.reasons.canChuong2 : vi.reasons.canKetChuong2;
+  return vi.reasons[UNLOCK_REASON[u]];
+}
+
+/** Chương đang chơi: 1, 2 hay 3. */
+function chapterNow(state: GameState): Chapter {
+  return inChapter3(state) ? 3 : inChapter2(state) ? 2 : 1;
 }
 
 export type HudAction =
@@ -104,6 +119,8 @@ export type HudAction =
   | { kind: 'raiseBuilding'; id: number }
   | { kind: 'openSon' }
   | { kind: 'offerGift'; gift: GiftId }
+  | { kind: 'openAdv' }
+  | { kind: 'forgeNoThan' }
   | { kind: 'confirmPlace' }
   | { kind: 'cancelPlace' }
   | { kind: 'upgrade'; id: number }
@@ -147,6 +164,7 @@ type Sheet =
   | { kind: 'merchant' }
   | { kind: 'giong' }
   | { kind: 'son' }
+  | { kind: 'adv' }
   | null;
 
 /** Chữ trên nút kỹ năng: tên khi sẵn sàng, chỉ biểu tượng và số giây khi đang hồi (cho gọn trên điện thoại). */
@@ -161,7 +179,7 @@ function skillButton(b: Battle, k: SkillId, small = false): string {
 
 /** Bản đồ phó bản đang mở: chương nào, màn đang xem, đang xem thẻ màn hay đang xếp quân. */
 interface CampaignView {
-  chapter: 1 | 2;
+  chapter: Chapter;
   stage: number | null;
   step: 'stage' | 'army';
   pick: ArmyPick;
@@ -330,7 +348,13 @@ export class Hud {
       const mark = sonJoined(state) ? (sonResting(state) ? '💤' : '⚔️') : `${giftCount(state)}/5`;
       son = `<button class="chip dan" data-act="openSon" title="${vi.ui.son}">${vi.sonLooks[sLook].icon} <b>${mark}</b></button>`;
     }
-    const html = `<div class="chip level" title="${vi.buildings.dien.name}">🏯 ${dienLevel(state)}</div>${res}${dan}${army}${giong}${son}
+    const aLook = advLook(state);
+    let adv = '';
+    if (aLook) {
+      const mark = advJoined(state) ? (advResting(state) ? '💤' : '⚔️') : `${Math.min(wallRings(state), RINGS_NEEDED)}/${RINGS_NEEDED}`;
+      adv = `<button class="chip dan" data-act="openAdv" title="${vi.ui.adv}">${vi.advLooks[aLook].icon} <b>${mark}</b></button>`;
+    }
+    const html = `<div class="chip level" title="${vi.buildings.dien.name}">🏯 ${dienLevel(state)}</div>${res}${dan}${army}${giong}${son}${adv}
       <span class="spacer"></span>
       <button class="icon-btn" data-act="openSettings" aria-label="${vi.ui.settings}">⚙️</button>`;
     // So với chuỗi đã vẽ lần trước (không so với innerHTML vì trình duyệt chuẩn hóa lại chuỗi),
@@ -353,12 +377,27 @@ export class Hud {
         <button class="btn small" data-act="lookRaid">${vi.ui.floodLook}</button></div>`);
     } else if (raid.phase === 'warning') {
       const secs = Math.max(0, Math.ceil((raid.startsAt - state.clock) / 1000));
-      parts.push(`<div class="banner bad">⚠️ ${vi.ui.raidWarning(sideName, secs)}
+      const text =
+        raid.foe === 'yeu'
+          ? `🌙 ${vi.ui.yeuWarning(sideName, secs)}`
+          : raid.foe === 'trieu'
+            ? `⚠️ ${vi.ui.trieuWarning(sideName, secs)}`
+            : `⚠️ ${vi.ui.raidWarning(sideName, secs)}`;
+      parts.push(`<div class="banner bad">${text}
         <button class="btn small" data-act="lookRaid">${vi.ui.raidLook}</button></div>`);
     }
     if (raid.phase === 'battle' && raid.battle) {
       const b = raid.battle;
-      const text = b.floodTo > 0 ? `🌊 ${vi.ui.floodBattle(Math.floor(b.water * 10) / 10, b.floodTo, enemiesLeft(b), alliesLeft(b))}` : `⚔️ ${vi.ui.raidBattle(enemiesLeft(b), alliesLeft(b))}`;
+      const left = enemiesLeft(b);
+      const ours = alliesLeft(b);
+      const text =
+        b.floodTo > 0
+          ? `🌊 ${vi.ui.floodBattle(Math.floor(b.water * 10) / 10, b.floodTo, left, ours)}`
+          : b.foe === 'yeu'
+            ? `🌙 ${vi.ui.yeuBattle(left, ours)}`
+            : b.foe === 'trieu'
+              ? `⚔️ ${vi.ui.trieuBattle(left, ours)}`
+              : `⚔️ ${vi.ui.raidBattle(left, ours)}`;
       parts.push(`<div class="banner bad">${text}</div>
         <div class="banner skills">${b.skills.map((k) => skillButton(b, k, true)).join('')}</div>`);
     }
@@ -467,6 +506,11 @@ export class Hud {
     this.refreshSheet(state);
   }
 
+  showAdv(state: GameState): void {
+    this.sheet = { kind: 'adv' };
+    this.refreshSheet(state);
+  }
+
   showSettings(state: GameState, resolution: Resolution): void {
     this.sheet = { kind: 'settings', resolution };
     this.refreshSheet(state, true);
@@ -513,6 +557,9 @@ export class Hud {
     } else if (this.sheet.kind === 'son') {
       title = `⛰️ ${vi.ui.son}`;
       body = sonHtml(state);
+    } else if (this.sheet.kind === 'adv') {
+      title = `🏹 ${vi.ui.adv}`;
+      body = advHtml(state);
     } else {
       title = `⚙️ ${vi.ui.settings}`;
       body = this.settingsHtml(state, this.sheet.resolution);
@@ -536,8 +583,8 @@ export class Hud {
         <span class="meta">1×1 ô · ${vi.ui.dapDatDesc}</span>
       </button>`
       : '';
-    // Công trình của chương 2 chỉ hiện khi đã sang chương 2.
-    const shown = BUILD_MENU.filter((type) => !['chuong2', 'ketChuong2'].includes(BUILDINGS[type].unlock ?? '') || inChapter2(state));
+    // Công trình của chương 2, chương 3 chỉ hiện khi đã sang chương ấy.
+    const shown = BUILD_MENU.filter((type) => (CHAPTER_OF[BUILDINGS[type].unlock ?? ''] ?? 1) <= chapterNow(state));
     const cards = shown.map((type) => {
       const def = BUILDINGS[type];
       const have = countOf(state, type);
@@ -614,6 +661,10 @@ export class Hud {
     if (b.type === 'dien' && sonLook(state)) {
       rows.push(`<div class="actions"><button class="btn bronze" data-act="openSon">⛰️ ${vi.ui.son}</button></div>`);
     }
+    if ((b.type === 'dien' || b.type === 'thanh') && advLook(state)) {
+      rows.push(`<div class="stat"><span>${vi.ui.citadelTitle}</span><span>${vi.ui.ringsNow(wallRings(state))}</span></div>`);
+      if (b.type === 'dien') rows.push(`<div class="actions"><button class="btn bronze" data-act="openAdv">${vi.advLooks[advLook(state)!].icon} ${vi.ui.adv}</button></div>`);
+    }
 
     const actions: string[] = [];
     if (b.damaged) {
@@ -643,7 +694,10 @@ export class Hud {
           ⛰️ ${vi.ui.raiseGround} · ${costHtml(state, raiseCostOf(state, b))}</button>`);
       }
     }
-    if (def.removable) actions.push(`<button class="btn ghost" data-act="removeWall" data-id="${b.id}">${b.type === 'de' ? vi.ui.removeDike : vi.ui.remove}</button>`);
+    if (def.removable) {
+      const label = b.type === 'de' ? vi.ui.removeDike : b.type === 'thanh' ? vi.ui.removeCitadel : vi.ui.remove;
+      actions.push(`<button class="btn ghost" data-act="removeWall" data-id="${b.id}">${label}</button>`);
+    }
 
     return `<div class="info"><p>${esc(vi.buildings[b.type].desc)}</p>${rows.join('')}<div class="actions">${actions.join('')}</div></div>`;
   }
@@ -666,9 +720,14 @@ export class Hud {
     let call = '';
     if (raid.phase === 'idle') {
       const min = raid.nextAt === null ? 0 : Math.ceil((raid.nextAt - state.clock) / 60000);
+      const foe = nextFoe(state);
       if (inChapter2(state) && !floodSeason(state)) next = vi.ui.calmBeforeWedding;
-      else if (floodSeason(state)) {
+      else if (foe === 'yeu' || foe === 'trieu') {
+        next = foe === 'yeu' ? vi.ui.nextYeu(min) : vi.ui.nextTrieu(min);
+        call = vi.ui.callRaid;
+      } else if (floodSeason(state)) {
         next = vi.ui.nextFlood(min, nextFloodLevel(state));
+        if (ruaVangCame(state) && !advJoined(state)) next += `. ${vi.ui.calmBeforeNoThan}`;
         call = vi.ui.callFlood;
       } else {
         next = raid.nextAt === null ? vi.ui.noRaidYet : vi.ui.nextRaid(min);
@@ -724,14 +783,16 @@ export class Hud {
 
   showCampaign(state: GameState): void {
     this.closeSheet();
-    const chapter: 1 | 2 = inChapter2(state) && state.campaign.cleared >= chapterStages(1).length ? 2 : 1;
+    // Mở ở chương có màn kế tiếp chưa thắng, hay chương mới nhất nếu đã thắng hết.
+    const now = chapterNow(state);
+    const chapter = (([1, 2, 3] as const).find((c) => c <= now && this.nextStage(state, c) !== null) ?? now) as Chapter;
     this.camp = { chapter, stage: this.nextStage(state, chapter), step: 'stage', pick: defaultPick(state) };
     this.campaignEl.hidden = false;
     this.refreshCampaign(state, true);
   }
 
   /** Màn kế tiếp chưa thắng trong chương, hoặc null khi đã thắng hết. */
-  private nextStage(state: GameState, chapter: 1 | 2): number | null {
+  private nextStage(state: GameState, chapter: Chapter): number | null {
     const next = state.campaign.cleared + 1;
     const stages = chapterStages(chapter);
     return stages.includes(next) && next <= STAGES.length ? next : null;
@@ -750,7 +811,7 @@ export class Hud {
     const state = this.getState();
     const unit = el.dataset.unit as UnitType;
     if (act === 'campChapter') {
-      camp.chapter = id === 2 ? 2 : 1;
+      camp.chapter = id === 3 ? 3 : id === 2 ? 2 : 1;
       camp.stage = this.nextStage(state, camp.chapter);
       camp.step = 'stage';
     } else if (act === 'pickStage') {
@@ -774,14 +835,18 @@ export class Hud {
     const camp = this.camp;
     if (!camp) return;
     for (const k of UNIT_TYPES) camp.pick.army[k] = Math.min(camp.pick.army[k], state.troops[k]);
-    let panel = `<p class="muted">${camp.chapter === 2 ? vi.ui.campaignHint2 : vi.ui.campaignHint}</p>`;
+    const hint = camp.chapter === 3 ? vi.ui.campaignHint3 : camp.chapter === 2 ? vi.ui.campaignHint2 : vi.ui.campaignHint;
+    let panel = `<p class="muted">${hint}</p>`;
     if (camp.stage) panel = camp.step === 'army' ? armyHtml(state, camp.pick, camp.stage) : stageHtml(state, camp.stage);
-    const tabs = inChapter2(state)
-      ? `<div class="camp-tabs">${([1, 2] as const)
-          .map((c) => `<button class="btn small ${c === camp.chapter ? 'bronze' : 'ghost'}" data-act="campChapter" data-id="${c}">${vi.ui.chapterTab(c)}</button>`)
-          .join('')}</div>`
-      : '';
-    const title = camp.chapter === 2 ? vi.ui.campaignTitle2 : vi.ui.campaignTitle;
+    const now = chapterNow(state);
+    const tabs =
+      now > 1
+        ? `<div class="camp-tabs">${([1, 2, 3] as const)
+            .filter((c) => c <= now)
+            .map((c) => `<button class="btn small ${c === camp.chapter ? 'bronze' : 'ghost'}" data-act="campChapter" data-id="${c}">${vi.ui.chapterTab(c)}</button>`)
+            .join('')}</div>`
+        : '';
+    const title = camp.chapter === 3 ? vi.ui.campaignTitle3 : camp.chapter === 2 ? vi.ui.campaignTitle2 : vi.ui.campaignTitle;
     const html = `<div class="camp-head"><h2>⚔️ ${title}</h2>${tabs}
         <button class="close" data-act="closeCampaign" aria-label="${vi.ui.close}">✕</button></div>
       <div class="camp-main"><div class="camp-map">${mapHtml(state, camp.stage, camp.chapter)}</div><div class="camp-panel">${panel}</div></div>`;
@@ -809,7 +874,7 @@ export class Hud {
       const k = btn.dataset.skill as SkillId;
       btn.disabled = !skillReady(b, k);
       btn.textContent = skillLabel(b, k);
-      btn.classList.toggle('active', k === 'trongTran' && b.rally > 0);
+      btn.classList.toggle('active', (k === 'trongTran' && b.rally > 0) || (k === 'ruaVang' && b.shield > 0));
     }
     this.fieldBar.querySelector<HTMLButtonElement>('[data-act="retreat"]')!.disabled = !!b.outcome;
   }
@@ -894,15 +959,14 @@ export class Hud {
     const damaged = state.buildings.filter((b) => b.damaged).length;
     const cost = repairAllCost(state);
     const flood = r.flood > 0;
-    const title = flood
-      ? r.won && !r.drowned.length
-        ? '🌊 ' + vi.ui.floodWonTitle
-        : r.won
-          ? '🌊 ' + vi.ui.floodHeldTitle
-          : '🌊 ' + vi.ui.floodLostTitle
-      : r.won
-        ? '🥁 ' + vi.ui.raidWonTitle
-        : '🔥 ' + vi.ui.raidLostTitle;
+    let title: string;
+    if (flood) title = '🌊 ' + (r.won && !r.drowned.length ? vi.ui.floodWonTitle : r.won ? vi.ui.floodHeldTitle : vi.ui.floodLostTitle);
+    else if (r.foe === 'yeu') {
+      const broken = r.wrecked.some((id) => state.buildings.find((b) => b.id === id)?.type === 'thanh');
+      title = '🌙 ' + (!r.won ? vi.ui.yeuLostTitle : broken ? vi.ui.yeuHeldTitle : vi.ui.yeuWonTitle);
+    }
+    else if (r.foe === 'trieu') title = r.won ? '🏹 ' + vi.ui.trieuWonTitle : '🔥 ' + vi.ui.trieuLostTitle;
+    else title = r.won ? '🥁 ' + vi.ui.raidWonTitle : '🔥 ' + vi.ui.raidLostTitle;
     back.innerHTML = `<div class="modal">
       <h2>${title}</h2>
       <div class="result-rows">

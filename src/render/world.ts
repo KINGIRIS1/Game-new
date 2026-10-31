@@ -1,9 +1,10 @@
-// Cảnh 3D của kinh đô: địa hình bậc thang, rừng, sông, công trình, lũy tre, đê, nước lũ, mưa
-// và các hiệu ứng khi đặt công trình.
+// Cảnh 3D của kinh đô: địa hình bậc thang, rừng, sông, công trình, lũy tre, đê, thành Cổ Loa, nước lũ, mưa,
+// đêm yêu tinh và các hiệu ứng khi đặt công trình.
 
 import * as THREE from 'three';
 import { BUILDINGS, FIELD, type BuildingType, type Terrain } from '../game/defs';
 import type { Battle, RaidSide } from '../game/battle';
+import { advLook, inChapter3, ruaVangCame, type AdvLook } from '../game/coLoa';
 import { dienLevel, type Building, type GameState } from '../game/game';
 import { giongLook, type GiongLook } from '../game/giong';
 import { GRID, RIVER_START, areaStart, baseHeights, isUnlocked } from '../game/map';
@@ -17,6 +18,7 @@ import {
   makeBayChong,
   makeBen,
   makeChoiCanh,
+  makeDenCoLoa,
   makeDenPhuDong,
   makeDenTanVien,
   makeDien,
@@ -27,10 +29,25 @@ import {
   makeRuong,
 } from './buildings';
 import { addSunLights, type SunLights } from './lights';
-import { buildDikes, buildForest, buildWalls, makeBoat, makeGiong, makeSonTinh, type DikeSpot, type TreeSpot, type WallSpot } from './models';
+import {
+  buildCitadel,
+  buildDikes,
+  buildForest,
+  buildWalls,
+  makeAnDuong,
+  makeBoat,
+  makeGiong,
+  makeRuaVang,
+  makeSonTinh,
+  type CitadelSpot,
+  type DikeSpot,
+  type TreeSpot,
+  type WallSpot,
+} from './models';
 import { makeWorker, type Job } from './people';
 import { C } from './palette';
 import { ShapeBuilder, seeded } from './shapes';
+import { inkThin, outlineOf, toon } from './toon';
 
 const HALF = GRID / 2;
 /** Mặt nước nằm thấp hơn mặt đất. */
@@ -48,6 +65,11 @@ export function waterSurface(level: number): number {
   if (level >= 1) return (level - 0.35) * LEVEL_H;
   return WATER_Y + Math.max(level, 0) * (one - WATER_Y);
 }
+
+/** Ánh trăng, trời và đất trong đêm yêu tinh. */
+const NIGHT_MOON = new THREE.Color(0x9fb4ff);
+const NIGHT_SKY = new THREE.Color(0x5a6aa8);
+const NIGHT_GROUND = new THREE.Color(0x2a2a48);
 
 /** Mật độ rừng: thưa để công trình nổi bật, không rối mắt. */
 const FOREST_DENSITY = 0.7;
@@ -200,11 +222,16 @@ export class World {
   private readonly drops: { x: number; y: number; z: number; v: number }[] = [];
   private storm = 0;
   private stormGoal = 0;
+  /** Đêm yêu tinh: trời tối xanh, ma trơi lơ lửng ở bìa rừng. */
+  private night = 0;
+  private nightGoal = 0;
+  private readonly wisps = new THREE.Group();
   private readonly lights: SunLights;
   private state?: GameState;
   private forest?: THREE.Object3D;
   private walls?: THREE.Object3D;
   private dikes?: THREE.Object3D;
+  private citadel?: THREE.Object3D;
   private readonly ripples = new InstancedBoxes(60);
   private readonly buildingsRoot = new THREE.Group();
   private readonly views = new Map<number, BuildingView>();
@@ -226,9 +253,15 @@ export class World {
   private giong?: { obj: THREE.Group; look: GiongLook; key: string };
   /** Sơn Tinh đứng trước Điện ở chương 2, tới khi đánh lui Thủy Tinh thì về núi. */
   private son?: { obj: THREE.Group; look: SonLook; key: string };
+  /** An Dương Vương đứng trước Điện ở chương 3, cạnh cột đá thề. */
+  private adv?: { obj: THREE.Group; look: AdvLook; key: string; y: number };
+  private pillar?: { obj: THREE.Group; key: string };
+  /** Rùa Vàng bơi chậm trên sông sau khi đã hiện lên diệt yêu tinh. */
+  private turtle?: THREE.Group;
   private shownLevel = 0;
   private wallKey = '';
   private dikeKey = '';
+  private citadelKey = '';
   private time = 0;
   private res: Resolution = 'medium';
 
@@ -272,6 +305,7 @@ export class World {
     for (let i = 0; i < 420; i++) this.drops.push({ x: Math.random() * 40 - 20, y: Math.random() * 16, z: Math.random() * 40 - 20, v: 14 + Math.random() * 6 });
     this.addBoats();
     this.initRipples();
+    this.initWisps();
 
     this.footprint = new THREE.Mesh(
       new THREE.PlaneGeometry(1, 1).rotateX(-Math.PI / 2),
@@ -385,6 +419,25 @@ export class World {
     }
   }
 
+  /** Đốm ma trơi xanh lơ lửng dọc bìa rừng phía bắc và phía tây, chỉ hiện trong đêm yêu tinh. */
+  private initWisps(): void {
+    const rand = seeded(23);
+    const geo = new THREE.SphereGeometry(0.16, 8, 6);
+    for (let i = 0; i < 22; i++) {
+      const mat = new THREE.MeshBasicMaterial({ color: i % 3 ? C.ghost : C.ghostDeep, transparent: true, opacity: 0, depthWrite: false });
+      const wisp = new THREE.Mesh(geo, mat);
+      const along = 2 + rand() * 22;
+      const depth = rand() * 2.5;
+      const north = i % 2 === 0;
+      wisp.position.set(wx(north ? along : depth), 1 + rand() * 1.4, wz(north ? depth : along));
+      wisp.userData.base = wisp.position.clone();
+      wisp.userData.phase = rand() * Math.PI * 2;
+      this.wisps.add(wisp);
+    }
+    this.wisps.visible = false;
+    this.scene.add(this.wisps);
+  }
+
   private initRipples(): void {
     const rand = seeded(11);
     for (let i = 0; i < 60; i++) {
@@ -422,6 +475,7 @@ export class World {
     this.views.clear();
     this.wallKey = '';
     this.dikeKey = '';
+    this.citadelKey = '';
     this.floodKey = '';
     this.heights = [];
     this.shownLevel = 0;
@@ -464,7 +518,7 @@ export class World {
 
     const alive = new Set<number>();
     for (const b of state.buildings) {
-      if (b.type === 'luy' || b.type === 'de') continue;
+      if (b.type === 'luy' || b.type === 'de' || b.type === 'thanh') continue;
       alive.add(b.id);
       const v = this.views.get(b.id);
       if (!v || v.level !== b.level || v.damaged !== !!b.damaged || v.workers !== b.workers) this.createView(b);
@@ -483,6 +537,8 @@ export class World {
     this.syncMerchant(state);
     this.syncGiong(state);
     this.syncSon(state);
+    this.syncAdv(state);
+    this.syncTurtle(state);
 
     const walls = state.buildings.filter((b) => b.type === 'luy');
     const key = walls.map((b) => `${b.id}:${b.level}:${b.damaged ? 1 : 0}:${this.heights[b.z * GRID + b.x]}`).join(',');
@@ -511,6 +567,22 @@ export class World {
       this.scene.add(this.dikes);
       this.floodKey = '';
     }
+
+    const citadel = state.buildings.filter((b) => b.type === 'thanh');
+    const ckey = citadel.map((b) => `${b.id}:${b.damaged ? 1 : 0}:${this.heights[b.z * GRID + b.x]}`).join(',');
+    if (ckey !== this.citadelKey) {
+      this.citadelKey = ckey;
+      if (this.citadel) this.scene.remove(this.citadel);
+      const spots: CitadelSpot[] = citadel.map((c) => ({
+        x: wx(c.x) + 0.5,
+        y: this.groundY(c.x, c.z),
+        z: wz(c.z) + 0.5,
+        seed: c.x * 31 + c.z * 17,
+        damaged: !!c.damaged,
+      }));
+      this.citadel = buildCitadel(spots);
+      this.scene.add(this.citadel);
+    }
     this.syncFlood(state);
   }
 
@@ -524,6 +596,7 @@ export class World {
   private syncFlood(state: GameState): void {
     const raid = state.raid;
     this.stormGoal = raid.foe === 'thuy' && raid.phase !== 'idle' ? 1 : raid.water > 0.02 ? 0.5 : 0;
+    this.nightGoal = raid.foe === 'yeu' && raid.phase !== 'idle' ? 1 : 0;
     const water = raid.water;
     const key = water > 0.005 ? `${water.toFixed(2)}:${state.buildings.filter((b) => b.type === 'de' && b.damaged).length}` : '';
     if (key === this.floodKey) return;
@@ -653,6 +726,7 @@ export class World {
     if (type === 'bayChong') return makeBayChong();
     if (type === 'denPhuDong') return makeDenPhuDong();
     if (type === 'denTanVien') return makeDenTanVien();
+    if (type === 'denCoLoa') return makeDenCoLoa();
     return new THREE.Group();
   }
 
@@ -791,11 +865,71 @@ export class World {
     this.son = { obj, look, key };
   }
 
-  /** Người chơi chạm vào tướng đứng trước Điện: Gióng hay Sơn Tinh. */
-  pickHero(clientX: number, clientY: number): 'giong' | 'son' | null {
+  /**
+   * An Dương Vương đứng trước Điện ở chương 3: chưa có nỏ thần thì cầm rìu đồng, có rồi thì cầm nỏ thần.
+   * Cạnh ngài là cột đá thề Thục Phán dựng khi nhận ngôi, thề giữ đền thờ các vua Hùng.
+   */
+  private syncAdv(state: GameState): void {
+    const look = advLook(state);
+    const dien = state.buildings.find((b) => b.type === 'dien');
+    const spot = dien ? this.heroSpot(dien) : null;
+    const key = look && spot ? `${look}:${spot.x}:${spot.y}:${spot.z}` : '';
+    if (this.adv?.key !== key) {
+      if (this.adv) this.scene.remove(this.adv.obj);
+      this.adv = undefined;
+      if (look && spot) {
+        const obj = makeAnDuong({ crossbow: look === 'noThan' });
+        obj.scale.setScalar(0.9);
+        obj.position.set(spot.x, spot.y, spot.z);
+        obj.rotation.y = 0.4;
+        this.scene.add(obj);
+        this.adv = { obj, look, key, y: spot.y };
+      }
+    }
+    const pkey = inChapter3(state) && spot ? `${spot.x}:${spot.y}:${spot.z}` : '';
+    if (this.pillar?.key === pkey) return;
+    if (this.pillar) this.scene.remove(this.pillar.obj);
+    this.pillar = undefined;
+    if (!pkey || !spot) return;
+    const obj = this.makePillar();
+    obj.position.set(spot.x - 0.62, spot.y, spot.z - 0.2);
+    obj.rotation.y = 0.3;
+    this.scene.add(obj);
+    this.pillar = { obj, key: pkey };
+  }
+
+  /** Cột đá thề: trụ đá vuông trên bệ, mặt khắc vạch chữ, đỉnh vát. */
+  private makePillar(): THREE.Group {
+    const b = new ShapeBuilder();
+    b.box(0.42, 0.08, 0.42, C.rockDark, 0, 0.04, 0);
+    b.box(0.24, 0.9, 0.24, C.rock, 0, 0.53, 0);
+    b.cone(0.18, 0.16, C.rockDark, 0, 1.06, 0, [0, Math.PI / 4, 0], 4);
+    for (let i = 0; i < 5; i++) b.box(0.12, 0.02, 0.01, C.ink, 0, 0.3 + i * 0.12, 0.122);
+    const g = new THREE.Group();
+    const mesh = b.mesh(toon);
+    g.add(mesh, outlineOf(mesh.geometry, inkThin));
+    return g;
+  }
+
+  /** Rùa Vàng bơi qua bơi lại trên sông phía nam kinh đô, từ khi hiện lên diệt yêu tinh. */
+  private syncTurtle(state: GameState): void {
+    const want = ruaVangCame(state);
+    if (want && !this.turtle) {
+      this.turtle = makeRuaVang();
+      this.turtle.scale.setScalar(0.55);
+      this.scene.add(this.turtle);
+    } else if (!want && this.turtle) {
+      this.scene.remove(this.turtle);
+      this.turtle = undefined;
+    }
+  }
+
+  /** Người chơi chạm vào tướng đứng trước Điện: Gióng, Sơn Tinh hay An Dương Vương. */
+  pickHero(clientX: number, clientY: number): 'giong' | 'son' | 'adv' | null {
     const ray = this.view.setRay(clientX, clientY);
     if (this.giong && ray.intersectObject(this.giong.obj, true).length) return 'giong';
     if (this.son && ray.intersectObject(this.son.obj, true).length) return 'son';
+    if (this.adv && ray.intersectObject(this.adv.obj, true).length) return 'adv';
     return null;
   }
 
@@ -1030,7 +1164,25 @@ export class World {
       if (staff) staff.rotation.x = -0.35 + 0.12 * Math.sin(t * 1.3);
     }
 
+    if (this.adv) {
+      // An Dương Vương đứng nhún nhẹ, nỏ (hay rìu) khẽ đưa lên xuống.
+      this.adv.obj.position.y = this.adv.y + Math.abs(Math.sin(t * 1.6)) * 0.02;
+      const weapon = this.adv.obj.children.find((c) => c.userData.weapon);
+      if (weapon && this.adv.look === 'noThan') weapon.rotation.x = 0.5 + 0.06 * Math.sin(t * 1.2);
+    }
+
+    if (this.turtle) {
+      // Bơi dọc sông phía nam, tới đầu thì quay lại; đầu ngóc nhấp nhô theo sóng.
+      const span = 22;
+      const k = (t * 0.045) % 2;
+      const along = k < 1 ? k : 2 - k;
+      const lane = RIVER_START - HALF + 1.3;
+      this.turtle.position.set(-HALF + 2 + along * span, WATER_Y - 0.05 + Math.sin(t * 1.3) * 0.03, lane);
+      this.turtle.rotation.y = k < 1 ? Math.PI / 2 : -Math.PI / 2;
+    }
+
     this.updateStorm(dt);
+    this.updateNight(dt);
 
     if (this.giong) {
       const g = this.giong;
@@ -1073,14 +1225,37 @@ export class World {
     this.renderer.render(this.inField && this.field ? this.field.scene : this.scene, this.view.camera);
   }
 
-  /** Trời tối sầm và mưa xối xả khi Thủy Tinh hô mưa gọi gió, tạnh dần khi nước rút. */
+  /** Đêm yêu tinh: ma trơi bập bềnh, sáng mờ dần theo trời tối. Màu trời và đèn tính chung ở `updateStorm`. */
+  private updateNight(dt: number): void {
+    this.night += (this.nightGoal - this.night) * Math.min(1, dt * 1.2);
+    const k = this.night;
+    this.wisps.visible = !this.inField && k > 0.05;
+    if (!this.wisps.visible) return;
+    for (const w of this.wisps.children) {
+      const base = w.userData.base as THREE.Vector3;
+      const ph = w.userData.phase as number;
+      w.position.set(base.x + Math.sin(this.time * 0.7 + ph) * 0.4, base.y + Math.sin(this.time * 1.9 + ph) * 0.25, base.z + Math.cos(this.time * 0.6 + ph) * 0.4);
+      const mat = (w as THREE.Mesh).material as THREE.MeshBasicMaterial;
+      mat.opacity = k * (0.55 + 0.4 * Math.abs(Math.sin(this.time * 3 + ph)));
+    }
+  }
+
+  /**
+   * Trời tối sầm và mưa xối xả khi Thủy Tinh hô mưa gọi gió, tạnh dần khi nước rút.
+   * Đêm yêu tinh thì trời tối xanh, không mưa.
+   */
   private updateStorm(dt: number): void {
     this.storm += (this.stormGoal - this.storm) * Math.min(1, dt * 1.5);
     const k = this.storm;
-    const sky = (this.scene.background as THREE.Color).setHex(C.sky).lerp(new THREE.Color(C.storm), k * 0.85);
+    const n = this.night;
+    const sky = (this.scene.background as THREE.Color).setHex(C.sky).lerp(new THREE.Color(C.storm), k * 0.85).lerp(new THREE.Color(C.night), n * 0.85);
     (this.scene.fog as THREE.Fog).color.copy(sky);
-    this.lights.sun.intensity = 2.6 * (1 - 0.45 * k);
-    this.lights.hemi.intensity = 0.9 * (1 - 0.2 * k);
+    this.lights.sun.intensity = 2.6 * (1 - 0.45 * k) * (1 - 0.6 * n);
+    this.lights.hemi.intensity = 0.9 * (1 - 0.2 * k) * (1 - 0.25 * n);
+    // Đêm: nắng thành ánh trăng xanh nhạt, trời và đất hắt ánh xanh tím.
+    this.lights.sun.color.setHex(0xfff0d8).lerp(NIGHT_MOON, n * 0.8);
+    this.lights.hemi.color.setHex(0xfff3dc).lerp(NIGHT_SKY, n * 0.85);
+    this.lights.hemi.groundColor.setHex(0x6d6a45).lerp(NIGHT_GROUND, n * 0.85);
     this.rain.visible = !this.inField && k > 0.05;
     if (!this.rain.visible) return;
     const m = new THREE.Matrix4();

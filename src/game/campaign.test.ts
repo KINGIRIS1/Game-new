@@ -140,7 +140,8 @@ describe('phó bản', () => {
     s.buildings[0].level = 5;
     expect(canStartStage(s, 5)).toEqual({ ok: false, reason: 'canThanhGiong' });
     expect(canStartStage(s, 9)).toEqual({ ok: false, reason: 'canChuong2' });
-    expect(canStartStage(s, 17)).toEqual({ ok: false, reason: 'khongTimThay' });
+    expect(canStartStage(s, 17)).toEqual({ ok: false, reason: 'canChuong3' });
+    expect(canStartStage(s, 25)).toEqual({ ok: false, reason: 'khongTimThay' });
   });
 
   it('phải chọn lính, và không mang quá số lính đang có', () => {

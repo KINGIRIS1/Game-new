@@ -3,7 +3,7 @@
 // Gốc tọa độ là tâm chân móng, mặt trước hướng +z.
 
 import * as THREE from 'three';
-import { ironHorse, makeFighter, makeSonTinh } from './models';
+import { ironHorse, makeCrossbowStand, makeFighter, makeRuaVang, makeSonTinh } from './models';
 import { C } from './palette';
 import { ShapeBuilder, saddleRoof, seeded } from './shapes';
 import { ToonModel, inkThin, outlineOf, toon } from './toon';
@@ -538,5 +538,46 @@ export function makeDenTanVien(): THREE.Group {
   statue.scale.setScalar(0.5);
   statue.position.set(0, 0.5, 0.95);
   g.add(statue);
+  return g;
+}
+
+// ---------- Đền Cổ Loa ----------
+
+/**
+ * Đền thờ An Dương Vương: nền đá hai bậc có lan can, đền mái thuyền hai tầng, trước sân là tượng Rùa Vàng
+ * ngóc đầu và cây nỏ đồng lớn trên giá; hai bên cờ đỏ.
+ */
+export function makeDenCoLoa(): THREE.Group {
+  const m = new ToonModel();
+  const p = m.plain;
+  p.box(2.9, 0.22, 2.9, C.rock, 0, 0.11, 0);
+  p.box(2.5, 0.18, 1.9, C.rockDark, 0, 0.31, -0.45);
+  // Lan can đá quanh sân.
+  for (let i = 0; i < 7; i++) {
+    const t = -1.35 + i * 0.45;
+    p.box(0.1, 0.24, 0.1, C.rockDark, t, 0.34, 1.35);
+    if (Math.abs(t) > 0.4) p.box(0.1, 0.24, 0.1, C.rockDark, 1.35, 0.34, t);
+    if (Math.abs(t) > 0.4) p.box(0.1, 0.24, 0.1, C.rockDark, -1.35, 0.34, t);
+  }
+  stiltHall(m, { x: 0, z: -0.5, w: 2.0, d: 1.2, postH: 0.9, roofL: 2.8, roofW: 1.7, lift: 0.7 });
+  const roofTop = 0.9 + 0.68 + 1.7 * 0.4 + 0.7;
+  // Tầng mái trên nhỏ hơn, chim đồng hai đầu nóc.
+  m.band.add(saddleRoof({ length: 1.8, width: 1.1, lift: 0.45, drop: 0.44, thickness: 0.08 }), C.thatchDark, 0, roofTop - 0.25, -0.5);
+  bird(m, 0.95, roofTop + 0.15, -0.5, 1, 0.7);
+  bird(m, -0.95, roofTop + 0.15, -0.5, -1, 0.7);
+  drum(m, -1.05, 0.9, 0.38, 0.22);
+  banner(m, -1.3, -1.3, 2.5, C.red);
+  banner(m, 1.1, -1.3, 2.5, C.red);
+  p.box(0.7, 0.14, 0.9, C.rock, -0.15, 0.29, 0.85);
+  const g = m.group();
+  const turtle = makeRuaVang();
+  turtle.scale.setScalar(0.42);
+  turtle.position.set(-0.15, 0.36, 0.8);
+  g.add(turtle);
+  const bow = makeCrossbowStand();
+  bow.scale.setScalar(0.85);
+  bow.position.set(0.85, 0.22, 0.75);
+  bow.rotation.y = -0.4;
+  g.add(bow);
   return g;
 }

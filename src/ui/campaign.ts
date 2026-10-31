@@ -1,10 +1,12 @@
-// Giao diện phó bản: bản đồ đường tới núi Trâu (chương 1) và đường lên núi Tản Viên (chương 2),
+// Giao diện phó bản: bản đồ đường tới núi Trâu (chương 1), đường lên núi Tản Viên (chương 2)
+// và đường giữ thành Cổ Loa (chương 3),
 // thẻ màn, bảng xếp quân và bảng kết quả trận.
 // Chỉ dựng chuỗi HTML; Hud lo việc gắn vào trang và bắt sự kiện.
 
 import type { HeroSetup } from '../game/battle';
 import { CH2_LAST, canStartStage, chapterStages, stageDef, stageOpen, stageReward } from '../game/campaign';
-import { BOSSES, ROWS, UNIT_TYPES, type EnemyType, type Row, type UnitType } from '../game/defs';
+import { CH3_LAST } from '../game/coLoa';
+import { BOSSES, ROWS, UNIT_TYPES, type Chapter, type EnemyType, type Row, type UnitType } from '../game/defs';
 import type { GameState, StageResult } from '../game/game';
 import { giftOfStage, heroFor } from '../game/son';
 import { vi } from '../text/vi';
@@ -18,9 +20,9 @@ export interface ArmyPick {
 
 /**
  * Vị trí các màn trên bản đồ (hệ tọa độ 100 × 160), đi từ Phong Châu ở dưới lên núi ở trên.
- * Chương 1 lên núi Trâu, chương 2 lên núi Tản Viên ba đỉnh.
+ * Chương 1 lên núi Trâu, chương 2 lên núi Tản Viên ba đỉnh. Chương 3 lên núi Thất Diệu rồi quay về giữ thành Cổ Loa.
  */
-const NODES: Record<1 | 2, [number, number][]> = {
+const NODES: Record<Chapter, [number, number][]> = {
   1: [
     [26, 144],
     [62, 131],
@@ -41,11 +43,21 @@ const NODES: Record<1 | 2, [number, number][]> = {
     [76, 52],
     [50, 30],
   ],
+  3: [
+    [32, 138],
+    [16, 112],
+    [25, 84],
+    [52, 96],
+    [80, 88],
+    [86, 58],
+    [60, 44],
+    [72, 24],
+  ],
 };
 const START: [number, number] = [12, 154];
 
 /** Núi, sông và tên đất vẽ sau đường đi, khác nhau ở mỗi chương. */
-const SCENERY: Record<1 | 2, string> = {
+const SCENERY: Record<Chapter, string> = {
   1: `<path class="mtn far" d="M8 30 L24 10 L40 30 Z M60 30 L78 8 L96 30 Z"/>
     <path class="mtn" d="M30 34 L50 4 L70 34 Z"/>
     <text class="label" x="50" y="40">Núi Trâu</text>
@@ -59,11 +71,30 @@ const SCENERY: Record<1 | 2, string> = {
     <path class="river" d="M-2 118 C 20 106, 44 126, 70 114 S 96 102, 104 110"/>
     <path class="river" d="M104 74 C 84 66, 62 84, 40 74 S 10 62, -2 68"/>
     <text class="label" x="84" y="82">Sông Đà</text>`,
+  3: `<path class="mtn far" d="M0 92 L7 76 L14 92 Z M8 86 L14 72 L20 86 Z M22 84 L28 70 L34 84 Z M30 92 L37 76 L44 92 Z"/>
+    <path class="mtn" d="M4 100 L13 82 L22 100 Z M16 98 L25 74 L34 98 Z M28 100 L36 84 L44 100 Z"/>
+    <text class="label" x="22" y="66">Núi Thất Diệu</text>
+    <path class="mtn far" d="M74 66 L86 46 L98 66 Z"/>
+    <text class="label" x="88" y="43">Tiên Du</text>
+    <ellipse class="citadel" cx="72" cy="24" rx="22" ry="11"/>
+    <ellipse class="citadel" cx="72" cy="24" rx="15" ry="7.5"/>
+    <ellipse class="citadel" cx="72" cy="24" rx="8" ry="4"/>
+    <text class="label" x="72" y="9">Thành Cổ Loa</text>
+    <path class="river" d="M-2 128 C 20 118, 44 136, 70 122 S 96 112, 104 118"/>
+    <path class="river" d="M48 74 C 60 80, 74 66, 88 72 S 100 74, 104 72"/>
+    <text class="label" x="62" y="69">Sông Đuống</text>`,
 };
 
 export const hasBoss = (n: number) => BOSSES.some((k) => (stageDef(n)?.enemies[k] ?? 0) > 0);
 
-export function mapHtml(state: GameState, selected: number | null, chapter: 1 | 2 = 1): string {
+/** Biểu tượng trùm trên bản đồ: chính tên trùm của màn ấy. */
+function bossIcon(n: number): string {
+  const boss = BOSSES.find((k) => (stageDef(n)?.enemies[k] ?? 0) > 0);
+  if (!boss) return '';
+  return stageDef(n)!.chapter === 1 ? '👹' : vi.enemyIcons[boss];
+}
+
+export function mapHtml(state: GameState, selected: number | null, chapter: Chapter = 1): string {
   const points = NODES[chapter];
   const stages = chapterStages(chapter);
   const road = [START, ...points].map(([x, y], i) => `${i ? 'L' : 'M'}${x} ${y}`).join(' ');
@@ -80,11 +111,11 @@ export function mapHtml(state: GameState, selected: number | null, chapter: 1 | 
       <circle class="ring" r="${r}"/>
       <circle class="core" r="${r * 0.66}"/>
       <text class="num" y="${cleared || open ? 1.8 : 1.6}">${mark}</text>
-      ${hasBoss(n) ? `<text class="boss" y="${-r - 1.5}">${stageDef(n)!.chapter === 2 ? '🌊' : '👹'}</text>` : ''}
+      ${hasBoss(n) ? `<text class="boss" y="${-r - 1.5}">${bossIcon(n)}</text>` : ''}
       ${gift && !state.son.gifts[gift] ? `<text class="boss" y="${-r - 1.5}">${vi.gifts[gift].icon}</text>` : ''}
     </g>`;
   }).join('');
-  const title = chapter === 2 ? vi.ui.campaignTitle2 : vi.ui.campaignTitle;
+  const title = chapter === 3 ? vi.ui.campaignTitle3 : chapter === 2 ? vi.ui.campaignTitle2 : vi.ui.campaignTitle;
   return `<svg class="map" viewBox="0 0 100 160" preserveAspectRatio="xMidYMid meet" role="img" aria-label="${title}">
     ${SCENERY[chapter]}
     <path class="road" d="${road}"/>
@@ -113,7 +144,8 @@ export function stageBlocker(state: GameState, n: number): string {
 /** Dòng báo tướng nào cùng ra trận. */
 export function heroNote(hero: HeroSetup | null): string {
   if (!hero) return '';
-  if (hero.kind === 'sonTinh') return `<p class="hero-note">⛰️ ${vi.ui.sonJoins}</p>`;
+  if (hero.kind === 'anDuong') return `<p class="hero-note">🏹 ${vi.ui.advJoins}</p>`;
+  if (hero.kind === 'sonTinh') return `<p class="hero-note">⛰️ ${hero.glow ? vi.ui.sonHienLinhJoins : vi.ui.sonJoins}</p>`;
   return `<p class="hero-note">🐎 ${hero.glow ? vi.ui.giongHienLinhJoins : vi.ui.giongJoins}</p>`;
 }
 
@@ -175,14 +207,13 @@ export function defaultPick(state: GameState): ArmyPick {
 
 export function stageResultHtml(r: StageResult): string {
   const lost = UNIT_TYPES.filter((k) => r.lost[k] > 0).map((k) => `${vi.units[k].icon} ${r.lost[k]}`).join(' ') || vi.ui.raidNone;
-  const finale = r.outcome === 'win' && r.first && r.stage === CH2_LAST;
-  const title = finale
-    ? `⛰️ ${vi.ui.sonWinTitle}`
-    : r.outcome === 'win'
-      ? `🥁 ${vi.ui.stageWonTitle(r.stage)}`
-      : r.outcome === 'retreat'
-        ? `🏳️ ${vi.ui.stageRetreatTitle}`
-        : `🔥 ${vi.ui.stageLostTitle}`;
+  const won1st = r.outcome === 'win' && r.first;
+  let title: string;
+  if (won1st && r.stage === CH3_LAST) title = `🐢 ${vi.ui.advWinTitle}`;
+  else if (won1st && r.stage === CH2_LAST) title = `⛰️ ${vi.ui.sonWinTitle}`;
+  else if (r.outcome === 'win') title = `🥁 ${vi.ui.stageWonTitle(r.stage)}`;
+  else if (r.outcome === 'retreat') title = `🏳️ ${vi.ui.stageRetreatTitle}`;
+  else title = `🔥 ${vi.ui.stageLostTitle}`;
   const won = r.outcome === 'win';
   return `<div class="modal">
     <h2>${title}</h2>
