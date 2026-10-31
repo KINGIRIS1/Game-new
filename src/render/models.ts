@@ -346,6 +346,38 @@ function halo(): THREE.Group {
   return g;
 }
 
+/** Lúc đứng yên, tay phải giơ cao roi (hay tre), hơi ngả ra sau và chếch ra ngoài. */
+export const WEAPON_REST = { x: -0.35, z: -0.4 };
+
+/**
+ * Tay phải cầm roi sắt (hay cây tre) của tráng sĩ, tách riêng để phần vẽ trận làm động tác quật.
+ * Gốc nhóm là khớp vai; tay và vũ khí dựng dọc trục +y của gốc. Xoay theo thứ tự YXZ:
+ * nghiêng ra ngoài (z), cúi về trước (x), rồi quay quanh mình (y).
+ */
+function giongWeapon(bamboo: boolean): THREE.Group {
+  const w = new ToonModel(inkThin);
+  const p = w.plain;
+  p.cyl(0.045, 0.045, 0.4, C.skin, 0, 0.2, 0, undefined, 6);
+  if (bamboo) {
+    // Cây tre đằng ngà nhổ bên đường, ngọn xòe lá.
+    p.cyl(0.045, 0.055, 2, C.bamboo, 0, 1.4, 0, undefined, 6);
+    for (let i = 0; i < 5; i++) {
+      const a = (i - 2) * 0.5;
+      p.cone(0.08, 0.32, C.leaf[i % 4], Math.sin(a) * 0.12, 2.3 + Math.cos(a) * 0.12, (i % 2) * 0.12 - 0.06, [0, 0, -a], 4);
+    }
+  } else {
+    p.cyl(0.03, 0.03, 1.2, IRON_DARK, 0, 1.0, 0, undefined, 6);
+    p.cyl(0.045, 0.045, 0.16, C.bronze, 0, 0.45, 0, undefined, 8);
+    p.sphere(0.05, C.bronze, 0, 1.62, 0, [1, 1, 1], 8);
+  }
+  const g = w.group();
+  g.position.set(0.25, 1.56, 0.05);
+  g.rotation.order = 'YXZ';
+  g.rotation.set(WEAPON_REST.x, 0, WEAPON_REST.z);
+  g.userData.weapon = true;
+  return g;
+}
+
 /**
  * Thánh Gióng theo từng dáng: cậu bé lên ba ngồi trên chiếu, thiếu niên ôm bát cơm đầy cạnh chồng bát đã ăn,
  * tráng sĩ mặc giáp sắt viền đồng, đội mũ lông chim, cưỡi ngựa sắt, giơ cao roi sắt (hay cây tre khi roi đã gãy).
@@ -374,18 +406,8 @@ export function makeGiong(look: GiongLook, opts: { bamboo?: boolean; glow?: bool
     // Chùm lông chim xòe trên mũ, như người trên mặt trống đồng.
     const plume = [C.red, C.cream, C.bronzeLight];
     for (let i = -3; i <= 3; i++) p.box(0.07, 0.52, 0.03, plume[Math.abs(i) % 3], i * 0.06, y + 1.3, -0.04, [0, 0, -i * 0.22]);
-    // Tay trái cầm cương, tay phải giơ cao.
+    // Tay trái cầm cương. Tay phải và vũ khí dựng riêng ở `giongWeapon`.
     p.cyl(0.04, 0.04, 0.3, C.skin, -0.2, y + 0.38, 0.14, [1, 0, 0.2], 6);
-    p.cyl(0.045, 0.045, 0.4, C.skin, 0.32, y + 0.68, 0.05, [0, 0, -0.4], 6);
-    if (opts.bamboo) {
-      // Cây tre đằng ngà nhổ bên đường, vung cao.
-      p.cyl(0.045, 0.055, 2, C.bamboo, 0.7, y + 1.77, -0.28, [-0.35, 0, -0.3], 6);
-      for (let i = 0; i < 5; i++) p.cone(0.08, 0.32, C.leaf[i % 4], 0.92 + i * 0.05, y + 2.45 + i * 0.07, -0.5 - i * 0.04, [-0.3, 0, -0.9 + i * 0.35], 4);
-    } else {
-      p.cyl(0.03, 0.03, 1.2, IRON_DARK, 0.58, y + 1.41, -0.15, [-0.35, 0, -0.3], 6);
-      p.cyl(0.045, 0.045, 0.16, C.bronze, 0.43, y + 0.96, 0.02, [-0.35, 0, -0.3], 8);
-      p.sphere(0.05, C.bronze, 0.76, y + 1.95, -0.35, [1, 1, 1], 8);
-    }
   } else if (look === 'be') {
     // Cậu bé lên ba ngồi bệt trên chiếu, đầu cạo trọc chừa chỏm tóc trước trán, mặc yếm đỏ.
     m.band.box(0.66, 0.03, 0.52, C.thatch, 0, 0.015, 0.04);
@@ -415,6 +437,7 @@ export function makeGiong(look: GiongLook, opts: { bamboo?: boolean; glow?: bool
   }
   const g = m.group();
   if (look === 'trangSi') {
+    g.add(giongWeapon(opts.bamboo ?? false));
     // Lửa phun ra từ mõm ngựa, hai lớp đỏ cam và vàng, phần vẽ làm lập lòe.
     for (const [r, len, color, z] of [[0.13, 0.62, C.fire, 1.12], [0.07, 0.42, C.ember, 1.04]] as const) {
       const flame = new THREE.Mesh(new THREE.ConeGeometry(r, len, 6), new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.9 }));

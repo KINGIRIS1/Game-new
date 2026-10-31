@@ -3,7 +3,7 @@
 
 import * as THREE from 'three';
 import type { Battle, FighterKind } from '../game/battle';
-import { makeFighter, makeGiong } from './models';
+import { WEAPON_REST, makeFighter, makeGiong } from './models';
 import { C } from './palette';
 
 interface FighterView {
@@ -11,6 +11,10 @@ interface FighterView {
   deadAge: number;
   /** Gióng bay về trời: đã bay được bao lâu. */
   rise: number;
+  /** Tay cầm roi (hay tre) của Gióng, để làm động tác quật. */
+  weapon?: THREE.Object3D;
+  /** Gióng đang quét tre một vòng (Nhổ tre): còn bao lâu. */
+  smash: number;
 }
 
 /** Một đốm hiệu ứng ngắn: lửa, bụi, khói. Lớn dần rồi mờ đi. */
@@ -42,6 +46,29 @@ const arrowGeo = new THREE.BoxGeometry(0.03, 0.03, 0.45);
 const arrowMat = new THREE.MeshBasicMaterial({ color: C.arrow });
 const ringGeo = new THREE.RingGeometry(0.8, 1, 48).rotateX(-Math.PI / 2);
 const RING_LIFE = 1.1;
+/** Nhổ tre: thời gian cả động tác, từ lấy đà tới giơ tre lên lại. */
+const SMASH_TIME = 0.9;
+const { lerp, smoothstep } = THREE.MathUtils;
+
+/**
+ * Động tác tay vũ khí của Gióng. Đòn thường: quật từ trên cao xuống trước mặt (theo `swing` của luật trận).
+ * Nhổ tre: vung tre ra sau lấy đà, quật mạnh xuống trước mặt, nâng ngang lên quét trọn một vòng quanh mình,
+ * rồi giơ lên lại. Vòng quét dài vừa bằng vùng bị đánh trúng.
+ */
+function swingWeapon(weapon: THREE.Object3D, swing: number, smash: number): void {
+  if (smash > 0) {
+    const k = 1 - smash / SMASH_TIME;
+    let x: number;
+    if (k < 0.15) x = lerp(WEAPON_REST.x, -1, smoothstep(k, 0, 0.15));
+    else if (k < 0.3) x = lerp(-1, 2.2, smoothstep(k, 0.15, 0.3));
+    else if (k < 0.85) x = lerp(2.2, 1.45, smoothstep(k, 0.3, 0.4));
+    else x = lerp(1.45, WEAPON_REST.x, smoothstep(k, 0.85, 1));
+    weapon.rotation.set(x, Math.PI * 2 * smoothstep(k, 0.35, 0.85), WEAPON_REST.z);
+    return;
+  }
+  const k = swing > 0 ? 1 - swing / 0.3 : 0;
+  weapon.rotation.set(WEAPON_REST.x + 2.25 * Math.sin(Math.PI * k), 0, WEAPON_REST.z);
+}
 
 export class BattleView {
   private readonly fighters = new Map<number, FighterView>();
@@ -112,7 +139,7 @@ export class BattleView {
         const obj = f.kind === 'giong' ? makeGiong('trangSi', { bamboo: battle.hero?.bamboo, glow: battle.hero?.glow }) : makeFighter(f.kind);
         obj.scale.setScalar((SCALE[f.kind] ?? 0.8) * this.scale);
         this.root.add(obj);
-        view = { obj, deadAge: 0, rise: 0 };
+        view = { obj, deadAge: 0, rise: 0, weapon: obj.children.find((c) => c.userData.weapon), smash: 0 };
         this.fighters.set(f.id, view);
       }
       const obj = view.obj;
@@ -139,8 +166,12 @@ export class BattleView {
           obj.rotation.x = -0.35;
           continue;
         }
+        view.smash = Math.max(0, view.smash - dt);
+        if (view.weapon) swingWeapon(view.weapon, f.swing, view.smash);
       }
-      obj.rotation.x = f.swing > 0 ? -0.5 * (f.swing / 0.3) : 0;
+      // Gióng ra đòn bằng tay vũ khí, ngựa chỉ chồm nhẹ khi quét tre; người khác ngả cả thân.
+      if (f.kind === 'giong') obj.rotation.x = view.smash > 0 ? -0.2 * Math.sin(Math.PI * (1 - view.smash / SMASH_TIME)) : 0;
+      else obj.rotation.x = f.swing > 0 ? -0.5 * (f.swing / 0.3) : 0;
       // Đang có Trống trận thì quân ta nhún nhảy hăng hơn.
       const hop = f.side === 'ta' && battle.rally > 0 ? 0.12 : 0.06;
       obj.position.y = f.state === 'move' ? Math.abs(Math.sin(this.time * 10 + f.id)) * hop : 0;
@@ -158,6 +189,11 @@ export class BattleView {
         mesh.position.copy(from);
         this.root.add(mesh);
         this.arrows.push({ mesh, from, to, age: 0, dur: Math.max(0.15, from.distanceTo(to) / 12) });
+      }
+      if (e.kind === 'smash') {
+        const hero = battle.fighters.find((f) => f.kind === 'giong');
+        const view = hero && this.fighters.get(hero.id);
+        if (view) view.smash = SMASH_TIME;
       }
       if (e.kind === 'rally' || e.kind === 'smash') {
         const color = e.kind === 'rally' ? C.bronzeLight : C.bamboo;

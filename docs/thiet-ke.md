@@ -247,10 +247,11 @@ Tài liệu này ghi lại các quyết định đã chốt với chủ dự án
   - khi giặc đánh kinh đô, Gióng ra từ trước Điện.
 - **Gióng trong trận**:
   - 500 máu (ngoài bãi cũng bền gấp 1,6 lần như mọi người), 22 sát thương, chạy nhanh;
-  - mỗi đòn quét thêm nửa sát thương lên giặc đứng quanh mục tiêu trong 1,3 ô.
+  - mỗi đòn quét thêm nửa sát thương lên giặc đứng quanh mục tiêu trong 1,3 ô;
+  - mỗi đòn, Gióng quật roi sắt (hay cây tre) từ trên cao xuống trước mặt.
 - **Kỹ năng của Gióng**:
   - **Phun lửa**: Gióng phi ngựa lao về phía giặc gần nhất. Mọi tên giặc trong dải dài 7 ô, rộng 1,5 ô mất 60 máu. Hồi 15 giây;
-  - **Nhổ tre**: có từ khi roi sắt gãy. Giặc trong vòng 2,5 ô quanh Gióng mất 45 máu và bị hất lùi 1,2 ô. Hồi 20 giây;
+  - **Nhổ tre**: có từ khi roi sắt gãy. Giặc trong vòng 2,5 ô quanh Gióng mất 45 máu và bị hất lùi 1,2 ô. Hồi 20 giây. Gióng vung tre ra sau lấy đà, quật xuống trước mặt rồi quét trọn một vòng quanh mình, chừng 0,9 giây;
   - ngoài bãi, sát thương kỹ năng cũng nhân 1,6 lần cho tương xứng.
 - **Kiệt sức**: hết máu thì Gióng rút khỏi trận, không tính vào lính tử trận. Sau trận Gióng nghỉ 2 phút theo đồng hồ chơi; trong lúc đó không ra trận và chưa đánh được màn cần Gióng.
 - **Kết chương**: thắng màn 8 thì Gióng cưỡi ngựa bay lên trời ngay trên bãi chiến, bảng kết quả hiện sau đó.
