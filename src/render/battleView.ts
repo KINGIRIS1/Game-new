@@ -3,7 +3,7 @@
 
 import * as THREE from 'three';
 import type { Battle, FighterKind } from '../game/battle';
-import { FIRE } from '../game/defs';
+import { FIRE, SKILLS } from '../game/defs';
 import { WEAPON_REST, makeFighter, makeGiong } from './models';
 import { C } from './palette';
 import { seeded } from './shapes';
@@ -64,7 +64,7 @@ interface Arrow {
   dur: number;
 }
 
-/** Vòng sóng đồng lan ra khi Lạc tướng đánh trống trận. */
+/** Vòng sóng lan ra quanh Gióng khi Nhổ tre. */
 interface Ring {
   mesh: THREE.Mesh;
   age: number;
@@ -76,6 +76,63 @@ const arrowGeo = new THREE.BoxGeometry(0.03, 0.03, 0.45);
 const arrowMat = new THREE.MeshBasicMaterial({ color: C.arrow });
 const ringGeo = new THREE.RingGeometry(0.8, 1, 48).rotateX(-Math.PI / 2);
 const RING_LIFE = 1.1;
+/** Trống trận: mỗi tiếng trống cách nhau chừng này giây, đánh suốt lúc quân ta được thúc. */
+export const RALLY_BEAT = 0.5;
+
+/** Đang có Trống trận thì trả về tiếng trống thứ mấy và đã vang được bao lâu (giây). Trận đã ngã ngũ thì thôi trống. */
+export function rallyBeat(battle: Battle | null): { index: number; age: number } | null {
+  if (!battle || battle.rally <= 0 || battle.outcome) return null;
+  const t = SKILLS.trongTran.duration - battle.rally;
+  const index = Math.floor(t / RALLY_BEAT);
+  return { index, age: t - index * RALLY_BEAT };
+}
+
+/** Sóng mặt trống đồng: mỗi tiếng trống lan ra một vòng mang hoa văn mặt trống, lớn dần rồi mờ đi. */
+const RIPPLE_LIFE = 1.1;
+const rippleGeo = new THREE.PlaneGeometry(2, 2).rotateX(-Math.PI / 2);
+const rippleTex = (() => {
+  // Nền trong suốt, nét đồng: sao giữa, vòng tròn tiếp tuyến, răng cưa, như mặt trống Đông Sơn.
+  const c = document.createElement('canvas');
+  c.width = c.height = 256;
+  const g = c.getContext('2d')!;
+  g.translate(128, 128);
+  g.strokeStyle = g.fillStyle = '#f2cf7a';
+  g.lineWidth = 5;
+  g.beginPath();
+  for (let i = 0; i < 24; i++) {
+    const r = i % 2 ? 14 : 34;
+    const a = (i / 24) * Math.PI * 2;
+    g.lineTo(Math.cos(a) * r, Math.sin(a) * r);
+  }
+  g.fill();
+  for (const r of [46, 96, 122]) {
+    g.beginPath();
+    g.arc(0, 0, r, 0, Math.PI * 2);
+    g.stroke();
+  }
+  for (let i = 0; i < 16; i++) {
+    const a = (i / 16) * Math.PI * 2;
+    g.beginPath();
+    g.arc(Math.cos(a) * 71, Math.sin(a) * 71, 11, 0, Math.PI * 2);
+    g.stroke();
+  }
+  g.beginPath();
+  for (let i = 0; i <= 48; i++) {
+    const a = (i / 48) * Math.PI * 2;
+    const r = i % 2 ? 106 : 116;
+    g.lineTo(Math.cos(a) * r, Math.sin(a) * r);
+  }
+  g.stroke();
+  const tex = new THREE.CanvasTexture(c);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  return tex;
+})();
+
+/** Vòng đồng dưới chân lính ta khi được trống thúc: một lần vẽ cho cả đạo quân. */
+const RALLY_RINGS = 120;
+const rallyRingGeo = new THREE.RingGeometry(0.3, 0.42, 24).rotateX(-Math.PI / 2);
+const rallyRingMat = new THREE.MeshBasicMaterial({ color: C.bronzeLight, transparent: true, opacity: 0.8, depthWrite: false });
+
 /** Phun lửa: ngựa sắt phi hết đường lao trong chừng này giây; lửa phun suốt lúc phi rồi tắt dần. */
 const DASH_TIME = 0.4;
 const JET_LIFE = 0.75;
@@ -170,6 +227,13 @@ export class BattleView {
   private readonly jets: Jet[] = [];
   private readonly scorches: Scorch[] = [];
   private readonly burns: Burn[] = [];
+  private readonly ripples: Ring[] = [];
+  private readonly rallyRings = new THREE.InstancedMesh(rallyRingGeo, rallyRingMat, RALLY_RINGS);
+  /** Tiếng trống trận đang vang (null khi không có Trống trận) và tiếng đã phát sóng gần nhất. */
+  private beat: { index: number; age: number } | null = null;
+  private lastBeat = -1;
+  /** Chỗ đặt trống đồng của Lạc tướng (tọa độ trận), để sóng trống lan ra từ đó. Bỏ trống thì lan từ giữa đám quân ta. */
+  drumAt?: { x: number; z: number };
   private battleId = -1;
   private lastSeq = 0;
   private time = 0;
@@ -179,7 +243,11 @@ export class BattleView {
     private readonly root: THREE.Object3D,
     private readonly offset: { x: number; z: number },
     private readonly scale = 1,
-  ) {}
+  ) {
+    this.rallyRings.visible = false;
+    this.rallyRings.renderOrder = 2;
+    this.root.add(this.rallyRings);
+  }
 
   /** Gọi mỗi khung hình với trận đang diễn ra, hoặc null khi không có trận. */
   update(battle: Battle | null, dt: number): void {
@@ -188,9 +256,15 @@ export class BattleView {
       this.clear();
       this.battleId = battle ? battle.id : -1;
     }
+    this.beat = rallyBeat(battle);
     if (battle) {
       this.syncFighters(battle, dt);
       this.readEvents(battle);
+      this.drumRally(battle);
+    }
+    if (!this.beat) {
+      this.lastBeat = -1;
+      this.rallyRings.visible = false;
     }
     this.animate(dt);
   }
@@ -209,11 +283,12 @@ export class BattleView {
     this.fighters.clear();
     for (const a of this.arrows) this.root.remove(a.mesh);
     this.arrows.length = 0;
-    for (const r of this.rings) {
+    for (const r of [...this.rings, ...this.ripples]) {
       this.root.remove(r.mesh);
       (r.mesh.material as THREE.Material).dispose();
     }
     this.rings.length = 0;
+    this.ripples.length = 0;
     for (const p of this.puffs) {
       this.root.remove(p.mesh);
       (p.mesh.material as THREE.Material).dispose();
@@ -288,7 +363,9 @@ export class BattleView {
       else obj.rotation.x = f.swing > 0 ? -0.5 * (f.swing / 0.3) : 0;
       // Đang có Trống trận thì quân ta nhún nhảy hăng hơn.
       const hop = f.side === 'ta' && battle.rally > 0 ? 0.12 : 0.06;
-      obj.position.y = f.state === 'move' ? Math.abs(Math.sin(this.time * 10 + f.id)) * hop : 0;
+      // Mỗi tiếng trống trận, cả đạo quân ta cùng nhún lên một nhịp.
+      const jump = f.side === 'ta' && this.beat ? 0.16 * Math.exp(-this.beat.age * 10) : 0;
+      obj.position.y = (f.state === 'move' ? Math.abs(Math.sin(this.time * 10 + f.id)) * hop : 0) + jump;
     }
   }
 
@@ -309,9 +386,8 @@ export class BattleView {
         const view = hero && this.fighters.get(hero.id);
         if (view) view.smash = SMASH_TIME;
       }
-      if (e.kind === 'rally' || e.kind === 'smash') {
-        const color = e.kind === 'rally' ? C.bronzeLight : C.bamboo;
-        const mesh = new THREE.Mesh(ringGeo, new THREE.MeshBasicMaterial({ color, transparent: true, depthWrite: false }));
+      if (e.kind === 'smash') {
+        const mesh = new THREE.Mesh(ringGeo, new THREE.MeshBasicMaterial({ color: C.bamboo, transparent: true, depthWrite: false }));
         mesh.position.set(e.x + ox, 0.08, e.z + oz);
         mesh.renderOrder = 3;
         this.root.add(mesh);
@@ -397,6 +473,40 @@ export class BattleView {
     }
   }
 
+  /**
+   * Trống trận: mỗi tiếng trống lan ra một sóng mặt trống đồng (từ trống của Lạc tướng, hay từ giữa đám quân ta),
+   * và dưới chân mỗi lính ta có vòng đồng nảy lên theo nhịp, tắt đúng lúc hết được thúc.
+   */
+  private drumRally(battle: Battle): void {
+    const beat = this.beat;
+    if (!beat) return;
+    const { x: ox, z: oz } = this.offset;
+    const allies = battle.fighters.filter((f) => f.side === 'ta' && f.state !== 'dead' && f.state !== 'gone');
+    if (beat.index !== this.lastBeat) {
+      this.lastBeat = beat.index;
+      const from = this.drumAt ?? {
+        x: allies.reduce((s, f) => s + f.x, 0) / Math.max(allies.length, 1),
+        z: allies.reduce((s, f) => s + f.z, 0) / Math.max(allies.length, 1),
+      };
+      const mesh = new THREE.Mesh(rippleGeo, new THREE.MeshBasicMaterial({ map: rippleTex, transparent: true, depthWrite: false }));
+      mesh.position.set(from.x + ox, 0.07, from.z + oz);
+      mesh.renderOrder = 3;
+      this.root.add(mesh);
+      this.ripples.push({ mesh, age: 0 });
+    }
+    const pulse = 1 + 0.35 * Math.exp(-beat.age * 8);
+    let n = 0;
+    for (const f of allies) {
+      const view = this.fighters.get(f.id);
+      if (!view || n >= RALLY_RINGS) continue;
+      tmpPos.set(view.obj.position.x, 0.06, view.obj.position.z);
+      this.rallyRings.setMatrixAt(n++, tmpMatrix.compose(tmpPos, noTurn, tmpScale.setScalar(pulse * (f.kind === 'voi' ? 1.6 : 1))));
+    }
+    this.rallyRings.count = n;
+    this.rallyRings.instanceMatrix.needsUpdate = true;
+    this.rallyRings.visible = n > 0;
+  }
+
   private dropScorch(s: Scorch): void {
     this.root.remove(s.group);
     s.blobs.dispose();
@@ -478,6 +588,18 @@ export class BattleView {
       if (k >= 1) {
         this.root.remove(a.mesh);
         this.arrows.splice(i, 1);
+      }
+    }
+    for (let i = this.ripples.length - 1; i >= 0; i--) {
+      const r = this.ripples[i];
+      r.age += dt;
+      const k = r.age / RIPPLE_LIFE;
+      r.mesh.scale.setScalar(0.6 + k * 6.5);
+      (r.mesh.material as THREE.MeshBasicMaterial).opacity = 0.8 * (1 - k);
+      if (k >= 1) {
+        this.root.remove(r.mesh);
+        (r.mesh.material as THREE.Material).dispose();
+        this.ripples.splice(i, 1);
       }
     }
     for (let i = this.rings.length - 1; i >= 0; i--) {

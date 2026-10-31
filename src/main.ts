@@ -34,6 +34,7 @@ import {
 } from './game/game';
 import { GRID, RIVER_START } from './game/map';
 import { fromCode, loadFromStorage, saveToStorage, toCode } from './game/save';
+import { rallyBeat } from './render/battleView';
 import { RESOLUTIONS, World, type Resolution } from './render/world';
 import { vi } from './text/vi';
 import { Hud, buildingName, type HudAction } from './ui/hud';
@@ -467,7 +468,8 @@ function start(): void {
       case 'useSkill': {
         const battle = state.campaign.battle ?? (state.raid.phase === 'battle' ? state.raid.battle : null);
         if (!battle || !useSkill(battle, a.skill)) return;
-        play('claim');
+        // Trống trận thì tiếng trống vang theo nhịp trong vòng lặp khung hình, từ tiếng đầu tiên.
+        if (a.skill !== 'trongTran') play('claim');
         navigator.vibrate?.(a.skill === 'trongTran' ? 30 : 60);
         commit();
         return;
@@ -607,6 +609,8 @@ function start(): void {
   });
   window.addEventListener('pagehide', save);
 
+  /** Tiếng trống trận đã phát gần nhất, để mỗi nhịp chỉ phát một lần. */
+  let drumBeat = -1;
   let prev = performance.now();
   let lastUi = 0;
   let lastSave = prev;
@@ -629,6 +633,9 @@ function start(): void {
     watchCampaign();
     world.updateField(state.campaign.battle, dt);
     world.update(dt);
+    const beat = rallyBeat(state.campaign.battle ?? (state.raid.phase === 'battle' ? state.raid.battle : null));
+    if (beat && beat.index !== drumBeat) play(beat.index % 4 === 0 ? 'trongNhan' : 'trong');
+    drumBeat = beat ? beat.index : -1;
     watchRaid();
     if (now - lastUi > 250) {
       lastUi = now;

@@ -110,6 +110,8 @@ Tài liệu này ghi lại các quyết định đã chốt với chủ dự án
   - bấm thì quân ta đánh mạnh thêm 50% và chạy nhanh thêm 30% trong 6 giây;
   - hồi lại sau 20 giây;
   - dùng được cả ở phó bản lẫn khi giữ kinh đô.
+  - khi đánh, trống vang 0,5 giây một tiếng suốt 6 giây, cứ bốn tiếng có một tiếng nhấn trầm hơn (tạo bằng Web Audio). Mỗi tiếng, một sóng mang hoa văn mặt trống đồng (sao giữa, vòng tròn tiếp tuyến, răng cưa) lan ra, và cả đạo quân ta nhún lên một nhịp; dưới chân mỗi lính ta có vòng đồng nảy theo nhịp, tắt đúng lúc hết hiệu lực. Trận ngã ngũ thì thôi trống;
+  - ở bãi chiến, Lạc tướng quay mặt vào trống đồng, nện dùi theo nhịp, mặt trống lóe sáng mỗi tiếng, cờ đỏ phấp phới; sóng trống lan từ chỗ trống. Khi giữ kinh đô, sóng lan từ giữa đám quân ta.
 - **Giữ kinh đô**: khoảng 15 phút chơi có một đợt giặc Ân. Trinh sát báo trước 60 giây, kèm hướng giặc tới (một trong hai cạnh rừng). Giặc tìm đường tới kho và Điện, gặp lũy thì phải phá. Phòng thủ bằng chòi canh, bẫy chông và quân nhà. Thua thì chỉ mất một phần kho và vài công trình hư hỏng, sửa lại được.
 
 ### Giữ kinh đô (đã làm ở lát cắt 2b)

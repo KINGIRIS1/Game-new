@@ -5,8 +5,9 @@
 
 import * as THREE from 'three';
 import { createNoise2D, type NoiseFunction2D } from 'simplex-noise';
+import type { Battle } from '../game/battle';
 import { FIELD, type Terrain } from '../game/defs';
-import { BattleView } from './battleView';
+import { BattleView, RALLY_BEAT, rallyBeat } from './battleView';
 import { addSunLights } from './lights';
 import { buildForest, makeBoat, makeEnemyFlag, makeFighter, makeMountain, makeTent, type TreeSpot } from './models';
 import { makeNhaSan, makeRuong } from './buildings';
@@ -48,6 +49,9 @@ export class Battlefield {
   private readonly inner = new THREE.Group();
   private decor = new THREE.Group();
   private terrain: Terrain | null = null;
+  private time = 0;
+  /** Dùi trống, ánh sáng mặt trống và lá cờ của Lạc tướng, để làm động tác khi đánh Trống trận. */
+  private drummer?: { stick: THREE.Object3D; banner: THREE.Object3D };
 
   constructor() {
     this.scene.background = new THREE.Color(C.sky);
@@ -60,6 +64,20 @@ export class Battlefield {
     this.scene.add(field);
     this.inner.add(this.decor);
     this.view = new BattleView(this.inner, { x: 0, z: 0 }, 1.25);
+    this.view.drumAt = { x: FIELD.w / 2 + DRUM_X, z: FIELD.d + 2 };
+  }
+
+  /** Vẽ trận đang diễn ra; có Trống trận thì Lạc tướng nện dùi theo nhịp, mặt trống lóe sáng, cờ phấp phới. */
+  update(battle: Battle | null, dt: number): void {
+    this.view.update(battle, dt);
+    this.time += dt;
+    const d = this.drummer;
+    if (!d) return;
+    const beat = rallyBeat(battle);
+    // Dùi dựng theo trục +y của khớp tay; xoay quanh z để giơ lên hay nện xuống mặt trống.
+    d.stick.rotation.z = beat ? THREE.MathUtils.lerp(STICK_HIT, STICK_UP, Math.sin((Math.PI * beat.age) / RALLY_BEAT)) : STICK_IDLE;
+    drumGlow.opacity = beat ? 0.85 * Math.exp(-beat.age * 7) : 0;
+    d.banner.rotation.y = beat ? Math.sin(this.time * 9) * 0.35 : Math.sin(this.time * 2) * 0.08;
   }
 
   setTerrain(t: Terrain): void {
@@ -72,6 +90,9 @@ export class Battlefield {
     });
     this.decor = buildDecor(t);
     this.inner.add(this.decor);
+    const stick = this.decor.getObjectByName('duiTrong');
+    const banner = this.decor.getObjectByName('coLacTuong');
+    this.drummer = stick && banner ? { stick, banner } : undefined;
   }
 }
 
@@ -328,19 +349,47 @@ class Relief {
   }
 }
 
-/** Lạc tướng đứng cạnh trống đồng lớn và cờ đỏ, sau lưng quân ta. */
+/** Trống đồng của Lạc tướng nằm lệch về bên trái chỗ ông đứng (theo trục x của bãi). */
+const DRUM_X = -0.4;
+/** Góc dùi trống quanh trục z: buông xuôi lúc nghỉ, giơ cao, và nện xuống mặt trống. */
+const STICK_IDLE = 2.8;
+const STICK_UP = 0.15;
+const STICK_HIT = 1.4;
+/** Ánh sáng lóe trên mặt trống mỗi tiếng: không nhận ánh sáng, trong suốt, chỉ có một bãi chiến nên dùng chung. */
+const drumGlow = new THREE.MeshBasicMaterial({ color: C.ember, transparent: true, opacity: 0, depthWrite: false });
+
+/**
+ * Lạc tướng đứng cạnh trống đồng lớn và cờ đỏ, sau lưng quân ta, quay mặt vào trống.
+ * Dùi trống (`duiTrong`) và lá cờ (`coLacTuong`) tách riêng để Battlefield làm động tác khi đánh Trống trận.
+ */
 function commander(x: number, z: number): THREE.Group {
   const g = new THREE.Group();
   const lord = makeFighter('giao');
-  lord.position.set(0.7, 0, 0);
-  lord.rotation.y = Math.PI;
+  lord.position.set(0.34, 0, 0);
+  lord.rotation.y = -Math.PI / 2;
   const m = new ToonModel();
-  m.band.cyl(0.42, 0.38, 0.4, C.bronze, -0.4, 0.28, 0, undefined, 16);
-  m.drum.cyl(0.44, 0.44, 0.05, 0xffffff, -0.4, 0.5, 0, undefined, 20);
-  for (const s of [-1, 1]) m.plain.cyl(0.03, 0.03, 0.4, C.woodDark, -0.4 + s * 0.38, 0.12, 0, undefined, 5);
+  m.band.cyl(0.42, 0.38, 0.4, C.bronze, DRUM_X, 0.28, 0, undefined, 16);
+  m.drum.cyl(0.44, 0.44, 0.05, 0xffffff, DRUM_X, 0.5, 0, undefined, 20);
+  for (const s of [-1, 1]) m.plain.cyl(0.03, 0.03, 0.4, C.woodDark, DRUM_X + s * 0.38, 0.12, 0, undefined, 5);
   m.plain.cyl(0.035, 0.04, 2.4, C.woodDark, 1.4, 1.2, 0.3, undefined, 6);
-  m.band.box(0.6, 0.5, 0.03, C.red, 1.7, 2.1, 0.3);
-  g.add(lord, m.group());
+  const glow = new THREE.Mesh(new THREE.CircleGeometry(0.42, 24).rotateX(-Math.PI / 2), drumGlow);
+  glow.position.set(DRUM_X, 0.53, 0);
+  glow.renderOrder = 2;
+  // Dùi trống cầm ở tay trước mặt, gốc là khớp tay, dựng dọc trục +y; đầu dùi bọc đồng.
+  const s = new ToonModel();
+  s.plain.cyl(0.025, 0.03, 0.55, C.woodDark, 0, 0.275, 0, undefined, 6);
+  s.plain.sphere(0.06, C.bronze, 0, 0.56, 0, [1, 1, 1], 8);
+  const stick = s.group();
+  stick.name = 'duiTrong';
+  stick.position.set(0.2, 0.46, -0.12);
+  stick.rotation.z = STICK_IDLE;
+  // Lá cờ đỏ treo ở đầu cán, gốc ở cán để phấp phới quanh cán.
+  const f = new ToonModel();
+  f.band.box(0.6, 0.5, 0.03, C.red, 0.3, 0, 0);
+  const banner = f.group();
+  banner.name = 'coLacTuong';
+  banner.position.set(1.4, 2.1, 0.3);
+  g.add(lord, m.group(), glow, stick, banner);
   g.position.set(x, 0, z);
   return g;
 }

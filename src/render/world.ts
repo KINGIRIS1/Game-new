@@ -677,7 +677,7 @@ export class World {
 
   /** Vẽ trận ngoài bãi đang diễn ra. */
   updateField(battle: Battle | null, dt: number): void {
-    this.field?.view.update(battle, dt);
+    this.field?.update(battle, dt);
   }
 
   /** Bóng mờ của công trình sắp đặt, viền xanh nếu đặt được, đỏ nếu không. */

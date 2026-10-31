@@ -1,6 +1,6 @@
 // Hiệu ứng âm thanh ngắn tạo bằng Web Audio, không dùng file âm thanh.
 
-export type Sfx = 'tap' | 'place' | 'upgrade' | 'claim' | 'error';
+export type Sfx = 'tap' | 'place' | 'upgrade' | 'claim' | 'error' | 'trong' | 'trongNhan';
 
 let ctx: AudioContext | undefined;
 let muted = false;
@@ -63,6 +63,14 @@ export function play(name: Sfx): void {
       break;
     case 'error':
       tone(200, t, 0.12, 'square', 0.04, 150);
+      break;
+    // Trống trận: tiếng "tùng" trầm, cứ bốn tiếng có một tiếng nhấn trầm và vang hơn.
+    case 'trong':
+      drum(t, 105, 0.28);
+      break;
+    case 'trongNhan':
+      drum(t, 78, 0.42);
+      tone(52, t, 0.7, 'sine', 0.2);
       break;
   }
 }
