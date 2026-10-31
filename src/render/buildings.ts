@@ -374,7 +374,7 @@ export function makeBaiDa(level: number): THREE.Group {
   const p = m.plain;
   p.box(1.95, 0.1, 1.95, C.earth, 0, 0.05, 0);
   const rand = seeded(17);
-  for (let i = 0; i < 2 + level; i++) {
+  for (let i = 0; i < 2 + grown(level); i++) {
     const x = -0.6 + rand() * 1.2;
     const z = -0.2 + rand() * 0.8;
     p.sphere(0.2 + rand() * 0.12, i % 2 ? C.rock : C.rockDark, x, 0.15, z, [1.2, 0.7, 1], 6);
@@ -465,10 +465,11 @@ export function makeLoRen(level: number): THREE.Group {
   const extra = new THREE.Group();
   p.box(1.95, 0.08, 1.95, C.earthDark, 0, 0.04, 0);
   kiln(m, extra, -0.4, 0.3, 1.2);
-  // Lán mái một dốc phía sau che chỗ đe; cấp 4 lán dài hơn.
+  // Lán mái một dốc phía sau che chỗ đe; cấp 4 lán dài hơn, cấp 6 lán cao hơn để che giá binh khí.
   const shedL = level >= 4 ? 1.6 : 1.0;
-  for (const x of [0.85 - shedL, 0.85]) for (const z of [-0.85, -0.2]) p.cyl(0.04, 0.05, 1.0, C.woodDark, x, 0.5, z, undefined, 5);
-  m.band.box(shedL + 0.25, 0.05, 0.85, C.thatch, 0.85 - shedL / 2, 1.02, -0.52, [-0.25, 0, 0]);
+  const shedH = level >= 6 ? 1.35 : 1.0;
+  for (const x of [0.85 - shedL, 0.85]) for (const z of [-0.85, -0.2]) p.cyl(0.04, 0.05, shedH, C.woodDark, x, shedH / 2, z, undefined, 5);
+  m.band.box(shedL + 0.25, 0.05, 0.85, C.thatch, 0.85 - shedL / 2, shedH + 0.02, -0.52, [-0.25, 0, 0]);
   p.box(0.3, 0.16, 0.16, C.iron, 0.45, 0.36, -0.45);
   p.box(0.12, 0.22, 0.12, C.woodDark, 0.45, 0.18, -0.45);
   if (level >= 2 && level < 6) {
@@ -479,10 +480,10 @@ export function makeLoRen(level: number): THREE.Group {
   }
   if (level >= 3 && level < 7) kiln(m, extra, 0.55, 0.55, 0.75);
   if (level >= 5) {
-    // Giá trưng giáo và rìu đồng.
+    // Giá trưng giáo và rìu đồng, thấp hơn mái lán.
     for (let i = 0; i < 4; i++) {
-      p.cyl(0.015, 0.015, 0.9, C.woodDark, -0.85 + i * 0.13, 0.45, -0.8, undefined, 4);
-      p.cone(0.035, 0.14, C.bronze, -0.85 + i * 0.13, 0.95, -0.8, undefined, 4);
+      p.cyl(0.015, 0.015, 0.75, C.woodDark, -0.85 + i * 0.13, 0.38, -0.8, undefined, 4);
+      p.cone(0.035, 0.14, C.bronze, -0.85 + i * 0.13, 0.82, -0.8, undefined, 4);
     }
     p.box(0.16, 0.12, 0.03, C.bronze, -0.92, 0.7, -0.73, [0, 0, 0.5]);
   }
@@ -696,11 +697,18 @@ export function makeChoiCanh(level: number): THREE.Group {
       p.box(0.86, 0.16, 0.04, C.woodLight, 0, y + 0.1, s * 0.41);
       p.box(0.04, 0.16, 0.86, C.woodLight, s * 0.41, y + 0.1, 0);
     }
-    // Nỏ lớn đặt trên sàn trên cùng, chĩa ra trước.
-    p.box(0.08, 0.16, 0.08, C.woodDark, 0.18, h + 0.12, 0.32);
-    p.box(0.08, 0.06, 0.55, C.wood, 0.18, h + 0.24, 0.42);
-    for (const sx of [-1, 1]) p.box(0.32, 0.05, 0.05, C.woodDark, 0.18 + sx * 0.16, h + 0.26, 0.62, [0, sx * 0.45, 0]);
-    p.box(0.02, 0.02, 0.6, IRON_BLADE, 0.18, h + 0.29, 0.5);
+    // Nỏ lớn trên sàn trên cùng, gác qua lan can chĩa ra trước: chân xoay, báng gỗ dài,
+    // cánh nỏ đồng uốn chữ V, dây kéo về lẫy, mũi tên sắt lớn.
+    const nx = -0.17;
+    const ny = h + 0.36;
+    p.cyl(0.05, 0.06, 0.3, C.woodDark, nx, h + 0.2, 0.2, undefined, 6);
+    p.box(0.11, 0.09, 0.8, C.wood, nx, ny, 0.45);
+    for (const sx of [-1, 1]) {
+      p.box(0.46, 0.07, 0.07, C.bronze, nx + sx * 0.21, ny + 0.02, 0.78, [0, sx * 0.4, 0]);
+      p.box(0.012, 0.012, 0.51, C.cream, nx + sx * 0.21, ny + 0.05, 0.545, [0, sx * 0.966, 0]);
+    }
+    p.cyl(0.02, 0.02, 0.7, IRON_BLADE, nx, ny + 0.07, 0.6, [Math.PI / 2, 0, 0], 4);
+    p.cone(0.05, 0.14, IRON_BLADE, nx, ny + 0.07, 1.0, [Math.PI / 2, 0, 0], 4);
   }
   if (level >= 7) {
     // Cờ đỏ cắm trên nóc lầu canh.

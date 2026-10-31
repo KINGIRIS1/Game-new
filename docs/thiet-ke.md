@@ -631,17 +631,18 @@ Rèn riêng cho giáo binh, cung thủ, voi chiến. Có tác dụng ở mọi t
 | Bến chợ thuyền | một thuyền buôn lớn đậu cạnh cầu tàu | lầu chợ hai tầng mái hình thuyền |
 | Nhà sàn | sàn phơi lúa và chuồng gà dưới sàn | hai nhà sàn nối nhau bằng cầu tre |
 | Bãi đất đá | tời gỗ kéo đá | lò nung gạch đất bốc khói |
-| Lò rèn | ống bễ da lớn và giá treo binh khí | hai lò nung, lửa đỏ rực |
+| Lò rèn | ống bễ da lớn, lán cao hơn che giá treo binh khí | hai lò nung, lửa đỏ rực |
 | Kho thóc | thêm một vựa thóc tròn thứ hai | ba vựa quây quanh sân phơi |
-| Chòi canh | chòi hai tầng, trên có nỏ lớn | lầu canh đá có cờ đỏ |
+| Chòi canh | chòi hai tầng, trên có nỏ lớn gác qua lan can (cánh nỏ đồng, mũi tên sắt) | lầu canh đá có cờ đỏ |
 
 | Binh chủng | Rèn bậc 1 | Rèn bậc 2 |
 |---|---|---|
 | Giáo binh | đầu giáo sắt xám | thêm tua đỏ và khiên viền sắt |
 | Cung thủ | mũi tên sắt, bao tên da | cung sừng, bao tên đồng |
-| Voi chiến | giáp trán sắt | giáp ngà và bành có lọng |
+| Voi chiến | giáp trán sắt, giáp sườn sắt viền đồng (nhìn từ sau lưng cũng thấy) | giáp ngà và bành có lọng |
 
-- Đã vẽ: guồng nước ruộng cấp 6 quay thật; bến cấp 6 có thuyền buôn lớn neo cạnh cầu tàu nhấp nhô theo sóng; ruộng và bãi đất đá cấp 6–7 có 5 chỗ đứng cho người làm, bến và lò rèn 4 chỗ.
+- Đã vẽ: guồng nước ruộng cấp 6 quay thật; bến cấp 6 có thuyền buôn lớn neo cạnh cầu tàu nhấp nhô theo sóng; ruộng và bãi đất đá cấp 6–7 có 5 chỗ đứng cho người làm, bến và lò rèn 4 chỗ. Người làm rải khắp ruộng; thợ đá mỗi người đứng một cột theo hướng camera để khỏi che nhau.
+- Từ Điện cấp 6, tướng (Sơn Tinh, An Dương Vương cùng cột đá thề) ra đứng hẳn bên phải nền Điện, để khỏi che lầu trống bên phải.
 - Bản lưu lên phiên bản 8 (thêm bậc rèn của từng binh chủng).
 - Lời Lạc hầu: đoạn "Vua Hùng kén rể" thêm một câu nhắc Điện có thể lên cấp 6 và lò rèn rèn binh khí; đoạn "Cột đá thề" thêm một câu nhắc Điện cấp 7. Người đã xem các đoạn ấy thì thấy nút nâng cấp như thường.
 

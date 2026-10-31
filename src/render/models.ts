@@ -118,6 +118,12 @@ export function makeFighter(kind: FighterKind, tier = 0): THREE.Group {
       // Giáp trán sắt: tấm sắt che trán, viền đồng.
       p.box(0.34, 0.26, 0.05, IRON, 0, 1.02, 0.7, [-0.35, 0, 0]);
       p.box(0.36, 0.04, 0.06, C.bronze, 0, 1.15, 0.66, [-0.35, 0, 0]);
+      // Giáp sườn sắt rủ hai bên dưới tấm vải, viền đồng, đinh đồng: nhìn từ sau lưng cũng thấy.
+      for (const s of [-1, 1]) {
+        p.box(0.04, 0.3, 0.6, IRON_DARK, s * 0.35, 0.86, -0.05, [0, 0, s * 0.2]);
+        for (const y of [0.72, 1.0]) p.box(0.05, 0.04, 0.62, C.bronze, s * (0.32 + (1.0 - y) * 0.2), y, -0.05, [0, 0, s * 0.2]);
+        for (const dz of [-0.2, 0, 0.2]) p.sphere(0.028, C.bronzeLight, s * 0.38, 0.86, -0.05 + dz, [1, 1, 1], 5);
+      }
     }
     if (tier >= 2) {
       // Giáp ngà: ngà dài bịt đồng. Bành gỗ quây quanh chỗ ngồi.
