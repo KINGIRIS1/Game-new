@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { heroOf, skillReady, startBattle, startFieldBattle, stepField, useSkill, type Battle, type HeroSetup } from './battle';
-import { canStartStage, startStage } from './campaign';
+import { canStartStage, stageHero, stageHeroes, startStage } from './campaign';
 import {
   CH2_QUEST_START,
   DEFAULT_ROWS,
@@ -344,6 +344,43 @@ describe('Sơn Tinh', () => {
     expect(canStartStage(s, 12).ok).toBe(true);
   });
 
+  it('bảng xếp quân chương 2 chọn được Sơn Tinh hay Gióng hiển linh; mặc định Sơn Tinh', () => {
+    const s = wed();
+    s.campaign.cleared = 11;
+    expect(stageHeroes(s, 10)).toEqual(['sonTinh', 'giong']);
+    expect(stageHero(s, 10)?.kind).toBe('sonTinh');
+    expect(stageHero(s, 10, 'giong')?.kind).toBe('giong');
+    expect(startStage(s, 10, ARMY, DEFAULT_ROWS, 'giong').ok).toBe(true);
+    expect(s.campaign.battle!.hero?.kind).toBe('giong');
+    expect(s.campaign.battle!.fighters.filter((f) => f.kind === 'sonTinh')).toHaveLength(0);
+    s.campaign.battle = null;
+    expect(startStage(s, 12, ARMY, DEFAULT_ROWS, 'giong').ok).toBe(true);
+    expect(s.campaign.battle!.hero?.kind).toBe('giong');
+    s.campaign.battle = null;
+    // Trận chương 1 chỉ có Gióng.
+    expect(stageHeroes(s, 3)).toEqual(['giong']);
+    expect(startStage(s, 3, ARMY, DEFAULT_ROWS, 'sonTinh')).toEqual({ ok: false, reason: 'canChuong2' });
+  });
+
+  it('Sơn Tinh kiệt sức thì Gióng đánh thay màn 12–15; cả hai kiệt sức thì chờ; màn 16 chỉ Sơn Tinh', () => {
+    const s = wed();
+    s.campaign.cleared = 15;
+    s.son.restUntil = s.clock + 60_000;
+    expect(canStartStage(s, 12).ok).toBe(true);
+    expect(stageHero(s, 12)?.kind).toBe('giong');
+    expect(stageHero(s, 12, 'sonTinh')?.kind).toBe('giong');
+    expect(startStage(s, 12, ARMY, DEFAULT_ROWS, 'sonTinh')).toEqual({ ok: false, reason: 'sonKietSuc' });
+    expect(canStartStage(s, 16)).toEqual({ ok: false, reason: 'sonKietSuc' });
+    s.giong.restUntil = s.clock + 60_000;
+    expect(canStartStage(s, 12)).toEqual({ ok: false, reason: 'tuongKietSuc' });
+    s.son.restUntil = 0;
+    s.giong.restUntil = 0;
+    expect(stageHeroes(s, 16)).toEqual(['sonTinh']);
+    expect(startStage(s, 16, ARMY, DEFAULT_ROWS, 'giong')).toEqual({ ok: false, reason: 'chiSonTinh' });
+    expect(startStage(s, 16, ARMY, DEFAULT_ROWS).ok).toBe(true);
+    expect(s.campaign.battle!.hero?.kind).toBe('sonTinh');
+  });
+
   it('Bốc đồi ném xuống chỗ giặc đứng đông nhất', () => {
     const b = startFieldBattle({ id: 1, stage: 9, enemies: { tomBinh: 5 }, hpScale: 1, army: { giao: 0, cung: 0, voi: 0 }, rows: DEFAULT_ROWS, hero: SON });
     const foes = b.fighters.filter((f) => f.side === 'giac');
@@ -447,6 +484,13 @@ describe('cân bằng phó bản chương 2', () => {
       expect(won.t).toBeLessThan(FIELD.maxS);
       expect(fight(n, ARMY, null).outcome).toBe('lose');
       expect(fight(n, half, sonFor(n)).outcome).toBe('lose');
+    });
+  }
+  for (const n of [12, 13, 14, 15]) {
+    it(`màn ${n}: Gióng hiển linh đánh thay Sơn Tinh cũng thắng nhưng chậm hơn`, () => {
+      const giong = fight(n, ARMY, GIONG);
+      expect(giong.outcome).toBe('win');
+      expect(giong.t).toBeGreaterThan(fight(n, ARMY, sonFor(n)).t);
     });
   }
   it('Thủy Tinh cần bấm kỹ năng mới thắng', () => {

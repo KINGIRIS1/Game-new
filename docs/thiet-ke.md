@@ -365,6 +365,7 @@ Vòng khắc chế của quân ta giữ nguyên: giáo binh thắng quân nặng
 
 - Đủ năm lễ vật thì Sơn Tinh rước Mị Nương và **cùng ra trận**:
   - mỗi trận một tướng: trận chương 2 (phó bản chương 2, mùa lũ) có Sơn Tinh, các trận khác có Gióng hiển linh. Chưa rước Mị Nương, hay Sơn Tinh đang kiệt sức, thì trận chương 2 có Gióng hiển linh;
+  - **chọn tướng ở bảng xếp quân** (chủ dự án yêu cầu): trận phó bản chương 2 có hai thẻ Sơn Tinh và Phù Đổng Thiên Vương, chạm để chọn, mặc định Sơn Tinh. Mỗi thẻ ghi kỹ năng của tướng; tướng đang kiệt sức thì thẻ mờ đi, ghi "Đang kiệt sức" (không đếm ngược từng giây để bảng khỏi vẽ lại liên tục, nuốt mất lần chạm). Trận chương 1 chỉ có Gióng, mùa lũ không có bảng xếp quân nên vẫn lấy Sơn Tinh trước;
   - 560 máu (ngoài bãi bền gấp 1,6), 20 sát thương, mỗi đòn gậy làm rung đất, quét thêm nửa sát thương lên giặc quanh mục tiêu trong 1,3 ô như Gióng;
   - hết máu thì kiệt sức, nghỉ 2 phút chơi, không tính vào lính tử trận.
 - **Kỹ năng của Sơn Tinh**:
@@ -393,6 +394,7 @@ Vòng khắc chế của quân ta giữ nguyên: giáo binh thắng quân nặng
 
   - Mọi màn cần Điện cấp 5. Thưởng lần đầu từ 1200 gạo, 800 vỏ ốc, 600 đất đá, 150 sắt (màn 9) tới 3000 gạo, 2000 vỏ ốc, 2000 đất đá, 500 sắt (màn 16). Đánh lại được 30%.
   - Máu của màn 9–11 cao hơn màn 12–16 vì màn 9–11 có Gióng hiển linh hai kỹ năng, còn màn 12–14 Sơn Tinh mới có một kỹ năng.
+  - "Cần Sơn Tinh" nghĩa là phải rước Mị Nương rồi mới mở màn. Ở màn 12–15, Sơn Tinh kiệt sức thì chọn Gióng hiển linh đánh thay được; cả hai kiệt sức thì phải chờ. **Màn 16 chỉ Sơn Tinh ra trận** ("Chỉ Sơn Tinh mới địch nổi Thủy Tinh"), vì cảnh kết chương là núi Tản Viên dâng dưới chân Sơn Tinh.
 - Bãi chiến mới:
   - **đồi sim**: đồi lượn cao, mảng hoa sim tím;
   - **đồng ngập**: bãi chiến là một gò nổi giữa biển nước lũ, nhà sàn chìm nửa, thuyền trôi giữa đồng, chỗ đất chìm thì không có cây;
@@ -401,6 +403,7 @@ Vòng khắc chế của quân ta giữ nguyên: giáo binh thắng quân nặng
 - Cân bằng đo bằng test với quân mẫu chương 2: 14 giáo, 12 cung, 4 voi (vừa 38 chỗ doanh trại cấp 5), có Đền Phù Đổng:
   - màn 9–11: có Gióng hiển linh thì thắng, nửa quân thì thua;
   - màn 12–16: có Sơn Tinh và bấm kỹ năng thì thắng; không Sơn Tinh, hay nửa quân, thì thua;
+  - màn 12–15: Gióng hiển linh đánh thay cũng thắng nhưng chậm hơn Sơn Tinh. Đo thử thì Gióng thua ở màn 16;
   - Thủy Tinh không bấm kỹ năng thì thua.
 
 ### Hướng dẫn của Lạc hầu chương 2

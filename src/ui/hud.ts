@@ -1,7 +1,7 @@
 // Giao diện HTML đặt đè lên cảnh 3D: thanh tài nguyên, nhiệm vụ, bảng xây dựng, bảng công trình, cài đặt,
 // bản đồ phó bản và các nút trong trận.
 
-import { enemiesLeft, alliesLeft, skillReady, type Battle } from '../game/battle';
+import { enemiesLeft, alliesLeft, skillReady, type Battle, type HeroKind } from '../game/battle';
 import {
   BUILDINGS,
   FIELD,
@@ -54,7 +54,7 @@ import {
   type StageResult,
   type StoryId,
 } from '../game/game';
-import { chapterStages } from '../game/campaign';
+import { chapterStages, stageHero, stageHeroCheck } from '../game/campaign';
 import { giongAppeared, giongLook, giongReady, giongResting } from '../game/giong';
 import { AREA_SIZE } from '../game/map';
 import { inChapter2, sonJoined, sonLook, sonResting, giftCount } from '../game/son';
@@ -128,7 +128,7 @@ export type HudAction =
   | { kind: 'openBarracks' }
   | { kind: 'dismissRaid' }
   | { kind: 'openCampaign' }
-  | { kind: 'march'; stage: number; army: Record<UnitType, number>; rows: Record<UnitType, Row> }
+  | { kind: 'march'; stage: number; army: Record<UnitType, number>; rows: Record<UnitType, Row>; hero: HeroKind | null }
   | { kind: 'useSkill'; skill: SkillId }
   | { kind: 'openGiong' }
   | { kind: 'feedGiong' }
@@ -277,11 +277,12 @@ export class Hud {
       case 'backToStage':
       case 'armyDelta':
       case 'armyRow':
+      case 'armyHero':
         return this.campaignStep(act, id, el);
       case 'march': {
         if (!this.camp?.stage) return;
-        const { army, rows } = this.camp.pick;
-        return this.onAction({ kind: 'march', stage: this.camp.stage, army: { ...army }, rows: { ...rows } });
+        const { army, rows, hero } = this.camp.pick;
+        return this.onAction({ kind: 'march', stage: this.camp.stage, army: { ...army }, rows: { ...rows }, hero });
       }
       case 'importCode': {
         const box = this.sheetEl.querySelector<HTMLTextAreaElement>('#import-box');
@@ -725,7 +726,8 @@ export class Hud {
   showCampaign(state: GameState): void {
     this.closeSheet();
     const chapter: 1 | 2 = inChapter2(state) && state.campaign.cleared >= chapterStages(1).length ? 2 : 1;
-    this.camp = { chapter, stage: this.nextStage(state, chapter), step: 'stage', pick: defaultPick(state) };
+    const stage = this.nextStage(state, chapter);
+    this.camp = { chapter, stage, step: 'stage', pick: defaultPick(state, stage) };
     this.campaignEl.hidden = false;
     this.refreshCampaign(state, true);
   }
@@ -758,7 +760,7 @@ export class Hud {
       camp.step = 'stage';
     } else if (act === 'prepareStage') {
       camp.step = 'army';
-      camp.pick = defaultPick(state);
+      camp.pick = defaultPick(state, camp.stage);
     } else if (act === 'backToStage') {
       camp.step = 'stage';
     } else if (act === 'armyDelta') {
@@ -766,6 +768,8 @@ export class Hud {
       camp.pick.army[unit] = Math.max(0, Math.min(state.troops[unit], n));
     } else if (act === 'armyRow') {
       camp.pick.rows[unit] = nextRow(camp.pick.rows[unit]);
+    } else if (act === 'armyHero' && camp.stage && stageHeroCheck(state, camp.stage, el.dataset.hero as HeroKind).ok) {
+      camp.pick.hero = el.dataset.hero as HeroKind;
     }
     this.refreshCampaign(state);
   }
@@ -774,6 +778,8 @@ export class Hud {
     const camp = this.camp;
     if (!camp) return;
     for (const k of UNIT_TYPES) camp.pick.army[k] = Math.min(camp.pick.army[k], state.troops[k]);
+    // Chưa chọn tướng, hay tướng đã chọn không ra trận được, thì lấy tướng chọn sẵn.
+    if (camp.stage && !(camp.pick.hero && stageHeroCheck(state, camp.stage, camp.pick.hero).ok)) camp.pick.hero = stageHero(state, camp.stage)?.kind ?? null;
     let panel = `<p class="muted">${camp.chapter === 2 ? vi.ui.campaignHint2 : vi.ui.campaignHint}</p>`;
     if (camp.stage) panel = camp.step === 'army' ? armyHtml(state, camp.pick, camp.stage) : stageHtml(state, camp.stage);
     const tabs = inChapter2(state)

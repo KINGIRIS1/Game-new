@@ -604,8 +604,10 @@ export interface StageDef {
   minDien: number;
   /** Cần Thánh Gióng đã vươn vai thành tráng sĩ. */
   needsGiong: boolean;
-  /** Cần Sơn Tinh đã rước Mị Nương, cùng ra trận. */
+  /** Cần Sơn Tinh đã rước Mị Nương. Sơn Tinh kiệt sức thì Gióng hiển linh đánh thay được. */
   needsSon?: boolean;
+  /** Chỉ Sơn Tinh ra trận được, Gióng không đánh thay. */
+  sonOnly?: boolean;
   enemies: Partial<Record<EnemyType, number>>;
   /** Hệ số máu giặc. */
   hpScale: number;
@@ -635,7 +637,7 @@ export const STAGES: StageDef[] = [
   { chapter: 2, minDien: 5, needsGiong: false, needsSon: true, enemies: { tomBinh: 14, caPhun: 8, caSau: 4 }, hpScale: 2.2, reward: { gao: 2000, voOc: 1300, datDa: 1100, sat: 280 }, terrain: 'lang' },
   { chapter: 2, minDien: 5, needsGiong: false, needsSon: true, enemies: { tomBinh: 14, caPhun: 8, caSau: 4 }, hpScale: 2.3, reward: { gao: 2200, voOc: 1500, datDa: 1200, sat: 300 }, terrain: 'benSong' },
   { chapter: 2, minDien: 5, needsGiong: false, needsSon: true, enemies: { tomBinh: 14, caPhun: 9, caSau: 4 }, hpScale: 2.6, reward: { gao: 2500, voOc: 1700, datDa: 1400, sat: 350 }, terrain: 'nui' },
-  { chapter: 2, minDien: 5, needsGiong: false, needsSon: true, enemies: { tomBinh: 12, caPhun: 8, caSau: 3, thuyTinh: 1 }, hpScale: 2.5, reward: { gao: 3000, voOc: 2000, datDa: 2000, sat: 500 }, terrain: 'tanVien' },
+  { chapter: 2, minDien: 5, needsGiong: false, needsSon: true, sonOnly: true, enemies: { tomBinh: 12, caPhun: 8, caSau: 3, thuyTinh: 1 }, hpScale: 2.5, reward: { gao: 3000, voOc: 2000, datDa: 2000, sat: 500 }, terrain: 'tanVien' },
 ];
 /** Đánh lại màn đã qua được phần này của thưởng lần đầu. */
 export const REPLAY_SHARE = 0.3;

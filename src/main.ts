@@ -2,7 +2,7 @@
 
 import './style.css';
 import { play, setMuted, unlockAudio } from './audio/sfx';
-import { useSkill } from './game/battle';
+import { useSkill, type HeroKind } from './game/battle';
 import { leaveBattlefield, retreat, startStage } from './game/campaign';
 import { feedGiong, forgeGear } from './game/giong';
 import { inChapter2, offerGift } from './game/son';
@@ -524,7 +524,7 @@ function start(): void {
         return;
 
       case 'march': {
-        const r = startStage(state, a.stage, a.army, a.rows);
+        const r = startStage(state, a.stage, a.army, a.rows, a.hero);
         if (!r.ok) return fail(r.reason);
         play('claim');
         navigator.vibrate?.(40);
@@ -738,9 +738,9 @@ function start(): void {
       commit();
       return r;
     },
-    /** Xuất toàn quân đánh màn `n`, rồi `skill(k)` để bấm kỹ năng: chụp thử trận ngoài bãi. */
-    march: (n: number) => {
-      const r = startStage(state, n, { ...state.troops }, state.campaign.rows);
+    /** Xuất toàn quân đánh màn `n` cùng tướng `hero` (bỏ trống thì tướng chọn sẵn), rồi `skill(k)` để bấm kỹ năng: chụp thử trận ngoài bãi. */
+    march: (n: number, hero?: HeroKind) => {
+      const r = startStage(state, n, { ...state.troops }, state.campaign.rows, hero);
       commit();
       return r;
     },

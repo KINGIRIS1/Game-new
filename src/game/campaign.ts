@@ -2,11 +2,11 @@
 // Chương 2: tám màn lên núi Tản Viên, ba màn đầu giành lễ vật thách cưới.
 // Chọn lính mang theo, xếp hàng theo binh chủng, xuất quân; lính chết thì mất, thắng thì có thưởng.
 
-import { retreatField, startFieldBattle, stepField } from './battle';
+import { retreatField, startFieldBattle, stepField, type HeroKind, type HeroSetup } from './battle';
 import { REPLAY_SHARE, RESOURCE_IDS, STAGES, UNIT_TYPES, type Cost, type Row, type StageDef, type UnitType } from './defs';
 import { BATTLE_STEP, countOf, dienLevel, gain, templeBonus, type FailReason, type GameState, type Result, type StageResult } from './game';
 import { giongReady, giongResting } from './giong';
-import { heroFor, inChapter2, restAfter, sonJoined, sonResting, winGift } from './son';
+import { heroFor, heroRoster, inChapter2, restAfter, sonJoined, sonResting, winGift } from './son';
 
 /** Thắng màn này lần đầu thì roi sắt gãy. */
 export const WHIP_BREAKS_AT = 6;
@@ -54,20 +54,61 @@ export function canStartStage(state: GameState, n: number): Result {
   if (def.needsGiong && !giongReady(state)) return fail('canThanhGiong');
   if (def.needsGiong && giongResting(state)) return fail('giongKietSuc');
   if (def.needsSon && !sonJoined(state)) return fail('canSonTinh');
-  if (def.needsSon && sonResting(state)) return fail('sonKietSuc');
+  // Sơn Tinh kiệt sức thì Gióng hiển linh đánh thay được, trừ màn chỉ Sơn Tinh đánh được.
+  if (def.needsSon && !stageHero(state, n)) return fail(def.sonOnly ? 'sonKietSuc' : 'tuongKietSuc');
   if (dienLevel(state) < def.minDien) return fail('chuaDuCapDien');
   if (state.raid.phase !== 'idle') return fail('dangCoGiac');
   if (state.campaign.battle) return fail('dangDanhPhoBan');
   return ok(undefined);
 }
 
-/** Xuất quân đánh màn `n` với số lính `army`, đứng theo hàng `rows`. */
-export function startStage(state: GameState, n: number, army: Record<UnitType, number>, rows: Record<UnitType, Row>): Result {
+/** Tướng `kind` ra trận màn `n` được không. */
+export function stageHeroCheck(state: GameState, n: number, kind: HeroKind): Result {
+  const def = stageDef(n);
+  if (!def) return fail('khongTimThay');
+  if (kind === 'sonTinh') {
+    if (def.chapter !== 2) return fail('canChuong2');
+    if (!sonJoined(state)) return fail('canSonTinh');
+    if (sonResting(state)) return fail('sonKietSuc');
+  } else {
+    if (def.sonOnly) return fail('chiSonTinh');
+    if (!giongReady(state)) return fail('canThanhGiong');
+    if (giongResting(state)) return fail('giongKietSuc');
+  }
+  return ok(undefined);
+}
+
+/** Các tướng đã có cho màn `n`, xếp theo thứ tự chọn sẵn, kể cả tướng đang kiệt sức. */
+export function stageHeroes(state: GameState, n: number): HeroKind[] {
+  const def = stageDef(n);
+  if (!def) return [];
+  return heroRoster(state, def.chapter).filter((k) => !(def.sonOnly && k === 'giong'));
+}
+
+/** Tướng ra trận màn `n`: tướng `pick` nếu ra trận được, không thì tướng chọn sẵn đầu tiên không kiệt sức. */
+export function stageHero(state: GameState, n: number, pick?: HeroKind | null): HeroSetup | null {
+  const def = stageDef(n);
+  if (!def) return null;
+  return heroFor(state, def.chapter, pick, stageHeroes(state, n));
+}
+
+/** Xuất quân đánh màn `n` với số lính `army`, đứng theo hàng `rows`, cùng tướng `pick` (bỏ trống thì lấy tướng chọn sẵn). */
+export function startStage(
+  state: GameState,
+  n: number,
+  army: Record<UnitType, number>,
+  rows: Record<UnitType, Row>,
+  pick?: HeroKind | null,
+): Result {
   const check = canStartStage(state, n);
   if (!check.ok) return check;
   if (UNIT_TYPES.some((k) => (army[k] ?? 0) < 0 || (army[k] ?? 0) > state.troops[k])) return fail('khongDuQuan');
+  if (pick) {
+    const heroCheck = stageHeroCheck(state, n, pick);
+    if (!heroCheck.ok) return heroCheck;
+  }
   const def = stageDef(n)!;
-  const hero = heroFor(state, def.chapter);
+  const hero = stageHero(state, n, pick);
   // Có tướng thì ra trận một mình cũng được.
   if (!hero && UNIT_TYPES.every((k) => !army[k])) return fail('chuaChonQuan');
   state.campaign.rows = { ...rows };

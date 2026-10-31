@@ -1,11 +1,11 @@
 // Chương 2: Sơn Tinh, Thủy Tinh. Vua Hùng thứ mười tám kén rể cho Mị Nương, thách cưới năm lễ vật.
 // Đủ lễ vật thì Sơn Tinh đến trước rước Mị Nương, cùng ra trận; Thủy Tinh nổi giận dâng nước đánh kinh đô.
-// Kèm việc chọn tướng cho từng trận: mỗi trận một tướng, Gióng hay Sơn Tinh.
+// Kèm việc chọn tướng cho từng trận: mỗi trận một tướng, Gióng hay Sơn Tinh, người chơi chọn ở bảng xếp quân.
 
-import type { Battle, HeroSetup } from './battle';
+import type { Battle, HeroKind, HeroSetup } from './battle';
 import { CH2_QUEST_START, GIFTS, GIFT_IDS, GIONG_REST_MS, SON_REST_MS, type GiftId } from './defs';
 import { canAfford, pay, scheduleFirstFlood, type FailReason, type GameState, type Result, type SonState } from './game';
-import { heroSetup } from './giong';
+import { giongReady, heroSetup } from './giong';
 
 const ok = <T>(value: T): Result<T> => ({ ok: true, value });
 const fail = (reason: FailReason): Result<never> => ({ ok: false, reason });
@@ -28,15 +28,29 @@ export function sonSetup(s: GameState): HeroSetup | null {
 }
 
 /**
- * Tướng ra trận. Trận chương 2 (phó bản chương 2, mùa lũ) có Sơn Tinh khi Sơn Tinh đã rước Mị Nương và không kiệt sức;
- * còn lại có Gióng nếu Gióng đã thành tráng sĩ và không kiệt sức.
+ * Các tướng đã có cho trận chương `chapter`, xếp theo thứ tự chọn sẵn, kể cả tướng đang kiệt sức.
+ * Trận chương 2 (phó bản chương 2, mùa lũ) có Sơn Tinh khi Sơn Tinh đã rước Mị Nương, rồi tới Gióng;
+ * trận chương 1 chỉ có Gióng. Gióng có khi đã thành tráng sĩ.
  */
-export function heroFor(s: GameState, chapter: 1 | 2): HeroSetup | null {
-  if (chapter === 2) {
-    const son = sonSetup(s);
-    if (son) return son;
-  }
-  return heroSetup(s);
+export function heroRoster(s: GameState, chapter: 1 | 2): HeroKind[] {
+  const out: HeroKind[] = [];
+  if (chapter === 2 && sonJoined(s)) out.push('sonTinh');
+  if (giongReady(s)) out.push('giong');
+  return out;
+}
+
+/** Tướng `kind` ra trận được lần này không (không kiệt sức), đánh bằng gì. */
+export function heroReady(s: GameState, kind: HeroKind): HeroSetup | null {
+  return kind === 'sonTinh' ? sonSetup(s) : heroSetup(s);
+}
+
+/**
+ * Tướng ra trận, mỗi trận một tướng. Người chơi chọn `pick` thì lấy tướng đó nếu ra trận được;
+ * không thì lấy tướng đầu tiên trong `roster` không kiệt sức. Mùa lũ không có bảng xếp quân nên luôn lấy theo thứ tự chọn sẵn.
+ */
+export function heroFor(s: GameState, chapter: 1 | 2, pick?: HeroKind | null, roster = heroRoster(s, chapter)): HeroSetup | null {
+  const ready = roster.map((k) => heroReady(s, k)).filter((h): h is HeroSetup => !!h);
+  return ready.find((h) => h.kind === pick) ?? ready[0] ?? null;
 }
 
 /** Sau trận: tướng đã kiệt sức thì phải nghỉ một lúc mới ra trận lại được. */

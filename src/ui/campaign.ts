@@ -2,18 +2,19 @@
 // thẻ màn, bảng xếp quân và bảng kết quả trận.
 // Chỉ dựng chuỗi HTML; Hud lo việc gắn vào trang và bắt sự kiện.
 
-import type { HeroSetup } from '../game/battle';
-import { CH2_LAST, canStartStage, chapterStages, stageDef, stageOpen, stageReward } from '../game/campaign';
+import { heroSkills, type HeroKind, type HeroSetup } from '../game/battle';
+import { CH2_LAST, canStartStage, chapterStages, stageDef, stageHero, stageHeroCheck, stageOpen, stageReward } from '../game/campaign';
 import { BOSSES, ROWS, UNIT_TYPES, type EnemyType, type Row, type UnitType } from '../game/defs';
 import type { GameState, StageResult } from '../game/game';
-import { giftOfStage, heroFor } from '../game/son';
+import { giftOfStage, heroReady, heroRoster } from '../game/son';
 import { vi } from '../text/vi';
 import { costHtml, esc } from './format';
 
-/** Lựa chọn trên bảng xếp quân: số lính mang theo và hàng đứng của từng binh chủng. */
+/** Lựa chọn trên bảng xếp quân: số lính mang theo, hàng đứng của từng binh chủng, tướng ra trận. */
 export interface ArmyPick {
   army: Record<UnitType, number>;
   rows: Record<UnitType, Row>;
+  hero: HeroKind | null;
 }
 
 /**
@@ -128,7 +129,7 @@ export function stageHtml(state: GameState, n: number): string {
     <div class="stat"><span>${vi.ui.enemyArmy}</span><b>${enemyList(n)}</b></div>
     <div class="stat"><span>${first ? vi.ui.firstReward : vi.ui.replayReward}</span>${costHtml(null, stageReward(state, n))}</div>
     ${gift && !state.son.gifts[gift] ? `<div class="stat"><span>${vi.ui.giftWon}</span><b>${vi.gifts[gift].icon} ${esc(vi.gifts[gift].name)}</b></div>` : ''}
-    ${heroNote(heroFor(state, stageDef(n)!.chapter))}
+    ${heroNote(stageHero(state, n))}
     <div class="actions">
       ${why ? `<span class="why">${esc(why)}</span>` : ''}
       <button class="btn" data-act="prepareStage" ${why ? 'disabled' : ''}>${vi.ui.prepare}</button>
@@ -136,8 +137,35 @@ export function stageHtml(state: GameState, n: number): string {
   </div>`;
 }
 
+const heroIcon = (k: HeroKind) => (k === 'sonTinh' ? '⛰️' : '🐎');
+const heroName = (state: GameState, k: HeroKind) => (k === 'sonTinh' ? vi.ui.son : state.giong.ascended ? vi.ui.phuDong : vi.ui.giong);
+
+/** Chọn tướng ra trận khi có hơn một tướng: mỗi trận một tướng, chạm để đổi. Tướng kiệt sức thì mờ đi. */
+function heroPickHtml(state: GameState, pick: ArmyPick, stage: number): string {
+  const def = stageDef(stage);
+  const roster = def ? heroRoster(state, def.chapter) : [];
+  if (roster.length < 2) return heroNote(stageHero(state, stage, pick.hero));
+  const opts = roster
+    .map((k) => {
+      const check = stageHeroCheck(state, stage, k);
+      // Không đếm ngược từng giây: bảng vẽ lại liên tục thì nuốt mất lần chạm.
+      const ready = heroReady(state, k);
+      const note = check.ok
+        ? heroSkills(ready!).map((sk) => `${vi.skills[sk].icon} ${vi.skills[sk].name}`).join(' · ')
+        : check.reason === 'sonKietSuc' || check.reason === 'giongKietSuc'
+          ? vi.ui.heroResting
+          : vi.reasons[check.reason];
+      return `<button class="hero-opt ${pick.hero === k ? 'sel' : ''}" data-act="armyHero" data-hero="${k}" aria-pressed="${pick.hero === k}" ${check.ok ? '' : 'disabled'}>
+        <span class="unit-icon">${heroIcon(k)}</span>
+        <span class="unit-info"><b>${heroName(state, k)}</b><small>${esc(note)}</small></span>
+      </button>`;
+    })
+    .join('');
+  return `<div class="hero-pick"><h4>${vi.ui.heroPickTitle}</h4><div class="hero-opts">${opts}</div></div>`;
+}
+
 export function armyHtml(state: GameState, pick: ArmyPick, stage: number): string {
-  const hero = heroFor(state, stageDef(stage)?.chapter ?? 1);
+  const hero = stageHero(state, stage, pick.hero);
   const owned = UNIT_TYPES.filter((k) => state.troops[k] > 0);
   const total = UNIT_TYPES.reduce((s, k) => s + pick.army[k], 0);
   const rows = owned
@@ -156,7 +184,7 @@ export function armyHtml(state: GameState, pick: ArmyPick, stage: number): strin
   return `<div class="stage-card">
     <h3>${vi.ui.armyTitle}</h3>
     <p class="muted">${vi.ui.armyHint}</p>
-    ${heroNote(hero)}
+    ${heroPickHtml(state, pick, stage)}
     ${owned.length ? `<div class="units">${rows}</div>` : `<p class="why">${vi.ui.noTroops}</p>`}
     <div class="actions">
       <button class="btn ghost" data-act="backToStage">${vi.ui.back}</button>
@@ -168,9 +196,9 @@ export function armyHtml(state: GameState, pick: ArmyPick, stage: number): strin
 /** Hàng kế tiếp khi chạm vào chip hàng: Tiền → Trung → Hậu → Tiền. */
 export const nextRow = (r: Row): Row => ROWS[(ROWS.indexOf(r) + 1) % ROWS.length];
 
-/** Mặc định mang hết lính đang có, đứng theo hàng đã chọn lần trước. */
-export function defaultPick(state: GameState): ArmyPick {
-  return { army: { ...state.troops }, rows: { ...state.campaign.rows } };
+/** Mặc định mang hết lính đang có, đứng theo hàng đã chọn lần trước, cùng tướng chọn sẵn của màn `stage`. */
+export function defaultPick(state: GameState, stage: number | null): ArmyPick {
+  return { army: { ...state.troops }, rows: { ...state.campaign.rows }, hero: stage ? (stageHero(state, stage)?.kind ?? null) : null };
 }
 
 export function stageResultHtml(r: StageResult): string {

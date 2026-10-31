@@ -1146,6 +1146,50 @@ textarea {
   color: var(--red-dark);
 }
 
+/* Chọn tướng ra trận trên bảng xếp quân: mỗi trận một tướng. */
+.hero-pick h4 {
+  margin: 8px 0 6px;
+  font-size: 13px;
+  color: var(--red-dark);
+}
+
+.hero-opts {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.hero-opt {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px;
+  border-radius: 12px;
+  background: #fffaf0;
+  border: 2px solid var(--line);
+  font: inherit;
+  color: inherit;
+  text-align: left;
+}
+
+.hero-opt.sel {
+  border-color: var(--red);
+  background: #fbe3d6;
+  box-shadow: 0 0 0 2px rgba(176, 57, 43, 0.25);
+}
+
+.hero-opt:disabled {
+  opacity: 0.55;
+}
+
+.hero-opt .unit-icon {
+  font-size: 22px;
+}
+
+.hero-opt b {
+  font-size: 13px;
+}
+
 /* ---------- Thánh Gióng ---------- */
 
 .giong h3 {
