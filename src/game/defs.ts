@@ -21,7 +21,11 @@ export type BuildingType =
   | 'de'
   | 'denTanVien'
   | 'thanh'
-  | 'denCoLoa';
+  | 'denCoLoa'
+  | 'ruongNep'
+  | 'vuon'
+  | 'chuongLon'
+  | 'bep';
 
 /** Mốc mở khóa theo cốt truyện: sau kết chương 1, khi vào chương 2, sau kết chương 2, khi vào chương 3, sau kết chương 3. */
 export type Unlock = 'ketChuong1' | 'chuong2' | 'ketChuong2' | 'chuong3' | 'ketChuong3';
@@ -396,7 +400,102 @@ export const BUILDINGS: Record<BuildingType, BuildingDef> = {
     removable: false,
     unlock: 'ketChuong3',
   },
+  // Hội Tết bánh chưng bánh giầy: bốn công trình làm bánh, mở sau truyện Lang Liêu (kết chương 1).
+  // Ba cấp: cấp 2 cần Điện cấp 5, cấp 3 cần Điện cấp 6. Làm ra nguyên liệu và bánh, không làm ra tài nguyên.
+  ruongNep: {
+    type: 'ruongNep',
+    w: 3,
+    d: 3,
+    maxLevel: 3,
+    buildCost: { voOc: 300, datDa: 150 },
+    upgradeCost: [{}, {}, { voOc: 900, datDa: 500 }, { voOc: 2500, datDa: 1500 }],
+    production: [{}, {}, {}],
+    workers: [2, 3, 3],
+    hp: [170, 200, 230],
+    limit: [0, 0, 1, 1, 2, 2, 2],
+    minDien: 3,
+    levelMinDien: [0, 0, 5, 6],
+    buildable: true,
+    removable: false,
+    unlock: 'ketChuong1',
+  },
+  vuon: {
+    type: 'vuon',
+    w: 2,
+    d: 2,
+    maxLevel: 3,
+    buildCost: { gao: 200, voOc: 150 },
+    upgradeCost: [{}, {}, { gao: 600, voOc: 450 }, { gao: 1800, voOc: 1300 }],
+    production: [{}, {}, {}],
+    workers: [1, 2, 2],
+    hp: [150, 170, 190],
+    limit: [0, 0, 1, 1, 1, 2, 2],
+    minDien: 3,
+    levelMinDien: [0, 0, 5, 6],
+    buildable: true,
+    removable: false,
+    unlock: 'ketChuong1',
+  },
+  chuongLon: {
+    type: 'chuongLon',
+    w: 2,
+    d: 2,
+    maxLevel: 3,
+    buildCost: { gao: 250, datDa: 200 },
+    upgradeCost: [{}, {}, { gao: 750, datDa: 600 }, { gao: 2200, datDa: 1800 }],
+    production: [{}, {}, {}],
+    workers: [1, 1, 2],
+    hp: [180, 200, 220],
+    limit: [0, 0, 1, 1, 1, 2, 2],
+    minDien: 3,
+    levelMinDien: [0, 0, 5, 6],
+    buildable: true,
+    removable: false,
+    unlock: 'ketChuong1',
+  },
+  bep: {
+    type: 'bep',
+    w: 2,
+    d: 2,
+    maxLevel: 3,
+    buildCost: { voOc: 200, datDa: 250, sat: 40 },
+    upgradeCost: [{}, {}, { voOc: 600, datDa: 750, sat: 120 }, { voOc: 1800, datDa: 2200, sat: 350 }],
+    production: [{}, {}, {}],
+    workers: [2, 2, 3],
+    hp: [200, 230, 260],
+    limit: [0, 0, 1, 1, 1, 1, 1],
+    minDien: 3,
+    levelMinDien: [0, 0, 5, 6],
+    buildable: true,
+    removable: false,
+    unlock: 'ketChuong1',
+  },
 };
+
+// ---------- Hội Tết bánh chưng bánh giầy ----------
+
+/**
+ * Nguyên liệu mỗi phút khi đủ người làm, theo cấp (chỉ số 0 là cấp 1), tính bằng số cái bánh làm được:
+ * ruộng nếp ra nếp (bánh chưng hay bánh giầy đều cần), vườn ra đậu xanh và lá dong, chuồng ra thịt lợn.
+ * Nguyên liệu không tích trữ.
+ */
+export const NEP_PER_MIN = [2, 3, 4];
+export const DAU_LA_PER_MIN = [1, 1.5, 2];
+export const THIT_PER_MIN = [1, 1.5, 2];
+/** Bếp gói tối đa chừng này bánh chưng, và giã tối đa chừng này bánh giầy, mỗi phút. */
+export const BEP_PER_MIN = [2, 3, 4];
+/** Gác bếp chứa tối đa chừng này bánh mỗi loại. */
+export const BEP_STORE = [30, 45, 60];
+/** Tết đầu tiên tới sau truyện Lang Liêu chừng này; về sau cứ chừng này lại có Tết (tính từ lúc Tết trước mở); mỗi Tết mở chừng này. */
+export const TET_FIRST_MS = 2 * 60_000;
+export const TET_EVERY_MS = 20 * 60_000;
+export const TET_OPEN_MS = 3 * 60_000;
+/** Số bánh mỗi loại cần dâng ở Tết đầu tiên, và về sau theo cấp Điện (chỉ số 0 là cấp 1). */
+export const TET_FIRST_NEED = 3;
+export const TET_NEED = [12, 12, 12, 12, 20, 30, 40];
+/** Phúc lành Đất: mọi tài nguyên làm ra thêm chừng này. Phúc lành Trời: quân ta thêm chừng này máu và sức đánh. */
+export const TET_DAT_BONUS = 0.15;
+export const TET_TROI_BONUS = 0.1;
 
 // ---------- Độ cao ô đất và lũ ----------
 

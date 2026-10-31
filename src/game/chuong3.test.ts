@@ -389,7 +389,7 @@ describe('cân bằng phó bản chương 3', () => {
 describe('truyện và lưu game chương 3', () => {
   it('kể các đoạn chương 3 đúng thứ tự sau chương 2', () => {
     const s = ch3();
-    for (const id of ['mo', 'suGia', 'vuonVai', 'roiGay', 'ketChuong', 'kenRe', 'ruocDau', 'doiNon', 'ketChuong2'] as const) markStory(s, id);
+    for (const id of ['mo', 'suGia', 'vuonVai', 'roiGay', 'ketChuong', 'langLieu', 'kenRe', 'ruocDau', 'doiNon', 'ketChuong2'] as const) markStory(s, id);
     expect(pendingStory(s)).toBe('cotDa');
     markStory(s, 'cotDa');
     expect(pendingStory(s)).toBeNull();
@@ -422,7 +422,7 @@ describe('truyện và lưu game chương 3', () => {
     for (const k of ['nights', 'nightsHeld', 'trieu', 'trieuHeld']) delete raid[k];
     raid.foe = 'thuy';
     const back = deserialize(JSON.stringify(s6))!;
-    expect(back.version).toBe(8);
+    expect(back.version).toBe(9);
     expect(back.adv).toEqual({ no: false, restUntil: 0, kimQuy: false, won: false });
     expect(back.raid.nights).toBe(0);
     expect(back.raid.foe).toBe('thuy');

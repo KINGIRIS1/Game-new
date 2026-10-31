@@ -22,7 +22,8 @@ type Speaker =
   | 'anDuong'
   | 'ruaVang'
   | 'caoLo'
-  | 'trieuDa';
+  | 'trieuDa'
+  | 'langLieu';
 
 export const vi = {
   gameTitle: 'Thời đại Văn Lang',
@@ -115,6 +116,26 @@ export const vi = {
       icon: '🐢',
       desc: 'Đền thờ An Dương Vương, ghi công thần Kim Quy và tướng Cao Lỗ. Đền còn nguyên thì lính nỏ trên chòi canh bắn mạnh gấp rưỡi và xa thêm 1 ô. Chỉ dựng được sau khi đánh tan Triệu Đà.',
     },
+    ruongNep: {
+      name: 'Ruộng nếp',
+      icon: '🌾',
+      desc: 'Cấy lúa nếp để gói bánh chưng, giã bánh giầy cho Hội Tết. Bánh chưng hay bánh giầy đều cần nếp; nếp còn thừa sau khi gói bánh chưng thì bếp giã bánh giầy.',
+    },
+    vuon: {
+      name: 'Vườn đậu, lá dong',
+      icon: '🌿',
+      desc: 'Trồng đậu xanh làm nhân, lá dong gói bánh chưng.',
+    },
+    chuongLon: {
+      name: 'Chuồng lợn',
+      icon: '🐖',
+      desc: 'Nuôi lợn lấy thịt làm nhân bánh chưng. Lợn ăn cám, không ăn gạo.',
+    },
+    bep: {
+      name: 'Bếp gói bánh',
+      icon: '🍲',
+      desc: 'Gói bánh chưng, giã bánh giầy, cất bánh trên gác bếp chờ Tết. Bánh chưng làm nhanh bằng nguồn chậm nhất trong nếp, đậu lá, thịt lợn.',
+    },
   } satisfies Record<BuildingType, { name: string; icon: string; desc: string }>,
 
   reasons: {
@@ -163,6 +184,9 @@ export const vi = {
     thieuVongThanh: 'Thành Cổ Loa chưa đủ 3 vòng quanh Điện',
     canAnDuong: 'Màn này cần An Dương Vương đã có nỏ thần',
     advKietSuc: 'An Dương Vương đang kiệt sức, chờ một lát',
+    chuaToiTet: 'Chưa tới Tết',
+    daDang: 'Tết này đã dâng bánh này rồi',
+    thieuBanh: 'Chưa đủ bánh để dâng',
   } satisfies Record<FailReason, string>,
 
   quests: {
@@ -343,6 +367,7 @@ export const vi = {
     ruaVang: { name: 'Rùa Vàng', icon: '🐢' },
     caoLo: { name: 'Cao Lỗ', icon: '🔨' },
     trieuDa: { name: 'Triệu Đà', icon: '🚩' },
+    langLieu: { name: 'Lang Liêu', icon: '🌾' },
   } satisfies Record<Speaker, { name: string; icon: string }>,
 
   /**
@@ -393,6 +418,21 @@ export const vi = {
         { who: 'ke', text: 'Gióng phi ngựa lên đỉnh núi Sóc, cởi giáp sắt để lại, rồi cả người lẫn ngựa từ từ bay lên trời.' },
         { who: 'vua', text: 'Nhớ công ơn ấy, ta phong Gióng là Phù Đổng Thiên Vương và lập đền thờ ngay ở quê nhà.' },
         { who: 'lacHau', text: 'Tâu bệ hạ, xin dựng Đền Phù Đổng ở kinh đô. Từ nay mỗi khi ra trận, Thiên Vương vẫn hiển linh giúp quân ta.' },
+      ],
+    },
+    langLieu: {
+      title: 'Bánh chưng bánh giầy',
+      lines: [
+        { who: 'lacHau', text: 'Tâu bệ hạ, giặc đã yên, Tết sắp đến. Thần xin kể lại chuyện xưa về bánh chưng bánh giầy.' },
+        { who: 'ke', text: 'Thuở trước, có đời vua Hùng dẹp yên giặc Ân xong, tuổi đã cao, muốn truyền ngôi cho một trong các con.' },
+        { who: 'vua', text: 'Nhân lễ Tiên vương đầu năm, con nào tìm được lễ vật hợp ý ta thì ta truyền ngôi cho.' },
+        { who: 'ke', text: 'Các lang đua nhau tìm của ngon vật lạ trên rừng dưới biển. Riêng Lang Liêu, người con thứ mười tám, mẹ mất sớm, chỉ chăm việc đồng áng, chẳng biết lấy gì dâng vua cha.' },
+        { who: 'ke', text: 'Một đêm Lang Liêu nằm mộng thấy thần đến bảo: "Trong trời đất, không gì quý bằng hạt gạo. Hãy lấy gạo làm bánh mà lễ Tiên vương."' },
+        { who: 'langLieu', text: 'Con lấy gạo nếp gói bánh vuông, nhân đậu xanh thịt lợn, lá dong bọc ngoài, tượng hình đất. Lại đồ xôi giã nhuyễn làm bánh tròn, tượng hình trời.' },
+        { who: 'vua', text: 'Bánh vuông tượng đất, bánh tròn tượng trời, lá bọc ngoài, nhân ở trong như cha mẹ đùm bọc con cái. Lễ vật này hợp ý ta. Ta truyền ngôi cho Lang Liêu.' },
+        { who: 'ke', text: 'Từ đó, cứ đến Tết, nhà nhà lại gói bánh chưng, giã bánh giầy dâng tổ tiên.' },
+        { who: 'lacHau', text: 'Kinh đô ta cũng mở hội Tết. Xin cho cấy ruộng nếp, trồng vườn đậu xanh lá dong, dựng chuồng lợn và bếp gói bánh.' },
+        { who: 'lacHau', text: 'Tết tới, dâng đủ bánh chưng thì đất cho mùa màng thêm tốt, dâng đủ bánh giầy thì trời phù hộ quân ta. Tết đầu tiên chỉ còn ít lâu nữa.' },
       ],
     },
     kenRe: {
@@ -720,6 +760,38 @@ export const vi = {
     armsDone: 'Đã rèn đủ',
     armsToast: (name: string, n: number) => `Thợ rèn đã rèn binh khí bậc ${n} cho ${name.toLowerCase()}`,
     armsOnUnit: (n: number) => `Binh khí bậc ${n}`,
+    tet: 'Hội Tết',
+    banh: {
+      chung: { name: 'Bánh chưng', icon: '🟩' },
+      giay: { name: 'Bánh giầy', icon: '⚪' },
+    },
+    nguon: { nep: 'Nếp', dauLa: 'Đậu xanh, lá dong', thit: 'Thịt lợn', bep: 'Sức bếp' },
+    perMin: (n: number) => `${n.toLocaleString('vi-VN', { maximumFractionDigits: 1 })}/phút`,
+    tetIngredients: 'Nguyên liệu mỗi phút (tính bằng số bánh)',
+    tetBaking: 'Bếp làm ra',
+    tetNoBep: 'Chưa có bếp gói bánh. Dựng bếp để gói bánh chưng, giã bánh giầy.',
+    tetShort: (nguon: string[], n: string) => `Thiếu ${nguon.map((x) => x.toLowerCase()).join(' và ')}: bánh chưng chỉ được ${n} cái mỗi phút.`,
+    tetBepShort: 'Bếp làm hết sức. Nâng bếp để làm nhanh hơn.',
+    tetStock: (have: number, need: number) => `${have}/${need}`,
+    tetStore: (n: number) => `Gác bếp chứa tối đa ${n} cái mỗi loại.`,
+    tetNeedTitle: 'Bánh đang có / cần dâng',
+    tetNext: (min: number) => (min <= 0 ? 'Tết sắp tới' : `Tết tới sau khoảng ${min} phút chơi`),
+    tetWaitBattle: 'Tết chờ xong trận mới tới',
+    tetSoon: 'Tết đầu tiên tới sau truyện Lang Liêu',
+    tetOpen: (secs: number) => `Tết đang mở, còn ${Math.floor(secs / 60)}:${String(secs % 60).padStart(2, '0')} để dâng bánh`,
+    tetBanner: (secs: number) => `🎋 Tết đến! Dâng bánh trước Điện, còn ${Math.floor(secs / 60)}:${String(secs % 60).padStart(2, '0')}`,
+    tetOfferBtn: 'Dâng bánh',
+    offerBanh: (name: string, n: number) => `Dâng ${n} ${name.toLowerCase()}`,
+    offered: 'Đã dâng',
+    blessTitle: 'Phúc lành',
+    bless: {
+      chung: { name: 'Phúc lành Đất', icon: '🌱', desc: 'Mọi tài nguyên làm ra thêm 15%.' },
+      giay: { name: 'Phúc lành Trời', icon: '☀️', desc: 'Quân ta thêm 10% máu và sức đánh.' },
+    },
+    blessNone: 'Chưa có phúc lành. Dâng bánh chưng được phúc lành Đất, dâng bánh giầy được phúc lành Trời.',
+    blessUntil: 'Kéo dài tới khi Tết sau đóng. Tết sau dâng tiếp thì nối liền.',
+    offerToast: (name: string) => `Đã dâng bánh. Được ${name}!`,
+    tetEndedLost: 'Hết Tết mà chưa dâng bánh: phúc lành đã hết.',
   },
 };
 

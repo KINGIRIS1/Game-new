@@ -12,6 +12,7 @@ const STORY_ORDER: StoryId[] = [
   'vuonVai',
   'roiGay',
   'ketChuong',
+  'langLieu',
   'kenRe',
   'ruocDau',
   'doiNon',
@@ -28,6 +29,8 @@ const STORY_WHEN: Record<StoryId, (s: GameState) => boolean> = {
   vuonVai: giongReady,
   roiGay: (s) => s.giong.whipBroken,
   ketChuong: (s) => s.giong.ascended,
+  // Chuyện Lang Liêu kể như chuyện xưa, mở Hội Tết.
+  langLieu: (s) => s.giong.ascended,
   kenRe: inChapter2,
   ruocDau: sonJoined,
   doiNon: (s) => s.son.non,
