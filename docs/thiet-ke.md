@@ -729,9 +729,11 @@ Cả bốn cần dân làm, mở sau truyện Lang Liêu, cần Điện cấp 3.
 - Cảnh Tết, chỉ lúc Tết mở:
   - cây nêu trước Điện: cây tre cao, ngọn còn chùm lá, treo dải vải đỏ và khánh đất nung;
   - dây cờ hội nhiều màu căng từ cây nêu tới Điện;
-  - thêm vài người ngồi chiếu quanh bếp gói bánh;
+  - thêm một người ngồi xếp bằng ở mép chiếu gói bánh trước bếp (bếp đã có 2–3 người làm, thêm nữa thì chật);
   - dâng rồi thì có mâm bánh chưng vuông, bánh giầy tròn bày trước thềm Điện tới hết Tết;
+  - cây nêu và mâm bánh đứng ngoài móng Điện: ô ấy có công trình khác (kể cả lũy, thành) thì không dựng, dây cờ căng thẳng giữa hai cột cờ của Điện;
   - không có pháo.
+- Dáng đã chỉnh sau khi chụp thử: lợn con chạy ngoài sân theo mẹ (không khuất dưới mái chuồng), mái bếp dựng cao và nồi bánh dời ra trước cho thấy nồi, lá dong là lá thuôn dài trên cuống cao (không chụm tròn như bắp cải).
 
 **Bản lưu phiên bản 9**: thêm phần Tết (Tết thứ mấy, lúc Tết tới, Tết mở tới khi nào, bánh đang có, Tết này đã dâng gì, phúc lành đang có). Bản lưu cũ được thêm phần này. Người đã qua kết chương 1 sẽ thấy truyện Lang Liêu, rồi 2 phút sau tới Tết đầu.
 

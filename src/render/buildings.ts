@@ -933,17 +933,28 @@ export function makeRuongNep(level: number): THREE.Group {
 
 /** Khóm lá dong: lá to bản mọc xòe trên cuống dài. */
 function dongClump(p: ShapeBuilder, x: number, z: number, s: number): void {
-  for (let i = 0; i < 7; i++) {
-    const a = (i / 7) * Math.PI * 2 + 0.3;
-    const tilt = 0.45 + (i % 2) * 0.2;
+  // Lá dong: cuống dài mọc thẳng, mỗi cuống một lá thuôn dài xòe chếch ra ngoài, cao thấp so le
+  // (không chụm thành búp tròn như bắp cải).
+  for (let i = 0; i < 6; i++) {
+    const a = (i / 6) * Math.PI * 2 + 0.3;
+    const tilt = 0.95 + (i % 2) * 0.3;
+    const stem = (0.3 + (i % 3) * 0.1) * s;
+    const bx = x + Math.sin(a) * 0.06 * s;
+    const bz = z + Math.cos(a) * 0.06 * s;
+    p.cyl(0.013, 0.016, stem, 0x5a8a3a, bx, 0.06 + stem / 2, bz, undefined, 4);
+    const dir = [Math.sin(tilt) * Math.sin(a), Math.cos(tilt), Math.sin(tilt) * Math.cos(a)];
     const leaf = new THREE.SphereGeometry(1, 8, 6);
-    leaf.scale(0.13 * s, 0.3 * s, 0.025);
+    leaf.scale(0.085 * s, 0.27 * s, 0.018);
     leaf.rotateX(tilt);
     leaf.rotateY(a);
-    const dir = [Math.sin(tilt) * Math.sin(a), Math.cos(tilt), Math.sin(tilt) * Math.cos(a)];
-    const base = 0.2 * s;
-    p.cyl(0.012, 0.012, base, DONG, x + dir[0] * 0.04, 0.06 + base / 2, z + dir[2] * 0.04, undefined, 4);
-    p.add(leaf, i % 3 ? DONG : 0x4f8a42, x + dir[0] * 0.3 * s, 0.06 + base + dir[1] * 0.28 * s, z + dir[2] * 0.3 * s);
+    const len = 0.25 * s;
+    p.add(leaf, i % 3 ? DONG : 0x4f8a42, bx + dir[0] * len, 0.06 + stem + dir[1] * len, bz + dir[2] * len);
+    // Gân giữa lá, nổi trên mặt lá (mặt trên lá hướng theo `up`).
+    const rib = new THREE.CylinderGeometry(0.007, 0.007, 0.48 * s, 3);
+    rib.rotateX(tilt);
+    rib.rotateY(a);
+    const up = [-Math.cos(tilt) * Math.sin(a), Math.sin(tilt), -Math.cos(tilt) * Math.cos(a)];
+    p.add(rib, 0x9ccc74, bx + dir[0] * len + up[0] * 0.02, 0.06 + stem + dir[1] * len + up[1] * 0.02, bz + dir[2] * len + up[2] * 0.02);
   }
 }
 
@@ -1062,15 +1073,14 @@ export function makeChuongLon(level: number): THREE.Group {
       p.box(0.04, 0.42, 0.66, C.woodLight, -0.84, floorY + 0.24, -0.52);
     }
     p.box(0.95, 0.03, 0.5, C.thatchDark, -0.3, floorY + 0.04, -0.52);
-    pigs.push([-0.6, -0.5, 1.6, 0.6], [-0.32, -0.62, 1.2, 0.55], [-0.05, -0.45, -1.9, 0.55]);
-    if (level >= 3) pigs.push([-0.5, 0.55, -0.4, 1.3], [0.55, -0.08, -2.2, 1.3]);
+    // Đàn lợn con chạy ngoài sân theo mẹ, không nằm khuất dưới mái. Cấp 3 thêm hai lợn lớn: một con đằm bùn, một con cạnh cầu dốc.
+    if (level >= 3) pigs.push([-0.6, 0.42, -0.4, 1.3], [0.55, -0.08, -2.2, 1.3], [-0.25, 0.64, 0.3, 0.6], [-0.05, 0.38, -0.5, 0.55], [0.66, 0.34, -2.6, 0.55]);
+    else pigs.push([-0.64, 0.45, 0.8, 0.6], [-0.4, 0.6, 0.3, 0.55], [-0.13, 0.38, -0.5, 0.55]);
   }
   const g = m.group();
   for (const [x, z, ry, s] of pigs) {
     const pig = makePig(s);
-    // Lợn con trong ổ: đứng trên sàn chuồng (cấp 3 sàn kê cao).
-    const onFloor = s < 1.3 && level >= 3;
-    pig.position.set(x, onFloor ? 0.39 : 0.06, z);
+    pig.position.set(x, 0.06, z);
     pig.rotation.y = ry;
     g.add(pig);
   }
@@ -1117,7 +1127,7 @@ export function makeBep(level: number): THREE.Group {
   const p = m.plain;
   const g = new THREE.Group();
   p.box(1.95, 0.06, 1.95, C.earthDark, 0, 0.03, 0);
-  hearth(m, g, -0.5, -0.45);
+  hearth(m, g, -0.5, -0.36);
   // Chiếu gói bánh ở mặt trước: lá dong trải sẵn, vài cái bánh đã gói.
   m.band.box(0.75, 0.02, 0.48, C.thatch, -0.3, 0.07, 0.55);
   for (const [x, z, a] of [[-0.5, 0.48, 0.3], [-0.42, 0.62, -0.4]] as const) p.box(0.22, 0.012, 0.12, DONG, x, 0.085, z, [0, a, 0]);
@@ -1127,9 +1137,9 @@ export function makeBep(level: number): THREE.Group {
   const leafY = level >= 2 ? 0.42 : 0.07;
   for (let i = 0; i < 4; i++) p.box(0.34, 0.025, 0.2, i % 2 ? DONG : 0x4f8a42, 0.7, leafY + i * 0.028, -0.68, [0, 0.15 * (i % 3), 0]);
   if (level >= 2) {
-    // Mái tranh che bếp, chõng tre có khuôn gói bánh.
-    for (const x of [-0.95, 0.45]) for (const z of [-0.92, -0.05]) p.cyl(0.035, 0.04, 1.1, C.woodDark, x, 0.55, z, undefined, 5);
-    m.band.add(saddleRoof({ length: 1.7, width: 1.15, lift: 0.2, drop: 0.3, thickness: 0.05 }), C.thatch, -0.25, 1.32, -0.48);
+    // Mái tranh che bếp, dựng cao cho thấy nồi bánh dưới mái; chõng tre có khuôn gói bánh.
+    for (const x of [-0.95, 0.45]) for (const z of [-0.92, -0.05]) p.cyl(0.035, 0.04, 1.45, C.woodDark, x, 0.725, z, undefined, 5);
+    m.band.add(saddleRoof({ length: 1.7, width: 1.15, lift: 0.2, drop: 0.3, thickness: 0.05 }), C.thatch, -0.25, 1.67, -0.48);
     for (const dx of [-0.16, 0.16]) for (const dz of [-0.22, 0.22]) p.cyl(0.025, 0.025, 0.36, C.bamboo, 0.7 + dx, 0.2, -0.5 + dz, undefined, 5);
     p.box(0.42, 0.04, 0.6, C.bamboo, 0.7, 0.39, -0.5);
     // Khuôn gói bánh: khung gỗ vuông.
@@ -1141,7 +1151,7 @@ export function makeBep(level: number): THREE.Group {
   }
   if (level >= 3) {
     // Nồi thứ hai cạnh nồi cũ; cối đá chày gỗ giã bánh giầy ở góc trước bên phải; khói bếp bốc qua mái.
-    hearth(m, g, 0.1, -0.5);
+    hearth(m, g, 0.1, -0.4);
     p.cyl(0.2, 0.24, 0.3, C.rock, 0.72, 0.21, 0.7, undefined, 12);
     p.cyl(0.14, 0.14, 0.02, 0x3d3530, 0.72, 0.365, 0.7, undefined, 12);
     p.sphere(0.1, BANH_GIAY, 0.72, 0.36, 0.7, [1, 0.35, 1], 8);
@@ -1157,7 +1167,7 @@ export function makeBep(level: number): THREE.Group {
         puff.userData.phase = (i + (x > 0 ? 0.5 : 0)) / 4;
         smoke.add(puff);
       }
-      smoke.position.set(x, 1.45, -0.45);
+      smoke.position.set(x, 1.8, -0.38);
       g.add(smoke);
     }
   }

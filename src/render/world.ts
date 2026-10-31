@@ -5,7 +5,7 @@ import * as THREE from 'three';
 import { BUILDINGS, FIELD, type BuildingType, type Terrain } from '../game/defs';
 import type { Battle, RaidSide } from '../game/battle';
 import { advLook, inChapter3, ruaVangCame, type AdvLook } from '../game/coLoa';
-import { dienLevel, type Building, type GameState } from '../game/game';
+import { buildingAt, dienLevel, type Building, type GameState } from '../game/game';
 import { giongLook, type GiongLook } from '../game/giong';
 import { GRID, RIVER_START, areaStart, baseHeights, isUnlocked } from '../game/map';
 import { sonLook, type SonLook } from '../game/son';
@@ -221,7 +221,7 @@ const SPOTS: Partial<Record<BuildingType, Spot[]>> = {
     { job: 'nong', x: 0.62, y: 0.06, z: -0.58, ry: -1.6 },
   ],
   bep: [
-    { job: 'phuNu', x: -0.68, y: 0.06, z: 0.05, ry: -2.9 },
+    { job: 'phuNu', x: -0.74, y: 0.06, z: 0.14, ry: -2.9 },
     { job: 'phuNu', x: 0.6, y: 0.06, z: -0.02, ry: 2.9 },
     { job: 'phuNu', x: 0.4, y: 0.06, z: 0.4, ry: 0.9 },
   ],
@@ -972,9 +972,19 @@ export class World {
     const bep = state.buildings.find((b) => b.type === 'bep' && !b.damaged);
     const o = state.tet.offered;
     const h = (b: Building) => this.heights[b.z * GRID + b.x] ?? 0;
+    // Cây nêu và mâm bánh đứng ngoài móng Điện: ô ấy có công trình khác (kể cả lũy, thành) thì không dựng.
+    const free = (lx: number, lz: number) => {
+      if (!dien) return false;
+      const b = buildingAt(state, dien.x + Math.floor(2 + lx), dien.z + Math.floor(2 + lz));
+      return !b || b.id === dien.id;
+    };
+    const NX = -1.6;
+    const NZ = 2.55;
+    const neuFree = free(NX, NZ);
+    const trayFree = free(-0.3, 2.8) && free(0.3, 2.8);
     const key =
       dien && tetOpen(state)
-        ? [dien.x, dien.z, dien.level, h(dien), o.chung, o.giay, bep ? `${bep.x},${bep.z},${bep.level},${h(bep)}` : '-'].join(':')
+        ? [dien.x, dien.z, dien.level, h(dien), o.chung, o.giay, neuFree, trayFree, bep ? `${bep.x},${bep.z},${bep.level},${h(bep)}` : '-'].join(':')
         : '';
     if (key === this.tetKey) return;
     this.tetKey = key;
@@ -989,46 +999,38 @@ export class World {
     const dienY = topY(h(dien));
     const ground = (lx: number, lz: number) =>
       this.groundY(Math.min(dien.x + Math.floor(2 + lx), RIVER_START - 1), Math.min(dien.z + Math.floor(2 + lz), RIVER_START - 1));
-    const nx = -1.6;
-    const nz = 2.55;
-    const ny = ground(nx, nz);
-    const neu = this.makeNeu();
-    neu.position.set(cx + nx, ny, cz + nz);
-    neu.rotation.y = Math.PI / 4;
-    root.add(neu);
     // Hai dây cờ từ ngọn nêu: sang đầu cột cờ bên trái Điện, và vắt qua trước thềm sang cột cờ bên phải
-    // (Điện cấp 1 chưa có cột cờ thì buộc vào hai góc nền).
-    const top = new THREE.Vector3(cx + nx, ny + NEU_H - 0.3, cz + nz);
+    // (Điện cấp 1 chưa có cột cờ thì buộc vào hai góc nền). Không dựng được nêu thì căng một dây giữa hai cột cờ.
     const bz = (dien.level >= 6 ? 1.85 : 1.6) * s;
     const left = dien.level >= 2 ? new THREE.Vector3(cx - 1.7 * s, dienY + 2.5 * s, cz + bz) : new THREE.Vector3(cx - 1.85 * s, dienY + 0.9 * s, cz + 1.85 * s);
     const right = dien.level >= 4 ? new THREE.Vector3(cx + 1.75 * s, dienY + 2.7 * s, cz + bz) : new THREE.Vector3(cx + 1.85 * s, dienY + 0.9 * s, cz + 1.85 * s);
-    root.add(this.makeFlagLine(top, left, 4));
-    root.add(this.makeFlagLine(top, right, 9));
-    if (o.chung || o.giay) {
+    if (neuFree) {
+      const ny = ground(NX, NZ);
+      const neu = this.makeNeu();
+      neu.position.set(cx + NX, ny, cz + NZ);
+      neu.rotation.y = Math.PI / 4;
+      root.add(neu);
+      const top = new THREE.Vector3(cx + NX, ny + NEU_H - 0.3, cz + NZ);
+      root.add(this.makeFlagLine(top, left, 4));
+      root.add(this.makeFlagLine(top, right, 9));
+    } else {
+      root.add(this.makeFlagLine(left, right, 9));
+    }
+    if ((o.chung || o.giay) && trayFree) {
       const tray = this.makeTray(o.chung, o.giay);
       tray.position.set(cx, ground(0, 2.8), cz + 2.8);
       tray.rotation.y = Math.PI / 4;
       root.add(tray);
     }
     if (bep) {
-      // Người ngồi quanh chiếu gói bánh ở mặt trước bếp (chiếu ở tọa độ bếp -0.3, 0.55).
-      const sitters: [number, number, number][] = [
-        [-0.86, 0.55, Math.PI / 2],
-        [-0.3, 0.98, Math.PI],
-      ];
-      const bx = wx(bep.x) + 1;
-      const bz = wz(bep.z) + 1;
-      const by = topY(h(bep));
-      for (const [x, z, ry] of sitters) {
-        const w = makeWorker('phuNu');
-        w.scale.setScalar(0.85);
-        // Ngồi xếp chân trên chiếu: chân khuất dưới nền bếp.
-        w.position.set(bx + x, by - 0.1, bz + z);
-        w.rotation.y = ry;
-        const tool = w.children.find((c) => c.userData.tool);
-        if (tool) tool.rotation.x = -0.9;
-        root.add(w);
-      }
+      // Một người ngồi xếp bằng ở mép chiếu gói bánh trước bếp (chiếu ở tọa độ bếp -0.3, 0.55), quay vào chiếu.
+      const w = makeWorker('phuNu', true);
+      w.scale.setScalar(0.85);
+      w.position.set(wx(bep.x) + 1 - 0.3, topY(h(bep)) + 0.08, wz(bep.z) + 1 + 0.88);
+      w.rotation.y = Math.PI;
+      const tool = w.children.find((c) => c.userData.tool);
+      if (tool) tool.rotation.x = -0.9;
+      root.add(w);
     }
     this.scene.add(root);
     this.tetDecor = root;
