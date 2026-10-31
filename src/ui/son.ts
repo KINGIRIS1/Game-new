@@ -16,7 +16,10 @@ function skillsHtml(state: GameState): string {
 }
 
 export function sonHtml(state: GameState): string {
-  if (state.son.won) return `<div class="info giong"><p>${vi.ui.sonHienLinh}</p>${skillsHtml(state)}</div>`;
+  if (state.son.won) {
+    const rest = sonResting(state) ? `<p class="why warn">💤 ${vi.ui.sonResting(Math.ceil((state.son.restUntil - state.clock) / 1000))}</p>` : '';
+    return `<div class="info giong"><p>${vi.ui.sonHienLinh}</p>${rest}${skillsHtml(state)}</div>`;
+  }
   const look = sonLook(state);
   const head = look ? `<div class="giong-head"><span class="big">${vi.sonLooks[look].icon}</span><b>${vi.sonLooks[look].name}</b></div>` : '';
   let status: string = vi.ui.sonWaiting;

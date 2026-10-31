@@ -1161,6 +1161,18 @@ textarea {
   color: var(--red-dark);
 }
 
+/* Báo đỏ trước khi xuất quân: tướng đang kiệt sức, Đền Phù Đổng đang hư. */
+.why.warn {
+  margin: 6px 0;
+  padding: 6px 8px;
+  border-radius: 8px;
+  background: rgba(176, 58, 46, 0.1);
+  border-left: 3px solid var(--red);
+  color: var(--red-dark);
+  font-size: 13px;
+  font-weight: 600;
+}
+
 /* ---------- Thánh Gióng ---------- */
 
 .giong h3 {

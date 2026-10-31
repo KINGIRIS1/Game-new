@@ -2,11 +2,11 @@
 // Đủ lễ vật thì Sơn Tinh đến trước rước Mị Nương, cùng ra trận; Thủy Tinh nổi giận dâng nước đánh kinh đô.
 // Kèm việc chọn tướng cho từng trận: mỗi trận một tướng, Gióng, Sơn Tinh hay An Dương Vương.
 
-import type { Battle, HeroSetup } from './battle';
-import { advSetup } from './coLoa';
+import type { Battle, HeroKind, HeroSetup } from './battle';
+import { advJoined, advSetup } from './coLoa';
 import { ADV_REST_MS, CH2_QUEST_START, GIFTS, GIFT_IDS, GIONG_REST_MS, SON_REST_MS, type Chapter, type GiftId } from './defs';
 import { canAfford, pay, scheduleFirstFlood, type FailReason, type GameState, type Result, type SonState } from './game';
-import { heroSetup } from './giong';
+import { giongReady, heroSetup } from './giong';
 
 const ok = <T>(value: T): Result<T> => ({ ok: true, value });
 const fail = (reason: FailReason): Result<never> => ({ ok: false, reason });
@@ -44,6 +44,20 @@ export function heroFor(s: GameState, chapter: Chapter): HeroSetup | null {
     if (son) return son;
   }
   return heroSetup(s);
+}
+
+/**
+ * Tướng lẽ ra cùng ra trận chương này mà đang kiệt sức: ai, còn nghỉ bao nhiêu giây.
+ * Null khi tướng đứng đầu đang khỏe, hay chưa có tướng nào. Để giao diện báo trước khi xuất quân.
+ */
+export function restingHero(s: GameState, chapter: Chapter): { kind: HeroKind; secs: number } | null {
+  const order: { kind: HeroKind; joined: boolean; until: number }[] = [];
+  if (chapter === 3) order.push({ kind: 'anDuong', joined: advJoined(s), until: s.adv.restUntil });
+  if (chapter >= 2) order.push({ kind: 'sonTinh', joined: sonJoined(s), until: s.son.restUntil });
+  order.push({ kind: 'giong', joined: giongReady(s), until: s.giong.restUntil });
+  const first = order.find((h) => h.joined);
+  if (!first || s.clock >= first.until) return null;
+  return { kind: first.kind, secs: Math.ceil((first.until - s.clock) / 1000) };
 }
 
 /** Sau trận: tướng đã kiệt sức thì phải nghỉ một lúc mới ra trận lại được. */

@@ -16,7 +16,10 @@ function skillsHtml(state: GameState): string {
 
 export function giongHtml(state: GameState): string {
   const g = state.giong;
-  if (g.ascended) return `<div class="info giong"><p>${vi.ui.giongHienLinh}</p>${skillsHtml(state)}</div>`;
+  if (g.ascended) {
+    const rest = giongResting(state) ? `<p class="why warn">💤 ${vi.ui.giongResting(Math.ceil((g.restUntil - state.clock) / 1000))}</p>` : '';
+    return `<div class="info giong"><p>${vi.ui.giongHienLinh}</p>${rest}${skillsHtml(state)}</div>`;
+  }
   const look = giongLook(state);
   const head = look ? `<div class="giong-head"><span class="big">${vi.giongLooks[look].icon}</span><b>${vi.giongLooks[look].name}</b></div>` : '';
   let status: string = vi.ui.giongNotReady;

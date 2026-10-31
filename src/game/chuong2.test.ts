@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { heroOf, skillReady, startBattle, startFieldBattle, stepField, useSkill, type Battle, type HeroSetup } from './battle';
+import { heroOf, skillReady, startBattle, startFieldBattle, stepField, useSkill, type HeroSetup } from './battle';
 import { canStartStage, startStage } from './campaign';
 import {
   CH2_QUEST_START,
@@ -13,7 +13,6 @@ import {
   RAID_WARNING_MS,
   ROCKS,
   SKILL_IDS,
-  STAGES,
   UNITS,
   floodLevel,
   type UnitType,
@@ -32,6 +31,7 @@ import {
 } from './game';
 import { GRID, RIVER_START, baseHeights } from './map';
 import { deserialize, serialize } from './save';
+import { HALF_ARMY, SAMPLE_ARMY, SEEDS, fightStage } from './testkit';
 import { canOffer, heroFor, offerGift, sonJoined } from './son';
 import { markStory, pendingStory } from './story';
 import { drowns, floodMap, groundOf, tileHeight } from './terrain';
@@ -420,37 +420,26 @@ describe('Sơn Tinh', () => {
 describe('cân bằng phó bản chương 2', () => {
   const GIONG: HeroSetup = { kind: 'giong', bamboo: true, glow: true, non: false };
   const sonFor = (n: number): HeroSetup => ({ kind: 'sonTinh', bamboo: false, glow: false, non: n > 14 });
-  const half: Army = { giao: 7, cung: 6, voi: 2 };
-
-  function fight(stage: number, army: Army, hero: HeroSetup | null, skills = true): Battle {
-    const def = STAGES[stage - 1];
-    const b = startFieldBattle({ id: 1, stage, enemies: def.enemies, hpScale: def.hpScale, army, rows: DEFAULT_ROWS, hero, bonus: 0.1 });
-    for (let i = 0; i < 20 * 120 && !stepField(b, 0.05); i++) if (skills && b.t > 3) for (const k of SKILL_IDS) useSkill(b, k);
-    return b;
-  }
 
   it('quân mẫu chương 2 vừa doanh trại cấp 5', () => {
     const space = (Object.keys(ARMY) as UnitType[]).reduce((n, k) => n + ARMY[k] * UNITS[k].space, 0);
     expect(space).toBeLessThanOrEqual(38);
   });
 
-  for (const n of [9, 10, 11]) {
-    it(`màn ${n}: quân mẫu cùng Gióng hiển linh thì thắng, nửa quân thì thua`, () => {
-      expect(fight(n, ARMY, GIONG).outcome).toBe('win');
-      expect(fight(n, half, GIONG).outcome).toBe('lose');
-    });
-  }
-  for (const n of [12, 13, 14, 15, 16]) {
-    it(`màn ${n}: có Sơn Tinh và bấm kỹ năng thì thắng; không Sơn Tinh, hay nửa quân, thì thua`, () => {
-      const won = fight(n, ARMY, sonFor(n));
-      expect(won.outcome).toBe('win');
-      expect(won.t).toBeLessThan(FIELD.maxS);
-      expect(fight(n, ARMY, null).outcome).toBe('lose');
-      expect(fight(n, half, sonFor(n)).outcome).toBe('lose');
+  for (const n of [9, 10, 11, 12, 13, 14, 15, 16]) {
+    const hero = n <= 11 ? GIONG : sonFor(n);
+    it(`màn ${n}: người chơi thường có ${n <= 11 ? 'Gióng hiển linh' : 'Sơn Tinh'} thì thắng; không tướng, hay nửa quân, chơi giỏi cũng thua`, () => {
+      for (const id of SEEDS) {
+        const won = fightStage(n, SAMPLE_ARMY, hero, 'thuong', id);
+        expect(won.outcome).toBe('win');
+        expect(won.t).toBeLessThan(FIELD.maxS);
+        expect(fightStage(n, SAMPLE_ARMY, null, 'gioi', id).outcome).toBe('lose');
+        expect(fightStage(n, HALF_ARMY, hero, 'gioi', id).outcome).toBe('lose');
+      }
     });
   }
   it('Thủy Tinh cần bấm kỹ năng mới thắng', () => {
-    expect(fight(16, ARMY, sonFor(16), false).outcome).toBe('lose');
+    for (const id of SEEDS) expect(fightStage(16, SAMPLE_ARMY, sonFor(16), 'khongBam', id).outcome).toBe('lose');
   });
   it('mùa lũ thứ 4 (nước bậc 2): quân mẫu cùng Sơn Tinh và 5 chòi canh giữ được', () => {
     const s = wed();

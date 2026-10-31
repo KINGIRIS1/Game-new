@@ -341,12 +341,17 @@ export class Hud {
     if (look) {
       const mark = giongReady(state) ? (giongResting(state) ? '💤' : '⚔️') : `${state.giong.fed}/5`;
       giong = `<button class="chip dan" data-act="openGiong" title="${vi.ui.giong}">${vi.giongLooks[look].icon} <b>${mark}</b></button>`;
+    } else if (state.giong.ascended && giongResting(state)) {
+      // Gióng đã về trời thì không đứng ở kinh đô, nhưng vẫn báo khi đang kiệt sức để người chơi khỏi xuất quân thiếu tướng.
+      giong = `<button class="chip dan" data-act="openGiong" title="${vi.ui.giong}">🐎 <b>💤</b></button>`;
     }
     const sLook = sonLook(state);
     let son = '';
     if (sLook) {
       const mark = sonJoined(state) ? (sonResting(state) ? '💤' : '⚔️') : `${giftCount(state)}/5`;
       son = `<button class="chip dan" data-act="openSon" title="${vi.ui.son}">${vi.sonLooks[sLook].icon} <b>${mark}</b></button>`;
+    } else if (state.son.won && sonResting(state)) {
+      son = `<button class="chip dan" data-act="openSon" title="${vi.ui.son}">⛰️ <b>💤</b></button>`;
     }
     const aLook = advLook(state);
     let adv = '';

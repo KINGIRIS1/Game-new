@@ -8,7 +8,7 @@ Game xây dựng chiến thuật chạy trên trình duyệt điện thoại (Ty
   - `battle.ts` mô phỏng trận: giữ kinh đô (`raid`, kể cả mùa lũ, đêm yêu tinh, quân Triệu) và ngoài bãi (`field`).
   - `campaign.ts` lo phó bản cả ba chương. `giong.ts` lo Thánh Gióng. `son.ts` lo lễ vật, Sơn Tinh và chọn tướng cho từng trận. `coLoa.ts` lo chương 3: đếm vòng thành Cổ Loa, chế nỏ thần, An Dương Vương. `story.ts` lo thứ tự các đoạn truyện.
   - `map.ts` dựng độ cao tự nhiên của ô đất. `terrain.ts` lo nền công trình, đê và nước lũ loang từ sông.
-  - `campaign.test.ts`, `giong.test.ts`, `chuong2.test.ts` và `chuong3.test.ts` canh độ khó từng màn, từng mùa lũ, đêm yêu tinh và đợt quân Triệu.
+  - `campaign.test.ts`, `giong.test.ts`, `chuong2.test.ts` và `chuong3.test.ts` canh độ khó từng màn, từng mùa lũ, đêm yêu tinh và đợt quân Triệu. Màn chương 2, 3 đánh thử bằng `testkit.ts` theo chuẩn: người chơi thường (bấm chậm, không Đền) phải thắng.
 - `src/render/`: cảnh 3D phong cách "Nét Đông Sơn" (tô màu hoạt hình, viền mực, hoa văn trống đồng).
   - Công trình, mỗi loại một dáng và mỗi cấp một dáng: `buildings.ts`.
   - Dân theo nghề: `people.ts`.
