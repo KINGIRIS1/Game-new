@@ -36,7 +36,7 @@ interface Ring {
   age: number;
 }
 
-const SCALE: Partial<Record<FighterKind, number>> = { voi: 0.75, chienXa: 0.75, phoTuong: 1, daiTuong: 0.85, giong: 0.85 };
+const SCALE: Partial<Record<FighterKind, number>> = { voi: 0.75, chienXa: 0.75, phoTuong: 1, daiTuong: 0.85, giong: 1.1 };
 const puffGeo = new THREE.SphereGeometry(0.3, 10, 8);
 const arrowGeo = new THREE.BoxGeometry(0.03, 0.03, 0.45);
 const arrowMat = new THREE.MeshBasicMaterial({ color: C.arrow });
@@ -127,7 +127,10 @@ export class BattleView {
         continue;
       }
       if (f.kind === 'giong') {
-        for (const c of obj.children) if (c.userData.flame) c.scale.set(1, 0.7 + 0.5 * Math.abs(Math.sin(this.time * 9)), 1);
+        for (const c of obj.children) {
+          if (c.userData.flame) c.scale.set(1, 0.7 + 0.5 * Math.abs(Math.sin(this.time * 9)), 1);
+          if (c.userData.halo) c.rotation.z = this.time * 0.6;
+        }
         if (battle.ascend && battle.outcome === 'win') {
           // Phá xong giặc, Gióng cưỡi ngựa bay lên trời.
           view.rise += dt;

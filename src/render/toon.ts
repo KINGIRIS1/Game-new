@@ -111,6 +111,8 @@ export const drumTex = canvasTexture(256, 256, (g) => {
 export const toon = new THREE.MeshToonMaterial({ vertexColors: true, gradientMap: ramp });
 export const toonBand = new THREE.MeshToonMaterial({ vertexColors: true, gradientMap: ramp, map: bandTex });
 export const toonDrum = new THREE.MeshToonMaterial({ vertexColors: true, gradientMap: ramp, map: drumTex });
+/** Lửa, mắt ngựa sắt, hào quang: không nhận ánh sáng nên luôn rực, kể cả khi nằm trong bóng. */
+export const glowMaterial = new THREE.MeshBasicMaterial({ vertexColors: true });
 
 function inkMaterial(thickness: number): THREE.MeshBasicMaterial {
   const m = new THREE.MeshBasicMaterial({ color: C.ink, side: THREE.BackSide });
@@ -130,11 +132,12 @@ export function outlineOf(geo: THREE.BufferGeometry, ink = inkThick): THREE.Mesh
   return o;
 }
 
-/** Một mô hình gồm phần màu trơn, phần có hoa văn dải và phần mặt trống, mỗi phần có viền mực. */
+/** Một mô hình gồm phần màu trơn, phần có hoa văn dải, phần mặt trống và phần tự phát sáng, mỗi phần có viền mực. */
 export class ToonModel {
   readonly plain = new ShapeBuilder();
   readonly band = new ShapeBuilder(true);
   readonly drum = new ShapeBuilder(true);
+  readonly glow = new ShapeBuilder();
   constructor(private readonly ink = inkThick) {}
   group(): THREE.Group {
     const out = new THREE.Group();
@@ -142,6 +145,7 @@ export class ToonModel {
       [this.plain, toon],
       [this.band, toonBand],
       [this.drum, toonDrum],
+      [this.glow, glowMaterial],
     ];
     for (const [b, mat] of parts) {
       if (b.empty) continue;

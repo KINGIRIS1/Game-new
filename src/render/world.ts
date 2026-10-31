@@ -540,7 +540,7 @@ export class World {
     this.giong = undefined;
     if (!look || !dien) return;
     const obj = makeGiong(look);
-    obj.scale.setScalar(look === 'trangSi' ? 0.7 : 0.8);
+    obj.scale.setScalar(look === 'trangSi' ? 0.9 : look === 'be' ? 1.1 : 1);
     obj.position.set(wx(dien.x) + 3.6, 0, wz(dien.z) + 4.5);
     obj.rotation.y = look === 'trangSi' ? -Math.PI / 2 + 0.5 : 0.3;
     this.scene.add(obj);
