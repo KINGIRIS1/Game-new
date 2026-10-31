@@ -3,6 +3,7 @@
 import type { BuildingType, EnemyType, GearId, ResourceId, Row, SkillId, UnitType } from '../game/defs';
 import type { FailReason, StoryId } from '../game/game';
 import type { GiongLook } from '../game/giong';
+import type { Resolution } from '../render/world';
 
 /** Người nói trong các đoạn truyện. */
 type Speaker = 'ke' | 'lacHau' | 'vua' | 'giong' | 'trangSi';
@@ -174,6 +175,8 @@ export const vi = {
 
   rows: { tien: 'Tiền quân', trung: 'Trung quân', hau: 'Hậu quân' } satisfies Record<Row, string>,
 
+  resolutions: { low: 'Tiết kiệm', medium: 'Vừa', high: 'Nét' } satisfies Record<Resolution, string>,
+
   skills: {
     trongTran: { name: 'Trống trận', icon: '🥁', desc: 'Lạc tướng đánh trống thúc quân: quân ta đánh mạnh hơn, chạy nhanh hơn trong chốc lát.' },
     phunLua: { name: 'Phun lửa', icon: '🔥', desc: 'Gióng phi ngựa sắt lao vào giặc, ngựa phun lửa đốt cả một dải.' },
@@ -322,6 +325,8 @@ export const vi = {
     trapHint: 'Chạm vào từng ô đất để gài bẫy',
     settings: 'Cài đặt',
     sound: 'Âm thanh',
+    resolution: 'Độ nét',
+    resolutionHint: 'Độ nét thấp thì máy mát hơn và đỡ tốn pin. Lựa chọn này chỉ lưu trên máy này.',
     on: 'Bật',
     off: 'Tắt',
     exportSave: 'Xuất mã lưu',
