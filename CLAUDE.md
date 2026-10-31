@@ -22,3 +22,4 @@ Game xây dựng chiến thuật chạy trên trình duyệt điện thoại (Ty
 - `src/text/vi.ts`: mọi chữ hiển thị, kể cả lời các đoạn truyện.
 - Lệnh: `npm test`, `npm run build` (gồm typecheck), `npm run dev`.
 - Đẩy lên `main` thì GitHub Actions chạy test, build rồi đăng lên GitHub Pages (`.github/workflows/deploy.yml`).
+- Game đã đăng ở https://kingiris1.github.io/Game-new/. Cuối mỗi câu trả lời cho chủ dự án, ghi link này.
