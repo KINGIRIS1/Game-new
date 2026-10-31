@@ -646,6 +646,102 @@ Rèn riêng cho giáo binh, cung thủ, voi chiến. Có tác dụng ở mọi t
 - Bản lưu lên phiên bản 8 (thêm bậc rèn của từng binh chủng).
 - Lời Lạc hầu: đoạn "Vua Hùng kén rể" thêm một câu nhắc Điện có thể lên cấp 6 và lò rèn rèn binh khí; đoạn "Cột đá thề" thêm một câu nhắc Điện cấp 7. Người đã xem các đoạn ấy thì thấy nút nâng cấp như thường.
 
+### PR 3: Hội Tết bánh chưng bánh giầy (đề xuất, chờ chủ dự án duyệt)
+
+Mục này ghi con số và dáng để duyệt trước khi viết code. Những chỗ **in đậm có dấu (mới)** là quyết định mới, chưa có trong buổi hỏi đáp.
+
+**Mở khóa và truyện**
+
+- Kết chương 1 (Gióng về trời) thì Lạc hầu kể **chuyện Lang Liêu**, ngay sau đoạn "Gióng về trời", trước "Vua Hùng kén rể". Người đang ở chương 2, 3 thấy đoạn này ngay khi mở game.
+- Truyện: Hùng Vương thứ 6 muốn truyền ngôi, bảo các lang tìm lễ vật cúng Tiên vương. Lang Liêu nghèo, chỉ có lúa gạo, được thần mách rằng trong trời đất không gì quý bằng hạt gạo. Chàng làm bánh vuông tượng đất, bánh tròn tượng trời, lá bọc ngoài, nhân ở trong. Vua chọn bánh của Lang Liêu, truyền ngôi cho chàng, từ đó Tết có bánh chưng bánh giầy. Lạc hầu kết: kinh đô ta cũng mở hội Tết, dâng bánh chưng thì đất cho mùa màng tốt hơn, dâng bánh giầy thì trời phù hộ quân ta.
+- Chỉ là truyện, không có trò thi tính điểm. Không thêm nhiệm vụ Lạc hầu.
+
+**Bốn công trình mới**
+
+Cả bốn cần dân làm, mở sau truyện Lang Liêu, cần Điện cấp 3. **Mỗi loại có 3 cấp (mới)**: cấp 2 cần Điện cấp 5, cấp 3 cần Điện cấp 6. Mỗi cấp đổi hẳn dáng.
+
+| Công trình | Ô | Giá dựng | Lên cấp 2 | Lên cấp 3 | Chỗ làm (cấp 1 → 2 → 3) | Làm ra mỗi phút (cấp 1 → 2 → 3) | Tối đa ở Điện 3–4 / 5 / 6–7 |
+|---|---|---|---|---|---|---|---|
+| Ruộng nếp | 3×3 | 300 vỏ ốc, 150 đất đá | 900 vỏ ốc, 500 đất đá | 2500 vỏ ốc, 1500 đất đá | 2 → 3 → 3 | nếp đủ cho 2 → 3 → 4 cái bánh | 1 / 2 / 2 |
+| Vườn đậu xanh, lá dong | 2×2 | 200 gạo, 150 vỏ ốc | 600 gạo, 450 vỏ ốc | 1800 gạo, 1300 vỏ ốc | 1 → 2 → 2 | đậu và lá đủ cho 1 → 1,5 → 2 cái bánh chưng | 1 / 1 / 2 |
+| Chuồng lợn | 2×2 | 250 gạo, 200 đất đá | 750 gạo, 600 đất đá | 2200 gạo, 1800 đất đá | 1 → 1 → 2 | thịt đủ cho 1 → 1,5 → 2 cái bánh chưng | 1 / 1 / 2 |
+| Bếp gói bánh | 2×2 | 200 vỏ ốc, 250 đất đá, 40 sắt | 600 vỏ ốc, 750 đất đá, 120 sắt | 1800 vỏ ốc, 2200 đất đá, 350 sắt | 2 → 2 → 3 | gói tối đa 2 → 3 → 4 bánh chưng, giã tối đa 2 → 3 → 4 bánh giầy | 1 / 1 / 1 |
+
+- Lợn không ăn gạo. Thiếu người làm thì làm ra ít đi theo tỉ lệ, như ruộng lúa. Thiếu gạo hay vắng mặt thì chậm lại như mọi công trình khác.
+- Nguyên liệu không tích trữ: chỉ tính theo mỗi phút.
+- **Cách bếp chia nếp (mới):** bếp gói bánh chưng trước, nhanh bằng nguồn chậm nhất trong ba nguồn nếp, đậu lá, thịt lợn (và không quá sức bếp). **Nếp còn thừa** thì giã bánh giầy (không quá sức bếp). Ví dụ đủ bộ cấp 1: nếp 2, đậu lá 1, thịt 1, nên mỗi phút được 1 bánh chưng, nếp thừa 1 giã được 1 bánh giầy. Muốn nhiều bánh giầy hơn thì cấy thêm ruộng nếp.
+- Bảng bếp báo nguồn nào đang thiếu. Ví dụ "Thiếu thịt lợn: bánh chưng chỉ được 1 cái mỗi phút".
+- Bánh để trên gác bếp, tích trữ được. **Gác bếp chứa tối đa 30 → 45 → 60 cái mỗi loại theo cấp bếp (mới)**. Bánh chỉ hiện trong bảng bếp và bảng Tết, không thêm chip trên thanh trên.
+
+**Tết**
+
+- Tết khoảng 20 phút chơi một lần, tính từ lúc Tết trước mở. Mỗi lần mở 3 phút để dâng bánh.
+- Lần đầu: 2 phút sau truyện Lang Liêu.
+- Tới giờ mà đang có giặc, lũ, yêu tinh, quân Triệu, hay đang đánh phó bản, thì lùi tới khi xong trận. Vắng mặt thì Tết chờ người chơi quay lại mới mở.
+- **Tết đang mở mà giặc tới thì vẫn dâng được (mới)**. Dâng chỉ là bấm nút.
+- **Số bánh cần dâng lớn dần theo kinh đô (mới)**, để nâng cấp và dựng thêm bốn công trình mới có ích:
+
+  | Điện | 3–4 | 5 | 6 | 7 |
+  |---|---|---|---|---|
+  | Bánh chưng cần dâng | 12 | 20 | 30 | 40 |
+  | Bánh giầy cần dâng | 12 | 20 | 30 | 40 |
+
+  **Tết đầu tiên chỉ cần 3 mỗi loại (mới)**, vì mới có 2 phút chuẩn bị.
+- Dâng riêng từng loại, mỗi loại một nút. Dâng thì trừ đúng số bánh cần dâng.
+- Dâng đủ bánh chưng được **phúc lành Đất**: mọi tài nguyên làm ra thêm 15%. Dâng đủ bánh giầy được **phúc lành Trời**: quân ta thêm 10% máu và sức đánh, cả khi giữ kinh đô lẫn ngoài phó bản.
+- Phúc lành cộng thêm vào phần của Đền Phù Đổng (đền thêm 10% cả hai thứ) và của binh khí đã rèn.
+- Phúc lành kéo dài tới khi Tết sau đóng. Tết sau dâng tiếp thì nối liền. Lỡ Tết thì hết phúc lành, nhưng bánh vẫn còn.
+
+**Nhịp, đo bằng test**: với bộ công trình nên có ở mỗi mức Điện, số bánh cần dâng phải làm xong trong khoảng 15 phút, chừa 5 phút cho lúc đánh nhau hay quên xếp người.
+
+| Điện | Bộ nên có | Mỗi phút (chưng, giầy) | Đủ số cần dâng sau | Người làm |
+|---|---|---|---|---|
+| 3–4 | 1 ruộng nếp, 1 vườn, 1 chuồng, 1 bếp, đều cấp 1 | 1, 1 | 12 phút | 6 |
+| 5 | thêm ruộng nếp thứ hai; cả bốn loại lên cấp 2 | 1,5, 3 | 13,3 phút | 11 |
+| 6 | mỗi loại một cái, đều cấp 3 | 2, 2 | 15 phút | 10 |
+| 7 | 2 ruộng nếp, 2 vườn, 2 chuồng, 1 bếp, đều cấp 3 | 4, 4 | 10 phút | 17 |
+
+- Dân rảnh khi mọi công trình cũ đủ người: khoảng 3 người ở Điện 4, 10 ở Điện 5, 5 ở Điện 6, 25 ở Điện 7. Vì vậy ở Điện 4 và Điện 6 phải rút vài người từ công trình khác.
+- Đổi lại thì được: phúc lành Đất ở Điện 6 thêm khoảng 375 tài nguyên mỗi phút, còn 5 người làm ruộng lúa cấp 6 chỉ ra khoảng 150 gạo mỗi phút.
+
+**Giao diện**
+
+- Bảng bếp có các mục sau:
+  - mỗi phút có bao nhiêu nếp, đậu lá, thịt, nguồn nào đang thiếu;
+  - mỗi phút làm được bao nhiêu bánh chưng, bánh giầy;
+  - bánh đang có, so với số cần dâng ở Tết tới;
+  - còn bao lâu tới Tết;
+  - phúc lành đang có.
+- Tết mở thì có băng báo "Tết đến, dâng bánh trước Điện", kèm chip 🎋 đếm ngược trên thanh trên (chỉ hiện lúc Tết mở). Chạm vào chip mở bảng Tết, có hai nút dâng bánh chưng, dâng bánh giầy.
+- Bảng Điện ghi phúc lành đang có. Sản lượng mỗi phút trên thanh trên đã gồm phúc lành Đất.
+
+**Dáng công trình** (cỡ không quá 105%, như các công trình khác)
+
+| Công trình | Cấp 1 | Cấp 2 | Cấp 3 |
+|---|---|---|---|
+| Ruộng nếp | khóm lúa nếp bông trĩu màu ngà, khác hàng lúa nhọn vàng của ruộng lúa | lúa dày hơn, bù nhìn rơm đội nón giữa ruộng | giàn tre phơi bó nếp bên bờ |
+| Vườn đậu xanh, lá dong | hai luống đậu xanh thấp, một khóm lá dong lá to bản | thêm giàn tre cho đậu leo, chum nước tưới | rào tre quanh vườn, lều nhỏ có nong đậu phơi |
+| Chuồng lợn | rào tre thấp, hai con lợn ỉ đen bụng phệ, máng gỗ | chuồng có mái tranh, thêm đàn lợn con | chuồng sàn gỗ, vũng bùn, bốn con lợn |
+| Bếp gói bánh | kiềng ba hòn đá, nồi đồng to luộc bánh, lửa củi, chồng lá dong | thêm mái tranh che bếp, chõng tre có khuôn gói bánh | thêm cối đá chày gỗ giã bánh giầy, nồi thứ hai, khói bếp |
+
+- Người làm: ruộng nếp và chuồng lợn là nhà nông, vườn và bếp là phụ nữ.
+- Cảnh Tết, chỉ lúc Tết mở:
+  - cây nêu trước Điện: cây tre cao, ngọn còn chùm lá, treo dải vải đỏ và khánh đất nung;
+  - dây cờ hội nhiều màu căng từ cây nêu tới Điện;
+  - thêm vài người ngồi chiếu quanh bếp gói bánh;
+  - dâng rồi thì có mâm bánh chưng vuông, bánh giầy tròn bày trước thềm Điện tới hết Tết;
+  - không có pháo.
+
+**Bản lưu phiên bản 9**: thêm phần Tết (Tết thứ mấy, lúc Tết tới, Tết mở tới khi nào, bánh đang có, Tết này đã dâng gì, phúc lành đang có). Bản lưu cũ được thêm phần này. Người đã qua kết chương 1 sẽ thấy truyện Lang Liêu, rồi 2 phút sau tới Tết đầu.
+
+**Test**:
+- tính bánh: nguồn chậm nhất, nếp thừa ra bánh giầy, sức bếp, gác bếp đầy, thiếu người;
+- hẹn Tết, lùi khi có trận, Tết chờ khi vắng mặt;
+- phúc lành kéo dài tới khi Tết sau đóng, lỡ Tết thì mất;
+- phúc lành cộng vào sản lượng và vào trận;
+- nhịp theo bảng trên;
+- nâng bản lưu 8 lên 9.
+
 ## Nhịp chơi và lưu game
 
 - Nhịp chơi lai: mỗi lần mở game là một phiên ra quyết định ngắn.
@@ -678,5 +774,5 @@ Rèn riêng cho giáo binh, cung thủ, voi chiến. Có tác dụng ở mọi t
 5. **Chương 3** (đã làm): thành Cổ Loa và số vòng thành, đêm yêu tinh phá thành, quân Triệu Đà xen với mùa lũ, An Dương Vương cầm nỏ ra trận với Nỏ thần và Rùa Vàng, phó bản màn 17–24 với gà trắng nghìn năm và Triệu Đà, cốt truyện, kết chương, Đền Cổ Loa.
 6. **Sửa sau chơi thử chương 3** (đã làm): chuẩn cân bằng mới cho màn 9–24, báo tướng kiệt sức và Đền Phù Đổng hư trước khi xuất quân.
 7. **Cấp 6–7 và rèn binh khí** (đã làm, xem mục Kế hoạch): Điện và 7 loại công trình lên cấp 6, 7, đất 25×25 rồi 26×26, rèn binh khí hai bậc ở lò rèn, bản lưu phiên bản 8.
-8. **Tiếp theo** (đã chốt): Hội Tết bánh chưng bánh giầy.
+8. **Đang làm**: Hội Tết bánh chưng bánh giầy (con số và dáng ở mục PR 3, chờ chủ dự án duyệt).
 9. **Để sau**: chương về Mỵ Châu, Trọng Thủy, có binh chủng nỏ thủ Âu Lạc.
