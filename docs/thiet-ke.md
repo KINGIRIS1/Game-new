@@ -581,6 +581,68 @@ Chủ dự án đã chốt qua một buổi hỏi đáp. Vấn đề: từ cuố
 - Mọi con số (giá, sản lượng, chỗ làm, số công trình tối đa, giá rèn, nhịp Tết) và dáng từng công trình được ghi vào tài liệu này để chủ dự án duyệt **trước khi** làm code của PR 2, PR 3.
 - Binh chủng thứ tư (nỏ thủ Âu Lạc) để dành cho chương 4.
 
+### PR 2: con số và dáng cấp 6–7, rèn binh khí (chờ chủ dự án duyệt)
+
+Giá mỗi cấp mới khoảng gấp đôi cấp trước; sản lượng mỗi cấp tăng khoảng 35%. Mọi con số còn được chỉnh trong khoảng ±20% để khớp nhịp đo bằng test, rồi ghi lại số cuối cùng.
+
+**Điện Vua Hùng**
+
+| Cấp | Mở khi | Giá nâng | Đất | Sức chứa kho | Chỗ ở | Gạo, vỏ ốc /phút | Máu |
+|---|---|---|---|---|---|---|---|
+| 6 | vào chương 2 | 4000 gạo, 4000 vỏ ốc, 3000 đất đá, 600 sắt | 25×25 | 14000 | 9 | 14, 7 | 1600 |
+| 7 | vào chương 3 | 9000 gạo, 8000 vỏ ốc, 7000 đất đá, 1500 sắt | 26×26 | 22000 | 10 | 16, 8 | 1800 |
+
+**Công trình lên cấp 6, 7** (giá là giá nâng lên cấp ấy)
+
+| Công trình | Cấp 6 | Cấp 7 | Sản lượng hay công dụng (cấp 5 → 6 → 7) | Chỗ làm | Tối đa ở Điện 5 → 6 → 7 |
+|---|---|---|---|---|---|
+| Ruộng lúa | 850 vỏ ốc, 550 đất đá | 1700 vỏ ốc, 1100 đất đá | gạo 110 → 150 → 200 | 4 → 5 → 5 | 6 → 7 → 8 |
+| Bến chợ thuyền | 1000 gạo, 600 đất đá | 2000 gạo, 1200 đất đá | vỏ ốc 112 → 150 → 200 | 3 → 4 → 4 | 4 → 4 → 5 |
+| Nhà sàn | 760 vỏ ốc, 640 đất đá | 1500 vỏ ốc, 1300 đất đá | chỗ ở 12 → 14 → 16 | – | 5 → 6 → 7 |
+| Bãi đất đá | 480 gạo, 1000 vỏ ốc | 960 gạo, 2000 vỏ ốc | đất đá 105 → 145 → 195 | 4 → 5 → 5 | 4 → 5 → 5 |
+| Lò rèn | 1300 vỏ ốc, 1400 đất đá | 2600 vỏ ốc, 2800 đất đá | sắt 29 → 40 → 54 | 3 → 4 → 4 | 2 → 3 → 3 |
+| Kho thóc | 1300 vỏ ốc, 1600 đất đá | 2600 vỏ ốc, 3200 đất đá | thêm sức chứa 4000 → 6000 → 9000 | – | 3 → 3 → 4 |
+| Chòi canh | 960 vỏ ốc, 960 đất đá, 160 sắt | 1900 vỏ ốc, 1900 đất đá, 320 sắt | sát thương 19 → 24 → 30 | – | 5 → 6 → 7 |
+
+- Máu mỗi công trình tăng thêm khoảng 10% mỗi cấp.
+- Doanh trại giữ cấp 5, 38 chỗ. Số lũy tối đa 110 → 120 → 130; bẫy chông 10 → 12 → 14; đê 90 → 100 → 110; thành Cổ Loa 150 → 160 → 170, vì đất rộng hơn.
+- Ở Điện 7, kho tối đa khoảng 22000 + 4 × 9000 = 58000 mỗi loại.
+
+**Rèn binh khí** (bảng lò rèn, lò rèn phải còn nguyên)
+
+| Bậc | Cần | Giá mỗi binh chủng | Tác dụng |
+|---|---|---|---|
+| 1 | lò rèn cấp 6 | 400 sắt, 400 vỏ ốc | +10% máu và sức đánh |
+| 2 | lò rèn cấp 7, đã rèn bậc 1 | 900 sắt, 900 vỏ ốc | thêm +10% (cộng 20%) |
+
+Rèn riêng cho giáo binh, cung thủ, voi chiến. Có tác dụng ở mọi trận (phó bản, giữ kinh đô), cộng thêm vào phần của Đền Phù Đổng và phúc lành Tết. Chuẩn cân bằng phó bản vẫn tính lính chưa rèn.
+
+**Nhịp** (test mô phỏng người biết dành dụm như `balance.test.ts`, không tính thưởng phó bản):
+- kinh đô đã lên hết cấp 5, vào chương 2 thì khoảng **12–20 phút** lên được Điện 6;
+- vào chương 3 thì khoảng **25–40 phút** lên được Điện 7.
+
+**Dáng mới** (móng giữ nguyên số ô, cỡ không to quá 105%):
+
+| Công trình | Cấp 6 | Cấp 7 |
+|---|---|---|
+| Điện Vua Hùng | hai lầu trống đồng hai bên thềm | mái ba tầng, đôi chim đồng lớn trên nóc |
+| Ruộng lúa | guồng nước tre quay bên bờ ruộng | miếu thần lúa nhỏ ở góc ruộng |
+| Bến chợ thuyền | một thuyền buôn lớn đậu cạnh cầu tàu | lầu chợ hai tầng mái hình thuyền |
+| Nhà sàn | sàn phơi lúa và chuồng gà dưới sàn | hai nhà sàn nối nhau bằng cầu tre |
+| Bãi đất đá | tời gỗ kéo đá | lò nung gạch đất bốc khói |
+| Lò rèn | ống bễ da lớn và giá treo binh khí | hai lò nung, lửa đỏ rực |
+| Kho thóc | thêm một vựa thóc tròn thứ hai | ba vựa quây quanh sân phơi |
+| Chòi canh | chòi hai tầng, trên có nỏ lớn | lầu canh đá có cờ đỏ |
+
+| Binh chủng | Rèn bậc 1 | Rèn bậc 2 |
+|---|---|---|
+| Giáo binh | đầu giáo sắt xám | thêm tua đỏ và khiên viền sắt |
+| Cung thủ | mũi tên sắt, bao tên da | cung sừng, bao tên đồng |
+| Voi chiến | giáp trán sắt | giáp ngà và bành có lọng |
+
+- Bản lưu lên phiên bản 8 (thêm bậc rèn của từng binh chủng).
+- Lời Lạc hầu: đoạn "Vua Hùng kén rể" thêm một câu nhắc Điện có thể lên cấp 6 và lò rèn rèn binh khí; đoạn "Cột đá thề" thêm một câu nhắc Điện cấp 7. Người đã xem các đoạn ấy thì thấy nút nâng cấp như thường.
+
 ## Nhịp chơi và lưu game
 
 - Nhịp chơi lai: mỗi lần mở game là một phiên ra quyết định ngắn.
