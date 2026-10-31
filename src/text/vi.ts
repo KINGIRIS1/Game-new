@@ -1,12 +1,13 @@
 // Mọi chữ hiển thị trong game. Tách riêng để sau này dịch sang tiếng Anh.
 
-import type { BuildingType, EnemyType, GearId, ResourceId, Row, SkillId, UnitType } from '../game/defs';
+import type { BuildingType, EnemyType, GearId, GiftId, ResourceId, Row, SkillId, UnitType } from '../game/defs';
 import type { FailReason, StoryId } from '../game/game';
 import type { GiongLook } from '../game/giong';
+import type { SonLook } from '../game/son';
 import type { Resolution } from '../render/world';
 
 /** Người nói trong các đoạn truyện. */
-type Speaker = 'ke' | 'lacHau' | 'vua' | 'giong' | 'trangSi';
+type Speaker = 'ke' | 'lacHau' | 'vua' | 'giong' | 'trangSi' | 'miNuong' | 'sonTinh' | 'thuyTinh';
 
 export const vi = {
   gameTitle: 'Thời đại Văn Lang',
@@ -79,6 +80,16 @@ export const vi = {
       icon: '🏮',
       desc: 'Đền thờ Phù Đổng Thiên Vương. Mọi tài nguyên làm ra thêm 10%, quân ta thêm 10% máu và sức đánh. Chỉ dựng được sau khi Gióng bay về trời.',
     },
+    de: {
+      name: 'Đê đất',
+      icon: '🟫',
+      desc: 'Đê đắp cao hơn mặt đất 2 bậc, chặn nước lũ tràn từ sông vào. Đê phải liền một dải mới chặn được; thủy quái phá vỡ đê thì nước tràn qua chỗ vỡ. Kè đá cao 3 bậc, chắc hơn nhiều.',
+    },
+    denTanVien: {
+      name: 'Đền Tản Viên',
+      icon: '⛰️',
+      desc: 'Đền thờ Sơn Tinh, Tản Viên Sơn Thánh. Đền còn nguyên thì mỗi mùa lũ nước dâng thấp đi một bậc. Chỉ dựng được sau khi đánh lui Thủy Tinh.',
+    },
   } satisfies Record<BuildingType, { name: string; icon: string; desc: string }>,
 
   reasons: {
@@ -113,6 +124,14 @@ export const vi = {
     canLoRen: 'Cần nâng lò rèn',
     giongKietSuc: 'Gióng đang kiệt sức, chờ một lát',
     canKetChuong: 'Chỉ dựng được sau khi Gióng bay về trời',
+    canChuong2: 'Mở ở chương 2: Sơn Tinh, Thủy Tinh',
+    canKetChuong2: 'Chỉ dựng được sau khi đánh lui Thủy Tinh',
+    datCaoNhat: 'Đất đã cao nhất, không đắp thêm được',
+    khongDapNen: 'Công trình này không đắp nền được. Hãy đắp ô đất trước rồi mới dựng',
+    canSonTinh: 'Cần đủ năm lễ vật để Sơn Tinh rước Mị Nương',
+    sonKietSuc: 'Sơn Tinh đang kiệt sức, chờ một lát',
+    daCoLeVat: 'Đã có lễ vật này',
+    leVatPhoBan: 'Lễ vật này phải giành ở phó bản',
   } satisfies Record<FailReason, string>,
 
   quests: {
@@ -136,7 +155,17 @@ export const vi = {
     quaMan6: 'Tráng sĩ Gióng đã lên đường. Xin bệ hạ đánh qua màn 6, mở đường lên phương Bắc.',
     nuiTrau: 'Đại quân Ân đóng ở chân núi Trâu. Xin bệ hạ cho Gióng đánh trận quyết chiến ở màn 8.',
     denPhuDong: 'Phù Đổng Thiên Vương đã về trời. Xin bệ hạ dựng Đền Phù Đổng để muôn đời thờ phụng.',
-    allDone: 'Chương 1 đã xong: giặc Ân tan vỡ, Phù Đổng Thiên Vương muôn đời hiển linh. Chương 2 (Sơn Tinh, Thủy Tinh) sẽ có ở bản sau.',
+    comNep: 'Vua thách cưới một trăm ván cơm nếp. Xin bệ hạ cho góp gạo nấu cơm nếp, giúp Sơn Tinh đủ lễ.',
+    banhChung: 'Lại thêm một trăm nệp bánh chưng. Xin góp gạo, mua lá dong của thuyền buôn mà gói bánh.',
+    deVenSong: 'Thủy Tinh hô mưa gọi gió, khó lòng chịu thua. Xin bệ hạ cho đắp 8 đoạn đê ven sông phòng lũ.',
+    quaMan9: 'Tôm binh của Thủy Tinh đang lùng gà chín cựa trên đồi sim. Xin cho Lạc tướng đánh màn 9 giành lấy.',
+    duLeVat: 'Còn ngựa chín hồng mao bên sông Đà, voi chín ngà trong rừng già. Xin giành đủ năm lễ vật để Sơn Tinh đến trước.',
+    chongLu: 'Thủy Tinh dâng nước đánh kinh đô. Xin giữ vững một mùa lũ: diệt hết thủy quái, không công trình nào bị ngập.',
+    quaMan12: 'Thuồng luồng chặn ngã ba Bạch Hạc ngập nước. Xin bệ hạ cùng Sơn Tinh đánh qua màn 12.',
+    quaMan14: 'Sóng dữ sông Đà nổi lên. Xin đánh qua màn 14, mở đường cho Sơn Tinh dời non.',
+    tanVien: 'Thủy Tinh dồn quân lên đỉnh Tản Viên. Xin bệ hạ cùng Sơn Tinh đánh trận quyết chiến ở màn 16.',
+    denTanVien: 'Thủy Tinh đã rút quân. Xin bệ hạ dựng Đền Tản Viên thờ Sơn Tinh, giữ nước cho muôn đời.',
+    allDone: 'Chương 2 đã xong: Thủy Tinh rút về biển, năm nào cũng dâng nước nhưng năm nào cũng thua. Xin giữ đê cho vững mỗi mùa lũ.',
   } as Record<string, string>,
 
   units: {
@@ -151,6 +180,11 @@ export const vi = {
     chienXa: 'chiến xa Ân',
     phoTuong: 'phó tướng Ân',
     daiTuong: 'đại tướng Ân',
+    tomBinh: 'tôm binh',
+    caPhun: 'cá phun nước',
+    caSau: 'cá sấu',
+    thuongLuong: 'thuồng luồng',
+    thuyTinh: 'Thủy Tinh',
   } satisfies Record<EnemyType, string>,
 
   enemyIcons: {
@@ -159,6 +193,11 @@ export const vi = {
     chienXa: '🛞',
     phoTuong: '👹',
     daiTuong: '👺',
+    tomBinh: '🦐',
+    caPhun: '🐟',
+    caSau: '🐊',
+    thuongLuong: '🐉',
+    thuyTinh: '🌊',
   } satisfies Record<EnemyType, string>,
 
   /** Tên và lời dẫn từng màn phó bản, theo thứ tự trong STAGES. */
@@ -171,6 +210,14 @@ export const vi = {
     { name: 'Bến sông Cầu', intro: 'Giặc giữ bến sông, chặn đường tiến quân của tráng sĩ.' },
     { name: 'Cánh đồng cháy', intro: 'Giặc đốt đồng lúa hòng cản bước quân ta.' },
     { name: 'Chân núi Trâu', intro: 'Đại quân Ân đóng ở chân núi Trâu. Trận quyết chiến!' },
+    { name: 'Đồi sim Ba Vì', intro: 'Thủy Tinh sai tôm binh lên đồi sim giành gà chín cựa. Đánh tan chúng mà mang gà về cho Sơn Tinh.' },
+    { name: 'Bãi cỏ sông Đà', intro: 'Ngựa chín hồng mao gặm cỏ ven sông Đà, thủy quái đã bủa vây kín bãi.' },
+    { name: 'Rừng già Tản Viên', intro: 'Voi chín ngà ẩn trong rừng già. Cá sấu của Thủy Tinh rình sẵn bên suối.' },
+    { name: 'Bạch Hạc ngập nước', intro: 'Thủy Tinh dâng nước ngập ngã ba Bạch Hạc, sai thuồng luồng chặn đường.' },
+    { name: 'Làng chìm trong lũ', intro: 'Nước lũ ngập tới mái nhà, thủy quái tràn vào làng. Mau cứu lấy dân!' },
+    { name: 'Sông Đà cuồn cuộn', intro: 'Sóng dữ sông Đà nổi lên, thủy binh đông nghịt mặt nước.' },
+    { name: 'Chân núi Tản', intro: 'Thủy Tinh dồn quân tới chân núi Tản, quyết đuổi kịp Sơn Tinh.' },
+    { name: 'Đỉnh Tản Viên', intro: 'Nước dâng lưng chừng núi. Thủy Tinh đích thân ra trận. Trận quyết chiến!' },
   ],
 
   rows: { tien: 'Tiền quân', trung: 'Trung quân', hau: 'Hậu quân' } satisfies Record<Row, string>,
@@ -181,6 +228,8 @@ export const vi = {
     trongTran: { name: 'Trống trận', icon: '🥁', desc: 'Lạc tướng đánh trống thúc quân: quân ta đánh mạnh hơn, chạy nhanh hơn trong chốc lát.' },
     phunLua: { name: 'Phun lửa', icon: '🔥', desc: 'Gióng phi ngựa sắt lao vào giặc, ngựa phun lửa đốt cả một dải.' },
     nhoTre: { name: 'Nhổ tre', icon: '🎋', desc: 'Gióng nhổ bụi tre quật quanh mình, giặc ngã rạp, bị hất lùi ra.' },
+    bocDoi: { name: 'Bốc đồi', icon: '⛰️', desc: 'Sơn Tinh nhấc bổng một quả đồi, ném xuống chỗ giặc đứng đông nhất.' },
+    doiNon: { name: 'Dời non', icon: '🪨', desc: 'Sơn Tinh dời non dựng núi: đá mọc lên dưới chân giặc quanh mình, giữ chân chúng vài giây.' },
   } satisfies Record<SkillId, { name: string; icon: string; desc: string }>,
 
   gear: {
@@ -188,6 +237,19 @@ export const vi = {
     roi: { name: 'Roi sắt', icon: '🦯' },
     giap: { name: 'Giáp sắt', icon: '🛡️' },
   } satisfies Record<GearId, { name: string; icon: string }>,
+
+  gifts: {
+    comNep: { name: 'Trăm ván cơm nếp', icon: '🍙' },
+    banhChung: { name: 'Trăm nệp bánh chưng', icon: '🟩' },
+    voi9Nga: { name: 'Voi chín ngà', icon: '🐘' },
+    ga9Cua: { name: 'Gà chín cựa', icon: '🐓' },
+    ngua9HongMao: { name: 'Ngựa chín hồng mao', icon: '🐴' },
+  } satisfies Record<GiftId, { name: string; icon: string }>,
+
+  sonLooks: {
+    cauHon: { name: 'Sơn Tinh đến cầu hôn', icon: '⛰️' },
+    trangSi: { name: 'Sơn Tinh, chúa vùng non cao', icon: '⛰️' },
+  } satisfies Record<SonLook, { name: string; icon: string }>,
 
   giongLooks: {
     be: { name: 'Cậu bé lên ba', icon: '👶' },
@@ -201,9 +263,12 @@ export const vi = {
     vua: { name: 'Vua Hùng', icon: '👑' },
     giong: { name: 'Gióng', icon: '🧒' },
     trangSi: { name: 'Tráng sĩ Gióng', icon: '🐎' },
+    miNuong: { name: 'Mị Nương', icon: '👸' },
+    sonTinh: { name: 'Sơn Tinh', icon: '⛰️' },
+    thuyTinh: { name: 'Thủy Tinh', icon: '🌊' },
   } satisfies Record<Speaker, { name: string; icon: string }>,
 
-  /** Các đoạn truyện chương 1, theo truyền thuyết Thánh Gióng. */
+  /** Các đoạn truyện: chương 1 theo truyền thuyết Thánh Gióng, chương 2 theo truyền thuyết Sơn Tinh, Thủy Tinh. */
   stories: {
     mo: {
       title: 'Giặc Ân xâm lược',
@@ -250,6 +315,48 @@ export const vi = {
         { who: 'lacHau', text: 'Tâu bệ hạ, xin dựng Đền Phù Đổng ở kinh đô. Từ nay mỗi khi ra trận, Thiên Vương vẫn hiển linh giúp quân ta.' },
       ],
     },
+    kenRe: {
+      title: 'Vua Hùng kén rể',
+      lines: [
+        { who: 'ke', text: 'Mười hai đời sau, Hùng Vương thứ mười tám có người con gái tên là Mị Nương, người đẹp như hoa, tính nết hiền dịu.' },
+        { who: 'vua', text: 'Ta muốn kén cho con một người chồng thật xứng đáng.' },
+        { who: 'ke', text: 'Một hôm có hai chàng trai đến cầu hôn. Một người ở vùng non cao Tản Viên, gọi là Sơn Tinh: vẫy tay về phía đông, phía đông nổi cồn bãi; vẫy tay về phía tây, phía tây mọc lên từng dãy núi đồi.' },
+        { who: 'ke', text: 'Một người ở miền biển, gọi là Thủy Tinh: gọi gió, gió đến; hô mưa, mưa về.' },
+        { who: 'vua', text: 'Ai đem sính lễ đến trước thì được rước Mị Nương: một trăm ván cơm nếp, một trăm nệp bánh chưng, voi chín ngà, gà chín cựa, ngựa chín hồng mao.' },
+        { who: 'lacHau', text: 'Tâu bệ hạ, Thủy Tinh đã sai thủy quái đi tranh lễ vật. Xin góp gạo nấu cơm nếp, gói bánh chưng, và mở phó bản chương 2 để Lạc tướng giành voi, gà, ngựa về cho Sơn Tinh.' },
+        { who: 'lacHau', text: 'Phòng khi Thủy Tinh nổi giận, xin cho đắp đê ven sông, đắp đất đắp nền cho cao. Chạm vào Sơn Tinh trước Điện để xem lễ vật.' },
+      ],
+    },
+    ruocDau: {
+      title: 'Sơn Tinh rước dâu',
+      lines: [
+        { who: 'ke', text: 'Hôm sau, mới tờ mờ sáng, Sơn Tinh đã đem đầy đủ lễ vật đến rước Mị Nương về núi.' },
+        { who: 'miNuong', text: 'Con xin từ biệt phụ vương.' },
+        { who: 'ke', text: 'Thủy Tinh đến sau, không lấy được vợ, đùng đùng nổi giận, đem quân đuổi theo đòi cướp Mị Nương.' },
+        { who: 'thuyTinh', text: 'Ta sẽ dâng nước nhấn chìm cả kinh đô Phong Châu!' },
+        { who: 'sonTinh', text: 'Nước dâng bao nhiêu, đồi núi cao bấy nhiêu. Ta sẽ cùng quân bệ hạ giữ vững non sông.' },
+        { who: 'lacHau', text: 'Tâu bệ hạ, mỗi mùa lũ Thủy Tinh sẽ dâng nước, sai thủy quái từ sông lên đánh. Ô đất nào thấp hơn mực lũ sẽ ngập. Xin đắp đê liền một dải ven sông, đắp nền cho cao.' },
+        { who: 'lacHau', text: 'Sơn Tinh sẽ cùng ra trận ở phó bản chương 2 và mỗi mùa lũ. Trong trận, bấm ⛰️ để Sơn Tinh bốc đồi ném giặc.' },
+      ],
+    },
+    doiNon: {
+      title: 'Dời non chặn nước',
+      lines: [
+        { who: 'ke', text: 'Thủy Tinh hô mưa gọi gió, nước sông dâng lên cuồn cuộn. Sơn Tinh không hề nao núng, bốc từng quả đồi, dời từng dãy núi ngăn dòng nước lũ.' },
+        { who: 'sonTinh', text: 'Nước dâng bao nhiêu, đồi núi cao bấy nhiêu!' },
+        { who: 'lacHau', text: 'Tâu bệ hạ, nay Sơn Tinh có thêm phép Dời non 🪨: đá mọc lên giữ chân cả đám giặc quanh mình.' },
+      ],
+    },
+    ketChuong2: {
+      title: 'Thủy Tinh rút quân',
+      lines: [
+        { who: 'ke', text: 'Hai bên đánh nhau ròng rã mấy tháng trời. Cuối cùng Thủy Tinh đuối sức, đành rút quân về biển.' },
+        { who: 'thuyTinh', text: 'Năm nào ta cũng sẽ dâng nước báo thù!' },
+        { who: 'ke', text: 'Từ đó, oán nặng thù sâu, năm nào Thủy Tinh cũng dâng nước đánh Sơn Tinh, nhưng năm nào cũng thua, đành rút về.' },
+        { who: 'vua', text: 'Ta lập đền thờ Sơn Tinh, Tản Viên Sơn Thánh, để muôn đời ghi công giữ nước.' },
+        { who: 'lacHau', text: 'Tâu bệ hạ, xin dựng Đền Tản Viên ở kinh đô: đền còn nguyên thì mỗi mùa lũ nước dâng thấp đi một bậc. Mùa lũ vẫn tới, xin giữ đê cho vững.' },
+      ],
+    },
   } satisfies Record<StoryId, { title: string; lines: { who: Speaker; text: string }[] }>,
 
   ui: {
@@ -273,6 +380,7 @@ export const vi = {
     cancel: 'Hủy',
     done: 'Xong',
     remove: 'Dỡ lũy',
+    removeDike: 'Dỡ đê',
     placeHint: 'Chạm vào ô đất để chọn chỗ, rồi bấm Đặt',
     wallHint: 'Chạm vào từng ô đất để dựng lũy',
     placed: (name: string) => `Đã dựng ${name}`,
@@ -387,6 +495,49 @@ export const vi = {
     back: 'Quay lại',
     saveFailed: 'Không lưu được game trên trình duyệt này',
     webglFailed: 'Trình duyệt này không hỗ trợ đồ họa 3D (WebGL).',
+    son: 'Sơn Tinh',
+    giftsTitle: 'Lễ vật thách cưới',
+    giftCount: (n: number, max: number) => `Đã có ${n}/${max} lễ vật`,
+    offer: 'Dâng',
+    giftFromStage: (n: number) => `Thắng màn ${n} lần đầu`,
+    giftToast: (name: string) => `Đã có ${name.toLowerCase()}`,
+    sonWaiting: 'Đủ năm lễ vật thì Sơn Tinh đến trước, rước Mị Nương về núi và cùng ra trận.',
+    sonReady: 'Sơn Tinh đã rước Mị Nương: cùng ra trận ở phó bản chương 2 và mỗi mùa lũ.',
+    sonResting: (s: number) => `Sơn Tinh đang kiệt sức, nghỉ thêm ${s} giây nữa mới ra trận được.`,
+    sonHienLinh: 'Thủy Tinh đã rút quân. Sơn Tinh về núi Tản Viên, vẫn hiển linh giúp quân ta mỗi mùa lũ.',
+    sonJoins: 'Sơn Tinh cùng ra trận',
+    giongHienLinhJoins: 'Phù Đổng Thiên Vương hiển linh cùng ra trận',
+    giftWon: 'Lễ vật',
+    dapDat: 'Đắp đất',
+    dapDatDesc: 'Đắp ô đất trống cao thêm một bậc để nước lũ không tràn tới. Đất càng cao càng tốn đất đá.',
+    dapDatHint: 'Chạm vào ô đất trống để đắp cao thêm một bậc',
+    dikeHint: 'Chạm vào từng ô đất để đắp đê. Đê phải liền một dải mới chặn được nước',
+    raisedTile: (h: number) => `Đất đã cao bậc ${h}`,
+    ground: 'Nền',
+    groundLevel: (h: number) => `Bậc ${h}`,
+    floodRisk: (h: number) => `Hư khi lũ dâng quá bậc ${h}`,
+    floodImmune: 'Không sợ nước lũ',
+    raiseGround: 'Đắp nền',
+    raisedBuilding: (name: string, h: number) => `${name} đắp nền lên bậc ${h}`,
+    dikeStone: 'Kè đá',
+    sideNam: 'phía Nam',
+    sideDong: 'phía Đông',
+    floodWarning: (side: string, s: number, level: number) => `Thủy Tinh hô mưa gọi gió! Lũ sắp dâng tới bậc ${level}, thủy quái kéo tới từ sông ${side}. Còn ${s} giây`,
+    floodLook: 'Xem vùng ngập',
+    floodBattle: (water: number, max: number, left: number, ours: number) => `Lũ dâng bậc ${water}/${max} · còn ${left} thủy quái, quân ta ${ours}`,
+    floodWonTitle: 'Giữ vững kinh đô trước lũ!',
+    floodLostTitle: 'Lũ đã tràn vào kinh đô',
+    floodHeldTitle: 'Thủy quái tan, nhưng nước đã tràn vào',
+    floodDrowned: (n: number) => `Công trình bị ngập: ${n}`,
+    floodPeak: (l: number) => `Nước dâng tới bậc ${l}`,
+    nextFlood: (min: number, level: number) => (min <= 0 ? `Mùa lũ sắp tới, nước dâng tới bậc ${level}` : `Mùa lũ tới sau khoảng ${min} phút chơi, nước dâng tới bậc ${level}`),
+    calmBeforeWedding: 'Bờ cõi đang yên. Đủ lễ vật thì Sơn Tinh rước Mị Nương, khi ấy Thủy Tinh sẽ dâng nước đánh kinh đô.',
+    callFlood: '🌊 Đón lũ ngay',
+    floodPreview: (level: number) => `Ô tô xanh sẽ ngập khi lũ dâng tới bậc ${level}`,
+    campaignTitle2: 'Đường lên núi Tản Viên',
+    campaignHint2: 'Ba màn đầu giành lễ vật cho Sơn Tinh. Từ màn 12, Sơn Tinh cùng ra trận.',
+    chapterTab: (n: number) => `Chương ${n}`,
+    sonWinTitle: 'Thủy Tinh rút quân!',
   },
 };
 

@@ -1,9 +1,9 @@
 // Thánh Gióng: cậu bé làng Phù Đổng lớn lên nhờ gạo cả nước góp nuôi, ra trận khi đã có
-// ngựa sắt, roi sắt, giáp sắt rèn ở lò rèn. Kèm các đoạn truyện của chương 1.
+// ngựa sắt, roi sắt, giáp sắt rèn ở lò rèn.
 
-import type { Battle, HeroSetup } from './battle';
-import { GEAR, GEAR_IDS, GIONG_FEED, GIONG_REST_MS, type GearId } from './defs';
-import { canAfford, dienLevel, pay, type FailReason, type GameState, type Result, type StoryId } from './game';
+import type { HeroSetup } from './battle';
+import { GEAR, GEAR_IDS, GIONG_FEED, type GearId } from './defs';
+import { canAfford, dienLevel, pay, type FailReason, type GameState, type Result } from './game';
 
 const ok = <T>(value: T): Result<T> => ({ ok: true, value });
 const fail = (reason: FailReason): Result<never> => ({ ok: false, reason });
@@ -18,7 +18,7 @@ export const giongResting = (s: GameState) => s.clock < s.giong.restUntil;
 /** Gióng có ra trận lần này không, và đánh bằng gì. */
 export function heroSetup(s: GameState): HeroSetup | null {
   if (!giongReady(s) || giongResting(s)) return null;
-  return { bamboo: s.giong.whipBroken, glow: s.giong.ascended };
+  return { kind: 'giong', bamboo: s.giong.whipBroken, glow: s.giong.ascended, non: false };
 }
 
 export type GiongLook = 'be' | 'thieuNien' | 'trangSi';
@@ -71,29 +71,4 @@ export function forgeGear(s: GameState, id: GearId): Result<GearId> {
   pay(s, GEAR[id].cost);
   s.giong.gear[id] = true;
   return ok(id);
-}
-
-/** Sau trận: Gióng đã kiệt sức thì phải nghỉ một lúc mới ra trận lại được. */
-export function restAfter(s: GameState, battle: Battle): void {
-  if (battle.hero?.down) s.giong.restUntil = s.clock + GIONG_REST_MS;
-}
-
-// ---------- Truyện ----------
-
-const STORY_ORDER: StoryId[] = ['mo', 'suGia', 'vuonVai', 'roiGay', 'ketChuong'];
-const STORY_WHEN: Record<StoryId, (s: GameState) => boolean> = {
-  mo: () => true,
-  suGia: giongAppeared,
-  vuonVai: giongReady,
-  roiGay: (s) => s.giong.whipBroken,
-  ketChuong: (s) => s.giong.ascended,
-};
-
-/** Đoạn truyện đến lúc kể mà người chơi chưa xem, theo đúng thứ tự. */
-export function pendingStory(s: GameState): StoryId | null {
-  return STORY_ORDER.find((id) => !s.story.seen.includes(id) && STORY_WHEN[id](s)) ?? null;
-}
-
-export function markStory(s: GameState, id: StoryId): void {
-  if (!s.story.seen.includes(id)) s.story.seen.push(id);
 }

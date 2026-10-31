@@ -2,6 +2,7 @@
 // - giữ kinh đô (`raid`): giặc Ân từ bìa rừng tìm đường tới kho và Điện, gặp lũy thì phá,
 //   quân ta từ doanh trại ra đánh, chòi canh bắn, bẫy chông đâm;
 // - ngoài bãi (`field`, phó bản): hai bên dàn ba hàng đối mặt nhau rồi xông vào đánh.
+// Mùa lũ là trận giữ kinh đô kèm nước dâng: thủy quái bơi từ sông lên, nước tràn vào ô thấp làm hư công trình.
 
 import {
   BUILDINGS,
@@ -9,19 +10,26 @@ import {
   ENEMY_ROWS,
   FIELD,
   FIRE,
+  FLOOD_RISE_S,
   GIONG,
-  GIONG_CLEAVE,
+  HERO_CLEAVE,
+  HILL,
   LOOT_FRACTION,
   RAID_MAX_MS,
   RALLY,
   RESOURCE_IDS,
+  ROCKS,
   ROWS,
   SKILLS,
   SMASH,
+  SON,
+  SWIMMERS,
   TOWER,
   TRAP_DMG,
   UNITS,
   UNIT_TYPES,
+  floodForces,
+  floodHpScale,
   raidForces,
   raidHpScale,
   type EnemyType,
@@ -31,18 +39,29 @@ import {
   type SkillId,
   type UnitType,
 } from './defs';
-import type { Building, GameState } from './game';
+import { dienLevel, type Building, type GameState } from './game';
 import { GRID, RIVER_START, areaStart, inGrid, isRiver } from './map';
+import { drowns, floodMap } from './terrain';
 
 export type Side = 'ta' | 'giac';
-export type RaidSide = 'bac' | 'tay';
-/** Lính thường, giặc, hoặc Thánh Gióng (`giong`). */
-export type FighterKind = UnitType | EnemyType | 'giong';
+/** Giặc Ân tới từ bìa rừng phía bắc hay tây; thủy quái tới từ sông phía nam hay đông. */
+export type RaidSide = 'bac' | 'tay' | 'nam' | 'dong';
+/** Tướng ra trận cùng quân ta: Thánh Gióng hoặc Sơn Tinh. Mỗi trận một tướng. */
+export type HeroKind = 'giong' | 'sonTinh';
+/** Lính thường, giặc, hoặc tướng. */
+export type FighterKind = UnitType | EnemyType | HeroKind;
+export const HERO_KINDS: HeroKind[] = ['giong', 'sonTinh'];
+export const isHero = (k: FighterKind): k is HeroKind => k === 'giong' || k === 'sonTinh';
 
-/** Gióng ra trận: đánh bằng roi sắt hay bằng tre (roi đã gãy), có hiển linh (đã bay về trời) không. */
+/**
+ * Tướng ra trận. Gióng: đánh bằng roi sắt hay bằng tre (`bamboo`, roi đã gãy). Sơn Tinh: đã mở Dời non chưa (`non`).
+ * `glow`: đã kết chương (Gióng bay về trời, Sơn Tinh về núi), hiển linh giúp quân ta.
+ */
 export interface HeroSetup {
+  kind: HeroKind;
   bamboo: boolean;
   glow: boolean;
+  non: boolean;
 }
 
 export interface Fighter {
@@ -69,15 +88,19 @@ export interface Fighter {
   face: number;
   /** Còn bao lâu nữa hết động tác ra đòn, để phần vẽ làm động tác. */
   swing: number;
+  /** Bị đá Dời non giữ chân: còn bao nhiêu giây chưa đi, chưa đánh được. */
+  stun?: number;
 }
 
 export interface BattleEvent {
   seq: number;
-  kind: 'shot' | 'trap' | 'wreck' | 'loot' | 'die' | 'rally' | 'fire' | 'smash' | 'exhaust';
+  kind: 'shot' | 'trap' | 'wreck' | 'loot' | 'die' | 'rally' | 'fire' | 'smash' | 'exhaust' | 'hill' | 'rocks' | 'drown';
   x: number;
   z: number;
   tx?: number;
   tz?: number;
+  /** Ai bắn (để vẽ mũi tên hay tia nước). */
+  by?: FighterKind;
 }
 
 export interface Battle {
@@ -110,15 +133,28 @@ export interface Battle {
   hero: (HeroSetup & { down: boolean }) | null;
   /** Phần cộng thêm vào máu và sát thương quân ta (Đền Phù Đổng). */
   bonus: number;
-  /** Trận cuối chương vừa thắng: phần vẽ cho Gióng bay về trời. */
+  /** Trận cuối chương 1 vừa thắng: phần vẽ cho Gióng bay về trời. */
   ascend?: boolean;
+  /** Trận cuối chương 2 vừa thắng: phần vẽ cho núi Tản Viên dâng cao dưới chân Sơn Tinh. */
+  sonWin?: boolean;
+  /** Mùa lũ thứ mấy (0 nếu không phải mùa lũ). */
+  flood: number;
+  /** Mực nước lũ sẽ dâng tới (bậc), 0 nếu không có lũ. */
+  floodTo: number;
+  /** Mực nước đang dâng (bậc). */
+  water: number;
+  /** Công trình bị nước lũ làm hư trong trận này. */
+  drowned: number[];
+  /** Giặc bơi được dưới sông (thủy quái). */
+  swim: boolean;
   /** Giây còn phải chờ để dùng lại từng kỹ năng. */
   skillCd: Partial<Record<SkillId, number>>;
   /** Kết cục trận ngoài bãi; trận giữ kinh đô luôn để null. */
   outcome: 'win' | 'lose' | 'retreat' | null;
 }
 
-const statsOf = (k: FighterKind): FighterStats => (k === 'giong' ? GIONG : k in UNITS ? UNITS[k as UnitType] : ENEMIES[k as EnemyType]);
+const statsOf = (k: FighterKind): FighterStats =>
+  k === 'giong' ? GIONG : k === 'sonTinh' ? SON : k in UNITS ? UNITS[k as UnitType] : ENEMIES[k as EnemyType];
 const tileIndex = (x: number, z: number) => z * GRID + x;
 
 /** Số ngẫu nhiên lặp lại được theo hạt giống. */
@@ -148,9 +184,9 @@ export function buildingHp(battle: Battle, b: Building): number {
   return battle.hp[b.id] ?? maxHpOf(b);
 }
 
-/** Công trình giặc có thể nhắm tới (không tính lũy và bẫy, không tính cái đã hư). */
+/** Công trình giặc có thể nhắm tới (không tính lũy, bẫy, đê, không tính cái đã hư). */
 function isTargetable(b: Building): boolean {
-  return !b.damaged && b.type !== 'luy' && b.type !== 'bayChong';
+  return !b.damaged && b.type !== 'luy' && b.type !== 'bayChong' && b.type !== 'de';
 }
 
 // ---------- Khởi đầu trận ----------
@@ -180,37 +216,57 @@ function newBattle(id: number, mode: Battle['mode'], wave: number, side: RaidSid
     bonus: 0,
     skillCd: {},
     outcome: null,
+    flood: 0,
+    floodTo: 0,
+    water: 0,
+    drowned: [],
+    swim: false,
   };
 }
 
-/** Cho Gióng vào trận ở (x, z) và mở các kỹ năng của Gióng. */
+/** Kỹ năng của từng tướng: kỹ năng đầu có ngay, kỹ năng sau mở giữa chương. */
+export function heroSkills(hero: HeroSetup): SkillId[] {
+  if (hero.kind === 'sonTinh') return hero.non ? ['bocDoi', 'doiNon'] : ['bocDoi'];
+  return hero.bamboo ? ['phunLua', 'nhoTre'] : ['phunLua'];
+}
+
+/** Cho tướng vào trận ở (x, z) và mở các kỹ năng của tướng. */
 function addHero(battle: Battle, hero: HeroSetup, x: number, z: number, hpMul: number): void {
   battle.hero = { ...hero, down: false };
-  battle.skills.push('phunLua');
-  if (hero.bamboo) battle.skills.push('nhoTre');
-  const f = newFighter(battle, 'ta', 'giong', x, z, GIONG.hp * hpMul * (1 + battle.bonus));
+  battle.skills.push(...heroSkills(hero));
+  const f = newFighter(battle, 'ta', hero.kind, x, z, statsOf(hero.kind).hp * hpMul * (1 + battle.bonus));
   battle.fighters.push(f);
 }
 
 export interface BattleOpts {
   hero?: HeroSetup | null;
   bonus?: number;
+  /** Mùa lũ thứ `n`, nước dâng tới `level` bậc, thủy quái bơi từ sông lên. */
+  flood?: { n: number; level: number } | null;
 }
 
 export function startBattle(state: GameState, wave: number, side: RaidSide, opts: BattleOpts = {}): Battle {
   const battle = newBattle(state.nextBattleId++, 'raid', wave, side);
   battle.bonus = opts.bonus ?? 0;
-  const rand = rng(wave * 7919 + (side === 'bac' ? 1 : 2));
+  const rand = rng(wave * 7919 + ['bac', 'tay', 'nam', 'dong'].indexOf(side) + 1);
   const lo = Math.max(areaStart(5), 1);
-  const forces = raidForces(wave);
-  const scale = raidHpScale(wave);
+  const flood = opts.flood ?? null;
+  if (flood) {
+    battle.flood = flood.n;
+    battle.floodTo = flood.level;
+    battle.swim = true;
+  }
+  const forces = flood ? floodForces(flood.n) : raidForces(wave);
+  const scale = flood ? floodHpScale(flood.n) : raidHpScale(wave);
   for (const kind of Object.keys(forces) as EnemyType[]) {
     for (let i = 0; i < (forces[kind] ?? 0); i++) {
-      // Giặc ra từ bìa rừng: cạnh bắc (z nhỏ) hoặc cạnh tây (x nhỏ).
+      // Giặc Ân ra từ bìa rừng: cạnh bắc (z nhỏ) hoặc cạnh tây (x nhỏ).
+      // Thủy quái ngoi lên từ sông: phía nam (z lớn) hoặc phía đông (x lớn).
       const along = lo + rand() * (RIVER_START - lo - 1);
-      const depth = 0.6 + rand() * 1.4;
+      const depth = flood ? RIVER_START + 0.4 + rand() * 1.4 : 0.6 + rand() * 1.4;
       const hp = ENEMIES[kind].hp * scale;
-      battle.fighters.push(newFighter(battle, 'giac', kind, side === 'bac' ? along : depth, side === 'bac' ? depth : along, hp));
+      const alongX = side === 'bac' || side === 'nam';
+      battle.fighters.push(newFighter(battle, 'giac', kind, alongX ? along : depth, alongX ? depth : along, hp));
       battle.total++;
     }
   }
@@ -225,7 +281,7 @@ export function startBattle(state: GameState, wave: number, side: RaidSide, opts
       }
     }
   }
-  // Gióng ra từ trước Điện.
+  // Tướng ra từ trước Điện.
   const dien = state.buildings.find((b) => b.type === 'dien');
   if (opts.hero && dien) addHero(battle, opts.hero, dien.x + 2, dien.z + 4.6, 1);
   return battle;
@@ -283,7 +339,7 @@ export function startFieldBattle(setup: FieldSetup): Battle {
   deploy(battle, 'ta', ours, FIELD.d - front, 1, rand, (k) => UNITS[k as UnitType].hp * FIELD.hpMul * (1 + battle.bonus));
   deploy(battle, 'giac', theirs, front, -1, rand, (k) => ENEMIES[k as EnemyType].hp * setup.hpScale * FIELD.hpMul);
   battle.total = battle.fighters.filter((f) => f.side === 'giac').length;
-  // Gióng đứng giữa, trước tiền quân.
+  // Tướng đứng giữa, trước tiền quân.
   if (setup.hero) addHero(battle, setup.hero, FIELD.w / 2, FIELD.d - front - 0.8, FIELD.hpMul);
   return battle;
 }
@@ -317,22 +373,25 @@ function emit(battle: Battle, e: Omit<BattleEvent, 'seq'>): void {
 
 // ---------- Tìm đường ----------
 
-/** Chi phí đi qua mỗi ô: sông không đi được, công trình còn nguyên phải phá mới qua (chi phí cao). */
-function costGrid(state: GameState, targetId: number | null): Float32Array {
+/**
+ * Chi phí đi qua mỗi ô: sông không đi được (thủy quái thì bơi được), công trình còn nguyên phải phá mới qua
+ * (chi phí cao).
+ */
+function costGrid(state: GameState, targetId: number | null, swim: boolean): Float32Array {
   const cost = new Float32Array(GRID * GRID).fill(1);
-  for (let z = 0; z < GRID; z++) for (let x = 0; x < GRID; x++) if (isRiver(x, z)) cost[tileIndex(x, z)] = Infinity;
+  if (!swim) for (let z = 0; z < GRID; z++) for (let x = 0; x < GRID; x++) if (isRiver(x, z)) cost[tileIndex(x, z)] = Infinity;
   for (const b of state.buildings) {
     if (b.damaged || b.type === 'bayChong') continue;
     const def = BUILDINGS[b.type];
-    const c = b.id === targetId ? 1 : b.type === 'luy' ? (b.level >= 2 ? 30 : 12) : 25;
+    const c = b.id === targetId ? 1 : b.type === 'luy' ? (b.level >= 2 ? 30 : 12) : b.type === 'de' ? (b.level >= 2 ? 40 : 18) : 25;
     for (let dx = 0; dx < def.w; dx++) for (let dz = 0; dz < def.d; dz++) cost[tileIndex(b.x + dx, b.z + dz)] = c;
   }
   return cost;
 }
 
-/** A* trên lưới 8 hướng, tới bất kỳ ô nào thuộc móng công trình đích. */
-export function findPath(state: GameState, fromX: number, fromZ: number, target: Building): number[] | null {
-  const cost = costGrid(state, target.id);
+/** A* trên lưới 8 hướng, tới bất kỳ ô nào thuộc móng công trình đích. `swim`: bơi được qua sông. */
+export function findPath(state: GameState, fromX: number, fromZ: number, target: Building, swim = false): number[] | null {
+  const cost = costGrid(state, target.id, swim);
   const def = BUILDINGS[target.type];
   const sx = Math.min(GRID - 1, Math.max(0, Math.floor(fromX)));
   const sz = Math.min(GRID - 1, Math.max(0, Math.floor(fromZ)));
@@ -435,10 +494,10 @@ function moveToward(f: Fighter, tx: number, tz: number, dt: number, mult = 1): b
 }
 
 function damageFighter(battle: Battle, attacker: { kind?: FighterKind; dmg: number }, target: Fighter): void {
-  const bonus = attacker.kind && statsOf(attacker.kind).strongVs === target.kind ? 2 : 1;
+  const bonus = attacker.kind && statsOf(attacker.kind).strongVs?.includes(target.kind as UnitType | EnemyType) ? 2 : 1;
   target.hp -= attacker.dmg * bonus;
-  if (target.kind === 'giong') {
-    // Gióng không chết: hết sức thì rút khỏi trận, nghỉ một lúc.
+  if (isHero(target.kind)) {
+    // Tướng không chết: hết sức thì rút khỏi trận, nghỉ một lúc.
     if (target.hp <= 0 && target.state !== 'gone') {
       target.hp = 0;
       target.state = 'gone';
@@ -459,15 +518,15 @@ function damageFighter(battle: Battle, attacker: { kind?: FighterKind; dmg: numb
 /** Một đòn của `f` vào `foe`: bắn tên nếu đánh xa, quân ta mạnh hơn khi đang có Trống trận. */
 function strike(battle: Battle, f: Fighter, foe: Fighter): void {
   const st = statsOf(f.kind);
-  if (st.range > 2) emit(battle, { kind: 'shot', x: f.x, z: f.z, tx: foe.x, tz: foe.z });
+  if (st.range > 2) emit(battle, { kind: 'shot', x: f.x, z: f.z, tx: foe.x, tz: foe.z, by: f.kind });
   const mult = f.side === 'ta' ? (1 + battle.bonus) * (battle.rally > 0 ? RALLY.dmg : 1) : 1;
   const dmg = st.dmg * mult;
   damageFighter(battle, { kind: f.kind, dmg }, foe);
-  if (f.kind === 'giong') {
-    // Đòn của Gióng quét cả giặc đứng quanh.
+  if (isHero(f.kind)) {
+    // Đòn của tướng quét cả giặc đứng quanh.
     for (const o of battle.fighters) {
       if (o === foe || o.side === f.side || !isAlive(o)) continue;
-      if (Math.hypot(o.x - foe.x, o.z - foe.z) <= GIONG_CLEAVE.radius) damageFighter(battle, { dmg: dmg * GIONG_CLEAVE.share }, o);
+      if (Math.hypot(o.x - foe.x, o.z - foe.z) <= HERO_CLEAVE.radius) damageFighter(battle, { dmg: dmg * HERO_CLEAVE.share }, o);
     }
   }
   f.cd = st.cooldown;
@@ -495,9 +554,18 @@ function damageBuilding(state: GameState, battle: Battle, attacker: Fighter, b: 
   }
 }
 
-/** Chỗ giặc bỏ chạy về: bìa rừng phía đã kéo tới. */
+/** Chỗ giặc bỏ chạy về: bìa rừng phía đã kéo tới, hay lặn xuống sông. */
 function exitPoint(battle: Battle, f: Fighter): { x: number; z: number } {
+  if (battle.side === 'nam') return { x: f.x, z: GRID + 0.5 };
+  if (battle.side === 'dong') return { x: GRID + 0.5, z: f.z };
   return battle.side === 'bac' ? { x: f.x, z: -0.5 } : { x: -0.5, z: f.z };
+}
+
+/** Đang bị đá giữ chân thì đứng yên, không đánh. */
+function stunned(f: Fighter, dt: number): boolean {
+  if (!f.stun || f.stun <= 0) return false;
+  f.stun = Math.max(0, f.stun - dt);
+  return true;
 }
 
 function stepEnemy(state: GameState, battle: Battle, f: Fighter, dt: number): void {
@@ -505,9 +573,10 @@ function stepEnemy(state: GameState, battle: Battle, f: Fighter, dt: number): vo
   if (f.state === 'flee') {
     const out = exitPoint(battle, f);
     moveToward(f, out.x, out.z, dt);
-    if (f.x < 0 || f.z < 0) f.state = 'gone';
+    if (f.x < 0 || f.z < 0 || f.x > GRID || f.z > GRID) f.state = 'gone';
     return;
   }
+  if (stunned(f, dt)) return;
   // Gặp quân ta ở gần thì đánh.
   const foe = nearestEnemyOf(battle, f, st.range + 0.5);
   if (foe) {
@@ -541,7 +610,7 @@ function stepEnemy(state: GameState, battle: Battle, f: Fighter, dt: number): vo
   }
   f.repathIn -= dt;
   if (!f.path || f.repathIn <= 0) {
-    f.path = findPath(state, f.x, f.z, target);
+    f.path = findPath(state, f.x, f.z, target, battle.swim && SWIMMERS.includes(f.kind as EnemyType));
     f.pathAt = 1;
     f.repathIn = 2;
   }
@@ -577,6 +646,7 @@ function stepEnemy(state: GameState, battle: Battle, f: Fighter, dt: number): vo
 
 /** Xông tới kẻ địch gần nhất rồi đánh. Quân ta làm vậy trong mọi trận, giặc làm vậy khi đánh ngoài bãi. */
 function stepChase(battle: Battle, f: Fighter, dt: number): void {
+  if (stunned(f, dt)) return;
   const st = statsOf(f.kind);
   const foe = nearestEnemyOf(battle, f);
   if (!foe) {
@@ -647,9 +717,27 @@ function advanceClock(battle: Battle, dt: number): void {
   for (const k of Object.keys(battle.skillCd) as SkillId[]) battle.skillCd[k] = Math.max(0, (battle.skillCd[k] ?? 0) - dt);
 }
 
+/**
+ * Mùa lũ: nước dâng dần mỗi bậc FLOOD_RISE_S giây tới mực lũ, loang từ sông vào ô thấp.
+ * Công trình bị ngập quá sức chịu của nền thì hư. Đê bị thủy quái phá thì nước tràn qua chỗ vỡ.
+ */
+function stepFlood(state: GameState, battle: Battle): void {
+  if (battle.floodTo <= 0) return;
+  battle.water = Math.min(battle.floodTo, battle.t / FLOOD_RISE_S);
+  const wet = floodMap(state, battle.water, dienLevel(state));
+  for (const b of state.buildings) {
+    if (!drowns(state, b, wet, battle.water)) continue;
+    b.damaged = true;
+    battle.drowned.push(b.id);
+    const def = BUILDINGS[b.type];
+    emit(battle, { kind: 'drown', x: b.x + def.w / 2, z: b.z + def.d / 2 });
+  }
+}
+
 /** Chạy trận giữ kinh đô thêm `dt` giây. Trả về true khi trận đã xong. */
 export function stepBattle(state: GameState, battle: Battle, dt: number): boolean {
   advanceClock(battle, dt);
+  stepFlood(state, battle);
   if (battle.t * 1000 > RAID_MAX_MS) {
     // Quá lâu thì giặc rút; quá lâu nữa thì coi như đã rút hết.
     for (const f of battle.fighters) if (f.side === 'giac' && (f.state === 'move' || f.state === 'fight')) f.state = 'flee';
@@ -669,7 +757,7 @@ export function stepBattle(state: GameState, battle: Battle, dt: number): boolea
 function isAlive(f: Fighter): boolean {
   return f.state !== 'dead' && f.state !== 'gone';
 }
-const BIG: FighterKind[] = ['voi', 'chienXa', 'phoTuong', 'daiTuong', 'giong'];
+const BIG: FighterKind[] = ['voi', 'chienXa', 'phoTuong', 'daiTuong', 'giong', 'sonTinh', 'caSau', 'thuongLuong', 'thuyTinh'];
 const bodyRadius = (k: FighterKind) => (BIG.includes(k) ? 0.45 : 0.27);
 
 /** Đẩy lính đứng chồng lên nhau ra, và giữ mọi người trong bãi. */
@@ -720,15 +808,32 @@ export function retreatField(battle: Battle): void {
   if (battle.mode === 'field' && !battle.outcome) battle.outcome = 'retreat';
 }
 
-/** Gióng đang đứng trong trận (chưa kiệt sức). */
+/** Tướng đang đứng trong trận (chưa kiệt sức). */
 export function heroOf(battle: Battle): Fighter | undefined {
-  return battle.fighters.find((f) => f.kind === 'giong' && isAlive(f));
+  return battle.fighters.find((f) => isHero(f.kind) && isAlive(f));
+}
+
+/** Chỗ giặc đứng đông nhất: tên giặc có nhiều đồng bọn quanh mình trong bán kính `r` nhất. */
+function densest(battle: Battle, r: number): Fighter | null {
+  let best: Fighter | null = null;
+  let bestN = -1;
+  for (const f of battle.fighters) {
+    if (f.side !== 'giac' || !isAlive(f)) continue;
+    let n = 0;
+    for (const o of battle.fighters) if (o.side === 'giac' && isAlive(o) && Math.hypot(o.x - f.x, o.z - f.z) <= r) n++;
+    if (n > bestN) {
+      bestN = n;
+      best = f;
+    }
+  }
+  return best;
 }
 
 export function skillReady(battle: Battle, skill: SkillId): boolean {
   if (battle.outcome || !battle.skills.includes(skill) || (battle.skillCd[skill] ?? 0) > 0) return false;
   if (skill === 'trongTran') return alliesLeft(battle) > 0;
-  return !!heroOf(battle) && enemiesLeft(battle) > 0;
+  const hero = heroOf(battle);
+  return !!hero && heroSkills({ kind: hero.kind as HeroKind, bamboo: true, glow: false, non: true }).includes(skill) && enemiesLeft(battle) > 0;
 }
 
 /** Bấm kỹ năng. Trả về false khi kỹ năng chưa hồi, không có trong trận này, hoặc trận đã xong. */
@@ -763,7 +868,7 @@ export function useSkill(battle: Battle, skill: SkillId): boolean {
     hero.z = clampField(hero.z + dz * FIRE.length * 0.8, battle.mode === 'field' ? FIELD.d : RIVER_START);
     hero.face = Math.atan2(dx, dz);
     emit(battle, { kind: 'fire', x: fromX, z: fromZ, tx: hero.x, tz: hero.z });
-  } else {
+  } else if (skill === 'nhoTre') {
     // Nhổ tre quật giặc: đòn diện rộng quanh Gióng, giặc bị hất lùi ra.
     const hero = heroOf(battle)!;
     for (const o of battle.fighters) {
@@ -778,6 +883,30 @@ export function useSkill(battle: Battle, skill: SkillId): boolean {
     }
     hero.swing = 0.3;
     emit(battle, { kind: 'smash', x: hero.x, z: hero.z });
+  } else if (skill === 'bocDoi') {
+    // Bốc đồi: Sơn Tinh nhấc một quả đồi ném xuống chỗ giặc đứng đông nhất.
+    const hero = heroOf(battle)!;
+    const at = densest(battle, HILL.radius)!;
+    const cx = at.x;
+    const cz = at.z;
+    for (const o of battle.fighters) {
+      if (o.side === 'ta' || !isAlive(o)) continue;
+      if (Math.hypot(o.x - cx, o.z - cz) <= HILL.radius) damageFighter(battle, { kind: 'sonTinh', dmg: HILL.dmg * scale }, o);
+    }
+    hero.face = Math.atan2(cx - hero.x, cz - hero.z);
+    hero.swing = 0.3;
+    emit(battle, { kind: 'hill', x: hero.x, z: hero.z, tx: cx, tz: cz });
+  } else {
+    // Dời non: đá mọc lên dưới chân mọi kẻ địch quanh Sơn Tinh, giữ chân chúng vài giây.
+    const hero = heroOf(battle)!;
+    for (const o of battle.fighters) {
+      if (o.side === 'ta' || !isAlive(o)) continue;
+      if (Math.hypot(o.x - hero.x, o.z - hero.z) > ROCKS.radius) continue;
+      damageFighter(battle, { kind: 'sonTinh', dmg: ROCKS.dmg * scale }, o);
+      if (isAlive(o)) o.stun = ROCKS.stun;
+    }
+    hero.swing = 0.3;
+    emit(battle, { kind: 'rocks', x: hero.x, z: hero.z });
   }
   return true;
 }

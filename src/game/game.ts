@@ -3,9 +3,17 @@
 
 import { startBattle, stepBattle, type Battle, type RaidSide } from './battle';
 import { updateCampaign } from './campaign';
-import { heroSetup, restAfter } from './giong';
+import { heroFor, inChapter2, initialSon, restAfter, sonJoined } from './son';
+import { footprintTop, groundOf, levelFootprint, tileHeight } from './terrain';
 import {
   BUILDINGS,
+  FIRST_FLOOD_MS,
+  FLOOD_RECEDE_S,
+  GIFT_IDS,
+  MAX_HEIGHT,
+  floodLevel,
+  raiseBuildingCost,
+  raiseTileCost,
   DAN_GROW_MS,
   DEFAULT_ROWS,
   FIRST_RAID_MS,
@@ -35,10 +43,12 @@ import {
   type ResourceId,
   type Resources,
   type GearId,
+  type GiftId,
   type Row,
+  type Unlock,
   type UnitType,
 } from './defs';
-import { GRID, inGrid, isUnlocked, touchesRiver } from './map';
+import { GRID, baseHeights, inGrid, isUnlocked, touchesRiver } from './map';
 
 export interface Building {
   id: number;
@@ -54,13 +64,20 @@ export interface Building {
 
 export interface RaidResult {
   wave: number;
+  /** Mùa lũ: mực nước đã dâng tới (bậc). Đợt giặc Ân thì là 0. */
+  flood: number;
   won: boolean;
   killed: number;
   total: number;
   lost: Record<UnitType, number>;
   wrecked: number[];
+  /** Công trình bị nước lũ làm hư. */
+  drowned: number[];
   stolen: Resources;
 }
+
+/** Ai đánh kinh đô: giặc Ân (chương 1) hay Thủy Tinh dâng nước kèm thủy quái (từ đám cưới ở chương 2). */
+export type Foe = 'an' | 'thuy';
 
 export interface RaidState {
   /** Số đợt giặc đã đánh xong. */
@@ -70,7 +87,15 @@ export interface RaidState {
   /** Lúc (đồng hồ chơi) trinh sát báo đợt tới. Null khi chưa có doanh trại. */
   nextAt: number | null;
   phase: 'idle' | 'warning' | 'battle';
+  /** Đợt sắp tới hay đang đánh là giặc Ân hay mùa lũ. */
+  foe: Foe;
   side: RaidSide;
+  /** Số mùa lũ đã qua. */
+  floods: number;
+  /** Số mùa lũ giữ được: diệt hết thủy quái, không công trình nào bị ngập. */
+  floodsHeld: number;
+  /** Mực nước lũ đang thấy (bậc), 0 khi không có lũ. Dâng trong trận, rút dần sau trận. */
+  water: number;
   /** Lúc giặc tràn vào (hết thời gian báo trước). */
   startsAt: number;
   battle: Battle | null;
@@ -87,6 +112,8 @@ export interface StageResult {
   total: number;
   lost: Record<UnitType, number>;
   reward: Cost;
+  /** Lễ vật giành được khi thắng lần đầu màn này. */
+  gift?: GiftId;
 }
 
 export interface CampaignState {
@@ -111,8 +138,19 @@ export interface GiongState {
   ascended: boolean;
 }
 
+export interface SonState {
+  /** Lễ vật thách cưới đã có. Đủ cả năm thì Sơn Tinh rước Mị Nương, cùng ra trận. */
+  gifts: Record<GiftId, boolean>;
+  /** Đồng hồ chơi lúc Sơn Tinh hồi sức sau khi kiệt sức trong trận. */
+  restUntil: number;
+  /** Đã mở kỹ năng Dời non (thắng màn 14 lần đầu). */
+  non: boolean;
+  /** Đã đánh lui Thủy Tinh ở đỉnh Tản Viên (kết chương 2). */
+  won: boolean;
+}
+
 /** Các đoạn truyện, hiện mỗi đoạn một lần theo đúng thứ tự. */
-export type StoryId = 'mo' | 'suGia' | 'vuonVai' | 'roiGay' | 'ketChuong';
+export type StoryId = 'mo' | 'suGia' | 'vuonVai' | 'roiGay' | 'ketChuong' | 'kenRe' | 'ruocDau' | 'doiNon' | 'ketChuong2';
 
 /** Một lời mời đổi hàng của thuyền buôn: đưa `give`, nhận `get`. */
 export interface Offer {
@@ -131,13 +169,15 @@ export interface Merchant {
 }
 
 export interface GameState {
-  version: 5;
+  version: 6;
   resources: Resources;
   /** Số dân (không tính lính). */
   dan: number;
   /** Thời gian đã tích cho người dân tiếp theo. */
   danProgress: number;
   buildings: Building[];
+  /** Độ cao từng ô (GRID×GRID, chỉ số z * GRID + x), sông là -1. Móng công trình luôn phẳng. */
+  heights: number[];
   nextId: number;
   /** Chỉ số nhiệm vụ Lạc hầu đang làm. Bằng QUESTS.length khi đã xong hết. */
   questIndex: number;
@@ -153,6 +193,7 @@ export interface GameState {
   /** Mã cho trận đánh tiếp theo (giữ kinh đô hay phó bản). */
   nextBattleId: number;
   giong: GiongState;
+  son: SonState;
   story: { seen: StoryId[] };
   settings: { muted: boolean };
 }
@@ -188,7 +229,15 @@ export type FailReason =
   | 'daRen'
   | 'canLoRen'
   | 'giongKietSuc'
-  | 'canKetChuong';
+  | 'canKetChuong'
+  | 'canChuong2'
+  | 'canKetChuong2'
+  | 'datCaoNhat'
+  | 'khongDapNen'
+  | 'canSonTinh'
+  | 'sonKietSuc'
+  | 'daCoLeVat'
+  | 'leVatPhoBan';
 
 export type Result<T = undefined> = { ok: true; value: T } | { ok: false; reason: FailReason };
 
@@ -196,7 +245,20 @@ const ok = <T>(value: T): Result<T> => ({ ok: true, value });
 const fail = (reason: FailReason): Result<never> => ({ ok: false, reason });
 
 export function initialRaid(): RaidState {
-  return { wave: 0, won: 0, nextAt: null, phase: 'idle', side: 'bac', startsAt: 0, battle: null, lastResult: null };
+  return {
+    wave: 0,
+    won: 0,
+    nextAt: null,
+    phase: 'idle',
+    foe: 'an',
+    side: 'bac',
+    floods: 0,
+    floodsHeld: 0,
+    water: 0,
+    startsAt: 0,
+    battle: null,
+    lastResult: null,
+  };
 }
 
 export function initialCampaign(): CampaignState {
@@ -208,12 +270,14 @@ export function initialGiong(): GiongState {
 }
 
 export function createInitialState(now: number): GameState {
-  return {
-    version: 5,
+  const dien: Building = { id: 1, type: 'dien', x: 16, z: 16, level: 1, workers: 0 };
+  const state: GameState = {
+    version: 6,
     resources: { ...START_RESOURCES },
     dan: START_DAN,
     danProgress: 0,
-    buildings: [{ id: 1, type: 'dien', x: 16, z: 16, level: 1, workers: 0 }],
+    buildings: [dien],
+    heights: baseHeights(),
     nextId: 2,
     questIndex: 0,
     lastSeen: now,
@@ -224,9 +288,12 @@ export function createInitialState(now: number): GameState {
     campaign: initialCampaign(),
     nextBattleId: 1,
     giong: initialGiong(),
+    son: initialSon(),
     story: { seen: [] },
     settings: { muted: false },
   };
+  levelFootprint(state, dien, footprintTop(state, 'dien', dien.x, dien.z));
+  return state;
 }
 
 // ---------- Truy vấn ----------
@@ -376,10 +443,20 @@ export function dienNeededFor(type: BuildingType, level: number): number {
   return Math.max(def.levelMinDien?.[level] ?? 0, level);
 }
 
+/** Đã tới mốc truyện mở khóa công trình hay thao tác này chưa. */
+export function unlocked(state: GameState, unlock: Unlock | undefined): boolean {
+  if (unlock === 'ketChuong1') return state.giong.ascended;
+  if (unlock === 'chuong2') return inChapter2(state);
+  if (unlock === 'ketChuong2') return state.son.won;
+  return true;
+}
+
+const UNLOCK_REASON: Record<Unlock, FailReason> = { ketChuong1: 'canKetChuong', chuong2: 'canChuong2', ketChuong2: 'canKetChuong2' };
+
 export function canPlace(state: GameState, type: BuildingType, x: number, z: number): Result {
   const def = BUILDINGS[type];
   if (!def.buildable) return fail('khongTheXay');
-  if (def.afterChapter && !state.giong.ascended) return fail('canKetChuong');
+  if (def.unlock && !unlocked(state, def.unlock)) return fail(UNLOCK_REASON[def.unlock]);
   if (dienLevel(state) < def.minDien) return fail('chuaDuCapDien');
   if (countOf(state, type) >= limitOf(state, type)) return fail('datGioiHan');
   const level = dienLevel(state);
@@ -439,6 +516,15 @@ export function questProgress(state: GameState): { have: number; need: number } 
   } else if (goal.kind === 'giongGear') {
     have = Object.values(state.giong.gear).filter(Boolean).length;
     need = goal.amount;
+  } else if (goal.kind === 'gift') {
+    have = state.son.gifts[goal.gift] ? 1 : 0;
+    need = 1;
+  } else if (goal.kind === 'gifts') {
+    have = GIFT_IDS.filter((g) => state.son.gifts[g]).length;
+    need = goal.amount;
+  } else if (goal.kind === 'floodsHeld') {
+    have = state.raid.floodsHeld;
+    need = goal.amount;
   } else {
     have = dienLevel(state);
     need = goal.level;
@@ -478,8 +564,63 @@ export function place(state: GameState, type: BuildingType, x: number, z: number
   if (!check.ok) return check;
   pay(state, BUILDINGS[type].buildCost);
   const b: Building = { id: state.nextId++, type, x, z, level: 1, workers: 0 };
+  // Dân đắp móng phẳng bằng chỗ cao nhất dưới móng.
+  levelFootprint(state, b, footprintTop(state, type, x, z));
   state.buildings.push(b);
   fillWorkers(state, b);
+  return ok(b);
+}
+
+// ---------- Đắp đất, đắp nền ----------
+
+/** Lũy, bẫy, đê là công trình một ô gắn với đất: muốn cao hơn thì đắp ô đất trước khi dựng. */
+const NO_RAISE: BuildingType[] = ['luy', 'bayChong', 'de'];
+
+export function canRaiseTile(state: GameState, x: number, z: number): Result<Cost> {
+  if (!inChapter2(state)) return fail('canChuong2');
+  if (!inGrid(x, z) || !isUnlocked(x, z, dienLevel(state))) return fail('ngoaiVung');
+  if (buildingAt(state, x, z)) return fail('datBiChiem');
+  const h = tileHeight(state, x, z);
+  if (h >= MAX_HEIGHT) return fail('datCaoNhat');
+  if (state.raid.phase === 'battle') return fail('dangCoGiac');
+  const cost = raiseTileCost(h);
+  if (!canAfford(state, cost)) return fail('thieuTaiNguyen');
+  return ok(cost);
+}
+
+/** Đắp ô đất trống (x, z) cao thêm một bậc. */
+export function raiseTile(state: GameState, x: number, z: number): Result<number> {
+  const check = canRaiseTile(state, x, z);
+  if (!check.ok) return check;
+  pay(state, check.value);
+  state.heights[z * GRID + x] += 1;
+  return ok(state.heights[z * GRID + x]);
+}
+
+export function raiseCostOf(state: GameState, b: Building): Cost {
+  const def = BUILDINGS[b.type];
+  return raiseBuildingCost(def.w, def.d, groundOf(state, b));
+}
+
+export function canRaiseBuilding(state: GameState, id: number): Result<Cost> {
+  if (!inChapter2(state)) return fail('canChuong2');
+  const b = findBuilding(state, id);
+  if (!b) return fail('khongTimThay');
+  if (NO_RAISE.includes(b.type)) return fail('khongDapNen');
+  if (groundOf(state, b) >= MAX_HEIGHT) return fail('datCaoNhat');
+  if (state.raid.phase === 'battle') return fail('dangCoGiac');
+  const cost = raiseCostOf(state, b);
+  if (!canAfford(state, cost)) return fail('thieuTaiNguyen');
+  return ok(cost);
+}
+
+/** Đắp nền cả công trình cao thêm một bậc. */
+export function raiseBuilding(state: GameState, id: number): Result<Building> {
+  const check = canRaiseBuilding(state, id);
+  if (!check.ok) return check;
+  const b = findBuilding(state, id)!;
+  pay(state, check.value);
+  levelFootprint(state, b, groundOf(state, b) + 1);
   return ok(b);
 }
 
@@ -611,6 +752,21 @@ export function repairAll(state: GameState): number {
 /** Bước nhỏ của mô phỏng trận, giây. */
 export const BATTLE_STEP = 0.05;
 
+/** Đền Tản Viên còn nguyên: lũ dâng thấp đi một bậc. */
+export function hasTanVien(state: GameState): boolean {
+  return state.buildings.some((b) => b.type === 'denTanVien' && !b.damaged);
+}
+
+/** Mực lũ của mùa lũ sắp tới (hay đang tới). */
+export function nextFloodLevel(state: GameState): number {
+  return floodLevel(state.raid.floods + 1, hasTanVien(state));
+}
+
+/** Từ đám cưới Sơn Tinh, Thủy Tinh dâng nước kèm thủy quái thay cho giặc Ân. */
+export function floodSeason(state: GameState): boolean {
+  return sonJoined(state);
+}
+
 function finishRaid(state: GameState): void {
   const raid = state.raid;
   const battle = raid.battle!;
@@ -618,16 +774,23 @@ function finishRaid(state: GameState): void {
   for (const k of UNIT_TYPES) state.troops[k] = Math.max(0, state.troops[k] - battle.lost[k]);
   const stolenAny = RESOURCE_IDS.some((r) => battle.stolen[r] > 0);
   const won = battle.killed === battle.total && !stolenAny;
+  const flood = battle.floodTo > 0;
   raid.lastResult = {
     wave: battle.wave,
+    flood: flood ? battle.water : 0,
     won,
     killed: battle.killed,
     total: battle.total,
     lost: { ...battle.lost },
     wrecked: [...battle.wrecked],
+    drowned: [...battle.drowned],
     stolen: { ...battle.stolen },
   };
   if (won) raid.won += 1;
+  if (flood) {
+    raid.floods += 1;
+    if (won && !battle.drowned.length) raid.floodsHeld += 1;
+  }
   restAfter(state, battle);
   raid.wave = battle.wave;
   raid.phase = 'idle';
@@ -635,26 +798,41 @@ function finishRaid(state: GameState): void {
   raid.nextAt = state.clock + RAID_EVERY_MS;
 }
 
+/** Đủ lễ vật, Sơn Tinh rước Mị Nương: Thủy Tinh nổi giận, mùa lũ đầu tiên tới sau một lúc. */
+export function scheduleFirstFlood(state: GameState): void {
+  const raid = state.raid;
+  if (raid.phase === 'idle' && raid.floods === 0) raid.nextAt = state.clock + FIRST_FLOOD_MS;
+}
+
 /** Lịch giặc: báo trước, tràn vào, đánh, rồi hẹn đợt sau. Chỉ chạy theo đồng hồ chơi. */
 function updateRaid(state: GameState, ms: number): void {
   const raid = state.raid;
+  if (raid.phase !== 'battle') raid.water = Math.max(0, raid.water - ms / 1000 / FLOOD_RECEDE_S);
   if (raid.nextAt === null) {
     if (countOf(state, 'doanhTrai') > 0) raid.nextAt = state.clock + FIRST_RAID_MS;
     return;
   }
   // Quân đang đánh phó bản thì giặc chưa tới: đồng hồ giặc đứng lại.
-  if (state.campaign.battle && raid.phase === 'idle') {
+  // Sang chương 2, bờ cõi yên bình tới khi Sơn Tinh rước Mị Nương làm Thủy Tinh nổi giận.
+  if (raid.phase === 'idle' && (state.campaign.battle || (inChapter2(state) && !floodSeason(state)))) {
     raid.nextAt += ms;
     return;
   }
   if (raid.phase === 'idle' && state.clock >= raid.nextAt) {
     raid.phase = 'warning';
-    raid.side = (raid.wave * 2654435761) % 7 < 4 ? 'bac' : 'tay';
+    raid.foe = floodSeason(state) ? 'thuy' : 'an';
+    const roll = (raid.wave * 2654435761) % 7 < 4;
+    raid.side = raid.foe === 'thuy' ? (roll ? 'nam' : 'dong') : roll ? 'bac' : 'tay';
     raid.startsAt = state.clock + RAID_WARNING_MS;
   }
   if (raid.phase === 'warning' && state.clock >= raid.startsAt) {
     raid.phase = 'battle';
-    raid.battle = startBattle(state, raid.wave + 1, raid.side, { hero: heroSetup(state), bonus: templeBonus(state) });
+    const thuy = raid.foe === 'thuy';
+    raid.battle = startBattle(state, raid.wave + 1, raid.side, {
+      hero: heroFor(state, thuy ? 2 : 1),
+      bonus: templeBonus(state),
+      flood: thuy ? { n: raid.floods + 1, level: nextFloodLevel(state) } : null,
+    });
     return;
   }
   if (raid.phase === 'battle' && raid.battle) {
@@ -662,7 +840,9 @@ function updateRaid(state: GameState, ms: number): void {
     while (left > 1e-9) {
       const dt = Math.min(BATTLE_STEP, left);
       left -= dt;
-      if (stepBattle(state, raid.battle, dt)) {
+      const done = stepBattle(state, raid.battle, dt);
+      raid.water = raid.battle.water;
+      if (done) {
         finishRaid(state);
         return;
       }
@@ -675,6 +855,7 @@ export function callRaidNow(state: GameState): Result {
   if (countOf(state, 'doanhTrai') === 0) return fail('canDoanhTrai');
   if (state.raid.phase !== 'idle') return fail('dangCoGiac');
   if (state.campaign.battle) return fail('dangDanhPhoBan');
+  if (inChapter2(state) && !floodSeason(state)) return fail('canSonTinh');
   state.raid.nextAt = state.clock;
   updateRaid(state, 0);
   return ok(undefined);
