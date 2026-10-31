@@ -86,15 +86,16 @@ const TREE_DENSITY: Record<Terrain, number> = {
   doi: 0.45,
   ngap: 0.3,
   tanVien: 0.5,
-  thatDieu: 0.18,
+  thatDieu: 0.05,
   coLoa: 0.35,
 };
 /** Trời và đèn theo nền: núi Thất Diệu là đêm tím, còn lại là ngày. */
-const SKY: Partial<Record<Terrain, { sky: number; sun: number; hemi: number }>> = {
-  thatDieu: { sky: 0x4a4868, sun: 1.5, hemi: 0.8 },
+const SKY: Partial<Record<Terrain, { sky: number; sun: number; hemi: number; sunColor: number; hemiSky: number; hemiGround: number }>> = {
+  thatDieu: { sky: 0x4a4868, sun: 1.6, hemi: 0.85, sunColor: 0xc4ccff, hemiSky: 0x8a86c4, hemiGround: 0x3a3448 },
 };
-/** Thành Cổ Loa: tâm vòng xoáy ốc sau lưng quân ta (tọa độ bãi). */
-const CO_LOA = { x: FIELD.w / 2, z: FIELD.d + 16, r0: 4, r1: 12.5, turns: 1.6 };
+const DAY = { sky: C.sky, sun: 2.6, hemi: 0.9, sunColor: 0xfff0d8, hemiSky: 0xfff3dc, hemiGround: 0x6d6a45 };
+/** Thành Cổ Loa: ba vòng thành bao quanh bãi, cách mép bãi chừng này ô. */
+const CO_LOA_RINGS = [3.4, 6, 8.6];
 /** Tấm đất quanh bãi và khoảng cách giữa hai đỉnh lưới (đơn vị: ô). */
 const LAND = { w: 90, d: 100, step: 0.75 };
 
@@ -175,11 +176,14 @@ export class Battlefield {
     this.decor = buildDecor(t);
     this.inner.add(this.decor);
     this.drummer = this.decor.userData.drummer as THREE.Group;
-    const sky = SKY[t] ?? { sky: C.sky, sun: 2.6, hemi: 0.9 };
+    const sky = SKY[t] ?? DAY;
     (this.scene.background as THREE.Color).setHex(sky.sky);
     (this.scene.fog as THREE.Fog).color.setHex(sky.sky);
     this.lights.sun.intensity = sky.sun;
+    this.lights.sun.color.setHex(sky.sunColor);
     this.lights.hemi.intensity = sky.hemi;
+    this.lights.hemi.color.setHex(sky.hemiSky);
+    this.lights.hemi.groundColor.setHex(sky.hemiGround);
   }
 }
 
@@ -293,32 +297,35 @@ function buildDecor(t: Terrain): THREE.Group {
   if (t === 'thatDieu') {
     // Bảy mỏm núi nhọn của núi Thất Diệu sau lưng yêu tinh, mỏm giữa cao nhất.
     const peaks: [number, number, number, number][] = [
-      [W / 2, -16, 3.2, 10],
-      [W / 2 - 5.5, -14, 2.6, 7.5],
-      [W / 2 + 5.5, -14, 2.6, 7.5],
-      [W / 2 - 10.5, -12.5, 2.3, 6],
-      [W / 2 + 10.5, -12.5, 2.3, 6],
-      [W / 2 - 15, -11, 2, 4.8],
-      [W / 2 + 15, -11, 2, 4.8],
+      [W / 2, -11, 3, 9.5],
+      [W / 2 - 4.5, -9, 2.3, 7],
+      [W / 2 + 4.5, -9, 2.3, 7],
+      [W / 2 - 8.5, -8, 2.1, 5.8],
+      [W / 2 + 8.5, -8, 2.1, 5.8],
+      [W / 2 - 12.5, -7.5, 1.9, 4.6],
+      [W / 2 + 12.5, -7.5, 1.9, 4.6],
     ];
     peaks.forEach(([x, z, r, h], i) => place(makeMountain(r, h, i % 2 ? 0x5d5670 : 0x6a6280), x, z, i, r * 0.8));
-    zones.push({ x0: -18, x1: W + 18, z0: -24, z1: -8, hills: true });
-    // Cây chết khẳng khiu dọc hai bên bãi.
+    zones.push({ x0: -18, x1: W + 18, z0: -24, z1: -6, hills: true });
+    // Cây chết khẳng khiu quanh bãi, cả sau lưng yêu tinh.
     const rand = seeded(77);
-    for (let i = 0; i < 12; i++) {
-      const side = i % 2 ? -1 : 1;
-      const x = side > 0 ? W + 2 + rand() * 5 : -2 - rand() * 5;
-      place(bareTree(i), x, -4 + rand() * (D + 8), rand() * 6);
+    for (let i = 0; i < 22; i++) {
+      const around = i % 3;
+      const x = around === 0 ? -2 - rand() * 5 : around === 1 ? W + 2 + rand() * 5 : -1 + rand() * (W + 2);
+      const z = around === 2 ? -2.2 - rand() * 3 : -4 + rand() * (D + 8);
+      place(bareTree(i), x, z, rand() * 6);
     }
-    // Ma trơi lơ lửng quanh bãi, tự sáng.
+    // Ma trơi lơ lửng quanh mép bãi, tự sáng.
     const wisps: THREE.Object3D[] = [];
     const glow = seeded(91);
-    for (let i = 0; i < 14; i++) {
-      const orb = new THREE.Mesh(new THREE.SphereGeometry(0.16, 8, 6), new THREE.MeshBasicMaterial({ color: i % 3 ? C.ghost : C.ghostDeep }));
-      const side = i % 2 ? -1 : 1;
-      const x = side > 0 ? W + 1.5 + glow() * 6 : -1.5 - glow() * 6;
-      const y = 1 + glow() * 2.2;
-      orb.position.set(x, y, -6 + glow() * (D + 6));
+    const orbGeo = new THREE.SphereGeometry(0.15, 8, 6);
+    for (let i = 0; i < 18; i++) {
+      const orb = new THREE.Mesh(orbGeo, new THREE.MeshBasicMaterial({ color: i % 3 ? C.ghost : C.ghostDeep }));
+      const around = i % 3;
+      const x = around === 0 ? -0.8 - glow() * 3 : around === 1 ? W + 0.8 + glow() * 3 : glow() * W;
+      const z = around === 2 ? -1.5 - glow() * 3 : glow() * D;
+      const y = 0.9 + glow() * 1.8;
+      orb.position.set(x, y, z);
       orb.userData = { phase: glow() * 6, y };
       g.add(orb);
       wisps.push(orb);
@@ -326,36 +333,41 @@ function buildDecor(t: Terrain): THREE.Group {
     g.userData.wisps = wisps;
   }
   if (t === 'coLoa') {
-    // Thành Cổ Loa sau lưng quân ta: ba vòng thành đất cao uốn xoáy ốc, hào nước bao ngoài, cờ đỏ trên thành.
+    // Thành Cổ Loa bao quanh bãi: ba vòng thành đất cao lồng nhau, mỗi vòng chừa cửa ở một góc khác nhau
+    // như đường xoáy ốc; vòng trong bị quân Triệu phá một mảng ở phía giặc tràn vào. Hào nước bao ngoài, cờ đỏ trên thành.
     const wall = new ShapeBuilder();
+    const rubble = new ShapeBuilder();
     const ditch = new ShapeBuilder();
     const flags: [number, number, number][] = [];
-    const { x: cx, z: cz, r0, r1, turns } = CO_LOA;
-    const total = turns * Math.PI * 2;
-    let n = 0;
-    for (let a = 0; a < total; ) {
-      const r = r0 + ((r1 - r0) * a) / total;
-      const x = cx + Math.sin(a) * r;
-      const z = cz - Math.cos(a) * r;
-      if (z > D + 4.6) {
-        const k = n % 2;
-        wall.box(1.0, 0.55, 1.05, C.earthDark, x, 0.27, z, [0, -a, 0]);
-        wall.box(0.86, 0.5, 0.95, C.earth, x, 0.78, z, [0, -a, 0]);
-        wall.box(0.72, 0.3, 0.9, k ? C.earthDark : C.earth, x, 1.18, z, [0, -a, 0]);
-        if (n % 3 === 0) wall.box(0.2, 0.22, 0.2, C.earth, x, 1.44, z, [0, -a, 0]);
-        if (n % 9 === 4) flags.push([x, z, -a]);
-      }
-      n++;
-      a += 0.9 / r;
-    }
+    // Vòng trong không có đoạn sau lưng quân ta, để thành không che Lạc tướng đánh trống.
+    const gates: ((x: number, z: number) => boolean)[] = [
+      (x, z) => (z < 0 && Math.abs(x - W / 2) < 1.6) || z > D,
+      (x, z) => z < 2 && x < 0,
+      (x, z) => z < 2 && x > W,
+    ];
+    CO_LOA_RINGS.forEach((d, ring) => {
+      ringPath(d, 0.92).forEach(({ x, z, ry }, n) => {
+        if (gates[ring](x, z)) {
+          if (ring === 0 && n % 2 === 0) {
+            rubble.box(0.9, 0.3, 0.9, C.earthDark, x, 0.15, z, [0, ry + 0.4, 0]);
+            rubble.box(0.5, 0.25, 0.4, C.earth, x + 0.2, 0.35, z, [0.3, ry, 0.2]);
+          }
+          return;
+        }
+        wall.box(1.0, 0.55, 1.0, C.earthDark, x, 0.27, z, [0, ry, 0]);
+        wall.box(0.88, 0.5, 0.9, C.earth, x, 0.78, z, [0, ry, 0]);
+        wall.box(0.76, 0.3, 0.86, n % 2 ? C.earthDark : C.earth, x, 1.18, z, [0, ry, 0]);
+        if (n % 2 === 0) wall.box(0.22, 0.22, 0.22, C.earth, x, 1.44, z, [0, ry, 0]);
+        if (n % 11 === 5) flags.push([x, z, ry]);
+      });
+    });
     // Hào nước bao ngoài vòng thành ngoài cùng.
-    for (let a = 0; a < Math.PI * 2; a += 0.07) {
-      const x = cx + Math.sin(a) * (r1 + 1.8);
-      const z = cz - Math.cos(a) * (r1 + 1.8);
-      if (z > D + 3.6) ditch.box(1.25, 0.08, 1.4, C.ditchWater, x, 0.03, z, [0, -a, 0]);
+    const outer = CO_LOA_RINGS[CO_LOA_RINGS.length - 1] + 1.5;
+    for (const { x, z, ry } of ringPath(outer, 0.9)) ditch.box(1.0, 0.08, 1.3, C.ditchWater, x, 0.03, z, [0, ry, 0]);
+    for (const b of [wall, rubble]) {
+      const mesh = b.mesh(toon);
+      g.add(mesh, outlineOf(mesh.geometry, inkThin));
     }
-    const wm = wall.mesh(toon);
-    g.add(wm, outlineOf(wm.geometry, inkThin));
     const dm = ditch.mesh(groundMaterial);
     dm.castShadow = false;
     g.add(dm);
@@ -368,7 +380,7 @@ function buildDecor(t: Terrain): THREE.Group {
       fg.rotation.y = ry;
       g.add(fg);
     }
-    zones.push({ x0: cx - r1 - 4, x1: cx + r1 + 4, z0: D + 3, z1: cz + r1 + 4 });
+    zones.push({ x0: -outer - 1, x1: W + outer + 1, z0: -outer - 1, z1: D + outer + 1 });
   }
   if (t === 'nui') {
     // Núi Trâu sừng sững sau lưng quân giặc.
@@ -595,4 +607,39 @@ function bareTree(seed: number): THREE.Group {
   const mesh = b.mesh(toon);
   g.add(mesh, outlineOf(mesh.geometry, inkThin));
   return g;
+}
+
+/**
+ * Đường đi quanh bãi, cách mép bãi `d` ô, góc bo tròn: các điểm cách nhau chừng `step`,
+ * kèm góc xoay `ry` để khối thành nằm dọc theo đường.
+ */
+function ringPath(d: number, step: number): { x: number; z: number; ry: number }[] {
+  const { w: W, d: D } = FIELD;
+  const out: { x: number; z: number; ry: number }[] = [];
+  // Bốn cạnh thẳng và bốn góc bo, theo chiều kim đồng hồ nhìn từ trên xuống.
+  const legs: [number, number, number, number][] = [
+    [0, -d, W, -d],
+    [W + d, 0, W + d, D],
+    [W, D + d, 0, D + d],
+    [-d, D, -d, 0],
+  ];
+  const corners: [number, number, number][] = [
+    [W, 0, -Math.PI / 2],
+    [W, D, 0],
+    [0, D, Math.PI / 2],
+    [0, 0, Math.PI],
+  ];
+  legs.forEach(([x0, z0, x1, z1], i) => {
+    const len = Math.hypot(x1 - x0, z1 - z0);
+    const n = Math.max(1, Math.round(len / step));
+    const ry = Math.atan2(x1 - x0, z1 - z0);
+    for (let k = 0; k < n; k++) out.push({ x: x0 + ((x1 - x0) * k) / n, z: z0 + ((z1 - z0) * k) / n, ry });
+    const [cx, cz, a0] = corners[i];
+    const arc = Math.max(1, Math.round((d * Math.PI) / 2 / step));
+    for (let k = 0; k < arc; k++) {
+      const a = a0 + ((k + 0.5) / arc) * (Math.PI / 2);
+      out.push({ x: cx + Math.cos(a) * d, z: cz + Math.sin(a) * d, ry: -a });
+    }
+  });
+  return out;
 }

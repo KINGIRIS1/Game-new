@@ -127,7 +127,7 @@ const VOLLEY_RISE = 0.3;
 const VOLLEY_AIM = 0.9;
 /** Rùa Vàng trồi lên, nằm lại, rồi lặn hẳn sau chừng này giây. */
 const TURTLE_LIFE = 2.8;
-const boltGeo = new THREE.BoxGeometry(0.05, 0.05, 0.6);
+const boltGeo = new THREE.BoxGeometry(0.07, 0.07, 0.75);
 const goldMat = new THREE.MeshBasicMaterial({ color: C.ember });
 const skyBoltGeo = new THREE.BoxGeometry(0.1, 0.1, 1.1);
 const ghostBallGeo = new THREE.SphereGeometry(0.13, 8, 6);
@@ -455,7 +455,8 @@ export class BattleView {
           if (!view.peak) {
             view.peak = makeRuaVang();
             view.peak.scale.setScalar(size);
-            view.peak.rotation.y = f.face;
+            // Rùa quay nghiêng, đầu ngóc sang bên để không che An Dương Vương đứng trên mai.
+            view.peak.rotation.y = f.face + Math.PI / 2;
             this.root.add(view.peak);
             for (let n = 0; n < 10; n++) {
               const a = (n / 10) * Math.PI * 2;

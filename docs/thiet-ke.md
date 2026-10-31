@@ -503,6 +503,17 @@ Chủ dự án đã chốt:
   - Mở **Đền Cổ Loa** (3×3, dựng một lần, 2500 gạo, 2500 vỏ ốc, 2500 đất đá, 700 sắt). Đền còn nguyên thì chòi canh bắn mạnh gấp rưỡi và xa thêm 1 ô.
   - An Dương Vương vẫn đứng trước Điện, vẫn cầm nỏ ra trận. Quân Triệu và mùa lũ vẫn thay phiên tới.
 
+### Hình ảnh chương 3
+
+- **An Dương Vương** (`makeAnDuong` trong `src/render/models.ts`): to cỡ Sơn Tinh, giáp đồng hoa văn trống, áo choàng đỏ son, mũ lông chim có vành vàng. Chưa có nỏ thì cầm rìu đồng nghi lễ; có nỏ thì cầm nỏ thần màu đồng vàng, lẫy hình vuốt rùa. Đứng trước Điện, cạnh cột đá thề.
+- **Rùa Vàng** (`makeRuaVang`): rùa mai vàng có hoa văn mặt trống. Từ khi diệt yêu tinh, một con Rùa Vàng nhỏ bơi trên sông phía nam kinh đô.
+- **Đoạn thành Cổ Loa** (`buildCitadel`): đất nện cao hơn thành đất của lũy, có ụ góc, hàng cọc gỗ, thỉnh thoảng một chòi canh; đoạn bị phá là đống đất sạt.
+- **Đền Cổ Loa** (`makeDenCoLoa` trong `src/render/buildings.ts`): đền nền đá mái cong, trước sân có tượng Rùa Vàng và cây nỏ đồng lớn trên giá.
+- **Giặc**: quỷ núi da xám xanh có sừng, cầm chày đá; ma trơi là đốm lửa xanh lơ lửng có mặt, tự sáng; hổ tinh vằn cam đen; gà trắng nghìn năm là gà trống trắng khổng lồ mào đỏ. Lính khiên Triệu áo đen viền đỏ, khiên chữ nhật; nỏ thủ Triệu cầm nỏ gỗ; kỵ binh cưỡi ngựa nâu; Triệu Đà râu bạc, giáp đen viền vàng, cưỡi ngựa đen.
+- **Đêm yêu tinh** ở kinh đô: ánh trăng xanh tím, trời tối, ma trơi lơ lửng ở bìa rừng, không mưa.
+- **Trong trận**: An Dương Vương bắn tên vàng, ma trơi bắn cầu lửa xanh, nỏ thủ Triệu bắn tên sẫm. Nỏ thần: một mũi tên vàng vút lên rồi mưa tên rơi xuống từng tên giặc, lóe sáng chỗ trúng. Rùa Vàng: rùa lớn trồi lên cạnh An Dương Vương rồi lặn; dưới chân lính ta có vòng lục giác như mai rùa khi đang được che chở. Kết chương: Rùa Vàng khổng lồ trồi lên nâng An Dương Vương, nỏ chĩa lên trời.
+- **Bãi chiến núi Thất Diệu**: đất tím, bảy mỏm núi nhọn, cây chết, ma trơi, trời đêm. **Bãi chiến thành Cổ Loa**: ba vòng thành đất bao quanh bãi, mỗi vòng chừa cửa ở một góc như xoáy ốc, vòng trong bị phá một mảng phía giặc tràn vào, có hào nước và cờ đỏ. Không đặt thành hẳn sau lưng quân ta vì như thế nằm ngoài khung hình và che Lạc tướng đánh trống.
+
 ### Phó bản chương 3: giữ thành Cổ Loa
 
 - Bản đồ phó bản có thêm thẻ Chương 3, mở khi đã sang chương 3. Bản đồ vẽ ba mỏm núi Thất Diệu, núi Tiên Du, sông Đuống và ba vòng thành Cổ Loa.
@@ -520,7 +531,7 @@ Chủ dự án đã chốt:
 
   - Mọi màn cần Điện cấp 5. Thưởng lần đầu từ 2600 gạo, 1800 vỏ ốc, 1600 đất đá, 400 sắt (màn 17) tới 5000 gạo, 4000 vỏ ốc, 3500 đất đá, 900 sắt (màn 24). Đánh lại được 30%.
   - Mỗi màn tối đa 28 giặc, cộng quân mẫu và tướng không quá 60 người trên bãi.
-- Bãi chiến mới: **núi Thất Diệu** (bảy mỏm núi nhọn sau lưng giặc, trời tím đêm, ma trơi lập lòe) cho màn 17, 19; **thành Cổ Loa** (ba vòng thành đất uốn xoáy, có hào nước, sau lưng quân ta) cho màn 24. Màn 18, 20 dùng rừng; 21 bến sông; 22 chân núi; 23 làng.
+- Bãi chiến mới: **núi Thất Diệu** cho màn 17, 19; **thành Cổ Loa** cho màn 24 (xem Hình ảnh chương 3). Màn 18, 20 dùng rừng; 21 bến sông; 22 chân núi; 23 làng.
 - Cân bằng đo bằng test với quân mẫu 14 giáo, 12 cung, 4 voi, có Đền Phù Đổng (`src/game/chuong3.test.ts`):
   - màn 17–19: có Sơn Tinh hiển linh bấm kỹ năng thì thắng; nửa quân, hay không có tướng, thì thua;
   - màn 20–24: có An Dương Vương bấm kỹ năng thì thắng trong 90 giây; không tướng, hay nửa quân, thì thua;

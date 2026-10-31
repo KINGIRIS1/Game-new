@@ -1004,10 +1004,10 @@ function tigerDemon(m: ToonModel): void {
     p.cone(0.03, 0.12, C.cream, sd * 0.05, 0.78, 0.88, [Math.PI, 0, 0], 4);
     p.box(0.1, 0.02, 0.02, C.ink, sd * 0.25, 1.0, 0.7, [0, sd * 0.4, 0]);
   }
-  // Đuôi: chìa ra sau rồi cong vồng lên, chóp đen.
-  p.cyl(0.045, 0.055, 0.5, C.tiger, 0, 0.72, -0.72, [-1.25, 0, 0], 6);
-  p.cyl(0.04, 0.045, 0.42, C.tiger, 0, 0.98, -1.0, [-0.35, 0, 0], 6);
-  p.sphere(0.055, C.ink, 0, 1.2, -1.07, [1, 1.3, 1], 6);
+  // Đuôi: chìa thẳng ra sau rồi cong nhẹ lên, chóp đen; thấp để nhìn từ trên xuống không thành cái cột.
+  p.cyl(0.045, 0.055, 0.45, C.tiger, 0, 0.64, -0.7, [-1.45, 0, 0], 6);
+  p.cyl(0.04, 0.045, 0.3, C.tiger, 0, 0.78, -0.96, [-0.65, 0, 0], 6);
+  p.sphere(0.05, C.ink, 0, 0.92, -1.05, [1, 1.3, 1], 6);
 }
 
 /** Gà trắng nghìn năm: gà trống trắng khổng lồ, mào đỏ to, tích đỏ, mắt đỏ rực, đuôi cong vút, cựa nhọn. */

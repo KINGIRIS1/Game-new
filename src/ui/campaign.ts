@@ -75,14 +75,14 @@ const SCENERY: Record<Chapter, string> = {
     <path class="mtn" d="M4 100 L13 82 L22 100 Z M16 98 L25 74 L34 98 Z M28 100 L36 84 L44 100 Z"/>
     <text class="label" x="22" y="66">Núi Thất Diệu</text>
     <path class="mtn far" d="M74 66 L86 46 L98 66 Z"/>
-    <text class="label" x="90" y="73">Tiên Du</text>
+    <text class="label" x="88" y="43">Tiên Du</text>
     <ellipse class="citadel" cx="72" cy="24" rx="22" ry="11"/>
     <ellipse class="citadel" cx="72" cy="24" rx="15" ry="7.5"/>
     <ellipse class="citadel" cx="72" cy="24" rx="8" ry="4"/>
     <text class="label" x="72" y="9">Thành Cổ Loa</text>
     <path class="river" d="M-2 128 C 20 118, 44 136, 70 122 S 96 112, 104 118"/>
-    <path class="river" d="M-2 78 C 20 70, 40 84, 62 74 S 92 66, 104 72"/>
-    <text class="label" x="56" y="69">Sông Đuống</text>`,
+    <path class="river" d="M48 74 C 60 80, 74 66, 88 72 S 100 74, 104 72"/>
+    <text class="label" x="62" y="69">Sông Đuống</text>`,
 };
 
 export const hasBoss = (n: number) => BOSSES.some((k) => (stageDef(n)?.enemies[k] ?? 0) > 0);

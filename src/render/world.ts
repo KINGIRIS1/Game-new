@@ -66,6 +66,11 @@ export function waterSurface(level: number): number {
   return WATER_Y + Math.max(level, 0) * (one - WATER_Y);
 }
 
+/** Ánh trăng, trời và đất trong đêm yêu tinh. */
+const NIGHT_MOON = new THREE.Color(0x9fb4ff);
+const NIGHT_SKY = new THREE.Color(0x5a6aa8);
+const NIGHT_GROUND = new THREE.Color(0x2a2a48);
+
 /** Mật độ rừng: thưa để công trình nổi bật, không rối mắt. */
 const FOREST_DENSITY = 0.7;
 
@@ -417,8 +422,8 @@ export class World {
   /** Đốm ma trơi xanh lơ lửng dọc bìa rừng phía bắc và phía tây, chỉ hiện trong đêm yêu tinh. */
   private initWisps(): void {
     const rand = seeded(23);
-    const geo = new THREE.SphereGeometry(0.12, 8, 6);
-    for (let i = 0; i < 18; i++) {
+    const geo = new THREE.SphereGeometry(0.16, 8, 6);
+    for (let i = 0; i < 22; i++) {
       const mat = new THREE.MeshBasicMaterial({ color: i % 3 ? C.ghost : C.ghostDeep, transparent: true, opacity: 0, depthWrite: false });
       const wisp = new THREE.Mesh(geo, mat);
       const along = 2 + rand() * 22;
@@ -1245,8 +1250,12 @@ export class World {
     const n = this.night;
     const sky = (this.scene.background as THREE.Color).setHex(C.sky).lerp(new THREE.Color(C.storm), k * 0.85).lerp(new THREE.Color(C.night), n * 0.85);
     (this.scene.fog as THREE.Fog).color.copy(sky);
-    this.lights.sun.intensity = 2.6 * (1 - 0.45 * k) * (1 - 0.55 * n);
-    this.lights.hemi.intensity = 0.9 * (1 - 0.2 * k) * (1 - 0.3 * n);
+    this.lights.sun.intensity = 2.6 * (1 - 0.45 * k) * (1 - 0.6 * n);
+    this.lights.hemi.intensity = 0.9 * (1 - 0.2 * k) * (1 - 0.25 * n);
+    // Đêm: nắng thành ánh trăng xanh nhạt, trời và đất hắt ánh xanh tím.
+    this.lights.sun.color.setHex(0xfff0d8).lerp(NIGHT_MOON, n * 0.8);
+    this.lights.hemi.color.setHex(0xfff3dc).lerp(NIGHT_SKY, n * 0.85);
+    this.lights.hemi.groundColor.setHex(0x6d6a45).lerp(NIGHT_GROUND, n * 0.85);
     this.rain.visible = !this.inField && k > 0.05;
     if (!this.rain.visible) return;
     const m = new THREE.Matrix4();
