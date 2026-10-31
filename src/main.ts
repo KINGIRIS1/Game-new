@@ -486,6 +486,15 @@ function start(): void {
     state: () => state,
     tileToScreen: (x: number, z: number) => world.tileToScreen(x, z),
     renderInfo: () => ({ ...world.renderer.info.render }),
+    camera: (x: number, z: number, zoom: number) => {
+      world.view.target.set(x - GRID / 2, 0, z - GRID / 2);
+      world.view.zoom = zoom;
+      world.view.apply();
+    },
+    resync: () => {
+      world.resetAll();
+      world.sync(state);
+    },
     advance: (ms: number) => {
       tick(state, ms);
       commit();

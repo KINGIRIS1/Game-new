@@ -6,6 +6,7 @@ import {
   callRaidNow,
   canTrain,
   createInitialState,
+  freeDan,
   outputOf,
   place,
   repair,
@@ -99,14 +100,28 @@ describe('trận giữ kinh đô', () => {
 });
 
 describe('quân đội', () => {
-  it('luyện quân tốn gạo, sắt và một người dân', () => {
+  it('tuyển lính tốn tiền nhưng không lấy bớt dân', () => {
     const s = capital();
     const dan = s.dan;
-    const sat = s.resources.sat;
+    const gao = s.resources.gao;
     expect(train(s, 'giao').ok).toBe(true);
     expect(s.troops.giao).toBe(1);
-    expect(s.dan).toBe(dan - 1);
-    expect(s.resources.sat).toBe(sat - UNITS.giao.cost.sat!);
+    expect(s.dan).toBe(dan);
+    expect(s.resources.gao).toBe(gao - UNITS.giao.cost.gao!);
+  });
+
+  it('vẫn tuyển được lính khi mọi người dân đều đang bận việc', () => {
+    const s = capital();
+    s.dan = 2;
+    place(s, 'ruong', 12, 12);
+    expect(freeDan(s)).toBe(0);
+    expect(train(s, 'giao').ok).toBe(true);
+  });
+
+  it('giáo binh không cần sắt, tuyển được ngay khi mới có doanh trại', () => {
+    const s = capital();
+    s.resources.sat = 0;
+    expect(train(s, 'giao').ok).toBe(true);
   });
 
   it('cung thủ cần doanh trại cấp 2, voi chiến cần cấp 3', () => {

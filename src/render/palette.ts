@@ -12,6 +12,7 @@ export const C = {
   woodDark: 0x5a3720,
   woodLight: 0xb98652,
   thatch: 0xd6a65a,
+  thatchDark: 0xb98a48,
   bronze: 0xb88a3a,
   bronzeDark: 0x7d5a22,
   bronzeLight: 0xdcb065,

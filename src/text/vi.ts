@@ -57,7 +57,7 @@ export const vi = {
     doanhTrai: {
       name: 'Doanh trại',
       icon: '⛺',
-      desc: 'Nơi Lạc tướng luyện quân. Mỗi người lính lấy đi một người dân và ăn gạo. Cấp càng cao càng nuôi được nhiều quân và mở thêm binh chủng.',
+      desc: 'Nơi Lạc tướng tuyển và luyện quân. Lính tuyển riêng, không lấy bớt dân làng, nhưng tốn tiền tuyển và ăn gạo mỗi phút. Cấp càng cao càng nuôi được nhiều quân và mở thêm binh chủng.',
     },
     choiCanh: {
       name: 'Chòi canh',
@@ -105,7 +105,7 @@ export const vi = {
     loRen: 'Giặc Ân có giáo đồng sắc bén. Xin dựng lò rèn để làm ra sắt.',
     dien3: 'Kinh đô đã vững. Xin nâng Điện Vua Hùng lên cấp 3, khi ấy có thể đắp thành đất.',
     doanhTrai: 'Giặc Ân sắp kéo tới. Xin dựng doanh trại để Lạc tướng luyện quân.',
-    luyenQuan: 'Xin bệ hạ cho luyện 5 người lính. Giáo binh khắc chế chiến xa của giặc.',
+    luyenQuan: 'Xin bệ hạ cho tuyển 5 người lính. Giáo binh không cần sắt, lại khắc chế chiến xa của giặc.',
     choiCanh: 'Xin dựng chòi canh, cung thủ trên chòi sẽ bắn giặc từ xa.',
     giuKinhDo: 'Trinh sát sẽ báo khi giặc Ân tới. Xin bệ hạ giữ vững kinh đô, đánh lui đợt giặc đầu tiên.',
     allDone:

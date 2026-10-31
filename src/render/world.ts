@@ -6,26 +6,9 @@ import type { Battle, RaidSide } from '../game/battle';
 import { dienLevel, type Building, type GameState } from '../game/game';
 import { GRID, RIVER_START, areaStart, isUnlocked } from '../game/map';
 import { IsoCamera } from './camera';
-import {
-  buildForest,
-  buildWalls,
-  makeBaiDa,
-  makeBayChong,
-  makeBen,
-  makeBoat,
-  makeChoiCanh,
-  makeDien,
-  makeDoanhTrai,
-  makeFighter,
-  makeKho,
-  makeLoRen,
-  makeNhaSan,
-  makePerson,
-  makeRuong,
-  type PersonKind,
-  type TreeSpot,
-  type WallSpot,
-} from './models';
+import { makeBaiDa, makeBayChong, makeBen, makeChoiCanh, makeDien, makeDoanhTrai, makeKho, makeLoRen, makeNhaSan, makeRuong } from './buildings';
+import { buildForest, buildWalls, makeBoat, makeFighter, type TreeSpot, type WallSpot } from './models';
+import { makeWorker, type Job } from './people';
 import { C } from './palette';
 import { ShapeBuilder, seeded } from './shapes';
 
@@ -85,23 +68,73 @@ export class InstancedBoxes {
   }
 }
 
+/** Chỗ đứng của một người dân trong công trình (tọa độ trong mô hình). `walk` là quãng đi qua lại. */
+interface Spot {
+  job: Job;
+  x: number;
+  y: number;
+  z: number;
+  ry: number;
+  walk?: number;
+}
+
+interface WorkerView {
+  obj: THREE.Group;
+  spot: Spot;
+  phase: number;
+}
+
 interface BuildingView {
   group: THREE.Group;
   type: BuildingType;
   level: number;
   damaged: boolean;
-  person?: THREE.Object3D;
+  workers: number;
+  people: WorkerView[];
   popAge: number;
   baseScale: number;
 }
 
-const PERSON_OF: Partial<Record<BuildingType, { kind: PersonKind; x: number; y: number; z: number; ry: number }>> = {
-  dien: { kind: 'linh', x: 0.75, y: 0.12, z: 1.85, ry: 0 },
-  ruong: { kind: 'nong', x: 0.25, y: 0.14, z: 0.05, ry: 0.6 },
-  ben: { kind: 'buon', x: 0.15, y: 0.48, z: -0.1, ry: 0.4 },
-  baiDa: { kind: 'nong', x: -0.1, y: 0.1, z: 0.3, ry: 0.5 },
-  loRen: { kind: 'linh', x: 0.4, y: 0.1, z: 0.6, ry: -0.4 },
+const SPOTS: Partial<Record<BuildingType, Spot[]>> = {
+  ruong: [
+    { job: 'nong', x: -0.6, y: 0.06, z: -0.45, ry: 0.4 },
+    { job: 'nong', x: 0.45, y: 0.06, z: -0.4, ry: -0.3 },
+    { job: 'nong', x: -0.35, y: 0.06, z: 0.45, ry: 0.9 },
+    { job: 'nong', x: 0.35, y: 0.06, z: 0.2, ry: -0.8 },
+  ],
+  ben: [
+    { job: 'buon', x: -0.45, y: 0.5, z: 0.05, ry: 0, walk: 0.3 },
+    { job: 'buon', x: 0.45, y: 0.5, z: 0.0, ry: 0, walk: 0.25 },
+    { job: 'buon', x: 0.55, y: 0.38, z: 1.3, ry: 0, walk: 0 },
+  ],
+  baiDa: [
+    { job: 'thoDa', x: -0.35, y: 0.1, z: 0.4, ry: 0.6 },
+    { job: 'thoDa', x: 0.3, y: 0.1, z: 0.15, ry: -0.5 },
+    { job: 'thoDa', x: -0.1, y: 0.1, z: -0.15, ry: 2.6 },
+    { job: 'thoDa', x: 0.65, y: 0.1, z: -0.25, ry: -2 },
+  ],
+  loRen: [
+    { job: 'thoRen', x: 0.45, y: 0.08, z: 0.82, ry: Math.PI },
+    { job: 'thoRen', x: -0.15, y: 0.08, z: 0.3, ry: -2.4 },
+    { job: 'thoRen', x: -0.6, y: 0.08, z: 0.55, ry: 2.6 },
+  ],
+  kho: [{ job: 'giuKho', x: -0.1, y: 0.06, z: 0.7, ry: 0, walk: 0.5 }],
+  nhaSan: [
+    { job: 'phuNu', x: 0.65, y: 0.06, z: 0.7, ry: 0.4 },
+    { job: 'phuNu', x: -0.65, y: 0.06, z: 0.35, ry: -0.6 },
+  ],
+  doanhTrai: [
+    { job: 'linhGac', x: -0.2, y: 0.08, z: 1.0, ry: 0 },
+    { job: 'linhGac', x: 0.95, y: 0.08, z: 0.3, ry: -0.6 },
+  ],
 };
+
+/** Số người hiện ra: công trình cần người làm thì đúng số người đang làm, còn lại cố định theo cấp. */
+function peopleCount(b: Building, spots: number): number {
+  if (b.type === 'ruong' || b.type === 'ben' || b.type === 'baiDa' || b.type === 'loRen') return Math.min(b.workers, spots);
+  if (b.type === 'nhaSan' || b.type === 'doanhTrai') return Math.min(b.level >= 2 ? 2 : 1, spots);
+  return Math.min(1, spots);
+}
 
 export class World {
   readonly renderer: THREE.WebGLRenderer;
@@ -307,7 +340,7 @@ export class World {
       if (b.type === 'luy') continue;
       alive.add(b.id);
       const v = this.views.get(b.id);
-      if (!v || v.level !== b.level || v.damaged !== !!b.damaged) this.createView(b);
+      if (!v || v.level !== b.level || v.damaged !== !!b.damaged || v.workers !== b.workers) this.createView(b);
     }
     for (const [id, v] of this.views) {
       if (!alive.has(id)) {
@@ -359,14 +392,24 @@ export class World {
     if (b.type === 'ben') group.rotation.y = b.x + def.w === RIVER_START ? Math.PI / 2 : 0;
     group.position.set(wx(b.x) + def.w / 2, 0, wz(b.z) + def.d / 2);
     group.userData.buildingId = b.id;
-    const p = PERSON_OF[b.type];
-    let person: THREE.Object3D | undefined;
-    if (p) {
-      person = makePerson(p.kind);
-      person.position.set(p.x, p.y, p.z);
-      person.rotation.y = p.ry;
-      person.userData.baseY = p.y;
-      group.add(person);
+    // Dân làm việc theo nghề; Điện có Lạc hầu, từ cấp 2 có thêm lính gác. Công trình hư thì không ai làm.
+    const people: WorkerView[] = [];
+    const spots: Spot[] =
+      b.type === 'dien'
+        ? [
+            { job: 'lacHau', x: 0.75, y: b.level >= 4 ? 0.45 : 0.14, z: 1.75, ry: 0 },
+            ...(b.level >= 2 ? [{ job: 'linhGac' as Job, x: -1.0, y: b.level >= 4 ? 0.45 : 0.14, z: 1.8, ry: 0.2 }] : []),
+          ]
+        : (SPOTS[b.type] ?? []);
+    const n = b.damaged ? 0 : b.type === 'dien' ? spots.length : peopleCount(b, spots.length);
+    for (let i = 0; i < n; i++) {
+      const spot = spots[i];
+      const obj = makeWorker(spot.job);
+      obj.position.set(spot.x, spot.y, spot.z);
+      obj.rotation.y = spot.ry;
+      obj.scale.setScalar(0.85);
+      group.add(obj);
+      people.push({ obj, spot, phase: b.id * 1.7 + i * 2.1 });
     }
     if (b.type === 'ben') {
       const boat = makeBoat();
@@ -390,7 +433,7 @@ export class World {
       group.add(smoke);
     }
     this.buildingsRoot.add(group);
-    this.views.set(b.id, { group, type: b.type, level: b.level, damaged: !!b.damaged, person, popAge: 0, baseScale: group.scale.x });
+    this.views.set(b.id, { group, type: b.type, level: b.level, damaged: !!b.damaged, workers: b.workers, people, popAge: 0, baseScale: group.scale.x });
   }
 
   private makeBuilding(type: BuildingType, level: number): THREE.Group {
@@ -509,6 +552,40 @@ export class World {
     goal.x += wx(b.x) + def.w / 2 - at.x;
     goal.z += wz(b.z) + def.d / 2 - at.z;
     this.panGoal = goal;
+  }
+
+  /** Động tác theo nghề: cúi cấy, bổ cuốc, quai búa, đi qua đi lại, đứng gác. */
+  private animateWorker(w: WorkerView, t: number): void {
+    const { obj, spot, phase } = w;
+    const tool = obj.children.find((c) => c.userData.tool);
+    const s = Math.sin(t * 2 + phase);
+    switch (spot.job) {
+      case 'nong':
+        obj.rotation.x = 0.3 + 0.15 * s;
+        if (tool) tool.rotation.x = -0.5 + 0.5 * s;
+        break;
+      case 'thoDa':
+        if (tool) tool.rotation.x = -1.4 + 1.4 * Math.abs(Math.sin(t * 3 + phase));
+        obj.rotation.x = 0.15 * Math.abs(Math.sin(t * 3 + phase));
+        break;
+      case 'thoRen':
+        if (tool) tool.rotation.x = -1.5 + 1.5 * Math.abs(Math.sin(t * 4.5 + phase));
+        break;
+      case 'buon':
+      case 'giuKho': {
+        const walk = spot.walk ?? 0;
+        if (walk) {
+          const k = t * 0.7 + phase;
+          obj.position.x = spot.x + Math.sin(k) * walk;
+          obj.rotation.y = Math.cos(k) >= 0 ? Math.PI / 2 : -Math.PI / 2;
+        }
+        obj.position.y = spot.y + Math.abs(Math.sin(t * 6 + phase)) * 0.04;
+        break;
+      }
+      default:
+        obj.rotation.y = spot.ry + 0.3 * Math.sin(t * 0.5 + phase);
+        obj.position.y = spot.y + Math.abs(Math.sin(t * 1.5 + phase)) * 0.02;
+    }
   }
 
   /** Dải đỏ nhấp nháy ở bìa rừng phía giặc sắp tới; null để tắt. */
@@ -645,11 +722,7 @@ export class World {
     }
 
     for (const v of this.views.values()) {
-      if (v.person) {
-        const phase = v.group.id * 0.7;
-        v.person.position.y = (v.person.userData.baseY as number) + Math.abs(Math.sin(t * 3 + phase)) * 0.05;
-        if (v.type === 'ruong') v.person.rotation.x = 0.25 + Math.sin(t * 2 + phase) * 0.2;
-      }
+      for (const w of v.people) this.animateWorker(w, t);
       if (v.popAge > 0) {
         v.popAge += dt;
         const k = Math.min(v.popAge / 0.4, 1);

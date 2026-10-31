@@ -338,7 +338,7 @@ export interface UnitDef extends FighterStats {
   cost: Cost;
   /** Cấp doanh trại cần có. */
   barracksLevel: number;
-  /** Số chỗ chiếm trong doanh trại. */
+  /** Số chỗ chiếm trong doanh trại. Lính tuyển riêng, không lấy người từ dân. */
   space: number;
   /** Gạo ăn mỗi phút. */
   upkeep: number;
@@ -346,9 +346,9 @@ export interface UnitDef extends FighterStats {
 
 /** Quân ta: Giáo binh thắng chiến xa, cung thủ thắng lính giáo, voi chiến thắng cung thủ giặc. */
 export const UNITS: Record<UnitType, UnitDef> = {
-  giao: { hp: 60, dmg: 8, range: 0.8, speed: 1.6, cooldown: 1.0, strongVs: 'chienXa', cost: { gao: 20, sat: 4 }, barracksLevel: 1, space: 1, upkeep: 0.6 },
-  cung: { hp: 40, dmg: 7, range: 3.8, speed: 1.5, cooldown: 1.2, strongVs: 'giaoAn', cost: { gao: 25, sat: 6 }, barracksLevel: 2, space: 1, upkeep: 0.6 },
-  voi: { hp: 200, dmg: 15, range: 0.9, speed: 1.1, cooldown: 1.5, strongVs: 'cungAn', cost: { gao: 60, sat: 15 }, barracksLevel: 3, space: 3, upkeep: 1.5 },
+  giao: { hp: 60, dmg: 8, range: 0.8, speed: 1.6, cooldown: 1.0, strongVs: 'chienXa', cost: { gao: 20, voOc: 8 }, barracksLevel: 1, space: 1, upkeep: 0.6 },
+  cung: { hp: 40, dmg: 7, range: 3.8, speed: 1.5, cooldown: 1.2, strongVs: 'giaoAn', cost: { gao: 25, voOc: 8, sat: 4 }, barracksLevel: 2, space: 1, upkeep: 0.6 },
+  voi: { hp: 200, dmg: 15, range: 0.9, speed: 1.1, cooldown: 1.5, strongVs: 'cungAn', cost: { gao: 60, voOc: 20, sat: 12 }, barracksLevel: 3, space: 3, upkeep: 1.5 },
 };
 
 /** Giặc Ân: lính giáo, cung thủ và chiến xa (xe ngựa chiến, quân nặng). */

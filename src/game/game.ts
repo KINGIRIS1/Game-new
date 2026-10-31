@@ -463,18 +463,19 @@ export function canTrain(state: GameState, kind: UnitType): Result {
   if (barracksLevel(state) < def.barracksLevel) return fail('canDoanhTrai');
   if (state.raid.phase === 'battle') return fail('dangCoGiac');
   if (isStarving(state)) return fail('thieuGao');
-  if (freeDan(state) < 1) return fail('thieuDan');
   if (troopSpace(state) + def.space > troopCap(state)) return fail('datGioiHanQuan');
   if (!canAfford(state, def.cost)) return fail('thieuTaiNguyen');
   return ok(undefined);
 }
 
-/** Luyện một người lính: lấy một người dân rảnh, tốn gạo và sắt, xong ngay. */
+/**
+ * Tuyển một người lính ở doanh trại, xong ngay. Lính tách riêng khỏi dân làng:
+ * cái giá là tiền tuyển và gạo ăn mỗi phút, không lấy bớt người làm.
+ */
 export function train(state: GameState, kind: UnitType): Result<UnitType> {
   const check = canTrain(state, kind);
   if (!check.ok) return check;
   pay(state, UNITS[kind].cost);
-  state.dan -= 1;
   state.troops[kind] += 1;
   return ok(kind);
 }

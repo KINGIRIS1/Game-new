@@ -18,6 +18,26 @@ Tài liệu này ghi lại các quyết định đã chốt với chủ dự án
   - **hoa văn trống đồng** (vòng tròn tiếp tuyến, răng cưa, mặt trống có sao và chim bay) vẽ bằng canvas, đắp lên mái, tường, trống;
   - nhà sàn **mái hình thuyền cong vút** có chim đồng đậu hai đầu nóc;
   - người chibi đầu to, **đội mũ lông chim** như hình người trên mặt trống đồng;
+  - **mỗi loại công trình một dáng riêng**, để không loại nào trông như bản to nhỏ của loại khác:
+    - Điện Vua Hùng là nhà sàn mái thuyền lớn;
+    - nhà sàn có mái tròn hình mai rùa, kiểu nhà thứ hai trên trống đồng;
+    - kho thóc thân tròn trên cột cao, mái nón;
+    - doanh trại là nhà dài để trống không vách, mái thẳng;
+    - lò rèn có lò nung hình nón to;
+    - bến chợ thuyền có cầu tàu và sạp căng bạt;
+    - bãi đất đá có hố và đống đá;
+  - **mỗi cấp đổi hẳn dáng**: thêm một phần lớn nhìn thấy rõ và to dần, từ khoảng 85% ở cấp 1 lên 105% ở cấp 5.
+    - Ví dụ Điện: cấp 2 thêm cờ, trống và chim đồng; cấp 3 thêm chái nhà bên; cấp 4 thêm nền đá và hàng rào; cấp 5 lợp mái hai tầng.
+    - Cả bảng nằm ở `src/render/buildings.ts`.
+  - **dân ăn mặc theo nơi làm việc**, mỗi nghề một dụng cụ và một động tác (`src/render/people.ts`):
+    - nông dân quấn khăn, cầm cuốc, cúi cấy;
+    - thương nhân mặc áo chàm, đội thúng, đi lại;
+    - thợ đá vác đá, bổ cuốc chim;
+    - thợ rèn đeo yếm da, quai búa;
+    - người giữ kho vác bao thóc;
+    - phụ nữ mặc váy, đeo gùi;
+    - Lạc hầu và lính gác đội mũ lông chim;
+  - ruộng, bến, bãi đất đá, lò rèn hiện **đúng số người đang làm**, tối đa bằng số chỗ đứng.
   - bảng màu: nền kem như giấy, đất vàng ô liu, nước xanh lam đục, điểm nhấn đồng, đỏ son và mực đen.
 - Phong cách này được chọn qua bản dùng thử so sánh 4 phương án: khối hộp ban đầu, voxel tinh xảo, đồ chơi bo tròn, và Nét Đông Sơn. Cả bộ dùng thử được cất ở branch `prototype/phong-cach-hinh-anh`.
 - Màn hình dọc, camera isometric, kéo và phóng to bằng chạm. Giao diện bằng HTML đặt đè lên cảnh 3D.
@@ -77,7 +97,7 @@ Tài liệu này ghi lại các quyết định đã chốt với chủ dự án
 ## Quân đội và trận đánh
 
 - 3 binh chủng khắc chế vòng tròn: **Giáo binh** thắng **Voi chiến**, Voi chiến thắng **Cung thủ**, Cung thủ thắng Giáo binh.
-- Luyện quân tốn gạo, sắt và **một người dân** (dân đi lính thì không làm ruộng được). Doanh trại càng cao càng nuôi được nhiều quân. Luyện gần như ngay lập tức.
+- Luyện quân tốn tiền tuyển và gạo ăn hằng phút. Lính tách riêng khỏi dân làng (xem mục Giữ kinh đô). Doanh trại càng cao càng nuôi được nhiều quân. Luyện xong ngay.
 - **Giặc Ân**: lính giáo (cung thủ ta khắc chế), cung thủ (voi chiến ta khắc chế), **chiến xa** (giáo binh ta khắc chế). Cuối mỗi phần có tướng giặc làm trùm.
 - Trận đánh **tự động** trong 20–40 giây trên bãi chiến 3D, lính chibi có động tác đơn giản. Người chơi chỉ bấm kỹ năng của tướng.
 - Trước trận phó bản: xem trước quân giặc, chọn số lính mỗi loại trong giới hạn sức chứa, xếp vào 3 hàng (tiền quân, trung quân, hậu quân).
@@ -91,11 +111,11 @@ Tài liệu này ghi lại các quyết định đã chốt với chủ dự án
 
   | Binh chủng | Cần doanh trại | Giá | Máu | Sát thương | Ghi chú |
   |---|---|---|---|---|---|
-  | Giáo binh | cấp 1 | 20 gạo, 4 sắt | 60 | 8 | |
-  | Cung thủ | cấp 2 | 25 gạo, 6 sắt | 40 | 7 | tầm bắn 3,8 ô |
-  | Voi chiến | cấp 3 | 60 gạo, 15 sắt | 200 | 15 | chiếm 3 chỗ |
+  | Giáo binh | cấp 1 | 20 gạo, 8 vỏ ốc | 60 | 8 | không cần sắt |
+  | Cung thủ | cấp 2 | 25 gạo, 8 vỏ ốc, 4 sắt | 40 | 7 | tầm bắn 3,8 ô |
+  | Voi chiến | cấp 3 | 60 gạo, 20 vỏ ốc, 12 sắt | 200 | 15 | chiếm 3 chỗ |
 
-  Mỗi lính lấy đi một người dân rảnh. Lính ăn 0,6 gạo/phút, riêng voi ăn 1,5. Đánh đúng thế khắc chế thì sát thương gấp đôi.
+  **Lính tách riêng khỏi dân làng**: tuyển thẳng ở doanh trại, không lấy bớt người làm. Đổi lại phải trả tiền tuyển và gạo ăn: lính ăn 0,6 gạo/phút, riêng voi ăn 1,5. Chủ dự án chọn cách này sau khi chơi thử thấy không tuyển được lính vì dân đều đã vào làm. Đánh đúng thế khắc chế thì sát thương gấp đôi.
 - **Giặc Ân:**
 
   | Loại | Máu | Sát thương | Ghi chú |
@@ -154,4 +174,8 @@ Tài liệu này ghi lại các quyết định đã chốt với chủ dự án
 1. **Lát cắt 1** (đã làm): kinh đô 3D với Điện Vua Hùng, ruộng lúa, bến chợ thuyền, lũy tre. Đặt công trình trên lưới, nâng cấp, sản xuất, mở rộng đất, tính phần vắng mặt, lưu và xuất/nhập mã lưu, âm thanh, bốn nhiệm vụ đầu của Lạc hầu (lũy tre → ruộng → bến → nâng Điện). Lát cắt này chỉ dùng gạo và vỏ ốc.
 2. **Lát cắt 2a** (đã làm): dân làng và phân công, nhà sàn, bãi đất đá, lò rèn, kho thóc, thành đất, thuyền buôn, thiếu gạo, nâng bản lưu cũ.
    **Lát cắt 2b** (đã làm): doanh trại và quân đội, chòi canh, bẫy chông, giữ kinh đô trước giặc Ân, hư hỏng và sửa chữa.
+   **Sửa sau chơi thử 2b** (đã làm):
+   - lính tách khỏi dân, giáo binh không cần sắt;
+   - mỗi công trình một dáng riêng, mỗi cấp đổi hẳn dáng;
+   - dân ăn mặc theo nghề.
 3. **Lát cắt 3**: phó bản chương 1, Thánh Gióng, cốt truyện.
