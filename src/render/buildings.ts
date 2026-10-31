@@ -3,7 +3,7 @@
 // Gốc tọa độ là tâm chân móng, mặt trước hướng +z.
 
 import * as THREE from 'three';
-import { ironHorse, makeFighter } from './models';
+import { ironHorse, makeFighter, makeSonTinh } from './models';
 import { C } from './palette';
 import { ShapeBuilder, saddleRoof, seeded } from './shapes';
 import { ToonModel, inkThin, outlineOf, toon } from './toon';
@@ -506,6 +506,37 @@ export function makeDenPhuDong(): THREE.Group {
   const statue = horse.group();
   statue.scale.setScalar(0.72);
   statue.position.set(0, 0.54, 0.75);
+  g.add(statue);
+  return g;
+}
+
+// ---------- Đền Tản Viên ----------
+
+/** Đền thờ Sơn Tinh: nền đá ba bậc như sườn núi, đền mái thuyền, ba ngọn núi Ba Vì sau lưng, tượng Sơn Tinh trước sân. */
+export function makeDenTanVien(): THREE.Group {
+  const m = new ToonModel();
+  const p = m.plain;
+  p.box(2.9, 0.2, 2.9, C.rockDark, 0, 0.1, 0);
+  p.box(2.5, 0.18, 2.4, C.rock, 0, 0.29, -0.2);
+  p.box(2.0, 0.16, 1.8, C.rockDark, 0, 0.46, -0.45);
+  // Ba ngọn núi Ba Vì, ngọn giữa cao nhất.
+  for (const [x, r, h] of [[-0.95, 0.55, 1.5], [0, 0.7, 2.1], [0.95, 0.55, 1.5]] as const) {
+    p.cone(r, h, C.mountainCloak, x, 0.54 + h / 2, -1.05, undefined, 8);
+    p.cone(r * 0.35, h * 0.28, C.rock, x, 0.54 + h * 0.86, -1.05, undefined, 6);
+  }
+  stiltHall(m, { x: 0, z: -0.35, w: 1.7, d: 1.1, postH: 1.0, roofL: 2.4, roofW: 1.5, lift: 0.6 });
+  const roofTop = 1.0 + 0.68 + 1.5 * 0.4 + 0.6;
+  bird(m, 1.1, roofTop, -0.35, 1, 0.75);
+  bird(m, -1.1, roofTop, -0.35, -1, 0.75);
+  p.box(0.6, 0.3, 0.6, C.rock, 0, 0.35, 0.95);
+  drum(m, -1.05, 1.0, 0.4, 0.2);
+  drum(m, 1.05, 1.0, 0.4, 0.2);
+  banner(m, -1.25, 0.4, 2.2, C.mountainCloak);
+  banner(m, 1.05, 0.4, 2.2, C.red);
+  const g = m.group();
+  const statue = makeSonTinh();
+  statue.scale.setScalar(0.5);
+  statue.position.set(0, 0.5, 0.95);
   g.add(statue);
   return g;
 }

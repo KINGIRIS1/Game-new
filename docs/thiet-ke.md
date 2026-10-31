@@ -1,4 +1,4 @@
-# Thời đại Văn Lang: thiết kế chương 1
+# Thời đại Văn Lang: thiết kế chương 1 và chương 2
 
 Tài liệu này ghi lại các quyết định đã chốt với chủ dự án. Khi cần đổi một quyết định, hãy hỏi chủ dự án trước rồi sửa tài liệu này cùng lúc với code.
 
@@ -8,7 +8,7 @@ Tài liệu này ghi lại các quyết định đã chốt với chủ dự án
 - Chỉ có tiếng Việt. Mọi chữ hiển thị nằm trong `src/text/vi.ts`, tách khỏi code để sau này dịch.
 - Người chơi là **Vua Hùng**, xây dựng **kinh đô Phong Châu**. Lạc hầu hướng dẫn, Lạc tướng cầm quân, Bồ chính coi làng.
 - Học các cơ chế quen thuộc của thể loại xây dựng chiến thuật (như Clash of Clans, Rise of Kingdoms), nhưng luật chơi, nội dung và hình ảnh là của riêng game này, không sao chép game nào.
-- Bản đầu (chương 1) dài khoảng 30–60 phút chơi.
+- Chương 1 dài khoảng 30–60 phút chơi. Chương 2 nối tiếp ngay trên cùng kinh đô.
 
 ## Hình ảnh, âm thanh, công nghệ
 
@@ -51,7 +51,7 @@ Tài liệu này ghi lại các quyết định đã chốt với chủ dự án
 
 - Lưới **30×30 ô**. Hai nhánh sông chảy dọc hai cạnh (nam và đông) rồi hợp lưu ở một góc, gợi ngã ba Bạch Hạc. Hai cạnh còn lại (bắc và tây) là rừng.
 - Lúc đầu chỉ xây được trong vùng **16×16** sát hai bờ sông. Mỗi lần Điện Vua Hùng lên cấp thì phát rừng mở thêm đất.
-- Bản đầu **chưa có độ cao ô đất và chưa có lũ**. Hai thứ này vào bản sau, cùng Sơn Tinh.
+- Ô đất có **độ cao theo bậc** ngay từ đầu game (xem mục Độ cao ô đất ở chương 2). Chương 1 chỉ để nhìn; từ chương 2 độ cao quyết định ô nào ngập lũ.
 
 ## Kinh tế
 
@@ -94,6 +94,8 @@ Tài liệu này ghi lại các quyết định đã chốt với chủ dự án
 | Chòi canh | Cung thủ tự bắn giặc |
 | Bẫy chông tre | Gây sát thương cho giặc giẫm vào |
 | Đền Phù Đổng | Có sau khi kết chương. Thêm 10% sản lượng mọi tài nguyên, thêm 10% máu và sức đánh cho quân ta |
+| Đê đất → Kè đá | Có từ chương 2. Chặn nước lũ tràn từ sông vào |
+| Đền Tản Viên | Có sau khi kết chương 2. Lũ dâng thấp đi một bậc |
 
 ## Quân đội và trận đánh
 
@@ -110,7 +112,7 @@ Tài liệu này ghi lại các quyết định đã chốt với chủ dự án
   - bấm thì quân ta đánh mạnh thêm 50% và chạy nhanh thêm 30% trong 6 giây;
   - hồi lại sau 20 giây;
   - dùng được cả ở phó bản lẫn khi giữ kinh đô.
-- **Giữ kinh đô**: khoảng 15 phút chơi có một đợt giặc Ân. Trinh sát báo trước 60 giây, kèm hướng giặc tới (một trong hai cạnh rừng). Giặc tìm đường tới kho và Điện, gặp lũy thì phải phá. Phòng thủ bằng chòi canh, bẫy chông và quân nhà. Thua thì chỉ mất một phần kho và vài công trình hư hỏng, sửa lại được.
+- **Giữ kinh đô**: khoảng 15 phút chơi có một đợt giặc Ân. Trinh sát báo trước 60 giây, kèm hướng giặc tới (một trong hai cạnh rừng). Giặc tìm đường tới kho và Điện, gặp lũy thì phải phá. Phòng thủ bằng chòi canh, bẫy chông và quân nhà. Thua thì chỉ mất một phần kho và vài công trình hư hỏng, sửa lại được. Sang chương 2, mùa lũ của Thủy Tinh thay cho giặc Ân (xem mục Mùa lũ).
 
 ### Giữ kinh đô (đã làm ở lát cắt 2b)
 
@@ -260,7 +262,155 @@ Tài liệu này ghi lại các quyết định đã chốt với chủ dự án
   - Từ đó Gióng **hiển linh** (có vòng hào quang vàng sau lưng, tia như ngôi sao giữa mặt trống đồng, xoay chậm), vẫn ra trận khi đánh lại phó bản và khi giữ kinh đô.
 - Bản lưu lên phiên bản 5. Bản lưu cũ có thêm phần Gióng; người chơi cũ không phải xem lại đoạn mở đầu, nhưng vẫn được kể các đoạn về Gióng.
 - Không có cơ chế chơi lại từ đầu (prestige). Tiến trình liên tục theo chương.
-- Thứ tự theo truyền thuyết: Gióng (đời Hùng Vương thứ 6) có trước Sơn Tinh (đời thứ 18). Chương 2 ở bản sau là Sơn Tinh, Thủy Tinh và lũ.
+- Thứ tự theo truyền thuyết: Gióng (đời Hùng Vương thứ 6) có trước Sơn Tinh (đời thứ 18). Chương 2 là Sơn Tinh, Thủy Tinh và lũ.
+
+## Chương 2: Sơn Tinh, Thủy Tinh (đã làm)
+
+Chủ dự án đã chốt bốn điểm:
+- **lũ kèm thủy quái**: từ đám cưới, Thủy Tinh dâng nước thay cho giặc Ân, cùng lúc thủy quái từ sông lên đánh; đê chặn nước, thủy quái phá vỡ đê thì nước tràn vào;
+- **độ cao ô đất có sẵn từ đầu game**, công trình tự đắp nền bằng ô cao nhất; chương 2 mở Đắp đất và Đắp nền;
+- **lễ vật lấy từ gạo và ba màn đầu phó bản chương 2**;
+- **Sơn Tinh là tướng ra trận** như Gióng, mỗi trận một tướng.
+
+### Cốt truyện
+
+1. **Vua Hùng kén rể.** Mười hai đời sau, Hùng Vương thứ 18 kén chồng cho Mị Nương. Sơn Tinh và Thủy Tinh cùng đến cầu hôn. Vua thách cưới một trăm ván cơm nếp, một trăm nệp bánh chưng, voi chín ngà, gà chín cựa, ngựa chín hồng mao. Thủy Tinh sai thủy quái đi tranh lễ vật.
+2. **Sơn Tinh rước dâu.** Đủ lễ vật, Sơn Tinh đến trước rước Mị Nương về núi. Thủy Tinh đến sau, nổi giận dâng nước đánh kinh đô. Sơn Tinh cùng quân ta giữ nước.
+3. **Dời non chặn nước.** "Nước dâng bao nhiêu, đồi núi cao bấy nhiêu": giữa chương Sơn Tinh có thêm phép Dời non.
+4. **Thủy Tinh rút quân.** Thua ở đỉnh Tản Viên, Thủy Tinh rút về biển, nhưng năm nào cũng dâng nước báo thù. Vua lập Đền Tản Viên.
+
+- Mỗi đoạn kể đúng một lần, theo thứ tự, sau các đoạn của chương 1:
+  - "Vua Hùng kén rể": nhận thưởng nhiệm vụ cuối chương 1 (Đền Phù Đổng);
+  - "Sơn Tinh rước dâu": đủ năm lễ vật;
+  - "Dời non chặn nước": thắng màn 14 lần đầu;
+  - "Thủy Tinh rút quân": thắng màn 16 lần đầu.
+- Người nói mới: Mị Nương, Sơn Tinh, Thủy Tinh.
+
+### Độ cao ô đất
+
+- Mỗi ô có bậc từ 0 tới 4, sông là −1. Đất tự nhiên dựng bằng value noise có hạt giống cố định nên mọi máy ra một dáng đất:
+  - hai ô sát sông là bãi bồi, bậc 0;
+  - vào trong là đồng bằng bậc 1, có gò bậc 2;
+  - càng xa sông về phía rừng càng nhiều đồi bậc 2–3.
+- Cảnh 3D vẽ mỗi ô một cột đất cao 0,3 đơn vị mỗi bậc, bậc cao sáng màu hơn chút. Rừng ngoài lưới nối liền theo bậc của ô mép.
+- Dựng công trình thì **móng được đắp phẳng bằng ô cao nhất dưới móng**, không mất thêm gì. Bản lưu cũ được đắp móng y như vậy.
+- Từ chương 2:
+  - **Đắp đất** (thẻ ⛰️ trong bảng Xây dựng): chạm từng ô trống đã khai phá để đắp cao thêm một bậc, giá 20 + 10 × bậc hiện tại đất đá, cao nhất bậc 4;
+  - **Đắp nền** (nút trong bảng công trình): cả công trình cao thêm một bậc, giá 8 × diện tích móng × (bậc + 1) đất đá, cao nhất bậc 4. Lũy, bẫy, đê không đắp nền được, muốn cao thì đắp ô đất trước;
+  - bảng công trình ghi bậc nền và lũ dâng quá bậc nào thì hư.
+- Độ cao không cản đường đi của lính.
+
+### Đê
+
+- 1×1 ô, dựng bằng cách chạm từng ô như lũy, tối đa 90 đoạn, có từ chương 2.
+
+  | Cấp | Tên | Giá | Cao hơn mặt đất | Máu |
+  |---|---|---|---|---|
+  | 1 | Đê đất | 15 đất đá | 2 bậc | 600 |
+  | 2 | Kè đá | 40 đất đá, 20 vỏ ốc | 3 bậc | 1500 |
+
+- Đê còn nguyên chặn nước; đê phải **liền một dải** mới chặn được. Giặc không nhắm đánh đê, nhưng đê chắn đường thì giặc phá. Đê vỡ thì nước tràn qua chỗ vỡ.
+- Khi đang đắp đê, đắp đất, hay lúc trinh sát báo lũ, những ô sẽ ngập ở mùa lũ tới được tô xanh.
+
+### Nước lũ
+
+- Nước loang từ sông sang bốn phía, chỉ vào ô **đã khai phá** thấp hơn mực nước (bậc nền cộng chiều cao đê). Rừng chưa phát giữ đất, không ngập.
+- Công trình bị nước làm hư (như bị giặc phá, sửa tốn 30% giá) khi móng nằm trong vùng ngập và mực nước cao hơn bậc nền cộng sức chịu:
+  - Điện, nhà sàn, kho thóc dựng trên cột, hai đền xây trên nền đá: chịu được 1 bậc;
+  - bến chợ thuyền, lũy, bẫy chông, đê: không sợ nước;
+  - còn lại ngập là hư.
+- Cảnh 3D: nước lũ màu phù sa phủ ô ngập, nước sông và bờ bên kia dâng theo; trời tối sầm, mưa xối xả; xong trận nước rút dần trong 8 giây.
+
+### Mùa lũ
+
+- Sang chương 2 thì giặc Ân thôi tới. Đồng hồ giặc đứng lại tới đám cưới, rồi **mùa lũ đầu tiên tới sau 3 phút chơi**, sau đó 15 phút một mùa như lịch giặc cũ.
+- Trinh sát báo trước 60 giây, kèm hướng sông thủy quái tới (sông phía Nam hoặc phía Đông), dải đỏ nhấp nháy trên mặt sông. Nút "Đón lũ ngay" trong doanh trại gọi lũ tới sớm.
+- Mực lũ mùa thứ n:
+
+  | Mùa | 1–2 | 3–4 | từ 5 |
+  |---|---|---|---|
+  | Nước dâng tới | bậc 1 | bậc 2 | bậc 3 |
+
+  Đền Tản Viên còn nguyên thì lũ thấp đi một bậc, thấp nhất bậc 1.
+- Nước dâng mỗi bậc trong 6 giây. **Diệt hết thủy quái thì nước rút ngay**, nên đánh nhanh thì lũ không kịp dâng cao.
+- Thủy quái mùa thứ n: `6 + n` tôm binh (tối đa 16), `1 + n` cá phun nước (tối đa 10), `⌊(n + 1) / 2⌋` cá sấu (tối đa 6). Máu ×(1,3 + 0,12 × (n − 1)).
+- Thủy quái ngoi lên từ sông, bơi được dưới sông, tìm đường tới kho rồi Điện như giặc Ân; cướp được thì lặn về sông.
+- Sơn Tinh ra trận từ trước Điện (nếu đang kiệt sức thì Gióng hiển linh ra thay).
+- **Giữ được mùa lũ** khi diệt hết thủy quái, không bị cướp, không công trình nào bị ngập.
+- Độ khó đo bằng test: đê liền dải, năm chòi canh sát đê, quân mẫu và Sơn Tinh bấm kỹ năng giữ được mùa lũ bậc 3 mà không công trình nào ngập. Đê đất không có chòi canh gần thì thường vỡ từ mùa 7.
+
+### Thủy quái
+
+| Loại | Máu | Sát thương | Ghi chú | Quân ta khắc chế |
+|---|---|---|---|---|
+| Tôm binh | 85 | 10 | cầm giáo | cung thủ |
+| Cá phun nước | 50 | 9 | phun nước xa 3,6 ô | voi chiến |
+| Cá sấu | 260 | 22 | lao nhanh, gấp đôi sát thương lên cung thủ ta | giáo binh |
+| Thuồng luồng (trùm màn 12) | 750 | 26 | | |
+| Thủy Tinh (trùm màn 16) | 1400 | 32 | đứng trên ngọn sóng, cầm đinh ba | |
+
+Vòng khắc chế của quân ta giữ nguyên: giáo binh thắng quân nặng, cung thủ thắng lính bộ, voi thắng quân bắn xa.
+
+### Lễ vật và Sơn Tinh
+
+- Chạm vào Sơn Tinh đứng trên mỏm đá trước Điện, vào chip ⛰️ trên thanh trên, hoặc nút trong bảng Điện, để mở bảng Sơn Tinh.
+
+  | Lễ vật | Lấy ở đâu |
+  |---|---|
+  | Trăm ván cơm nếp | dâng 900 gạo |
+  | Trăm nệp bánh chưng | dâng 700 gạo, 400 vỏ ốc |
+  | Gà chín cựa | thắng màn 9 lần đầu |
+  | Ngựa chín hồng mao | thắng màn 10 lần đầu |
+  | Voi chín ngà | thắng màn 11 lần đầu |
+
+- Đủ năm lễ vật thì Sơn Tinh rước Mị Nương và **cùng ra trận**:
+  - mỗi trận một tướng: trận chương 2 (phó bản chương 2, mùa lũ) có Sơn Tinh, các trận khác có Gióng hiển linh. Chưa rước Mị Nương, hay Sơn Tinh đang kiệt sức, thì trận chương 2 có Gióng hiển linh;
+  - 560 máu (ngoài bãi bền gấp 1,6), 20 sát thương, mỗi đòn gậy làm rung đất, quét thêm nửa sát thương lên giặc quanh mục tiêu trong 1,3 ô như Gióng;
+  - hết máu thì kiệt sức, nghỉ 2 phút chơi, không tính vào lính tử trận.
+- **Kỹ năng của Sơn Tinh**:
+  - **Bốc đồi**: nhấc một quả đồi có cây ném xuống chỗ giặc đứng đông nhất, giặc trong 2,2 ô mất 70 máu. Hồi 16 giây. Đồi rơi trong 0,45 giây, bụi đất tung lên, rồi lún dần;
+  - **Dời non**: có từ khi thắng màn 14. Đá mọc lên dưới chân mọi kẻ địch trong 4 ô quanh Sơn Tinh: mất 30 máu và bị giữ chân 3 giây (đứng yên, không đánh). Hồi 22 giây;
+  - ngoài bãi, sát thương kỹ năng nhân 1,6 lần như của Gióng.
+- **Dáng Sơn Tinh** (`makeSonTinh` trong `src/render/models.ts`): to hơn lính thường, giáp đồng hoa văn trống, áo choàng kết lá rừng, vai đắp đá núi, mũ lông chim xen lông xanh lá, tay cầm gậy thần đầu đồng ôm hòn đá thiêng.
+- **Kết chương 2**: thắng màn 16 thì núi Tản Viên dâng cao dưới chân Sơn Tinh ngay trên bãi chiến, bảng kết quả hiện sau đó.
+  - Mở **Đền Tản Viên** (3×3, dựng một lần, 1500 gạo, 1500 vỏ ốc, 1500 đất đá, 400 sắt): nền đá ba bậc, ba ngọn núi Ba Vì sau lưng, tượng Sơn Tinh trước sân. Đền còn nguyên thì lũ dâng thấp đi một bậc.
+  - Từ đó Sơn Tinh về núi, không đứng ở kinh đô nữa, nhưng **hiển linh** (có hào quang) vẫn ra trận mỗi mùa lũ và ở phó bản chương 2. Mùa lũ vẫn tới.
+
+### Phó bản chương 2: đường lên núi Tản Viên
+
+- Bản đồ phó bản có hai thẻ Chương 1, Chương 2. Mở màn 9 cần đã thắng màn 8 và đã sang chương 2.
+
+  | Màn | Tên | Quân giặc | Máu | Ghi chú |
+  |---|---|---|---|---|
+  | 9 | Đồi sim Ba Vì | 10 tôm, 6 cá phun, 2 cá sấu | ×2,9 | gà chín cựa |
+  | 10 | Bãi cỏ sông Đà | 11 tôm, 7 cá phun, 3 cá sấu | ×2,8 | ngựa chín hồng mao |
+  | 11 | Rừng già Tản Viên | 12 tôm, 8 cá phun, 3 cá sấu | ×2,9 | voi chín ngà |
+  | 12 | Bạch Hạc ngập nước | 12 tôm, 7 cá phun, 3 cá sấu, thuồng luồng | ×2,4 | cần Sơn Tinh |
+  | 13 | Làng chìm trong lũ | 14 tôm, 8 cá phun, 4 cá sấu | ×2,2 | cần Sơn Tinh |
+  | 14 | Sông Đà cuồn cuộn | 14 tôm, 8 cá phun, 4 cá sấu | ×2,3 | cần Sơn Tinh, mở Dời non |
+  | 15 | Chân núi Tản | 14 tôm, 9 cá phun, 4 cá sấu | ×2,6 | cần Sơn Tinh |
+  | 16 | Đỉnh Tản Viên | 12 tôm, 8 cá phun, 3 cá sấu, Thủy Tinh | ×2,5 | cần Sơn Tinh |
+
+  - Mọi màn cần Điện cấp 5. Thưởng lần đầu từ 1200 gạo, 800 vỏ ốc, 600 đất đá, 150 sắt (màn 9) tới 3000 gạo, 2000 vỏ ốc, 2000 đất đá, 500 sắt (màn 16). Đánh lại được 30%.
+  - Máu của màn 9–11 cao hơn màn 12–16 vì màn 9–11 có Gióng hiển linh hai kỹ năng, còn màn 12–14 Sơn Tinh mới có một kỹ năng.
+- Bãi chiến mới:
+  - **đồi sim**: đồi lượn cao, mảng hoa sim tím;
+  - **đồng ngập**: bãi chiến là một gò nổi giữa biển nước lũ, nhà sàn chìm nửa, thuyền trôi giữa đồng, chỗ đất chìm thì không có cây;
+  - **đỉnh Tản Viên**: ba ngọn núi Ba Vì sau lưng giặc, mây vờn lưng chừng núi, nước lũ dưới chân.
+  - Màn 10, 14 dùng bến sông; màn 11 rừng; màn 13 làng; màn 15 chân núi.
+- Cân bằng đo bằng test với quân mẫu chương 2: 14 giáo, 12 cung, 4 voi (vừa 38 chỗ doanh trại cấp 5), có Đền Phù Đổng:
+  - màn 9–11: có Gióng hiển linh thì thắng, nửa quân thì thua;
+  - màn 12–16: có Sơn Tinh và bấm kỹ năng thì thắng; không Sơn Tinh, hay nửa quân, thì thua;
+  - Thủy Tinh không bấm kỹ năng thì thua.
+
+### Hướng dẫn của Lạc hầu chương 2
+
+10 nhiệm vụ nối sau 20 nhiệm vụ chương 1: dâng cơm nếp → dâng bánh chưng → đắp 8 đoạn đê → qua màn 9 → đủ 5 lễ vật → giữ được một mùa lũ → qua màn 12 → qua màn 14 → qua màn 16 → dựng Đền Tản Viên.
+
+### Bản lưu phiên bản 6
+
+- Thêm độ cao từng ô, Sơn Tinh, mùa lũ. Bản lưu cũ được tính độ cao tự nhiên rồi đắp móng công trình cũ.
+- Người chơi đã nhận thưởng nhiệm vụ Đền Phù Đổng thì vào thẳng chương 2.
 
 ## Nhịp chơi và lưu game
 
@@ -290,4 +440,4 @@ Tài liệu này ghi lại các quyết định đã chốt với chủ dự án
    - dân ăn mặc theo nghề.
 3. **Lát cắt 3a** (đã làm): phó bản màn 1–4, bãi chiến riêng, xếp quân theo hàng, Lạc tướng đánh Trống trận, phó tướng Ân.
    **Lát cắt 3b** (đã làm): Thánh Gióng (góp gạo, rèn đồ, hai kỹ năng, kiệt sức), màn 5–8, đại tướng Ân, cốt truyện, kết chương, Đền Phù Đổng.
-4. **Chương 2** (bản sau): Sơn Tinh, Thủy Tinh, độ cao ô đất và lũ.
+4. **Chương 2** (đã làm): độ cao ô đất, đắp đất, đắp nền, đê và kè đá, mùa lũ kèm thủy quái, lễ vật thách cưới, Sơn Tinh ra trận với Bốc đồi và Dời non, phó bản màn 9–16 với thuồng luồng và Thủy Tinh, cốt truyện, kết chương, Đền Tản Viên.

@@ -23,6 +23,8 @@ export interface TreeSpot {
 /** Một đoạn lũy, tọa độ thế giới của tâm ô. Cấp 1 là lũy tre, cấp 2 là thành đất. */
 export interface WallSpot {
   x: number;
+  /** Mặt đất dưới chân. */
+  y?: number;
   z: number;
   seed: number;
   level: number;
@@ -92,6 +94,9 @@ function chariot(m: ToonModel): void {
  */
 export function makeFighter(kind: FighterKind): THREE.Group {
   if (kind === 'giong') return makeGiong('trangSi');
+  if (kind === 'sonTinh') return makeSonTinh();
+  const water = makeWaterFoe(kind);
+  if (water) return water;
   const boss = kind === 'phoTuong' || kind === 'daiTuong';
   const enemy = kind === 'giaoAn' || kind === 'cungAn' || kind === 'chienXa' || boss;
   const onCart = kind === 'chienXa' || kind === 'daiTuong';
@@ -266,6 +271,7 @@ export function buildWalls(spots: WallSpot[]): THREE.Object3D {
     spots.map((s) => ({
       t: s.damaged ? 4 : (s.level >= 2 ? 2 : 0) + (s.seed % 2),
       x: s.x,
+      y: s.y,
       z: s.z,
       s: 1,
       ry: (s.seed % 4) * (Math.PI / 2),
@@ -453,4 +459,274 @@ export function makeGiong(look: GiongLook, opts: { bamboo?: boolean; glow?: bool
     g.add(ring);
   }
   return g;
+}
+
+// ---------- Chương 2: thủy quái của Thủy Tinh ----------
+
+/** Tôm binh: thân tôm cong đứng thẳng, đầu có gai nhọn, râu dài, cầm giáo đồng. */
+function shrimp(m: ToonModel): void {
+  const p = m.plain;
+  // Đuôi cong ra sau làm chân đứng, xòe quạt đuôi.
+  for (let i = 0; i < 4; i++) {
+    const r = 0.15 - i * 0.012;
+    p.sphere(r, i % 2 ? C.shrimpLight : C.shrimp, 0, 0.12 + i * 0.17, -0.18 + i * 0.07, [1, 0.75, 1], 8);
+  }
+  for (const s of [-1, 0, 1]) p.box(0.1, 0.02, 0.22, C.shrimpLight, s * 0.09, 0.03, -0.3, [0, s * 0.4, 0]);
+  // Ngực và đầu.
+  p.sphere(0.2, C.shrimp, 0, 0.78, 0.04, [0.9, 1.1, 1], 10);
+  p.cone(0.05, 0.3, C.shrimpLight, 0, 0.92, 0.27, [1.25, 0, 0], 5);
+  for (const s of [-1, 1]) {
+    p.cyl(0.015, 0.015, 0.12, C.ink, s * 0.1, 0.96, 0.14, [0, 0, s * 0.5], 4);
+    p.sphere(0.045, C.ink, s * 0.14, 1.02, 0.14, [1, 1, 1], 6);
+    // Râu dài vắt ra sau.
+    p.cyl(0.01, 0.012, 0.9, C.shrimp, s * 0.12, 1.25, -0.1, [-0.6, 0, s * 0.35], 4);
+  }
+  for (let i = 0; i < 3; i++) for (const s of [-1, 1]) p.cyl(0.012, 0.012, 0.22, C.shrimpLight, s * 0.12, 0.58 - i * 0.08, 0.1, [0.4, 0, s * 0.6], 4);
+  for (const s of [-1, 1]) p.cyl(0.03, 0.03, 0.26, C.shrimp, s * 0.17, 0.68, 0.12, [0.9, 0, s * 0.35], 5);
+  p.cyl(0.018, 0.018, 1.15, C.woodDark, 0.24, 0.62, 0.12, undefined, 5);
+  p.cone(0.05, 0.2, C.bronze, 0.24, 1.27, 0.12, undefined, 4);
+}
+
+/** Cá phun nước: con cá đứng trên đuôi, miệng tròn há to, vây xòe. */
+function spitFish(m: ToonModel): void {
+  const p = m.plain;
+  p.sphere(0.3, C.fish, 0, 0.62, 0, [0.62, 1, 0.55], 12);
+  p.sphere(0.24, C.fishBelly, 0, 0.58, 0.07, [0.5, 0.85, 0.45], 10);
+  // Đuôi làm chân đứng.
+  for (const s of [-1, 1]) p.box(0.22, 0.05, 0.16, C.fish, s * 0.12, 0.08, -0.02, [0, 0, s * 0.5]);
+  p.cyl(0.07, 0.1, 0.22, C.fish, 0, 0.2, 0, undefined, 8);
+  // Vây lưng, vây ngực.
+  p.box(0.04, 0.34, 0.24, C.red, 0, 0.82, -0.17, [0.3, 0, 0]);
+  for (const s of [-1, 1]) p.box(0.2, 0.04, 0.14, C.red, s * 0.2, 0.55, 0.05, [0, 0, s * 0.6]);
+  // Mắt lồi và miệng tròn há to.
+  for (const s of [-1, 1]) {
+    p.sphere(0.07, C.cream, s * 0.12, 0.88, 0.12, [1, 1, 1], 8);
+    p.sphere(0.035, C.ink, s * 0.13, 0.89, 0.18, [1, 1, 1], 6);
+  }
+  p.cyl(0.08, 0.06, 0.08, C.fishBelly, 0, 0.72, 0.17, [Math.PI / 2, 0, 0], 10);
+  p.cyl(0.05, 0.05, 0.09, C.ink, 0, 0.72, 0.19, [Math.PI / 2, 0, 0], 10);
+}
+
+/** Cá sấu: mình dài sát đất, mõm dài răng trắng, lưng có vảy gai, đuôi vuốt dài. */
+function crocodile(m: ToonModel): void {
+  const p = m.plain;
+  p.sphere(0.32, C.croc, 0, 0.3, 0, [0.85, 0.6, 1.5], 12);
+  p.sphere(0.26, C.crocBelly, 0, 0.22, 0.04, [0.75, 0.35, 1.3], 10);
+  p.box(0.3, 0.16, 0.6, C.croc, 0, 0.32, 0.68);
+  p.box(0.26, 0.08, 0.56, C.crocBelly, 0, 0.22, 0.7);
+  for (let i = 0; i < 5; i++) for (const s of [-1, 1]) p.cone(0.025, 0.08, C.cream, s * 0.12, 0.2, 0.48 + i * 0.1, [Math.PI, 0, 0], 4);
+  for (const s of [-1, 1]) {
+    p.sphere(0.07, C.croc, s * 0.11, 0.44, 0.42, [1, 1, 1], 8);
+    p.sphere(0.035, C.ember, s * 0.12, 0.47, 0.46, [1, 1, 1], 6);
+  }
+  p.cone(0.16, 1.0, C.croc, 0, 0.25, -0.85, [-Math.PI / 2, 0, 0], 8);
+  for (let i = 0; i < 6; i++) p.box(0.06, 0.08, 0.06, C.serpent, 0, 0.5 - i * 0.03, 0.3 - i * 0.22);
+  for (const x of [-0.25, 0.25]) for (const z of [-0.25, 0.3]) p.cyl(0.06, 0.07, 0.2, C.croc, x, 0.1, z, [0, 0, x > 0 ? -0.5 : 0.5], 6);
+}
+
+/** Thuồng luồng: mình rắn uốn khúc ngóc đầu cao, râu dài, sừng đồng, vây lưng đỏ. */
+function serpent(m: ToonModel): void {
+  const p = m.plain;
+  const body: [number, number, number, number][] = [
+    [0, 0.18, -0.9, 0.2],
+    [0.25, 0.22, -0.55, 0.23],
+    [0.1, 0.3, -0.15, 0.25],
+    [-0.15, 0.5, 0.1, 0.25],
+    [-0.05, 0.85, 0.2, 0.24],
+    [0.05, 1.2, 0.25, 0.22],
+  ];
+  body.forEach(([x, y, z, r], i) => {
+    p.sphere(r, C.serpent, x, y, z, [1, 0.9, 1], 10);
+    p.sphere(r * 0.75, C.serpentBelly, x, y - r * 0.15, z + r * 0.4, [1, 0.8, 0.6], 8);
+    p.cone(0.06, 0.22, C.red, x, y + r + 0.05, z - 0.05, [-0.4, 0, 0], 4);
+    if (i === 0) p.cone(0.12, 0.5, C.serpent, x - 0.1, 0.12, z - 0.35, [-Math.PI / 2 - 0.2, 0, 0], 6);
+  });
+  // Đầu.
+  p.box(0.34, 0.24, 0.42, C.serpent, 0.05, 1.42, 0.42);
+  p.box(0.28, 0.08, 0.3, C.serpentBelly, 0.05, 1.3, 0.5);
+  for (const s of [-1, 1]) {
+    p.sphere(0.05, C.ember, 0.05 + s * 0.12, 1.5, 0.6, [1, 1, 0.6], 6);
+    p.cone(0.04, 0.3, C.bronzeLight, 0.05 + s * 0.1, 1.68, 0.3, [-0.6, 0, s * 0.3], 5);
+    p.cyl(0.012, 0.012, 0.6, C.cream, 0.05 + s * 0.16, 1.32, 0.78, [1.1, 0, s * 0.6], 4);
+  }
+}
+
+/**
+ * Lính trong trận của chương 2: tôm binh, cá phun nước, cá sấu, thuồng luồng và Thủy Tinh.
+ * Trả về null nếu không phải thủy quái.
+ */
+export function makeWaterFoe(kind: FighterKind): THREE.Group | null {
+  if (kind === 'thuyTinh') return makeThuyTinh();
+  const m = new ToonModel(inkThin);
+  if (kind === 'tomBinh') shrimp(m);
+  else if (kind === 'caPhun') spitFish(m);
+  else if (kind === 'caSau') crocodile(m);
+  else if (kind === 'thuongLuong') serpent(m);
+  else return null;
+  return m.group();
+}
+
+/** Thủy Tinh, chúa miền nước thẳm: áo xanh biển, mũ đồng vây cá, cầm đinh ba, đứng trên ngọn sóng bạc đầu. */
+export function makeThuyTinh(): THREE.Group {
+  const m = new ToonModel(inkThin);
+  const p = m.plain;
+  // Ngọn sóng cuộn dưới chân.
+  p.cyl(0.42, 0.55, 0.3, C.sea, 0, 0.15, 0, undefined, 12);
+  for (let i = 0; i < 6; i++) {
+    const a = (i / 6) * Math.PI * 2;
+    p.cone(0.14, 0.34, i % 2 ? C.foam : C.sea, Math.cos(a) * 0.42, 0.34, Math.sin(a) * 0.42, [Math.sin(a) * 0.5, 0, -Math.cos(a) * 0.5], 6);
+  }
+  p.sphere(0.36, C.foam, 0, 0.3, 0, [1, 0.35, 1], 10);
+  const y0 = 0.36;
+  for (const x of [-0.07, 0.07]) p.cyl(0.05, 0.055, 0.22, C.sea, x, y0 + 0.11, 0, undefined, 6);
+  m.band.cyl(0.17, 0.24, 0.36, C.sea, 0, y0 + 0.36, 0, undefined, 10);
+  p.cyl(0.14, 0.17, 0.2, C.foam, 0, y0 + 0.6, 0, undefined, 10);
+  for (const s of [-1, 1]) p.cyl(0.04, 0.04, 0.28, C.skin, s * 0.2, y0 + 0.55, 0.04, [0.3, 0, s * 0.4], 6);
+  p.sphere(0.24, C.skin, 0, y0 + 0.92, 0, [1, 0.95, 0.95], 12);
+  for (const s of [-1, 1]) {
+    p.sphere(0.03, C.ink, s * 0.08, y0 + 0.91, 0.2, [1, 1.4, 0.5], 6);
+    p.box(0.09, 0.02, 0.02, C.ink, s * 0.09, y0 + 0.99, 0.21, [0, 0, s * 0.35]);
+  }
+  // Râu dài như rong biển.
+  p.cone(0.1, 0.28, C.serpent, 0, y0 + 0.72, 0.18, [Math.PI, 0, 0], 6);
+  // Mũ đồng có vây cá xòe.
+  p.sphere(0.25, C.bronze, 0, y0 + 1.02, -0.01, [1, 0.6, 1], 10);
+  for (let i = -2; i <= 2; i++) p.box(0.05, 0.4, 0.12, i % 2 ? C.sea : C.bronzeLight, i * 0.07, y0 + 1.28, -0.04, [0, 0, -i * 0.25]);
+  // Đinh ba.
+  p.cyl(0.025, 0.025, 1.7, C.bronzeDark, 0.3, y0 + 0.75, 0.1, undefined, 6);
+  for (const dx of [-0.1, 0, 0.1]) p.cone(0.03, 0.22, C.bronzeLight, 0.3 + dx, y0 + 1.7, 0.1, undefined, 4);
+  p.box(0.26, 0.04, 0.04, C.bronzeLight, 0.3, y0 + 1.58, 0.1);
+  return m.group();
+}
+
+// ---------- Sơn Tinh ----------
+
+/**
+ * Tay phải cầm gậy thần của Sơn Tinh, tách riêng để phần vẽ trận làm động tác vung.
+ * Gốc nhóm là khớp vai, giống tay vũ khí của Gióng.
+ */
+function sonStaff(): THREE.Group {
+  const w = new ToonModel(inkThin);
+  const p = w.plain;
+  p.cyl(0.05, 0.05, 0.38, C.skin, 0, 0.19, 0, undefined, 6);
+  p.cyl(0.04, 0.05, 1.9, C.woodDark, 0, 1.0, 0, undefined, 6);
+  // Đầu gậy: vòng đồng ôm một hòn đá thiêng.
+  w.band.cyl(0.08, 0.08, 0.12, C.bronze, 0, 1.92, 0, undefined, 10);
+  p.sphere(0.12, C.rock, 0, 2.08, 0, [1, 1.1, 1], 8);
+  for (let i = 0; i < 3; i++) p.cone(0.035, 0.14, C.leaf[i], Math.cos(i * 2.1) * 0.09, 1.96, Math.sin(i * 2.1) * 0.09, [0, 0, Math.cos(i * 2.1) * 0.8], 4);
+  const g = w.group();
+  g.position.set(0.32, 1.5, 0.05);
+  g.rotation.order = 'YXZ';
+  g.rotation.set(WEAPON_REST.x, 0, WEAPON_REST.z);
+  g.userData.weapon = true;
+  return g;
+}
+
+/**
+ * Sơn Tinh, chúa vùng non cao: cao hơn hẳn lính thường, giáp đồng có hoa văn trống,
+ * áo choàng kết lá rừng, vai đắp đá núi, đội mũ lông chim, tay cầm gậy thần.
+ * `rock`: đứng trên mỏm đá (khi đứng chờ ở kinh đô). `glow`: hiển linh, có hào quang.
+ */
+export function makeSonTinh(opts: { rock?: boolean; glow?: boolean } = {}): THREE.Group {
+  const m = new ToonModel(inkThin);
+  const p = m.plain;
+  const y0 = opts.rock ? 0.32 : 0;
+  if (opts.rock) {
+    p.cone(0.62, 0.42, C.rockDark, 0, 0.18, 0, undefined, 7);
+    p.cone(0.3, 0.3, C.rock, 0.32, 0.18, -0.2, undefined, 6);
+    p.cone(0.25, 0.26, C.leaf[2], -0.35, 0.16, 0.15, undefined, 6);
+  }
+  for (const x of [-0.1, 0.1]) {
+    p.cyl(0.07, 0.08, 0.42, C.skin, x, y0 + 0.21, 0, undefined, 6);
+    p.cyl(0.085, 0.085, 0.08, C.bronze, x, y0 + 0.06, 0.02, undefined, 8);
+  }
+  // Váy lá và áo choàng lá rừng.
+  for (let i = 0; i < 8; i++) {
+    const a = (i / 8) * Math.PI * 2;
+    p.cone(0.1, 0.36, C.leaf[i % 4], Math.sin(a) * 0.2, y0 + 0.44, Math.cos(a) * 0.18, [Math.PI + Math.cos(a) * 0.3, 0, -Math.sin(a) * 0.3], 4);
+  }
+  m.band.cyl(0.24, 0.27, 0.46, C.bronze, 0, y0 + 0.78, 0, undefined, 12);
+  p.cyl(0.275, 0.275, 0.06, C.bronzeDark, 0, y0 + 0.56, 0, undefined, 12);
+  p.box(0.62, 0.7, 0.05, C.mountainCloak, 0, y0 + 0.78, -0.3, [0.2, 0, 0]);
+  for (let i = 0; i < 4; i++) p.cone(0.09, 0.26, C.leaf[i], -0.24 + i * 0.16, y0 + 0.38, -0.36, [Math.PI + 0.2, 0, 0], 4);
+  // Vai đắp đá núi.
+  for (const s of [-1, 1]) {
+    p.sphere(0.15, C.rock, s * 0.3, y0 + 1.0, 0, [1, 0.8, 1], 7);
+    p.cone(0.08, 0.16, C.leaf[1], s * 0.33, y0 + 1.14, 0, undefined, 5);
+  }
+  // Tay trái nắm lại trước ngực.
+  p.cyl(0.05, 0.05, 0.36, C.skin, -0.3, y0 + 0.8, 0.12, [0.9, 0, 0.25], 6);
+  p.sphere(0.27, C.skin, 0, y0 + 1.3, 0.02, [1, 0.95, 0.95], 12);
+  for (const s of [-1, 1]) {
+    p.sphere(0.03, C.ink, s * 0.09, y0 + 1.29, 0.24, [1, 1.4, 0.5], 6);
+    p.box(0.09, 0.02, 0.02, C.ink, s * 0.095, y0 + 1.37, 0.245, [0, 0, -s * 0.25]);
+  }
+  p.sphere(0.27, C.hair, 0, y0 + 1.4, -0.05, [1, 0.6, 0.98], 12);
+  p.cyl(0.275, 0.275, 0.06, C.bronze, 0, y0 + 1.36, -0.02, undefined, 12);
+  // Mũ lông chim cao, xen lông xanh lá như cây núi.
+  const plume = [C.red, C.cream, C.leaf[3]];
+  for (let i = -3; i <= 3; i++) p.box(0.07, 0.6, 0.03, plume[Math.abs(i) % 3], i * 0.065, y0 + 1.82, -0.06, [0, 0, -i * 0.22]);
+  const g = m.group();
+  const staff = sonStaff();
+  staff.position.y += y0;
+  g.add(staff);
+  if (opts.glow) {
+    const ring = halo();
+    ring.position.set(0, y0 + 1.5, -0.38);
+    g.add(ring);
+  }
+  return g;
+}
+
+// ---------- Đê ----------
+
+/** Một đoạn đê, tọa độ thế giới của tâm ô và mặt đất dưới chân. Cấp 1 là đê đất, cấp 2 là kè đá. */
+export interface DikeSpot {
+  x: number;
+  y: number;
+  z: number;
+  level: number;
+  damaged: boolean;
+}
+
+/** Đê đất: mô đất đắp thoai thoải, mặt đê phủ cỏ. Rộng trọn ô để các đoạn liền nhau thành một dải. */
+function earthDike(): THREE.Mesh {
+  const b = new ShapeBuilder(false, true);
+  b.box(1.02, 0.22, 1.02, C.earthDark, 0, 0.11, 0);
+  b.box(0.9, 0.22, 0.9, C.earth, 0, 0.33, 0);
+  b.box(0.78, 0.1, 0.78, C.grass[1], 0, 0.49, 0);
+  return b.mesh(toon);
+}
+
+/** Kè đá: đê cao hơn, mái đê lát đá hộc, mặt đê có lối đi lát đá. */
+function stoneDike(): THREE.Mesh {
+  const b = new ShapeBuilder(false, true);
+  const rand = seeded(41);
+  b.box(1.02, 0.3, 1.02, C.rockDark, 0, 0.15, 0);
+  b.box(0.92, 0.3, 0.92, C.rock, 0, 0.45, 0);
+  for (let i = 0; i < 6; i++) b.box(0.22, 0.12, 0.05, C.rockDark, -0.35 + (i % 3) * 0.35, 0.22 + Math.floor(i / 3) * 0.3, 0.5 + rand() * 0.02);
+  b.box(0.8, 0.14, 0.8, C.grass[0], 0, 0.67, 0);
+  b.box(0.3, 0.03, 0.82, C.rock, 0, 0.75, 0);
+  return b.mesh(toon);
+}
+
+/** Đoạn đê vỡ: mô đất thấp sạt lở. */
+function brokenDike(): THREE.Mesh {
+  const b = new ShapeBuilder(false, true);
+  b.box(0.95, 0.14, 0.95, C.earthDark, 0, 0.07, 0);
+  b.box(0.4, 0.12, 0.5, C.earth, -0.2, 0.18, 0.1, [0, 0.4, 0.2]);
+  b.box(0.3, 0.1, 0.3, C.rock, 0.25, 0.16, -0.2, [0.2, 0.5, 0]);
+  return b.mesh(toon);
+}
+
+let cachedDikes: THREE.Mesh[] | null = null;
+
+/** Dựng toàn bộ đê trong kinh đô. */
+export function buildDikes(spots: DikeSpot[]): THREE.Object3D {
+  cachedDikes ??= [earthDike(), stoneDike(), brokenDike()];
+  return instanceTemplates(
+    cachedDikes,
+    spots.map((s) => ({ t: s.damaged ? 2 : s.level >= 2 ? 1 : 0, x: s.x, y: s.y, z: s.z, s: 1, ry: 0 })),
+    treeOutline,
+  );
 }

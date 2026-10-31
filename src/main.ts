@@ -4,8 +4,11 @@ import './style.css';
 import { play, setMuted, unlockAudio } from './audio/sfx';
 import { useSkill } from './game/battle';
 import { leaveBattlefield, retreat, startStage } from './game/campaign';
-import { feedGiong, forgeGear, markStory, pendingStory } from './game/giong';
-import { BUILDINGS, RESOURCE_IDS, STAGES, type BuildingType, type Cost } from './game/defs';
+import { feedGiong, forgeGear } from './game/giong';
+import { inChapter2, offerGift } from './game/son';
+import { markStory, pendingStory } from './game/story';
+import { footprintTop } from './game/terrain';
+import { BUILDINGS, RESOURCE_IDS, STAGES, type BuildingType, type Cost, type SkillId } from './game/defs';
 import {
   applyOffline,
   buildingAt,
@@ -21,6 +24,9 @@ import {
   housing,
   callRaidNow,
   dismissRaidResult,
+  nextFloodLevel,
+  raiseBuilding,
+  raiseTile,
   remove,
   repair,
   repairAll,
@@ -38,10 +44,13 @@ import { RESOLUTIONS, World, type Resolution } from './render/world';
 import { vi } from './text/vi';
 import { Hud, buildingName, type HudAction } from './ui/hud';
 
+/** Chạm từng ô để dựng lũy, gài bẫy, đắp đê, hay đắp đất (`raise`). */
+type PaintType = 'luy' | 'bayChong' | 'de' | 'raise';
+
 type Mode =
   | { kind: 'view'; selected: number | null }
   | { kind: 'place'; type: BuildingType; x: number; z: number }
-  | { kind: 'paint'; type: 'luy' | 'bayChong' };
+  | { kind: 'paint'; type: PaintType };
 
 /** Vắng mặt lâu hơn mức này thì hiện bảng báo thu hoạch. */
 const OFFLINE_NOTICE_MS = 60_000;
@@ -108,6 +117,7 @@ function start(): void {
   const commit = () => {
     save();
     world.sync(state);
+    refreshFloodPreview();
     refreshUi();
   };
 
@@ -130,8 +140,15 @@ function start(): void {
   const updateGhost = () => {
     if (mode.kind !== 'place') return;
     const check = canPlace(state, mode.type, mode.x, mode.z);
-    world.setGhost(mode.type, mode.x, mode.z, check.ok);
+    world.setGhost(mode.type, mode.x, mode.z, check.ok, footprintTop(state, mode.type, mode.x, mode.z));
     hud.setPlaceValid(check.ok, check.ok ? undefined : vi.reasons[check.reason]);
+  };
+
+  /** Tô xanh vùng sẽ ngập ở mùa lũ tới: khi đắp đê, đắp đất, và lúc trinh sát báo lũ. */
+  const refreshFloodPreview = () => {
+    const painting = mode.kind === 'paint' && (mode.type === 'de' || mode.type === 'raise');
+    const warning = state.raid.phase === 'warning' && state.raid.foe === 'thuy';
+    world.setFloodPreview(painting || warning ? state : null, nextFloodLevel(state));
   };
 
   /** Tìm chỗ đặt được gần tâm màn hình nhất để bóng công trình hiện ra ở chỗ hợp lý. */
@@ -156,6 +173,7 @@ function start(): void {
     world.setSelection(null);
     world.showGrid(false);
     hud.setMode('view');
+    refreshFloodPreview();
   };
 
   const select = (id: number | null) => {
@@ -174,10 +192,12 @@ function start(): void {
   world.view.onTap = (cx, cy) => {
     // Trên bãi chiến chỉ xem, không chọn gì.
     if (world.inField) return;
-    if (mode.kind === 'view' && world.pickGiong(cx, cy)) {
+    const hero = mode.kind === 'view' ? world.pickHero(cx, cy) : null;
+    if (hero) {
       play('tap');
       select(null);
-      hud.showGiong(state);
+      if (hero === 'giong') hud.showGiong(state);
+      else hud.showSon(state);
       return;
     }
     const tile = world.pickTile(cx, cy);
@@ -193,6 +213,14 @@ function start(): void {
     }
     if (mode.kind === 'paint') {
       if (!tile) return;
+      if (mode.type === 'raise') {
+        const r = raiseTile(state, tile.x, tile.z);
+        if (!r.ok) return fail(r.reason);
+        play('place');
+        hud.setHint(vi.ui.raisedTile(r.value));
+        commit();
+        return;
+      }
       const r = place(state, mode.type, tile.x, tile.z);
       if (!r.ok) return fail(r.reason);
       play('place');
@@ -225,9 +253,11 @@ function start(): void {
         hud.closeSheet();
         world.showGrid(true);
         play('tap');
-        if (a.type === 'luy' || a.type === 'bayChong') {
+        if (a.type === 'luy' || a.type === 'bayChong' || a.type === 'de') {
           mode = { kind: 'paint', type: a.type };
-          hud.setMode('paint', true, a.type === 'luy' ? vi.ui.wallHint : vi.ui.trapHint);
+          hud.setMode('paint', true, a.type === 'luy' ? vi.ui.wallHint : a.type === 'de' ? vi.ui.dikeHint : vi.ui.trapHint);
+          refreshFloodPreview();
+          if (a.type === 'de') hud.toast(vi.ui.floodPreview(nextFloodLevel(state)));
           return;
         }
         mode = { kind: 'place', type: a.type, ...nearestSpot(a.type) };
@@ -245,6 +275,44 @@ function start(): void {
         exitMode();
         commit();
         world.pop(r.value.id);
+        return;
+      }
+
+      case 'chooseRaise':
+        if (!inChapter2(state)) return fail('canChuong2');
+        hud.closeSheet();
+        world.showGrid(true);
+        play('tap');
+        mode = { kind: 'paint', type: 'raise' };
+        hud.setMode('paint', true, vi.ui.dapDatHint);
+        refreshFloodPreview();
+        hud.toast(vi.ui.floodPreview(nextFloodLevel(state)));
+        return;
+
+      case 'raiseBuilding': {
+        const r = raiseBuilding(state, a.id);
+        if (!r.ok) return fail(r.reason);
+        play('upgrade');
+        hud.toast(vi.ui.raisedBuilding(buildingName(r.value), state.heights[r.value.z * GRID + r.value.x]));
+        commit();
+        world.pop(r.value.id);
+        world.setSelection(r.value);
+        return;
+      }
+
+      case 'openSon':
+        if (mode.kind !== 'view') exitMode();
+        select(null);
+        play('tap');
+        hud.showSon(state);
+        return;
+
+      case 'offerGift': {
+        const r = offerGift(state, a.gift);
+        if (!r.ok) return fail(r.reason);
+        play('upgrade');
+        hud.toast(vi.ui.giftToast(vi.gifts[a.gift].name));
+        commit();
         return;
       }
 
@@ -533,6 +601,7 @@ function start(): void {
     const phase = state.raid.phase;
     world.setRaidWarning(phase === 'warning' ? state.raid.side : null);
     if (phase === shownPhase) return;
+    refreshFloodPreview();
     if (phase === 'warning') {
       play('claim');
       navigator.vibrate?.([60, 80, 60]);
@@ -572,7 +641,7 @@ function start(): void {
     }
     if (r === shownStage) return;
     if (!resultAt) {
-      resultAt = now + (battle?.ascend ? 3500 : 700);
+      resultAt = now + (battle?.ascend || battle?.sonWin ? 3500 : 700);
       play(r.outcome === 'win' ? 'upgrade' : 'error');
       commit();
     }
@@ -625,6 +694,7 @@ function start(): void {
       state.lastSeen = wall;
     }
 
+    world.updateFlood(state);
     world.updateBattle(state.raid.battle, dt);
     watchCampaign();
     world.updateField(state.campaign.battle, dt);
@@ -662,6 +732,21 @@ function start(): void {
     advance: (ms: number) => {
       tick(state, ms);
       commit();
+    },
+    place: (type: BuildingType, x: number, z: number) => {
+      const r = place(state, type, x, z);
+      commit();
+      return r;
+    },
+    /** Xuất toàn quân đánh màn `n`, rồi `skill(k)` để bấm kỹ năng: chụp thử trận ngoài bãi. */
+    march: (n: number) => {
+      const r = startStage(state, n, { ...state.troops }, state.campaign.rows);
+      commit();
+      return r;
+    },
+    skill: (k: SkillId) => {
+      const battle = state.campaign.battle ?? state.raid.battle;
+      return !!battle && useSkill(battle, k);
     },
   };
 }

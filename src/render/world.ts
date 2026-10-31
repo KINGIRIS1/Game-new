@@ -1,17 +1,33 @@
-// Cảnh 3D của kinh đô: địa hình, rừng, sông, công trình, lũy tre và các hiệu ứng khi đặt công trình.
+// Cảnh 3D của kinh đô: địa hình bậc thang, rừng, sông, công trình, lũy tre, đê, nước lũ, mưa
+// và các hiệu ứng khi đặt công trình.
 
 import * as THREE from 'three';
 import { BUILDINGS, FIELD, type BuildingType, type Terrain } from '../game/defs';
 import type { Battle, RaidSide } from '../game/battle';
 import { dienLevel, type Building, type GameState } from '../game/game';
 import { giongLook, type GiongLook } from '../game/giong';
-import { GRID, RIVER_START, areaStart, isUnlocked } from '../game/map';
+import { GRID, RIVER_START, areaStart, baseHeights, isUnlocked } from '../game/map';
+import { sonLook, type SonLook } from '../game/son';
+import { floodMap } from '../game/terrain';
 import { Battlefield } from './battlefield';
 import { BattleView } from './battleView';
 import { IsoCamera } from './camera';
-import { makeBaiDa, makeBayChong, makeBen, makeChoiCanh, makeDenPhuDong, makeDien, makeDoanhTrai, makeKho, makeLoRen, makeNhaSan, makeRuong } from './buildings';
-import { addSunLights } from './lights';
-import { buildForest, buildWalls, makeBoat, makeGiong, type TreeSpot, type WallSpot } from './models';
+import {
+  makeBaiDa,
+  makeBayChong,
+  makeBen,
+  makeChoiCanh,
+  makeDenPhuDong,
+  makeDenTanVien,
+  makeDien,
+  makeDoanhTrai,
+  makeKho,
+  makeLoRen,
+  makeNhaSan,
+  makeRuong,
+} from './buildings';
+import { addSunLights, type SunLights } from './lights';
+import { buildDikes, buildForest, buildWalls, makeBoat, makeGiong, makeSonTinh, type DikeSpot, type TreeSpot, type WallSpot } from './models';
 import { makeWorker, type Job } from './people';
 import { C } from './palette';
 import { ShapeBuilder, seeded } from './shapes';
@@ -19,6 +35,19 @@ import { ShapeBuilder, seeded } from './shapes';
 const HALF = GRID / 2;
 /** Mặt nước nằm thấp hơn mặt đất. */
 const WATER_Y = -0.28;
+/** Mỗi bậc đất cao chừng này (đơn vị thế giới). Mặt ô bậc h nằm ở h * LEVEL_H. */
+export const LEVEL_H = 0.3;
+const topY = (h: number) => Math.max(h, 0) * LEVEL_H;
+
+/**
+ * Mặt nước lũ khi nước dâng tới mực `level` (bậc): ở mực L, nước phủ ô bậc L − 1 mà chưa tới mặt ô bậc L.
+ * Dưới bậc 1 thì nước sông dâng dần lên từ mặt sông.
+ */
+export function waterSurface(level: number): number {
+  const one = (1 - 0.35) * LEVEL_H;
+  if (level >= 1) return (level - 0.35) * LEVEL_H;
+  return WATER_Y + Math.max(level, 0) * (one - WATER_Y);
+}
 
 /** Mật độ rừng: thưa để công trình nổi bật, không rối mắt. */
 const FOREST_DENSITY = 0.7;
@@ -101,6 +130,8 @@ interface BuildingView {
   level: number;
   damaged: boolean;
   workers: number;
+  /** Bậc nền đang vẽ. */
+  ground: number;
   people: WorkerView[];
   popAge: number;
   baseScale: number;
@@ -153,8 +184,27 @@ export class World {
   readonly view: IsoCamera;
 
   private readonly land = new InstancedBoxes(RIVER_START * RIVER_START);
+  /** Ô đất ứng với từng bản sao trong `land`, để biết người chơi chạm vào ô nào. */
+  private readonly landTiles: number[] = [];
+  /** Độ cao đã vẽ, so với state để biết khi nào phải dựng lại đất. */
+  private heights: number[] = [];
+  /** Nước lũ phủ trên các ô ngập, và lớp tô xanh báo trước vùng sẽ ngập. */
+  private readonly floodWater = new InstancedBoxes(RIVER_START * RIVER_START);
+  private readonly floodPreview = new InstancedBoxes(RIVER_START * RIVER_START);
+  private floodKey = '';
+  private riverWater?: THREE.Object3D;
+  /** Nước lũ tràn cả bờ bên kia sông, hiện khi nước dâng cao hơn mặt bãi bên ấy. */
+  private farFlood?: THREE.Object3D;
+  /** Mưa giông khi Thủy Tinh hô mưa gọi gió. */
+  private readonly rain: THREE.InstancedMesh;
+  private readonly drops: { x: number; y: number; z: number; v: number }[] = [];
+  private storm = 0;
+  private stormGoal = 0;
+  private readonly lights: SunLights;
+  private state?: GameState;
   private forest?: THREE.Object3D;
   private walls?: THREE.Object3D;
+  private dikes?: THREE.Object3D;
   private readonly ripples = new InstancedBoxes(60);
   private readonly buildingsRoot = new THREE.Group();
   private readonly views = new Map<number, BuildingView>();
@@ -165,7 +215,7 @@ export class World {
   private readonly footprint: THREE.Mesh;
   private readonly selection: THREE.LineLoop;
   private panGoal: THREE.Vector3 | null = null;
-  private readonly raidView = new BattleView(this.scene, { x: -HALF, z: -HALF });
+  private readonly raidView = new BattleView(this.scene, { x: -HALF, z: -HALF }, 1, (x, z) => this.fighterY(x, z));
   /** Bãi chiến phó bản, dựng khi cần lần đầu. */
   private field?: Battlefield;
   /** Đang xem bãi chiến: chỗ camera nhìn kinh đô trước đó, để trả về sau trận. */
@@ -174,8 +224,11 @@ export class World {
   private merchantBoat?: THREE.Object3D;
   /** Gióng đứng trước Điện, đổi dáng khi lớn lên; không còn khi đã bay về trời. */
   private giong?: { obj: THREE.Group; look: GiongLook; key: string };
+  /** Sơn Tinh đứng trước Điện ở chương 2, tới khi đánh lui Thủy Tinh thì về núi. */
+  private son?: { obj: THREE.Group; look: SonLook; key: string };
   private shownLevel = 0;
   private wallKey = '';
+  private dikeKey = '';
   private time = 0;
   private res: Resolution = 'medium';
 
@@ -192,10 +245,31 @@ export class World {
     };
     this.view.target.set(wx(19), 0, wz(19));
 
-    addSunLights(this.scene, 24, 2048);
-    this.scene.add(this.staticTerrain());
-    this.scene.add(buildForest(this.outerForestSpots()));
+    this.lights = addSunLights(this.scene, 24, 2048);
+    const edge = baseHeights();
+    this.scene.add(this.staticTerrain(edge));
+    this.scene.add(buildForest(this.outerForestSpots(edge)));
     this.scene.add(this.land.mesh, this.ripples.mesh, this.buildingsRoot);
+    // Nước lũ màu phù sa đục, mờ một chút để còn thấy móng nhà dưới nước.
+    const floodMat = this.floodWater.mesh.material as THREE.MeshLambertMaterial;
+    floodMat.transparent = true;
+    floodMat.opacity = 0.88;
+    this.floodWater.mesh.renderOrder = 1;
+    const previewMat = this.floodPreview.mesh.material as THREE.MeshLambertMaterial;
+    previewMat.transparent = true;
+    previewMat.opacity = 0.45;
+    previewMat.depthWrite = false;
+    this.floodPreview.mesh.renderOrder = 2;
+    this.scene.add(this.floodWater.mesh, this.floodPreview.mesh);
+    this.rain = new THREE.InstancedMesh(
+      new THREE.BoxGeometry(0.025, 0.55, 0.025),
+      new THREE.MeshBasicMaterial({ color: C.rain, transparent: true, opacity: 0.55, depthWrite: false }),
+      420,
+    );
+    this.rain.frustumCulled = false;
+    this.rain.visible = false;
+    this.scene.add(this.rain);
+    for (let i = 0; i < 420; i++) this.drops.push({ x: Math.random() * 40 - 20, y: Math.random() * 16, z: Math.random() * 40 - 20, v: 14 + Math.random() * 6 });
     this.addBoats();
     this.initRipples();
 
@@ -228,30 +302,48 @@ export class World {
     this.resize();
   }
 
-  /** Đất ngoài lưới, hai dòng sông và bờ bên kia. */
-  private staticTerrain(): THREE.Object3D {
+  /**
+   * Đất ngoài lưới, hai dòng sông và bờ bên kia. Đất bên này sông kéo dài từng dải theo đúng bậc của ô mép lưới,
+   * để mép rừng liền với đất trong lưới.
+   */
+  private staticTerrain(edge: number[]): THREE.Object3D {
     const group = new THREE.Group();
     const far = 70;
     const river = RIVER_START - HALF;
     const land = new ShapeBuilder();
-    // Đất bên này sông (phía rừng), nằm dưới các ô lưới.
-    land.box(far + river, 1, far + river, C.grassLocked[0], (river - far) / 2, -0.52, (river - far) / 2);
+    const strip = (w: number, d: number, h: number, x: number, z: number, shade: number) => {
+      const top = topY(h);
+      land.box(w, top + 1, d, C.grassLocked[shade % 3], x, (top - 1) / 2 - 0.02, z);
+    };
+    // Đất bên này sông (phía rừng): dải phía bắc, dải phía tây, và góc tây bắc.
+    for (let x = 0; x < RIVER_START; x++) strip(1, far, edge[x], wx(x) + 0.5, wz(0) - far / 2, x);
+    for (let z = 0; z < RIVER_START; z++) strip(far, 1, edge[z * GRID], wx(0) - far / 2, wz(z) + 0.5, z + 1);
+    strip(far, far, edge[0], wx(0) - far / 2, wz(0) - far / 2, 0);
     // Bờ bên kia sông Thao (phía đông) và sông Đà (phía nam).
     land.box(far - HALF, 1, 2 * far, C.grassLocked[1], (HALF + far) / 2, -0.52, 0);
     land.box(far + river, 1, far - HALF, C.grassLocked[2], (river - far) / 2, -0.52, (HALF + far) / 2);
     const water = new ShapeBuilder();
     water.box(HALF - river, 1, 2 * far, C.water[0], (river + HALF) / 2, WATER_Y - 0.5, 0);
     water.box(far + river, 1, HALF - river, C.water[1], (river - far) / 2, WATER_Y - 0.5, (river + HALF) / 2);
-    for (const b of [land, water]) {
-      const mesh = b.mesh(groundMaterial);
-      mesh.castShadow = false;
-      group.add(mesh);
-    }
+    const landMesh = land.mesh(groundMaterial);
+    landMesh.castShadow = false;
+    const waterMesh = water.mesh(groundMaterial);
+    waterMesh.castShadow = false;
+    this.riverWater = waterMesh;
+    // Bờ bên kia sông Thao và sông Đà: mặt nước lũ phẳng phủ kín, chỉ cây cối nhô lên.
+    const flood = new ShapeBuilder();
+    flood.box(far - HALF, 0.1, 2 * far, C.flood, (HALF + far) / 2, -0.05, 0);
+    flood.box(far + river, 0.1, far - HALF, C.flood, (river - far) / 2, -0.05, (HALF + far) / 2);
+    const floodMesh = flood.mesh(new THREE.MeshLambertMaterial({ vertexColors: true, transparent: true, opacity: 0.88 }));
+    floodMesh.castShadow = false;
+    floodMesh.visible = false;
+    this.farFlood = floodMesh;
+    group.add(landMesh, waterMesh, floodMesh);
     return group;
   }
 
   /** Rừng bao ngoài lưới và cây thưa ở bờ bên kia. */
-  private outerForestSpots(): TreeSpot[] {
+  private outerForestSpots(edge: number[]): TreeSpot[] {
     const spots: TreeSpot[] = [];
     const rand = seeded(7);
     for (let x = -10; x < GRID + 8; x++) {
@@ -263,7 +355,10 @@ export class World {
         if (rand() > (farBank ? 0.25 : 0.6) * FOREST_DENSITY) continue;
         const cx = wx(x) + 0.5 + (rand() - 0.5) * 0.4;
         const cz = wz(z) + 0.5 + (rand() - 0.5) * 0.4;
-        spots.push({ x: cx, z: cz, kind: rand() < 0.3 ? 'bamboo' : 'tree', seed: Math.floor(rand() * 1e9) });
+        const ex = Math.min(Math.max(x, 0), RIVER_START - 1);
+        const ez = Math.min(Math.max(z, 0), RIVER_START - 1);
+        const y = farBank ? 0 : topY(edge[ez * GRID + ex]);
+        spots.push({ x: cx, y, z: cz, kind: rand() < 0.3 ? 'bamboo' : 'tree', seed: Math.floor(rand() * 1e9) });
       }
     }
     return spots;
@@ -326,28 +421,57 @@ export class World {
     for (const v of this.views.values()) this.buildingsRoot.remove(v.group);
     this.views.clear();
     this.wallKey = '';
+    this.dikeKey = '';
+    this.floodKey = '';
+    this.heights = [];
     this.shownLevel = 0;
     this.setSelection(null);
     if (this.merchantBoat) this.scene.remove(this.merchantBoat);
     this.merchantBoat = undefined;
   }
 
+  /** Mặt đất (tọa độ thế giới) của ô (x, z). */
+  private groundY(x: number, z: number): number {
+    const h = this.heights[z * GRID + x];
+    return h === undefined ? 0 : topY(h);
+  }
+
+  /** Chỗ lính đứng trong trận giữ kinh đô (tọa độ trận): mặt đất, hay ngập nửa người dưới nước. */
+  private fighterY(x: number, z: number): number {
+    const tx = Math.floor(x);
+    const tz = Math.floor(z);
+    const inRiver = tx >= RIVER_START || tz >= RIVER_START || tx < 0 || tz < 0;
+    const ground = inRiver ? WATER_Y : this.groundY(tx, tz);
+    const water = this.state?.raid.water ?? 0;
+    const surface = water > 0 ? waterSurface(water) : WATER_Y;
+    if (inRiver) return Math.max(WATER_Y, surface) - 0.3;
+    return surface > ground ? Math.max(ground, surface - 0.3) : ground;
+  }
+
   /** Cập nhật cảnh theo state. Chỉ dựng lại phần đã thay đổi. */
   sync(state: GameState): void {
+    this.state = state;
     const level = dienLevel(state);
-    if (level !== this.shownLevel) {
+    const heightsChanged = state.heights.length !== this.heights.length || state.heights.some((h, i) => h !== this.heights[i]);
+    if (heightsChanged) this.heights = [...state.heights];
+    if (level !== this.shownLevel || heightsChanged) {
       this.shownLevel = level;
       this.rebuildLand(level);
       this.rebuildForest(level);
       this.rebuildGridOverlay(level);
+      this.floodKey = '';
     }
 
     const alive = new Set<number>();
     for (const b of state.buildings) {
-      if (b.type === 'luy') continue;
+      if (b.type === 'luy' || b.type === 'de') continue;
       alive.add(b.id);
       const v = this.views.get(b.id);
       if (!v || v.level !== b.level || v.damaged !== !!b.damaged || v.workers !== b.workers) this.createView(b);
+      else if (v.ground !== this.heights[b.z * GRID + b.x]) {
+        v.ground = this.heights[b.z * GRID + b.x];
+        v.group.position.y = topY(v.ground);
+      }
     }
     for (const [id, v] of this.views) {
       if (!alive.has(id)) {
@@ -358,16 +482,87 @@ export class World {
 
     this.syncMerchant(state);
     this.syncGiong(state);
+    this.syncSon(state);
 
     const walls = state.buildings.filter((b) => b.type === 'luy');
-    const key = walls.map((b) => `${b.id}:${b.level}:${b.damaged ? 1 : 0}`).join(',');
+    const key = walls.map((b) => `${b.id}:${b.level}:${b.damaged ? 1 : 0}:${this.heights[b.z * GRID + b.x]}`).join(',');
     if (key !== this.wallKey) {
       this.wallKey = key;
       if (this.walls) this.scene.remove(this.walls);
-      const spots: WallSpot[] = walls.map((w) => ({ x: wx(w.x) + 0.5, z: wz(w.z) + 0.5, seed: w.x * 92821 + w.z * 68917, level: w.level, damaged: !!w.damaged }));
+      const spots: WallSpot[] = walls.map((w) => ({
+        x: wx(w.x) + 0.5,
+        y: this.groundY(w.x, w.z),
+        z: wz(w.z) + 0.5,
+        seed: w.x * 92821 + w.z * 68917,
+        level: w.level,
+        damaged: !!w.damaged,
+      }));
       this.walls = buildWalls(spots);
       this.scene.add(this.walls);
     }
+
+    const dikes = state.buildings.filter((b) => b.type === 'de');
+    const dkey = dikes.map((b) => `${b.id}:${b.level}:${b.damaged ? 1 : 0}:${this.heights[b.z * GRID + b.x]}`).join(',');
+    if (dkey !== this.dikeKey) {
+      this.dikeKey = dkey;
+      if (this.dikes) this.scene.remove(this.dikes);
+      const spots: DikeSpot[] = dikes.map((d) => ({ x: wx(d.x) + 0.5, y: this.groundY(d.x, d.z), z: wz(d.z) + 0.5, level: d.level, damaged: !!d.damaged }));
+      this.dikes = buildDikes(spots);
+      this.scene.add(this.dikes);
+      this.floodKey = '';
+    }
+    this.syncFlood(state);
+  }
+
+  /** Gọi mỗi khung hình: nước lũ dâng, rút mượt theo state mà không phải dựng lại cả cảnh. */
+  updateFlood(state: GameState): void {
+    if (this.state !== state) return;
+    this.syncFlood(state);
+  }
+
+  /** Nước lũ phủ các ô đang ngập, nước sông dâng theo; mưa giông khi Thủy Tinh dâng nước. */
+  private syncFlood(state: GameState): void {
+    const raid = state.raid;
+    this.stormGoal = raid.foe === 'thuy' && raid.phase !== 'idle' ? 1 : raid.water > 0.02 ? 0.5 : 0;
+    const water = raid.water;
+    const key = water > 0.005 ? `${water.toFixed(2)}:${state.buildings.filter((b) => b.type === 'de' && b.damaged).length}` : '';
+    if (key === this.floodKey) return;
+    this.floodKey = key;
+    const surface = waterSurface(water);
+    if (this.riverWater) this.riverWater.position.y = Math.max(0, surface - WATER_Y);
+    if (this.farFlood) {
+      this.farFlood.visible = surface > 0.02;
+      this.farFlood.position.y = surface;
+    }
+    this.floodWater.begin();
+    if (water > 0.005) {
+      const wet = floodMap(state, water, dienLevel(state));
+      for (let z = 0; z < RIVER_START; z++) {
+        for (let x = 0; x < RIVER_START; x++) {
+          if (!wet[z * GRID + x]) continue;
+          const top = this.groundY(x, z);
+          if (surface <= top + 0.01) continue;
+          const shade = (x * 5 + z * 3) % 2 ? C.flood : C.floodDeep;
+          this.floodWater.add(1, surface - top, 1, shade, wx(x) + 0.5, (surface + top) / 2, wz(z) + 0.5);
+        }
+      }
+    }
+    this.floodWater.end();
+  }
+
+  /** Tô xanh những ô sẽ ngập khi lũ dâng tới `level`; null để tắt. */
+  setFloodPreview(state: GameState | null, level = 0): void {
+    this.floodPreview.begin();
+    if (state && level > 0) {
+      const wet = floodMap(state, level, dienLevel(state));
+      for (let z = 0; z < RIVER_START; z++) {
+        for (let x = 0; x < RIVER_START; x++) {
+          if (!wet[z * GRID + x]) continue;
+          this.floodPreview.add(0.96, 0.04, 0.96, 0x3f8fd0, wx(x) + 0.5, this.groundY(x, z) + 0.04, wz(z) + 0.5);
+        }
+      }
+    }
+    this.floodPreview.end();
   }
 
   /** Thuyền buôn lớn neo cạnh bến đầu tiên trong lúc đang đậu. */
@@ -398,7 +593,8 @@ export class World {
     const def = BUILDINGS[b.type];
     const group = this.makeBuilding(b.type, b.level);
     if (b.type === 'ben') group.rotation.y = b.x + def.w === RIVER_START ? Math.PI / 2 : 0;
-    group.position.set(wx(b.x) + def.w / 2, 0, wz(b.z) + def.d / 2);
+    const ground = this.heights[b.z * GRID + b.x] ?? 0;
+    group.position.set(wx(b.x) + def.w / 2, topY(ground), wz(b.z) + def.d / 2);
     group.userData.buildingId = b.id;
     // Dân làm việc theo nghề; Điện có Lạc hầu, từ cấp 2 có thêm lính gác. Công trình hư thì không ai làm.
     const people: WorkerView[] = [];
@@ -421,7 +617,7 @@ export class World {
     }
     if (b.type === 'ben') {
       const boat = makeBoat();
-      boat.position.set(-0.15, WATER_Y - 0.02, 1.75);
+      boat.position.set(-0.15, WATER_Y - 0.02 - topY(ground), 1.75);
       boat.userData.dock = true;
       group.add(boat);
     }
@@ -441,7 +637,7 @@ export class World {
       group.add(smoke);
     }
     this.buildingsRoot.add(group);
-    this.views.set(b.id, { group, type: b.type, level: b.level, damaged: !!b.damaged, workers: b.workers, people, popAge: 0, baseScale: group.scale.x });
+    this.views.set(b.id, { group, type: b.type, level: b.level, damaged: !!b.damaged, workers: b.workers, ground, people, popAge: 0, baseScale: group.scale.x });
   }
 
   private makeBuilding(type: BuildingType, level: number): THREE.Group {
@@ -456,20 +652,30 @@ export class World {
     if (type === 'choiCanh') return makeChoiCanh(level);
     if (type === 'bayChong') return makeBayChong();
     if (type === 'denPhuDong') return makeDenPhuDong();
+    if (type === 'denTanVien') return makeDenTanVien();
     return new THREE.Group();
   }
 
+  /** Đất trong lưới: mỗi ô một cột đất cao theo bậc, bậc cao sáng màu hơn một chút. */
   private rebuildLand(level: number): void {
     this.land.begin();
+    this.landTiles.length = 0;
+    const c = new THREE.Color();
     for (let x = 0; x < RIVER_START; x++) {
       for (let z = 0; z < RIVER_START; z++) {
         const open = isUnlocked(x, z, level);
         const palette = open ? C.grass : C.grassLocked;
-        const shade = palette[(x * 7 + z * 13) % 3];
-        this.land.add(1, 0.4, 1, shade, wx(x) + 0.5, -0.2, wz(z) + 0.5);
+        const h = Math.max(this.heights[z * GRID + x] ?? 0, 0);
+        c.setHex(palette[(x * 7 + z * 13) % 3]).offsetHSL(0, -0.02 * h, 0.022 * h - 0.02);
+        const top = topY(h);
+        this.land.add(1, top + 0.5, 1, c.getHex(), wx(x) + 0.5, (top - 0.5) / 2, wz(z) + 0.5);
+        this.landTiles.push(z * GRID + x);
       }
     }
     this.land.end();
+    // Đất đổi bậc thì khối bao cũng đổi: tính lại khi chạm lần sau.
+    this.land.mesh.boundingSphere = null;
+    this.land.mesh.boundingBox = null;
   }
 
   private rebuildForest(level: number): void {
@@ -485,7 +691,7 @@ export class World {
         if (rand() > (nearEdge ? 0.25 : 0.65) * FOREST_DENSITY) continue;
         const cx = wx(x) + 0.5 + (rand() - 0.5) * 0.3;
         const cz = wz(z) + 0.5 + (rand() - 0.5) * 0.3;
-        spots.push({ x: cx, z: cz, kind: rand() < 0.35 ? 'bamboo' : 'tree', seed: Math.floor(rand() * 1e9) });
+        spots.push({ x: cx, y: this.groundY(x, z), z: cz, kind: rand() < 0.35 ? 'bamboo' : 'tree', seed: Math.floor(rand() * 1e9) });
       }
     }
     this.forest = buildForest(spots);
@@ -500,9 +706,17 @@ export class World {
     }
     const lo = areaStart(level);
     const pts: THREE.Vector3[] = [];
-    for (let i = lo; i <= RIVER_START; i++) {
-      pts.push(new THREE.Vector3(wx(i), 0.02, wz(lo)), new THREE.Vector3(wx(i), 0.02, wz(RIVER_START)));
-      pts.push(new THREE.Vector3(wx(lo), 0.02, wz(i)), new THREE.Vector3(wx(RIVER_START), 0.02, wz(i)));
+    // Viền từng ô ở đúng mặt đất của ô, để lưới bám theo bậc đất.
+    for (let x = lo; x < RIVER_START; x++) {
+      for (let z = lo; z < RIVER_START; z++) {
+        const y = this.groundY(x, z) + 0.02;
+        const x0 = wx(x) + 0.03;
+        const x1 = wx(x + 1) - 0.03;
+        const z0 = wz(z) + 0.03;
+        const z1 = wz(z + 1) - 0.03;
+        pts.push(new THREE.Vector3(x0, y, z0), new THREE.Vector3(x1, y, z0), new THREE.Vector3(x1, y, z0), new THREE.Vector3(x1, y, z1));
+        pts.push(new THREE.Vector3(x1, y, z1), new THREE.Vector3(x0, y, z1), new THREE.Vector3(x0, y, z1), new THREE.Vector3(x0, y, z0));
+      }
     }
     const geo = new THREE.BufferGeometry().setFromPoints(pts);
     this.gridOverlay = new THREE.LineSegments(geo, new THREE.LineBasicMaterial({ color: 0xfff8e0, transparent: true, opacity: 0.35 }));
@@ -520,8 +734,13 @@ export class World {
     if (v) v.popAge = 0.0001;
   }
 
-  /** Ô lưới dưới vị trí màn hình, hoặc null nếu chạm ra ngoài lưới. */
+  /** Ô lưới dưới vị trí màn hình, hoặc null nếu chạm ra ngoài lưới. Chạm trúng mặt đất bậc nào thì lấy ô đó. */
   pickTile(clientX: number, clientY: number): { x: number; z: number } | null {
+    const hit = this.view.setRay(clientX, clientY).intersectObject(this.land.mesh, false)[0];
+    if (hit && hit.instanceId !== undefined) {
+      const i = this.landTiles[hit.instanceId];
+      if (i !== undefined) return { x: i % GRID, z: Math.floor(i / GRID) };
+    }
     const p = this.view.groundPoint(clientX, clientY);
     if (!p) return null;
     const x = Math.floor(p.x + HALF);
@@ -529,29 +748,58 @@ export class World {
     return x >= 0 && z >= 0 && x < GRID && z < GRID ? { x, z } : null;
   }
 
-  /** Id công trình (trừ lũy tre) dưới vị trí chạm, ưu tiên phần nhô cao như mái nhà. */
+  /** Chỗ đứng trước Điện, bên phải bậc lên: nơi Gióng, rồi Sơn Tinh đứng. */
+  private heroSpot(dien: Building): { x: number; y: number; z: number } {
+    const tx = Math.min(dien.x + 3, RIVER_START - 1);
+    const tz = Math.min(dien.z + 4, RIVER_START - 1);
+    return { x: wx(dien.x) + 3.6, y: this.groundY(tx, tz), z: wz(dien.z) + 4.5 };
+  }
+
   /** Gióng đứng ngay trước Điện, bên phải bậc lên. */
   private syncGiong(state: GameState): void {
     const look = giongLook(state);
     const dien = state.buildings.find((b) => b.type === 'dien');
-    const key = look && dien ? `${look}:${dien.x}:${dien.z}` : '';
+    const spot = dien ? this.heroSpot(dien) : null;
+    const key = look && spot ? `${look}:${spot.x}:${spot.y}:${spot.z}` : '';
     if (this.giong?.key === key) return;
     if (this.giong) this.scene.remove(this.giong.obj);
     this.giong = undefined;
-    if (!look || !dien) return;
+    if (!look || !spot) return;
     const obj = makeGiong(look);
     obj.scale.setScalar(look === 'trangSi' ? 0.9 : look === 'be' ? 1.1 : 1);
-    obj.position.set(wx(dien.x) + 3.6, 0, wz(dien.z) + 4.5);
+    obj.position.set(spot.x, spot.y, spot.z);
     obj.rotation.y = look === 'trangSi' ? -Math.PI / 2 + 0.5 : 0.3;
     this.scene.add(obj);
     this.giong = { obj, look, key };
   }
 
-  /** Người chơi chạm vào Gióng trước Điện. */
-  pickGiong(clientX: number, clientY: number): boolean {
-    if (!this.giong) return false;
-    return this.view.setRay(clientX, clientY).intersectObject(this.giong.obj, true).length > 0;
+  /** Sơn Tinh đứng trên mỏm đá trước Điện ở chương 2, đánh lui Thủy Tinh thì về núi. */
+  private syncSon(state: GameState): void {
+    const look = sonLook(state);
+    const dien = state.buildings.find((b) => b.type === 'dien');
+    const spot = dien ? this.heroSpot(dien) : null;
+    const key = look && spot ? `${look}:${spot.x}:${spot.y}:${spot.z}` : '';
+    if (this.son?.key === key) return;
+    if (this.son) this.scene.remove(this.son.obj);
+    this.son = undefined;
+    if (!look || !spot) return;
+    const obj = makeSonTinh({ rock: true });
+    obj.scale.setScalar(0.95);
+    obj.position.set(spot.x, spot.y, spot.z);
+    obj.rotation.y = 0.4;
+    this.scene.add(obj);
+    this.son = { obj, look, key };
   }
+
+  /** Người chơi chạm vào tướng đứng trước Điện: Gióng hay Sơn Tinh. */
+  pickHero(clientX: number, clientY: number): 'giong' | 'son' | null {
+    const ray = this.view.setRay(clientX, clientY);
+    if (this.giong && ray.intersectObject(this.giong.obj, true).length) return 'giong';
+    if (this.son && ray.intersectObject(this.son.obj, true).length) return 'son';
+    return null;
+  }
+
+  /** Id công trình (trừ lũy tre, đê) dưới vị trí chạm, ưu tiên phần nhô cao như mái nhà. */
 
   pickBuildingId(clientX: number, clientY: number): number | null {
     const ray = this.view.setRay(clientX, clientY);
@@ -566,7 +814,7 @@ export class World {
 
   /** Vị trí màn hình của tâm ô (x, z). Dùng cho kiểm thử tự động. */
   tileToScreen(x: number, z: number): { x: number; y: number } {
-    const p = new THREE.Vector3(wx(x) + 0.5, 0, wz(z) + 0.5).project(this.view.camera);
+    const p = new THREE.Vector3(wx(x) + 0.5, this.groundY(x, z), wz(z) + 0.5).project(this.view.camera);
     const rect = this.renderer.domElement.getBoundingClientRect();
     return { x: rect.left + ((p.x + 1) / 2) * rect.width, y: rect.top + ((1 - p.y) / 2) * rect.height };
   }
@@ -620,23 +868,31 @@ export class World {
     }
   }
 
-  /** Dải đỏ nhấp nháy ở bìa rừng phía giặc sắp tới; null để tắt. */
+  /** Dải đỏ nhấp nháy ở bìa rừng (giặc Ân) hay trên mặt sông (thủy quái) phía giặc sắp tới; null để tắt. */
   setRaidWarning(side: RaidSide | null): void {
     this.warning.visible = !!side;
     if (!side) return;
     const len = RIVER_START;
     if (side === 'bac') {
       this.warning.scale.set(len, 1, 3);
-      this.warning.position.set(wx(0) + len / 2, 0.05, wz(0) + 1.5);
-    } else {
+      this.warning.position.set(wx(0) + len / 2, 1.0, wz(0) + 1.5);
+    } else if (side === 'tay') {
       this.warning.scale.set(3, 1, len);
-      this.warning.position.set(wx(0) + 1.5, 0.05, wz(0) + len / 2);
+      this.warning.position.set(wx(0) + 1.5, 1.0, wz(0) + len / 2);
+    } else if (side === 'nam') {
+      this.warning.scale.set(len, 1, 2.6);
+      this.warning.position.set(wx(0) + len / 2, WATER_Y + 0.08, wz(RIVER_START) + 1.4);
+    } else {
+      this.warning.scale.set(2.6, 1, len);
+      this.warning.position.set(wx(RIVER_START) + 1.4, WATER_Y + 0.08, wz(0) + len / 2);
     }
   }
 
-  /** Lướt camera tới bìa rừng phía giặc tới. */
+  /** Lướt camera tới phía giặc tới. */
   lookAtEdge(side: RaidSide): void {
-    this.panGoal = side === 'bac' ? new THREE.Vector3(wx(15), 0, wz(5)) : new THREE.Vector3(wx(5), 0, wz(15));
+    const at: Record<RaidSide, [number, number]> = { bac: [15, 5], tay: [5, 15], nam: [17, 23], dong: [23, 17] };
+    const [x, z] = at[side];
+    this.panGoal = new THREE.Vector3(wx(x), 0, wz(z));
   }
 
   /** Vẽ lính hai bên của trận giữ kinh đô; null khi không có trận. */
@@ -680,8 +936,8 @@ export class World {
     this.field?.view.update(battle, dt);
   }
 
-  /** Bóng mờ của công trình sắp đặt, viền xanh nếu đặt được, đỏ nếu không. */
-  setGhost(type: BuildingType | null, x = 0, z = 0, valid = true): void {
+  /** Bóng mờ của công trình sắp đặt ở mặt đất bậc `h`, viền xanh nếu đặt được, đỏ nếu không. */
+  setGhost(type: BuildingType | null, x = 0, z = 0, valid = true, h = 0): void {
     if (!type) {
       if (this.ghost) this.scene.remove(this.ghost);
       this.ghost = undefined;
@@ -709,11 +965,12 @@ export class World {
       });
       this.scene.add(this.ghost);
     }
-    this.ghost.position.set(wx(x) + def.w / 2, 0.02, wz(z) + def.d / 2);
+    const y = topY(h);
+    this.ghost.position.set(wx(x) + def.w / 2, y + 0.02, wz(z) + def.d / 2);
     if (type === 'ben') this.ghost.rotation.y = x + def.w === RIVER_START ? Math.PI / 2 : 0;
     this.footprint.visible = true;
     this.footprint.scale.set(def.w, 1, def.d);
-    this.footprint.position.set(wx(x) + def.w / 2, 0.03, wz(z) + def.d / 2);
+    this.footprint.position.set(wx(x) + def.w / 2, y + 0.03, wz(z) + def.d / 2);
     (this.footprint.material as THREE.MeshBasicMaterial).color.set(valid ? 0x4caf50 : 0xe53935);
   }
 
@@ -725,7 +982,7 @@ export class World {
     const def = BUILDINGS[b.type];
     this.selection.visible = true;
     this.selection.scale.set(def.w + 0.15, 1, def.d + 0.15);
-    this.selection.position.set(wx(b.x) + def.w / 2, 0.06, wz(b.z) + def.d / 2);
+    this.selection.position.set(wx(b.x) + def.w / 2, this.groundY(b.x, b.z) + 0.06, wz(b.z) + def.d / 2);
   }
 
   update(dt: number): void {
@@ -767,6 +1024,14 @@ export class World {
       this.merchantBoat.position.y = WATER_Y - 0.02 + Math.sin(t * 1.2) * 0.04;
     }
 
+    if (this.son) {
+      // Sơn Tinh đứng chờ, tay gậy đung đưa.
+      const staff = this.son.obj.children.find((c) => c.userData.weapon);
+      if (staff) staff.rotation.x = -0.35 + 0.12 * Math.sin(t * 1.3);
+    }
+
+    this.updateStorm(dt);
+
     if (this.giong) {
       const g = this.giong;
       // Cậu bé lắc lư, thiếu niên cúi ăn cơm, ngựa sắt thở ra lửa.
@@ -806,6 +1071,37 @@ export class World {
     }
 
     this.renderer.render(this.inField && this.field ? this.field.scene : this.scene, this.view.camera);
+  }
+
+  /** Trời tối sầm và mưa xối xả khi Thủy Tinh hô mưa gọi gió, tạnh dần khi nước rút. */
+  private updateStorm(dt: number): void {
+    this.storm += (this.stormGoal - this.storm) * Math.min(1, dt * 1.5);
+    const k = this.storm;
+    const sky = (this.scene.background as THREE.Color).setHex(C.sky).lerp(new THREE.Color(C.storm), k * 0.85);
+    (this.scene.fog as THREE.Fog).color.copy(sky);
+    this.lights.sun.intensity = 2.6 * (1 - 0.45 * k);
+    this.lights.hemi.intensity = 0.9 * (1 - 0.2 * k);
+    this.rain.visible = !this.inField && k > 0.05;
+    if (!this.rain.visible) return;
+    const m = new THREE.Matrix4();
+    const q = new THREE.Quaternion().setFromEuler(new THREE.Euler(0.25, 0, -0.15));
+    const p = new THREE.Vector3();
+    const sc = new THREE.Vector3(1, 1, 1);
+    const c = this.view.target;
+    const shown = Math.floor(this.drops.length * Math.min(1, k));
+    for (let i = 0; i < this.drops.length; i++) {
+      const d = this.drops[i];
+      d.y -= d.v * dt;
+      d.x += 1.2 * dt;
+      if (d.y < 0) {
+        d.y += 16;
+        d.x = Math.random() * 40 - 20;
+        d.z = Math.random() * 40 - 20;
+      }
+      sc.setScalar(i < shown ? 1 : 0.0001);
+      this.rain.setMatrixAt(i, m.compose(p.set(c.x + d.x, d.y, c.z + d.z), q, sc));
+    }
+    this.rain.instanceMatrix.needsUpdate = true;
   }
 }
 

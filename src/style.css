@@ -824,6 +824,17 @@ textarea {
   color: var(--bronze-dark);
 }
 
+.camp-tabs {
+  display: flex;
+  gap: 6px;
+}
+
+.camp-tabs .btn {
+  padding: 4px 10px;
+  min-height: 30px;
+  font-size: 13px;
+}
+
 .camp-head .close {
   width: 34px;
   height: 34px;
@@ -894,6 +905,17 @@ textarea {
   stroke-width: 4;
   stroke-linecap: round;
   opacity: 0.8;
+}
+
+.map .flood {
+  fill: #9fb6a8;
+  opacity: 0.55;
+}
+
+.map .cloud {
+  fill: #fbf4e2;
+  stroke: var(--ink);
+  stroke-width: 0.4;
 }
 
 .map .road {
@@ -1199,6 +1221,18 @@ textarea {
 .speaker.giong .avatar,
 .speaker.trangSi .avatar {
   border-color: var(--red);
+}
+
+.speaker.sonTinh .avatar {
+  border-color: #55703a;
+}
+
+.speaker.thuyTinh .avatar {
+  border-color: #2f6f8f;
+}
+
+.speaker.miNuong .avatar {
+  border-color: #c06a8a;
 }
 
 .story .line {

@@ -3,7 +3,8 @@ import { alliesLeft, heroOf, skillReady, startBattle, startFieldBattle, stepFiel
 import { canStartStage, startStage } from './campaign';
 import { DEFAULT_ROWS, FIELD, FIRE, GIONG, GIONG_FEED, GIONG_REST_MS, STAGES, UNITS, type SkillId, type UnitType } from './defs';
 import { canPlace, createInitialState, place, productionPerMinute, tick, type GameState } from './game';
-import { canFeed, canForge, feedGiong, forgeGear, giongLook, giongReady, heroSetup, markStory, pendingStory } from './giong';
+import { canFeed, canForge, feedGiong, forgeGear, giongLook, giongReady, heroSetup } from './giong';
+import { markStory, pendingStory } from './story';
 import { deserialize, serialize } from './save';
 
 type Army = Record<UnitType, number>;
@@ -33,7 +34,7 @@ const SKILL_ORDER: SkillId[] = ['trongTran', 'phunLua', 'nhoTre'];
 
 function fieldFight(stage: number, army: Army, hero: boolean, skills = true): Battle {
   const def = STAGES[stage - 1];
-  const b = startFieldBattle({ id: 1, stage, enemies: def.enemies, hpScale: def.hpScale, army, rows: DEFAULT_ROWS, hero: hero ? { bamboo: stage > 6, glow: false } : null });
+  const b = startFieldBattle({ id: 1, stage, enemies: def.enemies, hpScale: def.hpScale, army, rows: DEFAULT_ROWS, hero: hero ? { kind: 'giong', bamboo: stage > 6, glow: false, non: false } : null });
   for (let i = 0; i < 20 * 120 && !stepField(b, 0.05); i++) if (skills && b.t > 3) for (const k of SKILL_ORDER) useSkill(b, k);
   return b;
 }
@@ -79,20 +80,20 @@ describe('nuôi Gióng', () => {
     withGiong(s);
     expect(giongReady(s)).toBe(true);
     expect(giongLook(s)).toBe('trangSi');
-    expect(heroSetup(s)).toEqual({ bamboo: false, glow: false });
+    expect(heroSetup(s)).toEqual({ kind: 'giong', bamboo: false, glow: false, non: false });
   });
 });
 
 describe('Gióng trong trận', () => {
   it('ra trận cùng quân ta, có kỹ năng Phun lửa, chưa có Nhổ tre', () => {
-    const b = startFieldBattle({ id: 1, stage: 1, enemies: { giaoAn: 4 }, hpScale: 1, army: { giao: 2, cung: 0, voi: 0 }, rows: DEFAULT_ROWS, hero: { bamboo: false, glow: false } });
+    const b = startFieldBattle({ id: 1, stage: 1, enemies: { giaoAn: 4 }, hpScale: 1, army: { giao: 2, cung: 0, voi: 0 }, rows: DEFAULT_ROWS, hero: { kind: 'giong', bamboo: false, glow: false, non: false } });
     expect(heroOf(b)).toBeDefined();
     expect(b.skills).toEqual(['trongTran', 'phunLua']);
     expect(skillReady(b, 'nhoTre')).toBe(false);
   });
 
   it('Phun lửa đốt giặc trong dải lửa và đưa Gióng lao lên', () => {
-    const b = startFieldBattle({ id: 1, stage: 1, enemies: { giaoAn: 3 }, hpScale: 1, army: { giao: 0, cung: 0, voi: 0 }, rows: DEFAULT_ROWS, hero: { bamboo: false, glow: false } });
+    const b = startFieldBattle({ id: 1, stage: 1, enemies: { giaoAn: 3 }, hpScale: 1, army: { giao: 0, cung: 0, voi: 0 }, rows: DEFAULT_ROWS, hero: { kind: 'giong', bamboo: false, glow: false, non: false } });
     const hero = heroOf(b)!;
     // Dồn giặc vào một hàng thẳng trước mặt Gióng.
     const foes = b.fighters.filter((f) => f.side === 'giac');
@@ -109,7 +110,7 @@ describe('Gióng trong trận', () => {
   });
 
   it('roi gãy rồi thì có Nhổ tre: đánh giặc quanh mình và hất ra xa', () => {
-    const b = startFieldBattle({ id: 1, stage: 1, enemies: { giaoAn: 2 }, hpScale: 1, army: { giao: 0, cung: 0, voi: 0 }, rows: DEFAULT_ROWS, hero: { bamboo: true, glow: false } });
+    const b = startFieldBattle({ id: 1, stage: 1, enemies: { giaoAn: 2 }, hpScale: 1, army: { giao: 0, cung: 0, voi: 0 }, rows: DEFAULT_ROWS, hero: { kind: 'giong', bamboo: true, glow: false, non: false } });
     const hero = heroOf(b)!;
     const foes = b.fighters.filter((f) => f.side === 'giac');
     foes[0].x = hero.x + 1;
@@ -123,7 +124,7 @@ describe('Gióng trong trận', () => {
   });
 
   it('Gióng không chết: hết sức thì rút khỏi trận, không tính vào lính tử trận', () => {
-    const b = startFieldBattle({ id: 1, stage: 4, enemies: { phoTuong: 3 }, hpScale: 3, army: { giao: 0, cung: 0, voi: 0 }, rows: DEFAULT_ROWS, hero: { bamboo: false, glow: false } });
+    const b = startFieldBattle({ id: 1, stage: 4, enemies: { phoTuong: 3 }, hpScale: 3, army: { giao: 0, cung: 0, voi: 0 }, rows: DEFAULT_ROWS, hero: { kind: 'giong', bamboo: false, glow: false, non: false } });
     while (!stepField(b, 0.05));
     expect(b.outcome).toBe('lose');
     expect(b.hero?.down).toBe(true);
@@ -217,7 +218,7 @@ describe('roi gãy, kết chương, Đền Phù Đổng', () => {
     winStage(s, 8, { giao: 14, cung: 12, voi: 4 });
     expect(s.giong.ascended).toBe(true);
     expect(giongLook(s)).toBeNull();
-    expect(heroSetup(s)).toEqual({ bamboo: true, glow: true });
+    expect(heroSetup(s)).toEqual({ kind: 'giong', bamboo: true, glow: true, non: false });
     expect(canPlace(s, 'denPhuDong', 3, 3).ok).toBe(true);
   });
 

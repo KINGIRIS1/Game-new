@@ -3,11 +3,11 @@
 
 import * as THREE from 'three';
 import type { Battle, FighterKind } from '../game/battle';
-import { FIRE } from '../game/defs';
-import { WEAPON_REST, makeFighter, makeGiong } from './models';
+import { FIRE, HILL } from '../game/defs';
+import { WEAPON_REST, makeFighter, makeGiong, makeMountain, makeSonTinh } from './models';
 import { C } from './palette';
-import { seeded } from './shapes';
-import { inkThin, outlineOf } from './toon';
+import { ShapeBuilder, seeded } from './shapes';
+import { ToonModel, inkThin, outlineOf, toon } from './toon';
 
 interface FighterView {
   obj: THREE.Group;
@@ -20,6 +20,17 @@ interface FighterView {
   smash: number;
   /** Gióng đang phi ngựa dọc đường lao (Phun lửa), tọa độ trận. */
   dash?: { fromX: number; fromZ: number; toX: number; toZ: number; age: number };
+  /** Đá Dời non mọc quanh chân tên giặc đang bị giữ chân. */
+  rocks?: { group: THREE.Group; age: number };
+  /** Núi Tản Viên dâng lên dưới chân Sơn Tinh khi Thủy Tinh rút quân. */
+  peak?: THREE.Group;
+}
+
+/** Quả đồi Sơn Tinh ném xuống: rơi từ trên cao, đập xuống đất rồi lún dần. */
+interface Hill {
+  group: THREE.Group;
+  age: number;
+  landed: boolean;
 }
 
 /** Luồng lửa phun từ mõm ngựa sắt, gắn vào Gióng nên đi theo khi phi. */
@@ -70,7 +81,50 @@ interface Ring {
   age: number;
 }
 
-const SCALE: Partial<Record<FighterKind, number>> = { voi: 0.75, chienXa: 0.75, phoTuong: 1, daiTuong: 0.85, giong: 1.1 };
+const SCALE: Partial<Record<FighterKind, number>> = {
+  voi: 0.75,
+  chienXa: 0.75,
+  phoTuong: 1,
+  daiTuong: 0.85,
+  giong: 1.1,
+  sonTinh: 1.05,
+  caSau: 0.8,
+  thuongLuong: 1,
+  thuyTinh: 0.95,
+};
+/** Bốc đồi: đồi rơi trong chừng này giây, nằm lại một lúc rồi lún hẳn. */
+const HILL_FALL = 0.45;
+const HILL_LIFE = 2.4;
+const waterBallGeo = new THREE.SphereGeometry(0.09, 8, 6);
+const waterBallMat = new THREE.MeshBasicMaterial({ color: 0x9fd4e8 });
+
+/** Quả đồi nhỏ có cây: Sơn Tinh nhấc bổng lên ném vào giặc. Rộng vừa vùng bị đánh trúng. */
+function hillModel(): THREE.Group {
+  const m = new ToonModel(inkThin);
+  m.plain.cone(HILL.radius * 0.95, 1.6, C.mountainCloak, 0, 0.8, 0, undefined, 9);
+  m.plain.cone(HILL.radius * 0.5, 0.7, C.rock, 0.3, 0.35, 0.4, undefined, 6);
+  m.plain.cone(0.45, 0.5, C.rock, 0, 1.45, 0, undefined, 6);
+  for (let i = 0; i < 5; i++) {
+    const a = (i / 5) * Math.PI * 2;
+    m.plain.cone(0.22, 0.5, C.leaf[i % 4], Math.cos(a) * 1.0, 0.9, Math.sin(a) * 1.0, undefined, 5);
+  }
+  return m.group();
+}
+
+/** Ba mỏm đá nhọn mọc lên quanh chân một tên giặc. */
+function rockSpikes(seed: number): THREE.Group {
+  const b = new ShapeBuilder(false, true);
+  const rand = seeded(seed);
+  for (let i = 0; i < 4; i++) {
+    const a = (i / 4) * Math.PI * 2 + rand();
+    const h = 0.55 + rand() * 0.35;
+    b.cone(0.16, h, i % 2 ? C.rock : C.rockDark, Math.cos(a) * 0.32, h / 2, Math.sin(a) * 0.32, [Math.sin(a) * 0.25, 0, -Math.cos(a) * 0.25], 5);
+  }
+  const g = new THREE.Group();
+  const mesh = b.mesh(toon);
+  g.add(mesh, outlineOf(mesh.geometry, inkThin));
+  return g;
+}
 const puffGeo = new THREE.SphereGeometry(0.3, 10, 8);
 const arrowGeo = new THREE.BoxGeometry(0.03, 0.03, 0.45);
 const arrowMat = new THREE.MeshBasicMaterial({ color: C.arrow });
@@ -170,15 +224,20 @@ export class BattleView {
   private readonly jets: Jet[] = [];
   private readonly scorches: Scorch[] = [];
   private readonly burns: Burn[] = [];
+  private readonly hills: Hill[] = [];
   private battleId = -1;
   private lastSeq = 0;
   private time = 0;
 
-  /** `scale`: phóng to lính so với cỡ trong kinh đô (bãi chiến nhìn gần hơn cần lính to hơn). */
+  /**
+   * `scale`: phóng to lính so với cỡ trong kinh đô (bãi chiến nhìn gần hơn cần lính to hơn).
+   * `heightAt`: chỗ đứng (độ cao) tại tọa độ trận, cho kinh đô có đất bậc thang và nước lũ.
+   */
   constructor(
     private readonly root: THREE.Object3D,
     private readonly offset: { x: number; z: number },
     private readonly scale = 1,
+    private readonly heightAt: (x: number, z: number) => number = () => 0,
   ) {}
 
   /** Gọi mỗi khung hình với trận đang diễn ra, hoặc null khi không có trận. */
@@ -202,6 +261,7 @@ export class BattleView {
     this.burns.length = 0;
     for (const v of this.fighters.values()) {
       this.root.remove(v.obj);
+      if (v.peak) this.root.remove(v.peak);
       v.obj.traverse((o) => {
         if (o instanceof THREE.Mesh) o.geometry.dispose();
       });
@@ -221,6 +281,8 @@ export class BattleView {
     this.puffs.length = 0;
     for (const s of this.scorches) this.dropScorch(s);
     this.scorches.length = 0;
+    for (const h of this.hills) this.root.remove(h.group);
+    this.hills.length = 0;
     this.lastSeq = 0;
   }
 
@@ -237,7 +299,12 @@ export class BattleView {
       }
       if (!view) {
         if (f.state === 'dead') continue;
-        const obj = f.kind === 'giong' ? makeGiong('trangSi', { bamboo: battle.hero?.bamboo, glow: battle.hero?.glow }) : makeFighter(f.kind);
+        const obj =
+          f.kind === 'giong'
+            ? makeGiong('trangSi', { bamboo: battle.hero?.bamboo, glow: battle.hero?.glow })
+            : f.kind === 'sonTinh'
+              ? makeSonTinh({ glow: battle.hero?.glow })
+              : makeFighter(f.kind);
         obj.scale.setScalar((SCALE[f.kind] ?? 0.8) * this.scale);
         this.root.add(obj);
         view = { obj, deadAge: 0, rise: 0, weapon: obj.children.find((c) => c.userData.weapon), smash: 0 };
@@ -247,12 +314,31 @@ export class BattleView {
       obj.position.x = f.x + ox;
       obj.position.z = f.z + oz;
       obj.rotation.y = f.face;
+      const base = this.heightAt(f.x, f.z);
+      this.syncRocks(view, f.stun ?? 0, f.id, dt);
       if (f.state === 'dead') {
         view.deadAge += dt;
         obj.rotation.x = -Math.min(view.deadAge * 4, Math.PI / 2);
-        obj.position.y = view.deadAge > 1.2 ? -(view.deadAge - 1.2) * 0.6 : 0;
+        obj.position.y = base + (view.deadAge > 1.2 ? -(view.deadAge - 1.2) * 0.6 : 0);
         if (view.deadAge > 2.5) obj.visible = false;
         continue;
+      }
+      if (f.kind === 'sonTinh') {
+        for (const c of obj.children) if (c.userData.halo) c.rotation.z = this.time * 0.6;
+        if (battle.sonWin && battle.outcome === 'win') {
+          // Thủy Tinh rút quân: núi Tản Viên dâng cao dưới chân Sơn Tinh.
+          view.rise += dt;
+          const k = Math.min(view.rise / 2.5, 1);
+          if (!view.peak) {
+            view.peak = makeMountain(2.2, 3.2, C.mountainCloak);
+            this.root.add(view.peak);
+          }
+          view.peak.position.set(obj.position.x, base - 3.2 + 3.2 * THREE.MathUtils.smoothstep(k, 0, 1), obj.position.z);
+          obj.position.y = view.peak.position.y + 3.2;
+          if (view.weapon) view.weapon.rotation.set(WEAPON_REST.x - 2.4 * Math.min(view.rise, 1), 0, WEAPON_REST.z);
+          continue;
+        }
+        if (view.weapon) swingWeapon(view.weapon, f.swing, 0);
       }
       if (f.kind === 'giong') {
         for (const c of obj.children) {
@@ -262,7 +348,7 @@ export class BattleView {
         if (battle.ascend && battle.outcome === 'win') {
           // Phá xong giặc, Gióng cưỡi ngựa bay lên trời.
           view.rise += dt;
-          obj.position.y = view.rise * view.rise * 0.8;
+          obj.position.y = base + view.rise * view.rise * 0.8;
           obj.rotation.y = f.face + view.rise * 0.6;
           obj.rotation.x = -0.35;
           continue;
@@ -277,7 +363,7 @@ export class BattleView {
           obj.position.x = lerp(d.fromX, d.toX, k) + ox;
           obj.position.z = lerp(d.fromZ, d.toZ, k) + oz;
           if (Math.hypot(d.toX - d.fromX, d.toZ - d.fromZ) > 0.01) obj.rotation.y = Math.atan2(d.toX - d.fromX, d.toZ - d.fromZ);
-          obj.position.y = Math.abs(Math.sin(d.age * 26)) * 0.14;
+          obj.position.y = this.heightAt(lerp(d.fromX, d.toX, k), lerp(d.fromZ, d.toZ, k)) + Math.abs(Math.sin(d.age * 26)) * 0.14;
           obj.rotation.x = 0.12;
           if (d.age >= DASH_TIME) view.dash = undefined;
           continue;
@@ -285,10 +371,30 @@ export class BattleView {
       }
       // Gióng ra đòn bằng tay vũ khí, ngựa chỉ chồm nhẹ khi quét tre; người khác ngả cả thân.
       if (f.kind === 'giong') obj.rotation.x = view.smash > 0 ? -0.2 * Math.sin(Math.PI * (1 - view.smash / SMASH_TIME)) : 0;
+      else if (f.kind === 'sonTinh') obj.rotation.x = 0;
       else obj.rotation.x = f.swing > 0 ? -0.5 * (f.swing / 0.3) : 0;
       // Đang có Trống trận thì quân ta nhún nhảy hăng hơn.
       const hop = f.side === 'ta' && battle.rally > 0 ? 0.12 : 0.06;
-      obj.position.y = f.state === 'move' ? Math.abs(Math.sin(this.time * 10 + f.id)) * hop : 0;
+      obj.position.y = base + (f.state === 'move' && !f.stun ? Math.abs(Math.sin(this.time * 10 + f.id)) * hop : 0);
+    }
+  }
+
+  /** Đá Dời non: mọc nhanh lên quanh chân khi bị giữ chân, lún xuống khi hết. */
+  private syncRocks(view: FighterView, stun: number, id: number, dt: number): void {
+    if (stun > 0 && !view.rocks) {
+      const group = rockSpikes(id * 31 + 7);
+      group.scale.set(1, 0.01, 1);
+      view.obj.add(group);
+      view.rocks = { group, age: 0 };
+    }
+    if (!view.rocks) return;
+    const r = view.rocks;
+    r.age += dt;
+    // Mọc vụt lên trong 0,2 giây, lún dần trong 0,3 giây cuối.
+    r.group.scale.set(1, Math.max(0.01, Math.min(r.age / 0.2, 1) * Math.min(1, stun / 0.3)), 1);
+    if (stun <= 0) {
+      r.group.removeFromParent();
+      view.rocks = undefined;
     }
   }
 
@@ -297,9 +403,10 @@ export class BattleView {
     for (const e of battle.events) {
       if (e.seq <= this.lastSeq) continue;
       if (e.kind === 'shot' && e.tx !== undefined && e.tz !== undefined) {
-        const mesh = new THREE.Mesh(arrowGeo, arrowMat);
-        const from = new THREE.Vector3(e.x + ox, 0.8, e.z + oz);
-        const to = new THREE.Vector3(e.tx + ox, 0.5, e.tz + oz);
+        // Cá phun nước bắn tia nước, người bắn tên.
+        const mesh = e.by === 'caPhun' ? new THREE.Mesh(waterBallGeo, waterBallMat) : new THREE.Mesh(arrowGeo, arrowMat);
+        const from = new THREE.Vector3(e.x + ox, this.heightAt(e.x, e.z) + 0.8, e.z + oz);
+        const to = new THREE.Vector3(e.tx + ox, this.heightAt(e.tx, e.tz) + 0.5, e.tz + oz);
         mesh.position.copy(from);
         this.root.add(mesh);
         this.arrows.push({ mesh, from, to, age: 0, dur: Math.max(0.15, from.distanceTo(to) / 12) });
@@ -309,22 +416,36 @@ export class BattleView {
         const view = hero && this.fighters.get(hero.id);
         if (view) view.smash = SMASH_TIME;
       }
-      if (e.kind === 'rally' || e.kind === 'smash') {
-        const color = e.kind === 'rally' ? C.bronzeLight : C.bamboo;
+      if (e.kind === 'hill' && e.tx !== undefined && e.tz !== undefined) {
+        const group = hillModel();
+        group.position.set(e.tx + ox, this.heightAt(e.tx, e.tz) + 7, e.tz + oz);
+        group.rotation.y = e.seq;
+        this.root.add(group);
+        this.hills.push({ group, age: 0, landed: false });
+      }
+      if (e.kind === 'drown') {
+        for (let i = 0; i < 6; i++) {
+          const a = (i / 6) * Math.PI * 2;
+          this.addPuff(e.x + Math.cos(a) * 0.8 + ox, this.heightAt(e.x, e.z) + 0.3, e.z + Math.sin(a) * 0.8 + oz, i % 2 ? C.foam : 0x9fd4e8, i * 0.05, 0.8, 1.3);
+        }
+      }
+      if (e.kind === 'rally' || e.kind === 'smash' || e.kind === 'rocks') {
+        const color = e.kind === 'rally' ? C.bronzeLight : e.kind === 'rocks' ? C.rock : C.bamboo;
         const mesh = new THREE.Mesh(ringGeo, new THREE.MeshBasicMaterial({ color, transparent: true, depthWrite: false }));
-        mesh.position.set(e.x + ox, 0.08, e.z + oz);
+        mesh.position.set(e.x + ox, this.heightAt(e.x, e.z) + 0.08, e.z + oz);
         mesh.renderOrder = 3;
         this.root.add(mesh);
         this.rings.push({ mesh, age: 0 });
       }
       if (e.kind === 'fire' && e.tx !== undefined && e.tz !== undefined) this.breatheFire(battle, e.seq, e.x, e.z, e.tx, e.tz);
-      if (e.kind === 'smash') {
+      if (e.kind === 'smash' || e.kind === 'rocks') {
+        const r = e.kind === 'rocks' ? 3 : 1.6;
         for (let i = 0; i < 8; i++) {
           const a = (i / 8) * Math.PI * 2;
-          this.addPuff(e.x + Math.cos(a) * 1.6 + ox, 0.2, e.z + Math.sin(a) * 1.6 + oz, C.earth, 0.05, 0.7, 1.6);
+          this.addPuff(e.x + Math.cos(a) * r + ox, this.heightAt(e.x, e.z) + 0.2, e.z + Math.sin(a) * r + oz, C.earth, 0.05, 0.7, 1.6);
         }
       }
-      if (e.kind === 'exhaust') this.addPuff(e.x + ox, 0.6, e.z + oz, C.smoke, 0, 1.2, 3);
+      if (e.kind === 'exhaust') this.addPuff(e.x + ox, this.heightAt(e.x, e.z) + 0.6, e.z + oz, C.smoke, 0, 1.2, 3);
     }
     this.lastSeq = battle.seq;
   }
@@ -413,6 +534,32 @@ export class BattleView {
   }
 
   private animate(dt: number): void {
+    for (let i = this.hills.length - 1; i >= 0; i--) {
+      const h = this.hills[i];
+      h.age += dt;
+      const { x, z } = h.group.position;
+      const ground = this.heightAt(x - this.offset.x, z - this.offset.z);
+      if (h.age < HILL_FALL) {
+        const k = h.age / HILL_FALL;
+        h.group.position.y = ground + 7 * (1 - k * k);
+      } else {
+        if (!h.landed) {
+          h.landed = true;
+          // Đồi đập xuống: bụi đất tung lên quanh chân đồi.
+          for (let n = 0; n < 10; n++) {
+            const a = (n / 10) * Math.PI * 2;
+            this.addPuff(x + Math.cos(a) * HILL.radius, ground + 0.2, z + Math.sin(a) * HILL.radius, C.earth, 0, 0.8, 1.8);
+          }
+        }
+        // Nằm lại một lúc rồi lún dần xuống đất.
+        const sink = Math.max(0, (h.age - 1.2) / (HILL_LIFE - 1.2));
+        h.group.position.y = ground - 1.8 * sink * sink;
+      }
+      if (h.age >= HILL_LIFE) {
+        this.root.remove(h.group);
+        this.hills.splice(i, 1);
+      }
+    }
     for (let i = this.jets.length - 1; i >= 0; i--) {
       const j = this.jets[i];
       j.age += dt;
