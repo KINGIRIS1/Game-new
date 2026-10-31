@@ -581,16 +581,16 @@ Chủ dự án đã chốt qua một buổi hỏi đáp. Vấn đề: từ cuố
 - Mọi con số (giá, sản lượng, chỗ làm, số công trình tối đa, giá rèn, nhịp Tết) và dáng từng công trình được ghi vào tài liệu này để chủ dự án duyệt **trước khi** làm code của PR 2, PR 3.
 - Binh chủng thứ tư (nỏ thủ Âu Lạc) để dành cho chương 4.
 
-### PR 2: con số và dáng cấp 6–7, rèn binh khí (chờ chủ dự án duyệt)
+### PR 2: cấp 6–7 và rèn binh khí (chủ dự án đã duyệt, đã làm)
 
-Giá mỗi cấp mới khoảng gấp đôi cấp trước; sản lượng mỗi cấp tăng khoảng 35%. Mọi con số còn được chỉnh trong khoảng ±20% để khớp nhịp đo bằng test, rồi ghi lại số cuối cùng.
+Giá mỗi cấp mới khoảng gấp đôi cấp trước; sản lượng mỗi cấp tăng khoảng 35%. Chủ dự án cho chỉnh trong khoảng ±20% để khớp nhịp đo bằng test; bảng dưới là số cuối cùng.
 
 **Điện Vua Hùng**
 
 | Cấp | Mở khi | Giá nâng | Đất | Sức chứa kho | Chỗ ở | Gạo, vỏ ốc /phút | Máu |
 |---|---|---|---|---|---|---|---|
 | 6 | vào chương 2 | 4000 gạo, 4000 vỏ ốc, 3000 đất đá, 600 sắt | 25×25 | 14000 | 9 | 14, 7 | 1600 |
-| 7 | vào chương 3 | 9000 gạo, 8000 vỏ ốc, 7000 đất đá, 1500 sắt | 26×26 | 22000 | 10 | 16, 8 | 1800 |
+| 7 | vào chương 3 | 7200 gạo, 6400 vỏ ốc, 5600 đất đá, 1200 sắt | 26×26 | 22000 | 10 | 16, 8 | 1800 |
 
 **Công trình lên cấp 6, 7** (giá là giá nâng lên cấp ấy)
 
@@ -617,9 +617,10 @@ Giá mỗi cấp mới khoảng gấp đôi cấp trước; sản lượng mỗi
 
 Rèn riêng cho giáo binh, cung thủ, voi chiến. Có tác dụng ở mọi trận (phó bản, giữ kinh đô), cộng thêm vào phần của Đền Phù Đổng và phúc lành Tết. Chuẩn cân bằng phó bản vẫn tính lính chưa rèn.
 
-**Nhịp** (test mô phỏng người biết dành dụm như `balance.test.ts`, không tính thưởng phó bản):
-- kinh đô đã lên hết cấp 5, vào chương 2 thì khoảng **12–20 phút** lên được Điện 6;
-- vào chương 3 thì khoảng **25–40 phút** lên được Điện 7.
+**Nhịp** (test mô phỏng người biết dành dụm trong `balance.test.ts`, không tính thưởng phó bản):
+- sau khi lên Điện 5 còn chừng nửa giờ chương 1 thì vào chương 2; lên Điện 6 rồi còn chừng nửa giờ chương 2 thì vào chương 3;
+- lúc vào mỗi chương, của dành dụm coi như đã tiêu hết (đền, lễ vật, rèn đồ, quân), nên số phút đo được là số phút sản lượng cần để lên cấp. Lần đo đầu để nguyên kho đầy thì Điện 6 chỉ mất 8 phút, vì giá nằm dưới sức chứa kho;
+- đích: vào chương 2 thì **12–20 phút** lên Điện 6 (đo được 14 phút); vào chương 3 thì **25–40 phút** lên Điện 7. Với giá đề xuất ban đầu (9000 gạo, 8000 vỏ ốc, 7000 đất đá, 1500 sắt) Điện 7 mất 39 phút, sát mép trên; hạ 20% còn 34 phút.
 
 **Dáng mới** (móng giữ nguyên số ô, cỡ không to quá 105%):
 
@@ -674,5 +675,6 @@ Rèn riêng cho giáo binh, cung thủ, voi chiến. Có tác dụng ở mọi t
 4. **Chương 2** (đã làm): độ cao ô đất, đắp đất, đắp nền, đê và kè đá, mùa lũ kèm thủy quái, lễ vật thách cưới, Sơn Tinh ra trận với Bốc đồi và Dời non, phó bản màn 9–16 với thuồng luồng và Thủy Tinh, cốt truyện, kết chương, Đền Tản Viên.
 5. **Chương 3** (đã làm): thành Cổ Loa và số vòng thành, đêm yêu tinh phá thành, quân Triệu Đà xen với mùa lũ, An Dương Vương cầm nỏ ra trận với Nỏ thần và Rùa Vàng, phó bản màn 17–24 với gà trắng nghìn năm và Triệu Đà, cốt truyện, kết chương, Đền Cổ Loa.
 6. **Sửa sau chơi thử chương 3** (đã làm): chuẩn cân bằng mới cho màn 9–24, báo tướng kiệt sức và Đền Phù Đổng hư trước khi xuất quân.
-7. **Tiếp theo** (đã chốt, xem mục Kế hoạch): cấp 6–7 và rèn binh khí; rồi Hội Tết bánh chưng bánh giầy.
-8. **Để sau**: chương về Mỵ Châu, Trọng Thủy, có binh chủng nỏ thủ Âu Lạc.
+7. **Cấp 6–7 và rèn binh khí** (đã làm, xem mục Kế hoạch): Điện và 7 loại công trình lên cấp 6, 7, đất 25×25 rồi 26×26, rèn binh khí hai bậc ở lò rèn, bản lưu phiên bản 8.
+8. **Tiếp theo** (đã chốt): Hội Tết bánh chưng bánh giầy.
+9. **Để sau**: chương về Mỵ Châu, Trọng Thủy, có binh chủng nỏ thủ Âu Lạc.

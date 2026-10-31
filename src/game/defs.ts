@@ -62,12 +62,15 @@ export interface BuildingDef {
   unlock?: Unlock;
 }
 
+/** Điện Vua Hùng lên cấp 6 khi đã vào chương 2, lên cấp 7 khi đã vào chương 3 (chỉ số là cấp đích). */
+export const DIEN_CHAPTER: Partial<Record<number, 2 | 3>> = { 6: 2, 7: 3 };
+
 export const BUILDINGS: Record<BuildingType, BuildingDef> = {
   dien: {
     type: 'dien',
     w: 4,
     d: 4,
-    maxLevel: 5,
+    maxLevel: 7,
     buildCost: {},
     upgradeCost: [
       {},
@@ -76,6 +79,9 @@ export const BUILDINGS: Record<BuildingType, BuildingDef> = {
       { gao: 450, voOc: 250, datDa: 150 },
       { gao: 800, voOc: 700, datDa: 400, sat: 60 },
       { gao: 1400, voOc: 1300, datDa: 800, sat: 160 },
+      // Cấp 6 mở khi vào chương 2, cấp 7 khi vào chương 3 (DIEN_CHAPTER).
+      { gao: 4000, voOc: 4000, datDa: 3000, sat: 600 },
+      { gao: 7200, voOc: 6400, datDa: 5600, sat: 1200 },
     ],
     production: [
       { gao: 4, voOc: 2 },
@@ -83,10 +89,12 @@ export const BUILDINGS: Record<BuildingType, BuildingDef> = {
       { gao: 8, voOc: 4 },
       { gao: 10, voOc: 5 },
       { gao: 12, voOc: 6 },
+      { gao: 14, voOc: 7 },
+      { gao: 16, voOc: 8 },
     ],
-    housing: [4, 5, 6, 7, 8],
-    hp: [700, 850, 1000, 1200, 1400],
-    limit: [1, 1, 1, 1, 1],
+    housing: [4, 5, 6, 7, 8, 9, 10],
+    hp: [700, 850, 1000, 1200, 1400, 1600, 1800],
+    limit: [1, 1, 1, 1, 1, 1, 1],
     minDien: 1,
     buildable: false,
     removable: false,
@@ -95,7 +103,7 @@ export const BUILDINGS: Record<BuildingType, BuildingDef> = {
     type: 'ruong',
     w: 3,
     d: 3,
-    maxLevel: 5,
+    maxLevel: 7,
     buildCost: { voOc: 30 },
     upgradeCost: [
       {},
@@ -104,11 +112,13 @@ export const BUILDINGS: Record<BuildingType, BuildingDef> = {
       { voOc: 90, datDa: 30 },
       { voOc: 200, datDa: 120 },
       { voOc: 420, datDa: 260 },
+      { voOc: 850, datDa: 550 },
+      { voOc: 1700, datDa: 1100 },
     ],
-    production: [{ gao: 19 }, { gao: 32 }, { gao: 50 }, { gao: 75 }, { gao: 110 }],
-    workers: [2, 3, 3, 4, 4],
-    hp: [150, 170, 190, 210, 230],
-    limit: [2, 3, 4, 5, 6],
+    production: [{ gao: 19 }, { gao: 32 }, { gao: 50 }, { gao: 75 }, { gao: 110 }, { gao: 150 }, { gao: 200 }],
+    workers: [2, 3, 3, 4, 4, 5, 5],
+    hp: [150, 170, 190, 210, 230, 250, 270],
+    limit: [2, 3, 4, 5, 6, 7, 8],
     minDien: 1,
     buildable: true,
     removable: false,
@@ -117,7 +127,7 @@ export const BUILDINGS: Record<BuildingType, BuildingDef> = {
     type: 'ben',
     w: 2,
     d: 2,
-    maxLevel: 5,
+    maxLevel: 7,
     buildCost: { gao: 50 },
     upgradeCost: [
       {},
@@ -126,11 +136,13 @@ export const BUILDINGS: Record<BuildingType, BuildingDef> = {
       { gao: 120, datDa: 60 },
       { gao: 250, datDa: 150 },
       { gao: 500, datDa: 300 },
+      { gao: 1000, datDa: 600 },
+      { gao: 2000, datDa: 1200 },
     ],
-    production: [{ voOc: 20 }, { voOc: 35 }, { voOc: 52 }, { voOc: 78 }, { voOc: 112 }],
-    workers: [1, 2, 2, 3, 3],
-    hp: [160, 180, 200, 220, 240],
-    limit: [2, 2, 3, 3, 4],
+    production: [{ voOc: 20 }, { voOc: 35 }, { voOc: 52 }, { voOc: 78 }, { voOc: 112 }, { voOc: 150 }, { voOc: 200 }],
+    workers: [1, 2, 2, 3, 3, 4, 4],
+    hp: [160, 180, 200, 220, 240, 260, 280],
+    limit: [2, 2, 3, 3, 4, 4, 5],
     minDien: 1,
     nearRiver: true,
     buildable: true,
@@ -146,7 +158,7 @@ export const BUILDINGS: Record<BuildingType, BuildingDef> = {
     upgradeCost: [{}, {}, { datDa: 20 }],
     production: [{}, {}],
     hp: [120, 420],
-    limit: [30, 50, 70, 90, 110],
+    limit: [30, 50, 70, 90, 110, 120, 130],
     minDien: 1,
     levelMinDien: [0, 0, 3],
     buildable: true,
@@ -156,7 +168,7 @@ export const BUILDINGS: Record<BuildingType, BuildingDef> = {
     type: 'nhaSan',
     w: 2,
     d: 2,
-    maxLevel: 5,
+    maxLevel: 7,
     buildCost: { gao: 30, voOc: 20 },
     upgradeCost: [
       {},
@@ -165,11 +177,13 @@ export const BUILDINGS: Record<BuildingType, BuildingDef> = {
       { voOc: 100, datDa: 70 },
       { voOc: 200, datDa: 160 },
       { voOc: 380, datDa: 320 },
+      { voOc: 760, datDa: 640 },
+      { voOc: 1500, datDa: 1300 },
     ],
-    production: [{}, {}, {}, {}, {}],
-    housing: [4, 6, 8, 10, 12],
-    hp: [160, 180, 200, 220, 240],
-    limit: [1, 2, 3, 4, 5],
+    production: [{}, {}, {}, {}, {}, {}, {}],
+    housing: [4, 6, 8, 10, 12, 14, 16],
+    hp: [160, 180, 200, 220, 240, 260, 280],
+    limit: [1, 2, 3, 4, 5, 6, 7],
     minDien: 1,
     buildable: true,
     removable: false,
@@ -178,7 +192,7 @@ export const BUILDINGS: Record<BuildingType, BuildingDef> = {
     type: 'baiDa',
     w: 2,
     d: 2,
-    maxLevel: 5,
+    maxLevel: 7,
     buildCost: { gao: 40, voOc: 30 },
     upgradeCost: [
       {},
@@ -187,11 +201,13 @@ export const BUILDINGS: Record<BuildingType, BuildingDef> = {
       { gao: 60, voOc: 120 },
       { gao: 120, voOc: 250 },
       { gao: 240, voOc: 500 },
+      { gao: 480, voOc: 1000 },
+      { gao: 960, voOc: 2000 },
     ],
-    production: [{ datDa: 19 }, { datDa: 32 }, { datDa: 50 }, { datDa: 72 }, { datDa: 105 }],
-    workers: [2, 2, 3, 3, 4],
-    hp: [180, 200, 220, 240, 260],
-    limit: [1, 2, 3, 3, 4],
+    production: [{ datDa: 19 }, { datDa: 32 }, { datDa: 50 }, { datDa: 72 }, { datDa: 105 }, { datDa: 145 }, { datDa: 195 }],
+    workers: [2, 2, 3, 3, 4, 5, 5],
+    hp: [180, 200, 220, 240, 260, 280, 300],
+    limit: [1, 2, 3, 3, 4, 5, 5],
     minDien: 1,
     buildable: true,
     removable: false,
@@ -200,7 +216,7 @@ export const BUILDINGS: Record<BuildingType, BuildingDef> = {
     type: 'loRen',
     w: 2,
     d: 2,
-    maxLevel: 5,
+    maxLevel: 7,
     buildCost: { voOc: 60, datDa: 60 },
     upgradeCost: [
       {},
@@ -209,11 +225,13 @@ export const BUILDINGS: Record<BuildingType, BuildingDef> = {
       { voOc: 160, datDa: 180 },
       { voOc: 320, datDa: 350 },
       { voOc: 640, datDa: 700 },
+      { voOc: 1300, datDa: 1400 },
+      { voOc: 2600, datDa: 2800 },
     ],
-    production: [{ sat: 5 }, { sat: 9 }, { sat: 14 }, { sat: 20 }, { sat: 29 }],
-    workers: [1, 2, 2, 3, 3],
-    hp: [200, 220, 240, 260, 280],
-    limit: [0, 1, 1, 2, 2],
+    production: [{ sat: 5 }, { sat: 9 }, { sat: 14 }, { sat: 20 }, { sat: 29 }, { sat: 40 }, { sat: 54 }],
+    workers: [1, 2, 2, 3, 3, 4, 4],
+    hp: [200, 220, 240, 260, 280, 300, 320],
+    limit: [0, 1, 1, 2, 2, 3, 3],
     minDien: 2,
     buildable: true,
     removable: false,
@@ -222,7 +240,7 @@ export const BUILDINGS: Record<BuildingType, BuildingDef> = {
     type: 'kho',
     w: 2,
     d: 2,
-    maxLevel: 5,
+    maxLevel: 7,
     buildCost: { voOc: 40, datDa: 40 },
     upgradeCost: [
       {},
@@ -231,11 +249,13 @@ export const BUILDINGS: Record<BuildingType, BuildingDef> = {
       { voOc: 160, datDa: 200 },
       { voOc: 320, datDa: 400 },
       { voOc: 640, datDa: 800 },
+      { voOc: 1300, datDa: 1600 },
+      { voOc: 2600, datDa: 3200 },
     ],
-    production: [{}, {}, {}, {}, {}],
-    storage: [500, 1000, 1500, 2500, 4000],
-    hp: [300, 360, 420, 480, 540],
-    limit: [1, 1, 2, 2, 3],
+    production: [{}, {}, {}, {}, {}, {}, {}],
+    storage: [500, 1000, 1500, 2500, 4000, 6000, 9000],
+    hp: [300, 360, 420, 480, 540, 600, 660],
+    limit: [1, 1, 2, 2, 3, 3, 4],
     minDien: 1,
     buildable: true,
     removable: false,
@@ -257,7 +277,7 @@ export const BUILDINGS: Record<BuildingType, BuildingDef> = {
     production: [{}, {}, {}, {}, {}],
     troopCap: [8, 14, 20, 28, 38],
     hp: [400, 460, 520, 600, 700],
-    limit: [0, 1, 1, 1, 1],
+    limit: [0, 1, 1, 1, 1, 1, 1],
     minDien: 2,
     buildable: true,
     removable: false,
@@ -266,7 +286,7 @@ export const BUILDINGS: Record<BuildingType, BuildingDef> = {
     type: 'choiCanh',
     w: 1,
     d: 1,
-    maxLevel: 5,
+    maxLevel: 7,
     buildCost: { voOc: 40, datDa: 40 },
     upgradeCost: [
       {},
@@ -275,10 +295,12 @@ export const BUILDINGS: Record<BuildingType, BuildingDef> = {
       { voOc: 120, datDa: 120, sat: 20 },
       { voOc: 240, datDa: 240, sat: 40 },
       { voOc: 480, datDa: 480, sat: 80 },
+      { voOc: 960, datDa: 960, sat: 160 },
+      { voOc: 1900, datDa: 1900, sat: 320 },
     ],
-    production: [{}, {}, {}, {}, {}],
-    hp: [180, 220, 270, 330, 400],
-    limit: [0, 2, 3, 4, 5],
+    production: [{}, {}, {}, {}, {}, {}, {}],
+    hp: [180, 220, 270, 330, 400, 480, 560],
+    limit: [0, 2, 3, 4, 5, 6, 7],
     minDien: 2,
     buildable: true,
     removable: false,
@@ -292,7 +314,7 @@ export const BUILDINGS: Record<BuildingType, BuildingDef> = {
     upgradeCost: [{}, {}],
     production: [{}],
     hp: [1],
-    limit: [0, 4, 6, 8, 10],
+    limit: [0, 4, 6, 8, 10, 12, 14],
     minDien: 2,
     buildable: true,
     removable: true,
@@ -306,7 +328,7 @@ export const BUILDINGS: Record<BuildingType, BuildingDef> = {
     upgradeCost: [{}, {}],
     production: [{}],
     hp: [700],
-    limit: [1, 1, 1, 1, 1],
+    limit: [1, 1, 1, 1, 1, 1, 1],
     minDien: 1,
     buildable: true,
     removable: false,
@@ -322,7 +344,7 @@ export const BUILDINGS: Record<BuildingType, BuildingDef> = {
     upgradeCost: [{}, {}, { datDa: 40, voOc: 20 }],
     production: [{}, {}],
     hp: [600, 1500],
-    limit: [90, 90, 90, 90, 90],
+    limit: [90, 90, 90, 90, 90, 100, 110],
     minDien: 1,
     buildable: true,
     removable: true,
@@ -337,7 +359,7 @@ export const BUILDINGS: Record<BuildingType, BuildingDef> = {
     upgradeCost: [{}, {}],
     production: [{}],
     hp: [900],
-    limit: [1, 1, 1, 1, 1],
+    limit: [1, 1, 1, 1, 1, 1, 1],
     minDien: 1,
     buildable: true,
     removable: false,
@@ -353,7 +375,7 @@ export const BUILDINGS: Record<BuildingType, BuildingDef> = {
     upgradeCost: [{}, {}],
     production: [{}],
     hp: [1000],
-    limit: [150, 150, 150, 150, 150],
+    limit: [150, 150, 150, 150, 150, 160, 170],
     minDien: 1,
     buildable: true,
     removable: true,
@@ -368,7 +390,7 @@ export const BUILDINGS: Record<BuildingType, BuildingDef> = {
     upgradeCost: [{}, {}],
     production: [{}],
     hp: [1000],
-    limit: [1, 1, 1, 1, 1],
+    limit: [1, 1, 1, 1, 1, 1, 1],
     minDien: 1,
     buildable: true,
     removable: false,
@@ -429,11 +451,23 @@ export function floodForces(n: number): Partial<Record<EnemyType, number>> {
 /** Thủy quái các mùa sau khỏe hơn. */
 export const floodHpScale = (n: number) => 1.3 + 0.12 * (n - 1);
 
+// ---------- Rèn binh khí ----------
+
+/**
+ * Rèn binh khí ở lò rèn: mỗi binh chủng rèn riêng, hai bậc. Bậc 1 cần lò rèn cấp 6, bậc 2 cần lò rèn cấp 7.
+ * Mỗi bậc thêm `ARMS_BONUS` vào máu và sức đánh của binh chủng ấy, ở mọi trận.
+ */
+export const ARMS: { cost: Cost; forgeLevel: number }[] = [
+  { cost: { sat: 400, voOc: 400 }, forgeLevel: 6 },
+  { cost: { sat: 900, voOc: 900 }, forgeLevel: 7 },
+];
+export const ARMS_BONUS = 0.1;
+
 /** Đền Phù Đổng (còn nguyên) cộng thêm phần này vào sản lượng mọi tài nguyên, và vào máu, sát thương của quân ta. */
 export const TEMPLE_BONUS = 0.1;
 
 /** Sức chứa mỗi loại tài nguyên theo cấp Điện Vua Hùng, chỉ số 0 là cấp 1. Kho thóc cộng thêm. */
-export const STORAGE_CAP = [500, 1000, 2000, 4000, 8000];
+export const STORAGE_CAP = [500, 1000, 2000, 4000, 8000, 14000, 22000];
 
 export const START_RESOURCES: Resources = { gao: 150, voOc: 120, datDa: 0, sat: 0 };
 export const START_DAN = 4;
@@ -639,7 +673,7 @@ export function trieuForces(n: number): Partial<Record<EnemyType, number>> {
 export const trieuHpScale = (n: number) => 1.9 + 0.12 * (n - 1);
 
 /** Chòi canh tự bắn giặc trong tầm. */
-export const TOWER = { range: 4.5, cooldown: 1.1, dmg: [7, 9, 12, 15, 19] };
+export const TOWER = { range: 4.5, cooldown: 1.1, dmg: [7, 9, 12, 15, 19, 24, 30] };
 /** Bẫy chông: sát thương một lần mỗi đợt giặc. */
 export const TRAP_DMG = 45;
 

@@ -405,6 +405,7 @@ export const vi = {
         { who: 'vua', text: 'Ai đem sính lễ đến trước thì được rước Mị Nương: một trăm ván cơm nếp, một trăm nệp bánh chưng, voi chín ngà, gà chín cựa, ngựa chín hồng mao.' },
         { who: 'lacHau', text: 'Tâu bệ hạ, Thủy Tinh đã sai thủy quái đi tranh lễ vật. Xin góp gạo nấu cơm nếp, gói bánh chưng, và mở phó bản chương 2 để Lạc tướng giành voi, gà, ngựa về cho Sơn Tinh.' },
         { who: 'lacHau', text: 'Phòng khi Thủy Tinh nổi giận, xin cho đắp đê ven sông, đắp đất đắp nền cho cao. Chạm vào Sơn Tinh trước Điện để xem lễ vật.' },
+        { who: 'lacHau', text: 'Nay Điện Vua Hùng có thể nâng lên cấp 6, phát thêm rừng mở đất, các công trình cũng lên được cấp 6. Lò rèn cấp 6 rèn được binh khí sắt cho quân ta.' },
       ],
     },
     ruocDau: {
@@ -448,6 +449,7 @@ export const vi = {
         { who: 'ke', text: 'Nhưng thành đắp tới đâu lở tới đó. Đêm đêm yêu tinh núi Thất Diệu kéo về phá.' },
         { who: 'lacHau', text: 'Tâu bệ hạ, xin đắp thành Cổ Loa quanh Điện. Các đoạn thành phải nối liền theo cạnh ô, dựa vào bờ sông cũng được. Giặc phải phá qua mấy lớp thành mới tới Điện thì thành có mấy vòng.' },
         { who: 'lacHau', text: 'Đêm yêu tinh kéo về, chúng nhắm phá thành trước tiên. Xin giữ thành, và mở phó bản chương 3 lên núi Thất Diệu diệt tận gốc. Chạm vào An Dương Vương trước Điện để xem.' },
+        { who: 'lacHau', text: 'Kinh đô Âu Lạc còn rộng được nữa: Điện có thể nâng lên cấp 7. Lò rèn cấp 7 rèn được binh khí bậc hai, tốt nhất.' },
       ],
     },
     dietYeu: {
@@ -711,6 +713,13 @@ export const vi = {
     heroStandIn: (name: string) => `Trận này ${name} ra trận thay.`,
     noHeroWarn: 'Trận này không có tướng nào, rất khó thắng. Nên chờ tướng hồi sức.',
     templeDamaged: 'Đền Phù Đổng đang hư: quân ta mất 10% máu và sức đánh. Hãy sửa đền ở kinh đô.',
+    armsTitle: 'Rèn binh khí',
+    armsHint: 'Mỗi bậc thêm 10% máu và sức đánh cho cả binh chủng, ở mọi trận. Bậc 1 cần lò rèn cấp 6, bậc 2 cần lò rèn cấp 7.',
+    armsTier: (n: number) => `Bậc ${n}/2`,
+    armsForge: (n: number) => `Rèn bậc ${n}`,
+    armsDone: 'Đã rèn đủ',
+    armsToast: (name: string, n: number) => `Thợ rèn đã rèn binh khí bậc ${n} cho ${name.toLowerCase()}`,
+    armsOnUnit: (n: number) => `Binh khí bậc ${n}`,
   },
 };
 

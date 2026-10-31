@@ -67,6 +67,7 @@ import { floodToleranceOf, groundOf } from '../game/terrain';
 import type { Resolution } from '../render/world';
 import { formatDuration, vi } from '../text/vi';
 import { armyHtml, defaultPick, mapHtml, nextRow, stageHtml, stageResultHtml, type ArmyPick } from './campaign';
+import { armsHtml } from './binhKhi';
 import { advHtml } from './coLoa';
 import { costHtml, esc, fmt } from './format';
 import { giongHtml, storyHtml } from './giong';
@@ -121,6 +122,7 @@ export type HudAction =
   | { kind: 'offerGift'; gift: GiftId }
   | { kind: 'openAdv' }
   | { kind: 'forgeNoThan' }
+  | { kind: 'forgeArms'; unit: UnitType }
   | { kind: 'confirmPlace' }
   | { kind: 'cancelPlace' }
   | { kind: 'upgrade'; id: number }
@@ -279,6 +281,8 @@ export class Hud {
         return this.onAction({ kind: 'repair', id });
       case 'train':
         return this.onAction({ kind: 'train', unit: el.dataset.unit as UnitType });
+      case 'forgeArms':
+        return this.onAction({ kind: 'forgeArms', unit: el.dataset.unit as UnitType });
       case 'closeCampaign':
         return this.closeCampaign();
       case 'useSkill':
@@ -659,6 +663,8 @@ export class Hud {
     }
 
     if (b.type === 'doanhTrai') rows.push(this.barracksHtml(state));
+    // Rèn binh khí cần lò rèn cấp 6, tức là từ chương 2 (Điện cấp 6).
+    if (b.type === 'loRen' && inChapter2(state)) rows.push(armsHtml(state));
     if ((b.type === 'loRen' || b.type === 'dien') && giongAppeared(state) && !state.giong.ascended) {
       const label = b.type === 'loRen' ? `⚒️ ${vi.ui.giongForge}` : `${vi.giongLooks[giongLook(state)!].icon} ${vi.ui.giong}`;
       rows.push(`<div class="actions"><button class="btn bronze" data-act="openGiong">${label}</button></div>`);
@@ -716,6 +722,7 @@ export class Hud {
         <span class="unit-icon">${vi.units[k].icon}</span>
         <span class="unit-info"><b>${vi.units[k].name}</b> × ${state.troops[k]}
           <small>${vi.units[k].desc}</small>
+          ${state.arms[k] ? `<small>⚔️ ${vi.ui.armsOnUnit(state.arms[k])}</small>` : ''}
           ${why ? `<small class="lack">${why}</small>` : ''}</span>
         <button class="btn small" data-act="train" data-unit="${k}" ${check.ok ? '' : 'disabled'}>${vi.ui.train}<br>${costHtml(state, def.cost)}</button>
       </div>`;

@@ -4,6 +4,7 @@ import './style.css';
 import { play, setMuted, stopRally, unlockAudio } from './audio/sfx';
 import { useSkill } from './game/battle';
 import { leaveBattlefield, retreat, startStage } from './game/campaign';
+import { forgeArms } from './game/binhKhi';
 import { forgeNoThan, inChapter3, wallRings } from './game/coLoa';
 import { feedGiong, forgeGear } from './game/giong';
 import { inChapter2, offerGift } from './game/son';
@@ -332,6 +333,15 @@ function start(): void {
         if (!r.ok) return fail(r.reason);
         play('upgrade');
         hud.toast(vi.ui.noThanToast);
+        commit();
+        return;
+      }
+
+      case 'forgeArms': {
+        const r = forgeArms(state, a.unit);
+        if (!r.ok) return fail(r.reason);
+        play('upgrade');
+        hud.toast(vi.ui.armsToast(vi.units[a.unit].name, r.value));
         commit();
         return;
       }
