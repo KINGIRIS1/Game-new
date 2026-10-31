@@ -652,6 +652,8 @@ export const SKILLS: Record<SkillId, { cooldown: number; duration: number }> = {
 };
 /** Trống trận thúc quân: quân ta đánh mạnh hơn và chạy nhanh hơn trong một lúc. */
 export const RALLY = { dmg: 1.5, speed: 1.3 };
+/** Nhịp trống khi Lạc tướng đánh Trống trận (giây một tiếng), để phần vẽ và tiếng trống khớp nhau. */
+export const RALLY_BEAT = 0.5;
 
 export type QuestGoal =
   | { kind: 'count'; building: BuildingType; amount: number }

@@ -730,3 +730,71 @@ export function buildDikes(spots: DikeSpot[]): THREE.Object3D {
     treeOutline,
   );
 }
+
+// ---------- Lạc tướng đánh trống trận ----------
+
+/** Tay cầm dùi trống: gốc ở vai, tay và dùi chĩa về trước (+z). Xoay quanh trục x: dương thì dùi chúc xuống. */
+function drumStick(x: number): THREE.Group {
+  const m = new ToonModel(inkThin);
+  m.plain.cyl(0.04, 0.04, 0.26, C.skin, 0, 0, 0.13, [Math.PI / 2, 0, 0], 6);
+  m.plain.cyl(0.022, 0.026, 0.42, C.woodDark, 0, 0, 0.42, [Math.PI / 2, 0, 0], 5);
+  m.plain.sphere(0.055, C.red, 0, 0, 0.64, [1, 1, 1], 8);
+  const g = m.group();
+  g.position.set(x, 0.56, 0.04);
+  return g;
+}
+
+/** Dùi trống lúc nghỉ, lúc giơ cao lấy đà, và lúc nện xuống mặt trống. */
+export const STICK_POSE = { rest: 0.12, up: -0.75, hit: 0.32 };
+
+/**
+ * Lạc tướng đứng sau trống đồng lớn, hai tay cầm dùi, mũ lông chim cao như người trên trống đồng.
+ * Mặt trống có bốn tượng cóc ở vành. Mặt trước hướng +z, trống ở phía trước.
+ * `userData.sticks` là hai tay cầm dùi, `userData.face` là mặt trống, để phần vẽ trận làm động tác đánh trống.
+ */
+export function makeDrummer(): THREE.Group {
+  const m = new ToonModel(inkThin);
+  const p = m.plain;
+  for (const x of [-0.07, 0.07]) p.cyl(0.045, 0.05, 0.2, C.skin, x, 0.1, 0, undefined, 6);
+  m.band.cyl(0.15, 0.19, 0.26, C.red, 0, 0.32, 0, undefined, 10);
+  p.cyl(0.14, 0.16, 0.18, C.bronze, 0, 0.5, 0, undefined, 10);
+  p.box(0.44, 0.5, 0.04, C.red, 0, 0.42, -0.17, [0.18, 0, 0]);
+  for (const s of [-1, 1]) p.sphere(0.07, C.bronze, s * 0.17, 0.58, 0, [1, 0.8, 1], 8);
+  p.sphere(0.23, C.skin, 0, 0.8, 0, [1, 0.95, 0.95], 12);
+  for (const s of [-1, 1]) {
+    p.sphere(0.028, C.ink, s * 0.08, 0.8, 0.2, [1, 1.4, 0.5], 6);
+    p.box(0.08, 0.018, 0.02, C.ink, s * 0.085, 0.87, 0.21, [0, 0, -s * 0.3]);
+  }
+  p.sphere(0.24, C.hair, 0, 0.88, -0.04, [1, 0.62, 0.98], 12);
+  for (let i = -3; i <= 3; i++) p.box(0.06, 0.46, 0.03, i % 2 ? C.cream : C.red, i * 0.058, 1.2, -0.06, [0, 0, -i * 0.24]);
+  // Trống đồng lớn trên bốn chân ngắn, trước mặt Lạc tướng.
+  const dz = 0.56;
+  m.band.cyl(0.38, 0.33, 0.32, C.bronze, 0, 0.26, dz, undefined, 18);
+  p.cyl(0.395, 0.395, 0.05, C.bronzeDark, 0, 0.41, dz, undefined, 18);
+  for (let i = 0; i < 4; i++) {
+    const a = (i / 4) * Math.PI * 2 + Math.PI / 4;
+    p.cyl(0.03, 0.04, 0.12, C.bronzeDark, Math.cos(a) * 0.28, 0.06, dz + Math.sin(a) * 0.28, undefined, 5);
+  }
+  const g = m.group();
+  const face = new ToonModel(inkThin);
+  face.drum.cyl(0.4, 0.4, 0.035, 0xffffff, 0, 0, 0, undefined, 22);
+  // Tượng cóc đồng ngồi trên vành mặt trống, như trống Đông Sơn.
+  for (let i = 0; i < 4; i++) {
+    const a = (i / 4) * Math.PI * 2 + Math.PI / 4;
+    const x = Math.cos(a) * 0.32;
+    const z = Math.sin(a) * 0.32;
+    face.plain.sphere(0.05, C.bronzeDark, x, 0.04, z, [1, 0.7, 1.2], 7);
+    face.plain.sphere(0.028, C.bronzeDark, x, 0.075, z + 0.03, [1, 0.9, 1], 6);
+  }
+  const faceGroup = face.group();
+  faceGroup.position.set(0, 0.45, dz);
+  g.add(faceGroup);
+  const sticks = [drumStick(-0.17), drumStick(0.17)];
+  for (const s of sticks) {
+    s.rotation.x = STICK_POSE.rest;
+    g.add(s);
+  }
+  g.userData.sticks = sticks;
+  g.userData.face = faceGroup;
+  return g;
+}

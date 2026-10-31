@@ -3,11 +3,11 @@
 
 import * as THREE from 'three';
 import type { Battle, FighterKind } from '../game/battle';
-import { FIRE, HILL } from '../game/defs';
+import { FIRE, HILL, RALLY_BEAT, SKILLS } from '../game/defs';
 import { WEAPON_REST, makeFighter, makeGiong, makeMountain, makeSonTinh } from './models';
 import { C } from './palette';
 import { ShapeBuilder, seeded } from './shapes';
-import { ToonModel, inkThin, outlineOf, toon } from './toon';
+import { ToonModel, drumWaveTex, inkThin, outlineOf, toon } from './toon';
 
 interface FighterView {
   obj: THREE.Group;
@@ -24,6 +24,14 @@ interface FighterView {
   rocks?: { group: THREE.Group; age: number };
   /** Núi Tản Viên dâng lên dưới chân Sơn Tinh khi Thủy Tinh rút quân. */
   peak?: THREE.Group;
+  /** Vòng sáng đồng dưới chân lính ta khi có Trống trận, đập theo nhịp trống. */
+  aura?: THREE.Mesh;
+}
+
+/** Sóng trống: hoa văn mặt trống đồng loang ra trên mặt đất mỗi nhịp trống. */
+interface DrumWave {
+  mesh: THREE.Mesh;
+  age: number;
 }
 
 /** Quả đồi Sơn Tinh ném xuống: rơi từ trên cao, đập xuống đất rồi lún dần. */
@@ -95,6 +103,13 @@ const SCALE: Partial<Record<FighterKind, number>> = {
 /** Bốc đồi: đồi rơi trong chừng này giây, nằm lại một lúc rồi lún hẳn. */
 const HILL_FALL = 0.45;
 const HILL_LIFE = 2.4;
+/** Sóng trống sống chừng này giây, loang tới bán kính này (ô). */
+const WAVE_LIFE = 1.3;
+const WAVE_RADIUS = 6.5;
+const waveGeo = new THREE.CircleGeometry(1, 48).rotateX(-Math.PI / 2);
+const auraGeo = new THREE.RingGeometry(0.3, 0.46, 24).rotateX(-Math.PI / 2);
+/** Mọi vòng sáng dưới chân dùng chung một chất liệu, đổi độ sáng một lần mỗi khung hình. */
+const auraMat = new THREE.MeshBasicMaterial({ color: C.ember, transparent: true, opacity: 0.6, depthWrite: false });
 const waterBallGeo = new THREE.SphereGeometry(0.09, 8, 6);
 const waterBallMat = new THREE.MeshBasicMaterial({ color: 0x9fd4e8 });
 
@@ -225,6 +240,9 @@ export class BattleView {
   private readonly scorches: Scorch[] = [];
   private readonly burns: Burn[] = [];
   private readonly hills: Hill[] = [];
+  private readonly waves: DrumWave[] = [];
+  /** Nhịp trống đã tỏa sóng gần nhất của Trống trận đang đánh, −1 khi không có. */
+  private rallyBeat = -1;
   private battleId = -1;
   private lastSeq = 0;
   private time = 0;
@@ -232,12 +250,14 @@ export class BattleView {
   /**
    * `scale`: phóng to lính so với cỡ trong kinh đô (bãi chiến nhìn gần hơn cần lính to hơn).
    * `heightAt`: chỗ đứng (độ cao) tại tọa độ trận, cho kinh đô có đất bậc thang và nước lũ.
+   * `drumAt`: mặt trống của Lạc tướng (tọa độ trận), nơi sóng trống tỏa ra. Không có thì sóng tỏa từ giữa quân ta.
    */
   constructor(
     private readonly root: THREE.Object3D,
     private readonly offset: { x: number; z: number },
     private readonly scale = 1,
     private readonly heightAt: (x: number, z: number) => number = () => 0,
+    private readonly drumAt?: { x: number; z: number },
   ) {}
 
   /** Gọi mỗi khung hình với trận đang diễn ra, hoặc null khi không có trận. */
@@ -250,8 +270,45 @@ export class BattleView {
     if (battle) {
       this.syncFighters(battle, dt);
       this.readEvents(battle);
+      this.syncRally(battle);
     }
     this.animate(dt);
+  }
+
+  /**
+   * Trống trận: mỗi nhịp trống tỏa một sóng hoa văn mặt trống đồng trên mặt đất, từ mặt trống của Lạc tướng
+   * (hay từ giữa quân ta khi giữ kinh đô). Vòng sáng dưới chân lính ta bừng lên đúng nhịp rồi dịu dần.
+   */
+  private syncRally(battle: Battle): void {
+    const rally = battle.outcome ? 0 : battle.rally;
+    if (rally <= 0) {
+      this.rallyBeat = -1;
+      return;
+    }
+    const t = SKILLS.trongTran.duration - rally;
+    const beat = Math.floor(t / RALLY_BEAT);
+    const k = (t % RALLY_BEAT) / RALLY_BEAT;
+    const pulse = Math.exp(-k * 5);
+    auraMat.opacity = 0.3 + 0.6 * pulse;
+    for (const v of this.fighters.values()) if (v.aura) v.aura.scale.setScalar(1 + 0.3 * pulse);
+    if (beat === this.rallyBeat) return;
+    this.rallyBeat = beat;
+    let at = this.drumAt;
+    if (!at) {
+      const allies = battle.fighters.filter((f) => f.side === 'ta' && f.state !== 'dead' && f.state !== 'gone');
+      if (!allies.length) return;
+      at = { x: allies.reduce((s, f) => s + f.x, 0) / allies.length, z: allies.reduce((s, f) => s + f.z, 0) / allies.length };
+    }
+    const mesh = new THREE.Mesh(
+      waveGeo,
+      new THREE.MeshBasicMaterial({ color: C.bronzeLight, map: drumWaveTex, transparent: true, depthWrite: false }),
+    );
+    mesh.position.set(at.x + this.offset.x, this.heightAt(at.x, at.z) + 0.06, at.z + this.offset.z);
+    mesh.rotation.y = beat * 0.4;
+    mesh.scale.setScalar(0.5);
+    mesh.renderOrder = 3;
+    this.root.add(mesh);
+    this.waves.push({ mesh, age: 0 });
   }
 
   private clear(): void {
@@ -283,6 +340,9 @@ export class BattleView {
     this.scorches.length = 0;
     for (const h of this.hills) this.root.remove(h.group);
     this.hills.length = 0;
+    for (const w of this.waves) this.dropWave(w);
+    this.waves.length = 0;
+    this.rallyBeat = -1;
     this.lastSeq = 0;
   }
 
@@ -316,6 +376,7 @@ export class BattleView {
       obj.rotation.y = f.face;
       const base = this.heightAt(f.x, f.z);
       this.syncRocks(view, f.stun ?? 0, f.id, dt);
+      this.syncAura(view, f.side === 'ta' && f.state !== 'dead' && battle.rally > 0 && !battle.outcome);
       if (f.state === 'dead') {
         view.deadAge += dt;
         obj.rotation.x = -Math.min(view.deadAge * 4, Math.PI / 2);
@@ -379,6 +440,24 @@ export class BattleView {
     }
   }
 
+  /** Thêm hay bỏ vòng sáng dưới chân một người lính ta. */
+  private syncAura(view: FighterView, on: boolean): void {
+    if (on && !view.aura) {
+      view.aura = new THREE.Mesh(auraGeo, auraMat);
+      view.aura.position.y = 0.04;
+      view.aura.renderOrder = 2;
+      view.obj.add(view.aura);
+    } else if (!on && view.aura) {
+      view.aura.removeFromParent();
+      view.aura = undefined;
+    }
+  }
+
+  private dropWave(w: DrumWave): void {
+    this.root.remove(w.mesh);
+    (w.mesh.material as THREE.Material).dispose();
+  }
+
   /** Đá Dời non: mọc nhanh lên quanh chân khi bị giữ chân, lún xuống khi hết. */
   private syncRocks(view: FighterView, stun: number, id: number, dt: number): void {
     if (stun > 0 && !view.rocks) {
@@ -429,8 +508,9 @@ export class BattleView {
           this.addPuff(e.x + Math.cos(a) * 0.8 + ox, this.heightAt(e.x, e.z) + 0.3, e.z + Math.sin(a) * 0.8 + oz, i % 2 ? C.foam : 0x9fd4e8, i * 0.05, 0.8, 1.3);
         }
       }
-      if (e.kind === 'rally' || e.kind === 'smash' || e.kind === 'rocks') {
-        const color = e.kind === 'rally' ? C.bronzeLight : e.kind === 'rocks' ? C.rock : C.bamboo;
+      // Trống trận vẽ bằng sóng trống theo từng nhịp (xem syncRally), không cần vòng ở đây.
+      if (e.kind === 'smash' || e.kind === 'rocks') {
+        const color = e.kind === 'rocks' ? C.rock : C.bamboo;
         const mesh = new THREE.Mesh(ringGeo, new THREE.MeshBasicMaterial({ color, transparent: true, depthWrite: false }));
         mesh.position.set(e.x + ox, this.heightAt(e.x, e.z) + 0.08, e.z + oz);
         mesh.renderOrder = 3;
@@ -534,6 +614,18 @@ export class BattleView {
   }
 
   private animate(dt: number): void {
+    for (let i = this.waves.length - 1; i >= 0; i--) {
+      const w = this.waves[i];
+      w.age += dt;
+      const k = Math.min(w.age / WAVE_LIFE, 1);
+      // Loang nhanh lúc đầu rồi chậm dần, mờ đi khi ra xa.
+      w.mesh.scale.setScalar(0.5 + (WAVE_RADIUS - 0.5) * (1 - (1 - k) ** 2));
+      (w.mesh.material as THREE.MeshBasicMaterial).opacity = 0.95 * (1 - k) ** 1.3;
+      if (k >= 1) {
+        this.dropWave(w);
+        this.waves.splice(i, 1);
+      }
+    }
     for (let i = this.hills.length - 1; i >= 0; i--) {
       const h = this.hills[i];
       h.age += dt;

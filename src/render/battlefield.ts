@@ -5,10 +5,11 @@
 
 import * as THREE from 'three';
 import { createNoise2D, type NoiseFunction2D } from 'simplex-noise';
-import { FIELD, type Terrain } from '../game/defs';
+import type { Battle } from '../game/battle';
+import { FIELD, RALLY_BEAT, SKILLS, type Terrain } from '../game/defs';
 import { BattleView } from './battleView';
 import { addSunLights } from './lights';
-import { buildForest, makeBoat, makeEnemyFlag, makeFighter, makeMountain, makeTent, type TreeSpot } from './models';
+import { STICK_POSE, buildForest, makeBoat, makeDrummer, makeEnemyFlag, makeMountain, makeTent, type TreeSpot } from './models';
 import { makeNhaSan, makeRuong } from './buildings';
 import { C } from './palette';
 import { ShapeBuilder, seeded } from './shapes';
@@ -71,6 +72,14 @@ const TREE_DENSITY: Record<Terrain, number> = { rung: 0.8, benSong: 0.45, lang: 
 /** Tấm đất quanh bãi và khoảng cách giữa hai đỉnh lưới (đơn vị: ô). */
 const LAND = { w: 90, d: 100, step: 0.75 };
 
+/**
+ * Lạc tướng đứng sau hàng quân ta, giữa bãi, quay nghiêng sang trái bãi, trống đồng ở trước mặt:
+ * nhìn từ camera thấy rõ cả hai tay cầm dùi lẫn mặt trống.
+ */
+const DRUMMER = { x: FIELD.w / 2 + 0.3, z: FIELD.d + 2 };
+/** Mặt trống: nơi sóng trống tỏa ra (tọa độ trận). */
+const DRUM_AT = { x: DRUMMER.x - 0.56, z: DRUMMER.z };
+
 /** Một vùng không trồng cây (để chỗ cho sông, nhà, lều, núi). Đất trong vùng được san phẳng, trừ khi giữ đồi. */
 type Zone = { x0: number; x1: number; z0: number; z1: number; hills?: boolean };
 
@@ -80,6 +89,7 @@ export class Battlefield {
   private readonly inner = new THREE.Group();
   private decor = new THREE.Group();
   private terrain: Terrain | null = null;
+  private drummer?: THREE.Group;
 
   constructor() {
     this.scene.background = new THREE.Color(C.sky);
@@ -91,7 +101,32 @@ export class Battlefield {
     field.add(this.inner);
     this.scene.add(field);
     this.inner.add(this.decor);
-    this.view = new BattleView(this.inner, { x: 0, z: 0 }, 1.25);
+    this.view = new BattleView(this.inner, { x: 0, z: 0 }, 1.25, undefined, DRUM_AT);
+  }
+
+  /** Vẽ trận đang diễn ra, và Lạc tướng đánh trống khi có Trống trận. */
+  update(battle: Battle | null, dt: number): void {
+    this.view.update(battle, dt);
+    const d = this.drummer;
+    if (!d) return;
+    const [left, right] = d.userData.sticks as THREE.Object3D[];
+    const face = d.userData.face as THREE.Object3D;
+    const rally = battle && !battle.outcome ? battle.rally : 0;
+    if (rally <= 0) {
+      left.rotation.x = right.rotation.x = STICK_POSE.rest;
+      face.scale.set(1, 1, 1);
+      return;
+    }
+    // Mỗi nhịp một tay nện xuống, tay kia giơ cao lấy đà; mặt trống rung lên đúng lúc dùi chạm.
+    const t = SKILLS.trongTran.duration - rally;
+    const beat = Math.floor(t / RALLY_BEAT);
+    const k = (t % RALLY_BEAT) / RALLY_BEAT;
+    const striking = beat % 2 ? right : left;
+    const lifting = beat % 2 ? left : right;
+    striking.rotation.x = k < 0.12 ? STICK_POSE.hit : THREE.MathUtils.lerp(STICK_POSE.hit, STICK_POSE.rest, smoothstep(k, 0.12, 0.5));
+    lifting.rotation.x = THREE.MathUtils.lerp(STICK_POSE.rest, STICK_POSE.up, smoothstep(k, 0.3, 0.9));
+    const bump = Math.exp(-k * 9);
+    face.scale.set(1 + 0.06 * bump, 1 + 1.2 * bump, 1 + 0.06 * bump);
   }
 
   setTerrain(t: Terrain): void {
@@ -104,6 +139,7 @@ export class Battlefield {
     });
     this.decor = buildDecor(t);
     this.inner.add(this.decor);
+    this.drummer = this.decor.userData.drummer as THREE.Group;
   }
 }
 
@@ -112,9 +148,11 @@ function buildDecor(t: Terrain): THREE.Group {
   const W = FIELD.w;
   const D = FIELD.d;
   const zones: Zone[] = [{ x0: -1.5, x1: W + 1.5, z0: -1.5, z1: D + 1.5 }];
-  // Lạc tướng đứng sau hàng quân ta, cạnh trống đồng và cờ đỏ.
+  // Lạc tướng đứng sau hàng quân ta, đánh trống đồng, cạnh cờ đỏ.
   zones.push({ x0: W / 2 - 2.5, x1: W / 2 + 2.5, z0: D, z1: D + 4 });
-  g.add(commander(W / 2, D + 2));
+  const lord = commander(DRUMMER.x, DRUMMER.z);
+  g.add(lord);
+  g.userData.drummer = lord.userData.drummer;
 
   // Đặt trước ở mặt phẳng, dựng xong dáng đất mới hạ xuống đúng mặt đất. `foot` là bán kính chân.
   const placed: { obj: THREE.Object3D; foot: number }[] = [];
@@ -407,19 +445,16 @@ class Relief {
   }
 }
 
-/** Lạc tướng đứng cạnh trống đồng lớn và cờ đỏ, sau lưng quân ta. */
+/** Lạc tướng đứng sau trống đồng lớn, cạnh cờ đỏ, sau lưng quân ta. */
 function commander(x: number, z: number): THREE.Group {
   const g = new THREE.Group();
-  const lord = makeFighter('giao');
-  lord.position.set(0.7, 0, 0);
-  lord.rotation.y = Math.PI;
+  const drummer = makeDrummer();
+  drummer.rotation.y = -Math.PI / 2;
   const m = new ToonModel();
-  m.band.cyl(0.42, 0.38, 0.4, C.bronze, -0.4, 0.28, 0, undefined, 16);
-  m.drum.cyl(0.44, 0.44, 0.05, 0xffffff, -0.4, 0.5, 0, undefined, 20);
-  for (const s of [-1, 1]) m.plain.cyl(0.03, 0.03, 0.4, C.woodDark, -0.4 + s * 0.38, 0.12, 0, undefined, 5);
-  m.plain.cyl(0.035, 0.04, 2.4, C.woodDark, 1.4, 1.2, 0.3, undefined, 6);
-  m.band.box(0.6, 0.5, 0.03, C.red, 1.7, 2.1, 0.3);
-  g.add(lord, m.group());
+  m.plain.cyl(0.035, 0.04, 2.4, C.woodDark, 1.2, 1.2, 0.3, undefined, 6);
+  m.band.box(0.6, 0.5, 0.03, C.red, 1.5, 2.1, 0.3);
+  g.add(drummer, m.group());
   g.position.set(x, 0, z);
+  g.userData.drummer = drummer;
   return g;
 }

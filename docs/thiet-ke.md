@@ -111,7 +111,12 @@ Tài liệu này ghi lại các quyết định đã chốt với chủ dự án
 - **Lạc tướng** cầm quân trong mọi trận, có kỹ năng **Trống trận**:
   - bấm thì quân ta đánh mạnh thêm 50% và chạy nhanh thêm 30% trong 6 giây;
   - hồi lại sau 20 giây;
-  - dùng được cả ở phó bản lẫn khi giữ kinh đô.
+  - dùng được cả ở phó bản lẫn khi giữ kinh đô;
+  - hình và tiếng, đều theo nhịp trống nửa giây một tiếng, suốt 6 giây:
+    - ngoài bãi, Lạc tướng đứng nghiêng sau hàng quân ta, hai tay cầm dùi thay nhau nện xuống trống đồng có bốn tượng cóc trên mặt; mặt trống rung lên mỗi lần dùi chạm (`makeDrummer` trong `src/render/models.ts`);
+    - mỗi nhịp, một sóng hoa văn mặt trống đồng (ngôi sao giữa, vòng tròn tiếp tuyến, chim bay) màu đồng loang ra trên mặt đất, từ mặt trống ngoài bãi, hay từ giữa quân ta khi giữ kinh đô;
+    - dưới chân mỗi lính ta có vòng sáng đồng bừng lên đúng nhịp rồi dịu dần; lính nhún nhảy hăng hơn;
+    - tiếng trống "tùng" trầm và "tung" nảy xen nhau, tắt ngay khi trận kết thúc, rút quân hay tắt tiếng.
 - **Giữ kinh đô**: khoảng 15 phút chơi có một đợt giặc Ân. Trinh sát báo trước 60 giây, kèm hướng giặc tới (một trong hai cạnh rừng). Giặc tìm đường tới kho và Điện, gặp lũy thì phải phá. Phòng thủ bằng chòi canh, bẫy chông và quân nhà. Thua thì chỉ mất một phần kho và vài công trình hư hỏng, sửa lại được. Sang chương 2, mùa lũ của Thủy Tinh thay cho giặc Ân (xem mục Mùa lũ).
 
 ### Giữ kinh đô (đã làm ở lát cắt 2b)

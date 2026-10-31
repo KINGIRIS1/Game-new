@@ -1,7 +1,7 @@
 // Điểm khởi động: nạp game, nối luật chơi với cảnh 3D và giao diện, chạy vòng lặp.
 
 import './style.css';
-import { play, setMuted, unlockAudio } from './audio/sfx';
+import { play, setMuted, stopRally, unlockAudio } from './audio/sfx';
 import { useSkill } from './game/battle';
 import { leaveBattlefield, retreat, startStage } from './game/campaign';
 import { feedGiong, forgeGear } from './game/giong';
@@ -364,6 +364,7 @@ function start(): void {
       case 'toggleMute':
         state.settings.muted = !state.settings.muted;
         setMuted(state.settings.muted);
+        if (state.settings.muted) stopRally();
         save();
         hud.showSettings(state, world.resolution);
         return;
@@ -535,7 +536,7 @@ function start(): void {
       case 'useSkill': {
         const battle = state.campaign.battle ?? (state.raid.phase === 'battle' ? state.raid.battle : null);
         if (!battle || !useSkill(battle, a.skill)) return;
-        play('claim');
+        play(a.skill === 'trongTran' ? 'trongTran' : 'claim');
         navigator.vibrate?.(a.skill === 'trongTran' ? 30 : 60);
         commit();
         return;
@@ -607,6 +608,7 @@ function start(): void {
       navigator.vibrate?.([60, 80, 60]);
     }
     if (phase === 'battle') play('claim');
+    if (phase === 'idle' && shownPhase === 'battle') stopRally();
     if (phase === 'idle' && shownPhase === 'battle' && state.raid.lastResult) {
       play(state.raid.lastResult.won ? 'upgrade' : 'error');
       commit();
@@ -641,6 +643,7 @@ function start(): void {
     }
     if (r === shownStage) return;
     if (!resultAt) {
+      stopRally();
       resultAt = now + (battle?.ascend || battle?.sonWin ? 3500 : 700);
       play(r.outcome === 'win' ? 'upgrade' : 'error');
       commit();
