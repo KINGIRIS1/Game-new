@@ -923,7 +923,7 @@ export class World {
     v.zoom = this.cityCam.zoom;
     v.apply();
     this.cityCam = null;
-    this.field?.view.update(null, 0);
+    this.field?.update(null, 0);
   }
 
   /** Vừa khít bề ngang bãi, chừa chỗ cho lính đứng sát mép. */
@@ -933,7 +933,7 @@ export class World {
 
   /** Vẽ trận ngoài bãi đang diễn ra. */
   updateField(battle: Battle | null, dt: number): void {
-    this.field?.view.update(battle, dt);
+    this.field?.update(battle, dt);
   }
 
   /** Bóng mờ của công trình sắp đặt ở mặt đất bậc `h`, viền xanh nếu đặt được, đỏ nếu không. */

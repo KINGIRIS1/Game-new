@@ -108,6 +108,59 @@ export const drumTex = canvasTexture(256, 256, (g) => {
   }
 });
 
+/**
+ * Sóng trống: hoa văn mặt trống đồng (vành tròn, vòng tròn tiếp tuyến, ngôi sao giữa, chim bay) nét trắng
+ * trên nền trong suốt, để tô màu đồng bằng chất liệu và loang ra trên mặt đất.
+ */
+export const drumWaveTex = (() => {
+  const c = document.createElement('canvas');
+  c.width = 256;
+  c.height = 256;
+  const g = c.getContext('2d')!;
+  g.strokeStyle = '#ffffff';
+  g.fillStyle = '#ffffff';
+  const m = 128;
+  g.lineWidth = 8;
+  g.beginPath();
+  g.arc(m, m, 118, 0, Math.PI * 2);
+  g.stroke();
+  g.lineWidth = 3;
+  for (const r of [104, 66]) {
+    g.beginPath();
+    g.arc(m, m, r, 0, Math.PI * 2);
+    g.stroke();
+  }
+  for (let i = 0; i < 16; i++) {
+    const a = (i / 16) * Math.PI * 2;
+    g.beginPath();
+    g.arc(m + Math.cos(a) * 85, m + Math.sin(a) * 85, 8, 0, Math.PI * 2);
+    g.stroke();
+  }
+  for (let i = 0; i < 6; i++) {
+    const a = (i / 6) * Math.PI * 2 + 0.3;
+    g.save();
+    g.translate(m + Math.cos(a) * 50, m + Math.sin(a) * 50);
+    g.rotate(a + Math.PI / 2);
+    g.beginPath();
+    g.moveTo(-10, 4);
+    g.lineTo(0, -3);
+    g.lineTo(10, 4);
+    g.stroke();
+    g.restore();
+  }
+  for (let i = 0; i < 12; i++) {
+    const a = (i / 12) * Math.PI * 2;
+    g.beginPath();
+    g.moveTo(m + Math.cos(a - 0.14) * 8, m + Math.sin(a - 0.14) * 8);
+    g.lineTo(m + Math.cos(a) * 30, m + Math.sin(a) * 30);
+    g.lineTo(m + Math.cos(a + 0.14) * 8, m + Math.sin(a + 0.14) * 8);
+    g.fill();
+  }
+  const tex = new THREE.CanvasTexture(c);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  return tex;
+})();
+
 export const toon = new THREE.MeshToonMaterial({ vertexColors: true, gradientMap: ramp });
 export const toonBand = new THREE.MeshToonMaterial({ vertexColors: true, gradientMap: ramp, map: bandTex });
 export const toonDrum = new THREE.MeshToonMaterial({ vertexColors: true, gradientMap: ramp, map: drumTex });
