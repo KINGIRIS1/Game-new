@@ -1,15 +1,20 @@
-// Giao diện HTML đặt đè lên cảnh 3D: thanh tài nguyên, nhiệm vụ, bảng xây dựng, bảng công trình, cài đặt.
+// Giao diện HTML đặt đè lên cảnh 3D: thanh tài nguyên, nhiệm vụ, bảng xây dựng, bảng công trình, cài đặt,
+// bản đồ phó bản và các nút trong trận.
 
-import { enemiesLeft, alliesLeft } from '../game/battle';
+import { enemiesLeft, alliesLeft, skillReady } from '../game/battle';
 import {
   BUILDINGS,
+  FIELD,
   RESOURCE_IDS,
+  SKILLS,
+  STAGES,
   UNITS,
   UNIT_TYPES,
   type BuildingType,
   type Cost,
   type ResourceId,
   type Resources,
+  type Row,
   type UnitType,
 } from '../game/defs';
 import {
@@ -39,9 +44,12 @@ import {
   type Building,
   type GameState,
   type RaidResult,
+  type StageResult,
 } from '../game/game';
 import { AREA_SIZE } from '../game/map';
 import { formatDuration, vi } from '../text/vi';
+import { armyHtml, defaultPick, mapHtml, nextRow, stageHtml, stageResultHtml, type ArmyPick } from './campaign';
+import { costHtml, esc, fmt } from './format';
 
 const SHOWN_RESOURCES: ResourceId[] = ['gao', 'voOc', 'datDa', 'sat'];
 const BUILD_MENU: BuildingType[] = ['luy', 'ruong', 'ben', 'nhaSan', 'baiDa', 'kho', 'loRen', 'doanhTrai', 'choiCanh', 'bayChong'];
@@ -75,21 +83,23 @@ export type HudAction =
   | { kind: 'callRaid' }
   | { kind: 'lookRaid' }
   | { kind: 'openBarracks' }
-  | { kind: 'dismissRaid' };
+  | { kind: 'dismissRaid' }
+  | { kind: 'openCampaign' }
+  | { kind: 'march'; stage: number; army: Record<UnitType, number>; rows: Record<UnitType, Row> }
+  | { kind: 'useRally' }
+  | { kind: 'retreat' }
+  | { kind: 'leaveField' }
+  | { kind: 'fieldToMap' };
 
 export type HudMode = 'view' | 'place' | 'paint';
 
 type Sheet = { kind: 'build' } | { kind: 'building'; id: number } | { kind: 'settings' } | { kind: 'merchant' } | null;
 
-const esc = (s: string) => s.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]!);
-const fmt = (n: number) => Math.floor(n).toLocaleString('vi-VN');
-
-function costHtml(state: GameState | null, cost: Cost): string {
-  const parts = RESOURCE_IDS.filter((r) => (cost[r] ?? 0) > 0).map((r) => {
-    const lack = state && state.resources[r] < (cost[r] ?? 0);
-    return `<span class="${lack ? 'lack' : ''}">${vi.resources[r].icon} ${fmt(cost[r]!)}</span>`;
-  });
-  return parts.length ? `<span class="cost">${parts.join('')}</span>` : vi.ui.free;
+/** Bản đồ phó bản đang mở: màn đang xem, đang xem thẻ màn hay đang xếp quân. */
+interface CampaignView {
+  stage: number | null;
+  step: 'stage' | 'army';
+  pick: ArmyPick;
 }
 
 function prodHtml(prod: Cost): string {
@@ -112,19 +122,40 @@ export class Hud {
   private topHtml = '';
   private bannerHtml = '';
   private questCollapsed = false;
+  private mode: HudMode = 'view';
+  /** Đã có doanh trại: hiện nút Phó bản ở thanh dưới. */
+  private campaignReady = false;
+  private readonly campaignEl: HTMLElement;
+  private readonly fieldTop: HTMLElement;
+  private readonly fieldBar: HTMLElement;
+  private camp: CampaignView | null = null;
+  private campHtml = '';
 
-  constructor(root: HTMLElement, private readonly onAction: (a: HudAction) => void) {
+  constructor(
+    root: HTMLElement,
+    private readonly onAction: (a: HudAction) => void,
+    private readonly getState: () => GameState,
+  ) {
     this.root = root;
     root.innerHTML = `
       <div class="top-area">
         <header class="topbar"></header>
         <div class="banners"></div>
         <section class="quest"></section>
+        <div class="field-top"><b></b><span></span></div>
       </div>
       <div class="hint" hidden></div>
       <footer class="bottombar"></footer>
+      <footer class="fieldbar">
+        <button class="btn ghost" data-act="retreat">${vi.ui.retreat}</button>
+        <button class="btn bronze rally" data-act="useRally" title="${vi.ui.rallyHint}">${vi.ui.rally}</button>
+      </footer>
       <aside class="sheet" aria-live="polite"></aside>
+      <section class="campaign" hidden></section>
       <div class="toasts"></div>`;
+    this.campaignEl = root.querySelector('.campaign')!;
+    this.fieldTop = root.querySelector('.field-top')!;
+    this.fieldBar = root.querySelector('.fieldbar')!;
     this.topbar = root.querySelector('.topbar')!;
     this.banners = root.querySelector('.banners')!;
     this.quest = root.querySelector('.quest')!;
@@ -159,6 +190,19 @@ export class Hud {
         return this.onAction({ kind: 'repair', id });
       case 'train':
         return this.onAction({ kind: 'train', unit: el.dataset.unit as UnitType });
+      case 'closeCampaign':
+        return this.closeCampaign();
+      case 'pickStage':
+      case 'prepareStage':
+      case 'backToStage':
+      case 'armyDelta':
+      case 'armyRow':
+        return this.campaignStep(act, id, el);
+      case 'march': {
+        if (!this.camp?.stage) return;
+        const { army, rows } = this.camp.pick;
+        return this.onAction({ kind: 'march', stage: this.camp.stage, army: { ...army }, rows: { ...rows } });
+      }
       case 'importCode': {
         const box = this.sheetEl.querySelector<HTMLTextAreaElement>('#import-box');
         return this.onAction({ kind: 'importCode', code: box?.value ?? '' });
@@ -185,6 +229,11 @@ export class Hud {
     const room = housing(state);
     const dan = `<button class="chip dan ${free > 0 ? 'idle' : ''}" data-act="danInfo" title="${vi.ui.danTitle(state.dan, room, free)}">
       👥 <b>${state.dan}</b><small>/${room}</small>${free > 0 ? `<span class="rate">${free} rảnh</span>` : ''}</button>`;
+    const ready = countOf(state, 'doanhTrai') > 0;
+    if (ready !== this.campaignReady) {
+      this.campaignReady = ready;
+      if (this.mode === 'view') this.setMode('view');
+    }
     const cap = troopCap(state);
     const army = cap
       ? `<button class="chip dan" data-act="openBarracks" title="${vi.ui.troopSpace(troopSpace(state), cap)}">⚔️ <b>${troopSpace(state)}</b><small>/${cap}</small></button>`
@@ -212,7 +261,9 @@ export class Hud {
         <button class="btn small" data-act="lookRaid">${vi.ui.raidLook}</button></div>`);
     }
     if (raid.phase === 'battle' && raid.battle) {
-      parts.push(`<div class="banner bad">⚔️ ${vi.ui.raidBattle(enemiesLeft(raid.battle), alliesLeft(raid.battle))}</div>`);
+      const ready = skillReady(raid.battle, 'trongTran');
+      parts.push(`<div class="banner bad">⚔️ ${vi.ui.raidBattle(enemiesLeft(raid.battle), alliesLeft(raid.battle))}
+        <button class="btn small bronze" data-act="useRally" ${ready ? '' : 'disabled'}>${vi.ui.rally}</button></div>`);
     }
     if (isStarving(state)) parts.push(`<div class="banner bad">🍚 ${vi.ui.starving}</div>`);
     const visit = state.merchant.visit;
@@ -258,8 +309,10 @@ export class Hud {
   // ---------- Thanh dưới ----------
 
   setMode(mode: HudMode, placeValid = true, hint?: string): void {
+    this.mode = mode;
     if (mode === 'view') {
-      this.bottombar.innerHTML = `<button class="btn" data-act="openBuild">🔨 ${vi.ui.build}</button>`;
+      const camp = this.campaignReady ? `<button class="btn bronze" data-act="openCampaign">⚔️ ${vi.ui.campaign}</button>` : '';
+      this.bottombar.innerHTML = `<button class="btn" data-act="openBuild">🔨 ${vi.ui.build}</button>${camp}`;
       this.hint.hidden = true;
     } else if (mode === 'place') {
       this.bottombar.innerHTML = `
@@ -500,7 +553,94 @@ export class Hud {
       <textarea id="import-box" placeholder="TDVL1:..."></textarea>
       <button class="btn small ghost" data-act="importCode">📥 ${vi.ui.importSave}</button>
       <div class="actions"><button class="btn ghost" data-act="reset">🔄 ${vi.ui.reset}</button></div>
-      <p class="muted" style="text-align:center;margin-top:14px">${vi.gameTitle} · bản thử 0.3</p>`;
+      <p class="muted" style="text-align:center;margin-top:14px">${vi.gameTitle} · bản thử 0.4</p>`;
+  }
+
+  // ---------- Phó bản ----------
+
+  get campaignOpen(): boolean {
+    return this.camp !== null;
+  }
+
+  showCampaign(state: GameState): void {
+    this.closeSheet();
+    const next = state.campaign.cleared + 1;
+    this.camp = { stage: next <= STAGES.length ? next : null, step: 'stage', pick: defaultPick(state) };
+    this.campaignEl.hidden = false;
+    this.refreshCampaign(state, true);
+  }
+
+  closeCampaign(): void {
+    this.camp = null;
+    this.campHtml = '';
+    this.campaignEl.hidden = true;
+  }
+
+  /** Thao tác trên bản đồ chỉ đổi giao diện: chọn màn, xếp quân. */
+  private campaignStep(act: string, id: number, el: HTMLElement): void {
+    const camp = this.camp;
+    if (!camp) return;
+    const state = this.getState();
+    const unit = el.dataset.unit as UnitType;
+    if (act === 'pickStage') {
+      camp.stage = id;
+      camp.step = 'stage';
+    } else if (act === 'prepareStage') {
+      camp.step = 'army';
+      camp.pick = defaultPick(state);
+    } else if (act === 'backToStage') {
+      camp.step = 'stage';
+    } else if (act === 'armyDelta') {
+      const n = camp.pick.army[unit] + Number(el.dataset.delta);
+      camp.pick.army[unit] = Math.max(0, Math.min(state.troops[unit], n));
+    } else if (act === 'armyRow') {
+      camp.pick.rows[unit] = nextRow(camp.pick.rows[unit]);
+    }
+    this.refreshCampaign(state);
+  }
+
+  refreshCampaign(state: GameState, force = false): void {
+    const camp = this.camp;
+    if (!camp) return;
+    for (const k of UNIT_TYPES) camp.pick.army[k] = Math.min(camp.pick.army[k], state.troops[k]);
+    let panel = `<p class="muted">${vi.ui.campaignHint}</p>`;
+    if (camp.stage) panel = camp.step === 'army' ? armyHtml(state, camp.pick) : stageHtml(state, camp.stage);
+    const html = `<div class="camp-head"><h2>⚔️ ${vi.ui.campaignTitle}</h2>
+        <button class="close" data-act="closeCampaign" aria-label="${vi.ui.close}">✕</button></div>
+      <div class="camp-main"><div class="camp-map">${mapHtml(state, camp.stage)}</div><div class="camp-panel">${panel}</div></div>`;
+    if (html !== this.campHtml || force) {
+      this.campHtml = html;
+      this.campaignEl.innerHTML = html;
+    }
+  }
+
+  /** Thanh trên và nút dưới khi đang đánh ngoài bãi. Chỉ đổi chữ tại chỗ để không nuốt lần chạm. */
+  updateField(state: GameState): void {
+    const b = state.campaign.battle;
+    this.root.classList.toggle('in-field', !!b);
+    if (!b) return;
+    const secs = Math.max(0, Math.ceil(FIELD.maxS - b.t));
+    this.fieldTop.querySelector('b')!.textContent = `${vi.ui.stageN(b.wave)} · ${vi.stages[b.wave - 1].name}`;
+    this.fieldTop.querySelector('span')!.textContent = vi.ui.fieldBanner(enemiesLeft(b), alliesLeft(b), secs);
+    const rally = this.fieldBar.querySelector<HTMLButtonElement>('.rally')!;
+    const cd = b.skillCd.trongTran ?? 0;
+    rally.disabled = !skillReady(b, 'trongTran');
+    rally.textContent = cd > 0 && !b.outcome ? `${vi.ui.rally} · ${Math.ceil(cd)}s` : vi.ui.rally;
+    rally.classList.toggle('active', b.rally > 0);
+    rally.style.setProperty('--cd', String(cd / SKILLS.trongTran.cooldown));
+    this.fieldBar.querySelector<HTMLButtonElement>('[data-act="retreat"]')!.disabled = !!b.outcome;
+  }
+
+  showStageResult(r: StageResult): void {
+    this.closeStageResult();
+    const back = document.createElement('div');
+    back.className = 'modal-back stage';
+    back.innerHTML = stageResultHtml(r);
+    this.root.appendChild(back);
+  }
+
+  closeStageResult(): void {
+    this.root.querySelector('.modal-back.stage')?.remove();
   }
 
   // ---------- Thông báo ----------

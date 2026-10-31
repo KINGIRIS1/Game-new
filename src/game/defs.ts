@@ -318,7 +318,7 @@ export const TRADE_BONUS = 1.15;
 // ---------- Quân đội và giặc ----------
 
 export type UnitType = 'giao' | 'cung' | 'voi';
-export type EnemyType = 'giaoAn' | 'cungAn' | 'chienXa';
+export type EnemyType = 'giaoAn' | 'cungAn' | 'chienXa' | 'phoTuong';
 export const UNIT_TYPES: UnitType[] = ['giao', 'cung', 'voi'];
 
 export interface FighterStats {
@@ -351,11 +351,12 @@ export const UNITS: Record<UnitType, UnitDef> = {
   voi: { hp: 200, dmg: 15, range: 0.9, speed: 1.1, cooldown: 1.5, strongVs: 'cungAn', cost: { gao: 60, voOc: 20, sat: 12 }, barracksLevel: 3, space: 3, upkeep: 1.5 },
 };
 
-/** Giặc Ân: lính giáo, cung thủ và chiến xa (xe ngựa chiến, quân nặng). */
+/** Giặc Ân: lính giáo, cung thủ và chiến xa (xe ngựa chiến, quân nặng). Phó tướng làm trùm ở phó bản. */
 export const ENEMIES: Record<EnemyType, FighterStats> = {
   giaoAn: { hp: 75, dmg: 9, range: 0.8, speed: 1.4, cooldown: 1.0 },
   cungAn: { hp: 45, dmg: 8, range: 3.5, speed: 1.3, cooldown: 1.3 },
   chienXa: { hp: 230, dmg: 20, range: 0.9, speed: 2.0, cooldown: 1.4, strongVs: 'cung' },
+  phoTuong: { hp: 600, dmg: 24, range: 1.0, speed: 1.2, cooldown: 1.3 },
 };
 
 /** Chòi canh tự bắn giặc trong tầm. */
@@ -376,7 +377,7 @@ export const LOOT_FRACTION: Partial<Record<BuildingType, number>> = { kho: 0.15,
 export const REPAIR_FRACTION = 0.3;
 
 /** Quân số giặc của đợt thứ `wave` (bắt đầu từ 1). */
-export function raidForces(wave: number): Record<EnemyType, number> {
+export function raidForces(wave: number): Partial<Record<EnemyType, number>> {
   return {
     giaoAn: Math.min(3 + wave, 16),
     cungAn: wave >= 2 ? Math.min(wave, 10) : 0,
@@ -387,12 +388,66 @@ export function raidForces(wave: number): Record<EnemyType, number> {
 /** Giặc các đợt sau khỏe hơn. */
 export const raidHpScale = (wave: number) => 1 + 0.12 * (wave - 1);
 
+// ---------- Phó bản chương 1 ----------
+
+/** Hàng quân trên bãi chiến: tiền quân đứng đầu, hậu quân đứng sau cùng. */
+export type Row = 'tien' | 'trung' | 'hau';
+export const ROWS: Row[] = ['tien', 'trung', 'hau'];
+/** Hàng mặc định: giáo binh chặn đầu, voi ở giữa, cung thủ bắn từ sau. */
+export const DEFAULT_ROWS: Record<UnitType, Row> = { giao: 'tien', voi: 'trung', cung: 'hau' };
+export const ENEMY_ROWS: Record<EnemyType, Row> = { giaoAn: 'tien', chienXa: 'trung', cungAn: 'hau', phoTuong: 'hau' };
+
+/**
+ * Bãi chiến: rộng `w` ô, dài `d` ô; hàng đầu hai bên cách nhau `gap` ô.
+ * Ngoài bãi mọi người đều bền hơn `hpMul` lần để trận kéo dài, kịp bấm kỹ năng.
+ * Quá `maxS` giây chưa phá được giặc thì coi như thua.
+ */
+export const FIELD = { w: 9, d: 22, gap: 10, hpMul: 1.6, maxS: 90 };
+
+export type Terrain = 'rung' | 'benSong' | 'lang' | 'don' | 'nui';
+
+export interface StageDef {
+  /** Cấp Điện cần có để đánh màn này. */
+  minDien: number;
+  /** Cần Thánh Gióng đã vươn vai thành tráng sĩ (có ở lát cắt 3b). */
+  needsGiong: boolean;
+  enemies: Partial<Record<EnemyType, number>>;
+  /** Hệ số máu giặc. */
+  hpScale: number;
+  /** Thưởng lần đầu thắng. Đánh lại được một phần (REPLAY_SHARE). */
+  reward: Cost;
+  terrain: Terrain;
+}
+
+/** Tám màn trên đường từ Phong Châu tới chân núi Trâu. Màn 4 và màn 8 có trùm. */
+export const STAGES: StageDef[] = [
+  { minDien: 2, needsGiong: false, enemies: { giaoAn: 4 }, hpScale: 1, reward: { gao: 150, voOc: 100 }, terrain: 'rung' },
+  { minDien: 2, needsGiong: false, enemies: { giaoAn: 5, cungAn: 2 }, hpScale: 1, reward: { gao: 200, voOc: 150, datDa: 80 }, terrain: 'benSong' },
+  { minDien: 3, needsGiong: false, enemies: { giaoAn: 5, cungAn: 3, chienXa: 1 }, hpScale: 1.1, reward: { gao: 300, voOc: 200, datDa: 150, sat: 40 }, terrain: 'lang' },
+  { minDien: 3, needsGiong: false, enemies: { giaoAn: 5, cungAn: 3, chienXa: 1, phoTuong: 1 }, hpScale: 1.1, reward: { gao: 500, voOc: 300, datDa: 250, sat: 80 }, terrain: 'don' },
+  { minDien: 3, needsGiong: true, enemies: { giaoAn: 8, cungAn: 4, chienXa: 2 }, hpScale: 1.3, reward: { gao: 600, voOc: 400, datDa: 300, sat: 100 }, terrain: 'rung' },
+  { minDien: 4, needsGiong: true, enemies: { giaoAn: 9, cungAn: 5, chienXa: 3 }, hpScale: 1.4, reward: { gao: 800, voOc: 500, datDa: 400, sat: 120 }, terrain: 'benSong' },
+  { minDien: 4, needsGiong: true, enemies: { giaoAn: 10, cungAn: 6, chienXa: 4 }, hpScale: 1.5, reward: { gao: 1000, voOc: 600, datDa: 500, sat: 150 }, terrain: 'lang' },
+  { minDien: 5, needsGiong: true, enemies: { giaoAn: 12, cungAn: 7, chienXa: 4, phoTuong: 1 }, hpScale: 1.6, reward: { gao: 1500, voOc: 1000, datDa: 800, sat: 250 }, terrain: 'nui' },
+];
+/** Đánh lại màn đã qua được phần này của thưởng lần đầu. */
+export const REPLAY_SHARE = 0.3;
+
+/** Kỹ năng bấm tay trong trận. Lát cắt 3a có Trống trận của Lạc tướng. */
+export type SkillId = 'trongTran';
+export const SKILLS: Record<SkillId, { cooldown: number; duration: number }> = {
+  trongTran: { cooldown: 20, duration: 6 },
+};
+/** Trống trận thúc quân: quân ta đánh mạnh hơn và chạy nhanh hơn trong một lúc. */
+export const RALLY = { dmg: 1.5, speed: 1.3 };
+
 export type QuestGoal =
   | { kind: 'count'; building: BuildingType; amount: number }
   | { kind: 'dienLevel'; level: number }
   | { kind: 'workers'; building: BuildingType; amount: number }
   | { kind: 'troops'; amount: number }
-  | { kind: 'raidsWon'; amount: number };
+  | { kind: 'raidsWon'; amount: number }
+  | { kind: 'stage'; stage: number };
 
 export interface QuestDef {
   id: string;
@@ -413,6 +468,10 @@ export const QUESTS: QuestDef[] = [
   { id: 'dien3', goal: { kind: 'dienLevel', level: 3 }, reward: { gao: 200, voOc: 150, sat: 20 } },
   { id: 'doanhTrai', goal: { kind: 'count', building: 'doanhTrai', amount: 1 }, reward: { sat: 30 } },
   { id: 'luyenQuan', goal: { kind: 'troops', amount: 5 }, reward: { gao: 120 } },
+  { id: 'danhMan1', goal: { kind: 'stage', stage: 1 }, reward: { gao: 100, voOc: 80 } },
   { id: 'choiCanh', goal: { kind: 'count', building: 'choiCanh', amount: 1 }, reward: { datDa: 80 } },
   { id: 'giuKinhDo', goal: { kind: 'raidsWon', amount: 1 }, reward: { voOc: 150, sat: 40 } },
+  { id: 'quaMan4', goal: { kind: 'stage', stage: 4 }, reward: { datDa: 150, sat: 60 } },
 ];
+/** Bản lưu cũ (phiên bản 3) đã làm qua nhiệm vụ này thì chỉ số nhiệm vụ phải dời thêm một. */
+export const QUEST_INSERTED_V4 = 11;

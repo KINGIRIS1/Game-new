@@ -1,8 +1,8 @@
 // Lưu game vào localStorage và xuất/nhập mã lưu để sao lưu hoặc chuyển máy.
-// Bản lưu cũ (phiên bản 1 của lát cắt 1, phiên bản 2 của lát cắt 2a) được nâng lên phiên bản hiện tại khi nạp.
+// Bản lưu cũ (phiên bản 1 của lát cắt 1, 2 của lát cắt 2a, 3 của lát cắt 2b) được nâng lên phiên bản hiện tại khi nạp.
 
-import { BUILDINGS, MERCHANT_FIRST_MS, RESOURCE_IDS, type BuildingType } from './defs';
-import { autoAssign, housing, initialRaid, type GameState } from './game';
+import { BUILDINGS, MERCHANT_FIRST_MS, QUEST_INSERTED_V4, RESOURCE_IDS, ROWS, type BuildingType } from './defs';
+import { autoAssign, housing, initialCampaign, initialRaid, type GameState } from './game';
 
 /** Giữ nguyên khóa cũ để người chơi lát cắt 1 không mất tiến trình. */
 export const SAVE_KEY = 'thoi-dai-van-lang/save/v1';
@@ -34,6 +34,7 @@ function migrate(raw: unknown): unknown {
   let v = raw;
   if (isObj(v) && v.version === 1 && Array.isArray(v.buildings)) v = migrate1to2(v);
   if (isObj(v) && v.version === 2) v = migrate2to3(v);
+  if (isObj(v) && v.version === 3) v = migrate3to4(v);
   return v;
 }
 
@@ -62,6 +63,20 @@ function migrate2to3(s: Raw): Raw {
   return s;
 }
 
+/** Phiên bản 3 → 4 (lát cắt 3a): thêm phó bản, mã trận, và nhiệm vụ "Đánh màn 1" chèn vào giữa chuỗi. */
+function migrate3to4(s: Raw): Raw {
+  s.version = 4;
+  s.campaign = initialCampaign();
+  s.nextBattleId = 1;
+  if (isNum(s.questIndex) && s.questIndex >= QUEST_INSERTED_V4) s.questIndex += 1;
+  // Trận giữ kinh đô đang dở trong bản lưu cũ chưa có mã và kỹ năng.
+  const raid = s.raid;
+  if (isObj(raid) && isObj(raid.battle)) {
+    Object.assign(raid.battle, { id: 0, mode: 'raid', rally: 0, skillCd: {}, outcome: null });
+  }
+  return s;
+}
+
 function isValidBuildings(list: unknown): boolean {
   if (!Array.isArray(list)) return false;
   const ok = list.every((b: unknown) => {
@@ -83,12 +98,16 @@ function isValidBuildings(list: unknown): boolean {
 }
 
 function isGameState(v: unknown): v is GameState {
-  if (!isObj(v) || v.version !== 3) return false;
+  if (!isObj(v) || v.version !== 4) return false;
   const troops = v.troops;
   if (!isObj(troops) || !['giao', 'cung', 'voi'].every((k) => isNum(troops[k]) && troops[k] >= 0)) return false;
   const raid = v.raid;
   if (!isObj(raid) || !isNum(raid.wave) || !isNum(raid.won) || !(raid.nextAt === null || isNum(raid.nextAt))) return false;
   if (!['idle', 'warning', 'battle'].includes(raid.phase as string)) return false;
+  const camp = v.campaign;
+  if (!isObj(camp) || !isNum(camp.cleared) || !isObj(camp.rows)) return false;
+  if (!['giao', 'cung', 'voi'].every((k) => ROWS.includes((camp.rows as Raw)[k] as never))) return false;
+  if (!(camp.battle === null || isObj(camp.battle)) || !(camp.lastResult === null || isObj(camp.lastResult))) return false;
   const res = v.resources;
   if (!isObj(res) || !RESOURCE_IDS.every((r) => isNum(res[r]))) return false;
   if (!isValidBuildings(v.buildings)) return false;
@@ -100,6 +119,7 @@ function isGameState(v: unknown): v is GameState {
     isNum(v.danProgress) &&
     isNum(v.clock) &&
     isNum(v.nextId) &&
+    isNum(v.nextBattleId) &&
     isNum(v.questIndex) &&
     isNum(v.lastSeen) &&
     isObj(settings) &&

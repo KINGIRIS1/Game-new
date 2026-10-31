@@ -19,11 +19,28 @@ describe('lưu game', () => {
       settings: { muted: true },
     };
     const s = deserialize(JSON.stringify(v1));
-    expect(s?.version).toBe(3);
+    expect(s?.version).toBe(4);
+    expect(s?.campaign.cleared).toBe(0);
     expect(s?.dan).toBe(5);
     expect(s?.buildings.find((b) => b.type === 'ruong')?.workers).toBe(2);
     expect(s?.buildings.find((b) => b.type === 'ben')?.workers).toBe(1);
     expect(s?.settings.muted).toBe(true);
+  });
+
+  it('nâng bản lưu lát cắt 2b: thêm phó bản, dời nhiệm vụ vì có nhiệm vụ mới chèn vào', () => {
+    const s3 = createInitialState(5) as unknown as Record<string, unknown>;
+    s3.version = 3;
+    delete s3.campaign;
+    delete s3.nextBattleId;
+    s3.questIndex = 12;
+    const s = deserialize(JSON.stringify(s3));
+    expect(s?.version).toBe(4);
+    expect(s?.questIndex).toBe(13);
+    expect(s?.campaign.battle).toBeNull();
+    expect(s?.nextBattleId).toBe(1);
+    // Nhiệm vụ trước chỗ chèn giữ nguyên.
+    s3.questIndex = 10;
+    expect(deserialize(JSON.stringify(s3))?.questIndex).toBe(10);
   });
 
   it('xuất rồi nhập mã lưu ra đúng state cũ', () => {

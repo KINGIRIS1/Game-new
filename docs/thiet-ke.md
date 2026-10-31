@@ -96,12 +96,19 @@ Tài liệu này ghi lại các quyết định đã chốt với chủ dự án
 
 ## Quân đội và trận đánh
 
-- 3 binh chủng khắc chế vòng tròn: **Giáo binh** thắng **Voi chiến**, Voi chiến thắng **Cung thủ**, Cung thủ thắng Giáo binh.
+- 3 binh chủng khắc chế vòng tròn, mỗi binh chủng ta khắc một loại giặc tương ứng:
+  - **giáo binh** thắng quân nặng (chiến xa);
+  - **voi chiến** thắng cung thủ Ân;
+  - **cung thủ** thắng lính giáo Ân.
 - Luyện quân tốn tiền tuyển và gạo ăn hằng phút. Lính tách riêng khỏi dân làng (xem mục Giữ kinh đô). Doanh trại càng cao càng nuôi được nhiều quân. Luyện xong ngay.
 - **Giặc Ân**: lính giáo (cung thủ ta khắc chế), cung thủ (voi chiến ta khắc chế), **chiến xa** (giáo binh ta khắc chế). Cuối mỗi phần có tướng giặc làm trùm.
 - Trận đánh **tự động** trong 20–40 giây trên bãi chiến 3D, lính chibi có động tác đơn giản. Người chơi chỉ bấm kỹ năng của tướng.
 - Trước trận phó bản: xem trước quân giặc, chọn số lính mỗi loại trong giới hạn sức chứa, xếp vào 3 hàng (tiền quân, trung quân, hậu quân).
 - **Phó bản**: bản đồ chương 1 có khoảng 8 màn và trùm cuối. Màn đã qua đánh lại được để kiếm tài nguyên. Lính chết trong trận thì mất, dù thắng hay thua. Thua thì không có thưởng, ngoài ra không mất gì.
+- **Lạc tướng** cầm quân trong mọi trận, có kỹ năng **Trống trận**:
+  - bấm thì quân ta đánh mạnh thêm 50% và chạy nhanh thêm 30% trong 6 giây;
+  - hồi lại sau 20 giây;
+  - dùng được cả ở phó bản lẫn khi giữ kinh đô.
 - **Giữ kinh đô**: khoảng 15 phút chơi có một đợt giặc Ân. Trinh sát báo trước 60 giây, kèm hướng giặc tới (một trong hai cạnh rừng). Giặc tìm đường tới kho và Điện, gặp lũy thì phải phá. Phòng thủ bằng chòi canh, bẫy chông và quân nhà. Thua thì chỉ mất một phần kho và vài công trình hư hỏng, sửa lại được.
 
 ### Giữ kinh đô (đã làm ở lát cắt 2b)
@@ -143,6 +150,48 @@ Tài liệu này ghi lại các quyết định đã chốt với chủ dự án
   - Thắng (diệt hết, không mất của) mới tính là giữ được kinh đô.
 - Độ khó đo bằng test: đợt 1 cần khoảng 6 giáo binh và 1 chòi canh để thắng. Đợt 4 trở đi cần cung thủ, voi, lũy và nhiều chòi hơn.
 
+### Phó bản (đã làm ở lát cắt 3a)
+
+- Nút **⚔️ Phó bản** ở thanh dưới hiện khi đã có doanh trại.
+- **Bản đồ "Đường tới núi Trâu"**: 8 màn nối nhau từ Phong Châu tới chân núi Trâu. Thắng màn trước mới mở màn sau.
+
+  | Màn | Tên | Cần Điện | Quân giặc | Thưởng lần đầu |
+  |---|---|---|---|---|
+  | 1 | Bìa rừng Phong Châu | 2 | 4 lính giáo | 150 gạo, 100 vỏ ốc |
+  | 2 | Bến đò Bạch Hạc | 2 | 5 lính giáo, 2 cung | 200 gạo, 150 vỏ ốc, 80 đất đá |
+  | 3 | Làng ven sông | 3 | 5 lính giáo, 3 cung, 1 chiến xa (máu ×1,1) | 300 gạo, 200 vỏ ốc, 150 đất đá, 40 sắt |
+  | 4 | Đồn giặc, trùm **phó tướng Ân** | 3 | 5 lính giáo, 3 cung, 1 chiến xa, phó tướng (máu ×1,1) | 500 gạo, 300 vỏ ốc, 250 đất đá, 80 sắt |
+  | 5–8 | Rừng sâu, Bến sông Cầu, Cánh đồng cháy, Chân núi Trâu | 3, 4, 4, 5 | đông dần, màn 8 có trùm | lớn dần |
+
+  - Màn 5–8 cần Thánh Gióng, mở ở lát cắt 3b.
+  - Phó tướng Ân: 600 máu, 24 sát thương.
+  - Đánh lại màn đã qua được 30% thưởng lần đầu.
+- **Trước trận**:
+  - xem quân giặc và phần thưởng;
+  - chọn số lính mỗi loại mang theo (mặc định mang hết);
+  - **mỗi binh chủng đứng một hàng**, chạm để đổi hàng. Mặc định giáo binh ở tiền quân, voi ở trung quân, cung thủ ở hậu quân. Lần sau nhớ hàng đã chọn.
+- **Bãi chiến**:
+  - cảnh 3D riêng, rộng 9 ô, dài 22 ô; nền theo màn: rừng tre, bến sông, làng, đồn giặc, chân núi;
+  - hai bên dàn ba hàng cách nhau 10 ô rồi xông vào đánh kẻ gần nhất;
+  - lính đẩy nhau ra, không đứng chồng lên nhau;
+  - ngoài bãi mọi người bền gấp 1,6 lần, để trận kéo dài chừng 10–35 giây và kịp bấm Trống trận.
+- **Kết thúc trận**:
+  - thắng khi diệt hết giặc;
+  - thua khi quân ta chết hết, hoặc quá 90 giây mà chưa phá được giặc;
+  - nút **Rút quân** kết thúc ngay: lính còn sống trở về, không có thưởng.
+- **Đang đánh phó bản** thì:
+  - đồng hồ giặc đứng lại;
+  - không luyện quân và không gọi giặc được;
+  - đang có giặc báo hay đang giữ kinh đô thì chưa xuất quân được.
+- **Cân bằng** đo bằng test. Mỗi màn có một đạo quân mẫu vừa đủ chỗ trong doanh trại ở cấp Điện mà màn yêu cầu:
+  - màn 1: 6 giáo binh;
+  - màn 2: 8 giáo, 3 cung;
+  - màn 3: 8 giáo, 5 cung, 1 voi;
+  - màn 4: 8 giáo, 6 cung, 2 voi.
+
+  Quân mẫu thắng, nửa quân mẫu thua. Ở màn 4, quân mẫu thắng nhưng mất nhiều giáo binh; bấm Trống trận thì đỡ thiệt hơn.
+- Bản lưu lên phiên bản 4. Bản lưu cũ có thêm phần phó bản, và chỉ số nhiệm vụ được dời cho khớp với nhiệm vụ mới chèn vào.
+
 ## Thánh Gióng và cốt truyện chương 1
 
 1. **Giặc Ân xâm lược.** Lạc hầu hướng dẫn xây lũy tre, ruộng, chợ thuyền. Các trận đầu do Lạc tướng cầm quân thường.
@@ -152,6 +201,10 @@ Tài liệu này ghi lại các quyết định đã chốt với chủ dự án
 5. **Kết chương.** Gióng cưỡi ngựa lên núi Sóc, cởi giáp, bay về trời. Vua phong Phù Đổng Thiên Vương, lập Đền Phù Đổng (thưởng vĩnh viễn). Sau đó Gióng **hiển linh**, vẫn ra trận khi đánh lại phó bản.
 
 - Kỹ năng của Gióng (bấm tay trong trận): **Ngựa sắt phun lửa** (xung phong đốt một hàng giặc), **Nhổ tre quật giặc** (đòn diện rộng).
+- Chủ dự án đã chốt cho lát cắt 3b:
+  - **Gióng ra trận cả ở phó bản lẫn khi giặc vào kinh đô**;
+  - nuôi Gióng bằng cách **bấm góp gạo theo 5 mốc**;
+  - đủ 5 mốc và rèn xong ngựa sắt, roi sắt, giáp sắt ở lò rèn thì Gióng vươn vai thành tráng sĩ.
 - Gióng không bao giờ chết, chỉ kiệt sức khoảng 2 phút.
 - Không có cơ chế chơi lại từ đầu (prestige). Tiến trình liên tục theo chương.
 - Thứ tự theo truyền thuyết: Gióng (đời Hùng Vương thứ 6) có trước Sơn Tinh (đời thứ 18). Chương 2 ở bản sau là Sơn Tinh, Thủy Tinh và lũ.
@@ -167,7 +220,7 @@ Tài liệu này ghi lại các quyết định đã chốt với chủ dự án
 
 6 bước: xây lũy tre → đặt ruộng → phân công dân → nâng Điện Vua Hùng → luyện quân → đánh màn 1 và giữ kinh đô qua đợt giặc đầu tiên.
 
-Đã làm (lát cắt 2): lũy tre → ruộng → bến → Điện cấp 2 → nhà sàn → bãi đất đá có 2 người làm → kho thóc → lò rèn → Điện cấp 3 → doanh trại → luyện 5 lính → chòi canh → đánh lui đợt giặc đầu tiên. Phó bản và Thánh Gióng thêm ở lát cắt 3.
+Đã làm (lát cắt 3a): lũy tre → ruộng → bến → Điện cấp 2 → nhà sàn → bãi đất đá có 2 người làm → kho thóc → lò rèn → Điện cấp 3 → doanh trại → luyện 5 lính → **đánh màn 1** → chòi canh → đánh lui đợt giặc đầu tiên → **qua màn 4**. Nhiệm vụ về Thánh Gióng thêm ở lát cắt 3b.
 
 ## Thứ tự làm
 
@@ -178,4 +231,5 @@ Tài liệu này ghi lại các quyết định đã chốt với chủ dự án
    - lính tách khỏi dân, giáo binh không cần sắt;
    - mỗi công trình một dáng riêng, mỗi cấp đổi hẳn dáng;
    - dân ăn mặc theo nghề.
-3. **Lát cắt 3**: phó bản chương 1, Thánh Gióng, cốt truyện.
+3. **Lát cắt 3a** (đã làm): phó bản màn 1–4, bãi chiến riêng, xếp quân theo hàng, Lạc tướng đánh Trống trận, phó tướng Ân.
+   **Lát cắt 3b**: Thánh Gióng (góp gạo, rèn đồ, hai kỹ năng, kiệt sức), màn 5–8, cốt truyện, kết chương, Đền Phù Đổng.

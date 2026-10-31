@@ -1,13 +1,16 @@
 // Cảnh 3D của kinh đô: địa hình, rừng, sông, công trình, lũy tre và các hiệu ứng khi đặt công trình.
 
 import * as THREE from 'three';
-import { BUILDINGS, type BuildingType } from '../game/defs';
+import { BUILDINGS, FIELD, type BuildingType, type Terrain } from '../game/defs';
 import type { Battle, RaidSide } from '../game/battle';
 import { dienLevel, type Building, type GameState } from '../game/game';
 import { GRID, RIVER_START, areaStart, isUnlocked } from '../game/map';
+import { Battlefield } from './battlefield';
+import { BattleView } from './battleView';
 import { IsoCamera } from './camera';
 import { makeBaiDa, makeBayChong, makeBen, makeChoiCanh, makeDien, makeDoanhTrai, makeKho, makeLoRen, makeNhaSan, makeRuong } from './buildings';
-import { buildForest, buildWalls, makeBoat, makeFighter, type TreeSpot, type WallSpot } from './models';
+import { addSunLights } from './lights';
+import { buildForest, buildWalls, makeBoat, type TreeSpot, type WallSpot } from './models';
 import { makeWorker, type Job } from './people';
 import { C } from './palette';
 import { ShapeBuilder, seeded } from './shapes';
@@ -154,10 +157,11 @@ export class World {
   private readonly footprint: THREE.Mesh;
   private readonly selection: THREE.LineLoop;
   private panGoal: THREE.Vector3 | null = null;
-  private readonly fighters = new Map<number, { obj: THREE.Group; deadAge: number }>();
-  private readonly arrows: { mesh: THREE.Mesh; from: THREE.Vector3; to: THREE.Vector3; age: number; dur: number }[] = [];
-  private battleWave = 0;
-  private lastEventSeq = 0;
+  private readonly raidView = new BattleView(this.scene, { x: -HALF, z: -HALF });
+  /** Bãi chiến phó bản, dựng khi cần lần đầu. */
+  private field?: Battlefield;
+  /** Đang xem bãi chiến: chỗ camera nhìn kinh đô trước đó, để trả về sau trận. */
+  private cityCam: { target: THREE.Vector3; zoom: number; bounds: { min: number; max: number } } | null = null;
   private readonly warning: THREE.Mesh;
   private merchantBoat?: THREE.Object3D;
   private shownLevel = 0;
@@ -178,7 +182,7 @@ export class World {
     };
     this.view.target.set(wx(19), 0, wz(19));
 
-    this.addLights();
+    addSunLights(this.scene, 24, 2048);
     this.scene.add(this.staticTerrain());
     this.scene.add(buildForest(this.outerForestSpots()));
     this.scene.add(this.land.mesh, this.ripples.mesh, this.buildingsRoot);
@@ -212,25 +216,6 @@ export class World {
     this.scene.add(this.warning);
 
     this.resize();
-  }
-
-  /** Ánh sáng bầu trời dịu cộng nắng mạnh, để tô màu hoạt hình tách rõ 3 dải sáng. */
-  private addLights(): void {
-    this.scene.add(new THREE.HemisphereLight(0xfff3dc, 0x6d6a45, 0.9));
-    const sun = new THREE.DirectionalLight(0xfff0d8, 2.6);
-    sun.position.set(-10, 24, 14);
-    sun.castShadow = true;
-    const cam = sun.shadow.camera;
-    cam.left = -24;
-    cam.right = 24;
-    cam.top = 24;
-    cam.bottom = -24;
-    cam.near = 1;
-    cam.far = 70;
-    sun.shadow.mapSize.set(2048, 2048);
-    sun.shadow.bias = -0.0006;
-    sun.shadow.normalBias = 0.03;
-    this.scene.add(sun, sun.target);
   }
 
   /** Đất ngoài lưới, hai dòng sông và bờ bên kia. */
@@ -312,6 +297,7 @@ export class World {
     const h = window.innerHeight;
     this.renderer.setSize(w, h, false);
     this.view.setSize(w, h);
+    if (this.inField) this.fitField();
   }
 
   /** Xóa mọi thứ đã vẽ theo state cũ, dùng khi nạp mã lưu hoặc chơi lại. */
@@ -607,60 +593,45 @@ export class World {
     this.panGoal = side === 'bac' ? new THREE.Vector3(wx(15), 0, wz(5)) : new THREE.Vector3(wx(5), 0, wz(15));
   }
 
-  /** Vẽ lính hai bên theo trận đang diễn ra; null khi không có trận. */
+  /** Vẽ lính hai bên của trận giữ kinh đô; null khi không có trận. */
   updateBattle(battle: Battle | null, dt: number): void {
-    if (!battle || battle.wave !== this.battleWave) {
-      for (const f of this.fighters.values()) this.scene.remove(f.obj);
-      this.fighters.clear();
-      for (const a of this.arrows) this.scene.remove(a.mesh);
-      this.arrows.length = 0;
-      this.lastEventSeq = 0;
-      this.battleWave = battle ? battle.wave : 0;
-      if (!battle) return;
+    this.raidView.update(battle, dt);
+  }
+
+  get inField(): boolean {
+    return this.cityCam !== null;
+  }
+
+  /** Sang bãi chiến với nền `terrain`, hoặc về lại kinh đô khi `terrain` là null. */
+  showField(terrain: Terrain | null): void {
+    const v = this.view;
+    if (terrain) {
+      this.field ??= new Battlefield();
+      this.field.setTerrain(terrain);
+      if (!this.cityCam) this.cityCam = { target: v.target.clone(), zoom: v.zoom, bounds: { ...v.bounds } };
+      this.panGoal = null;
+      v.bounds = { min: -7, max: 7 };
+      v.target.set(0, 0, 0);
+      this.fitField();
+      return;
     }
-    for (const f of battle.fighters) {
-      let view = this.fighters.get(f.id);
-      if (f.state === 'gone') {
-        if (view) {
-          this.scene.remove(view.obj);
-          this.fighters.delete(f.id);
-        }
-        continue;
-      }
-      if (!view) {
-        if (f.state === 'dead') continue;
-        const obj = makeFighter(f.kind);
-        obj.scale.setScalar(f.kind === 'voi' || f.kind === 'chienXa' ? 0.75 : 0.8);
-        this.scene.add(obj);
-        view = { obj, deadAge: 0 };
-        this.fighters.set(f.id, view);
-      }
-      const obj = view.obj;
-      obj.position.x = f.x - HALF;
-      obj.position.z = f.z - HALF;
-      obj.rotation.y = f.face;
-      if (f.state === 'dead') {
-        view.deadAge += dt;
-        obj.rotation.x = Math.min(view.deadAge * 4, Math.PI / 2) * -1;
-        obj.position.y = view.deadAge > 1.2 ? -(view.deadAge - 1.2) * 0.6 : 0;
-        if (view.deadAge > 2.5) obj.visible = false;
-        continue;
-      }
-      obj.rotation.x = f.swing > 0 ? -0.5 * (f.swing / 0.3) : 0;
-      obj.position.y = f.state === 'move' ? Math.abs(Math.sin(this.time * 10 + f.id)) * 0.06 : 0;
-    }
-    for (const e of battle.events) {
-      if (e.seq <= this.lastEventSeq) continue;
-      if (e.kind === 'shot' && e.tx !== undefined && e.tz !== undefined) {
-        const mesh = new THREE.Mesh(new THREE.BoxGeometry(0.03, 0.03, 0.45), new THREE.MeshBasicMaterial({ color: C.arrow }));
-        const from = new THREE.Vector3(e.x - HALF, 0.8, e.z - HALF);
-        const to = new THREE.Vector3(e.tx - HALF, 0.5, e.tz - HALF);
-        mesh.position.copy(from);
-        this.scene.add(mesh);
-        this.arrows.push({ mesh, from, to, age: 0, dur: Math.max(0.15, from.distanceTo(to) / 12) });
-      }
-    }
-    this.lastEventSeq = battle.seq;
+    if (!this.cityCam) return;
+    v.bounds = this.cityCam.bounds;
+    v.target.copy(this.cityCam.target);
+    v.zoom = this.cityCam.zoom;
+    v.apply();
+    this.cityCam = null;
+    this.field?.view.update(null, 0);
+  }
+
+  /** Vừa khít bề ngang bãi, chừa chỗ cho lính đứng sát mép. */
+  private fitField(): void {
+    this.view.zoomToFit(FIELD.w + 1.5, FIELD.d * 0.62 + 3);
+  }
+
+  /** Vẽ trận ngoài bãi đang diễn ra. */
+  updateField(battle: Battle | null, dt: number): void {
+    this.field?.view.update(battle, dt);
   }
 
   /** Bóng mờ của công trình sắp đặt, viền xanh nếu đặt được, đỏ nếu không. */
@@ -772,21 +743,6 @@ export class World {
     }
     this.ripples.end();
 
-    for (let i = this.arrows.length - 1; i >= 0; i--) {
-      const a = this.arrows[i];
-      a.age += dt;
-      const k = Math.min(a.age / a.dur, 1);
-      const prev = a.mesh.position.clone();
-      a.mesh.position.lerpVectors(a.from, a.to, k);
-      a.mesh.position.y += Math.sin(Math.PI * k) * 0.6;
-      a.mesh.lookAt(a.mesh.position.clone().add(a.mesh.position.clone().sub(prev)));
-      if (k >= 1) {
-        this.scene.remove(a.mesh);
-        a.mesh.geometry.dispose();
-        this.arrows.splice(i, 1);
-      }
-    }
-
     if (this.warning.visible) {
       (this.warning.material as THREE.MeshBasicMaterial).opacity = 0.2 + Math.abs(Math.sin(t * 4)) * 0.3;
     }
@@ -795,7 +751,7 @@ export class World {
       (this.selection.material as THREE.LineBasicMaterial).opacity = 0.6 + Math.sin(t * 5) * 0.4;
     }
 
-    this.renderer.render(this.scene, this.view.camera);
+    this.renderer.render(this.inField && this.field ? this.field.scene : this.scene, this.view.camera);
   }
 }
 

@@ -1,6 +1,6 @@
 // Mọi chữ hiển thị trong game. Tách riêng để sau này dịch sang tiếng Anh.
 
-import type { BuildingType, EnemyType, ResourceId, UnitType } from '../game/defs';
+import type { BuildingType, EnemyType, ResourceId, Row, UnitType } from '../game/defs';
 import type { FailReason } from '../game/game';
 
 export const vi = {
@@ -92,6 +92,11 @@ export const vi = {
     thieuGao: 'Đang thiếu gạo, chưa luyện quân được',
     dangCoGiac: 'Đang có giặc!',
     khongHuHong: 'Công trình này không hư hỏng',
+    manKhoa: 'Phải thắng màn trước đã',
+    canThanhGiong: 'Màn này cần Thánh Gióng ra trận (có ở bản sau)',
+    chuaChonQuan: 'Chưa chọn người lính nào',
+    khongDuQuan: 'Không đủ lính',
+    dangDanhPhoBan: 'Quân đang đánh phó bản',
   } satisfies Record<FailReason, string>,
 
   quests: {
@@ -108,8 +113,9 @@ export const vi = {
     luyenQuan: 'Xin bệ hạ cho tuyển 5 người lính. Giáo binh không cần sắt, lại khắc chế chiến xa của giặc.',
     choiCanh: 'Xin dựng chòi canh, cung thủ trên chòi sẽ bắn giặc từ xa.',
     giuKinhDo: 'Trinh sát sẽ báo khi giặc Ân tới. Xin bệ hạ giữ vững kinh đô, đánh lui đợt giặc đầu tiên.',
-    allDone:
-      'Kinh đô đã giữ vững trước giặc Ân. Thánh Gióng và phó bản đánh giặc sẽ có ở bản sau.',
+    danhMan1: 'Giặc Ân lẩn ở bìa rừng Phong Châu. Xin bệ hạ mở Phó bản, cho Lạc tướng dẫn quân đánh màn 1.',
+    quaMan4: 'Phó tướng Ân đóng đồn chặn đường lên phương Bắc. Xin bệ hạ đánh qua màn 4, phá đồn giặc.',
+    allDone: 'Đồn giặc đã bị phá. Thánh Gióng và đường tới núi Trâu sẽ có ở bản sau.',
   } as Record<string, string>,
 
   units: {
@@ -122,7 +128,29 @@ export const vi = {
     giaoAn: 'lính giáo Ân',
     cungAn: 'cung thủ Ân',
     chienXa: 'chiến xa Ân',
+    phoTuong: 'phó tướng Ân',
   } satisfies Record<EnemyType, string>,
+
+  enemyIcons: {
+    giaoAn: '🔱',
+    cungAn: '🏹',
+    chienXa: '🛞',
+    phoTuong: '👹',
+  } satisfies Record<EnemyType, string>,
+
+  /** Tên và lời dẫn từng màn phó bản, theo thứ tự trong STAGES. */
+  stages: [
+    { name: 'Bìa rừng Phong Châu', intro: 'Một toán giặc Ân lẩn trong rừng tre, rình cướp lúa của dân. Lạc tướng xin dẫn quân ra dẹp.' },
+    { name: 'Bến đò Bạch Hạc', intro: 'Giặc chiếm bến đò ở ngã ba sông, chặn thuyền buôn. Phải đánh tan để thông đường sông.' },
+    { name: 'Làng ven sông', intro: 'Giặc kéo chiến xa vào làng ven sông, đốt nhà bắt dân. Mau cứu lấy làng!' },
+    { name: 'Đồn giặc', intro: 'Phó tướng Ân đóng đồn chặn đường lên phương Bắc. Hạ được hắn thì giặc mất một cánh tay.' },
+    { name: 'Rừng sâu', intro: 'Trên đường tới núi Trâu, giặc phục sẵn trong rừng sâu.' },
+    { name: 'Bến sông Cầu', intro: 'Giặc giữ bến sông, chặn đường tiến quân của tráng sĩ.' },
+    { name: 'Cánh đồng cháy', intro: 'Giặc đốt đồng lúa hòng cản bước quân ta.' },
+    { name: 'Chân núi Trâu', intro: 'Đại quân Ân đóng ở chân núi Trâu. Trận quyết chiến!' },
+  ],
+
+  rows: { tien: 'Tiền quân', trung: 'Trung quân', hau: 'Hậu quân' } satisfies Record<Row, string>,
 
   ui: {
     lacHau: 'Lạc hầu',
@@ -212,6 +240,31 @@ export const vi = {
     offlineTitle: 'Bệ hạ đã trở lại',
     offlineBody: (time: string) => `Trong ${time} vắng mặt, kinh đô vẫn làm lụng với nửa sức:`,
     ok: 'Tốt lắm',
+    campaign: 'Phó bản',
+    campaignTitle: 'Đường tới núi Trâu',
+    campaignHint: 'Lạc tướng dẫn quân đánh giặc. Lính chết trong trận thì mất, dù thắng hay thua.',
+    stageN: (n: number) => `Màn ${n}`,
+    stageCleared: 'Đã qua',
+    stageBoss: 'Có trùm',
+    enemyArmy: 'Quân giặc',
+    firstReward: 'Thưởng lần đầu',
+    replayReward: 'Thưởng đánh lại',
+    prepare: 'Chuẩn bị',
+    armyTitle: 'Xếp quân',
+    armyHint: 'Chọn số lính mang theo và hàng đứng của từng binh chủng. Tiền quân đứng đầu, hậu quân đứng sau.',
+    haveTroops: (n: number) => `Có ${n}`,
+    noTroops: 'Chưa có lính. Hãy luyện quân ở doanh trại.',
+    march: '⚔️ Xuất quân',
+    rally: '🥁 Trống trận',
+    rallyHint: 'Lạc tướng đánh trống thúc quân: quân ta đánh mạnh hơn, chạy nhanh hơn trong chốc lát.',
+    retreat: '🏳️ Rút quân',
+    fieldBanner: (left: number, ours: number, s: number) => `Còn ${left} giặc · quân ta ${ours} · ${s} giây`,
+    stageWonTitle: (n: number) => `Thắng màn ${n}!`,
+    stageLostTitle: 'Quân ta thua trận',
+    stageRetreatTitle: 'Quân ta đã rút về',
+    toCity: 'Về kinh đô',
+    toMap: 'Bản đồ',
+    back: 'Quay lại',
     saveFailed: 'Không lưu được game trên trình duyệt này',
     webglFailed: 'Trình duyệt này không hỗ trợ đồ họa 3D (WebGL).',
   },

@@ -2,7 +2,9 @@
 
 import './style.css';
 import { play, setMuted, unlockAudio } from './audio/sfx';
-import { BUILDINGS, RESOURCE_IDS, type BuildingType, type Cost } from './game/defs';
+import { useSkill } from './game/battle';
+import { leaveBattlefield, retreat, startStage } from './game/campaign';
+import { BUILDINGS, RESOURCE_IDS, STAGES, type BuildingType, type Cost } from './game/defs';
 import {
   applyOffline,
   buildingAt,
@@ -27,6 +29,7 @@ import {
   upgrade,
   type FailReason,
   type GameState,
+  type StageResult,
 } from './game/game';
 import { GRID, RIVER_START } from './game/map';
 import { fromCode, loadFromStorage, saveToStorage, toCode } from './game/save';
@@ -62,7 +65,7 @@ function start(): void {
   let saveWarned = false;
   setMuted(state.settings.muted);
 
-  const hud = new Hud(hudRoot, handle);
+  const hud = new Hud(hudRoot, handle, () => state);
 
   const save = () => {
     if (!saveToStorage(localStorage, state) && !saveWarned) {
@@ -76,6 +79,8 @@ function start(): void {
     hud.updateBanners(state);
     hud.updateQuest(state);
     hud.refreshSheet(state);
+    hud.refreshCampaign(state);
+    hud.updateField(state);
   };
 
   /** Gọi sau mọi thao tác: lưu, vẽ lại cảnh và giao diện. */
@@ -146,6 +151,8 @@ function start(): void {
   };
 
   world.view.onTap = (cx, cy) => {
+    // Trên bãi chiến chỉ xem, không chọn gì.
+    if (world.inField) return;
     const tile = world.pickTile(cx, cy);
     if (mode.kind === 'place') {
       if (!tile) return;
@@ -407,6 +414,45 @@ function start(): void {
       case 'closeSheet':
         select(null);
         return;
+
+      case 'openCampaign':
+        if (mode.kind !== 'view') exitMode();
+        select(null);
+        play('tap');
+        hud.showCampaign(state);
+        return;
+
+      case 'march': {
+        const r = startStage(state, a.stage, a.army, a.rows);
+        if (!r.ok) return fail(r.reason);
+        play('claim');
+        navigator.vibrate?.(40);
+        commit();
+        return;
+      }
+
+      case 'useRally': {
+        const battle = state.campaign.battle ?? (state.raid.phase === 'battle' ? state.raid.battle : null);
+        if (!battle || !useSkill(battle, 'trongTran')) return;
+        play('claim');
+        commit();
+        return;
+      }
+
+      case 'retreat':
+        if (!retreat(state).ok) return;
+        play('tap');
+        commit();
+        return;
+
+      case 'leaveField':
+      case 'fieldToMap':
+        leaveBattlefield(state);
+        hud.closeStageResult();
+        play('tap');
+        commit();
+        if (a.kind === 'fieldToMap') hud.showCampaign(state);
+        return;
     }
   }
 
@@ -436,10 +482,35 @@ function start(): void {
     shownPhase = phase;
   };
 
+  /** Sang bãi chiến khi xuất quân, về kinh đô khi xem xong kết quả, hiện bảng kết quả đúng một lần. */
+  let shownStage: StageResult | null = null;
+  const watchCampaign = () => {
+    const battle = state.campaign.battle;
+    if (battle && !world.inField) {
+      if (mode.kind !== 'view') exitMode();
+      select(null);
+      hud.closeCampaign();
+      world.showField(STAGES[battle.wave - 1].terrain);
+    } else if (!battle && world.inField) {
+      world.showField(null);
+      hud.closeStageResult();
+    }
+    const r = state.campaign.lastResult;
+    if (r && r !== shownStage) {
+      play(r.outcome === 'win' ? 'upgrade' : 'error');
+      commit();
+      hud.showStageResult(r);
+    }
+    shownStage = r;
+  };
+
   window.addEventListener('pointerdown', unlockAudio, { passive: true });
   window.addEventListener('resize', () => world.resize());
   window.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape') mode.kind === 'view' ? select(null) : exitMode();
+    if (e.key !== 'Escape') return;
+    if (hud.campaignOpen) hud.closeCampaign();
+    else if (mode.kind === 'view') select(null);
+    else exitMode();
   });
   document.addEventListener('visibilitychange', () => {
     if (document.visibilityState === 'hidden') save();
@@ -465,6 +536,8 @@ function start(): void {
     }
 
     world.updateBattle(state.raid.battle, dt);
+    watchCampaign();
+    world.updateField(state.campaign.battle, dt);
     world.update(dt);
     watchRaid();
     if (now - lastUi > 250) {

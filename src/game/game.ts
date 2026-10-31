@@ -2,9 +2,11 @@
 // Không phụ thuộc DOM hay Three.js để test được bằng Vitest.
 
 import { startBattle, stepBattle, type Battle, type RaidSide } from './battle';
+import { updateCampaign } from './campaign';
 import {
   BUILDINGS,
   DAN_GROW_MS,
+  DEFAULT_ROWS,
   FIRST_RAID_MS,
   GAO_PER_DAN,
   MERCHANT_EVERY_MS,
@@ -30,6 +32,7 @@ import {
   type QuestDef,
   type ResourceId,
   type Resources,
+  type Row,
   type UnitType,
 } from './defs';
 import { GRID, inGrid, isUnlocked, touchesRiver } from './map';
@@ -72,6 +75,27 @@ export interface RaidState {
   lastResult: RaidResult | null;
 }
 
+export interface StageResult {
+  stage: number;
+  outcome: 'win' | 'lose' | 'retreat';
+  /** Lần đầu thắng màn này. */
+  first: boolean;
+  killed: number;
+  total: number;
+  lost: Record<UnitType, number>;
+  reward: Cost;
+}
+
+export interface CampaignState {
+  /** Màn cao nhất đã thắng, 0 khi chưa thắng màn nào. */
+  cleared: number;
+  /** Hàng đứng của từng binh chủng, nhớ cho lần xuất quân sau. */
+  rows: Record<UnitType, Row>;
+  /** Trận đang đánh. Đánh xong vẫn giữ để vẽ cảnh cuối tới khi người chơi xem xong kết quả. */
+  battle: Battle | null;
+  lastResult: StageResult | null;
+}
+
 /** Một lời mời đổi hàng của thuyền buôn: đưa `give`, nhận `get`. */
 export interface Offer {
   give: { r: ResourceId; n: number };
@@ -89,7 +113,7 @@ export interface Merchant {
 }
 
 export interface GameState {
-  version: 3;
+  version: 4;
   resources: Resources;
   /** Số dân (không tính lính). */
   dan: number;
@@ -107,6 +131,9 @@ export interface GameState {
   /** Số lính mỗi loại đang có (lính không tính vào dân). */
   troops: Record<UnitType, number>;
   raid: RaidState;
+  campaign: CampaignState;
+  /** Mã cho trận đánh tiếp theo (giữ kinh đô hay phó bản). */
+  nextBattleId: number;
   settings: { muted: boolean };
 }
 
@@ -130,7 +157,12 @@ export type FailReason =
   | 'datGioiHanQuan'
   | 'thieuGao'
   | 'dangCoGiac'
-  | 'khongHuHong';
+  | 'khongHuHong'
+  | 'manKhoa'
+  | 'canThanhGiong'
+  | 'chuaChonQuan'
+  | 'khongDuQuan'
+  | 'dangDanhPhoBan';
 
 export type Result<T = undefined> = { ok: true; value: T } | { ok: false; reason: FailReason };
 
@@ -141,9 +173,13 @@ export function initialRaid(): RaidState {
   return { wave: 0, won: 0, nextAt: null, phase: 'idle', side: 'bac', startsAt: 0, battle: null, lastResult: null };
 }
 
+export function initialCampaign(): CampaignState {
+  return { cleared: 0, rows: { ...DEFAULT_ROWS }, battle: null, lastResult: null };
+}
+
 export function createInitialState(now: number): GameState {
   return {
-    version: 3,
+    version: 4,
     resources: { ...START_RESOURCES },
     dan: START_DAN,
     danProgress: 0,
@@ -155,6 +191,8 @@ export function createInitialState(now: number): GameState {
     merchant: { nextAt: MERCHANT_FIRST_MS, visit: null, seq: 0 },
     troops: { giao: 0, cung: 0, voi: 0 },
     raid: initialRaid(),
+    campaign: initialCampaign(),
+    nextBattleId: 1,
     settings: { muted: false },
   };
 }
@@ -352,6 +390,9 @@ export function questProgress(state: GameState): { have: number; need: number } 
   } else if (goal.kind === 'raidsWon') {
     have = state.raid.won;
     need = goal.amount;
+  } else if (goal.kind === 'stage') {
+    have = state.campaign.cleared;
+    need = goal.stage;
   } else {
     have = dienLevel(state);
     need = goal.level;
@@ -370,7 +411,8 @@ function pay(state: GameState, cost: Cost): void {
   for (const r of RESOURCE_IDS) state.resources[r] -= cost[r] ?? 0;
 }
 
-function gain(state: GameState, amounts: Cost): void {
+/** Cộng thêm tài nguyên, không vượt sức chứa kho. */
+export function gain(state: GameState, amounts: Cost): void {
   const cap = storageCap(state);
   for (const r of RESOURCE_IDS) {
     const add = amounts[r] ?? 0;
@@ -462,6 +504,7 @@ export function canTrain(state: GameState, kind: UnitType): Result {
   const def = UNITS[kind];
   if (barracksLevel(state) < def.barracksLevel) return fail('canDoanhTrai');
   if (state.raid.phase === 'battle') return fail('dangCoGiac');
+  if (state.campaign.battle) return fail('dangDanhPhoBan');
   if (isStarving(state)) return fail('thieuGao');
   if (troopSpace(state) + def.space > troopCap(state)) return fail('datGioiHanQuan');
   if (!canAfford(state, def.cost)) return fail('thieuTaiNguyen');
@@ -520,7 +563,7 @@ export function repairAll(state: GameState): number {
 // ---------- Giặc Ân đánh kinh đô ----------
 
 /** Bước nhỏ của mô phỏng trận, giây. */
-const BATTLE_STEP = 0.05;
+export const BATTLE_STEP = 0.05;
 
 function finishRaid(state: GameState): void {
   const raid = state.raid;
@@ -552,6 +595,11 @@ function updateRaid(state: GameState, ms: number): void {
     if (countOf(state, 'doanhTrai') > 0) raid.nextAt = state.clock + FIRST_RAID_MS;
     return;
   }
+  // Quân đang đánh phó bản thì giặc chưa tới: đồng hồ giặc đứng lại.
+  if (state.campaign.battle && raid.phase === 'idle') {
+    raid.nextAt += ms;
+    return;
+  }
   if (raid.phase === 'idle' && state.clock >= raid.nextAt) {
     raid.phase = 'warning';
     raid.side = (raid.wave * 2654435761) % 7 < 4 ? 'bac' : 'tay';
@@ -579,6 +627,7 @@ function updateRaid(state: GameState, ms: number): void {
 export function callRaidNow(state: GameState): Result {
   if (countOf(state, 'doanhTrai') === 0) return fail('canDoanhTrai');
   if (state.raid.phase !== 'idle') return fail('dangCoGiac');
+  if (state.campaign.battle) return fail('dangDanhPhoBan');
   state.raid.nextAt = state.clock;
   updateRaid(state, 0);
   return ok(undefined);
@@ -681,6 +730,7 @@ export function tick(state: GameState, ms: number): Resources {
   const gained = produce(state, ms, 1);
   state.clock += ms;
   updateMerchant(state);
+  updateCampaign(state, ms);
   updateRaid(state, ms);
   return gained;
 }

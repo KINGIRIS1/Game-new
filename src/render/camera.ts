@@ -67,6 +67,13 @@ export class IsoCamera {
     cam.updateMatrixWorld();
   }
 
+  /** Phóng sao cho một vùng rộng `w`, cao `h` (đơn vị thế giới trên màn hình) vừa khít khung nhìn. */
+  zoomToFit(w: number, h: number): void {
+    const base = this.baseHeight();
+    this.zoom = Math.min((base * this.width) / this.height / w, base / h);
+    this.apply();
+  }
+
   /** Điểm trên mặt đất (y = 0) nằm dưới vị trí màn hình. */
   groundPoint(clientX: number, clientY: number, out = new THREE.Vector3()): THREE.Vector3 | null {
     this.setRay(clientX, clientY);
