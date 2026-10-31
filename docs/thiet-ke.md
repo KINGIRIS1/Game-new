@@ -250,7 +250,7 @@ Tài liệu này ghi lại các quyết định đã chốt với chủ dự án
   - mỗi đòn quét thêm nửa sát thương lên giặc đứng quanh mục tiêu trong 1,3 ô;
   - mỗi đòn, Gióng quật roi sắt (hay cây tre) từ trên cao xuống trước mặt.
 - **Kỹ năng của Gióng**:
-  - **Phun lửa**: Gióng phi ngựa lao về phía giặc gần nhất. Mọi tên giặc trong dải dài 7 ô, rộng 1,5 ô mất 60 máu. Hồi 15 giây;
+  - **Phun lửa**: Gióng phi ngựa lao về phía giặc gần nhất. Mọi tên giặc trong dải dài 7 ô, rộng 1,5 ô mất 60 máu. Hồi 15 giây. Ngựa sắt phi dọc đường lao trong 0,4 giây, lửa hình giọt có viền mực phun từ mõm, để lại vệt đất cháy sém có than hồng đúng dải bị đốt (tắt dần trong 4 giây); giặc trúng lửa bốc cháy trên đầu và vai chừng 2 giây;
   - **Nhổ tre**: có từ khi roi sắt gãy. Giặc trong vòng 2,5 ô quanh Gióng mất 45 máu và bị hất lùi 1,2 ô. Hồi 20 giây. Gióng vung tre ra sau lấy đà, quật xuống trước mặt rồi quét trọn một vòng quanh mình, chừng 0,9 giây;
   - ngoài bãi, sát thương kỹ năng cũng nhân 1,6 lần cho tương xứng.
 - **Kiệt sức**: hết máu thì Gióng rút khỏi trận, không tính vào lính tử trận. Sau trận Gióng nghỉ 2 phút theo đồng hồ chơi; trong lúc đó không ra trận và chưa đánh được màn cần Gióng.
