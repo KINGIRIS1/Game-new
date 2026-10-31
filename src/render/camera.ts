@@ -95,7 +95,8 @@ export class IsoCamera {
     this.element.setPointerCapture(e.pointerId);
     this.pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
     if (this.pointers.size === 1) {
-      this.gesture = { startX: e.clientX, startY: e.clientY, startTime: performance.now(), moved: 0, multi: false };
+      // Lấy giờ của chính sự kiện, không phải giờ hàm chạy: một khung hình vẽ chậm không được nuốt mất cú chạm.
+      this.gesture = { startX: e.clientX, startY: e.clientY, startTime: e.timeStamp, moved: 0, multi: false };
     } else {
       this.gesture.multi = true;
     }
@@ -129,7 +130,7 @@ export class IsoCamera {
   private onUp = (e: PointerEvent): void => {
     const wasSingle = this.pointers.size === 1 && !this.gesture.multi;
     this.pointers.delete(e.pointerId);
-    const quick = performance.now() - this.gesture.startTime < TAP_MAX_MS;
+    const quick = e.timeStamp - this.gesture.startTime < TAP_MAX_MS;
     if (wasSingle && quick && this.gesture.moved <= TAP_SLOP_PX) this.onTap?.(e.clientX, e.clientY);
   };
 
