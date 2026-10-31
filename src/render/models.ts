@@ -14,6 +14,8 @@ export type PersonKind = 'nong' | 'linh' | 'buon' | 'laiDo';
 export interface TreeSpot {
   x: number;
   z: number;
+  /** Độ cao mặt đất chỗ cây mọc, bỏ trống là mặt phẳng. */
+  y?: number;
   kind: 'tree' | 'bamboo';
   seed: number;
 }
@@ -251,7 +253,7 @@ export function buildForest(spots: TreeSpot[]): THREE.Object3D {
     const r = seeded(s.seed);
     const pick = r();
     const t = s.kind === 'bamboo' ? 3 : pick < 0.45 ? 0 : pick < 0.75 ? 1 : 2;
-    return { t, x: s.x, z: s.z, s: 0.85 + r() * 0.3, ry: r() * Math.PI * 2 };
+    return { t, x: s.x, y: s.y, z: s.z, s: 0.85 + r() * 0.3, ry: r() * Math.PI * 2 };
   });
   return instanceTemplates(cachedTrees, placements, treeOutline);
 }
