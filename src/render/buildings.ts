@@ -1,6 +1,7 @@
 // Mô hình công trình "Nét Đông Sơn". Mỗi loại một dáng riêng lấy từ nhà cửa trên trống đồng,
 // mỗi cấp thêm một phần lớn nhìn thấy rõ và to dần lên tới cấp 5. Cấp 6, 7 (từ chương 2, 3) không to thêm
-// mà thêm một phần lớn nữa.
+// mà thêm một phần lớn nữa. Bốn công trình Hội Tết (ruộng nếp, vườn đậu lá dong, chuồng lợn, bếp gói bánh)
+// có 3 cấp, mỗi cấp cũng thêm một phần lớn.
 // Gốc tọa độ là tâm chân móng, mặt trước hướng +z.
 
 import * as THREE from 'three';
@@ -838,4 +839,339 @@ export function makeDenCoLoa(): THREE.Group {
   bow.rotation.y = -0.4;
   g.add(bow);
   return g;
+}
+
+// ---------- Hội Tết: ruộng nếp, vườn đậu lá dong, chuồng lợn, bếp gói bánh ----------
+
+/** Bông lúa nếp chín màu ngà, thân lúa xanh. */
+const NEP = 0xecd9a0;
+const NEP_STALK = 0x7f9a44;
+/** Bờ ruộng nếp lát đá ong, cho khác bờ đất của ruộng lúa. */
+const LATERITE = 0xa8643c;
+/** Lá dong xanh thẫm, đậu xanh. */
+const DONG = 0x3f7a3a;
+const DAU = 0x6f9a3a;
+const DAU_POD = 0x9fbf5a;
+/** Lợn ỉ đen, mõm xám hồng; bùn chuồng. */
+const PIG = 0x45403c;
+const PIG_SNOUT = 0xb08070;
+const MUD = 0x5a4026;
+/** Bánh chưng gói lá dong buộc lạt, bánh giầy trắng. */
+export const BANH_CHUNG = 0x4f7f35;
+export const BANH_GIAY = 0xf4efe0;
+export const LAT = 0xd8c48a;
+
+/** Khóm lúa nếp: năm lá lúa xanh xòe, ba bông nếp trĩu hạt màu ngà cong rủ ra ngoài. */
+function nepClump(p: ShapeBuilder, x: number, z: number, h: number): void {
+  for (let i = 0; i < 5; i++) {
+    const a = (i / 5) * Math.PI * 2;
+    p.box(0.022, h, 0.022, NEP_STALK, x + Math.sin(a) * 0.03, 0.06 + h / 2, z + Math.cos(a) * 0.03, [Math.cos(a) * 0.25, 0, -Math.sin(a) * 0.25]);
+  }
+  for (let k = 0; k < 3; k++) {
+    const a = (k / 3) * Math.PI * 2 + 0.5;
+    for (let j = 0; j < 4; j++) {
+      const r = 0.05 + j * 0.035;
+      p.sphere(0.03 - j * 0.004, NEP, x + Math.sin(a) * r, 0.08 + h - j * j * 0.022, z + Math.cos(a) * r, [1, 1.25, 1], 6);
+    }
+  }
+}
+
+/** Bù nhìn rơm đội nón lá, dang hai tay. Gốc ở chân cọc. */
+function scarecrow(m: ToonModel, x: number, z: number): void {
+  const p = m.plain;
+  p.cyl(0.025, 0.03, 1.05, C.woodDark, x, 0.52, z, undefined, 5);
+  p.cyl(0.02, 0.02, 0.7, C.woodDark, x, 0.72, z, [0, 0, Math.PI / 2], 5);
+  m.band.cyl(0.11, 0.15, 0.36, C.thatch, x, 0.62, z, undefined, 8);
+  for (const s of [-1, 1]) p.cone(0.05, 0.14, C.thatchDark, x + s * 0.36, 0.7, z, [0, 0, s * 1.4], 5);
+  p.sphere(0.09, C.cream, x, 0.9, z, [1, 1, 1], 8);
+  p.cone(0.17, 0.15, C.cream, x, 1.03, z, undefined, 12);
+}
+
+/** Bó lúa nếp treo trên giàn phơi. */
+function nepBundle(p: ShapeBuilder, x: number, y: number, z: number): void {
+  p.capsule(0.05, 0.22, NEP, x, y - 0.18, z, undefined, [1, 1, 0.8]);
+  p.cyl(0.03, 0.05, 0.12, NEP_STALK, x, y - 0.02, z, undefined, 6);
+}
+
+export function makeRuongNep(level: number): THREE.Group {
+  const m = new ToonModel();
+  const p = m.plain;
+  const bank = 0.16;
+  for (const s of [-1, 1]) {
+    p.box(2.95, bank, 0.2, LATERITE, 0, bank / 2, s * 1.38);
+    p.box(0.2, bank, 2.95, LATERITE, s * 1.38, bank / 2, 0);
+  }
+  p.box(2.6, 0.04, 2.6, C.paddyWater, 0, 0.05, 0);
+  // Bờ con chia ruộng làm hai thửa.
+  p.box(0.12, 0.09, 2.6, LATERITE, 0.0, 0.07, 0);
+  // Cấp càng cao lúa càng dày, cao.
+  const rows = level >= 2 ? 6 : 5;
+  const step = 2.4 / rows;
+  const h = 0.3 + level * 0.06;
+  for (let i = 0; i < rows; i++) {
+    for (let j = 0; j < rows; j++) {
+      const x = -1.2 + step * (i + 0.5);
+      const z = -1.2 + step * (j + 0.5);
+      if (Math.abs(x) < 0.12) continue;
+      // Chừa chỗ bù nhìn giữa thửa trái.
+      if (level >= 2 && Math.hypot(x + 0.55, z + 0.15) < 0.3) continue;
+      nepClump(p, x, z, h);
+    }
+  }
+  if (level >= 2) scarecrow(m, -0.55, -0.15);
+  if (level >= 3) {
+    // Giàn tre phơi bó nếp dọc bờ sau.
+    for (const x of [-1.2, 1.2]) for (const dz of [-0.06, 0.06]) p.cyl(0.035, 0.04, 1.15, C.bamboo, x, 0.6, -1.32 + dz, [dz * 2, 0, 0], 5);
+    for (const y of [1.08, 0.78]) p.cyl(0.03, 0.03, 2.5, C.bamboo, 0, y, -1.32, [0, 0, Math.PI / 2], 5);
+    for (let i = 0; i < 9; i++) {
+      const x = -1.0 + i * 0.25;
+      nepBundle(p, x, i % 2 ? 0.78 : 1.08, -1.32);
+    }
+  }
+  return m.group();
+}
+
+/** Khóm lá dong: lá to bản mọc xòe trên cuống dài. */
+function dongClump(p: ShapeBuilder, x: number, z: number, s: number): void {
+  // Lá dong: cuống dài mọc thẳng, mỗi cuống một lá thuôn dài xòe chếch ra ngoài, cao thấp so le
+  // (không chụm thành búp tròn như bắp cải).
+  for (let i = 0; i < 6; i++) {
+    const a = (i / 6) * Math.PI * 2 + 0.3;
+    const tilt = 0.95 + (i % 2) * 0.3;
+    const stem = (0.3 + (i % 3) * 0.1) * s;
+    const bx = x + Math.sin(a) * 0.06 * s;
+    const bz = z + Math.cos(a) * 0.06 * s;
+    p.cyl(0.013, 0.016, stem, 0x5a8a3a, bx, 0.06 + stem / 2, bz, undefined, 4);
+    const dir = [Math.sin(tilt) * Math.sin(a), Math.cos(tilt), Math.sin(tilt) * Math.cos(a)];
+    const leaf = new THREE.SphereGeometry(1, 8, 6);
+    leaf.scale(0.085 * s, 0.27 * s, 0.018);
+    leaf.rotateX(tilt);
+    leaf.rotateY(a);
+    const len = 0.25 * s;
+    p.add(leaf, i % 3 ? DONG : 0x4f8a42, bx + dir[0] * len, 0.06 + stem + dir[1] * len, bz + dir[2] * len);
+    // Gân giữa lá, nổi trên mặt lá (mặt trên lá hướng theo `up`).
+    const rib = new THREE.CylinderGeometry(0.007, 0.007, 0.48 * s, 3);
+    rib.rotateX(tilt);
+    rib.rotateY(a);
+    const up = [-Math.cos(tilt) * Math.sin(a), Math.sin(tilt), -Math.cos(tilt) * Math.cos(a)];
+    p.add(rib, 0x9ccc74, bx + dir[0] * len + up[0] * 0.02, 0.06 + stem + dir[1] * len + up[1] * 0.02, bz + dir[2] * len + up[2] * 0.02);
+  }
+}
+
+/** Rào tre thấp quanh mép móng, chừa cổng ở mặt trước từ `gateA` tới `gateB` (theo x). */
+function bambooFence(p: ShapeBuilder, half: number, h: number, gateA = 0, gateB = 0): void {
+  const n = 6;
+  for (let i = 0; i <= n; i++) {
+    const t = -half + (i * 2 * half) / n;
+    for (const [x, z] of [[t, -half], [-half, t], [half, t], [t, half]] as const) {
+      if (z === half && x > gateA && x < gateB) continue;
+      p.cyl(0.025, 0.03, h, C.bamboo, x, h / 2, z, undefined, 5);
+    }
+  }
+  for (const y of [h * 0.45, h * 0.85]) {
+    p.cyl(0.018, 0.018, 2 * half, C.bamboo, 0, y, -half, [0, 0, Math.PI / 2], 4);
+    p.cyl(0.018, 0.018, 2 * half, C.bamboo, -half, y, 0, [Math.PI / 2, 0, 0], 4);
+    p.cyl(0.018, 0.018, 2 * half, C.bamboo, half, y, 0, [Math.PI / 2, 0, 0], 4);
+    if (gateB > gateA) {
+      const l = gateA + half;
+      const r = half - gateB;
+      if (l > 0) p.cyl(0.018, 0.018, l, C.bamboo, -half + l / 2, y, half, [0, 0, Math.PI / 2], 4);
+      if (r > 0) p.cyl(0.018, 0.018, r, C.bamboo, half - r / 2, y, half, [0, 0, Math.PI / 2], 4);
+    } else {
+      p.cyl(0.018, 0.018, 2 * half, C.bamboo, 0, y, half, [0, 0, Math.PI / 2], 4);
+    }
+  }
+}
+
+export function makeVuon(level: number): THREE.Group {
+  const m = new ToonModel();
+  const p = m.plain;
+  p.box(1.95, 0.08, 1.95, C.soil, 0, 0.04, 0);
+  // Hai luống đậu xanh: bụi thấp, quả dài.
+  for (const x of [-0.62, -0.12]) {
+    p.box(0.34, 0.1, 1.15, C.earthDark, x, 0.12, -0.2);
+    for (let i = 0; i < 4; i++) {
+      const z = -0.62 + i * 0.28;
+      p.sphere(0.12, DAU, x, 0.25, z, [1, 0.7, 1], 8);
+      p.capsule(0.016, 0.09, DAU_POD, x + 0.08, 0.22, z + 0.07, [0, 0, 1.2]);
+      p.capsule(0.016, 0.09, DAU_POD, x - 0.07, 0.21, z - 0.05, [0, 0, -1.1]);
+    }
+  }
+  // Khóm lá dong lá to bản ở góc trước bên phải.
+  dongClump(p, 0.5, 0.45, level >= 2 ? 1.15 : 1);
+  if (level >= 2) {
+    // Giàn tre cho đậu leo, dây đậu xanh quấn cột; chum nước tưới ở góc trước.
+    for (const x of [-0.82, -0.37, 0.08]) for (const z of [-0.75, 0.35]) {
+      p.cyl(0.02, 0.025, 0.9, C.bamboo, x, 0.5, z, undefined, 5);
+      for (let k = 0; k < 3; k++) p.sphere(0.06, DAU, x + 0.03, 0.3 + k * 0.22, z + 0.02, [1, 1, 1], 6);
+    }
+    for (const x of [-0.82, -0.37, 0.08]) p.cyl(0.018, 0.018, 1.1, C.bamboo, x, 0.92, -0.2, [Math.PI / 2, 0, 0], 4);
+    for (const z of [-0.75, -0.2, 0.35]) p.cyl(0.018, 0.018, 0.95, C.bamboo, -0.37, 0.94, z, [0, 0, Math.PI / 2], 4);
+    for (let k = 0; k < 6; k++) p.sphere(0.07, k % 2 ? DAU : DAU_POD, -0.75 + k * 0.16, 0.96, -0.5 + (k % 3) * 0.3, [1.4, 0.5, 1], 6);
+    p.sphere(0.16, 0x8a5a3a, -0.72, 0.24, 0.72, [1, 1.1, 1], 10);
+    p.cyl(0.1, 0.12, 0.06, 0x7a4a2e, -0.72, 0.42, 0.72, undefined, 10);
+    p.cyl(0.09, 0.09, 0.01, C.paddyWater, -0.72, 0.45, 0.72, undefined, 10);
+  }
+  if (level >= 3) {
+    // Rào tre quanh vườn, cổng ở giữa mặt trước.
+    bambooFence(p, 0.93, 0.42, -0.15, 0.35);
+    // Lều nhỏ góc sau bên phải: nong đậu phơi trên giá, thúng đậu dưới đất.
+    for (const x of [0.32, 0.8]) for (const z of [-0.8, -0.34]) p.cyl(0.025, 0.03, 0.66, C.woodDark, x, 0.33, z, undefined, 5);
+    m.band.add(saddleRoof({ length: 0.72, width: 0.66, lift: 0.12, drop: 0.2, thickness: 0.04 }), C.thatch, 0.56, 0.82, -0.57, [0, Math.PI / 2, 0]);
+    p.box(0.5, 0.03, 0.4, C.bamboo, 0.56, 0.26, -0.57);
+    p.cyl(0.21, 0.21, 0.03, C.thatch, 0.56, 0.29, -0.57, undefined, 14);
+    p.cyl(0.18, 0.18, 0.02, DAU_POD, 0.56, 0.31, -0.57, undefined, 14);
+    p.cyl(0.1, 0.07, 0.14, C.thatchDark, 0.18, 0.15, -0.62, undefined, 10);
+    p.cyl(0.09, 0.09, 0.02, DAU, 0.18, 0.22, -0.62, undefined, 10);
+  }
+  return m.group();
+}
+
+/** Lợn ỉ: mình đen, bụng phệ sệ xuống, lưng võng, mõm ngắn, đuôi xoăn. Gốc ở chân, mặt hướng +z. */
+export function makePig(s = 1): THREE.Group {
+  const m = new ToonModel(inkThin);
+  const p = m.plain;
+  p.sphere(0.2 * s, PIG, 0, 0.24 * s, 0, [0.85, 0.75, 1.25], 10);
+  p.sphere(0.17 * s, PIG, 0, 0.15 * s, 0.02 * s, [0.95, 0.75, 1.05], 10);
+  for (const x of [-0.09, 0.09]) for (const z of [-0.15, 0.15]) p.cyl(0.035 * s, 0.04 * s, 0.12 * s, PIG, x * s, 0.06 * s, z * s, undefined, 6);
+  p.sphere(0.13 * s, PIG, 0, 0.27 * s, 0.25 * s, [1, 0.9, 1], 10);
+  p.cyl(0.055 * s, 0.065 * s, 0.08 * s, PIG_SNOUT, 0, 0.24 * s, 0.37 * s, [Math.PI / 2, 0, 0], 8);
+  for (const sx of [-1, 1]) {
+    p.cone(0.045 * s, 0.09 * s, PIG, sx * 0.08 * s, 0.38 * s, 0.22 * s, [0.5, 0, sx * 0.5], 5);
+    p.sphere(0.018 * s, C.cream, sx * 0.06 * s, 0.3 * s, 0.35 * s, [1, 1, 0.6], 5);
+  }
+  p.add(new THREE.TorusGeometry(0.035 * s, 0.012 * s, 4, 8, Math.PI * 1.5), PIG, 0, 0.3 * s, -0.27 * s, [0, Math.PI / 2, 0]);
+  return m.group();
+}
+
+export function makeChuongLon(level: number): THREE.Group {
+  const m = new ToonModel();
+  const p = m.plain;
+  p.box(1.95, 0.06, 1.95, C.earth, 0, 0.03, 0);
+  bambooFence(p, 0.9, 0.38);
+  // Máng gỗ đựng cám ở mặt trước, một con đang chúi mõm ăn.
+  p.box(0.55, 0.12, 0.16, C.wood, 0.25, 0.1, 0.62);
+  p.box(0.47, 0.03, 0.09, 0x8a7a50, 0.25, 0.16, 0.62);
+  const pigs: [number, number, number, number][] = [
+    [0.25, 0.3, 0, 1.3],
+    [-0.38, 0.08, 1.2, 1.3],
+  ];
+  if (level >= 2) {
+    // Chuồng có mái tranh che nửa sau, rơm lót ổ; thêm đàn lợn con.
+    const floorY = level >= 3 ? 0.36 : 0.06;
+    const roofY = level >= 3 ? 1.15 : 0.85;
+    for (const x of [-0.82, 0.22]) for (const z of [-0.82, -0.22]) p.cyl(0.035, 0.04, roofY, C.woodDark, x, roofY / 2, z, undefined, 5);
+    m.band.add(saddleRoof({ length: 1.35, width: 0.95, lift: 0.15, drop: 0.28, thickness: 0.05 }), C.thatch, -0.3, roofY + 0.22, -0.52);
+    if (level >= 3) {
+      // Chuồng sàn gỗ: sàn kê cao trên cột, có cầu dốc cho lợn lên xuống; vũng bùn trước chuồng.
+      p.box(1.1, 0.06, 0.66, C.wood, -0.3, floorY, -0.52);
+      for (let i = 0; i < 5; i++) p.box(0.02, 0.01, 0.66, C.woodDark, -0.8 + i * 0.25, floorY + 0.035, -0.52);
+      p.box(0.32, 0.04, 0.5, C.woodLight, 0.4, 0.2, -0.32, [0.62, -Math.PI / 2, 0]);
+      p.add(new THREE.CylinderGeometry(0.34, 0.34, 0.02, 16), MUD, -0.42, 0.065, 0.42, [0, 0, 0], [1.2, 1, 0.8]);
+      // Vách ván sau và bên trái chuồng sàn.
+      p.box(1.1, 0.42, 0.04, C.woodLight, -0.3, floorY + 0.24, -0.84);
+      p.box(0.04, 0.42, 0.66, C.woodLight, -0.84, floorY + 0.24, -0.52);
+    }
+    p.box(0.95, 0.03, 0.5, C.thatchDark, -0.3, floorY + 0.04, -0.52);
+    // Đàn lợn con chạy ngoài sân theo mẹ, không nằm khuất dưới mái. Cấp 3 thêm hai lợn lớn: một con đằm bùn, một con cạnh cầu dốc.
+    if (level >= 3) pigs.push([-0.6, 0.42, -0.4, 1.3], [0.55, -0.08, -2.2, 1.3], [-0.25, 0.64, 0.3, 0.6], [-0.05, 0.38, -0.5, 0.55], [0.66, 0.34, -2.6, 0.55]);
+    else pigs.push([-0.64, 0.45, 0.8, 0.6], [-0.4, 0.6, 0.3, 0.55], [-0.13, 0.38, -0.5, 0.55]);
+  }
+  const g = m.group();
+  for (const [x, z, ry, s] of pigs) {
+    const pig = makePig(s);
+    pig.position.set(x, 0.06, z);
+    pig.rotation.y = ry;
+    g.add(pig);
+  }
+  return g;
+}
+
+/** Kiềng ba hòn đá, nồi đồng to luộc bánh chưng, củi cháy dưới nồi. Lửa thêm thẳng vào `g` để World cho bập bùng. */
+function hearth(m: ToonModel, g: THREE.Group, x: number, z: number): void {
+  const p = m.plain;
+  for (let i = 0; i < 3; i++) {
+    const a = (i / 3) * Math.PI * 2 + 0.4;
+    p.sphere(0.12, C.rockDark, x + Math.sin(a) * 0.26, 0.12, z + Math.cos(a) * 0.26, [1, 1.3, 1], 7);
+  }
+  for (let i = 0; i < 3; i++) {
+    const a = (i / 3) * Math.PI * 2 + 0.95;
+    p.cyl(0.03, 0.035, 0.5, C.woodDark, x + Math.sin(a) * 0.25, 0.07, z + Math.cos(a) * 0.25, [Math.PI / 2, a, 0], 5);
+  }
+  m.band.cyl(0.3, 0.26, 0.42, C.bronze, x, 0.44, z, undefined, 16);
+  p.add(new THREE.TorusGeometry(0.3, 0.025, 6, 18), C.bronzeDark, x, 0.65, z, [Math.PI / 2, 0, 0]);
+  p.cyl(0.28, 0.28, 0.03, C.bronzeDark, x, 0.66, z, undefined, 16);
+  p.sphere(0.04, C.bronzeLight, x, 0.7, z, [1, 1, 1], 6);
+  for (const [r, h, color, dx, dz] of [[0.1, 0.24, C.fire, 0.1, 0.12], [0.08, 0.2, C.fire, -0.12, 0.05], [0.06, 0.16, C.ember, 0, 0.16]] as const) {
+    const flame = new THREE.Mesh(new THREE.ConeGeometry(r, h, 6), new THREE.MeshBasicMaterial({ color }));
+    flame.position.set(x + dx, 0.12 + h / 2 - 0.05, z + dz);
+    flame.userData.flame = true;
+    g.add(flame);
+  }
+}
+
+/** Bánh chưng vuông xanh lá, buộc lạt chữ thập. */
+export function banhChung(p: ShapeBuilder, x: number, y: number, z: number, s = 1, ry = 0): void {
+  p.box(0.15 * s, 0.08 * s, 0.15 * s, BANH_CHUNG, x, y + 0.04 * s, z, [0, ry, 0]);
+  p.box(0.155 * s, 0.085 * s, 0.02 * s, LAT, x, y + 0.04 * s, z, [0, ry, 0]);
+  p.box(0.02 * s, 0.085 * s, 0.155 * s, LAT, x, y + 0.04 * s, z, [0, ry, 0]);
+}
+
+/** Bánh giầy tròn trắng, dẹt. */
+export function banhGiay(p: ShapeBuilder, x: number, y: number, z: number, s = 1): void {
+  p.sphere(0.075 * s, BANH_GIAY, x, y + 0.03 * s, z, [1, 0.42, 1], 10);
+}
+
+export function makeBep(level: number): THREE.Group {
+  const m = new ToonModel();
+  const p = m.plain;
+  const g = new THREE.Group();
+  p.box(1.95, 0.06, 1.95, C.earthDark, 0, 0.03, 0);
+  hearth(m, g, -0.5, -0.36);
+  // Chiếu gói bánh ở mặt trước: lá dong trải sẵn, vài cái bánh đã gói.
+  m.band.box(0.75, 0.02, 0.48, C.thatch, -0.3, 0.07, 0.55);
+  for (const [x, z, a] of [[-0.5, 0.48, 0.3], [-0.42, 0.62, -0.4]] as const) p.box(0.22, 0.012, 0.12, DONG, x, 0.085, z, [0, a, 0]);
+  banhChung(p, -0.15, 0.08, 0.5, 1, 0.2);
+  banhChung(p, -0.05, 0.08, 0.66, 1, -0.3);
+  // Chồng lá dong: dưới đất ở cấp 1, trên chõng tre từ cấp 2.
+  const leafY = level >= 2 ? 0.42 : 0.07;
+  for (let i = 0; i < 4; i++) p.box(0.34, 0.025, 0.2, i % 2 ? DONG : 0x4f8a42, 0.7, leafY + i * 0.028, -0.68, [0, 0.15 * (i % 3), 0]);
+  if (level >= 2) {
+    // Mái tranh che bếp, dựng cao cho thấy nồi bánh dưới mái; chõng tre có khuôn gói bánh.
+    for (const x of [-0.95, 0.45]) for (const z of [-0.92, -0.05]) p.cyl(0.035, 0.04, 1.45, C.woodDark, x, 0.725, z, undefined, 5);
+    m.band.add(saddleRoof({ length: 1.7, width: 1.15, lift: 0.2, drop: 0.3, thickness: 0.05 }), C.thatch, -0.25, 1.67, -0.48);
+    for (const dx of [-0.16, 0.16]) for (const dz of [-0.22, 0.22]) p.cyl(0.025, 0.025, 0.36, C.bamboo, 0.7 + dx, 0.2, -0.5 + dz, undefined, 5);
+    p.box(0.42, 0.04, 0.6, C.bamboo, 0.7, 0.39, -0.5);
+    // Khuôn gói bánh: khung gỗ vuông.
+    for (const s of [-1, 1]) {
+      p.box(0.2, 0.05, 0.025, C.wood, 0.7, 0.44, -0.3 + s * 0.09);
+      p.box(0.025, 0.05, 0.2, C.wood, 0.7 + s * 0.09, 0.44, -0.3);
+    }
+    banhChung(p, 0.7, 0.41, -0.3, 0.9);
+  }
+  if (level >= 3) {
+    // Nồi thứ hai cạnh nồi cũ; cối đá chày gỗ giã bánh giầy ở góc trước bên phải; khói bếp bốc qua mái.
+    hearth(m, g, 0.1, -0.4);
+    p.cyl(0.2, 0.24, 0.3, C.rock, 0.72, 0.21, 0.7, undefined, 12);
+    p.cyl(0.14, 0.14, 0.02, 0x3d3530, 0.72, 0.365, 0.7, undefined, 12);
+    p.sphere(0.1, BANH_GIAY, 0.72, 0.36, 0.7, [1, 0.35, 1], 8);
+    p.cyl(0.035, 0.04, 1.0, C.wood, 0.6, 0.78, 0.58, [0.35, 0, 0.3], 6);
+    p.cyl(0.22, 0.22, 0.03, C.thatch, 0.16, 0.08, 0.84, undefined, 12);
+    for (const [x, z] of [[0.09, 0.8], [0.23, 0.82], [0.16, 0.92]] as const) banhGiay(p, x, 0.095, z);
+    for (const x of [-0.5, 0.1]) {
+      const smoke = new THREE.Group();
+      smoke.userData.smoke = true;
+      const mat = new THREE.MeshBasicMaterial({ color: 0xb8b2a8, transparent: true, opacity: 0.5, depthWrite: false });
+      for (let i = 0; i < 4; i++) {
+        const puff = new THREE.Mesh(new THREE.SphereGeometry(0.12, 7, 5), mat);
+        puff.userData.phase = (i + (x > 0 ? 0.5 : 0)) / 4;
+        smoke.add(puff);
+      }
+      smoke.position.set(x, 1.8, -0.38);
+      g.add(smoke);
+    }
+  }
+  const model = m.group();
+  model.add(...g.children);
+  return model;
 }

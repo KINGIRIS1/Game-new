@@ -6,6 +6,7 @@ import { useSkill } from './game/battle';
 import { leaveBattlefield, retreat, startStage } from './game/campaign';
 import { forgeArms } from './game/binhKhi';
 import { forgeNoThan, inChapter3, wallRings } from './game/coLoa';
+import { offer } from './game/tet';
 import { feedGiong, forgeGear } from './game/giong';
 import { inChapter2, offerGift } from './game/son';
 import { markStory, pendingStory } from './game/story';
@@ -333,6 +334,22 @@ function start(): void {
         if (!r.ok) return fail(r.reason);
         play('upgrade');
         hud.toast(vi.ui.noThanToast);
+        commit();
+        return;
+      }
+
+      case 'openTet':
+        if (mode.kind !== 'view') exitMode();
+        select(null);
+        play('tap');
+        hud.showTet(state);
+        return;
+
+      case 'offerBanh': {
+        const r = offer(state, a.banh);
+        if (!r.ok) return fail(r.reason);
+        play('upgrade');
+        hud.toast(vi.ui.offerToast(vi.ui.bless[a.banh].name));
         commit();
         return;
       }

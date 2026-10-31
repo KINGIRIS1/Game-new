@@ -460,6 +460,9 @@ describe('truyện và lưu game chương 2', () => {
   it('kể các đoạn chương 2 đúng thứ tự sau chương 1', () => {
     const s = ch2();
     for (const id of ['mo', 'suGia', 'vuonVai', 'roiGay', 'ketChuong'] as const) markStory(s, id);
+    // Chuyện Lang Liêu (Hội Tết) kể ngay sau kết chương 1, trước "Vua Hùng kén rể".
+    expect(pendingStory(s)).toBe('langLieu');
+    markStory(s, 'langLieu');
     expect(pendingStory(s)).toBe('kenRe');
     markStory(s, 'kenRe');
     expect(pendingStory(s)).toBeNull();
@@ -488,7 +491,7 @@ describe('truyện và lưu game chương 2', () => {
     const raid = s5.raid as Record<string, unknown>;
     for (const k of ['foe', 'floods', 'floodsHeld', 'water']) delete raid[k];
     const back = deserialize(JSON.stringify(s5))!;
-    expect(back.version).toBe(8);
+    expect(back.version).toBe(9);
     expect(back.heights.length).toBe(GRID * GRID);
     expect(back.son.gifts.comNep).toBe(false);
     expect(back.raid.foe).toBe('an');

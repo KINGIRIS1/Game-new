@@ -120,7 +120,7 @@ describe('rèn binh khí', () => {
     s7.version = 7;
     delete s7.arms;
     const back = deserialize(JSON.stringify(s7))!;
-    expect(back.version).toBe(8);
+    expect(back.version).toBe(9);
     expect(back.arms).toEqual({ giao: 0, cung: 0, voi: 0 });
   });
 });

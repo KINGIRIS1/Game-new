@@ -1,23 +1,28 @@
 // Cảnh 3D của kinh đô: địa hình bậc thang, rừng, sông, công trình, lũy tre, đê, thành Cổ Loa, nước lũ, mưa,
-// đêm yêu tinh và các hiệu ứng khi đặt công trình.
+// đêm yêu tinh, cảnh Tết (cây nêu, dây cờ, mâm bánh, người gói bánh) và các hiệu ứng khi đặt công trình.
 
 import * as THREE from 'three';
 import { BUILDINGS, FIELD, type BuildingType, type Terrain } from '../game/defs';
 import type { Battle, RaidSide } from '../game/battle';
 import { advLook, inChapter3, ruaVangCame, type AdvLook } from '../game/coLoa';
-import { dienLevel, type Building, type GameState } from '../game/game';
+import { buildingAt, dienLevel, type Building, type GameState } from '../game/game';
 import { giongLook, type GiongLook } from '../game/giong';
 import { GRID, RIVER_START, areaStart, baseHeights, isUnlocked } from '../game/map';
 import { sonLook, type SonLook } from '../game/son';
 import { floodMap } from '../game/terrain';
+import { tetOpen } from '../game/tet';
 import { Battlefield } from './battlefield';
 import { BattleView } from './battleView';
 import { IsoCamera } from './camera';
 import {
+  banhChung,
+  banhGiay,
   makeBaiDa,
   makeBayChong,
   makeBen,
+  makeBep,
   makeChoiCanh,
+  makeChuongLon,
   makeDenCoLoa,
   makeDenPhuDong,
   makeDenTanVien,
@@ -27,6 +32,8 @@ import {
   makeLoRen,
   makeNhaSan,
   makeRuong,
+  makeRuongNep,
+  makeVuon,
 } from './buildings';
 import { addSunLights, type SunLights } from './lights';
 import {
@@ -48,7 +55,7 @@ import {
 import { makeWorker, type Job } from './people';
 import { C } from './palette';
 import { ShapeBuilder, seeded } from './shapes';
-import { inkThin, outlineOf, toon } from './toon';
+import { ToonModel, inkThin, outlineOf, toon } from './toon';
 
 const HALF = GRID / 2;
 /** Mặt nước nằm thấp hơn mặt đất. */
@@ -199,11 +206,37 @@ const SPOTS: Partial<Record<BuildingType, Spot[]>> = {
     { job: 'linhGac', x: -0.2, y: 0.08, z: 1.0, ry: 0 },
     { job: 'linhGac', x: 0.95, y: 0.08, z: 0.3, ry: -0.6 },
   ],
+  // Hội Tết: mỗi người một cột x − z như thợ đá, tránh bù nhìn, giàn, chuồng, nồi.
+  ruongNep: [
+    { job: 'nong', x: -0.85, y: 0.06, z: 0.3, ry: 0.5 },
+    { job: 'nong', x: 0.3, y: 0.06, z: 0.3, ry: -0.4 },
+    { job: 'nong', x: 0.75, y: 0.06, z: -0.4, ry: -0.9 },
+  ],
+  vuon: [
+    { job: 'phuNu', x: -0.2, y: 0.08, z: 0.62, ry: -0.4 },
+    { job: 'phuNu', x: 0.78, y: 0.08, z: 0.02, ry: -1.8 },
+  ],
+  chuongLon: [
+    { job: 'nong', x: 0.65, y: 0.06, z: 0.72, ry: -2.0 },
+    { job: 'nong', x: 0.62, y: 0.06, z: -0.58, ry: -1.6 },
+  ],
+  bep: [
+    { job: 'phuNu', x: -0.74, y: 0.06, z: 0.14, ry: -2.9 },
+    { job: 'phuNu', x: 0.6, y: 0.06, z: -0.02, ry: 2.9 },
+    { job: 'phuNu', x: 0.4, y: 0.06, z: 0.4, ry: 0.9 },
+  ],
 };
+
+/** Cây nêu ngày Tết cao chừng này. Khánh đất nung treo trên nêu. */
+const NEU_H = 4.2;
+const KHANH = 0xa8502e;
+
+/** Công trình cần người làm: hiện đúng số người đang làm. */
+const WORKED: BuildingType[] = ['ruong', 'ben', 'baiDa', 'loRen', 'ruongNep', 'vuon', 'chuongLon', 'bep'];
 
 /** Số người hiện ra: công trình cần người làm thì đúng số người đang làm, còn lại cố định theo cấp. */
 function peopleCount(b: Building, spots: number): number {
-  if (b.type === 'ruong' || b.type === 'ben' || b.type === 'baiDa' || b.type === 'loRen') return Math.min(b.workers, spots);
+  if (WORKED.includes(b.type)) return Math.min(b.workers, spots);
   if (b.type === 'nhaSan' || b.type === 'doanhTrai') return Math.min(b.level >= 2 ? 2 : 1, spots);
   return Math.min(1, spots);
 }
@@ -264,6 +297,9 @@ export class World {
   /** An Dương Vương đứng trước Điện ở chương 3, cạnh cột đá thề. */
   private adv?: { obj: THREE.Group; look: AdvLook; key: string; y: number };
   private pillar?: { obj: THREE.Group; key: string };
+  /** Cảnh Tết trước Điện và quanh bếp gói bánh, chỉ có lúc Tết mở. */
+  private tetDecor?: THREE.Group;
+  private tetKey = '';
   /** Rùa Vàng bơi chậm trên sông sau khi đã hiện lên diệt yêu tinh. */
   private turtle?: THREE.Group;
   private shownLevel = 0;
@@ -547,6 +583,7 @@ export class World {
     this.syncSon(state);
     this.syncAdv(state);
     this.syncTurtle(state);
+    this.syncTet(state);
 
     const walls = state.buildings.filter((b) => b.type === 'luy');
     const key = walls.map((b) => `${b.id}:${b.level}:${b.damaged ? 1 : 0}:${this.heights[b.z * GRID + b.x]}`).join(',');
@@ -743,6 +780,10 @@ export class World {
     if (type === 'denPhuDong') return makeDenPhuDong();
     if (type === 'denTanVien') return makeDenTanVien();
     if (type === 'denCoLoa') return makeDenCoLoa();
+    if (type === 'ruongNep') return makeRuongNep(level);
+    if (type === 'vuon') return makeVuon(level);
+    if (type === 'chuongLon') return makeChuongLon(level);
+    if (type === 'bep') return makeBep(level);
     return new THREE.Group();
   }
 
@@ -919,6 +960,159 @@ export class World {
     obj.rotation.y = 0.3;
     this.scene.add(obj);
     this.pillar = { obj, key: pkey };
+  }
+
+  /**
+   * Cảnh Tết, chỉ lúc Tết mở: cây nêu bên trái bậc lên Điện, dây cờ đuôi nheo căng từ ngọn nêu tới cột cờ
+   * bên trái Điện, mâm bánh đã dâng bày trước thềm (chỉ loại đã dâng), và mấy người ngồi chiếu gói bánh
+   * trước bếp. Không có pháo. Cây nêu đứng bên trái bậc, tránh chỗ tướng và cột đá thề ở bên phải.
+   */
+  private syncTet(state: GameState): void {
+    const dien = state.buildings.find((b) => b.type === 'dien');
+    const bep = state.buildings.find((b) => b.type === 'bep' && !b.damaged);
+    const o = state.tet.offered;
+    const h = (b: Building) => this.heights[b.z * GRID + b.x] ?? 0;
+    // Cây nêu và mâm bánh đứng ngoài móng Điện: ô ấy có công trình khác (kể cả lũy, thành) thì không dựng.
+    const free = (lx: number, lz: number) => {
+      if (!dien) return false;
+      const b = buildingAt(state, dien.x + Math.floor(2 + lx), dien.z + Math.floor(2 + lz));
+      return !b || b.id === dien.id;
+    };
+    const NX = -1.6;
+    const NZ = 2.55;
+    const neuFree = free(NX, NZ);
+    const trayFree = free(-0.3, 2.8) && free(0.3, 2.8);
+    const key =
+      dien && tetOpen(state)
+        ? [dien.x, dien.z, dien.level, h(dien), o.chung, o.giay, neuFree, trayFree, bep ? `${bep.x},${bep.z},${bep.level},${h(bep)}` : '-'].join(':')
+        : '';
+    if (key === this.tetKey) return;
+    this.tetKey = key;
+    if (this.tetDecor) this.scene.remove(this.tetDecor);
+    this.tetDecor = undefined;
+    if (!key || !dien) return;
+    const root = new THREE.Group();
+    // Tọa độ trong mô hình Điện (gốc ở tâm móng, đã thu nhỏ theo cấp) đổi ra tọa độ cảnh.
+    const s = 0.8 + 0.05 * Math.min(dien.level, 5);
+    const cx = wx(dien.x) + 2;
+    const cz = wz(dien.z) + 2;
+    const dienY = topY(h(dien));
+    const ground = (lx: number, lz: number) =>
+      this.groundY(Math.min(dien.x + Math.floor(2 + lx), RIVER_START - 1), Math.min(dien.z + Math.floor(2 + lz), RIVER_START - 1));
+    // Hai dây cờ từ ngọn nêu: sang đầu cột cờ bên trái Điện, và vắt qua trước thềm sang cột cờ bên phải
+    // (Điện cấp 1 chưa có cột cờ thì buộc vào hai góc nền). Không dựng được nêu thì căng một dây giữa hai cột cờ.
+    const bz = (dien.level >= 6 ? 1.85 : 1.6) * s;
+    const left = dien.level >= 2 ? new THREE.Vector3(cx - 1.7 * s, dienY + 2.5 * s, cz + bz) : new THREE.Vector3(cx - 1.85 * s, dienY + 0.9 * s, cz + 1.85 * s);
+    const right = dien.level >= 4 ? new THREE.Vector3(cx + 1.75 * s, dienY + 2.7 * s, cz + bz) : new THREE.Vector3(cx + 1.85 * s, dienY + 0.9 * s, cz + 1.85 * s);
+    if (neuFree) {
+      const ny = ground(NX, NZ);
+      const neu = this.makeNeu();
+      neu.position.set(cx + NX, ny, cz + NZ);
+      neu.rotation.y = Math.PI / 4;
+      root.add(neu);
+      const top = new THREE.Vector3(cx + NX, ny + NEU_H - 0.3, cz + NZ);
+      root.add(this.makeFlagLine(top, left, 4));
+      root.add(this.makeFlagLine(top, right, 9));
+    } else {
+      root.add(this.makeFlagLine(left, right, 9));
+    }
+    if ((o.chung || o.giay) && trayFree) {
+      const tray = this.makeTray(o.chung, o.giay);
+      tray.position.set(cx, ground(0, 2.8), cz + 2.8);
+      tray.rotation.y = Math.PI / 4;
+      root.add(tray);
+    }
+    if (bep) {
+      // Một người ngồi xếp bằng ở mép chiếu gói bánh trước bếp (chiếu ở tọa độ bếp -0.3, 0.55), quay vào chiếu.
+      const w = makeWorker('phuNu', true);
+      w.scale.setScalar(0.85);
+      w.position.set(wx(bep.x) + 1 - 0.3, topY(h(bep)) + 0.08, wz(bep.z) + 1 + 0.88);
+      w.rotation.y = Math.PI;
+      const tool = w.children.find((c) => c.userData.tool);
+      if (tool) tool.rotation.x = -0.9;
+      root.add(w);
+    }
+    this.scene.add(root);
+    this.tetDecor = root;
+  }
+
+  /** Cây nêu: cây tre cao, ngọn còn chùm lá, vòng tre, thanh ngang treo khánh đất nung, dải vải đỏ. Mặt chính theo trục x. */
+  private makeNeu(): THREE.Group {
+    const m = new ToonModel(inkThin);
+    const p = m.plain;
+    p.sphere(0.22, C.earthDark, 0, 0.02, 0, [1, 0.35, 1], 8);
+    p.cyl(0.05, 0.07, NEU_H, C.bamboo, 0, NEU_H / 2, 0, undefined, 6);
+    for (let i = 1; i < 10; i++) p.cyl(0.062, 0.062, 0.035, C.thatchDark, 0, i * 0.42, 0, undefined, 6);
+    for (let i = 0; i < 8; i++) {
+      const a = (i / 8) * Math.PI * 2;
+      const leaf = new THREE.ConeGeometry(0.05, 0.62, 4);
+      leaf.scale(1, 1, 0.3);
+      leaf.rotateX(1.95 + (i % 2) * 0.25);
+      leaf.rotateY(a);
+      p.add(leaf, i % 2 ? C.bamboo : 0x6f8f44, Math.sin(a) * 0.2, NEU_H - 0.08, Math.cos(a) * 0.2);
+    }
+    p.add(new THREE.TorusGeometry(0.2, 0.02, 5, 16), C.bamboo, 0, NEU_H - 0.42, 0);
+    p.cyl(0.02, 0.02, 0.8, C.bamboo, 0, NEU_H - 0.7, 0, [0, 0, Math.PI / 2], 4);
+    for (const x of [-0.36, -0.12, 0.12, 0.36]) {
+      p.cyl(0.005, 0.005, 0.2, C.ink, x, NEU_H - 0.8, 0, undefined, 3);
+      p.cone(0.08, 0.14, KHANH, x, NEU_H - 0.97, 0, [Math.PI, 0, 0], 3);
+    }
+    m.band.box(0.14, 1.4, 0.015, C.red, 0.09, NEU_H - 1.5, 0.06, [0, 0, -0.06]);
+    m.band.box(0.1, 1.0, 0.015, C.bronzeLight, -0.09, NEU_H - 1.3, 0.06, [0, 0, 0.08]);
+    return m.group();
+  }
+
+  /** Dây cờ đuôi nheo nhiều màu võng xuống giữa hai điểm (tọa độ cảnh). */
+  private makeFlagLine(a: THREE.Vector3, b: THREE.Vector3, flags: number): THREE.Group {
+    const m = new ToonModel(inkThin);
+    const p = m.plain;
+    const colors = [C.red, C.bronzeLight, C.indigo, 0x6f8f44, C.cream];
+    const n = flags * 2;
+    const sag = a.distanceTo(b) * 0.1;
+    const pts: THREE.Vector3[] = [];
+    for (let i = 0; i <= n; i++) {
+      const t = i / n;
+      pts.push(new THREE.Vector3().lerpVectors(a, b, t).add(new THREE.Vector3(0, -sag * 4 * t * (1 - t), 0)));
+    }
+    const up = new THREE.Vector3(0, 1, 0);
+    for (let i = 0; i < n; i++) {
+      const d = new THREE.Vector3().subVectors(pts[i + 1], pts[i]);
+      const mid = new THREE.Vector3().addVectors(pts[i], pts[i + 1]).multiplyScalar(0.5);
+      const e = new THREE.Euler().setFromQuaternion(new THREE.Quaternion().setFromUnitVectors(up, d.clone().normalize()));
+      p.cyl(0.01, 0.01, d.length(), C.woodDark, mid.x, mid.y, mid.z, [e.x, e.y, e.z], 4);
+    }
+    // Cờ tam giác mũi chúc xuống, mặt cờ nằm dọc theo dây.
+    const yaw = Math.atan2(b.x - a.x, b.z - a.z);
+    for (let i = 1, k = 0; i < n; i += 2, k++) {
+      const flag = new THREE.ConeGeometry(0.11, 0.3, 3);
+      flag.rotateX(Math.PI);
+      flag.scale(1, 1, 0.2);
+      flag.rotateY(yaw - Math.PI / 2);
+      p.add(flag, colors[k % colors.length], pts[i].x, pts[i].y - 0.15, pts[i].z);
+    }
+    return m.group();
+  }
+
+  /** Mâm đồng trên chân gỗ, bày chồng bánh chưng và bánh giầy đã dâng. Mặt chính theo trục x. */
+  private makeTray(chung: boolean, giay: boolean): THREE.Group {
+    const m = new ToonModel(inkThin);
+    const p = m.plain;
+    p.cyl(0.16, 0.22, 0.26, C.woodDark, 0, 0.13, 0, undefined, 10);
+    p.cyl(0.46, 0.4, 0.05, C.bronze, 0, 0.285, 0, undefined, 18);
+    p.add(new THREE.TorusGeometry(0.45, 0.02, 5, 20), C.bronzeDark, 0, 0.31, 0, [Math.PI / 2, 0, 0]);
+    const both = chung && giay;
+    const y = 0.31;
+    if (chung) {
+      const x0 = both ? -0.2 : 0;
+      for (const dx of [-0.08, 0.08]) for (const dz of [-0.08, 0.08]) banhChung(p, x0 + dx, y, dz);
+      banhChung(p, x0, y + 0.08, 0, 1, Math.PI / 4);
+    }
+    if (giay) {
+      const x0 = both ? 0.2 : 0;
+      for (const dx of [-0.075, 0.075]) for (const dz of [-0.075, 0.075]) banhGiay(p, x0 + dx, y, dz);
+      banhGiay(p, x0, y + 0.05, 0);
+    }
+    return m.group();
   }
 
   /** Cột đá thề: trụ đá vuông trên bệ, mặt khắc vạch chữ, đỉnh vát. */

@@ -64,6 +64,7 @@ import { giongAppeared, giongLook, giongReady, giongResting } from '../game/gion
 import { AREA_SIZE } from '../game/map';
 import { inChapter2, sonJoined, sonLook, sonResting, giftCount } from '../game/son';
 import { floodToleranceOf, groundOf } from '../game/terrain';
+import { tetOpen, tetStarted, type Banh } from '../game/tet';
 import type { Resolution } from '../render/world';
 import { formatDuration, vi } from '../text/vi';
 import { armyHtml, defaultPick, mapHtml, nextRow, stageHtml, stageResultHtml, type ArmyPick } from './campaign';
@@ -72,6 +73,7 @@ import { advHtml } from './coLoa';
 import { costHtml, esc, fmt } from './format';
 import { giongHtml, storyHtml } from './giong';
 import { sonHtml } from './son';
+import { blessingHtml, tetHtml } from './tet';
 
 const SHOWN_RESOURCES: ResourceId[] = ['gao', 'voOc', 'datDa', 'sat'];
 const BUILD_MENU: BuildingType[] = [
@@ -86,11 +88,17 @@ const BUILD_MENU: BuildingType[] = [
   'choiCanh',
   'bayChong',
   'denPhuDong',
+  'ruongNep',
+  'vuon',
+  'chuongLon',
+  'bep',
   'de',
   'denTanVien',
   'thanh',
   'denCoLoa',
 ];
+/** Bốn công trình làm bánh của Hội Tết: chỉ hiện trong bảng Xây dựng khi đã mở (sau kết chương 1). */
+const TET_TYPES: BuildingType[] = ['ruongNep', 'vuon', 'chuongLon', 'bep'];
 /** Công trình chỉ hiện trong bảng Xây dựng khi đã sang chương có nó. */
 const CHAPTER_OF: Partial<Record<string, Chapter>> = { chuong2: 2, ketChuong2: 2, chuong3: 3, ketChuong3: 3 };
 
@@ -123,6 +131,8 @@ export type HudAction =
   | { kind: 'openAdv' }
   | { kind: 'forgeNoThan' }
   | { kind: 'forgeArms'; unit: UnitType }
+  | { kind: 'openTet' }
+  | { kind: 'offerBanh'; banh: Banh }
   | { kind: 'confirmPlace' }
   | { kind: 'cancelPlace' }
   | { kind: 'upgrade'; id: number }
@@ -167,6 +177,7 @@ type Sheet =
   | { kind: 'giong' }
   | { kind: 'son' }
   | { kind: 'adv' }
+  | { kind: 'tet' }
   | null;
 
 /** Chữ trên nút kỹ năng: tên khi sẵn sàng, chỉ biểu tượng và số giây khi đang hồi (cho gọn trên điện thoại). */
@@ -283,6 +294,8 @@ export class Hud {
         return this.onAction({ kind: 'train', unit: el.dataset.unit as UnitType });
       case 'forgeArms':
         return this.onAction({ kind: 'forgeArms', unit: el.dataset.unit as UnitType });
+      case 'offerBanh':
+        return this.onAction({ kind: 'offerBanh', banh: el.dataset.banh as Banh });
       case 'closeCampaign':
         return this.closeCampaign();
       case 'useSkill':
@@ -363,7 +376,13 @@ export class Hud {
       const mark = advJoined(state) ? (advResting(state) ? '💤' : '⚔️') : `${Math.min(wallRings(state), RINGS_NEEDED)}/${RINGS_NEEDED}`;
       adv = `<button class="chip dan" data-act="openAdv" title="${vi.ui.adv}">${vi.advLooks[aLook].icon} <b>${mark}</b></button>`;
     }
-    const html = `<div class="chip level" title="${vi.buildings.dien.name}">🏯 ${dienLevel(state)}</div>${res}${dan}${army}${giong}${son}${adv}
+    // Tết đang mở: chip 🎋 đếm ngược, chạm vào để mở bảng Tết.
+    let tet = '';
+    if (tetOpen(state)) {
+      const secs = Math.max(0, Math.ceil((state.tet.openUntil - state.clock) / 1000));
+      tet = `<button class="chip dan" data-act="openTet" title="${vi.ui.tet}">🎋 <b>${Math.floor(secs / 60)}:${String(secs % 60).padStart(2, '0')}</b></button>`;
+    }
+    const html = `<div class="chip level" title="${vi.buildings.dien.name}">🏯 ${dienLevel(state)}</div>${res}${dan}${army}${giong}${son}${adv}${tet}
       <span class="spacer"></span>
       <button class="icon-btn" data-act="openSettings" aria-label="${vi.ui.settings}">⚙️</button>`;
     // So với chuỗi đã vẽ lần trước (không so với innerHTML vì trình duyệt chuẩn hóa lại chuỗi),
@@ -409,6 +428,11 @@ export class Hud {
               : `⚔️ ${vi.ui.raidBattle(left, ours)}`;
       parts.push(`<div class="banner bad">${text}</div>
         <div class="banner skills">${b.skills.map((k) => skillButton(b, k, true)).join('')}</div>`);
+    }
+    if (tetOpen(state) && !(state.tet.offered.chung && state.tet.offered.giay)) {
+      const secs = Math.max(0, Math.ceil((state.tet.openUntil - state.clock) / 1000));
+      parts.push(`<div class="banner tet">${vi.ui.tetBanner(secs)}
+        <button class="btn small bronze" data-act="openTet">${vi.ui.tetOfferBtn}</button></div>`);
     }
     if (isStarving(state)) parts.push(`<div class="banner bad">🍚 ${vi.ui.starving}</div>`);
     const visit = state.merchant.visit;
@@ -520,6 +544,11 @@ export class Hud {
     this.refreshSheet(state);
   }
 
+  showTet(state: GameState): void {
+    this.sheet = { kind: 'tet' };
+    this.refreshSheet(state);
+  }
+
   showSettings(state: GameState, resolution: Resolution): void {
     this.sheet = { kind: 'settings', resolution };
     this.refreshSheet(state, true);
@@ -569,6 +598,9 @@ export class Hud {
     } else if (this.sheet.kind === 'adv') {
       title = `🏹 ${vi.ui.adv}`;
       body = advHtml(state);
+    } else if (this.sheet.kind === 'tet') {
+      title = `🎋 ${vi.ui.tet}`;
+      body = tetHtml(state);
     } else {
       title = `⚙️ ${vi.ui.settings}`;
       body = this.settingsHtml(state, this.sheet.resolution);
@@ -593,7 +625,9 @@ export class Hud {
       </button>`
       : '';
     // Công trình của chương 2, chương 3 chỉ hiện khi đã sang chương ấy.
-    const shown = BUILD_MENU.filter((type) => (CHAPTER_OF[BUILDINGS[type].unlock ?? ''] ?? 1) <= chapterNow(state));
+    const shown = BUILD_MENU.filter(
+      (type) => (CHAPTER_OF[BUILDINGS[type].unlock ?? ''] ?? 1) <= chapterNow(state) && (!TET_TYPES.includes(type) || tetStarted(state)),
+    );
     const cards = shown.map((type) => {
       const def = BUILDINGS[type];
       const have = countOf(state, type);
@@ -663,6 +697,11 @@ export class Hud {
     }
 
     if (b.type === 'doanhTrai') rows.push(this.barracksHtml(state));
+    if (TET_TYPES.includes(b.type)) rows.push(tetHtml(state));
+    if (b.type === 'dien' && tetStarted(state)) {
+      rows.push(`<h3>🎋 ${vi.ui.blessTitle}</h3>${blessingHtml(state)}`);
+      rows.push(`<div class="actions"><button class="btn bronze" data-act="openTet">🎋 ${vi.ui.tet}</button></div>`);
+    }
     // Rèn binh khí cần lò rèn cấp 6, tức là từ chương 2 (Điện cấp 6).
     if (b.type === 'loRen' && inChapter2(state)) rows.push(armsHtml(state));
     if ((b.type === 'loRen' || b.type === 'dien') && giongAppeared(state) && !state.giong.ascended) {

@@ -5,6 +5,7 @@ import { startBattle, stepBattle, type Battle, type RaidSide } from './battle';
 import { updateCampaign } from './campaign';
 import { advJoined, initialAdv, inChapter3, ruaVangCame, wallRings } from './coLoa';
 import { heroFor, inChapter2, initialSon, restAfter, sonJoined } from './son';
+import { bake, datBonus, initialTet, troiBonus, updateTet, type TetState } from './tet';
 import { footprintTop, groundOf, levelFootprint, tileHeight } from './terrain';
 import {
   BUILDINGS,
@@ -180,6 +181,7 @@ export type StoryId =
   | 'vuonVai'
   | 'roiGay'
   | 'ketChuong'
+  | 'langLieu'
   | 'kenRe'
   | 'ruocDau'
   | 'doiNon'
@@ -207,7 +209,7 @@ export interface Merchant {
 }
 
 export interface GameState {
-  version: 8;
+  version: 9;
   resources: Resources;
   /** Số dân (không tính lính). */
   dan: number;
@@ -235,6 +237,8 @@ export interface GameState {
   giong: GiongState;
   son: SonState;
   adv: AdvState;
+  /** Hội Tết bánh chưng bánh giầy. */
+  tet: TetState;
   story: { seen: StoryId[] };
   settings: { muted: boolean };
 }
@@ -284,7 +288,10 @@ export type FailReason =
   | 'canRuaVang'
   | 'thieuVongThanh'
   | 'canAnDuong'
-  | 'advKietSuc';
+  | 'advKietSuc'
+  | 'chuaToiTet'
+  | 'daDang'
+  | 'thieuBanh';
 
 export type Result<T = undefined> = { ok: true; value: T } | { ok: false; reason: FailReason };
 
@@ -323,7 +330,7 @@ export function initialGiong(): GiongState {
 export function createInitialState(now: number): GameState {
   const dien: Building = { id: 1, type: 'dien', x: 16, z: 16, level: 1, workers: 0 };
   const state: GameState = {
-    version: 8,
+    version: 9,
     resources: { ...START_RESOURCES },
     dan: START_DAN,
     danProgress: 0,
@@ -342,6 +349,7 @@ export function createInitialState(now: number): GameState {
     giong: initialGiong(),
     son: initialSon(),
     adv: initialAdv(),
+    tet: initialTet(),
     story: { seen: [] },
     settings: { muted: false },
   };
@@ -452,19 +460,24 @@ export function outputOf(b: Building): Cost {
   return out;
 }
 
-/** Sản lượng mỗi phút của cả kinh đô, chưa trừ gạo ăn và chưa tính thiếu gạo. */
 /** Phần cộng thêm của Đền Phù Đổng, khi đền đã dựng và còn nguyên. */
 export function templeBonus(state: GameState): number {
   return state.buildings.some((b) => b.type === 'denPhuDong' && !b.damaged) ? TEMPLE_BONUS : 0;
 }
 
+/** Phần cộng thêm vào máu và sức đánh quân ta: Đền Phù Đổng và phúc lành Trời của Tết. */
+export function troopBonus(state: GameState): number {
+  return templeBonus(state) + troiBonus(state);
+}
+
+/** Sản lượng mỗi phút của cả kinh đô, chưa trừ gạo ăn và chưa tính thiếu gạo. Đền Phù Đổng và phúc lành Đất cộng thêm. */
 export function productionPerMinute(state: GameState): Resources {
   const total: Resources = { gao: 0, voOc: 0, datDa: 0, sat: 0 };
   for (const b of state.buildings) {
     const out = outputOf(b);
     for (const r of RESOURCE_IDS) total[r] += out[r] ?? 0;
   }
-  const bonus = 1 + templeBonus(state);
+  const bonus = 1 + templeBonus(state) + datBonus(state);
   for (const r of RESOURCE_IDS) total[r] *= bonus;
   return total;
 }
@@ -964,7 +977,7 @@ function updateRaid(state: GameState, ms: number): void {
     const foe = raid.foe;
     raid.battle = startBattle(state, raid.wave + 1, raid.side, {
       hero: heroFor(state, FOE_CHAPTER[foe]),
-      bonus: templeBonus(state),
+      bonus: troopBonus(state),
       flood: foe === 'thuy' ? { n: raid.floods + 1, level: nextFloodLevel(state) } : null,
       land: foe === 'yeu' ? { foe, n: raid.nights + 1 } : foe === 'trieu' ? { foe, n: raid.trieu + 1 } : null,
       crossbows: hasCoLoa(state),
@@ -1075,6 +1088,7 @@ function produce(state: GameState, ms: number, rate: number): Resources {
     state.resources[r] = after;
     gained[r] = after - before;
   }
+  bake(state, ms, rate * (starving ? STARVING_RATE : 1));
   const room = housing(state);
   if (state.dan >= room || starving) {
     state.danProgress = 0;
@@ -1097,6 +1111,7 @@ export function tick(state: GameState, ms: number): Resources {
   updateMerchant(state);
   updateCampaign(state, ms);
   updateRaid(state, ms);
+  updateTet(state);
   return gained;
 }
 

@@ -95,18 +95,28 @@ function toolArm(job: Job): THREE.Group {
   return m.group();
 }
 
-/** Một người dân làm nghề `job`, cao khoảng 1 ô. */
-export function makeWorker(job: Job): THREE.Group {
+/**
+ * Một người dân làm nghề `job`, cao khoảng 1 ô. `sitting`: ngồi xếp bằng trên chiếu (thân hạ thấp,
+ * hai ống chân bắt chéo trước bụng, vạt váy xòe trên chiếu), không đeo gùi.
+ */
+export function makeWorker(job: Job, sitting = false): THREE.Group {
   const look = LOOKS[job];
   const m = new ToonModel(inkThin);
   const p = m.plain;
-  for (const x of [-0.06, 0.06]) p.cyl(0.04, 0.045, 0.18, C.skin, x, 0.09, 0, undefined, 6);
-  if (look.skirt) m.band.cyl(0.12, 0.2, 0.36, look.cloth, 0, 0.22, 0, undefined, 10);
-  else m.band.cyl(0.13, 0.17, 0.24, look.cloth, 0, 0.28, 0, undefined, 8);
-  p.cyl(0.1, 0.12, 0.16, look.shirt ?? C.skin, 0, 0.47, 0, undefined, 8);
+  // Ngồi thì phần trên người hạ xuống chừng này.
+  const dy = sitting ? -0.22 : 0;
+  if (sitting) {
+    for (const s of [-1, 1]) p.cyl(0.04, 0.045, 0.26, C.skin, s * 0.02, 0.05, 0.1, [0, s * 0.5, Math.PI / 2], 6);
+    m.band.cyl(0.13, 0.22, 0.12, look.cloth, 0, 0.07, 0.02, undefined, 12);
+  } else {
+    for (const x of [-0.06, 0.06]) p.cyl(0.04, 0.045, 0.18, C.skin, x, 0.09, 0, undefined, 6);
+    if (look.skirt) m.band.cyl(0.12, 0.2, 0.36, look.cloth, 0, 0.22, 0, undefined, 10);
+    else m.band.cyl(0.13, 0.17, 0.24, look.cloth, 0, 0.28, 0, undefined, 8);
+  }
+  p.cyl(0.1, 0.12, 0.16, look.shirt ?? C.skin, 0, 0.47 + dy, 0, undefined, 8);
   // Tay trái để yên, tay phải là `tool`.
-  p.cyl(0.035, 0.035, 0.22, look.shirt ?? C.skin, -0.15, 0.38, 0, [0, 0, -0.35], 6);
-  head(m, look, 0.7);
+  p.cyl(0.035, 0.035, 0.22, look.shirt ?? C.skin, -0.15, 0.38 + dy, 0, [0, 0, -0.35], 6);
+  head(m, look, 0.7 + dy);
   // Đồ mang theo trên người.
   if (job === 'buon') {
     p.cyl(0.18, 0.13, 0.1, C.thatch, 0, 1.0, 0, undefined, 10);
@@ -116,13 +126,13 @@ export function makeWorker(job: Job): THREE.Group {
   if (job === 'thoDa') p.box(0.2, 0.14, 0.16, C.rock, -0.2, 0.62, -0.02, [0, 0.3, 0.3]);
   if (job === 'thoRen') m.band.box(0.26, 0.34, 0.05, 0x4a3a30, 0, 0.36, 0.13);
   if (job === 'giuKho') p.sphere(0.15, C.cream, 0.0, 0.66, -0.16, [1.3, 0.8, 0.9], 8);
-  if (job === 'phuNu') {
+  if (job === 'phuNu' && !sitting) {
     // Gùi đeo sau lưng.
     p.cyl(0.13, 0.09, 0.3, C.thatch, 0, 0.5, -0.2, [0.15, 0, 0], 8);
   }
   const g = m.group();
   const arm = toolArm(job);
-  arm.position.set(0.16, 0.5, 0);
+  arm.position.set(0.16, 0.5 + dy, 0);
   arm.userData.tool = true;
   g.add(arm);
   g.userData.job = job;

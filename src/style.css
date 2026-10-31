@@ -145,6 +145,19 @@ button {
   font-weight: 600;
 }
 
+/* Tết mở: viền đỏ vàng như câu đối, chữ đỏ. */
+.banner.tet {
+  border-color: var(--red);
+  background: linear-gradient(90deg, rgba(255, 238, 200, 0.97), rgba(250, 222, 170, 0.97));
+  color: var(--red-dark);
+  font-weight: 600;
+}
+
+/* Nguồn đang thiếu trong bảng bếp. */
+.stat.lack span:first-child {
+  font-weight: 700;
+}
+
 .chip {
   display: flex;
   align-items: center;

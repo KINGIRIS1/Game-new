@@ -6,7 +6,7 @@
 import { retreatField, startFieldBattle, stepField } from './battle';
 import { CH3_LAST, KIM_QUY_AT, advJoined, advResting, inChapter3 } from './coLoa';
 import { REPLAY_SHARE, RESOURCE_IDS, STAGES, UNIT_TYPES, type Chapter, type Cost, type Row, type StageDef, type UnitType } from './defs';
-import { BATTLE_STEP, countOf, dienLevel, gain, templeBonus, type FailReason, type GameState, type Result, type StageResult } from './game';
+import { BATTLE_STEP, countOf, dienLevel, gain, troopBonus, type FailReason, type GameState, type Result, type StageResult } from './game';
 import { giongReady, giongResting } from './giong';
 import { heroFor, inChapter2, restAfter, sonJoined, sonResting, winGift } from './son';
 
@@ -85,7 +85,7 @@ export function startStage(state: GameState, n: number, army: Record<UnitType, n
     army: { ...army },
     rows: { ...rows },
     hero,
-    bonus: templeBonus(state),
+    bonus: troopBonus(state),
     arms: state.arms,
   });
   return ok(undefined);
