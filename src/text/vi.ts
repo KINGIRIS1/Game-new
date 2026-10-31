@@ -1,5 +1,6 @@
 // Mọi chữ hiển thị trong game. Tách riêng để sau này dịch sang tiếng Anh.
 
+import type { HeroKind } from '../game/battle';
 import type { AdvLook } from '../game/coLoa';
 import type { BuildingType, EnemyType, GearId, GiftId, ResourceId, Row, SkillId, UnitType } from '../game/defs';
 import type { FailReason, StoryId } from '../game/game';
@@ -705,6 +706,11 @@ export const vi = {
     campaignTitle3: 'Giữ thành Cổ Loa',
     campaignHint3: 'Ba màn đầu lên núi Thất Diệu diệt yêu tinh. Từ màn 20, An Dương Vương cầm nỏ thần cùng ra trận đánh quân Triệu Đà.',
     advWinTitle: 'Triệu Đà thua chạy!',
+    heroNames: { giong: 'Gióng', sonTinh: 'Sơn Tinh', anDuong: 'An Dương Vương' } satisfies Record<HeroKind, string>,
+    heroRestWarn: (name: string, s: number) => `${name} đang kiệt sức, còn ${s} giây mới ra trận được.`,
+    heroStandIn: (name: string) => `Trận này ${name} ra trận thay.`,
+    noHeroWarn: 'Trận này không có tướng nào, rất khó thắng. Nên chờ tướng hồi sức.',
+    templeDamaged: 'Đền Phù Đổng đang hư: quân ta mất 10% máu và sức đánh. Hãy sửa đền ở kinh đô.',
   },
 };
 

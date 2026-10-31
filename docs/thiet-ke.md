@@ -262,7 +262,7 @@ Tài liệu này ghi lại các quyết định đã chốt với chủ dự án
   - **Phun lửa**: Gióng phi ngựa lao về phía giặc gần nhất. Mọi tên giặc trong dải dài 7 ô, rộng 1,5 ô mất 60 máu. Hồi 15 giây. Ngựa sắt phi dọc đường lao trong 0,4 giây, lửa hình giọt có viền mực phun từ mõm, để lại vệt đất cháy sém có than hồng đúng dải bị đốt (tắt dần trong 4 giây); giặc trúng lửa bốc cháy trên đầu và vai chừng 2 giây;
   - **Nhổ tre**: có từ khi roi sắt gãy. Giặc trong vòng 2,5 ô quanh Gióng mất 45 máu và bị hất lùi 1,2 ô. Hồi 20 giây. Gióng vung tre ra sau lấy đà, quật xuống trước mặt rồi quét trọn một vòng quanh mình, chừng 0,9 giây;
   - ngoài bãi, sát thương kỹ năng cũng nhân 1,6 lần cho tương xứng.
-- **Kiệt sức**: hết máu thì Gióng rút khỏi trận, không tính vào lính tử trận. Sau trận Gióng nghỉ 2 phút theo đồng hồ chơi; trong lúc đó không ra trận và chưa đánh được màn cần Gióng.
+- **Kiệt sức**: hết máu thì Gióng rút khỏi trận, không tính vào lính tử trận. Sau trận Gióng nghỉ 2 phút theo đồng hồ chơi; trong lúc đó không ra trận và chưa đánh được màn cần Gióng. Màn không bắt buộc có Gióng thì vẫn xuất quân được, nhưng thẻ màn và bảng xếp quân báo đỏ (xem Chuẩn cân bằng phó bản).
 - **Kết chương**: thắng màn 8 thì Gióng cưỡi ngựa bay lên trời ngay trên bãi chiến, bảng kết quả hiện sau đó.
   - Mở công trình **Đền Phù Đổng** (3×3, dựng một lần, 600 gạo, 600 vỏ ốc, 500 đất đá, 150 sắt).
   - Đền còn nguyên thì mọi tài nguyên làm ra thêm 10%, quân ta thêm 10% máu và sức đánh.
@@ -389,26 +389,24 @@ Vòng khắc chế của quân ta giữ nguyên: giáo binh thắng quân nặng
 
   | Màn | Tên | Quân giặc | Máu | Ghi chú |
   |---|---|---|---|---|
-  | 9 | Đồi sim Ba Vì | 10 tôm, 6 cá phun, 2 cá sấu | ×2,9 | gà chín cựa |
+  | 9 | Đồi sim Ba Vì | 10 tôm, 6 cá phun, 2 cá sấu | ×3,2 | gà chín cựa |
   | 10 | Bãi cỏ sông Đà | 11 tôm, 7 cá phun, 3 cá sấu | ×2,8 | ngựa chín hồng mao |
-  | 11 | Rừng già Tản Viên | 12 tôm, 8 cá phun, 3 cá sấu | ×2,9 | voi chín ngà |
-  | 12 | Bạch Hạc ngập nước | 12 tôm, 7 cá phun, 3 cá sấu, thuồng luồng | ×2,4 | cần Sơn Tinh |
-  | 13 | Làng chìm trong lũ | 14 tôm, 8 cá phun, 4 cá sấu | ×2,2 | cần Sơn Tinh |
-  | 14 | Sông Đà cuồn cuộn | 14 tôm, 8 cá phun, 4 cá sấu | ×2,3 | cần Sơn Tinh, mở Dời non |
-  | 15 | Chân núi Tản | 14 tôm, 9 cá phun, 4 cá sấu | ×2,6 | cần Sơn Tinh |
-  | 16 | Đỉnh Tản Viên | 12 tôm, 8 cá phun, 3 cá sấu, Thủy Tinh | ×2,5 | cần Sơn Tinh |
+  | 11 | Rừng già Tản Viên | 12 tôm, 8 cá phun, 3 cá sấu | ×2,5 | voi chín ngà |
+  | 12 | Bạch Hạc ngập nước | 12 tôm, 7 cá phun, 3 cá sấu, thuồng luồng | ×2,1 | cần Sơn Tinh |
+  | 13 | Làng chìm trong lũ | 14 tôm, 8 cá phun, 4 cá sấu | ×2,1 | cần Sơn Tinh |
+  | 14 | Sông Đà cuồn cuộn | 14 tôm, 8 cá phun, 4 cá sấu | ×2,1 | cần Sơn Tinh, mở Dời non |
+  | 15 | Chân núi Tản | 14 tôm, 9 cá phun, 4 cá sấu | ×2,5 | cần Sơn Tinh |
+  | 16 | Đỉnh Tản Viên | 12 tôm, 8 cá phun, 3 cá sấu, Thủy Tinh | ×2,4 | cần Sơn Tinh |
 
   - Mọi màn cần Điện cấp 5. Thưởng lần đầu từ 1200 gạo, 800 vỏ ốc, 600 đất đá, 150 sắt (màn 9) tới 3000 gạo, 2000 vỏ ốc, 2000 đất đá, 500 sắt (màn 16). Đánh lại được 30%.
   - Máu của màn 9–11 cao hơn màn 12–16 vì màn 9–11 có Gióng hiển linh hai kỹ năng, còn màn 12–14 Sơn Tinh mới có một kỹ năng.
+  - Máu giặc các màn 9–24 được đặt lại theo chuẩn cân bằng mới (xem mục **Chuẩn cân bằng phó bản**).
 - Bãi chiến mới:
   - **đồi sim**: đồi lượn cao, mảng hoa sim tím;
   - **đồng ngập**: bãi chiến là một gò nổi giữa biển nước lũ, nhà sàn chìm nửa, thuyền trôi giữa đồng, chỗ đất chìm thì không có cây;
   - **đỉnh Tản Viên**: ba ngọn núi Ba Vì sau lưng giặc, mây vờn lưng chừng núi, nước lũ dưới chân.
   - Màn 10, 14 dùng bến sông; màn 11 rừng; màn 13 làng; màn 15 chân núi.
-- Cân bằng đo bằng test với quân mẫu chương 2: 14 giáo, 12 cung, 4 voi (vừa 38 chỗ doanh trại cấp 5), có Đền Phù Đổng:
-  - màn 9–11: có Gióng hiển linh thì thắng, nửa quân thì thua;
-  - màn 12–16: có Sơn Tinh và bấm kỹ năng thì thắng; không Sơn Tinh, hay nửa quân, thì thua;
-  - Thủy Tinh không bấm kỹ năng thì thua.
+- Cân bằng đo bằng test theo **Chuẩn cân bằng phó bản**, với quân mẫu chương 2: 14 giáo, 12 cung, 4 voi (vừa 38 chỗ doanh trại cấp 5). Tướng là Gióng hiển linh ở màn 9–11, Sơn Tinh ở màn 12–16. Thủy Tinh không bấm kỹ năng thì thua.
 
 ### Hướng dẫn của Lạc hầu chương 2
 
@@ -521,21 +519,18 @@ Chủ dự án đã chốt:
   | Màn | Tên | Quân giặc | Máu | Ghi chú |
   |---|---|---|---|---|
   | 17 | Chân núi Thất Diệu | 12 quỷ núi, 7 ma trơi, 3 hổ tinh | ×2,6 | |
-  | 18 | Rừng ma | 13 quỷ núi, 8 ma trơi, 4 hổ tinh | ×2,5 | |
+  | 18 | Rừng ma | 13 quỷ núi, 8 ma trơi, 4 hổ tinh | ×2,4 | |
   | 19 | Đỉnh Thất Diệu | 12 quỷ núi, 7 ma trơi, 3 hổ tinh, gà trắng nghìn năm | ×2,4 | Rùa Vàng hiện lên |
-  | 20 | Rừng biên ải | 14 lính khiên, 8 nỏ thủ, 4 kỵ binh | ×2,3 | cần An Dương Vương |
-  | 21 | Bến sông Đuống | 14 lính khiên, 9 nỏ thủ, 4 kỵ binh | ×2,0 | cần An Dương Vương |
-  | 22 | Núi Tiên Du | 15 lính khiên, 9 nỏ thủ, 4 kỵ binh | ×2,1 | cần An Dương Vương, mở Rùa Vàng |
-  | 23 | Làng ven Cổ Loa | 14 lính khiên, 9 nỏ thủ, 5 kỵ binh | ×2,3 | cần An Dương Vương |
-  | 24 | Chân thành Cổ Loa | 13 lính khiên, 9 nỏ thủ, 4 kỵ binh, Triệu Đà | ×2,0 | cần An Dương Vương |
+  | 20 | Rừng biên ải | 14 lính khiên, 8 nỏ thủ, 4 kỵ binh | ×1,9 | cần An Dương Vương |
+  | 21 | Bến sông Đuống | 14 lính khiên, 9 nỏ thủ, 4 kỵ binh | ×1,8 | cần An Dương Vương |
+  | 22 | Núi Tiên Du | 15 lính khiên, 9 nỏ thủ, 4 kỵ binh | ×1,8 | cần An Dương Vương, mở Rùa Vàng |
+  | 23 | Làng ven Cổ Loa | 14 lính khiên, 9 nỏ thủ, 5 kỵ binh | ×2,1 | cần An Dương Vương |
+  | 24 | Chân thành Cổ Loa | 13 lính khiên, 9 nỏ thủ, 4 kỵ binh, Triệu Đà | ×1,9 | cần An Dương Vương |
 
   - Mọi màn cần Điện cấp 5. Thưởng lần đầu từ 2600 gạo, 1800 vỏ ốc, 1600 đất đá, 400 sắt (màn 17) tới 5000 gạo, 4000 vỏ ốc, 3500 đất đá, 900 sắt (màn 24). Đánh lại được 30%.
   - Mỗi màn tối đa 28 giặc, cộng quân mẫu và tướng không quá 60 người trên bãi.
 - Bãi chiến mới: **núi Thất Diệu** cho màn 17, 19; **thành Cổ Loa** cho màn 24 (xem Hình ảnh chương 3). Màn 18, 20 dùng rừng; 21 bến sông; 22 chân núi; 23 làng.
-- Cân bằng đo bằng test với quân mẫu 14 giáo, 12 cung, 4 voi, có Đền Phù Đổng (`src/game/chuong3.test.ts`):
-  - màn 17–19: có Sơn Tinh hiển linh bấm kỹ năng thì thắng; nửa quân, hay không có tướng, thì thua;
-  - màn 20–24: có An Dương Vương bấm kỹ năng thì thắng trong 90 giây; không tướng, hay nửa quân, thì thua;
-  - Triệu Đà không bấm kỹ năng thì thua.
+- Cân bằng đo bằng test theo **Chuẩn cân bằng phó bản** (`src/game/chuong3.test.ts`), quân mẫu 14 giáo, 12 cung, 4 voi. Tướng là Sơn Tinh hiển linh ở màn 17–19, An Dương Vương ở màn 20–24. Triệu Đà không bấm kỹ năng thì thua.
 
 ### Hướng dẫn của Lạc hầu chương 3
 
@@ -545,6 +540,46 @@ Chủ dự án đã chốt:
 
 - Thêm An Dương Vương (đã có nỏ thần chưa, nghỉ tới lúc nào, đã có Rùa Vàng chưa, đã kết chương chưa) và số đêm yêu tinh, số đợt quân Triệu đã đánh và đã giữ được.
 - Bản lưu chương 2 được nâng lên, chưa có gì của chương 3.
+
+## Chuẩn cân bằng phó bản (sửa sau chơi thử chương 3)
+
+- Chủ dự án chơi thật báo 38 quân không qua được màn 11, dù test cũ báo thắng. Đo 20 hạt giống cho thấy:
+  - test cũ giả định chơi hoàn hảo: bấm kỹ năng ngay khi hồi, có Đền Phù Đổng. Màn 11 chỉ dư khoảng 7% máu giặc so với ngưỡng thua;
+  - lệch một thứ là tụt: quên Trống trận còn thắng 13/20, Đền bị phá 12/20, cung đứng tiền quân 9/20, không tuyển bù quân sau màn 10 thì 0/20;
+  - không có tướng thì thua 20/20 ở mọi mức máu. Mà màn 9–11 vẫn cho xuất quân khi Gióng đang kiệt sức, giao diện lại không báo gì: thua một lần rồi đánh lại liền thì gần như chắc thua.
+- **Chuẩn mới** cho mọi màn chương 2, 3 (`src/game/testkit.ts`), mỗi màn thử 3 hạt giống:
+  - **người chơi thường thắng**: kỹ năng sẵn sàng 1,5 giây mới bấm, không có Đền Phù Đổng (chưa dựng hay đang hư), quân mẫu 38 chỗ, có tướng, thắng trong 90 giây;
+  - **chơi giỏi mà thiếu thì thua**: bấm ngay khi hồi, có Đền, nhưng không có tướng, hay chỉ mang nửa quân, thì thua.
+- Màn nào không đạt thì đổi máu giặc. Hầu hết các màn hạ xuống, riêng màn 9 nâng từ ×2,9 lên ×3,2: Gióng hiển linh quá mạnh ở đó, quân mẫu không có tướng cũng thắng 6/10 lần. Mỗi màn lấy mức cao nhất mà người chơi thường vẫn thắng cả 10 hạt giống thử.
+- **Báo trước khi xuất quân** (thẻ màn và bảng xếp quân), bằng dòng đỏ:
+  - tướng lẽ ra ra trận đang kiệt sức: còn bao nhiêu giây, và ai ra thay hay trận này không có tướng. Vẫn cho xuất quân;
+  - Đền Phù Đổng đang hư: quân ta mất 10% máu và sức đánh.
+- Chip tướng trên thanh trên hiện 💤 khi tướng nghỉ, kể cả khi Gióng đã về trời hay Sơn Tinh đã về núi (lúc khỏe thì chip ẩn như cũ).
+
+## Kế hoạch: kinh đô lớn tiếp và Hội Tết (đã chốt, chưa làm)
+
+Chủ dự án đã chốt qua một buổi hỏi đáp. Vấn đề: từ cuối chương 1 mọi công trình đã ở cấp 5, kinh đô hết việc để xây, kho chạm trần. Mục tiêu là để kinh đô tiếp tục lớn qua các chương. Làm thành ba PR theo thứ tự:
+
+1. **Sửa lỗi và cân bằng lại** (mục Chuẩn cân bằng phó bản ở trên).
+2. **Cấp 6–7 và rèn binh khí**:
+   - Điện Vua Hùng lên cấp 6 khi vào chương 2, cấp 7 khi vào chương 3. Người đang ở chương sau thì mở ngay;
+   - đất mở ra 25×25 ở cấp 6, 26×26 ở cấp 7, chừa một hàng rừng cho giặc trên bộ hiện ra;
+   - ruộng, bến chợ thuyền, nhà sàn, bãi đất đá, lò rèn, kho thóc, chòi canh lên được cấp 6, 7. Lũy, đê, thành Cổ Loa giữ cấp riêng;
+   - mỗi cấp mới vẫn đổi hẳn dáng: thêm một phần lớn nhìn rõ (ví dụ ruộng cấp 6 có guồng nước, cấp 7 có miếu thần lúa), cỡ không to quá 105%;
+   - **doanh trại giữ 38 chỗ**, không lên thêm cấp, vì bãi chiến tối đa khoảng 60 người;
+   - **rèn binh khí** ở bảng lò rèn: giáo, cung, voi mỗi loại 2 bậc (bậc 1 cần lò rèn cấp 6, bậc 2 cần cấp 7), mỗi bậc thêm 10% máu và sức đánh ở mọi trận, lính đổi dáng vũ khí;
+   - nhịp: người biết dành dụm lên Điện 6 trước màn 12, Điện 7 trước màn 20; canh bằng test như `balance.test.ts`.
+3. **Hội Tết bánh chưng bánh giầy**:
+   - mở khi kết chương 1 (người đang ở chương 2, 3 mở ngay). Lạc hầu kể chuyện Lang Liêu như chuyện xưa, trước "Vua Hùng kén rể"; chỉ là truyện, không có trò thi tính điểm;
+   - công trình mới, cần dân làm: **ruộng nếp** (3×3), **vườn** đậu xanh và lá dong (2×2), **chuồng lợn** (2×2, lợn không ăn gạo), **bếp gói bánh** (2×2);
+   - bếp làm bánh chưng nhanh bằng nguồn chậm nhất trong ba nguồn, bánh giầy chỉ cần nếp. Nguyên liệu không tích trữ; bảng bếp báo nguồn nào đang thiếu;
+   - bánh tích trữ được, chỉ hiện trong bảng bếp và bảng Tết, không thêm chip trên thanh trên;
+   - **Tết** khoảng 20 phút chơi một lần, mở 3 phút để dâng bánh; đang có giặc hay mùa lũ thì lùi tới khi xong trận; lần đầu 2 phút sau truyện. Lỡ Tết thì không có phúc lành, bánh vẫn còn;
+   - dâng đủ bánh chưng được **phúc lành Đất** (mọi tài nguyên thêm khoảng 15%), đủ bánh giầy được **phúc lành Trời** (quân ta thêm khoảng 10% máu và sức đánh), kéo dài tới Tết sau, cộng thêm vào phần của các đền;
+   - cảnh Tết: cây nêu trước Điện, cờ hội, dân quây quần gói bánh quanh bếp, mâm bánh trước Điện khi dâng; không có pháo.
+- Không chèn nhiệm vụ Lạc hầu mới (để khỏi dời chỉ số nhiệm vụ của người đang chơi): Hội Tết dẫn bằng truyện Lang Liêu, cấp 6–7 và rèn binh khí dẫn bằng lời Lạc hầu ở các đoạn truyện mở chương.
+- Mọi con số (giá, sản lượng, chỗ làm, số công trình tối đa, giá rèn, nhịp Tết) và dáng từng công trình được ghi vào tài liệu này để chủ dự án duyệt **trước khi** làm code của PR 2, PR 3.
+- Binh chủng thứ tư (nỏ thủ Âu Lạc) để dành cho chương 4.
 
 ## Nhịp chơi và lưu game
 
@@ -576,4 +611,6 @@ Chủ dự án đã chốt:
    **Lát cắt 3b** (đã làm): Thánh Gióng (góp gạo, rèn đồ, hai kỹ năng, kiệt sức), màn 5–8, đại tướng Ân, cốt truyện, kết chương, Đền Phù Đổng.
 4. **Chương 2** (đã làm): độ cao ô đất, đắp đất, đắp nền, đê và kè đá, mùa lũ kèm thủy quái, lễ vật thách cưới, Sơn Tinh ra trận với Bốc đồi và Dời non, phó bản màn 9–16 với thuồng luồng và Thủy Tinh, cốt truyện, kết chương, Đền Tản Viên.
 5. **Chương 3** (đã làm): thành Cổ Loa và số vòng thành, đêm yêu tinh phá thành, quân Triệu Đà xen với mùa lũ, An Dương Vương cầm nỏ ra trận với Nỏ thần và Rùa Vàng, phó bản màn 17–24 với gà trắng nghìn năm và Triệu Đà, cốt truyện, kết chương, Đền Cổ Loa.
-6. **Để sau**: hội Tết gói bánh chưng bánh giầy (thiên về kinh tế); chương về Mỵ Châu, Trọng Thủy.
+6. **Sửa sau chơi thử chương 3** (đã làm): chuẩn cân bằng mới cho màn 9–24, báo tướng kiệt sức và Đền Phù Đổng hư trước khi xuất quân.
+7. **Tiếp theo** (đã chốt, xem mục Kế hoạch): cấp 6–7 và rèn binh khí; rồi Hội Tết bánh chưng bánh giầy.
+8. **Để sau**: chương về Mỵ Châu, Trọng Thủy, có binh chủng nỏ thủ Âu Lạc.

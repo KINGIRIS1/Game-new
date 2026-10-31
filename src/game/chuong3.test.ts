@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { heroOf, startBattle, startFieldBattle, stepBattle, stepField, useSkill, type Battle, type HeroSetup } from './battle';
+import { startBattle, startFieldBattle, stepBattle, stepField, useSkill, type Battle, type HeroSetup } from './battle';
 import { canStartStage, startStage } from './campaign';
 import { CH3_LAST, YEU_LAST, canForgeNoThan, forgeNoThan, wallRings } from './coLoa';
 import {
@@ -21,7 +21,8 @@ import {
 } from './defs';
 import { callRaidNow, canPlace, claimQuest, createInitialState, nextFoe, place, questProgress, tick, type GameState } from './game';
 import { deserialize, serialize } from './save';
-import { heroFor } from './son';
+import { HALF_ARMY, SAMPLE_ARMY, SEEDS, fightStage } from './testkit';
+import { heroFor, restingHero } from './son';
 import { markStory, pendingStory } from './story';
 
 type Army = Record<UnitType, number>;
@@ -237,6 +238,25 @@ describe('An Dương Vương', () => {
     expect(heroFor(s, 1)?.kind).toBe('giong');
   });
 
+  it('báo tướng đang kiệt sức: tướng nào lẽ ra ra trận, ai ra thay, hay không còn tướng', () => {
+    const s = ch3();
+    expect(restingHero(s, 3)).toBeNull();
+    s.son.restUntil = s.clock + 60_000;
+    expect(restingHero(s, 3)).toEqual({ kind: 'sonTinh', secs: 60 });
+    expect(heroFor(s, 3)?.kind).toBe('giong');
+    expect(restingHero(s, 1)).toBeNull();
+    s.giong.restUntil = s.clock + 30_000;
+    expect(restingHero(s, 1)).toEqual({ kind: 'giong', secs: 30 });
+    expect(heroFor(s, 3)).toBeNull();
+    // Có nỏ thần rồi thì An Dương Vương đứng đầu; ngài nghỉ thì Sơn Tinh ra thay (khi Sơn Tinh khỏe).
+    s.adv.no = true;
+    s.adv.restUntil = s.clock + 45_000;
+    s.son.restUntil = 0;
+    expect(restingHero(s, 3)).toEqual({ kind: 'anDuong', secs: 45 });
+    expect(heroFor(s, 3)?.kind).toBe('sonTinh');
+    expect(restingHero(s, 2)).toBeNull();
+  });
+
   it('màn 20 cần An Dương Vương', () => {
     const s = ch3();
     s.campaign.cleared = YEU_LAST;
@@ -339,14 +359,7 @@ describe('An Dương Vương', () => {
 describe('cân bằng phó bản chương 3', () => {
   const SON: HeroSetup = { kind: 'sonTinh', bamboo: false, glow: true, non: true };
   const advFor = (n: number): HeroSetup => ({ kind: 'anDuong', bamboo: false, glow: false, non: false, kimQuy: n > 22 });
-  const half: Army = { giao: 7, cung: 6, voi: 2 };
-
-  function fight(stage: number, army: Army, hero: HeroSetup | null, skills = true): Battle {
-    const def = STAGES[stage - 1];
-    const b = startFieldBattle({ id: 1, stage, enemies: def.enemies, hpScale: def.hpScale, army, rows: DEFAULT_ROWS, hero, bonus: 0.1 });
-    for (let i = 0; i < 20 * 120 && !stepField(b, 0.05); i++) if (skills && b.t > 3) for (const k of SKILL_IDS) useSkill(b, k);
-    return b;
-  }
+  const heroFor3 = (n: number) => (n <= 19 ? SON : advFor(n));
 
   it('quân mẫu chương 3 vừa doanh trại cấp 5, bãi chiến không quá 60 người', () => {
     const space = (Object.keys(ARMY) as UnitType[]).reduce((n, k) => n + ARMY[k] * UNITS[k].space, 0);
@@ -357,25 +370,19 @@ describe('cân bằng phó bản chương 3', () => {
     }
   });
 
-  for (const n of [17, 18, 19]) {
-    it(`màn ${n}: quân mẫu cùng Sơn Tinh hiển linh thì thắng; nửa quân, hay không có tướng, thì thua`, () => {
-      expect(fight(n, ARMY, SON).outcome).toBe('win');
-      expect(fight(n, half, SON).outcome).toBe('lose');
-      expect(fight(n, ARMY, null).outcome).toBe('lose');
-    });
-  }
-  for (const n of [20, 21, 22, 23, 24]) {
-    it(`màn ${n}: có An Dương Vương và bấm kỹ năng thì thắng; không tướng, hay nửa quân, thì thua`, () => {
-      const won = fight(n, ARMY, advFor(n));
-      expect(won.outcome).toBe('win');
-      expect(won.t).toBeLessThan(FIELD.maxS);
-      expect(heroOf(won)?.kind ?? 'anDuong').toBe('anDuong');
-      expect(fight(n, ARMY, null).outcome).toBe('lose');
-      expect(fight(n, half, advFor(n)).outcome).toBe('lose');
+  for (const n of [17, 18, 19, 20, 21, 22, 23, 24]) {
+    it(`màn ${n}: người chơi thường có ${n <= 19 ? 'Sơn Tinh hiển linh' : 'An Dương Vương'} thì thắng; không tướng, hay nửa quân, chơi giỏi cũng thua`, () => {
+      for (const id of SEEDS) {
+        const won = fightStage(n, SAMPLE_ARMY, heroFor3(n), 'thuong', id);
+        expect(won.outcome).toBe('win');
+        expect(won.t).toBeLessThan(FIELD.maxS);
+        expect(fightStage(n, SAMPLE_ARMY, null, 'gioi', id).outcome).toBe('lose');
+        expect(fightStage(n, HALF_ARMY, heroFor3(n), 'gioi', id).outcome).toBe('lose');
+      }
     });
   }
   it('Triệu Đà cần bấm kỹ năng mới thắng', () => {
-    expect(fight(CH3_LAST, ARMY, advFor(CH3_LAST), false).outcome).toBe('lose');
+    for (const id of SEEDS) expect(fightStage(CH3_LAST, SAMPLE_ARMY, advFor(CH3_LAST), 'khongBam', id).outcome).toBe('lose');
   });
 });
 

@@ -8,7 +8,7 @@ import { CH2_LAST, canStartStage, chapterStages, stageDef, stageOpen, stageRewar
 import { CH3_LAST } from '../game/coLoa';
 import { BOSSES, ROWS, UNIT_TYPES, type Chapter, type EnemyType, type Row, type UnitType } from '../game/defs';
 import type { GameState, StageResult } from '../game/game';
-import { giftOfStage, heroFor } from '../game/son';
+import { giftOfStage, heroFor, restingHero } from '../game/son';
 import { vi } from '../text/vi';
 import { costHtml, esc } from './format';
 
@@ -149,6 +149,25 @@ export function heroNote(hero: HeroSetup | null): string {
   return `<p class="hero-note">🐎 ${hero.glow ? vi.ui.giongHienLinhJoins : vi.ui.giongJoins}</p>`;
 }
 
+/** Đền Phù Đổng đã dựng mà đang hư: quân ta mất phần cộng thêm của đền. */
+const templeDamaged = (state: GameState) => state.buildings.some((b) => b.type === 'denPhuDong' && b.damaged);
+
+/**
+ * Lời báo đỏ trước khi xuất quân: tướng lẽ ra ra trận đang kiệt sức (ai ra thay, hay không có tướng),
+ * Đền Phù Đổng đang hư.
+ */
+export function battleWarnings(state: GameState, chapter: Chapter): string {
+  const out: string[] = [];
+  const rest = restingHero(state, chapter);
+  if (rest) {
+    const standIn = heroFor(state, chapter);
+    const tail = standIn ? vi.ui.heroStandIn(vi.ui.heroNames[standIn.kind]) : vi.ui.noHeroWarn;
+    out.push(`💤 ${vi.ui.heroRestWarn(vi.ui.heroNames[rest.kind], rest.secs)} ${tail}`);
+  }
+  if (templeDamaged(state)) out.push(`🏮 ${vi.ui.templeDamaged}`);
+  return out.map((t) => `<p class="why warn">${esc(t)}</p>`).join('');
+}
+
 export function stageHtml(state: GameState, n: number): string {
   const text = vi.stages[n - 1];
   const first = n > state.campaign.cleared;
@@ -161,6 +180,7 @@ export function stageHtml(state: GameState, n: number): string {
     <div class="stat"><span>${first ? vi.ui.firstReward : vi.ui.replayReward}</span>${costHtml(null, stageReward(state, n))}</div>
     ${gift && !state.son.gifts[gift] ? `<div class="stat"><span>${vi.ui.giftWon}</span><b>${vi.gifts[gift].icon} ${esc(vi.gifts[gift].name)}</b></div>` : ''}
     ${heroNote(heroFor(state, stageDef(n)!.chapter))}
+    ${battleWarnings(state, stageDef(n)!.chapter)}
     <div class="actions">
       ${why ? `<span class="why">${esc(why)}</span>` : ''}
       <button class="btn" data-act="prepareStage" ${why ? 'disabled' : ''}>${vi.ui.prepare}</button>
@@ -189,6 +209,7 @@ export function armyHtml(state: GameState, pick: ArmyPick, stage: number): strin
     <h3>${vi.ui.armyTitle}</h3>
     <p class="muted">${vi.ui.armyHint}</p>
     ${heroNote(hero)}
+    ${battleWarnings(state, stageDef(stage)?.chapter ?? 1)}
     ${owned.length ? `<div class="units">${rows}</div>` : `<p class="why">${vi.ui.noTroops}</p>`}
     <div class="actions">
       <button class="btn ghost" data-act="backToStage">${vi.ui.back}</button>
