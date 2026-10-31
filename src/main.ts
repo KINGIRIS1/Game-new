@@ -34,7 +34,7 @@ import {
 } from './game/game';
 import { GRID, RIVER_START } from './game/map';
 import { fromCode, loadFromStorage, saveToStorage, toCode } from './game/save';
-import { World } from './render/world';
+import { RESOLUTIONS, World, type Resolution } from './render/world';
 import { vi } from './text/vi';
 import { Hud, buildingName, type HudAction } from './ui/hud';
 
@@ -48,6 +48,25 @@ const OFFLINE_NOTICE_MS = 60_000;
 /** Khoảng trống giữa hai khung hình lớn hơn mức này (máy ngủ, chuyển app) được tính là vắng mặt. */
 const GAP_AS_OFFLINE_MS = 5_000;
 const AUTOSAVE_MS = 10_000;
+/** Độ nét lưu riêng trên từng máy, không đi theo mã lưu: máy mạnh máy yếu tự chọn. */
+const RESOLUTION_KEY = 'thoi-dai-van-lang/resolution';
+
+function loadResolution(): Resolution {
+  try {
+    const r = localStorage.getItem(RESOLUTION_KEY);
+    return r && Object.keys(RESOLUTIONS).includes(r) ? (r as Resolution) : 'medium';
+  } catch {
+    return 'medium';
+  }
+}
+
+function saveResolution(r: Resolution): void {
+  try {
+    localStorage.setItem(RESOLUTION_KEY, r);
+  } catch {
+    // Không lưu được thì lần sau dùng lại mức mặc định.
+  }
+}
 
 function start(): void {
   const canvas = document.querySelector<HTMLCanvasElement>('#scene')!;
@@ -60,6 +79,7 @@ function start(): void {
     document.body.innerHTML = `<div class="fatal">${vi.ui.webglFailed}</div>`;
     return;
   }
+  world.setResolution(loadResolution());
 
   let state: GameState = loadFromStorage(localStorage) ?? createInitialState(Date.now());
   let mode: Mode = { kind: 'view', selected: null };
@@ -270,14 +290,20 @@ function start(): void {
       case 'openSettings':
         if (mode.kind !== 'view') exitMode();
         select(null);
-        hud.showSettings(state);
+        hud.showSettings(state, world.resolution);
         return;
 
       case 'toggleMute':
         state.settings.muted = !state.settings.muted;
         setMuted(state.settings.muted);
         save();
-        hud.showSettings(state);
+        hud.showSettings(state, world.resolution);
+        return;
+
+      case 'setResolution':
+        world.setResolution(a.resolution);
+        saveResolution(a.resolution);
+        hud.showSettings(state, a.resolution);
         return;
 
       case 'copyCode': {

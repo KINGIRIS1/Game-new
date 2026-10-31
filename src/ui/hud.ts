@@ -50,6 +50,7 @@ import {
 } from '../game/game';
 import { giongAppeared, giongLook, giongReady, giongResting } from '../game/giong';
 import { AREA_SIZE } from '../game/map';
+import type { Resolution } from '../render/world';
 import { formatDuration, vi } from '../text/vi';
 import { armyHtml, defaultPick, mapHtml, nextRow, stageHtml, stageResultHtml, type ArmyPick } from './campaign';
 import { costHtml, esc, fmt } from './format';
@@ -73,6 +74,7 @@ export type HudAction =
   | { kind: 'claimQuest' }
   | { kind: 'openSettings' }
   | { kind: 'toggleMute' }
+  | { kind: 'setResolution'; resolution: Resolution }
   | { kind: 'copyCode' }
   | { kind: 'importCode'; code: string }
   | { kind: 'reset' }
@@ -101,7 +103,7 @@ export type HudAction =
 
 export type HudMode = 'view' | 'place' | 'paint';
 
-type Sheet = { kind: 'build' } | { kind: 'building'; id: number } | { kind: 'settings' } | { kind: 'merchant' } | { kind: 'giong' } | null;
+type Sheet = { kind: 'build' } | { kind: 'building'; id: number } | { kind: 'settings'; resolution: Resolution } | { kind: 'merchant' } | { kind: 'giong' } | null;
 
 /** Chữ trên nút kỹ năng: tên khi sẵn sàng, chỉ biểu tượng và số giây khi đang hồi (cho gọn trên điện thoại). */
 function skillLabel(b: Battle, k: SkillId): string {
@@ -217,6 +219,8 @@ export class Hud {
         return this.onAction({ kind: 'useSkill', skill: el.dataset.skill as SkillId });
       case 'forgeGear':
         return this.onAction({ kind: 'forgeGear', gear: el.dataset.gear as GearId });
+      case 'setResolution':
+        return this.onAction({ kind: 'setResolution', resolution: el.dataset.resolution as Resolution });
       case 'storyNext':
         return this.storyNext();
       case 'pickStage':
@@ -398,8 +402,8 @@ export class Hud {
     this.refreshSheet(state);
   }
 
-  showSettings(state: GameState): void {
-    this.sheet = { kind: 'settings' };
+  showSettings(state: GameState, resolution: Resolution): void {
+    this.sheet = { kind: 'settings', resolution };
     this.refreshSheet(state, true);
   }
 
@@ -443,7 +447,7 @@ export class Hud {
       body = giongHtml(state);
     } else {
       title = `⚙️ ${vi.ui.settings}`;
-      body = this.settingsHtml(state);
+      body = this.settingsHtml(state, this.sheet.resolution);
     }
     const html = `<div class="sheet-head"><h2>${title}</h2><button class="close" data-act="closeSheet" aria-label="${vi.ui.close}">✕</button></div>
       <div class="sheet-body">${body}</div>`;
@@ -587,10 +591,15 @@ export class Hud {
     return `<p class="muted">${vi.ui.merchantHint} (${secs}s)</p><div class="offers">${rows}</div>`;
   }
 
-  private settingsHtml(state: GameState): string {
+  private settingsHtml(state: GameState, resolution: Resolution): string {
+    const levels = (Object.keys(vi.resolutions) as Resolution[])
+      .map((r) => `<button class="btn small ${r === resolution ? 'bronze' : 'ghost'}" data-act="setResolution" data-resolution="${r}">${vi.resolutions[r]}</button>`)
+      .join('');
     return `
       <div class="setting-row"><span>${vi.ui.sound}</span>
         <button class="btn small ghost" data-act="toggleMute">${state.settings.muted ? '🔇 ' + vi.ui.off : '🔊 ' + vi.ui.on}</button></div>
+      <div class="setting-row"><span>${vi.ui.resolution}</span><div class="choices">${levels}</div></div>
+      <p class="muted">${vi.ui.resolutionHint}</p>
       <div class="setting-row"><span>${vi.ui.exportSave}</span>
         <button class="btn small ghost" data-act="copyCode">📋 ${vi.ui.copy}</button></div>
       <p class="muted">${vi.ui.exportHint}</p>

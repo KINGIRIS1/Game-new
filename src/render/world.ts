@@ -23,6 +23,13 @@ const WATER_Y = -0.28;
 /** Mật độ rừng: thưa để công trình nổi bật, không rối mắt. */
 const FOREST_DENSITY = 0.7;
 
+/**
+ * Độ nét: số điểm ảnh vẽ cho mỗi điểm CSS, không vượt quá màn hình thật.
+ * Mặc định 1,5: vẫn sắc trên điện thoại mà chỉ phải tô khoảng nửa số điểm ảnh của mức 2.
+ */
+export const RESOLUTIONS = { low: 1, medium: 1.5, high: 2 } as const;
+export type Resolution = keyof typeof RESOLUTIONS;
+
 /** Đất, nước và ô lưới dùng chất liệu Lambert đơn giản, công trình và cây mới dùng tô màu hoạt hình. */
 const groundMaterial = new THREE.MeshLambertMaterial({ vertexColors: true });
 
@@ -170,10 +177,10 @@ export class World {
   private shownLevel = 0;
   private wallKey = '';
   private time = 0;
+  private res: Resolution = 'medium';
 
   constructor(canvas: HTMLCanvasElement) {
     this.renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' });
-    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
     this.renderer.shadowMap.enabled = true;
     this.renderer.shadowMap.type = THREE.PCFShadowMap;
 
@@ -295,9 +302,20 @@ export class World {
     }
   }
 
+  get resolution(): Resolution {
+    return this.res;
+  }
+
+  setResolution(res: Resolution): void {
+    this.res = res;
+    this.resize();
+  }
+
   resize(): void {
     const w = window.innerWidth;
     const h = window.innerHeight;
+    // Đặt lại mỗi lần đổi cỡ: mở hay gập Fold5, phóng to trang đều có thể đổi devicePixelRatio.
+    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, RESOLUTIONS[this.res]));
     this.renderer.setSize(w, h, false);
     this.view.setSize(w, h);
     if (this.inField) this.fitField();
