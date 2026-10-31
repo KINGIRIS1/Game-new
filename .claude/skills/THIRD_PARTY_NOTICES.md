@@ -41,10 +41,13 @@ SOFTWARE.
 
 ## gamedev-skills/awesome-gamedev-agent-skills
 
-The 3 skill folders below were copied unchanged from
+The 4 skill folders below were copied unchanged from
 [gamedev-skills/awesome-gamedev-agent-skills](https://github.com/gamedev-skills/awesome-gamedev-agent-skills)
-at commit `19d93f9`, from `skills/web-engines/`: `threejs-scene-setup`,
-`threejs-materials-lighting`, `threejs-gltf-loading`.
+at commit `19d93f9`:
+
+- From `skills/web-engines/`: `threejs-scene-setup`,
+  `threejs-materials-lighting`, `threejs-gltf-loading`
+- From `skills/disciplines/`: `procedural-gen`
 
 They are distributed under the Apache License, Version 2.0. The upstream NOTICE
 file reads:
