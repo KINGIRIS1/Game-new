@@ -13,7 +13,7 @@ Game xây dựng chiến thuật chạy trên trình duyệt điện thoại (Ty
   - Công trình, mỗi loại một dáng và mỗi cấp một dáng: `buildings.ts`.
   - Dân theo nghề: `people.ts`.
   - Lính, thủy quái, yêu tinh, quân Triệu, Thánh Gióng và ngựa sắt, Sơn Tinh, Thủy Tinh, An Dương Vương, Rùa Vàng, thuyền, cây, lũy, đê, thành Cổ Loa, lều trại, núi: `models.ts`.
-  - Đất bậc thang, nước lũ, mưa giông, đêm yêu tinh ở kinh đô: `world.ts`.
+  - Đất bậc thang, nước lũ, mưa giông, đêm yêu tinh, cảnh Tết (cây nêu, dây cờ, mâm bánh) ở kinh đô: `world.ts`.
   - Bãi chiến phó bản là cảnh riêng: `battlefield.ts`. Lính trong trận vẽ bằng `battleView.ts`, dùng chung cho cả hai loại trận.
   - Chất liệu ở `toon.ts`, màu ở `palette.ts`.
   - `window.__debug` (trong `main.ts`) cho phép sửa state, `resync()`, đặt `camera()`, `place()` công trình, `march()` đánh màn, `skill()` bấm kỹ năng để chụp thử bằng Playwright.
