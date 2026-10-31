@@ -641,6 +641,7 @@ Rèn riêng cho giáo binh, cung thủ, voi chiến. Có tác dụng ở mọi t
 | Cung thủ | mũi tên sắt, bao tên da | cung sừng, bao tên đồng |
 | Voi chiến | giáp trán sắt | giáp ngà và bành có lọng |
 
+- Đã vẽ: guồng nước ruộng cấp 6 quay thật; bến cấp 6 có thuyền buôn lớn neo cạnh cầu tàu nhấp nhô theo sóng; ruộng và bãi đất đá cấp 6–7 có 5 chỗ đứng cho người làm, bến và lò rèn 4 chỗ.
 - Bản lưu lên phiên bản 8 (thêm bậc rèn của từng binh chủng).
 - Lời Lạc hầu: đoạn "Vua Hùng kén rể" thêm một câu nhắc Điện có thể lên cấp 6 và lò rèn rèn binh khí; đoạn "Cột đá thề" thêm một câu nhắc Điện cấp 7. Người đã xem các đoạn ấy thì thấy nút nâng cấp như thường.
 
