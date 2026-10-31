@@ -1,6 +1,7 @@
 // Cảnh bãi chiến của phó bản: một cảnh Three.js riêng, dùng chung renderer và camera với kinh đô.
 // Bãi nằm xoay 45° để quân ta (phía z lớn) ở cuối màn hình, giặc (phía z nhỏ) ở đầu màn hình.
-// Nền đổi theo từng màn: rừng, bến sông, làng, đồn giặc, chân núi; chương 2 thêm đồi sim, đồng ngập lũ, đỉnh Tản Viên.
+// Nền đổi theo từng màn: rừng, bến sông, làng, đồn giặc, chân núi; chương 2 thêm đồi sim, đồng ngập lũ, đỉnh Tản Viên;
+// chương 3 thêm núi Thất Diệu trong đêm và thành Cổ Loa xoáy ốc.
 // Đất quanh bãi nhấp nhô thành gò đồi bằng noise có hạt giống, nên mỗi màn luôn ra đúng một dáng đất.
 
 import * as THREE from 'three';
@@ -8,12 +9,12 @@ import { createNoise2D, type NoiseFunction2D } from 'simplex-noise';
 import type { Battle } from '../game/battle';
 import { FIELD, RALLY_BEAT, SKILLS, type Terrain } from '../game/defs';
 import { BattleView } from './battleView';
-import { addSunLights } from './lights';
+import { addSunLights, type SunLights } from './lights';
 import { STICK_POSE, buildForest, makeBoat, makeDrummer, makeEnemyFlag, makeMountain, makeTent, type TreeSpot } from './models';
 import { makeNhaSan, makeRuong } from './buildings';
 import { C } from './palette';
 import { ShapeBuilder, seeded } from './shapes';
-import { ToonModel, toon } from './toon';
+import { ToonModel, inkThin, outlineOf, toon } from './toon';
 
 const { smoothstep } = THREE.MathUtils;
 
@@ -21,7 +22,7 @@ const groundMaterial = new THREE.MeshLambertMaterial({ vertexColors: true });
 /** Đất có đồi tô phẳng từng mặt tam giác, ra dáng low-poly như các mô hình khác. */
 const reliefMaterial = new THREE.MeshLambertMaterial({ vertexColors: true, flatShading: true });
 
-const TERRAINS: Terrain[] = ['rung', 'benSong', 'lang', 'don', 'nui', 'doi', 'ngap', 'tanVien'];
+const TERRAINS: Terrain[] = ['rung', 'benSong', 'lang', 'don', 'nui', 'doi', 'ngap', 'tanVien', 'thatDieu', 'coLoa'];
 const OUTSIDE: Record<Terrain, number> = {
   rung: C.grassLocked[0],
   benSong: C.grassLocked[1],
@@ -31,6 +32,8 @@ const OUTSIDE: Record<Terrain, number> = {
   doi: 0x86904e,
   ngap: 0x7d8650,
   tanVien: 0x6f7a44,
+  thatDieu: C.nightLand,
+  coLoa: C.grassLocked[0],
 };
 const FIELD_COLOR: Record<Terrain, number> = {
   rung: C.grass[0],
@@ -41,6 +44,8 @@ const FIELD_COLOR: Record<Terrain, number> = {
   doi: 0xadb46c,
   ngap: 0xa69e6c,
   tanVien: 0x9ca466,
+  thatDieu: 0x8c8496,
+  coLoa: 0xb1ad72,
 };
 /** Màu các mảng loang trên đất: cỏ rậm, cỏ úa, đất trống, đá; đồi sim nở hoa tím. */
 const PATCH: Record<Terrain, number> = {
@@ -52,6 +57,8 @@ const PATCH: Record<Terrain, number> = {
   doi: 0x8f5f92,
   ngap: C.earthDark,
   tanVien: C.rock,
+  thatDieu: 0x45405a,
+  coLoa: C.earthDark,
 };
 /** Đồng ngập lũ và đỉnh Tản Viên: nước lũ phủ chỗ trũng quanh bãi, ở độ cao này. */
 const FLOOD_Y = -0.3;
@@ -67,8 +74,27 @@ const HILLS: Record<Terrain, { height: number; freq: number }> = {
   doi: { height: 2.8, freq: 0.08 },
   ngap: { height: 1.8, freq: 0.07 },
   tanVien: { height: 2.6, freq: 0.07 },
+  thatDieu: { height: 2.8, freq: 0.08 },
+  coLoa: { height: 1.4, freq: 0.05 },
 };
-const TREE_DENSITY: Record<Terrain, number> = { rung: 0.8, benSong: 0.45, lang: 0.35, don: 0.4, nui: 0.5, doi: 0.45, ngap: 0.3, tanVien: 0.5 };
+const TREE_DENSITY: Record<Terrain, number> = {
+  rung: 0.8,
+  benSong: 0.45,
+  lang: 0.35,
+  don: 0.4,
+  nui: 0.5,
+  doi: 0.45,
+  ngap: 0.3,
+  tanVien: 0.5,
+  thatDieu: 0.18,
+  coLoa: 0.35,
+};
+/** Trời và đèn theo nền: núi Thất Diệu là đêm tím, còn lại là ngày. */
+const SKY: Partial<Record<Terrain, { sky: number; sun: number; hemi: number }>> = {
+  thatDieu: { sky: 0x4a4868, sun: 1.5, hemi: 0.8 },
+};
+/** Thành Cổ Loa: tâm vòng xoáy ốc sau lưng quân ta (tọa độ bãi). */
+const CO_LOA = { x: FIELD.w / 2, z: FIELD.d + 16, r0: 4, r1: 12.5, turns: 1.6 };
 /** Tấm đất quanh bãi và khoảng cách giữa hai đỉnh lưới (đơn vị: ô). */
 const LAND = { w: 90, d: 100, step: 0.75 };
 
@@ -90,11 +116,13 @@ export class Battlefield {
   private decor = new THREE.Group();
   private terrain: Terrain | null = null;
   private drummer?: THREE.Group;
+  private readonly lights: SunLights;
+  private time = 0;
 
   constructor() {
     this.scene.background = new THREE.Color(C.sky);
     this.scene.fog = new THREE.Fog(C.sky, 75, 125);
-    addSunLights(this.scene, 16, 1024);
+    this.lights = addSunLights(this.scene, 16, 1024);
     const field = new THREE.Group();
     field.rotation.y = Math.PI / 4;
     this.inner.position.set(-FIELD.w / 2, 0, -FIELD.d / 2);
@@ -107,6 +135,13 @@ export class Battlefield {
   /** Vẽ trận đang diễn ra, và Lạc tướng đánh trống khi có Trống trận. */
   update(battle: Battle | null, dt: number): void {
     this.view.update(battle, dt);
+    this.time += dt;
+    // Ma trơi trên núi Thất Diệu bập bềnh, lập lòe.
+    for (const w of (this.decor.userData.wisps as THREE.Object3D[] | undefined) ?? []) {
+      const ph = w.userData.phase as number;
+      w.position.y = (w.userData.y as number) + Math.sin(this.time * 1.7 + ph) * 0.3;
+      w.scale.setScalar(0.8 + 0.3 * Math.abs(Math.sin(this.time * 3 + ph)));
+    }
     const d = this.drummer;
     if (!d) return;
     const [left, right] = d.userData.sticks as THREE.Object3D[];
@@ -140,6 +175,11 @@ export class Battlefield {
     this.decor = buildDecor(t);
     this.inner.add(this.decor);
     this.drummer = this.decor.userData.drummer as THREE.Group;
+    const sky = SKY[t] ?? { sky: C.sky, sun: 2.6, hemi: 0.9 };
+    (this.scene.background as THREE.Color).setHex(sky.sky);
+    (this.scene.fog as THREE.Fog).color.setHex(sky.sky);
+    this.lights.sun.intensity = sky.sun;
+    this.lights.hemi.intensity = sky.hemi;
   }
 }
 
@@ -249,6 +289,86 @@ function buildDecor(t: Terrain): THREE.Group {
     const cm = clouds.mesh(new THREE.MeshLambertMaterial({ vertexColors: true, transparent: true, opacity: 0.85 }));
     cm.castShadow = false;
     g.add(cm);
+  }
+  if (t === 'thatDieu') {
+    // Bảy mỏm núi nhọn của núi Thất Diệu sau lưng yêu tinh, mỏm giữa cao nhất.
+    const peaks: [number, number, number, number][] = [
+      [W / 2, -16, 3.2, 10],
+      [W / 2 - 5.5, -14, 2.6, 7.5],
+      [W / 2 + 5.5, -14, 2.6, 7.5],
+      [W / 2 - 10.5, -12.5, 2.3, 6],
+      [W / 2 + 10.5, -12.5, 2.3, 6],
+      [W / 2 - 15, -11, 2, 4.8],
+      [W / 2 + 15, -11, 2, 4.8],
+    ];
+    peaks.forEach(([x, z, r, h], i) => place(makeMountain(r, h, i % 2 ? 0x5d5670 : 0x6a6280), x, z, i, r * 0.8));
+    zones.push({ x0: -18, x1: W + 18, z0: -24, z1: -8, hills: true });
+    // Cây chết khẳng khiu dọc hai bên bãi.
+    const rand = seeded(77);
+    for (let i = 0; i < 12; i++) {
+      const side = i % 2 ? -1 : 1;
+      const x = side > 0 ? W + 2 + rand() * 5 : -2 - rand() * 5;
+      place(bareTree(i), x, -4 + rand() * (D + 8), rand() * 6);
+    }
+    // Ma trơi lơ lửng quanh bãi, tự sáng.
+    const wisps: THREE.Object3D[] = [];
+    const glow = seeded(91);
+    for (let i = 0; i < 14; i++) {
+      const orb = new THREE.Mesh(new THREE.SphereGeometry(0.16, 8, 6), new THREE.MeshBasicMaterial({ color: i % 3 ? C.ghost : C.ghostDeep }));
+      const side = i % 2 ? -1 : 1;
+      const x = side > 0 ? W + 1.5 + glow() * 6 : -1.5 - glow() * 6;
+      const y = 1 + glow() * 2.2;
+      orb.position.set(x, y, -6 + glow() * (D + 6));
+      orb.userData = { phase: glow() * 6, y };
+      g.add(orb);
+      wisps.push(orb);
+    }
+    g.userData.wisps = wisps;
+  }
+  if (t === 'coLoa') {
+    // Thành Cổ Loa sau lưng quân ta: ba vòng thành đất cao uốn xoáy ốc, hào nước bao ngoài, cờ đỏ trên thành.
+    const wall = new ShapeBuilder();
+    const ditch = new ShapeBuilder();
+    const flags: [number, number, number][] = [];
+    const { x: cx, z: cz, r0, r1, turns } = CO_LOA;
+    const total = turns * Math.PI * 2;
+    let n = 0;
+    for (let a = 0; a < total; ) {
+      const r = r0 + ((r1 - r0) * a) / total;
+      const x = cx + Math.sin(a) * r;
+      const z = cz - Math.cos(a) * r;
+      if (z > D + 4.6) {
+        const k = n % 2;
+        wall.box(1.0, 0.55, 1.05, C.earthDark, x, 0.27, z, [0, -a, 0]);
+        wall.box(0.86, 0.5, 0.95, C.earth, x, 0.78, z, [0, -a, 0]);
+        wall.box(0.72, 0.3, 0.9, k ? C.earthDark : C.earth, x, 1.18, z, [0, -a, 0]);
+        if (n % 3 === 0) wall.box(0.2, 0.22, 0.2, C.earth, x, 1.44, z, [0, -a, 0]);
+        if (n % 9 === 4) flags.push([x, z, -a]);
+      }
+      n++;
+      a += 0.9 / r;
+    }
+    // Hào nước bao ngoài vòng thành ngoài cùng.
+    for (let a = 0; a < Math.PI * 2; a += 0.07) {
+      const x = cx + Math.sin(a) * (r1 + 1.8);
+      const z = cz - Math.cos(a) * (r1 + 1.8);
+      if (z > D + 3.6) ditch.box(1.25, 0.08, 1.4, C.ditchWater, x, 0.03, z, [0, -a, 0]);
+    }
+    const wm = wall.mesh(toon);
+    g.add(wm, outlineOf(wm.geometry, inkThin));
+    const dm = ditch.mesh(groundMaterial);
+    dm.castShadow = false;
+    g.add(dm);
+    for (const [x, z, ry] of flags) {
+      const flag = new ToonModel(inkThin);
+      flag.plain.cyl(0.03, 0.035, 1.4, C.woodDark, 0, 0.7, 0, undefined, 5);
+      flag.band.box(0.5, 0.36, 0.03, C.red, 0.26, 1.2, 0);
+      const fg = flag.group();
+      fg.position.set(x, 1.3, z);
+      fg.rotation.y = ry;
+      g.add(fg);
+    }
+    zones.push({ x0: cx - r1 - 4, x1: cx + r1 + 4, z0: D + 3, z1: cz + r1 + 4 });
   }
   if (t === 'nui') {
     // Núi Trâu sừng sững sau lưng quân giặc.
@@ -369,7 +489,7 @@ class Relief {
     const rise = smoothstep(near, 0.5, 5) * (0.35 + 0.65 * smoothstep(near, 3, 18));
     let h = height * Math.pow(fbm(this.hills, x * freq, z * freq), 1.5) * rise;
     // Sườn núi Trâu, núi Tản dâng dần lên sau lưng quân giặc.
-    if (this.t === 'nui' || this.t === 'tanVien') h += 3.5 * smoothstep(-z, 7, 20) * (0.5 + fbm(this.hills, x * 0.11 + 40, z * 0.11) * 0.5);
+    if (this.t === 'nui' || this.t === 'tanVien' || this.t === 'thatDieu') h += 3.5 * smoothstep(-z, 7, 20) * (0.5 + fbm(this.hills, x * 0.11 + 40, z * 0.11) * 0.5);
     // Đồng ngập: ra khỏi bãi là đất trũng chìm dưới nước lũ, chỉ gò cao mới nhô lên.
     if (this.t === 'ngap') h -= 0.9 * smoothstep(near, 0.3, 3);
     if (this.t === 'tanVien') h -= 0.7 * smoothstep(near, 0.5, 4) * (1 - smoothstep(-z, 4, 12));
@@ -456,5 +576,23 @@ function commander(x: number, z: number): THREE.Group {
   g.add(drummer, m.group());
   g.position.set(x, 0, z);
   g.userData.drummer = drummer;
+  return g;
+}
+
+/** Cây chết khẳng khiu trên núi Thất Diệu: thân cong, vài cành trơ trụi. */
+function bareTree(seed: number): THREE.Group {
+  const b = new ShapeBuilder();
+  const rand = seeded(seed * 13 + 5);
+  const h = 1.6 + rand() * 0.8;
+  b.cyl(0.05, 0.1, h, 0x3e3446, 0, h / 2, 0, [rand() * 0.2 - 0.1, 0, rand() * 0.2 - 0.1], 6);
+  for (let i = 0; i < 4; i++) {
+    const a = rand() * Math.PI * 2;
+    const y = h * (0.45 + rand() * 0.5);
+    const len = 0.5 + rand() * 0.5;
+    b.cyl(0.02, 0.04, len, 0x3e3446, Math.cos(a) * len * 0.35, y + len * 0.3, Math.sin(a) * len * 0.35, [Math.sin(a) * 0.9, 0, -Math.cos(a) * 0.9], 5);
+  }
+  const g = new THREE.Group();
+  const mesh = b.mesh(toon);
+  g.add(mesh, outlineOf(mesh.geometry, inkThin));
   return g;
 }

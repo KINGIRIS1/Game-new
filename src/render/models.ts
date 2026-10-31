@@ -1,4 +1,4 @@
-// Mô hình "Nét Đông Sơn": người, lính, thuyền, cây cối và lũy. Công trình nằm ở buildings.ts.
+// Mô hình "Nét Đông Sơn": người, lính, tướng, thuyền, cây cối, lũy, đê và thành Cổ Loa. Công trình nằm ở buildings.ts.
 // Gốc tọa độ của mỗi mô hình là tâm chân móng, mặt trước hướng +z.
 
 import * as THREE from 'three';
@@ -95,7 +95,8 @@ function chariot(m: ToonModel): void {
 export function makeFighter(kind: FighterKind): THREE.Group {
   if (kind === 'giong') return makeGiong('trangSi');
   if (kind === 'sonTinh') return makeSonTinh();
-  const water = makeWaterFoe(kind);
+  if (kind === 'anDuong') return makeAnDuong({ crossbow: true });
+  const water = makeWaterFoe(kind) ?? makeChapter3Foe(kind);
   if (water) return water;
   const boss = kind === 'phoTuong' || kind === 'daiTuong';
   const enemy = kind === 'giaoAn' || kind === 'cungAn' || kind === 'chienXa' || boss;
@@ -796,5 +797,404 @@ export function makeDrummer(): THREE.Group {
   }
   g.userData.sticks = sticks;
   g.userData.face = faceGroup;
+  return g;
+}
+
+// ---------- Chương 3: An Dương Vương và nỏ thần ----------
+
+/** Nỏ lúc cầm hạ ngang thắt lưng; lúc ngắm thì nâng ngang vai (0); bắn nỏ thần thì chĩa lên trời. */
+export const BOW_POSE = { rest: 0.5, aim: 0, sky: -1.0 };
+
+/**
+ * Cây nỏ: báng dọc theo +z, cánh cung ngang ở đầu báng, dây cung kéo về sau, lẫy hình vuốt rùa ở dưới báng.
+ * `thanh`: nỏ thần đồng vàng có lẫy vuốt Rùa Vàng tự sáng và mũi tên vàng lắp sẵn; không thì nỏ gỗ thường.
+ * Gốc ở giữa báng.
+ */
+function crossbowParts(m: ToonModel, thanh: boolean, s = 1): void {
+  const p = m.plain;
+  const wood = thanh ? C.goldDark : C.woodDark;
+  const arm = thanh ? C.gold : C.wood;
+  p.box(0.07 * s, 0.07 * s, 0.72 * s, wood, 0, 0, 0.05 * s);
+  // Hai cánh cung ngả về sau như chữ V.
+  for (const side of [-1, 1]) p.box(0.42 * s, 0.05 * s, 0.05 * s, arm, side * 0.2 * s, 0, 0.36 * s, [0, side * 0.35, 0]);
+  p.box(0.012 * s, 0.012 * s, 0.82 * s, C.cream, 0, 0.02 * s, 0.24 * s, [0, Math.PI / 2, 0]);
+  if (thanh) {
+    m.band.cyl(0.05 * s, 0.05 * s, 0.1 * s, C.bronze, 0, 0, 0.4 * s, [Math.PI / 2, 0, 0], 8);
+    // Lẫy nỏ là vuốt Rùa Vàng: ba móng cong tự sáng.
+    for (const dx of [-0.035, 0, 0.035]) m.glow.cone(0.022 * s, 0.14 * s, C.ember, dx * s, -0.09 * s, -0.04 * s, [Math.PI + 0.4, 0, 0], 5);
+    m.glow.box(0.02 * s, 0.02 * s, 0.5 * s, C.ember, 0, 0.06 * s, 0.3 * s);
+    m.glow.cone(0.035 * s, 0.1 * s, C.fire, 0, 0.06 * s, 0.58 * s, [Math.PI / 2, 0, 0], 5);
+  } else {
+    p.box(0.03 * s, 0.1 * s, 0.05 * s, C.bronzeDark, 0, -0.07 * s, -0.08 * s);
+    p.box(0.018 * s, 0.018 * s, 0.4 * s, C.arrow, 0, 0.05 * s, 0.3 * s);
+  }
+}
+
+/**
+ * Tay cầm nỏ thần của An Dương Vương, tách riêng để phần vẽ trận nâng nỏ ngắm hay chĩa lên trời.
+ * Gốc nhóm ở ngang vai; xoay quanh trục x: dương thì nỏ chúc xuống.
+ */
+function anDuongBow(): THREE.Group {
+  const w = new ToonModel(inkThin);
+  for (const s of [-1, 1]) w.plain.cyl(0.045, 0.045, 0.36, C.skin, s * 0.13, -0.02, 0.17, [Math.PI / 2, 0, -s * 0.25], 6);
+  const g = w.group();
+  const bow = new ToonModel(inkThin);
+  crossbowParts(bow, true, 1.05);
+  const b = bow.group();
+  b.position.set(0, 0, 0.42);
+  g.add(b);
+  g.position.set(0, 1.22, 0.08);
+  g.rotation.x = BOW_POSE.rest;
+  g.userData.weapon = true;
+  return g;
+}
+
+/** Rìu đồng lưỡi xéo kiểu Đông Sơn, vua cầm khi đứng ở kinh đô lúc chưa có nỏ thần. */
+function ceremonialAxe(): THREE.Group {
+  const w = new ToonModel(inkThin);
+  const p = w.plain;
+  p.cyl(0.05, 0.05, 0.36, C.skin, 0, 0.18, 0, undefined, 6);
+  p.cyl(0.03, 0.03, 1.3, C.woodDark, 0, 0.75, 0, undefined, 6);
+  w.band.box(0.06, 0.32, 0.36, C.bronze, 0, 1.3, 0.16, [0.35, 0, 0]);
+  p.sphere(0.05, C.bronzeLight, 0, 1.44, 0, [1, 1, 1], 8);
+  const g = w.group();
+  g.position.set(0.32, 1.12, 0.05);
+  g.rotation.set(-0.25, 0, -0.18);
+  g.userData.weapon = true;
+  return g;
+}
+
+/**
+ * An Dương Vương: cao to như Sơn Tinh, giáp đồng có hoa văn trống, áo choàng đỏ son, mũ lông chim có vành vàng của vua.
+ * `crossbow`: cầm nỏ thần đồng vàng; không thì cầm rìu đồng nghi lễ. `glow`: hiển linh, có hào quang.
+ */
+export function makeAnDuong(opts: { crossbow?: boolean; glow?: boolean } = {}): THREE.Group {
+  const m = new ToonModel(inkThin);
+  const p = m.plain;
+  for (const x of [-0.1, 0.1]) {
+    p.cyl(0.07, 0.08, 0.44, C.skin, x, 0.22, 0, undefined, 6);
+    p.cyl(0.085, 0.09, 0.08, C.bronzeDark, x, 0.05, 0.03, undefined, 8);
+  }
+  // Váy đỏ son xếp nếp, giáp đồng hoa văn trống, đai vàng.
+  p.cyl(0.24, 0.3, 0.3, C.red, 0, 0.55, 0, undefined, 12);
+  m.band.cyl(0.25, 0.28, 0.48, C.bronze, 0, 0.88, 0, undefined, 12);
+  p.cyl(0.29, 0.29, 0.07, C.gold, 0, 0.66, 0, undefined, 12);
+  p.box(0.66, 0.84, 0.05, C.red, 0, 0.82, -0.32, [0.18, 0, 0]);
+  for (const s of [-1, 1]) {
+    p.sphere(0.13, C.bronzeLight, s * 0.3, 1.1, 0, [1, 0.75, 1], 8);
+    p.cone(0.05, 0.14, C.gold, s * 0.36, 1.18, 0, [0, 0, -s * 0.8], 5);
+  }
+  p.sphere(0.27, C.skin, 0, 1.4, 0.02, [1, 0.95, 0.95], 12);
+  for (const s of [-1, 1]) {
+    p.sphere(0.03, C.ink, s * 0.09, 1.39, 0.24, [1, 1.4, 0.5], 6);
+    p.box(0.09, 0.02, 0.02, C.ink, s * 0.095, 1.47, 0.245, [0, 0, -s * 0.2]);
+  }
+  // Râu mép của vua.
+  for (const s of [-1, 1]) p.box(0.1, 0.025, 0.02, C.hair, s * 0.06, 1.31, 0.255, [0, 0, s * 0.35]);
+  p.sphere(0.27, C.hair, 0, 1.5, -0.05, [1, 0.6, 0.98], 12);
+  // Vành mũ vàng có răng cưa, chùm lông chim cao xen lông vàng.
+  p.cyl(0.285, 0.285, 0.09, C.gold, 0, 1.47, -0.02, undefined, 14);
+  for (let i = 0; i < 8; i++) {
+    const a = (i / 8) * Math.PI * 2;
+    p.cone(0.035, 0.1, C.gold, Math.sin(a) * 0.27, 1.55, Math.cos(a) * 0.27 - 0.02, undefined, 4);
+  }
+  const plume = [C.red, C.cream, C.gold];
+  for (let i = -3; i <= 3; i++) p.box(0.07, 0.62, 0.03, plume[Math.abs(i) % 3], i * 0.065, 1.92, -0.06, [0, 0, -i * 0.22]);
+  const g = m.group();
+  g.add(opts.crossbow ? anDuongBow() : ceremonialAxe());
+  if (opts.glow) {
+    const ring = halo();
+    ring.position.set(0, 1.6, -0.4);
+    g.add(ring);
+  }
+  return g;
+}
+
+/**
+ * Rùa Vàng, sứ Thanh Giang: mai vàng như mặt trống đồng có ngôi sao giữa, đầu ngóc cao, bốn chân chèo.
+ * Gốc ở mặt nước (đáy mai), đầu hướng +z. Dài chừng 1,6.
+ */
+export function makeRuaVang(): THREE.Group {
+  const m = new ToonModel(inkThin);
+  const p = m.plain;
+  const geo = new THREE.SphereGeometry(1, 18, 9, 0, Math.PI * 2, 0, Math.PI / 2);
+  p.add(geo, C.gold, 0, 0.05, 0, [0, 0, 0], [0.62, 0.38, 0.72]);
+  p.cyl(0.66, 0.7, 0.1, C.goldDark, 0, 0.05, 0, undefined, 18);
+  // Mặt mai có hoa văn trống đồng.
+  m.drum.add(new THREE.CylinderGeometry(0.4, 0.4, 0.04, 20), C.gold, 0, 0.42, 0, [0, 0, 0], [1, 1, 1.15]);
+  for (let i = 0; i < 6; i++) {
+    const a = (i / 6) * Math.PI * 2;
+    p.box(0.16, 0.04, 0.16, C.goldDark, Math.sin(a) * 0.5, 0.26, Math.cos(a) * 0.58, [0, a, 0.5]);
+  }
+  // Cổ dài ngóc lên, đầu tròn, mắt đen, miệng mỉm.
+  p.cyl(0.13, 0.16, 0.55, C.turtle, 0, 0.36, 0.8, [-0.8, 0, 0], 8);
+  p.sphere(0.22, C.turtle, 0, 0.64, 1.02, [1, 0.9, 1.15], 10);
+  for (const s of [-1, 1]) {
+    p.sphere(0.045, C.ink, s * 0.11, 0.7, 1.18, [1, 1.3, 0.6], 6);
+    p.cyl(0.13, 0.08, 0.06, C.turtle, s * 0.62, 0.06, 0.45, [0, 0, s * 1.2], 6);
+    p.box(0.42, 0.05, 0.2, C.turtle, s * 0.7, 0.04, 0.5, [0, -s * 0.5, 0]);
+    p.box(0.3, 0.05, 0.16, C.turtle, s * 0.6, 0.04, -0.5, [0, s * 0.5, 0]);
+  }
+  p.cone(0.07, 0.25, C.turtle, 0, 0.06, -0.82, [-Math.PI / 2, 0, 0], 6);
+  return m.group();
+}
+
+// ---------- Chương 3: yêu tinh núi Thất Diệu ----------
+
+/** Quỷ núi: da xám xanh, đầu to có sừng, nanh trắng, khố da, vác chày đá. */
+function mountainDemon(m: ToonModel): void {
+  const p = m.plain;
+  for (const x of [-0.1, 0.1]) p.cyl(0.07, 0.08, 0.3, C.demonDark, x, 0.15, 0, undefined, 6);
+  p.sphere(0.27, C.demon, 0, 0.55, 0, [1, 0.95, 0.85], 10);
+  p.cyl(0.25, 0.28, 0.14, C.earthDark, 0, 0.38, 0, undefined, 10);
+  for (let i = 0; i < 4; i++) p.cone(0.06, 0.14, C.earthDark, -0.18 + i * 0.12, 0.27, 0.2, [Math.PI, 0, 0], 4);
+  for (const s of [-1, 1]) p.cyl(0.06, 0.07, 0.36, C.demon, s * 0.3, 0.52, 0.04, [0.3, 0, s * 0.5], 6);
+  p.sphere(0.25, C.demon, 0, 0.92, 0.04, [1.05, 0.95, 0.95], 12);
+  for (const s of [-1, 1]) {
+    p.cone(0.06, 0.26, C.cream, s * 0.16, 1.15, 0, [0, 0, -s * 0.45], 5);
+    p.sphere(0.05, C.ember, s * 0.09, 0.96, 0.22, [1, 0.8, 0.6], 6);
+    p.cone(0.025, 0.08, C.cream, s * 0.06, 0.8, 0.24, [Math.PI, 0, 0], 4);
+  }
+  p.box(0.12, 0.025, 0.02, C.ink, 0, 1.03, 0.25);
+  // Chày đá: cán gỗ, đầu đá to.
+  p.cyl(0.03, 0.035, 0.8, C.woodDark, 0.34, 0.75, 0.12, [0.15, 0, -0.1], 5);
+  p.sphere(0.15, C.rock, 0.38, 1.15, 0.18, [1, 1.2, 1], 7);
+}
+
+/** Ma trơi: đốm lửa xanh lơ lửng có đôi mắt đen, lưỡi lửa vuốt nhọn lên trời, vài đốm nhỏ bay quanh. Tự sáng. */
+function ghostFire(m: ToonModel): void {
+  const f = m.glow;
+  f.sphere(0.24, C.ghost, 0, 0.62, 0, [1, 1.05, 1], 12);
+  f.sphere(0.17, 0xe8fbff, 0, 0.58, 0.05, [1, 1, 1], 10);
+  f.cone(0.2, 0.55, C.ghostDeep, 0, 0.98, -0.04, [-0.2, 0, 0], 8);
+  f.cone(0.1, 0.3, C.ghost, 0.12, 0.92, 0.02, [-0.1, 0, -0.4], 6);
+  f.cone(0.1, 0.3, C.ghost, -0.12, 0.92, 0.02, [-0.1, 0, 0.4], 6);
+  for (const [x, y, z] of [[0.3, 0.4, -0.1], [-0.28, 0.5, 0.05], [0.05, 0.3, -0.25]] as const) f.sphere(0.05, C.ghost, x, y, z, [1, 1, 1], 6);
+  for (const s of [-1, 1]) m.plain.sphere(0.045, C.ink, s * 0.08, 0.66, 0.2, [1, 1.4, 0.5], 6);
+  m.plain.sphere(0.035, C.ink, 0, 0.55, 0.22, [1.2, 0.8, 0.5], 6);
+}
+
+/** Hổ tinh: hổ vằn cam đen, to, chồm về trước (vai cao hơn mông), mắt đỏ, trán có vằn, đuôi cong vồng lên. */
+function tigerDemon(m: ToonModel): void {
+  const p = m.plain;
+  // Thân chúi về trước: vai cao, mông thấp.
+  p.sphere(0.36, C.tiger, 0, 0.66, 0, [0.82, 0.72, 1.45], 12);
+  p.sphere(0.3, C.tigerBelly, 0, 0.54, 0.05, [0.7, 0.5, 1.25], 10);
+  // Vằn ôm quanh lưng và hai bên sườn.
+  for (let i = 0; i < 5; i++) {
+    const z = -0.38 + i * 0.17;
+    const top = 0.66 + 0.26 * Math.sqrt(Math.max(0, 1 - (z / 0.52) ** 2));
+    p.box(0.22, 0.03, 0.06, C.ink, 0, top, z, [0, 0, 0]);
+    for (const sd of [-1, 1]) p.box(0.03, 0.2, 0.06, C.ink, sd * 0.285, 0.7, z, [0, 0, sd * 0.35]);
+  }
+  for (const x of [-0.17, 0.17]) {
+    p.cyl(0.075, 0.085, 0.56, C.tiger, x, 0.3, 0.36, [-0.25, 0, 0], 7);
+    p.cyl(0.085, 0.095, 0.44, C.tiger, x, 0.23, -0.36, [0.15, 0, 0], 7);
+    for (const z of [0.44, -0.34]) p.sphere(0.08, C.tigerBelly, x, 0.05, z + 0.04, [1, 0.6, 1.3], 6);
+  }
+  // Đầu to ngẩng, tai tròn, mõm trắng, nanh, trán ba vằn.
+  p.sphere(0.28, C.tiger, 0, 0.98, 0.6, [1.12, 1, 1], 12);
+  p.sphere(0.16, C.tigerBelly, 0, 0.88, 0.8, [1.3, 0.8, 0.8], 10);
+  p.sphere(0.045, C.ink, 0, 0.95, 0.92, [1.4, 1, 1], 6);
+  for (const dx of [-0.06, 0, 0.06]) p.box(0.025, 0.1, 0.02, C.ink, dx, 1.16, 0.84, [-0.5, 0, 0]);
+  for (const sd of [-1, 1]) {
+    p.sphere(0.085, C.tiger, sd * 0.19, 1.2, 0.54, [1, 1, 0.6], 8);
+    p.sphere(0.04, C.ink, sd * 0.19, 1.21, 0.58, [1, 1, 0.4], 6);
+    p.sphere(0.045, C.ember, sd * 0.1, 1.04, 0.84, [1, 0.8, 0.6], 6);
+    p.cone(0.03, 0.12, C.cream, sd * 0.05, 0.78, 0.88, [Math.PI, 0, 0], 4);
+    p.box(0.1, 0.02, 0.02, C.ink, sd * 0.25, 1.0, 0.7, [0, sd * 0.4, 0]);
+  }
+  // Đuôi: chìa ra sau rồi cong vồng lên, chóp đen.
+  p.cyl(0.045, 0.055, 0.5, C.tiger, 0, 0.72, -0.72, [-1.25, 0, 0], 6);
+  p.cyl(0.04, 0.045, 0.42, C.tiger, 0, 0.98, -1.0, [-0.35, 0, 0], 6);
+  p.sphere(0.055, C.ink, 0, 1.2, -1.07, [1, 1.3, 1], 6);
+}
+
+/** Gà trắng nghìn năm: gà trống trắng khổng lồ, mào đỏ to, tích đỏ, mắt đỏ rực, đuôi cong vút, cựa nhọn. */
+function whiteRooster(m: ToonModel): void {
+  const p = m.plain;
+  for (const s of [-1, 1]) {
+    p.cyl(0.05, 0.06, 0.5, C.bronzeLight, s * 0.14, 0.25, 0, undefined, 6);
+    p.cone(0.035, 0.18, C.bronzeLight, s * 0.14, 0.16, -0.12, [-Math.PI / 2 - 0.3, 0, 0], 5);
+    for (const a of [-0.5, 0, 0.5]) p.box(0.04, 0.03, 0.2, C.bronzeLight, s * 0.14 + Math.sin(a) * 0.08, 0.02, 0.08, [0, a, 0]);
+  }
+  p.sphere(0.48, C.rooster, 0, 0.88, 0, [0.9, 0.85, 1.15], 14);
+  for (const s of [-1, 1]) p.sphere(0.3, C.cream, s * 0.32, 0.9, -0.05, [0.35, 0.7, 1.05], 10);
+  // Cổ và đầu.
+  p.cyl(0.18, 0.24, 0.5, C.rooster, 0, 1.3, 0.32, [0.35, 0, 0], 10);
+  p.sphere(0.22, C.rooster, 0, 1.6, 0.42, [1, 1, 1.05], 12);
+  p.cone(0.07, 0.24, C.bronzeLight, 0, 1.56, 0.7, [Math.PI / 2, 0, 0], 6);
+  for (let i = 0; i < 5; i++) p.sphere(0.08 + (i === 2 ? 0.03 : 0), C.comb, 0, 1.82 + Math.sin((i / 4) * Math.PI) * 0.08, 0.26 + i * 0.08, [0.6, 1.2, 0.8], 8);
+  p.sphere(0.07, C.comb, 0, 1.42, 0.62, [0.7, 1.4, 0.6], 8);
+  for (const s of [-1, 1]) m.glow.sphere(0.045, C.comb, s * 0.13, 1.64, 0.56, [1, 1, 0.6], 6);
+  // Đuôi cong vút: lông trắng xen lông đồng.
+  for (let i = 0; i < 6; i++) {
+    const a = -0.6 + i * 0.24;
+    p.box(0.08, 0.95, 0.14, i % 2 ? C.cream : C.rooster, Math.sin(a) * 0.18, 1.25 + Math.cos(a) * 0.15, -0.62, [-0.55, 0, a]);
+  }
+}
+
+// ---------- Chương 3: quân Triệu Đà ----------
+
+/** Con ngựa đứng, đầu hướng +z, lưng cao chừng 0,85. */
+function horseBody(m: ToonModel, color: number): void {
+  const p = m.plain;
+  p.sphere(0.33, color, 0, 0.78, 0, [0.8, 0.78, 1.4], 12);
+  for (const x of [-0.14, 0.14]) for (const z of [-0.3, 0.3]) p.cyl(0.06, 0.07, 0.6, color, x, 0.3, z, undefined, 6);
+  p.cyl(0.1, 0.14, 0.46, color, 0, 1.05, 0.42, [-0.6, 0, 0], 8);
+  p.box(0.17, 0.18, 0.4, color, 0, 1.25, 0.64, [0.35, 0, 0]);
+  for (const s of [-1, 1]) p.cone(0.035, 0.12, color, s * 0.06, 1.42, 0.5, [-0.3, 0, s * 0.25], 5);
+  p.box(0.04, 0.32, 0.36, C.ink, 0, 1.18, 0.38, [-0.6, 0, 0]);
+  p.cone(0.06, 0.5, C.ink, 0, 0.85, -0.52, [-2.3, 0, 0], 6);
+  m.band.box(0.5, 0.06, 0.46, C.trieuRed, 0, 1.0, -0.04);
+}
+
+/**
+ * Lính Triệu: áo đen viền đỏ, mũ vải búi tóc. `y0`, `z0`: chỗ ngồi khi cưỡi ngựa.
+ * `cap`: màu mũ; tướng thì đội mũ có hai cánh.
+ */
+function trieuSoldier(m: ToonModel, y0: number, z0: number, opts: { mounted?: boolean; general?: boolean } = {}): void {
+  const p = m.plain;
+  if (opts.mounted) {
+    for (const s of [-1, 1]) p.cyl(0.04, 0.045, 0.3, C.trieuCloth, s * 0.16, y0 + 0.08, z0 + 0.06, [0.4, 0, s * 0.6], 6);
+  } else {
+    for (const x of [-0.06, 0.06]) p.cyl(0.04, 0.045, 0.18, C.trieuCloth, x, y0 + 0.09, z0, undefined, 6);
+  }
+  m.band.cyl(0.13, 0.18, 0.26, opts.general ? C.ink : C.trieuCloth, 0, y0 + 0.3, z0, undefined, 8);
+  p.cyl(0.18, 0.18, 0.04, opts.general ? C.gold : C.trieuRed, 0, y0 + 0.18, z0, undefined, 8);
+  p.cyl(0.1, 0.12, 0.14, opts.general ? C.gold : C.trieuRed, 0, y0 + 0.47, z0, undefined, 8);
+  for (const s of [-1, 1]) p.cyl(0.035, 0.035, 0.22, C.trieuCloth, s * 0.15, y0 + 0.4, z0, [0, 0, s * 0.35], 6);
+  p.sphere(0.21, C.skin, 0, y0 + 0.7, z0, [1, 0.95, 0.95], 12);
+  for (const s of [-1, 1]) p.sphere(0.028, C.ink, s * 0.075, y0 + 0.69, z0 + 0.18, [1, 1.4, 0.5], 6);
+  if (opts.general) {
+    // Triệu Đà già: râu bạc dài, mày bạc, mũ đen có hai cánh chuồn viền vàng.
+    p.cone(0.12, 0.36, C.beard, 0, y0 + 0.5, z0 + 0.15, [Math.PI + 0.25, 0, 0], 7);
+    for (const s of [-1, 1]) p.box(0.09, 0.025, 0.02, C.beard, s * 0.08, y0 + 0.77, z0 + 0.19, [0, 0, -s * 0.3]);
+    p.cyl(0.2, 0.23, 0.24, C.ink, 0, y0 + 0.9, z0 - 0.02, undefined, 10);
+    p.cyl(0.235, 0.235, 0.04, C.gold, 0, y0 + 0.8, z0 - 0.02, undefined, 10);
+    for (const s of [-1, 1]) {
+      p.box(0.34, 0.12, 0.02, C.ink, s * 0.36, y0 + 0.96, z0 - 0.12, [0, 0, s * 0.15]);
+      p.box(0.34, 0.025, 0.025, C.gold, s * 0.36, y0 + 1.02, z0 - 0.11, [0, 0, s * 0.15]);
+      p.box(0.12, 0.3, 0.05, C.ink, s * 0.22, y0 + 0.5, z0, [0, 0, s * 0.2]);
+    }
+    p.box(0.5, 0.5, 0.04, C.trieuRed, 0, y0 + 0.4, z0 - 0.2, [0.2, 0, 0]);
+  } else {
+    // Mũ vải đen có búi tóc ở đỉnh, dải buộc đỏ.
+    p.sphere(0.22, C.trieuCloth, 0, y0 + 0.77, z0 - 0.02, [1, 0.55, 1], 10);
+    p.sphere(0.08, C.trieuCloth, 0, y0 + 0.92, z0 - 0.04, [1, 1, 1], 8);
+    p.box(0.04, 0.16, 0.02, C.trieuRed, 0.08, y0 + 0.72, z0 - 0.2, [0.2, 0, 0.2]);
+  }
+}
+
+/**
+ * Lính trong trận của chương 3: yêu tinh núi Thất Diệu và quân Triệu Đà.
+ * Trả về null nếu không phải giặc chương 3.
+ */
+export function makeChapter3Foe(kind: FighterKind): THREE.Group | null {
+  const m = new ToonModel(inkThin);
+  const p = m.plain;
+  if (kind === 'quyNui') mountainDemon(m);
+  else if (kind === 'maTroi') ghostFire(m);
+  else if (kind === 'hoTinh') tigerDemon(m);
+  else if (kind === 'gaTrang') whiteRooster(m);
+  else if (kind === 'linhTrieu') {
+    trieuSoldier(m, 0, 0);
+    // Khiên chữ nhật sơn đỏ có viền đen, kiếm thẳng.
+    p.box(0.36, 0.5, 0.04, C.trieuRed, -0.2, 0.42, 0.18, [0, 0.35, 0]);
+    p.box(0.26, 0.38, 0.045, C.trieuCloth, -0.2, 0.42, 0.18, [0, 0.35, 0]);
+    p.box(0.035, 0.6, 0.02, C.iron, 0.24, 0.62, 0.12, [0.2, 0, 0]);
+    p.box(0.12, 0.03, 0.04, C.bronze, 0.24, 0.33, 0.07, [0.2, 0, 0]);
+  } else if (kind === 'noTrieu') {
+    trieuSoldier(m, 0, 0);
+    const bow = new ToonModel(inkThin);
+    crossbowParts(bow, false, 0.85);
+    const g = m.group();
+    const b = bow.group();
+    b.position.set(0.05, 0.46, 0.22);
+    g.add(b);
+    return g;
+  } else if (kind === 'kyBinh') {
+    horseBody(m, C.horse);
+    trieuSoldier(m, 0.92, -0.08, { mounted: true });
+    p.cyl(0.018, 0.018, 1.5, C.woodDark, 0.24, 1.5, 0.2, [0.5, 0, 0], 5);
+    p.cone(0.05, 0.22, C.iron, 0.24, 2.18, 0.58, [0.5, 0, 0], 4);
+    p.box(0.2, 0.12, 0.02, C.trieuRed, 0.24, 2.0, 0.44, [0.5, 0, 0]);
+  } else if (kind === 'trieuDa') {
+    horseBody(m, C.horseBlack);
+    p.box(0.08, 0.2, 0.3, C.gold, 0, 1.33, 0.72, [0.35, 0, 0]);
+    trieuSoldier(m, 0.92, -0.08, { mounted: true, general: true });
+    // Kiếm dài giơ cao.
+    p.box(0.045, 0.9, 0.02, C.iron, 0.3, 1.9, 0.0, [-0.3, 0, -0.25]);
+    p.box(0.16, 0.035, 0.05, C.gold, 0.25, 1.46, 0.12, [-0.3, 0, -0.25]);
+  } else return null;
+  return m.group();
+}
+
+// ---------- Thành Cổ Loa ----------
+
+/** Một đoạn thành Cổ Loa, tọa độ thế giới của tâm ô và mặt đất dưới chân. */
+export interface CitadelSpot {
+  x: number;
+  y: number;
+  z: number;
+  seed: number;
+  damaged: boolean;
+}
+
+/**
+ * Đoạn thành Cổ Loa: đất nện ba lớp cao gần gấp rưỡi thành đất của lũy, chân rộng trọn ô, mặt thành thu nhỏ;
+ * bốn góc có ụ đất, giữa có cọc gỗ. `post`: có thêm chòi canh nhỏ lợp tranh trên mặt thành.
+ */
+function citadelWall(post: boolean): THREE.Mesh {
+  const b = new ShapeBuilder(false, true);
+  b.box(1.02, 0.5, 1.02, C.earthDark, 0, 0.25, 0);
+  b.box(0.92, 0.5, 0.92, C.earth, 0, 0.75, 0);
+  b.box(0.82, 0.36, 0.82, C.earthDark, 0, 1.18, 0);
+  b.box(0.74, 0.04, 0.74, C.grass[1], 0, 1.37, 0);
+  for (const x of [-0.32, 0.32]) for (const z of [-0.32, 0.32]) b.box(0.16, 0.2, 0.16, C.earth, x, 1.46, z);
+  if (post) {
+    for (const x of [-0.2, 0.2]) for (const z of [-0.2, 0.2]) b.cyl(0.03, 0.03, 0.55, C.woodDark, x, 1.65, z, undefined, 5);
+    b.box(0.5, 0.05, 0.5, C.wood, 0, 1.6, 0);
+    b.cone(0.42, 0.34, C.thatch, 0, 2.07, 0, undefined, 4);
+  } else {
+    for (const x of [-0.12, 0.12]) b.cone(0.04, 0.42, C.woodLight, x, 1.58, 0, undefined, 4);
+  }
+  return b.mesh(toon);
+}
+
+/** Đoạn thành bị phá: đống đất sạt thấp, vài tảng đất lăn ra. */
+function citadelRubble(): THREE.Mesh {
+  const b = new ShapeBuilder(false, true);
+  b.box(1.0, 0.24, 1.0, C.earthDark, 0, 0.12, 0);
+  b.box(0.7, 0.2, 0.6, C.earth, -0.1, 0.32, 0.05, [0, 0.3, 0.15]);
+  b.box(0.3, 0.2, 0.3, C.earthDark, 0.3, 0.28, -0.25, [0.3, 0.6, 0]);
+  b.cyl(0.03, 0.03, 0.5, C.woodLight, -0.2, 0.36, -0.2, [0, 0.5, Math.PI / 2 - 0.3], 4);
+  return b.mesh(toon);
+}
+
+let cachedCitadel: THREE.Mesh[] | null = null;
+
+/** Dựng toàn bộ thành Cổ Loa trong kinh đô. Mọi đoạn cùng hướng để ụ góc thẳng hàng thành răng cưa. */
+export function buildCitadel(spots: CitadelSpot[]): THREE.Object3D {
+  cachedCitadel ??= [citadelWall(false), citadelWall(true), citadelRubble()];
+  return instanceTemplates(
+    cachedCitadel,
+    spots.map((s) => ({ t: s.damaged ? 2 : s.seed % 7 === 0 ? 1 : 0, x: s.x, y: s.y, z: s.z, s: 1, ry: 0 })),
+    treeOutline,
+  );
+}
+
+/** Cây nỏ đồng lớn đặt trên giá gỗ, như ở sân Đền Cổ Loa. Gốc ở chân giá. */
+export function makeCrossbowStand(): THREE.Group {
+  const m = new ToonModel(inkThin);
+  for (const s of [-1, 1]) m.plain.cyl(0.04, 0.05, 0.55, C.woodDark, s * 0.18, 0.27, 0, [0, 0, s * 0.25], 5);
+  m.plain.box(0.5, 0.06, 0.08, C.wood, 0, 0.52, 0);
+  const g = m.group();
+  const bow = new ToonModel(inkThin);
+  crossbowParts(bow, true, 1.4);
+  const b = bow.group();
+  b.position.set(0, 0.62, 0.1);
+  b.rotation.x = -0.25;
+  g.add(b);
   return g;
 }

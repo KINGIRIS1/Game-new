@@ -1,4 +1,4 @@
-# Thời đại Văn Lang: thiết kế chương 1 và chương 2
+# Thời đại Văn Lang: thiết kế chương 1, chương 2 và chương 3
 
 Tài liệu này ghi lại các quyết định đã chốt với chủ dự án. Khi cần đổi một quyết định, hãy hỏi chủ dự án trước rồi sửa tài liệu này cùng lúc với code.
 
@@ -6,9 +6,9 @@ Tài liệu này ghi lại các quyết định đã chốt với chủ dự án
 
 - Game xây dựng chiến thuật cho một người chơi, chạy trên trình duyệt và ưu tiên điện thoại. Đăng miễn phí lên GitHub Pages. Làm cho vui, không kiếm tiền.
 - Chỉ có tiếng Việt. Mọi chữ hiển thị nằm trong `src/text/vi.ts`, tách khỏi code để sau này dịch.
-- Người chơi là **Vua Hùng**, xây dựng **kinh đô Phong Châu**. Lạc hầu hướng dẫn, Lạc tướng cầm quân, Bồ chính coi làng.
+- Người chơi là **Vua Hùng**, xây dựng **kinh đô Phong Châu**. Lạc hầu hướng dẫn, Lạc tướng cầm quân, Bồ chính coi làng. Từ chương 3, Vua Hùng truyền ngôi cho Thục Phán; người chơi trị vì tiếp trên cùng kinh đô với tư cách **An Dương Vương**.
 - Học các cơ chế quen thuộc của thể loại xây dựng chiến thuật (như Clash of Clans, Rise of Kingdoms), nhưng luật chơi, nội dung và hình ảnh là của riêng game này, không sao chép game nào.
-- Chương 1 dài khoảng 30–60 phút chơi. Chương 2 nối tiếp ngay trên cùng kinh đô.
+- Chương 1 dài khoảng 30–60 phút chơi. Chương 2 và chương 3 nối tiếp ngay trên cùng kinh đô.
 
 ## Hình ảnh, âm thanh, công nghệ
 
@@ -96,6 +96,8 @@ Tài liệu này ghi lại các quyết định đã chốt với chủ dự án
 | Đền Phù Đổng | Có sau khi kết chương. Thêm 10% sản lượng mọi tài nguyên, thêm 10% máu và sức đánh cho quân ta |
 | Đê đất → Kè đá | Có từ chương 2. Chặn nước lũ tràn từ sông vào |
 | Đền Tản Viên | Có sau khi kết chương 2. Lũ dâng thấp đi một bậc |
+| Thành Cổ Loa | Có từ chương 3. Đoạn thành đất nện cao, chắc; đắp nhiều vòng quanh Điện |
+| Đền Cổ Loa | Có sau khi kết chương 3. Chòi canh bắn mạnh gấp rưỡi, xa thêm 1 ô |
 
 ## Quân đội và trận đánh
 
@@ -267,7 +269,7 @@ Tài liệu này ghi lại các quyết định đã chốt với chủ dự án
   - Từ đó Gióng **hiển linh** (có vòng hào quang vàng sau lưng, tia như ngôi sao giữa mặt trống đồng, xoay chậm), vẫn ra trận khi đánh lại phó bản và khi giữ kinh đô.
 - Bản lưu lên phiên bản 5. Bản lưu cũ có thêm phần Gióng; người chơi cũ không phải xem lại đoạn mở đầu, nhưng vẫn được kể các đoạn về Gióng.
 - Không có cơ chế chơi lại từ đầu (prestige). Tiến trình liên tục theo chương.
-- Thứ tự theo truyền thuyết: Gióng (đời Hùng Vương thứ 6) có trước Sơn Tinh (đời thứ 18). Chương 2 là Sơn Tinh, Thủy Tinh và lũ.
+- Thứ tự theo truyền thuyết: Gióng (đời Hùng Vương thứ 6) có trước Sơn Tinh (đời thứ 18), rồi tới An Dương Vương (sau đời thứ 18). Chương 2 là Sơn Tinh, Thủy Tinh và lũ; chương 3 là An Dương Vương, thành Cổ Loa và nỏ thần.
 
 ## Chương 2: Sơn Tinh, Thủy Tinh (đã làm)
 
@@ -417,6 +419,122 @@ Vòng khắc chế của quân ta giữ nguyên: giáo binh thắng quân nặng
 - Thêm độ cao từng ô, Sơn Tinh, mùa lũ. Bản lưu cũ được tính độ cao tự nhiên rồi đắp móng công trình cũ.
 - Người chơi đã nhận thưởng nhiệm vụ Đền Phù Đổng thì vào thẳng chương 2.
 
+## Chương 3: An Dương Vương, thành Cổ Loa, nỏ thần (đã làm)
+
+Chủ dự án đã chốt:
+- **chương 3 kể truyền thuyết An Dương Vương**, nối ngay sau Hùng Vương thứ 18 cho đúng thứ tự truyền thuyết. Chủ dự án có hỏi truyện Bánh chưng bánh giầy; đã xem và thấy truyện không có đánh nhau (không giặc, không trùm, Lang Liêu không phải tướng), xảy ra đời Hùng Vương thứ 6 (trước chương 2), và chương 2 đã có lễ vật bánh chưng. Bánh chưng bánh giầy để dành làm hội Tết gói bánh, thiên về kinh tế, ở bản sau;
+- ba điểm còn lại chủ dự án để tùy, nên theo phương án khuyên dùng:
+  - **kết chương ở chiến thắng**: nỏ thần đánh tan Triệu Đà. Chuyện Mỵ Châu, Trọng Thủy để dành cho chương sau;
+  - **An Dương Vương cầm nỏ ra trận**, là tướng bắn xa đầu tiên;
+  - **cơ chế mới ở kinh đô là đắp thành Cổ Loa** nhiều vòng quanh Điện, yêu tinh núi Thất Diệu kéo về phá thành.
+
+### Cốt truyện
+
+1. **Cột đá thề.** Hùng Vương thứ 18 già, không có con trai nối ngôi, truyền ngôi cho Thục Phán, thủ lĩnh Âu Việt. Thục Phán dựng cột đá thề giữ đền thờ các vua Hùng, lên ngôi An Dương Vương, đặt tên nước Âu Lạc, cho đắp thành Cổ Loa. Thành đắp tới đâu lở tới đó, vì yêu tinh núi Thất Diệu đêm đêm kéo về phá.
+2. **Rùa Vàng hiện lên.** Diệt được con gà trắng nghìn năm, đầu sỏ lũ yêu tinh, thì Rùa Vàng (sứ Thanh Giang) nổi lên. Từ đó thành không đổ nữa. Rùa Vàng hứa: thành đủ ba vòng sẽ để lại một vật giữ nước.
+3. **Nỏ thần.** Thành xong, Rùa Vàng tặng vuốt làm lẫy nỏ; Cao Lỗ chế nỏ thần. Triệu Đà ở nước Nam Việt vẫn cất quân sang đánh.
+4. **Rùa Vàng hộ quân.** Giữa chương, Rùa Vàng hứa che chở quân ta khi núng thế.
+5. **Triệu Đà thua chạy.** Dưới chân thành Cổ Loa, nỏ thần bắn một phát giặc chết hàng trăm. Triệu Đà thua chạy, xin giảng hòa. Vua lập Đền Cổ Loa. Câu cuối nhắc chuyện Mỵ Châu, Trọng Thủy "là chuyện về sau".
+
+- Mỗi đoạn kể đúng một lần, theo thứ tự, sau các đoạn của chương 2:
+  - "Cột đá thề": nhận thưởng nhiệm vụ cuối chương 2 (Đền Tản Viên);
+  - "Rùa Vàng hiện lên": thắng màn 19 lần đầu;
+  - "Nỏ thần": chế xong nỏ thần;
+  - "Rùa Vàng hộ quân": thắng màn 22 lần đầu;
+  - "Triệu Đà thua chạy": thắng màn 24 lần đầu.
+- Người nói mới: Thục Phán, An Dương Vương, Rùa Vàng, Cao Lỗ, Triệu Đà.
+
+### Thành Cổ Loa
+
+- Thẻ **Thành Cổ Loa** trong bảng Xây dựng (có từ chương 3): chạm từng ô như lũy, đê. Mỗi đoạn 1×1 ô, giá 30 đất đá, 10 vỏ ốc, 1000 máu, tối đa 150 đoạn, không sợ nước lũ, không đắp nền được.
+- **Đắp đè lên lũy tre** (hay thành đất) được: lũy cũ được dỡ đi, chỉ trả giá thành.
+- **Số vòng thành** = số đoạn thành còn nguyên ít nhất mà giặc phải phá qua để đi từ bìa rừng tới Điện:
+  - giặc đi tám hướng như khi tìm đường thật, nên các đoạn thành phải nối liền theo cạnh ô; nối chéo góc là hở;
+  - giặc trên bộ không lội qua sông, nên vòng thành dựa vào bờ sông cũng kín;
+  - đoạn thành bị phá thì vòng ấy hở;
+  - thành dày hai lớp liền nhau cũng tính là hai vòng.
+- Chip 🏰 trên thanh trên ghi số vòng (x/3); bảng Điện, bảng một đoạn thành và bảng An Dương Vương cũng ghi. Khi đang đắp thành, dòng gợi ý báo số vòng hiện có.
+- Giặc phải phá thành mới qua (chi phí tìm đường 45, cao hơn mọi loại tường khác).
+
+### Giặc chương 3
+
+| Loại | Máu | Sát thương | Ghi chú | Quân ta khắc chế |
+|---|---|---|---|---|
+| Quỷ núi | 90 | 11 | yêu tinh, cầm chày đá | cung thủ |
+| Ma trơi | 55 | 10 | yêu tinh, phun lửa xanh xa 3,6 ô | voi chiến |
+| Hổ tinh | 280 | 23 | yêu tinh, vồ nhanh, gấp đôi sát thương lên cung thủ ta | giáo binh |
+| Gà trắng nghìn năm (trùm màn 19) | 1300 | 30 | đầu sỏ yêu tinh | |
+| Lính khiên Triệu | 95 | 11 | | cung thủ |
+| Nỏ thủ Triệu | 55 | 11 | bắn nỏ xa 3,8 ô | voi chiến |
+| Kỵ binh Triệu | 290 | 24 | lao nhanh, gấp đôi sát thương lên cung thủ ta | giáo binh |
+| Triệu Đà (trùm màn 24) | 1700 | 34 | cưỡi ngựa | |
+
+### Giữ kinh đô ở chương 3
+
+- Giặc trên bộ và mùa lũ **thay phiên nhau**: đợt trước là giặc trên bộ thì đợt này là lũ, và ngược lại. Lịch vẫn 15 phút một đợt, trinh sát báo trước 60 giây.
+  - Từ khi vào chương 3 tới khi thắng màn 19: giặc trên bộ là **đêm yêu tinh**. Đợt đầu tới 3 phút sau khi vào chương 3.
+  - Sau màn 19, chưa có nỏ thần: chỉ có lũ.
+  - Từ khi có nỏ thần: giặc trên bộ là **quân Triệu Đà**, đợt đầu tới 3 phút sau khi chế xong nỏ.
+- **Đêm yêu tinh** thứ n: `9 + n` quỷ núi (tối đa 18), `4 + n` ma trơi (tối đa 12), `2 + ⌊n/2⌋` hổ tinh (tối đa 6), máu ×(1,6 + 0,12 × (n − 1)). Yêu tinh tới từ bìa rừng, **nhắm phá đoạn thành Cổ Loa gần nhất trước tiên**; hết thành mới tới kho rồi Điện. Trời tối như đêm.
+- **Quân Triệu** đợt thứ n: `10 + n` lính khiên (tối đa 18), `5 + n` nỏ thủ (tối đa 12), `2 + ⌊(n + 1)/2⌋` kỵ binh (tối đa 7), máu ×(1,9 + 0,12 × (n − 1)). Tới từ bìa rừng, nhắm kho rồi Điện như giặc Ân.
+- Tướng: đêm yêu tinh và quân Triệu có An Dương Vương (chưa có thì Sơn Tinh hiển linh, rồi Gióng); mùa lũ vẫn có Sơn Tinh.
+- Nút "Nghênh chiến ngay" ở doanh trại gọi đợt kế tiếp tới sớm, dù là giặc hay lũ.
+- Độ khó đo bằng test: đêm yêu tinh đầu, và đợt quân Triệu đầu, đều bị quân mẫu, tướng và 5 chòi canh diệt hết.
+
+### An Dương Vương và nỏ thần
+
+- Chạm vào An Dương Vương đứng trước Điện, vào chip 🏰/🏹 trên thanh trên, hoặc nút trong bảng Điện, để mở bảng An Dương Vương: số vòng thành, ba bước để có nỏ thần, nút chế nỏ, kỹ năng.
+- **Chế nỏ thần** (Cao Lỗ lấy vuốt Rùa Vàng làm lẫy) cần:
+  - đã diệt yêu tinh (thắng màn 19);
+  - thành Cổ Loa đủ **3 vòng** quanh Điện lúc chế;
+  - lò rèn còn nguyên, cấp 5;
+  - 400 sắt, 600 đất đá, 600 vỏ ốc.
+- Có nỏ thần thì **An Dương Vương cùng ra trận**:
+  - mỗi trận một tướng: trận chương 3 (phó bản chương 3, đêm yêu tinh, quân Triệu) có An Dương Vương; chưa có hay đang kiệt sức thì Sơn Tinh hiển linh, rồi Gióng. Trận chương 2 có Sơn Tinh, trận chương 1 có Gióng như cũ;
+  - 620 máu (ngoài bãi bền gấp 1,6), 19 sát thương, bắn xa 4,2 ô; mũi tên găm thêm nửa sát thương lên giặc quanh mục tiêu trong 1,3 ô như đòn của các tướng khác;
+  - ngoài bãi, ngài đứng giữa, lùi sau hàng đầu quân ta 1,8 ô (tướng bắn xa);
+  - hết máu thì kiệt sức, nghỉ 2 phút chơi, không tính vào lính tử trận.
+- **Kỹ năng**:
+  - **Nỏ thần** 🏹: một phát tên bay ra hóa muôn mũi, **mọi kẻ địch** còn đứng trên bãi (hay trong kinh đô) mất 80 máu. Hồi 18 giây;
+  - **Rùa Vàng** 🐢: có từ khi thắng màn 22. Quân ta hồi 30% máu tối đa, và trong 6 giây chỉ chịu nửa sát thương. Hồi 24 giây;
+  - ngoài bãi, sát thương kỹ năng nhân 1,6 lần như của các tướng khác.
+- Cân bằng: ban đầu Nỏ thần chỉ 28 máu và An Dương Vương 480 máu đứng đầu hàng thì thua cả năm màn quân Triệu, yếu hơn hẳn Sơn Tinh hiển linh. Đã tăng như trên để ngài mạnh xấp xỉ Sơn Tinh hiển linh, vì trận chương 3 ưu tiên ngài ra trận.
+- **Kết chương 3**: thắng màn 24 thì Rùa Vàng khổng lồ nổi lên dưới chân An Dương Vương ngay trên bãi chiến, bảng kết quả hiện sau đó.
+  - Mở **Đền Cổ Loa** (3×3, dựng một lần, 2500 gạo, 2500 vỏ ốc, 2500 đất đá, 700 sắt). Đền còn nguyên thì chòi canh bắn mạnh gấp rưỡi và xa thêm 1 ô.
+  - An Dương Vương vẫn đứng trước Điện, vẫn cầm nỏ ra trận. Quân Triệu và mùa lũ vẫn thay phiên tới.
+
+### Phó bản chương 3: giữ thành Cổ Loa
+
+- Bản đồ phó bản có thêm thẻ Chương 3, mở khi đã sang chương 3. Bản đồ vẽ ba mỏm núi Thất Diệu, núi Tiên Du, sông Đuống và ba vòng thành Cổ Loa.
+
+  | Màn | Tên | Quân giặc | Máu | Ghi chú |
+  |---|---|---|---|---|
+  | 17 | Chân núi Thất Diệu | 12 quỷ núi, 7 ma trơi, 3 hổ tinh | ×2,6 | |
+  | 18 | Rừng ma | 13 quỷ núi, 8 ma trơi, 4 hổ tinh | ×2,5 | |
+  | 19 | Đỉnh Thất Diệu | 12 quỷ núi, 7 ma trơi, 3 hổ tinh, gà trắng nghìn năm | ×2,4 | Rùa Vàng hiện lên |
+  | 20 | Rừng biên ải | 14 lính khiên, 8 nỏ thủ, 4 kỵ binh | ×2,3 | cần An Dương Vương |
+  | 21 | Bến sông Đuống | 14 lính khiên, 9 nỏ thủ, 4 kỵ binh | ×2,0 | cần An Dương Vương |
+  | 22 | Núi Tiên Du | 15 lính khiên, 9 nỏ thủ, 4 kỵ binh | ×2,1 | cần An Dương Vương, mở Rùa Vàng |
+  | 23 | Làng ven Cổ Loa | 14 lính khiên, 9 nỏ thủ, 5 kỵ binh | ×2,3 | cần An Dương Vương |
+  | 24 | Chân thành Cổ Loa | 13 lính khiên, 9 nỏ thủ, 4 kỵ binh, Triệu Đà | ×2,0 | cần An Dương Vương |
+
+  - Mọi màn cần Điện cấp 5. Thưởng lần đầu từ 2600 gạo, 1800 vỏ ốc, 1600 đất đá, 400 sắt (màn 17) tới 5000 gạo, 4000 vỏ ốc, 3500 đất đá, 900 sắt (màn 24). Đánh lại được 30%.
+  - Mỗi màn tối đa 28 giặc, cộng quân mẫu và tướng không quá 60 người trên bãi.
+- Bãi chiến mới: **núi Thất Diệu** (bảy mỏm núi nhọn sau lưng giặc, trời tím đêm, ma trơi lập lòe) cho màn 17, 19; **thành Cổ Loa** (ba vòng thành đất uốn xoáy, có hào nước, sau lưng quân ta) cho màn 24. Màn 18, 20 dùng rừng; 21 bến sông; 22 chân núi; 23 làng.
+- Cân bằng đo bằng test với quân mẫu 14 giáo, 12 cung, 4 voi, có Đền Phù Đổng (`src/game/chuong3.test.ts`):
+  - màn 17–19: có Sơn Tinh hiển linh bấm kỹ năng thì thắng; nửa quân, hay không có tướng, thì thua;
+  - màn 20–24: có An Dương Vương bấm kỹ năng thì thắng trong 90 giây; không tướng, hay nửa quân, thì thua;
+  - Triệu Đà không bấm kỹ năng thì thua.
+
+### Hướng dẫn của Lạc hầu chương 3
+
+10 nhiệm vụ nối sau 30 nhiệm vụ của hai chương trước: đắp 1 vòng thành → qua màn 17 → đắp 2 vòng thành → qua màn 19 → đắp 3 vòng thành → chế nỏ thần → đánh lui một đợt quân Triệu ở kinh đô → qua màn 22 → phá Triệu Đà (màn 24) → dựng Đền Cổ Loa. Không nhiệm vụ nào đòi đêm yêu tinh, vì thắng màn 19 sớm thì yêu tinh thôi tới.
+
+### Bản lưu phiên bản 7
+
+- Thêm An Dương Vương (đã có nỏ thần chưa, nghỉ tới lúc nào, đã có Rùa Vàng chưa, đã kết chương chưa) và số đêm yêu tinh, số đợt quân Triệu đã đánh và đã giữ được.
+- Bản lưu chương 2 được nâng lên, chưa có gì của chương 3.
+
 ## Nhịp chơi và lưu game
 
 - Nhịp chơi lai: mỗi lần mở game là một phiên ra quyết định ngắn.
@@ -446,3 +564,5 @@ Vòng khắc chế của quân ta giữ nguyên: giáo binh thắng quân nặng
 3. **Lát cắt 3a** (đã làm): phó bản màn 1–4, bãi chiến riêng, xếp quân theo hàng, Lạc tướng đánh Trống trận, phó tướng Ân.
    **Lát cắt 3b** (đã làm): Thánh Gióng (góp gạo, rèn đồ, hai kỹ năng, kiệt sức), màn 5–8, đại tướng Ân, cốt truyện, kết chương, Đền Phù Đổng.
 4. **Chương 2** (đã làm): độ cao ô đất, đắp đất, đắp nền, đê và kè đá, mùa lũ kèm thủy quái, lễ vật thách cưới, Sơn Tinh ra trận với Bốc đồi và Dời non, phó bản màn 9–16 với thuồng luồng và Thủy Tinh, cốt truyện, kết chương, Đền Tản Viên.
+5. **Chương 3** (đã làm): thành Cổ Loa và số vòng thành, đêm yêu tinh phá thành, quân Triệu Đà xen với mùa lũ, An Dương Vương cầm nỏ ra trận với Nỏ thần và Rùa Vàng, phó bản màn 17–24 với gà trắng nghìn năm và Triệu Đà, cốt truyện, kết chương, Đền Cổ Loa.
+6. **Để sau**: hội Tết gói bánh chưng bánh giầy (thiên về kinh tế); chương về Mỵ Châu, Trọng Thủy.

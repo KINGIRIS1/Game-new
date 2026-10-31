@@ -1,9 +1,10 @@
 // Chương 2: Sơn Tinh, Thủy Tinh. Vua Hùng thứ mười tám kén rể cho Mị Nương, thách cưới năm lễ vật.
 // Đủ lễ vật thì Sơn Tinh đến trước rước Mị Nương, cùng ra trận; Thủy Tinh nổi giận dâng nước đánh kinh đô.
-// Kèm việc chọn tướng cho từng trận: mỗi trận một tướng, Gióng hay Sơn Tinh.
+// Kèm việc chọn tướng cho từng trận: mỗi trận một tướng, Gióng, Sơn Tinh hay An Dương Vương.
 
 import type { Battle, HeroSetup } from './battle';
-import { CH2_QUEST_START, GIFTS, GIFT_IDS, GIONG_REST_MS, SON_REST_MS, type GiftId } from './defs';
+import { advSetup } from './coLoa';
+import { ADV_REST_MS, CH2_QUEST_START, GIFTS, GIFT_IDS, GIONG_REST_MS, SON_REST_MS, type Chapter, type GiftId } from './defs';
 import { canAfford, pay, scheduleFirstFlood, type FailReason, type GameState, type Result, type SonState } from './game';
 import { heroSetup } from './giong';
 
@@ -28,11 +29,17 @@ export function sonSetup(s: GameState): HeroSetup | null {
 }
 
 /**
- * Tướng ra trận. Trận chương 2 (phó bản chương 2, mùa lũ) có Sơn Tinh khi Sơn Tinh đã rước Mị Nương và không kiệt sức;
- * còn lại có Gióng nếu Gióng đã thành tráng sĩ và không kiệt sức.
+ * Tướng ra trận. Trận chương 3 (phó bản chương 3, yêu tinh, quân Triệu) có An Dương Vương khi đã có nỏ thần
+ * và không kiệt sức. Trận chương 2 (phó bản chương 2, mùa lũ), hay trận chương 3 chưa có An Dương Vương,
+ * có Sơn Tinh khi Sơn Tinh đã rước Mị Nương và không kiệt sức. Còn lại có Gióng nếu Gióng đã thành tráng sĩ
+ * và không kiệt sức.
  */
-export function heroFor(s: GameState, chapter: 1 | 2): HeroSetup | null {
-  if (chapter === 2) {
+export function heroFor(s: GameState, chapter: Chapter): HeroSetup | null {
+  if (chapter === 3) {
+    const adv = advSetup(s);
+    if (adv) return adv;
+  }
+  if (chapter >= 2) {
     const son = sonSetup(s);
     if (son) return son;
   }
@@ -42,7 +49,8 @@ export function heroFor(s: GameState, chapter: 1 | 2): HeroSetup | null {
 /** Sau trận: tướng đã kiệt sức thì phải nghỉ một lúc mới ra trận lại được. */
 export function restAfter(s: GameState, battle: Battle): void {
   if (!battle.hero?.down) return;
-  if (battle.hero.kind === 'sonTinh') s.son.restUntil = s.clock + SON_REST_MS;
+  if (battle.hero.kind === 'anDuong') s.adv.restUntil = s.clock + ADV_REST_MS;
+  else if (battle.hero.kind === 'sonTinh') s.son.restUntil = s.clock + SON_REST_MS;
   else s.giong.restUntil = s.clock + GIONG_REST_MS;
 }
 
