@@ -36,6 +36,7 @@ import {
   buildWalls,
   makeAnDuong,
   makeBoat,
+  makeTradeBoat,
   makeGiong,
   makeRuaVang,
   makeSonTinh,
@@ -160,27 +161,34 @@ interface BuildingView {
 }
 
 const SPOTS: Partial<Record<BuildingType, Spot[]>> = {
+  // Dân rải khắp ruộng, tránh chòi canh, guồng nước, trâu và miếu ở các góc.
   ruong: [
-    { job: 'nong', x: -0.6, y: 0.06, z: -0.45, ry: 0.4 },
-    { job: 'nong', x: 0.45, y: 0.06, z: -0.4, ry: -0.3 },
-    { job: 'nong', x: -0.35, y: 0.06, z: 0.45, ry: 0.9 },
-    { job: 'nong', x: 0.35, y: 0.06, z: 0.2, ry: -0.8 },
+    { job: 'nong', x: -0.35, y: 0.06, z: -0.3, ry: 0.4 },
+    { job: 'nong', x: 0.7, y: 0.06, z: -0.25, ry: -0.3 },
+    { job: 'nong', x: -0.8, y: 0.06, z: 0.3, ry: 0.9 },
+    { job: 'nong', x: 0.2, y: 0.06, z: 0.45, ry: -0.8 },
+    { job: 'nong', x: -0.25, y: 0.06, z: 1.05, ry: 0.2 },
   ],
   ben: [
     { job: 'buon', x: -0.45, y: 0.5, z: 0.05, ry: 0, walk: 0.3 },
     { job: 'buon', x: 0.45, y: 0.5, z: 0.0, ry: 0, walk: 0.25 },
     { job: 'buon', x: 0.55, y: 0.38, z: 1.3, ry: 0, walk: 0 },
+    { job: 'buon', x: -0.2, y: 0.5, z: -0.7, ry: 0, walk: 0.2 },
   ],
+  // Camera nhìn chéo theo x + z, nên mỗi thợ đá đứng một cột x − z riêng để khỏi che nhau;
+  // tránh xe đá, chồng đá, tời và lò nung gạch.
   baiDa: [
-    { job: 'thoDa', x: -0.35, y: 0.1, z: 0.4, ry: 0.6 },
-    { job: 'thoDa', x: 0.3, y: 0.1, z: 0.15, ry: -0.5 },
-    { job: 'thoDa', x: -0.1, y: 0.1, z: -0.15, ry: 2.6 },
-    { job: 'thoDa', x: 0.65, y: 0.1, z: -0.25, ry: -2 },
+    { job: 'thoDa', x: 0.15, y: 0.1, z: 0.15, ry: 0.6 },
+    { job: 'thoDa', x: 0.65, y: 0.1, z: 0.1, ry: -0.5 },
+    { job: 'thoDa', x: -0.55, y: 0.1, z: 0.0, ry: 2.6 },
+    { job: 'thoDa', x: -0.75, y: 0.1, z: 0.35, ry: -2 },
+    { job: 'thoDa', x: 0.92, y: 0.1, z: -0.18, ry: 2.8 },
   ],
   loRen: [
     { job: 'thoRen', x: 0.45, y: 0.08, z: 0.82, ry: Math.PI },
     { job: 'thoRen', x: -0.15, y: 0.08, z: 0.3, ry: -2.4 },
     { job: 'thoRen', x: -0.6, y: 0.08, z: 0.55, ry: 2.6 },
+    { job: 'thoRen', x: 0.62, y: 0.08, z: -0.1, ry: -1.6 },
   ],
   kho: [{ job: 'giuKho', x: -0.1, y: 0.06, z: 0.7, ry: 0, walk: 0.5 }],
   nhaSan: [
@@ -693,6 +701,14 @@ export class World {
       boat.position.set(-0.15, WATER_Y - 0.02 - topY(ground), 1.75);
       boat.userData.dock = true;
       group.add(boat);
+      if (b.level >= 6) {
+        // Bến cấp 6 trở lên có thuyền buôn lớn neo cạnh cầu tàu.
+        const trader = makeTradeBoat();
+        trader.position.set(1.35, WATER_Y - 0.02 - topY(ground), 2.5);
+        trader.rotation.y = Math.PI / 2;
+        trader.userData.dock = true;
+        group.add(trader);
+      }
     }
     if (b.damaged) {
       // Công trình bị phá: nghiêng đổ, khói đen bốc lên.
@@ -823,10 +839,15 @@ export class World {
   }
 
   /** Chỗ đứng trước Điện, bên phải bậc lên: nơi Gióng, rồi Sơn Tinh đứng. */
+  /**
+   * Chỗ tướng đứng trước Điện, bên phải bậc lên. Từ cấp 6 Điện có lầu trống hai bên thềm,
+   * nên tướng ra đứng hẳn bên phải nền Điện để khỏi che lầu trống bên phải.
+   */
   private heroSpot(dien: Building): { x: number; y: number; z: number } {
-    const tx = Math.min(dien.x + 3, RIVER_START - 1);
-    const tz = Math.min(dien.z + 4, RIVER_START - 1);
-    return { x: wx(dien.x) + 3.6, y: this.groundY(tx, tz), z: wz(dien.z) + 4.5 };
+    const side = dien.level >= 6;
+    const tx = Math.min(dien.x + (side ? 4 : 3), RIVER_START - 1);
+    const tz = Math.min(dien.z + (side ? 3 : 4), RIVER_START - 1);
+    return { x: wx(dien.x) + (side ? 4.7 : 3.6), y: this.groundY(tx, tz), z: wz(dien.z) + (side ? 3.5 : 4.5) };
   }
 
   /** Gióng đứng ngay trước Điện, bên phải bậc lên. */
@@ -892,7 +913,9 @@ export class World {
     this.pillar = undefined;
     if (!pkey || !spot) return;
     const obj = this.makePillar();
-    obj.position.set(spot.x - 0.62, spot.y, spot.z - 0.2);
+    // Cột đá đứng bên trái tướng; khi tướng ra đứng bên phải nền Điện thì cột đứng sau lưng, phía phải.
+    const side = dien!.level >= 6;
+    obj.position.set(spot.x + (side ? 0.45 : -0.62), spot.y, spot.z + (side ? -0.7 : -0.2));
     obj.rotation.y = 0.3;
     this.scene.add(obj);
     this.pillar = { obj, key: pkey };
@@ -1143,6 +1166,7 @@ export class World {
       for (const child of v.group.children) {
         if (child.userData.dock) child.position.y = WATER_Y - 0.02 + Math.sin(t * 1.6 + v.group.id) * 0.03;
         if (child.userData.flame) child.scale.y = 0.75 + 0.35 * Math.abs(Math.sin(t * 9 + child.id));
+        if (child.userData.spin) child.rotation.x = t * (child.userData.spin as number);
         if (child.userData.smoke) {
           for (const puff of child.children) {
             const k = (t * 0.35 + (puff.userData.phase as number)) % 1;

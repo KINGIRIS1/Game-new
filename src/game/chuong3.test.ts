@@ -422,7 +422,7 @@ describe('truyện và lưu game chương 3', () => {
     for (const k of ['nights', 'nightsHeld', 'trieu', 'trieuHeld']) delete raid[k];
     raid.foe = 'thuy';
     const back = deserialize(JSON.stringify(s6))!;
-    expect(back.version).toBe(7);
+    expect(back.version).toBe(8);
     expect(back.adv).toEqual({ no: false, restUntil: 0, kimQuy: false, won: false });
     expect(back.raid.nights).toBe(0);
     expect(back.raid.foe).toBe('thuy');

@@ -87,12 +87,21 @@ function chariot(m: ToonModel): void {
   p.box(0.06, 0.18, 0.2, C.ink, 0, 1.0, 1.18);
 }
 
+/** Da thuộc làm bao tên. */
+const LEATHER = 0x8a5a33;
+/** Sừng làm cung (cung sừng): vàng ngà. */
+const HORN = 0xe6d6a8;
+
 /**
  * Lính trong trận. Quân ta đội mũ lông chim như trên trống đồng,
  * giặc Ân mặc áo sẫm, đội mũ trụ đồng, cầm qua (giáo móc).
  * Phó tướng Ân mặc giáp đỏ, mũ trụ có chùm lông đỏ cao, khoác áo choàng, cầm rìu lớn.
+ * `tier`: bậc binh khí đã rèn ở lò rèn (0–2) của giáo binh, cung thủ, voi chiến:
+ * - giáo binh: bậc 1 đầu giáo sắt, bậc 2 thêm tua đỏ và khiên viền sắt;
+ * - cung thủ: bậc 1 mũi tên sắt trong bao tên da, bậc 2 cung sừng và bao tên đồng;
+ * - voi chiến: bậc 1 giáp trán sắt, bậc 2 giáp ngà và bành có lọng.
  */
-export function makeFighter(kind: FighterKind): THREE.Group {
+export function makeFighter(kind: FighterKind, tier = 0): THREE.Group {
   if (kind === 'giong') return makeGiong('trangSi');
   if (kind === 'sonTinh') return makeSonTinh();
   if (kind === 'anDuong') return makeAnDuong({ crossbow: true });
@@ -103,7 +112,31 @@ export function makeFighter(kind: FighterKind): THREE.Group {
   const onCart = kind === 'chienXa' || kind === 'daiTuong';
   const m = new ToonModel(inkThin);
   const p = m.plain;
-  if (kind === 'voi') elephant(m);
+  if (kind === 'voi') {
+    elephant(m);
+    if (tier >= 1) {
+      // Giáp trán sắt: tấm sắt che trán, viền đồng.
+      p.box(0.34, 0.26, 0.05, IRON, 0, 1.02, 0.7, [-0.35, 0, 0]);
+      p.box(0.36, 0.04, 0.06, C.bronze, 0, 1.15, 0.66, [-0.35, 0, 0]);
+      // Giáp sườn sắt rủ hai bên dưới tấm vải, viền đồng, đinh đồng: nhìn từ sau lưng cũng thấy.
+      for (const s of [-1, 1]) {
+        p.box(0.04, 0.3, 0.6, IRON_DARK, s * 0.35, 0.86, -0.05, [0, 0, s * 0.2]);
+        for (const y of [0.72, 1.0]) p.box(0.05, 0.04, 0.62, C.bronze, s * (0.32 + (1.0 - y) * 0.2), y, -0.05, [0, 0, s * 0.2]);
+        for (const dz of [-0.2, 0, 0.2]) p.sphere(0.028, C.bronzeLight, s * 0.38, 0.86, -0.05 + dz, [1, 1, 1], 5);
+      }
+    }
+    if (tier >= 2) {
+      // Giáp ngà: ngà dài bịt đồng. Bành gỗ quây quanh chỗ ngồi.
+      for (const s of [-1, 1]) {
+        p.cone(0.045, 0.42, C.cream, s * 0.12, 0.66, 0.78, [1.25, 0, 0], 6);
+        p.cyl(0.05, 0.05, 0.06, C.bronze, s * 0.12, 0.7, 0.72, [1.25, 0, 0], 6);
+      }
+      for (const s of [-1, 1]) {
+        p.box(0.04, 0.16, 0.6, C.woodDark, s * 0.3, 1.18, -0.1);
+        p.box(0.6, 0.16, 0.04, C.woodDark, 0, 1.18, -0.1 + s * 0.3);
+      }
+    }
+  }
   if (onCart) chariot(m);
   // Người: đứng đất, hoặc ngồi trên voi / đứng trên xe. Đại tướng Ân đứng trên chiến xa.
   const y0 = kind === 'voi' ? 1.0 : onCart ? 0.5 : 0;
@@ -133,16 +166,30 @@ export function makeFighter(kind: FighterKind): THREE.Group {
   }
   const archer = kind === 'cung' || kind === 'cungAn';
   if (archer) {
-    // Cung cong ghép từ ba đoạn.
+    // Cung cong ghép từ ba đoạn; cung sừng (bậc 2) dày hơn, màu ngà.
+    const horn = kind === 'cung' && tier >= 2;
     for (const [dy, rz] of [[0.2, 0.5], [0, 0], [-0.2, -0.5]] as const) {
-      p.box(0.03, 0.22, 0.03, C.woodDark, 0.24 + Math.abs(dy) * -0.25, y0 + 0.42 + dy, z0 + 0.12, [0, 0, rz]);
+      p.box(horn ? 0.045 : 0.03, 0.22, horn ? 0.045 : 0.03, horn ? HORN : C.woodDark, 0.24 + Math.abs(dy) * -0.25, y0 + 0.42 + dy, z0 + 0.12, [0, 0, rz]);
     }
+    if (horn) for (const dy of [-0.31, 0.31]) p.sphere(0.03, C.bronze, 0.19, y0 + 0.42 + dy, z0 + 0.12, [1, 1, 1], 6);
     p.box(0.01, 0.56, 0.01, C.cream, 0.27, y0 + 0.42, z0 + 0.12);
-    p.cyl(0.05, 0.05, 0.36, enemy ? C.enemyRed : C.woodLight, -0.1, y0 + 0.5, z0 - 0.16, [0.3, 0, 0], 6);
+    // Bao tên: gỗ (chưa rèn), da (bậc 1), đồng (bậc 2). Đã rèn thì thấy mũi tên sắt nhô khỏi bao.
+    const quiver = enemy ? C.enemyRed : tier >= 2 ? C.bronze : tier >= 1 ? LEATHER : C.woodLight;
+    p.cyl(0.05, 0.05, 0.36, quiver, -0.1, y0 + 0.5, z0 - 0.16, [0.3, 0, 0], 6);
+    if (!enemy && tier >= 1) {
+      for (const dx of [-0.03, 0.02, 0.06]) {
+        p.cyl(0.008, 0.008, 0.16, C.woodLight, -0.1 + dx, y0 + 0.72, z0 - 0.22, [0.3, 0, 0], 4);
+        p.cone(0.022, 0.07, IRON, -0.1 + dx, y0 + 0.82, z0 - 0.25, [0.3, 0, 0], 4);
+      }
+    }
   } else if (kind === 'giao' || kind === 'voi') {
     p.cyl(0.018, 0.018, 1.15, C.woodDark, 0.24, y0 + 0.55, z0 + 0.06, undefined, 5);
-    p.cone(0.05, 0.2, C.bronze, 0.24, y0 + 1.2, z0 + 0.06, undefined, 4);
+    // Đầu giáo: đồng khi chưa rèn; giáo binh đã rèn thì đầu giáo sắt to hơn.
+    const iron = kind === 'giao' && tier >= 1;
+    p.cone(iron ? 0.065 : 0.05, iron ? 0.26 : 0.2, iron ? IRON : C.bronze, 0.24, y0 + (iron ? 1.23 : 1.2), z0 + 0.06, undefined, 4);
+    if (kind === 'giao' && tier >= 2) p.cone(0.06, 0.14, C.red, 0.24, y0 + 1.05, z0 + 0.06, [Math.PI, 0, 0], 6);
     if (kind === 'giao') m.drum.cyl(0.17, 0.17, 0.04, 0xffffff, -0.2, y0 + 0.4, z0 + 0.1, [Math.PI / 2, 0, 0.2], 12);
+    if (kind === 'giao' && tier >= 2) p.add(new THREE.TorusGeometry(0.175, 0.025, 6, 20), IRON, -0.2, y0 + 0.4, z0 + 0.12, [0, 0, 0.2]);
   } else if (boss) {
     // Rìu đồng lưỡi lớn.
     p.cyl(0.025, 0.025, 1.2, C.woodDark, 0.26, y0 + 0.6, z0 + 0.06, undefined, 5);
@@ -152,7 +199,34 @@ export function makeFighter(kind: FighterKind): THREE.Group {
     p.cyl(0.018, 0.018, 1.1, C.woodDark, 0.24, y0 + 0.55, z0 + 0.06, undefined, 5);
     p.box(0.22, 0.06, 0.03, C.bronze, 0.33, y0 + 1.02, z0 + 0.06);
   }
-  return m.group();
+  const g = m.group();
+  if (kind === 'voi' && tier >= 2) {
+    // Lọng che trên bành: cán gỗ, tán đỏ viền đồng.
+    const parasol = new ToonModel(inkThin);
+    parasol.plain.cyl(0.02, 0.02, 0.95, C.woodDark, 0, 0.47, 0, undefined, 5);
+    parasol.band.cone(0.42, 0.2, C.red, 0, 1.0, 0, undefined, 12);
+    parasol.plain.cyl(0.43, 0.43, 0.04, C.bronze, 0, 0.9, 0, undefined, 12);
+    const pg = parasol.group();
+    pg.position.set(0, y0 + 0.55, z0 - 0.25);
+    g.add(pg);
+  }
+  return g;
+}
+
+/** Thuyền buôn lớn: thân thuyền trống đồng dài hơn, cột buồm, buồm cói, khoang chở hàng. Dài theo trục x. */
+export function makeTradeBoat(): THREE.Group {
+  const g = new THREE.Group();
+  const hull = makeBoat();
+  hull.scale.set(1.45, 1.2, 1.35);
+  g.add(hull);
+  const m = new ToonModel(inkThin);
+  const p = m.plain;
+  p.cyl(0.035, 0.04, 1.5, C.woodDark, 0.15, 0.95, 0, undefined, 6);
+  m.band.box(0.06, 0.9, 0.7, C.cream, 0.18, 1.15, 0, [0, 0, 0.05]);
+  p.box(0.04, 0.04, 0.8, C.woodDark, 0.16, 1.62, 0);
+  for (const [x, c] of [[-0.45, C.ripe], [-0.75, C.thatch], [0.55, C.rock]] as const) p.box(0.26, 0.2, 0.26, c, x, 0.42, 0);
+  g.add(m.group());
+  return g;
 }
 
 /** Thuyền như trên trống đồng: mũi và đuôi cong vút, đầu chim. */

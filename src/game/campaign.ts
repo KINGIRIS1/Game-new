@@ -86,6 +86,7 @@ export function startStage(state: GameState, n: number, army: Record<UnitType, n
     rows: { ...rows },
     hero,
     bonus: templeBonus(state),
+    arms: state.arms,
   });
   return ok(undefined);
 }

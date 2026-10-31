@@ -581,6 +581,71 @@ Chủ dự án đã chốt qua một buổi hỏi đáp. Vấn đề: từ cuố
 - Mọi con số (giá, sản lượng, chỗ làm, số công trình tối đa, giá rèn, nhịp Tết) và dáng từng công trình được ghi vào tài liệu này để chủ dự án duyệt **trước khi** làm code của PR 2, PR 3.
 - Binh chủng thứ tư (nỏ thủ Âu Lạc) để dành cho chương 4.
 
+### PR 2: cấp 6–7 và rèn binh khí (chủ dự án đã duyệt, đã làm)
+
+Giá mỗi cấp mới khoảng gấp đôi cấp trước; sản lượng mỗi cấp tăng khoảng 35%. Chủ dự án cho chỉnh trong khoảng ±20% để khớp nhịp đo bằng test; bảng dưới là số cuối cùng.
+
+**Điện Vua Hùng**
+
+| Cấp | Mở khi | Giá nâng | Đất | Sức chứa kho | Chỗ ở | Gạo, vỏ ốc /phút | Máu |
+|---|---|---|---|---|---|---|---|
+| 6 | vào chương 2 | 4000 gạo, 4000 vỏ ốc, 3000 đất đá, 600 sắt | 25×25 | 14000 | 9 | 14, 7 | 1600 |
+| 7 | vào chương 3 | 7200 gạo, 6400 vỏ ốc, 5600 đất đá, 1200 sắt | 26×26 | 22000 | 10 | 16, 8 | 1800 |
+
+**Công trình lên cấp 6, 7** (giá là giá nâng lên cấp ấy)
+
+| Công trình | Cấp 6 | Cấp 7 | Sản lượng hay công dụng (cấp 5 → 6 → 7) | Chỗ làm | Tối đa ở Điện 5 → 6 → 7 |
+|---|---|---|---|---|---|
+| Ruộng lúa | 850 vỏ ốc, 550 đất đá | 1700 vỏ ốc, 1100 đất đá | gạo 110 → 150 → 200 | 4 → 5 → 5 | 6 → 7 → 8 |
+| Bến chợ thuyền | 1000 gạo, 600 đất đá | 2000 gạo, 1200 đất đá | vỏ ốc 112 → 150 → 200 | 3 → 4 → 4 | 4 → 4 → 5 |
+| Nhà sàn | 760 vỏ ốc, 640 đất đá | 1500 vỏ ốc, 1300 đất đá | chỗ ở 12 → 14 → 16 | – | 5 → 6 → 7 |
+| Bãi đất đá | 480 gạo, 1000 vỏ ốc | 960 gạo, 2000 vỏ ốc | đất đá 105 → 145 → 195 | 4 → 5 → 5 | 4 → 5 → 5 |
+| Lò rèn | 1300 vỏ ốc, 1400 đất đá | 2600 vỏ ốc, 2800 đất đá | sắt 29 → 40 → 54 | 3 → 4 → 4 | 2 → 3 → 3 |
+| Kho thóc | 1300 vỏ ốc, 1600 đất đá | 2600 vỏ ốc, 3200 đất đá | thêm sức chứa 4000 → 6000 → 9000 | – | 3 → 3 → 4 |
+| Chòi canh | 960 vỏ ốc, 960 đất đá, 160 sắt | 1900 vỏ ốc, 1900 đất đá, 320 sắt | sát thương 19 → 24 → 30 | – | 5 → 6 → 7 |
+
+- Máu mỗi công trình tăng thêm khoảng 10% mỗi cấp.
+- Doanh trại giữ cấp 5, 38 chỗ. Số lũy tối đa 110 → 120 → 130; bẫy chông 10 → 12 → 14; đê 90 → 100 → 110; thành Cổ Loa 150 → 160 → 170, vì đất rộng hơn.
+- Ở Điện 7, kho tối đa khoảng 22000 + 4 × 9000 = 58000 mỗi loại.
+
+**Rèn binh khí** (bảng lò rèn, lò rèn phải còn nguyên)
+
+| Bậc | Cần | Giá mỗi binh chủng | Tác dụng |
+|---|---|---|---|
+| 1 | lò rèn cấp 6 | 400 sắt, 400 vỏ ốc | +10% máu và sức đánh |
+| 2 | lò rèn cấp 7, đã rèn bậc 1 | 900 sắt, 900 vỏ ốc | thêm +10% (cộng 20%) |
+
+Rèn riêng cho giáo binh, cung thủ, voi chiến. Có tác dụng ở mọi trận (phó bản, giữ kinh đô), cộng thêm vào phần của Đền Phù Đổng và phúc lành Tết. Chuẩn cân bằng phó bản vẫn tính lính chưa rèn.
+
+**Nhịp** (test mô phỏng người biết dành dụm trong `balance.test.ts`, không tính thưởng phó bản):
+- sau khi lên Điện 5 còn chừng nửa giờ chương 1 thì vào chương 2; lên Điện 6 rồi còn chừng nửa giờ chương 2 thì vào chương 3;
+- lúc vào mỗi chương, của dành dụm coi như đã tiêu hết (đền, lễ vật, rèn đồ, quân), nên số phút đo được là số phút sản lượng cần để lên cấp. Lần đo đầu để nguyên kho đầy thì Điện 6 chỉ mất 8 phút, vì giá nằm dưới sức chứa kho;
+- đích: vào chương 2 thì **12–20 phút** lên Điện 6 (đo được 14 phút); vào chương 3 thì **25–40 phút** lên Điện 7. Với giá đề xuất ban đầu (9000 gạo, 8000 vỏ ốc, 7000 đất đá, 1500 sắt) Điện 7 mất 39 phút, sát mép trên; hạ 20% còn 34 phút.
+
+**Dáng mới** (móng giữ nguyên số ô, cỡ không to quá 105%):
+
+| Công trình | Cấp 6 | Cấp 7 |
+|---|---|---|
+| Điện Vua Hùng | hai lầu trống đồng hai bên thềm | mái ba tầng, đôi chim đồng lớn trên nóc |
+| Ruộng lúa | guồng nước tre quay bên bờ ruộng | miếu thần lúa nhỏ ở góc ruộng |
+| Bến chợ thuyền | một thuyền buôn lớn đậu cạnh cầu tàu | lầu chợ hai tầng mái hình thuyền |
+| Nhà sàn | sàn phơi lúa và chuồng gà dưới sàn | hai nhà sàn nối nhau bằng cầu tre |
+| Bãi đất đá | tời gỗ kéo đá | lò nung gạch đất bốc khói |
+| Lò rèn | ống bễ da lớn, lán cao hơn che giá treo binh khí | hai lò nung, lửa đỏ rực |
+| Kho thóc | thêm một vựa thóc tròn thứ hai | ba vựa quây quanh sân phơi |
+| Chòi canh | chòi hai tầng, trên có nỏ lớn gác qua lan can (cánh nỏ đồng, mũi tên sắt) | lầu canh đá có cờ đỏ |
+
+| Binh chủng | Rèn bậc 1 | Rèn bậc 2 |
+|---|---|---|
+| Giáo binh | đầu giáo sắt xám | thêm tua đỏ và khiên viền sắt |
+| Cung thủ | mũi tên sắt, bao tên da | cung sừng, bao tên đồng |
+| Voi chiến | giáp trán sắt, giáp sườn sắt viền đồng (nhìn từ sau lưng cũng thấy) | giáp ngà và bành có lọng |
+
+- Đã vẽ: guồng nước ruộng cấp 6 quay thật; bến cấp 6 có thuyền buôn lớn neo cạnh cầu tàu nhấp nhô theo sóng; ruộng và bãi đất đá cấp 6–7 có 5 chỗ đứng cho người làm, bến và lò rèn 4 chỗ. Người làm rải khắp ruộng; thợ đá mỗi người đứng một cột theo hướng camera để khỏi che nhau.
+- Từ Điện cấp 6, tướng (Sơn Tinh, An Dương Vương cùng cột đá thề) ra đứng hẳn bên phải nền Điện, để khỏi che lầu trống bên phải.
+- Bản lưu lên phiên bản 8 (thêm bậc rèn của từng binh chủng).
+- Lời Lạc hầu: đoạn "Vua Hùng kén rể" thêm một câu nhắc Điện có thể lên cấp 6 và lò rèn rèn binh khí; đoạn "Cột đá thề" thêm một câu nhắc Điện cấp 7. Người đã xem các đoạn ấy thì thấy nút nâng cấp như thường.
+
 ## Nhịp chơi và lưu game
 
 - Nhịp chơi lai: mỗi lần mở game là một phiên ra quyết định ngắn.
@@ -612,5 +677,6 @@ Chủ dự án đã chốt qua một buổi hỏi đáp. Vấn đề: từ cuố
 4. **Chương 2** (đã làm): độ cao ô đất, đắp đất, đắp nền, đê và kè đá, mùa lũ kèm thủy quái, lễ vật thách cưới, Sơn Tinh ra trận với Bốc đồi và Dời non, phó bản màn 9–16 với thuồng luồng và Thủy Tinh, cốt truyện, kết chương, Đền Tản Viên.
 5. **Chương 3** (đã làm): thành Cổ Loa và số vòng thành, đêm yêu tinh phá thành, quân Triệu Đà xen với mùa lũ, An Dương Vương cầm nỏ ra trận với Nỏ thần và Rùa Vàng, phó bản màn 17–24 với gà trắng nghìn năm và Triệu Đà, cốt truyện, kết chương, Đền Cổ Loa.
 6. **Sửa sau chơi thử chương 3** (đã làm): chuẩn cân bằng mới cho màn 9–24, báo tướng kiệt sức và Đền Phù Đổng hư trước khi xuất quân.
-7. **Tiếp theo** (đã chốt, xem mục Kế hoạch): cấp 6–7 và rèn binh khí; rồi Hội Tết bánh chưng bánh giầy.
-8. **Để sau**: chương về Mỵ Châu, Trọng Thủy, có binh chủng nỏ thủ Âu Lạc.
+7. **Cấp 6–7 và rèn binh khí** (đã làm, xem mục Kế hoạch): Điện và 7 loại công trình lên cấp 6, 7, đất 25×25 rồi 26×26, rèn binh khí hai bậc ở lò rèn, bản lưu phiên bản 8.
+8. **Tiếp theo** (đã chốt): Hội Tết bánh chưng bánh giầy.
+9. **Để sau**: chương về Mỵ Châu, Trọng Thủy, có binh chủng nỏ thủ Âu Lạc.

@@ -1,5 +1,6 @@
 // Mô hình công trình "Nét Đông Sơn". Mỗi loại một dáng riêng lấy từ nhà cửa trên trống đồng,
-// mỗi cấp thêm một phần lớn nhìn thấy rõ và to dần lên.
+// mỗi cấp thêm một phần lớn nhìn thấy rõ và to dần lên tới cấp 5. Cấp 6, 7 (từ chương 2, 3) không to thêm
+// mà thêm một phần lớn nữa.
 // Gốc tọa độ là tâm chân móng, mặt trước hướng +z.
 
 import * as THREE from 'three';
@@ -8,8 +9,25 @@ import { C } from './palette';
 import { ShapeBuilder, saddleRoof, seeded } from './shapes';
 import { ToonModel, inkThin, outlineOf, toon } from './toon';
 
-/** To dần theo cấp: khoảng 85% ở cấp 1, 105% ở cấp 5. */
-const sizeFor = (level: number) => 0.8 + 0.05 * level;
+/** Cấp dùng để tính cỡ và độ dày: cấp 6, 7 giữ như cấp 5, để móng không tràn ô. */
+const grown = (level: number) => Math.min(level, 5);
+/** To dần theo cấp: khoảng 85% ở cấp 1, 105% ở cấp 5 trở lên. */
+const sizeFor = (level: number) => 0.8 + 0.05 * grown(level);
+
+/** Lầu trống: bốn cột, sàn, trống đồng trên sàn, mái tranh nhọn. Gốc ở chân lầu. */
+function drumTower(m: ToonModel, x: number, z: number, y0: number): void {
+  const p = m.plain;
+  for (const dx of [-0.24, 0.24]) for (const dz of [-0.24, 0.24]) p.cyl(0.04, 0.05, 1.0, C.woodDark, x + dx, y0 + 0.5, z + dz, undefined, 6);
+  p.box(0.66, 0.07, 0.66, C.wood, x, y0 + 1.0, z);
+  for (const s of [-1, 1]) {
+    p.box(0.66, 0.12, 0.04, C.red, x, y0 + 1.1, z + s * 0.31);
+    p.box(0.04, 0.12, 0.66, C.red, x + s * 0.31, y0 + 1.1, z);
+  }
+  drum(m, x, z, 0.6, y0 + 1.04);
+  for (const dx of [-0.26, 0.26]) for (const dz of [-0.26, 0.26]) p.cyl(0.025, 0.025, 0.55, C.woodDark, x + dx, y0 + 1.32, z + dz, undefined, 5);
+  m.band.cone(0.56, 0.5, C.thatch, x, y0 + 1.82, z, undefined, 8);
+  p.sphere(0.06, C.bronzeLight, x, y0 + 2.1, z, [1, 1, 1], 6);
+}
 
 function bird(m: ToonModel, x: number, y: number, z: number, dir: number, s = 1): void {
   m.plain.capsule(0.06 * s, 0.22 * s, C.bronze, x, y, z, [0, 0, Math.PI / 2]);
@@ -75,13 +93,14 @@ export function makeDien(level: number): THREE.Group {
     const roofTop = hall.postH + 0.68 + hall.roofW * 0.4 + hall.lift;
     bird(m, hallX + hall.roofL / 2 - 0.1, roofTop + 0.05, -0.1, 1, 1.1);
     bird(m, hallX - hall.roofL / 2 + 0.1, roofTop + 0.05, -0.1, -1, 1.1);
-    banner(m, -1.7, 1.6, 2.6, C.red);
-    drum(m, 1.45, 1.55, 1, base);
+    banner(m, -1.7, level >= 6 ? 1.85 : 1.6, 2.6, C.red);
+    // Từ cấp 6 trống đặt trên lầu trống, không đặt dưới đất nữa.
+    if (level < 6) drum(m, 1.45, 1.55, 1, base);
   }
   if (level >= 3) {
     // Chái nhà bên phải (phía camera nhìn tới), mái quay ngang.
     stiltHall(m, { x: 1.45, z: -0.3, w: 1.0, d: 1.5, postH: 0.95 + base, roofL: 1.9, roofW: 1.4, lift: 0.4, ry: Math.PI / 2 });
-    drum(m, -1.05, 1.5, 0.7, base);
+    if (level < 6) drum(m, -1.05, 1.5, 0.7, base);
   }
   if (level >= 4) {
     // Hàng rào cột chạm, đầu cột bọc đồng.
@@ -92,7 +111,7 @@ export function makeDien(level: number): THREE.Group {
         p.sphere(0.07, C.bronze, x, base + 0.58, z, [1, 1, 1], 6);
       }
     }
-    banner(m, 1.75, 1.6, 2.8, C.red);
+    banner(m, 1.75, level >= 6 ? 1.85 : 1.6, 2.8, C.red);
   }
   if (level >= 5) {
     // Mái tầng hai trên nóc, sống mái mạ đồng, hai trống lớn trước điện.
@@ -101,6 +120,19 @@ export function makeDien(level: number): THREE.Group {
     p.box(hallW * 0.7, 0.07, 0.14, C.bronzeLight, hallX, y2 + 0.04, -0.1);
     drum(m, 0.6, 1.75, 1.15, base);
     drum(m, -0.5, 1.75, 1.15, base);
+  }
+  if (level >= 6) {
+    // Hai lầu trống đồng hai bên thềm.
+    for (const x of [-1.3, 1.3]) drumTower(m, x, 1.45, base);
+  }
+  if (level >= 7) {
+    // Mái tầng ba trên cùng, đôi chim đồng lớn đậu hai đầu nóc.
+    const y3 = hall.postH + 0.68 + hall.roofW * 0.4 + 1.25;
+    m.band.add(saddleRoof({ length: hallW * 0.6, width: 1.0, lift: 0.55, drop: 0.4, thickness: 0.07 }), C.thatchDark, hallX, y3, -0.1);
+    p.box(hallW * 0.5, 0.06, 0.12, C.bronzeLight, hallX, y3 + 0.03, -0.1);
+    const top = y3 + 0.55;
+    bird(m, hallX + hallW * 0.3, top, -0.1, 1, 1.6);
+    bird(m, hallX - hallW * 0.3, top, -0.1, -1, 1.6);
   }
   const g = m.group();
   g.scale.setScalar(sizeFor(level));
@@ -117,19 +149,37 @@ function buffalo(p: ShapeBuilder, x: number, z: number): void {
   for (const s of [-1, 1]) p.capsule(0.025, 0.18, 0xd8cbb0, x + s * 0.13, 0.52, z + 0.28, [0, 0, s * 1.1]);
 }
 
+/** Guồng nước tre quay quanh trục dọc theo x, có gàu múc nước. Tách riêng để World cho quay (`userData.spin`). */
+function waterWheel(): THREE.Group {
+  const w = new ToonModel(inkThin);
+  const p = w.plain;
+  p.add(new THREE.TorusGeometry(0.42, 0.03, 6, 20), C.woodDark, 0, 0, 0, [0, Math.PI / 2, 0]);
+  p.add(new THREE.TorusGeometry(0.2, 0.025, 6, 14), C.bamboo, 0, 0, 0, [0, Math.PI / 2, 0]);
+  for (let i = 0; i < 8; i++) {
+    const a = (i / 8) * Math.PI * 2;
+    p.box(0.03, 0.84, 0.03, C.bamboo, 0, 0, 0, [a, 0, 0]);
+    p.box(0.16, 0.08, 0.1, C.bamboo, 0, Math.cos(a) * 0.44, Math.sin(a) * 0.44, [a, 0, 0]);
+  }
+  p.cyl(0.05, 0.05, 0.5, C.woodDark, 0, 0, 0, [0, 0, Math.PI / 2], 6);
+  const g = w.group();
+  g.userData.spin = 1.1;
+  return g;
+}
+
 export function makeRuong(level: number): THREE.Group {
   const m = new ToonModel();
   const p = m.plain;
-  const bank = 0.12 + level * 0.02;
+  const lv = grown(level);
+  const bank = 0.12 + lv * 0.02;
   for (const s of [-1, 1]) {
     p.box(2.95, bank, 0.2, C.soil, 0, bank / 2, s * 1.38);
     p.box(0.2, bank, 2.95, C.soil, s * 1.38, bank / 2, 0);
   }
   p.box(2.6, 0.04, 2.6, C.paddyWater, 0, 0.05, 0);
-  const color = new THREE.Color(C.rice).lerp(new THREE.Color(C.ripe), (level - 1) / 4);
-  const h = 0.16 + level * 0.07;
+  const color = new THREE.Color(C.rice).lerp(new THREE.Color(C.ripe), (lv - 1) / 4);
+  const h = 0.16 + lv * 0.07;
   // Cấp càng cao lúa càng dày và cao.
-  const rows = Math.min(3 + level, 7);
+  const rows = Math.min(3 + lv, 7);
   const step = 2.3 / rows;
   for (let i = 0; i < rows; i++) {
     for (let j = 0; j < rows; j++) {
@@ -137,7 +187,9 @@ export function makeRuong(level: number): THREE.Group {
       const z = -1.15 + step * (j + 0.5);
       if (level >= 3 && x > 0.55 && z > 0.55) continue;
       if (level >= 4 && x < -0.55 && z < -0.55) continue;
-      p.cone(0.07 + level * 0.008, h, color, x, 0.06 + h / 2, z, undefined, 5);
+      if (level >= 6 && x < -0.55 && z > 0.55) continue;
+      if (level >= 7 && x > 0.55 && z < -0.55) continue;
+      p.cone(0.07 + lv * 0.008, h, color, x, 0.06 + h / 2, z, undefined, 5);
     }
   }
   if (level >= 3) buffalo(p, 0.85, 0.8);
@@ -148,13 +200,34 @@ export function makeRuong(level: number): THREE.Group {
     p.cone(0.48, 0.36, C.thatch, -0.85, 0.8, -0.85, undefined, 6);
   }
   if (level >= 5) {
-    // Bó lúa đã gặt dựng chụm vào nhau.
-    for (const [x, z] of [[1.0, -1.0], [0.75, -1.05], [0.88, -0.78]] as const) {
+    // Bó lúa đã gặt dựng chụm vào nhau; cấp 7 dời ra giữa bờ để nhường góc cho miếu.
+    const sheaves: [number, number][] = level >= 7 ? [[0.1, -1.05], [-0.12, -1.08], [0.0, -0.86]] : [[1.0, -1.0], [0.75, -1.05], [0.88, -0.78]];
+    for (const [x, z] of sheaves) {
       p.cyl(0.07, 0.11, 0.42, C.ripe, x, 0.25, z, [0.12, 0, 0.12], 6);
       p.cone(0.11, 0.18, C.bronzeLight, x, 0.52, z, undefined, 6);
     }
   }
-  return m.group();
+  if (level >= 6) {
+    // Máng nước tre dẫn từ guồng vào ruộng, hai cột đỡ trục guồng.
+    for (const x of [-1.32, -0.84]) p.cyl(0.04, 0.05, 0.62, C.woodDark, x, 0.31, 0.85, undefined, 5);
+    p.box(0.7, 0.07, 0.12, C.bamboo, -0.55, 0.62, 0.85);
+    p.box(0.5, 0.03, 0.5, C.paddyWater, -1.08, 0.07, 0.85);
+  }
+  if (level >= 7) {
+    // Miếu thần lúa nhỏ ở góc ruộng: nền đá, mái cong, lư hương đồng.
+    p.box(0.6, 0.14, 0.6, C.rock, 0.95, 0.12, -0.95);
+    m.band.box(0.36, 0.32, 0.3, C.red, 0.95, 0.35, -0.98);
+    m.band.add(saddleRoof({ length: 0.62, width: 0.52, lift: 0.18, drop: 0.2, thickness: 0.04 }), C.thatchDark, 0.95, 0.66, -0.98);
+    p.cyl(0.06, 0.05, 0.08, C.bronze, 0.95, 0.23, -0.68, undefined, 8);
+    bird(m, 0.95, 0.84, -0.98, 1, 0.35);
+  }
+  const g = m.group();
+  if (level >= 6) {
+    const wheel = waterWheel();
+    wheel.position.set(-1.08, 0.5, 0.85);
+    g.add(wheel);
+  }
+  return g;
 }
 
 // ---------- Bến chợ thuyền ----------
@@ -182,8 +255,10 @@ export function makeBen(level: number): THREE.Group {
   p.box(0.5, 0.08, jetty, C.wood, 0.55, 0.33, 0.45 + jetty / 2);
   for (let z = 0.9; z < 0.45 + jetty; z += 0.6) p.cyl(0.05, 0.05, 0.8, C.woodDark, 0.55, -0.05, z);
   if (level >= 3) p.box(0.9, 0.07, 0.4, C.wood, 0.05, 0.31, 1.9);
-  stall(m, -0.45, -0.5, C.red, 3);
-  if (level >= 2) stall(m, 0.45, -0.5, C.indigo, 2);
+  if (level < 7) {
+    stall(m, -0.45, -0.5, C.red, 3);
+    if (level >= 2) stall(m, 0.45, -0.5, C.indigo, 2);
+  }
   if (level >= 4) {
     // Nhà kho ven sông.
     p.box(0.7, 0.5, 0.5, C.woodLight, -0.6, 0.75, 0.25);
@@ -193,8 +268,24 @@ export function makeBen(level: number): THREE.Group {
     banner(m, 0.9, 0.35, 1.9, C.red);
     banner(m, 0.15, 0.35, 1.7, C.indigo);
   }
+  if (level >= 7) {
+    // Lầu chợ hai tầng mái hình thuyền: tầng dưới bày hàng, tầng trên có vách hoa văn.
+    for (const x of [-0.75, 0, 0.75]) for (const z of [-0.85, -0.25]) p.cyl(0.045, 0.055, 0.8, C.woodDark, x, 0.9, z, undefined, 6);
+    p.box(1.65, 0.08, 0.75, C.wood, 0, 1.3, -0.55);
+    m.band.box(1.35, 0.42, 0.5, C.woodLight, 0, 1.55, -0.55);
+    m.band.add(saddleRoof({ length: 2.1, width: 1.05, lift: 0.5, drop: 0.38, thickness: 0.07 }), C.thatch, 0, 1.95, -0.55);
+    bird(m, 1.0, 2.45, -0.55, 1, 0.6);
+    bird(m, -1.0, 2.45, -0.55, -1, 0.6);
+    // Hàng bày dưới lầu.
+    p.box(1.3, 0.1, 0.4, C.woodLight, 0, 0.62, -0.55);
+    for (let i = 0; i < 5; i++) {
+      const gx = -0.5 + i * 0.25;
+      if (i % 2) p.sphere(0.08, i === 1 ? 0xd9862e : C.ripe, gx, 0.74, -0.55, [1, 0.8, 1], 6);
+      else p.cyl(0.08, 0.06, 0.1, C.thatch, gx, 0.73, -0.55, undefined, 7);
+    }
+  }
   const g = m.group();
-  g.scale.setScalar(0.9 + 0.025 * level);
+  g.scale.setScalar(0.9 + 0.025 * grown(level));
   return g;
 }
 
@@ -223,6 +314,21 @@ export function makeNhaSan(level: number): THREE.Group {
       for (let i = 0; i < 3; i++) p.box(0.3, 0.04, 0.1, C.woodDark, 0, 0.45 - i * 0.16, 0.9 + i * 0.1);
       p.cyl(0.12, 0.09, 0.2, C.soil, -0.65, 0.12, 0.7, undefined, 8);
     }
+  } else if (level >= 7) {
+    // Hai nhà sàn nối nhau bằng cầu tre: nhà mái tròn và nhà mái thuyền, sàn cùng cao.
+    domeHouse(m, 0.42, 0.38, 0.9);
+    stiltHall(m, { x: -0.5, z: -0.45, w: 0.95, d: 0.75, postH: 0.5, roofL: 1.3, roofW: 0.8, lift: 0.32 });
+    domeHouse(m, 0.6, -0.62, 0.5);
+    // Cầu tre: hai cây tre làm sàn cầu, tay vịn hai bên.
+    const len = 0.62;
+    const a = Math.atan2(0.62, 0.7);
+    p.box(0.16, 0.04, len, C.bamboo, 0.0, 0.5, -0.08, [0, a, 0]);
+    for (const off of [-0.08, 0.08]) {
+      const ox = Math.cos(a) * off;
+      const oz = -Math.sin(a) * off;
+      p.box(0.025, 0.025, len, C.bamboo, ox, 0.68, -0.08 + oz, [0, a, 0]);
+      for (const t of [-0.25, 0, 0.25]) p.cyl(0.015, 0.015, 0.18, C.woodDark, ox + Math.sin(a) * t, 0.6, -0.08 + oz + Math.cos(a) * t, undefined, 4);
+    }
   } else {
     domeHouse(m, 0.3, 0.3, 1.0);
     domeHouse(m, -0.5, -0.45, 0.75);
@@ -235,9 +341,27 @@ export function makeNhaSan(level: number): THREE.Group {
       p.cyl(0.02, 0.02, 0.3, C.bamboo, t, 0.15, 0.95, undefined, 4);
       p.cyl(0.02, 0.02, 0.3, C.bamboo, -0.95, 0.15, t, undefined, 4);
     }
-    p.box(0.5, 0.06, 0.3, 0x5f7f3a, -0.55, 0.06, 0.65);
+    if (level < 6) p.box(0.5, 0.06, 0.3, 0x5f7f3a, -0.55, 0.06, 0.65);
   }
-  if (level >= 5) bird(m, 0.3, 1.3, 0.3, 1, 0.6);
+  if (level >= 5) bird(m, level >= 7 ? 0.42 : 0.3, level >= 7 ? 1.2 : 1.3, level >= 7 ? 0.38 : 0.3, 1, 0.6);
+  if (level >= 6) {
+    // Sàn phơi lúa trên cọc thấp: thóc vàng trải đều, cây cào gỗ.
+    for (const x of [-0.82, -0.28]) for (const z of [0.38, 0.78]) p.cyl(0.03, 0.03, 0.3, C.woodDark, x, 0.15, z, undefined, 5);
+    p.box(0.66, 0.05, 0.52, C.bamboo, -0.55, 0.31, 0.58);
+    p.box(0.58, 0.04, 0.44, C.ripe, -0.55, 0.35, 0.58);
+    p.cyl(0.012, 0.012, 0.55, C.woodDark, -0.4, 0.45, 0.58, [0, 0, 1.0], 4);
+    // Chuồng gà tre dưới sàn nhà, hai con gà ra sân.
+    const hx = level >= 7 ? 0.42 : 0.3;
+    const hz = level >= 7 ? 0.38 : 0.3;
+    p.box(0.42, 0.24, 0.3, C.bamboo, hx, 0.13, hz);
+    for (let i = 0; i < 3; i++) p.box(0.02, 0.24, 0.31, C.woodDark, hx - 0.14 + i * 0.14, 0.13, hz);
+    for (const [cx, cz, c] of [[0.62, 0.82, C.cream], [0.82, 0.62, 0xb8743a]] as const) {
+      p.sphere(0.08, c, cx, 0.1, cz, [1, 0.9, 1.2], 7);
+      p.sphere(0.05, c, cx, 0.19, cz + 0.06, [1, 1, 1], 6);
+      p.cone(0.025, 0.06, C.red, cx, 0.25, cz + 0.06, undefined, 4);
+      p.cone(0.015, 0.04, C.bronzeLight, cx, 0.18, cz + 0.12, [Math.PI / 2, 0, 0], 4);
+    }
+  }
   const g = m.group();
   g.scale.setScalar(sizeFor(level));
   return g;
@@ -250,13 +374,13 @@ export function makeBaiDa(level: number): THREE.Group {
   const p = m.plain;
   p.box(1.95, 0.1, 1.95, C.earth, 0, 0.05, 0);
   const rand = seeded(17);
-  for (let i = 0; i < 2 + level; i++) {
+  for (let i = 0; i < 2 + grown(level); i++) {
     const x = -0.6 + rand() * 1.2;
     const z = -0.2 + rand() * 0.8;
     p.sphere(0.2 + rand() * 0.12, i % 2 ? C.rock : C.rockDark, x, 0.15, z, [1.2, 0.7, 1], 6);
   }
   if (level >= 2) for (let i = 0; i < 3; i++) p.box(0.32, 0.18, 0.24, C.rock, 0.55, 0.19 + i * 0.18, 0.55, [0, i * 0.3, 0]);
-  if (level >= 3) {
+  if (level >= 3 && level < 6) {
     // Khung tời gỗ hình chữ A để kéo đá.
     for (const s of [-1, 1]) p.cyl(0.035, 0.04, 1.5, C.woodDark, s * 0.35, 0.72, -0.55, [0, 0, s * 0.3], 5);
     p.cyl(0.03, 0.03, 0.9, C.wood, 0, 1.35, -0.55, [0, 0, Math.PI / 2], 5);
@@ -274,8 +398,48 @@ export function makeBaiDa(level: number): THREE.Group {
     p.box(0.42, 0.14, 0.32, C.wood, -0.65, 0.3, 0.7);
     p.sphere(0.14, C.rock, -0.65, 0.42, 0.7, [1.3, 0.6, 1], 6);
   }
-  return m.group();
+  if (level >= 6) {
+    // Tời gỗ lớn: cột cái, cần với ra trên hố, dây thả khối đá; bánh xe tời quay tay dưới chân cột.
+    p.cyl(0.06, 0.08, 1.9, C.woodDark, -0.85, 0.95, -0.85, undefined, 6);
+    for (const s of [-1, 1]) p.cyl(0.035, 0.04, 1.1, C.wood, -0.85 + s * 0.22, 0.5, -0.62, [0.45, 0, -s * 0.3], 5);
+    p.cyl(0.04, 0.045, 1.0, C.wood, -0.62, 1.72, -0.68, [0.7, 0, -0.9], 5);
+    p.cyl(0.008, 0.008, 0.95, C.cream, -0.32, 1.12, -0.48, undefined, 4);
+    p.box(0.34, 0.26, 0.3, C.rock, -0.32, 0.6, -0.48);
+    p.add(new THREE.TorusGeometry(0.28, 0.03, 6, 16), C.woodDark, -0.55, 0.4, -0.95, [0, 0, 0]);
+    for (let i = 0; i < 4; i++) p.box(0.03, 0.56, 0.03, C.wood, -0.55, 0.4, -0.95, [0, 0, (i * Math.PI) / 4]);
+  }
+  const g = m.group();
+  if (level >= 7) {
+    // Lò nung gạch đất: lò vòm đất nung có ống khói bốc khói, chồng gạch đỏ bên cạnh.
+    const k = new ToonModel(inkThin);
+    k.plain.cyl(0.4, 0.44, 0.18, C.earthDark, 0.55, 0.09, -0.5, undefined, 12);
+    k.band.add(new THREE.SphereGeometry(1, 14, 8, 0, Math.PI * 2, 0, Math.PI / 2), BRICK, 0.55, 0.16, -0.5, [0, 0, 0], [0.4, 0.42, 0.4]);
+    k.plain.box(0.2, 0.18, 0.08, 0x2a1d12, 0.55, 0.26, -0.12);
+    k.plain.cyl(0.07, 0.09, 0.42, C.earthDark, 0.68, 0.72, -0.62, undefined, 8);
+    for (let i = 0; i < 3; i++) for (let j = 0; j < 2; j++) k.plain.box(0.16, 0.07, 0.09, BRICK, 0.05 + j * 0.18, 0.16 + i * 0.08, -0.85);
+    g.add(k.group());
+    const glow = new THREE.Mesh(new THREE.ConeGeometry(0.07, 0.14, 6), new THREE.MeshBasicMaterial({ color: C.ember }));
+    glow.position.set(0.55, 0.24, -0.06);
+    glow.userData.flame = true;
+    g.add(glow);
+    const smoke = new THREE.Group();
+    smoke.userData.smoke = true;
+    const mat = new THREE.MeshBasicMaterial({ color: 0x9a948c, transparent: true, opacity: 0.5, depthWrite: false });
+    for (let i = 0; i < 4; i++) {
+      const puff = new THREE.Mesh(new THREE.SphereGeometry(0.12, 7, 5), mat);
+      puff.userData.phase = i / 4;
+      smoke.add(puff);
+    }
+    smoke.position.set(0.68, 0.95, -0.62);
+    g.add(smoke);
+  }
+  return g;
 }
+
+/** Gạch đất nung đỏ. */
+const BRICK = 0xa8502e;
+/** Sắt rèn binh khí: thép xám xanh như ngựa sắt của Gióng. */
+const IRON_BLADE = 0x7b8a9c;
 
 // ---------- Lò rèn ----------
 
@@ -301,26 +465,66 @@ export function makeLoRen(level: number): THREE.Group {
   const extra = new THREE.Group();
   p.box(1.95, 0.08, 1.95, C.earthDark, 0, 0.04, 0);
   kiln(m, extra, -0.4, 0.3, 1.2);
-  // Lán mái một dốc phía sau che chỗ đe; cấp 4 lán dài hơn.
+  // Lán mái một dốc phía sau che chỗ đe; cấp 4 lán dài hơn, cấp 6 lán cao hơn để che giá binh khí.
   const shedL = level >= 4 ? 1.6 : 1.0;
-  for (const x of [0.85 - shedL, 0.85]) for (const z of [-0.85, -0.2]) p.cyl(0.04, 0.05, 1.0, C.woodDark, x, 0.5, z, undefined, 5);
-  m.band.box(shedL + 0.25, 0.05, 0.85, C.thatch, 0.85 - shedL / 2, 1.02, -0.52, [-0.25, 0, 0]);
+  const shedH = level >= 6 ? 1.35 : 1.0;
+  for (const x of [0.85 - shedL, 0.85]) for (const z of [-0.85, -0.2]) p.cyl(0.04, 0.05, shedH, C.woodDark, x, shedH / 2, z, undefined, 5);
+  m.band.box(shedL + 0.25, 0.05, 0.85, C.thatch, 0.85 - shedL / 2, shedH + 0.02, -0.52, [-0.25, 0, 0]);
   p.box(0.3, 0.16, 0.16, C.iron, 0.45, 0.36, -0.45);
   p.box(0.12, 0.22, 0.12, C.woodDark, 0.45, 0.18, -0.45);
-  if (level >= 2) {
+  if (level >= 2 && level < 6) {
     // Bễ thổi lửa cạnh lò và giá treo đồ.
     p.box(0.34, 0.14, 0.24, C.wood, 0.15, 0.15, 0.45);
     p.box(0.5, 0.04, 0.06, C.woodDark, 0.6, 0.85, -0.85);
     for (let i = 0; i < 3; i++) p.box(0.04, 0.3, 0.04, C.iron, 0.45 + i * 0.12, 0.68, -0.84);
   }
-  if (level >= 3) kiln(m, extra, 0.55, 0.55, 0.75);
+  if (level >= 3 && level < 7) kiln(m, extra, 0.55, 0.55, 0.75);
   if (level >= 5) {
-    // Giá trưng giáo và rìu đồng.
+    // Giá trưng giáo và rìu đồng, thấp hơn mái lán.
     for (let i = 0; i < 4; i++) {
-      p.cyl(0.015, 0.015, 0.9, C.woodDark, -0.85 + i * 0.13, 0.45, -0.8, undefined, 4);
-      p.cone(0.035, 0.14, C.bronze, -0.85 + i * 0.13, 0.95, -0.8, undefined, 4);
+      p.cyl(0.015, 0.015, 0.75, C.woodDark, -0.85 + i * 0.13, 0.38, -0.8, undefined, 4);
+      p.cone(0.035, 0.14, C.bronze, -0.85 + i * 0.13, 0.82, -0.8, undefined, 4);
     }
     p.box(0.16, 0.12, 0.03, C.bronze, -0.92, 0.7, -0.73, [0, 0, 0.5]);
+  }
+  if (level >= 6) {
+    // Ống bễ đôi bằng gỗ bọc da: hai ống đứng, cán pít-tông, vòi thổi vào miệng lò.
+    for (const x of [0.02, 0.26]) {
+      p.cyl(0.11, 0.12, 0.6, C.wood, x, 0.34, 0.8, undefined, 10);
+      p.cyl(0.115, 0.115, 0.08, 0x7a4a2a, x, 0.66, 0.8, undefined, 10);
+      p.cyl(0.02, 0.02, 0.3, C.woodDark, x, 0.84, 0.8, undefined, 5);
+      p.box(0.14, 0.03, 0.03, C.woodDark, x, 0.99, 0.8);
+    }
+    p.cyl(0.03, 0.03, 0.42, C.woodDark, -0.2, 0.16, 0.78, [0, 0, Math.PI / 2], 5);
+    // Giá treo binh khí sắt dựng sau lán: kiếm, giáo, rìu sắt treo ngay ngắn.
+    p.box(1.25, 0.05, 0.06, C.woodDark, 0.2, 1.05, -0.9);
+    p.box(1.25, 0.05, 0.06, C.woodDark, 0.2, 0.45, -0.9);
+    for (const x of [-0.42, 0.82]) p.cyl(0.035, 0.04, 1.1, C.woodDark, x, 0.55, -0.9, undefined, 5);
+    for (let i = 0; i < 5; i++) {
+      const x = -0.25 + i * 0.22;
+      if (i % 2) {
+        p.box(0.05, 0.5, 0.02, IRON_BLADE, x, 0.72, -0.86);
+        p.box(0.14, 0.03, 0.03, C.bronze, x, 0.47, -0.86);
+      } else {
+        p.cyl(0.012, 0.012, 0.6, C.woodDark, x, 0.72, -0.86, undefined, 4);
+        p.cone(0.04, 0.16, IRON_BLADE, x, 1.08, -0.86, undefined, 4);
+      }
+    }
+  }
+  if (level >= 7) {
+    // Lò luyện cao thứ hai: thân tròn đắp đất có đai sắt, lửa đỏ rực trên miệng, máng sắt nóng chảy.
+    p.cyl(0.36, 0.44, 1.25, C.earth, 0.55, 0.62, 0.45, undefined, 12);
+    for (const y of [0.35, 0.75, 1.1]) p.cyl(0.43 - y * 0.05, 0.43 - y * 0.05, 0.05, C.iron, 0.55, y, 0.45, undefined, 12);
+    p.box(0.12, 0.05, 0.5, C.earthDark, 0.55, 0.1, 0.85);
+    for (const [r, h, color, y] of [[0.24, 0.55, C.fire, 1.48], [0.15, 0.38, C.ember, 1.44]] as const) {
+      const flame = new THREE.Mesh(new THREE.ConeGeometry(r, h, 7), new THREE.MeshBasicMaterial({ color }));
+      flame.position.set(0.55, y, 0.45);
+      flame.userData.flame = true;
+      extra.add(flame);
+    }
+    const melt = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.03, 0.42), new THREE.MeshBasicMaterial({ color: C.ember }));
+    melt.position.set(0.55, 0.14, 0.86);
+    extra.add(melt);
   }
   const g = m.group();
   g.add(extra);
@@ -352,18 +556,38 @@ export function makeKho(level: number): THREE.Group {
   const p = m.plain;
   p.box(1.95, 0.06, 1.95, C.soil, 0, 0.03, 0);
   if (level <= 2) granary(m, 0, 0, 1.15, false);
-  else {
+  else if (level >= 7) {
+    // Ba vựa trên cột và cót thóc lớn quây quanh sân phơi lát gạch ở giữa.
+    granary(m, 0.62, -0.62, 0.72, true);
+    granary(m, -0.62, -0.62, 0.66, false);
+    granary(m, 0.66, 0.62, 0.6, false);
+    // Sân phơi lát gạch ở giữa, chéo về phía trước cho dễ thấy giữa ba mái vựa.
+    p.box(1.05, 0.05, 1.05, 0xc9b08a, -0.1, 0.07, 0.15, [0, Math.PI / 4, 0]);
+    p.box(0.85, 0.03, 0.85, C.ripe, -0.1, 0.11, 0.15, [0, Math.PI / 4, 0]);
+    for (let i = 0; i < 3; i++) p.box(0.85, 0.02, 0.035, C.thatchDark, -0.1 - 0.2 + i * 0.2, 0.13, 0.15 + 0.2 - i * 0.2, [0, Math.PI / 4, 0]);
+    p.cyl(0.014, 0.014, 0.7, C.woodDark, 0.05, 0.3, 0.35, [0, 0, 1.1], 4);
+    p.box(0.26, 0.05, 0.04, C.woodDark, -0.23, 0.15, 0.35);
+  } else {
     granary(m, 0.32, 0.3, level >= 5 ? 1.05 : 0.95, level >= 5);
     granary(m, -0.5, -0.45, 0.72, false);
     if (level >= 4) granary(m, 0.55, -0.55, 0.6, false);
   }
-  if (level >= 2) {
-    // Thang tre và thúng thóc.
-    for (const s of [-1, 1]) p.cyl(0.02, 0.02, 1.0, C.bamboo, -0.6 + s * 0.1, 0.5, 0.6, [0.35, 0, 0], 4);
+  if (level >= 2 && level < 7) {
+    // Thang tre và thúng thóc. Từ cấp 6 cót thóc lớn đứng chỗ thang, thúng dời sang phải.
+    if (level < 6) for (const s of [-1, 1]) p.cyl(0.02, 0.02, 1.0, C.bamboo, -0.6 + s * 0.1, 0.5, 0.6, [0.35, 0, 0], 4);
+    const x0 = level >= 6 ? 0.0 : -0.75;
     for (let i = 0; i < Math.min(level, 4); i++) {
-      p.cyl(0.13, 0.1, 0.18, C.thatch, -0.75 + i * 0.25, 0.12, 0.85, undefined, 8);
-      p.sphere(0.11, C.ripe, -0.75 + i * 0.25, 0.22, 0.85, [1, 0.5, 1], 6);
+      p.cyl(0.13, 0.1, 0.18, C.thatch, x0 + i * 0.25, 0.12, 0.85, undefined, 8);
+      p.sphere(0.11, C.ripe, x0 + i * 0.25, 0.22, 0.85, [1, 0.5, 1], 6);
     }
+  }
+  if (level >= 6) {
+    // Vựa thóc tròn thứ hai: cót tre đan lớn trên vòng đá, thóc đầy vun lên miệng cót.
+    const [cx, cz] = level >= 7 ? [-0.6, 0.6] : [-0.55, 0.42];
+    p.cyl(0.4, 0.42, 0.08, C.rock, cx, 0.08, cz, undefined, 12);
+    m.band.cyl(0.36, 0.38, 0.6, C.thatch, cx, 0.42, cz, undefined, 12);
+    for (const y of [0.25, 0.45, 0.65]) p.cyl(0.385, 0.385, 0.035, C.bamboo, cx, y, cz, undefined, 12);
+    p.sphere(0.34, C.ripe, cx, 0.72, cz, [1, 0.4, 1], 10);
   }
   const g = m.group();
   g.scale.setScalar(sizeFor(level));
@@ -433,7 +657,15 @@ export function makeDoanhTrai(level: number): THREE.Group {
 export function makeChoiCanh(level: number): THREE.Group {
   const m = new ToonModel();
   const p = m.plain;
-  const h = 1.5 + level * 0.25;
+  const h = 1.5 + grown(level) * 0.25;
+  if (level >= 7) {
+    // Lầu canh đá: chân lầu xây đá hộc thu nhỏ dần, ô cửa bắn.
+    for (let i = 0; i < 3; i++) {
+      const w = 0.98 - i * 0.08;
+      p.box(w, h * 0.18, w, i % 2 ? C.rockDark : C.rock, 0, h * 0.09 + i * h * 0.18, 0);
+    }
+    p.box(0.16, 0.22, 0.04, 0x2a1d12, 0, h * 0.42, 0.42);
+  }
   for (const x of [-0.32, 0.32]) {
     for (const z of [-0.32, 0.32]) p.cyl(0.04, 0.05, h + 0.1, C.woodDark, x * 0.85, h / 2, z * 0.85, [z * 0.08, 0, -x * 0.08], 5);
   }
@@ -456,6 +688,32 @@ export function makeChoiCanh(level: number): THREE.Group {
   if (level >= 5) {
     p.box(0.7, 0.05, 0.14, C.bronzeLight, 0, h + 0.88, 0);
     drum(m, -0.2, -0.2, 0.35, h + 0.03);
+  }
+  if (level >= 6) {
+    // Tầng giữa có lan can: chòi thành hai tầng.
+    const y = h * 0.58;
+    p.box(0.86, 0.06, 0.86, C.wood, 0, y, 0);
+    for (const s of [-1, 1]) {
+      p.box(0.86, 0.16, 0.04, C.woodLight, 0, y + 0.1, s * 0.41);
+      p.box(0.04, 0.16, 0.86, C.woodLight, s * 0.41, y + 0.1, 0);
+    }
+    // Nỏ lớn trên sàn trên cùng, gác qua lan can chĩa ra trước: chân xoay, báng gỗ dài,
+    // cánh nỏ đồng uốn chữ V, dây kéo về lẫy, mũi tên sắt lớn.
+    const nx = -0.17;
+    const ny = h + 0.36;
+    p.cyl(0.05, 0.06, 0.3, C.woodDark, nx, h + 0.2, 0.2, undefined, 6);
+    p.box(0.11, 0.09, 0.8, C.wood, nx, ny, 0.45);
+    for (const sx of [-1, 1]) {
+      p.box(0.46, 0.07, 0.07, C.bronze, nx + sx * 0.21, ny + 0.02, 0.78, [0, sx * 0.4, 0]);
+      p.box(0.012, 0.012, 0.51, C.cream, nx + sx * 0.21, ny + 0.05, 0.545, [0, sx * 0.966, 0]);
+    }
+    p.cyl(0.02, 0.02, 0.7, IRON_BLADE, nx, ny + 0.07, 0.6, [Math.PI / 2, 0, 0], 4);
+    p.cone(0.05, 0.14, IRON_BLADE, nx, ny + 0.07, 1.0, [Math.PI / 2, 0, 0], 4);
+  }
+  if (level >= 7) {
+    // Cờ đỏ cắm trên nóc lầu canh.
+    p.cyl(0.025, 0.025, 0.8, C.woodDark, 0, h + 1.35, 0, undefined, 5);
+    m.band.box(0.42, 0.28, 0.03, C.red, 0.22, h + 1.6, 0);
   }
   const g = m.group();
   const archer = makeFighter('cung');

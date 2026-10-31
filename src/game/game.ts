@@ -9,6 +9,7 @@ import { footprintTop, groundOf, levelFootprint, tileHeight } from './terrain';
 import {
   BUILDINGS,
   CH3_QUEST_START,
+  DIEN_CHAPTER,
   FIRST_FLOOD_MS,
   FIRST_LAND_MS,
   FLOOD_RECEDE_S,
@@ -206,7 +207,7 @@ export interface Merchant {
 }
 
 export interface GameState {
-  version: 7;
+  version: 8;
   resources: Resources;
   /** Số dân (không tính lính). */
   dan: number;
@@ -225,6 +226,8 @@ export interface GameState {
   merchant: Merchant;
   /** Số lính mỗi loại đang có (lính không tính vào dân). */
   troops: Record<UnitType, number>;
+  /** Binh khí đã rèn ở lò rèn cho từng binh chủng: 0, 1 hay 2 bậc. */
+  arms: Record<UnitType, number>;
   raid: RaidState;
   campaign: CampaignState;
   /** Mã cho trận đánh tiếp theo (giữ kinh đô hay phó bản). */
@@ -320,7 +323,7 @@ export function initialGiong(): GiongState {
 export function createInitialState(now: number): GameState {
   const dien: Building = { id: 1, type: 'dien', x: 16, z: 16, level: 1, workers: 0 };
   const state: GameState = {
-    version: 7,
+    version: 8,
     resources: { ...START_RESOURCES },
     dan: START_DAN,
     danProgress: 0,
@@ -332,6 +335,7 @@ export function createInitialState(now: number): GameState {
     clock: 0,
     merchant: { nextAt: MERCHANT_FIRST_MS, visit: null, seq: 0 },
     troops: { giao: 0, cung: 0, voi: 0 },
+    arms: { giao: 0, cung: 0, voi: 0 },
     raid: initialRaid(),
     campaign: initialCampaign(),
     nextBattleId: 1,
@@ -544,6 +548,10 @@ export function canUpgrade(state: GameState, id: number): Result {
   if (!b) return fail('khongTimThay');
   const cost = upgradeCostOf(b);
   if (!cost) return fail('capToiDa');
+  // Điện lên cấp 6 khi đã vào chương 2, lên cấp 7 khi đã vào chương 3.
+  const chapter = b.type === 'dien' ? DIEN_CHAPTER[b.level + 1] : undefined;
+  if (chapter === 2 && !inChapter2(state)) return fail('canChuong2');
+  if (chapter === 3 && !inChapter3(state)) return fail('canChuong3');
   if (dienLevel(state) < dienNeededFor(b.type, b.level + 1)) return fail('chuaDuCapDien');
   if (!canAfford(state, cost)) return fail('thieuTaiNguyen');
   return ok(undefined);
@@ -960,6 +968,7 @@ function updateRaid(state: GameState, ms: number): void {
       flood: foe === 'thuy' ? { n: raid.floods + 1, level: nextFloodLevel(state) } : null,
       land: foe === 'yeu' ? { foe, n: raid.nights + 1 } : foe === 'trieu' ? { foe, n: raid.trieu + 1 } : null,
       crossbows: hasCoLoa(state),
+      arms: state.arms,
     });
     return;
   }

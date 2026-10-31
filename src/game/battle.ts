@@ -7,6 +7,7 @@
 
 import {
   ADV,
+  ARMS_BONUS,
   BUILDINGS,
   CO_LOA_TOWER,
   ENEMIES,
@@ -157,6 +158,8 @@ export interface Battle {
   shield: number;
   /** Đền Cổ Loa còn nguyên: chòi canh bắn mạnh hơn, xa hơn. */
   crossbows: boolean;
+  /** Bậc binh khí đã rèn của từng binh chủng ta (0–2): thêm máu và sức đánh. */
+  arms: Record<UnitType, number>;
   /** Mùa lũ thứ mấy (0 nếu không phải mùa lũ). */
   flood: number;
   /** Mực nước lũ sẽ dâng tới (bậc), 0 nếu không có lũ. */
@@ -249,7 +252,13 @@ function newBattle(id: number, mode: Battle['mode'], wave: number, side: RaidSid
     foe: 'an',
     shield: 0,
     crossbows: false,
+    arms: { giao: 0, cung: 0, voi: 0 },
   };
+}
+
+/** Phần binh khí đã rèn cộng thêm vào máu và sức đánh của một lính ta (tướng và giặc không có). */
+export function armsBonus(battle: Pick<Battle, 'arms'>, kind: FighterKind): number {
+  return kind in UNITS ? (battle.arms[kind as UnitType] ?? 0) * ARMS_BONUS : 0;
 }
 
 /** Kỹ năng của từng tướng: kỹ năng đầu có ngay, kỹ năng sau mở giữa chương. */
@@ -276,12 +285,15 @@ export interface BattleOpts {
   land?: { foe: 'yeu' | 'trieu'; n: number } | null;
   /** Đền Cổ Loa còn nguyên. */
   crossbows?: boolean;
+  /** Bậc binh khí đã rèn của từng binh chủng. */
+  arms?: Record<UnitType, number>;
 }
 
 export function startBattle(state: GameState, wave: number, side: RaidSide, opts: BattleOpts = {}): Battle {
   const battle = newBattle(state.nextBattleId++, 'raid', wave, side);
   battle.bonus = opts.bonus ?? 0;
   battle.crossbows = opts.crossbows ?? false;
+  if (opts.arms) battle.arms = { ...opts.arms };
   const land = opts.land ?? null;
   const rand = rng(wave * 7919 + ['bac', 'tay', 'nam', 'dong'].indexOf(side) + 1);
   const lo = Math.max(areaStart(5), 1);
@@ -327,7 +339,7 @@ export function startBattle(state: GameState, wave: number, side: RaidSide, opts
       for (let i = 0; i < state.troops[kind]; i++) {
         const x = barracks.x + def.w / 2 + (rand() - 0.5) * def.w;
         const z = barracks.z + def.d / 2 + (rand() - 0.5) * def.d;
-        battle.fighters.push(newFighter(battle, 'ta', kind, x, z, UNITS[kind].hp * (1 + battle.bonus)));
+        battle.fighters.push(newFighter(battle, 'ta', kind, x, z, UNITS[kind].hp * (1 + battle.bonus + armsBonus(battle, kind))));
       }
     }
   }
@@ -368,6 +380,7 @@ export interface FieldSetup {
   rows: Record<UnitType, Row>;
   hero?: HeroSetup | null;
   bonus?: number;
+  arms?: Record<UnitType, number>;
 }
 
 /** An Dương Vương bắn nỏ: đứng lùi sau hàng đầu của quân ta chừng này ô. */
@@ -383,13 +396,14 @@ const PER_LINE = 8;
 export function startFieldBattle(setup: FieldSetup): Battle {
   const battle = newBattle(setup.id, 'field', setup.stage, 'bac');
   battle.bonus = setup.bonus ?? 0;
+  if (setup.arms) battle.arms = { ...setup.arms };
   const rand = rng(setup.id * 7919 + setup.stage);
   const ours: Record<Row, FighterKind[]> = { tien: [], trung: [], hau: [] };
   for (const k of UNIT_TYPES) for (let i = 0; i < (setup.army[k] ?? 0); i++) ours[setup.rows[k]].push(k);
   const theirs: Record<Row, FighterKind[]> = { tien: [], trung: [], hau: [] };
   for (const k of Object.keys(setup.enemies) as EnemyType[]) for (let i = 0; i < (setup.enemies[k] ?? 0); i++) theirs[ENEMY_ROWS[k]].push(k);
   const front = (FIELD.d - FIELD.gap) / 2;
-  deploy(battle, 'ta', ours, FIELD.d - front, 1, rand, (k) => UNITS[k as UnitType].hp * FIELD.hpMul * (1 + battle.bonus));
+  deploy(battle, 'ta', ours, FIELD.d - front, 1, rand, (k) => UNITS[k as UnitType].hp * FIELD.hpMul * (1 + battle.bonus + armsBonus(battle, k)));
   deploy(battle, 'giac', theirs, front, -1, rand, (k) => ENEMIES[k as EnemyType].hp * setup.hpScale * FIELD.hpMul);
   battle.total = battle.fighters.filter((f) => f.side === 'giac').length;
   // Tướng đứng giữa, trước tiền quân. An Dương Vương bắn nỏ thì đứng sau tiền quân.
@@ -592,7 +606,7 @@ function damageFighter(battle: Battle, attacker: { kind?: FighterKind; dmg: numb
 function strike(battle: Battle, f: Fighter, foe: Fighter): void {
   const st = statsOf(f.kind);
   if (st.range > 2) emit(battle, { kind: 'shot', x: f.x, z: f.z, tx: foe.x, tz: foe.z, by: f.kind });
-  const mult = f.side === 'ta' ? (1 + battle.bonus) * (battle.rally > 0 ? RALLY.dmg : 1) : 1;
+  const mult = f.side === 'ta' ? (1 + battle.bonus + armsBonus(battle, f.kind)) * (battle.rally > 0 ? RALLY.dmg : 1) : 1;
   const dmg = st.dmg * mult;
   damageFighter(battle, { kind: f.kind, dmg }, foe);
   if (isHero(f.kind)) {
