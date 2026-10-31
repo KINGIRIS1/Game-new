@@ -2,7 +2,7 @@ name: Kiểm tra và đăng game
 
 on:
   push:
-    branches: [main, ccr-eb85992d-60j30t]
+    branches: [main]
   pull_request:
   workflow_dispatch:
 
