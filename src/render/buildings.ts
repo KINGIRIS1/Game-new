@@ -3,7 +3,7 @@
 // Gốc tọa độ là tâm chân móng, mặt trước hướng +z.
 
 import * as THREE from 'three';
-import { makeFighter } from './models';
+import { ironHorse, makeFighter } from './models';
 import { C } from './palette';
 import { ShapeBuilder, saddleRoof, seeded } from './shapes';
 import { ToonModel, inkThin, outlineOf, toon } from './toon';
@@ -479,5 +479,33 @@ export function makeBayChong(): THREE.Group {
   const g = new THREE.Group();
   const mesh = b.mesh(toon);
   g.add(mesh, outlineOf(mesh.geometry, inkThin));
+  return g;
+}
+
+// ---------- Đền Phù Đổng ----------
+
+/** Đền thờ Phù Đổng Thiên Vương: nền đá hai bậc, đền mái thuyền, tượng ngựa sắt trước sân. */
+export function makeDenPhuDong(): THREE.Group {
+  const m = new ToonModel();
+  const p = m.plain;
+  p.box(2.9, 0.22, 2.9, C.rock, 0, 0.11, 0);
+  p.box(2.4, 0.16, 2.0, C.rockDark, 0, 0.3, -0.35);
+  stiltHall(m, { x: 0, z: -0.45, w: 1.9, d: 1.3, postH: 0.85, roofL: 2.7, roofW: 1.7, lift: 0.65 });
+  const roofTop = 0.85 + 0.68 + 1.7 * 0.4 + 0.65;
+  bird(m, 1.25, roofTop, -0.45, 1, 0.8);
+  bird(m, -1.25, roofTop, -0.45, -1, 0.8);
+  // Bệ tượng và hai lư hương đồng.
+  p.box(0.8, 0.32, 1.1, C.rock, 0, 0.38, 0.85);
+  drum(m, -1.05, 1.0, 0.4, 0.22);
+  drum(m, 1.05, 1.0, 0.4, 0.22);
+  banner(m, -1.3, -1.25, 2.4, C.red);
+  banner(m, 1.1, -1.25, 2.4, C.red);
+  const g = m.group();
+  const horse = new ToonModel(inkThin);
+  ironHorse(horse);
+  const statue = horse.group();
+  statue.scale.setScalar(0.72);
+  statue.position.set(0, 0.54, 0.75);
+  g.add(statue);
   return g;
 }

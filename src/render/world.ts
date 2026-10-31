@@ -4,13 +4,14 @@ import * as THREE from 'three';
 import { BUILDINGS, FIELD, type BuildingType, type Terrain } from '../game/defs';
 import type { Battle, RaidSide } from '../game/battle';
 import { dienLevel, type Building, type GameState } from '../game/game';
+import { giongLook, type GiongLook } from '../game/giong';
 import { GRID, RIVER_START, areaStart, isUnlocked } from '../game/map';
 import { Battlefield } from './battlefield';
 import { BattleView } from './battleView';
 import { IsoCamera } from './camera';
-import { makeBaiDa, makeBayChong, makeBen, makeChoiCanh, makeDien, makeDoanhTrai, makeKho, makeLoRen, makeNhaSan, makeRuong } from './buildings';
+import { makeBaiDa, makeBayChong, makeBen, makeChoiCanh, makeDenPhuDong, makeDien, makeDoanhTrai, makeKho, makeLoRen, makeNhaSan, makeRuong } from './buildings';
 import { addSunLights } from './lights';
-import { buildForest, buildWalls, makeBoat, type TreeSpot, type WallSpot } from './models';
+import { buildForest, buildWalls, makeBoat, makeGiong, type TreeSpot, type WallSpot } from './models';
 import { makeWorker, type Job } from './people';
 import { C } from './palette';
 import { ShapeBuilder, seeded } from './shapes';
@@ -164,6 +165,8 @@ export class World {
   private cityCam: { target: THREE.Vector3; zoom: number; bounds: { min: number; max: number } } | null = null;
   private readonly warning: THREE.Mesh;
   private merchantBoat?: THREE.Object3D;
+  /** Gióng đứng trước Điện, đổi dáng khi lớn lên; không còn khi đã bay về trời. */
+  private giong?: { obj: THREE.Group; look: GiongLook; key: string };
   private shownLevel = 0;
   private wallKey = '';
   private time = 0;
@@ -336,6 +339,7 @@ export class World {
     }
 
     this.syncMerchant(state);
+    this.syncGiong(state);
 
     const walls = state.buildings.filter((b) => b.type === 'luy');
     const key = walls.map((b) => `${b.id}:${b.level}:${b.damaged ? 1 : 0}`).join(',');
@@ -433,6 +437,7 @@ export class World {
     if (type === 'doanhTrai') return makeDoanhTrai(level);
     if (type === 'choiCanh') return makeChoiCanh(level);
     if (type === 'bayChong') return makeBayChong();
+    if (type === 'denPhuDong') return makeDenPhuDong();
     return new THREE.Group();
   }
 
@@ -507,6 +512,29 @@ export class World {
   }
 
   /** Id công trình (trừ lũy tre) dưới vị trí chạm, ưu tiên phần nhô cao như mái nhà. */
+  /** Gióng đứng ngay trước Điện, bên phải bậc lên. */
+  private syncGiong(state: GameState): void {
+    const look = giongLook(state);
+    const dien = state.buildings.find((b) => b.type === 'dien');
+    const key = look && dien ? `${look}:${dien.x}:${dien.z}` : '';
+    if (this.giong?.key === key) return;
+    if (this.giong) this.scene.remove(this.giong.obj);
+    this.giong = undefined;
+    if (!look || !dien) return;
+    const obj = makeGiong(look);
+    obj.scale.setScalar(look === 'trangSi' ? 0.7 : 0.8);
+    obj.position.set(wx(dien.x) + 3.6, 0, wz(dien.z) + 4.5);
+    obj.rotation.y = look === 'trangSi' ? -Math.PI / 2 + 0.5 : 0.3;
+    this.scene.add(obj);
+    this.giong = { obj, look, key };
+  }
+
+  /** Người chơi chạm vào Gióng trước Điện. */
+  pickGiong(clientX: number, clientY: number): boolean {
+    if (!this.giong) return false;
+    return this.view.setRay(clientX, clientY).intersectObject(this.giong.obj, true).length > 0;
+  }
+
   pickBuildingId(clientX: number, clientY: number): number | null {
     const ray = this.view.setRay(clientX, clientY);
     const hits = ray.intersectObjects(this.buildingsRoot.children, true);
@@ -610,7 +638,7 @@ export class World {
       this.field.setTerrain(terrain);
       if (!this.cityCam) this.cityCam = { target: v.target.clone(), zoom: v.zoom, bounds: { ...v.bounds } };
       this.panGoal = null;
-      v.bounds = { min: -7, max: 7 };
+      v.bounds = { min: -6, max: 6 };
       v.target.set(0, 0, 0);
       this.fitField();
       return;
@@ -719,6 +747,14 @@ export class World {
 
     if (this.merchantBoat) {
       this.merchantBoat.position.y = WATER_Y - 0.02 + Math.sin(t * 1.2) * 0.04;
+    }
+
+    if (this.giong) {
+      const g = this.giong;
+      // Cậu bé lắc lư, thiếu niên cúi ăn cơm, ngựa sắt thở ra lửa.
+      if (g.look === 'trangSi') g.obj.position.y = Math.abs(Math.sin(t * 2)) * 0.03;
+      else g.obj.rotation.x = (g.look === 'be' ? 0.06 : 0.15) * Math.sin(t * (g.look === 'be' ? 1.5 : 3));
+      for (const c of g.obj.children) if (c.userData.flame) c.scale.set(1, 0.7 + 0.5 * Math.abs(Math.sin(t * 9)), 1);
     }
 
     for (const boat of this.boats) {

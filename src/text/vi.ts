@@ -1,7 +1,11 @@
 // Mọi chữ hiển thị trong game. Tách riêng để sau này dịch sang tiếng Anh.
 
-import type { BuildingType, EnemyType, ResourceId, Row, UnitType } from '../game/defs';
-import type { FailReason } from '../game/game';
+import type { BuildingType, EnemyType, GearId, ResourceId, Row, SkillId, UnitType } from '../game/defs';
+import type { FailReason, StoryId } from '../game/game';
+import type { GiongLook } from '../game/giong';
+
+/** Người nói trong các đoạn truyện. */
+type Speaker = 'ke' | 'lacHau' | 'vua' | 'giong' | 'trangSi';
 
 export const vi = {
   gameTitle: 'Thời đại Văn Lang',
@@ -69,6 +73,11 @@ export const vi = {
       icon: '🔱',
       desc: 'Hố cắm chông tre vót nhọn. Giặc giẫm vào thì bị thương nặng. Mỗi đợt giặc dùng được một lần, đánh xong tự gài lại.',
     },
+    denPhuDong: {
+      name: 'Đền Phù Đổng',
+      icon: '🏮',
+      desc: 'Đền thờ Phù Đổng Thiên Vương. Mọi tài nguyên làm ra thêm 10%, quân ta thêm 10% máu và sức đánh. Chỉ dựng được sau khi Gióng bay về trời.',
+    },
   } satisfies Record<BuildingType, { name: string; icon: string; desc: string }>,
 
   reasons: {
@@ -93,10 +102,16 @@ export const vi = {
     dangCoGiac: 'Đang có giặc!',
     khongHuHong: 'Công trình này không hư hỏng',
     manKhoa: 'Phải thắng màn trước đã',
-    canThanhGiong: 'Màn này cần Thánh Gióng ra trận (có ở bản sau)',
+    canThanhGiong: 'Màn này cần Thánh Gióng đã thành tráng sĩ',
     chuaChonQuan: 'Chưa chọn người lính nào',
     khongDuQuan: 'Không đủ lính',
     dangDanhPhoBan: 'Quân đang đánh phó bản',
+    chuaCoGiong: 'Gióng chưa xuất hiện. Hãy nâng Điện Vua Hùng lên cấp 2',
+    daGopDu: 'Đã góp đủ gạo nuôi Gióng',
+    daRen: 'Đã rèn món này rồi',
+    canLoRen: 'Cần nâng lò rèn',
+    giongKietSuc: 'Gióng đang kiệt sức, chờ một lát',
+    canKetChuong: 'Chỉ dựng được sau khi Gióng bay về trời',
   } satisfies Record<FailReason, string>,
 
   quests: {
@@ -115,7 +130,12 @@ export const vi = {
     giuKinhDo: 'Trinh sát sẽ báo khi giặc Ân tới. Xin bệ hạ giữ vững kinh đô, đánh lui đợt giặc đầu tiên.',
     danhMan1: 'Giặc Ân lẩn ở bìa rừng Phong Châu. Xin bệ hạ mở Phó bản, cho Lạc tướng dẫn quân đánh màn 1.',
     quaMan4: 'Phó tướng Ân đóng đồn chặn đường lên phương Bắc. Xin bệ hạ đánh qua màn 4, phá đồn giặc.',
-    allDone: 'Đồn giặc đã bị phá. Thánh Gióng và đường tới núi Trâu sẽ có ở bản sau.',
+    nuoiGiong: 'Cả nước góp gạo nuôi Gióng. Xin bệ hạ góp đủ 5 mốc gạo để cậu bé làng Phù Đổng mau lớn.',
+    renDo: 'Gióng xin ngựa sắt, roi sắt, giáp sắt. Xin bệ hạ truyền lò rèn rèn đủ ba món.',
+    quaMan6: 'Tráng sĩ Gióng đã lên đường. Xin bệ hạ đánh qua màn 6, mở đường lên phương Bắc.',
+    nuiTrau: 'Đại quân Ân đóng ở chân núi Trâu. Xin bệ hạ cho Gióng đánh trận quyết chiến ở màn 8.',
+    denPhuDong: 'Phù Đổng Thiên Vương đã về trời. Xin bệ hạ dựng Đền Phù Đổng để muôn đời thờ phụng.',
+    allDone: 'Chương 1 đã xong: giặc Ân tan vỡ, Phù Đổng Thiên Vương muôn đời hiển linh. Chương 2 (Sơn Tinh, Thủy Tinh) sẽ có ở bản sau.',
   } as Record<string, string>,
 
   units: {
@@ -129,6 +149,7 @@ export const vi = {
     cungAn: 'cung thủ Ân',
     chienXa: 'chiến xa Ân',
     phoTuong: 'phó tướng Ân',
+    daiTuong: 'đại tướng Ân',
   } satisfies Record<EnemyType, string>,
 
   enemyIcons: {
@@ -136,6 +157,7 @@ export const vi = {
     cungAn: '🏹',
     chienXa: '🛞',
     phoTuong: '👹',
+    daiTuong: '👺',
   } satisfies Record<EnemyType, string>,
 
   /** Tên và lời dẫn từng màn phó bản, theo thứ tự trong STAGES. */
@@ -151,6 +173,81 @@ export const vi = {
   ],
 
   rows: { tien: 'Tiền quân', trung: 'Trung quân', hau: 'Hậu quân' } satisfies Record<Row, string>,
+
+  skills: {
+    trongTran: { name: 'Trống trận', icon: '🥁', desc: 'Lạc tướng đánh trống thúc quân: quân ta đánh mạnh hơn, chạy nhanh hơn trong chốc lát.' },
+    phunLua: { name: 'Phun lửa', icon: '🔥', desc: 'Gióng phi ngựa sắt lao vào giặc, ngựa phun lửa đốt cả một dải.' },
+    nhoTre: { name: 'Nhổ tre', icon: '🎋', desc: 'Gióng nhổ bụi tre quật quanh mình, giặc ngã rạp, bị hất lùi ra.' },
+  } satisfies Record<SkillId, { name: string; icon: string; desc: string }>,
+
+  gear: {
+    ngua: { name: 'Ngựa sắt', icon: '🐎' },
+    roi: { name: 'Roi sắt', icon: '🦯' },
+    giap: { name: 'Giáp sắt', icon: '🛡️' },
+  } satisfies Record<GearId, { name: string; icon: string }>,
+
+  giongLooks: {
+    be: { name: 'Cậu bé lên ba', icon: '👶' },
+    thieuNien: { name: 'Cậu bé lớn nhanh như thổi', icon: '🧒' },
+    trangSi: { name: 'Tráng sĩ Gióng', icon: '🐎' },
+  } satisfies Record<GiongLook, { name: string; icon: string }>,
+
+  speakers: {
+    ke: { name: 'Lời kể', icon: '🥁' },
+    lacHau: { name: 'Lạc hầu', icon: '📜' },
+    vua: { name: 'Vua Hùng', icon: '👑' },
+    giong: { name: 'Gióng', icon: '🧒' },
+    trangSi: { name: 'Tráng sĩ Gióng', icon: '🐎' },
+  } satisfies Record<Speaker, { name: string; icon: string }>,
+
+  /** Các đoạn truyện chương 1, theo truyền thuyết Thánh Gióng. */
+  stories: {
+    mo: {
+      title: 'Giặc Ân xâm lược',
+      lines: [
+        { who: 'ke', text: 'Đời Hùng Vương thứ sáu, giặc Ân từ phương Bắc kéo xuống, thế giặc rất mạnh.' },
+        { who: 'lacHau', text: 'Tâu bệ hạ, việc trước tiên là dựng lũy giữ kinh đô Phong Châu và khai ruộng cho đủ ăn.' },
+        { who: 'vua', text: 'Lạc hầu hãy lo việc dựng nước. Ta sẽ sai sứ giả đi khắp nơi tìm người tài đánh giặc.' },
+      ],
+    },
+    suGia: {
+      title: 'Sứ giả tìm người tài',
+      lines: [
+        { who: 'ke', text: 'Ở làng Phù Đổng có một cậu bé lên ba mà chẳng biết nói, biết cười, đặt đâu nằm đấy.' },
+        { who: 'ke', text: 'Nghe tiếng sứ giả rao tìm người tài, cậu bé bỗng cất tiếng gọi mẹ.' },
+        { who: 'giong', text: 'Mẹ ra mời sứ giả vào đây cho con!' },
+        { who: 'giong', text: 'Ông về tâu với vua sắm cho ta một con ngựa sắt, một cái roi sắt và một tấm áo giáp sắt, ta sẽ phá tan lũ giặc này.' },
+        { who: 'vua', text: 'Truyền cho thợ rèn ngày đêm làm gấp. Cả nước hãy góp gạo nuôi cậu bé!' },
+        { who: 'lacHau', text: 'Tâu bệ hạ, Gióng ăn bao nhiêu cũng không no. Xin góp gạo cho Gióng theo từng mốc, và cho lò rèn rèn đồ sắt. Chạm vào Gióng trước Điện để xem.' },
+      ],
+    },
+    vuonVai: {
+      title: 'Vươn vai thành tráng sĩ',
+      lines: [
+        { who: 'ke', text: 'Ngựa sắt, roi sắt, giáp sắt vừa đem tới, Gióng vươn vai một cái bỗng thành tráng sĩ mình cao hơn trượng.' },
+        { who: 'trangSi', text: 'Ta đi đánh giặc đây!' },
+        { who: 'ke', text: 'Gióng mặc giáp, cầm roi, nhảy lên mình ngựa. Ngựa sắt hí vang, phun lửa, lao thẳng ra trận.' },
+        { who: 'lacHau', text: 'Tâu bệ hạ, từ nay Gióng cùng ra trận ở phó bản và khi giặc đánh kinh đô. Trong trận, bấm 🔥 để ngựa sắt phun lửa.' },
+      ],
+    },
+    roiGay: {
+      title: 'Roi sắt gãy',
+      lines: [
+        { who: 'ke', text: 'Giữa trận, roi sắt gãy. Gióng liền nhổ những cụm tre bên đường quật vào giặc.' },
+        { who: 'trangSi', text: 'Tre làng ta cũng là vũ khí!' },
+        { who: 'lacHau', text: 'Tâu bệ hạ, nay Gióng có thêm đòn Nhổ tre 🎋, quật ngã cả đám giặc quanh mình.' },
+      ],
+    },
+    ketChuong: {
+      title: 'Phù Đổng Thiên Vương',
+      lines: [
+        { who: 'ke', text: 'Giặc Ân tan vỡ, đại tướng giặc bỏ mạng dưới chân núi Trâu.' },
+        { who: 'ke', text: 'Gióng phi ngựa lên đỉnh núi Sóc, cởi giáp sắt để lại, rồi cả người lẫn ngựa từ từ bay lên trời.' },
+        { who: 'vua', text: 'Nhớ công ơn ấy, ta phong Gióng là Phù Đổng Thiên Vương và lập đền thờ ngay ở quê nhà.' },
+        { who: 'lacHau', text: 'Tâu bệ hạ, xin dựng Đền Phù Đổng ở kinh đô. Từ nay mỗi khi ra trận, Thiên Vương vẫn hiển linh giúp quân ta.' },
+      ],
+    },
+  } satisfies Record<StoryId, { title: string; lines: { who: Speaker; text: string }[] }>,
 
   ui: {
     lacHau: 'Lạc hầu',
@@ -255,8 +352,26 @@ export const vi = {
     haveTroops: (n: number) => `Có ${n}`,
     noTroops: 'Chưa có lính. Hãy luyện quân ở doanh trại.',
     march: '⚔️ Xuất quân',
-    rally: '🥁 Trống trận',
-    rallyHint: 'Lạc tướng đánh trống thúc quân: quân ta đánh mạnh hơn, chạy nhanh hơn trong chốc lát.',
+    giong: 'Thánh Gióng',
+    giongFeedTitle: 'Góp gạo nuôi Gióng',
+    giongFed: (n: number, max: number) => `Đã góp ${n}/${max} mốc gạo`,
+    feed: 'Góp gạo',
+    fedToast: (n: number) => `Đã góp mốc gạo thứ ${n}. Gióng lớn nhanh như thổi!`,
+    gearTitle: 'Đồ sắt rèn ở lò rèn',
+    forge: 'Rèn',
+    forged: 'Đã rèn',
+    forgedToast: (name: string) => `Lò rèn đã rèn xong ${name.toLowerCase()}`,
+    needForge: (lv: number) => `Cần lò rèn cấp ${lv}`,
+    giongNotReady: 'Đủ 5 mốc gạo và 3 món đồ sắt thì Gióng vươn vai thành tráng sĩ, cùng ra trận.',
+    giongReady: 'Gióng đã thành tráng sĩ: cùng ra trận ở phó bản và khi giặc đánh kinh đô.',
+    giongResting: (s: number) => `Gióng đang kiệt sức, nghỉ thêm ${s} giây nữa mới ra trận được.`,
+    giongHienLinh: 'Phù Đổng Thiên Vương đã về trời, vẫn hiển linh giúp quân ta mỗi khi ra trận.',
+    giongForge: 'Rèn đồ cho Gióng',
+    giongJoins: 'Thánh Gióng cùng ra trận',
+    skillsTitle: 'Kỹ năng trong trận',
+    whipBroken: 'Roi sắt đã gãy, Gióng đánh bằng tre.',
+    storyNext: 'Tiếp ›',
+    storyEnd: 'Xong',
     retreat: '🏳️ Rút quân',
     fieldBanner: (left: number, ours: number, s: number) => `Còn ${left} giặc · quân ta ${ours} · ${s} giây`,
     stageWonTitle: (n: number) => `Thắng màn ${n}!`,

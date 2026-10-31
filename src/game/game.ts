@@ -3,6 +3,7 @@
 
 import { startBattle, stepBattle, type Battle, type RaidSide } from './battle';
 import { updateCampaign } from './campaign';
+import { heroSetup, restAfter } from './giong';
 import {
   BUILDINGS,
   DAN_GROW_MS,
@@ -23,6 +24,7 @@ import {
   START_DAN,
   START_RESOURCES,
   STORAGE_CAP,
+  TEMPLE_BONUS,
   TRADE_BONUS,
   TRADE_VALUE,
   UNITS,
@@ -32,6 +34,7 @@ import {
   type QuestDef,
   type ResourceId,
   type Resources,
+  type GearId,
   type Row,
   type UnitType,
 } from './defs';
@@ -96,6 +99,21 @@ export interface CampaignState {
   lastResult: StageResult | null;
 }
 
+export interface GiongState {
+  /** Số mốc gạo đã góp nuôi Gióng (0–5). */
+  fed: number;
+  gear: Record<GearId, boolean>;
+  /** Roi sắt đã gãy (sau màn 6): Gióng nhổ tre quật giặc. */
+  whipBroken: boolean;
+  /** Đồng hồ chơi lúc Gióng hồi sức sau khi kiệt sức trong trận. */
+  restUntil: number;
+  /** Đã bay về trời (kết chương); từ đó Gióng hiển linh giúp quân ta. */
+  ascended: boolean;
+}
+
+/** Các đoạn truyện, hiện mỗi đoạn một lần theo đúng thứ tự. */
+export type StoryId = 'mo' | 'suGia' | 'vuonVai' | 'roiGay' | 'ketChuong';
+
 /** Một lời mời đổi hàng của thuyền buôn: đưa `give`, nhận `get`. */
 export interface Offer {
   give: { r: ResourceId; n: number };
@@ -113,7 +131,7 @@ export interface Merchant {
 }
 
 export interface GameState {
-  version: 4;
+  version: 5;
   resources: Resources;
   /** Số dân (không tính lính). */
   dan: number;
@@ -134,6 +152,8 @@ export interface GameState {
   campaign: CampaignState;
   /** Mã cho trận đánh tiếp theo (giữ kinh đô hay phó bản). */
   nextBattleId: number;
+  giong: GiongState;
+  story: { seen: StoryId[] };
   settings: { muted: boolean };
 }
 
@@ -162,7 +182,13 @@ export type FailReason =
   | 'canThanhGiong'
   | 'chuaChonQuan'
   | 'khongDuQuan'
-  | 'dangDanhPhoBan';
+  | 'dangDanhPhoBan'
+  | 'chuaCoGiong'
+  | 'daGopDu'
+  | 'daRen'
+  | 'canLoRen'
+  | 'giongKietSuc'
+  | 'canKetChuong';
 
 export type Result<T = undefined> = { ok: true; value: T } | { ok: false; reason: FailReason };
 
@@ -177,9 +203,13 @@ export function initialCampaign(): CampaignState {
   return { cleared: 0, rows: { ...DEFAULT_ROWS }, battle: null, lastResult: null };
 }
 
+export function initialGiong(): GiongState {
+  return { fed: 0, gear: { ngua: false, roi: false, giap: false }, whipBroken: false, restUntil: 0, ascended: false };
+}
+
 export function createInitialState(now: number): GameState {
   return {
-    version: 4,
+    version: 5,
     resources: { ...START_RESOURCES },
     dan: START_DAN,
     danProgress: 0,
@@ -193,6 +223,8 @@ export function createInitialState(now: number): GameState {
     raid: initialRaid(),
     campaign: initialCampaign(),
     nextBattleId: 1,
+    giong: initialGiong(),
+    story: { seen: [] },
     settings: { muted: false },
   };
 }
@@ -301,12 +333,19 @@ export function outputOf(b: Building): Cost {
 }
 
 /** Sản lượng mỗi phút của cả kinh đô, chưa trừ gạo ăn và chưa tính thiếu gạo. */
+/** Phần cộng thêm của Đền Phù Đổng, khi đền đã dựng và còn nguyên. */
+export function templeBonus(state: GameState): number {
+  return state.buildings.some((b) => b.type === 'denPhuDong' && !b.damaged) ? TEMPLE_BONUS : 0;
+}
+
 export function productionPerMinute(state: GameState): Resources {
   const total: Resources = { gao: 0, voOc: 0, datDa: 0, sat: 0 };
   for (const b of state.buildings) {
     const out = outputOf(b);
     for (const r of RESOURCE_IDS) total[r] += out[r] ?? 0;
   }
+  const bonus = 1 + templeBonus(state);
+  for (const r of RESOURCE_IDS) total[r] *= bonus;
   return total;
 }
 
@@ -340,6 +379,7 @@ export function dienNeededFor(type: BuildingType, level: number): number {
 export function canPlace(state: GameState, type: BuildingType, x: number, z: number): Result {
   const def = BUILDINGS[type];
   if (!def.buildable) return fail('khongTheXay');
+  if (def.afterChapter && !state.giong.ascended) return fail('canKetChuong');
   if (dienLevel(state) < def.minDien) return fail('chuaDuCapDien');
   if (countOf(state, type) >= limitOf(state, type)) return fail('datGioiHan');
   const level = dienLevel(state);
@@ -393,6 +433,12 @@ export function questProgress(state: GameState): { have: number; need: number } 
   } else if (goal.kind === 'stage') {
     have = state.campaign.cleared;
     need = goal.stage;
+  } else if (goal.kind === 'giongFed') {
+    have = state.giong.fed;
+    need = goal.amount;
+  } else if (goal.kind === 'giongGear') {
+    have = Object.values(state.giong.gear).filter(Boolean).length;
+    need = goal.amount;
   } else {
     have = dienLevel(state);
     need = goal.level;
@@ -407,7 +453,7 @@ export function questDone(state: GameState): boolean {
 
 // ---------- Thao tác (thay đổi state tại chỗ) ----------
 
-function pay(state: GameState, cost: Cost): void {
+export function pay(state: GameState, cost: Cost): void {
   for (const r of RESOURCE_IDS) state.resources[r] -= cost[r] ?? 0;
 }
 
@@ -582,6 +628,7 @@ function finishRaid(state: GameState): void {
     stolen: { ...battle.stolen },
   };
   if (won) raid.won += 1;
+  restAfter(state, battle);
   raid.wave = battle.wave;
   raid.phase = 'idle';
   raid.battle = null;
@@ -607,7 +654,7 @@ function updateRaid(state: GameState, ms: number): void {
   }
   if (raid.phase === 'warning' && state.clock >= raid.startsAt) {
     raid.phase = 'battle';
-    raid.battle = startBattle(state, raid.wave + 1, raid.side);
+    raid.battle = startBattle(state, raid.wave + 1, raid.side, { hero: heroSetup(state), bonus: templeBonus(state) });
     return;
   }
   if (raid.phase === 'battle' && raid.battle) {

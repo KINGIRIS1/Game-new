@@ -3,7 +3,11 @@
 
 import { retreatField, startFieldBattle, stepField } from './battle';
 import { REPLAY_SHARE, RESOURCE_IDS, STAGES, UNIT_TYPES, type Cost, type Row, type StageDef, type UnitType } from './defs';
-import { BATTLE_STEP, countOf, dienLevel, gain, type FailReason, type GameState, type Result, type StageResult } from './game';
+import { BATTLE_STEP, countOf, dienLevel, gain, templeBonus, type FailReason, type GameState, type Result, type StageResult } from './game';
+import { giongReady, giongResting, heroSetup, restAfter } from './giong';
+
+/** Thắng màn này lần đầu thì roi sắt gãy. */
+export const WHIP_BREAKS_AT = 6;
 
 const ok = <T>(value: T): Result<T> => ({ ok: true, value });
 const fail = (reason: FailReason): Result<never> => ({ ok: false, reason });
@@ -33,8 +37,8 @@ export function canStartStage(state: GameState, n: number): Result {
   if (!def) return fail('khongTimThay');
   if (countOf(state, 'doanhTrai') === 0) return fail('canDoanhTrai');
   if (!stageOpen(state, n)) return fail('manKhoa');
-  // Thánh Gióng có ở lát cắt 3b; tới lúc ấy các màn này mới mở.
-  if (def.needsGiong) return fail('canThanhGiong');
+  if (def.needsGiong && !giongReady(state)) return fail('canThanhGiong');
+  if (def.needsGiong && giongResting(state)) return fail('giongKietSuc');
   if (dienLevel(state) < def.minDien) return fail('chuaDuCapDien');
   if (state.raid.phase !== 'idle') return fail('dangCoGiac');
   if (state.campaign.battle) return fail('dangDanhPhoBan');
@@ -46,7 +50,9 @@ export function startStage(state: GameState, n: number, army: Record<UnitType, n
   const check = canStartStage(state, n);
   if (!check.ok) return check;
   if (UNIT_TYPES.some((k) => (army[k] ?? 0) < 0 || (army[k] ?? 0) > state.troops[k])) return fail('khongDuQuan');
-  if (UNIT_TYPES.every((k) => !army[k])) return fail('chuaChonQuan');
+  const hero = heroSetup(state);
+  // Có Gióng thì ra trận một mình cũng được.
+  if (!hero && UNIT_TYPES.every((k) => !army[k])) return fail('chuaChonQuan');
   const def = stageDef(n)!;
   state.campaign.rows = { ...rows };
   state.campaign.lastResult = null;
@@ -57,6 +63,8 @@ export function startStage(state: GameState, n: number, army: Record<UnitType, n
     hpScale: def.hpScale,
     army: { ...army },
     rows: { ...rows },
+    hero,
+    bonus: templeBonus(state),
   });
   return ok(undefined);
 }
@@ -81,6 +89,13 @@ function finishStage(state: GameState): void {
   if (won) {
     gain(state, reward);
     state.campaign.cleared = Math.max(state.campaign.cleared, battle.wave);
+  }
+  restAfter(state, battle);
+  // Giữa chương roi sắt gãy, Gióng nhổ tre quật giặc. Phá xong giặc ở núi Trâu thì Gióng bay về trời.
+  if (first && battle.wave === WHIP_BREAKS_AT) state.giong.whipBroken = true;
+  if (first && battle.wave === STAGES.length) {
+    state.giong.ascended = true;
+    battle.ascend = true;
   }
   const result: StageResult = {
     stage: battle.wave,

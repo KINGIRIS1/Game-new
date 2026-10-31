@@ -16,7 +16,8 @@ export type BuildingType =
   | 'kho'
   | 'doanhTrai'
   | 'choiCanh'
-  | 'bayChong';
+  | 'bayChong'
+  | 'denPhuDong';
 
 export interface BuildingDef {
   type: BuildingType;
@@ -50,6 +51,8 @@ export interface BuildingDef {
   /** Người chơi được tự xây (Điện Vua Hùng có sẵn từ đầu). */
   buildable: boolean;
   removable: boolean;
+  /** Chỉ xây được sau khi kết chương (Gióng đã bay về trời). */
+  afterChapter?: boolean;
 }
 
 export const BUILDINGS: Record<BuildingType, BuildingDef> = {
@@ -287,7 +290,25 @@ export const BUILDINGS: Record<BuildingType, BuildingDef> = {
     buildable: true,
     removable: true,
   },
+  denPhuDong: {
+    type: 'denPhuDong',
+    w: 3,
+    d: 3,
+    maxLevel: 1,
+    buildCost: { gao: 600, voOc: 600, datDa: 500, sat: 150 },
+    upgradeCost: [{}, {}],
+    production: [{}],
+    hp: [700],
+    limit: [1, 1, 1, 1, 1],
+    minDien: 1,
+    buildable: true,
+    removable: false,
+    afterChapter: true,
+  },
 };
+
+/** Đền Phù Đổng (còn nguyên) cộng thêm phần này vào sản lượng mọi tài nguyên, và vào máu, sát thương của quân ta. */
+export const TEMPLE_BONUS = 0.1;
 
 /** Sức chứa mỗi loại tài nguyên theo cấp Điện Vua Hùng, chỉ số 0 là cấp 1. Kho thóc cộng thêm. */
 export const STORAGE_CAP = [500, 1000, 2000, 4000, 8000];
@@ -318,7 +339,7 @@ export const TRADE_BONUS = 1.15;
 // ---------- Quân đội và giặc ----------
 
 export type UnitType = 'giao' | 'cung' | 'voi';
-export type EnemyType = 'giaoAn' | 'cungAn' | 'chienXa' | 'phoTuong';
+export type EnemyType = 'giaoAn' | 'cungAn' | 'chienXa' | 'phoTuong' | 'daiTuong';
 export const UNIT_TYPES: UnitType[] = ['giao', 'cung', 'voi'];
 
 export interface FighterStats {
@@ -357,7 +378,35 @@ export const ENEMIES: Record<EnemyType, FighterStats> = {
   cungAn: { hp: 45, dmg: 8, range: 3.5, speed: 1.3, cooldown: 1.3 },
   chienXa: { hp: 230, dmg: 20, range: 0.9, speed: 2.0, cooldown: 1.4, strongVs: 'cung' },
   phoTuong: { hp: 600, dmg: 24, range: 1.0, speed: 1.2, cooldown: 1.3 },
+  daiTuong: { hp: 1100, dmg: 30, range: 1.1, speed: 1.2, cooldown: 1.3 },
 };
+
+/** Trùm của phó bản: phó tướng ở màn 4, đại tướng ở chân núi Trâu. */
+export const BOSSES: EnemyType[] = ['phoTuong', 'daiTuong'];
+
+// ---------- Thánh Gióng ----------
+
+/** Gạo góp nuôi Gióng ở từng mốc (5 mốc). */
+export const GIONG_FEED = [80, 150, 250, 400, 600];
+
+export type GearId = 'ngua' | 'roi' | 'giap';
+export const GEAR_IDS: GearId[] = ['ngua', 'roi', 'giap'];
+/** Đồ sắt rèn cho Gióng ở lò rèn: giá và cấp lò rèn cần có. */
+export const GEAR: Record<GearId, { cost: Cost; forgeLevel: number }> = {
+  ngua: { cost: { sat: 40 }, forgeLevel: 1 },
+  roi: { cost: { sat: 60 }, forgeLevel: 2 },
+  giap: { cost: { sat: 90, datDa: 100 }, forgeLevel: 3 },
+};
+
+/** Gióng tráng sĩ cưỡi ngựa sắt: rất khỏe, mỗi đòn quét cả giặc đứng quanh. */
+export const GIONG: FighterStats = { hp: 500, dmg: 22, range: 1.0, speed: 2.2, cooldown: 0.9 };
+export const GIONG_CLEAVE = { radius: 1.3, share: 0.5 };
+/** Gióng không chết, hết sức thì rút khỏi trận và nghỉ chừng này thời gian chơi. */
+export const GIONG_REST_MS = 2 * 60_000;
+/** Ngựa sắt phun lửa: lao thẳng `length` ô về phía giặc, đốt giặc trong dải rộng `width` ô. */
+export const FIRE = { dmg: 60, length: 7, width: 1.5 };
+/** Nhổ tre quật giặc: đòn diện rộng quanh Gióng, hất giặc lùi ra. */
+export const SMASH = { dmg: 45, radius: 2.5, push: 1.2 };
 
 /** Chòi canh tự bắn giặc trong tầm. */
 export const TOWER = { range: 4.5, cooldown: 1.1, dmg: [7, 9, 12, 15, 19] };
@@ -395,7 +444,7 @@ export type Row = 'tien' | 'trung' | 'hau';
 export const ROWS: Row[] = ['tien', 'trung', 'hau'];
 /** Hàng mặc định: giáo binh chặn đầu, voi ở giữa, cung thủ bắn từ sau. */
 export const DEFAULT_ROWS: Record<UnitType, Row> = { giao: 'tien', voi: 'trung', cung: 'hau' };
-export const ENEMY_ROWS: Record<EnemyType, Row> = { giaoAn: 'tien', chienXa: 'trung', cungAn: 'hau', phoTuong: 'hau' };
+export const ENEMY_ROWS: Record<EnemyType, Row> = { giaoAn: 'tien', chienXa: 'trung', cungAn: 'hau', phoTuong: 'hau', daiTuong: 'hau' };
 
 /**
  * Bãi chiến: rộng `w` ô, dài `d` ô; hàng đầu hai bên cách nhau `gap` ô.
@@ -409,7 +458,7 @@ export type Terrain = 'rung' | 'benSong' | 'lang' | 'don' | 'nui';
 export interface StageDef {
   /** Cấp Điện cần có để đánh màn này. */
   minDien: number;
-  /** Cần Thánh Gióng đã vươn vai thành tráng sĩ (có ở lát cắt 3b). */
+  /** Cần Thánh Gióng đã vươn vai thành tráng sĩ. */
   needsGiong: boolean;
   enemies: Partial<Record<EnemyType, number>>;
   /** Hệ số máu giặc. */
@@ -425,18 +474,21 @@ export const STAGES: StageDef[] = [
   { minDien: 2, needsGiong: false, enemies: { giaoAn: 5, cungAn: 2 }, hpScale: 1, reward: { gao: 200, voOc: 150, datDa: 80 }, terrain: 'benSong' },
   { minDien: 3, needsGiong: false, enemies: { giaoAn: 5, cungAn: 3, chienXa: 1 }, hpScale: 1.1, reward: { gao: 300, voOc: 200, datDa: 150, sat: 40 }, terrain: 'lang' },
   { minDien: 3, needsGiong: false, enemies: { giaoAn: 5, cungAn: 3, chienXa: 1, phoTuong: 1 }, hpScale: 1.1, reward: { gao: 500, voOc: 300, datDa: 250, sat: 80 }, terrain: 'don' },
-  { minDien: 3, needsGiong: true, enemies: { giaoAn: 8, cungAn: 4, chienXa: 2 }, hpScale: 1.3, reward: { gao: 600, voOc: 400, datDa: 300, sat: 100 }, terrain: 'rung' },
-  { minDien: 4, needsGiong: true, enemies: { giaoAn: 9, cungAn: 5, chienXa: 3 }, hpScale: 1.4, reward: { gao: 800, voOc: 500, datDa: 400, sat: 120 }, terrain: 'benSong' },
+  { minDien: 3, needsGiong: true, enemies: { giaoAn: 9, cungAn: 5, chienXa: 3 }, hpScale: 1.35, reward: { gao: 600, voOc: 400, datDa: 300, sat: 100 }, terrain: 'rung' },
+  { minDien: 4, needsGiong: true, enemies: { giaoAn: 12, cungAn: 7, chienXa: 3 }, hpScale: 1.45, reward: { gao: 800, voOc: 500, datDa: 400, sat: 120 }, terrain: 'benSong' },
   { minDien: 4, needsGiong: true, enemies: { giaoAn: 10, cungAn: 6, chienXa: 4 }, hpScale: 1.5, reward: { gao: 1000, voOc: 600, datDa: 500, sat: 150 }, terrain: 'lang' },
-  { minDien: 5, needsGiong: true, enemies: { giaoAn: 12, cungAn: 7, chienXa: 4, phoTuong: 1 }, hpScale: 1.6, reward: { gao: 1500, voOc: 1000, datDa: 800, sat: 250 }, terrain: 'nui' },
+  { minDien: 5, needsGiong: true, enemies: { giaoAn: 12, cungAn: 7, chienXa: 4, daiTuong: 1 }, hpScale: 1.6, reward: { gao: 1500, voOc: 1000, datDa: 800, sat: 250 }, terrain: 'nui' },
 ];
 /** Đánh lại màn đã qua được phần này của thưởng lần đầu. */
 export const REPLAY_SHARE = 0.3;
 
-/** Kỹ năng bấm tay trong trận. Lát cắt 3a có Trống trận của Lạc tướng. */
-export type SkillId = 'trongTran';
+/** Kỹ năng bấm tay trong trận: Trống trận của Lạc tướng, hai kỹ năng của Thánh Gióng. */
+export type SkillId = 'trongTran' | 'phunLua' | 'nhoTre';
+export const SKILL_IDS: SkillId[] = ['trongTran', 'phunLua', 'nhoTre'];
 export const SKILLS: Record<SkillId, { cooldown: number; duration: number }> = {
   trongTran: { cooldown: 20, duration: 6 },
+  phunLua: { cooldown: 15, duration: 0 },
+  nhoTre: { cooldown: 20, duration: 0 },
 };
 /** Trống trận thúc quân: quân ta đánh mạnh hơn và chạy nhanh hơn trong một lúc. */
 export const RALLY = { dmg: 1.5, speed: 1.3 };
@@ -447,7 +499,9 @@ export type QuestGoal =
   | { kind: 'workers'; building: BuildingType; amount: number }
   | { kind: 'troops'; amount: number }
   | { kind: 'raidsWon'; amount: number }
-  | { kind: 'stage'; stage: number };
+  | { kind: 'stage'; stage: number }
+  | { kind: 'giongFed'; amount: number }
+  | { kind: 'giongGear'; amount: number };
 
 export interface QuestDef {
   id: string;
@@ -472,6 +526,11 @@ export const QUESTS: QuestDef[] = [
   { id: 'choiCanh', goal: { kind: 'count', building: 'choiCanh', amount: 1 }, reward: { datDa: 80 } },
   { id: 'giuKinhDo', goal: { kind: 'raidsWon', amount: 1 }, reward: { voOc: 150, sat: 40 } },
   { id: 'quaMan4', goal: { kind: 'stage', stage: 4 }, reward: { datDa: 150, sat: 60 } },
+  { id: 'nuoiGiong', goal: { kind: 'giongFed', amount: 5 }, reward: { voOc: 200 } },
+  { id: 'renDo', goal: { kind: 'giongGear', amount: 3 }, reward: { gao: 300, datDa: 150 } },
+  { id: 'quaMan6', goal: { kind: 'stage', stage: 6 }, reward: { datDa: 300, sat: 100 } },
+  { id: 'nuiTrau', goal: { kind: 'stage', stage: 8 }, reward: { gao: 600, voOc: 600 } },
+  { id: 'denPhuDong', goal: { kind: 'count', building: 'denPhuDong', amount: 1 }, reward: { voOc: 300, sat: 100 } },
 ];
 /** Bản lưu cũ (phiên bản 3) đã làm qua nhiệm vụ này thì chỉ số nhiệm vụ phải dời thêm một. */
 export const QUEST_INSERTED_V4 = 11;

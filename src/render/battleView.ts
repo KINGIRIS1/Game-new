@@ -3,12 +3,23 @@
 
 import * as THREE from 'three';
 import type { Battle, FighterKind } from '../game/battle';
-import { makeFighter } from './models';
+import { makeFighter, makeGiong } from './models';
 import { C } from './palette';
 
 interface FighterView {
   obj: THREE.Group;
   deadAge: number;
+  /** Gióng bay về trời: đã bay được bao lâu. */
+  rise: number;
+}
+
+/** Một đốm hiệu ứng ngắn: lửa, bụi, khói. Lớn dần rồi mờ đi. */
+interface Puff {
+  mesh: THREE.Mesh;
+  age: number;
+  delay: number;
+  life: number;
+  grow: number;
 }
 
 interface Arrow {
@@ -25,7 +36,8 @@ interface Ring {
   age: number;
 }
 
-const SCALE: Partial<Record<FighterKind, number>> = { voi: 0.75, chienXa: 0.75, phoTuong: 1 };
+const SCALE: Partial<Record<FighterKind, number>> = { voi: 0.75, chienXa: 0.75, phoTuong: 1, daiTuong: 0.85, giong: 0.85 };
+const puffGeo = new THREE.SphereGeometry(0.3, 10, 8);
 const arrowGeo = new THREE.BoxGeometry(0.03, 0.03, 0.45);
 const arrowMat = new THREE.MeshBasicMaterial({ color: C.arrow });
 const ringGeo = new THREE.RingGeometry(0.8, 1, 48).rotateX(-Math.PI / 2);
@@ -35,6 +47,7 @@ export class BattleView {
   private readonly fighters = new Map<number, FighterView>();
   private readonly arrows: Arrow[] = [];
   private readonly rings: Ring[] = [];
+  private readonly puffs: Puff[] = [];
   private battleId = -1;
   private lastSeq = 0;
   private time = 0;
@@ -75,6 +88,11 @@ export class BattleView {
       (r.mesh.material as THREE.Material).dispose();
     }
     this.rings.length = 0;
+    for (const p of this.puffs) {
+      this.root.remove(p.mesh);
+      (p.mesh.material as THREE.Material).dispose();
+    }
+    this.puffs.length = 0;
     this.lastSeq = 0;
   }
 
@@ -91,10 +109,10 @@ export class BattleView {
       }
       if (!view) {
         if (f.state === 'dead') continue;
-        const obj = makeFighter(f.kind);
+        const obj = f.kind === 'giong' ? makeGiong('trangSi', { bamboo: battle.hero?.bamboo, glow: battle.hero?.glow }) : makeFighter(f.kind);
         obj.scale.setScalar((SCALE[f.kind] ?? 0.8) * this.scale);
         this.root.add(obj);
-        view = { obj, deadAge: 0 };
+        view = { obj, deadAge: 0, rise: 0 };
         this.fighters.set(f.id, view);
       }
       const obj = view.obj;
@@ -107,6 +125,17 @@ export class BattleView {
         obj.position.y = view.deadAge > 1.2 ? -(view.deadAge - 1.2) * 0.6 : 0;
         if (view.deadAge > 2.5) obj.visible = false;
         continue;
+      }
+      if (f.kind === 'giong') {
+        for (const c of obj.children) if (c.userData.flame) c.scale.set(1, 0.7 + 0.5 * Math.abs(Math.sin(this.time * 9)), 1);
+        if (battle.ascend && battle.outcome === 'win') {
+          // Phá xong giặc, Gióng cưỡi ngựa bay lên trời.
+          view.rise += dt;
+          obj.position.y = view.rise * view.rise * 0.8;
+          obj.rotation.y = f.face + view.rise * 0.6;
+          obj.rotation.x = -0.35;
+          continue;
+        }
       }
       obj.rotation.x = f.swing > 0 ? -0.5 * (f.swing / 0.3) : 0;
       // Đang có Trống trận thì quân ta nhún nhảy hăng hơn.
@@ -127,18 +156,56 @@ export class BattleView {
         this.root.add(mesh);
         this.arrows.push({ mesh, from, to, age: 0, dur: Math.max(0.15, from.distanceTo(to) / 12) });
       }
-      if (e.kind === 'rally') {
-        const mesh = new THREE.Mesh(ringGeo, new THREE.MeshBasicMaterial({ color: C.bronzeLight, transparent: true, depthWrite: false }));
+      if (e.kind === 'rally' || e.kind === 'smash') {
+        const color = e.kind === 'rally' ? C.bronzeLight : C.bamboo;
+        const mesh = new THREE.Mesh(ringGeo, new THREE.MeshBasicMaterial({ color, transparent: true, depthWrite: false }));
         mesh.position.set(e.x + ox, 0.08, e.z + oz);
         mesh.renderOrder = 3;
         this.root.add(mesh);
         this.rings.push({ mesh, age: 0 });
       }
+      if (e.kind === 'fire' && e.tx !== undefined && e.tz !== undefined) {
+        // Vệt lửa dọc đường ngựa sắt lao qua.
+        const n = 12;
+        for (let i = 0; i <= n; i++) {
+          const k = i / n;
+          this.addPuff(e.x + (e.tx - e.x) * k + ox, 0.35, e.z + (e.tz - e.z) * k + oz, i % 3 ? C.fire : C.ember, i * 0.025, 0.9, 2.2);
+        }
+      }
+      if (e.kind === 'smash') {
+        for (let i = 0; i < 8; i++) {
+          const a = (i / 8) * Math.PI * 2;
+          this.addPuff(e.x + Math.cos(a) * 1.6 + ox, 0.2, e.z + Math.sin(a) * 1.6 + oz, C.earth, 0.05, 0.7, 1.6);
+        }
+      }
+      if (e.kind === 'exhaust') this.addPuff(e.x + ox, 0.6, e.z + oz, C.smoke, 0, 1.2, 3);
     }
     this.lastSeq = battle.seq;
   }
 
+  private addPuff(x: number, y: number, z: number, color: number, delay: number, life: number, grow: number): void {
+    const mesh = new THREE.Mesh(puffGeo, new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0, depthWrite: false }));
+    mesh.position.set(x, y, z);
+    mesh.scale.setScalar(0.01);
+    this.root.add(mesh);
+    this.puffs.push({ mesh, age: 0, delay, life, grow });
+  }
+
   private animate(dt: number): void {
+    for (let i = this.puffs.length - 1; i >= 0; i--) {
+      const p = this.puffs[i];
+      p.age += dt;
+      const k = (p.age - p.delay) / p.life;
+      if (k < 0) continue;
+      p.mesh.scale.setScalar(0.3 + k * p.grow);
+      p.mesh.position.y += dt * 0.6;
+      (p.mesh.material as THREE.MeshBasicMaterial).opacity = 0.85 * (1 - k);
+      if (k >= 1) {
+        this.root.remove(p.mesh);
+        (p.mesh.material as THREE.Material).dispose();
+        this.puffs.splice(i, 1);
+      }
+    }
     for (let i = this.arrows.length - 1; i >= 0; i--) {
       const a = this.arrows[i];
       a.age += dt;

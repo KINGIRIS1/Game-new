@@ -19,8 +19,10 @@ describe('lưu game', () => {
       settings: { muted: true },
     };
     const s = deserialize(JSON.stringify(v1));
-    expect(s?.version).toBe(4);
+    expect(s?.version).toBe(5);
     expect(s?.campaign.cleared).toBe(0);
+    expect(s?.giong.fed).toBe(0);
+    expect(s?.story.seen).toEqual(['mo']);
     expect(s?.dan).toBe(5);
     expect(s?.buildings.find((b) => b.type === 'ruong')?.workers).toBe(2);
     expect(s?.buildings.find((b) => b.type === 'ben')?.workers).toBe(1);
@@ -32,9 +34,11 @@ describe('lưu game', () => {
     s3.version = 3;
     delete s3.campaign;
     delete s3.nextBattleId;
+    delete s3.giong;
+    delete s3.story;
     s3.questIndex = 12;
     const s = deserialize(JSON.stringify(s3));
-    expect(s?.version).toBe(4);
+    expect(s?.version).toBe(5);
     expect(s?.questIndex).toBe(13);
     expect(s?.campaign.battle).toBeNull();
     expect(s?.nextBattleId).toBe(1);

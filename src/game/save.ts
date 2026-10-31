@@ -1,8 +1,9 @@
 // Lưu game vào localStorage và xuất/nhập mã lưu để sao lưu hoặc chuyển máy.
-// Bản lưu cũ (phiên bản 1 của lát cắt 1, 2 của lát cắt 2a, 3 của lát cắt 2b) được nâng lên phiên bản hiện tại khi nạp.
+// Bản lưu cũ (phiên bản 1 của lát cắt 1, 2 của lát cắt 2a, 3 của lát cắt 2b, 4 của lát cắt 3a)
+// được nâng lên phiên bản hiện tại khi nạp.
 
-import { BUILDINGS, MERCHANT_FIRST_MS, QUEST_INSERTED_V4, RESOURCE_IDS, ROWS, type BuildingType } from './defs';
-import { autoAssign, housing, initialCampaign, initialRaid, type GameState } from './game';
+import { BUILDINGS, GEAR_IDS, MERCHANT_FIRST_MS, QUEST_INSERTED_V4, RESOURCE_IDS, ROWS, type BuildingType } from './defs';
+import { autoAssign, housing, initialCampaign, initialGiong, initialRaid, type GameState } from './game';
 
 /** Giữ nguyên khóa cũ để người chơi lát cắt 1 không mất tiến trình. */
 export const SAVE_KEY = 'thoi-dai-van-lang/save/v1';
@@ -35,6 +36,7 @@ function migrate(raw: unknown): unknown {
   if (isObj(v) && v.version === 1 && Array.isArray(v.buildings)) v = migrate1to2(v);
   if (isObj(v) && v.version === 2) v = migrate2to3(v);
   if (isObj(v) && v.version === 3) v = migrate3to4(v);
+  if (isObj(v) && v.version === 4) v = migrate4to5(v);
   return v;
 }
 
@@ -77,6 +79,19 @@ function migrate3to4(s: Raw): Raw {
   return s;
 }
 
+/** Phiên bản 4 → 5 (lát cắt 3b): thêm Thánh Gióng và các đoạn truyện. */
+function migrate4to5(s: Raw): Raw {
+  s.version = 5;
+  s.giong = initialGiong();
+  // Người chơi cũ đã qua đầu game thì không kể lại đoạn mở đầu, các đoạn về Gióng vẫn kể.
+  s.story = { seen: isNum(s.questIndex) && s.questIndex > 0 ? ['mo'] : [] };
+  // Trận đang dở trong bản lưu cũ chưa có Gióng và danh sách kỹ năng.
+  for (const holder of [s.raid, s.campaign]) {
+    if (isObj(holder) && isObj(holder.battle)) Object.assign(holder.battle, { skills: ['trongTran'], hero: null, bonus: 0 });
+  }
+  return s;
+}
+
 function isValidBuildings(list: unknown): boolean {
   if (!Array.isArray(list)) return false;
   const ok = list.every((b: unknown) => {
@@ -98,7 +113,12 @@ function isValidBuildings(list: unknown): boolean {
 }
 
 function isGameState(v: unknown): v is GameState {
-  if (!isObj(v) || v.version !== 4) return false;
+  if (!isObj(v) || v.version !== 5) return false;
+  const g = v.giong;
+  if (!isObj(g) || !isNum(g.fed) || !isNum(g.restUntil) || !isObj(g.gear)) return false;
+  if (!GEAR_IDS.every((k) => typeof (g.gear as Raw)[k] === 'boolean')) return false;
+  if (typeof g.whipBroken !== 'boolean' || typeof g.ascended !== 'boolean') return false;
+  if (!isObj(v.story) || !Array.isArray(v.story.seen)) return false;
   const troops = v.troops;
   if (!isObj(troops) || !['giao', 'cung', 'voi'].every((k) => isNum(troops[k]) && troops[k] >= 0)) return false;
   const raid = v.raid;

@@ -1,12 +1,11 @@
 // Giao diện HTML đặt đè lên cảnh 3D: thanh tài nguyên, nhiệm vụ, bảng xây dựng, bảng công trình, cài đặt,
 // bản đồ phó bản và các nút trong trận.
 
-import { enemiesLeft, alliesLeft, skillReady } from '../game/battle';
+import { enemiesLeft, alliesLeft, skillReady, type Battle } from '../game/battle';
 import {
   BUILDINGS,
   FIELD,
   RESOURCE_IDS,
-  SKILLS,
   STAGES,
   UNITS,
   UNIT_TYPES,
@@ -14,7 +13,9 @@ import {
   type Cost,
   type ResourceId,
   type Resources,
+  type GearId,
   type Row,
+  type SkillId,
   type UnitType,
 } from '../game/defs';
 import {
@@ -45,14 +46,17 @@ import {
   type GameState,
   type RaidResult,
   type StageResult,
+  type StoryId,
 } from '../game/game';
+import { giongAppeared, giongLook, giongReady, giongResting } from '../game/giong';
 import { AREA_SIZE } from '../game/map';
 import { formatDuration, vi } from '../text/vi';
 import { armyHtml, defaultPick, mapHtml, nextRow, stageHtml, stageResultHtml, type ArmyPick } from './campaign';
 import { costHtml, esc, fmt } from './format';
+import { giongHtml, storyHtml } from './giong';
 
 const SHOWN_RESOURCES: ResourceId[] = ['gao', 'voOc', 'datDa', 'sat'];
-const BUILD_MENU: BuildingType[] = ['luy', 'ruong', 'ben', 'nhaSan', 'baiDa', 'kho', 'loRen', 'doanhTrai', 'choiCanh', 'bayChong'];
+const BUILD_MENU: BuildingType[] = ['luy', 'ruong', 'ben', 'nhaSan', 'baiDa', 'kho', 'loRen', 'doanhTrai', 'choiCanh', 'bayChong', 'denPhuDong'];
 
 /** Tên hiển thị của công trình, tính cả lũy tre đã đắp thành đất. */
 export function buildingName(b: Pick<Building, 'type' | 'level'>): string {
@@ -86,14 +90,28 @@ export type HudAction =
   | { kind: 'dismissRaid' }
   | { kind: 'openCampaign' }
   | { kind: 'march'; stage: number; army: Record<UnitType, number>; rows: Record<UnitType, Row> }
-  | { kind: 'useRally' }
+  | { kind: 'useSkill'; skill: SkillId }
+  | { kind: 'openGiong' }
+  | { kind: 'feedGiong' }
+  | { kind: 'forgeGear'; gear: GearId }
+  | { kind: 'storyDone'; id: StoryId }
   | { kind: 'retreat' }
   | { kind: 'leaveField' }
   | { kind: 'fieldToMap' };
 
 export type HudMode = 'view' | 'place' | 'paint';
 
-type Sheet = { kind: 'build' } | { kind: 'building'; id: number } | { kind: 'settings' } | { kind: 'merchant' } | null;
+type Sheet = { kind: 'build' } | { kind: 'building'; id: number } | { kind: 'settings' } | { kind: 'merchant' } | { kind: 'giong' } | null;
+
+/** Chữ trên nút kỹ năng: tên khi sẵn sàng, chỉ biểu tượng và số giây khi đang hồi (cho gọn trên điện thoại). */
+function skillLabel(b: Battle, k: SkillId): string {
+  const cd = Math.ceil(b.skillCd[k] ?? 0);
+  return cd > 0 && !b.outcome ? `${vi.skills[k].icon} ${cd}s` : `${vi.skills[k].icon} ${vi.skills[k].name}`;
+}
+
+function skillButton(b: Battle, k: SkillId, small = false): string {
+  return `<button class="btn bronze skill ${small ? 'small' : ''}" data-act="useSkill" data-skill="${k}" title="${vi.skills[k].desc}" ${skillReady(b, k) ? '' : 'disabled'}>${skillLabel(b, k)}</button>`;
+}
 
 /** Bản đồ phó bản đang mở: màn đang xem, đang xem thẻ màn hay đang xếp quân. */
 interface CampaignView {
@@ -130,6 +148,9 @@ export class Hud {
   private readonly fieldBar: HTMLElement;
   private camp: CampaignView | null = null;
   private campHtml = '';
+  /** Đoạn truyện đang kể và thẻ đang xem. */
+  private story: { id: StoryId; step: number } | null = null;
+  private skillKey = '';
 
   constructor(
     root: HTMLElement,
@@ -147,8 +168,8 @@ export class Hud {
       <div class="hint" hidden></div>
       <footer class="bottombar"></footer>
       <footer class="fieldbar">
-        <button class="btn ghost" data-act="retreat">${vi.ui.retreat}</button>
-        <button class="btn bronze rally" data-act="useRally" title="${vi.ui.rallyHint}">${vi.ui.rally}</button>
+        <button class="btn ghost small" data-act="retreat" title="${vi.ui.retreat}">🏳️</button>
+        <span class="skills"></span>
       </footer>
       <aside class="sheet" aria-live="polite"></aside>
       <section class="campaign" hidden></section>
@@ -192,6 +213,12 @@ export class Hud {
         return this.onAction({ kind: 'train', unit: el.dataset.unit as UnitType });
       case 'closeCampaign':
         return this.closeCampaign();
+      case 'useSkill':
+        return this.onAction({ kind: 'useSkill', skill: el.dataset.skill as SkillId });
+      case 'forgeGear':
+        return this.onAction({ kind: 'forgeGear', gear: el.dataset.gear as GearId });
+      case 'storyNext':
+        return this.storyNext();
       case 'pickStage':
       case 'prepareStage':
       case 'backToStage':
@@ -238,7 +265,13 @@ export class Hud {
     const army = cap
       ? `<button class="chip dan" data-act="openBarracks" title="${vi.ui.troopSpace(troopSpace(state), cap)}">⚔️ <b>${troopSpace(state)}</b><small>/${cap}</small></button>`
       : '';
-    const html = `<div class="chip level" title="${vi.buildings.dien.name}">🏯 ${dienLevel(state)}</div>${res}${dan}${army}
+    const look = giongLook(state);
+    let giong = '';
+    if (look) {
+      const mark = giongReady(state) ? (giongResting(state) ? '💤' : '⚔️') : `${state.giong.fed}/5`;
+      giong = `<button class="chip dan" data-act="openGiong" title="${vi.ui.giong}">${vi.giongLooks[look].icon} <b>${mark}</b></button>`;
+    }
+    const html = `<div class="chip level" title="${vi.buildings.dien.name}">🏯 ${dienLevel(state)}</div>${res}${dan}${army}${giong}
       <span class="spacer"></span>
       <button class="icon-btn" data-act="openSettings" aria-label="${vi.ui.settings}">⚙️</button>`;
     // So với chuỗi đã vẽ lần trước (không so với innerHTML vì trình duyệt chuẩn hóa lại chuỗi),
@@ -261,9 +294,9 @@ export class Hud {
         <button class="btn small" data-act="lookRaid">${vi.ui.raidLook}</button></div>`);
     }
     if (raid.phase === 'battle' && raid.battle) {
-      const ready = skillReady(raid.battle, 'trongTran');
-      parts.push(`<div class="banner bad">⚔️ ${vi.ui.raidBattle(enemiesLeft(raid.battle), alliesLeft(raid.battle))}
-        <button class="btn small bronze" data-act="useRally" ${ready ? '' : 'disabled'}>${vi.ui.rally}</button></div>`);
+      const b = raid.battle;
+      parts.push(`<div class="banner bad">⚔️ ${vi.ui.raidBattle(enemiesLeft(b), alliesLeft(b))}</div>
+        <div class="banner skills">${b.skills.map((k) => skillButton(b, k, true)).join('')}</div>`);
     }
     if (isStarving(state)) parts.push(`<div class="banner bad">🍚 ${vi.ui.starving}</div>`);
     const visit = state.merchant.visit;
@@ -360,6 +393,11 @@ export class Hud {
     this.refreshSheet(state);
   }
 
+  showGiong(state: GameState): void {
+    this.sheet = { kind: 'giong' };
+    this.refreshSheet(state);
+  }
+
   showSettings(state: GameState): void {
     this.sheet = { kind: 'settings' };
     this.refreshSheet(state, true);
@@ -400,6 +438,9 @@ export class Hud {
       if (!state.merchant.visit) return this.closeSheet();
       title = `⛵ ${vi.ui.merchantTitle}`;
       body = this.merchantHtml(state);
+    } else if (this.sheet.kind === 'giong') {
+      title = `🐎 ${vi.ui.giong}`;
+      body = giongHtml(state);
     } else {
       title = `⚙️ ${vi.ui.settings}`;
       body = this.settingsHtml(state);
@@ -420,7 +461,8 @@ export class Hud {
       const have = countOf(state, type);
       const max = limitOf(state, type);
       let why = '';
-      if (dienLevel(state) < def.minDien) why = `Cần Điện cấp ${def.minDien}`;
+      if (def.afterChapter && !state.giong.ascended) why = vi.reasons.canKetChuong;
+      else if (dienLevel(state) < def.minDien) why = `Cần Điện cấp ${def.minDien}`;
       else if (have >= max) why = vi.reasons.datGioiHan;
       else if (!canAfford(state, def.buildCost)) why = vi.reasons.thieuTaiNguyen;
       return `<button class="card ${why ? 'locked' : ''}" data-act="chooseBuild" data-type="${type}">
@@ -476,6 +518,10 @@ export class Hud {
     }
 
     if (b.type === 'doanhTrai') rows.push(this.barracksHtml(state));
+    if ((b.type === 'loRen' || b.type === 'dien') && giongAppeared(state) && !state.giong.ascended) {
+      const label = b.type === 'loRen' ? `⚒️ ${vi.ui.giongForge}` : `${vi.giongLooks[giongLook(state)!].icon} ${vi.ui.giong}`;
+      rows.push(`<div class="actions"><button class="btn bronze" data-act="openGiong">${label}</button></div>`);
+    }
 
     const actions: string[] = [];
     if (b.damaged) {
@@ -614,7 +660,7 @@ export class Hud {
     }
   }
 
-  /** Thanh trên và nút dưới khi đang đánh ngoài bãi. Chỉ đổi chữ tại chỗ để không nuốt lần chạm. */
+  /** Thanh trên và nút dưới khi đang đánh ngoài bãi. Nút kỹ năng chỉ đổi chữ tại chỗ để không nuốt lần chạm. */
   updateField(state: GameState): void {
     const b = state.campaign.battle;
     this.root.classList.toggle('in-field', !!b);
@@ -622,13 +668,52 @@ export class Hud {
     const secs = Math.max(0, Math.ceil(FIELD.maxS - b.t));
     this.fieldTop.querySelector('b')!.textContent = `${vi.ui.stageN(b.wave)} · ${vi.stages[b.wave - 1].name}`;
     this.fieldTop.querySelector('span')!.textContent = vi.ui.fieldBanner(enemiesLeft(b), alliesLeft(b), secs);
-    const rally = this.fieldBar.querySelector<HTMLButtonElement>('.rally')!;
-    const cd = b.skillCd.trongTran ?? 0;
-    rally.disabled = !skillReady(b, 'trongTran');
-    rally.textContent = cd > 0 && !b.outcome ? `${vi.ui.rally} · ${Math.ceil(cd)}s` : vi.ui.rally;
-    rally.classList.toggle('active', b.rally > 0);
-    rally.style.setProperty('--cd', String(cd / SKILLS.trongTran.cooldown));
+    const box = this.fieldBar.querySelector<HTMLElement>('.skills')!;
+    const key = `${b.id}:${b.skills.join(',')}`;
+    if (key !== this.skillKey) {
+      this.skillKey = key;
+      box.innerHTML = b.skills.map((k) => skillButton(b, k)).join('');
+    }
+    for (const btn of box.querySelectorAll<HTMLButtonElement>('[data-skill]')) {
+      const k = btn.dataset.skill as SkillId;
+      btn.disabled = !skillReady(b, k);
+      btn.textContent = skillLabel(b, k);
+      btn.classList.toggle('active', k === 'trongTran' && b.rally > 0);
+    }
     this.fieldBar.querySelector<HTMLButtonElement>('[data-act="retreat"]')!.disabled = !!b.outcome;
+  }
+
+  // ---------- Truyện ----------
+
+  get storyOpen(): boolean {
+    return this.story !== null;
+  }
+
+  /** Có hộp thoại nào đang mở (kết quả trận, vắng mặt, truyện) thì chưa kể truyện mới. */
+  get modalOpen(): boolean {
+    return !!this.root.querySelector('.modal-back');
+  }
+
+  showStory(id: StoryId): void {
+    this.story = { id, step: 0 };
+    const back = document.createElement('div');
+    back.className = 'modal-back story-back';
+    back.innerHTML = storyHtml(id, 0);
+    this.root.appendChild(back);
+  }
+
+  private storyNext(): void {
+    const story = this.story;
+    const back = this.root.querySelector('.modal-back.story-back');
+    if (!story || !back) return;
+    if (story.step < vi.stories[story.id].lines.length - 1) {
+      story.step += 1;
+      back.innerHTML = storyHtml(story.id, story.step);
+      return;
+    }
+    back.remove();
+    this.story = null;
+    this.onAction({ kind: 'storyDone', id: story.id });
   }
 
   showStageResult(r: StageResult): void {
@@ -698,6 +783,7 @@ export class Hud {
 
   /** Kiểm tra nhanh xem có thể đặt công trình loại này ở đâu đó trên vùng đã mở không (dùng để báo lỗi sớm). */
   static placeBlocker(state: GameState, type: BuildingType): string | null {
+    if (BUILDINGS[type].afterChapter && !state.giong.ascended) return vi.reasons.canKetChuong;
     if (dienLevel(state) < BUILDINGS[type].minDien) return `Cần Điện cấp ${BUILDINGS[type].minDien}`;
     if (countOf(state, type) >= limitOf(state, type)) return vi.reasons.datGioiHan;
     if (!canAfford(state, BUILDINGS[type].buildCost)) return vi.reasons.thieuTaiNguyen;

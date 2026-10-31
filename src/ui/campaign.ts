@@ -2,8 +2,9 @@
 // Chỉ dựng chuỗi HTML; Hud lo việc gắn vào trang và bắt sự kiện.
 
 import { canStartStage, stageDef, stageOpen, stageReward } from '../game/campaign';
-import { ROWS, UNIT_TYPES, type EnemyType, type Row, type UnitType } from '../game/defs';
+import { BOSSES, ROWS, UNIT_TYPES, type EnemyType, type Row, type UnitType } from '../game/defs';
 import type { GameState, StageResult } from '../game/game';
+import { heroSetup } from '../game/giong';
 import { vi } from '../text/vi';
 import { costHtml, esc } from './format';
 
@@ -26,7 +27,7 @@ const NODES: [number, number][] = [
 ];
 const START: [number, number] = [12, 154];
 
-export const hasBoss = (n: number) => !!stageDef(n)?.enemies.phoTuong;
+export const hasBoss = (n: number) => BOSSES.some((k) => (stageDef(n)?.enemies[k] ?? 0) > 0);
 
 export function mapHtml(state: GameState, selected: number | null): string {
   const road = [START, ...NODES].map(([x, y], i) => `${i ? 'L' : 'M'}${x} ${y}`).join(' ');
@@ -83,6 +84,7 @@ export function stageHtml(state: GameState, n: number): string {
     <p class="intro">${esc(text.intro)}</p>
     <div class="stat"><span>${vi.ui.enemyArmy}</span><b>${enemyList(n)}</b></div>
     <div class="stat"><span>${first ? vi.ui.firstReward : vi.ui.replayReward}</span>${costHtml(null, stageReward(state, n))}</div>
+    ${heroSetup(state) ? `<p class="hero-note">🐎 ${vi.ui.giongJoins}</p>` : ''}
     <div class="actions">
       ${why ? `<span class="why">${esc(why)}</span>` : ''}
       <button class="btn" data-act="prepareStage" ${why ? 'disabled' : ''}>${vi.ui.prepare}</button>
@@ -109,10 +111,11 @@ export function armyHtml(state: GameState, pick: ArmyPick): string {
   return `<div class="stage-card">
     <h3>${vi.ui.armyTitle}</h3>
     <p class="muted">${vi.ui.armyHint}</p>
+    ${heroSetup(state) ? `<p class="hero-note">🐎 ${vi.ui.giongJoins}</p>` : ''}
     ${owned.length ? `<div class="units">${rows}</div>` : `<p class="why">${vi.ui.noTroops}</p>`}
     <div class="actions">
       <button class="btn ghost" data-act="backToStage">${vi.ui.back}</button>
-      <button class="btn" data-act="march" ${total ? '' : 'disabled'}>${vi.ui.march}</button>
+      <button class="btn" data-act="march" ${total || heroSetup(state) ? '' : 'disabled'}>${vi.ui.march}</button>
     </div>
   </div>`;
 }

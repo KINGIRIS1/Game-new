@@ -8,12 +8,16 @@ import {
   ENEMIES,
   ENEMY_ROWS,
   FIELD,
+  FIRE,
+  GIONG,
+  GIONG_CLEAVE,
   LOOT_FRACTION,
   RAID_MAX_MS,
   RALLY,
   RESOURCE_IDS,
   ROWS,
   SKILLS,
+  SMASH,
   TOWER,
   TRAP_DMG,
   UNITS,
@@ -32,7 +36,14 @@ import { GRID, RIVER_START, areaStart, inGrid, isRiver } from './map';
 
 export type Side = 'ta' | 'giac';
 export type RaidSide = 'bac' | 'tay';
-export type FighterKind = UnitType | EnemyType;
+/** Lính thường, giặc, hoặc Thánh Gióng (`giong`). */
+export type FighterKind = UnitType | EnemyType | 'giong';
+
+/** Gióng ra trận: đánh bằng roi sắt hay bằng tre (roi đã gãy), có hiển linh (đã bay về trời) không. */
+export interface HeroSetup {
+  bamboo: boolean;
+  glow: boolean;
+}
 
 export interface Fighter {
   id: number;
@@ -62,7 +73,7 @@ export interface Fighter {
 
 export interface BattleEvent {
   seq: number;
-  kind: 'shot' | 'trap' | 'wreck' | 'loot' | 'die' | 'rally';
+  kind: 'shot' | 'trap' | 'wreck' | 'loot' | 'die' | 'rally' | 'fire' | 'smash' | 'exhaust';
   x: number;
   z: number;
   tx?: number;
@@ -93,13 +104,21 @@ export interface Battle {
   wrecked: number[];
   /** Giây còn lại của Trống trận. */
   rally: number;
+  /** Kỹ năng bấm được trong trận này. */
+  skills: SkillId[];
+  /** Thánh Gióng trong trận; `down` khi Gióng đã kiệt sức rút khỏi trận. */
+  hero: (HeroSetup & { down: boolean }) | null;
+  /** Phần cộng thêm vào máu và sát thương quân ta (Đền Phù Đổng). */
+  bonus: number;
+  /** Trận cuối chương vừa thắng: phần vẽ cho Gióng bay về trời. */
+  ascend?: boolean;
   /** Giây còn phải chờ để dùng lại từng kỹ năng. */
   skillCd: Partial<Record<SkillId, number>>;
   /** Kết cục trận ngoài bãi; trận giữ kinh đô luôn để null. */
   outcome: 'win' | 'lose' | 'retreat' | null;
 }
 
-const statsOf = (k: FighterKind): FighterStats => (k in UNITS ? UNITS[k as UnitType] : ENEMIES[k as EnemyType]);
+const statsOf = (k: FighterKind): FighterStats => (k === 'giong' ? GIONG : k in UNITS ? UNITS[k as UnitType] : ENEMIES[k as EnemyType]);
 const tileIndex = (x: number, z: number) => z * GRID + x;
 
 /** Số ngẫu nhiên lặp lại được theo hạt giống. */
@@ -156,13 +175,31 @@ function newBattle(id: number, mode: Battle['mode'], wave: number, side: RaidSid
     lost: { giao: 0, cung: 0, voi: 0 },
     wrecked: [],
     rally: 0,
+    skills: ['trongTran'],
+    hero: null,
+    bonus: 0,
     skillCd: {},
     outcome: null,
   };
 }
 
-export function startBattle(state: GameState, wave: number, side: RaidSide): Battle {
+/** Cho Gióng vào trận ở (x, z) và mở các kỹ năng của Gióng. */
+function addHero(battle: Battle, hero: HeroSetup, x: number, z: number, hpMul: number): void {
+  battle.hero = { ...hero, down: false };
+  battle.skills.push('phunLua');
+  if (hero.bamboo) battle.skills.push('nhoTre');
+  const f = newFighter(battle, 'ta', 'giong', x, z, GIONG.hp * hpMul * (1 + battle.bonus));
+  battle.fighters.push(f);
+}
+
+export interface BattleOpts {
+  hero?: HeroSetup | null;
+  bonus?: number;
+}
+
+export function startBattle(state: GameState, wave: number, side: RaidSide, opts: BattleOpts = {}): Battle {
   const battle = newBattle(state.nextBattleId++, 'raid', wave, side);
+  battle.bonus = opts.bonus ?? 0;
   const rand = rng(wave * 7919 + (side === 'bac' ? 1 : 2));
   const lo = Math.max(areaStart(5), 1);
   const forces = raidForces(wave);
@@ -184,10 +221,13 @@ export function startBattle(state: GameState, wave: number, side: RaidSide): Bat
       for (let i = 0; i < state.troops[kind]; i++) {
         const x = barracks.x + def.w / 2 + (rand() - 0.5) * def.w;
         const z = barracks.z + def.d / 2 + (rand() - 0.5) * def.d;
-        battle.fighters.push(newFighter(battle, 'ta', kind, x, z, UNITS[kind].hp));
+        battle.fighters.push(newFighter(battle, 'ta', kind, x, z, UNITS[kind].hp * (1 + battle.bonus)));
       }
     }
   }
+  // Gióng ra từ trước Điện.
+  const dien = state.buildings.find((b) => b.type === 'dien');
+  if (opts.hero && dien) addHero(battle, opts.hero, dien.x + 2, dien.z + 4.6, 1);
   return battle;
 }
 
@@ -220,6 +260,8 @@ export interface FieldSetup {
   hpScale: number;
   army: Record<UnitType, number>;
   rows: Record<UnitType, Row>;
+  hero?: HeroSetup | null;
+  bonus?: number;
 }
 
 /** Số lính đứng trên một hàng ngang. Đông hơn thì xếp thêm hàng phía sau. */
@@ -231,15 +273,18 @@ const PER_LINE = 8;
  */
 export function startFieldBattle(setup: FieldSetup): Battle {
   const battle = newBattle(setup.id, 'field', setup.stage, 'bac');
+  battle.bonus = setup.bonus ?? 0;
   const rand = rng(setup.id * 7919 + setup.stage);
   const ours: Record<Row, FighterKind[]> = { tien: [], trung: [], hau: [] };
   for (const k of UNIT_TYPES) for (let i = 0; i < (setup.army[k] ?? 0); i++) ours[setup.rows[k]].push(k);
   const theirs: Record<Row, FighterKind[]> = { tien: [], trung: [], hau: [] };
   for (const k of Object.keys(setup.enemies) as EnemyType[]) for (let i = 0; i < (setup.enemies[k] ?? 0); i++) theirs[ENEMY_ROWS[k]].push(k);
   const front = (FIELD.d - FIELD.gap) / 2;
-  deploy(battle, 'ta', ours, FIELD.d - front, 1, rand, (k) => UNITS[k as UnitType].hp * FIELD.hpMul);
+  deploy(battle, 'ta', ours, FIELD.d - front, 1, rand, (k) => UNITS[k as UnitType].hp * FIELD.hpMul * (1 + battle.bonus));
   deploy(battle, 'giac', theirs, front, -1, rand, (k) => ENEMIES[k as EnemyType].hp * setup.hpScale * FIELD.hpMul);
   battle.total = battle.fighters.filter((f) => f.side === 'giac').length;
+  // Gióng đứng giữa, trước tiền quân.
+  if (setup.hero) addHero(battle, setup.hero, FIELD.w / 2, FIELD.d - front - 0.8, FIELD.hpMul);
   return battle;
 }
 
@@ -392,6 +437,16 @@ function moveToward(f: Fighter, tx: number, tz: number, dt: number, mult = 1): b
 function damageFighter(battle: Battle, attacker: { kind?: FighterKind; dmg: number }, target: Fighter): void {
   const bonus = attacker.kind && statsOf(attacker.kind).strongVs === target.kind ? 2 : 1;
   target.hp -= attacker.dmg * bonus;
+  if (target.kind === 'giong') {
+    // Gióng không chết: hết sức thì rút khỏi trận, nghỉ một lúc.
+    if (target.hp <= 0 && target.state !== 'gone') {
+      target.hp = 0;
+      target.state = 'gone';
+      if (battle.hero) battle.hero.down = true;
+      emit(battle, { kind: 'exhaust', x: target.x, z: target.z });
+    }
+    return;
+  }
   if (target.hp <= 0 && target.state !== 'dead') {
     target.state = 'dead';
     target.hp = 0;
@@ -405,8 +460,16 @@ function damageFighter(battle: Battle, attacker: { kind?: FighterKind; dmg: numb
 function strike(battle: Battle, f: Fighter, foe: Fighter): void {
   const st = statsOf(f.kind);
   if (st.range > 2) emit(battle, { kind: 'shot', x: f.x, z: f.z, tx: foe.x, tz: foe.z });
-  const rally = f.side === 'ta' && battle.rally > 0 ? RALLY.dmg : 1;
-  damageFighter(battle, { kind: f.kind, dmg: st.dmg * rally }, foe);
+  const mult = f.side === 'ta' ? (1 + battle.bonus) * (battle.rally > 0 ? RALLY.dmg : 1) : 1;
+  const dmg = st.dmg * mult;
+  damageFighter(battle, { kind: f.kind, dmg }, foe);
+  if (f.kind === 'giong') {
+    // Đòn của Gióng quét cả giặc đứng quanh.
+    for (const o of battle.fighters) {
+      if (o === foe || o.side === f.side || !isAlive(o)) continue;
+      if (Math.hypot(o.x - foe.x, o.z - foe.z) <= GIONG_CLEAVE.radius) damageFighter(battle, { dmg: dmg * GIONG_CLEAVE.share }, o);
+    }
+  }
   f.cd = st.cooldown;
   f.swing = 0.3;
 }
@@ -574,7 +637,7 @@ export function enemiesLeft(battle: Battle): number {
 }
 
 export function alliesLeft(battle: Battle): number {
-  return battle.fighters.filter((f) => f.side === 'ta' && f.state !== 'dead').length;
+  return battle.fighters.filter((f) => f.side === 'ta' && f.state !== 'dead' && f.state !== 'gone').length;
 }
 
 /** Đồng hồ chung của mọi trận: thời gian, Trống trận, hồi kỹ năng. */
@@ -603,8 +666,11 @@ export function stepBattle(state: GameState, battle: Battle, dt: number): boolea
   return enemiesLeft(battle) === 0;
 }
 
-const isAlive = (f: Fighter) => f.state !== 'dead' && f.state !== 'gone';
-const bodyRadius = (k: FighterKind) => (k === 'voi' || k === 'chienXa' || k === 'phoTuong' ? 0.45 : 0.27);
+function isAlive(f: Fighter): boolean {
+  return f.state !== 'dead' && f.state !== 'gone';
+}
+const BIG: FighterKind[] = ['voi', 'chienXa', 'phoTuong', 'daiTuong', 'giong'];
+const bodyRadius = (k: FighterKind) => (BIG.includes(k) ? 0.45 : 0.27);
 
 /** Đẩy lính đứng chồng lên nhau ra, và giữ mọi người trong bãi. */
 function separate(battle: Battle): void {
@@ -654,21 +720,64 @@ export function retreatField(battle: Battle): void {
   if (battle.mode === 'field' && !battle.outcome) battle.outcome = 'retreat';
 }
 
-export function skillReady(battle: Battle, skill: SkillId): boolean {
-  return !battle.outcome && (battle.skillCd[skill] ?? 0) <= 0 && alliesLeft(battle) > 0;
+/** Gióng đang đứng trong trận (chưa kiệt sức). */
+export function heroOf(battle: Battle): Fighter | undefined {
+  return battle.fighters.find((f) => f.kind === 'giong' && isAlive(f));
 }
 
-/** Bấm kỹ năng của tướng. Trả về false khi kỹ năng chưa hồi hoặc trận đã xong. */
+export function skillReady(battle: Battle, skill: SkillId): boolean {
+  if (battle.outcome || !battle.skills.includes(skill) || (battle.skillCd[skill] ?? 0) > 0) return false;
+  if (skill === 'trongTran') return alliesLeft(battle) > 0;
+  return !!heroOf(battle) && enemiesLeft(battle) > 0;
+}
+
+/** Bấm kỹ năng. Trả về false khi kỹ năng chưa hồi, không có trong trận này, hoặc trận đã xong. */
 export function useSkill(battle: Battle, skill: SkillId): boolean {
   if (!skillReady(battle, skill)) return false;
   const def = SKILLS[skill];
   battle.skillCd[skill] = def.cooldown;
+  // Ngoài bãi mọi người bền hơn, nên đòn kỹ năng cũng mạnh lên tương ứng.
+  const scale = (battle.mode === 'field' ? FIELD.hpMul : 1) * (1 + battle.bonus);
   if (skill === 'trongTran') {
     battle.rally = def.duration;
     const allies = battle.fighters.filter((f) => f.side === 'ta' && isAlive(f));
     const x = allies.reduce((s, f) => s + f.x, 0) / allies.length;
     const z = allies.reduce((s, f) => s + f.z, 0) / allies.length;
     emit(battle, { kind: 'rally', x, z });
+  } else if (skill === 'phunLua') {
+    // Ngựa sắt phun lửa: lao về phía giặc gần nhất, đốt mọi tên giặc trong dải lửa.
+    const hero = heroOf(battle)!;
+    const target = nearestEnemyOf(battle, hero)!;
+    const d = Math.hypot(target.x - hero.x, target.z - hero.z) || 1;
+    const dx = (target.x - hero.x) / d;
+    const dz = (target.z - hero.z) / d;
+    for (const o of battle.fighters) {
+      if (o.side === 'ta' || !isAlive(o)) continue;
+      const along = (o.x - hero.x) * dx + (o.z - hero.z) * dz;
+      const across = Math.abs((o.x - hero.x) * dz - (o.z - hero.z) * dx);
+      if (along >= -0.3 && along <= FIRE.length && across <= FIRE.width / 2) damageFighter(battle, { kind: 'giong', dmg: FIRE.dmg * scale }, o);
+    }
+    const fromX = hero.x;
+    const fromZ = hero.z;
+    hero.x = clampField(hero.x + dx * FIRE.length * 0.8, battle.mode === 'field' ? FIELD.w : RIVER_START);
+    hero.z = clampField(hero.z + dz * FIRE.length * 0.8, battle.mode === 'field' ? FIELD.d : RIVER_START);
+    hero.face = Math.atan2(dx, dz);
+    emit(battle, { kind: 'fire', x: fromX, z: fromZ, tx: hero.x, tz: hero.z });
+  } else {
+    // Nhổ tre quật giặc: đòn diện rộng quanh Gióng, giặc bị hất lùi ra.
+    const hero = heroOf(battle)!;
+    for (const o of battle.fighters) {
+      if (o.side === 'ta' || !isAlive(o)) continue;
+      const d = Math.hypot(o.x - hero.x, o.z - hero.z);
+      if (d > SMASH.radius) continue;
+      damageFighter(battle, { kind: 'giong', dmg: SMASH.dmg * scale }, o);
+      if (d > 1e-6 && isAlive(o)) {
+        o.x += ((o.x - hero.x) / d) * SMASH.push;
+        o.z += ((o.z - hero.z) / d) * SMASH.push;
+      }
+    }
+    hero.swing = 0.3;
+    emit(battle, { kind: 'smash', x: hero.x, z: hero.z });
   }
   return true;
 }

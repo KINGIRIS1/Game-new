@@ -4,6 +4,7 @@ import './style.css';
 import { play, setMuted, unlockAudio } from './audio/sfx';
 import { useSkill } from './game/battle';
 import { leaveBattlefield, retreat, startStage } from './game/campaign';
+import { feedGiong, forgeGear, markStory, pendingStory } from './game/giong';
 import { BUILDINGS, RESOURCE_IDS, STAGES, type BuildingType, type Cost } from './game/defs';
 import {
   applyOffline,
@@ -153,6 +154,12 @@ function start(): void {
   world.view.onTap = (cx, cy) => {
     // Trên bãi chiến chỉ xem, không chọn gì.
     if (world.inField) return;
+    if (mode.kind === 'view' && world.pickGiong(cx, cy)) {
+      play('tap');
+      select(null);
+      hud.showGiong(state);
+      return;
+    }
     const tile = world.pickTile(cx, cy);
     if (mode.kind === 'place') {
       if (!tile) return;
@@ -431,13 +438,44 @@ function start(): void {
         return;
       }
 
-      case 'useRally': {
+      case 'useSkill': {
         const battle = state.campaign.battle ?? (state.raid.phase === 'battle' ? state.raid.battle : null);
-        if (!battle || !useSkill(battle, 'trongTran')) return;
+        if (!battle || !useSkill(battle, a.skill)) return;
         play('claim');
+        navigator.vibrate?.(a.skill === 'trongTran' ? 30 : 60);
         commit();
         return;
       }
+
+      case 'openGiong':
+        if (mode.kind !== 'view') exitMode();
+        select(null);
+        play('tap');
+        hud.showGiong(state);
+        return;
+
+      case 'feedGiong': {
+        const r = feedGiong(state);
+        if (!r.ok) return fail(r.reason);
+        play('upgrade');
+        hud.toast(vi.ui.fedToast(r.value));
+        commit();
+        return;
+      }
+
+      case 'forgeGear': {
+        const r = forgeGear(state, a.gear);
+        if (!r.ok) return fail(r.reason);
+        play('upgrade');
+        hud.toast(vi.ui.forgedToast(vi.gear[a.gear].name));
+        commit();
+        return;
+      }
+
+      case 'storyDone':
+        markStory(state, a.id);
+        commit();
+        return;
 
       case 'retreat':
         if (!retreat(state).ok) return;
@@ -482,8 +520,12 @@ function start(): void {
     shownPhase = phase;
   };
 
-  /** Sang bãi chiến khi xuất quân, về kinh đô khi xem xong kết quả, hiện bảng kết quả đúng một lần. */
+  /**
+   * Sang bãi chiến khi xuất quân, về kinh đô khi xem xong kết quả, hiện bảng kết quả đúng một lần.
+   * Bảng kết quả hiện trễ một chút để kịp thấy đòn cuối; trận cuối chương chờ lâu hơn để xem Gióng bay về trời.
+   */
   let shownStage: StageResult | null = null;
+  let resultAt = 0;
   const watchCampaign = () => {
     const battle = state.campaign.battle;
     if (battle && !world.inField) {
@@ -496,12 +538,34 @@ function start(): void {
       hud.closeStageResult();
     }
     const r = state.campaign.lastResult;
-    if (r && r !== shownStage) {
+    const now = performance.now();
+    if (!r) {
+      shownStage = null;
+      resultAt = 0;
+      return;
+    }
+    if (r === shownStage) return;
+    if (!resultAt) {
+      resultAt = now + (battle?.ascend ? 3500 : 700);
       play(r.outcome === 'win' ? 'upgrade' : 'error');
       commit();
-      hud.showStageResult(r);
     }
+    if (now < resultAt) return;
     shownStage = r;
+    resultAt = 0;
+    hud.showStageResult(r);
+  };
+
+  /** Kể đoạn truyện đến lúc, khi không đang đánh và không có hộp thoại nào khác đang mở. */
+  const watchStory = () => {
+    if (hud.storyOpen || hud.modalOpen || state.campaign.battle || state.raid.phase === 'battle') return;
+    const id = pendingStory(state);
+    if (!id) return;
+    if (mode.kind !== 'view') exitMode();
+    select(null);
+    hud.closeCampaign();
+    play('claim');
+    hud.showStory(id);
   };
 
   window.addEventListener('pointerdown', unlockAudio, { passive: true });
@@ -545,6 +609,7 @@ function start(): void {
       // Trong trận, công trình có thể bị phá bất cứ lúc nào: vẽ lại cảnh theo state.
       if (state.raid.phase === 'battle') world.sync(state);
       refreshUi();
+      watchStory();
     }
     if (now - lastSave > AUTOSAVE_MS) {
       lastSave = now;
