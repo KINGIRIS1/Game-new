@@ -1201,6 +1201,157 @@ Chủ dự án thấy bản đồ kinh đô nhỏ, công trình sát nhau, bố 
 
 Sau đó mới làm tiếp chương 4, PR 2–4.
 
+## Kế hoạch: vùng đất bên kia sông (đề xuất, chờ chủ dự án duyệt)
+
+Chủ dự án yêu cầu: khám phá vùng đất mới bên kia sông để mở rộng lãnh thổ, có bắc cầu, điều quân. Mục này là bản đề xuất gồm phương án khuyên dùng, số nháp và các câu hỏi cần chốt (cuối mục). Chủ dự án duyệt rồi mới viết code. Như các kế hoạch trước, số cho chỉnh ±20% theo test; làm xong phần nào thì ghi số cuối cùng của phần ấy.
+
+**Hiện trạng** (khảo sát code):
+- Lưới 55×55. Sông Thao (phía đông) và sông Đà (phía nam) chiếm ba ô 52–54 sát mép lưới (`map.ts`). Bờ bên kia chỉ là một mảng đất phẳng vẽ ngoài lưới (`staticTerrain` trong `world.ts`): không có ô, không xây được, mùa lũ thì phủ một lớp nước.
+- Sông là hào tự nhiên: giặc trên bộ không lội qua (`costGrid` trong `battle.ts`), nên vòng thành Cổ Loa dựa vào bờ sông cũng tính là kín (`wallRings` trong `coLoa.ts`). Thủy quái, thuyền buôn và (sắp tới) thủy binh Triệu đi từ sông vào.
+- Số công trình tối đa tính theo cấp Điện, không theo đất. Ở Điện 8, bên này còn 20 trên 100 khoảnh chưa mở, và kinh đô theo mẫu Cổ Loa còn nhiều chỗ trống. Vì vậy **đất bên kia phải cho thứ bên này không có**; thêm đất không thôi thì không ai cần.
+
+**Học cơ chế** từ game cùng thể loại (chỉ học cơ chế, luật chơi và hình ảnh vẫn là của riêng game này):
+- Northgard: bản đồ chia vùng; trinh sát đi dò sương mù; chiếm vùng tốn lương thực, vùng sau đắt hơn vùng trước; có vùng bị thú dữ, quái vật giữ, phải đem quân dẹp mới chiếm được; nhiều vùng có đặc điểm riêng (đất màu mỡ, mỏ đá, mỏ sắt) có lợi cho công trình hợp với nó. Từ đây có **khoảnh sương mù, trinh sát, đồn giặc giữ đất, đặc sản đất**.
+- Rise of Kingdoms: trinh sát mở sương mù; đồn man di rải trên bản đồ để đánh lấy thưởng; cửa ải phải chiếm mới sang được vùng sau. Từ đây có **đồn giặc chia bậc theo chương**: bậc sau chỉ đánh được khi đã tới chương ấy.
+
+### Đề xuất
+
+**Bản đồ: bờ bên kia thành đất thật trong cùng lưới kinh đô**
+- Lưới nới từ 55×55 lên **72×72**. Sông giữ ô 52–54, nay nằm giữa lưới. Mọi tọa độ cũ giữ nguyên, nên công trình, mẫu kinh đô và test theo mốc không phải dời.
+- **Bờ nam sông Đà**: ô x 2–51, z 55–69. **Bờ đông sông Thao**: ô x 55–69, z 2–51. Mỗi bờ sâu 3 khoảnh, dài 10 khoảnh: 30 khoảnh mỗi bờ, cả hai bờ 60 khoảnh. Hai ô ngoài cùng (70–71) là rừng, chỗ giặc bên kia xuất phát. Góc đông nam (x và z đều từ 52) là ngã ba sông, toàn nước.
+
+  ```
+               x 0–1   2 … 51     52–54    55 … 69    70–71
+    z 0–1      rừng    rừng       sông     rừng       rừng
+    z 2–51     rừng    KINH ĐÔ    Thao     BỜ ĐÔNG    rừng
+    z 52–54    ──────── sông Đà ─────────  ngã ba sông (nước)
+    z 55–69    rừng    BỜ NAM     ngã ba sông (nước)
+    z 70–71    rừng    rừng       nước
+  ```
+
+- Độ cao bờ bên kia theo cùng luật bên này, soi gương qua sông: ba ô sát sông là bãi bồi bậc 0, vào trong là đồng bằng có gò, sát rừng là đồi. Nhiễu đã tính bằng hàm băm theo tọa độ, nên độ cao bên này **giữ y như cũ** (test canh).
+- Phương án khác: bờ bên kia là một bản đồ vùng riêng, cảnh riêng như bãi chiến. Ít đụng code kinh đô, nhẹ máy hơn, nhưng không thấy cầu và quân qua sông ngay trước mắt, mất cái hay chính của ý tưởng. Không khuyên dùng.
+
+**Cầu**
+- Thẻ **Cầu** trong bảng Xây dựng, mở ở Điện cấp 4. Cầu rộng 2 ô, vắt qua 3 ô sông; đầu bên này phải chạm đất đã khai phá. Tối đa một cầu qua sông Đà và một cầu qua sông Thao.
+- Bắc cầu xong thì **khoảnh đầu cầu** (khoảnh bên kia mà đầu cầu chạm vào) được dò và mở luôn, không mất thêm, làm chỗ đặt chân. Khoảnh đầu cầu không bị đồn kề bên chặn, nhưng không bắc cầu thẳng vào khoảnh có đồn.
+
+  | Cấp | Tên | Cần | Giá | Máu | Lũ |
+  |---|---|---|---|---|---|
+  | 1 | Cầu phao tre | Điện 4 | 400 gạo, 300 vỏ ốc, 200 đất đá | 600 | lũ từ bậc 2 thì cuốn trôi (hư) |
+  | 2 | Cầu gỗ | Điện 6 | 1600 vỏ ốc, 1400 đất đá, 250 sắt | 1500 | chịu tới bậc 2, bậc 3 thì hư |
+  | 3 | Cầu gỗ lớn có lầu đầu cầu | Điện 7 | 2800 vỏ ốc, 2600 đất đá, 500 sắt | 2600 | không sợ lũ |
+
+- Quân ta, giặc trên bộ và người làm đi qua cầu như đi trên đất. Cầu hư thì không ai qua được (thủy quái vẫn bơi). Sửa cầu tốn 30% giá như công trình khác.
+- Giặc không nhắm phá cầu. Thuyền buôn, thủy binh đi dưới gầm cầu, không bị chặn.
+- **Chỗ có cầu thì sông không còn là hào kín**: đếm vòng thành coi ô cầu là đi được, và coi bìa rừng bên kia là chỗ giặc xuất phát. Vòng thành dựa vào bờ sông mà hở ở đầu cầu thì không tính nữa. Mẫu Cổ Loa có vòng kín quanh Điện, không chạm sông, nên không đổi. Khi đặt cầu mà số vòng sẽ giảm thì dòng gợi ý báo trước.
+- Áp mẫu kinh đô chừa ô đầu cầu bên này, không đặt công trình chắn lối lên cầu.
+
+**Khám phá: sương mù và trinh sát**
+- Mỗi khoảnh bên kia có ba trạng thái: **chưa dò** (mây phủ, chỉ thấy ngọn cây), **đã dò** (thấy địa hình và điểm lạ), **đã mở** (xây được).
+- Chạm khoảnh chưa dò sát vùng đã dò (4 hướng) để **sai trinh sát**: 60 gạo, 20 vỏ ốc. Người trinh sát chạy từ sân Điện qua cầu tới đó; sau **40 giây chơi** thì khoảnh ấy và các khoảnh kề cạnh hiện ra. Một lúc một trinh sát, từ Điện 6 thì hai. Cầu phải còn nguyên.
+- Trinh sát đi theo đồng hồ chơi như thuyền buôn, vẫn đi khi có giặc hay lũ (chỉ là dò đường).
+- **Điểm lạ** cố định theo hạt giống, mọi máy như nhau. Mỗi bờ có:
+
+  | Điểm lạ | Mỗi bờ | Là gì |
+  |---|---|---|
+  | Đồn giặc | 6 (bậc 1, 1, 2, 2, 3, 4) | quân giặc đóng giữ; dẹp xong mới mở được khoảnh có đồn và các khoảnh kề cạnh |
+  | Bản làng | 2 | làng người Lạc Việt; mở đất tới nơi rồi dâng lễ thì làng về theo |
+  | Đặc sản đất | 3 | bãi phù sa, núi đá hay mỏ sắt lộ thiên |
+  | Của chôn | 2 | trống đồng, rìu đồng chôn dưới đất; mở khoảnh thì đào được |
+
+  Bậc đồn tăng dần từ bờ sông vào bìa rừng: bậc 1 ở hàng sát sông, bậc 3–4 ở hàng sát rừng. Làng và đặc sản tốt nằm sau đồn bậc 2–3, để có cái mà dẹp.
+
+**Điều quân dẹp đồn giặc**
+- Chạm đồn đã dò: bảng đồn ghi quân giặc, bậc, cần chương nào, thưởng. Nút **Điều quân** mở bảng xếp quân như phó bản (chọn lính, xếp hàng, tướng).
+- Bốn bậc theo bốn chương, mỗi bậc là giặc của chương ấy:
+
+  | Bậc | Giặc | Cần | Tướng | Quân giặc khởi điểm | Thưởng lần đầu (nháp) |
+  |---|---|---|---|---|---|
+  | 1 | giặc Ân | Điện 4 | như trận chương 1 | như màn 4–6 | 400 gạo, 300 vỏ ốc, 250 đất đá, 60 sắt |
+  | 2 | thủy quái ở đầm lau | vào chương 2 | như trận chương 2 | như màn 11–13 | 1300 gạo, 900 vỏ ốc, 700 đất đá, 180 sắt |
+  | 3 | yêu tinh | vào chương 3 | như trận chương 3 | như màn 17–18 | 2400 gạo, 1700 vỏ ốc, 1500 đất đá, 400 sắt |
+  | 4 | quân Triệu trên bộ | vào chương 4 | An Dương Vương, có Cao Lỗ thì Cao Lỗ | như màn 21–23 | 4200 gạo, 3500 vỏ ốc, 3100 đất đá, 800 sắt |
+
+  Số giặc và máu cuối cùng đo bằng test theo **Chuẩn cân bằng phó bản**: bậc 1 như màn 1–4 (người chơi thường thắng với quân vừa doanh trại ở Điện 4), bậc 2–4 như màn chương 2, 3 (`testkit.ts`).
+- **Đánh ngoài bãi chiến** như phó bản. Trước trận, lính (tối đa chừng 20 hình cho nhẹ máy) đi thành hàng từ doanh trại qua cầu tới đồn trong vài giây ngay trên kinh đô, rồi chuyển sang bãi chiến. Bãi chiến mới **bờ bên kia**: bãi sông có lau sậy, cầu tre sau lưng quân ta, đồn rào cọc sau lưng giặc.
+- Luật như phó bản: lính chết thì mất; thua thì đồn còn đó, đánh lại được; đang đánh thì đồng hồ giặc đứng, không luyện quân được. Thắng thì đồn cháy rồi tan, cờ đỏ của ta cắm lên. Đồn đã dẹp thì hết, không đánh lại.
+- Phương án khác: đánh ngay trên bản đồ kinh đô, quân đi thật từ doanh trại qua cầu tới đồn rồi đánh tại chỗ. Thấy rõ "điều quân" hơn, nhưng là một kiểu trận mới phải cân bằng lại từ đầu, đường hành quân dài, camera phải bám theo. Không khuyên dùng cho lần đầu; nếu cần thì làm sau PR 5.
+
+**Mở đất bên kia và được gì**
+- Dùng chung cách mở khoảnh của kế hoạch kinh đô lớn (PR 2): chạm khoảnh đã dò, sát đất đã mở cùng bờ (hay khoảnh đầu cầu), không bị đồn chặn, rồi trả gạo và vỏ ốc. Giá theo cùng công thức bên này, nhích dần theo số khoảnh bên kia đã mở. Không giới hạn số khoảnh theo cấp Điện: đồn bậc nào mở ở chương ấy đã giữ nhịp.
+- Công trình bên kia vẫn tính vào số tối đa chung. Bên kia cho ba thứ bên này không có:
+  - **Đặc sản đất**: công trình có móng nằm trọn trong khoảnh đặc sản làm ra thêm **30%**: ruộng lúa, ruộng nếp trên bãi phù sa; bãi đất đá trên núi đá; lò rèn trên mỏ sắt. Mỗi khoảnh vừa một công trình. Người chơi dời công trình sang (tốn 10% giá dựng như mọi lần dời);
+  - **Bản làng**: dâng lễ kết thân (600 gạo, 400 vỏ ốc) thì làng về theo, từ đó làm ra tài nguyên theo nghề, **không cần dân**, bằng một công trình cùng nghề đủ người ở cấp bằng cấp Điện. Bốn làng, mỗi làng một nghề: bờ nam có làng lúa (gạo), làng chài (vỏ ốc); bờ đông có làng đá (đất đá), làng rèn (sắt). Đền và phúc lành Tết cộng thêm như với công trình khác;
+  - **Của chôn**: mở khoảnh có của chôn thì đào được một lần, thưởng chừng 5% giá nâng Điện ở cấp hiện tại.
+- Người làm phải qua sông: **cầu hư thì công trình bên kia không có người làm**. Làng vẫn làm ra, vì là dân bên ấy. Đây là lý do nâng cầu trước mùa lũ to.
+- Áp mẫu kinh đô chỉ xếp bờ bên này. Công trình bên kia giữ nguyên chỗ và vẫn tính vào số tối đa, nên mẫu dựng thêm ít đi tương ứng.
+- Người chơi mô phỏng (`moPhong.ts`) không sang sông, nên nhịp lên Điện ở `balance.test.ts` không đổi. Sổ kinh tế (`kinhTe.ts`) thêm một kịch bản có bốn làng và đặc sản; rà bằng skill `ra-kinh-te` trước khi chốt số làng và đặc sản.
+
+**Phòng thủ hai bờ**
+- Một bờ đã có công trình hay làng về theo thì giặc trên bộ (giặc Ân, yêu tinh, quân Triệu) cứ ba đợt có một đợt tới từ **bìa rừng bên kia**. Trinh sát báo hướng như cũ ("bên kia sông Đà", "bên kia sông Thao"), có dải đỏ ở bìa rừng bên ấy. Chương 2 chỉ có lũ, nên bên kia chỉ lo lũ.
+- Giặc bên kia nhắm làng gần nhất trước (làng bị phá thì thôi làm ra, sửa tốn 30% lễ kết thân), rồi qua cầu tìm kho và Điện. Cầu hư thì chúng không sang được, phá bên kia tới hết giờ rồi rút.
+- Lũ loang cả hai bờ theo cùng luật: bãi bồi bên kia ngập trước; đắp đê bên kia được.
+- **Đồn biên** (công trình mới, 4×4, chỉ dựng bên kia, mỗi bờ một, cần Điện 5; giá nháp 800 gạo, 600 vỏ ốc, 600 đất đá, 100 sắt): bảng đồn biên chọn số lính **đóng ở đồn**, lấy từ quân đang có, không thêm chỗ quân. Khi giữ kinh đô, lính đóng ra trận từ đồn biên; phần còn lại và tướng ra từ doanh trại. Không có đồn biên thì cả quân ra từ doanh trại, phải đi vòng qua cầu.
+- Thủy binh Triệu (PR 2 chương 4) cập bờ có công trình gần nhất, kể cả bờ bên kia. Chốt khi làm PR ấy.
+
+**Hình ảnh** (mỗi PR chụp kiểm tra ở khổ điện thoại)
+- Bờ bên kia là đất bậc thang như bên này, rừng phủ chỗ chưa mở. Mảng đất phẳng vẽ ngoài lưới chỉ còn ở ngoài ô 71.
+- Sương mù: mây cuộn màu kem như giấy, viền mực, xoắn như hoa văn mây trên trống đồng, phủ khoảnh chưa dò; dò xong thì tan trong chừng 1 giây.
+- Cầu phao tre: bè tre kết dây mây, nhấp nhô theo sóng. Cầu gỗ: cột gỗ, lan can. Cấp 3: cầu gỗ lớn có lầu canh mái ngói ở đầu cầu bên này (mái như cấp 7).
+- Đồn giặc theo bậc, đều có rào cọc nhọn, lều, lửa trại và vài lính gác đứng yên (bản tĩnh, `bakeRig`): giặc Ân có cờ và mũ trụ đồng; thủy quái ở ổ lau sậy có xương cá; yêu tinh ở bãi đá tím có ma trơi; quân Triệu có lều đen viền đỏ.
+- Bản làng: hai ba nhà sàn nhỏ, khói bếp, cờ trắng; về theo thì cắm cờ đỏ, có người đi lại. Đặc sản: phù sa đất nâu thẫm có lau, núi đá xám lộ, mỏ sắt đá đỏ gỉ. Của chôn: gò đất lóe ánh đồng.
+- Trinh sát là người chạy cầm cờ lệnh nhỏ (lính đi bộ có khung xương). Camera kéo được sang bờ bên kia khi đã có cầu.
+- **Nặng máy**: lưới 72×72 nhiều gấp chừng 1,7 lần số ô; tìm đường A* cũng rộng ra chừng ấy. Đo khung hình ở khổ `fold` ngay từ PR 1; nếu tụt thì gộp rừng bên kia thành ít mesh, tắt bóng đổ bên kia, chỉ tìm đường trong vùng có giặc.
+
+**Giao diện**
+- Bảng Xây dựng có thẻ Cầu, và (PR 5) Đồn biên.
+- Chạm khoảnh bên kia: bảng **Đất bên kia sông** ghi trạng thái, điểm lạ và một nút theo trạng thái: Sai trinh sát, Mở đất, Điều quân hay Kết thân. Nút mờ thì ghi lý do (cầu hư, đồn chặn, chưa tới chương…).
+- Trinh sát đang đi thì có chip 🧭 đếm ngược trên thanh trên.
+- Bảng Điện ghi số khoảnh bên kia đã dò, đã mở, số đồn đã dẹp, số làng về theo.
+
+**Truyện**
+- Thêm đoạn **"Bên kia sông"**, kể khi Điện lên cấp 4 (người đã qua mốc ấy thì thấy ngay khi vào game): Lạc hầu tâu bên kia sông Đà, sông Thao còn nhiều làng Lạc Việt bị giặc Ân đóng đồn ức hiếp; bắc cầu tre, sai trinh sát dò đường, đem quân dẹp đồn thì đất ấy về với Văn Lang.
+- Các đoạn mở chương ("Vua Hùng kén rể", "Cột đá thề", "Cầu hôn") thêm một câu báo bên kia sông có đồn giặc mới (thủy quái, yêu tinh, quân Triệu), như cách đã nhắc Điện cấp 6–8.
+- Không thêm nhiệm vụ Lạc hầu, để khỏi dời số thứ tự nhiệm vụ của người đang chơi.
+
+**Bản lưu** (phiên bản kế tiếp sau phần khoảnh tự chọn)
+- Mảng độ cao dàn lại từ 55×55 sang 72×72; ô bờ bên kia lấy độ cao tự nhiên. Các bước nâng bản lưu cũ (kể cả `xepLai.ts`) phải dùng cỡ lưới của phiên bản ấy, rồi bước mới mới dàn lại.
+- Thêm: khoảnh bên kia đã dò, đã mở; trinh sát đang đi (tới khoảnh nào, lúc nào tới); đồn đã dẹp; làng đã về theo, làng bị phá; số lính đóng ở mỗi đồn biên. Cầu và đồn biên là công trình như mọi công trình khác.
+- Trận giữ kinh đô đang dở thì lùi về lúc trinh sát báo, vì đường đi lưu theo chỉ số ô cũ.
+
+**Test**
+- Lưới: sông ở giữa, góc ngã ba là nước; độ cao bên này y như trước khi nới lưới; khi chưa có cầu thì lũ, giặc, vòng thành, mẫu kinh đô ra y như cũ.
+- Cầu: chỉ đặt vắt qua sông, đầu bên này trên đất đã mở; giặc và quân đi qua được, cầu hư thì không; lũ cuốn cầu tre ở bậc 2, cầu gỗ ở bậc 3; vòng thành dựa vào sông hở khi có cầu.
+- Trinh sát: giá, 40 giây, mở khoảnh đích và các khoảnh kề; một lúc một (hai từ Điện 6).
+- Đồn: chặn khoảnh kề tới khi dẹp; cần đúng chương; độ khó từng đồn theo chuẩn; thưởng một lần.
+- Mở đất: sát đất đã mở cùng bờ, giá nhích dần; đặc sản thêm 30% khi móng nằm trọn trong khoảnh; làng làm ra như công trình cùng nghề ở cấp Điện, không cần dân; cầu hư thì công trình bên kia không có người làm.
+- Phòng thủ: một trong ba đợt giặc trên bộ tới từ bên kia khi bên kia có công trình; giặc bên kia nhắm làng rồi qua cầu; lính đóng ra trận từ đồn biên.
+- Nâng bản lưu cũ lên phiên bản mới.
+
+### Thứ tự làm (đề xuất)
+
+1. **PR 1: lưới qua sông** (bản lưu mới): nới lưới lên 72×72, đất thật ở hai bờ bên kia (toàn rừng, chưa mở được), độ cao, camera, nâng bản lưu. Luật chơi chưa đổi gì. Đo khung hình.
+2. **PR 2: cầu, sương mù, trinh sát, điểm lạ**, đoạn truyện "Bên kia sông".
+3. **PR 3: đồn giặc và điều quân**: 12 đồn bốn bậc, hành quân qua cầu, bãi chiến bờ bên kia, cân bằng theo chuẩn.
+4. **PR 4: mở đất bên kia, đặc sản, bản làng, của chôn**; sổ kinh tế.
+5. **PR 5: phòng thủ hai bờ**: giặc từ bìa rừng bên kia, đồn biên và lính đóng đồn, người làm cần cầu.
+
+- PR 4 cần cách mở khoảnh (PR 2 của kế hoạch kinh đô lớn, chưa làm), nên làm PR ấy trước.
+- Khuyên làm PR 1 trước PR 2–4 chương 4: thủy binh cập bờ và mẫu kinh đô chương 4 đều đụng bản đồ, làm sau khi nới lưới thì khỏi sửa hai lần. PR 5 làm cùng hay ngay sau PR 2 chương 4, vì cùng sửa chỗ giặc xuất phát.
+
+### Câu hỏi cần chủ dự án chốt
+
+1. Bờ bên kia là đất thật trong cùng lưới kinh đô (khuyên dùng), hay một bản đồ vùng riêng?
+2. Mở từ Điện cấp 4 ở chương 1 (khuyên dùng), từ đầu chương 2, hay sau màn hình Hết truyện?
+3. Mở cả hai bờ (khuyên dùng), hay chỉ bờ nam sông Đà trước?
+4. Đánh đồn ngoài bãi chiến kèm cảnh hành quân qua cầu (khuyên dùng), hay đánh ngay trên bản đồ kinh đô?
+5. Bên kia cho đặc sản đất, bản làng và của chôn (khuyên dùng). Có muốn thêm cả số công trình tối đa (ví dụ mỗi bờ thêm 1 ruộng, 1 bãi đất đá) không?
+6. Có cho giặc tới từ bên kia sông, và có đồn biên để chia quân giữ hai bờ không (khuyên có, làm ở PR 5)?
+7. Lũ cuốn cầu tre, cầu hư thì người làm không sang được: giữ (khuyên dùng) hay bỏ cho nhẹ?
+8. Làm ngay sau PR 2 kinh đô lớn, chen trước chương 4 PR 2–4 (khuyên dùng), hay để sau khi xong chương 4?
+9. Tên gọi: "bờ nam sông Đà", "bờ đông sông Thao", tên bốn làng. Chủ dự án có muốn đặt tên riêng không?
+
 ## Nhịp chơi và lưu game
 
 - Nhịp chơi lai: mỗi lần mở game là một phiên ra quyết định ngắn.
@@ -1238,4 +1389,5 @@ Sau đó mới làm tiếp chương 4, PR 2–4.
 10. **Chương 4: Mỵ Châu, Trọng Thủy** (đã duyệt, đang làm; PR 1 đã làm; xem Kế hoạch chương 4): Điện và 7 loại công trình lên cấp 8, lầu nỏ, ụ nỏ trên thành, lính nỏ, thủy binh Triệu đi thuyền, Cao Lỗ, phó bản màn 25–32, Đền Cuông, màn hình Hết truyện, thử thách phó bản và huân công.
 11. **Doanh trại và nơi ở riêng** (đã làm, xem mục cùng tên): doanh trại là nơi tướng ở và điều binh; trại giáo, trại cung, chuồng voi để luyện từng binh chủng; tướng ra trận từ doanh trại.
 12. **Kinh đô lớn, công trình to, mở đất bằng khoảnh** (đã duyệt, đang làm; xem mục Kế hoạch cùng tên): công trình to hơn một ô mỗi chiều, lưới 55×55, khoảnh 5×5 tự chọn, viền cỏ, trang trí ô trống, cây đá mọc. Làm trước chương 4 PR 2–4.
-13. **Để sau**: chương 5 về Hai Bà Trưng (mới nhắc ở câu cuối chương 4); nhạc nền.
+13. **Vùng đất bên kia sông** (đề xuất, chờ duyệt; xem mục Kế hoạch cùng tên): nới lưới qua sông, cầu ba cấp, sương mù và trinh sát, đồn giặc bốn bậc theo chương, điều quân dẹp đồn, mở đất bên kia với đặc sản đất, bản làng và của chôn, giặc tới từ hai bờ và đồn biên.
+14. **Để sau**: chương 5 về Hai Bà Trưng (mới nhắc ở câu cuối chương 4); nhạc nền.
