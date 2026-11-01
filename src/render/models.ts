@@ -6,6 +6,7 @@ import type { FighterKind } from '../game/battle';
 import type { GiongLook } from '../game/giong';
 import { C } from './palette';
 import { ShapeBuilder, instanceTemplates, seeded, type Placement } from './shapes';
+import { bakeSpearman } from './soldier';
 import { ToonModel, inkThick, inkThin, outlineOf, toon } from './toon';
 
 export type PersonKind = 'nong' | 'linh' | 'buon' | 'laiDo';
@@ -96,8 +97,9 @@ const HORN = 0xe6d6a8;
  * Lính trong trận. Quân ta đội mũ lông chim như trên trống đồng,
  * giặc Ân mặc áo sẫm, đội mũ trụ đồng, cầm qua (giáo móc).
  * Phó tướng Ân mặc giáp đỏ, mũ trụ có chùm lông đỏ cao, khoác áo choàng, cầm rìu lớn.
+ * Giáo binh có khung xương, dựng ở soldier.ts; ở đây trả về bản tĩnh đứng nghỉ.
  * `tier`: bậc binh khí đã rèn ở lò rèn (0–2) của giáo binh, cung thủ, voi chiến:
- * - giáo binh: bậc 1 đầu giáo sắt, bậc 2 thêm tua đỏ và khiên viền sắt;
+ * - giáo binh: bậc 1 đầu giáo sắt, bậc 2 thêm tua đỏ và khiên viền sắt (soldier.ts);
  * - cung thủ: bậc 1 mũi tên sắt trong bao tên da, bậc 2 cung sừng và bao tên đồng;
  * - voi chiến: bậc 1 giáp trán sắt, bậc 2 giáp ngà và bành có lọng.
  */
@@ -105,6 +107,7 @@ export function makeFighter(kind: FighterKind, tier = 0): THREE.Group {
   if (kind === 'giong') return makeGiong('trangSi');
   if (kind === 'sonTinh') return makeSonTinh();
   if (kind === 'anDuong') return makeAnDuong({ crossbow: true });
+  if (kind === 'giao') return bakeSpearman(tier);
   const water = makeWaterFoe(kind) ?? makeChapter3Foe(kind);
   if (water) return water;
   const boss = kind === 'phoTuong' || kind === 'daiTuong';
@@ -182,14 +185,10 @@ export function makeFighter(kind: FighterKind, tier = 0): THREE.Group {
         p.cone(0.022, 0.07, IRON, -0.1 + dx, y0 + 0.82, z0 - 0.25, [0.3, 0, 0], 4);
       }
     }
-  } else if (kind === 'giao' || kind === 'voi') {
+  } else if (kind === 'voi') {
+    // Lạc tướng trên voi cầm giáo mũi đồng.
     p.cyl(0.018, 0.018, 1.15, C.woodDark, 0.24, y0 + 0.55, z0 + 0.06, undefined, 5);
-    // Đầu giáo: đồng khi chưa rèn; giáo binh đã rèn thì đầu giáo sắt to hơn.
-    const iron = kind === 'giao' && tier >= 1;
-    p.cone(iron ? 0.065 : 0.05, iron ? 0.26 : 0.2, iron ? IRON : C.bronze, 0.24, y0 + (iron ? 1.23 : 1.2), z0 + 0.06, undefined, 4);
-    if (kind === 'giao' && tier >= 2) p.cone(0.06, 0.14, C.red, 0.24, y0 + 1.05, z0 + 0.06, [Math.PI, 0, 0], 6);
-    if (kind === 'giao') m.drum.cyl(0.17, 0.17, 0.04, 0xffffff, -0.2, y0 + 0.4, z0 + 0.1, [Math.PI / 2, 0, 0.2], 12);
-    if (kind === 'giao' && tier >= 2) p.add(new THREE.TorusGeometry(0.175, 0.025, 6, 20), IRON, -0.2, y0 + 0.4, z0 + 0.12, [0, 0, 0.2]);
+    p.cone(0.05, 0.2, C.bronze, 0.24, y0 + 1.2, z0 + 0.06, undefined, 4);
   } else if (boss) {
     // Rìu đồng lưỡi lớn.
     p.cyl(0.025, 0.025, 1.2, C.woodDark, 0.26, y0 + 0.6, z0 + 0.06, undefined, 5);

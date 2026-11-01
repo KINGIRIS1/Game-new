@@ -14,6 +14,8 @@ Game xây dựng chiến thuật chạy trên trình duyệt điện thoại (Ty
   - Công trình, mỗi loại một dáng và mỗi cấp một dáng (kể cả lầu nỏ và ba nơi ở của binh chủng): `buildings.ts`. Mái theo cấp (`roofFor`): tranh tới cấp 5, cấp 6 viền đỏ, cấp 7 ngói, cấp 8 ngói viền đồng vàng. Cấp 6–8 to 110–120% mà không tràn ô: thu tâm các phần (`setSpread`, `grownGroup`), nền thu vừa ô (`edgeOf`).
   - Dân theo nghề: `people.ts`.
   - Lính, thủy quái, yêu tinh, quân Triệu, Thánh Gióng và ngựa sắt, Sơn Tinh, Thủy Tinh, An Dương Vương, Rùa Vàng, thuyền, cây, lũy, đê, thành Cổ Loa, lều trại, núi: `models.ts`.
+  - Khung xương dựng bằng code: `rig.ts`. Mỗi khối gắn cứng vào một xương, cả người vẫn là một SkinnedMesh mỗi chất liệu, viền mực chạy theo xương. Bản tĩnh theo tư thế (`bakeRig`) dùng cho công trình.
+  - Giáo binh có xương và tư thế (đứng, đi, thế thủ, đâm, ngã): `soldier.ts`. `battleView.ts` xoay xương mỗi khung; `makeFighter('giao')` trả bản tĩnh. Đây là bản thử vẽ lại nhân vật, chờ chủ dự án duyệt rồi mới làm các nhân vật khác.
   - Đất bậc thang, nước lũ, mưa giông, đêm yêu tinh, cảnh Tết (cây nêu, dây cờ, mâm bánh) ở kinh đô: `world.ts`.
   - Bãi chiến phó bản là cảnh riêng: `battlefield.ts`. Lính trong trận vẽ bằng `battleView.ts`, dùng chung cho cả hai loại trận.
   - Chất liệu ở `toon.ts`, màu ở `palette.ts`.
