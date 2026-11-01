@@ -55,6 +55,7 @@ import {
   type UnitType,
   RAID_SCALE,
 } from './defs';
+import { barracksList, guardPlan, heroPost } from './doanhTrai';
 import type { Building, GameState } from './game';
 import { openStart } from './khoanh';
 import { GRID, RIVER_START, inGrid, isRiver } from './map';
@@ -376,21 +377,26 @@ export function startBattle(state: GameState, wave: number, side: RaidSide, opts
     }
   }
   if (!flood) battle.exitAt = Math.max(exitAt, -0.5);
-  const barracks = state.buildings.find((b) => b.type === 'doanhTrai');
-  if (barracks) {
-    const def = BUILDINGS.doanhTrai;
-    for (const kind of Object.keys(state.troops) as UnitType[]) {
-      for (let i = 0; i < state.troops[kind]; i++) {
+  // Lính người chơi bố trí giữ kinh đô ra trận từ doanh trại của mình; lính dự trữ ở lại.
+  const def = BUILDINGS.doanhTrai;
+  const plan = guardPlan(state);
+  for (const barracks of barracksList(state)) {
+    const guard = plan.get(barracks.id);
+    if (!guard) continue;
+    for (const kind of UNIT_TYPES) {
+      for (let i = 0; i < guard[kind]; i++) {
         const x = barracks.x + def.w / 2 + (rand() - 0.5) * def.w;
         const z = barracks.z + def.d / 2 + (rand() - 0.5) * def.d;
         battle.fighters.push(newFighter(battle, 'ta', kind, x, z, UNITS[kind].hp * (1 + battle.bonus + armsBonus(battle, kind))));
       }
     }
   }
-  // Tướng ở doanh trại, ra trận cùng quân từ sân doanh trại. Chưa có doanh trại thì ra từ trước Điện.
+  // Tướng ra trận từ sân doanh trại mình chỉ huy (không chỉ huy trại nào thì từ trại của Lạc tướng).
+  // Chưa có doanh trại thì ra từ trước Điện.
   if (opts.hero) {
     const dien = state.buildings.find((b) => b.type === 'dien');
-    if (barracks) addHero(battle, opts.hero, barracks.x + BUILDINGS.doanhTrai.w / 2, barracks.z + BUILDINGS.doanhTrai.d, 1);
+    const post = heroPost(state, opts.hero.kind);
+    if (post) addHero(battle, opts.hero, post.x + def.w / 2, post.z + def.d, 1);
     else if (dien) addHero(battle, opts.hero, dien.x + BUILDINGS.dien.w / 2, dien.z + BUILDINGS.dien.d + 0.6, 1);
   }
   return battle;

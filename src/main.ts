@@ -5,6 +5,7 @@ import { play, setMuted, stopRally, unlockAudio } from './audio/sfx';
 import { useSkill } from './game/battle';
 import { leaveBattlefield, retreat, startStage } from './game/campaign';
 import { forgeArms } from './game/binhKhi';
+import { assignCommander, autoGuard, setGuard } from './game/doanhTrai';
 import { forgeNoThan, inChapter3, wallRings } from './game/coLoa';
 import { offer } from './game/tet';
 import { applyMau } from './game/mau';
@@ -681,6 +682,29 @@ function start(): void {
         commit();
         return;
       }
+
+      case 'assignTuong': {
+        const r = assignCommander(state, a.id, a.tuong);
+        if (!r.ok) return fail(r.reason);
+        play('claim');
+        hud.toast(vi.ui.commandAssigned(vi.ui.tuongNames[a.tuong]));
+        commit();
+        return;
+      }
+
+      case 'guardDelta': {
+        const r = setGuard(state, a.id, a.unit, a.delta);
+        if (!r.ok) return fail(r.reason);
+        play('tap');
+        commit();
+        return;
+      }
+
+      case 'guardAuto':
+        autoGuard(state);
+        play('tap');
+        commit();
+        return;
 
       case 'repair': {
         const r = repair(state, a.id);

@@ -48,11 +48,11 @@ const CANH = {
   dien8: { mo: 'Kinh đô chương 4 lúc lên Điện cấp 8', truoc: `M.playChapters({ s, last: 8 });` },
   'mau-phong-chau': {
     mo: 'Kinh đô chương 1, Điện cấp 5, đã áp mẫu Phong Châu',
-    truoc: `${KINH_DO}\ns.resources = { gao: 1e6, voOc: 1e6, datDa: 1e6, sat: 1e6 }; const r = X.applyMau(s, 'phongChau'); if (!r.ok) throw new Error(r.reason);`,
+    truoc: `${KINH_DO}\ns.resources = { gao: 1e6, voOc: 1e6, datDa: 1e6, sat: 1e6 }; s.khoanh = [...new Set([...s.khoanh, ...X.frameKhoanh(G.dienLevel(s))])].sort((a, b) => a - b); const r = X.applyMau(s, 'phongChau'); if (!r.ok) throw new Error(r.reason);`,
   },
   'mau-co-loa': {
     mo: 'Kinh đô chương 3, Điện cấp 7, đã áp mẫu Cổ Loa',
-    truoc: `M.playChapters({ s });\ns.resources = { gao: 1e6, voOc: 1e6, datDa: 1e6, sat: 1e6 }; const r = X.applyMau(s, 'coLoa'); if (!r.ok) throw new Error(r.reason);`,
+    truoc: `M.playChapters({ s });\ns.resources = { gao: 1e6, voOc: 1e6, datDa: 1e6, sat: 1e6 }; s.khoanh = [...new Set([...s.khoanh, ...X.frameKhoanh(G.dienLevel(s))])].sort((a, b) => a - b); const r = X.applyMau(s, 'coLoa'); if (!r.ok) throw new Error(r.reason);`,
   },
   tran: {
     mo: 'Giặc đánh kinh đô chương 1, chụp sau 4 giây giao chiến',

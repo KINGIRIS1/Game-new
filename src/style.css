@@ -701,6 +701,23 @@ button {
   min-width: 78px;
 }
 
+/* Nút xếp dọc ở cuối dòng (bảng tướng chỉ huy doanh trại). */
+.unit-row .btn-col {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.unit-row .btn-col .btn {
+  padding: 5px 8px;
+}
+
+/* Tướng đang chỉ huy doanh trại đang xem. */
+.unit-row.here {
+  border-color: var(--bronze);
+  background: #fff3d6;
+}
+
 .result-rows {
   display: flex;
   flex-direction: column;

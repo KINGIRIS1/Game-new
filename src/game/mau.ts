@@ -1,8 +1,11 @@
-// Mẫu kinh đô: mỗi chương mở một mẫu bố trí công trình quanh Điện Vua Hùng. Áp mẫu thì dời mọi công trình
-// đang có vào chỗ trong mẫu và dựng thêm phần mẫu có mà mình chưa có (trong giới hạn theo cấp Điện, trong
-// vùng đất đã khai phá). Phải đủ tài nguyên để dựng phần thiếu và trả phí dời thì mới áp được.
+// Mẫu kinh đô: mỗi chương mở một mẫu bố trí công trình quanh Điện Vua Hùng. Mẫu không vẽ cứng mà dựng lại cho
+// từng cấp Điện theo vùng đất đã khai phá, nên giãn theo đất: lũy, đê, bẫy chạy theo bìa đất, vòng thành Cổ Loa
+// nới ra, công trình rải ra theo đất mới. Áp mẫu thì dời mọi công trình đang có vào chỗ trong mẫu và dựng thêm
+// phần mẫu có mà mình chưa có (trong giới hạn theo cấp Điện). Phải đủ tài nguyên để dựng phần thiếu và trả phí
+// dời thì mới áp được.
 
-import { BUILDINGS, isDecor, type BuildingType, type Cost, RESOURCE_IDS } from './defs';
+import { BUILDINGS, STAGES, isDecor, type BuildingType, type Cost, RESOURCE_IDS } from './defs';
+import { CH1_LAST } from './campaign';
 import { inChapter3 } from './coLoa';
 import {
   barracksLevel,
@@ -18,180 +21,36 @@ import {
   type GameState,
   type Result,
 } from './game';
-import { isOpen } from './khoanh';
-import { DIEN_HOME, GRID, inGrid, touchesRiver } from './map';
+import { V11_AREA, isOpen, khoanhOf } from './khoanh';
+import { DIEN_HOME, GRID, KHOANH, RIVER_START, inGrid, touchesRiver } from './map';
+
+/**
+ * Khung dựng mẫu ở cấp Điện `level`: hình vuông neo góc sông, cạnh như vùng đất của cấp ấy trước khi có khoảnh tự
+ * chọn (`V11_AREA`). Mẫu giãn theo khung này; lúc áp mẫu, chỗ nào rơi vào khoảnh rừng chưa phát thì bỏ qua.
+ * Trả về ô nhỏ nhất (cả x và z) của khung.
+ */
+export function frameStart(level: number): number {
+  return RIVER_START - V11_AREA[Math.min(Math.max(level, 1), V11_AREA.length) - 1];
+}
+
+/** Các khoảnh phủ khung dựng mẫu ở cấp Điện `level` (phát đủ chừng này thì mọi chỗ của mẫu đều trên đất đã mở). */
+export function frameKhoanh(level: number): number[] {
+  const lo = frameStart(level);
+  const out: number[] = [];
+  for (let z = lo; z < RIVER_START; z += KHOANH) for (let x = lo; x < RIVER_START; x += KHOANH) out.push(khoanhOf(x, z));
+  return out;
+}
+
+/** Ô (x, z) nằm trong khung dựng mẫu ở cấp Điện `level`. */
+export function inFrame(x: number, z: number, level: number): boolean {
+  const lo = frameStart(level);
+  return x >= lo && z >= lo && x < RIVER_START && z < RIVER_START;
+}
 import { inChapter2 } from './son';
 import { footprintTop, levelFootprint } from './terrain';
 
 export type MauId = 'phongChau' | 'deBao' | 'coLoa';
 export const MAU_IDS: MauId[] = ['phongChau', 'deBao', 'coLoa'];
-
-/** Chữ trong bản vẽ mẫu ứng với loại công trình. `H` là Điện Vua Hùng (đứng yên, mẫu vẽ quanh Điện). */
-const CHAR_TYPE: Record<string, BuildingType> = {
-  H: 'dien',
-  R: 'ruong',
-  B: 'ben',
-  N: 'nhaSan',
-  D: 'baiDa',
-  L: 'loRen',
-  K: 'kho',
-  T: 'doanhTrai',
-  G: 'traiGiao',
-  U: 'traiCung',
-  E: 'chuongVoi',
-  C: 'choiCanh',
-  X: 'bayChong',
-  '#': 'luy',
-  '=': 'de',
-  O: 'thanh',
-  P: 'denPhuDong',
-  V: 'denTanVien',
-  A: 'denCoLoa',
-  n: 'ruongNep',
-  v: 'vuon',
-  l: 'chuongLon',
-  b: 'bep',
-};
-
-/**
- * Bản vẽ ba mẫu, mỗi dòng là một hàng ô theo z, mỗi chữ một ô theo x, bắt đầu từ ô (origin, origin).
- * Sông ở x, z từ 52 trở lên. Điện Vua Hùng ở ô (37, 37). Giữa các khối nhà chừa lối đi một ô, trước Điện chừa sân.
- * - Phong Châu (chương 1, vẽ cho Điện cấp 5): lũy tre bao hai mặt rừng, bẫy chông trước lũy.
- * - Đê bao (chương 2, vẽ cho Điện cấp 6): đê liền dải dọc hai bờ sông (cách sông 3 ô), bến ngoài đê, chòi canh sát đê.
- * - Cổ Loa (chương 3, vẽ cho Điện cấp 7): ba vòng thành kín quanh Điện, đê bao ngoài cùng.
- */
-const DRAWINGS: Record<MauId, { origin: number; rows: string[] }> = {
-  phongChau: {
-    origin: 17,
-    rows: [
-      '....X.....X.....X.....X.....X......',
-      '.##################################',
-      '.#C............C............C......',
-      '.#.................................',
-      'X#..DDD.DDD.DDD.....LLL.DDD........',
-      '.#..DDD.DDD.DDD.....LLL.DDD........',
-      '.#..DDD.DDD.DDD.....LLL.DDD........',
-      '.#.................................',
-      '.#..TTTT.GGG..PPPP.nnnn.nnnn.......',
-      '.#..TTTT.GGG..PPPP.nnnn.nnnn.......',
-      'X#..TTTT.GGG..PPPP.nnnn.nnnn.RRRR..',
-      '.#..TTTT......PPPP.nnnn.nnnn.RRRR..',
-      '.#.......UUU.................RRRR..',
-      '.#..EEE..UUU.vvv.bbb.........RRRR..',
-      '.#..EEE..UUU.vvv.bbb...............',
-      '.#C.EEE......vvv.bbbNNN.NNN..RRRR..',
-      'X#......LLL.........NNN.NNN..RRRR..',
-      '.#......LLL..lll....NNN.NNN..RRRR..',
-      '.#......LLL..lll.............RRRR..',
-      '.#...........lll...................',
-      '.#..............KKK.HHHHH.NNN......',
-      '.#..NNN.NNN.KKK.KKK.HHHHH.NNN......',
-      'X#..NNN.NNN.KKK.KKK.HHHHH.NNN......',
-      '.#..NNN.NNN.KKK.....HHHHH..........',
-      '.#..............KKK.HHHHH.......BBB',
-      '.#..............KKK.............BBB',
-      '.#..RRRR.RRRR...KKK.............BBB',
-      '.#..RRRR.RRRR......................',
-      'X#C.RRRR.RRRR...................BBB',
-      '.#..RRRR.RRRR.RRRR.RRRR.........BBB',
-      '.#............RRRR.RRRR.........BBB',
-      '.#............RRRR.RRRR............',
-      '.#....BBB.....RRRR.RRRR..BBB.......',
-      '.#....BBB................BBB.......',
-      '.#....BBB................BBB.......',
-    ],
-  },
-  deBao: {
-    origin: 12,
-    rows: [
-      '....X.....X.....X.....X.....X.....X.=...',
-      '.C..................................=...',
-      '..DDD.DDD.DDD.DDD.DDD.TTTT.GGG.RRRR.=...',
-      '..DDD.DDD.DDD.DDD.DDD.TTTT.GGG.RRRR.=...',
-      '..DDD.DDD.DDD.DDD.DDD.TTTT.GGG.RRRRC=...',
-      'X.....................TTTT.....RRRR.=...',
-      '..LLL.LLL.LLL..............UUU......=...',
-      '..LLL.LLL.LLL.........EEE..UUU.RRRR.=...',
-      '..LLL.LLL.LLL.........EEE..UUU.RRRR.=...',
-      '......................EEE......RRRR.=...',
-      '...............................RRRR.=...',
-      'X.PPPP.nnnn.........................=...',
-      '..PPPP.nnnn....................RRRR.=...',
-      '..PPPP.nnnn....................RRRR.=...',
-      '..PPPP.nnnn...NNN.NNN.NNN......RRRR.=...',
-      '..............NNN.NNN.NNN......RRRR.=...',
-      '..VVVV.nnnn...NNN.NNN.NNN..........C=...',
-      'X.VVVV.nnnn....................RRRR.=...',
-      '..VVVV.nnnn...NNN.NNN.NNN......RRRR.=BBB',
-      '..VVVV.nnnn...NNN.NNN.NNN......RRRR.=BBB',
-      '..............NNN.NNN.NNN.bbb..RRRR.=BBB',
-      '..vvv.vvv.................bbb.......=...',
-      '..vvv.vvv.................bbb..RRRR.=...',
-      'X.vvv.vvv......................RRRR.=...',
-      '...............................RRRR.=...',
-      '..lll.lll........KKK.KKK.HHHHH.RRRR.=...',
-      '..lll.lll........KKK.KKK.HHHHH......=...',
-      '..lll.lll........KKK.KKK.HHHHH......=...',
-      '.........................HHHHH.....C=...',
-      'X....................KKK.HHHHH......=...',
-      '.....................KKK............=...',
-      '..RRRR.RRRR..........KKK............=...',
-      '..RRRR.RRRR.........................=...',
-      '..RRRR.RRRR.........................=...',
-      'X.RRRR.RRRR.........................=...',
-      '........C...........C...............=...',
-      '=====================================...',
-      '....BBB.......BBB.......BBB.............',
-      '....BBB.......BBB.......BBB.............',
-      '....BBB.......BBB.......BBB.............',
-    ],
-  },
-  coLoa: {
-    origin: 12,
-    rows: [
-      '......X....X....X....X....X....X...X=...',
-      '.TTTT.RRRR.RRRR.RRRR.RRRR.RRRR.AAAA.=...',
-      '.TTTT.RRRR.RRRR.RRRR.RRRR.RRRR.AAAA.=...',
-      '.TTTT.RRRR.RRRR.RRRR.RRRR.RRRR.AAAA.=...',
-      '.TTTT.RRRR.RRRR.RRRR.RRRR.RRRR.AAAA.=...',
-      '..........DDD.DDD.DDD.DDD.DDD.......=...',
-      'XRRRRGGG..DDD.DDD.DDD.DDD.DDD..LLL..=...',
-      '.RRRRGGG..DDD.DDD.DDD.DDD.DDDC.LLL..=...',
-      '.RRRRGGG.......................LLL..=...',
-      '.RRRR....OOOOOOOOOOOOOOOOOOOOOOOOOO.=...',
-      '.....UUU.Onnnn....................O.=...',
-      'XRRRRUUU.Onnnn..NNN.NNN.LLL.lll...O.=...',
-      '.RRRRUUU.Onnnn..NNN.NNN.LLL.lll..CO.=BBB',
-      '.RRRR....Onnnn..NNN.NNN.LLL.lll...O.=BBB',
-      '.RRRREEE.O........................O.=BBB',
-      '.....EEE.O.bbb.OOOOOOOOOOOOOOOOOOOO.=...',
-      'XRRRREEE.O.bbb.O.................OO.=...',
-      '.RRRR....O.bbb.O.NNN.NNN.KKK.LLL.OO.=...',
-      '.RRRR...CO.....O.NNN.NNN.KKK.LLL.OO.=...',
-      '.RRRRKKK.O.vvv.O.NNN.NNN.KKK.LLL.OO.=...',
-      '.....KKK.O.vvv.O.................OO.=...',
-      'XPPPPKKK.O.vvv.O.NNN.OOOOOOOOOOOOOO.=...',
-      '.PPPP....O.....O.NNN.O.........COOO.=...',
-      '.PPPP..C.O.vvv.O.NNN.OC.........OOO.=...',
-      '.PPPP....O.vvv.O.....O..........OOO.=...',
-      '.........O.vvv.O.NNN.O...HHHHH..OOO.=...',
-      'XVVVVNNN.O.....O.NNN.O...HHHHH..OOO.=...',
-      '.VVVVNNN.O.lll.O.NNN.O...HHHHH..OOO.=...',
-      '.VVVVNNN.O.lll.O.....O...HHHHH..OOO.=...',
-      '.VVVV....O.lll.O.KKK.O...HHHHH..OOO.=...',
-      '.........O.....O.KKK.O..........OOO.=...',
-      'Xnnnn..C.O.KKK.O.KKK.O..........OOO.=...',
-      '.nnnn....O.KKK.O.....OOOOOOOOOOOOOO.=...',
-      '.nnnn....O.KKK.OOOOOOOOOOOOOOOOOOOO.=...',
-      '.nnnn....OOOOOOOOOOOOOOOOOOOOOOOOOO.=...',
-      'X...................................=...',
-      '=====================================...',
-      '..BBB.....BBB.....BBB.....BBB...........',
-      '..BBB.....BBB.....BBB.....BBB...........',
-      '..BBB.....BBB.....BBB.....BBB...........',
-    ],
-  },
-};
 
 /** Một chỗ trong mẫu: loại công trình và góc móng (x, z). */
 export interface Slot {
@@ -200,36 +59,521 @@ export interface Slot {
   z: number;
 }
 
-/** Đọc bản vẽ: mỗi khối chữ liền nhau đúng cỡ móng là một công trình, đọc từ trên xuống, trái sang phải. */
-function parse({ origin, rows }: { origin: number; rows: string[] }): Slot[] {
-  const taken = rows.map((r) => Array.from(r, () => false));
-  const slots: Slot[] = [];
-  for (let z = 0; z < rows.length; z++) {
-    for (let x = 0; x < rows[z].length; x++) {
-      const ch = rows[z][x];
-      if (ch === '.' || taken[z][x]) continue;
-      const type = CHAR_TYPE[ch];
-      if (!type) throw new Error(`Chữ lạ '${ch}' trong mẫu ở (${x + origin}, ${z + origin})`);
-      const { w, d } = BUILDINGS[type];
-      for (let dz = 0; dz < d; dz++) {
-        for (let dx = 0; dx < w; dx++) {
-          if (rows[z + dz]?.[x + dx] !== ch || taken[z + dz][x + dx]) throw new Error(`Móng ${type} ở (${x + origin}, ${z + origin}) không đủ ô`);
-          taken[z + dz][x + dx] = true;
-        }
-      }
-      slots.push({ type, x: x + origin, z: z + origin });
-    }
-  }
-  return slots;
+// ---------- Dựng mẫu theo vùng đất ----------
+
+/** Ô đất cuối cùng trước sông (cả x và z). */
+const LAST = RIVER_START - 1;
+/** Ô cuối của móng Điện (cả x và z). */
+const DIEN_END = DIEN_HOME + BUILDINGS.dien.w - 1;
+/** Tâm móng Điện. */
+const DIEN_C = DIEN_HOME + BUILDINGS.dien.w / 2;
+/** Sân trước Điện (phía nam) và bên phải Điện (phía đông) rộng chừng này ô: chỗ cây nêu, mâm bánh, tướng đứng. */
+const SAN = 2;
+/** Đê bao chạy ở hàng (và cột) này: bãi bồi ngoài đê vừa một dải bến sát sông. */
+const DE_AT = RIVER_START - 1 - BUILDINGS.ben.w;
+
+/** Trạng thái ô trên bản nháp: còn trống, đã có công trình (hay ngoài vùng), chừa trống, bãi ngoài đê (chỉ cho bến). */
+const FREE = 0;
+const USED = 1;
+const KEEP = 2;
+const BANK = 3;
+
+/** Phạt điểm chỗ dựng: sát tường (lũy, đê, thành, chòi, bẫy) thì nhẹ, sát công trình khác (không còn lối đi) thì rất nặng. */
+const NEAR_WALL = 3;
+const PACKED = 1000;
+/** Phạt điểm chỗ dựng ngoài khu mẫu muốn (vòng thành Cổ Loa). */
+const OFF_ZONE = 100;
+
+/**
+ * Loại có mốc mở theo truyện (đền, Hội Tết, đê, thành) chỉ dựng được sau kết chương 1, mà màn cuối chương 1
+ * cần Điện cấp này: dưới cấp này mẫu không chừa chỗ cho chúng, đỡ chật đất.
+ */
+const storyDien = () => STAGES[CH1_LAST - 1].minDien;
+
+/**
+ * Số doanh trại mẫu chừa chỗ ở từng cấp Điện (chỉ số 0 là cấp 1): mỗi tướng thường đã có ở cấp ấy một trại.
+ * Lạc tướng từ Điện 2; Gióng thành tráng sĩ khi rèn xong giáp sắt ở lò rèn cấp 3; Sơn Tinh ở chương 2 (Điện 6);
+ * An Dương Vương ở chương 3 (Điện 7).
+ */
+export const MAU_BARRACKS = [0, 1, 2, 2, 2, 3, 4, 4];
+
+/** Số chỗ mẫu chừa cho loại `type` ở cấp Điện `level`: đúng số tối đa theo cấp Điện (doanh trại: theo số tướng). */
+function wantOf(type: BuildingType, level: number): number {
+  const def = BUILDINGS[type];
+  if (def.unlock && level < storyDien()) return 0;
+  if (type === 'doanhTrai') return Math.min(MAU_BARRACKS[level - 1] ?? 0, def.limit[level - 1] ?? 0);
+  return def.limit[level - 1] ?? 0;
 }
 
-const PARSED = new Map<MauId, Slot[]>();
-/** Mọi chỗ trong mẫu (cả Điện). */
-export function mauSlots(id: MauId): Slot[] {
-  let list = PARSED.get(id);
+/** Một vòng thành Cổ Loa: hình vuông kín từ ô (a, a) tới ô (b, b). */
+interface Ring {
+  a: number;
+  b: number;
+}
+
+/** Bản nháp một mẫu ở một cấp Điện. */
+class Draft {
+  readonly lo: number;
+  readonly cell = new Uint8Array(GRID * GRID);
+  /** Ô là móng công trình nhiều ô: hai công trình nhiều ô nên cách nhau một ô làm lối đi. */
+  readonly solid = new Uint8Array(GRID * GRID);
+  /** Ô có công trình một ô (lũy, đê, thành, chòi canh, bẫy). */
+  readonly wall = new Uint8Array(GRID * GRID);
+  readonly slots: Slot[] = [];
+  rings: Ring[] = [];
+
+  constructor(readonly level: number) {
+    this.lo = frameStart(level);
+    for (let z = 0; z < GRID; z++) for (let x = 0; x < GRID; x++) if (!inFrame(x, z, level)) this.cell[z * GRID + x] = USED;
+  }
+
+  at(x: number, z: number): number {
+    return inGrid(x, z) ? this.cell[z * GRID + x] : USED;
+  }
+
+  count(type: BuildingType): number {
+    let n = 0;
+    for (const s of this.slots) if (s.type === type) n++;
+    return n;
+  }
+
+  put(type: BuildingType, x: number, z: number): void {
+    const w = BUILDINGS[type].w;
+    for (let dz = 0; dz < w; dz++) {
+      for (let dx = 0; dx < w; dx++) {
+        const i = (z + dz) * GRID + x + dx;
+        this.cell[i] = USED;
+        if (w > 1) this.solid[i] = 1;
+        else this.wall[i] = 1;
+      }
+    }
+    this.slots.push({ type, x, z });
+  }
+
+  /** Đặt công trình một ô nếu ô còn trống. */
+  segment(type: BuildingType, x: number, z: number): boolean {
+    if (this.at(x, z) !== FREE) return false;
+    this.put(type, x, z);
+    return true;
+  }
+
+  /** Đánh dấu `v` (chừa trống hay bãi ngoài đê) cho các ô còn trống trong hình chữ nhật (x0, z0)–(x1, z1). */
+  mark(x0: number, z0: number, x1: number, z1: number, v: number): void {
+    for (let z = z0; z <= z1; z++) for (let x = x0; x <= x1; x++) if (this.at(x, z) === FREE) this.cell[z * GRID + x] = v;
+  }
+
+  /**
+   * Phạt điểm nếu dựng `type` ở (x, z): 0 khi quanh móng còn lối đi một ô, `NEAR_WALL` khi sát tường,
+   * `PACKED` khi sát công trình nhiều ô khác; -1 khi không dựng được.
+   */
+  penalty(type: BuildingType, x: number, z: number): number {
+    const def = BUILDINGS[type];
+    const w = def.w;
+    if (def.nearRiver && !touchesRiver(x, z, w, w)) return -1;
+    for (let dz = 0; dz < w; dz++) {
+      for (let dx = 0; dx < w; dx++) {
+        const c = this.at(x + dx, z + dz);
+        if (c === BANK ? type !== 'ben' : c !== FREE) return -1;
+      }
+    }
+    let p = 0;
+    for (let dz = -1; dz <= w; dz++) {
+      for (let dx = -1; dx <= w; dx++) {
+        if (dx >= 0 && dx < w && dz >= 0 && dz < w) {
+          dx = w - 1;
+          continue;
+        }
+        if (!inGrid(x + dx, z + dz)) continue;
+        const i = (z + dz) * GRID + x + dx;
+        if (this.solid[i]) return PACKED;
+        if (this.wall[i]) p = NEAR_WALL;
+      }
+    }
+    return p;
+  }
+
+  /**
+   * Độ khít của móng (x, z, cạnh w): số ô cách móng đúng hai ô (ngoài lối đi một ô) là móng công trình hay tường.
+   * Móng khít nép vào công trình khác, chừa đúng một ô lối đi, thành dãy thẳng hàng.
+   */
+  snug(x: number, z: number, w: number): number {
+    let n = 0;
+    const hit = (cx: number, cz: number) => {
+      if (!inGrid(cx, cz)) return;
+      const i = cz * GRID + cx;
+      if (this.solid[i] || this.wall[i]) n++;
+    };
+    for (let k = -2; k <= w + 1; k++) {
+      hit(x + k, z - 2);
+      hit(x + k, z + w + 1);
+    }
+    for (let k = -1; k <= w; k++) {
+      hit(x - 2, z + k);
+      hit(x + w + 1, z + k);
+    }
+    return n;
+  }
+
+  /** Tâm móng công trình loại `type` đầu tiên đã xếp (hay tâm Điện nếu chưa có). */
+  centerOf(type: BuildingType): { x: number; z: number } {
+    const s = this.slots.find((o) => o.type === type) ?? this.slots[0];
+    const w = BUILDINGS[s.type].w;
+    return { x: s.x + w / 2, z: s.z + w / 2 };
+  }
+
+  /** Số vòng thành bao trọn móng (x, z, cạnh w): 3 là trong vòng trong cùng, 0 là ngoài vòng ngoài. */
+  ringsAround(x: number, z: number, w: number): number {
+    let n = 0;
+    for (const r of this.rings) if (x > r.a && z > r.a && x + w - 1 < r.b && z + w - 1 < r.b) n++;
+    return n;
+  }
+}
+
+/** Một chỗ dựng đang xét: góc, cạnh, tâm và các khoảng cách để chấm điểm. */
+interface Foot {
+  x: number;
+  z: number;
+  w: number;
+  cx: number;
+  cz: number;
+  /** Số ô từ móng tới bờ sông gần nhất (0 là sát sông). */
+  river: number;
+  /** Số ô từ móng tới bìa rừng gần nhất (0 là sát bìa). */
+  forest: number;
+  /** Khoảng cách từ tâm móng tới tâm Điện. */
+  dien: number;
+  /** Độ lệch khỏi đường chéo qua Điện (từ góc rừng tới ngã ba sông). */
+  diag: number;
+}
+
+/** Điểm chỗ dựng: thấp là tốt. */
+type Score = (f: Foot, d: Draft) => number;
+
+const near = (d: Draft, type: BuildingType, f: Foot): number => {
+  const c = d.centerOf(type);
+  return Math.hypot(f.cx - c.x, f.cz - c.z);
+};
+/** Về phía rừng so với Điện (không về phía ngã ba sông). */
+const forestSide = (f: Foot) => (f.cx + f.cz > 2 * DIEN_C ? 40 : 0);
+/** Cổ Loa: phạt chỗ không nằm trong đúng số vòng thành `rings` (3 là vòng trong, 0 là ngoài vòng ngoài). */
+const zone = (d: Draft, f: Foot, rings: number) => Math.abs(d.ringsAround(f.x, f.z, f.w) - rings) * OFF_ZONE;
+
+/** Phạt điểm chỗ dựng một mình lệch khỏi đường chéo: mẫu đứng đối xứng qua đường chéo từ góc rừng tới ngã ba sông. */
+const ASYM = 8;
+/** Thưởng điểm cho mỗi ô khít (`Draft.snug`). */
+const SNUG = 0.2;
+/** Thưởng khít lớn nhất cho móng cạnh `w`: đủ mọi ô cách móng hai ô. Dùng để bỏ sớm chỗ chắc chắn kém hơn. */
+const snugMax = (w: number) => SNUG * 4 * (w + 3);
+
+function footAt(d: Draft, x: number, z: number, w: number): Foot {
+  const cx = x + w / 2;
+  const cz = z + w / 2;
+  return {
+    x,
+    z,
+    w,
+    cx,
+    cz,
+    river: Math.min(LAST - (x + w - 1), LAST - (z + w - 1)),
+    forest: Math.min(x - d.lo, z - d.lo),
+    dien: Math.hypot(cx - DIEN_C, cz - DIEN_C),
+    diag: Math.abs(cx - cz),
+  };
+}
+
+/** Xếp một công trình `type` vào chỗ điểm thấp nhất, ưu tiên chỗ trên đường chéo. Hết chỗ thì trả về false. */
+function placeSingle(d: Draft, type: BuildingType, score: Score): boolean {
+  const w = BUILDINGS[type].w;
+  let best: { x: number; z: number } | null = null;
+  let bestScore = Infinity;
+  for (let z = d.lo; z + w - 1 <= LAST; z++) {
+    for (let x = d.lo; x + w - 1 <= LAST; x++) {
+      const p = d.penalty(type, x, z);
+      if (p < 0 || p - snugMax(w) >= bestScore) continue;
+      const base = p + (x === z ? 0 : ASYM) + score(footAt(d, x, z, w), d);
+      if (base - snugMax(w) >= bestScore) continue;
+      const s = base - SNUG * d.snug(x, z, w);
+      if (s < bestScore) {
+        bestScore = s;
+        best = { x, z };
+      }
+    }
+  }
+  if (!best) return false;
+  d.put(type, best.x, best.z);
+  return true;
+}
+
+/**
+ * Xếp một cặp công trình cùng cỡ đối xứng nhau qua đường chéo: `a` ở (x, z) phía bắc đường chéo, `b` ở (z, x)
+ * phía tây. Hết chỗ thì trả về false.
+ */
+function placePair(d: Draft, a: BuildingType, b: BuildingType, score: Score): boolean {
+  const w = BUILDINGS[a].w;
+  let best: { x: number; z: number } | null = null;
+  let bestScore = Infinity;
+  for (let z = d.lo; z + w - 1 <= LAST; z++) {
+    for (let x = z + w; x + w - 1 <= LAST; x++) {
+      const pa = d.penalty(a, x, z);
+      if (pa < 0 || pa - snugMax(w) >= bestScore) continue;
+      const pb = d.penalty(b, z, x);
+      if (pb < 0) continue;
+      // Hai móng sát nhau qua đường chéo thì không còn lối đi.
+      const p = Math.max(pa, pb, x - z === w ? PACKED : 0);
+      const base = p + (score(footAt(d, x, z, w), d) + score(footAt(d, z, x, w), d)) / 2;
+      if (base - snugMax(w) >= bestScore) continue;
+      const s = base - SNUG * d.snug(x, z, w);
+      if (s < bestScore) {
+        bestScore = s;
+        best = { x, z };
+      }
+    }
+  }
+  if (!best) return false;
+  d.put(a, best.x, best.z);
+  d.put(b, best.z, best.x);
+  return true;
+}
+
+/**
+ * Một việc xếp: một loại, hay hai loại cùng cỡ đứng đối xứng nhau qua đường chéo; và cách chấm chỗ.
+ * Xếp từng cặp đối xứng, số lẻ thì cái còn lại đứng trên đường chéo (hết chỗ đối xứng thì đứng lệch).
+ */
+type Job = [BuildingType | [BuildingType, BuildingType], Score];
+
+function placeJob(d: Draft, [what, score]: Job): void {
+  const [a, b] = Array.isArray(what) ? what : [what, what];
+  const left = (t: BuildingType) => wantOf(t, d.level) - d.count(t);
+  for (;;) {
+    const pair = a === b ? left(a) >= 2 : left(a) >= 1 && left(b) >= 1;
+    if (!pair || !placePair(d, a, b, score)) break;
+  }
+  for (const t of a === b ? [a] : [a, b]) while (left(t) > 0 && placeSingle(d, t, score));
+}
+
+/** `n` vị trí rải đều trong đoạn [from, to]. */
+function spread(n: number, from: number, to: number): number[] {
+  return Array.from({ length: n }, (_, i) => from + Math.floor(((i + 0.5) * (to - from + 1)) / n));
+}
+
+/** Đặt công trình một ô `type` ở ô gần (x, z) nhất còn trống trên cùng hàng (theo `alongX`) hay cùng cột. */
+function segmentNear(d: Draft, type: BuildingType, x: number, z: number, alongX: boolean): boolean {
+  for (let k = 0; k < 4; k++) {
+    for (const s of k ? [k, -k] : [0]) {
+      if (d.segment(type, alongX ? x + s : x, alongX ? z : z + s)) return true;
+    }
+  }
+  return false;
+}
+
+/** Bẫy chông rải đều ở hàng ô ngoài cùng hai mặt rừng (bắc và tây), nửa mỗi mặt, tới ô `to`. */
+function edgeTraps(d: Draft, to = LAST): void {
+  const n = wantOf('bayChong', d.level);
+  const north = Math.ceil(n / 2);
+  for (const x of spread(north, d.lo + 1, to)) segmentNear(d, 'bayChong', x, d.lo, true);
+  for (const z of spread(n - north, d.lo + 1, to)) segmentNear(d, 'bayChong', d.lo, z, false);
+}
+
+/**
+ * Chòi canh dọc hai đường: hàng `at` (chạy theo x) và cột `at` (chạy theo z), trong đoạn [from, to], chia đôi
+ * hai đường, rải đều. Số lẻ thì một chòi đứng trên đường chéo, ở ô (`odd`, `odd`).
+ */
+function towersAlong(d: Draft, at: number, from: number, to: number, odd = at): void {
+  const n = wantOf('choiCanh', d.level);
+  if (n <= 0) return;
+  if (n % 2) segmentNear(d, 'choiCanh', odd, odd, true);
+  const k = Math.floor(n / 2);
+  for (const p of spread(k, from, to)) segmentNear(d, 'choiCanh', p, at, true);
+  for (const p of spread(k, from, to)) segmentNear(d, 'choiCanh', at, p, false);
+}
+
+/** Lũy tre bao hai mặt rừng (bắc và tây), bẫy chông ở hàng ngoài lũy, chòi canh và lối đi ngay trong lũy. */
+function luyTre(d: Draft): void {
+  const lo = d.lo;
+  for (let x = lo + 1; x <= LAST; x++) d.segment('luy', x, lo + 1);
+  for (let z = lo + 2; z <= LAST; z++) d.segment('luy', lo + 1, z);
+  edgeTraps(d);
+  towersAlong(d, lo + 2, lo + 3, LAST);
+  d.mark(lo + 2, lo + 2, LAST, lo + 2, KEEP);
+  d.mark(lo + 2, lo + 2, lo + 2, LAST, KEEP);
+}
+
+/**
+ * Đê bao dọc hai bờ sông, cách sông 3 ô, chạy suốt tới bìa đất; bãi ngoài đê chỉ cho bến. Chòi canh ngay trong
+ * đê (số lẻ thì một chòi ở góc rừng), bẫy chông ở bìa rừng.
+ */
+function deBao(d: Draft): void {
+  const lo = d.lo;
+  for (let z = lo; z <= DE_AT; z++) d.segment('de', DE_AT, z);
+  for (let x = lo; x < DE_AT; x++) d.segment('de', x, DE_AT);
+  d.mark(DE_AT + 1, lo, LAST, LAST, BANK);
+  d.mark(lo, DE_AT + 1, LAST, LAST, BANK);
+  towersAlong(d, DE_AT - 1, lo + 1, DE_AT - 2, lo + 1);
+  edgeTraps(d, DE_AT - 2);
+  d.mark(lo, lo, DE_AT - 1, lo, KEEP);
+  d.mark(lo, lo, lo, DE_AT - 1, KEEP);
+}
+
+/**
+ * Ba vòng thành Cổ Loa quanh Điện. Phía sông (đông, nam) ba vòng đứng sát nhau giữa sân Điện và đê. Phía rừng
+ * (bắc, tây): vòng trong cách Điện 2 ô như sân; vòng giữa cách vòng trong 3 ô, vừa một dãy nhà 3×3; vòng ngoài
+ * chừa ngoài nó 9 ô (bẫy, một dãy 4×4 và một dãy 3×3) rồi nới ra theo đất, nên lòng thành rộng dần theo cấp Điện.
+ * Đất hẹp quá (Điện thấp) thì ba vòng đứng sát nhau. Không quá số đoạn thành tối đa.
+ */
+function thanhRings(level: number, lo: number): Ring[] {
+  const b = [1, 2, 3].map((k) => DIEN_END + SAN + k);
+  const max = BUILDINGS.thanh.limit[level - 1];
+  const a1 = DIEN_HOME - SAN - 1;
+  const a2 = a1 - 4;
+  let a3 = lo + 9;
+  while (4 * (b[0] - a1 + b[1] - a2 + b[2] - a3) > max) a3++;
+  if (a3 <= a2 - 4) return [a1, a2, a3].map((a, i) => ({ a, b: b[i] }));
+  const t = Math.max(lo + 1, a1 - 2);
+  return [t + 2, t + 1, t].map((a, i) => ({ a, b: b[i] }));
+}
+
+/** Đê bao như mẫu Đê bao, thêm ba vòng thành quanh Điện. */
+function coLoaWalls(d: Draft): void {
+  d.rings = thanhRings(d.level, d.lo);
+  for (const { a, b } of d.rings) {
+    for (let k = a; k <= b; k++) {
+      d.segment('thanh', k, a);
+      d.segment('thanh', k, b);
+      d.segment('thanh', a, k);
+      d.segment('thanh', b, k);
+    }
+  }
+  // Vòng trong chỉ có Điện và sân.
+  const inner = d.rings[0];
+  d.mark(inner.a + 1, inner.a + 1, inner.b - 1, inner.b - 1, KEEP);
+  deBao(d);
+}
+
+/** Mỗi mẫu: dựng tường và chòi canh theo vùng đất, rồi xếp công trình theo thứ tự việc. */
+interface Recipe {
+  walls: (d: Draft) => void;
+  jobs: Job[];
+}
+
+/** Gần sông (trong đê nếu có đê), gần Điện trước. */
+const byRiver: Score = (f) => f.river * 2 + f.dien * 0.3;
+/** Gần Điện. */
+const byDien: Score = (f) => f.dien;
+/** Trên đồi phía rừng, gần bìa đất. */
+const byHill: Score = (f) => f.forest * 2 + f.dien * 0.2;
+/** Trên đường chéo từ Điện về góc rừng, gần Điện trước: trục đền, doanh trại. */
+const byAxis: Score = (f) => f.diag * 4 + f.dien + forestSide(f);
+/** Trên đường chéo, giữa Điện và góc rừng: doanh trại đứng giữa hai mặt giặc tới. */
+const byFront: Score = (f, d) => f.diag * 4 + Math.abs((f.cx + f.cz) / 2 - (DIEN_HOME + d.lo) / 2) + forestSide(f);
+/** Trên đường chéo, gần ngã ba sông: doanh trại trong đê, kịp ra chặn thủy quái từ hai bờ sông. */
+const byBank: Score = (f) => f.diag * 4 + f.river * 2;
+/** Quanh doanh trại. */
+const byBarracks: Score = (f, d) => near(d, 'doanhTrai', f);
+/** Quanh bếp gói bánh. */
+const byKitchen: Score = (f, d) => near(d, 'bep', f);
+/** Phạt điểm mỗi ô lệch khỏi dãy mẫu muốn (`row`). */
+const ROW = 6;
+/** Cổ Loa: dãy ngoài vòng ngoài, `k` ô tính từ bìa rừng (bỏ hàng bẫy): 1 là dãy 4×4 sát hàng bẫy, 2 là dãy 3×3 sát vòng ngoài. */
+const row =
+  (k: 1 | 2, score: Score): Score =>
+  (f, d) =>
+    Math.abs(f.forest - (k === 1 ? 1 : d.rings[2].a - d.lo - 3)) * ROW + score(f, d);
+/** Cổ Loa: trong đúng số vòng thành `rings` rồi mới tới cách chấm `score`. */
+const inRings =
+  (rings: number, score: Score): Score =>
+  (f, d) =>
+    zone(d, f, rings) + score(f, d);
+
+const RECIPES: Record<MauId, Recipe> = {
+  // Kinh đô Phong Châu: bến và ruộng dọc sông; trục đền, doanh trại, trại giáo từ Điện về góc rừng, trại cung và
+  // chuồng voi hai bên doanh trại; nhà sàn, kho, bếp quanh Điện; bãi đá trên đồi phía rừng; lũy tre bao hai mặt rừng.
+  phongChau: {
+    walls: luyTre,
+    jobs: [
+      ['ben', byDien],
+      ['doanhTrai', byFront],
+      ['denPhuDong', byAxis],
+      ['traiGiao', byBarracks],
+      [['traiCung', 'chuongVoi'], byBarracks],
+      ['loRen', byBarracks],
+      ['ruong', byRiver],
+      ['nhaSan', byDien],
+      ['kho', byDien],
+      ['bep', byDien],
+      [['vuon', 'chuongLon'], byKitchen],
+      ['ruongNep', byRiver],
+      ['baiDa', byHill],
+    ],
+  },
+  // Đê bao chống lũ: đê dọc hai bờ sông tới bìa đất, bến ngoài đê, chòi canh sát đê; ruộng, đền, ruộng nếp trong đê.
+  deBao: {
+    walls: deBao,
+    jobs: [
+      ['ben', byDien],
+      ['doanhTrai', byBank],
+      ['denPhuDong', byAxis],
+      ['denTanVien', byAxis],
+      ['traiGiao', byBarracks],
+      [['traiCung', 'chuongVoi'], byBarracks],
+      ['loRen', byBarracks],
+      ['ruong', byRiver],
+      ['nhaSan', byDien],
+      ['kho', byDien],
+      ['bep', byDien],
+      [['vuon', 'chuongLon'], byKitchen],
+      ['ruongNep', byRiver],
+      ['baiDa', byHill],
+    ],
+  },
+  // Thành Cổ Loa: ba vòng thành kín quanh Điện; vòng trong chỉ có Điện và sân; nhà sàn, kho, lò rèn, bếp giữa các
+  // vòng; ruộng, đền, doanh trại ngoài vòng ngoài; đê bao ngoài cùng.
+  coLoa: {
+    walls: coLoaWalls,
+    jobs: [
+      ['ben', byDien],
+      ['doanhTrai', inRings(0, row(1, byAxis))],
+      ['denCoLoa', inRings(1, byAxis)],
+      ['nhaSan', inRings(2, byDien)],
+      ['kho', inRings(2, byDien)],
+      ['bep', inRings(2, byDien)],
+      ['loRen', inRings(1, byDien)],
+      [['vuon', 'chuongLon'], inRings(1, byKitchen)],
+      [['denPhuDong', 'denTanVien'], inRings(0, row(1, byBarracks))],
+      ['traiGiao', inRings(0, row(2, byBarracks))],
+      [['traiCung', 'chuongVoi'], inRings(0, row(2, byBarracks))],
+      ['ruong', inRings(0, row(1, byRiver))],
+      ['ruongNep', inRings(0, row(1, byRiver))],
+      ['baiDa', inRings(0, row(2, byHill))],
+    ],
+  },
+};
+
+/** Sân trước Điện và bên phải Điện: chừa trống. */
+function keepYard(d: Draft): void {
+  d.mark(DIEN_HOME, DIEN_END + 1, DIEN_END + SAN, DIEN_END + SAN, KEEP);
+  d.mark(DIEN_END + 1, DIEN_HOME, DIEN_END + SAN, DIEN_END, KEEP);
+}
+
+/** Dựng mẫu `id` ở cấp Điện `level`. */
+function draw(id: MauId, level: number): Slot[] {
+  const recipe = RECIPES[id];
+  const d = new Draft(level);
+  d.put('dien', DIEN_HOME, DIEN_HOME);
+  recipe.walls(d);
+  keepYard(d);
+  for (const job of recipe.jobs) placeJob(d, job);
+  return d.slots;
+}
+
+const DRAWN = new Map<string, Slot[]>();
+/** Mọi chỗ trong mẫu `id` ở cấp Điện `level` (cả Điện), đều trong vùng đất đã khai phá ở cấp ấy. */
+export function mauSlots(id: MauId, level: number): Slot[] {
+  const lv = Math.min(Math.max(Math.round(level), 1), BUILDINGS.dien.maxLevel);
+  const key = `${id}:${lv}`;
+  let list = DRAWN.get(key);
   if (!list) {
-    list = parse(DRAWINGS[id]);
-    PARSED.set(id, list);
+    list = draw(id, lv);
+    DRAWN.set(key, list);
   }
   return list;
 }
@@ -270,6 +614,7 @@ export function planMau(state: GameState, id: MauId): MauPlan {
   const oz = dien.z - DIEN_HOME;
   const fits = (type: BuildingType, x: number, z: number) => {
     const def = BUILDINGS[type];
+    // Chỉ đặt trên đất đã mở: chỗ của mẫu rơi vào khoảnh rừng chưa phát thì bỏ qua.
     for (let dx = 0; dx < def.w; dx++) for (let dz = 0; dz < def.d; dz++) if (!isOpen(state, x + dx, z + dz)) return false;
     return !def.nearRiver || touchesRiver(x, z, def.w, def.d);
   };
@@ -286,7 +631,7 @@ export function planMau(state: GameState, id: MauId): MauPlan {
   mark('dien', dien.x, dien.z);
 
   const plan: MauPlan = { moves: [], builds: [], removes: [], cost: {}, stuck: [] };
-  const slots = mauSlots(id)
+  const slots = mauSlots(id, level)
     .filter((s) => s.type !== 'dien')
     .map((s) => ({ ...s, x: s.x + ox, z: s.z + oz }))
     .filter((s) => fits(s.type, s.x, s.z));
@@ -430,12 +775,12 @@ export function applyMau(state: GameState, id: MauId): Result<MauPlan> {
  * Lớp vòng thành của từng chỗ thành trong mẫu: đi từ Điện ra bìa rừng phải qua mấy lớp thành mới tới chỗ ấy
  * (1 là vòng trong cùng). Đi tám hướng như giặc, chéo góc giữa hai đoạn thành là hở.
  */
-function thanhLayers(id: MauId): Map<number, number> {
+function thanhLayers(id: MauId, level: number): Map<number, number> {
   const wall = new Uint8Array(GRID * GRID);
-  for (const s of mauSlots(id)) if (s.type === 'thanh') wall[s.z * GRID + s.x] = 1;
+  for (const s of mauSlots(id, level)) if (s.type === 'thanh') wall[s.z * GRID + s.x] = 1;
   const dist = new Int32Array(GRID * GRID).fill(1 << 20);
   const buckets: number[][] = [[]];
-  for (const s of mauSlots(id)) {
+  for (const s of mauSlots(id, level)) {
     if (s.type !== 'dien') continue;
     const def = BUILDINGS.dien;
     for (let dx = 0; dx < def.w; dx++) {
@@ -482,11 +827,13 @@ const TOP_UP: BuildingType[] = ['luy', 'de', 'thanh'];
  * Giữ cấp, người làm, hư hỏng. Trả về các đoạn lũy, đê, thành, bẫy không còn chỗ (để hoàn của) và các đoạn dựng thêm.
  */
 export function seatInMau(state: GameState, id: MauId, list: Building[], rings = 0): { dropped: Building[]; added: Building[] } {
+  const level = dienLevel(state);
   const dien = state.buildings.find((b) => b.type === 'dien')!;
   const ox = dien.x - DIEN_HOME;
   const oz = dien.z - DIEN_HOME;
   const fits = (type: BuildingType, x: number, z: number) => {
     const def = BUILDINGS[type];
+    // Chỉ đặt trên đất đã mở: chỗ của mẫu rơi vào khoảnh rừng chưa phát thì bỏ qua.
     for (let dx = 0; dx < def.w; dx++) for (let dz = 0; dz < def.d; dz++) if (!isOpen(state, x + dx, z + dz)) return false;
     return !def.nearRiver || touchesRiver(x, z, def.w, def.d);
   };
@@ -503,9 +850,9 @@ export function seatInMau(state: GameState, id: MauId, list: Building[], rings =
   for (const b of state.buildings) mark(b.type, b.x, b.z);
   const cx = dien.x + BUILDINGS.dien.w / 2;
   const cz = dien.z + BUILDINGS.dien.d / 2;
-  const layers = thanhLayers(id);
+  const layers = thanhLayers(id, level);
   const layerOf = (s: Slot) => (s.type === 'thanh' ? (layers.get((s.z - oz) * GRID + s.x - ox) ?? 99) : 0);
-  const slots = mauSlots(id)
+  const slots = mauSlots(id, level)
     .filter((s) => s.type !== 'dien')
     .map((s) => ({ ...s, x: s.x + ox, z: s.z + oz }))
     .filter((s) => fits(s.type, s.x, s.z))

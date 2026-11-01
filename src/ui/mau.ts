@@ -2,9 +2,9 @@
 // tổng giá và nút áp mẫu (bấm hai lần cho chắc). Chỉ dựng chuỗi HTML; Hud lo việc gắn vào trang và bắt sự kiện.
 
 import { BUILDINGS, type BuildingType } from '../game/defs';
-import type { GameState } from '../game/game';
+import { dienLevel, type GameState } from '../game/game';
+import { canApplyMau, frameStart, mauSlots, mauUnlocked, planMau, MAU_IDS, type MauId } from '../game/mau';
 import { isOpen, khoanhOf, openStart } from '../game/khoanh';
-import { canApplyMau, mauSlots, mauUnlocked, planMau, MAU_IDS, type MauId } from '../game/mau';
 import { RIVER_START } from '../game/map';
 import { vi } from '../text/vi';
 import { costHtml } from './format';
@@ -42,13 +42,14 @@ const TILE: Partial<Record<BuildingType, string>> = {
 const miniCache = new Map<string, string>();
 
 /**
- * Bản đồ thu nhỏ của mẫu, từ bìa vùng đất xa nhất (đất đã mở hay góc vẽ của mẫu) tới sông: ô rừng chưa phát thì
- * mờ, sông xanh ở hai cạnh. Vẽ lên canvas một lần cho mỗi mẫu và mỗi bộ khoảnh đã mở.
+ * Bản đồ thu nhỏ của mẫu ở cấp Điện hiện tại, từ bìa khung mẫu hay đất đã mở (xa hơn thì lấy) tới sông: ô rừng chưa
+ * phát vẽ mờ, chỗ của mẫu nằm trong rừng cũng mờ, sông xanh ở hai cạnh. Vẽ lên canvas một lần cho mỗi mẫu, mỗi cấp
+ * Điện và mỗi bộ khoảnh đã mở.
  */
 function miniMap(state: GameState, id: MauId): string {
-  const slots = mauSlots(id);
-  const x0 = Math.max(0, Math.min(openStart(state), ...slots.map((s) => Math.min(s.x, s.z))) - 1);
-  const key = `${id}:${state.khoanh.join(',')}:${x0}`;
+  const level = dienLevel(state);
+  const x0 = Math.max(0, Math.min(frameStart(level), openStart(state)) - 1);
+  const key = `${id}:${level}:${state.khoanh.join(',')}`;
   let url = miniCache.get(key);
   if (!url) {
     const n = RIVER_START + 1 - x0;
@@ -64,10 +65,9 @@ function miniMap(state: GameState, id: MauId): string {
         g.fillRect(x * px, z * px, px, px);
       }
     }
-    for (const s of slots) {
+    for (const s of mauSlots(id, level)) {
       const def = BUILDINGS[s.type];
-      const wild = !isOpen(state, s.x, s.z);
-      g.globalAlpha = wild ? 0.45 : 1;
+      g.globalAlpha = isOpen(state, s.x, s.z) ? 1 : 0.45;
       g.fillStyle = TILE[s.type] ?? MINI.land;
       g.fillRect((s.x - x0) * px, (s.z - x0) * px, def.w * px, def.d * px);
     }
@@ -78,10 +78,10 @@ function miniMap(state: GameState, id: MauId): string {
   return `<img class="mini-map" src="${url}" alt="">`;
 }
 
-/** Số khoảnh rừng chưa phát mà mẫu có chỗ đặt công trình trong đó. */
+/** Số khoảnh rừng chưa phát mà mẫu ở cấp Điện hiện tại có chỗ đặt công trình trong đó. */
 function wildKhoanh(state: GameState, id: MauId): number {
   const wild = new Set<number>();
-  for (const s of mauSlots(id)) {
+  for (const s of mauSlots(id, dienLevel(state))) {
     const def = BUILDINGS[s.type];
     for (let dx = 0; dx < def.w; dx++) {
       for (let dz = 0; dz < def.d; dz++) {

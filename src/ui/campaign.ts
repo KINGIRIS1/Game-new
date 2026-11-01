@@ -6,7 +6,8 @@
 import type { HeroSetup } from '../game/battle';
 import { CH2_LAST, canStartStage, chapterStages, stageDef, stageOpen, stageReward } from '../game/campaign';
 import { CH3_LAST } from '../game/coLoa';
-import { BOSSES, ROWS, UNIT_TYPES, type Chapter, type EnemyType, type Row, type UnitType } from '../game/defs';
+import { BOSSES, ROWS, UNITS, UNIT_TYPES, type Chapter, type EnemyType, type Row, type UnitType } from '../game/defs';
+import { armySpace, fieldCap, fitArmy } from '../game/doanhTrai';
 import type { GameState, StageResult } from '../game/game';
 import { giftOfStage, heroFor, restingHero } from '../game/son';
 import { vi } from '../text/vi';
@@ -192,16 +193,19 @@ export function armyHtml(state: GameState, pick: ArmyPick, stage: number): strin
   const hero = heroFor(state, stageDef(stage)?.chapter ?? 1);
   const owned = UNIT_TYPES.filter((k) => state.troops[k] > 0);
   const total = UNIT_TYPES.reduce((s, k) => s + pick.army[k], 0);
+  const cap = fieldCap(state);
+  const space = armySpace(pick.army);
   const rows = owned
     .map((k) => {
       const n = pick.army[k];
+      const more = n < state.troops[k] && space + UNITS[k].space <= cap;
       return `<div class="unit-row army">
         <span class="unit-icon">${vi.units[k].icon}</span>
         <span class="unit-info"><b>${vi.units[k].name}</b><small>${vi.ui.haveTroops(state.troops[k])}</small></span>
         <button class="row-chip ${pick.rows[k]}" data-act="armyRow" data-unit="${k}">${vi.rows[pick.rows[k]]}</button>
         <button class="step" data-act="armyDelta" data-unit="${k}" data-delta="-1" ${n <= 0 ? 'disabled' : ''}>−</button>
         <b class="count">${n}</b>
-        <button class="step" data-act="armyDelta" data-unit="${k}" data-delta="1" ${n >= state.troops[k] ? 'disabled' : ''}>+</button>
+        <button class="step" data-act="armyDelta" data-unit="${k}" data-delta="1" ${more ? '' : 'disabled'}>+</button>
       </div>`;
     })
     .join('');
@@ -210,7 +214,7 @@ export function armyHtml(state: GameState, pick: ArmyPick, stage: number): strin
     <p class="muted">${vi.ui.armyHint}</p>
     ${heroNote(hero)}
     ${battleWarnings(state, stageDef(stage)?.chapter ?? 1)}
-    ${owned.length ? `<div class="units">${rows}</div>` : `<p class="why">${vi.ui.noTroops}</p>`}
+    ${owned.length ? `<div class="stat"><span>${vi.ui.fieldSpace(space, cap)}</span></div><div class="units">${rows}</div>` : `<p class="why">${vi.ui.noTroops}</p>`}
     <div class="actions">
       <button class="btn ghost" data-act="backToStage">${vi.ui.back}</button>
       <button class="btn" data-act="march" ${total || hero ? '' : 'disabled'}>${vi.ui.march}</button>
@@ -221,9 +225,20 @@ export function armyHtml(state: GameState, pick: ArmyPick, stage: number): strin
 /** Hàng kế tiếp khi chạm vào chip hàng: Tiền → Trung → Hậu → Tiền. */
 export const nextRow = (r: Row): Row => ROWS[(ROWS.indexOf(r) + 1) % ROWS.length];
 
-/** Mặc định mang hết lính đang có, đứng theo hàng đã chọn lần trước. */
+/**
+ * Mặc định mang hết lính đang có, đứng theo hàng đã chọn lần trước. Nhiều lính hơn số chỗ một trận phó bản thì
+ * chọn bớt, giữ tỉ lệ các binh chủng.
+ */
 export function defaultPick(state: GameState): ArmyPick {
-  return { army: { ...state.troops }, rows: { ...state.campaign.rows } };
+  return { army: fitArmy(state.troops, fieldCap(state)), rows: { ...state.campaign.rows } };
+}
+
+/** Thêm hay bớt một lính binh chủng `k` mang theo, không quá số lính có và số chỗ một trận phó bản. */
+export function stepPick(state: GameState, pick: ArmyPick, k: UnitType, delta: number): void {
+  const n = Math.max(0, Math.min(state.troops[k], pick.army[k] + delta));
+  const next = { ...pick.army, [k]: n };
+  if (delta > 0 && armySpace(next) > fieldCap(state)) return;
+  pick.army[k] = n;
 }
 
 export function stageResultHtml(r: StageResult): string {

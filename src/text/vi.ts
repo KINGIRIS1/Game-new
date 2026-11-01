@@ -2,7 +2,7 @@
 
 import type { HeroKind } from '../game/battle';
 import type { AdvLook } from '../game/coLoa';
-import type { BuildingType, EnemyType, GearId, GiftId, ResourceId, Row, SkillId, UnitType } from '../game/defs';
+import type { BuildingType, EnemyType, GearId, GiftId, ResourceId, Row, SkillId, TuongId, UnitType } from '../game/defs';
 import type { FailReason, StoryId } from '../game/game';
 import type { GiongLook } from '../game/giong';
 import type { SonLook } from '../game/son';
@@ -79,7 +79,7 @@ export const vi = {
     doanhTrai: {
       name: 'Doanh trại',
       icon: '⛺',
-      desc: 'Nơi các tướng ở và điều binh. Quân ra trận, dù giữ kinh đô hay đánh phó bản, đều qua doanh trại. Cấp càng cao càng điều được nhiều quân và cho dựng thêm nơi ở riêng của binh chủng mới: cấp 1 trại giáo, cấp 2 trại cung, cấp 3 chuồng voi.',
+      desc: 'Nơi các tướng ở và điều binh. Mỗi doanh trại một tướng chỉ huy: có thêm tướng thì dựng thêm doanh trại, nuôi thêm quân dự trữ. Cấp càng cao càng giữ nhiều quân và cho dựng thêm nơi ở riêng của binh chủng mới: cấp 1 trại giáo, cấp 2 trại cung, cấp 3 chuồng voi.',
     },
     choiCanh: {
       name: 'Chòi canh',
@@ -270,6 +270,12 @@ export const vi = {
     daTheoMau: 'Kinh đô đã xếp đúng theo mẫu này',
     canChuong4: 'Mở ở chương 4: Mỵ Châu, Trọng Thủy',
     khongGhepDuoc: 'Chỉ ghép được hai chòi canh cấp 8 còn nguyên',
+    canTuongChiHuy: 'Mỗi doanh trại cần một tướng chỉ huy. Chưa có tướng rảnh',
+    tuongChuaCo: 'Tướng này chưa về với kinh đô',
+    daChiHuy: 'Tướng này đang chỉ huy doanh trại này rồi',
+    quaChoPhoBan: 'Mang quá số chỗ cho một trận phó bản',
+    quaChoGiuThanh: 'Đã đủ chỗ giữ kinh đô theo cấp Điện',
+    traiDay: 'Doanh trại này đã đủ chỗ, hãy nâng cấp',
     khongPhaiTrangTri: 'Chỉ dọn được đường đi và đồ trang trí',
     khoanhDaMo: 'Khoảnh này đã phát rồi',
     khoanhChuaSat: 'Chỉ phát được khoảnh rừng sát đất đã mở',
@@ -696,6 +702,29 @@ export const vi = {
     get: 'Nhận',
     troops: 'Quân',
     troopSpace: (used: number, cap: number) => `Quân trong doanh trại: ${used}/${cap} chỗ`,
+    troopSpaceAll: (used: number, cap: number, n: number) =>
+      n > 1 ? `Quân trong ${n} doanh trại: ${used}/${cap} chỗ` : `Quân trong doanh trại: ${used}/${cap} chỗ`,
+    barracksCap: (cap: number) => `Doanh trại này giữ ${cap} chỗ`,
+    commanderTitle: 'Tướng chỉ huy',
+    commanderHint: 'Mỗi doanh trại một tướng chỉ huy, có tướng mới giữ chỗ quân. Có thêm tướng thì dựng thêm doanh trại. Giữ kinh đô, tướng ra trận từ trại mình chỉ huy.',
+    commandsHere: 'chỉ huy doanh trại này',
+    commandsOther: 'chỉ huy doanh trại khác',
+    commandsNone: 'chưa chỉ huy doanh trại nào',
+    noCommander: 'Doanh trại này chưa có tướng chỉ huy nên chưa giữ chỗ quân.',
+    assignHere: 'Giao trại này',
+    toPost: 'Tới trại',
+    commandAssigned: (name: string) => `${name} chỉ huy doanh trại này`,
+    tuongNames: { lacTuong: 'Lạc tướng', giong: 'Thánh Gióng', sonTinh: 'Sơn Tinh', anDuong: 'An Dương Vương' } satisfies Record<TuongId, string>,
+    tuongIcons: { lacTuong: '🥁', giong: '🐎', sonTinh: '⛰️', anDuong: '🏹' } satisfies Record<TuongId, string>,
+    guardTitle: 'Bố trí giữ kinh đô',
+    guardInfo: (used: number, cap: number) => `Giữ kinh đô: ${used}/${cap} chỗ (theo cấp Điện)`,
+    guardAutoNote: 'Đang bố trí tự động: mọi lính giữ kinh đô cho tới đủ chỗ, chia đều các doanh trại. Bấm − + để tự bố trí.',
+    guardManualNote: 'Lính bố trí ở trại nào thì ra trận từ trại ấy. Lính chết được quân dự trữ bù vào.',
+    guardHere: (n: number) => `Ở trại này ${n}`,
+    guardShort: (n: number) => `thiếu ${n}`,
+    guardAuto: 'Bố trí tự động',
+    reserveLine: (list: string) => `Quân dự trữ (không ra giữ kinh đô): ${list}`,
+    reserveNone: 'không có',
     troopUpkeep: (g: number) => `Lính ăn ${g} gạo/phút`,
     train: 'Luyện',
     generalsTitle: 'Tướng ở doanh trại',
@@ -775,6 +804,7 @@ export const vi = {
     armyTitle: 'Xếp quân',
     armyHint: 'Chọn số lính mang theo và hàng đứng của từng binh chủng. Tiền quân đứng đầu, hậu quân đứng sau.',
     haveTroops: (n: number) => `Có ${n}`,
+    fieldSpace: (used: number, cap: number) => `Mang theo: ${used}/${cap} chỗ (mỗi trận phó bản)`,
     noTroops: 'Chưa có lính. Hãy luyện quân ở trại giáo, trại cung, chuồng voi.',
     march: '⚔️ Xuất quân',
     giong: 'Thánh Gióng',
@@ -899,24 +929,24 @@ export const vi = {
     rotate: 'Xoay cảnh 90°',
     mauTitle: 'Mẫu kinh đô',
     mauCard: 'Xếp kinh đô theo mẫu',
-    mauHint: 'Mỗi chương mở một mẫu. Áp mẫu thì mọi công trình được dời vào chỗ trong mẫu (mỗi cái mất 10% giá dựng), phần mẫu có mà mình chưa có được dựng thêm (trong giới hạn theo cấp Điện), đoạn lũy, đê, thành, bẫy thừa bị dỡ. Phải đủ tài nguyên mới áp được.',
+    mauHint: 'Mỗi chương mở một mẫu. Mẫu giãn theo cấp Điện: nâng Điện thì mẫu rộng ra, áp lại để lũy, đê, thành ra tới bìa mới và công trình mới có chỗ. Chỗ của mẫu nằm trong khoảnh rừng chưa phát thì bỏ qua: phát thêm rừng rồi áp lại. Áp mẫu thì mọi công trình được dời vào chỗ trong mẫu (mỗi cái mất 10% giá dựng), phần mẫu có mà mình chưa có được dựng thêm (trong giới hạn theo cấp Điện), đoạn lũy, đê, thành, bẫy thừa bị dỡ. Phải đủ tài nguyên mới áp được.',
     mau: {
       phongChau: {
         icon: '🏯',
         name: 'Kinh đô Phong Châu',
-        desc: 'Ruộng quanh Điện, nhà sàn và kho sát Điện, bãi đá trên đồi, lũy tre bao hai mặt rừng, bẫy chông trước lũy.',
+        desc: 'Bến và ruộng dọc sông; đền, doanh trại, trại giáo trên trục từ Điện về góc rừng; nhà sàn, kho quanh Điện; bãi đá trên đồi; lũy tre bao hai mặt rừng, bẫy chông trước lũy.',
         lock: '',
       },
       deBao: {
         icon: '🌊',
         name: 'Đê bao chống lũ',
-        desc: 'Đê liền dải dọc hai bờ sông, bến nằm ngoài đê, chòi canh sát đê; ruộng, đền và ruộng nếp trong đê.',
+        desc: 'Đê liền dải dọc hai bờ sông tới bìa đất, bến nằm ngoài đê, chòi canh sát đê; doanh trại ở góc đê gần ngã ba sông; ruộng, đền và ruộng nếp trong đê.',
         lock: 'Mở khi vào chương 2: Sơn Tinh, Thủy Tinh.',
       },
       coLoa: {
         icon: '🐚',
         name: 'Thành Cổ Loa',
-        desc: 'Ba vòng thành kín quanh Điện; nhà sàn, kho, lò rèn giữa các vòng; ruộng, đền, doanh trại ngoài vòng ngoài; đê bao ngoài cùng.',
+        desc: 'Ba vòng thành kín quanh Điện, vòng ngoài nới ra theo đất; nhà sàn, kho, lò rèn, bếp giữa các vòng; ruộng, đền, doanh trại ngoài vòng ngoài; đê bao ngoài cùng.',
         lock: 'Mở khi vào chương 3: An Dương Vương.',
       },
     },
