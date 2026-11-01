@@ -6,7 +6,7 @@ import { BUILDINGS, FIELD, isRoad, type BuildingType, type Terrain, type TuongId
 import { raidSpawnBand, type Battle, type RaidSide } from '../game/battle';
 import { advLook, inChapter3, ruaVangCame, type AdvLook } from '../game/coLoa';
 import { heroPost } from '../game/doanhTrai';
-import { buildingAt, dienLevel, type Building, type GameState } from '../game/game';
+import { dienLevel, type Building, type GameState } from '../game/game';
 import { giongLook, type GiongLook } from '../game/giong';
 import { DIEN_HOME, FAR_BANK, FOREST_BAND, GRID, RIVER_START, areaStart, baseHeights, isUnlocked } from '../game/map';
 import { sonLook, type SonLook } from '../game/son';
@@ -15,17 +15,11 @@ import { tetOpen } from '../game/tet';
 import { Battlefield } from './battlefield';
 import { BattleView } from './battleView';
 import { IsoCamera } from './camera';
-import {
-  banhChung,
-  banhGiay,
-  benBoats,
-  buildingModel,
-  dienFloor,
-  dienScale,
-  DOANH_TRAI_HERO,
-  doanhTraiScale,
-  footScale,
-} from './buildings';
+import { banhChung, banhGiay, footScale } from './buildings';
+import { PERSON_SCALE } from './congTrinh/chung';
+import { DIEN_LOT } from './congTrinh/dien';
+import { DOANH_TRAI_HERO } from './congTrinh/doanhTrai';
+import { CONG_TRINH, lotModel } from './congTrinh/index';
 import { makeRuaVang } from './beasts';
 import { buildDecor, disposeDecor, isBatchedDecor, type DecorSpot } from './decor';
 import { makeAnDuong, makeGiong, makeSonTinh } from './heroes';
@@ -36,6 +30,7 @@ import {
   buildForest,
   buildWalls,
   makeBoat,
+  makeTradeBoat,
   type CitadelSpot,
   type DikeSpot,
   type TreeSpot,
@@ -52,6 +47,8 @@ const HALF = GRID / 2;
 const FAR = FAR_BANK - HALF;
 /** Luồng thuyền qua lại: sát bờ bên kia, ngoài tầm cầu tàu và thuyền neo ở bến. */
 const BOAT_LANE = FAR - 0.9;
+/** Thuyền buôn ghé đậu cách bờ chừng này ô (tâm thuyền), ngoài thuyền neo của bến, trong luồng thuyền. */
+const MERCHANT_OUT = 3.5;
 /** Số gợn sóng trên mặt sông: chừng 20 gợn mỗi ô bề rộng sông. */
 const RIPPLES = 20 * (FAR_BANK - RIVER_START);
 /** Mặt nước nằm thấp hơn mặt đất. */
@@ -166,45 +163,11 @@ interface BuildingView {
   baseScale: number;
 }
 
+/**
+ * Chỗ đứng của người ở công trình còn vẽ theo móng cũ (ba đền, bốn công trình Hội Tết), tọa độ mô hình trước khi
+ * phóng theo móng. Công trình vẽ trên móng mới (`congTrinh/`) cho chỗ đứng theo bản vẽ của nó.
+ */
 const SPOTS: Partial<Record<BuildingType, Spot[]>> = {
-  // Dân rải khắp ruộng, tránh chòi canh, guồng nước, trâu và miếu ở các góc.
-  ruong: [
-    { job: 'nong', x: -0.35, y: 0.06, z: -0.3, ry: 0.4 },
-    { job: 'nong', x: 0.7, y: 0.06, z: -0.25, ry: -0.3 },
-    { job: 'nong', x: -0.8, y: 0.06, z: 0.3, ry: 0.9 },
-    { job: 'nong', x: 0.2, y: 0.06, z: 0.45, ry: -0.8 },
-    { job: 'nong', x: -0.25, y: 0.06, z: 1.05, ry: 0.2 },
-  ],
-  ben: [
-    { job: 'buon', x: -0.45, y: 0.5, z: 0.05, ry: 0, walk: 0.3 },
-    { job: 'buon', x: 0.45, y: 0.5, z: 0.0, ry: 0, walk: 0.25 },
-    { job: 'buon', x: 0.55, y: 0.38, z: 1.3, ry: 0, walk: 0 },
-    { job: 'buon', x: -0.2, y: 0.5, z: -0.7, ry: 0, walk: 0.2 },
-  ],
-  // Camera nhìn chéo theo x + z, nên mỗi thợ đá đứng một cột x − z riêng để khỏi che nhau;
-  // tránh xe đá, chồng đá, tời và lò nung gạch.
-  baiDa: [
-    { job: 'thoDa', x: 0.15, y: 0.1, z: 0.15, ry: 0.6 },
-    { job: 'thoDa', x: 0.65, y: 0.1, z: 0.1, ry: -0.5 },
-    { job: 'thoDa', x: -0.55, y: 0.1, z: 0.0, ry: 2.6 },
-    { job: 'thoDa', x: -0.75, y: 0.1, z: 0.35, ry: -2 },
-    { job: 'thoDa', x: 0.92, y: 0.1, z: -0.18, ry: 2.8 },
-  ],
-  loRen: [
-    { job: 'thoRen', x: 0.45, y: 0.08, z: 0.82, ry: Math.PI },
-    { job: 'thoRen', x: -0.15, y: 0.08, z: 0.3, ry: -2.4 },
-    { job: 'thoRen', x: -0.6, y: 0.08, z: 0.55, ry: 2.6 },
-    { job: 'thoRen', x: 0.62, y: 0.08, z: -0.1, ry: -1.6 },
-  ],
-  kho: [{ job: 'giuKho', x: -0.1, y: 0.06, z: 0.7, ry: 0, walk: 0.5 }],
-  nhaSan: [
-    { job: 'phuNu', x: 0.65, y: 0.06, z: 0.7, ry: 0.4 },
-    { job: 'phuNu', x: -0.65, y: 0.06, z: 0.35, ry: -0.6 },
-  ],
-  doanhTrai: [
-    { job: 'linhGac', x: -0.2, y: 0.08, z: 1.0, ry: 0 },
-    { job: 'linhGac', x: 0.95, y: 0.08, z: 0.3, ry: -0.6 },
-  ],
   // Hội Tết: mỗi người một cột x − z như thợ đá, tránh bù nhìn, giàn, chuồng, nồi.
   ruongNep: [
     { job: 'nong', x: -0.85, y: 0.06, z: 0.3, ry: 0.5 },
@@ -794,7 +757,10 @@ export class World {
       const east = ben.x + def.w === RIVER_START;
       const cx = wx(ben.x) + def.w / 2;
       const cz = wz(ben.z) + def.d / 2;
-      boat.position.set(east ? cx + 2.4 : cx - 0.6, WATER_Y - 0.02, east ? cz - 0.6 : cz + 2.4);
+      // Thuyền buôn ghé dọc dòng, ngoài các thuyền neo của bến (`benDocks` chìa ra chừng 2,8 ô từ bờ), cách bờ
+      // `MERCHANT_OUT` ô, còn chừa luồng thuyền qua lại sát bờ bên kia.
+      const out = def.w / 2 + MERCHANT_OUT;
+      boat.position.set(east ? cx + out : cx - 0.9, WATER_Y - 0.02, east ? cz - 0.9 : cz + out);
       boat.rotation.y = east ? -Math.PI / 2 : 0;
       boat.userData.at = at;
       this.scene.add(boat);
@@ -812,33 +778,32 @@ export class World {
     group.position.set(wx(b.x) + def.w / 2, topY(ground), wz(b.z) + def.d / 2);
     group.userData.buildingId = b.id;
     // Dân làm việc theo nghề; Điện có Lạc hầu, từ cấp 2 có thêm lính gác. Công trình hư thì không ai làm.
+    // Công trình móng mới (`congTrinh/`) cho chỗ đứng theo bản vẽ, mô hình không phóng nên người giữ cỡ
+    // `PERSON_SCALE`. Dáng cũ thì chỗ đứng thu theo hệ số thu tâm (`spread`, xem buildings.ts) và người thu lại
+    // theo cỡ đã phóng theo móng (`foot`).
     const people: WorkerView[] = [];
-    const spots: Spot[] =
-      b.type === 'dien'
-        ? [
-            { job: 'lacHau', x: 0.75, y: dienFloor(b.level), z: 1.75, ry: 0 },
-            ...(b.level >= 2 ? [{ job: 'linhGac' as Job, x: -1.0, y: dienFloor(b.level), z: 1.8, ry: 0.2 }] : []),
-          ]
-        : (SPOTS[b.type] ?? []);
+    const moi = CONG_TRINH[b.type];
+    const spots: Spot[] = moi ? moi.spots(b.level) : (SPOTS[b.type] ?? []);
     const n = b.damaged ? 0 : b.type === 'dien' ? spots.length : peopleCount(b, spots.length);
-    // Công trình cấp 6–8 to thêm nhưng thu tâm các phần về chỗ cũ (`spread`, xem buildings.ts):
-    // chỗ đứng thu theo, người giữ cỡ như ở cấp 5.
-    const spread = (group.userData.spread as number | undefined) ?? 1;
+    const spread = moi ? 1 : ((group.userData.spread as number | undefined) ?? 1);
+    const personScale = moi ? PERSON_SCALE : (0.85 * spread) / ((group.userData.foot as number | undefined) ?? 1);
     for (let i = 0; i < n; i++) {
       const spot = { ...spots[i], x: spots[i].x * spread, z: spots[i].z * spread };
       const obj = makeWorker(spot.job);
       obj.position.set(spot.x, spot.y, spot.z);
       obj.rotation.y = spot.ry;
-      // Mô hình đã phóng theo móng (`foot`): người thu lại để giữ cỡ người thật.
-      obj.scale.setScalar((0.85 * spread) / ((group.userData.foot as number | undefined) ?? 1));
+      obj.scale.setScalar(personScale);
       group.add(obj);
       people.push({ obj, spot, phase: b.id * 1.7 + i * 2.1 });
     }
-    if (b.type === 'ben') {
-      // Thuyền là con của bến, bến to theo cấp: chia cho cỡ bến để thuyền vẫn nổi đúng mặt nước.
+    if (moi?.docks) {
+      // Thuyền neo theo bến, nổi trên mặt sông.
       const waterY = (WATER_Y - 0.02 - topY(ground)) / group.scale.y;
-      for (const boat of benBoats(b.level, spread)) {
-        boat.position.y = waterY;
+      for (const d of moi.docks(b.level)) {
+        const boat = d.kind === 'trader' ? makeTradeBoat() : makeBoat();
+        boat.position.set(d.x, waterY, d.z);
+        boat.rotation.y = d.ry;
+        if (d.scale) boat.scale.setScalar(d.scale);
         boat.userData.dock = waterY;
         group.add(boat);
       }
@@ -862,13 +827,9 @@ export class World {
     this.views.set(b.id, { group, type: b.type, level: b.level, damaged: !!b.damaged, workers: b.workers, x: b.x, z: b.z, ground, people, popAge: 0, baseScale: group.scale.x });
   }
 
-  /** Mô hình công trình đặt vừa móng: phóng theo móng kinh đô lớn, chừa viền cỏ (`footScale`). */
+  /** Mô hình công trình đặt vừa móng (`lotModel`): vẽ trên móng mới, hay dáng cũ phóng theo móng. */
   private makeBuilding(type: BuildingType, level: number): THREE.Group {
-    const g = buildingModel(type, level);
-    const k = footScale(type);
-    g.scale.multiplyScalar(k);
-    g.userData.foot = k;
-    return g;
+    return lotModel(type, level);
   }
 
 
@@ -964,21 +925,14 @@ export class World {
     return x >= 0 && z >= 0 && x < GRID && z < GRID ? { x, z } : null;
   }
 
-  /** Chỗ đứng trước Điện, bên phải bậc lên: nơi Gióng, rồi Sơn Tinh đứng. */
   /**
-   * Chỗ tướng đứng trước Điện, bên phải bậc lên. Từ cấp 6 Điện có lầu trống hai bên thềm,
-   * nên tướng ra đứng hẳn bên phải nền Điện để khỏi che lầu trống bên phải.
+   * Chỗ tướng đứng trong sân chầu của Điện, bên phải lối giữa (khối `a` trong bản vẽ Điện): nơi Gióng lúc nhỏ,
+   * Sơn Tinh lúc cầu hôn và An Dương Vương đứng. Móng Điện phẳng nên đứng cùng độ cao mặt sân.
    */
   private heroSpot(dien: Building): { x: number; y: number; z: number } {
-    const side = dien.level >= 6;
+    const a = DIEN_LOT.zone('a');
     const def = BUILDINGS.dien;
-    // Lệch so với tâm móng Điện (tọa độ mô hình), phóng theo móng.
-    const k = footScale('dien');
-    const ox = (side ? 2.7 : 1.6) * k;
-    const oz = (side ? 1.5 : 2.5) * k;
-    const tx = Math.min(Math.floor(dien.x + def.w / 2 + ox), RIVER_START - 1);
-    const tz = Math.min(Math.floor(dien.z + def.d / 2 + oz), RIVER_START - 1);
-    return { x: wx(dien.x) + def.w / 2 + ox, y: this.groundY(tx, tz), z: wz(dien.z) + def.d / 2 + oz };
+    return { x: wx(dien.x) + def.w / 2 + a.x - 0.15, y: this.groundY(dien.x, dien.z) + 0.05, z: wz(dien.z) + def.d / 2 + a.z };
   }
 
   /** Chỗ tướng đứng giữa sân doanh trại tướng ấy chỉ huy (không chỉ huy trại nào thì trại của Lạc tướng). Chưa có doanh trại thì null. */
@@ -986,8 +940,7 @@ export class World {
     const b = heroPost(state, tuong);
     if (!b) return null;
     const def = BUILDINGS.doanhTrai;
-    const k = doanhTraiScale(b.level) * footScale('doanhTrai');
-    return { x: wx(b.x) + def.w / 2 + DOANH_TRAI_HERO.x * k, y: this.groundY(b.x, b.z) + 0.08, z: wz(b.z) + def.d / 2 + DOANH_TRAI_HERO.z * k };
+    return { x: wx(b.x) + def.w / 2 + DOANH_TRAI_HERO.x, y: this.groundY(b.x, b.z) + 0.08, z: wz(b.z) + def.d / 2 + DOANH_TRAI_HERO.z };
   }
 
   /**
@@ -1068,75 +1021,53 @@ export class World {
     this.pillar = undefined;
     if (!pkey || !spot) return;
     const obj = this.makePillar();
-    // Cột đá đứng bên trái tướng; khi tướng ra đứng bên phải nền Điện thì cột đứng sau lưng, phía phải.
-    const side = dien!.level >= 6;
-    obj.position.set(spot.x + (side ? 0.45 : -0.62), spot.y, spot.z + (side ? -0.7 : -0.2));
+    // Cột đá đứng sau lưng tướng, phía phải, còn trong sân Điện.
+    obj.position.set(spot.x + 0.55, spot.y, spot.z - 0.35);
     obj.rotation.y = 0.3;
     this.scene.add(obj);
     this.pillar = { obj, key: pkey };
   }
 
   /**
-   * Cảnh Tết, chỉ lúc Tết mở: cây nêu bên trái bậc lên Điện, dây cờ đuôi nheo căng từ ngọn nêu tới cột cờ
-   * bên trái Điện, mâm bánh đã dâng bày trước thềm (chỉ loại đã dâng), và mấy người ngồi chiếu gói bánh
-   * trước bếp. Không có pháo. Cây nêu đứng bên trái bậc, tránh chỗ tướng và cột đá thề ở bên phải.
+   * Cảnh Tết, chỉ lúc Tết mở, trong sân chầu của Điện (khối `e`, `m` trong bản vẽ Điện): cây nêu bên trái lối giữa,
+   * dây cờ đuôi nheo căng từ ngọn nêu tới hai cột cờ hai bên lối, mâm bánh đã dâng bày trước thềm (chỉ loại đã dâng),
+   * và một người ngồi chiếu gói bánh trước bếp. Không có pháo. Tướng và cột đá thề đứng bên phải lối.
    */
   private syncTet(state: GameState): void {
     const dien = state.buildings.find((b) => b.type === 'dien');
     const bep = state.buildings.find((b) => b.type === 'bep' && !b.damaged);
     const o = state.tet.offered;
     const h = (b: Building) => this.heights[b.z * GRID + b.x] ?? 0;
-    // Cây nêu và mâm bánh đứng ngoài móng Điện: ô ấy có công trình khác (kể cả lũy, thành) thì không dựng.
-    // Đồ Tết đặt theo tâm móng Điện; lệch ra ngoài móng theo cỡ Điện đã phóng (`footScale`).
-    const half = BUILDINGS.dien.w / 2;
-    const fk = footScale('dien');
-    const free = (lx: number, lz: number) => {
-      if (!dien) return false;
-      const b = buildingAt(state, dien.x + Math.floor(half + lx), dien.z + Math.floor(half + lz));
-      return !b || b.id === dien.id;
-    };
-    const NX = -1.6 * fk;
-    const NZ = 2.55 * fk;
-    const TZ = 2.8 * fk;
-    const neuFree = free(NX, NZ);
-    const trayFree = free(-0.3, TZ) && free(0.3, TZ);
-    const key =
-      dien && tetOpen(state)
-        ? [dien.x, dien.z, dien.level, h(dien), o.chung, o.giay, neuFree, trayFree, bep ? `${bep.x},${bep.z},${bep.level},${h(bep)}` : '-'].join(':')
-        : '';
+    const key = dien && tetOpen(state) ? [dien.x, dien.z, dien.level, h(dien), o.chung, o.giay, bep ? `${bep.x},${bep.z},${bep.level},${h(bep)}` : '-'].join(':') : '';
     if (key === this.tetKey) return;
     this.tetKey = key;
     if (this.tetDecor) this.scene.remove(this.tetDecor);
     this.tetDecor = undefined;
     if (!key || !dien) return;
     const root = new THREE.Group();
-    // Tọa độ trong mô hình Điện (gốc ở tâm móng, đã thu nhỏ theo cấp) đổi ra tọa độ cảnh.
-    const s = dienScale(dien.level) * fk;
-    const cx = wx(dien.x) + half;
-    const cz = wz(dien.z) + half;
-    const dienY = topY(h(dien));
-    const ground = (lx: number, lz: number) =>
-      this.groundY(Math.min(dien.x + Math.floor(half + lx), RIVER_START - 1), Math.min(dien.z + Math.floor(half + lz), RIVER_START - 1));
-    // Hai dây cờ từ ngọn nêu: sang đầu cột cờ bên trái Điện, và vắt qua trước thềm sang cột cờ bên phải
-    // (Điện cấp 1 chưa có cột cờ thì buộc vào hai góc nền). Không dựng được nêu thì căng một dây giữa hai cột cờ.
-    const bz = (dien.level >= 6 ? 1.85 : 1.6) * s;
-    const left = dien.level >= 2 ? new THREE.Vector3(cx - 1.7 * s, dienY + 2.5 * s, cz + bz) : new THREE.Vector3(cx - 1.85 * s, dienY + 0.9 * s, cz + 1.85 * s);
-    const right = dien.level >= 4 ? new THREE.Vector3(cx + 1.75 * s, dienY + 2.7 * s, cz + bz) : new THREE.Vector3(cx + 1.85 * s, dienY + 0.9 * s, cz + 1.85 * s);
-    if (neuFree) {
-      const ny = ground(NX, NZ);
-      const neu = this.makeNeu();
-      neu.position.set(cx + NX, ny, cz + NZ);
-      neu.rotation.y = Math.PI / 4;
-      root.add(neu);
-      const top = new THREE.Vector3(cx + NX, ny + NEU_H - 0.3, cz + NZ);
-      root.add(this.makeFlagLine(top, left, 4));
-      root.add(this.makeFlagLine(top, right, 9));
-    } else {
-      root.add(this.makeFlagLine(left, right, 9));
-    }
-    if ((o.chung || o.giay) && trayFree) {
+    // Tọa độ trong bản vẽ Điện (gốc ở tâm móng) đổi ra tọa độ cảnh. Móng Điện phẳng nên mặt sân cùng một độ cao.
+    const def = BUILDINGS.dien;
+    const cx = wx(dien.x) + def.w / 2;
+    const cz = wz(dien.z) + def.d / 2;
+    const y = topY(h(dien)) + 0.05;
+    // Dây cờ buộc vào đầu hai cột cờ hai bên lối (Điện cấp 1 chưa có cột cờ thì buộc vào hai cọc mốc góc trước).
+    const flagH = dien.level >= 6 ? 2.7 : 2.4;
+    const [left, right] =
+      dien.level >= 2
+        ? DIEN_LOT.groups('2').map((f) => new THREE.Vector3(cx + f.x - 0.2, y + flagH - 0.1, cz + f.z))
+        : [-1, 1].map((sx) => new THREE.Vector3(cx + sx * 2.3, y + 0.7, cz + 2.3));
+    const e = DIEN_LOT.zone('e');
+    const neu = this.makeNeu();
+    neu.position.set(cx + e.x, y, cz + e.z);
+    neu.rotation.y = Math.PI / 4;
+    root.add(neu);
+    const top = new THREE.Vector3(cx + e.x, y + NEU_H - 0.3, cz + e.z);
+    root.add(this.makeFlagLine(top, left, 4));
+    root.add(this.makeFlagLine(top, right, 9));
+    if (o.chung || o.giay) {
+      const m = DIEN_LOT.zone('m');
       const tray = this.makeTray(o.chung, o.giay);
-      tray.position.set(cx, ground(0, TZ), cz + TZ);
+      tray.position.set(cx + m.x, y, cz + m.z);
       tray.rotation.y = Math.PI / 4;
       root.add(tray);
     }
