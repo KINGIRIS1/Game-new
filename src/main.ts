@@ -14,13 +14,14 @@ import { feedGiong, forgeGear } from './game/giong';
 import { inChapter2, offerGift } from './game/son';
 import { markStory, pendingStory } from './game/story';
 import { footprintTop } from './game/terrain';
-import { BUILDINGS, RESOURCE_IDS, STAGES, type BuildingType, type Cost, type ResourceId, type SkillId } from './game/defs';
+import { BUILDINGS, RESOURCE_IDS, STAGES, isDecor, isRoad, type BuildingType, type Cost, type ResourceId, type SkillId } from './game/defs';
 import { fmt } from './ui/format';
 import {
   applyOffline,
   buildingAt,
   canMove,
   canPlace,
+  clearDecorAt,
   findSpot,
   claimQuest,
   createInitialState,
@@ -54,9 +55,13 @@ import { RESOLUTIONS, World, type Resolution } from './render/world';
 import { vi } from './text/vi';
 import { Hud, buildingName, type HudAction } from './ui/hud';
 
-/** Chạm từng ô để dựng lũy, gài bẫy, đắp đê, đắp thành Cổ Loa, hay đắp đất (`raise`). */
-type PaintType = 'luy' | 'bayChong' | 'de' | 'thanh' | 'raise';
+/**
+ * Chạm từng ô để dựng lũy, gài bẫy, đắp đê, đắp thành Cổ Loa, trải đường, đặt đồ trang trí một ô; hay đắp đất
+ * (`raise`), dọn đường và đồ trang trí (`clear`).
+ */
+type PaintType = BuildingType | 'raise' | 'clear';
 const PAINTED: BuildingType[] = ['luy', 'bayChong', 'de', 'thanh'];
+const isPainted = (type: BuildingType) => PAINTED.includes(type) || (isDecor(type) && BUILDINGS[type].w === 1);
 
 type Mode =
   | { kind: 'view'; selected: number | null }
@@ -218,6 +223,14 @@ function start(): void {
     }
     if (mode.kind === 'paint') {
       if (!tile) return;
+      if (mode.type === 'clear') {
+        const r = clearDecorAt(state, tile.x, tile.z);
+        if (!r.ok) return fail(r.reason);
+        play('tap');
+        hud.setHint(vi.ui.cleared(buildingName(r.value)));
+        commit();
+        return;
+      }
       if (mode.type === 'raise') {
         const r = raiseTile(state, tile.x, tile.z);
         if (!r.ok) return fail(r.reason);
@@ -271,16 +284,19 @@ function start(): void {
         hud.closeSheet();
         world.showGrid(true);
         play('tap');
-        if (PAINTED.includes(a.type)) {
-          mode = { kind: 'paint', type: a.type as PaintType };
-          const hint =
-            a.type === 'luy'
-              ? vi.ui.wallHint
-              : a.type === 'de'
-                ? vi.ui.dikeHint
-                : a.type === 'thanh'
-                  ? vi.ui.citadelHint(wallRings(state))
-                  : vi.ui.trapHint;
+        if (isPainted(a.type)) {
+          mode = { kind: 'paint', type: a.type };
+          const hint = isRoad(a.type)
+            ? vi.ui.roadHint
+            : isDecor(a.type)
+              ? vi.ui.decorHint
+              : a.type === 'luy'
+                ? vi.ui.wallHint
+                : a.type === 'de'
+                  ? vi.ui.dikeHint
+                  : a.type === 'thanh'
+                    ? vi.ui.citadelHint(wallRings(state))
+                    : vi.ui.trapHint;
           hud.setMode('paint', true, hint);
           refreshFloodPreview();
           if (a.type === 'de') hud.toast(vi.ui.floodPreview(nextFloodLevel(state)));
@@ -374,6 +390,15 @@ function start(): void {
         hud.setMode('merge');
         return;
       }
+
+      case 'chooseClear':
+        if (mode.kind !== 'view') exitMode();
+        hud.closeSheet();
+        world.showGrid(true);
+        play('tap');
+        mode = { kind: 'paint', type: 'clear' };
+        hud.setMode('paint', true, vi.ui.clearHint);
+        return;
 
       case 'chooseRaise':
         if (!inChapter2(state)) return fail('canChuong2');

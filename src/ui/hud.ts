@@ -5,8 +5,12 @@ import { enemiesLeft, alliesLeft, skillReady, type Battle } from '../game/battle
 import { advJoined, advLook, advResting, inChapter3, ruaVangCame, wallRings } from '../game/coLoa';
 import {
   BUILDINGS,
+  DECOR_TYPES,
   FIELD,
   RESOURCE_IDS,
+  ROAD_TYPES,
+  isDecor,
+  isRoad,
   RINGS_NEEDED,
   STAGES,
   UNITS,
@@ -122,6 +126,12 @@ const BUILD_MENU: BuildingType[] = [
   'thanh',
   'denCoLoa',
 ];
+/** Nhóm thẻ trong bảng Xây dựng: công trình, đường đi, đồ trang trí. */
+const BUILD_GROUPS: { key: keyof typeof vi.ui.buildGroups; types: BuildingType[] }[] = [
+  { key: 'congTrinh', types: BUILD_MENU },
+  { key: 'duong', types: ROAD_TYPES },
+  { key: 'trangTri', types: DECOR_TYPES },
+];
 /** Bốn công trình làm bánh của Hội Tết: chỉ hiện trong bảng Xây dựng khi đã mở (sau kết chương 1). */
 const TET_TYPES: BuildingType[] = ['ruongNep', 'vuon', 'chuongLon', 'bep'];
 /** Công trình chỉ hiện trong bảng Xây dựng khi đã sang chương có nó. */
@@ -150,6 +160,8 @@ export type HudAction =
   | { kind: 'openBuild' }
   | { kind: 'chooseBuild'; type: BuildingType }
   | { kind: 'chooseRaise' }
+  /** Công cụ dọn: chạm ô đường hay món trang trí để dọn đi. */
+  | { kind: 'chooseClear' }
   | { kind: 'raiseBuilding'; id: number }
   | { kind: 'openSon' }
   | { kind: 'offerGift'; gift: GiftId }
@@ -341,6 +353,11 @@ export class Hud {
         return;
       case 'chooseBuild':
         return this.onAction({ kind: 'chooseBuild', type: el.dataset.type as BuildingType });
+      case 'buildTab':
+        this.buildTab = el.dataset.tab as typeof this.buildTab;
+        this.refreshSheet(this.getState());
+        this.sheetEl.querySelector('.sheet-body')?.scrollTo(0, 0);
+        return;
       case 'selectBuilding':
       case 'upgrade':
       case 'removeWall':
@@ -633,6 +650,8 @@ export class Hud {
 
   /** Mẫu vừa bấm Áp lần đầu (chờ bấm lần nữa cho chắc). */
   mauArmed: MauId | null = null;
+  /** Nhóm đang xem trong bảng Xây dựng; nhớ cho lần mở sau. */
+  private buildTab: (typeof BUILD_GROUPS)[number]['key'] = 'congTrinh';
 
   showMau(state: GameState): void {
     this.sheet = { kind: 'mau' };
@@ -724,10 +743,9 @@ export class Hud {
       </button>`
       : '';
     // Công trình của chương 2, chương 3 chỉ hiện khi đã sang chương ấy.
-    const shown = BUILD_MENU.filter(
-      (type) => (CHAPTER_OF[BUILDINGS[type].unlock ?? ''] ?? 1) <= chapterNow(state) && (!TET_TYPES.includes(type) || tetStarted(state)),
-    );
-    const cards = shown.map((type) => {
+    const shownOf = (types: BuildingType[]) =>
+      types.filter((type) => (CHAPTER_OF[BUILDINGS[type].unlock ?? ''] ?? 1) <= chapterNow(state) && (!TET_TYPES.includes(type) || tetStarted(state)));
+    const card = (type: BuildingType) => {
       const def = BUILDINGS[type];
       const have = usedOf(state, type);
       const max = limitOf(state, type);
@@ -736,22 +754,45 @@ export class Hud {
         // Đã ghi lý do mở khóa.
       } else if (dienLevel(state) < def.minDien) why = `Cần Điện cấp ${def.minDien}`;
       else if (def.barracksLevel && barracksLevel(state) < def.barracksLevel) why = vi.ui.needBarracks(def.barracksLevel);
-      else if (have >= max) why = needsGeneral(state, type) ? vi.reasons.canTuongChiHuy : vi.reasons.datGioiHan;
+      // Đường đầy giới hạn vẫn trải đè đổi vật liệu được.
+      else if (have >= max && !isRoad(type)) why = needsGeneral(state, type) ? vi.reasons.canTuongChiHuy : vi.reasons.datGioiHan;
       else if (!canAfford(state, def.buildCost)) why = vi.reasons.thieuTaiNguyen;
+      // Bốn loại đường chung một giới hạn, ghi ở đầu nhóm.
+      const count = isRoad(type) ? '' : ` · ${vi.ui.count(have, max)}`;
       return `<button class="card ${why ? 'locked' : ''}" data-act="chooseBuild" data-type="${type}">
         <span class="icon">${vi.buildings[type].icon}</span>
         <span class="name">${vi.buildings[type].name}</span>
-        <span class="meta">${def.w}×${def.d} ô · ${vi.ui.count(have, max)}</span>
+        <span class="meta">${def.w}×${def.d} ô${count}</span>
         ${costHtml(state, def.buildCost)}
         ${why ? `<span class="why">${why}</span>` : ''}
       </button>`;
-    }).join('');
+    };
     const mau = `<button class="card" data-act="openMau">
         <span class="icon">🗺️</span>
         <span class="name">${vi.ui.mauTitle}</span>
         <span class="meta">${vi.ui.mauCard}</span>
       </button>`;
-    return `<div class="cards">${mau}${cards}${raise}</div>`;
+    // Công cụ dọn đường, đồ trang trí: chạm từng ô như khi trải.
+    const clear = `<button class="card" data-act="chooseClear">
+        <span class="icon">🧹</span>
+        <span class="name">${vi.ui.clearDecor}</span>
+        <span class="meta">${vi.ui.clearDecorDesc}</span>
+      </button>`;
+    // Ba nhóm thẻ chọn ở đầu bảng; mỗi lần chỉ hiện một nhóm cho khỏi cuộn dài trên điện thoại.
+    const tabs = BUILD_GROUPS.map(
+      ({ key }) =>
+        `<button class="tab ${key === this.buildTab ? 'on' : ''}" data-act="buildTab" data-tab="${key}">${vi.ui.buildGroups[key]}</button>`,
+    ).join('');
+    const group = BUILD_GROUPS.find((g) => g.key === this.buildTab)!;
+    const cards = shownOf(group.types).map(card).join('');
+    const note =
+      group.key === 'duong'
+        ? `<p class="muted">${vi.ui.roadCount(usedOf(state, 'duongDat'), limitOf(state, 'duongDat'))}. ${vi.ui.decorOnly}</p>`
+        : group.key === 'trangTri'
+          ? `<p class="muted">${vi.ui.decorOnly}</p>`
+          : '';
+    const items = group.key === 'congTrinh' ? [mau, cards, raise] : group.key === 'trangTri' ? [cards, clear] : [cards];
+    return `<div class="build-tabs">${tabs}</div>${note}<div class="cards">${items.join('')}</div>`;
   }
 
   private buildingHtml(state: GameState, id: number): string {
@@ -803,6 +844,7 @@ export class Hud {
     }
 
     if (b.type === 'lauNo') rows.push(`<div class="stat"><span>${vi.ui.lauNoShots}</span><span></span></div>`);
+    if (isDecor(b.type)) rows.push(`<div class="stat"><span></span><span class="muted">${vi.ui.decorOnly}</span></div>`);
     if (b.type === 'doanhTrai') rows.push(this.barracksHtml(state, b));
     const home = UNIT_TYPES.find((k) => UNITS[k].home === b.type);
     if (home) rows.push(this.homeHtml(state, home));
@@ -868,7 +910,7 @@ export class Hud {
       }
     }
     if (def.removable) {
-      const label = b.type === 'de' ? vi.ui.removeDike : b.type === 'thanh' ? vi.ui.removeCitadel : vi.ui.remove;
+      const label = isDecor(b.type) ? vi.ui.removeDecor : b.type === 'de' ? vi.ui.removeDike : b.type === 'thanh' ? vi.ui.removeCitadel : vi.ui.remove;
       actions.push(`<button class="btn ghost" data-act="removeWall" data-id="${b.id}">${label}</button>`);
     }
 
@@ -1288,7 +1330,8 @@ export class Hud {
     if (dienLevel(state) < BUILDINGS[type].minDien) return `Cần Điện cấp ${BUILDINGS[type].minDien}`;
     const need = BUILDINGS[type].barracksLevel;
     if (need && barracksLevel(state) < need) return vi.ui.needBarracks(need);
-    if (countOf(state, type) >= limitOf(state, type)) return needsGeneral(state, type) ? vi.reasons.canTuongChiHuy : vi.reasons.datGioiHan;
+    // Đường đầy giới hạn vẫn vào trải được: trải đè lên ô đường loại khác thì đổi vật liệu, không thêm ô.
+    if (!isRoad(type) && usedOf(state, type) >= limitOf(state, type)) return needsGeneral(state, type) ? vi.reasons.canTuongChiHuy : vi.reasons.datGioiHan;
     if (!canAfford(state, BUILDINGS[type].buildCost)) return vi.reasons.thieuTaiNguyen;
     return null;
   }

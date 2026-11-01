@@ -10,6 +10,7 @@ import {
   claimQuest,
   createInitialState,
   currentQuest,
+  dienLevel,
   limitOf,
   place,
   remove,
@@ -187,10 +188,10 @@ describe('lầu nỏ', () => {
     expect(plan.stuck).toEqual([]);
     const builds = plan.builds.filter((x) => x.type === 'choiCanh').length;
     expect(builds).toBe(limitOf(s, 'choiCanh') - 2);
-    const move = plan.moves.find((m) => m.id === a.id)!;
-    expect(move).toBeDefined();
-    const slots = mauSlots('coLoa').filter((x) => x.type === 'choiCanh');
-    expect(slots.some((x) => x.x === move.x && x.z === move.z)).toBe(true);
+    // Lầu nỏ đã đứng ở chỗ chòi canh thì giữ nguyên, không thì dời tới một chỗ chòi canh.
+    const spot = plan.moves.find((m) => m.id === a.id) ?? a;
+    const slots = mauSlots('coLoa', dienLevel(s)).filter((x) => x.type === 'choiCanh');
+    expect(slots.some((x) => x.x === spot.x && x.z === spot.z)).toBe(true);
   });
 
   it('bản lưu phiên bản 9 được nâng lên phiên bản hiện tại; lưu và nạp lại giữ lầu nỏ', () => {

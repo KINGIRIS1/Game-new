@@ -41,14 +41,14 @@ const TILE: Partial<Record<BuildingType, string>> = {
 const miniCache = new Map<string, string>();
 
 /**
- * Bản đồ thu nhỏ của mẫu, từ bìa vùng đất xa nhất (vùng đã khai phá hay góc vẽ của mẫu) tới sông: ô ngoài vùng
- * đã khai phá thì mờ, sông xanh ở hai cạnh. Vẽ lên canvas một lần cho mỗi mẫu và mỗi cấp Điện.
+ * Bản đồ thu nhỏ của mẫu ở cấp Điện hiện tại, từ bìa vùng đất đã khai phá tới sông: mẫu giãn theo đất nên mọi chỗ
+ * trong mẫu đều nằm trong vùng; rừng chưa phát vẽ mờ ở mép, sông xanh ở hai cạnh. Vẽ lên canvas một lần cho mỗi
+ * mẫu và mỗi cấp Điện.
  */
 function miniMap(state: GameState, id: MauId): string {
   const level = dienLevel(state);
-  const slots = mauSlots(id);
-  const x0 = Math.max(0, Math.min(areaStart(level), ...slots.map((s) => Math.min(s.x, s.z))) - 1);
-  const key = `${id}:${level}:${x0}`;
+  const x0 = Math.max(0, areaStart(level) - 1);
+  const key = `${id}:${level}`;
   let url = miniCache.get(key);
   if (!url) {
     const n = RIVER_START + 1 - x0;
@@ -64,14 +64,11 @@ function miniMap(state: GameState, id: MauId): string {
         g.fillRect(x * px, z * px, px, px);
       }
     }
-    for (const s of slots) {
+    for (const s of mauSlots(id, level)) {
       const def = BUILDINGS[s.type];
-      const wild = !isUnlocked(s.x, s.z, level);
-      g.globalAlpha = wild ? 0.45 : 1;
       g.fillStyle = TILE[s.type] ?? MINI.land;
       g.fillRect((s.x - x0) * px, (s.z - x0) * px, def.w * px, def.d * px);
     }
-    g.globalAlpha = 1;
     url = canvas.toDataURL();
     miniCache.set(key, url);
   }

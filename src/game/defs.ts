@@ -29,7 +29,20 @@ export type BuildingType =
   | 'lauNo'
   | 'traiGiao'
   | 'traiCung'
-  | 'chuongVoi';
+  | 'chuongVoi'
+  // Đường đi: trải từng ô, chỉ để nhìn.
+  | 'duongDat'
+  | 'duongSoi'
+  | 'duongDa'
+  | 'duongGach'
+  // Đồ trang trí: chỉ để nhìn.
+  | 'cayDa'
+  | 'gieng'
+  | 'ao'
+  | 'hoa'
+  | 'co'
+  | 'cau'
+  | 'rom';
 
 /** Mốc mở khóa theo cốt truyện: sau kết chương 1, khi vào chương 2, sau kết chương 2, khi vào chương 3, sau kết chương 3. */
 export type Unlock = 'ketChuong1' | 'chuong2' | 'ketChuong2' | 'chuong3' | 'ketChuong3';
@@ -70,6 +83,10 @@ export interface BuildingDef {
   unlock?: Unlock;
   /** Cần doanh trại ít nhất cấp này mới dựng được (nơi ở riêng của từng binh chủng). */
   barracksLevel?: number;
+  /**
+   * Đường đi hay đồ trang trí: chỉ để nhìn. Giặc không nhắm, đi qua được; lũ không làm hư; áp mẫu mà vướng thì dỡ.
+   */
+  decor?: 'duong' | 'trangTri';
 }
 
 /** Dời công trình sang chỗ khác tốn chừng này phần giá dựng (làm tròn lên). Điện Vua Hùng không dời được. */
@@ -77,6 +94,38 @@ export const MOVE_FRACTION = 0.1;
 
 /** Điện Vua Hùng lên cấp 6 khi đã vào chương 2, cấp 7 khi đã vào chương 3, cấp 8 khi đã vào chương 4 (chỉ số là cấp đích). */
 export const DIEN_CHAPTER: Partial<Record<number, 2 | 3 | 4>> = { 6: 2, 7: 3, 8: 4 };
+
+/** Tổng số ô đường (cả bốn loại) được trải, theo cấp Điện. */
+export const ROAD_LIMIT = [60, 90, 120, 160, 200, 240, 280, 280];
+export const ROAD_TYPES: BuildingType[] = ['duongDat', 'duongSoi', 'duongDa', 'duongGach'];
+export const DECOR_TYPES: BuildingType[] = ['cayDa', 'gieng', 'ao', 'hoa', 'co', 'cau', 'rom'];
+
+/** Một ô đường: một cấp, dỡ được, giới hạn chung. */
+function road(type: BuildingType, cost: Cost, minDien: number): BuildingDef {
+  return { ...decorDef(type, 1, cost, ROAD_LIMIT, minDien), decor: 'duong' };
+}
+
+/** Một món trang trí móng `size`×`size`. */
+function decor(type: BuildingType, size: number, cost: Cost, limit: number[], minDien: number): BuildingDef {
+  return { ...decorDef(type, size, cost, limit, minDien), decor: 'trangTri' };
+}
+
+function decorDef(type: BuildingType, size: number, cost: Cost, limit: number[], minDien: number): BuildingDef {
+  return {
+    type,
+    w: size,
+    d: size,
+    maxLevel: 1,
+    buildCost: cost,
+    upgradeCost: [{}, {}],
+    production: [{}],
+    hp: [1],
+    limit,
+    minDien,
+    buildable: true,
+    removable: true,
+  };
+}
 
 export const BUILDINGS: Record<BuildingType, BuildingDef> = {
   dien: {
@@ -552,7 +601,25 @@ export const BUILDINGS: Record<BuildingType, BuildingDef> = {
     buildable: true,
     removable: false,
   },
+  // ---------- Đường đi ----------
+  // Trải từng ô như lũy. Bốn loại chung một giới hạn số ô (ROAD_LIMIT). Trải loại khác đè lên ô đường cũ thì đổi vật liệu.
+  duongDat: road('duongDat', { voOc: 2 }, 1),
+  duongSoi: road('duongSoi', { datDa: 3 }, 2),
+  duongDa: road('duongDa', { datDa: 6, voOc: 2 }, 3),
+  duongGach: { ...road('duongGach', { datDa: 8, voOc: 6 }, 1), unlock: 'chuong3' },
+  // ---------- Đồ trang trí ----------
+  cayDa: decor('cayDa', 2, { gao: 80, voOc: 60 }, [1, 1, 2, 2, 3, 3, 4, 4], 2),
+  gieng: decor('gieng', 1, { voOc: 20, datDa: 20 }, [1, 2, 2, 3, 3, 4, 5, 5], 2),
+  ao: decor('ao', 3, { gao: 60, voOc: 60 }, [1, 1, 1, 2, 2, 2, 3, 3], 2),
+  hoa: decor('hoa', 1, { voOc: 3 }, [10, 15, 20, 25, 30, 35, 40, 40], 1),
+  co: decor('co', 1, { voOc: 1 }, [20, 30, 40, 50, 60, 70, 80, 80], 1),
+  cau: decor('cau', 1, { gao: 10, voOc: 5 }, [4, 6, 8, 10, 12, 14, 16, 16], 1),
+  rom: decor('rom', 1, { gao: 8 }, [2, 4, 6, 8, 10, 12, 14, 14], 1),
 };
+
+/** Đường đi hay đồ trang trí: chỉ để nhìn, không chắn giặc, không sợ lũ. */
+export const isDecor = (type: BuildingType): boolean => BUILDINGS[type].decor !== undefined;
+export const isRoad = (type: BuildingType): boolean => BUILDINGS[type].decor === 'duong';
 
 // ---------- Doanh trại, tướng chỉ huy, bố trí quân ----------
 

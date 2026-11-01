@@ -156,6 +156,61 @@ export const vi = {
       icon: '🐘',
       desc: 'Nơi voi chiến ở, có quản tượng chăm. Luyện voi chiến ở đây. Cần doanh trại cấp 3.',
     },
+    duongDat: {
+      name: 'Đường đất nện',
+      icon: '🟤',
+      desc: 'Lối đất nện chặt cho dân đi lại. Chỉ để nhìn: giặc vẫn đi qua được, lũ không làm hư.',
+    },
+    duongSoi: {
+      name: 'Đường rải sỏi',
+      icon: '⚪',
+      desc: 'Lối rải sỏi cuội nhặt ven sông, mưa không lầy. Chỉ để nhìn.',
+    },
+    duongDa: {
+      name: 'Đường lát đá',
+      icon: '🔳',
+      desc: 'Lối lát đá phiến đẽo vuông, khít mạch. Chỉ để nhìn.',
+    },
+    duongGach: {
+      name: 'Đường lát gạch',
+      icon: '🧱',
+      desc: 'Lối lát gạch đất nung đỏ, nung cùng lò với ngói thành Cổ Loa. Chỉ để nhìn.',
+    },
+    cayDa: {
+      name: 'Cây đa',
+      icon: '🌳',
+      desc: 'Cây đa đầu làng tán rộng, rễ phụ buông xuống như rèm, gốc có am thờ nhỏ, chốn dân nghỉ chân. Chỉ để trang trí.',
+    },
+    gieng: {
+      name: 'Giếng nước',
+      icon: '🪣',
+      desc: 'Giếng làng thành xây đá ong, có gàu múc nước. Chỉ để trang trí.',
+    },
+    ao: {
+      name: 'Ao làng',
+      icon: '🪷',
+      desc: 'Ao làng thả sen, có cầu ao bằng gỗ cho dân giặt giũ. Chỉ để trang trí; lũ không làm hư.',
+    },
+    hoa: {
+      name: 'Khóm hoa',
+      icon: '🌺',
+      desc: 'Khóm hoa dâm bụt, hoa cúc, hoa mười giờ trồng ven lối đi. Chỉ để trang trí.',
+    },
+    co: {
+      name: 'Bãi cỏ',
+      icon: '🌱',
+      desc: 'Thảm cỏ xanh mướt điểm hoa dại. Chỉ để trang trí.',
+    },
+    cau: {
+      name: 'Cây cau',
+      icon: '🌴',
+      desc: 'Cây cau thân thẳng, buồng cau trĩu quả, trồng trước ngõ. Chỉ để trang trí.',
+    },
+    rom: {
+      name: 'Đống rơm',
+      icon: '🌾',
+      desc: 'Đống rơm vàng quấn quanh cây cột sau vụ gặt. Chỉ để trang trí.',
+    },
   } satisfies Record<BuildingType, { name: string; icon: string; desc: string }>,
 
   reasons: {
@@ -221,6 +276,7 @@ export const vi = {
     quaChoPhoBan: 'Mang quá số chỗ cho một trận phó bản',
     quaChoGiuThanh: 'Đã đủ chỗ giữ kinh đô theo cấp Điện',
     traiDay: 'Doanh trại này đã đủ chỗ, hãy nâng cấp',
+    khongPhaiTrangTri: 'Chỉ dọn được đường đi và đồ trang trí',
   } satisfies Record<FailReason, string>,
 
   quests: {
@@ -595,6 +651,16 @@ export const vi = {
     removeDike: 'Dỡ đê',
     placeHint: 'Chạm vào ô đất để chọn chỗ, rồi bấm Đặt',
     wallHint: 'Chạm vào từng ô đất để dựng lũy',
+    roadHint: 'Chạm vào từng ô để trải đường. Trải lên ô đường loại khác thì đổi vật liệu',
+    decorHint: 'Chạm vào từng ô đất để đặt',
+    clearHint: 'Chạm vào ô đường hay món trang trí để dọn đi',
+    cleared: (name: string) => `Đã dọn ${name}`,
+    buildGroups: { congTrinh: 'Công trình', duong: 'Đường đi', trangTri: 'Trang trí' },
+    roadCount: (have: number, max: number) => `Cả 4 loại đường: ${have}/${max} ô`,
+    clearDecor: 'Dọn trang trí',
+    clearDecorDesc: 'chạm ô để dọn đường, đồ trang trí',
+    removeDecor: 'Dọn đi',
+    decorOnly: 'Chỉ để nhìn: giặc không nhắm phá, đi qua được; lũ không làm hư.',
     placed: (name: string) => `Đã dựng ${name}`,
     upgraded: (name: string, n: number) => `${name} lên cấp ${n}`,
     landExpanded: 'Đã phát rừng, bờ cõi mở rộng!',
@@ -849,24 +915,24 @@ export const vi = {
     rotate: 'Xoay cảnh 90°',
     mauTitle: 'Mẫu kinh đô',
     mauCard: 'Xếp kinh đô theo mẫu',
-    mauHint: 'Mỗi chương mở một mẫu. Áp mẫu thì mọi công trình được dời vào chỗ trong mẫu (mỗi cái mất 10% giá dựng), phần mẫu có mà mình chưa có được dựng thêm (trong giới hạn theo cấp Điện), đoạn lũy, đê, thành, bẫy thừa bị dỡ. Phải đủ tài nguyên mới áp được.',
+    mauHint: 'Mỗi chương mở một mẫu. Mẫu giãn theo đất đã khai phá: nâng Điện, đất rộng ra thì áp lại để lũy, đê, thành ra tới bìa đất mới và công trình mới có chỗ. Áp mẫu thì mọi công trình được dời vào chỗ trong mẫu (mỗi cái mất 10% giá dựng), phần mẫu có mà mình chưa có được dựng thêm (trong giới hạn theo cấp Điện), đoạn lũy, đê, thành, bẫy thừa bị dỡ. Phải đủ tài nguyên mới áp được.',
     mau: {
       phongChau: {
         icon: '🏯',
         name: 'Kinh đô Phong Châu',
-        desc: 'Ruộng quanh Điện, nhà sàn và kho sát Điện, bãi đá trên đồi, lũy tre bao hai mặt rừng, bẫy chông trước lũy.',
+        desc: 'Bến và ruộng dọc sông; đền, doanh trại, trại giáo trên trục từ Điện về góc rừng; nhà sàn, kho quanh Điện; bãi đá trên đồi; lũy tre bao hai mặt rừng, bẫy chông trước lũy.',
         lock: '',
       },
       deBao: {
         icon: '🌊',
         name: 'Đê bao chống lũ',
-        desc: 'Đê liền dải dọc hai bờ sông, bến nằm ngoài đê, chòi canh sát đê; ruộng, đền và ruộng nếp trong đê.',
+        desc: 'Đê liền dải dọc hai bờ sông tới bìa đất, bến nằm ngoài đê, chòi canh sát đê; doanh trại ở góc đê gần ngã ba sông; ruộng, đền và ruộng nếp trong đê.',
         lock: 'Mở khi vào chương 2: Sơn Tinh, Thủy Tinh.',
       },
       coLoa: {
         icon: '🐚',
         name: 'Thành Cổ Loa',
-        desc: 'Ba vòng thành kín quanh Điện; nhà sàn, kho, lò rèn giữa các vòng; ruộng, đền, doanh trại ngoài vòng ngoài; đê bao ngoài cùng.',
+        desc: 'Ba vòng thành kín quanh Điện, vòng ngoài nới ra theo đất; nhà sàn, kho, lò rèn, bếp giữa các vòng; ruộng, đền, doanh trại ngoài vòng ngoài; đê bao ngoài cùng.',
         lock: 'Mở khi vào chương 3: An Dương Vương.',
       },
     },

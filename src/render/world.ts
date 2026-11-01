@@ -2,13 +2,13 @@
 // đêm yêu tinh, cảnh Tết (cây nêu, dây cờ, mâm bánh, người gói bánh) và các hiệu ứng khi đặt công trình.
 
 import * as THREE from 'three';
-import { BUILDINGS, FIELD, type BuildingType, type Terrain, type TuongId } from '../game/defs';
+import { BUILDINGS, FIELD, isRoad, type BuildingType, type Terrain, type TuongId } from '../game/defs';
 import { raidSpawnBand, type Battle, type RaidSide } from '../game/battle';
 import { advLook, inChapter3, ruaVangCame, type AdvLook } from '../game/coLoa';
 import { heroPost } from '../game/doanhTrai';
 import { buildingAt, dienLevel, type Building, type GameState } from '../game/game';
 import { giongLook, type GiongLook } from '../game/giong';
-import { DIEN_HOME, FOREST_BAND, GRID, RIVER_START, areaStart, baseHeights, isUnlocked } from '../game/map';
+import { DIEN_HOME, FAR_BANK, FOREST_BAND, GRID, RIVER_START, areaStart, baseHeights, isUnlocked } from '../game/map';
 import { sonLook, type SonLook } from '../game/son';
 import { floodMap } from '../game/terrain';
 import { tetOpen } from '../game/tet';
@@ -18,6 +18,7 @@ import { IsoCamera } from './camera';
 import {
   banhChung,
   banhGiay,
+  benBoats,
   buildingModel,
   dienFloor,
   dienScale,
@@ -26,6 +27,7 @@ import {
   footScale,
 } from './buildings';
 import { makeRuaVang } from './beasts';
+import { buildDecor, disposeDecor, isBatchedDecor, type DecorSpot } from './decor';
 import { makeAnDuong, makeGiong, makeSonTinh } from './heroes';
 import { addSunLights, type SunLights } from './lights';
 import {
@@ -34,7 +36,6 @@ import {
   buildForest,
   buildWalls,
   makeBoat,
-  makeTradeBoat,
   type CitadelSpot,
   type DikeSpot,
   type TreeSpot,
@@ -47,6 +48,12 @@ import { ShapeBuilder, seeded } from './shapes';
 import { ToonModel, inkThin, outlineOf, toon } from './toon';
 
 const HALF = GRID / 2;
+/** Mép bờ bên kia (tọa độ thế giới): sông vẽ rộng hơn sông trong lưới, xem `FAR_BANK`. */
+const FAR = FAR_BANK - HALF;
+/** Luồng thuyền qua lại: sát bờ bên kia, ngoài tầm cầu tàu và thuyền neo ở bến. */
+const BOAT_LANE = FAR - 0.9;
+/** Số gợn sóng trên mặt sông: chừng 20 gợn mỗi ô bề rộng sông. */
+const RIPPLES = 20 * (FAR_BANK - RIVER_START);
 /** Mặt nước nằm thấp hơn mặt đất. */
 const WATER_Y = -0.28;
 /** Mỗi bậc đất cao chừng này (đơn vị thế giới). Mặt ô bậc h nằm ở h * LEVEL_H. */
@@ -265,7 +272,9 @@ export class World {
   private walls?: THREE.Object3D;
   private dikes?: THREE.Object3D;
   private citadel?: THREE.Object3D;
-  private readonly ripples = new InstancedBoxes(60);
+  /** Đường đi và đồ trang trí một ô, vẽ theo lô. */
+  private decor?: THREE.Object3D;
+  private readonly ripples = new InstancedBoxes(RIPPLES);
   private readonly buildingsRoot = new THREE.Group();
   private readonly views = new Map<number, BuildingView>();
   private readonly boats: { obj: THREE.Object3D; axis: 'x' | 'z'; speed: number; pos: number }[] = [];
@@ -298,6 +307,7 @@ export class World {
   private wallKey = '';
   private dikeKey = '';
   private citadelKey = '';
+  private decorKey = '';
   private time = 0;
   private res: Resolution = 'medium';
 
@@ -389,12 +399,12 @@ export class World {
     for (let x = 0; x < RIVER_START; x++) strip(1, far, edge[x], wx(x) + 0.5, wz(0) - far / 2, x);
     for (let z = 0; z < RIVER_START; z++) strip(far, 1, edge[z * GRID], wx(0) - far / 2, wz(z) + 0.5, z + 1);
     strip(far, far, edge[0], wx(0) - far / 2, wz(0) - far / 2, 0);
-    // Bờ bên kia sông Thao (phía đông) và sông Đà (phía nam).
-    land.box(far - HALF, 1, 2 * far, C.grassLocked[1], (HALF + far) / 2, -0.52, 0);
-    land.box(far + river, 1, far - HALF, C.grassLocked[2], (river - far) / 2, -0.52, (HALF + far) / 2);
+    // Bờ bên kia sông Thao (phía đông) và sông Đà (phía nam), lùi ra ngoài lưới cho sông rộng (`FAR_BANK`).
+    land.box(far - FAR, 1, 2 * far, C.grassLocked[1], (FAR + far) / 2, -0.52, 0);
+    land.box(far + river, 1, far - FAR, C.grassLocked[2], (river - far) / 2, -0.52, (FAR + far) / 2);
     const water = new ShapeBuilder();
-    water.box(HALF - river, 1, 2 * far, C.water[0], (river + HALF) / 2, WATER_Y - 0.5, 0);
-    water.box(far + river, 1, HALF - river, C.water[1], (river - far) / 2, WATER_Y - 0.5, (river + HALF) / 2);
+    water.box(FAR - river, 1, 2 * far, C.water[0], (river + FAR) / 2, WATER_Y - 0.5, 0);
+    water.box(far + river, 1, FAR - river, C.water[1], (river - far) / 2, WATER_Y - 0.5, (river + FAR) / 2);
     const landMesh = land.mesh(groundMaterial);
     landMesh.castShadow = false;
     const waterMesh = water.mesh(groundMaterial);
@@ -402,8 +412,8 @@ export class World {
     this.riverWater = waterMesh;
     // Bờ bên kia sông Thao và sông Đà: mặt nước lũ phẳng phủ kín, chỉ cây cối nhô lên.
     const flood = new ShapeBuilder();
-    flood.box(far - HALF, 0.1, 2 * far, C.flood, (HALF + far) / 2, -0.05, 0);
-    flood.box(far + river, 0.1, far - HALF, C.flood, (river - far) / 2, -0.05, (HALF + far) / 2);
+    flood.box(far - FAR, 0.1, 2 * far, C.flood, (FAR + far) / 2, -0.05, 0);
+    flood.box(far + river, 0.1, far - FAR, C.flood, (river - far) / 2, -0.05, (FAR + far) / 2);
     const floodMesh = flood.mesh(new THREE.MeshLambertMaterial({ vertexColors: true, transparent: true, opacity: 0.88 }));
     floodMesh.castShadow = false;
     floodMesh.visible = false;
@@ -416,12 +426,13 @@ export class World {
   private outerForestSpots(edge: number[]): TreeSpot[] {
     const spots: TreeSpot[] = [];
     const rand = seeded(7);
-    for (let x = -10; x < GRID + 8; x++) {
-      for (let z = -10; z < GRID + 8; z++) {
+    for (let x = -10; x < FAR_BANK + 8; x++) {
+      for (let z = -10; z < FAR_BANK + 8; z++) {
         const insideGrid = x >= 0 && z >= 0 && x < GRID && z < GRID;
-        const inRiver = (x >= RIVER_START && x < GRID) || (z >= RIVER_START && z < GRID);
+        // Sông Thao chảy suốt dọc cạnh đông; sông Đà chảy tới chỗ hợp lưu, bên đông nữa là bờ bên kia sông Thao.
+        const inRiver = (x >= RIVER_START && x < FAR_BANK) || (z >= RIVER_START && z < FAR_BANK && x < RIVER_START);
         if (insideGrid || inRiver) continue;
-        const farBank = x >= GRID || z >= GRID;
+        const farBank = x >= FAR_BANK || z >= FAR_BANK;
         if (rand() > (farBank ? 0.25 : 0.6) * FOREST_DENSITY) continue;
         const cx = wx(x) + 0.5 + (rand() - 0.5) * 0.4;
         const cz = wz(z) + 0.5 + (rand() - 0.5) * 0.4;
@@ -435,7 +446,6 @@ export class World {
   }
 
   private addBoats(): void {
-    const river = RIVER_START - HALF + 1.5;
     const routes: { axis: 'x' | 'z'; speed: number; pos: number }[] = [
       { axis: 'z', speed: 1.1, pos: -30 },
       { axis: 'z', speed: 0.8, pos: 5 },
@@ -445,10 +455,10 @@ export class World {
       const obj = makeBoat();
       obj.position.y = WATER_Y - 0.02;
       if (r.axis === 'z') {
-        obj.position.x = river;
+        obj.position.x = BOAT_LANE;
         obj.rotation.y = -Math.PI / 2;
       } else {
-        obj.position.z = river;
+        obj.position.z = BOAT_LANE;
       }
       this.scene.add(obj);
       this.boats.push({ obj, ...r });
@@ -524,11 +534,11 @@ export class World {
 
   private initRipples(): void {
     const rand = seeded(11);
-    for (let i = 0; i < 60; i++) {
+    for (let i = 0; i < RIPPLES; i++) {
       this.rippleState.push({
         axis: i % 2 ? 'x' : 'z',
         pos: -40 + rand() * 60,
-        lane: RIVER_START - HALF + 0.3 + rand() * 2.4,
+        lane: RIVER_START - HALF + 0.3 + rand() * (FAR_BANK - RIVER_START - 0.6),
         len: 0.4 + rand() * 0.6,
       });
     }
@@ -557,9 +567,11 @@ export class World {
   resetAll(): void {
     for (const v of this.views.values()) this.buildingsRoot.remove(v.group);
     this.views.clear();
-    this.wallKey = '';
-    this.dikeKey = '';
-    this.citadelKey = '';
+    // Khóa không trùng với khóa nào (kể cả khóa rỗng khi không còn đoạn nào): lần vẽ sau gỡ lô cũ, vẽ lại từ đầu.
+    this.wallKey = '#';
+    this.dikeKey = '#';
+    this.citadelKey = '#';
+    this.decorKey = '#';
     this.floodKey = '';
     this.heights = [];
     this.shownLevel = 0;
@@ -615,7 +627,7 @@ export class World {
 
     const alive = new Set<number>();
     for (const b of state.buildings) {
-      if (b.type === 'luy' || b.type === 'de' || b.type === 'thanh') continue;
+      if (b.type === 'luy' || b.type === 'de' || b.type === 'thanh' || isBatchedDecor(b.type)) continue;
       alive.add(b.id);
       const v = this.views.get(b.id);
       if (!v || v.type !== b.type || v.level !== b.level || v.damaged !== !!b.damaged || v.workers !== b.workers || v.x !== b.x || v.z !== b.z) this.createView(b);
@@ -682,7 +694,35 @@ export class World {
       this.citadel = buildCitadel(spots);
       this.scene.add(this.citadel);
     }
+    this.syncDecor(state);
     this.syncFlood(state);
+  }
+
+  /**
+   * Đường đi và đồ trang trí một ô: vẽ lại cả lô khi có ô thêm, bớt, đổi loại hay đổi bậc đất. Mép ô đường không giáp
+   * ô cùng loại thì có viền.
+   */
+  private syncDecor(state: GameState): void {
+    const small = state.buildings.filter((b) => isBatchedDecor(b.type));
+    const key = small.map((b) => `${b.id}:${b.type}:${b.x}:${b.z}:${this.heights[b.z * GRID + b.x]}`).join(',');
+    if (key === this.decorKey) return;
+    this.decorKey = key;
+    if (this.decor) {
+      this.scene.remove(this.decor);
+      disposeDecor(this.decor);
+    }
+    const roadAt = new Map<number, BuildingType>();
+    for (const b of small) if (isRoad(b.type)) roadAt.set(b.z * GRID + b.x, b.type);
+    const spots: DecorSpot[] = small.map((b) => {
+      const spot: DecorSpot = { type: b.type, x: wx(b.x) + 0.5, y: this.groundY(b.x, b.z), z: wz(b.z) + 0.5, seed: b.x * 92821 + b.z * 68917 };
+      if (isRoad(b.type)) {
+        const same = (dx: number, dz: number) => roadAt.get((b.z + dz) * GRID + b.x + dx) === b.type;
+        spot.open = [!same(0, 1), !same(0, -1), !same(1, 0), !same(-1, 0)];
+      }
+      return spot;
+    });
+    this.decor = buildDecor(spots);
+    this.scene.add(this.decor);
   }
 
   /** Gọi mỗi khung hình: nước lũ dâng, rút mượt theo state mà không phải dựng lại cả cảnh. */
@@ -797,26 +837,10 @@ export class World {
     if (b.type === 'ben') {
       // Thuyền là con của bến, bến to theo cấp: chia cho cỡ bến để thuyền vẫn nổi đúng mặt nước.
       const waterY = (WATER_Y - 0.02 - topY(ground)) / group.scale.y;
-      const boat = makeBoat();
-      boat.position.set(-0.15 * spread, waterY, 1.75 * spread);
-      boat.userData.dock = waterY;
-      group.add(boat);
-      if (b.level >= 6) {
-        // Bến cấp 6 trở lên có thuyền buôn lớn neo cạnh cầu tàu.
-        const trader = makeTradeBoat();
-        trader.position.set(1.35 * spread, waterY, 2.5 * spread);
-        trader.rotation.y = Math.PI / 2;
-        trader.userData.dock = waterY;
-        group.add(trader);
-      }
-      if (b.level >= 8) {
-        // Bến cấp 8: thuyền buôn thứ hai neo phía bên kia cầu tàu.
-        const trader = makeTradeBoat();
-        trader.position.set(-1.0 * spread, waterY, 3.3 * spread);
-        trader.rotation.y = -Math.PI / 2;
-        trader.scale.setScalar(0.85);
-        trader.userData.dock = waterY;
-        group.add(trader);
+      for (const boat of benBoats(b.level, spread)) {
+        boat.position.y = waterY;
+        boat.userData.dock = waterY;
+        group.add(boat);
       }
     }
     if (b.damaged) {
@@ -1515,8 +1539,8 @@ export class World {
       boat.pos += boat.speed * dt;
       if (boat.pos > 45) boat.pos = -45;
       if (boat.axis === 'z') boat.obj.position.z = boat.pos;
-      else boat.obj.position.x = Math.min(boat.pos, RIVER_START - HALF + 0.5);
-      if (boat.axis === 'x' && boat.pos > RIVER_START - HALF) boat.pos = -45;
+      else boat.obj.position.x = Math.min(boat.pos, BOAT_LANE);
+      if (boat.axis === 'x' && boat.pos > BOAT_LANE) boat.pos = -45;
       boat.obj.position.y = WATER_Y - 0.02 + Math.sin(t * 1.4 + boat.speed * 10) * 0.03;
       (boat.obj.userData.pose as Poser | undefined)?.({ act: 'walk', phase: t * 3 + boat.speed * 10 });
     }
