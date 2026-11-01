@@ -5,6 +5,7 @@ import * as THREE from 'three';
 import type { Battle, FighterKind } from '../game/battle';
 import { FIRE, HILL, RALLY_BEAT, ROCKS, SKILLS, TT_WAVE, type UnitType } from '../game/defs';
 import { isBeast, makeBeast, makeRuaVang } from './beasts';
+import { isMonster, makeMonster } from './monsters';
 import { BOW_POSE, WEAPON_REST, makeAnDuong, makeFighter, makeGiong, makeMountain, makeSonTinh } from './models';
 import { C } from './palette';
 import type { Poser } from './rig';
@@ -523,7 +524,9 @@ export class BattleView {
                   ? makeSoldier(f.kind, f.side === 'ta' ? (battle.arms?.[f.kind as UnitType] ?? 0) : 0)
                   : isBeast(f.kind)
                     ? makeBeast(f.kind, f.side === 'ta' ? (battle.arms?.[f.kind as UnitType] ?? 0) : 0)
-                    : makeFighter(f.kind, f.side === 'ta' ? (battle.arms?.[f.kind as UnitType] ?? 0) : 0);
+                    : isMonster(f.kind)
+                      ? makeMonster(f.kind)
+                      : makeFighter(f.kind, f.side === 'ta' ? (battle.arms?.[f.kind as UnitType] ?? 0) : 0);
         obj.scale.setScalar((SCALE[f.kind] ?? 0.8) * this.scale);
         this.root.add(obj);
         view = { obj, deadAge: 0, rise: 0, weapon: obj.children.find((c) => c.userData.weapon), smash: 0, volley: 0, pose: obj.userData.pose };
@@ -539,10 +542,10 @@ export class BattleView {
       this.syncShell(view, f.side === 'ta' && f.state !== 'dead' && battle.shield > 0 && !battle.outcome);
       if (f.state === 'dead') {
         view.deadAge += dt;
-        // Người ngã ngửa; thú lăn nghiêng.
+        // Người ngã ngửa; thú lăn nghiêng; ma trơi không ngả, chỉ tắt dần (theo tư thế ngã).
         const fall = Math.min(view.deadAge * 4, Math.PI / 2);
         if (obj.userData.fall === 'side') obj.rotation.z = -fall;
-        else obj.rotation.x = -fall;
+        else if (obj.userData.fall !== 'none') obj.rotation.x = -fall;
         obj.position.y = base + (view.deadAge > 1.2 ? -(view.deadAge - 1.2) * 0.6 : 0);
         view.pose?.({ act: 'dead', fall: Math.min(view.deadAge * 3, 1) });
         if (view.deadAge > 2.5) obj.visible = false;

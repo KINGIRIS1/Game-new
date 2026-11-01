@@ -6,6 +6,7 @@ import { addSunLights } from '../src/render/lights';
 import { C } from '../src/render/palette';
 import type { Act, Poser } from '../src/render/rig';
 import { makeBeast, makeRuaVang } from '../src/render/beasts';
+import { makeMonster } from '../src/render/monsters';
 import { makeSoldier } from '../src/render/soldier';
 
 interface Entry {
@@ -52,6 +53,14 @@ export const NHOM: Record<string, Entry[]> = {
     { ten: 'Gà trắng', tao: () => makeBeast('gaTrang'), co: 1.3, cach: 1.3 },
     { ten: 'Rùa Vàng', tao: () => makeRuaVang(), co: 0.9, cach: 1.7 },
   ],
+  quai: [
+    { ten: 'Tôm binh', tao: () => makeMonster('tomBinh'), co: 0.9 },
+    { ten: 'Cá phun nước', tao: () => makeMonster('caPhun') },
+    { ten: 'Cá sấu', tao: () => makeMonster('caSau'), co: 0.9, cach: 1.3 },
+    { ten: 'Thuồng luồng', tao: () => makeMonster('thuongLuong'), co: 1.2, cach: 1.2 },
+    { ten: 'Quỷ núi', tao: () => makeMonster('quyNui'), co: 1.0, cach: 0.9 },
+    { ten: 'Ma trơi', tao: () => makeMonster('maTroi') },
+  ],
 };
 
 const AZ = Math.PI / 4;
@@ -91,7 +100,7 @@ export function chup(nhom: string, huong = -0.6): { ten: string; anh: string }[]
       // Ngã: phần vẽ trận ngả cả người ra sau.
       if (act.act === 'dead') {
         if (g.userData.fall === 'side') g.rotation.z = -(act.fall ?? 1) * 1.2;
-        else g.rotation.x = -(act.fall ?? 1) * 1.2;
+        else if (g.userData.fall !== 'none') g.rotation.x = -(act.fall ?? 1) * 1.2;
       }
       scene.add(g);
     });

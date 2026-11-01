@@ -210,12 +210,15 @@ export function fallPose(b: Human, f: number): void {
   b.head.rotation.x = -0.3 * f;
 }
 
-/** Đặt đồ cầm tay vào hai bàn tay. Gọi sau khi đã xoay cánh tay. */
-export function gripHands(b: Human): void {
+const tmpHand = new THREE.Vector3();
+
+/** Đặt đồ cầm tay vào hai bàn tay. Gọi sau khi đã xoay cánh tay. `arm`: dài cánh tay, nếu khác thân người thường. */
+export function gripHands(b: Human, arm?: number): void {
+  const hand = arm === undefined ? HAND : tmpHand.set(0, -arm, 0);
   b.armR.updateMatrix();
-  b.hand.position.copy(HAND).applyMatrix4(b.armR.matrix);
+  b.hand.position.copy(hand).applyMatrix4(b.armR.matrix);
   b.armL.updateMatrix();
-  b.handL.position.copy(HAND).applyMatrix4(b.armL.matrix);
+  b.handL.position.copy(hand).applyMatrix4(b.armL.matrix);
 }
 
 /** Giấu đồ cầm tay (vd. mũi tên đã bắn đi) bằng cách thu xương về gần như không. */

@@ -5,6 +5,7 @@ import * as THREE from 'three';
 import type { FighterKind } from '../game/battle';
 import type { GiongLook } from '../game/giong';
 import { bakeBeast, isBeast } from './beasts';
+import { bakeMonster, isMonster } from './monsters';
 import { C } from './palette';
 import { ShapeBuilder, instanceTemplates, seeded, type Placement } from './shapes';
 import { bakeSoldier, isSoldier } from './soldier';
@@ -62,7 +63,7 @@ export function makePerson(kind: PersonKind): THREE.Object3D {
 /**
  * Lính trong trận. Lính đi bộ (quân ta, giặc Ân, quân Triệu; soldier.ts), thú và người cưỡi (voi chiến, chiến xa,
  * kỵ binh, Triệu Đà, hổ tinh, gà trắng; beasts.ts) có khung xương: ở đây trả về bản tĩnh đứng nghỉ.
- * Còn lại: thủy quái, quỷ núi, ma trơi.
+ * Thủy quái, quỷ núi, ma trơi cũng có khung xương (monsters.ts). Còn lại: các tướng.
  * `tier`: bậc binh khí đã rèn ở lò rèn (0–2) của giáo binh, cung thủ, voi chiến:
  * - giáo binh: bậc 1 đầu giáo sắt, bậc 2 thêm tua đỏ và khiên viền sắt (soldier.ts);
  * - cung thủ: bậc 1 mũi tên sắt trong bao tên da, bậc 2 cung sừng và bao tên đồng (soldier.ts);
@@ -74,9 +75,9 @@ export function makeFighter(kind: FighterKind, tier = 0): THREE.Group {
   if (kind === 'anDuong') return makeAnDuong({ crossbow: true });
   if (isSoldier(kind)) return bakeSoldier(kind, tier);
   if (isBeast(kind)) return bakeBeast(kind, tier);
-  const foe = makeWaterFoe(kind) ?? makeChapter3Foe(kind);
-  if (!foe) throw new Error(`Chưa có hình cho ${kind}`);
-  return foe;
+  if (isMonster(kind)) return bakeMonster(kind);
+  if (kind === 'thuyTinh') return makeThuyTinh();
+  throw new Error(`Chưa có hình cho ${kind}`);
 }
 
 /** Thuyền buôn lớn: thân thuyền trống đồng dài hơn, cột buồm, buồm cói, khoang chở hàng. Dài theo trục x. */
@@ -398,110 +399,7 @@ export function makeGiong(look: GiongLook, opts: { bamboo?: boolean; glow?: bool
   return g;
 }
 
-// ---------- Chương 2: thủy quái của Thủy Tinh ----------
-
-/** Tôm binh: thân tôm cong đứng thẳng, đầu có gai nhọn, râu dài, cầm giáo đồng. */
-function shrimp(m: ToonModel): void {
-  const p = m.plain;
-  // Đuôi cong ra sau làm chân đứng, xòe quạt đuôi.
-  for (let i = 0; i < 4; i++) {
-    const r = 0.15 - i * 0.012;
-    p.sphere(r, i % 2 ? C.shrimpLight : C.shrimp, 0, 0.12 + i * 0.17, -0.18 + i * 0.07, [1, 0.75, 1], 8);
-  }
-  for (const s of [-1, 0, 1]) p.box(0.1, 0.02, 0.22, C.shrimpLight, s * 0.09, 0.03, -0.3, [0, s * 0.4, 0]);
-  // Ngực và đầu.
-  p.sphere(0.2, C.shrimp, 0, 0.78, 0.04, [0.9, 1.1, 1], 10);
-  p.cone(0.05, 0.3, C.shrimpLight, 0, 0.92, 0.27, [1.25, 0, 0], 5);
-  for (const s of [-1, 1]) {
-    p.cyl(0.015, 0.015, 0.12, C.ink, s * 0.1, 0.96, 0.14, [0, 0, s * 0.5], 4);
-    p.sphere(0.045, C.ink, s * 0.14, 1.02, 0.14, [1, 1, 1], 6);
-    // Râu dài vắt ra sau.
-    p.cyl(0.01, 0.012, 0.9, C.shrimp, s * 0.12, 1.25, -0.1, [-0.6, 0, s * 0.35], 4);
-  }
-  for (let i = 0; i < 3; i++) for (const s of [-1, 1]) p.cyl(0.012, 0.012, 0.22, C.shrimpLight, s * 0.12, 0.58 - i * 0.08, 0.1, [0.4, 0, s * 0.6], 4);
-  for (const s of [-1, 1]) p.cyl(0.03, 0.03, 0.26, C.shrimp, s * 0.17, 0.68, 0.12, [0.9, 0, s * 0.35], 5);
-  p.cyl(0.018, 0.018, 1.15, C.woodDark, 0.24, 0.62, 0.12, undefined, 5);
-  p.cone(0.05, 0.2, C.bronze, 0.24, 1.27, 0.12, undefined, 4);
-}
-
-/** Cá phun nước: con cá đứng trên đuôi, miệng tròn há to, vây xòe. */
-function spitFish(m: ToonModel): void {
-  const p = m.plain;
-  p.sphere(0.3, C.fish, 0, 0.62, 0, [0.62, 1, 0.55], 12);
-  p.sphere(0.24, C.fishBelly, 0, 0.58, 0.07, [0.5, 0.85, 0.45], 10);
-  // Đuôi làm chân đứng.
-  for (const s of [-1, 1]) p.box(0.22, 0.05, 0.16, C.fish, s * 0.12, 0.08, -0.02, [0, 0, s * 0.5]);
-  p.cyl(0.07, 0.1, 0.22, C.fish, 0, 0.2, 0, undefined, 8);
-  // Vây lưng, vây ngực.
-  p.box(0.04, 0.34, 0.24, C.red, 0, 0.82, -0.17, [0.3, 0, 0]);
-  for (const s of [-1, 1]) p.box(0.2, 0.04, 0.14, C.red, s * 0.2, 0.55, 0.05, [0, 0, s * 0.6]);
-  // Mắt lồi và miệng tròn há to.
-  for (const s of [-1, 1]) {
-    p.sphere(0.07, C.cream, s * 0.12, 0.88, 0.12, [1, 1, 1], 8);
-    p.sphere(0.035, C.ink, s * 0.13, 0.89, 0.18, [1, 1, 1], 6);
-  }
-  p.cyl(0.08, 0.06, 0.08, C.fishBelly, 0, 0.72, 0.17, [Math.PI / 2, 0, 0], 10);
-  p.cyl(0.05, 0.05, 0.09, C.ink, 0, 0.72, 0.19, [Math.PI / 2, 0, 0], 10);
-}
-
-/** Cá sấu: mình dài sát đất, mõm dài răng trắng, lưng có vảy gai, đuôi vuốt dài. */
-function crocodile(m: ToonModel): void {
-  const p = m.plain;
-  p.sphere(0.32, C.croc, 0, 0.3, 0, [0.85, 0.6, 1.5], 12);
-  p.sphere(0.26, C.crocBelly, 0, 0.22, 0.04, [0.75, 0.35, 1.3], 10);
-  p.box(0.3, 0.16, 0.6, C.croc, 0, 0.32, 0.68);
-  p.box(0.26, 0.08, 0.56, C.crocBelly, 0, 0.22, 0.7);
-  for (let i = 0; i < 5; i++) for (const s of [-1, 1]) p.cone(0.025, 0.08, C.cream, s * 0.12, 0.2, 0.48 + i * 0.1, [Math.PI, 0, 0], 4);
-  for (const s of [-1, 1]) {
-    p.sphere(0.07, C.croc, s * 0.11, 0.44, 0.42, [1, 1, 1], 8);
-    p.sphere(0.035, C.ember, s * 0.12, 0.47, 0.46, [1, 1, 1], 6);
-  }
-  p.cone(0.16, 1.0, C.croc, 0, 0.25, -0.85, [-Math.PI / 2, 0, 0], 8);
-  for (let i = 0; i < 6; i++) p.box(0.06, 0.08, 0.06, C.serpent, 0, 0.5 - i * 0.03, 0.3 - i * 0.22);
-  for (const x of [-0.25, 0.25]) for (const z of [-0.25, 0.3]) p.cyl(0.06, 0.07, 0.2, C.croc, x, 0.1, z, [0, 0, x > 0 ? -0.5 : 0.5], 6);
-}
-
-/** Thuồng luồng: mình rắn uốn khúc ngóc đầu cao, râu dài, sừng đồng, vây lưng đỏ. */
-function serpent(m: ToonModel): void {
-  const p = m.plain;
-  const body: [number, number, number, number][] = [
-    [0, 0.18, -0.9, 0.2],
-    [0.25, 0.22, -0.55, 0.23],
-    [0.1, 0.3, -0.15, 0.25],
-    [-0.15, 0.5, 0.1, 0.25],
-    [-0.05, 0.85, 0.2, 0.24],
-    [0.05, 1.2, 0.25, 0.22],
-  ];
-  body.forEach(([x, y, z, r], i) => {
-    p.sphere(r, C.serpent, x, y, z, [1, 0.9, 1], 10);
-    p.sphere(r * 0.75, C.serpentBelly, x, y - r * 0.15, z + r * 0.4, [1, 0.8, 0.6], 8);
-    p.cone(0.06, 0.22, C.red, x, y + r + 0.05, z - 0.05, [-0.4, 0, 0], 4);
-    if (i === 0) p.cone(0.12, 0.5, C.serpent, x - 0.1, 0.12, z - 0.35, [-Math.PI / 2 - 0.2, 0, 0], 6);
-  });
-  // Đầu.
-  p.box(0.34, 0.24, 0.42, C.serpent, 0.05, 1.42, 0.42);
-  p.box(0.28, 0.08, 0.3, C.serpentBelly, 0.05, 1.3, 0.5);
-  for (const s of [-1, 1]) {
-    p.sphere(0.05, C.ember, 0.05 + s * 0.12, 1.5, 0.6, [1, 1, 0.6], 6);
-    p.cone(0.04, 0.3, C.bronzeLight, 0.05 + s * 0.1, 1.68, 0.3, [-0.6, 0, s * 0.3], 5);
-    p.cyl(0.012, 0.012, 0.6, C.cream, 0.05 + s * 0.16, 1.32, 0.78, [1.1, 0, s * 0.6], 4);
-  }
-}
-
-/**
- * Lính trong trận của chương 2: tôm binh, cá phun nước, cá sấu, thuồng luồng và Thủy Tinh.
- * Trả về null nếu không phải thủy quái.
- */
-export function makeWaterFoe(kind: FighterKind): THREE.Group | null {
-  if (kind === 'thuyTinh') return makeThuyTinh();
-  const m = new ToonModel(inkThin);
-  if (kind === 'tomBinh') shrimp(m);
-  else if (kind === 'caPhun') spitFish(m);
-  else if (kind === 'caSau') crocodile(m);
-  else if (kind === 'thuongLuong') serpent(m);
-  else return null;
-  return m.group();
-}
+// ---------- Chương 2: Thủy Tinh ----------
 
 /** Thủy Tinh, chúa miền nước thẳm: áo xanh biển, mũ đồng vây cá, cầm đinh ba, đứng trên ngọn sóng bạc đầu. */
 export function makeThuyTinh(): THREE.Group {
@@ -819,53 +717,6 @@ export function makeAnDuong(opts: { crossbow?: boolean; glow?: boolean } = {}): 
     g.add(ring);
   }
   return g;
-}
-
-// ---------- Chương 3: yêu tinh núi Thất Diệu ----------
-
-/** Quỷ núi: da xám xanh, đầu to có sừng, nanh trắng, khố da, vác chày đá. */
-function mountainDemon(m: ToonModel): void {
-  const p = m.plain;
-  for (const x of [-0.1, 0.1]) p.cyl(0.07, 0.08, 0.3, C.demonDark, x, 0.15, 0, undefined, 6);
-  p.sphere(0.27, C.demon, 0, 0.55, 0, [1, 0.95, 0.85], 10);
-  p.cyl(0.25, 0.28, 0.14, C.earthDark, 0, 0.38, 0, undefined, 10);
-  for (let i = 0; i < 4; i++) p.cone(0.06, 0.14, C.earthDark, -0.18 + i * 0.12, 0.27, 0.2, [Math.PI, 0, 0], 4);
-  for (const s of [-1, 1]) p.cyl(0.06, 0.07, 0.36, C.demon, s * 0.3, 0.52, 0.04, [0.3, 0, s * 0.5], 6);
-  p.sphere(0.25, C.demon, 0, 0.92, 0.04, [1.05, 0.95, 0.95], 12);
-  for (const s of [-1, 1]) {
-    p.cone(0.06, 0.26, C.cream, s * 0.16, 1.15, 0, [0, 0, -s * 0.45], 5);
-    p.sphere(0.05, C.ember, s * 0.09, 0.96, 0.22, [1, 0.8, 0.6], 6);
-    p.cone(0.025, 0.08, C.cream, s * 0.06, 0.8, 0.24, [Math.PI, 0, 0], 4);
-  }
-  p.box(0.12, 0.025, 0.02, C.ink, 0, 1.03, 0.25);
-  // Chày đá: cán gỗ, đầu đá to.
-  p.cyl(0.03, 0.035, 0.8, C.woodDark, 0.34, 0.75, 0.12, [0.15, 0, -0.1], 5);
-  p.sphere(0.15, C.rock, 0.38, 1.15, 0.18, [1, 1.2, 1], 7);
-}
-
-/** Ma trơi: đốm lửa xanh lơ lửng có đôi mắt đen, lưỡi lửa vuốt nhọn lên trời, vài đốm nhỏ bay quanh. Tự sáng. */
-function ghostFire(m: ToonModel): void {
-  const f = m.glow;
-  f.sphere(0.24, C.ghost, 0, 0.62, 0, [1, 1.05, 1], 12);
-  f.sphere(0.17, 0xe8fbff, 0, 0.58, 0.05, [1, 1, 1], 10);
-  f.cone(0.2, 0.55, C.ghostDeep, 0, 0.98, -0.04, [-0.2, 0, 0], 8);
-  f.cone(0.1, 0.3, C.ghost, 0.12, 0.92, 0.02, [-0.1, 0, -0.4], 6);
-  f.cone(0.1, 0.3, C.ghost, -0.12, 0.92, 0.02, [-0.1, 0, 0.4], 6);
-  for (const [x, y, z] of [[0.3, 0.4, -0.1], [-0.28, 0.5, 0.05], [0.05, 0.3, -0.25]] as const) f.sphere(0.05, C.ghost, x, y, z, [1, 1, 1], 6);
-  for (const s of [-1, 1]) m.plain.sphere(0.045, C.ink, s * 0.08, 0.66, 0.2, [1, 1.4, 0.5], 6);
-  m.plain.sphere(0.035, C.ink, 0, 0.55, 0.22, [1.2, 0.8, 0.5], 6);
-}
-
-/**
- * Lính trong trận của chương 3: yêu tinh núi Thất Diệu và quân Triệu Đà.
- * Trả về null nếu không phải giặc chương 3.
- */
-export function makeChapter3Foe(kind: FighterKind): THREE.Group | null {
-  const m = new ToonModel(inkThin);
-  if (kind === 'quyNui') mountainDemon(m);
-  else if (kind === 'maTroi') ghostFire(m);
-  else return null;
-  return m.group();
 }
 
 // ---------- Thành Cổ Loa ----------

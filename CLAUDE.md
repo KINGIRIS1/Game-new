@@ -19,6 +19,7 @@ Game xây dựng chiến thuật chạy trên trình duyệt điện thoại (Ty
     - `body.ts`: thân người chibi dùng chung (khớp, thân, mặt, tóc, mũ lông chim) và tư thế chung. `weapons.ts`: vũ khí, đồ đeo dùng chung (giáo, qua, rìu, kiếm, cung, tên, bao tên, nỏ, khiên).
     - `soldier.ts`: lính đi bộ (giáo binh, cung thủ, giặc Ân cầm qua, cầm cung, phó tướng, lính và lính nỏ Triệu), mỗi loại vũ khí một bộ động tác. `makeFighter` ở `models.ts` trả bản tĩnh của chúng.
     - `beasts.ts`: thú có xương và người cưỡi (voi chiến 3 bậc giáp, chiến xa có bánh lăn, đại tướng Ân, kỵ binh và Triệu Đà, hổ tinh, gà trắng, Rùa Vàng). Người cưỡi dựng ở `soldier.ts` (`RiderKind`), ghép lên lưng thú bằng `RigBuilder.place` và `moveBones`. Thú ngã thì lăn nghiêng (`userData.fall`).
+    - `monsters.ts`: thủy quái và yêu tinh có xương (tôm binh, cá phun nước, cá sấu, thuồng luồng, quỷ núi, ma trơi).
     - `node scripts/chup-nhan-vat.mjs <nhóm>` chụp từng nhân vật có xương ở mọi tư thế vào `chup/`; danh sách ở `scripts/nhanVat.ts`.
   - Đất bậc thang, nước lũ, mưa giông, đêm yêu tinh, cảnh Tết (cây nêu, dây cờ, mâm bánh) ở kinh đô: `world.ts`.
   - Bãi chiến phó bản là cảnh riêng: `battlefield.ts`. Lính trong trận vẽ bằng `battleView.ts`, dùng chung cho cả hai loại trận.
