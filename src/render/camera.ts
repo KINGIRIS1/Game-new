@@ -1,4 +1,5 @@
-// Camera isometric nhìn chéo từ trên xuống: một ngón kéo để di chuyển, hai ngón chụm để phóng to.
+// Camera isometric nhìn chéo từ trên xuống: một ngón kéo để di chuyển, hai ngón chụm để phóng to,
+// hai ngón vặn theo vòng tròn (hay nút ⟳) để xoay cảnh theo nấc 90°: có 4 hướng nhìn chéo.
 
 import * as THREE from 'three';
 
@@ -9,6 +10,10 @@ const MIN_ZOOM = 0.55;
 const MAX_ZOOM = 3;
 const TAP_SLOP_PX = 10;
 const TAP_MAX_MS = 600;
+/** Xoay cảnh: mỗi nấc 90°, chuyển mượt trong chừng này giây. */
+const TURN_S = 0.35;
+/** Hai ngón vặn quá góc này (radian, khoảng 35°) thì xoay một nấc. */
+const TWIST_SNAP = THREE.MathUtils.degToRad(35);
 
 export class IsoCamera {
   readonly camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 1, 200);
@@ -20,11 +25,14 @@ export class IsoCamera {
 
   private width = 1;
   private height = 1;
-  private readonly offset = new THREE.Vector3(
-    Math.cos(ELEVATION) * Math.sin(AZIMUTH),
-    Math.sin(ELEVATION),
-    Math.cos(ELEVATION) * Math.cos(AZIMUTH),
-  ).multiplyScalar(DISTANCE);
+  private readonly offset = new THREE.Vector3();
+  /** Góc phương vị đang nhìn (radian), và hướng nhìn đích theo nấc 90° (0–3). */
+  private azimuth = AZIMUTH;
+  private quarter = 0;
+  /** Đang xoay dở: từ góc nào tới góc nào, đã được bao lâu. */
+  private turn: { from: number; to: number; t: number } | null = null;
+  /** Góc giữa hai ngón lúc trước, và phần vặn đã cộng dồn chưa đủ một nấc. */
+  private twist = { angle: 0, acc: 0 };
   private readonly raycaster = new THREE.Raycaster();
   private readonly ground = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
   private readonly pointers = new Map<number, { x: number; y: number }>();
@@ -61,10 +69,54 @@ export class IsoCamera {
     cam.right = w / 2;
     cam.top = h / 2;
     cam.bottom = -h / 2;
+    this.offset
+      .set(Math.cos(ELEVATION) * Math.sin(this.azimuth), Math.sin(ELEVATION), Math.cos(ELEVATION) * Math.cos(this.azimuth))
+      .multiplyScalar(DISTANCE);
     cam.position.copy(this.target).add(this.offset);
     cam.lookAt(this.target);
     cam.updateProjectionMatrix();
     cam.updateMatrixWorld();
+  }
+
+  /** Hướng nhìn hiện tại theo nấc 90°: 0 là hướng mặc định (nhìn từ phía đông nam), 1–3 là xoay thêm từng nấc. */
+  get facing(): number {
+    return this.quarter;
+  }
+
+  /**
+   * Xoay cảnh một nấc 90° quanh tâm nhìn, giữ nguyên tâm và độ phóng. `dir` 1: cảnh quay theo chiều kim đồng hồ
+   * trên màn hình (nút ⟳), −1: ngược chiều. Chuyển mượt, xem `tick`.
+   */
+  rotate(dir: 1 | -1): void {
+    this.quarter = (this.quarter + dir + 4) % 4;
+    const from = this.azimuth;
+    // Góc phương vị tăng thì cảnh quay theo chiều kim đồng hồ trên màn hình.
+    const to = (this.turn ? this.turn.to : this.azimuth) + dir * (Math.PI / 2);
+    this.turn = { from, to, t: 0 };
+  }
+
+  /** Đặt ngay hướng nhìn (0–3), không chuyển mượt. */
+  setFacing(quarter: number): void {
+    this.quarter = ((quarter % 4) + 4) % 4;
+    this.azimuth = AZIMUTH + this.quarter * (Math.PI / 2);
+    this.turn = null;
+    this.apply();
+  }
+
+  /** Chạy chuyển động xoay cảnh; gọi mỗi khung hình. */
+  tick(dt: number): void {
+    if (!this.turn) return;
+    const tr = this.turn;
+    tr.t = Math.min(TURN_S, tr.t + dt);
+    const k = tr.t / TURN_S;
+    const ease = k * k * (3 - 2 * k);
+    this.azimuth = tr.from + (tr.to - tr.from) * ease;
+    if (tr.t >= TURN_S) {
+      // Giữ góc gọn trong một vòng để khỏi trôi số sau nhiều lần xoay.
+      this.azimuth = AZIMUTH + this.quarter * (Math.PI / 2);
+      this.turn = null;
+    }
+    this.apply();
   }
 
   /** Phóng sao cho một vùng rộng `w`, cao `h` (đơn vị thế giới trên màn hình) vừa khít khung nhìn. */
@@ -106,6 +158,8 @@ export class IsoCamera {
       this.gesture = { startX: e.clientX, startY: e.clientY, startTime: e.timeStamp, moved: 0, multi: false };
     } else {
       this.gesture.multi = true;
+      const [a, b] = [...this.pointers.values()];
+      this.twist = { angle: Math.atan2(b.y - a.y, b.x - a.x), acc: 0 };
     }
   };
 
@@ -132,6 +186,19 @@ export class IsoCamera {
     this.onUserMove?.();
     if (beforeDist > 0) this.zoomAt(afterDist / beforeDist, midAfter.x, midAfter.y);
     this.pan(midBefore.x, midBefore.y, midAfter.x, midAfter.y);
+    // Vặn hai ngón: cộng dồn góc quay của đoạn nối hai ngón; đủ một ngưỡng thì xoay cảnh một nấc theo chiều vặn.
+    const [a, b] = [...this.pointers.values()];
+    const angle = Math.atan2(b.y - a.y, b.x - a.x);
+    let delta = angle - this.twist.angle;
+    if (delta > Math.PI) delta -= Math.PI * 2;
+    if (delta < -Math.PI) delta += Math.PI * 2;
+    this.twist.angle = angle;
+    this.twist.acc += delta;
+    if (Math.abs(this.twist.acc) >= TWIST_SNAP) {
+      // Trục y màn hình chĩa xuống: góc tăng là vặn theo chiều kim đồng hồ.
+      this.rotate(this.twist.acc > 0 ? 1 : -1);
+      this.twist.acc = 0;
+    }
   };
 
   private onUp = (e: PointerEvent): void => {

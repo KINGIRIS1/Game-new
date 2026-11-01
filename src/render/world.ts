@@ -160,6 +160,9 @@ interface BuildingView {
   level: number;
   damaged: boolean;
   workers: number;
+  /** Ô góc đang vẽ: công trình được dời đi thì dựng lại ở chỗ mới. */
+  x: number;
+  z: number;
   /** Bậc nền đang vẽ. */
   ground: number;
   people: WorkerView[];
@@ -287,7 +290,7 @@ export class World {
   /** Bãi chiến phó bản, dựng khi cần lần đầu. */
   private field?: Battlefield;
   /** Đang xem bãi chiến: chỗ camera nhìn kinh đô trước đó, để trả về sau trận. */
-  private cityCam: { target: THREE.Vector3; zoom: number; bounds: { min: number; max: number } } | null = null;
+  private cityCam: { target: THREE.Vector3; zoom: number; bounds: { min: number; max: number }; facing: number } | null = null;
   private readonly warning: THREE.Mesh;
   private merchantBoat?: THREE.Object3D;
   /** Gióng đứng trước Điện, đổi dáng khi lớn lên; không còn khi đã bay về trời. */
@@ -565,7 +568,7 @@ export class World {
       if (b.type === 'luy' || b.type === 'de' || b.type === 'thanh') continue;
       alive.add(b.id);
       const v = this.views.get(b.id);
-      if (!v || v.level !== b.level || v.damaged !== !!b.damaged || v.workers !== b.workers) this.createView(b);
+      if (!v || v.level !== b.level || v.damaged !== !!b.damaged || v.workers !== b.workers || v.x !== b.x || v.z !== b.z) this.createView(b);
       else if (v.ground !== this.heights[b.z * GRID + b.x]) {
         v.ground = this.heights[b.z * GRID + b.x];
         v.group.position.y = topY(v.ground);
@@ -586,7 +589,8 @@ export class World {
     this.syncTet(state);
 
     const walls = state.buildings.filter((b) => b.type === 'luy');
-    const key = walls.map((b) => `${b.id}:${b.level}:${b.damaged ? 1 : 0}:${this.heights[b.z * GRID + b.x]}`).join(',');
+    // Khóa có cả ô đứng: dời một đoạn lũy sang chỗ khác thì vẽ lại.
+    const key = walls.map((b) => `${b.id}:${b.x}:${b.z}:${b.level}:${b.damaged ? 1 : 0}:${this.heights[b.z * GRID + b.x]}`).join(',');
     if (key !== this.wallKey) {
       this.wallKey = key;
       if (this.walls) this.scene.remove(this.walls);
@@ -603,7 +607,7 @@ export class World {
     }
 
     const dikes = state.buildings.filter((b) => b.type === 'de');
-    const dkey = dikes.map((b) => `${b.id}:${b.level}:${b.damaged ? 1 : 0}:${this.heights[b.z * GRID + b.x]}`).join(',');
+    const dkey = dikes.map((b) => `${b.id}:${b.x}:${b.z}:${b.level}:${b.damaged ? 1 : 0}:${this.heights[b.z * GRID + b.x]}`).join(',');
     if (dkey !== this.dikeKey) {
       this.dikeKey = dkey;
       if (this.dikes) this.scene.remove(this.dikes);
@@ -614,7 +618,7 @@ export class World {
     }
 
     const citadel = state.buildings.filter((b) => b.type === 'thanh');
-    const ckey = citadel.map((b) => `${b.id}:${b.damaged ? 1 : 0}:${this.heights[b.z * GRID + b.x]}`).join(',');
+    const ckey = citadel.map((b) => `${b.id}:${b.x}:${b.z}:${b.damaged ? 1 : 0}:${this.heights[b.z * GRID + b.x]}`).join(',');
     if (ckey !== this.citadelKey) {
       this.citadelKey = ckey;
       if (this.citadel) this.scene.remove(this.citadel);
@@ -687,7 +691,9 @@ export class World {
   private syncMerchant(state: GameState): void {
     const ben = state.buildings.find((b) => b.type === 'ben');
     const here = !!state.merchant.visit && !!ben;
-    if (!here && this.merchantBoat) {
+    // Bến được dời đi thì thuyền buôn neo lại cạnh bến ở chỗ mới.
+    const at = ben ? `${ben.x}:${ben.z}` : '';
+    if (this.merchantBoat && (!here || this.merchantBoat.userData.at !== at)) {
       this.scene.remove(this.merchantBoat);
       this.merchantBoat = undefined;
     }
@@ -700,6 +706,7 @@ export class World {
       const cz = wz(ben.z) + def.d / 2;
       boat.position.set(east ? cx + 2.4 : cx - 0.6, WATER_Y - 0.02, east ? cz - 0.6 : cz + 2.4);
       boat.rotation.y = east ? -Math.PI / 2 : 0;
+      boat.userData.at = at;
       this.scene.add(boat);
       this.merchantBoat = boat;
     }
@@ -763,7 +770,7 @@ export class World {
       group.add(smoke);
     }
     this.buildingsRoot.add(group);
-    this.views.set(b.id, { group, type: b.type, level: b.level, damaged: !!b.damaged, workers: b.workers, ground, people, popAge: 0, baseScale: group.scale.x });
+    this.views.set(b.id, { group, type: b.type, level: b.level, damaged: !!b.damaged, workers: b.workers, x: b.x, z: b.z, ground, people, popAge: 0, baseScale: group.scale.x });
   }
 
   private makeBuilding(type: BuildingType, level: number): THREE.Group {
@@ -1239,6 +1246,19 @@ export class World {
     }
   }
 
+  /**
+   * Xoay cảnh kinh đô một nấc 90° quanh tâm nhìn (1: theo chiều kim đồng hồ, −1: ngược lại).
+   * Ở bãi chiến thì không xoay. Trả về hướng nhìn mới (0–3).
+   */
+  rotateView(dir: 1 | -1): number {
+    if (!this.inField) {
+      // Xoay quanh đúng chỗ đang nhìn: bỏ lướt camera dở dang.
+      this.panGoal = null;
+      this.view.rotate(dir);
+    }
+    return this.view.facing;
+  }
+
   /** Lướt camera tới phía giặc tới. */
   lookAtEdge(side: RaidSide): void {
     const at: Record<RaidSide, [number, number]> = { bac: [15, 5], tay: [5, 15], nam: [17, 23], dong: [23, 17] };
@@ -1261,8 +1281,10 @@ export class World {
     if (terrain) {
       this.field ??= new Battlefield();
       this.field.setTerrain(terrain);
-      if (!this.cityCam) this.cityCam = { target: v.target.clone(), zoom: v.zoom, bounds: { ...v.bounds } };
+      if (!this.cityCam) this.cityCam = { target: v.target.clone(), zoom: v.zoom, bounds: { ...v.bounds }, facing: v.facing };
       this.panGoal = null;
+      // Bãi chiến vẽ cho hướng nhìn mặc định: quân ta ở dưới, giặc ở trên.
+      v.setFacing(0);
       v.bounds = { min: -6, max: 6 };
       v.target.set(0, 0, 0);
       this.fitField();
@@ -1272,7 +1294,7 @@ export class World {
     v.bounds = this.cityCam.bounds;
     v.target.copy(this.cityCam.target);
     v.zoom = this.cityCam.zoom;
-    v.apply();
+    v.setFacing(this.cityCam.facing);
     this.cityCam = null;
     this.field?.update(null, 0);
   }
@@ -1340,10 +1362,13 @@ export class World {
     this.time += dt;
     const t = this.time;
 
+    this.view.tick(dt);
     if (this.panGoal) {
+      const before = this.view.target.clone();
       this.view.target.lerp(this.panGoal, 1 - Math.exp(-dt * 9));
       this.view.apply();
-      if (this.view.target.distanceTo(this.panGoal) < 0.01) this.panGoal = null;
+      // Tới nơi, hoặc đích nằm ngoài ranh giới kéo (tâm nhìn bị giữ lại, không nhích nữa) thì thôi lướt.
+      if (this.view.target.distanceTo(this.panGoal) < 0.01 || (dt > 0 && this.view.target.distanceTo(before) < 1e-4)) this.panGoal = null;
     }
 
     for (const v of this.views.values()) {
