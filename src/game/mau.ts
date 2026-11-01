@@ -422,3 +422,135 @@ export function applyMau(state: GameState, id: MauId): Result<MauPlan> {
   }
   return check;
 }
+
+// ---------- Xếp kinh đô cũ vào mẫu (nâng bản lưu) ----------
+
+/**
+ * Lớp vòng thành của từng chỗ thành trong mẫu: đi từ Điện ra bìa rừng phải qua mấy lớp thành mới tới chỗ ấy
+ * (1 là vòng trong cùng). Đi tám hướng như giặc, chéo góc giữa hai đoạn thành là hở.
+ */
+function thanhLayers(id: MauId): Map<number, number> {
+  const wall = new Uint8Array(GRID * GRID);
+  for (const s of mauSlots(id)) if (s.type === 'thanh') wall[s.z * GRID + s.x] = 1;
+  const dist = new Int32Array(GRID * GRID).fill(1 << 20);
+  const buckets: number[][] = [[]];
+  for (const s of mauSlots(id)) {
+    if (s.type !== 'dien') continue;
+    const def = BUILDINGS.dien;
+    for (let dx = 0; dx < def.w; dx++) {
+      for (let dz = 0; dz < def.d; dz++) {
+        const i = (s.z + dz) * GRID + s.x + dx;
+        dist[i] = 0;
+        buckets[0].push(i);
+      }
+    }
+  }
+  for (let d = 0; d < buckets.length; d++) {
+    const list = buckets[d];
+    while (list.length) {
+      const i = list.pop()!;
+      if (dist[i] !== d) continue;
+      const cx = i % GRID;
+      const cz = Math.floor(i / GRID);
+      for (let dz = -1; dz <= 1; dz++) {
+        for (let dx = -1; dx <= 1; dx++) {
+          if ((!dx && !dz) || !inGrid(cx + dx, cz + dz)) continue;
+          const ni = (cz + dz) * GRID + cx + dx;
+          const nd = d + wall[ni];
+          if (nd >= dist[ni]) continue;
+          dist[ni] = nd;
+          (buckets[nd] ??= []).push(ni);
+        }
+      }
+    }
+  }
+  const layers = new Map<number, number>();
+  for (let i = 0; i < wall.length; i++) if (wall[i]) layers.set(i, dist[i]);
+  return layers;
+}
+
+/** Đoạn lũy, đê đã có thì dựng đủ cả dải theo mẫu; thành thì dựng nốt vòng đang dở. */
+const TOP_UP: BuildingType[] = ['luy', 'de', 'thanh'];
+
+/**
+ * Xếp các công trình `list` (chưa có trong state, trừ Điện) vào mẫu `id`, trong vùng đã khai phá, rồi thêm vào state.
+ * - Mỗi loại vào chỗ cùng loại gần Điện trước, cấp cao trước; lầu nỏ vào chỗ chòi canh; thành xếp từ vòng trong ra.
+ * - Công trình không có chỗ trong mẫu thì vào chỗ trống gần Điện nhất.
+ * - Lũy, đê đã có thì dựng đủ cả dải theo mẫu; thành thì dựng nốt vòng đang dở, và đủ ít nhất `rings` vòng
+ *   (số vòng kinh đô cũ đã có), miễn phí, trong giới hạn theo cấp Điện.
+ * Giữ cấp, người làm, hư hỏng. Trả về các đoạn lũy, đê, thành, bẫy không còn chỗ (để hoàn của) và các đoạn dựng thêm.
+ */
+export function seatInMau(state: GameState, id: MauId, list: Building[], rings = 0): { dropped: Building[]; added: Building[] } {
+  const level = dienLevel(state);
+  const dien = state.buildings.find((b) => b.type === 'dien')!;
+  const ox = dien.x - DIEN_HOME;
+  const oz = dien.z - DIEN_HOME;
+  const fits = (type: BuildingType, x: number, z: number) => {
+    const def = BUILDINGS[type];
+    for (let dx = 0; dx < def.w; dx++) for (let dz = 0; dz < def.d; dz++) if (!inGrid(x + dx, z + dz) || !isUnlocked(x + dx, z + dz, level)) return false;
+    return !def.nearRiver || touchesRiver(x, z, def.w, def.d);
+  };
+  const used = new Uint8Array(GRID * GRID);
+  const mark = (type: BuildingType, x: number, z: number) => {
+    const def = BUILDINGS[type];
+    for (let dx = 0; dx < def.w; dx++) for (let dz = 0; dz < def.d; dz++) used[(z + dz) * GRID + x + dx] = 1;
+  };
+  const free = (type: BuildingType, x: number, z: number) => {
+    const def = BUILDINGS[type];
+    for (let dx = 0; dx < def.w; dx++) for (let dz = 0; dz < def.d; dz++) if (used[(z + dz) * GRID + x + dx]) return false;
+    return true;
+  };
+  for (const b of state.buildings) mark(b.type, b.x, b.z);
+  const cx = dien.x + BUILDINGS.dien.w / 2;
+  const cz = dien.z + BUILDINGS.dien.d / 2;
+  const layers = thanhLayers(id);
+  const layerOf = (s: Slot) => (s.type === 'thanh' ? (layers.get((s.z - oz) * GRID + s.x - ox) ?? 99) : 0);
+  const slots = mauSlots(id)
+    .filter((s) => s.type !== 'dien')
+    .map((s) => ({ ...s, x: s.x + ox, z: s.z + oz }))
+    .filter((s) => fits(s.type, s.x, s.z))
+    .sort((a, b) => layerOf(a) - layerOf(b) || Math.hypot(a.x - cx, a.z - cz) - Math.hypot(b.x - cx, b.z - cz));
+  const dropped: Building[] = [];
+  const homeless: Building[] = [];
+  const order = [...list].sort((a, b) => BUILDINGS[b.type].w - BUILDINGS[a.type].w || b.level - a.level || a.id - b.id);
+  for (const b of order) {
+    const want = b.type === 'lauNo' ? 'choiCanh' : b.type;
+    const i = slots.findIndex((s) => s.type === want && free(s.type, s.x, s.z));
+    if (i >= 0) {
+      const s = slots.splice(i, 1)[0];
+      b.x = s.x;
+      b.z = s.z;
+      mark(b.type, b.x, b.z);
+      state.buildings.push(b);
+    } else if (SEGMENTS.includes(b.type)) dropped.push(b);
+    else homeless.push(b);
+  }
+  for (const b of homeless) {
+    b.x = Math.floor(cx);
+    b.z = Math.floor(cz);
+    const spot = nearestFree(b, fits, free);
+    if (!spot) {
+      dropped.push(b);
+      continue;
+    }
+    b.x = spot.x;
+    b.z = spot.z;
+    mark(b.type, b.x, b.z);
+    state.buildings.push(b);
+  }
+  // Dựng đủ lũy, đê theo mẫu; thành thì dựng nốt vòng đang dở.
+  const added: Building[] = [];
+  for (const type of TOP_UP) {
+    const had = list.filter((b) => b.type === type && state.buildings.includes(b));
+    if (!had.length) continue;
+    const top = type === 'thanh' ? Math.max(rings, ...had.map((b) => layers.get((b.z - oz) * GRID + b.x - ox) ?? 0)) : Infinity;
+    for (const s of slots.filter((x) => x.type === type && layerOf(x) <= top)) {
+      if (usedOf(state, type) >= limitOf(state, type) || !free(type, s.x, s.z)) continue;
+      const nb: Building = { id: state.nextId++, type, x: s.x, z: s.z, level: Math.min(...had.map((b) => b.level)), workers: 0 };
+      mark(type, s.x, s.z);
+      state.buildings.push(nb);
+      added.push(nb);
+    }
+  }
+  return { dropped, added };
+}

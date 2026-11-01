@@ -35,7 +35,7 @@ import {
   type GameState,
 } from './game';
 import { GRID, RIVER_START, baseHeights } from './map';
-import { deserialize, serialize } from './save';
+import { SAVE_VERSION, deserialize, serialize } from './save';
 import { HALF_ARMY, SAMPLE_ARMY, SEEDS, fightStage } from './testkit';
 import { canOffer, heroFor, offerGift, sonJoined } from './son';
 import { markStory, pendingStory } from './story';
@@ -562,7 +562,7 @@ describe('truyện và lưu game chương 2', () => {
     const raid = s5.raid as Record<string, unknown>;
     for (const k of ['foe', 'floods', 'floodsHeld', 'water']) delete raid[k];
     const back = deserialize(JSON.stringify(s5))!;
-    expect(back.version).toBe(10);
+    expect(back.version).toBe(SAVE_VERSION);
     expect(back.heights.length).toBe(GRID * GRID);
     expect(back.son.gifts.comNep).toBe(false);
     expect(back.raid.foe).toBe('an');

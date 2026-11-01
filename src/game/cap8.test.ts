@@ -22,7 +22,7 @@ import {
 import { AREA_SIZE, areaStart } from './map';
 import { edge } from './testmap';
 import { mauSlots, planMau } from './mau';
-import { deserialize, serialize } from './save';
+import { SAVE_VERSION, deserialize, serialize } from './save';
 
 /** Kinh đô đã vào chương 4, Điện cấp 8, của nhiều. */
 function capital8(): GameState {
@@ -193,7 +193,7 @@ describe('lầu nỏ', () => {
     expect(slots.some((x) => x.x === move.x && x.z === move.z)).toBe(true);
   });
 
-  it('bản lưu phiên bản 9 được nâng lên 10; lưu và nạp lại giữ lầu nỏ', () => {
+  it('bản lưu phiên bản 9 được nâng lên phiên bản hiện tại; lưu và nạp lại giữ lầu nỏ', () => {
     const s = capital8();
     const a = tower(s, 10, 10);
     const b = tower(s, 12, 10);
@@ -202,6 +202,6 @@ describe('lầu nỏ', () => {
     const old = createInitialState(0) as unknown as Record<string, unknown>;
     old.version = 9;
     const back = deserialize(JSON.stringify(old))!;
-    expect(back.version).toBe(10);
+    expect(back.version).toBe(SAVE_VERSION);
   });
 });

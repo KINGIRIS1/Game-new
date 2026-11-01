@@ -211,8 +211,11 @@ export interface Merchant {
   seq: number;
 }
 
+/** Phiên bản bản lưu hiện tại (11: kinh đô lớn, móng to hơn một ô). */
+export const SAVE_VERSION = 11;
+
 export interface GameState {
-  version: 10;
+  version: typeof SAVE_VERSION;
   resources: Resources;
   /** Số dân (không tính lính). */
   dan: number;
@@ -244,6 +247,8 @@ export interface GameState {
   tet: TetState;
   story: { seen: StoryId[] };
   settings: { muted: boolean };
+  /** Vừa nâng từ kinh đô nhỏ: kinh đô đã dựng lại theo mẫu, trả lại chừng này của. Giao diện báo một lần rồi xóa. */
+  relaid?: { refund: Cost; dropped: number };
 }
 
 export type FailReason =
@@ -341,7 +346,7 @@ export function initialGiong(): GiongState {
 export function createInitialState(now: number): GameState {
   const dien: Building = { id: 1, type: 'dien', x: DIEN_HOME, z: DIEN_HOME, level: 1, workers: 0 };
   const state: GameState = {
-    version: 10,
+    version: SAVE_VERSION,
     resources: { ...START_RESOURCES },
     dan: START_DAN,
     danProgress: 0,

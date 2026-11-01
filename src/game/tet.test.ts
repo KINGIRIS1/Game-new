@@ -31,7 +31,7 @@ import {
   type Building,
   type GameState,
 } from './game';
-import { deserialize, serialize } from './save';
+import { SAVE_VERSION, deserialize, serialize } from './save';
 import { markStory, pendingStory } from './story';
 import { bake, bakeRates, bakeStore, canOffer, offer, tetNeed, tetOpen } from './tet';
 
@@ -338,7 +338,7 @@ describe('bản lưu phiên bản 9', () => {
     delete old.tet;
     old.buildings = (old.buildings as { type: string }[]).filter((b) => !['ruongNep', 'vuon', 'chuongLon', 'bep'].includes(b.type));
     const back = deserialize(JSON.stringify(old))!;
-    expect(back.version).toBe(10);
+    expect(back.version).toBe(SAVE_VERSION);
     expect(back.tet).toEqual({
       seq: 0,
       nextAt: null,

@@ -397,7 +397,7 @@ export const BUILDINGS: Record<BuildingType, BuildingDef> = {
     upgradeCost: [{}, {}],
     production: [{}],
     hp: [1000],
-    limit: [210, 210, 210, 210, 210, 220, 240, 240],
+    limit: [220, 220, 220, 220, 220, 230, 240, 240],
     minDien: 1,
     buildable: true,
     removable: true,

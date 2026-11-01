@@ -5,7 +5,7 @@ import { ARMS, ARMS_BONUS, BUILDINGS, CH2_QUEST_START, CH3_QUEST_START, DEFAULT_
 import { canUpgrade, createInitialState, limitOf, place, storageCap, upgrade, type GameState } from './game';
 import { AREA_SIZE, FOREST_BAND, areaStart, isUnlocked } from './map';
 import { edge } from './testmap';
-import { deserialize, serialize } from './save';
+import { SAVE_VERSION, deserialize, serialize } from './save';
 
 /** Kinh đô Điện cấp 5, đủ của để nâng. */
 function rich(questIndex = 0): GameState {
@@ -123,7 +123,7 @@ describe('rèn binh khí', () => {
     s7.version = 7;
     delete s7.arms;
     const back = deserialize(JSON.stringify(s7))!;
-    expect(back.version).toBe(10);
+    expect(back.version).toBe(SAVE_VERSION);
     expect(back.arms).toEqual({ giao: 0, cung: 0, voi: 0 });
   });
 });
