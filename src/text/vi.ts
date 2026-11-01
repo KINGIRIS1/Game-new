@@ -885,24 +885,24 @@ export const vi = {
     rotate: 'Xoay cảnh 90°',
     mauTitle: 'Mẫu kinh đô',
     mauCard: 'Xếp kinh đô theo mẫu',
-    mauHint: 'Mỗi chương mở một mẫu. Áp mẫu thì mọi công trình được dời vào chỗ trong mẫu (mỗi cái mất 10% giá dựng), phần mẫu có mà mình chưa có được dựng thêm (trong giới hạn theo cấp Điện), đoạn lũy, đê, thành, bẫy thừa bị dỡ. Phải đủ tài nguyên mới áp được.',
+    mauHint: 'Mỗi chương mở một mẫu. Mẫu giãn theo đất đã khai phá: nâng Điện, đất rộng ra thì áp lại để lũy, đê, thành ra tới bìa đất mới và công trình mới có chỗ. Áp mẫu thì mọi công trình được dời vào chỗ trong mẫu (mỗi cái mất 10% giá dựng), phần mẫu có mà mình chưa có được dựng thêm (trong giới hạn theo cấp Điện), đoạn lũy, đê, thành, bẫy thừa bị dỡ. Phải đủ tài nguyên mới áp được.',
     mau: {
       phongChau: {
         icon: '🏯',
         name: 'Kinh đô Phong Châu',
-        desc: 'Ruộng quanh Điện, nhà sàn và kho sát Điện, bãi đá trên đồi, lũy tre bao hai mặt rừng, bẫy chông trước lũy.',
+        desc: 'Bến và ruộng dọc sông; đền, doanh trại, trại giáo trên trục từ Điện về góc rừng; nhà sàn, kho quanh Điện; bãi đá trên đồi; lũy tre bao hai mặt rừng, bẫy chông trước lũy.',
         lock: '',
       },
       deBao: {
         icon: '🌊',
         name: 'Đê bao chống lũ',
-        desc: 'Đê liền dải dọc hai bờ sông, bến nằm ngoài đê, chòi canh sát đê; ruộng, đền và ruộng nếp trong đê.',
+        desc: 'Đê liền dải dọc hai bờ sông tới bìa đất, bến nằm ngoài đê, chòi canh sát đê; doanh trại ở góc đê gần ngã ba sông; ruộng, đền và ruộng nếp trong đê.',
         lock: 'Mở khi vào chương 2: Sơn Tinh, Thủy Tinh.',
       },
       coLoa: {
         icon: '🐚',
         name: 'Thành Cổ Loa',
-        desc: 'Ba vòng thành kín quanh Điện; nhà sàn, kho, lò rèn giữa các vòng; ruộng, đền, doanh trại ngoài vòng ngoài; đê bao ngoài cùng.',
+        desc: 'Ba vòng thành kín quanh Điện, vòng ngoài nới ra theo đất; nhà sàn, kho, lò rèn, bếp giữa các vòng; ruộng, đền, doanh trại ngoài vòng ngoài; đê bao ngoài cùng.',
         lock: 'Mở khi vào chương 3: An Dương Vương.',
       },
     },

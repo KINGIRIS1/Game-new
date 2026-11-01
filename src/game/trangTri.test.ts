@@ -186,7 +186,7 @@ describe('đường đi, đồ trang trí trước giặc và lũ', () => {
 describe('áp mẫu với đường và đồ trang trí', () => {
   it('món vướng chỗ của mẫu thì dỡ đi, món không vướng thì giữ nguyên', () => {
     const s = city(5);
-    const slots = mauSlots('phongChau');
+    const slots = mauSlots('phongChau', 5);
     const ruong = slots.find((x) => x.type === 'ruong')!;
     const inWay = place(s, 'hoa', ruong.x + 1, ruong.z + 1);
     // Một ô trống không thuộc mẫu, trong vùng đã khai phá.
