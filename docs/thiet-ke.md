@@ -354,9 +354,14 @@ Chủ dự án đã chốt bốn điểm:
 | Cá phun nước | 50 | 9 | phun nước xa 3,6 ô | voi chiến |
 | Cá sấu | 260 | 22 | lao nhanh, gấp đôi sát thương lên cung thủ ta | giáo binh |
 | Thuồng luồng (trùm màn 12) | 750 | 26 | | |
-| Thủy Tinh (trùm màn 16) | 1400 | 32 | đứng trên ngọn sóng, cầm đinh ba | |
+| Thủy Tinh (trùm màn 16) | 1400 | 32 | đứng trên ngọn sóng, cầm đinh ba; có hai phép (xem dưới) | |
 
 Vòng khắc chế của quân ta giữ nguyên: giáo binh thắng quân nặng, cung thủ thắng lính bộ, voi thắng quân bắn xa.
+
+**Phép của Thủy Tinh** (chủ dự án chọn có cả hai, thêm sau khi chơi thử; số ở `TT_WAVE`, `TT_SUMMON`):
+- **Hô mưa gọi gió**: lần đầu sau 6 giây, rồi cứ 12 giây, nếu quân ta trong tầm 8 ô. Một con sóng quét dải dài 6 ô, rộng 2,6 ô từ Thủy Tinh về phía quân ta gần nhất. Ai trúng mất 30 máu, bị đẩy lùi 1,4 ô, đi chậm còn nửa tốc độ trong 3 giây.
+- **Gọi thủy quái**: lần đầu sau 9 giây, rồi cứ 15 giây, gọi 3 tôm binh từ dưới nước lên quanh mình, khỏe như tôm binh của màn; tối đa 4 lần (12 con) mỗi trận.
+- Thêm hai phép thì màn 16 khó hơn hẳn: hạ máu giặc từ ×2,4 xuống ×1,8. Đo bằng test: người chơi thường có Sơn Tinh thắng ở cả ×1,9 (dư một bậc); không tướng, hay nửa quân, chơi giỏi vẫn thua.
 
 ### Lễ vật và Sơn Tinh
 
@@ -396,7 +401,7 @@ Vòng khắc chế của quân ta giữ nguyên: giáo binh thắng quân nặng
   | 13 | Làng chìm trong lũ | 14 tôm, 8 cá phun, 4 cá sấu | ×2,1 | cần Sơn Tinh |
   | 14 | Sông Đà cuồn cuộn | 14 tôm, 8 cá phun, 4 cá sấu | ×2,1 | cần Sơn Tinh, mở Dời non |
   | 15 | Chân núi Tản | 14 tôm, 9 cá phun, 4 cá sấu | ×2,5 | cần Sơn Tinh |
-  | 16 | Đỉnh Tản Viên | 12 tôm, 8 cá phun, 3 cá sấu, Thủy Tinh | ×2,4 | cần Sơn Tinh |
+  | 16 | Đỉnh Tản Viên | 12 tôm, 8 cá phun, 3 cá sấu, Thủy Tinh | ×1,8 | cần Sơn Tinh; Thủy Tinh có hai phép |
 
   - Mọi màn cần Điện cấp 5. Thưởng lần đầu từ 1200 gạo, 800 vỏ ốc, 600 đất đá, 150 sắt (màn 9) tới 3000 gạo, 2000 vỏ ốc, 2000 đất đá, 500 sắt (màn 16). Đánh lại được 30%.
   - Máu của màn 9–11 cao hơn màn 12–16 vì màn 9–11 có Gióng hiển linh hai kỹ năng, còn màn 12–14 Sơn Tinh mới có một kỹ năng.
@@ -745,6 +750,53 @@ Cả bốn cần dân làm, mở sau truyện Lang Liêu, cần Điện cấp 3.
 - nhịp theo bảng trên;
 - nâng bản lưu 8 lên 9.
 
+## Xoay cảnh, dời công trình, mẫu kinh đô (thêm sau chơi thử Hội Tết)
+
+Chủ dự án đã chọn qua bốn câu hỏi: Thủy Tinh có cả hai phép (xem mục Thủy quái), xoay cảnh 4 hướng, dời công trình mất phí, áp mẫu thì dời và dựng đủ.
+
+**Xoay cảnh**
+- Có nút ⟳ trên màn hình kinh đô. Mỗi lần bấm, góc nhìn xoay 90°, có 4 hướng nhìn chéo, chuyển mượt.
+- Vuốt hai ngón theo vòng tròn cũng xoay theo nấc 90°, không xoay tự do, để hình vẽ luôn đúng góc đẹp và lưới ô không xiên.
+- Bãi chiến phó bản không xoay.
+
+**Dời công trình**
+- Chạm công trình, bấm ↔ Dời, chọn chỗ mới như khi dựng, rồi bấm Dời tới đây.
+- Mỗi lần dời tốn 10% giá dựng của công trình ấy (làm tròn lên; `MOVE_FRACTION`).
+- Giữ nguyên cấp, người làm, hư hỏng.
+- Không dời được Điện Vua Hùng. Không dời được lúc đang có giặc, lũ (kể cả lúc trinh sát báo).
+- Nền đất cũ ở lại chỗ cũ. Chỗ mới dân đắp móng phẳng bằng ô cao nhất dưới móng như khi dựng mới; đã đắp nền cao hơn thì phải đắp lại.
+
+**Mẫu kinh đô** (`src/game/mau.ts`, bản vẽ từng ô ngay trong code)
+- Mỗi chương mở một mẫu:
+
+  | Mẫu | Mở khi | Vẽ cho | Nét chính |
+  |---|---|---|---|
+  | Kinh đô Phong Châu | từ đầu | Điện cấp 5 | ruộng quanh Điện, nhà sàn và kho sát Điện, bãi đá trên đồi; lũy tre bao hai mặt rừng (45 đoạn), 10 bẫy chông trước lũy |
+  | Đê bao chống lũ | vào chương 2 | Điện cấp 6 | đê liền dải dọc hai bờ sông (47 đoạn), bến ngoài đê, chòi canh sát đê; ruộng, đền, ruộng nếp trong đê |
+  | Thành Cổ Loa | vào chương 3 | Điện cấp 7 | ba vòng thành kín quanh Điện (132 đoạn); nhà sàn, kho, lò rèn giữa các vòng; ruộng, đền, doanh trại ngoài vòng ngoài; đê bao ngoài cùng |
+
+- Vòng thành Cổ Loa trong mẫu là vòng kín quanh Điện, không chạm sông: thành không chặn nước như đê, nên vòng nào cắt ngang dải đê để chạm sông sẽ làm nước lọt vào.
+- Mỗi mẫu có đủ chỗ cho số công trình tối đa ở cấp Điện nó được vẽ, kể cả bốn công trình Hội Tết và các đền. Nó cũng chừa ô trước Điện cho cây nêu, mâm bánh và chỗ tướng đứng.
+- **Áp mẫu**:
+  - mỗi công trình đang có dời vào chỗ cùng loại gần nhất trong mẫu; cái nào đã đứng đúng chỗ thì giữ nguyên;
+  - chỗ còn trống trong mẫu thì dựng thêm, tới số tối đa theo cấp Điện hiện tại, nếu loại ấy đã mở;
+  - chỗ của mẫu nằm ngoài vùng đã khai phá thì bỏ qua;
+  - đoạn lũy, đê, thành, bẫy thừa so với mẫu, hay vướng chỗ của mẫu, thì dỡ đi, không trả lại của;
+  - công trình không có chỗ trong mẫu mà vướng thì tìm chỗ trống gần nhất;
+  - không còn chỗ nào thì không áp được.
+- Giá áp mẫu bằng giá dựng phần thêm cộng 10% giá dựng mỗi công trình phải dời. Phải đủ tài nguyên mới áp được. Đang có giặc thì không áp được.
+- Bảng Mẫu kinh đô mở từ bảng Xây dựng. Mỗi mẫu có:
+  - bản đồ thu nhỏ; đất chưa khai phá vẽ mờ;
+  - số công trình sẽ dời, dựng thêm, dỡ đi;
+  - tổng giá;
+  - nút Áp mẫu. Bấm hai lần mới áp, cho khỏi lỡ tay.
+- Test (`sapxep.test.ts`) canh các việc sau:
+  - mẫu vẽ đúng: không chồng nhau, không lấn sông, bến sát sông, đủ chỗ cho số tối đa;
+  - áp mẫu giữ cấp và người làm, trả đúng giá;
+  - mẫu Đê bao và Cổ Loa giữ được lũ bậc 3;
+  - mẫu Cổ Loa cho đủ 3 vòng thành;
+  - đổi từ mẫu Phong Châu sang Cổ Loa vẫn xếp được.
+
 ## Nhịp chơi và lưu game
 
 - Nhịp chơi lai: mỗi lần mở game là một phiên ra quyết định ngắn.
@@ -778,4 +830,5 @@ Cả bốn cần dân làm, mở sau truyện Lang Liêu, cần Điện cấp 3.
 6. **Sửa sau chơi thử chương 3** (đã làm): chuẩn cân bằng mới cho màn 9–24, báo tướng kiệt sức và Đền Phù Đổng hư trước khi xuất quân.
 7. **Cấp 6–7 và rèn binh khí** (đã làm, xem mục Kế hoạch): Điện và 7 loại công trình lên cấp 6, 7, đất 25×25 rồi 26×26, rèn binh khí hai bậc ở lò rèn, bản lưu phiên bản 8.
 8. **Hội Tết bánh chưng bánh giầy** (đã làm, xem mục PR 3): truyện Lang Liêu, ruộng nếp, vườn đậu lá dong, chuồng lợn, bếp gói bánh (3 cấp mỗi loại), Tết 20 phút một lần, phúc lành Đất và Trời, cảnh Tết trước Điện, bản lưu phiên bản 9.
-9. **Để sau**: chương về Mỵ Châu, Trọng Thủy, có binh chủng nỏ thủ Âu Lạc.
+9. **Sửa sau chơi thử Hội Tết**: Thủy Tinh có hai phép, Dời non vẽ rõ hơn, xoay cảnh 4 hướng, dời công trình, mẫu kinh đô mỗi chương.
+10. **Để sau**: chương về Mỵ Châu, Trọng Thủy, có binh chủng nỏ thủ Âu Lạc.

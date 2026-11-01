@@ -3,7 +3,7 @@
 
 import * as THREE from 'three';
 import type { Battle, FighterKind } from '../game/battle';
-import { FIRE, HILL, RALLY_BEAT, SKILLS, type UnitType } from '../game/defs';
+import { FIRE, HILL, RALLY_BEAT, ROCKS, SKILLS, TT_WAVE, type UnitType } from '../game/defs';
 import { BOW_POSE, WEAPON_REST, makeAnDuong, makeFighter, makeGiong, makeMountain, makeRuaVang, makeSonTinh } from './models';
 import { C } from './palette';
 import { ShapeBuilder, seeded } from './shapes';
@@ -30,6 +30,39 @@ interface FighterView {
   shell?: THREE.Mesh;
   /** An Dương Vương đang chĩa nỏ thần lên trời: còn bao lâu. */
   volley: number;
+  /** Đang làm phép (Sơn Tinh dời non, Thủy Tinh hô sóng hay gọi thủy quái): còn bao lâu. */
+  cast?: number;
+  /** Tôm binh Thủy Tinh vừa gọi lên: còn bao lâu mới trồi hẳn khỏi nước. */
+  emerge?: number;
+  /** Vũng nước bọt trắng dưới chân lính ta đang đi chậm vì trúng sóng Thủy Tinh. */
+  wet?: THREE.Group;
+}
+
+/** Vòng núi đá Dời non quanh Sơn Tinh: từng mỏm trồi vụt lên lần lượt, đứng một lúc rồi lún xuống. */
+interface Crag {
+  group: THREE.Group;
+  spikes: { obj: THREE.Group; h: number; delay: number }[];
+  cracks: THREE.Group;
+  crackMat: THREE.MeshBasicMaterial;
+  age: number;
+}
+
+/** Bức tường sóng Thủy Tinh hô lên, chạy dọc dải bị quét rồi đổ sụp. */
+interface Surge {
+  group: THREE.Group;
+  fromX: number;
+  fromZ: number;
+  toX: number;
+  toZ: number;
+  age: number;
+}
+
+/** Xoáy nước ở chỗ tôm binh được gọi lên: vòng nước xoáy dưới đất và cột nước phun vụt lên. */
+interface Whirl {
+  group: THREE.Group;
+  rings: THREE.Mesh[];
+  spout: THREE.Group;
+  age: number;
 }
 
 /** Rùa Vàng trồi lên cạnh An Dương Vương khi che chở quân ta, rồi lặn dần. */
@@ -149,6 +182,71 @@ const auraGeo = new THREE.RingGeometry(0.3, 0.46, 24).rotateX(-Math.PI / 2);
 const auraMat = new THREE.MeshBasicMaterial({ color: C.ember, transparent: true, opacity: 0.6, depthWrite: false });
 const waterBallGeo = new THREE.SphereGeometry(0.09, 8, 6);
 const waterBallMat = new THREE.MeshBasicMaterial({ color: 0x9fd4e8 });
+/** Dời non: núi đá trồi lên trong chừng này giây (lần lượt từng mỏm), đứng tới giây CRAG_HOLD, lún hẳn ở CRAG_LIFE. */
+const CRAG_RISE = 0.18;
+const CRAG_HOLD = 1.25;
+const CRAG_LIFE = 1.9;
+/** Sóng Thủy Tinh chạy hết dải trong chừng này giây, rồi đổ sụp tới SURGE_LIFE. */
+const SURGE_RUN = 0.6;
+const SURGE_LIFE = 1.0;
+const WHIRL_LIFE = 1.1;
+/** Động tác làm phép của Sơn Tinh và Thủy Tinh kéo dài chừng này giây. */
+const CAST_TIME = 0.8;
+/** Tôm binh trồi khỏi nước trong chừng này giây. */
+const EMERGE_TIME = 0.5;
+const rainGeo = new THREE.BoxGeometry(0.03, 0.03, 0.55);
+const rainMat = new THREE.MeshBasicMaterial({ color: C.rain, transparent: true, opacity: 0.8 });
+const wetGeo = new THREE.CircleGeometry(0.46, 16).rotateX(-Math.PI / 2);
+const wetMat = new THREE.MeshBasicMaterial({ color: 0x4f9fc0, transparent: true, opacity: 0.55, depthWrite: false });
+const foamDotGeo = new THREE.SphereGeometry(0.07, 6, 5);
+const foamMat = new THREE.MeshBasicMaterial({ color: C.foam });
+const whirlGeo = new THREE.RingGeometry(0.25, 0.42, 20, 1, 0, Math.PI * 1.5).rotateX(-Math.PI / 2);
+
+/** Một mỏm núi đá Dời non: khối đá nhọn nhiều mặt, đỉnh sáng màu, có viền mực. Gốc ở chân. */
+function cragSpike(h: number, r: number, rand: () => number): THREE.Group {
+  const b = new ShapeBuilder(false, true);
+  b.cone(r, h, rand() < 0.5 ? C.rock : C.rockDark, 0, h / 2, 0, undefined, 5);
+  b.cone(r * 0.55, h * 0.45, C.rock, r * 0.35, h * 0.22, -r * 0.2, [0.25, 0, -0.2], 5);
+  b.cone(r * 0.32, h * 0.3, 0xb8b0a0, 0, h * 0.86, 0, undefined, 5);
+  const g = new THREE.Group();
+  const mesh = b.mesh(toon);
+  g.add(mesh, outlineOf(mesh.geometry, inkThin));
+  return g;
+}
+
+/**
+ * Bức tường sóng: mặt cắt là con sóng đang vỡ (mặt trước lõm, mép sóng cuộn chúi về trước, lưng sóng thoải),
+ * kéo dài theo bề ngang `width` (trục x), sóng chạy theo +z. Bọt trắng to nhỏ so le trên mép cuộn và chân sóng.
+ */
+function surgeModel(width: number, h: number, seed: number): THREE.Group {
+  const shape = new THREE.Shape();
+  shape.moveTo(-1.0, 0);
+  shape.lineTo(0.45, 0);
+  shape.quadraticCurveTo(0.08, h * 0.25, 0.12, h * 0.62);
+  shape.quadraticCurveTo(0.24, h * 0.86, 0.58, h * 0.76);
+  shape.quadraticCurveTo(0.4, h * 1.04, -0.08, h);
+  shape.quadraticCurveTo(-0.55, h * 0.92, -1.0, h * 0.18);
+  shape.closePath();
+  const body = new THREE.ExtrudeGeometry(shape, { depth: width, bevelEnabled: false, curveSegments: 8 });
+  body.rotateY(-Math.PI / 2);
+  body.translate(width / 2, 0, 0);
+  const b = new ShapeBuilder(false, true);
+  b.add(body, 0x3f8fb8, 0, 0, 0);
+  // Lưng sóng nhạt màu hơn: một dải nước thấp kéo dài phía sau.
+  b.box(width * 0.96, h * 0.14, 1.0, 0x6fb8d8, 0, h * 0.07, -1.35);
+  const rand = seeded(seed);
+  const n = Math.max(5, Math.round(width / 0.32));
+  for (let i = 0; i < n; i++) {
+    const x = -width / 2 + (width * (i + 0.5)) / n + (rand() - 0.5) * 0.12;
+    b.sphere(h * (0.09 + rand() * 0.08), C.foam, x, h * (0.8 + rand() * 0.1), 0.5 + rand() * 0.12, [1, 0.75, 1], 7);
+    if (rand() < 0.7) b.sphere(h * (0.07 + rand() * 0.06), C.foam, x, h * (0.98 + rand() * 0.12), 0.05 + rand() * 0.2, [1, 0.8, 1], 6);
+    b.sphere(h * (0.06 + rand() * 0.05), C.foam, x + 0.08, h * 0.05, 0.5 + rand() * 0.15, [1, 0.6, 1], 6);
+  }
+  const g = new THREE.Group();
+  const mesh = b.mesh(toon);
+  g.add(mesh, outlineOf(mesh.geometry, inkThin));
+  return g;
+}
 
 /** Quả đồi nhỏ có cây: Sơn Tinh nhấc bổng lên ném vào giặc. Rộng vừa vùng bị đánh trúng. */
 function hillModel(): THREE.Group {
@@ -279,6 +377,9 @@ export class BattleView {
   private readonly hills: Hill[] = [];
   private readonly waves: DrumWave[] = [];
   private readonly turtles: Turtle[] = [];
+  private readonly crags: Crag[] = [];
+  private readonly surges: Surge[] = [];
+  private readonly whirls: Whirl[] = [];
   /** Nhịp trống đã tỏa sóng gần nhất của Trống trận đang đánh, −1 khi không có. */
   private rallyBeat = -1;
   private battleId = -1;
@@ -383,6 +484,12 @@ export class BattleView {
     this.waves.length = 0;
     for (const t of this.turtles) this.root.remove(t.group);
     this.turtles.length = 0;
+    for (const c of this.crags) this.dropCrag(c);
+    this.crags.length = 0;
+    for (const w of this.surges) this.root.remove(w.group);
+    this.surges.length = 0;
+    for (const w of this.whirls) this.root.remove(w.group);
+    this.whirls.length = 0;
     this.rallyBeat = -1;
     this.lastSeq = 0;
   }
@@ -444,6 +551,12 @@ export class BattleView {
           continue;
         }
         if (view.weapon) swingWeapon(view.weapon, f.swing, 0);
+        if (view.cast && view.cast > 0 && view.weapon) {
+          // Dời non: giơ gậy thần lên cao quá đầu, rồi dộng mạnh xuống đất.
+          const k = 1 - view.cast / CAST_TIME;
+          const up = k < 0.55 ? smoothstep(k, 0, 0.3) : 1 - smoothstep(k, 0.55, 0.75);
+          view.weapon.rotation.set(WEAPON_REST.x - 2.6 * up, 0, WEAPON_REST.z);
+        }
       }
       if (f.kind === 'anDuong') {
         for (const c of obj.children) if (c.userData.halo) c.rotation.z = this.time * 0.6;
@@ -509,9 +622,222 @@ export class BattleView {
       if (f.kind === 'giong') obj.rotation.x = view.smash > 0 ? -0.2 * Math.sin(Math.PI * (1 - view.smash / SMASH_TIME)) : 0;
       else if (f.kind === 'sonTinh' || f.kind === 'anDuong') obj.rotation.x = 0;
       else obj.rotation.x = f.swing > 0 ? -0.5 * (f.swing / 0.3) : 0;
-      // Đang có Trống trận thì quân ta nhún nhảy hăng hơn.
+      // Đang có Trống trận thì quân ta nhún nhảy hăng hơn; trúng sóng Thủy Tinh thì lội nước, nhún ít.
       const hop = f.side === 'ta' && battle.rally > 0 ? 0.12 : 0.06;
-      obj.position.y = base + (f.state === 'move' && !f.stun ? Math.abs(Math.sin(this.time * 10 + f.id)) * hop : 0);
+      const wading = (f.slow ?? 0) > 0;
+      obj.position.y = base + (f.state === 'move' && !f.stun ? Math.abs(Math.sin(this.time * (wading ? 5 : 10) + f.id)) * hop : 0);
+      this.syncWet(view, f.side === 'ta' && wading && !battle.outcome);
+      if (view.cast && view.cast > 0) {
+        view.cast = Math.max(0, view.cast - dt);
+        const k = 1 - view.cast / CAST_TIME;
+        if (f.kind === 'sonTinh') {
+          // Nhún người lấy đà rồi dậm xuống đúng lúc dộng gậy.
+          obj.position.y += 0.35 * this.scale * Math.sin(Math.PI * smoothstep(k, 0.1, 0.6));
+        }
+        if (f.kind === 'thuyTinh') {
+          // Hô mưa gọi gió: ngửa người, giơ đinh ba lên trời, nhô cao trên ngọn sóng.
+          const up = Math.sin(Math.PI * k);
+          obj.rotation.x = -0.25 * up;
+          obj.position.y += 0.3 * this.scale * up;
+        }
+      }
+      if (view.emerge && view.emerge > 0) {
+        view.emerge = Math.max(0, view.emerge - dt);
+        obj.position.y -= (view.emerge / EMERGE_TIME) ** 2 * 0.9 * this.scale;
+      }
+    }
+  }
+
+  /** Thêm hay bỏ vũng nước bọt trắng dưới chân một người lính ta đang lội vì trúng sóng. */
+  private syncWet(view: FighterView, on: boolean): void {
+    if (on && !view.wet) {
+      const g = new THREE.Group();
+      const pool = new THREE.Mesh(wetGeo, wetMat);
+      pool.renderOrder = 2;
+      g.add(pool);
+      for (let i = 0; i < 5; i++) {
+        const a = (i / 5) * Math.PI * 2;
+        const dot = new THREE.Mesh(foamDotGeo, foamMat);
+        dot.position.set(Math.cos(a) * 0.4, 0.04, Math.sin(a) * 0.4);
+        g.add(dot);
+      }
+      g.position.y = 0.05;
+      view.obj.add(g);
+      view.wet = g;
+    } else if (!on && view.wet) {
+      view.wet.removeFromParent();
+      view.wet = undefined;
+    }
+    if (view.wet) {
+      view.wet.rotation.y = this.time * 1.5;
+      view.wet.children.forEach((c, i) => {
+        if (i > 0) c.position.y = 0.04 + Math.abs(Math.sin(this.time * 6 + i)) * 0.06;
+      });
+    }
+  }
+
+  /**
+   * Dời non: một vòng núi đá nhọn trồi vụt lên quanh Sơn Tinh đúng bán kính bị đánh (ROCKS.radius), lần lượt
+   * từng mỏm; đất nứt toác từ chân Sơn Tinh ra; bụi đất tung ở chân đá. Đứng một lúc rồi lún xuống.
+   */
+  private raiseCrags(battle: Battle, x: number, z: number, seq: number): void {
+    const { x: ox, z: oz } = this.offset;
+    const hero = battle.fighters.find((f) => f.kind === 'sonTinh');
+    const view = hero && this.fighters.get(hero.id);
+    if (view) view.cast = CAST_TIME;
+    const rand = seeded(seq * 131 + 17);
+    const group = new THREE.Group();
+    group.position.set(x + ox, 0, z + oz);
+    const spikes: Crag['spikes'] = [];
+    const add = (n: number, r: number, hMin: number, hMax: number, size: number, delay0: number): void => {
+      for (let i = 0; i < n; i++) {
+        const a = (i / n) * Math.PI * 2 + rand() * 0.3 + (r < ROCKS.radius ? 0.3 : 0);
+        const px = Math.cos(a) * r;
+        const pz = Math.sin(a) * r;
+        const h = (hMin + rand() * (hMax - hMin)) * this.scale;
+        const obj = cragSpike(h, size * this.scale * (0.85 + rand() * 0.3), rand);
+        obj.position.set(px, this.heightAt(x + px, z + pz) - h, pz);
+        // Mỏm đá chĩa hơi ra ngoài vòng.
+        obj.rotation.set(Math.sin(a) * 0.18, rand() * Math.PI, -Math.cos(a) * 0.18);
+        group.add(obj);
+        spikes.push({ obj, h, delay: delay0 + (i / n) * 0.12 });
+      }
+    };
+    add(11, ROCKS.radius, 1.0, 1.6, 0.42, 0.04);
+    add(7, ROCKS.radius * 0.62, 0.55, 0.9, 0.28, 0);
+    // Đất nứt: những đường nứt sẫm tỏa từ chân Sơn Tinh ra tới vòng đá.
+    const crackMat = new THREE.MeshBasicMaterial({ color: 0x2a2018, transparent: true, opacity: 0.7, depthWrite: false });
+    const cracks = new THREE.Group();
+    for (let i = 0; i < 9; i++) {
+      const a = (i / 9) * Math.PI * 2 + rand() * 0.4;
+      let cx = 0;
+      let cz = 0;
+      let dir = a;
+      for (let seg = 0; seg < 3; seg++) {
+        const len = (ROCKS.radius / 3) * (0.8 + rand() * 0.4);
+        dir += (rand() - 0.5) * 0.6;
+        const mesh = new THREE.Mesh(new THREE.BoxGeometry(0.09 - seg * 0.02, 0.01, len), crackMat);
+        mesh.position.set(cx + Math.cos(dir) * len * 0.5, this.heightAt(x + cx, z + cz) + 0.04, cz + Math.sin(dir) * len * 0.5);
+        mesh.rotation.y = Math.atan2(Math.cos(dir), Math.sin(dir));
+        mesh.renderOrder = 2;
+        cracks.add(mesh);
+        cx += Math.cos(dir) * len;
+        cz += Math.sin(dir) * len;
+      }
+    }
+    group.add(cracks);
+    this.root.add(group);
+    this.crags.push({ group, spikes, cracks, crackMat, age: 0 });
+    // Bụi đất tung ở chân từng mỏm đá lớn.
+    for (let i = 0; i < 12; i++) {
+      const a = (i / 12) * Math.PI * 2;
+      const px = x + Math.cos(a) * ROCKS.radius;
+      const pz = z + Math.sin(a) * ROCKS.radius;
+      this.addPuff(px + ox, this.heightAt(px, pz) + 0.2, pz + oz, i % 3 ? C.earth : C.rock, 0.05 + (i / 12) * 0.12, 0.9, 1.8);
+    }
+  }
+
+  private dropCrag(c: Crag): void {
+    this.root.remove(c.group);
+    c.cracks.children.forEach((m) => (m as THREE.Mesh).geometry.dispose());
+    c.crackMat.dispose();
+  }
+
+  /**
+   * Hô mưa gọi gió: Thủy Tinh giơ đinh ba, mây đen và mưa xiên quất xuống quanh mình, một bức tường sóng
+   * bề ngang đúng dải bị quét (TT_WAVE.width) chạy từ chỗ Thủy Tinh tới cuối dải rồi đổ sụp, bọt tung dọc đường.
+   */
+  private surge(battle: Battle, x: number, z: number, tx: number, tz: number, seq: number): void {
+    const { x: ox, z: oz } = this.offset;
+    const tt = battle.fighters.find((f) => f.kind === 'thuyTinh');
+    const view = tt && this.fighters.get(tt.id);
+    if (view) view.cast = CAST_TIME;
+    const face = Math.atan2(tx - x, tz - z);
+    const group = surgeModel(TT_WAVE.width, 1.35 * this.scale, seq * 53 + 1);
+    group.rotation.y = face;
+    group.position.set(x + ox, this.heightAt(x, z), z + oz);
+    group.scale.set(1, 0.3, 1);
+    this.root.add(group);
+    this.surges.push({ group, fromX: x, fromZ: z, toX: tx, toZ: tz, age: 0 });
+    // Bọt tung hai bên mép sóng dọc đường sóng chạy.
+    const dx = Math.sin(face);
+    const dz = Math.cos(face);
+    for (let n = 0; n <= 6; n++) {
+      const k = n / 6;
+      for (const side of [-1, 1]) {
+        const px = x + (tx - x) * k + dz * side * TT_WAVE.width * 0.5;
+        const pz = z + (tz - z) * k - dx * side * TT_WAVE.width * 0.5;
+        this.addPuff(px + ox, this.heightAt(px, pz) + 0.4, pz + oz, n % 2 ? C.foam : 0x9fd4e8, SURGE_RUN * k, 0.6, 1.4);
+      }
+    }
+    // Mây đen kéo tới trên đầu Thủy Tinh, mưa xiên theo gió quất xuống quanh mình.
+    const ground = this.heightAt(x, z);
+    for (let n = 0; n < 5; n++) {
+      const a = (n / 5) * Math.PI * 2;
+      this.addPuff(x + ox + Math.cos(a) * 1.2, ground + 3.4 * this.scale, z + oz + Math.sin(a) * 1.2, C.storm, n * 0.05, 1.3, 2.4);
+    }
+    const rand = seeded(seq * 977 + 3);
+    for (let n = 0; n < 30; n++) {
+      const a = rand() * Math.PI * 2;
+      const r = rand() * 3;
+      const px = x + Math.cos(a) * r;
+      const pz = z + Math.sin(a) * r;
+      const g = this.heightAt(px, pz);
+      const mesh = new THREE.Mesh(rainGeo, rainMat);
+      mesh.visible = false;
+      this.root.add(mesh);
+      const from = new THREE.Vector3(px + ox + dx * 1.2, g + 4.2 * this.scale, pz + oz + dz * 1.2);
+      const to = new THREE.Vector3(px + ox, g, pz + oz);
+      mesh.position.copy(from);
+      this.arrows.push({ mesh, from, to, age: 0, dur: 0.28, arc: 0, delay: rand() * 0.9 });
+    }
+  }
+
+  /** Gọi thủy quái: xoáy nước và bọt bắn lên ở chỗ từng tôm binh trồi lên quanh Thủy Tinh; Thủy Tinh giơ đinh ba. */
+  private summon(battle: Battle, x: number, z: number): void {
+    const { x: ox, z: oz } = this.offset;
+    const tt = battle.fighters.find((f) => f.kind === 'thuyTinh');
+    const view = tt && this.fighters.get(tt.id);
+    if (view) view.cast = CAST_TIME;
+    // Tôm binh vừa gọi là mấy con mới nhất đứng sát Thủy Tinh.
+    const fresh = battle.fighters
+      .filter((f) => f.kind === 'tomBinh' && f.state !== 'dead' && f.state !== 'gone' && Math.hypot(f.x - x, f.z - z) < 1.8)
+      .sort((a, b) => b.id - a.id)
+      .slice(0, 3);
+    for (const f of fresh) {
+      const v = this.fighters.get(f.id);
+      if (v) v.emerge = EMERGE_TIME;
+      const g = new THREE.Group();
+      const rings: THREE.Mesh[] = [];
+      for (const [i, color] of [C.sea, 0x6fb8d8, C.foam].entries()) {
+        const ring = new THREE.Mesh(whirlGeo, new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.85, depthWrite: false }));
+        ring.scale.setScalar(1.6 - i * 0.45);
+        ring.rotation.y = i * 1.3;
+        ring.position.y = 0.03 + i * 0.01;
+        ring.renderOrder = 3;
+        g.add(ring);
+        rings.push(ring);
+      }
+      // Cột nước xoắn phun vụt lên, đầu cột tung bọt.
+      const b = new ShapeBuilder(false, true);
+      b.cyl(0.2, 0.32, 1.3, 0x6fb8d8, 0, 0.65, 0, undefined, 10);
+      b.cyl(0.12, 0.2, 0.5, C.sea, 0.05, 0.5, 0.04, undefined, 8);
+      for (let n = 0; n < 6; n++) {
+        const a = (n / 6) * Math.PI * 2;
+        b.sphere(0.12 + (n % 3) * 0.03, C.foam, Math.cos(a) * 0.22, 1.3 + (n % 2) * 0.12, Math.sin(a) * 0.22, [1, 0.8, 1], 6);
+      }
+      const spout = new THREE.Group();
+      const mesh = b.mesh(toon);
+      spout.add(mesh, outlineOf(mesh.geometry, inkThin));
+      spout.scale.set(1, 0.01, 1);
+      g.add(spout);
+      g.position.set(f.x + ox, this.heightAt(f.x, f.z), f.z + oz);
+      g.scale.setScalar(this.scale);
+      this.root.add(g);
+      this.whirls.push({ group: g, rings, spout, age: 0 });
+      for (let n = 0; n < 4; n++) {
+        this.addPuff(f.x + ox + (n - 1.5) * 0.15, this.heightAt(f.x, f.z) + 0.3, f.z + oz, n % 2 ? C.foam : 0x9fd4e8, 0.05 + n * 0.06, 0.7, 1.1);
+      }
     }
   }
 
@@ -642,6 +968,9 @@ export class BattleView {
         this.arrows.push({ mesh, from, to, age: 0, dur: Math.max(0.12, from.distanceTo(to) / (fast ? 18 : 12)), arc: fast ? 0.25 : 0.6, flash: e.by === 'anDuong' });
       }
       if (e.kind === 'volley') this.volley(battle, e.seq, e.x, e.z);
+      if (e.kind === 'rocks') this.raiseCrags(battle, e.x, e.z, e.seq);
+      if (e.kind === 'wave' && e.tx !== undefined && e.tz !== undefined) this.surge(battle, e.x, e.z, e.tx, e.tz, e.seq);
+      if (e.kind === 'summon') this.summon(battle, e.x, e.z);
       if (e.kind === 'shield') this.riseTurtle(battle, e.x, e.z);
       if (e.kind === 'smash') {
         const hero = battle.fighters.find((f) => f.kind === 'giong');
@@ -671,8 +1000,8 @@ export class BattleView {
         this.rings.push({ mesh, age: 0 });
       }
       if (e.kind === 'fire' && e.tx !== undefined && e.tz !== undefined) this.breatheFire(battle, e.seq, e.x, e.z, e.tx, e.tz);
-      if (e.kind === 'smash' || e.kind === 'rocks') {
-        const r = e.kind === 'rocks' ? 3 : 1.6;
+      if (e.kind === 'smash') {
+        const r = 1.6;
         for (let i = 0; i < 8; i++) {
           const a = (i / 8) * Math.PI * 2;
           this.addPuff(e.x + Math.cos(a) * r + ox, this.heightAt(e.x, e.z) + 0.2, e.z + Math.sin(a) * r + oz, C.earth, 0.05, 0.7, 1.6);
@@ -767,6 +1096,59 @@ export class BattleView {
   }
 
   private animate(dt: number): void {
+    for (let i = this.crags.length - 1; i >= 0; i--) {
+      const c = this.crags[i];
+      c.age += dt;
+      const sink = smoothstep(c.age, CRAG_HOLD, CRAG_LIFE);
+      for (const sp of c.spikes) {
+        // Trồi vụt lên, vượt đà một chút rồi đứng lại; về cuối thì lún xuống.
+        const k = Math.min(Math.max((c.age - sp.delay) / CRAG_RISE, 0), 1);
+        const back = 1 + 2.2 * (k - 1) ** 3 + 1.2 * (k - 1) ** 2;
+        const ground = sp.obj.userData.ground ?? (sp.obj.userData.ground = sp.obj.position.y + sp.h);
+        sp.obj.position.y = (ground as number) - sp.h + sp.h * back - sp.h * 1.05 * sink;
+      }
+      c.crackMat.opacity = 0.7 * (1 - smoothstep(c.age, CRAG_HOLD * 0.8, CRAG_LIFE));
+      if (c.age >= CRAG_LIFE) {
+        this.dropCrag(c);
+        this.crags.splice(i, 1);
+      }
+    }
+    for (let i = this.surges.length - 1; i >= 0; i--) {
+      const w = this.surges[i];
+      w.age += dt;
+      const k = Math.min(w.age / SURGE_RUN, 1);
+      const run = 1 - (1 - k) ** 2;
+      const px = lerp(w.fromX, w.toX, run);
+      const pz = lerp(w.fromZ, w.toZ, run);
+      w.group.position.set(px + this.offset.x, this.heightAt(px, pz), pz + this.offset.z);
+      // Dâng cao lúc đầu, chạy, rồi đổ sụp xuống khi tới cuối dải.
+      const grow = Math.min(w.age / 0.15, 1);
+      const fall = smoothstep(w.age, SURGE_RUN, SURGE_LIFE);
+      w.group.scale.set(1, Math.max(0.01, (0.3 + 0.7 * grow) * (1 - fall)), 1 + 0.4 * fall);
+      if (w.age >= SURGE_LIFE) {
+        this.root.remove(w.group);
+        this.surges.splice(i, 1);
+      }
+    }
+    for (let i = this.whirls.length - 1; i >= 0; i--) {
+      const w = this.whirls[i];
+      w.age += dt;
+      const k = w.age / WHIRL_LIFE;
+      w.rings.forEach((ring, n) => {
+        ring.rotation.y -= dt * (6 + n * 3);
+        (ring.material as THREE.MeshBasicMaterial).opacity = 0.85 * (1 - k);
+        ring.scale.setScalar((1.6 - n * 0.45) * (1.2 - 0.5 * k));
+      });
+      // Cột nước vọt lên rất nhanh, đứng một chút rồi sụp xuống.
+      const up = smoothstep(w.age, 0, 0.18) * (1 - smoothstep(w.age, 0.45, 0.85));
+      w.spout.scale.set(1, Math.max(0.01, up), 1);
+      w.spout.rotation.y += dt * 8;
+      if (k >= 1) {
+        this.root.remove(w.group);
+        w.rings.forEach((ring) => (ring.material as THREE.Material).dispose());
+        this.whirls.splice(i, 1);
+      }
+    }
     for (let i = this.waves.length - 1; i >= 0; i--) {
       const w = this.waves[i];
       w.age += dt;

@@ -11,6 +11,7 @@ import {
   BUILDINGS,
   CH3_QUEST_START,
   DIEN_CHAPTER,
+  MOVE_FRACTION,
   FIRST_FLOOD_MS,
   FIRST_LAND_MS,
   FLOOD_RECEDE_S,
@@ -291,7 +292,11 @@ export type FailReason =
   | 'advKietSuc'
   | 'chuaToiTet'
   | 'daDang'
-  | 'thieuBanh';
+  | 'thieuBanh'
+  | 'khongTheDoi'
+  | 'trungCho'
+  | 'khongDuCho'
+  | 'daTheoMau';
 
 export type Result<T = undefined> = { ok: true; value: T } | { ok: false; reason: FailReason };
 
@@ -649,7 +654,7 @@ export function gain(state: GameState, amounts: Cost): void {
 }
 
 /** Cho dân rảnh vào làm ở công trình này cho tới khi đủ chỗ. */
-function fillWorkers(state: GameState, b: Building): void {
+export function fillWorkers(state: GameState, b: Building): void {
   const add = Math.min(slotsOf(b) - b.workers, freeDan(state));
   if (add > 0) b.workers += add;
 }
@@ -665,6 +670,60 @@ export function place(state: GameState, type: BuildingType, x: number, z: number
   levelFootprint(state, b, footprintTop(state, type, x, z));
   state.buildings.push(b);
   fillWorkers(state, b);
+  return ok(b);
+}
+
+// ---------- Dời công trình ----------
+
+/** Giá dời một công trình: một phần giá dựng, làm tròn lên. */
+export function moveCost(b: Pick<Building, 'type'>): Cost {
+  const build = BUILDINGS[b.type].buildCost;
+  const cost: Cost = {};
+  for (const r of RESOURCE_IDS) if (build[r]) cost[r] = Math.ceil(build[r]! * MOVE_FRACTION);
+  return cost;
+}
+
+/** Ô (x, z) có đặt được công trình `b` không, coi như `b` đã nhấc khỏi chỗ cũ. */
+function fitsWithout(state: GameState, b: Building, x: number, z: number, grid: Int32Array): FailReason | null {
+  const def = BUILDINGS[b.type];
+  const level = dienLevel(state);
+  for (let dx = 0; dx < def.w; dx++) {
+    for (let dz = 0; dz < def.d; dz++) {
+      const tx = x + dx;
+      const tz = z + dz;
+      if (!inGrid(tx, tz) || !isUnlocked(tx, tz, level)) return 'ngoaiVung';
+      const at = grid[tz * GRID + tx];
+      if (at && at !== b.id) return 'datBiChiem';
+    }
+  }
+  if (def.nearRiver && !touchesRiver(x, z, def.w, def.d)) return 'phaiSatSong';
+  return null;
+}
+
+export function canMove(state: GameState, id: number, x: number, z: number): Result {
+  const b = findBuilding(state, id);
+  if (!b) return fail('khongTimThay');
+  if (b.type === 'dien') return fail('khongTheDoi');
+  if (state.raid.phase !== 'idle') return fail('dangCoGiac');
+  if (b.x === x && b.z === z) return fail('trungCho');
+  const why = fitsWithout(state, b, x, z, occupancy(state));
+  if (why) return fail(why);
+  if (!canAfford(state, moveCost(b))) return fail('thieuTaiNguyen');
+  return ok(undefined);
+}
+
+/**
+ * Dời công trình sang (x, z): giữ cấp, người làm, hư hỏng. Nền đất cũ ở lại chỗ cũ; chỗ mới dân đắp móng
+ * phẳng bằng ô cao nhất dưới móng như khi dựng mới (đã đắp nền cao hơn thì phải đắp lại).
+ */
+export function move(state: GameState, id: number, x: number, z: number): Result<Building> {
+  const check = canMove(state, id, x, z);
+  if (!check.ok) return check;
+  const b = findBuilding(state, id)!;
+  pay(state, moveCost(b));
+  b.x = x;
+  b.z = z;
+  levelFootprint(state, b, footprintTop(state, b.type, x, z));
   return ok(b);
 }
 

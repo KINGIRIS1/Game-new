@@ -26,6 +26,7 @@ import {
   canAfford,
   canTrain,
   canUpgrade,
+  moveCost,
   countOf,
   currentQuest,
   canRaiseBuilding,
@@ -74,6 +75,8 @@ import { costHtml, esc, fmt } from './format';
 import { giongHtml, storyHtml } from './giong';
 import { sonHtml } from './son';
 import { blessingHtml, tetHtml } from './tet';
+import { mauHtml } from './mau';
+import type { MauId } from '../game/mau';
 
 const SHOWN_RESOURCES: ResourceId[] = ['gao', 'voOc', 'datDa', 'sat'];
 const BUILD_MENU: BuildingType[] = [
@@ -132,6 +135,10 @@ export type HudAction =
   | { kind: 'forgeNoThan' }
   | { kind: 'forgeArms'; unit: UnitType }
   | { kind: 'openTet' }
+  | { kind: 'startMove'; id: number }
+  | { kind: 'openMau' }
+  | { kind: 'rotateView' }
+  | { kind: 'applyMau'; mau: MauId }
   | { kind: 'offerBanh'; banh: Banh }
   | { kind: 'confirmPlace' }
   | { kind: 'cancelPlace' }
@@ -167,7 +174,7 @@ export type HudAction =
   | { kind: 'leaveField' }
   | { kind: 'fieldToMap' };
 
-export type HudMode = 'view' | 'place' | 'paint';
+export type HudMode = 'view' | 'place' | 'move' | 'paint';
 
 type Sheet =
   | { kind: 'build' }
@@ -178,6 +185,7 @@ type Sheet =
   | { kind: 'son' }
   | { kind: 'adv' }
   | { kind: 'tet' }
+  | { kind: 'mau' }
   | null;
 
 /** Chữ trên nút kỹ năng: tên khi sẵn sàng, chỉ biểu tượng và số giây khi đang hồi (cho gọn trên điện thoại). */
@@ -281,6 +289,7 @@ export class Hud {
       case 'upgrade':
       case 'removeWall':
       case 'raiseBuilding':
+      case 'startMove':
         return this.onAction({ kind: act, id });
       case 'offerGift':
         return this.onAction({ kind: 'offerGift', gift: el.dataset.gift as GiftId });
@@ -294,6 +303,8 @@ export class Hud {
         return this.onAction({ kind: 'train', unit: el.dataset.unit as UnitType });
       case 'forgeArms':
         return this.onAction({ kind: 'forgeArms', unit: el.dataset.unit as UnitType });
+      case 'applyMau':
+        return this.onAction({ kind: 'applyMau', mau: el.dataset.mau as MauId });
       case 'offerBanh':
         return this.onAction({ kind: 'offerBanh', banh: el.dataset.banh as Banh });
       case 'closeCampaign':
@@ -479,18 +490,21 @@ export class Hud {
 
   setMode(mode: HudMode, placeValid = true, hint?: string): void {
     this.mode = mode;
+    // Nút xoay cảnh ở mọi chế độ: lúc đặt, dời, dựng lũy là lúc cần xoay nhất.
+    const rotate = `<button class="icon-btn rotate" data-act="rotateView" aria-label="${vi.ui.rotate}" title="${vi.ui.rotate}">⟳</button>`;
     if (mode === 'view') {
       const camp = this.campaignReady ? `<button class="btn bronze" data-act="openCampaign">⚔️ ${vi.ui.campaign}</button>` : '';
-      this.bottombar.innerHTML = `<button class="btn" data-act="openBuild">🔨 ${vi.ui.build}</button>${camp}`;
+      this.bottombar.innerHTML = `<button class="btn" data-act="openBuild">🔨 ${vi.ui.build}</button>${camp}${rotate}`;
       this.hint.hidden = true;
-    } else if (mode === 'place') {
+    } else if (mode === 'place' || mode === 'move') {
+      const label = mode === 'move' ? vi.ui.moveHere : vi.ui.place;
       this.bottombar.innerHTML = `
         <button class="btn ghost" data-act="cancelPlace">✕ ${vi.ui.cancel}</button>
-        <button class="btn" data-act="confirmPlace" ${placeValid ? '' : 'disabled'}>✓ ${vi.ui.place}</button>`;
+        <button class="btn" data-act="confirmPlace" ${placeValid ? '' : 'disabled'}>✓ ${label}</button>${rotate}`;
       this.hint.hidden = false;
-      this.hint.textContent = vi.ui.placeHint;
+      this.hint.textContent = mode === 'move' ? vi.ui.moveHint : vi.ui.placeHint;
     } else {
-      this.bottombar.innerHTML = `<button class="btn" data-act="cancelPlace">✓ ${vi.ui.done}</button>`;
+      this.bottombar.innerHTML = `<button class="btn" data-act="cancelPlace">✓ ${vi.ui.done}</button>${rotate}`;
       this.hint.hidden = false;
       this.hint.textContent = hint ?? vi.ui.wallHint;
     }
@@ -500,7 +514,8 @@ export class Hud {
   setPlaceValid(valid: boolean, reason?: string): void {
     const btn = this.bottombar.querySelector<HTMLButtonElement>('[data-act="confirmPlace"]');
     if (btn) btn.disabled = !valid;
-    if (btn) this.hint.textContent = valid || !reason ? vi.ui.placeHint : reason;
+    const hint = this.mode === 'move' ? vi.ui.moveHint : vi.ui.placeHint;
+    if (btn) this.hint.textContent = valid || !reason ? hint : reason;
   }
 
   /** Đổi tạm dòng gợi ý (chế độ dựng lũy). */
@@ -541,6 +556,15 @@ export class Hud {
 
   showAdv(state: GameState): void {
     this.sheet = { kind: 'adv' };
+    this.refreshSheet(state);
+  }
+
+  /** Mẫu vừa bấm Áp lần đầu (chờ bấm lần nữa cho chắc). */
+  mauArmed: MauId | null = null;
+
+  showMau(state: GameState): void {
+    this.sheet = { kind: 'mau' };
+    this.mauArmed = null;
     this.refreshSheet(state);
   }
 
@@ -598,6 +622,9 @@ export class Hud {
     } else if (this.sheet.kind === 'adv') {
       title = `🏹 ${vi.ui.adv}`;
       body = advHtml(state);
+    } else if (this.sheet.kind === 'mau') {
+      title = `🗺️ ${vi.ui.mauTitle}`;
+      body = mauHtml(state, this.mauArmed);
     } else if (this.sheet.kind === 'tet') {
       title = `🎋 ${vi.ui.tet}`;
       body = tetHtml(state);
@@ -646,7 +673,12 @@ export class Hud {
         ${why ? `<span class="why">${why}</span>` : ''}
       </button>`;
     }).join('');
-    return `<div class="cards">${cards}${raise}</div>`;
+    const mau = `<button class="card" data-act="openMau">
+        <span class="icon">🗺️</span>
+        <span class="name">${vi.ui.mauTitle}</span>
+        <span class="meta">${vi.ui.mauCard}</span>
+      </button>`;
+    return `<div class="cards">${mau}${cards}${raise}</div>`;
   }
 
   private buildingHtml(state: GameState, id: number): string {
@@ -722,6 +754,11 @@ export class Hud {
       actions.push(`<div class="why">${vi.ui.damaged}</div>`);
       actions.push(`<button class="btn bronze" data-act="repair" data-id="${b.id}" ${canAfford(state, rc) && state.raid.phase !== 'battle' ? '' : 'disabled'}>
         ${vi.ui.repair} · ${costHtml(state, rc)}</button>`);
+    }
+    if (b.type !== 'dien') {
+      const mc = moveCost(b);
+      const free = state.raid.phase === 'idle' && canAfford(state, mc);
+      actions.push(`<button class="btn ghost" data-act="startMove" data-id="${b.id}" ${free ? '' : 'disabled'}>↔ ${vi.ui.move} · ${costHtml(state, mc)}</button>`);
     }
     const cost = upgradeCostOf(b);
     if (cost) {

@@ -1286,3 +1286,37 @@ textarea {
   align-items: center;
   justify-content: space-between;
 }
+
+/* Mẫu kinh đô: thẻ mỗi mẫu, bản đồ thu nhỏ 27×27 ô (thêm một hàng sông). */
+.mau {
+  border: 1.5px solid var(--bronze);
+  border-radius: 12px;
+  padding: 8px 10px;
+  margin-bottom: 10px;
+  background: rgba(255, 255, 255, 0.35);
+}
+.mau.locked {
+  opacity: 0.6;
+}
+.mau h3 {
+  margin: 2px 0 4px;
+}
+.mini-map {
+  display: grid;
+  grid-template-columns: repeat(var(--n), 1fr);
+  width: min(100%, 260px);
+  aspect-ratio: 1;
+  margin: 6px auto;
+  border: 1px solid var(--bronze-dark);
+  background: #b9c47e;
+}
+.mini-map i {
+  display: block;
+}
+.mini-map i.wild {
+  background: #6f8a4a;
+  opacity: 0.55;
+}
+.mini-map i.river {
+  background: #3f7f9a;
+}

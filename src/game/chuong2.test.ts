@@ -4,6 +4,7 @@ import { canStartStage, startStage } from './campaign';
 import {
   CH2_QUEST_START,
   DEFAULT_ROWS,
+  ENEMIES,
   FIELD,
   FIRST_FLOOD_MS,
   GIFT_IDS,
@@ -13,6 +14,8 @@ import {
   RAID_WARNING_MS,
   ROCKS,
   SKILL_IDS,
+  TT_SUMMON,
+  TT_WAVE,
   UNITS,
   floodLevel,
   type UnitType,
@@ -414,6 +417,53 @@ describe('Sơn Tinh', () => {
     expect(win(16).outcome).toBe('win');
     expect(s.son.won).toBe(true);
     expect(canPlace(s, 'denTanVien', 3, 12).ok).toBe(true);
+  });
+});
+
+describe('phép của Thủy Tinh', () => {
+  /** Màn 16 dàn sẵn: Thủy Tinh đứng giữa bãi, một giáo binh đứng ngay trước mặt. */
+  function duel() {
+    const b = startFieldBattle({ id: 1, stage: 16, enemies: { thuyTinh: 1 }, hpScale: 2, army: { giao: 1, cung: 0, voi: 0 }, rows: DEFAULT_ROWS });
+    const tt = b.fighters.find((f) => f.kind === 'thuyTinh')!;
+    const giao = b.fighters.find((f) => f.kind === 'giao')!;
+    tt.x = 4.5;
+    tt.z = 8;
+    giao.x = 4.5;
+    giao.z = 11;
+    giao.maxHp = giao.hp = 1000;
+    return { b, tt, giao };
+  }
+
+  it('hô mưa gọi gió: sóng quét dải trước mặt, quân ta mất máu, bị đẩy lùi, đi chậm', () => {
+    const { b, tt, giao } = duel();
+    tt.spell = { wave: 0, summon: 99, summoned: 0 };
+    stepField(b, 0.01);
+    expect(b.events.some((e) => e.kind === 'wave')).toBe(true);
+    expect(giao.hp).toBeLessThanOrEqual(1000 - TT_WAVE.dmg + 1e-6);
+    expect(giao.z).toBeGreaterThan(11 + TT_WAVE.push - 0.2);
+    expect(giao.slow).toBeGreaterThan(TT_WAVE.slowS - 0.1);
+    expect(tt.spell.wave).toBeCloseTo(TT_WAVE.cooldown, 5);
+    // Quân ta ngoài tầm thì chưa hô sóng.
+    const far = duel();
+    far.giao.z = far.tt.z + TT_WAVE.reach + 2;
+    far.tt.spell = { wave: 0, summon: 99, summoned: 0 };
+    stepField(far.b, 0.01);
+    expect(far.b.events.some((e) => e.kind === 'wave')).toBe(false);
+  });
+
+  it('gọi thủy quái: mỗi lần 3 tôm binh khỏe như giặc của màn, tối đa 4 lần', () => {
+    const { b, tt } = duel();
+    tt.spell = { wave: 99, summon: 0, summoned: 0 };
+    stepField(b, 0.01);
+    const tom = b.fighters.filter((f) => f.kind === 'tomBinh');
+    expect(tom.length).toBe(TT_SUMMON.count);
+    expect(tom[0].maxHp).toBeCloseTo(ENEMIES.tomBinh.hp * 2 * FIELD.hpMul, 5);
+    expect(b.total).toBe(1 + TT_SUMMON.count);
+    for (let i = 0; i < 10; i++) {
+      tt.spell.summon = 0;
+      stepField(b, 0.01);
+    }
+    expect(b.fighters.filter((f) => f.kind === 'tomBinh').length).toBe(TT_SUMMON.count * TT_SUMMON.times);
   });
 });
 

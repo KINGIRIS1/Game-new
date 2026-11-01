@@ -66,6 +66,9 @@ export interface BuildingDef {
   unlock?: Unlock;
 }
 
+/** Dời công trình sang chỗ khác tốn chừng này phần giá dựng (làm tròn lên). Điện Vua Hùng không dời được. */
+export const MOVE_FRACTION = 0.1;
+
 /** Điện Vua Hùng lên cấp 6 khi đã vào chương 2, lên cấp 7 khi đã vào chương 3 (chỉ số là cấp đích). */
 export const DIEN_CHAPTER: Partial<Record<number, 2 | 3>> = { 6: 2, 7: 3 };
 
@@ -715,6 +718,16 @@ export const SON: FighterStats = { hp: 560, dmg: 20, range: 1.1, speed: 1.9, coo
 export const SON_REST_MS = 2 * 60_000;
 /** Bốc đồi: nhấc một quả đồi ném xuống chỗ giặc đứng đông nhất. */
 export const HILL = { dmg: 70, radius: 2.2 };
+/**
+ * Thủy Tinh (trùm màn 16) có hai phép:
+ * - Hô mưa gọi gió: cứ `cooldown` giây (lần đầu sau `first` giây) một con sóng lớn quét một dải dài `length`,
+ *   rộng `width` từ Thủy Tinh về phía quân ta gần nhất (chỉ khi quân ta trong tầm `reach`). Ai trúng sóng mất
+ *   `dmg` máu, bị đẩy lùi `push` ô, đi chậm còn `slow` tốc độ trong `slowS` giây.
+ * - Gọi thủy quái: cứ `cooldown` giây (lần đầu sau `first` giây) gọi `count` tôm binh từ dưới nước lên quanh mình,
+ *   tối đa `times` lần mỗi trận. Tôm binh gọi lên khỏe như tôm binh của màn.
+ */
+export const TT_WAVE = { first: 6, cooldown: 12, reach: 8, length: 6, width: 2.6, dmg: 30, push: 1.4, slow: 0.5, slowS: 3 };
+export const TT_SUMMON = { first: 9, cooldown: 15, count: 3, times: 4 };
 /** Dời non: đá mọc lên dưới chân mọi kẻ địch quanh Sơn Tinh, giữ chân chúng vài giây. */
 export const ROCKS = { dmg: 30, radius: 4, stun: 3 };
 
@@ -880,7 +893,7 @@ export const STAGES: StageDef[] = [
   { chapter: 2, minDien: 5, needsGiong: false, needsSon: true, enemies: { tomBinh: 14, caPhun: 8, caSau: 4 }, hpScale: 2.1, reward: { gao: 2000, voOc: 1300, datDa: 1100, sat: 280 }, terrain: 'lang' },
   { chapter: 2, minDien: 5, needsGiong: false, needsSon: true, enemies: { tomBinh: 14, caPhun: 8, caSau: 4 }, hpScale: 2.1, reward: { gao: 2200, voOc: 1500, datDa: 1200, sat: 300 }, terrain: 'benSong' },
   { chapter: 2, minDien: 5, needsGiong: false, needsSon: true, enemies: { tomBinh: 14, caPhun: 9, caSau: 4 }, hpScale: 2.5, reward: { gao: 2500, voOc: 1700, datDa: 1400, sat: 350 }, terrain: 'nui' },
-  { chapter: 2, minDien: 5, needsGiong: false, needsSon: true, enemies: { tomBinh: 12, caPhun: 8, caSau: 3, thuyTinh: 1 }, hpScale: 2.4, reward: { gao: 3000, voOc: 2000, datDa: 2000, sat: 500 }, terrain: 'tanVien' },
+  { chapter: 2, minDien: 5, needsGiong: false, needsSon: true, enemies: { tomBinh: 12, caPhun: 8, caSau: 3, thuyTinh: 1 }, hpScale: 1.8, reward: { gao: 3000, voOc: 2000, datDa: 2000, sat: 500 }, terrain: 'tanVien' },
   { chapter: 3, minDien: 5, needsGiong: false, enemies: { quyNui: 12, maTroi: 7, hoTinh: 3 }, hpScale: 2.6, reward: { gao: 2600, voOc: 1800, datDa: 1600, sat: 400 }, terrain: 'thatDieu' },
   { chapter: 3, minDien: 5, needsGiong: false, enemies: { quyNui: 13, maTroi: 8, hoTinh: 4 }, hpScale: 2.4, reward: { gao: 2800, voOc: 2000, datDa: 1800, sat: 450 }, terrain: 'rung' },
   { chapter: 3, minDien: 5, needsGiong: false, enemies: { quyNui: 12, maTroi: 7, hoTinh: 3, gaTrang: 1 }, hpScale: 2.4, reward: { gao: 3200, voOc: 2200, datDa: 2000, sat: 500 }, terrain: 'thatDieu' },
