@@ -54,6 +54,18 @@ const NODES: Record<Chapter, [number, number][]> = {
     [60, 44],
     [72, 24],
   ],
+  // Chương 4: xuôi sông từ thành Cổ Loa ra cửa sông (màn 25–28), quay về giữ thành (29–31), rồi theo dải lông ngỗng
+  // về phương Nam ra biển Mộ Dạ (màn 32).
+  4: [
+    [40, 136],
+    [70, 124],
+    [84, 102],
+    [88, 78],
+    [52, 92],
+    [24, 80],
+    [36, 58],
+    [56, 22],
+  ],
 };
 const START: [number, number] = [12, 154];
 
@@ -84,6 +96,17 @@ const SCENERY: Record<Chapter, string> = {
     <path class="river" d="M-2 128 C 20 118, 44 136, 70 122 S 96 112, 104 118"/>
     <path class="river" d="M48 74 C 60 80, 74 66, 88 72 S 100 74, 104 72"/>
     <text class="label" x="62" y="69">Sông Đuống</text>`,
+  4: `<path class="flood" d="M-2 0 L104 0 L104 12 C 80 18, 60 8, 40 14 S 6 16, -2 12 Z"/>
+    <text class="label" x="22" y="9">Biển Mộ Dạ</text>
+    <path class="mtn" d="M66 26 L76 10 L86 26 Z"/>
+    <text class="label" x="84" y="32">Núi Mộ Dạ</text>
+    <path class="river" d="M-2 126 C 24 120, 50 134, 72 120 S 92 96, 90 70 S 98 40, 104 30"/>
+    <ellipse class="citadel" cx="30" cy="96" rx="16" ry="8"/>
+    <ellipse class="citadel" cx="30" cy="96" rx="10.5" ry="5.3"/>
+    <ellipse class="citadel" cx="30" cy="96" rx="5.5" ry="2.8"/>
+    <text class="label" x="30" y="84">Thành Cổ Loa</text>
+    <path class="feather" d="M36 58 C 40 48, 48 40, 54 26"/>
+    <text class="label" x="96" y="66">Cửa sông</text>`,
 };
 
 export const hasBoss = (n: number) => BOSSES.some((k) => (stageDef(n)?.enemies[k] ?? 0) > 0);

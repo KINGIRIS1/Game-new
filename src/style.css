@@ -991,6 +991,16 @@ textarea {
   opacity: 0.9;
 }
 
+/* Dải lông ngỗng trắng Mỵ Châu rắc trên đường chạy về phương Nam (bản đồ chương 4). */
+.map .feather {
+  fill: none;
+  stroke: #fffdf4;
+  stroke-width: 1.6;
+  stroke-dasharray: 1.2 2.2;
+  stroke-linecap: round;
+  opacity: 0.95;
+}
+
 .map .cloud {
   fill: #fbf4e2;
   stroke: var(--ink);

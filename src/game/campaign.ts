@@ -1,9 +1,13 @@
 // Phó bản, đánh ngoài bãi chiến. Chương 1: tám màn từ Phong Châu tới chân núi Trâu.
 // Chương 2: tám màn lên núi Tản Viên, ba màn đầu giành lễ vật thách cưới.
 // Chương 3: ba màn diệt yêu tinh núi Thất Diệu, năm màn cùng An Dương Vương đánh quân Triệu Đà.
+// Chương 4: bốn màn dẹp thủy binh Triệu đội lốt cướp sông, ba màn chặn quân Triệu Đà trước thành Cổ Loa, màn cuối
+// cầm chân giặc cho vua ra biển Mộ Dạ.
 // Chọn lính mang theo, xếp hàng theo binh chủng, xuất quân; lính chết thì mất, thắng thì có thưởng.
 
 import { retreatField, startFieldBattle, stepField } from './battle';
+import { CH4_LAST, LAY_TRAO_AT, LENH_BAN_AT, caoLoJoined, caoLoResting } from './caoLo';
+import { inChapter4 } from './chuong4';
 import { CH3_LAST, KIM_QUY_AT, advJoined, advResting, inChapter3 } from './coLoa';
 import { armySpace, fieldCap } from './doanhTrai';
 import { REPLAY_SHARE, RESOURCE_IDS, STAGES, UNIT_TYPES, type Chapter, type Cost, type Row, type StageDef, type UnitType } from './defs';
@@ -54,6 +58,7 @@ export function canStartStage(state: GameState, n: number): Result {
   if (countOf(state, 'doanhTrai') === 0) return fail('canDoanhTrai');
   if (def.chapter === 2 && !inChapter2(state)) return fail('canChuong2');
   if (def.chapter === 3 && !inChapter3(state)) return fail('canChuong3');
+  if (def.chapter === 4 && !inChapter4(state)) return fail('canChuong4');
   if (!stageOpen(state, n)) return fail('manKhoa');
   if (def.needsGiong && !giongReady(state)) return fail('canThanhGiong');
   if (def.needsGiong && giongResting(state)) return fail('giongKietSuc');
@@ -61,6 +66,8 @@ export function canStartStage(state: GameState, n: number): Result {
   if (def.needsSon && sonResting(state)) return fail('sonKietSuc');
   if (def.needsAdv && !advJoined(state)) return fail('canAnDuong');
   if (def.needsAdv && advResting(state)) return fail('advKietSuc');
+  if (def.needsCaoLo && !caoLoJoined(state)) return fail('canCaoLo');
+  if (def.needsCaoLo && caoLoResting(state)) return fail('caoLoKietSuc');
   if (dienLevel(state) < def.minDien) return fail('chuaDuCapDien');
   if (state.raid.phase !== 'idle') return fail('dangCoGiac');
   if (state.campaign.battle) return fail('dangDanhPhoBan');
@@ -75,7 +82,7 @@ export function startStage(state: GameState, n: number, army: Record<UnitType, n
   // Nhiều doanh trại cho nhiều quân dự trữ, nhưng mỗi trận phó bản chỉ mang tối đa chừng này chỗ (38 từ Điện 5).
   if (armySpace(army) > fieldCap(state)) return fail('quaChoPhoBan');
   const def = stageDef(n)!;
-  const hero = heroFor(state, def.chapter);
+  const hero = heroFor(state, def.chapter, n);
   // Có tướng thì ra trận một mình cũng được.
   if (!hero && UNIT_TYPES.every((k) => !army[k])) return fail('chuaChonQuan');
   state.campaign.rows = { ...rows };
@@ -84,6 +91,8 @@ export function startStage(state: GameState, n: number, army: Record<UnitType, n
     id: state.nextBattleId++,
     stage: n,
     enemies: def.enemies,
+    waves: def.waves,
+    holdS: def.holdS,
     hpScale: def.hpScale,
     army: { ...army },
     rows: { ...rows },
@@ -134,6 +143,14 @@ function finishStage(state: GameState): void {
   if (first && battle.wave === CH3_LAST) {
     state.adv.won = true;
     battle.advWin = true;
+  }
+  // Chương 4: thắng màn 25 thì Cao Lỗ cầm quân (`caoLoJoined`); màn 28 Trọng Thủy đã tráo lẫy nỏ thần; màn 30 có
+  // Lệnh bắn; hộ giá ra tới biển thì vua theo Rùa Vàng xuống biển.
+  if (first && battle.wave === LAY_TRAO_AT) state.adv.layTrao = true;
+  if (first && battle.wave === LENH_BAN_AT) state.caoLo.lenhBan = true;
+  if (first && battle.wave === CH4_LAST) {
+    state.adv.bien = true;
+    battle.seaWin = true;
   }
   const result: StageResult = {
     stage: battle.wave,

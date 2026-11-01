@@ -218,6 +218,11 @@ export const vi = {
       icon: '🎯',
       desc: 'Nơi lính nỏ ở và tập bắn, Cao Lỗ dạy dân luyện nỏ. Luyện lính nỏ ở đây. Có từ chương 4, cần doanh trại cấp 5.',
     },
+    denCuong: {
+      name: 'Đền Cuông',
+      icon: '🌅',
+      desc: 'Đền thờ An Dương Vương dưới chân núi Mộ Dạ, nơi vua theo Rùa Vàng xuống biển. Đền còn nguyên thì mỗi đợt thủy binh Triệu tới ít hơn 20% số thuyền. Chỉ dựng được sau khi hộ giá vua ra biển.',
+    },
   } satisfies Record<BuildingType, { name: string; icon: string; desc: string }>,
 
   reasons: {
@@ -279,6 +284,9 @@ export const vi = {
     khongDuCho: 'Không đủ chỗ để xếp mọi công trình theo mẫu',
     daTheoMau: 'Kinh đô đã xếp đúng theo mẫu này',
     canChuong4: 'Mở ở chương 4: Mỵ Châu, Trọng Thủy',
+    canKetChuong4: 'Chỉ dựng được sau khi hộ giá vua ra biển Mộ Dạ',
+    canCaoLo: 'Màn này cần Cao Lỗ đã cầm quân (thắng màn 25)',
+    caoLoKietSuc: 'Cao Lỗ đang kiệt sức, chờ một lát',
     khongGhepDuoc: 'Chỉ ghép được hai chòi canh cấp 8 còn nguyên',
     canTuongChiHuy: 'Mỗi doanh trại cần một tướng chỉ huy. Chưa có tướng rảnh',
     tuongChuaCo: 'Tướng này chưa về với kinh đô',
@@ -338,7 +346,12 @@ export const vi = {
     uNo: 'Thuyền lạ cướp bóc trên sông. Xin dựng 4 ụ nỏ trên thành Cổ Loa: chọn thẻ Ụ nỏ trong bảng Xây dựng rồi chạm vào đoạn thành.',
     luyenNo: 'Cao Lỗ xin dựng trại nỏ cho dân luyện nỏ, rồi luyện 4 lính nỏ. Lính nỏ bắn chậm mà đau, mạnh gấp đôi khi gặp quân nặng và tướng giặc.',
     chongThuyBinh: 'Bọn cướp sông đi thuyền đen buồm đỏ, cập bờ cướp phá. Xin đánh lui một đợt thủy binh ở kinh đô.',
-    allDone: 'Kinh đô đã có lầu nỏ, ụ nỏ và lính nỏ. Thuyền lạ vẫn rình trên sông, Thủy Tinh vẫn dâng nước mỗi mùa. Xin giữ thành, giữ đê cho vững.',
+    quaMan25: 'Bọn cướp sông tụ ở bến sông dưới chân thành. Xin bệ hạ cầm nỏ thần đánh màn 25, bắt lấy một tên mà tra hỏi.',
+    quaMan28: 'Thủy binh đội lốt cướp sông đóng ở cửa sông, có tướng cầm đầu. Xin cho Cao Lỗ đánh qua màn 28.',
+    quaMan30: 'Quân Triệu Đà men rừng biên vây thành. Xin cho Cao Lỗ đánh qua màn 30, giữ bìa rừng phía bắc.',
+    hoGia: 'Giặc đuổi theo lông ngỗng. Xin Cao Lỗ chặn hậu, hộ giá vua ra tới biển Mộ Dạ (màn 32).',
+    denCuong: 'Dân lập đền thờ vua dưới chân núi Mộ Dạ. Xin dựng Đền Cuông: đền còn nguyên thì thủy binh Triệu tới ít thuyền hơn.',
+    allDone: 'Truyện An Dương Vương đã hết, nhưng kinh đô vẫn còn. Thủy binh, quân Triệu và mùa lũ vẫn thay phiên tới. Xin giữ thành, giữ đê, giữ bờ sông cho vững.',
   } as Record<string, string>,
 
   units: {
@@ -370,6 +383,7 @@ export const vi = {
     linhThuy: 'lính thủy Triệu',
     cungThuyen: 'cung thuyền Triệu',
     linhRiu: 'lính rìu giáp mây',
+    tuongThuy: 'tướng thủy binh Triệu',
   } satisfies Record<EnemyType, string>,
 
   enemyIcons: {
@@ -394,6 +408,7 @@ export const vi = {
     linhThuy: '🌊',
     cungThuyen: '🏹',
     linhRiu: '🪓',
+    tuongThuy: '⚓',
   } satisfies Record<EnemyType, string>,
 
   /** Tên và lời dẫn từng màn phó bản, theo thứ tự trong STAGES. */
@@ -422,6 +437,14 @@ export const vi = {
     { name: 'Núi Tiên Du', intro: 'Triệu Đà đóng đại doanh ở núi Tiên Du, chờ ngày đánh thành.' },
     { name: 'Làng ven Cổ Loa', intro: 'Kỵ binh Triệu tràn vào làng ven thành Cổ Loa, cướp lúa đốt nhà. Mau cứu lấy dân!' },
     { name: 'Chân thành Cổ Loa', intro: 'Triệu Đà dốc toàn quân tới chân thành Cổ Loa. Nỏ thần đã lên dây. Trận quyết chiến!' },
+    { name: 'Bến sông Cổ Loa', intro: 'Thuyền đen buồm đỏ cập bến dưới chân thành, bọn cướp sông tràn lên bãi. Bệ hạ đích thân cầm nỏ ra dẹp.' },
+    { name: 'Bãi ven sông', intro: 'Tên cướp bị bắt khai là người phương Bắc. Cao Lỗ dẫn quân xuôi bãi ven sông, đuổi bọn còn lại.' },
+    { name: 'Làng chài', intro: 'Cướp sông kéo vào làng chài, đốt thuyền, bắt dân kéo lưới. Mau cứu lấy dân!' },
+    { name: 'Cửa sông', intro: 'Thủy binh Triệu đóng ở cửa sông, thuyền đen neo kín bãi lau. Tướng thủy binh đích thân cầm đao. Trận quyết chiến!' },
+    { name: 'Đồng trước Cổ Loa', intro: 'Triệu Đà kéo đại quân sang, quân bộ lẫn thủy binh tràn qua cánh đồng trước thành.' },
+    { name: 'Rừng biên Cổ Loa', intro: 'Giặc men rừng vây phía bắc thành. Cao Lỗ truyền lính nỏ giữ bìa rừng.' },
+    { name: 'Cổng Cổ Loa', intro: 'Nỏ thần không còn thiêng, giặc đã tới chân thành. Cao Lỗ giữ cổng cho vua cùng Mỵ Châu lên ngựa chạy về phương Nam.' },
+    { name: 'Đường ra biển Mộ Dạ', intro: 'Vua cùng Mỵ Châu phi ngựa về phương Nam, giặc lần theo lông ngỗng đuổi sát sau lưng. Cầm chân giặc cho tới khi vua tới biển!' },
   ],
 
   rows: { tien: 'Tiền quân', trung: 'Trung quân', hau: 'Hậu quân' } satisfies Record<Row, string>,
@@ -436,6 +459,8 @@ export const vi = {
     doiNon: { name: 'Dời non', icon: '🪨', desc: 'Sơn Tinh dời non dựng núi: đá mọc lên dưới chân giặc quanh mình, giữ chân chúng vài giây.' },
     noThan: { name: 'Nỏ thần', icon: '🏹', desc: 'An Dương Vương bắn nỏ thần: một phát tên bay ra hóa muôn mũi, trúng mọi kẻ địch trên bãi.' },
     ruaVang: { name: 'Rùa Vàng', icon: '🐢', desc: 'Rùa Vàng nổi lên che chở: quân ta hồi máu, chỉ chịu nửa sát thương trong chốc lát.' },
+    lienChau: { name: 'Nỏ liên châu', icon: '🎯', desc: 'Cao Lỗ bắn nỏ liên châu: một loạt tên rơi xuống chỗ giặc đứng đông nhất.' },
+    lenhBan: { name: 'Lệnh bắn', icon: '📯', desc: 'Cao Lỗ thổi tù và ra lệnh: lính nỏ bắn nhanh gấp đôi trong chốc lát; giữ kinh đô thì cả ụ nỏ và lầu nỏ.' },
   } satisfies Record<SkillId, { name: string; icon: string; desc: string }>,
 
   gear: {
@@ -663,6 +688,57 @@ export const vi = {
         { who: 'lacHau', text: 'Thủy binh đi thuyền và mùa lũ sẽ thay phiên nhau tới, đều từ phía sông. Xin giữ bờ sông cho vững.' },
       ],
     },
+    caoLoCamQuan: {
+      title: 'Cao Lỗ cầm quân',
+      lines: [
+        { who: 'ke', text: 'Quân ta bắt được một tên cướp sông. Tra hỏi mãi, nó mới khai mình là người phương Bắc.' },
+        { who: 'caoLo', text: 'Tâu bệ hạ, cướp sông chính là thủy binh Triệu đội lốt, sang dò thế Âu Lạc. Xin cho thần cầm quân đi dẹp.' },
+        { who: 'anDuong', text: 'Triệu Đà đã kết thông gia với ta, chắc chỉ là bọn cướp vặt. Nhưng khanh cứ đi dẹp cho yên bờ sông.' },
+        { who: 'lacHau', text: 'Tâu bệ hạ, từ nay Cao Lỗ cùng ra trận, nỏ liên châu một lần bắn ra nhiều mũi. Cao Lỗ cũng chỉ huy được một doanh trại.' },
+      ],
+    },
+    layNo: {
+      title: 'Lẫy nỏ bị tráo',
+      lines: [
+        { who: 'ke', text: 'Trọng Thủy dỗ Mỵ Châu cho xem nỏ thần. Nhân lúc nàng không để ý, chàng lén tráo lẫy vuốt rùa bằng một chiếc lẫy giả.' },
+        { who: 'trongThuy', text: 'Ta phải về phương Bắc thăm cha. Nếu có binh đao, đôi ta biết lấy gì mà tìm nhau?' },
+        { who: 'myChau', text: 'Thiếp có chiếc áo lông ngỗng. Nếu phải chạy loạn, thiếp sẽ rắc lông ngỗng dọc đường để chàng tìm.' },
+        { who: 'ke', text: 'Trọng Thủy mang lẫy thần về nước. Nỏ thần đã mất thiêng mà không ai hay.' },
+        { who: 'lacHau', text: 'Tâu bệ hạ, từ nay giữ kinh đô thì nỏ thần không bắn được nữa. Thủy binh, quân Triệu trên bộ và mùa lũ sẽ thay phiên nhau tới.' },
+      ],
+    },
+    longNgong: {
+      title: 'Lông ngỗng',
+      lines: [
+        { who: 'ke', text: 'Triệu Đà kéo đại quân sang. An Dương Vương cậy có nỏ thần, vẫn ung dung ngồi đánh cờ.' },
+        { who: 'anDuong', text: 'Ta có nỏ thần. Giặc tới chân thành rồi bắn cũng chưa muộn.' },
+        { who: 'ke', text: 'Giặc tới sát chân thành, vua mới cầm nỏ. Nhưng nỏ không còn thiêng, giặc tràn vào thành.' },
+        { who: 'caoLo', text: 'Bệ hạ mau lên ngựa! Thần giữ cổng, chặn hậu cho bệ hạ.' },
+        { who: 'ke', text: 'Vua đặt Mỵ Châu ngồi sau lưng, phi ngựa chạy về phương Nam. Mỵ Châu rắc lông ngỗng trắng dọc đường đi.' },
+      ],
+    },
+    ngocTrai: {
+      title: 'Ngọc trai, giếng nước',
+      lines: [
+        { who: 'ke', text: 'Tới bờ biển Mộ Dạ, trước mặt là biển cả, sau lưng giặc đuổi sát. Vua kêu Rùa Vàng mau lên cứu.' },
+        { who: 'ruaVang', text: 'Kẻ ngồi sau ngựa chính là giặc đó!' },
+        { who: 'ke', text: 'Vua hiểu ra mọi chuyện. Mỵ Châu ngã xuống bên bờ biển.' },
+        { who: 'myChau', text: 'Thiếp một lòng trung hiếu mà bị người lừa dối. Xin chết đi hóa thành ngọc châu để rửa mối nhục này.' },
+        { who: 'ke', text: 'An Dương Vương cầm sừng tê bảy tấc, theo Rùa Vàng rẽ nước xuống biển. Máu Mỵ Châu chảy xuống biển, trai ăn phải đều hóa ngọc.' },
+        { who: 'ke', text: 'Trọng Thủy lần theo lông ngỗng tới nơi, đem xác vợ về táng ở Loa Thành. Thương nhớ khôn nguôi, chàng nhảy xuống giếng trong thành mà chết.' },
+        { who: 'lacHau', text: 'Vua đã về với biển cả, nhưng kinh đô vẫn còn đây. Dân lập Đền Cuông dưới chân núi Mộ Dạ thờ vua. Cao Lỗ sẽ cầm quân giữ kinh đô.' },
+      ],
+    },
+    hetTruyen: {
+      title: 'Hết truyện',
+      lines: [
+        { who: 'ke', text: 'Thánh Gióng vươn vai thành tráng sĩ, đuổi giặc Ân khỏi bờ cõi rồi bay về trời.' },
+        { who: 'ke', text: 'Sơn Tinh dời non chặn nước, thắng Thủy Tinh, rước Mị Nương về núi Tản Viên.' },
+        { who: 'ke', text: 'An Dương Vương đắp thành Cổ Loa ba vòng, có nỏ thần đánh tan Triệu Đà.' },
+        { who: 'ke', text: 'Lẫy nỏ bị tráo, nỏ thần mất thiêng, nước Âu Lạc rơi vào tay Triệu Đà.' },
+        { who: 'ke', text: 'Hơn hai trăm năm sau, ở đất Mê Linh có hai chị em họ Trưng…' },
+      ],
+    },
   } satisfies Record<StoryId, { title: string; lines: { who: Speaker; text: string }[] }>,
 
   ui: {
@@ -749,8 +825,8 @@ export const vi = {
     assignHere: 'Giao trại này',
     toPost: 'Tới trại',
     commandAssigned: (name: string) => `${name} chỉ huy doanh trại này`,
-    tuongNames: { lacTuong: 'Lạc tướng', giong: 'Thánh Gióng', sonTinh: 'Sơn Tinh', anDuong: 'An Dương Vương' } satisfies Record<TuongId, string>,
-    tuongIcons: { lacTuong: '🥁', giong: '🐎', sonTinh: '⛰️', anDuong: '🏹' } satisfies Record<TuongId, string>,
+    tuongNames: { lacTuong: 'Lạc tướng', giong: 'Thánh Gióng', sonTinh: 'Sơn Tinh', anDuong: 'An Dương Vương', caoLo: 'Cao Lỗ' } satisfies Record<TuongId, string>,
+    tuongIcons: { lacTuong: '🥁', giong: '🐎', sonTinh: '⛰️', anDuong: '🏹', caoLo: '🎯' } satisfies Record<TuongId, string>,
     guardTitle: 'Bố trí giữ kinh đô',
     guardInfo: (used: number, cap: number) => `Giữ kinh đô: ${used}/${cap} chỗ (theo cấp Điện)`,
     guardAutoNote: 'Đang bố trí tự động: mọi lính giữ kinh đô cho tới đủ chỗ, chia đều các doanh trại. Bấm − + để tự bố trí.',
@@ -770,6 +846,8 @@ export const vi = {
     heroHienLinh: 'hiển linh, vẫn ra trận',
     heroOpen: 'Xem',
     advAtDien: 'ngự ở Điện',
+    advAtSea: 'đã xuống biển, hiển linh',
+    caoLoAtDien: 'đứng trước Điện',
     homesTitle: 'Quân và nơi ở',
     trainAt: (name: string) => `Ở và luyện tại ${name.toLowerCase()}`,
     buildHome: (name: string) => `Dựng ${name.toLowerCase()}`,
@@ -964,7 +1042,23 @@ export const vi = {
     campaignTitle3: 'Giữ thành Cổ Loa',
     campaignHint3: 'Ba màn đầu lên núi Thất Diệu diệt yêu tinh. Từ màn 20, An Dương Vương cầm nỏ thần cùng ra trận đánh quân Triệu Đà.',
     advWinTitle: 'Triệu Đà thua chạy!',
-    heroNames: { giong: 'Gióng', sonTinh: 'Sơn Tinh', anDuong: 'An Dương Vương' } satisfies Record<HeroKind, string>,
+    heroNames: { giong: 'Gióng', sonTinh: 'Sơn Tinh', anDuong: 'An Dương Vương', caoLo: 'Cao Lỗ' } satisfies Record<HeroKind, string>,
+    campaignTitle4: 'Đường ra biển',
+    campaignHint4: 'Màn 25 An Dương Vương cầm nỏ dẹp cướp sông. Từ màn 26, Cao Lỗ cầm quân. Màn 32 cầm chân giặc cho vua ra biển.',
+    advHienLinhJoins: 'An Dương Vương hiển linh cùng ra trận',
+    caoLoJoins: 'Cao Lỗ cầm nỏ lớn cùng ra trận',
+    caoLo: 'Cao Lỗ',
+    caoLoWaiting: 'Thắng màn 25 thì Cao Lỗ xin cầm quân, cùng ra trận ở phó bản chương 4 và khi giặc đánh kinh đô.',
+    caoLoReady: 'Cao Lỗ cầm nỏ lớn: cùng ra trận từ màn 26, và giữ kinh đô khi vua đã xuống biển.',
+    caoLoResting: (s: number) => `Cao Lỗ đang kiệt sức, nghỉ thêm ${s} giây nữa mới ra trận được.`,
+    caoLoLenhBan: 'Thắng màn 30 thì Cao Lỗ có thêm Lệnh bắn.',
+    advSea: 'An Dương Vương đã theo Rùa Vàng xuống biển. Ở phó bản màn 17–25 ngài vẫn hiển linh ra trận.',
+    holdBanner: (left: number, ours: number, s: number) => `Vua tới biển sau ${s} giây · còn ${left} giặc · quân ta ${ours}`,
+    holdWave: (n: number, max: number) => `Đợt giặc ${n}/${max}`,
+    seaWinTitle: 'Vua đã tới biển!',
+    endingTitle: 'Hết truyện',
+    endingPlay: 'Chơi tiếp',
+    endingOpen: '📜 Xem lại Hết truyện',
     heroRestWarn: (name: string, s: number) => `${name} đang kiệt sức, còn ${s} giây mới ra trận được.`,
     heroStandIn: (name: string) => `Trận này ${name} ra trận thay.`,
     noHeroWarn: 'Trận này không có tướng nào, rất khó thắng. Nên chờ tướng hồi sức.',
@@ -998,6 +1092,12 @@ export const vi = {
         name: 'Thành Cổ Loa',
         desc: 'Ba vòng thành kín quanh Điện, vòng ngoài nới ra theo đất; nhà sàn, kho, lò rèn, bếp giữa các vòng; ruộng, đền, doanh trại ngoài vòng ngoài; đê bao ngoài cùng.',
         lock: 'Mở khi vào chương 3: An Dương Vương.',
+      },
+      coLoaSong: {
+        icon: '🎯',
+        name: 'Cổ Loa giữ sông',
+        desc: 'Ba vòng thành và đê bao như mẫu Cổ Loa; ụ nỏ trên vòng thành ngoài ở phía bắc, phía tây và phía sông; hai lầu nỏ ở phía sông, một ở góc bắc tây; trại nỏ cạnh doanh trại; Đền Cuông phía bắc ngoài vòng ngoài.',
+        lock: 'Mở khi vào chương 4: Mỵ Châu, Trọng Thủy.',
       },
     },
     mauPlan: (moves: number, builds: number, removes: number) =>

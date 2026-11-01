@@ -23,7 +23,7 @@ const groundMaterial = new THREE.MeshLambertMaterial({ vertexColors: true });
 /** Đất có đồi tô phẳng từng mặt tam giác, ra dáng low-poly như các mô hình khác. */
 const reliefMaterial = new THREE.MeshLambertMaterial({ vertexColors: true, flatShading: true });
 
-const TERRAINS: Terrain[] = ['rung', 'benSong', 'lang', 'don', 'nui', 'doi', 'ngap', 'tanVien', 'thatDieu', 'coLoa'];
+const TERRAINS: Terrain[] = ['rung', 'benSong', 'lang', 'don', 'nui', 'doi', 'ngap', 'tanVien', 'thatDieu', 'coLoa', 'cuaSong', 'moDa'];
 const OUTSIDE: Record<Terrain, number> = {
   rung: C.grassLocked[0],
   benSong: C.grassLocked[1],
@@ -35,6 +35,8 @@ const OUTSIDE: Record<Terrain, number> = {
   tanVien: 0x6f7a44,
   thatDieu: C.nightLand,
   coLoa: C.grassLocked[0],
+  cuaSong: C.grassLocked[1],
+  moDa: 0xc9b98a,
 };
 const FIELD_COLOR: Record<Terrain, number> = {
   rung: C.grass[0],
@@ -47,6 +49,8 @@ const FIELD_COLOR: Record<Terrain, number> = {
   tanVien: 0x9ca466,
   thatDieu: 0x8c8496,
   coLoa: 0xb1ad72,
+  cuaSong: 0xb8b27a,
+  moDa: 0xd8c896,
 };
 /** Màu các mảng loang trên đất: cỏ rậm, cỏ úa, đất trống, đá; đồi sim nở hoa tím. */
 const PATCH: Record<Terrain, number> = {
@@ -60,6 +64,8 @@ const PATCH: Record<Terrain, number> = {
   tanVien: C.rock,
   thatDieu: 0x45405a,
   coLoa: C.earthDark,
+  cuaSong: 0x8d9656,
+  moDa: 0xc4b07a,
 };
 /** Đồng ngập lũ và đỉnh Tản Viên: nước lũ phủ chỗ trũng quanh bãi, ở độ cao này. */
 const FLOOD_Y = -0.3;
@@ -77,6 +83,8 @@ const HILLS: Record<Terrain, { height: number; freq: number }> = {
   tanVien: { height: 2.6, freq: 0.07 },
   thatDieu: { height: 2.8, freq: 0.08 },
   coLoa: { height: 1.4, freq: 0.05 },
+  cuaSong: { height: 1.2, freq: 0.05 },
+  moDa: { height: 1.0, freq: 0.05 },
 };
 const TREE_DENSITY: Record<Terrain, number> = {
   rung: 0.8,
@@ -89,6 +97,8 @@ const TREE_DENSITY: Record<Terrain, number> = {
   tanVien: 0.5,
   thatDieu: 0.05,
   coLoa: 0.35,
+  cuaSong: 0.2,
+  moDa: 0.1,
 };
 /** Trời và đèn theo nền: núi Thất Diệu là đêm tím, còn lại là ngày. */
 const SKY: Partial<Record<Terrain, { sky: number; sun: number; hemi: number; sunColor: number; hemiSky: number; hemiGround: number }>> = {

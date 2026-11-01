@@ -88,6 +88,7 @@ import {
   type StoryId,
 } from '../game/game';
 import { chapterStages } from '../game/campaign';
+import { caoLoResting } from '../game/caoLo';
 import { inChapter4, mergeCost, mergeable } from '../game/chuong4';
 import { giongAppeared, giongLook, giongReady, giongResting } from '../game/giong';
 import { khoanhQuota } from '../game/khoanh';
@@ -1019,9 +1020,10 @@ export class Hud {
       lacTuong: () => vi.ui.lacTuongDesc,
       giong: () => status(giongResting(state), state.giong.restUntil, state.giong.ascended),
       sonTinh: () => status(sonResting(state), state.son.restUntil, state.son.won),
-      anDuong: () => `${status(advResting(state), state.adv.restUntil)} · ${vi.ui.advAtDien}`,
+      anDuong: () => `${status(advResting(state), state.adv.restUntil, state.adv.bien)} · ${state.adv.bien ? vi.ui.advAtSea : vi.ui.advAtDien}`,
+      caoLo: () => `${status(caoLoResting(state), state.caoLo.restUntil)} · ${vi.ui.caoLoAtDien}`,
     };
-    const open: Partial<Record<TuongId, string>> = { giong: 'openGiong', sonTinh: 'openSon', anDuong: 'openAdv' };
+    const open: Partial<Record<TuongId, string>> = { giong: 'openGiong', sonTinh: 'openSon', anDuong: 'openAdv', caoLo: 'openCaoLo' };
     const busy = state.raid.phase === 'battle';
     const rows = generals(state).map((t) => {
       const post = [...map].find(([, x]) => x === t)?.[0];

@@ -1,7 +1,8 @@
 // Lưu game vào localStorage và xuất/nhập mã lưu (hay tệp lưu, cũng chứa đúng mã đó) để sao lưu hoặc chuyển máy.
 // Bản lưu cũ (phiên bản 1 của lát cắt 1, 2 của lát cắt 2a, 3 của lát cắt 2b, 4 của lát cắt 3a,
 // 5 của lát cắt 3b, 6 của chương 2, 7 của chương 3, 8 của cấp 6–7, 9 của Hội Tết, 10 của cấp 8) được nâng lên phiên bản
-// hiện tại khi nạp. Phiên bản 13 là chương 4 phần 2 (lính nỏ, ụ nỏ, thủy binh Triệu). Bản lưu còn ở kinh đô nhỏ (trước phiên bản 11) được dựng lại thành kinh đô lớn theo mẫu (`xepLai.ts`).
+// hiện tại khi nạp. Phiên bản 13 là chương 4 phần 2 (lính nỏ, ụ nỏ, thủy binh Triệu), 14 là chương 4 phần 3 (Cao Lỗ,
+// vua xuống biển). Bản lưu còn ở kinh đô nhỏ (trước phiên bản 11) được dựng lại thành kinh đô lớn theo mẫu (`xepLai.ts`).
 
 import { deflateSync, inflateSync } from 'fflate';
 import {
@@ -17,6 +18,7 @@ import {
   type BuildingType,
   type TuongId,
 } from './defs';
+import { initialCaoLo } from './caoLo';
 import { initialAdv } from './coLoa';
 import { inChapter4 } from './chuong4';
 import { SAVE_VERSION, autoAssign, housing, initialCampaign, initialGiong, initialRaid, scheduleThuyBinh, type GameState } from './game';
@@ -74,6 +76,7 @@ function migrate(raw: unknown): unknown {
   if (isObj(v) && v.version === 10) v = migrate10to11(v);
   if (isObj(v) && v.version === 11) v = migrate11to12(v);
   if (isObj(v) && v.version === 12) v = migrate12to13(v);
+  if (isObj(v) && v.version === 13) v = migrate13to14(v);
   return v;
 }
 
@@ -273,6 +276,17 @@ function migrate12to13(s: Raw): Raw {
   return s;
 }
 
+/**
+ * Phiên bản 13 → 14 (Cao Lỗ, màn 25–32, vua xuống biển): thêm Cao Lỗ (nghỉ tới lúc nào, đã có Lệnh bắn chưa) và
+ * An Dương Vương đã xuống biển chưa. Người chơi phiên bản 13 chưa đánh được màn nào sau màn 24, nên đều là chưa.
+ */
+function migrate13to14(s: Raw): Raw {
+  s.version = 14;
+  s.caoLo = initialCaoLo();
+  if (isObj(s.adv)) s.adv.bien = false;
+  return s;
+}
+
 const isBanh = (v: unknown, test: (x: unknown) => boolean): boolean => isObj(v) && test(v.chung) && test(v.giay);
 const isBool = (x: unknown) => typeof x === 'boolean';
 
@@ -318,7 +332,9 @@ function isGameState(v: unknown): v is GameState {
   if (!GIFT_IDS.every((k) => typeof (son.gifts as Raw)[k] === 'boolean')) return false;
   const adv = v.adv;
   if (!isObj(adv) || typeof adv.no !== 'boolean' || !isNum(adv.restUntil) || typeof adv.kimQuy !== 'boolean' || typeof adv.won !== 'boolean') return false;
-  if (typeof adv.layTrao !== 'boolean') return false;
+  if (typeof adv.layTrao !== 'boolean' || typeof adv.bien !== 'boolean') return false;
+  const cao = v.caoLo;
+  if (!isObj(cao) || !isNum(cao.restUntil) || typeof cao.lenhBan !== 'boolean') return false;
   const g = v.giong;
   if (!isObj(g) || !isNum(g.fed) || !isNum(g.restUntil) || !isObj(g.gear)) return false;
   if (!GEAR_IDS.every((k) => typeof (g.gear as Raw)[k] === 'boolean')) return false;
