@@ -6,8 +6,21 @@ import { BUILDINGS, FIELD, type BuildingType, type Terrain } from '../game/defs'
 import { raidSpawnBand, type Battle, type RaidSide } from '../game/battle';
 import { advLook, inChapter3, ruaVangCame, type AdvLook } from '../game/coLoa';
 import { buildingAt, dienLevel, type Building, type GameState } from '../game/game';
+import {
+  FAR_PLOTS,
+  bridgeEnds,
+  bridgeTo,
+  isBridge,
+  openTester,
+  plotOf,
+  plotOrigin,
+  poiAt,
+  poiPlots,
+  type Poi,
+} from '../game/benKia';
+import { BEN_KIA_DIEN } from '../game/defs';
 import { giongLook, type GiongLook } from '../game/giong';
-import { DIEN_HOME, FOREST_BAND, GRID, RIVER_END, RIVER_START, areaStart, baseHeights, farBankOf, isRiver, isUnlocked, riverDistance } from '../game/map';
+import { DIEN_HOME, FOREST_BAND, GRID, RIVER_END, RIVER_START, areaStart, baseHeights, farBankOf, isRiver, riverDistance } from '../game/map';
 import { sonLook, type SonLook } from '../game/son';
 import { floodMap } from '../game/terrain';
 import { tetOpen } from '../game/tet';
@@ -26,6 +39,7 @@ import {
 } from './buildings';
 import { makeRuaVang } from './beasts';
 import { makeAnDuong, makeGiong, makeSonTinh } from './heroes';
+import { makeSoldier } from './soldier';
 import { addSunLights, type SunLights } from './lights';
 import {
   buildCitadel,
@@ -33,6 +47,9 @@ import {
   buildForest,
   buildWalls,
   makeBoat,
+  makeEnemyFlag,
+  makeFighter,
+  makeTent,
   makeTradeBoat,
   type CitadelSpot,
   type DikeSpot,
@@ -313,7 +330,18 @@ export class World {
   private tetKey = '';
   /** Rùa Vàng bơi chậm trên sông sau khi đã hiện lên diệt yêu tinh. */
   private turtle?: THREE.Group;
-  private shownLevel = 0;
+  /** Khóa của đất đã vẽ: cấp Điện, khoảnh đã mở bên kia sông, cầu. */
+  private landKey = '';
+  /** Mây mù phủ khoảnh bên kia chưa dò, và mây đang tan ở khoảnh vừa dò. */
+  private fog?: THREE.Object3D;
+  private fogKey = '';
+  private fogKnown = new Set<number>();
+  private readonly fogFading: { obj: THREE.Object3D; age: number }[] = [];
+  /** Dấu điểm lạ trên khoảnh bên kia đã dò: đồn giặc, bản làng, đặc sản, của chôn. */
+  private pois?: THREE.Group;
+  private poiKey = '';
+  /** Người trinh sát đang chạy qua cầu, theo lúc đi. */
+  private readonly scouts = new Map<number, THREE.Group>();
   private wallKey = '';
   private dikeKey = '';
   private citadelKey = '';
@@ -588,7 +616,10 @@ export class World {
     this.citadelKey = '';
     this.floodKey = '';
     this.heights = [];
-    this.shownLevel = 0;
+    this.landKey = '';
+    this.fogKey = '';
+    this.poiKey = '';
+    this.fogKnown = new Set();
     this.framed = false;
     this.setSelection(null);
     if (this.merchantBoat) this.scene.remove(this.merchantBoat);
@@ -620,10 +651,12 @@ export class World {
     this.placeWisps(state);
     const heightsChanged = state.heights.length !== this.heights.length || state.heights.some((h, i) => h !== this.heights[i]);
     if (heightsChanged) this.heights = [...state.heights];
-    if (level !== this.shownLevel || heightsChanged) {
-      this.shownLevel = level;
-      // Kéo cảnh trong vùng đất đã khai phá, chừa một dải rừng và một phần sông.
-      const bounds = { min: wx(areaStart(level)) - 3, max: wx(RIVER_START) + 2 };
+    const bridged = state.buildings.some((b) => isBridge(b.type));
+    const landKey = `${level}:${bridged}:${state.benKia.open.join(',')}:${state.benKia.known.length}`;
+    if (landKey !== this.landKey || heightsChanged) {
+      this.landKey = landKey;
+      // Kéo cảnh trong vùng đất đã khai phá, chừa một dải rừng và một phần sông; có cầu thì kéo được sang bên kia.
+      const bounds = { min: wx(areaStart(level)) - 3, max: bridged ? wx(GRID) - 1 : wx(RIVER_START) + 2 };
       if (this.cityCam) this.cityCam.bounds = bounds;
       else this.view.bounds = bounds;
       // Lần đầu dựng cảnh: nhìn vào giữa vùng đất đã khai phá (Điện ở gần góc sông, nhìn vào Điện thì nửa màn hình là sông).
@@ -633,11 +666,13 @@ export class World {
         this.view.target.set(mid, 0, mid);
         this.view.apply();
       }
-      this.rebuildLand(level);
-      this.rebuildForest(level);
-      this.rebuildGridOverlay(level);
+      this.rebuildLand(state);
+      this.rebuildForest(state);
+      this.rebuildGridOverlay(state);
       this.floodKey = '';
     }
+    this.syncFog(state);
+    this.syncPois(state);
 
     const alive = new Set<number>();
     for (const b of state.buildings) {
@@ -870,15 +905,16 @@ export class World {
   }
 
 
-  /** Đất trong lưới: mỗi ô một cột đất cao theo bậc, bậc cao sáng màu hơn một chút. */
-  private rebuildLand(level: number): void {
+  /** Đất trong lưới: mỗi ô một cột đất cao theo bậc, bậc cao sáng màu hơn một chút. Đất đã khai phá màu sáng hơn. */
+  private rebuildLand(state: GameState): void {
     this.land.begin();
     this.landTiles.length = 0;
     const c = new THREE.Color();
+    const isOpen = openTester(state);
     for (let x = 0; x < GRID; x++) {
       for (let z = 0; z < GRID; z++) {
         if (isRiver(x, z)) continue;
-        const open = isUnlocked(x, z, level);
+        const open = isOpen(x, z);
         const palette = open ? C.grass : C.grassLocked;
         const h = Math.max(this.heights[z * GRID + x] ?? 0, 0);
         c.setHex(palette[(x * 7 + z * 13) % 3]).offsetHSL(0, -0.02 * h, 0.022 * h - 0.02);
@@ -893,13 +929,21 @@ export class World {
     this.land.mesh.boundingBox = null;
   }
 
-  private rebuildForest(level: number): void {
+  private rebuildForest(state: GameState): void {
     if (this.forest) this.scene.remove(this.forest);
     const spots: (TreeSpot & { far: boolean })[] = [];
-    const lo = areaStart(level);
+    const lo = areaStart(dienLevel(state));
+    const isOpen = openTester(state);
+    // Khoảnh có điểm lạ đã dò thì phát trống cho thấy đồn, làng.
+    const clearing = new Set<number>();
+    for (const id of state.benKia.known) {
+      if (!poiAt(id)) continue;
+      const o = plotOrigin(id);
+      for (let dx = 0; dx < 5; dx++) for (let dz = 0; dz < 5; dz++) clearing.add((o.z + dz) * GRID + o.x + dx);
+    }
     for (let x = 0; x < GRID; x++) {
       for (let z = 0; z < GRID; z++) {
-        if (isRiver(x, z) || isUnlocked(x, z, level)) continue;
+        if (isRiver(x, z) || isOpen(x, z) || clearing.has(z * GRID + x)) continue;
         const rand = seeded(x * 73856093 + z * 19349663);
         // Chừa một dải đất trống sát vùng đã mở cho dễ nhìn. Bên kia sông, bãi bồi sát sông có cây thưa.
         // Rừng bên kia thưa hơn bên này một chút cho nhẹ máy.
@@ -915,17 +959,18 @@ export class World {
     this.scene.add(this.forest);
   }
 
-  private rebuildGridOverlay(level: number): void {
+  private rebuildGridOverlay(state: GameState): void {
     const visible = this.gridOverlay?.visible ?? false;
     if (this.gridOverlay) {
       this.scene.remove(this.gridOverlay);
       this.gridOverlay.geometry.dispose();
     }
-    const lo = areaStart(level);
+    const isOpen = openTester(state);
     const pts: THREE.Vector3[] = [];
-    // Viền từng ô ở đúng mặt đất của ô, để lưới bám theo bậc đất.
-    for (let x = lo; x < RIVER_START; x++) {
-      for (let z = lo; z < RIVER_START; z++) {
+    // Viền từng ô đã khai phá (cả bên kia sông) ở đúng mặt đất của ô, để lưới bám theo bậc đất.
+    for (let x = 0; x < GRID; x++) {
+      for (let z = 0; z < GRID; z++) {
+        if (!isOpen(x, z)) continue;
         const y = this.groundY(x, z) + 0.02;
         const x0 = wx(x) + 0.03;
         const x1 = wx(x + 1) - 0.03;
@@ -1247,6 +1292,250 @@ export class World {
   }
 
   /** Rùa Vàng bơi qua bơi lại trên sông phía nam kinh đô, từ khi hiện lên diệt yêu tinh. */
+  // ---------- Bên kia sông ----------
+
+  /** Mây cuộn màu kem phủ một khoảnh bên kia chưa dò, ngọn cây nhô lên khỏi mây. Mỗi khoảnh một dáng (theo số khoảnh). */
+  private cloudPuffs(b: ShapeBuilder, id: number): void {
+    const o = plotOrigin(id);
+    const rand = seeded(id * 7919 + 13);
+    for (let k = 0; k < 7; k++) {
+      const x = wx(o.x) + 0.6 + rand() * 3.8;
+      const z = wz(o.z) + 0.6 + rand() * 3.8;
+      const r = 0.8 + rand() * 0.45;
+      b.sphere(r, k % 3 ? C.cream : 0xe8d9b0, x, 1.15 + rand() * 0.35, z, [1.35, 0.5, 1.35], 9);
+    }
+  }
+
+  /** Dựng mây mù ở các khoảnh chưa dò (từ khi Điện đủ cấp mở chuyện bên kia sông); khoảnh vừa dò thì mây tan dần. */
+  private syncFog(state: GameState): void {
+    const on = dienLevel(state) >= BEN_KIA_DIEN;
+    const key = on ? `on:${state.benKia.known.slice().sort((a, b) => a - b).join(',')}` : 'off';
+    if (key === this.fogKey) return;
+    const known = new Set(state.benKia.known);
+    // Khoảnh vừa dò (không phải lần đầu dựng cảnh): mây tách riêng để tan dần.
+    if (this.fogKey && this.fogKey !== 'off' && on) {
+      for (const id of known) {
+        if (this.fogKnown.has(id)) continue;
+        const b = new ShapeBuilder();
+        this.cloudPuffs(b, id);
+        const mat = toon.clone();
+        mat.transparent = true;
+        const mesh = b.mesh(mat);
+        mesh.castShadow = false;
+        this.scene.add(mesh);
+        this.fogFading.push({ obj: mesh, age: 0 });
+      }
+    }
+    this.fogKey = key;
+    this.fogKnown = known;
+    if (this.fog) this.scene.remove(this.fog);
+    this.fog = undefined;
+    if (!on) return;
+    const b = new ShapeBuilder();
+    for (let id = 0; id < FAR_PLOTS; id++) if (!known.has(id)) this.cloudPuffs(b, id);
+    const mesh = b.mesh(toon);
+    mesh.castShadow = false;
+    const group = new THREE.Group();
+    group.add(mesh, outlineOf(mesh.geometry, inkThin));
+    this.fog = group;
+    this.scene.add(group);
+  }
+
+  /** Mây vừa dò tan trong chừng một giây: phình ra, mờ dần. */
+  private updateFog(dt: number): void {
+    for (let i = this.fogFading.length - 1; i >= 0; i--) {
+      const f = this.fogFading[i];
+      f.age += dt;
+      const k = Math.min(f.age, 1);
+      f.obj.scale.setScalar(1 + 0.15 * k);
+      f.obj.position.y = 0.4 * k;
+      ((f.obj as THREE.Mesh).material as THREE.Material).opacity = 1 - k;
+      if (k >= 1) {
+        this.scene.remove(f.obj);
+        this.fogFading.splice(i, 1);
+      }
+    }
+  }
+
+  /** Dấu của một điểm lạ, gốc ở giữa khoảnh. */
+  private poiMarker(poi: Poi, cleared: boolean, seed: number): THREE.Group {
+    const g = new THREE.Group();
+    const m = new ToonModel();
+    const p = m.plain;
+    const rand = seeded(seed);
+    if (poi.kind === 'don') {
+      if (cleared) {
+        // Đồn đã dẹp: đất cháy sém, cọc rào đổ, cờ đỏ của ta.
+        p.cyl(1.3, 1.3, 0.03, 0x4a3a2a, 0, 0.02, 0, undefined, 12);
+        for (let k = 0; k < 6; k++) p.box(0.08, 0.08, 0.7, C.woodDark, -0.8 + rand() * 1.6, 0.06, -0.8 + rand() * 1.6, [0, rand() * 3, Math.PI / 2]);
+        p.cyl(0.03, 0.03, 1.8, C.woodDark, 0, 0.9, 0, undefined, 5);
+        m.band.box(0.55, 0.36, 0.03, C.red, 0.29, 1.6, 0);
+        g.add(m.group());
+        return g;
+      }
+      // Rào cọc nhọn vòng quanh.
+      for (let k = 0; k < 14; k++) {
+        const a = (k / 14) * Math.PI * 2;
+        p.cone(0.07, 0.6, C.woodDark, Math.cos(a) * 1.35, 0.3, Math.sin(a) * 1.35, undefined, 5);
+      }
+      if (poi.tier === 2) {
+        // Ổ thủy quái: vũng bùn nước giữa lau sậy, xương cá.
+        p.cyl(0.9, 0.9, 0.05, C.paddyWater, 0, 0.03, 0, undefined, 12);
+        for (let k = 0; k < 12; k++) p.cyl(0.02, 0.02, 0.8 + rand() * 0.4, C.bamboo, -1 + rand() * 2, 0.45, -1 + rand() * 2, undefined, 4);
+        p.box(0.5, 0.04, 0.06, C.cream, 0.6, 0.06, -0.5, [0, 0.6, 0]);
+      } else if (poi.tier === 3) {
+        // Hang yêu tinh: đá tím nhọn, đốm ma trơi.
+        for (let k = 0; k < 5; k++) p.cone(0.25 + rand() * 0.2, 0.7 + rand() * 0.6, C.demonDark, -0.8 + rand() * 1.6, 0.4, -0.8 + rand() * 1.6, undefined, 5);
+        m.glow.sphere(0.13, C.ghost, 0.3, 1.2, 0.2, [1, 1, 1], 8);
+        m.glow.sphere(0.1, C.ghostDeep, -0.4, 1.0, -0.3, [1, 1, 1], 8);
+      } else {
+        // Lửa trại.
+        for (let k = 0; k < 3; k++) p.box(0.4, 0.06, 0.08, C.woodDark, 0.5, 0.05, 0.5, [0, k, 0]);
+        m.glow.cone(0.14, 0.32, C.fire, 0.5, 0.2, 0.5, undefined, 6);
+      }
+      g.add(m.group());
+      if (poi.tier === 1 || poi.tier === 4) {
+        for (const [x, z] of [
+          [-0.5, -0.4],
+          [0.2, -0.7],
+        ]) {
+          const tent = makeTent();
+          tent.position.set(x, 0, z);
+          tent.scale.setScalar(0.8);
+          g.add(tent);
+        }
+        const flag = makeEnemyFlag(2);
+        flag.position.set(-0.9, 0, 0.4);
+        g.add(flag);
+      }
+      const kind = poi.tier === 1 ? 'giaoAn' : poi.tier === 2 ? 'tomBinh' : poi.tier === 3 ? 'quyNui' : 'linhTrieu';
+      for (const [x, z] of [
+        [0.9, 0.9],
+        [-0.2, 1.0],
+      ]) {
+        const guard = makeFighter(kind);
+        guard.position.set(x, 0, z);
+        guard.scale.setScalar(0.75);
+        g.add(guard);
+      }
+      return g;
+    }
+    if (poi.kind === 'lang') {
+      for (const [x, z, ry] of [
+        [-0.8, -0.6, 0.3],
+        [0.7, -0.4, -0.4],
+        [0, 0.7, 0.1],
+      ]) {
+        const house = buildingModel('nhaSan', 1);
+        house.scale.setScalar(0.5);
+        house.position.set(x, 0, z);
+        house.rotation.y = ry;
+        g.add(house);
+      }
+      // Cờ trắng: làng chưa về theo.
+      p.cyl(0.025, 0.025, 1.5, C.woodDark, 1.0, 0.75, 0.9, undefined, 5);
+      m.band.box(0.45, 0.3, 0.03, C.cream, 1.24, 1.32, 0.9);
+      g.add(m.group());
+      return g;
+    }
+    if (poi.kind === 'dacSan') {
+      if (poi.dat === 'phuSa') {
+        // Bãi phù sa: đất bùn nâu thẫm loang vũng nước, khóm lau xanh vàng.
+        for (let k = 0; k < 5; k++) p.cyl(0.55 + rand() * 0.35, 0.6 + rand() * 0.35, 0.03, 0x5e4128, -0.9 + rand() * 1.8, 0.015, -0.9 + rand() * 1.8, undefined, 10);
+        for (let k = 0; k < 3; k++) p.cyl(0.22 + rand() * 0.12, 0.22, 0.02, C.paddyWater, -0.8 + rand() * 1.6, 0.035, -0.8 + rand() * 1.6, undefined, 10);
+        for (let k = 0; k < 6; k++) {
+          const cx = -1.1 + rand() * 2.2;
+          const cz = -1.1 + rand() * 2.2;
+          for (let r = 0; r < 4; r++) p.cone(0.03, 0.55 + rand() * 0.25, r % 2 ? C.bamboo : C.ripe, cx + (rand() - 0.5) * 0.2, 0.3, cz + (rand() - 0.5) * 0.2, [(rand() - 0.5) * 0.3, 0, (rand() - 0.5) * 0.3], 4);
+        }
+      } else {
+        // Núi đá xám, mỏ sắt đá đỏ gỉ.
+        const color = poi.dat === 'nuiDa' ? C.rock : 0x9a4a2a;
+        const dark = poi.dat === 'nuiDa' ? C.rockDark : 0x6e2f1c;
+        for (let k = 0; k < 6; k++) p.cone(0.3 + rand() * 0.3, 0.5 + rand() * 0.9, k % 2 ? color : dark, -0.9 + rand() * 1.8, 0.35, -0.9 + rand() * 1.8, undefined, 5);
+      }
+      g.add(m.group());
+      return g;
+    }
+    // Của chôn: gò đất, mặt trống đồng lấp ló.
+    p.sphere(0.6, C.earth, 0, 0, 0, [1.2, 0.45, 1.0], 9);
+    m.drum.cyl(0.28, 0.28, 0.06, C.bronze, 0.1, 0.2, 0.05, [0.3, 0, 0.2], 12);
+    g.add(m.group());
+    return g;
+  }
+
+  /** Dấu điểm lạ trên khoảnh bên kia đã dò. */
+  private syncPois(state: GameState): void {
+    const k = state.benKia;
+    const key = `${k.known.slice().sort((a, b) => a - b).join(',')}|${k.cleared.join(',')}`;
+    if (key === this.poiKey) return;
+    this.poiKey = key;
+    if (this.pois) this.scene.remove(this.pois);
+    const group = new THREE.Group();
+    for (const id of poiPlots()) {
+      if (!k.known.includes(id)) continue;
+      const o = plotOrigin(id);
+      const marker = this.poiMarker(poiAt(id)!, k.cleared.includes(id), id);
+      marker.position.set(wx(o.x) + 2.5, this.groundY(o.x + 2, o.z + 2), wz(o.z) + 2.5);
+      group.add(marker);
+    }
+    this.pois = group;
+    this.scene.add(group);
+  }
+
+  /** Người trinh sát chạy từ sân Điện qua cầu tới khoảnh đang dò, theo đồng hồ chơi. */
+  private updateScouts(t: number): void {
+    const state = this.state;
+    const list = state?.benKia.scouts ?? [];
+    const alive = new Set(list.map((sc) => sc.from));
+    for (const [from, obj] of this.scouts) {
+      if (alive.has(from)) continue;
+      this.scene.remove(obj);
+      this.scouts.delete(from);
+    }
+    if (!state) return;
+    const dien = state.buildings.find((b) => b.type === 'dien');
+    for (const sc of list) {
+      const bank = plotOf(sc.plot).bank;
+      const bridge = bridgeTo(state, bank);
+      if (!dien || !bridge || !isBridge(bridge.type)) continue;
+      let obj = this.scouts.get(sc.from);
+      if (!obj) {
+        obj = makeSoldier('giao');
+        obj.scale.setScalar(0.8);
+        this.scene.add(obj);
+        this.scouts.set(sc.from, obj);
+      }
+      const ends = bridgeEnds(bridge.type, bridge.x, bridge.z);
+      const mid = (cells: [number, number][]) => ({
+        x: cells.reduce((a, c) => a + c[0], 0) / cells.length + 0.5,
+        z: cells.reduce((a, c) => a + c[1], 0) / cells.length + 0.5,
+      });
+      const o = plotOrigin(sc.plot);
+      const pts = [
+        { x: dien.x + BUILDINGS.dien.w / 2, z: dien.z + BUILDINGS.dien.d + 0.5 },
+        mid(ends.near),
+        mid(ends.far),
+        { x: o.x + 2.5, z: o.z + 2.5 },
+      ];
+      const lens = pts.slice(1).map((q, i) => Math.hypot(q.x - pts[i].x, q.z - pts[i].z));
+      const total = lens.reduce((a, b) => a + b, 0);
+      let d = THREE.MathUtils.clamp((state.clock - sc.from) / Math.max(1, sc.at - sc.from), 0, 1) * total;
+      let i = 0;
+      while (i < lens.length - 1 && d > lens[i]) d -= lens[i++];
+      const a = pts[i];
+      const b = pts[i + 1];
+      const u = lens[i] > 0 ? Math.min(d / lens[i], 1) : 1;
+      const x = a.x + (b.x - a.x) * u;
+      const z = a.z + (b.z - a.z) * u;
+      const tx = Math.floor(x);
+      const tz = Math.floor(z);
+      obj.position.set(wx(x), isRiver(tx, tz) ? 0.12 : this.groundY(tx, tz), wz(z));
+      obj.rotation.y = Math.atan2(b.x - a.x, b.z - a.z);
+      (obj.userData.pose as Poser | undefined)?.({ act: 'walk', phase: t * 8, stride: 0.5, time: t });
+    }
+  }
+
   private syncTurtle(state: GameState): void {
     const want = ruaVangCame(state);
     if (want && !this.turtle) {
@@ -1528,6 +1817,8 @@ export class World {
 
     this.updateStorm(dt);
     this.updateNight(dt);
+    this.updateFog(dt);
+    this.updateScouts(t);
 
     if (this.giong) {
       const g = this.giong;

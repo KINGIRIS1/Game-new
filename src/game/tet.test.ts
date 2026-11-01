@@ -173,7 +173,7 @@ describe('bốn công trình Hội Tết', () => {
 describe('Tết', () => {
   it('kể truyện Lang Liêu ngay sau kết chương 1, Tết đầu tới sau 2 phút, mở 3 phút, 20 phút sau lại có Tết', () => {
     const s = city(5);
-    for (const id of ['mo', 'suGia', 'vuonVai', 'roiGay', 'ketChuong'] as const) markStory(s, id);
+    for (const id of ['mo', 'suGia', 'benKia', 'vuonVai', 'roiGay', 'ketChuong'] as const) markStory(s, id);
     expect(pendingStory(s)).toBe('langLieu');
     tick(s, 5 * MIN);
     expect(s.tet.nextAt).toBeNull();

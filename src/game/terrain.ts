@@ -1,9 +1,10 @@
 // Độ cao ô đất và nước lũ: công trình đứng trên nền nào, đê chắn nước tới đâu,
 // nước lũ từ sông tràn vào những ô nào. Không phụ thuộc DOM hay Three.js.
 
-import { BUILDINGS, DIKE_RAISE, FLOOD_TOLERANCE, type BuildingType } from './defs';
+import { BRIDGE_FLOOD, BUILDINGS, DIKE_RAISE, FLOOD_TOLERANCE, type BuildingType } from './defs';
+import { isBridge, openTester } from './benKia';
 import type { Building, GameState } from './game';
-import { GRID, RIVER_HEIGHT, inGrid, isRiver, isUnlocked } from './map';
+import { GRID, RIVER_HEIGHT, inGrid, isRiver } from './map';
 
 const tileIndex = (x: number, z: number) => z * GRID + x;
 
@@ -44,12 +45,15 @@ function dikeGrid(state: GameState): Int8Array {
 
 /**
  * Những ô bị ngập khi nước sông dâng tới mực `level` (bậc, có thể lẻ): nước loang từ sông sang bốn phía,
- * vào ô đã khai phá thấp hơn mực nước. Đê còn nguyên làm ô cao thêm, chắn nước. Rừng chưa phát giữ đất, không ngập.
+ * vào ô đã khai phá (cả khoảnh đã mở bên kia sông) thấp hơn mực nước. Đê còn nguyên làm ô cao thêm, chắn nước. Rừng
+ * chưa phát giữ đất, không ngập. `dien` giữ cho các chỗ gọi cũ; vùng đã khai phá tính theo state.
  * Trả về lưới GRID×GRID, 1 là ngập. Ô sông luôn là 1.
  */
 export function floodMap(state: GameState, level: number, dien: number): Uint8Array {
+  void dien;
   const wet = new Uint8Array(GRID * GRID);
   const raise = dikeGrid(state);
+  const open = openTester(state);
   const queue: number[] = [];
   for (let z = 0; z < GRID; z++) {
     for (let x = 0; x < GRID; x++) {
@@ -74,7 +78,7 @@ export function floodMap(state: GameState, level: number, dien: number): Uint8Ar
       const nz = z + dz;
       if (!inGrid(nx, nz)) continue;
       const ni = tileIndex(nx, nz);
-      if (wet[ni] || !isUnlocked(nx, nz, dien)) continue;
+      if (wet[ni] || !open(nx, nz)) continue;
       if (state.heights[ni] + raise[ni] >= level) continue;
       wet[ni] = 1;
       queue.push(ni);
@@ -86,6 +90,8 @@ export function floodMap(state: GameState, level: number, dien: number): Uint8Ar
 /** Công trình bị nước làm hư nếu dâng tới mực `level`: móng nằm trong vùng ngập và nước cao hơn sức chịu của nền. */
 export function drowns(state: GameState, b: Building, wet: Uint8Array, level: number): boolean {
   if (b.damaged) return false;
+  // Cầu bắc trên sông: lũ dâng tới bậc nào thì cuốn trôi tùy cấp cầu.
+  if (isBridge(b.type)) return level >= (BRIDGE_FLOOD[b.level - 1] ?? Infinity);
   if (level <= groundOf(state, b) + floodToleranceOf(b.type)) return false;
   const def = BUILDINGS[b.type];
   for (let dx = 0; dx < def.w; dx++) for (let dz = 0; dz < def.d; dz++) if (wet[tileIndex(b.x + dx, b.z + dz)]) return true;

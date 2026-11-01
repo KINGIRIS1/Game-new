@@ -4,6 +4,7 @@
 import { enemiesLeft, alliesLeft, skillReady, type Battle } from '../game/battle';
 import { advJoined, advLook, advResting, inChapter3, ruaVangCame, wallRings } from '../game/coLoa';
 import {
+  BRIDGE_FLOOD,
   BUILDINGS,
   FIELD,
   RESOURCE_IDS,
@@ -80,6 +81,8 @@ import { giongHtml, storyHtml } from './giong';
 import { sonHtml } from './son';
 import { blessingHtml, tetHtml } from './tet';
 import { mauHtml } from './mau';
+import { farHtml } from './benKia';
+import { isBridge } from '../game/benKia';
 import type { MauId } from '../game/mau';
 
 const SHOWN_RESOURCES: ResourceId[] = ['gao', 'voOc', 'datDa', 'sat'];
@@ -87,6 +90,8 @@ const BUILD_MENU: BuildingType[] = [
   'luy',
   'ruong',
   'ben',
+  'cauDa',
+  'cauThao',
   'nhaSan',
   'baiDa',
   'kho',
@@ -115,6 +120,8 @@ const CHAPTER_OF: Partial<Record<string, Chapter>> = { chuong2: 2, ketChuong2: 2
 /** Tên hiển thị của công trình, tính cả lũy tre đã đắp thành đất và đê đã kè đá. */
 export function buildingName(b: Pick<Building, 'type' | 'level'>): string {
   if (b.type === 'luy' && b.level >= 2) return vi.ui.wallEarth;
+  // Cầu gọi theo cấp: cầu phao tre, cầu gỗ, cầu gỗ lớn, kèm tên sông.
+  if (isBridge(b.type)) return `${vi.ui.bridgeLevels[b.level - 1]} ${b.type === 'cauDa' ? 'sông Đà' : 'sông Thao'}`;
   if (b.type === 'de' && b.level >= 2) return vi.ui.dikeStone;
   return vi.buildings[b.type].name;
 }
@@ -184,7 +191,8 @@ export type HudAction =
   | { kind: 'storyDone'; id: StoryId }
   | { kind: 'retreat' }
   | { kind: 'leaveField' }
-  | { kind: 'fieldToMap' };
+  | { kind: 'fieldToMap' }
+  | { kind: 'sendScout'; plot: number };
 
 export type HudMode = 'view' | 'place' | 'move' | 'paint' | 'merge';
 
@@ -198,6 +206,7 @@ type Sheet =
   | { kind: 'adv' }
   | { kind: 'tet' }
   | { kind: 'mau' }
+  | { kind: 'far'; plot: number }
   | null;
 
 /** Máy có gửi được tệp qua bảng chia sẻ của hệ điều hành (Zalo, Messenger, Drive...) không. Hỏi một lần. */
@@ -338,6 +347,8 @@ export class Hud {
         return this.onAction({ kind: 'acceptOffer', index: id });
       case 'repair':
         return this.onAction({ kind: 'repair', id });
+      case 'sendScout':
+        return this.onAction({ kind: 'sendScout', plot: id });
       case 'train':
         return this.onAction({ kind: 'train', unit: el.dataset.unit as UnitType });
       case 'forgeArms':
@@ -439,7 +450,13 @@ export class Hud {
       const secs = Math.max(0, Math.ceil((state.tet.openUntil - state.clock) / 1000));
       tet = `<button class="chip dan" data-act="openTet" title="${vi.ui.tet}">🎋 <b>${Math.floor(secs / 60)}:${String(secs % 60).padStart(2, '0')}</b></button>`;
     }
-    const html = `<div class="chip level" title="${vi.buildings.dien.name}">🏯 ${dienLevel(state)}</div>${res}${dan}${army}${giong}${son}${adv}${tet}
+    // Trinh sát đang đi bên kia sông: chip 🧭 đếm ngược tới lúc người đầu tiên về.
+    let scout = '';
+    if (state.benKia.scouts.length) {
+      const secs = Math.max(0, Math.ceil((Math.min(...state.benKia.scouts.map((s) => s.at)) - state.clock) / 1000));
+      scout = `<div class="chip dan" title="${vi.benKia.scoutChip}">🧭 <b>${secs}s</b></div>`;
+    }
+    const html = `<div class="chip level" title="${vi.buildings.dien.name}">🏯 ${dienLevel(state)}</div>${res}${dan}${army}${giong}${son}${adv}${tet}${scout}
       <span class="spacer"></span>
       <button class="icon-btn" data-act="openSettings" aria-label="${vi.ui.settings}">⚙️</button>`;
     // So với chuỗi đã vẽ lần trước (không so với innerHTML vì trình duyệt chuẩn hóa lại chuỗi),
@@ -623,6 +640,12 @@ export class Hud {
     this.refreshSheet(state);
   }
 
+  /** Bảng một khoảnh đất bên kia sông. */
+  showFar(state: GameState, plot: number): void {
+    this.sheet = { kind: 'far', plot };
+    this.refreshSheet(state);
+  }
+
   showSettings(state: GameState, resolution: Resolution): void {
     this.sheet = { kind: 'settings', resolution };
     this.refreshSheet(state, true);
@@ -678,6 +701,9 @@ export class Hud {
     } else if (this.sheet.kind === 'tet') {
       title = `🎋 ${vi.ui.tet}`;
       body = tetHtml(state);
+    } else if (this.sheet.kind === 'far') {
+      title = `🌫️ ${vi.benKia.title}`;
+      body = farHtml(state, this.sheet.plot);
     } else {
       title = `⚙️ ${vi.ui.settings}`;
       body = this.settingsHtml(state, this.sheet.resolution);
@@ -765,7 +791,13 @@ export class Hud {
       const next = b.level < def.maxLevel ? ` → +${fmt(def.storage[b.level])}` : '';
       rows.push(`<div class="stat"><span>${vi.ui.storage}</span><span>+${fmt(def.storage[b.level - 1])}${next}</span></div>`);
     }
-    if (inChapter2(state)) {
+    if (isBridge(b.type)) {
+      rows.push(`<div class="stat"><span>🌊</span><span class="muted">${vi.ui.bridgeFlood(BRIDGE_FLOOD[b.level - 1])}</span></div>`);
+      if (b.level < def.maxLevel) {
+        rows.push(`<div class="stat"><span>${vi.ui.nextLevel}</span><span class="muted">${vi.ui.bridgeLevels[b.level]}: ${vi.ui.bridgeFlood(BRIDGE_FLOOD[b.level])}</span></div>`);
+      }
+      if (inChapter3(state)) rows.push(`<p class="muted">${vi.ui.bridgeRings}</p>`);
+    } else if (inChapter2(state)) {
       const ground = groundOf(state, b);
       const tol = floodToleranceOf(b.type);
       rows.push(`<div class="stat"><span>${vi.ui.ground}</span><span>${vi.ui.groundLevel(ground)}</span></div>`);

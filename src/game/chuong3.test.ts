@@ -398,7 +398,7 @@ describe('cân bằng phó bản chương 3', () => {
 describe('truyện và lưu game chương 3', () => {
   it('kể các đoạn chương 3 đúng thứ tự sau chương 2', () => {
     const s = ch3();
-    for (const id of ['mo', 'suGia', 'vuonVai', 'roiGay', 'ketChuong', 'langLieu', 'kenRe', 'ruocDau', 'doiNon', 'ketChuong2'] as const) markStory(s, id);
+    for (const id of ['mo', 'suGia', 'benKia', 'vuonVai', 'roiGay', 'ketChuong', 'langLieu', 'kenRe', 'ruocDau', 'doiNon', 'ketChuong2'] as const) markStory(s, id);
     expect(pendingStory(s)).toBe('cotDa');
     markStory(s, 'cotDa');
     expect(pendingStory(s)).toBeNull();

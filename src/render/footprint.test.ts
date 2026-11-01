@@ -8,8 +8,11 @@ import * as THREE from 'three';
 const ctx = new Proxy({}, { get: (_t, k) => (k === 'canvas' ? {} : () => ({ addColorStop() {} })), set: () => true });
 vi.stubGlobal('document', { createElement: () => ({ width: 0, height: 0, getContext: () => ctx }) });
 
-/** Số ô mô hình được tràn ra ngoài móng mỗi phía. Điện có bậc thềm chìa ra sân; bến có cầu tàu chìa xuống sông. */
-const ALLOW: Record<string, number> = { dien: 1, ben: Infinity, choiCanh: 0.8, lauNo: 0.8 };
+/**
+ * Số ô mô hình được tràn ra ngoài móng mỗi phía. Điện có bậc thềm chìa ra sân; bến có cầu tàu chìa xuống sông;
+ * cầu có ván dốc, cọc buộc, mái lầu chìa lên hai bờ.
+ */
+const ALLOW: Record<string, number> = { dien: 1, ben: Infinity, choiCanh: 0.8, lauNo: 0.8, cauDa: 0.6, cauThao: 0.6 };
 
 describe('mô hình vừa móng kinh đô lớn', () => {
   it('mọi loại, mọi cấp: không tràn quá nửa ô ra ngoài móng (trừ bậc thềm Điện, cầu tàu bến, mái chòi canh)', async () => {
@@ -24,7 +27,7 @@ describe('mô hình vừa móng kinh đô lớn', () => {
         g.scale.multiplyScalar(footScale(type));
         g.updateMatrixWorld(true);
         const box = new THREE.Box3().setFromObject(g);
-        const over = Math.max(-box.min.x, box.max.x, -box.min.z, box.max.z) - def.w / 2;
+        const over = Math.max(-box.min.x - def.w / 2, box.max.x - def.w / 2, -box.min.z - def.d / 2, box.max.z - def.d / 2);
         expect(over, `${type} cấp ${level}`).toBeLessThanOrEqual(ALLOW[type] ?? 0.5);
       }
     }
@@ -35,7 +38,8 @@ describe('mô hình vừa móng kinh đô lớn', () => {
     const { footScale } = await import('./buildings');
     for (const type of Object.keys(BUILDINGS) as (keyof typeof BUILDINGS)[]) {
       const w = BUILDINGS[type].w;
-      if (w <= 1) continue;
+      // Lũy, chòi canh một ô; cầu vẽ đúng cỡ móng.
+      if (w <= 1 || type === 'cauDa' || type === 'cauThao') continue;
       const k = footScale(type);
       expect(k, type).toBeGreaterThan(1);
       expect(k, type).toBeLessThan(w / (w - 1));

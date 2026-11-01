@@ -58,7 +58,8 @@ import {
   type Unlock,
   type UnitType,
 } from './defs';
-import { DIEN_HOME, GRID, areaStart, baseHeights, inGrid, isUnlocked, touchesRiver } from './map';
+import { DIEN_HOME, GRID, areaStart, baseHeights, inGrid, touchesRiver } from './map';
+import { bridgeFit, initialBenKia, isBridge, openBridgehead, openTester, updateBenKia, type BenKiaState } from './benKia';
 
 export interface Building {
   id: number;
@@ -181,6 +182,7 @@ export interface AdvState {
 export type StoryId =
   | 'mo'
   | 'suGia'
+  | 'benKia'
   | 'vuonVai'
   | 'roiGay'
   | 'ketChuong'
@@ -245,6 +247,8 @@ export interface GameState {
   adv: AdvState;
   /** Hội Tết bánh chưng bánh giầy. */
   tet: TetState;
+  /** Vùng đất bên kia sông: khoảnh đã dò, đã mở, trinh sát đang đi, đồn đã dẹp. */
+  benKia: BenKiaState;
   story: { seen: StoryId[] };
   settings: { muted: boolean };
   /** Vừa nâng từ kinh đô nhỏ: kinh đô đã dựng lại theo mẫu, trả lại chừng này của. Giao diện báo một lần rồi xóa. */
@@ -307,7 +311,15 @@ export type FailReason =
   | 'canChuong4'
   | 'khongGhepDuoc'
   | 'canNoiO'
-  | 'noiOHu';
+  | 'noiOHu'
+  | 'dauCauCoDon'
+  | 'cauKhongDoi'
+  | 'daDo'
+  | 'dangDo'
+  | 'canCau'
+  | 'cauHu'
+  | 'xaQua'
+  | 'trinhSatBan';
 
 export type Result<T = undefined> = { ok: true; value: T } | { ok: false; reason: FailReason };
 
@@ -366,6 +378,7 @@ export function createInitialState(now: number): GameState {
     son: initialSon(),
     adv: initialAdv(),
     tet: initialTet(),
+    benKia: initialBenKia(),
     story: { seen: [] },
     settings: { muted: false },
   };
@@ -585,16 +598,20 @@ export function canPlace(state: GameState, type: BuildingType, x: number, z: num
   return ok(undefined);
 }
 
-/** Phần chỗ đặt của `canPlace`: móng nằm trong vùng đã khai phá, không chồng công trình khác (thành đắp đè lũy được), bến sát sông. */
+/**
+ * Phần chỗ đặt của `canPlace`: móng nằm trong vùng đã khai phá (bên này, hay khoảnh đã mở bên kia sông), không chồng
+ * công trình khác (thành đắp đè lũy được), bến sát sông. Cầu thì vắt qua sông (`bridgeFit`).
+ */
 function fitsAt(state: GameState, type: BuildingType, x: number, z: number, grid: Int32Array): FailReason | null {
+  if (isBridge(type)) return bridgeFit(state, type, x, z);
   const def = BUILDINGS[type];
-  const level = dienLevel(state);
+  const open = openTester(state);
   const over = replacedWall(state, type, x, z);
   for (let dx = 0; dx < def.w; dx++) {
     for (let dz = 0; dz < def.d; dz++) {
       const tx = x + dx;
       const tz = z + dz;
-      if (!inGrid(tx, tz) || !isUnlocked(tx, tz, level)) return 'ngoaiVung';
+      if (!open(tx, tz)) return 'ngoaiVung';
       if (grid[tz * GRID + tx] && grid[tz * GRID + tx] !== over?.id) return 'datBiChiem';
     }
   }
@@ -712,6 +729,7 @@ export function place(state: GameState, type: BuildingType, x: number, z: number
   levelFootprint(state, b, footprintTop(state, type, x, z));
   state.buildings.push(b);
   fillWorkers(state, b);
+  openBridgehead(state, b);
   return ok(b);
 }
 
@@ -795,12 +813,12 @@ export function moveCost(b: Pick<Building, 'type'>): Cost {
 /** Ô (x, z) có đặt được công trình `b` không, coi như `b` đã nhấc khỏi chỗ cũ. */
 function fitsWithout(state: GameState, b: Building, x: number, z: number, grid: Int32Array): FailReason | null {
   const def = BUILDINGS[b.type];
-  const level = dienLevel(state);
+  const open = openTester(state);
   for (let dx = 0; dx < def.w; dx++) {
     for (let dz = 0; dz < def.d; dz++) {
       const tx = x + dx;
       const tz = z + dz;
-      if (!inGrid(tx, tz) || !isUnlocked(tx, tz, level)) return 'ngoaiVung';
+      if (!open(tx, tz)) return 'ngoaiVung';
       const at = grid[tz * GRID + tx];
       if (at && at !== b.id) return 'datBiChiem';
     }
@@ -813,6 +831,7 @@ export function canMove(state: GameState, id: number, x: number, z: number): Res
   const b = findBuilding(state, id);
   if (!b) return fail('khongTimThay');
   if (b.type === 'dien') return fail('khongTheDoi');
+  if (isBridge(b.type)) return fail('cauKhongDoi');
   if (state.raid.phase !== 'idle') return fail('dangCoGiac');
   if (b.x === x && b.z === z) return fail('trungCho');
   const why = fitsWithout(state, b, x, z, occupancy(state));
@@ -843,7 +862,7 @@ const NO_RAISE: BuildingType[] = ['luy', 'bayChong', 'de', 'thanh'];
 
 export function canRaiseTile(state: GameState, x: number, z: number): Result<Cost> {
   if (!inChapter2(state)) return fail('canChuong2');
-  if (!inGrid(x, z) || !isUnlocked(x, z, dienLevel(state))) return fail('ngoaiVung');
+  if (!openTester(state)(x, z)) return fail('ngoaiVung');
   if (buildingAt(state, x, z)) return fail('datBiChiem');
   const h = tileHeight(state, x, z);
   if (h >= MAX_HEIGHT) return fail('datCaoNhat');
@@ -1097,7 +1116,9 @@ function finishRaid(state: GameState): void {
   if (won) raid.won += 1;
   if (flood) {
     raid.floods += 1;
-    if (won && !battle.drowned.length) raid.floodsHeld += 1;
+    // Cầu bị lũ cuốn thì phải sửa, nhưng không tính là để mất mùa lũ.
+    const lost = battle.drowned.filter((id) => !isBridge(state.buildings.find((b) => b.id === id)?.type ?? 'dien'));
+    if (won && !lost.length) raid.floodsHeld += 1;
   }
   if (battle.foe === 'yeu') {
     raid.nights += 1;
@@ -1290,6 +1311,7 @@ export function tick(state: GameState, ms: number): Resources {
   updateCampaign(state, ms);
   updateRaid(state, ms);
   updateTet(state);
+  updateBenKia(state);
   return gained;
 }
 

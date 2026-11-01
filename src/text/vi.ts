@@ -4,6 +4,7 @@ import type { HeroKind } from '../game/battle';
 import type { AdvLook } from '../game/coLoa';
 import type { BuildingType, EnemyType, GearId, GiftId, ResourceId, Row, SkillId, UnitType } from '../game/defs';
 import type { FailReason, StoryId } from '../game/game';
+import type { Bank, Dat, Nghe, Tier } from '../game/benKia';
 import type { GiongLook } from '../game/giong';
 import type { SonLook } from '../game/son';
 import type { Resolution } from '../render/world';
@@ -156,6 +157,16 @@ export const vi = {
       icon: '🐘',
       desc: 'Nơi voi chiến ở, có quản tượng chăm. Luyện voi chiến ở đây. Cần doanh trại cấp 3.',
     },
+    cauDa: {
+      name: 'Cầu sông Đà',
+      icon: '🌉',
+      desc: 'Cầu bắc qua sông Đà sang bờ nam. Bắc xong thì khoảnh đất đầu cầu bên kia mở ra; quân, trinh sát và dân qua cầu. Cầu phao tre bị lũ bậc 2 cuốn trôi, cầu gỗ chịu tới bậc 2, cầu gỗ lớn không sợ lũ.',
+    },
+    cauThao: {
+      name: 'Cầu sông Thao',
+      icon: '🌉',
+      desc: 'Cầu bắc qua sông Thao sang bờ đông. Bắc xong thì khoảnh đất đầu cầu bên kia mở ra; quân, trinh sát và dân qua cầu. Cầu phao tre bị lũ bậc 2 cuốn trôi, cầu gỗ chịu tới bậc 2, cầu gỗ lớn không sợ lũ.',
+    },
   } satisfies Record<BuildingType, { name: string; icon: string; desc: string }>,
 
   reasons: {
@@ -215,6 +226,14 @@ export const vi = {
     daTheoMau: 'Kinh đô đã xếp đúng theo mẫu này',
     canChuong4: 'Mở ở chương 4: Mỵ Châu, Trọng Thủy',
     khongGhepDuoc: 'Chỉ ghép được hai chòi canh cấp 8 còn nguyên',
+    dauCauCoDon: 'Bên kia đầu cầu có đồn giặc, hãy bắc cầu chỗ khác',
+    cauKhongDoi: 'Cầu đã bắc thì không dời được',
+    daDo: 'Khoảnh này đã dò rồi',
+    dangDo: 'Trinh sát đang trên đường tới đây',
+    canCau: 'Cần bắc cầu sang bờ này trước',
+    cauHu: 'Cầu đang hư, sửa cầu rồi trinh sát mới qua được',
+    xaQua: 'Xa quá, hãy dò dần từ khoảnh đã biết',
+    trinhSatBan: 'Trinh sát đều đang đi, chờ họ về',
   } satisfies Record<FailReason, string>,
 
   quests: {
@@ -413,6 +432,15 @@ export const vi = {
         { who: 'vua', text: 'Lạc hầu hãy lo việc dựng nước. Ta sẽ sai sứ giả đi khắp nơi tìm người tài đánh giặc.' },
       ],
     },
+    benKia: {
+      title: 'Bên kia sông',
+      lines: [
+        { who: 'ke', text: 'Kinh đô Phong Châu nằm bên ngã ba sông. Bên kia sông Đà, bên kia sông Thao là rừng rậm mênh mông, khói bếp các làng thấp thoáng.' },
+        { who: 'lacHau', text: 'Tâu bệ hạ, bên kia sông còn nhiều làng Lạc Việt bị giặc Ân đóng đồn ức hiếp. Đất bên ấy lại có bãi phù sa, núi đá, mỏ sắt.' },
+        { who: 'vua', text: 'Hãy bắc cầu tre qua sông, sai trinh sát dò đường. Đất nào dẹp xong giặc thì về với Văn Lang.' },
+        { who: 'lacHau', text: 'Xin bệ hạ mở bảng Xây dựng, bắc cầu sông Đà hay cầu sông Thao. Bắc xong, chạm vào đất bên kia sông để sai trinh sát.' },
+      ],
+    },
     suGia: {
       title: 'Sứ giả tìm người tài',
       lines: [
@@ -596,6 +624,11 @@ export const vi = {
       `Kinh đô đã dựng lại rộng hơn theo mẫu, nhà cửa giữ nguyên cấp và người làm.${refund ? ` Hoàn lại: ${refund}.` : ''}`,
     storage: 'Sức chứa kho',
     wallEarth: 'Thành đất',
+    /** Tên cầu theo cấp, ghép với tên sông. */
+    bridgeLevels: ['Cầu phao tre', 'Cầu gỗ', 'Cầu gỗ lớn'],
+    bridgeHint: 'Chạm vào bờ sông để chọn chỗ bắc cầu. Đầu cầu bên này phải trên đất đã khai phá.',
+    bridgeFlood: (level: number) => (Number.isFinite(level) ? `Lũ dâng tới bậc ${level} thì cầu bị cuốn` : 'Không sợ lũ'),
+    bridgeRings: 'Có cầu thì giặc từ bên kia sông đi qua cầu được: vòng thành dựa vào bờ sông bị hở ở đầu cầu.',
     workers: 'Người làm',
     freeDan: (n: number) => `Dân rảnh: ${n}`,
     autoAssign: 'Chia đều dân rảnh',
@@ -888,6 +921,45 @@ export const vi = {
     blessUntil: 'Kéo dài tới khi Tết sau đóng. Tết sau dâng tiếp thì nối liền.',
     offerToast: (name: string) => `Đã dâng bánh. Được ${name}!`,
     tetEndedLost: 'Hết Tết mà chưa dâng bánh: phúc lành đã hết.',
+  },
+
+  /** Vùng đất bên kia sông: khoảnh, trinh sát, điểm lạ. */
+  benKia: {
+    title: 'Đất bên kia sông',
+    bank: { nam: 'Bờ nam sông Đà', dong: 'Bờ đông sông Thao' } satisfies Record<Bank, string>,
+    plot: (bank: string, i: number, j: number) => `${bank}, khoảnh ${i + 1} dọc sông, hàng ${j + 1} từ bờ`,
+    unknown: 'Chưa dò: mây mù phủ kín, chỉ thấy ngọn cây.',
+    known: 'Đã dò, chưa khai phá.',
+    open: 'Đã khai phá, xây được.',
+    blocked: 'Đồn giặc gần đây chặn, chưa khai phá được đất này.',
+    empty: 'Rừng rậm, không có gì lạ.',
+    scout: 'Sai trinh sát',
+    scoutMeta: (secs: number) => `Đi chừng ${secs} giây, dò khoảnh này và các khoảnh kề cạnh.`,
+    scouting: (secs: number) => `Trinh sát đang tới, còn ${secs} giây.`,
+    scoutSent: 'Trinh sát đã lên đường',
+    scoutBack: 'Trinh sát đã về, đất bên kia hiện ra thêm',
+    scoutChip: 'Trinh sát đang đi',
+    don: {
+      1: { name: 'Đồn giặc Ân', icon: '⛺' },
+      2: { name: 'Ổ thủy quái', icon: '🦐' },
+      3: { name: 'Hang yêu tinh', icon: '👹' },
+      4: { name: 'Trại quân Triệu', icon: '🏴' },
+    } satisfies Record<Tier, { name: string; icon: string }>,
+    donDesc: 'Giặc đóng đồn giữ đất. Đất có đồn và đất kề bên chưa khai phá được tới khi dẹp đồn.',
+    donNeed: { 1: 'Đánh được từ Điện cấp 4', 2: 'Đánh được từ chương 2', 3: 'Đánh được từ chương 3', 4: 'Đánh được từ chương 4' } satisfies Record<Tier, string>,
+    lang: {
+      lua: { name: 'Làng trồng lúa', icon: '🏘️' },
+      chai: { name: 'Làng chài', icon: '🛶' },
+      da: { name: 'Làng thợ đá', icon: '🪨' },
+      ren: { name: 'Làng thợ rèn', icon: '🔨' },
+    } satisfies Record<Nghe, { name: string; icon: string }>,
+    langDesc: 'Làng người Lạc Việt bên kia sông. Khai phá tới nơi rồi dâng lễ thì làng về theo.',
+    dacSan: {
+      phuSa: { name: 'Bãi phù sa', icon: '🌱', desc: 'Đất màu mỡ. Ruộng lúa, ruộng nếp dựng trọn trên bãi này làm ra nhiều hơn.' },
+      nuiDa: { name: 'Núi đá', icon: '⛰️', desc: 'Đá lộ thiên. Bãi đất đá dựng trọn trên núi này làm ra nhiều hơn.' },
+      moSat: { name: 'Mỏ sắt lộ thiên', icon: '⚒️', desc: 'Quặng sắt đỏ gỉ. Lò rèn dựng trọn trên mỏ này làm ra nhiều hơn.' },
+    } satisfies Record<Dat, { name: string; icon: string; desc: string }>,
+    cua: { name: 'Của chôn', icon: '🏺', desc: 'Trống đồng, rìu đồng chôn dưới đất. Khai phá khoảnh này thì đào được.' },
   },
 };
 

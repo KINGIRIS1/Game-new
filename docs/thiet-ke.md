@@ -1245,6 +1245,7 @@ Chủ dự án yêu cầu: khám phá vùng đất mới bên kia sông để m�
 
 - Quân ta, giặc trên bộ và người làm đi qua cầu như đi trên đất. Cầu hư thì không ai qua được (thủy quái vẫn bơi). Sửa cầu tốn 30% giá như công trình khác.
 - Giặc không nhắm phá cầu. Thuyền buôn, thủy binh đi dưới gầm cầu, không bị chặn.
+- Cầu bị lũ cuốn thì phải sửa, nhưng **không tính là để mất mùa lũ** (thêm khi làm PR 2): mùa lũ vẫn tính giữ được nếu không công trình nào khác bị ngập, để bắc cầu tre không làm hỏng nhiệm vụ giữ lũ.
 - **Chỗ có cầu thì sông không còn là hào kín**: đếm vòng thành coi ô cầu là đi được, và coi bìa rừng bên kia là chỗ giặc xuất phát. Vòng thành dựa vào bờ sông mà hở ở đầu cầu thì không tính nữa. Mẫu Cổ Loa có vòng kín quanh Điện, không chạm sông, nên không đổi. Khi đặt cầu mà số vòng sẽ giảm thì dòng gợi ý báo trước.
 - Áp mẫu kinh đô chừa ô đầu cầu bên này, không đặt công trình chắn lối lên cầu.
 
@@ -1261,7 +1262,28 @@ Chủ dự án yêu cầu: khám phá vùng đất mới bên kia sông để m�
   | Đặc sản đất | 3 | bãi phù sa, núi đá hay mỏ sắt lộ thiên |
   | Của chôn | 2 | trống đồng, rìu đồng chôn dưới đất; mở khoảnh thì đào được |
 
-  Bậc đồn tăng dần từ bờ sông vào bìa rừng: bậc 1 ở hàng sát sông, bậc 3–4 ở hàng sát rừng. Làng và đặc sản tốt nằm sau đồn bậc 2–3, để có cái mà dẹp.
+  Bậc đồn tăng dần từ bờ sông vào bìa rừng: bậc 1 ở hàng sát sông, bậc 2 hàng giữa, bậc 3–4 ở hàng sát rừng. Làng và đặc sản tốt nằm sau đồn bậc 2–3, để có cái mà dẹp.
+
+  **Bố cục đã làm** (PR 2, `LAYOUT` trong `benKia.ts`). Bờ chỉ sâu 3 khoảnh, nên đồn bậc 2 ở hàng giữa chặn kín cả bề ngang bờ (khoảnh của nó và hai khoảnh trên dưới), chia bờ thành ba quãng. Hai bờ chung khung đồn, khác làng và đặc sản. Khoảnh đếm `i` từ tây (bờ nam) hay từ bắc (bờ đông), `j` từ bờ sông:
+
+  ```
+  j\i  0      1      2      3      4      5      6      7      8      9
+  2    .      .      cua    Đ4     .      .      đs3    Đ3     .      cua
+  1    đs2    Đ2     .      .      làng   Đ2     .      .      đs1    .
+  0    làng   .      .      Đ1     .      .      .      .      Đ1     .
+  ```
+
+  | Ô | Bờ nam sông Đà | Bờ đông sông Thao | Khai phá được khi (cầu bắc ở quãng gần ngã ba) |
+  |---|---|---|---|
+  | đs1 | bãi phù sa | núi đá | dẹp đồn bậc 1 bên cạnh (chương 1) |
+  | làng (4, 1) | làng trồng lúa | làng thợ đá | dẹp đồn bậc 2 (chương 2) |
+  | làng (0, 0) | làng chài | làng thợ rèn | dẹp đồn bậc 2 (chương 2) |
+  | đs2 | bãi phù sa | mỏ sắt | dẹp đồn bậc 2 (chương 2) |
+  | đs3 | núi đá | mỏ sắt | dẹp đồn bậc 3 (chương 3) |
+  | cua (9, 2) | của chôn | của chôn | ngay (chương 1) |
+  | cua (2, 2) | của chôn | của chôn | dẹp đồn bậc 4 (chương 4) |
+
+  Cả hai bờ có hai bãi phù sa, hai núi đá, hai mỏ sắt. Đồn chỉ cần dò thấy là đánh được, không cần khai phá tới nơi.
 
 **Điều quân dẹp đồn giặc**
 - Chạm đồn đã dò: bảng đồn ghi quân giặc, bậc, cần chương nào, thưởng. Nút **Điều quân** mở bảng xếp quân như phó bản (chọn lính, xếp hàng, tướng).
@@ -1338,7 +1360,14 @@ Chủ dự án yêu cầu: khám phá vùng đất mới bên kia sông để m�
    - **Thủy quái bỏ chạy** lặn ở mép sông bên kia như trước (ô 55), không bơi băng qua bờ bên kia.
    - **Thuyền** xuôi sông Thao tới ngã ba thì rẽ sang sông Đà; thuyền trên sông Đà chạy suốt.
    - **Nặng máy**: rừng hai bờ bên kia thêm chừng 880 cây. Chia rừng thành nhiều mảng nhỏ để bỏ qua mảng ngoài khung nhìn thì số lệnh vẽ tăng từ 60 lên 263, nên thôi. Cuối cùng rừng bên kia thưa hơn bên này một chút và **không đổ bóng**, rừng ngoài lưới sau bờ bên kia chỉ một dải thưa 5 ô. Cảnh vừa vào game: 60 → 76 lệnh vẽ, 1,56 → 1,87 triệu tam giác (thêm 20%); cảnh Điện 8: 1059 → 1073 lệnh vẽ, 1,53 → 1,84 triệu tam giác.
-2. **PR 2: cầu, sương mù, trinh sát, điểm lạ**, đoạn truyện "Bên kia sông".
+2. **PR 2: cầu, sương mù, trinh sát, điểm lạ** (đã làm), đoạn truyện "Bên kia sông". Số như bảng trên (giá cầu, lũ cuốn cầu, trinh sát 60 gạo 20 vỏ ốc, 40 giây). Chi tiết đã làm:
+   - **Luật** ở `src/game/benKia.ts`: khoảnh bên kia, điểm lạ cố định, khoảnh bị đồn chặn, cầu (`bridgeFit`, đầu cầu), trinh sát. Cầu là hai loại công trình `cauDa` (2×3 ô, nằm ở hàng sông đầu tiên) và `cauThao` (3×2 ô), mỗi loại một cái. Ô cầu còn nguyên đi được (tìm đường, đếm vòng thành); cầu không phải đích của giặc, không chắn đường.
+   - **Chạm để đặt cầu**: cầu bám theo sông, chạm đâu thì cầu dịch dọc sông tới đó. Cầu không dời được.
+   - **Mây mù** chỉ hiện từ Điện cấp 4 (lúc kể đoạn "Bên kia sông"), để đầu chương 1 nhìn như cũ. Mây cuộn màu kem viền mực, mỗi khoảnh bảy cụm, ngọn cây nhô lên; khoảnh vừa dò thì mây phình ra, bay lên, mờ dần trong một giây. Góc đông nam (sau ngã ba) không thuộc khoảnh nào nên không có mây. Mây thêm chừng 90 nghìn tam giác, hai lệnh vẽ.
+   - **Điểm lạ đã dò**: khoảnh ấy phát trống cả khoảnh. Đồn bậc 1 và 4 có rào cọc, lều, cờ; bậc 2 vũng bùn lau sậy xương cá; bậc 3 đá tím, ma trơi; mỗi đồn hai lính gác đứng yên đúng loại giặc. Làng: ba nhà sàn nhỏ, cờ trắng. Bãi phù sa: đất bùn nâu thẫm, vũng nước, khóm lau; núi đá đá xám; mỏ sắt đá đỏ gỉ. Của chôn: gò đất lấp ló mặt trống đồng. Đồn đã dẹp: đất cháy sém, cọc đổ, cờ đỏ của ta (dùng từ PR 3).
+   - **Người trinh sát** (giáo binh có khung xương) chạy từ sân Điện qua cầu tới khoảnh đang dò, đúng nhịp đồng hồ chơi. Có chip 🧭 đếm ngược trên thanh trên; về tới nơi thì báo một dòng.
+   - **Bảng Đất bên kia sông**: chạm đất bên kia (không trúng công trình). Ghi bờ, khoảnh thứ mấy, đã dò chưa, điểm lạ, lý do chưa khai phá được, nút Sai trinh sát kèm giá.
+   - **Bản lưu** vẫn phiên bản 12 (PR 1, PR 2 cùng một đợt): thêm phần bên kia (khoảnh đã dò, đã mở, trinh sát, đồn đã dẹp). Cầu nằm trọn trên sông là hợp lệ.
 3. **PR 3: đồn giặc và điều quân**: 12 đồn bốn bậc, hành quân qua cầu, bãi chiến bờ bên kia, cân bằng theo chuẩn.
 4. **PR 4: mở đất bên kia, đặc sản, bản làng, của chôn**; sổ kinh tế.
 5. **PR 5: phòng thủ hai bờ**: giặc từ bìa rừng bên kia, đồn biên và lính đóng đồn, người làm cần cầu.

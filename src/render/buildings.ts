@@ -23,6 +23,8 @@ import { ToonModel, inkThin, outlineOf, toon } from './toon';
 const FILL: Partial<Record<BuildingType, number>> = { ruong: 0.95, ruongNep: 0.95, ben: 0.92 };
 const SINGLE: Partial<Record<BuildingType, number>> = { choiCanh: 1.15, lauNo: 1.12 };
 export function footScale(type: BuildingType): number {
+  // Cầu vẽ đúng cỡ móng: vắt vừa ba ô sông, đầu cầu chạm hai bờ.
+  if (type === 'cauDa' || type === 'cauThao') return 1;
   const w = BUILDINGS[type].w;
   if (w <= 1) return SINGLE[type] ?? 1;
   return (w / (w - 1)) * (FILL[type] ?? 0.88);
@@ -1788,5 +1790,104 @@ export function buildingModel(type: BuildingType, level: number): THREE.Group {
   if (type === 'traiGiao') return makeTraiGiao();
   if (type === 'traiCung') return makeTraiCung();
   if (type === 'chuongVoi') return makeChuongVoi();
+  if (type === 'cauDa') return makeBridge(level);
+  if (type === 'cauThao') {
+    // Cầu sông Thao nằm ngang: xoay cầu dọc một góc vuông, đầu bên này (phía bắc) thành phía tây.
+    const g = new THREE.Group();
+    const bridge = makeBridge(level);
+    bridge.rotation.y = Math.PI / 2;
+    g.add(bridge);
+    return g;
+  }
   return new THREE.Group();
+}
+
+// ---------- Cầu qua sông ----------
+
+/** Mặt nước sông và mặt bãi hai bên, theo gốc mô hình (mặt bãi bậc 0). */
+const RIVER_Y = -0.28;
+
+/**
+ * Cầu qua sông, vẽ dọc theo trục z (dài 3 ô vắt qua sông, rộng 2 ô), đầu bên này ở −z. Cấp 1 cầu phao tre: ba bè tre
+ * kết dây mây nổi trên mặt nước, nhấp nhô theo sóng, ván dốc lên hai bờ, cọc buộc dây. Cấp 2 cầu gỗ: mặt ván gỗ vồng
+ * nhẹ trên hàng cột, lan can hai bên. Cấp 3 cầu gỗ lớn: vồng cao hơn, lan can sơn đỏ, lầu canh mái ngói ở đầu cầu.
+ */
+export function makeBridge(level: number): THREE.Group {
+  const out = new THREE.Group();
+  const len = 3;
+  const half = len / 2;
+  if (level <= 1) {
+    const raft = new ToonModel();
+    const p = raft.plain;
+    // Ba bè tre, mỗi bè một ô sông, cây tre nằm ngang, hai đòn tre dọc ghìm bè.
+    for (let k = 0; k < 3; k++) {
+      const z0 = -1 + k;
+      for (let i = 0; i < 9; i++) p.cyl(0.05, 0.05, 1.5, i % 2 ? C.bamboo : 0x8fae55, 0, 0, z0 - 0.4 + i * 0.1, [0, 0, Math.PI / 2], 6);
+      for (const x of [-0.5, 0.5]) p.cyl(0.04, 0.04, 0.92, C.thatchDark, x, 0.05, z0, [Math.PI / 2, 0, 0], 5);
+    }
+    // Dây mây làm tay vịn, buộc vào cọc trên bè.
+    for (const x of [-0.72, 0.72]) {
+      for (let k = 0; k < 4; k++) p.cyl(0.03, 0.035, 0.45, C.woodDark, x, 0.2, -1.4 + k * 0.93, undefined, 5);
+      p.cyl(0.015, 0.015, 2.9, C.thatchDark, x, 0.38, 0, [Math.PI / 2, 0, 0], 4);
+    }
+    const g = raft.group();
+    g.position.y = RIVER_Y + 0.08;
+    // World cho các phần có `dock` nhấp nhô theo sóng.
+    g.userData.dock = g.position.y;
+    out.add(g);
+    // Ván dốc từ hai bờ xuống bè, cọc buộc trên bờ.
+    const banks = new ToonModel();
+    for (const s of [-1, 1]) {
+      banks.plain.box(1.2, 0.05, 0.5, C.woodLight, 0, -0.08, s * (half - 0.05), [s * 0.35, 0, 0]);
+      for (const x of [-0.75, 0.75]) banks.plain.cyl(0.05, 0.06, 0.5, C.woodDark, x, 0.15, s * (half + 0.15), undefined, 6);
+    }
+    out.add(banks.group());
+    return out;
+  }
+  const big = level >= 3;
+  const m = new ToonModel();
+  const p = m.plain;
+  const width = big ? 1.55 : 1.35;
+  const rise = big ? 0.32 : 0.16;
+  /** Mặt cầu vồng lên giữa sông. */
+  const deckY = (z: number) => 0.06 + rise * (1 - (z / half) ** 2);
+  // Mặt ván ghép từng tấm, xen hai màu gỗ.
+  const planks = 14;
+  for (let i = 0; i < planks; i++) {
+    const z = -half + (i + 0.5) * (len / planks);
+    const slope = Math.atan((-2 * rise * z) / (half * half));
+    p.box(width, 0.07, len / planks + 0.01, i % 2 ? C.wood : C.woodLight, 0, deckY(z), z, [slope, 0, 0]);
+  }
+  // Hàng cột gỗ cắm xuống lòng sông, có xà ngang đỡ mặt cầu.
+  for (const z of [-1, 0, 1]) {
+    for (const x of [-width / 2 + 0.08, width / 2 - 0.08]) p.cyl(0.06, 0.07, deckY(z) - RIVER_Y + 0.25, C.woodDark, x, (deckY(z) + RIVER_Y - 0.25) / 2, z, undefined, 6);
+    p.box(width + 0.1, 0.08, 0.1, C.woodDark, 0, deckY(z) - 0.08, z);
+  }
+  // Lan can hai bên: cột lan can và tay vịn; cầu lớn sơn đỏ.
+  const rail = big ? C.red : C.woodDark;
+  for (const s of [-1, 1]) {
+    const x = s * (width / 2 - 0.04);
+    for (let i = 0; i <= 6; i++) {
+      const z = -half + 0.1 + (i * (len - 0.2)) / 6;
+      p.cyl(0.03, 0.03, 0.34, rail, x, deckY(z) + 0.2, z, undefined, 5);
+    }
+    for (let i = 0; i < 6; i++) {
+      const z0 = -half + 0.1 + (i * (len - 0.2)) / 6;
+      const z1 = -half + 0.1 + ((i + 1) * (len - 0.2)) / 6;
+      const zm = (z0 + z1) / 2;
+      const slope = Math.atan((deckY(z0) - deckY(z1)) / (z1 - z0));
+      m.band.box(0.06, 0.05, z1 - z0 + 0.02, rail, x, deckY(zm) + 0.37, zm, [slope, 0, 0]);
+    }
+  }
+  if (big) {
+    // Lầu canh đầu cầu bên này: bốn cột đỏ, mái ngói như công trình cấp 7, mặt cầu chạy qua dưới lầu.
+    const z0 = -half + 0.45;
+    const y0 = deckY(z0);
+    for (const dx of [-1, 1]) for (const dz of [-0.3, 0.3]) p.cyl(0.05, 0.06, 0.95, C.red, dx * (width / 2 - 0.02), y0 + 0.47, z0 + dz, undefined, 6);
+    p.box(width + 0.12, 0.1, 0.75, C.woodDark, 0, y0 + 0.97, z0);
+    boatRoof(m, roofFor(7), { length: width + 0.9, width: 1.0, lift: 0.22, drop: 0.3, thickness: 0.06 }, 0, y0 + 1.25, z0);
+    m.band.box(0.5, 0.18, 0.04, C.gold, 0, y0 + 0.82, z0 - 0.38);
+  }
+  out.add(m.group());
+  return out;
 }

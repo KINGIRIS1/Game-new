@@ -11,6 +11,7 @@ import { SAVE_VERSION, autoAssign, housing, initialCampaign, initialGiong, initi
 import { GRID, baseHeights, isRiver } from './map';
 import { initialSon } from './son';
 import { initialTet } from './tet';
+import { FAR_PLOTS, initialBenKia, isBridge } from './benKia';
 import { footprintTop, levelFootprint } from './terrain';
 import { isLegacyLayout, legacyBaseHeights, levelLegacyFootprints, relayLegacy } from './xepLai';
 
@@ -60,6 +61,8 @@ function migrate(raw: unknown): unknown {
   if (isObj(v) && v.version === 9) v = migrate9to10(v);
   if (isObj(v) && v.version === 10) v = migrate10to11(v);
   if (isObj(v) && v.version === 11) v = migrate11to12(v);
+  // Bản lưu 12 lưu từ bản dựng dở của phần bên kia sông (chưa có trạng thái bên kia): thêm vào.
+  if (isObj(v) && v.version === 12 && !isObj(v.benKia)) v.benKia = initialBenKia();
   return v;
 }
 
@@ -210,6 +213,7 @@ const GRID_V11 = 55;
  */
 function migrate11to12(s: Raw): Raw {
   s.version = 12;
+  s.benKia = initialBenKia();
   const old = s.heights;
   if (!Array.isArray(old) || old.length !== GRID_V11 * GRID_V11) return s;
   const heights = baseHeights();
@@ -247,12 +251,13 @@ function isValidBuildings(list: unknown): boolean {
   return ok && list.some((b: Raw) => b.type === 'dien');
 }
 
-/** Mọi công trình nằm gọn trong lưới, không ô nào dưới sông. */
+/** Mọi công trình nằm gọn trong lưới, không ô nào dưới sông; riêng cầu thì nằm trọn trên sông. */
 function buildingsInGrid(list: GameState['buildings']): boolean {
   return list.every((b) => {
     const def = BUILDINGS[b.type];
     if (b.x < 0 || b.z < 0 || b.x + def.w > GRID || b.z + def.d > GRID) return false;
-    for (let dx = 0; dx < def.w; dx++) for (let dz = 0; dz < def.d; dz++) if (isRiver(b.x + dx, b.z + dz)) return false;
+    const bridge = isBridge(b.type);
+    for (let dx = 0; dx < def.w; dx++) for (let dz = 0; dz < def.d; dz++) if (isRiver(b.x + dx, b.z + dz) !== bridge) return false;
     return true;
   });
 }
@@ -288,6 +293,10 @@ function isGameState(v: unknown): v is GameState {
   if (!(camp.battle === null || isObj(camp.battle)) || !(camp.lastResult === null || isObj(camp.lastResult))) return false;
   const res = v.resources;
   if (!isObj(res) || !RESOURCE_IDS.every((r) => isNum(res[r]))) return false;
+  const k = v.benKia;
+  const isPlots = (list: unknown) => Array.isArray(list) && list.every((id) => isNum(id) && id >= 0 && id < FAR_PLOTS);
+  if (!isObj(k) || !isPlots(k.known) || !isPlots(k.open) || !isPlots(k.cleared) || !Array.isArray(k.scouts)) return false;
+  if (!k.scouts.every((t: unknown) => isObj(t) && isNum(t.plot) && isNum(t.from) && isNum(t.at))) return false;
   if (!isValidBuildings(v.buildings) || !buildingsInGrid(v.buildings as GameState['buildings'])) return false;
   const m = v.merchant;
   if (!isObj(m) || !isNum(m.nextAt) || !isNum(m.seq) || !(m.visit === null || isObj(m.visit))) return false;

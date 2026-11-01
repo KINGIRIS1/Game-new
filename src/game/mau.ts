@@ -18,7 +18,8 @@ import {
   type GameState,
   type Result,
 } from './game';
-import { DIEN_HOME, GRID, inGrid, isUnlocked, touchesRiver } from './map';
+import { DIEN_HOME, GRID, farBankOf, inGrid, isUnlocked, touchesRiver } from './map';
+import { bridgeheadCells } from './benKia';
 import { inChapter2 } from './son';
 import { footprintTop, levelFootprint } from './terrain';
 
@@ -283,12 +284,19 @@ export function planMau(state: GameState, id: MauId): MauPlan {
     return true;
   };
   mark('dien', dien.x, dien.z);
+  // Mẫu chừa ô đầu cầu cho lối lên cầu.
+  const heads = bridgeheadCells(state);
+  const clearOfBridges = (type: BuildingType, x: number, z: number) => {
+    const def = BUILDINGS[type];
+    for (let dx = 0; dx < def.w; dx++) for (let dz = 0; dz < def.d; dz++) if (heads.has((z + dz) * GRID + x + dx)) return false;
+    return true;
+  };
 
   const plan: MauPlan = { moves: [], builds: [], removes: [], cost: {}, stuck: [] };
   const slots = mauSlots(id)
     .filter((s) => s.type !== 'dien')
     .map((s) => ({ ...s, x: s.x + ox, z: s.z + oz }))
-    .filter((s) => fits(s.type, s.x, s.z));
+    .filter((s) => fits(s.type, s.x, s.z) && clearOfBridges(s.type, s.x, s.z));
   // Doanh trại xếp trước nơi ở riêng của các binh chủng, vì nơi ở cần doanh trại.
   const types = [...new Set(slots.map((s) => s.type))].sort((a, b) => Number(b === 'doanhTrai') - Number(a === 'doanhTrai'));
   let barracks = barracksLevel(state);
@@ -302,7 +310,8 @@ export function planMau(state: GameState, id: MauId): MauPlan {
       .filter((s) => s.type === type)
       .sort((a, b) => Math.hypot(a.x + def.w / 2 - cx, a.z + def.d / 2 - cz) - Math.hypot(b.x + def.w / 2 - cx, b.z + def.d / 2 - cz));
     // Lầu nỏ một ô như chòi canh, đứng vào chỗ chòi canh của mẫu và tính là hai chòi canh trong giới hạn.
-    const sameSlot = (b: Building) => b.type === type || (type === 'choiCanh' && b.type === 'lauNo');
+    // Mẫu chỉ xếp bờ bên này: công trình bên kia sông đứng yên (vẫn tính vào số tối đa).
+    const sameSlot = (b: Building) => (b.type === type || (type === 'choiCanh' && b.type === 'lauNo')) && farBankOf(b.x, b.z) === null;
     const have = state.buildings.filter(sameSlot).sort((a, b) => b.level - a.level || a.id - b.id);
     // Công trình đã đứng đúng một chỗ trong mẫu thì giữ nguyên.
     const rest: Building[] = [];

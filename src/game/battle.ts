@@ -55,6 +55,7 @@ import {
   RAID_SCALE,
 } from './defs';
 import { dienLevel, type Building, type GameState } from './game';
+import { isBridge } from './benKia';
 import { GRID, RIVER_END, RIVER_START, areaStart, inGrid, isRiver } from './map';
 import { drowns, floodMap } from './terrain';
 
@@ -228,7 +229,7 @@ export function buildingHp(battle: Battle, b: Building): number {
 
 /** Công trình giặc có thể nhắm tới (không tính lũy, bẫy, đê, thành, không tính cái đã hư). */
 function isTargetable(b: Building): boolean {
-  return !b.damaged && b.type !== 'luy' && b.type !== 'bayChong' && b.type !== 'de' && b.type !== 'thanh';
+  return !b.damaged && b.type !== 'luy' && b.type !== 'bayChong' && b.type !== 'de' && b.type !== 'thanh' && !isBridge(b.type);
 }
 
 /** Yêu tinh nhắm phá thành Cổ Loa trước tiên, rồi mới tới kho và Điện. */
@@ -487,14 +488,20 @@ function emit(battle: Battle, e: Omit<BattleEvent, 'seq'>): void {
 // ---------- Tìm đường ----------
 
 /**
- * Chi phí đi qua mỗi ô: sông không đi được (thủy quái thì bơi được), công trình còn nguyên phải phá mới qua
- * (chi phí cao).
+ * Chi phí đi qua mỗi ô: sông không đi được (thủy quái thì bơi được) trừ chỗ có cầu còn nguyên, công trình còn nguyên
+ * phải phá mới qua (chi phí cao).
  */
 function costGrid(state: GameState, targetId: number | null, swim: boolean): Float32Array {
   const cost = new Float32Array(GRID * GRID).fill(1);
   if (!swim) for (let z = 0; z < GRID; z++) for (let x = 0; x < GRID; x++) if (isRiver(x, z)) cost[tileIndex(x, z)] = Infinity;
   for (const b of state.buildings) {
     if (b.damaged || b.type === 'bayChong') continue;
+    if (isBridge(b.type)) {
+      // Cầu là lối đi, không phải chướng ngại.
+      const def = BUILDINGS[b.type];
+      for (let dx = 0; dx < def.w; dx++) for (let dz = 0; dz < def.d; dz++) cost[tileIndex(b.x + dx, b.z + dz)] = 1;
+      continue;
+    }
     const def = BUILDINGS[b.type];
     const c =
       b.id === targetId
@@ -817,7 +824,7 @@ function stepEnemy(state: GameState, battle: Battle, f: Fighter, dt: number): vo
   const nz = Math.floor(next / GRID);
   // Ô tiếp theo có lũy hay công trình chắn đường: phá nó trước.
   const blocker = state.buildings.find((b) => {
-    if (b.damaged || b.id === target!.id || b.type === 'bayChong') return false;
+    if (b.damaged || b.id === target!.id || b.type === 'bayChong' || isBridge(b.type)) return false;
     const def = BUILDINGS[b.type];
     return nx >= b.x && nx < b.x + def.w && nz >= b.z && nz < b.z + def.d;
   });

@@ -9,6 +9,7 @@ import { forgeNoThan, inChapter3, wallRings } from './game/coLoa';
 import { offer } from './game/tet';
 import { applyMau } from './game/mau';
 import { mergeTowers } from './game/chuong4';
+import { isBridge, plotAt, sendScout } from './game/benKia';
 import { feedGiong, forgeGear } from './game/giong';
 import { inChapter2, offerGift } from './game/son';
 import { markStory, pendingStory } from './game/story';
@@ -208,9 +209,22 @@ function start(): void {
     if (mode.kind === 'place') {
       if (!tile) return;
       const def = BUILDINGS[mode.type];
-      // Chạm vào ô sát bờ thì đẩy công trình lùi vào đất liền thay vì chìa xuống sông.
-      mode.x = Math.min(Math.max(tile.x - Math.floor((def.w - 1) / 2), 0), RIVER_START - def.w);
-      mode.z = Math.min(Math.max(tile.z - Math.floor((def.d - 1) / 2), 0), RIVER_START - def.d);
+      if (mode.type === 'cauDa') {
+        // Cầu sông Đà bám theo sông: chạm đâu thì cầu dịch dọc sông tới đó.
+        mode.x = Math.min(Math.max(tile.x - Math.floor((def.w - 1) / 2), 0), RIVER_START - def.w);
+        mode.z = RIVER_START;
+      } else if (mode.type === 'cauThao') {
+        mode.x = RIVER_START;
+        mode.z = Math.min(Math.max(tile.z - Math.floor((def.d - 1) / 2), 0), RIVER_START - def.d);
+      } else if (plotAt(tile.x, tile.z) !== null) {
+        // Bên kia sông: đặt theo ô chạm, không đẩy về bên này.
+        mode.x = Math.min(Math.max(tile.x - Math.floor((def.w - 1) / 2), 0), GRID - def.w);
+        mode.z = Math.min(Math.max(tile.z - Math.floor((def.d - 1) / 2), 0), GRID - def.d);
+      } else {
+        // Chạm vào ô sát bờ thì đẩy công trình lùi vào đất liền thay vì chìa xuống sông.
+        mode.x = Math.min(Math.max(tile.x - Math.floor((def.w - 1) / 2), 0), RIVER_START - def.w);
+        mode.z = Math.min(Math.max(tile.z - Math.floor((def.d - 1) / 2), 0), RIVER_START - def.d);
+      }
       play('tap');
       updateGhost();
       return;
@@ -243,6 +257,14 @@ function start(): void {
       commit();
       world.pop(r.value.id);
       select(r.value.id);
+      return;
+    }
+    // Chạm đất bên kia sông (không trúng công trình): mở bảng khoảnh ấy.
+    const plot = id === null && tile ? plotAt(tile.x, tile.z) : null;
+    if (plot !== null && mode.kind === 'view') {
+      play('tap');
+      select(null);
+      hud.showFar(state, plot);
       return;
     }
     if (id !== null) play('tap');
@@ -288,6 +310,16 @@ function start(): void {
         mode = { kind: 'place', type: a.type, ...nearestSpot(a.type) };
         hud.setMode('place');
         updateGhost();
+        if (isBridge(a.type)) hud.toast(vi.ui.bridgeHint);
+        return;
+      }
+
+      case 'sendScout': {
+        const r = sendScout(state, a.plot);
+        if (!r.ok) return fail(r.reason);
+        play('place');
+        hud.toast(vi.benKia.scoutSent);
+        commit();
         return;
       }
 
@@ -841,6 +873,26 @@ function start(): void {
   };
 
   /** Kể đoạn truyện đến lúc, khi không đang đánh và không có hộp thoại nào khác đang mở. */
+  /** Trinh sát về tới nơi thì đất bên kia hiện ra thêm: báo một dòng. */
+  let knownPlots = state.benKia.known.length;
+  let knownOf = state;
+  const watchScouts = () => {
+    const n = state.benKia.known.length;
+    // Vừa nạp mã lưu hay chơi lại: chỉ ghi nhận, không báo.
+    if (knownOf !== state) {
+      knownOf = state;
+      knownPlots = n;
+    }
+    if (n > knownPlots && !state.benKia.scouts.length) {
+      play('claim');
+      hud.toast(vi.benKia.scoutBack);
+    }
+    if (n !== knownPlots) {
+      knownPlots = n;
+      world.sync(state);
+    }
+  };
+
   const watchStory = () => {
     if (hud.storyOpen || hud.modalOpen || state.campaign.battle || state.raid.phase === 'battle') return;
     const id = pendingStory(state);
@@ -895,6 +947,7 @@ function start(): void {
       if (state.raid.phase === 'battle') world.sync(state);
       refreshUi();
       watchStory();
+      watchScouts();
     }
     if (now - lastSave > AUTOSAVE_MS) {
       lastSave = now;

@@ -2,6 +2,8 @@
 // kể mỗi đoạn một lần, đúng thứ tự.
 
 import { advJoined, inChapter3, ruaVangCame } from './coLoa';
+import { BEN_KIA_DIEN } from './defs';
+import { dienLevel } from './game';
 import type { GameState, StoryId } from './game';
 import { giongAppeared, giongReady } from './giong';
 import { inChapter2, sonJoined } from './son';
@@ -9,6 +11,7 @@ import { inChapter2, sonJoined } from './son';
 const STORY_ORDER: StoryId[] = [
   'mo',
   'suGia',
+  'benKia',
   'vuonVai',
   'roiGay',
   'ketChuong',
@@ -26,6 +29,8 @@ const STORY_ORDER: StoryId[] = [
 const STORY_WHEN: Record<StoryId, (s: GameState) => boolean> = {
   mo: () => true,
   suGia: giongAppeared,
+  // Điện lên cấp 4: Lạc hầu tâu chuyện bên kia sông, mở cầu và trinh sát.
+  benKia: (s) => dienLevel(s) >= BEN_KIA_DIEN,
   vuonVai: giongReady,
   roiGay: (s) => s.giong.whipBroken,
   ketChuong: (s) => s.giong.ascended,

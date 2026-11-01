@@ -29,7 +29,9 @@ export type BuildingType =
   | 'lauNo'
   | 'traiGiao'
   | 'traiCung'
-  | 'chuongVoi';
+  | 'chuongVoi'
+  | 'cauDa'
+  | 'cauThao';
 
 /** Mốc mở khóa theo cốt truyện: sau kết chương 1, khi vào chương 2, sau kết chương 2, khi vào chương 3, sau kết chương 3. */
 export type Unlock = 'ketChuong1' | 'chuong2' | 'ketChuong2' | 'chuong3' | 'ketChuong3';
@@ -71,6 +73,38 @@ export interface BuildingDef {
   /** Cần doanh trại ít nhất cấp này mới dựng được (nơi ở riêng của từng binh chủng). */
   barracksLevel?: number;
 }
+
+/** Cầu qua sông: một cầu mỗi sông, có từ Điện cấp 4 (`BEN_KIA_DIEN`). Giá theo cấp như công trình khác. */
+function bridgeDef(type: 'cauDa' | 'cauThao', w: number, d: number): BuildingDef {
+  return {
+    type,
+    w,
+    d,
+    maxLevel: 3,
+    buildCost: { gao: 400, voOc: 300, datDa: 200 },
+    upgradeCost: [{}, {}, { voOc: 1600, datDa: 1400, sat: 250 }, { voOc: 2800, datDa: 2600, sat: 500 }],
+    levelMinDien: [0, 0, 6, 7],
+    production: [{}, {}, {}],
+    hp: [600, 1500, 2600],
+    limit: [0, 0, 0, 1, 1, 1, 1, 1],
+    minDien: 4,
+    buildable: true,
+    removable: false,
+  };
+}
+
+/** Điện cấp này thì bắc được cầu sang bên kia sông, và Lạc hầu kể đoạn "Bên kia sông". */
+export const BEN_KIA_DIEN = 4;
+/**
+ * Cầu bị lũ cuốn (hư) khi nước dâng tới bậc này, theo cấp cầu: cầu phao tre ở bậc 2, cầu gỗ ở bậc 3, cầu gỗ lớn
+ * không sợ lũ.
+ */
+export const BRIDGE_FLOOD = [2, 3, Infinity];
+/** Sai trinh sát dò một khoảnh bên kia sông: giá, thời gian đi (đồng hồ chơi). */
+export const SCOUT_COST: Cost = { gao: 60, voOc: 20 };
+export const SCOUT_MS = 40_000;
+/** Số trinh sát đi cùng lúc: một, từ Điện cấp này thì hai. */
+export const SCOUT_TWO_DIEN = 6;
 
 /** Dời công trình sang chỗ khác tốn chừng này phần giá dựng (làm tròn lên). Điện Vua Hùng không dời được. */
 export const MOVE_FRACTION = 0.1;
@@ -551,6 +585,10 @@ export const BUILDINGS: Record<BuildingType, BuildingDef> = {
     buildable: true,
     removable: false,
   },
+  // Cầu qua sông sang vùng đất bên kia (`benKia.ts`): cầu qua sông Đà nằm dọc (rộng 2 ô, vắt qua 3 ô sông),
+  // cầu qua sông Thao nằm ngang. Mỗi sông một cầu. Cấp 2, 3 cần Điện cấp 6, 7.
+  cauDa: bridgeDef('cauDa', 2, 3),
+  cauThao: bridgeDef('cauThao', 3, 2),
 };
 
 /** Chòi canh lên tới cấp này mới ghép được thành lầu nỏ; một lầu nỏ tính bằng chừng này chòi canh. */
