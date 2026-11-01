@@ -7,9 +7,10 @@
 
 import * as THREE from 'three';
 import { createNoise2D, type NoiseFunction2D } from 'simplex-noise';
-import type { Battle } from '../game/battle';
+import { holdProgress, type Battle } from '../game/battle';
 import { FIELD, RALLY_BEAT, SKILLS, type Terrain } from '../game/defs';
 import { BattleView } from './battleView';
+import { makeRoyalHorse, makeRuaVang } from './beasts';
 import { addSunLights, type SunLights } from './lights';
 import { STICK_POSE, makeDrummer } from './heroes';
 import { buildForest, makeBoat, makeEnemyBoat, makeEnemyFlag, makeMountain, makeTent, type TreeSpot } from './models';
@@ -175,6 +176,10 @@ export class Battlefield {
   private decor = new THREE.Group();
   private terrain: Terrain | null = null;
   private drummer?: THREE.Group;
+  /** Mộ Dạ (màn cầm cự): ngựa vua chở An Dương Vương và Mỵ Châu phi dọc mép bãi ra biển, theo thanh "Vua tới biển". */
+  private horse?: { obj: THREE.Group; battle: number };
+  /** Hộ giá tới biển: Rùa Vàng khổng lồ nổi lên ở góc biển. */
+  private seaTurtle?: { obj: THREE.Group; battle: number; age: number };
   private readonly lights: SunLights;
   private time = 0;
 
@@ -195,6 +200,7 @@ export class Battlefield {
   update(battle: Battle | null, dt: number): void {
     this.view.update(battle, dt);
     this.time += dt;
+    this.syncSea(battle, dt);
     // Ma trơi trên núi Thất Diệu bập bềnh, lập lòe.
     for (const w of (this.decor.userData.wisps as THREE.Object3D[] | undefined) ?? []) {
       const ph = w.userData.phase as number;
@@ -221,6 +227,65 @@ export class Battlefield {
     else beat(striking, lifting);
     const bump = Math.exp(-k * 9);
     face.scale.set(1 + 0.06 * bump, 1 + 1.2 * bump, 1 + 0.06 * bump);
+  }
+
+  /**
+   * Màn cầm cự ở Mộ Dạ: ngựa vua phi dọc đường `MO_DA.roadX`, từ sau lưng quân ta ra tới sát mép biển, xa dần theo
+   * thanh "Vua tới biển". Thắng (vua tới biển lần đầu) thì Rùa Vàng khổng lồ trồi lên ở góc biển.
+   */
+  private syncSea(battle: Battle | null, dt: number): void {
+    const hold = !!battle && this.terrain === 'moDa' && battle.holdS !== undefined;
+    if (!hold || this.horse?.battle !== battle!.id) {
+      if (this.horse) this.inner.remove(this.horse.obj);
+      this.horse = undefined;
+    }
+    if (!hold || this.seaTurtle?.battle !== battle!.id || !battle!.seaWin) {
+      if (this.seaTurtle) this.inner.remove(this.seaTurtle.obj);
+      this.seaTurtle = undefined;
+    }
+    if (!hold) return;
+    const b = battle!;
+    if (!this.horse) {
+      const obj = makeRoyalHorse();
+      obj.scale.setScalar(0.8 * 1.25);
+      // Mô hình nhìn về +z; ngựa phi về phía biển (z nhỏ).
+      obj.rotation.y = Math.PI;
+      this.inner.add(obj);
+      this.horse = { obj, battle: b.id };
+    }
+    const k = b.outcome === 'win' ? 1 : holdProgress(b);
+    const z = MO_DA.fromZ + (MO_DA.toZ - MO_DA.fromZ) * k;
+    const obj = this.horse.obj;
+    const pose = obj.userData.pose as ((a: { act: 'walk' | 'stand'; phase?: number; stride?: number; time?: number }) => void) | undefined;
+    const running = k < 1 && b.outcome !== 'lose';
+    obj.position.set(MO_DA.roadX, this.groundAt(MO_DA.roadX, z) + (running ? Math.abs(Math.sin(this.time * 9)) * 0.06 : 0), z);
+    pose?.(running ? { act: 'walk', phase: this.time * 18, stride: 0.9, time: this.time } : { act: 'stand', time: this.time });
+    if (!b.seaWin || b.outcome !== 'win') return;
+    if (!this.seaTurtle) {
+      const t = makeRuaVang();
+      t.scale.setScalar(3.4);
+      t.rotation.y = -Math.PI / 2 - 0.5;
+      this.inner.add(t);
+      this.seaTurtle = { obj: t, battle: b.id, age: 0 };
+    }
+    const st = this.seaTurtle;
+    st.age += dt;
+    const rise = THREE.MathUtils.smoothstep(Math.min(st.age / 2.4, 1), 0, 1);
+    st.obj.position.set(MO_DA.turtle.x, MO_DA.waterY - 1.6 + 1.5 * rise + Math.sin(this.time * 1.6) * 0.05 * rise, MO_DA.turtle.z);
+  }
+
+  /**
+   * Điểm camera nên nhìn (tọa độ cảnh), khi có: hộ giá tới biển thì nhìn Rùa Vàng nổi lên ở góc biển. Không có thì null.
+   */
+  focus(): THREE.Vector3 | null {
+    if (!this.seaTurtle) return null;
+    this.inner.updateWorldMatrix(true, false);
+    return this.inner.localToWorld(new THREE.Vector3(MO_DA.turtle.x - 3, 0, MO_DA.turtle.z + 5));
+  }
+
+  /** Nền đang dựng. */
+  get current(): Terrain | null {
+    return this.terrain;
   }
 
   /** Mặt đất (hay đáy sông, đáy biển) ở điểm (x, z) trong bãi, theo nền đang dựng. */

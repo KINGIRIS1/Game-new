@@ -1424,14 +1424,34 @@ export class World {
     this.field?.update(null, 0);
   }
 
-  /** Vừa khít bề ngang bãi, chừa chỗ cho lính đứng sát mép. */
+  /**
+   * Vừa khít bề ngang bãi, chừa chỗ cho lính đứng sát mép. Bãi Mộ Dạ (màn cầm cự) nhìn rộng sang phải hơn để thấy
+   * đường ngựa vua chạy dọc mép bãi và biển.
+   */
   private fitField(): void {
-    this.view.zoomToFit(FIELD.w + 1.5, FIELD.d * 0.62 + 3);
+    const v = this.view;
+    if (this.field?.current === 'moDa') {
+      v.zoomToFit(FIELD.w + 6, FIELD.d * 0.62 + 5);
+      // Dời tâm nhìn sang phải bãi chừng 2 ô (bãi xoay 45°).
+      v.target.set(Math.SQRT1_2 * 2, 0, -Math.SQRT1_2 * 2);
+      return;
+    }
+    v.zoomToFit(FIELD.w + 1.5, FIELD.d * 0.62 + 3);
   }
 
-  /** Vẽ trận ngoài bãi đang diễn ra. */
+  /** Vẽ trận ngoài bãi đang diễn ra. Cảnh kết chương có điểm nhìn riêng (Rùa Vàng ở biển) thì camera lướt tới đó. */
   updateField(battle: Battle | null, dt: number): void {
     this.field?.update(battle, dt);
+    const focus = this.inField ? this.field?.focus() : null;
+    if (!focus) return;
+    const v = this.view;
+    v.bounds = { min: -30, max: 30 };
+    const k = Math.min(1, dt * 1.2);
+    v.target.x += (focus.x - v.target.x) * k;
+    v.target.z += (focus.z - v.target.z) * k;
+    const wide = v.fitZoom(FIELD.w + 16, FIELD.d * 0.8 + 10);
+    v.zoom += (wide - v.zoom) * k;
+    v.apply();
   }
 
   /** Bóng mờ của công trình sắp đặt ở mặt đất bậc `h`, viền xanh nếu đặt được, đỏ nếu không. */

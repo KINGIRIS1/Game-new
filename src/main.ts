@@ -939,7 +939,7 @@ function start(): void {
   /**
    * Sang bãi chiến khi xuất quân, về kinh đô khi xem xong kết quả, hiện bảng kết quả đúng một lần.
    * Bảng kết quả hiện trễ một chút để kịp thấy đòn cuối; trận cuối chương chờ lâu hơn để xem cảnh kết chương
-   * (Gióng bay về trời, núi Tản Viên dâng cao, Rùa Vàng nổi lên).
+   * (Gióng bay về trời, núi Tản Viên dâng cao, Rùa Vàng nổi lên dưới chân An Dương Vương hay ở biển Mộ Dạ).
    */
   let shownStage: StageResult | null = null;
   let resultAt = 0;
@@ -964,7 +964,7 @@ function start(): void {
     if (r === shownStage) return;
     if (!resultAt) {
       stopRally();
-      resultAt = now + (battle?.ascend || battle?.sonWin || battle?.advWin ? 3500 : 700);
+      resultAt = now + (battle?.ascend || battle?.sonWin || battle?.advWin || battle?.seaWin ? 3500 : 700);
       play(r.outcome === 'win' ? 'upgrade' : 'error');
       commit();
     }
