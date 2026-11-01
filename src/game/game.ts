@@ -58,7 +58,7 @@ import {
   type Unlock,
   type UnitType,
 } from './defs';
-import { GRID, baseHeights, inGrid, isUnlocked, touchesRiver } from './map';
+import { DIEN_HOME, GRID, areaStart, baseHeights, inGrid, isUnlocked, touchesRiver } from './map';
 
 export interface Building {
   id: number;
@@ -339,7 +339,7 @@ export function initialGiong(): GiongState {
 }
 
 export function createInitialState(now: number): GameState {
-  const dien: Building = { id: 1, type: 'dien', x: 16, z: 16, level: 1, workers: 0 };
+  const dien: Building = { id: 1, type: 'dien', x: DIEN_HOME, z: DIEN_HOME, level: 1, workers: 0 };
   const state: GameState = {
     version: 10,
     resources: { ...START_RESOURCES },
@@ -443,8 +443,24 @@ export function barracksLevel(state: GameState): number {
   return state.buildings.filter((b) => b.type === 'doanhTrai').reduce((m, b) => Math.max(m, b.level), 0);
 }
 
-/** Lưới GRID×GRID, mỗi ô chứa id công trình đang chiếm hoặc 0. */
+const TYPE_INDEX = new Map(Object.keys(BUILDINGS).map((t, i) => [t, i + 1]));
+const occupancyCache = new WeakMap<GameState, { a: number; b: number; n: number; grid: Int32Array }>();
+
+/**
+ * Lưới GRID×GRID, mỗi ô chứa id công trình đang chiếm hoặc 0. Chỉ đọc: kết quả được ghi nhớ theo dấu vân tay
+ * của danh sách công trình (id, loại, chỗ), vì việc dò chỗ dựng gọi hàm này hàng nghìn lần trên lưới lớn.
+ */
 export function occupancy(state: GameState): Int32Array {
+  let a = 0x811c9dc5;
+  let h = 0x9e3779b9;
+  for (const b of state.buildings) {
+    const v = (((b.id * 64 + (TYPE_INDEX.get(b.type) ?? 0)) * 64 + b.x) * 64 + b.z) | 0;
+    a = Math.imul(a ^ v, 0x01000193);
+    h = Math.imul(h ^ v ^ b.id, 0x85ebca6b) ^ (h >>> 13);
+  }
+  const n = state.buildings.length;
+  const hit = occupancyCache.get(state);
+  if (hit && hit.a === a && hit.b === h && hit.n === n) return hit.grid;
   const grid = new Int32Array(GRID * GRID);
   for (const b of state.buildings) {
     const def = BUILDINGS[b.type];
@@ -452,6 +468,7 @@ export function occupancy(state: GameState): Int32Array {
       for (let dz = 0; dz < def.d; dz++) grid[(b.z + dz) * GRID + (b.x + dx)] = b.id;
     }
   }
+  occupancyCache.set(state, { a, b: h, n, grid });
   return grid;
 }
 
@@ -557,20 +574,27 @@ export function canPlace(state: GameState, type: BuildingType, x: number, z: num
   if (dienLevel(state) < def.minDien) return fail('chuaDuCapDien');
   if (def.barracksLevel && barracksLevel(state) < def.barracksLevel) return fail('canDoanhTrai');
   if (usedOf(state, type) >= limitOf(state, type)) return fail('datGioiHan');
+  const why = fitsAt(state, type, x, z, occupancy(state));
+  if (why) return fail(why);
+  if (!canAfford(state, def.buildCost)) return fail('thieuTaiNguyen');
+  return ok(undefined);
+}
+
+/** Phần chỗ đặt của `canPlace`: móng nằm trong vùng đã khai phá, không chồng công trình khác (thành đắp đè lũy được), bến sát sông. */
+function fitsAt(state: GameState, type: BuildingType, x: number, z: number, grid: Int32Array): FailReason | null {
+  const def = BUILDINGS[type];
   const level = dienLevel(state);
-  const grid = occupancy(state);
   const over = replacedWall(state, type, x, z);
   for (let dx = 0; dx < def.w; dx++) {
     for (let dz = 0; dz < def.d; dz++) {
       const tx = x + dx;
       const tz = z + dz;
-      if (!inGrid(tx, tz) || !isUnlocked(tx, tz, level)) return fail('ngoaiVung');
-      if (grid[tz * GRID + tx] && grid[tz * GRID + tx] !== over?.id) return fail('datBiChiem');
+      if (!inGrid(tx, tz) || !isUnlocked(tx, tz, level)) return 'ngoaiVung';
+      if (grid[tz * GRID + tx] && grid[tz * GRID + tx] !== over?.id) return 'datBiChiem';
     }
   }
-  if (def.nearRiver && !touchesRiver(x, z, def.w, def.d)) return fail('phaiSatSong');
-  if (!canAfford(state, def.buildCost)) return fail('thieuTaiNguyen');
-  return ok(undefined);
+  if (def.nearRiver && !touchesRiver(x, z, def.w, def.d)) return 'phaiSatSong';
+  return null;
 }
 
 export function canUpgrade(state: GameState, id: number): Result {
@@ -684,6 +708,73 @@ export function place(state: GameState, type: BuildingType, x: number, z: number
   state.buildings.push(b);
   fillWorkers(state, b);
   return ok(b);
+}
+
+/** Công trình một ô (lũy, đê, thành, bẫy, chòi canh, lầu nỏ) đứng liền nhau được; không tính khi xét viền trống. */
+const isSolid = (type: BuildingType) => BUILDINGS[type].w > 1;
+
+/** Quanh móng (x, z, w, d) một ô có công trình nhiều ô nào không (ô ngoài lưới, sông, rừng coi như trống). */
+function ringFree(state: GameState, grid: Int32Array, x: number, z: number, w: number, d: number): boolean {
+  for (let tx = x - 1; tx <= x + w; tx++) {
+    for (let tz = z - 1; tz <= z + d; tz++) {
+      if (tx >= x && tx < x + w && tz >= z && tz < z + d) continue;
+      if (!inGrid(tx, tz)) continue;
+      const id = grid[tz * GRID + tx];
+      if (id && isSolid(findBuilding(state, id)!.type)) return false;
+    }
+  }
+  return true;
+}
+
+const spotOrder = new Map<string, Int32Array>();
+/** Mọi góc móng (x, z) cho móng w×d, xếp theo khoảng cách từ tâm móng tới (ax, az), gần trước. Ghi nhớ theo khóa. */
+function spotsAround(w: number, d: number, ax: number, az: number): Int32Array {
+  const key = `${w}:${d}:${ax}:${az}`;
+  let list = spotOrder.get(key);
+  if (!list) {
+    const spots: { x: number; z: number; k: number }[] = [];
+    for (let z = 0; z <= GRID - d; z++) {
+      for (let x = 0; x <= GRID - w; x++) {
+        const dx = x + w / 2 - ax;
+        const dz = z + d / 2 - az;
+        spots.push({ x, z, k: dx * dx + dz * dz });
+      }
+    }
+    spots.sort((a, b) => a.k - b.k || a.z - b.z || a.x - b.x);
+    list = new Int32Array(spots.length * 2);
+    spots.forEach((s, i) => {
+      list![2 * i] = s.x;
+      list![2 * i + 1] = s.z;
+    });
+    if (spotOrder.size > 64) spotOrder.clear();
+    spotOrder.set(key, list);
+  }
+  return list;
+}
+
+/**
+ * Tìm chỗ dựng `type` gần điểm neo (mặc định là tâm Điện; công trình một ô thì neo ở góc vùng đất phía rừng).
+ * Ưu tiên chỗ có viền trống một ô quanh móng để kinh đô thoáng; hết chỗ thoáng mới đặt sát.
+ * Không xét giá: trả về chỗ mà `canPlace` sẽ nhận nếu đủ tài nguyên. Không có chỗ thì trả về null.
+ */
+export function findSpot(state: GameState, type: BuildingType, anchor?: { x: number; z: number }): { x: number; z: number } | null {
+  const def = BUILDINGS[type];
+  const probe = canPlace(state, type, -def.w, -def.d);
+  if (!probe.ok && probe.reason !== 'ngoaiVung') return null;
+  const dien = state.buildings.find((b) => b.type === 'dien');
+  const lo = areaStart(dienLevel(state));
+  const a = anchor ?? (isSolid(type) && dien ? { x: dien.x + BUILDINGS.dien.w / 2, z: dien.z + BUILDINGS.dien.d / 2 } : { x: lo, z: lo });
+  const grid = occupancy(state);
+  const list = spotsAround(def.w, def.d, Math.round(a.x * 2) / 2, Math.round(a.z * 2) / 2);
+  let packed: { x: number; z: number } | null = null;
+  for (let i = 0; i < list.length; i += 2) {
+    const x = list[i];
+    const z = list[i + 1];
+    if (fitsAt(state, type, x, z, grid) !== null) continue;
+    if (!isSolid(type) || ringFree(state, grid, x, z, def.w, def.d)) return { x, z };
+    packed ??= { x, z };
+  }
+  return packed;
 }
 
 // ---------- Dời công trình ----------
