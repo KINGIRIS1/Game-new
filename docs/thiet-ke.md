@@ -47,6 +47,11 @@ Tài liệu này ghi lại các quyết định đã chốt với chủ dự án
 - Máy thử chính là **Samsung Galaxy Z Fold5**. Màn hình ngoài (dài, hẹp) dùng bảng trượt lên từ dưới. Màn hình trong (gần vuông) dùng bảng bên cạnh.
 - Mục tiêu 60 khung hình/giây trên Fold5, ít nhất 30 trên máy Android tầm trung đời cũ. Bãi chiến tối đa khoảng 40–60 lính.
 - Độ nét (pixel ratio) mặc định 1,5, không vượt quá màn hình thật, đặt lại mỗi lần đổi cỡ màn hình (mở hay gập Fold5). Cài đặt có 3 mức: Tiết kiệm (1), Vừa (1,5), Nét (2). Lựa chọn lưu riêng trên từng máy, không đi theo mã lưu.
+- **Sao lưu, chuyển máy** (bảng Cài đặt). Game tự lưu trên trình duyệt. Muốn sang máy khác thì dùng một trong hai cách:
+  - **tệp lưu**: bấm Tải về, hoặc Gửi qua bảng chia sẻ của điện thoại (Zalo, Messenger, Drive). Máy kia bấm Chọn tệp ở dòng Mở tệp lưu. Nút Gửi chỉ hiện trên máy chia sẻ được tệp. Tệp lưu là tệp `.txt` chứa đúng mã lưu, tên theo ngày giờ (`thoi-dai-van-lang-2026-11-01-1430.txt`);
+  - **mã lưu**: chép rồi dán vào ô Nhập mã lưu.
+  - Mã lưu được nén (đầu mã `TDVL2:`), ngắn hơn mã đời đầu (`TDVL1:`) chừng 4–8 lần: ván mới chừng 1.000 ký tự (trước 4.200), lên Điện 8 chừng 1.550 (trước 7.300), kinh đô xây kín chừng 4.000 (trước 31.000). Mã đời đầu vẫn nhập được. Nén bằng thư viện `fflate` vì nén xong ngay trong lúc bấm: Safari trên iPhone chỉ cho chép mã và mở bảng chia sẻ ngay lúc người chơi chạm.
+  - Nạp tệp hay mã lưu thì tiến trình hiện tại bị thay bằng tiến trình trong đó.
 - Hiệu ứng âm thanh ngắn tạo bằng code (Web Audio), có nút tắt tiếng. Nhạc nền để bản sau.
 - TypeScript + Vite. Phần tính toán (`src/game/`) không phụ thuộc DOM hay Three.js và có test tự động bằng Vitest. GitHub Actions build, chạy test rồi đăng lên GitHub Pages.
 
