@@ -83,7 +83,8 @@ import { sonHtml } from './son';
 import { blessingHtml, tetHtml } from './tet';
 import { mauHtml } from './mau';
 import { farHtml, type CampPick } from './benKia';
-import { campTier, cutOff, dacSanOf, isBridge } from '../game/benKia';
+import { BANKS, campTier, cutOff, dacSanOf, isBridge, plotAt, poiAt, villageOutput } from '../game/benKia';
+import { farBankOf } from '../game/map';
 import type { MauId } from '../game/mau';
 
 const SHOWN_RESOURCES: ResourceId[] = ['gao', 'voOc', 'datDa', 'sat'];
@@ -123,6 +124,11 @@ export function buildingName(b: Pick<Building, 'type' | 'level'>): string {
   if (b.type === 'luy' && b.level >= 2) return vi.ui.wallEarth;
   // Cầu gọi theo cấp: cầu phao tre, cầu gỗ, cầu gỗ lớn, kèm tên sông.
   if (isBridge(b.type)) return `${vi.ui.bridgeLevels[b.level - 1]} ${b.type === 'cauDa' ? 'sông Đà' : 'sông Thao'}`;
+  // Bản làng gọi theo nghề (cần tọa độ để biết làng nào).
+  if (b.type === 'lang' && 'x' in b) {
+    const poi = poiAt(plotAt((b as Building).x, (b as Building).z) ?? -1);
+    if (poi?.kind === 'lang') return vi.benKia.lang[poi.nghe].name;
+  }
   if (b.type === 'de' && b.level >= 2) return vi.ui.dikeStone;
   return vi.buildings[b.type].name;
 }
@@ -195,6 +201,7 @@ export type HudAction =
   | { kind: 'fieldToMap' }
   | { kind: 'sendScout'; plot: number }
   | { kind: 'openPlot'; plot: number }
+  | { kind: 'garrison'; id: number; unit: UnitType; delta: number }
   | { kind: 'joinVillage'; plot: number }
   | { kind: 'marchCamp'; plot: number; army: Record<UnitType, number>; rows: Record<UnitType, Row> };
 
@@ -358,6 +365,8 @@ export class Hud {
       case 'openPlot':
       case 'joinVillage':
         return this.onAction({ kind: act, plot: id });
+      case 'garrison':
+        return this.onAction({ kind: 'garrison', id, unit: el.dataset.unit as UnitType, delta: Number(el.dataset.delta) });
       case 'campPrepare':
         this.campPick = { plot: id, pick: defaultPick(this.getState()) };
         return this.refreshSheet(this.getState());
@@ -493,7 +502,7 @@ export class Hud {
   updateBanners(state: GameState): void {
     const parts: string[] = [];
     const raid = state.raid;
-    const sideName = { bac: vi.ui.sideBac, tay: vi.ui.sideTay, nam: vi.ui.sideNam, dong: vi.ui.sideDong }[raid.side];
+    const sideName = { bac: vi.ui.sideBac, tay: vi.ui.sideTay, nam: vi.ui.sideNam, dong: vi.ui.sideDong, namXa: vi.ui.sideNamXa, dongXa: vi.ui.sideDongXa }[raid.side];
     if (raid.phase === 'warning' && raid.foe === 'thuy') {
       const secs = Math.max(0, Math.ceil((raid.startsAt - state.clock) / 1000));
       parts.push(`<div class="banner bad">🌧️ ${vi.ui.floodWarning(sideName, secs, nextFloodLevel(state))}
@@ -853,6 +862,11 @@ export class Hud {
     }
 
     if (b.type === 'lauNo') rows.push(`<div class="stat"><span>${vi.ui.lauNoShots}</span><span></span></div>`);
+    if (b.type === 'lang') {
+      const id = plotAt(b.x, b.z);
+      if (id !== null) rows.push(`<div class="stat"><span>${vi.ui.production}</span><span>${b.damaged ? '—' : prodHtml(villageOutput(state, id))}</span></div>`);
+    }
+    if (b.type === 'donBien') rows.push(this.garrisonHtml(state, b));
     if (b.type === 'doanhTrai') rows.push(this.barracksHtml(state));
     const home = UNIT_TYPES.find((k) => UNITS[k].home === b.type);
     if (home) rows.push(this.homeHtml(state, home));
@@ -944,6 +958,26 @@ export class Hud {
   private homeHtml(state: GameState, k: UnitType): string {
     return `<div class="stat"><span>${vi.ui.troopSpace(troopSpace(state), troopCap(state))}</span></div>
       <div class="units">${this.unitRowHtml(state, k)}</div>`;
+  }
+
+  /** Đồn biên: chọn số lính mỗi binh chủng đóng ở đồn (lấy từ quân đang có). */
+  private garrisonHtml(state: GameState, b: Building): string {
+    const bank = farBankOf(b.x, b.z);
+    if (!bank) return '';
+    const rows = UNIT_TYPES.filter((k) => state.troops[k] > 0).map((k) => {
+      const here = Math.min(state.benKia.garrison[bank][k], state.troops[k]);
+      const other = BANKS.filter((x) => x !== bank).reduce((n, x) => n + state.benKia.garrison[x][k], 0);
+      const room = state.troops[k] - other;
+      return `<div class="unit-row army">
+        <span class="unit-icon">${vi.units[k].icon}</span>
+        <span class="unit-info"><b>${vi.units[k].name}</b><small>${vi.ui.haveTroops(state.troops[k])}</small></span>
+        <button class="step" data-act="garrison" data-id="${b.id}" data-unit="${k}" data-delta="-1" ${here > 0 ? '' : 'disabled'}>−</button>
+        <b class="count">${here}</b>
+        <button class="step" data-act="garrison" data-id="${b.id}" data-unit="${k}" data-delta="1" ${here < room ? '' : 'disabled'}>+</button>
+      </div>`;
+    });
+    return `<h3>${vi.benKia.garrisonTitle}</h3><p class="muted">${vi.benKia.garrisonHint}</p>
+      ${rows.length ? `<div class="units">${rows.join('')}</div>` : `<p class="why">${vi.ui.noTroops}</p>`}`;
   }
 
   /** Các tướng ở doanh trại (và An Dương Vương ngự ở Điện): ai ra trận được, ai đang nghỉ. */

@@ -201,6 +201,9 @@ interface BuildingView {
 }
 
 const SPOTS: Partial<Record<BuildingType, Spot[]>> = {
+  // Bản làng: người đàn bà đeo gùi đi lại trong sân; đồn biên: lính gác ở cổng.
+  lang: [{ job: 'phuNu', x: -0.1, y: 0.04, z: 0.1, ry: 0.3 }],
+  donBien: [{ job: 'linhGac', x: 0.05, y: 0.04, z: 1.05, ry: 0 }],
   // Dân rải khắp ruộng, tránh chòi canh, guồng nước, trâu và miếu ở các góc.
   ruong: [
     { job: 'nong', x: -0.35, y: 0.06, z: -0.3, ry: 0.4 },
@@ -1504,7 +1507,7 @@ export class World {
     if (this.pois) this.scene.remove(this.pois);
     const group = new THREE.Group();
     for (const id of poiPlots()) {
-      if (!k.known.includes(id) || k.dug.includes(id)) continue;
+      if (!k.known.includes(id) || k.dug.includes(id) || k.villages.includes(id)) continue;
       const poi = poiAt(id)!;
       if (k.open.includes(id) && poi.kind !== 'lang') continue;
       const o = plotOrigin(id);
@@ -1737,6 +1740,13 @@ export class World {
     } else if (side === 'nam') {
       this.warning.scale.set(len, 1, 2.6);
       this.warning.position.set(wx(0) + len / 2, WATER_Y + 0.08, wz(RIVER_START) + 1.4);
+    } else if (side === 'namXa') {
+      // Bìa rừng ngoài cùng bên kia sông Đà.
+      this.warning.scale.set(len - 2, 1, 3);
+      this.warning.position.set(wx(2) + (len - 2) / 2, 1.0, wz(GRID - 2) + 1);
+    } else if (side === 'dongXa') {
+      this.warning.scale.set(3, 1, len - 2);
+      this.warning.position.set(wx(GRID - 2) + 1, 1.0, wz(2) + (len - 2) / 2);
     } else {
       this.warning.scale.set(2.6, 1, len);
       this.warning.position.set(wx(RIVER_START) + 1.4, WATER_Y + 0.08, wz(0) + len / 2);
@@ -1762,7 +1772,15 @@ export class World {
     const along = (band.lo + RIVER_START) / 2;
     const deep = band.to + 3;
     const bank = RIVER_START - 4;
-    const at: Record<RaidSide, [number, number]> = { bac: [along, deep], tay: [deep, along], nam: [along, bank], dong: [bank, along] };
+    const far = GRID - 6;
+    const at: Record<RaidSide, [number, number]> = {
+      bac: [along, deep],
+      tay: [deep, along],
+      nam: [along, bank],
+      dong: [bank, along],
+      namXa: [along, far],
+      dongXa: [far, along],
+    };
     const [x, z] = at[side];
     this.panGoal = new THREE.Vector3(wx(x), 0, wz(z));
   }

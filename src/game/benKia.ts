@@ -2,13 +2,14 @@
 // (khoảnh 5×5 ô). Bắc cầu qua sông thì khoảnh đầu cầu bên kia được dò và mở; sai trinh sát dò dần từng khoảnh, thấy
 // điểm lạ (đồn giặc, bản làng, đặc sản đất, của chôn) cố định, mọi máy như nhau. Không phụ thuộc DOM hay Three.js.
 
-import { startFieldBattle, type Battle } from './battle';
+import { startFieldBattle, type Battle, type RaidSide } from './battle';
 import { inChapter3 } from './coLoa';
 import { inChapter4 } from './chuong4';
 import {
   BEN_KIA_DIEN,
   BUILDINGS,
   DAC_SAN_BONUS,
+  FAR_RAID_EVERY,
   PLOT_SHARE,
   PLOT_STEP,
   RESOURCE_IDS,
@@ -29,7 +30,7 @@ import {
   type UnitType,
 } from './defs';
 import { canAfford, countOf, dienLevel, gain, pay, troopBonus, type Building, type FailReason, type GameState, type Result } from './game';
-import { FAR_FOREST, GRID, KHOANH, RIVER_END, RIVER_START, inGrid, isUnlocked } from './map';
+import { FAR_FOREST, GRID, KHOANH, RIVER_END, RIVER_START, farBankOf, inGrid, isUnlocked } from './map';
 import { heroFor, inChapter2, restAfter } from './son';
 
 const ok = <T>(value: T): Result<T> => ({ ok: true, value });
@@ -165,10 +166,14 @@ export interface BenKiaState {
   villages: number[];
   /** Của chôn đã đào (khoảnh). */
   dug: number[];
+  /** Số lính mỗi binh chủng đóng ở đồn biên mỗi bờ (lấy từ quân đang có, không thêm chỗ quân). */
+  garrison: Record<Bank, Record<UnitType, number>>;
 }
 
+export const noGarrison = (): Record<Bank, Record<UnitType, number>> => ({ nam: { giao: 0, cung: 0, voi: 0 }, dong: { giao: 0, cung: 0, voi: 0 } });
+
 export function initialBenKia(): BenKiaState {
-  return { known: [], open: [], scouts: [], cleared: [], villages: [], dug: [] };
+  return { known: [], open: [], scouts: [], cleared: [], villages: [], dug: [], garrison: noGarrison() };
 }
 
 /** Khoảnh `id` còn đồn giặc chưa dẹp. */
@@ -527,7 +532,20 @@ export function joinVillage(state: GameState, id: number): Result {
   if (!check.ok) return check;
   pay(state, VILLAGE_GIFT);
   state.benKia.villages.push(id);
+  addVillageHall(state, id);
   return ok(undefined);
+}
+
+/** Nhà làng (công trình `lang`) giữa khoảnh làng: giặc đánh được, hư thì thôi làm ra, sửa như công trình khác. */
+export function addVillageHall(state: GameState, id: number): void {
+  const o = plotOrigin(id);
+  if (villageHall(state, id)) return;
+  state.buildings.push({ id: state.nextId++, type: 'lang', x: o.x + 1, z: o.z + 1, level: 1, workers: 0 });
+}
+
+/** Nhà làng của làng ở khoảnh `id`. */
+export function villageHall(state: GameState, id: number): Building | undefined {
+  return state.buildings.find((b) => b.type === 'lang' && plotAt(b.x, b.z) === id);
 }
 
 /** Một làng đã về theo làm ra mỗi phút (chưa cộng đền, phúc lành). */
@@ -545,8 +563,66 @@ export function villageOutput(state: GameState, id: number): Cost {
 export function villagesOutput(state: GameState): Resources {
   const total: Resources = { gao: 0, voOc: 0, datDa: 0, sat: 0 };
   for (const id of state.benKia.villages) {
+    // Làng bị giặc phá thì thôi làm ra tới khi sửa.
+    const hall = villageHall(state, id);
+    if (!hall || hall.damaged) continue;
     const out = villageOutput(state, id);
     for (const r of RESOURCE_IDS) total[r] += out[r] ?? 0;
   }
   return total;
+}
+
+// ---------- Phòng thủ hai bờ ----------
+
+/** Bờ `bank` đã có công trình (kể cả nhà làng, đồn biên): giặc trên bộ có thể tới từ bìa rừng bên ấy. */
+export function farPresence(state: GameState, bank: Bank): boolean {
+  return state.buildings.some((b) => farBankOf(b.x, b.z) === bank);
+}
+
+/**
+ * Đợt giặc trên bộ thứ `wave` tới từ đâu: bờ bên kia đã có công trình thì cứ `FAR_RAID_EVERY` đợt có một đợt tới từ
+ * bìa rừng bên kia (hai bờ đều có thì thay phiên); còn lại từ bìa rừng phía bắc hay phía tây như cũ.
+ */
+export function landRaidSide(state: GameState, wave: number, roll: boolean): RaidSide {
+  const banks = BANKS.filter((b) => farPresence(state, b));
+  if (banks.length && wave % FAR_RAID_EVERY === FAR_RAID_EVERY - 1) {
+    const bank = banks[Math.floor(wave / FAR_RAID_EVERY) % banks.length];
+    return bank === 'nam' ? 'namXa' : 'dongXa';
+  }
+  return roll ? 'bac' : 'tay';
+}
+
+/** Đồn biên còn nguyên ở bờ `bank`. */
+export function fortOf(state: GameState, bank: Bank): Building | undefined {
+  return state.buildings.find((b) => b.type === 'donBien' && !b.damaged && farBankOf(b.x, b.z) === bank);
+}
+
+/** Lính `kind` đóng ở các đồn biên còn nguyên, ra trận từ đồn khi giữ kinh đô. */
+export function garrisonPosts(state: GameState, kind: UnitType): { fort: Building; n: number }[] {
+  const out: { fort: Building; n: number }[] = [];
+  for (const bank of BANKS) {
+    const fort = fortOf(state, bank);
+    const n = state.benKia.garrison[bank][kind];
+    if (fort && n > 0) out.push({ fort, n });
+  }
+  return out;
+}
+
+/** Số lính `kind` đóng ở đồn biên bờ `bank` (không quá quân đang có, trừ phần đóng ở bờ kia). */
+export function setGarrison(state: GameState, bank: Bank, kind: UnitType, n: number): Result<number> {
+  if (!state.buildings.some((b) => b.type === 'donBien' && farBankOf(b.x, b.z) === bank)) return fail('khongTimThay');
+  const other = BANKS.filter((b) => b !== bank).reduce((sum, b) => sum + state.benKia.garrison[b][kind], 0);
+  const max = Math.max(0, state.troops[kind] - other);
+  const v = Math.max(0, Math.min(max, Math.round(n)));
+  state.benKia.garrison[bank][kind] = v;
+  return ok(v);
+}
+
+/** Đồn biên dựng được ở đâu: móng nằm trọn ở một bờ bên kia, mỗi bờ một đồn. */
+export function fortFit(state: GameState, x: number, z: number): FailReason | null {
+  const def = BUILDINGS.donBien;
+  const bank = farBankOf(x, z);
+  if (!bank || farBankOf(x + def.w - 1, z + def.d - 1) !== bank) return 'phaiBenKia';
+  if (state.buildings.some((b) => b.type === 'donBien' && farBankOf(b.x, b.z) === bank)) return 'datGioiHan';
+  return null;
 }

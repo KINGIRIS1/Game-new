@@ -1,7 +1,7 @@
 // Vùng đất bên kia sông: lưới nới qua sông (bờ nam sông Đà, bờ đông sông Thao, ngã ba sông).
 
 import { describe, expect, it } from 'vitest';
-import { findPath, type HeroSetup } from './battle';
+import { findPath, startBattle, stepBattle, type HeroSetup } from './battle';
 import {
   BANKS,
   FAR_ALONG,
@@ -10,6 +10,11 @@ import {
   CAMPS,
   canJoinVillage,
   canOpenPlot,
+  fortOf,
+  landRaidSide,
+  setGarrison,
+  villageHall,
+  villagesOutput,
   dacSanOf,
   joinVillage,
   openPlot,
@@ -34,7 +39,7 @@ import {
 } from './benKia';
 import { wallRings } from './coLoa';
 import { BRIDGE_FLOOD, BUILDINGS, CH2_QUEST_START, CH3_QUEST_START, DAC_SAN_BONUS, FIELD, SCOUT_COST, SCOUT_MS, UNITS, VILLAGE_GIFT, VILLAGE_SHARE, type UnitType } from './defs';
-import { canMove, canPlace, createInitialState, outputIn, place, productionPerMinute, tick, type Building, type GameState } from './game';
+import { canMove, canPlace, createInitialState, outputIn, place, productionPerMinute, repair, tick, type Building, type GameState } from './game';
 import { planMau } from './mau';
 import { FAR_FOREST, GRID, RIVER_END, RIVER_START, areaStart, baseHeights, farBankOf, isRiver, isUnlocked, riverDistance } from './map';
 import { deserialize, serialize } from './save';
@@ -629,5 +634,74 @@ describe('khai phá đất bên kia, đặc sản, bản làng, của chôn', ()
     s.benKia.villages.push(14);
     s.benKia.dug.push(29);
     expect(deserialize(serialize(s))!.benKia).toEqual(s.benKia);
+  });
+});
+
+describe('phòng thủ hai bờ', () => {
+  /** Kinh đô có cầu sang bờ nam, làng lúa đã về theo, một kho, doanh trại; mọi đồn bờ nam đã dẹp. */
+  function frontier(): { s: GameState; lang: number } {
+    const s = rich(6);
+    const head = freeRiverPlot('nam', 6);
+    bridgeTo(s, head);
+    s.benKia.cleared = poiPlots().filter((id) => poiAt(id)!.kind === 'don');
+    s.benKia.known = [...Array(30).keys()];
+    const lang = poiPlots().find((id) => plotOf(id).bank === 'nam' && poiAt(id)!.kind === 'lang' && plotOf(id).i === 4)!;
+    const from = plotOf(head);
+    for (let j = 1; j <= plotOf(lang).j; j++) openPlot(s, plotId('nam', from.i, j));
+    for (let i = from.i - 1; i >= plotOf(lang).i; i--) openPlot(s, plotId('nam', i, plotOf(lang).j));
+    expect(joinVillage(s, lang).ok).toBe(true);
+    place(s, 'kho', 40, 30);
+    s.buildings.push({ id: 950, type: 'doanhTrai', x: 30, z: 30, level: 5, workers: 0 });
+    return { s, lang };
+  }
+
+  it('bờ bên kia có công trình thì cứ ba đợt giặc trên bộ có một đợt tới từ bìa rừng bên kia', () => {
+    const s = rich(6);
+    expect([0, 1, 2, 3, 4, 5].map((w) => landRaidSide(s, w, true))).toEqual(['bac', 'bac', 'bac', 'bac', 'bac', 'bac']);
+    const { s: t } = frontier();
+    expect([0, 1, 2, 3, 4, 5].map((w) => landRaidSide(t, w, false))).toEqual(['tay', 'tay', 'namXa', 'tay', 'tay', 'namXa']);
+  });
+
+  it('giặc bên kia ra từ bìa rừng bên kia, đánh làng trước tiên; làng hư thì thôi làm ra, sửa lại được', () => {
+    const { s, lang } = frontier();
+    const hall = villageHall(s, lang)!;
+    const b = startBattle(s, 3, 'namXa', {});
+    const foes = b.fighters.filter((f) => f.side === 'giac');
+    expect(foes.every((f) => f.z >= 70)).toBe(true);
+    for (let i = 0; i < 40; i++) stepBattle(s, b, 0.05);
+    const targets = new Set(foes.map((f) => f.targetBuilding));
+    expect(targets.has(hall.id)).toBe(true);
+    hall.damaged = true;
+    expect(villagesOutput(s).gao).toBe(0);
+    expect(repair(s, hall.id).ok).toBe(true);
+    expect(villagesOutput(s).gao).toBeGreaterThan(0);
+  });
+
+  it('cầu hư thì giặc bên kia không sang được: chỉ đánh công trình bên ấy', () => {
+    const { s, lang } = frontier();
+    s.buildings.find((b) => b.type === 'cauDa')!.damaged = true;
+    villageHall(s, lang)!.damaged = true;
+    const b = startBattle(s, 3, 'namXa', {});
+    for (let i = 0; i < 40; i++) stepBattle(s, b, 0.05);
+    const near = new Set(s.buildings.filter((x) => farBankOf(x.x, x.z) === null).map((x) => x.id));
+    for (const f of b.fighters.filter((x) => x.side === 'giac')) expect(f.targetBuilding === null || !near.has(f.targetBuilding)).toBe(true);
+  });
+
+  it('đồn biên: chỉ dựng bên kia sông, mỗi bờ một; lính đóng ở đồn ra trận từ đồn', () => {
+    const { s, lang } = frontier();
+    const o = plotOrigin(lang);
+    expect(canPlace(s, 'donBien', 20, 30)).toEqual({ ok: false, reason: 'phaiBenKia' });
+    const spot = { x: o.x + 5, z: o.z };
+    expect(place(s, 'donBien', spot.x, spot.z).ok).toBe(true);
+    expect(canPlace(s, 'donBien', spot.x + 5, spot.z)).not.toEqual({ ok: true, value: undefined });
+    s.troops = { giao: 10, cung: 4, voi: 0 };
+    expect(setGarrison(s, 'nam', 'giao', 99)).toEqual({ ok: true, value: 10 });
+    expect(setGarrison(s, 'nam', 'giao', 6)).toEqual({ ok: true, value: 6 });
+    const fort = fortOf(s, 'nam')!;
+    const b = startBattle(s, 1, 'bac', {});
+    const ours = b.fighters.filter((f) => f.side === 'ta' && f.kind === 'giao');
+    expect(ours.length).toBe(10);
+    const atFort = ours.filter((f) => Math.abs(f.x - (fort.x + 2)) <= 2.5 && Math.abs(f.z - (fort.z + 2)) <= 2.5);
+    expect(atFort.length).toBe(6);
   });
 });

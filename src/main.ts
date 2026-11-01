@@ -9,7 +9,7 @@ import { forgeNoThan, inChapter3, wallRings } from './game/coLoa';
 import { offer } from './game/tet';
 import { applyMau } from './game/mau';
 import { mergeTowers } from './game/chuong4';
-import { CAMPS, campTier, canStartCamp, isBridge, joinVillage, openPlot, plotAt, poiAt, sendScout, startCamp } from './game/benKia';
+import { CAMPS, campTier, canStartCamp, isBridge, joinVillage, openPlot, plotAt, poiAt, sendScout, setGarrison, startCamp } from './game/benKia';
 import { feedGiong, forgeGear } from './game/giong';
 import { heroFor, inChapter2, offerGift } from './game/son';
 import { markStory, pendingStory } from './game/story';
@@ -48,7 +48,7 @@ import {
   type GameState,
   type StageResult,
 } from './game/game';
-import { AREA_SIZE, GRID, RIVER_START } from './game/map';
+import { AREA_SIZE, GRID, RIVER_START, farBankOf } from './game/map';
 import { fromCode, loadFromStorage, saveFileName, saveToStorage, toCode } from './game/save';
 import { HALF, RESOLUTIONS, World, type Resolution } from './render/world';
 import { vi } from './text/vi';
@@ -339,6 +339,17 @@ function start(): void {
         play('place');
         const dug = RESOURCE_IDS.some((k) => (r.value[k] ?? 0) > 0);
         hud.toast(dug ? `${vi.benKia.cuaToast} ${rewardText(r.value)}` : vi.benKia.opened);
+        commit();
+        return;
+      }
+
+      case 'garrison': {
+        const b = findBuilding(state, a.id);
+        const bank = b ? farBankOf(b.x, b.z) : null;
+        if (!b || !bank) return fail('khongTimThay');
+        const r = setGarrison(state, bank, a.unit, state.benKia.garrison[bank][a.unit] + a.delta);
+        if (!r.ok) return fail(r.reason);
+        play('tap');
         commit();
         return;
       }

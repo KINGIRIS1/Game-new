@@ -59,7 +59,19 @@ import {
   type UnitType,
 } from './defs';
 import { DIEN_HOME, GRID, areaStart, baseHeights, inGrid, touchesRiver } from './map';
-import { bridgeFit, farFactor, initialBenKia, isBridge, openBridgehead, openTester, updateBenKia, villagesOutput, type BenKiaState } from './benKia';
+import {
+  bridgeFit,
+  farFactor,
+  fortFit,
+  initialBenKia,
+  isBridge,
+  landRaidSide,
+  openBridgehead,
+  openTester,
+  updateBenKia,
+  villagesOutput,
+  type BenKiaState,
+} from './benKia';
 
 export interface Building {
   id: number;
@@ -326,7 +338,8 @@ export type FailReason =
   | 'daMo'
   | 'donChan'
   | 'daVeTheo'
-  | 'chuaKhaiPha';
+  | 'chuaKhaiPha'
+  | 'phaiBenKia';
 
 export type Result<T = undefined> = { ok: true; value: T } | { ok: false; reason: FailReason };
 
@@ -638,6 +651,7 @@ function fitsAt(state: GameState, type: BuildingType, x: number, z: number, grid
     }
   }
   if (def.nearRiver && !touchesRiver(x, z, def.w, def.d)) return 'phaiSatSong';
+  if (type === 'donBien') return fortFit(state, x, z);
   return null;
 }
 
@@ -1190,7 +1204,7 @@ function updateRaid(state: GameState, ms: number): void {
     raid.foe = nextFoe(state);
     raid.phase = 'warning';
     const roll = (raid.wave * 2654435761) % 7 < 4;
-    raid.side = raid.foe === 'thuy' ? (roll ? 'nam' : 'dong') : roll ? 'bac' : 'tay';
+    raid.side = raid.foe === 'thuy' ? (roll ? 'nam' : 'dong') : landRaidSide(state, raid.wave, roll);
     raid.startsAt = state.clock + RAID_WARNING_MS;
   }
   if (raid.phase === 'warning' && state.clock >= raid.startsAt) {

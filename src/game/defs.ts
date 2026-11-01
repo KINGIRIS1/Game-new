@@ -31,7 +31,9 @@ export type BuildingType =
   | 'traiCung'
   | 'chuongVoi'
   | 'cauDa'
-  | 'cauThao';
+  | 'cauThao'
+  | 'lang'
+  | 'donBien';
 
 /** Mốc mở khóa theo cốt truyện: sau kết chương 1, khi vào chương 2, sau kết chương 2, khi vào chương 3, sau kết chương 3. */
 export type Unlock = 'ketChuong1' | 'chuong2' | 'ketChuong2' | 'chuong3' | 'ketChuong3';
@@ -113,8 +115,10 @@ export const PLOT_SHARE = 0.05;
 export const PLOT_STEP = 0.1;
 /** Công trình có móng nằm trọn trên đất đặc sản hợp nghề làm ra thêm chừng này. */
 export const DAC_SAN_BONUS = 0.3;
-/** Dâng lễ kết thân thì bản làng về theo. */
+/** Dâng lễ kết thân thì bản làng về theo (cũng là giá dựng của công trình làng, để sửa làng tốn 30% lễ). */
 export const VILLAGE_GIFT: Cost = { gao: 600, voOc: 400 };
+/** Một bờ bên kia có công trình thì cứ chừng này đợt giặc trên bộ có một đợt tới từ bìa rừng bên kia. */
+export const FAR_RAID_EVERY = 3;
 /**
  * Bản làng đã về theo làm ra bằng chừng này phần một công trình cùng nghề, đủ người, ở cấp bằng cấp Điện (không cần
  * dân). Một làng trọn một công trình thì làng rèn thêm tới 46% sắt ở Điện 6, nên lấy một nửa.
@@ -606,6 +610,37 @@ export const BUILDINGS: Record<BuildingType, BuildingDef> = {
   // cầu qua sông Thao nằm ngang. Mỗi sông một cầu. Cấp 2, 3 cần Điện cấp 6, 7.
   cauDa: bridgeDef('cauDa', 2, 3),
   cauThao: bridgeDef('cauThao', 3, 2),
+  // Bản làng bên kia sông đã về theo (`benKia.ts`): nhà làng giữa khoảnh làng, không dựng hay dỡ được. Giặc bên kia
+  // đánh làng trước tiên; làng hư thì thôi làm ra, sửa tốn 30% lễ kết thân như công trình khác.
+  lang: {
+    type: 'lang',
+    w: 3,
+    d: 3,
+    maxLevel: 1,
+    buildCost: { gao: 600, voOc: 400 },
+    upgradeCost: [{}, {}],
+    production: [{}],
+    hp: [700],
+    limit: [0, 0, 0, 4, 4, 4, 4, 4],
+    minDien: 4,
+    buildable: false,
+    removable: false,
+  },
+  // Đồn biên: chỉ dựng bên kia sông, mỗi bờ một. Lính đóng ở đồn ra trận từ đây khi giữ kinh đô.
+  donBien: {
+    type: 'donBien',
+    w: 4,
+    d: 4,
+    maxLevel: 1,
+    buildCost: { gao: 800, voOc: 600, datDa: 600, sat: 100 },
+    upgradeCost: [{}, {}],
+    production: [{}],
+    hp: [900],
+    limit: [0, 0, 0, 0, 2, 2, 2, 2],
+    minDien: 5,
+    buildable: true,
+    removable: false,
+  },
 };
 
 /** Chòi canh lên tới cấp này mới ghép được thành lầu nỏ; một lầu nỏ tính bằng chừng này chòi canh. */
@@ -666,6 +701,7 @@ export const FLOOD_TOLERANCE: Partial<Record<BuildingType, number>> = {
   denPhuDong: 1,
   denTanVien: 1,
   denCoLoa: 1,
+  lang: 1,
   ben: 99,
   luy: 99,
   bayChong: 99,

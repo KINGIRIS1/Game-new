@@ -1790,6 +1790,8 @@ export function buildingModel(type: BuildingType, level: number): THREE.Group {
   if (type === 'traiGiao') return makeTraiGiao();
   if (type === 'traiCung') return makeTraiCung();
   if (type === 'chuongVoi') return makeChuongVoi();
+  if (type === 'lang') return makeLang();
+  if (type === 'donBien') return makeDonBien();
   if (type === 'cauDa') return makeBridge(level);
   if (type === 'cauThao') {
     // Cầu sông Thao nằm ngang: xoay cầu dọc một góc vuông, đầu bên này (phía bắc) thành phía tây.
@@ -1800,6 +1802,75 @@ export function buildingModel(type: BuildingType, level: number): THREE.Group {
     return g;
   }
   return new THREE.Group();
+}
+
+// ---------- Bên kia sông: bản làng, đồn biên ----------
+
+/** Bản làng bên kia sông đã về theo: ba nhà sàn nhỏ quây quanh sân, cối giã gạo, cờ đỏ của ta. Mái tranh. */
+export function makeLang(): THREE.Group {
+  const g = new THREE.Group();
+  for (const [x, z, ry] of [
+    [-0.45, -0.4, 0.3],
+    [0.5, -0.3, -0.4],
+    [0, 0.5, 0.1],
+  ]) {
+    const house = makeNhaSan(1);
+    house.scale.setScalar(0.42);
+    house.position.set(x, 0, z);
+    house.rotation.y = ry;
+    g.add(house);
+  }
+  const m = new ToonModel();
+  const p = m.plain;
+  p.cyl(0.08, 0.1, 0.16, C.rock, -0.55, 0.08, 0.55, undefined, 8);
+  p.cyl(0.015, 0.015, 0.4, C.woodLight, -0.55, 0.32, 0.55, [0.2, 0, 0.1], 5);
+  p.cyl(0.02, 0.02, 1.0, C.woodDark, 0.75, 0.5, 0.6, undefined, 5);
+  m.band.box(0.3, 0.2, 0.02, C.red, 0.91, 0.88, 0.6);
+  g.add(m.group());
+  return g;
+}
+
+/**
+ * Đồn biên: rào cọc tre vuông chừa cổng phía trước, chòi canh bốn cột có mái tranh, lán lính mái chữ A, cờ đỏ.
+ * Vẽ theo móng cũ 3×3 như các công trình khác.
+ */
+export function makeDonBien(): THREE.Group {
+  const m = new ToonModel();
+  const p = m.plain;
+  const e = 1.4;
+  // Rào cọc nhọn, chừa cổng ở giữa mặt trước.
+  for (let i = 0; i <= 14; i++) {
+    const t = -e + (i * 2 * e) / 14;
+    for (const [x, z] of [
+      [t, -e],
+      [-e, t],
+      [e, t],
+      [t, e],
+    ]) {
+      if (z === e && Math.abs(x) < 0.35) continue;
+      p.cyl(0.045, 0.05, 0.55, C.bamboo, x, 0.27, z, undefined, 5);
+      p.cone(0.05, 0.12, C.woodLight, x, 0.6, z, undefined, 5);
+    }
+  }
+  // Chòi canh góc sau bên trái.
+  const tx = -0.75;
+  const tz = -0.75;
+  for (const dx of [-0.22, 0.22]) for (const dz of [-0.22, 0.22]) p.cyl(0.04, 0.05, 1.3, C.woodDark, tx + dx, 0.65, tz + dz, undefined, 6);
+  p.box(0.62, 0.06, 0.62, C.wood, tx, 1.3, tz);
+  for (const s of [-1, 1]) {
+    p.box(0.62, 0.14, 0.03, C.woodDark, tx, 1.4, tz + s * 0.3);
+    p.box(0.03, 0.14, 0.62, C.woodDark, tx + s * 0.3, 1.4, tz);
+  }
+  m.band.cone(0.5, 0.42, C.thatch, tx, 1.75, tz, undefined, 8);
+  // Lán lính mái chữ A bên phải, giá giáo trước lán.
+  m.band.add(saddleRoof({ length: 1.1, width: 0.8, lift: 0.08, drop: 0.38, thickness: 0.05 }), C.thatch, 0.55, 0.62, -0.35);
+  p.box(0.9, 0.36, 0.6, C.woodLight, 0.55, 0.18, -0.35);
+  for (let i = 0; i < 4; i++) p.cyl(0.012, 0.012, 0.9, C.woodDark, 0.25 + i * 0.16, 0.45, 0.25, [0.12, 0, 0], 4);
+  p.box(0.75, 0.04, 0.06, C.woodDark, 0.5, 0.32, 0.22);
+  // Cờ đỏ cạnh cổng.
+  p.cyl(0.025, 0.025, 1.6, C.woodDark, 0.5, 0.8, 1.1, undefined, 5);
+  m.band.box(0.42, 0.28, 0.02, C.red, 0.72, 1.42, 1.1);
+  return m.group();
 }
 
 // ---------- Cầu qua sông ----------

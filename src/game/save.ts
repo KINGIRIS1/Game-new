@@ -11,7 +11,7 @@ import { SAVE_VERSION, autoAssign, housing, initialCampaign, initialGiong, initi
 import { GRID, baseHeights, isRiver } from './map';
 import { initialSon } from './son';
 import { initialTet } from './tet';
-import { FAR_PLOTS, initialBenKia, isBridge } from './benKia';
+import { FAR_PLOTS, addVillageHall, initialBenKia, isBridge, noGarrison } from './benKia';
 import { footprintTop, levelFootprint } from './terrain';
 import { isLegacyLayout, legacyBaseHeights, levelLegacyFootprints, relayLegacy } from './xepLai';
 
@@ -66,6 +66,9 @@ function migrate(raw: unknown): unknown {
     if (!isObj(v.benKia)) v.benKia = initialBenKia();
     const k = v.benKia as Raw;
     for (const key of ['villages', 'dug'] as const) if (!Array.isArray(k[key])) k[key] = [];
+    if (!isObj(k.garrison)) k.garrison = noGarrison();
+    // Làng về theo mà chưa có nhà làng (bản dựng dở): dựng nhà làng.
+    if (isValidBuildings(v.buildings) && isNum(v.nextId)) for (const id of k.villages as number[]) addVillageHall(v as unknown as GameState, id);
   }
   return v;
 }
@@ -301,6 +304,8 @@ function isGameState(v: unknown): v is GameState {
   const isPlots = (list: unknown) => Array.isArray(list) && list.every((id) => isNum(id) && id >= 0 && id < FAR_PLOTS);
   if (!isObj(k) || !isPlots(k.known) || !isPlots(k.open) || !isPlots(k.cleared) || !isPlots(k.villages) || !isPlots(k.dug) || !Array.isArray(k.scouts)) return false;
   if (!k.scouts.every((t: unknown) => isObj(t) && isNum(t.plot) && isNum(t.from) && isNum(t.at))) return false;
+  const posts = k.garrison;
+  if (!isObj(posts) || !['nam', 'dong'].every((bank) => isObj(posts[bank]) && ['giao', 'cung', 'voi'].every((u) => isNum((posts[bank] as Raw)[u])))) return false;
   if (!isValidBuildings(v.buildings) || !buildingsInGrid(v.buildings as GameState['buildings'])) return false;
   const m = v.merchant;
   if (!isObj(m) || !isNum(m.nextAt) || !isNum(m.seq) || !(m.visit === null || isObj(m.visit))) return false;

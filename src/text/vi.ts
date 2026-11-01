@@ -162,6 +162,16 @@ export const vi = {
       icon: '🌉',
       desc: 'Cầu bắc qua sông Đà sang bờ nam. Bắc xong thì khoảnh đất đầu cầu bên kia mở ra; quân, trinh sát và dân qua cầu. Cầu phao tre bị lũ bậc 2 cuốn trôi, cầu gỗ chịu tới bậc 2, cầu gỗ lớn không sợ lũ.',
     },
+    lang: {
+      name: 'Bản làng',
+      icon: '🏘️',
+      desc: 'Làng người Lạc Việt bên kia sông đã về theo, làm ra tài nguyên theo nghề mà không cần dân. Giặc từ bìa rừng bên kia đánh làng trước tiên; làng hư thì thôi làm ra, sửa lại như công trình khác.',
+    },
+    donBien: {
+      name: 'Đồn biên',
+      icon: '🛡️',
+      desc: 'Đồn quân dựng bên kia sông, mỗi bờ một. Chọn số lính đóng ở đồn (lấy từ quân đang có): khi giữ kinh đô, lính đóng ra trận từ đồn biên, giữ bờ bên kia khỏi phải đi vòng qua cầu.',
+    },
     cauThao: {
       name: 'Cầu sông Thao',
       icon: '🌉',
@@ -239,6 +249,7 @@ export const vi = {
     donChan: 'Đồn giặc gần đây chặn, hãy dẹp đồn trước',
     daVeTheo: 'Làng đã về theo',
     chuaKhaiPha: 'Khai phá đất tới làng trước đã',
+    phaiBenKia: 'Đồn biên phải dựng trọn trên đất đã khai phá bên kia sông, mỗi bờ một đồn',
   } satisfies Record<FailReason, string>,
 
   quests: {
@@ -792,6 +803,8 @@ export const vi = {
     dikeStone: 'Kè đá',
     sideNam: 'phía Nam',
     sideDong: 'phía Đông',
+    sideNamXa: 'bên kia sông Đà',
+    sideDongXa: 'bên kia sông Thao',
     floodWarning: (side: string, s: number, level: number) => `Thủy Tinh hô mưa gọi gió! Lũ sắp dâng tới bậc ${level}, thủy quái kéo tới từ sông ${side}. Còn ${s} giây`,
     floodLook: 'Xem vùng ngập',
     floodBattle: (water: number, max: number, left: number, ours: number) => `Lũ dâng bậc ${water}/${max} · còn ${left} thủy quái, quân ta ${ours}`,
@@ -977,6 +990,8 @@ export const vi = {
     openBtn: 'Khai phá',
     opened: 'Đã khai phá đất bên kia sông',
     cutOff: 'Cầu sang bờ này hư hay chưa có: dân không sang làm được, công trình không làm ra gì.',
+    garrisonTitle: 'Lính đóng ở đồn',
+    garrisonHint: 'Lính đóng ở đồn vẫn là quân của doanh trại, nhưng khi giặc đánh kinh đô thì ra trận từ đồn biên, giữ bờ bên kia.',
     dienStats: (known: number, open: number, cleared: number, villages: number) =>
       `Bên kia sông: dò ${known}, khai phá ${open} khoảnh, dẹp ${cleared} đồn, ${villages} làng về theo`,
     dacSan: {
