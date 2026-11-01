@@ -6,9 +6,9 @@ import type { Battle, FighterKind } from '../game/battle';
 import { FIRE, HILL, RALLY_BEAT, ROCKS, SKILLS, TT_WAVE, type UnitType } from '../game/defs';
 import { BOW_POSE, WEAPON_REST, makeAnDuong, makeFighter, makeGiong, makeMountain, makeRuaVang, makeSonTinh } from './models';
 import { C } from './palette';
-import type { Bones } from './rig';
+import type { Poser } from './rig';
 import { ShapeBuilder, seeded } from './shapes';
-import { makeSpearman, poseSpearman, type HumanBone } from './soldier';
+import { isSoldier, makeSoldier } from './soldier';
 import { ToonModel, drumWaveTex, inkThin, outlineOf, toon } from './toon';
 
 interface FighterView {
@@ -38,8 +38,8 @@ interface FighterView {
   emerge?: number;
   /** Vũng nước bọt trắng dưới chân lính ta đang đi chậm vì trúng sóng Thủy Tinh. */
   wet?: THREE.Group;
-  /** Lính có khung xương (giáo binh): đi, đâm, ngã bằng cách xoay xương thay vì ngả cả thân. */
-  rig?: Bones<HumanBone>;
+  /** Nhân vật có khung xương: đi, đánh, ngã bằng cách xoay xương thay vì nhún và ngả cả thân. */
+  pose?: Poser;
 }
 
 /** Vòng núi đá Dời non quanh Sơn Tinh: từng mỏm trồi vụt lên lần lượt, đứng một lúc rồi lún xuống. */
@@ -518,12 +518,12 @@ export class BattleView {
               ? makeSonTinh({ glow: battle.hero?.glow })
               : f.kind === 'anDuong'
                 ? makeAnDuong({ crossbow: true, glow: battle.hero?.glow })
-                : f.kind === 'giao' && f.side === 'ta'
-                  ? makeSpearman(battle.arms?.giao ?? 0)
+                : isSoldier(f.kind)
+                  ? makeSoldier(f.kind, f.side === 'ta' ? (battle.arms?.[f.kind as UnitType] ?? 0) : 0)
                   : makeFighter(f.kind, f.side === 'ta' ? (battle.arms?.[f.kind as UnitType] ?? 0) : 0);
         obj.scale.setScalar((SCALE[f.kind] ?? 0.8) * this.scale);
         this.root.add(obj);
-        view = { obj, deadAge: 0, rise: 0, weapon: obj.children.find((c) => c.userData.weapon), smash: 0, volley: 0, rig: obj.userData.bones };
+        view = { obj, deadAge: 0, rise: 0, weapon: obj.children.find((c) => c.userData.weapon), smash: 0, volley: 0, pose: obj.userData.pose };
         this.fighters.set(f.id, view);
       }
       const obj = view.obj;
@@ -538,7 +538,7 @@ export class BattleView {
         view.deadAge += dt;
         obj.rotation.x = -Math.min(view.deadAge * 4, Math.PI / 2);
         obj.position.y = base + (view.deadAge > 1.2 ? -(view.deadAge - 1.2) * 0.6 : 0);
-        if (view.rig) poseSpearman(view.rig, { act: 'dead', fall: Math.min(view.deadAge * 3, 1) });
+        view.pose?.({ act: 'dead', fall: Math.min(view.deadAge * 3, 1) });
         if (view.deadAge > 2.5) obj.visible = false;
         continue;
       }
@@ -627,24 +627,27 @@ export class BattleView {
       }
       // Gióng ra đòn bằng tay vũ khí, ngựa chỉ chồm nhẹ khi quét tre; người khác ngả cả thân.
       if (f.kind === 'giong') obj.rotation.x = view.smash > 0 ? -0.2 * Math.sin(Math.PI * (1 - view.smash / SMASH_TIME)) : 0;
-      else if (f.kind === 'sonTinh' || f.kind === 'anDuong' || view.rig) obj.rotation.x = 0;
+      else if (f.kind === 'sonTinh' || f.kind === 'anDuong' || view.pose) obj.rotation.x = 0;
       else obj.rotation.x = f.swing > 0 ? -0.5 * (f.swing / 0.3) : 0;
       // Đang có Trống trận thì quân ta nhún nhảy hăng hơn; trúng sóng Thủy Tinh thì lội nước, nhún ít.
       const rally = f.side === 'ta' && battle.rally > 0;
       const hop = rally ? 0.12 : 0.06;
       const wading = (f.slow ?? 0) > 0;
       const moving = f.state === 'move' && !f.stun;
-      if (view.rig) {
-        // Lính có xương tự bước, tự đâm; Trống trận thì bước dài và nảy theo nhịp, lội nước thì bước ngắn và chậm.
-        const phase = this.time * (wading ? 6 : rally ? 13 : 11) + f.id;
-        obj.position.y = base + (moving && rally ? Math.abs(Math.sin(phase)) * 0.05 : 0);
-        poseSpearman(
-          view.rig,
-          moving
-            ? { act: 'walk', phase, stride: wading ? 0.3 : rally ? 0.65 : 0.5 }
+      if (view.pose) {
+        // Nhân vật có xương tự bước, tự ra đòn. Trống trận thì bước dài và nảy theo nhịp; lội nước thì bước ngắn
+        // và chậm; giặc cướp được của thì chạy.
+        const flee = f.state === 'flee' && !f.stun;
+        const walking = moving || flee;
+        const phase = this.time * (wading ? 6 : rally || flee ? 13 : 11) + f.id;
+        obj.position.y = base + (walking && rally ? Math.abs(Math.sin(phase)) * 0.05 : 0);
+        const time = this.time + f.id;
+        view.pose(
+          walking
+            ? { act: 'walk', phase, stride: wading ? 0.3 : rally || flee ? 0.65 : 0.5, time }
             : f.state === 'fight'
-              ? { act: 'guard', strike: f.swing > 0 ? 1 - f.swing / 0.3 : undefined, time: this.time + f.id }
-              : { act: 'stand', time: this.time + f.id },
+              ? { act: 'fight', strike: f.swing > 0 ? 1 - f.swing / 0.3 : undefined, time }
+              : { act: 'stand', time },
         );
       } else obj.position.y = base + (moving ? Math.abs(Math.sin(this.time * (wading ? 5 : 10) + f.id)) * hop : 0);
       this.syncWet(view, f.side === 'ta' && wading && !battle.outcome);

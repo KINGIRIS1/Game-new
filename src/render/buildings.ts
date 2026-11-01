@@ -8,6 +8,7 @@ import * as THREE from 'three';
 import { ironHorse, makeCrossbowStand, makeFighter, makeRuaVang, makeSonTinh } from './models';
 import { C } from './palette';
 import { ShapeBuilder, saddleRoof, seeded } from './shapes';
+import { bakeSoldier } from './soldier';
 import { ToonModel, inkThin, outlineOf, toon } from './toon';
 
 /** Cấp dùng để tính độ dày (bờ ruộng, đống đá...): cấp 6, 7, 8 giữ như cấp 5. */
@@ -1101,7 +1102,7 @@ export function makeTraiCung(): THREE.Group {
   archeryTarget(m, -0.6, 0.45, Math.PI / 2);
   banner(m, 0.86, -0.92, 1.7, C.red);
   const g = m.group();
-  const cung = makeFighter('cung');
+  const cung = bakeSoldier('cung', 0, { act: 'fight' });
   cung.scale.setScalar(0.72);
   cung.position.set(0.5, 0.08, 0.45);
   cung.rotation.y = -Math.PI / 2;
@@ -1231,7 +1232,7 @@ export function makeChoiCanh(level: number): THREE.Group {
   }
   const g = m.group();
   for (const b of bows) g.add(b);
-  const archer = makeFighter('cung');
+  const archer = bakeSoldier('cung', 0, { act: 'fight' });
   archer.scale.setScalar(0.62);
   archer.position.set(0, h + 0.05, 0.05);
   g.add(archer);
@@ -1288,7 +1289,7 @@ export function makeLauNo(): THREE.Group {
   // Ba nỏ lớn chĩa ra trước, sang phải và sang trái, mỗi nỏ một lính nỏ đứng sau.
   g.add(bigCrossbow(0, f2, 0.12, 0), bigCrossbow(0.12, f2, -0.05, Math.PI / 2), bigCrossbow(-0.12, f2, -0.05, -Math.PI / 2));
   for (const [x, z, ry] of [[0.18, -0.2, 0], [-0.25, 0.2, -Math.PI / 2], [0.25, 0.25, Math.PI / 2]] as const) {
-    const archer = makeFighter('cung');
+    const archer = bakeSoldier('cung', 0, { act: 'fight' });
     archer.scale.setScalar(0.5);
     archer.position.set(x, f2 + 0.05, z);
     archer.rotation.y = ry;

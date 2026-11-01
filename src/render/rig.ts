@@ -35,6 +35,27 @@ export interface RigShape<B extends string> {
 
 export type Bones<B extends string> = Record<B, THREE.Bone>;
 
+/**
+ * Nhân vật có xương đang làm gì, để đặt tư thế mỗi khung hình. Mỗi nhân vật có xương giữ một hàm
+ * `userData.pose(a: Act)`; tư thế chỉ phụ thuộc `a`, không phụ thuộc khung trước.
+ */
+export interface Act {
+  /** Đứng, đi (hay chạy), đánh (giữa hai đòn, có thể đang ra đòn), ngã. */
+  act: 'stand' | 'walk' | 'fight' | 'dead';
+  /** Pha bước chân (radian), tăng đều khi đi. */
+  phase?: number;
+  /** Góc vung chân khi đi (radian). Đi thường 0,5. */
+  stride?: number;
+  /** Tiến trình đòn đánh: 0 lúc vừa ra đòn tới 1 lúc thu về. Bỏ trống là không ra đòn. */
+  strike?: number;
+  /** Đồng hồ (giây), cho nhịp thở, lửa bập bùng... */
+  time?: number;
+  /** Ngã được bao nhiêu, 0..1. */
+  fall?: number;
+}
+
+export type Poser = (a: Act) => void;
+
 /** Gom khối hình theo xương, rồi gộp thành `RigShape`. */
 export class RigBuilder<B extends string> {
   private readonly slots = new Map<B, RigSlots>();
@@ -48,6 +69,22 @@ export class RigBuilder<B extends string> {
       this.slots.set(b, s);
     }
     return s;
+  }
+
+  /**
+   * Vẽ các khối của xương `b` trong khung riêng: gốc ở `origin`, xoay `rot` (tọa độ mô hình ở tư thế gốc).
+   * Dùng cho vũ khí, đồ đeo: dựng quanh chỗ tay nắm hay chỗ đeo cho dễ, rồi đặt vào người.
+   */
+  local(b: B, origin: V3, rot: V3 | null, draw: (s: RigSlots) => void): void {
+    const s = this.on(b);
+    const frame = new THREE.Matrix4().compose(
+      new THREE.Vector3(...origin),
+      new THREE.Quaternion().setFromEuler(new THREE.Euler(...(rot ?? [0, 0, 0]))),
+      new THREE.Vector3(1, 1, 1),
+    );
+    for (const k of SLOTS) s[k].frame = frame;
+    draw(s);
+    for (const k of SLOTS) s[k].frame = null;
   }
 
   build(): RigShape<B> {
@@ -101,11 +138,12 @@ function makeBones<B extends string>(shape: RigShape<B>): { root: THREE.Bone; bo
   return { root, bones, list };
 }
 
-/** Đưa mọi xương về tư thế gốc: khớp về chỗ cũ, không xoay. */
+/** Đưa mọi xương về tư thế gốc: khớp về chỗ cũ, không xoay, đủ cỡ. */
 export function resetBones<B extends string>(bones: Bones<B>): void {
   for (const b of Object.values<THREE.Bone>(bones)) {
     b.position.copy(b.userData.rest as THREE.Vector3);
     b.rotation.set(0, 0, 0);
+    b.scale.setScalar(1);
   }
 }
 

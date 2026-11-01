@@ -6,8 +6,9 @@ import type { FighterKind } from '../game/battle';
 import type { GiongLook } from '../game/giong';
 import { C } from './palette';
 import { ShapeBuilder, instanceTemplates, seeded, type Placement } from './shapes';
-import { bakeSpearman } from './soldier';
+import { bakeSoldier, isSoldier } from './soldier';
 import { ToonModel, inkThick, inkThin, outlineOf, toon } from './toon';
+import { IRON, IRON_DARK, crossbowParts } from './weapons';
 
 export type PersonKind = 'nong' | 'linh' | 'buon' | 'laiDo';
 
@@ -88,30 +89,24 @@ function chariot(m: ToonModel): void {
   p.box(0.06, 0.18, 0.2, C.ink, 0, 1.0, 1.18);
 }
 
-/** Da thuộc làm bao tên. */
-const LEATHER = 0x8a5a33;
-/** Sừng làm cung (cung sừng): vàng ngà. */
-const HORN = 0xe6d6a8;
-
 /**
- * Lính trong trận. Quân ta đội mũ lông chim như trên trống đồng,
- * giặc Ân mặc áo sẫm, đội mũ trụ đồng, cầm qua (giáo móc).
- * Phó tướng Ân mặc giáp đỏ, mũ trụ có chùm lông đỏ cao, khoác áo choàng, cầm rìu lớn.
- * Giáo binh có khung xương, dựng ở soldier.ts; ở đây trả về bản tĩnh đứng nghỉ.
+ * Lính trong trận. Lính đi bộ (quân ta, giặc Ân, quân Triệu) có khung xương, dựng ở soldier.ts;
+ * ở đây trả về bản tĩnh đứng nghỉ. Còn lại: voi chiến có Lạc tướng cưỡi, chiến xa và đại tướng Ân,
+ * thủy quái, yêu tinh, kỵ binh Triệu.
  * `tier`: bậc binh khí đã rèn ở lò rèn (0–2) của giáo binh, cung thủ, voi chiến:
  * - giáo binh: bậc 1 đầu giáo sắt, bậc 2 thêm tua đỏ và khiên viền sắt (soldier.ts);
- * - cung thủ: bậc 1 mũi tên sắt trong bao tên da, bậc 2 cung sừng và bao tên đồng;
+ * - cung thủ: bậc 1 mũi tên sắt trong bao tên da, bậc 2 cung sừng và bao tên đồng (soldier.ts);
  * - voi chiến: bậc 1 giáp trán sắt, bậc 2 giáp ngà và bành có lọng.
  */
 export function makeFighter(kind: FighterKind, tier = 0): THREE.Group {
   if (kind === 'giong') return makeGiong('trangSi');
   if (kind === 'sonTinh') return makeSonTinh();
   if (kind === 'anDuong') return makeAnDuong({ crossbow: true });
-  if (kind === 'giao') return bakeSpearman(tier);
+  if (isSoldier(kind)) return bakeSoldier(kind, tier);
   const water = makeWaterFoe(kind) ?? makeChapter3Foe(kind);
   if (water) return water;
-  const boss = kind === 'phoTuong' || kind === 'daiTuong';
-  const enemy = kind === 'giaoAn' || kind === 'cungAn' || kind === 'chienXa' || boss;
+  const boss = kind === 'daiTuong';
+  const enemy = kind === 'chienXa' || boss;
   const onCart = kind === 'chienXa' || kind === 'daiTuong';
   const m = new ToonModel(inkThin);
   const p = m.plain;
@@ -167,25 +162,7 @@ export function makeFighter(kind: FighterKind, tier = 0): THREE.Group {
     p.sphere(0.22, C.hair, 0, y0 + 0.76, z0 - 0.04, [1, 0.62, 0.98], 12);
     for (let i = -2; i <= 2; i++) p.box(0.055, 0.34, 0.03, i % 2 ? C.cream : C.red, i * 0.055, y0 + 1.02, z0 - 0.06, [0, 0, -i * 0.28]);
   }
-  const archer = kind === 'cung' || kind === 'cungAn';
-  if (archer) {
-    // Cung cong ghép từ ba đoạn; cung sừng (bậc 2) dày hơn, màu ngà.
-    const horn = kind === 'cung' && tier >= 2;
-    for (const [dy, rz] of [[0.2, 0.5], [0, 0], [-0.2, -0.5]] as const) {
-      p.box(horn ? 0.045 : 0.03, 0.22, horn ? 0.045 : 0.03, horn ? HORN : C.woodDark, 0.24 + Math.abs(dy) * -0.25, y0 + 0.42 + dy, z0 + 0.12, [0, 0, rz]);
-    }
-    if (horn) for (const dy of [-0.31, 0.31]) p.sphere(0.03, C.bronze, 0.19, y0 + 0.42 + dy, z0 + 0.12, [1, 1, 1], 6);
-    p.box(0.01, 0.56, 0.01, C.cream, 0.27, y0 + 0.42, z0 + 0.12);
-    // Bao tên: gỗ (chưa rèn), da (bậc 1), đồng (bậc 2). Đã rèn thì thấy mũi tên sắt nhô khỏi bao.
-    const quiver = enemy ? C.enemyRed : tier >= 2 ? C.bronze : tier >= 1 ? LEATHER : C.woodLight;
-    p.cyl(0.05, 0.05, 0.36, quiver, -0.1, y0 + 0.5, z0 - 0.16, [0.3, 0, 0], 6);
-    if (!enemy && tier >= 1) {
-      for (const dx of [-0.03, 0.02, 0.06]) {
-        p.cyl(0.008, 0.008, 0.16, C.woodLight, -0.1 + dx, y0 + 0.72, z0 - 0.22, [0.3, 0, 0], 4);
-        p.cone(0.022, 0.07, IRON, -0.1 + dx, y0 + 0.82, z0 - 0.25, [0.3, 0, 0], 4);
-      }
-    }
-  } else if (kind === 'voi') {
+  if (kind === 'voi') {
     // Lạc tướng trên voi cầm giáo mũi đồng.
     p.cyl(0.018, 0.018, 1.15, C.woodDark, 0.24, y0 + 0.55, z0 + 0.06, undefined, 5);
     p.cone(0.05, 0.2, C.bronze, 0.24, y0 + 1.2, z0 + 0.06, undefined, 4);
@@ -381,10 +358,6 @@ export function makeMountain(r: number, h: number, color: number): THREE.Group {
   m.plain.cone(r * 0.35, h * 0.3, C.rock, 0, h * 0.87, 0, undefined, 7);
   return m.group();
 }
-
-/** Sắt ánh thép xanh cho sáng hơn bóng đổ; viền và đồ trang sức bằng đồng như đồ Đông Sơn. */
-const IRON = 0x7b8a9c;
-const IRON_DARK = 0x4d5868;
 
 /** Ngựa sắt của Gióng: thân sắt có đồ đồng, mắt đỏ rực, bờm và đuôi là lửa tự sáng. Gốc ở chân, đầu hướng +z. */
 export function ironHorse(m: ToonModel): void {
@@ -877,31 +850,6 @@ export function makeDrummer(): THREE.Group {
 
 /** Nỏ lúc cầm hạ ngang thắt lưng; lúc ngắm thì nâng ngang vai (0); bắn nỏ thần thì chĩa lên trời. */
 export const BOW_POSE = { rest: 0.5, aim: 0, sky: -1.0 };
-
-/**
- * Cây nỏ: báng dọc theo +z, cánh cung ngang ở đầu báng, dây cung kéo về sau, lẫy hình vuốt rùa ở dưới báng.
- * `thanh`: nỏ thần đồng vàng có lẫy vuốt Rùa Vàng tự sáng và mũi tên vàng lắp sẵn; không thì nỏ gỗ thường.
- * Gốc ở giữa báng.
- */
-function crossbowParts(m: ToonModel, thanh: boolean, s = 1): void {
-  const p = m.plain;
-  const wood = thanh ? C.goldDark : C.woodDark;
-  const arm = thanh ? C.gold : C.wood;
-  p.box(0.07 * s, 0.07 * s, 0.72 * s, wood, 0, 0, 0.05 * s);
-  // Hai cánh cung ngả về sau như chữ V.
-  for (const side of [-1, 1]) p.box(0.42 * s, 0.05 * s, 0.05 * s, arm, side * 0.2 * s, 0, 0.36 * s, [0, side * 0.35, 0]);
-  p.box(0.012 * s, 0.012 * s, 0.82 * s, C.cream, 0, 0.02 * s, 0.24 * s, [0, Math.PI / 2, 0]);
-  if (thanh) {
-    m.band.cyl(0.05 * s, 0.05 * s, 0.1 * s, C.bronze, 0, 0, 0.4 * s, [Math.PI / 2, 0, 0], 8);
-    // Lẫy nỏ là vuốt Rùa Vàng: ba móng cong tự sáng.
-    for (const dx of [-0.035, 0, 0.035]) m.glow.cone(0.022 * s, 0.14 * s, C.ember, dx * s, -0.09 * s, -0.04 * s, [Math.PI + 0.4, 0, 0], 5);
-    m.glow.box(0.02 * s, 0.02 * s, 0.5 * s, C.ember, 0, 0.06 * s, 0.3 * s);
-    m.glow.cone(0.035 * s, 0.1 * s, C.fire, 0, 0.06 * s, 0.58 * s, [Math.PI / 2, 0, 0], 5);
-  } else {
-    p.box(0.03 * s, 0.1 * s, 0.05 * s, C.bronzeDark, 0, -0.07 * s, -0.08 * s);
-    p.box(0.018 * s, 0.018 * s, 0.4 * s, C.arrow, 0, 0.05 * s, 0.3 * s);
-  }
-}
 
 /**
  * Tay cầm nỏ thần của An Dương Vương, tách riêng để phần vẽ trận nâng nỏ ngắm hay chĩa lên trời.

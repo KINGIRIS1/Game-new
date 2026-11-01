@@ -16,6 +16,11 @@ export class ShapeBuilder {
    * các phần lại, nên mỗi phần to ra tại chỗ cũ mà không tràn ô móng.
    */
   spread = 1;
+  /**
+   * Khung tọa độ riêng: có thì mỗi hình vẽ sau đó tính từ khung này (vd. vũ khí dựng với gốc ở chỗ tay nắm),
+   * rồi mới đặt vào mô hình. Không có thì vẽ thẳng trong tọa độ mô hình.
+   */
+  frame: THREE.Matrix4 | null = null;
 
   /** `lowPoly`: ít mặt hơn, dùng cho cây cối được nhân lên hàng trăm lần. */
   constructor(
@@ -31,6 +36,7 @@ export class ShapeBuilder {
       new THREE.Quaternion().setFromEuler(new THREE.Euler(...rot)),
       new THREE.Vector3(...scale),
     );
+    if (this.frame) m.premultiply(this.frame);
     g.applyMatrix4(m);
     tmpColor.set(color);
     const n = g.getAttribute('position').count;

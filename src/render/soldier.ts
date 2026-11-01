@@ -1,211 +1,323 @@
-// Lính có khung xương (rig.ts): thân người chibi dùng chung, đầu, tay, chân và vũ khí cử động được.
-// Bản thử đầu tiên là giáo binh; các binh chủng khác vẫn dựng bằng khối tĩnh ở models.ts.
-// Gốc tọa độ là giữa hai bàn chân, mặt trước hướng +z, như mọi mô hình khác.
+// Lính đi bộ có khung xương (rig.ts, body.ts): giáo binh, cung thủ của ta; giặc Ân cầm qua, cầm cung, phó tướng
+// cầm rìu; quân Triệu cầm kiếm, cầm nỏ. Mỗi lính một dáng, mỗi loại vũ khí một bộ động tác.
 
-import * as THREE from 'three';
+import type * as THREE from 'three';
+import type { FighterKind } from '../game/battle';
+import {
+  GRIP_L,
+  GRIP_R,
+  HUMAN,
+  beginPose,
+  fallPose,
+  featherCrown,
+  gripHands,
+  hairCap,
+  headband,
+  hide,
+  humanBody,
+  humanHead,
+  lerp,
+  smooth,
+  stance,
+  strikeCurve,
+  walkCycle,
+  type Human,
+  type HumanRig,
+} from './body';
 import { C } from './palette';
-import { RigBuilder, bakeRig, resetBones, skinRig, type BoneDef, type Bones } from './rig';
+import { RigBuilder, bakeRig, skinRig, type Act, type Poser } from './rig';
+import { LEATHER, arrow, bigAxe, bow, crossbowParts, drumShield, qua, quiver, spear, sword } from './weapons';
 
-export type HumanBone = 'hips' | 'legL' | 'legR' | 'chest' | 'head' | 'armL' | 'armR' | 'hand';
+export type SoldierKind = 'giao' | 'cung' | 'giaoAn' | 'cungAn' | 'phoTuong' | 'linhTrieu' | 'noTrieu';
+const KINDS: readonly FighterKind[] = ['giao', 'cung', 'giaoAn', 'cungAn', 'phoTuong', 'linhTrieu', 'noTrieu'];
+export const isSoldier = (k: FighterKind): k is SoldierKind => KINDS.includes(k);
 
-/** Khớp của thân người chibi ở tư thế gốc: đứng thẳng, hai tay buông thẳng. */
-const HUMAN: Record<HumanBone, BoneDef<HumanBone>> = {
-  hips: { parent: null, at: [0, 0.24, 0] },
-  legL: { parent: 'hips', at: [-0.065, 0.21, 0] },
-  legR: { parent: 'hips', at: [0.065, 0.21, 0] },
-  chest: { parent: 'hips', at: [0, 0.4, 0] },
-  head: { parent: 'chest', at: [0, 0.58, 0] },
-  armL: { parent: 'chest', at: [-0.135, 0.545, 0] },
-  armR: { parent: 'chest', at: [0.135, 0.545, 0] },
-  // Vũ khí tay phải là con của ngực chứ không của cánh tay, để xoay độc lập; mỗi tư thế đặt nó vào bàn tay phải.
-  hand: { parent: 'chest', at: [0.135, 0.29, 0] },
-};
-/** Chiều dài chân, từ khớp háng tới mặt đất. */
-const LEG = 0.21;
-/** Bàn tay phải so với vai phải, ở tư thế gốc. */
-const HAND = new THREE.Vector3(0, HUMAN.hand.at[1] - HUMAN.armR.at[1], 0);
+// ---------- Dáng ----------
 
-/** Sắt đã rèn, như giáp sắt của voi ở models.ts. */
-const IRON = 0x7b8a9c;
-const IRON_DARK = 0x4d5868;
-const CHEEK = 0xe58a6a;
-
-/** Thân người: chân trần, khố hoa văn, đai đồng, ngực trần đeo tấm đồng che ngực, vòng tay đồng. */
-function body(r: RigBuilder<HumanBone>, cloth: number): void {
-  for (const [b, x] of [
-    ['legL', -0.065],
-    ['legR', 0.065],
-  ] as const) {
-    const p = r.on(b).plain;
-    p.cyl(0.048, 0.036, 0.2, C.skin, x, 0.115, 0, undefined, 8);
-    // Bàn chân bẹt chĩa ra trước, để nhìn rõ bước đi.
-    p.sphere(0.045, C.skin, x, 0.022, 0.025, [1, 0.55, 1.5], 6);
-  }
-  const hips = r.on('hips');
-  hips.band.cyl(0.125, 0.165, 0.22, cloth, 0, 0.3, 0, undefined, 12);
-  // Vạt khố buông trước và sau.
-  hips.band.box(0.11, 0.2, 0.025, cloth, 0, 0.2, 0.15, [-0.12, 0, 0]);
-  hips.band.box(0.11, 0.18, 0.025, cloth, 0, 0.21, -0.15, [0.12, 0, 0]);
-  hips.plain.cyl(0.135, 0.135, 0.04, C.bronze, 0, 0.405, 0, undefined, 12);
-  const chest = r.on('chest').plain;
-  chest.cyl(0.125, 0.1, 0.17, C.skin, 0, 0.49, 0, undefined, 10);
-  for (const s of [-1, 1]) chest.sphere(0.05, C.skin, s * 0.12, 0.545, 0, [1, 1, 1], 6);
-  chest.cyl(0.05, 0.06, 0.05, C.skin, 0, 0.585, 0, undefined, 8);
-  chest.cyl(0.05, 0.05, 0.016, C.bronzeLight, 0, 0.495, 0.112, [Math.PI / 2, 0, 0], 12);
-  for (const [b, s] of [
-    ['armL', -1],
-    ['armR', 1],
-  ] as const) {
-    const p = r.on(b).plain;
-    const x = s * 0.135;
-    p.cyl(0.04, 0.033, 0.23, C.skin, x, 0.43, 0, undefined, 8);
-    p.cyl(0.043, 0.043, 0.035, C.bronze, x, 0.4, 0, undefined, 8);
-    p.sphere(0.045, C.skin, x, 0.3, 0, [1, 1, 1], 6);
-  }
+/** Quân ta: chân trần, khố đỏ hoa văn, đai đồng, mũ lông chim, dải vải đỏ buộc tóc. */
+function lacViet(r: HumanRig, plate: boolean): void {
+  humanBody(r, { cloth: C.red, plate: plate ? C.bronzeLight : undefined, armband: C.bronze });
+  humanHead(r);
+  hairCap(r);
+  headband(r, C.red);
+  featherCrown(r);
 }
 
-/** Đầu to: mắt có đốm sáng, má hồng, tóc, dải vải buộc tóc và mũ lông chim xòe như hình người trên mặt trống đồng. */
-function head(r: RigBuilder<HumanBone>): void {
+/** Giặc Ân: khố sẫm, áo đỏ sẫm, mày xếch, mũ trụ đồng có chóp. */
+function anSoldier(r: HumanRig): void {
+  humanBody(r, { cloth: C.enemyCloth, top: C.enemyRed, belt: C.bronzeDark });
+  humanHead(r, { brows: true });
   const p = r.on('head').plain;
-  p.sphere(0.2, C.skin, 0, 0.76, 0, [1, 0.95, 0.95], 12);
-  for (const s of [-1, 1]) {
-    p.sphere(0.03, C.skin, s * 0.195, 0.75, 0, [0.6, 1, 1], 5);
-    p.sphere(0.03, C.ink, s * 0.072, 0.745, 0.172, [1, 1.45, 0.5], 6);
-    p.sphere(0.011, C.cream, s * 0.066, 0.76, 0.19, [1, 1, 1], 5);
-    p.sphere(0.03, CHEEK, s * 0.115, 0.7, 0.148, [1, 0.6, 0.4], 5);
-  }
-  p.sphere(0.215, C.hair, 0, 0.835, -0.03, [1, 0.62, 1], 12);
-  // Dải vải đỏ buộc tóc, không dùng đồng để khỏi lẫn với mũ trụ đồng của giặc khi nhìn xa.
-  p.cyl(0.222, 0.226, 0.04, C.red, 0, 0.825, -0.03, undefined, 12);
-  // Bảy lông chim đỏ, kem xen nhau, xòe hình quạt và ngả ra sau.
-  const tilt = -0.3;
-  for (let i = -3; i <= 3; i++) {
-    const a = i * 0.27;
-    const len = 0.36 - Math.abs(i) * 0.02;
-    const d = new THREE.Vector3(Math.sin(a), Math.cos(a) * Math.cos(tilt), Math.cos(a) * Math.sin(tilt));
-    p.box(0.05, len, 0.022, i % 2 ? C.cream : C.red, d.x * len * 0.5, 0.88 + d.y * len * 0.5, -0.1 + d.z * len * 0.5, [tilt, 0, -a]);
-  }
+  p.sphere(0.232, C.bronze, 0, 0.84, -0.025, [1, 0.62, 1], 10);
+  p.cyl(0.236, 0.236, 0.03, C.bronzeDark, 0, 0.845, -0.025, undefined, 12);
+  p.cone(0.05, 0.16, C.bronzeDark, 0, 1.03, -0.02, undefined, 5);
 }
 
-/** Giáo dài 1,3, tay nắm cách đuôi 0,25. Bậc 0 mũi đồng; bậc 1 lưỡi sắt to hơn; bậc 2 thêm tua đỏ. */
-function spear(r: RigBuilder<HumanBone>, tier: number): void {
-  const p = r.on('hand').plain;
-  const [x, grip, z] = HUMAN.hand.at;
-  p.cyl(0.018, 0.018, 1.3, C.woodDark, x, grip - 0.25 + 0.65, z, undefined, 6);
-  const top = grip + 1.05;
-  const iron = tier >= 1;
-  p.cyl(0.024, 0.02, 0.06, iron ? IRON_DARK : C.bronzeDark, x, top + 0.02, z, undefined, 6);
-  // Lưỡi giáo hình lá, dẹt theo chiều trước sau.
-  p.sphere(iron ? 0.07 : 0.058, iron ? IRON : C.bronze, x, top + (iron ? 0.19 : 0.16), z, [1, iron ? 2.6 : 2.5, 0.3], 8);
-  if (tier >= 2) p.cone(0.06, 0.14, C.red, x, top - 0.06, z, [Math.PI, 0, 0], 8);
+/** Quân Triệu: quần đen, áo dài đen hoa văn, áo trong đỏ, mũ vải đen búi tóc, dải buộc đỏ. */
+function trieuSoldier(r: HumanRig): void {
+  humanBody(r, { legs: C.trieuCloth, cloth: C.trieuCloth, long: true, top: C.trieuRed, sleeves: C.trieuCloth, belt: C.trieuRed });
+  humanHead(r, { brows: true });
+  const p = r.on('head').plain;
+  p.sphere(0.225, C.trieuCloth, 0, 0.835, -0.03, [1, 0.6, 1], 10);
+  p.sphere(0.08, C.trieuCloth, 0, 0.99, -0.05, [1, 1, 1], 8);
+  p.box(0.04, 0.16, 0.02, C.trieuRed, 0.08, 0.76, -0.21, [0.2, 0, 0.2]);
 }
 
-/** Khiên tròn mặt trống đồng đeo ở cẳng tay trái; bậc 2 viền sắt. */
-function shield(r: RigBuilder<HumanBone>, tier: number): void {
-  const s = r.on('armL');
-  s.drum.cyl(0.165, 0.165, 0.035, 0xffffff, -0.2, 0.39, 0.06, [Math.PI / 2, 0, 0], 16);
-  if (tier >= 2) s.plain.add(new THREE.TorusGeometry(0.17, 0.024, 6, 20), IRON, -0.2, 0.39, 0.065);
+/** Bao tên sau lưng, miệng bao chếch qua vai phải để tay phải rút tên. */
+function backQuiver(r: HumanRig, color: number, iron: boolean): void {
+  r.local('chest', [0.06, 0.55, -0.15], [-0.3, 0, -0.35], (s) => quiver(s, color, { iron }));
 }
 
-function spearmanShape(tier: number) {
+type Style = 'spear' | 'chop' | 'bow' | 'crossbow';
+
+interface Spec {
+  style: Style;
+  /** Có khiên ở tay trái. */
+  shield?: boolean;
+  /** Vũ khí nặng (rìu lớn): bổ chậm hơn, ngả người nhiều hơn. */
+  heavy?: boolean;
+  /** Vũ khí ngắn (kiếm): đi thì cầm chúc xuống thay vì vác vai. */
+  short?: boolean;
+  draw: (r: HumanRig, tier: number) => void;
+}
+
+const SPECS: Record<SoldierKind, Spec> = {
+  giao: {
+    style: 'spear',
+    shield: true,
+    draw: (r, tier) => {
+      lacViet(r, true);
+      r.local('hand', GRIP_R, null, (s) => spear(s, tier));
+      // Khiên tròn mặt trống đồng ở cẳng tay trái; bậc 2 viền sắt.
+      r.local('armL', [-0.2, 0.39, 0.06], null, (s) => drumShield(s, tier >= 2));
+    },
+  },
+  cung: {
+    style: 'bow',
+    draw: (r, tier) => {
+      lacViet(r, false);
+      // Bậc 1 mũi tên sắt, bao tên da; bậc 2 cung sừng, bao tên đồng.
+      r.local('handL', GRIP_L, null, (s) => bow(s, tier >= 2));
+      r.local('hand', GRIP_R, null, (s) => arrow(s, tier >= 1));
+      backQuiver(r, tier >= 2 ? C.bronze : tier >= 1 ? LEATHER : C.woodLight, tier >= 1);
+    },
+  },
+  giaoAn: {
+    style: 'chop',
+    draw: (r) => {
+      anSoldier(r);
+      r.local('hand', GRIP_R, null, qua);
+    },
+  },
+  cungAn: {
+    style: 'bow',
+    draw: (r) => {
+      anSoldier(r);
+      r.local('handL', GRIP_L, null, (s) => bow(s));
+      r.local('hand', GRIP_R, null, (s) => arrow(s));
+      backQuiver(r, C.enemyRed, false);
+    },
+  },
+  phoTuong: {
+    style: 'chop',
+    heavy: true,
+    draw: (r) => {
+      // Phó tướng Ân: giáp đỏ hoa văn, gai đồng trên vai, áo choàng, mũ trụ chùm lông đỏ cao, rìu đồng lớn.
+      humanBody(r, { cloth: C.enemyCloth, top: C.enemyRed, belt: C.bronze });
+      const chest = r.on('chest');
+      chest.band.cyl(0.15, 0.13, 0.2, C.enemyRed, 0, 0.48, 0, undefined, 10);
+      chest.plain.box(0.46, 0.5, 0.035, C.enemyRed, 0, 0.36, -0.17, [0.15, 0, 0]);
+      for (const s of [-1, 1]) chest.plain.cone(0.04, 0.2, C.bronzeLight, s * 0.18, 0.6, 0, [0, 0, -s * 0.6], 5);
+      humanHead(r, { brows: true });
+      const head = r.on('head').plain;
+      head.sphere(0.236, C.bronze, 0, 0.84, -0.02, [1, 0.65, 1], 10);
+      head.cone(0.09, 0.42, C.red, 0, 1.12, -0.06, [-0.25, 0, 0], 6);
+      r.local('hand', GRIP_R, null, bigAxe);
+    },
+  },
+  linhTrieu: {
+    style: 'chop',
+    shield: true,
+    short: true,
+    draw: (r) => {
+      trieuSoldier(r);
+      // Khiên chữ nhật sơn đỏ, lòng đen; kiếm thẳng.
+      r.local('armL', [-0.2, 0.4, 0.07], null, (s) => {
+        s.plain.box(0.32, 0.46, 0.035, C.trieuRed, 0, 0, 0);
+        s.plain.box(0.22, 0.34, 0.045, C.trieuCloth, 0, 0, 0);
+      });
+      r.local('hand', GRIP_R, null, (s) => sword(s));
+    },
+  },
+  noTrieu: {
+    style: 'crossbow',
+    draw: (r) => {
+      trieuSoldier(r);
+      r.local('hand', GRIP_R, null, (s) => crossbowParts(s, false, 0.85));
+    },
+  },
+};
+
+// ---------- Động tác ----------
+
+/** Bốn động tác của một loại vũ khí: đứng nghỉ, cầm khi đi, đánh, rơi khi ngã. */
+interface Moves {
+  rest(b: Human, spec: Spec): void;
+  carry(b: Human, sw: number, spec: Spec): void;
+  fight(b: Human, k: number | undefined, spec: Spec): void;
+  drop(b: Human, f: number): void;
+}
+
+/** Khiên đưa ra che trước bụng. */
+function shieldUp(b: Human, e = 0): void {
+  b.armL.rotation.set(lerp(-0.95, -0.6, e), 0, lerp(-0.1, -0.3, e));
+}
+
+const MOVES: Record<Style, Moves> = {
+  spear: {
+    // Đứng: giáo dựng bên phải, khiên che bụng. Đi: vác giáo ngả về trước.
+    rest: (b) => {
+      b.armL.rotation.set(-0.45, 0, -0.28);
+      b.hand.rotation.set(0.06, 0, -0.06);
+    },
+    carry: (b, sw) => {
+      b.armL.rotation.set(-0.45 - 0.3 * sw, 0, -0.28);
+      b.armR.rotation.x = -0.15 + 0.2 * sw;
+      b.hand.rotation.set(0.35, 0, -0.06);
+    },
+    // Thế thủ: chân trái trước, vai trái và khiên đưa ra, giáo kẹp ngang hông chĩa tới.
+    // Đâm: lao người tới, xoay vai phải lên, duỗi thẳng tay, giáo nằm ngang.
+    fight: (b, k) => {
+      const e = strikeCurve(k);
+      stance(b, lerp(0.3, 0.55, e), lerp(0.28, 0.45, e));
+      b.hips.position.z += 0.06 * e;
+      b.hips.rotation.y = lerp(0.15, -0.1, e);
+      b.chest.rotation.set(lerp(0.12, 0.32, e), lerp(0.3, -0.3, e), 0);
+      const face = -b.chest.rotation.y - b.hips.rotation.y;
+      b.head.rotation.set(lerp(-0.1, -0.28, e), face, 0);
+      b.armR.rotation.set(lerp(-0.4, -1.35, e), 0, lerp(0.18, 0.05, e));
+      shieldUp(b, e);
+      b.hand.rotation.set(lerp(1.35, 1.57, e), face, 0);
+    },
+    drop: (b, f) => b.hand.rotation.set(lerp(0.06, -0.9, f), 0, -0.06),
+  },
+  chop: {
+    rest: (b, spec) => {
+      if (spec.shield) b.armL.rotation.set(-0.45, 0, -0.28);
+      // Cán dài nghiêng ra ngoài cho lưỡi khỏi che mặt.
+      b.hand.rotation.set(spec.short ? 0.25 : 0.08, 0, spec.short ? -0.06 : -0.25);
+    },
+    // Đi: vũ khí cán dài vác vai, kiếm cầm chúc xuống.
+    carry: (b, sw, spec) => {
+      if (spec.shield) b.armL.rotation.set(-0.45 - 0.3 * sw, 0, -0.28);
+      if (spec.short) b.hand.rotation.set(0.6, 0, -0.1);
+      else {
+        b.armR.rotation.x = -0.7 + 0.1 * sw;
+        b.hand.rotation.set(-0.75, 0, -0.1);
+      }
+    },
+    // Thủ: giơ cao vũ khí quá đầu, lưỡi ngả ra sau, người hơi ngả. Bổ: vụt xuống trước mặt, lao người tới.
+    fight: (b, k, spec) => {
+      const e = spec.heavy ? strikeCurve(k, 0.3, 0.5) : strikeCurve(k, 0.22, 0.4);
+      stance(b, lerp(0.25, 0.5, e), lerp(0.25, 0.4, e));
+      b.hips.position.z += 0.05 * e;
+      b.chest.rotation.set(lerp(-0.08, spec.heavy ? 0.45 : 0.35, e), lerp(0.25, -0.25, e), 0);
+      b.head.rotation.set(lerp(0.05, -0.3, e), -b.chest.rotation.y, 0);
+      b.armR.rotation.set(lerp(-3.0, -1.0, e), 0, lerp(0.15, 0.05, e));
+      b.hand.rotation.set(lerp(-0.9, spec.short ? 1.6 : 1.9, e), 0, 0);
+      if (spec.shield) shieldUp(b, e);
+      else b.armL.rotation.set(lerp(-0.6, -0.2, e), 0, -0.3);
+    },
+    drop: (b, f) => b.hand.rotation.set(lerp(0.08, -1.0, f), 0, 0),
+  },
+  bow: {
+    // Đứng, đi: cung cầm tay trái buông xuôi, tay phải không cầm tên.
+    rest: (b) => {
+      b.armL.rotation.set(-0.1, 0, -0.25);
+      b.handL.rotation.set(0.1, 0, 0);
+      hide(b.hand, true);
+    },
+    carry: (b) => {
+      b.handL.rotation.set(0.1, 0, 0);
+      hide(b.hand, true);
+    },
+    // Ngắm: đứng nghiêng, vai trái chĩa về giặc, tay trái đẩy cung, tay phải kéo dây tới má.
+    // Bắn: buông dây (tay phải bật ra sau), với ra sau vai rút tên, lắp tên, kéo dây lại.
+    fight: (b, k) => {
+      const flick = k !== undefined && k < 0.25 ? Math.sin((Math.PI * k) / 0.25) : 0;
+      const reach = k !== undefined && k > 0.2 && k < 0.7 ? Math.sin((Math.PI * (k - 0.2)) / 0.5) : 0;
+      const yaw = k === undefined ? 0.9 : k < 0.5 ? lerp(0.9, 0.6, smooth(k, 0.1, 0.5)) : lerp(0.6, 0.9, smooth(k, 0.7, 1));
+      stance(b, 0.2, 0.2);
+      b.hips.rotation.y = yaw * 0.3;
+      b.chest.rotation.y = yaw * 0.7;
+      b.head.rotation.set(-0.05, -yaw, 0);
+      b.armL.rotation.set(-1.5, -yaw, 0);
+      b.handL.rotation.set(0, -yaw, 0.12);
+      b.armR.rotation.set(lerp(-1.5, -2.9, reach), lerp(lerp(-yaw - 0.05, 0.6, flick), 0.3, reach), 0);
+      b.hand.rotation.set(Math.PI / 2, -yaw, 0);
+      hide(b.hand, k !== undefined && k < 0.55);
+    },
+    drop: (b, f) => {
+      b.handL.rotation.set(lerp(0.1, -0.6, f), 0, 0);
+      hide(b.hand, true);
+    },
+  },
+  crossbow: {
+    // Đứng, đi: nỏ cầm ngang thắt lưng, mũi chúc xuống.
+    rest: (b) => {
+      b.armR.rotation.set(-0.5, 0, 0.1);
+      b.armL.rotation.set(-0.55, 0.45, 0);
+      b.hand.rotation.set(0.5, 0, 0);
+    },
+    carry: (b, sw) => {
+      b.armR.rotation.set(-0.5 + 0.1 * sw, 0, 0.1);
+      b.armL.rotation.set(-0.55 - 0.1 * sw, 0.45, 0);
+      b.hand.rotation.set(0.5, 0, 0);
+    },
+    // Ngắm: nâng nỏ ngang vai. Bắn: nỏ giật lên, rồi hạ xuống lên dây, lại nâng lên ngắm.
+    fight: (b, k) => {
+      const kick = k !== undefined && k < 0.3 ? Math.sin((Math.PI * k) / 0.3) : 0;
+      const load = k !== undefined && k > 0.3 && k < 0.85 ? Math.sin((Math.PI * (k - 0.3)) / 0.55) : 0;
+      stance(b, 0.22, 0.22);
+      b.chest.rotation.set(0.05 - 0.1 * kick + 0.1 * load, 0.2, 0);
+      b.head.rotation.set(-0.05, -0.2, 0);
+      b.armR.rotation.set(-1.35 - 0.25 * kick + 0.9 * load, -0.1, 0.05);
+      b.armL.rotation.set(-1.45 - 0.2 * kick + 0.8 * load, 0.35, 0);
+      b.hand.rotation.set(-b.chest.rotation.x - 0.5 * kick + 0.9 * load, -0.2, 0);
+    },
+    drop: (b, f) => b.hand.rotation.set(lerp(0.5, 1.2, f), 0, 0),
+  },
+};
+
+function poseSoldier(spec: Spec, b: Human, a: Act): void {
+  beginPose(b, a.time);
+  const moves = MOVES[spec.style];
+  if (a.act === 'walk') moves.carry(b, walkCycle(b, a.phase ?? 0, a.stride ?? 0.5), spec);
+  else if (a.act === 'fight') moves.fight(b, a.strike, spec);
+  else if (a.act === 'dead') {
+    const f = a.fall ?? 1;
+    fallPose(b, f);
+    moves.drop(b, f);
+  } else moves.rest(b, spec);
+  gripHands(b);
+}
+
+function shapeOf(kind: SoldierKind, tier: number) {
   const r = new RigBuilder(HUMAN);
-  body(r, C.red);
-  head(r);
-  spear(r, tier);
-  shield(r, tier);
+  SPECS[kind].draw(r, tier);
   return r.build();
 }
 
-/** Lính đang làm gì, để đặt tư thế. */
-export interface SpearmanPose {
-  /** Đứng nghỉ, đi, thế thủ giữa hai đòn (có thể đang đâm), hay ngã. */
-  act: 'stand' | 'walk' | 'guard' | 'dead';
-  /** Pha bước chân (radian), tăng đều khi đi. */
-  phase?: number;
-  /** Góc vung chân khi đi (radian). Đi thường 0,5. */
-  stride?: number;
-  /** Tiến trình cú đâm, 0 lúc vừa ra đòn tới 1 lúc thu giáo về. Bỏ trống là không đâm. */
-  strike?: number;
-  /** Đồng hồ (giây), cho nhịp thở. */
-  time?: number;
-  /** Ngã được bao nhiêu, 0..1. */
-  fall?: number;
-}
-
-const smooth = THREE.MathUtils.smoothstep;
-const lerp = THREE.MathUtils.lerp;
-
-/** Hạ hông cho bàn chân (chân thẳng, vung góc `a`) vẫn chạm đất. */
-const hipDrop = (a: number) => LEG * (1 - Math.cos(a));
-
-/** Đặt tư thế giáo binh. Gọi mỗi khung hình; tư thế không phụ thuộc khung trước. */
-export function poseSpearman(b: Bones<HumanBone>, s: SpearmanPose): void {
-  resetBones(b);
-  const { hips, legL, legR, chest, head, armL, armR, hand } = b;
-  // Vũ khí: lăn (z) rồi ngả về trước (x) rồi quay ngang (y), để chĩa giáo theo một hướng dù ngực đang xoay.
-  hand.rotation.order = 'YXZ';
-  const t = s.time ?? 0;
-  const breath = Math.sin(t * 3);
-  // Mặc định: đứng nghỉ, giáo dựng đứng bên phải, khiên che trước bụng.
-  let spearTilt = 0.06;
-  armR.rotation.z = 0.2;
-  armL.rotation.set(-0.45, 0, -0.28);
-  chest.rotation.x = 0.02 * breath;
-  head.rotation.x = -0.02 * breath;
-  if (s.act === 'walk') {
-    const sw = Math.sin(s.phase ?? 0);
-    const a = s.stride ?? 0.5;
-    legL.rotation.x = a * sw;
-    legR.rotation.x = -a * sw;
-    hips.position.y -= hipDrop(a * sw) - 0.012 * (1 - Math.abs(sw));
-    hips.rotation.y = 0.12 * sw;
-    chest.rotation.set(0.08, -0.2 * sw, 0);
-    head.rotation.set(0, 0.08 * sw, 0);
-    // Tay trái vung ngược chân trái; tay phải vác giáo ngả về trước, nhún theo bước.
-    armL.rotation.x = -0.45 - 0.3 * sw;
-    armR.rotation.x = -0.15 + 0.2 * sw;
-    spearTilt = 0.35;
-  } else if (s.act === 'guard') {
-    // Thế thủ: chân trái trước, vai trái và khiên đưa ra, giáo kẹp ngang hông chĩa tới.
-    // Đâm: lao người tới, xoay vai phải lên, duỗi thẳng tay, giáo nằm ngang.
-    const k = s.strike;
-    const e = k === undefined ? 0 : k < 0.3 ? smooth(k, 0, 0.3) : 1 - smooth(k, 0.45, 1);
-    legL.rotation.x = lerp(-0.3, -0.55, e);
-    legR.rotation.x = lerp(0.28, 0.45, e);
-    hips.position.y -= hipDrop(Math.min(-legL.rotation.x, legR.rotation.x)) + 0.01 * (1 - e) * (1 + breath);
-    hips.position.z += 0.06 * e;
-    hips.rotation.y = lerp(0.15, -0.1, e);
-    chest.rotation.set(lerp(0.12, 0.32, e) + 0.02 * breath, lerp(0.3, -0.3, e), 0);
-    head.rotation.set(lerp(-0.1, -0.28, e), -chest.rotation.y - hips.rotation.y, 0);
-    armR.rotation.set(lerp(-0.4, -1.35, e), 0, lerp(0.18, 0.05, e));
-    armL.rotation.set(lerp(-0.95, -0.6, e), 0, lerp(-0.1, -0.3, e));
-    spearTilt = lerp(1.35, 1.57, e);
-    hand.rotation.y = -chest.rotation.y - hips.rotation.y;
-  } else if (s.act === 'dead') {
-    const f = s.fall ?? 1;
-    armL.rotation.set(lerp(-0.45, -2.5, f), 0, lerp(-0.28, -0.5, f));
-    armR.rotation.set(lerp(0, -2.3, f), 0, lerp(0.2, 0.5, f));
-    legL.rotation.x = -0.35 * f;
-    head.rotation.x = -0.3 * f;
-    spearTilt = lerp(0.06, -0.9, f);
-  }
-  // Giáo luôn nằm trong bàn tay phải.
-  armR.updateMatrix();
-  hand.position.copy(HAND).applyMatrix4(armR.matrix);
-  hand.rotation.x = spearTilt;
-  hand.rotation.z = s.act === 'guard' ? 0 : -0.06;
-}
-
-const STAND: SpearmanPose = { act: 'stand' };
-
-/** Giáo binh có xương, cho trận đánh. Xoay xương bằng `poseSpearman(group.userData.bones, ...)`. */
-export function makeSpearman(tier = 0): THREE.Group {
-  const { group, bones } = skinRig(spearmanShape(tier));
-  poseSpearman(bones, STAND);
+/** Lính có xương, cho trận đánh: `userData.pose(a)` đặt tư thế mỗi khung hình. `tier`: bậc binh khí đã rèn (quân ta). */
+export function makeSoldier(kind: SoldierKind, tier = 0): THREE.Group {
+  const { group, bones } = skinRig(shapeOf(kind, tier));
+  const pose: Poser = (a) => poseSoldier(SPECS[kind], bones, a);
+  pose({ act: 'stand' });
+  group.userData.pose = pose;
   return group;
 }
 
-/** Giáo binh bản tĩnh ở một tư thế, cho công trình. */
-export function bakeSpearman(tier = 0, pose: SpearmanPose = STAND): THREE.Group {
-  return bakeRig(spearmanShape(tier), (b) => poseSpearman(b, pose));
+/** Lính bản tĩnh ở một tư thế, cho công trình. */
+export function bakeSoldier(kind: SoldierKind, tier = 0, a: Act = { act: 'stand' }): THREE.Group {
+  return bakeRig(shapeOf(kind, tier), (b) => poseSoldier(SPECS[kind], b, a));
 }
