@@ -1106,11 +1106,73 @@ Thưởng khoảng gấp rưỡi nhiệm vụ chương 3. Nhận xong nhiệm v�
 
 1. **Duyệt tài liệu này** (mọi con số và dáng ở trên). Chủ dự án đã duyệt.
 2. **PR 1** (đã làm): Điện cấp 8, công trình cấp 8, lầu nỏ. Bản lưu v10.
-3. **PR 2**: lính nỏ, ụ nỏ, thủy binh Triệu đánh kinh đô, đoạn truyện "Cầu hôn". Bản lưu v11.
-4. **PR 3**: Cao Lỗ, màn 25–32, bốn đoạn truyện còn lại, Đền Cuông, mẫu kinh đô chương 4, màn hình Hết truyện. Bản lưu v12.
-5. **PR 4**: thử thách phó bản và huân công. Bản lưu v13.
+3. **PR 2**: lính nỏ, ụ nỏ, thủy binh Triệu đánh kinh đô, đoạn truyện "Cầu hôn". Bản lưu v14.
+4. **PR 3**: Cao Lỗ, màn 25–32, bốn đoạn truyện còn lại, Đền Cuông, mẫu kinh đô chương 4 (vẽ trên bản đồ mới), màn hình Hết truyện. Bản lưu v15.
+5. **PR 4**: thử thách phó bản và huân công. Bản lưu v16.
+
+PR 2–4 làm sau kế hoạch Kinh đô lớn (mục ngay dưới), vì thủy binh Triệu cập bờ và mẫu kinh đô chương 4 cần bản đồ mới. Bản đồ mới dùng bản lưu v11–v13.
 
 Mỗi PR: chạy `npm test` và `npm run build`; sửa `src/render/` hay `src/ui/` thì chụp kiểm tra ở khổ điện thoại; sau đó ghi số cuối cùng vào tài liệu này.
+
+## Kế hoạch: kinh đô lớn, công trình to, mở đất bằng khoảnh (chủ dự án đã duyệt, đang làm)
+
+Chủ dự án thấy bản đồ kinh đô nhỏ, công trình sát nhau, bố cục xấu, và muốn công trình to hơn cho có tầm vóc. Chủ dự án nhờ tham khảo các game cùng thể loại rồi chọn qua hai lượt hỏi.
+
+**Vì sao chật** (khảo sát code):
+- Đất tối đa 26×26. Xây đủ giới hạn thì kín 104% đất ở Điện 7–8, phần lớn là lũy, đê, thành, bẫy.
+- Nền mô hình phủ 92–100% ô móng, mái từ cấp 5 tràn qua mép, nên hai nhà cạnh nhau liền thành một mảng.
+- Giữa các nhà không có cây cỏ, đá hay lối đi. Mẫu kinh đô và người chơi mô phỏng xếp liền khối.
+
+**Học cơ chế từ game cùng thể loại:**
+- Forge of Empires, Elvenar: đất chia khoảnh, mở theo tiến trình rồi trả tiền; người chơi chọn chỗ đặt, miễn sát đất cũ.
+- Hay Day, Township: đất đã mở thỉnh thoảng mọc cây, đá để dọn lấy chút thưởng.
+- Clash of Clans: quanh mô hình có viền cỏ, nên đặt sát nhau vẫn thoáng.
+
+### Những điều đã chốt
+
+- **Công trình to hơn một ô mỗi chiều**: 2×2 thành 3×3, 3×3 thành 4×4, Điện 4×4 thành 5×5. Công trình 1 ô giữ 1 ô: lũy, đê, thành, bẫy chông, chòi canh, lầu nỏ (chòi canh, lầu nỏ vẽ cao hơn cho cân).
+- **Lưới 55×55**:
+  - hai ô ngoài cùng phía bắc và phía tây luôn là rừng, làm chỗ giặc xuất phát;
+  - đất chia **10×10 khoảnh 5×5**, phủ ô 2..51;
+  - sông rộng 3 ô, từ ô 52.
+- **Điện 5×5 ở ô (37, 37)**, đúng một khoảnh. Game mới mở sẵn 16 khoảnh ở góc sông (20×20 ô). Điện cách rìa rừng 5 ô, cách sông 10 ô.
+- **Mở đất bằng khoảnh tự chọn**:
+  - chạm khoảnh rừng sát đất đã mở (4 hướng), trả gạo và vỏ ốc, đất mở ngay;
+  - số khoảnh được mở theo cấp Điện: 18, 24, 32, 38, 48, 60, 72, 80;
+  - giá chừng 1–1,5% giá nâng Điện của bậc vừa cho lượt ấy, nhích dần trong cùng bậc; không tốn sắt hay đất đá;
+  - không phát được khi có giặc hay lũ, kể cả lúc trinh sát báo;
+  - khoảnh ven sông thêm chỗ đặt bến nhưng dễ ngập, khoảnh trên đồi an toàn lũ.
+- **Độ thoáng ước tính** (xây đủ giới hạn):
+
+  | Điện | Đất (ô) | Nhà cửa chiếm | Tính cả lũy, đê, thành |
+  |---|---|---|---|
+  | 1 | 450 | 23% | 29% |
+  | 3 | 800 | 30% | 40% |
+  | 5 | 1200 | 33% | 44% |
+  | 6 | 1500 | 32% | 48% |
+  | 7 | 1800 | 30% | 54% |
+  | 8 | 2000 (≈45×45) | 27% | 48% |
+
+- **Giới hạn số đoạn** lũy, đê, thành tăng chừng 40% vì vòng quanh kinh đô dài hơn; giá mỗi đoạn giữ nguyên.
+- **Trận giữ kinh đô**: tầm bắn, tốc độ, bán kính kỹ năng tính bằng ô nhân một hệ số chừng 1,4. Trận ngoài bãi giữ nguyên.
+- **Khoảng thở**:
+  - mô hình phóng theo móng mới, nền chừng 85% ô móng, chừa viền cỏ; người làm giữ cỡ người thật;
+  - trang trí ô trống (bụi cây, hoa, đá nhỏ) và lối đất nện từ cửa công trình về sân Điện, chỉ để nhìn;
+  - cây, đá thỉnh thoảng mọc trên ô trống, chạm để dọn lấy chút gạo hay đất đá.
+- **Bản lưu cũ** tự xếp lại theo mẫu kinh đô của chương đang chơi, miễn phí, giữ cấp và người làm. Đoạn lũy, đê, thành, bẫy không còn chỗ thì trả lại giá dựng; đất đã đắp trả lại đất đá.
+- Tự chọn, chủ dự án có thể đổi:
+  - rừng chưa mở giặc vẫn đi qua được;
+  - không thêm nhiệm vụ Lạc hầu, chỉ hiện gợi ý lần đầu được phát rừng;
+  - tiền trả lại khi nâng bản lưu được vượt sức chứa kho.
+
+### Thứ tự làm
+
+1. **PR 1: kinh đô lớn, công trình to** (bản lưu v11): ô móng mới, lưới 55×55, địa hình giãn theo, giới hạn lũy/đê/thành, trận giữ kinh đô theo bản đồ mới, vẽ lại ba mẫu kinh đô có lối đi, mô hình phóng to có viền cỏ, camera, nâng bản lưu xếp theo mẫu. Đất tạm mở theo hình vuông ở góc sông, cạnh 20, 25, 25, 30, 35, 40, 40, 45 theo cấp Điện (khớp lưới khoảnh).
+2. **PR 2: khoảnh tự chọn** (bản lưu v12): bảng Khoảnh rừng, phát rừng, người chơi mô phỏng phát rừng, chỉnh giá theo sổ kinh tế.
+3. **PR 3: trang trí ô trống, lối đất** (chỉ hình vẽ).
+4. **PR 4: cây, đá mọc trên ô trống** (bản lưu v13).
+
+Sau đó mới làm tiếp chương 4, PR 2–4.
 
 ## Nhịp chơi và lưu game
 
@@ -1148,4 +1210,5 @@ Mỗi PR: chạy `npm test` và `npm run build`; sửa `src/render/` hay `src/ui
 9. **Sửa sau chơi thử Hội Tết**: Thủy Tinh có hai phép, Dời non vẽ rõ hơn, xoay cảnh 4 hướng, dời công trình, mẫu kinh đô mỗi chương.
 10. **Chương 4: Mỵ Châu, Trọng Thủy** (đã duyệt, đang làm; PR 1 đã làm; xem Kế hoạch chương 4): Điện và 7 loại công trình lên cấp 8, lầu nỏ, ụ nỏ trên thành, lính nỏ, thủy binh Triệu đi thuyền, Cao Lỗ, phó bản màn 25–32, Đền Cuông, màn hình Hết truyện, thử thách phó bản và huân công.
 11. **Doanh trại và nơi ở riêng** (đã làm, xem mục cùng tên): doanh trại là nơi tướng ở và điều binh; trại giáo, trại cung, chuồng voi để luyện từng binh chủng; tướng ra trận từ doanh trại.
-12. **Để sau**: chương 5 về Hai Bà Trưng (mới nhắc ở câu cuối chương 4); nhạc nền.
+12. **Kinh đô lớn, công trình to, mở đất bằng khoảnh** (đã duyệt, đang làm; xem mục Kế hoạch cùng tên): công trình to hơn một ô mỗi chiều, lưới 55×55, khoảnh 5×5 tự chọn, viền cỏ, trang trí ô trống, cây đá mọc. Làm trước chương 4 PR 2–4.
+13. **Để sau**: chương 5 về Hai Bà Trưng (mới nhắc ở câu cuối chương 4); nhạc nền.
