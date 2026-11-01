@@ -17,6 +17,8 @@ import { IsoCamera } from './camera';
 import {
   banhChung,
   banhGiay,
+  dienFloor,
+  dienScale,
   makeBaiDa,
   makeBayChong,
   makeBen,
@@ -727,40 +729,45 @@ export class World {
     const spots: Spot[] =
       b.type === 'dien'
         ? [
-            { job: 'lacHau', x: 0.75, y: b.level >= 4 ? 0.45 : 0.14, z: 1.75, ry: 0 },
-            ...(b.level >= 2 ? [{ job: 'linhGac' as Job, x: -1.0, y: b.level >= 4 ? 0.45 : 0.14, z: 1.8, ry: 0.2 }] : []),
+            { job: 'lacHau', x: 0.75, y: dienFloor(b.level), z: 1.75, ry: 0 },
+            ...(b.level >= 2 ? [{ job: 'linhGac' as Job, x: -1.0, y: dienFloor(b.level), z: 1.8, ry: 0.2 }] : []),
           ]
         : (SPOTS[b.type] ?? []);
     const n = b.damaged ? 0 : b.type === 'dien' ? spots.length : peopleCount(b, spots.length);
+    // Công trình cấp 6–8 to thêm nhưng thu tâm các phần về chỗ cũ (`spread`, xem buildings.ts):
+    // chỗ đứng thu theo, người giữ cỡ như ở cấp 5.
+    const spread = (group.userData.spread as number | undefined) ?? 1;
     for (let i = 0; i < n; i++) {
-      const spot = spots[i];
+      const spot = { ...spots[i], x: spots[i].x * spread, z: spots[i].z * spread };
       const obj = makeWorker(spot.job);
       obj.position.set(spot.x, spot.y, spot.z);
       obj.rotation.y = spot.ry;
-      obj.scale.setScalar(0.85);
+      obj.scale.setScalar(0.85 * spread);
       group.add(obj);
       people.push({ obj, spot, phase: b.id * 1.7 + i * 2.1 });
     }
     if (b.type === 'ben') {
+      // Thuyền là con của bến, bến to theo cấp: chia cho cỡ bến để thuyền vẫn nổi đúng mặt nước.
+      const waterY = (WATER_Y - 0.02 - topY(ground)) / group.scale.y;
       const boat = makeBoat();
-      boat.position.set(-0.15, WATER_Y - 0.02 - topY(ground), 1.75);
-      boat.userData.dock = true;
+      boat.position.set(-0.15 * spread, waterY, 1.75 * spread);
+      boat.userData.dock = waterY;
       group.add(boat);
       if (b.level >= 6) {
         // Bến cấp 6 trở lên có thuyền buôn lớn neo cạnh cầu tàu.
         const trader = makeTradeBoat();
-        trader.position.set(1.35, WATER_Y - 0.02 - topY(ground), 2.5);
+        trader.position.set(1.35 * spread, waterY, 2.5 * spread);
         trader.rotation.y = Math.PI / 2;
-        trader.userData.dock = true;
+        trader.userData.dock = waterY;
         group.add(trader);
       }
       if (b.level >= 8) {
         // Bến cấp 8: thuyền buôn thứ hai neo phía bên kia cầu tàu.
         const trader = makeTradeBoat();
-        trader.position.set(-1.0, WATER_Y - 0.02 - topY(ground), 3.3);
+        trader.position.set(-1.0 * spread, waterY, 3.3 * spread);
         trader.rotation.y = -Math.PI / 2;
         trader.scale.setScalar(0.85);
-        trader.userData.dock = true;
+        trader.userData.dock = waterY;
         group.add(trader);
       }
     }
@@ -1011,7 +1018,7 @@ export class World {
     if (!key || !dien) return;
     const root = new THREE.Group();
     // Tọa độ trong mô hình Điện (gốc ở tâm móng, đã thu nhỏ theo cấp) đổi ra tọa độ cảnh.
-    const s = 0.8 + 0.05 * Math.min(dien.level, 5);
+    const s = dienScale(dien.level);
     const cx = wx(dien.x) + 2;
     const cz = wz(dien.z) + 2;
     const dienY = topY(h(dien));
@@ -1394,7 +1401,7 @@ export class World {
         }
       }
       for (const child of v.group.children) {
-        if (child.userData.dock) child.position.y = WATER_Y - 0.02 + Math.sin(t * 1.6 + v.group.id) * 0.03;
+        if (child.userData.dock !== undefined) child.position.y = (child.userData.dock as number) + Math.sin(t * 1.6 + v.group.id) * 0.03;
         if (child.userData.flame) child.scale.y = 0.75 + 0.35 * Math.abs(Math.sin(t * 9 + child.id));
         if (child.userData.spin) child.rotation.x = t * (child.userData.spin as number);
         if (child.userData.smoke) {

@@ -192,6 +192,10 @@ export class ToonModel {
   readonly drum = new ShapeBuilder(true);
   readonly glow = new ShapeBuilder();
   constructor(private readonly ink = inkThick) {}
+  /** Thu tâm các phần về gốc (xem `ShapeBuilder.spread`). */
+  setSpread(k: number): void {
+    for (const b of [this.plain, this.band, this.drum, this.glow]) b.spread = k;
+  }
   group(): THREE.Group {
     const out = new THREE.Group();
     const parts: [ShapeBuilder, THREE.Material][] = [
