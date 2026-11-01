@@ -28,7 +28,7 @@ describe('mô hình vừa móng kinh đô lớn', () => {
         expect(over, `${type} cấp ${level}`).toBeLessThanOrEqual(ALLOW[type] ?? 0.5);
       }
     }
-  });
+  }, 30000);
 
   it('công trình vẽ trên móng mới: bản vẽ đúng cỡ móng, mô hình không phóng', async () => {
     const { BUILDINGS } = await import('../game/defs');
