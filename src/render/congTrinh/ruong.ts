@@ -2,7 +2,7 @@
 // Bản vẽ ở docs/bo-cuc-cong-trinh.md. Góc nào chưa tới cấp có phần thì vẫn cấy lúa; tới cấp thì góc ấy đắp bờ dựng phần.
 
 import * as THREE from 'three';
-import { above5, bird, boatRoof, buffalo, coneRoof, egret, grown, POND, roofFor, type Roof, waterWheel } from '../buildings';
+import { above5, bird, boatRoof, buffalo, coneRoof, egret, grown, POND, riceClump, riceSheaf, roofFor, type Roof, waterWheel } from '../buildings';
 import { CELL, Lot, type Zone } from '../lot';
 import { C } from '../palette';
 import { type ShapeBuilder, seeded } from '../shapes';
@@ -147,11 +147,14 @@ export function makeRuong(level: number): THREE.Group {
     for (const sx of [-1, 1]) {
       const cx = (sx * (RIM + DYKE)) / 2;
       p.box(w, 0.03, w, MUD_WATER, cx, 0.06, (RIM + DYKE) / 2);
-      for (let k = 0; k < 5; k++) p.box(w - 0.14, 0.035, 0.07, C.soil, cx, 0.08, DYKE + 0.2 + k * 0.34);
+      for (let k = 0; k < 5; k++) {
+        const fz = DYKE + 0.2 + k * 0.34;
+        p.box(w - 0.14, 0.038, 0.08, k % 2 === 0 ? C.soil : C.earthDark, cx, 0.08, fz);
+      }
     }
   }
 
-  // Bờ ngoài quanh móng (cấp 6 kè đá xám, mặt bờ đá sẫm).
+  // Bờ ngoài quanh móng (cấp 6 kè đá xám, mặt bờ lát phiến đá sẫm).
   const outer = level >= 6 ? C.rock : C.soil;
   const bw = EDGE - RIM;
   const bc = (EDGE + RIM) / 2;
@@ -159,8 +162,12 @@ export function makeRuong(level: number): THREE.Group {
     p.box(2 * EDGE, bank, bw, outer, 0, bank / 2, s * bc);
     p.box(bw, bank, 2 * RIM, outer, s * bc, bank / 2, 0);
     if (level >= 6) {
-      p.box(2 * EDGE + 0.02, 0.04, bw + 0.02, C.rockDark, 0, bank, s * bc);
-      p.box(bw + 0.02, 0.04, 2 * RIM, C.rockDark, s * bc, bank, 0);
+      p.box(2 * EDGE + 0.02, 0.035, bw + 0.02, C.rockDark, 0, bank, s * bc);
+      p.box(bw + 0.02, 0.035, 2 * RIM, C.rockDark, s * bc, bank, 0);
+      for (let k = -4; k <= 4; k += 2) {
+        p.box(0.32, 0.022, bw - 0.02, C.rock, k * 0.4, bank + 0.02, s * bc);
+        p.box(bw - 0.02, 0.022, 0.32, C.rock, s * bc, bank + 0.02, k * 0.38);
+      }
     }
   }
   // Bờ chữ thập chia bốn thửa; cấp 8 chừa giữa cho ao.
@@ -171,17 +178,22 @@ export function makeRuong(level: number): THREE.Group {
     p.box(2 * DYKE, dyke, len, C.soil, 0, dyke / 2, c);
     p.box(len, dyke, 2 * DYKE, C.soil, c, dyke / 2, 0);
   }
+  // Ống bương tre thông nước qua bờ chữ thập
+  for (const [cx, cz, rotZ] of [
+    [0, -1.05, Math.PI / 2],
+    [1.05, 0, 0],
+  ] as const) {
+    p.cyl(0.024, 0.024, 0.24, C.bamboo, cx, 0.065, cz, [rotZ === 0 ? Math.PI / 2 : 0, 0, rotZ], 5);
+  }
   const tufts = seeded(5);
-  for (let i = 0; i < 4; i++) {
-    const t = (i % 2 ? 1 : -1) * (0.6 + tufts() * 1.0);
-    const [x, z] = i < 2 ? [0, t] : [t, 0];
-    p.cone(0.05, 0.14, C.leaf[i % 4], x + (i < 2 ? 0.03 : 0), dyke + 0.05, z + (i < 2 ? 0 : 0.03), undefined, 4);
+  for (let i = 0; i < 6; i++) {
+    const t = (i % 2 ? 1 : -1) * (0.55 + tufts() * 1.05);
+    const [x, z] = i < 3 ? [0, t] : [t, 0];
+    p.cone(0.052, 0.15, C.leaf[i % 4], x + (i < 3 ? 0.03 : 0), dyke + 0.05, z + (i < 3 ? 0 : 0.03), undefined, 4);
   }
 
-  // Lúa: cấp càng cao khóm càng cao, càng chín vàng; cấp 6–8 cao thêm.
-  const color = new THREE.Color(C.rice).lerp(new THREE.Color(C.ripe), (lv - 1) / 4);
+  // Lúa: mỗi khóm có lá lúa xòe từ gốc nước và các bông lúa trĩu hạt uốn cong theo từng cấp trưởng thành.
   const h = 0.16 + lv * 0.075 + 0.04 * up;
-  const r = 0.08 + lv * 0.012;
   const n = rowsFor(level);
   const rand = seeded(23);
   for (const sx of [-1, 1]) {
@@ -191,7 +203,8 @@ export function makeRuong(level: number): THREE.Group {
           const x = sx * clump(level, i);
           const z = sz * clump(level, j);
           const k = 0.88 + rand() * 0.24;
-          if (planted(x, z, level)) p.cone(r, h * k, color, x, 0.07 + (h * k) / 2, z, undefined, 5);
+          const seedAng = rand() * Math.PI * 2;
+          if (planted(x, z, level)) riceClump(p, x, z, h * k, lv, level, seedAng);
         }
       }
     }
@@ -216,16 +229,17 @@ export function makeRuong(level: number): THREE.Group {
     watchHut(m, Cz.x + 0.05, Cz.z + 0.05, bank, level, roof);
   }
   if (has('S')) {
-    // Bó lúa đã gặt dựng chụm trên bờ, đụn rơm quanh cây cọc sát mép phải.
+    // Bó lúa đã gặt buộc lạt dựng chụm trên bờ, cây rơm nhiều tầng quanh cột tre sát mép phải.
     const S = L.zone('S');
     mound(p, S, bank);
     for (const [x, z] of [[1.14, 1.16], [1.36, 1.24], [1.18, 1.38]] as const) {
-      p.cyl(0.08, 0.12, 0.46, C.ripe, x, bank + 0.23, z, [0.1, 0, -0.1], 6);
-      p.cone(0.12, 0.2, C.bronzeLight, x, bank + 0.55, z, undefined, 6);
+      riceSheaf(p, x, bank, z, 0.09, -0.09);
     }
-    p.cyl(0.22, 0.25, 0.28, C.thatch, 1.72, bank + 0.14, 1.24, undefined, 8);
-    p.cone(0.25, 0.34, C.thatchDark, 1.72, bank + 0.45, 1.24, undefined, 8);
-    p.cyl(0.015, 0.015, 0.2, C.woodDark, 1.72, bank + 0.68, 1.24, undefined, 4);
+    p.cyl(0.21, 0.25, 0.24, C.thatchDark, 1.72, bank + 0.12, 1.24, undefined, 8);
+    p.sphere(0.25, C.thatch, 1.72, bank + 0.32, 1.24, [1, 0.85, 1], 8);
+    p.cone(0.24, 0.32, C.ripe, 1.72, bank + 0.52, 1.24, undefined, 8);
+    p.cone(0.08, 0.09, C.soil, 1.72, bank + 0.67, 1.24, undefined, 6);
+    p.cyl(0.018, 0.022, 0.26, C.woodDark, 1.72, bank + 0.72, 1.24, undefined, 5);
   }
   if (has('G')) {
     // Mương nước giữa hai bờ đất, hai cột giữ trục guồng; máng tre từ đỉnh guồng dẫn nước vào thửa trước bên trái.
@@ -252,10 +266,19 @@ export function makeRuong(level: number): THREE.Group {
     shrine(m, M.x - 0.03, M.z, bank, roof);
   }
   if (has('O')) {
-    // Ao nước trong bờ đá giữa bốn thửa, lá sen, đàn cò; ống tre nối từ máng guồng đổ vào ao.
+    // Ao nước trong bờ đá giữa bốn thửa, lá sen + búp sen hồng, đàn cò; ống tre nối từ máng guồng đổ vào ao.
     p.cyl(0.5, 0.54, bank, C.rock, 0, bank / 2, 0, undefined, 16);
     p.cyl(0.43, 0.43, 0.03, POND, 0, bank - 0.005, 0, undefined, 16);
-    for (const [x, z] of [[-0.2, 0.18], [0.24, -0.16], [0.08, 0.28]] as const) p.cyl(0.08, 0.08, 0.015, C.leaf[3], x, bank + 0.015, z, undefined, 8);
+    for (const [x, z, r] of [
+      [-0.2, 0.18, 0.085],
+      [0.24, -0.16, 0.08],
+      [0.08, 0.28, 0.075],
+      [-0.08, -0.24, 0.068],
+    ] as const) {
+      p.cyl(r, r, 0.015, C.leaf[3], x, bank + 0.015, z, undefined, 8);
+    }
+    p.cone(0.032, 0.065, 0xe87a90, -0.18, bank + 0.05, 0.16, undefined, 6);
+    p.cone(0.028, 0.055, 0xe87a90, 0.22, bank + 0.045, -0.14, undefined, 6);
     egret(p, 0.1, 0.06, 0.6, bank - 0.12);
     egret(p, -0.18, -0.16, -2.3, bank - 0.12);
     egret(p, 1.25, 0.0, 1.9, dyke);

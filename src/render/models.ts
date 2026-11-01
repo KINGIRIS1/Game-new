@@ -55,33 +55,152 @@ export function makeFighter(kind: FighterKind, tier = 0): THREE.Group {
   throw new Error(`Chưa có hình cho ${kind}`);
 }
 
-/** Thuyền buôn lớn: thân thuyền trống đồng dài hơn, cột buồm, buồm cói, khoang chở hàng. Dài theo trục x. */
+/** Thuyền buôn Lạc Việt cỡ lớn: thân thuyền Đông Sơn nẹp đồng, cột buồm có dây chằng, buồm cói căng gió nẹp nan tre, cờ hiệu và khoang hàng trù phú. Dài theo trục x. */
 export function makeTradeBoat(): THREE.Group {
   const g = new THREE.Group();
   const hull = makeBoat();
-  hull.scale.set(1.45, 1.2, 1.35);
+  hull.scale.set(1.42, 1.2, 1.35);
   g.add(hull);
+
   const m = new ToonModel(inkThin);
   const p = m.plain;
-  p.cyl(0.035, 0.04, 1.5, C.woodDark, 0.15, 0.95, 0, undefined, 6);
-  m.band.box(0.06, 0.9, 0.7, C.cream, 0.18, 1.15, 0, [0, 0, 0.05]);
-  p.box(0.04, 0.04, 0.8, C.woodDark, 0.16, 1.62, 0);
-  for (const [x, c] of [[-0.45, C.ripe], [-0.75, C.thatch], [0.55, C.rock]] as const) p.box(0.26, 0.2, 0.26, c, x, 0.42, 0);
+  // Lan can tre dọc hai bên mạn thuyền buôn
+  for (const sz of [-1, 1]) {
+    p.cyl(0.016, 0.016, 1.45, C.bamboo, 0.02, 0.34, sz * 0.27, [0, 0, Math.PI / 2], 5);
+    for (const x of [-0.62, -0.2, 0.22, 0.64]) p.cyl(0.014, 0.014, 0.14, C.woodDark, x, 0.27, sz * 0.27, undefined, 4);
+  }
+  // Bệ chân cột buồm bọc đồng & Cột buồm gỗ lim cao vút đặt trước mui thuyền (x = 0.28)
+  const mx = 0.28;
+  p.cyl(0.08, 0.095, 0.12, C.bronze, mx, 0.22, 0, undefined, 8);
+  p.cyl(0.032, 0.046, 1.58, C.woodDark, mx, 0.99, 0, undefined, 7);
+  p.cyl(0.048, 0.048, 0.05, C.bronze, mx, 1.74, 0, undefined, 7);
+  p.cone(0.04, 0.11, C.gold, mx, 1.82, 0, undefined, 6);
+  // Cờ đuôi nheo đỏ son viền vàng tung bay trên đỉnh cột buồm
+  m.band.box(0.3, 0.1, 0.02, C.red, mx - 0.17, 1.74, 0, [0, 0, 0.06]);
+  p.cone(0.05, 0.16, C.red, mx - 0.38, 1.73, 0, [0, 0, Math.PI / 2 + 0.06], 4);
+
+  // Dây chằng cột buồm nối xuống hai bên mạn thuyền
+  for (const sz of [-1, 1]) {
+    p.cyl(0.008, 0.008, 1.38, C.thatchDark, mx - 0.08, 0.96, sz * 0.14, [sz * 0.19, 0, -0.08], 4);
+  }
+
+  // Cánh buồm cói liền mảnh căng gió xoay nhẹ đón gió (ry = 0.28), có trục buồm gỗ trên/dưới và 4 thanh nan tre ngang
+  const sailYaw = 0.28;
+  const cs = Math.cos(sailYaw);
+  const sn = Math.sin(sailYaw);
+  m.band.box(0.048, 0.94, 0.78, C.cream, mx + 0.05, 1.15, 0, [0, sailYaw, 0.06]);
+  for (const s of [-1, 1]) {
+    const edgeZ = s * 0.38;
+    p.box(0.054, 0.94, 0.045, C.red, mx + 0.05 + sn * edgeZ, 1.15, cs * edgeZ, [0, sailYaw, 0.06]);
+  }
+  for (const [by, rBar, col] of [
+    [0.67, 0.022, C.woodDark],
+    [0.91, 0.014, C.bamboo],
+    [1.15, 0.014, C.bamboo],
+    [1.39, 0.014, C.bamboo],
+    [1.63, 0.022, C.woodDark],
+  ] as const) {
+    const bar = new THREE.CylinderGeometry(rBar, rBar, 0.88, 6);
+    bar.rotateX(Math.PI / 2);
+    bar.rotateY(sailYaw);
+    p.add(bar, col, mx + 0.065 + (by - 1.15) * -0.06, by, 0);
+  }
+
+  // Khoang hàng hóa trù phú: chum gốm đất nung bịt vải đỏ, bao tải thóc buộc miệng & rương gỗ nẹp đồng
+  for (const [jx, jz, sc] of [
+    [0.64, -0.09, 1.0],
+    [0.6, 0.11, 0.88],
+    [0.8, 0.01, 0.82],
+  ] as const) {
+    p.sphere(0.105 * sc, 0xa85834, jx, 0.25, jz, [0.95, 1.2, 0.95], 8);
+    p.cyl(0.068 * sc, 0.058 * sc, 0.032, C.red, jx, 0.36 * sc + 0.04, jz, undefined, 8);
+    p.cyl(0.072 * sc, 0.072 * sc, 0.015, C.gold, jx, 0.34 * sc + 0.04, jz, undefined, 8);
+  }
+  // Bao tải lương thực & rương gỗ nẹp đồng phía sau mui
+  for (const [sx, sz, col] of [
+    [-0.48, -0.08, C.ripe],
+    [-0.5, 0.09, C.thatch],
+    [-0.66, 0.0, 0xd8b868],
+  ] as const) {
+    p.sphere(0.105, col, sx, 0.26, sz, [1.22, 0.85, 0.95], 7);
+    p.cyl(0.032, 0.048, 0.045, C.thatchDark, sx, 0.34, sz, undefined, 5);
+  }
+  m.band.box(0.22, 0.15, 0.2, C.wood, -0.32, 0.26, 0.02);
+  p.box(0.23, 0.025, 0.21, C.bronze, -0.32, 0.33, 0.02);
+
   g.add(m.group());
   return g;
 }
 
-/** Thuyền như trên trống đồng: mũi và đuôi cong vút, đầu chim, có người lái đò. */
+/** Thuyền Lạc Việt như trên trống đồng Đông Sơn: thân độc mộc be ván uốn thon 2 đầu, mũi chạm Đầu Chim Lạc bằng đồng, đuôi vây cá, mui vòm cói nan tre & người lái đò. */
 export function makeBoat(): THREE.Object3D {
   const m = new ToonModel();
   const p = m.plain;
-  m.band.box(1.3, 0.16, 0.38, C.woodDark, 0, 0.08, 0);
-  for (const dir of [1, -1]) {
-    p.box(0.42, 0.1, 0.3, C.woodDark, dir * 0.78, 0.2, 0, [0, 0, dir * 0.6]);
-    p.box(0.12, 0.26, 0.12, C.woodDark, dir * 0.98, 0.42, 0);
-    p.cone(0.04, 0.16, C.bronze, dir * 1.08, 0.5, 0, [0, 0, -dir * Math.PI / 2], 4);
+
+  // 1. Đáy thuyền & Thân thuyền uốn thon về mũi (+x) và lái (-x)
+  p.box(1.16, 0.08, 0.28, C.woodDark, 0, 0.04, 0);
+  // Hai bên be mạn thuyền chạm hoa văn Đông Sơn
+  for (const sz of [-1, 1]) {
+    m.band.box(1.18, 0.13, 0.055, C.wood, 0, 0.12, sz * 0.175, [sz * 0.14, 0, 0]);
+    p.box(1.2, 0.03, 0.045, C.woodDark, 0, 0.19, sz * 0.19);
+    // Đoạn be thuyền vuốt thon về mũi (+x) và lái (-x)
+    for (const dir of [1, -1]) {
+      p.box(0.36, 0.12, 0.05, C.wood, dir * 0.72, 0.16, sz * 0.1, [0, -dir * sz * 0.42, dir * 0.32]);
+    }
   }
-  p.box(0.5, 0.24, 0.42, C.thatch, -0.1, 0.28, 0);
+  // Sàn ván gỗ lòng thuyền & 4 thanh thang thuyền (giằng ngang)
+  p.box(1.12, 0.03, 0.3, C.woodLight, 0, 0.085, 0);
+  for (const x of [-0.48, -0.22, 0.22, 0.48]) {
+    p.box(0.06, 0.035, 0.36, C.woodDark, x, 0.155, 0);
+  }
+
+  // 2. Sống mũi (+x) & Sống đuôi (-x) cong vút kiểu thuyền trống đồng Ngọc Lũ
+  for (const dir of [1, -1]) {
+    p.box(0.36, 0.1, 0.18, C.woodDark, dir * 0.72, 0.16, 0, [0, 0, dir * 0.46]);
+    p.box(0.24, 0.09, 0.11, C.woodDark, dir * 0.9, 0.29, 0, [0, 0, dir * 0.85]);
+    p.cyl(0.038, 0.052, 0.22, C.woodDark, dir * 0.98, 0.42, 0, [0, 0, -dir * 0.22], 6);
+    p.cyl(0.048, 0.048, 0.04, C.bronze, dir * 0.95, 0.34, 0, [0, 0, -dir * 0.35], 6);
+  }
+  // Đầu mũi thuyền (+x): Đầu Chim Lạc bằng đồng có mào lông vũ & mỏ dài
+  p.sphere(0.058, C.bronze, 1.0, 0.51, 0, [1.15, 0.95, 0.85], 7);
+  p.cone(0.038, 0.16, C.gold, 1.07, 0.51, 0, [0, 0, -Math.PI / 2 + 0.08], 5);
+  for (const s of [-1, 1]) p.sphere(0.016, C.gold, 1.01, 0.525, s * 0.045, [1, 1, 0.6], 5);
+  // Mào lông vũ đồng uốn ra sau trên đỉnh đầu chim Lạc
+  for (let k = 0; k < 3; k++) {
+    p.cone(0.018, 0.11, k === 0 ? C.gold : C.bronze, 0.95 - k * 0.028, 0.56 - k * 0.015, 0, [0, 0, 0.68 + k * 0.18], 4);
+  }
+  // Đuôi thuyền (-x): Vây đuôi cá chạm đồng & cọc chèo lái
+  p.cone(0.065, 0.16, C.bronze, -1.03, 0.52, 0, [0, 0, Math.PI * 0.35], 4);
+  p.cone(0.045, 0.12, C.gold, -1.05, 0.45, 0, [0, 0, Math.PI * 0.58], 4);
+
+  // 3. Mui thuyền vòm cói đan có khung cạp tre & vật dụng trong thuyền
+  p.add(
+    new THREE.CylinderGeometry(0.21, 0.21, 0.52, 10, 1, false, -Math.PI * 0.48, Math.PI * 0.96),
+    C.thatch,
+    -0.06,
+    0.18,
+    0,
+    [0, 0, Math.PI / 2],
+    [1.1, 1, 1.02],
+  );
+  // 4 vành khung nan tre uốn quanh vòm mui & đòn nóc tre
+  for (const x of [-0.3, -0.14, 0.02, 0.18]) {
+    p.add(
+      new THREE.CylinderGeometry(0.218, 0.218, 0.024, 10, 1, false, -Math.PI * 0.48, Math.PI * 0.96),
+      C.bamboo,
+      x,
+      0.18,
+      0,
+      [0, 0, Math.PI / 2],
+      [1.1, 1, 1.02],
+    );
+  }
+  p.cyl(0.015, 0.015, 0.56, C.bamboo, -0.06, 0.415, 0, [0, 0, Math.PI / 2], 5);
+  // Giỏ cá tre & vò gốm đặt ở khoang mũi trước mui
+  p.sphere(0.065, C.thatchDark, 0.33, 0.15, -0.06, [1, 1.15, 1], 7);
+  p.cyl(0.038, 0.045, 0.03, C.bamboo, 0.33, 0.22, -0.06, undefined, 6);
+  p.sphere(0.055, 0xa85834, 0.36, 0.14, 0.07, [1, 1.2, 1], 7);
+
   const g = m.group();
   const rower = makeRower();
   rower.scale.setScalar(0.75);

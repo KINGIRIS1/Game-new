@@ -491,41 +491,164 @@ const TURTLE: Defs = {
 };
 
 /**
- * Rùa Vàng, sứ Thanh Giang: mai vàng như mặt trống đồng có ngôi sao giữa, đầu ngóc cao, bốn chân chèo.
+ * Rùa Vàng (Thần Kim Quy — sứ Thanh Giang): mai vàng ròng chạm mặt trống đồng Đông Sơn & lục giác linh quy,
+ * đỉnh mai khảm ngọc linh quang, đầu Long Quy ngóc cao có sừng vàng, mắt thần phát sáng, râu vàng và bốn chân chèo giương móng vuốt Kim Quy.
  * Gốc ở mặt nước (đáy mai), đầu hướng +z. Dài chừng 1,6.
  */
 function drawTurtle(r: Rig): void {
   const body = r.on('qBody');
   const p = body.plain;
-  p.add(new THREE.SphereGeometry(1, 18, 9, 0, Math.PI * 2, 0, Math.PI / 2), C.gold, 0, 0.05, 0, [0, 0, 0], [0.62, 0.38, 0.72]);
-  p.cyl(0.66, 0.7, 0.1, C.goldDark, 0, 0.05, 0, undefined, 18);
-  body.drum.add(new THREE.CylinderGeometry(0.4, 0.4, 0.04, 20), C.gold, 0, 0.42, 0, [0, 0, 0], [1, 1, 1.15]);
-  for (let i = 0; i < 6; i++) {
-    const a = (i / 6) * Math.PI * 2;
-    p.box(0.16, 0.04, 0.16, C.goldDark, Math.sin(a) * 0.5, 0.26, Math.cos(a) * 0.58, [0, a, 0.5]);
+  const g = body.glow;
+  const SHELL_GOLD = 0xf0c242;
+  const SHELL_RIM = 0x8f6b1c;
+  const TURTLE_SKIN = C.turtle;
+  const TURTLE_DARK = 0x8f7d2e;
+  const DIVINE_GLOW = 0xffe878;
+
+  // 1. Yếm rùa (Plastron) dưới bụng & vành mai cuốn (Marginal rim) bè rộng
+  p.cyl(0.56, 0.52, 0.07, SHELL_RIM, 0, 0.035, 0, undefined, 16);
+  p.add(new THREE.SphereGeometry(1, 20, 10, 0, Math.PI * 2, 0, Math.PI / 2), C.goldDark, 0, 0.04, 0, [0, 0, 0], [0.68, 0.14, 0.78]);
+  // Vòm mai chính bằng vàng ròng
+  p.add(new THREE.SphereGeometry(1, 20, 12, 0, Math.PI * 2, 0, Math.PI / 2), C.gold, 0, 0.06, 0, [0, 0, 0], [0.62, 0.39, 0.72]);
+
+  // 14 phiến giáp viền mai (Marginal scutes) chạm nổi chạy vòng quanh mép mai
+  for (let i = 0; i < 14; i++) {
+    const a = (i / 14) * Math.PI * 2;
+    const sa = Math.sin(a);
+    const ca = Math.cos(a);
+    const rx = sa * 0.63;
+    const rz = ca * 0.73;
+    p.box(0.16, 0.055, 0.14, i % 2 === 0 ? SHELL_GOLD : C.goldDark, rx, 0.095, rz, [-ca * 0.22, a, sa * 0.22]);
+    p.sphere(0.024, C.bronzeDark, rx * 0.96, 0.125, rz * 0.96, [1, 0.6, 1], 5);
   }
-  r.on('qNeck').plain.cyl(0.13, 0.16, 0.55, C.turtle, 0, 0.36, 0.8, [-0.8, 0, 0], 8);
-  const h = r.on('qHead').plain;
-  h.sphere(0.22, C.turtle, 0, 0.64, 1.02, [1, 0.9, 1.15], 10);
-  for (const s of [-1, 1]) h.sphere(0.045, C.ink, s * 0.11, 0.7, 1.18, [1, 1.3, 0.6], 6);
+  // Vòm mai bảo vệ cổ (+z) và đuôi (-z)
+  p.box(0.32, 0.06, 0.14, C.gold, 0, 0.14, 0.7, [-0.28, 0, 0]);
+  p.box(0.24, 0.05, 0.12, C.goldDark, 0, 0.11, -0.71, [0.25, 0, 0]);
+
+  // 8 múi giáp lục giác bên sườn mai (Costal scutes) + 3 múi sống lưng (Vertebral scutes)
+  for (let i = 0; i < 8; i++) {
+    const a = ((i + 0.5) / 8) * Math.PI * 2;
+    const sa = Math.sin(a);
+    const ca = Math.cos(a);
+    const rx = sa * 0.46;
+    const rz = ca * 0.54;
+    p.cyl(0.11, 0.135, 0.045, C.goldDark, rx, 0.25, rz, [ca * 0.42, 0, -sa * 0.42], 6);
+    p.cyl(0.075, 0.09, 0.05, SHELL_GOLD, rx * 0.98, 0.26, rz * 0.98, [ca * 0.42, 0, -sa * 0.42], 6);
+  }
+  for (const [z, y, sc] of [
+    [0.42, 0.34, 1.0],
+    [0.0, 0.41, 1.15],
+    [-0.42, 0.34, 0.95],
+  ] as const) {
+    p.cyl(0.09 * sc, 0.12 * sc, 0.05, C.goldDark, 0, y, z, [z * 0.55, 0, 0], 6);
+  }
+
+  // 2. Tâm mai chạm Mặt Trống Đồng Đông Sơn & Bệ Ngọc Linh Quang Kim Quy trên đỉnh mai
+  p.add(new THREE.CylinderGeometry(0.41, 0.44, 0.045, 20), C.goldDark, 0, 0.41, 0, [0, 0, 0], [1, 1, 1.14]);
+  body.drum.add(new THREE.CylinderGeometry(0.38, 0.39, 0.045, 20), C.gold, 0, 0.435, 0, [0, 0, 0], [1, 1, 1.14]);
+  // Bệ sen vàng & Viên Linh Châu Kim Quy tỏa sáng ở chính tâm mai + 4 linh vật góc mặt trống
+  p.cyl(0.085, 0.11, 0.03, C.goldDark, 0, 0.462, 0, undefined, 8);
+  g.sphere(0.065, DIVINE_GLOW, 0, 0.488, 0, [1, 0.68, 1], 8);
+  for (const [dx, dz] of [
+    [0, 0.33],
+    [0, -0.33],
+    [0.29, 0],
+    [-0.29, 0],
+  ] as const) {
+    g.sphere(0.028, DIVINE_GLOW, dx, 0.46, dz, [1.1, 0.55, 1.1], 6);
+  }
+
+  // 3. Cổ Long Quy ('qNeck') vươn cao liền mạch từ cửa mai (0, 0.18, 0.62) lên đầu (0, 0.60, 0.98)
+  const neck = r.on('qNeck').plain;
+  const neckAng = 0.68;
+  const caN = Math.cos(neckAng);
+  const saN = Math.sin(neckAng);
+  neck.cyl(0.13, 0.17, 0.56, TURTLE_SKIN, 0, 0.38, 0.79, [neckAng, 0, 0], 8);
+  for (let i = 0; i < 4; i++) {
+    const s = -0.15 + (i / 3) * 0.3;
+    const ay = 0.38 + s * caN;
+    const az = 0.79 + s * saN;
+    // Đốt giáp yếm cổ bằng vàng ôm sát mặt trước cổ (+z, -y)
+    neck.box(0.135 - i * 0.012, 0.048, 0.032, SHELL_GOLD, 0, ay - 0.115 * saN, az + 0.115 * caN, [neckAng, 0, 0]);
+  }
+
+  // 4. Đầu Thần Kim Quy ('qHead'): dáng Long Quy cổ đại, mỏ sừng vàng quặp, mắt thần phát sáng, mày rồng, sừng Kim Quy & râu thần
+  const head = r.on('qHead');
+  const h = head.plain;
+  const hg = head.glow;
+  // Sọ rùa thần & mũ giáp kim quy đỉnh đầu
+  h.sphere(0.205, TURTLE_SKIN, 0, 0.64, 1.0, [1.0, 0.88, 1.16], 10);
+  h.sphere(0.155, C.gold, 0, 0.72, 0.98, [0.92, 0.5, 1.06], 8);
+  hg.sphere(0.035, DIVINE_GLOW, 0, 0.75, 1.09, [0.85, 0.65, 1.05], 6);
+  // Mõm trên thuôn gọn & Mỏ sừng Kim Quy quặp xuống sắc bén ở chóp mũi (+z)
+  h.sphere(0.12, TURTLE_SKIN, 0, 0.615, 1.13, [0.95, 0.72, 1.18], 8);
+  h.cone(0.052, 0.1, SHELL_GOLD, 0, 0.585, 1.24, [Math.PI * 0.62, 0, 0], 5);
+  h.sphere(0.095, TURTLE_DARK, 0, 0.555, 1.11, [0.9, 0.55, 1.15], 7);
+  // Mắt thần rực sáng, mày rồng vàng uốn vút, sừng thái dương & râu thần
+  for (const s of [-1, 1]) {
+    h.sphere(0.044, C.ink, s * 0.128, 0.67, 1.11, [0.9, 1.05, 0.9], 6);
+    hg.sphere(0.03, 0xffd24c, s * 0.14, 0.672, 1.126, [0.85, 0.95, 0.85], 6);
+    // Chân mày rồng vàng uy nghiêm
+    h.box(0.042, 0.03, 0.14, C.gold, s * 0.13, 0.72, 1.09, [-0.2, s * 0.25, -s * 0.28]);
+    // Sừng Long Quy bằng vàng ròng vươn chéo lên và ra sau (-z)
+    h.cyl(0.02, 0.038, 0.15, C.goldDark, s * 0.11, 0.76, 0.91, [-0.75, 0, -s * 0.26], 6);
+    h.cone(0.022, 0.13, C.gold, s * 0.132, 0.82, 0.81, [-0.85, 0, -s * 0.3], 5);
+    // Râu thần bằng vàng uốn rủ về phía sau dưới hàm
+    h.cone(0.018, 0.15, C.gold, s * 0.08, 0.49, 1.12, [-Math.PI * 0.72, 0, -s * 0.2], 5);
+  }
+  // Chòm râu thần dưới cằm
+  h.cone(0.022, 0.16, SHELL_GOLD, 0, 0.47, 1.11, [-Math.PI * 0.74, 0, 0], 5);
+
+  // 5. Bốn chân chèo bọc vảy giáp vàng & Móng vuốt Kim Quy phát sáng (vật báu rèn lẫy Nỏ Thần)
   for (const [b, s] of [
     ['qFL', -1],
     ['qFR', 1],
   ] as const) {
-    const f = r.on(b).plain;
-    f.cyl(0.13, 0.08, 0.06, C.turtle, s * 0.62, 0.06, 0.45, [0, 0, s * 1.2], 6);
-    f.box(0.42, 0.05, 0.2, C.turtle, s * 0.7, 0.04, 0.5, [0, -s * 0.5, 0]);
+    const leg = r.on(b);
+    const f = leg.plain;
+    const fg = leg.glow;
+    // Bắp chân trước & bàn chân chèo lớn
+    f.cyl(0.125, 0.09, 0.22, TURTLE_SKIN, s * 0.58, 0.07, 0.46, [0, -s * 0.25, s * 1.25], 7);
+    f.box(0.42, 0.058, 0.22, TURTLE_SKIN, s * 0.74, 0.045, 0.48, [0.06, -s * 0.45, 0]);
+    // 3 lớp vảy giáp vàng trên lưng chân chèo
+    for (let k = 0; k < 3; k++) {
+      f.box(0.11, 0.03, 0.16 - k * 0.02, k % 2 === 0 ? C.gold : C.goldDark, s * (0.62 + k * 0.1), 0.078 - k * 0.006, 0.49 - k * 0.02, [0.06, -s * 0.45, 0]);
+    }
+    // 3 móng vuốt Kim Quy bằng vàng sáng nằm ngang theo rìa chân chèo
+    for (let c = 0; c < 3; c++) {
+      const claw = new THREE.ConeGeometry(0.022, 0.11, 4);
+      claw.rotateX(Math.PI / 2 + 0.12);
+      claw.rotateY(s * (0.75 + c * 0.22));
+      fg.add(claw, DIVINE_GLOW, s * (0.74 + c * 0.085), 0.04, 0.58 - c * 0.055);
+    }
   }
   for (const [b, s] of [
     ['qBL', -1],
     ['qBR', 1],
   ] as const) {
-    r.on(b).plain.box(0.3, 0.05, 0.16, C.turtle, s * 0.6, 0.04, -0.5, [0, s * 0.5, 0]);
+    const leg = r.on(b);
+    const f = leg.plain;
+    const fg = leg.glow;
+    f.cyl(0.1, 0.075, 0.18, TURTLE_SKIN, s * 0.52, 0.06, -0.45, [0, s * 0.3, s * 1.2], 6);
+    f.box(0.32, 0.055, 0.18, TURTLE_SKIN, s * 0.64, 0.04, -0.5, [0.04, s * 0.48, 0]);
+    f.box(0.2, 0.028, 0.13, C.goldDark, s * 0.6, 0.068, -0.49, [0.04, s * 0.48, 0]);
+    for (let c = 0; c < 3; c++) {
+      const claw = new THREE.ConeGeometry(0.018, 0.09, 4);
+      claw.rotateX(Math.PI / 2 + 0.12);
+      claw.rotateY(s * (2.15 + c * 0.2));
+      fg.add(claw, DIVINE_GLOW, s * (0.68 + c * 0.065), 0.036, -0.56 - c * 0.04);
+    }
   }
-  r.on('qTail').plain.cone(0.07, 0.25, C.turtle, 0, 0.06, -0.82, [-Math.PI / 2, 0, 0], 6);
+
+  // 6. Đuôi Linh Quy ('qTail') có gai vảy vàng
+  const tail = r.on('qTail').plain;
+  tail.cone(0.075, 0.28, TURTLE_SKIN, 0, 0.065, -0.82, [-Math.PI / 2 + 0.12, 0, 0], 6);
+  for (let i = 0; i < 3; i++) {
+    tail.cone(0.022 - i * 0.004, 0.055, C.gold, 0, 0.095 - i * 0.006, -0.74 - i * 0.065, [-0.35, 0, 0], 4);
+  }
 }
 
-/** Rùa bơi (đi): chân trước chèo mạnh, chân sau đạp nhẹ, đầu nhấp nhô. Đứng: chèo nhẹ giữ chỗ. */
+/** Rùa bơi (đi): chân trước chèo mạnh, chân sau đạp nhẹ, đầu nhấp nhô, đuôi vẫy. Đứng: chèo nhẹ giữ chỗ. */
 function poseTurtle(b: B, a: Act): void {
   resetBones(b);
   const swim = a.act === 'walk';
@@ -545,6 +668,7 @@ function poseTurtle(b: B, a: Act): void {
   }
   b.qNeck.rotation.x = 0.08 * Math.sin(ph * 2);
   b.qHead.rotation.x = -0.06 * Math.sin(ph * 2);
+  b.qTail.rotation.y = 0.18 * amp * Math.sin(ph * 2);
 }
 
 /** Rùa Vàng có xương: `userData.pose` cho bơi (đi) hay nằm chèo nhẹ (đứng). */

@@ -298,40 +298,148 @@ export function makeDien(level: number): THREE.Group {
 /** Nước ao trong, sáng hơn nước ruộng cho dễ nhận ra ao giữ nước. */
 export const POND = 0x6fb8cf;
 
-/** Con trâu chibi đứng nghỉ. */
+/** Con trâu nước Việt cổ đứng nghỉ: thân vạm vỡ có vai u, bốn chân móng guốc, đầu rõ mõm mắt tai, cặp sừng cong cánh cung & đuôi phe phẩy. */
 export function buffalo(p: ShapeBuilder, x: number, z: number): void {
-  p.sphere(0.24, 0x4a4440, x, 0.32, z, [0.8, 0.7, 1.25], 8);
-  for (const dx of [-0.1, 0.1]) for (const dz of [-0.15, 0.15]) p.cyl(0.045, 0.05, 0.24, 0x3a3532, x + dx, 0.12, z + dz, undefined, 5);
-  p.sphere(0.13, 0x4a4440, x, 0.42, z + 0.3, [0.9, 0.85, 1.1], 7);
-  for (const s of [-1, 1]) p.capsule(0.025, 0.18, 0xd8cbb0, x + s * 0.13, 0.52, z + 0.28, [0, 0, s * 1.1]);
+  const HIDE = 0x423d39;
+  const HIDE_DARK = 0x2e2a27;
+  const SNOUT = 0x58504b;
+  const HORN = 0xd8cbb0;
+
+  // Thân trâu no tròn, vai u nhô cao & mông trâu
+  p.sphere(0.23, HIDE, x, 0.31, z - 0.02, [0.82, 0.72, 1.28], 9);
+  p.sphere(0.16, HIDE, x, 0.36, z + 0.14, [0.85, 0.78, 0.92], 8);
+  // Bốn chân cột đình có khớp gối và móng guốc sẫm
+  for (const dx of [-0.105, 0.105]) {
+    for (const [dz, h] of [
+      [-0.16, 0.24],
+      [0.15, 0.24],
+    ] as const) {
+      p.cyl(0.042, 0.036, h, HIDE_DARK, x + dx, h / 2 + 0.02, z + dz, undefined, 6);
+      p.cyl(0.044, 0.048, 0.04, 0x1f1c1a, x + dx, 0.02, z + dz + 0.01, undefined, 6);
+    }
+  }
+  // Cổ trâu & Đầu trâu vươn về phía trước (+z)
+  p.cyl(0.11, 0.14, 0.18, HIDE, x, 0.37, z + 0.24, [0.95, 0, 0], 7);
+  p.sphere(0.125, HIDE, x, 0.42, z + 0.33, [0.92, 0.84, 1.08], 8);
+  p.box(0.14, 0.095, 0.12, SNOUT, x, 0.39, z + 0.43, [0.18, 0, 0]);
+  // Mắt, lỗ mũi & tai trâu vểnh hai bên
+  for (const s of [-1, 1]) {
+    p.sphere(0.022, C.ink, x + s * 0.095, 0.44, z + 0.37, [0.8, 1, 1], 5);
+    p.sphere(0.016, HIDE_DARK, x + s * 0.042, 0.395, z + 0.485, [1, 0.8, 0.6], 5);
+    p.cone(0.035, 0.1, HIDE_DARK, x + s * 0.13, 0.42, z + 0.29, [0, 0, -s * 1.25], 5);
+    // Cặp sừng trâu cong cánh cung 3 nhịp đặc trưng
+    p.cyl(0.032, 0.042, 0.13, HORN, x + s * 0.12, 0.48, z + 0.3, [-0.15, 0, -s * 1.18], 6);
+    p.cyl(0.024, 0.032, 0.13, HORN, x + s * 0.21, 0.51, z + 0.26, [-0.35, -s * 0.3, -s * 0.68], 6);
+    p.cone(0.024, 0.11, HIDE_DARK, x + s * 0.23, 0.58, z + 0.21, [-0.45, -s * 0.4, s * 0.18], 5);
+  }
+  // Đuôi trâu buông phía sau (-z) có chùm lông đuôi
+  p.cyl(0.014, 0.022, 0.22, HIDE_DARK, x, 0.24, z - 0.31, [-0.28, 0, 0], 4);
+  p.cone(0.028, 0.08, 0x1f1c1a, x, 0.12, z - 0.34, [Math.PI - 0.28, 0, 0], 5);
 }
 
-/** Con cò trắng đứng: mình trắng, cổ cong, mỏ vàng, chân đen. Mặt hướng `ry`, đứng ở độ cao `y`. */
+/** Con cò trắng đứng: thân thon có cánh xếp, cổ chữ S mềm mại, mỏ vàng dài, chân cao lội nước. Mặt hướng `ry`, đứng ở độ cao `y`. */
 export function egret(p: ShapeBuilder, x: number, z: number, ry: number, y = 0.07): void {
   const fx = Math.sin(ry);
   const fz = Math.cos(ry);
-  for (const s of [-1, 1]) p.cyl(0.008, 0.008, 0.2, C.ink, x + s * 0.03 * fz, y + 0.1, z - s * 0.03 * fx, undefined, 3);
-  p.sphere(0.075, C.cream, x, y + 0.24, z, [0.75, 0.7, 1.35], 8);
-  p.capsule(0.022, 0.13, C.cream, x + fx * 0.07, y + 0.36, z + fz * 0.07, [fz * 0.35, 0, -fx * 0.35]);
-  p.sphere(0.035, C.cream, x + fx * 0.1, y + 0.45, z + fz * 0.1, [1, 1, 1], 6);
-  p.cone(0.012, 0.1, C.ember, x + fx * 0.17, y + 0.45, z + fz * 0.17, [fz * Math.PI / 2, 0, -fx * Math.PI / 2], 4);
+  const rx = fz;
+  const rz = -fx;
+  for (const s of [-1, 1]) {
+    p.cyl(0.008, 0.009, 0.22, C.ink, x + s * 0.032 * rx, y + 0.11, z + s * 0.032 * rz, undefined, 4);
+    // Cánh xếp hai bên sườn
+    p.sphere(0.052, 0xede6d3, x + s * 0.042 * rx - fx * 0.015, y + 0.25, z + s * 0.042 * rz - fz * 0.015, [0.45, 0.65, 1.35], 6);
+  }
+  p.sphere(0.075, C.cream, x, y + 0.24, z, [0.72, 0.68, 1.38], 8);
+  p.cone(0.042, 0.09, C.cream, x - fx * 0.09, y + 0.22, z - fz * 0.09, [-fz * 1.15, 0, fx * 1.15], 5);
+  // Cổ chữ S thanh thoát & Đầu cò có chùm lông mào trắng
+  p.capsule(0.021, 0.11, C.cream, x + fx * 0.06, y + 0.33, z + fz * 0.06, [fz * 0.42, 0, -fx * 0.42]);
+  p.capsule(0.018, 0.09, C.cream, x + fx * 0.085, y + 0.41, z + fz * 0.085, [fz * 0.12, 0, -fx * 0.12]);
+  p.sphere(0.036, C.cream, x + fx * 0.095, y + 0.47, z + fz * 0.095, [0.95, 0.95, 1.1], 6);
+  p.cone(0.014, 0.06, C.cream, x + fx * 0.055, y + 0.49, z + fz * 0.055, [-fz * 1.2, 0, fx * 1.2], 4);
+  p.cone(0.013, 0.11, C.ember, x + fx * 0.17, y + 0.465, z + fz * 0.17, [fz * Math.PI / 2, 0, -fx * Math.PI / 2], 4);
 }
 
-/** Guồng nước tre quay quanh trục dọc theo x, có gàu múc nước. Tách riêng để World cho quay (`userData.spin`). */
+/** Guồng nước tre quay quanh trục dọc theo x, có 2 vành bánh xe tre kép, nan chéo và 10 ống bương múc nước. Tách riêng để World cho quay (`userData.spin`). */
 export function waterWheel(): THREE.Group {
   const w = new ToonModel(inkThin);
   const p = w.plain;
-  p.add(new THREE.TorusGeometry(0.42, 0.03, 6, 20), C.woodDark, 0, 0, 0, [0, Math.PI / 2, 0]);
-  p.add(new THREE.TorusGeometry(0.2, 0.025, 6, 14), C.bamboo, 0, 0, 0, [0, Math.PI / 2, 0]);
-  for (let i = 0; i < 8; i++) {
-    const a = (i / 8) * Math.PI * 2;
-    p.box(0.03, 0.84, 0.03, C.bamboo, 0, 0, 0, [a, 0, 0]);
-    p.box(0.16, 0.08, 0.1, C.bamboo, 0, Math.cos(a) * 0.44, Math.sin(a) * 0.44, [a, 0, 0]);
+  for (const dx of [-0.055, 0.055]) {
+    p.add(new THREE.TorusGeometry(0.43, 0.024, 6, 20), C.woodDark, dx, 0, 0, [0, Math.PI / 2, 0]);
+    p.add(new THREE.TorusGeometry(0.22, 0.02, 6, 16), C.bamboo, dx, 0, 0, [0, Math.PI / 2, 0]);
   }
-  p.cyl(0.05, 0.05, 0.5, C.woodDark, 0, 0, 0, [0, 0, Math.PI / 2], 6);
+  for (let i = 0; i < 10; i++) {
+    const a = (i / 10) * Math.PI * 2;
+    const ca = Math.cos(a);
+    const sa = Math.sin(a);
+    for (const dx of [-0.055, 0.055]) {
+      p.box(0.022, 0.86, 0.022, C.bamboo, dx, 0, 0, [a, 0, 0]);
+    }
+    // Thanh ngang đỡ ống bương & Ống bương tre múc nước đặt chéo
+    p.cyl(0.014, 0.014, 0.14, C.woodDark, 0, ca * 0.42, sa * 0.42, [0, 0, Math.PI / 2], 4);
+    p.cyl(0.032, 0.028, 0.18, C.bamboo, 0.01, ca * 0.45, sa * 0.45, [a + 0.35, 0, Math.PI / 2 - 0.28], 6);
+  }
+  p.cyl(0.055, 0.055, 0.52, C.woodDark, 0, 0, 0, [0, 0, Math.PI / 2], 7);
+  for (const dx of [-0.14, 0.14]) p.cyl(0.068, 0.068, 0.04, C.bronze, dx, 0, 0, [0, 0, Math.PI / 2], 7);
   const g = w.group();
   g.userData.spin = 1.1;
   return g;
+}
+
+/**
+ * Khóm lúa nước Văn Lang:
+ * - Cấp thấp (mạ non / lúa con gái): chùm lá lúa xanh mảnh mọc xòe từ gốc nước.
+ * - Cấp cao (lúa trổ đòng -> lúa chín vàng): lá lúa xòe bên dưới nâng 3–4 bông lúa vàng óng trĩu hạt uốn cong ra xung quanh.
+ */
+export function riceClump(p: ShapeBuilder, x: number, z: number, h: number, lv: number, level: number, seedAngle = 0): void {
+  const maturity = Math.min(1, Math.max(0, (lv - 1) / 4));
+  const leafCol = new THREE.Color(0x63a635).lerp(new THREE.Color(0x88a43b), maturity * 0.65).getHex();
+  const stalkCol = new THREE.Color(C.rice).lerp(new THREE.Color(0xd2b242), maturity).getHex();
+  const grainCol = new THREE.Color(0xa6c648).lerp(new THREE.Color(C.ripe), Math.min(1, maturity * 1.25)).getHex();
+
+  // Bụi gốc lúa chụm dưới mặt nước
+  p.cyl(0.042, 0.028, h * 0.52, stalkCol, x, 0.06 + h * 0.24, z, undefined, 6);
+
+  // 5 phiến lá lúa vươn xòe tự nhiên quanh gốc (dùng rotateX + rotateY chuẩn, không xoắn Euler)
+  const leafH = h * (0.82 + 0.1 * (1 - maturity));
+  for (let i = 0; i < 5; i++) {
+    const a = seedAngle + (i / 5) * Math.PI * 2;
+    const tilt = 0.34 + (i % 2) * 0.14;
+    const blade = new THREE.ConeGeometry(0.028, leafH, 4);
+    blade.scale(1, 1, 0.45);
+    blade.rotateX(tilt);
+    blade.rotateY(a);
+    const rOff = 0.015 + Math.sin(tilt) * leafH * 0.42;
+    p.add(blade, i % 2 === 0 ? leafCol : stalkCol, x + Math.sin(a) * rOff, 0.055 + Math.cos(tilt) * leafH * 0.45, z + Math.cos(a) * rOff);
+  }
+
+  // Từ cấp 2 trở lên bắt đầu trổ bông; mỗi bông lúa là chùm hạt thuôn dài uốn cong rủ xuống bốn phía
+  if (level >= 2) {
+    const ears = level >= 6 ? 4 : 3;
+    const earLen = 0.095 + maturity * 0.045;
+    const earR = 0.026 + maturity * 0.008;
+    for (let k = 0; k < ears; k++) {
+      const a = seedAngle + 0.35 + (k / ears) * Math.PI * 2;
+      const arch = 0.92 + maturity * 0.32;
+      const ear = new THREE.SphereGeometry(1, 6, 5);
+      ear.scale(earR, earLen, earR * 0.88);
+      ear.rotateX(arch);
+      ear.rotateY(a);
+      const rEar = 0.042 + Math.sin(arch) * earLen * 0.55;
+      const yEar = 0.065 + h * 0.88 - (1 - Math.cos(arch)) * earLen * 0.25;
+      p.add(ear, k === 0 && level >= 6 ? C.gold : grainCol, x + Math.sin(a) * rEar, yEar, z + Math.cos(a) * rEar);
+    }
+  }
+}
+
+/** Bó lúa gặt buộc lạt dựng trên bờ ruộng: chân rạ xòe, eo buộc lạt tre, đầu bông lúa vàng trĩu hạt. */
+export function riceSheaf(p: ShapeBuilder, x: number, y0: number, z: number, rx = 0.08, rz = 0.08): void {
+  p.cyl(0.065, 0.115, 0.24, 0xc8a248, x, y0 + 0.12, z, [rx, 0, rz], 7);
+  p.cyl(0.072, 0.072, 0.04, C.red, x, y0 + 0.23, z, [rx, 0, rz], 7);
+  p.cyl(0.11, 0.068, 0.22, C.ripe, x, y0 + 0.34, z, [rx, 0, rz], 7);
+  for (let i = 0; i < 6; i++) {
+    const a = (i / 6) * Math.PI * 2;
+    p.sphere(0.036, i % 2 === 0 ? C.ripe : C.gold, x + Math.cos(a) * 0.065, y0 + 0.46, z + Math.sin(a) * 0.065, [1.1, 1.35, 1.1], 5);
+  }
+  p.sphere(0.042, C.gold, x, y0 + 0.49, z, [1.2, 0.9, 1.2], 6);
 }
 
 export function makeRuong(level: number): THREE.Group {
@@ -346,9 +454,12 @@ export function makeRuong(level: number): THREE.Group {
   for (const s of [-1, 1]) {
     p.box(2.95, bank, 0.2, bankColor, 0, bank / 2, s * 1.38);
     p.box(0.2, bank, 2.95, bankColor, s * 1.38, bank / 2, 0);
+    if (level >= 6) {
+      p.box(2.97, 0.035, 0.22, C.rockDark, 0, bank, s * 1.38);
+      p.box(0.22, 0.035, 2.95, C.rockDark, s * 1.38, bank, 0);
+    }
   }
   p.box(2.6, 0.04, 2.6, C.paddyWater, 0, 0.05, 0);
-  const color = new THREE.Color(C.rice).lerp(new THREE.Color(C.ripe), (lv - 1) / 4);
   const h = 0.16 + lv * 0.07 + 0.06 * up;
   // Cấp càng cao lúa càng dày và cao (cấp 6–8 cao thêm, trĩu bông).
   const rows = Math.min(3 + lv, 7);
@@ -362,7 +473,7 @@ export function makeRuong(level: number): THREE.Group {
       if (level >= 6 && x < -0.55 && z > 0.55) continue;
       if (level >= 7 && x > 0.55 && z < -0.55) continue;
       if (level >= 8 && x < -0.55 && Math.abs(z) < 0.45) continue;
-      p.cone(0.07 + lv * 0.008, h, color, x, 0.06 + h / 2, z, undefined, 5);
+      riceClump(p, x, z, h, lv, level, (i * 7 + j * 13) * 0.4);
     }
   }
   if (level >= 3) buffalo(p, 0.85, 0.8);
@@ -386,8 +497,7 @@ export function makeRuong(level: number): THREE.Group {
     // Bó lúa đã gặt dựng chụm vào nhau; cấp 7 dời ra giữa bờ để nhường góc cho miếu.
     const sheaves: [number, number][] = level >= 7 ? [[0.1, -1.05], [-0.12, -1.08], [0.0, -0.86]] : [[1.0, -1.0], [0.75, -1.05], [0.88, -0.78]];
     for (const [x, z] of sheaves) {
-      p.cyl(0.07, 0.11, 0.42, C.ripe, x, 0.25, z, [0.12, 0, 0.12], 6);
-      p.cone(0.11, 0.18, C.bronzeLight, x, 0.52, z, undefined, 6);
+      riceSheaf(p, x, 0.06, z, 0.1, 0.1);
     }
   }
   if (level >= 6) {
@@ -1475,71 +1585,144 @@ export const BANH_CHUNG = 0x4f7f35;
 export const BANH_GIAY = 0xf4efe0;
 export const LAT = 0xd8c48a;
 
-/** Khóm lúa nếp: năm lá lúa xanh xòe, ba bông nếp trĩu hạt màu ngà cong rủ ra ngoài. */
-function nepClump(p: ShapeBuilder, x: number, z: number, h: number): void {
-  for (let i = 0; i < 5; i++) {
-    const a = (i / 5) * Math.PI * 2;
-    p.box(0.022, h, 0.022, NEP_STALK, x + Math.sin(a) * 0.03, 0.06 + h / 2, z + Math.cos(a) * 0.03, [Math.cos(a) * 0.25, 0, -Math.sin(a) * 0.25]);
+/** Khóm lúa nếp cái hoa vàng: 6 lá lúa xanh thẫm hình mũi mác vươn xòe, 4 bông nếp tròn mẩy màu ngà vàng uốn cong trĩu hạt như đuôi gà. */
+function nepClump(p: ShapeBuilder, x: number, z: number, h: number, seedAngle = 0): void {
+  p.cyl(0.046, 0.03, h * 0.54, NEP_STALK, x, 0.06 + h * 0.25, z, undefined, 6);
+  const leafH = h * 0.85;
+  for (let i = 0; i < 6; i++) {
+    const a = seedAngle + (i / 6) * Math.PI * 2;
+    const tilt = 0.36 + (i % 2) * 0.14;
+    const blade = new THREE.ConeGeometry(0.03, leafH, 4);
+    blade.scale(1, 1, 0.45);
+    blade.rotateX(tilt);
+    blade.rotateY(a);
+    const rOff = 0.018 + Math.sin(tilt) * leafH * 0.42;
+    p.add(blade, i % 2 === 0 ? NEP_STALK : 0x5c7c2e, x + Math.sin(a) * rOff, 0.055 + Math.cos(tilt) * leafH * 0.45, z + Math.cos(a) * rOff);
   }
-  for (let k = 0; k < 3; k++) {
-    const a = (k / 3) * Math.PI * 2 + 0.5;
-    for (let j = 0; j < 4; j++) {
-      const r = 0.05 + j * 0.035;
-      p.sphere(0.03 - j * 0.004, NEP, x + Math.sin(a) * r, 0.08 + h - j * j * 0.022, z + Math.cos(a) * r, [1, 1.25, 1], 6);
-    }
+  for (let k = 0; k < 4; k++) {
+    const a = seedAngle + 0.4 + (k / 4) * Math.PI * 2;
+    const arch = 1.02 + (k % 2) * 0.16;
+    const ear = new THREE.SphereGeometry(1, 7, 5);
+    ear.scale(0.036, 0.125, 0.034);
+    ear.rotateX(arch);
+    ear.rotateY(a);
+    const rEar = 0.05 + Math.sin(arch) * 0.07;
+    const yEar = 0.075 + h * 0.88;
+    p.add(ear, k % 2 === 0 ? NEP : 0xdcc47e, x + Math.sin(a) * rEar, yEar, z + Math.cos(a) * rEar);
   }
 }
 
-/** Bù nhìn rơm đội nón lá, dang hai tay. Gốc ở chân cọc. */
+/** Bù nhìn rơm đội nón lá, mặc áo tơi rơm 3 tầng thắt đai đỏ, tay cầm dải lụa đỏ & mõ tre đuổi chim. Gốc ở chân cọc. */
 function scarecrow(m: ToonModel, x: number, z: number): void {
   const p = m.plain;
-  p.cyl(0.025, 0.03, 1.05, C.woodDark, x, 0.52, z, undefined, 5);
-  p.cyl(0.02, 0.02, 0.7, C.woodDark, x, 0.72, z, [0, 0, Math.PI / 2], 5);
-  m.band.cyl(0.11, 0.15, 0.36, C.thatch, x, 0.62, z, undefined, 8);
-  for (const s of [-1, 1]) p.cone(0.05, 0.14, C.thatchDark, x + s * 0.36, 0.7, z, [0, 0, s * 1.4], 5);
-  p.sphere(0.09, C.cream, x, 0.9, z, [1, 1, 1], 8);
-  p.cone(0.17, 0.15, C.cream, x, 1.03, z, undefined, 12);
+  // Cọc tre đứng & sào tre ngang
+  p.cyl(0.026, 0.032, 1.08, C.woodDark, x, 0.54, z, undefined, 5);
+  p.cyl(0.02, 0.02, 0.78, C.bamboo, x, 0.74, z, [0, 0, Math.PI / 2], 5);
+  // Áo tơi rơm bện 3 lớp xòe tua tủa + đai lưng vải đỏ
+  p.cone(0.22, 0.28, C.thatchDark, x, 0.46, z, undefined, 8);
+  m.band.cyl(0.115, 0.165, 0.28, C.thatch, x, 0.64, z, undefined, 8);
+  p.cone(0.18, 0.18, C.thatch, x, 0.76, z, undefined, 8);
+  p.cyl(0.132, 0.138, 0.04, C.red, x, 0.56, z, undefined, 8);
+  // Hai ống tay rơm + dải lụa đỏ bay bên trái & ống mõ tre bên phải
+  for (const s of [-1, 1]) {
+    p.cone(0.055, 0.18, C.thatchDark, x + s * 0.34, 0.72, z, [0, 0, s * 1.38], 6);
+  }
+  p.box(0.035, 0.24, 0.016, C.red, x - 0.41, 0.58, z + 0.02, [0.15, 0, 0.28]);
+  p.cyl(0.028, 0.028, 0.12, C.bamboo, x + 0.4, 0.6, z, [0, 0, -0.15], 5);
+  // Đầu rơm tròn & Nón lá truyền thống có vành tre + chóp nón
+  p.sphere(0.092, C.cream, x, 0.91, z, [1, 1.05, 1], 8);
+  p.cone(0.21, 0.16, C.cream, x, 1.05, z, undefined, 12);
+  p.add(new THREE.TorusGeometry(0.2, 0.012, 5, 14), C.bamboo, x, 0.975, z, [Math.PI / 2, 0, 0]);
 }
 
-/** Bó lúa nếp treo trên giàn phơi. */
+/** Bó lúa nếp treo trên giàn phơi: cuống lúa xanh buộc lạt đỏ, chùm bông nếp vàng ngà trĩu hạt. */
 function nepBundle(p: ShapeBuilder, x: number, y: number, z: number): void {
-  p.capsule(0.05, 0.22, NEP, x, y - 0.18, z, undefined, [1, 1, 0.8]);
-  p.cyl(0.03, 0.05, 0.12, NEP_STALK, x, y - 0.02, z, undefined, 6);
+  p.cyl(0.028, 0.046, 0.12, NEP_STALK, x, y - 0.03, z, undefined, 6);
+  p.cyl(0.038, 0.038, 0.025, C.red, x, y - 0.08, z, undefined, 6);
+  p.capsule(0.056, 0.22, NEP, x, y - 0.2, z, undefined, [1.05, 1, 0.85]);
+  p.sphere(0.048, 0xd8c27a, x, y - 0.3, z, [1.15, 0.85, 0.95], 6);
 }
 
 export function makeRuongNep(level: number): THREE.Group {
   const m = new ToonModel();
   const p = m.plain;
-  const bank = 0.16;
+  const bank = 0.16 + level * 0.015;
+  const LAT_DARK = 0x8a4c28;
+  const LAT_LIGHT = 0xc27a4e;
+
+  // Bờ đá ong bao quanh ruộng: thân bờ đá ong + các viên đá ong xếp nổi khối trên mặt bờ
   for (const s of [-1, 1]) {
-    p.box(2.95, bank, 0.2, LATERITE, 0, bank / 2, s * 1.38);
-    p.box(0.2, bank, 2.95, LATERITE, s * 1.38, bank / 2, 0);
+    p.box(2.95, bank, 0.22, LATERITE, 0, bank / 2, s * 1.37);
+    p.box(0.22, bank, 2.95, LATERITE, s * 1.37, bank / 2, 0);
+    for (let k = 0; k < 7; k++) {
+      const pos = -1.2 + k * 0.4;
+      const c1 = k % 2 === 0 ? LAT_DARK : LAT_LIGHT;
+      const c2 = k % 2 === 0 ? LAT_LIGHT : LAT_DARK;
+      p.box(0.34, 0.035, 0.18, c1, pos, bank + 0.015, s * 1.37);
+      p.box(0.18, 0.035, 0.34, c2, s * 1.37, bank + 0.015, pos);
+    }
   }
-  p.box(2.6, 0.04, 2.6, C.paddyWater, 0, 0.05, 0);
-  // Bờ con chia ruộng làm hai thửa.
-  p.box(0.12, 0.09, 2.6, LATERITE, 0.0, 0.07, 0);
-  // Cấp càng cao lúa càng dày, cao.
+  p.box(2.58, 0.04, 2.58, C.paddyWater, 0, 0.05, 0);
+
+  // Bờ con lát đá ong chia ruộng làm hai thửa + ống bương tre thông nước giữa hai thửa + bụi cỏ bờ
+  p.box(0.15, 0.11, 2.56, LATERITE, 0.0, 0.065, 0);
+  for (let k = 0; k < 5; k++) {
+    p.box(0.13, 0.025, 0.38, k % 2 === 0 ? LAT_LIGHT : LAT_DARK, 0, 0.125, -0.96 + k * 0.48);
+  }
+  p.cyl(0.028, 0.028, 0.28, C.bamboo, 0, 0.065, 0.24, [0, 0, Math.PI / 2], 6);
+  for (const [gx, gz] of [
+    [-1.24, 1.24],
+    [1.24, -1.22],
+    [0.04, -1.18],
+    [-0.04, 1.15],
+  ] as const) {
+    p.cone(0.055, 0.15, C.leaf[1], gx, bank + 0.05, gz, undefined, 4);
+  }
+
+  // Bậc đá ong lối bước xuống ruộng ở bờ trước (+z)
+  p.box(0.42, bank + 0.03, 0.26, LAT_DARK, 0, (bank + 0.03) / 2, 1.36);
+  p.box(0.36, bank * 0.65, 0.16, LATERITE, 0, bank * 0.32, 1.19);
+
+  // Cấp càng cao lúa nếp càng dày, cao và trĩu bông.
   const rows = level >= 2 ? 6 : 5;
   const step = 2.4 / rows;
-  const h = 0.3 + level * 0.06;
+  const h = 0.28 + level * 0.065;
   for (let i = 0; i < rows; i++) {
     for (let j = 0; j < rows; j++) {
       const x = -1.2 + step * (i + 0.5);
       const z = -1.2 + step * (j + 0.5);
-      if (Math.abs(x) < 0.12) continue;
+      if (Math.abs(x) < 0.14) continue;
       // Chừa chỗ bù nhìn giữa thửa trái.
       if (level >= 2 && Math.hypot(x + 0.55, z + 0.15) < 0.3) continue;
-      nepClump(p, x, z, h);
+      // Cấp 3 chừa góc phải trước cho nong phơi thóc nếp & thúng nếp.
+      if (level >= 3 && x > 0.72 && z > 0.72) continue;
+      nepClump(p, x, z, h, (i * 5 + j * 11) * 0.45);
     }
   }
   if (level >= 2) scarecrow(m, -0.55, -0.15);
   if (level >= 3) {
-    // Giàn tre phơi bó nếp dọc bờ sau.
-    for (const x of [-1.2, 1.2]) for (const dz of [-0.06, 0.06]) p.cyl(0.035, 0.04, 1.15, C.bamboo, x, 0.6, -1.32 + dz, [dz * 2, 0, 0], 5);
-    for (const y of [1.08, 0.78]) p.cyl(0.03, 0.03, 2.5, C.bamboo, 0, y, -1.32, [0, 0, Math.PI / 2], 5);
+    // Giàn tre 2 tầng phơi bó nếp dọc bờ sau (-z).
+    for (const x of [-1.2, 1.2]) {
+      for (const dz of [-0.06, 0.06]) {
+        p.cyl(0.035, 0.042, 1.18, C.bamboo, x, 0.62, -1.32 + dz, [dz * 2, 0, 0], 5);
+      }
+      p.box(0.12, 0.04, 0.22, C.woodDark, x, 1.18, -1.32);
+    }
+    for (const y of [1.1, 0.78]) p.cyl(0.03, 0.03, 2.54, C.bamboo, 0, y, -1.32, [0, 0, Math.PI / 2], 5);
     for (let i = 0; i < 9; i++) {
       const x = -1.0 + i * 0.25;
-      nepBundle(p, x, i % 2 ? 0.78 : 1.08, -1.32);
+      nepBundle(p, x, i % 2 ? 0.78 : 1.1, -1.32);
+    }
+    // Góc sân đá ong góc trước phải (+x, +z): nong tre phơi thóc nếp vàng ngà & 2 thúng nếp đầy ắp
+    p.box(0.56, bank, 0.56, LATERITE, 0.98, bank / 2, 0.98);
+    p.cyl(0.21, 0.2, 0.025, C.bamboo, 0.92, bank + 0.015, 0.95, undefined, 10);
+    p.sphere(0.17, NEP, 0.92, bank + 0.025, 0.95, [1, 0.22, 1], 8);
+    for (const [bx, bz, r] of [
+      [1.18, 0.82, 0.095],
+      [1.14, 1.08, 0.082],
+    ] as const) {
+      p.cyl(r, r * 0.78, 0.13, C.thatchDark, bx, bank + 0.065, bz, undefined, 8);
+      p.sphere(r * 0.92, NEP, bx, bank + 0.13, bz, [1, 0.45, 1], 7);
     }
   }
   return m.group();
