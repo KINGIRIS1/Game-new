@@ -87,6 +87,7 @@ Học cơ chế mở đất của Forge of Empires, Elvenar: đất chia khoản
 - **Giá** chỉ gạo và vỏ ốc, làm tròn 5: từ 2% (khoảnh đầu của cấp) tới 3% (khoảnh cuối của cấp) giá lần nâng Điện kế tiếp (ở Điện 8 lấy giá lên cấp 8), sàn 20 gạo, 10 vỏ ốc (`KHOANH_COST_FRAC`, `KHOANH_COST_MIN`). Ví dụ: Điện 1–3 chừng 20–25 gạo; Điện 5: 80–120; Điện 6: 145–215 gạo, 130–190 vỏ ốc; Điện 7, 8: 210–310 gạo. Người chơi mô phỏng tiêu cho phát rừng chừng 1–3% số chi mỗi chương, nhịp lên Điện không đổi.
 - **Chạm** vào rừng chưa phát thì mở bảng **Khoảnh rừng**: khoảnh tô vàng; bảng ghi số khoảnh đã mở trên lượt, giá, nút Phát rừng, hay lý do chưa phát được (chưa sát đất, hết lượt kèm cấp Điện cho thêm lượt, đang có giặc). Khoảnh ven sông có ghi chú: dựng được bến nhưng mùa lũ dễ ngập.
 - **Hình ảnh**: rừng thưa dần ở bìa đất đã mở; khoảnh phát được (sát đất, còn lượt) thì cây thưa hơn và có **cọc mốc** tre buộc vải đỏ ở bốn góc.
+- **Rừng nhẹ máy**: rừng có cả nghìn cây nên là phần nặng nhất của cảnh. Mật độ rừng 0,3 (trước 0,7), cây gỗ vẽ ở độ chi tiết 0,5, bụi tre rừng 5–6 thân (trước 9–10), lá tre 3 mặt. Cảnh kinh đô Điện 5 chừng 4 triệu tam giác (trước 10,7 triệu). Lũy tre giữ đủ thân.
 - Bảng Điện ghi "Khoảnh đất đã mở n/lượt → lượt cấp sau". Lên cấp Điện thì báo được phát thêm mấy khoảnh.
 - Rừng chưa phát giặc vẫn đi qua được; lũ không loang vào rừng chưa phát. Giặc trên bộ xuất phát ngoài mọi ô đã mở (dải giặc tính từ ô nhỏ nhất đã mở, `openStart`).
 - Mẫu kinh đô: chỗ của mẫu nằm trong rừng chưa phát thì bỏ qua; bảng mẫu ghi mẫu còn mấy khoảnh chưa phát.

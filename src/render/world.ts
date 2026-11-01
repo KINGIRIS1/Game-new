@@ -75,7 +75,7 @@ const NIGHT_SKY = new THREE.Color(0x5a6aa8);
 const NIGHT_GROUND = new THREE.Color(0x2a2a48);
 
 /** Mật độ rừng: thưa để công trình nổi bật, không rối mắt. */
-const FOREST_DENSITY = 0.7;
+const FOREST_DENSITY = 0.3;
 
 /**
  * Độ nét: số điểm ảnh vẽ cho mỗi điểm CSS, không vượt quá màn hình thật.
