@@ -6,7 +6,7 @@ import { above5, bird, boatRoof, buffalo, coneRoof, egret, grown, POND, riceClum
 import { CELL, Lot, type Zone } from '../lot';
 import { C } from '../palette';
 import { type ShapeBuilder, seeded } from '../shapes';
-import { ToonModel } from '../toon';
+import { ToonModel, inkThin } from '../toon';
 import { type CongTrinh, type LotSpot, type V3, rod } from './chung';
 
 export const RUONG_LOT = new Lot(4, [
@@ -130,7 +130,7 @@ function shrine(m: ToonModel, x: number, z: number, y0: number, roof: Roof): voi
 }
 
 export function makeRuong(level: number): THREE.Group {
-  const m = new ToonModel();
+  const m = new ToonModel(inkThin);
   const p = m.plain;
   const L = RUONG_LOT;
   const roof = roofFor(level);

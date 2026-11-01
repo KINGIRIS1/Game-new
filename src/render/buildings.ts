@@ -5,6 +5,7 @@
 // Gốc tọa độ là tâm chân móng, mặt trước hướng +z.
 
 import * as THREE from 'three';
+import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { BUILDINGS, isDecor, type BuildingType } from '../game/defs';
 import { bakeRuaVang } from './beasts';
 import { decorModel } from './decor';
@@ -384,97 +385,212 @@ export function waterWheel(): THREE.Group {
   return g;
 }
 
+const LEAF_BLADE_CACHE = new Map<string, THREE.BufferGeometry>();
+
 /**
- * Tạo hình học bông lúa uốn cong hình cánh cung từ ngọn thân lúa vồng ra ngoài rồi rủ sâu xuống về phía gốc cây.
- * Dùng một lưới liền mạch (`SphereGeometry` uốn đỉnh theo đường cong) để bông lúa cong mượt mà không bị ngắt viền mực đen.
+ * Phiến lá lúa có sống gân giữa mọc trực tiếp từ gốc nước (`t = 0`) vươn lên và uốn cong tự nhiên ở ngọn (`t = 1`).
  */
-function curvedPanicleGeo(span: number, rise: number, drop: number, rMax: number): THREE.BufferGeometry {
-  const geo = new THREE.SphereGeometry(1, 6, 10);
-  const pos = geo.attributes.position;
-  for (let i = 0; i < pos.count; i++) {
-    const vx = pos.getX(i);
-    const vy = pos.getY(i);
-    const vz = pos.getZ(i);
-    const t = (vy + 1) * 0.5; // 0 ở cổ bông (mảnh), 0.3..0.95 là chùm hạt trĩu nặng rủ xuống gốc
-    // Cổ bông vươn cao rồi uốn vồng ra ngoài và rủ sâu xuống về phía gốc cây
-    const cz = 0.01 + span * (0.35 * t + 0.65 * Math.sin(t * Math.PI * 0.5));
-    const cy = rise * Math.sin(t * Math.PI * 0.62) - drop * Math.pow(t, 2.0);
-    const dz = span * (0.35 + 0.65 * 0.5 * Math.PI * Math.cos(t * Math.PI * 0.5));
-    const dy = rise * 0.62 * Math.PI * Math.cos(t * Math.PI * 0.62) - drop * 2.0 * Math.max(0.02, t);
-    const len = Math.hypot(dz, dy) || 1;
-    const ny = -dz / len;
-    const nz = dy / len;
-    // Đoạn cổ bông (t < 0.25) mảnh như cọng lúa, phần bông hạt (t = 0.25..0.95) phình tròn mẩy và thuôn nhọn ở đầu bông
-    const grainEnvelope = t < 0.22 ? 0.32 + (t / 0.22) * 0.45 : 0.77 + 0.38 * Math.sin(((t - 0.22) / 0.78) * Math.PI * 0.85);
-    const r = rMax * grainEnvelope;
-    pos.setXYZ(i, vx * r, cy + vz * r * ny, cz + vz * r * nz);
+function curvedLeafBladeGeo(wBase: number, h: number, bendOut: number, bendDrop: number): THREE.BufferGeometry {
+  const key = `${wBase.toFixed(3)}_${h.toFixed(3)}_${bendOut.toFixed(3)}_${bendDrop.toFixed(3)}`;
+  let cached = LEAF_BLADE_CACHE.get(key);
+  if (!cached) {
+    const geo = new THREE.CylinderGeometry(wBase * 0.1, wBase, 1, 3, 4);
+    const pos = geo.attributes.position;
+    for (let i = 0; i < pos.count; i++) {
+      const vx = pos.getX(i);
+      const vy = pos.getY(i);
+      const vz = pos.getZ(i);
+      const t = vy + 0.5; // 0 ở gốc mạ, 1 ở chóp nhọn lá lúa
+      const widthProfile = Math.sin(t * Math.PI * 0.82) * 0.55 + (1 - t * 0.85) * 0.65;
+      const cz = 0.01 + bendOut * Math.pow(t, 1.5);
+      const cy = h * Math.sin(t * Math.PI * 0.52) - bendDrop * Math.pow(t, 2.3);
+      const dz = bendOut * 1.5 * Math.pow(Math.max(0.02, t), 0.5);
+      const dy = h * 0.52 * Math.PI * Math.cos(t * Math.PI * 0.52) - bendDrop * 2.3 * Math.pow(Math.max(0.02, t), 1.3);
+      const len = Math.hypot(dz, dy) || 1;
+      const ny = -dz / len;
+      const nz = dy / len;
+      const bx = vx * widthProfile * 1.3;
+      const bz = vz * widthProfile * 0.85;
+      pos.setXYZ(i, bx, cy + bz * ny, cz + bz * nz);
+    }
+    geo.computeVertexNormals();
+    cached = geo.toNonIndexed();
+    geo.dispose();
+    LEAF_BLADE_CACHE.set(key, cached);
   }
-  geo.computeVertexNormals();
-  return geo;
+  return cached.clone();
 }
 
 /**
- * Khóm lúa nước Văn Lang:
- * - Cấp thấp (mạ non / lúa con gái): chùm lá lúa xanh mảnh mọc xòe từ gốc nước.
- * - Cấp cao (lúa trổ đòng -> lúa chín vàng): thân lúa vươn cao, lá lúa xòe bên dưới nâng 3–5 bông lúa vàng óng có cổ bông mảnh uốn cong rủ sâu xuống về phía gốc.
+ * Đường cong của một dảnh lúa (cuống mạ + bông lúa) tính từ gốc nước (`t = 0`) vươn lên rồi uốn vồng rủ xuống (`t = 1`).
+ */
+function stemCurvePoint(
+  t: number,
+  stemH: number,
+  span: number,
+  drop: number,
+): { cz: number; cy: number; dz: number; dy: number; ny: number; nz: number } {
+  const u = Math.max(0, t - 0.4) / 0.6;
+  const cz = 0.012 + span * Math.pow(t, 1.32);
+  const cy = stemH * Math.sin(t * Math.PI * 0.55) - drop * Math.pow(u, 1.85);
+  const dz = span * 1.32 * Math.pow(Math.max(0.02, t), 0.32);
+  const dy = stemH * 0.55 * Math.PI * Math.cos(t * Math.PI * 0.55) - (t > 0.4 ? (drop * 1.85 * Math.pow(u, 0.85)) / 0.6 : 0);
+  const len = Math.hypot(dz, dy) || 1;
+  return { cz, cy, dz, dy, ny: -dz / len, nz: dy / len };
+}
+
+const UNIT_GRAIN_GEO = new THREE.SphereGeometry(1, 5, 3).toNonIndexed();
+const PANICLE_CACHE = new Map<string, { stem: THREE.BufferGeometry; g1: THREE.BufferGeometry; g2: THREE.BufferGeometry }>();
+
+function getPanicleGeos(stemH: number, span: number, drop: number, grainR: number) {
+  const key = `${stemH.toFixed(3)}_${span.toFixed(3)}_${drop.toFixed(3)}_${grainR.toFixed(3)}`;
+  let cached = PANICLE_CACHE.get(key);
+  if (!cached) {
+    const stemGeo = new THREE.CylinderGeometry(0.013, 0.019, 1, 4, 5);
+    const sPos = stemGeo.attributes.position;
+    for (let i = 0; i < sPos.count; i++) {
+      const vx = sPos.getX(i);
+      const vy = sPos.getY(i);
+      const vz = sPos.getZ(i);
+      const t = (vy + 0.5) * 0.94;
+      const { cz, cy, ny, nz } = stemCurvePoint(t, stemH, span, drop);
+      sPos.setXYZ(i, vx, cy + vz * ny, cz + vz * nz);
+    }
+    stemGeo.computeVertexNormals();
+    const stem = stemGeo.toNonIndexed();
+    stemGeo.dispose();
+
+    const g1List: THREE.BufferGeometry[] = [];
+    const g2List: THREE.BufferGeometry[] = [];
+    const pairs = 5;
+    for (let j = 0; j < pairs; j++) {
+      const u = j / (pairs - 1);
+      const sizeMul = 0.9 + 0.22 * Math.sin(u * Math.PI);
+      const rx = grainR * 0.98 * sizeMul;
+      const ry = grainR * 1.62 * sizeMul;
+      const rz = grainR * 0.92 * sizeMul;
+      for (const side of [-1, 1]) {
+        const t = 0.45 + u * 0.48 + (side > 0 ? 0.022 : 0);
+        const { cz, cy, dz, dy, ny, nz } = stemCurvePoint(t, stemH, span, drop);
+        const pitch = Math.atan2(dz, dy);
+        const lx = side * grainR * 0.78 * sizeMul;
+        const ly = cy + ny * grainR * 0.28;
+        const lz = cz + nz * grainR * 0.28;
+        const gGeo = UNIT_GRAIN_GEO.clone();
+        gGeo.scale(rx, ry, rz);
+        gGeo.rotateZ(-side * 0.42);
+        gGeo.rotateX(pitch + 0.1);
+        gGeo.translate(lx, ly, lz);
+        if ((j + (side > 0 ? 1 : 0)) % 2 === 0) g1List.push(gGeo);
+        else g2List.push(gGeo);
+      }
+    }
+    const tip = stemCurvePoint(1.0, stemH, span, drop);
+    const tipPitch = Math.atan2(tip.dz, tip.dy);
+    const tipGeo = UNIT_GRAIN_GEO.clone();
+    tipGeo.scale(grainR * 0.94, grainR * 1.56, grainR * 0.9);
+    tipGeo.rotateX(tipPitch);
+    tipGeo.translate(0, tip.cy, tip.cz);
+    g1List.push(tipGeo);
+
+    const g1 = mergeGeometries(g1List, false)!;
+    const g2 = mergeGeometries(g2List, false)!;
+    for (const g of g1List) g.dispose();
+    for (const g of g2List) g.dispose();
+    cached = { stem, g1, g2 };
+    PANICLE_CACHE.set(key, cached);
+  }
+  return cached;
+}
+
+/**
+ * Vẽ một cuống mạ xanh mọc thẳng từ gốc nước (`y0`) vươn cao uốn cong ra ngoài,
+ * phần nửa ngọn cuống mạ cắm các cặp hạt lúa bầu dục vàng mẩy xếp dọc theo cuống rủ xuống gốc (đúng như ảnh mẫu).
+ */
+function addStemWithPanicle(
+  p: ShapeBuilder,
+  x: number,
+  y0: number,
+  z: number,
+  a: number,
+  stemH: number,
+  span: number,
+  drop: number,
+  stemCol: number,
+  grainCol: number,
+  grainColAlt: number,
+  grainR: number,
+): void {
+  const { stem, g1, g2 } = getPanicleGeos(stemH, span, drop, grainR);
+  p.add(stem.clone(), stemCol, x, y0, z, [0, a, 0]);
+  p.add(g1.clone(), grainCol, x, y0, z, [0, a, 0]);
+  p.add(g2.clone(), grainColAlt, x, y0, z, [0, a, 0]);
+}
+
+/**
+ * Khóm lúa nước Văn Lang (dựng đúng cấu trúc cây lúa thật — không có thân gỗ chính):
+ * - Gốc mạ có mô đất bùn nhỏ sát mặt nước.
+ * - Các lá mạ dài mọc trực tiếp từ gốc: lá tầng dưới uốn vòm sang hai bên, lá đòng tầng giữa vươn cao vút.
+ * - Mỗi bông lúa gồm các hạt thóc bầu dục vàng mẩy bám dọc theo cuống mạ xanh mọc từ gốc vươn lên rồi uốn cong rủ xuống gốc.
  */
 export function riceClump(p: ShapeBuilder, x: number, z: number, h: number, lv: number, level: number, seedAngle = 0): void {
   const maturity = Math.min(1, Math.max(0, (lv - 1) / 4));
-  const leafCol = new THREE.Color(0x63a635).lerp(new THREE.Color(0x7fa036), maturity * 0.55).getHex();
-  const stalkCol = new THREE.Color(C.rice).lerp(new THREE.Color(0xbfa43a), maturity * 0.85).getHex();
-  const grainCol = new THREE.Color(0xa6c648).lerp(new THREE.Color(C.ripe), Math.min(1, maturity * 1.25)).getHex();
+  const darkLeafCol = new THREE.Color(0x58a42c).lerp(new THREE.Color(0x6eb030), maturity * 0.5).getHex();
+  const brightLeafCol = new THREE.Color(0x7cc838).lerp(new THREE.Color(0xa8d83c), maturity * 0.85).getHex();
+  const stemCol = new THREE.Color(0x64b030).lerp(new THREE.Color(0x86c036), maturity * 0.6).getHex();
+  const grainCol = new THREE.Color(0xc8da4c).lerp(new THREE.Color(C.ripe), Math.min(1, maturity * 1.35)).getHex();
+  const grainColAlt = new THREE.Color(0xb6ca40).lerp(new THREE.Color(C.gold), Math.min(1, maturity * 1.35)).getHex();
+  const y0 = 0.055;
 
-  // Bụi thân lúa chụm từ gốc nước
-  p.cyl(0.032, 0.024, h * 0.72, stalkCol, x, 0.06 + h * 0.36, z, undefined, 6);
+  // Mô đất bùn nhỏ dưới chân khóm mạ
+  p.sphere(0.056, C.soil, x, y0, z, [1.35, 0.36, 1.35], 5);
 
-  // 6 phiến lá lúa mảnh vươn xòe tự nhiên quanh gốc ở nhiều độ nghiêng
-  const leafH = h * (0.78 + 0.12 * (1 - maturity));
-  for (let i = 0; i < 6; i++) {
-    const a = seedAngle + i * 1.05 + (i % 2) * 0.18;
-    const tilt = 0.32 + (i % 3) * 0.14;
-    const blade = new THREE.ConeGeometry(0.022, leafH * (0.88 + (i % 2) * 0.14), 4);
-    blade.scale(1, 1, 0.42);
-    blade.rotateX(tilt);
+  // 1. Tầng lá mạ dưới (3 lá): mọc từ gốc, uốn cong hình vòm rủ mũi lá xuống xung quanh gốc
+  for (let i = 0; i < 3; i++) {
+    const a = seedAngle + (i / 3) * Math.PI * 2 + 0.35;
+    const blade = curvedLeafBladeGeo(0.026, h * 0.56, 0.145 + (i % 2) * 0.025, h * 0.26);
     blade.rotateY(a);
-    const rOff = 0.014 + Math.sin(tilt) * leafH * 0.4;
-    p.add(blade, i % 2 === 0 ? leafCol : stalkCol, x + Math.sin(a) * rOff, 0.055 + Math.cos(tilt) * leafH * 0.44, z + Math.cos(a) * rOff);
+    p.add(blade, darkLeafCol, x, y0, z);
   }
 
-  // Từ cấp 2 trở lên bắt đầu trổ bông; các bông lúa mọc lệch độ cao và góc tự nhiên, cổ bông vươn lên rồi uốn cong rủ sâu xuống gốc
+  // 2. Tầng lá đòng giữa (3 lá): bản lá xanh vàng vươn cao vút ở tâm khóm lên quá tầm bông lúa (như ảnh mẫu)
+  for (let i = 0; i < 3; i++) {
+    const a = seedAngle + 0.15 + (i / 3) * Math.PI * 2;
+    const lh = h * (1.12 + (i % 2) * 0.14);
+    const blade = curvedLeafBladeGeo(0.027, lh, 0.065 + (i % 2) * 0.03, lh * 0.06);
+    blade.rotateY(a);
+    p.add(blade, i % 2 === 0 ? brightLeafCol : darkLeafCol, x, y0, z);
+  }
+
+  // 3. Từ cấp 2 trở lên: mỗi bông lúa cắm trên một cuống mạ xanh mọc thẳng từ gốc nước, vươn ra ngoài rồi uốn cong rủ bông hạt xuống gốc
   if (level >= 2) {
-    const ears = level >= 6 ? 5 : level >= 4 ? 4 : 3;
-    const span = 0.115 + maturity * 0.045;
-    const earR = 0.021 + maturity * 0.006;
+    const ears = 3;
+    const span = 0.185 + maturity * 0.045;
+    const earR = 0.021 + maturity * 0.005;
     for (let k = 0; k < ears; k++) {
-      const a = seedAngle + 0.4 + k * 2.22; // góc vàng (golden angle) để bông tỏa tự nhiên không đối xứng cứng
-      const hScale = 0.82 + ((k * 37) % 3) * 0.1;
-      const yBase = 0.06 + h * (0.68 * hScale);
-      const rise = h * (0.24 * hScale);
-      const drop = h * (0.48 + maturity * 0.22) * hScale;
-      const ear = curvedPanicleGeo(span * (0.9 + (k % 2) * 0.14), rise, drop, earR);
-      ear.rotateY(a);
-      const ox = Math.sin(a) * 0.012;
-      const oz = Math.cos(a) * 0.012;
-      p.add(ear, k % 2 === 0 && level >= 6 ? C.gold : grainCol, x + ox, yBase, z + oz);
+      const a = seedAngle + 0.68 + (k / ears) * Math.PI * 2 + (k % 2) * 0.18;
+      const hScale = 0.88 + (k % 3) * 0.09;
+      const stemH = h * 0.98 * hScale;
+      const drop = h * (0.46 + maturity * 0.18) * hScale;
+      const c1 = k === 0 && level >= 6 ? C.gold : grainCol;
+      const c2 = k === 0 && level >= 6 ? C.ripe : grainColAlt;
+      addStemWithPanicle(p, x, y0, z, a, stemH, span * (0.94 + (k % 2) * 0.14), drop, stemCol, c1, c2, earR);
     }
   }
 }
 
 /** Bó lúa gặt buộc lạt dựng trên bờ ruộng: chân rạ xòe, eo buộc lạt tre, đầu bông lúa vàng uốn cong rủ xuống quanh bó. */
 export function riceSheaf(p: ShapeBuilder, x: number, y0: number, z: number, rx = 0.08, rz = 0.08): void {
-  p.cyl(0.065, 0.115, 0.24, 0xc8a248, x, y0 + 0.12, z, [rx, 0, rz], 7);
+  p.cyl(0.065, 0.115, 0.24, 0x7ca834, x, y0 + 0.12, z, [rx, 0, rz], 7);
   p.cyl(0.072, 0.072, 0.04, C.red, x, y0 + 0.23, z, [rx, 0, rz], 7);
-  p.cyl(0.095, 0.068, 0.2, C.ripe, x, y0 + 0.33, z, [rx, 0, rz], 7);
-  for (let i = 0; i < 6; i++) {
-    const a = (i / 6) * Math.PI * 2;
-    const ear = curvedPanicleGeo(0.12, 0.045, 0.19, 0.032);
-    ear.rotateY(a);
-    p.add(ear, i % 2 === 0 ? C.ripe : C.gold, x, y0 + 0.42, z);
+  for (let i = 0; i < 5; i++) {
+    const a = (i / 5) * Math.PI * 2;
+    addStemWithPanicle(p, x, y0 + 0.2, z, a, 0.28, 0.13, 0.16, 0x7ca834, C.ripe, C.gold, 0.019);
   }
 }
 
 export function makeRuong(level: number): THREE.Group {
-  const m = new ToonModel();
+  const m = new ToonModel(inkThin);
   const p = m.plain;
   const roof = roofFor(level);
   const lv = grown(level);
@@ -1616,29 +1732,40 @@ export const BANH_CHUNG = 0x4f7f35;
 export const BANH_GIAY = 0xf4efe0;
 export const LAT = 0xd8c48a;
 
-/** Khóm lúa nếp cái hoa vàng: 6 lá lúa xanh thẫm hình mũi mác vươn xòe, 4 bông nếp tròn mẩy màu ngà vàng uốn cong rủ sâu xuống về phía gốc như đuôi gà. */
-function nepClump(p: ShapeBuilder, x: number, z: number, h: number, seedAngle = 0): void {
-  p.cyl(0.036, 0.026, h * 0.72, NEP_STALK, x, 0.06 + h * 0.36, z, undefined, 6);
-  const leafH = h * 0.78;
-  for (let i = 0; i < 6; i++) {
-    const a = seedAngle + i * 1.05 + (i % 2) * 0.16;
-    const tilt = 0.36 + (i % 3) * 0.13;
-    const blade = new THREE.ConeGeometry(0.025, leafH * (0.88 + (i % 2) * 0.14), 4);
-    blade.scale(1, 1, 0.42);
-    blade.rotateX(tilt);
+/**
+ * Khóm lúa nếp cái hoa vàng (dựng đúng cấu trúc cây lúa — không có thân gỗ chính):
+ * - Gốc mạ có mô đất bùn nhỏ sát mặt nước.
+ * - Tầng lá mạ dưới uốn vòm sang hai bên, tầng lá đòng giữa vươn cao vút.
+ * - Mỗi bông nếp tròn mẩy màu ngà vàng được cắm trực tiếp vào một cuống mạ xanh mọc từ gốc vươn lên rồi uốn cong rủ bông xuống gốc.
+ */
+export function nepClump(p: ShapeBuilder, x: number, z: number, h: number, seedAngle = 0): void {
+  const y0 = 0.055;
+  p.sphere(0.056, C.soil, x, y0, z, [1.35, 0.36, 1.35], 6);
+
+  // 1. Tầng lá mạ dưới (4 lá): mọc từ gốc, uốn vòm rủ xuống xung quanh gốc
+  for (let i = 0; i < 4; i++) {
+    const a = seedAngle + (i / 4) * Math.PI * 2 + 0.35;
+    const blade = curvedLeafBladeGeo(0.026, h * 0.58, 0.15 + (i % 2) * 0.025, h * 0.27);
     blade.rotateY(a);
-    const rOff = 0.016 + Math.sin(tilt) * leafH * 0.42;
-    p.add(blade, i % 2 === 0 ? NEP_STALK : 0x5c7c2e, x + Math.sin(a) * rOff, 0.055 + Math.cos(tilt) * leafH * 0.44, z + Math.cos(a) * rOff);
+    p.add(blade, 0x5c8c2c, x, y0, z);
   }
+
+  // 2. Tầng lá đòng giữa (4 lá): bản lá dài vươn cao vút từ gốc lên quá tầm bông nếp
+  for (let i = 0; i < 4; i++) {
+    const a = seedAngle + 0.15 + (i / 4) * Math.PI * 2;
+    const lh = h * (1.12 + (i % 2) * 0.14);
+    const blade = curvedLeafBladeGeo(0.028, lh, 0.068 + (i % 2) * 0.03, lh * 0.06);
+    blade.rotateY(a);
+    p.add(blade, i % 2 === 0 ? NEP_STALK : 0x72a238, x, y0, z);
+  }
+
+  // 3. 4 cuống mạ xanh mọc thẳng từ gốc nước, mỗi cuống mang các cặp hạt nếp tròn mẩy màu ngà vàng uốn cong rủ sâu xuống gốc
   for (let k = 0; k < 4; k++) {
-    const a = seedAngle + 0.35 + k * 2.18;
-    const hScale = 0.84 + (k % 3) * 0.09;
-    const yBase = 0.06 + h * (0.68 * hScale);
-    const rise = h * (0.24 * hScale);
-    const drop = h * (0.62 + (k % 2) * 0.1) * hScale;
-    const ear = curvedPanicleGeo(0.135 + (k % 2) * 0.018, rise, drop, 0.028);
-    ear.rotateY(a);
-    p.add(ear, k % 2 === 0 ? NEP : 0xdcc47e, x + Math.sin(a) * 0.014, yBase, z + Math.cos(a) * 0.014);
+    const a = seedAngle + 0.68 + (k / 4) * Math.PI * 2 + (k % 2) * 0.18;
+    const hScale = 0.88 + (k % 3) * 0.09;
+    const stemH = h * 0.98 * hScale;
+    const drop = h * (0.5 + (k % 2) * 0.08) * hScale;
+    addStemWithPanicle(p, x, y0, z, a, stemH, 0.2 + (k % 2) * 0.025, drop, NEP_STALK, NEP, 0xd8be72, 0.024);
   }
 }
 
@@ -1674,7 +1801,7 @@ function nepBundle(p: ShapeBuilder, x: number, y: number, z: number): void {
 }
 
 export function makeRuongNep(level: number): THREE.Group {
-  const m = new ToonModel();
+  const m = new ToonModel(inkThin);
   const p = m.plain;
   const bank = 0.16 + level * 0.015;
   const LAT_DARK = 0x8a4c28;
