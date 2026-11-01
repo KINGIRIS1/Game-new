@@ -1265,6 +1265,73 @@ export function stageEnemies(def: StageDef): Partial<Record<EnemyType, number>> 
 /** Đánh lại màn đã qua được phần này của thưởng lần đầu. */
 export const REPLAY_SHARE = 0.3;
 
+/**
+ * Thử thách phó bản (chương 4 phần 4): thắng màn nào ở chế độ thường thì màn ấy mở một thử thách.
+ * - `giacDu`: giặc dữ, sát thương giặc nhân `GIAC_DU_DMG`;
+ * - `khongTuong`: trận không có tướng nào;
+ * - `haiBinh`: chỉ được mang hai binh chủng `units`.
+ */
+export type ChallengeKind = 'giacDu' | 'khongTuong' | 'haiBinh';
+export interface ChallengeDef {
+  kind: ChallengeKind;
+  /** Thử thách Hai binh chủng: hai binh chủng được mang. */
+  units?: [UnitType, UnitType];
+  /** Hệ số máu giặc của thử thách (thay cho hệ số của màn thường). */
+  hpScale: number;
+}
+export const GIAC_DU_DMG = 1.25;
+const du = (hpScale: number): ChallengeDef => ({ kind: 'giacDu', hpScale });
+const kt = (hpScale: number): ChallengeDef => ({ kind: 'khongTuong', hpScale });
+const hai = (a: UnitType, b: UnitType, hpScale: number): ChallengeDef => ({ kind: 'haiBinh', units: [a, b], hpScale });
+/**
+ * Thử thách của từng màn 1–32 (chỉ số 0 là màn 1). Giặc dữ ở các màn có trùm và màn 1, 3. Hai binh chủng thường bỏ
+ * cung thủ, binh chủng khắc loại giặc đông nhất của màn (màn 13, 21 bỏ voi chiến); từ màn 26 có lính nỏ.
+ * Hệ số máu giặc đo bằng test (`thuThach.test.ts`): người chơi giỏi thắng, người chơi thường thua.
+ */
+export const CHALLENGES: ChallengeDef[] = [
+  du(58),
+  hai('giao', 'voi', 24),
+  du(16),
+  du(8.5),
+  kt(3.5),
+  hai('giao', 'voi', 3.5),
+  kt(2.4),
+  du(2.2),
+  kt(3.15),
+  hai('giao', 'voi', 4),
+  kt(1.9),
+  du(2.9),
+  hai('giao', 'cung', 4.1),
+  kt(1.4),
+  hai('giao', 'voi', 3),
+  du(1.8),
+  kt(1.7),
+  hai('giao', 'voi', 3.2),
+  du(2.8),
+  kt(1.1),
+  hai('giao', 'cung', 3.3),
+  kt(0.95),
+  hai('giao', 'voi', 2.6),
+  du(2.05),
+  kt(1.05),
+  hai('giao', 'no', 3.15),
+  kt(0.85),
+  du(2.2),
+  hai('voi', 'no', 2.6),
+  kt(0.95),
+  hai('giao', 'no', 3.1),
+  du(3.3),
+];
+/** Huân công cho lần đầu thắng thử thách, theo chương của màn: màn 1–8 được 1, … màn 25–32 được 4. */
+export const HUAN_REWARD: Record<Chapter, number> = { 1: 1, 2: 2, 3: 3, 4: 4 };
+/** Nhánh huân công: bốn binh chủng và tướng (cho mọi tướng). */
+export type HuanBranch = UnitType | 'tuong';
+export const HUAN_BRANCHES: HuanBranch[] = ['giao', 'cung', 'voi', 'no', 'tuong'];
+/** Giá bậc 1, 2, 3 của mỗi nhánh. Một nhánh hết 16, năm nhánh hết 80, bằng huân công của cả 32 thử thách. */
+export const HUAN_COST = [3, 5, 8];
+/** Mỗi bậc huân công thêm chừng này vào máu và sức đánh của nhánh ấy, ở mọi trận. */
+export const HUAN_BONUS = 0.04;
+
 /** Kỹ năng bấm tay trong trận: Trống trận của Lạc tướng, hai kỹ năng của mỗi tướng Gióng, Sơn Tinh, An Dương Vương, Cao Lỗ. */
 export type SkillId = 'trongTran' | 'phunLua' | 'nhoTre' | 'bocDoi' | 'doiNon' | 'noThan' | 'ruaVang' | 'lienChau' | 'lenhBan';
 export const SKILL_IDS: SkillId[] = ['trongTran', 'phunLua', 'nhoTre', 'bocDoi', 'doiNon', 'noThan', 'ruaVang', 'lienChau', 'lenhBan'];

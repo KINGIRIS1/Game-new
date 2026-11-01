@@ -28,6 +28,7 @@ import {
   GIONG,
   HERO_CLEAVE,
   HILL,
+  HUAN_BONUS,
   KIM_QUY,
   LOOT_FRACTION,
   NO_THAN,
@@ -57,8 +58,10 @@ import {
   U_NO,
   yeuForces,
   yeuHpScale,
+  type ChallengeKind,
   type EnemyType,
   type FighterStats,
+  type HuanBranch,
   type Foe,
   type Resources,
   type Row,
@@ -243,6 +246,12 @@ export interface Battle {
   exitAt?: number;
   /** Bậc binh khí đã rèn của từng binh chủng ta (0–2): thêm máu và sức đánh. */
   arms: Record<UnitType, number>;
+  /** Bậc huân công của từng nhánh (0–3): thêm máu và sức đánh. Bản lưu cũ không có thì coi như 0. */
+  huan?: Record<HuanBranch, number>;
+  /** Trận thử thách phó bản: kiểu thử thách. */
+  challenge?: ChallengeKind;
+  /** Thử thách Giặc dữ: sát thương giặc gây cho quân ta nhân chừng này. */
+  fury?: number;
   /** Mùa lũ thứ mấy (0 nếu không phải mùa lũ). */
   flood: number;
   /** Mực nước lũ sẽ dâng tới (bậc), 0 nếu không có lũ. */
@@ -361,6 +370,15 @@ export function armsBonus(battle: Pick<Battle, 'arms'>, kind: FighterKind): numb
   return kind in UNITS ? (battle.arms[kind as UnitType] ?? 0) * ARMS_BONUS : 0;
 }
 
+/** Phần huân công cộng thêm vào máu và sức đánh: lính theo nhánh binh chủng, tướng theo nhánh tướng (giặc không có). */
+export function huanBonus(battle: Pick<Battle, 'huan'>, kind: FighterKind): number {
+  const branch: HuanBranch | null = kind in UNITS ? (kind as UnitType) : isHero(kind) ? 'tuong' : null;
+  return branch ? (battle.huan?.[branch] ?? 0) * HUAN_BONUS : 0;
+}
+
+/** Hệ số máu và sức đánh của một người bên ta: Đền, phúc lành, binh khí đã rèn, huân công. */
+const ownMult = (battle: Battle, kind: FighterKind) => 1 + battle.bonus + armsBonus(battle, kind) + huanBonus(battle, kind);
+
 /** Kỹ năng của từng tướng: kỹ năng đầu có ngay, kỹ năng sau mở giữa chương. */
 export function heroSkills(hero: HeroSetup): SkillId[] {
   if (hero.kind === 'sonTinh') return hero.non ? ['bocDoi', 'doiNon'] : ['bocDoi'];
@@ -376,7 +394,7 @@ export function heroSkills(hero: HeroSetup): SkillId[] {
 function addHero(battle: Battle, hero: HeroSetup, x: number, z: number, hpMul: number): void {
   battle.hero = { ...hero, down: false };
   battle.skills.push(...heroSkills(hero));
-  const f = newFighter(battle, 'ta', hero.kind, x, z, statsOf(hero.kind).hp * hpMul * (1 + battle.bonus));
+  const f = newFighter(battle, 'ta', hero.kind, x, z, statsOf(hero.kind).hp * hpMul * ownMult(battle, hero.kind));
   battle.fighters.push(f);
 }
 
@@ -393,6 +411,8 @@ export interface BattleOpts {
   fewerBoats?: boolean;
   /** Bậc binh khí đã rèn của từng binh chủng. */
   arms?: Record<UnitType, number>;
+  /** Bậc huân công của từng nhánh. */
+  huan?: Record<HuanBranch, number>;
 }
 
 /**
@@ -416,6 +436,7 @@ export function startBattle(state: GameState, wave: number, side: RaidSide, opts
   battle.bonus = opts.bonus ?? 0;
   battle.crossbows = opts.crossbows ?? false;
   if (opts.arms) battle.arms = { ...opts.arms };
+  if (opts.huan) battle.huan = { ...opts.huan };
   const land = opts.land ?? null;
   battle.geo = RAID_SCALE;
   const rand = rng(wave * 7919 + ['bac', 'tay', 'nam', 'dong'].indexOf(side) + 1);
@@ -476,7 +497,7 @@ export function startBattle(state: GameState, wave: number, side: RaidSide, opts
       for (let i = 0; i < guard[kind]; i++) {
         const x = barracks.x + def.w / 2 + (rand() - 0.5) * def.w;
         const z = barracks.z + def.d / 2 + (rand() - 0.5) * def.d;
-        battle.fighters.push(newFighter(battle, 'ta', kind, x, z, UNITS[kind].hp * (1 + battle.bonus + armsBonus(battle, kind))));
+        battle.fighters.push(newFighter(battle, 'ta', kind, x, z, UNITS[kind].hp * ownMult(battle, kind)));
       }
     }
   }
@@ -613,6 +634,10 @@ export interface FieldSetup {
   hero?: HeroSetup | null;
   bonus?: number;
   arms?: Record<UnitType, number>;
+  huan?: Record<HuanBranch, number>;
+  /** Trận thử thách: kiểu thử thách; Giặc dữ thì sát thương giặc nhân `fury`. */
+  challenge?: ChallengeKind;
+  fury?: number;
 }
 
 /** An Dương Vương, Cao Lỗ bắn nỏ: đứng lùi sau hàng đầu của quân ta chừng này ô. */
@@ -630,13 +655,16 @@ export function startFieldBattle(setup: FieldSetup): Battle {
   battle.bonus = setup.bonus ?? 0;
   battle.hpScale = setup.hpScale;
   if (setup.arms) battle.arms = { ...setup.arms };
+  if (setup.huan) battle.huan = { ...setup.huan };
+  if (setup.challenge) battle.challenge = setup.challenge;
+  if (setup.fury) battle.fury = setup.fury;
   const rand = rng(setup.id * 7919 + setup.stage);
   const ours: Record<Row, FighterKind[]> = { tien: [], trung: [], hau: [] };
   for (const k of UNIT_TYPES) for (let i = 0; i < (setup.army[k] ?? 0); i++) ours[setup.rows[k]].push(k);
   const theirs: Record<Row, FighterKind[]> = { tien: [], trung: [], hau: [] };
   for (const k of Object.keys(setup.enemies) as EnemyType[]) for (let i = 0; i < (setup.enemies[k] ?? 0); i++) theirs[ENEMY_ROWS[k]].push(k);
   const front = (FIELD.d - FIELD.gap) / 2;
-  deploy(battle, 'ta', ours, FIELD.d - front, 1, rand, (k) => UNITS[k as UnitType].hp * FIELD.hpMul * (1 + battle.bonus + armsBonus(battle, k)));
+  deploy(battle, 'ta', ours, FIELD.d - front, 1, rand, (k) => UNITS[k as UnitType].hp * FIELD.hpMul * ownMult(battle, k));
   deploy(battle, 'giac', theirs, front, -1, rand, (k) => ENEMIES[k as EnemyType].hp * setup.hpScale * FIELD.hpMul);
   battle.total = battle.fighters.filter((f) => f.side === 'giac').length;
   // Màn cầm cự: các đợt sau chưa tới bãi, nhưng vẫn tính vào tổng số giặc.
@@ -882,9 +910,10 @@ function moveToward(f: Fighter, tx: number, tz: number, dt: number, mult = 1, ge
 
 function damageFighter(battle: Battle, attacker: { kind?: FighterKind; dmg: number }, target: Fighter): void {
   const bonus = attacker.kind && statsOf(attacker.kind).strongVs?.includes(target.kind as UnitType | EnemyType) ? 2 : 1;
-  // Rùa Vàng che chở: quân ta chỉ chịu một phần sát thương.
+  // Rùa Vàng che chở: quân ta chỉ chịu một phần sát thương. Thử thách Giặc dữ: giặc đánh đau hơn.
   const shield = target.side === 'ta' && battle.shield > 0 ? KIM_QUY.reduce : 1;
-  target.hp -= attacker.dmg * bonus * shield;
+  const fury = target.side === 'ta' ? (battle.fury ?? 1) : 1;
+  target.hp -= attacker.dmg * bonus * shield * fury;
   if (isHero(target.kind)) {
     // Tướng không chết: hết sức thì rút khỏi trận, nghỉ một lúc.
     if (target.hp <= 0 && target.state !== 'gone') {
@@ -908,7 +937,7 @@ function damageFighter(battle: Battle, attacker: { kind?: FighterKind; dmg: numb
 function strike(battle: Battle, f: Fighter, foe: Fighter): void {
   const st = statsOf(f.kind);
   if (st.range > 2) emit(battle, { kind: 'shot', x: f.x, z: f.z, tx: foe.x, tz: foe.z, by: f.kind });
-  const mult = f.side === 'ta' ? (1 + battle.bonus + armsBonus(battle, f.kind)) * (battle.rally > 0 ? RALLY.dmg : 1) : 1;
+  const mult = f.side === 'ta' ? ownMult(battle, f.kind) * (battle.rally > 0 ? RALLY.dmg : 1) : 1;
   const dmg = st.dmg * mult;
   damageFighter(battle, { kind: f.kind, dmg }, foe);
   if (isHero(f.kind)) {
@@ -1374,7 +1403,7 @@ export function useSkill(battle: Battle, skill: SkillId): boolean {
   const def = SKILLS[skill];
   battle.skillCd[skill] = def.cooldown;
   // Ngoài bãi mọi người bền hơn, nên đòn kỹ năng cũng mạnh lên tương ứng.
-  const scale = (battle.mode === 'field' ? FIELD.hpMul : 1) * (1 + battle.bonus);
+  const scale = (battle.mode === 'field' ? FIELD.hpMul : 1) * (1 + battle.bonus + (battle.huan?.tuong ?? 0) * HUAN_BONUS);
   const g = geoOf(battle);
   if (skill === 'trongTran') {
     battle.rally = def.duration;

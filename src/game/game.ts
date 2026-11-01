@@ -4,6 +4,7 @@
 import { startBattle, stepBattle, type Battle, type RaidSide } from './battle';
 import { updateCampaign } from './campaign';
 import { initialCaoLo } from './caoLo';
+import { huanTiers, initialThuThach } from './thuThach';
 import { inChapter4 } from './chuong4';
 import { advJoined, initialAdv, inChapter3, ruaVangCame, wallRings } from './coLoa';
 import { heroFor, inChapter2, initialSon, restAfter, sonJoined } from './son';
@@ -54,6 +55,7 @@ import {
   UNIT_TYPES,
   type BuildingType,
   type Chapter,
+  type ChallengeKind,
   type Cost,
   type Foe,
   type QuestDef,
@@ -61,6 +63,7 @@ import {
   type Resources,
   type GearId,
   type GiftId,
+  type HuanBranch,
   type Row,
   type TuongId,
   type Unlock,
@@ -150,6 +153,8 @@ export interface StageResult {
   reward: Cost;
   /** Lễ vật giành được khi thắng lần đầu màn này. */
   gift?: GiftId;
+  /** Trận thử thách: kiểu thử thách, huân công được (0 khi đã thắng thử thách này rồi, hay thua). */
+  challenge?: { kind: ChallengeKind; huan: number };
 }
 
 export interface CampaignState {
@@ -206,6 +211,16 @@ export interface AdvState {
   bien: boolean;
 }
 
+/** Thử thách phó bản và huân công (`thuThach.ts`). */
+export interface ThuThachState {
+  /** Các màn đã thắng thử thách, xếp tăng dần. */
+  won: number[];
+  /** Huân công đang có, chưa tiêu. */
+  huan: number;
+  /** Bậc huân công đã mua của từng nhánh (0–3). */
+  bac: Record<HuanBranch, number>;
+}
+
 export interface CaoLoState {
   /** Đồng hồ chơi lúc Cao Lỗ hồi sức sau khi kiệt sức trong trận. */
   restUntil: number;
@@ -255,7 +270,7 @@ export interface Merchant {
 }
 
 /** Phiên bản bản lưu hiện tại (11: kinh đô lớn; 12: khoảnh tự chọn; 13: lính nỏ, ụ nỏ; 14: Cao Lỗ, vua xuống biển). */
-export const SAVE_VERSION = 14;
+export const SAVE_VERSION = 15;
 
 export interface GameState {
   version: typeof SAVE_VERSION;
@@ -287,6 +302,7 @@ export interface GameState {
   son: SonState;
   adv: AdvState;
   caoLo: CaoLoState;
+  thuThach: ThuThachState;
   /** Hội Tết bánh chưng bánh giầy. */
   tet: TetState;
   story: { seen: StoryId[] };
@@ -369,7 +385,11 @@ export type FailReason =
   | 'khongCoUNo'
   | 'canKetChuong4'
   | 'canCaoLo'
-  | 'caoLoKietSuc';
+  | 'caoLoKietSuc'
+  | 'thuThachKhoa'
+  | 'thuThachBinhChung'
+  | 'huanToiDa'
+  | 'thieuHuanCong';
 
 export type Result<T = undefined> = { ok: true; value: T } | { ok: false; reason: FailReason };
 
@@ -430,6 +450,7 @@ export function createInitialState(now: number): GameState {
     son: initialSon(),
     adv: initialAdv(),
     caoLo: initialCaoLo(),
+    thuThach: initialThuThach(),
     tet: initialTet(),
     story: { seen: [] },
     settings: { muted: false },
@@ -1374,6 +1395,7 @@ function updateRaid(state: GameState, ms: number): void {
       crossbows: hasCoLoa(state),
       fewerBoats: hasCuong(state),
       arms: state.arms,
+      huan: huanTiers(state),
     });
     return;
   }

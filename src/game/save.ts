@@ -2,17 +2,20 @@
 // Bản lưu cũ (phiên bản 1 của lát cắt 1, 2 của lát cắt 2a, 3 của lát cắt 2b, 4 của lát cắt 3a,
 // 5 của lát cắt 3b, 6 của chương 2, 7 của chương 3, 8 của cấp 6–7, 9 của Hội Tết, 10 của cấp 8) được nâng lên phiên bản
 // hiện tại khi nạp. Phiên bản 13 là chương 4 phần 2 (lính nỏ, ụ nỏ, thủy binh Triệu), 14 là chương 4 phần 3 (Cao Lỗ,
-// vua xuống biển). Bản lưu còn ở kinh đô nhỏ (trước phiên bản 11) được dựng lại thành kinh đô lớn theo mẫu (`xepLai.ts`).
+// vua xuống biển), 15 là chương 4 phần 4 (thử thách phó bản, huân công). Bản lưu còn ở kinh đô nhỏ (trước phiên bản 11) được dựng lại thành kinh đô lớn theo mẫu (`xepLai.ts`).
 
 import { deflateSync, inflateSync } from 'fflate';
 import {
   BUILDINGS,
   GEAR_IDS,
   GIFT_IDS,
+  HUAN_BRANCHES,
+  HUAN_COST,
   MERCHANT_FIRST_MS,
   QUEST_INSERTED_V4,
   RESOURCE_IDS,
   ROWS,
+  STAGES,
   TUONG_IDS,
   UNIT_TYPES,
   type BuildingType,
@@ -25,6 +28,7 @@ import { SAVE_VERSION, autoAssign, housing, initialCampaign, initialGiong, initi
 import { GRID, baseHeights, isRiver } from './map';
 import { initialSon } from './son';
 import { initialTet } from './tet';
+import { initialThuThach } from './thuThach';
 import { footprintTop, levelFootprint } from './terrain';
 import { KHOANH_N, V11_AREA, squareKhoanh } from './khoanh';
 import { isLegacyLayout, legacyBaseHeights, levelLegacyFootprints, relayLegacy } from './xepLai';
@@ -77,6 +81,7 @@ function migrate(raw: unknown): unknown {
   if (isObj(v) && v.version === 11) v = migrate11to12(v);
   if (isObj(v) && v.version === 12) v = migrate12to13(v);
   if (isObj(v) && v.version === 13) v = migrate13to14(v);
+  if (isObj(v) && v.version === 14) v = migrate14to15(v);
   return v;
 }
 
@@ -287,6 +292,16 @@ function migrate13to14(s: Raw): Raw {
   return s;
 }
 
+/**
+ * Phiên bản 14 → 15 (thử thách phó bản và huân công): thêm thử thách đã thắng, huân công đang có, bậc huân công từng
+ * nhánh. Người chơi phiên bản 14 chưa đánh thử thách nào.
+ */
+function migrate14to15(s: Raw): Raw {
+  s.version = 15;
+  s.thuThach = initialThuThach();
+  return s;
+}
+
 const isBanh = (v: unknown, test: (x: unknown) => boolean): boolean => isObj(v) && test(v.chung) && test(v.giay);
 const isBool = (x: unknown) => typeof x === 'boolean';
 
@@ -335,6 +350,9 @@ function isGameState(v: unknown): v is GameState {
   if (typeof adv.layTrao !== 'boolean' || typeof adv.bien !== 'boolean') return false;
   const cao = v.caoLo;
   if (!isObj(cao) || !isNum(cao.restUntil) || typeof cao.lenhBan !== 'boolean') return false;
+  const tt = v.thuThach;
+  if (!isObj(tt) || !isNum(tt.huan) || tt.huan < 0 || !Array.isArray(tt.won) || !tt.won.every((n) => isNum(n) && n >= 1 && n <= STAGES.length)) return false;
+  if (!isObj(tt.bac) || !HUAN_BRANCHES.every((k) => isNum((tt.bac as Raw)[k]) && ((tt.bac as Raw)[k] as number) >= 0 && ((tt.bac as Raw)[k] as number) <= HUAN_COST.length)) return false;
   const g = v.giong;
   if (!isObj(g) || !isNum(g.fed) || !isNum(g.restUntil) || !isObj(g.gear)) return false;
   if (!GEAR_IDS.every((k) => typeof (g.gear as Raw)[k] === 'boolean')) return false;
