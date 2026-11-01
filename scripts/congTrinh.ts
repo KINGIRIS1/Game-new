@@ -1,109 +1,134 @@
-// Bảng công trình cho scripts/chup-cong-trinh.mjs: dựng dáng cũ và dáng móng mới (src/render/mongMoi.ts) ở từng cấp
+// Bảng công trình cho scripts/chup-cong-trinh.mjs: dựng dáng cũ và dáng móng mới (src/render/congTrinh/) ở từng cấp
 // trên cùng tỉ lệ ô đất, có người đứng để so cỡ, rồi chụp bằng camera nhìn chéo như trong game.
 // Chạy trong trình duyệt qua Vite.
 
 import * as THREE from 'three';
-import { dienFloor, makeDien, makeNhaSan } from '../src/render/buildings';
+import { BUILDINGS, type BuildingType } from '../src/game/defs';
+import {
+  dienFloor,
+  makeBaiDa,
+  makeBen,
+  makeChuongVoi,
+  makeDien,
+  makeDoanhTrai,
+  makeKho,
+  makeLoRen,
+  makeNhaSan,
+  makeRuong,
+  makeTraiCung,
+  makeTraiGiao,
+} from '../src/render/buildings';
+import type { Dock, LotSpot } from '../src/render/congTrinh/chung';
+import { CONG_TRINH } from '../src/render/congTrinh/index';
 import { addSunLights } from '../src/render/lights';
-import { dienSpots, makeDienMoi, makeNhaSanMoi, nhaSanSpots } from '../src/render/mongMoi';
+import { makeBoat, makeTradeBoat } from '../src/render/models';
 import { C } from '../src/render/palette';
-import { makeWorker, type Job } from '../src/render/people';
+import { makeWorker } from '../src/render/people';
+import { vi } from '../src/text/vi';
 import type { Poser } from '../src/render/rig';
 
 /** Người trong kinh đô cao chừng này lần dáng gốc (như dân ở công trình cấp 5 trong game). */
 const PERSON = 0.85 * 1.05;
+/** Mặt nước sông thấp hơn mặt đất chừng này (như world.ts). */
+const WATER_Y = -0.28;
 
-interface Person {
-  job: Job;
-  x: number;
-  y: number;
-  z: number;
-  ry: number;
-}
-
-interface Version {
-  /** Cạnh móng (ô). */
-  tiles: number;
-  make: (level: number) => THREE.Group;
-  /** Người đứng ở cấp này, tọa độ thế giới tính từ tâm móng. */
-  people: (level: number) => Person[];
-}
-
-interface Kind {
-  ten: string;
-  cu: Version;
-  moi: Version;
-  /** Nửa chiều cao khung nhìn (ô) và độ cao tâm nhìn khi chụp từng cấp. */
-  half: number;
-  lookY: number;
-  /** Điểm ảnh mỗi ô khi chụp từng cấp. */
-  px: number;
-}
-
-const KINDS: Record<string, Kind> = {
-  dien: {
-    ten: 'Điện Vua Hùng',
-    half: 5.4,
-    lookY: 1.9,
-    px: 44,
-    cu: {
-      tiles: 4,
-      make: makeDien,
-      // Như world.ts: Lạc hầu và lính gác đứng trên nền trước thềm, theo cỡ Điện.
-      people: (lv) => {
-        const k = Math.min(0.8 + 0.05 * lv, 1.05);
-        const y = dienFloor(lv) * k;
-        return [
-          { job: 'lacHau', x: 0.75 * k, y, z: 1.75 * k, ry: 0 },
-          ...(lv >= 2 ? [{ job: 'linhGac' as Job, x: -1.0 * k, y, z: 1.8 * k, ry: 0.2 }] : []),
-        ];
-      },
-    },
-    moi: {
-      tiles: 5,
-      make: makeDienMoi,
-      people: (lv) => dienSpots(lv).map((s, i) => ({ job: i ? 'linhGac' : 'lacHau', ...s })),
-    },
+/** Dáng cũ, để so: móng cũ, hàm dựng cũ, chỗ đứng cũ (chép từ world.ts trước khi đổi móng). */
+const CU: Partial<Record<BuildingType, { tiles: number; make: (level: number) => THREE.Group; spots: LotSpot[] }>> = {
+  dien: { tiles: 4, make: makeDien, spots: [] },
+  ruong: {
+    tiles: 3,
+    make: makeRuong,
+    spots: [
+      { job: 'nong', x: -0.35, y: 0.06, z: -0.3, ry: 0.4 },
+      { job: 'nong', x: 0.7, y: 0.06, z: -0.25, ry: -0.3 },
+      { job: 'nong', x: -0.8, y: 0.06, z: 0.3, ry: 0.9 },
+      { job: 'nong', x: 0.2, y: 0.06, z: 0.45, ry: -0.8 },
+      { job: 'nong', x: -0.25, y: 0.06, z: 1.05, ry: 0.2 },
+    ],
+  },
+  ben: {
+    tiles: 2,
+    make: makeBen,
+    spots: [
+      { job: 'buon', x: -0.45, y: 0.5, z: 0.05, ry: 0 },
+      { job: 'buon', x: 0.45, y: 0.5, z: 0.0, ry: 0 },
+      { job: 'buon', x: 0.55, y: 0.38, z: 1.3, ry: 0 },
+      { job: 'buon', x: -0.2, y: 0.5, z: -0.7, ry: 0 },
+    ],
   },
   nhaSan: {
-    ten: 'Nhà sàn',
-    half: 3.2,
-    lookY: 1.0,
-    px: 64,
-    cu: {
-      tiles: 2,
-      make: makeNhaSan,
-      people: (lv) => {
-        const k = Math.min(1, 1.05 / (0.8 + 0.05 * lv));
-        const g = 0.8 + 0.05 * lv;
-        const spots: Person[] = [
-          { job: 'phuNu', x: 0.65 * k * g, y: 0.06 * g, z: 0.7 * k * g, ry: 0.4 },
-          { job: 'phuNu', x: -0.65 * k * g, y: 0.06 * g, z: 0.35 * k * g, ry: -0.6 },
-        ];
-        return spots.slice(0, lv >= 2 ? 2 : 1);
-      },
-    },
-    moi: {
-      tiles: 3,
-      make: makeNhaSanMoi,
-      people: (lv) => nhaSanSpots().slice(0, lv >= 2 ? 2 : 1).map((s) => ({ job: 'phuNu' as Job, ...s })),
-    },
+    tiles: 2,
+    make: makeNhaSan,
+    spots: [
+      { job: 'phuNu', x: 0.65, y: 0.06, z: 0.7, ry: 0.4 },
+      { job: 'phuNu', x: -0.65, y: 0.06, z: 0.35, ry: -0.6 },
+    ],
   },
+  baiDa: {
+    tiles: 2,
+    make: makeBaiDa,
+    spots: [
+      { job: 'thoDa', x: 0.15, y: 0.1, z: 0.15, ry: 0.6 },
+      { job: 'thoDa', x: 0.65, y: 0.1, z: 0.1, ry: -0.5 },
+      { job: 'thoDa', x: -0.55, y: 0.1, z: 0.0, ry: 2.6 },
+      { job: 'thoDa', x: -0.75, y: 0.1, z: 0.35, ry: -2 },
+      { job: 'thoDa', x: 0.92, y: 0.1, z: -0.18, ry: 2.8 },
+    ],
+  },
+  loRen: {
+    tiles: 2,
+    make: makeLoRen,
+    spots: [
+      { job: 'thoRen', x: 0.45, y: 0.08, z: 0.82, ry: Math.PI },
+      { job: 'thoRen', x: -0.15, y: 0.08, z: 0.3, ry: -2.4 },
+      { job: 'thoRen', x: -0.6, y: 0.08, z: 0.55, ry: 2.6 },
+      { job: 'thoRen', x: 0.62, y: 0.08, z: -0.1, ry: -1.6 },
+    ],
+  },
+  kho: { tiles: 2, make: makeKho, spots: [{ job: 'giuKho', x: -0.1, y: 0.06, z: 0.7, ry: 0 }] },
+  doanhTrai: {
+    tiles: 3,
+    make: makeDoanhTrai,
+    spots: [
+      { job: 'linhGac', x: -0.2, y: 0.08, z: 1.0, ry: 0 },
+      { job: 'linhGac', x: 0.95, y: 0.08, z: 0.3, ry: -0.6 },
+    ],
+  },
+  traiGiao: { tiles: 2, make: () => makeTraiGiao(), spots: [] },
+  traiCung: { tiles: 2, make: () => makeTraiCung(), spots: [] },
+  chuongVoi: { tiles: 2, make: () => makeChuongVoi(), spots: [] },
 };
+
+/** Số người hiện ra như world.ts: công trình cần người làm thì đủ chỗ làm của cấp ấy, nhà sàn và doanh trại 1–2 người, còn lại 1. */
+function peopleCount(type: BuildingType, level: number, spots: number): number {
+  const work = BUILDINGS[type].workers;
+  if (work) return Math.min(work[Math.min(level, work.length) - 1], spots);
+  if (type === 'nhaSan' || type === 'doanhTrai' || type === 'dien') return Math.min(level >= 2 ? 2 : 1, spots);
+  return Math.min(1, spots);
+}
 
 const AZ = Math.PI / 4;
 const EL = THREE.MathUtils.degToRad(38);
 
-/** Mặt cỏ `size` ô quanh gốc, có đường kẻ ô để đếm được móng. Móng công trình tô đậm hơn. */
-function groundPatch(size: number, lots: { x: number; z: number; tiles: number }[]): THREE.Group {
+/** Mặt cỏ `size` ô quanh gốc có đường kẻ ô; `riverFrom`: từ z này trở ra là sông. Móng công trình viền đen. */
+function groundPatch(size: number, lots: { x: number; z: number; tiles: number }[], riverFrom?: number): THREE.Group {
   const g = new THREE.Group();
-  const grass = new THREE.Mesh(new THREE.BoxGeometry(size, 0.2, size), new THREE.MeshLambertMaterial({ color: C.grass[0] }));
-  grass.position.y = -0.1;
+  const h = size / 2;
+  const landD = riverFrom === undefined ? size : riverFrom + h;
+  const grass = new THREE.Mesh(new THREE.BoxGeometry(size, 0.2, landD), new THREE.MeshLambertMaterial({ color: C.grass[0] }));
+  grass.position.set(0, -0.1, -h + landD / 2);
   grass.receiveShadow = true;
   g.add(grass);
+  if (riverFrom !== undefined) {
+    const water = new THREE.Mesh(new THREE.BoxGeometry(size, 0.05, size - landD), new THREE.MeshLambertMaterial({ color: C.water[0] }));
+    water.position.set(0, WATER_Y - 0.03, riverFrom + (size - landD) / 2);
+    g.add(water);
+  }
   const pts: number[] = [];
-  const h = size / 2;
-  for (let i = -h; i <= h + 1e-6; i++) pts.push(i, 0.004, -h, i, 0.004, h, -h, 0.004, i, h, 0.004, i);
+  for (let i = -h; i <= h + 1e-6; i++) {
+    pts.push(i, 0.004, -h, i, 0.004, -h + landD);
+    if (i <= -h + landD + 1e-6) pts.push(-h, 0.004, i, h, 0.004, i);
+  }
   const geo = new THREE.BufferGeometry();
   geo.setAttribute('position', new THREE.Float32BufferAttribute(pts, 3));
   g.add(new THREE.LineSegments(geo, new THREE.LineBasicMaterial({ color: 0x4a5a2a, transparent: true, opacity: 0.45 })));
@@ -119,18 +144,63 @@ function groundPatch(size: number, lots: { x: number; z: number; tiles: number }
   return g;
 }
 
-function place(scene: THREE.Scene, v: Version, level: number, x: number, z: number): void {
+function addPeople(group: THREE.Group, spots: LotSpot[], scale: number, spread: number): void {
+  for (const p of spots) {
+    const w = makeWorker(p.job);
+    w.position.set(p.x * spread, p.y, p.z * spread);
+    w.rotation.y = p.ry;
+    w.scale.setScalar(scale);
+    (w.userData.pose as Poser | undefined)?.({ act: 'stand', time: 0.3 });
+    group.add(w);
+  }
+}
+
+function addDocks(group: THREE.Group, docks: Dock[], spread = 1): void {
+  for (const d of docks) {
+    const boat = d.kind === 'trader' ? makeTradeBoat() : makeBoat();
+    boat.position.set(d.x * spread, WATER_Y - 0.02, d.z * spread);
+    boat.rotation.y = d.ry;
+    if (d.scale) boat.scale.setScalar(d.scale);
+    group.add(boat);
+  }
+}
+
+/** Dáng cũ ở cấp `level`, đặt như world.ts đặt (người là con của mô hình, theo cỡ và hệ số thu tâm). */
+function placeOld(scene: THREE.Scene, type: BuildingType, level: number, x: number, z: number): void {
+  const v = CU[type]!;
   const b = v.make(level);
   b.position.set(x, 0, z);
-  scene.add(b);
-  for (const p of v.people(level)) {
-    const w = makeWorker(p.job);
-    w.position.set(x + p.x, p.y, z + p.z);
-    w.rotation.y = p.ry;
-    w.scale.setScalar(PERSON);
-    (w.userData.pose as Poser | undefined)?.({ act: 'stand', time: 0.3 });
-    scene.add(w);
+  const spread = (b.userData.spread as number | undefined) ?? 1;
+  if (type === 'dien') {
+    const y = dienFloor(level);
+    const spots: LotSpot[] = [{ job: 'lacHau', x: 0.75, y, z: 1.75, ry: 0 }, ...(level >= 2 ? [{ job: 'linhGac' as const, x: -1.0, y, z: 1.8, ry: 0.2 }] : [])];
+    addPeople(b, spots, 0.85, 1);
+  } else addPeople(b, v.spots.slice(0, peopleCount(type, level, v.spots.length)), 0.85 * spread, spread);
+  if (type === 'ben') {
+    const docks: Dock[] = [{ kind: 'small', x: -0.15, z: 1.75, ry: 0 }];
+    if (level >= 6) docks.push({ kind: 'trader', x: 1.35, z: 2.5, ry: Math.PI / 2 });
+    if (level >= 8) docks.push({ kind: 'trader', x: -1.0, z: 3.3, ry: -Math.PI / 2, scale: 0.85 });
+    // Thuyền là con của bến (bến to theo cấp): chia cho cỡ bến để thuyền vẫn nổi đúng mặt nước.
+    for (const d of docks) {
+      const boat = d.kind === 'trader' ? makeTradeBoat() : makeBoat();
+      boat.position.set(d.x * spread, (WATER_Y - 0.02) / b.scale.y, d.z * spread);
+      boat.rotation.y = d.ry;
+      if (d.scale) boat.scale.setScalar(d.scale);
+      b.add(boat);
+    }
   }
+  scene.add(b);
+}
+
+/** Dáng mới ở cấp `level`: người giữ cỡ, không thu tâm. */
+function placeNew(scene: THREE.Scene, type: BuildingType, level: number, x: number, z: number): void {
+  const v = CONG_TRINH[type]!;
+  const b = v.make(level);
+  b.position.set(x, 0, z);
+  const spots = v.spots(level);
+  addPeople(b, spots.slice(0, peopleCount(type, level, spots.length)), PERSON, 1);
+  if (v.docks) addDocks(b, v.docks(level));
+  scene.add(b);
 }
 
 function render(renderer: THREE.WebGLRenderer, scene: THREE.Scene, w: number, h: number, half: number, target: THREE.Vector3): string {
@@ -160,22 +230,36 @@ function makeRenderer(): THREE.WebGLRenderer {
   return renderer;
 }
 
-/** Từng cấp: mỗi cấp một cặp ảnh cũ, mới cùng tỉ lệ. */
-export function chupCap(loai: string): { cap: number; cu: string; moi: string }[] {
-  const k = KINDS[loai];
-  if (!k) throw new Error(`Không có công trình ${loai}. Có: ${Object.keys(KINDS).join(', ')}`);
+export interface Shot {
+  cap: number;
+  cu: string;
+  moi: string;
+}
+
+/** Từng cấp của một loại: mỗi cấp một cặp ảnh cũ, mới cùng tỉ lệ ô đất. Loại một cấp thì chỉ một cặp. */
+export function chupCap(loai: string): Shot[] {
+  const type = loai as BuildingType;
+  const moi = CONG_TRINH[type];
+  const cu = CU[type];
+  if (!moi || !cu) throw new Error(`Không có công trình ${loai}. Có: ${Object.keys(CONG_TRINH).join(', ')}`);
   const renderer = makeRenderer();
-  const size = k.moi.tiles + 2;
-  const h = Math.round(2 * k.half * k.px);
+  // Bến có thêm dải sông phía trước cho cầu tàu và thuyền.
+  const size = moi.tiles + (type === 'ben' ? 6 : 2);
+  const { half, lookY, px } = moi.view;
+  const h = Math.round(2 * half * px);
   const w = Math.round(h * 1.15);
-  const out: { cap: number; cu: string; moi: string }[] = [];
-  for (let level = 1; level <= 8; level++) {
+  const river = type === 'ben' ? moi.tiles / 2 : undefined;
+  const riverOld = type === 'ben' ? cu.tiles / 2 : undefined;
+  const out: Shot[] = [];
+  for (let level = 1; level <= BUILDINGS[type].maxLevel; level++) {
     const shots: string[] = [];
-    for (const v of [k.cu, k.moi]) {
+    for (const which of ['cu', 'moi'] as const) {
       const scene = newScene(size);
-      scene.add(groundPatch(size, [{ x: 0, z: 0, tiles: v.tiles }]));
-      place(scene, v, level, 0, 0);
-      shots.push(render(renderer, scene, w, h, k.half, new THREE.Vector3(0, k.lookY, 0)));
+      const tiles = which === 'cu' ? cu.tiles : moi.tiles;
+      scene.add(groundPatch(size + (which === 'cu' ? 1 : 0), [{ x: 0, z: 0, tiles }], which === 'cu' ? riverOld : river));
+      if (which === 'cu') placeOld(scene, type, level, 0, 0);
+      else placeNew(scene, type, level, 0, 0);
+      shots.push(render(renderer, scene, w, h, half, new THREE.Vector3(0, lookY, 0)));
     }
     out.push({ cap: level, cu: shots[0], moi: shots[1] });
   }
@@ -185,33 +269,34 @@ export function chupCap(loai: string): { cap: number; cu: string; moi: string }[
 }
 
 /**
- * Cảnh cỡ thật: Điện giữa hai nhà sàn như một góc kinh đô, cũ và mới, ở cấp `levels`.
+ * Cảnh cỡ thật: Điện giữa ba nhà sàn như một góc kinh đô, cũ và mới, ở cấp `levels`.
  * `px` điểm ảnh mỗi ô, chừng như trên điện thoại lúc chưa phóng to (độ nét 1,5).
  */
-export function chupCanh(levels: number[], px = 32): { cap: number; cu: string; moi: string }[] {
+export function chupCanh(levels: number[], px = 32): Shot[] {
   const renderer = makeRenderer();
-  const out: { cap: number; cu: string; moi: string }[] = [];
+  const out: Shot[] = [];
   const half = 8;
   const h = Math.round(2 * half * px);
   const w = Math.round(h * 1.2);
   for (const level of levels) {
     const shots: string[] = [];
     for (const which of ['cu', 'moi'] as const) {
-      const d = KINDS.dien[which];
-      const n = KINDS.nhaSan[which];
+      const dt = which === 'cu' ? CU.dien!.tiles : CONG_TRINH.dien!.tiles;
+      const nt = which === 'cu' ? CU.nhaSan!.tiles : CONG_TRINH.nhaSan!.tiles;
       const scene = newScene(12);
       const gap = 1;
-      const nx = d.tiles / 2 + gap + n.tiles / 2;
-      const nz = -d.tiles / 2 + n.tiles / 2;
+      const nx = dt / 2 + gap + nt / 2;
+      const nz = -dt / 2 + nt / 2;
       const lots = [
-        { x: 0, z: 0, tiles: d.tiles },
-        { x: -nx, z: nz, tiles: n.tiles },
-        { x: nx, z: nz, tiles: n.tiles },
-        { x: -nx, z: nz + n.tiles + gap, tiles: n.tiles },
+        { x: 0, z: 0, tiles: dt },
+        { x: -nx, z: nz, tiles: nt },
+        { x: nx, z: nz, tiles: nt },
+        { x: -nx, z: nz + nt + gap, tiles: nt },
       ];
       scene.add(groundPatch(16, lots));
-      place(scene, d, level, 0, 0);
-      for (const l of lots.slice(1)) place(scene, n, level, l.x, l.z);
+      const put = which === 'cu' ? placeOld : placeNew;
+      put(scene, 'dien', level, 0, 0);
+      for (const l of lots.slice(1)) put(scene, 'nhaSan', level, l.x, l.z);
       shots.push(render(renderer, scene, w, h, half, new THREE.Vector3(0, 1.2, 0)));
     }
     out.push({ cap: level, cu: shots[0], moi: shots[1] });
@@ -221,4 +306,6 @@ export function chupCanh(levels: number[], px = 32): { cap: number; cu: string; 
   return out;
 }
 
-export const LOAI = Object.fromEntries(Object.entries(KINDS).map(([id, k]) => [id, { ten: k.ten, cu: k.cu.tiles, moi: k.moi.tiles }]));
+export const LOAI = Object.fromEntries(
+  Object.keys(CONG_TRINH).map((id) => [id, { ten: vi.buildings[id as BuildingType].name, cu: CU[id as BuildingType]!.tiles, moi: CONG_TRINH[id as BuildingType]!.tiles }]),
+);

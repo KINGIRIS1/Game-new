@@ -1,7 +1,8 @@
 #!/usr/bin/env node
 // Chụp dáng cũ và dáng móng mới của công trình ở cả 8 cấp, cùng tỉ lệ ô đất, có người đứng để so cỡ.
 // Danh sách ở scripts/congTrinh.ts. Ảnh vào chup/cong-trinh-<loại>.png, cảnh cỡ thật vào chup/cong-trinh-canh.png.
-// Cách dùng: node scripts/chup-cong-trinh.mjs [dien|nhaSan|canh ...]   (không ghi gì thì chụp hết)
+// Cách dùng: node scripts/chup-cong-trinh.mjs [loại ...|canh]   (loại: dien, ruong, ben, nhaSan, baiDa, loRen, kho,
+// doanhTrai, traiGiao, traiCung, chuongVoi; không ghi gì thì chụp dien, nhaSan và canh)
 
 import { createRequire } from 'node:module';
 import { mkdir } from 'node:fs/promises';
@@ -40,10 +41,12 @@ try {
         const mod = await import('/scripts/congTrinh.ts');
         return { anh: mod.chupCap(m), loai: mod.LOAI[m] };
       }, m);
-      const half = (list) => `<div style="display:flex;gap:10px;margin-bottom:6px">${list.map((a) => cell(a.cu, `Cấp ${a.cap}: bây giờ ${loai.cu}×${loai.cu}`)).join('')}</div>
+      const hang = (list) => `<div style="display:flex;gap:10px;margin-bottom:6px">${list.map((a) => cell(a.cu, `Cấp ${a.cap}: bây giờ ${loai.cu}×${loai.cu}`)).join('')}</div>
         <div style="display:flex;gap:10px;margin-bottom:18px">${list.map((a) => cell(a.moi, `Cấp ${a.cap}: móng mới ${loai.moi}×${loai.moi}`)).join('')}</div>`;
+      const nhom = [];
+      for (let i = 0; i < anh.length; i += 4) nhom.push(anh.slice(i, i + 4));
       html = `<body style="${css}"><div style="font-size:20px;margin-bottom:8px">${loai.ten}: ${loai.cu}×${loai.cu} → ${loai.moi}×${loai.moi}, cùng tỉ lệ ô đất, nét đen là ranh móng</div>
-        ${half(anh.slice(0, 4))}${half(anh.slice(4))}</body>`;
+        ${nhom.map(hang).join('')}</body>`;
     }
     await page.setContent(html);
     await page.waitForFunction(() => [...document.images].every((i) => i.complete));

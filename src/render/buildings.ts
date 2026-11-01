@@ -14,7 +14,7 @@ import { bakeSoldier } from './soldier';
 import { ToonModel, inkThin, outlineOf, toon } from './toon';
 
 /** Cấp dùng để tính độ dày (bờ ruộng, đống đá...): cấp 6, 7, 8 giữ như cấp 5. */
-const grown = (level: number) => Math.min(level, 5);
+export const grown = (level: number) => Math.min(level, 5);
 /** To dần theo cấp: khoảng 85% ở cấp 1, 105% ở cấp 5, rồi 110%, 115%, 120% ở cấp 6, 7, 8. */
 export const sizeFor = (level: number) => 0.8 + 0.05 * Math.min(level, 8);
 /** Số cấp đã qua cấp 5 (0 tới 3): công trình cao thêm và chi tiết thêm theo số này. */
@@ -49,8 +49,8 @@ function grownGroup(m: ToonModel, scale: number, k: number, extras: THREE.Object
 // cấp 8 mái ngói, sống và diềm mái bọc đồng vàng.
 
 /** Ngói đất nung đỏ cam. */
-const TILE = 0xc8643a;
-const TILE_DARK = 0xa84e2e;
+export const TILE = 0xc8643a;
+export const TILE_DARK = 0xa84e2e;
 
 export interface Roof {
   main: number;
@@ -280,10 +280,10 @@ export function makeDien(level: number): THREE.Group {
 // ---------- Ruộng lúa ----------
 
 /** Nước ao trong, sáng hơn nước ruộng cho dễ nhận ra ao giữ nước. */
-const POND = 0x6fb8cf;
+export const POND = 0x6fb8cf;
 
 /** Con trâu chibi đứng nghỉ. */
-function buffalo(p: ShapeBuilder, x: number, z: number): void {
+export function buffalo(p: ShapeBuilder, x: number, z: number): void {
   p.sphere(0.24, 0x4a4440, x, 0.32, z, [0.8, 0.7, 1.25], 8);
   for (const dx of [-0.1, 0.1]) for (const dz of [-0.15, 0.15]) p.cyl(0.045, 0.05, 0.24, 0x3a3532, x + dx, 0.12, z + dz, undefined, 5);
   p.sphere(0.13, 0x4a4440, x, 0.42, z + 0.3, [0.9, 0.85, 1.1], 7);
@@ -291,7 +291,7 @@ function buffalo(p: ShapeBuilder, x: number, z: number): void {
 }
 
 /** Con cò trắng đứng: mình trắng, cổ cong, mỏ vàng, chân đen. Mặt hướng `ry`, đứng ở độ cao `y`. */
-function egret(p: ShapeBuilder, x: number, z: number, ry: number, y = 0.07): void {
+export function egret(p: ShapeBuilder, x: number, z: number, ry: number, y = 0.07): void {
   const fx = Math.sin(ry);
   const fz = Math.cos(ry);
   for (const s of [-1, 1]) p.cyl(0.008, 0.008, 0.2, C.ink, x + s * 0.03 * fz, y + 0.1, z - s * 0.03 * fx, undefined, 3);
@@ -302,7 +302,7 @@ function egret(p: ShapeBuilder, x: number, z: number, ry: number, y = 0.07): voi
 }
 
 /** Guồng nước tre quay quanh trục dọc theo x, có gàu múc nước. Tách riêng để World cho quay (`userData.spin`). */
-function waterWheel(): THREE.Group {
+export function waterWheel(): THREE.Group {
   const w = new ToonModel(inkThin);
   const p = w.plain;
   p.add(new THREE.TorusGeometry(0.42, 0.03, 6, 20), C.woodDark, 0, 0, 0, [0, Math.PI / 2, 0]);
@@ -417,7 +417,7 @@ export function makeRuong(level: number): THREE.Group {
 // ---------- Bến chợ thuyền ----------
 
 /** Sạp chợ: bốn cọc, bạt căng có hoa văn, hàng hóa bày bên dưới. */
-function stall(m: ToonModel, x: number, z: number, color: number, goods: number): void {
+export function stall(m: ToonModel, x: number, z: number, color: number, goods: number): void {
   const p = m.plain;
   for (const dx of [-0.32, 0.32]) for (const dz of [-0.25, 0.25]) p.cyl(0.025, 0.025, 0.72, C.woodDark, x + dx, 0.36 + 0.4, z + dz, undefined, 5);
   m.band.box(0.8, 0.04, 0.66, color, x, 1.15, z, [0.12, 0, 0]);
@@ -710,14 +710,14 @@ export function makeBaiDa(level: number): THREE.Group {
 }
 
 /** Gạch đất nung đỏ. */
-const BRICK = 0xa8502e;
+export const BRICK = 0xa8502e;
 /** Sắt rèn binh khí: thép xám xanh như ngựa sắt của Gióng. */
-const IRON_BLADE = 0x7b8a9c;
+export const IRON_BLADE = 0x7b8a9c;
 
 // ---------- Lò rèn ----------
 
 /** Lò nung hình nón bằng đất sét, miệng lò có lửa. */
-function kiln(m: ToonModel, g: THREE.Group, x: number, z: number, s: number): void {
+export function kiln(m: ToonModel, g: THREE.Group, x: number, z: number, s: number): void {
   const p = m.plain;
   p.cyl(0.42 * s, 0.5 * s, 0.25 * s, C.soil, x, 0.13 * s, z, undefined, 10);
   p.cone(0.45 * s, 0.95 * s, C.earth, x, 0.25 * s + 0.47 * s, z, undefined, 10);
@@ -851,7 +851,7 @@ export function makeLoRen(level: number): THREE.Group {
 // ---------- Kho thóc ----------
 
 /** Một kho tròn trên cột cao (có đĩa chặn chuột), mái nón màu theo `roof`. */
-function granary(m: ToonModel, x: number, z: number, s: number, finial: boolean, roof: Roof = THATCH, tall = 0): void {
+export function granary(m: ToonModel, x: number, z: number, s: number, finial: boolean, roof: Roof = THATCH, tall = 0): void {
   const p = m.plain;
   const postH = 0.8 * s + tall;
   for (const dx of [-0.25, 0.25]) for (const dz of [-0.25, 0.25]) {
@@ -929,7 +929,7 @@ export function makeKho(level: number): THREE.Group {
 // ---------- Doanh trại ----------
 
 /** Nhà dài để trống không vách, mái tranh thấp: chỗ lính nghỉ. */
-function openHall(m: ToonModel, x: number, z: number, length: number, ry = 0): void {
+export function openHall(m: ToonModel, x: number, z: number, length: number, ry = 0): void {
   const p = m.plain;
   const cos = Math.cos(ry);
   const sin = Math.sin(ry);
@@ -948,14 +948,14 @@ export const doanhTraiScale = (level: number) => 0.9 + 0.025 * level;
 export const DOANH_TRAI_HERO = { x: 0.35, z: 0.8 };
 
 /** Cọc rơm tập đâm: cọc gỗ, bó rơm, thanh ngang làm tay. */
-function strawDummy(p: ShapeBuilder, x: number, z: number, s = 1): void {
+export function strawDummy(p: ShapeBuilder, x: number, z: number, s = 1): void {
   p.cyl(0.03 * s, 0.03 * s, 0.8 * s, C.woodDark, x, 0.4 * s, z, undefined, 5);
   p.cyl(0.13 * s, 0.13 * s, 0.36 * s, C.thatch, x, 0.62 * s, z, undefined, 7);
   p.box(0.4 * s, 0.05 * s, 0.05 * s, C.woodDark, x, 0.7 * s, z);
 }
 
 /** Lọng che tướng: cán cao, tán đỏ hình nón thấp, diềm đồng. */
-function parasol(m: ToonModel, x: number, z: number, h: number): void {
+export function parasol(m: ToonModel, x: number, z: number, h: number): void {
   m.plain.cyl(0.025, 0.03, h, C.woodDark, x, h / 2, z, undefined, 5);
   m.band.cone(0.36, 0.16, C.red, x, h + 0.04, z, undefined, 12);
   m.plain.add(new THREE.TorusGeometry(0.35, 0.025, 4, 18), C.bronze, x, h - 0.03, z, [Math.PI / 2, 0, 0]);
@@ -1011,7 +1011,7 @@ export function makeDoanhTrai(level: number): THREE.Group {
 // Mỗi binh chủng có nơi ở riêng, luyện ở đó. Móng 2×2, dựng một lần, không lên cấp (mái tranh).
 
 /** Lều lính mái chữ A: mái tranh chạm đất hai bên, nóc chạy dọc trục z, đầu hồi trước để ngỏ; gốc ở tâm sàn lều. */
-function aFrameHut(m: ToonModel, x: number, z: number, length: number, width: number, h: number): void {
+export function aFrameHut(m: ToonModel, x: number, z: number, length: number, width: number, h: number): void {
   const p = m.plain;
   p.box(width * 0.9, 0.06, length, C.thatchDark, x, 0.06, z);
   const half = width / 2;
@@ -1060,7 +1060,7 @@ export function makeTraiGiao(): THREE.Group {
 }
 
 /** Bia rơm tròn vẽ vòng đỏ trắng trên giá gỗ, mấy mũi tên đã găm; mặt bia hướng `ry` (0 là ra trước, +z). */
-function archeryTarget(m: ToonModel, x: number, z: number, ry: number): void {
+export function archeryTarget(m: ToonModel, x: number, z: number, ry: number): void {
   const p = m.plain;
   const fx = Math.sin(ry);
   const fz = Math.cos(ry);
@@ -1154,7 +1154,7 @@ export function makeChuongVoi(): THREE.Group {
  * Nỏ lớn gác qua lan can: chân xoay, báng gỗ dài, cánh nỏ đồng uốn chữ V, dây kéo về lẫy, mũi tên sắt lớn.
  * Chân nỏ ở (x, z) trên sàn cao `floor`, chĩa theo hướng `ry` (0 là ra trước, +z).
  */
-function bigCrossbow(x: number, floor: number, z: number, ry: number): THREE.Group {
+export function bigCrossbow(x: number, floor: number, z: number, ry: number): THREE.Group {
   const g = new ToonModel();
   const p = g.plain;
   const ny = 0.36;
@@ -1418,25 +1418,25 @@ export function makeDenCoLoa(): THREE.Group {
 // ---------- Hội Tết: ruộng nếp, vườn đậu lá dong, chuồng lợn, bếp gói bánh ----------
 
 /** Bông lúa nếp chín màu ngà, thân lúa xanh. */
-const NEP = 0xecd9a0;
-const NEP_STALK = 0x7f9a44;
+export const NEP = 0xecd9a0;
+export const NEP_STALK = 0x7f9a44;
 /** Bờ ruộng nếp lát đá ong, cho khác bờ đất của ruộng lúa. */
-const LATERITE = 0xa8643c;
+export const LATERITE = 0xa8643c;
 /** Lá dong xanh thẫm, đậu xanh. */
-const DONG = 0x3f7a3a;
-const DAU = 0x6f9a3a;
-const DAU_POD = 0x9fbf5a;
+export const DONG = 0x3f7a3a;
+export const DAU = 0x6f9a3a;
+export const DAU_POD = 0x9fbf5a;
 /** Lợn ỉ đen, mõm xám hồng; bùn chuồng. */
-const PIG = 0x45403c;
-const PIG_SNOUT = 0xb08070;
-const MUD = 0x5a4026;
+export const PIG = 0x45403c;
+export const PIG_SNOUT = 0xb08070;
+export const MUD = 0x5a4026;
 /** Bánh chưng gói lá dong buộc lạt, bánh giầy trắng. */
 export const BANH_CHUNG = 0x4f7f35;
 export const BANH_GIAY = 0xf4efe0;
 export const LAT = 0xd8c48a;
 
 /** Khóm lúa nếp: năm lá lúa xanh xòe, ba bông nếp trĩu hạt màu ngà cong rủ ra ngoài. */
-function nepClump(p: ShapeBuilder, x: number, z: number, h: number): void {
+export function nepClump(p: ShapeBuilder, x: number, z: number, h: number): void {
   for (let i = 0; i < 5; i++) {
     const a = (i / 5) * Math.PI * 2;
     p.box(0.022, h, 0.022, NEP_STALK, x + Math.sin(a) * 0.03, 0.06 + h / 2, z + Math.cos(a) * 0.03, [Math.cos(a) * 0.25, 0, -Math.sin(a) * 0.25]);
@@ -1451,7 +1451,7 @@ function nepClump(p: ShapeBuilder, x: number, z: number, h: number): void {
 }
 
 /** Bù nhìn rơm đội nón lá, dang hai tay. Gốc ở chân cọc. */
-function scarecrow(m: ToonModel, x: number, z: number): void {
+export function scarecrow(m: ToonModel, x: number, z: number): void {
   const p = m.plain;
   p.cyl(0.025, 0.03, 1.05, C.woodDark, x, 0.52, z, undefined, 5);
   p.cyl(0.02, 0.02, 0.7, C.woodDark, x, 0.72, z, [0, 0, Math.PI / 2], 5);
@@ -1462,7 +1462,7 @@ function scarecrow(m: ToonModel, x: number, z: number): void {
 }
 
 /** Bó lúa nếp treo trên giàn phơi. */
-function nepBundle(p: ShapeBuilder, x: number, y: number, z: number): void {
+export function nepBundle(p: ShapeBuilder, x: number, y: number, z: number): void {
   p.capsule(0.05, 0.22, NEP, x, y - 0.18, z, undefined, [1, 1, 0.8]);
   p.cyl(0.03, 0.05, 0.12, NEP_STALK, x, y - 0.02, z, undefined, 6);
 }
@@ -1506,7 +1506,7 @@ export function makeRuongNep(level: number): THREE.Group {
 }
 
 /** Khóm lá dong: lá to bản mọc xòe trên cuống dài. */
-function dongClump(p: ShapeBuilder, x: number, z: number, s: number): void {
+export function dongClump(p: ShapeBuilder, x: number, z: number, s: number): void {
   // Lá dong: cuống dài mọc thẳng, mỗi cuống một lá thuôn dài xòe chếch ra ngoài, cao thấp so le
   // (không chụm thành búp tròn như bắp cải).
   for (let i = 0; i < 6; i++) {
@@ -1533,7 +1533,7 @@ function dongClump(p: ShapeBuilder, x: number, z: number, s: number): void {
 }
 
 /** Rào tre thấp quanh mép móng, chừa cổng ở mặt trước từ `gateA` tới `gateB` (theo x). */
-function bambooFence(p: ShapeBuilder, half: number, h: number, gateA = 0, gateB = 0): void {
+export function bambooFence(p: ShapeBuilder, half: number, h: number, gateA = 0, gateB = 0): void {
   const n = 6;
   for (let i = 0; i <= n; i++) {
     const t = -half + (i * 2 * half) / n;
@@ -1662,7 +1662,7 @@ export function makeChuongLon(level: number): THREE.Group {
 }
 
 /** Kiềng ba hòn đá, nồi đồng to luộc bánh chưng, củi cháy dưới nồi. Lửa thêm thẳng vào `g` để World cho bập bùng. */
-function hearth(m: ToonModel, g: THREE.Group, x: number, z: number): void {
+export function hearth(m: ToonModel, g: THREE.Group, x: number, z: number): void {
   const p = m.plain;
   for (let i = 0; i < 3; i++) {
     const a = (i / 3) * Math.PI * 2 + 0.4;
