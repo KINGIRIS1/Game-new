@@ -57,9 +57,11 @@ interface Surge {
   age: number;
 }
 
-/** Xoáy nước ở chỗ tôm binh được gọi lên. */
+/** Xoáy nước ở chỗ tôm binh được gọi lên: vòng nước xoáy dưới đất và cột nước phun vụt lên. */
 interface Whirl {
   group: THREE.Group;
+  rings: THREE.Mesh[];
+  spout: THREE.Group;
   age: number;
 }
 
@@ -212,17 +214,33 @@ function cragSpike(h: number, r: number, rand: () => number): THREE.Group {
   return g;
 }
 
-/** Bức tường sóng: thân nước xanh sẫm, ngọn sóng cuộn về phía trước, bọt trắng trên ngọn và chân sóng. Bề ngang theo trục x, sóng chạy theo +z. */
-function surgeModel(width: number, h: number): THREE.Group {
+/**
+ * Bức tường sóng: mặt cắt là con sóng đang vỡ (mặt trước lõm, mép sóng cuộn chúi về trước, lưng sóng thoải),
+ * kéo dài theo bề ngang `width` (trục x), sóng chạy theo +z. Bọt trắng to nhỏ so le trên mép cuộn và chân sóng.
+ */
+function surgeModel(width: number, h: number, seed: number): THREE.Group {
+  const shape = new THREE.Shape();
+  shape.moveTo(-1.0, 0);
+  shape.lineTo(0.45, 0);
+  shape.quadraticCurveTo(0.08, h * 0.25, 0.12, h * 0.62);
+  shape.quadraticCurveTo(0.24, h * 0.86, 0.58, h * 0.76);
+  shape.quadraticCurveTo(0.4, h * 1.04, -0.08, h);
+  shape.quadraticCurveTo(-0.55, h * 0.92, -1.0, h * 0.18);
+  shape.closePath();
+  const body = new THREE.ExtrudeGeometry(shape, { depth: width, bevelEnabled: false, curveSegments: 8 });
+  body.rotateY(-Math.PI / 2);
+  body.translate(width / 2, 0, 0);
   const b = new ShapeBuilder(false, true);
-  b.box(width, h * 0.55, 0.55, C.sea, 0, h * 0.275, -0.1);
-  b.add(new THREE.CylinderGeometry(h * 0.32, h * 0.32, width, 12, 1, false, 0, Math.PI * 1.2), 0x4f9fc0, 0, h * 0.62, 0.05, [0, 0, Math.PI / 2]);
-  b.box(width * 0.96, h * 0.2, 0.9, 0x5aa8c8, 0, h * 0.1, -0.7);
-  const n = Math.max(4, Math.round(width / 0.45));
+  b.add(body, 0x3f8fb8, 0, 0, 0);
+  // Lưng sóng nhạt màu hơn: một dải nước thấp kéo dài phía sau.
+  b.box(width * 0.96, h * 0.14, 1.0, 0x6fb8d8, 0, h * 0.07, -1.35);
+  const rand = seeded(seed);
+  const n = Math.max(5, Math.round(width / 0.32));
   for (let i = 0; i < n; i++) {
-    const x = -width / 2 + (width * (i + 0.5)) / n;
-    b.sphere(h * 0.16, C.foam, x, h * 0.92, 0.05 + (i % 2) * 0.08, [1, 0.7, 1], 7);
-    b.sphere(h * 0.11, C.foam, x + 0.1, h * 0.08, 0.35, [1, 0.6, 1], 6);
+    const x = -width / 2 + (width * (i + 0.5)) / n + (rand() - 0.5) * 0.12;
+    b.sphere(h * (0.09 + rand() * 0.08), C.foam, x, h * (0.8 + rand() * 0.1), 0.5 + rand() * 0.12, [1, 0.75, 1], 7);
+    if (rand() < 0.7) b.sphere(h * (0.07 + rand() * 0.06), C.foam, x, h * (0.98 + rand() * 0.12), 0.05 + rand() * 0.2, [1, 0.8, 1], 6);
+    b.sphere(h * (0.06 + rand() * 0.05), C.foam, x + 0.08, h * 0.05, 0.5 + rand() * 0.15, [1, 0.6, 1], 6);
   }
   const g = new THREE.Group();
   const mesh = b.mesh(toon);
@@ -735,7 +753,7 @@ export class BattleView {
     const view = tt && this.fighters.get(tt.id);
     if (view) view.cast = CAST_TIME;
     const face = Math.atan2(tx - x, tz - z);
-    const group = surgeModel(TT_WAVE.width, 1.15 * this.scale);
+    const group = surgeModel(TT_WAVE.width, 1.35 * this.scale, seq * 53 + 1);
     group.rotation.y = face;
     group.position.set(x + ox, this.heightAt(x, z), z + oz);
     group.scale.set(1, 0.3, 1);
@@ -790,6 +808,7 @@ export class BattleView {
       const v = this.fighters.get(f.id);
       if (v) v.emerge = EMERGE_TIME;
       const g = new THREE.Group();
+      const rings: THREE.Mesh[] = [];
       for (const [i, color] of [C.sea, 0x6fb8d8, C.foam].entries()) {
         const ring = new THREE.Mesh(whirlGeo, new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.85, depthWrite: false }));
         ring.scale.setScalar(1.6 - i * 0.45);
@@ -797,11 +816,25 @@ export class BattleView {
         ring.position.y = 0.03 + i * 0.01;
         ring.renderOrder = 3;
         g.add(ring);
+        rings.push(ring);
       }
+      // Cột nước xoắn phun vụt lên, đầu cột tung bọt.
+      const b = new ShapeBuilder(false, true);
+      b.cyl(0.2, 0.32, 1.3, 0x6fb8d8, 0, 0.65, 0, undefined, 10);
+      b.cyl(0.12, 0.2, 0.5, C.sea, 0.05, 0.5, 0.04, undefined, 8);
+      for (let n = 0; n < 6; n++) {
+        const a = (n / 6) * Math.PI * 2;
+        b.sphere(0.12 + (n % 3) * 0.03, C.foam, Math.cos(a) * 0.22, 1.3 + (n % 2) * 0.12, Math.sin(a) * 0.22, [1, 0.8, 1], 6);
+      }
+      const spout = new THREE.Group();
+      const mesh = b.mesh(toon);
+      spout.add(mesh, outlineOf(mesh.geometry, inkThin));
+      spout.scale.set(1, 0.01, 1);
+      g.add(spout);
       g.position.set(f.x + ox, this.heightAt(f.x, f.z), f.z + oz);
       g.scale.setScalar(this.scale);
       this.root.add(g);
-      this.whirls.push({ group: g, age: 0 });
+      this.whirls.push({ group: g, rings, spout, age: 0 });
       for (let n = 0; n < 4; n++) {
         this.addPuff(f.x + ox + (n - 1.5) * 0.15, this.heightAt(f.x, f.z) + 0.3, f.z + oz, n % 2 ? C.foam : 0x9fd4e8, 0.05 + n * 0.06, 0.7, 1.1);
       }
@@ -1101,14 +1134,18 @@ export class BattleView {
       const w = this.whirls[i];
       w.age += dt;
       const k = w.age / WHIRL_LIFE;
-      w.group.children.forEach((ring, n) => {
+      w.rings.forEach((ring, n) => {
         ring.rotation.y -= dt * (6 + n * 3);
-        ((ring as THREE.Mesh).material as THREE.MeshBasicMaterial).opacity = 0.85 * (1 - k);
+        (ring.material as THREE.MeshBasicMaterial).opacity = 0.85 * (1 - k);
+        ring.scale.setScalar((1.6 - n * 0.45) * (1.2 - 0.5 * k));
       });
-      w.group.scale.setScalar(this.scale * (1.2 - 0.6 * k));
+      // Cột nước vọt lên rất nhanh, đứng một chút rồi sụp xuống.
+      const up = smoothstep(w.age, 0, 0.18) * (1 - smoothstep(w.age, 0.45, 0.85));
+      w.spout.scale.set(1, Math.max(0.01, up), 1);
+      w.spout.rotation.y += dt * 8;
       if (k >= 1) {
         this.root.remove(w.group);
-        w.group.children.forEach((ring) => ((ring as THREE.Mesh).material as THREE.Material).dispose());
+        w.rings.forEach((ring) => (ring.material as THREE.Material).dispose());
         this.whirls.splice(i, 1);
       }
     }
