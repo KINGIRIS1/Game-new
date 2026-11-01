@@ -6,7 +6,7 @@ import type { Battle, FighterKind } from '../game/battle';
 import { FIRE, HILL, LIEN_CHAU, RALLY_BEAT, ROCKS, SKILLS, TT_WAVE, type UnitType } from '../game/defs';
 import { isBeast, makeBeast, makeRuaVang } from './beasts';
 import { isMonster, makeMonster } from './monsters';
-import { makeAnDuong, makeGiong, makeSonTinh, makeThuyTinh } from './heroes';
+import { makeAnDuong, makeCaoLo, makeGiong, makeSonTinh, makeThuyTinh } from './heroes';
 import { makeEnemyBoat, makeFighter, makeMountain } from './models';
 import { C } from './palette';
 import type { Poser } from './rig';
@@ -161,6 +161,8 @@ const SCALE: Partial<Record<FighterKind, number>> = {
   thuongLuong: 1,
   thuyTinh: 0.95,
   anDuong: 1.05,
+  caoLo: 1.05,
+  tuongThuy: 1,
   hoTinh: 0.75,
   gaTrang: 1.05,
   kyBinh: 0.75,
@@ -545,7 +547,9 @@ export class BattleView {
               ? makeSonTinh({ glow: battle.hero?.glow })
               : f.kind === 'anDuong'
                 ? makeAnDuong({ crossbow: true, glow: battle.hero?.glow })
-                : f.kind === 'thuyTinh'
+                : f.kind === 'caoLo'
+                  ? makeCaoLo({ glow: battle.hero?.glow })
+                  : f.kind === 'thuyTinh'
                   ? makeThuyTinh()
                   : isSoldier(f.kind)
                   ? makeSoldier(f.kind, f.side === 'ta' ? (battle.arms?.[f.kind as UnitType] ?? 0) : 0)
@@ -625,6 +629,19 @@ export class BattleView {
         const goal = view.volley > 0 ? 1 : 0;
         view.lift = (view.lift ?? 0) + (goal - (view.lift ?? 0)) * Math.min(1, dt * 14);
       }
+      if (f.kind === 'caoLo') {
+        for (const c of obj.children) if (c.userData.halo) c.rotation.z = this.time * 0.6;
+        // Nỏ liên châu và tù và Lệnh bắn: tư thế chạy theo thời gian còn lại (0 → 1).
+        view.volley = Math.max(0, view.volley - dt);
+        view.lift = view.volley > 0 ? 1 - view.volley / VOLLEY_AIM : undefined;
+        view.horn = Math.max(0, (view.horn ?? 0) - dt);
+        if (battle.seaWin && battle.outcome === 'win') {
+          view.rise += dt;
+          view.pose?.({ act: 'stand', win: Math.min(view.rise * 2, 1), time: this.time });
+          obj.rotation.x = 0;
+          continue;
+        }
+      }
       if (f.kind === 'giong') {
         for (const c of obj.children) if (c.userData.halo) c.rotation.z = this.time * 0.6;
         if (battle.ascend && battle.outcome === 'win') {
@@ -661,7 +678,7 @@ export class BattleView {
       }
       // Gióng ra đòn bằng tay vũ khí, ngựa chỉ chồm nhẹ khi quét tre; nhân vật có xương tự làm động tác.
       if (f.kind === 'giong') obj.rotation.x = view.smash > 0 ? -0.2 * Math.sin(Math.PI * (1 - view.smash / SMASH_TIME)) : 0;
-      else if (f.kind === 'sonTinh' || f.kind === 'anDuong' || view.pose) obj.rotation.x = 0;
+      else if (f.kind === 'sonTinh' || f.kind === 'anDuong' || f.kind === 'caoLo' || view.pose) obj.rotation.x = 0;
       else obj.rotation.x = f.swing > 0 ? -0.5 * (f.swing / 0.3) : 0;
       // Đang có Trống trận thì quân ta nhún nhảy hăng hơn; trúng sóng Thủy Tinh thì lội nước, nhún ít.
       const rally = f.side === 'ta' && battle.rally > 0;
@@ -682,17 +699,19 @@ export class BattleView {
             ? view.smash > 0
               ? 1 - view.smash / SMASH_TIME
               : undefined
-            : f.kind === 'anDuong'
+            : f.kind === 'anDuong' || f.kind === 'caoLo'
               ? view.lift
               : view.cast && view.cast > 0
                 ? 1 - view.cast / CAST_TIME
                 : undefined;
+        // Cao Lỗ thổi tù và ra Lệnh bắn.
+        const horn = view.horn && view.horn > 0 ? 1 - view.horn / HORN_TIME : undefined;
         view.pose(
           walking
-            ? { act: 'walk', phase, stride: wading ? 0.3 : rally || flee ? 0.65 : 0.5, time, skill }
+            ? { act: 'walk', phase, stride: wading ? 0.3 : rally || flee ? 0.65 : 0.5, time, skill, horn }
             : f.state === 'fight'
-              ? { act: 'fight', strike: f.swing > 0 ? 1 - f.swing / 0.3 : undefined, time, skill }
-              : { act: 'stand', time, skill },
+              ? { act: 'fight', strike: f.swing > 0 ? 1 - f.swing / 0.3 : undefined, time, skill, horn }
+              : { act: 'stand', time, skill, horn },
         );
       } else obj.position.y = base + (moving ? Math.abs(Math.sin(this.time * (wading ? 5 : 10) + f.id)) * hop : 0);
       this.syncWet(view, f.side === 'ta' && wading && !battle.outcome);

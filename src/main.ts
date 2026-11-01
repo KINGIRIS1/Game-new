@@ -214,6 +214,7 @@ function start(): void {
       select(null);
       if (hero === 'giong') hud.showGiong(state);
       else if (hero === 'adv') hud.showAdv(state);
+      else if (hero === 'caoLo') hud.showCaoLo(state);
       else hud.showSon(state);
       return;
     }
