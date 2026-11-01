@@ -9,7 +9,7 @@ import { BUILDINGS, isDecor, type BuildingType } from '../game/defs';
 import { bakeRuaVang } from './beasts';
 import { decorModel } from './decor';
 import { bakeIronHorse, bakeSonTinh } from './heroes';
-import { makeCrossbowStand, makeFighter } from './models';
+import { makeBoat, makeCrossbowStand, makeFighter, makeTradeBoat } from './models';
 import { C } from './palette';
 import { ShapeBuilder, saddleRoof, seeded } from './shapes';
 import { bakeSoldier } from './soldier';
@@ -515,6 +515,30 @@ export function makeBen(level: number): THREE.Group {
     for (let i = 0; i < 3; i++) p.cyl(0.08, 0.07, 0.14, C.thatch, 0.4 + i * 0.15, 0.44, 1.8, undefined, 7);
   }
   return grownGroup(m, sc, k);
+}
+
+/**
+ * Thuyền neo ở bến cấp `level`, theo khung mô hình bến (+z chìa ra sông), tâm thu theo `spread` như các phần khác.
+ * World đặt chúng lên mặt nước. Cấp 6 có thuyền buôn lớn cạnh cầu tàu, cấp 8 thêm thuyền buôn thứ hai bên kia cầu tàu.
+ */
+export function benBoats(level: number, spread: number): THREE.Object3D[] {
+  const boat = makeBoat();
+  boat.position.set(-0.15 * spread, 0, 1.75 * spread);
+  const out: THREE.Object3D[] = [boat];
+  if (level >= 6) {
+    const trader = makeTradeBoat();
+    trader.position.set(1.35 * spread, 0, 2.5 * spread);
+    trader.rotation.y = Math.PI / 2;
+    out.push(trader);
+  }
+  if (level >= 8) {
+    const trader = makeTradeBoat();
+    trader.position.set(-1.0 * spread, 0, 3.3 * spread);
+    trader.rotation.y = -Math.PI / 2;
+    trader.scale.setScalar(0.85);
+    out.push(trader);
+  }
+  return out;
 }
 
 // ---------- Nhà sàn ----------
