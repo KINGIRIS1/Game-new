@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { DIEN, DIEN_END } from './testmap';
 import { alliesLeft, startFieldBattle, stepField, useSkill, type Battle } from './battle';
 import { canStartStage, leaveBattlefield, retreat, stageReward, startStage } from './campaign';
 import { DEFAULT_ROWS, FIELD, STAGES, UNITS, type UnitType } from './defs';
@@ -6,14 +7,18 @@ import { callRaidNow, canTrain, createInitialState, place, questProgress, tick, 
 
 type Army = Record<UnitType, number>;
 
-/** Kinh đô Điện cấp 3 có doanh trại cấp 3, đủ tiền luyện quân. */
+/** Kinh đô Điện cấp 3 có doanh trại cấp 3 và ba nơi ở, đủ tiền luyện quân. */
 function capital(): GameState {
   const s = createInitialState(0);
   s.buildings[0].level = 3;
   s.resources = { gao: 3000, voOc: 3000, datDa: 3000, sat: 1000 };
-  const barracks = place(s, 'doanhTrai', 12, 20);
+  const barracks = place(s, 'doanhTrai', DIEN - 6, DIEN_END + 2);
   if (!barracks.ok) throw new Error('dựng doanh trại thử thất bại');
   barracks.value.level = 3;
+  // Mỗi binh chủng luyện ở nơi ở riêng.
+  for (const [type, x] of [['traiGiao', DIEN - 1], ['traiCung', DIEN + 3], ['chuongVoi', DIEN + 7]] as const) {
+    if (!place(s, type, x, DIEN_END + 2).ok) throw new Error('dựng nơi ở thử thất bại');
+  }
   return s;
 }
 

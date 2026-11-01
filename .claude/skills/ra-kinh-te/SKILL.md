@@ -31,7 +31,7 @@ Bản rà xong khi cả bốn tài nguyên đều có kết luận dựa trên s
 ## Tham khảo
 
 - **Sổ đo**: số dương là thu vào kho, số âm là chi ra hay mất đi. "Tràn kho" là phần làm ra khi kho đã đầy, bị bỏ phí. Sức chứa kho dùng chung một mức cho cả bốn loại.
-- **Thử phương án mà không sửa repo**: `node scripts/kinh-te.mjs --thu "D.BUILDINGS.nhaSan.upgradeCost[6].gao = 2000"`. Mã trong `--thu` đổi tạm `defs.ts` (biến `D`) trước khi đo; chỉ số `upgradeCost` là cấp đích. `--sau-dien7 <phút>` đổi thời gian chơi thêm sau Điện 7.
+- **Thử phương án mà không sửa repo**: `node scripts/kinh-te.mjs --thu "D.BUILDINGS.nhaSan.upgradeCost[6].gao = 2000"`. Mã trong `--thu` đổi tạm `defs.ts` (biến `D`) trước khi đo; chỉ số `upgradeCost` là cấp đích. `--sau-dien8 <phút>` đổi thời gian chơi thêm sau Điện 8.
 - **Người chơi mô phỏng** nằm ở `src/game/moPhong.ts` và cũng là người chơi của `balance.test.ts`. Thêm việc vào `playSecond` sẽ đổi nhịp tiến trình mà test đó canh, nên muốn đo thêm một chỗ tiêu thì hỏi chủ dự án trước. Khi được đồng ý: thêm một `Viec` mới, bọc việc đó bằng `lam(...)`, thêm khoản tương ứng vào `KHOAN` trong `src/game/kinhTe.ts`.
 - **Quy ước "Vào chương mới"** lấy từ `balance.test.ts`: lúc sang chương mới, của dành dụm coi như đã tiêu hết, nên nhịp lên Điện 6, 7 chỉ dựa vào sản lượng.
 - `kinhTe.test.ts` canh cho sổ khớp với `game.ts`. Khoản "Khác" khác 0 nghĩa là `game.ts` có cách thu chi mới chạy lúc thời gian trôi mà `kinhTe.ts` chưa tách thành khoản riêng.

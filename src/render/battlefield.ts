@@ -10,7 +10,8 @@ import type { Battle } from '../game/battle';
 import { FIELD, RALLY_BEAT, SKILLS, type Terrain } from '../game/defs';
 import { BattleView } from './battleView';
 import { addSunLights, type SunLights } from './lights';
-import { STICK_POSE, buildForest, makeBoat, makeDrummer, makeEnemyFlag, makeMountain, makeTent, type TreeSpot } from './models';
+import { STICK_POSE, makeDrummer } from './heroes';
+import { buildForest, makeBoat, makeEnemyFlag, makeMountain, makeTent, type TreeSpot } from './models';
 import { makeNhaSan, makeRuong } from './buildings';
 import { C } from './palette';
 import { ShapeBuilder, seeded } from './shapes';
@@ -145,22 +146,22 @@ export class Battlefield {
     }
     const d = this.drummer;
     if (!d) return;
-    const [left, right] = d.userData.sticks as THREE.Object3D[];
+    const beat = d.userData.beat as (left: number, right: number) => void;
     const face = d.userData.face as THREE.Object3D;
     const rally = battle && !battle.outcome ? battle.rally : 0;
     if (rally <= 0) {
-      left.rotation.x = right.rotation.x = STICK_POSE.rest;
+      beat(STICK_POSE.rest, STICK_POSE.rest);
       face.scale.set(1, 1, 1);
       return;
     }
     // Mỗi nhịp một tay nện xuống, tay kia giơ cao lấy đà; mặt trống rung lên đúng lúc dùi chạm.
     const t = SKILLS.trongTran.duration - rally;
-    const beat = Math.floor(t / RALLY_BEAT);
+    const n = Math.floor(t / RALLY_BEAT);
     const k = (t % RALLY_BEAT) / RALLY_BEAT;
-    const striking = beat % 2 ? right : left;
-    const lifting = beat % 2 ? left : right;
-    striking.rotation.x = k < 0.12 ? STICK_POSE.hit : THREE.MathUtils.lerp(STICK_POSE.hit, STICK_POSE.rest, smoothstep(k, 0.12, 0.5));
-    lifting.rotation.x = THREE.MathUtils.lerp(STICK_POSE.rest, STICK_POSE.up, smoothstep(k, 0.3, 0.9));
+    const striking = k < 0.12 ? STICK_POSE.hit : THREE.MathUtils.lerp(STICK_POSE.hit, STICK_POSE.rest, smoothstep(k, 0.12, 0.5));
+    const lifting = THREE.MathUtils.lerp(STICK_POSE.rest, STICK_POSE.up, smoothstep(k, 0.3, 0.9));
+    if (n % 2) beat(lifting, striking);
+    else beat(striking, lifting);
     const bump = Math.exp(-k * 9);
     face.scale.set(1 + 0.06 * bump, 1 + 1.2 * bump, 1 + 0.06 * bump);
   }

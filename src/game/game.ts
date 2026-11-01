@@ -3,6 +3,7 @@
 
 import { startBattle, stepBattle, type Battle, type RaidSide } from './battle';
 import { updateCampaign } from './campaign';
+import { inChapter4 } from './chuong4';
 import { advJoined, initialAdv, inChapter3, ruaVangCame, wallRings } from './coLoa';
 import { heroFor, inChapter2, initialSon, restAfter, sonJoined } from './son';
 import { bake, datBonus, initialTet, troiBonus, updateTet, type TetState } from './tet';
@@ -11,6 +12,7 @@ import {
   BUILDINGS,
   CH3_QUEST_START,
   DIEN_CHAPTER,
+  LAU_NO_TOWERS,
   MOVE_FRACTION,
   FIRST_FLOOD_MS,
   FIRST_LAND_MS,
@@ -18,6 +20,9 @@ import {
   GIFT_IDS,
   MAX_HEIGHT,
   floodLevel,
+  isDecor,
+  isRoad,
+  ROAD_TYPES,
   raiseBuildingCost,
   raiseTileCost,
   DAN_GROW_MS,
@@ -53,10 +58,12 @@ import {
   type GearId,
   type GiftId,
   type Row,
+  type TuongId,
   type Unlock,
   type UnitType,
 } from './defs';
-import { GRID, baseHeights, inGrid, isUnlocked, touchesRiver } from './map';
+import { capOf, generals } from './doanhTrai';
+import { DIEN_HOME, GRID, areaStart, baseHeights, inGrid, isUnlocked, touchesRiver } from './map';
 
 export interface Building {
   id: number;
@@ -68,6 +75,10 @@ export interface Building {
   workers: number;
   /** Bị giặc phá: không làm ra gì, không chắn đường, cần sửa. */
   damaged?: boolean;
+  /** Doanh trại: tướng chỉ huy người chơi đã giao. Chưa giao thì tướng rảnh tự nhận (`commanders` ở `doanhTrai.ts`). */
+  tuong?: TuongId;
+  /** Doanh trại: số lính mỗi binh chủng người chơi bố trí giữ kinh đô ở đây. Chưa doanh trại nào có thì bố trí tự động. */
+  guard?: Record<UnitType, number>;
 }
 
 export interface RaidResult {
@@ -209,8 +220,11 @@ export interface Merchant {
   seq: number;
 }
 
+/** Phiên bản bản lưu hiện tại (11: kinh đô lớn, móng to hơn một ô). */
+export const SAVE_VERSION = 11;
+
 export interface GameState {
-  version: 9;
+  version: typeof SAVE_VERSION;
   resources: Resources;
   /** Số dân (không tính lính). */
   dan: number;
@@ -242,6 +256,8 @@ export interface GameState {
   tet: TetState;
   story: { seen: StoryId[] };
   settings: { muted: boolean };
+  /** Vừa nâng từ kinh đô nhỏ: kinh đô đã dựng lại theo mẫu, trả lại chừng này của. Giao diện báo một lần rồi xóa. */
+  relaid?: { refund: Cost; dropped: number };
 }
 
 export type FailReason =
@@ -296,7 +312,18 @@ export type FailReason =
   | 'khongTheDoi'
   | 'trungCho'
   | 'khongDuCho'
-  | 'daTheoMau';
+  | 'daTheoMau'
+  | 'canChuong4'
+  | 'khongGhepDuoc'
+  | 'canNoiO'
+  | 'noiOHu'
+  | 'canTuongChiHuy'
+  | 'tuongChuaCo'
+  | 'daChiHuy'
+  | 'quaChoPhoBan'
+  | 'quaChoGiuThanh'
+  | 'traiDay'
+  | 'khongPhaiTrangTri';
 
 export type Result<T = undefined> = { ok: true; value: T } | { ok: false; reason: FailReason };
 
@@ -333,9 +360,9 @@ export function initialGiong(): GiongState {
 }
 
 export function createInitialState(now: number): GameState {
-  const dien: Building = { id: 1, type: 'dien', x: 16, z: 16, level: 1, workers: 0 };
+  const dien: Building = { id: 1, type: 'dien', x: DIEN_HOME, z: DIEN_HOME, level: 1, workers: 0 };
   const state: GameState = {
-    version: 9,
+    version: SAVE_VERSION,
     resources: { ...START_RESOURCES },
     dan: START_DAN,
     danProgress: 0,
@@ -379,7 +406,15 @@ export function countOf(state: GameState, type: BuildingType): number {
 }
 
 export function limitOf(state: GameState, type: BuildingType): number {
-  return BUILDINGS[type].limit[dienLevel(state) - 1];
+  const limit = BUILDINGS[type].limit[dienLevel(state) - 1];
+  // Mỗi doanh trại một tướng chỉ huy: có bao nhiêu tướng thì dựng được bấy nhiêu doanh trại.
+  return type === 'doanhTrai' ? Math.min(limit, generals(state).length) : limit;
+}
+
+/** Số chỗ đã dùng trong giới hạn `limitOf`: mỗi lầu nỏ tính là hai chòi canh; bốn loại đường chung một giới hạn. */
+export function usedOf(state: GameState, type: BuildingType): number {
+  if (isRoad(type)) return ROAD_TYPES.reduce((n, t) => n + countOf(state, t), 0);
+  return countOf(state, type) + (type === 'choiCanh' ? LAU_NO_TOWERS * countOf(state, 'lauNo') : 0);
 }
 
 export function findBuilding(state: GameState, id: number): Building | undefined {
@@ -422,9 +457,10 @@ export function troopSpace(state: GameState): number {
   return UNIT_TYPES.reduce((n, k) => n + state.troops[k] * UNITS[k].space, 0);
 }
 
+/** Tổng chỗ quân của mọi doanh trại có tướng chỉ huy. */
 export function troopCap(state: GameState): number {
   let cap = 0;
-  for (const b of state.buildings) cap += BUILDINGS[b.type].troopCap?.[b.level - 1] ?? 0;
+  for (const b of state.buildings) if (b.type === 'doanhTrai') cap += capOf(state, b);
   return cap;
 }
 
@@ -432,8 +468,24 @@ export function barracksLevel(state: GameState): number {
   return state.buildings.filter((b) => b.type === 'doanhTrai').reduce((m, b) => Math.max(m, b.level), 0);
 }
 
-/** Lưới GRID×GRID, mỗi ô chứa id công trình đang chiếm hoặc 0. */
+const TYPE_INDEX = new Map(Object.keys(BUILDINGS).map((t, i) => [t, i + 1]));
+const occupancyCache = new WeakMap<GameState, { a: number; b: number; n: number; grid: Int32Array }>();
+
+/**
+ * Lưới GRID×GRID, mỗi ô chứa id công trình đang chiếm hoặc 0. Chỉ đọc: kết quả được ghi nhớ theo dấu vân tay
+ * của danh sách công trình (id, loại, chỗ), vì việc dò chỗ dựng gọi hàm này hàng nghìn lần trên lưới lớn.
+ */
 export function occupancy(state: GameState): Int32Array {
+  let a = 0x811c9dc5;
+  let h = 0x9e3779b9;
+  for (const b of state.buildings) {
+    const v = (((b.id * 64 + (TYPE_INDEX.get(b.type) ?? 0)) * 64 + b.x) * 64 + b.z) | 0;
+    a = Math.imul(a ^ v, 0x01000193);
+    h = Math.imul(h ^ v ^ b.id, 0x85ebca6b) ^ (h >>> 13);
+  }
+  const n = state.buildings.length;
+  const hit = occupancyCache.get(state);
+  if (hit && hit.a === a && hit.b === h && hit.n === n) return hit.grid;
   const grid = new Int32Array(GRID * GRID);
   for (const b of state.buildings) {
     const def = BUILDINGS[b.type];
@@ -441,6 +493,7 @@ export function occupancy(state: GameState): Int32Array {
       for (let dz = 0; dz < def.d; dz++) grid[(b.z + dz) * GRID + (b.x + dx)] = b.id;
     }
   }
+  occupancyCache.set(state, { a, b: h, n, grid });
   return grid;
 }
 
@@ -532,11 +585,15 @@ export const UNLOCK_REASON: Record<Unlock, FailReason> = {
   ketChuong3: 'canKetChuong3',
 };
 
-/** Thành Cổ Loa đắp đè lên lũy tre (hay thành đất) được: lũy cũ được dỡ đi. */
+/**
+ * Công trình bị thay khi dựng `type` ở (x, z): thành Cổ Loa đắp đè lên lũy tre (hay thành đất) được, lũy cũ được dỡ đi;
+ * trải loại đường khác đè lên ô đường cũ thì đổi vật liệu.
+ */
 function replacedWall(state: GameState, type: BuildingType, x: number, z: number): Building | undefined {
-  if (type !== 'thanh') return undefined;
+  if (type !== 'thanh' && !isRoad(type)) return undefined;
   const b = buildingAt(state, x, z);
-  return b?.type === 'luy' ? b : undefined;
+  if (type === 'thanh') return b?.type === 'luy' ? b : undefined;
+  return b && isRoad(b.type) && b.type !== type ? b : undefined;
 }
 
 export function canPlace(state: GameState, type: BuildingType, x: number, z: number): Result {
@@ -544,21 +601,36 @@ export function canPlace(state: GameState, type: BuildingType, x: number, z: num
   if (!def.buildable) return fail('khongTheXay');
   if (def.unlock && !unlocked(state, def.unlock)) return fail(UNLOCK_REASON[def.unlock]);
   if (dienLevel(state) < def.minDien) return fail('chuaDuCapDien');
-  if (countOf(state, type) >= limitOf(state, type)) return fail('datGioiHan');
+  if (def.barracksLevel && barracksLevel(state) < def.barracksLevel) return fail('canDoanhTrai');
+  // Đổi vật liệu một ô đường không thêm ô nào.
+  const swap = isRoad(type) && !!replacedWall(state, type, x, z);
+  if (!swap && usedOf(state, type) >= limitOf(state, type)) return fail(needsGeneral(state, type) ? 'canTuongChiHuy' : 'datGioiHan');
+  const why = fitsAt(state, type, x, z, occupancy(state));
+  if (why) return fail(why);
+  if (!canAfford(state, def.buildCost)) return fail('thieuTaiNguyen');
+  return ok(undefined);
+}
+
+/** Hết chỗ dựng doanh trại vì thiếu tướng chỉ huy (cấp Điện vẫn cho dựng thêm). */
+export function needsGeneral(state: GameState, type: BuildingType): boolean {
+  return type === 'doanhTrai' && limitOf(state, type) < BUILDINGS.doanhTrai.limit[dienLevel(state) - 1];
+}
+
+/** Phần chỗ đặt của `canPlace`: móng nằm trong vùng đã khai phá, không chồng công trình khác (thành đắp đè lũy được), bến sát sông. */
+function fitsAt(state: GameState, type: BuildingType, x: number, z: number, grid: Int32Array): FailReason | null {
+  const def = BUILDINGS[type];
   const level = dienLevel(state);
-  const grid = occupancy(state);
   const over = replacedWall(state, type, x, z);
   for (let dx = 0; dx < def.w; dx++) {
     for (let dz = 0; dz < def.d; dz++) {
       const tx = x + dx;
       const tz = z + dz;
-      if (!inGrid(tx, tz) || !isUnlocked(tx, tz, level)) return fail('ngoaiVung');
-      if (grid[tz * GRID + tx] && grid[tz * GRID + tx] !== over?.id) return fail('datBiChiem');
+      if (!inGrid(tx, tz) || !isUnlocked(tx, tz, level)) return 'ngoaiVung';
+      if (grid[tz * GRID + tx] && grid[tz * GRID + tx] !== over?.id) return 'datBiChiem';
     }
   }
-  if (def.nearRiver && !touchesRiver(x, z, def.w, def.d)) return fail('phaiSatSong');
-  if (!canAfford(state, def.buildCost)) return fail('thieuTaiNguyen');
-  return ok(undefined);
+  if (def.nearRiver && !touchesRiver(x, z, def.w, def.d)) return 'phaiSatSong';
+  return null;
 }
 
 export function canUpgrade(state: GameState, id: number): Result {
@@ -566,10 +638,11 @@ export function canUpgrade(state: GameState, id: number): Result {
   if (!b) return fail('khongTimThay');
   const cost = upgradeCostOf(b);
   if (!cost) return fail('capToiDa');
-  // Điện lên cấp 6 khi đã vào chương 2, lên cấp 7 khi đã vào chương 3.
+  // Điện lên cấp 6 khi đã vào chương 2, cấp 7 khi đã vào chương 3, cấp 8 khi đã vào chương 4.
   const chapter = b.type === 'dien' ? DIEN_CHAPTER[b.level + 1] : undefined;
   if (chapter === 2 && !inChapter2(state)) return fail('canChuong2');
   if (chapter === 3 && !inChapter3(state)) return fail('canChuong3');
+  if (chapter === 4 && !inChapter4(state)) return fail('canChuong4');
   if (dienLevel(state) < dienNeededFor(b.type, b.level + 1)) return fail('chuaDuCapDien');
   if (!canAfford(state, cost)) return fail('thieuTaiNguyen');
   return ok(undefined);
@@ -673,6 +746,76 @@ export function place(state: GameState, type: BuildingType, x: number, z: number
   return ok(b);
 }
 
+/**
+ * Công trình một ô (lũy, đê, thành, bẫy, chòi canh, lầu nỏ) đứng liền nhau được; không tính khi xét viền trống.
+ * Đường đi và đồ trang trí cũng không tính: nhà đứng cạnh ao, cạnh cây đa vẫn là thoáng.
+ */
+const isSolid = (type: BuildingType) => BUILDINGS[type].w > 1 && !isDecor(type);
+
+/** Quanh móng (x, z, w, d) một ô có công trình nhiều ô nào không (ô ngoài lưới, sông, rừng coi như trống). */
+function ringFree(state: GameState, grid: Int32Array, x: number, z: number, w: number, d: number): boolean {
+  for (let tx = x - 1; tx <= x + w; tx++) {
+    for (let tz = z - 1; tz <= z + d; tz++) {
+      if (tx >= x && tx < x + w && tz >= z && tz < z + d) continue;
+      if (!inGrid(tx, tz)) continue;
+      const id = grid[tz * GRID + tx];
+      if (id && isSolid(findBuilding(state, id)!.type)) return false;
+    }
+  }
+  return true;
+}
+
+const spotOrder = new Map<string, Int32Array>();
+/** Mọi góc móng (x, z) cho móng w×d, xếp theo khoảng cách từ tâm móng tới (ax, az), gần trước. Ghi nhớ theo khóa. */
+function spotsAround(w: number, d: number, ax: number, az: number): Int32Array {
+  const key = `${w}:${d}:${ax}:${az}`;
+  let list = spotOrder.get(key);
+  if (!list) {
+    const spots: { x: number; z: number; k: number }[] = [];
+    for (let z = 0; z <= GRID - d; z++) {
+      for (let x = 0; x <= GRID - w; x++) {
+        const dx = x + w / 2 - ax;
+        const dz = z + d / 2 - az;
+        spots.push({ x, z, k: dx * dx + dz * dz });
+      }
+    }
+    spots.sort((a, b) => a.k - b.k || a.z - b.z || a.x - b.x);
+    list = new Int32Array(spots.length * 2);
+    spots.forEach((s, i) => {
+      list![2 * i] = s.x;
+      list![2 * i + 1] = s.z;
+    });
+    if (spotOrder.size > 64) spotOrder.clear();
+    spotOrder.set(key, list);
+  }
+  return list;
+}
+
+/**
+ * Tìm chỗ dựng `type` gần điểm neo (mặc định là tâm Điện; công trình một ô thì neo ở góc vùng đất phía rừng).
+ * Ưu tiên chỗ có viền trống một ô quanh móng để kinh đô thoáng; hết chỗ thoáng mới đặt sát.
+ * Không xét giá: trả về chỗ mà `canPlace` sẽ nhận nếu đủ tài nguyên. Không có chỗ thì trả về null.
+ */
+export function findSpot(state: GameState, type: BuildingType, anchor?: { x: number; z: number }): { x: number; z: number } | null {
+  const def = BUILDINGS[type];
+  const probe = canPlace(state, type, -def.w, -def.d);
+  if (!probe.ok && probe.reason !== 'ngoaiVung') return null;
+  const dien = state.buildings.find((b) => b.type === 'dien');
+  const lo = areaStart(dienLevel(state));
+  const a = anchor ?? (isSolid(type) && dien ? { x: dien.x + BUILDINGS.dien.w / 2, z: dien.z + BUILDINGS.dien.d / 2 } : { x: lo, z: lo });
+  const grid = occupancy(state);
+  const list = spotsAround(def.w, def.d, Math.round(a.x * 2) / 2, Math.round(a.z * 2) / 2);
+  let packed: { x: number; z: number } | null = null;
+  for (let i = 0; i < list.length; i += 2) {
+    const x = list[i];
+    const z = list[i + 1];
+    if (fitsAt(state, type, x, z, grid) !== null) continue;
+    if (!isSolid(type) || ringFree(state, grid, x, z, def.w, def.d)) return { x, z };
+    packed ??= { x, z };
+  }
+  return packed;
+}
+
 // ---------- Dời công trình ----------
 
 /** Giá dời một công trình: một phần giá dựng, làm tròn lên. */
@@ -735,7 +878,9 @@ const NO_RAISE: BuildingType[] = ['luy', 'bayChong', 'de', 'thanh'];
 export function canRaiseTile(state: GameState, x: number, z: number): Result<Cost> {
   if (!inChapter2(state)) return fail('canChuong2');
   if (!inGrid(x, z) || !isUnlocked(x, z, dienLevel(state))) return fail('ngoaiVung');
-  if (buildingAt(state, x, z)) return fail('datBiChiem');
+  // Ô đường hay món trang trí một ô thì đắp đất ngay dưới nó được, nó nằm trên mặt đất mới.
+  const on = buildingAt(state, x, z);
+  if (on && !(isDecor(on.type) && BUILDINGS[on.type].w === 1)) return fail('datBiChiem');
   const h = tileHeight(state, x, z);
   if (h >= MAX_HEIGHT) return fail('datCaoNhat');
   if (state.raid.phase === 'battle') return fail('dangCoGiac');
@@ -798,6 +943,15 @@ export function remove(state: GameState, id: number): Result {
   return ok(undefined);
 }
 
+/** Dọn ô đường hay món trang trí đang chiếm ô (x, z). Không hoàn của, như dỡ lũy. */
+export function clearDecorAt(state: GameState, x: number, z: number): Result<Building> {
+  const b = buildingAt(state, x, z);
+  if (!b) return fail('khongTimThay');
+  if (!isDecor(b.type)) return fail('khongPhaiTrangTri');
+  state.buildings = state.buildings.filter((other) => other.id !== b.id);
+  return ok(b);
+}
+
 /** Đặt số người làm ở một công trình. */
 export function setWorkers(state: GameState, id: number, n: number): Result<Building> {
   const b = findBuilding(state, id);
@@ -845,9 +999,18 @@ export function claimQuest(state: GameState): Result<Cost> {
 
 // ---------- Quân đội ----------
 
+/** Nơi ở riêng còn nguyên của binh chủng (lính luyện ở đó), nếu có. */
+export function homeOf(state: GameState, kind: UnitType): Building | undefined {
+  const homes = state.buildings.filter((b) => b.type === UNITS[kind].home);
+  return homes.find((b) => !b.damaged) ?? homes[0];
+}
+
 export function canTrain(state: GameState, kind: UnitType): Result {
   const def = UNITS[kind];
-  if (barracksLevel(state) < def.barracksLevel) return fail('canDoanhTrai');
+  if (countOf(state, 'doanhTrai') === 0) return fail('canDoanhTrai');
+  const home = homeOf(state, kind);
+  if (!home) return fail('canNoiO');
+  if (home.damaged) return fail('noiOHu');
   if (state.raid.phase === 'battle') return fail('dangCoGiac');
   if (state.campaign.battle) return fail('dangDanhPhoBan');
   if (isStarving(state)) return fail('thieuGao');
@@ -857,7 +1020,8 @@ export function canTrain(state: GameState, kind: UnitType): Result {
 }
 
 /**
- * Tuyển một người lính ở doanh trại, xong ngay. Lính tách riêng khỏi dân làng:
+ * Tuyển một người lính ở nơi ở riêng của binh chủng ấy, xong ngay. Doanh trại giữ tổng số chỗ quân.
+ * Lính tách riêng khỏi dân làng:
  * cái giá là tiền tuyển và gạo ăn mỗi phút, không lấy bớt người làm.
  */
 export function train(state: GameState, kind: UnitType): Result<UnitType> {

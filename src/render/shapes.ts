@@ -11,6 +11,21 @@ type Rot = [number, number, number];
 /** Ghép nhiều hình (hộp, cầu, trụ, nón, viên nang...) có màu thành một geometry. */
 export class ShapeBuilder {
   private parts: THREE.BufferGeometry[] = [];
+  /**
+   * Thu tâm mỗi hình theo x, z về gốc (giữ nguyên cỡ hình). Công trình cấp cao phóng to cả khối nhưng thu tâm
+   * các phần lại, nên mỗi phần to ra tại chỗ cũ mà không tràn ô móng.
+   */
+  spread = 1;
+  /**
+   * Khung tọa độ riêng: có thì mỗi hình vẽ sau đó tính từ khung này (vd. vũ khí dựng với gốc ở chỗ tay nắm),
+   * rồi mới đặt vào mô hình. Không có thì vẽ thẳng trong tọa độ mô hình.
+   */
+  frame: THREE.Matrix4 | null = null;
+  /**
+   * Độ chi tiết: nhân số mặt quanh của khối cầu, trụ, nón (giữ tối thiểu để không méo). Nhân vật đông và nhỏ
+   * trên màn hình (dân làng) dùng số nhỏ cho nhẹ máy.
+   */
+  detail = 1;
 
   /** `lowPoly`: ít mặt hơn, dùng cho cây cối được nhân lên hàng trăm lần. */
   constructor(
@@ -22,10 +37,11 @@ export class ShapeBuilder {
     const g = geo.index ? geo.toNonIndexed() : geo;
     if (g !== geo) geo.dispose();
     const m = new THREE.Matrix4().compose(
-      new THREE.Vector3(x, y, z),
+      new THREE.Vector3(x * this.spread, y, z * this.spread),
       new THREE.Quaternion().setFromEuler(new THREE.Euler(...rot)),
       new THREE.Vector3(...scale),
     );
+    if (this.frame) m.premultiply(this.frame);
     g.applyMatrix4(m);
     tmpColor.set(color);
     const n = g.getAttribute('position').count;
@@ -46,15 +62,21 @@ export class ShapeBuilder {
   }
 
   sphere(r: number, color: THREE.ColorRepresentation, x: number, y: number, z: number, scale: [number, number, number] = [1, 1, 1], seg = this.lowPoly ? 7 : 12): this {
-    return this.add(new THREE.SphereGeometry(r, seg, Math.max(6, Math.round(seg * 0.75))), color, x, y, z, [0, 0, 0], scale);
+    const n = this.seg(seg, 5);
+    return this.add(new THREE.SphereGeometry(r, n, Math.max(this.detail < 1 ? 4 : 6, Math.round(n * 0.75))), color, x, y, z, [0, 0, 0], scale);
   }
 
   cyl(rTop: number, rBottom: number, h: number, color: THREE.ColorRepresentation, x: number, y: number, z: number, rot?: Rot, seg = this.lowPoly ? 6 : 12): this {
-    return this.add(new THREE.CylinderGeometry(rTop, rBottom, h, seg), color, x, y, z, rot);
+    return this.add(new THREE.CylinderGeometry(rTop, rBottom, h, this.seg(seg, 5)), color, x, y, z, rot);
   }
 
   cone(r: number, h: number, color: THREE.ColorRepresentation, x: number, y: number, z: number, rot?: Rot, seg = this.lowPoly ? 6 : 10): this {
-    return this.add(new THREE.ConeGeometry(r, h, seg), color, x, y, z, rot);
+    return this.add(new THREE.ConeGeometry(r, h, this.seg(seg, 4)), color, x, y, z, rot);
+  }
+
+  /** Số mặt quanh theo độ chi tiết, không ít hơn `min` (và không nhiều hơn số đã cho). */
+  private seg(seg: number, min: number): number {
+    return this.detail === 1 ? seg : Math.min(seg, Math.max(min, Math.round(seg * this.detail)));
   }
 
   capsule(r: number, len: number, color: THREE.ColorRepresentation, x: number, y: number, z: number, rot?: Rot, scale?: [number, number, number]): this {

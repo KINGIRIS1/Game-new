@@ -9,10 +9,10 @@ describe('báo cáo kinh tế', () => {
   const kq = doKinhTe();
   const giaiDoan = Object.values(kq.so);
 
-  it('người chơi mô phỏng đi hết ba chương, lên đủ bảy cấp Điện, rồi chơi thêm mỗi giờ một giai đoạn', () => {
-    expect(kq.moc.at7).toBeGreaterThan(0);
+  it('người chơi mô phỏng đi hết bốn chương, lên đủ tám cấp Điện, rồi chơi thêm mỗi giờ một giai đoạn', () => {
+    expect(kq.moc.at8).toBeGreaterThan(0);
     expect(kq.lenDien.slice(2).every((t) => t > 0)).toBe(true);
-    expect(Object.keys(kq.so)).toEqual(['chuong1', 'chuong2', 'chuong3', 'sau7-1', 'sau7-2', 'sau7-3']);
+    expect(Object.keys(kq.so)).toEqual(['chuong1', 'chuong2', 'chuong3', 'chuong4', 'sau8-1', 'sau8-2', 'sau8-3']);
   });
 
   // Báo cáo đo cùng người chơi với balance.test.ts nên mốc lên Điện phải trùng với cách test đó đo.
@@ -20,6 +20,7 @@ describe('báo cáo kinh tế', () => {
     expect(kq.lenDien[5]).toBe(playUntilDien(5, 120) * 60);
     expect(kq.lenDien[6]).toBe(kq.moc.at6);
     expect(kq.lenDien[7]).toBe(kq.moc.at7);
+    expect(kq.lenDien[8]).toBe(kq.moc.at8);
   });
 
   // Tiêu hết khi vào chương mới diễn ra sau giây cuối của chương cũ, nên không tính vào tồn cuối.

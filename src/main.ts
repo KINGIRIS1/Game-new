@@ -5,19 +5,24 @@ import { play, setMuted, stopRally, unlockAudio } from './audio/sfx';
 import { useSkill } from './game/battle';
 import { leaveBattlefield, retreat, startStage } from './game/campaign';
 import { forgeArms } from './game/binhKhi';
+import { assignCommander, autoGuard, setGuard } from './game/doanhTrai';
 import { forgeNoThan, inChapter3, wallRings } from './game/coLoa';
 import { offer } from './game/tet';
 import { applyMau } from './game/mau';
+import { mergeTowers } from './game/chuong4';
 import { feedGiong, forgeGear } from './game/giong';
 import { inChapter2, offerGift } from './game/son';
 import { markStory, pendingStory } from './game/story';
 import { footprintTop } from './game/terrain';
-import { BUILDINGS, RESOURCE_IDS, STAGES, type BuildingType, type Cost, type SkillId } from './game/defs';
+import { BUILDINGS, RESOURCE_IDS, STAGES, isDecor, isRoad, type BuildingType, type Cost, type ResourceId, type SkillId } from './game/defs';
+import { fmt } from './ui/format';
 import {
   applyOffline,
   buildingAt,
   canMove,
   canPlace,
+  clearDecorAt,
+  findSpot,
   claimQuest,
   createInitialState,
   findBuilding,
@@ -44,20 +49,26 @@ import {
   type GameState,
   type StageResult,
 } from './game/game';
-import { GRID, RIVER_START } from './game/map';
-import { fromCode, loadFromStorage, saveToStorage, toCode } from './game/save';
+import { AREA_SIZE, GRID, RIVER_START } from './game/map';
+import { fromCode, loadFromStorage, saveFileName, saveToStorage, toCode } from './game/save';
 import { RESOLUTIONS, World, type Resolution } from './render/world';
 import { vi } from './text/vi';
 import { Hud, buildingName, type HudAction } from './ui/hud';
 
-/** Chạm từng ô để dựng lũy, gài bẫy, đắp đê, đắp thành Cổ Loa, hay đắp đất (`raise`). */
-type PaintType = 'luy' | 'bayChong' | 'de' | 'thanh' | 'raise';
+/**
+ * Chạm từng ô để dựng lũy, gài bẫy, đắp đê, đắp thành Cổ Loa, trải đường, đặt đồ trang trí một ô; hay đắp đất
+ * (`raise`), dọn đường và đồ trang trí (`clear`).
+ */
+type PaintType = BuildingType | 'raise' | 'clear';
 const PAINTED: BuildingType[] = ['luy', 'bayChong', 'de', 'thanh'];
+const isPainted = (type: BuildingType) => PAINTED.includes(type) || (isDecor(type) && BUILDINGS[type].w === 1);
 
 type Mode =
   | { kind: 'view'; selected: number | null }
   | { kind: 'place'; type: BuildingType; x: number; z: number; moving?: number }
-  | { kind: 'paint'; type: PaintType };
+  | { kind: 'paint'; type: PaintType }
+  /** Đang chọn chòi canh thứ hai để ghép với chòi `from` thành lầu nỏ. */
+  | { kind: 'merge'; from: number };
 
 /** Vắng mặt lâu hơn mức này thì hiện bảng báo thu hoạch. */
 const OFFLINE_NOTICE_MS = 60_000;
@@ -158,20 +169,11 @@ function start(): void {
     world.setFloodPreview(painting || warning ? state : null, nextFloodLevel(state));
   };
 
-  /** Tìm chỗ đặt được gần tâm màn hình nhất để bóng công trình hiện ra ở chỗ hợp lý. */
+  /** Tìm chỗ đặt được gần tâm màn hình nhất, ưu tiên chỗ thoáng, để bóng công trình hiện ra ở chỗ hợp lý. */
   const nearestSpot = (type: BuildingType): { x: number; z: number } => {
     const def = BUILDINGS[type];
     const c = world.screenCenterTile();
-    const cx = c.x - Math.floor((def.w - 1) / 2);
-    const cz = c.z - Math.floor((def.d - 1) / 2);
-    let best: { x: number; z: number; d: number } | null = null;
-    for (let x = 0; x <= GRID - def.w; x++) {
-      for (let z = 0; z <= GRID - def.d; z++) {
-        const d = Math.abs(x - cx) + Math.abs(z - cz);
-        if ((!best || d < best.d) && canPlace(state, type, x, z).ok) best = { x, z, d };
-      }
-    }
-    return best ?? { x: cx, z: cz };
+    return findSpot(state, type, c) ?? { x: c.x - Math.floor((def.w - 1) / 2), z: c.z - Math.floor((def.d - 1) / 2) };
   };
 
   const exitMode = () => {
@@ -221,6 +223,14 @@ function start(): void {
     }
     if (mode.kind === 'paint') {
       if (!tile) return;
+      if (mode.type === 'clear') {
+        const r = clearDecorAt(state, tile.x, tile.z);
+        if (!r.ok) return fail(r.reason);
+        play('tap');
+        hud.setHint(vi.ui.cleared(buildingName(r.value)));
+        commit();
+        return;
+      }
       if (mode.type === 'raise') {
         const r = raiseTile(state, tile.x, tile.z);
         if (!r.ok) return fail(r.reason);
@@ -237,6 +247,18 @@ function start(): void {
       return;
     }
     const id = world.pickBuildingId(cx, cy) ?? (tile ? buildingAt(state, tile.x, tile.z)?.id : undefined) ?? null;
+    if (mode.kind === 'merge') {
+      if (id === null) return;
+      const r = mergeTowers(state, mode.from, id);
+      if (!r.ok) return fail(r.reason);
+      play('upgrade');
+      hud.toast(vi.ui.merged);
+      exitMode();
+      commit();
+      world.pop(r.value.id);
+      select(r.value.id);
+      return;
+    }
     if (id !== null) play('tap');
     select(id);
   };
@@ -262,16 +284,19 @@ function start(): void {
         hud.closeSheet();
         world.showGrid(true);
         play('tap');
-        if (PAINTED.includes(a.type)) {
-          mode = { kind: 'paint', type: a.type as PaintType };
-          const hint =
-            a.type === 'luy'
-              ? vi.ui.wallHint
-              : a.type === 'de'
-                ? vi.ui.dikeHint
-                : a.type === 'thanh'
-                  ? vi.ui.citadelHint(wallRings(state))
-                  : vi.ui.trapHint;
+        if (isPainted(a.type)) {
+          mode = { kind: 'paint', type: a.type };
+          const hint = isRoad(a.type)
+            ? vi.ui.roadHint
+            : isDecor(a.type)
+              ? vi.ui.decorHint
+              : a.type === 'luy'
+                ? vi.ui.wallHint
+                : a.type === 'de'
+                  ? vi.ui.dikeHint
+                  : a.type === 'thanh'
+                    ? vi.ui.citadelHint(wallRings(state))
+                    : vi.ui.trapHint;
           hud.setMode('paint', true, hint);
           refreshFloodPreview();
           if (a.type === 'de') hud.toast(vi.ui.floodPreview(nextFloodLevel(state)));
@@ -353,6 +378,27 @@ function start(): void {
         updateGhost();
         return;
       }
+
+      case 'startMerge': {
+        const b = findBuilding(state, a.id);
+        if (!b) return fail('khongTimThay');
+        if (state.raid.phase !== 'idle') return fail('dangCoGiac');
+        hud.closeSheet();
+        world.setSelection(b);
+        play('tap');
+        mode = { kind: 'merge', from: b.id };
+        hud.setMode('merge');
+        return;
+      }
+
+      case 'chooseClear':
+        if (mode.kind !== 'view') exitMode();
+        hud.closeSheet();
+        world.showGrid(true);
+        play('tap');
+        mode = { kind: 'paint', type: 'clear' };
+        hud.setMode('paint', true, vi.ui.clearHint);
+        return;
 
       case 'chooseRaise':
         if (!inChapter2(state)) return fail('canChuong2');
@@ -444,7 +490,9 @@ function start(): void {
         play('upgrade');
         hud.toast(
           r.value.type === 'dien'
-            ? vi.ui.landExpanded
+            ? AREA_SIZE[r.value.level - 1] > AREA_SIZE[r.value.level - 2]
+              ? vi.ui.landExpanded
+              : vi.ui.dienUp(r.value.level)
             : r.value.type === 'luy'
               ? vi.ui.placed(buildingName(r.value))
               : vi.ui.upgraded(buildingName(r.value), r.value.level),
@@ -510,19 +558,46 @@ function start(): void {
         return;
       }
 
+      case 'saveFile': {
+        // Tệp lưu chứa đúng mã lưu, nên mở tệp ra chép mã cũng được.
+        const url = URL.createObjectURL(new Blob([toCode(state)], { type: 'text/plain' }));
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = saveFileName(new Date());
+        document.body.append(link);
+        link.click();
+        link.remove();
+        setTimeout(() => URL.revokeObjectURL(url), 60_000);
+        hud.toast(vi.ui.downloaded);
+        return;
+      }
+
+      case 'shareFile': {
+        // Gọi ngay trong lúc bấm: Safari chỉ cho mở bảng chia sẻ khi người chơi vừa chạm.
+        const file = new File([toCode(state)], saveFileName(new Date()), { type: 'text/plain' });
+        navigator.share({ files: [file], title: vi.gameTitle }).catch((err: unknown) => {
+          // Người chơi tự đóng bảng chia sẻ thì thôi.
+          if (err instanceof DOMException && err.name === 'AbortError') return;
+          play('error');
+          hud.toast(vi.ui.shareFailed, true);
+        });
+        return;
+      }
+
       case 'importCode': {
         const loaded = fromCode(a.code);
         if (!loaded) {
           play('error');
-          hud.toast(vi.ui.importBad, true);
+          hud.toast(a.file ? vi.ui.fileBad : vi.ui.importBad, true);
           return;
         }
         state = loaded;
         state.lastSeen = Date.now();
+        showRelaid();
         setMuted(state.settings.muted);
         world.resetAll();
         hud.closeSheet();
-        hud.toast(vi.ui.imported);
+        hud.toast(a.file ? vi.ui.fileLoaded : vi.ui.imported);
         commit();
         return;
       }
@@ -583,6 +658,29 @@ function start(): void {
         return;
       }
 
+      case 'assignTuong': {
+        const r = assignCommander(state, a.id, a.tuong);
+        if (!r.ok) return fail(r.reason);
+        play('claim');
+        hud.toast(vi.ui.commandAssigned(vi.ui.tuongNames[a.tuong]));
+        commit();
+        return;
+      }
+
+      case 'guardDelta': {
+        const r = setGuard(state, a.id, a.unit, a.delta);
+        if (!r.ok) return fail(r.reason);
+        play('tap');
+        commit();
+        return;
+      }
+
+      case 'guardAuto':
+        autoGuard(state);
+        play('tap');
+        commit();
+        return;
+
       case 'repair': {
         const r = repair(state, a.id);
         if (!r.ok) return fail(r.reason);
@@ -630,6 +728,12 @@ function start(): void {
         }
         return;
       }
+
+      case 'selectBuilding':
+        if (mode.kind !== 'view') exitMode();
+        play('tap');
+        select(a.id);
+        return;
 
       case 'closeSheet':
         select(null);
@@ -709,7 +813,19 @@ function start(): void {
 
   // ---------- Khởi động và vòng lặp ----------
 
+  /** Bản lưu vừa nâng từ kinh đô nhỏ: báo một lần kinh đô đã dựng lại và phần của được hoàn. */
+  const showRelaid = () => {
+    if (!state.relaid) return;
+    const refund = (Object.entries(state.relaid.refund) as [ResourceId, number][])
+      .filter(([, n]) => n > 0)
+      .map(([r, n]) => `${fmt(n)} ${vi.resources[r].icon}`)
+      .join(', ');
+    delete state.relaid;
+    hud.toast(vi.ui.relaid(refund));
+  };
+
   const offline = applyOffline(state, Date.now());
+  showRelaid();
   commit();
   showOfflineIfLong(offline.ms, offline.gained);
   if (state.raid.lastResult) hud.showRaidResult(state, state.raid.lastResult);

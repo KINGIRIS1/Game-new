@@ -5,6 +5,7 @@
 
 import { retreatField, startFieldBattle, stepField } from './battle';
 import { CH3_LAST, KIM_QUY_AT, advJoined, advResting, inChapter3 } from './coLoa';
+import { armySpace, fieldCap } from './doanhTrai';
 import { REPLAY_SHARE, RESOURCE_IDS, STAGES, UNIT_TYPES, type Chapter, type Cost, type Row, type StageDef, type UnitType } from './defs';
 import { BATTLE_STEP, countOf, dienLevel, gain, troopBonus, type FailReason, type GameState, type Result, type StageResult } from './game';
 import { giongReady, giongResting } from './giong';
@@ -71,6 +72,8 @@ export function startStage(state: GameState, n: number, army: Record<UnitType, n
   const check = canStartStage(state, n);
   if (!check.ok) return check;
   if (UNIT_TYPES.some((k) => (army[k] ?? 0) < 0 || (army[k] ?? 0) > state.troops[k])) return fail('khongDuQuan');
+  // Nhiều doanh trại cho nhiều quân dự trữ, nhưng mỗi trận phó bản chỉ mang tối đa chừng này chỗ (38 từ Điện 5).
+  if (armySpace(army) > fieldCap(state)) return fail('quaChoPhoBan');
   const def = stageDef(n)!;
   const hero = heroFor(state, def.chapter);
   // Có tướng thì ra trận một mình cũng được.

@@ -1,5 +1,5 @@
-// Báo cáo kinh tế: ghi sổ từng khoản thu chi của người chơi mô phỏng (`moPhong.ts`) qua ba chương rồi chơi thêm
-// sau Điện 7. Chạy bằng `node scripts/kinh-te.mjs`; skill `ra-kinh-te` đọc báo cáo để phân tích nguồn vào, chỗ tiêu.
+// Báo cáo kinh tế: ghi sổ từng khoản thu chi của người chơi mô phỏng (`moPhong.ts`) qua bốn chương rồi chơi thêm
+// sau Điện 8. Chạy bằng `node scripts/kinh-te.mjs`; skill `ra-kinh-te` đọc báo cáo để phân tích nguồn vào, chỗ tiêu.
 // Báo cáo chỉ đưa số đo, không kết luận cân bằng hay không. Không chạy trong game thật.
 
 import { RESOURCE_IDS, STARVING_RATE, type ResourceId, type Resources } from './defs';
@@ -14,6 +14,7 @@ import {
   type GameState,
 } from './game';
 import { ECONOMY, LUY_COUNT, playChapters, playSecond, type Lam, type Moc } from './moPhong';
+import { inChapter4 } from './chuong4';
 import { inChapter3 } from './coLoa';
 import { inChapter2 } from './son';
 import { vi } from '../text/vi';
@@ -34,8 +35,17 @@ const KHOAN = {
 } as const;
 type Khoan = keyof typeof KHOAN;
 
-/** Sau Điện 7 người chơi mô phỏng chơi thêm chừng này phút (mặc định), chia sổ theo từng giờ. */
-export const SAU_DIEN7_PHUT = 180;
+/** Sau Điện 8 người chơi mô phỏng chơi thêm chừng này phút (mặc định), chia sổ theo từng giờ, để xem tài nguyên
+ * dồn lại ra sao khi hết đường lên cấp. */
+export const SAU_DIEN8_PHUT = 180;
+
+/** Bốn chương, theo thứ tự. Chương nào người chơi mô phỏng không tới thì báo cáo ghi CHƯA ĐO. */
+const CHUONG = [
+  ['chuong1', 'Chương 1 (từ đầu tới lúc vào chương 2)'],
+  ['chuong2', 'Chương 2 (tới lúc vào chương 3)'],
+  ['chuong3', 'Chương 3 (tới lúc vào chương 4)'],
+  ['chuong4', 'Chương 4 (tới lúc lên Điện 8)'],
+] as const;
 
 const zero = (): Resources => ({ gao: 0, voOc: 0, datDa: 0, sat: 0 });
 
@@ -75,24 +85,22 @@ export interface KetQuaKinhTe {
   moc: Moc;
   /** Giây chơi lúc lên từng cấp Điện (chỉ số là cấp), -1 nếu chưa tới. */
   lenDien: number[];
-  /** Sổ từng giai đoạn, theo thứ tự: chuong1, chuong2, chuong3, rồi sau7-1, sau7-2... mỗi giờ sau Điện 7. */
+  /** Sổ từng giai đoạn, theo thứ tự: chuong1 tới chuong4, rồi sau8-1, sau8-2... mỗi giờ sau Điện 8. */
   so: Record<string, SoGiaiDoan>;
 }
 
 /** Chạy người chơi mô phỏng và ghi sổ. Tất định: cùng con số trong defs.ts thì lần nào chạy cũng ra cùng sổ. */
-export function doKinhTe(sauDien7Phut = SAU_DIEN7_PHUT): KetQuaKinhTe {
+export function doKinhTe(sauDien8Phut = SAU_DIEN8_PHUT): KetQuaKinhTe {
   const s = createInitialState(0);
   const so: Record<string, SoGiaiDoan> = {};
-  const lenDien = [-1, 0, -1, -1, -1, -1, -1, -1];
+  const lenDien = [-1, 0, -1, -1, -1, -1, -1, -1, -1];
   let giayChoi = 0;
-  let sau7: { key: string; ten: string } | null = null;
-  const giaiDoan = (): { key: string; ten: string } =>
-    sau7 ??
-    (inChapter3(s)
-      ? { key: 'chuong3', ten: 'Chương 3 (tới lúc lên Điện 7)' }
-      : inChapter2(s)
-        ? { key: 'chuong2', ten: 'Chương 2 (tới lúc vào chương 3)' }
-        : { key: 'chuong1', ten: 'Chương 1 (từ đầu tới lúc vào chương 2)' });
+  let sau8: { key: string; ten: string } | null = null;
+  const giaiDoan = (): { key: string; ten: string } => {
+    if (sau8) return sau8;
+    const [key, ten] = CHUONG[inChapter4(s) ? 3 : inChapter3(s) ? 2 : inChapter2(s) ? 1 : 0];
+    return { key, ten };
+  };
 
   const lam: Lam = (viec, run) => {
     // Ghi vào giai đoạn lúc việc bắt đầu: tiêu hết khi vào chương mới tính cho chương cũ.
@@ -136,12 +144,12 @@ export function doKinhTe(sauDien7Phut = SAU_DIEN7_PHUT): KetQuaKinhTe {
     sg.dienCuoi = level;
   };
 
-  const moc = playChapters({ lam, s });
-  if (moc.at7 >= 0) {
-    for (let sec = 0; sec < sauDien7Phut * 60; sec++) {
+  const moc = playChapters({ lam, s, last: 8 });
+  if (moc.at8 >= 0) {
+    for (let sec = 0; sec < sauDien8Phut * 60; sec++) {
       const h = Math.floor(sec / 3600);
-      const ten = `Sau Điện 7, phút ${h * 60}–${Math.min((h + 1) * 60, sauDien7Phut)}`;
-      sau7 = { key: `sau7-${h + 1}`, ten };
+      const ten = `Sau Điện 8, phút ${h * 60}–${Math.min((h + 1) * 60, sauDien8Phut)}`;
+      sau8 = { key: `sau8-${h + 1}`, ten };
       playSecond(s, lam);
     }
   }
@@ -183,11 +191,16 @@ export function inBaoCao(kq: KetQuaKinhTe, thu?: string): string {
         ['Lên Điện 6', `${phut(lenDien[6])} (${sau(lenDien[6], moc.enter2)} sau khi vào chương 2)`],
         ['Vào chương 3', phut(moc.enter3)],
         ['Lên Điện 7', `${phut(lenDien[7])} (${sau(lenDien[7], moc.enter3)} sau khi vào chương 3)`],
+        ['Vào chương 4', phut(moc.enter4)],
+        ['Lên Điện 8', `${phut(lenDien[8])} (${sau(lenDien[8], moc.enter4)} sau khi vào chương 4)`],
       ],
     ),
     '',
   );
 
+  for (const [key, ten] of CHUONG) {
+    if (!so[key]) out.push(`## ${ten}`, '', 'CHƯA ĐO: người chơi mô phỏng không tới giai đoạn này.', '');
+  }
   for (const sg of Object.values(so)) {
     out.push(`## ${sg.ten}: ${phut(sg.giay)}, cuối giai đoạn Điện cấp ${sg.dienCuoi}`, '');
     const hang: string[][] = [];
@@ -224,7 +237,7 @@ export function inBaoCao(kq: KetQuaKinhTe, thu?: string): string {
     `- Dựng ${LUY_COUNT} đoạn ${ten('luy').toLowerCase()}; dựng và nâng cấp: ${ECONOMY.map(ten).join(', ')}; nâng Điện.`,
     '- Tự chia dân rảnh vào làm, đổi thứ dư nhiều nhất với thuyền buôn, nhận thưởng nhiệm vụ khi nhiệm vụ đã xong.',
     '- Giữ lại 60% giá nâng Điện cấp sau trước khi chi cho việc khác.',
-    '- Vào chương 2 sau Điện 5 nửa giờ, vào chương 3 sau Điện 6 nửa giờ. Lúc vào chương, của dành dụm coi như tiêu hết.',
+    '- Vào chương 2 sau Điện 5 nửa giờ, chương 3 sau Điện 6 nửa giờ, chương 4 sau Điện 7 nửa giờ. Lúc vào chương, của dành dụm coi như tiêu hết.',
     '',
     '**Mọi khoản thu chi khác đều CHƯA ĐO**, gồm: các công trình khác (doanh trại, chòi canh, bẫy chông, đê, đền, thành, ' +
       'công trình Tết...), nhiệm vụ cần những công trình đó nên không xong, quân (huấn luyện, lính ăn, quân chết), giặc đánh ' +

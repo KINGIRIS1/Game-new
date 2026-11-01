@@ -3,8 +3,9 @@ import { startFieldBattle, stepField } from './battle';
 import { canForgeArms, forgeArms } from './binhKhi';
 import { ARMS, ARMS_BONUS, BUILDINGS, CH2_QUEST_START, CH3_QUEST_START, DEFAULT_ROWS, FIELD, STORAGE_CAP, UNITS } from './defs';
 import { canUpgrade, createInitialState, limitOf, place, storageCap, upgrade, type GameState } from './game';
-import { AREA_SIZE, areaStart, isUnlocked } from './map';
-import { deserialize, serialize } from './save';
+import { AREA_SIZE, FOREST_BAND, areaStart, isUnlocked } from './map';
+import { edge } from './testmap';
+import { SAVE_VERSION, deserialize, serialize } from './save';
 
 /** Kinh đô Điện cấp 5, đủ của để nâng. */
 function rich(questIndex = 0): GameState {
@@ -26,14 +27,16 @@ describe('Điện và công trình cấp 6–7', () => {
     s.questIndex = CH3_QUEST_START;
     expect(upgrade(s, 1).ok).toBe(true);
     expect(s.buildings[0].level).toBe(7);
-    expect(canUpgrade(s, 1)).toEqual({ ok: false, reason: 'capToiDa' });
+    // Cấp 8 mở ở chương 4 (cap8.test.ts).
+    expect(canUpgrade(s, 1)).toEqual({ ok: false, reason: 'canChuong4' });
   });
 
-  it('Điện cấp 6, 7 mở đất 25×25 rồi 26×26, chừa một hàng rừng; kho chứa nhiều hơn', () => {
-    expect(AREA_SIZE.slice(5)).toEqual([25, 26]);
-    expect(areaStart(7)).toBe(1);
-    expect(isUnlocked(0, 10, 7)).toBe(false);
-    expect(isUnlocked(1, 10, 7)).toBe(true);
+  it('Điện cấp 6, 7 mở đất 40×40, luôn chừa dải rừng ngoài cùng; kho chứa nhiều hơn', () => {
+    expect(AREA_SIZE.slice(5, 7)).toEqual([40, 40]);
+    expect(areaStart(7)).toBe(12);
+    expect(isUnlocked(11, 20, 7)).toBe(false);
+    expect(isUnlocked(12, 20, 7)).toBe(true);
+    for (let level = 1; level <= 8; level++) expect(areaStart(level)).toBeGreaterThanOrEqual(FOREST_BAND);
     const s = rich(CH3_QUEST_START);
     s.buildings[0].level = 7;
     expect(storageCap(s)).toBe(STORAGE_CAP[6]);
@@ -41,7 +44,7 @@ describe('Điện và công trình cấp 6–7', () => {
 
   it('công trình lên cấp 6, 7 khi Điện đã lên tới; mỗi cấp Điện mới cho dựng thêm', () => {
     const s = rich(CH3_QUEST_START);
-    const ruong = place(s, 'ruong', 10, 10);
+    const ruong = place(s, 'ruong', edge(5, 1), edge(5, 1));
     if (!ruong.ok) throw new Error(ruong.reason);
     ruong.value.level = 5;
     expect(canUpgrade(s, ruong.value.id)).toEqual({ ok: false, reason: 'chuaDuCapDien' });
@@ -52,9 +55,9 @@ describe('Điện và công trình cấp 6–7', () => {
     expect(ruong.value.level).toBe(7);
     expect(limitOf(s, 'ruong')).toBe(8);
     expect(BUILDINGS.doanhTrai.maxLevel).toBe(5);
-    // Mọi mảng theo cấp Điện đủ 7 phần, mọi mảng theo cấp công trình đủ số cấp.
+    // Mọi mảng theo cấp Điện đủ 8 phần (cấp 8 từ chương 4), mọi mảng theo cấp công trình đủ số cấp.
     for (const def of Object.values(BUILDINGS)) {
-      expect(def.limit.length).toBe(7);
+      expect(def.limit.length).toBe(8);
       expect(def.hp.length).toBe(def.maxLevel);
       expect(def.production.length).toBe(def.maxLevel);
       expect(def.upgradeCost.length).toBe(def.maxLevel + 1);
@@ -67,7 +70,7 @@ describe('rèn binh khí', () => {
   function withForge(level: number): GameState {
     const s = rich(CH3_QUEST_START);
     s.buildings[0].level = 7;
-    const r = place(s, 'loRen', 4, 22);
+    const r = place(s, 'loRen', edge(7, 1), edge(7, 10));
     if (!r.ok) throw new Error(r.reason);
     r.value.level = level;
     return s;
@@ -120,7 +123,7 @@ describe('rèn binh khí', () => {
     s7.version = 7;
     delete s7.arms;
     const back = deserialize(JSON.stringify(s7))!;
-    expect(back.version).toBe(9);
+    expect(back.version).toBe(SAVE_VERSION);
     expect(back.arms).toEqual({ giao: 0, cung: 0, voi: 0 });
   });
 });

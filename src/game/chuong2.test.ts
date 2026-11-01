@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { heroOf, skillReady, startBattle, startFieldBattle, stepField, useSkill, type HeroSetup } from './battle';
 import { canStartStage, startStage } from './campaign';
 import {
+  BUILDINGS,
   CH2_QUEST_START,
   DEFAULT_ROWS,
   ENEMIES,
@@ -25,6 +26,7 @@ import {
   canPlace,
   canRaiseTile,
   createInitialState,
+  move,
   place,
   questProgress,
   raiseBuilding,
@@ -33,11 +35,12 @@ import {
   type GameState,
 } from './game';
 import { GRID, RIVER_START, baseHeights } from './map';
-import { deserialize, serialize } from './save';
+import { SAVE_VERSION, deserialize, serialize } from './save';
 import { HALF_ARMY, SAMPLE_ARMY, SEEDS, fightStage } from './testkit';
 import { canOffer, heroFor, offerGift, sonJoined } from './son';
 import { markStory, pendingStory } from './story';
 import { drowns, floodMap, groundOf, tileHeight } from './terrain';
+import { bank, edge } from './testmap';
 
 type Army = Record<UnitType, number>;
 const ARMY: Army = { giao: 14, cung: 12, voi: 4 };
@@ -51,11 +54,11 @@ function ch2(): GameState {
   s.questIndex = CH2_QUEST_START;
   s.giong = { fed: 5, gear: { ngua: true, roi: true, giap: true }, whipBroken: true, restUntil: 0, ascended: true };
   s.campaign.cleared = 8;
-  const barracks = place(s, 'doanhTrai', 6, 6);
+  const barracks = place(s, 'doanhTrai', edge(5, 1), edge(5, 1));
   if (!barracks.ok) throw new Error(barracks.reason);
   barracks.value.level = 5;
   // Chương 1 kết thúc bằng việc dựng Đền Phù Đổng.
-  if (!place(s, 'denPhuDong', 10, 6).ok) throw new Error('dựng đền thử thất bại');
+  if (!place(s, 'denPhuDong', edge(5, 6), edge(5, 1)).ok) throw new Error('dựng đền thử thất bại');
   s.troops = { ...ARMY };
   return s;
 }
@@ -79,37 +82,37 @@ function flatSpot(s: GameState, w: number, d: number, h: number, zMax = RIVER_ST
 }
 
 describe('độ cao ô đất', () => {
-  it('sông thấp nhất, hai ô sát sông là bãi bồi bậc 0, càng xa sông càng cao', () => {
+  it('sông thấp nhất, ba ô sát sông là bãi bồi bậc 0, càng xa sông càng cao', () => {
     const h = baseHeights();
-    expect(h[28 * GRID + 10]).toBe(-1);
-    expect(h[26 * GRID + 10]).toBe(0);
-    expect(h[25 * GRID + 10]).toBe(0);
-    expect(h[10 * GRID + 26]).toBe(0);
+    const R = RIVER_START;
+    expect(h[(R + 1) * GRID + 20]).toBe(-1);
+    for (const z of [R - 1, R - 2, R - 3]) expect(h[z * GRID + 20]).toBe(0);
+    expect(h[20 * GRID + R - 1]).toBe(0);
     const avg = (z0: number, z1: number) => {
       let sum = 0;
       let n = 0;
-      for (let z = z0; z < z1; z++) for (let x = 3; x < 24; x++) (sum += h[z * GRID + x]), n++;
+      for (let z = z0; z < z1; z++) for (let x = 3; x < R - 4; x++) (sum += h[z * GRID + x]), n++;
       return sum / n;
     };
-    expect(avg(3, 9)).toBeGreaterThan(avg(18, 25));
+    expect(avg(3, 13)).toBeGreaterThan(avg(R - 13, R - 3));
     expect(Math.max(...h)).toBeLessThanOrEqual(3);
   });
 
   it('dựng công trình thì móng được đắp phẳng bằng chỗ cao nhất', () => {
     const s = ch2();
-    // Tìm chỗ 3×3 có cả bậc 1 lẫn bậc 2.
+    // Tìm chỗ 4×4 có cả bậc 1 lẫn bậc 2.
     let spot: { x: number; z: number } | null = null;
-    for (let z = 3; z < 24 && !spot; z++) {
-      for (let x = 3; x < 24 && !spot; x++) {
+    for (let z = edge(5); z < RIVER_START - 4 && !spot; z++) {
+      for (let x = edge(5); x < RIVER_START - 4 && !spot; x++) {
         const hs = new Set<number>();
-        for (let dx = 0; dx < 3; dx++) for (let dz = 0; dz < 3; dz++) hs.add(tileHeight(s, x + dx, z + dz));
+        for (let dx = 0; dx < 4; dx++) for (let dz = 0; dz < 4; dz++) hs.add(tileHeight(s, x + dx, z + dz));
         if (hs.has(1) && hs.has(2) && hs.size === 2 && canPlace(s, 'ruong', x, z).ok) spot = { x, z };
       }
     }
     expect(spot).not.toBeNull();
     const r = place(s, 'ruong', spot!.x, spot!.z);
     expect(r.ok).toBe(true);
-    for (let dx = 0; dx < 3; dx++) for (let dz = 0; dz < 3; dz++) expect(tileHeight(s, spot!.x + dx, spot!.z + dz)).toBe(2);
+    for (let dx = 0; dx < 4; dx++) for (let dz = 0; dz < 4; dz++) expect(tileHeight(s, spot!.x + dx, spot!.z + dz)).toBe(2);
     // Điện có sẵn cũng đứng trên móng phẳng.
     const dien = s.buildings[0];
     expect(tileHeight(s, dien.x + 3, dien.z + 3)).toBe(groundOf(s, dien));
@@ -135,7 +138,7 @@ describe('độ cao ô đất', () => {
 
   it('đắp nền: cả công trình cao thêm một bậc; lũy, bẫy, đê thì không', () => {
     const s = ch2();
-    const spot = flatSpot(s, 3, 3, 1);
+    const spot = flatSpot(s, 4, 4, 1);
     const ruong = place(s, 'ruong', spot.x, spot.z);
     if (!ruong.ok) throw new Error(ruong.reason);
     expect(raiseBuilding(s, ruong.value.id).ok).toBe(true);
@@ -169,7 +172,7 @@ describe('nước lũ', () => {
           low++;
         }
         if (two[i] && h === 1) plain++;
-        if (x < 3 || z < 3) expect(two[i]).toBe(0);
+        if (x < edge(5) || z < edge(5)) expect(two[i]).toBe(0);
       }
     }
     expect(low).toBeGreaterThan(40);
@@ -179,24 +182,27 @@ describe('nước lũ', () => {
   it('đê liền một dải chặn được nước, hở một chỗ thì nước tràn vào', () => {
     const s = ch2();
     s.buildings[0].level = 1;
-    // Vùng Điện cấp 1 là các ô 11..26: đắp đê dọc hàng z = 25 và cột x = 25.
-    for (let x = 11; x <= 25; x++) expect(place(s, 'de', x, 25).ok).toBe(true);
-    for (let z = 11; z <= 24; z++) expect(place(s, 'de', 25, z).ok).toBe(true);
+    // Vùng Điện cấp 1: đắp đê dọc hàng và cột cách sông 4 ô (đứng trên đất bậc 1).
+    const lo = edge(1);
+    const line = RIVER_START - 4;
+    for (let x = lo; x <= line; x++) expect(place(s, 'de', x, line).ok).toBe(true);
+    for (let z = lo; z < line; z++) expect(place(s, 'de', line, z).ok).toBe(true);
     const sealed = floodMap(s, 2, 1);
-    for (let z = 11; z <= 24; z++) for (let x = 11; x <= 24; x++) expect(sealed[z * GRID + x]).toBe(0);
+    for (let z = lo; z < line; z++) for (let x = lo; x < line; x++) expect(sealed[z * GRID + x]).toBe(0);
     // Thủy quái phá vỡ một đoạn đê.
-    s.buildings.find((b) => b.type === 'de' && b.x === 15)!.damaged = true;
+    s.buildings.find((b) => b.type === 'de' && b.x === lo + 4)!.damaged = true;
     const breach = floodMap(s, 2, 1);
     let inside = 0;
-    for (let z = 11; z <= 24; z++) for (let x = 11; x <= 24; x++) inside += breach[z * GRID + x];
+    for (let z = lo; z < line; z++) for (let x = lo; x < line; x++) inside += breach[z * GRID + x];
     expect(inside).toBeGreaterThan(5);
   });
 
   it('công trình ngập thì hư; Điện, nhà sàn, kho chịu được 1 bậc; bến không sợ nước', () => {
     const s = ch2();
-    const baiDa = place(s, 'baiDa', 8, 25);
-    const nhaSan = place(s, 'nhaSan', 11, 25);
-    const ben = place(s, 'ben', 14, 25);
+    // Ba công trình trên bãi bồi sát sông nam.
+    const baiDa = place(s, 'baiDa', edge(5, 3), bank('baiDa'));
+    const nhaSan = place(s, 'nhaSan', edge(5, 7), bank('nhaSan'));
+    const ben = place(s, 'ben', edge(5, 11), bank('ben'));
     if (!baiDa.ok || !nhaSan.ok || !ben.ok) throw new Error('dựng thử thất bại');
     const wet1 = floodMap(s, 1, 5);
     expect(drowns(s, baiDa.value, wet1, 1)).toBe(true);
@@ -251,7 +257,7 @@ describe('mùa lũ ở kinh đô', () => {
     expect(['nam', 'dong']).toContain(s.raid.side);
   });
 
-  it('thủy quái ngoi lên từ sông, nước dâng dần tới mực lũ, Sơn Tinh ra trận từ trước Điện', () => {
+  it('thủy quái ngoi lên từ sông, nước dâng dần tới mực lũ, Sơn Tinh ra trận từ doanh trại', () => {
     const s = wed();
     expect(callRaidNow(s).ok).toBe(true);
     tick(s, RAID_WARNING_MS);
@@ -259,6 +265,11 @@ describe('mùa lũ ở kinh đô', () => {
     expect(battle.swim).toBe(true);
     expect(battle.floodTo).toBe(1);
     expect(battle.hero?.kind).toBe('sonTinh');
+    // Tướng ra từ sân trước doanh trại.
+    const barracks = s.buildings.find((b) => b.type === 'doanhTrai')!;
+    const son = battle.fighters.find((f) => f.kind === 'sonTinh')!;
+    expect(son.x).toBeCloseTo(barracks.x + BUILDINGS.doanhTrai.w / 2, 1);
+    expect(son.z).toBeCloseTo(barracks.z + BUILDINGS.doanhTrai.d, 1);
     for (const f of battle.fighters.filter((f) => f.side === 'giac')) expect(Math.max(f.x, f.z)).toBeGreaterThan(RIVER_START);
     tick(s, 3000);
     expect(s.raid.water).toBeGreaterThan(0.3);
@@ -269,7 +280,7 @@ describe('mùa lũ ở kinh đô', () => {
 
   it('giữ được mùa lũ: diệt hết thủy quái, không công trình nào ngập; công trình trên bãi bồi thì hư', () => {
     const s = wed();
-    for (let i = 0; i < 5; i++) place(s, 'choiCanh', 14 + i * 2, 22);
+    for (let i = 0; i < 5; i++) place(s, 'choiCanh', 34 + i * 3, RIVER_START - 7);
     callRaidNow(s);
     tick(s, RAID_WARNING_MS);
     for (let i = 0; i < 400 && s.raid.phase === 'battle'; i++) tick(s, 500);
@@ -280,7 +291,7 @@ describe('mùa lũ ở kinh đô', () => {
     expect(s.raid.floodsHeld).toBe(1);
     expect(s.raid.floods).toBe(1);
     // Mùa sau: dựng bãi đất đá ngay trên bãi bồi thì bị nước làm hư.
-    const baiDa = place(s, 'baiDa', 8, 25);
+    const baiDa = place(s, 'baiDa', edge(5, 3), bank('baiDa'));
     if (!baiDa.ok) throw new Error(baiDa.reason);
     s.troops = { ...ARMY };
     callRaidNow(s);
@@ -291,11 +302,21 @@ describe('mùa lũ ở kinh đô', () => {
     expect(s.raid.floodsHeld).toBe(1);
   });
 
-  it('đê liền một dải, chòi canh sát đê và Sơn Tinh chặn được lũ bậc 3, không công trình nào ngập', () => {
+  it('đê liền một dải, chòi canh sát đê và Sơn Tinh từ doanh trại chặn được lũ bậc 3, không công trình nào ngập', () => {
     const s = wed();
-    for (let x = 3; x <= 24; x++) place(s, 'de', x, 24);
-    for (let z = 3; z <= 23; z++) place(s, 'de', 24, z);
-    for (const [x, z] of [[8, 22], [12, 22], [17, 22], [21, 22], [22, 15]]) place(s, 'choiCanh', x, z);
+    const lo = edge(5);
+    const line = RIVER_START - 4;
+    for (let x = lo; x <= line; x++) place(s, 'de', x, line);
+    for (let z = lo; z < line; z++) place(s, 'de', line, z);
+    const R = RIVER_START;
+    for (const [x, z] of [[R - 27, R - 7], [R - 21, R - 7], [R - 14, R - 7], [R - 8, R - 7], [R - 7, R - 17]]) place(s, 'choiCanh', x, z);
+    // Đê liền dải giữ khô cả vùng trong đê khi nước dâng tới bậc 3.
+    const sealed = floodMap(s, 3, 5);
+    for (let z = lo; z < line; z++) for (let x = lo; x < line; x++) expect(sealed[z * GRID + x]).toBe(0);
+    // Sơn Tinh ở doanh trại và ra trận cùng quân từ đó: doanh trại trong đê, gần phía sông như mẫu Đê bao.
+    // Doanh trại xa sông (góc rừng) thì quân và tướng tới chậm, thủy quái kịp phá đê.
+    const barracks = s.buildings.find((b) => b.type === 'doanhTrai')!;
+    expect(move(s, barracks.id, R - 10, R - 11).ok).toBe(true);
     s.raid.floods = 4;
     callRaidNow(s);
     tick(s, RAID_WARNING_MS);
@@ -305,7 +326,7 @@ describe('mùa lũ ở kinh đô', () => {
       if (battle.t > 2) for (const k of SKILL_IDS) useSkill(battle, k);
       tick(s, 125);
     }
-    expect(s.raid.lastResult?.flood).toBeCloseTo(3, 1);
+    expect(s.raid.lastResult?.won).toBe(true);
     expect(s.raid.lastResult?.drowned).toEqual([]);
     expect(s.buildings.filter((b) => b.type === 'de' && b.damaged)).toEqual([]);
   });
@@ -412,11 +433,11 @@ describe('Sơn Tinh', () => {
     expect(win(14).outcome).toBe('win');
     expect(s.son.non).toBe(true);
     expect(heroFor(s, 2)?.non).toBe(true);
-    expect(canPlace(s, 'denTanVien', 3, 12)).toEqual({ ok: false, reason: 'canKetChuong2' });
+    expect(canPlace(s, 'denTanVien', edge(5, 1), edge(5, 10))).toEqual({ ok: false, reason: 'canKetChuong2' });
     s.raid.nextAt = null;
     expect(win(16).outcome).toBe('win');
     expect(s.son.won).toBe(true);
-    expect(canPlace(s, 'denTanVien', 3, 12).ok).toBe(true);
+    expect(canPlace(s, 'denTanVien', edge(5, 1), edge(5, 10)).ok).toBe(true);
   });
 });
 
@@ -494,7 +515,7 @@ describe('cân bằng phó bản chương 2', () => {
   it('mùa lũ thứ 4 (nước bậc 2): quân mẫu cùng Sơn Tinh và 5 chòi canh giữ được', () => {
     const s = wed();
     s.raid.floods = 3;
-    for (let i = 0; i < 5; i++) place(s, 'choiCanh', 14 + i * 2, 22);
+    for (let i = 0; i < 5; i++) place(s, 'choiCanh', 34 + i * 3, RIVER_START - 7);
     const battle = startBattle(s, 10, 'nam', { hero: heroFor(s, 2), bonus: 0.1, flood: { n: 4, level: 2 } });
     s.raid.phase = 'battle';
     s.raid.battle = battle;
@@ -528,8 +549,8 @@ describe('truyện và lưu game chương 2', () => {
 
   it('lưu và nạp lại giữ nguyên độ cao, đê, Sơn Tinh', () => {
     const s = wed();
-    raiseTile(s, 10, 20);
-    place(s, 'de', 12, 24);
+    raiseTile(s, edge(5, 3), edge(5, 10));
+    place(s, 'de', edge(5, 5), RIVER_START - 4);
     expect(deserialize(serialize(s))).toEqual(s);
   });
 
@@ -541,7 +562,7 @@ describe('truyện và lưu game chương 2', () => {
     const raid = s5.raid as Record<string, unknown>;
     for (const k of ['foe', 'floods', 'floodsHeld', 'water']) delete raid[k];
     const back = deserialize(JSON.stringify(s5))!;
-    expect(back.version).toBe(9);
+    expect(back.version).toBe(SAVE_VERSION);
     expect(back.heights.length).toBe(GRID * GRID);
     expect(back.son.gifts.comNep).toBe(false);
     expect(back.raid.foe).toBe('an');
