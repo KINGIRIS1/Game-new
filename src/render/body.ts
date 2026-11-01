@@ -51,8 +51,18 @@ export interface BodyLook {
   belt?: number;
   /** Tấm đồng che ngực. */
   plate?: number;
+  /** Tấm gương đồng hộ tâm mặt trời trống đồng ở giữa ngực. */
+  drumPlate?: boolean;
+  /** Dây đai da bắt chéo trước ngực giữ giáp hộ tâm. */
+  crossStrap?: number;
   /** Vòng tay. */
   armband?: number;
+  /** Xà cạp đồng hoặc da bảo vệ ống chân. */
+  greaves?: number;
+  /** Bao cổ tay bảo vệ. */
+  wristband?: number;
+  /** Xăm mình thủy quái / họa tiết sông nước Đông Sơn. */
+  tattoo?: boolean;
 }
 
 /** Chân, hông, ngực, tay. */
@@ -66,6 +76,16 @@ export function humanBody(r: HumanRig, look: BodyLook): void {
     p.cyl(0.048, 0.036, 0.2, legs, x, 0.115, 0, undefined, 8);
     // Bàn chân bẹt chĩa ra trước, để nhìn rõ bước đi.
     p.sphere(0.045, legs === C.skin ? C.skin : C.ink, x, 0.022, 0.025, [1, 0.55, 1.5], 6);
+  }
+  if (look.greaves) {
+    for (const [b, x] of [
+      ['legL', -0.065],
+      ['legR', 0.065],
+    ] as const) {
+      const p = r.on(b).plain;
+      p.cyl(0.052, 0.042, 0.12, look.greaves, x, 0.105, 0.01, undefined, 8);
+      r.on(b).band.cyl(0.054, 0.054, 0.025, look.greaves, x, 0.14, 0.01, undefined, 8);
+    }
   }
   const hips = r.on('hips');
   const skirt = look.pattern === false ? hips.plain : hips.band;
@@ -81,7 +101,26 @@ export function humanBody(r: HumanRig, look: BodyLook): void {
   chest.cyl(0.125, 0.1, 0.17, torso, 0, 0.49, 0, undefined, 10);
   for (const s of [-1, 1]) chest.sphere(0.05, look.sleeves ?? torso, s * 0.12, 0.545, 0, [1, 1, 1], 6);
   chest.cyl(0.05, 0.06, 0.05, C.skin, 0, 0.585, 0, undefined, 8);
-  if (look.plate) chest.cyl(0.05, 0.05, 0.016, look.plate, 0, 0.495, 0.112, [Math.PI / 2, 0, 0], 12);
+  if (look.crossStrap) {
+    chest.box(0.022, 0.22, 0.01, look.crossStrap, 0, 0.49, 0.108, [0, 0, 0.46]);
+    chest.box(0.022, 0.22, 0.01, look.crossStrap, 0, 0.49, 0.108, [0, 0, -0.46]);
+  }
+  if (look.drumPlate) {
+    r.on('chest').drum.cyl(0.065, 0.065, 0.016, C.bronzeLight, 0, 0.495, 0.116, [Math.PI / 2, 0, 0], 16);
+    chest.cyl(0.075, 0.075, 0.012, C.bronzeDark, 0, 0.495, 0.114, [Math.PI / 2, 0, 0], 16);
+    chest.sphere(0.022, C.bronzeLight, 0, 0.495, 0.126, [1, 1, 0.6], 8);
+  } else if (look.plate) {
+    chest.cyl(0.05, 0.05, 0.016, look.plate, 0, 0.495, 0.112, [Math.PI / 2, 0, 0], 12);
+  }
+  if (look.tattoo) {
+    r.on('chest').band.cyl(0.128, 0.102, 0.09, C.ink, 0, 0.48, 0, undefined, 10);
+    for (const [b, x] of [
+      ['legL', -0.065],
+      ['legR', 0.065],
+    ] as const) {
+      r.on(b).band.cyl(0.05, 0.038, 0.08, C.ink, x, 0.12, 0, undefined, 8);
+    }
+  }
   for (const [b, s] of [
     ['armL', -1],
     ['armR', 1],
@@ -90,6 +129,7 @@ export function humanBody(r: HumanRig, look: BodyLook): void {
     const x = s * 0.135;
     p.cyl(0.04, 0.033, 0.23, look.sleeves ?? C.skin, x, 0.43, 0, undefined, 8);
     if (look.armband) p.cyl(0.043, 0.043, 0.035, look.armband, x, 0.4, 0, undefined, 8);
+    if (look.wristband) p.cyl(0.045, 0.045, 0.045, look.wristband, x, 0.33, 0, undefined, 8);
     p.sphere(0.045, C.skin, x, 0.3, 0, [1, 1, 1], 6);
   }
 }
@@ -103,6 +143,10 @@ export interface FaceLook {
   mustache?: number;
   /** Râu cằm (màu). */
   beard?: number;
+  /** Hoa tai đồng tròn xoắn ốc (phụ nữ Lạc Việt). */
+  earrings?: number;
+  /** Trâm cài tóc bằng đồng. */
+  hairPin?: number;
 }
 
 /** Đầu to: mặt, tai, mắt. Tóc và mũ vẽ riêng. Tâm đầu ở y 0,76, bán kính 0,2. */
@@ -119,8 +163,17 @@ export function humanHead(r: HumanRig, face: FaceLook = {}): void {
     }
     if (face.brows) p.box(0.075, 0.018, 0.02, C.ink, s * 0.078, 0.8, 0.178, [0, 0, -s * 0.32]);
     if (face.mustache) p.box(0.08, 0.022, 0.02, face.mustache, s * 0.05, 0.69, 0.188, [0, 0, s * 0.35]);
+    if (face.earrings) {
+      p.cyl(0.032, 0.032, 0.015, face.earrings, s * 0.2, 0.71, 0, [0, 0, Math.PI / 2], 8);
+      p.sphere(0.016, C.bronzeLight, s * 0.208, 0.69, 0, [1, 1, 1], 6);
+    }
   }
   if (face.beard) p.cone(0.1, 0.3, face.beard, 0, 0.56, 0.13, [Math.PI + 0.25, 0, 0], 7);
+  if (face.hairPin) {
+    p.cyl(0.008, 0.008, 0.32, face.hairPin, 0, 0.98, -0.05, [0, 0, Math.PI / 2], 6);
+    p.sphere(0.02, face.hairPin, -0.16, 0.98, -0.05, [1, 1, 1], 6);
+    p.sphere(0.02, face.hairPin, 0.16, 0.98, -0.05, [1, 1, 1], 6);
+  }
 }
 
 /** Tóc ngắn phủ đỉnh đầu. */
@@ -134,8 +187,16 @@ export function headband(r: HumanRig, color: number, h = 0.04): void {
 }
 
 /** Mũ lông chim xòe hình quạt, ngả ra sau, như hình người trên mặt trống đồng. */
-export function featherCrown(r: HumanRig, colors: readonly number[] = [C.red, C.cream], opts: { count?: number; len?: number; spread?: number } = {}): void {
+export function featherCrown(
+  r: HumanRig,
+  colors: readonly number[] = [C.red, C.cream],
+  opts: { count?: number; len?: number; spread?: number; bronzeRim?: boolean; tier2?: boolean } = {},
+): void {
   const p = r.on('head').plain;
+  if (opts.bronzeRim) {
+    r.on('head').band.cyl(0.228, 0.232, 0.045, C.bronze, 0, 0.83, -0.03, undefined, 14);
+    p.cyl(0.235, 0.235, 0.012, C.bronzeDark, 0, 0.81, -0.03, undefined, 14);
+  }
   const n = opts.count ?? 7;
   const half = (n - 1) / 2;
   const tilt = -0.3;
@@ -146,6 +207,18 @@ export function featherCrown(r: HumanRig, colors: readonly number[] = [C.red, C.
     const d = new THREE.Vector3(Math.sin(a), Math.cos(a) * Math.cos(tilt), Math.cos(a) * Math.sin(tilt));
     const color = colors[Math.abs(Math.round(i)) % colors.length];
     p.box(0.05, len, 0.022, color, d.x * len * 0.5, 0.88 + d.y * len * 0.5, -0.1 + d.z * len * 0.5, [tilt, 0, -a]);
+  }
+  if (opts.tier2) {
+    const n2 = Math.max(3, n - 2);
+    const half2 = (n2 - 1) / 2;
+    for (let k = 0; k < n2; k++) {
+      const i = k - half2;
+      const a = i * (opts.spread ?? 0.27);
+      const len = (opts.len ?? 0.36) * 0.62 - Math.abs(i) * 0.02;
+      const d = new THREE.Vector3(Math.sin(a), Math.cos(a) * Math.cos(tilt + 0.15), Math.cos(a) * Math.sin(tilt + 0.15));
+      const color = colors[(Math.abs(Math.round(i)) + 1) % colors.length];
+      p.box(0.045, len, 0.018, color, d.x * len * 0.5, 0.89 + d.y * len * 0.5, -0.07 + d.z * len * 0.5, [tilt + 0.15, 0, -a]);
+    }
   }
 }
 
