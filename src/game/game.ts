@@ -20,6 +20,9 @@ import {
   GIFT_IDS,
   MAX_HEIGHT,
   floodLevel,
+  isDecor,
+  isRoad,
+  ROAD_TYPES,
   raiseBuildingCost,
   raiseTileCost,
   DAN_GROW_MS,
@@ -307,7 +310,8 @@ export type FailReason =
   | 'canChuong4'
   | 'khongGhepDuoc'
   | 'canNoiO'
-  | 'noiOHu';
+  | 'noiOHu'
+  | 'khongPhaiTrangTri';
 
 export type Result<T = undefined> = { ok: true; value: T } | { ok: false; reason: FailReason };
 
@@ -393,8 +397,9 @@ export function limitOf(state: GameState, type: BuildingType): number {
   return BUILDINGS[type].limit[dienLevel(state) - 1];
 }
 
-/** Số chỗ đã dùng trong giới hạn `limitOf`: mỗi lầu nỏ tính là hai chòi canh. */
+/** Số chỗ đã dùng trong giới hạn `limitOf`: mỗi lầu nỏ tính là hai chòi canh; bốn loại đường chung một giới hạn. */
 export function usedOf(state: GameState, type: BuildingType): number {
+  if (isRoad(type)) return ROAD_TYPES.reduce((n, t) => n + countOf(state, t), 0);
   return countOf(state, type) + (type === 'choiCanh' ? LAU_NO_TOWERS * countOf(state, 'lauNo') : 0);
 }
 
@@ -565,11 +570,15 @@ export const UNLOCK_REASON: Record<Unlock, FailReason> = {
   ketChuong3: 'canKetChuong3',
 };
 
-/** Thành Cổ Loa đắp đè lên lũy tre (hay thành đất) được: lũy cũ được dỡ đi. */
+/**
+ * Công trình bị thay khi dựng `type` ở (x, z): thành Cổ Loa đắp đè lên lũy tre (hay thành đất) được, lũy cũ được dỡ đi;
+ * trải loại đường khác đè lên ô đường cũ thì đổi vật liệu.
+ */
 function replacedWall(state: GameState, type: BuildingType, x: number, z: number): Building | undefined {
-  if (type !== 'thanh') return undefined;
+  if (type !== 'thanh' && !isRoad(type)) return undefined;
   const b = buildingAt(state, x, z);
-  return b?.type === 'luy' ? b : undefined;
+  if (type === 'thanh') return b?.type === 'luy' ? b : undefined;
+  return b && isRoad(b.type) && b.type !== type ? b : undefined;
 }
 
 export function canPlace(state: GameState, type: BuildingType, x: number, z: number): Result {
@@ -578,7 +587,9 @@ export function canPlace(state: GameState, type: BuildingType, x: number, z: num
   if (def.unlock && !unlocked(state, def.unlock)) return fail(UNLOCK_REASON[def.unlock]);
   if (dienLevel(state) < def.minDien) return fail('chuaDuCapDien');
   if (def.barracksLevel && barracksLevel(state) < def.barracksLevel) return fail('canDoanhTrai');
-  if (usedOf(state, type) >= limitOf(state, type)) return fail('datGioiHan');
+  // Đổi vật liệu một ô đường không thêm ô nào.
+  const swap = isRoad(type) && !!replacedWall(state, type, x, z);
+  if (!swap && usedOf(state, type) >= limitOf(state, type)) return fail('datGioiHan');
   const why = fitsAt(state, type, x, z, occupancy(state));
   if (why) return fail(why);
   if (!canAfford(state, def.buildCost)) return fail('thieuTaiNguyen');
@@ -715,8 +726,11 @@ export function place(state: GameState, type: BuildingType, x: number, z: number
   return ok(b);
 }
 
-/** Công trình một ô (lũy, đê, thành, bẫy, chòi canh, lầu nỏ) đứng liền nhau được; không tính khi xét viền trống. */
-const isSolid = (type: BuildingType) => BUILDINGS[type].w > 1;
+/**
+ * Công trình một ô (lũy, đê, thành, bẫy, chòi canh, lầu nỏ) đứng liền nhau được; không tính khi xét viền trống.
+ * Đường đi và đồ trang trí cũng không tính: nhà đứng cạnh ao, cạnh cây đa vẫn là thoáng.
+ */
+const isSolid = (type: BuildingType) => BUILDINGS[type].w > 1 && !isDecor(type);
 
 /** Quanh móng (x, z, w, d) một ô có công trình nhiều ô nào không (ô ngoài lưới, sông, rừng coi như trống). */
 function ringFree(state: GameState, grid: Int32Array, x: number, z: number, w: number, d: number): boolean {
@@ -844,7 +858,9 @@ const NO_RAISE: BuildingType[] = ['luy', 'bayChong', 'de', 'thanh'];
 export function canRaiseTile(state: GameState, x: number, z: number): Result<Cost> {
   if (!inChapter2(state)) return fail('canChuong2');
   if (!inGrid(x, z) || !isUnlocked(x, z, dienLevel(state))) return fail('ngoaiVung');
-  if (buildingAt(state, x, z)) return fail('datBiChiem');
+  // Ô đường hay món trang trí một ô thì đắp đất ngay dưới nó được, nó nằm trên mặt đất mới.
+  const on = buildingAt(state, x, z);
+  if (on && !(isDecor(on.type) && BUILDINGS[on.type].w === 1)) return fail('datBiChiem');
   const h = tileHeight(state, x, z);
   if (h >= MAX_HEIGHT) return fail('datCaoNhat');
   if (state.raid.phase === 'battle') return fail('dangCoGiac');
@@ -905,6 +921,15 @@ export function remove(state: GameState, id: number): Result {
   if (!BUILDINGS[b.type].removable) return fail('khongTheDo');
   state.buildings = state.buildings.filter((other) => other.id !== id);
   return ok(undefined);
+}
+
+/** Dọn ô đường hay món trang trí đang chiếm ô (x, z). Không hoàn của, như dỡ lũy. */
+export function clearDecorAt(state: GameState, x: number, z: number): Result<Building> {
+  const b = buildingAt(state, x, z);
+  if (!b) return fail('khongTimThay');
+  if (!isDecor(b.type)) return fail('khongPhaiTrangTri');
+  state.buildings = state.buildings.filter((other) => other.id !== b.id);
+  return ok(b);
 }
 
 /** Đặt số người làm ở một công trình. */

@@ -116,6 +116,7 @@ Tài liệu này ghi lại các quyết định đã chốt với chủ dự án
 | Đền Tản Viên | 4×4 | Có sau khi kết chương 2. Lũ dâng thấp đi một bậc |
 | Thành Cổ Loa | 1×1 | Có từ chương 3. Đoạn thành đất nện cao, chắc; đắp nhiều vòng quanh Điện |
 | Đền Cổ Loa | 4×4 | Có sau khi kết chương 3. Chòi canh bắn mạnh gấp rưỡi, xa thêm 1 ô |
+| Đường đi, đồ trang trí | 1×1 tới 3×3 | Chỉ để nhìn (xem mục Đường đi và đồ trang trí) |
 
 Giá đắp nền tính theo lõi móng (bỏ viền cỏ một ô), nên giữ như trước khi móng to ra.
 
@@ -848,6 +849,51 @@ Chủ dự án đã chọn qua bốn câu hỏi: Thủy Tinh có cả hai phép 
   - mẫu Cổ Loa cho đủ 3 vòng thành;
   - đổi từ mẫu Phong Châu sang Cổ Loa vẫn xếp được.
 
+## Đường đi và đồ trang trí (chủ dự án yêu cầu, đã làm)
+
+Chủ dự án muốn thêm vật liệu trải đường (đất, đá...) và đồ trang trí (cây đa, giếng nước, ao làng, hoa, cỏ...) vào phần xây dựng. Các con số và luật dưới đây là tự chọn, chủ dự án có thể đổi.
+
+**Bảng Xây dựng** có ba thẻ chọn ở đầu bảng: Công trình, Đường đi, Trang trí. Mỗi lần chỉ hiện một nhóm, cho khỏi cuộn dài trên điện thoại; bảng nhớ thẻ đang xem.
+
+**Đường đi** (`ROAD_TYPES` ở `defs.ts`): móng 1×1, chạm từng ô để trải như lũy.
+
+| Loại | Giá mỗi ô | Mở khi |
+|---|---|---|
+| Đường đất nện | 🐚 2 | từ đầu |
+| Đường rải sỏi | 🪨 3 | Điện cấp 2 |
+| Đường lát đá | 🐚 2, 🪨 6 | Điện cấp 3 |
+| Đường lát gạch (gạch nung cùng lò với ngói Cổ Loa) | 🐚 6, 🪨 8 | vào chương 3 |
+
+- Bốn loại chung một giới hạn số ô theo cấp Điện: 60, 90, 120, 160, 200, 240, 280, 280 (`ROAD_LIMIT`).
+- Trải loại khác đè lên ô đường cũ thì đổi vật liệu, trả giá loại mới, không thêm ô (đầy giới hạn vẫn đổi được).
+- Ô đường lát kín ô nên các ô liền nhau thành một lối. Mép ô không giáp ô cùng loại thì có viền: bờ đất có cỏ, viền sỏi to, bó vỉa đá, gạch dựng.
+
+**Đồ trang trí** (`DECOR_TYPES`):
+
+| Món | Móng | Giá | Mở khi | Số tối đa theo cấp Điện 1–8 |
+|---|---|---|---|---|
+| Cây đa (gốc to, rễ phụ buông, am thờ dưới gốc) | 2×2 | 🌾 80, 🐚 60 | Điện cấp 2 | 1, 1, 2, 2, 3, 3, 4, 4 |
+| Giếng nước (thành đá ong, giá gàu, chum) | 1×1 | 🐚 20, 🪨 20 | Điện cấp 2 | 1, 2, 2, 3, 3, 4, 5, 5 |
+| Ao làng (sen, lau sậy, cầu ao) | 3×3 | 🌾 60, 🐚 60 | Điện cấp 2 | 1, 1, 1, 2, 2, 2, 3, 3 |
+| Khóm hoa (dâm bụt, cúc, mười giờ) | 1×1 | 🐚 3 | từ đầu | 10, 15, 20, 25, 30, 35, 40, 40 |
+| Bãi cỏ (thảm cỏ điểm hoa dại, liền nhau thành thảm) | 1×1 | 🐚 1 | từ đầu | 20, 30, 40, 50, 60, 70, 80, 80 |
+| Cây cau | 1×1 | 🌾 10, 🐚 5 | từ đầu | 4, 6, 8, 10, 12, 14, 16, 16 |
+| Đống rơm | 1×1 | 🌾 8 | từ đầu | 2, 4, 6, 8, 10, 12, 14, 14 |
+
+- Món một ô chạm từng ô để đặt như đường; cây đa, ao làng đặt như công trình (chọn chỗ rồi bấm Đặt).
+- Cây đa, ao làng vẽ theo móng cũ rồi phóng theo móng mới, chừa viền cỏ như công trình (`footScale`); tán đa chìa ra quá móng một chút như đa thật.
+
+**Luật chung** của đường và đồ trang trí (`isDecor` ở `defs.ts`):
+- Chỉ để nhìn, không cho thêm tài nguyên hay sức mạnh gì.
+- Giặc không nhắm phá, đi thẳng qua như đất trống. Lũ ngập tới đâu cũng không làm hư.
+- Chiếm ô như công trình: nhà không dựng đè lên được, phải dọn đi trước. Nhà đứng cạnh đồ trang trí vẫn tính là chỗ thoáng khi gợi ý chỗ dựng.
+- Dời được như công trình (10% giá dựng). Dọn đi không hoàn của, như dỡ lũy: bấm Dọn đi trong bảng của món ấy, hoặc dùng thẻ **Dọn trang trí** (🧹) trong nhóm Trang trí rồi chạm từng ô.
+- Từ chương 2, đắp đất được ngay dưới ô đường hay món một ô (món nằm trên mặt đất mới); cây đa, ao làng thì đắp nền như công trình.
+- Áp mẫu kinh đô: món vướng chỗ của mẫu thì dỡ đi (tính vào số dỡ đi), món không vướng thì giữ nguyên chỗ.
+- Bản lưu không đổi phiên bản: chỉ thêm loại công trình mới.
+- Vẽ theo lô cho nhẹ máy: đường và món một ô dù nhiều tới hàng trăm vẫn chỉ vài lệnh vẽ (`src/render/decor.ts`).
+- Test: `trangTri.test.ts`.
+
 ## Kế hoạch chương 4: Mỵ Châu, Trọng Thủy (chủ dự án đã duyệt, đang làm)
 
 Chủ dự án đã chốt hướng qua một buổi hỏi đáp 26 câu. Ở nhiều câu, chủ dự án nhờ tìm hiểu các game cùng thể loại rồi đề xuất theo đó. Chỉ học cơ chế, còn luật chơi, nội dung và hình ảnh vẫn là của riêng game này:
@@ -1196,7 +1242,7 @@ Chủ dự án thấy bản đồ kinh đô nhỏ, công trình sát nhau, bố 
    - **Nâng bản lưu** (`xepLai.ts`): bản lưu còn ở kinh đô nhỏ (Điện ở ô 16, 16, độ cao 30×30) dựng lại theo mẫu của chương đang chơi (chương 4 dùng mẫu Cổ Loa), miễn phí, giữ cấp, người làm, hư hỏng; công trình không có chỗ trong mẫu thì vào chỗ trống gần Điện nhất. Lũy, đê đã có thì dựng đủ dải theo mẫu; thành Cổ Loa xếp từ vòng trong ra và dựng nốt cho đủ số vòng kinh đô cũ đã có. Đoạn thừa trả lại giá đã bỏ ra; đất đã đắp và nền đã đắp trả lại đất đá (tính theo địa hình cũ). Trận giữ kinh đô đang dở lùi về lúc trinh sát báo, trả lại của bị cướp. Vào game thì báo một lần kinh đô đã dựng lại và phần hoàn lại.
    - **Bảng mẫu kinh đô**: bản đồ thu nhỏ vẽ lên canvas một lần cho mỗi mẫu và cấp Điện.
 2. **PR 2: khoảnh tự chọn** (bản lưu v12): bảng Khoảnh rừng, phát rừng, người chơi mô phỏng phát rừng, chỉnh giá theo sổ kinh tế.
-3. **PR 3: trang trí ô trống, lối đất** (chỉ hình vẽ).
+3. **PR 3: trang trí ô trống, lối đất** (chỉ hình vẽ, tự mọc). Người chơi đã tự trải đường và đặt đồ trang trí được (xem mục Đường đi và đồ trang trí); PR này vẫn để làm trang trí tự mọc trên ô trống.
 4. **PR 4: cây, đá mọc trên ô trống** (bản lưu v13).
 
 Sau đó mới làm tiếp chương 4, PR 2–4.
@@ -1238,4 +1284,5 @@ Sau đó mới làm tiếp chương 4, PR 2–4.
 10. **Chương 4: Mỵ Châu, Trọng Thủy** (đã duyệt, đang làm; PR 1 đã làm; xem Kế hoạch chương 4): Điện và 7 loại công trình lên cấp 8, lầu nỏ, ụ nỏ trên thành, lính nỏ, thủy binh Triệu đi thuyền, Cao Lỗ, phó bản màn 25–32, Đền Cuông, màn hình Hết truyện, thử thách phó bản và huân công.
 11. **Doanh trại và nơi ở riêng** (đã làm, xem mục cùng tên): doanh trại là nơi tướng ở và điều binh; trại giáo, trại cung, chuồng voi để luyện từng binh chủng; tướng ra trận từ doanh trại.
 12. **Kinh đô lớn, công trình to, mở đất bằng khoảnh** (đã duyệt, đang làm; xem mục Kế hoạch cùng tên): công trình to hơn một ô mỗi chiều, lưới 55×55, khoảnh 5×5 tự chọn, viền cỏ, trang trí ô trống, cây đá mọc. Làm trước chương 4 PR 2–4.
-13. **Để sau**: chương 5 về Hai Bà Trưng (mới nhắc ở câu cuối chương 4); nhạc nền.
+13. **Đường đi và đồ trang trí** (đã làm, xem mục cùng tên): bốn loại đường, bảy món trang trí, ba thẻ chọn trong bảng Xây dựng, thẻ Dọn trang trí.
+14. **Để sau**: chương 5 về Hai Bà Trưng (mới nhắc ở câu cuối chương 4); nhạc nền.
