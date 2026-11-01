@@ -1,10 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import { wallRings } from './coLoa';
-import { BUILDINGS, CH2_QUEST_START, CH3_QUEST_START, MOVE_FRACTION, type BuildingType } from './defs';
+import { CH1_LAST } from './campaign';
+import { BUILDINGS, CH2_QUEST_START, CH3_QUEST_START, MOVE_FRACTION, STAGES, type BuildingType } from './defs';
 import { canMove, createInitialState, dienLevel, limitOf, move, moveCost, occupancy, place, type GameState } from './game';
-import { applyMau, canApplyMau, mauSlots, mauUnlocked, planMau, MAU_IDS } from './mau';
-import { DIEN_HOME, GRID, RIVER_START, isRiver, isUnlocked, touchesRiver } from './map';
-import { bank, edge } from './testmap';
+import { applyMau, canApplyMau, mauSlots, mauUnlocked, planMau, MAU_IDS, type MauId } from './mau';
+import { DIEN_HOME, GRID, RIVER_START, isUnlocked, touchesRiver } from './map';
+import { DIEN_END, bank, edge, setDien } from './testmap';
 import { floodMap } from './terrain';
 
 /** Kinh đô giàu của, đã qua kết chương 1, ở chương `chapter`, Điện cấp `dien`. */
@@ -57,31 +58,77 @@ describe('dời công trình', () => {
   });
 });
 
+/** Chương có ở cấp Điện `dien` để dùng mẫu `id`: Đê bao từ chương 2, Cổ Loa từ chương 3; Điện 7, 8 cần chương 3. */
+const chapterFor = (id: MauId, dien: number): 1 | 2 | 3 => (id === 'coLoa' || dien >= 7 ? 3 : id === 'deBao' || dien >= 6 ? 2 : 1);
+/** Cấp Điện mẫu mở được trong game: Phong Châu từ đầu; Đê bao, Cổ Loa mở theo truyện, khi Điện đã cấp 5 (màn 8 cần Điện 5). */
+const levelsOf = (id: MauId): number[] => {
+  const from = id === 'phongChau' ? 1 : STAGES[CH1_LAST - 1].minDien;
+  return Array.from({ length: 9 - from }, (_, i) => from + i);
+};
+const SEGMENT_TYPES: BuildingType[] = ['luy', 'de', 'thanh', 'bayChong'];
+
 describe('mẫu kinh đô', () => {
-  it('ba mẫu vẽ đúng: Điện ở chỗ cố định, không chồng, không lấn sông, bến sát sông, đủ chỗ cho giới hạn của chương', () => {
-    const top: Record<string, number> = { phongChau: 5, deBao: 6, coLoa: 7 };
+  it('ba mẫu giãn theo đất: ở mọi cấp Điện, chỗ nào cũng trong vùng đã khai phá, không chồng, không lấn sông, bến sát sông', () => {
     for (const id of MAU_IDS) {
-      const slots = mauSlots(id);
-      expect(slots.find((s) => s.type === 'dien')).toMatchObject({ x: DIEN_HOME, z: DIEN_HOME });
-      const seen = new Set<number>();
-      for (const s of slots) {
-        const def = BUILDINGS[s.type];
-        if (def.nearRiver) expect(touchesRiver(s.x, s.z, def.w, def.d)).toBe(true);
-        for (let dx = 0; dx < def.w; dx++) {
-          for (let dz = 0; dz < def.d; dz++) {
-            expect(isRiver(s.x + dx, s.z + dz)).toBe(false);
-            const i = (s.z + dz) * GRID + s.x + dx;
-            expect(seen.has(i)).toBe(false);
-            seen.add(i);
+      for (let dien = 1; dien <= 8; dien++) {
+        const slots = mauSlots(id, dien);
+        expect(slots.find((x) => x.type === 'dien'), `${id} Điện ${dien}`).toMatchObject({ x: DIEN_HOME, z: DIEN_HOME });
+        const seen = new Set<number>();
+        for (const x of slots) {
+          const def = BUILDINGS[x.type];
+          if (def.nearRiver) expect(touchesRiver(x.x, x.z, def.w, def.d)).toBe(true);
+          for (let dx = 0; dx < def.w; dx++) {
+            for (let dz = 0; dz < def.d; dz++) {
+              expect(isUnlocked(x.x + dx, x.z + dz, dien), `${id} Điện ${dien}: ${x.type} ${x.x},${x.z}`).toBe(true);
+              const i = (x.z + dz) * GRID + x.x + dx;
+              expect(seen.has(i)).toBe(false);
+              seen.add(i);
+            }
           }
         }
+        // Lũy, đê, thành, bẫy, chòi canh không quá số tối đa ở cấp Điện ấy.
+        const s = city(dien, chapterFor(id, dien));
+        for (const t of [...SEGMENT_TYPES, 'choiCanh'] as BuildingType[]) {
+          expect(slots.filter((x) => x.type === t).length, `${id} Điện ${dien}: ${t}`).toBeLessThanOrEqual(limitOf(s, t));
+        }
       }
-      // Ở cấp Điện cao nhất của chương, mỗi loại có trong mẫu đủ chỗ (trong vùng) cho số tối đa.
-      const s = city(top[id], id === 'coLoa' ? 3 : id === 'deBao' ? 2 : 1);
-      const types = [...new Set(slots.map((x) => x.type))].filter((t) => t !== 'dien' && !['luy', 'de', 'thanh', 'bayChong'].includes(t));
-      for (const t of types) {
-        const inside = slots.filter((x) => x.type === t && isUnlocked(x.x, x.z, top[id])).length;
-        expect(inside, `${id}: ${t}`).toBeGreaterThanOrEqual(limitOf(s, t as BuildingType));
+    }
+  });
+
+  it('ở mọi cấp Điện mẫu mở được, mỗi loại trong mẫu đủ chỗ cho số tối đa (kể cả đền, Hội Tết, ba nơi ở)', () => {
+    for (const id of MAU_IDS) {
+      const types = [...new Set(mauSlots(id, 8).map((x) => x.type))].filter((t) => t !== 'dien' && !SEGMENT_TYPES.includes(t));
+      expect(types).toEqual(expect.arrayContaining(['doanhTrai', 'traiGiao', 'traiCung', 'chuongVoi', 'ruongNep', 'vuon', 'chuongLon', 'bep', 'denPhuDong']));
+      for (const dien of levelsOf(id)) {
+        const s = city(dien, chapterFor(id, dien));
+        const slots = mauSlots(id, dien);
+        for (const t of types) {
+          // Đền, Hội Tết mở sau kết chương 1, mà màn cuối chương 1 cần Điện 5: dưới Điện 5 mẫu không chừa chỗ.
+          const want = BUILDINGS[t].unlock && dien < STAGES[CH1_LAST - 1].minDien ? 0 : limitOf(s, t);
+          expect(slots.filter((x) => x.type === t).length, `${id} Điện ${dien}: ${t}`).toBe(want);
+        }
+      }
+    }
+  });
+
+  it('lũy, đê, bẫy chạy theo bìa đất ở từng cấp Điện', () => {
+    const at = (slots: { type: BuildingType; x: number; z: number }[], t: BuildingType, x: number, z: number) =>
+      slots.some((o) => o.type === t && o.x === x && o.z === z);
+    // Phong Châu: lũy tre liền một hàng ngay trong bìa rừng, cả mặt bắc và mặt tây, từ góc rừng tới sông; bẫy ở hàng ngoài lũy.
+    for (const dien of levelsOf('phongChau')) {
+      const slots = mauSlots('phongChau', dien);
+      for (let k = edge(dien, 1); k < RIVER_START; k++) {
+        expect(at(slots, 'luy', k, edge(dien, 1)) && at(slots, 'luy', edge(dien, 1), k), `Điện ${dien}: lũy ở ${k}`).toBe(true);
+      }
+      for (const b of slots.filter((x) => x.type === 'bayChong')) expect(Math.min(b.x, b.z)).toBe(edge(dien));
+    }
+    // Đê bao, Cổ Loa: đê liền dải cách sông 3 ô, chạy suốt tới bìa đất ở cả hai bờ.
+    for (const id of ['deBao', 'coLoa'] as const) {
+      for (const dien of levelsOf(id)) {
+        const slots = mauSlots(id, dien);
+        for (let k = edge(dien); k <= bank('ben', 1); k++) {
+          expect(at(slots, 'de', bank('ben', 1), k) && at(slots, 'de', k, bank('ben', 1)), `${id} Điện ${dien}: đê ở ${k}`).toBe(true);
+        }
       }
     }
   });
@@ -108,7 +155,7 @@ describe('mẫu kinh đô', () => {
     expect(res.ok).toBe(true);
     for (const r of ['gao', 'voOc', 'datDa', 'sat'] as const) expect(s.resources[r]).toBeCloseTo(before[r] - (plan.cost[r] ?? 0), 5);
     // Ruộng cấp 5 vẫn cấp 5, vẫn 4 người làm, giờ đứng ở một chỗ ruộng của mẫu.
-    const slots = mauSlots('phongChau');
+    const slots = mauSlots('phongChau', 5);
     expect(slots.some((x) => x.type === 'ruong' && x.x === r1.value.x && x.z === r1.value.z)).toBe(true);
     expect(r1.value).toMatchObject({ level: 5, workers: 4 });
     // Mọi công trình đứng đúng chỗ mẫu, không chồng nhau, số mỗi loại không quá giới hạn.
@@ -158,9 +205,9 @@ describe('mẫu kinh đô', () => {
     expect(s.buildings.filter((b) => b.type === 'luy').length).toBeLessThanOrEqual(limitOf(s, 'luy'));
   });
 
-  it('mẫu Đê bao: đê liền dải, lũ bậc 3 không ngập công trình nào ngoài bến', () => {
-    for (const dien of [6, 7]) {
-      const s = city(dien, dien === 7 ? 3 : 2);
+  it('mẫu Đê bao: đê liền dải, lũ bậc 3 không ngập công trình nào ngoài bến, ở mọi cấp Điện từ 5', () => {
+    for (const dien of levelsOf('deBao')) {
+      const s = city(dien, chapterFor('deBao', dien));
       expect(applyMau(s, 'deBao').ok).toBe(true);
       const wet = floodMap(s, 3, dien);
       for (const b of s.buildings) {
@@ -171,17 +218,47 @@ describe('mẫu kinh đô', () => {
     }
   });
 
-  it('mẫu Cổ Loa: ba vòng thành kín quanh Điện, đê bao ngoài cũng giữ được lũ bậc 3', () => {
-    const s = city(7, 3);
-    expect(applyMau(s, 'coLoa').ok).toBe(true);
-    expect(wallRings(s)).toBe(3);
-    const wet = floodMap(s, 3, 7);
-    for (const b of s.buildings) {
-      if (b.type === 'ben' || b.type === 'de') continue;
-      expect(wet[b.z * GRID + b.x], `${b.type} ${b.x},${b.z}`).toBe(0);
+  it('mẫu Cổ Loa: ba vòng thành kín quanh Điện ở mọi cấp Điện từ 5, vòng ngoài nới ra theo đất; đê bao giữ được lũ bậc 3', () => {
+    let outer = Infinity;
+    for (const dien of levelsOf('coLoa')) {
+      const s = city(dien, 3);
+      expect(applyMau(s, 'coLoa').ok).toBe(true);
+      expect(wallRings(s), `Điện ${dien}`).toBe(3);
+      const wet = floodMap(s, 3, dien);
+      for (const b of s.buildings) {
+        if (b.type === 'ben' || b.type === 'de') continue;
+        const def = BUILDINGS[b.type];
+        for (let dx = 0; dx < def.w; dx++) for (let dz = 0; dz < def.d; dz++) expect(wet[(b.z + dz) * GRID + b.x + dx], `Điện ${dien}: ${b.type} ${b.x},${b.z}`).toBe(0);
+      }
+      // Vòng ngoài không co lại khi đất rộng ra, và tới Điện 8 thì đã nới ra.
+      const west = Math.min(...mauSlots('coLoa', dien).filter((x) => x.type === 'thanh').map((x) => x.x));
+      expect(west, `Điện ${dien}`).toBeLessThanOrEqual(outer);
+      outer = west;
     }
-    // Bản vẽ mẫu đặt bến, đê theo bờ sông ở ô 52.
-    expect(RIVER_START).toBe(52);
+    expect(outer).toBeLessThan(Math.min(...mauSlots('coLoa', 5).filter((x) => x.type === 'thanh').map((x) => x.x)));
+    // Vòng trong chỉ có Điện và sân.
+    const slots = mauSlots('coLoa', 8);
+    const inner = Math.max(...slots.filter((x) => x.type === 'thanh' && x.z < DIEN_HOME && x.x > DIEN_HOME).map((x) => x.z));
+    for (const x of slots) if (x.type !== 'dien' && x.type !== 'thanh') expect(x.x > inner && x.z > inner && x.x < DIEN_END + 2 && x.z < DIEN_END + 2, `${x.type} ${x.x},${x.z}`).toBe(false);
+  });
+
+  it('nâng Điện rồi áp lại: lũy ra tới bìa đất mới, công trình cũ giữ cấp, dựng thêm cho đủ số tối đa mới', () => {
+    const s = city(3);
+    expect(applyMau(s, 'phongChau').ok).toBe(true);
+    const ruong = s.buildings.find((b) => b.type === 'ruong')!;
+    ruong.level = 3;
+    setDien(s, 4);
+    expect(applyMau(s, 'phongChau').ok).toBe(true);
+    expect(ruong.level).toBe(3);
+    const luy = s.buildings.filter((b) => b.type === 'luy');
+    expect(luy.length).toBeGreaterThan(0);
+    for (const b of luy) expect(Math.min(b.x, b.z)).toBe(edge(4, 1));
+    expect(s.buildings.filter((b) => b.type === 'ruong').length).toBe(limitOf(s, 'ruong'));
+    for (const b of s.buildings) {
+      const def = BUILDINGS[b.type];
+      for (let dx = 0; dx < def.w; dx++) for (let dz = 0; dz < def.d; dz++) expect(isUnlocked(b.x + dx, b.z + dz, 4)).toBe(true);
+    }
+    expect(canApplyMau(s, 'phongChau')).toEqual({ ok: false, reason: 'daTheoMau' });
   });
 
   it('đổi mẫu: đoạn lũy cũ vướng thành Cổ Loa bị dỡ, công trình không có chỗ trong mẫu tìm chỗ trống gần nhất', () => {

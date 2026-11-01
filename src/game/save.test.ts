@@ -177,7 +177,7 @@ describe('nâng bản lưu kinh đô nhỏ lên kinh đô lớn (phiên bản 10
     expect(s.buildings.filter((b) => b.type === 'luy').length).toBeGreaterThanOrEqual(23);
     expect(s.relaid?.refund.datDa ?? 0).toBeGreaterThanOrEqual(raiseTileCost(h0).datDa! + raiseTileCost(h0 + 1).datDa!);
     // Mỗi chỗ đứng là một chỗ trong mẫu Phong Châu.
-    const slots = mauSlots('phongChau');
+    const slots = mauSlots('phongChau', dienLevel(s));
     for (const b of s.buildings) expect(slots.some((x) => x.type === b.type && x.x === b.x && x.z === b.z), `${b.type} ${b.x},${b.z}`).toBe(true);
   });
 
