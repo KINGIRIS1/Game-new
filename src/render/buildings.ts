@@ -30,11 +30,11 @@ export function footScale(type: BuildingType): number {
 }
 
 /** Cấp dùng để tính độ dày (bờ ruộng, đống đá...): cấp 6, 7, 8 giữ như cấp 5. */
-const grown = (level: number) => Math.min(level, 5);
+export const grown = (level: number) => Math.min(level, 5);
 /** To dần theo cấp: khoảng 85% ở cấp 1, 105% ở cấp 5, rồi 110%, 115%, 120% ở cấp 6, 7, 8. */
 export const sizeFor = (level: number) => 0.8 + 0.05 * Math.min(level, 8);
 /** Số cấp đã qua cấp 5 (0 tới 3): công trình cao thêm và chi tiết thêm theo số này. */
-const above5 = (level: number) => Math.max(0, Math.min(level, 8) - 5);
+export const above5 = (level: number) => Math.max(0, Math.min(level, 8) - 5);
 /**
  * Nửa cạnh móng `tiles` ô trong tọa độ mô hình đã phóng to `scale`: nền và rào vẽ tới đây thì không tràn ô
  * dù công trình to lên. Không quá nửa cạnh lúc chưa phóng to.
@@ -68,7 +68,7 @@ function grownGroup(m: ToonModel, scale: number, k: number, extras: THREE.Object
 const TILE = 0xc8643a;
 const TILE_DARK = 0xa84e2e;
 
-interface Roof {
+export interface Roof {
   main: number;
   /** Tầng mái trên, mái miếu nhỏ. */
   dark: number;
@@ -78,7 +78,7 @@ interface Roof {
 
 const THATCH: Roof = { main: C.thatch, dark: C.thatchDark, trim: null };
 
-function roofFor(level: number): Roof {
+export function roofFor(level: number): Roof {
   if (level >= 8) return { main: TILE, dark: TILE_DARK, trim: C.gold };
   if (level >= 7) return { main: TILE, dark: TILE_DARK, trim: null };
   if (level >= 6) return { main: C.thatch, dark: C.thatchDark, trim: C.red };
@@ -88,7 +88,7 @@ function roofFor(level: number): Roof {
 type SaddleOpts = Parameters<typeof saddleRoof>[0];
 
 /** Mái thuyền màu theo `r`, xoay `ry` quanh trục đứng; có viền thì thêm sống mái và hai diềm mái chạy theo dáng cong. */
-function boatRoof(m: ToonModel, r: Roof, o: SaddleOpts, x: number, y: number, z: number, ry = 0, dark = false): void {
+export function boatRoof(m: ToonModel, r: Roof, o: SaddleOpts, x: number, y: number, z: number, ry = 0, dark = false): void {
   m.band.add(saddleRoof(o), dark ? r.dark : r.main, x, y, z, [0, ry, 0]);
   if (r.trim === null) return;
   const rad = THREE.MathUtils.clamp(o.width * 0.045, 0.03, 0.07);
@@ -104,7 +104,7 @@ function boatRoof(m: ToonModel, r: Roof, o: SaddleOpts, x: number, y: number, z:
 }
 
 /** Mái nón (tâm khối nón ở `y`, như `cone`): có viền thì thêm vành diềm mái và chóp mái. */
-function coneRoof(m: ToonModel, r: Roof, radius: number, h: number, x: number, y: number, z: number, seg = 10, band = false, dark = false): void {
+export function coneRoof(m: ToonModel, r: Roof, radius: number, h: number, x: number, y: number, z: number, seg = 10, band = false, dark = false): void {
   (band ? m.band : m.plain).cone(radius, h, dark ? r.dark : r.main, x, y, z, undefined, seg);
   if (r.trim === null) return;
   const t = THREE.MathUtils.clamp(radius * 0.07, 0.025, 0.05);
@@ -113,7 +113,7 @@ function coneRoof(m: ToonModel, r: Roof, radius: number, h: number, x: number, y
 }
 
 /** Lầu trống: bốn cột, sàn, trống đồng trên sàn, mái nhọn theo `roof`. Gốc ở chân lầu. `lac`: chim Lạc dang cánh trên đỉnh. */
-function drumTower(m: ToonModel, x: number, z: number, y0: number, roof: Roof, lac = false): void {
+export function drumTower(m: ToonModel, x: number, z: number, y0: number, roof: Roof, lac = false): void {
   const p = m.plain;
   for (const dx of [-0.24, 0.24]) for (const dz of [-0.24, 0.24]) p.cyl(0.04, 0.05, 1.0, C.woodDark, x + dx, y0 + 0.5, z + dz, undefined, 6);
   p.box(0.66, 0.07, 0.66, C.wood, x, y0 + 1.0, z);
@@ -128,7 +128,7 @@ function drumTower(m: ToonModel, x: number, z: number, y0: number, roof: Roof, l
   if (lac) birdSpread(m, x, y0 + 2.1, z, 0.9);
 }
 
-function bird(m: ToonModel, x: number, y: number, z: number, dir: number, s = 1): void {
+export function bird(m: ToonModel, x: number, y: number, z: number, dir: number, s = 1): void {
   m.plain.capsule(0.06 * s, 0.22 * s, C.bronze, x, y, z, [0, 0, Math.PI / 2]);
   m.plain.capsule(0.03 * s, 0.26 * s, C.bronze, x + dir * 0.2 * s, y + 0.12 * s, z, [0, 0, -dir * 0.6]);
   m.plain.cone(0.03 * s, 0.22 * s, C.bronzeLight, x + dir * 0.4 * s, y + 0.2 * s, z, [0, 0, -dir * Math.PI / 2]);
@@ -136,7 +136,7 @@ function bird(m: ToonModel, x: number, y: number, z: number, dir: number, s = 1)
 }
 
 /** Tượng chim Lạc dang cánh, mỏ dài, đuôi xòe, đứng trên đỉnh: kiểu chim bay trên mặt trống đồng. */
-function birdSpread(m: ToonModel, x: number, y: number, z: number, s = 1): void {
+export function birdSpread(m: ToonModel, x: number, y: number, z: number, s = 1): void {
   const p = m.plain;
   p.capsule(0.07 * s, 0.2 * s, C.bronze, x, y + 0.1 * s, z, [Math.PI / 2, 0, 0]);
   p.capsule(0.035 * s, 0.2 * s, C.bronze, x, y + 0.22 * s, z + 0.16 * s, [0.5, 0, 0]);
@@ -145,18 +145,18 @@ function birdSpread(m: ToonModel, x: number, y: number, z: number, s = 1): void 
   p.box(0.16 * s, 0.03, 0.2 * s, C.bronzeDark, x, y + 0.08 * s, z - 0.22 * s, [0.5, 0, 0]);
 }
 
-function drum(m: ToonModel, x: number, z: number, s = 1, y = 0.08): void {
+export function drum(m: ToonModel, x: number, z: number, s = 1, y = 0.08): void {
   m.band.cyl(0.36 * s, 0.32 * s, 0.32 * s, C.bronze, x, 0.16 * s + y, z, undefined, 16);
   m.drum.cyl(0.38 * s, 0.38 * s, 0.04 * s, 0xffffff, x, 0.34 * s + y, z, undefined, 20);
 }
 
-function banner(m: ToonModel, x: number, z: number, h: number, color: number): void {
+export function banner(m: ToonModel, x: number, z: number, h: number, color: number): void {
   m.plain.cyl(0.03, 0.035, h, C.woodDark, x, h / 2, z, undefined, 5);
   m.band.box(0.42, 0.6, 0.03, color, x + 0.22, h - 0.32, z);
 }
 
 /** Nhà sàn mái thuyền: cột, sàn, vách có hoa văn, mái cong vút. */
-function stiltHall(m: ToonModel, o: { x: number; z: number; w: number; d: number; postH: number; roofL: number; roofW: number; lift: number; ry?: number; roof?: Roof }): void {
+export function stiltHall(m: ToonModel, o: { x: number; z: number; w: number; d: number; postH: number; roofL: number; roofW: number; lift: number; ry?: number; roof?: Roof }): void {
   const p = m.plain;
   const cols = o.w > 2 ? [-o.w / 2 + 0.15, 0, o.w / 2 - 0.15] : [-o.w / 2 + 0.12, o.w / 2 - 0.12];
   for (const cx of cols) for (const cz of [-o.d / 2 + 0.12, o.d / 2 - 0.12]) p.cyl(0.07, 0.09, o.postH, C.woodDark, o.x + cx, o.postH / 2, o.z + cz);
@@ -296,10 +296,10 @@ export function makeDien(level: number): THREE.Group {
 // ---------- Ruộng lúa ----------
 
 /** Nước ao trong, sáng hơn nước ruộng cho dễ nhận ra ao giữ nước. */
-const POND = 0x6fb8cf;
+export const POND = 0x6fb8cf;
 
 /** Con trâu chibi đứng nghỉ. */
-function buffalo(p: ShapeBuilder, x: number, z: number): void {
+export function buffalo(p: ShapeBuilder, x: number, z: number): void {
   p.sphere(0.24, 0x4a4440, x, 0.32, z, [0.8, 0.7, 1.25], 8);
   for (const dx of [-0.1, 0.1]) for (const dz of [-0.15, 0.15]) p.cyl(0.045, 0.05, 0.24, 0x3a3532, x + dx, 0.12, z + dz, undefined, 5);
   p.sphere(0.13, 0x4a4440, x, 0.42, z + 0.3, [0.9, 0.85, 1.1], 7);
@@ -307,7 +307,7 @@ function buffalo(p: ShapeBuilder, x: number, z: number): void {
 }
 
 /** Con cò trắng đứng: mình trắng, cổ cong, mỏ vàng, chân đen. Mặt hướng `ry`, đứng ở độ cao `y`. */
-function egret(p: ShapeBuilder, x: number, z: number, ry: number, y = 0.07): void {
+export function egret(p: ShapeBuilder, x: number, z: number, ry: number, y = 0.07): void {
   const fx = Math.sin(ry);
   const fz = Math.cos(ry);
   for (const s of [-1, 1]) p.cyl(0.008, 0.008, 0.2, C.ink, x + s * 0.03 * fz, y + 0.1, z - s * 0.03 * fx, undefined, 3);
@@ -318,7 +318,7 @@ function egret(p: ShapeBuilder, x: number, z: number, ry: number, y = 0.07): voi
 }
 
 /** Guồng nước tre quay quanh trục dọc theo x, có gàu múc nước. Tách riêng để World cho quay (`userData.spin`). */
-function waterWheel(): THREE.Group {
+export function waterWheel(): THREE.Group {
   const w = new ToonModel(inkThin);
   const p = w.plain;
   p.add(new THREE.TorusGeometry(0.42, 0.03, 6, 20), C.woodDark, 0, 0, 0, [0, Math.PI / 2, 0]);
@@ -544,7 +544,7 @@ export function benBoats(level: number, spread: number): THREE.Object3D[] {
 // ---------- Nhà sàn ----------
 
 /** Một nóc nhà sàn mái tròn, màu mái theo `roof`; có viền thì thêm vành diềm mái và chóp mái. */
-function domeHouse(m: ToonModel, x: number, z: number, s: number, roof: Roof = THATCH, tall = 0): void {
+export function domeHouse(m: ToonModel, x: number, z: number, s: number, roof: Roof = THATCH, tall = 0): void {
   const p = m.plain;
   const postH = 0.55 * s + tall;
   for (const dx of [-0.32, 0.32]) for (const dz of [-0.28, 0.28]) p.cyl(0.045, 0.055, postH, C.woodDark, x + dx * s, postH / 2, z + dz * s, undefined, 6);
@@ -639,7 +639,7 @@ export function makeNhaSan(level: number): THREE.Group {
 }
 
 /** Cây cau: thân mảnh có đốt, chùm tàu lá xòe rủ trên ngọn, buồng cau xanh dưới tàu lá. Gốc ở chân cây. */
-function arecaPalm(p: ShapeBuilder, x: number, z: number, h: number): void {
+export function arecaPalm(p: ShapeBuilder, x: number, z: number, h: number): void {
   p.cyl(0.035, 0.055, h, C.palm, x, h / 2, z, undefined, 6);
   for (let i = 1; i < 6; i++) p.cyl(0.05, 0.05, 0.025, 0x6f5d46, x, (i * h) / 6, z, undefined, 6);
   for (let i = 0; i < 7; i++) {
@@ -750,9 +750,9 @@ export function makeBaiDa(level: number): THREE.Group {
 }
 
 /** Gạch đất nung đỏ. */
-const BRICK = 0xa8502e;
+export const BRICK = 0xa8502e;
 /** Sắt rèn binh khí: thép xám xanh như ngựa sắt của Gióng. */
-const IRON_BLADE = 0x7b8a9c;
+export const IRON_BLADE = 0x7b8a9c;
 
 // ---------- Lò rèn ----------
 
@@ -891,7 +891,7 @@ export function makeLoRen(level: number): THREE.Group {
 // ---------- Kho thóc ----------
 
 /** Một kho tròn trên cột cao (có đĩa chặn chuột), mái nón màu theo `roof`. */
-function granary(m: ToonModel, x: number, z: number, s: number, finial: boolean, roof: Roof = THATCH, tall = 0): void {
+export function granary(m: ToonModel, x: number, z: number, s: number, finial: boolean, roof: Roof = THATCH, tall = 0): void {
   const p = m.plain;
   const postH = 0.8 * s + tall;
   for (const dx of [-0.25, 0.25]) for (const dz of [-0.25, 0.25]) {
@@ -995,7 +995,7 @@ function strawDummy(p: ShapeBuilder, x: number, z: number, s = 1): void {
 }
 
 /** Lọng che tướng: cán cao, tán đỏ hình nón thấp, diềm đồng. */
-function parasol(m: ToonModel, x: number, z: number, h: number): void {
+export function parasol(m: ToonModel, x: number, z: number, h: number): void {
   m.plain.cyl(0.025, 0.03, h, C.woodDark, x, h / 2, z, undefined, 5);
   m.band.cone(0.36, 0.16, C.red, x, h + 0.04, z, undefined, 12);
   m.plain.add(new THREE.TorusGeometry(0.35, 0.025, 4, 18), C.bronze, x, h - 0.03, z, [Math.PI / 2, 0, 0]);
@@ -1100,7 +1100,7 @@ export function makeTraiGiao(): THREE.Group {
 }
 
 /** Bia rơm tròn vẽ vòng đỏ trắng trên giá gỗ, mấy mũi tên đã găm; mặt bia hướng `ry` (0 là ra trước, +z). */
-function archeryTarget(m: ToonModel, x: number, z: number, ry: number): void {
+export function archeryTarget(m: ToonModel, x: number, z: number, ry: number): void {
   const p = m.plain;
   const fx = Math.sin(ry);
   const fz = Math.cos(ry);
@@ -1790,16 +1790,13 @@ export function makeBep(level: number): THREE.Group {
   return model;
 }
 
-/** Mô hình công trình loại `type` ở cấp `level`, theo móng cũ (chưa phóng theo móng, xem `footScale`). */
+/**
+ * Mô hình công trình loại `type` ở cấp `level`, theo móng cũ (chưa phóng theo móng, xem `footScale`), cho các loại
+ * chưa vẽ lại trên móng mới. Mười một loại đã vẽ lại ở `congTrinh/` (Điện, ruộng, bến, nhà sàn, bãi đá, lò rèn, kho,
+ * doanh trại, trại giáo, trại cung, chuồng voi) không có ở đây: game dựng chúng qua `lotModel` (`congTrinh/index.ts`).
+ * Dáng cũ của chúng (`makeDien`...) còn lại chỉ để `scripts/congTrinh.ts` chụp so cũ và mới; bỏ khi vẽ lại nốt.
+ */
 export function buildingModel(type: BuildingType, level: number): THREE.Group {
-  if (type === 'dien') return makeDien(level);
-  if (type === 'ruong') return makeRuong(level);
-  if (type === 'ben') return makeBen(level);
-  if (type === 'nhaSan') return makeNhaSan(level);
-  if (type === 'baiDa') return makeBaiDa(level);
-  if (type === 'loRen') return makeLoRen(level);
-  if (type === 'kho') return makeKho(level);
-  if (type === 'doanhTrai') return makeDoanhTrai(level);
   if (type === 'choiCanh') return makeChoiCanh(level);
   if (type === 'bayChong') return makeBayChong();
   if (type === 'denPhuDong') return makeDenPhuDong();
@@ -1810,9 +1807,6 @@ export function buildingModel(type: BuildingType, level: number): THREE.Group {
   if (type === 'chuongLon') return makeChuongLon(level);
   if (type === 'bep') return makeBep(level);
   if (type === 'lauNo') return makeLauNo();
-  if (type === 'traiGiao') return makeTraiGiao();
-  if (type === 'traiCung') return makeTraiCung();
-  if (type === 'chuongVoi') return makeChuongVoi();
   if (isDecor(type)) return decorModel(type);
   return new THREE.Group();
 }
