@@ -4,7 +4,19 @@
 // hiện tại khi nạp. Bản lưu còn ở kinh đô nhỏ (trước phiên bản 11) được dựng lại thành kinh đô lớn theo mẫu (`xepLai.ts`).
 
 import { deflateSync, inflateSync } from 'fflate';
-import { BUILDINGS, GEAR_IDS, GIFT_IDS, MERCHANT_FIRST_MS, QUEST_INSERTED_V4, RESOURCE_IDS, ROWS, type BuildingType } from './defs';
+import {
+  BUILDINGS,
+  GEAR_IDS,
+  GIFT_IDS,
+  MERCHANT_FIRST_MS,
+  QUEST_INSERTED_V4,
+  RESOURCE_IDS,
+  ROWS,
+  TUONG_IDS,
+  UNIT_TYPES,
+  type BuildingType,
+  type TuongId,
+} from './defs';
 import { initialAdv } from './coLoa';
 import { SAVE_VERSION, autoAssign, housing, initialCampaign, initialGiong, initialRaid, type GameState } from './game';
 import { GRID, baseHeights, isRiver } from './map';
@@ -215,7 +227,9 @@ function isValidBuildings(list: unknown): boolean {
       typeof b.type === 'string' &&
       b.type in BUILDINGS &&
       b.level >= 1 &&
-      b.level <= BUILDINGS[b.type as BuildingType].maxLevel
+      b.level <= BUILDINGS[b.type as BuildingType].maxLevel &&
+      (b.tuong === undefined || TUONG_IDS.includes(b.tuong as TuongId)) &&
+      (b.guard === undefined || (isObj(b.guard) && UNIT_TYPES.every((k) => isNum((b.guard as Raw)[k]) && ((b.guard as Raw)[k] as number) >= 0)))
     );
   });
   return ok && list.some((b: Raw) => b.type === 'dien');

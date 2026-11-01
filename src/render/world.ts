@@ -2,9 +2,10 @@
 // đêm yêu tinh, cảnh Tết (cây nêu, dây cờ, mâm bánh, người gói bánh) và các hiệu ứng khi đặt công trình.
 
 import * as THREE from 'three';
-import { BUILDINGS, FIELD, type BuildingType, type Terrain } from '../game/defs';
+import { BUILDINGS, FIELD, type BuildingType, type Terrain, type TuongId } from '../game/defs';
 import { raidSpawnBand, type Battle, type RaidSide } from '../game/battle';
 import { advLook, inChapter3, ruaVangCame, type AdvLook } from '../game/coLoa';
+import { heroPost } from '../game/doanhTrai';
 import { buildingAt, dienLevel, type Building, type GameState } from '../game/game';
 import { giongLook, type GiongLook } from '../game/giong';
 import { DIEN_HOME, FOREST_BAND, GRID, RIVER_START, areaStart, baseHeights, isUnlocked } from '../game/map';
@@ -956,9 +957,9 @@ export class World {
     return { x: wx(dien.x) + def.w / 2 + ox, y: this.groundY(tx, tz), z: wz(dien.z) + def.d / 2 + oz };
   }
 
-  /** Chỗ tướng đứng giữa sân doanh trại, nơi các tướng ở. Chưa có doanh trại thì null. */
-  private barracksSpot(state: GameState): { x: number; y: number; z: number } | null {
-    const b = state.buildings.find((t) => t.type === 'doanhTrai');
+  /** Chỗ tướng đứng giữa sân doanh trại tướng ấy chỉ huy (không chỉ huy trại nào thì trại của Lạc tướng). Chưa có doanh trại thì null. */
+  private barracksSpot(state: GameState, tuong: TuongId): { x: number; y: number; z: number } | null {
+    const b = heroPost(state, tuong);
     if (!b) return null;
     const def = BUILDINGS.doanhTrai;
     const k = doanhTraiScale(b.level) * footScale('doanhTrai');
@@ -969,9 +970,9 @@ export class World {
    * Chỗ đứng của tướng: tướng đã cùng ra trận (Gióng tráng sĩ, Sơn Tinh đã rước dâu) ở doanh trại;
    * Gióng lúc nhỏ ở trước Điện cho dân nuôi, Sơn Tinh lúc cầu hôn đứng chầu trước Điện.
    */
-  private heroHome(state: GameState, atBarracks: boolean): { x: number; y: number; z: number } | null {
+  private heroHome(state: GameState, tuong: TuongId, atBarracks: boolean): { x: number; y: number; z: number } | null {
     if (atBarracks) {
-      const spot = this.barracksSpot(state);
+      const spot = this.barracksSpot(state, tuong);
       if (spot) return spot;
     }
     const dien = state.buildings.find((b) => b.type === 'dien');
@@ -981,7 +982,7 @@ export class World {
   /** Gióng lúc nhỏ ở trước Điện, bên phải bậc lên; thành tráng sĩ thì về doanh trại. */
   private syncGiong(state: GameState): void {
     const look = giongLook(state);
-    const spot = this.heroHome(state, look === 'trangSi');
+    const spot = this.heroHome(state, 'giong', look === 'trangSi');
     const key = look && spot ? `${look}:${spot.x}:${spot.y}:${spot.z}` : '';
     if (this.giong?.key === key) return;
     if (this.giong) this.scene.remove(this.giong.obj);
@@ -1001,8 +1002,8 @@ export class World {
    */
   private syncSon(state: GameState): void {
     const look = sonLook(state);
-    const camp = look === 'trangSi' && !!this.barracksSpot(state);
-    const spot = this.heroHome(state, look === 'trangSi');
+    const camp = look === 'trangSi' && !!this.barracksSpot(state, 'sonTinh');
+    const spot = this.heroHome(state, 'sonTinh', look === 'trangSi');
     const key = look && spot ? `${look}:${camp}:${spot.x}:${spot.y}:${spot.z}` : '';
     if (this.son?.key === key) return;
     if (this.son) this.scene.remove(this.son.obj);

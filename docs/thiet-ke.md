@@ -106,7 +106,7 @@ Tài liệu này ghi lại các quyết định đã chốt với chủ dự án
 | Bãi đất đá | 3×3 | Ra đất đá |
 | Lò rèn | 3×3 | Ra sắt, rèn đồ cho Gióng |
 | Kho thóc | 3×3 | Tăng sức chứa tài nguyên, cũng là mục tiêu của giặc |
-| Doanh trại | 4×4 | Nơi các tướng ở và điều binh: giữ tổng chỗ quân, quân và tướng ra trận từ đây. Cấp 1 cho dựng trại giáo, cấp 2 trại cung, cấp 3 chuồng voi |
+| Doanh trại | 4×4 | Nơi các tướng ở và điều binh: giữ chỗ quân, quân và tướng ra trận từ đây. Mỗi doanh trại một tướng chỉ huy, tối đa 4 (xem mục Nhiều doanh trại). Cấp 1 cho dựng trại giáo, cấp 2 trại cung, cấp 3 chuồng voi |
 | Trại giáo, trại cung, chuồng voi | 3×3 | Nơi ở riêng của giáo binh, cung thủ, voi chiến. Luyện mỗi binh chủng ở nơi ở của nó (xem mục Doanh trại và nơi ở riêng) |
 | Lũy tre → Thành đất | 1×1 | Tường. Lũy tre rẻ, có từ đầu. Thành đất chắc hơn, tốn đất đá, mở khóa khi Điện lên cấp |
 | Chòi canh | 1×1 | Cung thủ tự bắn giặc |
@@ -128,7 +128,7 @@ Giá đắp nền tính theo lõi móng (bỏ viền cỏ một ô), nên giữ 
 - Luyện quân tốn tiền tuyển và gạo ăn hằng phút. Lính tách riêng khỏi dân làng (xem mục Giữ kinh đô). Mỗi binh chủng luyện ở nơi ở riêng; doanh trại càng cao càng điều được nhiều quân. Luyện xong ngay.
 - **Giặc Ân**: lính giáo (cung thủ ta khắc chế), cung thủ (voi chiến ta khắc chế), **chiến xa** (giáo binh ta khắc chế). Cuối mỗi phần có tướng giặc làm trùm.
 - Trận đánh **tự động** trong 20–40 giây trên bãi chiến 3D, lính chibi có động tác đơn giản. Người chơi chỉ bấm kỹ năng của tướng.
-- Trước trận phó bản: xem trước quân giặc, chọn số lính mỗi loại trong giới hạn sức chứa, xếp vào 3 hàng (tiền quân, trung quân, hậu quân).
+- Trước trận phó bản: xem trước quân giặc, chọn số lính mỗi loại trong giới hạn chỗ mang ra phó bản (38 từ Điện 5), xếp vào 3 hàng (tiền quân, trung quân, hậu quân).
 - **Phó bản**: bản đồ chương 1 có khoảng 8 màn và trùm cuối. Màn đã qua đánh lại được để kiếm tài nguyên. Lính chết trong trận thì mất, dù thắng hay thua. Thua thì không có thưởng, ngoài ra không mất gì.
 - **Lạc tướng** cầm quân trong mọi trận, có kỹ năng **Trống trận**:
   - bấm thì quân ta đánh mạnh thêm 50% và chạy nhanh thêm 30% trong 6 giây;
@@ -143,7 +143,7 @@ Giá đắp nền tính theo lõi móng (bỏ viền cỏ một ô), nên giữ 
 
 ### Giữ kinh đô (đã làm ở lát cắt 2b)
 
-- **Doanh trại** cần Điện cấp 2. Sức chứa quân theo cấp: 8, 14, 20, 28, 38 chỗ.
+- **Doanh trại** cần Điện cấp 2. Sức chứa quân theo cấp: 8, 14, 20, 28, 38 chỗ. Có thêm tướng thì dựng thêm doanh trại, chỗ quân cộng dồn; mỗi trận giữ kinh đô chỉ ra số lính đã bố trí (xem mục Nhiều doanh trại).
 - **Các binh chủng ta:**
 
   | Binh chủng | Luyện ở | Giá | Máu | Sát thương | Ghi chú |
@@ -185,7 +185,7 @@ Giá đắp nền tính theo lõi móng (bỏ viền cỏ một ô), nên giữ 
 
 Chủ dự án đổi: doanh trại là nơi các tướng ở; mỗi binh chủng có nơi ở riêng và luyện ở đó; điều binh vẫn phải qua doanh trại. Chủ dự án chọn hai phương án khuyên dùng: doanh trại giữ tổng chỗ quân như cũ, và tướng về đứng ở doanh trại.
 
-- **Doanh trại** giữ nguyên giá, cấp và sức chứa (8, 14, 20, 28, 38 chỗ, tính chung mọi binh chủng). Không có doanh trại thì không luyện được, không đánh phó bản được. Nút "Nghênh chiến ngay" vẫn ở doanh trại.
+- **Doanh trại** giữ nguyên giá, cấp và sức chứa (8, 14, 20, 28, 38 chỗ, tính chung mọi binh chủng). Không có doanh trại thì không luyện được, không đánh phó bản được. Nút "Nghênh chiến ngay" vẫn ở doanh trại. Về sau có nhiều doanh trại, mỗi trại một tướng chỉ huy (xem mục Nhiều doanh trại).
 - **Nơi ở riêng**: móng 3×3, dựng một lần, không lên cấp (mái tranh), không dỡ được, dời được như công trình khác. Còn nguyên mới luyện được; hư thì phải sửa trước. Lính đã luyện vẫn ra trận dù nơi ở hư.
 
   | Nơi ở | Binh chủng | Cần | Giá dựng | Máu |
@@ -197,7 +197,7 @@ Chủ dự án đổi: doanh trại là nơi các tướng ở; mỗi binh chủ
   Giá nhỏ hơn doanh trại để không làm chậm nhịp chương 1; người chơi mô phỏng ở `balance.test.ts` không luyện quân nên nhịp lên Điện không đổi.
 - **Tướng ở doanh trại**:
   - Gióng đã thành tráng sĩ, Sơn Tinh đã rước Mị Nương thì đứng giữa sân doanh trại. Gióng lúc nhỏ vẫn ở trước Điện cho dân nuôi; Sơn Tinh lúc cầu hôn vẫn đứng trên mỏm đá trước Điện. An Dương Vương là vua, vẫn đứng trước Điện cạnh cột đá thề. Chưa có doanh trại thì tướng đứng trước Điện như cũ;
-  - khi giữ kinh đô, tướng ra trận cùng quân từ sân trước doanh trại (chưa có doanh trại thì từ trước Điện). Vì thế nên đặt doanh trại gần chỗ giặc hay lũ tới: test mùa lũ bậc 3 đặt doanh trại trong đê, gần phía sông như mẫu Đê bao; doanh trại ở góc rừng xa sông thì thủy quái kịp phá đê.
+  - khi giữ kinh đô, tướng ra trận cùng quân từ sân trước doanh trại (chưa có doanh trại thì từ trước Điện). Có nhiều doanh trại thì tướng ở và ra trận từ trại mình chỉ huy. Vì thế nên đặt doanh trại gần chỗ giặc hay lũ tới: test mùa lũ bậc 3 đặt doanh trại trong đê, gần phía sông như mẫu Đê bao; doanh trại ở góc rừng xa sông thì thủy quái kịp phá đê.
 - **Bảng doanh trại**: số chỗ quân; mục **Tướng ở doanh trại** (Lạc tướng cầm quân mọi trận; Gióng, Sơn Tinh, An Dương Vương khi đã cùng ra trận, kèm trạng thái sẵn sàng, kiệt sức bao lâu hay hiển linh, và nút Xem mở bảng tướng); mục **Quân và nơi ở** (mỗi binh chủng: số lính, nút tới nơi ở, hoặc nút dựng nơi ở kèm giá khi chưa có); lịch đợt giặc và nút Nghênh chiến ngay.
 - **Bảng nơi ở**: số chỗ quân trong doanh trại, dòng binh chủng ấy với số lính, binh khí đã rèn và nút Luyện kèm giá.
 - **Dáng**: trại giáo có lều lính mái chữ A, giá giáo đồng, hai cọc rơm tập đâm và một giáo binh đâm thử; trại cung có lán một mái tựa vách phên, giá cung, bao tên, bia rơm tròn vòng đỏ trắng có tên găm và một cung thủ nhắm bia; chuồng voi có bốn cột lớn đỡ mái chóp bốn mặt, rào gỗ, máng nước, đống cỏ, cọc buộc voi và một voi chiến đang ăn cỏ. Doanh trại bỏ cọc rơm tập đâm ở cấp 2 (đã sang trại giáo), thay bằng đài tướng có chiếu và lọng đỏ; giữa sân để trống cho tướng đứng.
@@ -205,6 +205,47 @@ Chủ dự án đổi: doanh trại là nơi các tướng ở; mỗi binh chủ
 - **Nhiệm vụ** giữ nguyên thứ tự. Lời Lạc hầu ở nhiệm vụ doanh trại nói dựng cho Lạc tướng ở và điều binh; nhiệm vụ luyện 5 lính nhắc dựng trại giáo trước.
 - **Bản lưu** không đổi phiên bản. Bản lưu cũ giữ nguyên lính đã luyện; muốn luyện thêm thì dựng nơi ở (bảng doanh trại có nút dựng).
 - Lính nỏ ở chương 4 cũng sẽ có nơi ở riêng (xem PR 2 chương 4).
+
+### Nhiều doanh trại, tướng chỉ huy, bố trí giữ kinh đô (chủ dự án yêu cầu, đã làm)
+
+Chủ dự án muốn có nhiều quân dự trữ: dựng thêm doanh trại, mỗi doanh trại một tướng chỉ huy; phó bản vẫn chỉ mang tối đa 38 chỗ để không phá độ khó; giữ kinh đô thì người chơi tự bố trí lính, số lính bố trí được giới hạn theo cấp. Chủ dự án chọn "mỗi tướng một trại" (khuyên dùng) thay vì mở trại theo cấp Điện. Luật ở `src/game/doanhTrai.ts`, test ở `doanhTrai.test.ts`.
+
+- **Tướng chỉ huy**: mỗi doanh trại một tướng; doanh trại có tướng chỉ huy mới giữ chỗ quân (8–38 theo cấp). Bốn tướng:
+
+  | Tướng | Có khi |
+  |---|---|
+  | Lạc tướng | từ đầu |
+  | Thánh Gióng | thành tráng sĩ (đủ 5 mốc gạo, 3 món đồ sắt); về trời rồi vẫn chỉ huy, hiển linh |
+  | Sơn Tinh | rước Mị Nương (đủ 5 lễ vật); về núi rồi vẫn chỉ huy |
+  | An Dương Vương | có nỏ thần |
+
+  - Có bao nhiêu tướng thì dựng được bấy nhiêu doanh trại, tối đa 4 (cần Điện cấp 2 như trước). Hết tướng rảnh thì bảng Xây dựng báo "Mỗi doanh trại cần một tướng chỉ huy".
+  - Doanh trại mới tự nhận tướng rảnh theo thứ tự trên. Trong bảng doanh trại, nút **Giao trại này** đổi tướng chỉ huy; tướng ấy đang chỉ huy trại khác thì hai tướng đổi chỗ cho nhau, nên không trại nào mất tướng. Đang có giặc thì không đổi được.
+  - Tổng chỗ quân là chỗ của mọi doanh trại có tướng: bốn trại cấp 5 là 152 chỗ. Luyện quân như cũ, ở nơi ở riêng của binh chủng; chỉ cần một trại giáo, một trại cung, một chuồng voi cho cả kinh đô.
+  - Tướng đứng ở sân doanh trại mình chỉ huy (Gióng tráng sĩ, Sơn Tinh đã rước dâu). An Dương Vương vẫn đứng trước Điện, dù chỉ huy trại nào.
+  - Khi giữ kinh đô, tướng của trận (như cũ: An Dương Vương, Sơn Tinh hay Gióng) ra từ trại mình chỉ huy; không chỉ huy trại nào thì ra từ trại của Lạc tướng. Mỗi trận vẫn một tướng.
+- **Phó bản**: mỗi trận mang tối đa số chỗ theo cấp Điện, bằng sức chứa doanh trại cao nhất dựng được ở cấp ấy, không quá 38:
+
+  | Điện | 2 | 3 | 4 | 5–8 |
+  |---|---|---|---|---|
+  | Chỗ mang ra phó bản | 14 | 20 | 28 | 38 |
+
+  Nhờ vậy hai doanh trại cấp 3 (40 chỗ) ở chương 1 vẫn chỉ mang 20 chỗ như trước, quân mẫu các màn không đổi. Bảng xếp quân ghi "Mang theo: x/38 chỗ", nút + tắt khi đủ chỗ; mặc định mang hết, nhiều quá thì chọn bớt giữ tỉ lệ binh chủng. Xuất quân quá chỗ thì bị từ chối.
+- **Bố trí giữ kinh đô** (mục **Bố trí giữ kinh đô** trong bảng mỗi doanh trại):
+  - mỗi doanh trại có số lính mỗi binh chủng ra giữ kinh đô từ trại ấy; lính chưa bố trí là **quân dự trữ**, ở lại khi giặc, lũ, yêu tinh, quân Triệu tới. Bảng ghi số quân dự trữ mỗi binh chủng;
+  - số chỗ bố trí được, cả kinh đô, theo cấp Điện (tới Điện 5 bằng số trước đây một doanh trại giữ được, nên độ khó chương 1 không đổi; từ chương 2 thêm 6 chỗ mỗi cấp, giữ trận kinh đô không quá nặng máy):
+
+    | Điện | 2 | 3 | 4 | 5 | 6 | 7 | 8 |
+    |---|---|---|---|---|---|---|---|
+    | Chỗ giữ kinh đô | 14 | 20 | 28 | 38 | 44 | 50 | 56 |
+
+  - mỗi trại bố trí không quá sức chứa của trại ấy;
+  - **tự động** (mặc định, bản lưu cũ): mọi lính giữ kinh đô cho tới đủ chỗ, giữ tỉ lệ binh chủng, chia ra các doanh trại theo sức chứa. Một doanh trại và ít lính thì y như trước;
+  - bấm − + ở một trại là **tự bố trí**: bố trí tự động lúc ấy được giữ nguyên làm gốc rồi đổi. Nút **Bố trí tự động** quay về tự động;
+  - lính bố trí chết thì quân dự trữ bù vào ngay; hết dự trữ thì trại dựng trước được lính trước, dòng binh chủng ghi "thiếu n";
+  - lính bố trí ở trại nào thì ra trận từ trại ấy, nên đặt doanh trại gần chỗ giặc hay lũ tới và dồn lính về đó.
+- **Mẫu kinh đô**: Phong Châu có chỗ cho 2 doanh trại, Đê bao 3, Cổ Loa 4 (thêm hai trại ngoài vòng ngoài phía tây, một trại giữa vòng ngoài và vòng giữa phía bắc; chuồng lợn và hai chòi canh dời một chút). Áp mẫu chỉ dựng thêm doanh trại khi có tướng rảnh; doanh trại giữ tướng và bố trí khi dời.
+- **Bản lưu** không đổi phiên bản: doanh trại có thêm hai trường tùy chọn (tướng chỉ huy, bố trí). Bản lưu cũ chưa có thì tướng tự nhận, bố trí tự động.
 
 ### Phó bản (đã làm ở lát cắt 3a)
 
@@ -227,7 +268,7 @@ Chủ dự án đổi: doanh trại là nơi các tướng ở; mỗi binh chủ
   - Đánh lại màn đã qua được 30% thưởng lần đầu.
 - **Trước trận**:
   - xem quân giặc và phần thưởng;
-  - chọn số lính mỗi loại mang theo (mặc định mang hết);
+  - chọn số lính mỗi loại mang theo (mặc định mang hết, tối đa số chỗ mang ra phó bản theo cấp Điện, 38 từ Điện 5; xem mục Nhiều doanh trại);
   - **mỗi binh chủng đứng một hàng**, chạm để đổi hàng. Mặc định giáo binh ở tiền quân, voi ở trung quân, cung thủ ở hậu quân. Lần sau nhớ hàng đã chọn.
 - **Bãi chiến**:
   - cảnh 3D riêng, rộng 9 ô, dài 22 ô; nền theo màn: rừng tre, bến sông, làng, đồn giặc, chân núi;
@@ -618,7 +659,7 @@ Chủ dự án đã chốt qua một buổi hỏi đáp. Vấn đề: từ cuố
    - đất mở ra 25×25 ở cấp 6, 26×26 ở cấp 7, chừa một hàng rừng cho giặc trên bộ hiện ra (kinh đô lớn: 40×40 ở cả hai cấp);
    - ruộng, bến chợ thuyền, nhà sàn, bãi đất đá, lò rèn, kho thóc, chòi canh lên được cấp 6, 7. Lũy, đê, thành Cổ Loa giữ cấp riêng;
    - mỗi cấp mới vẫn đổi hẳn dáng: thêm một phần lớn nhìn rõ (ví dụ ruộng cấp 6 có guồng nước, cấp 7 có miếu thần lúa); ban đầu cỡ giữ 105%, sau chủ dự án yêu cầu to thêm (xem mục Phong cách);
-   - **doanh trại giữ 38 chỗ**, không lên thêm cấp, vì bãi chiến tối đa khoảng 60 người;
+   - **doanh trại giữ 38 chỗ**, không lên thêm cấp, vì bãi chiến tối đa khoảng 60 người (về sau có thêm doanh trại cho quân dự trữ, nhưng mỗi trận phó bản vẫn mang tối đa 38 chỗ; xem mục Nhiều doanh trại);
    - **rèn binh khí** ở bảng lò rèn: giáo, cung, voi mỗi loại 2 bậc (bậc 1 cần lò rèn cấp 6, bậc 2 cần cấp 7), mỗi bậc thêm 10% máu và sức đánh ở mọi trận, lính đổi dáng vũ khí;
    - nhịp: người biết dành dụm lên Điện 6 trước màn 12, Điện 7 trước màn 20; canh bằng test như `balance.test.ts`.
 3. **Hội Tết bánh chưng bánh giầy**:
@@ -822,12 +863,12 @@ Chủ dự án đã chọn qua bốn câu hỏi: Thủy Tinh có cả hai phép 
   |---|---|---|---|
   | Kinh đô Phong Châu | từ đầu | Điện cấp 5 | ruộng quanh Điện và dọc bờ sông, nhà sàn và kho gần Điện, bãi đá trên đồi phía bắc; lũy tre bao hai mặt rừng (67 đoạn), 10 bẫy chông trước lũy |
   | Đê bao chống lũ | vào chương 2 | Điện cấp 6 | đê liền dải dọc hai bờ sông, cách sông 3 ô (73 đoạn), bến ngoài đê, chòi canh sát đê; ruộng, đền, ruộng nếp trong đê |
-  | Thành Cổ Loa | vào chương 3 | Điện cấp 7 | ba vòng thành kín quanh Điện (216 đoạn); vòng trong chỉ có Điện và sân; nhà sàn, kho, lò rèn, bếp giữa các vòng; ruộng, đền, doanh trại ngoài vòng ngoài; đê bao ngoài cùng |
+  | Thành Cổ Loa | vào chương 3 | Điện cấp 7 | ba vòng thành kín quanh Điện (216 đoạn); vòng trong chỉ có Điện và sân; nhà sàn, kho, lò rèn, bếp giữa các vòng; ruộng, đền, ba doanh trại ngoài vòng ngoài, doanh trại thứ tư giữa vòng ngoài và vòng giữa; đê bao ngoài cùng |
 
   Từ bản lưu phiên bản 11, ba mẫu vẽ cho kinh đô lớn (lưới 55×55, móng to hơn một ô): giữa các khối nhà chừa lối đi một ô, trước Điện chừa sân. Bản vẽ ghi góc gốc của nó, không phải vẽ cả lưới.
 
 - Vòng thành Cổ Loa trong mẫu là vòng kín quanh Điện, không chạm sông: thành không chặn nước như đê, nên vòng nào cắt ngang dải đê để chạm sông sẽ làm nước lọt vào.
-- Mỗi mẫu có đủ chỗ cho số công trình tối đa ở cấp Điện nó được vẽ, kể cả bốn công trình Hội Tết, các đền và ba nơi ở của binh chủng (sát doanh trại). Nó cũng chừa ô trước Điện cho cây nêu, mâm bánh và chỗ An Dương Vương đứng.
+- Mỗi mẫu có đủ chỗ cho số công trình tối đa ở cấp Điện nó được vẽ, kể cả bốn công trình Hội Tết, các đền, ba nơi ở của binh chủng (sát doanh trại đầu) và mỗi tướng của chương một doanh trại (Phong Châu 2, Đê bao 3, Cổ Loa 4). Nó cũng chừa ô trước Điện cho cây nêu, mâm bánh và chỗ An Dương Vương đứng.
 - **Áp mẫu**:
   - mỗi công trình đang có dời vào chỗ cùng loại gần nhất trong mẫu; cái nào đã đứng đúng chỗ thì giữ nguyên;
   - chỗ còn trống trong mẫu thì dựng thêm, tới số tối đa theo cấp Điện hiện tại, nếu loại ấy đã mở;
@@ -1237,5 +1278,6 @@ Sau đó mới làm tiếp chương 4, PR 2–4.
 9. **Sửa sau chơi thử Hội Tết**: Thủy Tinh có hai phép, Dời non vẽ rõ hơn, xoay cảnh 4 hướng, dời công trình, mẫu kinh đô mỗi chương.
 10. **Chương 4: Mỵ Châu, Trọng Thủy** (đã duyệt, đang làm; PR 1 đã làm; xem Kế hoạch chương 4): Điện và 7 loại công trình lên cấp 8, lầu nỏ, ụ nỏ trên thành, lính nỏ, thủy binh Triệu đi thuyền, Cao Lỗ, phó bản màn 25–32, Đền Cuông, màn hình Hết truyện, thử thách phó bản và huân công.
 11. **Doanh trại và nơi ở riêng** (đã làm, xem mục cùng tên): doanh trại là nơi tướng ở và điều binh; trại giáo, trại cung, chuồng voi để luyện từng binh chủng; tướng ra trận từ doanh trại.
+    **Nhiều doanh trại** (đã làm, xem mục Nhiều doanh trại, tướng chỉ huy, bố trí giữ kinh đô): mỗi tướng chỉ huy một doanh trại, tới 152 chỗ quân; phó bản mang tối đa 38 chỗ; người chơi tự bố trí lính giữ kinh đô ở từng trại.
 12. **Kinh đô lớn, công trình to, mở đất bằng khoảnh** (đã duyệt, đang làm; xem mục Kế hoạch cùng tên): công trình to hơn một ô mỗi chiều, lưới 55×55, khoảnh 5×5 tự chọn, viền cỏ, trang trí ô trống, cây đá mọc. Làm trước chương 4 PR 2–4.
 13. **Để sau**: chương 5 về Hai Bà Trưng (mới nhắc ở câu cuối chương 4); nhạc nền.

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { wallRings } from './coLoa';
-import { BUILDINGS, CH2_QUEST_START, CH3_QUEST_START, MOVE_FRACTION, type BuildingType } from './defs';
+import { BUILDINGS, CH2_QUEST_START, CH3_QUEST_START, GIFT_IDS, MOVE_FRACTION, type BuildingType } from './defs';
 import { canMove, createInitialState, dienLevel, limitOf, move, moveCost, occupancy, place, type GameState } from './game';
 import { applyMau, canApplyMau, mauSlots, mauUnlocked, planMau, MAU_IDS } from './mau';
 import { DIEN_HOME, GRID, RIVER_START, isRiver, isUnlocked, touchesRiver } from './map';
@@ -16,6 +16,15 @@ function city(dien: number, chapter: 1 | 2 | 3 = 1): GameState {
   s.questIndex = chapter === 3 ? CH3_QUEST_START : chapter === 2 ? CH2_QUEST_START : 0;
   s.resources = { gao: 1e6, voOc: 1e6, datDa: 1e6, sat: 1e6 };
   s.dan = 200;
+  return s;
+}
+
+/** Có đủ tướng của chương đang ở: Gióng (chương 1), Sơn Tinh (chương 2), An Dương Vương (chương 3). */
+function withGenerals(s: GameState): GameState {
+  s.giong.fed = 5;
+  s.giong.gear = { ngua: true, roi: true, giap: true };
+  if (s.questIndex >= CH2_QUEST_START) for (const g of GIFT_IDS) s.son.gifts[g] = true;
+  if (s.questIndex >= CH3_QUEST_START) s.adv.no = true;
   return s;
 }
 
@@ -76,8 +85,10 @@ describe('mẫu kinh đô', () => {
           }
         }
       }
-      // Ở cấp Điện cao nhất của chương, mỗi loại có trong mẫu đủ chỗ (trong vùng) cho số tối đa.
-      const s = city(top[id], id === 'coLoa' ? 3 : id === 'deBao' ? 2 : 1);
+      // Ở cấp Điện cao nhất của chương, mỗi loại có trong mẫu đủ chỗ (trong vùng) cho số tối đa, kể cả mỗi tướng của
+      // chương một doanh trại: Phong Châu 2 (Lạc tướng, Gióng), Đê bao 3 (thêm Sơn Tinh), Cổ Loa 4 (thêm An Dương Vương).
+      const s = withGenerals(city(top[id], id === 'coLoa' ? 3 : id === 'deBao' ? 2 : 1));
+      expect(limitOf(s, 'doanhTrai')).toBe(top[id] - 3);
       const types = [...new Set(slots.map((x) => x.type))].filter((t) => t !== 'dien' && !['luy', 'de', 'thanh', 'bayChong'].includes(t));
       for (const t of types) {
         const inside = slots.filter((x) => x.type === t && isUnlocked(x.x, x.z, top[id])).length;
@@ -121,6 +132,25 @@ describe('mẫu kinh đô', () => {
     expect(s.buildings.filter((b) => b.type === 'ruong').length).toBe(limitOf(s, 'ruong'));
     // Áp lần nữa thì không còn gì để làm.
     expect(canApplyMau(s, 'phongChau')).toEqual({ ok: false, reason: 'daTheoMau' });
+  });
+
+  it('mỗi tướng một doanh trại: áp mẫu dựng thêm doanh trại cho tướng rảnh, giữ tướng và bố trí của trại cũ', () => {
+    const s = withGenerals(city(7, 3));
+    const first = place(s, 'doanhTrai', edge(7, 1), edge(7, 1));
+    if (!first.ok) throw new Error(first.reason);
+    first.value.tuong = 'anDuong';
+    first.value.guard = { giao: 3, cung: 0, voi: 0 };
+    // Mẫu Cổ Loa có chỗ cho cả bốn doanh trại. Mẫu cũ có ít chỗ hơn: doanh trại thừa đứng yên hay dời ra chỗ trống.
+    const want: Record<string, number> = { coLoa: 4, deBao: 3, phongChau: 2 };
+    for (const id of ['coLoa', 'deBao', 'phongChau'] as const) {
+      expect(applyMau(s, id).ok, id).toBe(true);
+      const camps = s.buildings.filter((b) => b.type === 'doanhTrai');
+      expect(camps.length).toBe(4);
+      const slots = mauSlots(id);
+      const onSlot = camps.filter((b) => slots.some((x) => x.type === 'doanhTrai' && x.x === b.x && x.z === b.z));
+      expect(onSlot.length, id).toBe(want[id]);
+      expect(first.value).toMatchObject({ tuong: 'anDuong', guard: { giao: 3, cung: 0, voi: 0 } });
+    }
   });
 
   it('áp mẫu dựng nơi ở riêng của binh chủng theo cấp doanh trại: cấp 1 trại giáo, cấp 3 thêm trại cung, chuồng voi', () => {
