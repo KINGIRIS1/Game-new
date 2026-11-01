@@ -103,7 +103,7 @@ export function mauHtml(state: GameState, armed: MauId | null): string {
     }
     const plan = planMau(state, id);
     const check = canApplyMau(state, id);
-    const summary = vi.ui.mauPlan(plan.moves.length, plan.builds.length, plan.removes.length);
+    const summary = vi.ui.mauPlan(plan.moves.length, plan.builds.length, plan.removes.length, plan.uNos.length);
     const label = armed === id ? vi.ui.mauConfirm : vi.ui.mauApply;
     const why = check.ok ? '' : `<div class="why">${vi.reasons[check.reason]}</div>`;
     const wild = wildKhoanh(state, id);

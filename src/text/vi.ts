@@ -1100,8 +1100,10 @@ export const vi = {
         lock: 'Mở khi vào chương 4: Mỵ Châu, Trọng Thủy.',
       },
     },
-    mauPlan: (moves: number, builds: number, removes: number) =>
-      [moves ? `Dời ${moves} công trình` : '', builds ? `dựng thêm ${builds}` : '', removes ? `dỡ ${removes} đoạn thừa` : ''].filter(Boolean).join(', ') || 'Đã xếp đúng theo mẫu',
+    mauPlan: (moves: number, builds: number, removes: number, uNos = 0) =>
+      [moves ? `Dời ${moves} công trình` : '', builds ? `dựng thêm ${builds}` : '', uNos ? `dựng ${uNos} ụ nỏ` : '', removes ? `dỡ ${removes} đoạn thừa` : '']
+        .filter(Boolean)
+        .join(', ') || 'Đã xếp đúng theo mẫu',
     mauApply: '🗺️ Áp mẫu',
     mauConfirm: '⚠️ Bấm lần nữa để áp',
     mauDone: (name: string) => `Đã xếp kinh đô theo mẫu ${name}`,
