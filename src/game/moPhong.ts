@@ -88,8 +88,10 @@ function buildRoomy(s: GameState, type: BuildingType): 'built' | 'needLand' | 'n
   return placeAnywhere(s, type) ? 'built' : 'none';
 }
 
-/** Thứ tự một người chơi hợp lý dựng kinh tế. */
-const ECONOMY: BuildingType[] = ['ruong', 'ben', 'nhaSan', 'baiDa', 'kho', 'loRen'];
+/** Thứ tự một người chơi hợp lý dựng kinh tế. Ngoài các loại này, người chơi mô phỏng chỉ dựng lũy. */
+export const ECONOMY: BuildingType[] = ['ruong', 'ben', 'nhaSan', 'baiDa', 'kho', 'loRen'];
+/** Số lũy người chơi mô phỏng dựng cho đủ nhiệm vụ đầu. */
+export const LUY_COUNT = 6;
 
 /**
  * Một giây chơi: nhận thưởng, xây cho đủ nhiệm vụ, ưu tiên nâng Điện,
@@ -100,7 +102,7 @@ export function playSecond(s: GameState, lam: Lam = lamThang): void {
     while (questDone(s)) claimQuest(s);
   });
   lam('xay', () => {
-    if (countOf(s, 'luy') < 6) placeAnywhere(s, 'luy');
+    if (countOf(s, 'luy') < LUY_COUNT) placeAnywhere(s, 'luy');
   });
   lam('nangDien', () => {
     if (canUpgrade(s, 1).ok) upgrade(s, 1);
