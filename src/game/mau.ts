@@ -9,6 +9,7 @@ import {
   dienLevel,
   fillWorkers,
   limitOf,
+  usedOf,
   moveCost,
   pay,
   unlocked,
@@ -251,7 +252,9 @@ export function planMau(state: GameState, id: MauId): MauPlan {
     const open = slots
       .filter((s) => s.type === type)
       .sort((a, b) => Math.hypot(a.x + def.w / 2 - cx, a.z + def.d / 2 - cz) - Math.hypot(b.x + def.w / 2 - cx, b.z + def.d / 2 - cz));
-    const have = state.buildings.filter((b) => b.type === type).sort((a, b) => b.level - a.level || a.id - b.id);
+    // Lầu nỏ một ô như chòi canh, đứng vào chỗ chòi canh của mẫu và tính là hai chòi canh trong giới hạn.
+    const sameSlot = (b: Building) => b.type === type || (type === 'choiCanh' && b.type === 'lauNo');
+    const have = state.buildings.filter(sameSlot).sort((a, b) => b.level - a.level || a.id - b.id);
     // Công trình đã đứng đúng một chỗ trong mẫu thì giữ nguyên.
     const rest: Building[] = [];
     for (const b of have) {
@@ -278,7 +281,7 @@ export function planMau(state: GameState, id: MauId): MauPlan {
     }
     // Chỗ trống còn lại: dựng thêm cho tới giới hạn theo cấp Điện, nếu loại này đã mở.
     const canBuild = def.buildable && unlocked(state, def.unlock) && level >= def.minDien;
-    let room = canBuild ? limitOf(state, type) - have.length : 0;
+    let room = canBuild ? limitOf(state, type) - usedOf(state, type) : 0;
     for (const s of open) {
       if (room <= 0) break;
       plan.builds.push(s);
@@ -290,7 +293,7 @@ export function planMau(state: GameState, id: MauId): MauPlan {
   // Công trình thừa hay không có trong mẫu: đứng yên nếu không vướng chỗ của mẫu; đoạn lũy, đê, thành, bẫy
   // thừa thì dỡ; công trình khác vướng thì tìm chỗ trống gần nhất.
   for (const b of state.buildings) {
-    if (b.type === 'dien' || types.includes(b.type)) continue;
+    if (b.type === 'dien' || types.includes(b.type) || (b.type === 'lauNo' && types.includes('choiCanh'))) continue;
     leftovers.push(b);
   }
   const inMau = new Set(types);

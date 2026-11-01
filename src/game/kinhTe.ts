@@ -1,5 +1,5 @@
-// Báo cáo kinh tế: ghi sổ từng khoản thu chi của người chơi mô phỏng (`moPhong.ts`) qua ba chương rồi thêm một giờ
-// sau Điện 7. Chạy bằng `node scripts/kinh-te.mjs`; skill `ra-kinh-te` đọc báo cáo để phân tích nguồn vào, chỗ tiêu.
+// Báo cáo kinh tế: ghi sổ từng khoản thu chi của người chơi mô phỏng (`moPhong.ts`) qua bốn chương rồi thêm một giờ
+// sau Điện 8. Chạy bằng `node scripts/kinh-te.mjs`; skill `ra-kinh-te` đọc báo cáo để phân tích nguồn vào, chỗ tiêu.
 // Báo cáo chỉ đưa số đo, không kết luận cân bằng hay không. Không chạy trong game thật.
 
 import { RESOURCE_IDS, STARVING_RATE, type ResourceId, type Resources } from './defs';
@@ -14,6 +14,7 @@ import {
   type GameState,
 } from './game';
 import { playChapters, playSecond, type Lam, type Moc } from './moPhong';
+import { inChapter4 } from './chuong4';
 import { inChapter3 } from './coLoa';
 import { inChapter2 } from './son';
 import { vi } from '../text/vi';
@@ -34,17 +35,18 @@ const KHOAN = {
 } as const;
 type Khoan = keyof typeof KHOAN;
 
-const GIAI_DOAN = ['chuong1', 'chuong2', 'chuong3', 'sauDien7'] as const;
+const GIAI_DOAN = ['chuong1', 'chuong2', 'chuong3', 'chuong4', 'sauDien8'] as const;
 type GiaiDoan = (typeof GIAI_DOAN)[number];
 const TEN_GIAI_DOAN: Record<GiaiDoan, string> = {
   chuong1: 'Chương 1 (từ đầu tới lúc vào chương 2)',
   chuong2: 'Chương 2 (tới lúc vào chương 3)',
-  chuong3: 'Chương 3 (tới lúc lên Điện 7)',
-  sauDien7: 'Sau Điện 7 (người chơi mô phỏng chơi thêm)',
+  chuong3: 'Chương 3 (tới lúc vào chương 4)',
+  chuong4: 'Chương 4 (tới lúc lên Điện 8)',
+  sauDien8: 'Sau Điện 8 (người chơi mô phỏng chơi thêm)',
 };
 
-/** Sau Điện 7 chơi thêm chừng này phút, để xem tài nguyên dồn lại ra sao khi hết đường lên cấp. */
-export const SAU_DIEN7_PHUT = 60;
+/** Sau Điện 8 chơi thêm chừng này phút, để xem tài nguyên dồn lại ra sao khi hết đường lên cấp. */
+export const SAU_DIEN8_PHUT = 60;
 
 const zero = (): Resources => ({ gao: 0, voOc: 0, datDa: 0, sat: 0 });
 
@@ -87,8 +89,9 @@ export interface KetQuaKinhTe {
 export function doKinhTe(): KetQuaKinhTe {
   const s = createInitialState(0);
   const so: Partial<Record<GiaiDoan, SoGiaiDoan>> = {};
-  let sauDien7 = false;
-  const giaiDoan = (): GiaiDoan => (sauDien7 ? 'sauDien7' : inChapter3(s) ? 'chuong3' : inChapter2(s) ? 'chuong2' : 'chuong1');
+  let sauDien8 = false;
+  const giaiDoan = (): GiaiDoan =>
+    sauDien8 ? 'sauDien8' : inChapter4(s) ? 'chuong4' : inChapter3(s) ? 'chuong3' : inChapter2(s) ? 'chuong2' : 'chuong1';
   const soCua = (g: GiaiDoan) => (so[g] ??= soMoi(s));
 
   const cong = (sg: SoGiaiDoan, k: Khoan, r: ResourceId, n: number) => {
@@ -133,10 +136,10 @@ export function doKinhTe(): KetQuaKinhTe {
     sg.dienCuoi = dienLevel(s);
   };
 
-  const moc = playChapters({ lam, s });
-  if (moc.at7 >= 0) {
-    sauDien7 = true;
-    for (let sec = 0; sec < SAU_DIEN7_PHUT * 60; sec++) playSecond(s, lam);
+  const moc = playChapters({ lam, s, last: 8 });
+  if (moc.at8 >= 0) {
+    sauDien8 = true;
+    for (let sec = 0; sec < SAU_DIEN8_PHUT * 60; sec++) playSecond(s, lam);
   }
   return { moc, so };
 }
@@ -183,6 +186,8 @@ export function inBaoCao(kq: KetQuaKinhTe): string {
         ['Lên Điện 6', phut(moc.at6)],
         ['Vào chương 3', phut(moc.enter3)],
         ['Lên Điện 7', phut(moc.at7)],
+        ['Vào chương 4', phut(moc.enter4)],
+        ['Lên Điện 8', phut(moc.at8)],
       ],
     ),
     '',

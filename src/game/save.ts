@@ -1,6 +1,6 @@
 // Lưu game vào localStorage và xuất/nhập mã lưu để sao lưu hoặc chuyển máy.
 // Bản lưu cũ (phiên bản 1 của lát cắt 1, 2 của lát cắt 2a, 3 của lát cắt 2b, 4 của lát cắt 3a,
-// 5 của lát cắt 3b, 6 của chương 2, 7 của chương 3, 8 của cấp 6–7) được nâng lên phiên bản hiện tại khi nạp.
+// 5 của lát cắt 3b, 6 của chương 2, 7 của chương 3, 8 của cấp 6–7, 9 của Hội Tết) được nâng lên phiên bản hiện tại khi nạp.
 
 import { BUILDINGS, GEAR_IDS, GIFT_IDS, MERCHANT_FIRST_MS, QUEST_INSERTED_V4, RESOURCE_IDS, ROWS, type BuildingType } from './defs';
 import { initialAdv } from './coLoa';
@@ -46,6 +46,7 @@ function migrate(raw: unknown): unknown {
   if (isObj(v) && v.version === 6) v = migrate6to7(v);
   if (isObj(v) && v.version === 7) v = migrate7to8(v);
   if (isObj(v) && v.version === 8) v = migrate8to9(v);
+  if (isObj(v) && v.version === 9) v = migrate9to10(v);
   return v;
 }
 
@@ -161,6 +162,12 @@ function migrate8to9(s: Raw): Raw {
   return s;
 }
 
+/** Phiên bản 9 → 10 (cấp 8, lầu nỏ): không thêm gì vào state; công trình được lên cấp 8, có thêm loại lầu nỏ. */
+function migrate9to10(s: Raw): Raw {
+  s.version = 10;
+  return s;
+}
+
 const isBanh = (v: unknown, test: (x: unknown) => boolean): boolean => isObj(v) && test(v.chung) && test(v.giay);
 const isBool = (x: unknown) => typeof x === 'boolean';
 
@@ -185,7 +192,7 @@ function isValidBuildings(list: unknown): boolean {
 }
 
 function isGameState(v: unknown): v is GameState {
-  if (!isObj(v) || v.version !== 9) return false;
+  if (!isObj(v) || v.version !== 10) return false;
   if (!Array.isArray(v.heights) || v.heights.length !== GRID * GRID || !v.heights.every(isNum)) return false;
   const son = v.son;
   if (!isObj(son) || !isObj(son.gifts) || !isNum(son.restUntil) || typeof son.non !== 'boolean' || typeof son.won !== 'boolean') return false;

@@ -4,8 +4,8 @@
 export const GRID = 30;
 /** Ô có x hoặc z từ mốc này trở lên là sông. */
 export const RIVER_START = 27;
-/** Cạnh vùng xây được theo cấp Điện Vua Hùng, chỉ số 0 là cấp 1. Vùng luôn sát hai bờ sông; cấp 7 vẫn chừa một hàng rừng. */
-export const AREA_SIZE = [16, 18, 20, 22, 24, 25, 26];
+/** Cạnh vùng xây được theo cấp Điện Vua Hùng, chỉ số 0 là cấp 1. Vùng luôn sát hai bờ sông; cấp 7 vẫn chừa một hàng rừng, cấp 8 không thêm đất. */
+export const AREA_SIZE = [16, 18, 20, 22, 24, 25, 26, 26];
 
 export function inGrid(x: number, z: number): boolean {
   return x >= 0 && z >= 0 && x < GRID && z < GRID;

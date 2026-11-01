@@ -3,6 +3,7 @@
 
 import { startBattle, stepBattle, type Battle, type RaidSide } from './battle';
 import { updateCampaign } from './campaign';
+import { inChapter4 } from './chuong4';
 import { advJoined, initialAdv, inChapter3, ruaVangCame, wallRings } from './coLoa';
 import { heroFor, inChapter2, initialSon, restAfter, sonJoined } from './son';
 import { bake, datBonus, initialTet, troiBonus, updateTet, type TetState } from './tet';
@@ -11,6 +12,7 @@ import {
   BUILDINGS,
   CH3_QUEST_START,
   DIEN_CHAPTER,
+  LAU_NO_TOWERS,
   MOVE_FRACTION,
   FIRST_FLOOD_MS,
   FIRST_LAND_MS,
@@ -210,7 +212,7 @@ export interface Merchant {
 }
 
 export interface GameState {
-  version: 9;
+  version: 10;
   resources: Resources;
   /** Số dân (không tính lính). */
   dan: number;
@@ -296,7 +298,9 @@ export type FailReason =
   | 'khongTheDoi'
   | 'trungCho'
   | 'khongDuCho'
-  | 'daTheoMau';
+  | 'daTheoMau'
+  | 'canChuong4'
+  | 'khongGhepDuoc';
 
 export type Result<T = undefined> = { ok: true; value: T } | { ok: false; reason: FailReason };
 
@@ -335,7 +339,7 @@ export function initialGiong(): GiongState {
 export function createInitialState(now: number): GameState {
   const dien: Building = { id: 1, type: 'dien', x: 16, z: 16, level: 1, workers: 0 };
   const state: GameState = {
-    version: 9,
+    version: 10,
     resources: { ...START_RESOURCES },
     dan: START_DAN,
     danProgress: 0,
@@ -380,6 +384,11 @@ export function countOf(state: GameState, type: BuildingType): number {
 
 export function limitOf(state: GameState, type: BuildingType): number {
   return BUILDINGS[type].limit[dienLevel(state) - 1];
+}
+
+/** Số chỗ đã dùng trong giới hạn `limitOf`: mỗi lầu nỏ tính là hai chòi canh. */
+export function usedOf(state: GameState, type: BuildingType): number {
+  return countOf(state, type) + (type === 'choiCanh' ? LAU_NO_TOWERS * countOf(state, 'lauNo') : 0);
 }
 
 export function findBuilding(state: GameState, id: number): Building | undefined {
@@ -544,7 +553,7 @@ export function canPlace(state: GameState, type: BuildingType, x: number, z: num
   if (!def.buildable) return fail('khongTheXay');
   if (def.unlock && !unlocked(state, def.unlock)) return fail(UNLOCK_REASON[def.unlock]);
   if (dienLevel(state) < def.minDien) return fail('chuaDuCapDien');
-  if (countOf(state, type) >= limitOf(state, type)) return fail('datGioiHan');
+  if (usedOf(state, type) >= limitOf(state, type)) return fail('datGioiHan');
   const level = dienLevel(state);
   const grid = occupancy(state);
   const over = replacedWall(state, type, x, z);
@@ -566,10 +575,11 @@ export function canUpgrade(state: GameState, id: number): Result {
   if (!b) return fail('khongTimThay');
   const cost = upgradeCostOf(b);
   if (!cost) return fail('capToiDa');
-  // Điện lên cấp 6 khi đã vào chương 2, lên cấp 7 khi đã vào chương 3.
+  // Điện lên cấp 6 khi đã vào chương 2, cấp 7 khi đã vào chương 3, cấp 8 khi đã vào chương 4.
   const chapter = b.type === 'dien' ? DIEN_CHAPTER[b.level + 1] : undefined;
   if (chapter === 2 && !inChapter2(state)) return fail('canChuong2');
   if (chapter === 3 && !inChapter3(state)) return fail('canChuong3');
+  if (chapter === 4 && !inChapter4(state)) return fail('canChuong4');
   if (dienLevel(state) < dienNeededFor(b.type, b.level + 1)) return fail('chuaDuCapDien');
   if (!canAfford(state, cost)) return fail('thieuTaiNguyen');
   return ok(undefined);

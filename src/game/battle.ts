@@ -10,6 +10,7 @@ import {
   ARMS_BONUS,
   BUILDINGS,
   CO_LOA_TOWER,
+  LAU_NO,
   ENEMIES,
   ENEMY_ROWS,
   FIELD,
@@ -782,6 +783,27 @@ function stepDefenses(state: GameState, battle: Battle, dt: number): void {
         emit(battle, { kind: 'shot', x: tower.x, z: tower.z, tx: best.x, tz: best.z });
         damageFighter(battle, { dmg: TOWER.dmg[b.level - 1] * (battle.crossbows ? CO_LOA_TOWER.dmg : 1) }, best);
         battle.towerCd[b.id] = TOWER.cooldown;
+      }
+    }
+    if (b.type === 'lauNo') {
+      const cd = (battle.towerCd[b.id] ?? 0) - dt;
+      battle.towerCd[b.id] = cd;
+      if (cd > 0) continue;
+      // Lầu nỏ: mỗi phát bắn ba giặc gần nhất trong tầm, mỗi mũi một tên.
+      const tower = { x: b.x + 0.5, z: b.z + 0.5 };
+      const range = LAU_NO.range + (battle.crossbows ? CO_LOA_TOWER.range : 0);
+      const targets = battle.fighters
+        .filter((o) => o.side === 'giac' && (o.state === 'move' || o.state === 'fight' || o.state === 'flee'))
+        .map((o) => ({ o, d: Math.hypot(o.x - tower.x, o.z - tower.z) }))
+        .filter((t) => t.d < range)
+        .sort((p, q) => p.d - q.d)
+        .slice(0, LAU_NO.targets);
+      if (targets.length) {
+        for (const { o } of targets) {
+          emit(battle, { kind: 'shot', x: tower.x, z: tower.z, tx: o.x, tz: o.z });
+          damageFighter(battle, { dmg: LAU_NO.dmg * (battle.crossbows ? CO_LOA_TOWER.dmg : 1) }, o);
+        }
+        battle.towerCd[b.id] = LAU_NO.cooldown;
       }
     }
     if (b.type === 'bayChong' && !battle.trapsUsed.includes(b.id)) {

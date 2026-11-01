@@ -1,14 +1,15 @@
-// Mô phỏng một người chơi hợp lý để kiểm tra nhịp tiến trình: Điện cấp 2–5 ở chương 1, cấp 6, 7 ở chương 2, 3.
+// Mô phỏng một người chơi hợp lý để kiểm tra nhịp tiến trình: Điện cấp 2–5 ở chương 1, cấp 6, 7, 8 ở chương 2, 3, 4.
 
 import { describe, expect, it } from 'vitest';
 import { playChapters, playUntilDien } from './moPhong';
 
-/** Số phút từ lúc vào chương 2, 3 tới khi lên Điện 6, 7 (người chơi mô phỏng ở `moPhong.ts`). */
-function chapterMinutes(): { dien6: number; dien7: number } {
-  const m = playChapters();
+/** Số phút từ lúc vào chương 2, 3, 4 tới khi lên Điện 6, 7, 8 (người chơi mô phỏng ở `moPhong.ts`). */
+function chapterMinutes(): { dien6: number; dien7: number; dien8: number } {
+  const m = playChapters({ last: 8 });
   return {
     dien6: m.at6 < 0 ? Infinity : (m.at6 - m.enter2) / 60,
     dien7: m.at7 < 0 ? Infinity : (m.at7 - m.enter3) / 60,
+    dien8: m.at8 < 0 ? Infinity : (m.at8 - m.enter4) / 60,
   };
 }
 
@@ -32,12 +33,15 @@ describe('nhịp tiến trình', () => {
     expect(minutes).toBeLessThanOrEqual(70);
   });
 
-  // Không tính thưởng phó bản chương 2, 3 (hàng nghìn mỗi màn), nên chơi thật còn nhanh hơn.
-  it('vào chương 2 thì khoảng 12–20 phút lên Điện 6; vào chương 3 thì khoảng 25–40 phút lên Điện 7', () => {
-    const { dien6, dien7 } = chapterMinutes();
+  // Không tính thưởng phó bản chương 2, 3, 4 (hàng nghìn mỗi màn), nên chơi thật còn nhanh hơn.
+  // Điện 8 cho tới 45 phút: lúc vào chương 4, người chơi mô phỏng còn đang nâng nốt công trình lên cấp 7.
+  it('vào chương 2 thì 12–20 phút lên Điện 6; vào chương 3 thì 25–40 phút lên Điện 7; vào chương 4 thì 25–45 phút lên Điện 8', () => {
+    const { dien6, dien7, dien8 } = chapterMinutes();
     expect(dien6).toBeGreaterThanOrEqual(12);
     expect(dien6).toBeLessThanOrEqual(20);
     expect(dien7).toBeGreaterThanOrEqual(25);
     expect(dien7).toBeLessThanOrEqual(40);
+    expect(dien8).toBeGreaterThanOrEqual(25);
+    expect(dien8).toBeLessThanOrEqual(45);
   });
 });

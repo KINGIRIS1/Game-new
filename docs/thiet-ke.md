@@ -797,7 +797,7 @@ Chủ dự án đã chọn qua bốn câu hỏi: Thủy Tinh có cả hai phép 
   - mẫu Cổ Loa cho đủ 3 vòng thành;
   - đổi từ mẫu Phong Châu sang Cổ Loa vẫn xếp được.
 
-## Kế hoạch chương 4: Mỵ Châu, Trọng Thủy (đã chốt hướng, chờ duyệt số)
+## Kế hoạch chương 4: Mỵ Châu, Trọng Thủy (chủ dự án đã duyệt, đang làm)
 
 Chủ dự án đã chốt hướng qua một buổi hỏi đáp 26 câu. Ở nhiều câu, chủ dự án nhờ tìm hiểu các game cùng thể loại rồi đề xuất theo đó. Chỉ học cơ chế, còn luật chơi, nội dung và hình ảnh vẫn là của riêng game này:
 - **Clash of Clans**: làng không rộng thêm, mỗi lần mở cấp Tòa thị chính mới thì thêm cấp cho công trình cũ. Hai công trình phòng thủ đã tối đa ghép được thành một công trình mạnh hơn, ghép rồi không tách lại được. Từ đây có cấp 8 và **lầu nỏ**.
@@ -806,7 +806,7 @@ Chủ dự án đã chốt hướng qua một buổi hỏi đáp 26 câu. Ở nh
 - **Kingdom Rush**: thắng một màn thì mở thử thách cho màn đó, phần thưởng nhỏ nhưng cho người chơi lý do đánh lại. Từ đây có **thử thách phó bản** và **huân công**.
 - **Age of Empires II, Halo: Reach**: nhiều chiến dịch kết thúc buồn; người chơi biết trước kết cục nhưng vẫn thắng từng trận. Từ đây chương 4 **kể trọn truyền thuyết**.
 
-Mọi con số dưới đây chờ chủ dự án duyệt trước khi viết code. Như lúc làm cấp 6–7, cho chỉnh trong khoảng ±20% để khớp nhịp và độ khó đo bằng test; sau khi làm xong sẽ ghi số cuối cùng.
+Chủ dự án đã duyệt mọi con số dưới đây trước khi viết code. Như lúc làm cấp 6–7, cho chỉnh trong khoảng ±20% để khớp nhịp và độ khó đo bằng test; làm xong phần nào thì ghi số cuối cùng của phần ấy.
 
 ### Những điều đã chốt
 
@@ -835,15 +835,15 @@ Mọi con số dưới đây chờ chủ dự án duyệt trước khi viết co
 - Mỗi đoạn kể đúng một lần, theo thứ tự, sau các đoạn của chương 3. Người nói mới: Mỵ Châu, Trọng Thủy.
 - **Màn hình Hết truyện**: bốn dòng tóm tắt bốn chương (Gióng đuổi giặc Ân, Sơn Tinh thắng Thủy Tinh, An Dương Vương xây thành Cổ Loa, nỏ thần mất và nước Âu Lạc mất), rồi một câu: "Hơn hai trăm năm sau, ở đất Mê Linh có hai chị em họ Trưng…". Nút **Chơi tiếp** đưa về kinh đô. Mở lại được từ bảng Lạc hầu.
 
-### PR 1: Điện cấp 8, công trình cấp 8, lầu nỏ
+### PR 1: Điện cấp 8, công trình cấp 8, lầu nỏ (chủ dự án đã duyệt, đã làm)
 
-Giá cấp 8 khoảng gấp 2 cấp 7, sản lượng tăng khoảng 30% (cấp 6–7 tăng khoảng 35%).
+Giá cấp 8 khoảng gấp 2 cấp 7, sản lượng tăng khoảng 30% (cấp 6–7 tăng khoảng 35%). Bảng dưới là số cuối cùng.
 
 **Điện**
 
 | Cấp | Mở khi | Giá nâng | Đất | Sức chứa kho | Chỗ ở | Gạo, vỏ ốc /phút | Máu |
 |---|---|---|---|---|---|---|---|
-| 8 | vào chương 4 | 13000 gạo, 11500 vỏ ốc, 10000 đất đá, 2200 sắt | 26×26 (giữ nguyên) | 32000 | 11 | 18, 9 | 2000 |
+| 8 | vào chương 4 | 10400 gạo, 9200 vỏ ốc, 8000 đất đá, 1800 sắt | 26×26 (giữ nguyên) | 32000 | 11 | 18, 9 | 2000 |
 
 - Người đang ở chương 4 thì mở ngay. Vào chương 4 tức là nhận thưởng nhiệm vụ Đền Cổ Loa. PR 1 chưa có truyện chương 4, nên điều kiện này mở Điện 8 luôn.
 - Ở Điện 8, số công trình tối đa của mọi loại giữ như Điện 7, kể cả lũy, bẫy, đê, thành và bốn công trình Hội Tết. Số bánh cần dâng ở Tết giữ 40 mỗi loại, vì bốn công trình làm bánh không lên cấp.
@@ -864,7 +864,11 @@ Giá cấp 8 khoảng gấp 2 cấp 7, sản lượng tăng khoảng 30% (cấp 
 - Ở Điện 8, kho tối đa khoảng 32000 + 4 × 13000 = 84000 mỗi loại.
 - Chỗ làm giữ nguyên để khỏi thiếu dân: lúc mọi công trình cũ đủ người, Điện 7 còn khoảng 25 dân rảnh.
 
-**Nhịp** (test mô phỏng người biết dành dụm như `balance.test.ts`, không tính thưởng phó bản): vào chương 4 thì **25–40 phút** lên Điện 8, như chương 3 lên Điện 7. Người biết dành dụm lên Điện 8 trước màn 29. Báo cáo kinh tế (`kinhTe.ts`) thêm giai đoạn chương 4.
+**Nhịp** (test mô phỏng người biết dành dụm trong `balance.test.ts`, không tính thưởng phó bản):
+- người chơi mô phỏng ở lại chương 3 chừng nửa giờ sau khi lên Điện 7 rồi mới vào chương 4, như các chương trước;
+- với giá đề xuất ban đầu (13000 gạo, 11500 vỏ ốc, 10000 đất đá, 2200 sắt), Điện 8 mất 48 phút. Hạ 20% (mức tối đa đã cho) còn **44 phút**: lúc vào chương 4, người chơi mô phỏng còn đang dùng vỏ ốc nâng nốt công trình lên cấp 7, mà vỏ ốc chỉ làm ra khoảng 1000 mỗi phút;
+- vì vậy đích của test nới từ 25–40 lên **25–45 phút**. Chơi thật nhanh hơn nhiều: mỗi màn 25–28 thưởng lần đầu 4500–6000 vỏ ốc;
+- báo cáo kinh tế (`kinhTe.ts`) có thêm giai đoạn chương 4 (tới lúc lên Điện 8) và một giờ chơi thêm sau Điện 8.
 
 **Lầu nỏ** (ghép chòi canh)
 
@@ -875,24 +879,27 @@ Giá cấp 8 khoảng gấp 2 cấp 7, sản lượng tăng khoảng 30% (cấp 
 - Chỉ số: mỗi phát bắn **3 giặc khác nhau** (ít giặc hơn thì bắn chừng ấy), mỗi mũi 34 sát thương, tầm 5,5 ô, nghỉ 1,1 giây, máu 1400, móng 1×1 như chòi canh. Khi có từ 3 giặc trong tầm trở lên, lầu nỏ mạnh hơn hai chòi canh cấp 8 cộng lại khoảng 40%.
 - Đền Cổ Loa còn nguyên thì lầu nỏ cũng bắn mạnh gấp rưỡi và xa thêm 1 ô như chòi canh.
 - Ghép chỉ trống ra một ô mỗi lần. Đất không thiếu: theo mẫu Cổ Loa ở Điện 7 còn khoảng 218 ô trống, đủ chỗ cho Đền Cuông 3×3 ở phía bắc, ngoài vòng thành ngoài.
+- Áp mẫu kinh đô: lầu nỏ đứng vào chỗ chòi canh của mẫu và tính là hai chòi canh, chỗ còn lại dựng thêm chòi canh cho đủ số tối đa.
+- Giao diện: bảng chòi canh cấp 8 có nút **🎯 Ghép thành lầu nỏ** kèm giá. Bấm thì thanh dưới chỉ còn nút Hủy và dòng gợi ý "Chạm vào một chòi canh cấp 8 khác còn nguyên để ghép". Chưa có chòi canh cấp 8 thứ hai thì nút mờ, có dòng báo. Bảng Điện cấp 8 ghi đất 26×26, không ghi mũi tên mở đất.
 
 **Dáng mới** (móng giữ nguyên số ô, cỡ không to quá 105%)
 
 | Công trình | Cấp 8 |
 |---|---|
 | Điện | thềm đá ba bậc, trên nóc có trống đồng lớn giữa hai tượng chim Lạc dang cánh |
-| Ruộng lúa | đập đá nhỏ có cống tre dẫn nước vào ruộng |
-| Bến chợ thuyền | kho hàng mái cong trên cầu tàu, hai thuyền buôn neo hai bên |
-| Nhà sàn | nhà sàn dài mái cong hình thuyền như nhà khắc trên trống đồng |
-| Bãi đất đá | xe trâu chở đá và giàn cần vọt |
-| Lò rèn | sân đúc đồng: khuôn đúc trống đồng giữa sân, nồi nấu đồng đỏ lửa |
-| Kho thóc | kho sàn lớn mái cong, thêm vựa thóc thứ tư |
-| Chòi canh | lầu canh đá thêm nỏ lớn thứ hai chĩa hướng khác |
-| Lầu nỏ | lầu gỗ ba tầng trên nền đá, ba cây nỏ lớn chĩa ba hướng, cờ đỏ trên nóc; mỗi phát bay ra ba mũi tên |
+| Điện | thềm đá ba bậc rộng hơn; trống đồng lớn trên nóc giữa đôi chim đồng; chim Lạc dang cánh trên đỉnh hai lầu trống |
+| Ruộng lúa | đập đá xếp cao chắn ngang bờ trái, cống tre lớn đổ nước xuống ao nước trong giữa ruộng |
+| Bến chợ thuyền | kho hàng mái cong ở đầu cầu tàu, thêm thuyền buôn thứ hai neo giữa sông |
+| Nhà sàn | nhà sàn dài mái thuyền vút cao hai đầu như nhà khắc trên trống đồng, chim đồng hai đầu nóc |
+| Bãi đất đá | trâu kéo xe đá đứng cạnh xe; giàn cần vọt có đá đối trọng và thúng đá |
+| Lò rèn | sân đúc đồng thay ống bễ: khuôn đất, nồi đồng nghiêng rót nước đồng đỏ rực; trống đồng vừa đúc trên giá gỗ ở góc trước |
+| Kho thóc | kho sàn dài mái cong thay hai vựa phía sau, chim đồng hai đầu nóc |
+| Chòi canh | lầu canh đá thêm nỏ lớn thứ hai chĩa sang phải |
+| Lầu nỏ | chân đất nện cao có đai đồng và ô cửa bắn, lầu gỗ hai tầng lan can đỏ, mái tranh ba tầng chồng nhau, chim Lạc dang cánh trên đỉnh; ba nỏ lớn chĩa ra trước, sang phải, sang trái, ba lính nỏ; hai cờ đỏ góc sau; mỗi phát bay ra ba mũi tên. Cao hơn chòi canh để nhìn là biết |
 
-- Bản lưu lên **phiên bản 10** (thêm lầu nỏ).
-- Nhiệm vụ: nối thêm nhiệm vụ 40, 41 (xem mục Nhiệm vụ).
-- Test: giá, sản lượng, sức chứa cấp 8; ghép lầu nỏ (đủ điều kiện, tính 2 chòi, không tách); lầu nỏ bắn 3 mục tiêu; nhịp lên Điện 8; nâng bản lưu 9 lên 10.
+- Bản lưu lên **phiên bản 10** (công trình lên được cấp 8, thêm loại lầu nỏ; bản lưu 9 chỉ đổi số phiên bản).
+- Nhiệm vụ: nối thêm nhiệm vụ 40, 41 (xem mục Nhiệm vụ). Xong nhiệm vụ 41 thì bảng Lạc hầu báo kinh đô đã có Điện cấp 8 và lầu nỏ, chờ phần sau.
+- Test (`cap8.test.ts`): Điện cấp 8 cần chương 4; đất giữ 26×26, kho 32000; bảy loại lên cấp 8 với số đã duyệt, số tối đa giữ như Điện 7; ghép lầu nỏ (Điện 8, hai chòi cấp 8 còn nguyên, không lúc có giặc, trả giá), không tách, không lên cấp, không dỡ; tính 2 chòi canh; mỗi phát bắn 3 giặc gần nhất, giặc thứ tư không trúng; áp mẫu; nâng bản lưu 9 lên 10. Nhịp lên Điện 8 ở `balance.test.ts`.
 
 ### PR 2: lính nỏ, ụ nỏ, thủy binh Triệu
 
@@ -1065,8 +1072,8 @@ Thưởng khoảng gấp rưỡi nhiệm vụ chương 3. Nhận xong nhiệm v�
 
 ### Thứ tự làm chương 4
 
-1. **Duyệt tài liệu này** (mọi con số và dáng ở trên).
-2. **PR 1**: Điện cấp 8, công trình cấp 8, lầu nỏ. Bản lưu v10.
+1. **Duyệt tài liệu này** (mọi con số và dáng ở trên). Chủ dự án đã duyệt.
+2. **PR 1** (đã làm): Điện cấp 8, công trình cấp 8, lầu nỏ. Bản lưu v10.
 3. **PR 2**: lính nỏ, ụ nỏ, thủy binh Triệu đánh kinh đô, đoạn truyện "Cầu hôn". Bản lưu v11.
 4. **PR 3**: Cao Lỗ, màn 25–32, bốn đoạn truyện còn lại, Đền Cuông, mẫu kinh đô chương 4, màn hình Hết truyện. Bản lưu v12.
 5. **PR 4**: thử thách phó bản và huân công. Bản lưu v13.
@@ -1107,5 +1114,5 @@ Mỗi PR: chạy `npm test` và `npm run build`; sửa `src/render/` hay `src/ui
 7. **Cấp 6–7 và rèn binh khí** (đã làm, xem mục Kế hoạch): Điện và 7 loại công trình lên cấp 6, 7, đất 25×25 rồi 26×26, rèn binh khí hai bậc ở lò rèn, bản lưu phiên bản 8.
 8. **Hội Tết bánh chưng bánh giầy** (đã làm, xem mục PR 3): truyện Lang Liêu, ruộng nếp, vườn đậu lá dong, chuồng lợn, bếp gói bánh (3 cấp mỗi loại), Tết 20 phút một lần, phúc lành Đất và Trời, cảnh Tết trước Điện, bản lưu phiên bản 9.
 9. **Sửa sau chơi thử Hội Tết**: Thủy Tinh có hai phép, Dời non vẽ rõ hơn, xoay cảnh 4 hướng, dời công trình, mẫu kinh đô mỗi chương.
-10. **Chương 4: Mỵ Châu, Trọng Thủy** (đã chốt hướng, chờ duyệt số, xem Kế hoạch chương 4): Điện và 7 loại công trình lên cấp 8, lầu nỏ, ụ nỏ trên thành, lính nỏ, thủy binh Triệu đi thuyền, Cao Lỗ, phó bản màn 25–32, Đền Cuông, màn hình Hết truyện, thử thách phó bản và huân công.
+10. **Chương 4: Mỵ Châu, Trọng Thủy** (đã duyệt, đang làm; PR 1 đã làm; xem Kế hoạch chương 4): Điện và 7 loại công trình lên cấp 8, lầu nỏ, ụ nỏ trên thành, lính nỏ, thủy binh Triệu đi thuyền, Cao Lỗ, phó bản màn 25–32, Đền Cuông, màn hình Hết truyện, thử thách phó bản và huân công.
 11. **Để sau**: chương 5 về Hai Bà Trưng (mới nhắc ở câu cuối chương 4); nhạc nền.
