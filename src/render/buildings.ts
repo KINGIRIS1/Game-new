@@ -1653,57 +1653,334 @@ export function makeBayChong(): THREE.Group {
 
 // ---------- Đền Phù Đổng ----------
 
-/** Đền thờ Phù Đổng Thiên Vương: nền đá hai bậc, đền mái thuyền, tượng ngựa sắt trước sân. */
+/**
+ * Khóm Tre Đằng Ngà vàng óng (thân tre vàng có đốt, cành mảnh và lá tre nhọn mọc từ giữa thân lên ngọn).
+ */
+function goldenBambooClump(p: ShapeBuilder, x: number, y0: number, z: number, stems: number, scale = 1): void {
+  const GOLD_BAMBOO = 0xe2b638;
+  const GOLD_NODE = 0x9c7218;
+  const GOLD_LEAF = 0xc6a828;
+  const GREEN_LEAF = 0x6a9a2e;
+  for (let i = 0; i < stems; i++) {
+    const a = (i / stems) * Math.PI * 2 + 0.3;
+    const r = (i === 0 ? 0 : 0.09 + (i % 2) * 0.04) * scale;
+    const sx = x + Math.cos(a) * r;
+    const sz = z + Math.sin(a) * r;
+    const lean = (i === 0 ? 0.04 : 0.14) * scale;
+    const h = (1.18 + (i % 3) * 0.22) * scale;
+    const segs = 4;
+    const segH = h / segs;
+    for (let s = 0; s < segs; s++) {
+      const t0 = s / segs;
+      const t1 = (s + 1) / segs;
+      const tm = (t0 + t1) * 0.5;
+      const bend = lean * tm * tm;
+      const cx = sx + Math.cos(a) * bend;
+      const cz = sz + Math.sin(a) * bend;
+      const cy = y0 + tm * h;
+      const rad = (0.032 * (1 - t0 * 0.42)) * scale;
+      const tilt = 2 * lean * tm;
+      p.cyl(rad * 0.88, rad, segH * 1.02, GOLD_BAMBOO, cx, cy, cz, [Math.sin(a) * tilt, 0, -Math.cos(a) * tilt], 5);
+      p.cyl(rad * 1.12, rad * 1.12, 0.022 * scale, GOLD_NODE, sx + Math.cos(a) * lean * t1 * t1, y0 + t1 * h, sz + Math.sin(a) * lean * t1 * t1, undefined, 5);
+      if (s >= 1) {
+        const nx = sx + Math.cos(a) * lean * t1 * t1;
+        const ny = y0 + t1 * h;
+        const nz = sz + Math.sin(a) * lean * t1 * t1;
+        for (const side of [-1, 1]) {
+          const ba = a + side * (0.9 + s * 0.25);
+          const bx = nx + Math.cos(ba) * 0.12 * scale;
+          const bz = nz + Math.sin(ba) * 0.12 * scale;
+          p.cone(0.032 * scale, 0.22 * scale, (s + i) % 2 === 0 ? GOLD_LEAF : GREEN_LEAF, bx, ny + 0.04 * scale, bz, [0.95, ba, 0], 4);
+        }
+      }
+    }
+  }
+}
+
+/**
+ * Đền thờ Phù Đổng Thiên Vương (Phong cách "Võ Miếu Lửa Sắt & Tre Đằng Ngà" — Sự tích Thánh Gióng):
+ * - Nền đá hỏa nham đen 2 bậc viền gạch đỏ lửa; góc sân trước bên phải có Ao Tròn Vết Chân Ngựa Sắt;
+ *   phía sau có rặng Tre Đằng Ngà vàng óng; mặt trước có Cổng Võ Môn Tre Đằng Ngà nẹp sắt đen cắm giáo sắt.
+ * - Chính điện Võ Miếu dựng bằng hệ cột bó Tre Đằng Ngà vàng nẹp đai sắt đen, vách đỏ chiến bào nẹp giáp sắt,
+ *   mái đao 2 tầng chồng diêm ngói Đỏ Lửa viền Sắt Đen & Vàng, đỉnh nóc rực sáng Hào Quang Lửa Mặt Trời & Sừng Ngựa Sắt.
+ * - Giữa sân là Đài Đá Hỏa Nham viền lửa thiêng nâng Tượng Thánh Gióng cưỡi Ngựa Sắt phun lửa, kèm Đôi Hỏa Đỉnh 3 chân & Giá Roi Sắt.
+ */
 export function makeDenPhuDong(): THREE.Group {
   const m = new ToonModel();
   const p = m.plain;
-  p.box(2.9, 0.22, 2.9, C.rock, 0, 0.11, 0);
-  p.box(2.4, 0.16, 2.0, C.rockDark, 0, 0.3, -0.35);
-  stiltHall(m, { x: 0, z: -0.45, w: 1.9, d: 1.3, postH: 0.85, roofL: 2.7, roofW: 1.7, lift: 0.65 });
-  const roofTop = 0.85 + 0.68 + 1.7 * 0.4 + 0.65;
-  bird(m, 1.25, roofTop, -0.45, 1, 0.8);
-  bird(m, -1.25, roofTop, -0.45, -1, 0.8);
-  // Bệ tượng và hai lư hương đồng.
-  p.box(0.8, 0.32, 1.1, C.rock, 0, 0.38, 0.85);
-  drum(m, -1.05, 1.0, 0.4, 0.22);
-  drum(m, 1.05, 1.0, 0.4, 0.22);
-  banner(m, -1.3, -1.25, 2.4, C.red);
-  banner(m, 1.1, -1.25, 2.4, C.red);
+  const IRON_DARK = 0x2a2729;
+  const IRON_MID = 0x433e42;
+  const FIRE_ROOF: Roof = { main: 0xb83220, dark: 0x8c2214, trim: C.gold };
+  const GOLD_BAMBOO = 0xe2b638;
+
+  // 1. Nền đá hỏa nham đen 2 bậc viền gạch đỏ son + đường thần đạo lát đá đen nẹp đồng
+  p.box(2.92, 0.22, 2.92, IRON_MID, 0, 0.11, 0);
+  m.band.box(2.96, 0.06, 2.96, C.red, 0, 0.2, 0);
+  p.box(2.44, 0.18, 1.82, IRON_DARK, 0, 0.31, -0.48);
+  p.box(2.48, 0.05, 1.86, C.gold, 0, 0.39, -0.48);
+  // Thềm bậc đá đen lên Võ Miếu
+  for (let i = 0; i < 3; i++) {
+    p.box(1.12, 0.06, 0.2, i % 2 === 0 ? IRON_DARK : C.red, 0, 0.25 + i * 0.055, 0.52 - i * 0.14);
+  }
+
+  // 2. Ao Tròn Vết Chân Ngựa Sắt ở góc trước bên phải sân (x = 0.88, z = 0.72)
+  const px = 0.88;
+  const pz = 0.72;
+  p.cyl(0.46, 0.5, 0.09, IRON_DARK, px, 0.245, pz, undefined, 14);
+  p.cyl(0.38, 0.38, 0.095, POND, px, 0.25, pz, undefined, 14);
+  // Vành móng ngựa sắt vàng in quanh bờ ao + lá sen & búp sen trong ao vết chân ngựa
+  p.add(new THREE.TorusGeometry(0.41, 0.032, 5, 14), C.gold, px, 0.29, pz, [Math.PI / 2, 0, 0]);
+  p.cyl(0.085, 0.085, 0.015, 0x4ca644, px - 0.1, 0.3, pz - 0.06, undefined, 8);
+  p.cyl(0.07, 0.07, 0.015, 0x5cb84e, px + 0.11, 0.3, pz + 0.08, undefined, 8);
+  p.cone(0.038, 0.075, 0xf27d9c, px - 0.08, 0.335, pz - 0.05, undefined, 6);
+
+  // 3. Rặng Tre Đằng Ngà vàng óng mọc vươn cao hai bên sườn Võ Miếu (tái hiện bụi tre Gióng nhổ đánh giặc Ân)
+  goldenBambooClump(p, -1.14, 0.38, -0.42, 6, 1.15);
+  goldenBambooClump(p, 1.14, 0.38, -0.42, 5, 1.08);
+
+  // 4. Ngôi Đền Võ Miếu Phù Đổng (Cột bó Tre Đằng Ngà đai sắt, vách giáp sắt đỏ, mái lửa 2 tầng chồng diêm)
+  const hx = 0;
+  const hz = -0.56;
+  const hw = 1.92;
+  const hd = 1.22;
+  const floorY = 0.92;
+  const colH = floorY - 0.4;
+  for (const cx of [-hw / 2 + 0.14, -hw * 0.18, hw * 0.18, hw / 2 - 0.14]) {
+    for (const cz of [-hd / 2 + 0.12, hd / 2 - 0.12]) {
+      // Chân tảng sắt đúc + cột bó Tre Đằng Ngà vàng nẹp 3 đai sắt đen
+      p.cyl(0.095, 0.115, 0.08, IRON_DARK, hx + cx, 0.44, hz + cz, undefined, 6);
+      p.cyl(0.072, 0.082, colH, GOLD_BAMBOO, hx + cx, 0.4 + colH / 2, hz + cz, undefined, 7);
+      for (const ry of [0.54, 0.7, 0.84]) {
+        p.cyl(0.086, 0.086, 0.035, IRON_DARK, hx + cx, ry, hz + cz, undefined, 7);
+      }
+    }
+  }
+  // Sàn Võ Miếu bọc sắt đen viền đồng vàng
+  p.box(hw, 0.12, hd, IRON_DARK, hx, floorY, hz);
+  m.band.box(hw + 0.04, 0.06, hd + 0.04, C.gold, hx, floorY + 0.01, hz);
+  // Vách Võ Miếu đỏ thẫm nẹp giáp sắt đen + Khiên Sắt Trống Đồng & Cặp Roi Tre Vàng bắt chéo trước trán cửa
+  const wallW = hw - 0.36;
+  const wallD = hd - 0.32;
+  const wallH = 0.64;
+  m.band.box(wallW, wallH, wallD, C.red, hx, floorY + 0.06 + wallH / 2, hz);
+  for (const sx of [-1, 1]) {
+    p.box(0.08, wallH + 0.04, wallD + 0.04, IRON_DARK, hx + sx * (wallW / 2 - 0.02), floorY + 0.06 + wallH / 2, hz);
+    p.box(0.06, wallH + 0.04, 0.06, IRON_DARK, hx + sx * 0.26, floorY + 0.06 + wallH / 2, hz + wallD / 2 + 0.01);
+  }
+  p.box(0.42, 0.5, 0.06, 0x1a1412, hx, floorY + 0.31, hz + wallD / 2 + 0.01);
+  // Cặp Roi Tre Đằng Ngà bắt chéo & Khiên Trống Đồng trên cửa Võ Miếu
+  p.cyl(0.022, 0.022, 0.72, GOLD_BAMBOO, hx, floorY + wallH - 0.02, hz + wallD / 2 + 0.04, [0, 0, 0.95], 5);
+  p.cyl(0.022, 0.022, 0.72, GOLD_BAMBOO, hx, floorY + wallH - 0.02, hz + wallD / 2 + 0.04, [0, 0, -0.95], 5);
+  m.drum.cyl(0.16, 0.16, 0.045, 0xffffff, hx, floorY + wallH - 0.02, hz + wallD / 2 + 0.055, [Math.PI / 2, 0, 0], 14);
+
+  // Mái Võ Miếu 2 tầng chồng diêm uốn cong vút như ngọn lửa
+  const rY1 = floorY + 0.68 + 1.64 * 0.4;
+  boatRoof(m, FIRE_ROOF, { length: 2.68, width: 1.64, lift: 0.78, drop: 0.6, thickness: 0.1 }, hx, rY1, hz);
+  const rY2 = rY1 + 0.58;
+  m.band.box(1.18, 0.24, 0.74, IRON_DARK, hx, rY2 - 0.26, hz);
+  boatRoof(m, FIRE_ROOF, { length: 1.92, width: 1.1, lift: 0.62, drop: 0.4, thickness: 0.08 }, hx, rY2, hz, 0, true);
+  // Đỉnh nóc Võ Miếu: Vầng Hào Quang Lửa Mặt Trời & Đôi Đầu Ngựa Sắt / Sừng Lửa ở hai đầu bờ nóc
+  const topY = rY2 + 0.48;
+  p.cyl(0.16, 0.16, 0.05, C.gold, hx, topY, hz, [Math.PI / 2, 0, 0], 12);
+  m.glow.cone(0.11, 0.34, 0xff5a1f, hx, topY + 0.18, hz, undefined, 6);
+  m.glow.cone(0.07, 0.24, 0xffe066, hx, topY + 0.16, hz + 0.02, undefined, 6);
+  for (const dir of [-1, 1]) {
+    bird(m, hx + dir * 0.9, rY2 + 0.56, hz, dir, 0.85);
+    m.glow.cone(0.05, 0.18, 0xff6a1f, hx + dir * 1.25, rY1 + 0.72, hz, [0, 0, -dir * 0.55], 5);
+  }
+
+  // 5. Bệ Đá Hỏa Nham Đen viền Lửa Vàng giữa sân nâng Tượng Thánh Gióng cưỡi Ngựa Sắt (thoáng rộng không bị che)
+  p.box(0.88, 0.24, 1.12, IRON_DARK, -0.05, 0.34, 0.68);
+  m.band.box(0.8, 0.14, 1.02, C.red, -0.05, 0.5, 0.68);
+  p.box(0.84, 0.05, 1.06, C.gold, -0.05, 0.58, 0.68);
+
+  // Đôi Hỏa Đỉnh 3 chân bằng sắt đúc rực lửa hai bên bệ tượng + Giá thờ Roi Sắt & Nón Sắt bên trái sân
+  for (const sx of [-0.74, 0.48]) {
+    p.cyl(0.13, 0.16, 0.18, IRON_DARK, sx, 0.31, 0.64, undefined, 8);
+    p.add(new THREE.TorusGeometry(0.14, 0.022, 5, 10), C.gold, sx, 0.39, 0.64, [Math.PI / 2, 0, 0]);
+    m.glow.cone(0.1, 0.22, 0xff5a1f, sx, 0.48, 0.64, undefined, 6);
+    m.glow.cone(0.065, 0.16, 0xffe066, sx, 0.47, 0.64, undefined, 5);
+  }
+  // Giá vũ khí thờ Roi Sắt & Nón Sắt Thánh Gióng ở góc trước bên trái (x = -1.04, z = 0.68)
+  p.box(0.42, 0.08, 0.22, IRON_DARK, -1.04, 0.26, 0.68);
+  for (const dx of [-0.14, 0.14]) p.cyl(0.022, 0.026, 0.38, IRON_DARK, -1.04 + dx, 0.45, 0.68, undefined, 5);
+  p.cyl(0.024, 0.024, 0.56, GOLD_BAMBOO, -1.04, 0.56, 0.68, [0, 0, Math.PI / 2 + 0.12], 6);
+  p.cone(0.12, 0.11, IRON_DARK, -1.04, 0.68, 0.68, undefined, 8);
+  p.sphere(0.03, C.gold, -1.04, 0.74, 0.68, [1, 1, 1], 5);
+
+  // 6. Cổng Tứ Trụ Võ Môn Tre Đằng Ngà & Sắt Đen mở thoáng hai bên mặt trước (z = 1.32) để lộ trọn Tượng Ngựa Sắt
+  const gz = 1.32;
+  for (const sx of [-1, 1]) {
+    // Trụ chính Võ Môn bằng bó Tre Đằng Ngà nẹp đai sắt, đỉnh trụ bốc lửa thiêng
+    p.box(0.18, 0.16, 0.18, IRON_DARK, sx * 0.68, 0.3, gz);
+    p.cyl(0.062, 0.074, 1.18, GOLD_BAMBOO, sx * 0.68, 0.88, gz, undefined, 7);
+    for (const ry of [0.58, 0.88, 1.18, 1.42]) p.cyl(0.08, 0.08, 0.04, IRON_DARK, sx * 0.68, ry, gz, undefined, 7);
+    m.glow.cone(0.065, 0.2, 0xff5a1f, sx * 0.68, 1.56, gz, undefined, 6);
+    m.glow.cone(0.042, 0.14, 0xffe066, sx * 0.68, 1.54, gz, undefined, 5);
+    // Tường cánh gà sắt đen cắm hàng mũi giáo vàng hai bên cổng
+    p.box(0.46, 0.34, 0.12, IRON_DARK, sx * 1.02, 0.38, gz);
+    p.box(0.48, 0.04, 0.14, C.red, sx * 1.02, 0.56, gz);
+    for (let k = -1; k <= 1; k++) {
+      p.cone(0.024, 0.14, C.gold, sx * 1.02 + k * 0.14, 0.64, gz, undefined, 4);
+    }
+  }
+
+  banner(m, -1.3, -1.2, 2.45, C.red);
+  banner(m, 1.12, -1.2, 2.45, C.gold);
+
   const g = m.group();
   const statue = bakeIronHorse();
-  statue.scale.setScalar(0.72);
-  statue.position.set(0, 0.54, 0.75);
+  statue.scale.setScalar(0.76);
+  statue.position.set(-0.05, 0.6, 0.64);
   g.add(statue);
   return g;
 }
 
 // ---------- Đền Tản Viên ----------
 
-/** Đền thờ Sơn Tinh: nền đá ba bậc như sườn núi, đền mái thuyền, ba ngọn núi Ba Vì sau lưng, tượng Sơn Tinh trước sân. */
+/**
+ * Đền thờ Tản Viên Sơn Thánh (Phong cách "Đền Đá Tam Sơn Ba Vì & Suối Thác Rừng Già" — Sự tích Sơn Tinh – Thủy Tinh):
+ * - Phía sau là Dãy Núi Ba Vì Tam Đỉnh hùng vĩ cao vút vượt lên trên mái đền (Đỉnh Tản Viên xòe tròn như chiếc tán đá trên mây,
+ *   Đỉnh Vua cao nhất ở giữa, Đỉnh Ngọc Hoa bên phải) có mây trắng vờn lưng núi.
+ * - Từ khe núi bên trái, Thác Nước trắng xóa đổ xuống Dòng Suối Ngàn chảy dọc sườn trái sân đền, qua Cầu Đá Vòm rêu phong.
+ * - Ngôi Đền Đá dựng trên nền đá núi 3 tầng bậc thang, cột đá xanh bát giác khảm Ngọc Lục Bảo,
+ *   mái đền thiết kế theo dáng "Tam Sơn" (3 đỉnh mái xếp hình chữ Sơn `山` lợp ngói đá xanh rêu rừng viền vàng đồng).
+ * - Giữa sân là Đài Cự Thạch nâng Tượng Sơn Tinh, hai bên thềm đặt Sính Lễ "Voi Chín Ngà" (cặp bệ đồng 9 ngà voi cong vút) & Đôi Trụ Đá Linh Thạch mở thoáng trước sân.
+ */
 export function makeDenTanVien(): THREE.Group {
   const m = new ToonModel();
   const p = m.plain;
-  p.box(2.9, 0.2, 2.9, C.rockDark, 0, 0.1, 0);
-  p.box(2.5, 0.18, 2.4, C.rock, 0, 0.29, -0.2);
-  p.box(2.0, 0.16, 1.8, C.rockDark, 0, 0.46, -0.45);
-  // Ba ngọn núi Ba Vì, ngọn giữa cao nhất.
-  for (const [x, r, h] of [[-0.95, 0.55, 1.5], [0, 0.7, 2.1], [0.95, 0.55, 1.5]] as const) {
-    p.cone(r, h, C.mountainCloak, x, 0.54 + h / 2, -1.05, undefined, 8);
-    p.cone(r * 0.35, h * 0.28, C.rock, x, 0.54 + h * 0.86, -1.05, undefined, 6);
+  const JADE = 0x4be38a;
+  const MOSS_ROOF: Roof = { main: 0x2f6340, dark: 0x1f472c, trim: C.gold };
+  const STONE_GREEN = 0x56685a;
+
+  // 1. Nền đá núi 3 tầng bậc thang rêu phong + Dòng Suối Ngàn chảy dọc bên trái (x = -1.08)
+  p.box(2.92, 0.2, 2.92, C.rockDark, 0, 0.1, 0);
+  p.box(2.32, 0.18, 2.36, STONE_GREEN, 0.18, 0.29, -0.18);
+  p.box(1.92, 0.18, 1.66, C.rockDark, 0.18, 0.47, -0.48);
+  // Bậc đá tự nhiên từ sân lên 3 tầng nền núi
+  for (let i = 0; i < 4; i++) {
+    p.box(0.86, 0.08, 0.22, i % 2 === 0 ? C.rock : STONE_GREEN, 0.18, 0.22 + i * 0.09, 0.88 - i * 0.22);
   }
-  stiltHall(m, { x: 0, z: -0.35, w: 1.7, d: 1.1, postH: 1.0, roofL: 2.4, roofW: 1.5, lift: 0.6 });
-  const roofTop = 1.0 + 0.68 + 1.5 * 0.4 + 0.6;
-  bird(m, 1.1, roofTop, -0.35, 1, 0.75);
-  bird(m, -1.1, roofTop, -0.35, -1, 0.75);
-  p.box(0.6, 0.3, 0.6, C.rock, 0, 0.35, 0.95);
-  drum(m, -1.05, 1.0, 0.4, 0.2);
-  drum(m, 1.05, 1.0, 0.4, 0.2);
-  banner(m, -1.25, 0.4, 2.2, C.mountainCloak);
-  banner(m, 1.05, 0.4, 2.2, C.red);
+
+  // 2. Dãy Núi Đá Ba Vì Tam Đỉnh hùng vĩ phía sau (z = -1.08) cao vút lên trên mái đền:
+  //    Đỉnh Tản Viên (trái, xòe tán tròn), Đỉnh Vua (giữa, cao nhất + xòe tán cổ bồng), Đỉnh Ngọc Hoa (phải)
+  const peaks = [
+    { x: -0.88, r: 0.58, h: 2.35, umbrella: true },
+    { x: 0.14, r: 0.76, h: 3.05, umbrella: true },
+    { x: 1.02, r: 0.56, h: 2.25, umbrella: false },
+  ] as const;
+  for (const pk of peaks) {
+    // Vách đá dựng đứng đa diện + sườn rừng xanh thẫm
+    p.cone(pk.r, pk.h, C.rockDark, pk.x, 0.52 + pk.h / 2, -1.08, undefined, 6);
+    p.cone(pk.r * 0.84, pk.h * 0.82, C.mountainCloak, pk.x, 0.52 + pk.h * 0.54, -1.04, [0, 0.4, 0], 6);
+    p.cone(pk.r * 0.42, pk.h * 0.3, C.rock, pk.x, 0.52 + pk.h * 0.86, -1.06, undefined, 6);
+    // Đỉnh Tản Viên xòe tròn dẹt ở chóp núi như chiếc tán lọng trời (đúng tên gọi "Tản Viên")
+    if (pk.umbrella) {
+      p.cyl(pk.r * 0.56, pk.r * 0.22, 0.18, C.rock, pk.x, 0.52 + pk.h * 0.91, -1.06, undefined, 7);
+      p.sphere(pk.r * 0.52, C.mountainCloak, pk.x, 0.52 + pk.h * 0.97, -1.06, [1.2, 0.32, 1.08], 7);
+    }
+  }
+  // Mây trắng vờn quanh sườn núi Ba Vì
+  for (const [cx, cy, cz, sx] of [
+    [-0.52, 2.25, -0.82, 1.38],
+    [0.58, 2.48, -0.84, 1.48],
+    [0.12, 2.95, -0.78, 1.32],
+  ] as const) {
+    p.sphere(0.15, 0xf4f1e6, cx, cy, cz, [sx, 0.42, 0.65], 7);
+  }
+
+  // 3. Thác Nước Trắng Xóa từ khe núi bên trái đổ xuống Dòng Suối Ngàn & Cầu Đá Vòm (x = -1.08)
+  p.box(0.26, 1.55, 0.12, POND, -0.96, 1.15, -0.84, [0.2, 0, 0]);
+  p.box(0.15, 1.52, 0.13, 0xe8f8ff, -0.96, 1.16, -0.83, [0.2, 0, 0]);
+  for (const dx of [-0.08, 0, 0.08]) {
+    p.sphere(0.07, 0xe8f8ff, -0.96 + dx, 0.28, -0.66, [1.1, 0.7, 1.1], 5);
+  }
+  // Lòng suối xanh biếc chảy dọc mép trái sân từ chân thác (z = -0.7) ra tiền sảnh (z = 1.32)
+  p.box(0.36, 0.04, 2.08, POND, -1.08, 0.21, 0.3);
+  for (let k = 0; k < 8; k++) {
+    const sz = -0.62 + k * 0.26;
+    p.sphere(0.065, k % 2 === 0 ? C.rock : STONE_GREEN, -1.28, 0.24, sz, [1.1, 0.65, 1.2], 5);
+    p.sphere(0.06, k % 2 === 0 ? STONE_GREEN : C.rockDark, -0.88, 0.24, sz + 0.08, [1.1, 0.65, 1.1], 5);
+  }
+  // Cầu Đá Vòm Cổ Kính bắc ngang qua suối ở phía trước trái (x = -1.08, z = 0.55)
+  p.cyl(0.24, 0.24, 0.34, C.rock, -1.08, 0.22, 0.55, [Math.PI / 2, 0, 0], 10);
+  for (const dz of [-0.14, 0.14]) {
+    p.box(0.46, 0.07, 0.04, C.rockDark, -1.08, 0.44, 0.55 + dz);
+  }
+
+  // 4. Ngôi Đền Đá Tản Viên Mái "Tam Sơn" (3 đỉnh mái chữ Sơn `山` tượng trưng 3 đỉnh Ba Vì)
+  const hx = 0.18;
+  const hz = -0.4;
+  const floorY = 0.98;
+  const colH = floorY - 0.56;
+  for (const cx of [-0.74, -0.26, 0.26, 0.74]) {
+    for (const cz of [-0.42, 0.42]) {
+      // Cột đá xanh nguyên khối bát giác + đai Ngọc Lục Bảo phát sáng
+      p.cyl(0.09, 0.11, 0.08, C.rockDark, hx + cx, 0.6, hz + cz, undefined, 6);
+      p.cyl(0.072, 0.082, colH, C.rock, hx + cx, 0.56 + colH / 2, hz + cz, undefined, 6);
+      m.glow.cyl(0.084, 0.084, 0.04, JADE, hx + cx, 0.56 + colH * 0.65, hz + cz, undefined, 6);
+    }
+  }
+  p.box(1.76, 0.12, 1.06, C.rockDark, hx, floorY, hz);
+  m.band.box(1.42, 0.54, 0.76, STONE_GREEN, hx, floorY + 0.33, hz);
+  p.box(0.38, 0.42, 0.06, 0x1c281e, hx, floorY + 0.27, hz + 0.39);
+  // Phù điêu Ấn Sơn Thần Ngọc Lục Bảo trên trán cửa đền
+  p.box(0.52, 0.14, 0.07, C.gold, hx, floorY + 0.52, hz + 0.4);
+  m.glow.sphere(0.065, JADE, hx, floorY + 0.52, hz + 0.43, [1.2, 1, 0.6], 6);
+
+  // Mái Tam Sơn (3 tầng mái: 1 mái trung tâm cao + 2 mái tả hữu xếp bậc chữ Sơn `山`)
+  const rYSide = floorY + 0.58 + 1.12 * 0.4;
+  for (const sx of [-1, 1]) {
+    boatRoof(m, MOSS_ROOF, { length: 1.02, width: 1.12, lift: 0.4, drop: 0.4, thickness: 0.08 }, hx + sx * 0.68, rYSide, hz, 0, true);
+  }
+  const rYCenter = floorY + 0.82 + 1.34 * 0.4;
+  m.band.box(0.92, 0.26, 0.66, C.mountainCloak, hx, rYCenter - 0.34, hz);
+  boatRoof(m, MOSS_ROOF, { length: 1.62, width: 1.34, lift: 0.64, drop: 0.48, thickness: 0.09 }, hx, rYCenter, hz);
+  // Đỉnh mái giữa: Bệ Đá Tam Sơn & Tinh Thể Ngọc Lục Bảo phát sáng + Đôi Chim Rừng Vàng
+  const topY = rYCenter + 0.48;
+  p.cyl(0.12, 0.15, 0.08, C.gold, hx, topY - 0.06, hz, undefined, 6);
+  m.glow.cone(0.085, 0.26, JADE, hx, topY + 0.08, hz, undefined, 5);
+  bird(m, hx + 0.74, topY + 0.08, hz, 1, 0.72);
+  bird(m, hx - 0.74, topY + 0.08, hz, -1, 0.72);
+
+  // 5. Đài Cự Thạch Núi Tản giữa sân nâng Tượng Sơn Tinh (mở thoáng hoàn toàn mặt trước)
+  p.cyl(0.42, 0.5, 0.32, C.rockDark, 0.18, 0.36, 0.76, undefined, 7);
+  p.cyl(0.38, 0.42, 0.08, STONE_GREEN, 0.18, 0.54, 0.76, undefined, 7);
+  m.glow.add(new THREE.TorusGeometry(0.39, 0.022, 5, 7), JADE, 0.18, 0.52, 0.76, [Math.PI / 2, 0, 0]);
+
+  // Đôi Bệ Thờ Sính Lễ "Voi Chín Ngà" (mỗi bên là bệ đồng cắm 9 chiếc ngà voi trắng ngà cong vút)
+  for (const [sx, tx] of [
+    [-1, -0.44],
+    [1, 0.82],
+  ] as const) {
+    p.cyl(0.18, 0.21, 0.18, C.bronzeDark, tx, 0.36, 0.46, undefined, 8);
+    p.cyl(0.19, 0.19, 0.04, C.gold, tx, 0.46, 0.46, undefined, 8);
+    for (let k = 0; k < 9; k++) {
+      const row = Math.floor(k / 3);
+      const col = (k % 3) - 1;
+      const hTusk = 0.24 + row * 0.055;
+      p.cone(0.024, hTusk, 0xf6f0dc, tx + col * 0.06, 0.49 + hTusk * 0.45, 0.46 - row * 0.038, [0.35 + row * 0.12, 0, -col * 0.28 - sx * 0.1], 5);
+    }
+  }
+
+  // 6. Cổng Đôi Cột Đá Thề / Trụ Cự Thạch Linh Thạch Ngọc Lục Bảo mở rộng hai bên lối vào (z = 1.28)
+  const gz = 1.28;
+  for (const sx of [-1, 1]) {
+    const gx = 0.18 + sx * 0.68;
+    p.cyl(0.16, 0.2, 0.18, C.rockDark, gx, 0.29, gz, undefined, 6);
+    p.cyl(0.11, 0.14, 0.86, STONE_GREEN, gx, 0.78, gz, undefined, 6);
+    p.cyl(0.15, 0.11, 0.12, C.rock, gx, 1.24, gz, undefined, 6);
+    m.glow.cone(0.095, 0.28, JADE, gx, 1.42, gz, undefined, 5);
+  }
+
+  banner(m, -0.58, 1.22, 2.15, C.mountainCloak);
+  banner(m, 1.08, 1.22, 2.15, C.gold);
+
   const g = m.group();
   const statue = bakeSonTinh();
-  statue.scale.setScalar(0.5);
-  statue.position.set(0, 0.5, 0.95);
+  statue.scale.setScalar(0.62);
+  statue.position.set(0.18, 0.58, 0.76);
   g.add(statue);
   return g;
 }
@@ -1711,40 +1988,129 @@ export function makeDenTanVien(): THREE.Group {
 // ---------- Đền Cổ Loa ----------
 
 /**
- * Đền thờ An Dương Vương: nền đá hai bậc có lan can, đền mái thuyền hai tầng, trước sân là tượng Rùa Vàng
- * ngóc đầu và cây nỏ đồng lớn trên giá; hai bên cờ đỏ.
+ * Đền thờ An Dương Vương & Thần Kim Quy (Phong cách "Loa Thành Xoắn Ốc & Điện Vòm Mai Rùa Vàng Kim Quy" — Sự tích Cổ Loa):
+ * - Bao quanh sân là Vòng Tường Thành Đất Nện Xoắn Ốc Cổ Loa (Loa Thành 2 vòng đồng tâm lệch bậc) có lỗ châu mai, đai đồng
+ *   và đôi Trụ Cổng Thành Cổ Loa mở rộng ở mặt trước.
+ * - Chính điện Cổ Loa mang kiến trúc độc bản: Toàn bộ mái chính là **Vòm Mai Rùa Vàng Khổng Lồ (`domeRoof`)** đắp 8 múi lục giác vàng ròng,
+ *   viền mai đính 12 phiến giáp đồng, đỉnh vòm mai chạm **Mặt Trống Đồng Đông Sơn** và nâng **Bảo Tháp Ngọc Linh Quang Kim Quy** tỏa sáng!
+ * - Trong sân: Bên trái là Hồ Nước Sông Thanh Giang & Giếng Ngọc với Thần Kim Quy trồi lên trên đài sen vàng;
+ *   chính giữa là Đài Thờ Móng Rùa Vàng (Linh Trảo Kim Quy) phát sáng; bên phải là Đài Bắn Nỏ Thần Liên Châu trên giá.
  */
 export function makeDenCoLoa(): THREE.Group {
   const m = new ToonModel();
   const p = m.plain;
-  p.box(2.9, 0.22, 2.9, C.rock, 0, 0.11, 0);
-  p.box(2.5, 0.18, 1.9, C.rockDark, 0, 0.31, -0.45);
-  // Lan can đá quanh sân.
-  for (let i = 0; i < 7; i++) {
-    const t = -1.35 + i * 0.45;
-    p.box(0.1, 0.24, 0.1, C.rockDark, t, 0.34, 1.35);
-    if (Math.abs(t) > 0.4) p.box(0.1, 0.24, 0.1, C.rockDark, 1.35, 0.34, t);
-    if (Math.abs(t) > 0.4) p.box(0.1, 0.24, 0.1, C.rockDark, -1.35, 0.34, t);
+  const SHELL_GOLD = 0xdba428;
+  const SHELL_DARK = 0x9c6d16;
+
+  // 1. Nền thành Cổ Loa 2 tầng đất nện & đá xanh viền đồng vàng
+  p.box(2.92, 0.22, 2.92, C.earthDark, 0, 0.11, 0);
+  p.box(2.76, 0.06, 2.76, C.rock, 0, 0.23, 0);
+  p.box(2.38, 0.18, 1.68, C.rockDark, 0, 0.34, -0.5);
+  p.box(2.42, 0.05, 1.72, C.gold, 0, 0.43, -0.5);
+
+  // 2. Vòng Tường Thành Đất Nện Xoắn Ốc (Loa Thành 2 lớp) bao quanh sân & Đôi Trụ Cổng Thành Cổ Loa ở mặt trước
+  for (const sx of [-1, 1]) {
+    // Vòng thành ngoài bằng đất nện có đai đồng và lỗ châu mai
+    p.box(0.22, 0.42, 2.48, C.earth, sx * 1.32, 0.42, 0.1);
+    p.box(0.26, 0.05, 2.52, C.bronze, sx * 1.32, 0.63, 0.1);
+    for (let k = 0; k < 5; k++) {
+      p.box(0.2, 0.12, 0.24, C.earthDark, sx * 1.32, 0.7, -0.9 + k * 0.5);
+    }
+    // Vòng thành trong uốn xoắn ốc vào sân
+    p.box(0.16, 0.32, 1.28, C.earthDark, sx * 1.1, 0.36, 0.28 + sx * 0.14);
+    p.box(0.18, 0.04, 1.3, C.gold, sx * 1.1, 0.52, 0.28 + sx * 0.14);
+    // Tường thành mặt trước & Trụ Cổng Thành Cổ Loa mở thoáng ở giữa (z = 1.3)
+    p.box(0.62, 0.44, 0.24, C.earth, sx * 1.0, 0.43, 1.3);
+    p.box(0.66, 0.05, 0.28, C.bronze, sx * 1.0, 0.65, 1.3);
+    p.box(0.28, 0.76, 0.28, C.rockDark, sx * 0.6, 0.58, 1.3);
+    p.box(0.32, 0.06, 0.32, C.gold, sx * 0.6, 0.96, 1.3);
+    m.drum.cyl(0.11, 0.11, 0.04, 0xffffff, sx * 0.6, 0.76, 1.43, [Math.PI / 2, 0, 0], 12);
   }
-  stiltHall(m, { x: 0, z: -0.5, w: 2.0, d: 1.2, postH: 0.9, roofL: 2.8, roofW: 1.7, lift: 0.7 });
-  const roofTop = 0.9 + 0.68 + 1.7 * 0.4 + 0.7;
-  // Tầng mái trên nhỏ hơn, chim đồng hai đầu nóc.
-  m.band.add(saddleRoof({ length: 1.8, width: 1.1, lift: 0.45, drop: 0.44, thickness: 0.08 }), C.thatchDark, 0, roofTop - 0.25, -0.5);
-  bird(m, 0.95, roofTop + 0.15, -0.5, 1, 0.7);
-  bird(m, -0.95, roofTop + 0.15, -0.5, -1, 0.7);
-  drum(m, -1.05, 0.9, 0.38, 0.22);
-  banner(m, -1.3, -1.3, 2.5, C.red);
-  banner(m, 1.1, -1.3, 2.5, C.red);
-  p.box(0.7, 0.14, 0.9, C.rock, -0.15, 0.29, 0.85);
+
+  // 3. Ngôi Đền Cổ Loa — Kiến trúc "Điện Vòm Mai Rùa Vàng Kim Quy" (độc bản không đụng hàng với mái thuyền):
+  const hx = 0;
+  const hz = -0.52;
+  const floorY = 0.92;
+  const colH = floorY - 0.44;
+  for (const cx of [-0.84, -0.28, 0.28, 0.84]) {
+    for (const cz of [-0.46, 0.46]) {
+      p.cyl(0.09, 0.11, 0.07, C.rockDark, hx + cx, 0.47, hz + cz, undefined, 8);
+      p.cyl(0.074, 0.084, colH, C.red, hx + cx, 0.44 + colH / 2, hz + cz, undefined, 8);
+      p.cyl(0.09, 0.09, 0.045, C.gold, hx + cx, 0.44 + colH * 0.5, hz + cz, undefined, 8);
+    }
+  }
+  // Sàn đền & Vách đền hình bát giác / chữ nhật bo góc chạm hoa văn trống đồng
+  p.box(2.02, 0.12, 1.24, C.wood, hx, floorY, hz);
+  m.band.box(2.06, 0.06, 1.28, C.gold, hx, floorY + 0.01, hz);
+  m.band.box(1.66, 0.6, 0.92, C.red, hx, floorY + 0.36, hz);
+  p.box(0.44, 0.48, 0.06, 0x22140c, hx, floorY + 0.3, hz + 0.47);
+  // Mặt Trống Đồng Cổ Loa & Đầu Rùa Vàng hộ môn ngay trên trán cửa đền
+  m.drum.cyl(0.18, 0.18, 0.045, 0xffffff, hx, floorY + 0.56, hz + 0.48, [Math.PI / 2, 0, 0], 14);
+  p.sphere(0.09, C.gold, hx, floorY + 0.62, hz + 0.56, [0.95, 0.8, 1.25], 7);
+
+  // Mái Đền Chính: Vòm Mai Rùa Vàng Khổng Lồ (`domeRoof`) đắp nổi 8 múi lục giác vàng ròng, vành diềm mai 12 phiến giáp & Mặt Trống Đồng đỉnh mai!
+  const domeY = floorY + 0.64;
+  domeRoof(p, 1.32, 0.72, SHELL_GOLD, hx, domeY, hz);
+  p.add(new THREE.TorusGeometry(1.26, 0.065, 6, 20), SHELL_DARK, hx, domeY + 0.04, hz, [Math.PI / 2, 0, 0], [1, 0.88, 1]);
+  // 12 phiến giáp viền mai rùa vàng quanh diềm mái vòm
+  for (let i = 0; i < 12; i++) {
+    const a = (i / 12) * Math.PI * 2 + 0.26;
+    const rx = Math.sin(a) * 1.24;
+    const rz = Math.cos(a) * 1.1;
+    p.box(0.22, 0.055, 0.16, i % 2 === 0 ? C.gold : SHELL_DARK, hx + rx, domeY + 0.05, hz + rz, [0, a, 0]);
+  }
+  // 8 múi mai lục giác nổi khối trên lưng Vòm Mai Rùa Vàng
+  for (let i = 0; i < 8; i++) {
+    const a = (i / 8) * Math.PI * 2 + Math.PI / 8;
+    const sx = Math.sin(a) * 0.68;
+    const sz = Math.cos(a) * 0.58;
+    const tilt = 0.38;
+    p.cyl(0.24, 0.29, 0.06, SHELL_DARK, hx + sx, domeY + 0.44, hz + sz, [Math.cos(a) * tilt, 0, -Math.sin(a) * tilt], 6);
+    p.cyl(0.2, 0.24, 0.07, C.gold, hx + sx, domeY + 0.45, hz + sz, [Math.cos(a) * tilt, 0, -Math.sin(a) * tilt], 6);
+  }
+  // Đỉnh Vòm Mai Rùa: Mặt Trống Đồng Đông Sơn lớn + Bảo Tháp Lục Giác & Viên Ngọc Linh Quang Kim Quy phát sáng + Đôi Chim Lạc Vàng
+  const crownY = domeY + 0.68;
+  p.cyl(0.54, 0.62, 0.07, SHELL_DARK, hx, crownY, hz, undefined, 14);
+  m.drum.cyl(0.5, 0.5, 0.08, 0xffffff, hx, crownY + 0.02, hz, undefined, 16);
+  // Bảo Tháp Lục Giác Kim Quy & Ngọc Linh Châu trên đỉnh mai
+  p.cyl(0.18, 0.24, 0.22, C.gold, hx, crownY + 0.16, hz, undefined, 6);
+  p.cone(0.32, 0.22, TILE, hx, crownY + 0.34, hz, undefined, 6);
+  p.add(new THREE.TorusGeometry(0.3, 0.022, 5, 6), C.gold, hx, crownY + 0.24, hz, [Math.PI / 2, 0, 0]);
+  m.glow.sphere(0.105, 0xffe869, hx, crownY + 0.5, hz, [1, 1.15, 1], 8);
+  bird(m, hx + 0.92, domeY + 0.48, hz, 1, 0.78);
+  bird(m, hx - 0.92, domeY + 0.48, hz, -1, 0.78);
+
+  // 4. Sân Đền Cổ Loa:
+  // (a) Chính giữa trước thềm (x = 0, z = 0.2): Đài Thờ Móng Rùa Vàng (Linh Trảo Kim Quy) tỏa hào quang
+  p.cyl(0.22, 0.26, 0.18, C.bronzeDark, 0, 0.35, 0.2, undefined, 8);
+  m.drum.cyl(0.23, 0.23, 0.03, 0xffffff, 0, 0.45, 0.2, undefined, 12);
+  m.glow.cone(0.072, 0.32, 0xffe869, 0, 0.6, 0.22, [0.42, 0, 0], 6);
+
+  // (b) Bên trái sân (x = -0.48, z = 0.66): Hồ Nước Sông Thanh Giang & Đài Đá Sen Vàng nơi Thần Kim Quy ngóc đầu
+  p.box(0.86, 0.08, 0.9, C.rockDark, -0.48, 0.27, 0.66);
+  p.box(0.74, 0.085, 0.78, POND, -0.48, 0.275, 0.66);
+  p.cyl(0.32, 0.36, 0.12, C.gold, -0.48, 0.32, 0.66, undefined, 10);
+  // Giếng Ngọc Cổ Loa ở góc trước trái (x = -0.86, z = 1.0)
+  p.cyl(0.18, 0.2, 0.14, C.rock, -0.86, 0.31, 1.0, undefined, 10);
+  p.cyl(0.14, 0.14, 0.145, 0x72e2f2, -0.86, 0.315, 1.0, undefined, 10);
+
+  // (c) Bên phải sân (x = 0.58, z = 0.66): Đài Bắn Nỏ Thần Cổ Loa lát đá viền đồng vàng
+  p.box(0.76, 0.14, 0.82, C.rockDark, 0.58, 0.3, 0.66);
+  p.box(0.72, 0.05, 0.78, C.gold, 0.58, 0.38, 0.66);
+
+  banner(m, -1.22, -1.18, 2.45, C.red);
+  banner(m, 1.06, -1.18, 2.45, C.gold);
+
   const g = m.group();
   const turtle = bakeRuaVang();
   turtle.scale.setScalar(0.42);
-  turtle.position.set(-0.15, 0.36, 0.8);
+  turtle.position.set(-0.48, 0.38, 0.62);
+  turtle.rotation.y = 0.22;
   g.add(turtle);
   const bow = makeCrossbowStand();
   bow.scale.setScalar(0.85);
-  bow.position.set(0.85, 0.22, 0.75);
-  bow.rotation.y = -0.4;
+  bow.position.set(0.58, 0.4, 0.66);
+  bow.rotation.y = -0.35;
   g.add(bow);
   return g;
 }
