@@ -8,6 +8,7 @@ import { forgeArms } from './game/binhKhi';
 import { forgeNoThan, inChapter3, wallRings } from './game/coLoa';
 import { offer } from './game/tet';
 import { applyMau } from './game/mau';
+import { mergeTowers } from './game/chuong4';
 import { feedGiong, forgeGear } from './game/giong';
 import { inChapter2, offerGift } from './game/son';
 import { markStory, pendingStory } from './game/story';
@@ -44,7 +45,7 @@ import {
   type GameState,
   type StageResult,
 } from './game/game';
-import { GRID, RIVER_START } from './game/map';
+import { AREA_SIZE, GRID, RIVER_START } from './game/map';
 import { fromCode, loadFromStorage, saveToStorage, toCode } from './game/save';
 import { RESOLUTIONS, World, type Resolution } from './render/world';
 import { vi } from './text/vi';
@@ -57,7 +58,9 @@ const PAINTED: BuildingType[] = ['luy', 'bayChong', 'de', 'thanh'];
 type Mode =
   | { kind: 'view'; selected: number | null }
   | { kind: 'place'; type: BuildingType; x: number; z: number; moving?: number }
-  | { kind: 'paint'; type: PaintType };
+  | { kind: 'paint'; type: PaintType }
+  /** Đang chọn chòi canh thứ hai để ghép với chòi `from` thành lầu nỏ. */
+  | { kind: 'merge'; from: number };
 
 /** Vắng mặt lâu hơn mức này thì hiện bảng báo thu hoạch. */
 const OFFLINE_NOTICE_MS = 60_000;
@@ -237,6 +240,18 @@ function start(): void {
       return;
     }
     const id = world.pickBuildingId(cx, cy) ?? (tile ? buildingAt(state, tile.x, tile.z)?.id : undefined) ?? null;
+    if (mode.kind === 'merge') {
+      if (id === null) return;
+      const r = mergeTowers(state, mode.from, id);
+      if (!r.ok) return fail(r.reason);
+      play('upgrade');
+      hud.toast(vi.ui.merged);
+      exitMode();
+      commit();
+      world.pop(r.value.id);
+      select(r.value.id);
+      return;
+    }
     if (id !== null) play('tap');
     select(id);
   };
@@ -354,6 +369,18 @@ function start(): void {
         return;
       }
 
+      case 'startMerge': {
+        const b = findBuilding(state, a.id);
+        if (!b) return fail('khongTimThay');
+        if (state.raid.phase !== 'idle') return fail('dangCoGiac');
+        hud.closeSheet();
+        world.setSelection(b);
+        play('tap');
+        mode = { kind: 'merge', from: b.id };
+        hud.setMode('merge');
+        return;
+      }
+
       case 'chooseRaise':
         if (!inChapter2(state)) return fail('canChuong2');
         hud.closeSheet();
@@ -444,7 +471,9 @@ function start(): void {
         play('upgrade');
         hud.toast(
           r.value.type === 'dien'
-            ? vi.ui.landExpanded
+            ? AREA_SIZE[r.value.level - 1] > AREA_SIZE[r.value.level - 2]
+              ? vi.ui.landExpanded
+              : vi.ui.dienUp(r.value.level)
             : r.value.type === 'luy'
               ? vi.ui.placed(buildingName(r.value))
               : vi.ui.upgraded(buildingName(r.value), r.value.level),

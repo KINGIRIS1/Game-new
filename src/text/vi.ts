@@ -136,6 +136,11 @@ export const vi = {
       icon: '🍲',
       desc: 'Gói bánh chưng, giã bánh giầy, cất bánh trên gác bếp chờ Tết. Bánh chưng làm nhanh bằng nguồn chậm nhất trong nếp, đậu lá, thịt lợn.',
     },
+    lauNo: {
+      name: 'Lầu nỏ',
+      icon: '🎯',
+      desc: 'Lầu gỗ ba tầng ghép từ hai chòi canh cấp 8, ba cây nỏ lớn chĩa ba hướng. Mỗi phát bắn ba giặc khác nhau. Tính là hai chòi canh trong số chòi canh tối đa. Không tách lại được.',
+    },
   } satisfies Record<BuildingType, { name: string; icon: string; desc: string }>,
 
   reasons: {
@@ -191,6 +196,8 @@ export const vi = {
     trungCho: 'Công trình đang ở đúng chỗ này rồi',
     khongDuCho: 'Không đủ chỗ để xếp mọi công trình theo mẫu',
     daTheoMau: 'Kinh đô đã xếp đúng theo mẫu này',
+    canChuong4: 'Mở ở chương 4: Mỵ Châu, Trọng Thủy',
+    khongGhepDuoc: 'Chỉ ghép được hai chòi canh cấp 8 còn nguyên',
   } satisfies Record<FailReason, string>,
 
   quests: {
@@ -234,7 +241,9 @@ export const vi = {
     quaMan22: 'Triệu Đà đóng đại doanh ở núi Tiên Du. Xin đánh qua màn 22, phá doanh trại giặc.',
     coLoa: 'Triệu Đà dốc toàn quân tới chân thành Cổ Loa. Xin bệ hạ cầm nỏ thần đánh trận quyết chiến ở màn 24.',
     denCoLoa: 'Triệu Đà đã thua chạy. Xin dựng Đền Cổ Loa, ghi công thần Kim Quy và nỏ thần giữ nước.',
-    allDone: 'Chương 3 đã xong: Triệu Đà thua chạy về phương Bắc. Thủy Tinh vẫn dâng nước mỗi mùa, quân Triệu vẫn dòm ngó. Xin giữ thành, giữ đê cho vững.',
+    dien8: 'Âu Lạc đã yên, kinh đô còn lớn được nữa. Xin bệ hạ nâng Điện lên cấp 8: đất không rộng thêm, nhưng kho rộng hơn, ruộng, bến, lò rèn, chòi canh đều lên được cấp 8.',
+    lauNo: 'Cao Lỗ xin ghép hai chòi canh cấp 8 thành một lầu nỏ, mỗi phát bắn ba giặc. Chạm vào một chòi canh cấp 8 để ghép.',
+    allDone: 'Kinh đô đã có Điện cấp 8 và lầu nỏ. Thủy Tinh vẫn dâng nước mỗi mùa, quân Triệu vẫn dòm ngó. Xin giữ thành, giữ đê cho vững.',
   } as Record<string, string>,
 
   units: {
@@ -797,6 +806,13 @@ export const vi = {
     moveHere: 'Dời tới đây',
     moveHint: 'Chạm ô đất để chọn chỗ mới, rồi bấm Dời tới đây. Nền đất cũ ở lại chỗ cũ.',
     moved: (name: string) => `Đã dời ${name.toLowerCase()}`,
+    merge: 'Ghép thành lầu nỏ',
+    mergeHint: 'Chạm vào một chòi canh cấp 8 khác còn nguyên để ghép. Lầu nỏ đứng ở chỗ chòi đang chọn.',
+    mergeInfo: 'Hai chòi canh cấp 8 ghép được thành một lầu nỏ, mỗi phát bắn ba giặc. Không tách lại được.',
+    mergeNoPair: 'Cần thêm một chòi canh cấp 8 còn nguyên để ghép',
+    merged: 'Đã ghép thành lầu nỏ!',
+    dienUp: (level: number) => `Điện đã lên cấp ${level}: kho rộng hơn, công trình lên được cấp ${level}`,
+    lauNoShots: 'Mỗi phát bắn 3 giặc',
     tet: 'Hội Tết',
     banh: {
       chung: { name: 'Bánh chưng', icon: '🟩' },

@@ -1,7 +1,7 @@
 // Người chơi mô phỏng: chơi từng giây theo cách hợp lý. Dùng chung cho test nhịp tiến trình (`balance.test.ts`),
 // báo cáo kinh tế (`kinhTe.ts`) và cảnh chụp thử (`scripts/chup.mjs`). Không chạy trong game thật.
 
-import { BUILDINGS, CH2_QUEST_START, CH3_QUEST_START, type BuildingType } from './defs';
+import { BUILDINGS, CH2_QUEST_START, CH3_QUEST_START, CH4_QUEST_START, type BuildingType } from './defs';
 import {
   acceptOffer,
   autoAssign,
@@ -101,26 +101,28 @@ export function playUntilDien(target: number, maxMinutes: number): number {
 }
 
 /** Giây chơi lúc đạt từng mốc, -1 nếu chưa tới. */
-export type Moc = { at5: number; enter2: number; at6: number; enter3: number; at7: number };
+export type Moc = { at5: number; enter2: number; at6: number; enter3: number; at7: number; enter4: number; at8: number };
 
-/** Sau khi lên Điện 5 (hay 6), người chơi còn ở chương cũ chừng chừng này giây rồi mới vào chương mới. */
+/** Sau khi lên Điện 5 (hay 6, 7), người chơi còn ở chương cũ chừng chừng này giây rồi mới vào chương mới. */
 export const STAY_AFTER_S = 30 * 60;
 
 /**
  * Chơi tiếp qua các chương: sau khi lên Điện 5 còn chừng nửa giờ chương 1 (Gióng, màn 5–8) thì vào chương 2;
- * lên Điện 6 rồi còn chừng nửa giờ chương 2 thì vào chương 3. Dừng khi lên Điện 7.
+ * lên Điện 6 rồi còn chừng nửa giờ chương 2 thì vào chương 3. Dừng khi lên Điện 7, hay (với `last: 8`) chơi tiếp
+ * chừng nửa giờ chương 3 rồi vào chương 4, dừng khi lên Điện 8.
  * Lúc vào mỗi chương, của dành dụm coi như đã tiêu hết (dựng đền, lễ vật, rèn đồ, quân), nên số phút đo được là
  * số phút sản lượng của kinh đô cần để lên cấp.
  *
  * - `lam`: bọc từng việc (báo cáo kinh tế ghi sổ ở đây).
  * - `s`: chơi tiếp trên state này thay vì một ván mới.
  * - `until`: dừng sớm khi trả về true, xét trước mỗi giây chơi (cảnh chụp thử dừng ở giữa chương 2).
+ * - `last`: cấp Điện cuối cùng thì dừng, 7 (mặc định) hay 8.
  */
 export function playChapters(
-  opts: { lam?: Lam; s?: GameState; maxSec?: number; until?: (m: Moc, sec: number) => boolean } = {},
+  opts: { lam?: Lam; s?: GameState; maxSec?: number; until?: (m: Moc, sec: number) => boolean; last?: 7 | 8 } = {},
 ): Moc {
-  const { lam = lamThang, s = createInitialState(0), maxSec = 6 * 3600, until } = opts;
-  const m: Moc = { at5: -1, enter2: -1, at6: -1, enter3: -1, at7: -1 };
+  const { lam = lamThang, s = createInitialState(0), maxSec = 8 * 3600, until, last = 7 } = opts;
+  const m: Moc = { at5: -1, enter2: -1, at6: -1, enter3: -1, at7: -1, enter4: -1, at8: -1 };
   for (let sec = 0; sec < maxSec; sec++) {
     if (until?.(m, sec)) return m;
     const level = dienLevel(s);
@@ -140,8 +142,19 @@ export function playChapters(
       });
       m.enter3 = sec;
     }
-    if (level >= 7) {
+    if (level >= 7 && m.at7 < 0) {
       m.at7 = sec;
+      if (last === 7) return m;
+    }
+    if (m.at7 >= 0 && m.enter4 < 0 && sec >= m.at7 + STAY_AFTER_S) {
+      lam('vaoChuong', () => {
+        s.questIndex = CH4_QUEST_START;
+        s.resources = { gao: 0, voOc: 0, datDa: 0, sat: 0 };
+      });
+      m.enter4 = sec;
+    }
+    if (level >= 8) {
+      m.at8 = sec;
       return m;
     }
     playSecond(s, lam);

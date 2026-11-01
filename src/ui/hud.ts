@@ -38,6 +38,7 @@ import {
   housing,
   isStarving,
   limitOf,
+  usedOf,
   nextFloodLevel,
   raiseCostOf,
   netPerMinute,
@@ -61,6 +62,7 @@ import {
   type StoryId,
 } from '../game/game';
 import { chapterStages } from '../game/campaign';
+import { mergeCost, mergeable } from '../game/chuong4';
 import { giongAppeared, giongLook, giongReady, giongResting } from '../game/giong';
 import { AREA_SIZE } from '../game/map';
 import { inChapter2, sonJoined, sonLook, sonResting, giftCount } from '../game/son';
@@ -136,6 +138,7 @@ export type HudAction =
   | { kind: 'forgeArms'; unit: UnitType }
   | { kind: 'openTet' }
   | { kind: 'startMove'; id: number }
+  | { kind: 'startMerge'; id: number }
   | { kind: 'openMau' }
   | { kind: 'rotateView' }
   | { kind: 'applyMau'; mau: MauId }
@@ -174,7 +177,7 @@ export type HudAction =
   | { kind: 'leaveField' }
   | { kind: 'fieldToMap' };
 
-export type HudMode = 'view' | 'place' | 'move' | 'paint';
+export type HudMode = 'view' | 'place' | 'move' | 'paint' | 'merge';
 
 type Sheet =
   | { kind: 'build' }
@@ -290,6 +293,7 @@ export class Hud {
       case 'removeWall':
       case 'raiseBuilding':
       case 'startMove':
+      case 'startMerge':
         return this.onAction({ kind: act, id });
       case 'offerGift':
         return this.onAction({ kind: 'offerGift', gift: el.dataset.gift as GiftId });
@@ -503,6 +507,10 @@ export class Hud {
         <button class="btn" data-act="confirmPlace" ${placeValid ? '' : 'disabled'}>✓ ${label}</button>${rotate}`;
       this.hint.hidden = false;
       this.hint.textContent = mode === 'move' ? vi.ui.moveHint : vi.ui.placeHint;
+    } else if (mode === 'merge') {
+      this.bottombar.innerHTML = `<button class="btn ghost" data-act="cancelPlace">✕ ${vi.ui.cancel}</button>${rotate}`;
+      this.hint.hidden = false;
+      this.hint.textContent = vi.ui.mergeHint;
     } else {
       this.bottombar.innerHTML = `<button class="btn" data-act="cancelPlace">✓ ${vi.ui.done}</button>${rotate}`;
       this.hint.hidden = false;
@@ -657,7 +665,7 @@ export class Hud {
     );
     const cards = shown.map((type) => {
       const def = BUILDINGS[type];
-      const have = countOf(state, type);
+      const have = usedOf(state, type);
       const max = limitOf(state, type);
       let why = unlockWhy(state, type);
       if (why) {
@@ -722,12 +730,14 @@ export class Hud {
     }
     if (b.type === 'dien') {
       const size = AREA_SIZE[b.level - 1];
-      const next = b.level < def.maxLevel ? ` → ${AREA_SIZE[b.level]}×${AREA_SIZE[b.level]}` : '';
+      // Điện cấp 8 không thêm đất: không ghi mũi tên.
+      const next = b.level < def.maxLevel && AREA_SIZE[b.level] > size ? ` → ${AREA_SIZE[b.level]}×${AREA_SIZE[b.level]}` : '';
       rows.push(`<div class="stat"><span>${vi.ui.storage}</span><span>${fmt(storageCap(state))}</span></div>`);
       rows.push(`<div class="stat"><span>${vi.ui.dan}</span><span>${state.dan}/${housing(state)}</span></div>`);
       rows.push(`<div class="stat"><span>Đất kinh đô</span><span>${size}×${size}${next}</span></div>`);
     }
 
+    if (b.type === 'lauNo') rows.push(`<div class="stat"><span>${vi.ui.lauNoShots}</span><span></span></div>`);
     if (b.type === 'doanhTrai') rows.push(this.barracksHtml(state));
     if (TET_TYPES.includes(b.type)) rows.push(tetHtml(state));
     if (b.type === 'dien' && tetStarted(state)) {
@@ -754,6 +764,15 @@ export class Hud {
       actions.push(`<div class="why">${vi.ui.damaged}</div>`);
       actions.push(`<button class="btn bronze" data-act="repair" data-id="${b.id}" ${canAfford(state, rc) && state.raid.phase !== 'battle' ? '' : 'disabled'}>
         ${vi.ui.repair} · ${costHtml(state, rc)}</button>`);
+    }
+    if (mergeable(b) && dienLevel(state) >= BUILDINGS.lauNo.minDien) {
+      // Ghép hai chòi canh cấp 8 thành lầu nỏ: bấm nút rồi chạm vào chòi thứ hai trên bản đồ.
+      const pair = state.buildings.some((o) => o.id !== b.id && mergeable(o));
+      const cost = mergeCost();
+      const can = pair && state.raid.phase === 'idle' && canAfford(state, cost);
+      actions.push(`<div class="muted">${vi.ui.mergeInfo}</div>`);
+      actions.push(`<button class="btn bronze" data-act="startMerge" data-id="${b.id}" ${can ? '' : 'disabled'}>🎯 ${vi.ui.merge} · ${costHtml(state, cost)}</button>`);
+      if (!pair) actions.push(`<div class="why">${vi.ui.mergeNoPair}</div>`);
     }
     if (b.type !== 'dien') {
       const mc = moveCost(b);

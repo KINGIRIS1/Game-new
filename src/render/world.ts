@@ -29,6 +29,7 @@ import {
   makeDien,
   makeDoanhTrai,
   makeKho,
+  makeLauNo,
   makeLoRen,
   makeNhaSan,
   makeRuong,
@@ -568,7 +569,7 @@ export class World {
       if (b.type === 'luy' || b.type === 'de' || b.type === 'thanh') continue;
       alive.add(b.id);
       const v = this.views.get(b.id);
-      if (!v || v.level !== b.level || v.damaged !== !!b.damaged || v.workers !== b.workers || v.x !== b.x || v.z !== b.z) this.createView(b);
+      if (!v || v.type !== b.type || v.level !== b.level || v.damaged !== !!b.damaged || v.workers !== b.workers || v.x !== b.x || v.z !== b.z) this.createView(b);
       else if (v.ground !== this.heights[b.z * GRID + b.x]) {
         v.ground = this.heights[b.z * GRID + b.x];
         v.group.position.y = topY(v.ground);
@@ -753,6 +754,15 @@ export class World {
         trader.userData.dock = true;
         group.add(trader);
       }
+      if (b.level >= 8) {
+        // Bến cấp 8: thuyền buôn thứ hai neo phía bên kia cầu tàu.
+        const trader = makeTradeBoat();
+        trader.position.set(-1.0, WATER_Y - 0.02 - topY(ground), 3.3);
+        trader.rotation.y = -Math.PI / 2;
+        trader.scale.setScalar(0.85);
+        trader.userData.dock = true;
+        group.add(trader);
+      }
     }
     if (b.damaged) {
       // Công trình bị phá: nghiêng đổ, khói đen bốc lên.
@@ -791,6 +801,7 @@ export class World {
     if (type === 'vuon') return makeVuon(level);
     if (type === 'chuongLon') return makeChuongLon(level);
     if (type === 'bep') return makeBep(level);
+    if (type === 'lauNo') return makeLauNo();
     return new THREE.Group();
   }
 

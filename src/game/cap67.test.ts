@@ -26,11 +26,12 @@ describe('Điện và công trình cấp 6–7', () => {
     s.questIndex = CH3_QUEST_START;
     expect(upgrade(s, 1).ok).toBe(true);
     expect(s.buildings[0].level).toBe(7);
-    expect(canUpgrade(s, 1)).toEqual({ ok: false, reason: 'capToiDa' });
+    // Cấp 8 mở ở chương 4 (cap8.test.ts).
+    expect(canUpgrade(s, 1)).toEqual({ ok: false, reason: 'canChuong4' });
   });
 
   it('Điện cấp 6, 7 mở đất 25×25 rồi 26×26, chừa một hàng rừng; kho chứa nhiều hơn', () => {
-    expect(AREA_SIZE.slice(5)).toEqual([25, 26]);
+    expect(AREA_SIZE.slice(5, 7)).toEqual([25, 26]);
     expect(areaStart(7)).toBe(1);
     expect(isUnlocked(0, 10, 7)).toBe(false);
     expect(isUnlocked(1, 10, 7)).toBe(true);
@@ -52,9 +53,9 @@ describe('Điện và công trình cấp 6–7', () => {
     expect(ruong.value.level).toBe(7);
     expect(limitOf(s, 'ruong')).toBe(8);
     expect(BUILDINGS.doanhTrai.maxLevel).toBe(5);
-    // Mọi mảng theo cấp Điện đủ 7 phần, mọi mảng theo cấp công trình đủ số cấp.
+    // Mọi mảng theo cấp Điện đủ 8 phần (cấp 8 từ chương 4), mọi mảng theo cấp công trình đủ số cấp.
     for (const def of Object.values(BUILDINGS)) {
-      expect(def.limit.length).toBe(7);
+      expect(def.limit.length).toBe(8);
       expect(def.hp.length).toBe(def.maxLevel);
       expect(def.production.length).toBe(def.maxLevel);
       expect(def.upgradeCost.length).toBe(def.maxLevel + 1);
@@ -120,7 +121,7 @@ describe('rèn binh khí', () => {
     s7.version = 7;
     delete s7.arms;
     const back = deserialize(JSON.stringify(s7))!;
-    expect(back.version).toBe(9);
+    expect(back.version).toBe(10);
     expect(back.arms).toEqual({ giao: 0, cung: 0, voi: 0 });
   });
 });

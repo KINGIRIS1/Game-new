@@ -96,9 +96,9 @@ describe('bốn công trình Hội Tết', () => {
     expect(upgrade(s, bep.value.id).ok).toBe(true);
     expect(canUpgrade(s, bep.value.id)).toEqual({ ok: false, reason: 'capToiDa' });
     // Số tối đa: ruộng nếp thứ hai ở Điện 5, vườn và chuồng thứ hai ở Điện 6, bếp chỉ một.
-    expect(BUILDINGS.ruongNep.limit.slice(2)).toEqual([1, 1, 2, 2, 2]);
-    expect(BUILDINGS.vuon.limit.slice(2)).toEqual([1, 1, 1, 2, 2]);
-    expect(BUILDINGS.bep.limit.slice(2)).toEqual([1, 1, 1, 1, 1]);
+    expect(BUILDINGS.ruongNep.limit.slice(2)).toEqual([1, 1, 2, 2, 2, 2]);
+    expect(BUILDINGS.vuon.limit.slice(2)).toEqual([1, 1, 1, 2, 2, 2]);
+    expect(BUILDINGS.bep.limit.slice(2)).toEqual([1, 1, 1, 1, 1, 1]);
   });
 
   it('bánh chưng nhanh bằng nguồn chậm nhất, nếp thừa thì giã bánh giầy, không quá sức bếp', () => {
@@ -211,7 +211,7 @@ describe('Tết', () => {
     expect(tetNeed(s)).toBe(TET_FIRST_NEED);
     tick(s, TET_OPEN_MS);
     expect(tetNeed(s)).toBe(20);
-    expect(TET_NEED.slice(2)).toEqual([12, 12, 20, 30, 40]);
+    expect(TET_NEED.slice(2)).toEqual([12, 12, 20, 30, 40, 40]);
     s.buildings[0].level = 7;
     expect(tetNeed(s)).toBe(40);
   });
@@ -328,7 +328,7 @@ describe('bản lưu phiên bản 9', () => {
     delete old.tet;
     old.buildings = (old.buildings as { type: string }[]).filter((b) => !['ruongNep', 'vuon', 'chuongLon', 'bep'].includes(b.type));
     const back = deserialize(JSON.stringify(old))!;
-    expect(back.version).toBe(9);
+    expect(back.version).toBe(10);
     expect(back.tet).toEqual({
       seq: 0,
       nextAt: null,

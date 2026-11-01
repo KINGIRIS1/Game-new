@@ -10,7 +10,7 @@ describe('báo cáo kinh tế', () => {
 
   it('người chơi mô phỏng đi hết ba chương và chơi thêm sau Điện 7', () => {
     expect(kq.moc.at7).toBeGreaterThan(0);
-    expect(Object.keys(kq.so)).toEqual(['chuong1', 'chuong2', 'chuong3', 'sauDien7']);
+    expect(Object.keys(kq.so)).toEqual(['chuong1', 'chuong2', 'chuong3', 'chuong4', 'sauDien8']);
   });
 
   // Tiêu hết khi vào chương mới diễn ra sau giây cuối của chương cũ, nên không tính vào tồn cuối.
