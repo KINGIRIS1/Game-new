@@ -4,6 +4,11 @@
 export const GRID = 55;
 /** Ô có x hoặc z từ mốc này trở lên là sông (sông rộng 3 ô). */
 export const RIVER_START = 52;
+/**
+ * Chỉ để vẽ: bờ bên kia bắt đầu từ mốc này, ngoài lưới. Trong lưới sông rộng 3 ô (lính, thủy quái đi trong đó),
+ * nhưng nước vẽ rộng 7 ô để bến cấp 8 cùng hai thuyền buôn neo gọn giữa dòng, không chạm bờ bên kia.
+ */
+export const FAR_BANK = GRID + 4;
 /** Dải rừng ngoài cùng phía bắc và phía tây (x hoặc z nhỏ hơn mốc này) không bao giờ khai phá: chỗ giặc xuất phát. */
 export const FOREST_BAND = 2;
 /** Cạnh một khoảnh đất (ô). Đất giữa dải rừng ngoài cùng và sông chia thành 10×10 khoảnh. */
