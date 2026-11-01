@@ -1325,3 +1325,7 @@ textarea {
 .mini-map i.river {
   background: #3f7f9a;
 }
+.mau .free {
+  color: var(--green);
+  font-weight: 600;
+}

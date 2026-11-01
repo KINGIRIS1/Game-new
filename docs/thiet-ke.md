@@ -32,6 +32,7 @@ Tài liệu này ghi lại các quyết định đã chốt với chủ dự án
     - **Cấp 6, 7, 8 to mà không tràn ô**: móng giữ nguyên số ô. Cả khối phóng to nhưng tâm từng phần giữ chỗ như cấp 5 (thu tâm, `ShapeBuilder.spread`), nền và rào thu lại vừa ô; mỗi phần to ra tại chỗ. Người làm việc giữ cỡ như cấp 5. Nhà cũng cao dần (cột, sàn, mái), và mỗi cấp thêm chi tiết. Điện đã kín bốn ô nên giữ 105%, to lên bằng nền đá thứ hai dưới nhà chính, cột cao, mái rộng và vút hơn. Bến to 106%, 110%, 114%; bãi đất đá 105%, 110%, 114% so với cấp 5; chòi canh móng một ô chỉ cao lên; ruộng giữ cỡ, lúa và chòi canh ruộng cao lên.
     - **Mái theo cấp** (nhìn mái để biết cấp, chung cho mọi công trình có mái): tới cấp 5 mái tranh; cấp 6 mái tranh có sống mái và diềm mái sơn đỏ; cấp 7 mái ngói đất nung đỏ cam như ngói thành Cổ Loa; cấp 8 mái ngói, sống mái và diềm mái bọc đồng vàng. Mái nón, mái tròn thì viền là vành diềm mái và chóp mái. Lầu nỏ mái như cấp 8. Đền và bốn công trình Hội Tết giữ mái tranh.
     - Cả bảng nằm ở `src/render/buildings.ts`.
+    - **Từ khi công trình to hơn** (bản lưu 11, xem mục Kế hoạch cùng tên): móng rộng thêm 1 ô mỗi cạnh, mỗi công trình vẽ lại theo bản vẽ ô con ở `docs/bo-cuc-cong-trinh.md`, mỗi loại một tệp trong `src/render/congTrinh/`. Người, thú, đồ vật giữ cỡ; phần chính to hơn dáng cũ chừng 15–30%; lên cấp thì móng lấp dần, mỗi phần đứng ở chỗ riêng của nó nên không cần thu tâm nữa; cấp 6–8 cao lên tại chỗ, mái theo cấp như trên. Đền và bốn công trình Hội Tết còn dáng cũ tới PR 2 của việc này.
   - **dân ăn mặc theo nơi làm việc**, mỗi nghề một dụng cụ và một động tác (`src/render/people.ts`):
     - nông dân quấn khăn, cầm cuốc, cúi cấy;
     - thương nhân mặc áo chàm, đội thúng, đi lại;
@@ -65,8 +66,8 @@ Tài liệu này ghi lại các quyết định đã chốt với chủ dự án
 
 ## Bản đồ
 
-- Lưới **30×30 ô**. Hai nhánh sông chảy dọc hai cạnh (nam và đông) rồi hợp lưu ở một góc, gợi ngã ba Bạch Hạc. Hai cạnh còn lại (bắc và tây) là rừng.
-- Lúc đầu chỉ xây được trong vùng **16×16** sát hai bờ sông. Mỗi lần Điện Vua Hùng lên cấp thì phát rừng mở thêm đất.
+- Lưới **38×38 ô** (trước khi công trình to hơn là 30×30, xem mục Kế hoạch: công trình to hơn). Hai nhánh sông rộng 3 ô chảy dọc hai cạnh (nam và đông) rồi hợp lưu ở một góc, gợi ngã ba Bạch Hạc. Hai cạnh còn lại (bắc và tây) là rừng.
+- Lúc đầu chỉ xây được trong vùng **20×20** sát hai bờ sông. Mỗi lần Điện Vua Hùng lên cấp thì phát rừng mở thêm đất: 20, 23, 26, 28, 30, 32, 34, 34 ô mỗi cạnh ở Điện cấp 1 tới 8.
 - Ô đất có **độ cao theo bậc** ngay từ đầu game (xem mục Độ cao ô đất ở chương 2). Chương 1 chỉ để nhìn; từ chương 2 độ cao quyết định ô nào ngập lũ.
 
 ## Kinh tế
@@ -338,7 +339,7 @@ Chủ dự án đã chốt bốn điểm:
 ### Độ cao ô đất
 
 - Mỗi ô có bậc từ 0 tới 4, sông là −1. Đất tự nhiên dựng bằng value noise có hạt giống cố định nên mọi máy ra một dáng đất:
-  - hai ô sát sông là bãi bồi, bậc 0;
+  - ba ô sát sông là bãi bồi, bậc 0 (trước khi công trình to hơn là hai ô; nay ba ô cho móng 3×3 đứng gọn trên bãi bồi);
   - vào trong là đồng bằng bậc 1, có gò bậc 2;
   - càng xa sông về phía rừng càng nhiều đồi bậc 2–3.
 - Cảnh 3D vẽ mỗi ô một cột đất cao 0,3 đơn vị mỗi bậc, bậc cao sáng màu hơn chút. Rừng ngoài lưới nối liền theo bậc của ô mép.
@@ -781,7 +782,7 @@ Cả bốn cần dân làm, mở sau truyện Lang Liêu, cần Điện cấp 3.
   - dây cờ hội nhiều màu căng từ cây nêu tới Điện;
   - thêm một người ngồi xếp bằng ở mép chiếu gói bánh trước bếp (bếp đã có 2–3 người làm, thêm nữa thì chật);
   - dâng rồi thì có mâm bánh chưng vuông, bánh giầy tròn bày trước thềm Điện tới hết Tết;
-  - cây nêu và mâm bánh đứng ngoài móng Điện: ô ấy có công trình khác (kể cả lũy, thành) thì không dựng, dây cờ căng thẳng giữa hai cột cờ của Điện;
+  - cây nêu và mâm bánh đứng trong sân chầu của Điện (từ khi Điện 5×5; trước đó đứng ngoài móng Điện và không dựng khi ô ấy có công trình khác), dây cờ căng từ ngọn nêu tới hai cột cờ hai bên lối;
   - không có pháo.
 - Dáng đã chỉnh sau khi chụp thử: lợn con chạy ngoài sân theo mẹ (không khuất dưới mái chuồng), mái bếp dựng cao và nồi bánh dời ra trước cho thấy nồi, lá dong là lá thuôn dài trên cuống cao (không chụm tròn như bắp cải).
 
@@ -816,12 +817,14 @@ Chủ dự án đã chọn qua bốn câu hỏi: Thủy Tinh có cả hai phép 
 
   | Mẫu | Mở khi | Vẽ cho | Nét chính |
   |---|---|---|---|
-  | Kinh đô Phong Châu | từ đầu | Điện cấp 5 | ruộng quanh Điện, nhà sàn và kho sát Điện, bãi đá trên đồi; lũy tre bao hai mặt rừng (45 đoạn), 10 bẫy chông trước lũy |
-  | Đê bao chống lũ | vào chương 2 | Điện cấp 6 | đê liền dải dọc hai bờ sông (47 đoạn), bến ngoài đê, chòi canh sát đê; ruộng, đền, ruộng nếp trong đê |
-  | Thành Cổ Loa | vào chương 3 | Điện cấp 7 | ba vòng thành kín quanh Điện (132 đoạn); nhà sàn, kho, lò rèn giữa các vòng; ruộng, đền, doanh trại ngoài vòng ngoài; đê bao ngoài cùng |
+  | Kinh đô Phong Châu | từ đầu | Điện cấp 5 | ruộng dọc bờ sông, nhà sàn và kho quanh Điện, bãi đá và lò rèn trên đồi, trước Điện để đường ra bến; lũy tre bao hai mặt rừng (57 đoạn), 13 bẫy chông trước lũy |
+  | Đê bao chống lũ | vào chương 2 | Điện cấp 6 | đê liền dải dọc hai bờ sông (61 đoạn), lùi vào 4 ô cho bến 3×3 đứng ngoài đê, chòi canh sát đê; ruộng, đền, ruộng nếp trong đê |
+  | Thành Cổ Loa | vào chương 3 | Điện cấp 7 | ba vòng thành kín quanh Điện (144 đoạn), phía sông ba lớp sát nhau; nhà sàn, kho, lò rèn giữa các vòng; ruộng, đền, doanh trại ngoài vòng ngoài; đê bao ngoài cùng (61 đoạn) |
+
+  Bảng trên là mẫu vẽ lại trên lưới 38×38 (Điện ở ô 23, 23). Mẫu cũ trên lưới 30×30 có 45 đoạn lũy, 47 đoạn đê, 132 đoạn thành.
 
 - Vòng thành Cổ Loa trong mẫu là vòng kín quanh Điện, không chạm sông: thành không chặn nước như đê, nên vòng nào cắt ngang dải đê để chạm sông sẽ làm nước lọt vào.
-- Mỗi mẫu có đủ chỗ cho số công trình tối đa ở cấp Điện nó được vẽ, kể cả bốn công trình Hội Tết, các đền và ba nơi ở của binh chủng (sát doanh trại). Nó cũng chừa ô trước Điện cho cây nêu, mâm bánh và chỗ An Dương Vương đứng.
+- Mỗi mẫu có đủ chỗ cho số công trình tối đa ở cấp Điện nó được vẽ, kể cả bốn công trình Hội Tết, các đền và ba nơi ở của binh chủng (sát doanh trại). Cây nêu, mâm bánh và chỗ An Dương Vương đứng nay ở trong sân chầu của Điện 5×5, nên mẫu không phải chừa ô trước Điện.
 - **Áp mẫu**:
   - mỗi công trình đang có dời vào chỗ cùng loại gần nhất trong mẫu; cái nào đã đứng đúng chỗ thì giữ nguyên;
   - chỗ còn trống trong mẫu thì dựng thêm, tới số tối đa theo cấp Điện hiện tại, nếu loại ấy đã mở;
@@ -923,7 +926,7 @@ Giá cấp 8 khoảng gấp 2 cấp 7, sản lượng tăng khoảng 30% (cấp 
 - **Mỗi lầu nỏ tính là 2 chòi canh** trong số tối đa. Với 7 chòi canh tối đa thì có nhiều nhất 3 lầu nỏ và 1 chòi canh. Ghép không cho thêm công trình, chỉ dồn sức.
 - Chỉ số: mỗi phát bắn **3 giặc khác nhau** (ít giặc hơn thì bắn chừng ấy), mỗi mũi 34 sát thương, tầm 5,5 ô, nghỉ 1,1 giây, máu 1400, móng 1×1 như chòi canh. Khi có từ 3 giặc trong tầm trở lên, lầu nỏ mạnh hơn hai chòi canh cấp 8 cộng lại khoảng 40%.
 - Đền Cổ Loa còn nguyên thì lầu nỏ cũng bắn mạnh gấp rưỡi và xa thêm 1 ô như chòi canh.
-- Ghép chỉ trống ra một ô mỗi lần. Đất không thiếu: theo mẫu Cổ Loa ở Điện 7 còn khoảng 218 ô trống, đủ chỗ cho Đền Cuông 3×3 ở phía bắc, ngoài vòng thành ngoài.
+- Ghép chỉ trống ra một ô mỗi lần. Đất không thiếu: theo mẫu Cổ Loa ở Điện 7 còn khoảng 218 ô trống, đủ chỗ cho Đền Cuông ở phía bắc, ngoài vòng thành ngoài (lúc ấy móng 3×3, nay 4×4 trên lưới 38×38).
 - Áp mẫu kinh đô: lầu nỏ đứng vào chỗ chòi canh của mẫu và tính là hai chòi canh, chỗ còn lại dựng thêm chòi canh cho đủ số tối đa.
 - Giao diện: bảng chòi canh cấp 8 có nút **🎯 Ghép thành lầu nỏ** kèm giá. Bấm thì thanh dưới chỉ còn nút Hủy và dòng gợi ý "Chạm vào một chòi canh cấp 8 khác còn nguyên để ghép". Chưa có chòi canh cấp 8 thứ hai thì nút mờ, có dòng báo. Bảng Điện cấp 8 ghi đất 26×26, không ghi mũi tên mở đất.
 
@@ -994,9 +997,9 @@ Giá cấp 8 khoảng gấp 2 cấp 7, sản lượng tăng khoảng 30% (cấp 
 - **Tướng giữ kinh đô**: thủy binh và quân Triệu có **An Dương Vương** tới khi xuống biển, sau đó là **Cao Lỗ**. Đang kiệt sức thì người kế tiếp ra thay: Cao Lỗ, rồi Sơn Tinh hiển linh, rồi Gióng. Mùa lũ vẫn có Sơn Tinh.
 - **Từ đoạn 3, An Dương Vương không còn kỹ năng Nỏ thần khi giữ kinh đô.** Ô kỹ năng ghi "lẫy đã bị tráo". Ngài vẫn bắn nỏ thường, vẫn có Rùa Vàng. Ở phó bản, đánh lại màn 17–25 thì ngài vẫn đủ Nỏ thần, giống Gióng đã về trời vẫn đánh màn 5–8.
 - Độ khó đo bằng test: đợt thủy binh đầu bị quân mẫu, tướng, 5 chòi canh và 8 ụ nỏ diệt hết.
-- Bản lưu lên **phiên bản 11**: thêm số lính nỏ, bậc rèn của lính nỏ, các ụ nỏ, số đợt thủy binh đã đánh và đã giữ được, đã kể đoạn "Cầu hôn" chưa.
+- Bản lưu lên **phiên bản 12** (11 đã dùng cho công trình to hơn): thêm số lính nỏ, bậc rèn của lính nỏ, các ụ nỏ, số đợt thủy binh đã đánh và đã giữ được, đã kể đoạn "Cầu hôn" chưa.
 - Nhiệm vụ: nối thêm nhiệm vụ 42–44.
-- Test: luyện và rèn lính nỏ; lính nỏ gấp đôi sát thương lên quân nặng và trùm; dựng ụ trên thành, ụ hư theo thành; thuyền cập bờ phía nam và phía đông; lịch thay phiên; mất Nỏ thần ở kinh đô sau đoạn 3 nhưng vẫn còn ở màn 17–25; nâng bản lưu 10 lên 11.
+- Test: luyện và rèn lính nỏ; lính nỏ gấp đôi sát thương lên quân nặng và trùm; dựng ụ trên thành, ụ hư theo thành; thuyền cập bờ phía nam và phía đông; lịch thay phiên; mất Nỏ thần ở kinh đô sau đoạn 3 nhưng vẫn còn ở màn 17–25; nâng bản lưu 11 lên 12.
 
 ### PR 3: Cao Lỗ, màn 25–32, truyện, Đền Cuông, mẫu kinh đô, Hết truyện
 
@@ -1044,7 +1047,7 @@ Bản đồ phó bản có thêm thẻ Chương 4, mở khi đã vào chương 4
 
 **Đền Cuông**
 
-- Mở khi thắng màn 32. Dựng một lần, 3×3, giá 4000 gạo, 4000 vỏ ốc, 4000 đất đá, 1100 sắt. Ngoài đời, Đền Cuông ở Diễn Châu, Nghệ An, thờ An Dương Vương, nơi truyền thuyết kể vua xuống biển.
+- Mở khi thắng màn 32. Dựng một lần, 4×4 (móng đền rộng thêm 1 ô như các đền khác), giá 4000 gạo, 4000 vỏ ốc, 4000 đất đá, 1100 sắt. Ngoài đời, Đền Cuông ở Diễn Châu, Nghệ An, thờ An Dương Vương, nơi truyền thuyết kể vua xuống biển.
 - Đền còn nguyên thì **mỗi đợt thủy binh bớt 20% số thuyền** (làm tròn xuống, còn ít nhất 1 thuyền), tức bớt chừng ấy lính.
 - Sức chịu nước lũ như các đền khác.
 - Dáng: đền nền đá mái cong dưới chân một mỏm núi, sân có tượng Rùa Vàng quay mặt ra phía sông, bên cạnh là một giếng nhỏ thành đá.
@@ -1119,9 +1122,9 @@ Thưởng khoảng gấp rưỡi nhiệm vụ chương 3. Nhận xong nhiệm v�
 
 1. **Duyệt tài liệu này** (mọi con số và dáng ở trên). Chủ dự án đã duyệt.
 2. **PR 1** (đã làm): Điện cấp 8, công trình cấp 8, lầu nỏ. Bản lưu v10.
-3. **PR 2**: lính nỏ, ụ nỏ, thủy binh Triệu đánh kinh đô, đoạn truyện "Cầu hôn". Bản lưu v11.
-4. **PR 3**: Cao Lỗ, màn 25–32, bốn đoạn truyện còn lại, Đền Cuông, mẫu kinh đô chương 4, màn hình Hết truyện. Bản lưu v12.
-5. **PR 4**: thử thách phó bản và huân công. Bản lưu v13.
+3. **PR 2**: lính nỏ, ụ nỏ, thủy binh Triệu đánh kinh đô, đoạn truyện "Cầu hôn". Bản lưu v12 (v11 đã dùng cho công trình to hơn).
+4. **PR 3**: Cao Lỗ, màn 25–32, bốn đoạn truyện còn lại, Đền Cuông (4×4), mẫu kinh đô chương 4 vẽ trên lưới 38×38, màn hình Hết truyện. Bản lưu v13.
+5. **PR 4**: thử thách phó bản và huân công. Bản lưu v14.
 
 Mỗi PR: chạy `npm test` và `npm run build`; sửa `src/render/` hay `src/ui/` thì chụp kiểm tra ở khổ điện thoại; sau đó ghi số cuối cùng vào tài liệu này.
 
@@ -1217,19 +1220,21 @@ Vẽ lại cả ba trên lưới 38×38, Điện ở ô (23, 23), giữ nét ch�
 | Đê bao chống lũ | Điện cấp 6 | 32×32 | đê liền dải hai bờ lùi vào 3 ô, chừa dải cho bến 3×3 đứng ngoài đê (khoảng 62 đoạn); chòi canh sát đê; ruộng, đền, ruộng nếp trong đê |
 | Thành Cổ Loa | Điện cấp 7 | 34×34 | ba vòng thành kín quanh Điện (khoảng 190 đoạn); nhà sàn, kho, lò rèn giữa các vòng; ruộng, đền, doanh trại ngoài vòng ngoài; đê bao ngoài cùng |
 
+Đã vẽ (số cuối cùng ở mục Mẫu kinh đô): Phong Châu 57 đoạn lũy, 13 bẫy; Đê bao 61 đoạn đê lùi vào 4 ô; Cổ Loa 144 đoạn thành (phía sông ba lớp sát nhau như lớp thành dày), 61 đoạn đê. Trước Điện chừa đường ra bến ở Phong Châu.
+
 - Mẫu chương 4 (Cổ Loa giữ sông, PR 3 chương 4) vẽ thẳng trên lưới mới.
 - Test `sapxep.test.ts` giữ đủ các điều đang canh: không chồng nhau, không lấn sông, bến sát sông, đủ chỗ cho số tối đa, Đê bao và Cổ Loa giữ được lũ bậc 3, Cổ Loa đủ 3 vòng, đổi mẫu vẫn xếp được.
 
 ### Bản lưu cũ
 
-Bản lưu lên phiên bản kế tiếp. Kinh đô cũ được tự xếp lại:
+Bản lưu lên **phiên bản 11** (đã làm, `migrate10to11` ở `save.ts`). Kinh đô cũ được tự xếp lại:
 1. Mọi tọa độ dịch 8 ô theo cả hai chiều, nên mọi thứ giữ khoảng cách tới sông. Đất mới mở thêm nằm về phía rừng.
-2. Công trình to giữ góc phía sông và nở về phía rừng. Vướng thì thử nở về ba hướng còn lại, vẫn vướng thì dời tới chỗ trống gần nhất (như áp mẫu). Điện xếp trước, rồi tới công trình to, gần Điện trước. Bến luôn giữ sát sông.
+2. Công trình to giữ góc phía sông và nở về phía rừng. Vướng thì thử nở về ba hướng còn lại, vẫn vướng thì dời tới chỗ trống gần nhất, ưu tiên chỗ không đè lũy, đê, thành. Điện xếp trước và luôn đứng ở chỗ gốc (ô 23, 23), rồi tới công trình to, gần Điện trước. Bến luôn giữ sát sông.
 3. Đoạn lũy, đê, thành, bẫy nằm dưới móng mới thì dỡ đi và **hoàn lại đủ giá** dựng và nâng cấp.
-4. Độ cao: phần đất cũ (kể cả chỗ đã đắp) dịch theo; dải đất mới lấy độ cao tự nhiên; móng ở chỗ mới đắp phẳng như khi dựng.
-5. Lũ, giặc, thủy binh kế tiếp lùi tới ít nhất 5 phút sau lần mở đầu tiên, cho người chơi kịp xem lại đê và thành.
+4. Độ cao: phần đất cũ (kể cả chỗ đã đắp) dịch theo; dải đất mới lấy độ cao tự nhiên; móng ở chỗ mới đắp phẳng như khi dựng. Bản lưu rất cũ chưa có độ cao (trước chương 2) lấy độ cao tự nhiên của bản đồ cũ (`legacyBaseHeights`).
+5. Trận giữ kinh đô đang dở trong bản lưu được hoãn. Giặc, lũ kế tiếp chờ ít nhất 5 phút (`RELAYOUT_GRACE_MS`), cho người chơi kịp xem lại đê và thành.
 6. Được **áp mẫu kinh đô một lần không mất phí dời** (dựng thêm vẫn trả giá dựng).
-7. Lạc hầu báo: kinh đô vừa dựng lại rộng hơn, bao nhiêu công trình đã dời, bao nhiêu đoạn đã dỡ và hoàn của, nên xem lại đê trước mùa lũ.
+7. Lạc hầu kể đoạn "Kinh đô dựng lại rộng hơn" trước mọi đoạn khác: công trình chật chỗ đã dời, đoạn vướng đã dỡ và hoàn của, nên xem lại đê, thành; còn một lần áp mẫu không mất phí dời (bảng mẫu ghi rõ).
 
 Test: nâng bản lưu cũ thì đủ công trình, không chồng nhau, giữ cấp và người làm, bến sát sông, đoạn bị dỡ hoàn đúng giá.
 

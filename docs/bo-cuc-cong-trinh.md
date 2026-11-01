@@ -244,18 +244,19 @@ a a a a . .
 . . , , . .
 ```
 
-- `A` lều lính mái chữ A.
+- `A` lều lính mái chữ A, nóc chạy ngang, mái tranh chạm đất trước và sau; hồi trái đan phên, hồi phải để ngỏ thấy chiếu ngủ; cột tre bắt chéo hai đầu nóc. Cờ đỏ cắm sau hồi trái, bay cao trên nóc.
 - `g` giá giáo, mũi đồng lớn.
-- `a` lều chữ A thứ hai (mới).
-- `o` cọc rơm, giáo binh đâm thử.
+- `a` lều chữ A thứ hai, thấp hơn (mới).
+- `o` cọc rơm có thanh ngang làm vai, nắm rơm làm đầu; giáo binh đứng thế thủ đâm giáo vào cọc bên phải.
 - `,` lối vào.
+- Rào cọc vót nhọn quanh mép móng như doanh trại, chừa cổng giữa mặt trước; hai cọc cổng to buộc vải đỏ. Lều to hơn lều cũ chừng 20%.
 
 ### Trại cung: 2×2 → 3×3
 
 Lán một mái góc sau bên phải, trường bắn chạy ngang hết móng: cung thủ đứng bên phải bắn sang hai bia ở mép trái.
 
 ```
-. . . L L L
+r f . L L L
 . . . L L L
 B . . L L L
 . . . . . c
@@ -263,31 +264,35 @@ b . . . . c
 . . , , . .
 ```
 
-- `L` lán một mái, giá cung, bao tên.
+- `L` lán một mái tựa vách phên sau, mái tranh dốc ra trước; giá cung đứng và bao tên đặt ngay dưới mép mái trước (vách sau khuất dưới mái). Cao hơn lán cũ chừng 30%, sâu gấp rưỡi, hẹp lại cho vừa khối `L`.
 - `B` bia rơm tròn ở xa (mới).
-- `c` chỗ cung thủ đứng bắn.
-- `b` bia rơm tròn ở gần.
+- `c` chỗ cung thủ đứng bắn, khúc gỗ nằm làm vạch bắn trước mặt, bao tên bên cạnh.
+- `b` bia rơm tròn ở gần. Mấy mũi tên trượt găm xuống đất quanh hai bia.
 - `,` lối vào.
+- `r` đống bó rơm làm bia (mới).
+- `f` cờ đỏ cao (mới).
+- Rào cọc vót nhọn quanh mép móng như trại giáo, chừa cổng giữa mặt trước.
 
 ### Chuồng voi: 2×2 → 3×3
 
 Mái chóp bốn mặt trên cột gỗ lớn ở góc sau, sân voi rộng có rào gỗ, máng nước và đống cỏ phía trước.
 
 ```
-M M M M . .
-M M M M . .
+M M M M m m
+M M M M m m
 M M M M c .
 . . . . . .
 w w . . y y
 . . , , y y
 ```
 
-- `M` mái chóp bốn mặt trên bốn cột lớn.
-- `c` cọc buộc voi đai đồng.
-- `w` máng nước gỗ.
-- `y` đống cỏ.
+- `M` mái chóp bốn mặt trên bốn cột lớn đai đồng, chóp đồng, rơm lót nền. Mái rộng hơn mái cũ chừng 35% theo bề ngang, 15% theo bề sâu, cao hơn chừng 30%; cột cao đủ cho voi có người cưỡi đứng lọt.
+- `c` cọc buộc voi đai đồng, cuộn thừng quấn quanh.
+- `w` máng nước gỗ kê trên hai khúc gỗ.
+- `y` đống cỏ cao, nhô lên trên thanh rào.
 - `,` cổng sân voi.
-- Rào gỗ ngang ba phía, chừa cổng trước. Voi đứng giữa sân.
+- `m` đống thân chuối cắt khúc cho voi ăn, đầu cắt quay ra trước (mới).
+- Rào cọc vót nhọn thưa, cao hơn rào trại giáo, có hai thanh gỗ ngang, chạy quanh mép móng, chừa cổng trước; hai cọc cổng to buộc vải đỏ. Voi (có người cưỡi) đứng giữa sân, quay về đống cỏ.
 
 ### Đền Phù Đổng: 3×3 → 4×4
 

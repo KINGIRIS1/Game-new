@@ -830,7 +830,7 @@ export const vi = {
       phongChau: {
         icon: '🏯',
         name: 'Kinh đô Phong Châu',
-        desc: 'Ruộng quanh Điện, nhà sàn và kho sát Điện, bãi đá trên đồi, lũy tre bao hai mặt rừng, bẫy chông trước lũy.',
+        desc: 'Ruộng dọc bờ sông, nhà sàn và kho quanh Điện, bãi đá và lò rèn trên đồi, trước Điện để đường ra bến; lũy tre bao hai mặt rừng, bẫy chông trước lũy.',
         lock: '',
       },
       deBao: {
@@ -848,6 +848,7 @@ export const vi = {
     },
     mauPlan: (moves: number, builds: number, removes: number) =>
       [moves ? `Dời ${moves} công trình` : '', builds ? `dựng thêm ${builds}` : '', removes ? `dỡ ${removes} đoạn thừa` : ''].filter(Boolean).join(', ') || 'Đã xếp đúng theo mẫu',
+    mauFree: 'Lần này không mất phí dời: kinh đô vừa được dựng lại rộng hơn.',
     mauApply: '🗺️ Áp mẫu',
     mauConfirm: '⚠️ Bấm lần nữa để áp',
     mauDone: (name: string) => `Đã xếp kinh đô theo mẫu ${name}`,

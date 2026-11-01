@@ -35,7 +35,7 @@ const TILE: Partial<Record<BuildingType, string>> = {
   bep: '#c45a2a',
 };
 
-/** Bản đồ thu nhỏ 27×27 ô của mẫu: ô ngoài vùng đã khai phá thì mờ, sông xanh ở hai cạnh. */
+/** Bản đồ thu nhỏ của mẫu (đất và một hàng sông): ô ngoài vùng đã khai phá thì mờ, sông xanh ở hai cạnh. */
 function miniMap(state: GameState, id: MauId): string {
   const n = RIVER_START + 1;
   const cells: string[] = Array.from({ length: n * n }, (_, i) => {
@@ -66,7 +66,7 @@ export function mauHtml(state: GameState, armed: MauId | null): string {
     const label = armed === id ? vi.ui.mauConfirm : vi.ui.mauApply;
     const why = check.ok ? '' : `<div class="why">${vi.reasons[check.reason]}</div>`;
     return `<div class="mau"><h3>${t.icon} ${t.name}</h3><p class="muted">${t.desc}</p>${miniMap(state, id)}
-      <p>${summary}</p>
+      <p>${summary}</p>${plan.freeMoves && plan.moves.length ? `<p class="free">${vi.ui.mauFree}</p>` : ''}
       <div class="actions"><button class="btn ${armed === id ? 'bronze' : ''}" data-act="applyMau" data-mau="${id}" ${check.ok ? '' : 'disabled'}>
         ${label}${Object.keys(plan.cost).length ? ` · ${costHtml(state, plan.cost)}` : ''}</button></div>${why}</div>`;
   }).join('');

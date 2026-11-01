@@ -9,6 +9,9 @@ import type { Job } from '../people';
 import { C } from '../palette';
 import type { ToonModel } from '../toon';
 
+/** Người, lính gác đứng trên công trình móng mới cao chừng này lần dáng gốc (như ở công trình cấp 5 dáng cũ). */
+export const PERSON_SCALE = 0.85 * 1.05;
+
 /** Cỡ phần chính theo cấp: 85% ở cấp 1 tới 105% ở cấp 5, như dáng cũ; cấp 6–8 cao lên chứ không rộng ra. */
 export const partScale = (level: number) => 0.8 + 0.05 * Math.min(level, 5);
 

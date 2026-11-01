@@ -6,7 +6,8 @@ import * as THREE from 'three';
 const AZIMUTH = Math.PI / 4;
 const ELEVATION = THREE.MathUtils.degToRad(38);
 const DISTANCE = 70;
-const MIN_ZOOM = 0.55;
+/** Thu nhỏ được tới mức thấy gần trọn kinh đô 34×34 ô trên màn hình dọc. */
+const MIN_ZOOM = 0.42;
 const MAX_ZOOM = 3;
 const TAP_SLOP_PX = 10;
 const TAP_MAX_MS = 600;
@@ -20,7 +21,7 @@ export class IsoCamera {
   readonly target = new THREE.Vector3();
   zoom = 1;
   /** Giới hạn di chuyển của tâm nhìn trên mặt đất. */
-  bounds = { min: -17, max: 17 };
+  bounds = { min: -21, max: 21 };
   onTap?: (clientX: number, clientY: number) => void;
 
   private width = 1;
