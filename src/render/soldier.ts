@@ -1,5 +1,6 @@
 // Lính đi bộ có khung xương (rig.ts, body.ts): giáo binh, cung thủ của ta; giặc Ân cầm qua, cầm cung, phó tướng
-// cầm rìu; quân Triệu cầm kiếm, cầm nỏ. Mỗi lính một dáng, mỗi loại vũ khí một bộ động tác.
+// cầm rìu; quân Triệu cầm kiếm, cầm nỏ; lính nỏ của ta (quỳ một gối khi bắn); thủy binh Triệu (lính thủy, cung
+// thuyền, lính rìu giáp mây). Mỗi lính một dáng, mỗi loại vũ khí một bộ động tác.
 
 import type * as THREE from 'three';
 import type { FighterKind } from '../game/battle';
@@ -31,8 +32,14 @@ import { LEATHER, arrow, bigAxe, bow, crossbowParts, drumShield, qua, quiver, sp
 /** Lính đông trong trận (tới vài chục): bớt số mặt cho nhẹ máy (xem `ShapeBuilder.detail`). */
 const DETAIL = 0.7;
 
-export type SoldierKind = 'giao' | 'cung' | 'giaoAn' | 'cungAn' | 'phoTuong' | 'linhTrieu' | 'noTrieu';
-const KINDS: readonly FighterKind[] = ['giao', 'cung', 'giaoAn', 'cungAn', 'phoTuong', 'linhTrieu', 'noTrieu'];
+export type SoldierKind = 'giao' | 'cung' | 'no' | 'giaoAn' | 'cungAn' | 'phoTuong' | 'linhTrieu' | 'noTrieu' | 'linhThuy' | 'cungThuyen' | 'linhRiu';
+const KINDS: readonly FighterKind[] = ['giao', 'cung', 'no', 'giaoAn', 'cungAn', 'phoTuong', 'linhTrieu', 'noTrieu', 'linhThuy', 'cungThuyen', 'linhRiu'];
+
+/** Giáp mây đan của lính rìu Triệu. */
+const RATTAN = 0xc9a45a;
+const RATTAN_DARK = 0x9a7a3a;
+/** Bắn thì quỳ một gối: hông hạ chừng này. */
+const KNEEL_DROP = 0.17;
 export const isSoldier = (k: FighterKind): k is SoldierKind => KINDS.includes(k);
 
 // ---------- Dáng ----------
@@ -81,6 +88,8 @@ interface Spec {
   heavy?: boolean;
   /** Vũ khí ngắn (kiếm): đi thì cầm chúc xuống thay vì vác vai. */
   short?: boolean;
+  /** Bắn thì quỳ một gối (lính nỏ của ta). */
+  kneel?: boolean;
   draw: (r: HumanRig, tier: number) => void;
 }
 
@@ -103,6 +112,25 @@ const SPECS: Record<SoldierKind, Spec> = {
       r.local('handL', GRIP_L, null, (s) => bow(s, tier >= 2));
       r.local('hand', GRIP_R, null, (s) => arrow(s, tier >= 1));
       backQuiver(r, tier >= 2 ? C.bronze : tier >= 1 ? LEATHER : C.woodLight, tier >= 1);
+    },
+  },
+  no: {
+    style: 'crossbow',
+    kneel: true,
+    draw: (r, tier) => {
+      // Lính nỏ: mũ đồng, giáp da, nỏ gỗ lớn lẫy đồng; bậc 1 mũi tên sắt, bậc 2 nỏ cánh sừng và bao tên đồng.
+      humanBody(r, { cloth: C.red, top: LEATHER, belt: C.bronze, armband: C.bronze });
+      humanHead(r);
+      hairCap(r);
+      const head = r.on('head').plain;
+      head.sphere(0.232, C.bronze, 0, 0.84, -0.025, [1, 0.6, 1], 10);
+      head.cyl(0.236, 0.236, 0.03, C.bronzeDark, 0, 0.84, -0.025, undefined, 12);
+      for (let i = -1; i <= 1; i++) head.box(0.05, 0.28, 0.025, i ? C.cream : C.red, i * 0.06, 1.02, -0.06, [0, 0, -i * 0.3]);
+      r.local('hand', GRIP_R, null, (s) => {
+        crossbowParts(s, false, 0.95);
+        if (tier >= 2) for (const sx of [-1, 1]) s.plain.box(0.2, 0.035, 0.035, 0xe6d6a8, sx * 0.2, 0, 0.32, [0, sx * 0.25, 0]);
+      });
+      backQuiver(r, tier >= 2 ? C.bronze : LEATHER, tier >= 1);
     },
   },
   giaoAn: {
@@ -157,6 +185,51 @@ const SPECS: Record<SoldierKind, Spec> = {
     draw: (r) => {
       trieuSoldier(r);
       r.local('hand', GRIP_R, null, (s) => crossbowParts(s, false, 0.85));
+    },
+  },
+  // Thủy binh Triệu đội lốt cướp sông.
+  linhThuy: {
+    style: 'spear',
+    draw: (r) => {
+      // Cởi trần, khố đen viền đỏ, khăn đỏ buộc đầu, giáo ngắn.
+      humanBody(r, { cloth: C.trieuCloth, belt: C.trieuRed });
+      humanHead(r, { brows: true });
+      hairCap(r);
+      headband(r, C.trieuRed);
+      r.local('hand', GRIP_R, null, (s) => spear(s, 1, 1.0));
+    },
+  },
+  cungThuyen: {
+    style: 'bow',
+    draw: (r) => {
+      // Nón rộng vành đen, áo ngắn đen, cung dài.
+      humanBody(r, { cloth: C.trieuCloth, top: C.trieuCloth, belt: C.trieuRed });
+      humanHead(r, { brows: true });
+      hairCap(r);
+      const head = r.on('head').plain;
+      head.cyl(0.31, 0.31, 0.022, C.trieuCloth, 0, 0.9, -0.02, undefined, 14);
+      head.cyl(0.315, 0.315, 0.012, C.trieuRed, 0, 0.885, -0.02, undefined, 14);
+      head.cone(0.19, 0.14, C.trieuCloth, 0, 0.98, -0.02, undefined, 10);
+      r.local('handL', GRIP_L, null, (s) => bow(s));
+      r.local('hand', GRIP_R, null, (s) => arrow(s));
+      backQuiver(r, C.trieuRed, false);
+    },
+  },
+  linhRiu: {
+    style: 'chop',
+    heavy: true,
+    draw: (r) => {
+      // Giáp mây đan dày phủ ngực và vai, mũ mây, rìu lớn.
+      humanBody(r, { cloth: C.trieuCloth, top: RATTAN, belt: RATTAN_DARK });
+      const chest = r.on('chest');
+      chest.band.cyl(0.16, 0.14, 0.22, RATTAN, 0, 0.47, 0, undefined, 10);
+      for (const y of [0.4, 0.48, 0.56]) chest.plain.cyl(0.165, 0.165, 0.018, RATTAN_DARK, 0, y, 0, undefined, 10);
+      for (const sx of [-1, 1]) chest.plain.sphere(0.075, RATTAN, sx * 0.17, 0.57, 0, [1, 0.7, 1], 6);
+      humanHead(r, { brows: true });
+      const head = r.on('head').plain;
+      head.sphere(0.235, RATTAN, 0, 0.84, -0.025, [1, 0.62, 1], 10);
+      head.cyl(0.24, 0.24, 0.025, RATTAN_DARK, 0, 0.84, -0.025, undefined, 12);
+      r.local('hand', GRIP_R, null, bigAxe);
     },
   },
 };
@@ -296,8 +369,15 @@ function poseSoldier(spec: Spec, b: Human, a: Act): void {
   beginPose(b, a.time);
   const moves = MOVES[spec.style];
   if (a.act === 'walk') moves.carry(b, walkCycle(b, a.phase ?? 0, a.stride ?? 0.5), spec);
-  else if (a.act === 'fight') moves.fight(b, a.strike, spec);
-  else if (a.act === 'dead') {
+  else if (a.act === 'fight') {
+    moves.fight(b, a.strike, spec);
+    if (spec.kneel) {
+      // Quỳ một gối: chân trái co ra trước, chân phải quỳ ra sau, hông hạ thấp cho vững nỏ.
+      b.legL.rotation.x = -1.25;
+      b.legR.rotation.x = 0.45;
+      b.hips.position.y = (b.hips.userData.rest as THREE.Vector3).y - KNEEL_DROP;
+    }
+  } else if (a.act === 'dead') {
     const f = a.fall ?? 1;
     fallPose(b, f);
     moves.drop(b, f);

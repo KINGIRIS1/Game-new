@@ -26,6 +26,7 @@ const TILE: Partial<Record<BuildingType, string>> = {
   traiGiao: '#94443a',
   traiCung: '#a35a3a',
   chuongVoi: '#6e5a4e',
+  traiNo: '#b3553a',
   choiCanh: '#5a3b20',
   bayChong: '#9fbf5a',
   luy: '#6b8f3a',

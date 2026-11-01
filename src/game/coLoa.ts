@@ -20,7 +20,7 @@ export const KIM_QUY_AT = 22;
 export const CH3_LAST = 24;
 
 export function initialAdv(): AdvState {
-  return { no: false, restUntil: 0, kimQuy: false, won: false };
+  return { no: false, restUntil: 0, kimQuy: false, won: false, layTrao: false };
 }
 
 /** Nhận xong thưởng nhiệm vụ cuối chương 2 (Đền Tản Viên) thì sang chương 3. */

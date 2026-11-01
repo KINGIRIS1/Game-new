@@ -1445,6 +1445,43 @@ export function makeChuongVoi(): THREE.Group {
   return g;
 }
 
+/**
+ * Trại nỏ (chương 4): lán mái ngói đỏ cam như ngói thành Cổ Loa, dưới lán gác một cây nỏ lớn lẫy đồng trên giá gỗ;
+ * bia gỗ vuông vẽ vòng tròn ở góc trước, một lính nỏ quỳ một gối nhắm bia. Gốc ở tâm móng, mặt trước +z.
+ */
+export function makeTraiNo(): THREE.Group {
+  const m = new ToonModel();
+  const p = m.plain;
+  p.box(1.95, 0.08, 1.95, C.earth, 0, 0.04, 0);
+  // Lán mái ngói dọc phía sau, bốn cột, sàn đất nện.
+  p.box(1.5, 0.08, 0.8, C.earthDark, -0.1, 0.12, -0.5);
+  for (const x of [-0.75, 0.55]) for (const z of [-0.82, -0.18]) p.cyl(0.045, 0.055, 0.95, C.woodDark, x, 0.55, z, undefined, 6);
+  boatRoof(m, { main: TILE, dark: TILE_DARK, trim: null }, { length: 1.75, width: 1.0, lift: 0.18, drop: 0.36, thickness: 0.07 }, -0.1, 1.33, -0.5);
+  // Giá treo nỏ dưới lán: ba cây nỏ gác ngang.
+  p.box(1.1, 0.04, 0.05, C.woodDark, -0.1, 0.72, -0.8);
+  for (const x of [-0.5, -0.1, 0.3]) {
+    p.box(0.05, 0.05, 0.36, C.woodDark, x, 0.62, -0.74, [0.6, 0, 0]);
+    p.box(0.32, 0.035, 0.035, C.wood, x, 0.66, -0.66, [0.6, 0, 0]);
+  }
+  // Bia gỗ vuông ở góc trước bên trái, vẽ vòng tròn đỏ trắng, mặt bia quay vào sân.
+  for (const s of [-1, 1]) p.cyl(0.025, 0.03, 0.75, C.woodDark, -0.72 + s * 0.2, 0.38, 0.55, undefined, 5);
+  p.box(0.48, 0.48, 0.05, C.woodLight, -0.72, 0.62, 0.55, [0, 0.7, 0]);
+  m.band.cyl(0.17, 0.17, 0.02, C.cream, -0.7, 0.62, 0.57, [Math.PI / 2, 0, -0.7], 14);
+  m.band.cyl(0.1, 0.1, 0.02, C.red, -0.69, 0.62, 0.58, [Math.PI / 2, 0, -0.7], 12);
+  banner(m, 0.86, -0.92, 1.9, C.red);
+  const g = m.group();
+  // Nỏ lớn lẫy đồng trên giá, chĩa ra trước như nỏ trên chòi canh.
+  g.add(bigCrossbow(0.5, 0.08, -0.1, 0));
+  // Lính nỏ quỳ một gối nhắm bia.
+  const man = bakeSoldier('no', 0, { act: 'fight', strike: 0.9 });
+  man.scale.setScalar(0.72);
+  man.position.set(0.2, 0.08, 0.55);
+  man.rotation.y = -Math.PI / 2 - 0.15;
+  g.add(man);
+  g.scale.setScalar(0.95);
+  return g;
+}
+
 // ---------- Chòi canh ----------
 
 /**
@@ -2147,6 +2184,7 @@ export function buildingModel(type: BuildingType, level: number): THREE.Group {
   if (type === 'chuongLon') return makeChuongLon(level);
   if (type === 'bep') return makeBep(level);
   if (type === 'lauNo') return makeLauNo();
+  if (type === 'traiNo') return makeTraiNo();
   if (isDecor(type)) return decorModel(type);
   return new THREE.Group();
 }

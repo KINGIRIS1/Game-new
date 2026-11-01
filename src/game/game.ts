@@ -11,7 +11,10 @@ import { footprintTop, groundOf, levelFootprint, tileHeight } from './terrain';
 import {
   BUILDINGS,
   CH3_QUEST_START,
+  CH4_QUEST_START,
   DIEN_CHAPTER,
+  FIRST_THUY_BINH_MS,
+  U_NO,
   LAU_NO_TOWERS,
   MOVE_FRACTION,
   FIRST_FLOOD_MS,
@@ -80,6 +83,8 @@ export interface Building {
   tuong?: TuongId;
   /** Doanh trại: số lính mỗi binh chủng người chơi bố trí giữ kinh đô ở đây. Chưa doanh trại nào có thì bố trí tự động. */
   guard?: Record<UnitType, number>;
+  /** Đoạn thành Cổ Loa có ụ nỏ trên mặt thành: còn tốt, hay đã hư theo thành (phải sửa riêng). */
+  uNo?: 'ok' | 'hu';
 }
 
 export interface RaidResult {
@@ -121,6 +126,9 @@ export interface RaidState {
   /** Số đợt quân Triệu Đà đánh kinh đô, và số đợt đánh lui được hết. */
   trieu: number;
   trieuHeld: number;
+  /** Số đợt thủy binh Triệu đi thuyền đánh kinh đô, và số đợt đánh lui được hết. */
+  thuyBinh: number;
+  thuyBinhHeld: number;
   /** Mực nước lũ đang thấy (bậc), 0 khi không có lũ. Dâng trong trận, rút dần sau trận. */
   water: number;
   /** Lúc giặc tràn vào (hết thời gian báo trước). */
@@ -185,6 +193,11 @@ export interface AdvState {
   kimQuy: boolean;
   /** Đã đánh tan Triệu Đà dưới chân thành Cổ Loa (kết chương 3). */
   won: boolean;
+  /**
+   * Trọng Thủy đã đánh tráo lẫy nỏ thần (đoạn truyện 3 của chương 4): từ đó khi giữ kinh đô An Dương Vương
+   * không còn kỹ năng Nỏ thần, và giặc kéo tới ba đợt thay phiên. Phó bản màn 17–25 vẫn đủ Nỏ thần.
+   */
+  layTrao: boolean;
 }
 
 /** Các đoạn truyện, hiện mỗi đoạn một lần theo đúng thứ tự. */
@@ -203,7 +216,8 @@ export type StoryId =
   | 'dietYeu'
   | 'noThan'
   | 'kimQuy'
-  | 'ketChuong3';
+  | 'ketChuong3'
+  | 'cauHon';
 
 /** Một lời mời đổi hàng của thuyền buôn: đưa `give`, nhận `get`. */
 export interface Offer {
@@ -222,7 +236,7 @@ export interface Merchant {
 }
 
 /** Phiên bản bản lưu hiện tại (11: kinh đô lớn, móng to hơn một ô). */
-export const SAVE_VERSION = 12;
+export const SAVE_VERSION = 13;
 
 export interface GameState {
   version: typeof SAVE_VERSION;
@@ -329,7 +343,10 @@ export type FailReason =
   | 'khongPhaiTrangTri'
   | 'khoanhDaMo'
   | 'khoanhChuaSat'
-  | 'hetLuotKhoanh';
+  | 'hetLuotKhoanh'
+  | 'canThanh'
+  | 'daCoUNo'
+  | 'khongCoUNo';
 
 export type Result<T = undefined> = { ok: true; value: T } | { ok: false; reason: FailReason };
 
@@ -350,6 +367,8 @@ export function initialRaid(): RaidState {
     nightsHeld: 0,
     trieu: 0,
     trieuHeld: 0,
+    thuyBinh: 0,
+    thuyBinhHeld: 0,
     water: 0,
     startsAt: 0,
     battle: null,
@@ -379,8 +398,8 @@ export function createInitialState(now: number): GameState {
     lastSeen: now,
     clock: 0,
     merchant: { nextAt: MERCHANT_FIRST_MS, visit: null, seq: 0 },
-    troops: { giao: 0, cung: 0, voi: 0 },
-    arms: { giao: 0, cung: 0, voi: 0 },
+    troops: { giao: 0, cung: 0, voi: 0, no: 0 },
+    arms: { giao: 0, cung: 0, voi: 0, no: 0 },
     raid: initialRaid(),
     campaign: initialCampaign(),
     nextBattleId: 1,
@@ -581,6 +600,7 @@ export function unlocked(state: GameState, unlock: Unlock | undefined): boolean 
   if (unlock === 'ketChuong2') return state.son.won;
   if (unlock === 'chuong3') return inChapter3(state);
   if (unlock === 'ketChuong3') return state.adv.won;
+  if (unlock === 'chuong4') return inChapter4(state);
   return true;
 }
 
@@ -590,6 +610,7 @@ export const UNLOCK_REASON: Record<Unlock, FailReason> = {
   ketChuong2: 'canKetChuong2',
   chuong3: 'canChuong3',
   ketChuong3: 'canKetChuong3',
+  chuong4: 'canChuong4',
 };
 
 /**
@@ -704,6 +725,15 @@ export function questProgress(state: GameState): { have: number; need: number } 
     need = 1;
   } else if (goal.kind === 'trieuHeld') {
     have = state.raid.trieuHeld;
+    need = goal.amount;
+  } else if (goal.kind === 'uNo') {
+    have = uNoCount(state);
+    need = goal.amount;
+  } else if (goal.kind === 'unitTroops') {
+    have = state.troops[goal.unit];
+    need = goal.amount;
+  } else if (goal.kind === 'thuyBinhHeld') {
+    have = state.raid.thuyBinhHeld;
     need = goal.amount;
   } else {
     have = dienLevel(state);
@@ -1007,6 +1037,8 @@ export function claimQuest(state: GameState): Result<Cost> {
   state.questIndex += 1;
   // Vào chương 3: ít phút sau, yêu tinh núi Thất Diệu kéo về phá thành.
   if (state.questIndex === CH3_QUEST_START) scheduleLandRaid(state);
+  // Vào chương 4: ít phút sau, thủy binh Triệu đội lốt cướp sông đi thuyền tới.
+  if (state.questIndex === CH4_QUEST_START) scheduleThuyBinh(state);
   return ok(quest.reward);
 }
 
@@ -1067,19 +1099,76 @@ export function repair(state: GameState, id: number): Result<Building> {
 
 export function repairAllCost(state: GameState): Cost {
   const total: Cost = {};
-  for (const b of state.buildings) {
-    if (!b.damaged) continue;
-    const c = repairCost(b);
+  const add = (c: Cost) => {
     for (const r of RESOURCE_IDS) if (c[r]) total[r] = (total[r] ?? 0) + c[r]!;
+  };
+  for (const b of state.buildings) {
+    if (b.damaged) add(repairCost(b));
+    if (b.uNo === 'hu') add(uNoRepairCost());
   }
   return total;
 }
 
-/** Sửa mọi công trình hư hỏng còn đủ tiền sửa, ưu tiên theo thứ tự trong kinh đô. */
+/** Sửa mọi công trình hư hỏng còn đủ tiền sửa, ưu tiên theo thứ tự trong kinh đô; thành sửa xong thì sửa ụ nỏ trên đó. */
 export function repairAll(state: GameState): number {
   let fixed = 0;
   for (const b of state.buildings) if (b.damaged && repair(state, b.id).ok) fixed++;
+  for (const b of state.buildings) if (b.uNo === 'hu' && repairUNo(state, b.id).ok) fixed++;
   return fixed;
+}
+
+// ---------- Ụ nỏ trên thành Cổ Loa ----------
+
+/** Số ụ nỏ đã dựng (kể cả ụ đang hư). */
+export function uNoCount(state: GameState): number {
+  return state.buildings.filter((b) => b.uNo).length;
+}
+
+/** Số ụ nỏ tối đa theo cấp Điện. */
+export function uNoLimit(state: GameState): number {
+  return U_NO.limit[dienLevel(state) - 1] ?? 0;
+}
+
+/** Dựng được ụ nỏ trên ô (x, z) không: phải là đoạn thành Cổ Loa còn nguyên, chưa có ụ, từ chương 4. */
+export function canPlaceUNo(state: GameState, x: number, z: number): Result<Building> {
+  if (!inChapter4(state)) return fail('canChuong4');
+  const b = buildingAt(state, x, z);
+  if (!b || b.type !== 'thanh') return fail('canThanh');
+  if (b.uNo) return fail('daCoUNo');
+  if (b.damaged) return fail('canThanh');
+  if (uNoCount(state) >= uNoLimit(state)) return fail('datGioiHan');
+  if (!canAfford(state, U_NO.cost)) return fail('thieuTaiNguyen');
+  return ok(b);
+}
+
+/** Dựng ụ nỏ lên đoạn thành ở ô (x, z). */
+export function placeUNo(state: GameState, x: number, z: number): Result<Building> {
+  const check = canPlaceUNo(state, x, z);
+  if (!check.ok) return check;
+  pay(state, U_NO.cost);
+  check.value.uNo = 'ok';
+  return check;
+}
+
+/** Giá sửa một ụ nỏ hư: một phần giá dựng, như mọi công trình. */
+export function uNoRepairCost(): Cost {
+  const cost: Cost = {};
+  for (const r of RESOURCE_IDS) if (U_NO.cost[r]) cost[r] = Math.max(5, Math.round((U_NO.cost[r]! * REPAIR_FRACTION) / 5) * 5);
+  return cost;
+}
+
+/** Sửa ụ nỏ hư trên đoạn thành `id`: phải sửa thành trước. */
+export function repairUNo(state: GameState, id: number): Result<Building> {
+  const b = findBuilding(state, id);
+  if (!b || !b.uNo) return fail('khongCoUNo');
+  if (b.uNo !== 'hu') return fail('khongHuHong');
+  if (b.damaged) return fail('canThanh');
+  if (state.raid.phase === 'battle') return fail('dangCoGiac');
+  const cost = uNoRepairCost();
+  if (!canAfford(state, cost)) return fail('thieuTaiNguyen');
+  pay(state, cost);
+  b.uNo = 'ok';
+  return ok(b);
 }
 
 // ---------- Giặc Ân đánh kinh đô ----------
@@ -1119,18 +1208,24 @@ function landFoe(state: GameState): 'yeu' | 'trieu' | null {
 
 /**
  * Đợt sắp tới là ai: chương 1 giặc Ân; chương 2 mùa lũ; chương 3 thì giặc trên bộ và mùa lũ xen nhau,
- * đợt trước là giặc trên bộ thì đợt này là lũ.
+ * đợt trước là giặc trên bộ thì đợt này là lũ. Chương 4: thủy binh Triệu và lũ xen nhau; từ khi lẫy nỏ thần
+ * bị tráo thì ba đợt thay phiên: thủy binh → quân Triệu trên bộ → lũ.
  */
 export function nextFoe(state: GameState): Foe {
   const raid = state.raid;
   if (raid.phase !== 'idle') return raid.foe;
+  if (inChapter4(state)) {
+    if (raid.foe === 'thuyBinh') return state.adv.layTrao ? 'trieu' : 'thuy';
+    if (raid.foe === 'trieu' && state.adv.layTrao) return 'thuy';
+    return 'thuyBinh';
+  }
   if (!floodSeason(state)) return 'an';
   const land = landFoe(state);
   return land && raid.foe !== land ? land : 'thuy';
 }
 
-/** Đợt giặc này thuộc chương nào, để chọn tướng ra trận. */
-const FOE_CHAPTER: Record<Foe, Chapter> = { an: 1, thuy: 2, yeu: 3, trieu: 3 };
+/** Đợt giặc này thuộc chương nào, để chọn tướng ra trận. Thủy binh như quân Triệu: An Dương Vương giữ kinh đô. */
+const FOE_CHAPTER: Record<Foe, Chapter> = { an: 1, thuy: 2, yeu: 3, trieu: 3, thuyBinh: 3 };
 
 function finishRaid(state: GameState): void {
   const raid = state.raid;
@@ -1165,6 +1260,10 @@ function finishRaid(state: GameState): void {
     raid.trieu += 1;
     if (won) raid.trieuHeld += 1;
   }
+  if (battle.foe === 'thuyBinh') {
+    raid.thuyBinh += 1;
+    if (won) raid.thuyBinhHeld += 1;
+  }
   restAfter(state, battle);
   raid.wave = battle.wave;
   raid.phase = 'idle';
@@ -1187,6 +1286,15 @@ export function scheduleLandRaid(state: GameState): void {
   if (landFoe(state)) raid.foe = 'thuy';
 }
 
+/** Vào chương 4: đợt thủy binh đầu tới sau một lúc (không muộn hơn lịch sẵn có). */
+export function scheduleThuyBinh(state: GameState): void {
+  const raid = state.raid;
+  if (raid.phase !== 'idle') return;
+  raid.nextAt = Math.min(raid.nextAt ?? Infinity, state.clock + FIRST_THUY_BINH_MS);
+  // Đợt tới phải là thủy binh: coi như đợt trước là lũ.
+  raid.foe = 'thuy';
+}
+
 /** Lịch giặc: báo trước, tràn vào, đánh, rồi hẹn đợt sau. Chỉ chạy theo đồng hồ chơi. */
 function updateRaid(state: GameState, ms: number): void {
   const raid = state.raid;
@@ -1205,17 +1313,27 @@ function updateRaid(state: GameState, ms: number): void {
     raid.foe = nextFoe(state);
     raid.phase = 'warning';
     const roll = (raid.wave * 2654435761) % 7 < 4;
-    raid.side = raid.foe === 'thuy' ? (roll ? 'nam' : 'dong') : roll ? 'bac' : 'tay';
+    // Lũ và thủy binh tới từ sông (phía nam hay đông), giặc trên bộ tới từ bìa rừng (phía bắc hay tây).
+    raid.side = raid.foe === 'thuy' || raid.foe === 'thuyBinh' ? (roll ? 'nam' : 'dong') : roll ? 'bac' : 'tay';
     raid.startsAt = state.clock + RAID_WARNING_MS;
   }
   if (raid.phase === 'warning' && state.clock >= raid.startsAt) {
     raid.phase = 'battle';
     const foe = raid.foe;
+    const hero = heroFor(state, FOE_CHAPTER[foe]);
     raid.battle = startBattle(state, raid.wave + 1, raid.side, {
-      hero: heroFor(state, FOE_CHAPTER[foe]),
+      // Lẫy nỏ thần đã bị tráo: giữ kinh đô thì An Dương Vương không còn Nỏ thần.
+      hero: hero?.kind === 'anDuong' && state.adv.layTrao ? { ...hero, layTrao: true } : hero,
       bonus: troopBonus(state),
       flood: foe === 'thuy' ? { n: raid.floods + 1, level: nextFloodLevel(state) } : null,
-      land: foe === 'yeu' ? { foe, n: raid.nights + 1 } : foe === 'trieu' ? { foe, n: raid.trieu + 1 } : null,
+      land:
+        foe === 'yeu'
+          ? { foe, n: raid.nights + 1 }
+          : foe === 'trieu'
+            ? { foe, n: raid.trieu + 1 }
+            : foe === 'thuyBinh'
+              ? { foe, n: raid.thuyBinh + 1 }
+              : null,
       crossbows: hasCoLoa(state),
       arms: state.arms,
     });

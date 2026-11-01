@@ -792,3 +792,56 @@ export function makeCrossbowStand(): THREE.Group {
   g.add(b);
   return g;
 }
+
+// ---------- Chương 4: lính nỏ, thủy binh Triệu, thuyền giặc, ụ nỏ ----------
+
+/** Thuyền giặc Triệu: thân đen dài, mũi cong vểnh lên như móc câu, cột buồm và buồm đỏ. Dài theo trục z (mũi ra trước). */
+export function makeEnemyBoat(): THREE.Group {
+  const m = new ToonModel(inkThin);
+  const p = m.plain;
+  p.box(0.5, 0.22, 1.6, C.trieuCloth, 0, 0.11, 0);
+  // Sàn gỗ sẫm, viền mạn đỏ chạy dọc hai bên.
+  p.box(0.4, 0.02, 1.5, C.woodDark, 0, 0.225, 0);
+  for (const sx of [-1, 1]) p.box(0.05, 0.06, 1.62, C.trieuRed, sx * 0.25, 0.24, 0);
+  // Mũi cong vểnh như móc câu, đuôi vát lên.
+  p.box(0.36, 0.12, 0.5, C.trieuCloth, 0, 0.28, 0.95, [-0.6, 0, 0]);
+  p.cone(0.08, 0.34, C.trieuCloth, 0, 0.6, 1.16, [-0.2, 0, 0], 5);
+  p.box(0.36, 0.12, 0.4, C.trieuCloth, 0, 0.24, -0.92, [0.5, 0, 0]);
+  // Cột buồm và buồm đỏ hình chữ nhật có nẹp tre.
+  p.cyl(0.03, 0.035, 1.5, C.woodDark, 0, 0.95, 0.15, undefined, 6);
+  m.band.box(0.86, 0.8, 0.03, C.trieuRed, 0, 1.15, 0.12);
+  for (const y of [0.85, 1.15, 1.45]) p.box(0.9, 0.025, 0.04, C.woodDark, 0, y, 0.12);
+  // Mái chèo hai bên mạn.
+  for (const s of [-1, 1]) for (const z of [-0.4, 0.3]) p.box(0.04, 0.04, 0.6, C.woodDark, s * 0.4, 0.12, z, [0, s * 0.9, s * 0.4]);
+  return m.group();
+}
+
+/** Mặt thành Cổ Loa cao chừng này trên mặt đất (chỗ đặt ụ nỏ). */
+export const CITADEL_TOP = 1.39;
+
+/**
+ * Ụ nỏ trên mặt thành Cổ Loa: ụ đất đắp cao, mái tranh che nhỏ, một lính nỏ quỳ bắn ra ngoài. Gốc ở mặt thành.
+ * `broken`: ụ hư (thành đã sửa mà ụ chưa sửa): ụ đất sạt, cột gãy, không người.
+ */
+export function makeUNo(broken = false): THREE.Group {
+  const m = new ToonModel(inkThin);
+  const p = m.plain;
+  p.box(0.62, 0.18, 0.62, C.earthDark, 0, 0.09, 0);
+  if (broken) {
+    p.box(0.42, 0.12, 0.36, C.earth, -0.05, 0.2, 0.04, [0, 0.4, 0.15]);
+    p.cyl(0.025, 0.025, 0.4, C.woodDark, 0.12, 0.25, -0.1, [0, 0.6, Math.PI / 2 - 0.4], 5);
+    p.cyl(0.025, 0.025, 0.3, C.woodDark, -0.18, 0.3, 0.15, undefined, 5);
+    return m.group();
+  }
+  p.box(0.5, 0.14, 0.5, C.earth, 0, 0.25, 0);
+  for (const x of [-0.18, 0.18]) for (const z of [-0.18, 0.18]) p.cyl(0.025, 0.025, 0.5, C.woodDark, x, 0.55, z, undefined, 5);
+  m.band.cone(0.4, 0.26, C.thatch, 0, 0.9, 0, [0, Math.PI / 4, 0], 4);
+  const g = m.group();
+  // Lính nỏ quỳ một gối nhắm ra ngoài thành (bản tĩnh của lính có xương).
+  const man = bakeSoldier('no', 0, { act: 'fight', strike: 0.9 });
+  man.scale.setScalar(0.5);
+  man.position.set(0, 0.32, 0.05);
+  g.add(man);
+  return g;
+}
+
