@@ -16,8 +16,8 @@ export const RUONG_LOT = new Lot(4, [
   'aaaOObbb',
   'cccOOddd',
   'ccccdddd',
-  'GGccddTT',
-  'GGcc,,SS',
+  'GGccddSS',
+  'GGcc,,TT',
 ]);
 
 /** Cấp có từng phần (thửa, lối, phần góc). Trước cấp ấy chỗ của phần góc vẫn là ruộng cấy lúa. */
@@ -82,7 +82,7 @@ export function ruongSpots(level: number): LotSpot[] {
   const at: V3[] =
     level <= 2
       ? [[-g(0), -g(0), 0.5], [g(1), g(0), -0.5], [g(0), -g(0), 0.9], [-g(1), g(0), 0.3], [-g(1), -g(0), 1.1]]
-      : [[-g(1), -g(0), 0.5], [g(1), g(0), -0.5], [g(0), -g(1), 0.9], [-g(2), g(0), 0.3], [-g(0), -g(2), 1.1]];
+      : [[-g(1), -g(0), 0.5], [g(0), g(0), -0.5], [g(0), -g(1), 0.9], [-g(2), g(0), 0.3], [-g(0), -g(2), 1.1]];
   return at.map(([x, z, ry]) => ({ job: 'nong' as const, x, y: 0.06, z, ry }));
 }
 
@@ -192,7 +192,7 @@ export function makeRuong(level: number): THREE.Group {
 
   // Lúa: cấp càng cao khóm càng cao, càng chín vàng; cấp 6–8 cao thêm.
   const color = new THREE.Color(C.rice).lerp(new THREE.Color(C.ripe), (lv - 1) / 4);
-  const h = 0.18 + lv * 0.08 + 0.07 * up;
+  const h = 0.16 + lv * 0.075 + 0.04 * up;
   const r = 0.08 + lv * 0.012;
   const n = rowsFor(level);
   const rand = seeded(23);
@@ -216,10 +216,10 @@ export function makeRuong(level: number): THREE.Group {
   p.box(0.5, bank * 0.32, 0.14, C.earth, P.x, bank * 0.16, EDGE - 0.59);
 
   if (has('T')) {
-    // Trâu đứng nghỉ trên bờ góc trước bên phải, quay mặt ra phía trước.
+    // Trâu đứng nghỉ trên bờ góc trước bên phải, ngoảnh mặt về phía trước (thấp, đứng trước bó lúa).
     const T = L.zone('T');
     mound(p, T, bank);
-    turned(p, T.x - 0.08, bank, T.z, Math.PI / 2 - 0.4, () => buffalo(p, 0, 0));
+    turned(p, T.x - 0.08, bank, T.z - 0.05, Math.PI / 2 - 0.25, () => buffalo(p, 0, 0));
   }
   if (has('C')) {
     // Chòi canh ruộng trên gò góc sau bên trái.
@@ -228,16 +228,16 @@ export function makeRuong(level: number): THREE.Group {
     watchHut(m, Cz.x + 0.05, Cz.z + 0.05, bank, level, roof);
   }
   if (has('S')) {
-    // Bó lúa đã gặt dựng chụm trên bờ, đụn rơm quanh cây cọc ở góc.
+    // Bó lúa đã gặt dựng chụm trên bờ, đụn rơm quanh cây cọc sát mép phải.
     const S = L.zone('S');
     mound(p, S, bank);
-    for (const [x, z] of [[1.12, 1.64], [1.34, 1.74], [1.16, 1.86]] as const) {
+    for (const [x, z] of [[1.14, 1.16], [1.36, 1.24], [1.18, 1.38]] as const) {
       p.cyl(0.08, 0.12, 0.46, C.ripe, x, bank + 0.23, z, [0.1, 0, -0.1], 6);
       p.cone(0.12, 0.2, C.bronzeLight, x, bank + 0.55, z, undefined, 6);
     }
-    p.cyl(0.22, 0.25, 0.28, C.thatch, 1.72, bank + 0.14, 1.74, undefined, 8);
-    p.cone(0.25, 0.34, C.thatchDark, 1.72, bank + 0.45, 1.74, undefined, 8);
-    p.cyl(0.015, 0.015, 0.2, C.woodDark, 1.72, bank + 0.68, 1.74, undefined, 4);
+    p.cyl(0.22, 0.25, 0.28, C.thatch, 1.72, bank + 0.14, 1.24, undefined, 8);
+    p.cone(0.25, 0.34, C.thatchDark, 1.72, bank + 0.45, 1.24, undefined, 8);
+    p.cyl(0.015, 0.015, 0.2, C.woodDark, 1.72, bank + 0.68, 1.24, undefined, 4);
   }
   if (has('G')) {
     // Mương nước giữa hai bờ đất, hai cột giữ trục guồng; máng tre từ đỉnh guồng dẫn nước vào thửa trước bên trái.

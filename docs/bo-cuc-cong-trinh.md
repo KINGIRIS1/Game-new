@@ -109,14 +109,15 @@ F . , , . F
 ```
 
 - `S` cấp 1, sạp chợ bạt đỏ.
-- `,` cấp 1, lối chợ ra cầu tàu.
-- `=` cấp 1, sàn bến gỗ dọc mép sông.
-- `G` cấp 1, đầu cầu tàu chìa ra sông (cấp 3: cầu tàu dài, có nhánh phụ; cấp 6: cổng bến có mái, cờ đuôi nheo).
-- `s` cấp 2, sạp chợ bạt chàm (cấp 7: lầu chợ hai tầng mái hình thuyền).
-- `K` cấp 4, nhà kho ven sông.
+- `,` cấp 1, lối chợ lát ván ra cầu tàu.
+- `=` cấp 1, sàn bến gỗ dọc mép sông, cọc cắm xuống nước.
+- `G` cấp 1, đầu cầu tàu chìa ra sông (cấp 3: cầu tàu dài, có nhánh phụ chìa sang trái ở đầu cầu; cấp 6: cổng bến có mái, cờ đuôi nheo).
+- `s` cấp 2, sạp chợ bạt chàm (cấp 7: lầu chợ hai tầng mái hình thuyền, chim đồng hai đầu nóc).
+- `K` cấp 4, nhà kho ven sông trên cột thấp. Cấp 1–3 chỗ này là đống hàng chờ xuống thuyền (chum, bao, hòm).
 - `F` cấp 5, cờ hai cột.
 - `W` cấp 8, kho hàng mái cong, chim đồng hai đầu nóc.
-- Thuyền nhỏ đậu cạnh cầu tàu (cấp 1), thuyền buôn lớn (cấp 6), thuyền thứ hai neo giữa sông (cấp 8).
+- Thuyền đậu dọc cầu tàu, phía bên phải cho camera thấy rõ: thuyền nhỏ sát cầu tàu (cấp 1); cấp 6 thuyền buôn lớn ghé sát cầu tàu, thuyền nhỏ dời ra ngoài; cấp 8 thuyền buôn thứ hai neo bên trái, ngoài nhánh phụ (thay cho neo giữa sông: sông chỉ rộng 3 ô, neo giữa sông thì chạm các thuyền khác).
+- Bốn người buôn: qua lại giữa hai dãy sạp, ở chân cầu tàu, sau chợ cạnh nhà kho, trước sạp đỏ.
 
 ### Nhà sàn: 2×2 → 3×3
 
@@ -200,36 +201,39 @@ V V V . . .
 6 6 , s s s
 ```
 
-- `V` cấp 1, vựa tròn trên cột, mái nón (cấp 5: vựa to, chóp đồng).
-- `,` cấp 1, lối vào.
-- `T` cấp 2, thang tre, thúng thóc.
-- `s` cấp 3, sân phơi thóc (mới; cấp 7: lát gạch).
+- `V` cấp 1, vựa tròn trên cột, mái nón, đứng trên nền đất đắp kè đá (cấp 5: vựa to, chóp đồng).
+- `,` cấp 1, lối vào ba phiến đá kê.
+- `T` cấp 2, thang tre dựa sàn vựa, thúng thóc (cấp 3: thêm thúng).
+- `s` cấp 3, sân phơi thóc: thóc trải, luống cào, cào gỗ, đống thóc, nia (mới; cấp 7: lát gạch).
 - `4` cấp 4, vựa phụ (cấp 8: kho sàn dài mái cong, chim đồng).
 - `6` cấp 6, cót thóc lớn trên vòng đá (cấp 7: cót cao, thêm đai tre).
+- Người giữ kho đi qua lại trên dải sân giữa vựa phụ và sân phơi.
 
 ### Doanh trại: 3×3 → 4×4
 
-Nhà dài để trống không vách chạy suốt phía sau, sân tập rộng ở giữa cho tướng đứng, đài tướng và chòi trống bên phải.
+Nhà dài để trống không vách chạy suốt phía sau, sân tập rộng ở giữa cho tướng đứng, chòi trống sau bên phải, đài tướng trước bên phải.
 
 ```
 H H H H H H H H
 H H H H H H H H
-h h . . . . 2 2
-h h . . . . 2 2
-h h . . X . . .
 h h . . . . 5 5
-g . . . . . 5 5
+h h . . . . 5 5
+h h . . X . . .
+h h . . . . 2 2
+g . . . . . 2 2
 . . . , , . . .
 ```
 
-- `H` cấp 1, nhà dài để trống không vách, mái thẳng.
-- `X` cấp 1, chỗ tướng đứng giữa sân.
-- `g` cấp 1, giá giáo đồng.
-- `,` cấp 1, cổng trại.
-- `2` cấp 2, đài tướng có chiếu cói, lọng đỏ.
+- `H` cấp 1, nhà dài để trống không vách, mái thẳng; sàn ván thấp, chiếu ngủ, chăn cuộn.
+- `X` cấp 1, chỗ tướng đứng giữa sân tập (đất nện sẫm hơn sân).
+- `g` cấp 1, giá giáo đồng chạy dọc mép trái.
+- `,` cấp 1, cổng trại: hai cột, xà ngang, vải đỏ, cờ đuôi nheo.
+- `2` cấp 2, đài tướng: nền đất đắp, sàn ván, chiếu cói, lan can đỏ, lọng đỏ.
 - `h` cấp 4, nhà dài thứ hai quay dọc bên trái.
-- `5` cấp 5, chòi trống trận.
-- Cấp 3: rào cọc vót nhọn quanh móng, chừa cổng giữa mặt trước. Trại giáo, trại cung, chuồng voi dựng sát doanh trại dùng cùng kiểu rào.
+- `5` cấp 5, chòi trống trận có mái nhọn, thang tre.
+- Đài tướng và chòi trống đổi chỗ so với bản đầu: chòi trống cao đứng trước tướng thì che tướng (camera nhìn từ trước bên phải), nên chòi lùi về sau cạnh nhà dài, đài tướng thấp ra trước.
+- Cấp 3: rào cọc vót nhọn hai bên và mặt trước (phía sau đã có nhà dài), chừa cổng giữa mặt trước. Trại giáo, trại cung, chuồng voi dựng sát doanh trại dùng cùng kiểu rào.
+- Hai lính gác: trong cổng bên trái, và giữa chòi trống với đài tướng; không ai đứng trước tướng.
 
 ### Trại giáo: 2×2 → 3×3
 

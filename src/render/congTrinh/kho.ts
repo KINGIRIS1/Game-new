@@ -47,8 +47,8 @@ export function makeKho(level: number): THREE.Group {
 
   // Vựa chính góc sau bên trái trên nền đất đắp kè đá: to hơn vựa cũ chừng 15–30%; cấp 5 to nhất, có chóp đồng.
   const V = L.zone('V');
-  const vx = V.x + 0.02;
-  const vz = V.z + 0.02;
+  const vx = V.x + 0.05;
+  const vz = V.z + 0.05;
   const vs = 1.35 * partScale(level);
   const mound = 0.46 * vs;
   p.cyl(mound + 0.05, mound + 0.07, 0.06, C.rock, vx, 0.06, vz, undefined, 12);
@@ -132,4 +132,4 @@ export function makeKho(level: number): THREE.Group {
   return m.group();
 }
 
-export const KHO: CongTrinh = { tiles: 3, make: makeKho, spots: khoSpots, view: { half: 3.2, lookY: 1.0, px: 110 } };
+export const KHO: CongTrinh = { tiles: 3, make: makeKho, spots: khoSpots, view: { half: 3.2, lookY: 1.0, px: 56 } };

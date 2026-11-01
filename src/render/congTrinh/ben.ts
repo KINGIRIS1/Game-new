@@ -26,14 +26,14 @@ const jettyEnd = (level: number) => (level >= 3 ? 3.35 : 2.5);
 
 /**
  * Bốn người buôn, mỗi người một cột x − z để khỏi che nhau (đi qua lại theo trục x):
- * qua lại giữa hai dãy sạp; trên cầu tàu nhận hàng; sau chợ trước nhà kho; trước sạp đỏ.
+ * qua lại giữa hai dãy sạp; ở chân cầu tàu nhận hàng; sau chợ cạnh nhà kho; trước sạp đỏ.
  */
 export function benSpots(): LotSpot[] {
   return [
     { job: 'buon', x: 0, y: LANE_Y, z: 0.05, ry: 0, walk: 0.3 },
-    { job: 'buon', x: -0.06, y: DECK_Y, z: 1.75, ry: Math.PI, walk: 0 },
+    { job: 'buon', x: -0.12, y: DECK_Y, z: 1.75, ry: Math.PI, walk: 0 },
     { job: 'buon', x: 0.25, y: 0.05, z: -0.95, ry: 0, walk: 0.15 },
-    { job: 'buon', x: -0.75, y: 0.05, z: 0.78, ry: 0, walk: 0.2 },
+    { job: 'buon', x: -0.6, y: 0.05, z: 0.75, ry: 0, walk: 0.15 },
   ];
 }
 
@@ -133,9 +133,9 @@ export function makeBen(level: number): THREE.Group {
     for (const dx of [-0.55, 0, 0.55]) for (const dz of [-0.3, 0.3]) p.cyl(0.045, 0.055, pk, C.woodDark, K.x + dx, pk / 2, K.z + dz, undefined, 6);
     p.box(1.25, 0.07, 0.78, C.wood, K.x, pk, K.z);
     m.band.box(1.0, 0.52, 0.6, C.woodLight, K.x, pk + 0.3, K.z);
-    p.box(0.24, 0.36, 0.03, C.woodDark, K.x + 0.25, pk + 0.22, K.z + 0.31);
+    p.box(0.24, 0.36, 0.03, C.woodDark, K.x + 0.36, pk + 0.22, K.z + 0.31);
     boatRoof(m, roof, { length: 1.45, width: 1.0, lift: 0.28, drop: 0.36, thickness: 0.06 }, K.x, pk + 0.8, K.z);
-    for (let i = 0; i < 3; i++) p.box(0.2, 0.04, 0.1, C.woodDark, K.x + 0.25, pk * (1 - (i + 1) / 4), K.z + 0.42 + i * 0.1);
+    for (let i = 0; i < 3; i++) p.box(0.2, 0.04, 0.1, C.woodDark, K.x + 0.4, pk * (1 - (i + 1) / 4), K.z + 0.42 + i * 0.1);
     p.cyl(0.11, 0.08, 0.26, C.soil, K.x - 0.3, 0.13, K.z, undefined, 7);
     p.cyl(0.1, 0.075, 0.24, C.soil, K.x - 0.05, 0.12, K.z + 0.05, undefined, 7);
   }

@@ -664,7 +664,8 @@ export class World {
       const east = ben.x + def.w === RIVER_START;
       const cx = wx(ben.x) + def.w / 2;
       const cz = wz(ben.z) + def.d / 2;
-      boat.position.set(east ? cx + 2.4 : cx - 0.6, WATER_Y - 0.02, east ? cz - 0.6 : cz + 2.4);
+      // Thuyền buôn ghé ngoài các thuyền neo của bến, gần bờ bên kia sông (sông rộng 3 ô).
+      boat.position.set(east ? cx + 3.8 : cx - 0.9, WATER_Y - 0.02, east ? cz - 0.9 : cz + 3.8);
       boat.rotation.y = east ? -Math.PI / 2 : 0;
       boat.userData.at = at;
       this.scene.add(boat);
@@ -708,30 +709,6 @@ export class World {
         if (d.scale) boat.scale.setScalar(d.scale);
         boat.userData.dock = waterY;
         group.add(boat);
-      }
-    } else if (b.type === 'ben') {
-      // Thuyền là con của bến, bến to theo cấp: chia cho cỡ bến để thuyền vẫn nổi đúng mặt nước.
-      const waterY = (WATER_Y - 0.02 - topY(ground)) / group.scale.y;
-      const boat = makeBoat();
-      boat.position.set(-0.15 * spread, waterY, 1.75 * spread);
-      boat.userData.dock = waterY;
-      group.add(boat);
-      if (b.level >= 6) {
-        // Bến cấp 6 trở lên có thuyền buôn lớn neo cạnh cầu tàu.
-        const trader = makeTradeBoat();
-        trader.position.set(1.35 * spread, waterY, 2.5 * spread);
-        trader.rotation.y = Math.PI / 2;
-        trader.userData.dock = waterY;
-        group.add(trader);
-      }
-      if (b.level >= 8) {
-        // Bến cấp 8: thuyền buôn thứ hai neo phía bên kia cầu tàu.
-        const trader = makeTradeBoat();
-        trader.position.set(-1.0 * spread, waterY, 3.3 * spread);
-        trader.rotation.y = -Math.PI / 2;
-        trader.scale.setScalar(0.85);
-        trader.userData.dock = waterY;
-        group.add(trader);
       }
     }
     if (b.damaged) {

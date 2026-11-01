@@ -1,8 +1,10 @@
 // Doanh trại 4×4: nhà dài để trống không vách chạy suốt phía sau, sân tập rộng ở giữa cho tướng đứng,
-// đài tướng và chòi trống bên phải; nhà dài thứ hai quay dọc bên trái (cấp 4). Bản vẽ ở docs/bo-cuc-cong-trinh.md.
+// chòi trống sau bên phải, đài tướng trước bên phải; nhà dài thứ hai quay dọc bên trái (cấp 4).
+// Bản vẽ ở docs/bo-cuc-cong-trinh.md. Camera nhìn từ trước bên phải nên phần cao (chòi trống) đứng phía sau,
+// phía trước tướng chỉ có phần thấp (đài tướng, rào) để không che tướng.
 
 import type * as THREE from 'three';
-import { banner, coneRoof, drum, parasol, roofFor } from '../buildings';
+import { coneRoof, drum, parasol, roofFor } from '../buildings';
 import { Lot } from '../lot';
 import { C } from '../palette';
 import { saddleRoof } from '../shapes';
@@ -12,22 +14,22 @@ import { type CongTrinh, type LotSpot, yard } from './chung';
 export const DOANH_TRAI_LOT = new Lot(4, [
   'HHHHHHHH',
   'HHHHHHHH',
-  'hh....22',
-  'hh....22',
-  'hh..X...',
   'hh....55',
-  'g.....55',
+  'hh....55',
+  'hh..X...',
+  'hh....22',
+  'g.....22',
   '...,,...',
 ]);
 
 /** Chỗ tướng đứng giữa sân tập (tâm khối X, tọa độ móng): sân để trống quanh đó cho tướng to. */
 export const DOANH_TRAI_HERO = { x: DOANH_TRAI_LOT.zone('X').x, z: DOANH_TRAI_LOT.zone('X').z };
 
-/** Hai lính gác: một đứng trong cổng trại, một đứng trước đài tướng nhìn ra sân. */
+/** Hai lính gác, mỗi người một cột x − z, không đứng trước tướng: một trong cổng trại bên trái, một giữa chòi trống và đài tướng. */
 export function doanhTraiSpots(): LotSpot[] {
   return [
-    { job: 'linhGac', x: -0.85, y: 0.06, z: 1.55, ry: 0.2 },
-    { job: 'linhGac', x: 1.3, y: 0.06, z: 0.22, ry: -1.0 },
+    { job: 'linhGac', x: -1.15, y: 0.06, z: 1.45, ry: 0.3 },
+    { job: 'linhGac', x: 1.55, y: 0.06, z: 0.15, ry: -1.0 },
   ];
 }
 
@@ -83,41 +85,46 @@ export function makeDoanhTrai(level: number): THREE.Group {
   const H = L.zone('H');
   nhaDai(m, H.x, H.z + 0.05, 3.3, 0.72, 'x');
 
-  // Giá giáo đồng góc trước bên trái: hai cột, hai xà, năm cây giáo mũi đồng.
+  // Giá giáo đồng góc trước bên trái, chạy dọc mép trái: hai cột, hai xà, năm cây giáo mũi đồng.
   const g = L.zone('g');
-  const gz = g.z + 0.08;
-  const gx0 = g.x - 0.05;
-  const gx1 = gx0 + 0.72;
-  for (const x of [gx0, gx1]) p.cyl(0.03, 0.035, 0.95, C.woodDark, x, 0.47, gz, undefined, 5);
-  for (const y of [0.35, 0.85]) p.box(gx1 - gx0 + 0.08, 0.05, 0.06, C.wood, (gx0 + gx1) / 2, y, gz);
+  const rx = g.x + 0.03;
+  const rz0 = g.z;
+  const rz1 = rz0 + 0.6;
+  for (const z of [rz0, rz1]) p.cyl(0.03, 0.035, 0.95, C.woodDark, rx, 0.47, z, undefined, 5);
+  for (const y of [0.35, 0.85]) p.box(0.06, 0.05, rz1 - rz0 + 0.08, C.wood, rx, y, (rz0 + rz1) / 2);
   for (let i = 0; i < 5; i++) {
-    const x = gx0 + 0.08 + i * 0.14;
-    p.cyl(0.015, 0.015, 1.2, C.woodDark, x, 0.62, gz + 0.03, undefined, 4);
-    p.cone(0.04, 0.16, C.bronze, x, 1.3, gz + 0.03, undefined, 4);
+    const z = rz0 + 0.06 + i * 0.12;
+    p.cyl(0.015, 0.015, 1.2, C.woodDark, rx + 0.03, 0.62, z, undefined, 4);
+    p.cone(0.04, 0.16, C.bronze, rx + 0.03, 1.3, z, undefined, 4);
   }
 
-  // Cổng trại giữa mặt trước: hai cột, xà ngang, vải đỏ; cờ đỏ cạnh cổng.
+  // Cổng trại giữa mặt trước: hai cột đầu vót, xà ngang, vải đỏ, cờ đuôi nheo đỏ trên đầu cột.
   const gate = L.zone(',');
   const gtz = gate.z + 0.08;
   for (const sx of [-1, 1]) {
-    p.cyl(0.06, 0.07, 1.6, C.woodDark, sx * 0.62, 0.8, gtz, undefined, 6);
-    p.cone(0.075, 0.16, C.wood, sx * 0.62, 1.68, gtz, undefined, 6);
+    p.cyl(0.06, 0.07, 1.6, C.woodDark, sx * 0.6, 0.8, gtz, undefined, 6);
+    p.cone(0.075, 0.16, C.wood, sx * 0.6, 1.68, gtz, undefined, 6);
+    m.band.box(0.03, 0.34, 0.22, C.red, sx * 0.6, 1.46, gtz - 0.14);
   }
-  p.box(1.5, 0.09, 0.12, C.wood, 0, 1.45, gtz);
+  p.box(1.46, 0.09, 0.12, C.wood, 0, 1.45, gtz);
   m.band.box(0.7, 0.22, 0.04, C.red, 0, 1.28, gtz + 0.05);
-  banner(m, 1.05, 1.75, 2.2, C.red);
 
   if (level >= 2) {
-    // Đài tướng: nền đất đắp viền đá, bậc quay ra sân, chiếu cói, lọng đỏ che.
+    // Đài tướng trước bên phải: nền đất đắp kè đá, sàn ván, chiếu cói viền đỏ, lan can đỏ hai phía ngoài,
+    // bậc đá quay ra sân, lọng đỏ che góc sau.
     const d = L.zone('2');
     const dx = d.x - 0.07;
     const dz = d.z - 0.02;
-    p.box(0.78, 0.22, 0.8, C.earthDark, dx, 0.11, dz);
-    p.box(0.82, 0.05, 0.84, C.rock, dx, 0.22, dz);
-    for (let i = 0; i < 2; i++) p.box(0.14, 0.08 + i * 0.07, 0.42, C.rock, dx - 0.48 + i * 0.07, (0.08 + i * 0.07) / 2, dz + 0.05);
-    p.box(0.56, 0.02, 0.5, C.thatch, dx + 0.02, 0.255, dz + 0.04);
-    m.band.box(0.56, 0.021, 0.06, C.red, dx + 0.02, 0.256, dz + 0.27);
-    parasol(m, dx + 0.22, dz - 0.22, 1.25);
+    const top = 0.3;
+    p.box(0.8, 0.08, 0.82, C.rock, dx, 0.04, dz);
+    p.box(0.76, top - 0.08, 0.78, C.earthDark, dx, 0.08 + (top - 0.08) / 2, dz);
+    p.box(0.8, 0.05, 0.82, C.wood, dx, top, dz);
+    for (let i = 0; i < 2; i++) p.box(0.13, top * (0.4 + 0.3 * i), 0.44, C.rock, dx - 0.47 + i * 0.07, (top * (0.4 + 0.3 * i)) / 2, dz + 0.06);
+    p.box(0.5, 0.02, 0.5, C.thatch, dx + 0.02, top + 0.035, dz + 0.04);
+    m.band.box(0.5, 0.022, 0.06, C.red, dx + 0.02, top + 0.036, dz + 0.27);
+    m.band.box(0.8, 0.14, 0.04, C.red, dx, top + 0.1, dz - 0.39);
+    m.band.box(0.04, 0.14, 0.82, C.red, dx + 0.38, top + 0.1, dz);
+    parasol(m, dx + 0.22, dz - 0.22, 1.3);
   }
   if (level >= 3) {
     // Rào cọc vót nhọn quanh móng (hai bên và mặt trước; phía sau đã có nhà dài), chừa cổng giữa mặt trước.
@@ -145,10 +152,10 @@ export function makeDoanhTrai(level: number): THREE.Group {
     nhaDai(m, h.x + 0.03, h.z + 0.14, 1.5, 0.68, 'z');
   }
   if (level >= 5) {
-    // Chòi trống trận góc trước bên phải: chân cột cao, sàn có lan can đỏ, trống đồng, mái tranh nhọn, thang tre.
+    // Chòi trống trận sau bên phải, cạnh nhà dài: chân cột cao, sàn có lan can đỏ, trống đồng, mái tranh nhọn, thang tre.
     const c = L.zone('5');
     const x = c.x - 0.05;
-    const z = c.z + 0.02;
+    const z = c.z + 0.05;
     const fy = 1.25;
     for (const ox of [-0.27, 0.27]) for (const oz of [-0.27, 0.27]) p.cyl(0.045, 0.055, fy, C.woodDark, x + ox, fy / 2, z + oz, undefined, 6);
     p.box(0.72, 0.07, 0.72, C.wood, x, fy, z);
@@ -166,4 +173,4 @@ export function makeDoanhTrai(level: number): THREE.Group {
   return m.group();
 }
 
-export const DOANH_TRAI: CongTrinh = { tiles: 4, make: makeDoanhTrai, spots: doanhTraiSpots, view: { half: 4.3, lookY: 1.0, px: 96 } };
+export const DOANH_TRAI: CongTrinh = { tiles: 4, make: makeDoanhTrai, spots: doanhTraiSpots, view: { half: 4.3, lookY: 1.0, px: 48 } };
