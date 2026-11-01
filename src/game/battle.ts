@@ -32,6 +32,8 @@ import {
   SWIMMERS,
   TOWER,
   TRAP_DMG,
+  TT_SUMMON,
+  TT_WAVE,
   UNITS,
   UNIT_TYPES,
   floodForces,
@@ -103,11 +105,15 @@ export interface Fighter {
   swing: number;
   /** Bị đá Dời non giữ chân: còn bao nhiêu giây chưa đi, chưa đánh được. */
   stun?: number;
+  /** Bị sóng Thủy Tinh quét: còn bao nhiêu giây đi chậm. */
+  slow?: number;
+  /** Thủy Tinh: còn bao lâu tới lần hô sóng, lần gọi thủy quái tiếp theo, và đã gọi mấy lần. */
+  spell?: { wave: number; summon: number; summoned: number };
 }
 
 export interface BattleEvent {
   seq: number;
-  kind: 'shot' | 'trap' | 'wreck' | 'loot' | 'die' | 'rally' | 'fire' | 'smash' | 'exhaust' | 'hill' | 'rocks' | 'drown' | 'volley' | 'shield';
+  kind: 'shot' | 'trap' | 'wreck' | 'loot' | 'die' | 'rally' | 'fire' | 'smash' | 'exhaust' | 'hill' | 'rocks' | 'drown' | 'volley' | 'shield' | 'wave' | 'summon';
   x: number;
   z: number;
   tx?: number;
@@ -146,6 +152,8 @@ export interface Battle {
   hero: (HeroSetup & { down: boolean }) | null;
   /** Phần cộng thêm vào máu và sát thương quân ta (Đền Phù Đổng). */
   bonus: number;
+  /** Trận ngoài bãi: giặc khỏe gấp mấy lần (để thủy quái Thủy Tinh gọi lên khỏe như giặc của màn). */
+  hpScale?: number;
   /** Trận cuối chương 1 vừa thắng: phần vẽ cho Gióng bay về trời. */
   ascend?: boolean;
   /** Trận cuối chương 2 vừa thắng: phần vẽ cho núi Tản Viên dâng cao dưới chân Sơn Tinh. */
@@ -396,6 +404,7 @@ const PER_LINE = 8;
 export function startFieldBattle(setup: FieldSetup): Battle {
   const battle = newBattle(setup.id, 'field', setup.stage, 'bac');
   battle.bonus = setup.bonus ?? 0;
+  battle.hpScale = setup.hpScale;
   if (setup.arms) battle.arms = { ...setup.arms };
   const rand = rng(setup.id * 7919 + setup.stage);
   const ours: Record<Row, FighterKind[]> = { tien: [], trung: [], hau: [] };
@@ -566,7 +575,7 @@ function moveToward(f: Fighter, tx: number, tz: number, dt: number, mult = 1): b
   const dx = tx - f.x;
   const dz = tz - f.z;
   const d = Math.hypot(dx, dz);
-  const step = statsOf(f.kind).speed * mult * dt;
+  const step = statsOf(f.kind).speed * mult * (f.slow && f.slow > 0 ? TT_WAVE.slow : 1) * dt;
   if (d > 1e-6) f.face = Math.atan2(dx, dz);
   if (d <= step) {
     f.x = tx;
@@ -898,12 +907,59 @@ export function stepField(battle: Battle, dt: number): boolean {
     if (!isAlive(f)) continue;
     f.cd -= dt;
     f.swing = Math.max(0, f.swing - dt);
+    if (f.slow) f.slow = Math.max(0, f.slow - dt);
+    if (f.kind === 'thuyTinh') stepThuyTinh(battle, f, dt);
     stepChase(battle, f, dt);
   }
   separate(battle);
   if (enemiesLeft(battle) === 0) battle.outcome = 'win';
   else if (alliesLeft(battle) === 0 || battle.t > FIELD.maxS) battle.outcome = 'lose';
   return battle.outcome !== null;
+}
+
+/** Thủy Tinh làm phép: hô mưa gọi gió (sóng quét đẩy lùi quân ta) và gọi thủy quái lên đánh tiếp. */
+function stepThuyTinh(battle: Battle, f: Fighter, dt: number): void {
+  const spell = (f.spell ??= { wave: TT_WAVE.first, summon: TT_SUMMON.first, summoned: 0 });
+  if (f.stun && f.stun > 0) return;
+  spell.wave -= dt;
+  spell.summon -= dt;
+  const foe = nearestEnemyOf(battle, f);
+  if (spell.wave <= 0 && foe) {
+    const d = Math.hypot(foe.x - f.x, foe.z - f.z);
+    if (d > TT_WAVE.reach) spell.wave = 0.5;
+    else {
+      const dx = d > 1e-6 ? (foe.x - f.x) / d : 0;
+      const dz = d > 1e-6 ? (foe.z - f.z) / d : 1;
+      for (const o of battle.fighters) {
+        if (o.side !== 'ta' || !isAlive(o)) continue;
+        const along = (o.x - f.x) * dx + (o.z - f.z) * dz;
+        const across = Math.abs((o.x - f.x) * dz - (o.z - f.z) * dx);
+        if (along < -0.3 || along > TT_WAVE.length || across > TT_WAVE.width / 2) continue;
+        damageFighter(battle, { kind: 'thuyTinh', dmg: TT_WAVE.dmg }, o);
+        if (!isAlive(o)) continue;
+        o.x = clampField(o.x + dx * TT_WAVE.push, FIELD.w);
+        o.z = clampField(o.z + dz * TT_WAVE.push, FIELD.d);
+        o.slow = TT_WAVE.slowS;
+      }
+      f.face = Math.atan2(dx, dz);
+      f.swing = 0.4;
+      spell.wave = TT_WAVE.cooldown;
+      emit(battle, { kind: 'wave', x: f.x, z: f.z, tx: f.x + dx * TT_WAVE.length, tz: f.z + dz * TT_WAVE.length });
+    }
+  }
+  if (spell.summon <= 0 && spell.summoned < TT_SUMMON.times) {
+    const hp = ENEMIES.tomBinh.hp * (battle.hpScale ?? 1) * FIELD.hpMul;
+    for (let i = 0; i < TT_SUMMON.count; i++) {
+      const a = (i / TT_SUMMON.count) * Math.PI * 2 + spell.summoned;
+      const t = newFighter(battle, 'giac', 'tomBinh', clampField(f.x + Math.sin(a) * 1.1, FIELD.w), clampField(f.z + Math.cos(a) * 1.1, FIELD.d), hp);
+      battle.fighters.push(t);
+      battle.total += 1;
+    }
+    spell.summoned += 1;
+    spell.summon = TT_SUMMON.cooldown;
+    f.swing = 0.4;
+    emit(battle, { kind: 'summon', x: f.x, z: f.z });
+  }
 }
 
 /** Rút quân khỏi trận ngoài bãi: lính còn sống được giữ lại, không có thưởng. */

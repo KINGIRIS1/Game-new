@@ -354,9 +354,14 @@ Chủ dự án đã chốt bốn điểm:
 | Cá phun nước | 50 | 9 | phun nước xa 3,6 ô | voi chiến |
 | Cá sấu | 260 | 22 | lao nhanh, gấp đôi sát thương lên cung thủ ta | giáo binh |
 | Thuồng luồng (trùm màn 12) | 750 | 26 | | |
-| Thủy Tinh (trùm màn 16) | 1400 | 32 | đứng trên ngọn sóng, cầm đinh ba | |
+| Thủy Tinh (trùm màn 16) | 1400 | 32 | đứng trên ngọn sóng, cầm đinh ba; có hai phép (xem dưới) | |
 
 Vòng khắc chế của quân ta giữ nguyên: giáo binh thắng quân nặng, cung thủ thắng lính bộ, voi thắng quân bắn xa.
+
+**Phép của Thủy Tinh** (chủ dự án chọn có cả hai, thêm sau khi chơi thử; số ở `TT_WAVE`, `TT_SUMMON`):
+- **Hô mưa gọi gió**: lần đầu sau 6 giây, rồi cứ 12 giây, nếu quân ta trong tầm 8 ô. Một con sóng quét dải dài 6 ô, rộng 2,6 ô từ Thủy Tinh về phía quân ta gần nhất. Ai trúng mất 30 máu, bị đẩy lùi 1,4 ô, đi chậm còn nửa tốc độ trong 3 giây.
+- **Gọi thủy quái**: lần đầu sau 9 giây, rồi cứ 15 giây, gọi 3 tôm binh từ dưới nước lên quanh mình, khỏe như tôm binh của màn; tối đa 4 lần (12 con) mỗi trận.
+- Thêm hai phép thì màn 16 khó hơn hẳn: hạ máu giặc từ ×2,4 xuống ×1,8. Đo bằng test: người chơi thường có Sơn Tinh thắng ở cả ×1,9 (dư một bậc); không tướng, hay nửa quân, chơi giỏi vẫn thua.
 
 ### Lễ vật và Sơn Tinh
 
@@ -396,7 +401,7 @@ Vòng khắc chế của quân ta giữ nguyên: giáo binh thắng quân nặng
   | 13 | Làng chìm trong lũ | 14 tôm, 8 cá phun, 4 cá sấu | ×2,1 | cần Sơn Tinh |
   | 14 | Sông Đà cuồn cuộn | 14 tôm, 8 cá phun, 4 cá sấu | ×2,1 | cần Sơn Tinh, mở Dời non |
   | 15 | Chân núi Tản | 14 tôm, 9 cá phun, 4 cá sấu | ×2,5 | cần Sơn Tinh |
-  | 16 | Đỉnh Tản Viên | 12 tôm, 8 cá phun, 3 cá sấu, Thủy Tinh | ×2,4 | cần Sơn Tinh |
+  | 16 | Đỉnh Tản Viên | 12 tôm, 8 cá phun, 3 cá sấu, Thủy Tinh | ×1,8 | cần Sơn Tinh; Thủy Tinh có hai phép |
 
   - Mọi màn cần Điện cấp 5. Thưởng lần đầu từ 1200 gạo, 800 vỏ ốc, 600 đất đá, 150 sắt (màn 9) tới 3000 gạo, 2000 vỏ ốc, 2000 đất đá, 500 sắt (màn 16). Đánh lại được 30%.
   - Máu của màn 9–11 cao hơn màn 12–16 vì màn 9–11 có Gióng hiển linh hai kỹ năng, còn màn 12–14 Sơn Tinh mới có một kỹ năng.
