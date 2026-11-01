@@ -58,9 +58,11 @@ import {
   type GearId,
   type GiftId,
   type Row,
+  type TuongId,
   type Unlock,
   type UnitType,
 } from './defs';
+import { capOf, generals } from './doanhTrai';
 import { DIEN_HOME, GRID, areaStart, baseHeights, inGrid, isUnlocked, touchesRiver } from './map';
 
 export interface Building {
@@ -73,6 +75,10 @@ export interface Building {
   workers: number;
   /** Bị giặc phá: không làm ra gì, không chắn đường, cần sửa. */
   damaged?: boolean;
+  /** Doanh trại: tướng chỉ huy người chơi đã giao. Chưa giao thì tướng rảnh tự nhận (`commanders` ở `doanhTrai.ts`). */
+  tuong?: TuongId;
+  /** Doanh trại: số lính mỗi binh chủng người chơi bố trí giữ kinh đô ở đây. Chưa doanh trại nào có thì bố trí tự động. */
+  guard?: Record<UnitType, number>;
 }
 
 export interface RaidResult {
@@ -311,6 +317,12 @@ export type FailReason =
   | 'khongGhepDuoc'
   | 'canNoiO'
   | 'noiOHu'
+  | 'canTuongChiHuy'
+  | 'tuongChuaCo'
+  | 'daChiHuy'
+  | 'quaChoPhoBan'
+  | 'quaChoGiuThanh'
+  | 'traiDay'
   | 'khongPhaiTrangTri';
 
 export type Result<T = undefined> = { ok: true; value: T } | { ok: false; reason: FailReason };
@@ -394,7 +406,9 @@ export function countOf(state: GameState, type: BuildingType): number {
 }
 
 export function limitOf(state: GameState, type: BuildingType): number {
-  return BUILDINGS[type].limit[dienLevel(state) - 1];
+  const limit = BUILDINGS[type].limit[dienLevel(state) - 1];
+  // Mỗi doanh trại một tướng chỉ huy: có bao nhiêu tướng thì dựng được bấy nhiêu doanh trại.
+  return type === 'doanhTrai' ? Math.min(limit, generals(state).length) : limit;
 }
 
 /** Số chỗ đã dùng trong giới hạn `limitOf`: mỗi lầu nỏ tính là hai chòi canh; bốn loại đường chung một giới hạn. */
@@ -443,9 +457,10 @@ export function troopSpace(state: GameState): number {
   return UNIT_TYPES.reduce((n, k) => n + state.troops[k] * UNITS[k].space, 0);
 }
 
+/** Tổng chỗ quân của mọi doanh trại có tướng chỉ huy. */
 export function troopCap(state: GameState): number {
   let cap = 0;
-  for (const b of state.buildings) cap += BUILDINGS[b.type].troopCap?.[b.level - 1] ?? 0;
+  for (const b of state.buildings) if (b.type === 'doanhTrai') cap += capOf(state, b);
   return cap;
 }
 
@@ -589,11 +604,16 @@ export function canPlace(state: GameState, type: BuildingType, x: number, z: num
   if (def.barracksLevel && barracksLevel(state) < def.barracksLevel) return fail('canDoanhTrai');
   // Đổi vật liệu một ô đường không thêm ô nào.
   const swap = isRoad(type) && !!replacedWall(state, type, x, z);
-  if (!swap && usedOf(state, type) >= limitOf(state, type)) return fail('datGioiHan');
+  if (!swap && usedOf(state, type) >= limitOf(state, type)) return fail(needsGeneral(state, type) ? 'canTuongChiHuy' : 'datGioiHan');
   const why = fitsAt(state, type, x, z, occupancy(state));
   if (why) return fail(why);
   if (!canAfford(state, def.buildCost)) return fail('thieuTaiNguyen');
   return ok(undefined);
+}
+
+/** Hết chỗ dựng doanh trại vì thiếu tướng chỉ huy (cấp Điện vẫn cho dựng thêm). */
+export function needsGeneral(state: GameState, type: BuildingType): boolean {
+  return type === 'doanhTrai' && limitOf(state, type) < BUILDINGS.doanhTrai.limit[dienLevel(state) - 1];
 }
 
 /** Phần chỗ đặt của `canPlace`: móng nằm trong vùng đã khai phá, không chồng công trình khác (thành đắp đè lũy được), bến sát sông. */

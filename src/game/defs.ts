@@ -347,7 +347,8 @@ export const BUILDINGS: Record<BuildingType, BuildingDef> = {
     production: [{}, {}, {}, {}, {}],
     troopCap: [8, 14, 20, 28, 38],
     hp: [400, 460, 520, 600, 700],
-    limit: [0, 1, 1, 1, 1, 1, 1, 1],
+    // Mỗi doanh trại cần một tướng chỉ huy, nên số doanh trại còn tùy số tướng đã có (`limitOf`, `doanhTrai.ts`).
+    limit: [0, 4, 4, 4, 4, 4, 4, 4],
     minDien: 2,
     buildable: true,
     removable: false,
@@ -619,6 +620,25 @@ export const BUILDINGS: Record<BuildingType, BuildingDef> = {
 /** Đường đi hay đồ trang trí: chỉ để nhìn, không chắn giặc, không sợ lũ. */
 export const isDecor = (type: BuildingType): boolean => BUILDINGS[type].decor !== undefined;
 export const isRoad = (type: BuildingType): boolean => BUILDINGS[type].decor === 'duong';
+
+// ---------- Doanh trại, tướng chỉ huy, bố trí quân ----------
+
+/**
+ * Tướng chỉ huy doanh trại, mỗi doanh trại một tướng: Lạc tướng có từ đầu; Thánh Gióng khi thành tráng sĩ, Sơn Tinh khi
+ * rước Mị Nương, An Dương Vương khi có nỏ thần (về trời, về núi rồi vẫn chỉ huy). Doanh trại có tướng mới giữ chỗ quân.
+ */
+export type TuongId = 'lacTuong' | 'giong' | 'sonTinh' | 'anDuong';
+export const TUONG_IDS: TuongId[] = ['lacTuong', 'giong', 'sonTinh', 'anDuong'];
+/**
+ * Số chỗ quân tối đa mang ra một trận phó bản, theo cấp Điện (chỉ số 0 là cấp 1): bằng sức chứa doanh trại cao nhất
+ * dựng được ở cấp Điện ấy, không quá 38, để nhiều doanh trại không làm phó bản dễ đi.
+ */
+export const FIELD_CAP = [0, 14, 20, 28, 38, 38, 38, 38];
+/**
+ * Số chỗ quân tối đa bố trí giữ kinh đô (giặc, lũ, yêu tinh, quân Triệu), theo cấp Điện. Tới Điện 5 bằng phó bản;
+ * từ chương 2 nhích thêm 6 chỗ mỗi cấp. Lính còn lại là quân dự trữ.
+ */
+export const GUARD_CAP = [0, 14, 20, 28, 38, 44, 50, 56];
 
 /** Chòi canh lên tới cấp này mới ghép được thành lầu nỏ; một lầu nỏ tính bằng chừng này chòi canh. */
 export const LAU_NO_FROM_LEVEL = 8;

@@ -24,8 +24,22 @@ import {
   type GiftId,
   type Row,
   type SkillId,
+  type TuongId,
   type UnitType,
 } from '../game/defs';
+import {
+  armySpace,
+  canGuard,
+  capOf,
+  commanders,
+  generals,
+  guardCap,
+  guardManual,
+  guardPlan,
+  guardTargets,
+  guardTotal,
+  reserve,
+} from '../game/doanhTrai';
 import {
   barracksLevel,
   canAfford,
@@ -44,6 +58,7 @@ import {
   housing,
   isStarving,
   limitOf,
+  needsGeneral,
   usedOf,
   nextFloodLevel,
   raiseCostOf,
@@ -76,7 +91,7 @@ import { floodToleranceOf, groundOf } from '../game/terrain';
 import { tetOpen, tetStarted, type Banh } from '../game/tet';
 import type { Resolution } from '../render/world';
 import { formatDuration, vi } from '../text/vi';
-import { armyHtml, defaultPick, mapHtml, nextRow, stageHtml, stageResultHtml, type ArmyPick } from './campaign';
+import { armyHtml, defaultPick, mapHtml, nextRow, stageHtml, stageResultHtml, stepPick, type ArmyPick } from './campaign';
 import { armsHtml } from './binhKhi';
 import { advHtml } from './coLoa';
 import { costHtml, esc, fmt } from './format';
@@ -180,6 +195,9 @@ export type HudAction =
   | { kind: 'openMerchant' }
   | { kind: 'acceptOffer'; index: number }
   | { kind: 'train'; unit: UnitType }
+  | { kind: 'assignTuong'; id: number; tuong: TuongId }
+  | { kind: 'guardDelta'; id: number; unit: UnitType; delta: 1 | -1 }
+  | { kind: 'guardAuto' }
   | { kind: 'repair'; id: number }
   | { kind: 'repairAll' }
   | { kind: 'callRaid' }
@@ -357,6 +375,10 @@ export class Hud {
         return this.onAction({ kind: 'repair', id });
       case 'train':
         return this.onAction({ kind: 'train', unit: el.dataset.unit as UnitType });
+      case 'assignTuong':
+        return this.onAction({ kind: 'assignTuong', id, tuong: el.dataset.tuong as TuongId });
+      case 'guardDelta':
+        return this.onAction({ kind: 'guardDelta', id, unit: el.dataset.unit as UnitType, delta: Number(el.dataset.delta) < 0 ? -1 : 1 });
       case 'forgeArms':
         return this.onAction({ kind: 'forgeArms', unit: el.dataset.unit as UnitType });
       case 'applyMau':
@@ -733,7 +755,7 @@ export class Hud {
       } else if (dienLevel(state) < def.minDien) why = `Cần Điện cấp ${def.minDien}`;
       else if (def.barracksLevel && barracksLevel(state) < def.barracksLevel) why = vi.ui.needBarracks(def.barracksLevel);
       // Đường đầy giới hạn vẫn trải đè đổi vật liệu được.
-      else if (have >= max && !isRoad(type)) why = vi.reasons.datGioiHan;
+      else if (have >= max && !isRoad(type)) why = needsGeneral(state, type) ? vi.reasons.canTuongChiHuy : vi.reasons.datGioiHan;
       else if (!canAfford(state, def.buildCost)) why = vi.reasons.thieuTaiNguyen;
       // Bốn loại đường chung một giới hạn, ghi ở đầu nhóm.
       const count = isRoad(type) ? '' : ` · ${vi.ui.count(have, max)}`;
@@ -823,7 +845,7 @@ export class Hud {
 
     if (b.type === 'lauNo') rows.push(`<div class="stat"><span>${vi.ui.lauNoShots}</span><span></span></div>`);
     if (isDecor(b.type)) rows.push(`<div class="stat"><span></span><span class="muted">${vi.ui.decorOnly}</span></div>`);
-    if (b.type === 'doanhTrai') rows.push(this.barracksHtml(state));
+    if (b.type === 'doanhTrai') rows.push(this.barracksHtml(state, b));
     const home = UNIT_TYPES.find((k) => UNITS[k].home === b.type);
     if (home) rows.push(this.homeHtml(state, home));
     if (TET_TYPES.includes(b.type)) rows.push(tetHtml(state));
@@ -912,31 +934,90 @@ export class Hud {
 
   /** Bảng nơi ở riêng của một binh chủng: luyện binh chủng ấy ở đây. Tổng chỗ quân vẫn do doanh trại giữ. */
   private homeHtml(state: GameState, k: UnitType): string {
-    return `<div class="stat"><span>${vi.ui.troopSpace(troopSpace(state), troopCap(state))}</span></div>
+    return `${this.troopSpaceHtml(state)}
       <div class="units">${this.unitRowHtml(state, k)}</div>`;
   }
 
-  /** Các tướng ở doanh trại (và An Dương Vương ngự ở Điện): ai ra trận được, ai đang nghỉ. */
-  private generalsHtml(state: GameState): string {
-    const status = (resting: boolean, until: number, hienLinh = false) =>
-      resting ? `💤 ${vi.ui.heroRest(Math.ceil((until - state.clock) / 1000))}` : hienLinh ? vi.ui.heroHienLinh : vi.ui.heroReady;
-    const row = (icon: string, name: string, info: string, act = '') =>
-      `<div class="unit-row">
-        <span class="unit-icon">${icon}</span>
-        <span class="unit-info"><b>${name}</b><small>${info}</small></span>
-        ${act ? `<button class="btn small bronze" data-act="${act}">${vi.ui.heroOpen}</button>` : ''}
-      </div>`;
-    const rows = [row(vi.skills.trongTran.icon, vi.ui.lacTuong, vi.ui.lacTuongDesc)];
-    if (giongReady(state) || state.giong.ascended) {
-      rows.push(row('🐎', vi.ui.giong, status(giongResting(state), state.giong.restUntil, state.giong.ascended), 'openGiong'));
-    }
-    if (sonJoined(state)) rows.push(row('⛰️', vi.ui.son, status(sonResting(state), state.son.restUntil, state.son.won), 'openSon'));
-    if (advJoined(state)) rows.push(row('🏹', vi.ui.adv, `${status(advResting(state), state.adv.restUntil)} · ${vi.ui.advAtDien}`, 'openAdv'));
-    return `<h3>${vi.ui.generalsTitle}</h3><div class="units">${rows.join('')}</div>`;
+  /** Số chỗ quân đang dùng trên tổng chỗ của mọi doanh trại. */
+  private troopSpaceHtml(state: GameState): string {
+    return `<div class="stat"><span>${vi.ui.troopSpaceAll(troopSpace(state), troopCap(state), countOf(state, 'doanhTrai'))}</span></div>`;
   }
 
-  /** Doanh trại: nơi tướng ở, giữ tổng chỗ quân và điều binh. Mỗi binh chủng luyện ở nơi ở riêng. */
-  private barracksHtml(state: GameState): string {
+  /**
+   * Tướng chỉ huy các doanh trại: ai sẵn sàng ra trận, ai đang nghỉ; ai chỉ huy trại này, ai ở trại khác.
+   * Bấm "Giao trại này" để tướng ấy chỉ huy trại này (đang chỉ huy trại khác thì hai tướng đổi chỗ).
+   */
+  private generalsHtml(state: GameState, b: Building): string {
+    const map = commanders(state);
+    const status = (resting: boolean, until: number, hienLinh = false) =>
+      resting ? `💤 ${vi.ui.heroRest(Math.ceil((until - state.clock) / 1000))}` : hienLinh ? vi.ui.heroHienLinh : vi.ui.heroReady;
+    const info: Record<TuongId, () => string> = {
+      lacTuong: () => vi.ui.lacTuongDesc,
+      giong: () => status(giongResting(state), state.giong.restUntil, state.giong.ascended),
+      sonTinh: () => status(sonResting(state), state.son.restUntil, state.son.won),
+      anDuong: () => `${status(advResting(state), state.adv.restUntil)} · ${vi.ui.advAtDien}`,
+    };
+    const open: Partial<Record<TuongId, string>> = { giong: 'openGiong', sonTinh: 'openSon', anDuong: 'openAdv' };
+    const busy = state.raid.phase === 'battle';
+    const rows = generals(state).map((t) => {
+      const post = [...map].find(([, x]) => x === t)?.[0];
+      const here = post === b.id;
+      const where = here ? vi.ui.commandsHere : post !== undefined ? vi.ui.commandsOther : vi.ui.commandsNone;
+      const buttons: string[] = [];
+      if (!here) buttons.push(`<button class="btn small" data-act="assignTuong" data-id="${b.id}" data-tuong="${t}" ${busy ? 'disabled' : ''}>${vi.ui.assignHere}</button>`);
+      if (post !== undefined && !here) buttons.push(`<button class="btn small ghost" data-act="selectBuilding" data-id="${post}">${vi.ui.toPost} ›</button>`);
+      if (open[t]) buttons.push(`<button class="btn small bronze" data-act="${open[t]}">${vi.ui.heroOpen}</button>`);
+      return `<div class="unit-row ${here ? 'here' : ''}">
+        <span class="unit-icon">${vi.ui.tuongIcons[t]}</span>
+        <span class="unit-info"><b>${vi.ui.tuongNames[t]}</b><small>${here ? '⭐ ' : ''}${where}</small><small>${info[t]()}</small></span>
+        <span class="btn-col">${buttons.join('')}</span>
+      </div>`;
+    });
+    const none = map.has(b.id) ? '' : `<p class="why">${vi.ui.noCommander}</p>`;
+    return `<h3>${vi.ui.commanderTitle}</h3><p class="muted">${vi.ui.commanderHint}</p>${none}<div class="units">${rows.join('')}</div>`;
+  }
+
+  /**
+   * Bố trí giữ kinh đô ở doanh trại này: mỗi binh chủng bao nhiêu lính ra trận từ đây khi giặc, lũ đánh kinh đô.
+   * Cả kinh đô không quá số chỗ giữ kinh đô theo cấp Điện; lính còn lại là quân dự trữ.
+   */
+  private guardHtml(state: GameState, b: Building): string {
+    const plan = guardPlan(state);
+    const targets = guardTargets(state);
+    const got = plan.get(b.id) ?? { giao: 0, cung: 0, voi: 0 };
+    const want = targets.get(b.id) ?? got;
+    const used = armySpace(guardTotal(state, plan));
+    const owned = UNIT_TYPES.filter((k) => state.troops[k] > 0 || want[k] > 0);
+    // Lý do chưa thêm được (trại đầy, đủ chỗ giữ kinh đô) báo một lần dưới đầu mục.
+    const full = new Set<string>();
+    const rows = owned.map((k) => {
+      const short = want[k] - got[k];
+      const minus = canGuard(state, b.id, k, -1);
+      const plus = canGuard(state, b.id, k, 1);
+      if (!plus.ok && plus.reason !== 'khongDuQuan') full.add(vi.reasons[plus.reason]);
+      return `<div class="unit-row army">
+        <span class="unit-icon">${vi.units[k].icon}</span>
+        <span class="unit-info"><b>${vi.units[k].name}</b><small>${vi.ui.haveTroops(state.troops[k])}</small>
+          ${short > 0 ? `<small class="lack">${vi.ui.guardShort(short)}</small>` : ''}</span>
+        <button class="step" data-act="guardDelta" data-id="${b.id}" data-unit="${k}" data-delta="-1" ${minus.ok ? '' : 'disabled'} aria-label="Bớt một lính giữ ở trại này">−</button>
+        <b class="count">${got[k]}</b>
+        <button class="step" data-act="guardDelta" data-id="${b.id}" data-unit="${k}" data-delta="1" ${plus.ok ? '' : 'disabled'} aria-label="Thêm một lính giữ ở trại này">+</button>
+      </div>`;
+    });
+    const left = reserve(state);
+    const spare = UNIT_TYPES.filter((k) => left[k] > 0).map((k) => `${vi.units[k].icon} ${left[k]}`).join(' · ') || vi.ui.reserveNone;
+    const manual = guardManual(state);
+    return `<h3>🛡️ ${vi.ui.guardTitle}</h3>
+      <div class="stat"><span>${vi.ui.guardInfo(used, guardCap(state))}</span><span>${vi.ui.guardHere(armySpace(got))}</span></div>
+      <p class="muted">${manual ? vi.ui.guardManualNote : vi.ui.guardAutoNote}</p>
+      ${[...full].map((t) => `<p class="why">${t}</p>`).join('')}
+      ${owned.length ? `<div class="units">${rows.join('')}</div>` : `<p class="muted">${vi.ui.noTroops}</p>`}
+      <p class="muted">${vi.ui.reserveLine(spare)}</p>
+      ${manual ? `<button class="btn ghost small" data-act="guardAuto">${vi.ui.guardAuto}</button>` : ''}`;
+  }
+
+  /** Doanh trại: nơi tướng ở, giữ chỗ quân và điều binh. Mỗi binh chủng luyện ở nơi ở riêng. */
+  private barracksHtml(state: GameState, b: Building): string {
     const homes = UNIT_TYPES.map((k) => {
       const type = UNITS[k].home;
       const home = homeOf(state, k);
@@ -976,8 +1057,10 @@ export class Hud {
         call = vi.ui.callRaid;
       }
     }
-    return `<div class="stat"><span>${vi.ui.troopSpace(troopSpace(state), troopCap(state))}</span></div>
-      ${this.generalsHtml(state)}
+    return `${this.troopSpaceHtml(state)}
+      <div class="stat"><span>${vi.ui.barracksCap(capOf(state, b))}</span></div>
+      ${this.generalsHtml(state, b)}
+      ${this.guardHtml(state, b)}
       <h3>${vi.ui.homesTitle}</h3>
       <div class="units">${homes}</div>
       ${next ? `<p class="muted">${next}</p>` : ''}${call ? `<button class="btn ghost small" data-act="callRaid">${call}</button>` : ''}`;
@@ -1076,8 +1159,7 @@ export class Hud {
     } else if (act === 'backToStage') {
       camp.step = 'stage';
     } else if (act === 'armyDelta') {
-      const n = camp.pick.army[unit] + Number(el.dataset.delta);
-      camp.pick.army[unit] = Math.max(0, Math.min(state.troops[unit], n));
+      stepPick(state, camp.pick, unit, Number(el.dataset.delta));
     } else if (act === 'armyRow') {
       camp.pick.rows[unit] = nextRow(camp.pick.rows[unit]);
     }
@@ -1249,7 +1331,7 @@ export class Hud {
     const need = BUILDINGS[type].barracksLevel;
     if (need && barracksLevel(state) < need) return vi.ui.needBarracks(need);
     // Đường đầy giới hạn vẫn vào trải được: trải đè lên ô đường loại khác thì đổi vật liệu, không thêm ô.
-    if (!isRoad(type) && usedOf(state, type) >= limitOf(state, type)) return vi.reasons.datGioiHan;
+    if (!isRoad(type) && usedOf(state, type) >= limitOf(state, type)) return needsGeneral(state, type) ? vi.reasons.canTuongChiHuy : vi.reasons.datGioiHan;
     if (!canAfford(state, BUILDINGS[type].buildCost)) return vi.reasons.thieuTaiNguyen;
     return null;
   }

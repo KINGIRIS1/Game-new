@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import { wallRings } from './coLoa';
 import { CH1_LAST } from './campaign';
-import { BUILDINGS, CH2_QUEST_START, CH3_QUEST_START, MOVE_FRACTION, STAGES, type BuildingType } from './defs';
+import { BUILDINGS, CH2_QUEST_START, CH3_QUEST_START, GIFT_IDS, MOVE_FRACTION, STAGES, type BuildingType } from './defs';
 import { canMove, createInitialState, dienLevel, limitOf, move, moveCost, occupancy, place, type GameState } from './game';
-import { applyMau, canApplyMau, mauSlots, mauUnlocked, planMau, MAU_IDS, type MauId } from './mau';
+import { MAU_BARRACKS, applyMau, canApplyMau, mauSlots, mauUnlocked, planMau, MAU_IDS, type MauId } from './mau';
 import { DIEN_HOME, GRID, RIVER_START, isUnlocked, touchesRiver } from './map';
 import { DIEN_END, bank, edge, setDien } from './testmap';
 import { floodMap } from './terrain';
@@ -17,6 +17,17 @@ function city(dien: number, chapter: 1 | 2 | 3 = 1): GameState {
   s.questIndex = chapter === 3 ? CH3_QUEST_START : chapter === 2 ? CH2_QUEST_START : 0;
   s.resources = { gao: 1e6, voOc: 1e6, datDa: 1e6, sat: 1e6 };
   s.dan = 200;
+  return s;
+}
+
+/** Có đủ tướng thường có ở cấp Điện `dien`: Gióng từ Điện 3, Sơn Tinh ở chương 2, An Dương Vương ở chương 3. */
+function withGenerals(s: GameState, dien = dienLevel(s)): GameState {
+  if (dien >= 3) {
+    s.giong.fed = 5;
+    s.giong.gear = { ngua: true, roi: true, giap: true };
+  }
+  if (s.questIndex >= CH2_QUEST_START && dien >= 6) for (const g of GIFT_IDS) s.son.gifts[g] = true;
+  if (s.questIndex >= CH3_QUEST_START && dien >= 7) s.adv.no = true;
   return s;
 }
 
@@ -104,10 +115,37 @@ describe('mẫu kinh đô', () => {
         const slots = mauSlots(id, dien);
         for (const t of types) {
           // Đền, Hội Tết mở sau kết chương 1, mà màn cuối chương 1 cần Điện 5: dưới Điện 5 mẫu không chừa chỗ.
-          const want = BUILDINGS[t].unlock && dien < STAGES[CH1_LAST - 1].minDien ? 0 : limitOf(s, t);
+          // Doanh trại: mỗi tướng thường có ở cấp Điện ấy một chỗ.
+          const want = t === 'doanhTrai' ? MAU_BARRACKS[dien - 1] : BUILDINGS[t].unlock && dien < STAGES[CH1_LAST - 1].minDien ? 0 : limitOf(s, t);
           expect(slots.filter((x) => x.type === t).length, `${id} Điện ${dien}: ${t}`).toBe(want);
         }
       }
+    }
+  });
+
+  it('mỗi tướng một doanh trại: mẫu chừa đủ chỗ cho các tướng thường có ở từng cấp Điện', () => {
+    expect(MAU_BARRACKS.slice(1)).toEqual([1, 2, 2, 2, 3, 4, 4]);
+    for (const id of MAU_IDS) {
+      for (const dien of levelsOf(id)) {
+        const s = withGenerals(city(dien, chapterFor(id, dien)), dien);
+        expect(mauSlots(id, dien).filter((x) => x.type === 'doanhTrai').length, `${id} Điện ${dien}`).toBeGreaterThanOrEqual(limitOf(s, 'doanhTrai'));
+      }
+    }
+  });
+
+  it('áp mẫu dựng thêm doanh trại cho tướng rảnh, giữ tướng và bố trí của trại cũ', () => {
+    const s = withGenerals(city(7, 3), 7);
+    const first = place(s, 'doanhTrai', edge(7, 1), edge(7, 1));
+    if (!first.ok) throw new Error(first.reason);
+    first.value.tuong = 'anDuong';
+    first.value.guard = { giao: 3, cung: 0, voi: 0 };
+    for (const id of ['coLoa', 'deBao', 'phongChau'] as const) {
+      expect(applyMau(s, id).ok, id).toBe(true);
+      const camps = s.buildings.filter((b) => b.type === 'doanhTrai');
+      expect(camps.length).toBe(4);
+      const slots = mauSlots(id, 7);
+      for (const b of camps) expect(slots.some((x) => x.type === 'doanhTrai' && x.x === b.x && x.z === b.z), `${id}: ${b.x},${b.z}`).toBe(true);
+      expect(first.value).toMatchObject({ tuong: 'anDuong', guard: { giao: 3, cung: 0, voi: 0 } });
     }
   });
 

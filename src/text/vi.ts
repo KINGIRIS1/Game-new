@@ -2,7 +2,7 @@
 
 import type { HeroKind } from '../game/battle';
 import type { AdvLook } from '../game/coLoa';
-import type { BuildingType, EnemyType, GearId, GiftId, ResourceId, Row, SkillId, UnitType } from '../game/defs';
+import type { BuildingType, EnemyType, GearId, GiftId, ResourceId, Row, SkillId, TuongId, UnitType } from '../game/defs';
 import type { FailReason, StoryId } from '../game/game';
 import type { GiongLook } from '../game/giong';
 import type { SonLook } from '../game/son';
@@ -79,7 +79,7 @@ export const vi = {
     doanhTrai: {
       name: 'Doanh trại',
       icon: '⛺',
-      desc: 'Nơi các tướng ở và điều binh. Quân ra trận, dù giữ kinh đô hay đánh phó bản, đều qua doanh trại. Cấp càng cao càng điều được nhiều quân và cho dựng thêm nơi ở riêng của binh chủng mới: cấp 1 trại giáo, cấp 2 trại cung, cấp 3 chuồng voi.',
+      desc: 'Nơi các tướng ở và điều binh. Mỗi doanh trại một tướng chỉ huy: có thêm tướng thì dựng thêm doanh trại, nuôi thêm quân dự trữ. Cấp càng cao càng giữ nhiều quân và cho dựng thêm nơi ở riêng của binh chủng mới: cấp 1 trại giáo, cấp 2 trại cung, cấp 3 chuồng voi.',
     },
     choiCanh: {
       name: 'Chòi canh',
@@ -270,6 +270,12 @@ export const vi = {
     daTheoMau: 'Kinh đô đã xếp đúng theo mẫu này',
     canChuong4: 'Mở ở chương 4: Mỵ Châu, Trọng Thủy',
     khongGhepDuoc: 'Chỉ ghép được hai chòi canh cấp 8 còn nguyên',
+    canTuongChiHuy: 'Mỗi doanh trại cần một tướng chỉ huy. Chưa có tướng rảnh',
+    tuongChuaCo: 'Tướng này chưa về với kinh đô',
+    daChiHuy: 'Tướng này đang chỉ huy doanh trại này rồi',
+    quaChoPhoBan: 'Mang quá số chỗ cho một trận phó bản',
+    quaChoGiuThanh: 'Đã đủ chỗ giữ kinh đô theo cấp Điện',
+    traiDay: 'Doanh trại này đã đủ chỗ, hãy nâng cấp',
     khongPhaiTrangTri: 'Chỉ dọn được đường đi và đồ trang trí',
   } satisfies Record<FailReason, string>,
 
@@ -682,6 +688,29 @@ export const vi = {
     get: 'Nhận',
     troops: 'Quân',
     troopSpace: (used: number, cap: number) => `Quân trong doanh trại: ${used}/${cap} chỗ`,
+    troopSpaceAll: (used: number, cap: number, n: number) =>
+      n > 1 ? `Quân trong ${n} doanh trại: ${used}/${cap} chỗ` : `Quân trong doanh trại: ${used}/${cap} chỗ`,
+    barracksCap: (cap: number) => `Doanh trại này giữ ${cap} chỗ`,
+    commanderTitle: 'Tướng chỉ huy',
+    commanderHint: 'Mỗi doanh trại một tướng chỉ huy, có tướng mới giữ chỗ quân. Có thêm tướng thì dựng thêm doanh trại. Giữ kinh đô, tướng ra trận từ trại mình chỉ huy.',
+    commandsHere: 'chỉ huy doanh trại này',
+    commandsOther: 'chỉ huy doanh trại khác',
+    commandsNone: 'chưa chỉ huy doanh trại nào',
+    noCommander: 'Doanh trại này chưa có tướng chỉ huy nên chưa giữ chỗ quân.',
+    assignHere: 'Giao trại này',
+    toPost: 'Tới trại',
+    commandAssigned: (name: string) => `${name} chỉ huy doanh trại này`,
+    tuongNames: { lacTuong: 'Lạc tướng', giong: 'Thánh Gióng', sonTinh: 'Sơn Tinh', anDuong: 'An Dương Vương' } satisfies Record<TuongId, string>,
+    tuongIcons: { lacTuong: '🥁', giong: '🐎', sonTinh: '⛰️', anDuong: '🏹' } satisfies Record<TuongId, string>,
+    guardTitle: 'Bố trí giữ kinh đô',
+    guardInfo: (used: number, cap: number) => `Giữ kinh đô: ${used}/${cap} chỗ (theo cấp Điện)`,
+    guardAutoNote: 'Đang bố trí tự động: mọi lính giữ kinh đô cho tới đủ chỗ, chia đều các doanh trại. Bấm − + để tự bố trí.',
+    guardManualNote: 'Lính bố trí ở trại nào thì ra trận từ trại ấy. Lính chết được quân dự trữ bù vào.',
+    guardHere: (n: number) => `Ở trại này ${n}`,
+    guardShort: (n: number) => `thiếu ${n}`,
+    guardAuto: 'Bố trí tự động',
+    reserveLine: (list: string) => `Quân dự trữ (không ra giữ kinh đô): ${list}`,
+    reserveNone: 'không có',
     troopUpkeep: (g: number) => `Lính ăn ${g} gạo/phút`,
     train: 'Luyện',
     generalsTitle: 'Tướng ở doanh trại',
@@ -761,6 +790,7 @@ export const vi = {
     armyTitle: 'Xếp quân',
     armyHint: 'Chọn số lính mang theo và hàng đứng của từng binh chủng. Tiền quân đứng đầu, hậu quân đứng sau.',
     haveTroops: (n: number) => `Có ${n}`,
+    fieldSpace: (used: number, cap: number) => `Mang theo: ${used}/${cap} chỗ (mỗi trận phó bản)`,
     noTroops: 'Chưa có lính. Hãy luyện quân ở trại giáo, trại cung, chuồng voi.',
     march: '⚔️ Xuất quân',
     giong: 'Thánh Gióng',
