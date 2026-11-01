@@ -4,6 +4,8 @@
 // Danh sách ở scripts/congTrinh.ts. Ảnh vào chup/cong-trinh-<loại>.png, cảnh cỡ thật vào chup/cong-trinh-canh.png.
 // Cách dùng: node scripts/chup-cong-trinh.mjs [loại ...|canh]   (loại: dien, ruong, ben, nhaSan, baiDa, loRen, kho,
 // doanhTrai, traiGiao, traiCung, chuongVoi; không ghi gì thì chụp dien, nhaSan và canh)
+// Loại còn vẽ theo móng cũ (denPhuDong, denTanVien, denCoLoa, denCuong, bep...) thì chụp mô hình game dựng
+// (phóng theo móng), nhìn từ trước và từ sau.
 
 import { createRequire } from 'node:module';
 import { mkdir } from 'node:fs/promises';
@@ -40,13 +42,17 @@ try {
     } else {
       const { anh, loai } = await page.evaluate(async (m) => {
         const mod = await import('/scripts/congTrinh.ts');
-        return { anh: mod.chupCap(m), loai: mod.LOAI[m] };
+        const loai = mod.LOAI[m];
+        if (!loai) throw new Error(`Không có công trình ${m}`);
+        return { anh: loai.cu ? mod.chupLo(m) : mod.chupCap(m), loai };
       }, m);
-      const hang = (list) => `<div style="display:flex;gap:10px;margin-bottom:6px">${list.map((a) => cell(a.cu, `Cấp ${a.cap}: dáng cũ phóng theo móng`)).join('')}</div>
-        <div style="display:flex;gap:10px;margin-bottom:18px">${list.map((a) => cell(a.moi, `Cấp ${a.cap}: vẽ lại trên móng`)).join('')}</div>`;
+      const [tren, duoi] = loai.cu ? ['nhìn từ trước', 'nhìn từ sau'] : ['dáng cũ phóng theo móng', 'vẽ lại trên móng'];
+      const hang = (list) => `<div style="display:flex;gap:10px;margin-bottom:6px">${list.map((a) => cell(a.cu, `Cấp ${a.cap}: ${tren}`)).join('')}</div>
+        <div style="display:flex;gap:10px;margin-bottom:18px">${list.map((a) => cell(a.moi, `Cấp ${a.cap}: ${duoi}`)).join('')}</div>`;
       const nhom = [];
       for (let i = 0; i < anh.length; i += 4) nhom.push(anh.slice(i, i + 4));
-      html = `<body style="${css}"><div style="font-size:20px;margin-bottom:8px">${loai.ten}, móng ${loai.moi}×${loai.moi}: trên là dáng cũ phóng theo móng, dưới là vẽ lại; nét đen là ranh móng</div>
+      const tieuDe = loai.cu ? 'mô hình vẽ theo móng cũ, phóng theo móng; trên nhìn từ trước, dưới nhìn từ sau' : 'trên là dáng cũ phóng theo móng, dưới là vẽ lại';
+      html = `<body style="${css}"><div style="font-size:20px;margin-bottom:8px">${loai.ten}, móng ${loai.moi}×${loai.moi}: ${tieuDe}; nét đen là ranh móng</div>
         ${nhom.map(hang).join('')}</body>`;
     }
     await page.setContent(html);

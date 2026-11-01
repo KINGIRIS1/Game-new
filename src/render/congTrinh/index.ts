@@ -32,7 +32,7 @@ export const CONG_TRINH: Partial<Record<BuildingType, CongTrinh>> = {
 
 /**
  * Mô hình công trình loại `type` ở cấp `level`, đặt vừa móng kinh đô lớn. Loại đã vẽ trên móng mới (`CONG_TRINH`)
- * thì dựng thẳng, không phóng. Loại còn vẽ theo móng cũ (ba đền, bốn công trình Hội Tết, chòi canh, lầu nỏ, đường
+ * thì dựng thẳng, không phóng. Loại còn vẽ theo móng cũ (bốn đền, bốn công trình Hội Tết, chòi canh, lầu nỏ, đường
  * và đồ trang trí) thì phóng theo móng và chừa viền cỏ (`footScale`). `userData.foot` ghi hệ số đã phóng.
  */
 export function lotModel(type: BuildingType, level: number): THREE.Group {

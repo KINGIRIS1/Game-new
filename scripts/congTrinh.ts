@@ -21,7 +21,7 @@ import {
   makeTraiGiao,
 } from '../src/render/buildings';
 import type { Dock, LotSpot } from '../src/render/congTrinh/chung';
-import { CONG_TRINH } from '../src/render/congTrinh/index';
+import { CONG_TRINH, lotModel } from '../src/render/congTrinh/index';
 import { addSunLights } from '../src/render/lights';
 import { makeBoat, makeTradeBoat } from '../src/render/models';
 import { C } from '../src/render/palette';
@@ -262,6 +262,41 @@ export function chupCap(loai: string): Shot[] {
 }
 
 /**
+ * Loại còn vẽ theo móng cũ (đền, công trình Hội Tết, chòi canh...): mô hình game dựng (`lotModel`, phóng theo móng)
+ * ở từng cấp, nhìn từ bốn hướng như khi xoay cảnh, có người đứng ở góc móng để so cỡ.
+ */
+export function chupLo(loai: string): Shot[] {
+  const type = loai as BuildingType;
+  const def = BUILDINGS[type];
+  if (!def || CONG_TRINH[type]) throw new Error(`${loai} không phải công trình vẽ theo móng cũ`);
+  const renderer = makeRenderer();
+  const tiles = def.w;
+  const size = tiles + 2;
+  const half = tiles * 0.62 + 1.2;
+  const h = Math.round(2 * half * 64);
+  const w = Math.round(h * 1.15);
+  const out: Shot[] = [];
+  for (let level = 1; level <= def.maxLevel; level++) {
+    const shots: string[] = [];
+    for (const turn of [0, Math.PI]) {
+      const scene = newScene(size);
+      scene.add(groundPatch(size, [{ x: 0, z: 0, tiles }]));
+      const b = lotModel(type, level);
+      b.rotation.y = turn;
+      scene.add(b);
+      const nguoi = new THREE.Group();
+      addPeople(nguoi, [{ job: 'lacHau', x: tiles / 2 - 0.3, y: 0, z: tiles / 2 + 0.3, ry: 0 }], PERSON, 1);
+      scene.add(nguoi);
+      shots.push(render(renderer, scene, w, h, half, new THREE.Vector3(0, 1.3, 0)));
+    }
+    out.push({ cap: level, cu: shots[0], moi: shots[1] });
+  }
+  renderer.dispose();
+  renderer.domElement.remove();
+  return out;
+}
+
+/**
  * Cảnh cỡ thật: Điện giữa ba nhà sàn như một góc kinh đô, cũ và mới, ở cấp `levels`.
  * `px` điểm ảnh mỗi ô, chừng như trên điện thoại lúc chưa phóng to (độ nét 1,5).
  */
@@ -300,5 +335,5 @@ export function chupCanh(levels: number[], px = 32): Shot[] {
 }
 
 export const LOAI = Object.fromEntries(
-  Object.keys(CONG_TRINH).map((id) => [id, { ten: vi.buildings[id as BuildingType].name, moi: CONG_TRINH[id as BuildingType]!.tiles }]),
+  (Object.keys(BUILDINGS) as BuildingType[]).map((id) => [id, { ten: vi.buildings[id].name, moi: CONG_TRINH[id]?.tiles ?? BUILDINGS[id].w, cu: !CONG_TRINH[id] }]),
 );
