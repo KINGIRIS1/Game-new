@@ -356,7 +356,7 @@ export function startBattle(state: GameState, wave: number, side: RaidSide, opts
   if (opts.hero) {
     const dien = state.buildings.find((b) => b.type === 'dien');
     if (barracks) addHero(battle, opts.hero, barracks.x + BUILDINGS.doanhTrai.w / 2, barracks.z + BUILDINGS.doanhTrai.d, 1);
-    else if (dien) addHero(battle, opts.hero, dien.x + 2, dien.z + 4.6, 1);
+    else if (dien) addHero(battle, opts.hero, dien.x + BUILDINGS.dien.w / 2, dien.z + BUILDINGS.dien.d + 0.6, 1);
   }
   return battle;
 }

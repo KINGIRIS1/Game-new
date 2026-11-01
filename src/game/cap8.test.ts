@@ -201,6 +201,6 @@ describe('lầu nỏ', () => {
     const old = createInitialState(0) as unknown as Record<string, unknown>;
     old.version = 9;
     const back = deserialize(JSON.stringify(old))!;
-    expect(back.version).toBe(10);
+    expect(back.version).toBe(11);
   });
 });

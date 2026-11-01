@@ -81,8 +81,8 @@ export const DIEN_CHAPTER: Partial<Record<number, 2 | 3 | 4>> = { 6: 2, 7: 3, 8:
 export const BUILDINGS: Record<BuildingType, BuildingDef> = {
   dien: {
     type: 'dien',
-    w: 4,
-    d: 4,
+    w: 5,
+    d: 5,
     maxLevel: 8,
     buildCost: {},
     upgradeCost: [
@@ -116,8 +116,8 @@ export const BUILDINGS: Record<BuildingType, BuildingDef> = {
   },
   ruong: {
     type: 'ruong',
-    w: 3,
-    d: 3,
+    w: 4,
+    d: 4,
     maxLevel: 8,
     buildCost: { voOc: 30 },
     upgradeCost: [
@@ -141,8 +141,8 @@ export const BUILDINGS: Record<BuildingType, BuildingDef> = {
   },
   ben: {
     type: 'ben',
-    w: 2,
-    d: 2,
+    w: 3,
+    d: 3,
     maxLevel: 8,
     buildCost: { gao: 50 },
     upgradeCost: [
@@ -175,7 +175,7 @@ export const BUILDINGS: Record<BuildingType, BuildingDef> = {
     upgradeCost: [{}, {}, { datDa: 20 }],
     production: [{}, {}],
     hp: [120, 420],
-    limit: [30, 50, 70, 90, 110, 120, 130, 130],
+    limit: [40, 65, 90, 115, 140, 155, 170, 170],
     minDien: 1,
     levelMinDien: [0, 0, 3],
     buildable: true,
@@ -183,8 +183,8 @@ export const BUILDINGS: Record<BuildingType, BuildingDef> = {
   },
   nhaSan: {
     type: 'nhaSan',
-    w: 2,
-    d: 2,
+    w: 3,
+    d: 3,
     maxLevel: 8,
     buildCost: { gao: 30, voOc: 20 },
     upgradeCost: [
@@ -208,8 +208,8 @@ export const BUILDINGS: Record<BuildingType, BuildingDef> = {
   },
   baiDa: {
     type: 'baiDa',
-    w: 2,
-    d: 2,
+    w: 3,
+    d: 3,
     maxLevel: 8,
     buildCost: { gao: 40, voOc: 30 },
     upgradeCost: [
@@ -233,8 +233,8 @@ export const BUILDINGS: Record<BuildingType, BuildingDef> = {
   },
   loRen: {
     type: 'loRen',
-    w: 2,
-    d: 2,
+    w: 3,
+    d: 3,
     maxLevel: 8,
     buildCost: { voOc: 60, datDa: 60 },
     upgradeCost: [
@@ -258,8 +258,8 @@ export const BUILDINGS: Record<BuildingType, BuildingDef> = {
   },
   kho: {
     type: 'kho',
-    w: 2,
-    d: 2,
+    w: 3,
+    d: 3,
     maxLevel: 8,
     buildCost: { voOc: 40, datDa: 40 },
     upgradeCost: [
@@ -283,8 +283,8 @@ export const BUILDINGS: Record<BuildingType, BuildingDef> = {
   },
   doanhTrai: {
     type: 'doanhTrai',
-    w: 3,
-    d: 3,
+    w: 4,
+    d: 4,
     maxLevel: 5,
     buildCost: { gao: 80, voOc: 60, datDa: 60 },
     upgradeCost: [
@@ -336,15 +336,15 @@ export const BUILDINGS: Record<BuildingType, BuildingDef> = {
     upgradeCost: [{}, {}],
     production: [{}],
     hp: [1],
-    limit: [0, 4, 6, 8, 10, 12, 14, 14],
+    limit: [0, 5, 8, 10, 13, 16, 18, 18],
     minDien: 2,
     buildable: true,
     removable: true,
   },
   denPhuDong: {
     type: 'denPhuDong',
-    w: 3,
-    d: 3,
+    w: 4,
+    d: 4,
     maxLevel: 1,
     buildCost: { gao: 600, voOc: 600, datDa: 500, sat: 150 },
     upgradeCost: [{}, {}],
@@ -366,7 +366,7 @@ export const BUILDINGS: Record<BuildingType, BuildingDef> = {
     upgradeCost: [{}, {}, { datDa: 40, voOc: 20 }],
     production: [{}, {}],
     hp: [600, 1500],
-    limit: [90, 90, 90, 90, 90, 100, 110, 110],
+    limit: [115, 115, 115, 115, 115, 130, 145, 145],
     minDien: 1,
     buildable: true,
     removable: true,
@@ -374,8 +374,8 @@ export const BUILDINGS: Record<BuildingType, BuildingDef> = {
   },
   denTanVien: {
     type: 'denTanVien',
-    w: 3,
-    d: 3,
+    w: 4,
+    d: 4,
     maxLevel: 1,
     buildCost: { gao: 1500, voOc: 1500, datDa: 1500, sat: 400 },
     upgradeCost: [{}, {}],
@@ -397,7 +397,7 @@ export const BUILDINGS: Record<BuildingType, BuildingDef> = {
     upgradeCost: [{}, {}],
     production: [{}],
     hp: [1000],
-    limit: [150, 150, 150, 150, 150, 160, 170, 170],
+    limit: [200, 200, 200, 200, 200, 210, 220, 220],
     minDien: 1,
     buildable: true,
     removable: true,
@@ -405,8 +405,8 @@ export const BUILDINGS: Record<BuildingType, BuildingDef> = {
   },
   denCoLoa: {
     type: 'denCoLoa',
-    w: 3,
-    d: 3,
+    w: 4,
+    d: 4,
     maxLevel: 1,
     buildCost: { gao: 2500, voOc: 2500, datDa: 2500, sat: 700 },
     upgradeCost: [{}, {}],
@@ -422,8 +422,8 @@ export const BUILDINGS: Record<BuildingType, BuildingDef> = {
   // Ba cấp: cấp 2 cần Điện cấp 5, cấp 3 cần Điện cấp 6. Làm ra nguyên liệu và bánh, không làm ra tài nguyên.
   ruongNep: {
     type: 'ruongNep',
-    w: 3,
-    d: 3,
+    w: 4,
+    d: 4,
     maxLevel: 3,
     buildCost: { voOc: 300, datDa: 150 },
     upgradeCost: [{}, {}, { voOc: 900, datDa: 500 }, { voOc: 2500, datDa: 1500 }],
@@ -439,8 +439,8 @@ export const BUILDINGS: Record<BuildingType, BuildingDef> = {
   },
   vuon: {
     type: 'vuon',
-    w: 2,
-    d: 2,
+    w: 3,
+    d: 3,
     maxLevel: 3,
     buildCost: { gao: 200, voOc: 150 },
     upgradeCost: [{}, {}, { gao: 600, voOc: 450 }, { gao: 1800, voOc: 1300 }],
@@ -456,8 +456,8 @@ export const BUILDINGS: Record<BuildingType, BuildingDef> = {
   },
   chuongLon: {
     type: 'chuongLon',
-    w: 2,
-    d: 2,
+    w: 3,
+    d: 3,
     maxLevel: 3,
     buildCost: { gao: 250, datDa: 200 },
     upgradeCost: [{}, {}, { gao: 750, datDa: 600 }, { gao: 2200, datDa: 1800 }],
@@ -473,8 +473,8 @@ export const BUILDINGS: Record<BuildingType, BuildingDef> = {
   },
   bep: {
     type: 'bep',
-    w: 2,
-    d: 2,
+    w: 3,
+    d: 3,
     maxLevel: 3,
     buildCost: { voOc: 200, datDa: 250, sat: 40 },
     upgradeCost: [{}, {}, { voOc: 600, datDa: 750, sat: 120 }, { voOc: 1800, datDa: 2200, sat: 350 }],
@@ -508,8 +508,8 @@ export const BUILDINGS: Record<BuildingType, BuildingDef> = {
   // Doanh trại là nơi các tướng ở, giữ tổng số chỗ quân và lo điều binh.
   traiGiao: {
     type: 'traiGiao',
-    w: 2,
-    d: 2,
+    w: 3,
+    d: 3,
     maxLevel: 1,
     buildCost: { gao: 40, voOc: 30, datDa: 30 },
     upgradeCost: [{}, {}],
@@ -523,8 +523,8 @@ export const BUILDINGS: Record<BuildingType, BuildingDef> = {
   },
   traiCung: {
     type: 'traiCung',
-    w: 2,
-    d: 2,
+    w: 3,
+    d: 3,
     maxLevel: 1,
     buildCost: { gao: 60, voOc: 50, datDa: 50, sat: 10 },
     upgradeCost: [{}, {}],
@@ -538,8 +538,8 @@ export const BUILDINGS: Record<BuildingType, BuildingDef> = {
   },
   chuongVoi: {
     type: 'chuongVoi',
-    w: 2,
-    d: 2,
+    w: 3,
+    d: 3,
     maxLevel: 1,
     buildCost: { gao: 120, voOc: 80, datDa: 100, sat: 20 },
     upgradeCost: [{}, {}],
@@ -591,8 +591,11 @@ export const MAX_HEIGHT = 4;
 const round5 = (n: number) => Math.max(5, Math.round(n / 5) * 5);
 /** Đắp một ô đất trống lên thêm một bậc, giá theo bậc hiện tại của ô. */
 export const raiseTileCost = (h: number): Cost => ({ datDa: 20 + 10 * h });
-/** Đắp nền cả một công trình lên thêm một bậc, giá theo diện tích móng và bậc hiện tại. */
-export const raiseBuildingCost = (w: number, d: number, h: number): Cost => ({ datDa: round5(8 * w * d * (h + 1)) });
+/**
+ * Đắp nền cả một công trình lên thêm một bậc, giá theo diện tích móng và bậc hiện tại. Móng rộng thêm 1 ô mỗi cạnh
+ * nên mỗi ô rẻ còn nửa, để đắp nền mỗi công trình tốn gần như trước.
+ */
+export const raiseBuildingCost = (w: number, d: number, h: number): Cost => ({ datDa: round5(4 * w * d * (h + 1)) });
 /** Đê cao hơn mặt đất dưới chân chừng này bậc: đê đất ở cấp 1, kè đá ở cấp 2. */
 export const DIKE_RAISE = [2, 3];
 /**
@@ -878,6 +881,8 @@ export const FIRST_RAID_MS = 4 * 60_000;
 export const RAID_EVERY_MS = 15 * 60_000;
 /** Trinh sát báo trước khi giặc tràn vào. */
 export const RAID_WARNING_MS = 60_000;
+/** Bản lưu cũ vừa được dựng lại rộng hơn (bản lưu 11): giặc, lũ kế tiếp chờ ít nhất chừng này để người chơi xem lại đê, thành. */
+export const RELAYOUT_GRACE_MS = 5 * 60_000;
 /** Quá lâu chưa phân thắng bại thì giặc rút. */
 export const RAID_MAX_MS = 180_000;
 /** Giặc phá được kho hoặc Điện thì cướp đi phần này của mỗi tài nguyên rồi bỏ chạy. */

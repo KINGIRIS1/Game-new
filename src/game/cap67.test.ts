@@ -30,8 +30,8 @@ describe('Điện và công trình cấp 6–7', () => {
     expect(canUpgrade(s, 1)).toEqual({ ok: false, reason: 'canChuong4' });
   });
 
-  it('Điện cấp 6, 7 mở đất 25×25 rồi 26×26, chừa một hàng rừng; kho chứa nhiều hơn', () => {
-    expect(AREA_SIZE.slice(5, 7)).toEqual([25, 26]);
+  it('Điện cấp 6, 7 mở đất 32×32 rồi 34×34, chừa một hàng rừng; kho chứa nhiều hơn', () => {
+    expect(AREA_SIZE.slice(5, 7)).toEqual([32, 34]);
     expect(areaStart(7)).toBe(1);
     expect(isUnlocked(0, 10, 7)).toBe(false);
     expect(isUnlocked(1, 10, 7)).toBe(true);
@@ -121,7 +121,7 @@ describe('rèn binh khí', () => {
     s7.version = 7;
     delete s7.arms;
     const back = deserialize(JSON.stringify(s7))!;
-    expect(back.version).toBe(10);
+    expect(back.version).toBe(11);
     expect(back.arms).toEqual({ giao: 0, cung: 0, voi: 0 });
   });
 });

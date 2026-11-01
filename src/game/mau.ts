@@ -18,7 +18,7 @@ import {
   type GameState,
   type Result,
 } from './game';
-import { GRID, inGrid, isUnlocked, touchesRiver } from './map';
+import { DIEN_START, GRID, inGrid, isUnlocked, touchesRiver } from './map';
 import { inChapter2 } from './son';
 import { footprintTop, levelFootprint } from './terrain';
 
@@ -54,98 +54,122 @@ const CHAR_TYPE: Record<string, BuildingType> = {
 
 /**
  * Bản vẽ ba mẫu, mỗi dòng là một hàng ô theo z (0 ở bìa rừng phía bắc), mỗi chữ một ô theo x.
- * Sông ở x, z từ 27 trở lên. Điện Vua Hùng ở ô (16, 16).
- * - Phong Châu (chương 1, vẽ cho Điện cấp 5): lũy tre bao hai mặt rừng, bẫy chông trước lũy.
- * - Đê bao (chương 2, vẽ cho Điện cấp 6): đê liền dải dọc hai bờ sông, bến ngoài đê, chòi canh sát đê.
- * - Cổ Loa (chương 3, vẽ cho Điện cấp 7): ba vòng thành kín quanh Điện, đê bao ngoài cùng.
+ * Sông ở x, z từ 35 trở lên. Điện Vua Hùng ở ô (23, 23) (`DIEN_START`), sân chầu quay về phía nam.
+ * - Phong Châu (chương 1, vẽ cho Điện cấp 5): lũy tre bao hai mặt rừng, bẫy chông trước lũy; trước Điện chừa đường ra bến.
+ * - Đê bao (chương 2, vẽ cho Điện cấp 6): đê liền dải dọc hai bờ sông, lùi 4 ô cho bến 3×3 đứng ngoài đê; chòi canh sát đê.
+ * - Cổ Loa (chương 3, vẽ cho Điện cấp 7): ba vòng thành kín quanh Điện (phía sông ba lớp sát nhau), đê bao ngoài cùng.
  */
 const DRAWINGS: Record<MauId, string[]> = {
   phongChau: [
-    '...........................',
-    '...........................',
-    '...........................',
-    '........X...X...X...X...X..',
-    '....#######################',
-    '....#........C.......C.....',
-    '....#.C...............RRR..',
-    '....#.......LLLLLL.PPPRRR..',
-    '...X#..DDDD.LLLLLL.PPPRRR..',
-    '....#..DDDD........PPPRRR..',
-    '....#..DDDD..bb.KKKK..RRR..',
-    '....#..DDDD..bb.KKKK..RRR..',
-    '...X#..DD.............RRR..',
-    '....#C.DD.vv.NN.NNNN..RRR..',
-    '....#.....vv.NN.NNNN..RRR..',
-    '....#.nnn.............ll...',
-    '...X#.nnn.KK.NN.HHHHNNll...',
-    '....#.nnn.KK.NN.HHHHNNTTTGG',
-    '....#.nnn.KK.NN.HHHHNNTTTGG',
-    '....#.nnn.KK.NN.HHHHNNTTTUU',
-    '...X#.nnnvv.ll.........EEUU',
-    '....#C...vv.ll.........EEBB',
-    '....#.RRRRRRRRRRRR...RRR.BB',
-    '....#.RRRRRRRRRRRR...RRR...',
-    '...X#.RRRRRRRRRRRR...RRR...',
-    '....#..BB.BB.BB.....BB.....',
-    '....#..BB.BB.BB.....BB.....',
+    '...................................',
+    '...................................',
+    '...................................',
+    '...................................',
+    '...................................',
+    '.........X...X...X...X...X...X...X.',
+    '......#############################',
+    '......#.......C............C.......',
+    '......#.DDDDDD.LLLLLL.PPPP......BBB',
+    '......#.DDDDDD.LLLLLL.PPPP......BBB',
+    '.....X#.DDDDDD.LLLLLL.PPPP......BBB',
+    '......#.DDDDDD........PPPP.........',
+    '......#.DDDDDD..............TTTTGGG',
+    '......#.DDDDDD..............TTTTGGG',
+    '.....X#C....................TTTTGGG',
+    '......#.....................TTTTUUU',
+    '......#nnnnvvv.KKK.KKK.......EEEUUU',
+    '......#nnnnvvv.KKK.KKK.......EEEUUU',
+    '.....X#nnnnvvv.KKK.KKK.NNNKKKEEE...',
+    '......#nnnn............NNNKKK......',
+    '......#nnnnlll.NNN.NNN.NNNKKK....C.',
+    '......#nnnnlll.NNN.NNN.............',
+    '.....X#nnnnlll.NNN.NNN.......RRRR..',
+    '......#nnnn............HHHHH.RRRR..',
+    '......#....bbb.NNN.NNN.HHHHH.RRRR..',
+    '......#....bbb.NNN.NNN.HHHHH.RRRR..',
+    '.....X#C...bbb.NNN.NNN.HHHHH.RRRR..',
+    '......#................HHHHH.RRRR..',
+    '......#RRRRRRRRRRRRRRRR......RRRR..',
+    '......#RRRRRRRRRRRRRRRR......RRRR..',
+    '.....X#RRRRRRRRRRRRRRRR............',
+    '......#RRRRRRRRRRRRRRRR............',
+    '......#.BBB..BBB........BBB.....BBB',
+    '......#.BBB..BBB........BBB.....BBB',
+    '......#.BBB..BBB........BBB.....BBB',
   ],
   deBao: [
-    '...........................',
-    '....X...X.X.X..XXX......=..',
-    '....................RRR.=..',
-    '...DDDDDDLLLLLL.....RRR.=..',
-    '.X.DDDDDDLLLLLL.....RRR.=..',
-    '...DDDD.............RRR.=..',
-    '.X.DDDD.............RRRC=..',
-    '....................RRR.=..',
-    '.X..................RRR.=..',
-    '....................RRR.=..',
-    '.X...........NN.KKKKRRR.=..',
-    '..........bb.NN.KKKKRRR.=..',
-    '.X........bb........RRRC=..',
-    '..PPPnnnvvvv.NN.NNNNRRR.=..',
-    '..PPPnnnvvvv.NN.NNNN....=..',
-    '..PPPnnn.............C..=..',
-    '.XVVVnnnllKK.NN.HHHH....=..',
-    '..VVVnnnllKK.NN.HHHH.NN.=..',
-    '.XVVVnnnllKK.NN.HHHH.NN.=..',
-    '........llKK.NN.HHHH....=..',
-    '..RRRRRRRRRRRR.....TTTGG=..',
-    '..RRRRRRRRRRRR.C...TTTGG=..',
-    '..RRRRRRRRRRRRUUEE.TTTC.=..',
-    '......C.....C.UUEE......=..',
-    '.========================..',
-    '...BB..BB..BB..BB..BB......',
-    '...BB..BB..BB..BB..BB......',
+    '...................................',
+    '........X......................=...',
+    '...............................=...',
+    '......X...X...X...X...X...X...X=...',
+    '..............................C=...',
+    '.....DDDDDDDDDLLLLLL.PPPP.VVVV.=...',
+    '.....DDDDDDDDDLLLLLL.PPPP.VVVV.=...',
+    '...X.DDDDDDDDDLLLLLL.PPPP.VVVV.=...',
+    '.....DDDDDDLLL.......PPPP.VVVV.=...',
+    '.....DDDDDDLLL................C=...',
+    '.....DDDDDDLLL.........GGGTTTT.=...',
+    '...X...................GGGTTTT.=...',
+    '.....nnnnvvv.lll.......GGGTTTT.=...',
+    '.X...nnnnvvv.lll..RRRR.UUUTTTT.=...',
+    '.....nnnnvvv.lll..RRRR.UUU.EEE.=...',
+    '...X.nnnnvvv.bbb..RRRR.UUU.EEE.=BBB',
+    '.....nnnnvvv.bbb..RRRR.....EEE.=BBB',
+    '.....nnnnvvv.bbb...............=BBB',
+    '.....nnnnlll..................C=...',
+    '...X.nnnnlll.KKKNNNNNN.NNN.KKK.=...',
+    '.........lll.KKKNNNNNN.NNN.KKK.=...',
+    '.............KKKNNNNNN.NNN.KKK.=...',
+    '....RRRRRRRR...................=...',
+    '...XRRRRRRRR....NNNNNN.HHHHHNNN=...',
+    '....RRRRRRRR....NNNNNN.HHHHHNNN=...',
+    '.X..RRRRRRRR....NNNNNN.HHHHHNNN=...',
+    '....RRRRRRRRRRRRRRRR...HHHHH...=...',
+    '...XRRRRRRRRRRRRRRRR...HHHHHKKK=...',
+    '....RRRRRRRRRRRRRRRR........KKK=...',
+    '....RRRRRRRRRRRRRRRR........KKK=...',
+    '...C......C..........C........C=...',
+    '.===============================...',
+    '.....BBB...BBB...BBB....BBB........',
+    '.....BBB...BBB...BBB....BBB........',
+    '.....BBB...BBB...BBB....BBB........',
   ],
   coLoa: [
-    '...........................',
-    '.X.X.X.X.RRRRRRDDDDDDDD.=..',
-    '.........RRRRRRDDDDDDDD.=..',
-    '.X.......RRRRRRDD.......=..',
-    '...X.X.X.nnnnnnDDX.X....=..',
-    '.X....EE.nnnnnn.........=..',
-    '...X.XEE.nnnnnn.........=..',
-    '.XGGUU.C........C.......=..',
-    '..GGUU..OOOOOOOOOOOOOOOO=..',
-    '.RRRTTT.O..LLLLKKKKLLNNO=..',
-    '.RRRTTT.O.CLLLLKKKKLLNNO=..',
-    '.RRRTTT.ObbOOOOOOOOOOOOO=..',
-    '.RRRPPP.ObbONNNNNNNNKKOO=..',
-    '.RRRPPP.OvvONNNNNNNNKKOO=..',
-    '.RRRPPP.OvvONNOOOOOOOOOO=..',
-    '.RRRVVV.OvvONNOC....COOO=..',
-    '.RRRVVVCOvvONNO.HHHH.OOO=..',
-    '.RRRVVV.OllONNO.HHHH.OOO=..',
-    '.RRRAAA.OllONNO.HHHH.OOO=..',
-    '.RRRAAA.OllONNO.HHHH.OOO=..',
-    '.RRRAAA.OllOKKOC.....OOO=..',
-    '.RRRRRR.O..OKKOOOOOOOOOO=..',
-    '.RRRRRR.O..OOOOOOOOOOOOO=..',
-    '.RRRRRR.OOOOOOOOOOOOOOOO=..',
-    '.========================..',
-    '...BB..BB..BB..BB..BB......',
-    '...BB..BB..BB..BB..BB......',
+    '...................................',
+    '..X..X..X..X..X..X..X..X..X..X.=...',
+    '...............................=...',
+    '..DDDDDDDDD..PPPP.VVVV.AAAAnnnn=BBB',
+    '..DDDDDDDDD..PPPP.VVVV.AAAAnnnn=BBB',
+    '..DDDDDDDDD..PPPP.VVVV.AAAAnnnn=BBB',
+    '..DDDDDD.....PPPP.VVVV.AAAAnnnn=...',
+    '..DDDDDD......................C=...',
+    '..DDDDDD.....TTTTGGGUUUEEE.nnnn=...',
+    '..RRRRRRRR...TTTTGGGUUUEEE.nnnn=...',
+    '..RRRRRRRR...TTTTGGGUUUEEE.nnnn=...',
+    '..RRRRRRRR.C.TTTT..........nnnn=...',
+    '.XRRRRRRRR.....................=...',
+    '.............OOOOOOOOOOOOOOOOOO=...',
+    '..RRRRRRRRvvvOKKKLLLLLLLLLbbb.O=...',
+    '..RRRRRRRRvvvOKKKLLLLLLLLLbbbCO=...',
+    '.XRRRRRRRRvvvOKKKLLLLLLLLLbbb.O=...',
+    '..RRRRRRRRvvvOKKKOOOOOOOOOOOOOO=...',
+    '..RRRRRRRRvvvOKKKONNNNNNNNN..OO=...',
+    '..RRRRRRRRvvvOKKKONNNNNNNNNC.OO=...',
+    '.XRRRRRRRRlllOKKKONNNNNNNNN..OO=...',
+    '..RRRRRRRRlllOKKKONNNOOOOOOOOOO=...',
+    '..RRRRRRRRlllOKKKONNNOC.....OOO=...',
+    '..RRRRRRRRlllOKKKONNNO.HHHHHOOO=...',
+    '.XRRRRRRRRlllOKKKONNNO.HHHHHOOO=...',
+    '..RRRRRRRRlllOKKKONNNO.HHHHHOOO=...',
+    '..........NNNONNNONNNO.HHHHHOOO=...',
+    '..........NNNONNNO.C.O.HHHHHOOO=...',
+    '.X..C.....NNNONNNO...OOOOOOOOOO=...',
+    '.............O...OOOOOOOOOOOOOO=...',
+    '.............OOOOOOOOOOOOOOOOOO=...',
+    '.===============================...',
+    '...BBB...BBB...BBB...BBB...........',
+    '...BBB...BBB...BBB...BBB...........',
+    '...BBB...BBB...BBB...BBB...........',
   ],
 };
 
@@ -211,6 +235,8 @@ export interface MauPlan {
   cost: Cost;
   /** Công trình không còn chỗ nào để xếp (mẫu không áp được). */
   stuck: number[];
+  /** Lần áp này không mất phí dời (kinh đô vừa dựng lại khi nâng bản lưu cũ). */
+  freeMoves: boolean;
 }
 
 const addCost = (a: Cost, b: Cost) => {
@@ -221,9 +247,9 @@ const addCost = (a: Cost, b: Cost) => {
 export function planMau(state: GameState, id: MauId): MauPlan {
   const level = dienLevel(state);
   const dien = state.buildings.find((b) => b.type === 'dien')!;
-  // Mẫu vẽ cho Điện ở (16, 16); Điện ở chỗ khác thì dịch cả mẫu theo.
-  const ox = dien.x - 16;
-  const oz = dien.z - 16;
+  // Mẫu vẽ cho Điện ở DIEN_START; Điện ở chỗ khác thì dịch cả mẫu theo.
+  const ox = dien.x - DIEN_START.x;
+  const oz = dien.z - DIEN_START.z;
   const fits = (type: BuildingType, x: number, z: number) => {
     const def = BUILDINGS[type];
     for (let dx = 0; dx < def.w; dx++) for (let dz = 0; dz < def.d; dz++) if (!inGrid(x + dx, z + dz) || !isUnlocked(x + dx, z + dz, level)) return false;
@@ -241,7 +267,10 @@ export function planMau(state: GameState, id: MauId): MauPlan {
   };
   mark('dien', dien.x, dien.z);
 
-  const plan: MauPlan = { moves: [], builds: [], removes: [], cost: {}, stuck: [] };
+  const plan: MauPlan = { moves: [], builds: [], removes: [], cost: {}, stuck: [], freeMoves: false };
+  // Bản lưu cũ vừa dựng lại kinh đô rộng hơn: lần áp mẫu đầu tiên không mất phí dời.
+  const freeMoves = state.relayout?.freeMau ?? false;
+  plan.freeMoves = freeMoves;
   const slots = mauSlots(id)
     .filter((s) => s.type !== 'dien')
     .map((s) => ({ ...s, x: s.x + ox, z: s.z + oz }))
@@ -250,8 +279,8 @@ export function planMau(state: GameState, id: MauId): MauPlan {
   const types = [...new Set(slots.map((s) => s.type))].sort((a, b) => Number(b === 'doanhTrai') - Number(a === 'doanhTrai'));
   let barracks = barracksLevel(state);
   const leftovers: Building[] = [];
-  const cx = dien.x + 2;
-  const cz = dien.z + 2;
+  const cx = dien.x + BUILDINGS.dien.w / 2;
+  const cz = dien.z + BUILDINGS.dien.d / 2;
   for (const type of types) {
     const def = BUILDINGS[type];
     // Chỗ gần Điện xếp trước.
@@ -282,7 +311,7 @@ export function planMau(state: GameState, id: MauId): MauPlan {
       }
       const s = open.splice(best, 1)[0];
       plan.moves.push({ id: b.id, x: s.x, z: s.z });
-      addCost(plan.cost, moveCost(b));
+      if (!freeMoves) addCost(plan.cost, moveCost(b));
       mark(type, s.x, s.z);
     }
     // Chỗ trống còn lại: dựng thêm cho tới giới hạn theo cấp Điện, nếu loại này đã mở.
@@ -319,7 +348,7 @@ export function planMau(state: GameState, id: MauId): MauPlan {
       continue;
     }
     plan.moves.push({ id: b.id, x: spot.x, z: spot.z });
-    addCost(plan.cost, moveCost(b));
+    if (!freeMoves) addCost(plan.cost, moveCost(b));
     mark(b.type, spot.x, spot.z);
   }
   return plan;
@@ -377,5 +406,6 @@ export function applyMau(state: GameState, id: MauId): Result<MauPlan> {
     state.buildings.push(b);
     fillWorkers(state, b);
   }
+  if (state.relayout) state.relayout.freeMau = false;
   return check;
 }

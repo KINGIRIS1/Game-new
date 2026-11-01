@@ -405,6 +405,14 @@ export const vi = {
    * chương 3 theo truyền thuyết An Dương Vương, thành Cổ Loa và nỏ thần (dừng ở chiến thắng Triệu Đà).
    */
   stories: {
+    moRong: {
+      title: 'Kinh đô dựng lại rộng hơn',
+      lines: [
+        { who: 'lacHau', text: 'Tâu bệ hạ, dân đã phát thêm rừng, dựng lại kinh đô rộng hơn trước. Nhà cửa, ruộng vườn đều to rộng hơn, người qua lại thong thả.' },
+        { who: 'lacHau', text: 'Công trình nào chật chỗ thì đã dời sang bên cạnh. Đoạn lũy, đê, thành nào vướng nền nhà mới thì đã dỡ, của cải bỏ ra được hoàn lại đủ.' },
+        { who: 'lacHau', text: 'Xin bệ hạ xem lại đê và thành. Giặc và lũ còn chờ ít phút nữa mới tới. Bệ hạ cũng có thể áp mẫu kinh đô một lần mà không mất phí dời.' },
+      ],
+    },
     mo: {
       title: 'Giặc Ân xâm lược',
       lines: [

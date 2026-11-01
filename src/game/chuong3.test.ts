@@ -23,6 +23,7 @@ import { callRaidNow, canPlace, claimQuest, createInitialState, nextFoe, place, 
 import { deserialize, serialize } from './save';
 import { HALF_ARMY, SAMPLE_ARMY, SEEDS, fightStage } from './testkit';
 import { heroFor, restingHero } from './son';
+import { RIVER_START } from './map';
 import { markStory, pendingStory } from './story';
 
 type Army = Record<UnitType, number>;
@@ -48,17 +49,17 @@ function ch3(): GameState {
   return s;
 }
 
-/** Đắp một vòng thành vuông góc, dựa vào hai bờ sông, cách Điện (16..19) `d` ô. Bỏ góc thì vòng hở chéo. */
+/** Đắp một vòng thành vuông góc, dựa vào hai bờ sông, cách Điện (23..27) `d` ô. Bỏ góc thì vòng hở chéo. */
 function ring(s: GameState, d: number, corner = true): void {
-  const at = 16 - d;
-  for (let z = at + 1; z <= 26; z++) expect(place(s, 'thanh', at, z).ok).toBe(true);
-  for (let x = at + 1; x <= 26; x++) expect(place(s, 'thanh', x, at).ok).toBe(true);
+  const at = 23 - d;
+  for (let z = at + 1; z < RIVER_START; z++) expect(place(s, 'thanh', at, z).ok).toBe(true);
+  for (let x = at + 1; x < RIVER_START; x++) expect(place(s, 'thanh', x, at).ok).toBe(true);
   if (corner) expect(place(s, 'thanh', at, at).ok).toBe(true);
 }
 
 /** Lò rèn cấp 5 để chế nỏ thần. */
 function forge(s: GameState): void {
-  const r = place(s, 'loRen', 4, 22);
+  const r = place(s, 'loRen', 5, 22);
   if (!r.ok) throw new Error(r.reason);
   r.value.level = 5;
 }
@@ -101,12 +102,12 @@ describe('thành Cổ Loa', () => {
     expect(wallRings(s)).toBe(0);
     ring(s, 2, false);
     expect(wallRings(s)).toBe(0);
-    expect(place(s, 'thanh', 14, 14).ok).toBe(true);
+    expect(place(s, 'thanh', 21, 21).ok).toBe(true);
     expect(wallRings(s)).toBe(1);
     ring(s, 4);
     ring(s, 6);
     expect(wallRings(s)).toBe(3);
-    s.buildings.find((b) => b.type === 'thanh' && b.x === 10 && b.z === 20)!.damaged = true;
+    s.buildings.find((b) => b.type === 'thanh' && b.x === 17 && b.z === 27)!.damaged = true;
     expect(wallRings(s)).toBe(2);
   });
 
@@ -121,7 +122,7 @@ describe('thành Cổ Loa', () => {
   it('đêm yêu tinh: yêu tinh nhắm phá thành trước tiên, không nhắm kho', () => {
     const s = ch3();
     ring(s, 4);
-    place(s, 'kho', 4, 14);
+    place(s, 'kho', 5, 14);
     s.troops = { giao: 0, cung: 0, voi: 0 };
     const battle = startBattle(s, 1, 'tay', { land: { foe: 'yeu', n: 1 } });
     expect(battle.foe).toBe('yeu');
@@ -176,7 +177,7 @@ describe('lịch giặc chương 3', () => {
 
   it('quân mẫu, An Dương Vương và 5 chòi canh đánh lui quân Triệu đợt đầu; được tính cho nhiệm vụ', () => {
     const s = armed();
-    for (const [x, z] of [[8, 12], [12, 12], [16, 12], [20, 12], [12, 16]]) expect(place(s, 'choiCanh', x, z).ok).toBe(true);
+    for (const [x, z] of [[15, 19], [19, 19], [23, 19], [27, 19], [19, 23]]) expect(place(s, 'choiCanh', x, z).ok).toBe(true);
     s.raid.foe = 'thuy';
     expect(callRaidNow(s).ok).toBe(true);
     expect(s.raid.foe).toBe('trieu');
@@ -198,7 +199,7 @@ describe('lịch giặc chương 3', () => {
 
   it('đêm yêu tinh đầu: quân mẫu, Sơn Tinh hiển linh và 5 chòi canh diệt hết yêu tinh', () => {
     const s = ch3();
-    for (const [x, z] of [[8, 12], [12, 12], [16, 12], [20, 12], [12, 16]]) expect(place(s, 'choiCanh', x, z).ok).toBe(true);
+    for (const [x, z] of [[15, 19], [19, 19], [23, 19], [27, 19], [19, 23]]) expect(place(s, 'choiCanh', x, z).ok).toBe(true);
     s.raid.foe = 'thuy';
     expect(callRaidNow(s).ok).toBe(true);
     expect(s.raid.foe).toBe('yeu');
@@ -325,13 +326,13 @@ describe('An Dương Vương', () => {
     expect(win(22).result.outcome).toBe('win');
     expect(s.adv.kimQuy).toBe(true);
     expect(heroFor(s, 3)?.kimQuy).toBe(true);
-    expect(canPlace(s, 'denCoLoa', 3, 12)).toEqual({ ok: false, reason: 'canKetChuong3' });
+    expect(canPlace(s, 'denCoLoa', 5, 12)).toEqual({ ok: false, reason: 'canKetChuong3' });
     s.raid.nextAt = null;
     const last = win(CH3_LAST);
     expect(last.result.outcome).toBe('win');
     expect(last.battle.advWin).toBe(true);
     expect(s.adv.won).toBe(true);
-    expect(canPlace(s, 'denCoLoa', 3, 12).ok).toBe(true);
+    expect(canPlace(s, 'denCoLoa', 5, 12).ok).toBe(true);
   });
 
   it('Đền Cổ Loa: chòi canh bắn mạnh hơn và xa hơn', () => {
@@ -422,7 +423,7 @@ describe('truyện và lưu game chương 3', () => {
     for (const k of ['nights', 'nightsHeld', 'trieu', 'trieuHeld']) delete raid[k];
     raid.foe = 'thuy';
     const back = deserialize(JSON.stringify(s6))!;
-    expect(back.version).toBe(10);
+    expect(back.version).toBe(11);
     expect(back.adv).toEqual({ no: false, restUntil: 0, kimQuy: false, won: false });
     expect(back.raid.nights).toBe(0);
     expect(back.raid.foe).toBe('thuy');

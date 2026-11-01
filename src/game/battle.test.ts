@@ -26,9 +26,9 @@ function capital(): GameState {
   s.buildings[0].level = 2;
   s.resources = { gao: 900, voOc: 900, datDa: 900, sat: 400 };
   s.dan = 30;
-  const barracks = place(s, 'doanhTrai', 12, 20);
-  const kho = place(s, 'kho', 21, 20);
-  const traiGiao = place(s, 'traiGiao', 15, 21);
+  const barracks = place(s, 'doanhTrai', 15, 28);
+  const kho = place(s, 'kho', 29, 28);
+  const traiGiao = place(s, 'traiGiao', 19, 28);
   if (!barracks.ok || !kho.ok || !traiGiao.ok) throw new Error('dựng kinh đô thử thất bại');
   return s;
 }
@@ -43,8 +43,8 @@ function fight(s: GameState, wave: number, side: 'bac' | 'tay' = 'bac') {
 describe('tìm đường của giặc', () => {
   it('đi vòng qua chỗ hở của lũy thay vì phá lũy', () => {
     const s = capital();
-    for (let x = 9; x < 27; x++) if (x !== 13) place(s, 'luy', x, 12);
-    const path = findPath(s, 15.5, 1.5, s.buildings[0])!;
+    for (let x = 12; x < 35; x++) if (x !== 18) place(s, 'luy', x, 18);
+    const path = findPath(s, 20.5, 1.5, s.buildings[0])!;
     expect(path).not.toBeNull();
     const walls = new Set(s.buildings.filter((b) => b.type === 'luy').map((b) => b.z * GRID + b.x));
     expect(path.some((i) => walls.has(i))).toBe(false);
@@ -52,11 +52,11 @@ describe('tìm đường của giặc', () => {
 
   it('lũy bao kín thì đường đi xuyên qua lũy (giặc phải phá)', () => {
     const s = capital();
-    // Vòng lũy kín quanh Điện (Điện chiếm các ô 16–19).
-    for (let i = 15; i <= 20; i++) {
-      for (const [x, z] of [[i, 15], [i, 20], [15, i], [20, i]]) place(s, 'luy', x, z);
+    // Vòng lũy kín quanh Điện (Điện chiếm các ô 23–27).
+    for (let i = 22; i <= 28; i++) {
+      for (const [x, z] of [[i, 22], [i, 28], [22, i], [28, i]]) place(s, 'luy', x, z);
     }
-    const path = findPath(s, 15.5, 1.5, s.buildings[0])!;
+    const path = findPath(s, 20.5, 1.5, s.buildings[0])!;
     const walls = new Set(s.buildings.filter((b) => b.type === 'luy').map((b) => b.z * GRID + b.x));
     expect(path.some((i) => walls.has(i))).toBe(true);
   });
@@ -75,7 +75,7 @@ describe('trận giữ kinh đô', () => {
 
   it('có giáo binh và chòi canh thì đánh lui đợt đầu, không mất của', () => {
     const s = capital();
-    place(s, 'choiCanh', 18, 14);
+    place(s, 'choiCanh', 25, 21);
     for (let i = 0; i < 6; i++) expect(train(s, 'giao').ok).toBe(true);
     const battle = fight(s, 1);
     expect(battle.killed).toBe(battle.total);
@@ -86,7 +86,7 @@ describe('trận giữ kinh đô', () => {
     const s = capital();
     // Rải bẫy kín một hàng để giặc từ phía bắc phải đi qua.
     s.buildings[0].level = 5;
-    for (let x = 4; x < 27; x++) place(s, 'bayChong', x, 8);
+    for (let x = 5; x < 35; x++) place(s, 'bayChong', x, 10);
     const battle = fight(s, 1);
     expect(battle.trapsUsed.length).toBeGreaterThan(0);
     expect(battle.events.some((e) => e.kind === 'trap') || battle.trapsUsed.length > 0).toBe(true);
@@ -95,7 +95,7 @@ describe('trận giữ kinh đô', () => {
   it('cung thủ khắc chế lính giáo Ân', () => {
     const s = capital();
     s.buildings.find((b) => b.type === 'doanhTrai')!.level = 2;
-    expect(place(s, 'traiCung', 15, 23).ok).toBe(true);
+    expect(place(s, 'traiCung', 19, 31).ok).toBe(true);
     for (let i = 0; i < 5; i++) expect(train(s, 'cung').ok).toBe(true);
     const battle = fight(s, 1);
     expect(battle.killed).toBe(battle.total);
@@ -130,16 +130,16 @@ describe('quân đội', () => {
   it('mỗi binh chủng luyện ở nơi ở riêng: trại cung cần doanh trại cấp 2, chuồng voi cần cấp 3', () => {
     const s = capital();
     expect(canTrain(s, 'cung')).toEqual({ ok: false, reason: 'canNoiO' });
-    expect(canPlace(s, 'traiCung', 15, 23)).toEqual({ ok: false, reason: 'canDoanhTrai' });
+    expect(canPlace(s, 'traiCung', 19, 31)).toEqual({ ok: false, reason: 'canDoanhTrai' });
     s.buildings.find((b) => b.type === 'doanhTrai')!.level = 3;
-    expect(canPlace(s, 'chuongVoi', 17, 23)).toEqual({ ok: false, reason: 'chuaDuCapDien' });
+    expect(canPlace(s, 'chuongVoi', 22, 31)).toEqual({ ok: false, reason: 'chuaDuCapDien' });
     s.buildings[0].level = 3;
-    expect(place(s, 'traiCung', 15, 23).ok).toBe(true);
-    expect(place(s, 'chuongVoi', 17, 23).ok).toBe(true);
+    expect(place(s, 'traiCung', 19, 31).ok).toBe(true);
+    expect(place(s, 'chuongVoi', 22, 31).ok).toBe(true);
     expect(canTrain(s, 'cung').ok).toBe(true);
     expect(canTrain(s, 'voi').ok).toBe(true);
     // Mỗi loại dựng một lần.
-    expect(canPlace(s, 'traiCung', 19, 23)).toEqual({ ok: false, reason: 'datGioiHan' });
+    expect(canPlace(s, 'traiCung', 25, 31)).toEqual({ ok: false, reason: 'datGioiHan' });
   });
 
   it('nơi ở hư thì chưa luyện được binh chủng ấy; không có doanh trại thì không luyện được gì', () => {
@@ -165,7 +165,7 @@ describe('lịch giặc', () => {
   it('có doanh trại thì sau một lúc trinh sát báo, rồi giặc tràn vào, đánh xong hẹn đợt sau', () => {
     const s = capital();
     for (let i = 0; i < 6; i++) train(s, 'giao');
-    place(s, 'choiCanh', 18, 14);
+    place(s, 'choiCanh', 25, 21);
     tick(s, 1000);
     expect(s.raid.nextAt).not.toBeNull();
     tick(s, FIRST_RAID_MS);

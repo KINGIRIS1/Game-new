@@ -15,8 +15,8 @@ function capital(): GameState {
   if (!barracks.ok) throw new Error('dựng doanh trại thử thất bại');
   barracks.value.level = 3;
   // Mỗi binh chủng luyện ở nơi ở riêng.
-  for (const [type, x] of [['traiGiao', 15], ['traiCung', 17], ['chuongVoi', 19]] as const) {
-    if (!place(s, type, x, 21).ok) throw new Error('dựng nơi ở thử thất bại');
+  for (const [type, x, z] of [['traiGiao', 16, 20], ['traiCung', 19, 20], ['chuongVoi', 12, 24]] as const) {
+    if (!place(s, type, x, z).ok) throw new Error('dựng nơi ở thử thất bại');
   }
   return s;
 }

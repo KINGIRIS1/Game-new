@@ -1,11 +1,14 @@
 // Bản đồ kinh đô Phong Châu: lưới vuông, hai nhánh sông dọc cạnh nam (z lớn)
 // và cạnh đông (x lớn) hợp lưu ở góc, rừng ở cạnh bắc và tây.
+// Lưới 38×38 từ bản lưu 11 (công trình to hơn); trước đó là 30×30, sông từ ô 27.
 
-export const GRID = 30;
+export const GRID = 38;
 /** Ô có x hoặc z từ mốc này trở lên là sông. */
-export const RIVER_START = 27;
+export const RIVER_START = 35;
 /** Cạnh vùng xây được theo cấp Điện Vua Hùng, chỉ số 0 là cấp 1. Vùng luôn sát hai bờ sông; cấp 7 vẫn chừa một hàng rừng, cấp 8 không thêm đất. */
-export const AREA_SIZE = [16, 18, 20, 22, 24, 25, 26, 26];
+export const AREA_SIZE = [20, 23, 26, 28, 30, 32, 34, 34];
+/** Góc móng Điện Vua Hùng lúc dựng kinh đô: Điện 5×5 cách hai bờ sông 7 ô. Mẫu kinh đô vẽ quanh chỗ này. */
+export const DIEN_START = { x: 23, z: 23 };
 
 export function inGrid(x: number, z: number): boolean {
   return x >= 0 && z >= 0 && x < GRID && z < GRID;
@@ -51,9 +54,9 @@ function rng(seed: number): () => number {
   };
 }
 
-/** Value noise trên lưới thô `cell` ô, nội suy mượt, kết quả 0..1. */
-function valueNoise(seed: number, cell: number): (x: number, z: number) => number {
-  const n = Math.ceil(GRID / cell) + 2;
+/** Value noise trên lưới thô `cell` ô (bản đồ `grid` ô), nội suy mượt, kết quả 0..1. */
+function valueNoise(seed: number, cell: number, grid: number): (x: number, z: number) => number {
+  const n = Math.ceil(grid / cell) + 2;
   const rand = rng(seed);
   const knots = Array.from({ length: n * n }, () => rand());
   const at = (i: number, j: number) => knots[Math.min(j, n - 1) * n + Math.min(i, n - 1)];
@@ -71,30 +74,51 @@ function valueNoise(seed: number, cell: number): (x: number, z: number) => numbe
   };
 }
 
-/**
- * Độ cao tự nhiên của mọi ô, lặp lại y hệt ở mọi máy: hai ô sát sông là bãi bồi (bậc 0),
- * vào trong là đồng bằng (bậc 1) có gò (bậc 2), càng xa sông về phía rừng càng nhiều đồi (bậc 2–3).
- */
-export function baseHeights(): number[] {
-  const coarse = valueNoise(20260, 5);
-  const fine = valueNoise(731, 2.5);
+/** Hình dạng địa hình: cạnh lưới, ô sông đầu tiên, số ô bãi bồi ven sông, số ô từ đồng bằng lên tới đồi. */
+interface TerrainShape {
+  grid: number;
+  river: number;
+  lowBand: number;
+  inlandSpan: number;
+}
+
+function terrainHeights({ grid, river, lowBand, inlandSpan }: TerrainShape): number[] {
+  const coarse = valueNoise(20260, 5, grid);
+  const fine = valueNoise(731, 2.5, grid);
   const out: number[] = [];
-  for (let z = 0; z < GRID; z++) {
-    for (let x = 0; x < GRID; x++) {
-      const d = riverDistance(x, z);
+  for (let z = 0; z < grid; z++) {
+    for (let x = 0; x < grid; x++) {
+      const d = Math.min(river - 1 - x, river - 1 - z);
       if (d < 0) {
         out.push(RIVER_HEIGHT);
         continue;
       }
-      if (d <= 1) {
+      if (d < lowBand) {
         out.push(0);
         continue;
       }
-      const inland = Math.min(Math.max((d - 3) / 13, 0), 1);
+      const inland = Math.min(Math.max((d - 3) / inlandSpan, 0), 1);
       const n = coarse(x, z) * 0.75 + fine(x, z) * 0.25;
       const h = 1 + Math.floor(inland * 1.4 + Math.max(0, n - 0.42) * 2.6);
       out.push(Math.min(Math.max(h, 1), 3));
     }
   }
   return out;
+}
+
+/**
+ * Độ cao tự nhiên của mọi ô, lặp lại y hệt ở mọi máy: ba ô sát sông là bãi bồi (bậc 0, đủ cho móng 3×3),
+ * vào trong là đồng bằng (bậc 1) có gò (bậc 2), càng xa sông về phía rừng càng nhiều đồi (bậc 2–3).
+ */
+export function baseHeights(): number[] {
+  return terrainHeights({ grid: GRID, river: RIVER_START, lowBand: 3, inlandSpan: 17 });
+}
+
+/** Lưới của bản lưu trước phiên bản 11 (trước khi công trình to hơn): 30×30, sông từ ô 27. */
+export const LEGACY_GRID = 30;
+export const LEGACY_RIVER = 27;
+
+/** Độ cao tự nhiên của bản đồ cũ 30×30, y như trước phiên bản 11; dùng khi nâng bản lưu rất cũ chưa có độ cao. */
+export function legacyBaseHeights(): number[] {
+  return terrainHeights({ grid: LEGACY_GRID, river: LEGACY_RIVER, lowBand: 2, inlandSpan: 13 });
 }

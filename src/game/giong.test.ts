@@ -16,7 +16,8 @@ function capital(): GameState {
   s.resources = { gao: 5000, voOc: 5000, datDa: 5000, sat: 2000 };
   s.dan = 30;
   const forge = place(s, 'loRen', 9, 9);
-  const barracks = place(s, 'doanhTrai', 12, 20);
+  // Doanh trại phía nam Điện: tướng ra trận từ sân doanh trại, trước mặt Điện.
+  const barracks = place(s, 'doanhTrai', 15, 29);
   if (!forge.ok || !barracks.ok) throw new Error('dựng kinh đô thử thất bại');
   forge.value.level = 3;
   barracks.value.level = 3;
@@ -214,12 +215,12 @@ describe('roi gãy, kết chương, Đền Phù Đổng', () => {
     s.buildings[0].level = 5;
     s.giong.whipBroken = true;
     s.raid.nextAt = null;
-    expect(canPlace(s, 'denPhuDong', 3, 3)).toEqual({ ok: false, reason: 'canKetChuong' });
+    expect(canPlace(s, 'denPhuDong', 5, 5)).toEqual({ ok: false, reason: 'canKetChuong' });
     winStage(s, 8, { giao: 14, cung: 12, voi: 4 });
     expect(s.giong.ascended).toBe(true);
     expect(giongLook(s)).toBeNull();
     expect(heroSetup(s)).toEqual({ kind: 'giong', bamboo: true, glow: true, non: false });
-    expect(canPlace(s, 'denPhuDong', 3, 3).ok).toBe(true);
+    expect(canPlace(s, 'denPhuDong', 5, 5).ok).toBe(true);
   });
 
   it('Đền Phù Đổng thêm 10% sản lượng và 10% máu cho quân ta', () => {
@@ -229,7 +230,7 @@ describe('roi gãy, kết chương, Đền Phù Đổng', () => {
     place(s, 'ruong', 12, 12);
     s.buildings.find((b) => b.type === 'ruong')!.workers = 2;
     const before = productionPerMinute(s).gao;
-    expect(place(s, 'denPhuDong', 4, 4).ok).toBe(true);
+    expect(place(s, 'denPhuDong', 5, 5).ok).toBe(true);
     expect(productionPerMinute(s).gao).toBeCloseTo(before * 1.1);
     s.troops = { giao: 1, cung: 0, voi: 0 };
     const battle = startBattle(s, 1, 'bac', { bonus: 0.1 });

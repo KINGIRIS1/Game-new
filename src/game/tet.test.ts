@@ -250,13 +250,13 @@ describe('Tết', () => {
 
   it('phúc lành Đất thêm 15% tài nguyên, phúc lành Trời thêm 10% máu và sức đánh, cộng với Đền Phù Đổng', () => {
     const s = city(5);
-    const r = place(s, 'ruong', 4, 20);
+    const r = place(s, 'ruong', 6, 20);
     if (!r.ok) throw new Error(r.reason);
     r.value.workers = slotsOf(r.value);
     const base = productionPerMinute(s).gao;
     s.tet.blessing.chung = true;
     expect(productionPerMinute(s).gao).toBeCloseTo(base * (1 + TET_DAT_BONUS), 5);
-    const den = place(s, 'denPhuDong', 4, 16);
+    const den = place(s, 'denPhuDong', 6, 14);
     if (!den.ok) throw new Error(den.reason);
     expect(productionPerMinute(s).gao).toBeCloseTo(base * (1 + TEMPLE_BONUS + TET_DAT_BONUS), 5);
     expect(troopBonus(s)).toBeCloseTo(TEMPLE_BONUS, 5);
@@ -328,7 +328,7 @@ describe('bản lưu phiên bản 9', () => {
     delete old.tet;
     old.buildings = (old.buildings as { type: string }[]).filter((b) => !['ruongNep', 'vuon', 'chuongLon', 'bep'].includes(b.type));
     const back = deserialize(JSON.stringify(old))!;
-    expect(back.version).toBe(10);
+    expect(back.version).toBe(11);
     expect(back.tet).toEqual({
       seq: 0,
       nextAt: null,

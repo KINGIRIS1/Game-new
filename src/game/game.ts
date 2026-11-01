@@ -58,7 +58,7 @@ import {
   type Unlock,
   type UnitType,
 } from './defs';
-import { GRID, baseHeights, inGrid, isUnlocked, touchesRiver } from './map';
+import { DIEN_START, GRID, baseHeights, inGrid, isUnlocked, touchesRiver } from './map';
 
 export interface Building {
   id: number;
@@ -179,6 +179,7 @@ export interface AdvState {
 
 /** Các đoạn truyện, hiện mỗi đoạn một lần theo đúng thứ tự. */
 export type StoryId =
+  | 'moRong'
   | 'mo'
   | 'suGia'
   | 'vuonVai'
@@ -212,7 +213,7 @@ export interface Merchant {
 }
 
 export interface GameState {
-  version: 10;
+  version: 11;
   resources: Resources;
   /** Số dân (không tính lính). */
   dan: number;
@@ -243,6 +244,11 @@ export interface GameState {
   /** Hội Tết bánh chưng bánh giầy. */
   tet: TetState;
   story: { seen: StoryId[] };
+  /**
+   * Kinh đô được dựng lại rộng hơn khi nâng bản lưu cũ (công trình to hơn, bản lưu 11): null với ván mới.
+   * `freeMau`: còn một lần áp mẫu kinh đô không mất phí dời.
+   */
+  relayout: { freeMau: boolean } | null;
   settings: { muted: boolean };
 }
 
@@ -339,9 +345,9 @@ export function initialGiong(): GiongState {
 }
 
 export function createInitialState(now: number): GameState {
-  const dien: Building = { id: 1, type: 'dien', x: 16, z: 16, level: 1, workers: 0 };
+  const dien: Building = { id: 1, type: 'dien', x: DIEN_START.x, z: DIEN_START.z, level: 1, workers: 0 };
   const state: GameState = {
-    version: 10,
+    version: 11,
     resources: { ...START_RESOURCES },
     dan: START_DAN,
     danProgress: 0,
@@ -362,6 +368,7 @@ export function createInitialState(now: number): GameState {
     adv: initialAdv(),
     tet: initialTet(),
     story: { seen: [] },
+    relayout: null,
     settings: { muted: false },
   };
   levelFootprint(state, dien, footprintTop(state, 'dien', dien.x, dien.z));

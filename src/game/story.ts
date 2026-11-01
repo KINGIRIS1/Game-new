@@ -7,6 +7,8 @@ import { giongAppeared, giongReady } from './giong';
 import { inChapter2, sonJoined } from './son';
 
 const STORY_ORDER: StoryId[] = [
+  // Bản lưu cũ vừa được nâng lên: Lạc hầu báo kinh đô đã dựng lại rộng hơn, kể trước mọi đoạn khác.
+  'moRong',
   'mo',
   'suGia',
   'vuonVai',
@@ -24,6 +26,7 @@ const STORY_ORDER: StoryId[] = [
   'ketChuong3',
 ];
 const STORY_WHEN: Record<StoryId, (s: GameState) => boolean> = {
+  moRong: (s) => s.relayout !== null,
   mo: () => true,
   suGia: giongAppeared,
   vuonVai: giongReady,
