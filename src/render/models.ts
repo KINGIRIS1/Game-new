@@ -98,15 +98,55 @@ export function makeBoat(): THREE.Object3D {
 const BAMBOO_SHADES = [C.bamboo, 0x6b8a38, 0x8cab4e, 0x5d7a2f] as const;
 const LEAF_SHADES = [C.leaf[0], C.leaf[1], C.leaf[2], C.leaf[3], 0x466629, 0x92b055] as const;
 
+function addTreeRoot(
+  b: ShapeBuilder,
+  pts: readonly (readonly [number, number, number])[],
+  rStart: number,
+  rEnd: number,
+  color: number,
+  segs = 5,
+): void {
+  const curve = new THREE.CatmullRomCurve3(pts.map(([x, y, z]) => new THREE.Vector3(x, y, z)));
+  const samples = curve.getPoints(segs);
+  const up = new THREE.Vector3(0, 1, 0);
+  const q = new THREE.Quaternion();
+  const e = new THREE.Euler();
+  for (let i = 0; i < segs; i++) {
+    const a = samples[i];
+    const c = samples[i + 1];
+    const d = c.clone().sub(a);
+    const len = d.length();
+    const mid = a.clone().addScaledVector(d, 0.5);
+    q.setFromUnitVectors(up, d.normalize());
+    e.setFromQuaternion(q);
+    const r0 = rStart + (rEnd - rStart) * (i / segs);
+    const r1 = rStart + (rEnd - rStart) * ((i + 1) / segs);
+    b.cyl(r1, r0, len * 1.1, color, mid.x, mid.y, mid.z, [e.x, e.y, e.z], 5);
+  }
+}
+
 function treeTemplates(): THREE.Mesh[] {
   const out: THREE.Mesh[] = [];
 
   // 0: Cây gỗ lớn rừng Phong Châu (Chò chỉ / Lim cổ thụ): thân cao vút có rễ bạnh, 4 cành cái vươn xa nâng 5 tầng tán mây tách bạch.
   let b = new ShapeBuilder(false, true);
   b.cyl(0.08, 0.16, 0.96, C.trunk, 0, 0.48, 0, [0.03, 0, -0.03], 7);
-  for (let i = 0; i < 5; i++) {
-    const a = (i / 5) * Math.PI * 2 + 0.3;
-    b.cyl(0.025, 0.062, 0.34, 0x5a3a20, Math.cos(a) * 0.13, 0.14, Math.sin(a) * 0.13, [Math.sin(a) * 0.85, 0, -Math.cos(a) * 0.85], 5);
+  for (let i = 0; i < 6; i++) {
+    const a = (i / 6) * Math.PI * 2 + 0.3;
+    const ca = Math.cos(a);
+    const sa = Math.sin(a);
+    addTreeRoot(
+      b,
+      [
+        [ca * 0.08, 0.32, sa * 0.08],
+        [ca * 0.2, 0.12, sa * 0.2],
+        [ca * 0.36, 0.02, sa * 0.36],
+      ],
+      0.062,
+      0.018,
+      0x5a3a20,
+      4,
+    );
   }
   // Bốn cành cái vươn xa ở các độ cao lệch nhau, đỡ 4 tán lá tầng dưới & tầng giữa tách rời để lộ rõ chạc cây
   for (const [a, yBranch, len, tilt, distPad, yPad, rPad, c1, c2] of [
@@ -130,20 +170,34 @@ function treeTemplates(): THREE.Mesh[] {
   b.sphere(0.22, 0x92b055, -0.06, 1.76, 0.04, [1.22, 0.5, 1.22], 7);
   out.push(b.mesh(toon));
 
-  // 1: Cây Đa rừng / Muỗm cổ thụ tán rộng: gốc nhiều thân xoắn, 5 cành lớn vươn ngang buông rễ phụ, vòm lá nhiều tầng rộng rợp.
+  // 1: Cây Đa rừng / Muỗm cổ thụ tán rộng: gốc nhiều thân xoắn và đại rễ bạnh bò rộng, 5 cành lớn vươn ngang buông rễ phụ, vòm lá nhiều tầng rộng rợp.
   b = new ShapeBuilder(false, true);
-  b.cyl(0.105, 0.18, 0.78, 0x5c3b22, 0, 0.39, 0, [-0.03, 0, 0.04], 7);
-  for (let i = 0; i < 6; i++) {
-    const a = (i / 6) * Math.PI * 2 + 0.2;
-    b.cyl(0.026, 0.06, 0.32, C.trunk, Math.cos(a) * 0.15, 0.13, Math.sin(a) * 0.15, [Math.sin(a) * 0.9, 0, -Math.cos(a) * 0.9], 5);
+  b.cyl(0.115, 0.195, 0.78, 0x5c3b22, 0, 0.39, 0, [-0.03, 0, 0.04], 7);
+  for (let i = 0; i < 8; i++) {
+    const a = (i / 8) * Math.PI * 2 + 0.2;
+    const ca = Math.cos(a);
+    const sa = Math.sin(a);
+    addTreeRoot(
+      b,
+      [
+        [ca * 0.09, 0.36, sa * 0.09],
+        [ca * 0.24, 0.14, sa * 0.24],
+        [ca * 0.44, 0.02, sa * 0.44],
+      ],
+      0.074,
+      0.02,
+      i % 2 === 0 ? C.trunk : 0x5a3a20,
+      5,
+    );
   }
   for (let i = 0; i < 5; i++) {
     const a = (i / 5) * Math.PI * 2 + 0.4;
     const ca = Math.cos(a);
     const sa = Math.sin(a);
     b.cyl(0.036, 0.065, 0.62, C.trunk, ca * 0.24, 0.82 + (i % 2) * 0.05, sa * 0.24, [sa * 1.08, 0, -ca * 1.08], 5);
-    // Rễ phụ buông từ cành ngang xuống đất
-    b.cyl(0.01, 0.015, 0.72 + (i % 2) * 0.18, 0x6f4a2c, ca * 0.38, 0.48, sa * 0.38, undefined, 4);
+    // Rễ phụ buông từ cành ngang xuống đất, có chạc rễ bám ở chân
+    b.cyl(0.012, 0.02, 0.86, 0x6f4a2c, ca * 0.38, 0.44, sa * 0.38, undefined, 4);
+    b.cyl(0.012, 0.028, 0.18, 0x6f4a2c, ca * 0.43, 0.06, sa * 0.43, [sa * 1.1, 0, -ca * 1.1], 4);
     b.sphere(0.26, LEAF_SHADES[i % 4], ca * 0.48, 0.98 + (i % 2) * 0.06, sa * 0.48, [1.35, 0.48, 1.35], 7);
   }
   b.sphere(0.42, C.leaf[2], 0, 1.16, 0, [1.48, 0.5, 1.48], 8);

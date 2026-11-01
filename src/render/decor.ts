@@ -342,6 +342,31 @@ export function buildDecor(spots: DecorSpot[]): THREE.Object3D {
 
 // ---------- Mô hình từng cái ----------
 
+/** Vẽ một rễ đa cổ thụ uốn lượn liền mạch và thon dần từ `rStart` về `rEnd` dọc theo đường cong đi qua các điểm `pts`. */
+function addCurvedRoot(p: ShapeBuilder, pts: [number, number, number][], rStart: number, rEnd: number, color: number, segs = 5): void {
+  const curve = new THREE.CatmullRomCurve3(pts.map(([x, y, z]) => new THREE.Vector3(x, y, z)));
+  const up = new THREE.Vector3(0, 1, 0);
+  const d = new THREE.Vector3();
+  const mid = new THREE.Vector3();
+  const q = new THREE.Quaternion();
+  const e = new THREE.Euler();
+  for (let k = 0; k < segs; k++) {
+    const t0 = k / segs;
+    const t1 = (k + 1) / segs;
+    const p0 = curve.getPoint(t0);
+    const p1 = curve.getPoint(t1);
+    const r0 = THREE.MathUtils.lerp(rStart, rEnd, t0);
+    const r1 = THREE.MathUtils.lerp(rStart, rEnd, t1);
+    d.subVectors(p1, p0);
+    const len = d.length();
+    mid.addVectors(p0, p1).multiplyScalar(0.5);
+    q.setFromUnitVectors(up, d.normalize());
+    e.setFromQuaternion(q);
+    p.cyl(r1, r0, len * 1.06, color, mid.x, mid.y, mid.z, [e.x, e.y, e.z], 6);
+    if (k < segs - 1) p.sphere(r1 * 0.96, color, p1.x, p1.y, p1.z, [1.05, 0.9, 1.05], 6);
+  }
+}
+
 /** Cây đa cổ thụ đầu làng: gốc đại thụ nhiều thân xoắn quyện, rễ bạnh bò rộng khắp gò đất, hàng chục rễ phụ buông rủ & hóa cột, tán lá nhiều tầng xòe rộng gấp đôi, am thờ dưới gốc. */
 function makeCayDa(): THREE.Group {
   const m = new ToonModel(inkThin);
@@ -360,31 +385,69 @@ function makeCayDa(): THREE.Group {
   }
 
   // 2. Thân chính đại thụ & 8 thân phụ cổ thụ xoắn quyện vào nhau
-  p.cyl(0.17, 0.25, 0.94, C.trunk, 0, 0.52, 0, undefined, 10);
+  p.cyl(0.18, 0.27, 0.94, C.trunk, 0, 0.52, 0, undefined, 10);
   const subTrunks: [number, number, number, number, number, number, number][] = [
-    [0.13, 0.07, 0.07, 0.11, 0.88, 0.18, -0.2],
-    [-0.12, 0.08, 0.065, 0.105, 0.86, -0.16, 0.18],
-    [0.08, -0.12, 0.07, 0.11, 0.9, -0.2, -0.15],
-    [-0.11, -0.1, 0.062, 0.1, 0.84, 0.16, 0.19],
-    [0.16, -0.02, 0.055, 0.09, 0.8, 0.06, -0.25],
-    [-0.16, 0.01, 0.058, 0.092, 0.82, -0.05, 0.24],
-    [0.02, -0.16, 0.055, 0.09, 0.82, -0.24, 0.04],
-    [-0.03, 0.14, 0.05, 0.082, 0.78, 0.22, -0.05],
+    [0.13, 0.07, 0.075, 0.12, 0.88, 0.18, -0.2],
+    [-0.12, 0.08, 0.07, 0.115, 0.86, -0.16, 0.18],
+    [0.08, -0.12, 0.075, 0.12, 0.9, -0.2, -0.15],
+    [-0.11, -0.1, 0.068, 0.11, 0.84, 0.16, 0.19],
+    [0.16, -0.02, 0.06, 0.098, 0.8, 0.06, -0.25],
+    [-0.16, 0.01, 0.062, 0.1, 0.82, -0.05, 0.24],
+    [0.02, -0.16, 0.06, 0.098, 0.82, -0.24, 0.04],
+    [-0.03, 0.14, 0.055, 0.09, 0.78, 0.22, -0.05],
   ];
   subTrunks.forEach(([x, z, rt, rb, h, rx, rz], i) => {
     p.cyl(rt, rb, h, BARK[i % BARK.length], x, h / 2 + 0.06, z, [rx, 0, rz], 7);
   });
 
-  // 3. Hệ rễ bạnh nổi u cục & bò lan ngoằn ngoèo ra khắp mặt gò đất (16 rễ lớn 2 đoạn)
-  for (let i = 0; i < 16; i++) {
-    const a = (i / 16) * Math.PI * 2 + 0.15;
-    const ca = Math.cos(a);
-    const sa = Math.sin(a);
-    const col = BARK[i % BARK.length];
-    // Đoạn rễ bạnh vồng cao từ thân xuống gốc
-    p.cyl(0.036, 0.075, 0.38, col, ca * 0.22, 0.2, sa * 0.22, [sa * 0.95, 0, -ca * 0.95], 6);
-    // Đoạn rễ bò lan ngoằn ngoèo ra tận mép gò đất
-    p.cyl(0.02, 0.046, 0.34, col, ca * 0.4, 0.07, sa * 0.4, [sa * 1.4, 0, -ca * 1.4], 5);
+  // 3. Hệ đại rễ cái khổng lồ uốn lượn liền mạch từ lưng thân chính, vồng cao qua bờ đá và bò trườn dài ra khắp mặt đất
+  const ROOT_BARK = [0x764f30, 0x684326, 0x855b38, 0x5c3b22] as const;
+  for (let i = 0; i < 14; i++) {
+    const a0 = (i / 14) * Math.PI * 2 + 0.12;
+    // Chừa khoảng sân nhỏ ngay trước cửa am thờ phía +z (a ~ PI/2), hai bên am thờ có 2 đại rễ ôm lấy
+    const a = Math.abs(a0 - Math.PI / 2) < 0.24 ? a0 + (a0 < Math.PI / 2 ? -0.2 : 0.2) : a0;
+    const col = ROOT_BARK[i % ROOT_BARK.length];
+    const isMain = i % 2 === 0;
+    const bend1 = a + (isMain ? 0.14 : -0.12);
+    const bend2 = bend1 + (isMain ? -0.18 : 0.16);
+    const reach = isMain ? 0.9 : 0.74;
+    const r0 = isMain ? 0.115 : 0.086;
+
+    addCurvedRoot(
+      p,
+      [
+        [Math.cos(a) * 0.13, isMain ? 0.62 : 0.48, Math.sin(a) * 0.13],
+        [Math.cos(a) * 0.29, isMain ? 0.34 : 0.26, Math.sin(a) * 0.29],
+        [Math.cos(bend1) * 0.46, isMain ? 0.16 : 0.13, Math.sin(bend1) * 0.46],
+        [Math.cos(bend2) * (reach * 0.76), 0.075, Math.sin(bend2) * (reach * 0.76)],
+        [Math.cos(bend2) * reach, 0.015, Math.sin(bend2) * reach],
+      ],
+      r0,
+      0.022,
+      col,
+      7,
+    );
+
+    // Mỗi đại rễ chính tách thêm 2 nhánh rễ lớn bò tỏa ra hai bên ở ngoài vòng đá
+    if (isMain) {
+      const splitX = Math.cos(bend1) * 0.46;
+      const splitZ = Math.sin(bend1) * 0.46;
+      for (const side of [-1, 1]) {
+        const fa = bend2 + side * 0.38;
+        addCurvedRoot(
+          p,
+          [
+            [splitX, 0.14, splitZ],
+            [splitX * 0.48 + Math.cos(fa) * 0.38, 0.068, splitZ * 0.48 + Math.sin(fa) * 0.38],
+            [Math.cos(fa) * 0.85, 0.012, Math.sin(fa) * 0.85],
+          ],
+          0.058,
+          0.016,
+          ROOT_BARK[(i + 1) % ROOT_BARK.length],
+          5,
+        );
+      }
+    }
   }
 
   // Dải lụa đỏ & viền kim tuyến buộc quanh gốc đa thần
@@ -444,12 +507,35 @@ function makeCayDa(): THREE.Group {
     const z = Math.sin(a) * r;
     const topH = 1.08 + (i % 2) * 0.07;
     const col = BARK[(i + 1) % BARK.length];
-    const thick = i % 2 === 0 ? 0.025 : 0.019;
-    p.cyl(thick * 0.75, thick * 1.3, topH, col, x, topH / 2 + 0.02, z, [(rand() - 0.5) * 0.08, 0, (rand() - 0.5) * 0.08], 5);
-    // Chạc rễ phụ tách đôi bám chặt xuống đất ở chân mỗi rễ cột
+    const thick = i % 2 === 0 ? 0.028 : 0.021;
+    p.cyl(thick * 0.78, thick * 1.55, topH, col, x, topH / 2 + 0.02, z, [(rand() - 0.5) * 0.08, 0, (rand() - 0.5) * 0.08], 5);
+    // Rễ bạnh chân cột nối ngược về gốc chính & 2 chạc rễ lớn tỏa ra ngoài bám chặt xuống đất bằng đường cong mượt
+    addCurvedRoot(
+      p,
+      [
+        [x, 0.24, z],
+        [x * 0.85, 0.12, z * 0.85],
+        [x * 0.68, 0.03, z * 0.68],
+      ],
+      thick * 1.15,
+      thick * 0.6,
+      col,
+      5,
+    );
     for (const s of [-1, 1]) {
-      const fa = a + s * 0.45;
-      p.cyl(thick * 0.45, thick * 0.9, 0.2, col, x + Math.cos(fa) * 0.032, 0.09, z + Math.sin(fa) * 0.032, [Math.sin(fa) * 0.65, 0, -Math.cos(fa) * 0.65], 4);
+      const fa = a + s * 0.48;
+      addCurvedRoot(
+        p,
+        [
+          [x, 0.2, z],
+          [x + Math.cos(fa) * 0.11, 0.08, z + Math.sin(fa) * 0.11],
+          [x + Math.cos(fa) * 0.24, 0.015, z + Math.sin(fa) * 0.24],
+        ],
+        thick * 1.1,
+        thick * 0.45,
+        col,
+        5,
+      );
     }
   }
   // 32 rễ khí sinh buông rủ dày đặc từ cả vòng cành trong lẫn vành tán rộng bên ngoài
