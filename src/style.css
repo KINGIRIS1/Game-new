@@ -695,6 +695,11 @@ button {
   gap: 6px;
 }
 
+.setting-title {
+  margin: 16px 0 2px;
+  font-size: 15px;
+}
+
 textarea {
   width: 100%;
   min-height: 90px;

@@ -6,9 +6,12 @@
 
 import * as THREE from 'three';
 import { BUILDINGS, type BuildingType } from '../game/defs';
-import { ironHorse, makeCrossbowStand, makeFighter, makeRuaVang, makeSonTinh } from './models';
+import { bakeRuaVang } from './beasts';
+import { bakeIronHorse, bakeSonTinh } from './heroes';
+import { makeCrossbowStand, makeFighter } from './models';
 import { C } from './palette';
 import { ShapeBuilder, saddleRoof, seeded } from './shapes';
+import { bakeSoldier } from './soldier';
 import { ToonModel, inkThin, outlineOf, toon } from './toon';
 
 /**
@@ -1116,7 +1119,7 @@ export function makeTraiCung(): THREE.Group {
   archeryTarget(m, -0.6, 0.45, Math.PI / 2);
   banner(m, 0.86, -0.92, 1.7, C.red);
   const g = m.group();
-  const cung = makeFighter('cung');
+  const cung = bakeSoldier('cung', 0, { act: 'fight' });
   cung.scale.setScalar(0.72);
   cung.position.set(0.5, 0.08, 0.45);
   cung.rotation.y = -Math.PI / 2;
@@ -1246,7 +1249,7 @@ export function makeChoiCanh(level: number): THREE.Group {
   }
   const g = m.group();
   for (const b of bows) g.add(b);
-  const archer = makeFighter('cung');
+  const archer = bakeSoldier('cung', 0, { act: 'fight' });
   archer.scale.setScalar(0.62);
   archer.position.set(0, h + 0.05, 0.05);
   g.add(archer);
@@ -1303,7 +1306,7 @@ export function makeLauNo(): THREE.Group {
   // Ba nỏ lớn chĩa ra trước, sang phải và sang trái, mỗi nỏ một lính nỏ đứng sau.
   g.add(bigCrossbow(0, f2, 0.12, 0), bigCrossbow(0.12, f2, -0.05, Math.PI / 2), bigCrossbow(-0.12, f2, -0.05, -Math.PI / 2));
   for (const [x, z, ry] of [[0.18, -0.2, 0], [-0.25, 0.2, -Math.PI / 2], [0.25, 0.25, Math.PI / 2]] as const) {
-    const archer = makeFighter('cung');
+    const archer = bakeSoldier('cung', 0, { act: 'fight' });
     archer.scale.setScalar(0.5);
     archer.position.set(x, f2 + 0.05, z);
     archer.rotation.y = ry;
@@ -1348,9 +1351,7 @@ export function makeDenPhuDong(): THREE.Group {
   banner(m, -1.3, -1.25, 2.4, C.red);
   banner(m, 1.1, -1.25, 2.4, C.red);
   const g = m.group();
-  const horse = new ToonModel(inkThin);
-  ironHorse(horse);
-  const statue = horse.group();
+  const statue = bakeIronHorse();
   statue.scale.setScalar(0.72);
   statue.position.set(0, 0.54, 0.75);
   g.add(statue);
@@ -1381,7 +1382,7 @@ export function makeDenTanVien(): THREE.Group {
   banner(m, -1.25, 0.4, 2.2, C.mountainCloak);
   banner(m, 1.05, 0.4, 2.2, C.red);
   const g = m.group();
-  const statue = makeSonTinh();
+  const statue = bakeSonTinh();
   statue.scale.setScalar(0.5);
   statue.position.set(0, 0.5, 0.95);
   g.add(statue);
@@ -1417,7 +1418,7 @@ export function makeDenCoLoa(): THREE.Group {
   banner(m, 1.1, -1.3, 2.5, C.red);
   p.box(0.7, 0.14, 0.9, C.rock, -0.15, 0.29, 0.85);
   const g = m.group();
-  const turtle = makeRuaVang();
+  const turtle = bakeRuaVang();
   turtle.scale.setScalar(0.42);
   turtle.position.set(-0.15, 0.36, 0.8);
   g.add(turtle);

@@ -41,12 +41,25 @@ Tài liệu này ghi lại các quyết định đã chốt với chủ dự án
     - phụ nữ mặc váy, đeo gùi;
     - Lạc hầu và lính gác đội mũ lông chim;
   - ruộng, bến, bãi đất đá, lò rèn hiện **đúng số người đang làm**, tối đa bằng số chỗ đứng.
+  - **nhân vật có khung xương dựng bằng code** (chủ dự án duyệt qua bản thử giáo binh, rồi yêu cầu làm cho mọi nhân vật): mỗi khối hình gắn vào một xương (hông, chân, ngực, đầu, tay, đồ cầm tay; thú có thêm cổ, vòi, tai, đuôi, bánh xe), cả người vẫn là một mesh mỗi chất liệu, viền mực chạy theo động tác. Nhân vật cử động tay chân thay vì nhún và ngả cả người:
+    - lính bước chân khi đi; mỗi loại vũ khí một động tác đánh: đâm giáo; giơ cao bổ xuống (qua, rìu, kiếm, chày); giương cung, buông dây, rút tên sau lưng, lắp tên; nâng nỏ ngắm, nỏ giật, hạ xuống lên dây. Người ngã ngửa, thú lăn nghiêng, ma trơi tắt dần;
+    - thú đi nhịp chéo; voi giơ vòi dậm chân khi Lạc tướng đâm giáo, hổ vồ, gà xòe cánh mổ, cá sấu đớp, thuồng luồng rụt cổ rồi lao đầu; bánh chiến xa có nan, lăn khi chạy;
+    - tướng giữ đủ động tác kỹ năng: Gióng quét tre một vòng, ngựa sắt phi, lửa phun ở mõm; Sơn Tinh giơ gậy quá đầu dộng xuống (dời non), thắng thì giơ cao gậy; Thủy Tinh giơ đinh ba lên trời (hô mưa); An Dương Vương chĩa nỏ thần lên trời; Lạc tướng nện dùi hai tay luân phiên;
+    - dân làm việc theo nghề (cúi bổ cuốc, bổ đá, quai búa, đi mang hàng, ngồi xếp bằng gói bánh), người lái đò chèo khi thuyền đi;
+    - quân ta buộc tóc bằng dải vải đỏ dưới mũ lông chim, không dùng vành đồng, để nhìn xa không lẫn với mũ trụ đồng của giặc Ân;
+    - mặt quân ta và dân có đốm sáng trong mắt và má hồng; giặc và tướng có mày xếch;
+    - lính, thú, dân dựng ít mặt hơn tướng cho nhẹ máy (số mặt nhân 0,7, 0,75, 0,6), nên kinh đô gần như không nặng thêm mà số lệnh vẽ giảm.
   - bảng màu: nền kem như giấy, đất vàng ô liu, nước xanh lam đục, điểm nhấn đồng, đỏ son và mực đen.
 - Phong cách này được chọn qua bản dùng thử so sánh 4 phương án: khối hộp ban đầu, voxel tinh xảo, đồ chơi bo tròn, và Nét Đông Sơn. Cả bộ dùng thử được cất ở branch `prototype/phong-cach-hinh-anh`.
 - Màn hình dọc, camera isometric, kéo và phóng to bằng chạm. Giao diện bằng HTML đặt đè lên cảnh 3D.
 - Máy thử chính là **Samsung Galaxy Z Fold5**. Màn hình ngoài (dài, hẹp) dùng bảng trượt lên từ dưới. Màn hình trong (gần vuông) dùng bảng bên cạnh.
 - Mục tiêu 60 khung hình/giây trên Fold5, ít nhất 30 trên máy Android tầm trung đời cũ. Bãi chiến tối đa khoảng 40–60 lính.
 - Độ nét (pixel ratio) mặc định 1,5, không vượt quá màn hình thật, đặt lại mỗi lần đổi cỡ màn hình (mở hay gập Fold5). Cài đặt có 3 mức: Tiết kiệm (1), Vừa (1,5), Nét (2). Lựa chọn lưu riêng trên từng máy, không đi theo mã lưu.
+- **Sao lưu, chuyển máy** (bảng Cài đặt). Game tự lưu trên trình duyệt. Muốn sang máy khác thì dùng một trong hai cách:
+  - **tệp lưu**: bấm Tải về, hoặc Gửi qua bảng chia sẻ của điện thoại (Zalo, Messenger, Drive). Máy kia bấm Chọn tệp ở dòng Mở tệp lưu. Nút Gửi chỉ hiện trên máy chia sẻ được tệp. Tệp lưu là tệp `.txt` chứa đúng mã lưu, tên theo ngày giờ (`thoi-dai-van-lang-2026-11-01-1430.txt`);
+  - **mã lưu**: chép rồi dán vào ô Nhập mã lưu.
+  - Mã lưu được nén (đầu mã `TDVL2:`), ngắn hơn mã đời đầu (`TDVL1:`) chừng 4–8 lần: ván mới chừng 1.000 ký tự (trước 4.200), lên Điện 8 chừng 1.550 (trước 7.300), kinh đô xây kín chừng 4.000 (trước 31.000). Mã đời đầu vẫn nhập được. Nén bằng thư viện `fflate` vì nén xong ngay trong lúc bấm: Safari trên iPhone chỉ cho chép mã và mở bảng chia sẻ ngay lúc người chơi chạm.
+  - Nạp tệp hay mã lưu thì tiến trình hiện tại bị thay bằng tiến trình trong đó.
 - Hiệu ứng âm thanh ngắn tạo bằng code (Web Audio), có nút tắt tiếng. Nhạc nền để bản sau.
 - TypeScript + Vite. Phần tính toán (`src/game/`) không phụ thuộc DOM hay Three.js và có test tự động bằng Vitest. GitHub Actions build, chạy test rồi đăng lên GitHub Pages.
 

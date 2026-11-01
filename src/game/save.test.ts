@@ -5,7 +5,8 @@ import { createInitialState, dienLevel, limitOf, occupancy, place, type Building
 import { DIEN_HOME, GRID, isUnlocked, touchesRiver } from './map';
 import { mauSlots } from './mau';
 import { legacyBaseHeights, levelLegacyFootprints } from './xepLai';
-import { SAVE_VERSION, deserialize, fromCode, serialize, toCode } from './save';
+import { placeAnywhere } from './moPhong';
+import { SAVE_VERSION, deserialize, fromCode, saveFileName, serialize, toCode } from './save';
 
 describe('lưu game', () => {
   it('nâng bản lưu của lát cắt 1 lên bản mới, có đủ dân và người làm', () => {
@@ -57,14 +58,44 @@ describe('lưu game', () => {
   it('xuất rồi nhập mã lưu ra đúng state cũ', () => {
     const s = createInitialState(123);
     expect(place(s, 'luy', DIEN_HOME - 3, DIEN_HOME).ok).toBe(true);
-    const back = fromCode(toCode(s));
-    expect(back).toEqual(s);
+    const code = toCode(s);
+    expect(code.startsWith('TDVL2:')).toBe(true);
+    expect(fromCode(code)).toEqual(s);
+  });
+
+  it('mã lưu được nén, ngắn hơn nhiều so với mã đời đầu', () => {
+    const s = createInitialState(0);
+    s.resources = { gao: 1e6, voOc: 1e6, datDa: 1e6, sat: 1e6 };
+    for (let i = 0; i < 20; i++) placeAnywhere(s, 'luy');
+    expect(s.buildings.length).toBeGreaterThan(15);
+    expect(toCode(s).length).toBeLessThan(maDoiDau(s).length / 4);
+  });
+
+  it('vẫn nhập được mã lưu đời đầu (TDVL1)', () => {
+    const s = createInitialState(7);
+    expect(place(s, 'luy', DIEN_HOME - 3, DIEN_HOME).ok).toBe(true);
+    expect(fromCode(maDoiDau(s))).toEqual(s);
+  });
+
+  it('bỏ qua dấu cách, xuống dòng do ứng dụng nhắn tin chèn vào mã', () => {
+    const s = createInitialState(9);
+    const code = toCode(s);
+    const broken = `  ${code.slice(0, 40)}\n${code.slice(40, 90)} \r\n${code.slice(90)}\n`;
+    expect(fromCode(broken)).toEqual(s);
   });
 
   it('từ chối mã lưu hỏng hoặc sai định dạng', () => {
     expect(fromCode('xin chào')).toBeUndefined();
     expect(fromCode('TDVL1:!!!')).toBeUndefined();
+    expect(fromCode('TDVL2:!!!')).toBeUndefined();
+    expect(fromCode('TDVL2:' + btoa('khong phai du lieu nen'))).toBeUndefined();
+    const code = toCode(createInitialState(1));
+    expect(fromCode(code.slice(0, code.length / 2))).toBeUndefined();
     expect(deserialize('{"version":2}')).toBeUndefined();
+  });
+
+  it('tên tệp lưu theo ngày giờ máy, đuôi .txt', () => {
+    expect(saveFileName(new Date(2026, 10, 1, 9, 5))).toBe('thoi-dai-van-lang-2026-11-01-0905.txt');
   });
 
   it('từ chối công trình lạ hoặc vượt cấp tối đa', () => {
@@ -188,3 +219,10 @@ describe('nâng bản lưu kinh đô nhỏ lên kinh đô lớn (phiên bản 10
     expect(back.relaid).toBeUndefined();
   });
 });
+
+/** Mã lưu đời đầu: JSON đổi thẳng sang base64, không nén. */
+function maDoiDau(s: ReturnType<typeof createInitialState>): string {
+  let bin = '';
+  for (const byte of new TextEncoder().encode(serialize(s))) bin += String.fromCharCode(byte);
+  return 'TDVL1:' + btoa(bin);
+}
