@@ -29,10 +29,11 @@ export type BuildingType =
   | 'lauNo'
   | 'traiGiao'
   | 'traiCung'
-  | 'chuongVoi';
+  | 'chuongVoi'
+  | 'traiNo';
 
-/** Mốc mở khóa theo cốt truyện: sau kết chương 1, khi vào chương 2, sau kết chương 2, khi vào chương 3, sau kết chương 3. */
-export type Unlock = 'ketChuong1' | 'chuong2' | 'ketChuong2' | 'chuong3' | 'ketChuong3';
+/** Mốc mở khóa theo cốt truyện: sau kết chương 1, khi vào chương 2, sau kết chương 2, khi vào chương 3, sau kết chương 3, khi vào chương 4. */
+export type Unlock = 'ketChuong1' | 'chuong2' | 'ketChuong2' | 'chuong3' | 'ketChuong3' | 'chuong4';
 
 export interface BuildingDef {
   type: BuildingType;
@@ -551,6 +552,38 @@ export const BUILDINGS: Record<BuildingType, BuildingDef> = {
     buildable: true,
     removable: false,
   },
+  // Lính nỏ (chương 4) cũng có nơi ở riêng: Cao Lỗ tâu vua cho dân luyện nỏ.
+  traiNo: {
+    type: 'traiNo',
+    w: 2,
+    d: 2,
+    maxLevel: 1,
+    buildCost: { gao: 600, voOc: 500, datDa: 500, sat: 120 },
+    upgradeCost: [{}, {}],
+    production: [{}],
+    hp: [500],
+    limit: [0, 1, 1, 1, 1, 1, 1, 1],
+    minDien: 2,
+    barracksLevel: 5,
+    buildable: true,
+    removable: false,
+    unlock: 'chuong4',
+  },
+};
+
+// ---------- Ụ nỏ trên thành Cổ Loa (chương 4) ----------
+
+/**
+ * Ụ nỏ dựng trên một đoạn thành Cổ Loa còn nguyên, mỗi đoạn một ụ, không tốn thêm đất. Tự bắn một giặc trong tầm.
+ * Là một phần của đoạn thành: giặc không nhắm ụ, thành bị phá thì ụ hư theo, sửa thành xong phải sửa ụ.
+ * `limit` theo cấp Điện (chỉ số 0 là cấp 1).
+ */
+export const U_NO = {
+  cost: { voOc: 150, datDa: 150, sat: 30 } as Cost,
+  limit: [0, 0, 0, 0, 0, 0, 8, 16],
+  dmg: 14,
+  range: 4,
+  cooldown: 1.4,
 };
 
 /** Chòi canh lên tới cấp này mới ghép được thành lầu nỏ; một lầu nỏ tính bằng chừng này chòi canh. */
@@ -680,7 +713,7 @@ export const TRADE_BONUS = 1.15;
 
 // ---------- Quân đội và giặc ----------
 
-export type UnitType = 'giao' | 'cung' | 'voi';
+export type UnitType = 'giao' | 'cung' | 'voi' | 'no';
 export type EnemyType =
   | 'giaoAn'
   | 'cungAn'
@@ -699,8 +732,11 @@ export type EnemyType =
   | 'linhTrieu'
   | 'noTrieu'
   | 'kyBinh'
-  | 'trieuDa';
-export const UNIT_TYPES: UnitType[] = ['giao', 'cung', 'voi'];
+  | 'trieuDa'
+  | 'linhThuy'
+  | 'cungThuyen'
+  | 'linhRiu';
+export const UNIT_TYPES: UnitType[] = ['giao', 'cung', 'voi', 'no'];
 
 export interface FighterStats {
   hp: number;
@@ -725,15 +761,31 @@ export interface UnitDef extends FighterStats {
   upkeep: number;
 }
 
+/** Quân nặng của giặc: giáo binh và lính nỏ khắc chế. */
+const HEAVY: EnemyType[] = ['chienXa', 'caSau', 'hoTinh', 'kyBinh', 'linhRiu'];
+
 /**
- * Quân ta: giáo binh thắng quân nặng (chiến xa, cá sấu, hổ tinh, kỵ binh), cung thủ thắng lính bộ
- * (lính giáo Ân, tôm binh, quỷ núi, lính khiên Triệu), voi chiến thắng quân bắn xa
- * (cung thủ Ân, cá phun nước, ma trơi, nỏ thủ Triệu).
+ * Quân ta: giáo binh thắng quân nặng (chiến xa, cá sấu, hổ tinh, kỵ binh, lính rìu), cung thủ thắng lính bộ
+ * (lính giáo Ân, tôm binh, quỷ núi, lính khiên Triệu, lính thủy), voi chiến thắng quân bắn xa
+ * (cung thủ Ân, cá phun nước, ma trơi, nỏ thủ Triệu, cung thuyền).
+ * Lính nỏ (chương 4) đứng ngoài vòng khắc chế: đánh mạnh gấp đôi quân nặng và mọi trùm.
  */
 export const UNITS: Record<UnitType, UnitDef> = {
-  giao: { hp: 60, dmg: 8, range: 0.8, speed: 1.6, cooldown: 1.0, strongVs: ['chienXa', 'caSau', 'hoTinh', 'kyBinh'], cost: { gao: 20, voOc: 8 }, home: 'traiGiao', space: 1, upkeep: 0.6 },
-  cung: { hp: 40, dmg: 7, range: 3.8, speed: 1.5, cooldown: 1.2, strongVs: ['giaoAn', 'tomBinh', 'quyNui', 'linhTrieu'], cost: { gao: 25, voOc: 8, sat: 4 }, home: 'traiCung', space: 1, upkeep: 0.6 },
-  voi: { hp: 200, dmg: 15, range: 0.9, speed: 1.1, cooldown: 1.5, strongVs: ['cungAn', 'caPhun', 'maTroi', 'noTrieu'], cost: { gao: 60, voOc: 20, sat: 12 }, home: 'chuongVoi', space: 3, upkeep: 1.5 },
+  giao: { hp: 60, dmg: 8, range: 0.8, speed: 1.6, cooldown: 1.0, strongVs: HEAVY, cost: { gao: 20, voOc: 8 }, home: 'traiGiao', space: 1, upkeep: 0.6 },
+  cung: { hp: 40, dmg: 7, range: 3.8, speed: 1.5, cooldown: 1.2, strongVs: ['giaoAn', 'tomBinh', 'quyNui', 'linhTrieu', 'linhThuy'], cost: { gao: 25, voOc: 8, sat: 4 }, home: 'traiCung', space: 1, upkeep: 0.6 },
+  voi: { hp: 200, dmg: 15, range: 0.9, speed: 1.1, cooldown: 1.5, strongVs: ['cungAn', 'caPhun', 'maTroi', 'noTrieu', 'cungThuyen'], cost: { gao: 60, voOc: 20, sat: 12 }, home: 'chuongVoi', space: 3, upkeep: 1.5 },
+  no: {
+    hp: 50,
+    dmg: 26,
+    range: 4.5,
+    speed: 1.3,
+    cooldown: 2.4,
+    strongVs: [...HEAVY, 'phoTuong', 'daiTuong', 'thuongLuong', 'thuyTinh', 'gaTrang', 'trieuDa'],
+    cost: { gao: 50, voOc: 15, sat: 10 },
+    home: 'traiNo',
+    space: 2,
+    upkeep: 1.0,
+  },
 };
 
 /** Giặc Ân: lính giáo, cung thủ và chiến xa (xe ngựa chiến, quân nặng). Phó tướng làm trùm ở phó bản. */
@@ -759,6 +811,11 @@ export const ENEMIES: Record<EnemyType, FighterStats> = {
   noTrieu: { hp: 55, dmg: 11, range: 3.8, speed: 1.3, cooldown: 1.4 },
   kyBinh: { hp: 290, dmg: 24, range: 0.9, speed: 2.2, cooldown: 1.4, strongVs: ['cung'] },
   trieuDa: { hp: 1700, dmg: 34, range: 1.3, speed: 1.3, cooldown: 1.2 },
+  // Thủy binh Triệu đội lốt cướp sông, đi thuyền tới: lính thủy chạy nhanh, cung thuyền bắn xa,
+  // lính rìu giáp mây là quân nặng.
+  linhThuy: { hp: 100, dmg: 12, range: 0.8, speed: 1.7, cooldown: 1.0 },
+  cungThuyen: { hp: 60, dmg: 12, range: 3.8, speed: 1.3, cooldown: 1.4 },
+  linhRiu: { hp: 310, dmg: 25, range: 0.9, speed: 1.5, cooldown: 1.4, strongVs: ['cung'] },
 };
 
 /**
@@ -845,8 +902,11 @@ export const CO_LOA_TOWER = { dmg: 1.5, range: 1 };
 /** Vào chương 3, hay khi An Dương Vương cầm nỏ thần: đợt giặc đầu tiên trên bộ tới sau chừng này thời gian chơi. */
 export const FIRST_LAND_MS = 3 * 60_000;
 
-/** Ai đánh kinh đô: giặc Ân (chương 1), Thủy Tinh dâng nước kèm thủy quái, yêu tinh núi Thất Diệu, hay quân Triệu Đà. */
-export type Foe = 'an' | 'thuy' | 'yeu' | 'trieu';
+/**
+ * Ai đánh kinh đô: giặc Ân (chương 1), Thủy Tinh dâng nước kèm thủy quái, yêu tinh núi Thất Diệu, quân Triệu Đà
+ * trên bộ, hay thủy binh Triệu đi thuyền (chương 4).
+ */
+export type Foe = 'an' | 'thuy' | 'yeu' | 'trieu' | 'thuyBinh';
 
 /** Yêu tinh núi Thất Diệu đêm thứ `n` kéo về phá thành. */
 export function yeuForces(n: number): Partial<Record<EnemyType, number>> {
@@ -867,6 +927,23 @@ export function trieuForces(n: number): Partial<Record<EnemyType, number>> {
   };
 }
 export const trieuHpScale = (n: number) => 1.9 + 0.12 * (n - 1);
+
+/** Thủy binh Triệu đợt thứ `n` đi thuyền đánh kinh đô. */
+export function thuyBinhForces(n: number): Partial<Record<EnemyType, number>> {
+  return {
+    linhThuy: Math.min(9 + n, 18),
+    cungThuyen: Math.min(5 + n, 12),
+    linhRiu: Math.min(2 + Math.floor((n + 1) / 2), 7),
+  };
+}
+export const thuyBinhHpScale = (n: number) => 2.0 + 0.12 * (n - 1);
+/**
+ * Thuyền giặc: mỗi thuyền chở `carry` lính, hiện ở mép sông xa rồi chèo vào bờ gần nhất với tốc độ `speed`
+ * (ô mỗi giây), thuyền sau rời bến chậm hơn thuyền trước `stagger` giây. Thuyền không có máu, neo tới hết trận.
+ */
+export const BOAT = { carry: 6, speed: 0.6, stagger: 1.2 };
+/** Vào chương 4: đợt thủy binh đầu tiên tới sau chừng này thời gian chơi. */
+export const FIRST_THUY_BINH_MS = 3 * 60_000;
 
 /** Chòi canh tự bắn giặc trong tầm. */
 export const TOWER = { range: 4.5, cooldown: 1.1, dmg: [7, 9, 12, 15, 19, 24, 30, 37] };
@@ -903,7 +980,7 @@ export const raidHpScale = (wave: number) => 1 + 0.12 * (wave - 1);
 export type Row = 'tien' | 'trung' | 'hau';
 export const ROWS: Row[] = ['tien', 'trung', 'hau'];
 /** Hàng mặc định: giáo binh chặn đầu, voi ở giữa, cung thủ bắn từ sau. */
-export const DEFAULT_ROWS: Record<UnitType, Row> = { giao: 'tien', voi: 'trung', cung: 'hau' };
+export const DEFAULT_ROWS: Record<UnitType, Row> = { giao: 'tien', voi: 'trung', cung: 'hau', no: 'hau' };
 export const ENEMY_ROWS: Record<EnemyType, Row> = {
   giaoAn: 'tien',
   chienXa: 'trung',
@@ -923,6 +1000,9 @@ export const ENEMY_ROWS: Record<EnemyType, Row> = {
   kyBinh: 'trung',
   noTrieu: 'hau',
   trieuDa: 'hau',
+  linhThuy: 'tien',
+  linhRiu: 'trung',
+  cungThuyen: 'hau',
 };
 
 /**
@@ -1021,7 +1101,10 @@ export type QuestGoal =
   | { kind: 'floodsHeld'; amount: number }
   | { kind: 'rings'; amount: number }
   | { kind: 'noThan' }
-  | { kind: 'trieuHeld'; amount: number };
+  | { kind: 'trieuHeld'; amount: number }
+  | { kind: 'uNo'; amount: number }
+  | { kind: 'unitTroops'; unit: UnitType; amount: number }
+  | { kind: 'thuyBinhHeld'; amount: number };
 
 export interface QuestDef {
   id: string;
@@ -1076,6 +1159,9 @@ export const QUESTS: QuestDef[] = [
   // Chương 4: Mỵ Châu, Trọng Thủy. Mỗi phần làm xong thì nối thêm nhiệm vụ của phần ấy vào cuối.
   { id: 'dien8', goal: { kind: 'dienLevel', level: 8 }, reward: { gao: 2000, voOc: 2000 } },
   { id: 'lauNo', goal: { kind: 'count', building: 'lauNo', amount: 1 }, reward: { datDa: 1500, sat: 400 } },
+  { id: 'uNo', goal: { kind: 'uNo', amount: 4 }, reward: { voOc: 1200, sat: 300 } },
+  { id: 'luyenNo', goal: { kind: 'unitTroops', unit: 'no', amount: 4 }, reward: { gao: 1500, sat: 300 } },
+  { id: 'chongThuyBinh', goal: { kind: 'thuyBinhHeld', amount: 1 }, reward: { voOc: 1500, sat: 450 } },
 ];
 /** Nhận xong thưởng nhiệm vụ cuối chương 1 (Đền Phù Đổng) thì sang chương 2. */
 export const CH2_QUEST_START = 20;

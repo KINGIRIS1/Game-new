@@ -8,13 +8,18 @@ import { forgeArms } from './game/binhKhi';
 import { forgeNoThan, inChapter3, wallRings } from './game/coLoa';
 import { offer } from './game/tet';
 import { applyMau } from './game/mau';
-import { mergeTowers } from './game/chuong4';
+import { inChapter4, mergeTowers } from './game/chuong4';
 import { feedGiong, forgeGear } from './game/giong';
 import { inChapter2, offerGift } from './game/son';
 import { markStory, pendingStory } from './game/story';
 import { footprintTop } from './game/terrain';
-import { BUILDINGS, RESOURCE_IDS, STAGES, type BuildingType, type Cost, type SkillId } from './game/defs';
+import { BUILDINGS, RESOURCE_IDS, STAGES, U_NO, type BuildingType, type Cost, type SkillId } from './game/defs';
 import {
+  canAfford,
+  placeUNo,
+  repairUNo,
+  uNoCount,
+  uNoLimit,
   applyOffline,
   buildingAt,
   canMove,
@@ -52,7 +57,7 @@ import { vi } from './text/vi';
 import { Hud, buildingName, type HudAction } from './ui/hud';
 
 /** Chạm từng ô để dựng lũy, gài bẫy, đắp đê, đắp thành Cổ Loa, hay đắp đất (`raise`). */
-type PaintType = 'luy' | 'bayChong' | 'de' | 'thanh' | 'raise';
+type PaintType = 'luy' | 'bayChong' | 'de' | 'thanh' | 'raise' | 'uNo';
 const PAINTED: BuildingType[] = ['luy', 'bayChong', 'de', 'thanh'];
 
 type Mode =
@@ -232,6 +237,14 @@ function start(): void {
         commit();
         return;
       }
+      if (mode.type === 'uNo') {
+        const r = placeUNo(state, tile.x, tile.z);
+        if (!r.ok) return fail(r.reason);
+        play('place');
+        hud.setHint(vi.ui.uNoHint(uNoCount(state), uNoLimit(state)));
+        commit();
+        return;
+      }
       const r = place(state, mode.type, tile.x, tile.z);
       if (!r.ok) return fail(r.reason);
       play('place');
@@ -378,6 +391,39 @@ function start(): void {
         play('tap');
         mode = { kind: 'merge', from: b.id };
         hud.setMode('merge');
+        return;
+      }
+
+      case 'chooseUNo': {
+        if (!inChapter4(state)) return fail('canChuong4');
+        if (uNoCount(state) >= uNoLimit(state)) return fail('datGioiHan');
+        if (!canAfford(state, U_NO.cost)) return fail('thieuTaiNguyen');
+        hud.closeSheet();
+        world.showGrid(true);
+        play('tap');
+        mode = { kind: 'paint', type: 'uNo' };
+        hud.setMode('paint', true, vi.ui.uNoHint(uNoCount(state), uNoLimit(state)));
+        return;
+      }
+
+      case 'placeUNo': {
+        const b = findBuilding(state, a.id);
+        if (!b) return;
+        const r = placeUNo(state, b.x, b.z);
+        if (!r.ok) return fail(r.reason);
+        play('place');
+        hud.toast(vi.ui.uNoPlaced);
+        commit();
+        select(b.id);
+        return;
+      }
+
+      case 'repairUNo': {
+        const r = repairUNo(state, a.id);
+        if (!r.ok) return fail(r.reason);
+        play('upgrade');
+        commit();
+        world.pop(r.value.id);
         return;
       }
 

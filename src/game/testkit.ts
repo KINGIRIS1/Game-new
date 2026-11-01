@@ -5,8 +5,8 @@ import { DEFAULT_ROWS, SKILL_IDS, STAGES, TEMPLE_BONUS, type SkillId, type UnitT
 
 export type Army = Record<UnitType, number>;
 /** Quân mẫu chương 2, 3: vừa đúng 38 chỗ doanh trại cấp 5. */
-export const SAMPLE_ARMY: Army = { giao: 14, cung: 12, voi: 4 };
-export const HALF_ARMY: Army = { giao: 7, cung: 6, voi: 2 };
+export const SAMPLE_ARMY: Army = { giao: 14, cung: 12, voi: 4, no: 0 };
+export const HALF_ARMY: Army = { giao: 7, cung: 6, voi: 2, no: 0 };
 
 /**
  * Cách chơi khi đánh thử:

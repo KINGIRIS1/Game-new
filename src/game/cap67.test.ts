@@ -85,16 +85,16 @@ describe('rèn binh khí', () => {
     s.buildings.find((b) => b.type === 'loRen')!.level = 7;
     expect(forgeArms(s, 'giao')).toEqual({ ok: true, value: 2 });
     expect(canForgeArms(s, 'giao')).toEqual({ ok: false, reason: 'capToiDa' });
-    expect(s.arms).toEqual({ giao: 2, cung: 0, voi: 0 });
+    expect(s.arms).toEqual({ giao: 2, cung: 0, voi: 0, no: 0 });
     // Lò rèn hư thì không rèn được.
     s.buildings.find((b) => b.type === 'loRen')!.damaged = true;
     expect(canForgeArms(s, 'cung')).toEqual({ ok: false, reason: 'canLoRen' });
   });
 
   it('binh khí đã rèn thêm máu và sức đánh cho đúng binh chủng ấy', () => {
-    const setup = { id: 1, stage: 9, enemies: { tomBinh: 1 }, hpScale: 1, army: { giao: 1, cung: 1, voi: 0 }, rows: DEFAULT_ROWS };
+    const setup = { id: 1, stage: 9, enemies: { tomBinh: 1 }, hpScale: 1, army: { giao: 1, cung: 1, voi: 0, no: 0 }, rows: DEFAULT_ROWS };
     const plain = startFieldBattle(setup);
-    const armed = startFieldBattle({ ...setup, arms: { giao: 2, cung: 0, voi: 0 } });
+    const armed = startFieldBattle({ ...setup, arms: { giao: 2, cung: 0, voi: 0, no: 0 } });
     const hp = (b: typeof plain, k: string) => b.fighters.find((f) => f.kind === k)!.maxHp;
     expect(hp(armed, 'giao')).toBeCloseTo(UNITS.giao.hp * FIELD.hpMul * (1 + 2 * ARMS_BONUS), 5);
     expect(hp(armed, 'cung')).toBeCloseTo(hp(plain, 'cung'), 5);
@@ -121,7 +121,7 @@ describe('rèn binh khí', () => {
     s7.version = 7;
     delete s7.arms;
     const back = deserialize(JSON.stringify(s7))!;
-    expect(back.version).toBe(10);
-    expect(back.arms).toEqual({ giao: 0, cung: 0, voi: 0 });
+    expect(back.version).toBe(11);
+    expect(back.arms).toEqual({ giao: 0, cung: 0, voi: 0, no: 0 });
   });
 });

@@ -191,7 +191,7 @@ describe('Tết', () => {
     tick(s, TET_FIRST_MS + MIN);
     expect(tetOpen(s)).toBe(false);
     s.raid.phase = 'idle';
-    s.campaign.battle = startFieldBattle({ id: 1, stage: 1, enemies: { giaoAn: 1 }, hpScale: 1, army: { giao: 1, cung: 0, voi: 0 }, rows: DEFAULT_ROWS });
+    s.campaign.battle = startFieldBattle({ id: 1, stage: 1, enemies: { giaoAn: 1 }, hpScale: 1, army: { giao: 1, cung: 0, voi: 0, no: 0 }, rows: DEFAULT_ROWS });
     s.campaign.battle.outcome = null;
     const t = s.clock;
     // Phó bản tự đánh tiếp theo tick, nên chỉ chạy một chút để trận chưa xong.
@@ -262,7 +262,7 @@ describe('Tết', () => {
     expect(troopBonus(s)).toBeCloseTo(TEMPLE_BONUS, 5);
     s.tet.blessing.giay = true;
     expect(troopBonus(s)).toBeCloseTo(TEMPLE_BONUS + TET_TROI_BONUS, 5);
-    const b = startFieldBattle({ id: 1, stage: 1, enemies: { giaoAn: 1 }, hpScale: 1, army: { giao: 1, cung: 0, voi: 0 }, rows: DEFAULT_ROWS, bonus: troopBonus(s) });
+    const b = startFieldBattle({ id: 1, stage: 1, enemies: { giaoAn: 1 }, hpScale: 1, army: { giao: 1, cung: 0, voi: 0, no: 0 }, rows: DEFAULT_ROWS, bonus: troopBonus(s) });
     expect(b.fighters.find((f) => f.kind === 'giao')!.maxHp).toBeCloseTo(UNITS.giao.hp * FIELD.hpMul * (1 + TEMPLE_BONUS + TET_TROI_BONUS), 5);
   });
 });
@@ -328,7 +328,7 @@ describe('bản lưu phiên bản 9', () => {
     delete old.tet;
     old.buildings = (old.buildings as { type: string }[]).filter((b) => !['ruongNep', 'vuon', 'chuongLon', 'bep'].includes(b.type));
     const back = deserialize(JSON.stringify(old))!;
-    expect(back.version).toBe(10);
+    expect(back.version).toBe(11);
     expect(back.tet).toEqual({
       seq: 0,
       nextAt: null,

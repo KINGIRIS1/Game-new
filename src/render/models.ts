@@ -91,6 +91,9 @@ function chariot(m: ToonModel): void {
 const LEATHER = 0x8a5a33;
 /** Sừng làm cung (cung sừng): vàng ngà. */
 const HORN = 0xe6d6a8;
+/** Giáp mây đan của lính rìu Triệu. */
+const RATTAN = 0xc9a45a;
+const RATTAN_DARK = 0x9a7a3a;
 
 /**
  * Lính trong trận. Quân ta đội mũ lông chim như trên trống đồng,
@@ -105,7 +108,8 @@ export function makeFighter(kind: FighterKind, tier = 0): THREE.Group {
   if (kind === 'giong') return makeGiong('trangSi');
   if (kind === 'sonTinh') return makeSonTinh();
   if (kind === 'anDuong') return makeAnDuong({ crossbow: true });
-  const water = makeWaterFoe(kind) ?? makeChapter3Foe(kind);
+  if (kind === 'no') return makeCrossbowman(tier);
+  const water = makeWaterFoe(kind) ?? makeChapter3Foe(kind) ?? makeChapter4Foe(kind);
   if (water) return water;
   const boss = kind === 'phoTuong' || kind === 'daiTuong';
   const enemy = kind === 'giaoAn' || kind === 'cungAn' || kind === 'chienXa' || boss;
@@ -1272,3 +1276,165 @@ export function makeCrossbowStand(): THREE.Group {
   g.add(b);
   return g;
 }
+
+// ---------- Chương 4: lính nỏ, thủy binh Triệu, thuyền giặc, ụ nỏ ----------
+
+/**
+ * Lính nỏ Âu Lạc: mũ đồng, giáp da, nỏ gỗ lớn có lẫy đồng. Hai bộ chân: đứng khi đi, quỳ một gối khi bắn
+ * (phần vẽ trận bật tắt hai bộ chân và hạ thân trên, xem `userData.kneel`).
+ * Rèn bậc 1: mũi tên sắt; bậc 2: nỏ cánh sừng và bao tên đồng.
+ */
+export function makeCrossbowman(tier = 0): THREE.Group {
+  const upper = new ToonModel(inkThin);
+  const p = upper.plain;
+  // Giáp da thắt đai đồng, tay trần.
+  upper.band.cyl(0.13, 0.17, 0.24, LEATHER, 0, 0.28, 0, undefined, 8);
+  p.cyl(0.175, 0.175, 0.04, C.bronze, 0, 0.18, 0, undefined, 8);
+  p.cyl(0.1, 0.12, 0.14, LEATHER, 0, 0.45, 0, undefined, 8);
+  for (const s of [-1, 1]) p.cyl(0.035, 0.035, 0.24, C.skin, s * 0.12, 0.42, 0.14, [Math.PI / 2 - 0.3, 0, -s * 0.3], 6);
+  p.sphere(0.21, C.skin, 0, 0.68, 0, [1, 0.95, 0.95], 12);
+  for (const s of [-1, 1]) p.sphere(0.028, C.ink, s * 0.075, 0.67, 0.18, [1, 1.4, 0.5], 6);
+  // Mũ đồng tròn có vành, chỏm lông chim ngắn.
+  p.sphere(0.23, C.bronze, 0, 0.77, -0.02, [1, 0.6, 1], 10);
+  p.cyl(0.26, 0.26, 0.03, C.bronzeDark, 0, 0.72, -0.02, undefined, 12);
+  for (let i = -1; i <= 1; i++) p.box(0.05, 0.22, 0.03, i ? C.cream : C.red, i * 0.06, 0.95, -0.08, [0, 0, -i * 0.3]);
+  // Nỏ gỗ lớn cầm ngang trước ngực, chĩa ra trước.
+  const horn = tier >= 2;
+  p.box(0.07, 0.07, 0.62, C.woodDark, 0, 0.44, 0.34);
+  for (const side of [-1, 1]) p.box(0.4, 0.05, 0.05, horn ? HORN : C.wood, side * 0.19, 0.44, 0.62, [0, side * 0.35, 0]);
+  if (horn) for (const side of [-1, 1]) p.sphere(0.03, C.bronze, side * 0.37, 0.44, 0.55, [1, 1, 1], 6);
+  p.box(0.012, 0.012, 0.74, C.cream, 0, 0.46, 0.53, [0, Math.PI / 2, 0]);
+  p.box(0.03, 0.09, 0.05, C.bronze, 0, 0.38, 0.12);
+  p.box(0.018, 0.018, 0.36, C.arrow, 0, 0.49, 0.52);
+  p.cone(0.03, 0.08, tier >= 1 ? IRON : C.bronze, 0, 0.49, 0.72, [Math.PI / 2, 0, 0], 4);
+  // Bao tên sau lưng: gỗ (chưa rèn), da (bậc 1), đồng (bậc 2).
+  p.cyl(0.05, 0.05, 0.34, tier >= 2 ? C.bronze : tier >= 1 ? LEATHER : C.woodLight, -0.12, 0.5, -0.17, [0.3, 0, 0], 6);
+  const standLegs = new ToonModel(inkThin);
+  for (const x of [-0.06, 0.06]) standLegs.plain.cyl(0.04, 0.045, 0.18, C.skin, x, 0.09, 0, undefined, 6);
+  const kneelLegs = new ToonModel(inkThin);
+  // Quỳ một gối: chân phải co đặt bàn chân trước, gối trái chạm đất, cẳng chân ngả về sau.
+  kneelLegs.plain.cyl(0.04, 0.045, 0.16, C.skin, 0.07, 0.08, 0.1, undefined, 6);
+  kneelLegs.plain.cyl(0.04, 0.045, 0.2, C.skin, -0.07, 0.04, -0.06, [Math.PI / 2, 0, 0], 6);
+  const g = new THREE.Group();
+  const top = upper.group();
+  top.userData.kneelUpper = true;
+  const stand = standLegs.group();
+  stand.userData.standLegs = true;
+  const kneel = kneelLegs.group();
+  kneel.userData.kneelLegs = true;
+  kneel.visible = false;
+  g.add(top, stand, kneel);
+  g.userData.kneel = true;
+  return g;
+}
+
+/** Lính Triệu cởi trần (lính thủy): da trần, khố đen viền đỏ, khăn đỏ buộc đầu. */
+function bareSailor(m: ToonModel): void {
+  const p = m.plain;
+  for (const x of [-0.06, 0.06]) p.cyl(0.04, 0.045, 0.2, C.skin, x, 0.1, 0, undefined, 6);
+  m.band.cyl(0.15, 0.17, 0.12, C.trieuCloth, 0, 0.22, 0, undefined, 8);
+  p.cyl(0.175, 0.175, 0.035, C.trieuRed, 0, 0.29, 0, undefined, 8);
+  p.box(0.14, 0.16, 0.03, C.trieuCloth, 0, 0.13, 0.15);
+  p.cyl(0.12, 0.15, 0.2, C.skin, 0, 0.4, 0, undefined, 8);
+  for (const s of [-1, 1]) p.cyl(0.035, 0.035, 0.24, C.skin, s * 0.16, 0.4, 0, [0, 0, s * 0.4], 6);
+  p.sphere(0.21, C.skin, 0, 0.66, 0, [1, 0.95, 0.95], 12);
+  for (const s of [-1, 1]) p.sphere(0.028, C.ink, s * 0.075, 0.65, 0.18, [1, 1.4, 0.5], 6);
+  p.sphere(0.215, C.hair, 0, 0.74, -0.04, [1, 0.6, 1], 10);
+  p.cyl(0.215, 0.215, 0.05, C.trieuRed, 0, 0.72, -0.02, undefined, 10);
+  p.box(0.04, 0.16, 0.02, C.trieuRed, 0.06, 0.66, -0.22, [0.3, 0, 0.2]);
+}
+
+/**
+ * Thủy binh Triệu (chương 4). Trả về null nếu không phải thủy binh.
+ * - lính thủy: cởi trần, khố đen viền đỏ, giáo ngắn;
+ * - cung thuyền: áo đen, nón rộng vành đen, cung dài;
+ * - lính rìu giáp mây: giáp mây đan dày phồng ra, rìu lớn.
+ */
+export function makeChapter4Foe(kind: FighterKind): THREE.Group | null {
+  const m = new ToonModel(inkThin);
+  const p = m.plain;
+  if (kind === 'linhThuy') {
+    bareSailor(m);
+    p.cyl(0.018, 0.018, 0.8, C.woodDark, 0.24, 0.45, 0.08, [0.2, 0, 0], 5);
+    p.cone(0.05, 0.16, C.iron, 0.24, 0.88, 0.17, [0.2, 0, 0], 4);
+  } else if (kind === 'cungThuyen') {
+    trieuSoldier(m, 0, 0);
+    // Nón lá rộng vành sơn đen, chóp nhọn.
+    p.cone(0.42, 0.2, C.trieuCloth, 0, 0.92, -0.02, undefined, 12);
+    p.cyl(0.43, 0.43, 0.02, C.trieuRed, 0, 0.83, -0.02, undefined, 14);
+    // Cung dài cao quá đầu.
+    for (const [dy, rz] of [[0.32, 0.35], [0, 0], [-0.32, -0.35]] as const) {
+      p.box(0.03, 0.34, 0.03, C.woodDark, 0.26 + Math.abs(dy) * -0.18, 0.46 + dy, 0.12, [0, 0, rz]);
+    }
+    p.box(0.01, 0.92, 0.01, C.cream, 0.3, 0.46, 0.12);
+  } else if (kind === 'linhRiu') {
+    trieuSoldier(m, 0, 0);
+    // Giáp mây đan dày: thân phồng, vai bọc mây, các đai đan ngang.
+    m.band.cyl(0.21, 0.24, 0.34, RATTAN, 0, 0.32, 0, undefined, 10);
+    for (const y of [0.2, 0.32, 0.44]) p.cyl(0.235, 0.235, 0.025, RATTAN_DARK, 0, y, 0, undefined, 10);
+    for (const s of [-1, 1]) p.sphere(0.11, RATTAN, s * 0.2, 0.5, 0, [1, 0.8, 1], 8);
+    p.sphere(0.24, RATTAN_DARK, 0, 0.8, -0.02, [1, 0.5, 1], 10);
+    // Rìu lớn cán dài, lưỡi sắt cong.
+    p.cyl(0.025, 0.025, 1.0, C.woodDark, 0.28, 0.55, 0.1, [0.15, 0, 0], 5);
+    p.box(0.05, 0.3, 0.3, C.iron, 0.3, 0.98, 0.25, [0.15, 0, 0]);
+    p.box(0.05, 0.06, 0.32, C.trieuRed, 0.3, 0.86, 0.22, [0.15, 0, 0]);
+  } else return null;
+  return m.group();
+}
+
+/** Thuyền giặc Triệu: thân đen dài, mũi cong vểnh lên như móc câu, cột buồm và buồm đỏ. Dài theo trục z (mũi ra trước). */
+export function makeEnemyBoat(): THREE.Group {
+  const m = new ToonModel(inkThin);
+  const p = m.plain;
+  p.box(0.5, 0.22, 1.6, C.trieuCloth, 0, 0.11, 0);
+  // Sàn gỗ sẫm, viền mạn đỏ chạy dọc hai bên.
+  p.box(0.4, 0.02, 1.5, C.woodDark, 0, 0.225, 0);
+  for (const sx of [-1, 1]) p.box(0.05, 0.06, 1.62, C.trieuRed, sx * 0.25, 0.24, 0);
+  // Mũi cong vểnh như móc câu, đuôi vát lên.
+  p.box(0.36, 0.12, 0.5, C.trieuCloth, 0, 0.28, 0.95, [-0.6, 0, 0]);
+  p.cone(0.08, 0.34, C.trieuCloth, 0, 0.6, 1.16, [-0.2, 0, 0], 5);
+  p.box(0.36, 0.12, 0.4, C.trieuCloth, 0, 0.24, -0.92, [0.5, 0, 0]);
+  // Cột buồm và buồm đỏ hình chữ nhật có nẹp tre.
+  p.cyl(0.03, 0.035, 1.5, C.woodDark, 0, 0.95, 0.15, undefined, 6);
+  m.band.box(0.86, 0.8, 0.03, C.trieuRed, 0, 1.15, 0.12);
+  for (const y of [0.85, 1.15, 1.45]) p.box(0.9, 0.025, 0.04, C.woodDark, 0, y, 0.12);
+  // Mái chèo hai bên mạn.
+  for (const s of [-1, 1]) for (const z of [-0.4, 0.3]) p.box(0.04, 0.04, 0.6, C.woodDark, s * 0.4, 0.12, z, [0, s * 0.9, s * 0.4]);
+  return m.group();
+}
+
+/** Mặt thành Cổ Loa cao chừng này trên mặt đất (chỗ đặt ụ nỏ). */
+export const CITADEL_TOP = 1.39;
+
+/**
+ * Ụ nỏ trên mặt thành Cổ Loa: ụ đất đắp cao, mái tranh che nhỏ, một lính nỏ quỳ bắn ra ngoài. Gốc ở mặt thành.
+ * `broken`: ụ hư (thành đã sửa mà ụ chưa sửa): ụ đất sạt, cột gãy, không người.
+ */
+export function makeUNo(broken = false): THREE.Group {
+  const m = new ToonModel(inkThin);
+  const p = m.plain;
+  p.box(0.62, 0.18, 0.62, C.earthDark, 0, 0.09, 0);
+  if (broken) {
+    p.box(0.42, 0.12, 0.36, C.earth, -0.05, 0.2, 0.04, [0, 0.4, 0.15]);
+    p.cyl(0.025, 0.025, 0.4, C.woodDark, 0.12, 0.25, -0.1, [0, 0.6, Math.PI / 2 - 0.4], 5);
+    p.cyl(0.025, 0.025, 0.3, C.woodDark, -0.18, 0.3, 0.15, undefined, 5);
+    return m.group();
+  }
+  p.box(0.5, 0.14, 0.5, C.earth, 0, 0.25, 0);
+  for (const x of [-0.18, 0.18]) for (const z of [-0.18, 0.18]) p.cyl(0.025, 0.025, 0.5, C.woodDark, x, 0.55, z, undefined, 5);
+  m.band.cone(0.4, 0.26, C.thatch, 0, 0.9, 0, [0, Math.PI / 4, 0], 4);
+  const g = m.group();
+  const man = makeCrossbowman();
+  for (const c of man.children) {
+    if (c.userData.standLegs) c.visible = false;
+    if (c.userData.kneelLegs) c.visible = true;
+    if (c.userData.kneelUpper) c.position.y = -KNEEL_DROP;
+  }
+  man.scale.setScalar(0.5);
+  man.position.set(0, 0.32, 0.05);
+  g.add(man);
+  return g;
+}
+
+/** Quỳ một gối thì thân trên hạ xuống chừng này (đơn vị mô hình). */
+export const KNEEL_DROP = 0.1;

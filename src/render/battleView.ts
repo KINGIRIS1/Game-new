@@ -4,7 +4,7 @@
 import * as THREE from 'three';
 import type { Battle, FighterKind } from '../game/battle';
 import { FIRE, HILL, RALLY_BEAT, ROCKS, SKILLS, TT_WAVE, type UnitType } from '../game/defs';
-import { BOW_POSE, WEAPON_REST, makeAnDuong, makeFighter, makeGiong, makeMountain, makeRuaVang, makeSonTinh } from './models';
+import { BOW_POSE, KNEEL_DROP, WEAPON_REST, makeAnDuong, makeEnemyBoat, makeFighter, makeGiong, makeMountain, makeRuaVang, makeSonTinh } from './models';
 import { C } from './palette';
 import { ShapeBuilder, seeded } from './shapes';
 import { ToonModel, drumWaveTex, inkThin, outlineOf, toon } from './toon';
@@ -368,6 +368,8 @@ function swingWeapon(weapon: THREE.Object3D, swing: number, smash: number): void
 
 export class BattleView {
   private readonly fighters = new Map<number, FighterView>();
+  /** Thuyền giặc của thủy binh Triệu, theo thứ tự trong `Battle.boats`. */
+  private readonly boats: THREE.Group[] = [];
   private readonly arrows: Arrow[] = [];
   private readonly rings: Ring[] = [];
   private readonly puffs: Puff[] = [];
@@ -407,6 +409,7 @@ export class BattleView {
       this.battleId = battle ? battle.id : -1;
     }
     if (battle) {
+      this.syncBoats(battle);
       this.syncFighters(battle, dt);
       this.readEvents(battle);
       this.syncRally(battle);
@@ -452,6 +455,8 @@ export class BattleView {
   }
 
   private clear(): void {
+    for (const b of this.boats) this.root.remove(b);
+    this.boats.length = 0;
     // Lưỡi lửa dùng hình dựng sẵn cho mọi trận: gỡ khỏi lính trước khi giải phóng hình của lính.
     for (const fx of [...this.jets, ...this.burns]) fx.group.removeFromParent();
     this.jets.length = 0;
@@ -492,6 +497,25 @@ export class BattleView {
     this.whirls.length = 0;
     this.rallyBeat = -1;
     this.lastSeq = 0;
+  }
+
+  /**
+   * Thuyền đen buồm đỏ của thủy binh Triệu: chèo từ mép sông xa vào bờ, mũi hướng vào bờ, nhấp nhô theo sóng,
+   * cập bờ thì neo tới hết trận.
+   */
+  private syncBoats(battle: Battle): void {
+    const { x: ox, z: oz } = this.offset;
+    battle.boats.forEach((b, i) => {
+      let obj = this.boats[i];
+      if (!obj) {
+        obj = makeEnemyBoat();
+        obj.scale.setScalar(0.9 * this.scale);
+        obj.rotation.y = battle.side === 'dong' ? -Math.PI / 2 : Math.PI;
+        this.root.add(obj);
+        this.boats[i] = obj;
+      }
+      obj.position.set(b.x + ox, this.heightAt(b.x, b.z) + 0.26 + Math.sin(this.time * 2.4 + i) * 0.03, b.z + oz);
+    });
   }
 
   private syncFighters(battle: Battle, dt: number): void {
@@ -618,9 +642,26 @@ export class BattleView {
           continue;
         }
       }
-      // Gióng ra đòn bằng tay vũ khí, ngựa chỉ chồm nhẹ khi quét tre; người khác ngả cả thân.
+      if (f.state === 'aboard') {
+        // Thủy binh còn trên thuyền: đứng trên sàn thuyền, nhấp nhô theo thuyền.
+        const boat = f.boat !== undefined ? battle.boats[f.boat] : undefined;
+        obj.position.y = this.heightAt(f.x, f.z) + 0.26 + 0.2 * this.scale + (boat ? Math.sin(this.time * 2.4 + f.boat!) * 0.03 : 0);
+        obj.rotation.x = 0;
+        continue;
+      }
+      if (obj.userData.kneel) {
+        // Lính nỏ: đi thì đứng, bắn thì quỳ một gối.
+        const kneel = f.state === 'fight';
+        for (const c of obj.children) {
+          if (c.userData.standLegs) c.visible = !kneel;
+          if (c.userData.kneelLegs) c.visible = kneel;
+          if (c.userData.kneelUpper) c.position.y = kneel ? -KNEEL_DROP : 0;
+        }
+      }
+      // Gióng ra đòn bằng tay vũ khí, ngựa chỉ chồm nhẹ khi quét tre; người khác ngả cả thân. Lính nỏ giật nhẹ khi bắn.
       if (f.kind === 'giong') obj.rotation.x = view.smash > 0 ? -0.2 * Math.sin(Math.PI * (1 - view.smash / SMASH_TIME)) : 0;
       else if (f.kind === 'sonTinh' || f.kind === 'anDuong') obj.rotation.x = 0;
+      else if (f.kind === 'no') obj.rotation.x = f.swing > 0 ? 0.15 * (f.swing / 0.3) : 0;
       else obj.rotation.x = f.swing > 0 ? -0.5 * (f.swing / 0.3) : 0;
       // Đang có Trống trận thì quân ta nhún nhảy hăng hơn; trúng sóng Thủy Tinh thì lội nước, nhún ít.
       const hop = f.side === 'ta' && battle.rally > 0 ? 0.12 : 0.06;

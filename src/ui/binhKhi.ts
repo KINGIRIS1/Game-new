@@ -3,12 +3,14 @@
 
 import { canForgeArms, nextArms } from '../game/binhKhi';
 import { ARMS, UNIT_TYPES } from '../game/defs';
+import { inChapter4 } from '../game/chuong4';
 import type { GameState } from '../game/game';
 import { vi } from '../text/vi';
 import { costHtml } from './format';
 
 export function armsHtml(state: GameState): string {
-  const rows = UNIT_TYPES.map((k) => {
+  // Lính nỏ có từ chương 4.
+  const rows = UNIT_TYPES.filter((k) => k !== 'no' || inChapter4(state)).map((k) => {
     const tier = state.arms[k];
     const next = nextArms(state, k);
     const pips = ARMS.map((_, i) => `<i class="${i < tier ? 'on' : ''}"></i>`).join('');

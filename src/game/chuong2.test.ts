@@ -41,7 +41,7 @@ import { markStory, pendingStory } from './story';
 import { drowns, floodMap, groundOf, tileHeight } from './terrain';
 
 type Army = Record<UnitType, number>;
-const ARMY: Army = { giao: 14, cung: 12, voi: 4 };
+const ARMY: Army = { giao: 14, cung: 12, voi: 4, no: 0 };
 
 /** Kinh đô vừa sang chương 2: Điện cấp 5, doanh trại cấp 5 đủ quân, Gióng đã bay về trời. */
 function ch2(): GameState {
@@ -360,7 +360,7 @@ describe('Sơn Tinh', () => {
   });
 
   it('Bốc đồi ném xuống chỗ giặc đứng đông nhất', () => {
-    const b = startFieldBattle({ id: 1, stage: 9, enemies: { tomBinh: 5 }, hpScale: 1, army: { giao: 0, cung: 0, voi: 0 }, rows: DEFAULT_ROWS, hero: SON });
+    const b = startFieldBattle({ id: 1, stage: 9, enemies: { tomBinh: 5 }, hpScale: 1, army: { giao: 0, cung: 0, voi: 0, no: 0 }, rows: DEFAULT_ROWS, hero: SON });
     const foes = b.fighters.filter((f) => f.side === 'giac');
     // Bốn tên đứng chụm, một tên đứng lẻ gần Sơn Tinh hơn.
     foes.forEach((f, i) => {
@@ -378,7 +378,7 @@ describe('Sơn Tinh', () => {
   });
 
   it('Dời non giữ chân giặc quanh Sơn Tinh: đứng yên, không đánh được vài giây', () => {
-    const b = startFieldBattle({ id: 1, stage: 9, enemies: { tomBinh: 2 }, hpScale: 3, army: { giao: 0, cung: 0, voi: 0 }, rows: DEFAULT_ROWS, hero: { ...SON, non: true } });
+    const b = startFieldBattle({ id: 1, stage: 9, enemies: { tomBinh: 2 }, hpScale: 3, army: { giao: 0, cung: 0, voi: 0, no: 0 }, rows: DEFAULT_ROWS, hero: { ...SON, non: true } });
     const hero = heroOf(b)!;
     const [near, far] = b.fighters.filter((f) => f.side === 'giac');
     near.x = hero.x + 0.8;
@@ -435,7 +435,7 @@ describe('Sơn Tinh', () => {
 describe('phép của Thủy Tinh', () => {
   /** Màn 16 dàn sẵn: Thủy Tinh đứng giữa bãi, một giáo binh đứng ngay trước mặt. */
   function duel() {
-    const b = startFieldBattle({ id: 1, stage: 16, enemies: { thuyTinh: 1 }, hpScale: 2, army: { giao: 1, cung: 0, voi: 0 }, rows: DEFAULT_ROWS });
+    const b = startFieldBattle({ id: 1, stage: 16, enemies: { thuyTinh: 1 }, hpScale: 2, army: { giao: 1, cung: 0, voi: 0, no: 0 }, rows: DEFAULT_ROWS });
     const tt = b.fighters.find((f) => f.kind === 'thuyTinh')!;
     const giao = b.fighters.find((f) => f.kind === 'giao')!;
     tt.x = 4.5;
@@ -553,7 +553,7 @@ describe('truyện và lưu game chương 2', () => {
     const raid = s5.raid as Record<string, unknown>;
     for (const k of ['foe', 'floods', 'floodsHeld', 'water']) delete raid[k];
     const back = deserialize(JSON.stringify(s5))!;
-    expect(back.version).toBe(10);
+    expect(back.version).toBe(11);
     expect(back.heights.length).toBe(GRID * GRID);
     expect(back.son.gifts.comNep).toBe(false);
     expect(back.raid.foe).toBe('an');

@@ -86,14 +86,14 @@ describe('nuôi Gióng', () => {
 
 describe('Gióng trong trận', () => {
   it('ra trận cùng quân ta, có kỹ năng Phun lửa, chưa có Nhổ tre', () => {
-    const b = startFieldBattle({ id: 1, stage: 1, enemies: { giaoAn: 4 }, hpScale: 1, army: { giao: 2, cung: 0, voi: 0 }, rows: DEFAULT_ROWS, hero: { kind: 'giong', bamboo: false, glow: false, non: false } });
+    const b = startFieldBattle({ id: 1, stage: 1, enemies: { giaoAn: 4 }, hpScale: 1, army: { giao: 2, cung: 0, voi: 0, no: 0 }, rows: DEFAULT_ROWS, hero: { kind: 'giong', bamboo: false, glow: false, non: false } });
     expect(heroOf(b)).toBeDefined();
     expect(b.skills).toEqual(['trongTran', 'phunLua']);
     expect(skillReady(b, 'nhoTre')).toBe(false);
   });
 
   it('Phun lửa đốt giặc trong dải lửa và đưa Gióng lao lên', () => {
-    const b = startFieldBattle({ id: 1, stage: 1, enemies: { giaoAn: 3 }, hpScale: 1, army: { giao: 0, cung: 0, voi: 0 }, rows: DEFAULT_ROWS, hero: { kind: 'giong', bamboo: false, glow: false, non: false } });
+    const b = startFieldBattle({ id: 1, stage: 1, enemies: { giaoAn: 3 }, hpScale: 1, army: { giao: 0, cung: 0, voi: 0, no: 0 }, rows: DEFAULT_ROWS, hero: { kind: 'giong', bamboo: false, glow: false, non: false } });
     const hero = heroOf(b)!;
     // Dồn giặc vào một hàng thẳng trước mặt Gióng.
     const foes = b.fighters.filter((f) => f.side === 'giac');
@@ -110,7 +110,7 @@ describe('Gióng trong trận', () => {
   });
 
   it('roi gãy rồi thì có Nhổ tre: đánh giặc quanh mình và hất ra xa', () => {
-    const b = startFieldBattle({ id: 1, stage: 1, enemies: { giaoAn: 2 }, hpScale: 1, army: { giao: 0, cung: 0, voi: 0 }, rows: DEFAULT_ROWS, hero: { kind: 'giong', bamboo: true, glow: false, non: false } });
+    const b = startFieldBattle({ id: 1, stage: 1, enemies: { giaoAn: 2 }, hpScale: 1, army: { giao: 0, cung: 0, voi: 0, no: 0 }, rows: DEFAULT_ROWS, hero: { kind: 'giong', bamboo: true, glow: false, non: false } });
     const hero = heroOf(b)!;
     const foes = b.fighters.filter((f) => f.side === 'giac');
     foes[0].x = hero.x + 1;
@@ -124,19 +124,19 @@ describe('Gióng trong trận', () => {
   });
 
   it('Gióng không chết: hết sức thì rút khỏi trận, không tính vào lính tử trận', () => {
-    const b = startFieldBattle({ id: 1, stage: 4, enemies: { phoTuong: 3 }, hpScale: 3, army: { giao: 0, cung: 0, voi: 0 }, rows: DEFAULT_ROWS, hero: { kind: 'giong', bamboo: false, glow: false, non: false } });
+    const b = startFieldBattle({ id: 1, stage: 4, enemies: { phoTuong: 3 }, hpScale: 3, army: { giao: 0, cung: 0, voi: 0, no: 0 }, rows: DEFAULT_ROWS, hero: { kind: 'giong', bamboo: false, glow: false, non: false } });
     while (!stepField(b, 0.05));
     expect(b.outcome).toBe('lose');
     expect(b.hero?.down).toBe(true);
     expect(b.fighters.find((f) => f.kind === 'giong')?.state).toBe('gone');
-    expect(b.lost).toEqual({ giao: 0, cung: 0, voi: 0 });
+    expect(b.lost).toEqual({ giao: 0, cung: 0, voi: 0, no: 0 });
     expect(b.events.some((e) => e.kind === 'exhaust')).toBe(true);
   });
 
   it('kiệt sức thì nghỉ 2 phút chơi, chưa đánh được màn cần Gióng', () => {
     const s = withGiong();
     s.campaign.cleared = 4;
-    expect(startStage(s, 5, { giao: 0, cung: 0, voi: 0 }, DEFAULT_ROWS).ok).toBe(true);
+    expect(startStage(s, 5, { giao: 0, cung: 0, voi: 0, no: 0 }, DEFAULT_ROWS).ok).toBe(true);
     // Một mình Gióng không địch nổi đạo quân màn 5.
     for (let i = 0; i < 200 && !s.campaign.lastResult; i++) tick(s, 1000);
     expect(s.campaign.lastResult?.outcome).toBe('lose');
@@ -161,17 +161,17 @@ describe('Gióng trong trận', () => {
 describe('cân bằng màn có Gióng', () => {
   // Quân mẫu vừa đủ chỗ trong doanh trại ở cấp Điện mà màn yêu cầu.
   const SAMPLE: Record<number, Army> = {
-    5: { giao: 8, cung: 6, voi: 2 },
-    6: { giao: 10, cung: 9, voi: 3 },
-    7: { giao: 10, cung: 9, voi: 3 },
-    8: { giao: 14, cung: 12, voi: 4 },
+    5: { giao: 8, cung: 6, voi: 2, no: 0 },
+    6: { giao: 10, cung: 9, voi: 3, no: 0 },
+    7: { giao: 10, cung: 9, voi: 3, no: 0 },
+    8: { giao: 14, cung: 12, voi: 4, no: 0 },
   };
   for (const [n, army] of Object.entries(SAMPLE)) {
     const stage = Number(n);
     it(`màn ${stage}: có Gióng và bấm kỹ năng thì thắng; không Gióng, hay nửa quân, thì thua`, () => {
       expect(fieldFight(stage, army, true).outcome).toBe('win');
       expect(fieldFight(stage, army, false).outcome).toBe('lose');
-      const half = { giao: Math.floor(army.giao / 2), cung: Math.floor(army.cung / 2), voi: Math.floor(army.voi / 2) };
+      const half = { giao: Math.floor(army.giao / 2), cung: Math.floor(army.cung / 2), voi: Math.floor(army.voi / 2), no: 0 };
       expect(fieldFight(stage, half, true).outcome).toBe('lose');
     });
     it(`màn ${stage}: quân mẫu vừa doanh trại`, () => {
@@ -204,7 +204,7 @@ describe('roi gãy, kết chương, Đền Phù Đổng', () => {
     const s = withGiong();
     s.buildings[0].level = 4;
     s.raid.nextAt = null;
-    winStage(s, 6, { giao: 10, cung: 9, voi: 3 });
+    winStage(s, 6, { giao: 10, cung: 9, voi: 3, no: 0 });
     expect(s.giong.whipBroken).toBe(true);
     expect(heroSetup(s)?.bamboo).toBe(true);
   });
@@ -215,7 +215,7 @@ describe('roi gãy, kết chương, Đền Phù Đổng', () => {
     s.giong.whipBroken = true;
     s.raid.nextAt = null;
     expect(canPlace(s, 'denPhuDong', 3, 3)).toEqual({ ok: false, reason: 'canKetChuong' });
-    winStage(s, 8, { giao: 14, cung: 12, voi: 4 });
+    winStage(s, 8, { giao: 14, cung: 12, voi: 4, no: 0 });
     expect(s.giong.ascended).toBe(true);
     expect(giongLook(s)).toBeNull();
     expect(heroSetup(s)).toEqual({ kind: 'giong', bamboo: true, glow: true, non: false });
@@ -231,7 +231,7 @@ describe('roi gãy, kết chương, Đền Phù Đổng', () => {
     const before = productionPerMinute(s).gao;
     expect(place(s, 'denPhuDong', 4, 4).ok).toBe(true);
     expect(productionPerMinute(s).gao).toBeCloseTo(before * 1.1);
-    s.troops = { giao: 1, cung: 0, voi: 0 };
+    s.troops = { giao: 1, cung: 0, voi: 0, no: 0 };
     const battle = startBattle(s, 1, 'bac', { bonus: 0.1 });
     const giao = battle.fighters.find((f) => f.kind === 'giao')!;
     expect(giao.maxHp).toBeCloseTo(UNITS.giao.hp * 1.1);

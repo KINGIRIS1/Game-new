@@ -854,7 +854,7 @@ Chủ dự án đã duyệt mọi con số dưới đây trước khi viết cod
 - **Thử thách phó bản** cho mọi màn 1–32, thưởng **huân công** đổi lấy tăng sức nhỏ, giữ mãi.
 - **Cách làm**: chủ dự án duyệt tài liệu này một lần, rồi làm 4 PR theo thứ tự ở mục cuối.
 
-**Một chỗ đổi so với buổi hỏi đáp, chờ duyệt**: buổi hỏi đáp chốt lính nỏ mở khi thắng màn 25 (đoạn 2). Nhưng lính nỏ làm ở PR 2, còn màn 25 tới PR 3 mới có. Đề xuất **mở lính nỏ ngay khi vào chương 4 (đoạn 1)**, để người chơi có lính nỏ chống thủy binh ở kinh đô và có nhiệm vụ luyện lính nỏ trước màn 25. Đoạn 2 đổi tên thành "Cao Lỗ cầm quân": thắng màn 25 thì Cao Lỗ ra trận.
+**Một chỗ đổi so với buổi hỏi đáp, chủ dự án đã duyệt**: buổi hỏi đáp chốt lính nỏ mở khi thắng màn 25 (đoạn 2). Nhưng lính nỏ làm ở PR 2, còn màn 25 tới PR 3 mới có. Nên **mở lính nỏ ngay khi vào chương 4 (đoạn 1)**, để người chơi có lính nỏ chống thủy binh ở kinh đô và có nhiệm vụ luyện lính nỏ trước màn 25. Đoạn 2 đổi tên thành "Cao Lỗ cầm quân": thắng màn 25 thì Cao Lỗ ra trận.
 
 ### Truyện chương 4
 
@@ -933,9 +933,9 @@ Giá cấp 8 khoảng gấp 2 cấp 7, sản lượng tăng khoảng 30% (cấp 
 - Nhiệm vụ: nối thêm nhiệm vụ 40, 41 (xem mục Nhiệm vụ). Xong nhiệm vụ 41 thì bảng Lạc hầu báo kinh đô đã có Điện cấp 8 và lầu nỏ, chờ phần sau.
 - Test (`cap8.test.ts`): Điện cấp 8 cần chương 4; đất giữ 26×26, kho 32000; bảy loại lên cấp 8 với số đã duyệt, số tối đa giữ như Điện 7; ghép lầu nỏ (Điện 8, hai chòi cấp 8 còn nguyên, không lúc có giặc, trả giá), không tách, không lên cấp, không dỡ; tính 2 chòi canh; mỗi phát bắn 3 giặc gần nhất, giặc thứ tư không trúng; áp mẫu; nâng bản lưu 9 lên 10. Nhịp lên Điện 8 ở `balance.test.ts`.
 
-### PR 2: lính nỏ, ụ nỏ, thủy binh Triệu
+### PR 2: lính nỏ, ụ nỏ, thủy binh Triệu (chủ dự án đã duyệt, đã làm)
 
-**Lính nỏ** (mở khi vào chương 4, luyện ở nơi ở riêng như ba binh chủng kia; tên, giá và dáng nơi ở ghi vào đây cho chủ dự án duyệt trước khi làm PR 2)
+**Lính nỏ** (mở khi vào chương 4, luyện ở **trại nỏ**; số dưới đây là số cuối cùng)
 
 | Binh chủng | Giá | Máu | Sát thương | Tầm | Nghỉ giữa hai phát | Tốc độ | Chỗ | Gạo ăn /phút |
 |---|---|---|---|---|---|---|---|---|
@@ -946,6 +946,14 @@ Giá cấp 8 khoảng gấp 2 cấp 7, sản lượng tăng khoảng 30% (cấp 
 - So với cung thủ: tính trên mỗi chỗ trong doanh trại thì đánh thường ngang nhau, nhưng gặp quân nặng và trùm thì lính nỏ gấp đôi.
 - Rèn binh khí 2 bậc như ba binh chủng kia, cùng giá. Dáng: bậc 1 mũi tên sắt, bậc 2 nỏ cánh sừng và bao tên đồng.
 - Dáng: mũ đồng, giáp da, cầm nỏ gỗ lớn có lẫy đồng. Khi bắn thì quỳ một gối.
+- Lính nỏ đứng ngoài vòng khắc chế, còn ba binh chủng kia nhận thêm thủy binh vào vòng: cung thủ thắng lính thủy, voi thắng cung thuyền, giáo binh thắng lính rìu.
+- Rèn binh khí và dòng lính nỏ trong bảng doanh trại, bảng lò rèn chỉ hiện từ chương 4.
+
+**Trại nỏ** (chủ dự án chọn trại nỏ riêng theo quy tắc mỗi binh chủng một nơi ở)
+
+- Móng 2×2, dựng một lần, không lên cấp. Mở khi vào chương 4, cần doanh trại cấp 5. Giá 600 gạo, 500 vỏ ốc, 500 đất đá, 120 sắt; máu 500.
+- Dáng: lán mái ngói đỏ cam như ngói thành Cổ Loa, giá treo nỏ dưới lán, một cây nỏ lớn lẫy đồng trên giá gỗ chĩa ra trước, bia gỗ vuông vẽ vòng đỏ trắng, một lính nỏ quỳ một gối nhắm bia, cờ đỏ góc sau.
+- Ba mẫu kinh đô hiện có chưa có chỗ cho trại nỏ (vẽ cho chương 1–3); mẫu "Cổ Loa giữ sông" ở PR 3 sẽ có. Áp mẫu cũ thì trại nỏ đứng yên, vướng thì dời ra chỗ trống gần nhất.
 
 **Ụ nỏ** (mở khi vào chương 4)
 
@@ -954,7 +962,8 @@ Giá cấp 8 khoảng gấp 2 cấp 7, sản lượng tăng khoảng 30% (cấp 
 - Tự bắn một giặc trong tầm 4 ô, sát thương 14, nghỉ 1,4 giây.
 - Ụ là một phần của đoạn thành: giặc không nhắm ụ làm đích. Đoạn thành bị phá thì ụ hư theo, sửa thành xong phải sửa ụ (30% giá). Dỡ đoạn thành thì mất ụ.
 - Đền Cổ Loa còn nguyên thì ụ cũng bắn mạnh gấp rưỡi và xa thêm 1 ô.
-- Dáng: ụ đất đắp cao trên mặt thành, mái tranh che nhỏ, một lính nỏ quỳ bắn.
+- Dáng: ụ đất đắp cao trên mặt thành, mái tranh che nhỏ, một lính nỏ quỳ bắn quay mặt ra ngoài thành. Ụ hư (thành đã sửa mà ụ chưa sửa): ụ đất sạt, cột gãy, không người.
+- Giao diện: thẻ **Ụ nỏ** trong bảng Xây dựng ghi số ụ đã có trên số tối đa; chọn thẻ rồi chạm từng đoạn thành. Bảng một đoạn thành có nút dựng ụ ngay trên đoạn ấy, ghi ụ đang bắn hay đang hư, và nút **Sửa ụ nỏ** (mờ khi thành còn hư). Nút "Sửa hết" sau trận sửa cả thành lẫn ụ.
 
 **Thủy binh Triệu**
 
@@ -965,25 +974,29 @@ Giá cấp 8 khoảng gấp 2 cấp 7, sản lượng tăng khoảng 30% (cấp 
 | Lính rìu giáp mây | 310 | 25 | 0,9 | giáp mây đan dày, rìu lớn; gấp đôi sát thương lên cung thủ ta | giáo binh, lính nỏ |
 | Tướng thủy binh Triệu (trùm màn 28) | 1500 | 32 | 1,2 | giáp đen viền vàng, mũ lông chim đen, đao dài | lính nỏ |
 
-- Thuyền giặc: thuyền đen mũi cong, buồm đỏ, khác hẳn thuyền trống đồng của ta.
+- Thuyền giặc: thuyền đen mũi cong vểnh như móc câu, viền mạn đỏ, buồm đỏ có nẹp tre, mái chèo hai bên, khác hẳn thuyền trống đồng của ta.
+- Dáng lính: lính thủy cởi trần, khố đen viền đỏ, khăn đỏ buộc đầu, giáo ngắn; cung thuyền áo đen, nón lá rộng vành sơn đen, cung dài cao quá đầu; lính rìu khoác giáp mây phồng có đai đan ngang, rìu lưỡi sắt cán dài.
 
 **Giữ kinh đô ở chương 4**
 
 - **Lịch đợt**:
-  - từ khi vào chương 4 tới đoạn 3: **thủy binh và lũ thay phiên**. Đợt thủy binh đầu tới 3 phút sau đoạn "Cầu hôn";
+  - từ khi vào chương 4 tới đoạn 3: **thủy binh và lũ thay phiên**. Đợt thủy binh đầu tới 3 phút sau đoạn "Cầu hôn" (tính từ lúc nhận thưởng nhiệm vụ Đền Cổ Loa, cũng là lúc kể đoạn ấy);
   - từ đoạn 3 trở đi, kể cả sau Hết truyện: **ba đợt thay phiên**, thủy binh → quân Triệu trên bộ → lũ;
   - vẫn 15 phút một đợt, trinh sát báo trước 60 giây. Nút "Nghênh chiến ngay" gọi đợt kế tiếp.
 - **Thủy binh** đợt thứ n: `9 + n` lính thủy (tối đa 18), `5 + n` cung thuyền (tối đa 12), `2 + ⌊(n + 1)/2⌋` lính rìu (tối đa 7), máu ×(2,0 + 0,12 × (n − 1)).
 - **Thuyền**: mỗi thuyền chở 6 lính. Thuyền hiện ở mép sông phía nam hoặc phía đông, chèo vào bờ gần nhất, thả lính lên đất. Trinh sát báo hướng kèm dải đỏ trên mặt sông.
+  - Số cuối cùng (`BOAT`): thuyền hiện sát bờ bên kia, chèo 0,6 ô mỗi giây, các thuyền dàn đều dọc bờ, rời đi lệch nhau chừng 1,2 giây; lính xếp xen kẽ các loại để thuyền nào cũng đủ lính thủy, cung thuyền, lính rìu. Đợt 1 có 19 lính trên 4 thuyền.
+  - Lính còn trên thuyền chưa bị bắn, chưa đánh, nhưng vẫn tính là giặc còn lại.
   - Lính lên bờ rồi tìm đường như giặc trên bộ: không lội sông, phải phá hay đi vòng đê, thành, lũy. Chúng nhắm kho rồi Điện như quân Triệu.
   - Thuyền không có máu, không bị bắn. Thuyền neo ở bờ tới hết trận rồi rút.
   - Mã sinh giặc hiện chọn mép gần hay xa theo cờ lũ (`battle.ts`), nên phải sửa để giặc trên bộ tới được từ phía sông.
 - **Tướng giữ kinh đô**: thủy binh và quân Triệu có **An Dương Vương** tới khi xuống biển, sau đó là **Cao Lỗ**. Đang kiệt sức thì người kế tiếp ra thay: Cao Lỗ, rồi Sơn Tinh hiển linh, rồi Gióng. Mùa lũ vẫn có Sơn Tinh.
 - **Từ đoạn 3, An Dương Vương không còn kỹ năng Nỏ thần khi giữ kinh đô.** Ô kỹ năng ghi "lẫy đã bị tráo". Ngài vẫn bắn nỏ thường, vẫn có Rùa Vàng. Ở phó bản, đánh lại màn 17–25 thì ngài vẫn đủ Nỏ thần, giống Gióng đã về trời vẫn đánh màn 5–8.
-- Độ khó đo bằng test: đợt thủy binh đầu bị quân mẫu, tướng, 5 chòi canh và 8 ụ nỏ diệt hết.
-- Bản lưu lên **phiên bản 11**: thêm số lính nỏ, bậc rèn của lính nỏ, các ụ nỏ, số đợt thủy binh đã đánh và đã giữ được, đã kể đoạn "Cầu hôn" chưa.
-- Nhiệm vụ: nối thêm nhiệm vụ 42–44.
-- Test: luyện và rèn lính nỏ; lính nỏ gấp đôi sát thương lên quân nặng và trùm; dựng ụ trên thành, ụ hư theo thành; thuyền cập bờ phía nam và phía đông; lịch thay phiên; mất Nỏ thần ở kinh đô sau đoạn 3 nhưng vẫn còn ở màn 17–25; nâng bản lưu 10 lên 11.
+- Độ khó đo bằng test: đợt thủy binh đầu bị quân mẫu, tướng, 5 chòi canh và 8 ụ nỏ diệt hết, ở cả phía nam lẫn phía đông. Đo thêm: đợt đầu không ụ nỏ hay không tướng vẫn diệt hết; đợt 5 diệt hết nhưng mất chừng 11 lính; đợt 7 thì giặc phá được công trình và cướp của. Máu giặc giữ ×2,0 như đề xuất.
+- Đoạn 3 chưa có (PR 3). Cờ "lẫy đã bị tráo" (`adv.layTrao`) đã có trong bản lưu và luật: bật lên thì lịch thành ba đợt thay phiên và An Dương Vương mất Nỏ thần khi giữ kinh đô; PR 3 bật cờ này khi kể đoạn 3.
+- Bản lưu lên **phiên bản 11**: thêm số lính nỏ, bậc rèn và hàng đứng của lính nỏ, các ụ nỏ (ghi trên đoạn thành), số đợt thủy binh đã đánh và đã giữ được, cờ lẫy đã bị tráo; đoạn "Cầu hôn" ghi vào danh sách truyện đã kể như các đoạn khác. Người đang ở chương 4 thì thủy binh tới sau 3 phút kể từ lúc nạp.
+- Nhiệm vụ: nối thêm nhiệm vụ 42–44. Xong nhiệm vụ 44 thì bảng Lạc hầu báo kinh đô đã có lầu nỏ, ụ nỏ và lính nỏ, chờ phần sau.
+- Test (`chuong4.test.ts`): luyện và rèn lính nỏ; lính nỏ gấp đôi sát thương lên quân nặng và trùm; dựng ụ trên thành, ụ hư theo thành; thuyền cập bờ phía nam và phía đông; lịch thay phiên; mất Nỏ thần ở kinh đô sau đoạn 3 nhưng vẫn còn ở màn 17–25; nâng bản lưu 10 lên 11.
 
 ### PR 3: Cao Lỗ, màn 25–32, truyện, Đền Cuông, mẫu kinh đô, Hết truyện
 
@@ -1042,6 +1055,7 @@ Bản đồ phó bản có thêm thẻ Chương 4, mở khi đã vào chương 4
 - 16 ụ nỏ trên vòng thành ngoài, chia đều các phía bắc, tây và phía sông.
 - 3 lầu nỏ và 1 chòi canh: hai lầu nỏ ở phía sông, một ở góc bắc tây.
 - Đền Cuông ở chỗ 3×3 còn trống phía bắc, ngoài vòng thành ngoài.
+- Có chỗ cho trại nỏ (2×2), sát doanh trại.
 - Test như các mẫu khác: không chồng nhau, không lấn sông, đủ chỗ cho số tối đa, giữ được lũ bậc 3, đủ 3 vòng thành.
 
 - Bản lưu lên **phiên bản 12**: thêm Cao Lỗ (nghỉ tới lúc nào, đã có Lệnh bắn chưa), An Dương Vương đã xuống biển chưa, đã xem Hết truyện chưa.
@@ -1106,7 +1120,7 @@ Thưởng khoảng gấp rưỡi nhiệm vụ chương 3. Nhận xong nhiệm v�
 
 1. **Duyệt tài liệu này** (mọi con số và dáng ở trên). Chủ dự án đã duyệt.
 2. **PR 1** (đã làm): Điện cấp 8, công trình cấp 8, lầu nỏ. Bản lưu v10.
-3. **PR 2**: lính nỏ, ụ nỏ, thủy binh Triệu đánh kinh đô, đoạn truyện "Cầu hôn". Bản lưu v11.
+3. **PR 2** (đã làm): lính nỏ và trại nỏ, ụ nỏ, thủy binh Triệu đánh kinh đô, đoạn truyện "Cầu hôn". Bản lưu v11.
 4. **PR 3**: Cao Lỗ, màn 25–32, bốn đoạn truyện còn lại, Đền Cuông, mẫu kinh đô chương 4, màn hình Hết truyện. Bản lưu v12.
 5. **PR 4**: thử thách phó bản và huân công. Bản lưu v13.
 
@@ -1146,6 +1160,6 @@ Mỗi PR: chạy `npm test` và `npm run build`; sửa `src/render/` hay `src/ui
 7. **Cấp 6–7 và rèn binh khí** (đã làm, xem mục Kế hoạch): Điện và 7 loại công trình lên cấp 6, 7, đất 25×25 rồi 26×26, rèn binh khí hai bậc ở lò rèn, bản lưu phiên bản 8.
 8. **Hội Tết bánh chưng bánh giầy** (đã làm, xem mục PR 3): truyện Lang Liêu, ruộng nếp, vườn đậu lá dong, chuồng lợn, bếp gói bánh (3 cấp mỗi loại), Tết 20 phút một lần, phúc lành Đất và Trời, cảnh Tết trước Điện, bản lưu phiên bản 9.
 9. **Sửa sau chơi thử Hội Tết**: Thủy Tinh có hai phép, Dời non vẽ rõ hơn, xoay cảnh 4 hướng, dời công trình, mẫu kinh đô mỗi chương.
-10. **Chương 4: Mỵ Châu, Trọng Thủy** (đã duyệt, đang làm; PR 1 đã làm; xem Kế hoạch chương 4): Điện và 7 loại công trình lên cấp 8, lầu nỏ, ụ nỏ trên thành, lính nỏ, thủy binh Triệu đi thuyền, Cao Lỗ, phó bản màn 25–32, Đền Cuông, màn hình Hết truyện, thử thách phó bản và huân công.
+10. **Chương 4: Mỵ Châu, Trọng Thủy** (đã duyệt, đang làm; PR 1, PR 2 đã làm; xem Kế hoạch chương 4): Điện và 7 loại công trình lên cấp 8, lầu nỏ, ụ nỏ trên thành, lính nỏ, thủy binh Triệu đi thuyền, Cao Lỗ, phó bản màn 25–32, Đền Cuông, màn hình Hết truyện, thử thách phó bản và huân công.
 11. **Doanh trại và nơi ở riêng** (đã làm, xem mục cùng tên): doanh trại là nơi tướng ở và điều binh; trại giáo, trại cung, chuồng voi để luyện từng binh chủng; tướng ra trận từ doanh trại.
 12. **Để sau**: chương 5 về Hai Bà Trưng (mới nhắc ở câu cuối chương 4); nhạc nền.

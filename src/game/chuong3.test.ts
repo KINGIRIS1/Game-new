@@ -26,7 +26,7 @@ import { heroFor, restingHero } from './son';
 import { markStory, pendingStory } from './story';
 
 type Army = Record<UnitType, number>;
-const ARMY: Army = { giao: 14, cung: 12, voi: 4 };
+const ARMY: Army = { giao: 14, cung: 12, voi: 4, no: 0 };
 
 /** Kinh đô vừa sang chương 3: Điện cấp 5, doanh trại cấp 5 đủ quân, Gióng đã bay về trời, Sơn Tinh đã về núi, có hai đền. */
 function ch3(): GameState {
@@ -122,7 +122,7 @@ describe('thành Cổ Loa', () => {
     const s = ch3();
     ring(s, 4);
     place(s, 'kho', 4, 14);
-    s.troops = { giao: 0, cung: 0, voi: 0 };
+    s.troops = { giao: 0, cung: 0, voi: 0, no: 0 };
     const battle = startBattle(s, 1, 'tay', { land: { foe: 'yeu', n: 1 } });
     expect(battle.foe).toBe('yeu');
     for (let i = 0; i < 40; i++) stepBattle(s, battle, 0.05);
@@ -266,7 +266,7 @@ describe('An Dương Vương', () => {
   });
 
   it('Nỏ thần trúng mọi kẻ địch trên bãi, gần hay xa', () => {
-    const b = startFieldBattle({ id: 1, stage: 20, enemies: { linhTrieu: 4, noTrieu: 2 }, hpScale: 3, army: { giao: 0, cung: 0, voi: 0 }, rows: DEFAULT_ROWS, hero: ADV1 });
+    const b = startFieldBattle({ id: 1, stage: 20, enemies: { linhTrieu: 4, noTrieu: 2 }, hpScale: 3, army: { giao: 0, cung: 0, voi: 0, no: 0 }, rows: DEFAULT_ROWS, hero: ADV1 });
     expect(b.skills).toEqual(['trongTran', 'noThan']);
     expect(useSkill(b, 'noThan')).toBe(true);
     for (const f of b.fighters.filter((f) => f.side === 'giac')) expect(f.hp).toBeCloseTo(f.maxHp - NO_THAN.dmg * FIELD.hpMul, 5);
@@ -280,7 +280,7 @@ describe('An Dương Vương', () => {
       stage: 23,
       enemies: { linhTrieu: 1 },
       hpScale: 3,
-      army: { giao: 2, cung: 0, voi: 0 },
+      army: { giao: 2, cung: 0, voi: 0, no: 0 },
       rows: DEFAULT_ROWS,
       hero: { ...ADV1, kimQuy: true },
     });
@@ -338,7 +338,7 @@ describe('An Dương Vương', () => {
     const s = ch3();
     const tower = place(s, 'choiCanh', 12, 12);
     if (!tower.ok) throw new Error(tower.reason);
-    s.troops = { giao: 0, cung: 0, voi: 0 };
+    s.troops = { giao: 0, cung: 0, voi: 0, no: 0 };
     const shot = (crossbows: boolean, dist: number) => {
       const b: Battle = startBattle(s, 1, 'bac', { land: { foe: 'trieu', n: 1 }, crossbows });
       const foe = b.fighters.find((f) => f.side === 'giac')!;
@@ -422,8 +422,8 @@ describe('truyện và lưu game chương 3', () => {
     for (const k of ['nights', 'nightsHeld', 'trieu', 'trieuHeld']) delete raid[k];
     raid.foe = 'thuy';
     const back = deserialize(JSON.stringify(s6))!;
-    expect(back.version).toBe(10);
-    expect(back.adv).toEqual({ no: false, restUntil: 0, kimQuy: false, won: false });
+    expect(back.version).toBe(11);
+    expect(back.adv).toEqual({ no: false, restUntil: 0, kimQuy: false, won: false, layTrao: false });
     expect(back.raid.nights).toBe(0);
     expect(back.raid.foe).toBe('thuy');
   });
