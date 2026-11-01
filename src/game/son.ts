@@ -36,9 +36,9 @@ export function sonSetup(s: GameState): HeroSetup | null {
  *   xuống biển, rồi Cao Lỗ;
  * - chương 3: An Dương Vương.
  */
-function leadsFor(chapter: Chapter, stage?: number): ('anDuong' | 'caoLo')[] {
+function leadsFor(s: GameState, chapter: Chapter, stage?: number): ('anDuong' | 'caoLo')[] {
   if (chapter === 4) {
-    if (stage === undefined) return ['anDuong', 'caoLo'];
+    if (stage === undefined) return s.adv.bien ? ['caoLo'] : ['anDuong', 'caoLo'];
     return stage <= CAO_LO_AT ? ['anDuong'] : ['caoLo'];
   }
   return chapter === 3 ? ['anDuong'] : [];
@@ -51,8 +51,7 @@ function leadsFor(chapter: Chapter, stage?: number): ('anDuong' | 'caoLo')[] {
  * có Gióng nếu Gióng đã thành tráng sĩ và không kiệt sức.
  */
 export function heroFor(s: GameState, chapter: Chapter, stage?: number): HeroSetup | null {
-  for (const lead of leadsFor(chapter, stage)) {
-    if (lead === 'anDuong' && stage === undefined && s.adv.bien) continue;
+  for (const lead of leadsFor(s, chapter, stage)) {
     const hero = lead === 'anDuong' ? advSetup(s) : caoLoSetup(s);
     if (hero) return hero;
   }
@@ -69,8 +68,8 @@ export function heroFor(s: GameState, chapter: Chapter, stage?: number): HeroSet
  */
 export function restingHero(s: GameState, chapter: Chapter, stage?: number): { kind: HeroKind; secs: number } | null {
   const order: { kind: HeroKind; joined: boolean; until: number }[] = [];
-  for (const lead of leadsFor(chapter, stage)) {
-    if (lead === 'anDuong') order.push({ kind: 'anDuong', joined: advJoined(s) && !(stage === undefined && s.adv.bien), until: s.adv.restUntil });
+  for (const lead of leadsFor(s, chapter, stage)) {
+    if (lead === 'anDuong') order.push({ kind: 'anDuong', joined: advJoined(s), until: s.adv.restUntil });
     else order.push({ kind: 'caoLo', joined: caoLoJoined(s), until: s.caoLo.restUntil });
   }
   if (chapter >= 2) order.push({ kind: 'sonTinh', joined: sonJoined(s), until: s.son.restUntil });
