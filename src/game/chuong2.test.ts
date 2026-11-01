@@ -25,6 +25,7 @@ import {
   canPlace,
   canRaiseTile,
   createInitialState,
+  move,
   place,
   questProgress,
   raiseBuilding,
@@ -251,7 +252,7 @@ describe('mùa lũ ở kinh đô', () => {
     expect(['nam', 'dong']).toContain(s.raid.side);
   });
 
-  it('thủy quái ngoi lên từ sông, nước dâng dần tới mực lũ, Sơn Tinh ra trận từ trước Điện', () => {
+  it('thủy quái ngoi lên từ sông, nước dâng dần tới mực lũ, Sơn Tinh ra trận từ doanh trại', () => {
     const s = wed();
     expect(callRaidNow(s).ok).toBe(true);
     tick(s, RAID_WARNING_MS);
@@ -259,6 +260,10 @@ describe('mùa lũ ở kinh đô', () => {
     expect(battle.swim).toBe(true);
     expect(battle.floodTo).toBe(1);
     expect(battle.hero?.kind).toBe('sonTinh');
+    // Doanh trại ở (6, 6), móng 3×3: tướng ra từ sân trước doanh trại.
+    const son = battle.fighters.find((f) => f.kind === 'sonTinh')!;
+    expect(son.x).toBeCloseTo(7.5, 1);
+    expect(son.z).toBeCloseTo(9, 1);
     for (const f of battle.fighters.filter((f) => f.side === 'giac')) expect(Math.max(f.x, f.z)).toBeGreaterThan(RIVER_START);
     tick(s, 3000);
     expect(s.raid.water).toBeGreaterThan(0.3);
@@ -291,11 +296,18 @@ describe('mùa lũ ở kinh đô', () => {
     expect(s.raid.floodsHeld).toBe(1);
   });
 
-  it('đê liền một dải, chòi canh sát đê và Sơn Tinh chặn được lũ bậc 3, không công trình nào ngập', () => {
+  it('đê liền một dải, chòi canh sát đê và Sơn Tinh từ doanh trại chặn được lũ bậc 3, không công trình nào ngập', () => {
     const s = wed();
     for (let x = 3; x <= 24; x++) place(s, 'de', x, 24);
     for (let z = 3; z <= 23; z++) place(s, 'de', 24, z);
     for (const [x, z] of [[8, 22], [12, 22], [17, 22], [21, 22], [22, 15]]) place(s, 'choiCanh', x, z);
+    // Đê liền dải giữ khô cả vùng trong đê khi nước dâng tới bậc 3.
+    const sealed = floodMap(s, 3, 5);
+    for (let z = 3; z <= 23; z++) for (let x = 3; x <= 23; x++) expect(sealed[z * GRID + x]).toBe(0);
+    // Sơn Tinh ở doanh trại và ra trận cùng quân từ đó: doanh trại trong đê, gần phía sông như mẫu Đê bao.
+    // Doanh trại xa sông (góc rừng) thì quân và tướng tới chậm, thủy quái kịp phá đê.
+    const barracks = s.buildings.find((b) => b.type === 'doanhTrai')!;
+    expect(move(s, barracks.id, 20, 19).ok).toBe(true);
     s.raid.floods = 4;
     callRaidNow(s);
     tick(s, RAID_WARNING_MS);
@@ -305,7 +317,7 @@ describe('mùa lũ ở kinh đô', () => {
       if (battle.t > 2) for (const k of SKILL_IDS) useSkill(battle, k);
       tick(s, 125);
     }
-    expect(s.raid.lastResult?.flood).toBeCloseTo(3, 1);
+    expect(s.raid.lastResult?.won).toBe(true);
     expect(s.raid.lastResult?.drowned).toEqual([]);
     expect(s.buildings.filter((b) => b.type === 'de' && b.damaged)).toEqual([]);
   });

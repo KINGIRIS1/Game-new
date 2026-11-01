@@ -6,7 +6,7 @@ import { callRaidNow, canTrain, createInitialState, place, questProgress, tick, 
 
 type Army = Record<UnitType, number>;
 
-/** Kinh đô Điện cấp 3 có doanh trại cấp 3, đủ tiền luyện quân. */
+/** Kinh đô Điện cấp 3 có doanh trại cấp 3 và ba nơi ở, đủ tiền luyện quân. */
 function capital(): GameState {
   const s = createInitialState(0);
   s.buildings[0].level = 3;
@@ -14,6 +14,10 @@ function capital(): GameState {
   const barracks = place(s, 'doanhTrai', 12, 20);
   if (!barracks.ok) throw new Error('dựng doanh trại thử thất bại');
   barracks.value.level = 3;
+  // Mỗi binh chủng luyện ở nơi ở riêng.
+  for (const [type, x] of [['traiGiao', 15], ['traiCung', 17], ['chuongVoi', 19]] as const) {
+    if (!place(s, type, x, 21).ok) throw new Error('dựng nơi ở thử thất bại');
+  }
   return s;
 }
 

@@ -660,6 +660,12 @@ function start(): void {
         return;
       }
 
+      case 'selectBuilding':
+        if (mode.kind !== 'view') exitMode();
+        play('tap');
+        select(a.id);
+        return;
+
       case 'closeSheet':
         select(null);
         return;

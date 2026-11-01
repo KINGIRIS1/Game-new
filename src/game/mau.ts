@@ -5,6 +5,7 @@
 import { BUILDINGS, type BuildingType, type Cost, RESOURCE_IDS } from './defs';
 import { inChapter3 } from './coLoa';
 import {
+  barracksLevel,
   canAfford,
   dienLevel,
   fillWorkers,
@@ -34,6 +35,9 @@ const CHAR_TYPE: Record<string, BuildingType> = {
   L: 'loRen',
   K: 'kho',
   T: 'doanhTrai',
+  G: 'traiGiao',
+  U: 'traiCung',
+  E: 'chuongVoi',
   C: 'choiCanh',
   X: 'bayChong',
   '#': 'luy',
@@ -74,11 +78,11 @@ const DRAWINGS: Record<MauId, string[]> = {
     '....#.....vv.NN.NNNN..RRR..',
     '....#.nnn.............ll...',
     '...X#.nnn.KK.NN.HHHHNNll...',
-    '....#.nnn.KK.NN.HHHHNNTTT..',
-    '....#.nnn.KK.NN.HHHHNNTTT..',
-    '....#.nnn.KK.NN.HHHHNNTTT..',
-    '...X#.nnnvv.ll.............',
-    '....#C...vv.ll...........BB',
+    '....#.nnn.KK.NN.HHHHNNTTTGG',
+    '....#.nnn.KK.NN.HHHHNNTTTGG',
+    '....#.nnn.KK.NN.HHHHNNTTTUU',
+    '...X#.nnnvv.ll.........EEUU',
+    '....#C...vv.ll.........EEBB',
     '....#.RRRRRRRRRRRR...RRR.BB',
     '....#.RRRRRRRRRRRR...RRR...',
     '...X#.RRRRRRRRRRRR...RRR...',
@@ -106,10 +110,10 @@ const DRAWINGS: Record<MauId, string[]> = {
     '..VVVnnnllKK.NN.HHHH.NN.=..',
     '.XVVVnnnllKK.NN.HHHH.NN.=..',
     '........llKK.NN.HHHH....=..',
-    '..RRRRRRRRRRRR.....TTT..=..',
-    '..RRRRRRRRRRRR.C...TTT..=..',
-    '..RRRRRRRRRRRR.....TTTC.=..',
-    '......C.....C...........=..',
+    '..RRRRRRRRRRRR.....TTTGG=..',
+    '..RRRRRRRRRRRR.C...TTTGG=..',
+    '..RRRRRRRRRRRRUUEE.TTTC.=..',
+    '......C.....C.UUEE......=..',
     '.========================..',
     '...BB..BB..BB..BB..BB......',
     '...BB..BB..BB..BB..BB......',
@@ -120,10 +124,10 @@ const DRAWINGS: Record<MauId, string[]> = {
     '.........RRRRRRDDDDDDDD.=..',
     '.X.......RRRRRRDD.......=..',
     '...X.X.X.nnnnnnDDX.X....=..',
-    '.X.......nnnnnn.........=..',
-    '...X.X...nnnnnn.........=..',
-    '.X.....C........C.......=..',
-    '........OOOOOOOOOOOOOOOO=..',
+    '.X....EE.nnnnnn.........=..',
+    '...X.XEE.nnnnnn.........=..',
+    '.XGGUU.C........C.......=..',
+    '..GGUU..OOOOOOOOOOOOOOOO=..',
     '.RRRTTT.O..LLLLKKKKLLNNO=..',
     '.RRRTTT.O.CLLLLKKKKLLNNO=..',
     '.RRRTTT.ObbOOOOOOOOOOOOO=..',
@@ -242,7 +246,9 @@ export function planMau(state: GameState, id: MauId): MauPlan {
     .filter((s) => s.type !== 'dien')
     .map((s) => ({ ...s, x: s.x + ox, z: s.z + oz }))
     .filter((s) => fits(s.type, s.x, s.z));
-  const types = [...new Set(slots.map((s) => s.type))];
+  // Doanh trại xếp trước nơi ở riêng của các binh chủng, vì nơi ở cần doanh trại.
+  const types = [...new Set(slots.map((s) => s.type))].sort((a, b) => Number(b === 'doanhTrai') - Number(a === 'doanhTrai'));
+  let barracks = barracksLevel(state);
   const leftovers: Building[] = [];
   const cx = dien.x + 2;
   const cz = dien.z + 2;
@@ -280,7 +286,7 @@ export function planMau(state: GameState, id: MauId): MauPlan {
       mark(type, s.x, s.z);
     }
     // Chỗ trống còn lại: dựng thêm cho tới giới hạn theo cấp Điện, nếu loại này đã mở.
-    const canBuild = def.buildable && unlocked(state, def.unlock) && level >= def.minDien;
+    const canBuild = def.buildable && unlocked(state, def.unlock) && level >= def.minDien && barracks >= (def.barracksLevel ?? 0);
     let room = canBuild ? limitOf(state, type) - usedOf(state, type) : 0;
     for (const s of open) {
       if (room <= 0) break;
@@ -288,6 +294,8 @@ export function planMau(state: GameState, id: MauId): MauPlan {
       addCost(plan.cost, def.buildCost);
       mark(type, s.x, s.z);
       room--;
+      // Doanh trại dựng thêm theo mẫu ở cấp 1: đủ để dựng trại giáo cùng lúc.
+      if (type === 'doanhTrai') barracks = Math.max(barracks, 1);
     }
   }
   // Công trình thừa hay không có trong mẫu: đứng yên nếu không vướng chỗ của mẫu; đoạn lũy, đê, thành, bẫy

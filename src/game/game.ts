@@ -300,7 +300,9 @@ export type FailReason =
   | 'khongDuCho'
   | 'daTheoMau'
   | 'canChuong4'
-  | 'khongGhepDuoc';
+  | 'khongGhepDuoc'
+  | 'canNoiO'
+  | 'noiOHu';
 
 export type Result<T = undefined> = { ok: true; value: T } | { ok: false; reason: FailReason };
 
@@ -553,6 +555,7 @@ export function canPlace(state: GameState, type: BuildingType, x: number, z: num
   if (!def.buildable) return fail('khongTheXay');
   if (def.unlock && !unlocked(state, def.unlock)) return fail(UNLOCK_REASON[def.unlock]);
   if (dienLevel(state) < def.minDien) return fail('chuaDuCapDien');
+  if (def.barracksLevel && barracksLevel(state) < def.barracksLevel) return fail('canDoanhTrai');
   if (usedOf(state, type) >= limitOf(state, type)) return fail('datGioiHan');
   const level = dienLevel(state);
   const grid = occupancy(state);
@@ -855,9 +858,18 @@ export function claimQuest(state: GameState): Result<Cost> {
 
 // ---------- Quân đội ----------
 
+/** Nơi ở riêng còn nguyên của binh chủng (lính luyện ở đó), nếu có. */
+export function homeOf(state: GameState, kind: UnitType): Building | undefined {
+  const homes = state.buildings.filter((b) => b.type === UNITS[kind].home);
+  return homes.find((b) => !b.damaged) ?? homes[0];
+}
+
 export function canTrain(state: GameState, kind: UnitType): Result {
   const def = UNITS[kind];
-  if (barracksLevel(state) < def.barracksLevel) return fail('canDoanhTrai');
+  if (countOf(state, 'doanhTrai') === 0) return fail('canDoanhTrai');
+  const home = homeOf(state, kind);
+  if (!home) return fail('canNoiO');
+  if (home.damaged) return fail('noiOHu');
   if (state.raid.phase === 'battle') return fail('dangCoGiac');
   if (state.campaign.battle) return fail('dangDanhPhoBan');
   if (isStarving(state)) return fail('thieuGao');
@@ -867,7 +879,8 @@ export function canTrain(state: GameState, kind: UnitType): Result {
 }
 
 /**
- * Tuyển một người lính ở doanh trại, xong ngay. Lính tách riêng khỏi dân làng:
+ * Tuyển một người lính ở nơi ở riêng của binh chủng ấy, xong ngay. Doanh trại giữ tổng số chỗ quân.
+ * Lính tách riêng khỏi dân làng:
  * cái giá là tiền tuyển và gạo ăn mỗi phút, không lấy bớt người làm.
  */
 export function train(state: GameState, kind: UnitType): Result<UnitType> {
