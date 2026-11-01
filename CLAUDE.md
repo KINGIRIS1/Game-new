@@ -40,4 +40,9 @@ Game xây dựng chiến thuật chạy trên trình duyệt điện thoại (Ty
 - `src/text/vi.ts`: mọi chữ hiển thị, kể cả lời các đoạn truyện.
 - Lệnh: `npm test`, `npm run build` (gồm typecheck), `npm run dev`. `node scripts/chup.mjs --giup` chụp thử ở khổ điện thoại (có khổ `fold` cho màn ngoài Fold5, cảnh Điện 8 và cảnh đã áp mẫu), ảnh vào `chup/` (gitignore). `node scripts/chup-nhan-vat.mjs <nhóm>` (linh, thu, quai, tuong, ky_nang, dan) chụp nhân vật ở mọi tư thế. `node scripts/kinh-te.mjs` in sổ thu chi của người chơi mô phỏng. `node scripts/chup-cong-trinh.mjs [loại ...|canh]` chụp từng công trình đã vẽ lại ở mọi cấp, dáng cũ phóng theo móng đặt cạnh dáng vẽ lại.
 - Đẩy lên `main` thì GitHub Actions chạy test, build rồi đăng lên GitHub Pages (`.github/workflows/deploy.yml`).
+- Không để việc nằm lại trên nhánh mà không có PR:
+  - Xong một việc (đã test, build, chụp kiểm tra nếu sửa hình) thì đẩy lên và mở PR vào `main`, không chờ chủ dự án nhắc.
+  - PR của nhánh đã gộp mà còn làm tiếp thì làm lại nhánh từ `main` mới nhất rồi mở PR mới; commit đẩy thêm lên nhánh đã gộp không thuộc PR nào và sẽ bị bỏ quên.
+  - Việc còn chờ chủ dự án duyệt (đề xuất, kế hoạch) thì vẫn mở PR nháp (draft), ghi rõ đang chờ duyệt điều gì.
+  - Trước khi bắt đầu việc lớn, xem có nhánh hay PR nào đang làm cùng việc ấy không, để khỏi làm hai bản song song.
 - Game đã đăng ở https://kingiris1.github.io/Game-new/. Cuối mỗi câu trả lời cho chủ dự án, ghi link này.
