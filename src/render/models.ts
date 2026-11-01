@@ -213,10 +213,21 @@ function treeTemplates(): THREE.Mesh[] {
   return out;
 }
 
+/** Một chiếc lá tre nhỏ, dẹt, đầu nhọn hoắt như mũi mác, mọc từ gốc cuống `(x, y, z)` hướng ra theo góc `yaw` và độ rủ `pitch`. */
+function addBambooLeaf(b: ShapeBuilder, x: number, y: number, z: number, yaw: number, pitch: number, len: number, w: number, color: number): void {
+  const g = new THREE.ConeGeometry(w, len, 4);
+  g.translate(0, len * 0.5, 0);
+  g.scale(1, 1, 0.22);
+  g.rotateX(pitch);
+  g.rotateY(yaw);
+  b.add(g, color, x, y, z);
+}
+
 /**
  * Khóm tre rừng (`mound = false`) hoặc đoạn Lũy Tre Làng kiên cố (`mound = true`):
- * - Thân tre uốn cong 2 đoạn tự nhiên từ gốc vươn ra ngoài, có đốt tre rõ ràng.
- * - Tán lá tre mọc thành nhiều tầng từ lưng chừng thân (`0.58 * h`) lên tới ngọn, gồm các cụm lá và tàu lá tre nhọn xòe rủ.
+ * - Thân tre thon dần từ gốc lên ngọn nhọn, uốn cong 3 nhịp tự nhiên, có đốt tre rõ ràng.
+ * - Từ giữa thân (`~42%` chiều cao) lên tới đỉnh, tại mỗi mắt tre mọc ra các cành tre mảnh (tay tre) đối xứng so le,
+ *   trên cành mang từng chùm 3–4 lá tre nhỏ nhọn hình mũi mác xòe rủ — hoàn toàn không có khối tán tròn như cây gỗ.
  * - Khi là lũy tre (`mound = true`): có bờ đất đắp 2 bậc phủ cỏ, thanh tre đan ngang buộc lũy, hàng cọc chông tre vót nhọn và măng tre ở gốc.
  */
 function bambooClump(stalks: number, height: number, seed: number, mound: boolean): THREE.Mesh {
@@ -231,87 +242,122 @@ function bambooClump(stalks: number, height: number, seed: number, mound: boolea
     b.box(0.8, 0.03, 0.8, C.grass[1], 0, 0.185, 0);
     // Hai thanh tre đan ngang buộc chặt hàng tre thành lũy phòng thủ
     for (const yRail of [0.42, 0.74]) {
-      b.cyl(0.024, 0.024, 0.92, 0x8cab4e, 0, yRail, 0.18, [0, 0, Math.PI / 2], 5);
-      b.cyl(0.022, 0.022, 0.92, C.bamboo, 0, yRail - 0.03, -0.18, [0, 0, Math.PI / 2], 5);
+      b.cyl(0.022, 0.022, 0.92, 0x8cab4e, 0, yRail, 0.17, [0, 0, Math.PI / 2], 5);
+      b.cyl(0.02, 0.02, 0.92, C.bamboo, 0, yRail - 0.03, -0.17, [0, 0, Math.PI / 2], 5);
     }
     // Hàng cọc chông tre vót nhọn cắm chếch ở chân lũy
     for (let i = 0; i < 4; i++) {
       const sx = -0.33 + i * 0.22;
       const dir = i % 2 ? 1 : -1;
-      b.cone(0.028, 0.34, 0x8cab4e, sx, 0.28, dir * 0.33, [dir * 0.48, 0, (rand() - 0.5) * 0.15], 4);
+      b.cone(0.026, 0.34, 0x8cab4e, sx, 0.28, dir * 0.33, [dir * 0.48, 0, (rand() - 0.5) * 0.15], 4);
     }
   } else {
-    // Mô đất nhỏ & bụi cỏ dưới chân bụi tre rừng
-    b.cyl(0.32, 0.38, 0.05, C.earthDark, 0, 0.025, 0, undefined, 8);
+    // Mô đất nhỏ dưới chân bụi tre rừng
+    b.cyl(0.3, 0.36, 0.045, C.earthDark, 0, 0.022, 0, undefined, 8);
   }
 
   // Măng tre non mọc ở gốc bụi tre
   for (let i = 0; i < 4; i++) {
     const ma = (i / 4) * Math.PI * 2 + rand() * 0.5;
-    const mr = 0.15 + rand() * 0.18;
-    b.cone(0.035, 0.2 + rand() * 0.08, 0x6b8a38, Math.cos(ma) * mr, yBase + 0.1, Math.sin(ma) * mr, [(rand() - 0.5) * 0.22, 0, (rand() - 0.5) * 0.22], 5);
+    const mr = 0.14 + rand() * 0.18;
+    b.cone(0.032, 0.2 + rand() * 0.08, 0x6b8a38, Math.cos(ma) * mr, yBase + 0.1, Math.sin(ma) * mr, [(rand() - 0.5) * 0.2, 0, (rand() - 0.5) * 0.2], 5);
   }
 
-  // Các thân tre uốn cong 2 nhịp từ gốc, có đốt tre và tán lá mọc từ lưng chừng thân lên tới ngọn
+  // Các thân tre thon dần từ gốc lên ngọn, uốn cong 3 đoạn, cành và lá nhọn mọc từ giữa cây lên đỉnh
   for (let i = 0; i < stalks; i++) {
-    const ringA = (i / stalks) * Math.PI * 2 + (rand() - 0.5) * 0.3;
+    const ringA = (i / stalks) * Math.PI * 2 + (rand() - 0.5) * 0.28;
     const ca = Math.cos(ringA);
     const sa = Math.sin(ringA);
-    const dist = (i < 3 ? 0.07 : 0.22) + rand() * 0.12;
+    const dist = (i < 3 ? 0.06 : 0.2) + rand() * 0.12;
     const x0 = ca * dist;
     const z0 = sa * dist;
-    const h = height * (0.8 + rand() * 0.3);
-    const lean1 = (i < 3 ? 0.04 : 0.09) + rand() * 0.05;
-    const lean2 = lean1 * 1.85;
-    const h1 = h * 0.52;
-    const h2 = h * 0.48;
-    const rx1 = sa * lean1;
-    const rz1 = -ca * lean1;
-    const rx2 = sa * lean2;
-    const rz2 = -ca * lean2;
-
-    const xKnee = x0 + ca * Math.sin(lean1) * h1;
-    const zKnee = z0 + sa * Math.sin(lean1) * h1;
-    const yKnee = yBase + Math.cos(lean1) * h1;
-    const xTop = xKnee + ca * Math.sin(lean2) * h2;
-    const zTop = zKnee + sa * Math.sin(lean2) * h2;
-    const yTop = yKnee + Math.cos(lean2) * h2;
-
-    const rStalk = 0.028 + (i % 3) * 0.005;
+    const h = height * (0.82 + rand() * 0.28);
+    const baseLean = (i < 3 ? 0.04 : 0.08) + rand() * 0.05;
+    const rBase = 0.028 + (i % 3) * 0.004;
     const stalkCol = BAMBOO_SHADES[i % BAMBOO_SHADES.length];
 
-    // Đoạn thân dưới & đoạn thân trên uốn cong tự nhiên
-    b.cyl(rStalk * 0.92, rStalk * 1.12, h1, stalkCol, (x0 + xKnee) * 0.5, (yBase + yKnee) * 0.5, (z0 + zKnee) * 0.5, [rx1, 0, rz1], 5);
-    b.cyl(rStalk * 0.68, rStalk * 0.92, h2, stalkCol, (xKnee + xTop) * 0.5, (yKnee + yTop) * 0.5, (zKnee + zTop) * 0.5, [rx2, 0, rz2], 5);
-
-    // Đốt tre ở giữa đoạn dưới, khớp gối và giữa đoạn trên
-    for (const [nx, ny, nz, nr, rtx, rtz] of [
-      [(x0 + xKnee) * 0.5, (yBase + yKnee) * 0.5, (z0 + zKnee) * 0.5, rStalk * 1.12, rx1, rz1],
-      [xKnee, yKnee, zKnee, rStalk * 1.02, rx1, rz1],
-      [(xKnee + xTop) * 0.5, (yKnee + yTop) * 0.5, (zKnee + zTop) * 0.5, rStalk * 0.9, rx2, rz2],
-    ] as const) {
-      b.cyl(nr, nr, 0.022, C.bronzeDark, nx, ny, nz, [rtx, 0, rtz], 5);
+    // Chia thân tre làm 6 lóng (nodes = 0..6) uốn cong dần ra ngoài và thon nhỏ dần lên đỉnh
+    const pts: { x: number; y: number; z: number; r: number; lean: number }[] = [];
+    let px = x0;
+    let py = yBase;
+    let pz = z0;
+    const segs = 6;
+    const segLen = h / segs;
+    for (let s = 0; s <= segs; s++) {
+      const f = s / segs;
+      const lean = baseLean * (0.5 + f * f * 1.9);
+      const r = rBase * (1.08 - f * 0.78);
+      pts.push({ x: px, y: py, z: pz, r, lean });
+      px += ca * Math.sin(lean) * segLen;
+      py += Math.cos(lean) * segLen;
+      pz += sa * Math.sin(lean) * segLen;
     }
 
-    // Cụm lá tre tầng lưng chừng (ở khớp uốn) + cụm lá tre tầng ngọn
-    for (const [lx, ly, lz, sc] of [
-      [(xKnee + xTop) * 0.5, (yKnee + yTop) * 0.5, (zKnee + zTop) * 0.5, 0.78],
-      [xTop, yTop - 0.04, zTop, 1.0],
-    ] as const) {
-      const leafCol = LEAF_SHADES[(i + (sc < 1 ? 2 : 1)) % LEAF_SHADES.length];
-      b.sphere((0.16 + (i % 2) * 0.025) * sc, leafCol, lx, ly, lz, [1.35, 0.52, 1.35], 6);
-      for (let l = 0; l < 2; l++) {
-        const la = ringA + (l ? 0.85 : -0.85) + rand() * 0.3;
-        b.cone(
-          0.042 * sc,
-          0.32 * sc,
-          LEAF_SHADES[(i + l) % 4],
-          lx + Math.cos(la) * 0.14 * sc,
-          ly - 0.03 * sc,
-          lz + Math.sin(la) * 0.14 * sc,
-          [Math.sin(la) * 1.28, 0, -Math.cos(la) * 1.28],
-          4,
-        );
+    for (let s = 0; s < segs; s++) {
+      const p0 = pts[s];
+      const p1 = pts[s + 1];
+      const mx = (p0.x + p1.x) * 0.5;
+      const my = (p0.y + p1.y) * 0.5;
+      const mz = (p0.z + p1.z) * 0.5;
+      const lean = (p0.lean + p1.lean) * 0.5;
+      const rx = sa * lean;
+      const rz = -ca * lean;
+      b.cyl(p1.r, p0.r, segLen * 1.02, stalkCol, mx, my, mz, [rx, 0, rz], 5);
+      // Vòng đốt tre tại mỗi mắt
+      if (s > 0) {
+        b.cyl(p0.r + 0.0045, p0.r + 0.0045, 0.018, C.bronzeDark, p0.x, p0.y, p0.z, [rx, 0, rz], 5);
+      }
+    }
+
+    // Từ giữa cây (mắt s = 2, tức ~33%–40% chiều cao) lên tới ngọn (s = 6): mọc cành tre mảnh và chùm lá tre nhỏ nhọn
+    for (let s = 2; s <= segs; s++) {
+      const pt = pts[s];
+      const f = s / segs;
+      // Mỗi mắt có 2 cành tre nhỏ mọc lệch hai bên
+      const branchCount = s === segs ? 1 : 2;
+      for (let br = 0; br < branchCount; br++) {
+        const side = (s + br) % 2 ? 1 : -1;
+        const bYaw = ringA + side * (0.55 + br * 0.45) + (rand() - 0.5) * 0.25;
+        const bLen = (0.24 - f * 0.07) * (br === 0 ? 1 : 0.72);
+        const bTilt = 0.72 + f * 0.22;
+        const bSin = Math.sin(bTilt);
+        const bCos = Math.cos(bTilt);
+        const bxDir = Math.sin(bYaw) * bSin;
+        const bzDir = Math.cos(bYaw) * bSin;
+        const endX = pt.x + bxDir * bLen;
+        const endY = pt.y + bCos * bLen;
+        const endZ = pt.z + bzDir * bLen;
+
+        if (s < segs) {
+          // Cành tre mảnh mọc vươn từ đốt tre
+          b.cyl(
+            0.0035,
+            0.0065,
+            bLen,
+            stalkCol,
+            (pt.x + endX) * 0.5,
+            (pt.y + endY) * 0.5,
+            (pt.z + endZ) * 0.5,
+            [bzDir * bTilt, 0, -bxDir * bTilt],
+            4,
+          );
+        }
+
+        // Chùm 3–4 lá tre nhỏ nhọn xòe hình chân vịt ở đầu cành và lưng cành
+        const leaves = s === segs ? 4 : br === 0 ? 4 : 3;
+        for (let l = 0; l < leaves; l++) {
+          const spread = (l - (leaves - 1) * 0.5) * 0.42;
+          const lYaw = bYaw + spread;
+          const along = l === 0 || l === leaves - 1 ? 0.65 : 0.95;
+          const lx = pt.x + bxDir * bLen * along;
+          const ly = pt.y + bCos * bLen * along;
+          const lz = pt.z + bzDir * bLen * along;
+          const lPitch = 1.25 + (l % 2) * 0.28 + f * 0.15;
+          const lLen = (0.16 + (l % 2) * 0.035) * (1.05 - f * 0.15);
+          const lWidth = 0.02 + (l % 2) * 0.004;
+          const lCol = LEAF_SHADES[(i + s + l) % LEAF_SHADES.length];
+          addBambooLeaf(b, lx, ly, lz, lYaw, lPitch, lLen, lWidth, lCol);
+        }
       }
     }
   }
