@@ -66,9 +66,33 @@ Tài liệu này ghi lại các quyết định đã chốt với chủ dự án
 ## Bản đồ
 
 - Lưới **55×55 ô** (từ bản lưu phiên bản 11, xem mục Kế hoạch: kinh đô lớn). Hai nhánh sông rộng 3 ô chảy dọc hai cạnh (nam và đông, từ ô 52) rồi hợp lưu ở một góc, gợi ngã ba Bạch Hạc. Nước vẽ rộng 7 ô (bờ bên kia lùi ra ngoài lưới, từ ô 59) để bến chợ cấp 8 cùng hai thuyền buôn neo gọn giữa dòng, còn luồng cho thuyền qua lại sát bờ bên kia. Hai cạnh còn lại (bắc và tây) là rừng; hai ô ngoài cùng luôn là rừng, chỗ giặc trên bộ xuất phát.
-- Điện Vua Hùng (móng 5×5) ở ô (37, 37). Lúc đầu chỉ xây được trong vùng **20×20** sát hai bờ sông. Mỗi lần Điện lên cấp thì phát rừng mở thêm đất: cạnh 20, 25, 25, 30, 35, 40, 40, 45 theo cấp 1–8 (tạm thời; PR 2 của kế hoạch kinh đô lớn đổi sang khoảnh tự chọn).
+- Điện Vua Hùng (móng 5×5) ở ô (37, 37). Đất giữa dải rừng ngoài cùng và sông chia thành **10×10 khoảnh 5×5**. Lúc đầu mở sẵn 16 khoảnh ở góc sông (vùng **20×20**); muốn thêm đất thì **phát rừng** từng khoảnh, người chơi tự chọn (xem mục Khoảnh đất).
 - Công trình nhiều ô có móng rộng hơn mô hình, mô hình chừa viền cỏ chừng 12% móng, nên đặt sát nhau vẫn thoáng. Ruộng kín móng hơn (95%).
 - Ô đất có **độ cao theo bậc** ngay từ đầu game (xem mục Độ cao ô đất ở chương 2). Chương 1 chỉ để nhìn; từ chương 2 độ cao quyết định ô nào ngập lũ.
+
+### Khoảnh đất (bản lưu phiên bản 12, đã làm)
+
+Học cơ chế mở đất của Forge of Empires, Elvenar: đất chia khoảnh, người chơi tự chọn khoảnh nào, trả tiền là mở ngay.
+
+- **Lưới khoảnh**: 10×10 khoảnh 5×5 phủ ô 2..51. Không khoảnh nào chạm sông hay dải rừng ngoài cùng (hai ô sát mép bắc, mép tây, chỗ giặc trên bộ ẩn nấp; chạm vào đó thì báo "Rừng thiêng ngoài cùng").
+- **Lúc đầu** mở sẵn 16 khoảnh ở góc sông (vùng 20×20), Điện nằm giữa.
+- **Lượt phát** (tổng số khoảnh đã mở, tính cả 16 khoảnh mở sẵn) theo cấp Điện (`KHOANH_QUOTA`):
+
+  | Điện | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 |
+  |---|---|---|---|---|---|---|---|---|
+  | Khoảnh | 18 | 24 | 32 | 38 | 48 | 60 | 72 | 80 |
+
+  Tới Điện 8 còn 20 khoảnh rừng không bao giờ phát, nên viền kinh đô lượn tự nhiên.
+- **Phát được** khi khoảnh chạm đất đã mở theo bốn hướng, còn lượt, không có giặc, lũ hay trinh sát báo, đủ của.
+- **Giá** chỉ gạo và vỏ ốc, làm tròn 5: từ 2% (khoảnh đầu của cấp) tới 3% (khoảnh cuối của cấp) giá lần nâng Điện kế tiếp (ở Điện 8 lấy giá lên cấp 8), sàn 20 gạo, 10 vỏ ốc (`KHOANH_COST_FRAC`, `KHOANH_COST_MIN`). Ví dụ: Điện 1–3 chừng 20–25 gạo; Điện 5: 80–120; Điện 6: 145–215 gạo, 130–190 vỏ ốc; Điện 7, 8: 210–310 gạo. Người chơi mô phỏng tiêu cho phát rừng chừng 1–3% số chi mỗi chương, nhịp lên Điện không đổi.
+- **Chạm** vào rừng chưa phát thì mở bảng **Khoảnh rừng**: khoảnh tô vàng; bảng ghi số khoảnh đã mở trên lượt, giá, nút Phát rừng, hay lý do chưa phát được (chưa sát đất, hết lượt kèm cấp Điện cho thêm lượt, đang có giặc). Khoảnh ven sông có ghi chú: dựng được bến nhưng mùa lũ dễ ngập.
+- **Hình ảnh**: rừng thưa dần ở bìa đất đã mở; khoảnh phát được (sát đất, còn lượt) thì cây thưa hơn và có **cọc mốc** tre buộc vải đỏ ở bốn góc.
+- Bảng Điện ghi "Khoảnh đất đã mở n/lượt → lượt cấp sau". Lên cấp Điện thì báo được phát thêm mấy khoảnh.
+- Rừng chưa phát giặc vẫn đi qua được; lũ không loang vào rừng chưa phát. Giặc trên bộ xuất phát ngoài mọi ô đã mở (dải giặc tính từ ô nhỏ nhất đã mở, `openStart`).
+- Mẫu kinh đô: chỗ của mẫu nằm trong rừng chưa phát thì bỏ qua; bảng mẫu ghi mẫu còn mấy khoảnh chưa phát.
+- Người chơi mô phỏng: hết chỗ thoáng để dựng thì phát khoảnh gần Điện nhất (bến thì khoảnh ven sông), miễn còn lượt và vẫn giữ được phần dành để nâng Điện.
+- **Bản lưu phiên bản 11 → 12**: đất hình vuông theo cấp Điện (cạnh 20, 25, 25, 30, 35, 40, 40, 45) đổi thành đúng các khoảnh ấy, không công trình nào rơi ra ngoài. Đã mở nhiều hơn lượt của cấp (Điện 6: 64 khoảnh, lượt 60) thì giữ đất, chỉ chưa phát thêm được.
+- Code: `khoanh.ts`, bảng `src/ui/khoanh.ts`, test `khoanh.test.ts`.
 
 ## Kinh tế
 
@@ -616,7 +640,7 @@ Chủ dự án đã chốt qua một buổi hỏi đáp. Vấn đề: từ cuố
 1. **Sửa lỗi và cân bằng lại** (mục Chuẩn cân bằng phó bản ở trên).
 2. **Cấp 6–7 và rèn binh khí**:
    - Điện Vua Hùng lên cấp 6 khi vào chương 2, cấp 7 khi vào chương 3. Người đang ở chương sau thì mở ngay;
-   - đất mở ra 25×25 ở cấp 6, 26×26 ở cấp 7, chừa một hàng rừng cho giặc trên bộ hiện ra (kinh đô lớn: 40×40 ở cả hai cấp);
+   - đất mở ra 25×25 ở cấp 6, 26×26 ở cấp 7, chừa một hàng rừng cho giặc trên bộ hiện ra (kinh đô lớn: phát rừng tới 60, rồi 72 khoảnh 5×5, xem mục Khoảnh đất);
    - ruộng, bến chợ thuyền, nhà sàn, bãi đất đá, lò rèn, kho thóc, chòi canh lên được cấp 6, 7. Lũy, đê, thành Cổ Loa giữ cấp riêng;
    - mỗi cấp mới vẫn đổi hẳn dáng: thêm một phần lớn nhìn rõ (ví dụ ruộng cấp 6 có guồng nước, cấp 7 có miếu thần lúa); ban đầu cỡ giữ 105%, sau chủ dự án yêu cầu to thêm (xem mục Phong cách);
    - **doanh trại giữ 38 chỗ**, không lên thêm cấp, vì bãi chiến tối đa khoảng 60 người;
@@ -642,8 +666,8 @@ Giá mỗi cấp mới khoảng gấp đôi cấp trước; sản lượng mỗi
 
 | Cấp | Mở khi | Giá nâng | Đất | Sức chứa kho | Chỗ ở | Gạo, vỏ ốc /phút | Máu |
 |---|---|---|---|---|---|---|---|
-| 6 | vào chương 2 | 4000 gạo, 4000 vỏ ốc, 3000 đất đá, 600 sắt | 40×40 | 14000 | 9 | 14, 7 | 1600 |
-| 7 | vào chương 3 | 7200 gạo, 6400 vỏ ốc, 5600 đất đá, 1200 sắt | 40×40 | 22000 | 10 | 16, 8 | 1800 |
+| 6 | vào chương 2 | 4000 gạo, 4000 vỏ ốc, 3000 đất đá, 600 sắt | 60 khoảnh | 14000 | 9 | 14, 7 | 1600 |
+| 7 | vào chương 3 | 7200 gạo, 6400 vỏ ốc, 5600 đất đá, 1200 sắt | 72 khoảnh | 22000 | 10 | 16, 8 | 1800 |
 
 **Công trình lên cấp 6, 7** (giá là giá nâng lên cấp ấy)
 
@@ -909,7 +933,7 @@ Chủ dự án đã duyệt mọi con số dưới đây trước khi viết cod
 
 - **Truyện**: An Dương Vương và Mỵ Châu, Trọng Thủy, nối liền chương 3. Năm đoạn truyện. Truyền thuyết không có trận nào giữa đám cưới và lúc Triệu Đà đánh lần cuối, nên thêm một chi tiết không có trong truyện: trong lúc giả hòa, Triệu Đà sai **thủy binh đội lốt cướp sông** sang dò thế Âu Lạc.
 - **Kết**: kể trọn truyền thuyết. Thắng màn 32 thì hiện màn hình **Hết truyện**, rồi chơi tiếp trên kinh đô như bây giờ. Câu cuối nhắc trước Hai Bà Trưng, để ngỏ một chương 5. Cảnh chém chỉ kể một câu nhẹ, không vẽ.
-- **Kinh đô lớn tiếp nhưng không thêm đất**: Điện cấp 8 và 7 loại công trình lên cấp 8. Số công trình tối đa giữ như Điện 7. Ở Điện 7, đất 26×26 đã ra sát mép, chỉ chừa một hàng rừng cho giặc trên bộ hiện ra. (Kinh đô lớn đổi lại: Điện 8 mở đất tới 45×45.)
+- **Kinh đô lớn tiếp nhưng không thêm đất**: Điện cấp 8 và 7 loại công trình lên cấp 8. Số công trình tối đa giữ như Điện 7. Ở Điện 7, đất 26×26 đã ra sát mép, chỉ chừa một hàng rừng cho giặc trên bộ hiện ra. (Kinh đô lớn đổi lại: Điện 8 được phát rừng tới 80 khoảnh, chừng 45×45.)
 - **Lầu nỏ**: hai chòi canh cấp 8 ghép thành một, không tách lại được.
 - **Ụ nỏ** dựng trên đoạn thành Cổ Loa, không tốn thêm đất. Đây là cơ chế mới ở kinh đô; nhờ nó ba vòng thành mới có tác dụng trong trận.
 - **Thủy binh Triệu** đi thuyền từ phía sông tới đánh kinh đô. Đây là lần đầu bờ sông phải lo giặc chứ không chỉ lo lũ.
@@ -940,7 +964,7 @@ Giá cấp 8 khoảng gấp 2 cấp 7, sản lượng tăng khoảng 30% (cấp 
 
 | Cấp | Mở khi | Giá nâng | Đất | Sức chứa kho | Chỗ ở | Gạo, vỏ ốc /phút | Máu |
 |---|---|---|---|---|---|---|---|
-| 8 | vào chương 4 | 10400 gạo, 9200 vỏ ốc, 8000 đất đá, 1800 sắt | 45×45 (kinh đô lớn; trước kia giữ 26×26) | 32000 | 11 | 18, 9 | 2000 |
+| 8 | vào chương 4 | 10400 gạo, 9200 vỏ ốc, 8000 đất đá, 1800 sắt | 80 khoảnh, chừng 45×45 (kinh đô lớn; trước kia giữ 26×26) | 32000 | 11 | 18, 9 | 2000 |
 
 - Người đang ở chương 4 thì mở ngay. Vào chương 4 tức là nhận thưởng nhiệm vụ Đền Cổ Loa. PR 1 chưa có truyện chương 4, nên điều kiện này mở Điện 8 luôn.
 - Ở Điện 8, số công trình tối đa của mọi loại giữ như Điện 7, kể cả lũy, bẫy, đê, thành và bốn công trình Hội Tết. Số bánh cần dâng ở Tết giữ 40 mỗi loại, vì bốn công trình làm bánh không lên cấp.
@@ -996,7 +1020,7 @@ Giá cấp 8 khoảng gấp 2 cấp 7, sản lượng tăng khoảng 30% (cấp 
 
 - Bản lưu lên **phiên bản 10** (công trình lên được cấp 8, thêm loại lầu nỏ; bản lưu 9 chỉ đổi số phiên bản).
 - Nhiệm vụ: nối thêm nhiệm vụ 40, 41 (xem mục Nhiệm vụ). Xong nhiệm vụ 41 thì bảng Lạc hầu báo kinh đô đã có Điện cấp 8 và lầu nỏ, chờ phần sau.
-- Test (`cap8.test.ts`): Điện cấp 8 cần chương 4; đất mở tới 45×45 (kinh đô lớn), kho 32000; bảy loại lên cấp 8 với số đã duyệt, số tối đa giữ như Điện 7; ghép lầu nỏ (Điện 8, hai chòi cấp 8 còn nguyên, không lúc có giặc, trả giá), không tách, không lên cấp, không dỡ; tính 2 chòi canh; mỗi phát bắn 3 giặc gần nhất, giặc thứ tư không trúng; áp mẫu; nâng bản lưu 9 lên 10. Nhịp lên Điện 8 ở `balance.test.ts`.
+- Test (`cap8.test.ts`): Điện cấp 8 cần chương 4; được phát tới 80 khoảnh (kinh đô lớn), kho 32000; bảy loại lên cấp 8 với số đã duyệt, số tối đa giữ như Điện 7; ghép lầu nỏ (Điện 8, hai chòi cấp 8 còn nguyên, không lúc có giặc, trả giá), không tách, không lên cấp, không dỡ; tính 2 chòi canh; mỗi phát bắn 3 giặc gần nhất, giặc thứ tư không trúng; áp mẫu; nâng bản lưu 9 lên 10. Nhịp lên Điện 8 ở `balance.test.ts`.
 
 ### PR 2: lính nỏ, ụ nỏ, thủy binh Triệu
 
@@ -1204,7 +1228,7 @@ Chủ dự án thấy bản đồ kinh đô nhỏ, công trình sát nhau, bố 
 - **Mở đất bằng khoảnh tự chọn**:
   - chạm khoảnh rừng sát đất đã mở (4 hướng), trả gạo và vỏ ốc, đất mở ngay;
   - số khoảnh được mở theo cấp Điện: 18, 24, 32, 38, 48, 60, 72, 80;
-  - giá chừng 1–1,5% giá nâng Điện của bậc vừa cho lượt ấy, nhích dần trong cùng bậc; không tốn sắt hay đất đá;
+  - giá 2–3% giá lần nâng Điện kế tiếp, nhích dần trong cùng cấp (chủ dự án chọn khi làm PR 2; kế hoạch đầu ghi 1–1,5%, tính ra rẻ như cho không); không tốn sắt hay đất đá;
   - không phát được khi có giặc hay lũ, kể cả lúc trinh sát báo;
   - khoảnh ven sông thêm chỗ đặt bến nhưng dễ ngập, khoảnh trên đồi an toàn lũ.
 - **Độ thoáng ước tính** (xây đủ giới hạn):
@@ -1222,7 +1246,7 @@ Chủ dự án thấy bản đồ kinh đô nhỏ, công trình sát nhau, bố 
 - **Trận giữ kinh đô**: tầm bắn, tốc độ, bán kính kỹ năng tính bằng ô nhân một hệ số chừng 1,4. Trận ngoài bãi giữ nguyên.
 - **Khoảng thở**:
   - mô hình phóng theo móng mới, nền chừng 85% ô móng, chừa viền cỏ; người làm giữ cỡ người thật;
-  - trang trí ô trống (bụi cây, hoa, đá nhỏ) và lối đất nện từ cửa công trình về sân Điện, chỉ để nhìn;
+  - trang trí ô trống (khóm cỏ, hoa dại, đá nhỏ), chỉ để nhìn; không tự vẽ lối đất nữa vì người chơi đã tự trải đường được (xem mục Đường đi và đồ trang trí);
   - cây, đá thỉnh thoảng mọc trên ô trống, chạm để dọn lấy chút gạo hay đất đá.
 - **Bản lưu cũ** tự xếp lại theo mẫu kinh đô của chương đang chơi, miễn phí, giữ cấp và người làm. Đoạn lũy, đê, thành, bẫy không còn chỗ thì trả lại giá dựng; đất đã đắp trả lại đất đá.
 - Tự chọn, chủ dự án có thể đổi:
@@ -1241,9 +1265,9 @@ Chủ dự án thấy bản đồ kinh đô nhỏ, công trình sát nhau, bố 
    - **Camera**: mặc định thấy chừng 20 ô bề ngang, thu nhỏ được tới khi thấy trọn kinh đô 45×45; lần đầu mở game nhìn vào giữa vùng đất đã khai phá; kéo trong vùng đất ấy; bóng nắng theo chỗ đang nhìn, sương mù lùi xa khi thu nhỏ.
    - **Nâng bản lưu** (`xepLai.ts`): bản lưu còn ở kinh đô nhỏ (Điện ở ô 16, 16, độ cao 30×30) dựng lại theo mẫu của chương đang chơi (chương 4 dùng mẫu Cổ Loa), miễn phí, giữ cấp, người làm, hư hỏng; công trình không có chỗ trong mẫu thì vào chỗ trống gần Điện nhất. Lũy, đê đã có thì dựng đủ dải theo mẫu; thành Cổ Loa xếp từ vòng trong ra và dựng nốt cho đủ số vòng kinh đô cũ đã có. Đoạn thừa trả lại giá đã bỏ ra; đất đã đắp và nền đã đắp trả lại đất đá (tính theo địa hình cũ). Trận giữ kinh đô đang dở lùi về lúc trinh sát báo, trả lại của bị cướp. Vào game thì báo một lần kinh đô đã dựng lại và phần hoàn lại.
    - **Bảng mẫu kinh đô**: bản đồ thu nhỏ vẽ lên canvas một lần cho mỗi mẫu và cấp Điện.
-2. **PR 2: khoảnh tự chọn** (bản lưu v12): bảng Khoảnh rừng, phát rừng, người chơi mô phỏng phát rừng, chỉnh giá theo sổ kinh tế.
-3. **PR 3: trang trí ô trống, lối đất** (chỉ hình vẽ, tự mọc). Người chơi đã tự trải đường và đặt đồ trang trí được (xem mục Đường đi và đồ trang trí); PR này vẫn để làm trang trí tự mọc trên ô trống.
-4. **PR 4: cây, đá mọc trên ô trống** (bản lưu v13).
+2. **PR 2: khoảnh tự chọn** (đã làm, bản lưu v12): xem mục Khoảnh đất. Bảng Khoảnh rừng, cọc mốc, phát rừng, người chơi mô phỏng phát rừng khi hết chỗ thoáng, giá 2–3% giá nâng Điện kế tiếp.
+3. **PR 3: trang trí ô trống** (chỉ hình vẽ, tự mọc): khóm cỏ, hoa dại, đá nhỏ theo hạt giống từng ô, trên ô trống đã mở không có công trình, đường hay đồ trang trí; vẽ theo lô. Không tự vẽ lối đất: người chơi tự trải đường (xem mục Đường đi và đồ trang trí).
+4. **PR 4: cây, đá mọc trên ô trống** (bản lưu v13): không mọc trên ô có đường hay đồ trang trí; khoảnh vừa phát có sẵn 1–2 cái.
 
 Sau đó mới làm tiếp chương 4, PR 2–4.
 
@@ -1283,6 +1307,6 @@ Sau đó mới làm tiếp chương 4, PR 2–4.
 9. **Sửa sau chơi thử Hội Tết**: Thủy Tinh có hai phép, Dời non vẽ rõ hơn, xoay cảnh 4 hướng, dời công trình, mẫu kinh đô mỗi chương.
 10. **Chương 4: Mỵ Châu, Trọng Thủy** (đã duyệt, đang làm; PR 1 đã làm; xem Kế hoạch chương 4): Điện và 7 loại công trình lên cấp 8, lầu nỏ, ụ nỏ trên thành, lính nỏ, thủy binh Triệu đi thuyền, Cao Lỗ, phó bản màn 25–32, Đền Cuông, màn hình Hết truyện, thử thách phó bản và huân công.
 11. **Doanh trại và nơi ở riêng** (đã làm, xem mục cùng tên): doanh trại là nơi tướng ở và điều binh; trại giáo, trại cung, chuồng voi để luyện từng binh chủng; tướng ra trận từ doanh trại.
-12. **Kinh đô lớn, công trình to, mở đất bằng khoảnh** (đã duyệt, đang làm; xem mục Kế hoạch cùng tên): công trình to hơn một ô mỗi chiều, lưới 55×55, khoảnh 5×5 tự chọn, viền cỏ, trang trí ô trống, cây đá mọc. Làm trước chương 4 PR 2–4.
+12. **Kinh đô lớn, công trình to, mở đất bằng khoảnh** (đã duyệt, đang làm; xem mục Kế hoạch cùng tên): công trình to hơn một ô mỗi chiều, lưới 55×55 (PR 1 đã làm), khoảnh 5×5 tự chọn (PR 2 đã làm), viền cỏ, trang trí ô trống, cây đá mọc. Làm trước chương 4 PR 2–4.
 13. **Đường đi và đồ trang trí** (đã làm, xem mục cùng tên): bốn loại đường, bảy món trang trí, ba thẻ chọn trong bảng Xây dựng, thẻ Dọn trang trí.
 14. **Để sau**: chương 5 về Hai Bà Trưng (mới nhắc ở câu cuối chương 4); nhạc nền.

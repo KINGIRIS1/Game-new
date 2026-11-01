@@ -7,7 +7,8 @@ import { raidSpawnBand, type Battle, type RaidSide } from '../game/battle';
 import { advLook, inChapter3, ruaVangCame, type AdvLook } from '../game/coLoa';
 import { buildingAt, dienLevel, type Building, type GameState } from '../game/game';
 import { giongLook, type GiongLook } from '../game/giong';
-import { DIEN_HOME, FAR_BANK, FOREST_BAND, GRID, RIVER_START, areaStart, baseHeights, isUnlocked } from '../game/map';
+import { KHOANH_N, khoanhOf, khoanhOrigin, openMask, openStart, openable } from '../game/khoanh';
+import { DIEN_HOME, FAR_BANK, FOREST_BAND, GRID, KHOANH, RIVER_START, baseHeights } from '../game/map';
 import { sonLook, type SonLook } from '../game/son';
 import { floodMap } from '../game/terrain';
 import { tetOpen } from '../game/tet';
@@ -33,6 +34,7 @@ import {
   buildCitadel,
   buildDikes,
   buildForest,
+  buildStakes,
   buildWalls,
   makeBoat,
   type CitadelSpot,
@@ -252,6 +254,9 @@ export class World {
   /** Nước lũ phủ trên các ô ngập, và lớp tô xanh báo trước vùng sẽ ngập. */
   private readonly floodWater = new InstancedBoxes(RIVER_START * RIVER_START);
   private readonly floodPreview = new InstancedBoxes(RIVER_START * RIVER_START);
+  /** Ô của khoảnh rừng đang chọn (bảng Khoảnh rừng), tô vàng mờ. */
+  private readonly chunkPick = new InstancedBoxes(KHOANH * KHOANH);
+  private chunkPicked = -1;
   private floodKey = '';
   private riverWater?: THREE.Object3D;
   /** Nước lũ tràn cả bờ bên kia sông, hiện khi nước dâng cao hơn mặt bãi bên ấy. */
@@ -302,7 +307,8 @@ export class World {
   private tetKey = '';
   /** Rùa Vàng bơi chậm trên sông sau khi đã hiện lên diệt yêu tinh. */
   private turtle?: THREE.Group;
-  private shownLevel = 0;
+  /** Cấp Điện và danh sách khoảnh đã mở lúc dựng đất, rừng lần cuối. */
+  private landKey = '';
   private wallKey = '';
   private dikeKey = '';
   private citadelKey = '';
@@ -339,6 +345,13 @@ export class World {
     previewMat.depthWrite = false;
     this.floodPreview.mesh.renderOrder = 2;
     this.scene.add(this.floodWater.mesh, this.floodPreview.mesh);
+    const pickMat = this.chunkPick.mesh.material as THREE.MeshLambertMaterial;
+    pickMat.transparent = true;
+    pickMat.opacity = 0.5;
+    pickMat.depthWrite = false;
+    pickMat.emissive.set(0x6b5410);
+    this.chunkPick.mesh.renderOrder = 2;
+    this.scene.add(this.chunkPick.mesh);
     this.rain = new THREE.InstancedMesh(
       new THREE.BoxGeometry(0.025, 0.55, 0.025),
       new THREE.MeshBasicMaterial({ color: C.rain, transparent: true, opacity: 0.55, depthWrite: false }),
@@ -573,9 +586,10 @@ export class World {
     this.decorKey = '#';
     this.floodKey = '';
     this.heights = [];
-    this.shownLevel = 0;
+    this.landKey = '';
     this.framed = false;
     this.setSelection(null);
+    this.setChunkSelection(null);
     if (this.merchantBoat) this.scene.remove(this.merchantBoat);
     this.merchantBoat = undefined;
   }
@@ -605,22 +619,25 @@ export class World {
     this.placeWisps(state);
     const heightsChanged = state.heights.length !== this.heights.length || state.heights.some((h, i) => h !== this.heights[i]);
     if (heightsChanged) this.heights = [...state.heights];
-    if (level !== this.shownLevel || heightsChanged) {
-      this.shownLevel = level;
+    const landKey = `${level}:${state.khoanh.join(',')}`;
+    if (landKey !== this.landKey || heightsChanged) {
+      this.landKey = landKey;
+      const lo = openStart(state);
       // Kéo cảnh trong vùng đất đã khai phá, chừa một dải rừng và một phần sông.
-      const bounds = { min: wx(areaStart(level)) - 3, max: wx(RIVER_START) + 2 };
+      const bounds = { min: wx(lo) - 3, max: wx(RIVER_START) + 2 };
       if (this.cityCam) this.cityCam.bounds = bounds;
       else this.view.bounds = bounds;
       // Lần đầu dựng cảnh: nhìn vào giữa vùng đất đã khai phá (Điện ở gần góc sông, nhìn vào Điện thì nửa màn hình là sông).
       if (!this.framed) {
         this.framed = true;
-        const mid = wx((areaStart(level) + RIVER_START) / 2);
+        const mid = wx((lo + RIVER_START) / 2);
         this.view.target.set(mid, 0, mid);
         this.view.apply();
       }
-      this.rebuildLand(level);
-      this.rebuildForest(level);
-      this.rebuildGridOverlay(level);
+      this.rebuildLand(state);
+      this.rebuildForest(state);
+      this.rebuildGridOverlay(state);
+      if (this.chunkPicked >= 0) this.setChunkSelection(this.chunkPicked);
       this.floodKey = '';
     }
 
@@ -747,7 +764,7 @@ export class World {
     }
     this.floodWater.begin();
     if (water > 0.005) {
-      const wet = floodMap(state, water, dienLevel(state));
+      const wet = floodMap(state, water);
       for (let z = 0; z < RIVER_START; z++) {
         for (let x = 0; x < RIVER_START; x++) {
           if (!wet[z * GRID + x]) continue;
@@ -765,7 +782,7 @@ export class World {
   setFloodPreview(state: GameState | null, level = 0): void {
     this.floodPreview.begin();
     if (state && level > 0) {
-      const wet = floodMap(state, level, dienLevel(state));
+      const wet = floodMap(state, level);
       for (let z = 0; z < RIVER_START; z++) {
         for (let x = 0; x < RIVER_START; x++) {
           if (!wet[z * GRID + x]) continue;
@@ -872,13 +889,14 @@ export class World {
 
 
   /** Đất trong lưới: mỗi ô một cột đất cao theo bậc, bậc cao sáng màu hơn một chút. */
-  private rebuildLand(level: number): void {
+  private rebuildLand(state: GameState): void {
     this.land.begin();
     this.landTiles.length = 0;
     const c = new THREE.Color();
+    const mask = openMask(state);
     for (let x = 0; x < RIVER_START; x++) {
       for (let z = 0; z < RIVER_START; z++) {
-        const open = isUnlocked(x, z, level);
+        const open = mask[z * GRID + x] === 1;
         const palette = open ? C.grass : C.grassLocked;
         const h = Math.max(this.heights[z * GRID + x] ?? 0, 0);
         c.setHex(palette[(x * 7 + z * 13) % 3]).offsetHSL(0, -0.02 * h, 0.022 * h - 0.02);
@@ -893,37 +911,77 @@ export class World {
     this.land.mesh.boundingBox = null;
   }
 
-  private rebuildForest(level: number): void {
+  /**
+   * Rừng trên mọi ô chưa mở. Ô rừng sát đất đã mở thì thưa cây cho dễ nhìn bìa đất; khoảnh phát được (sát đất, còn
+   * lượt) thì thưa hơn nữa và cắm cọc mốc buộc vải đỏ ở bốn góc.
+   */
+  private rebuildForest(state: GameState): void {
     if (this.forest) this.scene.remove(this.forest);
+    const mask = openMask(state);
+    const ready = new Set(openable(state));
     const spots: TreeSpot[] = [];
-    const lo = areaStart(level);
+    const nearOpen = (x: number, z: number) => {
+      for (let dz = -1; dz <= 1; dz++) {
+        for (let dx = -1; dx <= 1; dx++) {
+          const nx = x + dx;
+          const nz = z + dz;
+          if (nx >= 0 && nz >= 0 && nx < GRID && nz < GRID && mask[nz * GRID + nx]) return true;
+        }
+      }
+      return false;
+    };
     for (let x = 0; x < RIVER_START; x++) {
       for (let z = 0; z < RIVER_START; z++) {
-        if (isUnlocked(x, z, level)) continue;
+        if (mask[z * GRID + x]) continue;
         const rand = seeded(x * 73856093 + z * 19349663);
-        // Chừa một dải đất trống sát vùng đã mở cho dễ nhìn.
-        const nearEdge = x >= lo - 1 && z >= lo - 1;
-        if (rand() > (nearEdge ? 0.25 : 0.65) * FOREST_DENSITY) continue;
+        const k = khoanhOf(x, z);
+        const density = nearOpen(x, z) ? 0.25 : ready.has(k) ? 0.45 : 0.65;
+        if (rand() > density * FOREST_DENSITY) continue;
         const cx = wx(x) + 0.5 + (rand() - 0.5) * 0.3;
         const cz = wz(z) + 0.5 + (rand() - 0.5) * 0.3;
         spots.push({ x: cx, y: this.groundY(x, z), z: cz, kind: rand() < 0.35 ? 'bamboo' : 'tree', seed: Math.floor(rand() * 1e9) });
       }
     }
-    this.forest = buildForest(spots);
+    const group = new THREE.Group();
+    group.add(buildForest(spots));
+    // Cọc mốc ở bốn góc mỗi khoảnh phát được (góc chung của hai khoảnh chỉ cắm một cọc).
+    const corners = new Map<number, { x: number; z: number }>();
+    for (const k of ready) {
+      const o = khoanhOrigin(k);
+      for (const [dx, dz] of [
+        [0, 0],
+        [KHOANH, 0],
+        [0, KHOANH],
+        [KHOANH, KHOANH],
+      ]) {
+        const x = o.x + dx;
+        const z = o.z + dz;
+        corners.set(z * (GRID + 1) + x, { x, z });
+      }
+    }
+    const stakes = [...corners.values()].map(({ x, z }) => {
+      // Cọc đứng ở góc ô, lùi vào trong rừng một chút; mặt đất lấy theo ô rừng gần nhất.
+      const tx = Math.min(Math.max(x, 0), RIVER_START - 1);
+      const tz = Math.min(Math.max(z, 0), RIVER_START - 1);
+      return { x: wx(x) + (x >= RIVER_START ? -0.2 : 0), y: this.groundY(tx, tz), z: wz(z) + (z >= RIVER_START ? -0.2 : 0), seed: x * 31 + z * 17 };
+    });
+    if (stakes.length) group.add(buildStakes(stakes));
+    this.forest = group;
     this.scene.add(this.forest);
   }
 
-  private rebuildGridOverlay(level: number): void {
+  private rebuildGridOverlay(state: GameState): void {
     const visible = this.gridOverlay?.visible ?? false;
     if (this.gridOverlay) {
       this.scene.remove(this.gridOverlay);
       this.gridOverlay.geometry.dispose();
     }
-    const lo = areaStart(level);
+    const mask = openMask(state);
     const pts: THREE.Vector3[] = [];
-    // Viền từng ô ở đúng mặt đất của ô, để lưới bám theo bậc đất.
-    for (let x = lo; x < RIVER_START; x++) {
-      for (let z = lo; z < RIVER_START; z++) {
+    // Viền từng ô đã mở ở đúng mặt đất của ô, để lưới bám theo bậc đất.
+    for (let x = 0; x < RIVER_START; x++) {
+      for (let z = 0; z < RIVER_START; z++) {
+        if (!mask[z * GRID + x]) continue;
         const y = this.groundY(x, z) + 0.02;
         const x0 = wx(x) + 0.03;
         const x1 = wx(x + 1) - 0.03;
@@ -1445,6 +1503,23 @@ export class World {
     this.footprint.scale.set(def.w, 1, def.d);
     this.footprint.position.set(wx(x) + def.w / 2, y + 0.03, wz(z) + def.d / 2);
     (this.footprint.material as THREE.MeshBasicMaterial).color.set(valid ? 0x4caf50 : 0xe53935);
+  }
+
+  /** Tô vàng mờ các ô của khoảnh rừng `id` (đang mở bảng Khoảnh rừng); null để tắt. */
+  setChunkSelection(id: number | null): void {
+    this.chunkPicked = id ?? -1;
+    this.chunkPick.begin();
+    if (id !== null && id >= 0 && id < KHOANH_N * KHOANH_N) {
+      const o = khoanhOrigin(id);
+      for (let dx = 0; dx < KHOANH; dx++) {
+        for (let dz = 0; dz < KHOANH; dz++) {
+          const x = o.x + dx;
+          const z = o.z + dz;
+          this.chunkPick.add(0.94, 0.05, 0.94, 0xffd54a, wx(x) + 0.5, this.groundY(x, z) + 0.05, wz(z) + 0.5);
+        }
+      }
+    }
+    this.chunkPick.end();
   }
 
   setSelection(b: Building | null): void {

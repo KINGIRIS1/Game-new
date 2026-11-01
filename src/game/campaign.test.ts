@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { DIEN, DIEN_END } from './testmap';
+import { DIEN, DIEN_END, setDien } from './testmap';
 import { alliesLeft, startFieldBattle, stepField, useSkill, type Battle } from './battle';
 import { canStartStage, leaveBattlefield, retreat, stageReward, startStage } from './campaign';
 import { DEFAULT_ROWS, FIELD, STAGES, UNITS, type UnitType } from './defs';
@@ -10,7 +10,7 @@ type Army = Record<UnitType, number>;
 /** Kinh đô Điện cấp 3 có doanh trại cấp 3 và ba nơi ở, đủ tiền luyện quân. */
 function capital(): GameState {
   const s = createInitialState(0);
-  s.buildings[0].level = 3;
+  setDien(s, 3);
   s.resources = { gao: 3000, voOc: 3000, datDa: 3000, sat: 1000 };
   const barracks = place(s, 'doanhTrai', DIEN - 6, DIEN_END + 2);
   if (!barracks.ok) throw new Error('dựng doanh trại thử thất bại');
@@ -130,7 +130,7 @@ describe('cân bằng các màn', () => {
 describe('phó bản', () => {
   it('chưa có doanh trại thì chưa đánh được', () => {
     const s = createInitialState(0);
-    s.buildings[0].level = 2;
+    setDien(s, 2);
     expect(canStartStage(s, 1)).toEqual({ ok: false, reason: 'canDoanhTrai' });
   });
 
@@ -139,10 +139,10 @@ describe('phó bản', () => {
     expect(canStartStage(s, 1).ok).toBe(true);
     expect(canStartStage(s, 2)).toEqual({ ok: false, reason: 'manKhoa' });
     s.campaign.cleared = 2;
-    s.buildings[0].level = 2;
+    setDien(s, 2);
     expect(canStartStage(s, 3)).toEqual({ ok: false, reason: 'chuaDuCapDien' });
     s.campaign.cleared = 4;
-    s.buildings[0].level = 5;
+    setDien(s, 5);
     expect(canStartStage(s, 5)).toEqual({ ok: false, reason: 'canThanhGiong' });
     expect(canStartStage(s, 9)).toEqual({ ok: false, reason: 'canChuong2' });
     expect(canStartStage(s, 17)).toEqual({ ok: false, reason: 'canChuong3' });

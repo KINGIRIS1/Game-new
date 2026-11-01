@@ -55,8 +55,9 @@ import {
   type UnitType,
   RAID_SCALE,
 } from './defs';
-import { dienLevel, type Building, type GameState } from './game';
-import { GRID, RIVER_START, areaStart, inGrid, isRiver } from './map';
+import type { Building, GameState } from './game';
+import { openStart } from './khoanh';
+import { GRID, RIVER_START, inGrid, isRiver } from './map';
 import { drowns, floodMap } from './terrain';
 
 export type Side = 'ta' | 'giac';
@@ -315,7 +316,7 @@ export interface BattleOpts {
  * ở ngoài vùng đã khai phá. Phần vẽ dùng để đặt dải báo giặc, ma trơi và hướng camera.
  */
 export function raidSpawnBand(state: GameState): { lo: number; from: number; to: number } {
-  const open = areaStart(dienLevel(state));
+  const open = openStart(state);
   const at = (r: number) => spawnDepth(open, r);
   return { lo: Math.min(open, fromRiver(24)), from: at(0), to: at(1) };
 }
@@ -334,7 +335,7 @@ export function startBattle(state: GameState, wave: number, side: RaidSide, opts
   battle.geo = RAID_SCALE;
   const rand = rng(wave * 7919 + ['bac', 'tay', 'nam', 'dong'].indexOf(side) + 1);
   // Giặc trên bộ ra từ dải ở bìa rừng (`raidSpawnBand`).
-  const open = areaStart(dienLevel(state));
+  const open = openStart(state);
   const lo = Math.min(open, fromRiver(24));
   let exitAt = Infinity;
   const flood = opts.flood ?? null;
@@ -941,7 +942,7 @@ function advanceClock(battle: Battle, dt: number): void {
 function stepFlood(state: GameState, battle: Battle): void {
   if (battle.floodTo <= 0) return;
   battle.water = Math.min(battle.floodTo, battle.t / FLOOD_RISE_S);
-  const wet = floodMap(state, battle.water, dienLevel(state));
+  const wet = floodMap(state, battle.water);
   for (const b of state.buildings) {
     if (!drowns(state, b, wet, battle.water)) continue;
     b.damaged = true;

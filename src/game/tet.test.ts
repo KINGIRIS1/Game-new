@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { edge } from './testmap';
+import { edge, setDien } from './testmap';
 import { startFieldBattle } from './battle';
 import {
   BUILDINGS,
@@ -42,16 +42,16 @@ function city(dien = 7): GameState {
   const s = createInitialState(0);
   s.giong.ascended = true;
   s.resources = { gao: 50000, voOc: 50000, datDa: 50000, sat: 50000 };
-  s.buildings[0].level = dien;
+  setDien(s, dien);
   return s;
 }
 
 /** Dựng một công trình Tết ở cấp `level`, đủ người làm (Điện tạm lên cấp 7 để có chỗ). */
 function put(s: GameState, type: BuildingType, x: number, z: number, level = 1): Building {
   const dien = s.buildings[0].level;
-  s.buildings[0].level = 7;
+  setDien(s, 7);
   const r = place(s, type, x, z);
-  s.buildings[0].level = dien;
+  setDien(s, dien);
   if (!r.ok) throw new Error(`${type}: ${r.reason}`);
   r.value.level = level;
   r.value.workers = slotsOf(r.value);
@@ -93,16 +93,16 @@ describe('bốn công trình Hội Tết', () => {
     s.giong.ascended = false;
     expect(canPlace(s, 'bep', edge(3, 1), edge(3, 1))).toEqual({ ok: false, reason: 'canKetChuong' });
     s.giong.ascended = true;
-    s.buildings[0].level = 2;
+    setDien(s, 2);
     expect(canPlace(s, 'bep', edge(3, 1), edge(3, 1))).toEqual({ ok: false, reason: 'chuaDuCapDien' });
-    s.buildings[0].level = 3;
+    setDien(s, 3);
     const bep = place(s, 'bep', edge(3, 1), edge(3, 1));
     if (!bep.ok) throw new Error(bep.reason);
     expect(canUpgrade(s, bep.value.id)).toEqual({ ok: false, reason: 'chuaDuCapDien' });
-    s.buildings[0].level = 5;
+    setDien(s, 5);
     expect(upgrade(s, bep.value.id).ok).toBe(true);
     expect(canUpgrade(s, bep.value.id)).toEqual({ ok: false, reason: 'chuaDuCapDien' });
-    s.buildings[0].level = 6;
+    setDien(s, 6);
     expect(upgrade(s, bep.value.id).ok).toBe(true);
     expect(canUpgrade(s, bep.value.id)).toEqual({ ok: false, reason: 'capToiDa' });
     // Số tối đa: ruộng nếp thứ hai ở Điện 5, vườn và chuồng thứ hai ở Điện 6, bếp chỉ một.
@@ -222,7 +222,7 @@ describe('Tết', () => {
     tick(s, TET_OPEN_MS);
     expect(tetNeed(s)).toBe(20);
     expect(TET_NEED.slice(2)).toEqual([12, 12, 20, 30, 40, 40]);
-    s.buildings[0].level = 7;
+    setDien(s, 7);
     expect(tetNeed(s)).toBe(40);
   });
 

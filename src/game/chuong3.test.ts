@@ -26,7 +26,7 @@ import { HALF_ARMY, SAMPLE_ARMY, SEEDS, fightStage } from './testkit';
 import { heroFor, restingHero } from './son';
 import { markStory, pendingStory } from './story';
 import { RIVER_START } from './map';
-import { DIEN, edge } from './testmap';
+import { DIEN, edge, setDien } from './testmap';
 
 type Army = Record<UnitType, number>;
 const ARMY: Army = { giao: 14, cung: 12, voi: 4 };
@@ -34,7 +34,7 @@ const ARMY: Army = { giao: 14, cung: 12, voi: 4 };
 /** Kinh đô vừa sang chương 3: Điện cấp 5, doanh trại cấp 5 đủ quân, Gióng đã bay về trời, Sơn Tinh đã về núi, có hai đền. */
 function ch3(): GameState {
   const s = createInitialState(0);
-  s.buildings[0].level = 5;
+  setDien(s, 5);
   s.resources = { gao: 8000, voOc: 8000, datDa: 8000, sat: 3000 };
   s.dan = 40;
   s.questIndex = CH3_QUEST_START;

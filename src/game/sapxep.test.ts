@@ -1,16 +1,17 @@
 import { describe, expect, it } from 'vitest';
 import { wallRings } from './coLoa';
 import { BUILDINGS, CH2_QUEST_START, CH3_QUEST_START, MOVE_FRACTION, type BuildingType } from './defs';
-import { canMove, createInitialState, dienLevel, limitOf, move, moveCost, occupancy, place, type GameState } from './game';
+import { canMove, createInitialState, limitOf, move, moveCost, occupancy, place, type GameState } from './game';
 import { applyMau, canApplyMau, mauSlots, mauUnlocked, planMau, MAU_IDS } from './mau';
-import { DIEN_HOME, GRID, RIVER_START, isRiver, isUnlocked, touchesRiver } from './map';
-import { bank, edge } from './testmap';
+import { isOpen } from './khoanh';
+import { DIEN_HOME, GRID, RIVER_START, isRiver, touchesRiver } from './map';
+import { bank, edge, setDien } from './testmap';
 import { floodMap } from './terrain';
 
 /** Kinh đô giàu của, đã qua kết chương 1, ở chương `chapter`, Điện cấp `dien`. */
 function city(dien: number, chapter: 1 | 2 | 3 = 1): GameState {
   const s = createInitialState(0);
-  s.buildings[0].level = dien;
+  setDien(s, dien);
   s.giong.ascended = true;
   s.story.seen.push('langLieu');
   s.questIndex = chapter === 3 ? CH3_QUEST_START : chapter === 2 ? CH2_QUEST_START : 0;
@@ -80,7 +81,7 @@ describe('mẫu kinh đô', () => {
       const s = city(top[id], id === 'coLoa' ? 3 : id === 'deBao' ? 2 : 1);
       const types = [...new Set(slots.map((x) => x.type))].filter((t) => t !== 'dien' && !['luy', 'de', 'thanh', 'bayChong'].includes(t));
       for (const t of types) {
-        const inside = slots.filter((x) => x.type === t && isUnlocked(x.x, x.z, top[id])).length;
+        const inside = slots.filter((x) => x.type === t && isOpen(s, x.x, x.z)).length;
         expect(inside, `${id}: ${t}`).toBeGreaterThanOrEqual(limitOf(s, t as BuildingType));
       }
     }
@@ -152,7 +153,7 @@ describe('mẫu kinh đô', () => {
     expect(applyMau(s, 'phongChau').ok).toBe(true);
     for (const b of s.buildings) {
       const def = BUILDINGS[b.type];
-      for (let dx = 0; dx < def.w; dx++) for (let dz = 0; dz < def.d; dz++) expect(isUnlocked(b.x + dx, b.z + dz, dienLevel(s))).toBe(true);
+      for (let dx = 0; dx < def.w; dx++) for (let dz = 0; dz < def.d; dz++) expect(isOpen(s, b.x + dx, b.z + dz)).toBe(true);
     }
     expect(s.buildings.filter((b) => b.type === 'ruong').length).toBe(limitOf(s, 'ruong'));
     expect(s.buildings.filter((b) => b.type === 'luy').length).toBeLessThanOrEqual(limitOf(s, 'luy'));
@@ -162,7 +163,7 @@ describe('mẫu kinh đô', () => {
     for (const dien of [6, 7]) {
       const s = city(dien, dien === 7 ? 3 : 2);
       expect(applyMau(s, 'deBao').ok).toBe(true);
-      const wet = floodMap(s, 3, dien);
+      const wet = floodMap(s, 3);
       for (const b of s.buildings) {
         if (b.type === 'ben' || b.type === 'de') continue;
         const def = BUILDINGS[b.type];
@@ -175,7 +176,7 @@ describe('mẫu kinh đô', () => {
     const s = city(7, 3);
     expect(applyMau(s, 'coLoa').ok).toBe(true);
     expect(wallRings(s)).toBe(3);
-    const wet = floodMap(s, 3, 7);
+    const wet = floodMap(s, 3);
     for (const b of s.buildings) {
       if (b.type === 'ben' || b.type === 'de') continue;
       expect(wet[b.z * GRID + b.x], `${b.type} ${b.x},${b.z}`).toBe(0);

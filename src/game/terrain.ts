@@ -3,7 +3,8 @@
 
 import { BUILDINGS, DIKE_RAISE, FLOOD_TOLERANCE, isDecor, type BuildingType } from './defs';
 import type { Building, GameState } from './game';
-import { GRID, RIVER_HEIGHT, inGrid, isRiver, isUnlocked } from './map';
+import { openMask } from './khoanh';
+import { GRID, RIVER_HEIGHT, inGrid, isRiver } from './map';
 
 const tileIndex = (x: number, z: number) => z * GRID + x;
 
@@ -49,8 +50,9 @@ function dikeGrid(state: GameState): Int8Array {
  * vào ô đã khai phá thấp hơn mực nước. Đê còn nguyên làm ô cao thêm, chắn nước. Rừng chưa phát giữ đất, không ngập.
  * Trả về lưới GRID×GRID, 1 là ngập. Ô sông luôn là 1.
  */
-export function floodMap(state: GameState, level: number, dien: number): Uint8Array {
+export function floodMap(state: GameState, level: number): Uint8Array {
   const wet = new Uint8Array(GRID * GRID);
+  const open = openMask(state);
   const raise = dikeGrid(state);
   const queue: number[] = [];
   for (let z = 0; z < GRID; z++) {
@@ -76,7 +78,7 @@ export function floodMap(state: GameState, level: number, dien: number): Uint8Ar
       const nz = z + dz;
       if (!inGrid(nx, nz)) continue;
       const ni = tileIndex(nx, nz);
-      if (wet[ni] || !isUnlocked(nx, nz, dien)) continue;
+      if (wet[ni] || !open[ni]) continue;
       if (state.heights[ni] + raise[ni] >= level) continue;
       wet[ni] = 1;
       queue.push(ni);

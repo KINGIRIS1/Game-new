@@ -18,7 +18,8 @@ import {
   type GameState,
   type Result,
 } from './game';
-import { DIEN_HOME, GRID, inGrid, isUnlocked, touchesRiver } from './map';
+import { isOpen } from './khoanh';
+import { DIEN_HOME, GRID, inGrid, touchesRiver } from './map';
 import { inChapter2 } from './son';
 import { footprintTop, levelFootprint } from './terrain';
 
@@ -269,7 +270,7 @@ export function planMau(state: GameState, id: MauId): MauPlan {
   const oz = dien.z - DIEN_HOME;
   const fits = (type: BuildingType, x: number, z: number) => {
     const def = BUILDINGS[type];
-    for (let dx = 0; dx < def.w; dx++) for (let dz = 0; dz < def.d; dz++) if (!inGrid(x + dx, z + dz) || !isUnlocked(x + dx, z + dz, level)) return false;
+    for (let dx = 0; dx < def.w; dx++) for (let dz = 0; dz < def.d; dz++) if (!isOpen(state, x + dx, z + dz)) return false;
     return !def.nearRiver || touchesRiver(x, z, def.w, def.d);
   };
   const used = new Uint8Array(GRID * GRID);
@@ -481,13 +482,12 @@ const TOP_UP: BuildingType[] = ['luy', 'de', 'thanh'];
  * Giữ cấp, người làm, hư hỏng. Trả về các đoạn lũy, đê, thành, bẫy không còn chỗ (để hoàn của) và các đoạn dựng thêm.
  */
 export function seatInMau(state: GameState, id: MauId, list: Building[], rings = 0): { dropped: Building[]; added: Building[] } {
-  const level = dienLevel(state);
   const dien = state.buildings.find((b) => b.type === 'dien')!;
   const ox = dien.x - DIEN_HOME;
   const oz = dien.z - DIEN_HOME;
   const fits = (type: BuildingType, x: number, z: number) => {
     const def = BUILDINGS[type];
-    for (let dx = 0; dx < def.w; dx++) for (let dz = 0; dz < def.d; dz++) if (!inGrid(x + dx, z + dz) || !isUnlocked(x + dx, z + dz, level)) return false;
+    for (let dx = 0; dx < def.w; dx++) for (let dz = 0; dz < def.d; dz++) if (!isOpen(state, x + dx, z + dz)) return false;
     return !def.nearRiver || touchesRiver(x, z, def.w, def.d);
   };
   const used = new Uint8Array(GRID * GRID);

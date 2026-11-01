@@ -48,7 +48,8 @@ import {
   type GameState,
   type StageResult,
 } from './game/game';
-import { AREA_SIZE, GRID, RIVER_START } from './game/map';
+import { isOpen, khoanhLeft, khoanhOf, khoanhQuota, openKhoanh, openable } from './game/khoanh';
+import { GRID, RIVER_START } from './game/map';
 import { fromCode, loadFromStorage, saveFileName, saveToStorage, toCode } from './game/save';
 import { RESOLUTIONS, World, type Resolution } from './render/world';
 import { vi } from './text/vi';
@@ -188,6 +189,7 @@ function start(): void {
     const b = id === null ? undefined : findBuilding(state, id);
     mode = { kind: 'view', selected: b ? b.id : null };
     world.setSelection(b ?? null);
+    world.setChunkSelection(null);
     if (b) {
       hud.showBuilding(state, b.id);
       const c = hud.freeCenter();
@@ -256,6 +258,19 @@ function start(): void {
       commit();
       world.pop(r.value.id);
       select(r.value.id);
+      return;
+    }
+    // Chạm vào rừng chưa phát: mở bảng Khoảnh rừng (dải rừng ngoài cùng thì không phát được).
+    if (id === null && tile && !isOpen(state, tile.x, tile.z) && tile.x < RIVER_START && tile.z < RIVER_START) {
+      const k = khoanhOf(tile.x, tile.z);
+      select(null);
+      play('tap');
+      if (k < 0) {
+        hud.toast(vi.ui.rungThieng);
+        return;
+      }
+      world.setChunkSelection(k);
+      hud.showKhoanh(state, k);
       return;
     }
     if (id !== null) play('tap');
@@ -342,6 +357,16 @@ function start(): void {
         play('tap');
         hud.showMau(state);
         return;
+
+      case 'phatRung': {
+        const r = openKhoanh(state, a.id);
+        if (!r.ok) return fail(r.reason);
+        play('place');
+        hud.toast(vi.ui.khoanhOpened);
+        world.setChunkSelection(null);
+        commit();
+        return;
+      }
 
       case 'applyMau': {
         // Áp mẫu đổi cả kinh đô: bấm lần đầu chỉ hỏi lại, bấm lần nữa mới áp.
@@ -489,8 +514,8 @@ function start(): void {
         play('upgrade');
         hud.toast(
           r.value.type === 'dien'
-            ? AREA_SIZE[r.value.level - 1] > AREA_SIZE[r.value.level - 2]
-              ? vi.ui.landExpanded
+            ? khoanhQuota(r.value.level) > khoanhQuota(r.value.level - 1) && khoanhLeft(state) > 0
+              ? vi.ui.landExpanded(khoanhLeft(state), r.value.level)
               : vi.ui.dienUp(r.value.level)
             : r.value.type === 'luy'
               ? vi.ui.placed(buildingName(r.value))
@@ -952,6 +977,13 @@ function start(): void {
       const r = place(state, type, x, z);
       commit();
       return r;
+    },
+    /** Các khoảnh rừng phát được; `khoanh(id)` mở bảng Khoảnh rừng như khi chạm vào khoảnh ấy. */
+    openable: () => openable(state),
+    khoanh: (id: number) => {
+      select(null);
+      world.setChunkSelection(id);
+      hud.showKhoanh(state, id);
     },
     /** Xuất toàn quân đánh màn `n`, rồi `skill(k)` để bấm kỹ năng: chụp thử trận ngoài bãi. */
     march: (n: number) => {

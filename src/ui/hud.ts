@@ -70,7 +70,7 @@ import {
 import { chapterStages } from '../game/campaign';
 import { mergeCost, mergeable } from '../game/chuong4';
 import { giongAppeared, giongLook, giongReady, giongResting } from '../game/giong';
-import { AREA_SIZE } from '../game/map';
+import { khoanhQuota } from '../game/khoanh';
 import { inChapter2, sonJoined, sonLook, sonResting, giftCount } from '../game/son';
 import { floodToleranceOf, groundOf } from '../game/terrain';
 import { tetOpen, tetStarted, type Banh } from '../game/tet';
@@ -83,6 +83,7 @@ import { costHtml, esc, fmt } from './format';
 import { giongHtml, storyHtml } from './giong';
 import { sonHtml } from './son';
 import { blessingHtml, tetHtml } from './tet';
+import { khoanhHtml } from './khoanh';
 import { mauHtml } from './mau';
 import type { MauId } from '../game/mau';
 
@@ -159,6 +160,7 @@ export type HudAction =
   | { kind: 'openMau' }
   | { kind: 'rotateView' }
   | { kind: 'applyMau'; mau: MauId }
+  | { kind: 'phatRung'; id: number }
   | { kind: 'offerBanh'; banh: Banh }
   | { kind: 'confirmPlace' }
   | { kind: 'cancelPlace' }
@@ -210,6 +212,7 @@ type Sheet =
   | { kind: 'adv' }
   | { kind: 'tet' }
   | { kind: 'mau' }
+  | { kind: 'khoanh'; id: number }
   | null;
 
 /** Máy có gửi được tệp qua bảng chia sẻ của hệ điều hành (Zalo, Messenger, Drive...) không. Hỏi một lần. */
@@ -361,6 +364,8 @@ export class Hud {
         return this.onAction({ kind: 'forgeArms', unit: el.dataset.unit as UnitType });
       case 'applyMau':
         return this.onAction({ kind: 'applyMau', mau: el.dataset.mau as MauId });
+      case 'phatRung':
+        return this.onAction({ kind: 'phatRung', id });
       case 'offerBanh':
         return this.onAction({ kind: 'offerBanh', banh: el.dataset.banh as Banh });
       case 'closeCampaign':
@@ -637,6 +642,12 @@ export class Hud {
     this.refreshSheet(state);
   }
 
+  /** Bảng Khoảnh rừng của khoảnh `id` (vừa chạm vào rừng). */
+  showKhoanh(state: GameState, id: number): void {
+    this.sheet = { kind: 'khoanh', id };
+    this.refreshSheet(state);
+  }
+
   showTet(state: GameState): void {
     this.sheet = { kind: 'tet' };
     this.refreshSheet(state);
@@ -694,6 +705,11 @@ export class Hud {
     } else if (this.sheet.kind === 'mau') {
       title = `🗺️ ${vi.ui.mauTitle}`;
       body = mauHtml(state, this.mauArmed);
+    } else if (this.sheet.kind === 'khoanh') {
+      // Đã phát xong thì đóng bảng.
+      if (state.khoanh.includes(this.sheet.id)) return this.closeSheet();
+      title = `🌳 ${vi.ui.khoanhTitle}`;
+      body = khoanhHtml(state, this.sheet.id);
     } else if (this.sheet.kind === 'tet') {
       title = `🎋 ${vi.ui.tet}`;
       body = tetHtml(state);
@@ -813,12 +829,12 @@ export class Hud {
       rows.push(`<div class="stat"><span></span><span class="muted">${tol >= 9 ? vi.ui.floodImmune : vi.ui.floodRisk(ground + tol)}</span></div>`);
     }
     if (b.type === 'dien') {
-      const size = AREA_SIZE[b.level - 1];
-      // Điện cấp 8 không thêm đất: không ghi mũi tên.
-      const next = b.level < def.maxLevel && AREA_SIZE[b.level] > size ? ` → ${AREA_SIZE[b.level]}×${AREA_SIZE[b.level]}` : '';
+      const quota = khoanhQuota(b.level);
+      // Điện cấp 8 không thêm lượt: không ghi mũi tên.
+      const next = b.level < def.maxLevel && khoanhQuota(b.level + 1) > quota ? ` → ${khoanhQuota(b.level + 1)}` : '';
       rows.push(`<div class="stat"><span>${vi.ui.storage}</span><span>${fmt(storageCap(state))}</span></div>`);
       rows.push(`<div class="stat"><span>${vi.ui.dan}</span><span>${state.dan}/${housing(state)}</span></div>`);
-      rows.push(`<div class="stat"><span>Đất kinh đô</span><span>${size}×${size}${next}</span></div>`);
+      rows.push(`<div class="stat"><span>${vi.ui.khoanhCount}</span><span>${state.khoanh.length}/${quota}${next}</span></div>`);
     }
 
     if (b.type === 'lauNo') rows.push(`<div class="stat"><span>${vi.ui.lauNoShots}</span><span></span></div>`);

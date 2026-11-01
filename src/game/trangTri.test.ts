@@ -20,13 +20,13 @@ import {
 } from './game';
 import { applyMau, mauSlots, planMau } from './mau';
 import { GRID } from './map';
-import { DIEN, DIEN_END, edge } from './testmap';
+import { DIEN, DIEN_END, edge, setDien } from './testmap';
 import { drowns, floodMap, floodToleranceOf } from './terrain';
 
 /** Kinh đô giàu của ở chương `chapter`, Điện cấp `dien`. */
 function city(dien: number, chapter: 1 | 2 | 3 = 1): GameState {
   const s = createInitialState(0);
-  s.buildings[0].level = dien;
+  setDien(s, dien);
   s.questIndex = chapter === 3 ? CH3_QUEST_START : chapter === 2 ? CH2_QUEST_START : 0;
   s.resources = { gao: 1e6, voOc: 1e6, datDa: 1e6, sat: 1e6 };
   s.dan = 200;
@@ -178,7 +178,7 @@ describe('đường đi, đồ trang trí trước giặc và lũ', () => {
     const near = 52 - 4;
     const placed = [place(s, 'duongDat', near, edge(6, 4)), place(s, 'ao', near - 4, edge(6, 4)), place(s, 'hoa', near, edge(6, 6))];
     for (const r of placed) if (!r.ok) throw new Error(r.reason);
-    const wet = floodMap(s, 4, 6);
+    const wet = floodMap(s, 4);
     for (const r of placed) if (r.ok) expect(drowns(s, r.value, wet, 4)).toBe(false);
   });
 });

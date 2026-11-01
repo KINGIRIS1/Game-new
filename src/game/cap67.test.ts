@@ -3,14 +3,15 @@ import { startFieldBattle, stepField } from './battle';
 import { canForgeArms, forgeArms } from './binhKhi';
 import { ARMS, ARMS_BONUS, BUILDINGS, CH2_QUEST_START, CH3_QUEST_START, DEFAULT_ROWS, FIELD, STORAGE_CAP, UNITS } from './defs';
 import { canUpgrade, createInitialState, limitOf, place, storageCap, upgrade, type GameState } from './game';
-import { AREA_SIZE, FOREST_BAND, areaStart, isUnlocked } from './map';
-import { edge } from './testmap';
+import { KHOANH_QUOTA } from './defs';
+import { khoanhQuota } from './khoanh';
+import { edge, setDien } from './testmap';
 import { SAVE_VERSION, deserialize, serialize } from './save';
 
 /** Kinh đô Điện cấp 5, đủ của để nâng. */
 function rich(questIndex = 0): GameState {
   const s = createInitialState(0);
-  s.buildings[0].level = 5;
+  setDien(s, 5);
   s.resources = { gao: 20000, voOc: 20000, datDa: 20000, sat: 20000 };
   s.questIndex = questIndex;
   return s;
@@ -31,14 +32,11 @@ describe('Điện và công trình cấp 6–7', () => {
     expect(canUpgrade(s, 1)).toEqual({ ok: false, reason: 'canChuong4' });
   });
 
-  it('Điện cấp 6, 7 mở đất 40×40, luôn chừa dải rừng ngoài cùng; kho chứa nhiều hơn', () => {
-    expect(AREA_SIZE.slice(5, 7)).toEqual([40, 40]);
-    expect(areaStart(7)).toBe(12);
-    expect(isUnlocked(11, 20, 7)).toBe(false);
-    expect(isUnlocked(12, 20, 7)).toBe(true);
-    for (let level = 1; level <= 8; level++) expect(areaStart(level)).toBeGreaterThanOrEqual(FOREST_BAND);
+  it('Điện cấp 6, 7 được phát tới 60, 72 khoảnh đất; kho chứa nhiều hơn', () => {
+    expect(KHOANH_QUOTA.slice(5, 7)).toEqual([60, 72]);
+    expect(khoanhQuota(7)).toBeGreaterThan(khoanhQuota(6));
     const s = rich(CH3_QUEST_START);
-    s.buildings[0].level = 7;
+    setDien(s, 7);
     expect(storageCap(s)).toBe(STORAGE_CAP[6]);
   });
 
@@ -48,9 +46,9 @@ describe('Điện và công trình cấp 6–7', () => {
     if (!ruong.ok) throw new Error(ruong.reason);
     ruong.value.level = 5;
     expect(canUpgrade(s, ruong.value.id)).toEqual({ ok: false, reason: 'chuaDuCapDien' });
-    s.buildings[0].level = 6;
+    setDien(s, 6);
     expect(upgrade(s, ruong.value.id).ok).toBe(true);
-    s.buildings[0].level = 7;
+    setDien(s, 7);
     expect(upgrade(s, ruong.value.id).ok).toBe(true);
     expect(ruong.value.level).toBe(7);
     expect(limitOf(s, 'ruong')).toBe(8);
@@ -69,7 +67,7 @@ describe('rèn binh khí', () => {
   /** Kinh đô có lò rèn ở cấp `level`. */
   function withForge(level: number): GameState {
     const s = rich(CH3_QUEST_START);
-    s.buildings[0].level = 7;
+    setDien(s, 7);
     const r = place(s, 'loRen', edge(7, 1), edge(7, 10));
     if (!r.ok) throw new Error(r.reason);
     r.value.level = level;
