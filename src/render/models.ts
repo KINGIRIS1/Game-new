@@ -125,11 +125,22 @@ function addTreeRoot(
   }
 }
 
+/**
+ * Độ chi tiết của cây rừng (như dân 0,6): rừng có cả nghìn cây, mỗi cây vài nghìn tam giác ở độ chi tiết đủ, nên
+ * bớt mặt cầu, mặt trụ cho nhẹ máy điện thoại; dáng và màu giữ nguyên.
+ */
+const FOREST_DETAIL = 0.5;
+const forestBuilder = () => {
+  const b = new ShapeBuilder(false, true);
+  b.detail = FOREST_DETAIL;
+  return b;
+};
+
 function treeTemplates(): THREE.Mesh[] {
   const out: THREE.Mesh[] = [];
 
   // 0: Cây gỗ lớn rừng Phong Châu (Chò chỉ / Lim cổ thụ): thân cao vút có rễ bạnh, 4 cành cái vươn xa nâng 5 tầng tán mây tách bạch.
-  let b = new ShapeBuilder(false, true);
+  let b = forestBuilder();
   b.cyl(0.08, 0.16, 0.96, C.trunk, 0, 0.48, 0, [0.03, 0, -0.03], 7);
   for (let i = 0; i < 6; i++) {
     const a = (i / 6) * Math.PI * 2 + 0.3;
@@ -171,7 +182,7 @@ function treeTemplates(): THREE.Mesh[] {
   out.push(b.mesh(toon));
 
   // 1: Cây Đa rừng / Muỗm cổ thụ tán rộng: gốc nhiều thân xoắn và đại rễ bạnh bò rộng, 5 cành lớn vươn ngang buông rễ phụ, vòm lá nhiều tầng rộng rợp.
-  b = new ShapeBuilder(false, true);
+  b = forestBuilder();
   b.cyl(0.115, 0.195, 0.78, 0x5c3b22, 0, 0.39, 0, [-0.03, 0, 0.04], 7);
   for (let i = 0; i < 8; i++) {
     const a = (i / 8) * Math.PI * 2 + 0.2;
@@ -212,7 +223,7 @@ function treeTemplates(): THREE.Mesh[] {
   out.push(b.mesh(toon));
 
   // 2: Cây Tùng / Sa Mộc núi đá: thân gỗ cao vút, cành ngang lộ dưới 4 tầng tán lá xếp bậc tự nhiên.
-  b = new ShapeBuilder(false, true);
+  b = forestBuilder();
   b.cyl(0.05, 0.12, 1.35, 0x5a3720, 0, 0.675, 0, undefined, 6);
   for (let i = 0; i < 4; i++) {
     const a = (i / 4) * Math.PI * 2 + 0.5;
@@ -233,7 +244,7 @@ function treeTemplates(): THREE.Mesh[] {
   out.push(b.mesh(toon));
 
   // 3: Khóm Cau rừng / Cọ núi (2 thân mẹ-con uốn cong, có buồng quả và 9 tàu lá uốn cong 2 nhịp mềm mại).
-  b = new ShapeBuilder(false, true);
+  b = forestBuilder();
   for (const [ox, oz, h, tiltX, tiltZ, sc] of [
     [0, 0, 1.92, 0.04, -0.03, 1],
     [0.18, 0.12, 1.18, 0.15, 0.11, 0.76],
@@ -262,14 +273,14 @@ function treeTemplates(): THREE.Mesh[] {
   out.push(b.mesh(toon));
 
   // 4 & 5: Hai mẫu bụi tre rừng tự nhiên (nhiều thân uốn cong 2 đoạn, có măng tre và tán lá mọc dọc nửa trên thân).
-  out.push(bambooClump(9, 2.15, 4, false));
-  out.push(bambooClump(10, 2.0, 19, false));
+  out.push(bambooClump(5, 2.15, 4, false));
+  out.push(bambooClump(6, 2.0, 19, false));
   return out;
 }
 
 /** Một chiếc lá tre nhỏ, dẹt, đầu nhọn hoắt như mũi mác, mọc từ gốc cuống `(x, y, z)` hướng ra theo góc `yaw` và độ rủ `pitch`. */
 function addBambooLeaf(b: ShapeBuilder, x: number, y: number, z: number, yaw: number, pitch: number, len: number, w: number, color: number): void {
-  const g = new THREE.ConeGeometry(w, len, 4);
+  const g = new THREE.ConeGeometry(w, len, 3);
   g.translate(0, len * 0.5, 0);
   g.scale(1, 1, 0.22);
   g.rotateX(pitch);
