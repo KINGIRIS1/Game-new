@@ -14,13 +14,15 @@ const require = createRequire(import.meta.url);
 /** Khổ màn hình (điểm CSS). Game làm cho điện thoại cầm dọc trước tiên. */
 const KHUNG = {
   doc: { width: 390, height: 844 },
+  /** Màn ngoài Samsung Galaxy Z Fold5 (máy thử chính): dài, hẹp. */
+  fold: { width: 344, height: 882 },
   ngang: { width: 844, height: 390 },
   bang: { width: 820, height: 1180 },
 };
 
 // Mã dựng cảnh chạy trong trang, có sẵn các biến:
 //   d = window.__debug, s = state đang chơi,
-//   G = game.ts, M = moPhong.ts (người chơi mô phỏng), D = defs.ts, C = campaign.ts, S = story.ts.
+//   G = game.ts, M = moPhong.ts (người chơi mô phỏng), D = defs.ts, C = campaign.ts, S = story.ts, X = mau.ts.
 // `truoc` chạy trước khi tải lại trang (dựng state rồi lưu), `sau` chạy sau khi tải lại (bấm trận, bấm kỹ năng...).
 
 /** Cho kinh đô một doanh trại và một ít quân, giữ nguyên kho của người chơi. */
@@ -43,6 +45,15 @@ const CANH = {
     truoc: `M.playChapters({ s, until: (m, sec) => m.enter2 >= 0 && sec >= m.enter2 + 600 });`,
   },
   chuong3: { mo: 'Kinh đô chương 3 lúc lên Điện cấp 7', truoc: `M.playChapters({ s });` },
+  dien8: { mo: 'Kinh đô chương 4 lúc lên Điện cấp 8', truoc: `M.playChapters({ s, last: 8 });` },
+  'mau-phong-chau': {
+    mo: 'Kinh đô chương 1, Điện cấp 5, đã áp mẫu Phong Châu',
+    truoc: `${KINH_DO}\ns.resources = { gao: 1e6, voOc: 1e6, datDa: 1e6, sat: 1e6 }; const r = X.applyMau(s, 'phongChau'); if (!r.ok) throw new Error(r.reason);`,
+  },
+  'mau-co-loa': {
+    mo: 'Kinh đô chương 3, Điện cấp 7, đã áp mẫu Cổ Loa',
+    truoc: `M.playChapters({ s });\ns.resources = { gao: 1e6, voOc: 1e6, datDa: 1e6, sat: 1e6 }; const r = X.applyMau(s, 'coLoa'); if (!r.ok) throw new Error(r.reason);`,
+  },
   tran: {
     mo: 'Giặc đánh kinh đô chương 1, chụp sau 4 giây giao chiến',
     truoc: KINH_DO + CO_QUAN,
@@ -69,15 +80,15 @@ const GIUP = `Chụp thử Thời đại Văn Lang ở khổ điện thoại.
 
 Cảnh có sẵn (mặc định: dau):
 ${Object.entries(CANH)
-  .map(([k, c]) => `  ${k.padEnd(9)} ${c.mo}`)
+  .map(([k, c]) => `  ${k.padEnd(15)} ${c.mo}`)
   .join('\n')}
 
 Tùy chọn:
-  --khung doc,ngang,bang  Khổ màn hình, cách nhau dấu phẩy (mặc định: doc = 390×844)
+  --khung doc,fold,ngang,bang  Khổ màn hình, cách nhau dấu phẩy (mặc định: doc = 390×844; fold = 344×882)
   --truoc "<mã>"          Chạy thêm trong trang trước khi tải lại, để dựng state
   --sau "<mã>"            Chạy thêm trong trang sau khi tải lại, để bấm trận, kỹ năng...
                           Mã có sẵn d (window.__debug), s (state), G (game.ts), M (moPhong.ts),
-                          D (defs.ts), C (campaign.ts), S (story.ts)
+                          D (defs.ts), C (campaign.ts), S (story.ts), X (mau.ts)
   --cam x,z,zoom          Đặt camera nhìn vào ô (x, z)
   --cham <x,z | loại>     Chạm một ô, hoặc công trình đầu tiên thuộc loại đó (vd: dien, ruong) để mở bảng
   --bam "<bộ chọn>"       Bấm một phần tử giao diện (CSS, hoặc text=Chữ trên nút)
@@ -137,15 +148,15 @@ function napPlaywright() {
   process.exit(2);
 }
 
-/** Chạy một đoạn mã trong trang với các biến d, s, G, M, D, C, S. */
+/** Chạy một đoạn mã trong trang với các biến d, s, G, M, D, C, S, X. */
 async function chayMa(page, ma) {
   if (!ma.trim()) return;
   await page.evaluate(async (ma) => {
-    const urls = ['/src/game/game.ts', '/src/game/moPhong.ts', '/src/game/defs.ts', '/src/game/campaign.ts', '/src/game/story.ts'];
-    const [G, M, D, C, S] = await Promise.all(urls.map((u) => import(/* @vite-ignore */ u)));
+    const urls = ['/src/game/game.ts', '/src/game/moPhong.ts', '/src/game/defs.ts', '/src/game/campaign.ts', '/src/game/story.ts', '/src/game/mau.ts'];
+    const [G, M, D, C, S, X] = await Promise.all(urls.map((u) => import(/* @vite-ignore */ u)));
     const d = window.__debug;
     const AsyncFunction = Object.getPrototypeOf(async function () {}).constructor;
-    await new AsyncFunction('d', 's', 'G', 'M', 'D', 'C', 'S', ma)(d, d.state(), G, M, D, C, S);
+    await new AsyncFunction('d', 's', 'G', 'M', 'D', 'C', 'S', 'X', ma)(d, d.state(), G, M, D, C, S, X);
   }, ma);
 }
 

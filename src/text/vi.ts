@@ -258,7 +258,7 @@ export const vi = {
     quaMan22: 'Triệu Đà đóng đại doanh ở núi Tiên Du. Xin đánh qua màn 22, phá doanh trại giặc.',
     coLoa: 'Triệu Đà dốc toàn quân tới chân thành Cổ Loa. Xin bệ hạ cầm nỏ thần đánh trận quyết chiến ở màn 24.',
     denCoLoa: 'Triệu Đà đã thua chạy. Xin dựng Đền Cổ Loa, ghi công thần Kim Quy và nỏ thần giữ nước.',
-    dien8: 'Âu Lạc đã yên, kinh đô còn lớn được nữa. Xin bệ hạ nâng Điện lên cấp 8: đất không rộng thêm, nhưng kho rộng hơn, ruộng, bến, lò rèn, chòi canh đều lên được cấp 8.',
+    dien8: 'Âu Lạc đã yên, kinh đô còn lớn được nữa. Xin bệ hạ nâng Điện lên cấp 8: đất rộng thêm, kho rộng hơn, ruộng, bến, lò rèn, chòi canh đều lên được cấp 8.',
     lauNo: 'Cao Lỗ xin ghép hai chòi canh cấp 8 thành một lầu nỏ, mỗi phát bắn ba giặc. Chạm vào một chòi canh cấp 8 để ghép.',
     allDone: 'Kinh đô đã có Điện cấp 8 và lầu nỏ. Thủy Tinh vẫn dâng nước mỗi mùa, quân Triệu vẫn dòm ngó. Xin giữ thành, giữ đê cho vững.',
   } as Record<string, string>,
@@ -592,6 +592,8 @@ export const vi = {
     placed: (name: string) => `Đã dựng ${name}`,
     upgraded: (name: string, n: number) => `${name} lên cấp ${n}`,
     landExpanded: 'Đã phát rừng, bờ cõi mở rộng!',
+    relaid: (refund: string) =>
+      `Kinh đô đã dựng lại rộng hơn theo mẫu, nhà cửa giữ nguyên cấp và người làm.${refund ? ` Hoàn lại: ${refund}.` : ''}`,
     storage: 'Sức chứa kho',
     wallEarth: 'Thành đất',
     workers: 'Người làm',

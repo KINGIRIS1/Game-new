@@ -1,15 +1,19 @@
 // Lưu game vào localStorage và xuất/nhập mã lưu (hay tệp lưu, cũng chứa đúng mã đó) để sao lưu hoặc chuyển máy.
 // Bản lưu cũ (phiên bản 1 của lát cắt 1, 2 của lát cắt 2a, 3 của lát cắt 2b, 4 của lát cắt 3a,
-// 5 của lát cắt 3b, 6 của chương 2, 7 của chương 3, 8 của cấp 6–7, 9 của Hội Tết) được nâng lên phiên bản hiện tại khi nạp.
+// 5 của lát cắt 3b, 6 của chương 2, 7 của chương 3, 8 của cấp 6–7, 9 của Hội Tết, 10 của cấp 8) được nâng lên phiên bản
+// hiện tại khi nạp. Bản lưu còn ở kinh đô nhỏ (trước phiên bản 11) được dựng lại thành kinh đô lớn theo mẫu (`xepLai.ts`).
 
 import { deflateSync, inflateSync } from 'fflate';
 import { BUILDINGS, GEAR_IDS, GIFT_IDS, MERCHANT_FIRST_MS, QUEST_INSERTED_V4, RESOURCE_IDS, ROWS, type BuildingType } from './defs';
 import { initialAdv } from './coLoa';
-import { autoAssign, housing, initialCampaign, initialGiong, initialRaid, type GameState } from './game';
-import { GRID, baseHeights } from './map';
+import { SAVE_VERSION, autoAssign, housing, initialCampaign, initialGiong, initialRaid, type GameState } from './game';
+import { GRID, baseHeights, isRiver } from './map';
 import { initialSon } from './son';
 import { initialTet } from './tet';
 import { footprintTop, levelFootprint } from './terrain';
+import { isLegacyLayout, legacyBaseHeights, levelLegacyFootprints, relayLegacy } from './xepLai';
+
+export { SAVE_VERSION };
 
 /** Giữ nguyên khóa cũ để người chơi lát cắt 1 không mất tiến trình. */
 export const SAVE_KEY = 'thoi-dai-van-lang/save/v1';
@@ -53,6 +57,7 @@ function migrate(raw: unknown): unknown {
   if (isObj(v) && v.version === 7) v = migrate7to8(v);
   if (isObj(v) && v.version === 8) v = migrate8to9(v);
   if (isObj(v) && v.version === 9) v = migrate9to10(v);
+  if (isObj(v) && v.version === 10) v = migrate10to11(v);
   return v;
 }
 
@@ -112,11 +117,18 @@ function migrate4to5(s: Raw): Raw {
 function migrate5to6(s: Raw): Raw {
   s.version = 6;
   s.son = initialSon();
-  s.heights = baseHeights();
-  // Công trình cũ được đắp móng phẳng bằng chỗ cao nhất dưới móng, như khi dựng mới.
-  if (isValidBuildings(s.buildings)) {
-    const state = s as unknown as GameState;
-    for (const b of state.buildings) levelFootprint(state, b, footprintTop(state, b.type, b.x, b.z));
+  // Công trình cũ được đắp móng phẳng bằng chỗ cao nhất dưới móng, như khi dựng mới. Bản lưu còn ở kinh đô nhỏ
+  // thì dùng độ cao và cỡ móng của kinh đô nhỏ, để bước 10 → 11 dựng lại cho đúng.
+  if (isLegacyLayout(s)) {
+    const heights = legacyBaseHeights();
+    if (isValidBuildings(s.buildings)) levelLegacyFootprints(heights, s.buildings as GameState['buildings']);
+    s.heights = heights;
+  } else {
+    s.heights = baseHeights();
+    if (isValidBuildings(s.buildings)) {
+      const state = s as unknown as GameState;
+      for (const b of state.buildings) levelFootprint(state, b, footprintTop(state, b.type, b.x, b.z));
+    }
   }
   const raid = s.raid;
   if (isObj(raid)) {
@@ -174,6 +186,18 @@ function migrate9to10(s: Raw): Raw {
   return s;
 }
 
+/**
+ * Phiên bản 10 → 11 (kinh đô lớn): lưới 55×55, công trình nhiều ô to hơn một ô mỗi chiều. Kinh đô nhỏ được dựng lại
+ * theo mẫu của chương đang chơi, miễn phí, giữ cấp và người làm; phần không còn chỗ và đất đã đắp được trả lại của.
+ */
+function migrate10to11(s: Raw): Raw {
+  s.version = 11;
+  if (isLegacyLayout(s) && Array.isArray(s.heights) && isValidBuildings(s.buildings) && isObj(s.raid) && isObj(s.resources)) {
+    relayLegacy(s as unknown as GameState);
+  }
+  return s;
+}
+
 const isBanh = (v: unknown, test: (x: unknown) => boolean): boolean => isObj(v) && test(v.chung) && test(v.giay);
 const isBool = (x: unknown) => typeof x === 'boolean';
 
@@ -197,8 +221,18 @@ function isValidBuildings(list: unknown): boolean {
   return ok && list.some((b: Raw) => b.type === 'dien');
 }
 
+/** Mọi công trình nằm gọn trong lưới, không ô nào dưới sông. */
+function buildingsInGrid(list: GameState['buildings']): boolean {
+  return list.every((b) => {
+    const def = BUILDINGS[b.type];
+    if (b.x < 0 || b.z < 0 || b.x + def.w > GRID || b.z + def.d > GRID) return false;
+    for (let dx = 0; dx < def.w; dx++) for (let dz = 0; dz < def.d; dz++) if (isRiver(b.x + dx, b.z + dz)) return false;
+    return true;
+  });
+}
+
 function isGameState(v: unknown): v is GameState {
-  if (!isObj(v) || v.version !== 10) return false;
+  if (!isObj(v) || v.version !== SAVE_VERSION) return false;
   if (!Array.isArray(v.heights) || v.heights.length !== GRID * GRID || !v.heights.every(isNum)) return false;
   const son = v.son;
   if (!isObj(son) || !isObj(son.gifts) || !isNum(son.restUntil) || typeof son.non !== 'boolean' || typeof son.won !== 'boolean') return false;
@@ -228,7 +262,7 @@ function isGameState(v: unknown): v is GameState {
   if (!(camp.battle === null || isObj(camp.battle)) || !(camp.lastResult === null || isObj(camp.lastResult))) return false;
   const res = v.resources;
   if (!isObj(res) || !RESOURCE_IDS.every((r) => isNum(res[r]))) return false;
-  if (!isValidBuildings(v.buildings)) return false;
+  if (!isValidBuildings(v.buildings) || !buildingsInGrid(v.buildings as GameState['buildings'])) return false;
   const m = v.merchant;
   if (!isObj(m) || !isNum(m.nextAt) || !isNum(m.seq) || !(m.visit === null || isObj(m.visit))) return false;
   const settings = v.settings;

@@ -20,8 +20,9 @@ import {
   type GameState,
 } from './game';
 import { AREA_SIZE, areaStart } from './map';
+import { edge } from './testmap';
 import { mauSlots, planMau } from './mau';
-import { deserialize, serialize } from './save';
+import { SAVE_VERSION, deserialize, serialize } from './save';
 
 /** Kinh đô đã vào chương 4, Điện cấp 8, của nhiều. */
 function capital8(): GameState {
@@ -55,9 +56,9 @@ describe('Điện và công trình cấp 8', () => {
     expect(canUpgrade(s, 1)).toEqual({ ok: false, reason: 'capToiDa' });
   });
 
-  it('Điện cấp 8 không thêm đất, kho rộng hơn', () => {
-    expect(AREA_SIZE[7]).toBe(AREA_SIZE[6]);
-    expect(areaStart(8)).toBe(areaStart(7));
+  it('Điện cấp 8 mở thêm đất tới 45×45, kho rộng hơn', () => {
+    expect(AREA_SIZE[7]).toBe(45);
+    expect(areaStart(8)).toBeLessThan(areaStart(7));
     const s = capital8();
     expect(storageCap(s)).toBe(STORAGE_CAP[7]);
     expect(STORAGE_CAP[7]).toBe(32000);
@@ -70,7 +71,7 @@ describe('Điện và công trình cấp 8', () => {
     for (const def of Object.values(BUILDINGS)) if (def.type !== 'lauNo') expect(def.limit[7], def.type).toBe(def.limit[6]);
     const s = capital8();
     s.buildings[0].level = 7;
-    const ruong = place(s, 'ruong', 10, 10);
+    const ruong = place(s, 'ruong', edge(7, 1), edge(7, 1));
     if (!ruong.ok) throw new Error(ruong.reason);
     ruong.value.level = 7;
     expect(canUpgrade(s, ruong.value.id)).toEqual({ ok: false, reason: 'chuaDuCapDien' });
@@ -143,7 +144,7 @@ describe('lầu nỏ', () => {
     const s = capital8();
     const max = limitOf(s, 'choiCanh');
     expect(max).toBe(7);
-    const towers = Array.from({ length: max }, (_, i) => tower(s, 6 + 2 * i, 8));
+    const towers = Array.from({ length: max }, (_, i) => tower(s, edge(8, 1) + 2 * i, edge(8, 3)));
     expect(usedOf(s, 'choiCanh')).toBe(7);
     mergeTowers(s, towers[0].id, towers[1].id);
     mergeTowers(s, towers[2].id, towers[3].id);
@@ -179,8 +180,8 @@ describe('lầu nỏ', () => {
   it('áp mẫu: lầu nỏ đứng vào chỗ chòi canh của mẫu, chỗ còn lại dựng thêm chòi canh tới đủ bảy', () => {
     const s = capital8();
     s.questIndex = CH4_QUEST_START;
-    const a = tower(s, 5, 5);
-    const b = tower(s, 7, 5);
+    const a = tower(s, edge(8, 1), edge(8, 1));
+    const b = tower(s, edge(8, 3), edge(8, 1));
     mergeTowers(s, a.id, b.id);
     const plan = planMau(s, 'coLoa');
     expect(plan.stuck).toEqual([]);
@@ -192,7 +193,7 @@ describe('lầu nỏ', () => {
     expect(slots.some((x) => x.x === move.x && x.z === move.z)).toBe(true);
   });
 
-  it('bản lưu phiên bản 9 được nâng lên 10; lưu và nạp lại giữ lầu nỏ', () => {
+  it('bản lưu phiên bản 9 được nâng lên phiên bản hiện tại; lưu và nạp lại giữ lầu nỏ', () => {
     const s = capital8();
     const a = tower(s, 10, 10);
     const b = tower(s, 12, 10);
@@ -201,6 +202,6 @@ describe('lầu nỏ', () => {
     const old = createInitialState(0) as unknown as Record<string, unknown>;
     old.version = 9;
     const back = deserialize(JSON.stringify(old))!;
-    expect(back.version).toBe(10);
+    expect(back.version).toBe(SAVE_VERSION);
   });
 });

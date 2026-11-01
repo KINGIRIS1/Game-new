@@ -5,7 +5,7 @@ import { BUILDINGS, CH2_QUEST_START, CH3_QUEST_START, CH4_QUEST_START, type Buil
 import {
   acceptOffer,
   autoAssign,
-  canPlace,
+  findSpot,
   canUpgrade,
   claimQuest,
   upgradeCostOf,
@@ -19,7 +19,6 @@ import {
   upgrade,
   type GameState,
 } from './game';
-import { GRID } from './map';
 
 /** Các việc người chơi mô phỏng làm. Báo cáo kinh tế dựa vào đây để ghi sổ từng khoản thu chi. */
 export type Viec = 'nhiemVu' | 'xay' | 'nangDien' | 'nangCap' | 'doiHang' | 'vaoChuong' | 'thoiGian';
@@ -27,14 +26,10 @@ export type Viec = 'nhiemVu' | 'xay' | 'nangDien' | 'nangCap' | 'doiHang' | 'vao
 export type Lam = (viec: Viec, run: () => void) => void;
 const lamThang: Lam = (_, run) => run();
 
+/** Dựng ở chỗ hợp lý gần Điện nhất, ưu tiên chỗ thoáng (`findSpot`). */
 export function placeAnywhere(s: GameState, type: BuildingType): boolean {
-  const def = BUILDINGS[type];
-  for (let z = 0; z <= GRID - def.d; z++) {
-    for (let x = 0; x <= GRID - def.w; x++) {
-      if (canPlace(s, type, x, z).ok) return place(s, type, x, z).ok;
-    }
-  }
-  return false;
+  const spot = findSpot(s, type);
+  return !!spot && place(s, type, spot.x, spot.z).ok;
 }
 
 /** Người chơi biết dành dụm: chỉ chi cho việc khác khi vẫn còn giữ được một phần để nâng Điện. */

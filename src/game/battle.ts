@@ -52,6 +52,7 @@ import {
   type Row,
   type SkillId,
   type UnitType,
+  RAID_SCALE,
 } from './defs';
 import { dienLevel, type Building, type GameState } from './game';
 import { GRID, RIVER_START, areaStart, inGrid, isRiver } from './map';
@@ -167,6 +168,13 @@ export interface Battle {
   shield: number;
   /** Đền Cổ Loa còn nguyên: chòi canh bắn mạnh hơn, xa hơn. */
   crossbows: boolean;
+  /**
+   * Hệ số hình học: tầm đánh, tốc độ, bán kính kỹ năng tính bằng ô nhân với số này. Ngoài bãi là 1, giữ kinh đô
+   * là `RAID_SCALE` (kinh đô giãn rộng). Bản lưu cũ không có thì coi như 1.
+   */
+  geo?: number;
+  /** Giữ kinh đô, giặc trên bộ: giặc bỏ chạy qua lại vạch này (tọa độ theo chiều sâu từ bìa rừng) là thoát. */
+  exitAt?: number;
   /** Bậc binh khí đã rèn của từng binh chủng ta (0–2): thêm máu và sức đánh. */
   arms: Record<UnitType, number>;
   /** Mùa lũ thứ mấy (0 nếu không phải mùa lũ). */
@@ -188,6 +196,8 @@ export interface Battle {
 const statsOf = (k: FighterKind): FighterStats =>
   k === 'giong' ? GIONG : k === 'sonTinh' ? SON : k === 'anDuong' ? ADV : k in UNITS ? UNITS[k as UnitType] : ENEMIES[k as EnemyType];
 const tileIndex = (x: number, z: number) => z * GRID + x;
+/** Hệ số hình học của trận (xem `Battle.geo`). */
+const geoOf = (battle: Pick<Battle, 'geo'>) => battle.geo ?? 1;
 
 /** Số ngẫu nhiên lặp lại được theo hạt giống. */
 function rng(seed: number): () => number {
@@ -298,14 +308,34 @@ export interface BattleOpts {
   arms?: Record<UnitType, number>;
 }
 
+/**
+ * Dải giặc trên bộ xuất phát ở bìa rừng phía bắc (hay phía tây, đối xứng): dọc theo bìa từ `lo` tới bờ sông,
+ * sâu từ `from` tới `to` ô tính từ mép lưới. Cách sông xa như ở kinh đô nhỏ trước kia nhân `RAID_SCALE`, nhưng luôn
+ * ở ngoài vùng đã khai phá. Phần vẽ dùng để đặt dải báo giặc, ma trơi và hướng camera.
+ */
+export function raidSpawnBand(state: GameState): { lo: number; from: number; to: number } {
+  const open = areaStart(dienLevel(state));
+  const at = (r: number) => spawnDepth(open, r);
+  return { lo: Math.min(open, fromRiver(24)), from: at(0), to: at(1) };
+}
+
+/** Ô cách sông như ô cách sông `old` ô ở kinh đô nhỏ, giãn theo `RAID_SCALE`. */
+const fromRiver = (old: number) => RIVER_START - RAID_SCALE * old;
+/** Chiều sâu chỗ giặc trên bộ xuất phát (số ngẫu nhiên `r` 0..1), vùng đã khai phá bắt đầu từ ô `open`. */
+const spawnDepth = (open: number, r: number) => Math.max(0.6, Math.min(fromRiver(26.4 - 1.4 * r), open - 2 + 1.4 * r));
+
 export function startBattle(state: GameState, wave: number, side: RaidSide, opts: BattleOpts = {}): Battle {
   const battle = newBattle(state.nextBattleId++, 'raid', wave, side);
   battle.bonus = opts.bonus ?? 0;
   battle.crossbows = opts.crossbows ?? false;
   if (opts.arms) battle.arms = { ...opts.arms };
   const land = opts.land ?? null;
+  battle.geo = RAID_SCALE;
   const rand = rng(wave * 7919 + ['bac', 'tay', 'nam', 'dong'].indexOf(side) + 1);
-  const lo = Math.max(areaStart(5), 1);
+  // Giặc trên bộ ra từ dải ở bìa rừng (`raidSpawnBand`).
+  const open = areaStart(dienLevel(state));
+  const lo = Math.min(open, fromRiver(24));
+  let exitAt = Infinity;
   const flood = opts.flood ?? null;
   if (flood) {
     battle.flood = flood.n;
@@ -334,13 +364,16 @@ export function startBattle(state: GameState, wave: number, side: RaidSide, opts
       // Giặc Ân ra từ bìa rừng: cạnh bắc (z nhỏ) hoặc cạnh tây (x nhỏ).
       // Thủy quái ngoi lên từ sông: phía nam (z lớn) hoặc phía đông (x lớn).
       const along = lo + rand() * (RIVER_START - lo - 1);
-      const depth = flood ? RIVER_START + 0.4 + rand() * 1.4 : 0.6 + rand() * 1.4;
+      const r = rand();
+      const depth = flood ? RIVER_START + 0.4 + r * 1.4 : spawnDepth(open, r);
+      if (!flood) exitAt = Math.min(exitAt, depth - 0.6 * RAID_SCALE);
       const hp = ENEMIES[kind].hp * scale;
       const alongX = side === 'bac' || side === 'nam';
       battle.fighters.push(newFighter(battle, 'giac', kind, alongX ? along : depth, alongX ? depth : along, hp));
       battle.total++;
     }
   }
+  if (!flood) battle.exitAt = Math.max(exitAt, -0.5);
   const barracks = state.buildings.find((b) => b.type === 'doanhTrai');
   if (barracks) {
     const def = BUILDINGS.doanhTrai;
@@ -356,7 +389,7 @@ export function startBattle(state: GameState, wave: number, side: RaidSide, opts
   if (opts.hero) {
     const dien = state.buildings.find((b) => b.type === 'dien');
     if (barracks) addHero(battle, opts.hero, barracks.x + BUILDINGS.doanhTrai.w / 2, barracks.z + BUILDINGS.doanhTrai.d, 1);
-    else if (dien) addHero(battle, opts.hero, dien.x + 2, dien.z + 4.6, 1);
+    else if (dien) addHero(battle, opts.hero, dien.x + BUILDINGS.dien.w / 2, dien.z + BUILDINGS.dien.d + 0.6, 1);
   }
   return battle;
 }
@@ -482,6 +515,56 @@ function costGrid(state: GameState, targetId: number | null, swim: boolean): Flo
   return cost;
 }
 
+/** Hàng đợi ưu tiên nhỏ nhất cho A*: khóa (f, thứ tự), giá trị là chỉ số ô. */
+class OpenHeap {
+  private f: number[] = [];
+  private q: number[] = [];
+  private v: number[] = [];
+  get size(): number {
+    return this.v.length;
+  }
+  private less(i: number, j: number): boolean {
+    return this.f[i] < this.f[j] || (this.f[i] === this.f[j] && this.q[i] < this.q[j]);
+  }
+  private swap(i: number, j: number): void {
+    [this.f[i], this.f[j]] = [this.f[j], this.f[i]];
+    [this.q[i], this.q[j]] = [this.q[j], this.q[i]];
+    [this.v[i], this.v[j]] = [this.v[j], this.v[i]];
+  }
+  push(f: number, q: number, v: number): void {
+    this.f.push(f);
+    this.q.push(q);
+    this.v.push(v);
+    let i = this.v.length - 1;
+    while (i > 0) {
+      const p = (i - 1) >> 1;
+      if (!this.less(i, p)) break;
+      this.swap(i, p);
+      i = p;
+    }
+  }
+  pop(): number {
+    const top = this.v[0];
+    const last = this.v.length - 1;
+    this.swap(0, last);
+    this.f.pop();
+    this.q.pop();
+    this.v.pop();
+    let i = 0;
+    for (;;) {
+      const l = 2 * i + 1;
+      const r = l + 1;
+      let m = i;
+      if (l < this.v.length && this.less(l, m)) m = l;
+      if (r < this.v.length && this.less(r, m)) m = r;
+      if (m === i) break;
+      this.swap(i, m);
+      i = m;
+    }
+    return top;
+  }
+}
+
 /** A* trên lưới 8 hướng, tới bất kỳ ô nào thuộc móng công trình đích. `swim`: bơi được qua sông. */
 export function findPath(state: GameState, fromX: number, fromZ: number, target: Building, swim = false): number[] | null {
   const cost = costGrid(state, target.id, swim);
@@ -500,19 +583,17 @@ export function findPath(state: GameState, fromX: number, fromZ: number, target:
   const g = new Float32Array(GRID * GRID).fill(Infinity);
   const came = new Int32Array(GRID * GRID).fill(-1);
   const closed = new Uint8Array(GRID * GRID);
-  const open: number[] = [start];
+  // Hàng đợi ưu tiên theo f = g + h; hòa thì ô thêm vào trước được xét trước (như cách dò tuần tự cũ).
+  // Ô có g tốt hơn thì thêm lại một mục mới, mục cũ bỏ qua khi lấy ra.
+  const seqOf = new Int32Array(GRID * GRID);
+  const heap = new OpenHeap();
+  let seq = 0;
   g[start] = 0;
-  while (open.length) {
-    let bi = 0;
-    let best = Infinity;
-    for (let k = 0; k < open.length; k++) {
-      const f = g[open[k]] + h(open[k]);
-      if (f < best) {
-        best = f;
-        bi = k;
-      }
-    }
-    const cur = open.splice(bi, 1)[0];
+  seqOf[start] = seq++;
+  heap.push(h(start), seqOf[start], start);
+  while (heap.size) {
+    const cur = heap.pop();
+    if (closed[cur]) continue;
     if (isGoal(cur)) {
       const path = [cur];
       let c = cur;
@@ -537,9 +618,10 @@ export function findPath(state: GameState, fromX: number, fromZ: number, target:
         if (dx && dz && (cost[tileIndex(cx + dx, cz)] === Infinity || cost[tileIndex(cx, cz + dz)] === Infinity)) continue;
         const ng = g[cur] + cost[ni] * (dx && dz ? Math.SQRT2 : 1);
         if (ng < g[ni]) {
-          if (g[ni] === Infinity) open.push(ni);
+          if (g[ni] === Infinity) seqOf[ni] = seq++;
           g[ni] = ng;
           came[ni] = cur;
+          heap.push(g[ni] + h(ni), seqOf[ni], ni);
         }
       }
     }
@@ -575,11 +657,11 @@ function chooseTarget(state: GameState, battle: Battle, f: Fighter): Building | 
   return pick(live.filter((b) => b.type === 'kho')) ?? pick(live.filter((b) => b.type === 'dien')) ?? pick(live);
 }
 
-function moveToward(f: Fighter, tx: number, tz: number, dt: number, mult = 1): boolean {
+function moveToward(f: Fighter, tx: number, tz: number, dt: number, mult = 1, geo = 1): boolean {
   const dx = tx - f.x;
   const dz = tz - f.z;
   const d = Math.hypot(dx, dz);
-  const step = statsOf(f.kind).speed * mult * (f.slow && f.slow > 0 ? TT_WAVE.slow : 1) * dt;
+  const step = statsOf(f.kind).speed * geo * mult * (f.slow && f.slow > 0 ? TT_WAVE.slow : 1) * dt;
   if (d > 1e-6) f.face = Math.atan2(dx, dz);
   if (d <= step) {
     f.x = tx;
@@ -626,7 +708,7 @@ function strike(battle: Battle, f: Fighter, foe: Fighter): void {
     // Đòn của tướng quét cả giặc đứng quanh.
     for (const o of battle.fighters) {
       if (o === foe || o.side === f.side || !isAlive(o)) continue;
-      if (Math.hypot(o.x - foe.x, o.z - foe.z) <= HERO_CLEAVE.radius) damageFighter(battle, { dmg: dmg * HERO_CLEAVE.share }, o);
+      if (Math.hypot(o.x - foe.x, o.z - foe.z) <= HERO_CLEAVE.radius * geoOf(battle)) damageFighter(battle, { dmg: dmg * HERO_CLEAVE.share }, o);
     }
   }
   f.cd = st.cooldown;
@@ -658,7 +740,17 @@ function damageBuilding(state: GameState, battle: Battle, attacker: Fighter, b: 
 function exitPoint(battle: Battle, f: Fighter): { x: number; z: number } {
   if (battle.side === 'nam') return { x: f.x, z: GRID + 0.5 };
   if (battle.side === 'dong') return { x: GRID + 0.5, z: f.z };
-  return battle.side === 'bac' ? { x: f.x, z: -0.5 } : { x: -0.5, z: f.z };
+  const out = (battle.exitAt ?? -0.5) - 1;
+  return battle.side === 'bac' ? { x: f.x, z: out } : { x: out, z: f.z };
+}
+
+/** Giặc bỏ chạy đã thoát chưa: lặn xuống sông, hay lùi qua vạch xuất phát ở bìa rừng. */
+function escaped(battle: Battle, f: Fighter): boolean {
+  if (f.x < 0 || f.z < 0 || f.x > GRID || f.z > GRID) return true;
+  const line = battle.exitAt ?? -0.5;
+  if (battle.side === 'bac') return f.z < line;
+  if (battle.side === 'tay') return f.x < line;
+  return false;
 }
 
 /** Đang bị đá giữ chân thì đứng yên, không đánh. */
@@ -670,15 +762,16 @@ function stunned(f: Fighter, dt: number): boolean {
 
 function stepEnemy(state: GameState, battle: Battle, f: Fighter, dt: number): void {
   const st = statsOf(f.kind);
+  const reach = st.range * geoOf(battle);
   if (f.state === 'flee') {
     const out = exitPoint(battle, f);
-    moveToward(f, out.x, out.z, dt);
-    if (f.x < 0 || f.z < 0 || f.x > GRID || f.z > GRID) f.state = 'gone';
+    moveToward(f, out.x, out.z, dt, 1, geoOf(battle));
+    if (escaped(battle, f)) f.state = 'gone';
     return;
   }
   if (stunned(f, dt)) return;
   // Gặp quân ta ở gần thì đánh.
-  const foe = nearestEnemyOf(battle, f, st.range + 0.5);
+  const foe = nearestEnemyOf(battle, f, reach + 0.5);
   if (foe) {
     f.state = 'fight';
     f.face = Math.atan2(foe.x - f.x, foe.z - f.z);
@@ -696,7 +789,7 @@ function stepEnemy(state: GameState, battle: Battle, f: Fighter, dt: number): vo
     f.state = 'flee';
     return;
   }
-  if (rectDist(f.x, f.z, target) <= st.range + 0.1) {
+  if (rectDist(f.x, f.z, target) <= reach + 0.1) {
     f.state = 'fight';
     if (f.cd <= 0) {
       const def = BUILDINGS[target.type];
@@ -716,7 +809,7 @@ function stepEnemy(state: GameState, battle: Battle, f: Fighter, dt: number): vo
   }
   if (!f.path || f.pathAt >= f.path.length) {
     f.state = 'move';
-    moveToward(f, target.x + BUILDINGS[target.type].w / 2, target.z + BUILDINGS[target.type].d / 2, dt);
+    moveToward(f, target.x + BUILDINGS[target.type].w / 2, target.z + BUILDINGS[target.type].d / 2, dt, 1, geoOf(battle));
     return;
   }
   const next = f.path[f.pathAt];
@@ -729,7 +822,7 @@ function stepEnemy(state: GameState, battle: Battle, f: Fighter, dt: number): vo
     return nx >= b.x && nx < b.x + def.w && nz >= b.z && nz < b.z + def.d;
   });
   if (blocker) {
-    if (rectDist(f.x, f.z, blocker) <= st.range + 0.15) {
+    if (rectDist(f.x, f.z, blocker) <= reach + 0.15) {
       f.state = 'fight';
       f.face = Math.atan2(nx + 0.5 - f.x, nz + 0.5 - f.z);
       if (f.cd <= 0) {
@@ -741,7 +834,7 @@ function stepEnemy(state: GameState, battle: Battle, f: Fighter, dt: number): vo
     }
   }
   f.state = 'move';
-  if (moveToward(f, nx + 0.5, nz + 0.5, dt) && !blocker) f.pathAt++;
+  if (moveToward(f, nx + 0.5, nz + 0.5, dt, 1, geoOf(battle)) && !blocker) f.pathAt++;
 }
 
 /** Xông tới kẻ địch gần nhất rồi đánh. Quân ta làm vậy trong mọi trận, giặc làm vậy khi đánh ngoài bãi. */
@@ -754,14 +847,14 @@ function stepChase(battle: Battle, f: Fighter, dt: number): void {
     return;
   }
   const d = Math.hypot(foe.x - f.x, foe.z - f.z);
-  if (d <= st.range + 0.3) {
+  if (d <= st.range * geoOf(battle) + 0.3) {
     f.state = 'fight';
     f.face = Math.atan2(foe.x - f.x, foe.z - f.z);
     if (f.cd <= 0) strike(battle, f, foe);
     return;
   }
   f.state = 'move';
-  moveToward(f, foe.x, foe.z, dt, f.side === 'ta' && battle.rally > 0 ? RALLY.speed : 1);
+  moveToward(f, foe.x, foe.z, dt, f.side === 'ta' && battle.rally > 0 ? RALLY.speed : 1, geoOf(battle));
 }
 
 function stepDefenses(state: GameState, battle: Battle, dt: number): void {
@@ -773,7 +866,7 @@ function stepDefenses(state: GameState, battle: Battle, dt: number): void {
       if (cd > 0) continue;
       const tower = { x: b.x + 0.5, z: b.z + 0.5 };
       let best: Fighter | null = null;
-      let bestD = TOWER.range + (battle.crossbows ? CO_LOA_TOWER.range : 0);
+      let bestD = (TOWER.range + (battle.crossbows ? CO_LOA_TOWER.range : 0)) * geoOf(battle);
       for (const o of battle.fighters) {
         if (o.side !== 'giac' || (o.state !== 'move' && o.state !== 'fight' && o.state !== 'flee')) continue;
         const d = Math.hypot(o.x - tower.x, o.z - tower.z);
@@ -794,7 +887,7 @@ function stepDefenses(state: GameState, battle: Battle, dt: number): void {
       if (cd > 0) continue;
       // Lầu nỏ: mỗi phát bắn ba giặc gần nhất trong tầm, mỗi mũi một tên.
       const tower = { x: b.x + 0.5, z: b.z + 0.5 };
-      const range = LAU_NO.range + (battle.crossbows ? CO_LOA_TOWER.range : 0);
+      const range = (LAU_NO.range + (battle.crossbows ? CO_LOA_TOWER.range : 0)) * geoOf(battle);
       const targets = battle.fighters
         .filter((o) => o.side === 'giac' && (o.state === 'move' || o.state === 'fight' || o.state === 'flee'))
         .map((o) => ({ o, d: Math.hypot(o.x - tower.x, o.z - tower.z) }))
@@ -1027,6 +1120,7 @@ export function useSkill(battle: Battle, skill: SkillId): boolean {
   battle.skillCd[skill] = def.cooldown;
   // Ngoài bãi mọi người bền hơn, nên đòn kỹ năng cũng mạnh lên tương ứng.
   const scale = (battle.mode === 'field' ? FIELD.hpMul : 1) * (1 + battle.bonus);
+  const g = geoOf(battle);
   if (skill === 'trongTran') {
     battle.rally = def.duration;
     const allies = battle.fighters.filter((f) => f.side === 'ta' && isAlive(f));
@@ -1044,12 +1138,12 @@ export function useSkill(battle: Battle, skill: SkillId): boolean {
       if (o.side === 'ta' || !isAlive(o)) continue;
       const along = (o.x - hero.x) * dx + (o.z - hero.z) * dz;
       const across = Math.abs((o.x - hero.x) * dz - (o.z - hero.z) * dx);
-      if (along >= -0.3 && along <= FIRE.length && across <= FIRE.width / 2) damageFighter(battle, { kind: 'giong', dmg: FIRE.dmg * scale }, o);
+      if (along >= -0.3 && along <= FIRE.length * g && across <= (FIRE.width * g) / 2) damageFighter(battle, { kind: 'giong', dmg: FIRE.dmg * scale }, o);
     }
     const fromX = hero.x;
     const fromZ = hero.z;
-    hero.x = clampField(hero.x + dx * FIRE.length * 0.8, battle.mode === 'field' ? FIELD.w : RIVER_START);
-    hero.z = clampField(hero.z + dz * FIRE.length * 0.8, battle.mode === 'field' ? FIELD.d : RIVER_START);
+    hero.x = clampField(hero.x + dx * FIRE.length * g * 0.8, battle.mode === 'field' ? FIELD.w : RIVER_START);
+    hero.z = clampField(hero.z + dz * FIRE.length * g * 0.8, battle.mode === 'field' ? FIELD.d : RIVER_START);
     hero.face = Math.atan2(dx, dz);
     emit(battle, { kind: 'fire', x: fromX, z: fromZ, tx: hero.x, tz: hero.z });
   } else if (skill === 'nhoTre') {
@@ -1058,11 +1152,11 @@ export function useSkill(battle: Battle, skill: SkillId): boolean {
     for (const o of battle.fighters) {
       if (o.side === 'ta' || !isAlive(o)) continue;
       const d = Math.hypot(o.x - hero.x, o.z - hero.z);
-      if (d > SMASH.radius) continue;
+      if (d > SMASH.radius * g) continue;
       damageFighter(battle, { kind: 'giong', dmg: SMASH.dmg * scale }, o);
       if (d > 1e-6 && isAlive(o)) {
-        o.x += ((o.x - hero.x) / d) * SMASH.push;
-        o.z += ((o.z - hero.z) / d) * SMASH.push;
+        o.x += ((o.x - hero.x) / d) * SMASH.push * g;
+        o.z += ((o.z - hero.z) / d) * SMASH.push * g;
       }
     }
     hero.swing = 0.3;
@@ -1070,12 +1164,12 @@ export function useSkill(battle: Battle, skill: SkillId): boolean {
   } else if (skill === 'bocDoi') {
     // Bốc đồi: Sơn Tinh nhấc một quả đồi ném xuống chỗ giặc đứng đông nhất.
     const hero = heroOf(battle)!;
-    const at = densest(battle, HILL.radius)!;
+    const at = densest(battle, HILL.radius * g)!;
     const cx = at.x;
     const cz = at.z;
     for (const o of battle.fighters) {
       if (o.side === 'ta' || !isAlive(o)) continue;
-      if (Math.hypot(o.x - cx, o.z - cz) <= HILL.radius) damageFighter(battle, { kind: 'sonTinh', dmg: HILL.dmg * scale }, o);
+      if (Math.hypot(o.x - cx, o.z - cz) <= HILL.radius * g) damageFighter(battle, { kind: 'sonTinh', dmg: HILL.dmg * scale }, o);
     }
     hero.face = Math.atan2(cx - hero.x, cz - hero.z);
     hero.swing = 0.3;
@@ -1106,7 +1200,7 @@ export function useSkill(battle: Battle, skill: SkillId): boolean {
     const hero = heroOf(battle)!;
     for (const o of battle.fighters) {
       if (o.side === 'ta' || !isAlive(o)) continue;
-      if (Math.hypot(o.x - hero.x, o.z - hero.z) > ROCKS.radius) continue;
+      if (Math.hypot(o.x - hero.x, o.z - hero.z) > ROCKS.radius * g) continue;
       damageFighter(battle, { kind: 'sonTinh', dmg: ROCKS.dmg * scale }, o);
       if (isAlive(o)) o.stun = ROCKS.stun;
     }

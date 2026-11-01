@@ -6,7 +6,8 @@ import * as THREE from 'three';
 const AZIMUTH = Math.PI / 4;
 const ELEVATION = THREE.MathUtils.degToRad(38);
 const DISTANCE = 70;
-const MIN_ZOOM = 0.55;
+/** Thu nhỏ hết cỡ thì thấy trọn kinh đô 45×45 ở khổ điện thoại dọc. */
+const MIN_ZOOM = 0.28;
 const MAX_ZOOM = 3;
 const TAP_SLOP_PX = 10;
 const TAP_MAX_MS = 600;
@@ -16,11 +17,12 @@ const TURN_S = 0.35;
 const TWIST_SNAP = THREE.MathUtils.degToRad(35);
 
 export class IsoCamera {
-  readonly camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 1, 200);
+  readonly camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 1, 400);
   readonly target = new THREE.Vector3();
-  zoom = 1;
-  /** Giới hạn di chuyển của tâm nhìn trên mặt đất. */
-  bounds = { min: -17, max: 17 };
+  /** Mặc định thấy chừng 20 ô bề ngang: công trình to (móng 3×3 tới 5×5) vẫn rõ dáng. */
+  zoom = 0.72;
+  /** Giới hạn di chuyển của tâm nhìn trên mặt đất (World đặt theo vùng đất đã khai phá). */
+  bounds = { min: -27, max: 27 };
   onTap?: (clientX: number, clientY: number) => void;
 
   private width = 1;

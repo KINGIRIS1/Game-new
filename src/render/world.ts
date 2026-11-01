@@ -3,11 +3,11 @@
 
 import * as THREE from 'three';
 import { BUILDINGS, FIELD, type BuildingType, type Terrain } from '../game/defs';
-import type { Battle, RaidSide } from '../game/battle';
+import { raidSpawnBand, type Battle, type RaidSide } from '../game/battle';
 import { advLook, inChapter3, ruaVangCame, type AdvLook } from '../game/coLoa';
 import { buildingAt, dienLevel, type Building, type GameState } from '../game/game';
 import { giongLook, type GiongLook } from '../game/giong';
-import { GRID, RIVER_START, areaStart, baseHeights, isUnlocked } from '../game/map';
+import { DIEN_HOME, FOREST_BAND, GRID, RIVER_START, areaStart, baseHeights, isUnlocked } from '../game/map';
 import { sonLook, type SonLook } from '../game/son';
 import { floodMap } from '../game/terrain';
 import { tetOpen } from '../game/tet';
@@ -17,31 +17,12 @@ import { IsoCamera } from './camera';
 import {
   banhChung,
   banhGiay,
+  buildingModel,
   dienFloor,
   dienScale,
-  makeBaiDa,
-  makeBayChong,
-  makeBen,
-  makeBep,
-  makeChoiCanh,
-  makeChuongLon,
-  makeDenCoLoa,
-  makeDenPhuDong,
-  makeDenTanVien,
-  makeDien,
-  makeDoanhTrai,
-  makeTraiGiao,
-  makeTraiCung,
-  makeChuongVoi,
-  doanhTraiScale,
   DOANH_TRAI_HERO,
-  makeKho,
-  makeLauNo,
-  makeLoRen,
-  makeNhaSan,
-  makeRuong,
-  makeRuongNep,
-  makeVuon,
+  doanhTraiScale,
+  footScale,
 } from './buildings';
 import { makeRuaVang } from './beasts';
 import { makeAnDuong, makeGiong, makeSonTinh } from './heroes';
@@ -330,7 +311,7 @@ export class World {
     this.view.onUserMove = () => {
       this.panGoal = null;
     };
-    this.view.target.set(wx(19), 0, wz(19));
+    this.view.target.set(wx(DIEN_HOME) + BUILDINGS.dien.w / 2, 0, wz(DIEN_HOME) + BUILDINGS.dien.d / 2);
 
     this.lights = addSunLights(this.scene, 24, 2048);
     const edge = baseHeights();
@@ -480,16 +461,64 @@ export class World {
     for (let i = 0; i < 22; i++) {
       const mat = new THREE.MeshBasicMaterial({ color: i % 3 ? C.ghost : C.ghostDeep, transparent: true, opacity: 0, depthWrite: false });
       const wisp = new THREE.Mesh(geo, mat);
-      const along = 2 + rand() * 22;
-      const depth = rand() * 2.5;
-      const north = i % 2 === 0;
-      wisp.position.set(wx(north ? along : depth), 1 + rand() * 1.4, wz(north ? depth : along));
+      // Chỗ trong dải giặc xuất phát (0..1 dọc bìa rừng, 0..1 theo chiều sâu), đặt thật ở `placeWisps`.
+      wisp.userData.u = rand();
+      wisp.userData.v = rand();
+      wisp.userData.north = i % 2 === 0;
+      wisp.position.y = 1 + rand() * 1.4;
       wisp.userData.base = wisp.position.clone();
       wisp.userData.phase = rand() * Math.PI * 2;
       this.wisps.add(wisp);
     }
     this.wisps.visible = false;
     this.scene.add(this.wisps);
+  }
+
+  /**
+   * Bóng nắng phủ quanh chỗ đang nhìn (cạnh theo độ phóng), bám theo từng điểm ảnh của bóng để bóng khỏi rung khi kéo.
+   * Sương mù lùi xa khi thu nhỏ, để nhìn trọn kinh đô lớn không bị mờ nửa trên.
+   */
+  private followView(): void {
+    const v = this.view;
+    const sun = this.lights.sun;
+    const extent = THREE.MathUtils.clamp(15 / v.zoom, 15, 48);
+    const cam = sun.shadow.camera;
+    if (cam.right !== extent) {
+      cam.left = -extent;
+      cam.right = extent;
+      cam.top = extent;
+      cam.bottom = -extent;
+      cam.updateProjectionMatrix();
+    }
+    const texel = (2 * extent) / sun.shadow.mapSize.x;
+    const tx = Math.round(v.target.x / texel) * texel;
+    const tz = Math.round(v.target.z / texel) * texel;
+    sun.target.position.set(tx, 0, tz);
+    sun.position.set(tx - 10, 24, tz + 14);
+    sun.target.updateMatrixWorld();
+    const fog = this.scene.fog as THREE.Fog;
+    const far = Math.max(0, 1 / v.zoom - 1);
+    fog.near = 75 + 40 * far;
+    fog.far = 125 + 70 * far;
+  }
+
+  /** Đã đặt tâm nhìn ban đầu theo vùng đất chưa. */
+  private framed = false;
+  private wispKey = '';
+  /** Đặt ma trơi dọc dải yêu tinh xuất phát ở bìa rừng phía bắc và phía tây (`raidSpawnBand`). */
+  private placeWisps(state: GameState): void {
+    const band = raidSpawnBand(state);
+    const key = `${band.lo}:${band.from}:${band.to}`;
+    if (key === this.wispKey) return;
+    this.wispKey = key;
+    for (const w of this.wisps.children) {
+      const along = band.lo + (w.userData.u as number) * (RIVER_START - band.lo - 1);
+      const depth = Math.max(0, band.from - 1) + (w.userData.v as number) * (band.to - band.from + 2);
+      const north = w.userData.north as boolean;
+      const base = w.userData.base as THREE.Vector3;
+      base.set(wx(north ? along : depth), base.y, wz(north ? depth : along));
+      w.position.copy(base);
+    }
   }
 
   private initRipples(): void {
@@ -533,6 +562,7 @@ export class World {
     this.floodKey = '';
     this.heights = [];
     this.shownLevel = 0;
+    this.framed = false;
     this.setSelection(null);
     if (this.merchantBoat) this.scene.remove(this.merchantBoat);
     this.merchantBoat = undefined;
@@ -560,10 +590,22 @@ export class World {
   sync(state: GameState): void {
     this.state = state;
     const level = dienLevel(state);
+    this.placeWisps(state);
     const heightsChanged = state.heights.length !== this.heights.length || state.heights.some((h, i) => h !== this.heights[i]);
     if (heightsChanged) this.heights = [...state.heights];
     if (level !== this.shownLevel || heightsChanged) {
       this.shownLevel = level;
+      // Kéo cảnh trong vùng đất đã khai phá, chừa một dải rừng và một phần sông.
+      const bounds = { min: wx(areaStart(level)) - 3, max: wx(RIVER_START) + 2 };
+      if (this.cityCam) this.cityCam.bounds = bounds;
+      else this.view.bounds = bounds;
+      // Lần đầu dựng cảnh: nhìn vào giữa vùng đất đã khai phá (Điện ở gần góc sông, nhìn vào Điện thì nửa màn hình là sông).
+      if (!this.framed) {
+        this.framed = true;
+        const mid = wx((areaStart(level) + RIVER_START) / 2);
+        this.view.target.set(mid, 0, mid);
+        this.view.apply();
+      }
       this.rebuildLand(level);
       this.rebuildForest(level);
       this.rebuildGridOverlay(level);
@@ -746,7 +788,8 @@ export class World {
       const obj = makeWorker(spot.job);
       obj.position.set(spot.x, spot.y, spot.z);
       obj.rotation.y = spot.ry;
-      obj.scale.setScalar(0.85 * spread);
+      // Mô hình đã phóng theo móng (`foot`): người thu lại để giữ cỡ người thật.
+      obj.scale.setScalar((0.85 * spread) / ((group.userData.foot as number | undefined) ?? 1));
       group.add(obj);
       people.push({ obj, spot, phase: b.id * 1.7 + i * 2.1 });
     }
@@ -794,30 +837,15 @@ export class World {
     this.views.set(b.id, { group, type: b.type, level: b.level, damaged: !!b.damaged, workers: b.workers, x: b.x, z: b.z, ground, people, popAge: 0, baseScale: group.scale.x });
   }
 
+  /** Mô hình công trình đặt vừa móng: phóng theo móng kinh đô lớn, chừa viền cỏ (`footScale`). */
   private makeBuilding(type: BuildingType, level: number): THREE.Group {
-    if (type === 'dien') return makeDien(level);
-    if (type === 'ruong') return makeRuong(level);
-    if (type === 'ben') return makeBen(level);
-    if (type === 'nhaSan') return makeNhaSan(level);
-    if (type === 'baiDa') return makeBaiDa(level);
-    if (type === 'loRen') return makeLoRen(level);
-    if (type === 'kho') return makeKho(level);
-    if (type === 'doanhTrai') return makeDoanhTrai(level);
-    if (type === 'choiCanh') return makeChoiCanh(level);
-    if (type === 'bayChong') return makeBayChong();
-    if (type === 'denPhuDong') return makeDenPhuDong();
-    if (type === 'denTanVien') return makeDenTanVien();
-    if (type === 'denCoLoa') return makeDenCoLoa();
-    if (type === 'ruongNep') return makeRuongNep(level);
-    if (type === 'vuon') return makeVuon(level);
-    if (type === 'chuongLon') return makeChuongLon(level);
-    if (type === 'bep') return makeBep(level);
-    if (type === 'lauNo') return makeLauNo();
-    if (type === 'traiGiao') return makeTraiGiao();
-    if (type === 'traiCung') return makeTraiCung();
-    if (type === 'chuongVoi') return makeChuongVoi();
-    return new THREE.Group();
+    const g = buildingModel(type, level);
+    const k = footScale(type);
+    g.scale.multiplyScalar(k);
+    g.userData.foot = k;
+    return g;
   }
+
 
   /** Đất trong lưới: mỗi ô một cột đất cao theo bậc, bậc cao sáng màu hơn một chút. */
   private rebuildLand(level: number): void {
@@ -918,9 +946,14 @@ export class World {
    */
   private heroSpot(dien: Building): { x: number; y: number; z: number } {
     const side = dien.level >= 6;
-    const tx = Math.min(dien.x + (side ? 4 : 3), RIVER_START - 1);
-    const tz = Math.min(dien.z + (side ? 3 : 4), RIVER_START - 1);
-    return { x: wx(dien.x) + (side ? 4.7 : 3.6), y: this.groundY(tx, tz), z: wz(dien.z) + (side ? 3.5 : 4.5) };
+    const def = BUILDINGS.dien;
+    // Lệch so với tâm móng Điện (tọa độ mô hình), phóng theo móng.
+    const k = footScale('dien');
+    const ox = (side ? 2.7 : 1.6) * k;
+    const oz = (side ? 1.5 : 2.5) * k;
+    const tx = Math.min(Math.floor(dien.x + def.w / 2 + ox), RIVER_START - 1);
+    const tz = Math.min(Math.floor(dien.z + def.d / 2 + oz), RIVER_START - 1);
+    return { x: wx(dien.x) + def.w / 2 + ox, y: this.groundY(tx, tz), z: wz(dien.z) + def.d / 2 + oz };
   }
 
   /** Chỗ tướng đứng giữa sân doanh trại, nơi các tướng ở. Chưa có doanh trại thì null. */
@@ -928,7 +961,7 @@ export class World {
     const b = state.buildings.find((t) => t.type === 'doanhTrai');
     if (!b) return null;
     const def = BUILDINGS.doanhTrai;
-    const k = doanhTraiScale(b.level);
+    const k = doanhTraiScale(b.level) * footScale('doanhTrai');
     return { x: wx(b.x) + def.w / 2 + DOANH_TRAI_HERO.x * k, y: this.groundY(b.x, b.z) + 0.08, z: wz(b.z) + def.d / 2 + DOANH_TRAI_HERO.z * k };
   }
 
@@ -1029,15 +1062,19 @@ export class World {
     const o = state.tet.offered;
     const h = (b: Building) => this.heights[b.z * GRID + b.x] ?? 0;
     // Cây nêu và mâm bánh đứng ngoài móng Điện: ô ấy có công trình khác (kể cả lũy, thành) thì không dựng.
+    // Đồ Tết đặt theo tâm móng Điện; lệch ra ngoài móng theo cỡ Điện đã phóng (`footScale`).
+    const half = BUILDINGS.dien.w / 2;
+    const fk = footScale('dien');
     const free = (lx: number, lz: number) => {
       if (!dien) return false;
-      const b = buildingAt(state, dien.x + Math.floor(2 + lx), dien.z + Math.floor(2 + lz));
+      const b = buildingAt(state, dien.x + Math.floor(half + lx), dien.z + Math.floor(half + lz));
       return !b || b.id === dien.id;
     };
-    const NX = -1.6;
-    const NZ = 2.55;
+    const NX = -1.6 * fk;
+    const NZ = 2.55 * fk;
+    const TZ = 2.8 * fk;
     const neuFree = free(NX, NZ);
-    const trayFree = free(-0.3, 2.8) && free(0.3, 2.8);
+    const trayFree = free(-0.3, TZ) && free(0.3, TZ);
     const key =
       dien && tetOpen(state)
         ? [dien.x, dien.z, dien.level, h(dien), o.chung, o.giay, neuFree, trayFree, bep ? `${bep.x},${bep.z},${bep.level},${h(bep)}` : '-'].join(':')
@@ -1049,12 +1086,12 @@ export class World {
     if (!key || !dien) return;
     const root = new THREE.Group();
     // Tọa độ trong mô hình Điện (gốc ở tâm móng, đã thu nhỏ theo cấp) đổi ra tọa độ cảnh.
-    const s = dienScale(dien.level);
-    const cx = wx(dien.x) + 2;
-    const cz = wz(dien.z) + 2;
+    const s = dienScale(dien.level) * fk;
+    const cx = wx(dien.x) + half;
+    const cz = wz(dien.z) + half;
     const dienY = topY(h(dien));
     const ground = (lx: number, lz: number) =>
-      this.groundY(Math.min(dien.x + Math.floor(2 + lx), RIVER_START - 1), Math.min(dien.z + Math.floor(2 + lz), RIVER_START - 1));
+      this.groundY(Math.min(dien.x + Math.floor(half + lx), RIVER_START - 1), Math.min(dien.z + Math.floor(half + lz), RIVER_START - 1));
     // Hai dây cờ từ ngọn nêu: sang đầu cột cờ bên trái Điện, và vắt qua trước thềm sang cột cờ bên phải
     // (Điện cấp 1 chưa có cột cờ thì buộc vào hai góc nền). Không dựng được nêu thì căng một dây giữa hai cột cờ.
     const bz = (dien.level >= 6 ? 1.85 : 1.6) * s;
@@ -1074,7 +1111,7 @@ export class World {
     }
     if ((o.chung || o.giay) && trayFree) {
       const tray = this.makeTray(o.chung, o.giay);
-      tray.position.set(cx, ground(0, 2.8), cz + 2.8);
+      tray.position.set(cx, ground(0, TZ), cz + TZ);
       tray.rotation.y = Math.PI / 4;
       root.add(tray);
     }
@@ -1082,7 +1119,8 @@ export class World {
       // Một người ngồi xếp bằng ở mép chiếu gói bánh trước bếp (chiếu ở tọa độ bếp -0.3, 0.55), quay vào chiếu.
       const w = makeWorker('phuNu', true);
       w.scale.setScalar(0.85);
-      w.position.set(wx(bep.x) + 1 - 0.3, topY(h(bep)) + 0.08, wz(bep.z) + 1 + 0.88);
+      const bk = footScale('bep');
+      w.position.set(wx(bep.x) + BUILDINGS.bep.w / 2 - 0.3 * bk, topY(h(bep)) + 0.08, wz(bep.z) + BUILDINGS.bep.d / 2 + 0.88 * bk);
       w.rotation.y = Math.PI;
       root.add(w);
     }
@@ -1260,12 +1298,17 @@ export class World {
     this.warning.visible = !!side;
     if (!side) return;
     const len = RIVER_START;
+    // Giặc trên bộ ra từ dải ở bìa rừng (`raidSpawnBand`): dải đỏ phủ đúng chỗ ấy.
+    const band = this.state ? raidSpawnBand(this.state) : { lo: FOREST_BAND, from: 0.6, to: 2 };
+    const along = RIVER_START - band.lo;
+    const deep = Math.max(3, band.to - band.from + 2);
+    const mid = (band.from + band.to) / 2;
     if (side === 'bac') {
-      this.warning.scale.set(len, 1, 3);
-      this.warning.position.set(wx(0) + len / 2, 1.0, wz(0) + 1.5);
+      this.warning.scale.set(along, 1, deep);
+      this.warning.position.set(wx(band.lo) + along / 2, 1.0, wz(0) + mid);
     } else if (side === 'tay') {
-      this.warning.scale.set(3, 1, len);
-      this.warning.position.set(wx(0) + 1.5, 1.0, wz(0) + len / 2);
+      this.warning.scale.set(deep, 1, along);
+      this.warning.position.set(wx(0) + mid, 1.0, wz(band.lo) + along / 2);
     } else if (side === 'nam') {
       this.warning.scale.set(len, 1, 2.6);
       this.warning.position.set(wx(0) + len / 2, WATER_Y + 0.08, wz(RIVER_START) + 1.4);
@@ -1290,7 +1333,11 @@ export class World {
 
   /** Lướt camera tới phía giặc tới. */
   lookAtEdge(side: RaidSide): void {
-    const at: Record<RaidSide, [number, number]> = { bac: [15, 5], tay: [5, 15], nam: [17, 23], dong: [23, 17] };
+    const band = this.state ? raidSpawnBand(this.state) : { lo: FOREST_BAND, from: 0.6, to: 2 };
+    const along = (band.lo + RIVER_START) / 2;
+    const deep = band.to + 3;
+    const bank = RIVER_START - 4;
+    const at: Record<RaidSide, [number, number]> = { bac: [along, deep], tay: [deep, along], nam: [along, bank], dong: [bank, along] };
     const [x, z] = at[side];
     this.panGoal = new THREE.Vector3(wx(x), 0, wz(z));
   }
@@ -1392,6 +1439,7 @@ export class World {
     const t = this.time;
 
     this.view.tick(dt);
+    this.followView();
     if (this.panGoal) {
       const before = this.view.target.clone();
       this.view.target.lerp(this.panGoal, 1 - Math.exp(-dt * 9));
@@ -1443,7 +1491,7 @@ export class World {
 
     if (this.turtle) {
       // Bơi dọc sông phía nam, tới đầu thì quay lại; đầu ngóc nhấp nhô theo sóng.
-      const span = 22;
+      const span = RIVER_START - 5;
       const k = (t * 0.045) % 2;
       const along = k < 1 ? k : 2 - k;
       const lane = RIVER_START - HALF + 1.3;

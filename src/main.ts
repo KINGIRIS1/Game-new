@@ -13,12 +13,14 @@ import { feedGiong, forgeGear } from './game/giong';
 import { inChapter2, offerGift } from './game/son';
 import { markStory, pendingStory } from './game/story';
 import { footprintTop } from './game/terrain';
-import { BUILDINGS, RESOURCE_IDS, STAGES, type BuildingType, type Cost, type SkillId } from './game/defs';
+import { BUILDINGS, RESOURCE_IDS, STAGES, type BuildingType, type Cost, type ResourceId, type SkillId } from './game/defs';
+import { fmt } from './ui/format';
 import {
   applyOffline,
   buildingAt,
   canMove,
   canPlace,
+  findSpot,
   claimQuest,
   createInitialState,
   findBuilding,
@@ -161,20 +163,11 @@ function start(): void {
     world.setFloodPreview(painting || warning ? state : null, nextFloodLevel(state));
   };
 
-  /** Tìm chỗ đặt được gần tâm màn hình nhất để bóng công trình hiện ra ở chỗ hợp lý. */
+  /** Tìm chỗ đặt được gần tâm màn hình nhất, ưu tiên chỗ thoáng, để bóng công trình hiện ra ở chỗ hợp lý. */
   const nearestSpot = (type: BuildingType): { x: number; z: number } => {
     const def = BUILDINGS[type];
     const c = world.screenCenterTile();
-    const cx = c.x - Math.floor((def.w - 1) / 2);
-    const cz = c.z - Math.floor((def.d - 1) / 2);
-    let best: { x: number; z: number; d: number } | null = null;
-    for (let x = 0; x <= GRID - def.w; x++) {
-      for (let z = 0; z <= GRID - def.d; z++) {
-        const d = Math.abs(x - cx) + Math.abs(z - cz);
-        if ((!best || d < best.d) && canPlace(state, type, x, z).ok) best = { x, z, d };
-      }
-    }
-    return best ?? { x: cx, z: cz };
+    return findSpot(state, type, c) ?? { x: c.x - Math.floor((def.w - 1) / 2), z: c.z - Math.floor((def.d - 1) / 2) };
   };
 
   const exitMode = () => {
@@ -574,6 +567,7 @@ function start(): void {
         }
         state = loaded;
         state.lastSeen = Date.now();
+        showRelaid();
         setMuted(state.settings.muted);
         world.resetAll();
         hud.closeSheet();
@@ -770,7 +764,19 @@ function start(): void {
 
   // ---------- Khởi động và vòng lặp ----------
 
+  /** Bản lưu vừa nâng từ kinh đô nhỏ: báo một lần kinh đô đã dựng lại và phần của được hoàn. */
+  const showRelaid = () => {
+    if (!state.relaid) return;
+    const refund = (Object.entries(state.relaid.refund) as [ResourceId, number][])
+      .filter(([, n]) => n > 0)
+      .map(([r, n]) => `${fmt(n)} ${vi.resources[r].icon}`)
+      .join(', ');
+    delete state.relaid;
+    hud.toast(vi.ui.relaid(refund));
+  };
+
   const offline = applyOffline(state, Date.now());
+  showRelaid();
   commit();
   showOfflineIfLong(offline.ms, offline.gained);
   if (state.raid.lastResult) hud.showRaidResult(state, state.raid.lastResult);

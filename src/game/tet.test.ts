@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { edge } from './testmap';
 import { startFieldBattle } from './battle';
 import {
   BUILDINGS,
@@ -30,7 +31,7 @@ import {
   type Building,
   type GameState,
 } from './game';
-import { deserialize, serialize } from './save';
+import { SAVE_VERSION, deserialize, serialize } from './save';
 import { markStory, pendingStory } from './story';
 import { bake, bakeRates, bakeStore, canOffer, offer, tetNeed, tetOpen } from './tet';
 
@@ -57,16 +58,25 @@ function put(s: GameState, type: BuildingType, x: number, z: number, level = 1):
   return r.value;
 }
 
+// Chỗ dựng bộ làm bánh trong vùng đất Điện 7, xa Điện.
+const NEP1 = { x: edge(7, 1), z: edge(7, 1) };
+const VUON1 = { x: edge(7, 6), z: edge(7, 1) };
+const LON1 = { x: edge(7, 10), z: edge(7, 1) };
+const BEP = { x: edge(7, 6), z: edge(7, 10) };
+const NEP2 = { x: edge(7, 1), z: edge(7, 6) };
+const VUON2 = { x: edge(7, 6), z: edge(7, 5) };
+const LON2 = { x: edge(7, 10), z: edge(7, 5) };
+
 /** Bộ làm bánh: mỗi loại một cái ở cấp `level`; `double` thì thêm ruộng nếp, vườn, chuồng thứ hai. */
 function kitchen(s: GameState, level = 1, double = false): void {
-  put(s, 'ruongNep', 8, 8, level);
-  put(s, 'vuon', 12, 8, level);
-  put(s, 'chuongLon', 15, 8, level);
-  put(s, 'bep', 12, 14, level);
+  put(s, 'ruongNep', NEP1.x, NEP1.z, level);
+  put(s, 'vuon', VUON1.x, VUON1.z, level);
+  put(s, 'chuongLon', LON1.x, LON1.z, level);
+  put(s, 'bep', BEP.x, BEP.z, level);
   if (double) {
-    put(s, 'ruongNep', 8, 12, level);
-    put(s, 'vuon', 12, 11, level);
-    put(s, 'chuongLon', 15, 11, level);
+    put(s, 'ruongNep', NEP2.x, NEP2.z, level);
+    put(s, 'vuon', VUON2.x, VUON2.z, level);
+    put(s, 'chuongLon', LON2.x, LON2.z, level);
   }
 }
 
@@ -81,12 +91,12 @@ describe('bốn công trình Hội Tết', () => {
   it('mở sau kết chương 1, cần Điện cấp 3; cấp 2 cần Điện 5, cấp 3 cần Điện 6', () => {
     const s = city(3);
     s.giong.ascended = false;
-    expect(canPlace(s, 'bep', 12, 14)).toEqual({ ok: false, reason: 'canKetChuong' });
+    expect(canPlace(s, 'bep', edge(3, 1), edge(3, 1))).toEqual({ ok: false, reason: 'canKetChuong' });
     s.giong.ascended = true;
     s.buildings[0].level = 2;
-    expect(canPlace(s, 'bep', 12, 14)).toEqual({ ok: false, reason: 'chuaDuCapDien' });
+    expect(canPlace(s, 'bep', edge(3, 1), edge(3, 1))).toEqual({ ok: false, reason: 'chuaDuCapDien' });
     s.buildings[0].level = 3;
-    const bep = place(s, 'bep', 12, 14);
+    const bep = place(s, 'bep', edge(3, 1), edge(3, 1));
     if (!bep.ok) throw new Error(bep.reason);
     expect(canUpgrade(s, bep.value.id)).toEqual({ ok: false, reason: 'chuaDuCapDien' });
     s.buildings[0].level = 5;
@@ -120,15 +130,15 @@ describe('bốn công trình Hội Tết', () => {
     expect(bakeRates(s).chung).toBe(0);
     lon.damaged = false;
     // Nếp nhiều mà bếp yếu: mỗi loại không quá sức bếp.
-    put(s, 'ruongNep', 8, 12, 3);
+    put(s, 'ruongNep', NEP2.x, NEP2.z, 3);
     const vuon = s.buildings.find((b) => b.type === 'vuon')!;
     vuon.level = 3;
     vuon.workers = slotsOf(vuon);
     expect(bakeRates(s)).toMatchObject({ nep: 6, dauLa: 2, thit: 2, bep: 2, chung: 2, giay: 2 });
     s.buildings.find((b) => b.type === 'chuongLon')!.level = 3;
     vuon.level = 3;
-    put(s, 'vuon', 12, 11, 3);
-    put(s, 'chuongLon', 15, 11, 3);
+    put(s, 'vuon', VUON2.x, VUON2.z, 3);
+    put(s, 'chuongLon', LON2.x, LON2.z, 3);
     expect(bakeRates(s)).toMatchObject({ dauLa: 4, chung: 2, giay: 2, short: 'bep' });
   });
 
@@ -250,13 +260,13 @@ describe('Tết', () => {
 
   it('phúc lành Đất thêm 15% tài nguyên, phúc lành Trời thêm 10% máu và sức đánh, cộng với Đền Phù Đổng', () => {
     const s = city(5);
-    const r = place(s, 'ruong', 4, 20);
+    const r = place(s, 'ruong', edge(5, 1), edge(5, 3));
     if (!r.ok) throw new Error(r.reason);
     r.value.workers = slotsOf(r.value);
     const base = productionPerMinute(s).gao;
     s.tet.blessing.chung = true;
     expect(productionPerMinute(s).gao).toBeCloseTo(base * (1 + TET_DAT_BONUS), 5);
-    const den = place(s, 'denPhuDong', 4, 16);
+    const den = place(s, 'denPhuDong', edge(5, 1), edge(5, 8));
     if (!den.ok) throw new Error(den.reason);
     expect(productionPerMinute(s).gao).toBeCloseTo(base * (1 + TEMPLE_BONUS + TET_DAT_BONUS), 5);
     expect(troopBonus(s)).toBeCloseTo(TEMPLE_BONUS, 5);
@@ -286,7 +296,7 @@ describe('nhịp Hội Tết', () => {
 
     const d5 = after(city(5));
     kitchen(d5, 2);
-    put(d5, 'ruongNep', 8, 12, 2);
+    put(d5, 'ruongNep', NEP2.x, NEP2.z, 2);
     expect(minutesFor(d5)).toBeCloseTo(20 / 1.5, 5);
 
     const d6 = after(city(6));
@@ -328,7 +338,7 @@ describe('bản lưu phiên bản 9', () => {
     delete old.tet;
     old.buildings = (old.buildings as { type: string }[]).filter((b) => !['ruongNep', 'vuon', 'chuongLon', 'bep'].includes(b.type));
     const back = deserialize(JSON.stringify(old))!;
-    expect(back.version).toBe(10);
+    expect(back.version).toBe(SAVE_VERSION);
     expect(back.tet).toEqual({
       seq: 0,
       nextAt: null,

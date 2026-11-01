@@ -47,6 +47,28 @@ const tileIndex = (x: number, z: number) => z * GRID + x;
 export function wallRings(s: GameState): number {
   const dien = s.buildings.find((b) => b.type === 'dien');
   if (!dien) return 0;
+  // Ghi nhớ theo dấu vân tay các đoạn thành còn nguyên: nhiệm vụ và bảng hỏi số vòng mỗi giây, trên lưới lớn.
+  let a = 0x811c9dc5;
+  let h = (dien.x * 64 + dien.z) | 0;
+  let n = 0;
+  for (const b of s.buildings) {
+    if (b.type !== 'thanh' || b.damaged) continue;
+    const v = b.x * 64 + b.z;
+    a = Math.imul(a ^ v, 0x01000193);
+    h = Math.imul(h ^ v, 0x85ebca6b) ^ (h >>> 13);
+    n++;
+  }
+  if (!n) return 0;
+  const hit = ringsCache.get(s);
+  if (hit && hit.a === a && hit.h === h && hit.n === n) return hit.rings;
+  const rings = countRings(s, dien);
+  ringsCache.set(s, { a, h, n, rings });
+  return rings;
+}
+
+const ringsCache = new WeakMap<GameState, { a: number; h: number; n: number; rings: number }>();
+
+function countRings(s: GameState, dien: { x: number; z: number }): number {
   const wall = new Uint8Array(GRID * GRID);
   for (const b of s.buildings) if (b.type === 'thanh' && !b.damaged) wall[tileIndex(b.x, b.z)] = 1;
   const dist = new Int32Array(GRID * GRID).fill(1 << 20);

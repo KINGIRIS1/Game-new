@@ -5,6 +5,7 @@
 // Gốc tọa độ là tâm chân móng, mặt trước hướng +z.
 
 import * as THREE from 'three';
+import { BUILDINGS, type BuildingType } from '../game/defs';
 import { bakeRuaVang } from './beasts';
 import { bakeIronHorse, bakeSonTinh } from './heroes';
 import { makeCrossbowStand, makeFighter } from './models';
@@ -12,6 +13,20 @@ import { C } from './palette';
 import { ShapeBuilder, saddleRoof, seeded } from './shapes';
 import { bakeSoldier } from './soldier';
 import { ToonModel, inkThin, outlineOf, toon } from './toon';
+
+/**
+ * Kinh đô lớn: móng mỗi công trình nhiều ô to hơn mô hình một ô mỗi chiều (mô hình vẽ theo móng cũ, `w − 1` ô).
+ * World phóng cả mô hình theo tỉ lệ móng rồi thu lại chừa một viền cỏ, nên hai nhà đứng sát nhau vẫn thoáng.
+ * Ruộng thì kín móng hơn (ruộng liền bờ trông đẹp), bến chừa ít hơn để cầu tàu chạm nước. Chòi canh, lầu nỏ một ô
+ * nhưng to hơn chút cho cân với nhà cửa.
+ */
+const FILL: Partial<Record<BuildingType, number>> = { ruong: 0.95, ruongNep: 0.95, ben: 0.92 };
+const SINGLE: Partial<Record<BuildingType, number>> = { choiCanh: 1.15, lauNo: 1.12 };
+export function footScale(type: BuildingType): number {
+  const w = BUILDINGS[type].w;
+  if (w <= 1) return SINGLE[type] ?? 1;
+  return (w / (w - 1)) * (FILL[type] ?? 0.88);
+}
 
 /** Cấp dùng để tính độ dày (bờ ruộng, đống đá...): cấp 6, 7, 8 giữ như cấp 5. */
 const grown = (level: number) => Math.min(level, 5);
@@ -1748,4 +1763,30 @@ export function makeBep(level: number): THREE.Group {
   const model = m.group();
   model.add(...g.children);
   return model;
+}
+
+/** Mô hình công trình loại `type` ở cấp `level`, theo móng cũ (chưa phóng theo móng, xem `footScale`). */
+export function buildingModel(type: BuildingType, level: number): THREE.Group {
+  if (type === 'dien') return makeDien(level);
+  if (type === 'ruong') return makeRuong(level);
+  if (type === 'ben') return makeBen(level);
+  if (type === 'nhaSan') return makeNhaSan(level);
+  if (type === 'baiDa') return makeBaiDa(level);
+  if (type === 'loRen') return makeLoRen(level);
+  if (type === 'kho') return makeKho(level);
+  if (type === 'doanhTrai') return makeDoanhTrai(level);
+  if (type === 'choiCanh') return makeChoiCanh(level);
+  if (type === 'bayChong') return makeBayChong();
+  if (type === 'denPhuDong') return makeDenPhuDong();
+  if (type === 'denTanVien') return makeDenTanVien();
+  if (type === 'denCoLoa') return makeDenCoLoa();
+  if (type === 'ruongNep') return makeRuongNep(level);
+  if (type === 'vuon') return makeVuon(level);
+  if (type === 'chuongLon') return makeChuongLon(level);
+  if (type === 'bep') return makeBep(level);
+  if (type === 'lauNo') return makeLauNo();
+  if (type === 'traiGiao') return makeTraiGiao();
+  if (type === 'traiCung') return makeTraiCung();
+  if (type === 'chuongVoi') return makeChuongVoi();
+  return new THREE.Group();
 }
