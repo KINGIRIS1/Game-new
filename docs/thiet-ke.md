@@ -41,6 +41,14 @@ Tài liệu này ghi lại các quyết định đã chốt với chủ dự án
     - phụ nữ mặc váy, đeo gùi;
     - Lạc hầu và lính gác đội mũ lông chim;
   - ruộng, bến, bãi đất đá, lò rèn hiện **đúng số người đang làm**, tối đa bằng số chỗ đứng.
+  - **nhân vật có khung xương dựng bằng code** (chủ dự án duyệt qua bản thử giáo binh, rồi yêu cầu làm cho mọi nhân vật): mỗi khối hình gắn vào một xương (hông, chân, ngực, đầu, tay, đồ cầm tay; thú có thêm cổ, vòi, tai, đuôi, bánh xe), cả người vẫn là một mesh mỗi chất liệu, viền mực chạy theo động tác. Nhân vật cử động tay chân thay vì nhún và ngả cả người:
+    - lính bước chân khi đi; mỗi loại vũ khí một động tác đánh: đâm giáo; giơ cao bổ xuống (qua, rìu, kiếm, chày); giương cung, buông dây, rút tên sau lưng, lắp tên; nâng nỏ ngắm, nỏ giật, hạ xuống lên dây. Người ngã ngửa, thú lăn nghiêng, ma trơi tắt dần;
+    - thú đi nhịp chéo; voi giơ vòi dậm chân khi Lạc tướng đâm giáo, hổ vồ, gà xòe cánh mổ, cá sấu đớp, thuồng luồng rụt cổ rồi lao đầu; bánh chiến xa có nan, lăn khi chạy;
+    - tướng giữ đủ động tác kỹ năng: Gióng quét tre một vòng, ngựa sắt phi, lửa phun ở mõm; Sơn Tinh giơ gậy quá đầu dộng xuống (dời non), thắng thì giơ cao gậy; Thủy Tinh giơ đinh ba lên trời (hô mưa); An Dương Vương chĩa nỏ thần lên trời; Lạc tướng nện dùi hai tay luân phiên;
+    - dân làm việc theo nghề (cúi bổ cuốc, bổ đá, quai búa, đi mang hàng, ngồi xếp bằng gói bánh), người lái đò chèo khi thuyền đi;
+    - quân ta buộc tóc bằng dải vải đỏ dưới mũ lông chim, không dùng vành đồng, để nhìn xa không lẫn với mũ trụ đồng của giặc Ân;
+    - mặt quân ta và dân có đốm sáng trong mắt và má hồng; giặc và tướng có mày xếch;
+    - lính, thú, dân dựng ít mặt hơn tướng cho nhẹ máy (số mặt nhân 0,7, 0,75, 0,6), nên kinh đô gần như không nặng thêm mà số lệnh vẽ giảm.
   - bảng màu: nền kem như giấy, đất vàng ô liu, nước xanh lam đục, điểm nhấn đồng, đỏ son và mực đen.
 - Phong cách này được chọn qua bản dùng thử so sánh 4 phương án: khối hộp ban đầu, voxel tinh xảo, đồ chơi bo tròn, và Nét Đông Sơn. Cả bộ dùng thử được cất ở branch `prototype/phong-cach-hinh-anh`.
 - Màn hình dọc, camera isometric, kéo và phóng to bằng chạm. Giao diện bằng HTML đặt đè lên cảnh 3D.

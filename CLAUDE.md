@@ -12,8 +12,17 @@ Game xây dựng chiến thuật chạy trên trình duyệt điện thoại (Ty
   - `campaign.test.ts`, `giong.test.ts`, `chuong2.test.ts` và `chuong3.test.ts` canh độ khó từng màn, từng mùa lũ, đêm yêu tinh và đợt quân Triệu. Màn chương 2, 3 đánh thử bằng `testkit.ts` theo chuẩn: người chơi thường (bấm chậm, không Đền) phải thắng.
 - `src/render/`: cảnh 3D phong cách "Nét Đông Sơn" (tô màu hoạt hình, viền mực, hoa văn trống đồng).
   - Công trình, mỗi loại một dáng và mỗi cấp một dáng (kể cả lầu nỏ và ba nơi ở của binh chủng): `buildings.ts`. Mái theo cấp (`roofFor`): tranh tới cấp 5, cấp 6 viền đỏ, cấp 7 ngói, cấp 8 ngói viền đồng vàng. Cấp 6–8 to 110–120% mà không tràn ô: thu tâm các phần (`setSpread`, `grownGroup`), nền thu vừa ô (`edgeOf`).
-  - Dân theo nghề: `people.ts`.
-  - Lính, thủy quái, yêu tinh, quân Triệu, Thánh Gióng và ngựa sắt, Sơn Tinh, Thủy Tinh, An Dương Vương, Rùa Vàng, thuyền, cây, lũy, đê, thành Cổ Loa, lều trại, núi: `models.ts`.
+  - Thuyền (có người lái đò), cây, lũy, đê, thành Cổ Loa, lều trại, núi, giá nỏ: `models.ts`; `makeFighter` ở đây trả bản tĩnh của mọi lính, thú, quái, tướng.
+  - Mọi nhân vật là nhân vật có khung xương dựng bằng code:
+    - `rig.ts`: mỗi khối gắn cứng vào một xương, cả người vẫn là một SkinnedMesh mỗi chất liệu, viền mực chạy theo xương; `local()` vẽ đồ trong khung riêng; `bakeRig` ra bản tĩnh theo tư thế cho công trình. Mỗi nhân vật có xương giữ `userData.pose(act)` (`Act`: đứng, đi, đánh, ngã), `battleView.ts` gọi mỗi khung.
+    - `body.ts`: thân người chibi dùng chung (khớp, thân, mặt, tóc, mũ lông chim) và tư thế chung. `weapons.ts`: vũ khí, đồ đeo dùng chung (giáo, qua, rìu, kiếm, cung, tên, bao tên, nỏ, khiên).
+    - `soldier.ts`: lính đi bộ (giáo binh, cung thủ, giặc Ân cầm qua, cầm cung, phó tướng, lính và lính nỏ Triệu), mỗi loại vũ khí một bộ động tác. `makeFighter` ở `models.ts` trả bản tĩnh của chúng.
+    - `beasts.ts`: thú có xương và người cưỡi (voi chiến 3 bậc giáp, chiến xa có bánh lăn, đại tướng Ân, kỵ binh và Triệu Đà, hổ tinh, gà trắng, Rùa Vàng). Người cưỡi dựng ở `soldier.ts` (`RiderKind`), ghép lên lưng thú bằng `RigBuilder.place` và `moveBones`. Thú ngã thì lăn nghiêng (`userData.fall`).
+    - `monsters.ts`: thủy quái và yêu tinh có xương (tôm binh, cá phun nước, cá sấu, thuồng luồng, quỷ núi, ma trơi).
+    - `people.ts`: dân theo nghề (mặc, dụng cụ, đồ mang và động tác làm việc theo nghề; ngồi gói bánh), người lái đò chèo thuyền. `world.ts` gọi `pose` mỗi khung (`animateWorker`, thuyền).
+    - Độ chi tiết (`RigBuilder(defs, detail)`, `ShapeBuilder.detail`): lính 0,7, thú 0,75, dân 0,6 cho nhẹ máy; tướng giữ đủ.
+    - `heroes.ts`: các tướng có xương (Gióng ba dáng và ngựa sắt có lửa phun ở mõm, Sơn Tinh, Thủy Tinh, An Dương Vương, Lạc tướng đánh trống). Kỹ năng riêng (quét tre, dời non, hô mưa, nỏ thần) qua `Act.skill`, thắng trận qua `Act.win`. Người đánh trống đặt góc dùi bằng `userData.beat`. Tượng ở đền là bản tĩnh (`bakeIronHorse`, `bakeSonTinh`).
+    - `node scripts/chup-nhan-vat.mjs <nhóm>` chụp từng nhân vật có xương ở mọi tư thế vào `chup/`; danh sách ở `scripts/nhanVat.ts`.
   - Đất bậc thang, nước lũ, mưa giông, đêm yêu tinh, cảnh Tết (cây nêu, dây cờ, mâm bánh) ở kinh đô: `world.ts`.
   - Bãi chiến phó bản là cảnh riêng: `battlefield.ts`. Lính trong trận vẽ bằng `battleView.ts`, dùng chung cho cả hai loại trận.
   - Chất liệu ở `toon.ts`, màu ở `palette.ts`.
@@ -24,6 +33,6 @@ Game xây dựng chiến thuật chạy trên trình duyệt điện thoại (Ty
   - `campaign.ts` dựng bản đồ phó bản và bảng xếp quân.
   - `giong.ts` dựng bảng Gióng và hộp thoại truyện. `binhKhi.ts` dựng mục rèn binh khí trong bảng lò rèn. `son.ts` dựng bảng Sơn Tinh và lễ vật. `coLoa.ts` dựng bảng An Dương Vương, thành Cổ Loa và nỏ thần. `tet.ts` dựng mục Hội Tết trong bảng bốn công trình làm bánh và bảng Tết. `mau.ts` dựng bảng mẫu kinh đô với bản đồ thu nhỏ.
 - `src/text/vi.ts`: mọi chữ hiển thị, kể cả lời các đoạn truyện.
-- Lệnh: `npm test`, `npm run build` (gồm typecheck), `npm run dev`. `node scripts/chup.mjs --giup` chụp thử ở khổ điện thoại, ảnh vào `chup/` (gitignore). `node scripts/kinh-te.mjs` in sổ thu chi của người chơi mô phỏng.
+- Lệnh: `npm test`, `npm run build` (gồm typecheck), `npm run dev`. `node scripts/chup.mjs --giup` chụp thử ở khổ điện thoại, ảnh vào `chup/` (gitignore). `node scripts/chup-nhan-vat.mjs <nhóm>` (linh, thu, quai, tuong, ky_nang, dan) chụp nhân vật ở mọi tư thế. `node scripts/kinh-te.mjs` in sổ thu chi của người chơi mô phỏng.
 - Đẩy lên `main` thì GitHub Actions chạy test, build rồi đăng lên GitHub Pages (`.github/workflows/deploy.yml`).
 - Game đã đăng ở https://kingiris1.github.io/Game-new/. Cuối mỗi câu trả lời cho chủ dự án, ghi link này.
