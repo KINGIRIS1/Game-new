@@ -275,3 +275,16 @@ The full license text:
    See the License for the specific language governing permissions and
    limitations under the License.
 ```
+
+## Donchitos/Claude-Code-Game-Studios
+
+The 3 skill folders below were written for this project. They adapt ideas from
+[Donchitos/Claude-Code-Game-Studios](https://github.com/Donchitos/Claude-Code-Game-Studios)
+at commit `05ad7c8` (release 1.2.0, MIT License, Copyright (c) 2026 Donchitos);
+no files or passages were copied:
+
+- `chup-kiem-tra`: the "run it and look" rule of `/dev-story`
+  (`.claude/docs/run-and-observe.md`), with `scripts/chup.mjs`.
+- `ra-kinh-te`: the faucet/sink analysis of the `economy-designer` agent, with
+  `scripts/kinh-te.mjs` and `src/game/kinhTe.ts`.
+- `doi-chieu-thiet-ke`: the `/consistency-check` and `/content-audit` skills.
