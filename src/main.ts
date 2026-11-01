@@ -507,6 +507,19 @@ function start(): void {
         hud.showAdv(state);
         return;
 
+      case 'openCaoLo':
+        if (mode.kind !== 'view') exitMode();
+        select(null);
+        play('tap');
+        hud.showCaoLo(state);
+        return;
+
+      case 'openEnding':
+        if (hud.storyOpen || hud.modalOpen) return;
+        play('tap');
+        hud.showStory('hetTruyen', true);
+        return;
+
       case 'forgeNoThan': {
         if (!inChapter3(state)) return fail('canChuong3');
         const r = forgeNoThan(state);

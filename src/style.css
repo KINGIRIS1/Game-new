@@ -1174,6 +1174,34 @@ textarea {
   color: var(--red-dark);
 }
 
+/* Màn cầm cự: thanh "Vua tới biển" chạy đầy theo thời gian giữ được. */
+.hold-bar {
+  position: relative;
+  height: 14px;
+  border-radius: 7px;
+  background: var(--paper-2);
+  border: 1.5px solid var(--bronze);
+  overflow: hidden;
+}
+
+.hold-bar[hidden] {
+  display: none;
+}
+
+.hold-bar i {
+  position: absolute;
+  inset: 0 auto 0 0;
+  background: linear-gradient(90deg, #4f8a93, #8fc3c9);
+}
+
+.hold-bar em {
+  position: absolute;
+  top: -3px;
+  font-style: normal;
+  font-size: 15px;
+  transform: translateX(-50%);
+}
+
 #hud.in-field .fieldbar {
   position: absolute;
   left: 0;
@@ -1332,8 +1360,26 @@ textarea {
   border-color: #2f6f8f;
 }
 
-.speaker.miNuong .avatar {
+.speaker.miNuong .avatar,
+.speaker.myChau .avatar {
   border-color: #c06a8a;
+}
+
+/* Màn hình Hết truyện: bốn dòng tóm tắt bốn chương rồi câu nhắc chuyện về sau. */
+.ending-list {
+  margin: 4px 0 10px;
+  padding-left: 22px;
+  line-height: 1.45;
+}
+
+.ending-list li {
+  margin: 6px 0;
+}
+
+.story .ending-next {
+  font-style: italic;
+  text-align: center;
+  color: var(--bronze-dark);
 }
 
 .story .line {

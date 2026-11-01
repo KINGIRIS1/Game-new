@@ -5,8 +5,9 @@
 
 import type { HeroSetup } from '../game/battle';
 import { CH2_LAST, canStartStage, chapterStages, stageDef, stageOpen, stageReward } from '../game/campaign';
+import { CH4_LAST } from '../game/caoLo';
 import { CH3_LAST } from '../game/coLoa';
-import { BOSSES, ROWS, UNITS, UNIT_TYPES, type Chapter, type EnemyType, type Row, type UnitType } from '../game/defs';
+import { BOSSES, ROWS, UNITS, UNIT_TYPES, stageEnemies, type Chapter, type EnemyType, type Row, type UnitType } from '../game/defs';
 import { armySpace, fieldCap, fitArmy } from '../game/doanhTrai';
 import type { GameState, StageResult } from '../game/game';
 import { giftOfStage, heroFor, restingHero } from '../game/son';
@@ -109,11 +110,15 @@ const SCENERY: Record<Chapter, string> = {
     <text class="label" x="96" y="66">Cửa sông</text>`,
 };
 
-export const hasBoss = (n: number) => BOSSES.some((k) => (stageDef(n)?.enemies[k] ?? 0) > 0);
+const allEnemies = (n: number) => {
+  const def = stageDef(n);
+  return def ? stageEnemies(def) : {};
+};
+export const hasBoss = (n: number) => BOSSES.some((k) => (allEnemies(n)[k] ?? 0) > 0);
 
 /** Biểu tượng trùm trên bản đồ: chính tên trùm của màn ấy. */
 function bossIcon(n: number): string {
-  const boss = BOSSES.find((k) => (stageDef(n)?.enemies[k] ?? 0) > 0);
+  const boss = BOSSES.find((k) => (allEnemies(n)[k] ?? 0) > 0);
   if (!boss) return '';
   return stageDef(n)!.chapter === 1 ? '👹' : vi.enemyIcons[boss];
 }
@@ -139,7 +144,7 @@ export function mapHtml(state: GameState, selected: number | null, chapter: Chap
       ${gift && !state.son.gifts[gift] ? `<text class="boss" y="${-r - 1.5}">${vi.gifts[gift].icon}</text>` : ''}
     </g>`;
   }).join('');
-  const title = chapter === 3 ? vi.ui.campaignTitle3 : chapter === 2 ? vi.ui.campaignTitle2 : vi.ui.campaignTitle;
+  const title = [vi.ui.campaignTitle, vi.ui.campaignTitle, vi.ui.campaignTitle2, vi.ui.campaignTitle3, vi.ui.campaignTitle4][chapter];
   return `<svg class="map" viewBox="0 0 100 160" preserveAspectRatio="xMidYMid meet" role="img" aria-label="${title}">
     ${SCENERY[chapter]}
     <path class="road" d="${road}"/>
@@ -150,7 +155,9 @@ export function mapHtml(state: GameState, selected: number | null, chapter: Chap
 }
 
 function enemyList(n: number): string {
-  const enemies = stageDef(n)?.enemies ?? {};
+  const def = stageDef(n);
+  // Màn cầm cự: kể cả các đợt kéo tới sau.
+  const enemies = def ? stageEnemies(def) : {};
   return (Object.keys(enemies) as EnemyType[])
     .filter((k) => (enemies[k] ?? 0) > 0)
     .map((k) => `<span title="${vi.enemies[k]}">${vi.enemyIcons[k]} ${enemies[k]}</span>`)
@@ -168,7 +175,8 @@ export function stageBlocker(state: GameState, n: number): string {
 /** Dòng báo tướng nào cùng ra trận. */
 export function heroNote(hero: HeroSetup | null): string {
   if (!hero) return '';
-  if (hero.kind === 'anDuong') return `<p class="hero-note">🏹 ${vi.ui.advJoins}</p>`;
+  if (hero.kind === 'caoLo') return `<p class="hero-note">🎯 ${vi.ui.caoLoJoins}</p>`;
+  if (hero.kind === 'anDuong') return `<p class="hero-note">🏹 ${hero.glow ? vi.ui.advHienLinhJoins : vi.ui.advJoins}</p>`;
   if (hero.kind === 'sonTinh') return `<p class="hero-note">⛰️ ${hero.glow ? vi.ui.sonHienLinhJoins : vi.ui.sonJoins}</p>`;
   return `<p class="hero-note">🐎 ${hero.glow ? vi.ui.giongHienLinhJoins : vi.ui.giongJoins}</p>`;
 }
@@ -180,11 +188,12 @@ const templeDamaged = (state: GameState) => state.buildings.some((b) => b.type =
  * Lời báo đỏ trước khi xuất quân: tướng lẽ ra ra trận đang kiệt sức (ai ra thay, hay không có tướng),
  * Đền Phù Đổng đang hư.
  */
-export function battleWarnings(state: GameState, chapter: Chapter): string {
+export function battleWarnings(state: GameState, stage: number): string {
   const out: string[] = [];
-  const rest = restingHero(state, chapter);
+  const chapter = stageDef(stage)?.chapter ?? 1;
+  const rest = restingHero(state, chapter, stage);
   if (rest) {
-    const standIn = heroFor(state, chapter);
+    const standIn = heroFor(state, chapter, stage);
     const tail = standIn ? vi.ui.heroStandIn(vi.ui.heroNames[standIn.kind]) : vi.ui.noHeroWarn;
     out.push(`💤 ${vi.ui.heroRestWarn(vi.ui.heroNames[rest.kind], rest.secs)} ${tail}`);
   }
@@ -203,8 +212,8 @@ export function stageHtml(state: GameState, n: number): string {
     <div class="stat"><span>${vi.ui.enemyArmy}</span><b>${enemyList(n)}</b></div>
     <div class="stat"><span>${first ? vi.ui.firstReward : vi.ui.replayReward}</span>${costHtml(null, stageReward(state, n))}</div>
     ${gift && !state.son.gifts[gift] ? `<div class="stat"><span>${vi.ui.giftWon}</span><b>${vi.gifts[gift].icon} ${esc(vi.gifts[gift].name)}</b></div>` : ''}
-    ${heroNote(heroFor(state, stageDef(n)!.chapter))}
-    ${battleWarnings(state, stageDef(n)!.chapter)}
+    ${heroNote(heroFor(state, stageDef(n)!.chapter, n))}
+    ${battleWarnings(state, n)}
     <div class="actions">
       ${why ? `<span class="why">${esc(why)}</span>` : ''}
       <button class="btn" data-act="prepareStage" ${why ? 'disabled' : ''}>${vi.ui.prepare}</button>
@@ -213,7 +222,7 @@ export function stageHtml(state: GameState, n: number): string {
 }
 
 export function armyHtml(state: GameState, pick: ArmyPick, stage: number): string {
-  const hero = heroFor(state, stageDef(stage)?.chapter ?? 1);
+  const hero = heroFor(state, stageDef(stage)?.chapter ?? 1, stage);
   const owned = UNIT_TYPES.filter((k) => state.troops[k] > 0);
   const total = UNIT_TYPES.reduce((s, k) => s + pick.army[k], 0);
   const cap = fieldCap(state);
@@ -236,7 +245,7 @@ export function armyHtml(state: GameState, pick: ArmyPick, stage: number): strin
     <h3>${vi.ui.armyTitle}</h3>
     <p class="muted">${vi.ui.armyHint}</p>
     ${heroNote(hero)}
-    ${battleWarnings(state, stageDef(stage)?.chapter ?? 1)}
+    ${battleWarnings(state, stage)}
     ${owned.length ? `<div class="stat"><span>${vi.ui.fieldSpace(space, cap)}</span></div><div class="units">${rows}</div>` : `<p class="why">${vi.ui.noTroops}</p>`}
     <div class="actions">
       <button class="btn ghost" data-act="backToStage">${vi.ui.back}</button>
@@ -268,7 +277,8 @@ export function stageResultHtml(r: StageResult): string {
   const lost = UNIT_TYPES.filter((k) => r.lost[k] > 0).map((k) => `${vi.units[k].icon} ${r.lost[k]}`).join(' ') || vi.ui.raidNone;
   const won1st = r.outcome === 'win' && r.first;
   let title: string;
-  if (won1st && r.stage === CH3_LAST) title = `🐢 ${vi.ui.advWinTitle}`;
+  if (won1st && r.stage === CH4_LAST) title = `🌊 ${vi.ui.seaWinTitle}`;
+  else if (won1st && r.stage === CH3_LAST) title = `🐢 ${vi.ui.advWinTitle}`;
   else if (won1st && r.stage === CH2_LAST) title = `⛰️ ${vi.ui.sonWinTitle}`;
   else if (r.outcome === 'win') title = `🥁 ${vi.ui.stageWonTitle(r.stage)}`;
   else if (r.outcome === 'retreat') title = `🏳️ ${vi.ui.stageRetreatTitle}`;

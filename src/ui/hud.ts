@@ -1,7 +1,7 @@
 // Giao diện HTML đặt đè lên cảnh 3D: thanh tài nguyên, nhiệm vụ, bảng xây dựng, bảng công trình, cài đặt,
 // bản đồ phó bản và các nút trong trận.
 
-import { enemiesLeft, alliesLeft, skillReady, type Battle } from '../game/battle';
+import { enemiesLeft, alliesLeft, holdProgress, skillReady, wavesArrived, type Battle } from '../game/battle';
 import { advJoined, advLook, advResting, inChapter3, ruaVangCame, wallRings } from '../game/coLoa';
 import {
   BUILDINGS,
@@ -88,7 +88,7 @@ import {
   type StoryId,
 } from '../game/game';
 import { chapterStages } from '../game/campaign';
-import { caoLoResting } from '../game/caoLo';
+import { caoLoJoined, caoLoResting } from '../game/caoLo';
 import { inChapter4, mergeCost, mergeable } from '../game/chuong4';
 import { giongAppeared, giongLook, giongReady, giongResting } from '../game/giong';
 import { khoanhQuota } from '../game/khoanh';
@@ -99,9 +99,9 @@ import type { Resolution } from '../render/world';
 import { formatDuration, vi } from '../text/vi';
 import { armyHtml, defaultPick, mapHtml, nextRow, stageHtml, stageResultHtml, stepPick, type ArmyPick } from './campaign';
 import { armsHtml } from './binhKhi';
-import { advHtml } from './coLoa';
+import { advHtml, caoLoHtml } from './coLoa';
 import { costHtml, esc, fmt } from './format';
-import { giongHtml, storyHtml } from './giong';
+import { endingHtml, giongHtml, storyHtml } from './giong';
 import { sonHtml } from './son';
 import { blessingHtml, tetHtml } from './tet';
 import { khoanhHtml } from './khoanh';
@@ -159,9 +159,9 @@ function unlockWhy(state: GameState, type: BuildingType): string {
   return vi.reasons[UNLOCK_REASON[u]];
 }
 
-/** Chương đang chơi: 1, 2 hay 3. */
+/** Chương đang chơi: 1, 2, 3 hay 4. */
 function chapterNow(state: GameState): Chapter {
-  return inChapter3(state) ? 3 : inChapter2(state) ? 2 : 1;
+  return inChapter4(state) ? 4 : inChapter3(state) ? 3 : inChapter2(state) ? 2 : 1;
 }
 
 export type HudAction =
@@ -174,6 +174,9 @@ export type HudAction =
   | { kind: 'openSon' }
   | { kind: 'offerGift'; gift: GiftId }
   | { kind: 'openAdv' }
+  | { kind: 'openCaoLo' }
+  /** Mở lại màn hình Hết truyện từ bảng Lạc hầu. */
+  | { kind: 'openEnding' }
   | { kind: 'forgeNoThan' }
   | { kind: 'forgeArms'; unit: UnitType }
   | { kind: 'openTet' }
@@ -238,6 +241,7 @@ type Sheet =
   | { kind: 'giong' }
   | { kind: 'son' }
   | { kind: 'adv' }
+  | { kind: 'caoLo' }
   | { kind: 'tet' }
   | { kind: 'mau' }
   | { kind: 'khoanh'; id: number }
@@ -303,7 +307,7 @@ export class Hud {
   private camp: CampaignView | null = null;
   private campHtml = '';
   /** Đoạn truyện đang kể và thẻ đang xem. */
-  private story: { id: StoryId; step: number } | null = null;
+  private story: { id: StoryId; step: number; replay?: boolean } | null = null;
   private skillKey = '';
 
   constructor(
@@ -317,7 +321,7 @@ export class Hud {
         <header class="topbar"></header>
         <div class="banners"></div>
         <section class="quest"></section>
-        <div class="field-top"><b></b><span></span></div>
+        <div class="field-top"><b></b><span></span><div class="hold-bar" hidden><i></i><em>🐎</em></div></div>
       </div>
       <div class="hint" hidden></div>
       <footer class="bottombar"></footer>
@@ -488,6 +492,13 @@ export class Hud {
     if (aLook) {
       const mark = advJoined(state) ? (advResting(state) ? '💤' : '⚔️') : `${Math.min(wallRings(state), RINGS_NEEDED)}/${RINGS_NEEDED}`;
       adv = `<button class="chip dan" data-act="openAdv" title="${vi.ui.adv}">${vi.advLooks[aLook].icon} <b>${mark}</b></button>`;
+    } else if (state.adv.bien && advResting(state)) {
+      // Vua đã xuống biển thì không đứng ở Điện, nhưng vẫn báo khi đang kiệt sức (vẫn ra trận ở màn 17–25).
+      adv = `<button class="chip dan" data-act="openAdv" title="${vi.ui.adv}">🏹 <b>💤</b></button>`;
+    }
+    // Cao Lỗ cầm quân từ màn 25.
+    if (caoLoJoined(state)) {
+      adv += `<button class="chip dan" data-act="openCaoLo" title="${vi.ui.caoLo}">🎯 <b>${caoLoResting(state) ? '💤' : '⚔️'}</b></button>`;
     }
     // Tết đang mở: chip 🎋 đếm ngược, chạm vào để mở bảng Tết.
     let tet = '';
@@ -575,7 +586,9 @@ export class Hud {
     const done = questDone(state);
     let body: string;
     if (!quest || !progress) {
-      body = `<p>${esc(vi.quests.allDone)}</p>`;
+      // Hết truyện rồi thì mở lại được màn hình Hết truyện.
+      const ending = state.story.seen.includes('hetTruyen') ? `<div class="quest-foot"><button class="btn small ghost" data-act="openEnding">${vi.ui.endingOpen}</button></div>` : '';
+      body = `<p>${esc(vi.quests.allDone)}</p>${ending}`;
     } else {
       body = `<p>${esc(vi.quests[quest.id])}</p>
         <div class="quest-foot">
@@ -671,6 +684,11 @@ export class Hud {
     this.refreshSheet(state);
   }
 
+  showCaoLo(state: GameState): void {
+    this.sheet = { kind: 'caoLo' };
+    this.refreshSheet(state);
+  }
+
   /** Mẫu vừa bấm Áp lần đầu (chờ bấm lần nữa cho chắc). */
   mauArmed: MauId | null = null;
   /** Nhóm đang xem trong bảng Xây dựng; nhớ cho lần mở sau. */
@@ -742,6 +760,9 @@ export class Hud {
     } else if (this.sheet.kind === 'adv') {
       title = `🏹 ${vi.ui.adv}`;
       body = advHtml(state);
+    } else if (this.sheet.kind === 'caoLo') {
+      title = `🎯 ${vi.ui.caoLo}`;
+      body = caoLoHtml(state);
     } else if (this.sheet.kind === 'mau') {
       title = `🗺️ ${vi.ui.mauTitle}`;
       body = mauHtml(state, this.mauArmed);
@@ -918,6 +939,9 @@ export class Hud {
     if ((b.type === 'dien' || b.type === 'thanh') && advLook(state)) {
       rows.push(`<div class="stat"><span>${vi.ui.citadelTitle}</span><span>${vi.ui.ringsNow(wallRings(state))}</span></div>`);
       if (b.type === 'dien') rows.push(`<div class="actions"><button class="btn bronze" data-act="openAdv">${vi.advLooks[advLook(state)!].icon} ${vi.ui.adv}</button></div>`);
+    }
+    if (b.type === 'dien' && caoLoJoined(state)) {
+      rows.push(`<div class="actions"><button class="btn bronze" data-act="openCaoLo">🎯 ${vi.ui.caoLo}</button></div>`);
     }
 
     const actions: string[] = [];
@@ -1216,7 +1240,7 @@ export class Hud {
     const state = this.getState();
     const unit = el.dataset.unit as UnitType;
     if (act === 'campChapter') {
-      camp.chapter = id === 3 ? 3 : id === 2 ? 2 : 1;
+      camp.chapter = id === 4 ? 4 : id === 3 ? 3 : id === 2 ? 2 : 1;
       camp.stage = this.nextStage(state, camp.chapter);
       camp.step = 'stage';
     } else if (act === 'pickStage') {
@@ -1239,18 +1263,18 @@ export class Hud {
     const camp = this.camp;
     if (!camp) return;
     for (const k of UNIT_TYPES) camp.pick.army[k] = Math.min(camp.pick.army[k], state.troops[k]);
-    const hint = camp.chapter === 3 ? vi.ui.campaignHint3 : camp.chapter === 2 ? vi.ui.campaignHint2 : vi.ui.campaignHint;
+    const hint = [vi.ui.campaignHint, vi.ui.campaignHint, vi.ui.campaignHint2, vi.ui.campaignHint3, vi.ui.campaignHint4][camp.chapter];
     let panel = `<p class="muted">${hint}</p>`;
     if (camp.stage) panel = camp.step === 'army' ? armyHtml(state, camp.pick, camp.stage) : stageHtml(state, camp.stage);
     const now = chapterNow(state);
     const tabs =
       now > 1
-        ? `<div class="camp-tabs">${([1, 2, 3] as const)
+        ? `<div class="camp-tabs">${([1, 2, 3, 4] as const)
             .filter((c) => c <= now)
             .map((c) => `<button class="btn small ${c === camp.chapter ? 'bronze' : 'ghost'}" data-act="campChapter" data-id="${c}">${vi.ui.chapterTab(c)}</button>`)
             .join('')}</div>`
         : '';
-    const title = camp.chapter === 3 ? vi.ui.campaignTitle3 : camp.chapter === 2 ? vi.ui.campaignTitle2 : vi.ui.campaignTitle;
+    const title = [vi.ui.campaignTitle, vi.ui.campaignTitle, vi.ui.campaignTitle2, vi.ui.campaignTitle3, vi.ui.campaignTitle4][camp.chapter];
     const html = `<div class="camp-head"><h2>⚔️ ${title}</h2>${tabs}
         <button class="close" data-act="closeCampaign" aria-label="${vi.ui.close}">✕</button></div>
       <div class="camp-main"><div class="camp-map">${mapHtml(state, camp.stage, camp.chapter)}</div><div class="camp-panel">${panel}</div></div>`;
@@ -1265,9 +1289,20 @@ export class Hud {
     const b = state.campaign.battle;
     this.root.classList.toggle('in-field', !!b);
     if (!b) return;
-    const secs = Math.max(0, Math.ceil(FIELD.maxS - b.t));
+    const hold = b.holdS !== undefined;
+    const secs = Math.max(0, Math.ceil((hold ? b.holdS! : FIELD.maxS) - b.t));
     this.fieldTop.querySelector('b')!.textContent = `${vi.ui.stageN(b.wave)} · ${vi.stages[b.wave - 1].name}`;
-    this.fieldTop.querySelector('span')!.textContent = vi.ui.fieldBanner(enemiesLeft(b), alliesLeft(b), secs);
+    this.fieldTop.querySelector('span')!.textContent = hold
+      ? `${vi.ui.holdBanner(enemiesLeft(b), alliesLeft(b), secs)} · ${vi.ui.holdWave(wavesArrived(b), b.waveCount ?? 1)}`
+      : vi.ui.fieldBanner(enemiesLeft(b), alliesLeft(b), secs);
+    // Màn cầm cự: thanh "Vua tới biển", ngựa vua chạy theo thanh.
+    const bar = this.fieldTop.querySelector<HTMLElement>('.hold-bar')!;
+    bar.hidden = !hold;
+    if (hold) {
+      const k = `${Math.round(holdProgress(b) * 1000) / 10}%`;
+      bar.querySelector<HTMLElement>('i')!.style.width = k;
+      bar.querySelector<HTMLElement>('em')!.style.left = k;
+    }
     const box = this.fieldBar.querySelector<HTMLElement>('.skills')!;
     const key = `${b.id}:${b.skills.join(',')}`;
     if (key !== this.skillKey) {
@@ -1278,7 +1313,7 @@ export class Hud {
       const k = btn.dataset.skill as SkillId;
       btn.disabled = !skillReady(b, k);
       btn.textContent = skillLabel(b, k);
-      btn.classList.toggle('active', (k === 'trongTran' && b.rally > 0) || (k === 'ruaVang' && b.shield > 0));
+      btn.classList.toggle('active', (k === 'trongTran' && b.rally > 0) || (k === 'ruaVang' && b.shield > 0) || (k === 'lenhBan' && (b.lenh ?? 0) > 0));
     }
     this.fieldBar.querySelector<HTMLButtonElement>('[data-act="retreat"]')!.disabled = !!b.outcome;
   }
@@ -1294,11 +1329,15 @@ export class Hud {
     return !!this.root.querySelector('.modal-back');
   }
 
-  showStory(id: StoryId): void {
-    this.story = { id, step: 0 };
+  /**
+   * Kể đoạn truyện `id`, thẻ này sang thẻ khác. Hết truyện thì là một màn hình riêng, mọi dòng cùng hiện, nút
+   * Chơi tiếp. `replay`: mở lại từ bảng Lạc hầu (không báo xong truyện nữa).
+   */
+  showStory(id: StoryId, replay = false): void {
+    this.story = { id, step: 0, replay };
     const back = document.createElement('div');
-    back.className = 'modal-back story-back';
-    back.innerHTML = storyHtml(id, 0);
+    back.className = `modal-back story-back ${id === 'hetTruyen' ? 'ending-back' : ''}`;
+    back.innerHTML = id === 'hetTruyen' ? endingHtml() : storyHtml(id, 0);
     this.root.appendChild(back);
   }
 
@@ -1306,6 +1345,12 @@ export class Hud {
     const story = this.story;
     const back = this.root.querySelector('.modal-back.story-back');
     if (!story || !back) return;
+    if (story.id === 'hetTruyen' || story.replay) {
+      back.remove();
+      this.story = null;
+      if (!story.replay) this.onAction({ kind: 'storyDone', id: story.id });
+      return;
+    }
     if (story.step < vi.stories[story.id].lines.length - 1) {
       story.step += 1;
       back.innerHTML = storyHtml(story.id, story.step);
