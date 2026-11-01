@@ -243,11 +243,12 @@ Chủ dự án muốn có nhiều quân dự trữ: dựng thêm doanh trại, m
   | Lạc tướng | từ đầu |
   | Thánh Gióng | thành tráng sĩ (đủ 5 mốc gạo, 3 món đồ sắt); về trời rồi vẫn chỉ huy, hiển linh |
   | Sơn Tinh | rước Mị Nương (đủ 5 lễ vật); về núi rồi vẫn chỉ huy |
-  | An Dương Vương | có nỏ thần |
+  | An Dương Vương | có nỏ thần; xuống biển rồi vẫn chỉ huy, hiển linh |
+  | Cao Lỗ | thắng màn 25 (chương 4) |
 
-  - Có bao nhiêu tướng thì dựng được bấy nhiêu doanh trại, tối đa 4 (cần Điện cấp 2 như trước). Hết tướng rảnh thì bảng Xây dựng báo "Mỗi doanh trại cần một tướng chỉ huy".
+  - Có bao nhiêu tướng thì dựng được bấy nhiêu doanh trại, tối đa 5 (cần Điện cấp 2 như trước). Cao Lỗ là tướng thứ năm, chỉ huy được doanh trại thứ năm theo đúng quy tắc mỗi tướng một trại (tự chọn khi làm chương 4 phần 3, chủ dự án có thể đổi). Hết tướng rảnh thì bảng Xây dựng báo "Mỗi doanh trại cần một tướng chỉ huy".
   - Doanh trại mới tự nhận tướng rảnh theo thứ tự trên. Trong bảng doanh trại, nút **Giao trại này** đổi tướng chỉ huy; tướng ấy đang chỉ huy trại khác thì hai tướng đổi chỗ cho nhau, nên không trại nào mất tướng. Đang có giặc thì không đổi được.
-  - Tổng chỗ quân là chỗ của mọi doanh trại có tướng: bốn trại cấp 5 là 152 chỗ. Luyện quân như cũ, ở nơi ở riêng của binh chủng; chỉ cần một trại giáo, một trại cung, một chuồng voi cho cả kinh đô.
+  - Tổng chỗ quân là chỗ của mọi doanh trại có tướng: bốn trại cấp 5 là 152 chỗ, năm trại là 190 chỗ. Luyện quân như cũ, ở nơi ở riêng của binh chủng; chỉ cần một trại giáo, một trại cung, một chuồng voi cho cả kinh đô.
   - Tướng đứng ở sân doanh trại mình chỉ huy (Gióng tráng sĩ, Sơn Tinh đã rước dâu). An Dương Vương vẫn đứng trước Điện, dù chỉ huy trại nào.
   - Khi giữ kinh đô, tướng của trận (như cũ: An Dương Vương, Sơn Tinh hay Gióng) ra từ trại mình chỉ huy; không chỉ huy trại nào thì ra từ trại của Lạc tướng. Mỗi trận vẫn một tướng.
 - **Phó bản**: mỗi trận mang tối đa số chỗ theo cấp Điện, bằng sức chứa doanh trại cao nhất dựng được ở cấp ấy, không quá 38:
@@ -270,7 +271,7 @@ Chủ dự án muốn có nhiều quân dự trữ: dựng thêm doanh trại, m
   - bấm − + ở một trại là **tự bố trí**: bố trí tự động lúc ấy được giữ nguyên làm gốc rồi đổi. Nút **Bố trí tự động** quay về tự động;
   - lính bố trí chết thì quân dự trữ bù vào ngay; hết dự trữ thì trại dựng trước được lính trước, dòng binh chủng ghi "thiếu n";
   - lính bố trí ở trại nào thì ra trận từ trại ấy, nên đặt doanh trại gần chỗ giặc hay lũ tới và dồn lính về đó.
-- **Mẫu kinh đô**: mẫu nào cũng chừa mỗi tướng thường có ở cấp Điện ấy một doanh trại: 1 ở Điện 2, 2 ở Điện 3–5, 3 ở Điện 6, 4 ở Điện 7–8 (mẫu giãn theo đất tự xếp các trại thêm như doanh trại đầu). Áp mẫu chỉ dựng thêm doanh trại khi có tướng rảnh; doanh trại giữ tướng và bố trí khi dời.
+- **Mẫu kinh đô**: mẫu nào cũng chừa mỗi tướng thường có ở cấp Điện ấy một doanh trại: 1 ở Điện 2, 2 ở Điện 3–5, 3 ở Điện 6, 4 ở Điện 7, 5 ở Điện 8 (mẫu giãn theo đất tự xếp các trại thêm như doanh trại đầu). Áp mẫu chỉ dựng thêm doanh trại khi có tướng rảnh; doanh trại giữ tướng và bố trí khi dời.
 - **Bản lưu** không đổi phiên bản: doanh trại có thêm hai trường tùy chọn (tướng chỉ huy, bố trí). Bản lưu cũ chưa có thì tướng tự nhận, bố trí tự động.
 
 ### Phó bản (đã làm ở lát cắt 3a)
@@ -890,6 +891,7 @@ Chủ dự án đã chọn qua bốn câu hỏi: Thủy Tinh có cả hai phép 
   | Kinh đô Phong Châu | từ đầu | bến và ruộng dọc hai bờ sông; trục từ Điện về góc rừng có đền Phù Đổng, doanh trại (giữa Điện và góc rừng), trại giáo, hai bên doanh trại là trại cung, chuồng voi, lò rèn; nhà sàn, kho, bếp quanh Điện; bãi đá trên đồi sát lũy; lũy tre liền một hàng ngay trong bìa rừng cả mặt bắc và mặt tây, bẫy chông ở hàng ngoài lũy, chòi canh ngay trong lũy |
   | Đê bao chống lũ | vào chương 2 | đê liền dải dọc hai bờ sông, cách sông 3 ô, chạy suốt tới bìa đất; bến ngoài đê; chòi canh sát đê trong; doanh trại ở góc đê gần ngã ba sông (kịp ra chặn thủy quái từ cả hai bờ), ba nơi ở quanh đó; đền trên trục về góc rừng; ruộng, ruộng nếp dọc đê; bẫy chông ở bìa rừng |
   | Thành Cổ Loa | vào chương 3 | ba vòng thành kín quanh Điện; vòng trong chỉ có Điện và sân; nhà sàn, kho, bếp giữa vòng trong và vòng giữa; lò rèn, vườn, chuồng lợn, đền Cổ Loa giữa vòng giữa và vòng ngoài; ngoài vòng ngoài một dãy 4×4 (doanh trại ở góc rừng, đền Phù Đổng, đền Tản Viên, ruộng, ruộng nếp) và một dãy 3×3 (ba nơi ở, bãi đá); đê bao ngoài cùng như mẫu Đê bao |
+  | Cổ Loa giữ sông | vào chương 4 | như mẫu Thành Cổ Loa; thêm 16 ụ nỏ trên vòng ngoài chia đều bốn mặt, ba chỗ dành cho lầu nỏ (hai ở phía sông, một ở góc bắc tây), trại nỏ sát doanh trại, Đền Cuông ngoài vòng ngoài (xem mục PR 3 chương 4) |
 
 - **Mẫu giãn theo đất** (chủ dự án yêu cầu sau khi có kinh đô lớn): mẫu không vẽ cứng một lần mà dựng lại cho từng cấp Điện, vừa trọn vùng đất đã khai phá ở cấp ấy.
 - **Mẫu và khoảnh tự chọn** (chủ dự án chọn khi gộp khoảnh tự chọn): đất mở theo khoảnh người chơi chọn nên có hình bất kỳ, còn mẫu vẫn dựng trên **khung vuông** neo góc sông theo cấp Điện (cạnh 20, 25, 25, 30, 35, 40, 40, 45; `frameStart`, `inFrame` ở `mau.ts`). Lúc áp mẫu, chỗ nào của mẫu rơi vào khoảnh rừng chưa phát thì bỏ qua (công trình ấy tìm chỗ trống gần nhất như công trình không có chỗ trong mẫu); bản đồ thu nhỏ tô mờ những chỗ ấy và bảng mẫu ghi số khoảnh mẫu còn trong rừng. Khoảnh đã phát ngoài khung thì mẫu không dùng tới.
@@ -1060,7 +1062,6 @@ Giá cấp 8 khoảng gấp 2 cấp 7, sản lượng tăng khoảng 30% (cấp 
 
 | Công trình | Cấp 8 |
 |---|---|
-| Điện | thềm đá ba bậc, trên nóc có trống đồng lớn giữa hai tượng chim Lạc dang cánh |
 | Điện | thềm đá ba bậc rộng hơn; trống đồng lớn trên nóc giữa đôi chim đồng; chim Lạc dang cánh trên đỉnh hai lầu trống; nền đá thứ hai viền đồng |
 | Ruộng lúa | đập đá xếp cao chắn ngang bờ trái, cống tre lớn đổ nước xuống ao nước trong giữa ruộng; đàn cò trắng lội ao, một con đậu bờ |
 | Bến chợ thuyền | kho hàng mái cong ở đầu cầu tàu, thêm thuyền buôn thứ hai neo giữa sông; chim đồng hai đầu mái cổng bến |
@@ -1095,7 +1096,7 @@ Giá cấp 8 khoảng gấp 2 cấp 7, sản lượng tăng khoảng 30% (cấp 
 
 - Móng 3×3 như ba nơi ở kia (kinh đô lớn), dựng một lần, không lên cấp; vẽ theo móng cũ phóng theo móng mới, chưa vẽ lại trên móng như trại giáo, trại cung, chuồng voi. Mở khi vào chương 4, cần doanh trại cấp 5. Giá 600 gạo, 500 vỏ ốc, 500 đất đá, 120 sắt; máu 500.
 - Dáng: lán mái ngói đỏ cam như ngói thành Cổ Loa, giá treo nỏ dưới lán, một cây nỏ lớn lẫy đồng trên giá gỗ chĩa ra trước, bia gỗ vuông vẽ vòng đỏ trắng, một lính nỏ quỳ một gối nhắm bia, cờ đỏ góc sau.
-- Ba mẫu kinh đô hiện có chưa có chỗ cho trại nỏ (vẽ cho chương 1–3); mẫu "Cổ Loa giữ sông" ở PR 3 sẽ có. Áp mẫu cũ thì trại nỏ đứng yên, vướng thì dời ra chỗ trống gần nhất.
+- Ba mẫu kinh đô chương 1–3 không có chỗ cho trại nỏ; mẫu "Cổ Loa giữ sông" (PR 3) có. Áp mẫu cũ thì trại nỏ đứng yên, vướng thì dời ra chỗ trống gần nhất.
 
 **Ụ nỏ** (mở khi vào chương 4)
 
@@ -1135,47 +1136,51 @@ Giá cấp 8 khoảng gấp 2 cấp 7, sản lượng tăng khoảng 30% (cấp 
 - **Tướng giữ kinh đô**: thủy binh và quân Triệu có **An Dương Vương** tới khi xuống biển, sau đó là **Cao Lỗ**. Đang kiệt sức thì người kế tiếp ra thay: Cao Lỗ, rồi Sơn Tinh hiển linh, rồi Gióng. Mùa lũ vẫn có Sơn Tinh.
 - **Từ đoạn 3, An Dương Vương không còn kỹ năng Nỏ thần khi giữ kinh đô.** Ô kỹ năng ghi "lẫy đã bị tráo". Ngài vẫn bắn nỏ thường, vẫn có Rùa Vàng. Ở phó bản, đánh lại màn 17–25 thì ngài vẫn đủ Nỏ thần, giống Gióng đã về trời vẫn đánh màn 5–8.
 - Độ khó đo bằng test: đợt thủy binh đầu bị quân mẫu, tướng, 5 chòi canh và 8 ụ nỏ diệt hết, ở cả phía nam lẫn phía đông. Đo thêm: đợt đầu không ụ nỏ hay không tướng vẫn diệt hết; đợt 5 diệt hết nhưng mất chừng 11 lính; đợt 7 thì giặc phá được công trình và cướp của. Máu giặc giữ ×2,0 như đề xuất.
-- Đoạn 3 chưa có (PR 3). Cờ "lẫy đã bị tráo" (`adv.layTrao`) đã có trong bản lưu và luật: bật lên thì lịch thành ba đợt thay phiên và An Dương Vương mất Nỏ thần khi giữ kinh đô; PR 3 bật cờ này khi kể đoạn 3.
+- Cờ "lẫy đã bị tráo" (`adv.layTrao`): bật lên thì lịch thành ba đợt thay phiên và An Dương Vương mất Nỏ thần khi giữ kinh đô. PR 3 bật cờ này khi thắng màn 28 lần đầu, cũng là lúc kể đoạn 3.
 - Bản lưu lên **phiên bản 13** (sau kinh đô lớn v11 và khoảnh tự chọn v12): thêm số lính nỏ, bậc rèn, hàng đứng và chỗ bố trí giữ kinh đô của lính nỏ, các ụ nỏ (ghi trên đoạn thành), số đợt thủy binh đã đánh và đã giữ được, cờ lẫy đã bị tráo; đoạn "Cầu hôn" ghi vào danh sách truyện đã kể như các đoạn khác. Người đang ở chương 4 thì thủy binh tới sau 3 phút kể từ lúc nạp.
 - Nhiệm vụ: nối thêm nhiệm vụ 42–44. Xong nhiệm vụ 44 thì bảng Lạc hầu báo kinh đô đã có lầu nỏ, ụ nỏ và lính nỏ, chờ phần sau.
 - Test (`chuong4.test.ts`): luyện và rèn lính nỏ; lính nỏ gấp đôi sát thương lên quân nặng và trùm; dựng ụ trên thành, ụ hư theo thành; thuyền cập bờ phía nam và phía đông; lịch thay phiên; mất Nỏ thần ở kinh đô sau đoạn 3 nhưng vẫn còn ở màn 17–25; nâng bản lưu 12 lên 13.
 
-### PR 3: Cao Lỗ, màn 25–32, truyện, Đền Cuông, mẫu kinh đô, Hết truyện
+### PR 3: Cao Lỗ, màn 25–32, truyện, Đền Cuông, mẫu kinh đô, Hết truyện (chủ dự án đã duyệt, đã làm)
+
+Số dưới đây là số cuối cùng. Luật ở `src/game/caoLo.ts` (mốc màn, Cao Lỗ), `son.ts` (chọn tướng), `battle.ts` (kỹ năng, màn cầm cự), `campaign.ts`; test ở `caoLo.test.ts`.
 
 **Cao Lỗ** (ra trận khi thắng màn 25)
 
-- Tướng bắn xa thứ hai: 600 máu (ngoài bãi bền gấp 1,6), 18 sát thương, tầm 4,4 ô, nghỉ 1 giây. Mũi tên găm thêm nửa sát thương lên giặc quanh mục tiêu trong 1,3 ô như đòn các tướng khác. Ngoài bãi đứng giữa, lùi sau hàng đầu 1,8 ô như An Dương Vương.
+- Tướng bắn xa thứ hai: 700 máu (ngoài bãi bền gấp 1,6), 20 sát thương, tầm 4,4 ô, nghỉ 1 giây. Mũi tên găm thêm nửa sát thương lên giặc quanh mục tiêu trong 1,3 ô như đòn các tướng khác. Ngoài bãi đứng giữa, lùi sau hàng đầu 1,8 ô như An Dương Vương.
 - Hết máu thì kiệt sức, nghỉ 2 phút chơi.
 - **Kỹ năng**:
-  - **Nỏ liên châu** 🎯: một loạt tên rơi xuống chỗ giặc đứng đông nhất, mọi giặc trong 2,5 ô mất 75 máu. Hồi 16 giây. Theo truyền thuyết, nỏ của Cao Lỗ một lần bắn ra nhiều mũi;
+  - **Nỏ liên châu** 🎯: một loạt tên rơi xuống chỗ giặc đứng đông nhất, mọi giặc trong 3,5 ô mất 120 máu. Hồi 12 giây. Theo truyền thuyết, nỏ của Cao Lỗ một lần bắn ra nhiều mũi;
   - **Lệnh bắn** 📯: có từ khi thắng màn 30. Trong 6 giây, mọi lính nỏ bắn nhanh gấp đôi; khi giữ kinh đô thì cả ụ nỏ và lầu nỏ cũng vậy. Hồi 22 giây;
   - ngoài bãi, sát thương kỹ năng nhân 1,6 như các tướng khác.
-- Cân bằng: mạnh xấp xỉ An Dương Vương, đo bằng test.
+- Cân bằng: mạnh xấp xỉ An Dương Vương, đo bằng test. Với số ban đầu (600 máu, 18 sát thương; Nỏ liên châu 75 máu, 2,5 ô, hồi 16 giây) Cao Lỗ yếu hơn hẳn: cùng màn 24, người chơi thường có An Dương Vương chịu được máu giặc ×2,0, có Cao Lỗ chỉ ×1,2, kém cả Sơn Tinh hiển linh (×1,5). Nên tăng như trên (giống lần tăng Nỏ thần ở chương 3): màn 24 Cao Lỗ chịu được ×2,0, màn 26 ×2,2 (An Dương Vương ×2,3).
+- Giữ kinh đô (thủy binh, quân Triệu ở chương 4): An Dương Vương tới khi xuống biển, rồi Cao Lỗ. Cao Lỗ chỉ huy được một doanh trại như các tướng khác (xem mục Nhiều doanh trại).
 - Dáng: tóc búi, râu đen, giáp da khảm đồng, đeo bao tên đồng, cầm nỏ lớn có hộp tên trên thân. Đứng trước Điện, cạnh An Dương Vương; vua xuống biển rồi thì Cao Lỗ đứng chỗ ấy.
 
 **Phó bản chương 4: đường ra biển**
 
 Bản đồ phó bản có thêm thẻ Chương 4, mở khi đã vào chương 4. Bản đồ vẽ sông từ Cổ Loa ra cửa biển, ba vòng thành Cổ Loa, dải lông ngỗng trắng chạy về phương Nam và núi Mộ Dạ bên bờ biển.
 
-| Màn | Tên | Quân giặc | Máu (ước) | Tướng | Thưởng lần đầu |
+| Màn | Tên | Quân giặc | Máu | Tướng | Thưởng lần đầu |
 |---|---|---|---|---|---|
-| 25 | Bến sông Cổ Loa | 13 lính thủy, 8 cung thuyền, 4 lính rìu | ×2,0 | An Dương Vương | 5500 gạo, 4500 vỏ ốc, 4000 đất đá, 1000 sắt |
-| 26 | Bãi ven sông | 14 lính thủy, 8 cung thuyền, 4 lính rìu | ×2,0 | cần Cao Lỗ | 6000, 5000, 4400, 1100 |
+| 25 | Bến sông Cổ Loa | 13 lính thủy, 8 cung thuyền, 4 lính rìu | ×2,3 | An Dương Vương | 5500 gạo, 4500 vỏ ốc, 4000 đất đá, 1000 sắt |
+| 26 | Bãi ven sông | 14 lính thủy, 8 cung thuyền, 4 lính rìu | ×2,2 | cần Cao Lỗ | 6000, 5000, 4400, 1100 |
 | 27 | Làng chài | 14 lính thủy, 9 cung thuyền, 5 lính rìu | ×2,0 | cần Cao Lỗ | 6500, 5400, 4800, 1200 |
 | 28 | Cửa sông, trùm **tướng thủy binh Triệu** | 13 lính thủy, 8 cung thuyền, 4 lính rìu, tướng thủy binh | ×2,0 | cần Cao Lỗ | 7200, 6000, 5200, 1300 |
 | 29 | Đồng trước Cổ Loa | 7 lính khiên, 7 lính thủy, 5 nỏ thủ Triệu, 4 cung thuyền, 3 kỵ binh, 2 lính rìu | ×2,1 | cần Cao Lỗ | 7600, 6300, 5500, 1350 |
 | 30 | Rừng biên Cổ Loa | 7 lính khiên, 7 lính thủy, 5 nỏ thủ Triệu, 5 cung thuyền, 2 kỵ binh, 2 lính rìu | ×2,1 | cần Cao Lỗ, mở Lệnh bắn | 8000, 6600, 5800, 1400 |
 | 31 | Cổng Cổ Loa: giữ cổng cho vua rút | 8 lính khiên, 7 lính thủy, 5 nỏ thủ Triệu, 4 cung thuyền, 2 kỵ binh, 2 lính rìu | ×2,2 | cần Cao Lỗ | 8500, 7000, 6200, 1500 |
-| 32 | Đường ra biển Mộ Dạ: hộ giá | 3 đợt (xem dưới), Triệu Đà ở đợt cuối | ×2,0 | cần Cao Lỗ | 9000, 7500, 6500, 1600 |
+| 32 | Đường ra biển Mộ Dạ: hộ giá | 3 đợt (xem dưới), Triệu Đà ở đợt cuối | ×3,0 | cần Cao Lỗ | 9000, 7500, 6500, 1600 |
 
 - Mọi màn cần Điện cấp 5 như chương 2, 3. Mỗi màn tối đa 28 giặc, cộng quân mẫu và tướng không quá 60 người trên bãi. Đánh lại được 30%.
-- Máu giặc ghi trên là mức khởi đầu; số cuối cùng đo bằng test theo Chuẩn cân bằng phó bản: lấy mức cao nhất mà người chơi thường vẫn thắng.
+- Máu giặc đo bằng test theo Chuẩn cân bằng phó bản (mức khởi đầu ước ×2,0–2,2): lấy mức cao nhất mà người chơi thường thắng cả 10 hạt giống thử, còn không tướng hay nửa quân (6 giáo, 5 cung, 1 voi, 2 lính nỏ) chơi giỏi vẫn thua. Màn 32 cầm cự nên giặc khỏe hơn hẳn (×3,0): chỉ cần giữ đủ 90 giây. Tướng thủy binh (màn 28) và Triệu Đà (màn 32) không bấm kỹ năng thì thua.
 - **Quân mẫu chương 4**: 11 giáo, 10 cung, 3 voi, 4 lính nỏ, đúng 38 chỗ.
 - Cao Lỗ đang kiệt sức thì màn 26–32 khóa, có dòng báo như với các tướng khác.
 - **Màn 32 là cầm cự**:
-  - giặc tới thành ba đợt, lúc 0, 30 và 60 giây: 10 tên, 10 tên, rồi 8 tên cùng Triệu Đà, trộn quân Triệu trên bộ và thủy binh;
+  - giặc tới thành ba đợt, lúc 0, 30 và 60 giây: 10 tên (3 lính khiên, 3 lính thủy, 2 nỏ thủ, 2 cung thuyền), 10 tên (3 lính khiên, 2 lính thủy, 2 nỏ thủ, 2 kỵ binh, 1 lính rìu), rồi 8 tên (2 lính khiên, 2 lính thủy, 1 nỏ thủ, 1 cung thuyền, 1 kỵ binh, 1 lính rìu) cùng Triệu Đà. Đợt sau kéo vào từ cuối bãi phía giặc (`StageDef.waves`, `holdS` ở `defs.ts`);
   - thanh **"Vua tới biển"** chạy đầy trong 90 giây. Đầy thanh mà quân ta (kể cả Cao Lỗ) chưa chết hết thì **thắng**, không cần giết hết giặc hay hạ Triệu Đà;
-  - quân ta chết hết trước khi đầy thanh thì thua;
+  - quân ta chết hết trước khi đầy thanh thì thua; diệt hết cả ba đợt trước khi đầy thanh thì cũng thắng;
+  - thanh trên bãi chiến ghi còn bao nhiêu giây vua tới biển và đợt giặc thứ mấy; ngựa nhỏ chạy theo thanh;
   - ngựa của vua, chở An Dương Vương và Mỵ Châu ngồi sau, chạy dọc mép bãi về phía biển, xa dần theo thanh. Ngựa chỉ là cảnh, giặc không nhắm vào ngựa.
 - **Bãi chiến mới**:
   - **Cửa sông** (màn 28): sông rộng chảy ngang sau lưng giặc, thuyền đen buồm đỏ neo ven bờ, bãi lau sậy;
@@ -1187,22 +1192,23 @@ Bản đồ phó bản có thêm thẻ Chương 4, mở khi đã vào chương 4
 **Đền Cuông**
 
 - Mở khi thắng màn 32. Dựng một lần, 4×4, giá 4000 gạo, 4000 vỏ ốc, 4000 đất đá, 1100 sắt. Ngoài đời, Đền Cuông ở Diễn Châu, Nghệ An, thờ An Dương Vương, nơi truyền thuyết kể vua xuống biển.
-- Đền còn nguyên thì **mỗi đợt thủy binh bớt 20% số thuyền** (làm tròn xuống, còn ít nhất 1 thuyền), tức bớt chừng ấy lính.
+- Đền còn nguyên thì **mỗi đợt thủy binh bớt 20% số thuyền**: còn lại `max(1, ⌊số thuyền × 0,8⌋)` thuyền, tức bớt chừng ấy lính (đợt 1: 4 thuyền 19 lính còn 3 thuyền 18 lính).
 - Sức chịu nước lũ như các đền khác.
 - Dáng: đền nền đá mái cong dưới chân một mỏm núi, sân có tượng Rùa Vàng quay mặt ra phía sông, bên cạnh là một giếng nhỏ thành đá.
 
-**Mẫu kinh đô "Cổ Loa giữ sông"** (mở khi vào chương 4, vẽ cho Điện 8)
+**Mẫu kinh đô "Cổ Loa giữ sông"** (mở khi vào chương 4, vẽ cho Điện 8; giãn theo đất như ba mẫu kia)
 
 - Giữ ba vòng thành và đê bao của mẫu Cổ Loa.
-- 16 ụ nỏ trên vòng thành ngoài, chia đều các phía bắc, tây và phía sông.
-- 3 lầu nỏ và 1 chòi canh: hai lầu nỏ ở phía sông, một ở góc bắc tây.
+- 16 ụ nỏ trên vòng thành ngoài, chia đều bốn mặt: bắc, tây và hai mặt phía sông (mỗi mặt 4). Áp mẫu thì dựng ụ trên các đoạn thành ấy, trong giới hạn ụ theo cấp Điện, mỗi ụ trả giá dựng như dựng tay.
+- 7 chỗ chòi canh ngay trong đê: 3 chỗ dành cho lầu nỏ (hai ở phía sông, một ở góc bắc tây), 4 chỗ ở mặt bắc và mặt tây. Áp mẫu thì lầu nỏ đang có vào chỗ dành cho lầu nỏ trước; chòi canh để dành chỗ ấy cho lầu nỏ ghép về sau. 3 lầu nỏ và 1 chòi canh là vừa đủ số chòi canh tối đa.
 - Đền Cuông ở chỗ 4×4 còn trống phía bắc, ngoài vòng thành ngoài.
-- Có chỗ cho trại nỏ (3×3), sát doanh trại.
+- Có chỗ cho trại nỏ (3×3), sát doanh trại; 5 doanh trại ở Điện 8 (mỗi tướng một trại, kể cả Cao Lỗ).
 - Test như các mẫu khác: không chồng nhau, không lấn sông, đủ chỗ cho số tối đa, giữ được lũ bậc 3, đủ 3 vòng thành.
 
-- Bản lưu lên **phiên bản 12**: thêm Cao Lỗ (nghỉ tới lúc nào, đã có Lệnh bắn chưa), An Dương Vương đã xuống biển chưa, đã xem Hết truyện chưa.
-- Nhiệm vụ: nối thêm nhiệm vụ 45–49.
-- Test: độ khó màn 25–32 theo chuẩn (`chuong4.test.ts`); màn 32 thắng khi đầy thanh, thua khi hết quân; thứ tự năm đoạn truyện; Đền Cuông bớt thuyền; mẫu kinh đô; nâng bản lưu 11 lên 12.
+- Bản lưu lên **phiên bản 14**: thêm Cao Lỗ (nghỉ tới lúc nào, đã có Lệnh bắn chưa), An Dương Vương đã xuống biển chưa (`adv.bien`). Đã xem Hết truyện chưa ghi như một đoạn truyện (`hetTruyen` trong danh sách truyện đã kể).
+- **Màn hình Hết truyện** là một hộp riêng: bốn dòng tóm tắt bốn chương, câu nhắc chuyện Hai Bà Trưng, nút Chơi tiếp. Hiện ngay sau đoạn "Ngọc trai, giếng nước". Nhận xong mọi nhiệm vụ thì bảng Lạc hầu có nút Xem lại Hết truyện.
+- Nhiệm vụ: nối thêm nhiệm vụ 45–49. Xong nhiệm vụ 49 thì bảng Lạc hầu báo truyện đã hết, kinh đô vẫn giữ (có nút Xem lại Hết truyện).
+- Test (`caoLo.test.ts`, mẫu ở `sapxep.test.ts`): độ khó màn 25–32 theo chuẩn; màn 32 thắng khi đầy thanh, thua khi hết quân; Nỏ liên châu, Lệnh bắn; chọn tướng phó bản và giữ kinh đô; thứ tự các đoạn truyện và Hết truyện; vua xuống biển, mở Đền Cuông; Đền Cuông bớt thuyền; mẫu kinh đô; nâng bản lưu 13 lên 14.
 
 ### PR 4: thử thách phó bản và huân công
 
@@ -1236,8 +1242,8 @@ Bản đồ phó bản có thêm thẻ Chương 4, mở khi đã vào chương 4
 - Chuẩn cân bằng của màn thường và của thử thách đều tính không có huân công.
 - Dáng: chip 🎖 trên bản đồ phó bản ghi số huân công đang có. Thẻ màn có thử thách đã thắng thì có ngôi sao đồng.
 
-- Bản lưu lên **phiên bản 13**: thêm thử thách đã thắng, huân công đang có, bậc huân công từng nhánh.
-- Test: mở thử thách sau khi thắng màn; luật từng kiểu; huân công chỉ cho một lần; mua bậc; tăng sức vào trận; mọi thử thách đạt chuẩn; nâng bản lưu 12 lên 13.
+- Bản lưu lên phiên bản kế tiếp (15 nếu làm ngay sau PR 3): thêm thử thách đã thắng, huân công đang có, bậc huân công từng nhánh.
+- Test: mở thử thách sau khi thắng màn; luật từng kiểu; huân công chỉ cho một lần; mua bậc; tăng sức vào trận; mọi thử thách đạt chuẩn; nâng bản lưu cũ lên.
 
 ### Nhiệm vụ Lạc hầu chương 4
 
@@ -1263,7 +1269,7 @@ Thưởng khoảng gấp rưỡi nhiệm vụ chương 3. Nhận xong nhiệm v�
 1. **Duyệt tài liệu này** (mọi con số và dáng ở trên). Chủ dự án đã duyệt.
 2. **PR 1** (đã làm): Điện cấp 8, công trình cấp 8, lầu nỏ. Bản lưu v10.
 3. **PR 2** (đã làm, trên bản đồ mới): lính nỏ và trại nỏ, ụ nỏ, thủy binh Triệu đánh kinh đô, đoạn truyện "Cầu hôn". Bản lưu v13.
-4. **PR 3**: Cao Lỗ, màn 25–32, bốn đoạn truyện còn lại, Đền Cuông, mẫu kinh đô chương 4 (vẽ trên bản đồ mới), màn hình Hết truyện. Bản lưu v14.
+4. **PR 3** (đã làm): Cao Lỗ, màn 25–32, bốn đoạn truyện còn lại, Đền Cuông, mẫu kinh đô chương 4 (vẽ trên bản đồ mới), màn hình Hết truyện. Bản lưu v14.
 5. **PR 4**: thử thách phó bản và huân công. Bản lưu v15.
 
 PR 2 làm sau kế hoạch Kinh đô lớn PR 1–2 (lưới 55×55 bản lưu v11, khoảnh tự chọn v12), vì thủy binh Triệu cập bờ cần bản đồ mới. Kinh đô lớn PR 4 (cây, đá mọc) chưa làm, sẽ lấy số bản lưu kế tiếp khi làm.
@@ -1334,9 +1340,9 @@ Chủ dự án thấy bản đồ kinh đô nhỏ, công trình sát nhau, bố 
    - **Bảng mẫu kinh đô**: bản đồ thu nhỏ vẽ lên canvas một lần cho mỗi mẫu và cấp Điện.
 2. **PR 2: khoảnh tự chọn** (đã làm, bản lưu v12): xem mục Khoảnh đất. Bảng Khoảnh rừng, cọc mốc, phát rừng, người chơi mô phỏng phát rừng khi hết chỗ thoáng, giá 2–3% giá nâng Điện kế tiếp.
 3. **PR 3: trang trí ô trống** (chỉ hình vẽ, tự mọc): khóm cỏ, hoa dại, đá nhỏ theo hạt giống từng ô, trên ô trống đã mở không có công trình, đường hay đồ trang trí; vẽ theo lô. Không tự vẽ lối đất: người chơi tự trải đường (xem mục Đường đi và đồ trang trí).
-4. **PR 4: cây, đá mọc trên ô trống** (bản lưu v13): không mọc trên ô có đường hay đồ trang trí; khoảnh vừa phát có sẵn 1–2 cái.
+4. **PR 4: cây, đá mọc trên ô trống** (lấy số bản lưu kế tiếp khi làm): không mọc trên ô có đường hay đồ trang trí; khoảnh vừa phát có sẵn 1–2 cái.
 
-Sau đó mới làm tiếp chương 4, PR 2–4.
+Chương 4 PR 2, PR 3 đã làm trước PR 3–4 của kế hoạch này (chỉ cần bản đồ mới của PR 1–2).
 
 ## Vẽ lại công trình trên móng (chủ dự án đã duyệt, đang làm)
 
@@ -1415,10 +1421,10 @@ Kinh đô lớn lúc đầu chỉ phóng mô hình cũ theo móng mới (`footSc
 4. **Chương 2** (đã làm): độ cao ô đất, đắp đất, đắp nền, đê và kè đá, mùa lũ kèm thủy quái, lễ vật thách cưới, Sơn Tinh ra trận với Bốc đồi và Dời non, phó bản màn 9–16 với thuồng luồng và Thủy Tinh, cốt truyện, kết chương, Đền Tản Viên.
 5. **Chương 3** (đã làm): thành Cổ Loa và số vòng thành, đêm yêu tinh phá thành, quân Triệu Đà xen với mùa lũ, An Dương Vương cầm nỏ ra trận với Nỏ thần và Rùa Vàng, phó bản màn 17–24 với gà trắng nghìn năm và Triệu Đà, cốt truyện, kết chương, Đền Cổ Loa.
 6. **Sửa sau chơi thử chương 3** (đã làm): chuẩn cân bằng mới cho màn 9–24, báo tướng kiệt sức và Đền Phù Đổng hư trước khi xuất quân.
-7. **Cấp 6–7 và rèn binh khí** (đã làm, xem mục Kế hoạch): Điện và 7 loại công trình lên cấp 6, 7, đất 25×25 rồi 26×26, rèn binh khí hai bậc ở lò rèn, bản lưu phiên bản 8.
+7. **Cấp 6–7 và rèn binh khí** (đã làm, xem mục Kế hoạch): Điện và 7 loại công trình lên cấp 6, 7, đất 25×25 rồi 26×26 (kinh đô lớn: 40×40), rèn binh khí hai bậc ở lò rèn, bản lưu phiên bản 8.
 8. **Hội Tết bánh chưng bánh giầy** (đã làm, xem mục PR 3): truyện Lang Liêu, ruộng nếp, vườn đậu lá dong, chuồng lợn, bếp gói bánh (3 cấp mỗi loại), Tết 20 phút một lần, phúc lành Đất và Trời, cảnh Tết trước Điện, bản lưu phiên bản 9.
 9. **Sửa sau chơi thử Hội Tết**: Thủy Tinh có hai phép, Dời non vẽ rõ hơn, xoay cảnh 4 hướng, dời công trình, mẫu kinh đô mỗi chương.
-10. **Chương 4: Mỵ Châu, Trọng Thủy** (đã duyệt, đang làm; PR 1, PR 2 đã làm; xem Kế hoạch chương 4): Điện và 7 loại công trình lên cấp 8, lầu nỏ, ụ nỏ trên thành, lính nỏ, thủy binh Triệu đi thuyền, Cao Lỗ, phó bản màn 25–32, Đền Cuông, màn hình Hết truyện, thử thách phó bản và huân công.
+10. **Chương 4: Mỵ Châu, Trọng Thủy** (đã duyệt, đang làm; PR 1, PR 2, PR 3 đã làm, còn PR 4; xem Kế hoạch chương 4): Điện và 7 loại công trình lên cấp 8, lầu nỏ, ụ nỏ trên thành, lính nỏ, thủy binh Triệu đi thuyền, Cao Lỗ, phó bản màn 25–32, Đền Cuông, màn hình Hết truyện, thử thách phó bản và huân công.
 11. **Doanh trại và nơi ở riêng** (đã làm, xem mục cùng tên): doanh trại là nơi tướng ở và điều binh; trại giáo, trại cung, chuồng voi để luyện từng binh chủng; tướng ra trận từ doanh trại.
     **Nhiều doanh trại** (đã làm, xem mục Nhiều doanh trại, tướng chỉ huy, bố trí giữ kinh đô): mỗi tướng chỉ huy một doanh trại, tới 152 chỗ quân; phó bản mang tối đa 38 chỗ; người chơi tự bố trí lính giữ kinh đô ở từng trại.
 12. **Kinh đô lớn, công trình to, mở đất bằng khoảnh** (đã duyệt, đang làm; xem mục Kế hoạch cùng tên): công trình to hơn một ô mỗi chiều, lưới 55×55 (PR 1 đã làm), khoảnh 5×5 tự chọn (PR 2 đã làm), viền cỏ, trang trí ô trống, cây đá mọc. Làm trước chương 4 PR 2–4.
