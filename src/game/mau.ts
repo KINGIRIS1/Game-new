@@ -21,7 +21,31 @@ import {
   type GameState,
   type Result,
 } from './game';
-import { DIEN_HOME, GRID, RIVER_START, areaStart, inGrid, isUnlocked, touchesRiver } from './map';
+import { V11_AREA, isOpen, khoanhOf } from './khoanh';
+import { DIEN_HOME, GRID, KHOANH, RIVER_START, inGrid, touchesRiver } from './map';
+
+/**
+ * Khung dựng mẫu ở cấp Điện `level`: hình vuông neo góc sông, cạnh như vùng đất của cấp ấy trước khi có khoảnh tự
+ * chọn (`V11_AREA`). Mẫu giãn theo khung này; lúc áp mẫu, chỗ nào rơi vào khoảnh rừng chưa phát thì bỏ qua.
+ * Trả về ô nhỏ nhất (cả x và z) của khung.
+ */
+export function frameStart(level: number): number {
+  return RIVER_START - V11_AREA[Math.min(Math.max(level, 1), V11_AREA.length) - 1];
+}
+
+/** Các khoảnh phủ khung dựng mẫu ở cấp Điện `level` (phát đủ chừng này thì mọi chỗ của mẫu đều trên đất đã mở). */
+export function frameKhoanh(level: number): number[] {
+  const lo = frameStart(level);
+  const out: number[] = [];
+  for (let z = lo; z < RIVER_START; z += KHOANH) for (let x = lo; x < RIVER_START; x += KHOANH) out.push(khoanhOf(x, z));
+  return out;
+}
+
+/** Ô (x, z) nằm trong khung dựng mẫu ở cấp Điện `level`. */
+export function inFrame(x: number, z: number, level: number): boolean {
+  const lo = frameStart(level);
+  return x >= lo && z >= lo && x < RIVER_START && z < RIVER_START;
+}
 import { inChapter2 } from './son';
 import { footprintTop, levelFootprint } from './terrain';
 
@@ -99,8 +123,8 @@ class Draft {
   rings: Ring[] = [];
 
   constructor(readonly level: number) {
-    this.lo = areaStart(level);
-    for (let z = 0; z < GRID; z++) for (let x = 0; x < GRID; x++) if (!isUnlocked(x, z, level)) this.cell[z * GRID + x] = USED;
+    this.lo = frameStart(level);
+    for (let z = 0; z < GRID; z++) for (let x = 0; x < GRID; x++) if (!inFrame(x, z, level)) this.cell[z * GRID + x] = USED;
   }
 
   at(x: number, z: number): number {
@@ -590,7 +614,8 @@ export function planMau(state: GameState, id: MauId): MauPlan {
   const oz = dien.z - DIEN_HOME;
   const fits = (type: BuildingType, x: number, z: number) => {
     const def = BUILDINGS[type];
-    for (let dx = 0; dx < def.w; dx++) for (let dz = 0; dz < def.d; dz++) if (!inGrid(x + dx, z + dz) || !isUnlocked(x + dx, z + dz, level)) return false;
+    // Chỉ đặt trên đất đã mở: chỗ của mẫu rơi vào khoảnh rừng chưa phát thì bỏ qua.
+    for (let dx = 0; dx < def.w; dx++) for (let dz = 0; dz < def.d; dz++) if (!isOpen(state, x + dx, z + dz)) return false;
     return !def.nearRiver || touchesRiver(x, z, def.w, def.d);
   };
   const used = new Uint8Array(GRID * GRID);
@@ -808,7 +833,8 @@ export function seatInMau(state: GameState, id: MauId, list: Building[], rings =
   const oz = dien.z - DIEN_HOME;
   const fits = (type: BuildingType, x: number, z: number) => {
     const def = BUILDINGS[type];
-    for (let dx = 0; dx < def.w; dx++) for (let dz = 0; dz < def.d; dz++) if (!inGrid(x + dx, z + dz) || !isUnlocked(x + dx, z + dz, level)) return false;
+    // Chỉ đặt trên đất đã mở: chỗ của mẫu rơi vào khoảnh rừng chưa phát thì bỏ qua.
+    for (let dx = 0; dx < def.w; dx++) for (let dz = 0; dz < def.d; dz++) if (!isOpen(state, x + dx, z + dz)) return false;
     return !def.nearRiver || touchesRiver(x, z, def.w, def.d);
   };
   const used = new Uint8Array(GRID * GRID);

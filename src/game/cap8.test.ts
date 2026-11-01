@@ -20,8 +20,8 @@ import {
   type Building,
   type GameState,
 } from './game';
-import { AREA_SIZE, areaStart } from './map';
-import { edge } from './testmap';
+import { khoanhQuota } from './khoanh';
+import { edge, setDien } from './testmap';
 import { mauSlots, planMau } from './mau';
 import { SAVE_VERSION, deserialize, serialize } from './save';
 
@@ -29,7 +29,7 @@ import { SAVE_VERSION, deserialize, serialize } from './save';
 function capital8(): GameState {
   const s = createInitialState(0);
   s.questIndex = CH4_QUEST_START;
-  s.buildings[0].level = 8;
+  setDien(s, 8);
   s.resources = { gao: 60000, voOc: 60000, datDa: 60000, sat: 60000 };
   s.dan = 40;
   return s;
@@ -46,7 +46,7 @@ function tower(s: GameState, x: number, z: number, level = 8): Building {
 describe('Điện và công trình cấp 8', () => {
   it('Điện lên cấp 8 khi đã vào chương 4, rồi hết cấp', () => {
     const s = createInitialState(0);
-    s.buildings[0].level = 7;
+    setDien(s, 7);
     s.resources = { gao: 60000, voOc: 60000, datDa: 60000, sat: 60000 };
     s.questIndex = CH3_QUEST_START;
     expect(inChapter4(s)).toBe(false);
@@ -57,9 +57,9 @@ describe('Điện và công trình cấp 8', () => {
     expect(canUpgrade(s, 1)).toEqual({ ok: false, reason: 'capToiDa' });
   });
 
-  it('Điện cấp 8 mở thêm đất tới 45×45, kho rộng hơn', () => {
-    expect(AREA_SIZE[7]).toBe(45);
-    expect(areaStart(8)).toBeLessThan(areaStart(7));
+  it('Điện cấp 8 được phát tới 80 khoảnh (chừng 45×45 ô), kho rộng hơn', () => {
+    expect(khoanhQuota(8)).toBe(80);
+    expect(khoanhQuota(8)).toBeGreaterThan(khoanhQuota(7));
     const s = capital8();
     expect(storageCap(s)).toBe(STORAGE_CAP[7]);
     expect(STORAGE_CAP[7]).toBe(32000);
@@ -71,12 +71,12 @@ describe('Điện và công trình cấp 8', () => {
     // Lầu nỏ chỉ có từ Điện 8 (ghép từ chòi canh), còn lại giữ như Điện 7.
     for (const def of Object.values(BUILDINGS)) if (def.type !== 'lauNo') expect(def.limit[7], def.type).toBe(def.limit[6]);
     const s = capital8();
-    s.buildings[0].level = 7;
+    setDien(s, 7);
     const ruong = place(s, 'ruong', edge(7, 1), edge(7, 1));
     if (!ruong.ok) throw new Error(ruong.reason);
     ruong.value.level = 7;
     expect(canUpgrade(s, ruong.value.id)).toEqual({ ok: false, reason: 'chuaDuCapDien' });
-    s.buildings[0].level = 8;
+    setDien(s, 8);
     expect(upgrade(s, ruong.value.id).ok).toBe(true);
     expect(ruong.value.level).toBe(8);
     // Số liệu đã duyệt.
@@ -95,14 +95,14 @@ describe('Điện và công trình cấp 8', () => {
     expect(QUESTS[CH4_QUEST_START].id).toBe('dien8');
     expect(QUESTS[CH4_QUEST_START + 1].id).toBe('lauNo');
     const s = capital8();
-    s.buildings[0].level = 7;
+    setDien(s, 7);
     expect(currentQuest(s)?.id).toBe('dien8');
     expect(claimQuest(s).ok).toBe(false);
     upgrade(s, 1);
     expect(claimQuest(s).ok).toBe(true);
     expect(currentQuest(s)?.id).toBe('lauNo');
-    const a = tower(s, 10, 10);
-    const b = tower(s, 12, 10);
+    const a = tower(s, edge(7, 1), edge(7, 1));
+    const b = tower(s, edge(7, 3), edge(7, 1));
     expect(mergeTowers(s, a.id, b.id).ok).toBe(true);
     expect(claimQuest(s).ok).toBe(true);
   });
@@ -122,9 +122,9 @@ describe('lầu nỏ', () => {
     s.raid.phase = 'warning';
     expect(canMergeTowers(s, a.id, b.id)).toEqual({ ok: false, reason: 'dangCoGiac' });
     s.raid.phase = 'idle';
-    s.buildings[0].level = 7;
+    setDien(s, 7);
     expect(canMergeTowers(s, a.id, b.id)).toEqual({ ok: false, reason: 'chuaDuCapDien' });
-    s.buildings[0].level = 8;
+    setDien(s, 8);
     const before = { ...s.resources };
     const r = mergeTowers(s, a.id, b.id);
     expect(r.ok).toBe(true);

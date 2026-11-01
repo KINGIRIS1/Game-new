@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { DIEN, DIEN_END, edge } from './testmap';
+import { DIEN, DIEN_END, edge, setDien } from './testmap';
 import { alliesLeft, heroOf, skillReady, startBattle, startFieldBattle, stepField, useSkill, type Battle } from './battle';
 import { canStartStage, startStage } from './campaign';
 import { DEFAULT_ROWS, FIELD, FIRE, GIONG, GIONG_FEED, GIONG_REST_MS, STAGES, UNITS, type SkillId, type UnitType } from './defs';
@@ -13,7 +13,7 @@ type Army = Record<UnitType, number>;
 /** Kinh đô Điện cấp 3 có lò rèn cấp 3 và doanh trại cấp 3, nhiều của. */
 function capital(): GameState {
   const s = createInitialState(0);
-  s.buildings[0].level = 3;
+  setDien(s, 3);
   s.resources = { gao: 5000, voOc: 5000, datDa: 5000, sat: 2000 };
   s.dan = 30;
   const forge = place(s, 'loRen', edge(3, 1), edge(3, 1));
@@ -46,7 +46,7 @@ describe('nuôi Gióng', () => {
     s.resources.gao = 5000;
     expect(canFeed(s)).toEqual({ ok: false, reason: 'chuaCoGiong' });
     expect(giongLook(s)).toBeNull();
-    s.buildings[0].level = 2;
+    setDien(s, 2);
     expect(giongLook(s)).toBe('be');
     expect(feedGiong(s)).toEqual({ ok: true, value: 1 });
     expect(s.resources.gao).toBe(5000 - GIONG_FEED[0]);
@@ -59,7 +59,7 @@ describe('nuôi Gióng', () => {
 
   it('thiếu gạo thì chưa góp được', () => {
     const s = createInitialState(0);
-    s.buildings[0].level = 2;
+    setDien(s, 2);
     s.resources.gao = GIONG_FEED[0] - 1;
     expect(canFeed(s)).toEqual({ ok: false, reason: 'thieuTaiNguyen' });
   });
@@ -203,7 +203,7 @@ describe('roi gãy, kết chương, Đền Phù Đổng', () => {
 
   it('thắng màn 6 lần đầu thì roi sắt gãy, Gióng có Nhổ tre', () => {
     const s = withGiong();
-    s.buildings[0].level = 4;
+    setDien(s, 4);
     s.raid.nextAt = null;
     winStage(s, 6, { giao: 10, cung: 9, voi: 3 });
     expect(s.giong.whipBroken).toBe(true);
@@ -212,7 +212,7 @@ describe('roi gãy, kết chương, Đền Phù Đổng', () => {
 
   it('thắng màn 8 thì Gióng bay về trời, mở Đền Phù Đổng, Gióng vẫn hiển linh', () => {
     const s = withGiong();
-    s.buildings[0].level = 5;
+    setDien(s, 5);
     s.giong.whipBroken = true;
     s.raid.nextAt = null;
     expect(canPlace(s, 'denPhuDong', edge(5, 1), edge(5, 1))).toEqual({ ok: false, reason: 'canKetChuong' });
@@ -226,7 +226,7 @@ describe('roi gãy, kết chương, Đền Phù Đổng', () => {
   it('Đền Phù Đổng thêm 10% sản lượng và 10% máu cho quân ta', () => {
     const s = withGiong();
     s.giong.ascended = true;
-    s.buildings[0].level = 5;
+    setDien(s, 5);
     place(s, 'ruong', edge(5, 7), edge(5, 7));
     s.buildings.find((b) => b.type === 'ruong')!.workers = 2;
     const before = productionPerMinute(s).gao;

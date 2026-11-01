@@ -277,6 +277,9 @@ export const vi = {
     quaChoGiuThanh: 'Đã đủ chỗ giữ kinh đô theo cấp Điện',
     traiDay: 'Doanh trại này đã đủ chỗ, hãy nâng cấp',
     khongPhaiTrangTri: 'Chỉ dọn được đường đi và đồ trang trí',
+    khoanhDaMo: 'Khoảnh này đã phát rồi',
+    khoanhChuaSat: 'Chỉ phát được khoảnh rừng sát đất đã mở',
+    hetLuotKhoanh: 'Đã phát hết lượt của cấp Điện này',
   } satisfies Record<FailReason, string>,
 
   quests: {
@@ -320,7 +323,7 @@ export const vi = {
     quaMan22: 'Triệu Đà đóng đại doanh ở núi Tiên Du. Xin đánh qua màn 22, phá doanh trại giặc.',
     coLoa: 'Triệu Đà dốc toàn quân tới chân thành Cổ Loa. Xin bệ hạ cầm nỏ thần đánh trận quyết chiến ở màn 24.',
     denCoLoa: 'Triệu Đà đã thua chạy. Xin dựng Đền Cổ Loa, ghi công thần Kim Quy và nỏ thần giữ nước.',
-    dien8: 'Âu Lạc đã yên, kinh đô còn lớn được nữa. Xin bệ hạ nâng Điện lên cấp 8: đất rộng thêm, kho rộng hơn, ruộng, bến, lò rèn, chòi canh đều lên được cấp 8.',
+    dien8: 'Âu Lạc đã yên, kinh đô còn lớn được nữa. Xin bệ hạ nâng Điện lên cấp 8: được phát thêm rừng, kho rộng hơn, ruộng, bến, lò rèn, chòi canh đều lên được cấp 8.',
     lauNo: 'Cao Lỗ xin ghép hai chòi canh cấp 8 thành một lầu nỏ, mỗi phát bắn ba giặc. Chạm vào một chòi canh cấp 8 để ghép.',
     allDone: 'Kinh đô đã có Điện cấp 8 và lầu nỏ. Thủy Tinh vẫn dâng nước mỗi mùa, quân Triệu vẫn dòm ngó. Xin giữ thành, giữ đê cho vững.',
   } as Record<string, string>,
@@ -663,7 +666,18 @@ export const vi = {
     decorOnly: 'Chỉ để nhìn: giặc không nhắm phá, đi qua được; lũ không làm hư.',
     placed: (name: string) => `Đã dựng ${name}`,
     upgraded: (name: string, n: number) => `${name} lên cấp ${n}`,
-    landExpanded: 'Đã phát rừng, bờ cõi mở rộng!',
+    landExpanded: (n: number, level: number) => `Điện cấp ${level}: được phát thêm ${n} khoảnh rừng. Chạm vào rừng sát đất để phát.`,
+    khoanhTitle: 'Khoảnh rừng',
+    khoanhDesc: 'Rừng tre, rừng lim còn rậm. Phát khoảnh này thì có thêm đất 5×5 ô để dựng nhà, trải đường.',
+    khoanhCount: 'Khoảnh đất đã mở',
+    khoanhCost: 'Giá phát rừng',
+    khoanhOpen: 'Phát rừng',
+    khoanhOpened: 'Đã phát rừng, bờ cõi mở rộng!',
+    khoanhMore: (level: number, n: number) => `Lên Điện cấp ${level} được phát thêm ${n} khoảnh.`,
+    khoanhMax: 'Đã mở đủ đất cho kinh đô.',
+    khoanhRiver: 'Khoảnh ven sông: dựng được bến, nhưng mùa lũ dễ ngập.',
+    rungThieng: 'Rừng thiêng ngoài cùng, không phát được: giặc ẩn nấp trong ấy.',
+    mauKhoanh: (n: number) => `Mẫu còn ${n} khoảnh chưa phát: chỗ trong rừng sẽ bỏ qua.`,
     relaid: (refund: string) =>
       `Kinh đô đã dựng lại rộng hơn theo mẫu, nhà cửa giữ nguyên cấp và người làm.${refund ? ` Hoàn lại: ${refund}.` : ''}`,
     storage: 'Sức chứa kho',
@@ -915,7 +929,7 @@ export const vi = {
     rotate: 'Xoay cảnh 90°',
     mauTitle: 'Mẫu kinh đô',
     mauCard: 'Xếp kinh đô theo mẫu',
-    mauHint: 'Mỗi chương mở một mẫu. Mẫu giãn theo đất đã khai phá: nâng Điện, đất rộng ra thì áp lại để lũy, đê, thành ra tới bìa đất mới và công trình mới có chỗ. Áp mẫu thì mọi công trình được dời vào chỗ trong mẫu (mỗi cái mất 10% giá dựng), phần mẫu có mà mình chưa có được dựng thêm (trong giới hạn theo cấp Điện), đoạn lũy, đê, thành, bẫy thừa bị dỡ. Phải đủ tài nguyên mới áp được.',
+    mauHint: 'Mỗi chương mở một mẫu. Mẫu giãn theo cấp Điện: nâng Điện thì mẫu rộng ra, áp lại để lũy, đê, thành ra tới bìa mới và công trình mới có chỗ. Chỗ của mẫu nằm trong khoảnh rừng chưa phát thì bỏ qua: phát thêm rừng rồi áp lại. Áp mẫu thì mọi công trình được dời vào chỗ trong mẫu (mỗi cái mất 10% giá dựng), phần mẫu có mà mình chưa có được dựng thêm (trong giới hạn theo cấp Điện), đoạn lũy, đê, thành, bẫy thừa bị dỡ. Phải đủ tài nguyên mới áp được.',
     mau: {
       phongChau: {
         icon: '🏯',

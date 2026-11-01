@@ -26,6 +26,7 @@ const KHOAN = {
   doiHang: 'Đổi hàng thuyền buôn (vào trừ ra)',
   an: 'Dân và lính ăn',
   xay: 'Dựng công trình',
+  phatRung: 'Phát rừng mở khoảnh',
   nangDien: 'Nâng Điện',
   nangCap: 'Nâng cấp công trình khác',
   vaoChuong: 'Vào chương mới (coi như tiêu hết cho đền, lễ vật, quân)',

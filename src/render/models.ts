@@ -470,6 +470,32 @@ export function buildForest(spots: TreeSpot[]): THREE.Object3D {
   return instanceTemplates(cachedTrees, placements, treeOutline);
 }
 
+/** Cọc mốc ở góc khoảnh rừng phát được: cọc tre vót nhọn, buộc dải vải đỏ bay một bên. */
+function stakeTemplate(): THREE.Mesh {
+  const b = new ShapeBuilder(false, true);
+  b.box(0.26, 0.08, 0.26, C.soil, 0, 0.04, 0);
+  b.cyl(0.05, 0.065, 1.5, C.bamboo, 0, 0.75, 0, undefined, 5);
+  b.cone(0.06, 0.18, C.bamboo, 0, 1.59, 0, undefined, 5);
+  for (const y of [0.5, 1.0]) b.cyl(0.07, 0.07, 0.03, C.bronzeDark, 0, y, 0, undefined, 5);
+  // Dải vải đỏ buộc gần đầu cọc, bay ngang như cờ.
+  b.cyl(0.08, 0.08, 0.08, C.red, 0, 1.34, 0, undefined, 6);
+  b.box(0.5, 0.16, 0.02, C.red, 0.28, 1.27, 0, [0, 0, -0.2]);
+  b.box(0.36, 0.1, 0.02, C.red, 0.22, 1.12, 0.03, [0, 0.25, -0.45]);
+  return b.mesh(toon);
+}
+
+let cachedStakes: THREE.Mesh[] | null = null;
+
+/** Dựng các cọc mốc khoảnh rừng (tọa độ thế giới, mặt đất dưới chân). */
+export function buildStakes(spots: { x: number; y: number; z: number; seed: number }[]): THREE.Object3D {
+  cachedStakes ??= [stakeTemplate()];
+  return instanceTemplates(
+    cachedStakes,
+    spots.map((s) => ({ t: 0, x: s.x, y: s.y, z: s.z, s: 1, ry: (s.seed % 8) * (Math.PI / 4) })),
+    treeOutline,
+  );
+}
+
 /** Dựng toàn bộ lũy: lũy tre là bụi tre dày đan cọc trên mô đất, thành đất là khối đất nện cắm chông, xoay ngẫu nhiên. */
 export function buildWalls(spots: WallSpot[]): THREE.Object3D {
   cachedWalls ??= [bambooClump(11, 1.85, 3, true), bambooClump(12, 1.95, 9, true), earthWall(5), earthWall(11), wallRubble()];

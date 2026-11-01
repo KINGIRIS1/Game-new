@@ -3,15 +3,16 @@ import { wallRings } from './coLoa';
 import { CH1_LAST } from './campaign';
 import { BUILDINGS, CH2_QUEST_START, CH3_QUEST_START, GIFT_IDS, MOVE_FRACTION, STAGES, type BuildingType } from './defs';
 import { canMove, createInitialState, dienLevel, limitOf, move, moveCost, occupancy, place, type GameState } from './game';
-import { MAU_BARRACKS, applyMau, canApplyMau, mauSlots, mauUnlocked, planMau, MAU_IDS, type MauId } from './mau';
-import { DIEN_HOME, GRID, RIVER_START, isUnlocked, touchesRiver } from './map';
+import { MAU_BARRACKS, applyMau, canApplyMau, inFrame, mauSlots, mauUnlocked, planMau, MAU_IDS, type MauId } from './mau';
+import { isOpen, khoanhOf } from './khoanh';
+import { DIEN_HOME, GRID, RIVER_START, touchesRiver } from './map';
 import { DIEN_END, bank, edge, setDien } from './testmap';
 import { floodMap } from './terrain';
 
 /** Kinh đô giàu của, đã qua kết chương 1, ở chương `chapter`, Điện cấp `dien`. */
 function city(dien: number, chapter: 1 | 2 | 3 = 1): GameState {
   const s = createInitialState(0);
-  s.buildings[0].level = dien;
+  setDien(s, dien);
   s.giong.ascended = true;
   s.story.seen.push('langLieu');
   s.questIndex = chapter === 3 ? CH3_QUEST_START : chapter === 2 ? CH2_QUEST_START : 0;
@@ -90,7 +91,7 @@ describe('mẫu kinh đô', () => {
           if (def.nearRiver) expect(touchesRiver(x.x, x.z, def.w, def.d)).toBe(true);
           for (let dx = 0; dx < def.w; dx++) {
             for (let dz = 0; dz < def.d; dz++) {
-              expect(isUnlocked(x.x + dx, x.z + dz, dien), `${id} Điện ${dien}: ${x.type} ${x.x},${x.z}`).toBe(true);
+              expect(inFrame(x.x + dx, x.z + dz, dien), `${id} Điện ${dien}: ${x.type} ${x.x},${x.z}`).toBe(true);
               const i = (x.z + dz) * GRID + x.x + dx;
               expect(seen.has(i)).toBe(false);
               seen.add(i);
@@ -232,12 +233,29 @@ describe('mẫu kinh đô', () => {
     expect(JSON.stringify(s.buildings)).toBe(snapshot);
   });
 
+  it('đất mở theo khoảnh không vuông: áp mẫu bỏ qua chỗ của mẫu nằm trong khoảnh rừng chưa phát', () => {
+    for (const id of MAU_IDS) {
+      const s = city(7, 3);
+      // Bỏ hai khoảnh ở góc rừng của khung mẫu: đất đã mở không còn vuông.
+      const lo = edge(7);
+      const drop = [khoanhOf(lo, lo), khoanhOf(lo + 5, lo)];
+      s.khoanh = s.khoanh.filter((k) => !drop.includes(k));
+      const wild = mauSlots(id, 7).filter((x) => !isOpen(s, x.x, x.z));
+      expect(wild.length, id).toBeGreaterThan(0);
+      expect(applyMau(s, id).ok, id).toBe(true);
+      for (const b of s.buildings) {
+        const def = BUILDINGS[b.type];
+        for (let dx = 0; dx < def.w; dx++) for (let dz = 0; dz < def.d; dz++) expect(isOpen(s, b.x + dx, b.z + dz), `${id}: ${b.type} ${b.x},${b.z}`).toBe(true);
+      }
+    }
+  });
+
   it('Điện cấp thấp: chỉ xếp vào chỗ trong vùng đã khai phá, dựng tới giới hạn theo cấp Điện', () => {
     const s = city(3);
     expect(applyMau(s, 'phongChau').ok).toBe(true);
     for (const b of s.buildings) {
       const def = BUILDINGS[b.type];
-      for (let dx = 0; dx < def.w; dx++) for (let dz = 0; dz < def.d; dz++) expect(isUnlocked(b.x + dx, b.z + dz, dienLevel(s))).toBe(true);
+      for (let dx = 0; dx < def.w; dx++) for (let dz = 0; dz < def.d; dz++) expect(isOpen(s, b.x + dx, b.z + dz)).toBe(true);
     }
     expect(s.buildings.filter((b) => b.type === 'ruong').length).toBe(limitOf(s, 'ruong'));
     expect(s.buildings.filter((b) => b.type === 'luy').length).toBeLessThanOrEqual(limitOf(s, 'luy'));
@@ -247,7 +265,7 @@ describe('mẫu kinh đô', () => {
     for (const dien of levelsOf('deBao')) {
       const s = city(dien, chapterFor('deBao', dien));
       expect(applyMau(s, 'deBao').ok).toBe(true);
-      const wet = floodMap(s, 3, dien);
+      const wet = floodMap(s, 3);
       for (const b of s.buildings) {
         if (b.type === 'ben' || b.type === 'de') continue;
         const def = BUILDINGS[b.type];
@@ -262,7 +280,7 @@ describe('mẫu kinh đô', () => {
       const s = city(dien, 3);
       expect(applyMau(s, 'coLoa').ok).toBe(true);
       expect(wallRings(s), `Điện ${dien}`).toBe(3);
-      const wet = floodMap(s, 3, dien);
+      const wet = floodMap(s, 3);
       for (const b of s.buildings) {
         if (b.type === 'ben' || b.type === 'de') continue;
         const def = BUILDINGS[b.type];
@@ -294,7 +312,7 @@ describe('mẫu kinh đô', () => {
     expect(s.buildings.filter((b) => b.type === 'ruong').length).toBe(limitOf(s, 'ruong'));
     for (const b of s.buildings) {
       const def = BUILDINGS[b.type];
-      for (let dx = 0; dx < def.w; dx++) for (let dz = 0; dz < def.d; dz++) expect(isUnlocked(b.x + dx, b.z + dz, 4)).toBe(true);
+      for (let dx = 0; dx < def.w; dx++) for (let dz = 0; dz < def.d; dz++) expect(isOpen(s, b.x + dx, b.z + dz)).toBe(true);
     }
     expect(canApplyMau(s, 'phongChau')).toEqual({ ok: false, reason: 'daTheoMau' });
   });

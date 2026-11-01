@@ -19,9 +19,11 @@ import {
   upgrade,
   type GameState,
 } from './game';
+import { KHOANH_N, khoanhCost, khoanhLeft, khoanhOrigin, openKhoanh, openable } from './khoanh';
+import { KHOANH } from './map';
 
 /** Các việc người chơi mô phỏng làm. Báo cáo kinh tế dựa vào đây để ghi sổ từng khoản thu chi. */
-export type Viec = 'nhiemVu' | 'xay' | 'nangDien' | 'nangCap' | 'doiHang' | 'vaoChuong' | 'thoiGian';
+export type Viec = 'nhiemVu' | 'xay' | 'phatRung' | 'nangDien' | 'nangCap' | 'doiHang' | 'vaoChuong' | 'thoiGian';
 /** Bọc một việc: mặc định chỉ làm việc đó. Báo cáo kinh tế bọc thêm phần ghi tài nguyên trước và sau. */
 export type Lam = (viec: Viec, run: () => void) => void;
 const lamThang: Lam = (_, run) => run();
@@ -52,6 +54,40 @@ function tradeSurplus(s: GameState): void {
   });
 }
 
+/**
+ * Khoảnh nên phát để dựng `type`, theo thứ tự ưu tiên: loại cần sát sông (bến) thì khoảnh ven sông; loại khác thì
+ * khoảnh gần Điện nhất. Rỗng nếu hết lượt hay không giữ được phần dành để nâng Điện.
+ */
+function khoanhFor(s: GameState, type: BuildingType): number[] {
+  if (khoanhLeft(s) <= 0 || !affordWithReserve(s, khoanhCost(s))) return [];
+  const dien = s.buildings.find((b) => b.type === 'dien')!;
+  const cx = dien.x + BUILDINGS.dien.w / 2;
+  const cz = dien.z + BUILDINGS.dien.d / 2;
+  const far = (id: number) => {
+    const o = khoanhOrigin(id);
+    return Math.hypot(o.x + KHOANH / 2 - cx, o.z + KHOANH / 2 - cz);
+  };
+  const edge = KHOANH_N - 1;
+  const list = openable(s).filter((id) => !BUILDINGS[type].nearRiver || id % KHOANH_N === edge || Math.floor(id / KHOANH_N) === edge);
+  return list.sort((a, b) => far(a) - far(b) || a - b);
+}
+
+/** Phát một khoảnh rừng để có chỗ thoáng dựng `type`. */
+function phatRung(s: GameState, type: BuildingType): boolean {
+  return khoanhFor(s, type).some((id) => openKhoanh(s, id).ok);
+}
+
+/**
+ * Dựng `type` như người chơi muốn kinh đô thoáng: có chỗ thoáng thì dựng ngay; hết chỗ thoáng mà phát rừng được thì
+ * để phát rừng trước (trả về false); không thì đặt sát vào chỗ còn trống.
+ */
+function buildRoomy(s: GameState, type: BuildingType): 'built' | 'needLand' | 'none' {
+  const roomy = findSpot(s, type, undefined, true);
+  if (roomy) return place(s, type, roomy.x, roomy.z).ok ? 'built' : 'none';
+  if (khoanhFor(s, type).length) return 'needLand';
+  return placeAnywhere(s, type) ? 'built' : 'none';
+}
+
 /** Thứ tự một người chơi hợp lý dựng kinh tế. Ngoài các loại này, người chơi mô phỏng chỉ dựng lũy. */
 export const ECONOMY: BuildingType[] = ['ruong', 'ben', 'nhaSan', 'baiDa', 'kho', 'loRen'];
 /** Số lũy người chơi mô phỏng dựng cho đủ nhiệm vụ đầu. */
@@ -71,12 +107,15 @@ export function playSecond(s: GameState, lam: Lam = lamThang): void {
   lam('nangDien', () => {
     if (canUpgrade(s, 1).ok) upgrade(s, 1);
   });
+  let cramped: BuildingType | null = null;
   lam('xay', () => {
     // Như hướng dẫn của Lạc hầu: lên Điện cấp 2 trước rồi mới mở rộng kinh tế.
     for (const type of dienLevel(s) < 2 ? ECONOMY.slice(0, 2) : ECONOMY) {
-      if (countOf(s, type) < limitOf(s, type) && affordWithReserve(s, BUILDINGS[type].buildCost)) placeAnywhere(s, type);
+      if (countOf(s, type) < limitOf(s, type) && affordWithReserve(s, BUILDINGS[type].buildCost) && buildRoomy(s, type) === 'needLand') cramped ??= type;
     }
   });
+  // Hết chỗ thoáng: phát rừng, giây sau dựng trên đất mới.
+  if (cramped) lam('phatRung', () => phatRung(s, cramped!));
   autoAssign(s);
   lam('doiHang', () => tradeSurplus(s));
   lam('nangCap', () => {

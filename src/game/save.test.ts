@@ -2,7 +2,8 @@ import { describe, expect, it } from 'vitest';
 import { wallRings } from './coLoa';
 import { BUILDINGS, CH3_QUEST_START, raiseTileCost, type BuildingType } from './defs';
 import { createInitialState, dienLevel, limitOf, occupancy, place, type Building, type GameState } from './game';
-import { DIEN_HOME, GRID, isUnlocked, touchesRiver } from './map';
+import { V11_AREA, isOpen, squareKhoanh } from './khoanh';
+import { DIEN_HOME, GRID, touchesRiver } from './map';
 import { mauSlots } from './mau';
 import { legacyBaseHeights, levelLegacyFootprints } from './xepLai';
 import { placeAnywhere } from './moPhong';
@@ -136,7 +137,7 @@ describe('nâng bản lưu kinh đô nhỏ lên kinh đô lớn (phiên bản 10
     for (const b of s.buildings) {
       const def = BUILDINGS[b.type];
       cells += def.w * def.d;
-      for (let dx = 0; dx < def.w; dx++) for (let dz = 0; dz < def.d; dz++) expect(isUnlocked(b.x + dx, b.z + dz, dienLevel(s)), `${b.type} ${b.x},${b.z}`).toBe(true);
+      for (let dx = 0; dx < def.w; dx++) for (let dz = 0; dz < def.d; dz++) expect(isOpen(s, b.x + dx, b.z + dz), `${b.type} ${b.x},${b.z}`).toBe(true);
       if (def.nearRiver) expect(touchesRiver(b.x, b.z, def.w, def.d)).toBe(true);
     }
     expect(occupancy(s).filter((v) => v > 0).length).toBe(cells);
@@ -169,6 +170,8 @@ describe('nâng bản lưu kinh đô nhỏ lên kinh đô lớn (phiên bản 10
     expect(s).toBeDefined();
     expect(s.version).toBe(SAVE_VERSION);
     expect(s.heights.length).toBe(GRID * GRID);
+    // Đất đã mở là vùng hình vuông của Điện cấp 5 trước khi có khoảnh tự chọn.
+    expect(s.khoanh).toEqual(squareKhoanh(V11_AREA[4]));
     expect(s.buildings[0]).toMatchObject({ type: 'dien', x: DIEN_HOME, z: DIEN_HOME, level: 5 });
     laidOut(s);
     // Không mất công trình nào ngoài đoạn lũy; giữ cấp, người làm.

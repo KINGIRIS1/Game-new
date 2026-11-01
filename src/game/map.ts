@@ -11,15 +11,10 @@ export const RIVER_START = 52;
 export const FAR_BANK = GRID + 4;
 /** Dải rừng ngoài cùng phía bắc và phía tây (x hoặc z nhỏ hơn mốc này) không bao giờ khai phá: chỗ giặc xuất phát. */
 export const FOREST_BAND = 2;
-/** Cạnh một khoảnh đất (ô). Đất giữa dải rừng ngoài cùng và sông chia thành 10×10 khoảnh. */
+/** Cạnh một khoảnh đất (ô). Đất giữa dải rừng ngoài cùng và sông chia thành 10×10 khoảnh (`khoanh.ts`). */
 export const KHOANH = 5;
 /** Góc móng Điện Vua Hùng (cả x và z): Điện 5×5 nằm đúng khoảnh thứ 8 tính từ dải rừng. */
 export const DIEN_HOME = 37;
-/**
- * Cạnh vùng xây được theo cấp Điện Vua Hùng, chỉ số 0 là cấp 1. Vùng luôn sát hai bờ sông, cạnh là bội số của
- * cỡ khoảnh để khớp lưới khoảnh.
- */
-export const AREA_SIZE = [20, 25, 25, 30, 35, 40, 40, 45];
 
 export function inGrid(x: number, z: number): boolean {
   return x >= 0 && z >= 0 && x < GRID && z < GRID;
@@ -27,17 +22,6 @@ export function inGrid(x: number, z: number): boolean {
 
 export function isRiver(x: number, z: number): boolean {
   return inGrid(x, z) && (x >= RIVER_START || z >= RIVER_START);
-}
-
-/** Ô nhỏ nhất (theo cả x và z) thuộc vùng xây được ở cấp Điện này. */
-export function areaStart(dienLevel: number): number {
-  const size = AREA_SIZE[Math.min(Math.max(dienLevel, 1), AREA_SIZE.length) - 1];
-  return RIVER_START - size;
-}
-
-export function isUnlocked(x: number, z: number, dienLevel: number): boolean {
-  const lo = areaStart(dienLevel);
-  return x >= lo && z >= lo && x < RIVER_START && z < RIVER_START;
 }
 
 export function touchesRiver(x: number, z: number, w: number, d: number): boolean {

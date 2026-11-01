@@ -40,7 +40,7 @@ import { HALF_ARMY, SAMPLE_ARMY, SEEDS, fightStage } from './testkit';
 import { canOffer, heroFor, offerGift, sonJoined } from './son';
 import { markStory, pendingStory } from './story';
 import { drowns, floodMap, groundOf, tileHeight } from './terrain';
-import { bank, edge } from './testmap';
+import { bank, edge, setDien } from './testmap';
 
 type Army = Record<UnitType, number>;
 const ARMY: Army = { giao: 14, cung: 12, voi: 4 };
@@ -48,7 +48,7 @@ const ARMY: Army = { giao: 14, cung: 12, voi: 4 };
 /** Kinh đô vừa sang chương 2: Điện cấp 5, doanh trại cấp 5 đủ quân, Gióng đã bay về trời. */
 function ch2(): GameState {
   const s = createInitialState(0);
-  s.buildings[0].level = 5;
+  setDien(s, 5);
   s.resources = { gao: 8000, voOc: 8000, datDa: 8000, sat: 3000 };
   s.dan = 40;
   s.questIndex = CH2_QUEST_START;
@@ -159,8 +159,8 @@ describe('độ cao ô đất', () => {
 describe('nước lũ', () => {
   it('lũ bậc 1 chỉ ngập bãi bồi ven sông, bậc 2 ngập cả đồng bằng; rừng chưa phát không ngập', () => {
     const s = ch2();
-    const one = floodMap(s, 1, 5);
-    const two = floodMap(s, 2, 5);
+    const one = floodMap(s, 1);
+    const two = floodMap(s, 2);
     let low = 0;
     let plain = 0;
     for (let z = 0; z < RIVER_START; z++) {
@@ -181,17 +181,17 @@ describe('nước lũ', () => {
 
   it('đê liền một dải chặn được nước, hở một chỗ thì nước tràn vào', () => {
     const s = ch2();
-    s.buildings[0].level = 1;
+    setDien(s, 1);
     // Vùng Điện cấp 1: đắp đê dọc hàng và cột cách sông 4 ô (đứng trên đất bậc 1).
     const lo = edge(1);
     const line = RIVER_START - 4;
     for (let x = lo; x <= line; x++) expect(place(s, 'de', x, line).ok).toBe(true);
     for (let z = lo; z < line; z++) expect(place(s, 'de', line, z).ok).toBe(true);
-    const sealed = floodMap(s, 2, 1);
+    const sealed = floodMap(s, 2);
     for (let z = lo; z < line; z++) for (let x = lo; x < line; x++) expect(sealed[z * GRID + x]).toBe(0);
     // Thủy quái phá vỡ một đoạn đê.
     s.buildings.find((b) => b.type === 'de' && b.x === lo + 4)!.damaged = true;
-    const breach = floodMap(s, 2, 1);
+    const breach = floodMap(s, 2);
     let inside = 0;
     for (let z = lo; z < line; z++) for (let x = lo; x < line; x++) inside += breach[z * GRID + x];
     expect(inside).toBeGreaterThan(5);
@@ -204,16 +204,16 @@ describe('nước lũ', () => {
     const nhaSan = place(s, 'nhaSan', edge(5, 7), bank('nhaSan'));
     const ben = place(s, 'ben', edge(5, 11), bank('ben'));
     if (!baiDa.ok || !nhaSan.ok || !ben.ok) throw new Error('dựng thử thất bại');
-    const wet1 = floodMap(s, 1, 5);
+    const wet1 = floodMap(s, 1);
     expect(drowns(s, baiDa.value, wet1, 1)).toBe(true);
     expect(drowns(s, nhaSan.value, wet1, 1)).toBe(false);
     expect(drowns(s, ben.value, wet1, 1)).toBe(false);
-    const wet2 = floodMap(s, 2, 5);
+    const wet2 = floodMap(s, 2);
     expect(drowns(s, nhaSan.value, wet2, 2)).toBe(true);
     expect(drowns(s, ben.value, wet2, 3)).toBe(false);
     // Đắp nền lên bậc 1 thì bãi đất đá thoát lũ bậc 1.
     raiseBuilding(s, baiDa.value.id);
-    expect(drowns(s, baiDa.value, floodMap(s, 1, 5), 1)).toBe(false);
+    expect(drowns(s, baiDa.value, floodMap(s, 1), 1)).toBe(false);
   });
 
   it('lũ dâng cao dần qua các mùa; Đền Tản Viên làm lũ thấp đi một bậc', () => {
@@ -311,7 +311,7 @@ describe('mùa lũ ở kinh đô', () => {
     const R = RIVER_START;
     for (const [x, z] of [[R - 27, R - 7], [R - 21, R - 7], [R - 14, R - 7], [R - 8, R - 7], [R - 7, R - 17]]) place(s, 'choiCanh', x, z);
     // Đê liền dải giữ khô cả vùng trong đê khi nước dâng tới bậc 3.
-    const sealed = floodMap(s, 3, 5);
+    const sealed = floodMap(s, 3);
     for (let z = lo; z < line; z++) for (let x = lo; x < line; x++) expect(sealed[z * GRID + x]).toBe(0);
     // Sơn Tinh ở doanh trại và ra trận cùng quân từ đó: doanh trại trong đê, gần phía sông như mẫu Đê bao.
     // Doanh trại xa sông (góc rừng) thì quân và tướng tới chậm, thủy quái kịp phá đê.

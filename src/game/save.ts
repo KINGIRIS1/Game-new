@@ -23,6 +23,7 @@ import { GRID, baseHeights, isRiver } from './map';
 import { initialSon } from './son';
 import { initialTet } from './tet';
 import { footprintTop, levelFootprint } from './terrain';
+import { KHOANH_N, V11_AREA, squareKhoanh } from './khoanh';
 import { isLegacyLayout, legacyBaseHeights, levelLegacyFootprints, relayLegacy } from './xepLai';
 
 export { SAVE_VERSION };
@@ -70,6 +71,7 @@ function migrate(raw: unknown): unknown {
   if (isObj(v) && v.version === 8) v = migrate8to9(v);
   if (isObj(v) && v.version === 9) v = migrate9to10(v);
   if (isObj(v) && v.version === 10) v = migrate10to11(v);
+  if (isObj(v) && v.version === 11) v = migrate11to12(v);
   return v;
 }
 
@@ -204,11 +206,34 @@ function migrate9to10(s: Raw): Raw {
  */
 function migrate10to11(s: Raw): Raw {
   s.version = 11;
+  // Dựng lại theo mẫu cần biết đất đã mở: đất phiên bản 11 là hình vuông theo cấp Điện (xem bước 11 → 12).
+  s.khoanh = v11Khoanh(s);
   if (isLegacyLayout(s) && Array.isArray(s.heights) && isValidBuildings(s.buildings) && isObj(s.raid) && isObj(s.resources)) {
     relayLegacy(s as unknown as GameState);
   }
   return s;
 }
+
+/** Đất đã mở ở phiên bản 11: hình vuông neo góc sông, cạnh theo cấp Điện, khớp đúng lưới khoảnh. */
+function v11Khoanh(s: Raw): number[] {
+  const dien = Array.isArray(s.buildings) ? (s.buildings as Raw[]).find((b) => isObj(b) && b.type === 'dien') : undefined;
+  const level = dien && isNum(dien.level) ? Math.min(Math.max(Math.round(dien.level), 1), V11_AREA.length) : 1;
+  return squareKhoanh(V11_AREA[level - 1]);
+}
+
+/**
+ * Phiên bản 11 → 12: mở đất bằng khoảnh tự chọn. Đất đang mở (hình vuông theo cấp Điện) đổi thành danh sách khoảnh,
+ * không công trình nào rơi ra ngoài. Đã mở nhiều hơn lượt của cấp (Điện 6: 64 khoảnh, lượt 60) thì giữ nguyên đất,
+ * chỉ chưa phát thêm được.
+ */
+function migrate11to12(s: Raw): Raw {
+  s.version = 12;
+  if (!isKhoanhList(s.khoanh)) s.khoanh = v11Khoanh(s);
+  return s;
+}
+
+const isKhoanhList = (v: unknown): v is number[] =>
+  Array.isArray(v) && v.every((id) => Number.isInteger(id) && id >= 0 && id < KHOANH_N * KHOANH_N) && new Set(v).size === v.length;
 
 const isBanh = (v: unknown, test: (x: unknown) => boolean): boolean => isObj(v) && test(v.chung) && test(v.giay);
 const isBool = (x: unknown) => typeof x === 'boolean';
@@ -248,6 +273,7 @@ function buildingsInGrid(list: GameState['buildings']): boolean {
 function isGameState(v: unknown): v is GameState {
   if (!isObj(v) || v.version !== SAVE_VERSION) return false;
   if (!Array.isArray(v.heights) || v.heights.length !== GRID * GRID || !v.heights.every(isNum)) return false;
+  if (!isKhoanhList(v.khoanh) || v.khoanh.length === 0) return false;
   const son = v.son;
   if (!isObj(son) || !isObj(son.gifts) || !isNum(son.restUntil) || typeof son.non !== 'boolean' || typeof son.won !== 'boolean') return false;
   if (!GIFT_IDS.every((k) => typeof (son.gifts as Raw)[k] === 'boolean')) return false;

@@ -17,7 +17,7 @@ import {
   type GameState,
 } from './game';
 import { GRID } from './map';
-import { DIEN, DIEN_END, edge } from './testmap';
+import { DIEN, DIEN_END, edge, setDien } from './testmap';
 
 const T0 = 1_000_000;
 
@@ -29,7 +29,7 @@ const FREE = edge(2, 1);
 /** Kinh đô Điện cấp 2 có doanh trại, trại giáo và một kho, đủ tiền, đủ dân. */
 function capital(): GameState {
   const s = createInitialState(T0);
-  s.buildings[0].level = 2;
+  setDien(s, 2);
   s.resources = { gao: 900, voOc: 900, datDa: 900, sat: 400 };
   s.dan = 30;
   // Doanh trại, trại giáo phía tây nam Điện, kho phía đông nam: giặc từ phía bắc phải qua Điện mới tới kho.
@@ -94,7 +94,7 @@ describe('trận giữ kinh đô', () => {
   it('bẫy chông gây sát thương khi giặc giẫm vào', () => {
     const s = capital();
     // Rải bẫy kín một hàng để giặc từ phía bắc phải đi qua.
-    s.buildings[0].level = 5;
+    setDien(s, 5);
     for (let x = DIEN - 2; x < DIEN + 8; x++) place(s, 'bayChong', x, DIEN - 7);
     const battle = fight(s, 1);
     expect(battle.trapsUsed.length).toBeGreaterThan(0);
@@ -142,7 +142,7 @@ describe('quân đội', () => {
     expect(canPlace(s, 'traiCung', CUNG.x, CUNG.z)).toEqual({ ok: false, reason: 'canDoanhTrai' });
     s.buildings.find((b) => b.type === 'doanhTrai')!.level = 3;
     expect(canPlace(s, 'chuongVoi', VOI.x, VOI.z)).toEqual({ ok: false, reason: 'chuaDuCapDien' });
-    s.buildings[0].level = 3;
+    setDien(s, 3);
     expect(place(s, 'traiCung', CUNG.x, CUNG.z).ok).toBe(true);
     expect(place(s, 'chuongVoi', VOI.x, VOI.z).ok).toBe(true);
     expect(canTrain(s, 'cung').ok).toBe(true);

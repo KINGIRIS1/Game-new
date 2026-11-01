@@ -25,8 +25,9 @@ import {
   upgrade,
   type GameState,
 } from './game';
-import { RIVER_START, areaStart, isUnlocked } from './map';
-import { bank, edge } from './testmap';
+import { RIVER_START } from './map';
+import { START_KHOANH, isOpen, khoanhLeft } from './khoanh';
+import { bank, edge, setDien } from './testmap';
 
 const T0 = 1_000_000;
 /** Bìa vùng xây được ở Điện cấp 1 (phía rừng). */
@@ -52,8 +53,9 @@ describe('trạng thái ban đầu', () => {
     expect(dienLevel(s)).toBe(1);
     expect(s.dan).toBe(4);
     expect(housing(s)).toBe(4);
+    expect(s.khoanh).toEqual([...START_KHOANH]);
     for (let dx = 0; dx < BUILDINGS.dien.w; dx++) {
-      expect(isUnlocked(dien.x + dx, dien.z, 1)).toBe(true);
+      expect(isOpen(s, dien.x + dx, dien.z)).toBe(true);
     }
   });
 });
@@ -75,7 +77,7 @@ describe('đặt công trình', () => {
 
   it('không cho đặt ngoài vùng đã mở hoặc xuống sông', () => {
     const s = rich();
-    const lo = areaStart(1);
+    const lo = edge(1);
     expect(canPlace(s, 'luy', lo - 1, O + 8)).toEqual({ ok: false, reason: 'ngoaiVung' });
     expect(canPlace(s, 'luy', RIVER_START, O + 8)).toEqual({ ok: false, reason: 'ngoaiVung' });
     expect(canPlace(s, 'ruong', RIVER_START - 2, O + 8)).toEqual({ ok: false, reason: 'ngoaiVung' });
@@ -105,7 +107,7 @@ describe('đặt công trình', () => {
   it('lò rèn cần Điện cấp 2', () => {
     const s = rich();
     expect(canPlace(s, 'loRen', O + 1, O + 1)).toEqual({ ok: false, reason: 'chuaDuCapDien' });
-    s.buildings[0].level = 2;
+    setDien(s, 2);
     expect(canPlace(s, 'loRen', O + 1, O + 1).ok).toBe(true);
   });
 
@@ -136,25 +138,26 @@ describe('nâng cấp', () => {
   it('lũy tre lên thành đất cần Điện cấp 3', () => {
     const s = rich();
     const luy = placeOk(s, 'luy', O + 1, O + 1);
-    s.buildings[0].level = 2;
+    setDien(s, 2);
     expect(upgrade(s, luy.id)).toEqual({ ok: false, reason: 'chuaDuCapDien' });
-    s.buildings[0].level = 3;
+    setDien(s, 3);
     expect(upgrade(s, luy.id).ok).toBe(true);
     expect(luy.level).toBe(2);
   });
 
-  it('nâng Điện thì mở rộng đất', () => {
+  it('nâng Điện thì được phát thêm khoảnh rừng (đất chưa tự mở)', () => {
     const s = rich();
-    const lo1 = areaStart(1);
-    expect(isUnlocked(lo1 - 1, lo1, dienLevel(s))).toBe(false);
+    const lo1 = edge(1);
+    const left = khoanhLeft(s);
     s.resources = { gao: 1000, voOc: 1000, datDa: 1000, sat: 100 };
     upgrade(s, 1);
-    expect(isUnlocked(lo1 - 1, lo1, dienLevel(s))).toBe(true);
+    expect(canPlace(s, 'luy', lo1 - 1, lo1)).toEqual({ ok: false, reason: 'ngoaiVung' });
+    expect(khoanhLeft(s)).toBeGreaterThan(left);
   });
 
   it('dừng ở cấp tối đa', () => {
     const s = rich();
-    s.buildings[0].level = BUILDINGS.dien.maxLevel;
+    setDien(s, BUILDINGS.dien.maxLevel);
     expect(upgrade(s, 1)).toEqual({ ok: false, reason: 'capToiDa' });
   });
 
