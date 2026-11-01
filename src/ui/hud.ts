@@ -157,7 +157,10 @@ export type HudAction =
   | { kind: 'toggleMute' }
   | { kind: 'setResolution'; resolution: Resolution }
   | { kind: 'copyCode' }
-  | { kind: 'importCode'; code: string }
+  | { kind: 'saveFile' }
+  | { kind: 'shareFile' }
+  /** Mã lưu dán vào ô, hay đọc từ tệp lưu (`file`). */
+  | { kind: 'importCode'; code: string; file?: boolean }
   | { kind: 'reset' }
   | { kind: 'closeSheet' }
   | { kind: 'workers'; id: number; delta: number }
@@ -196,6 +199,19 @@ type Sheet =
   | { kind: 'tet' }
   | { kind: 'mau' }
   | null;
+
+/** Máy có gửi được tệp qua bảng chia sẻ của hệ điều hành (Zalo, Messenger, Drive...) không. Hỏi một lần. */
+let shareFileOk: boolean | undefined;
+function canShareFile(): boolean {
+  if (shareFileOk === undefined) {
+    try {
+      shareFileOk = !!navigator.canShare?.({ files: [new File([''], 'thu.txt', { type: 'text/plain' })] });
+    } catch {
+      shareFileOk = false;
+    }
+  }
+  return shareFileOk;
+}
 
 /** Chữ trên nút kỹ năng: tên khi sẵn sàng, chỉ biểu tượng và số giây khi đang hồi (cho gọn trên điện thoại). */
 function skillLabel(b: Battle, k: SkillId): string {
@@ -280,8 +296,20 @@ export class Hud {
     this.sheetEl = root.querySelector('.sheet')!;
     this.toasts = root.querySelector('.toasts')!;
     root.addEventListener('click', this.onClick);
+    root.addEventListener('change', this.onChange);
     this.setMode('view');
   }
+
+  /** Đọc tệp lưu vừa chọn ở bảng Cài đặt. */
+  private onChange = (e: Event): void => {
+    const input = e.target as HTMLInputElement;
+    const file = input.id === 'save-file' ? input.files?.[0] : undefined;
+    if (!file) return;
+    const load = (code: string) => this.onAction({ kind: 'importCode', code, file: true });
+    // Tệp lưu chỉ vài chục KB; tệp quá lớn chắc chắn không phải.
+    if (file.size > 1_000_000) return load('');
+    file.text().then(load, () => load(''));
+  };
 
   private onClick = (e: Event): void => {
     const el = (e.target as HTMLElement).closest<HTMLElement>('[data-act]');
@@ -339,6 +367,13 @@ export class Hud {
         if (!this.camp?.stage) return;
         const { army, rows } = this.camp.pick;
         return this.onAction({ kind: 'march', stage: this.camp.stage, army: { ...army }, rows: { ...rows } });
+      }
+      case 'openFile': {
+        const input = this.sheetEl.querySelector<HTMLInputElement>('#save-file');
+        if (!input) return;
+        // Xóa lựa chọn cũ để chọn lại đúng tệp đó vẫn nạp được.
+        input.value = '';
+        return input.click();
       }
       case 'importCode': {
         const box = this.sheetEl.querySelector<HTMLTextAreaElement>('#import-box');
@@ -931,12 +966,21 @@ export class Hud {
         <button class="btn small ghost" data-act="toggleMute">${state.settings.muted ? '🔇 ' + vi.ui.off : '🔊 ' + vi.ui.on}</button></div>
       <div class="setting-row"><span>${vi.ui.resolution}</span><div class="choices">${levels}</div></div>
       <p class="muted">${vi.ui.resolutionHint}</p>
+      <h3 class="setting-title">${vi.ui.backupTitle}</h3>
+      <div class="setting-row"><span>${vi.ui.saveFile}</span><div class="choices">
+        <button class="btn small ghost" data-act="saveFile">💾 ${vi.ui.download}</button>
+        ${canShareFile() ? `<button class="btn small ghost" data-act="shareFile">📤 ${vi.ui.share}</button>` : ''}</div></div>
+      <p class="muted">${vi.ui.saveFileHint}</p>
+      <div class="setting-row"><span>${vi.ui.openFile}</span>
+        <button class="btn small ghost" data-act="openFile">📂 ${vi.ui.chooseFile}</button></div>
+      <input type="file" id="save-file" accept=".txt,text/plain" hidden>
+      <p class="muted">${vi.ui.openFileHint}</p>
       <div class="setting-row"><span>${vi.ui.exportSave}</span>
         <button class="btn small ghost" data-act="copyCode">📋 ${vi.ui.copy}</button></div>
       <p class="muted">${vi.ui.exportHint}</p>
       <div style="margin-top:12px"><b>${vi.ui.importSave}</b></div>
       <p class="muted">${vi.ui.importHint}</p>
-      <textarea id="import-box" placeholder="TDVL1:..."></textarea>
+      <textarea id="import-box" placeholder="TDVL2:..."></textarea>
       <button class="btn small ghost" data-act="importCode">📥 ${vi.ui.importSave}</button>
       <div class="actions"><button class="btn ghost" data-act="reset">🔄 ${vi.ui.reset}</button></div>
       <p class="muted" style="text-align:center;margin-top:14px">${vi.gameTitle} · bản thử 0.5</p>`;

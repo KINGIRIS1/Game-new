@@ -1,7 +1,8 @@
-// Lưu game vào localStorage và xuất/nhập mã lưu để sao lưu hoặc chuyển máy.
+// Lưu game vào localStorage và xuất/nhập mã lưu (hay tệp lưu, cũng chứa đúng mã đó) để sao lưu hoặc chuyển máy.
 // Bản lưu cũ (phiên bản 1 của lát cắt 1, 2 của lát cắt 2a, 3 của lát cắt 2b, 4 của lát cắt 3a,
 // 5 của lát cắt 3b, 6 của chương 2, 7 của chương 3, 8 của cấp 6–7, 9 của Hội Tết) được nâng lên phiên bản hiện tại khi nạp.
 
+import { deflateSync, inflateSync } from 'fflate';
 import { BUILDINGS, GEAR_IDS, GIFT_IDS, MERCHANT_FIRST_MS, QUEST_INSERTED_V4, RESOURCE_IDS, ROWS, type BuildingType } from './defs';
 import { initialAdv } from './coLoa';
 import { autoAssign, housing, initialCampaign, initialGiong, initialRaid, type GameState } from './game';
@@ -12,7 +13,12 @@ import { footprintTop, levelFootprint } from './terrain';
 
 /** Giữ nguyên khóa cũ để người chơi lát cắt 1 không mất tiến trình. */
 export const SAVE_KEY = 'thoi-dai-van-lang/save/v1';
-const CODE_PREFIX = 'TDVL1:';
+/** Mã lưu đời đầu: JSON đổi thẳng sang base64. Vẫn nhập được. */
+const CODE_PREFIX_V1 = 'TDVL1:';
+/** Mã lưu hiện tại: JSON được nén (deflate) rồi mới đổi sang base64, ngắn hơn chừng 4–8 lần. */
+const CODE_PREFIX = 'TDVL2:';
+/** Mã hay tệp lưu dài hơn chừng này chắc chắn không phải mã lưu. */
+const CODE_MAX_LENGTH = 1_000_000;
 
 export function serialize(state: GameState): string {
   return JSON.stringify(state);
@@ -239,23 +245,41 @@ function isGameState(v: unknown): v is GameState {
   );
 }
 
+/** Mã lưu để chép hay cất vào tệp lưu. Nén đồng bộ để nút Chép, Gửi chạy ngay trong lúc bấm (Safari đòi vậy). */
 export function toCode(state: GameState): string {
-  const bytes = new TextEncoder().encode(serialize(state));
-  let bin = '';
-  for (const byte of bytes) bin += String.fromCharCode(byte);
-  return CODE_PREFIX + btoa(bin);
+  return CODE_PREFIX + toBase64(deflateSync(new TextEncoder().encode(serialize(state)), { level: 9 }));
 }
 
+/** Đọc mã lưu (mới hay đời đầu). Bỏ qua dấu cách và xuống dòng do ứng dụng nhắn tin chèn vào. */
 export function fromCode(code: string): GameState | undefined {
-  const trimmed = code.trim();
-  if (!trimmed.startsWith(CODE_PREFIX)) return undefined;
+  const text = code.length > CODE_MAX_LENGTH ? '' : code.replace(/\s+/g, '');
   try {
-    const bin = atob(trimmed.slice(CODE_PREFIX.length));
-    const bytes = Uint8Array.from(bin, (c) => c.charCodeAt(0));
+    let bytes: Uint8Array;
+    if (text.startsWith(CODE_PREFIX)) bytes = inflateSync(fromBase64(text.slice(CODE_PREFIX.length)));
+    else if (text.startsWith(CODE_PREFIX_V1)) bytes = fromBase64(text.slice(CODE_PREFIX_V1.length));
+    else return undefined;
     return deserialize(new TextDecoder().decode(bytes));
   } catch {
+    // Mã hỏng: base64 sai hay dữ liệu nén sai.
     return undefined;
   }
+}
+
+/** Tên tệp lưu, theo giờ máy: thoi-dai-van-lang-2026-11-01-1430.txt. Đuôi .txt để ứng dụng nhắn tin nào cũng gửi được. */
+export function saveFileName(now: Date): string {
+  const two = (n: number) => String(n).padStart(2, '0');
+  const day = `${now.getFullYear()}-${two(now.getMonth() + 1)}-${two(now.getDate())}`;
+  return `thoi-dai-van-lang-${day}-${two(now.getHours())}${two(now.getMinutes())}.txt`;
+}
+
+function toBase64(bytes: Uint8Array): string {
+  let bin = '';
+  for (const byte of bytes) bin += String.fromCharCode(byte);
+  return btoa(bin);
+}
+
+function fromBase64(text: string): Uint8Array {
+  return Uint8Array.from(atob(text), (c) => c.charCodeAt(0));
 }
 
 export function loadFromStorage(storage: Storage): GameState | undefined {

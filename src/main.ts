@@ -46,7 +46,7 @@ import {
   type StageResult,
 } from './game/game';
 import { AREA_SIZE, GRID, RIVER_START } from './game/map';
-import { fromCode, loadFromStorage, saveToStorage, toCode } from './game/save';
+import { fromCode, loadFromStorage, saveFileName, saveToStorage, toCode } from './game/save';
 import { RESOLUTIONS, World, type Resolution } from './render/world';
 import { vi } from './text/vi';
 import { Hud, buildingName, type HudAction } from './ui/hud';
@@ -539,11 +539,37 @@ function start(): void {
         return;
       }
 
+      case 'saveFile': {
+        // Tệp lưu chứa đúng mã lưu, nên mở tệp ra chép mã cũng được.
+        const url = URL.createObjectURL(new Blob([toCode(state)], { type: 'text/plain' }));
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = saveFileName(new Date());
+        document.body.append(link);
+        link.click();
+        link.remove();
+        setTimeout(() => URL.revokeObjectURL(url), 60_000);
+        hud.toast(vi.ui.downloaded);
+        return;
+      }
+
+      case 'shareFile': {
+        // Gọi ngay trong lúc bấm: Safari chỉ cho mở bảng chia sẻ khi người chơi vừa chạm.
+        const file = new File([toCode(state)], saveFileName(new Date()), { type: 'text/plain' });
+        navigator.share({ files: [file], title: vi.gameTitle }).catch((err: unknown) => {
+          // Người chơi tự đóng bảng chia sẻ thì thôi.
+          if (err instanceof DOMException && err.name === 'AbortError') return;
+          play('error');
+          hud.toast(vi.ui.shareFailed, true);
+        });
+        return;
+      }
+
       case 'importCode': {
         const loaded = fromCode(a.code);
         if (!loaded) {
           play('error');
-          hud.toast(vi.ui.importBad, true);
+          hud.toast(a.file ? vi.ui.fileBad : vi.ui.importBad, true);
           return;
         }
         state = loaded;
@@ -551,7 +577,7 @@ function start(): void {
         setMuted(state.settings.muted);
         world.resetAll();
         hud.closeSheet();
-        hud.toast(vi.ui.imported);
+        hud.toast(a.file ? vi.ui.fileLoaded : vi.ui.imported);
         commit();
         return;
       }
