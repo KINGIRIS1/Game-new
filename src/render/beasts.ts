@@ -18,7 +18,7 @@ type V3 = [number, number, number];
 const BASE: Defs = { base: { parent: null, at: [0, 0, 0] } };
 
 /** Bốn chân đi nhịp chéo; thân hạ cho chân (dài `len`) vẫn chạm đất. Trả về sin pha. */
-function quadWalk(b: B, phase: number, stride: number, len: number): number {
+export function quadWalk(b: B, phase: number, stride: number, len: number): number {
   const sw = Math.sin(phase);
   b.qFL.rotation.x = b.qBR.rotation.x = stride * sw;
   b.qFR.rotation.x = b.qBL.rotation.x = -stride * sw;
@@ -27,7 +27,7 @@ function quadWalk(b: B, phase: number, stride: number, len: number): number {
 }
 
 /** Ngã: chân duỗi ra, đầu gục (phần vẽ trận lăn cả con nằm nghiêng). */
-function quadFall(b: B, f: number): void {
+export function quadFall(b: B, f: number): void {
   b.qFL.rotation.x = -0.6 * f;
   b.qFR.rotation.x = -0.35 * f;
   b.qBL.rotation.x = 0.5 * f;

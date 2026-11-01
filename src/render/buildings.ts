@@ -6,7 +6,8 @@
 
 import * as THREE from 'three';
 import { bakeRuaVang } from './beasts';
-import { ironHorse, makeCrossbowStand, makeFighter, makeSonTinh } from './models';
+import { bakeIronHorse, bakeSonTinh } from './heroes';
+import { makeCrossbowStand, makeFighter } from './models';
 import { C } from './palette';
 import { ShapeBuilder, saddleRoof, seeded } from './shapes';
 import { bakeSoldier } from './soldier';
@@ -1335,9 +1336,7 @@ export function makeDenPhuDong(): THREE.Group {
   banner(m, -1.3, -1.25, 2.4, C.red);
   banner(m, 1.1, -1.25, 2.4, C.red);
   const g = m.group();
-  const horse = new ToonModel(inkThin);
-  ironHorse(horse);
-  const statue = horse.group();
+  const statue = bakeIronHorse();
   statue.scale.setScalar(0.72);
   statue.position.set(0, 0.54, 0.75);
   g.add(statue);
@@ -1368,7 +1367,7 @@ export function makeDenTanVien(): THREE.Group {
   banner(m, -1.25, 0.4, 2.2, C.mountainCloak);
   banner(m, 1.05, 0.4, 2.2, C.red);
   const g = m.group();
-  const statue = makeSonTinh();
+  const statue = bakeSonTinh();
   statue.scale.setScalar(0.5);
   statue.position.set(0, 0.5, 0.95);
   g.add(statue);

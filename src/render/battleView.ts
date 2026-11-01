@@ -6,7 +6,8 @@ import type { Battle, FighterKind } from '../game/battle';
 import { FIRE, HILL, RALLY_BEAT, ROCKS, SKILLS, TT_WAVE, type UnitType } from '../game/defs';
 import { isBeast, makeBeast, makeRuaVang } from './beasts';
 import { isMonster, makeMonster } from './monsters';
-import { BOW_POSE, WEAPON_REST, makeAnDuong, makeFighter, makeGiong, makeMountain, makeSonTinh } from './models';
+import { makeAnDuong, makeGiong, makeSonTinh, makeThuyTinh } from './heroes';
+import { makeFighter, makeMountain } from './models';
 import { C } from './palette';
 import type { Poser } from './rig';
 import { ShapeBuilder, seeded } from './shapes';
@@ -18,8 +19,6 @@ interface FighterView {
   deadAge: number;
   /** Gióng bay về trời: đã bay được bao lâu. */
   rise: number;
-  /** Tay cầm roi (hay tre) của Gióng, để làm động tác quật. */
-  weapon?: THREE.Object3D;
   /** Gióng đang quét tre một vòng (Nhổ tre): còn bao lâu. */
   smash: number;
   /** Gióng đang phi ngựa dọc đường lao (Phun lửa), tọa độ trận. */
@@ -42,6 +41,8 @@ interface FighterView {
   wet?: THREE.Group;
   /** Nhân vật có khung xương: đi, đánh, ngã bằng cách xoay xương thay vì nhún và ngả cả thân. */
   pose?: Poser;
+  /** An Dương Vương chĩa nỏ lên trời (bắn nỏ thần): 0..1, đổi dần cho mượt. */
+  lift?: number;
 }
 
 /** Vòng núi đá Dời non quanh Sơn Tinh: từng mỏm trồi vụt lên lần lượt, đứng một lúc rồi lún xuống. */
@@ -352,26 +353,6 @@ function tongue(shape: { geo: THREE.BufferGeometry; outline: THREE.BufferGeometr
 const SMASH_TIME = 0.9;
 const { lerp, smoothstep } = THREE.MathUtils;
 
-/**
- * Động tác tay vũ khí của Gióng. Đòn thường: quật từ trên cao xuống trước mặt (theo `swing` của luật trận).
- * Nhổ tre: vung tre ra sau lấy đà, quật mạnh xuống trước mặt, nâng ngang lên quét trọn một vòng quanh mình,
- * rồi giơ lên lại. Vòng quét dài vừa bằng vùng bị đánh trúng.
- */
-function swingWeapon(weapon: THREE.Object3D, swing: number, smash: number): void {
-  if (smash > 0) {
-    const k = 1 - smash / SMASH_TIME;
-    let x: number;
-    if (k < 0.15) x = lerp(WEAPON_REST.x, -1, smoothstep(k, 0, 0.15));
-    else if (k < 0.3) x = lerp(-1, 2.2, smoothstep(k, 0.15, 0.3));
-    else if (k < 0.85) x = lerp(2.2, 1.45, smoothstep(k, 0.3, 0.4));
-    else x = lerp(1.45, WEAPON_REST.x, smoothstep(k, 0.85, 1));
-    weapon.rotation.set(x, Math.PI * 2 * smoothstep(k, 0.35, 0.85), WEAPON_REST.z);
-    return;
-  }
-  const k = swing > 0 ? 1 - swing / 0.3 : 0;
-  weapon.rotation.set(WEAPON_REST.x + 2.25 * Math.sin(Math.PI * k), 0, WEAPON_REST.z);
-}
-
 export class BattleView {
   private readonly fighters = new Map<number, FighterView>();
   private readonly arrows: Arrow[] = [];
@@ -520,7 +501,9 @@ export class BattleView {
               ? makeSonTinh({ glow: battle.hero?.glow })
               : f.kind === 'anDuong'
                 ? makeAnDuong({ crossbow: true, glow: battle.hero?.glow })
-                : isSoldier(f.kind)
+                : f.kind === 'thuyTinh'
+                  ? makeThuyTinh()
+                  : isSoldier(f.kind)
                   ? makeSoldier(f.kind, f.side === 'ta' ? (battle.arms?.[f.kind as UnitType] ?? 0) : 0)
                   : isBeast(f.kind)
                     ? makeBeast(f.kind, f.side === 'ta' ? (battle.arms?.[f.kind as UnitType] ?? 0) : 0)
@@ -529,7 +512,7 @@ export class BattleView {
                       : makeFighter(f.kind, f.side === 'ta' ? (battle.arms?.[f.kind as UnitType] ?? 0) : 0);
         obj.scale.setScalar((SCALE[f.kind] ?? 0.8) * this.scale);
         this.root.add(obj);
-        view = { obj, deadAge: 0, rise: 0, weapon: obj.children.find((c) => c.userData.weapon), smash: 0, volley: 0, pose: obj.userData.pose };
+        view = { obj, deadAge: 0, rise: 0, smash: 0, volley: 0, pose: obj.userData.pose };
         this.fighters.set(f.id, view);
       }
       const obj = view.obj;
@@ -563,15 +546,9 @@ export class BattleView {
           }
           view.peak.position.set(obj.position.x, base - 3.2 + 3.2 * THREE.MathUtils.smoothstep(k, 0, 1), obj.position.z);
           obj.position.y = view.peak.position.y + 3.2;
-          if (view.weapon) view.weapon.rotation.set(WEAPON_REST.x - 2.4 * Math.min(view.rise, 1), 0, WEAPON_REST.z);
+          // Giơ cao gậy thần.
+          view.pose?.({ act: 'stand', win: Math.min(view.rise, 1), time: this.time });
           continue;
-        }
-        if (view.weapon) swingWeapon(view.weapon, f.swing, 0);
-        if (view.cast && view.cast > 0 && view.weapon) {
-          // Dời non: giơ gậy thần lên cao quá đầu, rồi dộng mạnh xuống đất.
-          const k = 1 - view.cast / CAST_TIME;
-          const up = k < 0.55 ? smoothstep(k, 0, 0.3) : 1 - smoothstep(k, 0.55, 0.75);
-          view.weapon.rotation.set(WEAPON_REST.x - 2.6 * up, 0, WEAPON_REST.z);
         }
       }
       if (f.kind === 'anDuong') {
@@ -595,31 +572,26 @@ export class BattleView {
           view.peak.position.set(obj.position.x, base - 1.3 * size * 0.4 + 1.3 * size * 0.4 * THREE.MathUtils.smoothstep(k, 0, 1), obj.position.z);
           obj.position.y = view.peak.position.y + 0.42 * size;
           obj.rotation.x = 0;
-          if (view.weapon) view.weapon.rotation.x = lerp(BOW_POSE.rest, BOW_POSE.sky, Math.min(view.rise * 2, 1));
+          view.pose?.({ act: 'stand', win: Math.min(view.rise * 2, 1), time: this.time });
           continue;
         }
         view.volley = Math.max(0, view.volley - dt);
-        if (view.weapon) {
-          // Ra đòn thì nâng nỏ ngang vai ngắm; bắn nỏ thần thì chĩa lên trời; nghỉ thì hạ ngang thắt lưng.
-          const goal = view.volley > 0 ? BOW_POSE.sky : f.swing > 0 ? BOW_POSE.aim : BOW_POSE.rest;
-          view.weapon.rotation.x += (goal - view.weapon.rotation.x) * Math.min(1, dt * 14);
-        }
+        // Bắn nỏ thần thì chĩa nỏ lên trời (đổi dần); ra đòn thì nâng nỏ ngắm, nghỉ thì hạ (theo tư thế).
+        const goal = view.volley > 0 ? 1 : 0;
+        view.lift = (view.lift ?? 0) + (goal - (view.lift ?? 0)) * Math.min(1, dt * 14);
       }
       if (f.kind === 'giong') {
-        for (const c of obj.children) {
-          if (c.userData.flame) c.scale.set(1, 0.7 + 0.5 * Math.abs(Math.sin(this.time * 9)), 1);
-          if (c.userData.halo) c.rotation.z = this.time * 0.6;
-        }
+        for (const c of obj.children) if (c.userData.halo) c.rotation.z = this.time * 0.6;
         if (battle.ascend && battle.outcome === 'win') {
-          // Phá xong giặc, Gióng cưỡi ngựa bay lên trời.
+          // Phá xong giặc, Gióng cưỡi ngựa phi bay lên trời.
           view.rise += dt;
           obj.position.y = base + view.rise * view.rise * 0.8;
           obj.rotation.y = f.face + view.rise * 0.6;
           obj.rotation.x = -0.35;
+          view.pose?.({ act: 'walk', phase: this.time * 20, stride: 0.8, time: this.time });
           continue;
         }
         view.smash = Math.max(0, view.smash - dt);
-        if (view.weapon) swingWeapon(view.weapon, f.swing, view.smash);
         if (view.dash) {
           // Phun lửa: ngựa phi dọc đường lao, chồm về trước, nảy theo nhịp vó.
           const d = view.dash;
@@ -630,11 +602,12 @@ export class BattleView {
           if (Math.hypot(d.toX - d.fromX, d.toZ - d.fromZ) > 0.01) obj.rotation.y = Math.atan2(d.toX - d.fromX, d.toZ - d.fromZ);
           obj.position.y = this.heightAt(lerp(d.fromX, d.toX, k), lerp(d.fromZ, d.toZ, k)) + Math.abs(Math.sin(d.age * 26)) * 0.14;
           obj.rotation.x = 0.12;
+          view.pose?.({ act: 'walk', phase: d.age * 26, stride: 0.85, time: this.time });
           if (d.age >= DASH_TIME) view.dash = undefined;
           continue;
         }
       }
-      // Gióng ra đòn bằng tay vũ khí, ngựa chỉ chồm nhẹ khi quét tre; người khác ngả cả thân.
+      // Gióng ra đòn bằng tay vũ khí, ngựa chỉ chồm nhẹ khi quét tre; nhân vật có xương tự làm động tác.
       if (f.kind === 'giong') obj.rotation.x = view.smash > 0 ? -0.2 * Math.sin(Math.PI * (1 - view.smash / SMASH_TIME)) : 0;
       else if (f.kind === 'sonTinh' || f.kind === 'anDuong' || view.pose) obj.rotation.x = 0;
       else obj.rotation.x = f.swing > 0 ? -0.5 * (f.swing / 0.3) : 0;
@@ -651,12 +624,23 @@ export class BattleView {
         const phase = this.time * (wading ? 6 : rally || flee ? 13 : 11) + f.id;
         obj.position.y = base + (walking && rally ? Math.abs(Math.sin(phase)) * 0.05 : 0);
         const time = this.time + f.id;
+        // Kỹ năng riêng của tướng: Gióng quét tre, Sơn Tinh dời non, Thủy Tinh hô mưa, An Dương Vương nỏ thần.
+        const skill =
+          f.kind === 'giong'
+            ? view.smash > 0
+              ? 1 - view.smash / SMASH_TIME
+              : undefined
+            : f.kind === 'anDuong'
+              ? view.lift
+              : view.cast && view.cast > 0
+                ? 1 - view.cast / CAST_TIME
+                : undefined;
         view.pose(
           walking
-            ? { act: 'walk', phase, stride: wading ? 0.3 : rally || flee ? 0.65 : 0.5, time }
+            ? { act: 'walk', phase, stride: wading ? 0.3 : rally || flee ? 0.65 : 0.5, time, skill }
             : f.state === 'fight'
-              ? { act: 'fight', strike: f.swing > 0 ? 1 - f.swing / 0.3 : undefined, time }
-              : { act: 'stand', time },
+              ? { act: 'fight', strike: f.swing > 0 ? 1 - f.swing / 0.3 : undefined, time, skill }
+              : { act: 'stand', time, skill },
         );
       } else obj.position.y = base + (moving ? Math.abs(Math.sin(this.time * (wading ? 5 : 10) + f.id)) * hop : 0);
       this.syncWet(view, f.side === 'ta' && wading && !battle.outcome);

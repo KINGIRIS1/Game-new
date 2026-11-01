@@ -44,17 +44,15 @@ import {
   makeVuon,
 } from './buildings';
 import { makeRuaVang } from './beasts';
+import { makeAnDuong, makeGiong, makeSonTinh } from './heroes';
 import { addSunLights, type SunLights } from './lights';
 import {
   buildCitadel,
   buildDikes,
   buildForest,
   buildWalls,
-  makeAnDuong,
   makeBoat,
   makeTradeBoat,
-  makeGiong,
-  makeSonTinh,
   type CitadelSpot,
   type DikeSpot,
   type TreeSpot,
@@ -1454,15 +1452,13 @@ export class World {
 
     if (this.son) {
       // Sơn Tinh đứng chờ, tay gậy đung đưa.
-      const staff = this.son.obj.children.find((c) => c.userData.weapon);
-      if (staff) staff.rotation.x = -0.35 + 0.12 * Math.sin(t * 1.3);
+      (this.son.obj.userData.pose as Poser | undefined)?.({ act: 'stand', time: t });
     }
 
     if (this.adv) {
       // An Dương Vương đứng nhún nhẹ, nỏ (hay rìu) khẽ đưa lên xuống.
       this.adv.obj.position.y = this.adv.y + Math.abs(Math.sin(t * 1.6)) * 0.02;
-      const weapon = this.adv.obj.children.find((c) => c.userData.weapon);
-      if (weapon && this.adv.look === 'noThan') weapon.rotation.x = 0.5 + 0.06 * Math.sin(t * 1.2);
+      (this.adv.obj.userData.pose as Poser | undefined)?.({ act: 'stand', time: t });
     }
 
     if (this.turtle) {
@@ -1483,8 +1479,7 @@ export class World {
       const g = this.giong;
       // Cậu bé lắc lư, thiếu niên cúi ăn cơm, ngựa sắt thở ra lửa.
       if (g.look === 'trangSi') g.obj.position.y = Math.abs(Math.sin(t * 2)) * 0.03;
-      else g.obj.rotation.x = (g.look === 'be' ? 0.06 : 0.15) * Math.sin(t * (g.look === 'be' ? 1.5 : 3));
-      for (const c of g.obj.children) if (c.userData.flame) c.scale.set(1, 0.7 + 0.5 * Math.abs(Math.sin(t * 9)), 1);
+      (g.obj.userData.pose as Poser | undefined)?.({ act: 'stand', time: t });
     }
 
     for (const boat of this.boats) {

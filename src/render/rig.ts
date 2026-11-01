@@ -52,6 +52,10 @@ export interface Act {
   time?: number;
   /** Ngã được bao nhiêu, 0..1. */
   fall?: number;
+  /** Tướng đang làm kỹ năng riêng (quét tre, dời non, hô mưa, nỏ thần): tiến trình 0..1. */
+  skill?: number;
+  /** Tướng thắng trận (giơ gậy, chĩa nỏ lên trời): 0..1. */
+  win?: number;
 }
 
 export type Poser = (a: Act) => void;

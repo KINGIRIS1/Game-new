@@ -6,6 +6,7 @@ import { addSunLights } from '../src/render/lights';
 import { C } from '../src/render/palette';
 import type { Act, Poser } from '../src/render/rig';
 import { makeBeast, makeRuaVang } from '../src/render/beasts';
+import { makeAnDuong, makeDrummer, makeGiong, makeSonTinh, makeThuyTinh } from '../src/render/heroes';
 import { makeMonster } from '../src/render/monsters';
 import { makeSoldier } from '../src/render/soldier';
 
@@ -61,7 +62,28 @@ export const NHOM: Record<string, Entry[]> = {
     { ten: 'Quỷ núi', tao: () => makeMonster('quyNui'), co: 1.0, cach: 0.9 },
     { ten: 'Ma trơi', tao: () => makeMonster('maTroi') },
   ],
+  tuong: [
+    { ten: 'Gióng lên ba', tao: () => makeGiong('be'), co: 0.7 },
+    { ten: 'Gióng thiếu niên', tao: () => makeGiong('thieuNien'), co: 0.9 },
+    { ten: 'Tráng sĩ Gióng (roi sắt)', tao: () => makeGiong('trangSi'), co: 1.6, cach: 1.4 },
+    { ten: 'Tráng sĩ Gióng (tre, hiển linh)', tao: () => makeGiong('trangSi', { bamboo: true, glow: true }), co: 1.8, cach: 1.4 },
+    { ten: 'Sơn Tinh', tao: () => makeSonTinh(), co: 1.3, cach: 1.1 },
+    { ten: 'Sơn Tinh trên mỏm đá', tao: () => makeSonTinh({ rock: true }), co: 1.4, cach: 1.3 },
+    { ten: 'Thủy Tinh', tao: () => makeThuyTinh(), co: 1.3, cach: 1.2 },
+    { ten: 'An Dương Vương (nỏ thần)', tao: () => makeAnDuong({ crossbow: true }), co: 1.3, cach: 1.1 },
+    { ten: 'An Dương Vương (rìu)', tao: () => makeAnDuong(), co: 1.3, cach: 1.1 },
+  ],
+  ky_nang: [
+    { ten: 'Kỹ năng (cột: 0, 0,1 … 1)', tao: () => makeGiong('trangSi'), co: 1.6, cach: 1.4 },
+    { ten: 'Sơn Tinh dời non', tao: () => makeSonTinh(), co: 1.3, cach: 1.1 },
+    { ten: 'Thủy Tinh hô mưa', tao: () => makeThuyTinh(), co: 1.3, cach: 1.2 },
+    { ten: 'An Dương Vương nỏ thần', tao: () => makeAnDuong({ crossbow: true }), co: 1.3, cach: 1.1 },
+    { ten: 'Người đánh trống', tao: () => makeDrummer(), co: 0.9, cach: 1.1 },
+  ],
 };
+
+/** Nhóm `ky_nang`: mỗi cột một mốc tiến trình kỹ năng (người đánh trống: nện tay trái, tay phải xen nhau). */
+const KY_NANG: [string, Act][] = [0, 0.1, 0.2, 0.35, 0.5, 0.6, 0.7, 0.85, 1].map((k) => [`${k}`, { act: 'fight', skill: k, time: k }]);
 
 const AZ = Math.PI / 4;
 const EL = THREE.MathUtils.degToRad(38);
@@ -91,9 +113,12 @@ export function chup(nhom: string, huong = -0.6): { ten: string; anh: string }[]
     ground.rotation.x = -Math.PI / 2;
     ground.receiveShadow = true;
     scene.add(ground);
-    TU_THE.forEach(([, act], i) => {
+    const cols = nhom === 'ky_nang' ? KY_NANG : TU_THE;
+    cols.forEach(([, act], i) => {
       const g = e.tao();
-      const k = i - (TU_THE.length - 1) / 2;
+      const k = i - (cols.length - 1) / 2;
+      const beat = g.userData.beat as ((l: number, r: number) => void) | undefined;
+      if (beat) beat(i % 2 ? 0.32 : -0.75, i % 2 ? -0.75 : 0.32);
       g.position.copy(right).multiplyScalar(k * gap);
       g.rotation.y = AZ + huong;
       (g.userData.pose as Poser | undefined)?.(act);
