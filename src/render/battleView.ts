@@ -400,7 +400,11 @@ export class BattleView {
   ) {}
 
   /** Gọi mỗi khung hình với trận đang diễn ra, hoặc null khi không có trận. */
+  /** Hệ số hình học của trận đang vẽ (`Battle.geo`): ở kinh đô, vùng kỹ năng rộng hơn theo độ giãn của kinh đô. */
+  private geo = 1;
+
   update(battle: Battle | null, dt: number): void {
+    this.geo = battle?.geo ?? 1;
     this.time += dt;
     if (!battle || battle.id !== this.battleId) {
       this.clear();
@@ -691,7 +695,7 @@ export class BattleView {
     const spikes: Crag['spikes'] = [];
     const add = (n: number, r: number, hMin: number, hMax: number, size: number, delay0: number): void => {
       for (let i = 0; i < n; i++) {
-        const a = (i / n) * Math.PI * 2 + rand() * 0.3 + (r < ROCKS.radius ? 0.3 : 0);
+        const a = (i / n) * Math.PI * 2 + rand() * 0.3 + (r < (ROCKS.radius * this.geo) ? 0.3 : 0);
         const px = Math.cos(a) * r;
         const pz = Math.sin(a) * r;
         const h = (hMin + rand() * (hMax - hMin)) * this.scale;
@@ -703,8 +707,8 @@ export class BattleView {
         spikes.push({ obj, h, delay: delay0 + (i / n) * 0.12 });
       }
     };
-    add(11, ROCKS.radius, 1.0, 1.6, 0.42, 0.04);
-    add(7, ROCKS.radius * 0.62, 0.55, 0.9, 0.28, 0);
+    add(11, (ROCKS.radius * this.geo), 1.0, 1.6, 0.42, 0.04);
+    add(7, (ROCKS.radius * this.geo) * 0.62, 0.55, 0.9, 0.28, 0);
     // Đất nứt: những đường nứt sẫm tỏa từ chân Sơn Tinh ra tới vòng đá.
     const crackMat = new THREE.MeshBasicMaterial({ color: 0x2a2018, transparent: true, opacity: 0.7, depthWrite: false });
     const cracks = new THREE.Group();
@@ -714,7 +718,7 @@ export class BattleView {
       let cz = 0;
       let dir = a;
       for (let seg = 0; seg < 3; seg++) {
-        const len = (ROCKS.radius / 3) * (0.8 + rand() * 0.4);
+        const len = ((ROCKS.radius * this.geo) / 3) * (0.8 + rand() * 0.4);
         dir += (rand() - 0.5) * 0.6;
         const mesh = new THREE.Mesh(new THREE.BoxGeometry(0.09 - seg * 0.02, 0.01, len), crackMat);
         mesh.position.set(cx + Math.cos(dir) * len * 0.5, this.heightAt(x + cx, z + cz) + 0.04, cz + Math.sin(dir) * len * 0.5);
@@ -731,8 +735,8 @@ export class BattleView {
     // Bụi đất tung ở chân từng mỏm đá lớn.
     for (let i = 0; i < 12; i++) {
       const a = (i / 12) * Math.PI * 2;
-      const px = x + Math.cos(a) * ROCKS.radius;
-      const pz = z + Math.sin(a) * ROCKS.radius;
+      const px = x + Math.cos(a) * (ROCKS.radius * this.geo);
+      const pz = z + Math.sin(a) * (ROCKS.radius * this.geo);
       this.addPuff(px + ox, this.heightAt(px, pz) + 0.2, pz + oz, i % 3 ? C.earth : C.rock, 0.05 + (i / 12) * 0.12, 0.9, 1.8);
     }
   }
@@ -979,6 +983,7 @@ export class BattleView {
       }
       if (e.kind === 'hill' && e.tx !== undefined && e.tz !== undefined) {
         const group = hillModel();
+        group.scale.multiplyScalar(this.geo);
         group.position.set(e.tx + ox, this.heightAt(e.tx, e.tz) + 7, e.tz + oz);
         group.rotation.y = e.seq;
         this.root.add(group);
@@ -1048,6 +1053,7 @@ export class BattleView {
     const group = new THREE.Group();
     group.position.set(x + ox, 0.05, z + oz);
     group.rotation.y = face;
+    group.scale.set(this.geo, 1, this.geo);
     const steps = Math.ceil(FIRE.length / 0.55);
     const blobs = new THREE.InstancedMesh(scorchGeo, mat, steps);
     for (let i = 0; i < steps; i++) {
@@ -1068,7 +1074,7 @@ export class BattleView {
       const along = (f.x - x) * dx + (f.z - z) * dz;
       const across = Math.abs((f.x - x) * dz - (f.z - z) * dx);
       const target = this.fighters.get(f.id);
-      if (!target || along < -0.3 || along > FIRE.length || across > FIRE.width / 2) continue;
+      if (!target || along < -0.3 || along > FIRE.length * this.geo || across > (FIRE.width * this.geo) / 2) continue;
       const fire = new THREE.Group();
       for (const shape of burnShapes) {
         const t = tongue(shape);
@@ -1175,7 +1181,8 @@ export class BattleView {
           // Đồi đập xuống: bụi đất tung lên quanh chân đồi.
           for (let n = 0; n < 10; n++) {
             const a = (n / 10) * Math.PI * 2;
-            this.addPuff(x + Math.cos(a) * HILL.radius, ground + 0.2, z + Math.sin(a) * HILL.radius, C.earth, 0, 0.8, 1.8);
+            const r = HILL.radius * (h.group.scale.x || 1);
+            this.addPuff(x + Math.cos(a) * r, ground + 0.2, z + Math.sin(a) * r, C.earth, 0, 0.8, 1.8);
           }
         }
         // Nằm lại một lúc rồi lún dần xuống đất.

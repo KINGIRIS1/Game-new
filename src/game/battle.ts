@@ -308,6 +308,22 @@ export interface BattleOpts {
   arms?: Record<UnitType, number>;
 }
 
+/**
+ * Dải giặc trên bộ xuất phát ở bìa rừng phía bắc (hay phía tây, đối xứng): dọc theo bìa từ `lo` tới bờ sông,
+ * sâu từ `from` tới `to` ô tính từ mép lưới. Cách sông xa như ở kinh đô nhỏ trước kia nhân `RAID_SCALE`, nhưng luôn
+ * ở ngoài vùng đã khai phá. Phần vẽ dùng để đặt dải báo giặc, ma trơi và hướng camera.
+ */
+export function raidSpawnBand(state: GameState): { lo: number; from: number; to: number } {
+  const open = areaStart(dienLevel(state));
+  const at = (r: number) => spawnDepth(open, r);
+  return { lo: Math.min(open, fromRiver(24)), from: at(0), to: at(1) };
+}
+
+/** Ô cách sông như ô cách sông `old` ô ở kinh đô nhỏ, giãn theo `RAID_SCALE`. */
+const fromRiver = (old: number) => RIVER_START - RAID_SCALE * old;
+/** Chiều sâu chỗ giặc trên bộ xuất phát (số ngẫu nhiên `r` 0..1), vùng đã khai phá bắt đầu từ ô `open`. */
+const spawnDepth = (open: number, r: number) => Math.max(0.6, Math.min(fromRiver(26.4 - 1.4 * r), open - 2 + 1.4 * r));
+
 export function startBattle(state: GameState, wave: number, side: RaidSide, opts: BattleOpts = {}): Battle {
   const battle = newBattle(state.nextBattleId++, 'raid', wave, side);
   battle.bonus = opts.bonus ?? 0;
@@ -316,9 +332,8 @@ export function startBattle(state: GameState, wave: number, side: RaidSide, opts
   const land = opts.land ?? null;
   battle.geo = RAID_SCALE;
   const rand = rng(wave * 7919 + ['bac', 'tay', 'nam', 'dong'].indexOf(side) + 1);
-  // Giặc ra cách sông xa như ở kinh đô nhỏ trước kia nhân `RAID_SCALE`, nhưng luôn ở ngoài vùng đã khai phá.
+  // Giặc trên bộ ra từ dải ở bìa rừng (`raidSpawnBand`).
   const open = areaStart(dienLevel(state));
-  const fromRiver = (old: number) => RIVER_START - RAID_SCALE * old;
   const lo = Math.min(open, fromRiver(24));
   let exitAt = Infinity;
   const flood = opts.flood ?? null;
@@ -350,9 +365,7 @@ export function startBattle(state: GameState, wave: number, side: RaidSide, opts
       // Thủy quái ngoi lên từ sông: phía nam (z lớn) hoặc phía đông (x lớn).
       const along = lo + rand() * (RIVER_START - lo - 1);
       const r = rand();
-      const depth = flood
-        ? RIVER_START + 0.4 + r * 1.4
-        : Math.max(0.6, Math.min(fromRiver(26.4 - 1.4 * r), open - 2 + 1.4 * r));
+      const depth = flood ? RIVER_START + 0.4 + r * 1.4 : spawnDepth(open, r);
       if (!flood) exitAt = Math.min(exitAt, depth - 0.6 * RAID_SCALE);
       const hp = ENEMIES[kind].hp * scale;
       const alongX = side === 'bac' || side === 'nam';
