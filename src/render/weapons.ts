@@ -193,6 +193,113 @@ export function crossbowParts(m: Pick<Parts, 'plain' | 'band' | 'glow'> & Partia
   }
 }
 
+/**
+ * Nỏ liên châu của Cao Lỗ: nỏ lớn báng dọc +z, trên thân có hộp tên gỗ đai đồng (một lần lên dây bắn liền nhiều mũi),
+ * cần lên dây nối đuôi hộp xuống báng, cánh cung gỗ bọc sừng đầu bịt đồng, dây cung kéo chữ V vào miệng hộp.
+ * Gốc ở chỗ tay phải nắm, ngay sau hộp tên: hộp nằm hẳn phía trước tay nên nâng nỏ ngang vai ngắm không chạm mặt.
+ */
+export function repeatingCrossbow(m: Parts, s = 1): void {
+  const p = m.plain;
+  // Báng gỗ dài tới mũi nỏ, đuôi tì vai to bản bịt đồng.
+  p.box(0.075 * s, 0.08 * s, 0.9 * s, C.woodDark, 0, 0, 0.08 * s);
+  p.box(0.095 * s, 0.13 * s, 0.17 * s, C.wood, 0, -0.025 * s, -0.3 * s);
+  p.box(0.1 * s, 0.135 * s, 0.025 * s, C.bronze, 0, -0.025 * s, -0.39 * s);
+  // Lẫy đồng dưới báng, ngay trước tay nắm.
+  p.box(0.035 * s, 0.11 * s, 0.06 * s, C.bronzeDark, 0, -0.085 * s, 0.05 * s);
+  // Hộp tên gỗ ba đai đồng, nắp đồng, đuôi tên lông đỏ nhô khỏi khe nắp, hai mũi tên đồng ló ở miệng hộp.
+  const mz = 0.24;
+  const mh = 0.17;
+  const my = 0.04 + mh / 2;
+  p.box(0.12 * s, mh * s, 0.36 * s, C.wood, 0, my * s, mz * s);
+  for (const dz of [-0.14, 0, 0.14]) p.box(0.132 * s, (mh + 0.012) * s, 0.03 * s, C.bronze, 0, my * s, (mz + dz) * s);
+  m.band.box(0.134 * s, 0.022 * s, 0.37 * s, C.bronze, 0, (0.05 + mh) * s, mz * s);
+  for (const dx of [-0.03, 0, 0.03]) p.box(0.014 * s, 0.075 * s, 0.07 * s, C.red, dx * s, (0.09 + mh) * s, (mz - 0.11) * s, [-0.3, 0, 0]);
+  for (const dx of [-0.028, 0.028]) p.cone(0.022 * s, 0.08 * s, C.bronzeLight, dx * s, 0.08 * s, (mz + 0.22) * s, [Math.PI / 2, 0, 0], 4);
+  // Cần lên dây: thanh gỗ chéo từ đuôi hộp xuống đuôi báng, chốt đồng hai đầu.
+  p.box(0.03 * s, 0.03 * s, 0.4 * s, C.woodLight, 0, 0.12 * s, -0.11 * s, [-0.52, 0, 0]);
+  p.sphere(0.03 * s, C.bronze, 0, 0.2 * s, 0.06 * s, [1, 1, 1], 6);
+  p.sphere(0.028 * s, C.bronze, 0, 0.03 * s, -0.27 * s, [1, 1, 1], 6);
+  // Cánh cung: đoạn trong gỗ, đoạn ngoài sừng cong ngược, đầu bịt đồng; giữa cánh quấn đai đồng hoa văn.
+  // Dây cung từ đầu cánh kéo chữ V vào miệng hộp tên.
+  const nz = 0.46;
+  m.band.cyl(0.055 * s, 0.055 * s, 0.11 * s, C.bronze, 0, 0, nz * s, [Math.PI / 2, 0, 0], 8);
+  for (const side of [-1, 1]) {
+    let x = side * 0.02;
+    let z = nz;
+    for (const [len, a, color, w] of [
+      [0.27, 0.3, C.wood, 0.056],
+      [0.21, 0.58, HORN, 0.046],
+    ] as const) {
+      const dx = side * Math.cos(a) * len;
+      const dz = -Math.sin(a) * len;
+      p.box(len * s, w * s, w * s, color, (x + dx / 2) * s, 0, (z + dz / 2) * s, [0, side * a, 0]);
+      x += dx;
+      z += dz;
+    }
+    p.sphere(0.03 * s, C.bronze, x * s, 0, z * s, [1, 1, 1], 6);
+    const qz = 0.1;
+    const len = Math.hypot(x, z - qz);
+    p.box(0.012 * s, 0.012 * s, len * s, C.cream, (x / 2) * s, 0.02 * s, ((z + qz) / 2) * s, [0, Math.atan2(x, z - qz), 0]);
+  }
+}
+
+/** Màu sừng trâu làm tù và: ngà ấm, đầu ngậm sẫm. */
+const HORN_TRUMPET = 0xd8bf86;
+const HORN_TIP = 0x3a2a1a;
+
+/**
+ * Tù và sừng trâu: ống sừng thon cong, hai đai đồng, miệng loe bịt đồng. Gốc ở chỗ tay nắm, gần đầu ngậm (ở -z);
+ * ống chạy về +z rồi cong dần lên +y tới miệng loe.
+ */
+export function hornTrumpet(m: Parts, s = 1): void {
+  const p = m.plain;
+  const n = 6;
+  const at = (t: number) => new THREE.Vector3(0, 0.16 * t * t * s, (-0.06 + 0.34 * t) * s);
+  const radius = (t: number) => (0.012 + 0.042 * t * t) * s;
+  const up = new THREE.Vector3(0, 1, 0);
+  const q = new THREE.Quaternion();
+  const e = new THREE.Euler();
+  for (let i = 0; i < n; i++) {
+    const a = at(i / n);
+    const b = at((i + 1) / n);
+    const dir = b.clone().sub(a);
+    const mid = a.clone().add(b).multiplyScalar(0.5);
+    e.setFromQuaternion(q.setFromUnitVectors(up, dir.clone().normalize()));
+    p.cyl(radius((i + 1) / n), radius(i / n), dir.length() * 1.04, i === 0 ? HORN_TIP : HORN_TRUMPET, mid.x, mid.y, mid.z, [e.x, e.y, e.z], 8);
+  }
+  // Đai đồng và miệng loe bịt đồng.
+  for (const t of [0.35, 0.7, 1]) {
+    const c = at(t);
+    const d = at(Math.min(1, t + 0.01)).sub(at(t - 0.01)).normalize();
+    e.setFromQuaternion(q.setFromUnitVectors(up, d));
+    const r = radius(t) + 0.006 * s;
+    p.cyl(r, r, (t === 1 ? 0.035 : 0.022) * s, t === 1 ? C.bronzeLight : C.bronze, c.x, c.y, c.z, [e.x, e.y, e.z], 8);
+  }
+  p.sphere(0.016 * s, C.bronze, 0, 0, -0.065 * s, [1, 1, 1], 6);
+}
+
+/**
+ * Đao dài (đại đao cán dài) của tướng giặc: cán gỗ sơn đen đai vàng, đốc nhọn đồng, khâu vàng nối lưỡi, tua đỏ,
+ * lưỡi sắt to bản hình trăng khuyết, sống lưỡi viền vàng có gai móc. Tay nắm cách đuôi cán 0,3; lưỡi hướng +z.
+ */
+export function longDao(s: Parts): void {
+  const p = s.plain;
+  p.cyl(0.022, 0.024, 1.36, C.ink, 0, 0.38, 0, undefined, 6);
+  for (const y of [-0.05, 0.4, 0.85]) p.cyl(0.028, 0.028, 0.03, C.gold, 0, y, 0, undefined, 6);
+  p.cone(0.03, 0.12, C.bronze, 0, -0.36, 0, [Math.PI, 0, 0], 5);
+  p.cone(0.075, 0.16, C.red, 0, 1.0, -0.01, [Math.PI, 0, 0], 7);
+  p.sphere(0.05, C.gold, 0, 1.08, 0.015, [1, 1.2, 1.3], 7);
+  // Lưỡi đao hình trăng khuyết: phần dưới to bản, lưỡi phình cong ra trước, phần trên ngả về sau thành mũi nhọn.
+  p.box(0.026, 0.32, 0.2, IRON, 0, 1.26, 0.1);
+  p.sphere(0.1, IRON, 0, 1.3, 0.19, [0.12, 1.75, 0.55], 8);
+  p.box(0.024, 0.22, 0.16, IRON, 0, 1.5, 0.06, [-0.5, 0, 0]);
+  p.cone(0.06, 0.15, IRON, 0, 1.65, -0.03, [-0.75, 0, 0], 4);
+  // Sống lưỡi viền vàng, gai móc sau sống.
+  p.box(0.034, 0.34, 0.026, C.gold, 0, 1.26, -0.005);
+  p.box(0.03, 0.2, 0.024, C.gold, 0, 1.49, -0.02, [-0.5, 0, 0]);
+  p.cone(0.028, 0.11, C.gold, 0, 1.22, -0.06, [-Math.PI / 2 + 0.4, 0, 0], 4);
+}
+
 /** Khiên tròn mặt trống đồng, mặt hướng +z; `iron`: viền sắt. */
 export function drumShield(s: Parts, iron: boolean, r = 0.165): void {
   s.drum.cyl(r, r, 0.035, 0xffffff, 0, 0, 0, [Math.PI / 2, 0, 0], 16);
