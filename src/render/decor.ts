@@ -342,51 +342,145 @@ export function buildDecor(spots: DecorSpot[]): THREE.Object3D {
 
 // ---------- Mô hình từng cái ----------
 
-/** Cây đa đầu làng (vẽ theo móng cũ một ô): gốc to nhiều thân quấn, rễ phụ buông, tán rộng, am thờ dưới gốc. */
+/** Cây đa cổ thụ đầu làng: gốc đại thụ nhiều thân xoắn quyện, rễ bạnh bò rộng khắp gò đất, hàng chục rễ phụ buông rủ & hóa cột, tán lá nhiều tầng xòe rộng gấp đôi, am thờ dưới gốc. */
 function makeCayDa(): THREE.Group {
   const m = new ToonModel(inkThin);
   const p = m.plain;
   const rand = seeded(2027);
-  // Bệ đất, vòng đá quanh gốc.
-  p.cyl(0.34, 0.37, 0.05, C.earthDark, 0, 0.025, 0, undefined, 14);
-  p.cyl(0.25, 0.27, 0.09, C.rock, 0, 0.07, 0, undefined, 14);
-  // Gốc: thân chính và hai thân phụ quấn vào nhau.
-  p.cyl(0.1, 0.15, 0.85, C.trunk, 0, 0.5, 0, undefined, 9);
-  p.cyl(0.05, 0.08, 0.8, 0x5c3b22, 0.08, 0.46, 0.05, [0.12, 0, -0.16], 7);
-  p.cyl(0.05, 0.07, 0.75, 0x7a5232, -0.07, 0.44, -0.06, [-0.14, 0, 0.14], 7);
-  // Rễ bạnh ở chân.
-  for (let i = 0; i < 5; i++) {
-    const a = (i / 5) * Math.PI * 2 + 0.3;
-    p.cyl(0.025, 0.055, 0.26, C.trunk, Math.cos(a) * 0.16, 0.13, Math.sin(a) * 0.16, [Math.sin(a) * 0.9, 0, -Math.cos(a) * 0.9], 6);
+  const BARK = [C.trunk, 0x5c3b22, 0x7a5232, 0x4e321c] as const;
+  const LEAF = [C.leaf[0], C.leaf[1], C.leaf[2], C.leaf[3], 0x466629, 0x92b055] as const;
+
+  // 1. Gò đất cổ thụ rộng kín móng & vòng đá tảng rêu phong kè quanh gốc đa
+  p.cyl(0.53, 0.56, 0.055, C.earthDark, 0, 0.027, 0, undefined, 16);
+  p.cyl(0.44, 0.49, 0.065, C.soil, 0, 0.06, 0, undefined, 14);
+  for (let i = 0; i < 16; i++) {
+    const a = (i / 16) * Math.PI * 2 + 0.1;
+    const r = 0.44 + (i % 2) * 0.03;
+    p.sphere(0.055 + (i % 3) * 0.012, i % 2 ? C.rock : C.rockDark, Math.cos(a) * r, 0.065, Math.sin(a) * r, [1.35, 0.7, 1.15], 6);
   }
-  // Dải vải đỏ buộc quanh gốc.
-  p.cyl(0.155, 0.155, 0.035, C.red, 0, 0.36, 0, undefined, 12);
-  // Cành lớn tỏa ra đỡ tán.
-  for (let i = 0; i < 4; i++) {
-    const a = (i / 4) * Math.PI * 2 + 0.6;
-    p.cyl(0.035, 0.06, 0.45, C.trunk, Math.cos(a) * 0.17, 0.98, Math.sin(a) * 0.17, [Math.sin(a) * 1.0, 0, -Math.cos(a) * 1.0], 6);
+
+  // 2. Thân chính đại thụ & 8 thân phụ cổ thụ xoắn quyện vào nhau
+  p.cyl(0.17, 0.25, 0.94, C.trunk, 0, 0.52, 0, undefined, 10);
+  const subTrunks: [number, number, number, number, number, number, number][] = [
+    [0.13, 0.07, 0.07, 0.11, 0.88, 0.18, -0.2],
+    [-0.12, 0.08, 0.065, 0.105, 0.86, -0.16, 0.18],
+    [0.08, -0.12, 0.07, 0.11, 0.9, -0.2, -0.15],
+    [-0.11, -0.1, 0.062, 0.1, 0.84, 0.16, 0.19],
+    [0.16, -0.02, 0.055, 0.09, 0.8, 0.06, -0.25],
+    [-0.16, 0.01, 0.058, 0.092, 0.82, -0.05, 0.24],
+    [0.02, -0.16, 0.055, 0.09, 0.82, -0.24, 0.04],
+    [-0.03, 0.14, 0.05, 0.082, 0.78, 0.22, -0.05],
+  ];
+  subTrunks.forEach(([x, z, rt, rb, h, rx, rz], i) => {
+    p.cyl(rt, rb, h, BARK[i % BARK.length], x, h / 2 + 0.06, z, [rx, 0, rz], 7);
+  });
+
+  // 3. Hệ rễ bạnh nổi u cục & bò lan ngoằn ngoèo ra khắp mặt gò đất (16 rễ lớn 2 đoạn)
+  for (let i = 0; i < 16; i++) {
+    const a = (i / 16) * Math.PI * 2 + 0.15;
+    const ca = Math.cos(a);
+    const sa = Math.sin(a);
+    const col = BARK[i % BARK.length];
+    // Đoạn rễ bạnh vồng cao từ thân xuống gốc
+    p.cyl(0.036, 0.075, 0.38, col, ca * 0.22, 0.2, sa * 0.22, [sa * 0.95, 0, -ca * 0.95], 6);
+    // Đoạn rễ bò lan ngoằn ngoèo ra tận mép gò đất
+    p.cyl(0.02, 0.046, 0.34, col, ca * 0.4, 0.07, sa * 0.4, [sa * 1.4, 0, -ca * 1.4], 5);
   }
-  // Tán rộng chìa quá móng như đa thật: một khối giữa, bảy khối quanh, hai khối trên đỉnh.
-  p.sphere(0.36, C.leaf[2], 0, 1.26, 0, [1.55, 0.6, 1.55], 12);
-  for (let i = 0; i < 7; i++) {
-    const a = (i / 7) * Math.PI * 2;
-    const r = 0.21 + rand() * 0.05;
-    p.sphere(r, C.leaf[i % 4], Math.cos(a) * 0.42, 1.1 + rand() * 0.14, Math.sin(a) * 0.42, [1.25, 0.62, 1.25], 9);
+
+  // Dải lụa đỏ & viền kim tuyến buộc quanh gốc đa thần
+  m.band.cyl(0.24, 0.25, 0.05, C.red, 0, 0.43, 0, undefined, 14);
+  p.cyl(0.252, 0.252, 0.015, C.gold, 0, 0.456, 0, undefined, 14);
+
+  // 4. 10 cành cái cổ thụ vươn dài đỡ tán rộng + 10 nhánh phụ vươn xa ra vành tán ngoài
+  for (let i = 0; i < 10; i++) {
+    const a = (i / 10) * Math.PI * 2 + 0.25;
+    const ca = Math.cos(a);
+    const sa = Math.sin(a);
+    const col = BARK[i % BARK.length];
+    // Cành cái tầng trong vươn rộng
+    p.cyl(0.048, 0.082, 0.68, col, ca * 0.28, 0.98, sa * 0.28, [sa * 1.15, 0, -ca * 1.15], 6);
+    // Nhánh phụ vươn xa ra đỡ vành tán ngoài
+    const a2 = a + (i % 2 ? 0.14 : -0.14);
+    p.cyl(0.028, 0.048, 0.54, col, Math.cos(a2) * 0.62, 1.12, Math.sin(a2) * 0.62, [Math.sin(a2) * 1.28, 0, -Math.cos(a2) * 1.28], 5);
   }
-  p.sphere(0.24, C.leaf[3], 0.08, 1.48, -0.04, [1.3, 0.66, 1.3], 9);
-  p.sphere(0.18, C.leaf[1], -0.16, 1.42, 0.12, [1.2, 0.66, 1.2], 9);
-  // Rễ phụ buông từ dưới tán xuống, có chùm chạm đất thành cột.
+
+  // 5. Tán lá đa cổ thụ 4 tầng xòe rộng gấp đôi (bán kính ngang ~1.06, khi phóng theo móng vươn rộng 3,7×3,7 ô)
+  // Tầng lõi chính giữa rộng và dẹt như ô dù khổng lồ
+  p.sphere(0.56, C.leaf[2], 0, 1.26, 0, [1.65, 0.52, 1.65], 12);
+  // Tầng vành ngoài cùng: 12 cụm tán lá lớn vươn xa tạo bóng mát rộng quanh gốc
+  for (let i = 0; i < 12; i++) {
+    const a = (i / 12) * Math.PI * 2 + (rand() - 0.5) * 0.1;
+    const dist = 0.72 + (i % 2) * 0.05;
+    const r = 0.24 + (i % 3) * 0.02;
+    const y = 1.1 + (i % 3) * 0.05;
+    p.sphere(r, LEAF[i % LEAF.length], Math.cos(a) * dist, y, Math.sin(a) * dist, [1.3, 0.52, 1.3], 9);
+  }
+  // Tầng đệm giữa: 10 vòm lá dày nối liền tâm và vành ngoài
+  for (let i = 0; i < 10; i++) {
+    const a = (i / 10) * Math.PI * 2 + 0.3;
+    const dist = 0.46 + (i % 2) * 0.06;
+    const r = 0.28 + (i % 3) * 0.025;
+    p.sphere(r, LEAF[(i + 2) % LEAF.length], Math.cos(a) * dist, 1.32 + (i % 2) * 0.06, Math.sin(a) * dist, [1.35, 0.56, 1.35], 9);
+  }
+  // Tầng vòm trên & chóp lá non đón nắng: 7 cụm vòm tạo dáng cổ thụ hùng vĩ
+  for (const [x, y, z, r, c] of [
+    [0.0, 1.52, 0.0, 0.38, C.leaf[1]],
+    [-0.28, 1.44, 0.2, 0.28, C.leaf[3]],
+    [0.3, 1.43, 0.18, 0.27, 0x92b055],
+    [-0.22, 1.42, -0.28, 0.27, C.leaf[0]],
+    [0.24, 1.44, -0.24, 0.26, C.leaf[1]],
+    [0.04, 1.62, -0.02, 0.26, 0x92b055],
+    [-0.12, 1.56, 0.08, 0.22, C.leaf[3]],
+  ] as const) {
+    p.sphere(r, c, x, y, z, [1.35, 0.58, 1.35], 9);
+  }
+
+  // 6. Rễ phụ (rễ khí sinh): 14 rễ cột lớn chạm đất hóa thân phụ + 32 rễ khí sinh buông rủ thành từng chùm dày đặc
   for (let i = 0; i < 14; i++) {
-    const a = (i / 14) * Math.PI * 2 + rand() * 0.3;
-    const r = 0.24 + rand() * 0.3;
-    const len = i % 4 === 0 ? 1.0 : 0.45 + rand() * 0.35;
-    p.cyl(0.008, i % 4 === 0 ? 0.02 : 0.012, len, 0x6f4a2c, Math.cos(a) * r, 1.02 - len / 2, Math.sin(a) * r, undefined, 4);
+    // Chừa khoảng trống nhỏ phía trước (a ~ PI/2) cho am thờ
+    const a = -Math.PI * 0.36 + (i / 13) * Math.PI * 1.72;
+    const r = 0.3 + (i % 3) * 0.08 + rand() * 0.04;
+    const x = Math.cos(a) * r;
+    const z = Math.sin(a) * r;
+    const topH = 1.08 + (i % 2) * 0.07;
+    const col = BARK[(i + 1) % BARK.length];
+    const thick = i % 2 === 0 ? 0.025 : 0.019;
+    p.cyl(thick * 0.75, thick * 1.3, topH, col, x, topH / 2 + 0.02, z, [(rand() - 0.5) * 0.08, 0, (rand() - 0.5) * 0.08], 5);
+    // Chạc rễ phụ tách đôi bám chặt xuống đất ở chân mỗi rễ cột
+    for (const s of [-1, 1]) {
+      const fa = a + s * 0.45;
+      p.cyl(thick * 0.45, thick * 0.9, 0.2, col, x + Math.cos(fa) * 0.032, 0.09, z + Math.sin(fa) * 0.032, [Math.sin(fa) * 0.65, 0, -Math.cos(fa) * 0.65], 4);
+    }
   }
-  // Am thờ nhỏ dưới gốc, quay ra trước: bệ đá, miếu tường vôi mái ngói.
-  p.box(0.1, 0.1, 0.08, C.rock, 0, 0.05, 0.33);
-  p.box(0.09, 0.07, 0.07, C.cream, 0, 0.135, 0.33);
-  p.box(0.04, 0.045, 0.01, C.red, 0, 0.13, 0.367);
-  p.cone(0.085, 0.06, 0xc8643a, 0, 0.2, 0.33, [0, Math.PI / 4, 0], 4);
+  // 32 rễ khí sinh buông rủ dày đặc từ cả vòng cành trong lẫn vành tán rộng bên ngoài
+  for (let i = 0; i < 32; i++) {
+    const a = (i / 32) * Math.PI * 2 + rand() * 0.18;
+    const r = 0.24 + (i % 4) * 0.14 + rand() * 0.08;
+    const len = 0.4 + rand() * 0.56;
+    const yTop = 1.06 + (i % 3) * 0.06;
+    const col = i % 3 === 0 ? 0x855b38 : i % 2 === 0 ? 0x6f4a2c : 0x5c3b22;
+    p.cyl(
+      0.01,
+      0.005,
+      len,
+      col,
+      Math.cos(a) * r,
+      yTop - len / 2,
+      Math.sin(a) * r,
+      [(rand() - 0.5) * 0.1, 0, (rand() - 0.5) * 0.1],
+      4,
+    );
+  }
+
+  // 7. Am thờ cổ dưới gốc đa, quay ra mặt trước (+z): bệ đá xanh, miếu tường vôi, cột son, bát hương đồng & mái ngói 2 tầng
+  p.box(0.14, 0.1, 0.11, C.rockDark, 0, 0.05, 0.42);
+  p.box(0.12, 0.03, 0.1, C.rock, 0, 0.11, 0.42);
+  p.box(0.1, 0.085, 0.08, C.cream, 0, 0.165, 0.415);
+  for (const sx of [-1, 1]) p.cyl(0.009, 0.009, 0.085, C.red, sx * 0.046, 0.165, 0.455, undefined, 5);
+  p.box(0.044, 0.052, 0.012, C.red, 0, 0.155, 0.456);
+  p.cyl(0.016, 0.012, 0.022, C.bronze, 0, 0.135, 0.472, undefined, 6);
+  p.cone(0.105, 0.055, 0xc8643a, 0, 0.225, 0.42, [0, Math.PI / 4, 0], 4);
+  p.cone(0.075, 0.048, 0xb4573a, 0, 0.26, 0.42, [0, Math.PI / 4, 0], 4);
   return m.group();
 }
 

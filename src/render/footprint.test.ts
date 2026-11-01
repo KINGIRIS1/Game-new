@@ -9,8 +9,8 @@ import * as THREE from 'three';
 const ctx = new Proxy({}, { get: (_t, k) => (k === 'canvas' ? {} : () => ({ addColorStop() {} })), set: () => true });
 vi.stubGlobal('document', { createElement: () => ({ width: 0, height: 0, getContext: () => ctx }) });
 
-/** Số ô mô hình được tràn ra ngoài móng mỗi phía. Bến có cầu tàu chìa xuống sông; chòi canh, lầu nỏ có mái chìa. */
-const ALLOW: Record<string, number> = { ben: Infinity, choiCanh: 0.8, lauNo: 0.8 };
+/** Số ô mô hình được tràn ra ngoài móng mỗi phía. Bến có cầu tàu chìa xuống sông; chòi canh, lầu nỏ có mái chìa; cây đa cổ thụ tán xòe rộng. */
+const ALLOW: Record<string, number> = { ben: Infinity, choiCanh: 0.8, lauNo: 0.8, cayDa: 0.95 };
 
 describe('mô hình vừa móng kinh đô lớn', () => {
   it('mọi loại, mọi cấp: không tràn quá nửa ô ra ngoài móng (trừ cầu tàu bến, mái chòi canh)', async () => {
