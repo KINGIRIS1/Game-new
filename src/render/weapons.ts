@@ -16,33 +16,58 @@ export const LEATHER = 0x8a5a33;
 /** Sừng làm cung (cung sừng): vàng ngà. */
 export const HORN = 0xe6d6a8;
 
-/** Giáo dài 1,3, tay nắm cách đuôi 0,25. Bậc 0 mũi đồng; bậc 1 lưỡi sắt to hơn; bậc 2 thêm tua đỏ. */
+/** Giáo dài 1,3, tay nắm cách đuôi 0,25. Bậc 0 mũi đồng có tua đỏ chiến binh; bậc 1 lưỡi sắt to hơn; bậc 2 thêm dải lụa cờ đỏ. */
 export function spear(s: Parts, tier = 0, len = 1.3): void {
   const p = s.plain;
   p.cyl(0.018, 0.018, len, C.woodDark, 0, len / 2 - 0.25, 0, undefined, 6);
   const top = len - 0.25;
   const iron = tier >= 1;
-  p.cyl(0.024, 0.02, 0.06, iron ? IRON_DARK : C.bronzeDark, 0, top + 0.02, 0, undefined, 6);
-  // Lưỡi giáo hình lá, dẹt theo chiều trước sau.
-  p.sphere(iron ? 0.07 : 0.058, iron ? IRON : C.bronze, 0, top + (iron ? 0.19 : 0.16), 0, [1, iron ? 2.6 : 2.5, 0.3], 8);
-  if (tier >= 2) p.cone(0.06, 0.14, C.red, 0, top - 0.06, 0, [Math.PI, 0, 0], 8);
+  p.cyl(0.024, 0.02, 0.07, iron ? IRON_DARK : C.bronzeDark, 0, top + 0.02, 0, undefined, 6);
+  s.band.cyl(0.026, 0.026, 0.035, iron ? IRON : C.bronze, 0, top + 0.015, 0, undefined, 8);
+  // Lưỡi giáo hình lá 3 cạnh đặc trưng Cổ Loa, dẹt và sắc nhọn.
+  p.sphere(iron ? 0.072 : 0.06, iron ? IRON : C.bronze, 0, top + (iron ? 0.2 : 0.17), 0, [1, iron ? 2.7 : 2.5, 0.32], 8);
+  // Gờ sống giáo nổi chạy dọc giữa lưỡi giáo
+  p.box(0.01, (iron ? 0.28 : 0.24), 0.038, iron ? IRON_DARK : C.bronzeLight, 0, top + (iron ? 0.2 : 0.17), 0);
+  // Tua đỏ chiến binh ở cổ giáo
+  p.cone(0.048, 0.13, C.red, 0, top - 0.04, 0, [Math.PI, 0, 0], 8);
+  if (tier >= 2) {
+    p.box(0.025, 0.22, 0.012, C.red, 0.02, top - 0.14, 0.02, [0.1, 0, 0.15]);
+    p.box(0.02, 0.18, 0.012, C.gold, -0.02, top - 0.12, -0.02, [-0.1, 0, -0.15]);
+  }
 }
 
-/** Qua (giáo móc) của giặc Ân: cán dài, lưỡi đồng ngang chĩa về trước, mũi nhọn trên đầu cán. */
+/** Qua (giáo móc) của giặc Ân: cán dài, lưỡi đồng ngang chĩa về trước, mũi nhọn trên đầu cán, nẹp đồng thao thiết. */
 export function qua(s: Parts): void {
   const p = s.plain;
-  p.cyl(0.018, 0.018, 1.2, C.woodDark, 0, 0.4, 0, undefined, 5);
-  p.box(0.03, 0.065, 0.26, C.bronze, 0, 0.9, 0.12);
-  p.cone(0.03, 0.12, C.bronze, 0, 1.06, 0, undefined, 4);
-  p.cyl(0.026, 0.026, 0.05, C.bronzeDark, 0, 0.9, 0, undefined, 6);
+  p.cyl(0.018, 0.018, 1.25, C.woodDark, 0, 0.42, 0, undefined, 5);
+  // Ống ngậm cán bằng đồng đen
+  p.cyl(0.028, 0.028, 0.14, C.bronzeDark, 0, 0.92, 0, undefined, 6);
+  // Lưỡi móc ngang vát cong sắc lẹm
+  p.box(0.03, 0.075, 0.3, C.bronze, 0, 0.93, 0.14, [-0.1, 0, 0]);
+  p.cone(0.035, 0.12, C.bronzeLight, 0, 0.9, 0.28, [Math.PI / 2 + 0.1, 0, 0], 4);
+  // Mũi nhọn đâm thẳng trên đỉnh cán
+  p.cone(0.035, 0.16, C.bronze, 0, 1.12, 0, undefined, 4);
+  // Đuôi móc phía sau để cân bằng
+  p.box(0.028, 0.05, 0.1, C.bronzeDark, 0, 0.93, -0.08);
+  // Dải vải đỏ báo hiệu giặc Ân
+  p.box(0.02, 0.14, 0.01, C.enemyRed, 0, 0.83, 0.03, [0.1, 0, 0]);
 }
 
-/** Rìu đồng lưỡi lớn của tướng giặc. */
+/** Rìu đồng lưỡi lớn (đại phủ) của tướng giặc: lưỡi trăng khuyết rộng, mắt thú dữ ngậm cán. */
 export function bigAxe(s: Parts): void {
   const p = s.plain;
-  p.cyl(0.025, 0.025, 1.2, C.woodDark, 0, 0.35, 0, undefined, 5);
-  p.box(0.06, 0.34, 0.3, C.bronze, 0, 0.8, 0.15);
-  p.box(0.07, 0.36, 0.04, C.bronzeDark, 0, 0.8, 0.3);
+  p.cyl(0.025, 0.025, 1.25, C.woodDark, 0, 0.38, 0, undefined, 6);
+  // Cổ rìu bọc đồng đen chạm hình mặt thú dữ
+  p.box(0.08, 0.18, 0.14, C.bronzeDark, 0, 0.82, 0.02);
+  p.sphere(0.03, C.red, 0.045, 0.84, 0.04, [1, 1, 1], 6);
+  p.sphere(0.03, C.red, -0.045, 0.84, 0.04, [1, 1, 1], 6);
+  // Bản lưỡi rìu lớn hình trăng khuyết xòe rộng
+  p.box(0.055, 0.42, 0.28, C.bronze, 0, 0.82, 0.18);
+  p.box(0.065, 0.46, 0.06, C.bronzeLight, 0, 0.82, 0.32);
+  // Mũi giáo nhọn trên đỉnh cán để đâm
+  p.cone(0.035, 0.18, C.bronze, 0, 1.1, 0, undefined, 4);
+  // Mấu nhọn phá giáp phía sau sống rìu
+  p.cone(0.03, 0.12, C.bronzeDark, 0, 0.82, -0.11, [-Math.PI / 2, 0, 0], 4);
 }
 
 /** Kiếm thẳng sắt, chuôi và đốc đồng. */
@@ -193,8 +218,17 @@ export function crossbowParts(m: Pick<Parts, 'plain' | 'band' | 'glow'> & Partia
   }
 }
 
-/** Khiên tròn mặt trống đồng, mặt hướng +z; `iron`: viền sắt. */
+/** Khiên tròn mặt trống đồng Đông Sơn, mặt hướng +z; `iron`: viền sắt. */
 export function drumShield(s: Parts, iron: boolean, r = 0.165): void {
+  // Mặt trống đồng Đông Sơn
   s.drum.cyl(r, r, 0.035, 0xffffff, 0, 0, 0, [Math.PI / 2, 0, 0], 16);
-  if (iron) s.plain.add(new THREE.TorusGeometry(r + 0.005, 0.024, 6, 20), IRON, 0, 0, 0.005);
+  // Núm khiên / mặt trời nổi giữa tâm khiên
+  s.plain.sphere(0.045, iron ? IRON : C.bronzeLight, 0, 0, 0.02, [1, 1, 0.65], 8);
+  // Viền ngoài của khiên đồng / sắt đúc đinh tán
+  s.plain.cyl(r + 0.014, r + 0.014, 0.028, iron ? IRON_DARK : C.bronzeDark, 0, 0, -0.002, [Math.PI / 2, 0, 0], 16);
+  if (iron) {
+    s.plain.add(new THREE.TorusGeometry(r + 0.006, 0.022, 6, 20), IRON, 0, 0, 0.006);
+    // Tua cờ đỏ kẹp viền khiên chiến binh tinh nhuệ
+    s.plain.box(0.035, 0.08, 0.012, C.red, 0, -(r + 0.02), 0.005, [0, 0, 0.2]);
+  }
 }
