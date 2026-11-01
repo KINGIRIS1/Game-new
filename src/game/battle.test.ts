@@ -4,6 +4,7 @@ import { BUILDINGS, FIRST_RAID_MS, RAID_WARNING_MS, UNITS } from './defs';
 import {
   applyOffline,
   callRaidNow,
+  canPlace,
   canTrain,
   createInitialState,
   freeDan,
@@ -19,7 +20,7 @@ import { GRID } from './map';
 
 const T0 = 1_000_000;
 
-/** Kinh đô Điện cấp 2 có doanh trại và một kho, đủ tiền, đủ dân. */
+/** Kinh đô Điện cấp 2 có doanh trại, trại giáo và một kho, đủ tiền, đủ dân. */
 function capital(): GameState {
   const s = createInitialState(T0);
   s.buildings[0].level = 2;
@@ -27,7 +28,8 @@ function capital(): GameState {
   s.dan = 30;
   const barracks = place(s, 'doanhTrai', 12, 20);
   const kho = place(s, 'kho', 21, 20);
-  if (!barracks.ok || !kho.ok) throw new Error('dựng kinh đô thử thất bại');
+  const traiGiao = place(s, 'traiGiao', 15, 21);
+  if (!barracks.ok || !kho.ok || !traiGiao.ok) throw new Error('dựng kinh đô thử thất bại');
   return s;
 }
 
@@ -93,6 +95,7 @@ describe('trận giữ kinh đô', () => {
   it('cung thủ khắc chế lính giáo Ân', () => {
     const s = capital();
     s.buildings.find((b) => b.type === 'doanhTrai')!.level = 2;
+    expect(place(s, 'traiCung', 15, 23).ok).toBe(true);
     for (let i = 0; i < 5; i++) expect(train(s, 'cung').ok).toBe(true);
     const battle = fight(s, 1);
     expect(battle.killed).toBe(battle.total);
@@ -124,12 +127,30 @@ describe('quân đội', () => {
     expect(train(s, 'giao').ok).toBe(true);
   });
 
-  it('cung thủ cần doanh trại cấp 2, voi chiến cần cấp 3', () => {
+  it('mỗi binh chủng luyện ở nơi ở riêng: trại cung cần doanh trại cấp 2, chuồng voi cần cấp 3', () => {
     const s = capital();
-    expect(canTrain(s, 'cung')).toEqual({ ok: false, reason: 'canDoanhTrai' });
+    expect(canTrain(s, 'cung')).toEqual({ ok: false, reason: 'canNoiO' });
+    expect(canPlace(s, 'traiCung', 15, 23)).toEqual({ ok: false, reason: 'canDoanhTrai' });
     s.buildings.find((b) => b.type === 'doanhTrai')!.level = 3;
+    expect(canPlace(s, 'chuongVoi', 17, 23)).toEqual({ ok: false, reason: 'chuaDuCapDien' });
+    s.buildings[0].level = 3;
+    expect(place(s, 'traiCung', 15, 23).ok).toBe(true);
+    expect(place(s, 'chuongVoi', 17, 23).ok).toBe(true);
     expect(canTrain(s, 'cung').ok).toBe(true);
     expect(canTrain(s, 'voi').ok).toBe(true);
+    // Mỗi loại dựng một lần.
+    expect(canPlace(s, 'traiCung', 19, 23)).toEqual({ ok: false, reason: 'datGioiHan' });
+  });
+
+  it('nơi ở hư thì chưa luyện được binh chủng ấy; không có doanh trại thì không luyện được gì', () => {
+    const s = capital();
+    const home = s.buildings.find((b) => b.type === 'traiGiao')!;
+    home.damaged = true;
+    expect(canTrain(s, 'giao')).toEqual({ ok: false, reason: 'noiOHu' });
+    home.damaged = false;
+    expect(canTrain(s, 'giao').ok).toBe(true);
+    s.buildings = s.buildings.filter((b) => b.type !== 'doanhTrai');
+    expect(canTrain(s, 'giao')).toEqual({ ok: false, reason: 'canDoanhTrai' });
   });
 
   it('không vượt sức chứa doanh trại', () => {

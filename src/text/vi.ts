@@ -79,7 +79,7 @@ export const vi = {
     doanhTrai: {
       name: 'Doanh trại',
       icon: '⛺',
-      desc: 'Nơi Lạc tướng tuyển và luyện quân. Lính tuyển riêng, không lấy bớt dân làng, nhưng tốn tiền tuyển và ăn gạo mỗi phút. Cấp càng cao càng nuôi được nhiều quân và mở thêm binh chủng.',
+      desc: 'Nơi các tướng ở và điều binh. Quân ra trận, dù giữ kinh đô hay đánh phó bản, đều qua doanh trại. Cấp càng cao càng điều được nhiều quân và cho dựng thêm nơi ở riêng của binh chủng mới: cấp 1 trại giáo, cấp 2 trại cung, cấp 3 chuồng voi.',
     },
     choiCanh: {
       name: 'Chòi canh',
@@ -141,6 +141,21 @@ export const vi = {
       icon: '🎯',
       desc: 'Lầu gỗ ba tầng ghép từ hai chòi canh cấp 8, ba cây nỏ lớn chĩa ba hướng. Mỗi phát bắn ba giặc khác nhau. Tính là hai chòi canh trong số chòi canh tối đa. Không tách lại được.',
     },
+    traiGiao: {
+      name: 'Trại giáo',
+      icon: '🛡️',
+      desc: 'Nơi giáo binh ở và luyện tập. Luyện giáo binh ở đây. Lính tuyển riêng, không lấy bớt dân làng, nhưng tốn tiền tuyển và ăn gạo mỗi phút. Cần doanh trại.',
+    },
+    traiCung: {
+      name: 'Trại cung',
+      icon: '🎯',
+      desc: 'Nơi cung thủ ở và tập bắn. Luyện cung thủ ở đây. Cần doanh trại cấp 2.',
+    },
+    chuongVoi: {
+      name: 'Chuồng voi',
+      icon: '🐘',
+      desc: 'Nơi voi chiến ở, có quản tượng chăm. Luyện voi chiến ở đây. Cần doanh trại cấp 3.',
+    },
   } satisfies Record<BuildingType, { name: string; icon: string; desc: string }>,
 
   reasons: {
@@ -160,6 +175,8 @@ export const vi = {
     thuyenDaDi: 'Thuyền buôn đã rời bến',
     daDoi: 'Đã đổi món này rồi',
     canDoanhTrai: 'Cần nâng doanh trại',
+    canNoiO: 'Chưa dựng nơi ở của binh chủng này',
+    noiOHu: 'Nơi ở của binh chủng này đang hư, sửa rồi mới luyện được',
     datGioiHanQuan: 'Doanh trại đã đầy, hãy nâng cấp',
     thieuGao: 'Đang thiếu gạo, chưa luyện quân được',
     dangCoGiac: 'Đang có giặc!',
@@ -210,8 +227,8 @@ export const vi = {
     kho: 'Của cải nhiều lên, kho không đủ chứa. Xin dựng một kho thóc.',
     loRen: 'Giặc Ân có giáo đồng sắc bén. Xin dựng lò rèn để làm ra sắt.',
     dien3: 'Kinh đô đã vững. Xin nâng Điện Vua Hùng lên cấp 3, khi ấy có thể đắp thành đất.',
-    doanhTrai: 'Giặc Ân sắp kéo tới. Xin dựng doanh trại để Lạc tướng luyện quân.',
-    luyenQuan: 'Xin bệ hạ cho tuyển 5 người lính. Giáo binh không cần sắt, lại khắc chế chiến xa của giặc.',
+    doanhTrai: 'Giặc Ân sắp kéo tới. Xin dựng doanh trại cho Lạc tướng ở và điều binh.',
+    luyenQuan: 'Xin bệ hạ dựng trại giáo cho lính ở, rồi tuyển 5 giáo binh. Giáo binh không cần sắt, lại khắc chế chiến xa của giặc.',
     choiCanh: 'Xin dựng chòi canh, cung thủ trên chòi sẽ bắn giặc từ xa.',
     giuKinhDo: 'Trinh sát sẽ báo khi giặc Ân tới. Xin bệ hạ giữ vững kinh đô, đánh lui đợt giặc đầu tiên.',
     danhMan1: 'Giặc Ân lẩn ở bìa rừng Phong Châu. Xin bệ hạ mở Phó bản, cho Lạc tướng dẫn quân đánh màn 1.',
@@ -248,8 +265,8 @@ export const vi = {
 
   units: {
     giao: { name: 'Giáo binh', icon: '🗡️', desc: 'Lính giáo đồng, chắc chắn. Khắc chế chiến xa của giặc.' },
-    cung: { name: 'Cung thủ', icon: '🏹', desc: 'Bắn từ xa. Khắc chế lính giáo Ân. Cần doanh trại cấp 2.' },
-    voi: { name: 'Voi chiến', icon: '🐘', desc: 'Rất khỏe, chiếm 3 chỗ. Khắc chế cung thủ Ân. Cần doanh trại cấp 3.' },
+    cung: { name: 'Cung thủ', icon: '🏹', desc: 'Bắn từ xa. Khắc chế lính giáo Ân.' },
+    voi: { name: 'Voi chiến', icon: '🐘', desc: 'Rất khỏe, chiếm 3 chỗ. Khắc chế cung thủ Ân.' },
   } satisfies Record<UnitType, { name: string; icon: string; desc: string }>,
 
   enemies: {
@@ -599,6 +616,18 @@ export const vi = {
     troopSpace: (used: number, cap: number) => `Quân trong doanh trại: ${used}/${cap} chỗ`,
     troopUpkeep: (g: number) => `Lính ăn ${g} gạo/phút`,
     train: 'Luyện',
+    generalsTitle: 'Tướng ở doanh trại',
+    lacTuong: 'Lạc tướng',
+    lacTuongDesc: 'Cầm quân mọi trận, đánh Trống trận thúc quân.',
+    heroReady: 'sẵn sàng ra trận',
+    heroRest: (s: number) => `kiệt sức, nghỉ thêm ${s} giây`,
+    heroHienLinh: 'hiển linh, vẫn ra trận',
+    heroOpen: 'Xem',
+    advAtDien: 'ngự ở Điện',
+    homesTitle: 'Quân và nơi ở',
+    trainAt: (name: string) => `Ở và luyện tại ${name.toLowerCase()}`,
+    buildHome: (name: string) => `Dựng ${name.toLowerCase()}`,
+    needBarracks: (lv: number) => (lv <= 1 ? 'Cần doanh trại' : `Cần doanh trại cấp ${lv}`),
     trained: (name: string) => `Đã luyện một ${name.toLowerCase()}`,
     nextRaid: (min: number) => (min <= 0 ? 'Giặc Ân sắp tới' : `Đợt giặc tới sau khoảng ${min} phút chơi`),
     noRaidYet: 'Có doanh trại rồi, ít phút nữa trinh sát sẽ báo giặc tới.',
@@ -652,7 +681,7 @@ export const vi = {
     armyTitle: 'Xếp quân',
     armyHint: 'Chọn số lính mang theo và hàng đứng của từng binh chủng. Tiền quân đứng đầu, hậu quân đứng sau.',
     haveTroops: (n: number) => `Có ${n}`,
-    noTroops: 'Chưa có lính. Hãy luyện quân ở doanh trại.',
+    noTroops: 'Chưa có lính. Hãy luyện quân ở trại giáo, trại cung, chuồng voi.',
     march: '⚔️ Xuất quân',
     giong: 'Thánh Gióng',
     giongFeedTitle: 'Góp gạo nuôi Gióng',

@@ -26,7 +26,10 @@ export type BuildingType =
   | 'vuon'
   | 'chuongLon'
   | 'bep'
-  | 'lauNo';
+  | 'lauNo'
+  | 'traiGiao'
+  | 'traiCung'
+  | 'chuongVoi';
 
 /** Mốc mở khóa theo cốt truyện: sau kết chương 1, khi vào chương 2, sau kết chương 2, khi vào chương 3, sau kết chương 3. */
 export type Unlock = 'ketChuong1' | 'chuong2' | 'ketChuong2' | 'chuong3' | 'ketChuong3';
@@ -65,6 +68,8 @@ export interface BuildingDef {
   removable: boolean;
   /** Chỉ xây được từ mốc truyện này. */
   unlock?: Unlock;
+  /** Cần doanh trại ít nhất cấp này mới dựng được (nơi ở riêng của từng binh chủng). */
+  barracksLevel?: number;
 }
 
 /** Dời công trình sang chỗ khác tốn chừng này phần giá dựng (làm tròn lên). Điện Vua Hùng không dời được. */
@@ -499,6 +504,53 @@ export const BUILDINGS: Record<BuildingType, BuildingDef> = {
     buildable: false,
     removable: false,
   },
+  // Nơi ở riêng của từng binh chủng: lính ở đó và luyện ở đó. Dựng một lần, không lên cấp.
+  // Doanh trại là nơi các tướng ở, giữ tổng số chỗ quân và lo điều binh.
+  traiGiao: {
+    type: 'traiGiao',
+    w: 2,
+    d: 2,
+    maxLevel: 1,
+    buildCost: { gao: 40, voOc: 30, datDa: 30 },
+    upgradeCost: [{}, {}],
+    production: [{}],
+    hp: [300],
+    limit: [0, 1, 1, 1, 1, 1, 1, 1],
+    minDien: 2,
+    barracksLevel: 1,
+    buildable: true,
+    removable: false,
+  },
+  traiCung: {
+    type: 'traiCung',
+    w: 2,
+    d: 2,
+    maxLevel: 1,
+    buildCost: { gao: 60, voOc: 50, datDa: 50, sat: 10 },
+    upgradeCost: [{}, {}],
+    production: [{}],
+    hp: [300],
+    limit: [0, 1, 1, 1, 1, 1, 1, 1],
+    minDien: 2,
+    barracksLevel: 2,
+    buildable: true,
+    removable: false,
+  },
+  chuongVoi: {
+    type: 'chuongVoi',
+    w: 2,
+    d: 2,
+    maxLevel: 1,
+    buildCost: { gao: 120, voOc: 80, datDa: 100, sat: 20 },
+    upgradeCost: [{}, {}],
+    production: [{}],
+    hp: [400],
+    limit: [0, 0, 1, 1, 1, 1, 1, 1],
+    minDien: 3,
+    barracksLevel: 3,
+    buildable: true,
+    removable: false,
+  },
 };
 
 /** Chòi canh lên tới cấp này mới ghép được thành lầu nỏ; một lầu nỏ tính bằng chừng này chòi canh. */
@@ -665,8 +717,8 @@ export interface FighterStats {
 
 export interface UnitDef extends FighterStats {
   cost: Cost;
-  /** Cấp doanh trại cần có. */
-  barracksLevel: number;
+  /** Nơi ở riêng của binh chủng: luyện ở đó (còn nguyên mới luyện được). */
+  home: BuildingType;
   /** Số chỗ chiếm trong doanh trại. Lính tuyển riêng, không lấy người từ dân. */
   space: number;
   /** Gạo ăn mỗi phút. */
@@ -679,9 +731,9 @@ export interface UnitDef extends FighterStats {
  * (cung thủ Ân, cá phun nước, ma trơi, nỏ thủ Triệu).
  */
 export const UNITS: Record<UnitType, UnitDef> = {
-  giao: { hp: 60, dmg: 8, range: 0.8, speed: 1.6, cooldown: 1.0, strongVs: ['chienXa', 'caSau', 'hoTinh', 'kyBinh'], cost: { gao: 20, voOc: 8 }, barracksLevel: 1, space: 1, upkeep: 0.6 },
-  cung: { hp: 40, dmg: 7, range: 3.8, speed: 1.5, cooldown: 1.2, strongVs: ['giaoAn', 'tomBinh', 'quyNui', 'linhTrieu'], cost: { gao: 25, voOc: 8, sat: 4 }, barracksLevel: 2, space: 1, upkeep: 0.6 },
-  voi: { hp: 200, dmg: 15, range: 0.9, speed: 1.1, cooldown: 1.5, strongVs: ['cungAn', 'caPhun', 'maTroi', 'noTrieu'], cost: { gao: 60, voOc: 20, sat: 12 }, barracksLevel: 3, space: 3, upkeep: 1.5 },
+  giao: { hp: 60, dmg: 8, range: 0.8, speed: 1.6, cooldown: 1.0, strongVs: ['chienXa', 'caSau', 'hoTinh', 'kyBinh'], cost: { gao: 20, voOc: 8 }, home: 'traiGiao', space: 1, upkeep: 0.6 },
+  cung: { hp: 40, dmg: 7, range: 3.8, speed: 1.5, cooldown: 1.2, strongVs: ['giaoAn', 'tomBinh', 'quyNui', 'linhTrieu'], cost: { gao: 25, voOc: 8, sat: 4 }, home: 'traiCung', space: 1, upkeep: 0.6 },
+  voi: { hp: 200, dmg: 15, range: 0.9, speed: 1.1, cooldown: 1.5, strongVs: ['cungAn', 'caPhun', 'maTroi', 'noTrieu'], cost: { gao: 60, voOc: 20, sat: 12 }, home: 'chuongVoi', space: 3, upkeep: 1.5 },
 };
 
 /** Giặc Ân: lính giáo, cung thủ và chiến xa (xe ngựa chiến, quân nặng). Phó tướng làm trùm ở phó bản. */

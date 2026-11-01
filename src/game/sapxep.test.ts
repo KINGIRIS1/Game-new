@@ -121,6 +121,21 @@ describe('mẫu kinh đô', () => {
     expect(canApplyMau(s, 'phongChau')).toEqual({ ok: false, reason: 'daTheoMau' });
   });
 
+  it('áp mẫu dựng nơi ở riêng của binh chủng theo cấp doanh trại: cấp 1 trại giáo, cấp 3 thêm trại cung, chuồng voi', () => {
+    const s = city(5);
+    expect(applyMau(s, 'phongChau').ok).toBe(true);
+    const count = (t: BuildingType) => s.buildings.filter((b) => b.type === t).length;
+    // Doanh trại dựng theo mẫu ở cấp 1: trại giáo dựng cùng lúc, trại cung và chuồng voi thì chưa.
+    expect(count('doanhTrai')).toBe(1);
+    expect(count('traiGiao')).toBe(1);
+    expect(count('traiCung')).toBe(0);
+    expect(count('chuongVoi')).toBe(0);
+    s.buildings.find((b) => b.type === 'doanhTrai')!.level = 3;
+    expect(applyMau(s, 'phongChau').ok).toBe(true);
+    expect(count('traiCung')).toBe(1);
+    expect(count('chuongVoi')).toBe(1);
+  });
+
   it('thiếu của thì không áp được, kinh đô giữ nguyên', () => {
     const s = city(5);
     s.resources = { gao: 100, voOc: 100, datDa: 100, sat: 0 };

@@ -30,6 +30,11 @@ import {
   makeDenTanVien,
   makeDien,
   makeDoanhTrai,
+  makeTraiGiao,
+  makeTraiCung,
+  makeChuongVoi,
+  doanhTraiScale,
+  DOANH_TRAI_HERO,
   makeKho,
   makeLauNo,
   makeLoRen,
@@ -809,6 +814,9 @@ export class World {
     if (type === 'chuongLon') return makeChuongLon(level);
     if (type === 'bep') return makeBep(level);
     if (type === 'lauNo') return makeLauNo();
+    if (type === 'traiGiao') return makeTraiGiao();
+    if (type === 'traiCung') return makeTraiCung();
+    if (type === 'chuongVoi') return makeChuongVoi();
     return new THREE.Group();
   }
 
@@ -916,11 +924,32 @@ export class World {
     return { x: wx(dien.x) + (side ? 4.7 : 3.6), y: this.groundY(tx, tz), z: wz(dien.z) + (side ? 3.5 : 4.5) };
   }
 
-  /** Gióng đứng ngay trước Điện, bên phải bậc lên. */
+  /** Chỗ tướng đứng giữa sân doanh trại, nơi các tướng ở. Chưa có doanh trại thì null. */
+  private barracksSpot(state: GameState): { x: number; y: number; z: number } | null {
+    const b = state.buildings.find((t) => t.type === 'doanhTrai');
+    if (!b) return null;
+    const def = BUILDINGS.doanhTrai;
+    const k = doanhTraiScale(b.level);
+    return { x: wx(b.x) + def.w / 2 + DOANH_TRAI_HERO.x * k, y: this.groundY(b.x, b.z) + 0.08, z: wz(b.z) + def.d / 2 + DOANH_TRAI_HERO.z * k };
+  }
+
+  /**
+   * Chỗ đứng của tướng: tướng đã cùng ra trận (Gióng tráng sĩ, Sơn Tinh đã rước dâu) ở doanh trại;
+   * Gióng lúc nhỏ ở trước Điện cho dân nuôi, Sơn Tinh lúc cầu hôn đứng chầu trước Điện.
+   */
+  private heroHome(state: GameState, atBarracks: boolean): { x: number; y: number; z: number } | null {
+    if (atBarracks) {
+      const spot = this.barracksSpot(state);
+      if (spot) return spot;
+    }
+    const dien = state.buildings.find((b) => b.type === 'dien');
+    return dien ? this.heroSpot(dien) : null;
+  }
+
+  /** Gióng lúc nhỏ ở trước Điện, bên phải bậc lên; thành tráng sĩ thì về doanh trại. */
   private syncGiong(state: GameState): void {
     const look = giongLook(state);
-    const dien = state.buildings.find((b) => b.type === 'dien');
-    const spot = dien ? this.heroSpot(dien) : null;
+    const spot = this.heroHome(state, look === 'trangSi');
     const key = look && spot ? `${look}:${spot.x}:${spot.y}:${spot.z}` : '';
     if (this.giong?.key === key) return;
     if (this.giong) this.scene.remove(this.giong.obj);
@@ -934,17 +963,20 @@ export class World {
     this.giong = { obj, look, key };
   }
 
-  /** Sơn Tinh đứng trên mỏm đá trước Điện ở chương 2, đánh lui Thủy Tinh thì về núi. */
+  /**
+   * Sơn Tinh lúc cầu hôn đứng trên mỏm đá trước Điện; rước Mị Nương rồi thì cùng ra trận, ở doanh trại.
+   * Đánh lui Thủy Tinh thì về núi.
+   */
   private syncSon(state: GameState): void {
     const look = sonLook(state);
-    const dien = state.buildings.find((b) => b.type === 'dien');
-    const spot = dien ? this.heroSpot(dien) : null;
-    const key = look && spot ? `${look}:${spot.x}:${spot.y}:${spot.z}` : '';
+    const camp = look === 'trangSi' && !!this.barracksSpot(state);
+    const spot = this.heroHome(state, look === 'trangSi');
+    const key = look && spot ? `${look}:${camp}:${spot.x}:${spot.y}:${spot.z}` : '';
     if (this.son?.key === key) return;
     if (this.son) this.scene.remove(this.son.obj);
     this.son = undefined;
     if (!look || !spot) return;
-    const obj = makeSonTinh({ rock: true });
+    const obj = makeSonTinh({ rock: !camp });
     obj.scale.setScalar(0.95);
     obj.position.set(spot.x, spot.y, spot.z);
     obj.rotation.y = 0.4;
@@ -1166,7 +1198,7 @@ export class World {
     }
   }
 
-  /** Người chơi chạm vào tướng đứng trước Điện: Gióng, Sơn Tinh hay An Dương Vương. */
+  /** Người chơi chạm vào tướng (ở doanh trại hay trước Điện): Gióng, Sơn Tinh hay An Dương Vương. */
   pickHero(clientX: number, clientY: number): 'giong' | 'son' | 'adv' | null {
     const ray = this.view.setRay(clientX, clientY);
     if (this.giong && ray.intersectObject(this.giong.obj, true).length) return 'giong';

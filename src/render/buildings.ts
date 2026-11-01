@@ -939,6 +939,30 @@ function openHall(m: ToonModel, x: number, z: number, length: number, ry = 0): v
   p.box(0.12, 0.08, 0.9, C.woodLight, x, 0.25, z);
 }
 
+/** Cỡ doanh trại theo cấp. */
+export const doanhTraiScale = (level: number) => 0.9 + 0.025 * level;
+/** Chỗ tướng đứng trong sân doanh trại (tọa độ mô hình, chưa nhân cỡ): giữa sân, trước nhà dài. */
+export const DOANH_TRAI_HERO = { x: 0.35, z: 0.8 };
+
+/** Cọc rơm tập đâm: cọc gỗ, bó rơm, thanh ngang làm tay. */
+function strawDummy(p: ShapeBuilder, x: number, z: number, s = 1): void {
+  p.cyl(0.03 * s, 0.03 * s, 0.8 * s, C.woodDark, x, 0.4 * s, z, undefined, 5);
+  p.cyl(0.13 * s, 0.13 * s, 0.36 * s, C.thatch, x, 0.62 * s, z, undefined, 7);
+  p.box(0.4 * s, 0.05 * s, 0.05 * s, C.woodDark, x, 0.7 * s, z);
+}
+
+/** Lọng che tướng: cán cao, tán đỏ hình nón thấp, diềm đồng. */
+function parasol(m: ToonModel, x: number, z: number, h: number): void {
+  m.plain.cyl(0.025, 0.03, h, C.woodDark, x, h / 2, z, undefined, 5);
+  m.band.cone(0.36, 0.16, C.red, x, h + 0.04, z, undefined, 12);
+  m.plain.add(new THREE.TorusGeometry(0.35, 0.025, 4, 18), C.bronze, x, h - 0.03, z, [Math.PI / 2, 0, 0]);
+  m.plain.sphere(0.04, C.bronzeLight, x, h + 0.14, z, [1, 1, 1], 6);
+}
+
+/**
+ * Doanh trại: nơi các tướng ở và điều binh. Nhà dài để trống không vách, mái thẳng; giá giáo đồng; cờ đỏ.
+ * Giữa sân để trống cho tướng đứng (`DOANH_TRAI_HERO`). Lính luyện ở nơi ở riêng (trại giáo, trại cung, chuồng voi).
+ */
 export function makeDoanhTrai(level: number): THREE.Group {
   const m = new ToonModel();
   const p = m.plain;
@@ -953,12 +977,11 @@ export function makeDoanhTrai(level: number): THREE.Group {
   }
   banner(m, 1.25, 1.25, 2.2, C.red);
   if (level >= 2) {
-    // Cọc rơm tập đâm.
-    for (const x of [0.2, 0.65]) {
-      p.cyl(0.03, 0.03, 0.8, C.woodDark, x, 0.4, 0.75, undefined, 5);
-      p.cyl(0.13, 0.13, 0.36, C.thatch, x, 0.62, 0.75, undefined, 7);
-      p.box(0.4, 0.05, 0.05, C.woodDark, x, 0.7, 0.75);
-    }
+    // Đài tướng: nền đất đắp vuông có bậc, chiếu cói, lọng đỏ che.
+    p.box(0.56, 0.16, 0.5, C.earthDark, -0.92, 0.12, 0.92);
+    p.box(0.24, 0.08, 0.16, C.earthDark, -0.92, 0.08, 1.24);
+    p.box(0.42, 0.02, 0.36, C.thatch, -0.92, 0.21, 0.92);
+    parasol(m, -1.08, 0.78, 1.0);
   }
   if (level >= 3) {
     // Hàng rào cọc vót nhọn quanh sân tập, chừa cổng trước.
@@ -978,6 +1001,147 @@ export function makeDoanhTrai(level: number): THREE.Group {
   }
   const g = m.group();
   g.scale.setScalar(0.9 + 0.025 * level);
+  return g;
+}
+
+// ---------- Nơi ở riêng của từng binh chủng ----------
+// Mỗi binh chủng có nơi ở riêng, luyện ở đó. Móng 2×2, dựng một lần, không lên cấp (mái tranh).
+
+/** Lều lính mái chữ A: mái tranh chạm đất hai bên, nóc chạy dọc trục z, đầu hồi trước để ngỏ; gốc ở tâm sàn lều. */
+function aFrameHut(m: ToonModel, x: number, z: number, length: number, width: number, h: number): void {
+  const p = m.plain;
+  p.box(width * 0.9, 0.06, length, C.thatchDark, x, 0.06, z);
+  const half = width / 2;
+  const slope = Math.hypot(half, h);
+  const tilt = Math.atan2(h, half);
+  for (const s of [-1, 1]) m.band.box(slope + 0.08, 0.07, length + 0.14, C.thatch, x + s * half * 0.5, h / 2 + 0.04, z, [0, 0, -s * tilt]);
+  // Nóc tre và cột chữ A ở đầu hồi trước.
+  p.cyl(0.03, 0.03, length + 0.24, C.woodDark, x, h + 0.08, z, [Math.PI / 2, 0, 0], 5);
+  for (const s of [-1, 1]) p.cyl(0.025, 0.025, slope + 0.14, C.woodDark, x + s * half * 0.5, h / 2 + 0.06, z + length / 2 + 0.07, [0, 0, -s * tilt + s * Math.PI / 2], 5);
+  // Vách hồi sau đan phên (tam giác); đầu hồi trước để ngỏ, thấy chiếu ngủ bên trong.
+  const tri = new THREE.Shape();
+  tri.moveTo(-half * 0.92, 0);
+  tri.lineTo(half * 0.92, 0);
+  tri.lineTo(0, h * 0.95);
+  tri.closePath();
+  p.add(new THREE.ExtrudeGeometry(tri, { depth: 0.04, bevelEnabled: false }), C.woodLight, x, 0.06, z - length / 2);
+  p.box(width * 0.5, 0.02, length * 0.7, C.cream, x, 0.1, z - 0.05);
+}
+
+/** Trại giáo: lều lính mái chữ A, giá giáo đồng dựng nghiêng, hai cọc rơm tập đâm, một giáo binh đang đâm thử. */
+export function makeTraiGiao(): THREE.Group {
+  const m = new ToonModel();
+  const p = m.plain;
+  p.box(1.95, 0.08, 1.95, C.earth, 0, 0.04, 0);
+  aFrameHut(m, -0.42, -0.25, 1.3, 0.95, 1.0);
+  // Giá giáo: hai cột, xà ngang, giáo dựng nghiêng tựa xà, mũi đồng lớn.
+  for (const z of [-0.8, 0.0]) p.cyl(0.035, 0.04, 0.95, C.woodDark, 0.72, 0.47, z, undefined, 6);
+  p.box(0.06, 0.06, 0.92, C.woodDark, 0.72, 0.9, -0.4);
+  for (let i = 0; i < 5; i++) {
+    const z = -0.74 + i * 0.17;
+    p.cyl(0.016, 0.016, 1.25, C.woodDark, 0.8, 0.62, z, [0, 0, 0.18], 5);
+    p.cone(0.05, 0.2, C.bronze, 0.69, 1.31, z, [0, 0, 0.18], 4);
+  }
+  // Sân tập phía trước: hai cọc rơm, giáo binh đâm thử vào cọc gần.
+  strawDummy(p, 0.55, 0.62, 0.9);
+  strawDummy(p, -0.1, 0.78, 0.9);
+  banner(m, -0.88, 0.75, 1.5, C.red);
+  const g = m.group();
+  const giao = makeFighter('giao');
+  giao.scale.setScalar(0.72);
+  giao.position.set(0.3, 0.08, 0.25);
+  giao.rotation.y = 0.6;
+  g.add(giao);
+  g.scale.setScalar(0.95);
+  return g;
+}
+
+/** Bia rơm tròn vẽ vòng đỏ trắng trên giá gỗ, mấy mũi tên đã găm; mặt bia hướng `ry` (0 là ra trước, +z). */
+function archeryTarget(m: ToonModel, x: number, z: number, ry: number): void {
+  const p = m.plain;
+  const fx = Math.sin(ry);
+  const fz = Math.cos(ry);
+  // Trục khối trụ (trục y) quay về hướng mặt bia: Rz(−90°) đưa trục y về +x, rồi quay quanh trục đứng.
+  const face: [number, number, number] = [0, ry - Math.PI / 2, -Math.PI / 2];
+  for (const s of [-1, 1]) p.cyl(0.025, 0.03, 0.62, C.woodDark, x + fz * s * 0.2, 0.31, z - fx * s * 0.2, undefined, 5);
+  p.box(0.06, 0.05, 0.46, C.woodDark, x, 0.4, z, [0, ry + Math.PI / 2, 0]);
+  p.cyl(0.3, 0.3, 0.09, C.thatch, x, 0.66, z, face, 16);
+  m.band.cyl(0.22, 0.22, 0.02, C.cream, x + fx * 0.05, 0.66, z + fz * 0.05, face, 16);
+  m.band.cyl(0.14, 0.14, 0.02, C.red, x + fx * 0.06, 0.66, z + fz * 0.06, face, 14);
+  m.band.cyl(0.06, 0.06, 0.02, C.cream, x + fx * 0.07, 0.66, z + fz * 0.07, face, 10);
+  for (const [dx, dy] of [[0.06, 0.05], [-0.1, -0.04], [0.03, -0.13]]) {
+    p.cyl(0.009, 0.009, 0.28, C.woodLight, x + fx * 0.18 + fz * dx, 0.66 + dy, z + fz * 0.18 - fx * dx, face, 4);
+  }
+}
+
+/** Trại cung: lán một mái tựa vách sau, giá cung và bao tên, bia rơm tròn bên trái, một cung thủ giương cung nhắm bia. */
+export function makeTraiCung(): THREE.Group {
+  const m = new ToonModel();
+  const p = m.plain;
+  p.box(1.95, 0.08, 1.95, C.earth, 0, 0.04, 0);
+  // Lán một mái: cột sau cao tựa vách phên, cột trước thấp, mái tranh dốc ra trước.
+  const back = 1.25;
+  const front = 0.72;
+  for (const x of [-0.8, 0, 0.8]) {
+    p.cyl(0.04, 0.05, back, C.woodDark, x, back / 2, -0.84, undefined, 6);
+    p.cyl(0.04, 0.05, front, C.woodDark, x, front / 2, -0.18, undefined, 6);
+  }
+  const run = 0.66;
+  const tilt = Math.atan2(back - front, run);
+  m.band.box(1.95, 0.08, Math.hypot(back - front, run) + 0.26, C.thatch, 0, (back + front) / 2 + 0.05, -0.51, [tilt, 0, 0]);
+  p.box(1.7, 0.7, 0.04, C.woodLight, 0, 0.4, -0.86);
+  // Giá cung trên vách sau: cung cong treo hàng; hai bao tên dựng dưới lán.
+  p.box(1.1, 0.04, 0.05, C.woodDark, -0.1, 0.62, -0.8);
+  for (let i = 0; i < 4; i++) p.add(new THREE.TorusGeometry(0.17, 0.014, 4, 10, Math.PI), C.woodDark, -0.5 + i * 0.26, 0.46, -0.78, [0, 0, -Math.PI / 2]);
+  for (const x of [0.5, 0.66]) {
+    p.cyl(0.055, 0.05, 0.34, C.earthDark, x, 0.25, -0.5, undefined, 8);
+    for (const d of [-0.025, 0.025]) p.cyl(0.007, 0.007, 0.2, C.woodLight, x + d, 0.48, -0.5, undefined, 3);
+  }
+  // Bia rơm bên trái, mặt bia quay sang phải về phía cung thủ.
+  archeryTarget(m, -0.6, 0.45, Math.PI / 2);
+  banner(m, 0.86, -0.92, 1.7, C.red);
+  const g = m.group();
+  const cung = makeFighter('cung');
+  cung.scale.setScalar(0.72);
+  cung.position.set(0.5, 0.08, 0.45);
+  cung.rotation.y = -Math.PI / 2;
+  g.add(cung);
+  g.scale.setScalar(0.95);
+  return g;
+}
+
+/** Chuồng voi: cột gỗ lớn đỡ mái tranh vuông chóp nhọn cao cho voi đứng lọt, rào gỗ, máng nước, đống cỏ, cọc buộc voi. */
+export function makeChuongVoi(): THREE.Group {
+  const m = new ToonModel();
+  const p = m.plain;
+  p.box(1.95, 0.08, 1.95, C.earth, 0, 0.04, 0);
+  // Bốn cột lớn và mái chóp bốn mặt.
+  for (const x of [-0.62, 0.42]) for (const z of [-0.72, 0.22]) p.cyl(0.07, 0.09, 1.3, C.woodDark, x, 0.65, z, undefined, 7);
+  p.box(1.2, 0.08, 1.1, C.wood, -0.1, 1.3, -0.25);
+  // Mái chóp bốn mặt, mỗi mặt quay thẳng ra một phía; chóp đồng trên đỉnh.
+  m.band.cone(0.98, 0.62, C.thatch, -0.1, 1.64, -0.25, [0, Math.PI / 4, 0], 4);
+  p.sphere(0.07, C.bronzeLight, -0.1, 1.98, -0.25, [1, 1, 1], 6);
+  // Rào gỗ ngang hai bên và sau, chừa cổng trước.
+  for (const [x, z, w, d] of [[-0.93, -0.25, 0.05, 1.3], [0.93, -0.25, 0.05, 1.3], [0, -0.93, 1.86, 0.05]] as const) {
+    for (const y of [0.25, 0.5]) p.box(w, 0.06, d, C.wood, x, y, z);
+  }
+  for (const [x, z] of [[-0.93, -0.9], [-0.93, 0.4], [0.93, -0.9], [0.93, 0.4]]) p.cyl(0.04, 0.05, 0.62, C.woodDark, x, 0.31, z, undefined, 5);
+  // Máng nước gỗ và đống cỏ.
+  p.box(0.5, 0.14, 0.18, C.wood, 0.55, 0.12, 0.72);
+  p.box(0.42, 0.02, 0.1, C.paddyWater, 0.55, 0.19, 0.72);
+  p.sphere(0.26, 0x8fa64a, -0.6, 0.12, 0.7, [1.2, 0.6, 0.9], 9);
+  p.sphere(0.18, 0x7a9440, -0.42, 0.1, 0.82, [1.1, 0.6, 1], 8);
+  // Cọc buộc voi có đai đồng.
+  p.cyl(0.06, 0.07, 0.5, C.woodDark, 0.15, 0.25, 0.75, undefined, 6);
+  p.cyl(0.075, 0.075, 0.05, C.bronze, 0.15, 0.4, 0.75, undefined, 8);
+  const g = m.group();
+  const voi = makeFighter('voi');
+  // Voi bước ra trước mái, quay sang đống cỏ.
+  voi.scale.setScalar(0.62);
+  voi.position.set(-0.2, 0.08, 0.2);
+  voi.rotation.y = -0.6;
+  g.add(voi);
+  g.scale.setScalar(0.95);
   return g;
 }
 
