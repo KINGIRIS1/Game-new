@@ -5,8 +5,9 @@
 // Gốc tọa độ là tâm chân móng, mặt trước hướng +z.
 
 import * as THREE from 'three';
-import { BUILDINGS, type BuildingType } from '../game/defs';
+import { BUILDINGS, isDecor, type BuildingType } from '../game/defs';
 import { bakeRuaVang } from './beasts';
+import { decorModel } from './decor';
 import { bakeIronHorse, bakeSonTinh } from './heroes';
 import { makeBoat, makeCrossbowStand, makeFighter, makeTradeBoat } from './models';
 import { C } from './palette';
@@ -1812,5 +1813,6 @@ export function buildingModel(type: BuildingType, level: number): THREE.Group {
   if (type === 'traiGiao') return makeTraiGiao();
   if (type === 'traiCung') return makeTraiCung();
   if (type === 'chuongVoi') return makeChuongVoi();
+  if (isDecor(type)) return decorModel(type);
   return new THREE.Group();
 }

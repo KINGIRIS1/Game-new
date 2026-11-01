@@ -2,7 +2,7 @@
 // đang có vào chỗ trong mẫu và dựng thêm phần mẫu có mà mình chưa có (trong giới hạn theo cấp Điện, trong
 // vùng đất đã khai phá). Phải đủ tài nguyên để dựng phần thiếu và trả phí dời thì mới áp được.
 
-import { BUILDINGS, type BuildingType, type Cost, RESOURCE_IDS } from './defs';
+import { BUILDINGS, isDecor, type BuildingType, type Cost, RESOURCE_IDS } from './defs';
 import { inChapter3 } from './coLoa';
 import {
   barracksLevel,
@@ -248,7 +248,7 @@ export interface MauPlan {
   moves: { id: number; x: number; z: number }[];
   /** Công trình sẽ dựng thêm. */
   builds: Slot[];
-  /** Đoạn lũy, đê, thành, bẫy sẽ dỡ đi (thừa so với mẫu, hay vướng chỗ của mẫu). */
+  /** Đoạn lũy, đê, thành, bẫy sẽ dỡ đi (thừa so với mẫu, hay vướng chỗ của mẫu); đường đi, đồ trang trí vướng mẫu. */
   removes: number[];
   /** Tổng giá: dựng phần thiếu và phí dời. */
   cost: Cost;
@@ -342,7 +342,7 @@ export function planMau(state: GameState, id: MauId): MauPlan {
     }
   }
   // Công trình thừa hay không có trong mẫu: đứng yên nếu không vướng chỗ của mẫu; đoạn lũy, đê, thành, bẫy
-  // thừa thì dỡ; công trình khác vướng thì tìm chỗ trống gần nhất.
+  // thừa thì dỡ; đường đi, đồ trang trí vướng thì dỡ; công trình khác vướng thì tìm chỗ trống gần nhất.
   for (const b of state.buildings) {
     if (b.type === 'dien' || types.includes(b.type) || (b.type === 'lauNo' && types.includes('choiCanh'))) continue;
     leftovers.push(b);
@@ -352,7 +352,7 @@ export function planMau(state: GameState, id: MauId): MauPlan {
   for (const b of leftovers) {
     if (SEGMENTS.includes(b.type) && inMau.has(b.type)) plan.removes.push(b.id);
     else if (free(b.type, b.x, b.z)) mark(b.type, b.x, b.z);
-    else if (SEGMENTS.includes(b.type)) plan.removes.push(b.id);
+    else if (SEGMENTS.includes(b.type) || isDecor(b.type)) plan.removes.push(b.id);
     else blocked.push(b);
   }
   for (const b of blocked) {
@@ -522,7 +522,7 @@ export function seatInMau(state: GameState, id: MauId, list: Building[], rings =
       b.z = s.z;
       mark(b.type, b.x, b.z);
       state.buildings.push(b);
-    } else if (SEGMENTS.includes(b.type)) dropped.push(b);
+    } else if (SEGMENTS.includes(b.type) || isDecor(b.type)) dropped.push(b);
     else homeless.push(b);
   }
   for (const b of homeless) {

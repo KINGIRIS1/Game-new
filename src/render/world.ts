@@ -2,7 +2,7 @@
 // đêm yêu tinh, cảnh Tết (cây nêu, dây cờ, mâm bánh, người gói bánh) và các hiệu ứng khi đặt công trình.
 
 import * as THREE from 'three';
-import { BUILDINGS, FIELD, type BuildingType, type Terrain } from '../game/defs';
+import { BUILDINGS, FIELD, isRoad, type BuildingType, type Terrain } from '../game/defs';
 import { raidSpawnBand, type Battle, type RaidSide } from '../game/battle';
 import { advLook, inChapter3, ruaVangCame, type AdvLook } from '../game/coLoa';
 import { buildingAt, dienLevel, type Building, type GameState } from '../game/game';
@@ -26,6 +26,7 @@ import {
   footScale,
 } from './buildings';
 import { makeRuaVang } from './beasts';
+import { buildDecor, disposeDecor, isBatchedDecor, type DecorSpot } from './decor';
 import { makeAnDuong, makeGiong, makeSonTinh } from './heroes';
 import { addSunLights, type SunLights } from './lights';
 import {
@@ -270,6 +271,8 @@ export class World {
   private walls?: THREE.Object3D;
   private dikes?: THREE.Object3D;
   private citadel?: THREE.Object3D;
+  /** Đường đi và đồ trang trí một ô, vẽ theo lô. */
+  private decor?: THREE.Object3D;
   private readonly ripples = new InstancedBoxes(RIPPLES);
   private readonly buildingsRoot = new THREE.Group();
   private readonly views = new Map<number, BuildingView>();
@@ -303,6 +306,7 @@ export class World {
   private wallKey = '';
   private dikeKey = '';
   private citadelKey = '';
+  private decorKey = '';
   private time = 0;
   private res: Resolution = 'medium';
 
@@ -562,9 +566,11 @@ export class World {
   resetAll(): void {
     for (const v of this.views.values()) this.buildingsRoot.remove(v.group);
     this.views.clear();
-    this.wallKey = '';
-    this.dikeKey = '';
-    this.citadelKey = '';
+    // Khóa không trùng với khóa nào (kể cả khóa rỗng khi không còn đoạn nào): lần vẽ sau gỡ lô cũ, vẽ lại từ đầu.
+    this.wallKey = '#';
+    this.dikeKey = '#';
+    this.citadelKey = '#';
+    this.decorKey = '#';
     this.floodKey = '';
     this.heights = [];
     this.shownLevel = 0;
@@ -620,7 +626,7 @@ export class World {
 
     const alive = new Set<number>();
     for (const b of state.buildings) {
-      if (b.type === 'luy' || b.type === 'de' || b.type === 'thanh') continue;
+      if (b.type === 'luy' || b.type === 'de' || b.type === 'thanh' || isBatchedDecor(b.type)) continue;
       alive.add(b.id);
       const v = this.views.get(b.id);
       if (!v || v.type !== b.type || v.level !== b.level || v.damaged !== !!b.damaged || v.workers !== b.workers || v.x !== b.x || v.z !== b.z) this.createView(b);
@@ -687,7 +693,35 @@ export class World {
       this.citadel = buildCitadel(spots);
       this.scene.add(this.citadel);
     }
+    this.syncDecor(state);
     this.syncFlood(state);
+  }
+
+  /**
+   * Đường đi và đồ trang trí một ô: vẽ lại cả lô khi có ô thêm, bớt, đổi loại hay đổi bậc đất. Mép ô đường không giáp
+   * ô cùng loại thì có viền.
+   */
+  private syncDecor(state: GameState): void {
+    const small = state.buildings.filter((b) => isBatchedDecor(b.type));
+    const key = small.map((b) => `${b.id}:${b.type}:${b.x}:${b.z}:${this.heights[b.z * GRID + b.x]}`).join(',');
+    if (key === this.decorKey) return;
+    this.decorKey = key;
+    if (this.decor) {
+      this.scene.remove(this.decor);
+      disposeDecor(this.decor);
+    }
+    const roadAt = new Map<number, BuildingType>();
+    for (const b of small) if (isRoad(b.type)) roadAt.set(b.z * GRID + b.x, b.type);
+    const spots: DecorSpot[] = small.map((b) => {
+      const spot: DecorSpot = { type: b.type, x: wx(b.x) + 0.5, y: this.groundY(b.x, b.z), z: wz(b.z) + 0.5, seed: b.x * 92821 + b.z * 68917 };
+      if (isRoad(b.type)) {
+        const same = (dx: number, dz: number) => roadAt.get((b.z + dz) * GRID + b.x + dx) === b.type;
+        spot.open = [!same(0, 1), !same(0, -1), !same(1, 0), !same(-1, 0)];
+      }
+      return spot;
+    });
+    this.decor = buildDecor(spots);
+    this.scene.add(this.decor);
   }
 
   /** Gọi mỗi khung hình: nước lũ dâng, rút mượt theo state mà không phải dựng lại cả cảnh. */

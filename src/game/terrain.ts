@@ -1,7 +1,7 @@
 // Độ cao ô đất và nước lũ: công trình đứng trên nền nào, đê chắn nước tới đâu,
 // nước lũ từ sông tràn vào những ô nào. Không phụ thuộc DOM hay Three.js.
 
-import { BUILDINGS, DIKE_RAISE, FLOOD_TOLERANCE, type BuildingType } from './defs';
+import { BUILDINGS, DIKE_RAISE, FLOOD_TOLERANCE, isDecor, type BuildingType } from './defs';
 import type { Building, GameState } from './game';
 import { GRID, RIVER_HEIGHT, inGrid, isRiver, isUnlocked } from './map';
 
@@ -32,6 +32,8 @@ export function groundOf(state: GameState, b: Building): number {
 }
 
 export function floodToleranceOf(type: BuildingType): number {
+  // Đường đi, đồ trang trí không sợ nước.
+  if (isDecor(type)) return 99;
   return FLOOD_TOLERANCE[type] ?? 0;
 }
 
