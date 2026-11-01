@@ -6,6 +6,7 @@
 import type { HeroSetup } from '../game/battle';
 import { CH2_LAST, canStartStage, chapterStages, stageDef, stageOpen, stageReward } from '../game/campaign';
 import { CH3_LAST } from '../game/coLoa';
+import { campTier } from '../game/benKia';
 import { BOSSES, ROWS, UNIT_TYPES, type Chapter, type EnemyType, type Row, type UnitType } from '../game/defs';
 import type { GameState, StageResult } from '../game/game';
 import { giftOfStage, heroFor, restingHero } from '../game/son';
@@ -126,7 +127,11 @@ export function mapHtml(state: GameState, selected: number | null, chapter: Chap
 }
 
 function enemyList(n: number): string {
-  const enemies = stageDef(n)?.enemies ?? {};
+  return enemiesHtml(stageDef(n)?.enemies ?? {});
+}
+
+/** Quân giặc: biểu tượng và số lượng từng loại. */
+export function enemiesHtml(enemies: Partial<Record<EnemyType, number>>): string {
   return (Object.keys(enemies) as EnemyType[])
     .filter((k) => (enemies[k] ?? 0) > 0)
     .map((k) => `<span title="${vi.enemies[k]}">${vi.enemyIcons[k]} ${enemies[k]}</span>`)
@@ -189,7 +194,15 @@ export function stageHtml(state: GameState, n: number): string {
 }
 
 export function armyHtml(state: GameState, pick: ArmyPick, stage: number): string {
-  const hero = heroFor(state, stageDef(stage)?.chapter ?? 1);
+  return armyPickerHtml(state, pick, stageDef(stage)?.chapter ?? 1);
+}
+
+/**
+ * Bảng chọn lính mang theo và hàng đứng, tướng ra trận như trận của chương `chapter`. Dùng cho màn phó bản và cho
+ * đồn giặc bên kia sông (`back`, `march` là thao tác của nút Quay lại và nút Xuất quân).
+ */
+export function armyPickerHtml(state: GameState, pick: ArmyPick, chapter: Chapter, back = 'backToStage', march = 'march', id = 0): string {
+  const hero = heroFor(state, chapter);
   const owned = UNIT_TYPES.filter((k) => state.troops[k] > 0);
   const total = UNIT_TYPES.reduce((s, k) => s + pick.army[k], 0);
   const rows = owned
@@ -209,11 +222,11 @@ export function armyHtml(state: GameState, pick: ArmyPick, stage: number): strin
     <h3>${vi.ui.armyTitle}</h3>
     <p class="muted">${vi.ui.armyHint}</p>
     ${heroNote(hero)}
-    ${battleWarnings(state, stageDef(stage)?.chapter ?? 1)}
+    ${battleWarnings(state, chapter)}
     ${owned.length ? `<div class="units">${rows}</div>` : `<p class="why">${vi.ui.noTroops}</p>`}
     <div class="actions">
-      <button class="btn ghost" data-act="backToStage">${vi.ui.back}</button>
-      <button class="btn" data-act="march" ${total || hero ? '' : 'disabled'}>${vi.ui.march}</button>
+      <button class="btn ghost" data-act="${back}">${vi.ui.back}</button>
+      <button class="btn" data-act="${march}" data-id="${id}" ${total || hero ? '' : 'disabled'}>${vi.ui.march}</button>
     </div>
   </div>`;
 }
@@ -229,8 +242,10 @@ export function defaultPick(state: GameState): ArmyPick {
 export function stageResultHtml(r: StageResult): string {
   const lost = UNIT_TYPES.filter((k) => r.lost[k] > 0).map((k) => `${vi.units[k].icon} ${r.lost[k]}`).join(' ') || vi.ui.raidNone;
   const won1st = r.outcome === 'win' && r.first;
+  const camp = r.camp !== undefined ? campTier(r.camp) : null;
   let title: string;
-  if (won1st && r.stage === CH3_LAST) title = `🐢 ${vi.ui.advWinTitle}`;
+  if (camp && r.outcome === 'win') title = `🚩 ${vi.benKia.campWon}`;
+  else if (won1st && r.stage === CH3_LAST) title = `🐢 ${vi.ui.advWinTitle}`;
   else if (won1st && r.stage === CH2_LAST) title = `⛰️ ${vi.ui.sonWinTitle}`;
   else if (r.outcome === 'win') title = `🥁 ${vi.ui.stageWonTitle(r.stage)}`;
   else if (r.outcome === 'retreat') title = `🏳️ ${vi.ui.stageRetreatTitle}`;
@@ -239,14 +254,15 @@ export function stageResultHtml(r: StageResult): string {
   return `<div class="modal">
     <h2>${title}</h2>
     <div class="result-rows">
-      <div>${esc(vi.stages[r.stage - 1].name)}</div>
+      <div>${esc(camp ? vi.benKia.don[camp].name : vi.stages[r.stage - 1].name)}</div>
       <div>${vi.ui.raidKilled(r.killed, r.total)}</div>
       <div>${vi.ui.raidLostTroops}: ${lost}</div>
       ${won ? `<div>${r.first ? vi.ui.firstReward : vi.ui.replayReward}: ${costHtml(null, r.reward)}</div>` : ''}
+      ${camp && won ? `<div>${vi.benKia.campCleared}</div>` : ''}
       ${r.gift ? `<div>${vi.ui.giftWon}: ${vi.gifts[r.gift].icon} ${esc(vi.gifts[r.gift].name)}</div>` : ''}
     </div>
     <div class="actions">
-      <button class="btn ghost" data-act="fieldToMap">${vi.ui.toMap}</button>
+      ${camp ? '' : `<button class="btn ghost" data-act="fieldToMap">${vi.ui.toMap}</button>`}
       <button class="btn bronze" data-act="leaveField">${vi.ui.toCity}</button>
     </div>
   </div>`;

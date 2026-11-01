@@ -234,6 +234,7 @@ export const vi = {
     cauHu: 'Cầu đang hư, sửa cầu rồi trinh sát mới qua được',
     xaQua: 'Xa quá, hãy dò dần từ khoảnh đã biết',
     trinhSatBan: 'Trinh sát đều đang đi, chờ họ về',
+    donDaDep: 'Đồn này đã dẹp xong',
   } satisfies Record<FailReason, string>,
 
   quests: {
@@ -946,6 +947,12 @@ export const vi = {
       4: { name: 'Trại quân Triệu', icon: '🏴' },
     } satisfies Record<Tier, { name: string; icon: string }>,
     donDesc: 'Giặc đóng đồn giữ đất. Đất có đồn và đất kề bên chưa khai phá được tới khi dẹp đồn.',
+    donCleared: 'Đồn đã dẹp. Đất quanh đây không còn bị chặn.',
+    campPrepare: 'Điều quân',
+    campMarching: 'Quân ta đang qua cầu…',
+    campWon: 'Dẹp xong đồn giặc',
+    campCleared: 'Đồn giặc tan, đất quanh đây không còn bị chặn',
+    campReward: 'Thưởng (một lần)',
     donNeed: { 1: 'Đánh được từ Điện cấp 4', 2: 'Đánh được từ chương 2', 3: 'Đánh được từ chương 3', 4: 'Đánh được từ chương 4' } satisfies Record<Tier, string>,
     lang: {
       lua: { name: 'Làng trồng lúa', icon: '🏘️' },

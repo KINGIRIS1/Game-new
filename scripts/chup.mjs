@@ -91,7 +91,7 @@ Tùy chọn:
                           D (defs.ts), C (campaign.ts), S (story.ts), X (mau.ts)
   --cam x,z,zoom          Đặt camera nhìn vào ô (x, z)
   --cham <x,z | loại>     Chạm một ô, hoặc công trình đầu tiên thuộc loại đó (vd: dien, ruong) để mở bảng
-  --bam "<bộ chọn>"       Bấm một phần tử giao diện (CSS, hoặc text=Chữ trên nút)
+  --bam "<bộ chọn>"       Bấm một phần tử giao diện (CSS, hoặc text=Chữ trên nút); lặp lại để bấm lần lượt
   --doi <ms>              Chờ thêm trước khi chụp (mặc định 1200, cảnh trận chờ lâu hơn)
   --ten <tên>             Tên ảnh (mặc định: tên cảnh)
   --ra <thư mục>          Nơi lưu ảnh (mặc định: chup/)
@@ -120,7 +120,7 @@ function docThamSo(argv) {
     else if (a === '--sau') opts.sau = next();
     else if (a === '--cam') opts.cam = next().split(',').map(Number);
     else if (a === '--cham') opts.cham = next();
-    else if (a === '--bam') opts.bam = next();
+    else if (a === '--bam') (opts.bam ??= []).push(next());
     else if (a === '--doi') opts.doi = Number(next());
     else if (a === '--ten') opts.ten = next();
     else if (a === '--ra') opts.ra = next();
@@ -212,7 +212,12 @@ async function chupMotCanh(browser, url, tenCanh, khung, opts) {
       await page.waitForTimeout(300);
       await cham(page, opts.cham);
     }
-    if (opts.bam) await page.locator(opts.bam).first().click({ timeout: 5000 });
+    for (const bam of opts.bam ?? []) {
+      const el = page.locator(bam).first();
+      // Cảnh nặng thì trang bận vẽ, cú bấm chuột thật có khi chờ quá lâu: gửi thẳng sự kiện click (giao diện bắt click).
+      await el.dispatchEvent('click', undefined, { timeout: 5000 });
+      await page.waitForTimeout(300);
+    }
     await page.waitForTimeout(opts.doi ?? canh.doi ?? 1200);
     if (canh.truocKhiChup && !opts.cam) {
       await chayMa(page, canh.truocKhiChup);

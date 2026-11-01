@@ -1368,7 +1368,22 @@ Chủ dự án yêu cầu: khám phá vùng đất mới bên kia sông để m�
    - **Người trinh sát** (giáo binh có khung xương) chạy từ sân Điện qua cầu tới khoảnh đang dò, đúng nhịp đồng hồ chơi. Có chip 🧭 đếm ngược trên thanh trên; về tới nơi thì báo một dòng.
    - **Bảng Đất bên kia sông**: chạm đất bên kia (không trúng công trình). Ghi bờ, khoảnh thứ mấy, đã dò chưa, điểm lạ, lý do chưa khai phá được, nút Sai trinh sát kèm giá.
    - **Bản lưu** vẫn phiên bản 12 (PR 1, PR 2 cùng một đợt): thêm phần bên kia (khoảnh đã dò, đã mở, trinh sát, đồn đã dẹp). Cầu nằm trọn trên sông là hợp lệ.
-3. **PR 3: đồn giặc và điều quân**: 12 đồn bốn bậc, hành quân qua cầu, bãi chiến bờ bên kia, cân bằng theo chuẩn.
+3. **PR 3: đồn giặc và điều quân** (đã làm): 12 đồn bốn bậc, hành quân qua cầu, bãi chiến bờ bên kia, cân bằng theo chuẩn. Số cuối cùng:
+
+   | Bậc | Quân giặc | Máu | Tướng khi đo | Quân mẫu | Thưởng (một lần) |
+   |---|---|---|---|---|---|
+   | 1 | 7 lính giáo, 4 cung, 2 chiến xa | ×1,9 | không tướng | 10 giáo, 6 cung, 3 voi (25 chỗ, vừa doanh trại cấp 4) | 400 gạo, 300 vỏ ốc, 250 đất đá, 60 sắt |
+   | 2 | 11 tôm binh, 7 cá phun nước, 3 cá sấu | ×2,95 | Gióng hiển linh | 14 giáo, 12 cung, 4 voi | 1300 gạo, 900 vỏ ốc, 700 đất đá, 180 sắt |
+   | 3 | 12 quỷ núi, 7 ma trơi, 3 hổ tinh | ×3,05 | Sơn Tinh hiển linh | như trên | 2400 gạo, 1700 vỏ ốc, 1500 đất đá, 400 sắt |
+   | 4 | 14 lính khiên, 8 nỏ thủ, 4 kỵ binh Triệu | ×2,6 | An Dương Vương | như trên | 4200 gạo, 3500 vỏ ốc, 3100 đất đá, 800 sắt |
+
+   - Máu là mức cao nhất mà người chơi thường (bấm chậm 1,5 giây, không có Đền) vẫn thắng cả 10 hạt giống thử. Ở mức ấy, không tướng hay nửa quân thì chơi giỏi cũng thua cả 10 lần (bậc 1: nửa quân thua). Test giữ chuẩn với 3 hạt giống (`benKia.test.ts`).
+   - Tướng ra trận như trận của chương ứng với bậc (`heroFor`): bậc 1 như chương 1, bậc 2 như chương 2, bậc 3 và 4 như chương 3 (An Dương Vương; chưa có Cao Lỗ). Đánh được khi: đã dò thấy đồn, tới đúng chương (bậc 1 cần Điện cấp 4), có doanh trại, cầu sang bờ ấy còn nguyên, không đang có giặc hay đang đánh phó bản.
+   - Đánh đồn dùng đúng trận ngoài bãi của phó bản (`camp` trong trận), nên kỹ năng, Trống trận, kiệt sức của tướng, lính tử trận như phó bản. Thắng đồn không tính là thắng màn phó bản.
+   - **Bảng đồn** nằm trong bảng Đất bên kia sông: quân giặc, thưởng một lần, tướng ra trận, lời báo đỏ như thẻ màn, nút ⚔️ Điều quân mở bảng xếp quân (dùng chung với phó bản).
+   - **Hành quân**: bấm Xuất quân thì đóng bảng, quân ta (tối đa chừng 18 người theo đúng tỉ lệ binh chủng) đi thành hàng từ sân doanh trại tới đầu cầu, qua cầu, tới đồn trong 3,2 giây, camera đi theo đầu hàng; rồi sang bãi chiến.
+   - **Bãi chiến bờ bên kia** (`benKia` trong `battlefield.ts`): sông chảy ngang sau lưng quân ta có cầu phao tre, giặc đóng đồn rào cọc có lều và cờ, khóm lau sậy dọc hai bên bãi. Đồn bậc 3 (yêu tinh) dùng bãi núi Thất Diệu.
+   - Kết quả: hộp kết quả như phó bản, tiêu đề "Dẹp xong đồn giặc", chỉ có nút về kinh đô. Ở kinh đô, đồn đã dẹp thành đất cháy sém có cờ đỏ của ta, đất quanh đồn hết bị chặn.
 4. **PR 4: mở đất bên kia, đặc sản, bản làng, của chôn**; sổ kinh tế.
 5. **PR 5: phòng thủ hai bờ**: giặc từ bìa rừng bên kia, đồn biên và lính đóng đồn, người làm cần cầu.
 

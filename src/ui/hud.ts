@@ -81,8 +81,8 @@ import { giongHtml, storyHtml } from './giong';
 import { sonHtml } from './son';
 import { blessingHtml, tetHtml } from './tet';
 import { mauHtml } from './mau';
-import { farHtml } from './benKia';
-import { isBridge } from '../game/benKia';
+import { farHtml, type CampPick } from './benKia';
+import { campTier, isBridge } from '../game/benKia';
 import type { MauId } from '../game/mau';
 
 const SHOWN_RESOURCES: ResourceId[] = ['gao', 'voOc', 'datDa', 'sat'];
@@ -192,7 +192,8 @@ export type HudAction =
   | { kind: 'retreat' }
   | { kind: 'leaveField' }
   | { kind: 'fieldToMap' }
-  | { kind: 'sendScout'; plot: number };
+  | { kind: 'sendScout'; plot: number }
+  | { kind: 'marchCamp'; plot: number; army: Record<UnitType, number>; rows: Record<UnitType, Row> };
 
 export type HudMode = 'view' | 'place' | 'move' | 'paint' | 'merge';
 
@@ -271,6 +272,8 @@ export class Hud {
   /** Đoạn truyện đang kể và thẻ đang xem. */
   private story: { id: StoryId; step: number } | null = null;
   private skillKey = '';
+  /** Đang chọn quân đánh đồn bên kia sông (trong bảng đất bên kia). */
+  private campPick: CampPick | null = null;
 
   constructor(
     root: HTMLElement,
@@ -349,6 +352,17 @@ export class Hud {
         return this.onAction({ kind: 'repair', id });
       case 'sendScout':
         return this.onAction({ kind: 'sendScout', plot: id });
+      case 'campPrepare':
+        this.campPick = { plot: id, pick: defaultPick(this.getState()) };
+        return this.refreshSheet(this.getState());
+      case 'campBack':
+        this.campPick = null;
+        return this.refreshSheet(this.getState());
+      case 'marchCamp': {
+        if (!this.campPick) return;
+        const { plot, pick } = this.campPick;
+        return this.onAction({ kind: 'marchCamp', plot, army: { ...pick.army }, rows: { ...pick.rows } });
+      }
       case 'train':
         return this.onAction({ kind: 'train', unit: el.dataset.unit as UnitType });
       case 'forgeArms':
@@ -373,6 +387,7 @@ export class Hud {
       case 'backToStage':
       case 'armyDelta':
       case 'armyRow':
+        if (this.campPick && this.sheet?.kind === 'far') return this.campPickStep(act, el);
         return this.campaignStep(act, id, el);
       case 'march': {
         if (!this.camp?.stage) return;
@@ -643,6 +658,17 @@ export class Hud {
   /** Bảng một khoảnh đất bên kia sông. */
   showFar(state: GameState, plot: number): void {
     this.sheet = { kind: 'far', plot };
+    this.campPick = null;
+    this.refreshSheet(state);
+  }
+
+  /** Chọn số lính, hàng đứng khi điều quân đánh đồn. */
+  private campPickStep(act: string, el: HTMLElement): void {
+    const camp = this.campPick!;
+    const state = this.getState();
+    const unit = el.dataset.unit as UnitType;
+    if (act === 'armyDelta') camp.pick.army[unit] = Math.max(0, Math.min(state.troops[unit], camp.pick.army[unit] + Number(el.dataset.delta)));
+    else camp.pick.rows[unit] = nextRow(camp.pick.rows[unit]);
     this.refreshSheet(state);
   }
 
@@ -653,6 +679,7 @@ export class Hud {
 
   closeSheet(): void {
     this.sheet = null;
+    this.campPick = null;
     this.sheetEl.classList.remove('open');
     this.root.classList.remove('sheet-open');
   }
@@ -703,7 +730,8 @@ export class Hud {
       body = tetHtml(state);
     } else if (this.sheet.kind === 'far') {
       title = `🌫️ ${vi.benKia.title}`;
-      body = farHtml(state, this.sheet.plot);
+      if (this.campPick) for (const k of UNIT_TYPES) this.campPick.pick.army[k] = Math.min(this.campPick.pick.army[k], state.troops[k]);
+      body = farHtml(state, this.sheet.plot, this.campPick);
     } else {
       title = `⚙️ ${vi.ui.settings}`;
       body = this.settingsHtml(state, this.sheet.resolution);
@@ -1105,7 +1133,8 @@ export class Hud {
     this.root.classList.toggle('in-field', !!b);
     if (!b) return;
     const secs = Math.max(0, Math.ceil(FIELD.maxS - b.t));
-    this.fieldTop.querySelector('b')!.textContent = `${vi.ui.stageN(b.wave)} · ${vi.stages[b.wave - 1].name}`;
+    const camp = b.camp !== undefined ? campTier(b.camp) : null;
+    this.fieldTop.querySelector('b')!.textContent = camp ? `${vi.benKia.don[camp].icon} ${vi.benKia.don[camp].name}` : `${vi.ui.stageN(b.wave)} · ${vi.stages[b.wave - 1].name}`;
     this.fieldTop.querySelector('span')!.textContent = vi.ui.fieldBanner(enemiesLeft(b), alliesLeft(b), secs);
     const box = this.fieldBar.querySelector<HTMLElement>('.skills')!;
     const key = `${b.id}:${b.skills.join(',')}`;

@@ -132,6 +132,8 @@ export interface StageResult {
   reward: Cost;
   /** Lễ vật giành được khi thắng lần đầu màn này. */
   gift?: GiftId;
+  /** Trận đánh đồn giặc bên kia sông (khoảnh có đồn), `stage` khi ấy là 0. */
+  camp?: number;
 }
 
 export interface CampaignState {
@@ -319,7 +321,8 @@ export type FailReason =
   | 'canCau'
   | 'cauHu'
   | 'xaQua'
-  | 'trinhSatBan';
+  | 'trinhSatBan'
+  | 'donDaDep';
 
 export type Result<T = undefined> = { ok: true; value: T } | { ok: false; reason: FailReason };
 

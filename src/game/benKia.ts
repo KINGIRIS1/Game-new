@@ -2,9 +2,27 @@
 // (khoảnh 5×5 ô). Bắc cầu qua sông thì khoảnh đầu cầu bên kia được dò và mở; sai trinh sát dò dần từng khoảnh, thấy
 // điểm lạ (đồn giặc, bản làng, đặc sản đất, của chôn) cố định, mọi máy như nhau. Không phụ thuộc DOM hay Three.js.
 
-import { BEN_KIA_DIEN, BUILDINGS, SCOUT_COST, SCOUT_MS, SCOUT_TWO_DIEN, type BuildingType } from './defs';
-import { canAfford, dienLevel, pay, type Building, type FailReason, type GameState, type Result } from './game';
+import { startFieldBattle, type Battle } from './battle';
+import { inChapter3 } from './coLoa';
+import { inChapter4 } from './chuong4';
+import {
+  BEN_KIA_DIEN,
+  BUILDINGS,
+  SCOUT_COST,
+  SCOUT_MS,
+  SCOUT_TWO_DIEN,
+  UNIT_TYPES,
+  type BuildingType,
+  type Chapter,
+  type Cost,
+  type EnemyType,
+  type Row,
+  type Terrain,
+  type UnitType,
+} from './defs';
+import { canAfford, countOf, dienLevel, gain, pay, troopBonus, type Building, type FailReason, type GameState, type Result } from './game';
 import { FAR_FOREST, GRID, KHOANH, RIVER_END, RIVER_START, inGrid, isUnlocked } from './map';
+import { heroFor, inChapter2, restAfter } from './son';
 
 const ok = <T>(value: T): Result<T> => ({ ok: true, value });
 const fail = (reason: FailReason): Result<never> => ({ ok: false, reason });
@@ -84,7 +102,7 @@ export type Poi = { kind: 'don'; tier: Tier } | { kind: 'lang'; nghe: Nghe } | {
  * đô) có một đặc sản sau đồn bậc 1, khai phá được từ chương 1; làng và đặc sản khác nằm sau đồn bậc 2–4
  * (`benKia.test.ts` canh). Hai bờ chung khung đồn, khác làng và đặc sản.
  */
-const CAMPS: [number, number, Poi][] = [
+const CAMP_SPOTS: [number, number, Poi][] = [
   [3, 0, { kind: 'don', tier: 1 }],
   [8, 0, { kind: 'don', tier: 1 }],
   [1, 1, { kind: 'don', tier: 2 }],
@@ -94,7 +112,7 @@ const CAMPS: [number, number, Poi][] = [
 ];
 const LAYOUT: Record<Bank, [number, number, Poi][]> = {
   nam: [
-    ...CAMPS,
+    ...CAMP_SPOTS,
     [4, 1, { kind: 'lang', nghe: 'lua' }],
     [0, 0, { kind: 'lang', nghe: 'chai' }],
     [8, 1, { kind: 'dacSan', dat: 'phuSa' }],
@@ -104,7 +122,7 @@ const LAYOUT: Record<Bank, [number, number, Poi][]> = {
     [2, 2, { kind: 'cua' }],
   ],
   dong: [
-    ...CAMPS,
+    ...CAMP_SPOTS,
     [4, 1, { kind: 'lang', nghe: 'da' }],
     [0, 0, { kind: 'lang', nghe: 'ren' }],
     [8, 1, { kind: 'dacSan', dat: 'nuiDa' }],
@@ -279,4 +297,107 @@ export function updateBenKia(state: GameState): void {
   for (const s of back) {
     for (const id of [s.plot, ...plotNeighbors(s.plot)]) if (!k.known.includes(id)) k.known.push(id);
   }
+}
+
+// ---------- Đồn giặc và điều quân ----------
+
+/**
+ * Đồn giặc theo bậc: quân giặc, máu (như màn phó bản), nền bãi chiến, thưởng lần đầu (và duy nhất: đồn dẹp rồi là
+ * hết), tướng như trận của chương nào. Máu đo bằng test theo Chuẩn cân bằng phó bản (`benKia.test.ts`).
+ */
+export interface CampDef {
+  enemies: Partial<Record<EnemyType, number>>;
+  hpScale: number;
+  terrain: Terrain;
+  reward: Cost;
+  /** Tướng ra trận như trận của chương này (`heroFor`). */
+  chapter: Chapter;
+}
+
+export const CAMPS: Record<Tier, CampDef> = {
+  1: { enemies: { giaoAn: 7, cungAn: 4, chienXa: 2 }, hpScale: 1.9, terrain: 'benKia', reward: { gao: 400, voOc: 300, datDa: 250, sat: 60 }, chapter: 1 },
+  2: { enemies: { tomBinh: 11, caPhun: 7, caSau: 3 }, hpScale: 2.95, terrain: 'benKia', reward: { gao: 1300, voOc: 900, datDa: 700, sat: 180 }, chapter: 2 },
+  3: { enemies: { quyNui: 12, maTroi: 7, hoTinh: 3 }, hpScale: 3.05, terrain: 'thatDieu', reward: { gao: 2400, voOc: 1700, datDa: 1500, sat: 400 }, chapter: 3 },
+  4: { enemies: { linhTrieu: 14, noTrieu: 8, kyBinh: 4 }, hpScale: 2.6, terrain: 'benKia', reward: { gao: 4200, voOc: 3500, datDa: 3100, sat: 800 }, chapter: 3 },
+};
+
+/** Quân mẫu đánh đồn bậc 1 ở Điện cấp 4: vừa 28 chỗ doanh trại cấp 4. Bậc 2–4 dùng quân mẫu chương 2, 3 (38 chỗ). */
+export const CAMP1_ARMY: Record<UnitType, number> = { giao: 10, cung: 6, voi: 3 };
+
+/** Bậc của đồn ở khoảnh `id` (không có đồn thì null). */
+export function campTier(id: number): Tier | null {
+  const poi = poiAt(id);
+  return poi?.kind === 'don' ? poi.tier : null;
+}
+
+/** Đã tới chương đánh được đồn bậc `tier` chưa: bậc 1 cần Điện cấp 4, bậc 2, 3, 4 cần vào chương 2, 3, 4. */
+export function tierOpen(state: GameState, tier: Tier): boolean {
+  if (tier === 1) return dienLevel(state) >= BEN_KIA_DIEN;
+  if (tier === 2) return inChapter2(state);
+  if (tier === 3) return inChapter3(state);
+  return inChapter4(state);
+}
+
+/** Đánh được đồn ở khoảnh `id` chưa, chưa tính quân mang theo. */
+export function canStartCamp(state: GameState, id: number): Result {
+  const tier = campTier(id);
+  if (tier === null || !state.benKia.known.includes(id)) return fail('khongTimThay');
+  if (!hasCamp(state, id)) return fail('donDaDep');
+  if (!tierOpen(state, tier)) return fail(tier === 1 ? 'chuaDuCapDien' : tier === 2 ? 'canChuong2' : tier === 3 ? 'canChuong3' : 'canChuong4');
+  if (countOf(state, 'doanhTrai') === 0) return fail('canDoanhTrai');
+  const bridge = bridgeTo(state, plotOf(id).bank);
+  if (!bridge) return fail('canCau');
+  if (bridge.damaged) return fail('cauHu');
+  if (state.raid.phase !== 'idle') return fail('dangCoGiac');
+  if (state.campaign.battle) return fail('dangDanhPhoBan');
+  return ok(undefined);
+}
+
+/** Điều quân đánh đồn ở khoảnh `id` với số lính `army`, đứng theo hàng `rows`: trận ngoài bãi như phó bản. */
+export function startCamp(state: GameState, id: number, army: Record<UnitType, number>, rows: Record<UnitType, Row>): Result {
+  const check = canStartCamp(state, id);
+  if (!check.ok) return check;
+  if (UNIT_TYPES.some((k) => (army[k] ?? 0) < 0 || (army[k] ?? 0) > state.troops[k])) return fail('khongDuQuan');
+  const def = CAMPS[campTier(id)!];
+  const hero = heroFor(state, def.chapter);
+  if (!hero && UNIT_TYPES.every((k) => !army[k])) return fail('chuaChonQuan');
+  state.campaign.rows = { ...rows };
+  state.campaign.lastResult = null;
+  state.campaign.battle = startFieldBattle({
+    id: state.nextBattleId++,
+    stage: 0,
+    camp: id,
+    enemies: def.enemies,
+    hpScale: def.hpScale,
+    army: { ...army },
+    rows: { ...rows },
+    hero,
+    bonus: troopBonus(state),
+    arms: state.arms,
+  });
+  return ok(undefined);
+}
+
+/** Trận đánh đồn vừa xong: trừ lính tử trận; thắng thì dẹp đồn và nhận thưởng. Trận vẫn giữ để vẽ cảnh cuối. */
+export function finishCamp(state: GameState, battle: Battle): void {
+  const id = battle.camp!;
+  const outcome = battle.outcome ?? 'lose';
+  for (const k of UNIT_TYPES) state.troops[k] = Math.max(0, state.troops[k] - battle.lost[k]);
+  const won = outcome === 'win' && hasCamp(state, id);
+  const reward = won ? { ...CAMPS[campTier(id)!].reward } : {};
+  if (won) {
+    gain(state, reward);
+    state.benKia.cleared.push(id);
+  }
+  restAfter(state, battle);
+  state.campaign.lastResult = {
+    stage: 0,
+    camp: id,
+    outcome,
+    first: won,
+    killed: battle.killed,
+    total: battle.total,
+    lost: { ...battle.lost },
+    reward,
+  };
 }

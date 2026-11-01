@@ -9,6 +9,7 @@ import { REPLAY_SHARE, RESOURCE_IDS, STAGES, UNIT_TYPES, type Chapter, type Cost
 import { BATTLE_STEP, countOf, dienLevel, gain, troopBonus, type FailReason, type GameState, type Result, type StageResult } from './game';
 import { giongReady, giongResting } from './giong';
 import { heroFor, inChapter2, restAfter, sonJoined, sonResting, winGift } from './son';
+import { finishCamp } from './benKia';
 
 /** Thắng màn này lần đầu thì roi sắt gãy. */
 export const WHIP_BREAKS_AT = 6;
@@ -103,6 +104,8 @@ export function retreat(state: GameState): Result {
 /** Ghi kết quả trận vừa xong: trừ lính tử trận, cộng thưởng nếu thắng. Trận vẫn giữ để vẽ cảnh cuối. */
 function finishStage(state: GameState): void {
   const battle = state.campaign.battle!;
+  // Trận đánh đồn bên kia sông có cách ghi riêng.
+  if (battle.camp !== undefined) return finishCamp(state, battle);
   const outcome = battle.outcome ?? 'lose';
   for (const k of UNIT_TYPES) state.troops[k] = Math.max(0, state.troops[k] - battle.lost[k]);
   const won = outcome === 'win';

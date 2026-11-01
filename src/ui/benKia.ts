@@ -1,11 +1,19 @@
 // Giao diện vùng đất bên kia sông: bảng một khoảnh (đã dò chưa, có gì, sai trinh sát).
 // Chỉ dựng chuỗi HTML; Hud lo việc gắn vào trang và bắt sự kiện.
 
-import { canScout, hasCamp, plotBlocked, plotOf, poiAt } from '../game/benKia';
+import { CAMPS, canScout, canStartCamp, hasCamp, plotBlocked, plotOf, poiAt } from '../game/benKia';
 import { SCOUT_COST, SCOUT_MS } from '../game/defs';
 import type { GameState } from '../game/game';
+import { heroFor } from '../game/son';
 import { vi } from '../text/vi';
+import { armyPickerHtml, battleWarnings, enemiesHtml, heroNote, type ArmyPick } from './campaign';
 import { costHtml, esc } from './format';
+
+/** Đang chọn quân đánh đồn ở khoảnh nào (bảng đất bên kia chuyển sang bước chọn quân). */
+export interface CampPick {
+  plot: number;
+  pick: ArmyPick;
+}
 
 /** Tên và biểu tượng điểm lạ trên khoảnh, dùng cho tiêu đề bảng. */
 export function poiTitle(id: number): { icon: string; name: string } | null {
@@ -18,8 +26,26 @@ export function poiTitle(id: number): { icon: string; name: string } | null {
   return t.cua;
 }
 
-/** Bảng một khoảnh bên kia sông. */
-export function farHtml(state: GameState, id: number): string {
+/** Phần đồn giặc chưa dẹp: quân giặc, thưởng, tướng, lời báo, nút Điều quân. */
+function campHtml(state: GameState, id: number, tier: 1 | 2 | 3 | 4): string {
+  const def = CAMPS[tier];
+  const check = canStartCamp(state, id);
+  return `<div class="stat"><span>${vi.ui.enemyArmy}</span><b>${enemiesHtml(def.enemies)}</b></div>
+    <div class="stat"><span>${vi.benKia.campReward}</span>${costHtml(null, def.reward)}</div>
+    ${heroNote(heroFor(state, def.chapter))}
+    ${battleWarnings(state, def.chapter)}
+    <div class="actions">
+      ${check.ok ? '' : `<span class="why">${esc(vi.reasons[check.reason])}</span>`}
+      <button class="btn" data-act="campPrepare" data-id="${id}" ${check.ok ? '' : 'disabled'}>⚔️ ${vi.benKia.campPrepare}</button>
+    </div>`;
+}
+
+/** Bảng một khoảnh bên kia sông; đang chọn quân đánh đồn ở khoảnh này thì hiện bảng chọn quân. */
+export function farHtml(state: GameState, id: number, pick: CampPick | null = null): string {
+  const tier = poiAt(id)?.kind === 'don' ? (poiAt(id) as { tier: 1 | 2 | 3 | 4 }).tier : null;
+  if (pick && pick.plot === id && tier && hasCamp(state, id)) {
+    return armyPickerHtml(state, pick.pick, CAMPS[tier].chapter, 'campBack', 'marchCamp', id);
+  }
   const t = vi.benKia;
   const k = state.benKia;
   const { bank, i, j } = plotOf(id);
@@ -32,8 +58,9 @@ export function farHtml(state: GameState, id: number): string {
     if (!poi) rows.push(`<p class="muted">${t.empty}</p>`);
     else if (poi.kind === 'don') {
       const cleared = !hasCamp(state, id);
-      rows.push(`<h3>${t.don[poi.tier].icon} ${t.don[poi.tier].name}</h3><p>${t.donDesc}</p><p class="muted">${t.donNeed[poi.tier]}</p>`);
-      if (cleared) rows.push(`<p class="done">✓</p>`);
+      rows.push(`<h3>${t.don[poi.tier].icon} ${t.don[poi.tier].name}</h3>`);
+      if (cleared) rows.push(`<p class="done">✓ ${t.donCleared}</p>`);
+      else rows.push(`<p>${t.donDesc}</p><p class="muted">${t.donNeed[poi.tier]}</p>${campHtml(state, id, poi.tier)}`);
     } else if (poi.kind === 'lang') {
       rows.push(`<h3>${t.lang[poi.nghe].icon} ${t.lang[poi.nghe].name}</h3><p>${t.langDesc}</p>`);
     } else if (poi.kind === 'dacSan') {

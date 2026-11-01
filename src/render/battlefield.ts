@@ -12,7 +12,7 @@ import { BattleView } from './battleView';
 import { addSunLights, type SunLights } from './lights';
 import { STICK_POSE, makeDrummer } from './heroes';
 import { buildForest, makeBoat, makeEnemyFlag, makeMountain, makeTent, type TreeSpot } from './models';
-import { makeNhaSan, makeRuong } from './buildings';
+import { makeBridge, makeNhaSan, makeRuong } from './buildings';
 import { C } from './palette';
 import { ShapeBuilder, seeded } from './shapes';
 import { ToonModel, inkThin, outlineOf, toon } from './toon';
@@ -23,7 +23,7 @@ const groundMaterial = new THREE.MeshLambertMaterial({ vertexColors: true });
 /** Đất có đồi tô phẳng từng mặt tam giác, ra dáng low-poly như các mô hình khác. */
 const reliefMaterial = new THREE.MeshLambertMaterial({ vertexColors: true, flatShading: true });
 
-const TERRAINS: Terrain[] = ['rung', 'benSong', 'lang', 'don', 'nui', 'doi', 'ngap', 'tanVien', 'thatDieu', 'coLoa'];
+const TERRAINS: Terrain[] = ['rung', 'benSong', 'lang', 'don', 'nui', 'doi', 'ngap', 'tanVien', 'thatDieu', 'coLoa', 'benKia'];
 const OUTSIDE: Record<Terrain, number> = {
   rung: C.grassLocked[0],
   benSong: C.grassLocked[1],
@@ -35,6 +35,7 @@ const OUTSIDE: Record<Terrain, number> = {
   tanVien: 0x6f7a44,
   thatDieu: C.nightLand,
   coLoa: C.grassLocked[0],
+  benKia: 0x7f8a4c,
 };
 const FIELD_COLOR: Record<Terrain, number> = {
   rung: C.grass[0],
@@ -47,6 +48,7 @@ const FIELD_COLOR: Record<Terrain, number> = {
   tanVien: 0x9ca466,
   thatDieu: 0x8c8496,
   coLoa: 0xb1ad72,
+  benKia: 0xb4ac74,
 };
 /** Màu các mảng loang trên đất: cỏ rậm, cỏ úa, đất trống, đá; đồi sim nở hoa tím. */
 const PATCH: Record<Terrain, number> = {
@@ -60,6 +62,7 @@ const PATCH: Record<Terrain, number> = {
   tanVien: C.rock,
   thatDieu: 0x45405a,
   coLoa: C.earthDark,
+  benKia: 0x6a4a2c,
 };
 /** Đồng ngập lũ và đỉnh Tản Viên: nước lũ phủ chỗ trũng quanh bãi, ở độ cao này. */
 const FLOOD_Y = -0.3;
@@ -77,6 +80,7 @@ const HILLS: Record<Terrain, { height: number; freq: number }> = {
   tanVien: { height: 2.6, freq: 0.07 },
   thatDieu: { height: 2.8, freq: 0.08 },
   coLoa: { height: 1.4, freq: 0.05 },
+  benKia: { height: 1.5, freq: 0.06 },
 };
 const TREE_DENSITY: Record<Terrain, number> = {
   rung: 0.8,
@@ -89,6 +93,7 @@ const TREE_DENSITY: Record<Terrain, number> = {
   tanVien: 0.5,
   thatDieu: 0.05,
   coLoa: 0.35,
+  benKia: 0.4,
 };
 /** Trời và đèn theo nền: núi Thất Diệu là đêm tím, còn lại là ngày. */
 const SKY: Partial<Record<Terrain, { sky: number; sun: number; hemi: number; sunColor: number; hemiSky: number; hemiGround: number }>> = {
@@ -238,6 +243,39 @@ function buildDecor(t: Terrain): THREE.Group {
       place(makeRuong(2), x, z);
       zones.push({ x0: x - 2, x1: x + 2, z0: z - 2, z1: z + 2 });
     }
+  }
+  if (t === 'benKia') {
+    // Bờ bên kia sông: sông chảy ngang sau lưng quân ta, cầu tre vừa bắc qua; giặc đóng đồn rào cọc trong bãi lau.
+    const water = new ShapeBuilder();
+    water.box(60, 0.1, 5, C.water[1], W / 2, 0.01, D + 7.5);
+    const wm = water.mesh(groundMaterial);
+    wm.castShadow = false;
+    g.add(wm);
+    zones.push({ x0: -30, x1: 40, z0: D + 4, z1: D + 11 });
+    const bridge = makeBridge(1);
+    bridge.position.set(W / 2 + 3, 0.28, D + 7.5);
+    g.add(bridge);
+    const stakes = new ShapeBuilder();
+    const rand = seeded(29);
+    for (let x = 0.5; x <= W - 0.5; x += 0.34) {
+      if (Math.abs(x - W / 2) < 1) continue;
+      const h = 0.8 + rand() * 0.3;
+      stakes.cyl(0.07, 0.08, h, C.woodDark, x, h / 2, -2.2, undefined, 5);
+      stakes.cone(0.08, 0.2, C.woodLight, x, h + 0.1, -2.2, undefined, 5);
+    }
+    g.add(stakes.mesh(toon));
+    for (const [x, z] of [[1.5, -4.6], [4.5, -6], [7.5, -4.8]]) place(makeTent(), x, z, x);
+    place(makeEnemyFlag(), W / 2 + 1.3, -2.8, Math.PI / 2);
+    zones.push({ x0: -1, x1: W + 1, z0: -8, z1: -1.5 });
+    // Khóm lau sậy dọc bãi.
+    const reeds = new ShapeBuilder();
+    for (let k = 0; k < 70; k++) {
+      const side = k % 2 ? -1 : 1;
+      const x = W / 2 + side * (W / 2 + 1.5 + rand() * 6);
+      const z = -2 + rand() * (D + 6);
+      for (let r = 0; r < 3; r++) reeds.cone(0.04, 0.7 + rand() * 0.4, r % 2 ? C.bamboo : C.ripe, x + (rand() - 0.5) * 0.3, 0.35, z + (rand() - 0.5) * 0.3, undefined, 4);
+    }
+    g.add(reeds.mesh(toon));
   }
   if (t === 'don') {
     // Hàng rào cọc nhọn chắn đồn, chừa cổng ở giữa.

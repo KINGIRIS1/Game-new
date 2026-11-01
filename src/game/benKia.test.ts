@@ -1,13 +1,18 @@
 // Vùng đất bên kia sông: lưới nới qua sông (bờ nam sông Đà, bờ đông sông Thao, ngã ba sông).
 
 import { describe, expect, it } from 'vitest';
-import { findPath } from './battle';
+import { findPath, type HeroSetup } from './battle';
 import {
   BANKS,
   FAR_ALONG,
   FAR_PLOTS,
+  CAMP1_ARMY,
+  CAMPS,
   bridgeheadPlots,
+  campTier,
   canScout,
+  canStartCamp,
+  startCamp,
   plotAt,
   plotBlocked,
   plotId,
@@ -21,7 +26,7 @@ import {
   type Poi,
 } from './benKia';
 import { wallRings } from './coLoa';
-import { BRIDGE_FLOOD, BUILDINGS, SCOUT_COST, SCOUT_MS } from './defs';
+import { BRIDGE_FLOOD, BUILDINGS, CH2_QUEST_START, CH3_QUEST_START, FIELD, SCOUT_COST, SCOUT_MS, UNITS, type UnitType } from './defs';
 import { canMove, canPlace, createInitialState, place, tick, type Building, type GameState } from './game';
 import { planMau } from './mau';
 import { FAR_FOREST, GRID, RIVER_END, RIVER_START, areaStart, baseHeights, farBankOf, isRiver, isUnlocked, riverDistance } from './map';
@@ -29,6 +34,7 @@ import { deserialize, serialize } from './save';
 import { pendingStory } from './story';
 import { drowns, floodMap } from './terrain';
 import { setDien } from './testmap';
+import { HALF_ARMY, SAMPLE_ARMY, SEEDS, fightField } from './testkit';
 
 /** Dấu vân tay độ cao tự nhiên của lưới 55×55 trước khi nới lưới (tính từ `map.ts` cũ). */
 const OLD_FINGERPRINT = 3373663266;
@@ -400,4 +406,96 @@ describe('bên kia sông và các phần khác', () => {
     const back = deserialize(serialize(s))!;
     expect(back.benKia).toEqual(s.benKia);
   });
+});
+
+describe('đồn giặc và điều quân', () => {
+  /** Đồn bậc `tier` gần cầu nhất trên bờ nam, đã dò. */
+  function campOf(s: GameState, tier: number): number {
+    const id = poiPlots().find((p) => plotOf(p).bank === 'nam' && campTier(p) === tier)!;
+    if (!s.benKia.known.includes(id)) s.benKia.known.push(id);
+    return id;
+  }
+  /** Kinh đô có doanh trại, cầu sang bờ nam, lính đủ đánh. */
+  function ready(level = 4): GameState {
+    const s = rich(level);
+    s.buildings.push({ id: 900, type: 'doanhTrai', x: 30, z: 30, level: 4, workers: 0 });
+    bridgeTo(s, freeRiverPlot('nam', level));
+    s.troops = { giao: 20, cung: 12, voi: 4 };
+    return s;
+  }
+
+  it('đánh được khi đã dò thấy đồn, có doanh trại, có cầu còn nguyên, tới đúng chương', () => {
+    const s = ready();
+    const t1 = campOf(s, 1);
+    expect(canStartCamp(s, t1).ok).toBe(true);
+    const t2 = campOf(s, 2);
+    expect(canStartCamp(s, t2)).toEqual({ ok: false, reason: 'canChuong2' });
+    s.questIndex = CH2_QUEST_START;
+    expect(canStartCamp(s, t2).ok).toBe(true);
+    expect(canStartCamp(s, campOf(s, 3))).toEqual({ ok: false, reason: 'canChuong3' });
+    s.questIndex = CH3_QUEST_START;
+    expect(canStartCamp(s, campOf(s, 3)).ok).toBe(true);
+    expect(canStartCamp(s, campOf(s, 4))).toEqual({ ok: false, reason: 'canChuong4' });
+    const bridge = s.buildings.find((b) => b.type === 'cauDa')!;
+    bridge.damaged = true;
+    expect(canStartCamp(s, t1)).toEqual({ ok: false, reason: 'cauHu' });
+    s.buildings = s.buildings.filter((b) => b.id !== 900);
+    bridge.damaged = false;
+    expect(canStartCamp(s, t1)).toEqual({ ok: false, reason: 'canDoanhTrai' });
+    s.benKia.known = s.benKia.known.filter((id) => id !== t1);
+    expect(canStartCamp(s, t1)).toEqual({ ok: false, reason: 'khongTimThay' });
+  });
+
+  it('thắng thì dẹp đồn, nhận thưởng một lần, đất quanh đồn hết bị chặn; lính tử trận mất hẳn', () => {
+    const s = ready();
+    const id = campOf(s, 1);
+    expect(plotBlocked(s, id)).toBe(true);
+    expect(startCamp(s, id, { giao: 20, cung: 12, voi: 4 }, { giao: 'tien', cung: 'hau', voi: 'trung' }).ok).toBe(true);
+    expect(s.campaign.battle?.camp).toBe(id);
+    for (let i = 0; i < 200 && s.campaign.battle && !s.campaign.battle.outcome; i++) tick(s, 1000);
+    expect(s.campaign.battle?.outcome).toBe('win');
+    const r = s.campaign.lastResult!;
+    expect(r.camp).toBe(id);
+    expect(r.reward).toEqual(CAMPS[1].reward);
+    expect(s.benKia.cleared).toEqual([id]);
+    expect(canStartCamp(s, id)).toEqual({ ok: false, reason: 'donDaDep' });
+    // Thắng đồn không phải thắng màn phó bản.
+    expect(s.campaign.cleared).toBe(0);
+    for (const k of ['giao', 'cung', 'voi'] as const) expect(s.troops[k]).toBe([20, 12, 4][['giao', 'cung', 'voi'].indexOf(k)] - r.lost[k]);
+  });
+
+  it('quân mẫu bậc 1 vừa doanh trại cấp 4; mỗi đồn không quá 28 giặc', () => {
+    const space = (Object.keys(CAMP1_ARMY) as UnitType[]).reduce((n, k) => n + CAMP1_ARMY[k] * UNITS[k].space, 0);
+    expect(space).toBeLessThanOrEqual(28);
+    for (const def of Object.values(CAMPS)) expect(Object.values(def.enemies).reduce((a, b) => a + (b ?? 0), 0)).toBeLessThanOrEqual(28);
+  });
+
+  // Chuẩn cân bằng phó bản: người chơi thường thắng; không tướng hay nửa quân thì chơi giỏi cũng thua.
+  // Đồn bậc 1 như màn chương 1: quân mẫu thắng không cần tướng, nửa quân thua.
+  it('đồn bậc 1: quân mẫu thắng không cần tướng, nửa quân thua', () => {
+    const half = { giao: 5, cung: 3, voi: 1 };
+    for (const id of SEEDS) {
+      const won = fightField(CAMPS[1], CAMP1_ARMY, null, 'thuong', id);
+      expect(won.outcome).toBe('win');
+      expect(won.t).toBeLessThan(FIELD.maxS);
+      expect(fightField(CAMPS[1], half, null, 'gioi', id).outcome).toBe('lose');
+    }
+  });
+  const HEROES: [number, string, HeroSetup][] = [
+    [2, 'Gióng hiển linh', { kind: 'giong', bamboo: true, glow: true, non: false }],
+    [3, 'Sơn Tinh hiển linh', { kind: 'sonTinh', bamboo: false, glow: true, non: true }],
+    [4, 'An Dương Vương', { kind: 'anDuong', bamboo: false, glow: false, non: false, kimQuy: true }],
+  ];
+  for (const [tier, name, hero] of HEROES) {
+    it(`đồn bậc ${tier}: người chơi thường có ${name} thì thắng; không tướng, hay nửa quân, chơi giỏi cũng thua`, () => {
+      const def = CAMPS[tier as 2 | 3 | 4];
+      for (const id of SEEDS) {
+        const won = fightField(def, SAMPLE_ARMY, hero, 'thuong', id);
+        expect(won.outcome).toBe('win');
+        expect(won.t).toBeLessThan(FIELD.maxS);
+        expect(fightField(def, SAMPLE_ARMY, null, 'gioi', id).outcome).toBe('lose');
+        expect(fightField(def, HALF_ARMY, hero, 'gioi', id).outcome).toBe('lose');
+      }
+    });
+  }
 });

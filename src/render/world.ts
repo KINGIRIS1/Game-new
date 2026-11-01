@@ -342,6 +342,8 @@ export class World {
   private poiKey = '';
   /** Người trinh sát đang chạy qua cầu, theo lúc đi. */
   private readonly scouts = new Map<number, THREE.Group>();
+  /** Quân ta đang hành quân qua cầu tới đồn giặc, trước khi sang bãi chiến. */
+  private march?: { figs: THREE.Object3D[]; pts: { x: number; z: number }[]; t: number; dur: number };
   private wallKey = '';
   private dikeKey = '';
   private citadelKey = '';
@@ -1483,6 +1485,83 @@ export class World {
     this.scene.add(group);
   }
 
+  /** Điểm trên đường gấp khúc `pts` cách điểm đầu một quãng `d` (ô), kèm hướng đi. */
+  private alongPath(pts: { x: number; z: number }[], d: number): { x: number; z: number; ry: number } {
+    let i = 0;
+    let left = Math.max(0, d);
+    for (; i < pts.length - 2; i++) {
+      const len = Math.hypot(pts[i + 1].x - pts[i].x, pts[i + 1].z - pts[i].z);
+      if (left <= len) break;
+      left -= len;
+    }
+    const a = pts[i];
+    const b = pts[i + 1];
+    const len = Math.hypot(b.x - a.x, b.z - a.z);
+    const u = len > 0 ? Math.min(left / len, 1) : 1;
+    return { x: a.x + (b.x - a.x) * u, z: a.z + (b.z - a.z) * u, ry: Math.atan2(b.x - a.x, b.z - a.z) };
+  }
+
+  /** Mặt đất dưới chân người đi tại (x, z) theo ô; trên cầu thì đứng trên mặt cầu. */
+  private walkY(x: number, z: number): number {
+    const tx = Math.floor(x);
+    const tz = Math.floor(z);
+    return isRiver(tx, tz) ? 0.12 : this.groundY(tx, tz);
+  }
+
+  /**
+   * Quân ta hành quân từ doanh trại qua cầu tới đồn giặc ở khoảnh `plot` trong `dur` giây, đúng các binh chủng mang
+   * theo (tối đa chừng 18 người cho nhẹ máy), camera đi theo đầu hàng. Xong thì World không tự dọn: gọi `stopMarch`.
+   */
+  startMarch(state: GameState, plot: number, army: Record<string, number>, dur: number): void {
+    this.stopMarch();
+    const barracks = state.buildings.find((b) => b.type === 'doanhTrai');
+    const bridge = bridgeTo(state, plotOf(plot).bank);
+    if (!barracks || !bridge || !isBridge(bridge.type)) return;
+    const def = BUILDINGS.doanhTrai;
+    const ends = bridgeEnds(bridge.type, bridge.x, bridge.z);
+    const mid = (cells: [number, number][]) => ({
+      x: cells.reduce((a, c) => a + c[0], 0) / cells.length + 0.5,
+      z: cells.reduce((a, c) => a + c[1], 0) / cells.length + 0.5,
+    });
+    const o = plotOrigin(plot);
+    const pts = [{ x: barracks.x + def.w / 2, z: barracks.z + def.d + 0.5 }, mid(ends.near), mid(ends.far), { x: o.x + 2.5, z: o.z + 2.5 }];
+    const kinds = (['giao', 'cung', 'voi'] as const).filter((k) => (army[k] ?? 0) > 0);
+    const total = kinds.reduce((n, k) => n + army[k], 0);
+    const figs: THREE.Object3D[] = [];
+    for (const k of kinds) {
+      const n = Math.max(1, Math.round((18 * army[k]) / Math.max(total, 18)));
+      for (let i = 0; i < n; i++) {
+        const fig = k === 'voi' ? makeFighter('voi') : makeSoldier(k);
+        fig.scale.setScalar(k === 'voi' ? 0.7 : 0.8);
+        this.scene.add(fig);
+        figs.push(fig);
+      }
+    }
+    this.march = { figs, pts, t: 0, dur };
+  }
+
+  stopMarch(): void {
+    if (!this.march) return;
+    for (const f of this.march.figs) this.scene.remove(f);
+    this.march = undefined;
+  }
+
+  private updateMarch(dt: number, t: number): void {
+    const m = this.march;
+    if (!m) return;
+    m.t += dt;
+    const total = m.pts.slice(1).reduce((n, p, i) => n + Math.hypot(p.x - m.pts[i].x, p.z - m.pts[i].z), 0);
+    const head = (Math.min(m.t / m.dur, 1) * total) / 0.8 + 1;
+    m.figs.forEach((fig, i) => {
+      const at = this.alongPath(m.pts, Math.min(head - i * 0.7, total));
+      fig.position.set(wx(at.x), this.walkY(at.x, at.z), wz(at.z));
+      fig.rotation.y = at.ry;
+      (fig.userData.pose as Poser | undefined)?.({ act: 'walk', phase: t * 9 + i, stride: 0.5, time: t });
+    });
+    const lead = this.alongPath(m.pts, Math.min(head, total));
+    this.panGoal = new THREE.Vector3(wx(lead.x), 0, wz(lead.z));
+  }
+
   /** Người trinh sát chạy từ sân Điện qua cầu tới khoảnh đang dò, theo đồng hồ chơi. */
   private updateScouts(t: number): void {
     const state = this.state;
@@ -1819,6 +1898,7 @@ export class World {
     this.updateNight(dt);
     this.updateFog(dt);
     this.updateScouts(t);
+    this.updateMarch(dt, t);
 
     if (this.giong) {
       const g = this.giong;

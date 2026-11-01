@@ -163,6 +163,8 @@ export interface Battle {
   sonWin?: boolean;
   /** Trận cuối chương 3 vừa thắng: phần vẽ cho Rùa Vàng nổi lên dưới chân An Dương Vương. */
   advWin?: boolean;
+  /** Trận ngoài bãi đánh đồn giặc bên kia sông (khoảnh có đồn) thay cho một màn phó bản; `wave` khi ấy là 0. */
+  camp?: number;
   /** Ai đánh kinh đô (trận ngoài bãi để 'an'). Yêu tinh nhắm phá thành Cổ Loa trước tiên. */
   foe: Foe;
   /** Giây còn lại của Rùa Vàng che chở quân ta. */
@@ -427,6 +429,8 @@ export interface FieldSetup {
   hero?: HeroSetup | null;
   bonus?: number;
   arms?: Record<UnitType, number>;
+  /** Đánh đồn giặc bên kia sông (khoảnh có đồn) thay cho màn phó bản. */
+  camp?: number;
 }
 
 /** An Dương Vương bắn nỏ: đứng lùi sau hàng đầu của quân ta chừng này ô. */
@@ -444,6 +448,7 @@ export function startFieldBattle(setup: FieldSetup): Battle {
   battle.bonus = setup.bonus ?? 0;
   battle.hpScale = setup.hpScale;
   if (setup.arms) battle.arms = { ...setup.arms };
+  if (setup.camp !== undefined) battle.camp = setup.camp;
   const rand = rng(setup.id * 7919 + setup.stage);
   const ours: Record<Row, FighterKind[]> = { tien: [], trung: [], hau: [] };
   for (const k of UNIT_TYPES) for (let i = 0; i < (setup.army[k] ?? 0); i++) ours[setup.rows[k]].push(k);
