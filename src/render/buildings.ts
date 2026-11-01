@@ -385,61 +385,92 @@ export function waterWheel(): THREE.Group {
 }
 
 /**
+ * Tạo hình học bông lúa uốn cong hình cánh cung từ ngọn thân lúa vồng ra ngoài rồi rủ sâu xuống về phía gốc cây.
+ * Dùng một lưới liền mạch (`SphereGeometry` uốn đỉnh theo đường cong) để bông lúa cong mượt mà không bị ngắt viền mực đen.
+ */
+function curvedPanicleGeo(span: number, rise: number, drop: number, rMax: number): THREE.BufferGeometry {
+  const geo = new THREE.SphereGeometry(1, 6, 10);
+  const pos = geo.attributes.position;
+  for (let i = 0; i < pos.count; i++) {
+    const vx = pos.getX(i);
+    const vy = pos.getY(i);
+    const vz = pos.getZ(i);
+    const t = (vy + 1) * 0.5; // 0 ở cổ bông (mảnh), 0.3..0.95 là chùm hạt trĩu nặng rủ xuống gốc
+    // Cổ bông vươn cao rồi uốn vồng ra ngoài và rủ sâu xuống về phía gốc cây
+    const cz = 0.01 + span * (0.35 * t + 0.65 * Math.sin(t * Math.PI * 0.5));
+    const cy = rise * Math.sin(t * Math.PI * 0.62) - drop * Math.pow(t, 2.0);
+    const dz = span * (0.35 + 0.65 * 0.5 * Math.PI * Math.cos(t * Math.PI * 0.5));
+    const dy = rise * 0.62 * Math.PI * Math.cos(t * Math.PI * 0.62) - drop * 2.0 * Math.max(0.02, t);
+    const len = Math.hypot(dz, dy) || 1;
+    const ny = -dz / len;
+    const nz = dy / len;
+    // Đoạn cổ bông (t < 0.25) mảnh như cọng lúa, phần bông hạt (t = 0.25..0.95) phình tròn mẩy và thuôn nhọn ở đầu bông
+    const grainEnvelope = t < 0.22 ? 0.32 + (t / 0.22) * 0.45 : 0.77 + 0.38 * Math.sin(((t - 0.22) / 0.78) * Math.PI * 0.85);
+    const r = rMax * grainEnvelope;
+    pos.setXYZ(i, vx * r, cy + vz * r * ny, cz + vz * r * nz);
+  }
+  geo.computeVertexNormals();
+  return geo;
+}
+
+/**
  * Khóm lúa nước Văn Lang:
  * - Cấp thấp (mạ non / lúa con gái): chùm lá lúa xanh mảnh mọc xòe từ gốc nước.
- * - Cấp cao (lúa trổ đòng -> lúa chín vàng): lá lúa xòe bên dưới nâng 3–4 bông lúa vàng óng trĩu hạt uốn cong ra xung quanh.
+ * - Cấp cao (lúa trổ đòng -> lúa chín vàng): thân lúa vươn cao, lá lúa xòe bên dưới nâng 3–5 bông lúa vàng óng có cổ bông mảnh uốn cong rủ sâu xuống về phía gốc.
  */
 export function riceClump(p: ShapeBuilder, x: number, z: number, h: number, lv: number, level: number, seedAngle = 0): void {
   const maturity = Math.min(1, Math.max(0, (lv - 1) / 4));
-  const leafCol = new THREE.Color(0x63a635).lerp(new THREE.Color(0x88a43b), maturity * 0.65).getHex();
-  const stalkCol = new THREE.Color(C.rice).lerp(new THREE.Color(0xd2b242), maturity).getHex();
+  const leafCol = new THREE.Color(0x63a635).lerp(new THREE.Color(0x7fa036), maturity * 0.55).getHex();
+  const stalkCol = new THREE.Color(C.rice).lerp(new THREE.Color(0xbfa43a), maturity * 0.85).getHex();
   const grainCol = new THREE.Color(0xa6c648).lerp(new THREE.Color(C.ripe), Math.min(1, maturity * 1.25)).getHex();
 
-  // Bụi gốc lúa chụm dưới mặt nước
-  p.cyl(0.042, 0.028, h * 0.52, stalkCol, x, 0.06 + h * 0.24, z, undefined, 6);
+  // Bụi thân lúa chụm từ gốc nước
+  p.cyl(0.032, 0.024, h * 0.72, stalkCol, x, 0.06 + h * 0.36, z, undefined, 6);
 
-  // 5 phiến lá lúa vươn xòe tự nhiên quanh gốc (dùng rotateX + rotateY chuẩn, không xoắn Euler)
-  const leafH = h * (0.82 + 0.1 * (1 - maturity));
-  for (let i = 0; i < 5; i++) {
-    const a = seedAngle + (i / 5) * Math.PI * 2;
-    const tilt = 0.34 + (i % 2) * 0.14;
-    const blade = new THREE.ConeGeometry(0.028, leafH, 4);
-    blade.scale(1, 1, 0.45);
+  // 6 phiến lá lúa mảnh vươn xòe tự nhiên quanh gốc ở nhiều độ nghiêng
+  const leafH = h * (0.78 + 0.12 * (1 - maturity));
+  for (let i = 0; i < 6; i++) {
+    const a = seedAngle + i * 1.05 + (i % 2) * 0.18;
+    const tilt = 0.32 + (i % 3) * 0.14;
+    const blade = new THREE.ConeGeometry(0.022, leafH * (0.88 + (i % 2) * 0.14), 4);
+    blade.scale(1, 1, 0.42);
     blade.rotateX(tilt);
     blade.rotateY(a);
-    const rOff = 0.015 + Math.sin(tilt) * leafH * 0.42;
-    p.add(blade, i % 2 === 0 ? leafCol : stalkCol, x + Math.sin(a) * rOff, 0.055 + Math.cos(tilt) * leafH * 0.45, z + Math.cos(a) * rOff);
+    const rOff = 0.014 + Math.sin(tilt) * leafH * 0.4;
+    p.add(blade, i % 2 === 0 ? leafCol : stalkCol, x + Math.sin(a) * rOff, 0.055 + Math.cos(tilt) * leafH * 0.44, z + Math.cos(a) * rOff);
   }
 
-  // Từ cấp 2 trở lên bắt đầu trổ bông; mỗi bông lúa là chùm hạt thuôn dài uốn cong rủ xuống bốn phía
+  // Từ cấp 2 trở lên bắt đầu trổ bông; các bông lúa mọc lệch độ cao và góc tự nhiên, cổ bông vươn lên rồi uốn cong rủ sâu xuống gốc
   if (level >= 2) {
-    const ears = level >= 6 ? 4 : 3;
-    const earLen = 0.095 + maturity * 0.045;
-    const earR = 0.026 + maturity * 0.008;
+    const ears = level >= 6 ? 5 : level >= 4 ? 4 : 3;
+    const span = 0.115 + maturity * 0.045;
+    const earR = 0.021 + maturity * 0.006;
     for (let k = 0; k < ears; k++) {
-      const a = seedAngle + 0.35 + (k / ears) * Math.PI * 2;
-      const arch = 0.92 + maturity * 0.32;
-      const ear = new THREE.SphereGeometry(1, 6, 5);
-      ear.scale(earR, earLen, earR * 0.88);
-      ear.rotateX(arch);
+      const a = seedAngle + 0.4 + k * 2.22; // góc vàng (golden angle) để bông tỏa tự nhiên không đối xứng cứng
+      const hScale = 0.82 + ((k * 37) % 3) * 0.1;
+      const yBase = 0.06 + h * (0.68 * hScale);
+      const rise = h * (0.24 * hScale);
+      const drop = h * (0.48 + maturity * 0.22) * hScale;
+      const ear = curvedPanicleGeo(span * (0.9 + (k % 2) * 0.14), rise, drop, earR);
       ear.rotateY(a);
-      const rEar = 0.042 + Math.sin(arch) * earLen * 0.55;
-      const yEar = 0.065 + h * 0.88 - (1 - Math.cos(arch)) * earLen * 0.25;
-      p.add(ear, k === 0 && level >= 6 ? C.gold : grainCol, x + Math.sin(a) * rEar, yEar, z + Math.cos(a) * rEar);
+      const ox = Math.sin(a) * 0.012;
+      const oz = Math.cos(a) * 0.012;
+      p.add(ear, k % 2 === 0 && level >= 6 ? C.gold : grainCol, x + ox, yBase, z + oz);
     }
   }
 }
 
-/** Bó lúa gặt buộc lạt dựng trên bờ ruộng: chân rạ xòe, eo buộc lạt tre, đầu bông lúa vàng trĩu hạt. */
+/** Bó lúa gặt buộc lạt dựng trên bờ ruộng: chân rạ xòe, eo buộc lạt tre, đầu bông lúa vàng uốn cong rủ xuống quanh bó. */
 export function riceSheaf(p: ShapeBuilder, x: number, y0: number, z: number, rx = 0.08, rz = 0.08): void {
   p.cyl(0.065, 0.115, 0.24, 0xc8a248, x, y0 + 0.12, z, [rx, 0, rz], 7);
   p.cyl(0.072, 0.072, 0.04, C.red, x, y0 + 0.23, z, [rx, 0, rz], 7);
-  p.cyl(0.11, 0.068, 0.22, C.ripe, x, y0 + 0.34, z, [rx, 0, rz], 7);
+  p.cyl(0.095, 0.068, 0.2, C.ripe, x, y0 + 0.33, z, [rx, 0, rz], 7);
   for (let i = 0; i < 6; i++) {
     const a = (i / 6) * Math.PI * 2;
-    p.sphere(0.036, i % 2 === 0 ? C.ripe : C.gold, x + Math.cos(a) * 0.065, y0 + 0.46, z + Math.sin(a) * 0.065, [1.1, 1.35, 1.1], 5);
+    const ear = curvedPanicleGeo(0.12, 0.045, 0.19, 0.032);
+    ear.rotateY(a);
+    p.add(ear, i % 2 === 0 ? C.ripe : C.gold, x, y0 + 0.42, z);
   }
-  p.sphere(0.042, C.gold, x, y0 + 0.49, z, [1.2, 0.9, 1.2], 6);
 }
 
 export function makeRuong(level: number): THREE.Group {
@@ -1585,30 +1616,29 @@ export const BANH_CHUNG = 0x4f7f35;
 export const BANH_GIAY = 0xf4efe0;
 export const LAT = 0xd8c48a;
 
-/** Khóm lúa nếp cái hoa vàng: 6 lá lúa xanh thẫm hình mũi mác vươn xòe, 4 bông nếp tròn mẩy màu ngà vàng uốn cong trĩu hạt như đuôi gà. */
+/** Khóm lúa nếp cái hoa vàng: 6 lá lúa xanh thẫm hình mũi mác vươn xòe, 4 bông nếp tròn mẩy màu ngà vàng uốn cong rủ sâu xuống về phía gốc như đuôi gà. */
 function nepClump(p: ShapeBuilder, x: number, z: number, h: number, seedAngle = 0): void {
-  p.cyl(0.046, 0.03, h * 0.54, NEP_STALK, x, 0.06 + h * 0.25, z, undefined, 6);
-  const leafH = h * 0.85;
+  p.cyl(0.036, 0.026, h * 0.72, NEP_STALK, x, 0.06 + h * 0.36, z, undefined, 6);
+  const leafH = h * 0.78;
   for (let i = 0; i < 6; i++) {
-    const a = seedAngle + (i / 6) * Math.PI * 2;
-    const tilt = 0.36 + (i % 2) * 0.14;
-    const blade = new THREE.ConeGeometry(0.03, leafH, 4);
-    blade.scale(1, 1, 0.45);
+    const a = seedAngle + i * 1.05 + (i % 2) * 0.16;
+    const tilt = 0.36 + (i % 3) * 0.13;
+    const blade = new THREE.ConeGeometry(0.025, leafH * (0.88 + (i % 2) * 0.14), 4);
+    blade.scale(1, 1, 0.42);
     blade.rotateX(tilt);
     blade.rotateY(a);
-    const rOff = 0.018 + Math.sin(tilt) * leafH * 0.42;
-    p.add(blade, i % 2 === 0 ? NEP_STALK : 0x5c7c2e, x + Math.sin(a) * rOff, 0.055 + Math.cos(tilt) * leafH * 0.45, z + Math.cos(a) * rOff);
+    const rOff = 0.016 + Math.sin(tilt) * leafH * 0.42;
+    p.add(blade, i % 2 === 0 ? NEP_STALK : 0x5c7c2e, x + Math.sin(a) * rOff, 0.055 + Math.cos(tilt) * leafH * 0.44, z + Math.cos(a) * rOff);
   }
   for (let k = 0; k < 4; k++) {
-    const a = seedAngle + 0.4 + (k / 4) * Math.PI * 2;
-    const arch = 1.02 + (k % 2) * 0.16;
-    const ear = new THREE.SphereGeometry(1, 7, 5);
-    ear.scale(0.036, 0.125, 0.034);
-    ear.rotateX(arch);
+    const a = seedAngle + 0.35 + k * 2.18;
+    const hScale = 0.84 + (k % 3) * 0.09;
+    const yBase = 0.06 + h * (0.68 * hScale);
+    const rise = h * (0.24 * hScale);
+    const drop = h * (0.62 + (k % 2) * 0.1) * hScale;
+    const ear = curvedPanicleGeo(0.135 + (k % 2) * 0.018, rise, drop, 0.028);
     ear.rotateY(a);
-    const rEar = 0.05 + Math.sin(arch) * 0.07;
-    const yEar = 0.075 + h * 0.88;
-    p.add(ear, k % 2 === 0 ? NEP : 0xdcc47e, x + Math.sin(a) * rEar, yEar, z + Math.cos(a) * rEar);
+    p.add(ear, k % 2 === 0 ? NEP : 0xdcc47e, x + Math.sin(a) * 0.014, yBase, z + Math.cos(a) * 0.014);
   }
 }
 
