@@ -26,8 +26,10 @@ Tài liệu này ghi lại các quyết định đã chốt với chủ dự án
     - lò rèn có lò nung hình nón to;
     - bến chợ thuyền có cầu tàu và sạp căng bạt;
     - bãi đất đá có hố và đống đá;
-  - **mỗi cấp đổi hẳn dáng**: thêm một phần lớn nhìn thấy rõ và to dần, từ khoảng 85% ở cấp 1 lên 105% ở cấp 5.
+  - **mỗi cấp đổi hẳn dáng**: thêm một phần lớn nhìn thấy rõ và to dần, từ khoảng 85% ở cấp 1 lên 105% ở cấp 5, rồi 110%, 115%, 120% ở cấp 6, 7, 8.
     - Ví dụ Điện: cấp 2 thêm cờ, trống và chim đồng; cấp 3 thêm chái nhà bên; cấp 4 thêm nền đá và hàng rào; cấp 5 lợp mái hai tầng.
+    - **Cấp 6, 7, 8 to mà không tràn ô**: móng giữ nguyên số ô. Cả khối phóng to nhưng tâm từng phần giữ chỗ như cấp 5 (thu tâm, `ShapeBuilder.spread`), nền và rào thu lại vừa ô; mỗi phần to ra tại chỗ. Người làm việc giữ cỡ như cấp 5. Nhà cũng cao dần (cột, sàn, mái), và mỗi cấp thêm chi tiết. Điện đã kín bốn ô nên giữ 105%, to lên bằng nền đá thứ hai dưới nhà chính, cột cao, mái rộng và vút hơn. Bến to 106%, 110%, 114%; bãi đất đá 105%, 110%, 114% so với cấp 5; chòi canh móng một ô chỉ cao lên; ruộng giữ cỡ, lúa và chòi canh ruộng cao lên.
+    - **Mái theo cấp** (nhìn mái để biết cấp, chung cho mọi công trình có mái): tới cấp 5 mái tranh; cấp 6 mái tranh có sống mái và diềm mái sơn đỏ; cấp 7 mái ngói đất nung đỏ cam như ngói thành Cổ Loa; cấp 8 mái ngói, sống mái và diềm mái bọc đồng vàng. Mái nón, mái tròn thì viền là vành diềm mái và chóp mái. Lầu nỏ mái như cấp 8. Đền và bốn công trình Hội Tết giữ mái tranh.
     - Cả bảng nằm ở `src/render/buildings.ts`.
   - **dân ăn mặc theo nơi làm việc**, mỗi nghề một dụng cụ và một động tác (`src/render/people.ts`):
     - nông dân quấn khăn, cầm cuốc, cúi cấy;
@@ -570,7 +572,7 @@ Chủ dự án đã chốt qua một buổi hỏi đáp. Vấn đề: từ cuố
    - Điện Vua Hùng lên cấp 6 khi vào chương 2, cấp 7 khi vào chương 3. Người đang ở chương sau thì mở ngay;
    - đất mở ra 25×25 ở cấp 6, 26×26 ở cấp 7, chừa một hàng rừng cho giặc trên bộ hiện ra;
    - ruộng, bến chợ thuyền, nhà sàn, bãi đất đá, lò rèn, kho thóc, chòi canh lên được cấp 6, 7. Lũy, đê, thành Cổ Loa giữ cấp riêng;
-   - mỗi cấp mới vẫn đổi hẳn dáng: thêm một phần lớn nhìn rõ (ví dụ ruộng cấp 6 có guồng nước, cấp 7 có miếu thần lúa), cỡ không to quá 105%;
+   - mỗi cấp mới vẫn đổi hẳn dáng: thêm một phần lớn nhìn rõ (ví dụ ruộng cấp 6 có guồng nước, cấp 7 có miếu thần lúa); ban đầu cỡ giữ 105%, sau chủ dự án yêu cầu to thêm (xem mục Phong cách);
    - **doanh trại giữ 38 chỗ**, không lên thêm cấp, vì bãi chiến tối đa khoảng 60 người;
    - **rèn binh khí** ở bảng lò rèn: giáo, cung, voi mỗi loại 2 bậc (bậc 1 cần lò rèn cấp 6, bậc 2 cần cấp 7), mỗi bậc thêm 10% máu và sức đánh ở mọi trận, lính đổi dáng vũ khí;
    - nhịp: người biết dành dụm lên Điện 6 trước màn 12, Điện 7 trước màn 20; canh bằng test như `balance.test.ts`.
@@ -627,17 +629,17 @@ Rèn riêng cho giáo binh, cung thủ, voi chiến. Có tác dụng ở mọi t
 - lúc vào mỗi chương, của dành dụm coi như đã tiêu hết (đền, lễ vật, rèn đồ, quân), nên số phút đo được là số phút sản lượng cần để lên cấp. Lần đo đầu để nguyên kho đầy thì Điện 6 chỉ mất 8 phút, vì giá nằm dưới sức chứa kho;
 - đích: vào chương 2 thì **12–20 phút** lên Điện 6 (đo được 14 phút); vào chương 3 thì **25–40 phút** lên Điện 7. Với giá đề xuất ban đầu (9000 gạo, 8000 vỏ ốc, 7000 đất đá, 1500 sắt) Điện 7 mất 39 phút, sát mép trên; hạ 20% còn 34 phút.
 
-**Dáng mới** (móng giữ nguyên số ô, cỡ không to quá 105%):
+**Dáng mới** (móng giữ nguyên số ô; cỡ ban đầu giữ 105%, nay 110%, 115% ở cấp 6, 7, xem mục Phong cách):
 
 | Công trình | Cấp 6 | Cấp 7 |
 |---|---|---|
-| Điện Vua Hùng | hai lầu trống đồng hai bên thềm | mái ba tầng, đôi chim đồng lớn trên nóc |
-| Ruộng lúa | guồng nước tre quay bên bờ ruộng | miếu thần lúa nhỏ ở góc ruộng |
-| Bến chợ thuyền | một thuyền buôn lớn đậu cạnh cầu tàu | lầu chợ hai tầng mái hình thuyền |
-| Nhà sàn | sàn phơi lúa và chuồng gà dưới sàn | hai nhà sàn nối nhau bằng cầu tre |
-| Bãi đất đá | tời gỗ kéo đá | lò nung gạch đất bốc khói |
-| Lò rèn | ống bễ da lớn, lán cao hơn che giá treo binh khí | hai lò nung, lửa đỏ rực |
-| Kho thóc | thêm một vựa thóc tròn thứ hai | ba vựa quây quanh sân phơi |
+| Điện Vua Hùng | hai lầu trống đồng hai bên thềm; nền đá thứ hai dưới nhà chính, lan can đỏ hoa văn quanh hiên | mái ba tầng, đôi chim đồng lớn trên nóc; hai cột chim Lạc đai đồng ở hai góc sau nền |
+| Ruộng lúa | guồng nước tre quay bên bờ ruộng, bờ ruộng kè đá; chòi canh ruộng cao có thang tre | miếu thần lúa ở góc ruộng |
+| Bến chợ thuyền | một thuyền buôn lớn đậu cạnh cầu tàu; cổng bến có mái ở đầu cầu tàu, cờ đuôi nheo hai cột | lầu chợ hai tầng mái hình thuyền |
+| Nhà sàn | sàn phơi lúa và chuồng gà dưới sàn; cây cau cao góc vườn | hai nhà sàn nối nhau bằng cầu tre |
+| Bãi đất đá | tời gỗ kéo đá, lán che bánh xe tời; chồng đá xẻ cao thêm mỗi cấp | lò nung gạch đất bốc khói |
+| Lò rèn | ống bễ da lớn, lán cao hơn che giá treo binh khí; lò chính to hơn, khói bốc từ ống lò | hai lò nung, lửa đỏ rực |
+| Kho thóc | thêm một vựa thóc tròn thứ hai | ba vựa quây quanh sân phơi; cót cao hơn |
 | Chòi canh | chòi hai tầng, trên có nỏ lớn gác qua lan can (cánh nỏ đồng, mũi tên sắt) | lầu canh đá có cờ đỏ |
 
 | Binh chủng | Rèn bậc 1 | Rèn bậc 2 |
@@ -648,6 +650,8 @@ Rèn riêng cho giáo binh, cung thủ, voi chiến. Có tác dụng ở mọi t
 
 - Đã vẽ: guồng nước ruộng cấp 6 quay thật; bến cấp 6 có thuyền buôn lớn neo cạnh cầu tàu nhấp nhô theo sóng; ruộng và bãi đất đá cấp 6–7 có 5 chỗ đứng cho người làm, bến và lò rèn 4 chỗ. Người làm rải khắp ruộng; thợ đá mỗi người đứng một cột theo hướng camera để khỏi che nhau.
 - Từ Điện cấp 6, tướng (Sơn Tinh, An Dương Vương cùng cột đá thề) ra đứng hẳn bên phải nền Điện, để khỏi che lầu trống bên phải.
+- Chụp ở cỡ thật trên điện thoại thì các phần thêm ở cấp 6, 7 quá nhỏ, cùng màu tranh nên khó biết cấp. Chủ dự án yêu cầu công trình cấp cao có ngoại hình rõ hơn, nên thêm **mái theo cấp** (xem mục Phong cách): cấp 6 viền đỏ, cấp 7 mái ngói, cấp 8 viền đồng vàng. Ruộng ít mái nên từ cấp 6 bờ kè đá xám; guồng nước to thêm khoảng 30%, miếu thần lúa to thêm khoảng 30%. Bãi đất đá không có mái nên từ cấp 6 có lán che bánh xe tời, mái theo cấp.
+- Chủ dự án yêu cầu thêm: không chỉ đổi màu, công trình cấp cao phải to hơn và nhiều chi tiết hơn. Nên cấp 6, 7, 8 to 110%, 115%, 120% mà không tràn ô (xem mục Phong cách), nhà cao dần theo cấp (cột nhà sàn, vựa, lán lò rèn, chòi canh, chòi canh ruộng, lúa), và mỗi cấp thêm chi tiết ghi trong hai bảng dáng. Chủ dự án đã duyệt cả mái theo cấp lẫn cỡ và chi tiết mới.
 - Bản lưu lên phiên bản 8 (thêm bậc rèn của từng binh chủng).
 - Lời Lạc hầu: đoạn "Vua Hùng kén rể" thêm một câu nhắc Điện có thể lên cấp 6 và lò rèn rèn binh khí; đoạn "Cột đá thề" thêm một câu nhắc Điện cấp 7. Người đã xem các đoạn ấy thì thấy nút nâng cấp như thường.
 
@@ -721,7 +725,7 @@ Cả bốn cần dân làm, mở sau truyện Lang Liêu, cần Điện cấp 3.
 - Tết mở thì có băng báo "Tết đến, dâng bánh trước Điện", kèm chip 🎋 đếm ngược trên thanh trên (chỉ hiện lúc Tết mở). Chạm vào chip mở bảng Tết, có hai nút dâng bánh chưng, dâng bánh giầy.
 - Bảng Điện ghi phúc lành đang có. Sản lượng mỗi phút trên thanh trên đã gồm phúc lành Đất.
 
-**Dáng công trình** (cỡ không quá 105%, như các công trình khác)
+**Dáng công trình** (cỡ không quá 105%)
 
 | Công trình | Cấp 1 | Cấp 2 | Cấp 3 |
 |---|---|---|---|
@@ -882,20 +886,20 @@ Giá cấp 8 khoảng gấp 2 cấp 7, sản lượng tăng khoảng 30% (cấp 
 - Áp mẫu kinh đô: lầu nỏ đứng vào chỗ chòi canh của mẫu và tính là hai chòi canh, chỗ còn lại dựng thêm chòi canh cho đủ số tối đa.
 - Giao diện: bảng chòi canh cấp 8 có nút **🎯 Ghép thành lầu nỏ** kèm giá. Bấm thì thanh dưới chỉ còn nút Hủy và dòng gợi ý "Chạm vào một chòi canh cấp 8 khác còn nguyên để ghép". Chưa có chòi canh cấp 8 thứ hai thì nút mờ, có dòng báo. Bảng Điện cấp 8 ghi đất 26×26, không ghi mũi tên mở đất.
 
-**Dáng mới** (móng giữ nguyên số ô, cỡ không to quá 105%)
+**Dáng mới** (móng giữ nguyên số ô; cỡ ban đầu giữ 105%, nay 120%, xem mục Phong cách)
 
 | Công trình | Cấp 8 |
 |---|---|
 | Điện | thềm đá ba bậc, trên nóc có trống đồng lớn giữa hai tượng chim Lạc dang cánh |
-| Điện | thềm đá ba bậc rộng hơn; trống đồng lớn trên nóc giữa đôi chim đồng; chim Lạc dang cánh trên đỉnh hai lầu trống |
-| Ruộng lúa | đập đá xếp cao chắn ngang bờ trái, cống tre lớn đổ nước xuống ao nước trong giữa ruộng |
-| Bến chợ thuyền | kho hàng mái cong ở đầu cầu tàu, thêm thuyền buôn thứ hai neo giữa sông |
+| Điện | thềm đá ba bậc rộng hơn; trống đồng lớn trên nóc giữa đôi chim đồng; chim Lạc dang cánh trên đỉnh hai lầu trống; nền đá thứ hai viền đồng |
+| Ruộng lúa | đập đá xếp cao chắn ngang bờ trái, cống tre lớn đổ nước xuống ao nước trong giữa ruộng; đàn cò trắng lội ao, một con đậu bờ |
+| Bến chợ thuyền | kho hàng mái cong ở đầu cầu tàu, thêm thuyền buôn thứ hai neo giữa sông; chim đồng hai đầu mái cổng bến |
 | Nhà sàn | nhà sàn dài mái thuyền vút cao hai đầu như nhà khắc trên trống đồng, chim đồng hai đầu nóc |
-| Bãi đất đá | trâu kéo xe đá đứng cạnh xe; giàn cần vọt có đá đối trọng và thúng đá |
+| Bãi đất đá | trâu kéo xe đá đứng cạnh xe; giàn cần vọt có đá đối trọng và thúng đá; chồng gạch cạnh lò cao gấp đôi |
 | Lò rèn | sân đúc đồng thay ống bễ: khuôn đất, nồi đồng nghiêng rót nước đồng đỏ rực; trống đồng vừa đúc trên giá gỗ ở góc trước |
 | Kho thóc | kho sàn dài mái cong thay hai vựa phía sau, chim đồng hai đầu nóc |
-| Chòi canh | lầu canh đá thêm nỏ lớn thứ hai chĩa sang phải |
-| Lầu nỏ | chân đất nện cao có đai đồng và ô cửa bắn, lầu gỗ hai tầng lan can đỏ, mái tranh ba tầng chồng nhau, chim Lạc dang cánh trên đỉnh; ba nỏ lớn chĩa ra trước, sang phải, sang trái, ba lính nỏ; hai cờ đỏ góc sau; mỗi phát bay ra ba mũi tên. Cao hơn chòi canh để nhìn là biết |
+| Chòi canh | lầu canh đá thêm nỏ lớn thứ hai chĩa sang phải; chim đồng hai đầu nóc |
+| Lầu nỏ | chân đất nện cao có đai đồng và ô cửa bắn, lầu gỗ hai tầng lan can đỏ, mái ngói ba tầng chồng nhau viền đồng vàng (mái cấp 8), chim Lạc dang cánh trên đỉnh; ba nỏ lớn chĩa ra trước, sang phải, sang trái, ba lính nỏ; hai cờ đỏ góc sau; mỗi phát bay ra ba mũi tên. Cao hơn chòi canh để nhìn là biết |
 
 - Bản lưu lên **phiên bản 10** (công trình lên được cấp 8, thêm loại lầu nỏ; bản lưu 9 chỉ đổi số phiên bản).
 - Nhiệm vụ: nối thêm nhiệm vụ 40, 41 (xem mục Nhiệm vụ). Xong nhiệm vụ 41 thì bảng Lạc hầu báo kinh đô đã có Điện cấp 8 và lầu nỏ, chờ phần sau.

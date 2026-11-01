@@ -11,6 +11,11 @@ type Rot = [number, number, number];
 /** Ghép nhiều hình (hộp, cầu, trụ, nón, viên nang...) có màu thành một geometry. */
 export class ShapeBuilder {
   private parts: THREE.BufferGeometry[] = [];
+  /**
+   * Thu tâm mỗi hình theo x, z về gốc (giữ nguyên cỡ hình). Công trình cấp cao phóng to cả khối nhưng thu tâm
+   * các phần lại, nên mỗi phần to ra tại chỗ cũ mà không tràn ô móng.
+   */
+  spread = 1;
 
   /** `lowPoly`: ít mặt hơn, dùng cho cây cối được nhân lên hàng trăm lần. */
   constructor(
@@ -22,7 +27,7 @@ export class ShapeBuilder {
     const g = geo.index ? geo.toNonIndexed() : geo;
     if (g !== geo) geo.dispose();
     const m = new THREE.Matrix4().compose(
-      new THREE.Vector3(x, y, z),
+      new THREE.Vector3(x * this.spread, y, z * this.spread),
       new THREE.Quaternion().setFromEuler(new THREE.Euler(...rot)),
       new THREE.Vector3(...scale),
     );

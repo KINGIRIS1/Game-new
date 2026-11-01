@@ -10,7 +10,7 @@ Game xây dựng chiến thuật chạy trên trình duyệt điện thoại (Ty
   - `map.ts` dựng độ cao tự nhiên của ô đất. `terrain.ts` lo nền công trình, đê và nước lũ loang từ sông.
   - `campaign.test.ts`, `giong.test.ts`, `chuong2.test.ts` và `chuong3.test.ts` canh độ khó từng màn, từng mùa lũ, đêm yêu tinh và đợt quân Triệu. Màn chương 2, 3 đánh thử bằng `testkit.ts` theo chuẩn: người chơi thường (bấm chậm, không Đền) phải thắng.
 - `src/render/`: cảnh 3D phong cách "Nét Đông Sơn" (tô màu hoạt hình, viền mực, hoa văn trống đồng).
-  - Công trình, mỗi loại một dáng và mỗi cấp một dáng (kể cả lầu nỏ): `buildings.ts`.
+  - Công trình, mỗi loại một dáng và mỗi cấp một dáng (kể cả lầu nỏ): `buildings.ts`. Mái theo cấp (`roofFor`): tranh tới cấp 5, cấp 6 viền đỏ, cấp 7 ngói, cấp 8 ngói viền đồng vàng. Cấp 6–8 to 110–120% mà không tràn ô: thu tâm các phần (`setSpread`, `grownGroup`), nền thu vừa ô (`edgeOf`).
   - Dân theo nghề: `people.ts`.
   - Lính, thủy quái, yêu tinh, quân Triệu, Thánh Gióng và ngựa sắt, Sơn Tinh, Thủy Tinh, An Dương Vương, Rùa Vàng, thuyền, cây, lũy, đê, thành Cổ Loa, lều trại, núi: `models.ts`.
   - Đất bậc thang, nước lũ, mưa giông, đêm yêu tinh, cảnh Tết (cây nêu, dây cờ, mâm bánh) ở kinh đô: `world.ts`.
