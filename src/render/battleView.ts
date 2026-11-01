@@ -4,7 +4,8 @@
 import * as THREE from 'three';
 import type { Battle, FighterKind } from '../game/battle';
 import { FIRE, HILL, RALLY_BEAT, ROCKS, SKILLS, TT_WAVE, type UnitType } from '../game/defs';
-import { BOW_POSE, WEAPON_REST, makeAnDuong, makeFighter, makeGiong, makeMountain, makeRuaVang, makeSonTinh } from './models';
+import { isBeast, makeBeast, makeRuaVang } from './beasts';
+import { BOW_POSE, WEAPON_REST, makeAnDuong, makeFighter, makeGiong, makeMountain, makeSonTinh } from './models';
 import { C } from './palette';
 import type { Poser } from './rig';
 import { ShapeBuilder, seeded } from './shapes';
@@ -520,7 +521,9 @@ export class BattleView {
                 ? makeAnDuong({ crossbow: true, glow: battle.hero?.glow })
                 : isSoldier(f.kind)
                   ? makeSoldier(f.kind, f.side === 'ta' ? (battle.arms?.[f.kind as UnitType] ?? 0) : 0)
-                  : makeFighter(f.kind, f.side === 'ta' ? (battle.arms?.[f.kind as UnitType] ?? 0) : 0);
+                  : isBeast(f.kind)
+                    ? makeBeast(f.kind, f.side === 'ta' ? (battle.arms?.[f.kind as UnitType] ?? 0) : 0)
+                    : makeFighter(f.kind, f.side === 'ta' ? (battle.arms?.[f.kind as UnitType] ?? 0) : 0);
         obj.scale.setScalar((SCALE[f.kind] ?? 0.8) * this.scale);
         this.root.add(obj);
         view = { obj, deadAge: 0, rise: 0, weapon: obj.children.find((c) => c.userData.weapon), smash: 0, volley: 0, pose: obj.userData.pose };
@@ -536,7 +539,10 @@ export class BattleView {
       this.syncShell(view, f.side === 'ta' && f.state !== 'dead' && battle.shield > 0 && !battle.outcome);
       if (f.state === 'dead') {
         view.deadAge += dt;
-        obj.rotation.x = -Math.min(view.deadAge * 4, Math.PI / 2);
+        // Người ngã ngửa; thú lăn nghiêng.
+        const fall = Math.min(view.deadAge * 4, Math.PI / 2);
+        if (obj.userData.fall === 'side') obj.rotation.z = -fall;
+        else obj.rotation.x = -fall;
         obj.position.y = base + (view.deadAge > 1.2 ? -(view.deadAge - 1.2) * 0.6 : 0);
         view.pose?.({ act: 'dead', fall: Math.min(view.deadAge * 3, 1) });
         if (view.deadAge > 2.5) obj.visible = false;
@@ -1291,6 +1297,7 @@ export class BattleView {
       const up = smoothstep(tu.age, 0, 0.5);
       const down = smoothstep(tu.age, TURTLE_LIFE - 0.8, TURTLE_LIFE);
       tu.group.position.y = tu.base - 1 + up * 1 - down * 1.3 + (up - down > 0.5 ? Math.sin(this.time * 3) * 0.05 : 0);
+      (tu.group.userData.pose as Poser | undefined)?.({ act: 'stand', time: this.time });
       if (tu.age >= TURTLE_LIFE) {
         this.root.remove(tu.group);
         this.turtles.splice(i, 1);

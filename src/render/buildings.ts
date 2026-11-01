@@ -5,7 +5,8 @@
 // Gốc tọa độ là tâm chân móng, mặt trước hướng +z.
 
 import * as THREE from 'three';
-import { ironHorse, makeCrossbowStand, makeFighter, makeRuaVang, makeSonTinh } from './models';
+import { bakeRuaVang } from './beasts';
+import { ironHorse, makeCrossbowStand, makeFighter, makeSonTinh } from './models';
 import { C } from './palette';
 import { ShapeBuilder, saddleRoof, seeded } from './shapes';
 import { bakeSoldier } from './soldier';
@@ -1403,7 +1404,7 @@ export function makeDenCoLoa(): THREE.Group {
   banner(m, 1.1, -1.3, 2.5, C.red);
   p.box(0.7, 0.14, 0.9, C.rock, -0.15, 0.29, 0.85);
   const g = m.group();
-  const turtle = makeRuaVang();
+  const turtle = bakeRuaVang();
   turtle.scale.setScalar(0.42);
   turtle.position.set(-0.15, 0.36, 0.8);
   g.add(turtle);

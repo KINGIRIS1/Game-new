@@ -59,6 +59,8 @@ export type Poser = (a: Act) => void;
 /** Gom khối hình theo xương, rồi gộp thành `RigShape`. */
 export class RigBuilder<B extends string> {
   private readonly slots = new Map<B, RigSlots>();
+  /** Khung đang đặt bằng `place` (dời, đổi cỡ cả một nhóm khối); null là tọa độ mô hình. */
+  private base: THREE.Matrix4 | null = null;
   constructor(private readonly defs: Record<B, BoneDef<B>>) {}
 
   /** Các khối vẽ sau đây gắn vào xương `b`. Tọa độ vẫn là tọa độ mô hình ở tư thế gốc, như ToonModel. */
@@ -68,7 +70,21 @@ export class RigBuilder<B extends string> {
       s = { plain: new ShapeBuilder(), band: new ShapeBuilder(true), drum: new ShapeBuilder(true), glow: new ShapeBuilder() };
       this.slots.set(b, s);
     }
+    for (const k of SLOTS) s[k].frame = this.base;
     return s;
+  }
+
+  /**
+   * Vẽ cả một nhóm khối dời tới `offset`, cỡ nhân `scale`: vd. một thân người (vẽ như đứng ở gốc) đặt lên lưng voi,
+   * hay một con ngựa nhỏ kéo xe. Khớp của nhóm đó phải dời và đổi cỡ theo (xem `moveBones`).
+   */
+  place(offset: V3, scale: number, draw: () => void): void {
+    const prev = this.base;
+    const m = new THREE.Matrix4().makeTranslation(...offset).multiply(new THREE.Matrix4().makeScale(scale, scale, scale));
+    this.base = prev ? prev.clone().multiply(m) : m;
+    draw();
+    this.base = prev;
+    for (const s of this.slots.values()) for (const k of SLOTS) s[k].frame = prev;
   }
 
   /**
@@ -77,14 +93,15 @@ export class RigBuilder<B extends string> {
    */
   local(b: B, origin: V3, rot: V3 | null, draw: (s: RigSlots) => void): void {
     const s = this.on(b);
-    const frame = new THREE.Matrix4().compose(
+    const own = new THREE.Matrix4().compose(
       new THREE.Vector3(...origin),
       new THREE.Quaternion().setFromEuler(new THREE.Euler(...(rot ?? [0, 0, 0]))),
       new THREE.Vector3(1, 1, 1),
     );
+    const frame = this.base ? this.base.clone().multiply(own) : own;
     for (const k of SLOTS) s[k].frame = frame;
     draw(s);
-    for (const k of SLOTS) s[k].frame = null;
+    for (const k of SLOTS) s[k].frame = this.base;
   }
 
   build(): RigShape<B> {
@@ -136,6 +153,24 @@ function makeBones<B extends string>(shape: RigShape<B>): { root: THREE.Bone; bo
   }
   if (!root) throw new Error('Khung xương thiếu xương gốc');
   return { root, bones, list };
+}
+
+/**
+ * Khớp của một nhóm xương dời tới `offset`, cỡ nhân `scale`; xương gốc của nhóm (không có cha) nhận cha `parent`.
+ * Đi cùng `RigBuilder.place` khi ghép nhiều khung xương (người cưỡi trên ngựa, ngựa kéo xe).
+ */
+export function moveBones<B extends string, P extends string>(
+  defs: Record<B, BoneDef<B>>,
+  parent: P,
+  offset: V3,
+  scale = 1,
+): Record<B, BoneDef<B | P>> {
+  const out = {} as Record<B, BoneDef<B | P>>;
+  for (const b of Object.keys(defs) as B[]) {
+    const d = defs[b];
+    out[b] = { parent: d.parent ?? parent, at: [offset[0] + d.at[0] * scale, offset[1] + d.at[1] * scale, offset[2] + d.at[2] * scale] };
+  }
+  return out;
 }
 
 /** Đưa mọi xương về tư thế gốc: khớp về chỗ cũ, không xoay, đủ cỡ. */

@@ -308,6 +308,108 @@ function shapeOf(kind: SoldierKind, tier: number) {
   return r.build();
 }
 
+// ---------- Người cưỡi ----------
+
+/** Người cưỡi voi, cưỡi ngựa hay đứng trên chiến xa. Khung xương người dời lên lưng thú (beasts.ts). */
+export type RiderKind = 'lacTuong' | 'anXa' | 'daiTuong' | 'kyBinh' | 'trieuDa';
+
+const RIDERS: Record<RiderKind, Spec> = {
+  // Lạc tướng cưỡi voi: như giáo binh, cầm giáo mũi đồng, không khiên.
+  lacTuong: {
+    style: 'spear',
+    draw: (r) => {
+      lacViet(r, true);
+      r.local('hand', GRIP_R, null, (s) => spear(s, 0));
+    },
+  },
+  anXa: {
+    style: 'chop',
+    draw: (r) => {
+      anSoldier(r);
+      r.local('hand', GRIP_R, null, qua);
+    },
+  },
+  // Đại tướng Ân: giáp đồng, áo choàng đỏ, mũ trụ đồng sáng chùm lông vàng cao, rìu đồng lớn.
+  daiTuong: {
+    style: 'chop',
+    heavy: true,
+    draw: (r) => {
+      humanBody(r, { cloth: C.enemyCloth, top: C.bronzeDark, belt: C.bronzeLight });
+      const chest = r.on('chest');
+      chest.band.cyl(0.155, 0.135, 0.2, C.bronzeDark, 0, 0.48, 0, undefined, 10);
+      chest.plain.box(0.48, 0.5, 0.035, C.enemyRed, 0, 0.36, -0.17, [0.15, 0, 0]);
+      for (const s of [-1, 1]) chest.plain.cone(0.045, 0.22, C.bronzeLight, s * 0.18, 0.6, 0, [0, 0, -s * 0.6], 5);
+      humanHead(r, { brows: true });
+      const head = r.on('head').plain;
+      head.sphere(0.238, C.bronzeLight, 0, 0.84, -0.02, [1, 0.65, 1], 10);
+      head.cone(0.09, 0.55, C.ember, 0, 1.18, -0.07, [-0.25, 0, 0], 6);
+      r.local('hand', GRIP_R, null, bigAxe);
+    },
+  },
+  // Kỵ binh Triệu: giáo dài có cờ đuôi nheo đỏ.
+  kyBinh: {
+    style: 'spear',
+    draw: (r) => {
+      trieuSoldier(r);
+      r.local('hand', GRIP_R, null, (s) => {
+        spear(s, 1, 1.5);
+        s.plain.box(0.02, 0.12, 0.2, C.trieuRed, 0, 1.0, -0.1);
+      });
+    },
+  },
+  // Triệu Đà già: râu bạc dài, mày bạc, giáp vàng, mũ đen hai cánh chuồn viền vàng, áo choàng đỏ, kiếm dài.
+  trieuDa: {
+    style: 'chop',
+    draw: (r) => {
+      humanBody(r, { legs: C.trieuCloth, cloth: C.ink, long: true, top: C.gold, sleeves: C.trieuCloth, belt: C.gold });
+      const chest = r.on('chest').plain;
+      chest.box(0.46, 0.5, 0.035, C.trieuRed, 0, 0.38, -0.17, [0.18, 0, 0]);
+      for (const s of [-1, 1]) chest.box(0.1, 0.06, 0.16, C.ink, s * 0.16, 0.57, 0, [0, 0, s * 0.3]);
+      humanHead(r, { beard: C.beard });
+      const head = r.on('head').plain;
+      for (const s of [-1, 1]) head.box(0.08, 0.022, 0.02, C.beard, s * 0.078, 0.8, 0.178, [0, 0, -s * 0.32]);
+      head.cyl(0.2, 0.23, 0.24, C.ink, 0, 0.92, -0.03, undefined, 10);
+      head.cyl(0.235, 0.235, 0.04, C.gold, 0, 0.82, -0.03, undefined, 10);
+      for (const s of [-1, 1]) {
+        head.box(0.34, 0.12, 0.02, C.ink, s * 0.36, 0.98, -0.13, [0, 0, s * 0.15]);
+        head.box(0.34, 0.025, 0.025, C.gold, s * 0.36, 1.04, -0.12, [0, 0, s * 0.15]);
+      }
+      r.local('hand', GRIP_R, null, (s) => sword(s, 0.9, C.gold));
+    },
+  },
+};
+
+/** Vẽ người cưỡi (đứng ở gốc như lính thường; beasts.ts dời lên lưng thú bằng `place`). */
+export function drawRider(r: HumanRig, kind: RiderKind): void {
+  RIDERS[kind].draw(r, 0);
+}
+
+/**
+ * Đặt tư thế người cưỡi: tay và vũ khí như lính đi bộ, chân ngồi dạng trên lưng thú (`ride`) hay đứng vững
+ * trên sàn xe (`stand`). Thú đi thì người cưỡi chỉ nhún theo lưng thú, không bước.
+ */
+export function poseRider(kind: RiderKind, b: Human, a: Act, seat: 'ride' | 'stand'): void {
+  const spec = RIDERS[kind];
+  beginPose(b, a.time);
+  const moves = MOVES[spec.style];
+  if (a.act === 'walk') moves.carry(b, 0.3 * Math.sin(a.phase ?? 0), spec);
+  else if (a.act === 'fight') moves.fight(b, a.strike, spec);
+  else if (a.act === 'dead') {
+    const f = a.fall ?? 1;
+    fallPose(b, f);
+    moves.drop(b, f);
+  } else moves.rest(b, spec);
+  b.hips.position.copy(b.hips.userData.rest as THREE.Vector3);
+  if (seat === 'ride') {
+    b.legL.rotation.set(-0.35, 0, -0.8);
+    b.legR.rotation.set(-0.35, 0, 0.8);
+  } else {
+    b.legL.rotation.set(-0.15, 0, -0.08);
+    b.legR.rotation.set(0.15, 0, 0.08);
+  }
+  gripHands(b);
+}
+
 /** Lính có xương, cho trận đánh: `userData.pose(a)` đặt tư thế mỗi khung hình. `tier`: bậc binh khí đã rèn (quân ta). */
 export function makeSoldier(kind: SoldierKind, tier = 0): THREE.Group {
   const { group, bones } = skinRig(shapeOf(kind, tier));

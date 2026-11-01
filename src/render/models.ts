@@ -4,6 +4,7 @@
 import * as THREE from 'three';
 import type { FighterKind } from '../game/battle';
 import type { GiongLook } from '../game/giong';
+import { bakeBeast, isBeast } from './beasts';
 import { C } from './palette';
 import { ShapeBuilder, instanceTemplates, seeded, type Placement } from './shapes';
 import { bakeSoldier, isSoldier } from './soldier';
@@ -58,41 +59,10 @@ export function makePerson(kind: PersonKind): THREE.Object3D {
   return m.group();
 }
 
-/** Con voi chiến có Lạc tướng cưỡi. */
-function elephant(m: ToonModel): void {
-  const p = m.plain;
-  p.sphere(0.42, C.elephant, 0, 0.72, 0, [0.85, 0.8, 1.2], 12);
-  for (const x of [-0.2, 0.2]) for (const z of [-0.28, 0.28]) p.cyl(0.11, 0.12, 0.5, C.elephant, x, 0.25, z, undefined, 7);
-  p.sphere(0.27, C.elephant, 0, 0.92, 0.48, [1, 1, 0.95], 10);
-  for (const s of [-1, 1]) p.sphere(0.2, C.elephant, s * 0.26, 0.95, 0.4, [0.35, 1, 0.9], 8);
-  for (let i = 0; i < 4; i++) p.cyl(0.07 - i * 0.01, 0.08 - i * 0.01, 0.2, C.elephant, 0, 0.78 - i * 0.16, 0.7 + i * 0.03, [0.15 * i, 0, 0], 6);
-  for (const s of [-1, 1]) p.cone(0.03, 0.26, C.cream, s * 0.1, 0.72, 0.68, [1.2, 0, 0], 5);
-  m.band.box(0.62, 0.08, 0.7, C.red, 0, 1.05, -0.05);
-  for (const s of [-1, 1]) p.sphere(0.035, C.ink, s * 0.15, 1.02, 0.66, [1, 1, 0.5], 6);
-}
-
-/** Cỗ chiến xa của giặc Ân: hai bánh lớn, thùng xe, một con ngựa kéo. */
-function chariot(m: ToonModel): void {
-  const p = m.plain;
-  for (const s of [-1, 1]) {
-    p.cyl(0.36, 0.36, 0.05, C.woodDark, s * 0.38, 0.36, -0.15, [0, 0, Math.PI / 2], 12);
-    p.cyl(0.07, 0.07, 0.12, C.bronze, s * 0.4, 0.36, -0.15, [0, 0, Math.PI / 2], 6);
-  }
-  p.cyl(0.03, 0.03, 0.86, C.woodDark, 0, 0.36, -0.15, [0, 0, Math.PI / 2], 5);
-  m.band.box(0.62, 0.26, 0.46, C.enemyRed, 0, 0.55, -0.15);
-  p.cyl(0.025, 0.025, 1.0, C.woodDark, 0, 0.45, 0.4, [Math.PI / 2, 0, 0], 5);
-  // Ngựa.
-  p.sphere(0.24, C.horse, 0, 0.62, 0.95, [0.75, 0.8, 1.35], 10);
-  for (const x of [-0.1, 0.1]) for (const z of [0.78, 1.12]) p.cyl(0.04, 0.045, 0.45, C.horse, x, 0.22, z, undefined, 6);
-  p.cyl(0.08, 0.1, 0.36, C.horse, 0, 0.86, 1.22, [-0.6, 0, 0], 7);
-  p.box(0.14, 0.14, 0.3, C.horse, 0, 1.0, 1.38);
-  p.box(0.06, 0.18, 0.2, C.ink, 0, 1.0, 1.18);
-}
-
 /**
- * Lính trong trận. Lính đi bộ (quân ta, giặc Ân, quân Triệu) có khung xương, dựng ở soldier.ts;
- * ở đây trả về bản tĩnh đứng nghỉ. Còn lại: voi chiến có Lạc tướng cưỡi, chiến xa và đại tướng Ân,
- * thủy quái, yêu tinh, kỵ binh Triệu.
+ * Lính trong trận. Lính đi bộ (quân ta, giặc Ân, quân Triệu; soldier.ts), thú và người cưỡi (voi chiến, chiến xa,
+ * kỵ binh, Triệu Đà, hổ tinh, gà trắng; beasts.ts) có khung xương: ở đây trả về bản tĩnh đứng nghỉ.
+ * Còn lại: thủy quái, quỷ núi, ma trơi.
  * `tier`: bậc binh khí đã rèn ở lò rèn (0–2) của giáo binh, cung thủ, voi chiến:
  * - giáo binh: bậc 1 đầu giáo sắt, bậc 2 thêm tua đỏ và khiên viền sắt (soldier.ts);
  * - cung thủ: bậc 1 mũi tên sắt trong bao tên da, bậc 2 cung sừng và bao tên đồng (soldier.ts);
@@ -103,90 +73,10 @@ export function makeFighter(kind: FighterKind, tier = 0): THREE.Group {
   if (kind === 'sonTinh') return makeSonTinh();
   if (kind === 'anDuong') return makeAnDuong({ crossbow: true });
   if (isSoldier(kind)) return bakeSoldier(kind, tier);
-  const water = makeWaterFoe(kind) ?? makeChapter3Foe(kind);
-  if (water) return water;
-  const boss = kind === 'daiTuong';
-  const enemy = kind === 'chienXa' || boss;
-  const onCart = kind === 'chienXa' || kind === 'daiTuong';
-  const m = new ToonModel(inkThin);
-  const p = m.plain;
-  if (kind === 'voi') {
-    elephant(m);
-    if (tier >= 1) {
-      // Giáp trán sắt: tấm sắt che trán, viền đồng.
-      p.box(0.34, 0.26, 0.05, IRON, 0, 1.02, 0.7, [-0.35, 0, 0]);
-      p.box(0.36, 0.04, 0.06, C.bronze, 0, 1.15, 0.66, [-0.35, 0, 0]);
-      // Giáp sườn sắt rủ hai bên dưới tấm vải, viền đồng, đinh đồng: nhìn từ sau lưng cũng thấy.
-      for (const s of [-1, 1]) {
-        p.box(0.04, 0.3, 0.6, IRON_DARK, s * 0.35, 0.86, -0.05, [0, 0, s * 0.2]);
-        for (const y of [0.72, 1.0]) p.box(0.05, 0.04, 0.62, C.bronze, s * (0.32 + (1.0 - y) * 0.2), y, -0.05, [0, 0, s * 0.2]);
-        for (const dz of [-0.2, 0, 0.2]) p.sphere(0.028, C.bronzeLight, s * 0.38, 0.86, -0.05 + dz, [1, 1, 1], 5);
-      }
-    }
-    if (tier >= 2) {
-      // Giáp ngà: ngà dài bịt đồng. Bành gỗ quây quanh chỗ ngồi.
-      for (const s of [-1, 1]) {
-        p.cone(0.045, 0.42, C.cream, s * 0.12, 0.66, 0.78, [1.25, 0, 0], 6);
-        p.cyl(0.05, 0.05, 0.06, C.bronze, s * 0.12, 0.7, 0.72, [1.25, 0, 0], 6);
-      }
-      for (const s of [-1, 1]) {
-        p.box(0.04, 0.16, 0.6, C.woodDark, s * 0.3, 1.18, -0.1);
-        p.box(0.6, 0.16, 0.04, C.woodDark, 0, 1.18, -0.1 + s * 0.3);
-      }
-    }
-  }
-  if (onCart) chariot(m);
-  // Người: đứng đất, hoặc ngồi trên voi / đứng trên xe. Đại tướng Ân đứng trên chiến xa.
-  const y0 = kind === 'voi' ? 1.0 : onCart ? 0.5 : 0;
-  const z0 = onCart ? -0.15 : kind === 'voi' ? -0.1 : 0;
-  const cloth = enemy ? C.enemyCloth : C.red;
-  for (const x of [-0.06, 0.06]) p.cyl(0.04, 0.045, 0.18, C.skin, x, y0 + 0.09, z0, undefined, 6);
-  m.band.cyl(0.13, 0.17, 0.24, cloth, 0, y0 + 0.28, z0, undefined, 8);
-  p.cyl(0.1, 0.12, 0.14, enemy ? C.enemyRed : C.skin, 0, y0 + 0.45, z0, undefined, 8);
-  for (const s of [-1, 1]) p.cyl(0.035, 0.035, 0.22, C.skin, s * 0.15, y0 + 0.38, z0, [0, 0, s * 0.35], 6);
-  p.sphere(0.21, C.skin, 0, y0 + 0.68, z0, [1, 0.95, 0.95], 12);
-  for (const s of [-1, 1]) p.sphere(0.028, C.ink, s * 0.075, y0 + 0.67, z0 + 0.18, [1, 1.4, 0.5], 6);
-  if (boss) {
-    // Đại tướng mặc giáp đồng, chùm lông vàng; phó tướng giáp đỏ, chùm lông đỏ.
-    const big = kind === 'daiTuong';
-    m.band.cyl(0.19, 0.21, 0.2, big ? C.bronzeDark : C.enemyRed, 0, y0 + 0.44, z0, undefined, 10);
-    p.box(0.5, 0.5, 0.04, C.enemyRed, 0, y0 + 0.42, z0 - 0.2, [0.15, 0, 0]);
-    p.sphere(0.24, big ? C.bronzeLight : C.bronze, 0, y0 + 0.76, z0 - 0.02, [1, 0.65, 1], 10);
-    p.cone(0.09, big ? 0.55 : 0.42, big ? C.ember : C.red, 0, y0 + 1.1, z0 - 0.04, [-0.25, 0, 0], 6);
-    for (const s of [-1, 1]) p.cone(0.04, 0.2, C.bronzeLight, s * 0.2, y0 + 0.9, z0, [0, 0, -s * 0.6], 5);
-  } else if (enemy) {
-    // Mũ trụ đồng có chóp.
-    p.sphere(0.23, C.bronze, 0, y0 + 0.76, z0 - 0.02, [1, 0.6, 1], 10);
-    p.cone(0.05, 0.16, C.bronzeDark, 0, y0 + 0.95, z0, undefined, 5);
-  } else {
-    p.sphere(0.22, C.hair, 0, y0 + 0.76, z0 - 0.04, [1, 0.62, 0.98], 12);
-    for (let i = -2; i <= 2; i++) p.box(0.055, 0.34, 0.03, i % 2 ? C.cream : C.red, i * 0.055, y0 + 1.02, z0 - 0.06, [0, 0, -i * 0.28]);
-  }
-  if (kind === 'voi') {
-    // Lạc tướng trên voi cầm giáo mũi đồng.
-    p.cyl(0.018, 0.018, 1.15, C.woodDark, 0.24, y0 + 0.55, z0 + 0.06, undefined, 5);
-    p.cone(0.05, 0.2, C.bronze, 0.24, y0 + 1.2, z0 + 0.06, undefined, 4);
-  } else if (boss) {
-    // Rìu đồng lưỡi lớn.
-    p.cyl(0.025, 0.025, 1.2, C.woodDark, 0.26, y0 + 0.6, z0 + 0.06, undefined, 5);
-    p.box(0.06, 0.34, 0.3, C.bronze, 0.3, y0 + 1.05, z0 + 0.2);
-  } else {
-    // Qua: giáo có lưỡi ngang.
-    p.cyl(0.018, 0.018, 1.1, C.woodDark, 0.24, y0 + 0.55, z0 + 0.06, undefined, 5);
-    p.box(0.22, 0.06, 0.03, C.bronze, 0.33, y0 + 1.02, z0 + 0.06);
-  }
-  const g = m.group();
-  if (kind === 'voi' && tier >= 2) {
-    // Lọng che trên bành: cán gỗ, tán đỏ viền đồng.
-    const parasol = new ToonModel(inkThin);
-    parasol.plain.cyl(0.02, 0.02, 0.95, C.woodDark, 0, 0.47, 0, undefined, 5);
-    parasol.band.cone(0.42, 0.2, C.red, 0, 1.0, 0, undefined, 12);
-    parasol.plain.cyl(0.43, 0.43, 0.04, C.bronze, 0, 0.9, 0, undefined, 12);
-    const pg = parasol.group();
-    pg.position.set(0, y0 + 0.55, z0 - 0.25);
-    g.add(pg);
-  }
-  return g;
+  if (isBeast(kind)) return bakeBeast(kind, tier);
+  const foe = makeWaterFoe(kind) ?? makeChapter3Foe(kind);
+  if (!foe) throw new Error(`Chưa có hình cho ${kind}`);
+  return foe;
 }
 
 /** Thuyền buôn lớn: thân thuyền trống đồng dài hơn, cột buồm, buồm cói, khoang chở hàng. Dài theo trục x. */
@@ -931,35 +821,6 @@ export function makeAnDuong(opts: { crossbow?: boolean; glow?: boolean } = {}): 
   return g;
 }
 
-/**
- * Rùa Vàng, sứ Thanh Giang: mai vàng như mặt trống đồng có ngôi sao giữa, đầu ngóc cao, bốn chân chèo.
- * Gốc ở mặt nước (đáy mai), đầu hướng +z. Dài chừng 1,6.
- */
-export function makeRuaVang(): THREE.Group {
-  const m = new ToonModel(inkThin);
-  const p = m.plain;
-  const geo = new THREE.SphereGeometry(1, 18, 9, 0, Math.PI * 2, 0, Math.PI / 2);
-  p.add(geo, C.gold, 0, 0.05, 0, [0, 0, 0], [0.62, 0.38, 0.72]);
-  p.cyl(0.66, 0.7, 0.1, C.goldDark, 0, 0.05, 0, undefined, 18);
-  // Mặt mai có hoa văn trống đồng.
-  m.drum.add(new THREE.CylinderGeometry(0.4, 0.4, 0.04, 20), C.gold, 0, 0.42, 0, [0, 0, 0], [1, 1, 1.15]);
-  for (let i = 0; i < 6; i++) {
-    const a = (i / 6) * Math.PI * 2;
-    p.box(0.16, 0.04, 0.16, C.goldDark, Math.sin(a) * 0.5, 0.26, Math.cos(a) * 0.58, [0, a, 0.5]);
-  }
-  // Cổ dài ngóc lên, đầu tròn, mắt đen, miệng mỉm.
-  p.cyl(0.13, 0.16, 0.55, C.turtle, 0, 0.36, 0.8, [-0.8, 0, 0], 8);
-  p.sphere(0.22, C.turtle, 0, 0.64, 1.02, [1, 0.9, 1.15], 10);
-  for (const s of [-1, 1]) {
-    p.sphere(0.045, C.ink, s * 0.11, 0.7, 1.18, [1, 1.3, 0.6], 6);
-    p.cyl(0.13, 0.08, 0.06, C.turtle, s * 0.62, 0.06, 0.45, [0, 0, s * 1.2], 6);
-    p.box(0.42, 0.05, 0.2, C.turtle, s * 0.7, 0.04, 0.5, [0, -s * 0.5, 0]);
-    p.box(0.3, 0.05, 0.16, C.turtle, s * 0.6, 0.04, -0.5, [0, s * 0.5, 0]);
-  }
-  p.cone(0.07, 0.25, C.turtle, 0, 0.06, -0.82, [-Math.PI / 2, 0, 0], 6);
-  return m.group();
-}
-
 // ---------- Chương 3: yêu tinh núi Thất Diệu ----------
 
 /** Quỷ núi: da xám xanh, đầu to có sừng, nanh trắng, khố da, vác chày đá. */
@@ -995,159 +856,15 @@ function ghostFire(m: ToonModel): void {
   m.plain.sphere(0.035, C.ink, 0, 0.55, 0.22, [1.2, 0.8, 0.5], 6);
 }
 
-/** Hổ tinh: hổ vằn cam đen, to, chồm về trước (vai cao hơn mông), mắt đỏ, trán có vằn, đuôi cong vồng lên. */
-function tigerDemon(m: ToonModel): void {
-  const p = m.plain;
-  // Thân chúi về trước: vai cao, mông thấp.
-  p.sphere(0.36, C.tiger, 0, 0.66, 0, [0.82, 0.72, 1.45], 12);
-  p.sphere(0.3, C.tigerBelly, 0, 0.54, 0.05, [0.7, 0.5, 1.25], 10);
-  // Vằn ôm quanh lưng và hai bên sườn.
-  for (let i = 0; i < 5; i++) {
-    const z = -0.38 + i * 0.17;
-    const top = 0.66 + 0.26 * Math.sqrt(Math.max(0, 1 - (z / 0.52) ** 2));
-    p.box(0.22, 0.03, 0.06, C.ink, 0, top, z, [0, 0, 0]);
-    for (const sd of [-1, 1]) p.box(0.03, 0.2, 0.06, C.ink, sd * 0.285, 0.7, z, [0, 0, sd * 0.35]);
-  }
-  for (const x of [-0.17, 0.17]) {
-    p.cyl(0.075, 0.085, 0.56, C.tiger, x, 0.3, 0.36, [-0.25, 0, 0], 7);
-    p.cyl(0.085, 0.095, 0.44, C.tiger, x, 0.23, -0.36, [0.15, 0, 0], 7);
-    for (const z of [0.44, -0.34]) p.sphere(0.08, C.tigerBelly, x, 0.05, z + 0.04, [1, 0.6, 1.3], 6);
-  }
-  // Đầu to ngẩng, tai tròn, mõm trắng, nanh, trán ba vằn.
-  p.sphere(0.28, C.tiger, 0, 0.98, 0.6, [1.12, 1, 1], 12);
-  p.sphere(0.16, C.tigerBelly, 0, 0.88, 0.8, [1.3, 0.8, 0.8], 10);
-  p.sphere(0.045, C.ink, 0, 0.95, 0.92, [1.4, 1, 1], 6);
-  for (const dx of [-0.06, 0, 0.06]) p.box(0.025, 0.1, 0.02, C.ink, dx, 1.16, 0.84, [-0.5, 0, 0]);
-  for (const sd of [-1, 1]) {
-    p.sphere(0.085, C.tiger, sd * 0.19, 1.2, 0.54, [1, 1, 0.6], 8);
-    p.sphere(0.04, C.ink, sd * 0.19, 1.21, 0.58, [1, 1, 0.4], 6);
-    p.sphere(0.045, C.ember, sd * 0.1, 1.04, 0.84, [1, 0.8, 0.6], 6);
-    p.cone(0.03, 0.12, C.cream, sd * 0.05, 0.78, 0.88, [Math.PI, 0, 0], 4);
-    p.box(0.1, 0.02, 0.02, C.ink, sd * 0.25, 1.0, 0.7, [0, sd * 0.4, 0]);
-  }
-  // Đuôi: chìa thẳng ra sau rồi cong nhẹ lên, chóp đen; thấp để nhìn từ trên xuống không thành cái cột.
-  p.cyl(0.045, 0.055, 0.45, C.tiger, 0, 0.64, -0.7, [-1.45, 0, 0], 6);
-  p.cyl(0.04, 0.045, 0.3, C.tiger, 0, 0.78, -0.96, [-0.65, 0, 0], 6);
-  p.sphere(0.05, C.ink, 0, 0.92, -1.05, [1, 1.3, 1], 6);
-}
-
-/** Gà trắng nghìn năm: gà trống trắng khổng lồ, mào đỏ to, tích đỏ, mắt đỏ rực, đuôi cong vút, cựa nhọn. */
-function whiteRooster(m: ToonModel): void {
-  const p = m.plain;
-  for (const s of [-1, 1]) {
-    p.cyl(0.05, 0.06, 0.5, C.bronzeLight, s * 0.14, 0.25, 0, undefined, 6);
-    p.cone(0.035, 0.18, C.bronzeLight, s * 0.14, 0.16, -0.12, [-Math.PI / 2 - 0.3, 0, 0], 5);
-    for (const a of [-0.5, 0, 0.5]) p.box(0.04, 0.03, 0.2, C.bronzeLight, s * 0.14 + Math.sin(a) * 0.08, 0.02, 0.08, [0, a, 0]);
-  }
-  p.sphere(0.48, C.rooster, 0, 0.88, 0, [0.9, 0.85, 1.15], 14);
-  for (const s of [-1, 1]) p.sphere(0.3, C.cream, s * 0.32, 0.9, -0.05, [0.35, 0.7, 1.05], 10);
-  // Cổ và đầu.
-  p.cyl(0.18, 0.24, 0.5, C.rooster, 0, 1.3, 0.32, [0.35, 0, 0], 10);
-  p.sphere(0.22, C.rooster, 0, 1.6, 0.42, [1, 1, 1.05], 12);
-  p.cone(0.07, 0.24, C.bronzeLight, 0, 1.56, 0.7, [Math.PI / 2, 0, 0], 6);
-  for (let i = 0; i < 5; i++) p.sphere(0.08 + (i === 2 ? 0.03 : 0), C.comb, 0, 1.82 + Math.sin((i / 4) * Math.PI) * 0.08, 0.26 + i * 0.08, [0.6, 1.2, 0.8], 8);
-  p.sphere(0.07, C.comb, 0, 1.42, 0.62, [0.7, 1.4, 0.6], 8);
-  for (const s of [-1, 1]) m.glow.sphere(0.045, C.comb, s * 0.13, 1.64, 0.56, [1, 1, 0.6], 6);
-  // Đuôi cong vút: lông trắng xen lông đồng.
-  for (let i = 0; i < 6; i++) {
-    const a = -0.6 + i * 0.24;
-    p.box(0.08, 0.95, 0.14, i % 2 ? C.cream : C.rooster, Math.sin(a) * 0.18, 1.25 + Math.cos(a) * 0.15, -0.62, [-0.55, 0, a]);
-  }
-}
-
-// ---------- Chương 3: quân Triệu Đà ----------
-
-/** Con ngựa đứng, đầu hướng +z, lưng cao chừng 0,85. */
-function horseBody(m: ToonModel, color: number): void {
-  const p = m.plain;
-  p.sphere(0.33, color, 0, 0.78, 0, [0.8, 0.78, 1.4], 12);
-  for (const x of [-0.14, 0.14]) for (const z of [-0.3, 0.3]) p.cyl(0.06, 0.07, 0.6, color, x, 0.3, z, undefined, 6);
-  p.cyl(0.1, 0.14, 0.46, color, 0, 1.05, 0.42, [-0.6, 0, 0], 8);
-  p.box(0.17, 0.18, 0.4, color, 0, 1.25, 0.64, [0.35, 0, 0]);
-  for (const s of [-1, 1]) p.cone(0.035, 0.12, color, s * 0.06, 1.42, 0.5, [-0.3, 0, s * 0.25], 5);
-  p.box(0.04, 0.32, 0.36, C.ink, 0, 1.18, 0.38, [-0.6, 0, 0]);
-  p.cone(0.06, 0.5, C.ink, 0, 0.85, -0.52, [-2.3, 0, 0], 6);
-  m.band.box(0.5, 0.06, 0.46, C.trieuRed, 0, 1.0, -0.04);
-}
-
-/**
- * Lính Triệu: áo đen viền đỏ, mũ vải búi tóc. `y0`, `z0`: chỗ ngồi khi cưỡi ngựa.
- * `cap`: màu mũ; tướng thì đội mũ có hai cánh.
- */
-function trieuSoldier(m: ToonModel, y0: number, z0: number, opts: { mounted?: boolean; general?: boolean } = {}): void {
-  const p = m.plain;
-  if (opts.mounted) {
-    for (const s of [-1, 1]) p.cyl(0.04, 0.045, 0.3, C.trieuCloth, s * 0.16, y0 + 0.08, z0 + 0.06, [0.4, 0, s * 0.6], 6);
-  } else {
-    for (const x of [-0.06, 0.06]) p.cyl(0.04, 0.045, 0.18, C.trieuCloth, x, y0 + 0.09, z0, undefined, 6);
-  }
-  m.band.cyl(0.13, 0.18, 0.26, opts.general ? C.ink : C.trieuCloth, 0, y0 + 0.3, z0, undefined, 8);
-  p.cyl(0.18, 0.18, 0.04, opts.general ? C.gold : C.trieuRed, 0, y0 + 0.18, z0, undefined, 8);
-  p.cyl(0.1, 0.12, 0.14, opts.general ? C.gold : C.trieuRed, 0, y0 + 0.47, z0, undefined, 8);
-  for (const s of [-1, 1]) p.cyl(0.035, 0.035, 0.22, C.trieuCloth, s * 0.15, y0 + 0.4, z0, [0, 0, s * 0.35], 6);
-  p.sphere(0.21, C.skin, 0, y0 + 0.7, z0, [1, 0.95, 0.95], 12);
-  for (const s of [-1, 1]) p.sphere(0.028, C.ink, s * 0.075, y0 + 0.69, z0 + 0.18, [1, 1.4, 0.5], 6);
-  if (opts.general) {
-    // Triệu Đà già: râu bạc dài, mày bạc, mũ đen có hai cánh chuồn viền vàng.
-    p.cone(0.12, 0.36, C.beard, 0, y0 + 0.5, z0 + 0.15, [Math.PI + 0.25, 0, 0], 7);
-    for (const s of [-1, 1]) p.box(0.09, 0.025, 0.02, C.beard, s * 0.08, y0 + 0.77, z0 + 0.19, [0, 0, -s * 0.3]);
-    p.cyl(0.2, 0.23, 0.24, C.ink, 0, y0 + 0.9, z0 - 0.02, undefined, 10);
-    p.cyl(0.235, 0.235, 0.04, C.gold, 0, y0 + 0.8, z0 - 0.02, undefined, 10);
-    for (const s of [-1, 1]) {
-      p.box(0.34, 0.12, 0.02, C.ink, s * 0.36, y0 + 0.96, z0 - 0.12, [0, 0, s * 0.15]);
-      p.box(0.34, 0.025, 0.025, C.gold, s * 0.36, y0 + 1.02, z0 - 0.11, [0, 0, s * 0.15]);
-      p.box(0.12, 0.3, 0.05, C.ink, s * 0.22, y0 + 0.5, z0, [0, 0, s * 0.2]);
-    }
-    p.box(0.5, 0.5, 0.04, C.trieuRed, 0, y0 + 0.4, z0 - 0.2, [0.2, 0, 0]);
-  } else {
-    // Mũ vải đen có búi tóc ở đỉnh, dải buộc đỏ.
-    p.sphere(0.22, C.trieuCloth, 0, y0 + 0.77, z0 - 0.02, [1, 0.55, 1], 10);
-    p.sphere(0.08, C.trieuCloth, 0, y0 + 0.92, z0 - 0.04, [1, 1, 1], 8);
-    p.box(0.04, 0.16, 0.02, C.trieuRed, 0.08, y0 + 0.72, z0 - 0.2, [0.2, 0, 0.2]);
-  }
-}
-
 /**
  * Lính trong trận của chương 3: yêu tinh núi Thất Diệu và quân Triệu Đà.
  * Trả về null nếu không phải giặc chương 3.
  */
 export function makeChapter3Foe(kind: FighterKind): THREE.Group | null {
   const m = new ToonModel(inkThin);
-  const p = m.plain;
   if (kind === 'quyNui') mountainDemon(m);
   else if (kind === 'maTroi') ghostFire(m);
-  else if (kind === 'hoTinh') tigerDemon(m);
-  else if (kind === 'gaTrang') whiteRooster(m);
-  else if (kind === 'linhTrieu') {
-    trieuSoldier(m, 0, 0);
-    // Khiên chữ nhật sơn đỏ có viền đen, kiếm thẳng.
-    p.box(0.36, 0.5, 0.04, C.trieuRed, -0.2, 0.42, 0.18, [0, 0.35, 0]);
-    p.box(0.26, 0.38, 0.045, C.trieuCloth, -0.2, 0.42, 0.18, [0, 0.35, 0]);
-    p.box(0.035, 0.6, 0.02, C.iron, 0.24, 0.62, 0.12, [0.2, 0, 0]);
-    p.box(0.12, 0.03, 0.04, C.bronze, 0.24, 0.33, 0.07, [0.2, 0, 0]);
-  } else if (kind === 'noTrieu') {
-    trieuSoldier(m, 0, 0);
-    const bow = new ToonModel(inkThin);
-    crossbowParts(bow, false, 0.85);
-    const g = m.group();
-    const b = bow.group();
-    b.position.set(0.05, 0.46, 0.22);
-    g.add(b);
-    return g;
-  } else if (kind === 'kyBinh') {
-    horseBody(m, C.horse);
-    trieuSoldier(m, 0.92, -0.08, { mounted: true });
-    p.cyl(0.018, 0.018, 1.5, C.woodDark, 0.24, 1.5, 0.2, [0.5, 0, 0], 5);
-    p.cone(0.05, 0.22, C.iron, 0.24, 2.18, 0.58, [0.5, 0, 0], 4);
-    p.box(0.2, 0.12, 0.02, C.trieuRed, 0.24, 2.0, 0.44, [0.5, 0, 0]);
-  } else if (kind === 'trieuDa') {
-    horseBody(m, C.horseBlack);
-    p.box(0.08, 0.2, 0.3, C.gold, 0, 1.33, 0.72, [0.35, 0, 0]);
-    trieuSoldier(m, 0.92, -0.08, { mounted: true, general: true });
-    // Kiếm dài giơ cao.
-    p.box(0.045, 0.9, 0.02, C.iron, 0.3, 1.9, 0.0, [-0.3, 0, -0.25]);
-    p.box(0.16, 0.035, 0.05, C.gold, 0.25, 1.46, 0.12, [-0.3, 0, -0.25]);
-  } else return null;
+  else return null;
   return m.group();
 }
 

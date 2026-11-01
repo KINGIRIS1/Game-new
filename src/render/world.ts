@@ -43,6 +43,7 @@ import {
   makeRuongNep,
   makeVuon,
 } from './buildings';
+import { makeRuaVang } from './beasts';
 import { addSunLights, type SunLights } from './lights';
 import {
   buildCitadel,
@@ -53,7 +54,6 @@ import {
   makeBoat,
   makeTradeBoat,
   makeGiong,
-  makeRuaVang,
   makeSonTinh,
   type CitadelSpot,
   type DikeSpot,
@@ -62,6 +62,7 @@ import {
 } from './models';
 import { makeWorker, type Job } from './people';
 import { C } from './palette';
+import type { Poser } from './rig';
 import { ShapeBuilder, seeded } from './shapes';
 import { ToonModel, inkThin, outlineOf, toon } from './toon';
 
@@ -1472,6 +1473,7 @@ export class World {
       const lane = RIVER_START - HALF + 1.3;
       this.turtle.position.set(-HALF + 2 + along * span, WATER_Y - 0.05 + Math.sin(t * 1.3) * 0.03, lane);
       this.turtle.rotation.y = k < 1 ? Math.PI / 2 : -Math.PI / 2;
+      (this.turtle.userData.pose as Poser | undefined)?.({ act: 'walk', phase: t * 2.6 });
     }
 
     this.updateStorm(dt);

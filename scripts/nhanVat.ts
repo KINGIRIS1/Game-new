@@ -5,6 +5,7 @@ import * as THREE from 'three';
 import { addSunLights } from '../src/render/lights';
 import { C } from '../src/render/palette';
 import type { Act, Poser } from '../src/render/rig';
+import { makeBeast, makeRuaVang } from '../src/render/beasts';
 import { makeSoldier } from '../src/render/soldier';
 
 interface Entry {
@@ -39,6 +40,17 @@ export const NHOM: Record<string, Entry[]> = {
     { ten: 'Phó tướng Ân', tao: () => makeSoldier('phoTuong') },
     { ten: 'Lính Triệu', tao: () => makeSoldier('linhTrieu') },
     { ten: 'Lính nỏ Triệu', tao: () => makeSoldier('noTrieu') },
+  ],
+  thu: [
+    { ten: 'Voi chiến bậc 0', tao: () => makeBeast('voi', 0), co: 1.5, cach: 1.5 },
+    { ten: 'Voi chiến bậc 2', tao: () => makeBeast('voi', 2), co: 1.6, cach: 1.5 },
+    { ten: 'Chiến xa', tao: () => makeBeast('chienXa'), co: 1.3, cach: 1.6 },
+    { ten: 'Đại tướng Ân', tao: () => makeBeast('daiTuong'), co: 1.4, cach: 1.6 },
+    { ten: 'Kỵ binh Triệu', tao: () => makeBeast('kyBinh'), co: 1.4, cach: 1.3 },
+    { ten: 'Triệu Đà', tao: () => makeBeast('trieuDa'), co: 1.4, cach: 1.3 },
+    { ten: 'Hổ tinh', tao: () => makeBeast('hoTinh'), co: 1.0, cach: 1.3 },
+    { ten: 'Gà trắng', tao: () => makeBeast('gaTrang'), co: 1.3, cach: 1.3 },
+    { ten: 'Rùa Vàng', tao: () => makeRuaVang(), co: 0.9, cach: 1.7 },
   ],
 };
 
@@ -77,7 +89,10 @@ export function chup(nhom: string, huong = -0.6): { ten: string; anh: string }[]
       g.rotation.y = AZ + huong;
       (g.userData.pose as Poser | undefined)?.(act);
       // Ngã: phần vẽ trận ngả cả người ra sau.
-      if (act.act === 'dead') g.rotation.x = -(act.fall ?? 1) * 1.2;
+      if (act.act === 'dead') {
+        if (g.userData.fall === 'side') g.rotation.z = -(act.fall ?? 1) * 1.2;
+        else g.rotation.x = -(act.fall ?? 1) * 1.2;
+      }
       scene.add(g);
     });
     const aspect = w / h;
