@@ -212,7 +212,7 @@ export interface Merchant {
 }
 
 /** Phiên bản bản lưu hiện tại (11: kinh đô lớn, móng to hơn một ô). */
-export const SAVE_VERSION = 11;
+export const SAVE_VERSION = 12;
 
 export interface GameState {
   version: typeof SAVE_VERSION;

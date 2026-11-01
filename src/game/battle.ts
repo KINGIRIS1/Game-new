@@ -55,7 +55,7 @@ import {
   RAID_SCALE,
 } from './defs';
 import { dienLevel, type Building, type GameState } from './game';
-import { GRID, RIVER_START, areaStart, inGrid, isRiver } from './map';
+import { GRID, RIVER_END, RIVER_START, areaStart, inGrid, isRiver } from './map';
 import { drowns, floodMap } from './terrain';
 
 export type Side = 'ta' | 'giac';
@@ -736,17 +736,17 @@ function damageBuilding(state: GameState, battle: Battle, attacker: Fighter, b: 
   }
 }
 
-/** Chỗ giặc bỏ chạy về: bìa rừng phía đã kéo tới, hay lặn xuống sông. */
+/** Chỗ giặc bỏ chạy về: bìa rừng phía đã kéo tới, hay lặn xuống sông (bơi tới mép sông bên kia rồi lặn). */
 function exitPoint(battle: Battle, f: Fighter): { x: number; z: number } {
-  if (battle.side === 'nam') return { x: f.x, z: GRID + 0.5 };
-  if (battle.side === 'dong') return { x: GRID + 0.5, z: f.z };
+  if (battle.side === 'nam') return { x: f.x, z: RIVER_END + 0.5 };
+  if (battle.side === 'dong') return { x: RIVER_END + 0.5, z: f.z };
   const out = (battle.exitAt ?? -0.5) - 1;
   return battle.side === 'bac' ? { x: f.x, z: out } : { x: out, z: f.z };
 }
 
 /** Giặc bỏ chạy đã thoát chưa: lặn xuống sông, hay lùi qua vạch xuất phát ở bìa rừng. */
 function escaped(battle: Battle, f: Fighter): boolean {
-  if (f.x < 0 || f.z < 0 || f.x > GRID || f.z > GRID) return true;
+  if (f.x < 0 || f.z < 0 || f.x > RIVER_END || f.z > RIVER_END) return true;
   const line = battle.exitAt ?? -0.5;
   if (battle.side === 'bac') return f.z < line;
   if (battle.side === 'tay') return f.x < line;

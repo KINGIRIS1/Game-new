@@ -49,7 +49,7 @@ import {
 } from './game/game';
 import { AREA_SIZE, GRID, RIVER_START } from './game/map';
 import { fromCode, loadFromStorage, saveFileName, saveToStorage, toCode } from './game/save';
-import { RESOLUTIONS, World, type Resolution } from './render/world';
+import { HALF, RESOLUTIONS, World, type Resolution } from './render/world';
 import { vi } from './text/vi';
 import { Hud, buildingName, type HudAction } from './ui/hud';
 
@@ -911,7 +911,7 @@ function start(): void {
     renderInfo: () => ({ ...world.renderer.info.render }),
     rotate: (dir: 1 | -1) => world.rotateView(dir),
     camera: (x: number, z: number, zoom: number) => {
-      world.view.target.set(x - GRID / 2, 0, z - GRID / 2);
+      world.view.target.set(x - HALF, 0, z - HALF);
       world.view.zoom = zoom;
       world.view.apply();
     },

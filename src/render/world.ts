@@ -7,7 +7,7 @@ import { raidSpawnBand, type Battle, type RaidSide } from '../game/battle';
 import { advLook, inChapter3, ruaVangCame, type AdvLook } from '../game/coLoa';
 import { buildingAt, dienLevel, type Building, type GameState } from '../game/game';
 import { giongLook, type GiongLook } from '../game/giong';
-import { DIEN_HOME, FOREST_BAND, GRID, RIVER_START, areaStart, baseHeights, isUnlocked } from '../game/map';
+import { DIEN_HOME, FOREST_BAND, GRID, RIVER_END, RIVER_START, areaStart, baseHeights, farBankOf, isRiver, isUnlocked, riverDistance } from '../game/map';
 import { sonLook, type SonLook } from '../game/son';
 import { floodMap } from '../game/terrain';
 import { tetOpen } from '../game/tet';
@@ -45,7 +45,11 @@ import type { Poser } from './rig';
 import { ShapeBuilder, seeded } from './shapes';
 import { ToonModel, inkThin, outlineOf, toon } from './toon';
 
-const HALF = GRID / 2;
+/**
+ * Ô (HALF, HALF) nằm ở gốc tọa độ cảnh. Giữ như tâm lưới 55×55 cũ (sông ở mép lưới) để camera, ánh nắng, bóng đổ và
+ * các ảnh chụp thử không xê dịch khi lưới nới qua sông.
+ */
+export const HALF = 27.5;
 /** Mặt nước nằm thấp hơn mặt đất. */
 const WATER_Y = -0.28;
 /** Mỗi bậc đất cao chừng này (đơn vị thế giới). Mặt ô bậc h nằm ở h * LEVEL_H. */
@@ -83,6 +87,23 @@ const groundMaterial = new THREE.MeshLambertMaterial({ vertexColors: true });
 /** Tọa độ thế giới của góc ô (x, z). */
 const wx = (x: number) => x - HALF;
 const wz = (z: number) => z - HALF;
+
+/**
+ * Dựng rừng thành hai nhóm, bên này và bên kia sông. Rừng bên kia (chưa khai phá) không đổ bóng, cho nhẹ máy: thêm
+ * hai bờ bên kia là thêm chừng nửa số cây, mà rừng ở xa thì bóng đổ khó thấy. Chia rừng thành nhiều mảng nhỏ để bỏ
+ * qua mảng ngoài khung nhìn thì số lệnh vẽ tăng vọt (đã thử), không đáng.
+ */
+function forestBySide(spots: (TreeSpot & { far: boolean })[]): THREE.Group {
+  const group = new THREE.Group();
+  for (const far of [false, true]) {
+    const list = spots.filter((t) => t.far === far);
+    if (!list.length) continue;
+    const forest = buildForest(list);
+    if (far) forest.traverse((o) => (o.castShadow = false));
+    group.add(forest);
+  }
+  return group;
+}
 
 /** Nhiều khối hộp vẽ trong một lần, mỗi khối có màu riêng. */
 export class InstancedBoxes {
@@ -237,18 +258,16 @@ export class World {
   readonly scene = new THREE.Scene();
   readonly view: IsoCamera;
 
-  private readonly land = new InstancedBoxes(RIVER_START * RIVER_START);
+  private readonly land = new InstancedBoxes(GRID * GRID);
   /** Ô đất ứng với từng bản sao trong `land`, để biết người chơi chạm vào ô nào. */
   private readonly landTiles: number[] = [];
   /** Độ cao đã vẽ, so với state để biết khi nào phải dựng lại đất. */
   private heights: number[] = [];
   /** Nước lũ phủ trên các ô ngập, và lớp tô xanh báo trước vùng sẽ ngập. */
-  private readonly floodWater = new InstancedBoxes(RIVER_START * RIVER_START);
-  private readonly floodPreview = new InstancedBoxes(RIVER_START * RIVER_START);
+  private readonly floodWater = new InstancedBoxes(GRID * GRID);
+  private readonly floodPreview = new InstancedBoxes(GRID * GRID);
   private floodKey = '';
   private riverWater?: THREE.Object3D;
-  /** Nước lũ tràn cả bờ bên kia sông, hiện khi nước dâng cao hơn mặt bãi bên ấy. */
-  private farFlood?: THREE.Object3D;
   /** Mưa giông khi Thủy Tinh hô mưa gọi gió. */
   private readonly rain: THREE.InstancedMesh;
   private readonly drops: { x: number; y: number; z: number; v: number }[] = [];
@@ -267,7 +286,8 @@ export class World {
   private readonly ripples = new InstancedBoxes(60);
   private readonly buildingsRoot = new THREE.Group();
   private readonly views = new Map<number, BuildingView>();
-  private readonly boats: { obj: THREE.Object3D; axis: 'x' | 'z'; speed: number; pos: number }[] = [];
+  /** Thuyền trên sông: thuyền xuôi sông Thao (`home` là 'z') tới ngã ba thì rẽ sang sông Đà. */
+  private readonly boats: { obj: THREE.Object3D; axis: 'x' | 'z'; home: 'x' | 'z'; speed: number; pos: number }[] = [];
   private readonly rippleState: { axis: 'x' | 'z'; pos: number; lane: number; len: number }[] = [];
   private gridOverlay?: THREE.LineSegments;
   private ghost?: THREE.Group;
@@ -316,7 +336,7 @@ export class World {
     this.lights = addSunLights(this.scene, 24, 2048);
     const edge = baseHeights();
     this.scene.add(this.staticTerrain(edge));
-    this.scene.add(buildForest(this.outerForestSpots(edge)));
+    this.scene.add(forestBySide(this.outerForestSpots(edge)));
     this.scene.add(this.land.mesh, this.ripples.mesh, this.buildingsRoot);
     // Nước lũ màu phù sa đục, mờ một chút để còn thấy móng nhà dưới nước.
     const floodMat = this.floodWater.mesh.material as THREE.MeshLambertMaterial;
@@ -372,62 +392,69 @@ export class World {
   }
 
   /**
-   * Đất ngoài lưới, hai dòng sông và bờ bên kia. Đất bên này sông kéo dài từng dải theo đúng bậc của ô mép lưới,
-   * để mép rừng liền với đất trong lưới.
+   * Đất ngoài lưới và nước sông. Đất ngoài lưới kéo dài từng dải theo đúng bậc của ô mép lưới (bên này phía bắc,
+   * phía tây; bên kia phía nam, phía đông), để mép rừng liền với đất trong lưới. Nước chỉ phủ hai dòng sông: mùa lũ cả
+   * mặt nước dâng lên mà không tràn lên đất (ô ngập vẽ riêng theo `floodMap`).
    */
   private staticTerrain(edge: number[]): THREE.Object3D {
     const group = new THREE.Group();
     const far = 70;
-    const river = RIVER_START - HALF;
     const land = new ShapeBuilder();
     const strip = (w: number, d: number, h: number, x: number, z: number, shade: number) => {
       const top = topY(h);
       land.box(w, top + 1, d, C.grassLocked[shade % 3], x, (top - 1) / 2 - 0.02, z);
     };
-    // Đất bên này sông (phía rừng): dải phía bắc, dải phía tây, và góc tây bắc.
-    for (let x = 0; x < RIVER_START; x++) strip(1, far, edge[x], wx(x) + 0.5, wz(0) - far / 2, x);
-    for (let z = 0; z < RIVER_START; z++) strip(far, 1, edge[z * GRID], wx(0) - far / 2, wz(z) + 0.5, z + 1);
-    strip(far, far, edge[0], wx(0) - far / 2, wz(0) - far / 2, 0);
-    // Bờ bên kia sông Thao (phía đông) và sông Đà (phía nam).
-    land.box(far - HALF, 1, 2 * far, C.grassLocked[1], (HALF + far) / 2, -0.52, 0);
-    land.box(far + river, 1, far - HALF, C.grassLocked[2], (river - far) / 2, -0.52, (HALF + far) / 2);
+    const at = (x: number, z: number) => edge[z * GRID + x];
+    const last = GRID - 1;
+    for (let x = 0; x < GRID; x++) {
+      // Phía bắc (bên này và bờ đông bên kia), phía nam bên kia (bờ nam). Cột sông Thao chỉ có nước ở phía bắc.
+      if (!isRiver(x, 0)) strip(1, far, at(x, 0), wx(x) + 0.5, wz(0) - far / 2, x);
+      if (!isRiver(x, last)) strip(1, far, at(x, last), wx(x) + 0.5, wz(GRID) + far / 2, x + 1);
+    }
+    for (let z = 0; z < GRID; z++) {
+      // Phía tây (bên này và bờ nam bên kia), phía đông bên kia (bờ đông).
+      if (!isRiver(0, z)) strip(far, 1, at(0, z), wx(0) - far / 2, wz(z) + 0.5, z + 1);
+      if (!isRiver(last, z)) strip(far, 1, at(last, z), wx(GRID) + far / 2, wz(z) + 0.5, z);
+    }
+    // Bốn góc ngoài lưới: tây bắc, đông bắc (sau bờ đông), tây nam và đông nam (sau bờ nam).
+    strip(far, far, at(0, 0), wx(0) - far / 2, wz(0) - far / 2, 0);
+    strip(far, far, at(last, 0), wx(GRID) + far / 2, wz(0) - far / 2, 1);
+    strip(far, far, at(0, last), wx(0) - far / 2, wz(GRID) + far / 2, 2);
+    strip(far, far, at(last, last), wx(GRID) + far / 2, wz(GRID) + far / 2, 0);
     const water = new ShapeBuilder();
-    water.box(HALF - river, 1, 2 * far, C.water[0], (river + HALF) / 2, WATER_Y - 0.5, 0);
-    water.box(far + river, 1, HALF - river, C.water[1], (river - far) / 2, WATER_Y - 0.5, (river + HALF) / 2);
+    const box = (x0: number, x1: number, z0: number, z1: number, color: number) =>
+      water.box(x1 - x0, 1, z1 - z0, color, (x0 + x1) / 2, WATER_Y - 0.5, (z0 + z1) / 2);
+    // Sông Thao (phía đông) chảy tới ngã ba; sông Đà (phía nam) chảy suốt, qua ngã ba về phía đông.
+    box(wx(RIVER_START), wx(RIVER_END), wz(0) - far, wz(RIVER_START), C.water[0]);
+    box(wx(0) - far, wx(GRID) + far, wz(RIVER_START), wz(RIVER_END), C.water[1]);
     const landMesh = land.mesh(groundMaterial);
     landMesh.castShadow = false;
     const waterMesh = water.mesh(groundMaterial);
     waterMesh.castShadow = false;
     this.riverWater = waterMesh;
-    // Bờ bên kia sông Thao và sông Đà: mặt nước lũ phẳng phủ kín, chỉ cây cối nhô lên.
-    const flood = new ShapeBuilder();
-    flood.box(far - HALF, 0.1, 2 * far, C.flood, (HALF + far) / 2, -0.05, 0);
-    flood.box(far + river, 0.1, far - HALF, C.flood, (river - far) / 2, -0.05, (HALF + far) / 2);
-    const floodMesh = flood.mesh(new THREE.MeshLambertMaterial({ vertexColors: true, transparent: true, opacity: 0.88 }));
-    floodMesh.castShadow = false;
-    floodMesh.visible = false;
-    this.farFlood = floodMesh;
-    group.add(landMesh, waterMesh, floodMesh);
+    group.add(landMesh, waterMesh);
     return group;
   }
 
-  /** Rừng bao ngoài lưới và cây thưa ở bờ bên kia. */
-  private outerForestSpots(edge: number[]): TreeSpot[] {
-    const spots: TreeSpot[] = [];
+  /**
+   * Rừng bao ngoài lưới. Bên này (phía bắc, phía tây) rừng dày sâu 10 ô; sau hai bờ bên kia chỉ một dải thưa 5 ô,
+   * vì trong lưới bên ấy đã có rừng sâu 15 ô, cho nhẹ máy.
+   */
+  private outerForestSpots(edge: number[]): (TreeSpot & { far: boolean })[] {
+    const spots: (TreeSpot & { far: boolean })[] = [];
     const rand = seeded(7);
-    for (let x = -10; x < GRID + 8; x++) {
-      for (let z = -10; z < GRID + 8; z++) {
+    for (let x = -10; x < GRID + 5; x++) {
+      for (let z = -10; z < GRID + 5; z++) {
         const insideGrid = x >= 0 && z >= 0 && x < GRID && z < GRID;
-        const inRiver = (x >= RIVER_START && x < GRID) || (z >= RIVER_START && z < GRID);
-        if (insideGrid || inRiver) continue;
-        const farBank = x >= GRID || z >= GRID;
-        if (rand() > (farBank ? 0.25 : 0.6) * FOREST_DENSITY) continue;
+        // Ô ngoài lưới mang đúng bậc của ô mép lưới gần nhất; ô ấy là sông thì chỗ này cũng là nước.
+        const ex = Math.min(Math.max(x, 0), GRID - 1);
+        const ez = Math.min(Math.max(z, 0), GRID - 1);
+        if (insideGrid || isRiver(ex, ez)) continue;
+        const far = farBankOf(ex, ez) !== null;
+        if (rand() > (far ? 0.3 : 0.6) * FOREST_DENSITY) continue;
         const cx = wx(x) + 0.5 + (rand() - 0.5) * 0.4;
         const cz = wz(z) + 0.5 + (rand() - 0.5) * 0.4;
-        const ex = Math.min(Math.max(x, 0), RIVER_START - 1);
-        const ez = Math.min(Math.max(z, 0), RIVER_START - 1);
-        const y = farBank ? 0 : topY(edge[ez * GRID + ex]);
-        spots.push({ x: cx, y, z: cz, kind: rand() < 0.3 ? 'bamboo' : 'tree', seed: Math.floor(rand() * 1e9) });
+        spots.push({ x: cx, y: topY(edge[ez * GRID + ex]), z: cz, kind: rand() < 0.3 ? 'bamboo' : 'tree', seed: Math.floor(rand() * 1e9), far });
       }
     }
     return spots;
@@ -450,7 +477,7 @@ export class World {
         obj.position.z = river;
       }
       this.scene.add(obj);
-      this.boats.push({ obj, ...r });
+      this.boats.push({ obj, home: r.axis, ...r });
     }
   }
 
@@ -578,7 +605,7 @@ export class World {
   private fighterY(x: number, z: number): number {
     const tx = Math.floor(x);
     const tz = Math.floor(z);
-    const inRiver = tx >= RIVER_START || tz >= RIVER_START || tx < 0 || tz < 0;
+    const inRiver = tx < 0 || tz < 0 || tx >= GRID || tz >= GRID || isRiver(tx, tz);
     const ground = inRiver ? WATER_Y : this.groundY(tx, tz);
     const water = this.state?.raid.water ?? 0;
     const surface = water > 0 ? waterSurface(water) : WATER_Y;
@@ -701,16 +728,12 @@ export class World {
     this.floodKey = key;
     const surface = waterSurface(water);
     if (this.riverWater) this.riverWater.position.y = Math.max(0, surface - WATER_Y);
-    if (this.farFlood) {
-      this.farFlood.visible = surface > 0.02;
-      this.farFlood.position.y = surface;
-    }
     this.floodWater.begin();
     if (water > 0.005) {
       const wet = floodMap(state, water, dienLevel(state));
-      for (let z = 0; z < RIVER_START; z++) {
-        for (let x = 0; x < RIVER_START; x++) {
-          if (!wet[z * GRID + x]) continue;
+      for (let z = 0; z < GRID; z++) {
+        for (let x = 0; x < GRID; x++) {
+          if (!wet[z * GRID + x] || isRiver(x, z)) continue;
           const top = this.groundY(x, z);
           if (surface <= top + 0.01) continue;
           const shade = (x * 5 + z * 3) % 2 ? C.flood : C.floodDeep;
@@ -726,9 +749,9 @@ export class World {
     this.floodPreview.begin();
     if (state && level > 0) {
       const wet = floodMap(state, level, dienLevel(state));
-      for (let z = 0; z < RIVER_START; z++) {
-        for (let x = 0; x < RIVER_START; x++) {
-          if (!wet[z * GRID + x]) continue;
+      for (let z = 0; z < GRID; z++) {
+        for (let x = 0; x < GRID; x++) {
+          if (!wet[z * GRID + x] || isRiver(x, z)) continue;
           this.floodPreview.add(0.96, 0.04, 0.96, 0x3f8fd0, wx(x) + 0.5, this.groundY(x, z) + 0.04, wz(z) + 0.5);
         }
       }
@@ -852,8 +875,9 @@ export class World {
     this.land.begin();
     this.landTiles.length = 0;
     const c = new THREE.Color();
-    for (let x = 0; x < RIVER_START; x++) {
-      for (let z = 0; z < RIVER_START; z++) {
+    for (let x = 0; x < GRID; x++) {
+      for (let z = 0; z < GRID; z++) {
+        if (isRiver(x, z)) continue;
         const open = isUnlocked(x, z, level);
         const palette = open ? C.grass : C.grassLocked;
         const h = Math.max(this.heights[z * GRID + x] ?? 0, 0);
@@ -871,21 +895,23 @@ export class World {
 
   private rebuildForest(level: number): void {
     if (this.forest) this.scene.remove(this.forest);
-    const spots: TreeSpot[] = [];
+    const spots: (TreeSpot & { far: boolean })[] = [];
     const lo = areaStart(level);
-    for (let x = 0; x < RIVER_START; x++) {
-      for (let z = 0; z < RIVER_START; z++) {
-        if (isUnlocked(x, z, level)) continue;
+    for (let x = 0; x < GRID; x++) {
+      for (let z = 0; z < GRID; z++) {
+        if (isRiver(x, z) || isUnlocked(x, z, level)) continue;
         const rand = seeded(x * 73856093 + z * 19349663);
-        // Chừa một dải đất trống sát vùng đã mở cho dễ nhìn.
-        const nearEdge = x >= lo - 1 && z >= lo - 1;
-        if (rand() > (nearEdge ? 0.25 : 0.65) * FOREST_DENSITY) continue;
+        // Chừa một dải đất trống sát vùng đã mở cho dễ nhìn. Bên kia sông, bãi bồi sát sông có cây thưa.
+        // Rừng bên kia thưa hơn bên này một chút cho nhẹ máy.
+        const far = farBankOf(x, z) !== null;
+        const sparse = far ? riverDistance(x, z) <= 2 : x >= lo - 1 && z >= lo - 1;
+        if (rand() > (sparse ? 0.25 : far ? 0.4 : 0.65) * FOREST_DENSITY) continue;
         const cx = wx(x) + 0.5 + (rand() - 0.5) * 0.3;
         const cz = wz(z) + 0.5 + (rand() - 0.5) * 0.3;
-        spots.push({ x: cx, y: this.groundY(x, z), z: cz, kind: rand() < 0.35 ? 'bamboo' : 'tree', seed: Math.floor(rand() * 1e9) });
+        spots.push({ x: cx, y: this.groundY(x, z), z: cz, kind: rand() < 0.35 ? 'bamboo' : 'tree', seed: Math.floor(rand() * 1e9), far });
       }
     }
-    this.forest = buildForest(spots);
+    this.forest = forestBySide(spots);
     this.scene.add(this.forest);
   }
 
@@ -1510,12 +1536,27 @@ export class World {
       (g.obj.userData.pose as Poser | undefined)?.({ act: 'stand', time: t });
     }
 
+    // Giữa dòng hai sông (tọa độ cảnh): sông Thao chảy tới ngã ba thì đổ vào sông Đà.
+    const lane = RIVER_START - HALF + 1.5;
     for (const boat of this.boats) {
       boat.pos += boat.speed * dt;
-      if (boat.pos > 45) boat.pos = -45;
+      if (boat.axis === 'z' && boat.pos > lane) {
+        // Tới ngã ba: rẽ sang sông Đà, xuôi về phía đông.
+        boat.axis = 'x';
+        boat.pos = lane;
+        boat.obj.rotation.y = 0;
+        boat.obj.position.set(lane, boat.obj.position.y, lane);
+      }
+      if (boat.pos > 45) {
+        boat.pos = -45;
+        if (boat.home === 'z' && boat.axis === 'x') {
+          boat.axis = 'z';
+          boat.obj.rotation.y = -Math.PI / 2;
+          boat.obj.position.x = lane;
+        }
+      }
       if (boat.axis === 'z') boat.obj.position.z = boat.pos;
-      else boat.obj.position.x = Math.min(boat.pos, RIVER_START - HALF + 0.5);
-      if (boat.axis === 'x' && boat.pos > RIVER_START - HALF) boat.pos = -45;
+      else boat.obj.position.x = boat.pos;
       boat.obj.position.y = WATER_Y - 0.02 + Math.sin(t * 1.4 + boat.speed * 10) * 0.03;
       (boat.obj.userData.pose as Poser | undefined)?.({ act: 'walk', phase: t * 3 + boat.speed * 10 });
     }
@@ -1523,7 +1564,8 @@ export class World {
     this.ripples.begin();
     for (const r of this.rippleState) {
       r.pos += dt * 0.9;
-      const limit = r.axis === 'x' ? RIVER_START - HALF : 40;
+      // Gợn sóng sông Thao chỉ tới ngã ba; sông Đà chảy suốt.
+      const limit = r.axis === 'z' ? RIVER_START - HALF + 2.5 : 40;
       if (r.pos > limit) r.pos = -40;
       const x = r.axis === 'x' ? r.pos : r.lane;
       const z = r.axis === 'x' ? r.lane : r.pos;

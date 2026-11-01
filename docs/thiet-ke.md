@@ -65,7 +65,7 @@ Tài liệu này ghi lại các quyết định đã chốt với chủ dự án
 
 ## Bản đồ
 
-- Lưới **55×55 ô** (từ bản lưu phiên bản 11, xem mục Kế hoạch: kinh đô lớn). Hai nhánh sông rộng 3 ô chảy dọc hai cạnh (nam và đông, từ ô 52) rồi hợp lưu ở một góc, gợi ngã ba Bạch Hạc. Hai cạnh còn lại (bắc và tây) là rừng; hai ô ngoài cùng luôn là rừng, chỗ giặc trên bộ xuất phát.
+- Lưới **72×72 ô** (từ bản lưu phiên bản 12; phiên bản 11 là 55×55, xem mục Kế hoạch: kinh đô lớn và Kế hoạch: vùng đất bên kia sông). Hai nhánh sông rộng 3 ô (ô 52–54) bao kinh đô ở phía nam và phía đông, gợi ngã ba Bạch Hạc: sông Thao phía đông chảy từ bắc xuống, đổ vào sông Đà ở góc đông nam; sông Đà chảy suốt về phía đông. Bên kia sông là bờ đông sông Thao và bờ nam sông Đà (chưa khai phá). Hai cạnh bắc và tây là rừng; hai ô ngoài cùng luôn là rừng, chỗ giặc trên bộ xuất phát.
 - Điện Vua Hùng (móng 5×5) ở ô (37, 37). Lúc đầu chỉ xây được trong vùng **20×20** sát hai bờ sông. Mỗi lần Điện lên cấp thì phát rừng mở thêm đất: cạnh 20, 25, 25, 30, 35, 40, 40, 45 theo cấp 1–8 (tạm thời; PR 2 của kế hoạch kinh đô lớn đổi sang khoảnh tự chọn).
 - Công trình nhiều ô có móng rộng hơn mô hình, mô hình chừa viền cỏ chừng 12% móng, nên đặt sát nhau vẫn thoáng. Ruộng kín móng hơn (95%).
 - Ô đất có **độ cao theo bậc** ngay từ đầu game (xem mục Độ cao ô đất ở chương 2). Chương 1 chỉ để nhìn; từ chương 2 độ cao quyết định ô nào ngập lũ.
@@ -1195,15 +1195,15 @@ Chủ dự án thấy bản đồ kinh đô nhỏ, công trình sát nhau, bố 
    - **Camera**: mặc định thấy chừng 20 ô bề ngang, thu nhỏ được tới khi thấy trọn kinh đô 45×45; lần đầu mở game nhìn vào giữa vùng đất đã khai phá; kéo trong vùng đất ấy; bóng nắng theo chỗ đang nhìn, sương mù lùi xa khi thu nhỏ.
    - **Nâng bản lưu** (`xepLai.ts`): bản lưu còn ở kinh đô nhỏ (Điện ở ô 16, 16, độ cao 30×30) dựng lại theo mẫu của chương đang chơi (chương 4 dùng mẫu Cổ Loa), miễn phí, giữ cấp, người làm, hư hỏng; công trình không có chỗ trong mẫu thì vào chỗ trống gần Điện nhất. Lũy, đê đã có thì dựng đủ dải theo mẫu; thành Cổ Loa xếp từ vòng trong ra và dựng nốt cho đủ số vòng kinh đô cũ đã có. Đoạn thừa trả lại giá đã bỏ ra; đất đã đắp và nền đã đắp trả lại đất đá (tính theo địa hình cũ). Trận giữ kinh đô đang dở lùi về lúc trinh sát báo, trả lại của bị cướp. Vào game thì báo một lần kinh đô đã dựng lại và phần hoàn lại.
    - **Bảng mẫu kinh đô**: bản đồ thu nhỏ vẽ lên canvas một lần cho mỗi mẫu và cấp Điện.
-2. **PR 2: khoảnh tự chọn** (bản lưu v12): bảng Khoảnh rừng, phát rừng, người chơi mô phỏng phát rừng, chỉnh giá theo sổ kinh tế.
+2. **PR 2: khoảnh tự chọn** (bản lưu: phiên bản kế tiếp, vì v12 đã dành cho lưới qua sông): bảng Khoảnh rừng, phát rừng, người chơi mô phỏng phát rừng, chỉnh giá theo sổ kinh tế.
 3. **PR 3: trang trí ô trống, lối đất** (chỉ hình vẽ).
 4. **PR 4: cây, đá mọc trên ô trống** (bản lưu v13).
 
 Sau đó mới làm tiếp chương 4, PR 2–4.
 
-## Kế hoạch: vùng đất bên kia sông (đề xuất, chờ chủ dự án duyệt)
+## Kế hoạch: vùng đất bên kia sông (chủ dự án đã duyệt, đang làm)
 
-Chủ dự án yêu cầu: khám phá vùng đất mới bên kia sông để mở rộng lãnh thổ, có bắc cầu, điều quân. Mục này là bản đề xuất gồm phương án khuyên dùng, số nháp và các câu hỏi cần chốt (cuối mục). Chủ dự án duyệt rồi mới viết code. Như các kế hoạch trước, số cho chỉnh ±20% theo test; làm xong phần nào thì ghi số cuối cùng của phần ấy.
+Chủ dự án yêu cầu: khám phá vùng đất mới bên kia sông để mở rộng lãnh thổ, có bắc cầu, điều quân. Mục này ban đầu là bản đề xuất gồm phương án khuyên dùng, số nháp và chín câu hỏi cần chốt (cuối mục). **Chủ dự án đồng ý mọi phương án khuyên dùng**, nên các câu hỏi đã chốt theo phương án ấy. Như các kế hoạch trước, số cho chỉnh ±20% theo test; làm xong phần nào thì ghi số cuối cùng của phần ấy.
 
 **Hiện trạng** (khảo sát code):
 - Lưới 55×55. Sông Thao (phía đông) và sông Đà (phía nam) chiếm ba ô 52–54 sát mép lưới (`map.ts`). Bờ bên kia chỉ là một mảng đất phẳng vẽ ngoài lưới (`staticTerrain` trong `world.ts`): không có ô, không xây được, mùa lũ thì phủ một lớp nước.
@@ -1218,15 +1218,16 @@ Chủ dự án yêu cầu: khám phá vùng đất mới bên kia sông để m�
 
 **Bản đồ: bờ bên kia thành đất thật trong cùng lưới kinh đô**
 - Lưới nới từ 55×55 lên **72×72**. Sông giữ ô 52–54, nay nằm giữa lưới. Mọi tọa độ cũ giữ nguyên, nên công trình, mẫu kinh đô và test theo mốc không phải dời.
-- **Bờ nam sông Đà**: ô x 2–51, z 55–69. **Bờ đông sông Thao**: ô x 55–69, z 2–51. Mỗi bờ sâu 3 khoảnh, dài 10 khoảnh: 30 khoảnh mỗi bờ, cả hai bờ 60 khoảnh. Hai ô ngoài cùng (70–71) là rừng, chỗ giặc bên kia xuất phát. Góc đông nam (x và z đều từ 52) là ngã ba sông, toàn nước.
+- **Bờ nam sông Đà**: ô x 2–51, z 55–69. **Bờ đông sông Thao**: ô x 55–69, z 2–51. Mỗi bờ sâu 3 khoảnh, dài 10 khoảnh: 30 khoảnh mỗi bờ, cả hai bờ 60 khoảnh. Hai ô ngoài cùng (70–71) là rừng, chỗ giặc bên kia xuất phát.
+- **Ngã ba sông** (sửa khi làm PR 1): bản đề xuất để cả góc đông nam là nước, nhưng chụp thử thì thành một hồ nước trống trải chiếm nửa màn hình khi thu nhỏ. Nay theo địa thế Bạch Hạc: **sông Thao đổ vào sông Đà ở ngã ba, sông Đà chảy tiếp về đông**. Góc đông nam (x 52–71, z từ 55) liền với bờ nam, là rừng không khai phá, như dải rừng ngoài cùng.
 
   ```
                x 0–1   2 … 51     52–54    55 … 69    70–71
     z 0–1      rừng    rừng       sông     rừng       rừng
     z 2–51     rừng    KINH ĐÔ    Thao     BỜ ĐÔNG    rừng
-    z 52–54    ──────── sông Đà ─────────  ngã ba sông (nước)
-    z 55–69    rừng    BỜ NAM     ngã ba sông (nước)
-    z 70–71    rừng    rừng       nước
+    z 52–54    ─────────────────── sông Đà ──────────────────
+    z 55–69    rừng    BỜ NAM     rừng (góc đông nam)
+    z 70–71    rừng    rừng       rừng
   ```
 
 - Độ cao bờ bên kia theo cùng luật bên này, soi gương qua sông: ba ô sát sông là bãi bồi bậc 0, vào trong là đồng bằng có gò, sát rừng là đồi. Nhiễu đã tính bằng hàm băm theo tọa độ, nên độ cao bên này **giữ y như cũ** (test canh).
@@ -1315,13 +1316,13 @@ Chủ dự án yêu cầu: khám phá vùng đất mới bên kia sông để m�
 - Các đoạn mở chương ("Vua Hùng kén rể", "Cột đá thề", "Cầu hôn") thêm một câu báo bên kia sông có đồn giặc mới (thủy quái, yêu tinh, quân Triệu), như cách đã nhắc Điện cấp 6–8.
 - Không thêm nhiệm vụ Lạc hầu, để khỏi dời số thứ tự nhiệm vụ của người đang chơi.
 
-**Bản lưu** (phiên bản kế tiếp sau phần khoảnh tự chọn)
-- Mảng độ cao dàn lại từ 55×55 sang 72×72; ô bờ bên kia lấy độ cao tự nhiên. Các bước nâng bản lưu cũ (kể cả `xepLai.ts`) phải dùng cỡ lưới của phiên bản ấy, rồi bước mới mới dàn lại.
-- Thêm: khoảnh bên kia đã dò, đã mở; trinh sát đang đi (tới khoảnh nào, lúc nào tới); đồn đã dẹp; làng đã về theo, làng bị phá; số lính đóng ở mỗi đồn biên. Cầu và đồn biên là công trình như mọi công trình khác.
-- Trận giữ kinh đô đang dở thì lùi về lúc trinh sát báo, vì đường đi lưu theo chỉ số ô cũ.
+**Bản lưu** (PR 1 làm trước phần khoảnh tự chọn nên lấy **phiên bản 12**; khoảnh tự chọn, cây đá mọc và chương 4 lấy số kế tiếp khi làm)
+- Mảng độ cao dàn lại từ 55×55 sang 72×72; ô bờ bên kia lấy độ cao tự nhiên. Bước nâng mới nhận ra bản lưu 55×55 theo độ dài mảng độ cao, nên bản lưu kinh đô nhỏ vừa dựng lại ở bước 10 → 11 (đã theo lưới mới) được để nguyên.
+- Trận giữ kinh đô đang dở thì đổi đường đi của giặc (lưu theo chỉ số ô) sang chỉ số ô mới, đánh tiếp được.
+- Các PR sau thêm: khoảnh bên kia đã dò, đã mở; trinh sát đang đi (tới khoảnh nào, lúc nào tới); đồn đã dẹp; làng đã về theo, làng bị phá; số lính đóng ở mỗi đồn biên. Cầu và đồn biên là công trình như mọi công trình khác.
 
 **Test**
-- Lưới: sông ở giữa, góc ngã ba là nước; độ cao bên này y như trước khi nới lưới; khi chưa có cầu thì lũ, giặc, vòng thành, mẫu kinh đô ra y như cũ.
+- Lưới (`benKia.test.ts`): sông Thao tới ngã ba rồi đổ vào sông Đà, sông Đà chảy suốt; độ cao bên này y như trước khi nới lưới (so dấu vân tay); khi chưa có cầu thì lũ, giặc, vòng thành, mẫu kinh đô ra y như cũ (mọi test cũ giữ nguyên số).
 - Cầu: chỉ đặt vắt qua sông, đầu bên này trên đất đã mở; giặc và quân đi qua được, cầu hư thì không; lũ cuốn cầu tre ở bậc 2, cầu gỗ ở bậc 3; vòng thành dựa vào sông hở khi có cầu.
 - Trinh sát: giá, 40 giây, mở khoảnh đích và các khoảnh kề; một lúc một (hai từ Điện 6).
 - Đồn: chặn khoảnh kề tới khi dẹp; cần đúng chương; độ khó từng đồn theo chuẩn; thưởng một lần.
@@ -1329,9 +1330,14 @@ Chủ dự án yêu cầu: khám phá vùng đất mới bên kia sông để m�
 - Phòng thủ: một trong ba đợt giặc trên bộ tới từ bên kia khi bên kia có công trình; giặc bên kia nhắm làng rồi qua cầu; lính đóng ra trận từ đồn biên.
 - Nâng bản lưu cũ lên phiên bản mới.
 
-### Thứ tự làm (đề xuất)
+### Thứ tự làm
 
-1. **PR 1: lưới qua sông** (bản lưu mới): nới lưới lên 72×72, đất thật ở hai bờ bên kia (toàn rừng, chưa mở được), độ cao, camera, nâng bản lưu. Luật chơi chưa đổi gì. Đo khung hình.
+1. **PR 1: lưới qua sông** (đã làm, bản lưu v12): nới lưới lên 72×72, đất thật ở hai bờ bên kia (toàn rừng, chưa mở được), độ cao, nâng bản lưu. Luật chơi chưa đổi gì. Chi tiết đã làm:
+   - **Tọa độ cảnh** giữ gốc ở tâm lưới 55×55 cũ (`HALF` = 27,5 trong `world.ts`), nên camera, ánh nắng, bóng đổ và ảnh chụp thử không xê dịch. Camera vẫn kéo trong vùng đất bên này; sang PR 2 có cầu mới kéo được qua sông.
+   - **Nước** chỉ phủ hai dòng sông (mùa lũ dâng lên mà không tràn lên đất). Bờ bên kia chưa khai phá nên không ngập, như rừng bên này; mảng nước lũ phủ kín bờ bên kia trước đây bỏ đi.
+   - **Thủy quái bỏ chạy** lặn ở mép sông bên kia như trước (ô 55), không bơi băng qua bờ bên kia.
+   - **Thuyền** xuôi sông Thao tới ngã ba thì rẽ sang sông Đà; thuyền trên sông Đà chạy suốt.
+   - **Nặng máy**: rừng hai bờ bên kia thêm chừng 880 cây. Chia rừng thành nhiều mảng nhỏ để bỏ qua mảng ngoài khung nhìn thì số lệnh vẽ tăng từ 60 lên 263, nên thôi. Cuối cùng rừng bên kia thưa hơn bên này một chút và **không đổ bóng**, rừng ngoài lưới sau bờ bên kia chỉ một dải thưa 5 ô. Cảnh vừa vào game: 60 → 76 lệnh vẽ, 1,56 → 1,87 triệu tam giác (thêm 20%); cảnh Điện 8: 1059 → 1073 lệnh vẽ, 1,53 → 1,84 triệu tam giác.
 2. **PR 2: cầu, sương mù, trinh sát, điểm lạ**, đoạn truyện "Bên kia sông".
 3. **PR 3: đồn giặc và điều quân**: 12 đồn bốn bậc, hành quân qua cầu, bãi chiến bờ bên kia, cân bằng theo chuẩn.
 4. **PR 4: mở đất bên kia, đặc sản, bản làng, của chôn**; sổ kinh tế.

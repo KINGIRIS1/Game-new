@@ -1,7 +1,8 @@
 // Lưu game vào localStorage và xuất/nhập mã lưu (hay tệp lưu, cũng chứa đúng mã đó) để sao lưu hoặc chuyển máy.
 // Bản lưu cũ (phiên bản 1 của lát cắt 1, 2 của lát cắt 2a, 3 của lát cắt 2b, 4 của lát cắt 3a,
-// 5 của lát cắt 3b, 6 của chương 2, 7 của chương 3, 8 của cấp 6–7, 9 của Hội Tết, 10 của cấp 8) được nâng lên phiên bản
-// hiện tại khi nạp. Bản lưu còn ở kinh đô nhỏ (trước phiên bản 11) được dựng lại thành kinh đô lớn theo mẫu (`xepLai.ts`).
+// 5 của lát cắt 3b, 6 của chương 2, 7 của chương 3, 8 của cấp 6–7, 9 của Hội Tết, 10 của cấp 8, 11 của kinh đô lớn)
+// được nâng lên phiên bản hiện tại khi nạp. Bản lưu còn ở kinh đô nhỏ (trước phiên bản 11) được dựng lại thành kinh đô
+// lớn theo mẫu (`xepLai.ts`). Từ phiên bản 12 lưới nới qua sông (72×72).
 
 import { deflateSync, inflateSync } from 'fflate';
 import { BUILDINGS, GEAR_IDS, GIFT_IDS, MERCHANT_FIRST_MS, QUEST_INSERTED_V4, RESOURCE_IDS, ROWS, type BuildingType } from './defs';
@@ -58,6 +59,7 @@ function migrate(raw: unknown): unknown {
   if (isObj(v) && v.version === 8) v = migrate8to9(v);
   if (isObj(v) && v.version === 9) v = migrate9to10(v);
   if (isObj(v) && v.version === 10) v = migrate10to11(v);
+  if (isObj(v) && v.version === 11) v = migrate11to12(v);
   return v;
 }
 
@@ -194,6 +196,30 @@ function migrate10to11(s: Raw): Raw {
   s.version = 11;
   if (isLegacyLayout(s) && Array.isArray(s.heights) && isValidBuildings(s.buildings) && isObj(s.raid) && isObj(s.resources)) {
     relayLegacy(s as unknown as GameState);
+  }
+  return s;
+}
+
+/** Cạnh lưới của phiên bản 11 (kinh đô lớn, sông ở mép lưới). */
+const GRID_V11 = 55;
+
+/**
+ * Phiên bản 11 → 12 (bên kia sông): lưới nới từ 55×55 lên 72×72, sông nằm giữa lưới. Tọa độ ô giữ nguyên, chỉ
+ * dàn lại mảng độ cao (ô bờ bên kia lấy độ cao tự nhiên) và đường đi của giặc trong trận đang dở (chỉ số ô).
+ * Bản lưu vừa dựng lại từ kinh đô nhỏ ở bước trước đã theo lưới mới thì để nguyên.
+ */
+function migrate11to12(s: Raw): Raw {
+  s.version = 12;
+  const old = s.heights;
+  if (!Array.isArray(old) || old.length !== GRID_V11 * GRID_V11) return s;
+  const heights = baseHeights();
+  for (let z = 0; z < GRID_V11; z++) for (let x = 0; x < GRID_V11; x++) heights[z * GRID + x] = old[z * GRID_V11 + x];
+  s.heights = heights;
+  const regrid = (i: unknown) => (isNum(i) ? Math.floor(i / GRID_V11) * GRID + (i % GRID_V11) : i);
+  const raid = s.raid;
+  const battle = isObj(raid) && isObj(raid.battle) ? raid.battle : null;
+  if (battle && Array.isArray(battle.fighters)) {
+    for (const f of battle.fighters as Raw[]) if (isObj(f) && Array.isArray(f.path)) f.path = f.path.map(regrid);
   }
   return s;
 }
