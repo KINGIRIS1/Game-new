@@ -41,4 +41,20 @@ describe('mô hình vừa móng kinh đô lớn', () => {
       expect(k, type).toBeLessThan(w / (w - 1));
     }
   });
+
+  it('bến mọi cấp: cầu tàu và thuyền neo nằm gọn trong sông, chừa luồng thuyền qua lại sát bờ bên kia', async () => {
+    const { BUILDINGS } = await import('../game/defs');
+    const { FAR_BANK, RIVER_START } = await import('../game/map');
+    const { benBoats, buildingModel, footScale } = await import('./buildings');
+    const def = BUILDINGS.ben;
+    for (let level = 1; level <= def.maxLevel; level++) {
+      const g = buildingModel('ben', level);
+      g.scale.multiplyScalar(footScale('ben'));
+      for (const boat of benBoats(level, g.userData.spread as number)) g.add(boat);
+      g.updateMatrixWorld(true);
+      // Mô hình bến chìa ra sông theo +z, bờ sông ở mép móng.
+      const reach = new THREE.Box3().setFromObject(g).max.z - def.d / 2;
+      expect(reach, `bến cấp ${level}`).toBeLessThanOrEqual(FAR_BANK - RIVER_START - 1.5);
+    }
+  });
 });

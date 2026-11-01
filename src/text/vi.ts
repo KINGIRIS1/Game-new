@@ -156,6 +156,61 @@ export const vi = {
       icon: '🐘',
       desc: 'Nơi voi chiến ở, có quản tượng chăm. Luyện voi chiến ở đây. Cần doanh trại cấp 3.',
     },
+    duongDat: {
+      name: 'Đường đất nện',
+      icon: '🟤',
+      desc: 'Lối đất nện chặt cho dân đi lại. Chỉ để nhìn: giặc vẫn đi qua được, lũ không làm hư.',
+    },
+    duongSoi: {
+      name: 'Đường rải sỏi',
+      icon: '⚪',
+      desc: 'Lối rải sỏi cuội nhặt ven sông, mưa không lầy. Chỉ để nhìn.',
+    },
+    duongDa: {
+      name: 'Đường lát đá',
+      icon: '🔳',
+      desc: 'Lối lát đá phiến đẽo vuông, khít mạch. Chỉ để nhìn.',
+    },
+    duongGach: {
+      name: 'Đường lát gạch',
+      icon: '🧱',
+      desc: 'Lối lát gạch đất nung đỏ, nung cùng lò với ngói thành Cổ Loa. Chỉ để nhìn.',
+    },
+    cayDa: {
+      name: 'Cây đa',
+      icon: '🌳',
+      desc: 'Cây đa đầu làng tán rộng, rễ phụ buông xuống như rèm, gốc có am thờ nhỏ, chốn dân nghỉ chân. Chỉ để trang trí.',
+    },
+    gieng: {
+      name: 'Giếng nước',
+      icon: '🪣',
+      desc: 'Giếng làng thành xây đá ong, có gàu múc nước. Chỉ để trang trí.',
+    },
+    ao: {
+      name: 'Ao làng',
+      icon: '🪷',
+      desc: 'Ao làng thả sen, có cầu ao bằng gỗ cho dân giặt giũ. Chỉ để trang trí; lũ không làm hư.',
+    },
+    hoa: {
+      name: 'Khóm hoa',
+      icon: '🌺',
+      desc: 'Khóm hoa dâm bụt, hoa cúc, hoa mười giờ trồng ven lối đi. Chỉ để trang trí.',
+    },
+    co: {
+      name: 'Bãi cỏ',
+      icon: '🌱',
+      desc: 'Thảm cỏ xanh mướt điểm hoa dại. Chỉ để trang trí.',
+    },
+    cau: {
+      name: 'Cây cau',
+      icon: '🌴',
+      desc: 'Cây cau thân thẳng, buồng cau trĩu quả, trồng trước ngõ. Chỉ để trang trí.',
+    },
+    rom: {
+      name: 'Đống rơm',
+      icon: '🌾',
+      desc: 'Đống rơm vàng quấn quanh cây cột sau vụ gặt. Chỉ để trang trí.',
+    },
   } satisfies Record<BuildingType, { name: string; icon: string; desc: string }>,
 
   reasons: {
@@ -215,6 +270,7 @@ export const vi = {
     daTheoMau: 'Kinh đô đã xếp đúng theo mẫu này',
     canChuong4: 'Mở ở chương 4: Mỵ Châu, Trọng Thủy',
     khongGhepDuoc: 'Chỉ ghép được hai chòi canh cấp 8 còn nguyên',
+    khongPhaiTrangTri: 'Chỉ dọn được đường đi và đồ trang trí',
   } satisfies Record<FailReason, string>,
 
   quests: {
@@ -589,6 +645,16 @@ export const vi = {
     removeDike: 'Dỡ đê',
     placeHint: 'Chạm vào ô đất để chọn chỗ, rồi bấm Đặt',
     wallHint: 'Chạm vào từng ô đất để dựng lũy',
+    roadHint: 'Chạm vào từng ô để trải đường. Trải lên ô đường loại khác thì đổi vật liệu',
+    decorHint: 'Chạm vào từng ô đất để đặt',
+    clearHint: 'Chạm vào ô đường hay món trang trí để dọn đi',
+    cleared: (name: string) => `Đã dọn ${name}`,
+    buildGroups: { congTrinh: 'Công trình', duong: 'Đường đi', trangTri: 'Trang trí' },
+    roadCount: (have: number, max: number) => `Cả 4 loại đường: ${have}/${max} ô`,
+    clearDecor: 'Dọn trang trí',
+    clearDecorDesc: 'chạm ô để dọn đường, đồ trang trí',
+    removeDecor: 'Dọn đi',
+    decorOnly: 'Chỉ để nhìn: giặc không nhắm phá, đi qua được; lũ không làm hư.',
     placed: (name: string) => `Đã dựng ${name}`,
     upgraded: (name: string, n: number) => `${name} lên cấp ${n}`,
     landExpanded: 'Đã phát rừng, bờ cõi mở rộng!',
