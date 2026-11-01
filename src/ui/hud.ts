@@ -137,6 +137,7 @@ export type HudAction =
   | { kind: 'openTet' }
   | { kind: 'startMove'; id: number }
   | { kind: 'openMau' }
+  | { kind: 'rotateView' }
   | { kind: 'applyMau'; mau: MauId }
   | { kind: 'offerBanh'; banh: Banh }
   | { kind: 'confirmPlace' }
@@ -489,19 +490,21 @@ export class Hud {
 
   setMode(mode: HudMode, placeValid = true, hint?: string): void {
     this.mode = mode;
+    // Nút xoay cảnh ở mọi chế độ: lúc đặt, dời, dựng lũy là lúc cần xoay nhất.
+    const rotate = `<button class="icon-btn rotate" data-act="rotateView" aria-label="${vi.ui.rotate}" title="${vi.ui.rotate}">⟳</button>`;
     if (mode === 'view') {
       const camp = this.campaignReady ? `<button class="btn bronze" data-act="openCampaign">⚔️ ${vi.ui.campaign}</button>` : '';
-      this.bottombar.innerHTML = `<button class="btn" data-act="openBuild">🔨 ${vi.ui.build}</button>${camp}`;
+      this.bottombar.innerHTML = `<button class="btn" data-act="openBuild">🔨 ${vi.ui.build}</button>${camp}${rotate}`;
       this.hint.hidden = true;
     } else if (mode === 'place' || mode === 'move') {
       const label = mode === 'move' ? vi.ui.moveHere : vi.ui.place;
       this.bottombar.innerHTML = `
         <button class="btn ghost" data-act="cancelPlace">✕ ${vi.ui.cancel}</button>
-        <button class="btn" data-act="confirmPlace" ${placeValid ? '' : 'disabled'}>✓ ${label}</button>`;
+        <button class="btn" data-act="confirmPlace" ${placeValid ? '' : 'disabled'}>✓ ${label}</button>${rotate}`;
       this.hint.hidden = false;
       this.hint.textContent = mode === 'move' ? vi.ui.moveHint : vi.ui.placeHint;
     } else {
-      this.bottombar.innerHTML = `<button class="btn" data-act="cancelPlace">✓ ${vi.ui.done}</button>`;
+      this.bottombar.innerHTML = `<button class="btn" data-act="cancelPlace">✓ ${vi.ui.done}</button>${rotate}`;
       this.hint.hidden = false;
       this.hint.textContent = hint ?? vi.ui.wallHint;
     }

@@ -764,6 +764,7 @@ export const vi = {
     armsDone: 'Đã rèn đủ',
     armsToast: (name: string, n: number) => `Thợ rèn đã rèn binh khí bậc ${n} cho ${name.toLowerCase()}`,
     armsOnUnit: (n: number) => `Binh khí bậc ${n}`,
+    rotate: 'Xoay cảnh 90°',
     mauTitle: 'Mẫu kinh đô',
     mauCard: 'Xếp kinh đô theo mẫu',
     mauHint: 'Mỗi chương mở một mẫu. Áp mẫu thì mọi công trình được dời vào chỗ trong mẫu (mỗi cái mất 10% giá dựng), phần mẫu có mà mình chưa có được dựng thêm (trong giới hạn theo cấp Điện), đoạn lũy, đê, thành, bẫy thừa bị dỡ. Phải đủ tài nguyên mới áp được.',

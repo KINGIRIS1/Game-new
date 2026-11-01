@@ -305,6 +305,13 @@ function start(): void {
         return;
       }
 
+      case 'rotateView':
+        // Xoay góc nhìn kinh đô 90°; bãi chiến phó bản không xoay.
+        if (world.inField) return;
+        play('tap');
+        world.rotateView(1);
+        return;
+
       case 'openMau':
         if (mode.kind !== 'view') exitMode();
         select(null);
