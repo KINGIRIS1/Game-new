@@ -62,7 +62,11 @@ function migrate(raw: unknown): unknown {
   if (isObj(v) && v.version === 10) v = migrate10to11(v);
   if (isObj(v) && v.version === 11) v = migrate11to12(v);
   // Bản lưu 12 lưu từ bản dựng dở của phần bên kia sông (chưa có trạng thái bên kia): thêm vào.
-  if (isObj(v) && v.version === 12 && !isObj(v.benKia)) v.benKia = initialBenKia();
+  if (isObj(v) && v.version === 12) {
+    if (!isObj(v.benKia)) v.benKia = initialBenKia();
+    const k = v.benKia as Raw;
+    for (const key of ['villages', 'dug'] as const) if (!Array.isArray(k[key])) k[key] = [];
+  }
   return v;
 }
 
@@ -295,7 +299,7 @@ function isGameState(v: unknown): v is GameState {
   if (!isObj(res) || !RESOURCE_IDS.every((r) => isNum(res[r]))) return false;
   const k = v.benKia;
   const isPlots = (list: unknown) => Array.isArray(list) && list.every((id) => isNum(id) && id >= 0 && id < FAR_PLOTS);
-  if (!isObj(k) || !isPlots(k.known) || !isPlots(k.open) || !isPlots(k.cleared) || !Array.isArray(k.scouts)) return false;
+  if (!isObj(k) || !isPlots(k.known) || !isPlots(k.open) || !isPlots(k.cleared) || !isPlots(k.villages) || !isPlots(k.dug) || !Array.isArray(k.scouts)) return false;
   if (!k.scouts.every((t: unknown) => isObj(t) && isNum(t.plot) && isNum(t.from) && isNum(t.at))) return false;
   if (!isValidBuildings(v.buildings) || !buildingsInGrid(v.buildings as GameState['buildings'])) return false;
   const m = v.merchant;

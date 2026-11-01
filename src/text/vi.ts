@@ -235,6 +235,10 @@ export const vi = {
     xaQua: 'Xa quá, hãy dò dần từ khoảnh đã biết',
     trinhSatBan: 'Trinh sát đều đang đi, chờ họ về',
     donDaDep: 'Đồn này đã dẹp xong',
+    daMo: 'Khoảnh này đã khai phá',
+    donChan: 'Đồn giặc gần đây chặn, hãy dẹp đồn trước',
+    daVeTheo: 'Làng đã về theo',
+    chuaKhaiPha: 'Khai phá đất tới làng trước đã',
   } satisfies Record<FailReason, string>,
 
   quests: {
@@ -961,6 +965,20 @@ export const vi = {
       ren: { name: 'Làng thợ rèn', icon: '🔨' },
     } satisfies Record<Nghe, { name: string; icon: string }>,
     langDesc: 'Làng người Lạc Việt bên kia sông. Khai phá tới nơi rồi dâng lễ thì làng về theo.',
+    langJoined: 'Làng đã về theo, mỗi phút đem về:',
+    langWill: 'Về theo thì đem về',
+    langLike: (name: string) => `Bằng nửa một ${name.toLowerCase()} đủ người ở cấp bằng cấp Điện, không cần dân. Đền và phúc lành cộng thêm như thường.`,
+    langGift: 'Dâng lễ kết thân',
+    langToast: (name: string) => `${name} đã về theo`,
+    dacSanBonus: (pct: number) => `Công trình hợp nghề có móng nằm trọn trong khoảnh này làm ra thêm ${pct}%.`,
+    dacSanHere: (name: string, pct: number) => `${name}: thêm ${pct}%`,
+    cuaDug: 'Đã đào được của chôn.',
+    cuaToast: 'Đào được của chôn!',
+    openBtn: 'Khai phá',
+    opened: 'Đã khai phá đất bên kia sông',
+    cutOff: 'Cầu sang bờ này hư hay chưa có: dân không sang làm được, công trình không làm ra gì.',
+    dienStats: (known: number, open: number, cleared: number, villages: number) =>
+      `Bên kia sông: dò ${known}, khai phá ${open} khoảnh, dẹp ${cleared} đồn, ${villages} làng về theo`,
     dacSan: {
       phuSa: { name: 'Bãi phù sa', icon: '🌱', desc: 'Đất màu mỡ. Ruộng lúa, ruộng nếp dựng trọn trên bãi này làm ra nhiều hơn.' },
       nuiDa: { name: 'Núi đá', icon: '⛰️', desc: 'Đá lộ thiên. Bãi đất đá dựng trọn trên núi này làm ra nhiều hơn.' },

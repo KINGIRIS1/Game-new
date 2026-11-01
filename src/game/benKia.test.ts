@@ -8,6 +8,13 @@ import {
   FAR_PLOTS,
   CAMP1_ARMY,
   CAMPS,
+  canJoinVillage,
+  canOpenPlot,
+  dacSanOf,
+  joinVillage,
+  openPlot,
+  plotCost,
+  villageOutput,
   bridgeheadPlots,
   campTier,
   canScout,
@@ -26,8 +33,8 @@ import {
   type Poi,
 } from './benKia';
 import { wallRings } from './coLoa';
-import { BRIDGE_FLOOD, BUILDINGS, CH2_QUEST_START, CH3_QUEST_START, FIELD, SCOUT_COST, SCOUT_MS, UNITS, type UnitType } from './defs';
-import { canMove, canPlace, createInitialState, place, tick, type Building, type GameState } from './game';
+import { BRIDGE_FLOOD, BUILDINGS, CH2_QUEST_START, CH3_QUEST_START, DAC_SAN_BONUS, FIELD, SCOUT_COST, SCOUT_MS, UNITS, VILLAGE_GIFT, VILLAGE_SHARE, type UnitType } from './defs';
+import { canMove, canPlace, createInitialState, outputIn, place, productionPerMinute, tick, type Building, type GameState } from './game';
 import { planMau } from './mau';
 import { FAR_FOREST, GRID, RIVER_END, RIVER_START, areaStart, baseHeights, farBankOf, isRiver, isUnlocked, riverDistance } from './map';
 import { deserialize, serialize } from './save';
@@ -498,4 +505,129 @@ describe('đồn giặc và điều quân', () => {
       }
     });
   }
+});
+
+describe('khai phá đất bên kia, đặc sản, bản làng, của chôn', () => {
+  /** Kinh đô có cầu sang bờ nam ở khoảnh đối diện, mọi đồn đã dẹp, mọi khoảnh bờ nam đã dò. */
+  function explored(level = 6): { s: GameState; head: number } {
+    const s = rich(level);
+    const head = freeRiverPlot('nam', level);
+    bridgeTo(s, head);
+    s.benKia.cleared = poiPlots().filter((id) => poiAt(id)!.kind === 'don');
+    for (let id = 0; id < 30; id++) if (!s.benKia.known.includes(id)) s.benKia.known.push(id);
+    return { s, head };
+  }
+  /** Khai phá dần từ đầu cầu tới khoảnh `target` (theo hàng rồi theo cột). */
+  function openTo(s: GameState, target: number): void {
+    const from = plotOf(s.benKia.open[0]);
+    const to = plotOf(target);
+    let { i, j } = from;
+    const step = (ni: number, nj: number) => {
+      const id = plotId('nam', ni, nj);
+      if (!s.benKia.open.includes(id)) {
+        const r = openPlot(s, id);
+        if (!r.ok) throw new Error(`${ni},${nj}: ${r.reason}`);
+      }
+      i = ni;
+      j = nj;
+    };
+    while (j !== to.j) step(i, j + Math.sign(to.j - j));
+    while (i !== to.i) step(i + Math.sign(to.i - i), j);
+  }
+
+  it('khai phá khoảnh đã dò, sát đất đã mở, không bị đồn chặn; giá nhích dần', () => {
+    const s = rich(4);
+    const head = freeRiverPlot('nam', 4);
+    bridgeTo(s, head);
+    const next = plotId('nam', plotOf(head).i, 1);
+    expect(canOpenPlot(s, next)).toEqual({ ok: false, reason: 'khongTimThay' });
+    s.benKia.known.push(next, plotId('nam', plotOf(head).i, 2));
+    expect(canOpenPlot(s, plotId('nam', plotOf(head).i, 2))).toEqual({ ok: false, reason: 'xaQua' });
+    const cost = plotCost(s);
+    const before = { ...s.resources };
+    const r = openPlot(s, next);
+    expect(r.ok).toBe(true);
+    expect(before.gao - s.resources.gao).toBe(cost.gao);
+    expect(cost.datDa ?? 0).toBe(0);
+    expect(plotCost(s).gao!).toBeGreaterThanOrEqual(cost.gao!);
+    const many = { ...s, benKia: { ...s.benKia, open: [...s.benKia.open, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49] } };
+    expect(plotCost(many).gao!).toBeGreaterThan(cost.gao!);
+    // Khai phá rồi thì dựng được công trình trên khoảnh ấy.
+    const o = plotOrigin(next);
+    expect(canPlace(s, 'luy', o.x + 2, o.z + 2).ok).toBe(true);
+    // Đồn bậc 1 sát sông chặn khoảnh kề.
+    const camp = poiPlots().find((id) => plotOf(id).bank === 'nam' && campTier(id) === 1 && plotOf(id).i === plotOf(head).i - 1);
+    if (camp !== undefined) {
+      s.benKia.known.push(camp);
+      expect(canOpenPlot(s, camp)).toEqual({ ok: false, reason: 'donChan' });
+    }
+  });
+
+  it('khai phá khoảnh có của chôn thì đào được một lần', () => {
+    const { s } = explored(6);
+    const cua = poiPlots().find((id) => plotOf(id).bank === 'nam' && poiAt(id)!.kind === 'cua' && plotOf(id).i === 9)!;
+    s.resources = { gao: 5000, voOc: 5000, datDa: 0, sat: 0 };
+    openTo(s, cua);
+    expect(s.benKia.dug).toEqual([cua]);
+    expect(s.resources.datDa).toBeGreaterThan(0);
+    expect(s.resources.sat).toBeGreaterThan(0);
+  });
+
+  it('đặc sản: công trình hợp nghề có móng nằm trọn trong khoảnh làm ra thêm 30%', () => {
+    const { s } = explored(6);
+    const phuSa = poiPlots().find((id) => plotOf(id).bank === 'nam' && poiAt(id)!.kind === 'dacSan' && plotOf(id).i === 8)!;
+    openTo(s, phuSa);
+    const o = plotOrigin(phuSa);
+    const ruong = (place(s, 'ruong', o.x, o.z) as { value: Building }).value;
+    ruong.workers = 4;
+    expect(dacSanOf(ruong)).toBe('phuSa');
+    const base = BUILDINGS.ruong.production[0].gao!;
+    expect(outputIn(s, ruong).gao).toBeCloseTo(base * (1 + DAC_SAN_BONUS));
+    // Lò rèn trên bãi phù sa thì không được gì thêm.
+    expect(dacSanOf({ type: 'loRen', x: o.x, z: o.z })).toBe(null);
+    // Móng chìa ra ngoài khoảnh thì không tính.
+    expect(dacSanOf({ type: 'ruong', x: o.x + 2, z: o.z })).toBe(null);
+  });
+
+  it('cầu hư thì công trình bên kia không làm ra gì (dân không sang làm được)', () => {
+    const { s, head } = explored(6);
+    const o = plotOrigin(head);
+    const ruong = (place(s, 'ruong', o.x, o.z) as { value: Building }).value;
+    ruong.workers = 4;
+    expect(outputIn(s, ruong).gao).toBeGreaterThan(0);
+    s.buildings.find((b) => b.type === 'cauDa')!.damaged = true;
+    expect(outputIn(s, ruong).gao ?? 0).toBe(0);
+  });
+
+  it('bản làng: khai phá tới nơi, dâng lễ thì về theo, làm ra bằng nửa công trình cùng nghề ở cấp Điện, không cần dân', () => {
+    const { s } = explored(6);
+    const lang = poiPlots().find((id) => plotOf(id).bank === 'nam' && poiAt(id)!.kind === 'lang' && plotOf(id).i === 4)!;
+    expect(canJoinVillage(s, lang)).toEqual({ ok: false, reason: 'chuaKhaiPha' });
+    openTo(s, lang);
+    // Giữa làng là nhà làng, không dựng công trình được.
+    const o = plotOrigin(lang);
+    expect(canPlace(s, 'luy', o.x + 2, o.z + 2)).toEqual({ ok: false, reason: 'ngoaiVung' });
+    expect(canPlace(s, 'luy', o.x, o.z).ok).toBe(true);
+    const before = productionPerMinute(s).gao;
+    const gao = s.resources.gao;
+    expect(joinVillage(s, lang).ok).toBe(true);
+    expect(gao - s.resources.gao).toBe(VILLAGE_GIFT.gao);
+    expect(villageOutput(s, lang).gao).toBe(BUILDINGS.ruong.production[5].gao! * VILLAGE_SHARE);
+    expect(productionPerMinute(s).gao - before).toBeCloseTo(BUILDINGS.ruong.production[5].gao! * VILLAGE_SHARE);
+    expect(canJoinVillage(s, lang)).toEqual({ ok: false, reason: 'daVeTheo' });
+  });
+
+  it('bến dựng được sát sông ở bờ bên kia', () => {
+    const { s, head } = explored(6);
+    const o = plotOrigin(head);
+    expect(canPlace(s, 'ben', o.x, o.z).ok).toBe(true);
+    expect(canPlace(s, 'ben', o.x, o.z + 1)).toEqual({ ok: false, reason: 'phaiSatSong' });
+  });
+
+  it('lưu rồi nạp lại giữ làng đã về theo, của đã đào', () => {
+    const { s } = explored(6);
+    s.benKia.villages.push(14);
+    s.benKia.dug.push(29);
+    expect(deserialize(serialize(s))!.benKia).toEqual(s.benKia);
+  });
 });

@@ -1384,10 +1384,18 @@ Chủ dự án yêu cầu: khám phá vùng đất mới bên kia sông để m�
    - **Hành quân**: bấm Xuất quân thì đóng bảng, quân ta (tối đa chừng 18 người theo đúng tỉ lệ binh chủng) đi thành hàng từ sân doanh trại tới đầu cầu, qua cầu, tới đồn trong 3,2 giây, camera đi theo đầu hàng; rồi sang bãi chiến.
    - **Bãi chiến bờ bên kia** (`benKia` trong `battlefield.ts`): sông chảy ngang sau lưng quân ta có cầu phao tre, giặc đóng đồn rào cọc có lều và cờ, khóm lau sậy dọc hai bên bãi. Đồn bậc 3 (yêu tinh) dùng bãi núi Thất Diệu.
    - Kết quả: hộp kết quả như phó bản, tiêu đề "Dẹp xong đồn giặc", chỉ có nút về kinh đô. Ở kinh đô, đồn đã dẹp thành đất cháy sém có cờ đỏ của ta, đất quanh đồn hết bị chặn.
-4. **PR 4: mở đất bên kia, đặc sản, bản làng, của chôn**; sổ kinh tế.
+4. **PR 4: mở đất bên kia, đặc sản, bản làng, của chôn** (đã làm); sổ kinh tế. Số cuối cùng và những chỗ đổi so với đề xuất:
+   - **Khai phá** (`openPlot`): khoảnh đã dò, chưa mở, không bị đồn chặn, sát khoảnh đã mở cùng bờ, cầu sang bờ ấy còn nguyên, không đang có giặc hay lũ. Làm trước phần khoảnh tự chọn bên này (PR 2 kinh đô lớn chưa làm), nên bên kia có công thức giá riêng: **5% giá gạo, vỏ ốc nâng Điện lên cấp kế tiếp** (Điện 8 thì giá lên cấp 8), nhích thêm 10% mỗi khoảnh bên kia đã khai phá; không tốn đất đá, sắt. Ví dụ Điện 5, đã mở 9 khoảnh: 380 gạo, 380 vỏ ốc. Đề xuất ban đầu (1–1,5% như bên này) thì gần như cho không.
+   - **Đặc sản**: móng nằm trọn trong khoảnh đặc sản hợp nghề thì làm ra thêm 30% (bãi phù sa: ruộng lúa, ruộng nếp; núi đá: bãi đất đá; mỏ sắt: lò rèn). Đất đặc sản đã khai phá pha màu (nâu thẫm, xám, đỏ gỉ) thay cho dấu đặc sản, để biết dựng vào đâu. Bảng công trình ghi "Bãi phù sa: thêm 30%".
+   - **Bản làng**: dâng lễ kết thân 600 gạo, 400 vỏ ốc khi đã khai phá tới khoảnh làng. Làng về theo làm ra bằng **nửa** một công trình cùng nghề đủ người ở cấp bằng cấp Điện (đề xuất là trọn một công trình), không cần dân, có đền và phúc lành cộng thêm. Rà sổ kinh tế: cuối chương 2 kinh đô làm ra chừng 907 gạo, 607 vỏ ốc, 565 đất đá, 87 sắt mỗi phút; làng trọn một công trình thì làng rèn thêm tới 46% sắt, quá mạnh với sắt là thứ hiếm nhất. Nửa công trình thì bốn làng thêm chừng 8% gạo, 12% vỏ ốc, 13% đất đá, 22% sắt. Ba ô giữa khoảnh làng là nhà làng, không dựng công trình đè lên được; làng về theo thì cắm cờ đỏ, có dân làm việc theo nghề.
+   - **Của chôn**: khai phá khoảnh có của chôn (kể cả khoảnh đầu cầu) thì đào được một lần, thưởng 5% giá nâng Điện lên cấp kế tiếp, cả bốn loại tài nguyên.
+   - **Cầu hư** thì công trình bên kia không làm ra gì (dân bên này không sang làm được); bảng công trình báo đỏ. Làng vẫn làm ra.
+   - **Bến** dựng được sát sông ở bờ bên kia, cầu tàu quay ra sông, thuyền buôn neo đúng phía.
+   - Đất bên kia đã khai phá tính như đất bên này: lũ loang vào, đắp đất được, mẫu kinh đô không đụng tới.
+   - Người chơi mô phỏng không sang sông, nên nhịp lên Điện ở `balance.test.ts` và sổ kinh tế không đổi; phần thêm của làng và đặc sản ghi ở trên.
 5. **PR 5: phòng thủ hai bờ**: giặc từ bìa rừng bên kia, đồn biên và lính đóng đồn, người làm cần cầu.
 
-- PR 4 cần cách mở khoảnh (PR 2 của kế hoạch kinh đô lớn, chưa làm), nên làm PR ấy trước.
+- PR 4 làm trước PR 2 của kế hoạch kinh đô lớn (khoảnh tự chọn bên này), với cách mở khoảnh riêng cho bên kia (ở trên). Khi làm khoảnh tự chọn bên này thì xem có nên dùng chung công thức giá không.
 - Khuyên làm PR 1 trước PR 2–4 chương 4: thủy binh cập bờ và mẫu kinh đô chương 4 đều đụng bản đồ, làm sau khi nới lưới thì khỏi sửa hai lần. PR 5 làm cùng hay ngay sau PR 2 chương 4, vì cùng sửa chỗ giặc xuất phát.
 
 ### Câu hỏi cần chủ dự án chốt

@@ -105,6 +105,23 @@ export const SCOUT_COST: Cost = { gao: 60, voOc: 20 };
 export const SCOUT_MS = 40_000;
 /** Số trinh sát đi cùng lúc: một, từ Điện cấp này thì hai. */
 export const SCOUT_TWO_DIEN = 6;
+/**
+ * Khai phá một khoảnh bên kia sông: chừng này phần giá gạo, vỏ ốc nâng Điện lên cấp kế tiếp (Điện 8 thì giá lên cấp 8),
+ * nhích thêm `PLOT_STEP` mỗi khoảnh bên kia đã khai phá. Không tốn đất đá, sắt.
+ */
+export const PLOT_SHARE = 0.05;
+export const PLOT_STEP = 0.1;
+/** Công trình có móng nằm trọn trên đất đặc sản hợp nghề làm ra thêm chừng này. */
+export const DAC_SAN_BONUS = 0.3;
+/** Dâng lễ kết thân thì bản làng về theo. */
+export const VILLAGE_GIFT: Cost = { gao: 600, voOc: 400 };
+/**
+ * Bản làng đã về theo làm ra bằng chừng này phần một công trình cùng nghề, đủ người, ở cấp bằng cấp Điện (không cần
+ * dân). Một làng trọn một công trình thì làng rèn thêm tới 46% sắt ở Điện 6, nên lấy một nửa.
+ */
+export const VILLAGE_SHARE = 0.5;
+/** Đào được của chôn: chừng này phần giá nâng Điện lên cấp kế tiếp, cả bốn loại tài nguyên. */
+export const TREASURE_SHARE = 0.05;
 
 /** Dời công trình sang chỗ khác tốn chừng này phần giá dựng (làm tròn lên). Điện Vua Hùng không dời được. */
 export const MOVE_FRACTION = 0.1;

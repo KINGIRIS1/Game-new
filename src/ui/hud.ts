@@ -6,6 +6,7 @@ import { advJoined, advLook, advResting, inChapter3, ruaVangCame, wallRings } fr
 import {
   BRIDGE_FLOOD,
   BUILDINGS,
+  DAC_SAN_BONUS,
   FIELD,
   RESOURCE_IDS,
   RINGS_NEEDED,
@@ -46,7 +47,7 @@ import {
   raiseCostOf,
   netPerMinute,
   nextFoe,
-  outputOf,
+  outputIn,
   questDone,
   questProgress,
   repairAllCost,
@@ -82,7 +83,7 @@ import { sonHtml } from './son';
 import { blessingHtml, tetHtml } from './tet';
 import { mauHtml } from './mau';
 import { farHtml, type CampPick } from './benKia';
-import { campTier, isBridge } from '../game/benKia';
+import { campTier, cutOff, dacSanOf, isBridge } from '../game/benKia';
 import type { MauId } from '../game/mau';
 
 const SHOWN_RESOURCES: ResourceId[] = ['gao', 'voOc', 'datDa', 'sat'];
@@ -193,6 +194,8 @@ export type HudAction =
   | { kind: 'leaveField' }
   | { kind: 'fieldToMap' }
   | { kind: 'sendScout'; plot: number }
+  | { kind: 'openPlot'; plot: number }
+  | { kind: 'joinVillage'; plot: number }
   | { kind: 'marchCamp'; plot: number; army: Record<UnitType, number>; rows: Record<UnitType, Row> };
 
 export type HudMode = 'view' | 'place' | 'move' | 'paint' | 'merge';
@@ -352,6 +355,9 @@ export class Hud {
         return this.onAction({ kind: 'repair', id });
       case 'sendScout':
         return this.onAction({ kind: 'sendScout', plot: id });
+      case 'openPlot':
+      case 'joinVillage':
+        return this.onAction({ kind: act, plot: id });
       case 'campPrepare':
         this.campPick = { plot: id, pick: defaultPick(this.getState()) };
         return this.refreshSheet(this.getState());
@@ -796,11 +802,15 @@ export class Hud {
     }
     const prod = def.production[b.level - 1];
     if (RESOURCE_IDS.some((r) => (prod[r] ?? 0) > 0)) {
-      rows.push(`<div class="stat"><span>${vi.ui.production}</span><span>${prodHtml(outputOf(b))}</span></div>`);
+      rows.push(`<div class="stat"><span>${vi.ui.production}</span><span>${prodHtml(outputIn(state, b))}</span></div>`);
       if (b.level < def.maxLevel) {
         rows.push(`<div class="stat"><span>${vi.ui.nextLevel}</span><span>${prodHtml(def.production[b.level])}</span></div>`);
       }
     }
+    // Bên kia sông: đặc sản đất dưới móng, hay cầu hư (dân không sang làm được).
+    const dat = dacSanOf(b);
+    if (dat) rows.push(`<div class="stat"><span>${vi.benKia.dacSan[dat].icon}</span><span class="done">${vi.benKia.dacSanHere(vi.benKia.dacSan[dat].name, Math.round(DAC_SAN_BONUS * 100))}</span></div>`);
+    if (cutOff(state, b) && !isBridge(b.type)) rows.push(`<p class="why">🌉 ${vi.benKia.cutOff}</p>`);
     const slots = slotsOf(b);
     if (slots) {
       const free = freeDan(state);
@@ -838,6 +848,8 @@ export class Hud {
       rows.push(`<div class="stat"><span>${vi.ui.storage}</span><span>${fmt(storageCap(state))}</span></div>`);
       rows.push(`<div class="stat"><span>${vi.ui.dan}</span><span>${state.dan}/${housing(state)}</span></div>`);
       rows.push(`<div class="stat"><span>Đất kinh đô</span><span>${size}×${size}${next}</span></div>`);
+      const k = state.benKia;
+      if (k.known.length) rows.push(`<p class="muted">🌉 ${vi.benKia.dienStats(k.known.length, k.open.length, k.cleared.length, k.villages.length)}</p>`);
     }
 
     if (b.type === 'lauNo') rows.push(`<div class="stat"><span>${vi.ui.lauNoShots}</span><span></span></div>`);

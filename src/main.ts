@@ -9,7 +9,7 @@ import { forgeNoThan, inChapter3, wallRings } from './game/coLoa';
 import { offer } from './game/tet';
 import { applyMau } from './game/mau';
 import { mergeTowers } from './game/chuong4';
-import { CAMPS, campTier, canStartCamp, isBridge, plotAt, sendScout, startCamp } from './game/benKia';
+import { CAMPS, campTier, canStartCamp, isBridge, joinVillage, openPlot, plotAt, poiAt, sendScout, startCamp } from './game/benKia';
 import { feedGiong, forgeGear } from './game/giong';
 import { heroFor, inChapter2, offerGift } from './game/son';
 import { markStory, pendingStory } from './game/story';
@@ -330,6 +330,26 @@ function start(): void {
         hud.toast(vi.benKia.campMarching);
         world.startMarch(state, a.plot, a.army, MARCH_MS / 1000);
         marching = { plot: a.plot, army: a.army, rows: a.rows, at: performance.now() + MARCH_MS };
+        return;
+      }
+
+      case 'openPlot': {
+        const r = openPlot(state, a.plot);
+        if (!r.ok) return fail(r.reason);
+        play('place');
+        const dug = RESOURCE_IDS.some((k) => (r.value[k] ?? 0) > 0);
+        hud.toast(dug ? `${vi.benKia.cuaToast} ${rewardText(r.value)}` : vi.benKia.opened);
+        commit();
+        return;
+      }
+
+      case 'joinVillage': {
+        const r = joinVillage(state, a.plot);
+        if (!r.ok) return fail(r.reason);
+        play('upgrade');
+        const poi = poiAt(a.plot);
+        if (poi?.kind === 'lang') hud.toast(vi.benKia.langToast(vi.benKia.lang[poi.nghe].name));
+        commit();
         return;
       }
 

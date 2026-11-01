@@ -52,8 +52,21 @@ export function isUnlocked(x: number, z: number, dienLevel: number): boolean {
   return x >= lo && z >= lo && x < RIVER_START && z < RIVER_START;
 }
 
+/** Móng (x, z, w, d) có cạnh sát bờ sông: bên này sông, hay bên kia sông (bờ đông sông Thao, bờ nam sông Đà). */
 export function touchesRiver(x: number, z: number, w: number, d: number): boolean {
-  return x + w === RIVER_START || z + d === RIVER_START;
+  return x + w === RIVER_START || z + d === RIVER_START || x === RIVER_END || z === RIVER_END;
+}
+
+/**
+ * Bến ở (x, z) quay cầu tàu ra sông hướng nào (góc quay quanh trục đứng, mô hình vẽ cầu tàu hướng +z): bên này sông
+ * Đà là 0, bên này sông Thao là π/2; bờ nam bên kia là π, bờ đông bên kia là −π/2.
+ */
+export function benFacing(x: number, z: number, w: number, d: number): number {
+  if (x + w === RIVER_START) return Math.PI / 2;
+  if (z + d === RIVER_START) return 0;
+  if (z === RIVER_END) return Math.PI;
+  if (x === RIVER_END) return -Math.PI / 2;
+  return 0;
 }
 
 // ---------- Độ cao ô đất ----------

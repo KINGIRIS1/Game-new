@@ -59,7 +59,7 @@ import {
   type UnitType,
 } from './defs';
 import { DIEN_HOME, GRID, areaStart, baseHeights, inGrid, touchesRiver } from './map';
-import { bridgeFit, initialBenKia, isBridge, openBridgehead, openTester, updateBenKia, type BenKiaState } from './benKia';
+import { bridgeFit, farFactor, initialBenKia, isBridge, openBridgehead, openTester, updateBenKia, villagesOutput, type BenKiaState } from './benKia';
 
 export interface Building {
   id: number;
@@ -322,7 +322,11 @@ export type FailReason =
   | 'cauHu'
   | 'xaQua'
   | 'trinhSatBan'
-  | 'donDaDep';
+  | 'donDaDep'
+  | 'daMo'
+  | 'donChan'
+  | 'daVeTheo'
+  | 'chuaKhaiPha';
 
 export type Result<T = undefined> = { ok: true; value: T } | { ok: false; reason: FailReason };
 
@@ -524,11 +528,26 @@ export function troopBonus(state: GameState): number {
   return templeBonus(state) + troiBonus(state);
 }
 
-/** Sản lượng mỗi phút của cả kinh đô, chưa trừ gạo ăn và chưa tính thiếu gạo. Đền Phù Đổng và phúc lành Đất cộng thêm. */
+/**
+ * Sản lượng mỗi phút của công trình `b` trong kinh đô: theo người làm, cộng đặc sản đất bên kia sông, bằng 0 khi cầu
+ * sang bờ ấy hư (chưa cộng đền, phúc lành).
+ */
+export function outputIn(state: GameState, b: Building): Cost {
+  const out = outputOf(b);
+  const k = farFactor(state, b);
+  if (k === 1) return out;
+  for (const r of RESOURCE_IDS) if (out[r]) out[r] = out[r]! * k;
+  return out;
+}
+
+/**
+ * Sản lượng mỗi phút của cả kinh đô (cả bản làng bên kia sông đã về theo), chưa trừ gạo ăn và chưa tính thiếu gạo.
+ * Đền Phù Đổng và phúc lành Đất cộng thêm.
+ */
 export function productionPerMinute(state: GameState): Resources {
-  const total: Resources = { gao: 0, voOc: 0, datDa: 0, sat: 0 };
+  const total = villagesOutput(state);
   for (const b of state.buildings) {
-    const out = outputOf(b);
+    const out = outputIn(state, b);
     for (const r of RESOURCE_IDS) total[r] += out[r] ?? 0;
   }
   const bonus = 1 + templeBonus(state) + datBonus(state);

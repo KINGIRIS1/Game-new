@@ -1,13 +1,20 @@
 // Giao diện vùng đất bên kia sông: bảng một khoảnh (đã dò chưa, có gì, sai trinh sát).
 // Chỉ dựng chuỗi HTML; Hud lo việc gắn vào trang và bắt sự kiện.
 
-import { CAMPS, canScout, canStartCamp, hasCamp, plotBlocked, plotOf, poiAt } from '../game/benKia';
-import { SCOUT_COST, SCOUT_MS } from '../game/defs';
+import { CAMPS, NGHE_BUILDING, canJoinVillage, canOpenPlot, canScout, canStartCamp, hasCamp, plotCost, plotOf, poiAt, villageOutput } from '../game/benKia';
+import { DAC_SAN_BONUS, RESOURCE_IDS, SCOUT_COST, SCOUT_MS, VILLAGE_GIFT, type Cost } from '../game/defs';
 import type { GameState } from '../game/game';
 import { heroFor } from '../game/son';
 import { vi } from '../text/vi';
 import { armyPickerHtml, battleWarnings, enemiesHtml, heroNote, type ArmyPick } from './campaign';
-import { costHtml, esc } from './format';
+import { costHtml, esc, fmt } from './format';
+
+/** Sản lượng mỗi phút: biểu tượng và số. */
+function perMinute(cost: Cost): string {
+  return RESOURCE_IDS.filter((r) => (cost[r] ?? 0) > 0)
+    .map((r) => `${vi.resources[r].icon} ${fmt(cost[r]!)}${vi.ui.perMinute}`)
+    .join(' · ');
+}
 
 /** Đang chọn quân đánh đồn ở khoảnh nào (bảng đất bên kia chuyển sang bước chọn quân). */
 export interface CampPick {
@@ -62,13 +69,32 @@ export function farHtml(state: GameState, id: number, pick: CampPick | null = nu
       if (cleared) rows.push(`<p class="done">✓ ${t.donCleared}</p>`);
       else rows.push(`<p>${t.donDesc}</p><p class="muted">${t.donNeed[poi.tier]}</p>${campHtml(state, id, poi.tier)}`);
     } else if (poi.kind === 'lang') {
-      rows.push(`<h3>${t.lang[poi.nghe].icon} ${t.lang[poi.nghe].name}</h3><p>${t.langDesc}</p>`);
+      rows.push(`<h3>${t.lang[poi.nghe].icon} ${t.lang[poi.nghe].name}</h3>`);
+      const out = perMinute(villageOutput(state, id));
+      if (k.villages.includes(id)) {
+        rows.push(`<p class="done">✓ ${t.langJoined}</p><div class="stat"><span>${vi.ui.production}</span><span>${out}</span></div>`);
+      } else {
+        rows.push(`<p>${t.langDesc}</p><div class="stat"><span>${t.langWill}</span><span>${out}</span></div>
+          <p class="muted">${t.langLike(vi.buildings[NGHE_BUILDING[poi.nghe]].name)}</p>`);
+        if (open) {
+          const check = canJoinVillage(state, id);
+          rows.push(`<div class="actions">${check.ok ? '' : `<span class="why">${esc(vi.reasons[check.reason])}</span>`}
+            <button class="btn bronze" data-act="joinVillage" data-id="${id}" ${check.ok ? '' : 'disabled'}>🎁 ${t.langGift}</button></div>
+            ${costHtml(state, VILLAGE_GIFT)}`);
+        }
+      }
     } else if (poi.kind === 'dacSan') {
-      rows.push(`<h3>${t.dacSan[poi.dat].icon} ${t.dacSan[poi.dat].name}</h3><p>${t.dacSan[poi.dat].desc}</p>`);
+      rows.push(`<h3>${t.dacSan[poi.dat].icon} ${t.dacSan[poi.dat].name}</h3><p>${t.dacSan[poi.dat].desc}</p>
+        <p class="muted">${t.dacSanBonus(Math.round(DAC_SAN_BONUS * 100))}</p>`);
     } else {
-      rows.push(`<h3>${t.cua.icon} ${t.cua.name}</h3><p>${t.cua.desc}</p>`);
+      rows.push(`<h3>${t.cua.icon} ${t.cua.name}</h3><p>${k.dug.includes(id) ? t.cuaDug : t.cua.desc}</p>`);
     }
-    if (!open && plotBlocked(state, id) && poi?.kind !== 'don') rows.push(`<p class="why">${t.blocked}</p>`);
+    if (!open) {
+      const check = canOpenPlot(state, id);
+      rows.push(`<div class="actions">${check.ok ? '' : `<span class="why">${esc(vi.reasons[check.reason])}</span>`}
+        <button class="btn" data-act="openPlot" data-id="${id}" ${check.ok ? '' : 'disabled'}>🪓 ${t.openBtn}</button></div>
+        ${costHtml(state, plotCost(state))}`);
+    }
   } else {
     const going = k.scouts.find((s) => s.plot === id);
     if (going) rows.push(`<p>🧭 ${t.scouting(Math.max(0, Math.ceil((going.at - state.clock) / 1000)))}</p>`);
