@@ -89,26 +89,107 @@ export function quiver(s: Parts, color: number, arrows: { iron: boolean } | null
 
 /**
  * Cây nỏ: báng dọc theo +z, cánh cung ngang ở đầu báng, dây cung kéo về sau, lẫy hình vuốt rùa ở dưới báng.
- * `thanh`: nỏ thần đồng vàng có lẫy vuốt Rùa Vàng tự sáng và mũi tên vàng lắp sẵn; không thì nỏ gỗ thường.
- * Gốc ở giữa báng.
+ * `thanh`: Nỏ Thần Linh Quang Kim Quy (cánh cung kép bằng vàng ròng, đầu nỏ chạm Kim Quy, mặt trống đồng trên cổ nỏ,
+ * dây cung kéo căng chữ V, lẫy vuốt Rùa Vàng phát sáng và dàn 5 mũi tên thần đồng lửa Liên Châu xếp hình quạt);
+ * không thì nỏ gỗ thường. Gốc ở giữa báng.
  */
-export function crossbowParts(m: Pick<Parts, 'plain' | 'band' | 'glow'>, thanh: boolean, s = 1): void {
+export function crossbowParts(m: Pick<Parts, 'plain' | 'band' | 'glow'> & Partial<Pick<Parts, 'drum'>>, thanh: boolean, s = 1): void {
   const p = m.plain;
-  const wood = thanh ? C.goldDark : C.woodDark;
-  const arm = thanh ? C.gold : C.wood;
-  p.box(0.07 * s, 0.07 * s, 0.72 * s, wood, 0, 0, 0.05 * s);
-  // Hai cánh cung ngả về sau như chữ V.
-  for (const side of [-1, 1]) p.box(0.42 * s, 0.05 * s, 0.05 * s, arm, side * 0.2 * s, 0, 0.36 * s, [0, side * 0.35, 0]);
-  p.box(0.012 * s, 0.012 * s, 0.82 * s, C.cream, 0, 0.02 * s, 0.24 * s, [0, Math.PI / 2, 0]);
-  if (thanh) {
-    m.band.cyl(0.05 * s, 0.05 * s, 0.1 * s, C.bronze, 0, 0, 0.4 * s, [Math.PI / 2, 0, 0], 8);
-    // Lẫy nỏ là vuốt Rùa Vàng: ba móng cong tự sáng.
-    for (const dx of [-0.035, 0, 0.035]) m.glow.cone(0.022 * s, 0.14 * s, C.ember, dx * s, -0.09 * s, -0.04 * s, [Math.PI + 0.4, 0, 0], 5);
-    m.glow.box(0.02 * s, 0.02 * s, 0.5 * s, C.ember, 0, 0.06 * s, 0.3 * s);
-    m.glow.cone(0.035 * s, 0.1 * s, C.fire, 0, 0.06 * s, 0.58 * s, [Math.PI / 2, 0, 0], 5);
-  } else {
+  if (!thanh) {
+    p.box(0.07 * s, 0.07 * s, 0.72 * s, C.woodDark, 0, 0, 0.05 * s);
+    for (const side of [-1, 1]) p.box(0.42 * s, 0.05 * s, 0.05 * s, C.wood, side * 0.2 * s, 0, 0.36 * s, [0, side * 0.35, 0]);
+    p.box(0.012 * s, 0.012 * s, 0.82 * s, C.cream, 0, 0.02 * s, 0.24 * s, [0, Math.PI / 2, 0]);
     p.box(0.03 * s, 0.1 * s, 0.05 * s, C.bronzeDark, 0, -0.07 * s, -0.08 * s);
     p.box(0.018 * s, 0.018 * s, 0.4 * s, C.arrow, 0, 0.05 * s, 0.3 * s);
+    return;
+  }
+
+  // 1. Thân nỏ thần đồng đen & báng tì vai chạm vàng + bệ rãnh tên Liên Châu mở rộng
+  p.box(0.1 * s, 0.088 * s, 0.88 * s, C.bronzeDark, 0, -0.01 * s, 0.08 * s);
+  p.box(0.16 * s, 0.038 * s, 0.72 * s, C.goldDark, 0, 0.038 * s, 0.15 * s);
+  // Rãnh linh quang phát sáng dọc giữa mặt bệ nỏ
+  m.glow.box(0.028 * s, 0.014 * s, 0.66 * s, C.ember, 0, 0.056 * s, 0.16 * s);
+  // Báng tì vai phía sau bọc vàng và đai đồng chạm khắc
+  p.box(0.118 * s, 0.135 * s, 0.13 * s, C.gold, 0, -0.025 * s, -0.34 * s);
+  m.band.box(0.122 * s, 0.098 * s, 0.2 * s, C.bronze, 0, -0.005 * s, -0.11 * s);
+
+  // 2. Đầu nỏ chạm Đầu Rùa Vàng (Kim Quy) mắt lửa + Mặt trống đồng Đông Sơn trên cổ nỏ
+  m.band.cyl(0.094 * s, 0.086 * s, 0.15 * s, C.bronze, 0, 0.005 * s, 0.45 * s, [Math.PI / 2, 0, 0], 12);
+  if (m.drum) {
+    m.drum.cyl(0.092 * s, 0.092 * s, 0.028 * s, C.gold, 0, 0.064 * s, 0.43 * s, undefined, 16);
+  }
+  p.sphere(0.078 * s, C.gold, 0, 0.0 * s, 0.56 * s, [1.2, 0.88, 1.28], 10);
+  p.cone(0.056 * s, 0.13 * s, C.gold, 0, -0.005 * s, 0.66 * s, [Math.PI / 2 + 0.15, 0, 0], 6);
+  for (const side of [-1, 1]) {
+    m.glow.sphere(0.026 * s, C.fire, side * 0.062 * s, 0.022 * s, 0.58 * s, [0.85, 1, 1], 6);
+  }
+
+  // 3. Cánh cung kép 2 tầng (cánh chính vàng ròng uốn cong cánh chim Lạc + cánh phụ trợ lực bằng đồng)
+  for (const side of [-1, 1]) {
+    // Cánh cung chính đoạn trong (bản rộng, đúc vàng ròng)
+    p.box(0.34 * s, 0.072 * s, 0.078 * s, C.gold, side * 0.19 * s, 0.012 * s, 0.42 * s, [0, side * 0.28, 0]);
+    // Khớp đồng chạm hoa văn nối giữa cánh cung
+    m.band.box(0.072 * s, 0.088 * s, 0.092 * s, C.bronze, side * 0.34 * s, 0.012 * s, 0.36 * s, [0, side * 0.38, 0]);
+    // Cánh cung chính đoạn ngoài uốn cong (recurve)
+    p.box(0.28 * s, 0.056 * s, 0.062 * s, C.gold, side * 0.46 * s, 0.024 * s, 0.28 * s, [0, side * 0.56, side * 0.1]);
+    // Đầu mấu cánh cung hình sừng Kim Quy phát sáng hướng về trước
+    m.glow.cone(0.034 * s, 0.13 * s, C.fire, side * 0.56 * s, 0.042 * s, 0.22 * s, [Math.PI / 2 - 0.25, 0, -side * 0.35], 5);
+    // Cánh cung phụ trợ lực tầng dưới
+    p.box(0.38 * s, 0.045 * s, 0.052 * s, C.bronzeLight, side * 0.21 * s, -0.048 * s, 0.4 * s, [0, side * 0.35, -side * 0.08]);
+
+    // Dây cung thần kéo căng chuẩn hình chữ V từ đầu cánh cung (side*0.54, 0.22) về ổ lẫy vuốt Rùa Vàng (0, -0.14)
+    m.glow.box(0.018 * s, 0.018 * s, 0.65 * s, C.ember, side * 0.27 * s, 0.052 * s, 0.04 * s, [0, side * 0.983, 0]);
+  }
+
+  // 4. Hộp máy lẫy nỏ Cổ Loa & Vuốt Rùa Vàng tự sáng rực rỡ
+  p.box(0.074 * s, 0.095 * s, 0.15 * s, C.goldDark, 0, -0.055 * s, -0.06 * s);
+  // Vọng sơn (thước ngắm vàng đính ngọc lửa) phía trên ổ lẫy
+  p.box(0.055 * s, 0.068 * s, 0.038 * s, C.gold, 0, 0.082 * s, -0.15 * s);
+  m.glow.sphere(0.025 * s, C.fire, 0, 0.11 * s, -0.15 * s, [1, 1, 1], 6);
+  // Ba móng Vuốt Rùa Vàng cong sắc dưới bụng nỏ
+  for (const [dx, len, col] of [
+    [0, 0.2, C.fire],
+    [-0.048, 0.165, C.ember],
+    [0.048, 0.165, C.ember],
+  ] as const) {
+    m.glow.cone(0.03 * s, len * s, col, dx * s, -0.125 * s, -0.05 * s, [Math.PI + 0.45, 0, 0], 6);
+  }
+
+  // 5. Dàn 5 mũi tên thần đồng lửa (Liên Châu vạn tiễn) xếp hình quạt chuẩn đồng trục trên bệ nỏ
+  for (const i of [-2, -1, 0, 1, 2] as const) {
+    const yaw = i * 0.09;
+    const xStart = i * 0.016 * s;
+    const zStart = -0.1 * s;
+    const y0 = (i === 0 ? 0.082 : 0.072) * s;
+    const len = (i === 0 ? 0.66 : 0.6) * s;
+    const dMid = len * 0.5;
+    const dTip = len + 0.055 * s;
+    const sinY = Math.sin(yaw);
+    const cosY = Math.cos(yaw);
+    // Thân tên vàng ánh lửa
+    m.glow.box(
+      (i === 0 ? 0.025 : 0.019) * s,
+      (i === 0 ? 0.025 : 0.019) * s,
+      len,
+      C.ember,
+      xStart + sinY * dMid,
+      y0,
+      zStart + cosY * dMid,
+      [0, yaw, 0],
+    );
+    // Lông vũ đỏ ở đuôi tên
+    p.box(0.036 * s, 0.028 * s, 0.07 * s, C.red, xStart + sinY * 0.05 * s, y0 + 0.008 * s, zStart + cosY * 0.05 * s, [0, yaw, 0]);
+    // Mũi tên đồng 3 cạnh Cổ Loa bốc lửa đỏ cam (dùng [Math.PI / 2, 0, -yaw] để mũi nhọn xoay đúng hướng quạt)
+    m.glow.cone(
+      (i === 0 ? 0.048 : 0.036) * s,
+      (i === 0 ? 0.15 : 0.12) * s,
+      i === 0 ? C.fire : i % 2 ? C.ember : C.fire,
+      xStart + sinY * dTip,
+      y0,
+      zStart + cosY * dTip,
+      [Math.PI / 2, 0, -yaw],
+      4,
+    );
   }
 }
 

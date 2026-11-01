@@ -1078,8 +1078,25 @@ function drawAdv(h: HumanRig, crossbow: boolean): void {
   }
   featherCrown(h, [C.red, C.gold, C.cream, C.ember], { count: 9, len: 0.45, spread: 0.23 });
 
-  if (crossbow) h.local('hand', GRIP_R, null, (s) => crossbowParts(s, true, 1.05 / K_ADV));
-  else h.local('hand', GRIP_R, null, royalAxe);
+  if (crossbow) {
+    // Bao đựng tên thần Liên Châu đeo chéo sau lưng (bằng đồng mạ vàng, cắm 5 mũi tên đồng lửa)
+    h.local('chest', [0.13, 0.52, -0.17], [0.18, 0, -0.38], (s) => {
+      s.band.cyl(0.058, 0.048, 0.36, C.gold, 0, 0, 0, undefined, 8);
+      s.plain.cyl(0.064, 0.064, 0.036, C.bronzeDark, 0, 0.17, 0, undefined, 8);
+      s.plain.cyl(0.054, 0.054, 0.03, C.bronzeDark, 0, -0.17, 0, undefined, 8);
+      for (const [dx, dz] of [
+        [-0.024, -0.01],
+        [0.024, -0.01],
+        [0, 0.018],
+        [-0.014, 0.014],
+        [0.014, 0.014],
+      ] as const) {
+        s.glow.cyl(0.009, 0.009, 0.18, C.ember, dx, 0.24, dz, undefined, 4);
+        s.glow.cone(0.024, 0.075, C.fire, dx, 0.35, dz, undefined, 4);
+      }
+    });
+    h.local('hand', GRIP_R, null, (s) => crossbowParts(s, true, 1.15 / K_ADV));
+  } else h.local('hand', GRIP_R, null, royalAxe);
 }
 
 /**
