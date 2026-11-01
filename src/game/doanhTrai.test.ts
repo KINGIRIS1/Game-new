@@ -138,11 +138,11 @@ describe('phó bản mang tối đa 38 chỗ', () => {
     giongReady(s);
     barracks(s, 0);
     barracks(s, 1);
-    s.troops = { giao: 40, cung: 12, voi: 8 };
+    s.troops = { giao: 40, cung: 12, voi: 8, no: 0 };
     expect(fieldCap(s)).toBe(38);
     expect(canStartStage(s, 1).ok).toBe(true);
-    expect(startStage(s, 1, { giao: 15, cung: 12, voi: 4 }, DEFAULT_ROWS)).toEqual({ ok: false, reason: 'quaChoPhoBan' });
-    expect(startStage(s, 1, { giao: 14, cung: 12, voi: 4 }, DEFAULT_ROWS).ok).toBe(true);
+    expect(startStage(s, 1, { giao: 15, cung: 12, voi: 4, no: 0 }, DEFAULT_ROWS)).toEqual({ ok: false, reason: 'quaChoPhoBan' });
+    expect(startStage(s, 1, { giao: 14, cung: 12, voi: 4, no: 0 }, DEFAULT_ROWS).ok).toBe(true);
   });
 
   it('chương 1: hai doanh trại cấp 3 vẫn chỉ mang 20 chỗ như một doanh trại', () => {
@@ -151,24 +151,24 @@ describe('phó bản mang tối đa 38 chỗ', () => {
     barracks(s, 0, 3);
     barracks(s, 1, 3);
     expect(troopCap(s)).toBe(40);
-    s.troops = { giao: 40, cung: 0, voi: 0 };
-    expect(startStage(s, 1, { giao: 21, cung: 0, voi: 0 }, DEFAULT_ROWS)).toEqual({ ok: false, reason: 'quaChoPhoBan' });
-    expect(startStage(s, 1, { giao: 20, cung: 0, voi: 0 }, DEFAULT_ROWS).ok).toBe(true);
+    s.troops = { giao: 40, cung: 0, voi: 0, no: 0 };
+    expect(startStage(s, 1, { giao: 21, cung: 0, voi: 0, no: 0 }, DEFAULT_ROWS)).toEqual({ ok: false, reason: 'quaChoPhoBan' });
+    expect(startStage(s, 1, { giao: 20, cung: 0, voi: 0, no: 0 }, DEFAULT_ROWS).ok).toBe(true);
   });
 
   it('chọn bớt quân cho vừa chỗ, giữ tỉ lệ binh chủng', () => {
-    const pick = fitArmy({ giao: 40, cung: 20, voi: 10 }, 38);
+    const pick = fitArmy({ giao: 40, cung: 20, voi: 10, no: 0 }, 38);
     expect(armySpace(pick)).toBeLessThanOrEqual(38);
     expect(armySpace(pick)).toBeGreaterThanOrEqual(36);
     expect(pick.giao).toBeGreaterThan(pick.cung);
     expect(pick.voi).toBeGreaterThan(0);
-    expect(fitArmy({ giao: 5, cung: 2, voi: 1 }, 38)).toEqual({ giao: 5, cung: 2, voi: 1 });
+    expect(fitArmy({ giao: 5, cung: 2, voi: 1, no: 0 }, 38)).toEqual({ giao: 5, cung: 2, voi: 1, no: 0 });
   });
 });
 
 describe('bố trí giữ kinh đô', () => {
   /** Kinh đô Điện 5, hai doanh trại cấp 5 (Lạc tướng, Gióng), nhiều lính. */
-  function twoCamps(troops: Army = { giao: 40, cung: 20, voi: 6 }) {
+  function twoCamps(troops: Army = { giao: 40, cung: 20, voi: 6, no: 0 }) {
     const s = city();
     giongReady(s);
     const a = barracks(s, 0);
@@ -208,14 +208,14 @@ describe('bố trí giữ kinh đô', () => {
   it('một doanh trại, ít lính: mọi lính giữ kinh đô như trước', () => {
     const s = city(2);
     barracks(s, 0, 2);
-    s.troops = { giao: 6, cung: 0, voi: 0 };
-    expect(guardTotal(s)).toEqual({ giao: 6, cung: 0, voi: 0 });
+    s.troops = { giao: 6, cung: 0, voi: 0, no: 0 };
+    expect(guardTotal(s)).toEqual({ giao: 6, cung: 0, voi: 0, no: 0 });
     const battle = startBattle(s, 1, 'bac');
     expect(battle.fighters.filter((f) => f.side === 'ta').length).toBe(6);
   });
 
   it('tự bố trí: bấm − + giữ nguyên bố trí tự động rồi đổi; lính ra trận từ trại được bố trí', () => {
-    const { s, a, b } = twoCamps({ giao: 20, cung: 0, voi: 0 });
+    const { s, a, b } = twoCamps({ giao: 20, cung: 0, voi: 0, no: 0 });
     const before = guardPlan(s);
     expect(setGuard(s, a.id, 'giao', -1).ok).toBe(true);
     expect(guardManual(s)).toBe(true);
@@ -235,7 +235,7 @@ describe('bố trí giữ kinh đô', () => {
   });
 
   it('không bố trí quá sức chứa từng trại, quá số chỗ giữ kinh đô', () => {
-    const { s, a, b } = twoCamps({ giao: 60, cung: 0, voi: 0 });
+    const { s, a, b } = twoCamps({ giao: 60, cung: 0, voi: 0, no: 0 });
     a.level = 2;
     autoGuard(s);
     while (canGuard(s, b.id, 'giao', -1).ok) setGuard(s, b.id, 'giao', -1);
@@ -249,7 +249,7 @@ describe('bố trí giữ kinh đô', () => {
   });
 
   it('lính giữ kinh đô chết thì quân dự trữ bù vào; hết dự trữ thì trại dựng trước được lính trước', () => {
-    const { s, a, b } = twoCamps({ giao: 30, cung: 0, voi: 0 });
+    const { s, a, b } = twoCamps({ giao: 30, cung: 0, voi: 0, no: 0 });
     setGuard(s, a.id, 'giao', -1);
     const want = (id: number) => barracksList(s).find((x) => x.id === id)!.guard!.giao;
     const wantA = want(a.id);

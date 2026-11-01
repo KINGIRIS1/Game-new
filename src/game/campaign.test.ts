@@ -41,7 +41,7 @@ function playOut(s: GameState): void {
 
 describe('trận ngoài bãi', () => {
   it('dàn quân theo hàng: tiền quân đứng gần giặc nhất, hậu quân đứng sau', () => {
-    const b = startFieldBattle({ id: 1, stage: 2, enemies: { giaoAn: 3, cungAn: 2 }, hpScale: 1, army: { giao: 3, cung: 3, voi: 0 }, rows: DEFAULT_ROWS });
+    const b = startFieldBattle({ id: 1, stage: 2, enemies: { giaoAn: 3, cungAn: 2 }, hpScale: 1, army: { giao: 3, cung: 3, voi: 0, no: 0 }, rows: DEFAULT_ROWS });
     const avgZ = (side: 'ta' | 'giac', kind: string) => {
       const list = b.fighters.filter((f) => f.side === side && f.kind === kind);
       return list.reduce((s, f) => s + f.z, 0) / list.length;
@@ -58,28 +58,28 @@ describe('trận ngoài bãi', () => {
   });
 
   it('đổi hàng thì lính đứng chỗ khác', () => {
-    const rows = { giao: 'hau', cung: 'tien', voi: 'trung' } as const;
-    const b = startFieldBattle({ id: 1, stage: 1, enemies: { giaoAn: 1 }, hpScale: 1, army: { giao: 2, cung: 2, voi: 0 }, rows });
+    const rows = { giao: 'hau', cung: 'tien', voi: 'trung', no: 'hau' } as const;
+    const b = startFieldBattle({ id: 1, stage: 1, enemies: { giaoAn: 1 }, hpScale: 1, army: { giao: 2, cung: 2, voi: 0, no: 0 }, rows });
     const z = (kind: string) => b.fighters.find((f) => f.side === 'ta' && f.kind === kind)!.z;
     expect(z('cung')).toBeLessThan(z('giao'));
   });
 
   it('cùng một trận chạy lại ra cùng kết quả', () => {
-    const a = fieldFight(3, { giao: 8, cung: 5, voi: 1 });
-    const b = fieldFight(3, { giao: 8, cung: 5, voi: 1 });
+    const a = fieldFight(3, { giao: 8, cung: 5, voi: 1, no: 0 });
+    const b = fieldFight(3, { giao: 8, cung: 5, voi: 1, no: 0 });
     expect(a.t).toBe(b.t);
     expect(a.lost).toEqual(b.lost);
   });
 
   it('quân ta chết hết thì thua', () => {
-    const b = fieldFight(1, { giao: 2, cung: 0, voi: 0 });
+    const b = fieldFight(1, { giao: 2, cung: 0, voi: 0, no: 0 });
     expect(b.outcome).toBe('lose');
     expect(alliesLeft(b)).toBe(0);
     expect(b.lost.giao).toBe(2);
   });
 
   it('quá giờ chưa phá được giặc thì cũng thua', () => {
-    const b = startFieldBattle({ id: 1, stage: 1, enemies: { giaoAn: 1 }, hpScale: 100, army: { giao: 0, cung: 0, voi: 10 }, rows: DEFAULT_ROWS });
+    const b = startFieldBattle({ id: 1, stage: 1, enemies: { giaoAn: 1 }, hpScale: 100, army: { giao: 0, cung: 0, voi: 10, no: 0 }, rows: DEFAULT_ROWS });
     while (!stepField(b, 0.05));
     expect(b.outcome).toBe('lose');
     expect(b.t).toBeGreaterThan(FIELD.maxS);
@@ -88,12 +88,12 @@ describe('trận ngoài bãi', () => {
 
   it('Trống trận thúc quân đánh nhanh hơn, rồi phải chờ hồi mới bấm lại được', () => {
     const def = STAGES[0];
-    const b = startFieldBattle({ id: 1, stage: 1, enemies: def.enemies, hpScale: 1, army: { giao: 6, cung: 0, voi: 0 }, rows: DEFAULT_ROWS });
+    const b = startFieldBattle({ id: 1, stage: 1, enemies: def.enemies, hpScale: 1, army: { giao: 6, cung: 0, voi: 0, no: 0 }, rows: DEFAULT_ROWS });
     expect(useSkill(b, 'trongTran')).toBe(true);
     expect(useSkill(b, 'trongTran')).toBe(false);
     expect(b.events.some((e) => e.kind === 'rally')).toBe(true);
-    const plain = fieldFight(1, { giao: 6, cung: 0, voi: 0 });
-    const drummed = fieldFight(1, { giao: 6, cung: 0, voi: 0 }, true);
+    const plain = fieldFight(1, { giao: 6, cung: 0, voi: 0, no: 0 });
+    const drummed = fieldFight(1, { giao: 6, cung: 0, voi: 0, no: 0 }, true);
     expect(drummed.outcome).toBe('win');
     expect(drummed.t).toBeLessThan(plain.t);
   });
@@ -102,16 +102,16 @@ describe('trận ngoài bãi', () => {
 describe('cân bằng các màn', () => {
   // Quân mẫu vừa đủ chỗ trong doanh trại ở cấp Điện mà màn yêu cầu.
   const SAMPLE: Record<number, Army> = {
-    1: { giao: 6, cung: 0, voi: 0 },
-    2: { giao: 8, cung: 3, voi: 0 },
-    3: { giao: 8, cung: 5, voi: 1 },
-    4: { giao: 8, cung: 6, voi: 2 },
+    1: { giao: 6, cung: 0, voi: 0, no: 0 },
+    2: { giao: 8, cung: 3, voi: 0, no: 0 },
+    3: { giao: 8, cung: 5, voi: 1, no: 0 },
+    4: { giao: 8, cung: 6, voi: 2, no: 0 },
   };
   for (const [n, army] of Object.entries(SAMPLE)) {
     const stage = Number(n);
     it(`màn ${stage}: quân mẫu thắng, nửa quân mẫu thua`, () => {
       expect(fieldFight(stage, army).outcome).toBe('win');
-      const half = { giao: Math.floor(army.giao / 2), cung: Math.floor(army.cung / 2), voi: Math.floor(army.voi / 2) };
+      const half = { giao: Math.floor(army.giao / 2), cung: Math.floor(army.cung / 2), voi: Math.floor(army.voi / 2), no: 0 };
       expect(fieldFight(stage, half).outcome).toBe('lose');
     });
     it(`màn ${stage}: quân mẫu vừa doanh trại ở cấp Điện của màn`, () => {
@@ -150,17 +150,17 @@ describe('phó bản', () => {
   });
 
   it('phải chọn lính, và không mang quá số lính đang có', () => {
-    const s = withTroops(capital(), { giao: 3, cung: 0, voi: 0 });
-    expect(startStage(s, 1, { giao: 0, cung: 0, voi: 0 }, DEFAULT_ROWS)).toEqual({ ok: false, reason: 'chuaChonQuan' });
-    expect(startStage(s, 1, { giao: 4, cung: 0, voi: 0 }, DEFAULT_ROWS)).toEqual({ ok: false, reason: 'khongDuQuan' });
+    const s = withTroops(capital(), { giao: 3, cung: 0, voi: 0, no: 0 });
+    expect(startStage(s, 1, { giao: 0, cung: 0, voi: 0, no: 0 }, DEFAULT_ROWS)).toEqual({ ok: false, reason: 'chuaChonQuan' });
+    expect(startStage(s, 1, { giao: 4, cung: 0, voi: 0, no: 0 }, DEFAULT_ROWS)).toEqual({ ok: false, reason: 'khongDuQuan' });
   });
 
   it('thắng màn: được thưởng lần đầu, mở màn sau, đánh lại được ít hơn', () => {
-    const s = withTroops(capital(), { giao: 8, cung: 0, voi: 0 });
+    const s = withTroops(capital(), { giao: 8, cung: 0, voi: 0, no: 0 });
     s.resources = { gao: 100, voOc: 100, datDa: 0, sat: 0 };
     const first = stageReward(s, 1);
     expect(first).toEqual(STAGES[0].reward);
-    expect(startStage(s, 1, { giao: 8, cung: 0, voi: 0 }, DEFAULT_ROWS).ok).toBe(true);
+    expect(startStage(s, 1, { giao: 8, cung: 0, voi: 0, no: 0 }, DEFAULT_ROWS).ok).toBe(true);
     playOut(s);
     const result = s.campaign.lastResult!;
     expect(result.outcome).toBe('win');
@@ -179,9 +179,9 @@ describe('phó bản', () => {
   });
 
   it('thua màn: mất lính tử trận, không có thưởng, màn sau vẫn khóa', () => {
-    const s = withTroops(capital(), { giao: 2, cung: 0, voi: 0 });
+    const s = withTroops(capital(), { giao: 2, cung: 0, voi: 0, no: 0 });
     const before = { ...s.resources };
-    startStage(s, 1, { giao: 2, cung: 0, voi: 0 }, DEFAULT_ROWS);
+    startStage(s, 1, { giao: 2, cung: 0, voi: 0, no: 0 }, DEFAULT_ROWS);
     playOut(s);
     expect(s.campaign.lastResult?.outcome).toBe('lose');
     expect(s.troops.giao).toBe(0);
@@ -190,8 +190,8 @@ describe('phó bản', () => {
   });
 
   it('rút quân: lính còn sống trở về, không có thưởng', () => {
-    const s = withTroops(capital(), { giao: 6, cung: 0, voi: 0 });
-    startStage(s, 1, { giao: 4, cung: 0, voi: 0 }, DEFAULT_ROWS);
+    const s = withTroops(capital(), { giao: 6, cung: 0, voi: 0, no: 0 });
+    startStage(s, 1, { giao: 4, cung: 0, voi: 0, no: 0 }, DEFAULT_ROWS);
     tick(s, 1000);
     expect(retreat(s).ok).toBe(true);
     expect(s.campaign.lastResult?.outcome).toBe('retreat');
@@ -201,10 +201,10 @@ describe('phó bản', () => {
   });
 
   it('đang đánh phó bản: đồng hồ giặc đứng lại, không luyện quân, không gọi giặc', () => {
-    const s = withTroops(capital(), { giao: 6, cung: 0, voi: 0 });
+    const s = withTroops(capital(), { giao: 6, cung: 0, voi: 0, no: 0 });
     tick(s, 1000);
     const nextAt = s.raid.nextAt!;
-    startStage(s, 1, { giao: 6, cung: 0, voi: 0 }, DEFAULT_ROWS);
+    startStage(s, 1, { giao: 6, cung: 0, voi: 0, no: 0 }, DEFAULT_ROWS);
     tick(s, 3000);
     expect(s.raid.nextAt).toBe(nextAt + 3000);
     expect(canTrain(s, 'giao')).toEqual({ ok: false, reason: 'dangDanhPhoBan' });
@@ -212,7 +212,7 @@ describe('phó bản', () => {
   });
 
   it('đang có giặc báo thì chưa xuất quân được', () => {
-    const s = withTroops(capital(), { giao: 6, cung: 0, voi: 0 });
+    const s = withTroops(capital(), { giao: 6, cung: 0, voi: 0, no: 0 });
     callRaidNow(s);
     expect(canStartStage(s, 1)).toEqual({ ok: false, reason: 'dangCoGiac' });
   });

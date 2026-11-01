@@ -23,7 +23,9 @@ type Speaker =
   | 'ruaVang'
   | 'caoLo'
   | 'trieuDa'
-  | 'langLieu';
+  | 'langLieu'
+  | 'myChau'
+  | 'trongThuy';
 
 export const vi = {
   gameTitle: 'Thời đại Văn Lang',
@@ -211,6 +213,11 @@ export const vi = {
       icon: '🌾',
       desc: 'Đống rơm vàng quấn quanh cây cột sau vụ gặt. Chỉ để trang trí.',
     },
+    traiNo: {
+      name: 'Trại nỏ',
+      icon: '🎯',
+      desc: 'Nơi lính nỏ ở và tập bắn, Cao Lỗ dạy dân luyện nỏ. Luyện lính nỏ ở đây. Có từ chương 4, cần doanh trại cấp 5.',
+    },
   } satisfies Record<BuildingType, { name: string; icon: string; desc: string }>,
 
   reasons: {
@@ -232,6 +239,9 @@ export const vi = {
     canDoanhTrai: 'Cần nâng doanh trại',
     canNoiO: 'Chưa dựng nơi ở của binh chủng này',
     noiOHu: 'Nơi ở của binh chủng này đang hư, sửa rồi mới luyện được',
+    canThanh: 'Phải chạm vào một đoạn thành Cổ Loa còn nguyên',
+    daCoUNo: 'Đoạn thành này đã có ụ nỏ',
+    khongCoUNo: 'Đoạn thành này không có ụ nỏ',
     datGioiHanQuan: 'Doanh trại đã đầy, hãy nâng cấp',
     thieuGao: 'Đang thiếu gạo, chưa luyện quân được',
     dangCoGiac: 'Đang có giặc!',
@@ -325,13 +335,17 @@ export const vi = {
     denCoLoa: 'Triệu Đà đã thua chạy. Xin dựng Đền Cổ Loa, ghi công thần Kim Quy và nỏ thần giữ nước.',
     dien8: 'Âu Lạc đã yên, kinh đô còn lớn được nữa. Xin bệ hạ nâng Điện lên cấp 8: được phát thêm rừng, kho rộng hơn, ruộng, bến, lò rèn, chòi canh đều lên được cấp 8.',
     lauNo: 'Cao Lỗ xin ghép hai chòi canh cấp 8 thành một lầu nỏ, mỗi phát bắn ba giặc. Chạm vào một chòi canh cấp 8 để ghép.',
-    allDone: 'Kinh đô đã có Điện cấp 8 và lầu nỏ. Thủy Tinh vẫn dâng nước mỗi mùa, quân Triệu vẫn dòm ngó. Xin giữ thành, giữ đê cho vững.',
+    uNo: 'Thuyền lạ cướp bóc trên sông. Xin dựng 4 ụ nỏ trên thành Cổ Loa: chọn thẻ Ụ nỏ trong bảng Xây dựng rồi chạm vào đoạn thành.',
+    luyenNo: 'Cao Lỗ xin dựng trại nỏ cho dân luyện nỏ, rồi luyện 4 lính nỏ. Lính nỏ bắn chậm mà đau, mạnh gấp đôi khi gặp quân nặng và tướng giặc.',
+    chongThuyBinh: 'Bọn cướp sông đi thuyền đen buồm đỏ, cập bờ cướp phá. Xin đánh lui một đợt thủy binh ở kinh đô.',
+    allDone: 'Kinh đô đã có lầu nỏ, ụ nỏ và lính nỏ. Thuyền lạ vẫn rình trên sông, Thủy Tinh vẫn dâng nước mỗi mùa. Xin giữ thành, giữ đê cho vững.',
   } as Record<string, string>,
 
   units: {
     giao: { name: 'Giáo binh', icon: '🗡️', desc: 'Lính giáo đồng, chắc chắn. Khắc chế chiến xa của giặc.' },
     cung: { name: 'Cung thủ', icon: '🏹', desc: 'Bắn từ xa. Khắc chế lính giáo Ân.' },
     voi: { name: 'Voi chiến', icon: '🐘', desc: 'Rất khỏe, chiếm 3 chỗ. Khắc chế cung thủ Ân.' },
+    no: { name: 'Lính nỏ', icon: '🎯', desc: 'Nỏ lớn bắn xa, chậm mà đau, chiếm 2 chỗ. Mạnh gấp đôi khi bắn quân nặng và tướng giặc.' },
   } satisfies Record<UnitType, { name: string; icon: string; desc: string }>,
 
   enemies: {
@@ -353,6 +367,9 @@ export const vi = {
     noTrieu: 'nỏ thủ Triệu',
     kyBinh: 'kỵ binh Triệu',
     trieuDa: 'Triệu Đà',
+    linhThuy: 'lính thủy Triệu',
+    cungThuyen: 'cung thuyền Triệu',
+    linhRiu: 'lính rìu giáp mây',
   } satisfies Record<EnemyType, string>,
 
   enemyIcons: {
@@ -374,6 +391,9 @@ export const vi = {
     noTrieu: '🎯',
     kyBinh: '🐎',
     trieuDa: '🚩',
+    linhThuy: '🌊',
+    cungThuyen: '🏹',
+    linhRiu: '🪓',
   } satisfies Record<EnemyType, string>,
 
   /** Tên và lời dẫn từng màn phó bản, theo thứ tự trong STAGES. */
@@ -463,6 +483,8 @@ export const vi = {
     caoLo: { name: 'Cao Lỗ', icon: '🔨' },
     trieuDa: { name: 'Triệu Đà', icon: '🚩' },
     langLieu: { name: 'Lang Liêu', icon: '🌾' },
+    myChau: { name: 'Mỵ Châu', icon: '👸' },
+    trongThuy: { name: 'Trọng Thủy', icon: '🧑' },
   } satisfies Record<Speaker, { name: string; icon: string }>,
 
   /**
@@ -626,6 +648,19 @@ export const vi = {
         { who: 'anDuong', text: 'Ta lập đền thờ, ghi công thần Kim Quy và tướng Cao Lỗ, cho muôn đời biết nỏ thần giữ nước.' },
         { who: 'lacHau', text: 'Tâu bệ hạ, xin dựng Đền Cổ Loa: đền còn nguyên thì lính nỏ trên chòi canh bắn mạnh hơn, xa hơn. Quân Triệu và mùa lũ vẫn tới, xin giữ thành, giữ đê.' },
         { who: 'ke', text: 'Còn chuyện chiếc nỏ thần, nàng Mỵ Châu và chàng Trọng Thủy, lại là chuyện về sau.' },
+      ],
+    },
+    cauHon: {
+      title: 'Cầu hôn',
+      lines: [
+        { who: 'ke', text: 'Triệu Đà thua trận, biết không đánh được Âu Lạc bằng sức, bèn sai sứ sang xin cưới Mỵ Châu, con gái An Dương Vương, cho con trai là Trọng Thủy.' },
+        { who: 'anDuong', text: 'Hai nước kết thông gia thì biên ải được yên. Ta gả Mỵ Châu cho Trọng Thủy.' },
+        { who: 'trongThuy', text: 'Con xin theo tục ở rể, ở lại thành Cổ Loa phụng dưỡng phụ vương.' },
+        { who: 'myChau', text: 'Từ nay thiếp có người cùng ngắm sông Hoàng, cùng dạo quanh ba vòng thành.' },
+        { who: 'ke', text: 'Không bao lâu sau, trên sông bắt đầu có những thuyền đen buồm đỏ lạ mặt, cập bờ cướp bóc rồi lại đi.' },
+        { who: 'caoLo', text: 'Tâu bệ hạ, xin cho dân luyện nỏ, dựng trại nỏ, và đắp ụ nỏ trên mặt thành Cổ Loa để giữ bờ sông.' },
+        { who: 'lacHau', text: 'Tâu bệ hạ, nay luyện được lính nỏ ở trại nỏ, dựng được ụ nỏ trên thành (thẻ Ụ nỏ trong bảng Xây dựng). Điện cũng lên được cấp 8.' },
+        { who: 'lacHau', text: 'Thủy binh đi thuyền và mùa lũ sẽ thay phiên nhau tới, đều từ phía sông. Xin giữ bờ sông cho vững.' },
       ],
     },
   } satisfies Record<StoryId, { title: string; lines: { who: Speaker; text: string }[] }>,
@@ -910,6 +945,21 @@ export const vi = {
     trieuLostTitle: 'Quân Triệu đã cướp phá kinh đô',
     nextYeu: (min: number) => (min <= 0 ? 'Đêm yêu tinh sắp tới' : `Đêm yêu tinh tới sau khoảng ${min} phút chơi`),
     nextTrieu: (min: number) => (min <= 0 ? 'Quân Triệu sắp tới' : `Quân Triệu tới sau khoảng ${min} phút chơi`),
+    thuyBinhWarning: (side: string, s: number) => `Trinh sát báo: thuyền đen buồm đỏ kéo tới trên sông ${side}! Còn ${s} giây`,
+    thuyBinhBattle: (left: number, ours: number) => `Thủy binh Triệu cập bờ đánh kinh đô! Còn ${left} giặc, quân ta ${ours}`,
+    thuyBinhWonTitle: 'Đánh lui thủy binh!',
+    thuyBinhLostTitle: 'Thủy binh đã cướp phá kinh đô',
+    nextThuyBinh: (min: number) => (min <= 0 ? 'Thủy binh sắp tới' : `Thủy binh tới sau khoảng ${min} phút chơi`),
+    uNo: 'Ụ nỏ',
+    uNoCard: (have: number, max: number) => `trên thành · ${have}/${max}`,
+    uNoDesc: 'Ụ đất trên mặt thành, một lính nỏ quỳ bắn giặc trong tầm. Thành bị phá thì ụ hư theo.',
+    uNoHint: (have: number, max: number) => `Chạm vào đoạn thành Cổ Loa để dựng ụ nỏ (${have}/${max})`,
+    uNoOn: 'Đang bắn giặc',
+    uNoHu: 'Hư, cần sửa',
+    uNoBroken: 'Ụ nỏ đang hư: sửa thành xong thì sửa ụ',
+    repairUNo: 'Sửa ụ nỏ',
+    uNoPlaced: 'Đã dựng ụ nỏ',
+    layTrao: 'Lẫy đã bị tráo',
     calmBeforeNoThan: 'Yêu tinh đã tan. Có nỏ thần thì quân Triệu Đà sẽ kéo sang; trước đó chỉ có mùa lũ.',
     campaignTitle3: 'Giữ thành Cổ Loa',
     campaignHint3: 'Ba màn đầu lên núi Thất Diệu diệt yêu tinh. Từ màn 20, An Dương Vương cầm nỏ thần cùng ra trận đánh quân Triệu Đà.',

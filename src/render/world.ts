@@ -27,6 +27,8 @@ import { makeAnDuong, makeGiong, makeSonTinh } from './heroes';
 import { addSunLights, type SunLights } from './lights';
 import {
   buildCitadel,
+  makeUNo,
+  CITADEL_TOP,
   buildDikes,
   buildForest,
   buildStakes,
@@ -660,7 +662,7 @@ export class World {
     }
 
     const citadel = state.buildings.filter((b) => b.type === 'thanh');
-    const ckey = citadel.map((b) => `${b.id}:${b.x}:${b.z}:${b.damaged ? 1 : 0}:${this.heights[b.z * GRID + b.x]}`).join(',');
+    const ckey = citadel.map((b) => `${b.id}:${b.x}:${b.z}:${b.damaged ? 1 : 0}:${b.uNo ?? ''}:${this.heights[b.z * GRID + b.x]}`).join(',');
     if (ckey !== this.citadelKey) {
       this.citadelKey = ckey;
       if (this.citadel) this.scene.remove(this.citadel);
@@ -672,6 +674,16 @@ export class World {
         damaged: !!c.damaged,
       }));
       this.citadel = buildCitadel(spots);
+      // Ụ nỏ trên mặt các đoạn thành còn nguyên; ụ hư thì chỉ còn ụ đất sạt, không người.
+      citadel.forEach((c, i) => {
+        if (!c.uNo || c.damaged) return;
+        const u = makeUNo(c.uNo === 'hu');
+        u.position.set(spots[i].x, spots[i].y + CITADEL_TOP, spots[i].z);
+        // Lính nỏ quay ra ngoài thành, về phía xa Điện.
+        const dien = state.buildings.find((b) => b.type === 'dien');
+        if (dien) u.rotation.y = Math.atan2(c.x - dien.x - 2, c.z - dien.z - 2);
+        this.citadel!.add(u);
+      });
       this.scene.add(this.citadel);
     }
     this.syncDecor(state);

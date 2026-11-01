@@ -139,14 +139,14 @@ describe('mẫu kinh đô', () => {
     const first = place(s, 'doanhTrai', edge(7, 1), edge(7, 1));
     if (!first.ok) throw new Error(first.reason);
     first.value.tuong = 'anDuong';
-    first.value.guard = { giao: 3, cung: 0, voi: 0 };
+    first.value.guard = { giao: 3, cung: 0, voi: 0, no: 0 };
     for (const id of ['coLoa', 'deBao', 'phongChau'] as const) {
       expect(applyMau(s, id).ok, id).toBe(true);
       const camps = s.buildings.filter((b) => b.type === 'doanhTrai');
       expect(camps.length).toBe(4);
       const slots = mauSlots(id, 7);
       for (const b of camps) expect(slots.some((x) => x.type === 'doanhTrai' && x.x === b.x && x.z === b.z), `${id}: ${b.x},${b.z}`).toBe(true);
-      expect(first.value).toMatchObject({ tuong: 'anDuong', guard: { giao: 3, cung: 0, voi: 0 } });
+      expect(first.value).toMatchObject({ tuong: 'anDuong', guard: { giao: 3, cung: 0, voi: 0, no: 0 } });
     }
   });
 

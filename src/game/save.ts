@@ -1,7 +1,7 @@
 // Lưu game vào localStorage và xuất/nhập mã lưu (hay tệp lưu, cũng chứa đúng mã đó) để sao lưu hoặc chuyển máy.
 // Bản lưu cũ (phiên bản 1 của lát cắt 1, 2 của lát cắt 2a, 3 của lát cắt 2b, 4 của lát cắt 3a,
 // 5 của lát cắt 3b, 6 của chương 2, 7 của chương 3, 8 của cấp 6–7, 9 của Hội Tết, 10 của cấp 8) được nâng lên phiên bản
-// hiện tại khi nạp. Bản lưu còn ở kinh đô nhỏ (trước phiên bản 11) được dựng lại thành kinh đô lớn theo mẫu (`xepLai.ts`).
+// hiện tại khi nạp. Phiên bản 13 là chương 4 phần 2 (lính nỏ, ụ nỏ, thủy binh Triệu). Bản lưu còn ở kinh đô nhỏ (trước phiên bản 11) được dựng lại thành kinh đô lớn theo mẫu (`xepLai.ts`).
 
 import { deflateSync, inflateSync } from 'fflate';
 import {
@@ -18,7 +18,8 @@ import {
   type TuongId,
 } from './defs';
 import { initialAdv } from './coLoa';
-import { SAVE_VERSION, autoAssign, housing, initialCampaign, initialGiong, initialRaid, type GameState } from './game';
+import { inChapter4 } from './chuong4';
+import { SAVE_VERSION, autoAssign, housing, initialCampaign, initialGiong, initialRaid, scheduleThuyBinh, type GameState } from './game';
 import { GRID, baseHeights, isRiver } from './map';
 import { initialSon } from './son';
 import { initialTet } from './tet';
@@ -72,6 +73,7 @@ function migrate(raw: unknown): unknown {
   if (isObj(v) && v.version === 9) v = migrate9to10(v);
   if (isObj(v) && v.version === 10) v = migrate10to11(v);
   if (isObj(v) && v.version === 11) v = migrate11to12(v);
+  if (isObj(v) && v.version === 12) v = migrate12to13(v);
   return v;
 }
 
@@ -235,6 +237,42 @@ function migrate11to12(s: Raw): Raw {
 const isKhoanhList = (v: unknown): v is number[] =>
   Array.isArray(v) && v.every((id) => Number.isInteger(id) && id >= 0 && id < KHOANH_N * KHOANH_N) && new Set(v).size === v.length;
 
+/**
+ * Phiên bản 12 → 13 (lính nỏ, ụ nỏ, thủy binh Triệu): thêm số lính nỏ, bậc rèn của lính nỏ, hàng đứng của lính nỏ,
+ * số đợt thủy binh, lẫy nỏ thần chưa bị tráo. Người đang ở chương 4 thì thủy binh tới sau ít phút.
+ */
+function migrate12to13(s: Raw): Raw {
+  s.version = 13;
+  if (isObj(s.troops)) s.troops.no = 0;
+  // Bố trí giữ kinh đô ở từng doanh trại (nhiều doanh trại) chưa có lính nỏ.
+  if (Array.isArray(s.buildings)) for (const b of s.buildings) if (isObj(b) && isObj(b.guard)) b.guard.no = 0;
+  if (isObj(s.arms)) s.arms.no = 0;
+  if (isObj(s.adv)) s.adv.layTrao = false;
+  const camp = s.campaign;
+  if (isObj(camp) && isObj(camp.rows)) camp.rows.no = 'hau';
+  const raid = s.raid;
+  if (isObj(raid)) {
+    Object.assign(raid, { thuyBinh: 0, thuyBinhHeld: 0 });
+    if (isObj(raid.lastResult) && isObj(raid.lastResult.lost)) raid.lastResult.lost.no = 0;
+  }
+  // Trận đang dở trong bản lưu cũ chưa có lính nỏ và thuyền.
+  for (const holder of [s.raid, s.campaign]) {
+    if (!isObj(holder)) continue;
+    if (isObj(holder.battle)) {
+      const b = holder.battle;
+      if (isObj(b.arms)) b.arms.no = 0;
+      if (isObj(b.lost)) b.lost.no = 0;
+      b.boats = [];
+    }
+    if (isObj(holder.lastResult) && isObj(holder.lastResult.lost)) holder.lastResult.lost.no = 0;
+  }
+  if (isObj(raid) && raid.phase === 'idle' && isNum(s.questIndex)) {
+    const state = s as unknown as GameState;
+    if (inChapter4(state)) scheduleThuyBinh(state);
+  }
+  return s;
+}
+
 const isBanh = (v: unknown, test: (x: unknown) => boolean): boolean => isObj(v) && test(v.chung) && test(v.giay);
 const isBool = (x: unknown) => typeof x === 'boolean';
 
@@ -254,7 +292,8 @@ function isValidBuildings(list: unknown): boolean {
       b.level >= 1 &&
       b.level <= BUILDINGS[b.type as BuildingType].maxLevel &&
       (b.tuong === undefined || TUONG_IDS.includes(b.tuong as TuongId)) &&
-      (b.guard === undefined || (isObj(b.guard) && UNIT_TYPES.every((k) => isNum((b.guard as Raw)[k]) && ((b.guard as Raw)[k] as number) >= 0)))
+      (b.guard === undefined || (isObj(b.guard) && UNIT_TYPES.every((k) => isNum((b.guard as Raw)[k]) && ((b.guard as Raw)[k] as number) >= 0))) &&
+      (b.uNo === undefined || ((b.uNo === 'ok' || b.uNo === 'hu') && b.type === 'thanh'))
     );
   });
   return ok && list.some((b: Raw) => b.type === 'dien');
@@ -279,6 +318,7 @@ function isGameState(v: unknown): v is GameState {
   if (!GIFT_IDS.every((k) => typeof (son.gifts as Raw)[k] === 'boolean')) return false;
   const adv = v.adv;
   if (!isObj(adv) || typeof adv.no !== 'boolean' || !isNum(adv.restUntil) || typeof adv.kimQuy !== 'boolean' || typeof adv.won !== 'boolean') return false;
+  if (typeof adv.layTrao !== 'boolean') return false;
   const g = v.giong;
   if (!isObj(g) || !isNum(g.fed) || !isNum(g.restUntil) || !isObj(g.gear)) return false;
   if (!GEAR_IDS.every((k) => typeof (g.gear as Raw)[k] === 'boolean')) return false;
@@ -288,17 +328,17 @@ function isGameState(v: unknown): v is GameState {
   if (!isObj(tet) || !isNum(tet.seq) || !(tet.nextAt === null || isNum(tet.nextAt)) || !isNum(tet.openUntil)) return false;
   if (!isBanh(tet.banh, isNum) || !isBanh(tet.offered, isBool) || !isBanh(tet.blessing, isBool)) return false;
   const troops = v.troops;
-  if (!isObj(troops) || !['giao', 'cung', 'voi'].every((k) => isNum(troops[k]) && troops[k] >= 0)) return false;
+  if (!isObj(troops) || !UNIT_TYPES.every((k) => isNum(troops[k]) && troops[k] >= 0)) return false;
   const arms = v.arms;
-  if (!isObj(arms) || !['giao', 'cung', 'voi'].every((k) => isNum(arms[k]) && arms[k] >= 0 && arms[k] <= 2)) return false;
+  if (!isObj(arms) || !UNIT_TYPES.every((k) => isNum(arms[k]) && arms[k] >= 0 && arms[k] <= 2)) return false;
   const raid = v.raid;
   if (!isObj(raid) || !isNum(raid.wave) || !isNum(raid.won) || !(raid.nextAt === null || isNum(raid.nextAt))) return false;
   if (!['idle', 'warning', 'battle'].includes(raid.phase as string)) return false;
-  if (!['an', 'thuy', 'yeu', 'trieu'].includes(raid.foe as string) || !isNum(raid.floods) || !isNum(raid.floodsHeld) || !isNum(raid.water)) return false;
-  if (![raid.nights, raid.nightsHeld, raid.trieu, raid.trieuHeld].every(isNum)) return false;
+  if (!['an', 'thuy', 'yeu', 'trieu', 'thuyBinh'].includes(raid.foe as string) || !isNum(raid.floods) || !isNum(raid.floodsHeld) || !isNum(raid.water)) return false;
+  if (![raid.nights, raid.nightsHeld, raid.trieu, raid.trieuHeld, raid.thuyBinh, raid.thuyBinhHeld].every(isNum)) return false;
   const camp = v.campaign;
   if (!isObj(camp) || !isNum(camp.cleared) || !isObj(camp.rows)) return false;
-  if (!['giao', 'cung', 'voi'].every((k) => ROWS.includes((camp.rows as Raw)[k] as never))) return false;
+  if (!UNIT_TYPES.every((k) => ROWS.includes((camp.rows as Raw)[k] as never))) return false;
   if (!(camp.battle === null || isObj(camp.battle)) || !(camp.lastResult === null || isObj(camp.lastResult))) return false;
   const res = v.resources;
   if (!isObj(res) || !RESOURCE_IDS.every((r) => isNum(res[r]))) return false;

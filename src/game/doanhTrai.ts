@@ -12,7 +12,7 @@ export type Army = Record<UnitType, number>;
 
 const ok = <T>(value: T): Result<T> => ({ ok: true, value });
 const fail = (reason: FailReason): Result<never> => ({ ok: false, reason });
-const zero = (): Army => ({ giao: 0, cung: 0, voi: 0 });
+const zero = (): Army => ({ giao: 0, cung: 0, voi: 0, no: 0 });
 
 /** Số chỗ một đạo quân chiếm (voi chiến chiếm nhiều chỗ). */
 export const armySpace = (army: Army): number => UNIT_TYPES.reduce((n, k) => n + (army[k] ?? 0) * UNITS[k].space, 0);

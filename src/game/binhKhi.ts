@@ -3,6 +3,7 @@
 
 import { ARMS, type UnitType } from './defs';
 import { canAfford, pay, type FailReason, type GameState, type Result } from './game';
+import { inChapter4 } from './chuong4';
 import { forgeLevel } from './giong';
 
 const ok = <T>(value: T): Result<T> => ({ ok: true, value });
@@ -14,6 +15,7 @@ export function nextArms(s: GameState, unit: UnitType): (typeof ARMS)[number] | 
 }
 
 export function canForgeArms(s: GameState, unit: UnitType): Result {
+  if (unit === 'no' && !inChapter4(s)) return fail('canChuong4');
   const next = nextArms(s, unit);
   if (!next) return fail('capToiDa');
   if (forgeLevel(s) < next.forgeLevel) return fail('canLoRen');
