@@ -7,6 +7,7 @@ import { leaveBattlefield, retreat, startStage } from './game/campaign';
 import { forgeArms } from './game/binhKhi';
 import { forgeNoThan, inChapter3, wallRings } from './game/coLoa';
 import { offer } from './game/tet';
+import { applyMau } from './game/mau';
 import { feedGiong, forgeGear } from './game/giong';
 import { inChapter2, offerGift } from './game/son';
 import { markStory, pendingStory } from './game/story';
@@ -15,10 +16,12 @@ import { BUILDINGS, RESOURCE_IDS, STAGES, type BuildingType, type Cost, type Ski
 import {
   applyOffline,
   buildingAt,
+  canMove,
   canPlace,
   claimQuest,
   createInitialState,
   findBuilding,
+  move,
   place,
   acceptOffer,
   autoAssign,
@@ -53,7 +56,7 @@ const PAINTED: BuildingType[] = ['luy', 'bayChong', 'de', 'thanh'];
 
 type Mode =
   | { kind: 'view'; selected: number | null }
-  | { kind: 'place'; type: BuildingType; x: number; z: number }
+  | { kind: 'place'; type: BuildingType; x: number; z: number; moving?: number }
   | { kind: 'paint'; type: PaintType };
 
 /** Vắng mặt lâu hơn mức này thì hiện bảng báo thu hoạch. */
@@ -143,7 +146,7 @@ function start(): void {
 
   const updateGhost = () => {
     if (mode.kind !== 'place') return;
-    const check = canPlace(state, mode.type, mode.x, mode.z);
+    const check = mode.moving !== undefined ? canMove(state, mode.moving, mode.x, mode.z) : canPlace(state, mode.type, mode.x, mode.z);
     world.setGhost(mode.type, mode.x, mode.z, check.ok, footprintTop(state, mode.type, mode.x, mode.z));
     hud.setPlaceValid(check.ok, check.ok ? undefined : vi.reasons[check.reason]);
   };
@@ -282,6 +285,16 @@ function start(): void {
 
       case 'confirmPlace': {
         if (mode.kind !== 'place') return;
+        if (mode.moving !== undefined) {
+          const m = move(state, mode.moving, mode.x, mode.z);
+          if (!m.ok) return fail(m.reason);
+          play('place');
+          hud.toast(vi.ui.moved(buildingName(m.value)));
+          exitMode();
+          commit();
+          world.pop(m.value.id);
+          return;
+        }
         const r = place(state, mode.type, mode.x, mode.z);
         if (!r.ok) return fail(r.reason);
         play('place');
@@ -289,6 +302,48 @@ function start(): void {
         exitMode();
         commit();
         world.pop(r.value.id);
+        return;
+      }
+
+      case 'openMau':
+        if (mode.kind !== 'view') exitMode();
+        select(null);
+        play('tap');
+        hud.showMau(state);
+        return;
+
+      case 'applyMau': {
+        // Áp mẫu đổi cả kinh đô: bấm lần đầu chỉ hỏi lại, bấm lần nữa mới áp.
+        if (hud.mauArmed !== a.mau) {
+          play('tap');
+          hud.mauArmed = a.mau;
+          hud.refreshSheet(state);
+          return;
+        }
+        hud.mauArmed = null;
+        const r = applyMau(state, a.mau);
+        if (!r.ok) {
+          hud.refreshSheet(state);
+          return fail(r.reason);
+        }
+        play('upgrade');
+        hud.toast(vi.ui.mauDone(vi.ui.mau[a.mau].name));
+        commit();
+        return;
+      }
+
+      case 'startMove': {
+        const b = findBuilding(state, a.id);
+        if (!b) return fail('khongTimThay');
+        if (b.type === 'dien') return fail('khongTheDoi');
+        if (state.raid.phase !== 'idle') return fail('dangCoGiac');
+        hud.closeSheet();
+        world.setSelection(null);
+        world.showGrid(true);
+        play('tap');
+        mode = { kind: 'place', type: b.type, x: b.x, z: b.z, moving: b.id };
+        hud.setMode('move');
+        updateGhost();
         return;
       }
 
@@ -780,6 +835,7 @@ function start(): void {
     state: () => state,
     tileToScreen: (x: number, z: number) => world.tileToScreen(x, z),
     renderInfo: () => ({ ...world.renderer.info.render }),
+    rotate: (dir: 1 | -1) => world.rotateView(dir),
     camera: (x: number, z: number, zoom: number) => {
       world.view.target.set(x - GRID / 2, 0, z - GRID / 2);
       world.view.zoom = zoom;

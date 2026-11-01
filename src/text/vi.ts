@@ -187,6 +187,10 @@ export const vi = {
     chuaToiTet: 'Chưa tới Tết',
     daDang: 'Tết này đã dâng bánh này rồi',
     thieuBanh: 'Chưa đủ bánh để dâng',
+    khongTheDoi: 'Không dời được Điện Vua Hùng',
+    trungCho: 'Công trình đang ở đúng chỗ này rồi',
+    khongDuCho: 'Không đủ chỗ để xếp mọi công trình theo mẫu',
+    daTheoMau: 'Kinh đô đã xếp đúng theo mẫu này',
   } satisfies Record<FailReason, string>,
 
   quests: {
@@ -760,6 +764,38 @@ export const vi = {
     armsDone: 'Đã rèn đủ',
     armsToast: (name: string, n: number) => `Thợ rèn đã rèn binh khí bậc ${n} cho ${name.toLowerCase()}`,
     armsOnUnit: (n: number) => `Binh khí bậc ${n}`,
+    mauTitle: 'Mẫu kinh đô',
+    mauCard: 'Xếp kinh đô theo mẫu',
+    mauHint: 'Mỗi chương mở một mẫu. Áp mẫu thì mọi công trình được dời vào chỗ trong mẫu (mỗi cái mất 10% giá dựng), phần mẫu có mà mình chưa có được dựng thêm (trong giới hạn theo cấp Điện), đoạn lũy, đê, thành, bẫy thừa bị dỡ. Phải đủ tài nguyên mới áp được.',
+    mau: {
+      phongChau: {
+        icon: '🏯',
+        name: 'Kinh đô Phong Châu',
+        desc: 'Ruộng quanh Điện, nhà sàn và kho sát Điện, bãi đá trên đồi, lũy tre bao hai mặt rừng, bẫy chông trước lũy.',
+        lock: '',
+      },
+      deBao: {
+        icon: '🌊',
+        name: 'Đê bao chống lũ',
+        desc: 'Đê liền dải dọc hai bờ sông, bến nằm ngoài đê, chòi canh sát đê; ruộng, đền và ruộng nếp trong đê.',
+        lock: 'Mở khi vào chương 2: Sơn Tinh, Thủy Tinh.',
+      },
+      coLoa: {
+        icon: '🐚',
+        name: 'Thành Cổ Loa',
+        desc: 'Ba vòng thành kín quanh Điện; nhà sàn, kho, lò rèn giữa các vòng; ruộng, đền, doanh trại ngoài vòng ngoài; đê bao ngoài cùng.',
+        lock: 'Mở khi vào chương 3: An Dương Vương.',
+      },
+    },
+    mauPlan: (moves: number, builds: number, removes: number) =>
+      [moves ? `Dời ${moves} công trình` : '', builds ? `dựng thêm ${builds}` : '', removes ? `dỡ ${removes} đoạn thừa` : ''].filter(Boolean).join(', ') || 'Đã xếp đúng theo mẫu',
+    mauApply: '🗺️ Áp mẫu',
+    mauConfirm: '⚠️ Bấm lần nữa để áp',
+    mauDone: (name: string) => `Đã xếp kinh đô theo mẫu ${name}`,
+    move: 'Dời',
+    moveHere: 'Dời tới đây',
+    moveHint: 'Chạm ô đất để chọn chỗ mới, rồi bấm Dời tới đây. Nền đất cũ ở lại chỗ cũ.',
+    moved: (name: string) => `Đã dời ${name.toLowerCase()}`,
     tet: 'Hội Tết',
     banh: {
       chung: { name: 'Bánh chưng', icon: '🟩' },

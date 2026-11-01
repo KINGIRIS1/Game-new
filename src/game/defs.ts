@@ -66,6 +66,9 @@ export interface BuildingDef {
   unlock?: Unlock;
 }
 
+/** Dời công trình sang chỗ khác tốn chừng này phần giá dựng (làm tròn lên). Điện Vua Hùng không dời được. */
+export const MOVE_FRACTION = 0.1;
+
 /** Điện Vua Hùng lên cấp 6 khi đã vào chương 2, lên cấp 7 khi đã vào chương 3 (chỉ số là cấp đích). */
 export const DIEN_CHAPTER: Partial<Record<number, 2 | 3>> = { 6: 2, 7: 3 };
 
