@@ -8,6 +8,7 @@ import type { Act, Poser } from '../src/render/rig';
 import { makeBeast, makeRuaVang } from '../src/render/beasts';
 import { makeAnDuong, makeDrummer, makeGiong, makeSonTinh, makeThuyTinh } from '../src/render/heroes';
 import { makeMonster } from '../src/render/monsters';
+import { makeRower, makeWorker } from '../src/render/people';
 import { makeSoldier } from '../src/render/soldier';
 
 interface Entry {
@@ -80,7 +81,27 @@ export const NHOM: Record<string, Entry[]> = {
     { ten: 'An Dương Vương nỏ thần', tao: () => makeAnDuong({ crossbow: true }), co: 1.3, cach: 1.1 },
     { ten: 'Người đánh trống', tao: () => makeDrummer(), co: 0.9, cach: 1.1 },
   ],
+  dan: [
+    { ten: 'Nông dân', tao: () => makeWorker('nong') },
+    { ten: 'Thương nhân', tao: () => makeWorker('buon') },
+    { ten: 'Thợ đá', tao: () => makeWorker('thoDa') },
+    { ten: 'Thợ rèn', tao: () => makeWorker('thoRen') },
+    { ten: 'Người giữ kho', tao: () => makeWorker('giuKho') },
+    { ten: 'Phụ nữ', tao: () => makeWorker('phuNu') },
+    { ten: 'Phụ nữ ngồi gói bánh', tao: () => makeWorker('phuNu', true) },
+    { ten: 'Lạc hầu', tao: () => makeWorker('lacHau') },
+    { ten: 'Lính gác', tao: () => makeWorker('linhGac') },
+    { ten: 'Người lái đò', tao: () => makeRower() },
+  ],
 };
+
+/** Nhóm `dan`: làm việc theo nghề ở vài thời điểm, rồi bước đi. */
+const DAN: [string, Act][] = [
+  ...[0, 0.15, 0.3, 0.45, 0.6].map((t): [string, Act] => [`Làm (t=${t})`, { act: 'stand', time: t }]),
+  ['Đi (bước trái)', { act: 'walk', phase: -Math.PI / 2, stride: 0.45 }],
+  ['Đi (giữa bước)', { act: 'walk', phase: 0, stride: 0.45 }],
+  ['Đi (bước phải)', { act: 'walk', phase: Math.PI / 2, stride: 0.45 }],
+];
 
 /** Nhóm `ky_nang`: mỗi cột một mốc tiến trình kỹ năng (người đánh trống: nện tay trái, tay phải xen nhau). */
 const KY_NANG: [string, Act][] = [0, 0.1, 0.2, 0.35, 0.5, 0.6, 0.7, 0.85, 1].map((k) => [`${k}`, { act: 'fight', skill: k, time: k }]);
@@ -113,7 +134,7 @@ export function chup(nhom: string, huong = -0.6): { ten: string; anh: string }[]
     ground.rotation.x = -Math.PI / 2;
     ground.receiveShadow = true;
     scene.add(ground);
-    const cols = nhom === 'ky_nang' ? KY_NANG : TU_THE;
+    const cols = nhom === 'ky_nang' ? KY_NANG : nhom === 'dan' ? DAN : TU_THE;
     cols.forEach(([, act], i) => {
       const g = e.tao();
       const k = i - (cols.length - 1) / 2;

@@ -65,13 +65,18 @@ export class RigBuilder<B extends string> {
   private readonly slots = new Map<B, RigSlots>();
   /** Khung đang đặt bằng `place` (dời, đổi cỡ cả một nhóm khối); null là tọa độ mô hình. */
   private base: THREE.Matrix4 | null = null;
-  constructor(private readonly defs: Record<B, BoneDef<B>>) {}
+  /** `detail`: độ chi tiết của mọi khối (xem `ShapeBuilder.detail`). */
+  constructor(
+    private readonly defs: Record<B, BoneDef<B>>,
+    private readonly detail = 1,
+  ) {}
 
   /** Các khối vẽ sau đây gắn vào xương `b`. Tọa độ vẫn là tọa độ mô hình ở tư thế gốc, như ToonModel. */
   on(b: B): RigSlots {
     let s = this.slots.get(b);
     if (!s) {
       s = { plain: new ShapeBuilder(), band: new ShapeBuilder(true), drum: new ShapeBuilder(true), glow: new ShapeBuilder() };
+      for (const k of SLOTS) s[k].detail = this.detail;
       this.slots.set(b, s);
     }
     for (const k of SLOTS) s[k].frame = this.base;

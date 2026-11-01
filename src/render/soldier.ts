@@ -28,6 +28,9 @@ import { C } from './palette';
 import { RigBuilder, bakeRig, skinRig, type Act, type Poser } from './rig';
 import { LEATHER, arrow, bigAxe, bow, crossbowParts, drumShield, qua, quiver, spear, sword } from './weapons';
 
+/** Lính đông trong trận (tới vài chục): bớt số mặt cho nhẹ máy (xem `ShapeBuilder.detail`). */
+const DETAIL = 0.7;
+
 export type SoldierKind = 'giao' | 'cung' | 'giaoAn' | 'cungAn' | 'phoTuong' | 'linhTrieu' | 'noTrieu';
 const KINDS: readonly FighterKind[] = ['giao', 'cung', 'giaoAn', 'cungAn', 'phoTuong', 'linhTrieu', 'noTrieu'];
 export const isSoldier = (k: FighterKind): k is SoldierKind => KINDS.includes(k);
@@ -303,7 +306,7 @@ function poseSoldier(spec: Spec, b: Human, a: Act): void {
 }
 
 function shapeOf(kind: SoldierKind, tier: number) {
-  const r = new RigBuilder(HUMAN);
+  const r = new RigBuilder(HUMAN, DETAIL);
   SPECS[kind].draw(r, tier);
   return r.build();
 }

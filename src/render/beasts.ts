@@ -446,8 +446,11 @@ const SPECS: Record<BeastKind, Spec> = {
   gaTrang: { defs: { ...BASE, ...ROOSTER }, draw: drawRooster, pose: poseRooster },
 };
 
+/** Thú và người cưỡi trong trận: bớt số mặt cho nhẹ máy (xem `ShapeBuilder.detail`). */
+const DETAIL = 0.75;
+
 function shapeOf(spec: Spec, tier: number) {
-  const r = new RigBuilder(spec.defs);
+  const r = new RigBuilder(spec.defs, DETAIL);
   spec.draw(r, tier);
   return r.build();
 }

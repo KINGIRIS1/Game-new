@@ -6,13 +6,12 @@ import type { FighterKind } from '../game/battle';
 import { bakeBeast, isBeast } from './beasts';
 import { bakeThuyTinh, makeAnDuong, makeGiong, makeSonTinh } from './heroes';
 import { bakeMonster, isMonster } from './monsters';
+import { makeRower } from './people';
 import { C } from './palette';
 import { ShapeBuilder, instanceTemplates, seeded, type Placement } from './shapes';
 import { bakeSoldier, isSoldier } from './soldier';
 import { ToonModel, inkThick, inkThin, outlineOf, toon } from './toon';
 import { crossbowParts } from './weapons';
-
-export type PersonKind = 'nong' | 'linh' | 'buon' | 'laiDo';
 
 /** Một chỗ mọc cây, tọa độ thế giới. `seed` giữ cho mỗi cây khác nhau nhưng không đổi giữa các lần vẽ. */
 export interface TreeSpot {
@@ -34,30 +33,6 @@ export interface WallSpot {
   level: number;
   /** Bị giặc phá, chỉ còn đống đổ nát. */
   damaged: boolean;
-}
-
-export function makePerson(kind: PersonKind): THREE.Object3D {
-  const m = new ToonModel(inkThin);
-  const p = m.plain;
-  for (const x of [-0.06, 0.06]) p.cyl(0.04, 0.045, 0.18, C.skin, x, 0.09, 0, undefined, 6);
-  m.band.cyl(0.13, 0.17, 0.24, kind === 'buon' ? C.indigo : C.red, 0, 0.28, 0, undefined, 8);
-  p.cyl(0.1, 0.12, 0.14, C.skin, 0, 0.45, 0, undefined, 8);
-  for (const s of [-1, 1]) p.cyl(0.035, 0.035, 0.22, C.skin, s * 0.15, 0.38, 0, [0, 0, s * 0.35], 6);
-  p.sphere(0.23, C.skin, 0, 0.7, 0, [1, 0.95, 0.95], 14);
-  p.sphere(0.24, C.hair, 0, 0.78, -0.04, [1, 0.62, 0.98], 14);
-  for (const s of [-1, 1]) p.sphere(0.03, C.ink, s * 0.08, 0.69, 0.2, [1, 1.4, 0.5], 8);
-  // Mũ lông chim như hình người trên mặt trống đồng.
-  for (let i = -2; i <= 2; i++) {
-    p.box(0.06, 0.38, 0.03, i % 2 ? C.cream : C.red, i * 0.06, 1.06, -0.06, [0, 0, -i * 0.28]);
-  }
-  if (kind === 'linh') {
-    p.cyl(0.018, 0.018, 1.15, C.woodDark, 0.24, 0.6, 0.06, undefined, 6);
-    p.cone(0.05, 0.2, C.bronze, 0.24, 1.25, 0.06, undefined, 4);
-  }
-  if (kind === 'buon') p.cyl(0.17, 0.12, 0.1, C.thatch, 0, 0.98, 0.05, undefined, 10);
-  if (kind === 'nong') p.cyl(0.016, 0.016, 0.65, C.woodDark, -0.22, 0.34, 0.08, [0.35, 0, 0], 6);
-  if (kind === 'laiDo') p.cyl(0.016, 0.016, 0.75, C.woodDark, 0.2, 0.38, 0.12, [0.9, 0, 0], 6);
-  return m.group();
 }
 
 /**
@@ -96,7 +71,7 @@ export function makeTradeBoat(): THREE.Group {
   return g;
 }
 
-/** Thuyền như trên trống đồng: mũi và đuôi cong vút, đầu chim. */
+/** Thuyền như trên trống đồng: mũi và đuôi cong vút, đầu chim, có người lái đò. */
 export function makeBoat(): THREE.Object3D {
   const m = new ToonModel();
   const p = m.plain;
@@ -108,11 +83,13 @@ export function makeBoat(): THREE.Object3D {
   }
   p.box(0.5, 0.24, 0.42, C.thatch, -0.1, 0.28, 0);
   const g = m.group();
-  const rower = makePerson('laiDo');
+  const rower = makeRower();
   rower.scale.setScalar(0.75);
   rower.position.set(-0.55, 0.12, 0);
   rower.rotation.y = Math.PI / 2;
   g.add(rower);
+  // Người lái đò chèo khi thuyền đi (world.ts gọi).
+  g.userData.pose = rower.userData.pose;
   return g;
 }
 

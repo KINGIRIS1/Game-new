@@ -21,6 +21,11 @@ export class ShapeBuilder {
    * rồi mới đặt vào mô hình. Không có thì vẽ thẳng trong tọa độ mô hình.
    */
   frame: THREE.Matrix4 | null = null;
+  /**
+   * Độ chi tiết: nhân số mặt quanh của khối cầu, trụ, nón (giữ tối thiểu để không méo). Nhân vật đông và nhỏ
+   * trên màn hình (dân làng) dùng số nhỏ cho nhẹ máy.
+   */
+  detail = 1;
 
   /** `lowPoly`: ít mặt hơn, dùng cho cây cối được nhân lên hàng trăm lần. */
   constructor(
@@ -57,15 +62,21 @@ export class ShapeBuilder {
   }
 
   sphere(r: number, color: THREE.ColorRepresentation, x: number, y: number, z: number, scale: [number, number, number] = [1, 1, 1], seg = this.lowPoly ? 7 : 12): this {
-    return this.add(new THREE.SphereGeometry(r, seg, Math.max(6, Math.round(seg * 0.75))), color, x, y, z, [0, 0, 0], scale);
+    const n = this.seg(seg, 5);
+    return this.add(new THREE.SphereGeometry(r, n, Math.max(this.detail < 1 ? 4 : 6, Math.round(n * 0.75))), color, x, y, z, [0, 0, 0], scale);
   }
 
   cyl(rTop: number, rBottom: number, h: number, color: THREE.ColorRepresentation, x: number, y: number, z: number, rot?: Rot, seg = this.lowPoly ? 6 : 12): this {
-    return this.add(new THREE.CylinderGeometry(rTop, rBottom, h, seg), color, x, y, z, rot);
+    return this.add(new THREE.CylinderGeometry(rTop, rBottom, h, this.seg(seg, 5)), color, x, y, z, rot);
   }
 
   cone(r: number, h: number, color: THREE.ColorRepresentation, x: number, y: number, z: number, rot?: Rot, seg = this.lowPoly ? 6 : 10): this {
-    return this.add(new THREE.ConeGeometry(r, h, seg), color, x, y, z, rot);
+    return this.add(new THREE.ConeGeometry(r, h, this.seg(seg, 4)), color, x, y, z, rot);
+  }
+
+  /** Số mặt quanh theo độ chi tiết, không ít hơn `min` (và không nhiều hơn số đã cho). */
+  private seg(seg: number, min: number): number {
+    return this.detail === 1 ? seg : Math.min(seg, Math.max(min, Math.round(seg * this.detail)));
   }
 
   capsule(r: number, len: number, color: THREE.ColorRepresentation, x: number, y: number, z: number, rot?: Rot, scale?: [number, number, number]): this {

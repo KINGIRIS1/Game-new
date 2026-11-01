@@ -1084,8 +1084,6 @@ export class World {
       w.scale.setScalar(0.85);
       w.position.set(wx(bep.x) + 1 - 0.3, topY(h(bep)) + 0.08, wz(bep.z) + 1 + 0.88);
       w.rotation.y = Math.PI;
-      const tool = w.children.find((c) => c.userData.tool);
-      if (tool) tool.rotation.x = -0.9;
       root.add(w);
     }
     this.scene.add(root);
@@ -1241,38 +1239,20 @@ export class World {
     this.panGoal = goal;
   }
 
-  /** Động tác theo nghề: cúi cấy, bổ cuốc, quai búa, đi qua đi lại, đứng gác. */
+  /** Động tác theo nghề (people.ts): cúi bổ cuốc, bổ đá, quai búa, đi qua đi lại mang hàng, đứng gác nhìn quanh. */
   private animateWorker(w: WorkerView, t: number): void {
     const { obj, spot, phase } = w;
-    const tool = obj.children.find((c) => c.userData.tool);
-    const s = Math.sin(t * 2 + phase);
-    switch (spot.job) {
-      case 'nong':
-        obj.rotation.x = 0.3 + 0.15 * s;
-        if (tool) tool.rotation.x = -0.5 + 0.5 * s;
-        break;
-      case 'thoDa':
-        if (tool) tool.rotation.x = -1.4 + 1.4 * Math.abs(Math.sin(t * 3 + phase));
-        obj.rotation.x = 0.15 * Math.abs(Math.sin(t * 3 + phase));
-        break;
-      case 'thoRen':
-        if (tool) tool.rotation.x = -1.5 + 1.5 * Math.abs(Math.sin(t * 4.5 + phase));
-        break;
-      case 'buon':
-      case 'giuKho': {
-        const walk = spot.walk ?? 0;
-        if (walk) {
-          const k = t * 0.7 + phase;
-          obj.position.x = spot.x + Math.sin(k) * walk;
-          obj.rotation.y = Math.cos(k) >= 0 ? Math.PI / 2 : -Math.PI / 2;
-        }
-        obj.position.y = spot.y + Math.abs(Math.sin(t * 6 + phase)) * 0.04;
-        break;
-      }
-      default:
-        obj.rotation.y = spot.ry + 0.3 * Math.sin(t * 0.5 + phase);
-        obj.position.y = spot.y + Math.abs(Math.sin(t * 1.5 + phase)) * 0.02;
+    const pose = obj.userData.pose as Poser | undefined;
+    const walk = spot.job === 'buon' || spot.job === 'giuKho' ? (spot.walk ?? 0) : 0;
+    if (walk) {
+      const k = t * 0.7 + phase;
+      obj.position.x = spot.x + Math.sin(k) * walk;
+      obj.rotation.y = Math.cos(k) >= 0 ? Math.PI / 2 : -Math.PI / 2;
+      pose?.({ act: 'walk', phase: t * 8 + phase, stride: 0.45, time: t + phase });
+      return;
     }
+    if (spot.job === 'phuNu' || spot.job === 'lacHau' || spot.job === 'linhGac') obj.rotation.y = spot.ry + 0.25 * Math.sin(t * 0.5 + phase);
+    pose?.({ act: 'stand', time: t + phase });
   }
 
   /** Dải đỏ nhấp nháy ở bìa rừng (giặc Ân) hay trên mặt sông (thủy quái) phía giặc sắp tới; null để tắt. */
@@ -1489,6 +1469,7 @@ export class World {
       else boat.obj.position.x = Math.min(boat.pos, RIVER_START - HALF + 0.5);
       if (boat.axis === 'x' && boat.pos > RIVER_START - HALF) boat.pos = -45;
       boat.obj.position.y = WATER_Y - 0.02 + Math.sin(t * 1.4 + boat.speed * 10) * 0.03;
+      (boat.obj.userData.pose as Poser | undefined)?.({ act: 'walk', phase: t * 3 + boat.speed * 10 });
     }
 
     this.ripples.begin();
