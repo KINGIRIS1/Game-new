@@ -5,9 +5,8 @@ import * as THREE from 'three';
 import { above5, BRICK, boatRoof, buffalo, roofFor } from '../buildings';
 import { Lot } from '../lot';
 import { C } from '../palette';
-import type { ShapeBuilder } from '../shapes';
 import { ToonModel } from '../toon';
-import { type CongTrinh, type LotSpot, yard } from './chung';
+import { type CongTrinh, type LotSpot, type V3, rod, yard } from './chung';
 
 export const BAI_DA_LOT = new Lot(3, [
   'PPPPTT',
@@ -37,17 +36,7 @@ const TIERS = [
   { xR: -0.35, zB: -1.32, xL: -1.32, zF: -0.8 },
 ];
 
-type V3 = [number, number, number];
-
-/** Thanh tròn từ điểm `a` tới điểm `b` (chân tời, cần, dây). */
-function rod(b: ShapeBuilder, a: V3, c: V3, r: number, color: number, seg = 5): void {
-  const from = new THREE.Vector3(...a);
-  const dir = new THREE.Vector3(...c).sub(from);
-  const e = new THREE.Euler().setFromQuaternion(new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 1, 0), dir.clone().normalize()));
-  b.cyl(r, r, dir.length(), color, from.x + dir.x / 2, from.y + dir.y / 2, from.z + dir.z / 2, [e.x, e.y, e.z], seg);
-}
-
-/** Đá tảng vỡ: (x, z, bán kính). Mấy viên đầu ở bãi đá vỡ (r), mấy viên sau rơi dưới đáy hố. */
+/** Đá tảng vỡ ở bãi đá vỡ (r): (x, z, bán kính), hiện dần theo cấp. */
 const ROCKS: [number, number, number][] = [
   [-0.76, 0.2, 0.2],
   [-1.28, 0.12, 0.15],
@@ -55,21 +44,22 @@ const ROCKS: [number, number, number][] = [
   [-0.62, 0.42, 0.12],
   [-1.32, 0.44, 0.1],
 ];
+/** Đá rơi dưới đáy hố: viên đầu nằm trước mặt thợ đá trong hố, từ cấp 3 thêm dần. */
 const PIT_ROCKS: [number, number, number][] = [
-  [-0.18, -0.36, 0.11],
-  [-0.8, -0.78, 0.13],
-  [0.12, -0.6, 0.1],
-  [-0.84, -0.36, 0.1],
+  [-0.32, -0.28, 0.09],
+  [-0.78, -0.8, 0.13],
+  [-0.12, -0.9, 0.1],
+  [0.2, -0.3, 0.09],
 ];
 
-/** Năm thợ đá: dưới đáy hố, bên đá vỡ, cạnh chồng đá xẻ, hai người giữa bãi xẻ. Mỗi người một cột x − z khác nhau. */
+/** Năm thợ đá: hai người dưới đáy hố, một bên đá vỡ, một cạnh chồng đá xẻ, một giữa bãi. Mỗi người một cột x − z khác nhau. */
 export function baiDaSpots(): LotSpot[] {
   return [
-    { job: 'thoDa', x: -0.4, y: 0.06, z: -0.6, ry: 0.7 },
+    { job: 'thoDa', x: -0.55, y: 0.06, z: -0.45, ry: 0.7 },
     { job: 'thoDa', x: -1.1, y: 0.06, z: 0.38, ry: 0.9 },
-    { job: 'thoDa', x: 0.3, y: 0.06, z: 0.45, ry: 1.57 },
+    { job: 'thoDa', x: 0.55, y: 0.06, z: 0.3, ry: 1.57 },
     { job: 'thoDa', x: -0.25, y: 0.06, z: 0.75, ry: 0.4 },
-    { job: 'thoDa', x: 0.32, y: 0.06, z: 0.92, ry: 0.8 },
+    { job: 'thoDa', x: 0.12, y: 0.06, z: -0.62, ry: 0.3 },
   ];
 }
 
@@ -106,8 +96,9 @@ function quarry(m: ToonModel, level: number): void {
   }
   if (deep) {
     // Bậc gỗ từ sân qua mép hố xuống đáy.
-    for (const [y, z] of [[0.08, 0.06], [rim + 0.02, -0.11], [rim * 0.55, -0.3], [0.1, -0.45]] as const) p.box(0.34, 0.04, 0.15, C.wood, -0.62, y, z);
-    for (const s of [-1, 1]) rod(p, [-0.62 + s * 0.18, rim + 0.04, -0.1], [-0.62 + s * 0.18, 0.05, -0.5], 0.02, C.woodDark, 4);
+    const sx = -0.88;
+    for (const [y, z] of [[0.08, 0.06], [rim + 0.02, -0.11], [rim * 0.55, -0.3], [0.1, -0.45]] as const) p.box(0.26, 0.04, 0.15, C.wood, sx, y, z);
+    for (const s of [-1, 1]) rod(p, [sx + s * 0.14, rim + 0.04, -0.1], [sx + s * 0.14, 0.05, -0.5], 0.02, C.woodDark, 4);
   }
 }
 
@@ -135,8 +126,8 @@ export function makeBaiDa(level: number): THREE.Group {
 
   if (level >= 2) {
     // Hai chồng đá xẻ vuông; cấp 6–8 mỗi cấp cao thêm một khối.
-    for (const [x, n] of [[0.8, 3 + up], [1.2, 2 + up]] as const) {
-      for (let i = 0; i < n; i++) p.box(0.3, 0.17, 0.24, i % 2 ? C.rock : CUT, x, 0.145 + i * 0.17, 0.25, [0, (i % 2 ? 1 : -1) * 0.12, 0]);
+    for (const [x, n] of [[0.97, 3 + up], [1.31, 2 + up]] as const) {
+      for (let i = 0; i < n; i++) p.box(0.28, 0.17, 0.24, i % 2 ? C.rock : CUT, x, 0.145 + i * 0.17, 0.25, [0, (i % 2 ? 1 : -1) * 0.1, 0]);
     }
   }
   if (level >= 3 && level < 6) {
@@ -171,11 +162,11 @@ export function makeBaiDa(level: number): THREE.Group {
     const mh = 1.9 + 0.15 * up;
     p.cyl(0.055, 0.075, mh, C.woodDark, mx, mh / 2, mz, undefined, 6);
     for (const [fx, fz] of [[1.3, -1.2], [0.62, -1.44]] as const) rod(p, [fx, 0, fz], [mx, 0.9, mz], 0.03, C.wood);
-    const tip: V3 = [0.02, mh * 0.72, -0.8];
+    const tip: V3 = [-0.15, mh * 0.72, -0.85];
     rod(p, [mx, 0.35, mz], tip, 0.04, C.wood);
     rod(p, [mx, mh, mz], tip, 0.008, C.cream, 3);
-    rod(p, tip, [tip[0], 0.98, tip[2]], 0.008, C.cream, 3);
-    p.box(0.32, 0.24, 0.28, CUT, tip[0], 0.86, tip[2]);
+    rod(p, tip, [tip[0], tip[1] - 0.48, tip[2]], 0.008, C.cream, 3);
+    p.box(0.32, 0.24, 0.28, CUT, tip[0], tip[1] - 0.6, tip[2]);
     for (const x of [0.8, 1.38]) for (const z of [-1.0, -0.56]) p.cyl(0.03, 0.035, 0.9, C.woodDark, x, 0.45, z, undefined, 5);
     boatRoof(m, roof, { length: 0.86, width: 0.64, lift: 0.14, drop: 0.18, thickness: 0.05 }, 1.07, 1.1, -0.78);
     p.add(new THREE.TorusGeometry(0.26, 0.03, 6, 16), C.woodDark, 1.09, 0.38, -0.78);
@@ -215,16 +206,18 @@ export function makeBaiDa(level: number): THREE.Group {
   }
   if (level >= 8) {
     // Giàn cần vọt: cột chạc, đòn dài, đầu này đá đối trọng, đầu kia thúng đá trên hố.
-    const qz = -0.3;
+    const qz = -0.25;
     for (const dz of [-0.07, 0.07]) p.box(0.05, 0.96, 0.04, C.woodDark, 0.85, 0.48, qz + dz);
-    rod(p, [1.42, 0.68, qz], [-0.12, 1.38, qz], 0.03, C.wood);
+    rod(p, [1.42, 0.68, qz], [-0.17, 1.4, qz], 0.03, C.wood);
     p.sphere(0.13, C.rockDark, 1.32, 0.6, qz, [1.1, 0.9, 1], 7);
-    rod(p, [-0.1, 1.37, qz], [-0.1, 0.72, qz], 0.008, C.cream, 3);
-    p.cyl(0.12, 0.09, 0.14, C.thatch, -0.1, 0.64, qz, undefined, 8);
-    p.sphere(0.08, C.rock, -0.1, 0.72, qz, [1, 0.6, 1], 6);
+    rod(p, [-0.15, 1.39, qz], [-0.15, 0.72, qz], 0.008, C.cream, 3);
+    p.cyl(0.12, 0.09, 0.14, C.thatch, -0.15, 0.64, qz, undefined, 8);
+    p.sphere(0.08, C.rock, -0.15, 0.72, qz, [1, 0.6, 1], 6);
     // Trâu đứng cạnh xe đá, dây buộc vào càng xe.
-    buffalo(p, 0.72, 0.98);
-    rod(p, [0.72, 0.42, 1.2], [1.08, 0.18, 1.42], 0.008, C.cream, 3);
+    p.frame = new THREE.Matrix4().compose(new THREE.Vector3(0.68, 0, 1.02), new THREE.Quaternion().setFromEuler(new THREE.Euler(0, -0.6, 0)), new THREE.Vector3(1, 1, 1));
+    buffalo(p, 0, 0);
+    p.frame = null;
+    rod(p, [0.58, 0.42, 1.2], [1.08, 0.18, 1.42], 0.008, C.cream, 3);
   }
   const g = m.group();
   for (const o of extras) g.add(o);

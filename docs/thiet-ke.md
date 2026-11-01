@@ -1200,7 +1200,7 @@ Nguyên tắc chung:
 | Bến chợ thuyền | ba dải ra sông: kho, chợ hai dãy sạp có lối giữa, sàn bến; lối chợ thẳng ra cầu tàu |
 | Nhà sàn | nếp nhà có vườn: nhà chính góc sau, nhà phụ, hiên, chum nước, vườn rau góc trước |
 | Bãi đất đá | mỏ đá bên gò: hố đá góc sau, bãi xẻ đá giữa, đường xe đá ra trước |
-| Lò rèn | lò nón góc sau, lán đe phía sau, sân làm việc giữa, đống than quặng và giá binh khí phía trước |
+| Lò rèn | lò nón góc sau, lán đe phía sau, sân làm việc giữa, lò thứ hai bên trái, đống than quặng phía trước, giá binh khí bên phải |
 | Kho thóc | vựa chính, vựa phụ, cót quây ba phía quanh sân phơi thóc |
 | Doanh trại | nhà dài suốt phía sau, sân tập rộng giữa cho tướng đứng, đài tướng và chòi trống bên phải; thêm nhà dài thứ hai (cấp 4) |
 | Trại giáo, trại cung, chuồng voi | hai lều chữ A và sân cọc rơm; lán một mái và trường bắn ngang hai bia; mái chóp và sân voi có máng, đống cỏ |
@@ -1248,9 +1248,9 @@ Test: nâng bản lưu cũ thì đủ công trình, không chồng nhau, giữ c
 ### Thứ tự làm
 
 1. **Duyệt phương án này** và bản vẽ ở `docs/bo-cuc-cong-trinh.md`. Chủ dự án đã duyệt.
-2. **Bản thử** (đang làm): vẽ Điện 5×5 và nhà sàn 3×3 theo bản vẽ ở `src/render/mongMoi.ts`, chưa nối vào game. `node scripts/chup-cong-trinh.mjs` chụp dáng cũ và dáng mới ở cả 8 cấp trên cùng tỉ lệ ô đất, có người đứng để so cỡ, kèm một cảnh cỡ thật như trên điện thoại. Gửi chủ dự án duyệt hướng, như lúc duyệt phong cách và giáo binh có xương.
-3. **PR 1**: móng mới, lưới 38×38, đất theo cấp, giá đắp nền, số đoạn tối đa, ba mẫu vẽ lại, nâng bản lưu, test. Vẽ lại Điện, ruộng, bến, nhà sàn, bãi đá, lò rèn, kho, doanh trại và ba nơi ở.
-4. **PR 2**: ba đền, bốn công trình Hội Tết, cảnh Tết trong sân Điện. Chụp kiểm tra mọi công trình ở mọi cấp, ghi số cuối cùng vào tài liệu này.
+2. **Bản thử** (đã làm, chủ dự án đã duyệt hướng): vẽ Điện 5×5 và nhà sàn 3×3 theo bản vẽ, chưa nối vào game. `node scripts/chup-cong-trinh.mjs` chụp dáng cũ và dáng mới ở cả 8 cấp trên cùng tỉ lệ ô đất, có người đứng để so cỡ, kèm một cảnh cỡ thật như trên điện thoại. Gửi chủ dự án duyệt hướng, như lúc duyệt phong cách và giáo binh có xương.
+3. **PR 1** (đã làm, chờ duyệt): móng mới, lưới 38×38, đất theo cấp, giá đắp nền, số đoạn tối đa, ba mẫu vẽ lại, nâng bản lưu 11, test. Vẽ lại Điện, ruộng, bến, nhà sàn, bãi đá, lò rèn, kho, doanh trại và ba nơi ở (`src/render/congTrinh/`). Cảnh Tết dời vào sân Điện luôn ở PR này vì Điện đã vẽ lại. Dáng cũ của các công trình này còn ở `buildings.ts` để script chụp so cũ và mới; bỏ ở PR 2.
+4. **PR 2**: ba đền, bốn công trình Hội Tết; bỏ dáng cũ khỏi `buildings.ts`. Chụp kiểm tra mọi công trình ở mọi cấp, ghi số cuối cùng vào tài liệu này.
 
 - Hai PR đăng lên `main` liền nhau, để người chơi không thấy đền và công trình Tết dáng cũ nằm lọt thỏm trong móng mới.
 - Làm **trước PR 2 chương 4**: thủy binh cập bờ, ụ nỏ trên vòng thành và mẫu chương 4 đều dựa vào bản đồ, làm sau thì phải đo lại lần nữa. Khi ấy việc này lấy bản lưu v11, các PR chương 4 lùi một số (v12 tới v14).
@@ -1301,5 +1301,5 @@ Chủ dự án đã duyệt cả sáu điều:
 9. **Sửa sau chơi thử Hội Tết**: Thủy Tinh có hai phép, Dời non vẽ rõ hơn, xoay cảnh 4 hướng, dời công trình, mẫu kinh đô mỗi chương.
 10. **Chương 4: Mỵ Châu, Trọng Thủy** (đã duyệt, đang làm; PR 1 đã làm; xem Kế hoạch chương 4): Điện và 7 loại công trình lên cấp 8, lầu nỏ, ụ nỏ trên thành, lính nỏ, thủy binh Triệu đi thuyền, Cao Lỗ, phó bản màn 25–32, Đền Cuông, màn hình Hết truyện, thử thách phó bản và huân công.
 11. **Doanh trại và nơi ở riêng** (đã làm, xem mục cùng tên): doanh trại là nơi tướng ở và điều binh; trại giáo, trại cung, chuồng voi để luyện từng binh chủng; tướng ra trận từ doanh trại.
-12. **Công trình to hơn, kinh đô vẽ lại** (đã duyệt, đang làm bản thử; xem mục Kế hoạch cùng tên): mọi công trình trừ móng 1×1 rộng thêm 1 ô, vẽ lại bố cục từng công trình, bản đồ 38×38, ba mẫu kinh đô vẽ lại, bản lưu cũ tự xếp lại.
+12. **Công trình to hơn, kinh đô vẽ lại** (đã duyệt; PR 1 đã làm, PR 2 còn lại; xem mục Kế hoạch cùng tên): mọi công trình trừ móng 1×1 rộng thêm 1 ô, vẽ lại bố cục từng công trình, bản đồ 38×38, ba mẫu kinh đô vẽ lại, bản lưu cũ tự xếp lại.
 13. **Để sau**: chương 5 về Hai Bà Trưng (mới nhắc ở câu cuối chương 4); nhạc nền.

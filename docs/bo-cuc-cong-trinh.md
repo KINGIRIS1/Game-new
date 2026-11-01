@@ -55,22 +55,25 @@ a a a a b b b b
 a a a O O b b b
 c c c O O d d d
 c c c c d d d d
-G G c c d d T T
-G G c c , , S S
+G G c c d d S S
+G G c c , , T T
 ```
 
 - `a` cấp 1, thửa sau bên trái.
 - `b` cấp 1, thửa sau bên phải.
-- `,` cấp 1, lối xuống ruộng.
+- `,` cấp 1, lối xuống ruộng: dốc đất cắt qua bờ trước, hai bậc xuống nước.
 - `c` cấp 2, thửa trước bên trái.
 - `d` cấp 2, thửa trước bên phải.
-- `T` cấp 3, trâu đứng nghỉ trên bờ.
-- `C` cấp 4, chòi canh ruộng (cấp 6: chòi cao có thang tre).
-- `S` cấp 5, bó lúa đã gặt.
-- `G` cấp 6, guồng nước tre quay, máng dẫn nước.
-- `M` cấp 7, miếu thần lúa.
-- `O` cấp 8, ao nước trong có đàn cò, cống tre từ guồng đổ vào.
-- Bờ đất quanh móng và bờ chữ thập giữa bốn thửa; cấp 6 bờ ngoài kè đá xám.
+- `T` cấp 3, trâu đứng nghỉ trên bờ góc trước.
+- `C` cấp 4, chòi canh ruộng trên gò, sàn có lan can tre, mái nón (cấp 6: chòi cao có thang tre).
+- `S` cấp 5, bó lúa đã gặt và đụn rơm.
+- `G` cấp 6, guồng nước tre quay trên mương, máng tre từ đỉnh guồng dẫn nước vào thửa trước bên trái.
+- `M` cấp 7, miếu thần lúa trên nền đá, lư hương, chim đồng trên nóc.
+- `O` cấp 8, ao nước trong bờ đá, lá sen, đàn cò; ống tre nối từ máng guồng đổ vào ao.
+- Bờ đất quanh móng và bờ chữ thập giữa bốn thửa; cấp 6 bờ ngoài kè đá xám. Cấp 8 bờ chữ thập chừa giữa cho ao.
+- Góc nào chưa tới cấp có phần thì vẫn cấy lúa; tới cấp thì góc ấy đắp gò dựng phần. Cấp 1–2 cấy thưa (3×3 khóm mỗi thửa), từ cấp 3 cấy dày (4×4); lúa cao và chín vàng dần theo cấp.
+- Năm nông dân đứng giữa các khóm lúa, rải đủ bốn thửa; cấp 1 người thứ hai cày thửa trước.
+- Đã đổi khi vẽ: `T` và `S` đổi hàng cho nhau, trâu thấp ra mép trước, bó lúa và đụn rơm cao lùi sau một hàng, để đụn rơm không che trâu.
 
 ### Ruộng nếp: 3×3 → 4×4
 
@@ -152,41 +155,45 @@ P P P P T T
 P P P P T T
 P P P P q q
 r r . . X X
-r r . . X X
+K K . . V V
 K K , , V V
 ```
 
-- `P` cấp 1, hố đá đào lộ thiên (cấp 4: hố sâu, có bậc gỗ xuống).
-- `r` cấp 1, tảng đá vỡ, nhiều dần theo cấp.
-- `,` cấp 1, đường xe đá.
-- `X` cấp 2, chồng đá xẻ vuông (cấp 6: cao thêm một khối mỗi cấp).
-- `T` cấp 3, tời gỗ chữ A (cấp 6: tời lớn, lán che bánh xe tời).
-- `V` cấp 5, xe gỗ chở đá (cấp 8: trâu kéo xe).
-- `K` cấp 7, lò nung gạch đất bốc khói (cấp 8: chồng gạch cao gấp đôi).
-- `q` cấp 8, giàn cần vọt, đá đối trọng, thúng đá.
+- `P` cấp 1, hố đá lộ thiên khoét vào gò: bậc đá chữ L ôm góc sau bên trái, đỉnh gò có đá tảng và cỏ, đáy hố đất (cấp 4: hố sâu ba bậc, mép hố cao, đáy sẫm, có bậc gỗ xuống; cấp 6–8: bậc đá cao dần).
+- `r` cấp 1, tảng đá vỡ, nhiều dần theo cấp; từ cấp 3 có thêm đá rơi dưới đáy hố.
+- `,` cấp 1, đường xe đá có hai vệt bánh xe.
+- `X` cấp 2, hai chồng đá xẻ vuông (cấp 6: cao thêm một khối mỗi cấp).
+- `T` cấp 3, tời gỗ chữ A: hai chân bên phải hố chụm đỉnh trên hố, tời quay tay (cấp 6: tời lớn, cột cái, cần với ra trên hố, lán mái theo cấp che bánh xe tời).
+- `V` cấp 5, xe gỗ chở đá xẻ (cấp 8: trâu đứng cạnh xe, dây buộc vào càng).
+- `K` cấp 7, lò nung gạch vòm có hoa văn, miệng lò đỏ lửa, ống khói bốc khói, chồng gạch bên cạnh (cấp 8: chồng gạch cao gấp đôi).
+- `q` cấp 8, giàn cần vọt, đá đối trọng, thúng đá thả xuống hố.
+- Năm thợ đá: hai người dưới đáy hố, một bên đá vỡ, một cạnh chồng đá xẻ, một giữa bãi.
+- Đã đổi khi vẽ: lò nung gạch `K` cần cả một ô nên chiếm hai hàng góc trước bên trái; đá vỡ `r` và chồng đá `X` còn một hàng; xe đá `V` hai hàng để trâu đứng cạnh xe.
 
 ### Lò rèn: 2×2 → 3×3
 
-Lò nón lớn ở góc sau bên trái cho khói bốc cao, lán đe phía sau, sân làm việc ở giữa, đống than quặng và giá binh khí ra phía trước.
+Lò nón lớn ở góc sau bên trái cho khói bốc cao, lán đe phía sau, sân làm việc ở giữa; lò thứ hai và bễ bên trái, giá binh khí bên phải, đống than quặng và sân đúc đồng ra phía trước.
 
 ```
-N N W W W W
-N N W W W W
-. . A . 7 7
-B B . . 7 7
-q q . . R R
+N N N W W W
+N N N W W W
+N N N . A .
+7 7 B . . R
+7 7 B . . R
 q q , , 8 8
 ```
 
-- `N` cấp 1, lò nung hình nón (cấp 6: lò to hơn, khói đen từ ống lò).
-- `W` cấp 1, lán đe mái một dốc (cấp 4: lán dài hơn; cấp 6: lán cao, giá treo binh khí sắt).
-- `A` cấp 1, đe sắt.
-- `,` cấp 1, lối vào.
-- `B` cấp 2, bễ thổi lửa (cấp 6: ống bễ đôi bọc da).
-- `q` cấp 2, đống than và quặng sắt (mới).
-- `7` cấp 3, lò nhỏ thứ hai (cấp 7: lò luyện cao đai sắt, lửa đỏ rực).
-- `R` cấp 5, giá giáo, rìu đồng.
-- `8` cấp 8, sân đúc đồng: khuôn trống, nồi đồng rót.
+- `N` cấp 1, lò nung hình nón to hơn dáng cũ chừng 15%, chân lò có hoa văn, miệng lò quay chéo ra góc trước bên phải (cấp 6–8: lò cao dần, đai đất quấn thân, khói đen từ ống lò).
+- `W` cấp 1, lán đe mái một dốc, cao ở trước, máng nước tôi sắt, giá treo kìm búa (cấp 4: lán dài sang phải, bàn gỗ; cấp 6: lán cao, giá treo binh khí sắt thay giá kìm búa).
+- `A` cấp 1, đe sắt trên gốc gỗ, thanh sắt nung đỏ.
+- `,` cấp 1, lối vào lát ba phiến đá.
+- `B` cấp 2, bễ da, vòi thổi vào miệng lò lớn (cấp 6: ống bễ đôi bọc da).
+- `q` cấp 2, đống than và quặng sắt (mới; cấp 4 thêm thúng than, cấp 6 đống to hơn).
+- `7` cấp 3, lò nhỏ thứ hai (cấp 7: lò luyện cao đai sắt, lửa đỏ rực, máng sắt nóng chảy).
+- `R` cấp 5, giá giáo, rìu đồng dựng nghiêng tựa xà, quay ra sân.
+- `8` cấp 8, sân đúc đồng: khuôn trống, nồi đồng rót, trống vừa đúc trên giá.
+- Bốn thợ rèn: quai búa bên đe dưới mép lán, kéo bễ, xúc than, giữa sân.
+- Đã đổi khi vẽ: lò nón cần ô rưỡi nên `N` rộng 3×3 ô con, lán `W` còn ba ô con; lò thứ hai `7` sang bên trái vì lò luyện cao cấp 7 đứng giữa bên phải sẽ che đe và người; bễ `B` đứng giữa hai lò, sát miệng lò lớn; giá binh khí `R` sang bên phải.
 
 ### Kho thóc: 2×2 → 3×3
 

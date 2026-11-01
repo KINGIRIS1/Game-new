@@ -7,7 +7,7 @@ import { CELL, Lot, type Zone } from '../lot';
 import { C } from '../palette';
 import { type ShapeBuilder, seeded } from '../shapes';
 import { ToonModel } from '../toon';
-import type { CongTrinh, LotSpot } from './chung';
+import { type CongTrinh, type LotSpot, type V3, rod } from './chung';
 
 export const RUONG_LOT = new Lot(4, [
   'CCaabbMM',
@@ -31,17 +31,6 @@ const DYKE = 0.08;
 const MUD_WATER = 0x6f7f68;
 /** Guồng nước: tâm trục, cỡ (guồng giữ cỡ như dáng cũ). */
 const WHEEL = { x: -1.42, y: 0.62, z: 1.4, scale: 1.25 };
-
-type V3 = [number, number, number];
-
-/** Thanh tròn từ điểm `a` tới điểm `b` (cột chéo, dây, ống tre). */
-function rod(b: ShapeBuilder, a: V3, c: V3, r: number, color: number, seg = 5): void {
-  const from = new THREE.Vector3(...a);
-  const dir = new THREE.Vector3(...c).sub(from);
-  const len = dir.length();
-  const e = new THREE.Euler().setFromQuaternion(new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 1, 0), dir.clone().normalize()));
-  b.cyl(r, r, len, color, from.x + dir.x / 2, from.y + dir.y / 2, from.z + dir.z / 2, [e.x, e.y, e.z], seg);
-}
 
 /** Vẽ `draw` (tọa độ gốc ở chân) đặt tại (x, y, z), xoay `ry` quanh trục đứng: dùng cho trâu đứng nghiêng trên bờ. */
 function turned(b: ShapeBuilder, x: number, y: number, z: number, ry: number, draw: () => void): void {
@@ -93,9 +82,8 @@ function mound(p: ShapeBuilder, zone: Zone, h: number, front = 0): void {
   const z0 = Math.max(zone.z - zone.d / 2, -EDGE);
   const z1 = Math.min(zone.z + zone.d / 2 + front, EDGE);
   p.box(x1 - x0, h - 0.005, z1 - z0, C.soil, (x0 + x1) / 2, (h - 0.005) / 2, (z0 + z1) / 2);
-  // Hai khóm cỏ trên bờ cho mềm.
+  // Khóm cỏ trên bờ cho mềm.
   p.cone(0.06, 0.16, C.leaf[1], x0 + 0.15, h + 0.06, z1 - 0.14, undefined, 4);
-  p.cone(0.05, 0.13, C.leaf[3], x1 - 0.14, h + 0.05, z0 + 0.16, undefined, 4);
 }
 
 /** Chòi canh ruộng trên bốn cột, sàn có lan can tre, mái nón theo cấp; cấp 6–8 chòi cao lên, có thang tre. */
@@ -184,10 +172,10 @@ export function makeRuong(level: number): THREE.Group {
     p.box(len, dyke, 2 * DYKE, C.soil, c, dyke / 2, 0);
   }
   const tufts = seeded(5);
-  for (let i = 0; i < 6; i++) {
+  for (let i = 0; i < 4; i++) {
     const t = (i % 2 ? 1 : -1) * (0.6 + tufts() * 1.0);
-    const [x, z] = i < 3 ? [0, t] : [t, 0];
-    p.cone(0.05, 0.14, C.leaf[i % 4], x + (i < 3 ? 0.03 : 0), dyke + 0.05, z + (i < 3 ? 0 : 0.03), undefined, 4);
+    const [x, z] = i < 2 ? [0, t] : [t, 0];
+    p.cone(0.05, 0.14, C.leaf[i % 4], x + (i < 2 ? 0.03 : 0), dyke + 0.05, z + (i < 2 ? 0 : 0.03), undefined, 4);
   }
 
   // Lúa: cấp càng cao khóm càng cao, càng chín vàng; cấp 6–8 cao thêm.

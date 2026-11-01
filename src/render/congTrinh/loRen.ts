@@ -5,9 +5,8 @@ import * as THREE from 'three';
 import { above5, drum, IRON_BLADE, roofFor, type Roof } from '../buildings';
 import { Lot } from '../lot';
 import { C } from '../palette';
-import type { ShapeBuilder } from '../shapes';
 import { ToonModel } from '../toon';
-import { type CongTrinh, type LotSpot, partScale, yard } from './chung';
+import { type CongTrinh, type LotSpot, type V3, partScale, rod, yard } from './chung';
 
 export const LO_REN_LOT = new Lot(3, [
   'NNNWWW',
@@ -25,16 +24,6 @@ const ORE = 0x7a4634;
 const LEATHER = 0x7a4a2a;
 /** Lò nón lớn quay miệng chéo ra góc trước bên phải (về phía camera), bễ và đe đứng quanh miệng lò. */
 const MOUTH_FACE = Math.PI / 4;
-
-type V3 = [number, number, number];
-
-/** Thanh tròn từ điểm `a` tới điểm `b` (vòi bễ, khung nồi đồng). */
-function rod(b: ShapeBuilder, a: V3, c: V3, r: number, color: number, seg = 5): void {
-  const from = new THREE.Vector3(...a);
-  const dir = new THREE.Vector3(...c).sub(from);
-  const e = new THREE.Euler().setFromQuaternion(new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 1, 0), dir.clone().normalize()));
-  b.cyl(r, r, dir.length(), color, from.x + dir.x / 2, from.y + dir.y / 2, from.z + dir.z / 2, [e.x, e.y, e.z], seg);
-}
 
 /** Lửa nhấp nháy (world.ts cho co giãn theo `userData.flame`). */
 function flame(g: THREE.Object3D[], r: number, h: number, color: number, x: number, y: number, z: number): void {
@@ -146,8 +135,8 @@ function shed(m: ToonModel, level: number, roof: Roof): number {
     // Giá treo binh khí sắt dọc vách sau lán: kiếm, giáo, rìu sắt treo ngay ngắn.
     const rz = zb + 0.06;
     for (const y of [0.42, 1.0]) p.box(x1 - x0 - 0.1, 0.05, 0.05, C.woodDark, (x0 + x1) / 2, y, rz);
-    for (let i = 0; i < 6; i++) {
-      const x = 0.24 + i * 0.2;
+    for (let i = 0; i < 5; i++) {
+      const x = 0.3 + i * 0.24;
       if (i % 2) {
         p.box(0.05, 0.48, 0.02, IRON_BLADE, x, 0.7, rz + 0.04);
         p.box(0.14, 0.03, 0.03, C.bronze, x, 0.45, rz + 0.04);
@@ -195,7 +184,7 @@ export function makeLoRen(level: number): THREE.Group {
     const big = level >= 6 ? 1.2 : 1;
     p.sphere(0.22 * big, COAL, -1.2, 0.05, 1.24, [1.05, 0.6, 0.95], 8);
     p.sphere(0.18 * big, ORE, -0.8, 0.05, 1.22, [1, 0.6, 1], 8);
-    for (const [x, z, c] of [[-1.0, 1.42, COAL], [-0.62, 1.1, ORE], [-1.42, 1.06, COAL]] as const) p.sphere(0.05, c, x, 0.07, z, [1, 0.7, 1], 5);
+    for (const [x, z, c] of [[-1.0, 1.42, COAL], [-0.62, 1.1, ORE]] as const) p.sphere(0.05, c, x, 0.07, z, [1, 0.7, 1], 5);
     if (level >= 4) {
       p.cyl(0.12, 0.09, 0.14, C.thatch, -0.62, 0.12, 1.36, undefined, 8);
       p.sphere(0.1, COAL, -0.62, 0.19, 1.36, [1, 0.5, 1], 6);
@@ -249,7 +238,6 @@ export function makeLoRen(level: number): THREE.Group {
     const rx = R.x + 0.12;
     for (const z of [R.z - 0.38, R.z + 0.38]) p.cyl(0.03, 0.035, 0.8, C.woodDark, rx, 0.4, z, undefined, 5);
     p.box(0.05, 0.05, 0.86, C.wood, rx, 0.78, R.z);
-    p.box(0.05, 0.04, 0.86, C.wood, rx, 0.1, R.z);
     for (const dz of [-0.26, -0.1, 0.06]) {
       const foot: V3 = [rx - 0.26, 0.03, R.z + dz];
       const top: V3 = [rx - 0.02, 1.0, R.z + dz];
@@ -279,7 +267,7 @@ export function makeLoRen(level: number): THREE.Group {
     pour.userData.flame = true;
     extras.push(pour);
     m.glow.cyl(0.14, 0.14, 0.02, C.ember, mx, 0.395, mz, undefined, 12);
-    for (const dx of [-0.15, 0.15]) for (const dz of [-0.12, 0.12]) p.cyl(0.025, 0.025, 0.2, C.woodDark, E.x + 0.25 + dx, 0.12, mz + dz, undefined, 5);
+    for (const dx of [-0.15, 0.15]) p.box(0.04, 0.2, 0.3, C.woodDark, E.x + 0.25 + dx, 0.11, mz);
     p.box(0.4, 0.04, 0.32, C.wood, E.x + 0.25, 0.23, mz);
     drum(m, E.x + 0.25, mz, 0.56, 0.21);
   }

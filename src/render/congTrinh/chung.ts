@@ -4,9 +4,10 @@
 // lối, rào; không thu tâm như dáng cũ (setSpread): mỗi phần đứng trong khối chữ của nó và to dần tại chỗ.
 // Gốc tọa độ là tâm móng, mặt trước hướng +z, đơn vị là ô đất.
 
-import type * as THREE from 'three';
+import * as THREE from 'three';
 import type { Job } from '../people';
 import { C } from '../palette';
+import type { ShapeBuilder } from '../shapes';
 import type { ToonModel } from '../toon';
 
 /** Người, lính gác đứng trên công trình móng mới cao chừng này lần dáng gốc (như ở công trình cấp 5 dáng cũ). */
@@ -82,4 +83,15 @@ export interface CongTrinh {
   view: View;
   /** Thuyền neo (chỉ bến). */
   docks?: (level: number) => Dock[];
+}
+
+/** Điểm (x, y, z) trong tọa độ móng. */
+export type V3 = [number, number, number];
+
+/** Thanh tròn bán kính `r` nối hai điểm `a`, `c` (tre, cán, dây chéo...). */
+export function rod(b: ShapeBuilder, a: V3, c: V3, r: number, color: number, seg = 5): void {
+  const from = new THREE.Vector3(...a);
+  const dir = new THREE.Vector3(...c).sub(from);
+  const e = new THREE.Euler().setFromQuaternion(new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 1, 0), dir.clone().normalize()));
+  b.cyl(r, r, dir.length(), color, from.x + dir.x / 2, from.y + dir.y / 2, from.z + dir.z / 2, [e.x, e.y, e.z], seg);
 }
