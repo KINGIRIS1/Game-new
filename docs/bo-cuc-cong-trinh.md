@@ -1,4 +1,4 @@
-# Bố cục công trình trên móng mới (chờ duyệt)
+# Bố cục công trình trên móng mới (chủ dự án đã duyệt)
 
 Bản vẽ đi kèm mục **Kế hoạch: công trình to hơn, kinh đô vẽ lại** trong `docs/thiet-ke.md`. Công trình móng 1×1 giữ nguyên nên không có ở đây.
 
@@ -8,7 +8,7 @@ Cách đọc bản vẽ:
 - `.` là sân hay nền trống, `,` là lối đi. Mỗi chữ khác là một phần, ghi cấp nó xuất hiện; phần đổi dáng ở cấp sau ghi trong ngoặc.
 - **mới** là phần chưa có ở dáng hiện tại, thêm vào vì móng rộng hơn.
 - Người, thú, đồ vật giữ cỡ như bây giờ. Mỗi cấp vẫn thêm một phần lớn nhìn rõ; cấp thấp móng còn thưa, lên cấp thì lấp dần.
-- Khi làm, bản vẽ này chép vào code như bản vẽ mẫu kinh đô ở `src/game/mau.ts`, rồi sửa ở code. Tệp này chỉ để duyệt.
+- Khi làm, bản vẽ này chép vào code như bản vẽ mẫu kinh đô ở `src/game/mau.ts`, rồi sửa ở code. Tệp này giữ bản đã duyệt; chỗ nào đổi khi vẽ thật thì sửa cả ở đây.
 
 ### Điện Vua Hùng: 4×4 → 5×5
 
@@ -38,11 +38,11 @@ L m m . , , . . . L
 - `C` cấp 3, chái nhà bên phải.
 - `N` cấp 4, nền đất đắp viền đá dưới nhà (cấp 6: nền đá thứ hai, lan can đỏ; cấp 8: viền đồng).
 - `T` cấp 4, thềm đá ba bậc (cấp 8: thềm rộng, viền đá sẫm).
-- `G` cấp 4, cổng gỗ giữa rào (mới; cấp 8: mái ngói viền đồng).
+- `G` cấp 4, cổng gỗ có mái nhỏ giữa rào, mái theo cấp (mới; cấp 8: mái ngói viền đồng, chim đồng).
 - `L` cấp 6, lầu trống đồng ở hai góc trước.
 - `7` cấp 7, cột chim Lạc đai đồng.
 - `c` cấp 7, chái nhà bên trái, cho cân hai bên (mới).
-- Cấp 4: hàng rào cột chạm đầu bọc đồng chạy quanh mép móng, chừa cổng giữa mặt trước.
+- Cấp 1–3: bốn cọc mốc tre buộc vải đỏ ở bốn góc (mới). Cấp 4: hàng rào cột chạm đầu bọc đồng chạy quanh mép móng thay cọc mốc, chừa cổng giữa mặt trước. Nhà chính to hơn dáng cũ chừng 15%.
 
 ### Ruộng lúa: 3×3 → 4×4
 
@@ -120,7 +120,7 @@ F . , , . F
 
 ### Nhà sàn: 2×2 → 3×3
 
-Một nếp nhà có vườn: nhà chính lùi về góc sau bên trái, nhà phụ bên phải, sân trước có hiên và chum nước, vườn rau góc trước bên trái.
+Một nếp nhà có vườn: nhà chính lùi về góc sau bên trái, to hơn dáng cũ chừng 30%; nhà phụ bên phải, sân trước có hiên và chum nước, vườn rau góc trước bên trái.
 
 ```
 H H H H Q Q
@@ -131,11 +131,11 @@ V V . . g J
 V V , , P P
 ```
 
-- `H` cấp 1, nhà chính mái tròn hình mai rùa (cấp 8: nhà sàn dài mái thuyền vút hai đầu).
+- `H` cấp 1, nhà chính mái tròn hình mai rùa (cấp 7: nhà mái thuyền nối cầu tre sang nhà phụ; cấp 8: nhà sàn dài mái thuyền vút hai đầu, chim đồng).
 - `,` cấp 1, lối vào sân.
 - `E` cấp 2, hiên trước, thang tre.
 - `J` cấp 2, chum nước.
-- `h` cấp 3, nhà phụ mái tròn (cấp 7: nhà mái thuyền nối cầu tre sang nhà chính).
+- `h` cấp 3, nhà phụ mái tròn.
 - `V` cấp 4, vườn rau rào tre.
 - `k` cấp 5, nhà nhỏ thứ ba, chim đồng trên nóc.
 - `Q` cấp 6, cây cau cao, buồng cau.

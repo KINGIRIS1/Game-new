@@ -1125,9 +1125,9 @@ Thưởng khoảng gấp rưỡi nhiệm vụ chương 3. Nhận xong nhiệm v�
 
 Mỗi PR: chạy `npm test` và `npm run build`; sửa `src/render/` hay `src/ui/` thì chụp kiểm tra ở khổ điện thoại; sau đó ghi số cuối cùng vào tài liệu này.
 
-## Kế hoạch: công trình to hơn, kinh đô vẽ lại (chờ duyệt)
+## Kế hoạch: công trình to hơn, kinh đô vẽ lại (chủ dự án đã duyệt, đang làm)
 
-Chủ dự án yêu cầu: công trình móng 1×1 giữ nguyên, mọi công trình khác rộng thêm 1 ô; vẽ lại bố cục và thiết kế, không chỉ phóng to. Mục này là phương án để duyệt trước khi viết code. Bản vẽ bố cục từng công trình nằm ở `docs/bo-cuc-cong-trinh.md`.
+Chủ dự án yêu cầu: công trình móng 1×1 giữ nguyên, mọi công trình khác rộng thêm 1 ô; vẽ lại bố cục và thiết kế, không chỉ phóng to. Chủ dự án đã duyệt phương án dưới đây, kể cả sáu điều ở mục Những điều đã chốt. Bản vẽ bố cục từng công trình nằm ở `docs/bo-cuc-cong-trinh.md`.
 
 ### Móng mới
 
@@ -1242,16 +1242,17 @@ Test: nâng bản lưu cũ thì đủ công trình, không chồng nhau, giữ c
 
 ### Thứ tự làm
 
-1. **Duyệt phương án này** và bản vẽ ở `docs/bo-cuc-cong-trinh.md`.
-2. **Bản thử**: vẽ Điện 5×5 và nhà sàn 3×3 theo bản vẽ, đặt vào kinh đô bằng `window.__debug`, chụp đủ 8 cấp gửi chủ dự án duyệt hướng, như lúc duyệt phong cách và giáo binh có xương.
+1. **Duyệt phương án này** và bản vẽ ở `docs/bo-cuc-cong-trinh.md`. Chủ dự án đã duyệt.
+2. **Bản thử** (đang làm): vẽ Điện 5×5 và nhà sàn 3×3 theo bản vẽ ở `src/render/mongMoi.ts`, chưa nối vào game. `node scripts/chup-cong-trinh.mjs` chụp dáng cũ và dáng mới ở cả 8 cấp trên cùng tỉ lệ ô đất, có người đứng để so cỡ, kèm một cảnh cỡ thật như trên điện thoại. Gửi chủ dự án duyệt hướng, như lúc duyệt phong cách và giáo binh có xương.
 3. **PR 1**: móng mới, lưới 38×38, đất theo cấp, giá đắp nền, số đoạn tối đa, ba mẫu vẽ lại, nâng bản lưu, test. Vẽ lại Điện, ruộng, bến, nhà sàn, bãi đá, lò rèn, kho, doanh trại và ba nơi ở.
 4. **PR 2**: ba đền, bốn công trình Hội Tết, cảnh Tết trong sân Điện. Chụp kiểm tra mọi công trình ở mọi cấp, ghi số cuối cùng vào tài liệu này.
 
 - Hai PR đăng lên `main` liền nhau, để người chơi không thấy đền và công trình Tết dáng cũ nằm lọt thỏm trong móng mới.
 - Làm **trước PR 2 chương 4**: thủy binh cập bờ, ụ nỏ trên vòng thành và mẫu chương 4 đều dựa vào bản đồ, làm sau thì phải đo lại lần nữa. Khi ấy việc này lấy bản lưu v11, các PR chương 4 lùi một số (v12 tới v14).
 
-### Cần chủ dự án chốt
+### Những điều đã chốt
 
+Chủ dự án đã duyệt cả sáu điều:
 1. Rộng thêm cả hai cạnh, móng vẫn vuông.
 2. Bản đồ 38×38 và đất theo cấp như bảng trên.
 3. Bản lưu cũ tự xếp lại, hoàn giá đoạn bị dỡ, một lần áp mẫu không mất phí dời.
@@ -1295,5 +1296,5 @@ Test: nâng bản lưu cũ thì đủ công trình, không chồng nhau, giữ c
 9. **Sửa sau chơi thử Hội Tết**: Thủy Tinh có hai phép, Dời non vẽ rõ hơn, xoay cảnh 4 hướng, dời công trình, mẫu kinh đô mỗi chương.
 10. **Chương 4: Mỵ Châu, Trọng Thủy** (đã duyệt, đang làm; PR 1 đã làm; xem Kế hoạch chương 4): Điện và 7 loại công trình lên cấp 8, lầu nỏ, ụ nỏ trên thành, lính nỏ, thủy binh Triệu đi thuyền, Cao Lỗ, phó bản màn 25–32, Đền Cuông, màn hình Hết truyện, thử thách phó bản và huân công.
 11. **Doanh trại và nơi ở riêng** (đã làm, xem mục cùng tên): doanh trại là nơi tướng ở và điều binh; trại giáo, trại cung, chuồng voi để luyện từng binh chủng; tướng ra trận từ doanh trại.
-12. **Công trình to hơn, kinh đô vẽ lại** (chờ duyệt, xem mục Kế hoạch cùng tên): mọi công trình trừ móng 1×1 rộng thêm 1 ô, vẽ lại bố cục từng công trình, bản đồ 38×38, ba mẫu kinh đô vẽ lại, bản lưu cũ tự xếp lại.
+12. **Công trình to hơn, kinh đô vẽ lại** (đã duyệt, đang làm bản thử; xem mục Kế hoạch cùng tên): mọi công trình trừ móng 1×1 rộng thêm 1 ô, vẽ lại bố cục từng công trình, bản đồ 38×38, ba mẫu kinh đô vẽ lại, bản lưu cũ tự xếp lại.
 13. **Để sau**: chương 5 về Hai Bà Trưng (mới nhắc ở câu cuối chương 4); nhạc nền.

@@ -24,6 +24,7 @@ Game xây dựng chiến thuật chạy trên trình duyệt điện thoại (Ty
     - `heroes.ts`: các tướng có xương (Gióng ba dáng và ngựa sắt có lửa phun ở mõm, Sơn Tinh, Thủy Tinh, An Dương Vương, Lạc tướng đánh trống). Kỹ năng riêng (quét tre, dời non, hô mưa, nỏ thần) qua `Act.skill`, thắng trận qua `Act.win`. Người đánh trống đặt góc dùi bằng `userData.beat`. Tượng ở đền là bản tĩnh (`bakeIronHorse`, `bakeSonTinh`).
     - `node scripts/chup-nhan-vat.mjs <nhóm>` chụp từng nhân vật có xương ở mọi tư thế vào `chup/`; danh sách ở `scripts/nhanVat.ts`.
   - Đất bậc thang, nước lũ, mưa giông, đêm yêu tinh, cảnh Tết (cây nêu, dây cờ, mâm bánh) ở kinh đô: `world.ts`.
+  - Bản thử móng mới (kế hoạch "công trình to hơn" ở `docs/thiet-ke.md`, chưa nối vào game): `lot.ts` đọc bản vẽ ô con (mỗi ký tự nửa ô, như bản vẽ ở `docs/bo-cuc-cong-trinh.md`); `mongMoi.ts` vẽ Điện 5×5 và nhà sàn 3×3 theo bản vẽ ấy. `node scripts/chup-cong-trinh.mjs` chụp dáng cũ và mới ở 8 cấp cùng tỉ lệ ô đất, kèm cảnh cỡ thật.
   - Bãi chiến phó bản là cảnh riêng: `battlefield.ts`. Lính trong trận vẽ bằng `battleView.ts`, dùng chung cho cả hai loại trận.
   - Chất liệu ở `toon.ts`, màu ở `palette.ts`.
   - `window.__debug` (trong `main.ts`) cho phép sửa state, `resync()`, đặt `camera()`, `place()` công trình, `march()` đánh màn, `skill()` bấm kỹ năng. `scripts/chup.mjs` dùng nó để chụp thử bằng Playwright.
