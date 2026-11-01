@@ -1155,7 +1155,8 @@ Số dưới đây là số cuối cùng. Luật ở `src/game/caoLo.ts` (mốc 
   - ngoài bãi, sát thương kỹ năng nhân 1,6 như các tướng khác.
 - Cân bằng: mạnh xấp xỉ An Dương Vương, đo bằng test. Với số ban đầu (600 máu, 18 sát thương; Nỏ liên châu 75 máu, 2,5 ô, hồi 16 giây) Cao Lỗ yếu hơn hẳn: cùng màn 24, người chơi thường có An Dương Vương chịu được máu giặc ×2,0, có Cao Lỗ chỉ ×1,2, kém cả Sơn Tinh hiển linh (×1,5). Nên tăng như trên (giống lần tăng Nỏ thần ở chương 3): màn 24 Cao Lỗ chịu được ×2,0, màn 26 ×2,2 (An Dương Vương ×2,3).
 - Giữ kinh đô (thủy binh, quân Triệu ở chương 4): An Dương Vương tới khi xuống biển, rồi Cao Lỗ. Cao Lỗ chỉ huy được một doanh trại như các tướng khác (xem mục Nhiều doanh trại).
-- Dáng: tóc búi, râu đen, giáp da khảm đồng, đeo bao tên đồng, cầm nỏ lớn có hộp tên trên thân. Đứng trước Điện, cạnh An Dương Vương; vua xuống biển rồi thì Cao Lỗ đứng chỗ ấy.
+- Dáng (`makeCaoLo` trong `src/render/heroes.ts`, nhỏ hơn An Dương Vương một chút): tóc búi, râu đen, giáp da khảm đồng, đeo bao tên đồng, cầm nỏ liên châu có hộp tên trên thân (`repeatingCrossbow` ở `weapons.ts`), tù và đeo bên hông. Nỏ liên châu: ngẩng nỏ chếch lên trời bắn liền năm phát, rồi loạt tên đồng rơi xuống vùng trúng, vòng sóng đồng loang ra. Lệnh bắn: tay trái đưa tù và lên môi thổi (`Act.horn`), vòng sóng đỏ loang ra, dưới chân lính nỏ có hình thoi đỏ đồng nhấp nháy trong lúc có lệnh. Thắng trận thì giơ nỏ quá đầu. Đứng trước Điện, cạnh An Dương Vương, lùi sang trái một bước theo hướng nhìn; vua xuống biển rồi thì Cao Lỗ đứng chỗ ấy.
+- **Tướng thủy binh Triệu** (`makeSoldier('tuongThuy')`): giáp lá đen viền vàng, giáp vai hai tầng, dải lụa đỏ chéo ngực, áo choàng đỏ, mũ đen viền vàng có chùm lông chim đen, râu đen, đao dài lưỡi trăng khuyết giơ cao bổ xuống; to hơn lính của hắn.
 
 **Phó bản chương 4: đường ra biển**
 
@@ -1181,12 +1182,13 @@ Bản đồ phó bản có thêm thẻ Chương 4, mở khi đã vào chương 4
   - thanh **"Vua tới biển"** chạy đầy trong 90 giây. Đầy thanh mà quân ta (kể cả Cao Lỗ) chưa chết hết thì **thắng**, không cần giết hết giặc hay hạ Triệu Đà;
   - quân ta chết hết trước khi đầy thanh thì thua; diệt hết cả ba đợt trước khi đầy thanh thì cũng thắng;
   - thanh trên bãi chiến ghi còn bao nhiêu giây vua tới biển và đợt giặc thứ mấy; ngựa nhỏ chạy theo thanh;
-  - ngựa của vua, chở An Dương Vương và Mỵ Châu ngồi sau, chạy dọc mép bãi về phía biển, xa dần theo thanh. Ngựa chỉ là cảnh, giặc không nhắm vào ngựa.
+  - ngựa của vua, chở An Dương Vương và Mỵ Châu ngồi sau, chạy dọc mép bãi về phía biển, xa dần theo thanh. Ngựa chỉ là cảnh, giặc không nhắm vào ngựa. Ngựa vua (`makeRoyalHorse` trong `beasts.ts`): ngựa hồng to hơn ngựa kỵ binh, đệm đỏ có mặt trống đồng, vua áo đỏ đội miện vàng cầm cương, Mỵ Châu áo đỏ hồng, tóc dài, khoác áo lông ngỗng trắng bay ra sau. Đường ngựa chạy ở mép phải bãi (`MO_DA` ở `battlefield.ts`), nên ở màn này camera nhìn rộng sang phải hơn để thấy cả đường và biển;
 - **Bãi chiến mới**:
   - **Cửa sông** (màn 28): sông rộng chảy ngang sau lưng giặc, thuyền đen buồm đỏ neo ven bờ, bãi lau sậy;
   - **Mộ Dạ** (màn 32): bãi cát, một bên là núi Mộ Dạ, phía xa là biển xanh, lông ngỗng trắng rải trên cát.
   - Màn 25, 26 dùng bãi bến sông; 27 làng; 29 làng; 30 rừng; 31 thành Cổ Loa.
-- Thắng màn 32: Rùa Vàng khổng lồ nổi lên ở mép biển trên bãi chiến, rồi tới đoạn truyện 5 và màn hình Hết truyện.
+  - Đã vẽ: cửa sông có bãi bồi giữa dòng, năm thuyền đen neo mũi vào bờ, ba chiếc thả neo giữa dòng, lau sậy hai bờ; Mộ Dạ có núi bên trái (một ngọn chìa ra biển), biển và bọt sóng bên phải, lông ngỗng rải trên cát dọc mép bãi, dải cát trống cho ngựa chạy. `battlefield.test.ts` canh dải cát trống và góc biển. `node scripts/chup-bai-chien.mjs <nền>` chụp bãi chiến theo nền.
+- Thắng màn 32: ngựa vua dừng ở cuối đường, camera lướt ra biển và lùi xa, Rùa Vàng khổng lồ nổi lên ở góc biển (bảng kết quả chờ 3,5 giây như các màn kết chương), rồi tới đoạn truyện 5 và màn hình Hết truyện.
 - Sau Hết truyện: An Dương Vương không còn đứng trước Điện, không giữ kinh đô nữa. Phó bản màn 17–25 ngài vẫn ra trận, hiện lên "hiển linh" như Gióng, Sơn Tinh.
 
 **Đền Cuông**
@@ -1194,7 +1196,7 @@ Bản đồ phó bản có thêm thẻ Chương 4, mở khi đã vào chương 4
 - Mở khi thắng màn 32. Dựng một lần, 4×4, giá 4000 gạo, 4000 vỏ ốc, 4000 đất đá, 1100 sắt. Ngoài đời, Đền Cuông ở Diễn Châu, Nghệ An, thờ An Dương Vương, nơi truyền thuyết kể vua xuống biển.
 - Đền còn nguyên thì **mỗi đợt thủy binh bớt 20% số thuyền**: còn lại `max(1, ⌊số thuyền × 0,8⌋)` thuyền, tức bớt chừng ấy lính (đợt 1: 4 thuyền 19 lính còn 3 thuyền 18 lính).
 - Sức chịu nước lũ như các đền khác.
-- Dáng: đền nền đá mái cong dưới chân một mỏm núi, sân có tượng Rùa Vàng quay mặt ra phía sông, bên cạnh là một giếng nhỏ thành đá.
+- Dáng (`makeDenCuong` trong `buildings.ts`, vẽ theo móng cũ phóng theo móng như các đền khác): đền nền đá mái tranh cong có chim đồng, sau lưng là mỏm núi đá có rêu và cây thông nhỏ, sân có tượng Rùa Vàng trên bệ đá quay mặt ra phía sông, bên cạnh là giếng nhỏ thành đá có giá gàu, chum nước; lư hương đồng, cờ đỏ.
 
 **Mẫu kinh đô "Cổ Loa giữ sông"** (mở khi vào chương 4, vẽ cho Điện 8; giãn theo đất như ba mẫu kia)
 

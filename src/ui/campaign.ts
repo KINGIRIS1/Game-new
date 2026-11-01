@@ -70,6 +70,19 @@ const NODES: Record<Chapter, [number, number][]> = {
 };
 const START: [number, number] = [12, 154];
 
+/** Chương 4: lông ngỗng trắng Mỵ Châu rắc dọc đường chạy về phương Nam, từ thành Cổ Loa ra biển. */
+const FEATHERS = [
+  [33, 70, -40],
+  [39, 63, 20],
+  [35, 52, -10],
+  [43, 46, 35],
+  [41, 38, -25],
+  [50, 32, 15],
+  [47, 24, -30],
+]
+  .map(([x, y, a]) => `<ellipse class="feather" cx="${x}" cy="${y}" rx="1.9" ry="0.75" transform="rotate(${a} ${x} ${y})"/>`)
+  .join('');
+
 /** Núi, sông và tên đất vẽ sau đường đi, khác nhau ở mỗi chương. */
 const SCENERY: Record<Chapter, string> = {
   1: `<path class="mtn far" d="M8 30 L24 10 L40 30 Z M60 30 L78 8 L96 30 Z"/>
@@ -105,9 +118,9 @@ const SCENERY: Record<Chapter, string> = {
     <ellipse class="citadel" cx="30" cy="96" rx="16" ry="8"/>
     <ellipse class="citadel" cx="30" cy="96" rx="10.5" ry="5.3"/>
     <ellipse class="citadel" cx="30" cy="96" rx="5.5" ry="2.8"/>
-    <text class="label" x="30" y="84">Thành Cổ Loa</text>
-    <path class="feather" d="M36 58 C 40 48, 48 40, 54 26"/>
-    <text class="label" x="96" y="66">Cửa sông</text>`,
+    <text class="label" x="30" y="111">Thành Cổ Loa</text>
+    ${FEATHERS}
+    <text class="label" x="80" y="60">Cửa sông</text>`,
 };
 
 const allEnemies = (n: number) => {
@@ -210,6 +223,7 @@ export function stageHtml(state: GameState, n: number): string {
     <h3>${vi.ui.stageN(n)} · ${esc(text.name)} ${hasBoss(n) ? `<span class="tag">👹 ${vi.ui.stageBoss}</span>` : ''}</h3>
     <p class="intro">${esc(text.intro)}</p>
     <div class="stat"><span>${vi.ui.enemyArmy}</span><b>${enemyList(n)}</b></div>
+    ${stageDef(n)?.holdS ? `<p class="hero-note">🌊 ${vi.ui.holdInfo(stageDef(n)!.holdS!, (stageDef(n)!.waves?.length ?? 0) + 1)}</p>` : ''}
     <div class="stat"><span>${first ? vi.ui.firstReward : vi.ui.replayReward}</span>${costHtml(null, stageReward(state, n))}</div>
     ${gift && !state.son.gifts[gift] ? `<div class="stat"><span>${vi.ui.giftWon}</span><b>${vi.gifts[gift].icon} ${esc(vi.gifts[gift].name)}</b></div>` : ''}
     ${heroNote(heroFor(state, stageDef(n)!.chapter, n))}

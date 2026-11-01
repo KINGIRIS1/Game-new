@@ -1055,6 +1055,7 @@ export const vi = {
     advSea: 'An Dương Vương đã theo Rùa Vàng xuống biển. Ở phó bản màn 17–25 ngài vẫn hiển linh ra trận.',
     holdBanner: (left: number, ours: number, s: number) => `Vua tới biển sau ${s} giây · còn ${left} giặc · quân ta ${ours}`,
     holdWave: (n: number, max: number) => `Đợt giặc ${n}/${max}`,
+    holdInfo: (s: number, waves: number) => `Cầm chân giặc ${s} giây cho vua tới biển; giặc tới ${waves} đợt. Còn người là thắng.`,
     seaWinTitle: 'Vua đã tới biển!',
     endingTitle: 'Hết truyện',
     endingPlay: 'Chơi tiếp',
