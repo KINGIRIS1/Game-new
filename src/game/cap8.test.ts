@@ -20,7 +20,6 @@ import {
   type Building,
   type GameState,
 } from './game';
-import { khoanhQuota } from './khoanh';
 import { edge, setDien } from './testmap';
 import { mauSlots, planMau } from './mau';
 import { SAVE_VERSION, deserialize, serialize } from './save';
@@ -57,9 +56,7 @@ describe('Điện và công trình cấp 8', () => {
     expect(canUpgrade(s, 1)).toEqual({ ok: false, reason: 'capToiDa' });
   });
 
-  it('Điện cấp 8 được phát tới 80 khoảnh (chừng 45×45 ô), kho rộng hơn', () => {
-    expect(khoanhQuota(8)).toBe(80);
-    expect(khoanhQuota(8)).toBeGreaterThan(khoanhQuota(7));
+  it('Điện cấp 8: kho rộng hơn', () => {
     const s = capital8();
     expect(storageCap(s)).toBe(STORAGE_CAP[7]);
     expect(STORAGE_CAP[7]).toBe(32000);

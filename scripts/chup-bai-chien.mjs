@@ -3,7 +3,7 @@
 // Có quân hai bên dàn trận như lúc vừa xuất quân để so cỡ. Ảnh vào chup/bai-<nền>-<khung>.png.
 // Cách dùng: node scripts/chup-bai-chien.mjs <nền> [nền ...] [--man <số màn lấy quân giặc>] [--khung doc,fold,ngang]
 //            [--lui <hệ số>] (lùi camera xa: 0.5 là thấy gấp đôi) [--moc] (vẽ đường ngựa, chỗ Rùa Vàng của Mộ Dạ)
-// Nền: rung, benSong, lang, don, nui, doi, ngap, tanVien, thatDieu, coLoa, cuaSong, moDa.
+// Nền: rung, benSong, lang, don, nui, doi, ngap, tanVien, thatDieu, coLoa, cuaSong, moDa, benKia.
 
 import { createRequire } from 'node:module';
 import { mkdir, writeFile } from 'node:fs/promises';

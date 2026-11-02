@@ -1,10 +1,11 @@
 // Khoảnh đất: đất giữa dải rừng ngoài cùng và sông chia thành 10×10 khoảnh 5×5. Lúc đầu mở sẵn 16 khoảnh ở góc
-// sông; mỗi cấp Điện được phát thêm một số khoảnh rừng, người chơi tự chọn khoảnh nào (miễn sát đất đã mở), trả
-// gạo và vỏ ốc. Không phụ thuộc DOM hay Three.js.
+// sông; người chơi phát thêm khoảnh rừng nào tùy ý (miễn sát đất đã mở), không giới hạn lượt, trả gạo và vỏ ốc, giá
+// tăng từng nấc theo số khoảnh đã phát. Không phụ thuộc DOM hay Three.js.
 
-import { BUILDINGS, KHOANH_COST_FRAC, KHOANH_COST_MIN, KHOANH_QUOTA, type Cost } from './defs';
+import { KHOANH_COST_BASE, KHOANH_COST_STEP, type Cost } from './defs';
+import { plotOrigin, poiAt } from './benKia';
 import { sowKhoanh } from './cayDa';
-import { canAfford, dienLevel, gain, pay, type GameState, type Result } from './game';
+import { canAfford, gain, pay, type GameState, type Result } from './game';
 import { FOREST_BAND, GRID, KHOANH, RIVER_START } from './map';
 
 /** Số khoảnh mỗi chiều. */
@@ -52,31 +53,47 @@ export const START_KHOANH: readonly number[] = squareKhoanh(20);
  */
 export const V11_AREA = [20, 25, 25, 30, 35, 40, 40, 45];
 
-/** Mặt nạ ô đã mở và ô nhỏ nhất đã mở, nhớ theo mảng `state.khoanh` (phát rừng thay mảng mới). */
+/**
+ * Mặt nạ ô đã mở và ô nhỏ nhất đã mở (bên này), nhớ theo mảng `state.khoanh` (phát rừng thay mảng mới) và mảng
+ * khoảnh đã mở bên kia sông (`state.benKia.open`, cũng thay mảng mới mỗi lần mở thêm).
+ */
 interface OpenCache {
   len: number;
+  far: readonly number[];
   mask: Uint8Array;
   start: number;
 }
 const cache = new WeakMap<number[], OpenCache>();
+const NONE: readonly number[] = [];
 
 function openCache(state: GameState): OpenCache {
   const list = state.khoanh;
+  const far = state.benKia?.open ?? NONE;
   const hit = cache.get(list);
-  if (hit && hit.len === list.length) return hit;
+  if (hit && hit.len === list.length && hit.far === far) return hit;
   const mask = new Uint8Array(GRID * GRID);
   let start = RIVER_START;
+  const fill = (o: { x: number; z: number }) => {
+    for (let dz = 0; dz < KHOANH; dz++) mask.fill(1, (o.z + dz) * GRID + o.x, (o.z + dz) * GRID + o.x + KHOANH);
+  };
   for (const id of list) {
     const o = khoanhOrigin(id);
     start = Math.min(start, o.x, o.z);
-    for (let dz = 0; dz < KHOANH; dz++) mask.fill(1, (o.z + dz) * GRID + o.x, (o.z + dz) * GRID + o.x + KHOANH);
+    fill(o);
   }
-  const fresh = { len: list.length, mask, start };
+  // Khoảnh đã mở bên kia sông: xây được như đất bên này, nhưng không tính vào mốc `start` (dải giặc, camera bên này).
+  // Khoảnh có bản làng: 3×3 ô giữa là nhà làng, không dựng công trình được.
+  for (const id of far) {
+    const o = plotOrigin(id);
+    fill(o);
+    if (poiAt(id)?.kind === 'lang') for (let dz = 1; dz < 4; dz++) mask.fill(0, (o.z + dz) * GRID + o.x + 1, (o.z + dz) * GRID + o.x + 4);
+  }
+  const fresh = { len: list.length, far, mask, start };
   cache.set(list, fresh);
   return fresh;
 }
 
-/** Mặt nạ ô đất đã mở (GRID×GRID, chỉ số z * GRID + x): 1 là đã mở. */
+/** Mặt nạ ô đất đã mở, cả hai bờ (GRID×GRID, chỉ số z * GRID + x): 1 là đã mở. */
 export function openMask(state: GameState): Uint8Array {
   return openCache(state).mask;
 }
@@ -94,34 +111,21 @@ export function openStart(state: GameState): number {
   return openCache(state).start;
 }
 
-/** Tổng số khoảnh được mở ở cấp Điện này. */
-export function khoanhQuota(level: number): number {
-  return KHOANH_QUOTA[Math.min(Math.max(level, 1), KHOANH_QUOTA.length) - 1];
-}
-
-/** Số khoảnh còn được phát ở cấp Điện hiện tại. */
-export function khoanhLeft(state: GameState): number {
-  return Math.max(0, khoanhQuota(dienLevel(state)) - state.khoanh.length);
-}
-
-const round5 = (n: number) => Math.round(n / 5) * 5;
-
 /**
- * Giá phát khoảnh tiếp theo: một phần giá lần nâng Điện kế tiếp (ở Điện 8 lấy giá lên cấp 8), nhích dần từ khoảnh đầu
- * tới khoảnh cuối trong lượt của cấp Điện hiện tại; chỉ gạo và vỏ ốc.
+ * Làm tròn giá cho dễ đọc mà nấc nào cũng đắt hơn nấc trước: dưới 100 tới đơn vị, dưới 1000 tới 5, từ 1000 tới 10
+ * (mỗi nấc tăng 6%, luôn hơn bước làm tròn).
  */
+const roundPrice = (n: number) => (n < 100 ? Math.round(n) : n < 1000 ? Math.round(n / 5) * 5 : Math.round(n / 10) * 10);
+
+/** Giá phát khoảnh rừng khi đã mở `count` khoảnh (tính cả 16 khoảnh mở sẵn): nấc thứ `count − 16`. */
+export function khoanhCostAt(count: number): Cost {
+  const step = KHOANH_COST_STEP ** Math.max(0, count - START_KHOANH.length);
+  return { gao: roundPrice(KHOANH_COST_BASE.gao * step), voOc: roundPrice(KHOANH_COST_BASE.voOc * step) };
+}
+
+/** Giá phát khoảnh tiếp theo: tăng từng nấc theo số khoảnh đã mở, không theo cấp Điện; chỉ gạo và vỏ ốc. */
 export function khoanhCost(state: GameState): Cost {
-  const level = Math.min(Math.max(dienLevel(state), 1), KHOANH_QUOTA.length);
-  const prev = level > 1 ? KHOANH_QUOTA[level - 2] : START_KHOANH.length;
-  const size = Math.max(1, KHOANH_QUOTA[level - 1] - prev);
-  const i = Math.min(Math.max(0, state.khoanh.length - prev), size - 1);
-  const [lo, hi] = KHOANH_COST_FRAC;
-  const frac = lo + (hi - lo) * (size > 1 ? i / (size - 1) : 0);
-  const up = BUILDINGS.dien.upgradeCost[Math.min(level + 1, BUILDINGS.dien.maxLevel)] ?? {};
-  return {
-    gao: Math.max(KHOANH_COST_MIN.gao, round5(frac * (up.gao ?? 0))),
-    voOc: Math.max(KHOANH_COST_MIN.voOc, round5(frac * (up.voOc ?? 0))),
-  };
+  return khoanhCostAt(state.khoanh.length);
 }
 
 /** Khoảnh `id` chạm đất đã mở (4 hướng). */
@@ -136,7 +140,6 @@ export function canOpenKhoanh(state: GameState, id: number): Result<Cost> {
   if (!validId(id)) return { ok: false, reason: 'khongTimThay' };
   if (state.khoanh.includes(id)) return { ok: false, reason: 'khoanhDaMo' };
   if (!touchesOpen(state, id)) return { ok: false, reason: 'khoanhChuaSat' };
-  if (khoanhLeft(state) <= 0) return { ok: false, reason: 'hetLuotKhoanh' };
   // Đang có giặc, lũ, hay trinh sát vừa báo: lo giữ kinh đô trước.
   if (state.raid.phase !== 'idle') return { ok: false, reason: 'dangCoGiac' };
   const cost = khoanhCost(state);
@@ -163,17 +166,9 @@ export function openKhoanh(state: GameState, id: number): Result<Cost> {
   return check;
 }
 
-/** Các khoảnh phát được ngay nếu đủ của: chưa mở, sát đất đã mở, còn lượt (không xét giặc). */
+/** Các khoảnh phát được ngay nếu đủ của: chưa mở, sát đất đã mở (không xét giặc). */
 export function openable(state: GameState): number[] {
-  if (khoanhLeft(state) <= 0) return [];
   const out: number[] = [];
   for (let id = 0; id < KHOANH_N * KHOANH_N; id++) if (!state.khoanh.includes(id) && touchesOpen(state, id)) out.push(id);
   return out;
-}
-
-/** Cấp Điện thấp nhất (sau cấp hiện tại) cho thêm lượt phát, hoặc null nếu đã hết. */
-export function nextQuotaLevel(state: GameState): number | null {
-  const level = dienLevel(state);
-  for (let l = level + 1; l <= KHOANH_QUOTA.length; l++) if (khoanhQuota(l) > Math.max(state.khoanh.length, khoanhQuota(level))) return l;
-  return null;
 }

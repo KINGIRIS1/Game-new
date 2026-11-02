@@ -4,7 +4,7 @@
 // thành đủ ba vòng thì Rùa Vàng tặng vuốt làm lẫy nỏ, Cao Lỗ chế nỏ thần, An Dương Vương cầm nỏ ra trận.
 
 import type { HeroSetup } from './battle';
-import { BUILDINGS, CH3_QUEST_START, NO_THAN_FORGE, RINGS_NEEDED } from './defs';
+import { BUILDINGS, CH3_QUEST_START, NO_THAN_FORGE, RINGS_NEEDED, isBridge } from './defs';
 import { canAfford, pay, scheduleLandRaid, type AdvState, type FailReason, type GameState, type Result } from './game';
 import { forgeLevel } from './giong';
 import { GRID, isRiver } from './map';
@@ -55,8 +55,10 @@ export function wallRings(s: GameState): number {
   let h = (dien.x * 64 + dien.z) | 0;
   let n = 0;
   for (const b of s.buildings) {
-    if (!isRingWall(b)) continue;
-    const v = b.x * 64 + b.z;
+    // Cầu còn nguyên cũng đổi số vòng: giặc từ bên kia sông đi qua cầu được.
+    const bridge = isBridge(b.type) && !b.damaged;
+    if (!isRingWall(b) && !bridge) continue;
+    const v = (b.x * 128 + b.z) * (bridge ? 7 : 1);
     a = Math.imul(a ^ v, 0x01000193);
     h = Math.imul(h ^ v, 0x85ebca6b) ^ (h >>> 13);
     n++;
@@ -74,12 +76,20 @@ const ringsCache = new WeakMap<GameState, { a: number; h: number; n: number; rin
 function countRings(s: GameState, dien: { x: number; z: number }): number {
   const wall = new Uint8Array(GRID * GRID);
   for (const b of s.buildings) if (isRingWall(b)) wall[tileIndex(b.x, b.z)] = 1;
+  // Ô sông có cầu còn nguyên thì đi được như đất.
+  const bridge = new Uint8Array(GRID * GRID);
+  for (const b of s.buildings) {
+    if (!isBridge(b.type) || b.damaged) continue;
+    const d = BUILDINGS[b.type];
+    for (let dx = 0; dx < d.w; dx++) for (let dz = 0; dz < d.d; dz++) bridge[tileIndex(b.x + dx, b.z + dz)] = 1;
+  }
+  const water = (x: number, z: number) => isRiver(x, z) && !bridge[tileIndex(x, z)];
   const dist = new Int32Array(GRID * GRID).fill(1 << 20);
   // Dò theo từng mức: bước vào ô có thành tốn 1, ô khác tốn 0. `buckets[d]` là các ô vừa tới được với chi phí d.
   const buckets: number[][] = [[], []];
   for (let z = 0; z < GRID; z++) {
     for (let x = 0; x < GRID; x++) {
-      if ((x !== 0 && z !== 0) || isRiver(x, z)) continue;
+      if ((x !== 0 && z !== 0) || water(x, z)) continue;
       const i = tileIndex(x, z);
       dist[i] = wall[i];
       buckets[wall[i]].push(i);
@@ -97,9 +107,9 @@ function countRings(s: GameState, dien: { x: number; z: number }): number {
           if (!dx && !dz) continue;
           const nx = cx + dx;
           const nz = cz + dz;
-          if (nx < 0 || nz < 0 || nx >= GRID || nz >= GRID || isRiver(nx, nz)) continue;
+          if (nx < 0 || nz < 0 || nx >= GRID || nz >= GRID || water(nx, nz)) continue;
           // Không đi chéo cắt góc qua sông, như giặc khi tìm đường.
-          if (dx && dz && (isRiver(cx + dx, cz) || isRiver(cx, cz + dz))) continue;
+          if (dx && dz && (water(cx + dx, cz) || water(cx, cz + dz))) continue;
           const ni = tileIndex(nx, nz);
           const nd = d + wall[ni];
           if (nd >= dist[ni]) continue;

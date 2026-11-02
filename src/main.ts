@@ -15,7 +15,8 @@ import { inChapter2, offerGift } from './game/son';
 import { buyHuan } from './game/thuThach';
 import { markStory, pendingStory } from './game/story';
 import { footprintTop } from './game/terrain';
-import { BUILDINGS, RESOURCE_IDS, STAGES, UNIT_TYPES, U_NO, isDecor, isRoad, type BuildingType, type Cost, type ResourceId, type SkillId } from './game/defs';
+import { BUILDINGS, RESOURCE_IDS, STAGES, UNIT_TYPES, U_NO, isBridge, isDecor, isRoad, type BuildingType, type Cost, type ResourceId, type Row, type SkillId, type UnitType } from './game/defs';
+import { CAMPS, benKiaOpen, bridgeSnap, campHero, campTier, canStartCamp, joinVillage, plotAt, poiAt, sendScout, setGarrison, startCamp } from './game/benKia';
 import { fmt } from './ui/format';
 import {
   canAfford,
@@ -57,11 +58,11 @@ import {
   type GameState,
   type StageResult,
 } from './game/game';
-import { isOpen, khoanhLeft, khoanhOf, khoanhQuota, khoanhWood, openKhoanh, openable } from './game/khoanh';
+import { isOpen, khoanhOf, khoanhWood, openKhoanh, openable } from './game/khoanh';
 import { cayDaAt, clearCayDa } from './game/cayDa';
-import { GRID, RIVER_START } from './game/map';
+import { GRID, RIVER_START, farBankOf } from './game/map';
 import { fromCode, loadFromStorage, saveFileName, saveToStorage, toCode } from './game/save';
-import { RESOLUTIONS, World, type Resolution } from './render/world';
+import { HALF, RESOLUTIONS, World, type Resolution } from './render/world';
 import { vi } from './text/vi';
 import { Hud, buildingName, type HudAction } from './ui/hud';
 
@@ -212,7 +213,8 @@ function start(): void {
   const nearestSpot = (type: BuildingType): { x: number; z: number } => {
     const def = BUILDINGS[type];
     const c = world.screenCenterTile();
-    return findSpot(state, type, c) ?? { x: c.x - Math.floor((def.w - 1) / 2), z: c.z - Math.floor((def.d - 1) / 2) };
+    const guess = { x: c.x - Math.floor((def.w - 1) / 2), z: c.z - Math.floor((def.d - 1) / 2) };
+    return findSpot(state, type, c) ?? (isBridge(type) ? bridgeSnap(type, guess.x, guess.z) : guess);
   };
 
   const exitMode = () => {
@@ -238,9 +240,13 @@ function start(): void {
     }
   };
 
+  /** Quân đang hành quân qua cầu tới đồn giặc: chừng ba giây rồi mới sang bãi chiến. */
+  let marching: { plot: number; army: Record<UnitType, number>; rows: Record<UnitType, Row>; at: number } | null = null;
+  const MARCH_MS = 3200;
+
   world.view.onTap = (cx, cy) => {
-    // Trên bãi chiến chỉ xem, không chọn gì.
-    if (world.inField) return;
+    // Trên bãi chiến chỉ xem, không chọn gì; đang hành quân cũng vậy.
+    if (world.inField || marching) return;
     const hero: string | null = mode.kind === 'view' ? world.pickHero(cx, cy) : null;
     if (hero) {
       play('tap');
@@ -260,6 +266,15 @@ function start(): void {
     if (mode.kind === 'place') {
       if (!tile) return;
       const def = BUILDINGS[mode.type];
+      // Cầu bám theo sông: chạm đâu thì cầu dịch dọc sông tới đó.
+      if (isBridge(mode.type)) {
+        const at = bridgeSnap(mode.type, tile.x - (def.w - 1) / 2, tile.z - (def.d - 1) / 2);
+        mode.x = at.x;
+        mode.z = at.z;
+        play('tap');
+        updateGhost();
+        return;
+      }
       // Chạm vào ô sát bờ thì đẩy công trình lùi vào đất liền thay vì chìa xuống sông.
       mode.x = Math.min(Math.max(tile.x - Math.floor((def.w - 1) / 2), 0), RIVER_START - def.w);
       mode.z = Math.min(Math.max(tile.z - Math.floor((def.d - 1) / 2), 0), RIVER_START - def.d);
@@ -311,6 +326,15 @@ function start(): void {
       commit();
       world.pop(r.value.id);
       select(r.value.id);
+      return;
+    }
+    // Chạm vào đất bên kia sông (từ khi Điện đủ cấp mở chuyện bên kia): mở bảng Đất bên kia sông.
+    const far = id === null && tile ? plotAt(tile.x, tile.z) : null;
+    if (far !== null && benKiaOpen(state) && !isOpen(state, tile!.x, tile!.z)) {
+      select(null);
+      play('tap');
+      world.setFarSelection(far);
+      hud.showBenKia(state, far);
       return;
     }
     // Chạm vào rừng chưa phát: mở bảng Khoảnh rừng (dải rừng ngoài cùng thì không phát được).
@@ -372,6 +396,7 @@ function start(): void {
         mode = { kind: 'place', type: a.type, ...nearestSpot(a.type) };
         hud.setMode('place');
         updateGhost();
+        if (isBridge(a.type)) hud.toast(vi.ui.bridgeHint);
         return;
       }
 
@@ -410,6 +435,41 @@ function start(): void {
         play('tap');
         hud.showMau(state);
         return;
+
+      case 'marchCamp': {
+        const check = canStartCamp(state, a.plot);
+        if (!check.ok) return fail(check.reason);
+        if (UNIT_TYPES.every((k) => !a.army[k]) && !campHero(state, a.plot)) return fail('chuaChonQuan');
+        hud.closeSheet();
+        select(null);
+        play('claim');
+        navigator.vibrate?.(40);
+        hud.toast(vi.benKia.campMarching);
+        world.startMarch(state, a.plot, a.army, MARCH_MS / 1000);
+        marching = { plot: a.plot, army: a.army, rows: a.rows, at: performance.now() + MARCH_MS };
+        return;
+      }
+
+      case 'ketThan': {
+        const r = joinVillage(state, a.id);
+        if (!r.ok) return fail(r.reason);
+        play('upgrade');
+        const poi = poiAt(a.id);
+        if (poi?.kind === 'lang') hud.toast(vi.benKia.villageToast(vi.benKia.lang[poi.nghe].name));
+        commit();
+        hud.refreshSheet(state);
+        return;
+      }
+
+      case 'trinhSat': {
+        const r = sendScout(state, a.id);
+        if (!r.ok) return fail(r.reason);
+        play('place');
+        hud.toast(vi.benKia.scoutSent);
+        commit();
+        hud.refreshSheet(state);
+        return;
+      }
 
       case 'phatRung': {
         const r = openKhoanh(state, a.id);
@@ -613,9 +673,7 @@ function start(): void {
         play('upgrade');
         hud.toast(
           r.value.type === 'dien'
-            ? khoanhQuota(r.value.level) > khoanhQuota(r.value.level - 1) && khoanhLeft(state) > 0
-              ? vi.ui.landExpanded(khoanhLeft(state), r.value.level)
-              : vi.ui.dienUp(r.value.level)
+            ? vi.ui.dienUp(r.value.level)
             : r.value.type === 'luy'
               ? vi.ui.placed(buildingName(r.value))
               : vi.ui.upgraded(buildingName(r.value), r.value.level),
@@ -786,6 +844,17 @@ function start(): void {
         if (!r.ok) return fail(r.reason);
         play('claim');
         hud.toast(vi.ui.commandAssigned(vi.ui.tuongNames[a.tuong]));
+        commit();
+        return;
+      }
+
+      case 'garrisonDelta': {
+        const b = findBuilding(state, a.id);
+        const bank = b ? farBankOf(b.x, b.z) : null;
+        if (!bank) return;
+        const r = setGarrison(state, bank, a.unit, state.benKia.garrison[bank][a.unit] + a.delta);
+        if (!r.ok) return fail(r.reason);
+        play('tap');
         commit();
         return;
       }
@@ -997,7 +1066,8 @@ function start(): void {
       if (mode.kind !== 'view') exitMode();
       select(null);
       hud.closeCampaign();
-      world.showField(STAGES[battle.wave - 1].terrain);
+      const don = battle.camp !== undefined ? campTier(battle.camp) : null;
+      world.showField(don ? CAMPS[don].terrain : STAGES[battle.wave - 1].terrain);
     } else if (!battle && world.inField) {
       world.showField(null);
       hud.closeStageResult();
@@ -1050,6 +1120,7 @@ function start(): void {
   let prev = performance.now();
   let lastUi = 0;
   let lastCayKey = '';
+  let lastKnown = state.benKia.known.length;
   let lastSave = prev;
   const frame = (now: number) => {
     const dt = Math.min((now - prev) / 1000, 0.1);
@@ -1066,6 +1137,15 @@ function start(): void {
       state.lastSeen = wall;
     }
 
+    if (marching && now >= marching.at) {
+      // Hành quân xong: sang bãi chiến đánh đồn.
+      const m = marching;
+      marching = null;
+      world.stopMarch();
+      const r = startCamp(state, m.plot, m.army, m.rows);
+      if (!r.ok) fail(r.reason);
+      commit();
+    }
     world.updateFlood(state);
     world.updateBattle(state.raid.battle, dt);
     watchCampaign();
@@ -1082,6 +1162,12 @@ function start(): void {
         lastCayKey = cayKey;
         world.sync(state);
         showCayDaHint();
+      }
+      // Trinh sát về tới nơi: đất bên kia hiện ra thêm.
+      if (state.benKia.known.length !== lastKnown) {
+        if (state.benKia.known.length > lastKnown && !state.benKia.scouts.length) hud.toast(vi.benKia.scoutBack);
+        lastKnown = state.benKia.known.length;
+        world.sync(state);
       }
       refreshUi();
       watchStory();
@@ -1101,7 +1187,7 @@ function start(): void {
     renderInfo: () => ({ ...world.renderer.info.render }),
     rotate: (dir: 1 | -1) => world.rotateView(dir),
     camera: (x: number, z: number, zoom: number) => {
-      world.view.target.set(x - GRID / 2, 0, z - GRID / 2);
+      world.view.target.set(x - HALF, 0, z - HALF);
       world.view.zoom = zoom;
       world.view.apply();
     },
@@ -1117,6 +1203,20 @@ function start(): void {
       const r = place(state, type, x, z);
       commit();
       return r;
+    },
+    /** Chỉ chạy cảnh quân hành quân qua cầu tới đồn ở khoảnh `plot` (không vào trận), để chụp thử. */
+    marchPreview: (plot: number, army: Record<UnitType, number>, secs = 8) => world.startMarch(state, plot, army, secs),
+    /** Điều quân đánh đồn ở khoảnh `plot` ngay (bỏ qua cảnh hành quân), để chụp thử bãi chiến bờ bên kia. */
+    camp: (plot: number) => {
+      const r = startCamp(state, plot, { ...state.troops }, state.campaign.rows);
+      commit();
+      return r;
+    },
+    /** Mở bảng Đất bên kia sông của khoảnh bên kia `id`, như khi chạm vào đất ấy. */
+    benKia: (id: number) => {
+      select(null);
+      world.setFarSelection(id);
+      hud.showBenKia(state, id);
     },
     /** Các khoảnh rừng phát được; `khoanh(id)` mở bảng Khoảnh rừng như khi chạm vào khoảnh ấy. */
     openable: () => openable(state),

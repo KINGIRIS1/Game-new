@@ -47,7 +47,7 @@ function late(): GameState {
   if (!barracks.ok) throw new Error(barracks.reason);
   barracks.value.level = 5;
   s.troops = { ...SAMPLE_ARMY4 };
-  for (const id of ['mo', 'suGia', 'vuonVai', 'roiGay', 'ketChuong', 'langLieu', 'kenRe', 'ruocDau', 'doiNon', 'ketChuong2', 'cotDa', 'dietYeu', 'noThan', 'kimQuy', 'ketChuong3', 'cauHon', 'caoLoCamQuan', 'layNo', 'longNgong', 'ngocTrai', 'hetTruyen'] as const) {
+  for (const id of ['mo', 'suGia', 'benKia', 'vuonVai', 'roiGay', 'ketChuong', 'langLieu', 'kenRe', 'ruocDau', 'doiNon', 'ketChuong2', 'cotDa', 'dietYeu', 'noThan', 'kimQuy', 'ketChuong3', 'cauHon', 'caoLoCamQuan', 'layNo', 'longNgong', 'ngocTrai', 'hetTruyen'] as const) {
     markStory(s, id);
   }
   return s;

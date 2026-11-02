@@ -59,7 +59,7 @@ function ch4(): GameState {
     if (!place(s, type, x, edge(8, 1)).ok) throw new Error(`dựng ${type} thử thất bại`);
   }
   s.troops = { ...ARMY };
-  for (const id of ['mo', 'suGia', 'vuonVai', 'roiGay', 'ketChuong', 'langLieu', 'kenRe', 'ruocDau', 'doiNon', 'ketChuong2', 'cotDa', 'dietYeu', 'noThan', 'kimQuy', 'ketChuong3'] as const) markStory(s, id);
+  for (const id of ['mo', 'suGia', 'benKia', 'vuonVai', 'roiGay', 'ketChuong', 'langLieu', 'kenRe', 'ruocDau', 'doiNon', 'ketChuong2', 'cotDa', 'dietYeu', 'noThan', 'kimQuy', 'ketChuong3'] as const) markStory(s, id);
   return s;
 }
 

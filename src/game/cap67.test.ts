@@ -3,8 +3,6 @@ import { startFieldBattle, stepField } from './battle';
 import { canForgeArms, forgeArms } from './binhKhi';
 import { ARMS, ARMS_BONUS, BUILDINGS, CH2_QUEST_START, CH3_QUEST_START, DEFAULT_ROWS, FIELD, STORAGE_CAP, UNITS } from './defs';
 import { canUpgrade, createInitialState, limitOf, place, storageCap, upgrade, type GameState } from './game';
-import { KHOANH_QUOTA } from './defs';
-import { khoanhQuota } from './khoanh';
 import { edge, setDien } from './testmap';
 import { SAVE_VERSION, deserialize, serialize } from './save';
 
@@ -32,9 +30,7 @@ describe('Điện và công trình cấp 6–7', () => {
     expect(canUpgrade(s, 1)).toEqual({ ok: false, reason: 'canChuong4' });
   });
 
-  it('Điện cấp 6, 7 được phát tới 60, 72 khoảnh đất; kho chứa nhiều hơn', () => {
-    expect(KHOANH_QUOTA.slice(5, 7)).toEqual([60, 72]);
-    expect(khoanhQuota(7)).toBeGreaterThan(khoanhQuota(6));
+  it('Điện cấp 6, 7: kho chứa nhiều hơn', () => {
     const s = rich(CH3_QUEST_START);
     setDien(s, 7);
     expect(storageCap(s)).toBe(STORAGE_CAP[6]);

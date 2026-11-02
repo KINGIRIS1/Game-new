@@ -52,7 +52,13 @@ export type BuildingType =
   // Làng chài: ra cá, dân và lính ăn cá thay một phần gạo.
   | 'langChai'
   // Cổng thành: cửa trong vòng tường, hút giặc tới phá, lính trên lầu cổng bắn (chương 3).
-  | 'congThanh';
+  | 'congThanh'
+  // Cầu qua sông Đà, qua sông Thao sang vùng đất bên kia (`benKia.ts`).
+  | 'cauSongDa'
+  | 'cauSongThao'
+  // Nhà làng bên kia sông đã về theo, và đồn biên giữ bờ bên kia.
+  | 'banLang'
+  | 'donBien';
 
 /**
  * Mốc mở khóa theo cốt truyện: sau kết chương 1, khi vào chương 2, sau kết chương 2, khi vào chương 3, sau kết chương 3,
@@ -137,6 +143,28 @@ function decorDef(type: BuildingType, size: number, cost: Cost, limit: number[],
     minDien,
     buildable: true,
     removable: true,
+  };
+}
+
+/**
+ * Cầu qua sông: một cầu mỗi sông, có từ Điện cấp 4 (`BEN_KIA_DIEN`), vắt qua 7 ô sông. Cấp 1 cầu phao tre, cấp 2 cầu
+ * gỗ (Điện 6), cấp 3 cầu gỗ lớn có lầu đầu cầu (Điện 7). Không dời, không dỡ được.
+ */
+function bridgeDef(type: 'cauSongDa' | 'cauSongThao', w: number, d: number): BuildingDef {
+  return {
+    type,
+    w,
+    d,
+    maxLevel: 3,
+    buildCost: { gao: 400, voOc: 300, datDa: 200 },
+    upgradeCost: [{}, {}, { voOc: 1400, datDa: 1000, go: 800, sat: 250 }, { voOc: 2400, datDa: 2000, go: 1500, sat: 500 }],
+    levelMinDien: [0, 0, 6, 7],
+    production: [{}, {}, {}],
+    hp: [600, 1500, 2600],
+    limit: [0, 0, 0, 1, 1, 1, 1, 1],
+    minDien: 4,
+    buildable: true,
+    removable: false,
   };
 }
 
@@ -731,7 +759,72 @@ export const BUILDINGS: Record<BuildingType, BuildingDef> = {
     removable: false,
     unlock: 'ketChuong4',
   },
+  // Cầu qua sông Đà nằm dọc (rộng 2 ô, vắt qua 7 ô sông), cầu qua sông Thao nằm ngang.
+  cauSongDa: bridgeDef('cauSongDa', 2, 7),
+  cauSongThao: bridgeDef('cauSongThao', 7, 2),
+  // Bản làng bên kia sông đã về theo (`benKia.ts`): nhà làng giữa khoảnh làng, không dựng hay dỡ được. Giặc bên kia
+  // đánh làng trước tiên; làng hư thì thôi làm ra, sửa tốn 30% lễ kết thân như công trình khác.
+  banLang: {
+    type: 'banLang',
+    w: 3,
+    d: 3,
+    maxLevel: 1,
+    buildCost: { gao: 600, voOc: 400 },
+    upgradeCost: [{}, {}],
+    production: [{}],
+    hp: [700],
+    limit: [0, 0, 0, 4, 4, 4, 4, 4],
+    minDien: 4,
+    buildable: false,
+    removable: false,
+  },
+  // Đồn biên: chỉ dựng bên kia sông, mỗi bờ một. Lính đóng ở đồn ra trận từ đây khi giữ kinh đô.
+  donBien: {
+    type: 'donBien',
+    w: 4,
+    d: 4,
+    maxLevel: 1,
+    buildCost: { gao: 800, voOc: 600, datDa: 600, sat: 100 },
+    upgradeCost: [{}, {}],
+    production: [{}],
+    hp: [900],
+    limit: [0, 0, 0, 0, 2, 2, 2, 2],
+    minDien: 5,
+    buildable: true,
+    removable: false,
+  },
 };
+
+/** Cầu qua sông (sông Đà hay sông Thao). */
+export const isBridge = (type: BuildingType): type is 'cauSongDa' | 'cauSongThao' => type === 'cauSongDa' || type === 'cauSongThao';
+
+// ---------- Bên kia sông ----------
+
+/** Điện cấp này thì bắc được cầu sang bên kia sông, và Lạc hầu kể đoạn "Bên kia sông". */
+export const BEN_KIA_DIEN = 4;
+/**
+ * Cầu bị lũ cuốn (hư) khi nước dâng tới bậc này, theo cấp cầu: cầu phao tre ở bậc 2, cầu gỗ ở bậc 3, cầu gỗ lớn
+ * không sợ lũ.
+ */
+export const BRIDGE_FLOOD = [2, 3, Infinity];
+/** Sai trinh sát dò một khoảnh bên kia sông: giá, thời gian đi (đồng hồ chơi). */
+export const SCOUT_COST: Cost = { gao: 60, voOc: 20 };
+export const SCOUT_MS = 40_000;
+/** Số trinh sát đi cùng lúc: một, từ Điện cấp này thì hai. */
+export const SCOUT_TWO_DIEN = 6;
+/** Công trình có móng nằm trọn trên đất đặc sản hợp nghề làm ra thêm chừng này. */
+export const DAC_SAN_BONUS = 0.3;
+/** Dâng lễ kết thân thì bản làng về theo. */
+export const VILLAGE_GIFT: Cost = { gao: 600, voOc: 400 };
+/**
+ * Bản làng đã về theo làm ra bằng chừng này phần một công trình cùng nghề, đủ người, ở cấp bằng cấp Điện (không cần
+ * dân). Một làng trọn một công trình thì làng rèn thêm tới gần nửa số sắt ở Điện 6, nên lấy một nửa.
+ */
+export const VILLAGE_SHARE = 0.5;
+/** Đào được của chôn: chừng này phần giá nâng Điện lên cấp kế tiếp, mọi loại tài nguyên trong giá ấy. */
+export const TREASURE_SHARE = 0.05;
+/** Một bờ bên kia có công trình thì cứ chừng này đợt giặc trên bộ (hay thủy binh) có một đợt tới bờ bên kia. */
+export const FAR_RAID_EVERY = 3;
 
 /** Đền Cuông còn nguyên: mỗi đợt thủy binh bớt chừng này phần số thuyền (làm tròn xuống, còn ít nhất một thuyền). */
 export const DEN_CUONG_BOATS = 0.2;
@@ -894,14 +987,13 @@ export const STORAGE_CAP = [500, 1000, 2000, 4000, 8000, 14000, 22000, 32000];
 
 // ---------- Khoảnh đất ----------
 
-/** Tổng số khoảnh đất 5×5 được mở (tính cả 16 khoảnh mở sẵn lúc đầu) theo cấp Điện, chỉ số 0 là cấp 1. */
-export const KHOANH_QUOTA = [18, 24, 32, 38, 48, 60, 72, 80];
 /**
- * Giá phát một khoảnh rừng: phần này của giá lần nâng Điện kế tiếp (gạo và vỏ ốc), từ khoảnh đầu tới khoảnh cuối
- * trong lượt của một cấp Điện. Không thấp hơn `KHOANH_COST_MIN`.
+ * Giá phát khoảnh rừng đầu tiên (khoảnh thứ 17, sau 16 khoảnh mở sẵn lúc đầu): chỉ gạo và vỏ ốc. Đất bên này sông
+ * phát thoải mái, không giới hạn lượt theo cấp Điện; giá tăng từng nấc theo số khoảnh đã phát (`KHOANH_COST_STEP`).
  */
-export const KHOANH_COST_FRAC: [number, number] = [0.02, 0.03];
-export const KHOANH_COST_MIN = { gao: 20, voOc: 10 };
+export const KHOANH_COST_BASE = { gao: 20, voOc: 15 };
+/** Mỗi khoảnh đã phát thêm thì giá khoảnh sau nhân chừng này. Khoảnh cuối cùng (thứ 100) chừng 2500 gạo. */
+export const KHOANH_COST_STEP = 1.06;
 
 // ---------- Cây, đá mọc trên ô trống (kinh đô lớn PR 4) ----------
 
@@ -1274,7 +1366,7 @@ export const ENEMY_ROWS: Record<EnemyType, Row> = {
  */
 export const FIELD = { w: 9, d: 22, gap: 10, hpMul: 1.6, maxS: 90 };
 
-export type Terrain = 'rung' | 'benSong' | 'lang' | 'don' | 'nui' | 'doi' | 'ngap' | 'tanVien' | 'thatDieu' | 'coLoa' | 'cuaSong' | 'moDa';
+export type Terrain = 'rung' | 'benSong' | 'lang' | 'don' | 'nui' | 'doi' | 'ngap' | 'tanVien' | 'thatDieu' | 'coLoa' | 'cuaSong' | 'moDa' | 'benKia';
 
 export type Chapter = 1 | 2 | 3 | 4;
 
