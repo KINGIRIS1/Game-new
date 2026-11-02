@@ -4,7 +4,7 @@
 // tướng), mỗi bậc thêm máu và sức đánh ở mọi trận, giữ mãi. Đánh và ghi kết quả thử thách ở `campaign.ts`.
 
 import type { Battle, FieldSetup } from './battle';
-import { CHALLENGES, GIAC_DU_DMG, HUAN_BRANCHES, HUAN_COST, HUAN_REWARD, STAGES, type ChallengeDef, type HuanBranch } from './defs';
+import { CHALLENGES, GIAC_DU_DMG, HUAN_BRANCHES, HUAN_COST, HUAN_REWARD, STAGES, type ChallengeDef, type EnemyType, type HuanBranch } from './defs';
 import type { FailReason, GameState, Result, ThuThachState } from './game';
 
 const ok = <T>(value: T): Result<T> => ({ ok: true, value });
@@ -25,10 +25,18 @@ export const challengeWon = (s: GameState, n: number) => s.thuThach.won.includes
 /** Huân công cho lần đầu thắng thử thách màn `n`. */
 export const huanReward = (n: number) => (STAGES[n - 1] ? HUAN_REWARD[STAGES[n - 1].chapter] : 0);
 
-/** Phần thiết lập trận của thử thách màn `n`: hệ số máu giặc riêng, giặc dữ đánh đau hơn. */
-export function challengeField(n: number): Pick<FieldSetup, 'hpScale' | 'fury' | 'challenge'> {
+/** Giặc đứng sẵn trên bãi lúc vào thử thách màn `n`: giặc của màn thường, cộng giặc kéo thêm (màn 1–4). */
+export function challengeEnemies(n: number): Partial<Record<EnemyType, number>> {
+  const out: Partial<Record<EnemyType, number>> = { ...STAGES[n - 1].enemies };
+  const extra = challengeOf(n)?.extra ?? {};
+  for (const k of Object.keys(extra) as EnemyType[]) out[k] = (out[k] ?? 0) + (extra[k] ?? 0);
+  return out;
+}
+
+/** Phần thiết lập trận của thử thách màn `n`: giặc (kể cả giặc thêm), hệ số máu giặc riêng, giặc dữ đánh đau hơn. */
+export function challengeField(n: number): Pick<FieldSetup, 'enemies' | 'hpScale' | 'fury' | 'challenge'> {
   const ch = challengeOf(n)!;
-  return { hpScale: ch.hpScale, fury: ch.kind === 'giacDu' ? GIAC_DU_DMG : undefined, challenge: ch.kind };
+  return { enemies: challengeEnemies(n), hpScale: ch.hpScale, fury: ch.kind === 'giacDu' ? GIAC_DU_DMG : undefined, challenge: ch.kind };
 }
 
 /** Thắng một trận thử thách: lần đầu thì cộng huân công, ghi đã thắng. Trả về số huân công được. */

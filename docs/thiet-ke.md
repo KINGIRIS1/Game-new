@@ -1240,10 +1240,10 @@ Bản đồ phó bản có thêm thẻ Chương 4, mở khi đã vào chương 4
 
 | Màn | Kiểu | Máu giặc | Màn | Kiểu | Máu giặc |
 |---|---|---|---|---|---|
-| 1 | Giặc dữ | ×58 | 17 | Không tướng | ×1,7 |
-| 2 | Giáo binh + voi chiến | ×24 | 18 | Giáo binh + voi chiến | ×3,2 |
-| 3 | Giặc dữ | ×16 | 19 | Giặc dữ | ×2,8 |
-| 4 | Giặc dữ | ×8,5 | 20 | Không tướng | ×1,1 |
+| 1 | Giặc dữ, thêm giặc | ×3,2 | 17 | Không tướng | ×1,7 |
+| 2 | Giáo binh + voi chiến, thêm giặc | ×3,95 | 18 | Giáo binh + voi chiến | ×3,2 |
+| 3 | Giặc dữ, thêm giặc | ×3,8 | 19 | Giặc dữ | ×2,8 |
+| 4 | Giặc dữ, thêm giặc | ×2,6 | 20 | Không tướng | ×1,1 |
 | 5 | Không tướng | ×3,5 | 21 | Giáo binh + cung thủ | ×3,3 |
 | 6 | Giáo binh + voi chiến | ×3,5 | 22 | Không tướng | ×0,95 |
 | 7 | Không tướng | ×2,4 | 23 | Giáo binh + voi chiến | ×2,6 |
@@ -1258,10 +1258,18 @@ Bản đồ phó bản có thêm thẻ Chương 4, mở khi đã vào chương 4
 | 16 | Giặc dữ | ×1,8 | 32 | Giặc dữ | ×3,3 |
 
 - Giặc đông nhất ở mọi màn đều là loại cung thủ khắc (lính giáo Ân, tôm binh, quỷ núi, lính Triệu, lính thủy). Nên màn Hai binh chủng bỏ cung thủ là chính; màn 13 và 21 bỏ voi chiến cho đỡ lặp.
-- Màn 1–4 ít giặc (màn 1 chỉ có 4 lính giáo Ân) mà quân mẫu 38 chỗ có Gióng hiển linh, nên hệ số máu phải rất lớn mới làm người chơi thường thua.
+- **Màn 1–4 thêm giặc** (chủ dự án chọn): màn thường ít giặc (màn 1 chỉ có 4 lính giáo Ân), quân mẫu 38 chỗ lại có Gióng hiển linh, nên nếu chỉ tăng máu thì phải tăng rất lớn (màn 1 tới ×58). Thử thách màn 1–4 có thêm giặc (`extra`), đông ngang màn 5–8; thẻ màn ghi quân giặc của thử thách:
+
+  | Màn | Giặc của thử thách |
+  |---|---|
+  | 1 | 14 lính giáo, 7 cung thủ, 3 chiến xa (thêm 10 lính giáo, 7 cung thủ, 3 chiến xa) |
+  | 2 | 12 lính giáo, 7 cung thủ, 2 chiến xa (thêm 7 lính giáo, 5 cung thủ, 2 chiến xa) |
+  | 3 | 12 lính giáo, 7 cung thủ, 3 chiến xa (thêm 7 lính giáo, 4 cung thủ, 2 chiến xa) |
+  | 4 | 12 lính giáo, 7 cung thủ, 3 chiến xa, phó tướng (thêm 7 lính giáo, 4 cung thủ, 2 chiến xa) |
+
 - Thử thách Không tướng ở chương 3, 4 có hệ số thấp hơn màn thường, có màn dưới ×1: mất tướng là thiệt lớn nhất, vì màn thường đã cân theo tướng.
 
-**Những chỗ làm thêm, chủ dự án xem lại** (tài liệu chưa nói rõ):
+**Những chỗ làm thêm, chủ dự án đã duyệt** (tài liệu trước chưa nói rõ):
 - Tướng khi đánh thử là tướng người chơi có **khi đã hết truyện**: chương 1 Gióng hiển linh có Nhổ tre, chương 2 Sơn Tinh hiển linh dời được non, chương 3 và màn 25 An Dương Vương hiển linh có Rùa Vàng, màn 26–32 Cao Lỗ có Lệnh bắn. Chuẩn đã tính binh khí rèn đủ 2 bậc (cuối chương 3), nên thử thách là việc chơi về sau. `thuThach.test.ts` canh tướng này đúng là tướng `heroFor` chọn khi đã qua màn 32.
 - Thắng thử thách chỉ có huân công: không có của cải, không mở màn, không kể truyện, không có lễ vật.
 - Thử thách Không tướng không cần tướng của màn: tướng đang nghỉ vẫn đánh được.

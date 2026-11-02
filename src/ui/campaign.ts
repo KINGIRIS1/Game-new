@@ -11,7 +11,7 @@ import { BOSSES, CHALLENGES, HUAN_BRANCHES, HUAN_COST, ROWS, UNITS, UNIT_TYPES, 
 import { armySpace, fieldCap, fitArmy } from '../game/doanhTrai';
 import type { GameState, StageResult } from '../game/game';
 import { giftOfStage, heroFor, restingHero } from '../game/son';
-import { challengeOf, challengeOpen, challengeWon, huanNextCost, huanReward } from '../game/thuThach';
+import { challengeEnemies, challengeOf, challengeOpen, challengeWon, huanNextCost, huanReward } from '../game/thuThach';
 import { vi } from '../text/vi';
 import { costHtml, esc } from './format';
 
@@ -174,10 +174,10 @@ export function mapHtml(state: GameState, selected: number | null, chapter: Chap
   </svg>`;
 }
 
-function enemyList(n: number): string {
+function enemyList(n: number, list?: Partial<Record<EnemyType, number>>): string {
   const def = stageDef(n);
   // Màn cầm cự: kể cả các đợt kéo tới sau.
-  const enemies = def ? stageEnemies(def) : {};
+  const enemies = list ?? (def ? stageEnemies(def) : {});
   return (Object.keys(enemies) as EnemyType[])
     .filter((k) => (enemies[k] ?? 0) > 0)
     .map((k) => `<span title="${vi.enemies[k]}">${vi.enemyIcons[k]} ${enemies[k]}</span>`)
@@ -249,7 +249,9 @@ function challengeRules(n: number): string {
   const ch = challengeOf(n)!;
   const kind = vi.ui.challengeKinds[ch.kind];
   const units = ch.units ? `<p class="rule">${vi.ui.challengeUnits(ch.units.map((k) => `${vi.units[k].icon} ${vi.units[k].name}`).join(', '))}</p>` : '';
-  return `<p class="rule">${kind.icon} ${esc(kind.rule)}</p>${units}<p class="muted">${vi.ui.challengeTougher}</p>`;
+  // Màn 1–4: thử thách có thêm giặc, ghi quân giặc của thử thách.
+  const foes = ch.extra ? `<div class="stat"><span>${vi.ui.challengeFoes}</span><b>${enemyList(n, challengeEnemies(n))}</b></div>` : '';
+  return `<p class="rule">${kind.icon} ${esc(kind.rule)}</p>${units}${foes}<p class="muted">${ch.extra ? vi.ui.challengeMore : vi.ui.challengeTougher}</p>`;
 }
 
 /** Khung thử thách dưới thẻ màn: mở khi đã thắng màn ở chế độ thường. */

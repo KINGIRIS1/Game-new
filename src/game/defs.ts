@@ -1278,21 +1278,29 @@ export interface ChallengeDef {
   units?: [UnitType, UnitType];
   /** Hệ số máu giặc của thử thách (thay cho hệ số của màn thường). */
   hpScale: number;
+  /** Giặc kéo thêm tới, ngoài giặc của màn thường (màn 1–4 vốn ít giặc). */
+  extra?: Partial<Record<EnemyType, number>>;
 }
 export const GIAC_DU_DMG = 1.25;
-const du = (hpScale: number): ChallengeDef => ({ kind: 'giacDu', hpScale });
+const du = (hpScale: number, extra?: Partial<Record<EnemyType, number>>): ChallengeDef => ({ kind: 'giacDu', hpScale, ...(extra ? { extra } : {}) });
 const kt = (hpScale: number): ChallengeDef => ({ kind: 'khongTuong', hpScale });
-const hai = (a: UnitType, b: UnitType, hpScale: number): ChallengeDef => ({ kind: 'haiBinh', units: [a, b], hpScale });
+const hai = (a: UnitType, b: UnitType, hpScale: number, extra?: Partial<Record<EnemyType, number>>): ChallengeDef => ({
+  kind: 'haiBinh',
+  units: [a, b],
+  hpScale,
+  ...(extra ? { extra } : {}),
+});
 /**
  * Thử thách của từng màn 1–32 (chỉ số 0 là màn 1). Giặc dữ ở các màn có trùm và màn 1, 3. Hai binh chủng thường bỏ
  * cung thủ, binh chủng khắc loại giặc đông nhất của màn (màn 13, 21 bỏ voi chiến); từ màn 26 có lính nỏ.
+ * Màn 1–4 vốn ít giặc nên thử thách có thêm giặc (`extra`), cho đông ngang màn 5–8.
  * Hệ số máu giặc đo bằng test (`thuThach.test.ts`): người chơi giỏi thắng, người chơi thường thua.
  */
 export const CHALLENGES: ChallengeDef[] = [
-  du(58),
-  hai('giao', 'voi', 24),
-  du(16),
-  du(8.5),
+  du(3.2, { giaoAn: 10, cungAn: 7, chienXa: 3 }),
+  hai('giao', 'voi', 3.95, { giaoAn: 7, cungAn: 5, chienXa: 2 }),
+  du(3.8, { giaoAn: 7, cungAn: 4, chienXa: 2 }),
+  du(2.6, { giaoAn: 7, cungAn: 4, chienXa: 2 }),
   kt(3.5),
   hai('giao', 'voi', 3.5),
   kt(2.4),

@@ -26,7 +26,7 @@ import { SAVE_VERSION, deserialize, serialize } from './save';
 import { heroFor } from './son';
 import { markStory } from './story';
 import { FIELD_SLOTS, SAMPLE_ARMY, SAMPLE_ARMY4, SEEDS, challengeArmy, fightChallenge, lateHero } from './testkit';
-import { buyHuan, canBuyHuan, challengeOf, challengeOpen, huanEarned, huanReward } from './thuThach';
+import { buyHuan, canBuyHuan, challengeEnemies, challengeOf, challengeOpen, huanEarned, huanReward } from './thuThach';
 import { DIEN_END, setDien } from './testmap';
 
 /** Kinh đô đã hết truyện: Điện cấp 8, doanh trại cấp 5, mọi tướng đã về, đã qua màn 32. */
@@ -161,6 +161,23 @@ describe('luật từng kiểu thử thách', () => {
       const foe = b.fighters.find((f) => f.side === 'giac')!;
       expect(foe.maxHp).toBeCloseTo(ENEMIES[foe.kind as EnemyType].hp * ch.hpScale * FIELD.hpMul, 5);
     }
+  });
+
+  it('màn 1–4 vốn ít giặc nên thử thách có thêm giặc, đông ngang màn 5–8; bãi chiến không quá 60 người', () => {
+    const count = (e: Partial<Record<EnemyType, number>>) => Object.values(e).reduce((a, b) => a + (b ?? 0), 0);
+    for (let n = 1; n <= STAGES.length; n++) {
+      const ch = challengeOf(n)!;
+      expect(!!ch.extra).toBe(n <= 4);
+      const foes = count(challengeEnemies(n));
+      if (n <= 4) expect(foes).toBeGreaterThanOrEqual(count(STAGES[4].enemies));
+      else expect(challengeEnemies(n)).toEqual(STAGES[n - 1].enemies);
+      // Quân mẫu 30 người, một tướng.
+      expect(foes + 30 + 1).toBeLessThanOrEqual(60);
+    }
+    const s = late();
+    expect(startStage(s, 1, ARMY(s), DEFAULT_ROWS, true).ok).toBe(true);
+    expect(s.campaign.battle!.total).toBe(count(challengeEnemies(1)));
+    expect(s.campaign.battle!.fighters.filter((f) => f.side === 'giac' && f.kind === 'chienXa').length).toBe(3);
   });
 
   it('màn 32 thử thách vẫn là cầm cự 90 giây', () => {

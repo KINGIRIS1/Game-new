@@ -1085,6 +1085,8 @@ export const vi = {
     } satisfies Record<ChallengeKind, { name: string; icon: string; rule: string }>,
     challengeUnits: (names: string) => `Được mang: ${names}`,
     challengeTougher: 'Giặc khỏe hơn màn thường. Thắng không có thêm của cải.',
+    challengeFoes: 'Quân giặc thử thách',
+    challengeMore: 'Giặc đông hơn, khỏe hơn màn thường. Thắng không có thêm của cải.',
     challengeHuan: 'Huân công lần đầu thắng',
     challengeDone: '⭐ Đã thắng thử thách',
     challengeArmyTitle: (name: string) => `Xếp quân · Thử thách ${name}`,

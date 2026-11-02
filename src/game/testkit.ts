@@ -96,7 +96,6 @@ export function fightChallenge(n: number, play: 'thuong' | 'gioi', id = 1, army 
   const b = startFieldBattle({
     id,
     stage: n,
-    enemies: def.enemies,
     waves: def.waves,
     holdS: def.holdS,
     army,
