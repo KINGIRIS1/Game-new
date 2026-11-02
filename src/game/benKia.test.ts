@@ -13,8 +13,15 @@ import {
   bridgeSnap,
   campOf,
   campTier,
+  canJoinVillage,
   canScout,
   canStartCamp,
+  cutOff,
+  dacSanOf,
+  joinVillage,
+  revealPlots,
+  treasureReward,
+  villageOutput,
   isBenKiaState,
   plotAt,
   plotHeld,
@@ -31,10 +38,10 @@ import {
 } from './benKia';
 import type { HeroSetup } from './battle';
 import { wallRings } from './coLoa';
-import { BRIDGE_FLOOD, BUILDINGS, CH2_QUEST_START, CH3_QUEST_START, FIELD, FIELD_CAP, SCOUT_COST, SCOUT_MS, UNITS, type UnitType } from './defs';
+import { BRIDGE_FLOOD, BUILDINGS, CH2_QUEST_START, CH3_QUEST_START, DAC_SAN_BONUS, FIELD, FIELD_CAP, SCOUT_COST, SCOUT_MS, UNITS, VILLAGE_GIFT, VILLAGE_SHARE, type UnitType } from './defs';
 import { armySpace } from './doanhTrai';
-import { canMove, canPlace, createInitialState, place, tick, type Building, type GameState } from './game';
-import { FAR_FOREST, GRID, RIVER_DIVE, RIVER_END, RIVER_START, baseHeights, farBankOf, isNearBank, isRiver, riverDistance } from './map';
+import { canMove, canPlace, createInitialState, outputIn, outputOf, place, productionPerMinute, templeBonus, tick, type Building, type GameState } from './game';
+import { FAR_FOREST, GRID, RIVER_DIVE, RIVER_END, RIVER_START, baseHeights, farBankOf, isNearBank, isRiver, riverDistance, riverFacing, touchesRiver } from './map';
 import { planMau } from './mau';
 import { SAVE_VERSION, deserialize, serialize } from './save';
 import { pendingStory } from './story';
@@ -439,7 +446,7 @@ describe('bên kia sông và các phần khác', () => {
     const back = deserialize(serialize(s))!;
     expect(back.benKia).toEqual(s.benKia);
     expect(back.buildings).toEqual(s.buildings);
-    for (const bad of [{ ...s.benKia, known: [60] }, { ...s.benKia, open: [3, 3] }, { ...s.benKia, scouts: [{ plot: 1 }] }, { known: [], open: [] }]) {
+    for (const bad of [{ ...s.benKia, known: [60] }, { ...s.benKia, open: [3, 3] }, { ...s.benKia, scouts: [{ plot: 1 }] }, { ...s.benKia, villages: [99] }, { known: [], open: [] }]) {
       expect(isBenKiaState(bad)).toBe(false);
       const raw = JSON.parse(serialize(s));
       raw.benKia = bad;
@@ -448,7 +455,12 @@ describe('bên kia sông và các phần khác', () => {
     // Bản lưu 18 chưa có phần bên kia (lưu từ bản dựng dở): thêm vào.
     const raw = JSON.parse(serialize(createInitialState(0)));
     delete raw.benKia;
-    expect(deserialize(JSON.stringify(raw))!.benKia).toEqual({ known: [], open: [], scouts: [], cleared: [] });
+    expect(deserialize(JSON.stringify(raw))!.benKia).toEqual({ known: [], open: [], scouts: [], cleared: [], villages: [], dug: [] });
+    // Bản lưu 18 có phần bên kia mà chưa có làng, của chôn: thêm vào.
+    const half = JSON.parse(serialize(s));
+    delete half.benKia.villages;
+    delete half.benKia.dug;
+    expect(deserialize(JSON.stringify(half))!.benKia).toEqual(s.benKia);
   });
 });
 
@@ -565,4 +577,126 @@ describe('đồn giặc và điều quân', () => {
       }
     });
   }
+});
+
+describe('đất bên kia được gì: đặc sản, bản làng, của chôn', () => {
+  /** Kinh đô Điện `level` có cầu sang bờ `bank`, và cả bờ ấy đã về tay ta. */
+  function opened(bank: Bank = 'nam', level = 6): GameState {
+    const s = rich(level);
+    bridgeTo(s, freeRiverPlot(bank, level));
+    const all = Array.from({ length: 30 }, (_, k) => plotId(bank, 0, 0) + k);
+    s.benKia.cleared = poiPlots().filter((p) => plotOf(p).bank === bank && poiAt(p)!.kind === 'don');
+    revealPlots(s, all, true);
+    return s;
+  }
+  const plotWith = (bank: Bank, test: (p: ReturnType<typeof poiAt>) => boolean) => poiPlots().find((p) => plotOf(p).bank === bank && test(poiAt(p)))!;
+
+  it('công trình có móng nằm trọn trên đất đặc sản hợp nghề làm ra thêm 30%; lệch ra ngoài hay khác nghề thì không', () => {
+    const s = opened('nam');
+    const phuSa = plotWith('nam', (p) => p?.kind === 'dacSan' && p.dat === 'phuSa');
+    const o = plotOrigin(phuSa);
+    const r = place(s, 'ruong', o.x, o.z + 1);
+    if (!r.ok) throw new Error(r.reason);
+    r.value.workers = 99;
+    expect(dacSanOf(r.value)).toBe('phuSa');
+    expect(outputIn(s, r.value).gao).toBeCloseTo(outputOf(r.value).gao! * (1 + DAC_SAN_BONUS), 6);
+    // Bãi đất đá trên phù sa: không hợp nghề.
+    const bai = place(s, 'baiDa', o.x + 1, o.z + 1 - 1);
+    expect(bai.ok && dacSanOf(bai.value)).toBe(false);
+    // Lệch ra khoảnh bên cạnh: không tính.
+    expect(dacSanOf({ type: 'ruong', x: o.x + 3, z: o.z + 1 })).toBe(null);
+  });
+
+  it('cầu hư thì công trình bên kia không làm ra gì; làng đã về theo vẫn làm ra', () => {
+    const s = opened('nam');
+    const plot = plotWith('nam', (p) => p?.kind === 'dacSan');
+    const o = plotOrigin(plot);
+    const r = place(s, 'ruong', o.x, o.z + 1);
+    if (!r.ok) throw new Error(r.reason);
+    r.value.workers = 99;
+    const lang = plotWith('nam', (p) => p?.kind === 'lang');
+    expect(joinVillage(s, lang).ok).toBe(true);
+    const bridge = s.buildings.find((b) => b.type === 'cauSongDa')!;
+    const before = productionPerMinute(s).gao;
+    bridge.damaged = true;
+    expect(cutOff(s, r.value)).toBe(true);
+    expect(outputIn(s, r.value)).toEqual({});
+    const after = productionPerMinute(s).gao;
+    const bonus = 1 + templeBonus(s);
+    expect(after).toBeCloseTo(before - outputOf(r.value).gao! * (1 + DAC_SAN_BONUS) * bonus, 4);
+    expect(after).toBeGreaterThanOrEqual(villageOutput(s, lang).gao! * bonus - 1e-6);
+    // Công trình bên này không bị ảnh hưởng.
+    expect(cutOff(s, s.buildings.find((b) => b.type === 'dien')!)).toBe(false);
+  });
+
+  it('bản làng: đất làng về tay ta rồi dâng lễ thì về theo, làm ra bằng nửa công trình cùng nghề ở cấp Điện, không cần dân', () => {
+    const s = rich(6);
+    bridgeTo(s, freeRiverPlot('nam', 6));
+    const lang = plotWith('nam', (p) => p?.kind === 'lang' && p.nghe === 'lua');
+    s.benKia.known = [...s.benKia.known, lang];
+    expect(canJoinVillage(s, lang)).toEqual({ ok: false, reason: 'chuaVeTay' });
+    revealPlots(s, [lang], true);
+    const dan = s.dan;
+    const before = { ...s.resources };
+    expect(joinVillage(s, lang).ok).toBe(true);
+    expect(s.resources.gao).toBe(before.gao - VILLAGE_GIFT.gao!);
+    expect(s.resources.voOc).toBe(before.voOc - VILLAGE_GIFT.voOc!);
+    expect(canJoinVillage(s, lang)).toEqual({ ok: false, reason: 'daVeTheo' });
+    expect(villageOutput(s, lang)).toEqual({ gao: BUILDINGS.ruong.production[5].gao! * VILLAGE_SHARE });
+    expect(s.dan).toBe(dan);
+    // Bốn làng, bốn nghề: gạo, vỏ ốc (bờ nam); đất đá, sắt (bờ đông).
+    const nghe = poiPlots().flatMap((p) => (poiAt(p)!.kind === 'lang' ? [Object.keys(villageOutput(s, p))[0]] : []));
+    expect(nghe.sort()).toEqual(['datDa', 'gao', 'sat', 'voOc']);
+  });
+
+  it('ba ô giữa khoảnh làng là nhà làng, không dựng công trình được; các ô khác của khoảnh thì được', () => {
+    const s = opened('nam');
+    const lang = plotWith('nam', (p) => p?.kind === 'lang');
+    const o = plotOrigin(lang);
+    expect(canPlace(s, 'luy', o.x + 2, o.z + 2)).toEqual({ ok: false, reason: 'ngoaiVung' });
+    expect(canPlace(s, 'luy', o.x + 1, o.z + 3)).toEqual({ ok: false, reason: 'ngoaiVung' });
+    expect(canPlace(s, 'luy', o.x, o.z).ok).toBe(true);
+    expect(canPlace(s, 'luy', o.x + 4, o.z + 4).ok).toBe(true);
+  });
+
+  it('của chôn: dẹp đồn giữ vùng có của chôn thì đào được một lần, thưởng 5% giá nâng Điện kế tiếp, ghi vào phần thưởng trận', () => {
+    const s = rich(6);
+    s.raid.nextAt = null;
+    s.buildings.push({ id: 900, type: 'doanhTrai', x: 30, z: 30, level: 4, workers: 0 });
+    bridgeTo(s, freeRiverPlot('nam', 6));
+    // Vùng đồn bậc 1 gần ngã ba có của chôn (9, 2).
+    const camp = plotId('nam', 8, 0);
+    const cua = plotId('nam', 9, 2);
+    expect(campOf(cua)).toBe(camp);
+    s.benKia.known = [...s.benKia.known, camp].sort((a, b) => a - b);
+    s.troops = { giao: 14, cung: 12, voi: 4, no: 0 };
+    const worth = treasureReward(s);
+    expect(worth.gao).toBe(Math.round((BUILDINGS.dien.upgradeCost[7].gao! * 0.05) / 10) * 10);
+    expect(startCamp(s, camp, { ...s.troops }, { giao: 'tien', cung: 'hau', voi: 'trung', no: 'hau' }).ok).toBe(true);
+    for (let i = 0; i < 200 && s.campaign.battle && !s.campaign.battle.outcome; i++) tick(s, 1000);
+    expect(s.campaign.battle?.outcome).toBe('win');
+    expect(s.benKia.dug).toEqual([cua]);
+    const r = s.campaign.lastResult!;
+    expect(r.reward.gao).toBe(CAMPS[1].reward.gao! + worth.gao!);
+    expect(r.reward.sat).toBe(CAMPS[1].reward.sat! + worth.sat!);
+    // Mở lại không đào lần nữa.
+    const gao = s.resources.gao;
+    revealPlots(s, [cua], true);
+    expect(s.resources.gao).toBe(gao);
+  });
+
+  it('bến, làng chài dựng được sát sông ở bờ bên kia, quay mặt ra sông', () => {
+    const s = opened('nam');
+    const id = plotId('nam', 6, 0);
+    const o = plotOrigin(id);
+    expect(touchesRiver(o.x, RIVER_END, 4, 4)).toBe(true);
+    expect(riverFacing(o.x, RIVER_END, 4, 4)).toBe(Math.PI);
+    const ben = place(s, 'ben', o.x, RIVER_END);
+    expect(ben.ok).toBe(true);
+    expect(canPlace(s, 'langChai', o.x + 5, RIVER_END + 1)).toEqual({ ok: false, reason: 'phaiSatSong' });
+    expect(canPlace(s, 'langChai', o.x + 5, RIVER_END).ok).toBe(true);
+    expect(riverFacing(RIVER_END, 10, 3, 3)).toBe(-Math.PI / 2);
+    expect(riverFacing(RIVER_START - 3, 10, 3, 3)).toBe(Math.PI / 2);
+    expect(riverFacing(10, RIVER_START - 3, 3, 3)).toBe(0);
+  });
 });

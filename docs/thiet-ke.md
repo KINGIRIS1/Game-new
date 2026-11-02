@@ -1798,7 +1798,14 @@ j\i  0  1  2  3  4  5  6  7  8  9
    - **Bãi chiến bờ bên kia** (nền `benKia` trong `battlefield.ts`): sông chảy ngang sau lưng quân ta có cầu phao tre, lau sậy hai bờ (chừa chỗ Lạc tướng đánh trống và đầu cầu), giặc đóng đồn rào cọc có lều và cờ. Đồn bậc 3 (yêu tinh) dùng bãi núi Thất Diệu.
    - **Kết quả**: hộp kết quả như phó bản, tiêu đề "Dẹp xong đồn giặc", chỉ có nút về kinh đô. Ở kinh đô, đồn đã dẹp thành đất cháy sém có cờ đỏ của ta.
    - **Ô đầu cầu** (hai bờ) chừa làm lối lên cầu: không dựng hay dời công trình đè lên (đường đi thì trải được), như áp mẫu đã chừa.
-4. **PR 4: đặc sản, bản làng, của chôn**; sổ kinh tế.
+4. **PR 4: đặc sản, bản làng, của chôn** (đã làm). Số cuối cùng và những chỗ đổi so với nhánh cũ:
+   - **Không có bước khai phá trả của**: đất bên kia mở khi bắc cầu (khoảnh đầu cầu) hay khi dẹp đồn (cả vùng). Nhánh cũ có `openPlot` trả 5% giá nâng Điện; nay bỏ theo quyết định "dẹp đồn chiếm cả vùng".
+   - **Đặc sản**: móng nằm trọn trong khoảnh đặc sản hợp nghề thì làm ra thêm 30% (bãi phù sa: ruộng lúa, ruộng nếp; núi đá: bãi đất đá; mỏ sắt: lò rèn). Đất đặc sản đã về tay ta pha màu (nâu thẫm, xám, đỏ gỉ) thay cho dấu đặc sản, để biết dựng vào đâu. Bảng công trình ghi "Bãi phù sa: làm ra thêm 30%".
+   - **Bản làng**: dâng lễ kết thân 600 gạo, 400 vỏ ốc khi đất làng đã về tay ta. Làng về theo làm ra bằng **nửa** một công trình cùng nghề đủ người ở cấp bằng cấp Điện (làng lúa như ruộng, làng mò ốc như bến, làng thợ đá như bãi đất đá, làng thợ rèn như lò rèn), không cần dân, có đền và phúc lành cộng thêm. Ở Điện 6 bốn làng thêm 75 gạo, 75 vỏ ốc, 72,5 đất đá, 20 sắt mỗi phút: chừng 10%, 15%, 15%, 30% số làm ra bình quân của người chơi mô phỏng trong chương 2 (sắt là thứ được nhiều nhất, vì sắt hiếm; số này cho chỉnh khi chơi thử). Ba ô giữa khoảnh làng là nhà làng, không dựng công trình đè lên được; làng về theo thì cắm cờ đỏ, có dân làm việc theo nghề.
+   - **Của chôn**: khoảnh có của chôn về tay ta (dẹp đồn giữ vùng ấy) thì đào được một lần, thưởng 5% giá nâng Điện lên cấp kế tiếp, mọi loại tài nguyên trong giá ấy; ghi chung vào phần thưởng của trận dẹp đồn.
+   - **Cầu hư** (hay chưa có) thì công trình bên kia không làm ra gì, kể cả làng chài bên kia không đánh cá; bảng công trình báo đỏ. Làng vẫn làm ra.
+   - **Bến, làng chài** dựng được sát sông ở bờ bên kia, quay mặt ra sông (`riverFacing`), thuyền neo đúng phía. Thuyền buôn ghé bến bên này trước.
+   - Người chơi mô phỏng không sang sông, nên nhịp lên Điện ở `balance.test.ts` và sổ kinh tế không đổi.
 5. **PR 5: phòng thủ hai bờ**: giặc từ bìa rừng bên kia, đồn biên, thủy binh Triệu cập bờ bên kia.
 
 ## Nhịp chơi và lưu game

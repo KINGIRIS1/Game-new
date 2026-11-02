@@ -12,6 +12,7 @@ import {
   RESOURCE_IDS,
   ROAD_TYPES,
   BRIDGE_FLOOD,
+  DAC_SAN_BONUS,
   isBridge,
   isDecor,
   isRoad,
@@ -77,7 +78,7 @@ import {
   raiseCostOf,
   netPerMinute,
   nextFoe,
-  outputOf,
+  outputIn,
   questDone,
   questProgress,
   repairAllCost,
@@ -114,7 +115,7 @@ import { sonHtml } from './son';
 import { blessingHtml, tetHtml } from './tet';
 import { khoanhHtml } from './khoanh';
 import { benKiaHtml } from './benKia';
-import { campTier } from '../game/benKia';
+import { campTier, cutOff, dacSanOf } from '../game/benKia';
 import { mauHtml } from './mau';
 import type { MauId } from '../game/mau';
 
@@ -209,6 +210,7 @@ export type HudAction =
   | { kind: 'applyMau'; mau: MauId }
   | { kind: 'phatRung'; id: number }
   | { kind: 'trinhSat'; id: number }
+  | { kind: 'ketThan'; id: number }
   | { kind: 'marchCamp'; plot: number; army: Record<UnitType, number>; rows: Record<UnitType, Row> }
   | { kind: 'offerBanh'; banh: Banh }
   | { kind: 'confirmPlace' }
@@ -435,6 +437,8 @@ export class Hud {
         return this.onAction({ kind: 'phatRung', id });
       case 'trinhSat':
         return this.onAction({ kind: 'trinhSat', id });
+      case 'ketThan':
+        return this.onAction({ kind: 'ketThan', id });
       case 'donPrepare':
         this.donPick = { ...defaultPick(this.getState()), don: id };
         return this.refreshSheet(this.getState());
@@ -951,7 +955,11 @@ export class Hud {
     }
     const prod = def.production[b.level - 1];
     if (RESOURCE_IDS.some((r) => (prod[r] ?? 0) > 0)) {
-      rows.push(`<div class="stat"><span>${vi.ui.production}</span><span>${prodHtml(outputOf(b))}</span></div>`);
+      rows.push(`<div class="stat"><span>${vi.ui.production}</span><span>${prodHtml(outputIn(state, b))}</span></div>`);
+      // Bên kia sông: đặc sản thêm phần làm ra; cầu hư thì dân bên này không sang làm được.
+      const dat = dacSanOf(b);
+      if (dat && !cutOff(state, b)) rows.push(`<div class="stat"><span></span><span class="muted">${vi.benKia.dacSan[dat].icon} ${vi.benKia.dacSanBonus(vi.benKia.dacSan[dat].name, Math.round(DAC_SAN_BONUS * 100))}</span></div>`);
+      if (cutOff(state, b)) rows.push(`<p class="why warn">${vi.benKia.cutOff}</p>`);
       if (b.level < def.maxLevel) {
         rows.push(`<div class="stat"><span>${vi.ui.nextLevel}</span><span>${prodHtml(def.production[b.level])}</span></div>`);
       }

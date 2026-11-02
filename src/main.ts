@@ -16,7 +16,7 @@ import { buyHuan } from './game/thuThach';
 import { markStory, pendingStory } from './game/story';
 import { footprintTop } from './game/terrain';
 import { BUILDINGS, RESOURCE_IDS, STAGES, UNIT_TYPES, U_NO, isBridge, isDecor, isRoad, type BuildingType, type Cost, type ResourceId, type Row, type SkillId, type UnitType } from './game/defs';
-import { CAMPS, benKiaOpen, bridgeSnap, campHero, campTier, canStartCamp, plotAt, sendScout, startCamp } from './game/benKia';
+import { CAMPS, benKiaOpen, bridgeSnap, campHero, campTier, canStartCamp, joinVillage, plotAt, poiAt, sendScout, startCamp } from './game/benKia';
 import { fmt } from './ui/format';
 import {
   canAfford,
@@ -447,6 +447,17 @@ function start(): void {
         hud.toast(vi.benKia.campMarching);
         world.startMarch(state, a.plot, a.army, MARCH_MS / 1000);
         marching = { plot: a.plot, army: a.army, rows: a.rows, at: performance.now() + MARCH_MS };
+        return;
+      }
+
+      case 'ketThan': {
+        const r = joinVillage(state, a.id);
+        if (!r.ok) return fail(r.reason);
+        play('upgrade');
+        const poi = poiAt(a.id);
+        if (poi?.kind === 'lang') hud.toast(vi.benKia.villageToast(vi.benKia.lang[poi.nghe].name));
+        commit();
+        hud.refreshSheet(state);
         return;
       }
 

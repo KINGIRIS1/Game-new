@@ -3,7 +3,7 @@
 // tăng từng nấc theo số khoảnh đã phát. Không phụ thuộc DOM hay Three.js.
 
 import { KHOANH_COST_BASE, KHOANH_COST_STEP, type Cost } from './defs';
-import { plotOrigin } from './benKia';
+import { plotOrigin, poiAt } from './benKia';
 import { sowKhoanh } from './cayDa';
 import { canAfford, gain, pay, type GameState, type Result } from './game';
 import { FOREST_BAND, GRID, KHOANH, RIVER_START } from './map';
@@ -82,7 +82,12 @@ function openCache(state: GameState): OpenCache {
     fill(o);
   }
   // Khoảnh đã mở bên kia sông: xây được như đất bên này, nhưng không tính vào mốc `start` (dải giặc, camera bên này).
-  for (const id of far) fill(plotOrigin(id));
+  // Khoảnh có bản làng: 3×3 ô giữa là nhà làng, không dựng công trình được.
+  for (const id of far) {
+    const o = plotOrigin(id);
+    fill(o);
+    if (poiAt(id)?.kind === 'lang') for (let dz = 1; dz < 4; dz++) mask.fill(0, (o.z + dz) * GRID + o.x + 1, (o.z + dz) * GRID + o.x + 4);
+  }
   const fresh = { len: list.length, far, mask, start };
   cache.set(list, fresh);
   return fresh;

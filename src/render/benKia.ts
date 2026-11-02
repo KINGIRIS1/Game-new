@@ -3,8 +3,11 @@
 
 import * as THREE from 'three';
 import { RIVER_END, RIVER_START } from '../game/map';
-import type { Poi } from '../game/benKia';
-import { boatRoof, buildingModel, roofFor } from './buildings';
+import type { Nghe, Poi } from '../game/benKia';
+import { PERSON_SCALE } from './congTrinh/chung';
+import { makeWorker, type Job } from './people';
+import type { Poser } from './rig';
+import { boatRoof, makeNhaSan, roofFor } from './buildings';
 import { makeEnemyFlag, makeFighter, makeTent } from './models';
 import { C } from './palette';
 import { ShapeBuilder, seeded } from './shapes';
@@ -123,8 +126,15 @@ export function cloudPuffs(b: ShapeBuilder, id: number, x0: number, z0: number, 
   }
 }
 
-/** Dấu của một điểm lạ, gốc ở giữa khoảnh. Đồn đã dẹp thì thành đất cháy sém, cờ đỏ của ta. */
-export function poiMarker(poi: Poi, cleared: boolean, seed: number): THREE.Group {
+/** Dân làng làm việc theo nghề của làng đã về theo. */
+const VILLAGER: Record<Nghe, Job> = { lua: 'nong', oc: 'nguDan', da: 'thoDa', ren: 'thoRen' };
+
+/**
+ * Dấu của một điểm lạ, gốc ở giữa khoảnh. `done`: đồn đã dẹp (đất cháy sém, cờ đỏ của ta), hay làng đã về theo (cờ đỏ,
+ * dân làm việc theo nghề).
+ */
+export function poiMarker(poi: Poi, done: boolean, seed: number): THREE.Group {
+  const cleared = done;
   const g = new THREE.Group();
   const m = new ToonModel();
   const p = m.plain;
@@ -193,16 +203,30 @@ export function poiMarker(poi: Poi, cleared: boolean, seed: number): THREE.Group
       [0.7, -0.4, -0.4],
       [0, 0.7, 0.1],
     ]) {
-      const house = buildingModel('nhaSan', 1);
+      const house = makeNhaSan(1);
       house.scale.setScalar(0.5);
       house.position.set(x, 0, z);
       house.rotation.y = ry;
       g.add(house);
     }
-    // Cờ trắng: làng chưa về theo.
+    // Cờ trắng: làng chưa về theo; về theo rồi thì cờ đỏ, có dân làm việc theo nghề.
     p.cyl(0.025, 0.025, 1.5, C.woodDark, 1.0, 0.75, 0.9, undefined, 5);
-    m.band.box(0.45, 0.3, 0.03, C.cream, 1.24, 1.32, 0.9);
+    m.band.box(0.45, 0.3, 0.03, done ? C.red : C.cream, 1.24, 1.32, 0.9);
     g.add(m.group());
+    if (done) {
+      for (const [x, z, ry] of [
+        [-0.2, -0.1, 0.6],
+        [0.9, 0.3, -1.2],
+      ]) {
+        const man = makeWorker(VILLAGER[poi.nghe]);
+        man.position.set(x, 0, z);
+        man.rotation.y = ry;
+        man.scale.setScalar(0.85 * PERSON_SCALE);
+        // Đứng yên trong dáng làm việc.
+        (man.userData.pose as Poser | undefined)?.({ act: 'stand', time: x * 3 });
+        g.add(man);
+      }
+    }
     return g;
   }
   if (poi.kind === 'dacSan') {

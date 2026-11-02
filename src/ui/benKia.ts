@@ -2,8 +2,8 @@
 // chưa, điểm lạ, vùng đồn giặc nào đang giữ, nút Sai trinh sát kèm giá hay lý do chưa sai được. Chỉ dựng chuỗi HTML;
 // Hud lo việc gắn vào trang và bắt sự kiện.
 
-import { CAMPS, campHero, campOf, campTier, canScout, canStartCamp, hasCamp, plotHeld, plotOf, poiAt, regionOf, type Poi, type Tier } from '../game/benKia';
-import { SCOUT_COST, SCOUT_MS } from '../game/defs';
+import { CAMPS, campHero, campOf, campTier, canJoinVillage, canScout, canStartCamp, hasCamp, plotHeld, plotOf, poiAt, regionOf, treasureReward, villageOutput, type Poi, type Tier } from '../game/benKia';
+import { SCOUT_COST, SCOUT_MS, VILLAGE_GIFT } from '../game/defs';
 import type { GameState } from '../game/game';
 import { vi } from '../text/vi';
 import { armyHtml, enemyList, heroNote, warningsFor, type ArmyPick } from './campaign';
@@ -32,6 +32,18 @@ function campHtml(state: GameState, id: number, tier: Tier): string {
     </div>`;
 }
 
+/** Phần bản làng: về theo thì làm ra bao nhiêu; chưa về theo thì nút dâng lễ kết thân kèm giá, hay lý do chưa được. */
+function villageHtml(state: GameState, id: number): string {
+  const out = `<div class="stat"><span>${vi.benKia.villageMakes}</span><span>${costHtml(null, villageOutput(state, id))}${vi.ui.perMinute}</span></div>`;
+  if (state.benKia.villages.includes(id)) return `<p class="done">✓ ${vi.benKia.villageJoined}</p>${out}`;
+  const check = canJoinVillage(state, id);
+  return `<p class="muted">${vi.benKia.langDesc}</p>${out}
+    <div class="actions">
+      <button class="btn" data-act="ketThan" data-id="${id}" ${check.ok ? '' : 'disabled'}>🎁 ${vi.benKia.villageJoin} · ${costHtml(state, VILLAGE_GIFT)}</button>
+      ${check.ok ? '' : `<div class="why">${esc(vi.reasons[check.reason])}</div>`}
+    </div>`;
+}
+
 /** Bảng một khoảnh bên kia sông; đang chọn quân đánh đồn ở khoảnh này thì hiện bảng chọn quân. */
 export function benKiaHtml(state: GameState, id: number, pick: ArmyPick | null = null): string {
   const tier = campTier(id);
@@ -50,9 +62,10 @@ export function benKiaHtml(state: GameState, id: number, pick: ArmyPick | null =
       if (poi.kind === 'don') {
         if (!hasCamp(state, id)) rows.push(`<p class="done">✓ ${vi.benKia.donCleared}</p>`);
         else rows.push(`<p class="muted">${vi.benKia.donDesc(regionOf(id).length)} ${vi.benKia.donNeed[poi.tier]}.</p>${campHtml(state, id, poi.tier)}`);
-      } else if (poi.kind === 'lang') rows.push(`<p class="muted">${vi.benKia.langDesc}</p>`);
+      } else if (poi.kind === 'lang') rows.push(villageHtml(state, id));
       else if (poi.kind === 'dacSan') rows.push(`<p class="muted">${vi.benKia.dacSan[poi.dat].desc}</p>`);
-      else rows.push(`<p class="muted">${vi.benKia.cua.desc}</p>`);
+      else if (k.dug.includes(id)) rows.push(`<p class="done">✓ ${vi.benKia.cuaDug}</p>`);
+      else rows.push(`<p class="muted">${vi.benKia.cua.desc}</p><div class="stat"><span>${vi.benKia.cuaWorth}</span><span>${costHtml(null, treasureReward(state))}</span></div>`);
     } else if (!open) rows.push(`<p class="muted">${vi.benKia.empty}</p>`);
     // Vùng đồn giặc nào giữ khoảnh này (chưa dẹp thì chưa về tay ta).
     const camp = campOf(id);

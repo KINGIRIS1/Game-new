@@ -9,13 +9,20 @@ import { inChapter4 } from './chuong4';
 import {
   BEN_KIA_DIEN,
   BUILDINGS,
+  DAC_SAN_BONUS,
+  RESOURCE_IDS,
+  TREASURE_SHARE,
+  VILLAGE_GIFT,
+  VILLAGE_SHARE,
   SCOUT_COST,
   SCOUT_MS,
   SCOUT_TWO_DIEN,
   UNIT_TYPES,
   isBridge,
+  type BuildingType,
   type Chapter,
   type Cost,
+  type Resources,
   type EnemyType,
   type Row,
   type Terrain,
@@ -191,10 +198,14 @@ export interface BenKiaState {
   scouts: { plot: number; from: number; at: number }[];
   /** Đồn giặc đã dẹp (khoảnh). */
   cleared: number[];
+  /** Bản làng đã về theo (khoảnh). */
+  villages: number[];
+  /** Của chôn đã đào (khoảnh). */
+  dug: number[];
 }
 
 export function initialBenKia(): BenKiaState {
-  return { known: [], open: [], scouts: [], cleared: [] };
+  return { known: [], open: [], scouts: [], cleared: [], villages: [], dug: [] };
 }
 
 /** Khoảnh `id` còn đồn giặc chưa dẹp. */
@@ -210,14 +221,31 @@ export function plotHeld(state: GameState, id: number): boolean {
 export const plotKnown = (state: GameState, id: number): boolean => state.benKia.known.includes(id);
 export const plotOpen = (state: GameState, id: number): boolean => state.benKia.open.includes(id);
 
-/** Thêm các khoảnh vào danh sách đã dò (và đã mở, nếu `open`). Thay mảng mới để mặt nạ đất đã mở tính lại. */
-export function revealPlots(state: GameState, ids: number[], open = false): void {
+/**
+ * Thêm các khoảnh vào danh sách đã dò (và đã mở, nếu `open`). Thay mảng mới để mặt nạ đất đã mở tính lại. Khoảnh vừa
+ * mở có của chôn thì đào luôn; trả về của đào được.
+ */
+export function revealPlots(state: GameState, ids: number[], open = false): Cost {
   const k = state.benKia;
   const known = ids.filter((id) => !k.known.includes(id));
   if (known.length) k.known = [...k.known, ...known].sort((a, b) => a - b);
-  if (!open) return;
+  if (!open) return {};
   const fresh = ids.filter((id) => !k.open.includes(id));
   if (fresh.length) k.open = [...k.open, ...fresh].sort((a, b) => a - b);
+  const dug: Cost = {};
+  for (const id of fresh) {
+    const got = digTreasure(state, id);
+    for (const r of RESOURCE_IDS) if (got[r]) dug[r] = (dug[r] ?? 0) + got[r]!;
+  }
+  return dug;
+}
+
+/** Ô (x, z) thuộc giữa bản làng (3×3 ô giữa khoảnh có làng): nhà làng đứng đó, không dựng công trình được. */
+export function villageCore(x: number, z: number): boolean {
+  const id = plotAt(x, z);
+  if (id === null || poiAt(id)?.kind !== 'lang') return false;
+  const o = plotOrigin(id);
+  return x > o.x && x < o.x + 4 && z > o.z && z < o.z + 4;
 }
 
 // ---------- Cầu ----------
@@ -353,7 +381,7 @@ export function isBenKiaState(v: unknown): v is BenKiaState {
   if (!v || typeof v !== 'object') return false;
   const k = v as Record<string, unknown>;
   const isPlots = (list: unknown) => Array.isArray(list) && list.every(validPlot) && new Set(list).size === list.length;
-  if (!isPlots(k.known) || !isPlots(k.open) || !isPlots(k.cleared) || !Array.isArray(k.scouts)) return false;
+  if (!isPlots(k.known) || !isPlots(k.open) || !isPlots(k.cleared) || !isPlots(k.villages) || !isPlots(k.dug) || !Array.isArray(k.scouts)) return false;
   const num = (x: unknown) => typeof x === 'number' && Number.isFinite(x);
   return k.scouts.every((t: unknown) => !!t && typeof t === 'object' && validPlot((t as Record<string, unknown>).plot as number) && num((t as Record<string, unknown>).from) && num((t as Record<string, unknown>).at));
 }
@@ -458,7 +486,9 @@ export function finishCamp(state: GameState, battle: Battle): void {
   if (won) {
     gain(state, reward);
     state.benKia.cleared = [...state.benKia.cleared, id].sort((a, b) => a - b);
-    revealPlots(state, regionOf(id), true);
+    // Vùng vừa chiếm có của chôn thì đào luôn, ghi chung vào phần thưởng.
+    const dug = revealPlots(state, regionOf(id), true);
+    for (const r of RESOURCE_IDS) if (dug[r]) reward[r] = (reward[r] ?? 0) + dug[r]!;
   }
   restAfter(state, battle);
   state.campaign.lastResult = {
@@ -471,4 +501,106 @@ export function finishCamp(state: GameState, battle: Battle): void {
     lost: { ...battle.lost },
     reward,
   };
+}
+
+// ---------- Của chôn ----------
+
+/** Giá nâng Điện lên cấp kế tiếp (Điện đã tối đa thì giá lên cấp cao nhất): mốc tính của chôn. */
+function dienStepCost(state: GameState): Cost {
+  const up = BUILDINGS.dien.upgradeCost;
+  return up[Math.min(dienLevel(state) + 1, up.length - 1)] ?? {};
+}
+
+/** Của chôn đào được ở cấp Điện hiện tại: `TREASURE_SHARE` giá nâng Điện kế tiếp, làm tròn 10. */
+export function treasureReward(state: GameState): Cost {
+  const base = dienStepCost(state);
+  const reward: Cost = {};
+  for (const r of RESOURCE_IDS) if (base[r]) reward[r] = Math.round((base[r]! * TREASURE_SHARE) / 10) * 10;
+  return reward;
+}
+
+/** Của chôn trên khoảnh vừa mở: đào được một lần (không vượt sức chứa kho). Trả về phần đã định thưởng. */
+function digTreasure(state: GameState, id: number): Cost {
+  const k = state.benKia;
+  if (poiAt(id)?.kind !== 'cua' || k.dug.includes(id)) return {};
+  const reward = treasureReward(state);
+  gain(state, reward);
+  k.dug = [...k.dug, id].sort((a, b) => a - b);
+  return reward;
+}
+
+// ---------- Đặc sản đất, cầu hư ----------
+
+/** Đặc sản hợp nghề với loại công trình nào. */
+const DAT_FOR: Record<Dat, BuildingType[]> = { phuSa: ['ruong', 'ruongNep'], nuiDa: ['baiDa'], moSat: ['loRen'] };
+
+/** Đặc sản đất dưới công trình `b`: móng nằm trọn trong một khoảnh đặc sản hợp nghề. */
+export function dacSanOf(b: Pick<Building, 'type' | 'x' | 'z'>): Dat | null {
+  const def = BUILDINGS[b.type];
+  const id = plotAt(b.x, b.z);
+  if (id === null || plotAt(b.x + def.w - 1, b.z + def.d - 1) !== id) return null;
+  const poi = poiAt(id);
+  return poi?.kind === 'dacSan' && DAT_FOR[poi.dat].includes(b.type) ? poi.dat : null;
+}
+
+/** Công trình `b` ở bên kia sông mà cầu sang bờ ấy hư hay chưa có: dân bên này không sang làm được. */
+export function cutOff(state: GameState, b: Pick<Building, 'x' | 'z'>): boolean {
+  const id = plotAt(b.x, b.z);
+  if (id === null) return false;
+  return !bridgeUp(state, plotOf(id).bank);
+}
+
+/**
+ * Hệ số sản lượng của công trình `b` theo đất bên kia: 0 khi cầu sang bờ ấy hư (không ai sang làm), thêm phần đặc sản
+ * khi móng nằm trọn trên đất đặc sản hợp nghề, còn lại 1.
+ */
+export function farFactor(state: GameState, b: Building): number {
+  if (plotAt(b.x, b.z) === null) return 1;
+  if (cutOff(state, b)) return 0;
+  return dacSanOf(b) ? 1 + DAC_SAN_BONUS : 1;
+}
+
+// ---------- Bản làng ----------
+
+/** Làng làm nghề gì thì làm ra như công trình nào. */
+export const NGHE_BUILDING: Record<Nghe, BuildingType> = { lua: 'ruong', oc: 'ben', da: 'baiDa', ren: 'loRen' };
+
+/** Dâng lễ kết thân làng ở khoảnh `id` được không: đất làng đã về tay ta, làng chưa về theo. */
+export function canJoinVillage(state: GameState, id: number): Result {
+  const k = state.benKia;
+  if (poiAt(id)?.kind !== 'lang' || !k.known.includes(id)) return fail('khongTimThay');
+  if (k.villages.includes(id)) return fail('daVeTheo');
+  if (!k.open.includes(id)) return fail('chuaVeTay');
+  if (state.raid.phase !== 'idle') return fail('dangCoGiac');
+  if (!canAfford(state, VILLAGE_GIFT)) return fail('thieuTaiNguyen');
+  return ok(undefined);
+}
+
+export function joinVillage(state: GameState, id: number): Result {
+  const check = canJoinVillage(state, id);
+  if (!check.ok) return check;
+  pay(state, VILLAGE_GIFT);
+  state.benKia.villages = [...state.benKia.villages, id].sort((a, b) => a - b);
+  return ok(undefined);
+}
+
+/** Một làng đã về theo làm ra mỗi phút (chưa cộng đền, phúc lành): nửa công trình cùng nghề đủ người ở cấp Điện. */
+export function villageOutput(state: GameState, id: number): Cost {
+  const poi = poiAt(id);
+  if (poi?.kind !== 'lang') return {};
+  const def = BUILDINGS[NGHE_BUILDING[poi.nghe]];
+  const prod = def.production[Math.min(dienLevel(state), def.maxLevel) - 1] ?? {};
+  const out: Cost = {};
+  for (const r of RESOURCE_IDS) if (prod[r]) out[r] = prod[r]! * VILLAGE_SHARE;
+  return out;
+}
+
+/** Mọi làng đã về theo làm ra mỗi phút (chưa cộng đền, phúc lành). */
+export function villagesOutput(state: GameState): Resources {
+  const total: Resources = { gao: 0, voOc: 0, datDa: 0, sat: 0, go: 0 };
+  for (const id of state.benKia.villages) {
+    const out = villageOutput(state, id);
+    for (const r of RESOURCE_IDS) total[r] += out[r] ?? 0;
+  }
+  return total;
 }

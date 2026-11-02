@@ -92,6 +92,11 @@ function migrate(raw: unknown): unknown {
   if (isObj(v) && v.version === 17) v = migrate17to18(v);
   // Bản lưu 18 lưu từ bản dựng dở của phần bên kia sông (chưa có trạng thái bên kia): thêm vào.
   if (isObj(v) && v.version === 18 && !isObj(v.benKia)) v.benKia = initialBenKia();
+  if (isObj(v) && v.version === 18 && isObj(v.benKia)) {
+    const k = v.benKia as Raw;
+    k.villages ??= [];
+    k.dug ??= [];
+  }
   return v;
 }
 

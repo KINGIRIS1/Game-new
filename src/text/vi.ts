@@ -338,6 +338,8 @@ export const vi = {
     trinhSatBan: 'Trinh sát đều đang đi, chờ họ về',
     donDaDep: 'Đồn này đã dẹp xong',
     chanLoiCau: 'Chừa đầu cầu làm lối lên cầu',
+    daVeTheo: 'Làng đã về theo Văn Lang',
+    chuaVeTay: 'Đất làng chưa về tay ta: dẹp đồn giặc giữ vùng này trước',
   } satisfies Record<FailReason, string>,
 
   quests: {
@@ -825,6 +827,14 @@ export const vi = {
     campReward: 'Thưởng (một lần)',
     campArmyTitle: (don: string) => `Điều quân đánh ${don}`,
     campRegion: (n: number) => `Dẹp xong thì ${n} khoảnh đất quanh đồn về tay ta.`,
+    dacSanBonus: (dat: string, pct: number) => `${dat}: làm ra thêm ${pct}%`,
+    cutOff: 'Cầu sang bờ này đang hư: dân bên này không sang làm được, công trình không làm ra gì.',
+    villageMakes: 'Làng về theo làm ra',
+    villageJoin: 'Dâng lễ kết thân',
+    villageJoined: 'Làng đã về theo Văn Lang, làm ra theo nghề, không cần dân bên này.',
+    villageToast: (name: string) => `${name} đã về theo Văn Lang!`,
+    cuaWorth: 'Đào được',
+    cuaDug: 'Của chôn đã đào.',
     lang: {
       lua: { name: 'Làng trồng lúa', icon: '🏘️' },
       oc: { name: 'Làng mò ốc', icon: '🐚' },

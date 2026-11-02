@@ -5,7 +5,7 @@ import { startBattle, stepBattle, type Battle, type RaidSide } from './battle';
 import { updateCampaign } from './campaign';
 import { initialCaoLo } from './caoLo';
 import { initialCayDa, updateCayDa, type CayDaState } from './cayDa';
-import { bridgeFit, bridgeheadCells, initialBenKia, openBridgehead, updateBenKia, type BenKiaState } from './benKia';
+import { bridgeFit, bridgeheadCells, cutOff, farFactor, initialBenKia, openBridgehead, updateBenKia, villagesOutput, type BenKiaState } from './benKia';
 import { huanTiers, initialThuThach } from './thuThach';
 import { inChapter4 } from './chuong4';
 import { advJoined, initialAdv, inChapter3, ruaVangCame, wallRings } from './coLoa';
@@ -416,7 +416,9 @@ export type FailReason =
   | 'xaQua'
   | 'trinhSatBan'
   | 'donDaDep'
-  | 'chanLoiCau';
+  | 'chanLoiCau'
+  | 'daVeTheo'
+  | 'chuaVeTay';
 
 export type Result<T = undefined> = { ok: true; value: T } | { ok: false; reason: FailReason };
 
@@ -556,9 +558,12 @@ export function fishOf(b: Building): number {
   return (CA_PER_MIN[b.level - 1] ?? 0) * (slots ? Math.min(b.workers, slots) / slots : 1);
 }
 
-/** Cá cả kinh đô mỗi phút: mọi làng chài, cộng phần của Đền Phù Đổng và phúc lành Đất như mọi sản lượng. */
+/**
+ * Cá cả kinh đô mỗi phút: mọi làng chài (làng chài bên kia sông mà cầu hư thì không ai sang đánh cá), cộng phần của
+ * Đền Phù Đổng và phúc lành Đất như mọi sản lượng.
+ */
 export function fishPerMinute(state: GameState): number {
-  const fish = state.buildings.reduce((sum, b) => sum + fishOf(b), 0);
+  const fish = state.buildings.reduce((sum, b) => sum + (cutOff(state, b) ? 0 : fishOf(b)), 0);
   return fish * (1 + templeBonus(state) + datBonus(state));
 }
 
@@ -647,11 +652,27 @@ export function troopBonus(state: GameState): number {
   return templeBonus(state) + troiBonus(state);
 }
 
-/** Sản lượng mỗi phút của cả kinh đô, chưa trừ gạo ăn và chưa tính thiếu gạo. Đền Phù Đổng và phúc lành Đất cộng thêm. */
+/**
+ * Sản lượng mỗi phút của công trình `b` trong kinh đô: theo người làm, cộng đặc sản đất bên kia sông, bằng 0 khi cầu
+ * sang bờ ấy hư (chưa cộng đền, phúc lành).
+ */
+export function outputIn(state: GameState, b: Building): Cost {
+  const out = outputOf(b);
+  const k = farFactor(state, b);
+  if (k === 1) return out;
+  if (k === 0) return {};
+  for (const r of RESOURCE_IDS) if (out[r]) out[r] = out[r]! * k;
+  return out;
+}
+
+/**
+ * Sản lượng mỗi phút của cả kinh đô (cả bản làng bên kia sông đã về theo), chưa trừ gạo ăn và chưa tính thiếu gạo.
+ * Đền Phù Đổng và phúc lành Đất cộng thêm.
+ */
 export function productionPerMinute(state: GameState): Resources {
-  const total: Resources = { gao: 0, voOc: 0, datDa: 0, sat: 0, go: 0 };
+  const total = villagesOutput(state);
   for (const b of state.buildings) {
-    const out = outputOf(b);
+    const out = outputIn(state, b);
     for (const r of RESOURCE_IDS) total[r] += out[r] ?? 0;
   }
   const bonus = 1 + templeBonus(state) + datBonus(state);

@@ -778,6 +778,17 @@ export const SCOUT_COST: Cost = { gao: 60, voOc: 20 };
 export const SCOUT_MS = 40_000;
 /** Số trinh sát đi cùng lúc: một, từ Điện cấp này thì hai. */
 export const SCOUT_TWO_DIEN = 6;
+/** Công trình có móng nằm trọn trên đất đặc sản hợp nghề làm ra thêm chừng này. */
+export const DAC_SAN_BONUS = 0.3;
+/** Dâng lễ kết thân thì bản làng về theo. */
+export const VILLAGE_GIFT: Cost = { gao: 600, voOc: 400 };
+/**
+ * Bản làng đã về theo làm ra bằng chừng này phần một công trình cùng nghề, đủ người, ở cấp bằng cấp Điện (không cần
+ * dân). Một làng trọn một công trình thì làng rèn thêm tới gần nửa số sắt ở Điện 6, nên lấy một nửa.
+ */
+export const VILLAGE_SHARE = 0.5;
+/** Đào được của chôn: chừng này phần giá nâng Điện lên cấp kế tiếp, mọi loại tài nguyên trong giá ấy. */
+export const TREASURE_SHARE = 0.05;
 
 /** Đền Cuông còn nguyên: mỗi đợt thủy binh bớt chừng này phần số thuyền (làm tròn xuống, còn ít nhất một thuyền). */
 export const DEN_CUONG_BOATS = 0.2;
