@@ -28,7 +28,7 @@ function city(dien: number, chapter: 1 | 2 | 3 = 1): GameState {
   const s = createInitialState(0);
   setDien(s, dien);
   s.questIndex = chapter === 3 ? CH3_QUEST_START : chapter === 2 ? CH2_QUEST_START : 0;
-  s.resources = { gao: 1e6, voOc: 1e6, datDa: 1e6, sat: 1e6 };
+  s.resources = { gao: 1e6, voOc: 1e6, datDa: 1e6, sat: 1e6, go: 1e6 };
   s.dan = 200;
   return s;
 }
@@ -160,7 +160,7 @@ describe('đường đi, đồ trang trí trước giặc và lũ', () => {
 
   it('giặc không nhắm phá đồ trang trí: đánh xong mọi món vẫn nguyên', () => {
     const s = city(2);
-    s.resources = { gao: 900, voOc: 900, datDa: 900, sat: 400 };
+    s.resources = { gao: 900, voOc: 900, datDa: 900, sat: 400, go: 400 };
     for (let x = edge(2, 2); x < edge(2, 14); x++) place(s, x % 2 ? 'hoa' : 'duongDat', x, DIEN - 3);
     place(s, 'cayDa', DIEN - 4, DIEN + 1);
     place(s, 'gieng', DIEN_END + 1, DIEN);

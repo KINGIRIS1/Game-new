@@ -30,7 +30,7 @@ const FREE = edge(2, 1);
 function capital(): GameState {
   const s = createInitialState(T0);
   setDien(s, 2);
-  s.resources = { gao: 900, voOc: 900, datDa: 900, sat: 400 };
+  s.resources = { gao: 900, voOc: 900, datDa: 900, sat: 400, go: 400 };
   s.dan = 30;
   // Doanh trại, trại giáo phía tây nam Điện, kho phía đông nam: giặc từ phía bắc phải qua Điện mới tới kho.
   const barracks = place(s, 'doanhTrai', DIEN - 6, DIEN_END + 2);
@@ -78,6 +78,7 @@ describe('trận giữ kinh đô', () => {
     const battle = fight(s, 1);
     expect(enemiesLeft(battle)).toBe(0);
     expect(battle.stolen.gao).toBeGreaterThan(0);
+    expect(battle.stolen.go).toBeGreaterThan(0);
     expect(s.resources.gao).toBeLessThan(before);
     expect(s.buildings.some((b) => b.damaged)).toBe(true);
   });
@@ -88,7 +89,7 @@ describe('trận giữ kinh đô', () => {
     for (let i = 0; i < 6; i++) expect(train(s, 'giao').ok).toBe(true);
     const battle = fight(s, 1);
     expect(battle.killed).toBe(battle.total);
-    expect(battle.stolen).toEqual({ gao: 0, voOc: 0, datDa: 0, sat: 0 });
+    expect(battle.stolen).toEqual({ gao: 0, voOc: 0, datDa: 0, sat: 0, go: 0 });
   });
 
   it('bẫy chông gây sát thương khi giặc giẫm vào', () => {

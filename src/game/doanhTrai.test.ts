@@ -28,7 +28,7 @@ type Army = Record<UnitType, number>;
 function city(level = 5): GameState {
   const s = createInitialState(0);
   setDien(s, level);
-  s.resources = { gao: 50000, voOc: 50000, datDa: 50000, sat: 20000 };
+  s.resources = { gao: 50000, voOc: 50000, datDa: 50000, sat: 20000, go: 20000 };
   s.dan = 40;
   s.raid.nextAt = null;
   return s;

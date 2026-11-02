@@ -11,7 +11,7 @@ type Army = Record<UnitType, number>;
 function capital(): GameState {
   const s = createInitialState(0);
   setDien(s, 3);
-  s.resources = { gao: 3000, voOc: 3000, datDa: 3000, sat: 1000 };
+  s.resources = { gao: 3000, voOc: 3000, datDa: 3000, sat: 1000, go: 1000 };
   const barracks = place(s, 'doanhTrai', DIEN - 6, DIEN_END + 2);
   if (!barracks.ok) throw new Error('dựng doanh trại thử thất bại');
   barracks.value.level = 3;
@@ -157,7 +157,7 @@ describe('phó bản', () => {
 
   it('thắng màn: được thưởng lần đầu, mở màn sau, đánh lại được ít hơn', () => {
     const s = withTroops(capital(), { giao: 8, cung: 0, voi: 0, no: 0 });
-    s.resources = { gao: 100, voOc: 100, datDa: 0, sat: 0 };
+    s.resources = { gao: 100, voOc: 100, datDa: 0, sat: 0, go: 0 };
     const first = stageReward(s, 1);
     expect(first).toEqual(STAGES[0].reward);
     expect(startStage(s, 1, { giao: 8, cung: 0, voi: 0, no: 0 }, DEFAULT_ROWS).ok).toBe(true);

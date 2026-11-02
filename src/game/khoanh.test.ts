@@ -30,7 +30,7 @@ import { DIEN, setDien } from './testmap';
 function rich(level = 1): GameState {
   const s = createInitialState(0);
   s.buildings[0].level = level;
-  s.resources = { gao: 1e6, voOc: 1e6, datDa: 1e6, sat: 1e6 };
+  s.resources = { gao: 1e6, voOc: 1e6, datDa: 1e6, sat: 1e6, go: 1e6 };
   return s;
 }
 
@@ -136,7 +136,7 @@ describe('phát rừng', () => {
     s.raid.phase = 'battle';
     expect(canOpenKhoanh(s, NORTH)).toEqual({ ok: false, reason: 'dangCoGiac' });
     s.raid.phase = 'idle';
-    s.resources = { gao: 0, voOc: 0, datDa: 0, sat: 0 };
+    s.resources = { gao: 0, voOc: 0, datDa: 0, sat: 0, go: 0 };
     expect(canOpenKhoanh(s, NORTH)).toEqual({ ok: false, reason: 'thieuTaiNguyen' });
   });
 
@@ -157,7 +157,7 @@ describe('nâng bản lưu phiên bản 11 lên 12', () => {
     it(`Điện cấp ${level}: đất hình vuông đổi thành danh sách khoảnh, công trình giữ nguyên`, () => {
       const s = createInitialState(0);
       setDien(s, level);
-      s.resources = { gao: 1e5, voOc: 1e5, datDa: 1e5, sat: 1e5 };
+      s.resources = { gao: 1e5, voOc: 1e5, datDa: 1e5, sat: 1e5, go: 1e5 };
       const lo = RIVER_START - V11_AREA[level - 1];
       expect(place(s, 'luy', lo, lo).ok).toBe(true);
       const raw = JSON.parse(serialize(s));

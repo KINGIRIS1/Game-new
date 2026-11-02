@@ -439,7 +439,7 @@ c c c c , ,
 - `G` cấp 3, cối đá, chày gỗ giã bánh giầy.
 - Ngày Tết thêm người ngồi gói bánh trên chiếu, nay nằm trong móng.
 
-## Công trình mới (chờ chủ dự án duyệt)
+## Công trình mới (chủ dự án đã duyệt)
 
 Bản vẽ đi kèm mục **Kế hoạch: cổng thành, xưởng mộc, làng chài** trong `docs/thiet-ke.md`. Cổng thành móng 1×1 nên không có ở đây. Cách đọc như trên; hai công trình này chưa có dáng cũ nên không có chữ **mới**.
 
@@ -465,7 +465,11 @@ S S , , B B
 - `P` cấp 4, giá phơi ván dựng nghiêng.
 - `B` cấp 5, trâu kéo một cây gỗ vào sân.
 - `S` cấp 7, lán thứ hai bày sập gỗ chạm, hòm gỗ.
-- Bốn thợ mộc: một người dưới giá cưa, một người đứng trên giá (hai người kéo cưa), một người đẽo thuyền, một người vác ván giữa giá ván và lối.
+- Bốn người làm: một thợ xẻ dưới giá cưa, một thợ xẻ đứng trên cây gỗ (hai người kéo cưa), một thợ mộc đẽo thuyền, một thợ mộc đẽo cột trước khung nhà.
+- Đã vẽ (`src/render/congTrinh/xuongMoc.ts`). Đã đổi khi vẽ:
+  - giá cưa `X`: cây gỗ gác dọc (từ sau ra trước) trên hai giá chữ A cao, tấm ván trên cây gỗ cho thợ xẻ đứng, lưỡi cưa sắt mài sáng đứng xuyên thân gỗ có tay cưa trên và dưới; thợ xẻ dưới đứng lệch sang trái, quay nghiêng cho thấy mặt;
+  - thợ mộc đẽo thuyền đứng sau thuyền, quay mặt ra trước; người thứ tư đẽo một cây cột nằm trước khung nhà `K` (thay cho người vác ván, để mỗi người làm một việc tại chỗ);
+  - lối `,` vẽ thành hai khối liền (dải giữa và mặt trước rộng gấp đôi) cho khỏi kẻ ô.
 
 ### Làng chài: 3×3
 

@@ -88,7 +88,10 @@ function buildRoomy(s: GameState, type: BuildingType): 'built' | 'needLand' | 'n
   return placeAnywhere(s, type) ? 'built' : 'none';
 }
 
-/** Thứ tự một người chơi hợp lý dựng kinh tế. Ngoài các loại này, người chơi mô phỏng chỉ dựng lũy. */
+/**
+ * Thứ tự một người chơi hợp lý dựng kinh tế. Ngoài các loại này, người chơi mô phỏng chỉ dựng lũy. Chưa dựng xưởng
+ * mộc: gỗ chưa dựng được gì ngoài đổi với thuyền buôn, dựng thì chỉ tốn của và người làm.
+ */
 export const ECONOMY: BuildingType[] = ['ruong', 'ben', 'nhaSan', 'baiDa', 'kho', 'loRen'];
 /** Số lũy người chơi mô phỏng dựng cho đủ nhiệm vụ đầu. */
 export const LUY_COUNT = 6;
@@ -166,7 +169,7 @@ export function playChapters(
     if (m.at5 >= 0 && m.enter2 < 0 && sec >= m.at5 + STAY_AFTER_S) {
       lam('vaoChuong', () => {
         s.questIndex = CH2_QUEST_START;
-        s.resources = { gao: 0, voOc: 0, datDa: 0, sat: 0 };
+        s.resources = { gao: 0, voOc: 0, datDa: 0, sat: 0, go: 0 };
       });
       m.enter2 = sec;
     }
@@ -174,7 +177,7 @@ export function playChapters(
     if (m.at6 >= 0 && m.enter3 < 0 && sec >= m.at6 + STAY_AFTER_S) {
       lam('vaoChuong', () => {
         s.questIndex = CH3_QUEST_START;
-        s.resources = { gao: 0, voOc: 0, datDa: 0, sat: 0 };
+        s.resources = { gao: 0, voOc: 0, datDa: 0, sat: 0, go: 0 };
       });
       m.enter3 = sec;
     }
@@ -185,7 +188,7 @@ export function playChapters(
     if (m.at7 >= 0 && m.enter4 < 0 && sec >= m.at7 + STAY_AFTER_S) {
       lam('vaoChuong', () => {
         s.questIndex = CH4_QUEST_START;
-        s.resources = { gao: 0, voOc: 0, datDa: 0, sat: 0 };
+        s.resources = { gao: 0, voOc: 0, datDa: 0, sat: 0, go: 0 };
       });
       m.enter4 = sec;
     }

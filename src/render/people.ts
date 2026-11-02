@@ -26,7 +26,7 @@ import { spear, type Parts } from './weapons';
 /** Dân làng đông và nhỏ trên màn hình: bớt số mặt cho nhẹ máy (xem `ShapeBuilder.detail`). */
 const DETAIL = 0.6;
 
-export type Job = 'nong' | 'buon' | 'thoDa' | 'thoRen' | 'giuKho' | 'phuNu' | 'lacHau' | 'linhGac';
+export type Job = 'nong' | 'buon' | 'thoDa' | 'thoRen' | 'giuKho' | 'phuNu' | 'lacHau' | 'linhGac' | 'thoXe' | 'thoMoc';
 
 interface Look {
   cloth: number;
@@ -54,6 +54,9 @@ const LOOKS: Record<Job, Look> = {
   phuNu: { cloth: C.red, shirt: 0xc85a3a, skirt: true, hair: 'tocBuiNu', earrings: C.bronzeLight, hairPin: C.bronzeLight },
   lacHau: { cloth: C.cream, shirt: C.cream, skirt: true, hair: 'miengHoang' },
   linhGac: { cloth: C.red, hair: 'longChim', drumPlate: true, crossStrap: C.woodDark, greaves: C.bronze, wristband: C.bronze },
+  // Thợ xưởng mộc: khăn thợ màu gỗ, khố nâu; thợ xẻ kéo cưa xẻ của xưởng (tay không), thợ mộc cầm rìu đẽo.
+  thoXe: { cloth: 0x6a4a2c, pattern: false, hair: 'khanTho', headColor: 0x8a6a44, wristband: 0x5a3f28 },
+  thoMoc: { cloth: 0x5a4030, pattern: false, hair: 'khanTho', headColor: 0xc49a62, wristband: 0x5a3f28 },
 };
 
 function hair(r: HumanRig, look: Look): void {
@@ -147,6 +150,14 @@ function hammer(s: Parts): void {
   s.plain.box(0.11, 0.04, 0.05, C.bronzeDark, 0, 0.33, 0.08);
 }
 
+/** Rìu đẽo của thợ mộc: cán gỗ cong, lưỡi đồng xòe lệch một bên như rìu xéo Đông Sơn. */
+function adze(s: Parts): void {
+  s.plain.cyl(0.017, 0.02, 0.46, C.woodDark, 0, 0.17, 0, [0.12, 0, 0], 6);
+  s.plain.box(0.04, 0.07, 0.05, C.bronzeDark, 0, 0.4, 0.04);
+  s.plain.box(0.025, 0.16, 0.13, C.bronze, 0, 0.38, 0.12, [0.35, 0, 0]);
+  s.plain.box(0.028, 0.14, 0.02, C.bronzeLight, 0, 0.34, 0.18, [0.35, 0, 0]);
+}
+
 /** Thẻ bài kiểm kê kho thóc/kho vũ khí bằng gỗ bịt đồng. */
 function inventoryTablet(s: Parts): void {
   s.plain.box(0.06, 0.28, 0.015, C.woodLight, 0, 0.16, 0.02);
@@ -168,6 +179,7 @@ const TOOLS: Partial<Record<Job, (s: Parts) => void>> = {
   buon: scaleTool,
   thoDa: pick,
   thoRen: hammer,
+  thoMoc: adze,
   giuKho: inventoryTablet,
   lacHau: royalStaff,
   linhGac: (s) => spear(s, 0, 1.25),
@@ -233,6 +245,17 @@ function drawWorker(r: HumanRig, job: Job, sitting: boolean): void {
       s.glow.box(0.045, 0.045, 0.1, C.fire, 0, 0.26, 0.1);
       s.glow.box(0.035, 0.035, 0.08, C.ember, 0, 0.26, 0.1);
     });
+  }
+  if (job === 'thoXe' || job === 'thoMoc') {
+    // Yếm vải thô che bụi gỗ, đai lưng có ống mực (thợ mộc) hay túi đinh tre (thợ xẻ).
+    chest.plain.box(0.24, 0.3, 0.03, 0x8a6a46, 0, 0.42, 0.12);
+    chest.plain.box(0.26, 0.035, 0.03, 0x4a3424, 0, 0.56, 0.12);
+    if (job === 'thoMoc') {
+      chest.plain.cyl(0.035, 0.035, 0.06, C.woodLight, 0.15, 0.38, 0.06, [0, 0, Math.PI / 2], 8);
+      chest.plain.sphere(0.012, C.ink, 0.19, 0.38, 0.06);
+    } else {
+      chest.plain.sphere(0.045, C.thatch, -0.15, 0.36, 0.06, [1, 1.3, 0.8], 6);
+    }
   }
   if (job === 'giuKho') {
     // Bao thóc đầy ắp cột miệng dây thừng
@@ -303,6 +326,23 @@ function work(b: Human, job: Job, t: number): void {
       b.chest.rotation.x = lerp(-0.05, 0.3, u);
       b.armR.rotation.set(lerp(-2.8, -0.7, u), 0, 0.1);
       b.hand.rotation.set(lerp(-0.6, 1.4, u), 0, 0);
+      break;
+    }
+    case 'thoXe': {
+      // Kéo cưa xẻ: cúi người, hai tay nắm tay cưa đưa lên kéo xuống.
+      const u = 0.5 + 0.5 * Math.sin(t * 3);
+      b.chest.rotation.x = 0.3 + 0.15 * u;
+      b.armR.rotation.set(lerp(-2.3, -1.2, u), 0, 0.12);
+      b.armL.rotation.set(lerp(-2.3, -1.2, u), 0, -0.12);
+      break;
+    }
+    case 'thoMoc': {
+      // Đẽo rìu: cúi thấp, rìu giơ quá vai rồi bổ xuống thân gỗ trước chân.
+      const u = Math.abs(Math.sin(t * 2.6));
+      b.chest.rotation.x = lerp(0.15, 0.45, u);
+      b.armR.rotation.set(lerp(-2.5, -0.5, u), 0, 0.1);
+      b.hand.rotation.set(lerp(-0.5, 1.2, u), 0, 0);
+      b.armL.rotation.set(-0.6, 0.3, 0);
       break;
     }
     case 'thoRen': {

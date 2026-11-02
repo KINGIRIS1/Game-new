@@ -31,7 +31,7 @@ import {
 } from './game';
 import { RIVER_START } from './map';
 import { DIEN, DIEN_END, edge, setDien } from './testmap';
-import { deserialize, serialize } from './save';
+import { SAVE_VERSION, deserialize, serialize } from './save';
 import { heroFor } from './son';
 import { markStory, pendingStory } from './story';
 
@@ -43,7 +43,7 @@ const ARMY: Army = { giao: 11, cung: 10, voi: 3, no: 4 };
 function ch4(): GameState {
   const s = createInitialState(0);
   setDien(s, 8);
-  s.resources = { gao: 60000, voOc: 60000, datDa: 60000, sat: 60000 };
+  s.resources = { gao: 60000, voOc: 60000, datDa: 60000, sat: 60000, go: 60000 };
   s.dan = 40;
   s.questIndex = CH4_QUEST_START;
   s.giong = { fed: 5, gear: { ngua: true, roi: true, giap: true }, whipBroken: true, restUntil: 0, ascended: true };
@@ -386,7 +386,7 @@ describe('truyện, nhiệm vụ và bản lưu chương 4', () => {
     }
     old.raid.nextAt = old.clock + 10 * 60_000;
     const back = deserialize(JSON.stringify(old))!;
-    expect(back.version).toBe(13);
+    expect(back.version).toBe(SAVE_VERSION);
     expect(back.troops.no).toBe(0);
     expect(back.arms.no).toBe(0);
     expect(back.campaign.rows.no).toBe('hau');

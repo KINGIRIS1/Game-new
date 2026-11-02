@@ -15,6 +15,7 @@ import { NHA_SAN } from './nhaSan';
 import { RUONG } from './ruong';
 import { TRAI_CUNG } from './traiCung';
 import { TRAI_GIAO } from './traiGiao';
+import { XUONG_MOC } from './xuongMoc';
 
 export const CONG_TRINH: Partial<Record<BuildingType, CongTrinh>> = {
   dien: DIEN,
@@ -28,6 +29,7 @@ export const CONG_TRINH: Partial<Record<BuildingType, CongTrinh>> = {
   traiGiao: TRAI_GIAO,
   traiCung: TRAI_CUNG,
   chuongVoi: CHUONG_VOI,
+  xuongMoc: XUONG_MOC,
 };
 
 /**
