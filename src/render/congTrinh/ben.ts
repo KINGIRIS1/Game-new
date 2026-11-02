@@ -40,12 +40,12 @@ export function benSpots(): LotSpot[] {
 /**
  * Thuyền neo dọc theo cầu tàu (camera nhìn từ trước bên phải nên thuyền đậu bên phải cầu tàu mới thấy rõ):
  * thuyền nhỏ sát bên phải cầu tàu (cấp 1); cấp 6 thuyền buôn lớn ghé sát cầu tàu, thuyền nhỏ dời ra ngoài;
- * cấp 8 thuyền buôn thứ hai neo bên trái, ngoài nhánh phụ.
+ * cấp 8 thuyền buôn thứ hai neo bên trái, ngoài nhánh phụ; cấp 10 thuyền ấy thành thuyền buôn lớn hai buồm.
  */
 export function benDocks(level: number): Dock[] {
   const out: Dock[] = [{ kind: 'small', x: level >= 6 ? 1.25 : 0.55, z: 2.6, ry: Math.PI / 2, scale: 0.9 }];
   if (level >= 6) out.push({ kind: 'trader', x: 0.66, z: 2.95, ry: -Math.PI / 2, scale: 0.8 });
-  if (level >= 8) out.push({ kind: 'trader', x: -1.1, z: 2.9, ry: Math.PI / 2, scale: 0.72 });
+  if (level >= 8) out.push({ kind: 'trader', x: -1.1, z: 2.9, ry: Math.PI / 2, scale: 0.72, big: level >= 10 });
   return out;
 }
 
@@ -99,18 +99,33 @@ export function makeBen(level: number): THREE.Group {
   for (const x of [-1.35, -0.75, 0.75, 1.35]) p.cyl(0.045, 0.05, 0.62, C.woodDark, x, -0.21, deckZ1 - 0.03, undefined, 5);
 
   // Cầu tàu chìa ra sông từ giữa sàn bến; cọc đôi cắm xuống nước; cọc buộc thuyền ở đầu cầu.
+  // Cấp 9 trở lên: cầu tàu lát phiến đá trên trụ đá, cột neo bọc đồng có chỏm đồng vàng.
   const end = jettyEnd(level);
   const jz0 = deckZ0;
-  p.box(0.56, 0.07, end - jz0, C.wood, 0, DECK_Y - 0.03, (jz0 + end) / 2);
-  for (let z = 1.75; z < end; z += 0.32) p.box(0.56, 0.012, 0.015, C.woodDark, 0, DECK_Y + 0.006, z);
+  const stone = level >= 9;
+  p.box(0.56, 0.07, end - jz0, stone ? C.rock : C.wood, 0, DECK_Y - 0.03, (jz0 + end) / 2);
+  if (stone) {
+    for (let z = 1.62, i = 0; z < end - 0.1; z += 0.26, i++) p.box(0.5, 0.02, 0.22, i % 2 ? C.rockDark : C.rock, 0, DECK_Y + 0.01, z + 0.13);
+    for (const sx of [-1, 1]) p.box(0.04, 0.05, end - 1.5, C.gold, sx * 0.29, DECK_Y + 0.01, (1.5 + end) / 2);
+  } else for (let z = 1.75; z < end; z += 0.32) p.box(0.56, 0.012, 0.015, C.woodDark, 0, DECK_Y + 0.006, z);
   const posts = level >= 3 ? [1.95, 2.65, end - 0.06] : [1.95, end - 0.06];
-  for (const z of posts) for (const sx of [-1, 1]) p.cyl(0.045, 0.05, 0.62, C.woodDark, sx * 0.25, -0.21, z, undefined, 5);
-  for (const sx of [-1, 1]) p.cyl(0.04, 0.045, 0.2, C.woodDark, sx * 0.21, DECK_Y + 0.1, end - 0.1, undefined, 5);
+  for (const z of posts) for (const sx of [-1, 1]) {
+    if (stone) p.box(0.14, 0.62, 0.14, C.rockDark, sx * 0.24, -0.21, z);
+    else p.cyl(0.045, 0.05, 0.62, C.woodDark, sx * 0.25, -0.21, z, undefined, 5);
+  }
+  const bollard = (x: number, z: number) => {
+    if (!stone) return p.cyl(0.04, 0.045, 0.2, C.woodDark, x, DECK_Y + 0.1, z, undefined, 5);
+    p.cyl(0.05, 0.06, 0.2, C.bronze, x, DECK_Y + 0.1, z, undefined, 8);
+    p.sphere(0.06, C.gold, x, DECK_Y + 0.22, z, [1, 0.8, 1], 7);
+  };
+  for (const sx of [-1, 1]) bollard(sx * 0.21, end - 0.1);
+  if (stone) for (const sx of [-1, 1]) bollard(sx * 0.21, 2.3);
   if (level >= 3) {
     // Nhánh phụ chìa sang trái ở đầu cầu tàu, chỗ thuyền buôn thứ hai ghé (cấp 8).
-    p.box(0.5, 0.07, 0.3, C.wood, -0.53, DECK_Y - 0.03, end - 0.15);
-    p.cyl(0.045, 0.05, 0.62, C.woodDark, -0.68, -0.21, end - 0.15, undefined, 5);
-    p.cyl(0.04, 0.045, 0.2, C.woodDark, -0.7, DECK_Y + 0.1, end - 0.25, undefined, 5);
+    p.box(0.5, 0.07, 0.3, stone ? C.rock : C.wood, -0.53, DECK_Y - 0.03, end - 0.15);
+    if (stone) p.box(0.14, 0.62, 0.14, C.rockDark, -0.68, -0.21, end - 0.15);
+    else p.cyl(0.045, 0.05, 0.62, C.woodDark, -0.68, -0.21, end - 0.15, undefined, 5);
+    bollard(-0.7, end - 0.25);
   }
 
   // Hai dãy sạp chợ hai bên lối: sạp bạt đỏ (cấp 1), sạp bạt chàm (cấp 2, thành lầu chợ ở cấp 7).
@@ -158,8 +173,8 @@ export function makeBen(level: number): THREE.Group {
     p.box(0.86, 0.08, 0.1, C.wood, 0, DECK_Y + 1.3, gz);
     boatRoof(m, roof, { length: 1.0, width: 0.44, lift: 0.18, drop: 0.12, thickness: 0.04 }, 0, DECK_Y + 1.5, gz);
     if (level >= 8) {
-      bird(m, 0.42, DECK_Y + 1.7, gz, 1, 0.35);
-      bird(m, -0.42, DECK_Y + 1.7, gz, -1, 0.35);
+      if (!roof.lac) bird(m, 0.42, DECK_Y + 1.7, gz, 1, 0.35);
+      if (!roof.lac) bird(m, -0.42, DECK_Y + 1.7, gz, -1, 0.35);
     }
   }
   if (level >= 7) {
@@ -172,8 +187,8 @@ export function makeBen(level: number): THREE.Group {
     m.band.box(0.66, 0.42, 0.66, C.woodLight, x, fy + 0.25, z);
     const ry = fy + 0.72;
     boatRoof(m, roof, { length: 1.02, width: 1.0, lift: 0.42, drop: 0.36, thickness: 0.06 }, x, ry, z);
-    bird(m, x + 0.32, ry + 0.38, z, 1, 0.4);
-    bird(m, x - 0.32, ry + 0.38, z, -1, 0.4);
+    if (!roof.lac) bird(m, x + 0.32, ry + 0.38, z, 1, 0.4);
+    if (!roof.lac) bird(m, x - 0.32, ry + 0.38, z, -1, 0.4);
     p.box(0.36, 0.06, 0.72, C.woodLight, x - 0.12, 0.48, z);
     p.box(0.04, 0.42, 0.72, C.wood, x - 0.29, 0.26, z);
     for (let i = 0; i < 3; i++) {
@@ -189,8 +204,8 @@ export function makeBen(level: number): THREE.Group {
     p.box(0.86, 0.07, 0.74, C.wood, W.x, 0.45, W.z);
     m.band.box(0.66, 0.5, 0.56, C.woodLight, W.x, 0.72, W.z);
     boatRoof(m, roof, { length: 1.0, width: 0.92, lift: 0.5, drop: 0.32, thickness: 0.05 }, W.x, 1.22, W.z);
-    bird(m, W.x + 0.34, 1.66, W.z, 1, 0.4);
-    bird(m, W.x - 0.34, 1.66, W.z, -1, 0.4);
+    if (!roof.lac) bird(m, W.x + 0.34, 1.66, W.z, 1, 0.4);
+    if (!roof.lac) bird(m, W.x - 0.34, 1.66, W.z, -1, 0.4);
   }
   return m.group();
 }

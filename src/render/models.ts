@@ -57,11 +57,31 @@ export function makeFighter(kind: FighterKind, tier = 0): THREE.Group {
 }
 
 /** Thuyền buôn Lạc Việt cỡ lớn: thân thuyền Đông Sơn nẹp đồng, cột buồm có dây chằng, buồm cói căng gió nẹp nan tre, cờ hiệu và khoang hàng trù phú. Dài theo trục x. */
-export function makeTradeBoat(): THREE.Group {
+/** Thuyền buôn một buồm; `big`: thuyền buôn lớn (bến cấp 10) dài hơn, thêm cột buồm thứ hai ở đuôi. */
+export function makeTradeBoat(big = false): THREE.Group {
   const g = new THREE.Group();
   const hull = makeBoat();
-  hull.scale.set(1.42, 1.2, 1.35);
+  hull.scale.set(big ? 1.75 : 1.42, big ? 1.3 : 1.2, big ? 1.5 : 1.35);
   g.add(hull);
+  if (big) {
+    // Cột buồm thứ hai ở đuôi, buồm cói nhỏ hơn viền đỏ, cờ đuôi nheo vàng.
+    const k = new ToonModel(inkThin);
+    const q = k.plain;
+    const ax = -0.62;
+    q.cyl(0.07, 0.085, 0.1, C.bronze, ax, 0.22, 0, undefined, 8);
+    q.cyl(0.028, 0.04, 1.24, C.woodDark, ax, 0.82, 0, undefined, 7);
+    q.cone(0.035, 0.1, C.gold, ax, 1.48, 0, undefined, 6);
+    k.band.box(0.24, 0.08, 0.02, C.gold, ax - 0.14, 1.4, 0, [0, 0, 0.06]);
+    k.band.box(0.045, 0.7, 0.6, C.cream, ax + 0.04, 0.94, 0, [0, 0.2, 0.05]);
+    for (const s of [-1, 1]) q.box(0.05, 0.7, 0.04, C.red, ax + 0.04 + Math.sin(0.2) * s * 0.29, 0.94, Math.cos(0.2) * s * 0.29, [0, 0.2, 0.05]);
+    for (const by of [0.6, 1.28]) {
+      const bar = new THREE.CylinderGeometry(0.018, 0.018, 0.66, 6);
+      bar.rotateX(Math.PI / 2);
+      bar.rotateY(0.2);
+      q.add(bar, C.woodDark, ax + 0.05, by, 0);
+    }
+    g.add(k.group());
+  }
 
   const m = new ToonModel(inkThin);
   const p = m.plain;
@@ -129,6 +149,25 @@ export function makeTradeBoat(): THREE.Group {
   m.band.box(0.22, 0.15, 0.2, C.wood, -0.32, 0.26, 0.02);
   p.box(0.23, 0.025, 0.21, C.bronze, -0.32, 0.33, 0.02);
 
+  g.add(m.group());
+  return g;
+}
+
+/** Thuyền đánh cá có buồm cói (làng chài cấp 10): thuyền con, cột buồm tre giữa thuyền, buồm cói có nan tre. */
+export function makeSailBoat(): THREE.Object3D {
+  // Gắn buồm vào chính thuyền (không bọc nhóm mới) để giữ `userData.pose` cho người chèo.
+  const g = makeBoat();
+  const m = new ToonModel(inkThin);
+  const p = m.plain;
+  p.cyl(0.025, 0.035, 1.05, C.bamboo, 0.05, 0.62, 0, undefined, 6);
+  m.band.box(0.035, 0.62, 0.5, C.thatch, 0.09, 0.78, 0, [0, 0.25, 0.04]);
+  for (const by of [0.5, 0.7, 0.9, 1.08]) {
+    const bar = new THREE.CylinderGeometry(0.012, 0.012, 0.54, 5);
+    bar.rotateX(Math.PI / 2);
+    bar.rotateY(0.25);
+    p.add(bar, C.bamboo, 0.1, by, 0);
+  }
+  m.band.box(0.18, 0.06, 0.015, C.red, -0.02, 1.12, 0);
   g.add(m.group());
   return g;
 }

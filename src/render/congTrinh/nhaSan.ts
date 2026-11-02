@@ -1,7 +1,7 @@
 // Nhà sàn 3×3: một nếp nhà có vườn. Bản vẽ ở docs/bo-cuc-cong-trinh.md.
 
 import type * as THREE from 'three';
-import { above5, arecaPalm, bird, domeHouse, roofFor, stiltHall } from '../buildings';
+import { above5, arecaPalm, bird, boatRoof, domeHouse, roofFor, stiltHall } from '../buildings';
 import { Lot } from '../lot';
 import { C } from '../palette';
 import { seeded } from '../shapes';
@@ -75,19 +75,43 @@ export function makeNhaSan(level: number): THREE.Group {
     // Nhà sàn dài mái thuyền vút cao hai đầu như nhà khắc trên trống đồng, chim đồng hai đầu nóc.
     stiltHall(m, { x: hx, z: hz, w: 1.75, d: 1.15, postH: 0.72 + tall, roofL: 2.1, roofW: 1.4, lift: 0.8, roof });
     const top = 0.72 + tall + 0.68 + 1.4 * 0.4 + 0.8;
-    bird(m, hx + 1.0, top, hz, 1, 0.65);
-    bird(m, hx - 1.0, top, hz, -1, 0.65);
+    if (!roof.lac) {
+      bird(m, hx + 1.0, top, hz, 1, 0.65);
+      bird(m, hx - 1.0, top, hz, -1, 0.65);
+    }
     frontZ = hz + 0.575;
     floorY = 0.72 + tall;
+    if (level >= 9) {
+      // Lan can quanh sàn chạm hoa văn trống đồng, tay vịn đỏ, chừa lối thang giữa mặt trước.
+      const fy = floorY + 0.13;
+      for (const sx of [-1, 1]) {
+        m.band.box(0.6, 0.18, 0.04, C.woodLight, hx + sx * 0.56, fy, frontZ - 0.01);
+        p.box(0.62, 0.035, 0.06, C.red, hx + sx * 0.56, fy + 0.1, frontZ - 0.01);
+        m.band.box(0.04, 0.18, 1.1, C.woodLight, hx + sx * 0.86, fy, hz);
+        p.box(0.06, 0.035, 1.12, C.red, hx + sx * 0.86, fy + 0.1, hz);
+      }
+    }
   }
   if (level >= 2) {
     // Hiên trước, thang tre xuống sân; chum nước góc sân.
     const E = L.zone('E');
     p.box(0.9, 0.06, 0.32, C.wood, E.x, floorY, frontZ + 0.14);
     const steps = 3 + up;
+    // Cấp 9 trở lên: cầu thang gỗ to, bậc rộng, hai má thang sơn đỏ, trụ đầu thang bịt đồng.
+    const wide = level >= 9;
     for (let i = 0; i < steps; i++) {
       const t = (i + 1) / (steps + 1);
-      p.box(0.32, 0.04, 0.1, C.woodDark, E.x, floorY - t * (floorY - 0.06), frontZ + 0.32 + t * 0.32);
+      p.box(wide ? 0.5 : 0.32, wide ? 0.05 : 0.04, wide ? 0.13 : 0.1, C.woodDark, E.x, floorY - t * (floorY - 0.06), frontZ + 0.32 + t * 0.32);
+    }
+    if (wide) {
+      for (const sx of [-1, 1]) {
+        const x = E.x + sx * 0.27;
+        const a: [number, number, number] = [x, floorY + 0.02, frontZ + 0.3];
+        const b: [number, number, number] = [x, 0.08, frontZ + 0.68];
+        p.box(0.05, 0.1, Math.hypot(a[1] - b[1], a[2] - b[2]), C.red, x, (a[1] + b[1]) / 2, (a[2] + b[2]) / 2, [Math.atan2(a[1] - b[1], b[2] - a[2]), 0, 0]);
+        p.cyl(0.035, 0.04, 0.3, C.woodDark, x, 0.15, frontZ + 0.7, undefined, 6);
+        p.sphere(0.045, C.gold, x, 0.32, frontZ + 0.7, [1, 1.1, 1], 6);
+      }
     }
     const J = L.zone('J');
     p.cyl(0.13, 0.1, 0.24, C.soil, J.x, 0.14, J.z, undefined, 10);
@@ -96,7 +120,10 @@ export function makeNhaSan(level: number): THREE.Group {
   if (level >= 3) {
     // Nhà phụ mái tròn bên phải.
     const h = L.zone('h');
-    domeHouse(m, h.x + 0.05, h.z - 0.05, 0.75 + 0.05 * (Math.min(level, 5) - 3), roof, tall);
+    if (level >= 10) {
+      // Cấp 10: nhà phụ thành nếp nhà sàn thứ hai, mái thuyền, sàn ngang sàn nhà chính.
+      stiltHall(m, { x: h.x + 0.05, z: h.z - 0.05, w: 0.72, d: 0.78, postH: 0.72 + tall, roofL: 0.95, roofW: 0.92, lift: 0.34, roof });
+    } else domeHouse(m, h.x + 0.05, h.z - 0.05, 0.75 + 0.05 * (Math.min(level, 5) - 3), roof, tall);
   }
   if (level >= 4) {
     // Vườn rau rào tre góc trước bên trái: ba luống rau.
@@ -151,7 +178,16 @@ export function makeNhaSan(level: number): THREE.Group {
   if (level >= 7) {
     // Cầu tre từ hiên bên phải nhà chính sang sàn nhà phụ.
     const h = L.zone('h');
-    bambooBridge(m, hx + 0.75, hz + 0.2, h.x - 0.35, h.z, floorY - 0.02);
+    if (level >= 10) {
+      // Hiên có mái nối hai nếp nhà: sàn gỗ, bốn cột, mái thuyền nhỏ quay ngang.
+      const x0 = hx + 0.8;
+      const x1 = h.x - 0.28;
+      const cx = (x0 + x1) / 2;
+      const cz = (hz + h.z - 0.05) / 2;
+      p.box(x1 - x0 + 0.1, 0.05, 0.62, C.wood, cx, floorY - 0.01, cz);
+      for (const dx of [-1, 1]) for (const dz of [-0.26, 0.26]) p.cyl(0.03, 0.035, 0.55, C.woodDark, cx + dx * ((x1 - x0) / 2), floorY + 0.27, cz + dz, undefined, 5);
+      boatRoof(m, roof, { length: 0.82, width: 0.5, lift: 0.14, drop: 0.14, thickness: 0.04 }, cx, floorY + 0.68, cz, Math.PI / 2);
+    } else bambooBridge(m, hx + 0.75, hz + 0.2, h.x - 0.35, h.z, floorY - 0.02);
   }
   // Vài khóm cỏ ven mép sân cho mềm ranh móng.
   const rand = seeded(17);

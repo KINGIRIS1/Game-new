@@ -56,14 +56,14 @@ describe('mô hình vừa móng kinh đô lớn', () => {
   it('bến, làng chài mọi cấp: cầu tàu, vó, đáy và thuyền nằm gọn trong sông, chừa luồng thuyền qua lại sát bờ bên kia', async () => {
     const { BUILDINGS } = await import('../game/defs');
     const { RIVER_END, RIVER_START } = await import('../game/map');
-    const { makeBoat, makeTradeBoat } = await import('./models');
+    const { makeBoat, makeSailBoat, makeTradeBoat } = await import('./models');
     const { CONG_TRINH, lotModel } = await import('./congTrinh/index');
     for (const type of ['ben', 'langChai'] as const) {
       const def = BUILDINGS[type];
       for (let level = 1; level <= def.maxLevel; level++) {
         const g = lotModel(type, level);
         for (const d of CONG_TRINH[type]!.docks!(level)) {
-          const boat = d.kind === 'trader' ? makeTradeBoat() : makeBoat();
+          const boat = d.kind === 'trader' ? makeTradeBoat(d.big) : d.big ? makeSailBoat() : makeBoat();
           // Thuyền đánh cá bơi vòng quanh chỗ neo: xa bờ nhất khi ở đỉnh vòng, mũi xuôi theo bờ.
           const fishing = d.kind === 'fishing';
           boat.position.set(d.x, 0, d.z + (fishing ? 0.22 : 0));

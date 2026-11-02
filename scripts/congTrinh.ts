@@ -26,7 +26,7 @@ import {
 import type { Dock, LotSpot } from '../src/render/congTrinh/chung';
 import { CONG_TRINH, lotModel } from '../src/render/congTrinh/index';
 import { addSunLights } from '../src/render/lights';
-import { makeBoat, makeTradeBoat } from '../src/render/models';
+import { makeBoat, makeSailBoat, makeTradeBoat } from '../src/render/models';
 import { C } from '../src/render/palette';
 import { makeWorker } from '../src/render/people';
 import { vi } from '../src/text/vi';
@@ -181,7 +181,7 @@ function addPeople(group: THREE.Group, spots: LotSpot[], scale: number, spread: 
 
 function addDocks(group: THREE.Group, docks: Dock[], spread = 1): void {
   for (const d of docks) {
-    const boat = d.kind === 'trader' ? makeTradeBoat() : makeBoat();
+    const boat = d.kind === 'trader' ? makeTradeBoat(d.big) : d.big ? makeSailBoat() : makeBoat();
     boat.position.set(d.x * spread, WATER_Y - 0.02, d.z * spread);
     boat.rotation.y = d.ry;
     if (d.scale) boat.scale.setScalar(d.scale);
@@ -261,7 +261,8 @@ export interface Shot {
  * Từng cấp của một loại: mỗi cấp một cặp ảnh cũ, mới cùng tỉ lệ ô đất. Loại một cấp thì chỉ một cặp. Loại mới vẽ thẳng
  * trên móng (không có trong `CU`) thì chỉ có ảnh mới.
  */
-export function chupCap(loai: string): Shot[] {
+/** `caps`: chỉ chụp các cấp này (bỏ trống là mọi cấp). */
+export function chupCap(loai: string, caps?: number[]): Shot[] {
   const type = loai as BuildingType;
   const moi = CONG_TRINH[type];
   const cu = CU[type];
@@ -276,6 +277,7 @@ export function chupCap(loai: string): Shot[] {
   const river = wet ? moi.tiles / 2 : undefined;
   const out: Shot[] = [];
   for (let level = 1; level <= BUILDINGS[type].maxLevel; level++) {
+    if (caps && !caps.includes(level)) continue;
     const shots: (string | null)[] = cu ? [] : [null];
     for (const which of cu ? (['cu', 'moi'] as const) : (['moi'] as const)) {
       const scene = newScene(size);
@@ -295,18 +297,22 @@ export function chupCap(loai: string): Shot[] {
  * Loại còn vẽ theo móng cũ (đền, công trình Hội Tết, chòi canh...): mô hình game dựng (`lotModel`, phóng theo móng)
  * ở từng cấp, nhìn từ bốn hướng như khi xoay cảnh, có người đứng ở góc móng để so cỡ.
  */
-export function chupLo(loai: string): Shot[] {
+export function chupLo(loai: string, caps?: number[]): Shot[] {
   const type = loai as BuildingType;
   const def = BUILDINGS[type];
   if (!def || CONG_TRINH[type]) throw new Error(`${loai} không phải công trình vẽ theo móng cũ`);
   const renderer = makeRenderer();
   const tiles = def.w;
   const size = tiles + 2;
-  const half = tiles * 0.62 + 1.2;
+  // Khung vừa công trình cao nhất (chòi canh, lầu nỏ cao hơn hẳn móng một ô).
+  const top = new THREE.Box3().setFromObject(lotModel(type, def.maxLevel)).max.y;
+  const half = Math.max(tiles * 0.62 + 1.2, top * 0.62 + 0.4);
+  const lookY = Math.max(1.3, top * 0.45);
   const h = Math.round(2 * half * 64);
   const w = Math.round(h * 1.15);
   const out: Shot[] = [];
   for (let level = 1; level <= def.maxLevel; level++) {
+    if (caps && !caps.includes(level)) continue;
     const shots: string[] = [];
     for (const turn of [0, Math.PI]) {
       const scene = newScene(size);
@@ -317,7 +323,7 @@ export function chupLo(loai: string): Shot[] {
       const nguoi = new THREE.Group();
       addPeople(nguoi, [{ job: 'lacHau', x: tiles / 2 - 0.3, y: 0, z: tiles / 2 + 0.3, ry: 0 }], PERSON, 1);
       scene.add(nguoi);
-      shots.push(render(renderer, scene, w, h, half, new THREE.Vector3(0, 1.3, 0)));
+      shots.push(render(renderer, scene, w, h, half, new THREE.Vector3(0, lookY, 0)));
     }
     out.push({ cap: level, cu: shots[0], moi: shots[1] });
   }

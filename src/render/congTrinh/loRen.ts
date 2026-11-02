@@ -2,7 +2,7 @@
 // giá binh khí bên phải, đống than quặng và sân đúc đồng ra phía trước. Bản vẽ ở docs/bo-cuc-cong-trinh.md.
 
 import * as THREE from 'three';
-import { above5, drum, IRON_BLADE, roofFor, type Roof } from '../buildings';
+import { above5, BRICK, drum, IRON_BLADE, lacBird, patternStrip, roofFor, type Roof } from '../buildings';
 import { Lot } from '../lot';
 import { C } from '../palette';
 import { ToonModel } from '../toon';
@@ -114,6 +114,12 @@ function shed(m: ToonModel, level: number, roof: Roof): number {
   if (roof.trim !== null) {
     for (const [y, z] of [[y0, zr0], [y1, zr1]] as const) p.box(rx1 - rx0 + 0.04, 0.07, 0.07, roof.trim, (rx0 + rx1) / 2, y + 0.02, z);
   }
+  // Mái theo cấp: cấp 9 dải đồng hoa văn dưới diềm trước, cấp 10 chim Lạc hai góc diềm trước.
+  if (roof.pattern) {
+    const eave = [new THREE.Vector3(rx0, y1 - 0.02, zr1 + 0.045), new THREE.Vector3(rx1, y1 - 0.02, zr1 + 0.045)];
+    m.band.add(patternStrip(eave, 0.15, new THREE.Vector3(0, 0, 1)), C.bronzeLight, 0, 0, 0);
+  }
+  if (roof.lac) for (const [x, ry] of [[rx0 + 0.05, -Math.PI / 2], [rx1 - 0.05, Math.PI / 2]] as const) lacBird(m, x, y1 + 0.05, zr1, ry, 0.3);
   // Trong lán: máng nước tôi sắt; tới cấp 5 có giá treo kìm búa ở vách sau.
   p.box(0.48, 0.18, 0.22, C.wood, 0.42, 0.11, -1.1);
   p.box(0.42, 0.02, 0.16, C.paddyWater, 0.42, 0.2, -1.1);
@@ -217,14 +223,20 @@ export function makeLoRen(level: number): THREE.Group {
     coneKiln(m, extras, S.x, S.z, 0.9, 0);
   } else if (level >= 7) {
     // Lò luyện cao: thân tròn đắp đất có đai sắt, lửa đỏ rực trên miệng, máng sắt nóng chảy ra góc trước.
-    const H = 1.3 + 0.15 * (up - 2);
+    // Cấp 10: thành tháp lò cao gấp rưỡi, vành gạch trên miệng, khói đỏ bốc lên.
+    const tower = level >= 10;
+    const H = 1.3 + 0.15 * (up - 2) + (tower ? 0.7 : 0);
     p.cyl(0.36, 0.44, H, C.earth, S.x, H / 2, S.z, undefined, 12);
-    const bands = level >= 8 ? [0.3, 0.7, 1.05, 1.3] : [0.3, 0.7, 1.05];
+    const bands = tower ? [0.3, 0.7, 1.05, 1.4, 1.75, 2.05] : level >= 8 ? [0.3, 0.7, 1.05, 1.3] : [0.3, 0.7, 1.05];
     for (const y of bands) {
       const r = 0.44 - (0.08 * y) / H + 0.02;
       p.cyl(r, r, 0.05, C.iron, S.x, y, S.z, undefined, 12);
     }
     p.cyl(0.37, 0.37, 0.06, C.earthDark, S.x, H + 0.01, S.z, undefined, 12);
+    if (tower) {
+      m.band.cyl(0.39, 0.39, 0.14, BRICK, S.x, H + 0.08, S.z, undefined, 12);
+      smoke(extras, 0xb8503a, S.x, H + 0.55, S.z);
+    }
     flame(extras, 0.24, 0.55, C.fire, S.x, H + 0.25, S.z);
     flame(extras, 0.15, 0.38, C.ember, S.x, H + 0.21, S.z);
     const tx = S.x + Math.sin(MOUTH_FACE) * 0.52;
@@ -254,22 +266,25 @@ export function makeLoRen(level: number): THREE.Group {
   if (level >= 8) {
     // Sân đúc đồng: khuôn đất đúc trống, nồi nấu đồng trên giá nghiêng rót nước đồng đỏ rực vào khuôn;
     // trống đồng vừa đúc xong trên giá gỗ thấp bên phải.
+    // Cấp 9 trở lên: khuôn đúc trống đồng lớn đắp đất in hoa văn, trống vừa đúc to hơn.
     const E = L.zone('8');
-    const mx = E.x - 0.28;
+    const k = level >= 9 ? 1.35 : 1;
+    const mx = E.x - 0.28 - (k - 1) * 0.12;
     const mz = E.z;
-    p.cyl(0.2, 0.22, 0.32, C.earthDark, mx, 0.2, mz, undefined, 12);
-    p.cyl(0.21, 0.21, 0.04, C.earth, mx, 0.37, mz, undefined, 12);
-    rod(p, [mx - 0.22, 0.05, mz + 0.1], [mx - 0.02, 0.6, mz + 0.1], 0.03, C.woodDark);
-    rod(p, [mx + 0.22, 0.05, mz + 0.1], [mx + 0.02, 0.6, mz + 0.1], 0.03, C.woodDark);
+    (k > 1 ? m.band : p).cyl(0.2 * k, 0.22 * k, 0.32, C.earthDark, mx, 0.2, mz, undefined, 12);
+    p.cyl(0.21 * k, 0.21 * k, 0.04, C.earth, mx, 0.37, mz, undefined, 12);
+    rod(p, [mx - 0.22 * k, 0.05, mz + 0.1], [mx - 0.02, 0.6, mz + 0.1], 0.03, C.woodDark);
+    rod(p, [mx + 0.22 * k, 0.05, mz + 0.1], [mx + 0.02, 0.6, mz + 0.1], 0.03, C.woodDark);
     p.cyl(0.1, 0.07, 0.13, C.bronzeDark, mx, 0.58, mz + 0.06, [0.6, 0, 0], 8);
     const pour = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.025, 0.16, 6), new THREE.MeshBasicMaterial({ color: C.ember }));
     pour.position.set(mx, 0.46, mz + 0.02);
     pour.userData.flame = true;
     extras.push(pour);
-    m.glow.cyl(0.14, 0.14, 0.02, C.ember, mx, 0.395, mz, undefined, 12);
-    for (const dx of [-0.15, 0.15]) p.box(0.04, 0.2, 0.3, C.woodDark, E.x + 0.25 + dx, 0.11, mz);
-    p.box(0.4, 0.04, 0.32, C.wood, E.x + 0.25, 0.23, mz);
-    drum(m, E.x + 0.25, mz, 0.56, 0.21);
+    m.glow.cyl(0.14 * k, 0.14 * k, 0.02, C.ember, mx, 0.395, mz, undefined, 12);
+    const rx = E.x + 0.25 + (k - 1) * 0.1;
+    for (const dx of [-0.15, 0.15]) p.box(0.04, 0.2, 0.3, C.woodDark, rx + dx * k, 0.11, mz);
+    p.box(0.4 * k, 0.04, 0.32, C.wood, rx, 0.23, mz);
+    drum(m, rx, mz, 0.56 * k, 0.21);
   }
 
   const g = m.group();

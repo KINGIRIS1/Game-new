@@ -2,7 +2,7 @@
 // Chụp dáng cũ phóng theo móng (như kinh đô lớn lúc chưa vẽ lại) và dáng vẽ trên móng mới của công trình ở cả 8 cấp,
 // cùng móng, cùng tỉ lệ ô đất, có người đứng để so cỡ.
 // Danh sách ở scripts/congTrinh.ts. Ảnh vào chup/cong-trinh-<loại>.png, cảnh cỡ thật vào chup/cong-trinh-canh.png.
-// Cách dùng: node scripts/chup-cong-trinh.mjs [loại ...|canh]   (loại: dien, ruong, ben, nhaSan, baiDa, loRen, kho,
+// Cách dùng: node scripts/chup-cong-trinh.mjs [loại ...|canh] [--cap 8,9,10]   (loại: dien, ruong, ben, nhaSan, baiDa, loRen, kho,
 // doanhTrai, traiGiao, traiCung, chuongVoi, vuon, chuongLon, bep; không ghi gì thì chụp dien, nhaSan và canh)
 // Loại còn vẽ theo móng cũ (denPhuDong, denTanVien, denCoLoa, denCuong, ruongNep...) thì chụp mô hình game dựng
 // (phóng theo móng), nhìn từ trước và từ sau.
@@ -17,7 +17,11 @@ const require = createRequire(import.meta.url);
 const { chromium } = require('playwright');
 const { createServer } = await import(require.resolve('vite', { paths: [ROOT] }));
 
-const args = process.argv.slice(2).filter((a) => !a.startsWith('--'));
+const argv = process.argv.slice(2);
+const capAt = argv.indexOf('--cap');
+// --cap 8,9,10: chỉ chụp các cấp này.
+const caps = capAt >= 0 ? argv[capAt + 1].split(',').map(Number) : null;
+const args = argv.filter((a, i) => !a.startsWith('--') && !(capAt >= 0 && i === capAt + 1));
 const muc = args.length ? args : ['dien', 'nhaSan', 'canh'];
 
 const server = await createServer({ root: ROOT, configFile: false, server: { port: 5208, strictPort: false }, logLevel: 'error' });
@@ -40,12 +44,13 @@ try {
       html = `<body style="${css}"><div style="font-size:20px;margin-bottom:8px">Cỡ thật: Điện giữa ba nhà sàn, như lúc chưa phóng to trên điện thoại</div>
         ${anh.map((a) => `<div style="display:flex;gap:12px;margin-bottom:12px">${cell(a.cu, `Dáng cũ phóng theo móng, cấp ${a.cap}`)}${cell(a.moi, `Vẽ lại trên móng, cấp ${a.cap}`)}</div>`).join('')}</body>`;
     } else {
-      const { anh, loai } = await page.evaluate(async (m) => {
+      const { anh, loai } = await page.evaluate(async ([m, caps]) => {
         const mod = await import('/scripts/congTrinh.ts');
         const loai = mod.LOAI[m];
         if (!loai) throw new Error(`Không có công trình ${m}`);
-        return { anh: loai.cu ? mod.chupLo(m) : mod.chupCap(m), loai };
-      }, m);
+        const only = caps ?? undefined;
+        return { anh: loai.cu ? mod.chupLo(m, only) : mod.chupCap(m, only), loai };
+      }, [m, caps]);
       // Loại vẽ theo móng cũ: nhìn từ trước và từ sau. Loại đã vẽ lại: dáng cũ trên, dáng mới dưới. Công trình mới
       // chưa từng có dáng cũ (xưởng mộc): chỉ một hàng ảnh vẽ trên móng.
       const motHang = !loai.cu && !anh.some((a) => a.cu);

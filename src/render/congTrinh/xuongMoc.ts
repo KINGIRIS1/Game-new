@@ -3,7 +3,7 @@
 // Bản vẽ ở docs/bo-cuc-cong-trinh.md.
 
 import * as THREE from 'three';
-import { above5, boatRoof, buffalo, roofFor, type Roof } from '../buildings';
+import { above5, birdSpread, boatRoof, buffalo, roofFor, type Roof } from '../buildings';
 import { Lot } from '../lot';
 import { C } from '../palette';
 import type { ShapeBuilder } from '../shapes';
@@ -165,7 +165,7 @@ function dugout(p: ShapeBuilder): void {
 }
 
 /** Thuyền lớn mũi cong trên giàn đà (cấp 8): thân ván ghép, mũi lái cong vút, đà gỗ kê dốc ra lối. */
-function bigBoat(p: ShapeBuilder, m: ToonModel): void {
+function bigBoat(p: ShapeBuilder, m: ToonModel, level: number): void {
   const { x, z } = BOAT;
   const y = 0.44;
   for (const s of [-1, 1]) rod(p, [x - 0.75, 0.06, z + s * 0.16], [x + 0.75, 0.2, z + s * 0.16], 0.03, C.woodDark, 4);
@@ -179,6 +179,20 @@ function bigBoat(p: ShapeBuilder, m: ToonModel): void {
     rod(p, [x + s * 0.76, y + 0.38, z], [x + s * 0.68, y + 0.52, z], 0.035, C.wood, 6);
   }
   p.sphere(0.04, C.bronze, x + 0.68, y + 0.54, z, [1, 1, 1], 6);
+  if (level >= 9) {
+    // Cấp 9: mui cói giữa thuyền trên khung tre, mái chèo gác hai bên mạn.
+    const mui = new THREE.CylinderGeometry(0.17, 0.17, 0.5, 10, 1, true, 0, Math.PI);
+    mui.rotateZ(Math.PI / 2);
+    mui.rotateX(-Math.PI / 2);
+    m.band.add(mui, C.thatch, x - 0.12, y + 0.12, z);
+    for (const dx of [-0.36, 0.12]) p.add(new THREE.TorusGeometry(0.17, 0.014, 4, 10, Math.PI), C.bamboo, x + dx, y + 0.12, z, [0, Math.PI / 2, 0]);
+    for (const s of [-1, 1]) {
+      for (const dx of [-0.42, 0.0, 0.38]) {
+        rod(p, [x + dx, y + 0.12, z + s * 0.12], [x + dx - 0.1, y - 0.12, z + s * 0.42], 0.013, C.woodDark, 4);
+        p.box(0.05, 0.015, 0.12, C.wood, x + dx - 0.12, y - 0.15, z + s * 0.46, [0, 0.3, 0.5]);
+      }
+    }
+  }
 }
 
 /** Khung nhà sàn dựng dở: bốn cột, xà sàn, xà đầu cột, hai vì kèo chữ A và đòn nóc, chưa lợp mái. */
@@ -242,18 +256,27 @@ function buffaloHaul(p: ShapeBuilder): void {
 function showroom(m: ToonModel, level: number, roof: Roof): void {
   const p = m.plain;
   const S = XUONG_MOC_LOT.zone('S');
-  const h = 0.78 + 0.08 * Math.max(0, level - 7);
+  // Cấp 10: thành nhà sàn chạm: sàn ván trên cột, cột chạm hoa văn có chim Lạc trên đầu hai cột trước, vách sau chạm.
+  const stilt = level >= 10;
+  const fy = stilt ? 0.36 : 0;
+  const h = 0.78 + 0.08 * Math.max(0, Math.min(level, 8) - 7) + fy;
   const hx = S.w / 2 - 0.1;
   const hz = S.d / 2 - 0.12;
-  for (const sx of [-1, 1]) for (const sz of [-1, 1]) p.cyl(0.035, 0.045, h, C.woodDark, S.x + sx * hx, h / 2, S.z + sz * hz, undefined, 6);
+  for (const sx of [-1, 1]) for (const sz of [-1, 1]) (stilt ? m.band : p).cyl(0.035, 0.045, h, C.woodDark, S.x + sx * hx, h / 2, S.z + sz * hz, undefined, 6);
+  if (stilt) {
+    p.box(2 * hx + 0.12, 0.05, 2 * hz + 0.12, C.wood, S.x, fy, S.z);
+    m.band.box(2 * hx - 0.04, 0.34, 0.04, C.woodLight, S.x, fy + 0.2, S.z - hz);
+    for (let i = 0; i < 3; i++) p.box(0.26, 0.035, 0.09, C.woodDark, S.x - 0.12, fy * (1 - (i + 1) / 4), S.z + hz + 0.08 + i * 0.08);
+    for (const sx of [-1, 1]) birdSpread(m, S.x + sx * hx, h + 0.02, S.z + hz, 0.28);
+  }
   boatRoof(m, roof, { length: S.w + 0.08, width: S.d + 0.12, lift: 0.16, drop: 0.24, thickness: 0.045 }, S.x, h + 0.25, S.z);
   // Sập gỗ chạm: mặt ván, diềm chạm hoa văn, bốn chân quỳ.
-  for (const sx of [-1, 1]) for (const sz of [-1, 1]) p.box(0.05, 0.18, 0.05, C.woodDark, S.x + sx * 0.24, 0.09, S.z - 0.08 + sz * 0.14);
-  p.box(0.6, 0.05, 0.36, C.wood, S.x, 0.2, S.z - 0.08);
-  m.band.box(0.62, 0.06, 0.02, C.woodLight, S.x, 0.15, S.z + 0.11);
+  for (const sx of [-1, 1]) for (const sz of [-1, 1]) p.box(0.05, 0.18, 0.05, C.woodDark, S.x + sx * 0.24, fy + 0.09, S.z - 0.08 + sz * 0.14);
+  p.box(0.6, 0.05, 0.36, C.wood, S.x, fy + 0.2, S.z - 0.08);
+  m.band.box(0.62, 0.06, 0.02, C.woodLight, S.x, fy + 0.15, S.z + 0.11);
   // Hòm gỗ bịt đồng góc trước.
-  p.box(0.26, 0.18, 0.18, C.woodDark, S.x + 0.18, 0.14, S.z + 0.28);
-  p.box(0.28, 0.03, 0.2, C.bronze, S.x + 0.18, 0.24, S.z + 0.28);
+  p.box(0.26, 0.18, 0.18, C.woodDark, S.x + 0.18, fy + 0.14, S.z + 0.28);
+  p.box(0.28, 0.03, 0.2, C.bronze, S.x + 0.18, fy + 0.24, S.z + 0.28);
 }
 
 export function makeXuongMoc(level: number): THREE.Group {
@@ -272,7 +295,7 @@ export function makeXuongMoc(level: number): THREE.Group {
   workshop(m, level, roof);
   logPile(p, level);
   sawPit(p);
-  if (level >= 8) bigBoat(p, m);
+  if (level >= 8) bigBoat(p, m, level);
   else if (level >= 2) dugout(p);
   if (level >= 3) houseFrame(p);
   if (level >= 4) plankRack(p);

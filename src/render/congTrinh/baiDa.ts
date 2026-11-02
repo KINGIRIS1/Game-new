@@ -2,7 +2,7 @@
 // Bản vẽ ở docs/bo-cuc-cong-trinh.md.
 
 import * as THREE from 'three';
-import { above5, BRICK, boatRoof, buffalo, roofFor } from '../buildings';
+import { above5, BRICK, boatRoof, buffalo, roofFor, TILE, TILE_DARK } from '../buildings';
 import { Lot } from '../lot';
 import { C } from '../palette';
 import { ToonModel } from '../toon';
@@ -117,7 +117,21 @@ export function makeBaiDa(level: number): THREE.Group {
   const rz0 = 0.45;
   const rz1 = road.z + road.d / 2 - 0.03;
   p.box(0.8, 0.02, rz1 - rz0, ROAD, road.x, 0.055, (rz0 + rz1) / 2);
-  for (const s of [-1, 1]) p.box(0.05, 0.01, rz1 - rz0 - 0.1, C.earthDark, road.x + s * 0.2, 0.066, (rz0 + rz1) / 2);
+  if (level >= 9) {
+    // Cấp 9: đường ray gỗ từ mép hố ra mặt trước: tà vẹt gỗ, hai thanh ray gỗ nẹp sắt; xe goòng gỗ chở đá xẻ.
+    const r0 = -0.02;
+    for (let z = r0 + 0.08; z < rz1; z += 0.17) p.box(0.56, 0.03, 0.08, C.woodDark, road.x, 0.07, z);
+    for (const s of [-1, 1]) {
+      p.box(0.05, 0.05, rz1 - r0, C.wood, road.x + s * 0.18, 0.1, (r0 + rz1) / 2);
+      p.box(0.055, 0.012, rz1 - r0, C.iron, road.x + s * 0.18, 0.128, (r0 + rz1) / 2);
+    }
+    const cz = 1.08;
+    for (const s of [-1, 1]) for (const dz of [-0.12, 0.12]) p.cyl(0.07, 0.07, 0.04, C.woodDark, road.x + s * 0.2, 0.19, cz + dz, [0, 0, Math.PI / 2], 8);
+    p.box(0.36, 0.16, 0.38, C.wood, road.x, 0.3, cz);
+    for (const s of [-1, 1]) p.box(0.38, 0.03, 0.03, C.iron, road.x, 0.33, cz + s * 0.19);
+    p.box(0.26, 0.14, 0.2, CUT, road.x - 0.02, 0.44, cz - 0.04, [0, 0.2, 0]);
+    p.box(0.2, 0.12, 0.16, C.rock, road.x + 0.05, 0.42, cz + 0.12, [0, -0.3, 0]);
+  } else for (const s of [-1, 1]) p.box(0.05, 0.01, rz1 - rz0 - 0.1, C.earthDark, road.x + s * 0.2, 0.066, (rz0 + rz1) / 2);
 
   // Đá tảng vỡ: nhiều dần theo cấp; từ cấp 3 có đá rơi dưới đáy hố.
   const rocks = ROCKS.slice(0, Math.min(2 + Math.floor(level / 2), ROCKS.length));
@@ -188,7 +202,21 @@ export function makeBaiDa(level: number): THREE.Group {
     p.cyl(0.07, 0.09, 0.66, C.earthDark, chimney[0], 0.72, chimney[2], undefined, 8);
     p.cyl(0.09, 0.09, 0.05, BRICK, chimney[0], 1.03, chimney[2], undefined, 8);
     const layers = level >= 8 ? 6 : 3;
-    for (let i = 0; i < layers; i++) for (let j = 0; j < 2; j++) p.box(0.18, 0.07, 0.15, i % 2 ? 0x9a4628 : BRICK, -0.6, 0.085 + i * 0.075, 0.61 + j * 0.17, [0, i % 2 ? 0.08 : 0, 0]);
+    if (level >= 10) {
+      // Cấp 10: lò gạch thành lò nung ngói: chồng ngói đỏ cam xếp úp, hai ống khói, giá phơi ngói mộc.
+      for (let i = 0; i < 7; i++) {
+        for (let j = 0; j < 2; j++) {
+          const tile = new THREE.CylinderGeometry(0.075, 0.075, 0.26, 8, 1, true, 0, Math.PI);
+          tile.rotateZ(Math.PI / 2);
+          p.add(tile, i % 2 ? TILE_DARK : TILE, -0.6, 0.08 + i * 0.05, 0.61 + j * 0.17);
+        }
+      }
+      p.cyl(0.06, 0.08, 0.5, C.earthDark, kx - 0.16, 0.62, kz - 0.18, undefined, 8);
+      p.cyl(0.08, 0.08, 0.05, BRICK, kx - 0.16, 0.88, kz - 0.18, undefined, 8);
+      for (const dz of [-0.2, 0.2]) p.cyl(0.02, 0.02, 0.42, C.woodDark, -1.36, 0.21, kz + dz, undefined, 4);
+      p.box(0.06, 0.03, 0.46, C.wood, -1.36, 0.42, kz);
+      for (let i = 0; i < 3; i++) p.box(0.04, 0.12, 0.1, C.soil, -1.34, 0.3, kz - 0.15 + i * 0.15, [0, 0, 0.2]);
+    } else for (let i = 0; i < layers; i++) for (let j = 0; j < 2; j++) p.box(0.18, 0.07, 0.15, i % 2 ? 0x9a4628 : BRICK, -0.6, 0.085 + i * 0.075, 0.61 + j * 0.17, [0, i % 2 ? 0.08 : 0, 0]);
     const flame = new THREE.Mesh(new THREE.ConeGeometry(0.07, 0.14, 6), new THREE.MeshBasicMaterial({ color: C.ember }));
     flame.position.set(kx, 0.24, kz + 0.37);
     flame.userData.flame = true;
@@ -218,6 +246,13 @@ export function makeBaiDa(level: number): THREE.Group {
     buffalo(p, 0, 0);
     p.frame = null;
     rod(p, [0.58, 0.42, 1.2], [1.08, 0.18, 1.42], 0.008, C.cream, 3);
+    if (level >= 10) {
+      // Cấp 10: trâu thứ hai cùng kéo, ách gỗ nối hai trâu.
+      p.frame = new THREE.Matrix4().compose(new THREE.Vector3(0.98, 0, 1.28), new THREE.Quaternion().setFromEuler(new THREE.Euler(0, -0.6, 0)), new THREE.Vector3(0.95, 0.95, 0.95));
+      buffalo(p, 0, 0);
+      p.frame = null;
+      rod(p, [0.86, 0.46, 1.38], [1.2, 0.2, 1.46], 0.008, C.cream, 3);
+    }
   }
   const g = m.group();
   for (const o of extras) g.add(o);

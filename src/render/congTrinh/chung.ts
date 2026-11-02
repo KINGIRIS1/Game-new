@@ -75,6 +75,8 @@ export interface Dock {
   ry: number;
   scale?: number;
   span?: number;
+  /** Thuyền buôn lớn hai buồm (bến cấp 10); thuyền đánh cá có buồm cói (làng chài cấp 10). */
+  big?: boolean;
 }
 
 /** Một công trình vẽ trên móng mới. */
