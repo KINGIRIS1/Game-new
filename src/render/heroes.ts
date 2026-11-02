@@ -1,4 +1,4 @@
-// Các tướng có khung xương (rig.ts, body.ts): Thánh Gióng ba dáng và ngựa sắt, Sơn Tinh, Thủy Tinh, An Dương Vương,
+// Các tướng có khung xương (rig.ts, body.ts): Thánh Gióng ba dáng và ngựa sắt, Sơn Tinh, Thủy Tinh, An Dương Vương, Cao Lỗ,
 // và Lạc tướng đánh trống trận ở bãi chiến. Tướng to hơn lính: thân người thường phóng to bằng `place` + `moveBones`.
 
 import * as THREE from 'three';
@@ -14,6 +14,7 @@ import {
   gripHands,
   hairCap,
   headband,
+  hide,
   humanBody,
   humanHead,
   lerp,
@@ -27,7 +28,7 @@ import {
 import { C } from './palette';
 import { RigBuilder, bakeRig, moveBones, skinRig, type Act, type BoneDef, type Bones, type Poser } from './rig';
 import { ToonModel, inkThin } from './toon';
-import { IRON, IRON_DARK, crossbowParts, type Parts } from './weapons';
+import { IRON, IRON_DARK, LEATHER, crossbowParts, hornTrumpet, repeatingCrossbow, type Parts } from './weapons';
 
 type Defs = Record<string, BoneDef<string>>;
 type Rig = RigBuilder<string>;
@@ -1145,6 +1146,188 @@ export function makeAnDuong(opts: { crossbow?: boolean; glow?: boolean } = {}): 
   const { group, bones } = skinRig(r.build());
   if (opts.glow) addHalo(group, 1.6, -0.4);
   return finish(group, (a) => poseAdv(bones as unknown as Human, a, crossbow));
+}
+
+// ---------- Cao Lỗ ----------
+
+const K_CAO = 1.35;
+/** Da thuộc sẫm làm xà cạp, đai đeo. */
+const LEATHER_DARK = 0x5e3a20;
+/** Tù và đeo bên hông trái (xương riêng để giấu khi đã cầm lên tay). */
+const CAO_HORN: V3 = [-0.18, 0.32, 0.08];
+
+/**
+ * Cao Lỗ, tướng giỏi chế nỏ: tóc búi cài trâm đồng, râu đen, giáp da khảm đồng có hộ tâm mặt trống đồng, váy chàm
+ * hoa văn, mũ lông chim kiểu tướng, bao tên đồng sau lưng, tù và sừng trâu đeo hông, tay phải cầm nỏ liên châu.
+ */
+function drawCaoLo(h: HumanRig): void {
+  humanBody(h, { cloth: C.indigo, pattern: true, flaps: true, top: LEATHER, belt: C.bronzeDark, armband: C.bronze });
+
+  // Xà cạp da, vòng đồng cổ chân.
+  for (const [b, x] of [
+    ['legL', -0.065],
+    ['legR', 0.065],
+  ] as const) {
+    const lp = h.on(b).plain;
+    lp.cyl(0.054, 0.048, 0.13, LEATHER_DARK, x, 0.1, 0.005, undefined, 8);
+    lp.cyl(0.057, 0.057, 0.026, C.bronze, x, 0.05, 0.008, undefined, 8);
+  }
+
+  // Khóa đai đồng, hai vạt giáp da đính đinh đồng che hông.
+  const hips = h.on('hips');
+  hips.plain.box(0.09, 0.07, 0.04, C.bronze, 0, 0.405, 0.136);
+  hips.plain.sphere(0.02, C.bronzeLight, 0, 0.405, 0.158, [1, 1, 0.6], 6);
+  for (const s of [-1, 1]) {
+    hips.plain.box(0.04, 0.18, 0.15, LEATHER, s * 0.15, 0.31, 0, [0, 0, -s * 0.18]);
+    for (const dz of [-0.04, 0.04]) hips.plain.sphere(0.016, C.bronzeLight, s * 0.172, 0.31, dz, [1, 1, 1], 5);
+  }
+
+  // Giáp da: vành cổ đồng, hộ tâm mặt trống đồng, hai hàng đinh đồng khảm quanh ngực, giáp vai da viền đồng.
+  const chest = h.on('chest');
+  chest.plain.cyl(0.152, 0.134, 0.22, LEATHER, 0, 0.485, 0, undefined, 12);
+  chest.plain.cyl(0.118, 0.13, 0.03, C.bronze, 0, 0.58, 0, undefined, 12);
+  chest.plain.cyl(0.137, 0.137, 0.025, C.bronzeDark, 0, 0.385, 0, undefined, 12);
+  chest.drum.cyl(0.066, 0.066, 0.022, C.gold, 0, 0.49, 0.142, [Math.PI / 2, 0, 0], 14);
+  chest.plain.add(new THREE.TorusGeometry(0.068, 0.011, 6, 16), C.bronzeDark, 0, 0.49, 0.148);
+  for (const [y, r] of [
+    [0.44, 0.143],
+    [0.54, 0.151],
+  ] as const) {
+    for (const a of [-1.5, -1.0, -0.55, 0.55, 1.0, 1.5, Math.PI - 0.5, Math.PI, Math.PI + 0.5]) {
+      chest.plain.sphere(0.017, C.bronzeLight, Math.sin(a) * r, y, Math.cos(a) * r, [1, 1, 1], 5);
+    }
+  }
+  for (const s of [-1, 1]) {
+    chest.plain.sphere(0.088, LEATHER, s * 0.18, 0.565, 0, [1.1, 0.72, 1.05], 8);
+    chest.plain.box(0.11, 0.022, 0.15, C.bronze, s * 0.19, 0.53, 0, [0, 0, -s * 0.3]);
+    chest.plain.sphere(0.02, C.bronzeLight, s * 0.2, 0.6, 0, [1, 1, 1], 5);
+  }
+
+  // Hộ uyển da thắt vòng đồng.
+  for (const [b, s] of [
+    ['armL', -1],
+    ['armR', 1],
+  ] as const) {
+    const ap = h.on(b).plain;
+    const x = s * 0.135;
+    ap.cyl(0.045, 0.039, 0.1, LEATHER_DARK, x, 0.37, 0, undefined, 8);
+    ap.cyl(0.047, 0.047, 0.02, C.bronze, x, 0.41, 0, undefined, 8);
+  }
+
+  // Bao tên đồng đeo chéo sau lưng, miệng bao qua vai phải, đuôi tên lông đỏ.
+  h.local('chest', [0.12, 0.5, -0.17], [0.2, 0, -0.4], (s) => {
+    s.band.cyl(0.058, 0.05, 0.38, C.bronze, 0, 0, 0, undefined, 8);
+    s.plain.cyl(0.064, 0.064, 0.034, C.bronzeDark, 0, 0.18, 0, undefined, 8);
+    s.plain.cyl(0.056, 0.056, 0.03, C.bronzeDark, 0, -0.18, 0, undefined, 8);
+    for (const [dx, dz] of [
+      [-0.022, -0.012],
+      [0.022, -0.012],
+      [0, 0.02],
+    ] as const) {
+      s.plain.cyl(0.008, 0.008, 0.12, C.woodLight, dx, 0.24, dz, undefined, 4);
+      s.plain.box(0.006, 0.07, 0.04, C.red, dx, 0.28, dz);
+      s.plain.box(0.04, 0.07, 0.006, C.red, dx, 0.28, dz);
+    }
+  });
+
+  // Mặt cương nghị: mày xếch, râu mép và chòm râu đen; tóc búi cài trâm đồng, dải đồng buộc trán, mũ lông chim tướng.
+  humanHead(h, { brows: true, mustache: C.hair });
+  hairCap(h);
+  headband(h, C.bronze, 0.035);
+  const head = h.on('head').plain;
+  head.cone(0.07, 0.17, C.hair, 0, 0.6, 0.152, [Math.PI + 0.3, 0, 0], 6);
+  head.sphere(0.085, C.hair, 0, 1.0, -0.005, [1, 0.9, 1], 8);
+  head.cyl(0.07, 0.07, 0.025, C.bronze, 0, 0.94, -0.005, undefined, 8);
+  head.cyl(0.012, 0.012, 0.26, C.bronzeLight, 0, 1.0, -0.005, [0, 0, Math.PI / 2 - 0.15], 5);
+  for (const s of [-1, 1]) head.sphere(0.02, C.bronzeLight, s * 0.13, 1.0 + s * 0.02, -0.005, [1, 1, 1], 5);
+  featherCrown(h, [C.red, C.cream, C.bronzeLight], { count: 7, len: 0.4 });
+
+  // Tù và sừng trâu đeo hông trái (giấu đi lúc cầm lên thổi), và tù và cầm tay trái (chỉ hiện lúc thổi).
+  (h as unknown as Rig).local('tuVa', CAO_HORN, [0.15, Math.PI + 0.35, 0], (s) => {
+    hornTrumpet(s, 0.95);
+    s.plain.box(0.012, 0.09, 0.012, LEATHER_DARK, 0, 0.05, 0.02);
+  });
+  h.local('handL', GRIP_L, null, (s) => hornTrumpet(s, 1.0));
+  h.local('hand', GRIP_R, null, (s) => repeatingCrossbow(s, 1.05 / K_CAO));
+}
+
+/** Năm lần bật dây của nỏ liên châu trong kỹ năng (tiến trình). */
+const VOLLEY_SHOTS = [0.28, 0.38, 0.48, 0.58, 0.68];
+
+/**
+ * Cao Lỗ: nghỉ thì cầm nỏ ngang thắt lưng, mũi chúc xuống; đánh thì nâng nỏ ngang vai ngắm, nỏ giật khi bắn.
+ * `skill` (nỏ liên châu): chĩa nỏ lên trời chừng 50 độ, bắn liền năm phát. `horn` (lệnh bắn): tay trái rút tù và
+ * bên hông đưa lên miệng thổi, ngửa đầu, tay phải hạ nỏ. `win`: giơ cao nỏ quá đầu, tay trái giơ nắm đấm.
+ */
+function poseCaoLo(bones: B, a: Act): void {
+  const b = bones as unknown as Human;
+  beginPose(b, a.time);
+  const t = a.time ?? 0;
+  if (a.act === 'walk') walkCycle(b, a.phase ?? 0, (a.stride ?? 0.5) * 0.8);
+  const sw = a.act === 'walk' ? Math.sin(a.phase ?? 0) : 0;
+  // Cầm nỏ ngang thắt lưng (nghỉ, đi): tay phải nắm báng, tay trái đỡ thân nỏ.
+  b.armR.rotation.set(-0.6 + 0.08 * sw, 0, 0.1);
+  b.armL.rotation.set(-0.7 - 0.08 * sw, 0.55, 0);
+  b.hand.rotation.set(0.5 + 0.05 * Math.sin(t * 1.2), 0, 0);
+  let blowing = false;
+  if (a.act === 'dead') {
+    fallPose(b, a.fall ?? 1);
+    b.hand.rotation.x = 1.0;
+  } else if (a.horn !== undefined) {
+    const k = a.horn;
+    const up = smooth(k, 0, 0.2) * (1 - smooth(k, 0.85, 1));
+    const blow = k > 0.2 && k < 0.85 ? 1 : 0;
+    blowing = up > 0.03;
+    stance(b, 0.12, 0.12);
+    b.chest.rotation.x = -0.1 * up;
+    b.head.rotation.set(-0.12 * up + 0.025 * blow * Math.sin(k * 90), 0, 0);
+    b.armL.rotation.set(lerp(-0.25, -2.15, up), lerp(0, 0.05, up), lerp(-0.2, 0.28, up));
+    b.handL.rotation.set(lerp(1.2, -0.15, up), lerp(0, -0.45, up), 0);
+    b.armR.rotation.set(lerp(-0.6, -0.25, up), 0, lerp(0.1, 0.2, up));
+    b.hand.rotation.set(lerp(0.5, 0.85, up), 0, 0);
+  } else if (a.skill !== undefined) {
+    const k = a.skill;
+    const aim = smooth(k, 0, 0.2) * (1 - smooth(k, 0.86, 1));
+    let kick = 0;
+    for (const s of VOLLEY_SHOTS) if (k >= s && k < s + 0.08) kick = Math.sin((Math.PI * (k - s)) / 0.08);
+    stance(b, lerp(0, 0.22, aim), lerp(0, 0.2, aim));
+    b.chest.rotation.set(-0.15 * aim + 0.05 * kick, 0.12 * aim, 0);
+    b.head.rotation.set(-0.15 * aim, -0.1 * aim, 0);
+    b.armR.rotation.set(lerp(-0.6, -2.3 + 0.12 * kick, aim), lerp(0, -0.1, aim), lerp(0.1, 0.12, aim));
+    b.armL.rotation.set(lerp(-0.7, -2.45 + 0.12 * kick, aim), lerp(0.55, 0.42, aim), 0);
+    b.hand.rotation.set(lerp(0.5, -0.87 - b.chest.rotation.x - 0.3 * kick, aim), lerp(0, -0.12, aim), 0);
+  } else if (a.win !== undefined) {
+    const w = a.win;
+    b.armR.rotation.set(lerp(-0.6, -2.95, w), 0, lerp(0.1, 0.4, w));
+    b.armL.rotation.set(lerp(-0.7, -2.7, w), lerp(0.55, 0, w), lerp(0, -0.45, w));
+    b.hand.rotation.set(lerp(0.5, -1.55, w), 0, lerp(0, -0.25, w));
+    b.chest.rotation.x = -0.1 * w;
+  } else if (a.act === 'fight') {
+    const k = a.strike;
+    const kick = k !== undefined && k < 0.3 ? Math.sin((Math.PI * k) / 0.3) : 0;
+    stance(b, 0.15, 0.15);
+    b.chest.rotation.set(0.04 - 0.08 * kick, 0.15, 0);
+    b.armR.rotation.set(-1.4 - 0.2 * kick, -0.1, 0.05);
+    b.armL.rotation.set(-1.5 - 0.15 * kick, 0.4, 0);
+    b.hand.rotation.set(-b.chest.rotation.x - 0.45 * kick, -0.15, 0);
+  }
+  hide(b.handL, !blowing);
+  hide(bones.tuVa, blowing);
+  gripHands(b, ARM * K_CAO);
+}
+
+function caoLoDefs(): Defs {
+  const at = (v: V3): V3 => [v[0] * K_CAO, v[1] * K_CAO, v[2] * K_CAO];
+  return { ...BASE, ...bigHuman('base', [0, 0, 0], K_CAO), tuVa: { parent: 'hips', at: at(CAO_HORN) } };
+}
+
+/** Cao Lỗ cầm nỏ liên châu. `glow`: hiển linh, có hào quang. */
+export function makeCaoLo(opts: { glow?: boolean } = {}): THREE.Group {
+  const r = new RigBuilder(caoLoDefs());
+  drawBig(r, [0, 0, 0], K_CAO, drawCaoLo);
+  const { group, bones } = skinRig(r.build());
+  if (opts.glow) addHalo(group, 1.5, -0.38);
+  return finish(group, (a) => poseCaoLo(bones, a));
 }
 
 // ---------- Lạc tướng đánh trống trận ----------

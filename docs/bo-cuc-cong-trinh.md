@@ -435,7 +435,7 @@ c c c c , ,
 - `K` cấp 1, kiềng ba hòn, nồi đồng luộc bánh, lửa củi (cấp 3: nồi thứ hai, khói bếp).
 - `,` cấp 1, lối vào.
 - `M` cấp 2, mái tranh che bếp dựng cao.
-- `c` cấp 2, chiếu gói bánh, chõng tre có khuôn.
+- `c` cấp 1, chiếu gói bánh nhỏ (cấp 2: chiếu rộng thêm, chõng tre có khuôn ở đầu chiếu). Khi vẽ thật đưa chiếu xuống cấp 1, vì bếp cấp 1 đã gói bánh.
 - `G` cấp 3, cối đá, chày gỗ giã bánh giầy.
 - Ngày Tết thêm người ngồi gói bánh trên chiếu, nay nằm trong móng.
 

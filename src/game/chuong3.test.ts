@@ -432,7 +432,7 @@ describe('truyện và lưu game chương 3', () => {
     raid.foe = 'thuy';
     const back = deserialize(JSON.stringify(s6))!;
     expect(back.version).toBe(SAVE_VERSION);
-    expect(back.adv).toEqual({ no: false, restUntil: 0, kimQuy: false, won: false, layTrao: false });
+    expect(back.adv).toEqual({ no: false, restUntil: 0, kimQuy: false, won: false, layTrao: false, bien: false });
     expect(back.raid.nights).toBe(0);
     expect(back.raid.foe).toBe('thuy');
   });

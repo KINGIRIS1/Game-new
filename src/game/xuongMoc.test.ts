@@ -1,5 +1,5 @@
 // Canh gỗ (tài nguyên thứ năm) và xưởng mộc: mở ở Điện 2, gỗ mỗi phút theo cấp và người làm, chung sức chứa kho,
-// phát rừng được gỗ, thuyền buôn buôn gỗ khi kinh đô có xưởng mộc, Lạc hầu gợi ý một lần, nâng bản lưu 13 lên 14.
+// phát rừng được gỗ, thuyền buôn buôn gỗ khi kinh đô có xưởng mộc, Lạc hầu gợi ý một lần, nâng bản lưu 15 lên 16.
 
 import { describe, expect, it } from 'vitest';
 import { BUILDINGS, MERCHANT_FIRST_MS, TEMPLE_BONUS } from './defs';
@@ -130,20 +130,20 @@ describe('gỗ', () => {
     expect(s.hinted).toEqual(['xuongMoc']);
   });
 
-  it('nâng bản lưu 13 lên 14: kho có 0 gỗ, chưa gợi ý gì, trận vừa xong chưa bị cướp gỗ', () => {
+  it('nâng bản lưu 15 lên 16: kho có 0 gỗ, chưa gợi ý gì, trận vừa xong chưa bị cướp gỗ', () => {
     const raw = createInitialState(0) as unknown as Record<string, any>;
-    raw.version = 13;
+    raw.version = 15;
     delete raw.resources.go;
     delete raw.hinted;
     raw.raid.lastResult = { won: true, stolen: { gao: 30, voOc: 0, datDa: 0, sat: 0 }, lost: {}, wrecked: 0 };
     const s = deserialize(JSON.stringify(raw))!;
     expect(s.version).toBe(SAVE_VERSION);
-    expect(SAVE_VERSION).toBe(14);
+    expect(SAVE_VERSION).toBe(16);
     expect(s.resources.go).toBe(0);
     expect(s.hinted).toEqual([]);
     expect(s.raid.lastResult?.stolen.go).toBe(0);
 
-    // Bản lưu 14 thiếu danh sách gợi ý là hỏng.
+    // Bản lưu 16 thiếu danh sách gợi ý là hỏng.
     const bad = createInitialState(0) as unknown as Record<string, unknown>;
     delete bad.hinted;
     expect(deserialize(JSON.stringify(bad))).toBeUndefined();

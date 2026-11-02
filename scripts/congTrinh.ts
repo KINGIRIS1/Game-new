@@ -10,6 +10,8 @@ import {
   footScale,
   makeBaiDa,
   makeBen,
+  makeBep,
+  makeChuongLon,
   makeChuongVoi,
   makeDien,
   makeDoanhTrai,
@@ -19,9 +21,10 @@ import {
   makeRuong,
   makeTraiCung,
   makeTraiGiao,
+  makeVuon,
 } from '../src/render/buildings';
 import type { Dock, LotSpot } from '../src/render/congTrinh/chung';
-import { CONG_TRINH } from '../src/render/congTrinh/index';
+import { CONG_TRINH, lotModel } from '../src/render/congTrinh/index';
 import { addSunLights } from '../src/render/lights';
 import { makeBoat, makeTradeBoat } from '../src/render/models';
 import { C } from '../src/render/palette';
@@ -96,6 +99,28 @@ const CU: Partial<Record<BuildingType, { make: (level: number) => THREE.Group; s
   traiGiao: { make: () => makeTraiGiao(), spots: [] },
   traiCung: { make: () => makeTraiCung(), spots: [] },
   chuongVoi: { make: () => makeChuongVoi(), spots: [] },
+  vuon: {
+    make: makeVuon,
+    spots: [
+      { job: 'phuNu', x: -0.2, y: 0.08, z: 0.62, ry: -0.4 },
+      { job: 'phuNu', x: 0.78, y: 0.08, z: 0.02, ry: -1.8 },
+    ],
+  },
+  chuongLon: {
+    make: makeChuongLon,
+    spots: [
+      { job: 'nong', x: 0.65, y: 0.06, z: 0.72, ry: -2.0 },
+      { job: 'nong', x: 0.62, y: 0.06, z: -0.58, ry: -1.6 },
+    ],
+  },
+  bep: {
+    make: makeBep,
+    spots: [
+      { job: 'phuNu', x: -0.74, y: 0.06, z: 0.14, ry: -2.9 },
+      { job: 'phuNu', x: 0.6, y: 0.06, z: -0.02, ry: 2.9 },
+      { job: 'phuNu', x: 0.4, y: 0.06, z: 0.4, ry: 0.9 },
+    ],
+  },
 };
 
 /** Số người hiện ra như world.ts: công trình cần người làm thì đủ chỗ làm của cấp ấy, nhà sàn và doanh trại 1–2 người, còn lại 1. */
@@ -266,6 +291,41 @@ export function chupCap(loai: string): Shot[] {
 }
 
 /**
+ * Loại còn vẽ theo móng cũ (đền, công trình Hội Tết, chòi canh...): mô hình game dựng (`lotModel`, phóng theo móng)
+ * ở từng cấp, nhìn từ bốn hướng như khi xoay cảnh, có người đứng ở góc móng để so cỡ.
+ */
+export function chupLo(loai: string): Shot[] {
+  const type = loai as BuildingType;
+  const def = BUILDINGS[type];
+  if (!def || CONG_TRINH[type]) throw new Error(`${loai} không phải công trình vẽ theo móng cũ`);
+  const renderer = makeRenderer();
+  const tiles = def.w;
+  const size = tiles + 2;
+  const half = tiles * 0.62 + 1.2;
+  const h = Math.round(2 * half * 64);
+  const w = Math.round(h * 1.15);
+  const out: Shot[] = [];
+  for (let level = 1; level <= def.maxLevel; level++) {
+    const shots: string[] = [];
+    for (const turn of [0, Math.PI]) {
+      const scene = newScene(size);
+      scene.add(groundPatch(size, [{ x: 0, z: 0, tiles }]));
+      const b = lotModel(type, level);
+      b.rotation.y = turn;
+      scene.add(b);
+      const nguoi = new THREE.Group();
+      addPeople(nguoi, [{ job: 'lacHau', x: tiles / 2 - 0.3, y: 0, z: tiles / 2 + 0.3, ry: 0 }], PERSON, 1);
+      scene.add(nguoi);
+      shots.push(render(renderer, scene, w, h, half, new THREE.Vector3(0, 1.3, 0)));
+    }
+    out.push({ cap: level, cu: shots[0], moi: shots[1] });
+  }
+  renderer.dispose();
+  renderer.domElement.remove();
+  return out;
+}
+
+/**
  * Cảnh cỡ thật: Điện giữa ba nhà sàn như một góc kinh đô, cũ và mới, ở cấp `levels`.
  * `px` điểm ảnh mỗi ô, chừng như trên điện thoại lúc chưa phóng to (độ nét 1,5).
  */
@@ -304,5 +364,5 @@ export function chupCanh(levels: number[], px = 32): Shot[] {
 }
 
 export const LOAI = Object.fromEntries(
-  Object.keys(CONG_TRINH).map((id) => [id, { ten: vi.buildings[id as BuildingType].name, moi: CONG_TRINH[id as BuildingType]!.tiles }]),
+  (Object.keys(BUILDINGS) as BuildingType[]).map((id) => [id, { ten: vi.buildings[id].name, moi: CONG_TRINH[id]?.tiles ?? BUILDINGS[id].w, cu: !CONG_TRINH[id] }]),
 );

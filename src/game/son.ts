@@ -3,8 +3,9 @@
 // Kèm việc chọn tướng cho từng trận: mỗi trận một tướng, Gióng, Sơn Tinh hay An Dương Vương.
 
 import type { Battle, HeroKind, HeroSetup } from './battle';
+import { CAO_LO_AT, caoLoJoined, caoLoSetup } from './caoLo';
 import { advJoined, advSetup } from './coLoa';
-import { ADV_REST_MS, CH2_QUEST_START, GIFTS, GIFT_IDS, GIONG_REST_MS, SON_REST_MS, type Chapter, type GiftId } from './defs';
+import { ADV_REST_MS, CAO_LO_REST_MS, CH2_QUEST_START, GIFTS, GIFT_IDS, GIONG_REST_MS, SON_REST_MS, type Chapter, type GiftId } from './defs';
 import { canAfford, pay, scheduleFirstFlood, type FailReason, type GameState, type Result, type SonState } from './game';
 import { giongReady, heroSetup } from './giong';
 
@@ -29,15 +30,30 @@ export function sonSetup(s: GameState): HeroSetup | null {
 }
 
 /**
- * Tướng ra trận. Trận chương 3 (phó bản chương 3, yêu tinh, quân Triệu) có An Dương Vương khi đã có nỏ thần
- * và không kiệt sức. Trận chương 2 (phó bản chương 2, mùa lũ), hay trận chương 3 chưa có An Dương Vương,
- * có Sơn Tinh khi Sơn Tinh đã rước Mị Nương và không kiệt sức. Còn lại có Gióng nếu Gióng đã thành tráng sĩ
- * và không kiệt sức.
+ * Thứ tự tướng ưu tiên ra trận chương này (`stage`: màn phó bản; không có là trận giữ kinh đô), trước Sơn Tinh và
+ * Gióng:
+ * - chương 4: phó bản màn 25 có An Dương Vương, màn 26–32 có Cao Lỗ; giữ kinh đô có An Dương Vương tới khi vua
+ *   xuống biển, rồi Cao Lỗ;
+ * - chương 3: An Dương Vương.
  */
-export function heroFor(s: GameState, chapter: Chapter): HeroSetup | null {
-  if (chapter === 3) {
-    const adv = advSetup(s);
-    if (adv) return adv;
+function leadsFor(s: GameState, chapter: Chapter, stage?: number): ('anDuong' | 'caoLo')[] {
+  if (chapter === 4) {
+    if (stage === undefined) return s.adv.bien ? ['caoLo'] : ['anDuong', 'caoLo'];
+    return stage <= CAO_LO_AT ? ['anDuong'] : ['caoLo'];
+  }
+  return chapter === 3 ? ['anDuong'] : [];
+}
+
+/**
+ * Tướng ra trận. Trận chương 4 và chương 3 có tướng của chương (`leadsFor`) khi tướng ấy đã về với kinh đô và không
+ * kiệt sức; An Dương Vương xuống biển rồi thì không giữ kinh đô nữa. Trận chương 2 (phó bản chương 2, mùa lũ), hay
+ * khi tướng của chương chưa có hoặc đang nghỉ, có Sơn Tinh khi Sơn Tinh đã rước Mị Nương và không kiệt sức. Còn lại
+ * có Gióng nếu Gióng đã thành tráng sĩ và không kiệt sức.
+ */
+export function heroFor(s: GameState, chapter: Chapter, stage?: number): HeroSetup | null {
+  for (const lead of leadsFor(s, chapter, stage)) {
+    const hero = lead === 'anDuong' ? advSetup(s) : caoLoSetup(s);
+    if (hero) return hero;
   }
   if (chapter >= 2) {
     const son = sonSetup(s);
@@ -50,9 +66,12 @@ export function heroFor(s: GameState, chapter: Chapter): HeroSetup | null {
  * Tướng lẽ ra cùng ra trận chương này mà đang kiệt sức: ai, còn nghỉ bao nhiêu giây.
  * Null khi tướng đứng đầu đang khỏe, hay chưa có tướng nào. Để giao diện báo trước khi xuất quân.
  */
-export function restingHero(s: GameState, chapter: Chapter): { kind: HeroKind; secs: number } | null {
+export function restingHero(s: GameState, chapter: Chapter, stage?: number): { kind: HeroKind; secs: number } | null {
   const order: { kind: HeroKind; joined: boolean; until: number }[] = [];
-  if (chapter === 3) order.push({ kind: 'anDuong', joined: advJoined(s), until: s.adv.restUntil });
+  for (const lead of leadsFor(s, chapter, stage)) {
+    if (lead === 'anDuong') order.push({ kind: 'anDuong', joined: advJoined(s), until: s.adv.restUntil });
+    else order.push({ kind: 'caoLo', joined: caoLoJoined(s), until: s.caoLo.restUntil });
+  }
   if (chapter >= 2) order.push({ kind: 'sonTinh', joined: sonJoined(s), until: s.son.restUntil });
   order.push({ kind: 'giong', joined: giongReady(s), until: s.giong.restUntil });
   const first = order.find((h) => h.joined);
@@ -64,6 +83,7 @@ export function restingHero(s: GameState, chapter: Chapter): { kind: HeroKind; s
 export function restAfter(s: GameState, battle: Battle): void {
   if (!battle.hero?.down) return;
   if (battle.hero.kind === 'anDuong') s.adv.restUntil = s.clock + ADV_REST_MS;
+  else if (battle.hero.kind === 'caoLo') s.caoLo.restUntil = s.clock + CAO_LO_REST_MS;
   else if (battle.hero.kind === 'sonTinh') s.son.restUntil = s.clock + SON_REST_MS;
   else s.giong.restUntil = s.clock + GIONG_REST_MS;
 }

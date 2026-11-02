@@ -50,7 +50,7 @@ function ch4(): GameState {
   for (const g of GIFT_IDS) s.son.gifts[g] = true;
   s.son.non = true;
   s.son.won = true;
-  s.adv = { no: true, restUntil: 0, kimQuy: true, won: true, layTrao: false };
+  s.adv = { no: true, restUntil: 0, kimQuy: true, won: true, layTrao: false, bien: false };
   s.campaign.cleared = 24;
   const barracks = place(s, 'doanhTrai', DIEN_END + 1, DIEN_END + 1);
   if (!barracks.ok) throw new Error(barracks.reason);

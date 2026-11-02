@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { isHero, startBattle } from './battle';
 import { canStartStage, startStage } from './campaign';
-import { BUILDINGS, DEFAULT_ROWS, FIELD_CAP, GIFT_IDS, GUARD_CAP, UNITS, type UnitType } from './defs';
+import { BUILDINGS, CH4_QUEST_START, DEFAULT_ROWS, FIELD_CAP, GIFT_IDS, GUARD_CAP, UNITS, type UnitType } from './defs';
 import {
   armySpace,
   assignCommander,
@@ -74,15 +74,22 @@ describe('mỗi tướng chỉ huy một doanh trại', () => {
     expect(troopCap(s)).toBe(76);
   });
 
-  it('đủ bốn tướng thì bốn doanh trại, 152 chỗ quân; không quá bốn', () => {
-    const s = city(7);
+  it('đủ bốn tướng thì bốn doanh trại, 152 chỗ quân; Cao Lỗ cầm quân thì thêm trại thứ năm, không quá năm', () => {
+    const s = city(8);
     giongReady(s);
     sonJoined(s);
     s.adv.no = true;
     for (let i = 0; i < 4; i++) barracks(s, i);
     expect(barracksList(s).map((b) => commanderOf(s, b))).toEqual(['lacTuong', 'giong', 'sonTinh', 'anDuong']);
     expect(troopCap(s)).toBe(152);
-    expect(canPlace(s, 'doanhTrai', edge(7, 1), edge(7, 8))).toEqual({ ok: false, reason: 'datGioiHan' });
+    expect(canPlace(s, 'doanhTrai', edge(8, 1), edge(8, 8))).toEqual({ ok: false, reason: 'canTuongChiHuy' });
+    // Thắng màn 25 ở chương 4: Cao Lỗ cầm quân, chỉ huy doanh trại thứ năm.
+    s.questIndex = CH4_QUEST_START;
+    s.campaign.cleared = 25;
+    barracks(s, 4);
+    expect(commanderOf(s, barracksList(s)[4])).toBe('caoLo');
+    expect(troopCap(s)).toBe(190);
+    expect(canPlace(s, 'doanhTrai', edge(8, 1), edge(8, 14))).toEqual({ ok: false, reason: 'datGioiHan' });
   });
 
   it('Gióng về trời, Sơn Tinh về núi rồi vẫn chỉ huy doanh trại', () => {

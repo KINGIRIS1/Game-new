@@ -3,10 +3,10 @@
 
 import * as THREE from 'three';
 import type { Battle, FighterKind } from '../game/battle';
-import { FIRE, HILL, RALLY_BEAT, ROCKS, SKILLS, TT_WAVE, type UnitType } from '../game/defs';
+import { FIRE, HILL, LIEN_CHAU, RALLY_BEAT, ROCKS, SKILLS, TT_WAVE, type UnitType } from '../game/defs';
 import { isBeast, makeBeast, makeRuaVang } from './beasts';
 import { isMonster, makeMonster } from './monsters';
-import { makeAnDuong, makeGiong, makeSonTinh, makeThuyTinh } from './heroes';
+import { makeAnDuong, makeCaoLo, makeGiong, makeSonTinh, makeThuyTinh } from './heroes';
 import { makeEnemyBoat, makeFighter, makeMountain } from './models';
 import { C } from './palette';
 import type { Poser } from './rig';
@@ -41,8 +41,12 @@ interface FighterView {
   wet?: THREE.Group;
   /** Nhân vật có khung xương: đi, đánh, ngã bằng cách xoay xương thay vì nhún và ngả cả thân. */
   pose?: Poser;
-  /** An Dương Vương chĩa nỏ lên trời (bắn nỏ thần): 0..1, đổi dần cho mượt. */
+  /** An Dương Vương chĩa nỏ lên trời (bắn nỏ thần), Cao Lỗ ngẩng nỏ bắn liên châu: 0..1, đổi dần cho mượt. */
   lift?: number;
+  /** Cao Lỗ đang thổi tù và ra Lệnh bắn: còn bao lâu. */
+  horn?: number;
+  /** Vòng sáng Lệnh bắn dưới chân lính nỏ. */
+  order?: THREE.Mesh;
 }
 
 /** Vòng núi đá Dời non quanh Sơn Tinh: từng mỏm trồi vụt lên lần lượt, đứng một lúc rồi lún xuống. */
@@ -157,6 +161,8 @@ const SCALE: Partial<Record<FighterKind, number>> = {
   thuongLuong: 1,
   thuyTinh: 0.95,
   anDuong: 1.05,
+  caoLo: 1.05,
+  tuongThuy: 1,
   hoTinh: 0.75,
   gaTrang: 1.05,
   kyBinh: 0.75,
@@ -285,6 +291,15 @@ function rockSpikes(seed: number): THREE.Group {
 const puffGeo = new THREE.SphereGeometry(0.3, 10, 8);
 const arrowGeo = new THREE.BoxGeometry(0.03, 0.03, 0.45);
 const arrowMat = new THREE.MeshBasicMaterial({ color: C.arrow });
+/** Tên đồng của Cao Lỗ (đòn thường và Nỏ liên châu). */
+const bronzeBoltGeo = new THREE.BoxGeometry(0.05, 0.05, 0.6);
+const bronzeBoltMat = new THREE.MeshBasicMaterial({ color: C.bronzeLight });
+/** Lệnh bắn: vòng sáng đỏ đồng dưới chân lính nỏ trong lúc có lệnh. Dùng chung một chất liệu, nhấp nháy theo nhịp. */
+const orderGeo = new THREE.RingGeometry(0.22, 0.36, 4).rotateX(-Math.PI / 2);
+const orderMat = new THREE.MeshBasicMaterial({ color: C.red, transparent: true, opacity: 0.75, depthWrite: false });
+/** Nỏ liên châu: số mũi tên rơi xuống vùng trúng, và chừng này giây sau khi bắn mới rơi. */
+const RAIN_ARROWS = 18;
+const RAIN_RISE = 0.25;
 const ringGeo = new THREE.RingGeometry(0.8, 1, 48).rotateX(-Math.PI / 2);
 const RING_LIFE = 1.1;
 /** Phun lửa: ngựa sắt phi hết đường lao trong chừng này giây; lửa phun suốt lúc phi rồi tắt dần. */
@@ -351,6 +366,8 @@ function tongue(shape: { geo: THREE.BufferGeometry; outline: THREE.BufferGeometr
 
 /** Nhổ tre: thời gian cả động tác, từ lấy đà tới giơ tre lên lại. */
 const SMASH_TIME = 0.9;
+/** Cao Lỗ thổi tù và (Lệnh bắn) trong chừng này giây. */
+const HORN_TIME = 1.1;
 const { lerp, smoothstep } = THREE.MathUtils;
 
 export class BattleView {
@@ -405,6 +422,7 @@ export class BattleView {
       this.readEvents(battle);
       this.syncRally(battle);
       shellMat.opacity = 0.75 * Math.min(1, battle.shield / 0.8);
+      orderMat.opacity = (0.45 + 0.35 * Math.abs(Math.sin(this.time * 9))) * Math.min(1, (battle.lenh ?? 0) / 0.6);
     }
     this.animate(dt);
   }
@@ -529,7 +547,9 @@ export class BattleView {
               ? makeSonTinh({ glow: battle.hero?.glow })
               : f.kind === 'anDuong'
                 ? makeAnDuong({ crossbow: true, glow: battle.hero?.glow })
-                : f.kind === 'thuyTinh'
+                : f.kind === 'caoLo'
+                  ? makeCaoLo({ glow: battle.hero?.glow })
+                  : f.kind === 'thuyTinh'
                   ? makeThuyTinh()
                   : isSoldier(f.kind)
                   ? makeSoldier(f.kind, f.side === 'ta' ? (battle.arms?.[f.kind as UnitType] ?? 0) : 0)
@@ -551,6 +571,7 @@ export class BattleView {
       this.syncRocks(view, f.stun ?? 0, f.id, dt);
       this.syncAura(view, f.side === 'ta' && f.state !== 'dead' && battle.rally > 0 && !battle.outcome);
       this.syncShell(view, f.side === 'ta' && f.state !== 'dead' && battle.shield > 0 && !battle.outcome);
+      this.syncOrder(view, f.kind === 'no' && f.state !== 'dead' && (battle.lenh ?? 0) > 0 && !battle.outcome);
       if (f.state === 'dead') {
         view.deadAge += dt;
         // Người ngã ngửa; thú lăn nghiêng; ma trơi không ngả, chỉ tắt dần (theo tư thế ngã).
@@ -608,6 +629,19 @@ export class BattleView {
         const goal = view.volley > 0 ? 1 : 0;
         view.lift = (view.lift ?? 0) + (goal - (view.lift ?? 0)) * Math.min(1, dt * 14);
       }
+      if (f.kind === 'caoLo') {
+        for (const c of obj.children) if (c.userData.halo) c.rotation.z = this.time * 0.6;
+        // Nỏ liên châu và tù và Lệnh bắn: tư thế chạy theo thời gian còn lại (0 → 1).
+        view.volley = Math.max(0, view.volley - dt);
+        view.lift = view.volley > 0 ? 1 - view.volley / VOLLEY_AIM : undefined;
+        view.horn = Math.max(0, (view.horn ?? 0) - dt);
+        if (battle.seaWin && battle.outcome === 'win') {
+          view.rise += dt;
+          view.pose?.({ act: 'stand', win: Math.min(view.rise * 2, 1), time: this.time });
+          obj.rotation.x = 0;
+          continue;
+        }
+      }
       if (f.kind === 'giong') {
         for (const c of obj.children) if (c.userData.halo) c.rotation.z = this.time * 0.6;
         if (battle.ascend && battle.outcome === 'win') {
@@ -644,7 +678,7 @@ export class BattleView {
       }
       // Gióng ra đòn bằng tay vũ khí, ngựa chỉ chồm nhẹ khi quét tre; nhân vật có xương tự làm động tác.
       if (f.kind === 'giong') obj.rotation.x = view.smash > 0 ? -0.2 * Math.sin(Math.PI * (1 - view.smash / SMASH_TIME)) : 0;
-      else if (f.kind === 'sonTinh' || f.kind === 'anDuong' || view.pose) obj.rotation.x = 0;
+      else if (f.kind === 'sonTinh' || f.kind === 'anDuong' || f.kind === 'caoLo' || view.pose) obj.rotation.x = 0;
       else obj.rotation.x = f.swing > 0 ? -0.5 * (f.swing / 0.3) : 0;
       // Đang có Trống trận thì quân ta nhún nhảy hăng hơn; trúng sóng Thủy Tinh thì lội nước, nhún ít.
       const rally = f.side === 'ta' && battle.rally > 0;
@@ -665,17 +699,19 @@ export class BattleView {
             ? view.smash > 0
               ? 1 - view.smash / SMASH_TIME
               : undefined
-            : f.kind === 'anDuong'
+            : f.kind === 'anDuong' || f.kind === 'caoLo'
               ? view.lift
               : view.cast && view.cast > 0
                 ? 1 - view.cast / CAST_TIME
                 : undefined;
+        // Cao Lỗ thổi tù và ra Lệnh bắn.
+        const horn = view.horn && view.horn > 0 ? 1 - view.horn / HORN_TIME : undefined;
         view.pose(
           walking
-            ? { act: 'walk', phase, stride: wading ? 0.3 : rally || flee ? 0.65 : 0.5, time, skill }
+            ? { act: 'walk', phase, stride: wading ? 0.3 : rally || flee ? 0.65 : 0.5, time, skill, horn }
             : f.state === 'fight'
-              ? { act: 'fight', strike: f.swing > 0 ? 1 - f.swing / 0.3 : undefined, time, skill }
-              : { act: 'stand', time, skill },
+              ? { act: 'fight', strike: f.swing > 0 ? 1 - f.swing / 0.3 : undefined, time, skill, horn }
+              : { act: 'stand', time, skill, horn },
         );
       } else obj.position.y = base + (moving ? Math.abs(Math.sin(this.time * (wading ? 5 : 10) + f.id)) * hop : 0);
       this.syncWet(view, f.side === 'ta' && wading && !battle.outcome);
@@ -906,6 +942,77 @@ export class BattleView {
     }
   }
 
+  /** Thêm hay bỏ vòng sáng Lệnh bắn (hình thoi đỏ đồng) dưới chân một lính nỏ. */
+  private syncOrder(view: FighterView, on: boolean): void {
+    if (on && !view.order) {
+      view.order = new THREE.Mesh(orderGeo, orderMat);
+      view.order.position.y = 0.05;
+      view.order.renderOrder = 2;
+      view.obj.add(view.order);
+    } else if (!on && view.order) {
+      view.order.removeFromParent();
+      view.order = undefined;
+    }
+    if (view.order) view.order.rotation.y = this.time * 2;
+  }
+
+  /**
+   * Nỏ liên châu: Cao Lỗ ngẩng nỏ bắn một loạt tên đồng vút lên, rồi tên rơi lả tả xuống khắp vùng trúng quanh
+   * (tx, tz), bụi đất tung lên chỗ tên cắm.
+   */
+  private lienChau(battle: Battle, seq: number, x: number, z: number, tx: number, tz: number): void {
+    const { x: ox, z: oz } = this.offset;
+    const hero = battle.fighters.find((f) => f.kind === 'caoLo');
+    const view = hero && this.fighters.get(hero.id);
+    if (view) view.volley = VOLLEY_AIM;
+    const ground = this.heightAt(x, z);
+    const rand = seeded(seq * 97 + 3);
+    // Ba mũi tên vút lên chếch về phía vùng trúng.
+    for (let i = 0; i < 3; i++) {
+      const from = new THREE.Vector3(x + ox, ground + 1.4 * this.scale, z + oz);
+      const top = new THREE.Vector3(lerp(x, tx, 0.4) + ox + (i - 1) * 0.4, ground + 6, lerp(z, tz, 0.4) + oz);
+      const up = new THREE.Mesh(bronzeBoltGeo, bronzeBoltMat);
+      up.position.copy(from);
+      this.root.add(up);
+      this.arrows.push({ mesh: up, from, to: top, age: 0, dur: RAIN_RISE, arc: 0 });
+    }
+    const r = LIEN_CHAU.radius * this.geo;
+    for (let i = 0; i < RAIN_ARROWS; i++) {
+      const a = rand() * Math.PI * 2;
+      const d = Math.sqrt(rand()) * r;
+      const px = tx + Math.cos(a) * d;
+      const pz = tz + Math.sin(a) * d;
+      const h = this.heightAt(px, pz);
+      const to = new THREE.Vector3(px + ox, h + 0.15, pz + oz);
+      const start = new THREE.Vector3(px + ox - 0.8, h + 6.5, pz + oz - 0.8);
+      const mesh = new THREE.Mesh(bronzeBoltGeo, bronzeBoltMat);
+      mesh.position.copy(start);
+      mesh.visible = false;
+      this.root.add(mesh);
+      this.arrows.push({ mesh, from: start, to, age: 0, dur: 0.3, delay: RAIN_RISE + rand() * 0.35, arc: 0 });
+      if (i % 3 === 0) this.addPuff(px + ox, h + 0.15, pz + oz, C.earth, RAIN_RISE + 0.3 + rand() * 0.35, 0.6, 1.2);
+    }
+    // Vòng sóng đồng loang ra từ giữa vùng trúng.
+    const mesh = new THREE.Mesh(ringGeo, new THREE.MeshBasicMaterial({ color: C.bronzeLight, transparent: true, depthWrite: false }));
+    mesh.position.set(tx + ox, this.heightAt(tx, tz) + 0.08, tz + oz);
+    mesh.renderOrder = 3;
+    this.root.add(mesh);
+    this.rings.push({ mesh, age: 0 });
+  }
+
+  /** Lệnh bắn: Cao Lỗ nâng tù và lên thổi, một vòng sóng đỏ đồng loang ra từ chỗ ngài đứng. */
+  private lenhBan(battle: Battle, x: number, z: number): void {
+    const { x: ox, z: oz } = this.offset;
+    const hero = battle.fighters.find((f) => f.kind === 'caoLo');
+    const view = hero && this.fighters.get(hero.id);
+    if (view) view.horn = HORN_TIME;
+    const mesh = new THREE.Mesh(ringGeo, new THREE.MeshBasicMaterial({ color: C.red, transparent: true, depthWrite: false }));
+    mesh.position.set(x + ox, this.heightAt(x, z) + 0.08, z + oz);
+    mesh.renderOrder = 3;
+    this.root.add(mesh);
+    this.rings.push({ mesh, age: 0 });
+  }
+
   /** Thêm hay bỏ vòng sáng mai rùa dưới chân một người lính ta. */
   private syncShell(view: FighterView, on: boolean): void {
     if (on && !view.shell) {
@@ -1009,17 +1116,25 @@ export class BattleView {
               ? new THREE.Mesh(ghostBallGeo, ghostBallMat)
               : e.by === 'anDuong'
                 ? new THREE.Mesh(boltGeo, goldMat)
-                : e.by === 'noTrieu'
+                : e.by === 'caoLo'
+                  ? new THREE.Mesh(bronzeBoltGeo, bronzeBoltMat)
+                  : e.by === 'noTrieu'
                   ? new THREE.Mesh(darkBoltGeo, darkBoltMat)
                   : new THREE.Mesh(arrowGeo, arrowMat);
         const from = new THREE.Vector3(e.x + ox, this.heightAt(e.x, e.z) + 0.8, e.z + oz);
         const to = new THREE.Vector3(e.tx + ox, this.heightAt(e.tx, e.tz) + 0.5, e.tz + oz);
         mesh.position.copy(from);
         this.root.add(mesh);
-        const fast = e.by === 'anDuong' || e.by === 'noTrieu';
+        const fast = e.by === 'anDuong' || e.by === 'caoLo' || e.by === 'noTrieu' || e.by === 'no';
         this.arrows.push({ mesh, from, to, age: 0, dur: Math.max(0.12, from.distanceTo(to) / (fast ? 18 : 12)), arc: fast ? 0.25 : 0.6, flash: e.by === 'anDuong' });
       }
       if (e.kind === 'volley') this.volley(battle, e.seq, e.x, e.z);
+      if (e.kind === 'rain' && e.tx !== undefined && e.tz !== undefined) this.lienChau(battle, e.seq, e.x, e.z, e.tx, e.tz);
+      if (e.kind === 'order') this.lenhBan(battle, e.x, e.z);
+      if (e.kind === 'arrive') {
+        // Màn cầm cự: đợt giặc mới kéo vào bãi, bụi tung lên ở cuối bãi phía giặc.
+        for (let i = 0; i < 7; i++) this.addPuff(1 + i * 1.2 + ox, this.heightAt(1 + i * 1.2, e.z) + 0.2, e.z + oz, C.earth, i * 0.06, 0.9, 2);
+      }
       if (e.kind === 'rocks') this.raiseCrags(battle, e.x, e.z, e.seq);
       if (e.kind === 'wave' && e.tx !== undefined && e.tz !== undefined) this.surge(battle, e.x, e.z, e.tx, e.tz, e.seq);
       if (e.kind === 'summon') this.summon(battle, e.x, e.z);
