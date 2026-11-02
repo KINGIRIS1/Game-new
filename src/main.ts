@@ -58,6 +58,7 @@ import {
   type StageResult,
 } from './game/game';
 import { isOpen, khoanhLeft, khoanhOf, khoanhQuota, khoanhWood, openKhoanh, openable } from './game/khoanh';
+import { cayDaAt, clearCayDa } from './game/cayDa';
 import { GRID, RIVER_START } from './game/map';
 import { fromCode, loadFromStorage, saveFileName, saveToStorage, toCode } from './game/save';
 import { RESOLUTIONS, World, type Resolution } from './render/world';
@@ -149,9 +150,28 @@ function start(): void {
     if (text) hud.toast(text, false, 8000);
   };
 
+  /** Cây dại, tảng đá đầu tiên mọc: Lạc hầu gợi ý một lần cách dọn. */
+  const showCayDaHint = () => {
+    if (!state.cayDa.list.length || state.hinted.includes('cayDa')) return;
+    state.hinted = [...state.hinted, 'cayDa'];
+    hud.toast(vi.ui.cayDaHint, false, 8000);
+  };
+
+  /** Chạm vào cây dại, tảng đá ở (x, z): dân dọn, được chút gạo hay đất đá. */
+  const clearGrowth = (x: number, z: number) => {
+    const r = clearCayDa(state, x, z);
+    if (!r.ok) return fail(r.reason);
+    play('claim');
+    select(null);
+    const got = rewardText(r.value.gained);
+    hud.toast(`${vi.ui.cayDaCleared[r.value.kind]}: ${got || vi.ui.cayDaFull}`);
+    commit();
+  };
+
   /** Gọi sau mọi thao tác: lưu, vẽ lại cảnh và giao diện. */
   const commit = () => {
     showHint();
+    showCayDaHint();
     save();
     world.sync(state);
     refreshFloodPreview();
@@ -232,6 +252,11 @@ function start(): void {
       return;
     }
     const tile = world.pickTile(cx, cy);
+    // Chạm vào cây dại, tảng đá (trúng mô hình, hay trúng ô của nó mà không có công trình): dân dọn đi.
+    if (mode.kind === 'view') {
+      const growth = world.pickCayDa(cx, cy) ?? (tile && !buildingAt(state, tile.x, tile.z) && cayDaAt(state, tile.x, tile.z) ? tile : null);
+      if (growth) return clearGrowth(growth.x, growth.z);
+    }
     if (mode.kind === 'place') {
       if (!tile) return;
       const def = BUILDINGS[mode.type];
@@ -1024,6 +1049,7 @@ function start(): void {
 
   let prev = performance.now();
   let lastUi = 0;
+  let lastCayKey = '';
   let lastSave = prev;
   const frame = (now: number) => {
     const dt = Math.min((now - prev) / 1000, 0.1);
@@ -1050,6 +1076,13 @@ function start(): void {
       lastUi = now;
       // Trong trận, công trình có thể bị phá bất cứ lúc nào: vẽ lại cảnh theo state.
       if (state.raid.phase === 'battle') world.sync(state);
+      // Cây dại, tảng đá mọc theo đồng hồ chơi: mọc thêm thì vẽ (trang trí ô trống né chỗ ấy) và gợi ý lần đầu.
+      const cayKey = `${state.cayDa.seq}:${state.cayDa.list.length}`;
+      if (cayKey !== lastCayKey) {
+        lastCayKey = cayKey;
+        world.sync(state);
+        showCayDaHint();
+      }
       refreshUi();
       watchStory();
     }

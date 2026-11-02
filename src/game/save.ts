@@ -22,6 +22,7 @@ import {
   type TuongId,
 } from './defs';
 import { initialCaoLo } from './caoLo';
+import { initialCayDa, isCayDaState } from './cayDa';
 import { initialAdv } from './coLoa';
 import { inChapter4 } from './chuong4';
 import { SAVE_VERSION, autoAssign, housing, initialCampaign, initialGiong, initialRaid, scheduleThuyBinh, type GameState } from './game';
@@ -83,6 +84,7 @@ function migrate(raw: unknown): unknown {
   if (isObj(v) && v.version === 13) v = migrate13to14(v);
   if (isObj(v) && v.version === 14) v = migrate14to15(v);
   if (isObj(v) && v.version === 15) v = migrate15to16(v);
+  if (isObj(v) && v.version === 16) v = migrate16to17(v);
   return v;
 }
 
@@ -319,6 +321,16 @@ function migrate15to16(s: Raw): Raw {
   return s;
 }
 
+/**
+ * Phiên bản 16 → 17 (cây, đá mọc trên ô trống): chưa có cây đá nào, cái đầu tiên mọc sau `CAY_DA_FIRST_MS` theo
+ * đồng hồ chơi.
+ */
+function migrate16to17(s: Raw): Raw {
+  s.version = 17;
+  s.cayDa = initialCayDa(isNum(s.clock) ? s.clock : 0);
+  return s;
+}
+
 const isBanh = (v: unknown, test: (x: unknown) => boolean): boolean => isObj(v) && test(v.chung) && test(v.giay);
 const isBool = (x: unknown) => typeof x === 'boolean';
 
@@ -360,6 +372,7 @@ function isGameState(v: unknown): v is GameState {
   if (!Array.isArray(v.heights) || v.heights.length !== GRID * GRID || !v.heights.every(isNum)) return false;
   if (!isKhoanhList(v.khoanh) || v.khoanh.length === 0) return false;
   if (!Array.isArray(v.hinted) || !v.hinted.every((t) => typeof t === 'string')) return false;
+  if (!isCayDaState(v.cayDa)) return false;
   const son = v.son;
   if (!isObj(son) || !isObj(son.gifts) || !isNum(son.restUntil) || typeof son.non !== 'boolean' || typeof son.won !== 'boolean') return false;
   if (!GIFT_IDS.every((k) => typeof (son.gifts as Raw)[k] === 'boolean')) return false;

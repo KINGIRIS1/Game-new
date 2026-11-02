@@ -1321,7 +1321,7 @@ Thưởng khoảng gấp rưỡi nhiệm vụ chương 3. Nhận xong nhiệm v�
 4. **PR 3** (đã làm): Cao Lỗ, màn 25–32, bốn đoạn truyện còn lại, Đền Cuông, mẫu kinh đô chương 4 (vẽ trên bản đồ mới), màn hình Hết truyện. Bản lưu v14.
 5. **PR 4** (đã làm): thử thách phó bản và huân công. Bản lưu v15.
 
-PR 2 làm sau kế hoạch Kinh đô lớn PR 1–2 (lưới 55×55 bản lưu v11, khoảnh tự chọn v12), vì thủy binh Triệu cập bờ cần bản đồ mới. Kinh đô lớn PR 4 (cây, đá mọc) chưa làm, sẽ lấy số bản lưu kế tiếp khi làm.
+PR 2 làm sau kế hoạch Kinh đô lớn PR 1–2 (lưới 55×55 bản lưu v11, khoảnh tự chọn v12), vì thủy binh Triệu cập bờ cần bản đồ mới. Kinh đô lớn PR 4 (cây, đá mọc) làm sau cùng, lấy bản lưu v17.
 
 Mỗi PR: chạy `npm test` và `npm run build`; sửa `src/render/` hay `src/ui/` thì chụp kiểm tra ở khổ điện thoại; sau đó ghi số cuối cùng vào tài liệu này.
 
@@ -1393,7 +1393,22 @@ Chủ dự án thấy bản đồ kinh đô nhỏ, công trình sát nhau, bố 
    - **Mật độ**: gần Điện người qua lại nhiều nên thưa, càng xa càng rậm. Trong chừng 4 ô quanh tâm Điện chỉ chừng 22% ô trống có cỏ, 5% có hoa, 4% có đá; rậm dần tới chừng 18 ô. Ở chỗ rậm nhất, mỗi ô trống có chừng 62% cơ hội mọc một khóm cỏ (một phần ba số ấy có thêm khóm thứ hai), 16% có khóm hoa, 9% có đá. Một ô không quá 4 món.
    - **Theo hạt giống từng ô**: dựng hay dỡ công trình chỗ khác không làm cỏ chỗ này đổi chỗ; mọi món nằm trọn trong ô, hai món cùng ô không chồng nhau. Món đứng trên mặt ô, kể cả ô đã đắp cao.
    - **Nhẹ máy**: mỗi mẫu một lần vẽ (InstancedMesh có viền mực mảnh), không đổ bóng; khóm cỏ 48–64 tam giác, hoa 216–256, đá 132–156. Cảnh Điện 8 thêm chừng 16 lệnh vẽ, 0,7% số tam giác. Chỉ vẽ lại khi đất mở thêm, bậc đất đổi hay công trình thêm, bớt, dời.
-4. **PR 4: cây, đá mọc trên ô trống** (lấy số bản lưu kế tiếp khi làm): không mọc trên ô có đường hay đồ trang trí; khoảnh vừa phát có sẵn 1–2 cái.
+4. **PR 4: cây, đá mọc trên ô trống** (đã làm, bản lưu v17; số và các mục tự chọn dưới đây chờ chủ dự án duyệt): không mọc trên ô có đường hay đồ trang trí; khoảnh vừa phát có sẵn 1–2 cái. Luật ở `cayDa.ts`, số ở `defs.ts` (`CAY_DA_*`). Chi tiết đã làm:
+   - **Hai loại, mỗi loại ba dáng**: cây dại (bụi chuối có buồng chuối xanh và bắp chuối, bụi sim chín tím lẫn hoa sim, cây sung con sai quả) dọn được gạo; tảng đá (tảng to có rêu, ba hòn chụm nhau, tảng dẹt có dương xỉ) dọn được đất đá. 60% số mọc là cây.
+   - **Nhịp mọc**: theo đồng hồ chơi, cái đầu sau 3 phút (game mới hay bản lưu vừa nâng), rồi cứ 4 phút một cái, tới khi kinh đô có 8 cái thì thôi. Mọc trên một ô trống bất kỳ đã mở. Không mọc lúc vắng mặt; đang có giặc (cả lúc trinh sát báo) thì chờ giặc đi.
+   - **Khoảnh vừa phát** có sẵn 1–2 cái trên các ô trong khoảnh, kể cả khi kinh đô đã đủ 8 cái.
+   - **Chạm để dọn**: được của theo cấp Điện, không vượt sức chứa kho. Từ Điện 5 trở lên bằng chừng 10–15 giây sản lượng của kinh đô (Điện 5 làm ra chừng 670 gạo, 420 đất đá mỗi phút); ở các cấp đầu kinh đô còn làm ra ít nên dọn đáng hơn:
+
+     | Điện | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 |
+     |---|---|---|---|---|---|---|---|---|
+     | Cây dại (gạo) | 20 | 35 | 60 | 90 | 130 | 190 | 270 | 380 |
+     | Tảng đá (đất đá) | 10 | 18 | 30 | 45 | 65 | 95 | 135 | 190 |
+
+   - **Không chặn gì**: dựng công trình, trải đường, đặt đồ trang trí, áp mẫu kinh đô đè lên thì dân dọn luôn, không được của; giặc đi qua được. Trang trí ô trống (khóm cỏ, hoa, đá nhỏ) né ô có cây đá.
+   - **Lạc hầu gợi ý một lần** khi cái đầu tiên mọc: chạm vào để dọn. Dọn xong thì báo của được.
+   - **Hình vẽ** ở `render/cayDa.ts`: to hơn trang trí ô trống cho dễ thấy, dễ chạm, gọn trong một ô. Cái đã lớn gộp một lô (một lần vẽ); cái mới mọc vẽ riêng, lớn dần lên rồi vào lô. Cảnh Điện 8 có 8 cái thêm 3 lệnh vẽ, chừng 0,4% số tam giác.
+   - **Người chơi mô phỏng** không dọn cây đá, nên nhịp lên Điện và sổ thu chi giữ nguyên. Người chơi thật dọn hết thì mỗi giờ được chừng 9 cây, 6 đá; ở Điện 5 là chừng 3% gạo, 1,5% đất đá làm ra trong giờ ấy.
+   - **Tự chọn, chủ dự án có thể đổi**: nhịp mọc (4 phút) và số tối đa (8); bảng của được; cây chỉ cho gạo (không cho gỗ); dựng đè thì mất của chứ không được; chỉ mọc khi yên giặc.
 
 Chương 4 PR 2, PR 3 đã làm trước PR 3–4 của kế hoạch này (chỉ cần bản đồ mới của PR 1–2).
 
@@ -1642,7 +1657,7 @@ Mỗi PR: chạy `npm test` và `npm run build`; chụp kiểm tra ở khổ đi
 10. **Chương 4: Mỵ Châu, Trọng Thủy** (đã làm cả 4 PR; xem Kế hoạch chương 4): Điện và 7 loại công trình lên cấp 8, lầu nỏ, ụ nỏ trên thành, lính nỏ, thủy binh Triệu đi thuyền, Cao Lỗ, phó bản màn 25–32, Đền Cuông, màn hình Hết truyện, thử thách phó bản và huân công.
 11. **Doanh trại và nơi ở riêng** (đã làm, xem mục cùng tên): doanh trại là nơi tướng ở và điều binh; trại giáo, trại cung, chuồng voi để luyện từng binh chủng; tướng ra trận từ doanh trại.
     **Nhiều doanh trại** (đã làm, xem mục Nhiều doanh trại, tướng chỉ huy, bố trí giữ kinh đô): mỗi tướng chỉ huy một doanh trại, tới 152 chỗ quân; phó bản mang tối đa 38 chỗ; người chơi tự bố trí lính giữ kinh đô ở từng trại.
-12. **Kinh đô lớn, công trình to, mở đất bằng khoảnh** (đã duyệt, đang làm; xem mục Kế hoạch cùng tên): công trình to hơn một ô mỗi chiều, lưới 55×55 (PR 1 đã làm), khoảnh 5×5 tự chọn (PR 2 đã làm), viền cỏ, trang trí ô trống (PR 3 đã làm), cây đá mọc. Làm trước chương 4 PR 2–4.
+12. **Kinh đô lớn, công trình to, mở đất bằng khoảnh** (đã duyệt, đang làm; xem mục Kế hoạch cùng tên): công trình to hơn một ô mỗi chiều, lưới 55×55 (PR 1 đã làm), khoảnh 5×5 tự chọn (PR 2 đã làm), viền cỏ, trang trí ô trống (PR 3 đã làm), cây đá mọc (PR 4 đã làm, bản lưu v17). Làm trước chương 4 PR 2–4.
     **Vẽ lại công trình trên móng** (đã làm; xem mục cùng tên): mười bốn loại vẽ lại trên trọn móng; ba đền và ruộng nếp chủ dự án vẽ lại dáng, vẫn phóng theo móng.
 13. **Đường đi và đồ trang trí** (đã làm, xem mục cùng tên): bốn loại đường, bảy món trang trí, ba thẻ chọn trong bảng Xây dựng, thẻ Dọn trang trí.
 14. **Cổng thành, xưởng mộc, làng chài** (chủ dự án đã duyệt, đã làm; xem mục Kế hoạch cùng tên): gỗ là tài nguyên thứ năm, cá đỡ gạo ăn, cổng hút giặc trong vòng tường. Ba PR: gỗ và xưởng mộc, làng chài, cổng thành.

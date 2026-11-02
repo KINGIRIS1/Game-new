@@ -4,6 +4,7 @@
 import { startBattle, stepBattle, type Battle, type RaidSide } from './battle';
 import { updateCampaign } from './campaign';
 import { initialCaoLo } from './caoLo';
+import { initialCayDa, updateCayDa, type CayDaState } from './cayDa';
 import { huanTiers, initialThuThach } from './thuThach';
 import { inChapter4 } from './chuong4';
 import { advJoined, initialAdv, inChapter3, ruaVangCame, wallRings } from './coLoa';
@@ -275,7 +276,7 @@ export interface Merchant {
  * Phiên bản bản lưu hiện tại (11: kinh đô lớn; 12: khoảnh tự chọn; 13: lính nỏ, ụ nỏ; 14: Cao Lỗ, vua xuống biển;
  * 15: thử thách, huân công; 16: gỗ, tài nguyên thứ năm, và gợi ý của Lạc hầu về công trình mới).
  */
-export const SAVE_VERSION = 16;
+export const SAVE_VERSION = 17;
 
 export interface GameState {
   version: typeof SAVE_VERSION;
@@ -316,6 +317,8 @@ export interface GameState {
   khoanh: number[];
   /** Công trình mới (`NEW_HINTS`) Lạc hầu đã gợi ý lần đầu mở, mỗi loại một lần. */
   hinted: string[];
+  /** Cây, đá mọc trên ô trống (`cayDa.ts`). */
+  cayDa: CayDaState;
   /** Vừa nâng từ kinh đô nhỏ: kinh đô đã dựng lại theo mẫu, trả lại chừng này của. Giao diện báo một lần rồi xóa. */
   relaid?: { refund: Cost; dropped: number };
 }
@@ -463,6 +466,7 @@ export function createInitialState(now: number): GameState {
     settings: { muted: false },
     khoanh: [...START_KHOANH],
     hinted: [],
+    cayDa: initialCayDa(),
   };
   levelFootprint(state, dien, footprintTop(state, 'dien', dien.x, dien.z));
   return state;
@@ -1582,6 +1586,7 @@ export function tick(state: GameState, ms: number): Resources {
   updateCampaign(state, ms);
   updateRaid(state, ms);
   updateTet(state);
+  updateCayDa(state);
   return gained;
 }
 

@@ -3,6 +3,7 @@
 // gạo và vỏ ốc. Không phụ thuộc DOM hay Three.js.
 
 import { BUILDINGS, KHOANH_COST_FRAC, KHOANH_COST_MIN, KHOANH_QUOTA, type Cost } from './defs';
+import { sowKhoanh } from './cayDa';
 import { canAfford, dienLevel, gain, pay, type GameState, type Result } from './game';
 import { FOREST_BAND, GRID, KHOANH, RIVER_START } from './map';
 
@@ -148,13 +149,17 @@ export function khoanhWood(cost: Cost): number {
   return Math.max(10, Math.round((cost.gao ?? 0) / 2 / 5) * 5);
 }
 
-/** Phát khoảnh rừng `id`: trả giá, đất mở ngay, cây chặt được thêm gỗ (`khoanhWood`). */
+/**
+ * Phát khoảnh rừng `id`: trả giá, đất mở ngay, cây chặt được thêm gỗ (`khoanhWood`). Khoảnh mới có sẵn 1–2 cây dại
+ * hay tảng đá để dọn (`sowKhoanh`).
+ */
 export function openKhoanh(state: GameState, id: number): Result<Cost> {
   const check = canOpenKhoanh(state, id);
   if (!check.ok) return check;
   pay(state, check.value);
   gain(state, { go: khoanhWood(check.value) });
   state.khoanh = [...state.khoanh, id].sort((a, b) => a - b);
+  sowKhoanh(state, id);
   return check;
 }
 

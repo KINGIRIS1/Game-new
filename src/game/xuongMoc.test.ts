@@ -135,15 +135,16 @@ describe('gỗ', () => {
     raw.version = 15;
     delete raw.resources.go;
     delete raw.hinted;
+    delete raw.cayDa;
     raw.raid.lastResult = { won: true, stolen: { gao: 30, voOc: 0, datDa: 0, sat: 0 }, lost: {}, wrecked: 0 };
     const s = deserialize(JSON.stringify(raw))!;
     expect(s.version).toBe(SAVE_VERSION);
-    expect(SAVE_VERSION).toBe(16);
+    expect(SAVE_VERSION).toBeGreaterThanOrEqual(16);
     expect(s.resources.go).toBe(0);
     expect(s.hinted).toEqual([]);
     expect(s.raid.lastResult?.stolen.go).toBe(0);
 
-    // Bản lưu 16 thiếu danh sách gợi ý là hỏng.
+    // Bản lưu từ 16 trở đi thiếu danh sách gợi ý là hỏng.
     const bad = createInitialState(0) as unknown as Record<string, unknown>;
     delete bad.hinted;
     expect(deserialize(JSON.stringify(bad))).toBeUndefined();

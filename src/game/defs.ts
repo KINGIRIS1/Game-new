@@ -903,6 +903,32 @@ export const KHOANH_QUOTA = [18, 24, 32, 38, 48, 60, 72, 80];
 export const KHOANH_COST_FRAC: [number, number] = [0.02, 0.03];
 export const KHOANH_COST_MIN = { gao: 20, voOc: 10 };
 
+// ---------- Cây, đá mọc trên ô trống (kinh đô lớn PR 4) ----------
+
+/** Cây dại (bụi chuối, bụi lá, cây con) dọn được gạo; tảng đá dọn được đất đá. */
+export const CAY_DA_KINDS = ['cay', 'da'] as const;
+export type CayDaKind = (typeof CAY_DA_KINDS)[number];
+/** Số dáng mỗi loại: hình vẽ chọn theo `v`. */
+export const CAY_DA_VARIANTS = 3;
+/** Đồng hồ chơi chạy chừng này thì mọc thêm một cái, khi kinh đô còn ít hơn `CAY_DA_CAP` cái. */
+export const CAY_DA_EVERY_MS = 4 * 60_000;
+/** Cái đầu tiên mọc sau chừng này (game mới, hay bản lưu vừa nâng). */
+export const CAY_DA_FIRST_MS = 3 * 60_000;
+/** Đủ chừng này cái thì thôi mọc thêm (khoảnh vừa phát vẫn có sẵn cây, đá dù đã đủ). */
+export const CAY_DA_CAP = 8;
+/** Phần cây trong số mọc lên, còn lại là đá. */
+export const CAY_DA_TREE_SHARE = 0.6;
+/** Khoảnh vừa phát có sẵn chừng này cái: thấp nhất, cao nhất. */
+export const CAY_DA_KHOANH: [number, number] = [1, 2];
+/**
+ * Của được khi dọn, theo cấp Điện (chỉ số 0 là cấp 1): từ Điện 5 trở lên bằng chừng 10–15 giây sản lượng của kinh đô;
+ * các cấp đầu kinh đô còn làm ra ít nên dọn đáng hơn.
+ */
+export const CAY_DA_REWARD: Record<CayDaKind, Cost[]> = {
+  cay: [20, 35, 60, 90, 130, 190, 270, 380].map((gao) => ({ gao })),
+  da: [10, 18, 30, 45, 65, 95, 135, 190].map((datDa) => ({ datDa })),
+};
+
 export const START_RESOURCES: Resources = { gao: 150, voOc: 120, datDa: 0, sat: 0, go: 0 };
 export const START_DAN = 4;
 

@@ -46,6 +46,16 @@ describe('trang trí ô trống', () => {
     }
   });
 
+  it('né các ô có cây dại, tảng đá (`skip`), các ô khác giữ nguyên', () => {
+    const mask = openSquare(32);
+    const occ = new Int32Array(GRID * GRID);
+    const all = wildSpots(mask, occ, CENTER);
+    const skip = new Set(all.slice(0, 20).map(tileOf));
+    const rest = wildSpots(mask, occ, CENTER, skip);
+    expect(rest.some((s) => skip.has(tileOf(s)))).toBe(false);
+    expect(rest.map(key)).toEqual(all.filter((s) => !skip.has(tileOf(s))).map(key));
+  });
+
   it('món nằm trọn trong ô của nó, hai món cùng ô không chồng lên nhau', () => {
     const spots = wildSpots(openSquare(2), new Int32Array(GRID * GRID), CENTER);
     const byTile = new Map<number, Spot[]>();
