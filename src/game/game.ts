@@ -343,7 +343,6 @@ export type FailReason =
   | 'khongPhaiTrangTri'
   | 'khoanhDaMo'
   | 'khoanhChuaSat'
-  | 'hetLuotKhoanh'
   | 'canThanh'
   | 'daCoUNo'
   | 'khongCoUNo';

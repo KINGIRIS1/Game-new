@@ -26,7 +26,7 @@ import {
   type GameState,
 } from './game';
 import { RIVER_START } from './map';
-import { START_KHOANH, isOpen, khoanhLeft } from './khoanh';
+import { START_KHOANH, isOpen } from './khoanh';
 import { bank, edge, setDien } from './testmap';
 
 const T0 = 1_000_000;
@@ -145,14 +145,12 @@ describe('nâng cấp', () => {
     expect(luy.level).toBe(2);
   });
 
-  it('nâng Điện thì được phát thêm khoảnh rừng (đất chưa tự mở)', () => {
+  it('nâng Điện không tự mở đất: muốn thêm đất thì phát rừng', () => {
     const s = rich();
     const lo1 = edge(1);
-    const left = khoanhLeft(s);
     s.resources = { gao: 1000, voOc: 1000, datDa: 1000, sat: 100 };
     upgrade(s, 1);
     expect(canPlace(s, 'luy', lo1 - 1, lo1)).toEqual({ ok: false, reason: 'ngoaiVung' });
-    expect(khoanhLeft(s)).toBeGreaterThan(left);
   });
 
   it('dừng ở cấp tối đa', () => {

@@ -225,8 +225,7 @@ function v11Khoanh(s: Raw): number[] {
 
 /**
  * Phiên bản 11 → 12: mở đất bằng khoảnh tự chọn. Đất đang mở (hình vuông theo cấp Điện) đổi thành danh sách khoảnh,
- * không công trình nào rơi ra ngoài. Đã mở nhiều hơn lượt của cấp (Điện 6: 64 khoảnh, lượt 60) thì giữ nguyên đất,
- * chỉ chưa phát thêm được.
+ * không công trình nào rơi ra ngoài.
  */
 function migrate11to12(s: Raw): Raw {
   s.version = 12;
