@@ -19,6 +19,7 @@ import {
   BUILDINGS,
   isDecor,
   CO_LOA_TOWER,
+  CONG_THANH,
   LAU_NO,
   ENEMIES,
   ENEMY_ROWS,
@@ -58,6 +59,7 @@ import {
   U_NO,
   yeuForces,
   yeuHpScale,
+  type BuildingType,
   type ChallengeKind,
   type EnemyType,
   type FighterStats,
@@ -315,14 +317,21 @@ export function buildingHp(battle: Battle, b: Building): number {
   return battle.hp[b.id] ?? maxHpOf(b);
 }
 
-/** Công trình giặc có thể nhắm tới (không tính lũy, bẫy, đê, thành, đường đi, đồ trang trí, không tính cái đã hư). */
+/**
+ * Công trình giặc có thể nhắm tới (không tính lũy, bẫy, đê, thành, cổng thành, đường đi, đồ trang trí, không tính cái
+ * đã hư). Cổng thành như tường: giặc chỉ phá khi đường đi qua cổng.
+ */
 function isTargetable(b: Building): boolean {
-  return !b.damaged && b.type !== 'luy' && b.type !== 'bayChong' && b.type !== 'de' && b.type !== 'thanh' && !isDecor(b.type);
+  return !b.damaged && !UNTARGETED.includes(b.type) && !isDecor(b.type);
 }
+const UNTARGETED: BuildingType[] = ['luy', 'bayChong', 'de', 'thanh', 'congThanh'];
 
-/** Yêu tinh nhắm phá thành Cổ Loa trước tiên, rồi mới tới kho và Điện. */
+/** Thành Cổ Loa và cổng thành: yêu tinh nhắm phá trước tiên. */
+const isCitadel = (b: Building) => (b.type === 'thanh' || b.type === 'congThanh') && !b.damaged;
+
+/** Yêu tinh nhắm phá thành Cổ Loa (cả cổng thành) trước tiên, rồi mới tới kho và Điện. */
 function targetableIn(battle: Battle, b: Building): boolean {
-  return isTargetable(b) || (battle.foe === 'yeu' && b.type === 'thanh' && !b.damaged);
+  return isTargetable(b) || (battle.foe === 'yeu' && isCitadel(b));
 }
 
 // ---------- Khởi đầu trận ----------
@@ -744,7 +753,9 @@ function costGrid(state: GameState, targetId: number | null, swim: boolean): Flo
               : 18
             : b.type === 'thanh'
               ? 45
-              : 25;
+              : b.type === 'congThanh'
+                ? CONG_THANH.pathCost
+                : 25;
     for (let dx = 0; dx < def.w; dx++) for (let dz = 0; dz < def.d; dz++) cost[tileIndex(b.x + dx, b.z + dz)] = c;
   }
   return cost;
@@ -883,9 +894,9 @@ function nearestEnemyOf(battle: Battle, f: Fighter, within = Infinity): Fighter 
 function chooseTarget(state: GameState, battle: Battle, f: Fighter): Building | null {
   const pick = (list: Building[]) =>
     list.reduce<Building | null>((best, b) => (!best || rectDist(f.x, f.z, b) < rectDist(f.x, f.z, best) ? b : best), null);
-  // Yêu tinh núi Thất Diệu phá thành Cổ Loa trước tiên.
+  // Yêu tinh núi Thất Diệu phá thành Cổ Loa (cả cổng thành) trước tiên.
   if (battle.foe === 'yeu') {
-    const wall = pick(state.buildings.filter((b) => b.type === 'thanh' && !b.damaged));
+    const wall = pick(state.buildings.filter(isCitadel));
     if (wall) return wall;
   }
   const live = state.buildings.filter(isTargetable);
@@ -1139,6 +1150,27 @@ function stepDefenses(state: GameState, battle: Battle, dt: number): void {
           damageFighter(battle, { dmg: LAU_NO.dmg * (battle.crossbows ? CO_LOA_TOWER.dmg : 1) }, o);
         }
         battle.towerCd[b.id] = LAU_NO.cooldown / fireRate(battle);
+      }
+    }
+    if (b.type === 'congThanh') {
+      const cd = (battle.towerCd[b.id] ?? 0) - dt;
+      battle.towerCd[b.id] = cd;
+      if (cd > 0) continue;
+      // Lính trên lầu cổng: mỗi phát bắn giặc gần nhất trong tầm (cổng cấp 3 hai lính nỏ, hai giặc).
+      const gate = { x: b.x + 0.5, z: b.z + 0.5 };
+      const range = (CONG_THANH.range + (battle.crossbows ? CO_LOA_TOWER.range : 0)) * geoOf(battle);
+      const targets = battle.fighters
+        .filter((o) => o.side === 'giac' && (o.state === 'move' || o.state === 'fight' || o.state === 'flee'))
+        .map((o) => ({ o, d: Math.hypot(o.x - gate.x, o.z - gate.z) }))
+        .filter((t) => t.d < range)
+        .sort((p, q) => p.d - q.d)
+        .slice(0, CONG_THANH.targets[b.level - 1] ?? 1);
+      if (targets.length) {
+        for (const { o } of targets) {
+          emit(battle, { kind: 'shot', x: gate.x, z: gate.z, tx: o.x, tz: o.z, by: 'no' });
+          damageFighter(battle, { dmg: CONG_THANH.dmg[b.level - 1] * (battle.crossbows ? CO_LOA_TOWER.dmg : 1) }, o);
+        }
+        battle.towerCd[b.id] = CONG_THANH.cooldown;
       }
     }
     if (b.type === 'thanh' && b.uNo === 'ok') {

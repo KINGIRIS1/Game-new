@@ -704,12 +704,14 @@ export const UNLOCK_REASON: Record<Unlock, FailReason> = {
 
 /**
  * Công trình bị thay khi dựng `type` ở (x, z): thành Cổ Loa đắp đè lên lũy tre (hay thành đất) được, lũy cũ được dỡ đi;
- * trải loại đường khác đè lên ô đường cũ thì đổi vật liệu.
+ * cổng thành dựng thay một đoạn lũy, thành đất hay thành Cổ Loa (ụ nỏ trên đoạn thành mất theo); trải loại đường khác
+ * đè lên ô đường cũ thì đổi vật liệu. Không hoàn lại giá đoạn bị thay.
  */
 function replacedWall(state: GameState, type: BuildingType, x: number, z: number): Building | undefined {
-  if (type !== 'thanh' && !isRoad(type)) return undefined;
+  if (type !== 'thanh' && type !== 'congThanh' && !isRoad(type)) return undefined;
   const b = buildingAt(state, x, z);
   if (type === 'thanh') return b?.type === 'luy' ? b : undefined;
+  if (type === 'congThanh') return b?.type === 'luy' || b?.type === 'thanh' ? b : undefined;
   return b && isRoad(b.type) && b.type !== type ? b : undefined;
 }
 
@@ -1004,8 +1006,8 @@ export function move(state: GameState, id: number, x: number, z: number): Result
 
 // ---------- Đắp đất, đắp nền ----------
 
-/** Lũy, bẫy, đê là công trình một ô gắn với đất: muốn cao hơn thì đắp ô đất trước khi dựng. */
-const NO_RAISE: BuildingType[] = ['luy', 'bayChong', 'de', 'thanh'];
+/** Lũy, bẫy, đê, thành, cổng thành là công trình một ô gắn với đất: muốn cao hơn thì đắp ô đất trước khi dựng. */
+const NO_RAISE: BuildingType[] = ['luy', 'bayChong', 'de', 'thanh', 'congThanh'];
 
 export function canRaiseTile(state: GameState, x: number, z: number): Result<Cost> {
   if (!inChapter2(state)) return fail('canChuong2');

@@ -23,7 +23,7 @@ import { ToonModel, inkThin, outlineOf, toon } from './toon';
  * nhưng to hơn chút cho cân với nhà cửa.
  */
 const FILL: Partial<Record<BuildingType, number>> = { ruong: 0.95, ruongNep: 0.95, ben: 0.92 };
-const SINGLE: Partial<Record<BuildingType, number>> = { choiCanh: 1.15, lauNo: 1.12 };
+const SINGLE: Partial<Record<BuildingType, number>> = { choiCanh: 1.15, lauNo: 1.12, congThanh: 1.12 };
 export function footScale(type: BuildingType): number {
   const w = BUILDINGS[type].w;
   if (w <= 1) return SINGLE[type] ?? 1;
@@ -1634,6 +1634,136 @@ export function makeLauNo(): THREE.Group {
   return g;
 }
 
+// ---------- Cổng thành ----------
+
+/** Cánh cửa mở quay chừng này (radian), gần nửa vòng, áp sát mặt trong trụ cổng; World đóng lại khi có giặc (`userData.door`). */
+export const DOOR_OPEN = 2.95;
+
+/**
+ * Một cánh cửa cổng: bản lề ở `hinge` (x), cánh chìa về phía giữa cổng. Gốc nhóm ở bản lề để World xoay cánh quanh
+ * đó: `userData.door` là chiều mở (+1 cánh trái, −1 cánh phải). Cửa ở mặt trong cổng (phía Điện, nơi camera
+ * thường nhìn); mở thì cánh quay vào phía trong thành, áp sát mặt trong hai trụ, để lộ lòng cổng.
+ */
+function gateLeaf(hinge: number, w: number, h: number, z: number, heavy: boolean): THREE.Group {
+  const m = new ToonModel(inkThin);
+  const p = m.plain;
+  const dir = -Math.sign(hinge);
+  const cx = (dir * w) / 2;
+  // Ván dọc ghép, hai nẹp ngang ở mặt trong; cửa đất nện thì gỗ sẫm, đinh đồng.
+  const n = 3;
+  for (let i = 0; i < n; i++) p.box(w / n - 0.01, h, 0.05, i % 2 ? C.wood : C.woodLight, cx + dir * (-w / 2 + (w / n) * (i + 0.5)), h / 2, 0);
+  for (const y of [h * 0.25, h * 0.75]) p.box(w, 0.06, 0.04, heavy ? C.woodDark : C.wood, cx, y, -0.04);
+  if (heavy) for (const y of [h * 0.25, h * 0.5, h * 0.75]) for (const k of [0.25, 0.75]) p.sphere(0.022, C.bronzeLight, dir * w * k, y, -0.07, [1, 1, 1], 5);
+  const g = m.group();
+  const pivot = new THREE.Group();
+  pivot.add(g);
+  pivot.position.set(hinge, 0.02, z);
+  pivot.userData.door = Math.sign(hinge) < 0 ? 1 : -1;
+  pivot.rotation.y = pivot.userData.door * DOOR_OPEN;
+  return pivot;
+}
+
+/**
+ * Cổng thành một ô, mặt trước (+z) trông ra ngoài thành, đoạn tường hai bên chạy dọc trục x. Hai trụ chiếm hai mép ô
+ * nối liền với đoạn lũy, đoạn thành kề bên; giữa là lối qua có hai cánh cửa; trên là lầu cổng có lính bắn. Cao hơn
+ * đoạn tường hai bên để nhìn là biết.
+ * - Cấp 1: hai trụ gỗ, cánh cửa gỗ, lầu tre mái tranh, một lính cung.
+ * - Cấp 2: hai trụ đất nện, lầu gỗ hai tầng lan can đỏ, mái ngói, một lính nỏ.
+ * - Cấp 3: vọng lâu mái ngói viền đồng vàng ba tầng mái, chim Lạc trên nóc, hai cờ đỏ, hai lính nỏ.
+ */
+export function makeCongThanh(level: number): THREE.Group {
+  const m = new ToonModel();
+  const p = m.plain;
+  const roof = level >= 3 ? roofFor(8) : level >= 2 ? roofFor(7) : THATCH;
+  const gap = 0.25;
+  const pillarH = level >= 2 ? 1.5 : 1.45;
+  const leaves: THREE.Group[] = [];
+  if (level === 1) {
+    // Trụ gỗ: bó ba cây gỗ tròn mỗi bên, chân kè đá, đầu vót.
+    for (const s of [-1, 1]) {
+      p.box(0.27, 0.12, 0.84, C.rock, s * 0.37, 0.06, 0);
+      for (const z of [-0.26, 0, 0.26]) {
+        for (const x of [0.3, 0.42]) {
+          p.cyl(0.065, 0.075, pillarH, z === 0 ? C.woodDark : C.wood, s * x, pillarH / 2, z, undefined, 6);
+          p.cone(0.065, 0.14, C.woodLight, s * x, pillarH + 0.06, z, undefined, 6);
+        }
+      }
+    }
+    // Xà ngang gác lầu.
+    for (const z of [-0.28, 0.28]) p.box(1.0, 0.09, 0.09, C.woodDark, 0, pillarH - 0.08, z);
+  } else {
+    // Trụ đất nện ba lớp thu nhỏ dần như thành Cổ Loa; cấp 3 có đai đồng giữa các lớp.
+    for (const s of [-1, 1]) {
+      for (let i = 0; i < 3; i++) {
+        const w = 0.26 - i * 0.015;
+        const d = 0.96 - i * 0.05;
+        p.box(w, pillarH / 3, d, i % 2 ? C.earth : C.earthDark, s * (0.5 - w / 2), pillarH / 6 + (i * pillarH) / 3, 0);
+        if (i && level >= 3) p.box(w + 0.02, 0.04, d + 0.02, C.bronze, s * (0.5 - w / 2), (i * pillarH) / 3, 0);
+      }
+    }
+    // Vòm đất nện bắc qua lối đi, xà gỗ dưới vòm.
+    p.box(0.52, 0.26, 0.9, C.earthDark, 0, pillarH - 0.13, 0);
+    p.box(0.5, 0.06, 0.92, C.woodDark, 0, pillarH - 0.29, 0);
+  }
+  // Hai cánh cửa ở mặt trong lối qua.
+  const leafH = pillarH - (level >= 2 ? 0.34 : 0.14);
+  for (const s of [-1, 1]) leaves.push(gateLeaf(s * gap, gap, leafH, -0.51, level >= 2));
+  // Lòng cổng tối giữa lối qua, khung cửa gỗ hai mặt: nhìn từ trong hay ngoài thành đều thấy lối qua.
+  p.box(gap * 2, leafH, 0.04, 0x2a1d12, 0, leafH / 2, 0.12);
+  for (const z of [-0.44, 0.44]) {
+    for (const s of [-1, 1]) p.box(0.07, leafH, 0.06, C.woodDark, s * (gap + 0.02), leafH / 2, z);
+    p.box(gap * 2 + 0.14, 0.08, 0.07, C.woodDark, 0, leafH + 0.02, z);
+  }
+
+  // Lầu cổng trên đầu trụ.
+  const f1 = pillarH + 0.02;
+  const archers: THREE.Group[] = [];
+  if (level === 1) {
+    p.box(1.0, 0.06, 0.78, C.bamboo, 0, f1, 0);
+    for (const x of [-0.42, 0.42]) for (const z of [-0.32, 0.32]) p.cyl(0.035, 0.035, 0.74, C.bamboo, x, f1 + 0.37, z, undefined, 5);
+    // Lan can tre trước và sau.
+    for (const z of [-0.34, 0.34]) for (const y of [0.12, 0.22]) p.cyl(0.02, 0.02, 0.9, C.bamboo, 0, f1 + y, z, [0, 0, Math.PI / 2], 5);
+    boatRoof(m, roof, { length: 1.3, width: 1.04, lift: 0.22, drop: 0.3, thickness: 0.05 }, 0, f1 + 1.02, 0);
+    archers.push(bakeSoldier('cung', 0, { act: 'fight' }));
+  } else {
+    // Lầu gỗ hai tầng, mỗi tầng một vòng lan can đỏ.
+    const f2 = f1 + 0.72;
+    for (const x of [-0.4, 0.4]) for (const z of [-0.34, 0.34]) p.cyl(0.04, 0.045, f2 - f1 + 0.72, C.woodDark, x, f1 + (f2 - f1 + 0.72) / 2, z, undefined, 6);
+    for (const [y, w, d] of [[f1, 1.0, 0.86], [f2, 0.92, 0.8]] as const) {
+      p.box(w, 0.07, d, C.wood, 0, y, 0);
+      for (const sd of [-1, 1]) {
+        m.band.box(w, 0.15, 0.04, C.red, 0, y + 0.11, sd * (d / 2 - 0.02));
+        m.band.box(0.04, 0.15, d, C.red, sd * (w / 2 - 0.02), y + 0.11, 0);
+      }
+    }
+    boatRoof(m, roof, { length: 1.22, width: 1.04, lift: 0.18, drop: 0.26, thickness: 0.05 }, 0, f1 + 0.66, 0);
+    boatRoof(m, roof, { length: 1.24, width: 1.0, lift: 0.24, drop: 0.3, thickness: 0.05 }, 0, f2 + 0.98, 0);
+    if (level >= 3) {
+      // Vọng lâu: thêm tầng mái nhỏ xoay ngang trên cùng, chim Lạc dang cánh trên nóc, hai cờ đỏ hai bên lầu.
+      boatRoof(m, roof, { length: 0.62, width: 0.56, lift: 0.16, drop: 0.18, thickness: 0.04 }, 0, f2 + 1.28, 0, Math.PI / 2, true);
+      birdSpread(m, 0, f2 + 1.34, 0, 0.6);
+      for (const x of [-0.46, 0.46]) {
+        p.cyl(0.02, 0.02, 1.3, C.woodDark, x, f2 + 0.75, 0, undefined, 5);
+        m.band.box(0.3, 0.22, 0.03, C.red, x + Math.sign(x) * 0.16, f2 + 1.26, 0);
+      }
+    } else if (roof.trim === null) {
+      p.sphere(0.05, C.bronzeLight, 0, f2 + 1.07, 0, [1, 1, 1], 6);
+    }
+    archers.push(bakeSoldier('no', 0, { act: 'fight' }));
+    if (level >= 3) archers.push(bakeSoldier('no', 0, { act: 'fight' }));
+  }
+  const g = m.group();
+  for (const leaf of leaves) g.add(leaf);
+  // Lính trên lầu (tầng trên cùng) trông ra ngoài thành.
+  const top = level >= 2 ? f1 + 0.72 : f1;
+  archers.forEach((a, i) => {
+    a.scale.setScalar(0.6);
+    a.position.set(archers.length > 1 ? (i ? 0.22 : -0.22) : 0.08, top + 0.04, 0.02);
+    g.add(a);
+  });
+  return g;
+}
+
 // ---------- Bẫy chông ----------
 
 export function makeBayChong(): THREE.Group {
@@ -2645,6 +2775,7 @@ export function buildingModel(type: BuildingType, level: number): THREE.Group {
   if (type === 'bep') return makeBep(level);
   if (type === 'lauNo') return makeLauNo();
   if (type === 'traiNo') return makeTraiNo();
+  if (type === 'congThanh') return makeCongThanh(level);
   if (isDecor(type)) return decorModel(type);
   return new THREE.Group();
 }

@@ -2,7 +2,7 @@
 // tổng giá và nút áp mẫu (bấm hai lần cho chắc). Chỉ dựng chuỗi HTML; Hud lo việc gắn vào trang và bắt sự kiện.
 
 import { BUILDINGS, type BuildingType } from '../game/defs';
-import { dienLevel, type GameState } from '../game/game';
+import { dienLevel, unlocked, type GameState } from '../game/game';
 import { canApplyMau, frameStart, mauSlots, mauUnlocked, planMau, MAU_IDS, type MauId } from '../game/mau';
 import { isOpen, khoanhOf, openStart } from '../game/khoanh';
 import { RIVER_START } from '../game/map';
@@ -34,6 +34,7 @@ const TILE: Partial<Record<BuildingType, string>> = {
   luy: '#6b8f3a',
   de: '#6d5a40',
   thanh: '#5c4630',
+  congThanh: '#c0392b',
   denPhuDong: '#e0703a',
   denTanVien: '#2f8a6a',
   denCoLoa: '#c8a020',
@@ -52,7 +53,9 @@ const miniCache = new Map<string, string>();
 function miniMap(state: GameState, id: MauId): string {
   const level = dienLevel(state);
   const x0 = Math.max(0, Math.min(frameStart(level), openStart(state)) - 1);
-  const key = `${id}:${level}:${state.khoanh.join(',')}`;
+  // Cổng thành đã mở thì chỗ cổng trong mẫu tô màu cổng, chưa mở thì vẫn là tường.
+  const gate = unlocked(state, BUILDINGS.congThanh.unlock) && level >= BUILDINGS.congThanh.minDien;
+  const key = `${id}:${level}:${gate ? 1 : 0}:${state.khoanh.join(',')}`;
   let url = miniCache.get(key);
   if (!url) {
     const n = RIVER_START + 1 - x0;
@@ -71,7 +74,7 @@ function miniMap(state: GameState, id: MauId): string {
     for (const s of mauSlots(id, level)) {
       const def = BUILDINGS[s.type];
       g.globalAlpha = isOpen(state, s.x, s.z) ? 1 : 0.45;
-      g.fillStyle = TILE[s.type] ?? MINI.land;
+      g.fillStyle = (gate && s.cong ? TILE.congThanh : TILE[s.type]) ?? MINI.land;
       g.fillRect((s.x - x0) * px, (s.z - x0) * px, def.w * px, def.d * px);
     }
     g.globalAlpha = 1;

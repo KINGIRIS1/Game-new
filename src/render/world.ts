@@ -17,7 +17,7 @@ import { tetOpen } from '../game/tet';
 import { Battlefield } from './battlefield';
 import { BattleView } from './battleView';
 import { IsoCamera } from './camera';
-import { banhChung, banhGiay } from './buildings';
+import { DOOR_OPEN, banhChung, banhGiay } from './buildings';
 import { PERSON_SCALE } from './congTrinh/chung';
 import { BEP_TET_SEAT } from './congTrinh/bep';
 import { DIEN_LOT } from './congTrinh/dien';
@@ -196,6 +196,27 @@ function peopleCount(b: Building, spots: number): number {
   return Math.min(1, spots);
 }
 
+/** Đoạn tường mà cổng thành nối vào: cổng xoay theo những đoạn này. */
+const GATE_WALLS: BuildingType[] = ['luy', 'de', 'thanh', 'congThanh'];
+
+/**
+ * Góc xoay cổng thành: đoạn tường hai bên chạy dọc trục x (ô đông, tây có tường) thì cửa trông theo trục z, ngược lại
+ * trông theo trục x; mặt trước (+z của mô hình) quay ra phía xa Điện, tức ra ngoài thành. Không có tường kề hay kề cả
+ * hai trục như nhau thì theo trục xa Điện hơn.
+ */
+function gateTurn(state: GameState, b: { x: number; z: number }, walls: Set<number>): number {
+  const at = (dx: number, dz: number) => (walls.has((b.z + dz) * GRID + b.x + dx) ? 1 : 0);
+  const ew = at(1, 0) + at(-1, 0);
+  const ns = at(0, 1) + at(0, -1);
+  const dien = state.buildings.find((d) => d.type === 'dien');
+  const cx = dien ? dien.x + BUILDINGS.dien.w / 2 : RIVER_START;
+  const cz = dien ? dien.z + BUILDINGS.dien.d / 2 : RIVER_START;
+  const dx = b.x + 0.5 - cx;
+  const dz = b.z + 0.5 - cz;
+  if (ew > ns || (ew === ns && Math.abs(dz) >= Math.abs(dx))) return dz < 0 ? Math.PI : 0;
+  return dx < 0 ? -Math.PI / 2 : Math.PI / 2;
+}
+
 export class World {
   readonly renderer: THREE.WebGLRenderer;
   readonly scene = new THREE.Scene();
@@ -236,6 +257,8 @@ export class World {
   private readonly ripples = new InstancedBoxes(RIPPLES);
   private readonly buildingsRoot = new THREE.Group();
   private readonly views = new Map<number, BuildingView>();
+  /** Có giặc (trinh sát đã báo hay đang đánh): cửa cổng thành đóng lại; lúc yên thì mở. */
+  private gatesShut = false;
   private readonly boats: { obj: THREE.Object3D; axis: 'x' | 'z'; speed: number; pos: number }[] = [];
   private readonly rippleState: { axis: 'x' | 'z'; pos: number; lane: number; len: number }[] = [];
   private gridOverlay?: THREE.LineSegments;
@@ -599,6 +622,8 @@ export class World {
     }
 
     const alive = new Set<number>();
+    this.gatesShut = state.raid.phase !== 'idle';
+    let wallTiles: Set<number> | null = null;
     for (const b of state.buildings) {
       if (b.type === 'luy' || b.type === 'de' || b.type === 'thanh' || isBatchedDecor(b.type)) continue;
       alive.add(b.id);
@@ -607,6 +632,10 @@ export class World {
       else if (v.ground !== this.heights[b.z * GRID + b.x]) {
         v.ground = this.heights[b.z * GRID + b.x];
         v.group.position.y = topY(v.ground);
+      }
+      if (b.type === 'congThanh') {
+        wallTiles ??= new Set(state.buildings.filter((w) => GATE_WALLS.includes(w.type)).map((w) => w.z * GRID + w.x));
+        this.views.get(b.id)!.group.rotation.y = gateTurn(state, b, wallTiles);
       }
     }
     for (const [id, v] of this.views) {
@@ -799,6 +828,8 @@ export class World {
     const ground = this.heights[b.z * GRID + b.x] ?? 0;
     group.position.set(wx(b.x) + def.w / 2, topY(ground), wz(b.z) + def.d / 2);
     group.userData.buildingId = b.id;
+    // Cổng dựng (hay dựng lại) giữa lúc có giặc thì cửa đóng sẵn.
+    if (this.gatesShut) for (const child of group.children) if (child.userData.door) child.rotation.y = 0;
     // Dân làm việc theo nghề; Điện có Lạc hầu, từ cấp 2 có thêm lính gác. Công trình hư thì không ai làm.
     // Công trình móng mới (`congTrinh/`) cho chỗ đứng theo bản vẽ, mô hình không phóng nên người giữ cỡ
     // `PERSON_SCALE`. Dáng cũ thì chỗ đứng thu theo hệ số thu tâm (`spread`, xem buildings.ts) và người thu lại
@@ -1491,6 +1522,11 @@ export class World {
     const y = topY(h);
     this.ghost.position.set(wx(x) + def.w / 2, y + 0.02, wz(z) + def.d / 2);
     if (def.nearRiver) this.ghost.rotation.y = x + def.w === RIVER_START ? Math.PI / 2 : 0;
+    // Cổng thành: bóng xoay theo đoạn tường ở chỗ đặt, như khi đã dựng.
+    if (type === 'congThanh' && this.state) {
+      const walls = new Set(this.state.buildings.filter((w) => GATE_WALLS.includes(w.type)).map((w) => w.z * GRID + w.x));
+      this.ghost.rotation.y = gateTurn(this.state, { x, z }, walls);
+    }
     this.footprint.visible = true;
     this.footprint.scale.set(def.w, 1, def.d);
     this.footprint.position.set(wx(x) + def.w / 2, y + 0.03, wz(z) + def.d / 2);
@@ -1555,6 +1591,11 @@ export class World {
         if (child.userData.fishing) this.rowFishingBoat(child, t);
         if (child.userData.flame) child.scale.y = 0.75 + 0.35 * Math.abs(Math.sin(t * 9 + child.id));
         if (child.userData.spin) child.rotation.x = t * (child.userData.spin as number);
+        if (child.userData.door) {
+          // Cánh cổng thành khép dần khi có giặc, mở dần khi yên.
+          const goal = this.gatesShut ? 0 : (child.userData.door as number) * DOOR_OPEN;
+          child.rotation.y += (goal - child.rotation.y) * (1 - Math.exp(-dt * 3));
+        }
         if (child.userData.smoke) {
           for (const puff of child.children) {
             const k = (t * 0.35 + (puff.userData.phase as number)) % 1;
