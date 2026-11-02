@@ -12,6 +12,7 @@ import { CHUONG_VOI } from './chuongVoi';
 import { DIEN } from './dien';
 import { DOANH_TRAI } from './doanhTrai';
 import { KHO } from './kho';
+import { LANG_CHAI } from './langChai';
 import { LO_REN } from './loRen';
 import { NHA_SAN } from './nhaSan';
 import { RUONG } from './ruong';
@@ -36,6 +37,7 @@ export const CONG_TRINH: Partial<Record<BuildingType, CongTrinh>> = {
   chuongLon: CHUONG_LON,
   bep: BEP,
   xuongMoc: XUONG_MOC,
+  langChai: LANG_CHAI,
 };
 
 /**

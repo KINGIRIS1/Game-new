@@ -5,6 +5,7 @@ import { enemiesLeft, alliesLeft, holdProgress, skillReady, wavesArrived, type B
 import { advJoined, advLook, advResting, inChapter3, ruaVangCame, wallRings } from '../game/coLoa';
 import {
   BUILDINGS,
+  CA_PER_MIN,
   DECOR_TYPES,
   FIELD,
   RESOURCE_IDS,
@@ -59,7 +60,10 @@ import {
   dienLevel,
   dienNeededFor,
   findBuilding,
+  fishOf,
+  fishPerMinute,
   floodSeason,
+  foodPerMinute,
   freeDan,
   housing,
   isStarving,
@@ -120,6 +124,7 @@ const BUILD_MENU: BuildingType[] = [
   'luy',
   'ruong',
   'ben',
+  'langChai',
   'nhaSan',
   'baiDa',
   'kho',
@@ -894,6 +899,11 @@ export class Hud {
         rows.push(`<div class="stat"><span>${vi.ui.nextLevel}</span><span>${prodHtml(def.production[b.level])}</span></div>`);
       }
     }
+    const fishRate = (n: number) => `🐟 ${fmt(n)}${vi.ui.perMinute}`;
+    if (b.type === 'langChai') {
+      rows.push(`<div class="stat"><span>${vi.ui.fishHere}</span><span>${fishRate(fishOf(b))}</span></div>`);
+      if (b.level < def.maxLevel) rows.push(`<div class="stat"><span>${vi.ui.nextLevel}</span><span>${fishRate(CA_PER_MIN[b.level])}</span></div>`);
+    }
     const slots = slotsOf(b);
     if (slots) {
       const free = freeDan(state);
@@ -933,6 +943,15 @@ export class Hud {
     const home = UNIT_TYPES.find((k) => UNITS[k].home === b.type);
     if (home) rows.push(this.homeHtml(state, home));
     if (TET_TYPES.includes(b.type)) rows.push(tetHtml(state));
+    if (b.type === 'langChai') {
+      // Cả kinh đô: cá mỗi phút, phần ăn của dân và lính, số gạo cá đỡ được; cá đủ ăn thì báo dựng thêm chưa có ích.
+      const fish = fishPerMinute(state);
+      const food = foodPerMinute(state);
+      rows.push(`<div class="stat"><span>${vi.ui.fishAll}</span><span>${fishRate(fish)}</span></div>`);
+      rows.push(`<div class="stat"><span>${vi.ui.foodAll}</span><span>${vi.resources.gao.icon} ${fmt(food)}${vi.ui.perMinute}</span></div>`);
+      rows.push(`<div class="stat"><span>${vi.ui.fishSaved}</span><span>${vi.resources.gao.icon} ${fmt(Math.min(fish, food))}${vi.ui.perMinute}</span></div>`);
+      if (fish >= food) rows.push(`<div class="stat"><span></span><span class="muted">${vi.ui.fishEnough}</span></div>`);
+    }
     if (b.type === 'dien' && tetStarted(state)) {
       rows.push(`<h3>🎋 ${vi.ui.blessTitle}</h3>${blessingHtml(state)}`);
       rows.push(`<div class="actions"><button class="btn bronze" data-act="openTet">🎋 ${vi.ui.tet}</button></div>`);

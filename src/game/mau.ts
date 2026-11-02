@@ -80,7 +80,10 @@ const SAN = 2;
 /** Đê bao chạy ở hàng (và cột) này: bãi bồi ngoài đê vừa một dải bến sát sông. */
 const DE_AT = RIVER_START - 1 - BUILDINGS.ben.w;
 
-/** Trạng thái ô trên bản nháp: còn trống, đã có công trình (hay ngoài vùng), chừa trống, bãi ngoài đê (chỉ cho bến). */
+/**
+ * Trạng thái ô trên bản nháp: còn trống, đã có công trình (hay ngoài vùng), chừa trống, bãi ngoài đê (chỉ cho loại
+ * phải sát sông: bến, làng chài).
+ */
 const FREE = 0;
 const USED = 1;
 const KEEP = 2;
@@ -181,7 +184,7 @@ class Draft {
     for (let dz = 0; dz < w; dz++) {
       for (let dx = 0; dx < w; dx++) {
         const c = this.at(x + dx, z + dz);
-        if (c === BANK ? type !== 'ben' : c !== FREE) return -1;
+        if (c === BANK ? !def.nearRiver : c !== FREE) return -1;
       }
     }
     let p = 0;
@@ -407,8 +410,8 @@ function luyTre(d: Draft): void {
 }
 
 /**
- * Đê bao dọc hai bờ sông, cách sông 3 ô, chạy suốt tới bìa đất; bãi ngoài đê chỉ cho bến. Chòi canh ngay trong
- * đê (số lẻ thì một chòi ở góc rừng), bẫy chông ở bìa rừng. `towers`: mẫu tự xếp chòi canh ở chỗ khác thì bỏ.
+ * Đê bao dọc hai bờ sông, cách sông 3 ô, chạy suốt tới bìa đất; bãi ngoài đê chỉ cho bến, làng chài. Chòi canh ngay
+ * trong đê (số lẻ thì một chòi ở góc rừng), bẫy chông ở bìa rừng. `towers`: mẫu tự xếp chòi canh ở chỗ khác thì bỏ.
  */
 function deBao(d: Draft, towers = true): void {
   const lo = d.lo;
@@ -543,6 +546,7 @@ const RECIPES: Record<MauId, Recipe> = {
     walls: luyTre,
     jobs: [
       ['ben', byDien],
+      ['langChai', byDien],
       ['doanhTrai', byFront],
       ['denPhuDong', byAxis],
       ['traiGiao', byBarracks],
@@ -563,6 +567,7 @@ const RECIPES: Record<MauId, Recipe> = {
     walls: deBao,
     jobs: [
       ['ben', byDien],
+      ['langChai', byDien],
       ['doanhTrai', byBank],
       ['denPhuDong', byAxis],
       ['denTanVien', byAxis],
@@ -585,6 +590,7 @@ const RECIPES: Record<MauId, Recipe> = {
     walls: coLoaWalls,
     jobs: [
       ['ben', byDien],
+      ['langChai', byDien],
       ['doanhTrai', inRings(0, row(1, byAxis))],
       ['denCoLoa', inRings(1, byAxis)],
       ['nhaSan', inRings(2, byDien)],
@@ -607,6 +613,7 @@ const RECIPES: Record<MauId, Recipe> = {
     walls: coLoaSongWalls,
     jobs: [
       ['ben', byDien],
+      ['langChai', byDien],
       ['doanhTrai', inRings(0, row(1, byAxis))],
       ['denCoLoa', inRings(1, byAxis)],
       ['nhaSan', inRings(2, byDien)],

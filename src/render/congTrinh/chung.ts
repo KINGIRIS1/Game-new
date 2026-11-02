@@ -64,13 +64,17 @@ export interface View {
   px: number;
 }
 
-/** Thuyền neo theo bến (tọa độ móng; world.ts đặt ở mặt nước). */
+/**
+ * Thuyền neo theo bến hay làng chài (tọa độ móng; world.ts đặt ở mặt nước). `fishing`: thuyền đánh cá bơi chậm vòng
+ * quanh chỗ neo (x, z), xa nhất `span` ô dọc bờ, người chèo theo nhịp.
+ */
 export interface Dock {
-  kind: 'small' | 'trader';
+  kind: 'small' | 'trader' | 'fishing';
   x: number;
   z: number;
   ry: number;
   scale?: number;
+  span?: number;
 }
 
 /** Một công trình vẽ trên móng mới. */
@@ -81,7 +85,7 @@ export interface CongTrinh {
   /** Mọi chỗ đứng của người ở cấp này; world.ts lấy đúng số người đang làm (hay 1–2 người) từ đầu danh sách. */
   spots: (level: number) => LotSpot[];
   view: View;
-  /** Thuyền neo (chỉ bến). */
+  /** Thuyền neo (bến, làng chài). */
   docks?: (level: number) => Dock[];
 }
 

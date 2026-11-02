@@ -267,12 +267,13 @@ export function chupCap(loai: string): Shot[] {
   const cu = CU[type];
   if (!moi) throw new Error(`Không có công trình ${loai}. Có: ${Object.keys(CONG_TRINH).join(', ')}`);
   const renderer = makeRenderer();
-  // Bến có thêm dải sông phía trước cho cầu tàu và thuyền.
-  const size = moi.tiles + (type === 'ben' ? 6 : 2);
+  // Bến, làng chài có thêm dải sông phía trước cho cầu tàu, vó, đáy và thuyền.
+  const wet = !!BUILDINGS[type].nearRiver;
+  const size = moi.tiles + (wet ? 6 : 2);
   const { half, lookY, px } = moi.view;
   const h = Math.round(2 * half * px);
   const w = Math.round(h * 1.15);
-  const river = type === 'ben' ? moi.tiles / 2 : undefined;
+  const river = wet ? moi.tiles / 2 : undefined;
   const out: Shot[] = [];
   for (let level = 1; level <= BUILDINGS[type].maxLevel; level++) {
     const shots: (string | null)[] = cu ? [] : [null];
