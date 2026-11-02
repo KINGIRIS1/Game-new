@@ -43,7 +43,7 @@ const ARMY: Army = { giao: 11, cung: 10, voi: 3, no: 4 };
 function ch4(): GameState {
   const s = createInitialState(0);
   setDien(s, 8);
-  s.resources = { gao: 60000, voOc: 60000, datDa: 60000, sat: 60000 };
+  s.resources = { gao: 60000, voOc: 60000, datDa: 60000, sat: 60000, go: 60000 };
   s.dan = 40;
   s.questIndex = CH4_QUEST_START;
   s.giong = { fed: 5, gear: { ngua: true, roi: true, giap: true }, whipBroken: true, restUntil: 0, ascended: true };

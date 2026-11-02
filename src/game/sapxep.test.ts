@@ -18,7 +18,7 @@ function city(dien: number, chapter: 1 | 2 | 3 | 4 = 1): GameState {
   s.questIndex = [0, 0, CH2_QUEST_START, CH3_QUEST_START, CH4_QUEST_START][chapter];
   // Chương 4 đã hộ giá vua ra biển: mở Đền Cuông.
   if (chapter === 4) s.adv.bien = true;
-  s.resources = { gao: 1e6, voOc: 1e6, datDa: 1e6, sat: 1e6 };
+  s.resources = { gao: 1e6, voOc: 1e6, datDa: 1e6, sat: 1e6, go: 1e6 };
   s.dan = 200;
   return s;
 }
@@ -68,7 +68,7 @@ describe('dời công trình', () => {
     s.raid.phase = 'warning';
     expect(canMove(s, a.value.id, edge(5), edge(5))).toEqual({ ok: false, reason: 'dangCoGiac' });
     s.raid.phase = 'idle';
-    s.resources = { gao: 0, voOc: 0, datDa: 0, sat: 0 };
+    s.resources = { gao: 0, voOc: 0, datDa: 0, sat: 0, go: 0 };
     expect(canMove(s, a.value.id, edge(5), edge(5))).toEqual({ ok: false, reason: 'thieuTaiNguyen' });
   });
 });
@@ -236,7 +236,7 @@ describe('mẫu kinh đô', () => {
 
   it('thiếu của thì không áp được, kinh đô giữ nguyên', () => {
     const s = city(5);
-    s.resources = { gao: 100, voOc: 100, datDa: 100, sat: 0 };
+    s.resources = { gao: 100, voOc: 100, datDa: 100, sat: 0, go: 0 };
     const snapshot = JSON.stringify(s.buildings);
     expect(canApplyMau(s, 'phongChau')).toEqual({ ok: false, reason: 'thieuTaiNguyen' });
     expect(applyMau(s, 'phongChau').ok).toBe(false);

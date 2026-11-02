@@ -24,6 +24,8 @@ import {
   uNoCount,
   uNoLimit,
   applyOffline,
+  markHinted,
+  nextHint,
   buildingAt,
   canMove,
   canPlace,
@@ -55,7 +57,7 @@ import {
   type GameState,
   type StageResult,
 } from './game/game';
-import { isOpen, khoanhLeft, khoanhOf, khoanhQuota, openKhoanh, openable } from './game/khoanh';
+import { isOpen, khoanhLeft, khoanhOf, khoanhQuota, khoanhWood, openKhoanh, openable } from './game/khoanh';
 import { GRID, RIVER_START } from './game/map';
 import { fromCode, loadFromStorage, saveFileName, saveToStorage, toCode } from './game/save';
 import { RESOLUTIONS, World, type Resolution } from './render/world';
@@ -138,8 +140,18 @@ function start(): void {
     hud.updateField(state);
   };
 
+  /** Công trình mới vừa mở (`NEW_HINTS`): Lạc hầu gợi ý một lần, để lâu cho kịp đọc. */
+  const showHint = () => {
+    const type = nextHint(state);
+    if (!type) return;
+    markHinted(state, type);
+    const text = vi.ui.newHint[type];
+    if (text) hud.toast(text, false, 8000);
+  };
+
   /** Gọi sau mọi thao tác: lưu, vẽ lại cảnh và giao diện. */
   const commit = () => {
+    showHint();
     save();
     world.sync(state);
     refreshFloodPreview();
@@ -378,7 +390,7 @@ function start(): void {
         const r = openKhoanh(state, a.id);
         if (!r.ok) return fail(r.reason);
         play('place');
-        hud.toast(vi.ui.khoanhOpened);
+        hud.toast(vi.ui.khoanhOpened(khoanhWood(r.value)));
         world.setChunkSelection(null);
         commit();
         return;
@@ -921,6 +933,7 @@ function start(): void {
 
   const offline = applyOffline(state, Date.now());
   showRelaid();
+  showHint();
   commit();
   showOfflineIfLong(offline.ms, offline.gained);
   if (state.raid.lastResult) hud.showRaidResult(state, state.raid.lastResult);

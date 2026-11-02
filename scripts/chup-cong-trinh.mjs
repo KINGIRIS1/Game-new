@@ -46,12 +46,20 @@ try {
         if (!loai) throw new Error(`Không có công trình ${m}`);
         return { anh: loai.cu ? mod.chupLo(m) : mod.chupCap(m), loai };
       }, m);
+      // Loại vẽ theo móng cũ: nhìn từ trước và từ sau. Loại đã vẽ lại: dáng cũ trên, dáng mới dưới. Công trình mới
+      // chưa từng có dáng cũ (xưởng mộc): chỉ một hàng ảnh vẽ trên móng.
+      const motHang = !loai.cu && !anh.some((a) => a.cu);
       const [tren, duoi] = loai.cu ? ['nhìn từ trước', 'nhìn từ sau'] : ['dáng cũ phóng theo móng', 'vẽ lại trên móng'];
-      const hang = (list) => `<div style="display:flex;gap:10px;margin-bottom:6px">${list.map((a) => cell(a.cu, `Cấp ${a.cap}: ${tren}`)).join('')}</div>
-        <div style="display:flex;gap:10px;margin-bottom:18px">${list.map((a) => cell(a.moi, `Cấp ${a.cap}: ${duoi}`)).join('')}</div>`;
+      const hang = (list) =>
+        (motHang ? '' : `<div style="display:flex;gap:10px;margin-bottom:6px">${list.map((a) => cell(a.cu, `Cấp ${a.cap}: ${tren}`)).join('')}</div>`) +
+        `<div style="display:flex;gap:10px;margin-bottom:18px">${list.map((a) => cell(a.moi, motHang ? `Cấp ${a.cap}` : `Cấp ${a.cap}: ${duoi}`)).join('')}</div>`;
       const nhom = [];
       for (let i = 0; i < anh.length; i += 4) nhom.push(anh.slice(i, i + 4));
-      const tieuDe = loai.cu ? 'mô hình vẽ theo móng cũ, phóng theo móng; trên nhìn từ trước, dưới nhìn từ sau' : 'trên là dáng cũ phóng theo móng, dưới là vẽ lại';
+      const tieuDe = loai.cu
+        ? 'mô hình vẽ theo móng cũ, phóng theo móng; trên nhìn từ trước, dưới nhìn từ sau'
+        : motHang
+          ? 'vẽ trên móng'
+          : 'trên là dáng cũ phóng theo móng, dưới là vẽ lại';
       html = `<body style="${css}"><div style="font-size:20px;margin-bottom:8px">${loai.ten}, móng ${loai.moi}×${loai.moi}: ${tieuDe}; nét đen là ranh móng</div>
         ${nhom.map(hang).join('')}</body>`;
     }

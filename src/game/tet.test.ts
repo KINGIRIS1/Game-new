@@ -41,7 +41,7 @@ const MIN = 60_000;
 function city(dien = 7): GameState {
   const s = createInitialState(0);
   s.giong.ascended = true;
-  s.resources = { gao: 50000, voOc: 50000, datDa: 50000, sat: 50000 };
+  s.resources = { gao: 50000, voOc: 50000, datDa: 50000, sat: 50000, go: 50000 };
   setDien(s, dien);
   return s;
 }

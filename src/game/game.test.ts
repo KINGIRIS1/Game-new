@@ -35,7 +35,7 @@ const O = edge(1);
 
 function rich(): GameState {
   const s = createInitialState(T0);
-  s.resources = { gao: 400, voOc: 400, datDa: 400, sat: 100 };
+  s.resources = { gao: 400, voOc: 400, datDa: 400, sat: 100, go: 100 };
   return s;
 }
 
@@ -129,7 +129,7 @@ describe('nâng cấp', () => {
     const s = rich();
     const r = placeOk(s, 'ruong', O + 1, O + 1);
     expect(upgrade(s, r.id)).toEqual({ ok: false, reason: 'chuaDuCapDien' });
-    s.resources = { gao: 1000, voOc: 1000, datDa: 1000, sat: 100 };
+    s.resources = { gao: 1000, voOc: 1000, datDa: 1000, sat: 100, go: 100 };
     expect(upgrade(s, 1).ok).toBe(true);
     expect(upgrade(s, r.id).ok).toBe(true);
     expect(r.level).toBe(2);
@@ -149,7 +149,7 @@ describe('nâng cấp', () => {
     const s = rich();
     const lo1 = edge(1);
     const left = khoanhLeft(s);
-    s.resources = { gao: 1000, voOc: 1000, datDa: 1000, sat: 100 };
+    s.resources = { gao: 1000, voOc: 1000, datDa: 1000, sat: 100, go: 100 };
     upgrade(s, 1);
     expect(canPlace(s, 'luy', lo1 - 1, lo1)).toEqual({ ok: false, reason: 'ngoaiVung' });
     expect(khoanhLeft(s)).toBeGreaterThan(left);
@@ -242,7 +242,7 @@ describe('dòng thời gian', () => {
 
   it('khi vắng mặt chỉ được một nửa, tối đa 8 giờ, và đồng hồ chơi đứng yên', () => {
     const s = createInitialState(T0);
-    s.resources = { gao: 0, voOc: 0, datDa: 0, sat: 0 };
+    s.resources = { gao: 0, voOc: 0, datDa: 0, sat: 0, go: 0 };
     s.resources.gao = 100;
     const net = netPerMinute(s).voOc;
     const r = applyOffline(s, T0 + 10 * 60_000);

@@ -14,7 +14,7 @@ type Army = Record<UnitType, number>;
 function capital(): GameState {
   const s = createInitialState(0);
   setDien(s, 3);
-  s.resources = { gao: 5000, voOc: 5000, datDa: 5000, sat: 2000 };
+  s.resources = { gao: 5000, voOc: 5000, datDa: 5000, sat: 2000, go: 2000 };
   s.dan = 30;
   const forge = place(s, 'loRen', edge(3, 1), edge(3, 1));
   const barracks = place(s, 'doanhTrai', DIEN - 6, DIEN_END + 2);

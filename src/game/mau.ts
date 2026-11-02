@@ -555,6 +555,7 @@ const RECIPES: Record<MauId, Recipe> = {
       [['vuon', 'chuongLon'], byKitchen],
       ['ruongNep', byRiver],
       ['baiDa', byHill],
+      ['xuongMoc', byHill],
     ],
   },
   // Đê bao chống lũ: đê dọc hai bờ sông tới bìa đất, bến ngoài đê, chòi canh sát đê; ruộng, đền, ruộng nếp trong đê.
@@ -575,6 +576,7 @@ const RECIPES: Record<MauId, Recipe> = {
       [['vuon', 'chuongLon'], byKitchen],
       ['ruongNep', byRiver],
       ['baiDa', byHill],
+      ['xuongMoc', byHill],
     ],
   },
   // Thành Cổ Loa: ba vòng thành kín quanh Điện; vòng trong chỉ có Điện và sân; nhà sàn, kho, lò rèn, bếp giữa các
@@ -596,6 +598,7 @@ const RECIPES: Record<MauId, Recipe> = {
       ['ruong', inRings(0, row(1, byRiver))],
       ['ruongNep', inRings(0, row(1, byRiver))],
       ['baiDa', inRings(0, row(2, byHill))],
+      ['xuongMoc', inRings(0, row(2, byHill))],
     ],
   },
   // Cổ Loa giữ sông (chương 4): như mẫu Cổ Loa, thêm ụ nỏ trên vòng thành ngoài, lầu nỏ giữ sông, trại nỏ cạnh
@@ -619,6 +622,7 @@ const RECIPES: Record<MauId, Recipe> = {
       ['ruong', inRings(0, row(1, byRiver))],
       ['ruongNep', inRings(0, row(1, byRiver))],
       ['baiDa', inRings(0, row(2, byHill))],
+      ['xuongMoc', inRings(0, row(2, byHill))],
     ],
   },
 };

@@ -48,7 +48,7 @@ const CHUONG = [
   ['chuong4', 'Chương 4 (tới lúc lên Điện 8)'],
 ] as const;
 
-const zero = (): Resources => ({ gao: 0, voOc: 0, datDa: 0, sat: 0 });
+const zero = (): Resources => ({ gao: 0, voOc: 0, datDa: 0, sat: 0, go: 0 });
 
 export interface SoGiaiDoan {
   ten: string;

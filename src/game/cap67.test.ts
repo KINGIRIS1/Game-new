@@ -12,7 +12,7 @@ import { SAVE_VERSION, deserialize, serialize } from './save';
 function rich(questIndex = 0): GameState {
   const s = createInitialState(0);
   setDien(s, 5);
-  s.resources = { gao: 20000, voOc: 20000, datDa: 20000, sat: 20000 };
+  s.resources = { gao: 20000, voOc: 20000, datDa: 20000, sat: 20000, go: 20000 };
   s.questIndex = questIndex;
   return s;
 }

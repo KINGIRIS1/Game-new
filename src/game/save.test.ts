@@ -66,7 +66,7 @@ describe('lưu game', () => {
 
   it('mã lưu được nén, ngắn hơn nhiều so với mã đời đầu', () => {
     const s = createInitialState(0);
-    s.resources = { gao: 1e6, voOc: 1e6, datDa: 1e6, sat: 1e6 };
+    s.resources = { gao: 1e6, voOc: 1e6, datDa: 1e6, sat: 1e6, go: 1e6 };
     for (let i = 0; i < 20; i++) placeAnywhere(s, 'luy');
     expect(s.buildings.length).toBeGreaterThan(15);
     expect(toCode(s).length).toBeLessThan(maDoiDau(s).length / 4);
@@ -126,7 +126,7 @@ describe('nâng bản lưu kinh đô nhỏ lên kinh đô lớn (phiên bản 10
     s.buildings = list;
     s.nextId = list.length + 1;
     s.questIndex = questIndex;
-    s.resources = { gao: 1000, voOc: 1000, datDa: 1000, sat: 100 };
+    s.resources = { gao: 1000, voOc: 1000, datDa: 1000, sat: 100, go: 100 };
     s.dan = 40;
     return s;
   }

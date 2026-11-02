@@ -33,7 +33,7 @@ import { DIEN_END, setDien } from './testmap';
 function late(): GameState {
   const s = createInitialState(0);
   setDien(s, 8);
-  s.resources = { gao: 60000, voOc: 60000, datDa: 60000, sat: 60000 };
+  s.resources = { gao: 60000, voOc: 60000, datDa: 60000, sat: 60000, go: 60000 };
   s.dan = 40;
   s.questIndex = CH4_QUEST_START + 10;
   s.giong = { fed: 5, gear: { ngua: true, roi: true, giap: true }, whipBroken: true, restUntil: 0, ascended: true };
@@ -311,7 +311,6 @@ describe('bản lưu phiên bản 15', () => {
     delete old.thuThach;
     const back = deserialize(JSON.stringify(old))!;
     expect(back.version).toBe(SAVE_VERSION);
-    expect(SAVE_VERSION).toBe(15);
     expect(back.thuThach).toEqual({ won: [], huan: 0, bac: { giao: 0, cung: 0, voi: 0, no: 0, tuong: 0 } });
   });
 
