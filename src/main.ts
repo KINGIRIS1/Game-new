@@ -57,7 +57,7 @@ import {
   type GameState,
   type StageResult,
 } from './game/game';
-import { isOpen, khoanhLeft, khoanhOf, khoanhQuota, khoanhWood, openKhoanh, openable } from './game/khoanh';
+import { isOpen, khoanhOf, khoanhWood, openKhoanh, openable } from './game/khoanh';
 import { cayDaAt, clearCayDa } from './game/cayDa';
 import { GRID, RIVER_START } from './game/map';
 import { fromCode, loadFromStorage, saveFileName, saveToStorage, toCode } from './game/save';
@@ -613,9 +613,7 @@ function start(): void {
         play('upgrade');
         hud.toast(
           r.value.type === 'dien'
-            ? khoanhQuota(r.value.level) > khoanhQuota(r.value.level - 1) && khoanhLeft(state) > 0
-              ? vi.ui.landExpanded(khoanhLeft(state), r.value.level)
-              : vi.ui.dienUp(r.value.level)
+            ? vi.ui.dienUp(r.value.level)
             : r.value.type === 'luy'
               ? vi.ui.placed(buildingName(r.value))
               : vi.ui.upgraded(buildingName(r.value), r.value.level),

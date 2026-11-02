@@ -42,7 +42,7 @@ export const vi = {
     dien: {
       name: 'Điện Vua Hùng',
       icon: '🏯',
-      desc: 'Nơi Vua Hùng trị nước. Nâng cấp để phát rừng mở đất, tăng sức chứa kho và cho phép nâng cấp các công trình khác.',
+      desc: 'Nơi Vua Hùng trị nước. Nâng cấp để tăng sức chứa kho và cho phép nâng cấp các công trình khác.',
     },
     ruong: {
       name: 'Ruộng lúa',
@@ -317,7 +317,6 @@ export const vi = {
     khongPhaiTrangTri: 'Chỉ dọn được đường đi và đồ trang trí',
     khoanhDaMo: 'Khoảnh này đã phát rồi',
     khoanhChuaSat: 'Chỉ phát được khoảnh rừng sát đất đã mở',
-    hetLuotKhoanh: 'Đã phát hết lượt của cấp Điện này',
   } satisfies Record<FailReason, string>,
 
   quests: {
@@ -800,15 +799,13 @@ export const vi = {
     decorOnly: 'Chỉ để nhìn: giặc không nhắm phá, đi qua được; lũ không làm hư.',
     placed: (name: string) => `Đã dựng ${name}`,
     upgraded: (name: string, n: number) => `${name} lên cấp ${n}`,
-    landExpanded: (n: number, level: number) => `Điện cấp ${level}: được phát thêm ${n} khoảnh rừng. Chạm vào rừng sát đất để phát.`,
     khoanhTitle: 'Khoảnh rừng',
-    khoanhDesc: 'Rừng tre, rừng lim còn rậm. Phát khoảnh này thì có thêm đất 5×5 ô để dựng nhà, trải đường.',
+    khoanhDesc: 'Rừng tre, rừng lim còn rậm. Phát khoảnh này thì có thêm đất 5×5 ô để dựng nhà, trải đường. Phát bao nhiêu tùy ý, mỗi khoảnh phát thêm thì khoảnh sau đắt hơn.',
     khoanhCount: 'Khoảnh đất đã mở',
     khoanhCost: 'Giá phát rừng',
     khoanhOpen: 'Phát rừng',
     khoanhOpened: (go: number) => `Đã phát rừng, bờ cõi mở rộng! Cây chặt được ${go} 🪵`,
-    khoanhMore: (level: number, n: number) => `Lên Điện cấp ${level} được phát thêm ${n} khoảnh.`,
-    khoanhMax: 'Đã mở đủ đất cho kinh đô.',
+    khoanhNext: 'Khoảnh sau',
     khoanhRiver: 'Khoảnh ven sông: dựng được bến, làng chài, nhưng mùa lũ dễ ngập.',
     rungThieng: 'Rừng thiêng ngoài cùng, không phát được: giặc ẩn nấp trong ấy.',
     mauKhoanh: (n: number) => `Mẫu còn ${n} khoảnh chưa phát: chỗ trong rừng sẽ bỏ qua.`,
