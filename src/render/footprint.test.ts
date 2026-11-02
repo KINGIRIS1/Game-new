@@ -55,7 +55,7 @@ describe('mô hình vừa móng kinh đô lớn', () => {
 
   it('bến, làng chài mọi cấp: cầu tàu, vó, đáy và thuyền nằm gọn trong sông, chừa luồng thuyền qua lại sát bờ bên kia', async () => {
     const { BUILDINGS } = await import('../game/defs');
-    const { FAR_BANK, RIVER_START } = await import('../game/map');
+    const { RIVER_END, RIVER_START } = await import('../game/map');
     const { makeBoat, makeTradeBoat } = await import('./models');
     const { CONG_TRINH, lotModel } = await import('./congTrinh/index');
     for (const type of ['ben', 'langChai'] as const) {
@@ -74,7 +74,7 @@ describe('mô hình vừa móng kinh đô lớn', () => {
         g.updateMatrixWorld(true);
         // Mô hình chìa ra sông theo +z, bờ sông ở mép móng.
         const reach = new THREE.Box3().setFromObject(g).max.z - def.d / 2;
-        expect(reach, `${type} cấp ${level}`).toBeLessThanOrEqual(FAR_BANK - RIVER_START - 1.5);
+        expect(reach, `${type} cấp ${level}`).toBeLessThanOrEqual(RIVER_END - RIVER_START - 1.5);
       }
     }
   });

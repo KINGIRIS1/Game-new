@@ -176,7 +176,7 @@ describe('cây, đá mọc trên ô trống', () => {
   });
 
   it('bản lưu 17: giữ cây đá; nâng bản lưu 16 thì chưa có cây đá, cái đầu mọc sau CAY_DA_FIRST_MS; dữ liệu hỏng thì bỏ', () => {
-    expect(SAVE_VERSION).toBe(17);
+    expect(SAVE_VERSION).toBeGreaterThanOrEqual(17);
     const s = capital();
     run(s, CAY_DA_FIRST_MS + 2 * CAY_DA_EVERY_MS);
     const back = deserialize(serialize(s))!;
@@ -187,7 +187,7 @@ describe('cây, đá mọc trên ô trống', () => {
     old.version = 16;
     delete old.cayDa;
     const up = deserialize(JSON.stringify(old))!;
-    expect(up.version).toBe(17);
+    expect(up.version).toBe(SAVE_VERSION);
     expect(up.cayDa).toEqual(initialCayDa(s.clock));
     expect(up.cayDa.nextAt).toBe(s.clock + CAY_DA_FIRST_MS);
 

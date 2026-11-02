@@ -75,7 +75,7 @@ import {
 import { barracksList, guardPlan, heroPost } from './doanhTrai';
 import type { Building, GameState } from './game';
 import { openStart } from './khoanh';
-import { GRID, RIVER_START, inGrid, isRiver } from './map';
+import { GRID, RIVER_DIVE, RIVER_START, inGrid, isRiver } from './map';
 import { drowns, floodMap } from './terrain';
 
 export type Side = 'ta' | 'giac';
@@ -549,8 +549,8 @@ function boardBoats(
   const span = RIVER_START - 1 - lo;
   for (let i = 0; i < count; i++) {
     const along = lo + 0.5 + (span * (i + 0.5)) / count + (rand() - 0.5) * 0.8;
-    // Thuyền hiện sát bờ bên kia, chèo sang bờ mình.
-    const far = GRID - 0.6;
+    // Thuyền hiện ở mép luồng sông (`RIVER_DIVE`), chèo sang bờ mình.
+    const far = RIVER_DIVE - 0.6;
     const bank = RIVER_START + 0.45;
     battle.boats.push({
       x: alongX ? along : far,
@@ -986,17 +986,17 @@ function damageBuilding(state: GameState, battle: Battle, attacker: Fighter, b: 
   }
 }
 
-/** Chỗ giặc bỏ chạy về: bìa rừng phía đã kéo tới, hay lặn xuống sông. */
+/** Chỗ giặc bỏ chạy về: bìa rừng phía đã kéo tới, hay lặn xuống sông (bơi ra mép luồng sông rồi lặn). */
 function exitPoint(battle: Battle, f: Fighter): { x: number; z: number } {
-  if (battle.side === 'nam') return { x: f.x, z: GRID + 0.5 };
-  if (battle.side === 'dong') return { x: GRID + 0.5, z: f.z };
+  if (battle.side === 'nam') return { x: f.x, z: RIVER_DIVE + 0.5 };
+  if (battle.side === 'dong') return { x: RIVER_DIVE + 0.5, z: f.z };
   const out = (battle.exitAt ?? -0.5) - 1;
   return battle.side === 'bac' ? { x: f.x, z: out } : { x: out, z: f.z };
 }
 
 /** Giặc bỏ chạy đã thoát chưa: lặn xuống sông, hay lùi qua vạch xuất phát ở bìa rừng. */
 function escaped(battle: Battle, f: Fighter): boolean {
-  if (f.x < 0 || f.z < 0 || f.x > GRID || f.z > GRID) return true;
+  if (f.x < 0 || f.z < 0 || f.x > RIVER_DIVE || f.z > RIVER_DIVE) return true;
   const line = battle.exitAt ?? -0.5;
   if (battle.side === 'bac') return f.z < line;
   if (battle.side === 'tay') return f.x < line;

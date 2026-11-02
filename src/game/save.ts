@@ -2,7 +2,9 @@
 // Bản lưu cũ (phiên bản 1 của lát cắt 1, 2 của lát cắt 2a, 3 của lát cắt 2b, 4 của lát cắt 3a,
 // 5 của lát cắt 3b, 6 của chương 2, 7 của chương 3, 8 của cấp 6–7, 9 của Hội Tết, 10 của cấp 8) được nâng lên phiên bản
 // hiện tại khi nạp. Phiên bản 13 là chương 4 phần 2 (lính nỏ, ụ nỏ, thủy binh Triệu), 14 là chương 4 phần 3 (Cao Lỗ,
-// vua xuống biển), 15 là chương 4 phần 4 (thử thách phó bản, huân công), 16 thêm gỗ (xưởng mộc). Bản lưu còn ở kinh đô nhỏ (trước phiên bản 11) được dựng lại thành kinh đô lớn theo mẫu (`xepLai.ts`).
+// vua xuống biển), 15 là chương 4 phần 4 (thử thách phó bản, huân công), 16 thêm gỗ (xưởng mộc), 17 thêm cây đá mọc trên ô
+// trống, 18 nới lưới qua sông (76×76, bên kia sông). Bản lưu còn ở kinh đô nhỏ (trước phiên bản 11) được dựng lại thành
+// kinh đô lớn theo mẫu (`xepLai.ts`).
 
 import { deflateSync, inflateSync } from 'fflate';
 import {
@@ -85,6 +87,7 @@ function migrate(raw: unknown): unknown {
   if (isObj(v) && v.version === 14) v = migrate14to15(v);
   if (isObj(v) && v.version === 15) v = migrate15to16(v);
   if (isObj(v) && v.version === 16) v = migrate16to17(v);
+  if (isObj(v) && v.version === 17) v = migrate17to18(v);
   return v;
 }
 
@@ -328,6 +331,30 @@ function migrate15to16(s: Raw): Raw {
 function migrate16to17(s: Raw): Raw {
   s.version = 17;
   s.cayDa = initialCayDa(isNum(s.clock) ? s.clock : 0);
+  return s;
+}
+
+/** Cạnh lưới từ phiên bản 11 tới 17 (kinh đô lớn, sông ở mép lưới). */
+const GRID_V17 = 55;
+
+/**
+ * Phiên bản 17 → 18 (bên kia sông): lưới nới từ 55×55 lên 76×76, sông nằm giữa lưới, bên kia sông là đất thật. Tọa
+ * độ ô giữ nguyên, chỉ dàn lại mảng độ cao (ô sông, ô bên kia lấy độ cao tự nhiên) và đường đi của giặc trong trận
+ * đang dở (chỉ số ô). Bản lưu vừa dựng lại từ kinh đô nhỏ ở bước 10 → 11 đã theo lưới mới thì để nguyên độ cao.
+ */
+function migrate17to18(s: Raw): Raw {
+  s.version = 18;
+  const old = s.heights;
+  if (!Array.isArray(old) || old.length !== GRID_V17 * GRID_V17) return s;
+  const heights = baseHeights();
+  for (let z = 0; z < GRID_V17; z++) for (let x = 0; x < GRID_V17; x++) if (!isRiver(x, z)) heights[z * GRID + x] = old[z * GRID_V17 + x];
+  s.heights = heights;
+  const regrid = (i: unknown) => (isNum(i) ? Math.floor(i / GRID_V17) * GRID + (i % GRID_V17) : i);
+  const raid = s.raid;
+  const battle = isObj(raid) && isObj(raid.battle) ? raid.battle : null;
+  if (battle && Array.isArray(battle.fighters)) {
+    for (const f of battle.fighters as Raw[]) if (isObj(f) && Array.isArray(f.path)) f.path = f.path.map(regrid);
+  }
   return s;
 }
 

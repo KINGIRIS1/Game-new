@@ -274,9 +274,10 @@ export interface Merchant {
 
 /**
  * Phiên bản bản lưu hiện tại (11: kinh đô lớn; 12: khoảnh tự chọn; 13: lính nỏ, ụ nỏ; 14: Cao Lỗ, vua xuống biển;
- * 15: thử thách, huân công; 16: gỗ, tài nguyên thứ năm, và gợi ý của Lạc hầu về công trình mới).
+ * 15: thử thách, huân công; 16: gỗ, tài nguyên thứ năm, và gợi ý của Lạc hầu về công trình mới; 17: cây, đá mọc trên
+ * ô trống; 18: lưới nới qua sông, 76×76).
  */
-export const SAVE_VERSION = 17;
+export const SAVE_VERSION = 18;
 
 export interface GameState {
   version: typeof SAVE_VERSION;
