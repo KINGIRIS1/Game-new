@@ -56,6 +56,8 @@ export interface Act {
   skill?: number;
   /** Tướng thắng trận (giơ gậy, chĩa nỏ lên trời): 0..1. */
   win?: number;
+  /** Tướng thổi tù và hiệu lệnh (Lệnh bắn của Cao Lỗ): tiến trình 0..1, nâng tù và lên miệng, thổi, rồi hạ xuống. */
+  horn?: number;
 }
 
 export type Poser = (a: Act) => void;

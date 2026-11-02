@@ -4,8 +4,9 @@
 // phần mẫu có mà mình chưa có (trong giới hạn theo cấp Điện). Phải đủ tài nguyên để dựng phần thiếu và trả phí
 // dời thì mới áp được.
 
-import { BUILDINGS, STAGES, isDecor, type BuildingType, type Cost, RESOURCE_IDS } from './defs';
+import { BUILDINGS, STAGES, U_NO, isDecor, type BuildingType, type Cost, RESOURCE_IDS } from './defs';
 import { CH1_LAST } from './campaign';
+import { inChapter4 } from './chuong4';
 import { inChapter3 } from './coLoa';
 import {
   barracksLevel,
@@ -17,8 +18,11 @@ import {
   moveCost,
   pay,
   unlocked,
+  uNoCount,
+  uNoLimit,
   type Building,
   type GameState,
+  type FailReason,
   type Result,
 } from './game';
 import { V11_AREA, isOpen, khoanhOf } from './khoanh';
@@ -49,14 +53,18 @@ export function inFrame(x: number, z: number, level: number): boolean {
 import { inChapter2 } from './son';
 import { footprintTop, levelFootprint } from './terrain';
 
-export type MauId = 'phongChau' | 'deBao' | 'coLoa';
-export const MAU_IDS: MauId[] = ['phongChau', 'deBao', 'coLoa'];
+export type MauId = 'phongChau' | 'deBao' | 'coLoa' | 'coLoaSong';
+export const MAU_IDS: MauId[] = ['phongChau', 'deBao', 'coLoa', 'coLoaSong'];
 
 /** Một chỗ trong mẫu: loại công trình và góc móng (x, z). */
 export interface Slot {
   type: BuildingType;
   x: number;
   z: number;
+  /** Đoạn thành có ụ nỏ trên mặt thành (mẫu Cổ Loa giữ sông). */
+  uNo?: boolean;
+  /** Chỗ chòi canh dành cho lầu nỏ (mẫu Cổ Loa giữ sông): lầu nỏ đang có đứng vào đây trước. */
+  lau?: boolean;
 }
 
 // ---------- Dựng mẫu theo vùng đất ----------
@@ -93,9 +101,9 @@ const storyDien = () => STAGES[CH1_LAST - 1].minDien;
 /**
  * Số doanh trại mẫu chừa chỗ ở từng cấp Điện (chỉ số 0 là cấp 1): mỗi tướng thường đã có ở cấp ấy một trại.
  * Lạc tướng từ Điện 2; Gióng thành tráng sĩ khi rèn xong giáp sắt ở lò rèn cấp 3; Sơn Tinh ở chương 2 (Điện 6);
- * An Dương Vương ở chương 3 (Điện 7).
+ * An Dương Vương ở chương 3 (Điện 7); Cao Lỗ ở chương 4 (Điện 8).
  */
-export const MAU_BARRACKS = [0, 1, 2, 2, 2, 3, 4, 4];
+export const MAU_BARRACKS = [0, 1, 2, 2, 2, 3, 4, 5];
 
 /** Số chỗ mẫu chừa cho loại `type` ở cấp Điện `level`: đúng số tối đa theo cấp Điện (doanh trại: theo số tướng). */
 function wantOf(type: BuildingType, level: number): number {
@@ -400,15 +408,15 @@ function luyTre(d: Draft): void {
 
 /**
  * Đê bao dọc hai bờ sông, cách sông 3 ô, chạy suốt tới bìa đất; bãi ngoài đê chỉ cho bến. Chòi canh ngay trong
- * đê (số lẻ thì một chòi ở góc rừng), bẫy chông ở bìa rừng.
+ * đê (số lẻ thì một chòi ở góc rừng), bẫy chông ở bìa rừng. `towers`: mẫu tự xếp chòi canh ở chỗ khác thì bỏ.
  */
-function deBao(d: Draft): void {
+function deBao(d: Draft, towers = true): void {
   const lo = d.lo;
   for (let z = lo; z <= DE_AT; z++) d.segment('de', DE_AT, z);
   for (let x = lo; x < DE_AT; x++) d.segment('de', x, DE_AT);
   d.mark(DE_AT + 1, lo, LAST, LAST, BANK);
   d.mark(lo, DE_AT + 1, LAST, LAST, BANK);
-  towersAlong(d, DE_AT - 1, lo + 1, DE_AT - 2, lo + 1);
+  if (towers) towersAlong(d, DE_AT - 1, lo + 1, DE_AT - 2, lo + 1);
   edgeTraps(d, DE_AT - 2);
   d.mark(lo, lo, DE_AT - 1, lo, KEEP);
   d.mark(lo, lo, lo, DE_AT - 1, KEEP);
@@ -432,8 +440,8 @@ function thanhRings(level: number, lo: number): Ring[] {
   return [t + 2, t + 1, t].map((a, i) => ({ a, b: b[i] }));
 }
 
-/** Đê bao như mẫu Đê bao, thêm ba vòng thành quanh Điện. */
-function coLoaWalls(d: Draft): void {
+/** Đê bao như mẫu Đê bao, thêm ba vòng thành quanh Điện. `towers`: như ở `deBao`. */
+function coLoaWalls(d: Draft, towers = true): void {
   d.rings = thanhRings(d.level, d.lo);
   for (const { a, b } of d.rings) {
     for (let k = a; k <= b; k++) {
@@ -446,7 +454,51 @@ function coLoaWalls(d: Draft): void {
   // Vòng trong chỉ có Điện và sân.
   const inner = d.rings[0];
   d.mark(inner.a + 1, inner.a + 1, inner.b - 1, inner.b - 1, KEEP);
-  deBao(d);
+  deBao(d, towers);
+}
+
+/** Chỗ trong mẫu ở ô (x, z), nếu có. */
+const slotAt = (d: Draft, x: number, z: number) => d.slots.find((s) => s.x === x && s.z === z);
+
+/**
+ * Cổ Loa giữ sông: ba vòng thành và đê bao như mẫu Cổ Loa. Ụ nỏ trên vòng thành ngoài, chia đều bốn mặt: phía bắc,
+ * phía tây (bìa rừng) và hai mặt phía sông. Chòi canh ngay trong đê: ba chỗ dành cho lầu nỏ (hai ở phía sông, một
+ * ở góc bắc tây), còn lại rải ở mặt bắc và mặt tây.
+ */
+function coLoaSongWalls(d: Draft): void {
+  coLoaWalls(d, false);
+  const outer = d.rings[d.rings.length - 1];
+  const n = U_NO.limit[d.level - 1] ?? 0;
+  const per = Math.ceil(n / 4);
+  let left = n;
+  const mark = (x: number, z: number) => {
+    const s = slotAt(d, x, z);
+    if (left > 0 && s?.type === 'thanh' && !s.uNo) {
+      s.uNo = true;
+      left--;
+    }
+  };
+  for (const p of spread(per, outer.a + 1, outer.b - 1)) {
+    mark(p, outer.a);
+    mark(outer.a, p);
+    mark(p, outer.b);
+    mark(outer.b, p);
+  }
+  const lo = d.lo;
+  const want = wantOf('choiCanh', d.level);
+  const lau: [number, number, boolean][] = [
+    [DIEN_HOME + 2, DE_AT - 1, true],
+    [DE_AT - 1, DIEN_HOME + 2, false],
+    [lo + 1, lo + 1, true],
+  ];
+  for (const [x, z, alongX] of lau.slice(0, Math.min(3, want))) {
+    const before = d.slots.length;
+    if (segmentNear(d, 'choiCanh', x, z, alongX)) d.slots[before].lau = true;
+  }
+  const rest = want - d.count('choiCanh');
+  const north = Math.ceil(rest / 2);
+  for (const p of spread(north, lo + 4, outer.b)) segmentNear(d, 'choiCanh', p, lo + 1, true);
+  for (const p of spread(rest - north, lo + 4, outer.b)) segmentNear(d, 'choiCanh', lo + 1, p, false);
 }
 
 /** Mỗi mẫu: dựng tường và chòi canh theo vùng đất, rồi xếp công trình theo thứ tự việc. */
@@ -546,6 +598,29 @@ const RECIPES: Record<MauId, Recipe> = {
       ['baiDa', inRings(0, row(2, byHill))],
     ],
   },
+  // Cổ Loa giữ sông (chương 4): như mẫu Cổ Loa, thêm ụ nỏ trên vòng thành ngoài, lầu nỏ giữ sông, trại nỏ cạnh
+  // doanh trại, Đền Cuông phía bắc ngoài vòng ngoài.
+  coLoaSong: {
+    walls: coLoaSongWalls,
+    jobs: [
+      ['ben', byDien],
+      ['doanhTrai', inRings(0, row(1, byAxis))],
+      ['denCoLoa', inRings(1, byAxis)],
+      ['nhaSan', inRings(2, byDien)],
+      ['kho', inRings(2, byDien)],
+      ['bep', inRings(2, byDien)],
+      ['loRen', inRings(1, byDien)],
+      [['vuon', 'chuongLon'], inRings(1, byKitchen)],
+      [['denPhuDong', 'denTanVien'], inRings(0, row(1, byBarracks))],
+      ['denCuong', inRings(0, row(1, byAxis))],
+      ['traiGiao', inRings(0, row(2, byBarracks))],
+      [['traiCung', 'chuongVoi'], inRings(0, row(2, byBarracks))],
+      ['traiNo', inRings(0, row(2, byBarracks))],
+      ['ruong', inRings(0, row(1, byRiver))],
+      ['ruongNep', inRings(0, row(1, byRiver))],
+      ['baiDa', inRings(0, row(2, byHill))],
+    ],
+  },
 };
 
 /** Sân trước Điện và bên phải Điện: chừa trống. */
@@ -578,12 +653,16 @@ export function mauSlots(id: MauId, level: number): Slot[] {
   return list;
 }
 
-/** Mỗi chương mở một mẫu: Phong Châu từ đầu, Đê bao khi vào chương 2, Cổ Loa khi vào chương 3. */
+/** Mỗi chương mở một mẫu: Phong Châu từ đầu, Đê bao khi vào chương 2, Cổ Loa khi vào chương 3, Cổ Loa giữ sông khi vào chương 4. */
 export function mauUnlocked(state: GameState, id: MauId): boolean {
   if (id === 'deBao') return inChapter2(state);
   if (id === 'coLoa') return inChapter3(state);
+  if (id === 'coLoaSong') return inChapter4(state);
   return true;
 }
+
+/** Lý do mẫu `id` chưa mở. */
+const LOCK_REASON: Record<MauId, FailReason> = { phongChau: 'khongTimThay', deBao: 'canChuong2', coLoa: 'canChuong3', coLoaSong: 'canChuong4' };
 
 /** Công trình một ô gắn với đất (lũy, đê, thành, bẫy): áp mẫu thì đoạn thừa bị dỡ đi, không dời. */
 const SEGMENTS: BuildingType[] = ['luy', 'de', 'thanh', 'bayChong'];
@@ -599,6 +678,8 @@ export interface MauPlan {
   cost: Cost;
   /** Công trình không còn chỗ nào để xếp (mẫu không áp được). */
   stuck: number[];
+  /** Ụ nỏ sẽ dựng thêm trên đoạn thành ở các ô này (mẫu Cổ Loa giữ sông), trong giới hạn theo cấp Điện. */
+  uNos: { x: number; z: number }[];
 }
 
 const addCost = (a: Cost, b: Cost) => {
@@ -630,7 +711,7 @@ export function planMau(state: GameState, id: MauId): MauPlan {
   };
   mark('dien', dien.x, dien.z);
 
-  const plan: MauPlan = { moves: [], builds: [], removes: [], cost: {}, stuck: [] };
+  const plan: MauPlan = { moves: [], builds: [], removes: [], cost: {}, stuck: [], uNos: [] };
   const slots = mauSlots(id, level)
     .filter((s) => s.type !== 'dien')
     .map((s) => ({ ...s, x: s.x + ox, z: s.z + oz }))
@@ -648,8 +729,11 @@ export function planMau(state: GameState, id: MauId): MauPlan {
       .filter((s) => s.type === type)
       .sort((a, b) => Math.hypot(a.x + def.w / 2 - cx, a.z + def.d / 2 - cz) - Math.hypot(b.x + def.w / 2 - cx, b.z + def.d / 2 - cz));
     // Lầu nỏ một ô như chòi canh, đứng vào chỗ chòi canh của mẫu và tính là hai chòi canh trong giới hạn.
+    // Mẫu có chỗ dành cho lầu nỏ thì lầu nỏ xếp trước, vào đúng những chỗ ấy.
     const sameSlot = (b: Building) => b.type === type || (type === 'choiCanh' && b.type === 'lauNo');
-    const have = state.buildings.filter(sameSlot).sort((a, b) => b.level - a.level || a.id - b.id);
+    const have = state.buildings
+      .filter(sameSlot)
+      .sort((a, b) => Number(b.type === 'lauNo') - Number(a.type === 'lauNo') || b.level - a.level || a.id - b.id);
     // Công trình đã đứng đúng một chỗ trong mẫu thì giữ nguyên.
     const rest: Building[] = [];
     for (const b of have) {
@@ -665,9 +749,12 @@ export function planMau(state: GameState, id: MauId): MauPlan {
         leftovers.push(b);
         continue;
       }
-      let best = 0;
-      for (let i = 1; i < open.length; i++) {
-        if (Math.hypot(open[i].x - b.x, open[i].z - b.z) < Math.hypot(open[best].x - b.x, open[best].z - b.z)) best = i;
+      // Lầu nỏ vào chỗ dành cho lầu nỏ nếu còn; chòi canh để dành chỗ ấy cho lầu nỏ ghép về sau.
+      const pool = open.map((s, i) => ({ s, i })).filter(({ s }) => (b.type === 'lauNo' ? s.lau : !s.lau));
+      const list = pool.length ? pool : open.map((s, i) => ({ s, i }));
+      let best = list[0].i;
+      for (const { s, i } of list) {
+        if (Math.hypot(s.x - b.x, s.z - b.z) < Math.hypot(open[best].x - b.x, open[best].z - b.z)) best = i;
       }
       const s = open.splice(best, 1)[0];
       plan.moves.push({ id: b.id, x: s.x, z: s.z });
@@ -711,6 +798,22 @@ export function planMau(state: GameState, id: MauId): MauPlan {
     addCost(plan.cost, moveCost(b));
     mark(b.type, spot.x, spot.z);
   }
+  // Ụ nỏ trên các đoạn thành mẫu đánh dấu: dựng thêm khi đoạn thành ấy có (hay sắp dựng), chưa có ụ, còn trong
+  // giới hạn theo cấp Điện (ụ trên đoạn thành bị dỡ thì mất theo).
+  if (inChapter4(state)) {
+    const removed = new Set(plan.removes);
+    let room = uNoLimit(state) - (uNoCount(state) - state.buildings.filter((b) => b.uNo && removed.has(b.id)).length);
+    for (const s of slots) {
+      if (room <= 0) break;
+      if (!s.uNo) continue;
+      const wall = state.buildings.find((b) => b.type === 'thanh' && b.x === s.x && b.z === s.z && !removed.has(b.id));
+      const built = plan.builds.some((x) => x.type === 'thanh' && x.x === s.x && x.z === s.z);
+      if (wall ? wall.uNo || wall.damaged : !built) continue;
+      plan.uNos.push({ x: s.x, z: s.z });
+      addCost(plan.cost, U_NO.cost);
+      room--;
+    }
+  }
   return plan;
 }
 
@@ -732,11 +835,11 @@ function nearestFree(
 }
 
 export function canApplyMau(state: GameState, id: MauId): Result<MauPlan> {
-  if (!mauUnlocked(state, id)) return { ok: false, reason: id === 'coLoa' ? 'canChuong3' : 'canChuong2' };
+  if (!mauUnlocked(state, id)) return { ok: false, reason: LOCK_REASON[id] };
   if (state.raid.phase !== 'idle') return { ok: false, reason: 'dangCoGiac' };
   const plan = planMau(state, id);
   if (plan.stuck.length) return { ok: false, reason: 'khongDuCho' };
-  if (!plan.moves.length && !plan.builds.length && !plan.removes.length) return { ok: false, reason: 'daTheoMau' };
+  if (!plan.moves.length && !plan.builds.length && !plan.removes.length && !plan.uNos.length) return { ok: false, reason: 'daTheoMau' };
   if (!canAfford(state, plan.cost)) return { ok: false, reason: 'thieuTaiNguyen' };
   return { ok: true, value: plan };
 }
@@ -765,6 +868,10 @@ export function applyMau(state: GameState, id: MauId): Result<MauPlan> {
     levelFootprint(state, b, footprintTop(state, s.type, s.x, s.z));
     state.buildings.push(b);
     fillWorkers(state, b);
+  }
+  for (const u of plan.uNos) {
+    const wall = state.buildings.find((b) => b.type === 'thanh' && b.x === u.x && b.z === u.z);
+    if (wall) wall.uNo = 'ok';
   }
   return check;
 }

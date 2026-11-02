@@ -32,7 +32,7 @@ const CO_QUAN = `
   if (!G.countOf(s, 'doanhTrai') && !M.placeAnywhere(s, 'doanhTrai')) throw new Error('Không còn chỗ dựng doanh trại');
   s.resources = kho;
   const cho = G.troopCap(s);
-  s.troops = { giao: Math.floor(cho / 2), cung: Math.floor(cho / 3), voi: 0 };
+  s.troops = { giao: Math.floor(cho / 2), cung: Math.floor(cho / 3), voi: 0, no: 0 };
 `;
 const KINH_DO = `M.playChapters({ s, until: (m) => m.at5 >= 0 });`;
 

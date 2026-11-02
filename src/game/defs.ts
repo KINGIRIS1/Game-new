@@ -44,10 +44,15 @@ export type BuildingType =
   | 'cau'
   | 'rom'
   // Nơi ở của lính nỏ (chương 4).
-  | 'traiNo';
+  | 'traiNo'
+  // Đền thờ An Dương Vương (kết chương 4).
+  | 'denCuong';
 
-/** Mốc mở khóa theo cốt truyện: sau kết chương 1, khi vào chương 2, sau kết chương 2, khi vào chương 3, sau kết chương 3, khi vào chương 4. */
-export type Unlock = 'ketChuong1' | 'chuong2' | 'ketChuong2' | 'chuong3' | 'ketChuong3' | 'chuong4';
+/**
+ * Mốc mở khóa theo cốt truyện: sau kết chương 1, khi vào chương 2, sau kết chương 2, khi vào chương 3, sau kết chương 3,
+ * khi vào chương 4, sau kết chương 4 (vua xuống biển).
+ */
+export type Unlock = 'ketChuong1' | 'chuong2' | 'ketChuong2' | 'chuong3' | 'ketChuong3' | 'chuong4' | 'ketChuong4';
 
 export interface BuildingDef {
   type: BuildingType;
@@ -350,7 +355,7 @@ export const BUILDINGS: Record<BuildingType, BuildingDef> = {
     troopCap: [8, 14, 20, 28, 38],
     hp: [400, 460, 520, 600, 700],
     // Mỗi doanh trại cần một tướng chỉ huy, nên số doanh trại còn tùy số tướng đã có (`limitOf`, `doanhTrai.ts`).
-    limit: [0, 4, 4, 4, 4, 4, 4, 4],
+    limit: [0, 5, 5, 5, 5, 5, 5, 5],
     minDien: 2,
     buildable: true,
     removable: false,
@@ -634,7 +639,26 @@ export const BUILDINGS: Record<BuildingType, BuildingDef> = {
     removable: false,
     unlock: 'chuong4',
   },
+  // Đền Cuông thờ An Dương Vương, nơi vua theo Rùa Vàng xuống biển: đền còn nguyên thì mỗi đợt thủy binh bớt thuyền.
+  denCuong: {
+    type: 'denCuong',
+    w: 4,
+    d: 4,
+    maxLevel: 1,
+    buildCost: { gao: 4000, voOc: 4000, datDa: 4000, sat: 1100 },
+    upgradeCost: [{}, {}],
+    production: [{}],
+    hp: [1000],
+    limit: [1, 1, 1, 1, 1, 1, 1, 1],
+    minDien: 1,
+    buildable: true,
+    removable: false,
+    unlock: 'ketChuong4',
+  },
 };
+
+/** Đền Cuông còn nguyên: mỗi đợt thủy binh bớt chừng này phần số thuyền (làm tròn xuống, còn ít nhất một thuyền). */
+export const DEN_CUONG_BOATS = 0.2;
 
 // ---------- Ụ nỏ trên thành Cổ Loa (chương 4) ----------
 
@@ -659,10 +683,11 @@ export const isRoad = (type: BuildingType): boolean => BUILDINGS[type].decor ===
 
 /**
  * Tướng chỉ huy doanh trại, mỗi doanh trại một tướng: Lạc tướng có từ đầu; Thánh Gióng khi thành tráng sĩ, Sơn Tinh khi
- * rước Mị Nương, An Dương Vương khi có nỏ thần (về trời, về núi rồi vẫn chỉ huy). Doanh trại có tướng mới giữ chỗ quân.
+ * rước Mị Nương, An Dương Vương khi có nỏ thần, Cao Lỗ khi thắng màn 25 (về trời, về núi, xuống biển rồi vẫn chỉ huy).
+ * Doanh trại có tướng mới giữ chỗ quân.
  */
-export type TuongId = 'lacTuong' | 'giong' | 'sonTinh' | 'anDuong';
-export const TUONG_IDS: TuongId[] = ['lacTuong', 'giong', 'sonTinh', 'anDuong'];
+export type TuongId = 'lacTuong' | 'giong' | 'sonTinh' | 'anDuong' | 'caoLo';
+export const TUONG_IDS: TuongId[] = ['lacTuong', 'giong', 'sonTinh', 'anDuong', 'caoLo'];
 /**
  * Số chỗ quân tối đa mang ra một trận phó bản, theo cấp Điện (chỉ số 0 là cấp 1): bằng sức chứa doanh trại cao nhất
  * dựng được ở cấp Điện ấy, không quá 38, để nhiều doanh trại không làm phó bản dễ đi.
@@ -732,6 +757,7 @@ export const FLOOD_TOLERANCE: Partial<Record<BuildingType, number>> = {
   denPhuDong: 1,
   denTanVien: 1,
   denCoLoa: 1,
+  denCuong: 1,
   ben: 99,
   luy: 99,
   bayChong: 99,
@@ -839,7 +865,8 @@ export type EnemyType =
   | 'trieuDa'
   | 'linhThuy'
   | 'cungThuyen'
-  | 'linhRiu';
+  | 'linhRiu'
+  | 'tuongThuy';
 export const UNIT_TYPES: UnitType[] = ['giao', 'cung', 'voi', 'no'];
 
 export interface FighterStats {
@@ -884,7 +911,7 @@ export const UNITS: Record<UnitType, UnitDef> = {
     range: 4.5,
     speed: 1.3,
     cooldown: 2.4,
-    strongVs: [...HEAVY, 'phoTuong', 'daiTuong', 'thuongLuong', 'thuyTinh', 'gaTrang', 'trieuDa'],
+    strongVs: [...HEAVY, 'phoTuong', 'daiTuong', 'thuongLuong', 'thuyTinh', 'gaTrang', 'trieuDa', 'tuongThuy'],
     cost: { gao: 50, voOc: 15, sat: 10 },
     home: 'traiNo',
     space: 2,
@@ -920,13 +947,16 @@ export const ENEMIES: Record<EnemyType, FighterStats> = {
   linhThuy: { hp: 100, dmg: 12, range: 0.8, speed: 1.7, cooldown: 1.0 },
   cungThuyen: { hp: 60, dmg: 12, range: 3.8, speed: 1.3, cooldown: 1.4 },
   linhRiu: { hp: 310, dmg: 25, range: 0.9, speed: 1.5, cooldown: 1.4, strongVs: ['cung'] },
+  // Tướng thủy binh Triệu cầm đao dài, trùm màn 28 ở cửa sông.
+  tuongThuy: { hp: 1500, dmg: 32, range: 1.2, speed: 1.3, cooldown: 1.2 },
 };
 
 /**
  * Trùm của phó bản: phó tướng ở màn 4, đại tướng ở chân núi Trâu, thuồng luồng ở màn 12, Thủy Tinh ở đỉnh Tản Viên,
- * gà trắng nghìn năm ở đỉnh Thất Diệu, Triệu Đà dưới chân thành Cổ Loa.
+ * gà trắng nghìn năm ở đỉnh Thất Diệu, Triệu Đà dưới chân thành Cổ Loa (và trên đường ra biển), tướng thủy binh
+ * Triệu ở cửa sông.
  */
-export const BOSSES: EnemyType[] = ['phoTuong', 'daiTuong', 'thuongLuong', 'thuyTinh', 'gaTrang', 'trieuDa'];
+export const BOSSES: EnemyType[] = ['phoTuong', 'daiTuong', 'thuongLuong', 'thuyTinh', 'gaTrang', 'trieuDa', 'tuongThuy'];
 /** Thủy quái bơi được dưới sông và chỗ nước ngập. */
 export const SWIMMERS: EnemyType[] = ['tomBinh', 'caPhun', 'caSau', 'thuongLuong', 'thuyTinh'];
 
@@ -1003,6 +1033,16 @@ export const NO_THAN_FORGE = { cost: { sat: 400, datDa: 600, voOc: 600 } as Cost
 export const RINGS_NEEDED = 3;
 /** Đền Cổ Loa còn nguyên: lính nỏ trên chòi canh bắn mạnh hơn, xa hơn. */
 export const CO_LOA_TOWER = { dmg: 1.5, range: 1 };
+// ---------- Cao Lỗ (chương 4) ----------
+
+/** Cao Lỗ cầm nỏ lớn: tướng bắn xa thứ hai, mũi tên găm cả giặc đứng quanh mục tiêu như đòn của các tướng khác. */
+export const CAO_LO: FighterStats = { hp: 700, dmg: 20, range: 4.4, speed: 1.9, cooldown: 1.0 };
+export const CAO_LO_REST_MS = 2 * 60_000;
+/** Nỏ liên châu: một loạt tên rơi xuống chỗ giặc đứng đông nhất, mọi giặc trong bán kính mất chừng này máu. */
+export const LIEN_CHAU = { dmg: 120, radius: 3.5 };
+/** Lệnh bắn: trong lúc có lệnh, lính nỏ (và khi giữ kinh đô cả ụ nỏ, lầu nỏ) bắn nhanh gấp chừng này lần. */
+export const LENH_BAN = { rate: 2 };
+
 /** Vào chương 3, hay khi An Dương Vương cầm nỏ thần: đợt giặc đầu tiên trên bộ tới sau chừng này thời gian chơi. */
 export const FIRST_LAND_MS = 3 * 60_000;
 
@@ -1113,6 +1153,7 @@ export const ENEMY_ROWS: Record<EnemyType, Row> = {
   linhThuy: 'tien',
   linhRiu: 'trung',
   cungThuyen: 'hau',
+  tuongThuy: 'hau',
 };
 
 /**
@@ -1122,9 +1163,15 @@ export const ENEMY_ROWS: Record<EnemyType, Row> = {
  */
 export const FIELD = { w: 9, d: 22, gap: 10, hpMul: 1.6, maxS: 90 };
 
-export type Terrain = 'rung' | 'benSong' | 'lang' | 'don' | 'nui' | 'doi' | 'ngap' | 'tanVien' | 'thatDieu' | 'coLoa';
+export type Terrain = 'rung' | 'benSong' | 'lang' | 'don' | 'nui' | 'doi' | 'ngap' | 'tanVien' | 'thatDieu' | 'coLoa' | 'cuaSong' | 'moDa';
 
-export type Chapter = 1 | 2 | 3;
+export type Chapter = 1 | 2 | 3 | 4;
+
+/** Một đợt giặc kéo tới bãi chiến lúc `at` giây (màn cầm cự). */
+export interface StageWave {
+  at: number;
+  enemies: Partial<Record<EnemyType, number>>;
+}
 
 export interface StageDef {
   chapter: Chapter;
@@ -1136,7 +1183,14 @@ export interface StageDef {
   needsSon?: boolean;
   /** Cần An Dương Vương đã có nỏ thần, cùng ra trận. */
   needsAdv?: boolean;
+  /** Cần Cao Lỗ đã cầm quân (thắng màn 25), cùng ra trận. */
+  needsCaoLo?: boolean;
+  /** Giặc đứng sẵn trên bãi lúc vào trận. Màn cầm cự thì là đợt đầu. */
   enemies: Partial<Record<EnemyType, number>>;
+  /** Màn cầm cự: các đợt giặc kéo tới sau (ngoài đợt đầu `enemies`). */
+  waves?: StageWave[];
+  /** Màn cầm cự: giữ được chừng này giây mà quân ta chưa chết hết thì thắng, không cần diệt hết giặc. */
+  holdS?: number;
   /** Hệ số máu giặc. */
   hpScale: number;
   /** Thưởng lần đầu thắng. Đánh lại được một phần (REPLAY_SHARE). */
@@ -1176,13 +1230,119 @@ export const STAGES: StageDef[] = [
   { chapter: 3, minDien: 5, needsGiong: false, needsAdv: true, enemies: { linhTrieu: 15, noTrieu: 9, kyBinh: 4 }, hpScale: 1.8, reward: { gao: 3800, voOc: 2800, datDa: 2600, sat: 650 }, terrain: 'nui' },
   { chapter: 3, minDien: 5, needsGiong: false, needsAdv: true, enemies: { linhTrieu: 14, noTrieu: 9, kyBinh: 5 }, hpScale: 2.1, reward: { gao: 4000, voOc: 3000, datDa: 2800, sat: 700 }, terrain: 'lang' },
   { chapter: 3, minDien: 5, needsGiong: false, needsAdv: true, enemies: { linhTrieu: 13, noTrieu: 9, kyBinh: 4, trieuDa: 1 }, hpScale: 1.9, reward: { gao: 5000, voOc: 4000, datDa: 3500, sat: 900 }, terrain: 'coLoa' },
+  // Chương 4: màn 25–28 dẹp thủy binh Triệu đội lốt cướp sông (trùm tướng thủy binh ở cửa sông), màn 29–31 chặn
+  // quân Triệu Đà trước thành Cổ Loa, màn 32 hộ giá vua ra biển Mộ Dạ (cầm cự 90 giây).
+  { chapter: 4, minDien: 5, needsGiong: false, needsAdv: true, enemies: { linhThuy: 13, cungThuyen: 8, linhRiu: 4 }, hpScale: 2.3, reward: { gao: 5500, voOc: 4500, datDa: 4000, sat: 1000 }, terrain: 'benSong' },
+  { chapter: 4, minDien: 5, needsGiong: false, needsCaoLo: true, enemies: { linhThuy: 14, cungThuyen: 8, linhRiu: 4 }, hpScale: 2.2, reward: { gao: 6000, voOc: 5000, datDa: 4400, sat: 1100 }, terrain: 'benSong' },
+  { chapter: 4, minDien: 5, needsGiong: false, needsCaoLo: true, enemies: { linhThuy: 14, cungThuyen: 9, linhRiu: 5 }, hpScale: 2.0, reward: { gao: 6500, voOc: 5400, datDa: 4800, sat: 1200 }, terrain: 'lang' },
+  { chapter: 4, minDien: 5, needsGiong: false, needsCaoLo: true, enemies: { linhThuy: 13, cungThuyen: 8, linhRiu: 4, tuongThuy: 1 }, hpScale: 2.0, reward: { gao: 7200, voOc: 6000, datDa: 5200, sat: 1300 }, terrain: 'cuaSong' },
+  { chapter: 4, minDien: 5, needsGiong: false, needsCaoLo: true, enemies: { linhTrieu: 7, linhThuy: 7, noTrieu: 5, cungThuyen: 4, kyBinh: 3, linhRiu: 2 }, hpScale: 2.1, reward: { gao: 7600, voOc: 6300, datDa: 5500, sat: 1350 }, terrain: 'lang' },
+  { chapter: 4, minDien: 5, needsGiong: false, needsCaoLo: true, enemies: { linhTrieu: 7, linhThuy: 7, noTrieu: 5, cungThuyen: 5, kyBinh: 2, linhRiu: 2 }, hpScale: 2.1, reward: { gao: 8000, voOc: 6600, datDa: 5800, sat: 1400 }, terrain: 'rung' },
+  { chapter: 4, minDien: 5, needsGiong: false, needsCaoLo: true, enemies: { linhTrieu: 8, linhThuy: 7, noTrieu: 5, cungThuyen: 4, kyBinh: 2, linhRiu: 2 }, hpScale: 2.2, reward: { gao: 8500, voOc: 7000, datDa: 6200, sat: 1500 }, terrain: 'coLoa' },
+  {
+    chapter: 4,
+    minDien: 5,
+    needsGiong: false,
+    needsCaoLo: true,
+    enemies: { linhTrieu: 3, linhThuy: 3, noTrieu: 2, cungThuyen: 2 },
+    waves: [
+      { at: 30, enemies: { linhTrieu: 3, linhThuy: 2, noTrieu: 2, kyBinh: 2, linhRiu: 1 } },
+      { at: 60, enemies: { linhTrieu: 2, linhThuy: 2, noTrieu: 1, cungThuyen: 1, kyBinh: 1, linhRiu: 1, trieuDa: 1 } },
+    ],
+    holdS: 90,
+    hpScale: 3.0,
+    reward: { gao: 9000, voOc: 7500, datDa: 6500, sat: 1600 },
+    terrain: 'moDa',
+  },
 ];
+
+/** Mọi giặc của màn, cả các đợt kéo tới sau (màn cầm cự). */
+export function stageEnemies(def: StageDef): Partial<Record<EnemyType, number>> {
+  const out: Partial<Record<EnemyType, number>> = { ...def.enemies };
+  for (const w of def.waves ?? []) for (const k of Object.keys(w.enemies) as EnemyType[]) out[k] = (out[k] ?? 0) + (w.enemies[k] ?? 0);
+  return out;
+}
 /** Đánh lại màn đã qua được phần này của thưởng lần đầu. */
 export const REPLAY_SHARE = 0.3;
 
-/** Kỹ năng bấm tay trong trận: Trống trận của Lạc tướng, hai kỹ năng của mỗi tướng Gióng, Sơn Tinh, An Dương Vương. */
-export type SkillId = 'trongTran' | 'phunLua' | 'nhoTre' | 'bocDoi' | 'doiNon' | 'noThan' | 'ruaVang';
-export const SKILL_IDS: SkillId[] = ['trongTran', 'phunLua', 'nhoTre', 'bocDoi', 'doiNon', 'noThan', 'ruaVang'];
+/**
+ * Thử thách phó bản (chương 4 phần 4): thắng màn nào ở chế độ thường thì màn ấy mở một thử thách.
+ * - `giacDu`: giặc dữ, sát thương giặc nhân `GIAC_DU_DMG`;
+ * - `khongTuong`: trận không có tướng nào;
+ * - `haiBinh`: chỉ được mang hai binh chủng `units`.
+ */
+export type ChallengeKind = 'giacDu' | 'khongTuong' | 'haiBinh';
+export interface ChallengeDef {
+  kind: ChallengeKind;
+  /** Thử thách Hai binh chủng: hai binh chủng được mang. */
+  units?: [UnitType, UnitType];
+  /** Hệ số máu giặc của thử thách (thay cho hệ số của màn thường). */
+  hpScale: number;
+  /** Giặc kéo thêm tới, ngoài giặc của màn thường (màn 1–4 vốn ít giặc). */
+  extra?: Partial<Record<EnemyType, number>>;
+}
+export const GIAC_DU_DMG = 1.25;
+const du = (hpScale: number, extra?: Partial<Record<EnemyType, number>>): ChallengeDef => ({ kind: 'giacDu', hpScale, ...(extra ? { extra } : {}) });
+const kt = (hpScale: number): ChallengeDef => ({ kind: 'khongTuong', hpScale });
+const hai = (a: UnitType, b: UnitType, hpScale: number, extra?: Partial<Record<EnemyType, number>>): ChallengeDef => ({
+  kind: 'haiBinh',
+  units: [a, b],
+  hpScale,
+  ...(extra ? { extra } : {}),
+});
+/**
+ * Thử thách của từng màn 1–32 (chỉ số 0 là màn 1). Giặc dữ ở các màn có trùm và màn 1, 3. Hai binh chủng thường bỏ
+ * cung thủ, binh chủng khắc loại giặc đông nhất của màn (màn 13, 21 bỏ voi chiến); từ màn 26 có lính nỏ.
+ * Màn 1–4 vốn ít giặc nên thử thách có thêm giặc (`extra`), cho đông ngang màn 5–8.
+ * Hệ số máu giặc đo bằng test (`thuThach.test.ts`): người chơi giỏi thắng, người chơi thường thua.
+ */
+export const CHALLENGES: ChallengeDef[] = [
+  du(3.2, { giaoAn: 10, cungAn: 7, chienXa: 3 }),
+  hai('giao', 'voi', 3.95, { giaoAn: 7, cungAn: 5, chienXa: 2 }),
+  du(3.8, { giaoAn: 7, cungAn: 4, chienXa: 2 }),
+  du(2.6, { giaoAn: 7, cungAn: 4, chienXa: 2 }),
+  kt(3.5),
+  hai('giao', 'voi', 3.5),
+  kt(2.4),
+  du(2.2),
+  kt(3.15),
+  hai('giao', 'voi', 4),
+  kt(1.9),
+  du(2.9),
+  hai('giao', 'cung', 4.1),
+  kt(1.4),
+  hai('giao', 'voi', 3),
+  du(1.8),
+  kt(1.7),
+  hai('giao', 'voi', 3.2),
+  du(2.8),
+  kt(1.1),
+  hai('giao', 'cung', 3.3),
+  kt(0.95),
+  hai('giao', 'voi', 2.6),
+  du(2.05),
+  kt(1.05),
+  hai('giao', 'no', 3.15),
+  kt(0.85),
+  du(2.2),
+  hai('voi', 'no', 2.6),
+  kt(0.95),
+  hai('giao', 'no', 3.1),
+  du(3.3),
+];
+/** Huân công cho lần đầu thắng thử thách, theo chương của màn: màn 1–8 được 1, … màn 25–32 được 4. */
+export const HUAN_REWARD: Record<Chapter, number> = { 1: 1, 2: 2, 3: 3, 4: 4 };
+/** Nhánh huân công: bốn binh chủng và tướng (cho mọi tướng). */
+export type HuanBranch = UnitType | 'tuong';
+export const HUAN_BRANCHES: HuanBranch[] = ['giao', 'cung', 'voi', 'no', 'tuong'];
+/** Giá bậc 1, 2, 3 của mỗi nhánh. Một nhánh hết 16, năm nhánh hết 80, bằng huân công của cả 32 thử thách. */
+export const HUAN_COST = [3, 5, 8];
+/** Mỗi bậc huân công thêm chừng này vào máu và sức đánh của nhánh ấy, ở mọi trận. */
+export const HUAN_BONUS = 0.04;
+
+/** Kỹ năng bấm tay trong trận: Trống trận của Lạc tướng, hai kỹ năng của mỗi tướng Gióng, Sơn Tinh, An Dương Vương, Cao Lỗ. */
+export type SkillId = 'trongTran' | 'phunLua' | 'nhoTre' | 'bocDoi' | 'doiNon' | 'noThan' | 'ruaVang' | 'lienChau' | 'lenhBan';
+export const SKILL_IDS: SkillId[] = ['trongTran', 'phunLua', 'nhoTre', 'bocDoi', 'doiNon', 'noThan', 'ruaVang', 'lienChau', 'lenhBan'];
 export const SKILLS: Record<SkillId, { cooldown: number; duration: number }> = {
   trongTran: { cooldown: 20, duration: 6 },
   phunLua: { cooldown: 15, duration: 0 },
@@ -1191,6 +1351,8 @@ export const SKILLS: Record<SkillId, { cooldown: number; duration: number }> = {
   doiNon: { cooldown: 22, duration: 0 },
   noThan: { cooldown: 18, duration: 0 },
   ruaVang: { cooldown: 24, duration: 6 },
+  lienChau: { cooldown: 12, duration: 0 },
+  lenhBan: { cooldown: 22, duration: 6 },
 };
 /** Trống trận thúc quân: quân ta đánh mạnh hơn và chạy nhanh hơn trong một lúc. */
 export const RALLY = { dmg: 1.5, speed: 1.3 };
@@ -1272,6 +1434,11 @@ export const QUESTS: QuestDef[] = [
   { id: 'uNo', goal: { kind: 'uNo', amount: 4 }, reward: { voOc: 1200, sat: 300 } },
   { id: 'luyenNo', goal: { kind: 'unitTroops', unit: 'no', amount: 4 }, reward: { gao: 1500, sat: 300 } },
   { id: 'chongThuyBinh', goal: { kind: 'thuyBinhHeld', amount: 1 }, reward: { voOc: 1500, sat: 450 } },
+  { id: 'quaMan25', goal: { kind: 'stage', stage: 25 }, reward: { gao: 1500, voOc: 1200 } },
+  { id: 'quaMan28', goal: { kind: 'stage', stage: 28 }, reward: { gao: 1800, datDa: 1200 } },
+  { id: 'quaMan30', goal: { kind: 'stage', stage: 30 }, reward: { voOc: 1500, sat: 500 } },
+  { id: 'hoGia', goal: { kind: 'stage', stage: 32 }, reward: { gao: 3000, voOc: 3000 } },
+  { id: 'denCuong', goal: { kind: 'count', building: 'denCuong', amount: 1 }, reward: { datDa: 2200, sat: 700 } },
 ];
 /** Nhận xong thưởng nhiệm vụ cuối chương 1 (Đền Phù Đổng) thì sang chương 2. */
 export const CH2_QUEST_START = 20;

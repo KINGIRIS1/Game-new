@@ -2,6 +2,7 @@
 // nhiều tướng càng nhiều doanh trại, càng nhiều quân dự trữ. Ra phó bản mang tối đa `FIELD_CAP` chỗ. Giữ kinh đô thì
 // người chơi tự bố trí lính ở từng doanh trại (cả kinh đô tối đa `GUARD_CAP` chỗ); chưa bố trí thì tự động.
 
+import { caoLoJoined } from './caoLo';
 import { advJoined } from './coLoa';
 import { BUILDINGS, FIELD_CAP, GUARD_CAP, TUONG_IDS, UNITS, UNIT_TYPES, type TuongId, type UnitType } from './defs';
 import { dienLevel, type Building, type FailReason, type GameState, type Result } from './game';
@@ -19,15 +20,19 @@ export const armySpace = (army: Army): number => UNIT_TYPES.reduce((n, k) => n +
 
 // ---------- Tướng chỉ huy ----------
 
-/** Tướng đã về với kinh đô, giao chỉ huy doanh trại được. Gióng về trời, Sơn Tinh về núi rồi vẫn chỉ huy (hiển linh). */
+/**
+ * Tướng đã về với kinh đô, giao chỉ huy doanh trại được. Gióng về trời, Sơn Tinh về núi, An Dương Vương xuống biển
+ * rồi vẫn chỉ huy (hiển linh).
+ */
 export function tuongJoined(s: GameState, id: TuongId): boolean {
   if (id === 'giong') return giongReady(s);
   if (id === 'sonTinh') return sonJoined(s);
   if (id === 'anDuong') return advJoined(s);
+  if (id === 'caoLo') return caoLoJoined(s);
   return true;
 }
 
-/** Các tướng đã có, theo thứ tự Lạc tướng, Gióng, Sơn Tinh, An Dương Vương. */
+/** Các tướng đã có, theo thứ tự Lạc tướng, Gióng, Sơn Tinh, An Dương Vương, Cao Lỗ. */
 export const generals = (s: GameState): TuongId[] => TUONG_IDS.filter((t) => tuongJoined(s, t));
 
 /** Các doanh trại theo thứ tự dựng. */

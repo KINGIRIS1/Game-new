@@ -3,6 +3,8 @@
 
 import { startBattle, stepBattle, type Battle, type RaidSide } from './battle';
 import { updateCampaign } from './campaign';
+import { initialCaoLo } from './caoLo';
+import { huanTiers, initialThuThach } from './thuThach';
 import { inChapter4 } from './chuong4';
 import { advJoined, initialAdv, inChapter3, ruaVangCame, wallRings } from './coLoa';
 import { heroFor, inChapter2, initialSon, restAfter, sonJoined } from './son';
@@ -53,6 +55,7 @@ import {
   UNIT_TYPES,
   type BuildingType,
   type Chapter,
+  type ChallengeKind,
   type Cost,
   type Foe,
   type QuestDef,
@@ -60,6 +63,7 @@ import {
   type Resources,
   type GearId,
   type GiftId,
+  type HuanBranch,
   type Row,
   type TuongId,
   type Unlock,
@@ -149,6 +153,8 @@ export interface StageResult {
   reward: Cost;
   /** Lễ vật giành được khi thắng lần đầu màn này. */
   gift?: GiftId;
+  /** Trận thử thách: kiểu thử thách, huân công được (0 khi đã thắng thử thách này rồi, hay thua). */
+  challenge?: { kind: ChallengeKind; huan: number };
 }
 
 export interface CampaignState {
@@ -194,10 +200,32 @@ export interface AdvState {
   /** Đã đánh tan Triệu Đà dưới chân thành Cổ Loa (kết chương 3). */
   won: boolean;
   /**
-   * Trọng Thủy đã đánh tráo lẫy nỏ thần (đoạn truyện 3 của chương 4): từ đó khi giữ kinh đô An Dương Vương
-   * không còn kỹ năng Nỏ thần, và giặc kéo tới ba đợt thay phiên. Phó bản màn 17–25 vẫn đủ Nỏ thần.
+   * Trọng Thủy đã đánh tráo lẫy nỏ thần (thắng màn 28, đoạn truyện 3 của chương 4): từ đó khi giữ kinh đô An Dương
+   * Vương không còn kỹ năng Nỏ thần, và giặc kéo tới ba đợt thay phiên. Phó bản màn 17–25 vẫn đủ Nỏ thần.
    */
   layTrao: boolean;
+  /**
+   * Đã theo Rùa Vàng xuống biển (thắng màn 32, kết chương 4): từ đó không đứng ở Điện, không giữ kinh đô nữa;
+   * phó bản màn 17–25 vẫn hiển linh ra trận, vẫn chỉ huy doanh trại.
+   */
+  bien: boolean;
+}
+
+/** Thử thách phó bản và huân công (`thuThach.ts`). */
+export interface ThuThachState {
+  /** Các màn đã thắng thử thách, xếp tăng dần. */
+  won: number[];
+  /** Huân công đang có, chưa tiêu. */
+  huan: number;
+  /** Bậc huân công đã mua của từng nhánh (0–3). */
+  bac: Record<HuanBranch, number>;
+}
+
+export interface CaoLoState {
+  /** Đồng hồ chơi lúc Cao Lỗ hồi sức sau khi kiệt sức trong trận. */
+  restUntil: number;
+  /** Đã có Lệnh bắn (thắng màn 30 lần đầu). */
+  lenhBan: boolean;
 }
 
 /** Các đoạn truyện, hiện mỗi đoạn một lần theo đúng thứ tự. */
@@ -217,7 +245,13 @@ export type StoryId =
   | 'noThan'
   | 'kimQuy'
   | 'ketChuong3'
-  | 'cauHon';
+  | 'cauHon'
+  | 'caoLoCamQuan'
+  | 'layNo'
+  | 'longNgong'
+  | 'ngocTrai'
+  /** Màn hình Hết truyện sau đoạn cuối chương 4 (không phải hộp thoại). */
+  | 'hetTruyen';
 
 /** Một lời mời đổi hàng của thuyền buôn: đưa `give`, nhận `get`. */
 export interface Offer {
@@ -235,8 +269,8 @@ export interface Merchant {
   seq: number;
 }
 
-/** Phiên bản bản lưu hiện tại (11: kinh đô lớn, móng to hơn một ô). */
-export const SAVE_VERSION = 13;
+/** Phiên bản bản lưu hiện tại (11: kinh đô lớn; 12: khoảnh tự chọn; 13: lính nỏ, ụ nỏ; 14: Cao Lỗ, vua xuống biển). */
+export const SAVE_VERSION = 15;
 
 export interface GameState {
   version: typeof SAVE_VERSION;
@@ -267,6 +301,8 @@ export interface GameState {
   giong: GiongState;
   son: SonState;
   adv: AdvState;
+  caoLo: CaoLoState;
+  thuThach: ThuThachState;
   /** Hội Tết bánh chưng bánh giầy. */
   tet: TetState;
   story: { seen: StoryId[] };
@@ -346,7 +382,14 @@ export type FailReason =
   | 'hetLuotKhoanh'
   | 'canThanh'
   | 'daCoUNo'
-  | 'khongCoUNo';
+  | 'khongCoUNo'
+  | 'canKetChuong4'
+  | 'canCaoLo'
+  | 'caoLoKietSuc'
+  | 'thuThachKhoa'
+  | 'thuThachBinhChung'
+  | 'huanToiDa'
+  | 'thieuHuanCong';
 
 export type Result<T = undefined> = { ok: true; value: T } | { ok: false; reason: FailReason };
 
@@ -406,6 +449,8 @@ export function createInitialState(now: number): GameState {
     giong: initialGiong(),
     son: initialSon(),
     adv: initialAdv(),
+    caoLo: initialCaoLo(),
+    thuThach: initialThuThach(),
     tet: initialTet(),
     story: { seen: [] },
     settings: { muted: false },
@@ -601,6 +646,7 @@ export function unlocked(state: GameState, unlock: Unlock | undefined): boolean 
   if (unlock === 'chuong3') return inChapter3(state);
   if (unlock === 'ketChuong3') return state.adv.won;
   if (unlock === 'chuong4') return inChapter4(state);
+  if (unlock === 'ketChuong4') return state.adv.bien;
   return true;
 }
 
@@ -611,6 +657,7 @@ export const UNLOCK_REASON: Record<Unlock, FailReason> = {
   chuong3: 'canChuong3',
   ketChuong3: 'canKetChuong3',
   chuong4: 'canChuong4',
+  ketChuong4: 'canKetChuong4',
 };
 
 /**
@@ -1196,6 +1243,11 @@ export function hasCoLoa(state: GameState): boolean {
   return state.buildings.some((b) => b.type === 'denCoLoa' && !b.damaged);
 }
 
+/** Đền Cuông còn nguyên: thủy binh Triệu tới ít thuyền hơn. */
+export function hasCuong(state: GameState): boolean {
+  return state.buildings.some((b) => b.type === 'denCuong' && !b.damaged);
+}
+
 /**
  * Giặc trên bộ của chương 3: yêu tinh núi Thất Diệu tới khi Rùa Vàng hiện lên (thắng màn 19),
  * quân Triệu Đà từ khi An Dương Vương có nỏ thần. Ở giữa hai mốc ấy chỉ có lũ.
@@ -1224,8 +1276,14 @@ export function nextFoe(state: GameState): Foe {
   return land && raid.foe !== land ? land : 'thuy';
 }
 
-/** Đợt giặc này thuộc chương nào, để chọn tướng ra trận. Thủy binh như quân Triệu: An Dương Vương giữ kinh đô. */
-const FOE_CHAPTER: Record<Foe, Chapter> = { an: 1, thuy: 2, yeu: 3, trieu: 3, thuyBinh: 3 };
+/**
+ * Đợt giặc này thuộc chương nào, để chọn tướng ra trận. Quân Triệu ở chương 4 và thủy binh tính như trận chương 4:
+ * An Dương Vương giữ kinh đô tới khi xuống biển, rồi Cao Lỗ.
+ */
+function foeChapter(state: GameState, foe: Foe): Chapter {
+  if (foe === 'thuyBinh' || (foe === 'trieu' && inChapter4(state))) return 4;
+  return foe === 'an' ? 1 : foe === 'thuy' ? 2 : 3;
+}
 
 function finishRaid(state: GameState): void {
   const raid = state.raid;
@@ -1320,7 +1378,7 @@ function updateRaid(state: GameState, ms: number): void {
   if (raid.phase === 'warning' && state.clock >= raid.startsAt) {
     raid.phase = 'battle';
     const foe = raid.foe;
-    const hero = heroFor(state, FOE_CHAPTER[foe]);
+    const hero = heroFor(state, foeChapter(state, foe));
     raid.battle = startBattle(state, raid.wave + 1, raid.side, {
       // Lẫy nỏ thần đã bị tráo: giữ kinh đô thì An Dương Vương không còn Nỏ thần.
       hero: hero?.kind === 'anDuong' && state.adv.layTrao ? { ...hero, layTrao: true } : hero,
@@ -1335,7 +1393,9 @@ function updateRaid(state: GameState, ms: number): void {
               ? { foe, n: raid.thuyBinh + 1 }
               : null,
       crossbows: hasCoLoa(state),
+      fewerBoats: hasCuong(state),
       arms: state.arms,
+      huan: huanTiers(state),
     });
     return;
   }

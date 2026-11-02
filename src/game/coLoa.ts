@@ -20,7 +20,7 @@ export const KIM_QUY_AT = 22;
 export const CH3_LAST = 24;
 
 export function initialAdv(): AdvState {
-  return { no: false, restUntil: 0, kimQuy: false, won: false, layTrao: false };
+  return { no: false, restUntil: 0, kimQuy: false, won: false, layTrao: false, bien: false };
 }
 
 /** Nhận xong thưởng nhiệm vụ cuối chương 2 (Đền Tản Viên) thì sang chương 3. */
@@ -31,10 +31,10 @@ export const ruaVangCame = (s: GameState) => inChapter3(s) && s.campaign.cleared
 export const advJoined = (s: GameState) => s.adv.no;
 export const advResting = (s: GameState) => s.clock < s.adv.restUntil;
 
-/** An Dương Vương có ra trận lần này không, đã có Rùa Vàng che chở chưa. */
+/** An Dương Vương có ra trận lần này không, đã có Rùa Vàng che chở chưa. Xuống biển rồi thì hiển linh. */
 export function advSetup(s: GameState): HeroSetup | null {
   if (!advJoined(s) || advResting(s)) return null;
-  return { kind: 'anDuong', bamboo: false, glow: false, non: false, kimQuy: s.adv.kimQuy };
+  return { kind: 'anDuong', bamboo: false, glow: s.adv.bien, non: false, kimQuy: s.adv.kimQuy };
 }
 
 const tileIndex = (x: number, z: number) => z * GRID + x;
@@ -139,8 +139,8 @@ export function forgeNoThan(s: GameState): Result {
 
 export type AdvLook = 'vua' | 'noThan';
 
-/** Dáng An Dương Vương đứng trước Điện ở chương 3: chưa có nỏ thần, rồi cầm nỏ thần. */
+/** Dáng An Dương Vương đứng trước Điện từ chương 3: chưa có nỏ thần, rồi cầm nỏ thần. Xuống biển rồi thì không còn đứng. */
 export function advLook(s: GameState): AdvLook | null {
-  if (!inChapter3(s)) return null;
+  if (!inChapter3(s) || s.adv.bien) return null;
   return s.adv.no ? 'noThan' : 'vua';
 }

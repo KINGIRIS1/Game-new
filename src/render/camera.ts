@@ -123,9 +123,14 @@ export class IsoCamera {
 
   /** Phóng sao cho một vùng rộng `w`, cao `h` (đơn vị thế giới trên màn hình) vừa khít khung nhìn. */
   zoomToFit(w: number, h: number): void {
-    const base = this.baseHeight();
-    this.zoom = Math.min((base * this.width) / this.height / w, base / h);
+    this.zoom = this.fitZoom(w, h);
     this.apply();
+  }
+
+  /** Độ phóng để thấy vừa khung rộng `w`, cao `h` (đơn vị ô), chưa áp vào camera. */
+  fitZoom(w: number, h: number): number {
+    const base = this.baseHeight();
+    return Math.min((base * this.width) / this.height / w, base / h);
   }
 
   /** Điểm trên mặt đất (y = 0) nằm dưới vị trí màn hình. */

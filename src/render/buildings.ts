@@ -2115,6 +2115,98 @@ export function makeDenCoLoa(): THREE.Group {
   return g;
 }
 
+// ---------- Đền Cuông ----------
+
+/** Rêu và bụi cây bám trên mỏm đá. */
+const MOSS = 0x6f8a44;
+
+/** Tảng đá góc cạnh (khối mười hai mặt) tâm ở (x, y, z), cỡ `s` theo ba chiều. */
+function boulder(b: ShapeBuilder, s: [number, number, number], color: number, x: number, y: number, z: number, ry = 0): void {
+  b.add(new THREE.DodecahedronGeometry(1, 0), color, x, y, z, [0.15, ry, -0.1], s);
+}
+
+/**
+ * Đền thờ An Dương Vương ở chân núi Mộ Dạ, nơi vua theo Rùa Vàng xuống biển: sau lưng là mỏm núi đá lởm chởm
+ * có rêu và cây bám, đền mái thuyền cong vút (mái tranh như các đền khác) trên nền đá có bậc lên.
+ * Sân trước có tượng Rùa Vàng trên bệ đá quay mặt ra phía sông (+z), bên cạnh là giếng nhỏ thành đá
+ * (giếng Trọng Thủy) có giá gỗ và vò nước, giữa sân là lư hương đồng.
+ */
+export function makeDenCuong(): THREE.Group {
+  const m = new ToonModel();
+  const p = m.plain;
+  // Nền đá và sân lát đá sáng phía trước.
+  p.box(2.9, 0.16, 2.9, C.rockDark, 0, 0.08, 0);
+  p.box(2.5, 0.05, 1.15, C.rock, 0, 0.18, 0.82);
+
+  // Mỏm núi đá sau lưng đền: ngọn cao bên phải, vai thấp bên trái, chân là đá tảng lăn lóc.
+  boulder(p, [0.8, 0.6, 0.62], C.rockDark, 0.78, 0.55, -0.88, 0.9);
+  boulder(p, [0.3, 0.42, 0.4], C.rock, 1.2, 0.45, -0.32, 0.5);
+  boulder(p, [0.62, 1.45, 0.5], C.rock, 0.72, 1.25, -1.0, 0.4);
+  boulder(p, [0.5, 1.0, 0.45], C.rockDark, 0.15, 1.45, -1.12, 1.1);
+  boulder(p, [0.42, 0.75, 0.4], C.rock, 0.88, 2.5, -1.05, 2.0);
+  boulder(p, [0.55, 0.75, 0.42], C.rockDark, -0.6, 0.8, -1.08, 0.7);
+  boulder(p, [0.4, 0.55, 0.38], C.rock, -1.08, 0.6, -1.0, 2.6);
+  boulder(p, [0.34, 0.5, 0.3], C.rock, -0.3, 1.4, -1.15, 1.7);
+  boulder(p, [0.3, 0.22, 0.26], C.rockDark, 1.25, 0.26, -0.45, 0.3);
+  boulder(p, [0.24, 0.18, 0.22], C.rock, -1.3, 0.24, -0.4, 1.4);
+  // Rêu, bụi cây và một cây tùng nhỏ mọc trên đá.
+  for (const [x, y, z, r] of [[0.42, 1.75, -0.8, 0.2], [-0.75, 1.2, -0.85, 0.18], [1.18, 1.1, -0.75, 0.16], [-0.1, 0.95, -0.82, 0.14]] as const) {
+    p.sphere(r, MOSS, x, y, z, [1.3, 0.7, 1], 7);
+  }
+  p.cyl(0.035, 0.05, 0.6, C.trunk, 0.7, 3.15, -1.05, [0, 0, -0.35], 5);
+  p.sphere(0.24, C.leaf[2], 0.85, 3.45, -1.05, [1.4, 0.55, 1.1], 7);
+  p.sphere(0.18, C.leaf[0], 0.58, 3.3, -0.95, [1.4, 0.55, 1.1], 7);
+
+  // Nền đền đá cao có bậc lên, đền mái thuyền.
+  p.box(2.1, 0.3, 1.3, C.rock, 0, 0.31, -0.3);
+  p.box(0.7, 0.1, 0.22, C.rockDark, 0, 0.21, 0.44);
+  p.box(0.7, 0.1, 0.2, C.rockDark, 0, 0.11, 0.6);
+  stiltHall(m, { x: 0, z: -0.32, w: 1.7, d: 1.0, postH: 0.78, roofL: 2.4, roofW: 1.35, lift: 0.55 });
+  const roofTop = 0.78 + 0.68 + 1.35 * 0.4 + 0.55;
+  bird(m, 1.1, roofTop, -0.32, 1, 0.72);
+  bird(m, -1.1, roofTop, -0.32, -1, 0.72);
+
+  // Lư hương đồng ba chân giữa sân, nén hương đỏ lửa.
+  for (let i = 0; i < 3; i++) {
+    const a = (i / 3) * Math.PI * 2;
+    p.cyl(0.018, 0.018, 0.14, C.bronzeDark, 0.12 + Math.cos(a) * 0.08, 0.27, 0.62 + Math.sin(a) * 0.08, undefined, 5);
+  }
+  m.band.cyl(0.13, 0.1, 0.12, C.bronze, 0.12, 0.38, 0.62, undefined, 10);
+  for (const dx of [-0.04, 0, 0.04]) {
+    p.cyl(0.008, 0.008, 0.2, C.woodDark, 0.12 + dx, 0.53, 0.62, [0, 0, dx * 3], 4);
+    m.glow.sphere(0.014, C.ember, 0.12 + dx * 1.6, 0.63, 0.62, [1, 1, 1], 5);
+  }
+
+  // Bệ tượng Rùa Vàng.
+  p.box(0.95, 0.16, 1.1, C.rock, -0.68, 0.28, 0.86);
+  p.box(1.03, 0.04, 1.16, C.rockDark, -0.68, 0.2, 0.86);
+
+  // Giếng nhỏ thành đá: vòng đá xếp, nước sẫm trong lòng giếng, giá gỗ có gàu, vò nước bên cạnh.
+  const WELL = { x: 0.82, z: 0.98 };
+  for (let i = 0; i < 9; i++) {
+    const a = (i / 9) * Math.PI * 2;
+    p.box(0.15, 0.2, 0.1, i % 2 ? C.rock : C.rockDark, WELL.x + Math.cos(a) * 0.25, 0.3, WELL.z + Math.sin(a) * 0.25, [0, -a + Math.PI / 2, 0]);
+  }
+  p.cyl(0.22, 0.22, 0.02, 0x2c5560, WELL.x, 0.33, WELL.z, undefined, 12);
+  for (const s of [-1, 1]) p.cyl(0.022, 0.026, 0.62, C.woodDark, WELL.x + s * 0.36, 0.51, WELL.z, undefined, 5);
+  p.cyl(0.018, 0.018, 0.78, C.wood, WELL.x, 0.8, WELL.z, [0, 0, Math.PI / 2], 5);
+  p.cyl(0.006, 0.006, 0.3, C.arrow, WELL.x, 0.65, WELL.z, undefined, 3);
+  p.cyl(0.05, 0.04, 0.07, C.woodLight, WELL.x, 0.48, WELL.z, undefined, 7);
+  p.sphere(0.09, 0xa85834, WELL.x + 0.28, 0.3, WELL.z + 0.34, [1, 1.15, 1], 8);
+  p.cyl(0.045, 0.055, 0.04, 0x8a4428, WELL.x + 0.28, 0.4, WELL.z + 0.34, undefined, 7);
+
+  banner(m, -1.3, 0.2, 2.2, C.red);
+  banner(m, 1.28, 0.2, 2.2, C.red);
+  const g = m.group();
+  // Rùa Vàng ngóc đầu nhìn ra phía sông (+z).
+  const turtle = bakeRuaVang();
+  turtle.scale.setScalar(0.5);
+  turtle.position.set(-0.68, 0.38, 0.8);
+  turtle.rotation.x = -0.12;
+  g.add(turtle);
+  return g;
+}
+
 // ---------- Hội Tết: ruộng nếp, vườn đậu lá dong, chuồng lợn, bếp gói bánh ----------
 
 /** Bông lúa nếp chín màu ngà, thân lúa xanh. */
@@ -2545,6 +2637,7 @@ export function buildingModel(type: BuildingType, level: number): THREE.Group {
   if (type === 'denPhuDong') return makeDenPhuDong();
   if (type === 'denTanVien') return makeDenTanVien();
   if (type === 'denCoLoa') return makeDenCoLoa();
+  if (type === 'denCuong') return makeDenCuong();
   if (type === 'ruongNep') return makeRuongNep(level);
   if (type === 'vuon') return makeVuon(level);
   if (type === 'chuongLon') return makeChuongLon(level);

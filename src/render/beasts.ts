@@ -1,12 +1,13 @@
 // Thú có khung xương (rig.ts) và người cưỡi (soldier.ts): voi chiến có Lạc tướng cưỡi, chiến xa và đại tướng Ân,
-// kỵ binh Triệu, Triệu Đà, hổ tinh, gà trắng nghìn năm, Rùa Vàng. Gốc là mặt đất dưới thú, đầu hướng +z.
+// kỵ binh Triệu, Triệu Đà, hổ tinh, gà trắng nghìn năm, Rùa Vàng, ngựa vua chở An Dương Vương và Mỵ Châu.
+// Gốc là mặt đất dưới thú, đầu hướng +z.
 // Thú bốn chân đi theo nhịp chéo (chân trước trái cùng chân sau phải); ngã thì lăn nghiêng (`userData.fall`).
 
 import * as THREE from 'three';
 import type { FighterKind } from '../game/battle';
-import { HUMAN, strikeCurve, type Human, type HumanRig } from './body';
+import { HUMAN, beginPose, featherCrown, hairCap, humanBody, humanHead, lerp, strikeCurve, type Human, type HumanRig } from './body';
 import { C } from './palette';
-import { RigBuilder, bakeRig, moveBones, resetBones, skinRig, type Act, type BoneDef, type Bones, type Poser } from './rig';
+import { RigBuilder, bakeRig, moveBones, resetBones, skinRig, type Act, type BoneDef, type Bones, type Poser, type RigSlots } from './rig';
 import { drawRider, poseRider, type RiderKind } from './soldier';
 import { IRON, IRON_DARK } from './weapons';
 
@@ -687,4 +688,231 @@ export function bakeRuaVang(): THREE.Group {
   const r = new RigBuilder(TURTLE);
   drawTurtle(r);
   return bakeRig(r.build(), (b) => poseTurtle(b, { act: 'stand' }));
+}
+
+// ---------- Ngựa vua ----------
+
+/** Ngựa vua to hơn ngựa kỵ binh: lông hồng (nâu đỏ), bờm đen. */
+const K_ROYAL = 1.15;
+const ROYAL_COAT = 0x9a5a2a;
+/** Gốc thân người (giữa hai bàn chân khi đứng) của vua ngồi trước và Mỵ Châu ngồi sau, và cỡ thân mỗi người. */
+const KING_AT: V3 = [0, 0.98, 0.24];
+const K_KING = 1.1;
+const PRINCESS_AT: V3 = [0.05, 0.97, -0.34];
+const K_PRINCESS = 0.9;
+/** Tiền tố xương của Mỵ Châu (khung xương người thứ hai trên cùng lưng ngựa). */
+const MC = 'mc';
+/** Áo đỏ hồng của công chúa, áo lông ngỗng trắng. */
+const ROSE = 0xd0546a;
+const GOOSE = 0xfaf6ec;
+const GOOSE_SHADE = 0xe2dccb;
+/** Chỗ treo hai vạt áo lông ngỗng (tọa độ thân người): sau gáy, và giữa lưng. */
+const CAPE_TOP: V3 = [0, 0.57, -0.13];
+const CAPE_MID: V3 = [0, 0.36, -0.17];
+
+/** Đổi tên mọi xương người thêm tiền tố `pre`; xương cha ngoài thân người (lưng ngựa) giữ nguyên. */
+function prefixBones(defs: Defs, pre: string): Defs {
+  const out: Defs = {};
+  for (const [k, d] of Object.entries(defs)) out[pre + k] = { parent: d.parent && d.parent in defs ? pre + d.parent : d.parent, at: d.at };
+  return out;
+}
+
+/** Vẽ thân người thứ hai trong cùng khung xương: các hàm vẽ người (body.ts) gọi `on('hips')`... thành `on(pre + 'hips')`. */
+function prefixRig(r: Rig, pre: string): HumanRig {
+  const rig = {
+    on: (b: string) => r.on(pre + b),
+    local: (b: string, origin: V3, rot: V3 | null, draw: (s: RigSlots) => void) => r.local(pre + b, origin, rot, draw),
+  };
+  return rig as unknown as HumanRig;
+}
+
+/** Các xương người có tiền tố `pre`, gọi theo tên thường để dùng các tư thế chung (body.ts). */
+function humanView(b: B, pre: string): Human {
+  const out: Record<string, THREE.Bone> = {};
+  for (const k of Object.keys(HUMAN)) out[k] = b[pre + k];
+  return out as Human;
+}
+
+/** Điểm trên thân người (tọa độ thân) đặt ở `at`, cỡ `k`, ra tọa độ mô hình. */
+const onBody = (at: V3, k: number, v: V3): V3 => [at[0] + v[0] * k, at[1] + v[1] * k, at[2] + v[2] * k];
+
+const ROYAL_HORSE: Defs = {
+  ...BASE,
+  ...moveBones(HORSE, 'base', [0, 0, 0], K_ROYAL),
+  ...moveBones(HUMAN, 'qBody', KING_AT, K_KING),
+  ...prefixBones(moveBones(HUMAN, 'qBody', PRINCESS_AT, K_PRINCESS), MC),
+  [MC + 'Cape']: { parent: MC + 'chest', at: onBody(PRINCESS_AT, K_PRINCESS, CAPE_TOP) },
+  [MC + 'Cape2']: { parent: MC + 'Cape', at: onBody(PRINCESS_AT, K_PRINCESS, CAPE_MID) },
+};
+
+/** Ngựa vua: yên dài phủ vải đỏ hoa văn viền vàng cho hai người ngồi, cương vàng, chùm lông đỏ trên đầu, lục lạc đồng. */
+function drawRoyalMount(r: Rig): void {
+  r.place([0, 0, 0], K_ROYAL, () => {
+    drawHorse(r, ROYAL_COAT, null);
+    // Tấm phủ lưng đỏ hoa văn trùm như vòm trên lưng ngựa, mặt trống đồng hai bên sườn, tua vàng quanh mép.
+    const body = r.on('qBody');
+    const capTheta = Math.PI * 0.4;
+    body.band.add(new THREE.SphereGeometry(1, 16, 6, 0, Math.PI * 2, 0, capTheta), C.red, 0, 0.785, -0.04, [0, 0, 0], [0.28, 0.272, 0.37]);
+    for (let i = 0; i < 12; i++) {
+      const a = ((i + 0.5) / 12) * Math.PI * 2;
+      const rim = Math.sin(capTheta);
+      body.plain.cone(0.026, 0.07, C.gold, Math.sin(a) * 0.28 * rim, 0.785 + 0.272 * Math.cos(capTheta) - 0.03, -0.04 + Math.cos(a) * 0.37 * rim, [0, 0, Math.PI], 5);
+    }
+    for (const s of [-1, 1]) {
+      body.drum.cyl(0.07, 0.07, 0.02, C.gold, s * 0.245, 0.935, -0.04, [0, 0, -s * (Math.PI / 2 - 0.57)], 12);
+    }
+    // Đai ngực đỏ có lục lạc đồng.
+    const neck = r.on('qNeck');
+    neck.plain.add(new THREE.TorusGeometry(0.15, 0.022, 5, 14), C.red, 0, 0.9, 0.36, [Math.PI / 2 - 0.5, 0, 0]);
+    neck.plain.sphere(0.04, C.bronzeLight, 0, 0.8, 0.47, [1, 1, 1], 6);
+    // Cương vàng quanh mõm, vành trán vàng, chùm lông đỏ.
+    const head = r.on('qHead').plain;
+    head.box(0.19, 0.035, 0.035, C.gold, 0, 1.36, 0.58, [0.35, 0, 0]);
+    head.box(0.19, 0.03, 0.03, C.gold, 0, 1.2, 0.76, [0.35, 0, 0]);
+    head.box(0.1, 0.12, 0.03, C.gold, 0, 1.36, 0.6, [0.35, 0, 0]);
+    head.cone(0.05, 0.22, C.red, 0, 1.5, 0.48, [-0.3, 0, 0], 6);
+    head.sphere(0.03, C.gold, 0, 1.4, 0.5, [1, 1, 1], 6);
+  });
+  // Dây cương từ hàm ngựa về tay vua.
+  const reins = r.on('qNeck').plain;
+  for (const s of [-1, 1]) reins.box(0.014, 0.014, 0.5, C.gold, s * 0.105, 1.4, 0.71, [0.12, -s * 0.06, 0]);
+}
+
+/** An Dương Vương cưỡi ngựa: hoàng bào đỏ, giáp ngực đồng chạm mặt trống, vương miện vàng, mũ lông chim, râu đen. */
+function drawKingRider(h: HumanRig): void {
+  humanBody(h, { legs: C.red, cloth: C.red, flaps: false, top: C.bronze, sleeves: C.red, belt: C.gold, armband: C.gold });
+  const chest = h.on('chest');
+  chest.band.cyl(0.155, 0.136, 0.22, C.bronze, 0, 0.485, 0, undefined, 12);
+  chest.plain.cyl(0.118, 0.132, 0.034, C.gold, 0, 0.58, 0, undefined, 12);
+  chest.drum.cyl(0.07, 0.07, 0.022, C.gold, 0, 0.495, 0.137, [Math.PI / 2, 0, 0], 14);
+  for (const s of [-1, 1]) chest.plain.sphere(0.085, C.bronzeLight, s * 0.18, 0.57, 0, [1.1, 0.75, 1.05], 8);
+  humanHead(h, { brows: true, mustache: C.hair });
+  hairCap(h);
+  const head = h.on('head');
+  head.plain.cone(0.055, 0.13, C.hair, 0, 0.62, 0.16, [Math.PI + 0.28, 0, 0], 6);
+  head.band.cyl(0.228, 0.232, 0.062, C.gold, 0, 0.835, -0.03, undefined, 16);
+  head.plain.box(0.075, 0.075, 0.032, C.gold, 0, 0.85, 0.198, [0, 0, Math.PI / 4]);
+  head.plain.sphere(0.026, C.red, 0, 0.85, 0.215, [1, 1.2, 0.6], 7);
+  for (let i = 0; i < 10; i++) {
+    const a = (i / 10) * Math.PI * 2;
+    head.plain.cone(0.026, i % 2 === 0 ? 0.085 : 0.058, C.gold, Math.sin(a) * 0.222, 0.89, Math.cos(a) * 0.222 - 0.03, undefined, 4);
+  }
+  featherCrown(h, [C.red, C.gold, C.cream, C.ember], { count: 9, len: 0.42, spread: 0.23 });
+}
+
+/**
+ * Mỵ Châu ngồi sau: tóc đen dài xõa lưng cài trâm vàng, áo đỏ hồng, kiềng vàng, áo lông ngỗng trắng khoác vai
+ * (cổ áo lông xù và hai vạt lông xếp lớp, gắn hai xương để bay phần phật khi ngựa phi). Vẽ như đứng ở gốc.
+ */
+function drawMyChau(r: Rig): void {
+  const h = prefixRig(r, MC);
+  humanBody(h, { legs: ROSE, cloth: ROSE, flaps: false, top: ROSE, sleeves: ROSE, belt: C.gold, armband: C.gold });
+  const chest = h.on('chest').plain;
+  chest.add(new THREE.TorusGeometry(0.075, 0.016, 5, 14), C.gold, 0, 0.575, 0.03, [Math.PI / 2 + 0.25, 0, 0]);
+  // Cổ áo lông ngỗng xù quanh vai.
+  for (let i = 0; i < 9; i++) {
+    const a = (i / 8) * Math.PI;
+    chest.sphere(0.06, i % 2 ? GOOSE_SHADE : GOOSE, Math.cos(a) * 0.15, 0.585, -Math.sin(a) * 0.12 + 0.01, [1.3, 0.7, 1], 6);
+  }
+  humanHead(h);
+  hairCap(h);
+  const head = h.on('head').plain;
+  // Tóc dài xõa sau lưng, tóc mai hai bên má, búi tóc cài trâm vàng, vành vàng trên trán.
+  head.sphere(0.18, C.hair, 0, 0.6, -0.15, [1, 1.45, 0.5], 9);
+  for (const s of [-1, 1]) head.box(0.05, 0.22, 0.09, C.hair, s * 0.19, 0.7, 0.04, [0, 0, -s * 0.12]);
+  head.sphere(0.07, C.hair, 0, 0.98, -0.1, [1, 0.85, 1], 7);
+  head.cyl(0.01, 0.01, 0.22, C.gold, 0, 0.99, -0.1, [0, 0, Math.PI / 2 - 0.3], 5);
+  head.sphere(0.025, C.red, 0.1, 1.02, -0.1, [1, 1, 1], 6);
+  head.cyl(0.222, 0.226, 0.022, C.gold, 0, 0.84, -0.03, undefined, 14);
+  // Áo lông ngỗng: mỗi vạt một tấm lót trắng, ngoài phủ lông xếp lớp như vảy (lông trắng xen lông ngà, hàng sau so le
+  // hàng trước); vạt dưới rộng hơn, mép dưới lông dài lởm chởm.
+  for (const [bone, top, bottom, w0, w1] of [
+    [MC + 'Cape', CAPE_TOP, CAPE_MID[1] - 0.02, 0.34, 0.4],
+    [MC + 'Cape2', CAPE_MID, 0.1, 0.4, 0.5],
+  ] as const) {
+    const p = r.on(bone).plain;
+    const h = top[1] - bottom;
+    p.box((w0 + w1) / 2, h, 0.025, GOOSE_SHADE, 0, top[1] - h / 2, top[2] - 0.01);
+    const rows = Math.round(h / 0.06);
+    for (let row = 0; row < rows; row++) {
+      const k = (row + 0.5) / rows;
+      const y = top[1] - k * h;
+      const half = lerp(w0, w1, k) / 2;
+      const n = 5;
+      for (let i = 0; i < n; i++) {
+        const x = lerp(-half, half, (i + (row % 2 ? 0.75 : 0.25)) / n);
+        const tip = bone === MC + 'Cape2' && row === rows - 1;
+        p.sphere(0.05, (row + i) % 2 ? GOOSE : GOOSE_SHADE, x, y - (tip ? 0.03 : 0), top[2] - 0.03 - row * 0.004, [1.05, tip ? 2.2 : 1.6, 0.32], 6);
+      }
+    }
+  }
+}
+
+/**
+ * Ngựa phi nước đại: hai chân trước cùng vươn, hai chân sau cùng đạp, lệch nhau chút; thân bổng lên rồi chồm xuống,
+ * cổ gật ngược thân, đuôi bay ra sau. Trả về sin pha.
+ */
+function gallop(b: B, phase: number, stride: number): number {
+  const st = stride * 1.5;
+  const s = Math.sin(phase);
+  b.qFL.rotation.x = -st * s;
+  b.qFR.rotation.x = -st * Math.sin(phase - 0.45);
+  b.qBL.rotation.x = st * Math.sin(phase - 0.2);
+  b.qBR.rotation.x = st * Math.sin(phase - 0.65);
+  b.qBody.position.y += 0.05 * s - HORSE_LEG * K_ROYAL * (1 - Math.cos(st)) * 0.5;
+  b.qBody.rotation.x = 0.09 * Math.sin(phase + 1.2);
+  b.qNeck.rotation.x = -0.14 * Math.sin(phase + 1.2) - 0.1;
+  b.qTail.rotation.x = 0.55 + 0.12 * Math.sin(phase * 2);
+  return s;
+}
+
+/** Ngựa vua phi (đi) hay đứng chờ; vua cầm cương, Mỵ Châu ôm lưng vua, áo lông ngỗng bay theo gió. */
+function poseRoyalHorse(b: B, a: Act): void {
+  resetBones(b);
+  const king = humanView(b, '');
+  const princess = humanView(b, MC);
+  const t = a.time ?? 0;
+  beginPose(king, t);
+  beginPose(princess, t);
+  const run = a.act === 'walk';
+  const ph = a.phase ?? 0;
+  const sw = run ? gallop(b, ph, a.stride ?? 0.5) : 0;
+  if (!run) poseHorse(b, { act: 'stand', time: t }, 0);
+  // Vua: hai tay cầm cương trước bụng, ngả người tới trước khi phi.
+  king.chest.rotation.x = run ? 0.14 + 0.04 * sw : 0.03;
+  king.armL.rotation.set(-1.0 + 0.06 * sw, 0, 0.12);
+  king.armR.rotation.set(-1.0 + 0.06 * sw, 0, -0.12);
+  // Mỵ Châu: hai tay ôm lưng vua, nghiêng người ló ra sau vai vua, ngoái đầu nhìn sang bên.
+  princess.chest.rotation.set(run ? 0.3 + 0.04 * sw : 0.2, 0, -0.14);
+  princess.armL.rotation.set(-1.3, 0, 0.22);
+  princess.armR.rotation.set(-1.3, 0, -0.22);
+  princess.head.rotation.set(-0.05, 0.45, 0);
+  for (const [k, x] of [
+    ['legL', -1],
+    ['legR', 1],
+  ] as const) {
+    king[k].rotation.set(-0.4, 0, x * 0.85);
+    princess[k].rotation.set(-0.4, 0, x * 0.85);
+  }
+  // Áo lông ngỗng: vạt trên phủ vai, vạt dưới bay phần phật ra sau khi phi; đứng thì buông rủ xuống lưng ngựa.
+  const wave = run ? ph * 2 : t * 1.5;
+  const amp = run ? 1 : 0.3;
+  b[MC + 'Cape'].rotation.x = (run ? 0.5 : 0.3) + 0.06 * amp * Math.sin(wave);
+  b[MC + 'Cape2'].rotation.x = (run ? 0.55 : 0.15) + 0.2 * amp * Math.sin(wave - 1.0);
+}
+
+/**
+ * Ngựa vua chở An Dương Vương ngồi trước, Mỵ Châu ngồi sau (cảnh màn 32, vua chạy ra biển): chỉ là cảnh, không đánh.
+ * `userData.pose({ act: 'walk', phase, stride })` là phi nước đại; `stand` là đứng chờ.
+ */
+export function makeRoyalHorse(): THREE.Group {
+  const r = new RigBuilder(ROYAL_HORSE, DETAIL);
+  drawRoyalMount(r);
+  r.place(KING_AT, K_KING, () => drawKingRider(r as unknown as HumanRig));
+  r.place(PRINCESS_AT, K_PRINCESS, () => drawMyChau(r));
+  const { group, bones } = skinRig(r.build());
+  const pose: Poser = (a) => poseRoyalHorse(bones, a);
+  pose({ act: 'stand' });
+  group.userData.pose = pose;
+  return group;
 }

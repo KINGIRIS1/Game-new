@@ -31,7 +31,7 @@ import {
 } from './game';
 import { RIVER_START } from './map';
 import { DIEN, DIEN_END, edge, setDien } from './testmap';
-import { deserialize, serialize } from './save';
+import { SAVE_VERSION, deserialize, serialize } from './save';
 import { heroFor } from './son';
 import { markStory, pendingStory } from './story';
 
@@ -50,7 +50,7 @@ function ch4(): GameState {
   for (const g of GIFT_IDS) s.son.gifts[g] = true;
   s.son.non = true;
   s.son.won = true;
-  s.adv = { no: true, restUntil: 0, kimQuy: true, won: true, layTrao: false };
+  s.adv = { no: true, restUntil: 0, kimQuy: true, won: true, layTrao: false, bien: false };
   s.campaign.cleared = 24;
   const barracks = place(s, 'doanhTrai', DIEN_END + 1, DIEN_END + 1);
   if (!barracks.ok) throw new Error(barracks.reason);
@@ -386,7 +386,7 @@ describe('truyện, nhiệm vụ và bản lưu chương 4', () => {
     }
     old.raid.nextAt = old.clock + 10 * 60_000;
     const back = deserialize(JSON.stringify(old))!;
-    expect(back.version).toBe(13);
+    expect(back.version).toBe(SAVE_VERSION);
     expect(back.troops.no).toBe(0);
     expect(back.arms.no).toBe(0);
     expect(back.campaign.rows.no).toBe('hau');

@@ -4,6 +4,7 @@
 import * as THREE from 'three';
 import { BUILDINGS, FIELD, isRoad, type BuildingType, type Terrain, type TuongId } from '../game/defs';
 import { raidSpawnBand, type Battle, type RaidSide } from '../game/battle';
+import { caoLoAtDien } from '../game/caoLo';
 import { advLook, inChapter3, ruaVangCame, type AdvLook } from '../game/coLoa';
 import { heroPost } from '../game/doanhTrai';
 import { dienLevel, type Building, type GameState } from '../game/game';
@@ -23,7 +24,7 @@ import { DOANH_TRAI_HERO } from './congTrinh/doanhTrai';
 import { CONG_TRINH, lotModel } from './congTrinh/index';
 import { makeRuaVang } from './beasts';
 import { buildDecor, disposeDecor, isBatchedDecor, type DecorSpot } from './decor';
-import { makeAnDuong, makeGiong, makeSonTinh } from './heroes';
+import { makeAnDuong, makeCaoLo, makeGiong, makeSonTinh } from './heroes';
 import { addSunLights, type SunLights } from './lights';
 import {
   buildCitadel,
@@ -267,6 +268,8 @@ export class World {
   private son?: { obj: THREE.Group; look: SonLook; key: string };
   /** An Dương Vương đứng trước Điện ở chương 3, cạnh cột đá thề. */
   private adv?: { obj: THREE.Group; look: AdvLook; key: string; y: number };
+  /** Cao Lỗ đứng trước Điện từ khi cầm quân (chương 4), cạnh An Dương Vương; vua xuống biển thì đứng chỗ của vua. */
+  private caoLo?: { obj: THREE.Group; key: string; y: number };
   private pillar?: { obj: THREE.Group; key: string };
   /** Cảnh Tết trước Điện và quanh bếp gói bánh, chỉ có lúc Tết mở. */
   private tetDecor?: THREE.Group;
@@ -629,6 +632,7 @@ export class World {
     this.syncGiong(state);
     this.syncSon(state);
     this.syncAdv(state);
+    this.syncCaoLo(state);
     this.syncTurtle(state);
     this.syncTet(state);
 
@@ -1098,6 +1102,24 @@ export class World {
     this.pillar = { obj, key: pkey };
   }
 
+  /** Cao Lỗ đứng trước Điện cạnh An Dương Vương, lùi sang trái một bước; vua xuống biển rồi thì đứng chỗ của vua. */
+  private syncCaoLo(state: GameState): void {
+    const dien = state.buildings.find((b) => b.type === 'dien');
+    const base = dien && caoLoAtDien(state) ? this.heroSpot(dien) : null;
+    const spot = base && advLook(state) ? { ...base, x: base.x - 0.6, z: base.z + 0.6 } : base;
+    const key = spot ? `${spot.x}:${spot.y}:${spot.z}` : '';
+    if (this.caoLo?.key === key) return;
+    if (this.caoLo) this.scene.remove(this.caoLo.obj);
+    this.caoLo = undefined;
+    if (!spot) return;
+    const obj = makeCaoLo();
+    obj.scale.setScalar(0.9);
+    obj.position.set(spot.x, spot.y, spot.z);
+    obj.rotation.y = 0.4;
+    this.scene.add(obj);
+    this.caoLo = { obj, key, y: spot.y };
+  }
+
   /**
    * Cảnh Tết, chỉ lúc Tết mở, trong sân chầu của Điện (khối `e`, `m` trong bản vẽ Điện): cây nêu bên trái lối giữa,
    * dây cờ đuôi nheo căng từ ngọn nêu tới hai cột cờ hai bên lối, mâm bánh đã dâng bày trước thềm (chỉ loại đã dâng),
@@ -1259,12 +1281,13 @@ export class World {
     }
   }
 
-  /** Người chơi chạm vào tướng (ở doanh trại hay trước Điện): Gióng, Sơn Tinh hay An Dương Vương. */
-  pickHero(clientX: number, clientY: number): 'giong' | 'son' | 'adv' | null {
+  /** Người chơi chạm vào tướng (ở doanh trại hay trước Điện): Gióng, Sơn Tinh, An Dương Vương hay Cao Lỗ. */
+  pickHero(clientX: number, clientY: number): 'giong' | 'son' | 'adv' | 'caoLo' | null {
     const ray = this.view.setRay(clientX, clientY);
     if (this.giong && ray.intersectObject(this.giong.obj, true).length) return 'giong';
     if (this.son && ray.intersectObject(this.son.obj, true).length) return 'son';
     if (this.adv && ray.intersectObject(this.adv.obj, true).length) return 'adv';
+    if (this.caoLo && ray.intersectObject(this.caoLo.obj, true).length) return 'caoLo';
     return null;
   }
 
@@ -1401,14 +1424,34 @@ export class World {
     this.field?.update(null, 0);
   }
 
-  /** Vừa khít bề ngang bãi, chừa chỗ cho lính đứng sát mép. */
+  /**
+   * Vừa khít bề ngang bãi, chừa chỗ cho lính đứng sát mép. Bãi Mộ Dạ (màn cầm cự) nhìn rộng sang phải hơn để thấy
+   * đường ngựa vua chạy dọc mép bãi và biển.
+   */
   private fitField(): void {
-    this.view.zoomToFit(FIELD.w + 1.5, FIELD.d * 0.62 + 3);
+    const v = this.view;
+    if (this.field?.current === 'moDa') {
+      v.zoomToFit(FIELD.w + 6, FIELD.d * 0.62 + 5);
+      // Dời tâm nhìn sang phải bãi chừng 2 ô (bãi xoay 45°).
+      v.target.set(Math.SQRT1_2 * 2, 0, -Math.SQRT1_2 * 2);
+      return;
+    }
+    v.zoomToFit(FIELD.w + 1.5, FIELD.d * 0.62 + 3);
   }
 
-  /** Vẽ trận ngoài bãi đang diễn ra. */
+  /** Vẽ trận ngoài bãi đang diễn ra. Cảnh kết chương có điểm nhìn riêng (Rùa Vàng ở biển) thì camera lướt tới đó. */
   updateField(battle: Battle | null, dt: number): void {
     this.field?.update(battle, dt);
+    const focus = this.inField ? this.field?.focus() : null;
+    if (!focus) return;
+    const v = this.view;
+    v.bounds = { min: -30, max: 30 };
+    const k = Math.min(1, dt * 1.2);
+    v.target.x += (focus.x - v.target.x) * k;
+    v.target.z += (focus.z - v.target.z) * k;
+    const wide = v.fitZoom(FIELD.w + 16, FIELD.d * 0.8 + 10);
+    v.zoom += (wide - v.zoom) * k;
+    v.apply();
   }
 
   /** Bóng mờ của công trình sắp đặt ở mặt đất bậc `h`, viền xanh nếu đặt được, đỏ nếu không. */
@@ -1530,6 +1573,12 @@ export class World {
       // An Dương Vương đứng nhún nhẹ, nỏ (hay rìu) khẽ đưa lên xuống.
       this.adv.obj.position.y = this.adv.y + Math.abs(Math.sin(t * 1.6)) * 0.02;
       (this.adv.obj.userData.pose as Poser | undefined)?.({ act: 'stand', time: t });
+    }
+
+    if (this.caoLo) {
+      // Cao Lỗ đứng nghỉ, nỏ cầm ngang thắt lưng, khẽ nhún.
+      this.caoLo.obj.position.y = this.caoLo.y + Math.abs(Math.sin(t * 1.5 + 1)) * 0.02;
+      (this.caoLo.obj.userData.pose as Poser | undefined)?.({ act: 'stand', time: t + 2 });
     }
 
     if (this.turtle) {
