@@ -79,3 +79,22 @@ describe('mô hình vừa móng kinh đô lớn', () => {
     }
   });
 });
+
+describe('cây dại, tảng đá mọc trên ô trống', () => {
+  it('mọi dáng nằm gọn trong một ô (kể cả lệch tâm 0,06 ô), cao vừa phải', async () => {
+    const { CAY_DA_KINDS, CAY_DA_VARIANTS } = await import('../game/defs');
+    const { makeCayDa } = await import('./cayDa');
+    for (const kind of CAY_DA_KINDS) {
+      for (let v = 0; v < CAY_DA_VARIANTS; v++) {
+        const g = makeCayDa(kind, v);
+        g.updateMatrixWorld(true);
+        const box = new THREE.Box3().setFromObject(g);
+        const over = Math.max(-box.min.x, box.max.x, -box.min.z, box.max.z) + 0.06;
+        expect(over, `${kind} dáng ${v}`).toBeLessThanOrEqual(0.62);
+        expect(box.max.y, `${kind} dáng ${v}`).toBeLessThan(kind === 'cay' ? 1.8 : 0.8);
+        // Đá lún chân xuống đất một chút cho tự nhiên.
+        expect(box.min.y, `${kind} dáng ${v}`).toBeGreaterThan(-0.2);
+      }
+    }
+  });
+});

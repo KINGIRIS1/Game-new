@@ -26,6 +26,7 @@ import { CONG_TRINH, lotModel } from './congTrinh/index';
 import { makeRuaVang } from './beasts';
 import { buildDecor, disposeDecor, isBatchedDecor, type DecorSpot } from './decor';
 import { buildWild, disposeWild, wildSpots } from './oTrong';
+import { buildCayDaBatch, disposeCayDaBatch, makeCayDa, type CayDaPlace } from './cayDa';
 import { makeAnDuong, makeCaoLo, makeGiong, makeSonTinh } from './heroes';
 import { addSunLights, type SunLights } from './lights';
 import {
@@ -260,6 +261,16 @@ export class World {
   private wildOcc?: Int32Array;
   private wildMask?: Uint8Array;
   private wildDirty = true;
+  /** Ô có cây dại, tảng đá lúc vẽ lô trang trí ô trống lần trước (trang trí ô trống né các ô này). */
+  private wildCayKey = '';
+  /**
+   * Cây dại, tảng đá (`game/cayDa.ts`) đang thấy, theo ô `z * GRID + x`. Cái đã lớn gộp chung một lô (`cayDaBatch`,
+   * một lần vẽ); cái mới mọc vẽ riêng (`cayDaGrowing`) và lớn dần lên, đủ cỡ thì vào lô.
+   */
+  private cayDaSpots = new Map<number, CayDaPlace & { tx: number; tz: number }>();
+  private cayDaBatch: THREE.Group | null = null;
+  private readonly cayDaGrowing = new Map<number, THREE.Group>();
+  private cayDaKey = '#';
   private readonly ripples = new InstancedBoxes(RIPPLES);
   private readonly buildingsRoot = new THREE.Group();
   private readonly views = new Map<number, BuildingView>();
@@ -571,6 +582,11 @@ export class World {
     this.citadelKey = '#';
     this.decorKey = '#';
     this.wildDirty = true;
+    for (const o of this.cayDaGrowing.values()) this.scene.remove(o);
+    this.cayDaGrowing.clear();
+    this.cayDaSpots.clear();
+    this.rebuildCayDaBatch();
+    this.cayDaKey = '#';
     this.floodKey = '';
     this.heights = [];
     this.landKey = '';
@@ -718,8 +734,102 @@ export class World {
       this.scene.add(this.citadel);
     }
     this.syncDecor(state);
+    this.syncCayDa(state);
     this.syncWild(state);
     this.syncFlood(state);
+  }
+
+  /**
+   * Cây dại, tảng đá trên ô trống. Ô đã có công trình đè lên thì không vẽ (nhịp sau luật cũng dọn đi). Gọi được riêng
+   * mỗi khi cây đá mọc thêm mà không phải dựng lại cả cảnh.
+   */
+  syncCayDa(state: GameState): void {
+    const occ = occupancy(state);
+    const list = state.cayDa.list.filter((c) => !occ[c.z * GRID + c.x]);
+    const key = list.map((c) => `${c.x}:${c.z}:${c.kind}:${c.v}:${this.heights[c.z * GRID + c.x]}`).join(',');
+    if (key === this.cayDaKey) return;
+    // Lần dựng đầu (vào game, nạp mã lưu): hiện ngay; về sau cái mới mọc thì lớn dần lên.
+    const first = this.cayDaKey === '#';
+    this.cayDaKey = key;
+    const before = this.cayDaSpots;
+    this.cayDaSpots = new Map();
+    for (const c of list) {
+      const i = c.z * GRID + c.x;
+      // Lệch tâm ô, xoay theo ô cho các bụi không đứng thẳng hàng.
+      const h = Math.imul(c.x + 11, 0x2c1b3c6d) ^ Math.imul(c.z + 5, 0x297a2d39);
+      const spot = {
+        kind: c.kind,
+        v: c.v,
+        tx: c.x,
+        tz: c.z,
+        x: wx(c.x) + 0.5 + ((h & 0xff) / 255 - 0.5) * 0.12,
+        y: this.groundY(c.x, c.z),
+        z: wz(c.z) + 0.5 + (((h >>> 8) & 0xff) / 255 - 0.5) * 0.12,
+        ry: (((h >>> 16) & 0xffff) / 0xffff) * Math.PI * 2,
+      };
+      this.cayDaSpots.set(i, spot);
+      const old = before.get(i);
+      const same = old && old.kind === c.kind && old.v === c.v;
+      const growing = this.cayDaGrowing.get(i);
+      if (growing && !same) this.dropGrowing(i);
+      if (!first && !same) {
+        const o = makeCayDa(c.kind, c.v);
+        o.userData.grow = 0;
+        o.scale.setScalar(0.01);
+        this.cayDaGrowing.set(i, o);
+        this.scene.add(o);
+      }
+      const o = this.cayDaGrowing.get(i);
+      if (o) {
+        o.position.set(spot.x, spot.y, spot.z);
+        o.rotation.y = spot.ry;
+      }
+    }
+    for (const i of [...this.cayDaGrowing.keys()]) if (!this.cayDaSpots.has(i)) this.dropGrowing(i);
+    this.rebuildCayDaBatch();
+  }
+
+  /** Bỏ cây đá đang mọc ở ô `i` (đã đủ cỡ vào lô, hay đã dọn): trả bộ nhớ viền mực riêng của nó. */
+  private dropGrowing(i: number): void {
+    const o = this.cayDaGrowing.get(i);
+    if (!o) return;
+    this.scene.remove(o);
+    // Hình dáng dùng chung giữa các cây đá cùng dáng; chỉ viền mực là riêng.
+    (o.children[1] as THREE.Mesh | undefined)?.geometry.dispose();
+    this.cayDaGrowing.delete(i);
+  }
+
+  /** Dựng lại lô gộp các cây đá đã lớn. */
+  private rebuildCayDaBatch(): void {
+    if (this.cayDaBatch) {
+      this.scene.remove(this.cayDaBatch);
+      disposeCayDaBatch(this.cayDaBatch);
+    }
+    const grown = [...this.cayDaSpots].filter(([i]) => !this.cayDaGrowing.has(i)).map(([, s]) => s);
+    this.cayDaBatch = buildCayDaBatch(grown);
+    if (this.cayDaBatch) this.scene.add(this.cayDaBatch);
+  }
+
+  /** Cây dại, tảng đá chạm trúng ở vị trí màn hình, hoặc null. Công trình đứng chắn phía trước thì là chạm công trình. */
+  pickCayDa(clientX: number, clientY: number): { x: number; z: number } | null {
+    const ray = this.view.setRay(clientX, clientY);
+    const targets = [...this.cayDaGrowing.values()];
+    if (this.cayDaBatch) targets.push(this.cayDaBatch);
+    const hit = ray.intersectObjects(targets, true)[0];
+    if (!hit) return null;
+    const front = ray.intersectObjects(this.buildingsRoot.children, true)[0];
+    if (front && front.distance < hit.distance) return null;
+    // Lô gộp không biết từng cái: lấy cây đá có gốc gần chỗ chạm nhất (tán cây có thể chìa sang ô bên).
+    let best: { x: number; z: number } | null = null;
+    let bestD = 0.8;
+    for (const s of this.cayDaSpots.values()) {
+      const d = Math.hypot(s.x - hit.point.x, s.z - hit.point.z);
+      if (d < bestD) {
+        bestD = d;
+        best = { x: s.tx, z: s.tz };
+      }
+    }
+    return best;
   }
 
   /**
@@ -729,17 +839,20 @@ export class World {
   private syncWild(state: GameState): void {
     const occ = occupancy(state);
     const mask = openMask(state);
-    if (!this.wildDirty && occ === this.wildOcc && mask === this.wildMask) return;
+    const cayKey = state.cayDa.list.map((c) => c.z * GRID + c.x).join(',');
+    if (!this.wildDirty && occ === this.wildOcc && mask === this.wildMask && cayKey === this.wildCayKey) return;
     this.wildDirty = false;
     this.wildOcc = occ;
     this.wildMask = mask;
+    this.wildCayKey = cayKey;
     if (this.wild) {
       this.scene.remove(this.wild);
       disposeWild(this.wild);
     }
     const dien = state.buildings.find((b) => b.type === 'dien');
     const center = dien ? { x: dien.x + BUILDINGS.dien.w / 2, z: dien.z + BUILDINGS.dien.d / 2 } : null;
-    this.wild = buildWild(wildSpots(mask, occ, center), (x, z) => this.groundY(x, z), (v) => v - HALF);
+    const skip = new Set(state.cayDa.list.map((c) => c.z * GRID + c.x));
+    this.wild = buildWild(wildSpots(mask, occ, center, skip), (x, z) => this.groundY(x, z), (v) => v - HALF);
     this.scene.add(this.wild);
   }
 
@@ -1642,6 +1755,19 @@ export class World {
     if (this.merchantBoat) {
       this.merchantBoat.position.y = WATER_Y - 0.02 + Math.sin(t * 1.2) * 0.04;
     }
+
+    // Cây dại, tảng đá mới mọc: lớn dần lên, nhún nhẹ khi đủ cỡ.
+    let grown = false;
+    for (const [i, o] of this.cayDaGrowing) {
+      const k = Math.min((o.userData.grow as number) + dt / 0.6, 1);
+      o.userData.grow = k;
+      o.scale.setScalar(Math.max(0.01, k * (1 + 0.15 * Math.sin(Math.PI * k))));
+      if (k >= 1) {
+        this.dropGrowing(i);
+        grown = true;
+      }
+    }
+    if (grown) this.rebuildCayDaBatch();
 
     if (this.son) {
       // Sơn Tinh đứng chờ, tay gậy đung đưa.

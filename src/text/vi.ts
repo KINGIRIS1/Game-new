@@ -2,7 +2,7 @@
 
 import type { HeroKind } from '../game/battle';
 import type { AdvLook } from '../game/coLoa';
-import type { BuildingType, ChallengeKind, EnemyType, GearId, GiftId, ResourceId, Row, SkillId, TuongId, UnitType } from '../game/defs';
+import type { BuildingType, CayDaKind, ChallengeKind, EnemyType, GearId, GiftId, ResourceId, Row, SkillId, TuongId, UnitType } from '../game/defs';
 import type { FailReason, StoryId } from '../game/game';
 import type { GiongLook } from '../game/giong';
 import type { SonLook } from '../game/son';
@@ -823,6 +823,11 @@ export const vi = {
       congThanh:
         '📜 Lạc hầu: Tâu bệ hạ, thành Cổ Loa nên có cổng. Giặc thấy cổng dễ qua sẽ dồn cả về đó: xin dựng cổng giữa vòng tường, bày chòi canh, bẫy chông quanh cổng mà đón đánh.',
     } as Partial<Record<BuildingType, string>>,
+    /** Cây dại, tảng đá mọc trên ô trống: Lạc hầu gợi ý một lần khi cái đầu tiên mọc; chạm vào thì dọn. */
+    cayDaHint:
+      '📜 Lạc hầu: Tâu bệ hạ, đất trống lâu ngày mọc bụi cây dại, lại có tảng đá lăn về. Bệ hạ chạm vào để dân dọn: cây cho chút gạo, đá cho chút đất đá.',
+    cayDaCleared: { cay: 'Đã dọn bụi cây dại', da: 'Đã dọn tảng đá' } as Record<CayDaKind, string>,
+    cayDaFull: 'kho đã đầy, không cất thêm được',
     /** Bảng làng chài. */
     fishHere: 'Cá làng này',
     fishAll: 'Cá cả kinh đô',

@@ -42,14 +42,15 @@ function wildness(x: number, z: number, center: { x: number; z: number } | null)
 
 /**
  * Các món mọc trên ô trống: ô đã mở (`mask`), không có công trình (`occ`, id công trình chiếm ô hay 0), không phải sông.
- * `center` là tâm Điện (tọa độ ô) để ô gần Điện sạch hơn. Mỗi ô gieo bằng hạt giống riêng của ô.
+ * `center` là tâm Điện (tọa độ ô) để ô gần Điện sạch hơn; `skip` là các ô (`z * GRID + x`) có cây dại, tảng đá
+ * (`game/cayDa.ts`) nên để trống. Mỗi ô gieo bằng hạt giống riêng của ô.
  */
-export function wildSpots(mask: Uint8Array, occ: Int32Array, center: { x: number; z: number } | null): WildSpot[] {
+export function wildSpots(mask: Uint8Array, occ: Int32Array, center: { x: number; z: number } | null, skip?: Set<number>): WildSpot[] {
   const out: WildSpot[] = [];
   for (let z = 0; z < RIVER_START; z++) {
     for (let x = 0; x < RIVER_START; x++) {
       const i = z * GRID + x;
-      if (!mask[i] || occ[i]) continue;
+      if (!mask[i] || occ[i] || skip?.has(i)) continue;
       const rand = seeded(Math.imul(x + 1, 0x2c1b3c6d) ^ Math.imul(z + 1, 0x297a2d39) ^ 0x51ed27);
       const w = wildness(x, z, center);
       const kinds: WildKind[] = [];
