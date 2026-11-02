@@ -11,6 +11,9 @@ import {
   FIELD,
   RESOURCE_IDS,
   ROAD_TYPES,
+  BRIDGE_FLOOD,
+  DAC_SAN_BONUS,
+  isBridge,
   isDecor,
   isRoad,
   RINGS_NEEDED,
@@ -75,7 +78,7 @@ import {
   raiseCostOf,
   netPerMinute,
   nextFoe,
-  outputOf,
+  outputIn,
   questDone,
   questProgress,
   repairAllCost,
@@ -97,7 +100,7 @@ import { chapterStages } from '../game/campaign';
 import { caoLoJoined, caoLoResting } from '../game/caoLo';
 import { inChapter4, mergeCost, mergeable } from '../game/chuong4';
 import { giongAppeared, giongLook, giongReady, giongResting } from '../game/giong';
-import { khoanhQuota } from '../game/khoanh';
+import { KHOANH_N } from '../game/khoanh';
 import { inChapter2, sonJoined, sonLook, sonResting, giftCount } from '../game/son';
 import { floodToleranceOf, groundOf } from '../game/terrain';
 import { tetOpen, tetStarted, type Banh } from '../game/tet';
@@ -111,6 +114,9 @@ import { endingHtml, giongHtml, storyHtml } from './giong';
 import { sonHtml } from './son';
 import { blessingHtml, tetHtml } from './tet';
 import { khoanhHtml } from './khoanh';
+import { benKiaHtml } from './benKia';
+import { campTier, cutOff, dacSanOf, plotAt, villageOutput } from '../game/benKia';
+import { farBankOf } from '../game/map';
 import { mauHtml } from './mau';
 import type { MauId } from '../game/mau';
 
@@ -148,6 +154,9 @@ const BUILD_MENU: BuildingType[] = [
   'thanh',
   'congThanh',
   'denCoLoa',
+  'cauSongDa',
+  'cauSongThao',
+  'donBien',
 ];
 /** Nhóm thẻ trong bảng Xây dựng: công trình, đường đi, đồ trang trí. */
 const BUILD_GROUPS: { key: keyof typeof vi.ui.buildGroups; types: BuildingType[] }[] = [
@@ -163,6 +172,7 @@ const CHAPTER_OF: Partial<Record<string, number>> = { chuong2: 2, ketChuong2: 2,
 /** Tên hiển thị của công trình, tính cả lũy tre đã đắp thành đất và đê đã kè đá. */
 export function buildingName(b: Pick<Building, 'type' | 'level'>): string {
   if (b.type === 'luy' && b.level >= 2) return vi.ui.wallEarth;
+  if (isBridge(b.type)) return vi.ui.bridgeName(b.level, b.type === 'cauSongDa' ? vi.ui.songDa : vi.ui.songThao);
   if (b.type === 'de' && b.level >= 2) return vi.ui.dikeStone;
   return vi.buildings[b.type].name;
 }
@@ -201,6 +211,9 @@ export type HudAction =
   | { kind: 'rotateView' }
   | { kind: 'applyMau'; mau: MauId }
   | { kind: 'phatRung'; id: number }
+  | { kind: 'trinhSat'; id: number }
+  | { kind: 'ketThan'; id: number }
+  | { kind: 'marchCamp'; plot: number; army: Record<UnitType, number>; rows: Record<UnitType, Row> }
   | { kind: 'offerBanh'; banh: Banh }
   | { kind: 'confirmPlace' }
   | { kind: 'cancelPlace' }
@@ -224,6 +237,7 @@ export type HudAction =
   | { kind: 'train'; unit: UnitType }
   | { kind: 'assignTuong'; id: number; tuong: TuongId }
   | { kind: 'guardDelta'; id: number; unit: UnitType; delta: 1 | -1 }
+  | { kind: 'garrisonDelta'; id: number; unit: UnitType; delta: 1 | -1 }
   | { kind: 'guardAuto' }
   | { kind: 'repair'; id: number }
   | { kind: 'repairAll' }
@@ -261,6 +275,7 @@ type Sheet =
   | { kind: 'tet' }
   | { kind: 'mau' }
   | { kind: 'khoanh'; id: number }
+  | { kind: 'benKia'; id: number }
   | null;
 
 /** Máy có gửi được tệp qua bảng chia sẻ của hệ điều hành (Zalo, Messenger, Drive...) không. Hỏi một lần. */
@@ -322,6 +337,8 @@ export class Hud {
   private readonly fieldTop: HTMLElement;
   private readonly fieldBar: HTMLElement;
   private camp: CampaignView | null = null;
+  /** Đang chọn quân đánh đồn bên kia sông (trong bảng Đất bên kia sông). */
+  private donPick: ArmyPick | null = null;
   private campHtml = '';
   /** Đoạn truyện đang kể và thẻ đang xem. */
   private story: { id: StoryId; step: number; replay?: boolean } | null = null;
@@ -415,12 +432,29 @@ export class Hud {
         return this.onAction({ kind: 'assignTuong', id, tuong: el.dataset.tuong as TuongId });
       case 'guardDelta':
         return this.onAction({ kind: 'guardDelta', id, unit: el.dataset.unit as UnitType, delta: Number(el.dataset.delta) < 0 ? -1 : 1 });
+      case 'garrisonDelta':
+        return this.onAction({ kind: 'garrisonDelta', id, unit: el.dataset.unit as UnitType, delta: Number(el.dataset.delta) < 0 ? -1 : 1 });
       case 'forgeArms':
         return this.onAction({ kind: 'forgeArms', unit: el.dataset.unit as UnitType });
       case 'applyMau':
         return this.onAction({ kind: 'applyMau', mau: el.dataset.mau as MauId });
       case 'phatRung':
         return this.onAction({ kind: 'phatRung', id });
+      case 'trinhSat':
+        return this.onAction({ kind: 'trinhSat', id });
+      case 'ketThan':
+        return this.onAction({ kind: 'ketThan', id });
+      case 'donPrepare':
+        this.donPick = { ...defaultPick(this.getState()), don: id };
+        return this.refreshSheet(this.getState());
+      case 'donBack':
+        this.donPick = null;
+        return this.refreshSheet(this.getState());
+      case 'donMarch': {
+        if (!this.donPick) return;
+        const { don, army, rows } = this.donPick;
+        return this.onAction({ kind: 'marchCamp', plot: don!, army: { ...army }, rows: { ...rows } });
+      }
       case 'offerBanh':
         return this.onAction({ kind: 'offerBanh', banh: el.dataset.banh as Banh });
       case 'closeCampaign':
@@ -441,6 +475,8 @@ export class Hud {
       case 'backToStage':
       case 'armyDelta':
       case 'armyRow':
+        // Đang chọn quân đánh đồn trong bảng Đất bên kia sông.
+        if (this.donPick && this.sheet?.kind === 'benKia' && act !== 'backToStage') return this.donPickStep(act, el);
         return this.campaignStep(act, id, el);
       case 'march': {
         if (!this.camp?.stage) return;
@@ -527,7 +563,13 @@ export class Hud {
       const secs = Math.max(0, Math.ceil((state.tet.openUntil - state.clock) / 1000));
       tet = `<button class="chip dan" data-act="openTet" title="${vi.ui.tet}">🎋 <b>${Math.floor(secs / 60)}:${String(secs % 60).padStart(2, '0')}</b></button>`;
     }
-    const html = `<div class="chip level" title="${vi.buildings.dien.name}">🏯 ${dienLevel(state)}</div>${res}${dan}${army}${giong}${son}${adv}${tet}
+    // Trinh sát đang đi: chip 🧭 đếm ngược tới lúc người về sớm nhất.
+    let scout = '';
+    if (state.benKia.scouts.length) {
+      const secs = Math.max(0, Math.ceil((Math.min(...state.benKia.scouts.map((sc) => sc.at)) - state.clock) / 1000));
+      scout = `<div class="chip dan" title="${vi.benKia.scoutChip}">🧭 <b>${secs}s</b></div>`;
+    }
+    const html = `<div class="chip level" title="${vi.buildings.dien.name}">🏯 ${dienLevel(state)}</div>${res}${dan}${army}${giong}${son}${adv}${tet}${scout}
       <span class="spacer"></span>
       <button class="icon-btn" data-act="openSettings" aria-label="${vi.ui.settings}">⚙️</button>`;
     // So với chuỗi đã vẽ lần trước (không so với innerHTML vì trình duyệt chuẩn hóa lại chuỗi),
@@ -543,7 +585,7 @@ export class Hud {
   updateBanners(state: GameState): void {
     const parts: string[] = [];
     const raid = state.raid;
-    const sideName = { bac: vi.ui.sideBac, tay: vi.ui.sideTay, nam: vi.ui.sideNam, dong: vi.ui.sideDong }[raid.side];
+    const sideName = { bac: vi.ui.sideBac, tay: vi.ui.sideTay, nam: vi.ui.sideNam, dong: vi.ui.sideDong, namXa: vi.ui.sideNamXa, dongXa: vi.ui.sideDongXa }[raid.side];
     if (raid.phase === 'warning' && raid.foe === 'thuy') {
       const secs = Math.max(0, Math.ceil((raid.startsAt - state.clock) / 1000));
       parts.push(`<div class="banner bad">🌧️ ${vi.ui.floodWarning(sideName, secs, nextFloodLevel(state))}
@@ -721,6 +763,43 @@ export class Hud {
     this.refreshSheet(state);
   }
 
+  /** Mục lính đóng ở đồn biên: mỗi binh chủng một hàng, bớt, thêm (không quá quân đang có, trừ phần đóng ở bờ kia). */
+  private garrisonHtml(state: GameState, b: Building): string {
+    const bank = farBankOf(b.x, b.z);
+    if (!bank) return '';
+    const here = state.benKia.garrison[bank];
+    const other = bank === 'nam' ? state.benKia.garrison.dong : state.benKia.garrison.nam;
+    const owned = UNIT_TYPES.filter((k) => state.troops[k] > 0 || here[k] > 0);
+    const rows = owned.map((k) => {
+      const max = Math.max(0, state.troops[k] - other[k]);
+      return `<div class="unit-row army">
+        <span class="unit-icon">${vi.units[k].icon}</span>
+        <span class="unit-info"><b>${vi.units[k].name}</b><small>${vi.ui.haveTroops(state.troops[k])}</small></span>
+        <button class="step" data-act="garrisonDelta" data-id="${b.id}" data-unit="${k}" data-delta="-1" ${here[k] > 0 ? '' : 'disabled'} aria-label="Bớt một lính đóng ở đồn">−</button>
+        <b class="count">${here[k]}</b>
+        <button class="step" data-act="garrisonDelta" data-id="${b.id}" data-unit="${k}" data-delta="1" ${here[k] < max ? '' : 'disabled'} aria-label="Thêm một lính đóng ở đồn">+</button>
+      </div>`;
+    });
+    return `<h3>🛡️ ${vi.benKia.garrisonTitle}</h3><p class="muted">${vi.benKia.garrisonHint}</p>${owned.length ? `<div class="units">${rows.join('')}</div>` : `<p class="why">${vi.ui.noTroops}</p>`}`;
+  }
+
+  /** Bảng Đất bên kia sông của khoảnh bên kia `id`. */
+  showBenKia(state: GameState, id: number): void {
+    this.sheet = { kind: 'benKia', id };
+    this.donPick = null;
+    this.refreshSheet(state);
+  }
+
+  /** Chọn số lính, hàng đứng khi điều quân đánh đồn. */
+  private donPickStep(act: string, el: HTMLElement): void {
+    const pick = this.donPick!;
+    const state = this.getState();
+    const unit = el.dataset.unit as UnitType;
+    if (act === 'armyDelta') stepPick(state, pick, unit, Number(el.dataset.delta));
+    else pick.rows[unit] = nextRow(pick.rows[unit]);
+    this.refreshSheet(state);
+  }
+
   /** Bảng Khoảnh rừng của khoảnh `id` (vừa chạm vào rừng). */
   showKhoanh(state: GameState, id: number): void {
     this.sheet = { kind: 'khoanh', id };
@@ -739,6 +818,7 @@ export class Hud {
 
   closeSheet(): void {
     this.sheet = null;
+    this.donPick = null;
     this.sheetEl.classList.remove('open');
     this.root.classList.remove('sheet-open');
   }
@@ -792,6 +872,10 @@ export class Hud {
       if (state.khoanh.includes(this.sheet.id)) return this.closeSheet();
       title = `🌳 ${vi.ui.khoanhTitle}`;
       body = khoanhHtml(state, this.sheet.id);
+    } else if (this.sheet.kind === 'benKia') {
+      title = `🌄 ${vi.benKia.title}`;
+      if (this.donPick) for (const k of UNIT_TYPES) this.donPick.army[k] = Math.min(this.donPick.army[k], state.troops[k]);
+      body = benKiaHtml(state, this.sheet.id, this.donPick);
     } else if (this.sheet.kind === 'tet') {
       title = `🎋 ${vi.ui.tet}`;
       body = tetHtml(state);
@@ -896,7 +980,11 @@ export class Hud {
     }
     const prod = def.production[b.level - 1];
     if (RESOURCE_IDS.some((r) => (prod[r] ?? 0) > 0)) {
-      rows.push(`<div class="stat"><span>${vi.ui.production}</span><span>${prodHtml(outputOf(b))}</span></div>`);
+      rows.push(`<div class="stat"><span>${vi.ui.production}</span><span>${prodHtml(outputIn(state, b))}</span></div>`);
+      // Bên kia sông: đặc sản thêm phần làm ra; cầu hư thì dân bên này không sang làm được.
+      const dat = dacSanOf(b);
+      if (dat && !cutOff(state, b)) rows.push(`<div class="stat"><span></span><span class="muted">${vi.benKia.dacSan[dat].icon} ${vi.benKia.dacSanBonus(vi.benKia.dacSan[dat].name, Math.round(DAC_SAN_BONUS * 100))}</span></div>`);
+      if (cutOff(state, b)) rows.push(`<p class="why warn">${vi.benKia.cutOff}</p>`);
       if (b.level < def.maxLevel) {
         rows.push(`<div class="stat"><span>${vi.ui.nextLevel}</span><span>${prodHtml(def.production[b.level])}</span></div>`);
       }
@@ -905,6 +993,12 @@ export class Hud {
     if (b.type === 'langChai') {
       rows.push(`<div class="stat"><span>${vi.ui.fishHere}</span><span>${fishRate(fishOf(b))}</span></div>`);
       if (b.level < def.maxLevel) rows.push(`<div class="stat"><span>${vi.ui.nextLevel}</span><span>${fishRate(CA_PER_MIN[b.level])}</span></div>`);
+    }
+    if (b.type === 'donBien') rows.push(this.garrisonHtml(state, b));
+    if (b.type === 'banLang') {
+      const id = plotAt(b.x, b.z);
+      if (id !== null) rows.push(`<div class="stat"><span>${vi.benKia.villageMakes}</span><span>${b.damaged ? '—' : prodHtml(villageOutput(state, id))}</span></div>`);
+      if (b.damaged) rows.push(`<p class="why warn">${vi.benKia.villageWrecked}</p>`);
     }
     if (b.type === 'congThanh') {
       const shot = (lv: number) => vi.ui.gateShot(CONG_THANH.dmg[lv - 1], CONG_THANH.targets[lv - 1]);
@@ -929,19 +1023,21 @@ export class Hud {
       const next = b.level < def.maxLevel ? ` → +${fmt(def.storage[b.level])}` : '';
       rows.push(`<div class="stat"><span>${vi.ui.storage}</span><span>+${fmt(def.storage[b.level - 1])}${next}</span></div>`);
     }
-    if (inChapter2(state)) {
+    if (isBridge(b.type)) {
+      // Cầu đứng trên sông: lũ cuốn tùy cấp cầu, không theo nền đất.
+      rows.push(`<div class="stat"><span>${vi.ui.bridgeFloodLabel}</span><span class="muted">${vi.ui.bridgeFlood(BRIDGE_FLOOD[b.level - 1] ?? Infinity)}</span></div>`);
+      if (b.level < def.maxLevel) rows.push(`<div class="stat"><span>${vi.ui.nextLevel}</span><span class="muted">${vi.ui.bridgeFlood(BRIDGE_FLOOD[b.level] ?? Infinity)}</span></div>`);
+      rows.push(`<p class="muted">${vi.ui.bridgeRings}</p>`);
+    } else if (inChapter2(state)) {
       const ground = groundOf(state, b);
       const tol = floodToleranceOf(b.type);
       rows.push(`<div class="stat"><span>${vi.ui.ground}</span><span>${vi.ui.groundLevel(ground)}</span></div>`);
       rows.push(`<div class="stat"><span></span><span class="muted">${tol >= 9 ? vi.ui.floodImmune : vi.ui.floodRisk(ground + tol)}</span></div>`);
     }
     if (b.type === 'dien') {
-      const quota = khoanhQuota(b.level);
-      // Điện cấp 8 không thêm lượt: không ghi mũi tên.
-      const next = b.level < def.maxLevel && khoanhQuota(b.level + 1) > quota ? ` → ${khoanhQuota(b.level + 1)}` : '';
       rows.push(`<div class="stat"><span>${vi.ui.storage}</span><span>${fmt(storageCap(state))}</span></div>`);
       rows.push(`<div class="stat"><span>${vi.ui.dan}</span><span>${state.dan}/${housing(state)}</span></div>`);
-      rows.push(`<div class="stat"><span>${vi.ui.khoanhCount}</span><span>${state.khoanh.length}/${quota}${next}</span></div>`);
+      rows.push(`<div class="stat"><span>${vi.ui.khoanhCount}</span><span>${state.khoanh.length}/${KHOANH_N * KHOANH_N}</span></div>`);
     }
 
     if (b.type === 'lauNo') rows.push(`<div class="stat"><span>${vi.ui.lauNoShots}</span><span></span></div>`);
@@ -1349,7 +1445,8 @@ export class Hud {
     const hold = b.holdS !== undefined;
     const secs = Math.max(0, Math.ceil((hold ? b.holdS! : FIELD.maxS) - b.t));
     const tag = b.challenge ? ` · 🎖 ${vi.ui.challengeKinds[b.challenge].name}` : '';
-    this.fieldTop.querySelector('b')!.textContent = `${vi.ui.stageN(b.wave)} · ${vi.stages[b.wave - 1].name}${tag}`;
+    const don = b.camp !== undefined ? campTier(b.camp) : null;
+    this.fieldTop.querySelector('b')!.textContent = don ? `${vi.benKia.don[don].icon} ${vi.benKia.don[don].name}` : `${vi.ui.stageN(b.wave)} · ${vi.stages[b.wave - 1].name}${tag}`;
     this.fieldTop.querySelector('span')!.textContent = hold
       ? `${vi.ui.holdBanner(enemiesLeft(b), alliesLeft(b), secs)} · ${vi.ui.holdWave(wavesArrived(b), b.waveCount ?? 1)}`
       : vi.ui.fieldBanner(enemiesLeft(b), alliesLeft(b), secs);

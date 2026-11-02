@@ -15,6 +15,7 @@ import { addSunLights, type SunLights } from './lights';
 import { STICK_POSE, makeDrummer } from './heroes';
 import { buildForest, makeBoat, makeEnemyBoat, makeEnemyFlag, makeMountain, makeTent, type TreeSpot } from './models';
 import { makeNhaSan, makeRuong } from './buildings';
+import { makeBridge } from './benKia';
 import { C } from './palette';
 import { type Placement, ShapeBuilder, instanceTemplates, seeded } from './shapes';
 import { ToonModel, inkThin, outlineOf, toon } from './toon';
@@ -25,7 +26,7 @@ const groundMaterial = new THREE.MeshLambertMaterial({ vertexColors: true });
 /** Đất có đồi tô phẳng từng mặt tam giác, ra dáng low-poly như các mô hình khác. */
 const reliefMaterial = new THREE.MeshLambertMaterial({ vertexColors: true, flatShading: true });
 
-const TERRAINS: Terrain[] = ['rung', 'benSong', 'lang', 'don', 'nui', 'doi', 'ngap', 'tanVien', 'thatDieu', 'coLoa', 'cuaSong', 'moDa'];
+const TERRAINS: Terrain[] = ['rung', 'benSong', 'lang', 'don', 'nui', 'doi', 'ngap', 'tanVien', 'thatDieu', 'coLoa', 'cuaSong', 'moDa', 'benKia'];
 const OUTSIDE: Record<Terrain, number> = {
   rung: C.grassLocked[0],
   benSong: C.grassLocked[1],
@@ -39,6 +40,7 @@ const OUTSIDE: Record<Terrain, number> = {
   coLoa: C.grassLocked[0],
   cuaSong: C.grassLocked[1],
   moDa: 0xd3bf88,
+  benKia: 0x7f8a4c,
 };
 const FIELD_COLOR: Record<Terrain, number> = {
   rung: C.grass[0],
@@ -53,6 +55,7 @@ const FIELD_COLOR: Record<Terrain, number> = {
   coLoa: 0xb1ad72,
   cuaSong: 0xb8b27a,
   moDa: 0xe0d2a2,
+  benKia: 0xb4ac74,
 };
 /** Màu các mảng loang trên đất: cỏ rậm, cỏ úa, đất trống, đá; đồi sim nở hoa tím. */
 const PATCH: Record<Terrain, number> = {
@@ -68,6 +71,7 @@ const PATCH: Record<Terrain, number> = {
   coLoa: C.earthDark,
   cuaSong: 0x8d9656,
   moDa: 0xc2aa72,
+  benKia: 0x6a4a2c,
 };
 /** Đồng ngập lũ và đỉnh Tản Viên: nước lũ phủ chỗ trũng quanh bãi, ở độ cao này. */
 const FLOOD_Y = -0.3;
@@ -87,6 +91,7 @@ const HILLS: Record<Terrain, { height: number; freq: number }> = {
   coLoa: { height: 1.4, freq: 0.05 },
   cuaSong: { height: 1.2, freq: 0.05 },
   moDa: { height: 1.0, freq: 0.05 },
+  benKia: { height: 1.5, freq: 0.06 },
 };
 const TREE_DENSITY: Record<Terrain, number> = {
   rung: 0.8,
@@ -101,6 +106,7 @@ const TREE_DENSITY: Record<Terrain, number> = {
   coLoa: 0.35,
   cuaSong: 0.35,
   moDa: 0.4,
+  benKia: 0.4,
 };
 /** Trời và đèn theo nền: núi Thất Diệu là đêm tím, còn lại là ngày. */
 const SKY: Partial<Record<Terrain, { sky: number; sun: number; hemi: number; sunColor: number; hemiSky: number; hemiGround: number }>> = {
@@ -119,6 +125,8 @@ const REED = { stalk: 0x8f9a4c, stalkDry: 0xa8a060, leaf: 0x6f8a3a, lau: 0xeee4c
 const FEATHER = { vane: 0xfbf8ee, down: 0xffffff, quill: 0xcfc2a0 };
 /** Thành Cổ Loa: ba vòng thành bao quanh bãi, cách mép bãi chừng này ô. */
 const CO_LOA_RINGS = [3.4, 6, 8.6];
+/** Bờ bên kia sông: cầu phao tre sau lưng quân ta, lệch sang phải bãi một chút (x, ô). */
+const BEN_KIA_BRIDGE_X = FIELD.w / 2 + 3;
 /** Tấm đất quanh bãi và khoảng cách giữa hai đỉnh lưới (đơn vị: ô). */
 const LAND = { w: 90, d: 100, step: 0.75 };
 
@@ -526,14 +534,44 @@ function buildDecor(t: Terrain): THREE.Group {
     zones.push(MO_DA_ROAD);
   }
 
+  if (t === 'benKia') {
+    // Giặc đóng đồn: rào cọc nhọn chắn ngang sau lưng quân giặc, hở một cửa giữa; lều, cờ trong đồn.
+    const stakes = new ToonModel(inkThin);
+    const rand = seeded(29);
+    for (let x = 0.5; x <= W - 0.5; x += 0.34) {
+      if (Math.abs(x - W / 2) < 1) continue;
+      const h = 0.8 + rand() * 0.3;
+      stakes.plain.cyl(0.07, 0.08, h, C.woodDark, x, h / 2, -2.2, undefined, 5);
+      stakes.plain.cone(0.08, 0.2, C.woodLight, x, h + 0.1, -2.2, undefined, 5);
+    }
+    place(stakes.group(), 0, 0);
+    for (const [x, z] of [
+      [1.5, -4.6],
+      [4.5, -6],
+      [7.5, -4.8],
+    ]) place(makeTent(), x, z, x, 0.8);
+    place(makeEnemyFlag(), W / 2 + 1.3, -2.8, Math.PI / 2);
+    zones.push({ x0: -1, x1: W + 1, z0: -8, z1: -1.5 });
+    // Bờ sông phẳng chỗ đầu cầu.
+    zones.push({ x0: BEN_KIA_BRIDGE_X - 1.5, x1: BEN_KIA_BRIDGE_X + 1.5, z0: D, z1: D + 5 });
+  }
+
   const relief = new Relief(t, zones, 7 + TERRAINS.indexOf(t) * 211);
   g.userData.relief = relief;
   g.add(relief.mesh(), relief.field());
   for (const { obj, foot } of placed) obj.position.y = relief.floor(obj.position.x, obj.position.z, foot);
 
-  if (t === 'cuaSong' || t === 'moDa') {
+  if (t === 'cuaSong' || t === 'moDa' || t === 'benKia') {
     g.add(waterSurface(relief), ...shoreLines(relief));
-    if (t === 'cuaSong') {
+    if (t === 'benKia') {
+      // Cầu phao tre vừa bắc qua sông sau lưng quân ta; lau sậy dọc hai bờ, chừa chỗ đầu cầu.
+      const bridge = makeBridge(1);
+      bridge.position.set(BEN_KIA_BRIDGE_X, 0, FIELD.d + 7.8);
+      g.add(bridge);
+      // Chừa chỗ đầu cầu và chỗ Lạc tướng đánh trống.
+      const clear = [-1.2, 0, 1.2].map((dx) => ({ x: DRUMMER.x + dx, z: DRUMMER.z + 1 }));
+      g.add(reedBeds(relief, [{ x: BEN_KIA_BRIDGE_X, z: FIELD.d + 4.6 }, { x: BEN_KIA_BRIDGE_X, z: FIELD.d + 11 }, ...clear]));
+    } else if (t === 'cuaSong') {
       // Thuyền giặc đen buồm đỏ neo mũi vào bờ gần, sau lưng quân giặc, vài chiếc thả neo giữa dòng.
       const bankAt = (x: number) => {
         let z = -2;
@@ -683,6 +721,12 @@ class Relief {
       const bar = (Math.hypot((x - BAR.x) / BAR.rx, (z - BAR.z) / BAR.rz) - 1) * BAR.rz;
       return Math.min(river, bar);
     }
+    if (this.t === 'benKia') {
+      // Sông chảy ngang sau lưng quân ta (phía z lớn), bờ gần lượn nhẹ theo noise.
+      const near = FIELD.d + 4.4 + 0.4 * this.shore(x * 0.12, 0);
+      const far = FIELD.d + 11.2 + 0.6 * this.shore(x * 0.1, 7);
+      return Math.min(z - near, far - z);
+    }
     if (this.t === 'moDa') {
       // Biển ở phía xa (z nhỏ) và bên phải. Bờ xa chìa ra quanh chân núi bên trái; bờ phải lùi dần về phía quân ta.
       // Bờ lượn nhiều ở xa, gần như thẳng ở góc cuối đường ngựa (đầu đường luôn là cát, góc ngoài luôn là biển).
@@ -709,9 +753,9 @@ class Relief {
     if (this.t === 'moDa') h += 4 * smoothstep(-x, 2, 14) * smoothstep(near, 0.5, 4) * (0.45 + 0.55 * fbm(this.hills, x * 0.09 + 20, z * 0.09));
     // Cửa sông, Mộ Dạ: đất phẳng dần thành bãi ra tới mép nước, dưới nước là đáy sông, đáy biển. Bờ sông thoai thoải
     // hơn bờ biển (bờ biển phải dốc vừa đủ để đầu đường ngựa sát mép nước vẫn là cát khô).
-    if (this.t === 'cuaSong' || this.t === 'moDa') {
+    if (this.t === 'cuaSong' || this.t === 'moDa' || this.t === 'benKia') {
       const d = this.wet(x, z);
-      const slope = this.t === 'cuaSong' ? [-1.6, 1.4] : [-0.7, 1.3];
+      const slope = this.t === 'moDa' ? [-0.7, 1.3] : [-1.6, 1.4];
       h = THREE.MathUtils.lerp(h * (1 - smoothstep(d, -4, -1.2)), SEABED, smoothstep(d, slope[0], slope[1]));
     }
     return h;
@@ -739,7 +783,7 @@ class Relief {
       const bank = 1 - smoothstep(Math.abs(z - RIVER_Z) - (p - 0.5) * 2, 2.8, 3.6);
       out.lerp(this.tint.setHex(FIELD_COLOR.benSong), bank);
     }
-    if (this.t === 'cuaSong' || this.t === 'moDa') {
+    if (this.t === 'cuaSong' || this.t === 'moDa' || this.t === 'benKia') {
       // Chân núi Mộ Dạ có cỏ cây; bãi cát dọc mép nước, cát ướt sẫm màu sát nước.
       if (this.t === 'moDa') out.lerp(this.tint.setHex(C.grassLocked[1]), smoothstep(h, 0.4, 1.6) * smoothstep(-x, 2, 7));
       const d = this.wet(x, z);
@@ -985,7 +1029,7 @@ function waterSurface(relief: Relief): THREE.Mesh {
     } else {
       c.setHex(RIVER.shallow).lerp(tint.setHex(RIVER.deep), smoothstep(d, 0, 2.2));
       // Ra tới cửa sông thì nước sông hòa vào biển.
-      c.lerp(tint.setHex(SEA.mid), smoothstep(x, FIELD.w + 4, FIELD.w + 20) * 0.8);
+      if (relief.terrain === 'cuaSong') c.lerp(tint.setHex(SEA.mid), smoothstep(x, FIELD.w + 4, FIELD.w + 20) * 0.8);
     }
     c.toArray(colors, i * 3);
   }
@@ -1056,8 +1100,10 @@ function reedBeds(relief: Relief, boats: { x: number; z: number }[]): THREE.Obje
   cachedReeds ??= [reedTemplate(3, REED.lau), reedTemplate(8, REED.say), reedTemplate(13, REED.lau)];
   const rand = seeded(57);
   const spots: Placement[] = [];
+  // Cửa sông: sông phía giặc; bờ bên kia: sông sau lưng quân ta.
+  const [z0, z1] = relief.terrain === 'benKia' ? [FIELD.d, FIELD.d + 14] : [-26, 10];
   for (let x = -22; x <= FIELD.w + 22; x += 0.5) {
-    for (let z = -26; z <= 10; z += 0.5) {
+    for (let z = z0; z <= z1; z += 0.5) {
       const px = x + (rand() - 0.5) * 0.5;
       const pz = z + (rand() - 0.5) * 0.5;
       const kind = rand();

@@ -2,7 +2,9 @@
 // Bản lưu cũ (phiên bản 1 của lát cắt 1, 2 của lát cắt 2a, 3 của lát cắt 2b, 4 của lát cắt 3a,
 // 5 của lát cắt 3b, 6 của chương 2, 7 của chương 3, 8 của cấp 6–7, 9 của Hội Tết, 10 của cấp 8) được nâng lên phiên bản
 // hiện tại khi nạp. Phiên bản 13 là chương 4 phần 2 (lính nỏ, ụ nỏ, thủy binh Triệu), 14 là chương 4 phần 3 (Cao Lỗ,
-// vua xuống biển), 15 là chương 4 phần 4 (thử thách phó bản, huân công), 16 thêm gỗ (xưởng mộc). Bản lưu còn ở kinh đô nhỏ (trước phiên bản 11) được dựng lại thành kinh đô lớn theo mẫu (`xepLai.ts`).
+// vua xuống biển), 15 là chương 4 phần 4 (thử thách phó bản, huân công), 16 thêm gỗ (xưởng mộc), 17 thêm cây đá mọc trên ô
+// trống, 18 nới lưới qua sông (76×76, bên kia sông). Bản lưu còn ở kinh đô nhỏ (trước phiên bản 11) được dựng lại thành
+// kinh đô lớn theo mẫu (`xepLai.ts`).
 
 import { deflateSync, inflateSync } from 'fflate';
 import {
@@ -18,10 +20,12 @@ import {
   STAGES,
   TUONG_IDS,
   UNIT_TYPES,
+  isBridge,
   type BuildingType,
   type TuongId,
 } from './defs';
 import { initialCaoLo } from './caoLo';
+import { initialBenKia, isBenKiaState, noGarrison } from './benKia';
 import { initialCayDa, isCayDaState } from './cayDa';
 import { initialAdv } from './coLoa';
 import { inChapter4 } from './chuong4';
@@ -86,6 +90,15 @@ function migrate(raw: unknown): unknown {
   if (isObj(v) && v.version === 15) v = migrate15to16(v);
   if (isObj(v) && v.version === 16) v = migrate16to17(v);
   if (isObj(v) && v.version === 17) v = migrate17to18(v);
+  // Bản lưu 18 lưu từ bản dựng dở của phần bên kia sông (chưa có trạng thái bên kia): thêm vào.
+  if (isObj(v) && v.version === 18 && !isObj(v.benKia)) v.benKia = initialBenKia();
+  if (isObj(v) && v.version === 18 && isObj(v.benKia)) {
+    const k = v.benKia as Raw;
+    k.villages ??= [];
+    k.dug ??= [];
+    k.garrison ??= noGarrison();
+  }
+  if (isObj(v) && v.version === 18) v = migrate18to19(v);
   return v;
 }
 
@@ -332,9 +345,34 @@ function migrate16to17(s: Raw): Raw {
   return s;
 }
 
-/** Phiên bản 17 → 18 (Điện cấp 9, 10): không thêm gì vào state; Điện và chín loại công trình được lên cấp 10. */
+/** Cạnh lưới từ phiên bản 11 tới 17 (kinh đô lớn, sông ở mép lưới). */
+const GRID_V17 = 55;
+
+/**
+ * Phiên bản 17 → 18 (bên kia sông): lưới nới từ 55×55 lên 76×76, sông nằm giữa lưới, bên kia sông là đất thật. Tọa
+ * độ ô giữ nguyên, chỉ dàn lại mảng độ cao (ô sông, ô bên kia lấy độ cao tự nhiên) và đường đi của giặc trong trận
+ * đang dở (chỉ số ô). Bản lưu vừa dựng lại từ kinh đô nhỏ ở bước 10 → 11 đã theo lưới mới thì để nguyên độ cao.
+ */
 function migrate17to18(s: Raw): Raw {
   s.version = 18;
+  s.benKia = initialBenKia();
+  const old = s.heights;
+  if (!Array.isArray(old) || old.length !== GRID_V17 * GRID_V17) return s;
+  const heights = baseHeights();
+  for (let z = 0; z < GRID_V17; z++) for (let x = 0; x < GRID_V17; x++) if (!isRiver(x, z)) heights[z * GRID + x] = old[z * GRID_V17 + x];
+  s.heights = heights;
+  const regrid = (i: unknown) => (isNum(i) ? Math.floor(i / GRID_V17) * GRID + (i % GRID_V17) : i);
+  const raid = s.raid;
+  const battle = isObj(raid) && isObj(raid.battle) ? raid.battle : null;
+  if (battle && Array.isArray(battle.fighters)) {
+    for (const f of battle.fighters as Raw[]) if (isObj(f) && Array.isArray(f.path)) f.path = f.path.map(regrid);
+  }
+  return s;
+}
+
+/** Phiên bản 18 → 19 (Điện cấp 9, 10): không thêm gì vào state; Điện và chín loại công trình được lên cấp 10. */
+function migrate18to19(s: Raw): Raw {
+  s.version = 19;
   return s;
 }
 
@@ -364,12 +402,13 @@ function isValidBuildings(list: unknown): boolean {
   return ok && list.some((b: Raw) => b.type === 'dien');
 }
 
-/** Mọi công trình nằm gọn trong lưới, không ô nào dưới sông. */
+/** Mọi công trình nằm gọn trong lưới, không ô nào dưới sông; riêng cầu thì nằm trọn trên sông. */
 function buildingsInGrid(list: GameState['buildings']): boolean {
   return list.every((b) => {
     const def = BUILDINGS[b.type];
     if (b.x < 0 || b.z < 0 || b.x + def.w > GRID || b.z + def.d > GRID) return false;
-    for (let dx = 0; dx < def.w; dx++) for (let dz = 0; dz < def.d; dz++) if (isRiver(b.x + dx, b.z + dz)) return false;
+    const bridge = isBridge(b.type);
+    for (let dx = 0; dx < def.w; dx++) for (let dz = 0; dz < def.d; dz++) if (isRiver(b.x + dx, b.z + dz) !== bridge) return false;
     return true;
   });
 }
@@ -380,6 +419,7 @@ function isGameState(v: unknown): v is GameState {
   if (!isKhoanhList(v.khoanh) || v.khoanh.length === 0) return false;
   if (!Array.isArray(v.hinted) || !v.hinted.every((t) => typeof t === 'string')) return false;
   if (!isCayDaState(v.cayDa)) return false;
+  if (!isBenKiaState(v.benKia)) return false;
   const son = v.son;
   if (!isObj(son) || !isObj(son.gifts) || !isNum(son.restUntil) || typeof son.non !== 'boolean' || typeof son.won !== 'boolean') return false;
   if (!GIFT_IDS.every((k) => typeof (son.gifts as Raw)[k] === 'boolean')) return false;

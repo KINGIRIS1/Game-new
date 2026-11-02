@@ -1,9 +1,8 @@
-// Điện cấp 9, 10 sau truyện: mốc mở, giá, sản lượng, số tối đa, khoảnh, kho, nhiệm vụ, mẫu kinh đô, bản lưu.
+// Điện cấp 9, 10 sau truyện: mốc mở, giá, sản lượng, số tối đa, kho, nhiệm vụ, mẫu kinh đô, bản lưu.
 
 import { describe, expect, it } from 'vitest';
 import { BUILDINGS, CA_PER_MIN, CH4_QUEST_START, DIEN10_CHALLENGES, GUARD_CAP, QUESTS, STORAGE_CAP, TOWER, type BuildingType } from './defs';
 import { canUpgrade, claimQuest, createInitialState, currentQuest, limitOf, place, questDone, storageCap, upgrade, type GameState } from './game';
-import { khoanhQuota } from './khoanh';
 import { MAU_IDS, mauSlots, planMau } from './mau';
 import { HAU_QUEST_START } from './moPhong';
 import { SAVE_VERSION, deserialize, serialize } from './save';
@@ -42,17 +41,14 @@ describe('Điện cấp 9, 10', () => {
     expect(canUpgrade(s, 1)).toEqual({ ok: false, reason: 'capToiDa' });
   });
 
-  it('số đã cân: giá Điện, kho, khoảnh, chỗ ở, quân giữ kinh đô', () => {
+  it('số đã cân: giá Điện, kho, chỗ ở, quân giữ kinh đô', () => {
     expect(BUILDINGS.dien.upgradeCost[9]).toEqual({ gao: 14100, voOc: 12300, datDa: 11000, sat: 2400 });
     expect(BUILDINGS.dien.upgradeCost[10]).toEqual({ gao: 19200, voOc: 16800, datDa: 15200, sat: 3400 });
     expect(STORAGE_CAP.slice(7)).toEqual([32000, 44000, 60000]);
-    expect([8, 9, 10].map(khoanhQuota)).toEqual([80, 88, 94]);
     expect(BUILDINGS.dien.housing!.slice(7)).toEqual([11, 12, 13]);
     expect(GUARD_CAP.slice(7)).toEqual([56, 62, 68]);
     const s = capital(10);
     expect(storageCap(s)).toBe(60000);
-    // Đất mẫu vẫn vừa: lượt phát của Điện 9 đủ phủ khung 45×45 (81 khoảnh) của mẫu.
-    expect(khoanhQuota(9)).toBeGreaterThanOrEqual(81);
   });
 
   it('chín loại lên cấp 9 khi Điện 9, cấp 10 khi Điện 10; thêm ruộng, nhà sàn, chòi canh', () => {
@@ -130,15 +126,15 @@ describe('Điện cấp 9, 10', () => {
     expect(planMau(s, 'coLoaSong').stuck).toEqual([]);
   });
 
-  it('bản lưu 17 lên 18 giữ nguyên; Điện 10 lưu rồi mở lại được', () => {
+  it('bản lưu 18 lên 19 giữ nguyên; Điện 10 lưu rồi mở lại được', () => {
     const s = capital(10);
-    expect(SAVE_VERSION).toBe(18);
+    expect(SAVE_VERSION).toBe(19);
     const back = deserialize(serialize(s))!;
     expect(back.buildings[0].level).toBe(10);
     const old = JSON.parse(serialize(capital(8))) as Record<string, unknown>;
-    old.version = 17;
+    old.version = 18;
     const up = deserialize(JSON.stringify(old))!;
-    expect(up.version).toBe(18);
+    expect(up.version).toBe(19);
     expect(up.buildings[0].level).toBe(8);
   });
 });

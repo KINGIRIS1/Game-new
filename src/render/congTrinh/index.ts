@@ -1,7 +1,8 @@
 // Mọi công trình vẽ trên móng mới, theo loại, và mô hình đặt vừa móng của mọi loại công trình (`lotModel`).
 
 import type * as THREE from 'three';
-import type { BuildingType } from '../../game/defs';
+import { isBridge, type BuildingType } from '../../game/defs';
+import { bridgeModel, makeBanLang, makeDonBien } from '../benKia';
 import { buildingModel, footScale } from '../buildings';
 import { BAI_DA } from './baiDa';
 import { BEN } from './ben';
@@ -46,6 +47,18 @@ export const CONG_TRINH: Partial<Record<BuildingType, CongTrinh>> = {
  * và đồ trang trí) thì phóng theo móng và chừa viền cỏ (`footScale`). `userData.foot` ghi hệ số đã phóng.
  */
 export function lotModel(type: BuildingType, level: number): THREE.Group {
+  // Cầu vẽ đúng cỡ móng: vắt vừa lòng sông, đầu cầu chạm hai bờ.
+  if (isBridge(type)) {
+    const g = bridgeModel(type, level);
+    g.userData.foot = 1;
+    return g;
+  }
+  // Nhà làng, đồn biên bên kia sông: vẽ thẳng trên móng.
+  if (type === 'banLang' || type === 'donBien') {
+    const g = type === 'banLang' ? makeBanLang() : makeDonBien();
+    g.userData.foot = 1;
+    return g;
+  }
   const moi = CONG_TRINH[type];
   if (moi) {
     const g = moi.make(level);

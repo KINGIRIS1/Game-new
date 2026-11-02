@@ -24,7 +24,7 @@ describe('mô hình vừa móng kinh đô lớn', () => {
         const g = lotModel(type, level);
         g.updateMatrixWorld(true);
         const box = new THREE.Box3().setFromObject(g);
-        const over = Math.max(-box.min.x, box.max.x, -box.min.z, box.max.z) - def.w / 2;
+        const over = Math.max(Math.max(-box.min.x, box.max.x) - def.w / 2, Math.max(-box.min.z, box.max.z) - def.d / 2);
         expect(over, `${type} cấp ${level}`).toBeLessThanOrEqual(ALLOW[type] ?? 0.5);
       }
     }
@@ -55,7 +55,7 @@ describe('mô hình vừa móng kinh đô lớn', () => {
 
   it('bến, làng chài mọi cấp: cầu tàu, vó, đáy và thuyền nằm gọn trong sông, chừa luồng thuyền qua lại sát bờ bên kia', async () => {
     const { BUILDINGS } = await import('../game/defs');
-    const { FAR_BANK, RIVER_START } = await import('../game/map');
+    const { RIVER_END, RIVER_START } = await import('../game/map');
     const { makeBoat, makeTradeBoat } = await import('./models');
     const { CONG_TRINH, lotModel } = await import('./congTrinh/index');
     for (const type of ['ben', 'langChai'] as const) {
@@ -74,7 +74,7 @@ describe('mô hình vừa móng kinh đô lớn', () => {
         g.updateMatrixWorld(true);
         // Mô hình chìa ra sông theo +z, bờ sông ở mép móng.
         const reach = new THREE.Box3().setFromObject(g).max.z - def.d / 2;
-        expect(reach, `${type} cấp ${level}`).toBeLessThanOrEqual(FAR_BANK - RIVER_START - 1.5);
+        expect(reach, `${type} cấp ${level}`).toBeLessThanOrEqual(RIVER_END - RIVER_START - 1.5);
       }
     }
   });

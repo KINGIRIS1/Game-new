@@ -26,7 +26,8 @@ import {
   type Result,
 } from './game';
 import { V11_AREA, isOpen, khoanhOf } from './khoanh';
-import { DIEN_HOME, GRID, KHOANH, RIVER_START, inGrid, touchesRiver } from './map';
+import { DIEN_HOME, GRID, KHOANH, RIVER_START, inGrid, isNearBank, touchesRiver } from './map';
+import { bridgeheadCells } from './benKia';
 
 /**
  * Khung dựng mẫu ở cấp Điện `level`: hình vuông neo góc sông, cạnh như vùng đất của cấp ấy trước khi có khoảnh tự
@@ -749,10 +750,18 @@ export function planMau(state: GameState, id: MauId): MauPlan {
   // Mẫu vẽ cho Điện ở (DIEN_HOME, DIEN_HOME); Điện ở chỗ khác thì dịch cả mẫu theo.
   const ox = dien.x - DIEN_HOME;
   const oz = dien.z - DIEN_HOME;
+  // Mẫu chỉ xếp bờ bên này, chừa ô đầu cầu cho lối lên cầu.
+  const heads = bridgeheadCells(state);
   const fits = (type: BuildingType, x: number, z: number) => {
     const def = BUILDINGS[type];
     // Chỉ đặt trên đất đã mở: chỗ của mẫu rơi vào khoảnh rừng chưa phát thì bỏ qua.
-    for (let dx = 0; dx < def.w; dx++) for (let dz = 0; dz < def.d; dz++) if (!isOpen(state, x + dx, z + dz)) return false;
+    for (let dx = 0; dx < def.w; dx++) {
+      for (let dz = 0; dz < def.d; dz++) {
+        const tx = x + dx;
+        const tz = z + dz;
+        if (!isNearBank(tx, tz) || !isOpen(state, tx, tz) || heads.has(tz * GRID + tx)) return false;
+      }
+    }
     return !def.nearRiver || touchesRiver(x, z, def.w, def.d);
   };
   const used = new Uint8Array(GRID * GRID);
@@ -791,7 +800,8 @@ export function planMau(state: GameState, id: MauId): MauPlan {
       .sort((a, b) => Math.hypot(a.x + def.w / 2 - cx, a.z + def.d / 2 - cz) - Math.hypot(b.x + def.w / 2 - cx, b.z + def.d / 2 - cz));
     // Lầu nỏ một ô như chòi canh, đứng vào chỗ chòi canh của mẫu và tính là hai chòi canh trong giới hạn.
     // Mẫu có chỗ dành cho lầu nỏ thì lầu nỏ xếp trước, vào đúng những chỗ ấy.
-    const sameSlot = (b: Building) => b.type === type || (type === 'choiCanh' && b.type === 'lauNo');
+    // Công trình bên kia sông đứng yên, không vào chỗ của mẫu (vẫn tính vào số tối đa).
+    const sameSlot = (b: Building) => (b.type === type || (type === 'choiCanh' && b.type === 'lauNo')) && isNearBank(b.x, b.z);
     const have = state.buildings
       .filter(sameSlot)
       .sort((a, b) => Number(b.type === 'lauNo') - Number(a.type === 'lauNo') || b.level - a.level || a.id - b.id);

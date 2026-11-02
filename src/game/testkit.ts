@@ -1,7 +1,7 @@
 // Đánh thử một màn phó bản cho các test cân bằng chương 2, 3, 4 và thử thách, theo cách chơi chuẩn đã chốt với chủ dự án.
 
 import { skillReady, startFieldBattle, stepField, useSkill, type Battle, type HeroSetup } from './battle';
-import { DEFAULT_ROWS, SKILL_IDS, STAGES, TEMPLE_BONUS, UNITS, type SkillId, type UnitType } from './defs';
+import { DEFAULT_ROWS, SKILL_IDS, STAGES, TEMPLE_BONUS, UNITS, type EnemyType, type SkillId, type UnitType } from './defs';
 import { challengeField, challengeOf } from './thuThach';
 
 export type Army = Record<UnitType, number>;
@@ -30,6 +30,13 @@ export function fightStage(stage: number, army: Army, hero: HeroSetup | null, pl
   const def = STAGES[stage - 1];
   const bonus = play === 'thuong' ? 0 : TEMPLE_BONUS;
   const b = startFieldBattle({ id, stage, enemies: def.enemies, waves: def.waves, holdS: def.holdS, hpScale: def.hpScale, army, rows: DEFAULT_ROWS, hero, bonus });
+  return playOut(b, play);
+}
+
+/** Đánh thử một trận ngoài bãi với quân giặc `foe` (đồn giặc bên kia sông), theo cùng cách chơi như màn phó bản. */
+export function fightField(foe: { enemies: Partial<Record<EnemyType, number>>; hpScale: number }, army: Army, hero: HeroSetup | null, play: Play, id = 1): Battle {
+  const bonus = play === 'thuong' ? 0 : TEMPLE_BONUS;
+  const b = startFieldBattle({ id, stage: 0, enemies: foe.enemies, hpScale: foe.hpScale, army, rows: DEFAULT_ROWS, hero, bonus });
   return playOut(b, play);
 }
 

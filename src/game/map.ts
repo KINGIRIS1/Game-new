@@ -1,14 +1,22 @@
-// Bản đồ kinh đô Phong Châu: lưới vuông, hai nhánh sông dọc cạnh nam (z lớn)
-// và cạnh đông (x lớn) hợp lưu ở góc, rừng ở cạnh bắc và tây.
+// Bản đồ kinh đô Phong Châu: lưới vuông, rừng ở cạnh bắc và tây. Sông Thao (phía đông, x lớn) chảy từ bắc xuống,
+// đổ vào sông Đà (phía nam, z lớn) ở ngã ba góc đông nam; sông Đà chảy tiếp về phía đông. Bên kia sông là hai bờ
+// đất mới, cũng nằm trong lưới: bờ đông sông Thao, và bờ nam sông Đà (kéo dài qua cả ngã ba, phần ấy là rừng).
 
-export const GRID = 55;
-/** Ô có x hoặc z từ mốc này trở lên là sông (sông rộng 3 ô). */
+export const GRID = 76;
+/** Sông rộng 7 ô: ô có x hoặc z từ mốc này tới trước `RIVER_END` là sông. */
 export const RIVER_START = 52;
 /**
- * Chỉ để vẽ: bờ bên kia bắt đầu từ mốc này, ngoài lưới. Trong lưới sông rộng 3 ô (lính, thủy quái đi trong đó),
- * nhưng nước vẽ rộng 7 ô để bến cấp 8 cùng hai thuyền buôn neo gọn giữa dòng, không chạm bờ bên kia.
+ * Ô đầu tiên bên kia sông (bờ đất bên kia bắt đầu từ đây). Sông rộng 7 ô để bến cấp 8 cùng hai thuyền buôn neo gọn
+ * giữa dòng, còn luồng cho thuyền qua lại sát bờ bên kia.
  */
-export const FAR_BANK = GRID + 4;
+export const RIVER_END = 59;
+/**
+ * Trong trận giữ kinh đô, thủy quái và thuyền giặc chỉ dùng ba ô sông sát bờ bên này (như khi sông trong lưới còn
+ * rộng 3 ô): hiện ra, lặn xuống ở mốc này.
+ */
+export const RIVER_DIVE = RIVER_START + 3;
+/** Dải rừng ngoài cùng bên kia sông (x hoặc z từ mốc này) không bao giờ khai phá: chỗ giặc bên kia xuất phát. */
+export const FAR_FOREST = GRID - 2;
 /** Dải rừng ngoài cùng phía bắc và phía tây (x hoặc z nhỏ hơn mốc này) không bao giờ khai phá: chỗ giặc xuất phát. */
 export const FOREST_BAND = 2;
 /** Cạnh một khoảnh đất (ô). Đất giữa dải rừng ngoài cùng và sông chia thành 10×10 khoảnh (`khoanh.ts`). */
@@ -21,11 +29,41 @@ export function inGrid(x: number, z: number): boolean {
 }
 
 export function isRiver(x: number, z: number): boolean {
-  return inGrid(x, z) && (x >= RIVER_START || z >= RIVER_START);
+  if (!inGrid(x, z)) return false;
+  // Sông Đà chảy suốt bề ngang; sông Thao chảy từ bắc xuống tới ngã ba thì đổ vào sông Đà.
+  const da = z >= RIVER_START && z < RIVER_END;
+  const thao = x >= RIVER_START && x < RIVER_END && z < RIVER_END;
+  return da || thao;
 }
 
+/** Ô (x, z) bên này sông: phía kinh đô, không phải sông hay bên kia. */
+export function isNearBank(x: number, z: number): boolean {
+  return x >= 0 && z >= 0 && x < RIVER_START && z < RIVER_START;
+}
+
+/** Bờ bên kia sông: 'nam' là bờ nam sông Đà, 'dong' là bờ đông sông Thao, null là bên này hay dưới sông. */
+export function farBankOf(x: number, z: number): 'nam' | 'dong' | null {
+  if (!inGrid(x, z)) return null;
+  if (z >= RIVER_END) return 'nam';
+  if (x >= RIVER_END && z < RIVER_START) return 'dong';
+  return null;
+}
+
+/** Móng (x, z, w, d) có cạnh sát bờ sông: bên này sông, hay bên kia sông (bờ đông sông Thao, bờ nam sông Đà). */
 export function touchesRiver(x: number, z: number, w: number, d: number): boolean {
-  return x + w === RIVER_START || z + d === RIVER_START;
+  return x + w === RIVER_START || z + d === RIVER_START || (x === RIVER_END && z < RIVER_START) || (z === RIVER_END && x < RIVER_START);
+}
+
+/**
+ * Công trình sát sông ở (x, z) quay mặt trước ra sông hướng nào (góc quay quanh trục đứng, mô hình vẽ mặt trước hướng
+ * +z): bên này sông Đà là 0, bên này sông Thao là π/2; bờ nam bên kia là π, bờ đông bên kia là −π/2.
+ */
+export function riverFacing(x: number, z: number, w: number, d: number): number {
+  if (x + w === RIVER_START) return Math.PI / 2;
+  if (z + d === RIVER_START) return 0;
+  if (z === RIVER_END) return Math.PI;
+  if (x === RIVER_END) return -Math.PI / 2;
+  return 0;
 }
 
 // ---------- Độ cao ô đất ----------
@@ -35,6 +73,11 @@ export const RIVER_HEIGHT = -1;
 
 /** Số ô từ ô (x, z) tới bờ sông gần nhất: 0 là ô sát sông. Âm khi ô nằm dưới sông. */
 export function riverDistance(x: number, z: number): number {
+  if (isRiver(x, z)) return -1;
+  const bank = farBankOf(x, z);
+  // Bên kia sông soi gương qua sông: cách bờ sông bên ấy.
+  if (bank === 'nam') return z - RIVER_END;
+  if (bank === 'dong') return Math.min(x - RIVER_END, RIVER_START - 1 - z);
   return Math.min(RIVER_START - 1 - x, RIVER_START - 1 - z);
 }
 
@@ -66,6 +109,8 @@ function valueNoise(seed: number, cell: number): (x: number, z: number) => numbe
 /**
  * Độ cao tự nhiên của mọi ô, lặp lại y hệt ở mọi máy: ba ô sát sông là bãi bồi (bậc 0, vừa một bến),
  * vào trong là đồng bằng (bậc 1) có gò (bậc 2), càng xa sông về phía rừng càng nhiều đồi (bậc 2–3).
+ * Bờ bên kia theo cùng luật, tính từ bờ sông bên ấy. Nhiễu tính theo tọa độ ô, nên nới lưới qua sông
+ * không làm đổi độ cao bên này.
  */
 export function baseHeights(): number[] {
   const coarse = valueNoise(20260, 7);

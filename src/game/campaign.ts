@@ -6,6 +6,7 @@
 // Chọn lính mang theo, xếp hàng theo binh chủng, xuất quân; lính chết thì mất, thắng thì có thưởng.
 
 import { retreatField, startFieldBattle, stepField } from './battle';
+import { finishCamp } from './benKia';
 import { CH4_LAST, LAY_TRAO_AT, LENH_BAN_AT, caoLoJoined, caoLoResting } from './caoLo';
 import { inChapter4 } from './chuong4';
 import { CH3_LAST, KIM_QUY_AT, advJoined, advResting, inChapter3 } from './coLoa';
@@ -139,6 +140,8 @@ export function retreat(state: GameState): Result {
 /** Ghi kết quả trận vừa xong: trừ lính tử trận, cộng thưởng nếu thắng. Trận vẫn giữ để vẽ cảnh cuối. */
 function finishStage(state: GameState): void {
   const battle = state.campaign.battle!;
+  // Trận đánh đồn bên kia sông có cách ghi riêng.
+  if (battle.camp !== undefined) return finishCamp(state, battle);
   const outcome = battle.outcome ?? 'lose';
   for (const k of UNIT_TYPES) state.troops[k] = Math.max(0, state.troops[k] - battle.lost[k]);
   const won = outcome === 'win';

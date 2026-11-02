@@ -2,6 +2,7 @@
 // và chương 4 (Mỵ Châu, Trọng Thủy):
 // kể mỗi đoạn một lần, đúng thứ tự.
 
+import { benKiaOpen } from './benKia';
 import { CAO_LO_AT, LONG_NGONG_AT, advAtSea } from './caoLo';
 import { inChapter4 } from './chuong4';
 import { advJoined, inChapter3, ruaVangCame } from './coLoa';
@@ -12,6 +13,7 @@ import { inChapter2, sonJoined } from './son';
 const STORY_ORDER: StoryId[] = [
   'mo',
   'suGia',
+  'benKia',
   'vuonVai',
   'roiGay',
   'ketChuong',
@@ -35,6 +37,8 @@ const STORY_ORDER: StoryId[] = [
 const STORY_WHEN: Record<StoryId, (s: GameState) => boolean> = {
   mo: () => true,
   suGia: giongAppeared,
+  // Điện lên cấp 4: Lạc hầu tâu chuyện bên kia sông, mở cầu và trinh sát.
+  benKia: benKiaOpen,
   vuonVai: giongReady,
   roiGay: (s) => s.giong.whipBroken,
   ketChuong: (s) => s.giong.ascended,

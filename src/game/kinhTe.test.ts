@@ -17,7 +17,7 @@ describe('báo cáo kinh tế', () => {
 
   // Báo cáo đo cùng người chơi với balance.test.ts nên mốc lên Điện phải trùng với cách test đó đo.
   it('mốc lên Điện trùng với playUntilDien và playChapters', () => {
-    expect(kq.lenDien[5]).toBe(playUntilDien(5, 120) * 60);
+    expect(kq.lenDien[5]).toBe(Math.round(playUntilDien(5, 120) * 60));
     expect(kq.lenDien[6]).toBe(kq.moc.at6);
     expect(kq.lenDien[7]).toBe(kq.moc.at7);
     expect(kq.lenDien[8]).toBe(kq.moc.at8);
