@@ -3,8 +3,8 @@
 // cùng móng, cùng tỉ lệ ô đất, có người đứng để so cỡ.
 // Danh sách ở scripts/congTrinh.ts. Ảnh vào chup/cong-trinh-<loại>.png, cảnh cỡ thật vào chup/cong-trinh-canh.png.
 // Cách dùng: node scripts/chup-cong-trinh.mjs [loại ...|canh]   (loại: dien, ruong, ben, nhaSan, baiDa, loRen, kho,
-// doanhTrai, traiGiao, traiCung, chuongVoi; không ghi gì thì chụp dien, nhaSan và canh)
-// Loại còn vẽ theo móng cũ (denPhuDong, denTanVien, denCoLoa, denCuong, bep...) thì chụp mô hình game dựng
+// doanhTrai, traiGiao, traiCung, chuongVoi, vuon, chuongLon, bep; không ghi gì thì chụp dien, nhaSan và canh)
+// Loại còn vẽ theo móng cũ (denPhuDong, denTanVien, denCoLoa, denCuong, ruongNep...) thì chụp mô hình game dựng
 // (phóng theo móng), nhìn từ trước và từ sau.
 
 import { createRequire } from 'node:module';

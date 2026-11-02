@@ -5,7 +5,9 @@ import type { BuildingType } from '../../game/defs';
 import { buildingModel, footScale } from '../buildings';
 import { BAI_DA } from './baiDa';
 import { BEN } from './ben';
+import { BEP } from './bep';
 import type { CongTrinh } from './chung';
+import { CHUONG_LON } from './chuongLon';
 import { CHUONG_VOI } from './chuongVoi';
 import { DIEN } from './dien';
 import { DOANH_TRAI } from './doanhTrai';
@@ -15,6 +17,7 @@ import { NHA_SAN } from './nhaSan';
 import { RUONG } from './ruong';
 import { TRAI_CUNG } from './traiCung';
 import { TRAI_GIAO } from './traiGiao';
+import { VUON } from './vuon';
 
 export const CONG_TRINH: Partial<Record<BuildingType, CongTrinh>> = {
   dien: DIEN,
@@ -28,11 +31,14 @@ export const CONG_TRINH: Partial<Record<BuildingType, CongTrinh>> = {
   traiGiao: TRAI_GIAO,
   traiCung: TRAI_CUNG,
   chuongVoi: CHUONG_VOI,
+  vuon: VUON,
+  chuongLon: CHUONG_LON,
+  bep: BEP,
 };
 
 /**
  * Mô hình công trình loại `type` ở cấp `level`, đặt vừa móng kinh đô lớn. Loại đã vẽ trên móng mới (`CONG_TRINH`)
- * thì dựng thẳng, không phóng. Loại còn vẽ theo móng cũ (bốn đền, bốn công trình Hội Tết, chòi canh, lầu nỏ, đường
+ * thì dựng thẳng, không phóng. Loại còn vẽ theo móng cũ (bốn đền, ruộng nếp, chòi canh, lầu nỏ, đường
  * và đồ trang trí) thì phóng theo móng và chừa viền cỏ (`footScale`). `userData.foot` ghi hệ số đã phóng.
  */
 export function lotModel(type: BuildingType, level: number): THREE.Group {

@@ -10,6 +10,8 @@ import {
   footScale,
   makeBaiDa,
   makeBen,
+  makeBep,
+  makeChuongLon,
   makeChuongVoi,
   makeDien,
   makeDoanhTrai,
@@ -19,6 +21,7 @@ import {
   makeRuong,
   makeTraiCung,
   makeTraiGiao,
+  makeVuon,
 } from '../src/render/buildings';
 import type { Dock, LotSpot } from '../src/render/congTrinh/chung';
 import { CONG_TRINH, lotModel } from '../src/render/congTrinh/index';
@@ -96,6 +99,28 @@ const CU: Partial<Record<BuildingType, { make: (level: number) => THREE.Group; s
   traiGiao: { make: () => makeTraiGiao(), spots: [] },
   traiCung: { make: () => makeTraiCung(), spots: [] },
   chuongVoi: { make: () => makeChuongVoi(), spots: [] },
+  vuon: {
+    make: makeVuon,
+    spots: [
+      { job: 'phuNu', x: -0.2, y: 0.08, z: 0.62, ry: -0.4 },
+      { job: 'phuNu', x: 0.78, y: 0.08, z: 0.02, ry: -1.8 },
+    ],
+  },
+  chuongLon: {
+    make: makeChuongLon,
+    spots: [
+      { job: 'nong', x: 0.65, y: 0.06, z: 0.72, ry: -2.0 },
+      { job: 'nong', x: 0.62, y: 0.06, z: -0.58, ry: -1.6 },
+    ],
+  },
+  bep: {
+    make: makeBep,
+    spots: [
+      { job: 'phuNu', x: -0.74, y: 0.06, z: 0.14, ry: -2.9 },
+      { job: 'phuNu', x: 0.6, y: 0.06, z: -0.02, ry: 2.9 },
+      { job: 'phuNu', x: 0.4, y: 0.06, z: 0.4, ry: 0.9 },
+    ],
+  },
 };
 
 /** Số người hiện ra như world.ts: công trình cần người làm thì đủ chỗ làm của cấp ấy, nhà sàn và doanh trại 1–2 người, còn lại 1. */

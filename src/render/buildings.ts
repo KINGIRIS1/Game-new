@@ -2215,13 +2215,13 @@ const NEP_STALK = 0x7f9a44;
 /** Bờ ruộng nếp lát đá ong, cho khác bờ đất của ruộng lúa. */
 const LATERITE = 0xa8643c;
 /** Lá dong xanh thẫm, đậu xanh. */
-const DONG = 0x3f7a3a;
-const DAU = 0x6f9a3a;
-const DAU_POD = 0x9fbf5a;
+export const DONG = 0x3f7a3a;
+export const DAU = 0x6f9a3a;
+export const DAU_POD = 0x9fbf5a;
 /** Lợn ỉ đen, mõm xám hồng; bùn chuồng. */
 const PIG = 0x45403c;
 const PIG_SNOUT = 0xb08070;
-const MUD = 0x5a4026;
+export const MUD = 0x5a4026;
 /** Bánh chưng gói lá dong buộc lạt, bánh giầy trắng. */
 export const BANH_CHUNG = 0x4f7f35;
 export const BANH_GIAY = 0xf4efe0;
@@ -2381,7 +2381,7 @@ export function makeRuongNep(level: number): THREE.Group {
 }
 
 /** Khóm lá dong: lá to bản mọc xòe trên cuống dài. */
-function dongClump(p: ShapeBuilder, x: number, z: number, s: number): void {
+export function dongClump(p: ShapeBuilder, x: number, z: number, s: number): void {
   // Lá dong: cuống dài mọc thẳng, mỗi cuống một lá thuôn dài xòe chếch ra ngoài, cao thấp so le
   // (không chụm thành búp tròn như bắp cải).
   for (let i = 0; i < 6; i++) {
@@ -2408,7 +2408,7 @@ function dongClump(p: ShapeBuilder, x: number, z: number, s: number): void {
 }
 
 /** Rào tre thấp quanh mép móng, chừa cổng ở mặt trước từ `gateA` tới `gateB` (theo x). */
-function bambooFence(p: ShapeBuilder, half: number, h: number, gateA = 0, gateB = 0): void {
+export function bambooFence(p: ShapeBuilder, half: number, h: number, gateA = 0, gateB = 0): void {
   const n = 6;
   for (let i = 0; i <= n; i++) {
     const t = -half + (i * 2 * half) / n;
@@ -2537,7 +2537,7 @@ export function makeChuongLon(level: number): THREE.Group {
 }
 
 /** Kiềng ba hòn đá, nồi đồng to luộc bánh chưng, củi cháy dưới nồi. Lửa thêm thẳng vào `g` để World cho bập bùng. */
-function hearth(m: ToonModel, g: THREE.Group, x: number, z: number): void {
+export function hearth(m: ToonModel, g: THREE.Group, x: number, z: number): void {
   const p = m.plain;
   for (let i = 0; i < 3; i++) {
     const a = (i / 3) * Math.PI * 2 + 0.4;
@@ -2627,8 +2627,9 @@ export function makeBep(level: number): THREE.Group {
 
 /**
  * Mô hình công trình loại `type` ở cấp `level`, theo móng cũ (chưa phóng theo móng, xem `footScale`), cho các loại
- * chưa vẽ lại trên móng mới. Mười một loại đã vẽ lại ở `congTrinh/` (Điện, ruộng, bến, nhà sàn, bãi đá, lò rèn, kho,
- * doanh trại, trại giáo, trại cung, chuồng voi) không có ở đây: game dựng chúng qua `lotModel` (`congTrinh/index.ts`).
+ * chưa vẽ lại trên móng mới. Mười bốn loại đã vẽ lại ở `congTrinh/` (Điện, ruộng, bến, nhà sàn, bãi đá, lò rèn, kho,
+ * doanh trại, trại giáo, trại cung, chuồng voi, vườn, chuồng lợn, bếp): game dựng chúng qua `lotModel`
+ * (`congTrinh/index.ts`), không qua hàm này.
  * Dáng cũ của chúng (`makeDien`...) còn lại chỉ để `scripts/congTrinh.ts` chụp so cũ và mới; bỏ khi vẽ lại nốt.
  */
 export function buildingModel(type: BuildingType, level: number): THREE.Group {
