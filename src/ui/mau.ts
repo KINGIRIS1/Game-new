@@ -18,6 +18,7 @@ const TILE: Partial<Record<BuildingType, string>> = {
   ruong: '#c9b04a',
   ruongNep: '#e4d7a0',
   ben: '#3f7f9a',
+  langChai: '#5f9fb0',
   nhaSan: '#a8743c',
   baiDa: '#8d877d',
   loRen: '#4f4038',

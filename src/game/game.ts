@@ -12,6 +12,7 @@ import { bake, datBonus, initialTet, troiBonus, updateTet, type TetState } from 
 import { footprintTop, groundOf, levelFootprint, tileHeight } from './terrain';
 import {
   BUILDINGS,
+  CA_PER_MIN,
   CH3_QUEST_START,
   CH4_QUEST_START,
   DIEN_CHAPTER,
@@ -519,11 +520,29 @@ export function freeDan(state: GameState): number {
   return state.dan - workingDan(state);
 }
 
-/** Gạo cả kinh đô ăn mỗi phút: dân và lính. */
-export function upkeepPerMinute(state: GameState): number {
+/** Phần ăn mỗi phút của cả kinh đô (dân và lính), tính bằng gạo, chưa trừ phần cá đỡ. */
+export function foodPerMinute(state: GameState): number {
   let total = state.dan * GAO_PER_DAN;
   for (const k of UNIT_TYPES) total += state.troops[k] * UNITS[k].upkeep;
   return total;
+}
+
+/** Cá một làng chài đánh được mỗi phút, tỉ lệ theo số người làm; làng hư thì không. */
+export function fishOf(b: Building): number {
+  if (b.type !== 'langChai' || b.damaged) return 0;
+  const slots = slotsOf(b);
+  return (CA_PER_MIN[b.level - 1] ?? 0) * (slots ? Math.min(b.workers, slots) / slots : 1);
+}
+
+/** Cá cả kinh đô mỗi phút: mọi làng chài, cộng phần của Đền Phù Đổng và phúc lành Đất như mọi sản lượng. */
+export function fishPerMinute(state: GameState): number {
+  const fish = state.buildings.reduce((sum, b) => sum + fishOf(b), 0);
+  return fish * (1 + templeBonus(state) + datBonus(state));
+}
+
+/** Gạo cả kinh đô ăn mỗi phút: phần ăn của dân và lính trừ đi phần cá đỡ (cá thừa bỏ phí). */
+export function upkeepPerMinute(state: GameState): number {
+  return Math.max(0, foodPerMinute(state) - fishPerMinute(state));
 }
 
 export function troopCount(state: GameState): number {
@@ -1078,7 +1097,7 @@ export function setWorkers(state: GameState, id: number, n: number): Result<Buil
 }
 
 /** Thứ tự ưu tiên khi tự phân công: có gạo ăn trước, rồi tới tiền, đất đá, sắt. */
-const ASSIGN_ORDER: BuildingType[] = ['ruong', 'ben', 'baiDa', 'loRen', 'xuongMoc'];
+const ASSIGN_ORDER: BuildingType[] = ['ruong', 'ben', 'baiDa', 'loRen', 'xuongMoc', 'langChai'];
 
 /** Chia đều dân rảnh vào các chỗ còn trống, mỗi vòng một người cho mỗi công trình. */
 export function autoAssign(state: GameState): number {
@@ -1456,7 +1475,10 @@ export function dismissRaidResult(state: GameState): void {
 
 const round5 = (n: number) => Math.max(5, Math.round(n / 5) * 5);
 
-/** Ba lời mời đổi hàng, lặp lại được theo số chuyến và cấp Điện; `go`: kinh đô đã có xưởng mộc thì buôn cả gỗ. */
+/**
+ * Ba lời mời đổi hàng, lặp lại được theo số chuyến và cấp Điện; `go`: kinh đô đã có xưởng mộc thì thêm lời mời thứ tư
+ * về gỗ.
+ */
 export function makeOffers(seq: number, level: number, go = false): Offer[] {
   let t = (seq * 2654435761 + 97) >>> 0;
   const rand = () => {
@@ -1465,17 +1487,25 @@ export function makeOffers(seq: number, level: number, go = false): Offer[] {
     r = (r + Math.imul(r ^ (r >>> 7), 61 | r)) ^ r;
     return ((r ^ (r >>> 14)) >>> 0) / 4294967296;
   };
-  // Chưa có lò rèn (Điện cấp 1) thì thuyền chưa buôn sắt; chưa có xưởng mộc thì chưa buôn gỗ.
+  // Chưa có lò rèn (Điện cấp 1) thì thuyền chưa buôn sắt.
   const pool: ResourceId[] = level >= 2 ? ['gao', 'voOc', 'datDa', 'sat'] : ['gao', 'voOc', 'datDa'];
-  if (go) pool.push('go');
   const offers: Offer[] = [];
+  const offer = (give: ResourceId, get: ResourceId) => {
+    const giveN = round5((40 * level * (0.8 + rand() * 0.5)) / TRADE_VALUE[give]);
+    const getN = round5(((giveN * TRADE_VALUE[give]) / TRADE_VALUE[get]) * TRADE_BONUS);
+    offers.push({ give: { r: give, n: giveN }, get: { r: get, n: getN }, taken: false });
+  };
   for (let i = 0; i < 3; i++) {
     const give = pool[Math.floor(rand() * pool.length)];
     let get = pool[Math.floor(rand() * pool.length)];
     if (get === give) get = pool[(pool.indexOf(give) + 1) % pool.length];
-    const giveN = round5((40 * level * (0.8 + rand() * 0.5)) / TRADE_VALUE[give]);
-    const getN = round5(((giveN * TRADE_VALUE[give]) / TRADE_VALUE[get]) * TRADE_BONUS);
-    offers.push({ give: { r: give, n: giveN }, get: { r: get, n: getN }, taken: false });
+    offer(give, get);
+  }
+  // Kinh đô có xưởng mộc: thêm một lời mời thứ tư, mua gỗ hay bán gỗ đổi lấy một thứ khác. Ba lời mời trên giữ nguyên.
+  if (go) {
+    const other = pool[Math.floor(rand() * pool.length)];
+    if (rand() < 0.5) offer('go', other);
+    else offer(other, 'go');
   }
   return offers;
 }

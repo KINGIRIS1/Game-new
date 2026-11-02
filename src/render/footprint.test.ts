@@ -10,10 +10,10 @@ const ctx = new Proxy({}, { get: (_t, k) => (k === 'canvas' ? {} : () => ({ addC
 vi.stubGlobal('document', { createElement: () => ({ width: 0, height: 0, getContext: () => ctx }) });
 
 /** Số ô mô hình được tràn ra ngoài móng mỗi phía. Bến có cầu tàu chìa xuống sông; chòi canh, lầu nỏ có mái chìa; cây đa cổ thụ tán xòe rộng. */
-const ALLOW: Record<string, number> = { ben: Infinity, choiCanh: 0.8, lauNo: 0.8, cayDa: 0.95 };
+const ALLOW: Record<string, number> = { ben: Infinity, langChai: Infinity, choiCanh: 0.8, lauNo: 0.8, cayDa: 0.95 };
 
 describe('mô hình vừa móng kinh đô lớn', () => {
-  it('mọi loại, mọi cấp: không tràn quá nửa ô ra ngoài móng (trừ cầu tàu bến, mái chòi canh)', async () => {
+  it('mọi loại, mọi cấp: không tràn quá nửa ô ra ngoài móng (trừ cầu tàu bến, vó và đáy làng chài, mái chòi canh)', async () => {
     const { BUILDINGS } = await import('../game/defs');
     const { lotModel } = await import('./congTrinh/index');
     for (const type of Object.keys(BUILDINGS) as (keyof typeof BUILDINGS)[]) {
@@ -53,25 +53,29 @@ describe('mô hình vừa móng kinh đô lớn', () => {
     }
   });
 
-  it('bến mọi cấp: cầu tàu và thuyền neo nằm gọn trong sông, chừa luồng thuyền qua lại sát bờ bên kia', async () => {
+  it('bến, làng chài mọi cấp: cầu tàu, vó, đáy và thuyền nằm gọn trong sông, chừa luồng thuyền qua lại sát bờ bên kia', async () => {
     const { BUILDINGS } = await import('../game/defs');
     const { FAR_BANK, RIVER_START } = await import('../game/map');
     const { makeBoat, makeTradeBoat } = await import('./models');
     const { CONG_TRINH, lotModel } = await import('./congTrinh/index');
-    const def = BUILDINGS.ben;
-    for (let level = 1; level <= def.maxLevel; level++) {
-      const g = lotModel('ben', level);
-      for (const d of CONG_TRINH.ben!.docks!(level)) {
-        const boat = d.kind === 'trader' ? makeTradeBoat() : makeBoat();
-        boat.position.set(d.x, 0, d.z);
-        boat.rotation.y = d.ry;
-        if (d.scale) boat.scale.setScalar(d.scale);
-        g.add(boat);
+    for (const type of ['ben', 'langChai'] as const) {
+      const def = BUILDINGS[type];
+      for (let level = 1; level <= def.maxLevel; level++) {
+        const g = lotModel(type, level);
+        for (const d of CONG_TRINH[type]!.docks!(level)) {
+          const boat = d.kind === 'trader' ? makeTradeBoat() : makeBoat();
+          // Thuyền đánh cá bơi vòng quanh chỗ neo: xa bờ nhất khi ở đỉnh vòng, mũi xuôi theo bờ.
+          const fishing = d.kind === 'fishing';
+          boat.position.set(d.x, 0, d.z + (fishing ? 0.22 : 0));
+          boat.rotation.y = fishing ? 0 : d.ry;
+          if (d.scale) boat.scale.setScalar(d.scale);
+          g.add(boat);
+        }
+        g.updateMatrixWorld(true);
+        // Mô hình chìa ra sông theo +z, bờ sông ở mép móng.
+        const reach = new THREE.Box3().setFromObject(g).max.z - def.d / 2;
+        expect(reach, `${type} cấp ${level}`).toBeLessThanOrEqual(FAR_BANK - RIVER_START - 1.5);
       }
-      g.updateMatrixWorld(true);
-      // Mô hình bến chìa ra sông theo +z, bờ sông ở mép móng.
-      const reach = new THREE.Box3().setFromObject(g).max.z - def.d / 2;
-      expect(reach, `bến cấp ${level}`).toBeLessThanOrEqual(FAR_BANK - RIVER_START - 1.5);
     }
   });
 });

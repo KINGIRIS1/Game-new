@@ -34,14 +34,15 @@ describe('nhịp tiến trình', () => {
   });
 
   // Không tính thưởng phó bản chương 2, 3, 4 (hàng nghìn mỗi màn), nên chơi thật còn nhanh hơn.
-  // Điện 8 cho tới 45 phút: lúc vào chương 4, người chơi mô phỏng còn đang nâng nốt công trình lên cấp 7.
-  it('vào chương 2 thì 12–20 phút lên Điện 6; vào chương 3 thì 25–40 phút lên Điện 7; vào chương 4 thì 25–45 phút lên Điện 8', () => {
+  // Điện 8 cho tới 47 phút: lúc vào chương 4, người chơi mô phỏng còn đang nâng nốt công trình lên cấp 7. Có xưởng mộc,
+  // làng chài thì thời điểm nâng cấp xê dịch, đo được 44–46 phút; chủ dự án cho nới từ 45 lên 47.
+  it('vào chương 2 thì 12–20 phút lên Điện 6; vào chương 3 thì 25–40 phút lên Điện 7; vào chương 4 thì 25–47 phút lên Điện 8', () => {
     const { dien6, dien7, dien8 } = chapterMinutes();
     expect(dien6).toBeGreaterThanOrEqual(12);
     expect(dien6).toBeLessThanOrEqual(20);
     expect(dien7).toBeGreaterThanOrEqual(25);
     expect(dien7).toBeLessThanOrEqual(40);
     expect(dien8).toBeGreaterThanOrEqual(25);
-    expect(dien8).toBeLessThanOrEqual(45);
+    expect(dien8).toBeLessThanOrEqual(47);
   });
 });

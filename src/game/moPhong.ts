@@ -12,6 +12,8 @@ import {
   countOf,
   createInitialState,
   dienLevel,
+  fishPerMinute,
+  foodPerMinute,
   limitOf,
   place,
   questDone,
@@ -43,12 +45,20 @@ function affordWithReserve(s: GameState, cost: Partial<Record<keyof GameState['r
   );
 }
 
-/** Đổi hàng với thuyền buôn: đưa thứ đang dư nhiều nhất, lấy thứ khác. */
+/**
+ * Đổi hàng với thuyền buôn: đưa thứ đang dư nhiều nhất, lấy thứ khác. Gỗ thì đưa phần thừa ra ngoài số gỗ còn cần
+ * cho việc sắp làm (`woodWant`), không lấy thêm gỗ khi chưa thiếu.
+ */
 function tradeSurplus(s: GameState): void {
   const visit = s.merchant.visit;
   if (!visit) return;
   visit.offers.forEach((o, i) => {
     if (o.taken) return;
+    if (o.get.r === 'go' && !woodShort(s)) return;
+    if (o.give.r === 'go') {
+      if (s.resources.go - o.give.n >= woodWant(s)) acceptOffer(s, i);
+      return;
+    }
     const most = (Object.keys(s.resources) as (keyof typeof s.resources)[]).reduce((a, b) => (s.resources[a] >= s.resources[b] ? a : b));
     if (o.give.r === most && s.resources[o.give.r] >= o.give.n * 2) acceptOffer(s, i);
   });
@@ -89,12 +99,62 @@ function buildRoomy(s: GameState, type: BuildingType): 'built' | 'needLand' | 'n
 }
 
 /**
- * Thứ tự một người chơi hợp lý dựng kinh tế. Ngoài các loại này, người chơi mô phỏng chỉ dựng lũy. Chưa dựng xưởng
- * mộc: gỗ chưa dựng được gì ngoài đổi với thuyền buôn, dựng thì chỉ tốn của và người làm.
+ * Thứ tự một người chơi hợp lý dựng kinh tế. Ngoài các loại này, người chơi mô phỏng chỉ dựng lũy. Xưởng mộc chỉ dựng
+ * thêm, nâng khi thiếu gỗ (`woodShort`); làng chài thôi dựng, nâng, và rút bớt ngư dân khi cá đã đủ ăn (`wanted`,
+ * `trimFishers`).
  */
-export const ECONOMY: BuildingType[] = ['ruong', 'ben', 'nhaSan', 'baiDa', 'kho', 'loRen'];
+export const ECONOMY: BuildingType[] = ['ruong', 'ben', 'nhaSan', 'baiDa', 'kho', 'loRen', 'xuongMoc', 'langChai'];
 /** Số lũy người chơi mô phỏng dựng cho đủ nhiệm vụ đầu. */
 export const LUY_COUNT = 6;
+
+/**
+ * Số gỗ cần cho việc dùng gỗ sắp làm: món đắt nhất trong các việc dựng thêm hay nâng công trình tốn gỗ trong
+ * `ECONOMY` mà người chơi còn muốn làm.
+ */
+function woodWant(s: GameState): number {
+  let want = 0;
+  for (const type of ECONOMY) {
+    if (wanted(s, type) && countOf(s, type) < limitOf(s, type)) want = Math.max(want, BUILDINGS[type].buildCost.go ?? 0);
+  }
+  const level = dienLevel(s);
+  for (const b of s.buildings) {
+    if (b.type !== 'xuongMoc' && wanted(s, b.type) && b.level < level) want = Math.max(want, upgradeCostOf(b)?.go ?? 0);
+  }
+  return want;
+}
+
+/**
+ * Gỗ trong kho chưa đủ cho việc sắp làm. Người chơi hợp lý chỉ dựng thêm, nâng xưởng mộc khi thiếu gỗ, vì xưởng mộc
+ * nâng tốn vỏ ốc mà gỗ thừa chỉ đem đổi.
+ */
+function woodShort(s: GameState): boolean {
+  return s.resources.go < woodWant(s);
+}
+
+/**
+ * Cá đã thừa thì rút bớt ngư dân, để dân rảnh vào chỗ còn trống ở ruộng, bến, bãi đá, lò rèn khi các nơi ấy lên cấp
+ * (`autoAssign` chia dân rảnh đều cho mọi nơi còn chỗ, kể cả làng chài). Giữ đủ cá cho dân và lính ăn.
+ */
+function trimFishers(s: GameState): void {
+  const food = foodPerMinute(s);
+  const villages = s.buildings.filter((b) => b.type === 'langChai').sort((a, b) => b.workers - a.workers);
+  for (const b of villages) {
+    while (b.workers > 0) {
+      b.workers -= 1;
+      if (fishPerMinute(s) >= food) continue;
+      b.workers += 1;
+      break;
+    }
+  }
+}
+
+/**
+ * Người chơi hợp lý còn muốn dựng thêm, nâng thêm loại này không. Làng chài: cá đã đủ cho dân và lính ăn thì thôi
+ * (bảng làng chài cũng báo dựng thêm chưa có ích).
+ */
+function wanted(s: GameState, type: BuildingType): boolean {
+  return type !== 'langChai' || fishPerMinute(s) < foodPerMinute(s);
+}
 
 /**
  * Một giây chơi: nhận thưởng, xây cho đủ nhiệm vụ, ưu tiên nâng Điện,
@@ -114,15 +174,21 @@ export function playSecond(s: GameState, lam: Lam = lamThang): void {
   lam('xay', () => {
     // Như hướng dẫn của Lạc hầu: lên Điện cấp 2 trước rồi mới mở rộng kinh tế.
     for (const type of dienLevel(s) < 2 ? ECONOMY.slice(0, 2) : ECONOMY) {
+      // Xưởng mộc thứ hai trở đi chỉ dựng khi thiếu gỗ; làng chài thôi dựng khi cá đã đủ ăn.
+      if (type === 'xuongMoc' && countOf(s, type) > 0 && !woodShort(s)) continue;
+      if (!wanted(s, type)) continue;
       if (countOf(s, type) < limitOf(s, type) && affordWithReserve(s, BUILDINGS[type].buildCost) && buildRoomy(s, type) === 'needLand') cramped ??= type;
     }
   });
   // Hết chỗ thoáng: phát rừng, giây sau dựng trên đất mới.
   if (cramped) lam('phatRung', () => phatRung(s, cramped!));
   autoAssign(s);
+  trimFishers(s);
   lam('doiHang', () => tradeSurplus(s));
   lam('nangCap', () => {
+    const wood = woodShort(s);
     for (const b of s.buildings) {
+      if ((b.type === 'xuongMoc' && !wood) || !wanted(s, b.type)) continue;
       if (b.type !== 'dien' && b.type !== 'luy' && canUpgrade(s, b.id).ok && affordWithReserve(s, upgradeCostOf(b)!)) upgrade(s, b.id);
     }
   });

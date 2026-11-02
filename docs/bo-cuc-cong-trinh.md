@@ -439,7 +439,7 @@ c c c c , ,
 - `G` cấp 3, cối đá, chày gỗ giã bánh giầy.
 - Ngày Tết thêm người ngồi gói bánh trên chiếu, nay nằm trong móng.
 
-## Công trình mới (chủ dự án đã duyệt)
+## Công trình mới (chủ dự án đã duyệt, đã vẽ xưởng mộc, làng chài)
 
 Bản vẽ đi kèm mục **Kế hoạch: cổng thành, xưởng mộc, làng chài** trong `docs/thiet-ke.md`. Cổng thành móng 1×1 nên không có ở đây. Cách đọc như trên; hai công trình này chưa có dáng cũ nên không có chữ **mới**.
 
@@ -500,4 +500,9 @@ L L , , V V
   - hàng đáy: một dãy cọc tre có lưới đáy chắn dòng (cấp 6);
   - thuyền lưới lớn có buồm neo ngoài cùng (cấp 8).
   - Thuyền bơi chậm quanh chỗ neo sát bờ, không ra tới luồng thuyền qua lại, không chạm bờ bên kia.
-- Ba ngư dân: một người vá lưới trên bờ ván, một người kéo vó, một người xếp cá lên giàn phơi.
+- Ba ngư dân: một người quăng chài ở đầu cầu ván, một người kéo vó trên bè vó, một người xếp cá lên giàn phơi.
+- Đã vẽ (`src/render/congTrinh/langChai.ts`). Đã đổi khi vẽ:
+  - thêm cầu ván ngắn chìa ra nước từ bờ ván `=`, chỗ ngư dân đứng quăng chài (thay cho người vá lưới trên bờ ván) và thuyền ghé;
+  - vó `V` có bè tre ngồi kéo vó sát bờ, cần vó tre bắc qua cột chống chìa ra sông, khung vó bắt chéo, bốn dây xuống bốn góc lưới;
+  - thuyền đánh cá bơi chậm một vòng quanh chỗ neo trước bờ ván, người lái đò chèo (không đứng quăng chài trên thuyền);
+  - thuyền lưới lớn có buồm (cấp 8) dùng dáng thuyền buôn thu nhỏ.

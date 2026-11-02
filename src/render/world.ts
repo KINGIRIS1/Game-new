@@ -187,7 +187,7 @@ const NEU_H = 4.2;
 const KHANH = 0xa8502e;
 
 /** Công trình cần người làm: hiện đúng số người đang làm. */
-const WORKED: BuildingType[] = ['ruong', 'ben', 'baiDa', 'loRen', 'xuongMoc', 'ruongNep', 'vuon', 'chuongLon', 'bep'];
+const WORKED: BuildingType[] = ['ruong', 'ben', 'baiDa', 'loRen', 'xuongMoc', 'langChai', 'ruongNep', 'vuon', 'chuongLon', 'bep'];
 
 /** Số người hiện ra: công trình cần người làm thì đúng số người đang làm, còn lại cố định theo cấp. */
 function peopleCount(b: Building, spots: number): number {
@@ -794,7 +794,8 @@ export class World {
     if (old) this.buildingsRoot.remove(old.group);
     const def = BUILDINGS[b.type];
     const group = this.makeBuilding(b.type, b.level);
-    if (b.type === 'ben') group.rotation.y = b.x + def.w === RIVER_START ? Math.PI / 2 : 0;
+    // Bến, làng chài quay mặt trước ra sông: sông phía đông thì xoay một góc vuông.
+    if (def.nearRiver) group.rotation.y = b.x + def.w === RIVER_START ? Math.PI / 2 : 0;
     const ground = this.heights[b.z * GRID + b.x] ?? 0;
     group.position.set(wx(b.x) + def.w / 2, topY(ground), wz(b.z) + def.d / 2);
     group.userData.buildingId = b.id;
@@ -826,6 +827,8 @@ export class World {
         boat.rotation.y = d.ry;
         if (d.scale) boat.scale.setScalar(d.scale);
         boat.userData.dock = waterY;
+        // Thuyền đánh cá bơi vòng quanh chỗ neo, người chèo theo nhịp (`animate`).
+        if (d.kind === 'fishing') boat.userData.fishing = { x: d.x, z: d.z, span: d.span ?? 0.4 };
         group.add(boat);
       }
     }
@@ -1313,6 +1316,21 @@ export class World {
     this.panGoal = goal;
   }
 
+  /**
+   * Thuyền đánh cá của làng chài: bơi chậm một vòng bầu dục quanh chỗ neo (dọc bờ xa nhất `span` ô), mũi thuyền theo
+   * hướng đi, người lái đò chèo theo nhịp. Tọa độ móng làng chài.
+   */
+  private rowFishingBoat(boat: THREE.Object3D, t: number): void {
+    const f = boat.userData.fishing as { x: number; z: number; span: number };
+    const a = t * 0.22 + f.x * 3 + f.z;
+    const depth = 0.22;
+    boat.position.x = f.x + f.span * Math.sin(a);
+    boat.position.z = f.z + depth * Math.cos(a);
+    // Mũi thuyền (+x của mô hình) theo hướng đi: vận tốc (span·cos a, −depth·sin a).
+    boat.rotation.y = Math.atan2(depth * Math.sin(a), f.span * Math.cos(a));
+    (boat.userData.pose as Poser | undefined)?.({ act: 'walk', phase: t * 3 + f.x * 5 });
+  }
+
   /** Động tác theo nghề (people.ts): cúi bổ cuốc, bổ đá, quai búa, đi qua đi lại mang hàng, đứng gác nhìn quanh. */
   private animateWorker(w: WorkerView, t: number): void {
     const { obj, spot, phase } = w;
@@ -1472,7 +1490,7 @@ export class World {
     }
     const y = topY(h);
     this.ghost.position.set(wx(x) + def.w / 2, y + 0.02, wz(z) + def.d / 2);
-    if (type === 'ben') this.ghost.rotation.y = x + def.w === RIVER_START ? Math.PI / 2 : 0;
+    if (def.nearRiver) this.ghost.rotation.y = x + def.w === RIVER_START ? Math.PI / 2 : 0;
     this.footprint.visible = true;
     this.footprint.scale.set(def.w, 1, def.d);
     this.footprint.position.set(wx(x) + def.w / 2, y + 0.03, wz(z) + def.d / 2);
@@ -1534,6 +1552,7 @@ export class World {
       }
       for (const child of v.group.children) {
         if (child.userData.dock !== undefined) child.position.y = (child.userData.dock as number) + Math.sin(t * 1.6 + v.group.id) * 0.03;
+        if (child.userData.fishing) this.rowFishingBoat(child, t);
         if (child.userData.flame) child.scale.y = 0.75 + 0.35 * Math.abs(Math.sin(t * 9 + child.id));
         if (child.userData.spin) child.rotation.x = t * (child.userData.spin as number);
         if (child.userData.smoke) {

@@ -38,10 +38,11 @@ Tài liệu này ghi lại các quyết định đã chốt với chủ dự án
     - thợ đá vác đá, bổ cuốc chim;
     - thợ rèn đeo yếm da, quai búa;
     - thợ xẻ đeo yếm vải, kéo cưa xẻ; thợ mộc cầm rìu đẽo (xưởng mộc);
+    - ngư dân đội nón lá, đeo giỏ cá, quăng chài (làng chài);
     - người giữ kho vác bao thóc;
     - phụ nữ mặc váy, đeo gùi;
     - Lạc hầu và lính gác đội mũ lông chim;
-  - ruộng, bến, bãi đất đá, lò rèn, xưởng mộc hiện **đúng số người đang làm**, tối đa bằng số chỗ đứng.
+  - ruộng, bến, bãi đất đá, lò rèn, xưởng mộc, làng chài hiện **đúng số người đang làm**, tối đa bằng số chỗ đứng.
   - **nhân vật có khung xương dựng bằng code** (chủ dự án duyệt qua bản thử giáo binh, rồi yêu cầu làm cho mọi nhân vật): mỗi khối hình gắn vào một xương (hông, chân, ngực, đầu, tay, đồ cầm tay; thú có thêm cổ, vòi, tai, đuôi, bánh xe), cả người vẫn là một mesh mỗi chất liệu, viền mực chạy theo động tác. Nhân vật cử động tay chân thay vì nhún và ngả cả người:
     - lính bước chân khi đi; mỗi loại vũ khí một động tác đánh: đâm giáo; giơ cao bổ xuống (qua, rìu, kiếm, chày); giương cung, buông dây, rút tên sau lưng, lắp tên; nâng nỏ ngắm, nỏ giật, hạ xuống lên dây. Người ngã ngửa, thú lăn nghiêng, ma trơi tắt dần;
     - thú đi nhịp chéo; voi giơ vòi dậm chân khi Lạc tướng đâm giáo, hổ vồ, gà xòe cánh mổ, cá sấu đớp, thuồng luồng rụt cổ rồi lao đầu; bánh chiến xa có nan, lăn khi chạy;
@@ -68,7 +69,7 @@ Tài liệu này ghi lại các quyết định đã chốt với chủ dự án
 
 - Lưới **55×55 ô** (từ bản lưu phiên bản 11, xem mục Kế hoạch: kinh đô lớn). Hai nhánh sông rộng 3 ô chảy dọc hai cạnh (nam và đông, từ ô 52) rồi hợp lưu ở một góc, gợi ngã ba Bạch Hạc. Nước vẽ rộng 7 ô (bờ bên kia lùi ra ngoài lưới, từ ô 59) để bến chợ cấp 8 cùng hai thuyền buôn neo gọn giữa dòng, còn luồng cho thuyền qua lại sát bờ bên kia. Hai cạnh còn lại (bắc và tây) là rừng; hai ô ngoài cùng luôn là rừng, chỗ giặc trên bộ xuất phát.
 - Điện Vua Hùng (móng 5×5) ở ô (37, 37). Đất giữa dải rừng ngoài cùng và sông chia thành **10×10 khoảnh 5×5**. Lúc đầu mở sẵn 16 khoảnh ở góc sông (vùng **20×20**); muốn thêm đất thì **phát rừng** từng khoảnh, người chơi tự chọn (xem mục Khoảnh đất).
-- Công trình nhiều ô: mười bốn loại (Điện, ruộng, bến, nhà sàn, bãi đất đá, lò rèn, kho, doanh trại, trại giáo, trại cung, chuồng voi, vườn đậu lá dong, chuồng lợn, bếp gói bánh) vẽ lại trên trọn móng, có sân, lối, rào theo bản vẽ (xem mục Vẽ lại công trình trên móng). Xưởng mộc là công trình mới, vẽ thẳng trên móng theo bản vẽ. Các loại còn lại (bốn đền, ruộng nếp) vẫn là mô hình móng cũ phóng theo móng mới, chừa viền cỏ chừng 12% móng.
+- Công trình nhiều ô: mười bốn loại (Điện, ruộng, bến, nhà sàn, bãi đất đá, lò rèn, kho, doanh trại, trại giáo, trại cung, chuồng voi, vườn đậu lá dong, chuồng lợn, bếp gói bánh) vẽ lại trên trọn móng, có sân, lối, rào theo bản vẽ (xem mục Vẽ lại công trình trên móng). Xưởng mộc, làng chài là công trình mới, vẽ thẳng trên móng theo bản vẽ. Các loại còn lại (bốn đền, ruộng nếp) vẫn là mô hình móng cũ phóng theo móng mới, chừa viền cỏ chừng 12% móng.
 - Ô đất có **độ cao theo bậc** ngay từ đầu game (xem mục Độ cao ô đất ở chương 2). Chương 1 chỉ để nhìn; từ chương 2 độ cao quyết định ô nào ngập lũ.
 
 ### Khoảnh đất (bản lưu phiên bản 12, đã làm)
@@ -100,7 +101,7 @@ Học cơ chế mở đất của Forge of Empires, Elvenar: đất chia khoản
 ## Kinh tế
 
 - 5 tài nguyên: **gạo, vỏ ốc** (làm tiền, vì thời Văn Lang chưa có tiền xu), **đất đá, sắt**, và **gỗ** từ xưởng mộc (từ Điện 2, xem mục Kế hoạch: cổng thành, xưởng mộc, làng chài).
-- **Dân làng** đến từ nhà sàn và được phân công vào ruộng, chợ, bãi đất đá, lò rèn, xưởng mộc. Dân và lính ăn gạo theo thời gian. Thiếu gạo thì mọi việc sản xuất chậm còn một nửa và không luyện thêm quân được. Không ai chết đói.
+- **Dân làng** đến từ nhà sàn và được phân công vào ruộng, chợ, bãi đất đá, lò rèn, xưởng mộc, làng chài. Dân và lính ăn gạo theo thời gian; có làng chài thì ăn cá trước, thiếu mới ăn gạo. Thiếu gạo thì mọi việc sản xuất chậm còn một nửa và không luyện thêm quân được. Không ai chết đói.
 - **Chợ thuyền**: tự sinh vỏ ốc theo số dân làm ở chợ. Khoảng 5 phút có một thuyền buôn cập bến với 3 lời mời đổi hàng, thuyền rời bến thì lời mời hết hạn.
 - Nâng cấp **xong ngay** khi đủ tài nguyên. Không có đồng hồ đếm ngược hàng giờ.
 - **Điện Vua Hùng** lên tối đa cấp 5 trong chương 1. Không công trình nào được vượt cấp Điện Vua Hùng.
@@ -110,14 +111,14 @@ Học cơ chế mở đất của Forge of Empires, Elvenar: đất chia khoản
 - Bắt đầu có 4 dân. Điện Vua Hùng cho 4–8 chỗ ở theo cấp, mỗi nhà sàn cho 4–12 chỗ.
 - Còn chỗ ở và không thiếu gạo thì cứ **30 giây có thêm một người dân**.
 - Mỗi người dân ăn **0,4 gạo/phút**.
-- Ruộng, bến chợ thuyền, bãi đất đá, lò rèn, xưởng mộc có **số chỗ làm theo cấp**, và chỉ làm ra đủ sản lượng khi đủ người.
+- Ruộng, bến chợ thuyền, bãi đất đá, lò rèn, xưởng mộc, làng chài có **số chỗ làm theo cấp**, và chỉ làm ra đủ sản lượng khi đủ người.
 - Xây hay nâng cấp xong, dân rảnh tự vào làm. Người chơi chỉnh bằng nút − / + trong bảng công trình, hoặc chạm vào ô dân 👥 để chia đều dân rảnh.
 - **Thiếu gạo** (hết gạo mà gạo làm ra không đủ ăn) thì mọi sản lượng còn một nửa và dân không về thêm.
 - **Kho thóc** cộng thêm sức chứa cho mọi tài nguyên. **Lò rèn** cần Điện cấp 2.
 - **Thành đất**: là lũy tre nâng lên cấp 2, tốn đất đá, cần Điện cấp 3.
 - **Thuyền buôn**:
   - Chỉ đến khi có bến, lần đầu sau khoảng 2 phút chơi, sau đó 5 phút một lần, mỗi lần đậu 90 giây.
-  - Mỗi chuyến có 3 lời mời đổi hàng, trả hơn giá trị khoảng 15%. Chưa có Điện cấp 2 thì chưa buôn sắt; chưa có xưởng mộc thì chưa buôn gỗ.
+  - Mỗi chuyến có 3 lời mời đổi hàng, trả hơn giá trị khoảng 15%. Chưa có Điện cấp 2 thì chưa buôn sắt. Có xưởng mộc thì thêm lời mời thứ tư về gỗ.
   - Thuyền buôn và giặc chỉ đến theo **đồng hồ chơi**, tức là thời gian đang mở game.
 - Bản lưu lát cắt 1 được tự nâng lên: có đủ dân ở và chia vào làm ngay.
 - Nhịp đo bằng test mô phỏng một người chơi biết dành dụm: lên Điện cấp 2 khoảng 5 phút, cấp 3 khoảng 22 phút, cấp 5 khoảng 63 phút. Phần thưởng phó bản ở lát cắt 3 sẽ rút ngắn thêm.
@@ -133,6 +134,7 @@ Học cơ chế mở đất của Forge of Empires, Elvenar: đất chia khoản
 | Bãi đất đá | 3×3 | Ra đất đá |
 | Lò rèn | 3×3 | Ra sắt, rèn đồ cho Gióng |
 | Xưởng mộc | 3×3 | Ra gỗ, cần Điện cấp 2 |
+| Làng chài | 3×3 | Ra cá cho dân và lính ăn thay gạo. Phải sát bờ sông, cần Điện cấp 3 |
 | Kho thóc | 3×3 | Tăng sức chứa tài nguyên, cũng là mục tiêu của giặc |
 | Doanh trại | 4×4 | Nơi các tướng ở và điều binh: giữ chỗ quân, quân và tướng ra trận từ đây. Mỗi doanh trại một tướng chỉ huy, tối đa 4 (xem mục Nhiều doanh trại). Cấp 1 cho dựng trại giáo, cấp 2 trại cung, cấp 3 chuồng voi |
 | Trại giáo, trại cung, chuồng voi | 3×3 | Nơi ở riêng của giáo binh, cung thủ, voi chiến. Luyện mỗi binh chủng ở nơi ở của nó (xem mục Doanh trại và nơi ở riêng) |
@@ -1450,7 +1452,7 @@ Chủ dự án muốn thêm ba công trình: cổng thành, xưởng mộc (th�
 - **Mở rải theo chương**: xưởng mộc, làng chài có từ chương 1; cổng thành có từ chương 3.
 - **Cổng hút giặc**: khi giữ kinh đô, quân ta vẫn đi thẳng xuyên tường như bây giờ, nên độ khó các đợt giặc cũ giữ nguyên. Giặc tìm đường thấy qua cổng dễ hơn phá tường, nên dồn về cổng.
 
-Chủ dự án đã duyệt mọi con số và dáng dưới đây trước khi viết code. Như các lần trước, khi làm được chỉnh trong khoảng ±20% để khớp nhịp đo bằng test, làm xong thì ghi số cuối cùng. Phần gỗ và xưởng mộc đã làm (PR 1), số giữ như đề xuất.
+Chủ dự án đã duyệt mọi con số và dáng dưới đây trước khi viết code. Như các lần trước, khi làm được chỉnh trong khoảng ±20% để khớp nhịp đo bằng test, làm xong thì ghi số cuối cùng. Phần gỗ và xưởng mộc (PR 1), làng chài (PR 2) đã làm, số giữ như đề xuất.
 
 ### Gỗ 🪵
 
@@ -1459,7 +1461,7 @@ Chủ dự án đã duyệt mọi con số và dáng dưới đây trước khi 
 - **Nguồn vào**:
   - xưởng mộc;
   - phát rừng: mỗi khoảnh phát xong cho số gỗ bằng nửa số gạo của giá khoảnh ấy (Điện 1–3: 10 gỗ, Điện 5: 40–60, Điện 7: 105–155);
-  - thuyền buôn: có thêm lời mời đổi gỗ **khi kinh đô đã có xưởng mộc** (đổi khi làm: rao gỗ cho kinh đô chưa có xưởng thì bớt lời mời có ích, người chơi mô phỏng lên Điện 8 chậm thêm hơn một phút). Giá trị quy đổi 1 gỗ bằng 1,3 gạo.
+  - thuyền buôn: kinh đô đã có xưởng mộc thì có **thêm một lời mời thứ tư** về gỗ (mua gỗ hay bán gỗ lấy một thứ khác); ba lời mời kia giữ nguyên như trước. Giá trị quy đổi 1 gỗ bằng 1,3 gạo. (Đổi khi làm: lúc đầu gỗ chen vào ba lời mời sẵn có, bớt lời mời có ích, người chơi mô phỏng lên Điện 8 chậm thêm hơn một phút; nay làm đúng chữ "có thêm lời mời".)
 - **Chỗ tiêu**:
   - dựng và nâng làng chài (đóng thuyền);
   - dựng và nâng cổng thành;
@@ -1492,7 +1494,7 @@ Móng 3×3, 8 cấp, cần Điện 2, có từ chương 1. Cần thợ mộc là
 
   Mái theo cấp như các công trình khác.
 - **Thợ xẻ, thợ mộc** (đổi khi vẽ: tách hai nghề cho mỗi người một động tác): quấn khăn thợ, đeo yếm vải thô. Thợ xẻ tay không, kéo cưa xẻ của xưởng, hai tay đưa lên kéo xuống; thợ mộc cầm rìu lưỡi đồng xòe lệch, giơ quá vai rồi bổ xuống. Thợ mộc đeo ống mực bên hông, thợ xẻ đeo túi đinh tre.
-- **Người chơi mô phỏng chưa dựng xưởng mộc** (đổi khi làm): gỗ chưa dựng được gì ngoài đổi với thuyền buôn, nên dựng xưởng mộc chỉ tốn của và người làm. Đo thử: có dựng thì lên Điện 5 mất 70 phút (đích 45–70), Điện 8 mất 52 phút sau khi vào chương 4 (đích 25–45). Không dựng thì nhịp giữ như trước: Điện 5 mất 63,7 phút, Điện 6, 7, 8 mất 14,1, 35, 44,3 phút sau khi vào chương. PR 2 cho người chơi mô phỏng dựng xưởng mộc cùng làng chài (gỗ có chỗ dùng, cá đỡ gạo ăn) rồi đo lại.
+- **Người chơi mô phỏng dựng xưởng mộc từ PR 2** (cùng làng chài, xem mục Làng chài). Ở PR 1 chưa dựng: gỗ chưa dựng được gì ngoài đổi với thuyền buôn, dựng thì lên Điện 5 mất 70 phút, Điện 8 mất 52 phút.
 
 ### Làng chài
 
@@ -1504,14 +1506,22 @@ Móng 3×3, 8 cấp, phải sát bờ sông như bến, cần Điện 3, có t�
 | Chỗ làm | 1 | 2 | 2 | 2 | 3 | 3 | 3 | 3 |
 | Giá dựng, giá nâng lên cấp ấy | 80 gạo, 60 gỗ | 60 gạo, 40 gỗ | 120 gạo, 80 gỗ | 250, 160 | 500, 320 | 1000, 640 | 2000, 1300 | 4000, 2600 |
 
+Đã làm (PR 2), số giữ như đề xuất.
+
 - Số tối đa theo cấp Điện 1–8: 0, 0, 1, 1, 2, 2, 3, 3. Máu như bến. Lũ không làm hư (nhà trên cọc), như bến.
 - **Cá đỡ gạo ăn**:
   - mỗi phút, dân và lính ăn cá trước, phần còn thiếu mới ăn gạo. Cá thừa thì bỏ phí, không tích trữ;
   - có đủ cá thì không bị thiếu gạo;
   - Đền Phù Đổng và phúc lành Đất cũng cộng vào cá như các sản lượng khác;
   - ví dụ ở Điện 5: dân và lính ăn chừng 75 gạo mỗi phút, hai làng chài cấp 5 đỡ được 60.
-- Bảng làng chài ghi: cá mỗi phút của làng ấy và của cả kinh đô, dân và lính ăn bao nhiêu mỗi phút, số gạo cá đỡ được. Cá đã đủ cho cả kinh đô ăn thì báo dựng thêm hay nâng thêm không có ích.
-- Áp mẫu kinh đô: làng chài đứng dọc sông ngoài đê như bến.
+  - Code: `foodPerMinute` (phần ăn), `fishPerMinute` (cá), `upkeepPerMinute` (gạo phải ăn, đã trừ cá) ở `game.ts`; thiếu gạo, thanh trên và sổ kinh tế dùng số gạo phải ăn. Sổ kinh tế ghi riêng khoản "Cá đỡ gạo ăn".
+- Bảng làng chài ghi: cá mỗi phút của làng ấy và của cấp sau, cá của cả kinh đô, dân và lính ăn bao nhiêu mỗi phút, số gạo cá đỡ được. Cá đã đủ cho cả kinh đô ăn thì báo dựng thêm hay nâng thêm chưa có ích, trừ khi thêm dân, thêm lính.
+- Áp mẫu kinh đô: làng chài đứng ngay sau bến, dọc sông, ngoài đê như bến (bãi ngoài đê nay dành cho mọi loại phải sát sông).
+- Lạc hầu gợi ý một lần khi lên Điện 3: dân ven sông xin lập làng chài, đóng thuyền bằng gỗ của xưởng mộc.
+- **Người chơi mô phỏng** (đổi khi làm, chủ dự án đã duyệt nới mốc):
+  - dựng xưởng mộc và làng chài như người chơi thật, nhưng biết dừng: xưởng mộc thứ hai trở đi và mọi lần nâng xưởng mộc chỉ khi gỗ còn thiếu cho việc sắp làm; làng chài thôi dựng, thôi nâng, và rút bớt ngư dân khi cá đã đủ ăn; gỗ thừa thì đem đổi với thuyền buôn;
+  - người chơi mô phỏng không nuôi lính nên chỉ ăn chừng 20–50 gạo mỗi phút; cá đỡ gần hết phần ấy từ Điện 4;
+  - nhịp đo được: lên Điện 5 mất 68 phút (đích 45–70); Điện 6, 7, 8 mất 16,2, 34,7, 45,3 phút sau khi vào chương. Điện 8 vượt đích cũ 25–45 phút: đã thử chỉnh giá ±20% và đổi giá nâng xưởng mộc sang gạo, đều ra 44,1–45,8 phút, vì thời điểm nâng cấp xê dịch chứ không do hai công trình tốn của. Chủ dự án cho nới đích Điện 8 lên **25–47 phút** (`balance.test.ts`).
 - **Dáng** (bản vẽ ở `docs/bo-cuc-cong-trinh.md`; mặt trước quay ra sông):
 
   | Cấp | Thêm |
@@ -1525,8 +1535,10 @@ Móng 3×3, 8 cấp, phải sát bờ sông như bến, cần Điện 3, có t�
   | 7 | sạp chợ cá bày thúng cá |
   | 8 | thuyền lưới lớn có buồm neo ngoài, miếu thần sông góc sau |
 
-  Thuyền đánh cá bơi quanh chỗ neo sát bờ, người trên thuyền quăng chài. Thuyền không ra tới luồng thuyền qua lại, không chạm bờ bên kia.
-- **Ngư dân**: đội nón lá, đóng khố, đeo giỏ cá bên hông. Động tác quăng chài, kéo vó.
+  Thuyền đánh cá bơi chậm một vòng bầu dục quanh chỗ neo trước bờ ván, mũi theo hướng đi, người lái đò chèo theo nhịp. Thuyền không ra tới luồng thuyền qua lại, không chạm bờ bên kia (`footprint.test.ts` canh).
+  - Đã vẽ (`src/render/congTrinh/langChai.ts`). Đã đổi khi vẽ: thêm cầu ván ngắn ra nước giữa bờ ván, ngư dân quăng chài đứng ở đầu cầu (thay cho người trên thuyền quăng chài); thuyền lưới lớn có buồm dùng dáng thuyền buôn thu nhỏ.
+  - Làng chài, bến quay mặt trước ra sông, cả khi đặt bên sông phía đông (`world.ts` xoay mọi loại phải sát sông).
+- **Ngư dân**: đội nón lá, đóng khố chàm bạc màu nước sông, cầm chài, đeo giỏ cá bên hông. Động tác quăng chài: vặn người lấy đà, vung tay từ sau ra trước lên cao rồi buông.
 
 ### Cổng thành
 
@@ -1572,7 +1584,7 @@ Mỗi PR làm trên một nhánh từ `main` mới nhất.
 
 1. **Duyệt tài liệu này**: mọi con số và dáng ở trên, cùng bản vẽ xưởng mộc, làng chài ở `docs/bo-cuc-cong-trinh.md`.
 2. **PR 1: gỗ và xưởng mộc** (đã làm, bản lưu v16). Thêm gỗ vào kho, thanh trên, thuyền buôn, phát rừng, giặc cướp; xưởng mộc, thợ xẻ, thợ mộc; lời gợi ý của Lạc hầu; báo cáo kinh tế có sổ gỗ; mẫu kinh đô có chỗ cho xưởng mộc (gần rừng như bãi đá). Test `xuongMoc.test.ts`: sản lượng, giá, số tối đa, Đền cộng vào gỗ, sức chứa, gỗ khi phát rừng, thuyền buôn, gợi ý một lần, nâng bản lưu; nhịp lên Điện giữ như trước.
-3. **PR 2: làng chài và cá**. Luật cá đỡ gạo ăn, thuyền đánh cá, ngư dân, chỗ trong mẫu kinh đô dọc sông; người chơi mô phỏng dựng xưởng mộc và làng chài. Test: cá đỡ gạo, cá thừa, hết thiếu gạo khi đủ cá, phải sát sông, lũ không làm hư, mẫu kinh đô đủ chỗ, nhịp lên Điện vẫn đạt.
+3. **PR 2: làng chài và cá** (đã làm). Luật cá đỡ gạo ăn, thuyền đánh cá, ngư dân, chỗ trong mẫu kinh đô dọc sông; người chơi mô phỏng dựng xưởng mộc và làng chài. Test `langChai.test.ts`: cá theo cấp và người làm, cá đỡ gạo, cá thừa, hết thiếu gạo khi đủ cá, phải sát sông, Đền cộng vào cá, lũ không làm hư, gợi ý của Lạc hầu; `sapxep.test.ts` canh mẫu kinh đô đủ chỗ; nhịp lên Điện trong đích (Điện 8 nới lên 47 phút).
 4. **PR 3: cổng thành**. Đặt thay đoạn tường, giặc tìm đường qua cổng, lính trên lầu bắn, đếm vòng thành, chỗ trong mẫu kinh đô. Test: giặc dồn về cổng khi vòng tường kín, lính trên lầu bắn và Đền Cổ Loa cộng thêm, cổng giữ vòng thành, mẫu kinh đô có cổng; các trận giữ kinh đô chương 3, 4 vẫn đạt chuẩn khi không có cổng, và một đợt có cổng không quá dễ.
 
 Mỗi PR: chạy `npm test` và `npm run build`; chụp kiểm tra ở khổ điện thoại (thanh trên đủ chỗ cho năm chip ở khổ `fold`); ghi số cuối cùng vào tài liệu này; sửa các mục chung (bốn tài nguyên thành năm, bảng Công trình) khi phần ấy đã làm.
@@ -1617,5 +1629,5 @@ Mỗi PR: chạy `npm test` và `npm run build`; chụp kiểm tra ở khổ đi
 12. **Kinh đô lớn, công trình to, mở đất bằng khoảnh** (đã duyệt, đang làm; xem mục Kế hoạch cùng tên): công trình to hơn một ô mỗi chiều, lưới 55×55 (PR 1 đã làm), khoảnh 5×5 tự chọn (PR 2 đã làm), viền cỏ, trang trí ô trống, cây đá mọc. Làm trước chương 4 PR 2–4.
     **Vẽ lại công trình trên móng** (đã làm; xem mục cùng tên): mười bốn loại vẽ lại trên trọn móng; ba đền và ruộng nếp chủ dự án vẽ lại dáng, vẫn phóng theo móng.
 13. **Đường đi và đồ trang trí** (đã làm, xem mục cùng tên): bốn loại đường, bảy món trang trí, ba thẻ chọn trong bảng Xây dựng, thẻ Dọn trang trí.
-14. **Cổng thành, xưởng mộc, làng chài** (chủ dự án đã duyệt, đang làm; xem mục Kế hoạch cùng tên): gỗ là tài nguyên thứ năm, cá đỡ gạo ăn, cổng hút giặc trong vòng tường. Ba PR: gỗ và xưởng mộc (đã làm), làng chài, cổng thành.
+14. **Cổng thành, xưởng mộc, làng chài** (chủ dự án đã duyệt, đang làm; xem mục Kế hoạch cùng tên): gỗ là tài nguyên thứ năm, cá đỡ gạo ăn, cổng hút giặc trong vòng tường. Ba PR: gỗ và xưởng mộc (đã làm), làng chài (đã làm), cổng thành.
 14. **Để sau**: chương 5 về Hai Bà Trưng (mới nhắc ở câu cuối chương 4); nhạc nền.

@@ -48,7 +48,9 @@ export type BuildingType =
   // Đền thờ An Dương Vương (kết chương 4).
   | 'denCuong'
   // Xưởng mộc: ra gỗ (tài nguyên thứ năm).
-  | 'xuongMoc';
+  | 'xuongMoc'
+  // Làng chài: ra cá, dân và lính ăn cá thay một phần gạo.
+  | 'langChai';
 
 /**
  * Mốc mở khóa theo cốt truyện: sau kết chương 1, khi vào chương 2, sau kết chương 2, khi vào chương 3, sau kết chương 3,
@@ -286,6 +288,33 @@ export const BUILDINGS: Record<BuildingType, BuildingDef> = {
     hp: [180, 200, 220, 240, 260, 280, 300, 330],
     limit: [1, 2, 3, 3, 4, 5, 5, 5],
     minDien: 1,
+    buildable: true,
+    removable: false,
+  },
+  // Làng chài: ngư dân đánh cá ven sông. Cá không tích trữ: dân và lính ăn cá trước, thiếu mới ăn gạo (`CA_PER_MIN`).
+  langChai: {
+    type: 'langChai',
+    w: 3,
+    d: 3,
+    maxLevel: 8,
+    buildCost: { gao: 80, go: 60 },
+    upgradeCost: [
+      {},
+      {},
+      { gao: 60, go: 40 },
+      { gao: 120, go: 80 },
+      { gao: 250, go: 160 },
+      { gao: 500, go: 320 },
+      { gao: 1000, go: 640 },
+      { gao: 2000, go: 1300 },
+      { gao: 4000, go: 2600 },
+    ],
+    production: [{}, {}, {}, {}, {}, {}, {}, {}],
+    workers: [1, 2, 2, 2, 3, 3, 3, 3],
+    hp: [160, 180, 200, 220, 240, 260, 280, 310],
+    limit: [0, 0, 1, 1, 2, 2, 3, 3],
+    minDien: 3,
+    nearRiver: true,
     buildable: true,
     removable: false,
   },
@@ -787,6 +816,7 @@ export const FLOOD_TOLERANCE: Partial<Record<BuildingType, number>> = {
   denCoLoa: 1,
   denCuong: 1,
   ben: 99,
+  langChai: 99,
   luy: 99,
   bayChong: 99,
   de: 99,
@@ -1481,4 +1511,10 @@ export const QUEST_INSERTED_V4 = 11;
  * Công trình mới thêm sau khi đã có người chơi: lần đầu mở được thì Lạc hầu nói một câu gợi ý (một lần, ghi ở
  * `GameState.hinted`). Thêm loại vào đây không phải nâng bản lưu.
  */
-export const NEW_HINTS: BuildingType[] = ['xuongMoc'];
+export const NEW_HINTS: BuildingType[] = ['xuongMoc', 'langChai'];
+
+/**
+ * Cá mỗi phút của một làng chài đủ người, theo cấp (chỉ số 0 là cấp 1). Cá không tích trữ: dân và lính ăn cá trước,
+ * phần còn thiếu mới ăn gạo; cá thừa bỏ phí.
+ */
+export const CA_PER_MIN = [6, 10, 15, 22, 30, 40, 52, 68];

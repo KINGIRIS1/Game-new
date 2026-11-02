@@ -271,13 +271,13 @@ describe('mẫu kinh đô', () => {
     expect(s.buildings.filter((b) => b.type === 'luy').length).toBeLessThanOrEqual(limitOf(s, 'luy'));
   });
 
-  it('mẫu Đê bao: đê liền dải, lũ bậc 3 không ngập công trình nào ngoài bến, ở mọi cấp Điện từ 5', () => {
+  it('mẫu Đê bao: đê liền dải, lũ bậc 3 không ngập công trình nào ngoài bến, làng chài, ở mọi cấp Điện từ 5', () => {
     for (const dien of levelsOf('deBao')) {
       const s = city(dien, chapterFor('deBao', dien));
       expect(applyMau(s, 'deBao').ok).toBe(true);
       const wet = floodMap(s, 3);
       for (const b of s.buildings) {
-        if (b.type === 'ben' || b.type === 'de') continue;
+        if (BUILDINGS[b.type].nearRiver || b.type === 'de') continue;
         const def = BUILDINGS[b.type];
         for (let dx = 0; dx < def.w; dx++) for (let dz = 0; dz < def.d; dz++) expect(wet[(b.z + dz) * GRID + b.x + dx], `Điện ${dien}: ${b.type} ${b.x},${b.z}`).toBe(0);
       }
@@ -292,7 +292,7 @@ describe('mẫu kinh đô', () => {
       expect(wallRings(s), `Điện ${dien}`).toBe(3);
       const wet = floodMap(s, 3);
       for (const b of s.buildings) {
-        if (b.type === 'ben' || b.type === 'de') continue;
+        if (BUILDINGS[b.type].nearRiver || b.type === 'de') continue;
         const def = BUILDINGS[b.type];
         for (let dx = 0; dx < def.w; dx++) for (let dz = 0; dz < def.d; dz++) expect(wet[(b.z + dz) * GRID + b.x + dx], `Điện ${dien}: ${b.type} ${b.x},${b.z}`).toBe(0);
       }
@@ -336,7 +336,7 @@ describe('mẫu kinh đô', () => {
     expect(usedOf(s, 'choiCanh')).toBe(limitOf(s, 'choiCanh'));
     const wet = floodMap(s, 3);
     for (const b of s.buildings) {
-      if (b.type === 'ben' || b.type === 'de') continue;
+      if (BUILDINGS[b.type].nearRiver || b.type === 'de') continue;
       const def = BUILDINGS[b.type];
       for (let dx = 0; dx < def.w; dx++) for (let dz = 0; dz < def.d; dz++) expect(wet[(b.z + dz) * GRID + b.x + dx], `${b.type} ${b.x},${b.z}`).toBe(0);
     }

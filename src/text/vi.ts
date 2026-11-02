@@ -77,7 +77,12 @@ export const vi = {
     xuongMoc: {
       name: 'Xưởng mộc',
       icon: '🪚',
-      desc: 'Thợ mộc xẻ gỗ lim, đẽo thuyền, dựng khung nhà. Gỗ để mai sau đóng thuyền đánh cá, dựng cổng thành; thừa thì đổi với thuyền buôn. Cần người làm.',
+      desc: 'Thợ mộc xẻ gỗ lim, đẽo thuyền, dựng khung nhà. Gỗ để đóng thuyền đánh cá, dựng cổng thành; thừa thì đổi với thuyền buôn. Cần người làm.',
+    },
+    langChai: {
+      name: 'Làng chài',
+      icon: '🐟',
+      desc: 'Ngư dân chèo thuyền nan quăng chài, kéo vó ven sông. Dân và lính ăn cá trước, thiếu mới ăn gạo, nên gạo dư ra để xây. Phải dựng sát bờ sông. Cần người làm.',
     },
     kho: {
       name: 'Kho thóc',
@@ -236,7 +241,7 @@ export const vi = {
     chuaDuCapDien: 'Cần nâng Điện Vua Hùng trước',
     datBiChiem: 'Chỗ này đã có công trình',
     ngoaiVung: 'Đất này chưa khai phá',
-    phaiSatSong: 'Bến phải nằm sát bờ sông',
+    phaiSatSong: 'Công trình này phải nằm sát bờ sông',
     datGioiHan: 'Đã đạt số lượng tối đa, hãy nâng Điện Vua Hùng',
     capToiDa: 'Đã đạt cấp tối đa',
     khongTheXay: 'Không thể xây công trình này',
@@ -796,7 +801,7 @@ export const vi = {
     khoanhOpened: (go: number) => `Đã phát rừng, bờ cõi mở rộng! Cây chặt được ${go} 🪵`,
     khoanhMore: (level: number, n: number) => `Lên Điện cấp ${level} được phát thêm ${n} khoảnh.`,
     khoanhMax: 'Đã mở đủ đất cho kinh đô.',
-    khoanhRiver: 'Khoảnh ven sông: dựng được bến, nhưng mùa lũ dễ ngập.',
+    khoanhRiver: 'Khoảnh ven sông: dựng được bến, làng chài, nhưng mùa lũ dễ ngập.',
     rungThieng: 'Rừng thiêng ngoài cùng, không phát được: giặc ẩn nấp trong ấy.',
     mauKhoanh: (n: number) => `Mẫu còn ${n} khoảnh chưa phát: chỗ trong rừng sẽ bỏ qua.`,
     relaid: (refund: string) =>
@@ -805,7 +810,15 @@ export const vi = {
     newHint: {
       xuongMoc:
         '📜 Lạc hầu: Tâu bệ hạ, nay đã dựng được xưởng mộc. Thợ mộc xẻ gỗ để mai sau đóng thuyền, dựng cổng thành; gỗ thừa thì đổi với thuyền buôn.',
+      langChai:
+        '📜 Lạc hầu: Tâu bệ hạ, dân ven sông xin lập làng chài. Đóng thuyền bằng gỗ của xưởng mộc, dân và lính có cá ăn thì bớt được gạo.',
     } as Partial<Record<BuildingType, string>>,
+    /** Bảng làng chài. */
+    fishHere: 'Cá làng này',
+    fishAll: 'Cá cả kinh đô',
+    foodAll: 'Dân và lính ăn',
+    fishSaved: 'Gạo cá đỡ được',
+    fishEnough: 'Cá đã đủ cho cả kinh đô ăn: dựng hay nâng thêm làng chài chưa có ích, trừ khi thêm dân, thêm lính.',
     storage: 'Sức chứa kho',
     wallEarth: 'Thành đất',
     workers: 'Người làm',

@@ -6,6 +6,7 @@ import { RESOURCE_IDS, STARVING_RATE, type ResourceId, type Resources } from './
 import {
   createInitialState,
   dienLevel,
+  foodPerMinute,
   isStarving,
   netPerMinute,
   productionPerMinute,
@@ -25,6 +26,7 @@ const KHOAN = {
   nhiemVu: 'Thưởng nhiệm vụ',
   doiHang: 'Đổi hàng thuyền buôn (vào trừ ra)',
   an: 'Dân và lính ăn',
+  ca: 'Cá đỡ gạo ăn (làng chài)',
   xay: 'Dựng công trình',
   phatRung: 'Phát rừng mở khoảnh',
   nangDien: 'Nâng Điện',
@@ -116,6 +118,8 @@ export function doKinhTe(sauDien8Phut = SAU_DIEN8_PHUT): KetQuaKinhTe {
     // Một giây trôi: tách phần làm ra, phần ăn, phần tràn kho như `produce` trong game.ts, còn lại là khoản khác.
     const k = isStarving(s) ? STARVING_RATE : 1;
     const prod = productionPerMinute(s);
+    // Phần ăn ghi đủ, phần cá đỡ ghi riêng như một khoản thu gạo: hai khoản cộng lại đúng số gạo phải ăn.
+    const anDu = foodPerMinute(s);
     const an = upkeepPerMinute(s);
     const net = netPerMinute(s);
     const cap = storageCap(s);
@@ -124,7 +128,10 @@ export function doKinhTe(sauDien8Phut = SAU_DIEN8_PHUT): KetQuaKinhTe {
       const raw = truoc[r] + net[r] / 60;
       const sau = net[r] >= 0 ? Math.max(truoc[r], Math.min(cap, raw)) : Math.max(0, raw);
       sg.khoan.sanXuat[r] += (prod[r] * k) / 60;
-      if (r === 'gao') sg.khoan.an[r] -= an / 60;
+      if (r === 'gao') {
+        sg.khoan.an[r] -= anDu / 60;
+        sg.khoan.ca[r] += (anDu - an) / 60;
+      }
       // raw > sau: làm ra mà kho hết chỗ. raw < sau: gạo hết, phần ăn không có để trừ.
       if (raw > sau) sg.khoan.tranKho[r] += sau - raw;
       if (raw < sau) sg.khoan.doi[r] += sau - raw;

@@ -109,6 +109,7 @@ export const NHOM: Record<string, Entry[]> = {
     { ten: 'Thợ rèn', tao: () => makeWorker('thoRen') },
     { ten: 'Thợ xẻ', tao: () => makeWorker('thoXe') },
     { ten: 'Thợ mộc', tao: () => makeWorker('thoMoc') },
+    { ten: 'Ngư dân', tao: () => makeWorker('nguDan') },
     { ten: 'Người giữ kho', tao: () => makeWorker('giuKho') },
     { ten: 'Phụ nữ', tao: () => makeWorker('phuNu') },
     { ten: 'Phụ nữ ngồi gói bánh', tao: () => makeWorker('phuNu', true) },
