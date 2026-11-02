@@ -783,14 +783,13 @@ export const STORAGE_CAP = [500, 1000, 2000, 4000, 8000, 14000, 22000, 32000];
 
 // ---------- Khoảnh đất ----------
 
-/** Tổng số khoảnh đất 5×5 được mở (tính cả 16 khoảnh mở sẵn lúc đầu) theo cấp Điện, chỉ số 0 là cấp 1. */
-export const KHOANH_QUOTA = [18, 24, 32, 38, 48, 60, 72, 80];
 /**
- * Giá phát một khoảnh rừng: phần này của giá lần nâng Điện kế tiếp (gạo và vỏ ốc), từ khoảnh đầu tới khoảnh cuối
- * trong lượt của một cấp Điện. Không thấp hơn `KHOANH_COST_MIN`.
+ * Giá phát khoảnh rừng đầu tiên (khoảnh thứ 17, sau 16 khoảnh mở sẵn lúc đầu): chỉ gạo và vỏ ốc. Đất bên này sông
+ * phát thoải mái, không giới hạn lượt theo cấp Điện; giá tăng từng nấc theo số khoảnh đã phát (`KHOANH_COST_STEP`).
  */
-export const KHOANH_COST_FRAC: [number, number] = [0.02, 0.03];
-export const KHOANH_COST_MIN = { gao: 20, voOc: 10 };
+export const KHOANH_COST_BASE = { gao: 20, voOc: 15 };
+/** Mỗi khoảnh đã phát thêm thì giá khoảnh sau nhân chừng này. Khoảnh cuối cùng (thứ 100) chừng 2500 gạo. */
+export const KHOANH_COST_STEP = 1.06;
 
 export const START_RESOURCES: Resources = { gao: 150, voOc: 120, datDa: 0, sat: 0 };
 export const START_DAN = 4;

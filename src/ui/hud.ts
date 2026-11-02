@@ -90,7 +90,7 @@ import {
 import { chapterStages } from '../game/campaign';
 import { inChapter4, mergeCost, mergeable } from '../game/chuong4';
 import { giongAppeared, giongLook, giongReady, giongResting } from '../game/giong';
-import { khoanhQuota } from '../game/khoanh';
+import { KHOANH_N } from '../game/khoanh';
 import { inChapter2, sonJoined, sonLook, sonResting, giftCount } from '../game/son';
 import { floodToleranceOf, groundOf } from '../game/terrain';
 import { tetOpen, tetStarted, type Banh } from '../game/tet';
@@ -883,12 +883,9 @@ export class Hud {
       rows.push(`<div class="stat"><span></span><span class="muted">${tol >= 9 ? vi.ui.floodImmune : vi.ui.floodRisk(ground + tol)}</span></div>`);
     }
     if (b.type === 'dien') {
-      const quota = khoanhQuota(b.level);
-      // Điện cấp 8 không thêm lượt: không ghi mũi tên.
-      const next = b.level < def.maxLevel && khoanhQuota(b.level + 1) > quota ? ` → ${khoanhQuota(b.level + 1)}` : '';
       rows.push(`<div class="stat"><span>${vi.ui.storage}</span><span>${fmt(storageCap(state))}</span></div>`);
       rows.push(`<div class="stat"><span>${vi.ui.dan}</span><span>${state.dan}/${housing(state)}</span></div>`);
-      rows.push(`<div class="stat"><span>${vi.ui.khoanhCount}</span><span>${state.khoanh.length}/${quota}${next}</span></div>`);
+      rows.push(`<div class="stat"><span>${vi.ui.khoanhCount}</span><span>${state.khoanh.length}/${KHOANH_N * KHOANH_N}</span></div>`);
     }
 
     if (b.type === 'lauNo') rows.push(`<div class="stat"><span>${vi.ui.lauNoShots}</span><span></span></div>`);

@@ -886,8 +886,8 @@ export class World {
   }
 
   /**
-   * Rừng trên mọi ô chưa mở. Ô rừng sát đất đã mở thì thưa cây cho dễ nhìn bìa đất; khoảnh phát được (sát đất, còn
-   * lượt) thì thưa hơn nữa và cắm cọc mốc buộc vải đỏ ở bốn góc.
+   * Rừng trên mọi ô chưa mở. Ô rừng sát đất đã mở thì thưa cây cho dễ nhìn bìa đất; khoảnh phát được (sát đất đã
+   * mở) thì thưa hơn nữa và cắm cọc mốc buộc vải đỏ ở bốn góc.
    */
   private rebuildForest(state: GameState): void {
     if (this.forest) this.scene.remove(this.forest);

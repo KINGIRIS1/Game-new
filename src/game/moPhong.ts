@@ -19,7 +19,7 @@ import {
   upgrade,
   type GameState,
 } from './game';
-import { KHOANH_N, khoanhCost, khoanhLeft, khoanhOrigin, openKhoanh, openable } from './khoanh';
+import { KHOANH_N, khoanhCost, khoanhOrigin, openKhoanh, openable } from './khoanh';
 import { KHOANH } from './map';
 
 /** Các việc người chơi mô phỏng làm. Báo cáo kinh tế dựa vào đây để ghi sổ từng khoản thu chi. */
@@ -56,10 +56,11 @@ function tradeSurplus(s: GameState): void {
 
 /**
  * Khoảnh nên phát để dựng `type`, theo thứ tự ưu tiên: loại cần sát sông (bến) thì khoảnh ven sông; loại khác thì
- * khoảnh gần Điện nhất. Rỗng nếu hết lượt hay không giữ được phần dành để nâng Điện.
+ * khoảnh gần Điện nhất. Rỗng nếu không giữ được phần dành để nâng Điện (giá phát rừng tăng từng nấc nên càng về sau
+ * càng ít phát).
  */
 function khoanhFor(s: GameState, type: BuildingType): number[] {
-  if (khoanhLeft(s) <= 0 || !affordWithReserve(s, khoanhCost(s))) return [];
+  if (!affordWithReserve(s, khoanhCost(s))) return [];
   const dien = s.buildings.find((b) => b.type === 'dien')!;
   const cx = dien.x + BUILDINGS.dien.w / 2;
   const cz = dien.z + BUILDINGS.dien.d / 2;

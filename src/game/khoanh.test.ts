@@ -1,9 +1,10 @@
-// Khoảnh đất tự chọn: lượt phát theo cấp Điện, phải sát đất đã mở, giá nhích dần 2–3% giá nâng Điện kế tiếp,
-// khóa khi có giặc, dải giặc luôn ngoài đất đã mở, nâng bản lưu phiên bản 11 (đất hình vuông) lên 12.
+// Khoảnh đất tự chọn: phát thoải mái không giới hạn lượt, phải sát đất đã mở, giá tăng từng nấc theo số khoảnh đã
+// phát (không theo cấp Điện), khóa khi có giặc, dải giặc luôn ngoài đất đã mở, nâng bản lưu phiên bản 11 (đất hình
+// vuông) lên 12.
 
 import { describe, expect, it } from 'vitest';
 import { raidSpawnBand } from './battle';
-import { BUILDINGS, KHOANH_COST_MIN, KHOANH_QUOTA } from './defs';
+import { KHOANH_COST_BASE, KHOANH_COST_STEP } from './defs';
 import { canPlace, createInitialState, place, type GameState } from './game';
 import {
   KHOANH_N,
@@ -12,11 +13,10 @@ import {
   canOpenKhoanh,
   isOpen,
   khoanhCost,
+  khoanhCostAt,
   khoanhId,
-  khoanhLeft,
   khoanhOf,
   khoanhOrigin,
-  khoanhQuota,
   openKhoanh,
   openStart,
   openable,
@@ -64,19 +64,18 @@ describe('lưới khoảnh', () => {
 });
 
 describe('phát rừng', () => {
-  it('lượt phát theo cấp Điện: 18, 24, 32, 38, 48, 60, 72, 80 khoảnh', () => {
-    expect(KHOANH_QUOTA).toEqual([18, 24, 32, 38, 48, 60, 72, 80]);
-    for (let l = 2; l <= 8; l++) expect(khoanhQuota(l)).toBeGreaterThan(khoanhQuota(l - 1));
-    expect(khoanhQuota(8)).toBeLessThan(100);
+  it('phát thoải mái, không giới hạn lượt theo cấp Điện: Điện 1 đủ của thì phát được hết rừng bên này sông', () => {
     const s = rich(1);
-    expect(khoanhLeft(s)).toBe(2);
     expect(openKhoanh(s, NORTH).ok).toBe(true);
     expect(openKhoanh(s, NORTH - KHOANH_N).ok).toBe(true);
-    expect(khoanhLeft(s)).toBe(0);
-    expect(canOpenKhoanh(s, NORTH - 2 * KHOANH_N)).toEqual({ ok: false, reason: 'hetLuotKhoanh' });
-    expect(openable(s)).toEqual([]);
-    s.buildings[0].level = 2;
-    expect(khoanhLeft(s)).toBe(6);
+    expect(openKhoanh(s, NORTH - 2 * KHOANH_N).ok).toBe(true);
+    // Lan dần ra từ đất đã mở cho tới khi hết rừng.
+    for (let list = openable(s); list.length; list = openable(s)) for (const id of list) expect(openKhoanh(s, id).ok).toBe(true);
+    expect(s.khoanh.length).toBe(KHOANH_N * KHOANH_N);
+    expect(s.buildings[0].level).toBe(1);
+    // Dải rừng ngoài cùng (chỗ giặc trên bộ xuất phát) vẫn là rừng.
+    expect(openStart(s)).toBe(FOREST_BAND);
+    expect(isOpen(s, FOREST_BAND - 1, FOREST_BAND)).toBe(false);
   });
 
   it('phải sát đất đã mở theo bốn hướng; đã mở thì thôi', () => {
@@ -107,26 +106,38 @@ describe('phát rừng', () => {
     expect(place(s, 'nhaSan', o.x + 1, o.z + 1).ok).toBe(true);
   });
 
-  it('giá: sàn 20 gạo, 10 vỏ ốc; nhích dần trong lượt; ở Điện 6 chừng 2–3% giá lên Điện 7', () => {
-    const s = rich(1);
-    expect(khoanhCost(s)).toEqual(KHOANH_COST_MIN);
-    const six = rich(6);
-    six.khoanh = squareKhoanh(35);
-    const up = BUILDINGS.dien.upgradeCost[7];
-    // Vùng 35×35 có 49 khoảnh: bỏ một khoảnh ở góc rừng cho đúng 48 (hết lượt Điện 5), khoảnh tiếp theo là đầu lượt Điện 6.
-    six.khoanh = six.khoanh.slice(1);
-    expect(six.khoanh.length).toBe(KHOANH_QUOTA[4]);
-    const first = khoanhCost(six);
-    expect(Math.abs(first.gao! - 0.02 * up.gao!)).toBeLessThanOrEqual(5);
-    expect(Math.abs(first.voOc! - 0.02 * up.voOc!)).toBeLessThanOrEqual(5);
-    expect(first.datDa ?? 0).toBe(0);
-    expect(first.sat ?? 0).toBe(0);
-    // Mở tới khoảnh cuối của lượt Điện 6.
-    const all = Array.from({ length: 100 }, (_, i) => i).filter((id) => !six.khoanh.includes(id));
-    six.khoanh = [...six.khoanh, ...all.slice(0, KHOANH_QUOTA[5] - 1 - six.khoanh.length)];
-    const last = khoanhCost(six);
-    expect(Math.abs(last.gao! - 0.03 * up.gao!)).toBeLessThanOrEqual(5);
-    expect(last.gao!).toBeGreaterThan(first.gao!);
+  it('giá tăng từng nấc theo số khoảnh đã phát (nấc nào cũng đắt hơn nấc trước), không theo cấp Điện; chỉ gạo và vỏ ốc', () => {
+    expect(khoanhCost(rich(1))).toEqual(KHOANH_COST_BASE);
+    expect(khoanhCost(rich(8))).toEqual(KHOANH_COST_BASE);
+    expect(khoanhCostAt(START_KHOANH.length)).toEqual(KHOANH_COST_BASE);
+    let prev = khoanhCostAt(START_KHOANH.length);
+    let total = 0;
+    for (let n = START_KHOANH.length; n < KHOANH_N * KHOANH_N; n++) {
+      const c = khoanhCostAt(n);
+      expect(Object.keys(c).sort()).toEqual(['gao', 'voOc']);
+      for (const r of ['gao', 'voOc'] as const) {
+        // Làm tròn: dưới 100 tới đơn vị, dưới 1000 tới 5, từ 1000 tới 10.
+        expect(c[r]! % (c[r]! < 100 ? 1 : c[r]! < 1000 ? 5 : 10)).toBe(0);
+        if (n > START_KHOANH.length) expect(c[r]!).toBeGreaterThan(prev[r]!);
+        expect(Math.abs(c[r]! - KHOANH_COST_BASE[r] * KHOANH_COST_STEP ** (n - START_KHOANH.length))).toBeLessThanOrEqual(5);
+      }
+      prev = c;
+      total += c.gao!;
+    }
+    // Khoảnh cuối cùng đắt gấp cả trăm khoảnh đầu; phát hết rừng tốn chừng 44 nghìn gạo.
+    expect(prev.gao!).toBeGreaterThan(100 * KHOANH_COST_BASE.gao);
+    expect(prev.gao!).toBeLessThan(3000);
+    expect(total).toBeGreaterThan(40000);
+    expect(total).toBeLessThan(50000);
+    // Phát xong một khoảnh thì khoảnh sau lên một nấc.
+    const s = rich(3);
+    for (let cz = 5; cz >= 0; cz--) {
+      const before = khoanhCost(s);
+      const r = openKhoanh(s, khoanhId(7, cz));
+      expect(r.ok && r.value).toEqual(before);
+      expect(khoanhCost(s)).toEqual(khoanhCostAt(s.khoanh.length));
+    }
+    expect(khoanhCost(s).gao!).toBeGreaterThan(KHOANH_COST_BASE.gao);
   });
 
   it('đang có giặc, lũ hay trinh sát vừa báo thì không phát rừng', () => {
@@ -173,12 +184,12 @@ describe('nâng bản lưu phiên bản 11 lên 12', () => {
     });
   }
 
-  it('đã mở nhiều hơn lượt của cấp (Điện 6: 64 khoảnh, lượt 60) thì giữ đất, chưa phát thêm được', () => {
+  it('đất hình vuông đổi sang khoảnh rồi vẫn phát thêm được, giá theo số khoảnh đã có (Điện 6: 64 khoảnh)', () => {
     const s = createInitialState(0);
     setDien(s, 6);
+    s.resources = { gao: 1e5, voOc: 1e5, datDa: 1e5, sat: 1e5 };
     expect(s.khoanh.length).toBe(64);
-    expect(khoanhLeft(s)).toBe(0);
-    expect(canOpenKhoanh(s, khoanhId(1, 9))).toEqual({ ok: false, reason: 'hetLuotKhoanh' });
+    expect(canOpenKhoanh(s, khoanhId(1, 9))).toEqual({ ok: true, value: khoanhCostAt(64) });
   });
 
   it('từ chối bản lưu có danh sách khoảnh hỏng', () => {
