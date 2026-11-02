@@ -7,7 +7,7 @@ import { raidSpawnBand, type Battle, type RaidSide } from '../game/battle';
 import { caoLoAtDien } from '../game/caoLo';
 import { advLook, inChapter3, ruaVangCame, type AdvLook } from '../game/coLoa';
 import { heroPost } from '../game/doanhTrai';
-import { dienLevel, type Building, type GameState } from '../game/game';
+import { dienLevel, occupancy, type Building, type GameState } from '../game/game';
 import { giongLook, type GiongLook } from '../game/giong';
 import { KHOANH_N, khoanhOf, khoanhOrigin, openMask, openStart, openable } from '../game/khoanh';
 import { DIEN_HOME, FAR_BANK, FOREST_BAND, GRID, KHOANH, RIVER_START, baseHeights } from '../game/map';
@@ -25,6 +25,7 @@ import { DOANH_TRAI_HERO } from './congTrinh/doanhTrai';
 import { CONG_TRINH, lotModel } from './congTrinh/index';
 import { makeRuaVang } from './beasts';
 import { buildDecor, disposeDecor, isBatchedDecor, type DecorSpot } from './decor';
+import { buildWild, disposeWild, wildSpots } from './oTrong';
 import { makeAnDuong, makeCaoLo, makeGiong, makeSonTinh } from './heroes';
 import { addSunLights, type SunLights } from './lights';
 import {
@@ -254,6 +255,11 @@ export class World {
   private citadel?: THREE.Object3D;
   /** Đường đi và đồ trang trí một ô, vẽ theo lô. */
   private decor?: THREE.Object3D;
+  /** Khóm cỏ, hoa dại, đá nhỏ trên ô trống; vẽ lại khi đất mở thêm, bậc đất đổi hay công trình đổi chỗ. */
+  private wild?: THREE.Object3D;
+  private wildOcc?: Int32Array;
+  private wildMask?: Uint8Array;
+  private wildDirty = true;
   private readonly ripples = new InstancedBoxes(RIPPLES);
   private readonly buildingsRoot = new THREE.Group();
   private readonly views = new Map<number, BuildingView>();
@@ -564,6 +570,7 @@ export class World {
     this.dikeKey = '#';
     this.citadelKey = '#';
     this.decorKey = '#';
+    this.wildDirty = true;
     this.floodKey = '';
     this.heights = [];
     this.landKey = '';
@@ -598,7 +605,10 @@ export class World {
     const level = dienLevel(state);
     this.placeWisps(state);
     const heightsChanged = state.heights.length !== this.heights.length || state.heights.some((h, i) => h !== this.heights[i]);
-    if (heightsChanged) this.heights = [...state.heights];
+    if (heightsChanged) {
+      this.heights = [...state.heights];
+      this.wildDirty = true;
+    }
     const landKey = `${level}:${state.khoanh.join(',')}`;
     if (landKey !== this.landKey || heightsChanged) {
       this.landKey = landKey;
@@ -708,7 +718,29 @@ export class World {
       this.scene.add(this.citadel);
     }
     this.syncDecor(state);
+    this.syncWild(state);
     this.syncFlood(state);
+  }
+
+  /**
+   * Trang trí ô trống (`oTrong.ts`): chỉ dựng lại khi lưới chiếm ô hay mặt nạ đất mở đổi (cả hai được ghi nhớ theo
+   * dấu vân tay nên so bằng tham chiếu là đủ), hoặc bậc đất đổi.
+   */
+  private syncWild(state: GameState): void {
+    const occ = occupancy(state);
+    const mask = openMask(state);
+    if (!this.wildDirty && occ === this.wildOcc && mask === this.wildMask) return;
+    this.wildDirty = false;
+    this.wildOcc = occ;
+    this.wildMask = mask;
+    if (this.wild) {
+      this.scene.remove(this.wild);
+      disposeWild(this.wild);
+    }
+    const dien = state.buildings.find((b) => b.type === 'dien');
+    const center = dien ? { x: dien.x + BUILDINGS.dien.w / 2, z: dien.z + BUILDINGS.dien.d / 2 } : null;
+    this.wild = buildWild(wildSpots(mask, occ, center), (x, z) => this.groundY(x, z), (v) => v - HALF);
+    this.scene.add(this.wild);
   }
 
   /**
