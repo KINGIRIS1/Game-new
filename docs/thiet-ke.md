@@ -1384,6 +1384,139 @@ Kinh đô lớn lúc đầu chỉ phóng mô hình cũ theo móng mới (`footSc
 1. **Mười một loại** (đã làm): Điện, ruộng, bến, nhà sàn, bãi đất đá, lò rèn, kho, doanh trại, trại giáo, trại cung, chuồng voi; cảnh Tết, tướng, thuyền buôn theo bố cục mới.
 2. **Ba đền, bốn công trình Hội Tết**; bỏ dáng cũ khỏi `buildings.ts`. Chụp kiểm tra mọi công trình ở mọi cấp.
 
+## Kế hoạch: cổng thành, xưởng mộc, làng chài (chờ chủ dự án duyệt)
+
+Chủ dự án muốn thêm ba công trình: cổng thành, xưởng mộc (thợ mộc, gỗ), làng chài (thuyền đánh cá, ngư dân, cá). Chủ dự án đã chốt hướng qua năm câu hỏi:
+
+- **Gỗ là tài nguyên thứ năm**: tích trong kho, có chip trên thanh trên, dùng cho các công trình mới. Giá công trình cũ giữ nguyên.
+- **Cá là thức ăn thay gạo**: không tích trữ, không có chip. Dân và lính ăn cá trước, thiếu mới ăn gạo.
+- **Cổng thành là cửa trong vòng tường**, trên lầu cổng có lính bắn.
+- **Mở rải theo chương**: xưởng mộc, làng chài có từ chương 1; cổng thành có từ chương 3.
+- **Cổng hút giặc**: khi giữ kinh đô, quân ta vẫn đi thẳng xuyên tường như bây giờ, nên độ khó các đợt giặc cũ giữ nguyên. Giặc tìm đường thấy qua cổng dễ hơn phá tường, nên dồn về cổng.
+
+Mọi con số và dáng dưới đây là đề xuất, chờ chủ dự án duyệt trước khi viết code. Như các lần trước, khi làm được chỉnh trong khoảng ±20% để khớp nhịp đo bằng test, làm xong thì ghi số cuối cùng.
+
+### Gỗ 🪵
+
+- Tài nguyên thứ năm, dùng chung sức chứa kho với bốn loại kia. Chip gỗ trên thanh trên chỉ hiện từ khi mở xưởng mộc (Điện 2).
+- **Nguồn vào**:
+  - xưởng mộc;
+  - phát rừng: mỗi khoảnh phát xong cho số gỗ bằng nửa số gạo của giá khoảnh ấy (Điện 1–3 chừng 10 gỗ, Điện 7 chừng 150);
+  - thuyền buôn: có thêm lời mời đổi gỗ. Giá trị quy đổi 1 gỗ bằng 1,3 gạo.
+- **Chỗ tiêu**:
+  - dựng và nâng làng chài (đóng thuyền);
+  - dựng và nâng cổng thành;
+  - thuyền buôn mua gỗ, để gỗ không ứ khi mọi công trình dùng gỗ đã lên hết cấp.
+- Đền Phù Đổng và phúc lành Đất cũng cộng vào gỗ. Giặc cướp gỗ như các tài nguyên khác. Thưởng phó bản và thưởng nhiệm vụ giữ bốn loại cũ.
+
+### Xưởng mộc
+
+Móng 3×3, 8 cấp, cần Điện 2, có từ chương 1. Cần thợ mộc làm, dân rảnh tự vào làm như ruộng, bến, bãi đất đá, lò rèn.
+
+| Cấp | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 |
+|---|---|---|---|---|---|---|---|---|
+| Gỗ mỗi phút | 10 | 16 | 24 | 36 | 50 | 68 | 90 | 118 |
+| Chỗ làm | 1 | 2 | 2 | 3 | 3 | 4 | 4 | 4 |
+| Giá dựng, giá nâng lên cấp ấy | 60 gạo, 40 vỏ ốc | 60 vỏ ốc, 30 đất đá | 120 vỏ ốc, 60 đất đá | 250, 120 | 500, 250 | 1000, 500 | 2000, 1000 | 4000, 2000 |
+
+- Số tối đa theo cấp Điện 1–8: 0, 1, 1, 2, 2, 2, 3, 3. Máu như bãi đất đá.
+- **Dáng** (bản vẽ ở `docs/bo-cuc-cong-trinh.md`):
+
+  | Cấp | Thêm |
+  |---|---|
+  | 1 | lán thợ mộc góc sau, giá cưa xẻ hai người (cây gỗ gác trên giá cao, một người đứng trên, một người dưới), đống gỗ tròn |
+  | 2 | thuyền độc mộc đang đẽo trên hai mễ gỗ |
+  | 3 | khung nhà sàn dựng dở, cột và xà chưa lợp mái |
+  | 4 | giá phơi ván |
+  | 5 | trâu kéo một cây gỗ vào sân |
+  | 6 | cột hiên lán chạm hoa văn trống đồng |
+  | 7 | lán thứ hai bày sập gỗ chạm, hòm gỗ |
+  | 8 | thuyền độc mộc thành thuyền lớn mũi cong trên giàn đà |
+
+  Mái theo cấp như các công trình khác.
+- **Thợ mộc**: quấn khăn, đeo yếm, cầm cưa hay rìu, vác tấm ván. Động tác kéo cưa và đẽo rìu.
+
+### Làng chài
+
+Móng 3×3, 8 cấp, phải sát bờ sông như bến, cần Điện 3, có từ chương 1. Cần ngư dân làm, dân rảnh tự vào làm.
+
+| Cấp | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 |
+|---|---|---|---|---|---|---|---|---|
+| Cá mỗi phút | 6 | 10 | 15 | 22 | 30 | 40 | 52 | 68 |
+| Chỗ làm | 1 | 2 | 2 | 2 | 3 | 3 | 3 | 3 |
+| Giá dựng, giá nâng lên cấp ấy | 80 gạo, 60 gỗ | 60 gạo, 40 gỗ | 120 gạo, 80 gỗ | 250, 160 | 500, 320 | 1000, 640 | 2000, 1300 | 4000, 2600 |
+
+- Số tối đa theo cấp Điện 1–8: 0, 0, 1, 1, 2, 2, 3, 3. Máu như bến. Lũ không làm hư (nhà trên cọc), như bến.
+- **Cá đỡ gạo ăn**:
+  - mỗi phút, dân và lính ăn cá trước, phần còn thiếu mới ăn gạo. Cá thừa thì bỏ phí, không tích trữ;
+  - có đủ cá thì không bị thiếu gạo;
+  - Đền Phù Đổng và phúc lành Đất cũng cộng vào cá như các sản lượng khác;
+  - ví dụ ở Điện 5: dân và lính ăn chừng 75 gạo mỗi phút, hai làng chài cấp 5 đỡ được 60.
+- Bảng làng chài ghi: cá mỗi phút của làng ấy và của cả kinh đô, dân và lính ăn bao nhiêu mỗi phút, số gạo cá đỡ được. Cá đã đủ cho cả kinh đô ăn thì báo dựng thêm hay nâng thêm không có ích.
+- Áp mẫu kinh đô: làng chài đứng dọc sông ngoài đê như bến.
+- **Dáng** (bản vẽ ở `docs/bo-cuc-cong-trinh.md`; mặt trước quay ra sông):
+
+  | Cấp | Thêm |
+  |---|---|
+  | 1 | lều chài góc sau, giàn phơi cá, bờ ván ra nước, một thuyền nan neo sát bờ |
+  | 2 | vó bè ven bờ, cần tre chìa ra nước |
+  | 3 | thuyền đánh cá thứ hai, giá phơi lưới |
+  | 4 | lều chài thành nhà sàn ngư dân |
+  | 5 | chum mắm, cờ |
+  | 6 | hàng đáy cắm cọc dưới sông |
+  | 7 | sạp chợ cá bày thúng cá |
+  | 8 | thuyền lưới lớn có buồm neo ngoài, miếu thần sông góc sau |
+
+  Thuyền đánh cá bơi quanh chỗ neo sát bờ, người trên thuyền quăng chài. Thuyền không ra tới luồng thuyền qua lại, không chạm bờ bên kia.
+- **Ngư dân**: đội nón lá, đóng khố, đeo giỏ cá bên hông. Động tác quăng chài, kéo vó.
+
+### Cổng thành
+
+Móng 1×1, 3 cấp, cần Điện 5, có từ chương 3 (cùng thành Cổ Loa).
+
+| Cấp | Cần | Giá dựng, giá nâng | Máu | Lính trên lầu |
+|---|---|---|---|---|
+| 1 | chương 3, Điện 5 | 500 đất đá, 400 gỗ, 100 sắt | 3000 | sát thương 20 |
+| 2 | Điện 7 | 1200 đất đá, 1000 gỗ, 250 sắt | 4500 | sát thương 26 |
+| 3 | Điện 8 | 2500 đất đá, 2000 gỗ, 500 sắt | 6000 | sát thương 32, mỗi phát bắn 2 giặc |
+
+- Số tối đa: 2 ở Điện 5–7, 4 ở Điện 8.
+- **Đặt**: trên ô trống, hoặc chạm vào một đoạn lũy, thành đất, thành Cổ Loa để thay đoạn ấy (như thành Cổ Loa thay lũy). Không đặt được trên đê, vì cổng không chặn nước lũ.
+- **Hút giặc**: khi tìm đường, giặc tính ô cổng dễ qua hơn tường (giá ô 8, so với lũy tre 12, thành đất 30, thành Cổ Loa 45). Nên giặc chịu đi vòng chừng 35 ô tới cổng thay vì phá thành. Tới cổng thì phải phá cổng mới qua. Người chơi bày chòi canh, lầu nỏ, bẫy chông quanh cổng thành chỗ đón đánh.
+- **Lính trên lầu cổng** tự bắn giặc trong tầm 4,5 ô, nghỉ 1,2 giây giữa hai phát. Như mọi tầm bắn khi giữ kinh đô, tầm nhân 1,4. Đền Cổ Loa còn nguyên thì bắn mạnh gấp rưỡi và xa thêm 1 ô, như chòi canh.
+- Cổng tính là thành khi đếm vòng thành Cổ Loa, nên đặt cổng trong vòng thành không làm hở vòng. Yêu tinh nhắm phá cổng như phá thành. Cổng hư thì giặc đi qua được, sửa như mọi công trình.
+- **Mẫu kinh đô**:
+  - Phong Châu: một cổng giữa cạnh lũy phía bắc, một cổng giữa cạnh phía tây, đối xứng qua đường chéo;
+  - Cổ Loa và Cổ Loa giữ sông: hai cổng trên vòng thành ngoài, phía bắc và phía tây; Điện 8 thêm hai cổng trên vòng giữa;
+  - Đê bao không có chỗ cho cổng. Áp mẫu này thì cổng đứng yên; vướng chỗ của mẫu thì dời ra chỗ trống gần nhất, như trại nỏ với các mẫu cũ.
+- **Dáng**:
+
+  | Cấp | Dáng |
+  |---|---|
+  | 1 | hai trụ gỗ, cánh cửa gỗ, lầu tre mái tranh trên cửa |
+  | 2 | hai trụ đất nện, lầu gỗ hai tầng lan can đỏ |
+  | 3 | vọng lâu mái ngói viền đồng vàng, chim Lạc trên nóc, hai cờ đỏ, hai lính nỏ trên lầu |
+
+  - Mái theo cấp. Cổng cao hơn đoạn tường hai bên để nhìn là biết.
+  - Cổng xoay theo đoạn tường hai bên, cửa nhìn ra phía ngoài.
+  - Lúc yên thì cánh cửa mở; có giặc thì đóng.
+
+### Lạc hầu và bản lưu
+
+- Không thêm nhiệm vụ Lạc hầu, để khỏi dời số thứ tự nhiệm vụ của người đang chơi. Lần đầu mở mỗi công trình, Lạc hầu nói một câu gợi ý, như gợi ý lần đầu được phát rừng.
+- Bản lưu lên một phiên bản khi thêm gỗ: bản lưu cũ có 0 gỗ. Lấy số phiên bản kế tiếp lúc làm, vì chương 4 phần 3 và phần 4 cũng nâng bản lưu.
+
+### Thứ tự làm
+
+Mỗi PR làm trên một nhánh từ `main` mới nhất.
+
+1. **Duyệt tài liệu này**: mọi con số và dáng ở trên, cùng bản vẽ xưởng mộc, làng chài ở `docs/bo-cuc-cong-trinh.md`.
+2. **PR 1: gỗ và xưởng mộc**, nâng bản lưu. Thêm gỗ vào kho, thanh trên, thuyền buôn, phát rừng, giặc cướp; xưởng mộc, thợ mộc; người chơi mô phỏng dựng xưởng mộc; báo cáo kinh tế có sổ gỗ; mẫu kinh đô có chỗ cho xưởng mộc. Test: sản lượng, giá, gỗ khi phát rừng, thuyền buôn, nâng bản lưu, nhịp lên Điện vẫn đạt.
+3. **PR 2: làng chài và cá**. Luật cá đỡ gạo ăn, thuyền đánh cá, ngư dân, chỗ trong mẫu kinh đô dọc sông. Test: cá đỡ gạo, cá thừa, hết thiếu gạo khi đủ cá, phải sát sông, lũ không làm hư, mẫu kinh đô đủ chỗ, nhịp lên Điện vẫn đạt.
+4. **PR 3: cổng thành**. Đặt thay đoạn tường, giặc tìm đường qua cổng, lính trên lầu bắn, đếm vòng thành, chỗ trong mẫu kinh đô. Test: giặc dồn về cổng khi vòng tường kín, lính trên lầu bắn và Đền Cổ Loa cộng thêm, cổng giữ vòng thành, mẫu kinh đô có cổng; các trận giữ kinh đô chương 3, 4 vẫn đạt chuẩn khi không có cổng, và một đợt có cổng không quá dễ.
+
+Mỗi PR: chạy `npm test` và `npm run build`; chụp kiểm tra ở khổ điện thoại (thanh trên đủ chỗ cho năm chip ở khổ `fold`); ghi số cuối cùng vào tài liệu này; sửa các mục chung (bốn tài nguyên thành năm, bảng Công trình) khi phần ấy đã làm.
+
 ## Nhịp chơi và lưu game
 
 - Nhịp chơi lai: mỗi lần mở game là một phiên ra quyết định ngắn.
@@ -1424,4 +1557,5 @@ Kinh đô lớn lúc đầu chỉ phóng mô hình cũ theo móng mới (`footSc
 12. **Kinh đô lớn, công trình to, mở đất bằng khoảnh** (đã duyệt, đang làm; xem mục Kế hoạch cùng tên): công trình to hơn một ô mỗi chiều, lưới 55×55 (PR 1 đã làm), khoảnh 5×5 tự chọn (PR 2 đã làm), viền cỏ, trang trí ô trống, cây đá mọc. Làm trước chương 4 PR 2–4.
     **Vẽ lại công trình trên móng** (đã duyệt, đang làm; xem mục cùng tên): mười một loại đã vẽ lại; ba đền và bốn công trình Hội Tết làm sau.
 13. **Đường đi và đồ trang trí** (đã làm, xem mục cùng tên): bốn loại đường, bảy món trang trí, ba thẻ chọn trong bảng Xây dựng, thẻ Dọn trang trí.
+14. **Cổng thành, xưởng mộc, làng chài** (chờ chủ dự án duyệt, xem mục Kế hoạch cùng tên): gỗ là tài nguyên thứ năm, cá đỡ gạo ăn, cổng hút giặc trong vòng tường. Ba PR: gỗ và xưởng mộc, làng chài, cổng thành.
 14. **Để sau**: chương 5 về Hai Bà Trưng (mới nhắc ở câu cuối chương 4); nhạc nền.
