@@ -39,6 +39,9 @@ export function advSetup(s: GameState): HeroSetup | null {
 
 const tileIndex = (x: number, z: number) => z * GRID + x;
 
+/** Đoạn tính vào vòng thành: thành Cổ Loa và cổng thành còn nguyên (cổng đứng trong vòng thì vòng vẫn kín). */
+const isRingWall = (b: { type: string; damaged?: boolean }) => (b.type === 'thanh' || b.type === 'congThanh') && !b.damaged;
+
 /**
  * Số vòng thành Cổ Loa quanh Điện: giặc đi từ bìa rừng tới Điện phải phá qua ít nhất bao nhiêu đoạn thành còn nguyên.
  * Giặc đi tám hướng như khi tìm đường thật, nên các đoạn thành phải nối liền theo cạnh ô (chéo góc là hở);
@@ -52,7 +55,7 @@ export function wallRings(s: GameState): number {
   let h = (dien.x * 64 + dien.z) | 0;
   let n = 0;
   for (const b of s.buildings) {
-    if (b.type !== 'thanh' || b.damaged) continue;
+    if (!isRingWall(b)) continue;
     const v = b.x * 64 + b.z;
     a = Math.imul(a ^ v, 0x01000193);
     h = Math.imul(h ^ v, 0x85ebca6b) ^ (h >>> 13);
@@ -70,7 +73,7 @@ const ringsCache = new WeakMap<GameState, { a: number; h: number; n: number; rin
 
 function countRings(s: GameState, dien: { x: number; z: number }): number {
   const wall = new Uint8Array(GRID * GRID);
-  for (const b of s.buildings) if (b.type === 'thanh' && !b.damaged) wall[tileIndex(b.x, b.z)] = 1;
+  for (const b of s.buildings) if (isRingWall(b)) wall[tileIndex(b.x, b.z)] = 1;
   const dist = new Int32Array(GRID * GRID).fill(1 << 20);
   // Dò theo từng mức: bước vào ô có thành tốn 1, ô khác tốn 0. `buckets[d]` là các ô vừa tới được với chi phí d.
   const buckets: number[][] = [[], []];

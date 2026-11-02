@@ -145,6 +145,7 @@ Học cơ chế mở đất của Forge of Empires, Elvenar: đất chia khoản
 | Đê đất → Kè đá | 1×1 | Có từ chương 2. Chặn nước lũ tràn từ sông vào |
 | Đền Tản Viên | 4×4 | Có sau khi kết chương 2. Lũ dâng thấp đi một bậc |
 | Thành Cổ Loa | 1×1 | Có từ chương 3. Đoạn thành đất nện cao, chắc; đắp nhiều vòng quanh Điện |
+| Cổng thành | 1×1 | Có từ chương 3, Điện 5. Cửa trong vòng tường: giặc dồn về cổng, lính trên lầu cổng bắn (xem mục Kế hoạch: cổng thành, xưởng mộc, làng chài) |
 | Đền Cổ Loa | 4×4 | Có sau khi kết chương 3. Chòi canh bắn mạnh gấp rưỡi, xa thêm 1 ô |
 | Đường đi, đồ trang trí | 1×1 tới 3×3 | Chỉ để nhìn (xem mục Đường đi và đồ trang trí) |
 
@@ -1442,7 +1443,7 @@ Kinh đô lớn lúc đầu chỉ phóng mô hình cũ theo móng mới (`footSc
    - vườn đậu lá dong, chuồng lợn, bếp gói bánh: vẽ lại trên trọn móng ở `congTrinh/` theo bản vẽ. Người ngồi gói bánh ngày Tết nay ngồi trên chiếu trong móng bếp (`BEP_TET_SEAT`).
    - Dáng cũ còn trong `buildings.ts` để chụp so; bỏ khi không cần so nữa.
 
-## Kế hoạch: cổng thành, xưởng mộc, làng chài (chủ dự án đã duyệt, đang làm)
+## Kế hoạch: cổng thành, xưởng mộc, làng chài (chủ dự án đã duyệt, đã làm)
 
 Chủ dự án muốn thêm ba công trình: cổng thành, xưởng mộc (thợ mộc, gỗ), làng chài (thuyền đánh cá, ngư dân, cá). Chủ dự án đã chốt hướng qua năm câu hỏi:
 
@@ -1452,7 +1453,7 @@ Chủ dự án muốn thêm ba công trình: cổng thành, xưởng mộc (th�
 - **Mở rải theo chương**: xưởng mộc, làng chài có từ chương 1; cổng thành có từ chương 3.
 - **Cổng hút giặc**: khi giữ kinh đô, quân ta vẫn đi thẳng xuyên tường như bây giờ, nên độ khó các đợt giặc cũ giữ nguyên. Giặc tìm đường thấy qua cổng dễ hơn phá tường, nên dồn về cổng.
 
-Chủ dự án đã duyệt mọi con số và dáng dưới đây trước khi viết code. Như các lần trước, khi làm được chỉnh trong khoảng ±20% để khớp nhịp đo bằng test, làm xong thì ghi số cuối cùng. Phần gỗ và xưởng mộc (PR 1), làng chài (PR 2) đã làm, số giữ như đề xuất.
+Chủ dự án đã duyệt mọi con số và dáng dưới đây trước khi viết code. Như các lần trước, khi làm được chỉnh trong khoảng ±20% để khớp nhịp đo bằng test, làm xong thì ghi số cuối cùng. Cả ba phần đã làm: gỗ và xưởng mộc (PR 1), làng chài (PR 2), cổng thành (PR 3); số giữ như đề xuất.
 
 ### Gỗ 🪵
 
@@ -1570,6 +1571,17 @@ Móng 1×1, 3 cấp, cần Điện 5, có từ chương 3 (cùng thành Cổ Loa
   - Mái theo cấp. Cổng cao hơn đoạn tường hai bên để nhìn là biết.
   - Cổng xoay theo đoạn tường hai bên, cửa nhìn ra phía ngoài.
   - Lúc yên thì cánh cửa mở; có giặc thì đóng.
+- **Đã làm** (PR 3, số giữ như bảng trên; không nâng bản lưu vì cổng chỉ là một loại công trình mới):
+  - Lính trên lầu nhắm giặc gần nhất trong tầm (kể cả giặc đang chạy), cấp 3 mỗi phát bắn hai giặc. Mũi tên bay ra từ giữa cổng.
+  - Mẫu kinh đô đánh dấu chỗ cổng trên đoạn tường (`Slot.cong`). Chỗ cổng đứng giữa trục Điện khi được (Phong Châu, Cổ Loa vòng ngoài), tránh đoạn có ụ nỏ (Cổ Loa giữ sông). Chưa mở cổng (trước chương 3, hay Điện dưới 5) thì áp mẫu vẫn dựng tường liền ở chỗ ấy, vòng không hở; đã mở thì dựng cổng thay đoạn tường, bao nhiêu cổng là tùy số tối đa. Bản đồ thu nhỏ của mẫu tô chỗ cổng màu đỏ khi đã mở cổng.
+  - Cổng không có chỗ trong mẫu (Đê bao) thì đứng yên, vướng thì dời ra chỗ trống gần nhất.
+  - Dáng ở `buildings.ts` (`makeCongThanh`), móng một ô như chòi canh, to hơn chút (112%) cho trụ cổng liền với đoạn tường hai bên. Lòng cổng tối có khung cửa gỗ hai mặt nên nhìn từ trong hay ngoài thành đều thấy lối qua. Cánh cửa ở mặt trong cổng (phía Điện, nơi camera thường nhìn); mở thì áp sát mặt trong hai trụ, có giặc (từ lúc trinh sát báo tới hết trận) thì khép lại. Cấp 1 có một lính cung, cấp 2 một lính nỏ, cấp 3 hai lính nỏ trên tầng trên cùng.
+  - Bảng cổng có dòng Lính trên lầu (sát thương, số giặc mỗi phát) và cấp sau; nút Dỡ cổng.
+  - **Đo độ khó** (`congThanh.test.ts`): kinh đô Điện 5 có một vòng thành Cổ Loa dựa sông, năm chòi canh phía bắc, không tướng; đợt Triệu thứ 4 và thứ 6, đánh từ phía bắc và phía tây; có hay không hai cổng giữa trục.
+    - Không quân: có cổng hay không, giặc đều phá 8 công trình rồi rút.
+    - Đủ quân mẫu chương 3 (30 lính), số lính ta mất khi không cổng → có hai cổng: đợt 4 phía bắc 14 → 27, phía tây 18 → 21; đợt 6 phía bắc 18 → 23, phía tây 30 → 30.
+    - Đợt đầu của quân Triệu có An Dương Vương như cũ: thắng, mất 2 lính, có cổng hay không như nhau.
+    - Vậy cổng không làm trận dễ đi: giặc dồn cục ở cổng nên đánh tập trung hơn. Cổng có lợi khi người chơi bày quân và chòi canh đón ở cổng, và đỡ phải sửa tường (có cổng thì giặc ít phá đoạn thành hơn). Đo thêm với cổng đặt lệch trục thấy kết quả thay đổi theo chỗ đặt (đợt 5–6 có chỗ đặt mất ít hơn hẳn khi không cổng), nên chưa chỉnh số.
 
 ### Lạc hầu và bản lưu
 
@@ -1585,7 +1597,7 @@ Mỗi PR làm trên một nhánh từ `main` mới nhất.
 1. **Duyệt tài liệu này**: mọi con số và dáng ở trên, cùng bản vẽ xưởng mộc, làng chài ở `docs/bo-cuc-cong-trinh.md`.
 2. **PR 1: gỗ và xưởng mộc** (đã làm, bản lưu v16). Thêm gỗ vào kho, thanh trên, thuyền buôn, phát rừng, giặc cướp; xưởng mộc, thợ xẻ, thợ mộc; lời gợi ý của Lạc hầu; báo cáo kinh tế có sổ gỗ; mẫu kinh đô có chỗ cho xưởng mộc (gần rừng như bãi đá). Test `xuongMoc.test.ts`: sản lượng, giá, số tối đa, Đền cộng vào gỗ, sức chứa, gỗ khi phát rừng, thuyền buôn, gợi ý một lần, nâng bản lưu; nhịp lên Điện giữ như trước.
 3. **PR 2: làng chài và cá** (đã làm). Luật cá đỡ gạo ăn, thuyền đánh cá, ngư dân, chỗ trong mẫu kinh đô dọc sông; người chơi mô phỏng dựng xưởng mộc và làng chài. Test `langChai.test.ts`: cá theo cấp và người làm, cá đỡ gạo, cá thừa, hết thiếu gạo khi đủ cá, phải sát sông, Đền cộng vào cá, lũ không làm hư, gợi ý của Lạc hầu; `sapxep.test.ts` canh mẫu kinh đô đủ chỗ; nhịp lên Điện trong đích (Điện 8 nới lên 47 phút).
-4. **PR 3: cổng thành**. Đặt thay đoạn tường, giặc tìm đường qua cổng, lính trên lầu bắn, đếm vòng thành, chỗ trong mẫu kinh đô. Test: giặc dồn về cổng khi vòng tường kín, lính trên lầu bắn và Đền Cổ Loa cộng thêm, cổng giữ vòng thành, mẫu kinh đô có cổng; các trận giữ kinh đô chương 3, 4 vẫn đạt chuẩn khi không có cổng, và một đợt có cổng không quá dễ.
+4. **PR 3: cổng thành** (đã làm). Đặt thay đoạn tường, giặc tìm đường qua cổng, lính trên lầu bắn, đếm vòng thành, chỗ trong mẫu kinh đô. Test: giặc dồn về cổng khi vòng tường kín, lính trên lầu bắn và Đền Cổ Loa cộng thêm, cổng giữ vòng thành, mẫu kinh đô có cổng; các trận giữ kinh đô chương 3, 4 vẫn đạt chuẩn khi không có cổng, và một đợt có cổng không quá dễ.
 
 Mỗi PR: chạy `npm test` và `npm run build`; chụp kiểm tra ở khổ điện thoại (thanh trên đủ chỗ cho năm chip ở khổ `fold`); ghi số cuối cùng vào tài liệu này; sửa các mục chung (bốn tài nguyên thành năm, bảng Công trình) khi phần ấy đã làm.
 
@@ -1629,5 +1641,5 @@ Mỗi PR: chạy `npm test` và `npm run build`; chụp kiểm tra ở khổ đi
 12. **Kinh đô lớn, công trình to, mở đất bằng khoảnh** (đã duyệt, đang làm; xem mục Kế hoạch cùng tên): công trình to hơn một ô mỗi chiều, lưới 55×55 (PR 1 đã làm), khoảnh 5×5 tự chọn (PR 2 đã làm), viền cỏ, trang trí ô trống, cây đá mọc. Làm trước chương 4 PR 2–4.
     **Vẽ lại công trình trên móng** (đã làm; xem mục cùng tên): mười bốn loại vẽ lại trên trọn móng; ba đền và ruộng nếp chủ dự án vẽ lại dáng, vẫn phóng theo móng.
 13. **Đường đi và đồ trang trí** (đã làm, xem mục cùng tên): bốn loại đường, bảy món trang trí, ba thẻ chọn trong bảng Xây dựng, thẻ Dọn trang trí.
-14. **Cổng thành, xưởng mộc, làng chài** (chủ dự án đã duyệt, đang làm; xem mục Kế hoạch cùng tên): gỗ là tài nguyên thứ năm, cá đỡ gạo ăn, cổng hút giặc trong vòng tường. Ba PR: gỗ và xưởng mộc (đã làm), làng chài (đã làm), cổng thành.
+14. **Cổng thành, xưởng mộc, làng chài** (chủ dự án đã duyệt, đã làm; xem mục Kế hoạch cùng tên): gỗ là tài nguyên thứ năm, cá đỡ gạo ăn, cổng hút giặc trong vòng tường. Ba PR: gỗ và xưởng mộc, làng chài, cổng thành.
 14. **Để sau**: chương 5 về Hai Bà Trưng (mới nhắc ở câu cuối chương 4); nhạc nền.

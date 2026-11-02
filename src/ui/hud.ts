@@ -6,6 +6,7 @@ import { advJoined, advLook, advResting, inChapter3, ruaVangCame, wallRings } fr
 import {
   BUILDINGS,
   CA_PER_MIN,
+  CONG_THANH,
   DECOR_TYPES,
   FIELD,
   RESOURCE_IDS,
@@ -145,6 +146,7 @@ const BUILD_MENU: BuildingType[] = [
   'de',
   'denTanVien',
   'thanh',
+  'congThanh',
   'denCoLoa',
 ];
 /** Nhóm thẻ trong bảng Xây dựng: công trình, đường đi, đồ trang trí. */
@@ -904,6 +906,11 @@ export class Hud {
       rows.push(`<div class="stat"><span>${vi.ui.fishHere}</span><span>${fishRate(fishOf(b))}</span></div>`);
       if (b.level < def.maxLevel) rows.push(`<div class="stat"><span>${vi.ui.nextLevel}</span><span>${fishRate(CA_PER_MIN[b.level])}</span></div>`);
     }
+    if (b.type === 'congThanh') {
+      const shot = (lv: number) => vi.ui.gateShot(CONG_THANH.dmg[lv - 1], CONG_THANH.targets[lv - 1]);
+      rows.push(`<div class="stat"><span>${vi.ui.gateGuard}</span><span>${shot(b.level)}</span></div>`);
+      if (b.level < def.maxLevel) rows.push(`<div class="stat"><span>${vi.ui.nextLevel}</span><span>${shot(b.level + 1)}</span></div>`);
+    }
     const slots = slotsOf(b);
     if (slots) {
       const free = freeDan(state);
@@ -1032,7 +1039,15 @@ export class Hud {
       }
     }
     if (def.removable) {
-      const label = isDecor(b.type) ? vi.ui.removeDecor : b.type === 'de' ? vi.ui.removeDike : b.type === 'thanh' ? vi.ui.removeCitadel : vi.ui.remove;
+      const label = isDecor(b.type)
+        ? vi.ui.removeDecor
+        : b.type === 'de'
+          ? vi.ui.removeDike
+          : b.type === 'thanh'
+            ? vi.ui.removeCitadel
+            : b.type === 'congThanh'
+              ? vi.ui.removeGate
+              : vi.ui.remove;
       actions.push(`<button class="btn ghost" data-act="removeWall" data-id="${b.id}">${label}</button>`);
     }
 

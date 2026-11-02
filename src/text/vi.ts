@@ -124,6 +124,11 @@ export const vi = {
       icon: '🏰',
       desc: 'Đoạn thành đất nện cao và chắc, đắp quanh Điện như thành Cổ Loa nhiều vòng. Giặc phải phá qua bao nhiêu lớp thành mới tới được Điện thì có bấy nhiêu vòng. Các đoạn phải nối liền theo cạnh ô (chéo góc là hở), dựa vào bờ sông cũng kín. Đắp đè lên lũy tre được. Yêu tinh núi Thất Diệu nhắm phá thành trước tiên.',
     },
+    congThanh: {
+      name: 'Cổng thành',
+      icon: '🚪',
+      desc: 'Cửa trong vòng tường, lầu cổng có lính bắn giặc. Giặc thấy qua cổng dễ hơn phá tường nên dồn về cổng: bày chòi canh, bẫy chông quanh cổng thành chỗ đón đánh. Dựng trên ô trống hay chạm vào một đoạn lũy, thành đất, thành Cổ Loa để thay. Cổng tính là thành khi đếm vòng thành.',
+    },
     denCoLoa: {
       name: 'Đền Cổ Loa',
       icon: '🐢',
@@ -778,6 +783,9 @@ export const vi = {
     done: 'Xong',
     remove: 'Dỡ lũy',
     removeDike: 'Dỡ đê',
+    removeGate: 'Dỡ cổng',
+    gateGuard: 'Lính trên lầu',
+    gateShot: (dmg: number, n: number) => `🏹 ${dmg} · ${n} giặc mỗi phát`,
     placeHint: 'Chạm vào ô đất để chọn chỗ, rồi bấm Đặt',
     wallHint: 'Chạm vào từng ô đất để dựng lũy',
     roadHint: 'Chạm vào từng ô để trải đường. Trải lên ô đường loại khác thì đổi vật liệu',
@@ -812,6 +820,8 @@ export const vi = {
         '📜 Lạc hầu: Tâu bệ hạ, nay đã dựng được xưởng mộc. Thợ mộc xẻ gỗ để mai sau đóng thuyền, dựng cổng thành; gỗ thừa thì đổi với thuyền buôn.',
       langChai:
         '📜 Lạc hầu: Tâu bệ hạ, dân ven sông xin lập làng chài. Đóng thuyền bằng gỗ của xưởng mộc, dân và lính có cá ăn thì bớt được gạo.',
+      congThanh:
+        '📜 Lạc hầu: Tâu bệ hạ, thành Cổ Loa nên có cổng. Giặc thấy cổng dễ qua sẽ dồn cả về đó: xin dựng cổng giữa vòng tường, bày chòi canh, bẫy chông quanh cổng mà đón đánh.',
     } as Partial<Record<BuildingType, string>>,
     /** Bảng làng chài. */
     fishHere: 'Cá làng này',

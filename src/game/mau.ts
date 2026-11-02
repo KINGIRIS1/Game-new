@@ -65,6 +65,11 @@ export interface Slot {
   uNo?: boolean;
   /** Chỗ chòi canh dành cho lầu nỏ (mẫu Cổ Loa giữ sông): lầu nỏ đang có đứng vào đây trước. */
   lau?: boolean;
+  /**
+   * Đoạn lũy hay thành ở chỗ cổng thành: đã mở cổng thì áp mẫu dựng cổng ở đây thay đoạn tường (`planMau`), chưa mở
+   * thì vẫn là tường, vòng tường không hở.
+   */
+  cong?: boolean;
 }
 
 // ---------- Dựng mẫu theo vùng đất ----------
@@ -398,7 +403,13 @@ function towersAlong(d: Draft, at: number, from: number, to: number, odd = at): 
   for (const p of spread(k, from, to)) segmentNear(d, 'choiCanh', at, p, false);
 }
 
-/** Lũy tre bao hai mặt rừng (bắc và tây), bẫy chông ở hàng ngoài lũy, chòi canh và lối đi ngay trong lũy. */
+/** Cột (và hàng) giữa Điện: trục cổng thành, đối xứng qua đường chéo. */
+const GATE_AXIS = DIEN_HOME + Math.floor(BUILDINGS.dien.w / 2);
+
+/**
+ * Lũy tre bao hai mặt rừng (bắc và tây), bẫy chông ở hàng ngoài lũy, chòi canh và lối đi ngay trong lũy. Từ cấp Điện
+ * có cổng thành: một cổng giữa lũy mặt bắc, một cổng giữa lũy mặt tây, thẳng trục Điện.
+ */
 function luyTre(d: Draft): void {
   const lo = d.lo;
   for (let x = lo + 1; x <= LAST; x++) d.segment('luy', x, lo + 1);
@@ -407,6 +418,34 @@ function luyTre(d: Draft): void {
   towersAlong(d, lo + 2, lo + 3, LAST);
   d.mark(lo + 2, lo + 2, LAST, lo + 2, KEEP);
   d.mark(lo + 2, lo + 2, lo + 2, LAST, KEEP);
+  if (wantOf('congThanh', d.level) > 0) {
+    for (const s of [slotAt(d, GATE_AXIS, lo + 1), slotAt(d, lo + 1, GATE_AXIS)]) if (s?.type === 'luy') s.cong = true;
+  }
+}
+
+/**
+ * Cổng thành trên vòng thành ngoài (Điện có bốn cổng thì thêm vòng giữa): một cổng mặt bắc, một cổng mặt tây, đối
+ * xứng qua đường chéo, gần trục Điện nhất mà không đè lên đoạn có ụ nỏ.
+ */
+function ringGates(d: Draft): void {
+  const want = wantOf('congThanh', d.level);
+  if (want <= 0 || !d.rings.length) return;
+  const outer = d.rings.length - 1;
+  const rings = want >= 4 && outer > 0 ? [outer, outer - 1] : [outer];
+  for (const r of rings) {
+    const { a, b } = d.rings[r];
+    const xs: number[] = [];
+    for (let x = a + 1; x < b; x++) xs.push(x);
+    xs.sort((p, q) => Math.abs(p - GATE_AXIS) - Math.abs(q - GATE_AXIS) || p - q);
+    for (const x of xs) {
+      const north = slotAt(d, x, a);
+      const west = slotAt(d, a, x);
+      if (north?.type !== 'thanh' || west?.type !== 'thanh' || north.uNo || west.uNo) continue;
+      north.cong = true;
+      west.cong = true;
+      break;
+    }
+  }
 }
 
 /**
@@ -443,8 +482,11 @@ function thanhRings(level: number, lo: number): Ring[] {
   return [t + 2, t + 1, t].map((a, i) => ({ a, b: b[i] }));
 }
 
-/** Đê bao như mẫu Đê bao, thêm ba vòng thành quanh Điện. `towers`: như ở `deBao`. */
-function coLoaWalls(d: Draft, towers = true): void {
+/**
+ * Đê bao như mẫu Đê bao, thêm ba vòng thành quanh Điện. `towers`: như ở `deBao`. `gates`: chừa chỗ cổng thành trên
+ * vòng thành (`ringGates`); mẫu còn đánh dấu ụ nỏ thì tự chừa sau, cho cổng né ụ nỏ.
+ */
+function coLoaWalls(d: Draft, towers = true, gates = true): void {
   d.rings = thanhRings(d.level, d.lo);
   for (const { a, b } of d.rings) {
     for (let k = a; k <= b; k++) {
@@ -458,6 +500,7 @@ function coLoaWalls(d: Draft, towers = true): void {
   const inner = d.rings[0];
   d.mark(inner.a + 1, inner.a + 1, inner.b - 1, inner.b - 1, KEEP);
   deBao(d, towers);
+  if (gates) ringGates(d);
 }
 
 /** Chỗ trong mẫu ở ô (x, z), nếu có. */
@@ -469,7 +512,7 @@ const slotAt = (d: Draft, x: number, z: number) => d.slots.find((s) => s.x === x
  * ở góc bắc tây), còn lại rải ở mặt bắc và mặt tây.
  */
 function coLoaSongWalls(d: Draft): void {
-  coLoaWalls(d, false);
+  coLoaWalls(d, false, false);
   const outer = d.rings[d.rings.length - 1];
   const n = U_NO.limit[d.level - 1] ?? 0;
   const per = Math.ceil(n / 4);
@@ -487,6 +530,8 @@ function coLoaSongWalls(d: Draft): void {
     mark(p, outer.b);
     mark(outer.b, p);
   }
+  // Cổng thành chừa sau ụ nỏ, né các đoạn có ụ.
+  ringGates(d);
   const lo = d.lo;
   const want = wantOf('choiCanh', d.level);
   const lau: [number, number, boolean][] = [
@@ -723,10 +768,15 @@ export function planMau(state: GameState, id: MauId): MauPlan {
   mark('dien', dien.x, dien.z);
 
   const plan: MauPlan = { moves: [], builds: [], removes: [], cost: {}, stuck: [], uNos: [] };
-  const slots = mauSlots(id, level)
+  // Cổng thành đã mở: chỗ cổng trong mẫu (đoạn tường có cờ `cong`) thành chỗ cổng, tới số cổng tối đa; chưa mở thì
+  // vẫn là đoạn tường, vòng tường không hở.
+  const gate = BUILDINGS.congThanh;
+  let gates = unlocked(state, gate.unlock) && level >= gate.minDien ? limitOf(state, 'congThanh') : 0;
+  const slots: Slot[] = mauSlots(id, level)
     .filter((s) => s.type !== 'dien')
     .map((s) => ({ ...s, x: s.x + ox, z: s.z + oz }))
-    .filter((s) => fits(s.type, s.x, s.z));
+    .filter((s) => fits(s.type, s.x, s.z))
+    .map((s) => (s.cong && gates-- > 0 ? { type: 'congThanh' as const, x: s.x, z: s.z } : s));
   // Doanh trại xếp trước nơi ở riêng của các binh chủng, vì nơi ở cần doanh trại.
   const types = [...new Set(slots.map((s) => s.type))].sort((a, b) => Number(b === 'doanhTrai') - Number(a === 'doanhTrai'));
   let barracks = barracksLevel(state);

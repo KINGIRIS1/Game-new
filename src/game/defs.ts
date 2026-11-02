@@ -50,7 +50,9 @@ export type BuildingType =
   // Xưởng mộc: ra gỗ (tài nguyên thứ năm).
   | 'xuongMoc'
   // Làng chài: ra cá, dân và lính ăn cá thay một phần gạo.
-  | 'langChai';
+  | 'langChai'
+  // Cổng thành: cửa trong vòng tường, hút giặc tới phá, lính trên lầu cổng bắn (chương 3).
+  | 'congThanh';
 
 /**
  * Mốc mở khóa theo cốt truyện: sau kết chương 1, khi vào chương 2, sau kết chương 2, khi vào chương 3, sau kết chương 3,
@@ -290,6 +292,23 @@ export const BUILDINGS: Record<BuildingType, BuildingDef> = {
     minDien: 1,
     buildable: true,
     removable: false,
+  },
+  // Cổng thành: một ô trong vòng tường (dựng trên ô trống hay thay một đoạn lũy, thành đất, thành Cổ Loa).
+  congThanh: {
+    type: 'congThanh',
+    w: 1,
+    d: 1,
+    maxLevel: 3,
+    buildCost: { datDa: 500, go: 400, sat: 100 },
+    upgradeCost: [{}, {}, { datDa: 1200, go: 1000, sat: 250 }, { datDa: 2500, go: 2000, sat: 500 }],
+    production: [{}, {}, {}],
+    hp: [3000, 4500, 6000],
+    limit: [0, 0, 0, 0, 2, 2, 2, 4],
+    minDien: 5,
+    levelMinDien: [0, 0, 7, 8],
+    buildable: true,
+    removable: true,
+    unlock: 'chuong3',
   },
   // Làng chài: ngư dân đánh cá ven sông. Cá không tích trữ: dân và lính ăn cá trước, thiếu mới ăn gạo (`CA_PER_MIN`).
   langChai: {
@@ -762,6 +781,13 @@ export const LAU_NO_TOWERS = 2;
 /** Lầu nỏ mỗi phát bắn `targets` giặc khác nhau, mỗi mũi `dmg` sát thương. Đền Cổ Loa cộng như với chòi canh. */
 export const LAU_NO = { targets: 3, dmg: 34, range: 5.5, cooldown: 1.1 };
 
+/**
+ * Cổng thành: lính trên lầu cổng bắn giặc trong tầm (nhân `RAID_SCALE` khi giữ kinh đô như chòi canh), mỗi phát
+ * `targets[cấp − 1]` giặc, sát thương theo cấp; Đền Cổ Loa cộng như với chòi canh. Khi tìm đường, giặc tính ô cổng
+ * giá `pathCost` (lũy tre 12, thành đất 30, thành Cổ Loa 45), nên chịu đi vòng tới cổng thay vì phá thành.
+ */
+export const CONG_THANH = { dmg: [20, 26, 32], targets: [1, 1, 2], range: 4.5, cooldown: 1.2, pathCost: 8 };
+
 // ---------- Hội Tết bánh chưng bánh giầy ----------
 
 /**
@@ -821,6 +847,7 @@ export const FLOOD_TOLERANCE: Partial<Record<BuildingType, number>> = {
   bayChong: 99,
   de: 99,
   thanh: 99,
+  congThanh: 99,
 };
 /** Nước lũ dâng mỗi bậc trong chừng này giây. */
 export const FLOOD_RISE_S = 6;
@@ -1511,7 +1538,7 @@ export const QUEST_INSERTED_V4 = 11;
  * Công trình mới thêm sau khi đã có người chơi: lần đầu mở được thì Lạc hầu nói một câu gợi ý (một lần, ghi ở
  * `GameState.hinted`). Thêm loại vào đây không phải nâng bản lưu.
  */
-export const NEW_HINTS: BuildingType[] = ['xuongMoc', 'langChai'];
+export const NEW_HINTS: BuildingType[] = ['xuongMoc', 'langChai', 'congThanh'];
 
 /**
  * Cá mỗi phút của một làng chài đủ người, theo cấp (chỉ số 0 là cấp 1). Cá không tích trữ: dân và lính ăn cá trước,
