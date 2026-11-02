@@ -5,6 +5,7 @@ import { startBattle, stepBattle, type Battle, type RaidSide } from './battle';
 import { updateCampaign } from './campaign';
 import { initialCaoLo } from './caoLo';
 import { initialCayDa, updateCayDa, type CayDaState } from './cayDa';
+import { bridgeFit, initialBenKia, openBridgehead, updateBenKia, type BenKiaState } from './benKia';
 import { huanTiers, initialThuThach } from './thuThach';
 import { inChapter4 } from './chuong4';
 import { advJoined, initialAdv, inChapter3, ruaVangCame, wallRings } from './coLoa';
@@ -28,6 +29,7 @@ import {
   GIFT_IDS,
   MAX_HEIGHT,
   floodLevel,
+  isBridge,
   isDecor,
   isRoad,
   ROAD_TYPES,
@@ -235,6 +237,7 @@ export interface CaoLoState {
 export type StoryId =
   | 'mo'
   | 'suGia'
+  | 'benKia'
   | 'vuonVai'
   | 'roiGay'
   | 'ketChuong'
@@ -320,6 +323,8 @@ export interface GameState {
   hinted: string[];
   /** Cây, đá mọc trên ô trống (`cayDa.ts`). */
   cayDa: CayDaState;
+  /** Vùng đất bên kia sông (`benKia.ts`): khoảnh đã dò, đã mở, trinh sát đang đi, đồn đã dẹp. */
+  benKia: BenKiaState;
   /** Vừa nâng từ kinh đô nhỏ: kinh đô đã dựng lại theo mẫu, trả lại chừng này của. Giao diện báo một lần rồi xóa. */
   relaid?: { refund: Cost; dropped: number };
 }
@@ -399,7 +404,15 @@ export type FailReason =
   | 'thuThachKhoa'
   | 'thuThachBinhChung'
   | 'huanToiDa'
-  | 'thieuHuanCong';
+  | 'thieuHuanCong'
+  | 'dauCauCoDon'
+  | 'cauKhongDoi'
+  | 'daDo'
+  | 'dangDo'
+  | 'canCau'
+  | 'cauHu'
+  | 'xaQua'
+  | 'trinhSatBan';
 
 export type Result<T = undefined> = { ok: true; value: T } | { ok: false; reason: FailReason };
 
@@ -467,6 +480,7 @@ export function createInitialState(now: number): GameState {
     khoanh: [...START_KHOANH],
     hinted: [],
     cayDa: initialCayDa(),
+    benKia: initialBenKia(),
   };
   levelFootprint(state, dien, footprintTop(state, 'dien', dien.x, dien.z));
   return state;
@@ -739,8 +753,12 @@ export function needsGeneral(state: GameState, type: BuildingType): boolean {
   return type === 'doanhTrai' && limitOf(state, type) < BUILDINGS.doanhTrai.limit[dienLevel(state) - 1];
 }
 
-/** Phần chỗ đặt của `canPlace`: móng nằm trong vùng đã khai phá, không chồng công trình khác (thành đắp đè lũy được), bến sát sông. */
+/**
+ * Phần chỗ đặt của `canPlace`: móng nằm trong vùng đã khai phá (bên này, hay khoảnh đã mở bên kia sông), không chồng
+ * công trình khác (thành đắp đè lũy được), bến sát sông. Cầu thì vắt qua sông (`bridgeFit`).
+ */
 function fitsAt(state: GameState, type: BuildingType, x: number, z: number, grid: Int32Array): FailReason | null {
+  if (isBridge(type)) return bridgeFit(state, type, x, z) ?? (bridgeClear(type, x, z, grid) ? null : 'datBiChiem');
   const def = BUILDINGS[type];
   const open = openMask(state);
   const over = replacedWall(state, type, x, z);
@@ -754,6 +772,13 @@ function fitsAt(state: GameState, type: BuildingType, x: number, z: number, grid
   }
   if (def.nearRiver && !touchesRiver(x, z, def.w, def.d)) return 'phaiSatSong';
   return null;
+}
+
+/** Ô sông dưới cầu chưa có gì (cầu khác chẳng hạn). */
+function bridgeClear(type: BuildingType, x: number, z: number, grid: Int32Array): boolean {
+  const def = BUILDINGS[type];
+  for (let dx = 0; dx < def.w; dx++) for (let dz = 0; dz < def.d; dz++) if (grid[(z + dz) * GRID + x + dx]) return false;
+  return true;
 }
 
 export function canUpgrade(state: GameState, id: number): Result {
@@ -875,6 +900,7 @@ export function place(state: GameState, type: BuildingType, x: number, z: number
   levelFootprint(state, b, footprintTop(state, type, x, z));
   state.buildings.push(b);
   fillWorkers(state, b);
+  openBridgehead(state, b);
   return ok(b);
 }
 
@@ -985,6 +1011,7 @@ export function canMove(state: GameState, id: number, x: number, z: number): Res
   const b = findBuilding(state, id);
   if (!b) return fail('khongTimThay');
   if (b.type === 'dien') return fail('khongTheDoi');
+  if (isBridge(b.type)) return fail('cauKhongDoi');
   if (state.raid.phase !== 'idle') return fail('dangCoGiac');
   if (b.x === x && b.z === z) return fail('trungCho');
   const why = fitsWithout(state, b, x, z, occupancy(state));
@@ -1356,7 +1383,12 @@ function finishRaid(state: GameState): void {
   if (won) raid.won += 1;
   if (flood) {
     raid.floods += 1;
-    if (won && !battle.drowned.length) raid.floodsHeld += 1;
+    // Cầu bị lũ cuốn thì phải sửa, nhưng không tính là để mất mùa lũ.
+    const lost = battle.drowned.filter((id) => {
+      const b = findBuilding(state, id);
+      return !b || !isBridge(b.type);
+    });
+    if (won && !lost.length) raid.floodsHeld += 1;
   }
   if (battle.foe === 'yeu') {
     raid.nights += 1;
@@ -1587,6 +1619,7 @@ export function tick(state: GameState, ms: number): Resources {
   updateRaid(state, ms);
   updateTet(state);
   updateCayDa(state);
+  updateBenKia(state);
   return gained;
 }
 

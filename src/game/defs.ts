@@ -52,7 +52,10 @@ export type BuildingType =
   // Làng chài: ra cá, dân và lính ăn cá thay một phần gạo.
   | 'langChai'
   // Cổng thành: cửa trong vòng tường, hút giặc tới phá, lính trên lầu cổng bắn (chương 3).
-  | 'congThanh';
+  | 'congThanh'
+  // Cầu qua sông Đà, qua sông Thao sang vùng đất bên kia (`benKia.ts`).
+  | 'cauSongDa'
+  | 'cauSongThao';
 
 /**
  * Mốc mở khóa theo cốt truyện: sau kết chương 1, khi vào chương 2, sau kết chương 2, khi vào chương 3, sau kết chương 3,
@@ -137,6 +140,28 @@ function decorDef(type: BuildingType, size: number, cost: Cost, limit: number[],
     minDien,
     buildable: true,
     removable: true,
+  };
+}
+
+/**
+ * Cầu qua sông: một cầu mỗi sông, có từ Điện cấp 4 (`BEN_KIA_DIEN`), vắt qua 7 ô sông. Cấp 1 cầu phao tre, cấp 2 cầu
+ * gỗ (Điện 6), cấp 3 cầu gỗ lớn có lầu đầu cầu (Điện 7). Không dời, không dỡ được.
+ */
+function bridgeDef(type: 'cauSongDa' | 'cauSongThao', w: number, d: number): BuildingDef {
+  return {
+    type,
+    w,
+    d,
+    maxLevel: 3,
+    buildCost: { gao: 400, voOc: 300, datDa: 200 },
+    upgradeCost: [{}, {}, { voOc: 1400, datDa: 1000, go: 800, sat: 250 }, { voOc: 2400, datDa: 2000, go: 1500, sat: 500 }],
+    levelMinDien: [0, 0, 6, 7],
+    production: [{}, {}, {}],
+    hp: [600, 1500, 2600],
+    limit: [0, 0, 0, 1, 1, 1, 1, 1],
+    minDien: 4,
+    buildable: true,
+    removable: false,
   };
 }
 
@@ -731,7 +756,28 @@ export const BUILDINGS: Record<BuildingType, BuildingDef> = {
     removable: false,
     unlock: 'ketChuong4',
   },
+  // Cầu qua sông Đà nằm dọc (rộng 2 ô, vắt qua 7 ô sông), cầu qua sông Thao nằm ngang.
+  cauSongDa: bridgeDef('cauSongDa', 2, 7),
+  cauSongThao: bridgeDef('cauSongThao', 7, 2),
 };
+
+/** Cầu qua sông (sông Đà hay sông Thao). */
+export const isBridge = (type: BuildingType): type is 'cauSongDa' | 'cauSongThao' => type === 'cauSongDa' || type === 'cauSongThao';
+
+// ---------- Bên kia sông ----------
+
+/** Điện cấp này thì bắc được cầu sang bên kia sông, và Lạc hầu kể đoạn "Bên kia sông". */
+export const BEN_KIA_DIEN = 4;
+/**
+ * Cầu bị lũ cuốn (hư) khi nước dâng tới bậc này, theo cấp cầu: cầu phao tre ở bậc 2, cầu gỗ ở bậc 3, cầu gỗ lớn
+ * không sợ lũ.
+ */
+export const BRIDGE_FLOOD = [2, 3, Infinity];
+/** Sai trinh sát dò một khoảnh bên kia sông: giá, thời gian đi (đồng hồ chơi). */
+export const SCOUT_COST: Cost = { gao: 60, voOc: 20 };
+export const SCOUT_MS = 40_000;
+/** Số trinh sát đi cùng lúc: một, từ Điện cấp này thì hai. */
+export const SCOUT_TWO_DIEN = 6;
 
 /** Đền Cuông còn nguyên: mỗi đợt thủy binh bớt chừng này phần số thuyền (làm tròn xuống, còn ít nhất một thuyền). */
 export const DEN_CUONG_BOATS = 0.2;

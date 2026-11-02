@@ -1771,7 +1771,16 @@ j\i  0  1  2  3  4  5  6  7  8  9
    - **Thủy quái bỏ chạy** lặn ở ô 55 như trước, thuyền giặc Triệu hiện ra ở đó (`RIVER_DIVE`).
    - **Thuyền** xuôi sông Thao tới ngã ba thì rẽ sang sông Đà; thuyền sông Đà chạy suốt. Trước đây sông Thao chảy suốt, sông Đà đổ vào sông Thao.
    - **Nặng máy**: rừng hai bờ bên kia dựng riêng một lần (bên này dựng lại mỗi lần phát rừng), mật độ 0,4 (bãi bồi 0,22) so với 0,65 bên này, không đổ bóng; rừng ngoài lưới sau bờ bên kia chỉ một dải thưa 5 ô.
-2. **PR 2: cầu, sương mù, trinh sát, điểm lạ**, đoạn truyện "Bên kia sông".
+2. **PR 2: cầu, sương mù, trinh sát, điểm lạ** (đã làm, cùng bản lưu v18), đoạn truyện "Bên kia sông". Số như bảng trên (giá cầu, lũ cuốn cầu, trinh sát 60 gạo 20 vỏ ốc, 40 giây). Chi tiết đã làm:
+   - **Luật** ở `src/game/benKia.ts`: khoảnh bên kia, điểm lạ cố định, vùng đồn (`campOf`, `regionOf`), cầu (`bridgeFit`, `bridgeSnap`, đầu cầu), trinh sát. Cầu là hai loại công trình `cauSongDa` (2×7 ô, nằm trên sông Đà) và `cauSongThao` (7×2 ô), mỗi loại một cái. Ô cầu còn nguyên đi được (tìm đường, đếm vòng thành); cầu không phải đích của giặc, không chắn đường.
+   - **Đất đã mở bên kia** dùng chung mặt nạ đất đã mở với bên này (`openMask`): dựng công trình, đắp đất, lũ loang như bên này. Khoảnh đầu cầu mở dù vùng ấy còn đồn giữ.
+   - **Chạm để đặt cầu**: cầu bám theo sông, chạm đâu thì cầu dịch dọc sông tới đó. Cầu không dời được. Có cầu thì camera kéo được sang bờ bên kia.
+   - **Mây mù** chỉ hiện từ Điện cấp 4 (lúc kể đoạn "Bên kia sông"), để đầu chương 1 nhìn như cũ. Mây cuộn màu kem viền mực, mỗi khoảnh bảy cụm, ngọn cây nhô lên; khoảnh vừa dò thì mây phình ra, bay lên, mờ dần trong một giây. Góc đông nam sau ngã ba không thuộc khoảnh nào nên không có mây.
+   - **Điểm lạ đã dò**: khoảnh ấy phát trống cả khoảnh. Đồn bậc 1 và 4 có rào cọc, lều, cờ, lửa trại; bậc 2 vũng bùn lau sậy xương cá; bậc 3 đá tím, ma trơi; mỗi đồn hai lính gác đứng yên đúng loại giặc. Làng: ba nhà sàn nhỏ, cờ trắng. Bãi phù sa: đất bùn nâu thẫm, vũng nước, khóm lau; núi đá đá xám; mỏ sắt đá đỏ gỉ. Của chôn: gò đất lấp ló mặt trống đồng. Đồn đã dẹp: đất cháy sém, cọc đổ, cờ đỏ của ta (dùng từ PR 3). Hình vẽ ở `src/render/benKia.ts`.
+   - **Cầu**: cấp 1 bảy bè tre kết dây mây nhấp nhô theo sóng; cấp 2 cầu gỗ vồng nhẹ, lan can gỗ; cấp 3 vồng cao, lan can đỏ, lầu canh mái ngói ở đầu cầu bên này. Bảng cầu ghi sức chịu lũ của cấp này và cấp sau, và nhắc vòng thành dựa sông bị hở ở đầu cầu. Cầu bị lũ cuốn không tính là để mất mùa lũ.
+   - **Người trinh sát** (giáo binh có khung xương) chạy từ sân Điện qua cầu tới khoảnh đang dò, đúng nhịp đồng hồ chơi. Có chip 🧭 đếm ngược trên thanh trên; về tới nơi thì báo một dòng.
+   - **Bảng Đất bên kia sông**: chạm đất bên kia chưa mở (không trúng công trình). Ghi bờ, khoảnh thứ mấy, đã dò chưa, điểm lạ, đồn nào giữ vùng ấy, nút Sai trinh sát kèm giá hay lý do chưa sai được.
+   - **Nặng máy**: mây cả 60 khoảnh là một lệnh vẽ (thêm viền mực một lệnh). Cảnh kinh đô Điện 5 có hai cầu, mây phủ gần hết: chừng 480–560 lệnh vẽ, 5,2–5,5 triệu tam giác.
 3. **PR 3: đồn giặc và điều quân**: 12 đồn bốn bậc, dẹp đồn chiếm vùng, hành quân qua cầu, bãi chiến bờ bên kia, cân bằng theo chuẩn.
 4. **PR 4: đặc sản, bản làng, của chôn**; sổ kinh tế.
 5. **PR 5: phòng thủ hai bờ**: giặc từ bìa rừng bên kia, đồn biên, thủy binh Triệu cập bờ bên kia.

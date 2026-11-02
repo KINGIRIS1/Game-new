@@ -3,6 +3,7 @@
 // tăng từng nấc theo số khoảnh đã phát. Không phụ thuộc DOM hay Three.js.
 
 import { KHOANH_COST_BASE, KHOANH_COST_STEP, type Cost } from './defs';
+import { plotOrigin } from './benKia';
 import { sowKhoanh } from './cayDa';
 import { canAfford, gain, pay, type GameState, type Result } from './game';
 import { FOREST_BAND, GRID, KHOANH, RIVER_START } from './map';
@@ -52,31 +53,42 @@ export const START_KHOANH: readonly number[] = squareKhoanh(20);
  */
 export const V11_AREA = [20, 25, 25, 30, 35, 40, 40, 45];
 
-/** Mặt nạ ô đã mở và ô nhỏ nhất đã mở, nhớ theo mảng `state.khoanh` (phát rừng thay mảng mới). */
+/**
+ * Mặt nạ ô đã mở và ô nhỏ nhất đã mở (bên này), nhớ theo mảng `state.khoanh` (phát rừng thay mảng mới) và mảng
+ * khoảnh đã mở bên kia sông (`state.benKia.open`, cũng thay mảng mới mỗi lần mở thêm).
+ */
 interface OpenCache {
   len: number;
+  far: readonly number[];
   mask: Uint8Array;
   start: number;
 }
 const cache = new WeakMap<number[], OpenCache>();
+const NONE: readonly number[] = [];
 
 function openCache(state: GameState): OpenCache {
   const list = state.khoanh;
+  const far = state.benKia?.open ?? NONE;
   const hit = cache.get(list);
-  if (hit && hit.len === list.length) return hit;
+  if (hit && hit.len === list.length && hit.far === far) return hit;
   const mask = new Uint8Array(GRID * GRID);
   let start = RIVER_START;
+  const fill = (o: { x: number; z: number }) => {
+    for (let dz = 0; dz < KHOANH; dz++) mask.fill(1, (o.z + dz) * GRID + o.x, (o.z + dz) * GRID + o.x + KHOANH);
+  };
   for (const id of list) {
     const o = khoanhOrigin(id);
     start = Math.min(start, o.x, o.z);
-    for (let dz = 0; dz < KHOANH; dz++) mask.fill(1, (o.z + dz) * GRID + o.x, (o.z + dz) * GRID + o.x + KHOANH);
+    fill(o);
   }
-  const fresh = { len: list.length, mask, start };
+  // Khoảnh đã mở bên kia sông: xây được như đất bên này, nhưng không tính vào mốc `start` (dải giặc, camera bên này).
+  for (const id of far) fill(plotOrigin(id));
+  const fresh = { len: list.length, far, mask, start };
   cache.set(list, fresh);
   return fresh;
 }
 
-/** Mặt nạ ô đất đã mở (GRID×GRID, chỉ số z * GRID + x): 1 là đã mở. */
+/** Mặt nạ ô đất đã mở, cả hai bờ (GRID×GRID, chỉ số z * GRID + x): 1 là đã mở. */
 export function openMask(state: GameState): Uint8Array {
   return openCache(state).mask;
 }

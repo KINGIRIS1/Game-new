@@ -24,7 +24,7 @@ describe('mô hình vừa móng kinh đô lớn', () => {
         const g = lotModel(type, level);
         g.updateMatrixWorld(true);
         const box = new THREE.Box3().setFromObject(g);
-        const over = Math.max(-box.min.x, box.max.x, -box.min.z, box.max.z) - def.w / 2;
+        const over = Math.max(Math.max(-box.min.x, box.max.x) - def.w / 2, Math.max(-box.min.z, box.max.z) - def.d / 2);
         expect(over, `${type} cấp ${level}`).toBeLessThanOrEqual(ALLOW[type] ?? 0.5);
       }
     }

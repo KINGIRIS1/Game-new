@@ -17,6 +17,7 @@ import {
   LENH_BAN,
   LIEN_CHAU,
   BUILDINGS,
+  isBridge,
   isDecor,
   CO_LOA_TOWER,
   CONG_THANH,
@@ -322,7 +323,7 @@ export function buildingHp(battle: Battle, b: Building): number {
  * đã hư). Cổng thành như tường: giặc chỉ phá khi đường đi qua cổng.
  */
 function isTargetable(b: Building): boolean {
-  return !b.damaged && !UNTARGETED.includes(b.type) && !isDecor(b.type);
+  return !b.damaged && !UNTARGETED.includes(b.type) && !isDecor(b.type) && !isBridge(b.type);
 }
 const UNTARGETED: BuildingType[] = ['luy', 'bayChong', 'de', 'thanh', 'congThanh'];
 
@@ -740,6 +741,11 @@ function costGrid(state: GameState, targetId: number | null, swim: boolean): Flo
     // Bẫy, đường đi, đồ trang trí không chắn đường: giặc đi thẳng qua.
     if (b.damaged || b.type === 'bayChong' || isDecor(b.type)) continue;
     const def = BUILDINGS[b.type];
+    if (isBridge(b.type)) {
+      // Cầu còn nguyên là lối đi qua sông, không phải chướng ngại.
+      for (let dx = 0; dx < def.w; dx++) for (let dz = 0; dz < def.d; dz++) cost[tileIndex(b.x + dx, b.z + dz)] = 1;
+      continue;
+    }
     const c =
       b.id === targetId
         ? 1
@@ -1067,7 +1073,7 @@ function stepEnemy(state: GameState, battle: Battle, f: Fighter, dt: number): vo
   const nz = Math.floor(next / GRID);
   // Ô tiếp theo có lũy hay công trình chắn đường: phá nó trước.
   const blocker = state.buildings.find((b) => {
-    if (b.damaged || b.id === target!.id || b.type === 'bayChong' || isDecor(b.type)) return false;
+    if (b.damaged || b.id === target!.id || b.type === 'bayChong' || isDecor(b.type) || isBridge(b.type)) return false;
     const def = BUILDINGS[b.type];
     return nx >= b.x && nx < b.x + def.w && nz >= b.z && nz < b.z + def.d;
   });

@@ -530,7 +530,7 @@ describe('cân bằng phó bản chương 2', () => {
 describe('truyện và lưu game chương 2', () => {
   it('kể các đoạn chương 2 đúng thứ tự sau chương 1', () => {
     const s = ch2();
-    for (const id of ['mo', 'suGia', 'vuonVai', 'roiGay', 'ketChuong'] as const) markStory(s, id);
+    for (const id of ['mo', 'suGia', 'benKia', 'vuonVai', 'roiGay', 'ketChuong'] as const) markStory(s, id);
     // Chuyện Lang Liêu (Hội Tết) kể ngay sau kết chương 1, trước "Vua Hùng kén rể".
     expect(pendingStory(s)).toBe('langLieu');
     markStory(s, 'langLieu');

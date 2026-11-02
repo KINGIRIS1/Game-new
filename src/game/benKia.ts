@@ -1,0 +1,339 @@
+// Vùng đất bên kia sông: bờ nam sông Đà và bờ đông sông Thao, mỗi bờ 10 khoảnh dọc sông × 3 khoảnh vào trong
+// (khoảnh 5×5 ô). Bắc cầu qua sông thì khoảnh đầu cầu bên kia được dò và mở; sai trinh sát dò dần từng khoảnh, thấy
+// điểm lạ (đồn giặc, bản làng, đặc sản đất, của chôn) cố định, mọi máy như nhau. Đất bên kia không mua bằng của:
+// mỗi khoảnh thuộc vùng của một đồn giặc, dẹp đồn thì cả vùng về tay ta. Không phụ thuộc DOM hay Three.js.
+
+import { BEN_KIA_DIEN, BUILDINGS, SCOUT_COST, SCOUT_MS, SCOUT_TWO_DIEN, isBridge } from './defs';
+import { canAfford, dienLevel, pay, type Building, type FailReason, type GameState, type Result } from './game';
+import { openMask } from './khoanh';
+import { FAR_FOREST, FOREST_BAND, GRID, KHOANH, RIVER_END, RIVER_START } from './map';
+
+const ok = <T>(value: T): Result<T> => ({ ok: true, value });
+const fail = (reason: FailReason): Result<never> => ({ ok: false, reason });
+
+export type Bank = 'nam' | 'dong';
+export const BANKS: readonly Bank[] = ['nam', 'dong'];
+/** Mỗi bờ có chừng này khoảnh dọc sông và chừng này khoảnh từ bờ sông vào tới dải rừng ngoài cùng. */
+export const FAR_ALONG = 10;
+export const FAR_DEEP = 3;
+const PER_BANK = FAR_ALONG * FAR_DEEP;
+export const FAR_PLOTS = 2 * PER_BANK;
+
+/** Một khoảnh bên kia: bờ nào, thứ mấy dọc sông (`i`, từ tây hay từ bắc), hàng mấy tính từ bờ sông (`j`). */
+export interface Plot {
+  bank: Bank;
+  i: number;
+  j: number;
+}
+
+export const plotId = (bank: Bank, i: number, j: number): number => (bank === 'nam' ? 0 : PER_BANK) + j * FAR_ALONG + i;
+
+export function plotOf(id: number): Plot {
+  const bank: Bank = id < PER_BANK ? 'nam' : 'dong';
+  const k = id % PER_BANK;
+  return { bank, i: k % FAR_ALONG, j: Math.floor(k / FAR_ALONG) };
+}
+
+export const validPlot = (id: number): boolean => Number.isInteger(id) && id >= 0 && id < FAR_PLOTS;
+
+/** Góc khoảnh (ô nhỏ nhất theo x và z). Bờ nam: dọc theo x, vào trong theo z; bờ đông thì ngược lại. */
+export function plotOrigin(id: number): { x: number; z: number } {
+  const { bank, i, j } = plotOf(id);
+  const along = FOREST_BAND + KHOANH * i;
+  const deep = RIVER_END + KHOANH * j;
+  return bank === 'nam' ? { x: along, z: deep } : { x: deep, z: along };
+}
+
+/** Khoảnh bên kia chứa ô (x, z), hay null nếu ô không thuộc khoảnh nào bên kia (bên này, sông, rừng ngoài cùng). */
+export function plotAt(x: number, z: number): number | null {
+  if (z >= RIVER_END && z < FAR_FOREST && x >= FOREST_BAND && x < RIVER_START) {
+    return plotId('nam', Math.floor((x - FOREST_BAND) / KHOANH), Math.floor((z - RIVER_END) / KHOANH));
+  }
+  if (x >= RIVER_END && x < FAR_FOREST && z >= FOREST_BAND && z < RIVER_START) {
+    return plotId('dong', Math.floor((z - FOREST_BAND) / KHOANH), Math.floor((x - RIVER_END) / KHOANH));
+  }
+  return null;
+}
+
+/** Các khoảnh kề cạnh (4 hướng) cùng bờ. */
+export function plotNeighbors(id: number): number[] {
+  const { bank, i, j } = plotOf(id);
+  const out: number[] = [];
+  for (const [di, dj] of [
+    [1, 0],
+    [-1, 0],
+    [0, 1],
+    [0, -1],
+  ]) {
+    const ni = i + di;
+    const nj = j + dj;
+    if (ni >= 0 && ni < FAR_ALONG && nj >= 0 && nj < FAR_DEEP) out.push(plotId(bank, ni, nj));
+  }
+  return out;
+}
+
+// ---------- Điểm lạ ----------
+
+/** Nghề của bản làng: trồng lúa (gạo), mò ốc (vỏ ốc), thợ đá (đất đá), thợ rèn (sắt). */
+export type Nghe = 'lua' | 'oc' | 'da' | 'ren';
+export type Dat = 'phuSa' | 'nuiDa' | 'moSat';
+export type Tier = 1 | 2 | 3 | 4;
+
+/** Điểm lạ trên một khoảnh bên kia: đồn giặc (bậc theo chương), bản làng (theo nghề), đặc sản đất, của chôn. */
+export type Poi = { kind: 'don'; tier: Tier } | { kind: 'lang'; nghe: Nghe } | { kind: 'dacSan'; dat: Dat } | { kind: 'cua' };
+
+/**
+ * Sáu đồn mỗi bờ (`i`, `j` như `Plot`), hai bờ chung khung đồn: bậc 1 sát sông, bậc 2 hàng giữa, bậc 3–4 sát rừng.
+ * Ngã ba sông (gần kinh đô) ở phía `i` = 9.
+ */
+const CAMPS: [number, number, Tier][] = [
+  [3, 0, 1],
+  [8, 0, 1],
+  [1, 1, 2],
+  [5, 1, 2],
+  [7, 2, 3],
+  [3, 2, 4],
+];
+
+/**
+ * Vùng của từng đồn (chỉ số trong `CAMPS`), theo hàng `j` rồi khoảnh `i`. Mỗi khoảnh thuộc vùng một đồn; dẹp đồn
+ * thì cả vùng về tay ta. Vùng đồn bậc 1 gần ngã ba có một đặc sản và một của chôn, khai phá được từ chương 1; làng
+ * và đặc sản khác nằm trong vùng đồn bậc 2–4 (`benKia.test.ts` canh).
+ */
+const REGION: number[][] = [
+  // j = 0 (sát sông)
+  [2, 2, 0, 0, 0, 3, 1, 1, 1, 1],
+  // j = 1
+  [2, 2, 2, 0, 3, 3, 3, 4, 1, 1],
+  // j = 2 (sát rừng)
+  [2, 2, 5, 5, 5, 3, 4, 4, 4, 1],
+];
+
+const LAYOUT: Record<Bank, [number, number, Poi][]> = {
+  nam: [
+    [4, 1, { kind: 'lang', nghe: 'lua' }],
+    [0, 0, { kind: 'lang', nghe: 'oc' }],
+    [8, 1, { kind: 'dacSan', dat: 'phuSa' }],
+    [0, 1, { kind: 'dacSan', dat: 'phuSa' }],
+    [6, 2, { kind: 'dacSan', dat: 'nuiDa' }],
+    [9, 2, { kind: 'cua' }],
+    [2, 2, { kind: 'cua' }],
+  ],
+  dong: [
+    [4, 1, { kind: 'lang', nghe: 'da' }],
+    [0, 0, { kind: 'lang', nghe: 'ren' }],
+    [8, 1, { kind: 'dacSan', dat: 'nuiDa' }],
+    [0, 1, { kind: 'dacSan', dat: 'moSat' }],
+    [6, 2, { kind: 'dacSan', dat: 'moSat' }],
+    [9, 2, { kind: 'cua' }],
+    [2, 2, { kind: 'cua' }],
+  ],
+};
+
+const POIS = new Map<number, Poi>();
+for (const bank of BANKS) {
+  for (const [i, j, tier] of CAMPS) POIS.set(plotId(bank, i, j), { kind: 'don', tier });
+  for (const [i, j, poi] of LAYOUT[bank]) POIS.set(plotId(bank, i, j), poi);
+}
+
+/** Điểm lạ trên khoảnh `id` (có hay không, chưa xét đã dò chưa). */
+export const poiAt = (id: number): Poi | undefined => POIS.get(id);
+
+/** Mọi khoảnh có điểm lạ. */
+export const poiPlots = (): number[] => [...POIS.keys()];
+
+/** Khoảnh có đồn giặc giữ vùng của khoảnh `id`. */
+export function campOf(id: number): number {
+  const { bank, i, j } = plotOf(id);
+  const [ci, cj] = CAMPS[REGION[j][i]];
+  return plotId(bank, ci, cj);
+}
+
+/** Các khoảnh trong vùng của đồn đóng ở khoảnh `camp`. */
+export function regionOf(camp: number): number[] {
+  const { bank } = plotOf(camp);
+  const out: number[] = [];
+  for (let k = 0; k < PER_BANK; k++) {
+    const id = plotId(bank, 0, 0) + k;
+    if (campOf(id) === camp) out.push(id);
+  }
+  return out;
+}
+
+// ---------- Trạng thái ----------
+
+export interface BenKiaState {
+  /** Khoảnh bên kia đã dò: thấy địa hình và điểm lạ. */
+  known: number[];
+  /** Khoảnh bên kia đã mở: xây được. */
+  open: number[];
+  /** Trinh sát đang đi: dò khoảnh nào, lúc đi và lúc tới (đồng hồ chơi). */
+  scouts: { plot: number; from: number; at: number }[];
+  /** Đồn giặc đã dẹp (khoảnh). */
+  cleared: number[];
+}
+
+export function initialBenKia(): BenKiaState {
+  return { known: [], open: [], scouts: [], cleared: [] };
+}
+
+/** Khoảnh `id` còn đồn giặc chưa dẹp. */
+export function hasCamp(state: GameState, id: number): boolean {
+  return poiAt(id)?.kind === 'don' && !state.benKia.cleared.includes(id);
+}
+
+/** Khoảnh `id` còn thuộc vùng một đồn giặc chưa dẹp (chưa về tay ta). */
+export function plotHeld(state: GameState, id: number): boolean {
+  return !state.benKia.cleared.includes(campOf(id));
+}
+
+export const plotKnown = (state: GameState, id: number): boolean => state.benKia.known.includes(id);
+export const plotOpen = (state: GameState, id: number): boolean => state.benKia.open.includes(id);
+
+/** Thêm các khoảnh vào danh sách đã dò (và đã mở, nếu `open`). Thay mảng mới để mặt nạ đất đã mở tính lại. */
+export function revealPlots(state: GameState, ids: number[], open = false): void {
+  const k = state.benKia;
+  const known = ids.filter((id) => !k.known.includes(id));
+  if (known.length) k.known = [...k.known, ...known].sort((a, b) => a - b);
+  if (!open) return;
+  const fresh = ids.filter((id) => !k.open.includes(id));
+  if (fresh.length) k.open = [...k.open, ...fresh].sort((a, b) => a - b);
+}
+
+// ---------- Cầu ----------
+
+export type BridgeType = 'cauSongDa' | 'cauSongThao';
+
+/** Cầu bắc sang bờ nào: cầu qua sông Đà sang bờ nam, cầu qua sông Thao sang bờ đông. */
+export const bridgeBank = (type: BridgeType): Bank => (type === 'cauSongDa' ? 'nam' : 'dong');
+export const bankBridge = (bank: Bank): BridgeType => (bank === 'nam' ? 'cauSongDa' : 'cauSongThao');
+
+/** Cầu đang có sang bờ `bank` (còn nguyên hay hư). */
+export function bridgeTo(state: GameState, bank: Bank): Building | undefined {
+  const type = bankBridge(bank);
+  return state.buildings.find((b) => b.type === type);
+}
+
+/** Có cầu còn nguyên sang bờ `bank`. */
+export function bridgeUp(state: GameState, bank: Bank): boolean {
+  const b = bridgeTo(state, bank);
+  return !!b && !b.damaged;
+}
+
+/** Hai đầu cầu: các ô đất bên này và bên kia mà cầu (đặt ở góc x, z) chạm vào. */
+export function bridgeEnds(type: BridgeType, x: number, z: number): { near: [number, number][]; far: [number, number][] } {
+  const def = BUILDINGS[type];
+  if (type === 'cauSongDa') {
+    const xs = Array.from({ length: def.w }, (_, k) => x + k);
+    return { near: xs.map((tx) => [tx, z - 1]), far: xs.map((tx) => [tx, z + def.d]) };
+  }
+  const zs = Array.from({ length: def.d }, (_, k) => z + k);
+  return { near: zs.map((tz) => [x - 1, tz]), far: zs.map((tz) => [x + def.w, tz]) };
+}
+
+/** Các khoảnh bên kia mà đầu cầu chạm vào (một hay hai khoảnh). */
+export function bridgeheadPlots(type: BridgeType, x: number, z: number): number[] {
+  const ids = bridgeEnds(type, x, z)
+    .far.map(([tx, tz]) => plotAt(tx, tz))
+    .filter((id): id is number => id !== null);
+  return [...new Set(ids)];
+}
+
+/** Chỗ đặt cầu gần ô (x, z) nhất: cầu bám theo sông, chỉ dịch dọc sông. */
+export function bridgeSnap(type: BridgeType, x: number, z: number): { x: number; z: number } {
+  const def = BUILDINGS[type];
+  const clamp = (v: number, span: number) => Math.min(Math.max(Math.round(v), FOREST_BAND), RIVER_START - span);
+  return type === 'cauSongDa' ? { x: clamp(x, def.w), z: RIVER_START } : { x: RIVER_START, z: clamp(z, def.d) };
+}
+
+/**
+ * Chỗ đặt cầu: vắt qua đúng 7 ô sông (cầu sông Đà nằm trên sông Đà, cầu sông Thao trên sông Thao), đầu bên này trên
+ * đất đã khai phá, đầu bên kia trên một khoảnh bên kia, không bắc thẳng vào khoảnh có đồn giặc. Trả về lý do không
+ * đặt được, hay null.
+ */
+export function bridgeFit(state: GameState, type: BridgeType, x: number, z: number): FailReason | null {
+  const def = BUILDINGS[type];
+  const across = type === 'cauSongDa' ? z : x;
+  const along = type === 'cauSongDa' ? x : z;
+  const span = type === 'cauSongDa' ? def.w : def.d;
+  if (across !== RIVER_START || along < FOREST_BAND || along + span > RIVER_START) return 'ngoaiVung';
+  const mask = openMask(state);
+  const ends = bridgeEnds(type, x, z);
+  if (!ends.near.every(([tx, tz]) => mask[tz * GRID + tx] === 1)) return 'ngoaiVung';
+  const plots = ends.far.map(([tx, tz]) => plotAt(tx, tz));
+  if (plots.some((id) => id === null)) return 'ngoaiVung';
+  if (plots.some((id) => hasCamp(state, id!))) return 'dauCauCoDon';
+  return null;
+}
+
+/** Vừa bắc cầu: khoảnh đầu cầu bên kia được dò và mở luôn, làm chỗ đặt chân. */
+export function openBridgehead(state: GameState, b: Building): void {
+  if (!isBridge(b.type)) return;
+  revealPlots(state, bridgeheadPlots(b.type, b.x, b.z), true);
+}
+
+/** Ô (x, z) thuộc đầu cầu (bên này hay bên kia) của một cầu đang có. Mẫu kinh đô chừa các ô này cho lối lên cầu. */
+export function bridgeheadCells(state: GameState): Set<number> {
+  const cells = new Set<number>();
+  for (const b of state.buildings) {
+    if (!isBridge(b.type)) continue;
+    const ends = bridgeEnds(b.type, b.x, b.z);
+    for (const [tx, tz] of [...ends.near, ...ends.far]) cells.add(tz * GRID + tx);
+  }
+  return cells;
+}
+
+// ---------- Trinh sát ----------
+
+/** Đã tới lúc lo chuyện bên kia sông: Điện cấp 4 (đoạn truyện "Bên kia sông"). */
+export const benKiaOpen = (state: GameState): boolean => dienLevel(state) >= BEN_KIA_DIEN;
+
+/** Số trinh sát được đi cùng lúc. */
+export function scoutLimit(state: GameState): number {
+  return dienLevel(state) >= SCOUT_TWO_DIEN ? 2 : 1;
+}
+
+/** Sai trinh sát dò khoảnh `id` được không: chưa dò, sát vùng đã dò cùng bờ, có cầu còn nguyên sang bờ ấy. */
+export function canScout(state: GameState, id: number): Result {
+  if (!validPlot(id)) return fail('khongTimThay');
+  if (!benKiaOpen(state)) return fail('chuaDuCapDien');
+  const k = state.benKia;
+  if (k.known.includes(id)) return fail('daDo');
+  if (k.scouts.some((s) => s.plot === id)) return fail('dangDo');
+  const bridge = bridgeTo(state, plotOf(id).bank);
+  if (!bridge) return fail('canCau');
+  if (bridge.damaged) return fail('cauHu');
+  if (!plotNeighbors(id).some((n) => k.known.includes(n))) return fail('xaQua');
+  if (k.scouts.length >= scoutLimit(state)) return fail('trinhSatBan');
+  if (!canAfford(state, SCOUT_COST)) return fail('thieuTaiNguyen');
+  return ok(undefined);
+}
+
+export function sendScout(state: GameState, id: number): Result {
+  const check = canScout(state, id);
+  if (!check.ok) return check;
+  pay(state, SCOUT_COST);
+  state.benKia.scouts = [...state.benKia.scouts, { plot: id, from: state.clock, at: state.clock + SCOUT_MS }];
+  return ok(undefined);
+}
+
+/** Trinh sát đã tới nơi: khoảnh ấy và các khoảnh kề cạnh hiện ra. Gọi mỗi lần đồng hồ chơi chạy; trả về số trinh sát vừa về. */
+export function updateBenKia(state: GameState): number {
+  const k = state.benKia;
+  if (!k.scouts.length) return 0;
+  const back = k.scouts.filter((s) => s.at <= state.clock);
+  if (!back.length) return 0;
+  k.scouts = k.scouts.filter((s) => s.at > state.clock);
+  for (const s of back) revealPlots(state, [s.plot, ...plotNeighbors(s.plot)]);
+  return back.length;
+}
+
+/** Bản lưu hợp lệ: khoảnh đúng chỉ số, không trùng; trinh sát đúng dạng. */
+export function isBenKiaState(v: unknown): v is BenKiaState {
+  if (!v || typeof v !== 'object') return false;
+  const k = v as Record<string, unknown>;
+  const isPlots = (list: unknown) => Array.isArray(list) && list.every(validPlot) && new Set(list).size === list.length;
+  if (!isPlots(k.known) || !isPlots(k.open) || !isPlots(k.cleared) || !Array.isArray(k.scouts)) return false;
+  const num = (x: unknown) => typeof x === 'number' && Number.isFinite(x);
+  return k.scouts.every((t: unknown) => !!t && typeof t === 'object' && validPlot((t as Record<string, unknown>).plot as number) && num((t as Record<string, unknown>).from) && num((t as Record<string, unknown>).at));
+}

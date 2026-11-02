@@ -2,7 +2,7 @@
 // đêm yêu tinh, cảnh Tết (cây nêu, dây cờ, mâm bánh, người gói bánh) và các hiệu ứng khi đặt công trình.
 
 import * as THREE from 'three';
-import { BUILDINGS, FIELD, isRoad, type BuildingType, type Terrain, type TuongId } from '../game/defs';
+import { BUILDINGS, FIELD, isBridge, isRoad, type BuildingType, type Terrain, type TuongId } from '../game/defs';
 import { raidSpawnBand, type Battle, type RaidSide } from '../game/battle';
 import { caoLoAtDien } from '../game/caoLo';
 import { advLook, inChapter3, ruaVangCame, type AdvLook } from '../game/coLoa';
@@ -10,6 +10,7 @@ import { heroPost } from '../game/doanhTrai';
 import { dienLevel, occupancy, type Building, type GameState } from '../game/game';
 import { giongLook, type GiongLook } from '../game/giong';
 import { KHOANH_N, khoanhOf, khoanhOrigin, openMask, openStart, openable } from '../game/khoanh';
+import { FAR_PLOTS, benKiaOpen, bridgeEnds, bridgeTo, plotAt, plotOf, plotOrigin, poiAt, poiPlots } from '../game/benKia';
 import { DIEN_HOME, FOREST_BAND, GRID, KHOANH, RIVER_END, RIVER_START, baseHeights, farBankOf, isRiver, riverDistance } from '../game/map';
 import { sonLook, type SonLook } from '../game/son';
 import { floodMap } from '../game/terrain';
@@ -27,6 +28,8 @@ import { makeRuaVang } from './beasts';
 import { buildDecor, disposeDecor, isBatchedDecor, type DecorSpot } from './decor';
 import { buildWild, disposeWild, wildSpots } from './oTrong';
 import { buildCayDaBatch, disposeCayDaBatch, makeCayDa, type CayDaPlace } from './cayDa';
+import { cloudPuffs, poiMarker } from './benKia';
+import { makeSoldier } from './soldier';
 import { makeAnDuong, makeCaoLo, makeGiong, makeSonTinh } from './heroes';
 import { addSunLights, type SunLights } from './lights';
 import {
@@ -264,6 +267,17 @@ export class World {
   private forest?: THREE.Object3D;
   /** Rừng hai bờ bên kia sông, dựng riêng vì ít khi đổi (bên này dựng lại mỗi lần phát rừng). */
   private farForest?: THREE.Object3D;
+  private farForestKey = '#';
+  /** Mây mù phủ khoảnh bên kia chưa dò, và mây đang tan ở khoảnh vừa dò. */
+  private fog?: THREE.Object3D;
+  private fogKey = '';
+  private fogKnown = new Set<number>();
+  private readonly fogFading: { obj: THREE.Mesh; age: number }[] = [];
+  /** Dấu điểm lạ trên khoảnh bên kia đã dò: đồn giặc, bản làng, đặc sản, của chôn. */
+  private pois?: THREE.Group;
+  private poiKey = '';
+  /** Người trinh sát đang chạy qua cầu, theo lúc đi và khoảnh đích. */
+  private readonly scoutViews = new Map<number, THREE.Group>();
   private walls?: THREE.Object3D;
   private dikes?: THREE.Object3D;
   private citadel?: THREE.Object3D;
@@ -613,6 +627,12 @@ export class World {
     this.floodKey = '';
     this.heights = [];
     this.landKey = '';
+    this.farForestKey = '#';
+    this.fogKey = '';
+    this.fogKnown = new Set();
+    this.poiKey = '';
+    for (const o of this.scoutViews.values()) this.scene.remove(o);
+    this.scoutViews.clear();
     this.framed = false;
     this.setSelection(null);
     this.setChunkSelection(null);
@@ -648,12 +668,13 @@ export class World {
       this.heights = [...state.heights];
       this.wildDirty = true;
     }
-    const landKey = `${level}:${state.khoanh.join(',')}`;
+    const bridged = state.buildings.some((b) => isBridge(b.type));
+    const landKey = `${level}:${state.khoanh.join(',')}:${bridged}:${state.benKia.open.join(',')}`;
     if (landKey !== this.landKey || heightsChanged) {
       this.landKey = landKey;
       const lo = openStart(state);
-      // Kéo cảnh trong vùng đất đã khai phá, chừa một dải rừng và một phần sông.
-      const bounds = { min: wx(lo) - 3, max: wx(RIVER_START) + 2 };
+      // Kéo cảnh trong vùng đất đã khai phá, chừa một dải rừng và một phần sông; có cầu thì kéo được sang bên kia.
+      const bounds = { min: wx(lo) - 3, max: bridged ? wx(GRID) - 2 : wx(RIVER_START) + 2 };
       if (this.cityCam) this.cityCam.bounds = bounds;
       else this.view.bounds = bounds;
       // Lần đầu dựng cảnh: nhìn vào giữa vùng đất đã khai phá (Điện ở gần góc sông, nhìn vào Điện thì nửa màn hình là sông).
@@ -760,6 +781,9 @@ export class World {
     this.syncCayDa(state);
     this.syncWild(state);
     this.syncFlood(state);
+    this.syncFarForest(state);
+    this.syncFog(state);
+    this.syncPois(state);
   }
 
   /**
@@ -1109,10 +1133,6 @@ export class World {
     }
     const group = new THREE.Group();
     group.add(buildForest(spots));
-    if (!this.farForest) {
-      this.farForest = this.buildFarForest();
-      this.scene.add(this.farForest);
-    }
     // Cọc mốc ở bốn góc mỗi khoảnh phát được (góc chung của hai khoảnh chỉ cắm một cọc).
     const corners = new Map<number, { x: number; z: number }>();
     for (const k of ready) {
@@ -1139,15 +1159,30 @@ export class World {
     this.scene.add(this.forest);
   }
 
+  /** Dựng lại rừng bên kia khi đất bên ấy mở thêm hay dò thấy thêm điểm lạ (khoảnh có điểm lạ phát trống). */
+  private syncFarForest(state: GameState): void {
+    const k = state.benKia;
+    const seen = k.known.filter((id) => poiAt(id));
+    const key = `${k.open.join(',')}|${seen.join(',')}`;
+    if (key === this.farForestKey && this.farForest) return;
+    this.farForestKey = key;
+    if (this.farForest) this.scene.remove(this.farForest);
+    this.farForest = this.buildFarForest(state, new Set<number>([...k.open, ...seen]));
+    this.scene.add(this.farForest);
+  }
+
   /**
    * Rừng hai bờ bên kia sông (chưa khai phá): thưa hơn bên này một chút và không đổ bóng, cho nhẹ máy; ba ô bãi bồi sát
-   * sông cây thưa như bìa rừng bên này.
+   * sông cây thưa như bìa rừng bên này. Khoảnh đã mở hay có điểm lạ đã dò (`clearing`) thì phát trống.
    */
-  private buildFarForest(): THREE.Object3D {
+  private buildFarForest(state: GameState, clearing: Set<number>): THREE.Object3D {
     const spots: TreeSpot[] = [];
+    const mask = openMask(state);
     for (let x = 0; x < GRID; x++) {
       for (let z = 0; z < GRID; z++) {
-        if (farBankOf(x, z) === null) continue;
+        if (farBankOf(x, z) === null || mask[z * GRID + x]) continue;
+        const plot = plotAt(x, z);
+        if (plot !== null && clearing.has(plot)) continue;
         const rand = seeded(x * 73856093 + z * 19349663);
         const density = riverDistance(x, z) <= 2 ? 0.22 : 0.4;
         if (rand() > density * FOREST_DENSITY) continue;
@@ -1159,6 +1194,134 @@ export class World {
     return shadowless(buildForest(spots));
   }
 
+  // ---------- Bên kia sông ----------
+
+  /** Dựng mây mù ở các khoảnh chưa dò (từ khi Điện đủ cấp mở chuyện bên kia sông); khoảnh vừa dò thì mây tan dần. */
+  private syncFog(state: GameState): void {
+    const on = benKiaOpen(state);
+    const key = on ? `on:${state.benKia.known.join(',')}` : 'off';
+    if (key === this.fogKey) return;
+    const known = new Set(state.benKia.known);
+    // Khoảnh vừa dò (không phải lần đầu dựng cảnh): mây tách riêng để tan dần.
+    if (this.fogKey.startsWith('on') && on) {
+      for (const id of known) {
+        if (this.fogKnown.has(id)) continue;
+        const b = new ShapeBuilder();
+        this.plotClouds(b, id);
+        const mat = toon.clone();
+        mat.transparent = true;
+        const mesh = b.mesh(mat);
+        mesh.castShadow = false;
+        this.scene.add(mesh);
+        this.fogFading.push({ obj: mesh, age: 0 });
+      }
+    }
+    this.fogKey = key;
+    this.fogKnown = known;
+    if (this.fog) this.scene.remove(this.fog);
+    this.fog = undefined;
+    if (!on) return;
+    const b = new ShapeBuilder();
+    for (let id = 0; id < FAR_PLOTS; id++) if (!known.has(id)) this.plotClouds(b, id);
+    if (b.empty) return;
+    const mesh = b.mesh(toon);
+    mesh.castShadow = false;
+    const group = new THREE.Group();
+    group.add(mesh, outlineOf(mesh.geometry, inkThin));
+    this.fog = group;
+    this.scene.add(group);
+  }
+
+  /** Mây trên khoảnh bên kia `id`, theo mặt đất giữa khoảnh. */
+  private plotClouds(b: ShapeBuilder, id: number): void {
+    const o = plotOrigin(id);
+    cloudPuffs(b, id, wx(o.x), wz(o.z), this.groundY(o.x + 2, o.z + 2));
+  }
+
+  /** Mây vừa dò tan trong chừng một giây: phình ra, bay lên, mờ dần. */
+  private updateFog(dt: number): void {
+    for (let i = this.fogFading.length - 1; i >= 0; i--) {
+      const f = this.fogFading[i];
+      f.age += dt;
+      const k = Math.min(f.age, 1);
+      f.obj.scale.setScalar(1 + 0.15 * k);
+      f.obj.position.y = 0.4 * k;
+      (f.obj.material as THREE.Material).opacity = 1 - k;
+      if (k >= 1) {
+        this.scene.remove(f.obj);
+        f.obj.geometry.dispose();
+        this.fogFading.splice(i, 1);
+      }
+    }
+  }
+
+  /** Dấu điểm lạ trên khoảnh bên kia đã dò. */
+  private syncPois(state: GameState): void {
+    const k = state.benKia;
+    const key = `${k.known.join(',')}|${k.cleared.join(',')}`;
+    if (key === this.poiKey) return;
+    this.poiKey = key;
+    if (this.pois) this.scene.remove(this.pois);
+    const group = new THREE.Group();
+    for (const id of poiPlots()) {
+      if (!k.known.includes(id)) continue;
+      const o = plotOrigin(id);
+      const marker = poiMarker(poiAt(id)!, k.cleared.includes(id), id);
+      marker.position.set(wx(o.x) + 2.5, this.groundY(o.x + 2, o.z + 2), wz(o.z) + 2.5);
+      group.add(marker);
+    }
+    this.pois = group;
+    this.scene.add(group);
+  }
+
+  /** Người trinh sát chạy từ sân Điện qua cầu tới khoảnh đang dò, theo đồng hồ chơi. */
+  private updateScouts(t: number): void {
+    const state = this.state;
+    const list = state && !this.inField ? state.benKia.scouts : [];
+    const alive = new Set(list.map((sc) => sc.from * 64 + sc.plot));
+    for (const [key, obj] of this.scoutViews) {
+      if (alive.has(key)) continue;
+      this.scene.remove(obj);
+      this.scoutViews.delete(key);
+    }
+    if (!state) return;
+    const dien = state.buildings.find((b) => b.type === 'dien');
+    for (const sc of list) {
+      const bridge = bridgeTo(state, plotOf(sc.plot).bank);
+      if (!dien || !bridge || !isBridge(bridge.type)) continue;
+      const key = sc.from * 64 + sc.plot;
+      let obj = this.scoutViews.get(key);
+      if (!obj) {
+        obj = makeSoldier('giao');
+        obj.scale.setScalar(0.8);
+        this.scene.add(obj);
+        this.scoutViews.set(key, obj);
+      }
+      const ends = bridgeEnds(bridge.type, bridge.x, bridge.z);
+      const mid = (cells: [number, number][]) => ({
+        x: cells.reduce((a, c) => a + c[0], 0) / cells.length + 0.5,
+        z: cells.reduce((a, c) => a + c[1], 0) / cells.length + 0.5,
+      });
+      const o = plotOrigin(sc.plot);
+      const pts = [{ x: dien.x + BUILDINGS.dien.w / 2, z: dien.z + BUILDINGS.dien.d + 0.5 }, mid(ends.near), mid(ends.far), { x: o.x + 2.5, z: o.z + 2.5 }];
+      const lens = pts.slice(1).map((q, i) => Math.hypot(q.x - pts[i].x, q.z - pts[i].z));
+      const total = lens.reduce((a, b) => a + b, 0);
+      let d = THREE.MathUtils.clamp((state.clock - sc.from) / Math.max(1, sc.at - sc.from), 0, 1) * total;
+      let i = 0;
+      while (i < lens.length - 1 && d > lens[i]) d -= lens[i++];
+      const a = pts[i];
+      const b = pts[i + 1];
+      const u = lens[i] > 0 ? Math.min(d / lens[i], 1) : 1;
+      const x = a.x + (b.x - a.x) * u;
+      const z = a.z + (b.z - a.z) * u;
+      const tx = Math.floor(x);
+      const tz = Math.floor(z);
+      obj.position.set(wx(x), isRiver(tx, tz) ? 0.12 : this.groundY(tx, tz), wz(z));
+      obj.rotation.y = Math.atan2(b.x - a.x, b.z - a.z);
+      (obj.userData.pose as Poser | undefined)?.({ act: 'walk', phase: t * 8, stride: 0.5, time: t });
+    }
+  }
+
   private rebuildGridOverlay(state: GameState): void {
     const visible = this.gridOverlay?.visible ?? false;
     if (this.gridOverlay) {
@@ -1167,9 +1330,9 @@ export class World {
     }
     const mask = openMask(state);
     const pts: THREE.Vector3[] = [];
-    // Viền từng ô đã mở ở đúng mặt đất của ô, để lưới bám theo bậc đất.
-    for (let x = 0; x < RIVER_START; x++) {
-      for (let z = 0; z < RIVER_START; z++) {
+    // Viền từng ô đã mở (cả bên kia sông) ở đúng mặt đất của ô, để lưới bám theo bậc đất.
+    for (let x = 0; x < GRID; x++) {
+      for (let z = 0; z < GRID; z++) {
         if (!mask[z * GRID + x]) continue;
         const y = this.groundY(x, z) + 0.02;
         const x0 = wx(x) + 0.03;
@@ -1739,6 +1902,23 @@ export class World {
     this.chunkPick.end();
   }
 
+  /** Tô vàng khoảnh bên kia sông `id` (bảng Đất bên kia sông); null để tắt. */
+  setFarSelection(id: number | null): void {
+    this.chunkPicked = -1;
+    this.chunkPick.begin();
+    if (id !== null && id >= 0 && id < FAR_PLOTS) {
+      const o = plotOrigin(id);
+      for (let dx = 0; dx < KHOANH; dx++) {
+        for (let dz = 0; dz < KHOANH; dz++) {
+          const x = o.x + dx;
+          const z = o.z + dz;
+          this.chunkPick.add(0.94, 0.05, 0.94, 0xffd54a, wx(x) + 0.5, this.groundY(x, z) + 0.05, wz(z) + 0.5);
+        }
+      }
+    }
+    this.chunkPick.end();
+  }
+
   setSelection(b: Building | null): void {
     if (!b) {
       this.selection.visible = false;
@@ -1842,6 +2022,8 @@ export class World {
     }
 
     this.updateStorm(dt);
+    this.updateFog(dt);
+    this.updateScouts(t);
     this.updateNight(dt);
 
     if (this.giong) {

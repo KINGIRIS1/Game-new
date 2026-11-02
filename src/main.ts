@@ -15,7 +15,8 @@ import { inChapter2, offerGift } from './game/son';
 import { buyHuan } from './game/thuThach';
 import { markStory, pendingStory } from './game/story';
 import { footprintTop } from './game/terrain';
-import { BUILDINGS, RESOURCE_IDS, STAGES, UNIT_TYPES, U_NO, isDecor, isRoad, type BuildingType, type Cost, type ResourceId, type SkillId } from './game/defs';
+import { BUILDINGS, RESOURCE_IDS, STAGES, UNIT_TYPES, U_NO, isBridge, isDecor, isRoad, type BuildingType, type Cost, type ResourceId, type SkillId } from './game/defs';
+import { benKiaOpen, bridgeSnap, plotAt, sendScout } from './game/benKia';
 import { fmt } from './ui/format';
 import {
   canAfford,
@@ -212,7 +213,8 @@ function start(): void {
   const nearestSpot = (type: BuildingType): { x: number; z: number } => {
     const def = BUILDINGS[type];
     const c = world.screenCenterTile();
-    return findSpot(state, type, c) ?? { x: c.x - Math.floor((def.w - 1) / 2), z: c.z - Math.floor((def.d - 1) / 2) };
+    const guess = { x: c.x - Math.floor((def.w - 1) / 2), z: c.z - Math.floor((def.d - 1) / 2) };
+    return findSpot(state, type, c) ?? (isBridge(type) ? bridgeSnap(type, guess.x, guess.z) : guess);
   };
 
   const exitMode = () => {
@@ -260,6 +262,15 @@ function start(): void {
     if (mode.kind === 'place') {
       if (!tile) return;
       const def = BUILDINGS[mode.type];
+      // Cầu bám theo sông: chạm đâu thì cầu dịch dọc sông tới đó.
+      if (isBridge(mode.type)) {
+        const at = bridgeSnap(mode.type, tile.x - (def.w - 1) / 2, tile.z - (def.d - 1) / 2);
+        mode.x = at.x;
+        mode.z = at.z;
+        play('tap');
+        updateGhost();
+        return;
+      }
       // Chạm vào ô sát bờ thì đẩy công trình lùi vào đất liền thay vì chìa xuống sông.
       mode.x = Math.min(Math.max(tile.x - Math.floor((def.w - 1) / 2), 0), RIVER_START - def.w);
       mode.z = Math.min(Math.max(tile.z - Math.floor((def.d - 1) / 2), 0), RIVER_START - def.d);
@@ -311,6 +322,15 @@ function start(): void {
       commit();
       world.pop(r.value.id);
       select(r.value.id);
+      return;
+    }
+    // Chạm vào đất bên kia sông (từ khi Điện đủ cấp mở chuyện bên kia): mở bảng Đất bên kia sông.
+    const far = id === null && tile ? plotAt(tile.x, tile.z) : null;
+    if (far !== null && benKiaOpen(state) && !isOpen(state, tile!.x, tile!.z)) {
+      select(null);
+      play('tap');
+      world.setFarSelection(far);
+      hud.showBenKia(state, far);
       return;
     }
     // Chạm vào rừng chưa phát: mở bảng Khoảnh rừng (dải rừng ngoài cùng thì không phát được).
@@ -372,6 +392,7 @@ function start(): void {
         mode = { kind: 'place', type: a.type, ...nearestSpot(a.type) };
         hud.setMode('place');
         updateGhost();
+        if (isBridge(a.type)) hud.toast(vi.ui.bridgeHint);
         return;
       }
 
@@ -410,6 +431,16 @@ function start(): void {
         play('tap');
         hud.showMau(state);
         return;
+
+      case 'trinhSat': {
+        const r = sendScout(state, a.id);
+        if (!r.ok) return fail(r.reason);
+        play('place');
+        hud.toast(vi.benKia.scoutSent);
+        commit();
+        hud.refreshSheet(state);
+        return;
+      }
 
       case 'phatRung': {
         const r = openKhoanh(state, a.id);
@@ -1048,6 +1079,7 @@ function start(): void {
   let prev = performance.now();
   let lastUi = 0;
   let lastCayKey = '';
+  let lastKnown = state.benKia.known.length;
   let lastSave = prev;
   const frame = (now: number) => {
     const dt = Math.min((now - prev) / 1000, 0.1);
@@ -1080,6 +1112,12 @@ function start(): void {
         lastCayKey = cayKey;
         world.sync(state);
         showCayDaHint();
+      }
+      // Trinh sát về tới nơi: đất bên kia hiện ra thêm.
+      if (state.benKia.known.length !== lastKnown) {
+        if (state.benKia.known.length > lastKnown && !state.benKia.scouts.length) hud.toast(vi.benKia.scoutBack);
+        lastKnown = state.benKia.known.length;
+        world.sync(state);
       }
       refreshUi();
       watchStory();
@@ -1115,6 +1153,12 @@ function start(): void {
       const r = place(state, type, x, z);
       commit();
       return r;
+    },
+    /** Mở bảng Đất bên kia sông của khoảnh bên kia `id`, như khi chạm vào đất ấy. */
+    benKia: (id: number) => {
+      select(null);
+      world.setFarSelection(id);
+      hud.showBenKia(state, id);
     },
     /** Các khoảnh rừng phát được; `khoanh(id)` mở bảng Khoảnh rừng như khi chạm vào khoảnh ấy. */
     openable: () => openable(state),

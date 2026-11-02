@@ -11,6 +11,8 @@ import {
   FIELD,
   RESOURCE_IDS,
   ROAD_TYPES,
+  BRIDGE_FLOOD,
+  isBridge,
   isDecor,
   isRoad,
   RINGS_NEEDED,
@@ -111,6 +113,7 @@ import { endingHtml, giongHtml, storyHtml } from './giong';
 import { sonHtml } from './son';
 import { blessingHtml, tetHtml } from './tet';
 import { khoanhHtml } from './khoanh';
+import { benKiaHtml } from './benKia';
 import { mauHtml } from './mau';
 import type { MauId } from '../game/mau';
 
@@ -148,6 +151,8 @@ const BUILD_MENU: BuildingType[] = [
   'thanh',
   'congThanh',
   'denCoLoa',
+  'cauSongDa',
+  'cauSongThao',
 ];
 /** Nhóm thẻ trong bảng Xây dựng: công trình, đường đi, đồ trang trí. */
 const BUILD_GROUPS: { key: keyof typeof vi.ui.buildGroups; types: BuildingType[] }[] = [
@@ -163,6 +168,7 @@ const CHAPTER_OF: Partial<Record<string, number>> = { chuong2: 2, ketChuong2: 2,
 /** Tên hiển thị của công trình, tính cả lũy tre đã đắp thành đất và đê đã kè đá. */
 export function buildingName(b: Pick<Building, 'type' | 'level'>): string {
   if (b.type === 'luy' && b.level >= 2) return vi.ui.wallEarth;
+  if (isBridge(b.type)) return vi.ui.bridgeName(b.level, b.type === 'cauSongDa' ? vi.ui.songDa : vi.ui.songThao);
   if (b.type === 'de' && b.level >= 2) return vi.ui.dikeStone;
   return vi.buildings[b.type].name;
 }
@@ -201,6 +207,7 @@ export type HudAction =
   | { kind: 'rotateView' }
   | { kind: 'applyMau'; mau: MauId }
   | { kind: 'phatRung'; id: number }
+  | { kind: 'trinhSat'; id: number }
   | { kind: 'offerBanh'; banh: Banh }
   | { kind: 'confirmPlace' }
   | { kind: 'cancelPlace' }
@@ -261,6 +268,7 @@ type Sheet =
   | { kind: 'tet' }
   | { kind: 'mau' }
   | { kind: 'khoanh'; id: number }
+  | { kind: 'benKia'; id: number }
   | null;
 
 /** Máy có gửi được tệp qua bảng chia sẻ của hệ điều hành (Zalo, Messenger, Drive...) không. Hỏi một lần. */
@@ -421,6 +429,8 @@ export class Hud {
         return this.onAction({ kind: 'applyMau', mau: el.dataset.mau as MauId });
       case 'phatRung':
         return this.onAction({ kind: 'phatRung', id });
+      case 'trinhSat':
+        return this.onAction({ kind: 'trinhSat', id });
       case 'offerBanh':
         return this.onAction({ kind: 'offerBanh', banh: el.dataset.banh as Banh });
       case 'closeCampaign':
@@ -527,7 +537,13 @@ export class Hud {
       const secs = Math.max(0, Math.ceil((state.tet.openUntil - state.clock) / 1000));
       tet = `<button class="chip dan" data-act="openTet" title="${vi.ui.tet}">🎋 <b>${Math.floor(secs / 60)}:${String(secs % 60).padStart(2, '0')}</b></button>`;
     }
-    const html = `<div class="chip level" title="${vi.buildings.dien.name}">🏯 ${dienLevel(state)}</div>${res}${dan}${army}${giong}${son}${adv}${tet}
+    // Trinh sát đang đi: chip 🧭 đếm ngược tới lúc người về sớm nhất.
+    let scout = '';
+    if (state.benKia.scouts.length) {
+      const secs = Math.max(0, Math.ceil((Math.min(...state.benKia.scouts.map((sc) => sc.at)) - state.clock) / 1000));
+      scout = `<div class="chip dan" title="${vi.benKia.scoutChip}">🧭 <b>${secs}s</b></div>`;
+    }
+    const html = `<div class="chip level" title="${vi.buildings.dien.name}">🏯 ${dienLevel(state)}</div>${res}${dan}${army}${giong}${son}${adv}${tet}${scout}
       <span class="spacer"></span>
       <button class="icon-btn" data-act="openSettings" aria-label="${vi.ui.settings}">⚙️</button>`;
     // So với chuỗi đã vẽ lần trước (không so với innerHTML vì trình duyệt chuẩn hóa lại chuỗi),
@@ -721,6 +737,12 @@ export class Hud {
     this.refreshSheet(state);
   }
 
+  /** Bảng Đất bên kia sông của khoảnh bên kia `id`. */
+  showBenKia(state: GameState, id: number): void {
+    this.sheet = { kind: 'benKia', id };
+    this.refreshSheet(state);
+  }
+
   /** Bảng Khoảnh rừng của khoảnh `id` (vừa chạm vào rừng). */
   showKhoanh(state: GameState, id: number): void {
     this.sheet = { kind: 'khoanh', id };
@@ -792,6 +814,9 @@ export class Hud {
       if (state.khoanh.includes(this.sheet.id)) return this.closeSheet();
       title = `🌳 ${vi.ui.khoanhTitle}`;
       body = khoanhHtml(state, this.sheet.id);
+    } else if (this.sheet.kind === 'benKia') {
+      title = `🌄 ${vi.benKia.title}`;
+      body = benKiaHtml(state, this.sheet.id);
     } else if (this.sheet.kind === 'tet') {
       title = `🎋 ${vi.ui.tet}`;
       body = tetHtml(state);
@@ -929,7 +954,12 @@ export class Hud {
       const next = b.level < def.maxLevel ? ` → +${fmt(def.storage[b.level])}` : '';
       rows.push(`<div class="stat"><span>${vi.ui.storage}</span><span>+${fmt(def.storage[b.level - 1])}${next}</span></div>`);
     }
-    if (inChapter2(state)) {
+    if (isBridge(b.type)) {
+      // Cầu đứng trên sông: lũ cuốn tùy cấp cầu, không theo nền đất.
+      rows.push(`<div class="stat"><span>${vi.ui.bridgeFloodLabel}</span><span class="muted">${vi.ui.bridgeFlood(BRIDGE_FLOOD[b.level - 1] ?? Infinity)}</span></div>`);
+      if (b.level < def.maxLevel) rows.push(`<div class="stat"><span>${vi.ui.nextLevel}</span><span class="muted">${vi.ui.bridgeFlood(BRIDGE_FLOOD[b.level] ?? Infinity)}</span></div>`);
+      rows.push(`<p class="muted">${vi.ui.bridgeRings}</p>`);
+    } else if (inChapter2(state)) {
       const ground = groundOf(state, b);
       const tol = floodToleranceOf(b.type);
       rows.push(`<div class="stat"><span>${vi.ui.ground}</span><span>${vi.ui.groundLevel(ground)}</span></div>`);

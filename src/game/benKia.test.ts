@@ -1,11 +1,38 @@
-// Vùng đất bên kia sông: lưới nới qua sông (bờ nam sông Đà, bờ đông sông Thao, ngã ba sông), bản lưu 18.
+// Vùng đất bên kia sông: lưới nới qua sông (bờ nam sông Đà, bờ đông sông Thao, ngã ba sông), bản lưu 18; khoảnh,
+// điểm lạ và vùng đồn bên kia; cầu (đặt, đầu cầu, đi qua, lũ cuốn, vòng thành hở), trinh sát, đoạn truyện.
 
 import { describe, expect, it } from 'vitest';
-import { startBattle, stepBattle } from './battle';
-import { canPlace, createInitialState, type GameState } from './game';
+import { findPath, startBattle, stepBattle } from './battle';
+import {
+  BANKS,
+  FAR_ALONG,
+  FAR_PLOTS,
+  bridgeheadPlots,
+  bridgeSnap,
+  campOf,
+  canScout,
+  isBenKiaState,
+  plotAt,
+  plotHeld,
+  plotId,
+  plotNeighbors,
+  plotOf,
+  plotOrigin,
+  poiAt,
+  poiPlots,
+  regionOf,
+  sendScout,
+  type Bank,
+} from './benKia';
+import { wallRings } from './coLoa';
+import { BRIDGE_FLOOD, BUILDINGS, SCOUT_COST, SCOUT_MS } from './defs';
+import { canMove, canPlace, createInitialState, place, tick, type Building, type GameState } from './game';
 import { FAR_FOREST, GRID, RIVER_DIVE, RIVER_END, RIVER_START, baseHeights, farBankOf, isNearBank, isRiver, riverDistance } from './map';
+import { planMau } from './mau';
 import { SAVE_VERSION, deserialize, serialize } from './save';
-import { floodMap } from './terrain';
+import { pendingStory } from './story';
+import { drowns, floodMap } from './terrain';
+import { edge, setDien } from './testmap';
 
 /** Dấu vân tay độ cao tự nhiên của lưới 55×55 trước khi nới lưới (tính từ `map.ts` cũ). */
 const OLD_FINGERPRINT = 3373663266;
@@ -122,5 +149,292 @@ describe('nâng bản lưu 17 lên 18', () => {
     const s = createInitialState(0);
     const back = deserialize(serialize(s))!;
     expect(back.heights).toEqual(s.heights);
+  });
+});
+
+/** Kinh đô ở Điện `level`, kho đầy. */
+function rich(level = 4): GameState {
+  const s = createInitialState(0);
+  setDien(s, level);
+  s.resources = { gao: 1e6, voOc: 1e6, datDa: 1e6, sat: 1e6, go: 1e6 };
+  return s;
+}
+
+/** Khoảnh bên kia sát sông, đối diện vùng đất bên này đã khai phá ở Điện `level`, không có đồn, gần ngã ba nhất. */
+function freeRiverPlot(bank: Bank, level: number): number {
+  for (let i = FAR_ALONG - 1; i >= 0; i--) {
+    const id = plotId(bank, i, 0);
+    const o = plotOrigin(id);
+    const along = bank === 'nam' ? o.x : o.z;
+    if (along >= edge(level) && poiAt(id)?.kind !== 'don') return id;
+  }
+  throw new Error('không có khoảnh trống');
+}
+
+/** Bắc cầu sang khoảnh sát sông `id` (đầu cầu vào giữa khoảnh). */
+function bridgeTo(s: GameState, id: number): Building {
+  const { bank } = plotOf(id);
+  const o = plotOrigin(id);
+  const r = bank === 'nam' ? place(s, 'cauSongDa', o.x + 1, RIVER_START) : place(s, 'cauSongThao', RIVER_START, o.z + 1);
+  if (!r.ok) throw new Error(r.reason);
+  return r.value;
+}
+
+describe('khoảnh, điểm lạ và vùng đồn bên kia sông', () => {
+  it('mỗi bờ 10 × 3 khoảnh 5×5 ô, từ bờ sông tới dải rừng ngoài cùng', () => {
+    expect(FAR_PLOTS).toBe(60);
+    for (let id = 0; id < FAR_PLOTS; id++) {
+      const o = plotOrigin(id);
+      for (let dx = 0; dx < 5; dx++) for (let dz = 0; dz < 5; dz++) expect(plotAt(o.x + dx, o.z + dz)).toBe(id);
+      expect(farBankOf(o.x, o.z)).toBe(plotOf(id).bank);
+    }
+    expect(plotAt(10, RIVER_END - 1)).toBe(null);
+    expect(plotAt(10, FAR_FOREST)).toBe(null);
+    expect(plotAt(RIVER_END, 1)).toBe(null);
+    expect(plotAt(60, 60)).toBe(null);
+    expect(plotNeighbors(plotId('nam', 0, 0)).sort()).toEqual([plotId('nam', 1, 0), plotId('nam', 0, 1)].sort());
+  });
+
+  it('mỗi bờ sáu đồn (bậc 1, 1, 2, 2, 3, 4), hai làng, ba đặc sản, hai của chôn', () => {
+    for (const bank of BANKS) {
+      const pois = poiPlots()
+        .filter((id) => plotOf(id).bank === bank)
+        .map((id) => poiAt(id)!);
+      const tiers = pois.flatMap((p) => (p.kind === 'don' ? [p.tier] : [])).sort();
+      expect(tiers).toEqual([1, 1, 2, 2, 3, 4]);
+      expect(pois.filter((p) => p.kind === 'lang').length).toBe(2);
+      expect(pois.filter((p) => p.kind === 'dacSan').length).toBe(3);
+      expect(pois.filter((p) => p.kind === 'cua').length).toBe(2);
+    }
+  });
+
+  it('mỗi khoảnh thuộc vùng một đồn; vùng liền một dải, có chính khoảnh của đồn; đồn bậc thấp sát sông', () => {
+    for (const bank of BANKS) {
+      const camps = poiPlots().filter((id) => plotOf(id).bank === bank && poiAt(id)!.kind === 'don');
+      let total = 0;
+      for (const camp of camps) {
+        const tier = (poiAt(camp) as { tier: number }).tier;
+        expect(plotOf(camp).j, `đồn bậc ${tier}`).toBe(tier === 1 ? 0 : tier === 2 ? 1 : 2);
+        const region = regionOf(camp);
+        expect(region).toContain(camp);
+        expect(region.every((id) => campOf(id) === camp)).toBe(true);
+        // Liền một dải (đi theo bốn hướng trong vùng).
+        const seen = new Set([camp]);
+        const queue = [camp];
+        while (queue.length) for (const n of plotNeighbors(queue.pop()!)) if (!seen.has(n) && campOf(n) === camp) seen.add(n), queue.push(n);
+        expect(seen.size).toBe(region.length);
+        total += region.length;
+      }
+      expect(total).toBe(30);
+    }
+  });
+
+  it('làng nằm trong vùng đồn bậc 2 trở lên; vùng đồn bậc 1 gần ngã ba có một đặc sản và một của chôn', () => {
+    for (const bank of BANKS) {
+      for (const id of poiPlots().filter((p) => plotOf(p).bank === bank)) {
+        const p = poiAt(id)!;
+        const tier = (poiAt(campOf(id)) as { tier: number }).tier;
+        if (p.kind === 'lang') expect(tier, `${bank} làng ${p.nghe}`).toBeGreaterThanOrEqual(2);
+      }
+      const near = regionOf(plotId(bank, 8, 0)).map((id) => poiAt(id)?.kind);
+      expect(near).toContain('dacSan');
+      expect(near).toContain('cua');
+    }
+  });
+});
+
+describe('cầu qua sông', () => {
+  it('có từ Điện cấp 4, mỗi sông một cầu; cầu bám theo sông khi chạm', () => {
+    const s = rich(3);
+    const id = freeRiverPlot('nam', 3);
+    const o = plotOrigin(id);
+    expect(canPlace(s, 'cauSongDa', o.x + 1, RIVER_START)).toEqual({ ok: false, reason: 'chuaDuCapDien' });
+    setDien(s, 4);
+    expect(canPlace(s, 'cauSongDa', o.x + 1, RIVER_START).ok).toBe(true);
+    bridgeTo(s, id);
+    expect(canPlace(s, 'cauSongDa', o.x - 3, RIVER_START)).toEqual({ ok: false, reason: 'datGioiHan' });
+    bridgeTo(s, freeRiverPlot('dong', 4));
+    expect(s.buildings.filter((b) => b.type === 'cauSongDa' || b.type === 'cauSongThao').length).toBe(2);
+    expect(bridgeSnap('cauSongDa', 30.4, 20)).toEqual({ x: 30, z: RIVER_START });
+    expect(bridgeSnap('cauSongThao', 10, 70)).toEqual({ x: RIVER_START, z: RIVER_START - BUILDINGS.cauSongThao.d });
+  });
+
+  it('vắt qua đúng 7 ô sông, đầu bên này trên đất đã khai phá, không bắc thẳng vào đồn giặc', () => {
+    const s = rich();
+    expect(BUILDINGS.cauSongDa.d).toBe(RIVER_END - RIVER_START);
+    expect(BUILDINGS.cauSongThao.w).toBe(RIVER_END - RIVER_START);
+    const id = freeRiverPlot('nam', 4);
+    const o = plotOrigin(id);
+    expect(canPlace(s, 'cauSongDa', o.x + 1, RIVER_START - 1)).toEqual({ ok: false, reason: 'ngoaiVung' });
+    expect(canPlace(s, 'cauSongDa', o.x + 1, RIVER_START + 1)).toEqual({ ok: false, reason: 'ngoaiVung' });
+    // Đầu bên này trong rừng chưa phát.
+    expect(canPlace(s, 'cauSongDa', 3, RIVER_START)).toEqual({ ok: false, reason: 'ngoaiVung' });
+    const camp = poiPlots().find((p) => plotOf(p).bank === 'nam' && plotOf(p).j === 0 && poiAt(p)!.kind === 'don' && plotOrigin(p).x >= edge(4))!;
+    expect(canPlace(s, 'cauSongDa', plotOrigin(camp).x + 1, RIVER_START)).toEqual({ ok: false, reason: 'dauCauCoDon' });
+    expect(canPlace(s, 'cauSongThao', RIVER_START, 30).ok).toBe(true);
+    expect(canPlace(s, 'cauSongThao', RIVER_START + 1, 30)).toEqual({ ok: false, reason: 'ngoaiVung' });
+  });
+
+  it('bắc xong thì khoảnh đầu cầu được dò và mở, dựng được công trình bên kia; cầu không dời được', () => {
+    const s = rich();
+    const id = freeRiverPlot('nam', 4);
+    const b = bridgeTo(s, id);
+    expect(bridgeheadPlots('cauSongDa', b.x, b.z)).toEqual([id]);
+    expect(s.benKia.known).toEqual([id]);
+    expect(s.benKia.open).toEqual([id]);
+    // Đầu cầu mở dù vùng ấy còn đồn giặc giữ.
+    expect(plotHeld(s, id)).toBe(true);
+    const o = plotOrigin(id);
+    expect(place(s, 'nhaSan', o.x, o.z + 1).ok).toBe(true);
+    // Khoảnh bên cạnh chưa mở.
+    expect(canPlace(s, 'luy', o.x + 5, o.z + 1)).toEqual({ ok: false, reason: 'ngoaiVung' });
+    expect(canMove(s, b.id, b.x + 5, b.z)).toEqual({ ok: false, reason: 'cauKhongDoi' });
+  });
+
+  it('giặc và quân đi qua cầu còn nguyên, cầu hư thì không qua được', () => {
+    const s = rich();
+    const id = freeRiverPlot('nam', 4);
+    const o = plotOrigin(id);
+    const kho = place(s, 'kho', 40, 30);
+    if (!kho.ok) throw new Error(kho.reason);
+    const from = { x: o.x + 2, z: o.z + 8 };
+    expect(findPath(s, from.x, from.z, kho.value)).toBeNull();
+    const b = bridgeTo(s, id);
+    const path = findPath(s, from.x, from.z, kho.value)!;
+    expect(path).not.toBeNull();
+    expect(path.some((i) => isRiver(i % GRID, Math.floor(i / GRID)))).toBe(true);
+    b.damaged = true;
+    expect(findPath(s, from.x, from.z, kho.value)).toBeNull();
+  });
+
+  it('lũ cuốn cầu phao tre ở bậc 2, cầu gỗ ở bậc 3, cầu gỗ lớn không sợ lũ', () => {
+    const s = rich(7);
+    const b = bridgeTo(s, freeRiverPlot('nam', 7));
+    const wet = floodMap(s, 3);
+    expect(BRIDGE_FLOOD).toEqual([2, 3, Infinity]);
+    expect(drowns(s, b, wet, 1.9)).toBe(false);
+    expect(drowns(s, b, wet, 2)).toBe(true);
+    b.level = 2;
+    expect(drowns(s, b, wet, 2.9)).toBe(false);
+    expect(drowns(s, b, wet, 3)).toBe(true);
+    b.level = 3;
+    expect(drowns(s, b, wet, 3)).toBe(false);
+  });
+
+  it('lũ loang vào khoảnh đã mở bên kia sông, rừng bên kia không ngập', () => {
+    const s = rich();
+    const id = freeRiverPlot('nam', 4);
+    bridgeTo(s, id);
+    const o = plotOrigin(id);
+    const wet = floodMap(s, 1);
+    // Bãi bồi bậc 0 sát sông ngập ở bậc 1.
+    expect(wet[o.z * GRID + o.x]).toBe(1);
+    expect(wet[o.z * GRID + o.x + 5]).toBe(0);
+  });
+
+  it('có cầu thì vòng thành dựa vào bờ sông bị hở ở đầu cầu', () => {
+    const s = rich();
+    let next = 1000;
+    const wall = (x: number, z: number) => s.buildings.push({ id: next++, type: 'thanh', x, z, level: 1, workers: 0 });
+    // Một vòng thành chữ L: chắn phía bắc và phía tây, dựa vào hai bờ sông.
+    const line = 25;
+    for (let x = 0; x < RIVER_START; x++) wall(x, line);
+    for (let z = line + 1; z < RIVER_START; z++) wall(0, z);
+    expect(wallRings(s)).toBe(1);
+    bridgeTo(s, freeRiverPlot('nam', 4));
+    expect(wallRings(s)).toBe(0);
+  });
+});
+
+describe('trinh sát', () => {
+  it('dò khoảnh sát vùng đã dò: tốn gạo, vỏ ốc, đi 40 giây chơi rồi khoảnh ấy và các khoảnh kề hiện ra', () => {
+    const s = rich();
+    s.raid.nextAt = null;
+    const id = freeRiverPlot('nam', 4);
+    expect(canScout(s, plotNeighbors(id)[0])).toEqual({ ok: false, reason: 'canCau' });
+    const b = bridgeTo(s, id);
+    const far = plotId('nam', plotOf(id).i, 2);
+    expect(canScout(s, far)).toEqual({ ok: false, reason: 'xaQua' });
+    expect(canScout(s, id)).toEqual({ ok: false, reason: 'daDo' });
+    const target = plotId('nam', plotOf(id).i, 1);
+    const before = { ...s.resources };
+    expect(sendScout(s, target).ok).toBe(true);
+    expect(before.gao - s.resources.gao).toBe(SCOUT_COST.gao);
+    expect(before.voOc - s.resources.voOc).toBe(SCOUT_COST.voOc);
+    expect(canScout(s, target)).toEqual({ ok: false, reason: 'dangDo' });
+    // Điện 4: một trinh sát một lúc.
+    const other = plotNeighbors(id).find((n) => n !== target)!;
+    expect(canScout(s, other)).toEqual({ ok: false, reason: 'trinhSatBan' });
+    tick(s, SCOUT_MS - 1000);
+    expect(s.benKia.known).not.toContain(target);
+    tick(s, 1000);
+    expect(s.benKia.known).toContain(target);
+    for (const n of plotNeighbors(target)) expect(s.benKia.known).toContain(n);
+    expect(s.benKia.scouts).toEqual([]);
+    // Dò chưa phải là mở.
+    expect(s.benKia.open).toEqual([id]);
+    b.damaged = true;
+    const unknown = plotNeighbors(far).find((n) => !s.benKia.known.includes(n))!;
+    expect(canScout(s, unknown)).toEqual({ ok: false, reason: 'cauHu' });
+  });
+
+  it('từ Điện cấp 6 đi được hai trinh sát cùng lúc', () => {
+    const s = rich(6);
+    const id = freeRiverPlot('nam', 6);
+    bridgeTo(s, id);
+    const [a, b] = plotNeighbors(id);
+    expect(sendScout(s, a).ok).toBe(true);
+    expect(sendScout(s, b).ok).toBe(true);
+  });
+});
+
+describe('bên kia sông và các phần khác', () => {
+  it('Điện cấp 4 thì Lạc hầu kể đoạn "Bên kia sông"', () => {
+    const s = createInitialState(0);
+    s.story.seen = ['mo', 'suGia'];
+    setDien(s, 3);
+    expect(pendingStory(s)).not.toBe('benKia');
+    setDien(s, 4);
+    expect(pendingStory(s)).toBe('benKia');
+  });
+
+  it('áp mẫu kinh đô không đụng công trình bên kia sông và chừa ô đầu cầu', () => {
+    const s = rich(5);
+    const id = freeRiverPlot('nam', 5);
+    const b = bridgeTo(s, id);
+    const o = plotOrigin(id);
+    const nha = place(s, 'nhaSan', o.x, o.z + 1);
+    if (!nha.ok) throw new Error(nha.reason);
+    const plan = planMau(s, 'phongChau');
+    expect(plan.moves.some((m) => m.id === nha.value.id || m.id === b.id)).toBe(false);
+    expect(plan.removes).not.toContain(b.id);
+    const def = BUILDINGS.cauSongDa;
+    for (const slot of [...plan.builds, ...plan.moves.map((m) => ({ ...m, type: s.buildings.find((x) => x.id === m.id)!.type }))]) {
+      const sd = BUILDINGS[slot.type];
+      for (let x = b.x; x < b.x + def.w; x++) {
+        const inside = x >= slot.x && x < slot.x + sd.w && RIVER_START - 1 >= slot.z && RIVER_START - 1 < slot.z + sd.d;
+        expect(inside, `${slot.type} ${slot.x},${slot.z}`).toBe(false);
+      }
+    }
+  });
+
+  it('lưu rồi nạp lại giữ khoảnh đã dò, đã mở, trinh sát đang đi; dữ liệu hỏng thì bỏ', () => {
+    const s = rich();
+    const id = freeRiverPlot('dong', 4);
+    bridgeTo(s, id);
+    sendScout(s, plotNeighbors(id)[0]);
+    const back = deserialize(serialize(s))!;
+    expect(back.benKia).toEqual(s.benKia);
+    expect(back.buildings).toEqual(s.buildings);
+    for (const bad of [{ ...s.benKia, known: [60] }, { ...s.benKia, open: [3, 3] }, { ...s.benKia, scouts: [{ plot: 1 }] }, { known: [], open: [] }]) {
+      expect(isBenKiaState(bad)).toBe(false);
+      const raw = JSON.parse(serialize(s));
+      raw.benKia = bad;
+      expect(deserialize(JSON.stringify(raw))).toBeUndefined();
+    }
+    // Bản lưu 18 chưa có phần bên kia (lưu từ bản dựng dở): thêm vào.
+    const raw = JSON.parse(serialize(createInitialState(0)));
+    delete raw.benKia;
+    expect(deserialize(JSON.stringify(raw))!.benKia).toEqual({ known: [], open: [], scouts: [], cleared: [] });
   });
 });

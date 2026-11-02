@@ -1,7 +1,7 @@
 // Độ cao ô đất và nước lũ: công trình đứng trên nền nào, đê chắn nước tới đâu,
 // nước lũ từ sông tràn vào những ô nào. Không phụ thuộc DOM hay Three.js.
 
-import { BUILDINGS, DIKE_RAISE, FLOOD_TOLERANCE, isDecor, type BuildingType } from './defs';
+import { BRIDGE_FLOOD, BUILDINGS, DIKE_RAISE, FLOOD_TOLERANCE, isBridge, isDecor, type BuildingType } from './defs';
 import type { Building, GameState } from './game';
 import { openMask } from './khoanh';
 import { GRID, RIVER_HEIGHT, inGrid, isRiver } from './map';
@@ -90,6 +90,8 @@ export function floodMap(state: GameState, level: number): Uint8Array {
 /** Công trình bị nước làm hư nếu dâng tới mực `level`: móng nằm trong vùng ngập và nước cao hơn sức chịu của nền. */
 export function drowns(state: GameState, b: Building, wet: Uint8Array, level: number): boolean {
   if (b.damaged) return false;
+  // Cầu bắc trên sông: lũ dâng tới bậc nào thì cuốn trôi tùy cấp cầu.
+  if (isBridge(b.type)) return level >= (BRIDGE_FLOOD[b.level - 1] ?? Infinity);
   if (level <= groundOf(state, b) + floodToleranceOf(b.type)) return false;
   const def = BUILDINGS[b.type];
   for (let dx = 0; dx < def.w; dx++) for (let dz = 0; dz < def.d; dz++) if (wet[tileIndex(b.x + dx, b.z + dz)]) return true;

@@ -23,7 +23,7 @@ const KHUNG = {
 // Mã dựng cảnh chạy trong trang, có sẵn các biến:
 //   d = window.__debug, s = state đang chơi,
 //   G = game.ts, M = moPhong.ts (người chơi mô phỏng), D = defs.ts, C = campaign.ts, S = story.ts, X = mau.ts,
-//   K = khoanh.ts.
+//   K = khoanh.ts, B = benKia.ts (bên kia sông).
 // `truoc` chạy trước khi tải lại trang (dựng state rồi lưu), `sau` chạy sau khi tải lại (bấm trận, bấm kỹ năng...).
 
 /** Cho kinh đô một doanh trại và một ít quân, giữ nguyên kho của người chơi. */
@@ -93,7 +93,7 @@ Tùy chọn:
   --truoc "<mã>"          Chạy thêm trong trang trước khi tải lại, để dựng state
   --sau "<mã>"            Chạy thêm trong trang sau khi tải lại, để bấm trận, kỹ năng...
                           Mã có sẵn d (window.__debug), s (state), G (game.ts), M (moPhong.ts),
-                          D (defs.ts), C (campaign.ts), S (story.ts), X (mau.ts), K (khoanh.ts)
+                          D (defs.ts), C (campaign.ts), S (story.ts), X (mau.ts), K (khoanh.ts), B (benKia.ts)
   --cam x,z,zoom          Đặt camera nhìn vào ô (x, z)
   --cham <x,z | loại>     Chạm một ô, hoặc công trình đầu tiên thuộc loại đó (vd: dien, ruong) để mở bảng
   --bam "<bộ chọn>"       Bấm một phần tử giao diện (CSS, hoặc text=Chữ trên nút)
@@ -153,15 +153,15 @@ function napPlaywright() {
   process.exit(2);
 }
 
-/** Chạy một đoạn mã trong trang với các biến d, s, G, M, D, C, S, X, K. */
+/** Chạy một đoạn mã trong trang với các biến d, s, G, M, D, C, S, X, K, B. */
 async function chayMa(page, ma) {
   if (!ma.trim()) return;
   await page.evaluate(async (ma) => {
-    const urls = ['/src/game/game.ts', '/src/game/moPhong.ts', '/src/game/defs.ts', '/src/game/campaign.ts', '/src/game/story.ts', '/src/game/mau.ts', '/src/game/khoanh.ts'];
-    const [G, M, D, C, S, X, K] = await Promise.all(urls.map((u) => import(/* @vite-ignore */ u)));
+    const urls = ['/src/game/game.ts', '/src/game/moPhong.ts', '/src/game/defs.ts', '/src/game/campaign.ts', '/src/game/story.ts', '/src/game/mau.ts', '/src/game/khoanh.ts', '/src/game/benKia.ts'];
+    const [G, M, D, C, S, X, K, B] = await Promise.all(urls.map((u) => import(/* @vite-ignore */ u)));
     const d = window.__debug;
     const AsyncFunction = Object.getPrototypeOf(async function () {}).constructor;
-    await new AsyncFunction('d', 's', 'G', 'M', 'D', 'C', 'S', 'X', 'K', ma)(d, d.state(), G, M, D, C, S, X, K);
+    await new AsyncFunction('d', 's', 'G', 'M', 'D', 'C', 'S', 'X', 'K', 'B', ma)(d, d.state(), G, M, D, C, S, X, K, B);
   }, ma);
 }
 

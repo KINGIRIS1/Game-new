@@ -20,10 +20,12 @@ import {
   STAGES,
   TUONG_IDS,
   UNIT_TYPES,
+  isBridge,
   type BuildingType,
   type TuongId,
 } from './defs';
 import { initialCaoLo } from './caoLo';
+import { initialBenKia, isBenKiaState } from './benKia';
 import { initialCayDa, isCayDaState } from './cayDa';
 import { initialAdv } from './coLoa';
 import { inChapter4 } from './chuong4';
@@ -88,6 +90,8 @@ function migrate(raw: unknown): unknown {
   if (isObj(v) && v.version === 15) v = migrate15to16(v);
   if (isObj(v) && v.version === 16) v = migrate16to17(v);
   if (isObj(v) && v.version === 17) v = migrate17to18(v);
+  // Bản lưu 18 lưu từ bản dựng dở của phần bên kia sông (chưa có trạng thái bên kia): thêm vào.
+  if (isObj(v) && v.version === 18 && !isObj(v.benKia)) v.benKia = initialBenKia();
   return v;
 }
 
@@ -344,6 +348,7 @@ const GRID_V17 = 55;
  */
 function migrate17to18(s: Raw): Raw {
   s.version = 18;
+  s.benKia = initialBenKia();
   const old = s.heights;
   if (!Array.isArray(old) || old.length !== GRID_V17 * GRID_V17) return s;
   const heights = baseHeights();
@@ -384,12 +389,13 @@ function isValidBuildings(list: unknown): boolean {
   return ok && list.some((b: Raw) => b.type === 'dien');
 }
 
-/** Mọi công trình nằm gọn trong lưới, không ô nào dưới sông. */
+/** Mọi công trình nằm gọn trong lưới, không ô nào dưới sông; riêng cầu thì nằm trọn trên sông. */
 function buildingsInGrid(list: GameState['buildings']): boolean {
   return list.every((b) => {
     const def = BUILDINGS[b.type];
     if (b.x < 0 || b.z < 0 || b.x + def.w > GRID || b.z + def.d > GRID) return false;
-    for (let dx = 0; dx < def.w; dx++) for (let dz = 0; dz < def.d; dz++) if (isRiver(b.x + dx, b.z + dz)) return false;
+    const bridge = isBridge(b.type);
+    for (let dx = 0; dx < def.w; dx++) for (let dz = 0; dz < def.d; dz++) if (isRiver(b.x + dx, b.z + dz) !== bridge) return false;
     return true;
   });
 }
@@ -400,6 +406,7 @@ function isGameState(v: unknown): v is GameState {
   if (!isKhoanhList(v.khoanh) || v.khoanh.length === 0) return false;
   if (!Array.isArray(v.hinted) || !v.hinted.every((t) => typeof t === 'string')) return false;
   if (!isCayDaState(v.cayDa)) return false;
+  if (!isBenKiaState(v.benKia)) return false;
   const son = v.son;
   if (!isObj(son) || !isObj(son.gifts) || !isNum(son.restUntil) || typeof son.non !== 'boolean' || typeof son.won !== 'boolean') return false;
   if (!GIFT_IDS.every((k) => typeof (son.gifts as Raw)[k] === 'boolean')) return false;
