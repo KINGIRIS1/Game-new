@@ -42,6 +42,7 @@ import {
   buildWalls,
   makeBoat,
   makeFighter,
+  makeSailBoat,
   makeTradeBoat,
   type CitadelSpot,
   type DikeSpot,
@@ -1059,7 +1060,7 @@ export class World {
       // Thuyền neo theo bến, nổi trên mặt sông.
       const waterY = (WATER_Y - 0.02 - topY(ground)) / group.scale.y;
       for (const d of moi.docks(b.level)) {
-        const boat = d.kind === 'trader' ? makeTradeBoat() : makeBoat();
+        const boat = d.kind === 'trader' ? makeTradeBoat(d.big) : d.big ? makeSailBoat() : makeBoat();
         boat.position.set(d.x, waterY, d.z);
         boat.rotation.y = d.ry;
         if (d.scale) boat.scale.setScalar(d.scale);

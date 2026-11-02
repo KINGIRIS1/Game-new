@@ -1,15 +1,22 @@
-// Mô phỏng một người chơi hợp lý để kiểm tra nhịp tiến trình: Điện cấp 2–5 ở chương 1, cấp 6, 7, 8 ở chương 2, 3, 4.
+// Mô phỏng một người chơi hợp lý để kiểm tra nhịp tiến trình: Điện cấp 2–5 ở chương 1, cấp 6, 7, 8 ở chương 2, 3, 4,
+// cấp 9, 10 sau truyện.
 
 import { describe, expect, it } from 'vitest';
 import { playChapters, playUntilDien } from './moPhong';
 
-/** Số phút từ lúc vào chương 2, 3, 4 tới khi lên Điện 6, 7, 8 (người chơi mô phỏng ở `moPhong.ts`). */
-function chapterMinutes(): { dien6: number; dien7: number; dien8: number } {
-  const m = playChapters({ last: 8 });
+/**
+ * Số phút từ lúc vào chương 2, 3, 4 tới khi lên Điện 6, 7, 8; từ lúc hết truyện tới Điện 9; từ Điện 9 tới Điện 10
+ * (người chơi mô phỏng ở `moPhong.ts`).
+ */
+const m = playChapters({ last: 10, maxSec: 12 * 3600 });
+const since = (at: number, from: number) => (at < 0 || from < 0 ? Infinity : (at - from) / 60);
+function chapterMinutes(): { dien6: number; dien7: number; dien8: number; dien9: number; dien10: number } {
   return {
-    dien6: m.at6 < 0 ? Infinity : (m.at6 - m.enter2) / 60,
-    dien7: m.at7 < 0 ? Infinity : (m.at7 - m.enter3) / 60,
-    dien8: m.at8 < 0 ? Infinity : (m.at8 - m.enter4) / 60,
+    dien6: since(m.at6, m.enter2),
+    dien7: since(m.at7, m.enter3),
+    dien8: since(m.at8, m.enter4),
+    dien9: since(m.at9, m.hetTruyen),
+    dien10: since(m.at10, m.at9),
   };
 }
 
@@ -44,5 +51,15 @@ describe('nhịp tiến trình', () => {
     expect(dien7).toBeLessThanOrEqual(40);
     expect(dien8).toBeGreaterThanOrEqual(25);
     expect(dien8).toBeLessThanOrEqual(47);
+  });
+
+  // Giá cấp 9, 10 đã hạ 20% (Điện 9 hạ 12%) so với đề xuất, bến cấp 9, 10 làm thêm 20%: với giá đề xuất, Điện 9 mất
+  // 68 phút, Điện 10 mất 131 phút vì vỏ ốc không kịp cho chín loại công trình cùng lên cấp.
+  it('hết truyện thì 35–50 phút lên Điện 9; lên Điện 9 rồi thì 45–65 phút lên Điện 10', () => {
+    const { dien9, dien10 } = chapterMinutes();
+    expect(dien9).toBeGreaterThanOrEqual(35);
+    expect(dien9).toBeLessThanOrEqual(50);
+    expect(dien10).toBeGreaterThanOrEqual(45);
+    expect(dien10).toBeLessThanOrEqual(65);
   });
 });

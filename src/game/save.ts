@@ -98,6 +98,7 @@ function migrate(raw: unknown): unknown {
     k.dug ??= [];
     k.garrison ??= noGarrison();
   }
+  if (isObj(v) && v.version === 18) v = migrate18to19(v);
   return v;
 }
 
@@ -366,6 +367,12 @@ function migrate17to18(s: Raw): Raw {
   if (battle && Array.isArray(battle.fighters)) {
     for (const f of battle.fighters as Raw[]) if (isObj(f) && Array.isArray(f.path)) f.path = f.path.map(regrid);
   }
+  return s;
+}
+
+/** Phiên bản 18 → 19 (Điện cấp 9, 10): không thêm gì vào state; Điện và chín loại công trình được lên cấp 10. */
+function migrate18to19(s: Raw): Raw {
+  s.version = 19;
   return s;
 }
 

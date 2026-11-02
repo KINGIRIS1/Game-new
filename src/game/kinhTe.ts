@@ -38,16 +38,17 @@ const KHOAN = {
 } as const;
 type Khoan = keyof typeof KHOAN;
 
-/** Sau Điện 8 người chơi mô phỏng chơi thêm chừng này phút (mặc định), chia sổ theo từng giờ, để xem tài nguyên
+/** Sau Điện 10 người chơi mô phỏng chơi thêm chừng này phút (mặc định), chia sổ theo từng giờ, để xem tài nguyên
  * dồn lại ra sao khi hết đường lên cấp. */
-export const SAU_DIEN8_PHUT = 180;
+export const SAU_DIEN10_PHUT = 180;
 
-/** Bốn chương, theo thứ tự. Chương nào người chơi mô phỏng không tới thì báo cáo ghi CHƯA ĐO. */
+/** Bốn chương và phần sau truyện, theo thứ tự. Chương nào người chơi mô phỏng không tới thì báo cáo ghi CHƯA ĐO. */
 const CHUONG = [
   ['chuong1', 'Chương 1 (từ đầu tới lúc vào chương 2)'],
   ['chuong2', 'Chương 2 (tới lúc vào chương 3)'],
   ['chuong3', 'Chương 3 (tới lúc vào chương 4)'],
-  ['chuong4', 'Chương 4 (tới lúc lên Điện 8)'],
+  ['chuong4', 'Chương 4 (tới lúc hết truyện, lên Điện 8 rồi chơi thêm chừng nửa giờ)'],
+  ['sauTruyen', 'Sau truyện (tới lúc lên Điện 10)'],
 ] as const;
 
 const zero = (): Resources => ({ gao: 0, voOc: 0, datDa: 0, sat: 0, go: 0 });
@@ -88,20 +89,20 @@ export interface KetQuaKinhTe {
   moc: Moc;
   /** Giây chơi lúc lên từng cấp Điện (chỉ số là cấp), -1 nếu chưa tới. */
   lenDien: number[];
-  /** Sổ từng giai đoạn, theo thứ tự: chuong1 tới chuong4, rồi sau8-1, sau8-2... mỗi giờ sau Điện 8. */
+  /** Sổ từng giai đoạn, theo thứ tự: chuong1 tới chuong4, sauTruyen, rồi sau10-1, sau10-2... mỗi giờ sau Điện 10. */
   so: Record<string, SoGiaiDoan>;
 }
 
 /** Chạy người chơi mô phỏng và ghi sổ. Tất định: cùng con số trong defs.ts thì lần nào chạy cũng ra cùng sổ. */
-export function doKinhTe(sauDien8Phut = SAU_DIEN8_PHUT): KetQuaKinhTe {
+export function doKinhTe(sauDien10Phut = SAU_DIEN10_PHUT): KetQuaKinhTe {
   const s = createInitialState(0);
   const so: Record<string, SoGiaiDoan> = {};
-  const lenDien = [-1, 0, -1, -1, -1, -1, -1, -1, -1];
+  const lenDien = [-1, 0, -1, -1, -1, -1, -1, -1, -1, -1, -1];
   let giayChoi = 0;
-  let sau8: { key: string; ten: string } | null = null;
+  let sau10: { key: string; ten: string } | null = null;
   const giaiDoan = (): { key: string; ten: string } => {
-    if (sau8) return sau8;
-    const [key, ten] = CHUONG[inChapter4(s) ? 3 : inChapter3(s) ? 2 : inChapter2(s) ? 1 : 0];
+    if (sau10) return sau10;
+    const [key, ten] = CHUONG[s.adv.bien ? 4 : inChapter4(s) ? 3 : inChapter3(s) ? 2 : inChapter2(s) ? 1 : 0];
     return { key, ten };
   };
 
@@ -152,12 +153,12 @@ export function doKinhTe(sauDien8Phut = SAU_DIEN8_PHUT): KetQuaKinhTe {
     sg.dienCuoi = level;
   };
 
-  const moc = playChapters({ lam, s, last: 8 });
-  if (moc.at8 >= 0) {
-    for (let sec = 0; sec < sauDien8Phut * 60; sec++) {
+  const moc = playChapters({ lam, s, last: 10, maxSec: 12 * 3600 });
+  if (moc.at10 >= 0) {
+    for (let sec = 0; sec < sauDien10Phut * 60; sec++) {
       const h = Math.floor(sec / 3600);
-      const ten = `Sau Điện 8, phút ${h * 60}–${Math.min((h + 1) * 60, sauDien8Phut)}`;
-      sau8 = { key: `sau8-${h + 1}`, ten };
+      const ten = `Sau Điện 10, phút ${h * 60}–${Math.min((h + 1) * 60, sauDien10Phut)}`;
+      sau10 = { key: `sau10-${h + 1}`, ten };
       playSecond(s, lam);
     }
   }
@@ -201,6 +202,9 @@ export function inBaoCao(kq: KetQuaKinhTe, thu?: string): string {
         ['Lên Điện 7', `${phut(lenDien[7])} (${sau(lenDien[7], moc.enter3)} sau khi vào chương 3)`],
         ['Vào chương 4', phut(moc.enter4)],
         ['Lên Điện 8', `${phut(lenDien[8])} (${sau(lenDien[8], moc.enter4)} sau khi vào chương 4)`],
+        ['Hết truyện', phut(moc.hetTruyen)],
+        ['Lên Điện 9', `${phut(lenDien[9])} (${sau(lenDien[9], moc.hetTruyen)} sau khi hết truyện)`],
+        ['Lên Điện 10', `${phut(lenDien[10])} (${sau(lenDien[10], lenDien[9])} sau khi lên Điện 9)`],
       ],
     ),
     '',

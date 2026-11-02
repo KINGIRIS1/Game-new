@@ -461,10 +461,12 @@ describe('bên kia sông và các phần khác', () => {
     }
     // Bản lưu 18 chưa có phần bên kia (lưu từ bản dựng dở): thêm vào.
     const raw = JSON.parse(serialize(createInitialState(0)));
+    raw.version = 18;
     delete raw.benKia;
     expect(deserialize(JSON.stringify(raw))!.benKia).toEqual(initialBenKia());
     // Bản lưu 18 có phần bên kia mà chưa có làng, của chôn: thêm vào.
     const half = JSON.parse(serialize(s));
+    half.version = 18;
     delete half.benKia.villages;
     delete half.benKia.dug;
     delete half.benKia.garrison;

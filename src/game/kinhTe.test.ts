@@ -9,10 +9,10 @@ describe('báo cáo kinh tế', () => {
   const kq = doKinhTe();
   const giaiDoan = Object.values(kq.so);
 
-  it('người chơi mô phỏng đi hết bốn chương, lên đủ tám cấp Điện, rồi chơi thêm mỗi giờ một giai đoạn', () => {
-    expect(kq.moc.at8).toBeGreaterThan(0);
+  it('người chơi mô phỏng đi hết bốn chương, lên đủ mười cấp Điện, rồi chơi thêm mỗi giờ một giai đoạn', () => {
+    expect(kq.moc.at10).toBeGreaterThan(0);
     expect(kq.lenDien.slice(2).every((t) => t > 0)).toBe(true);
-    expect(Object.keys(kq.so)).toEqual(['chuong1', 'chuong2', 'chuong3', 'chuong4', 'sau8-1', 'sau8-2', 'sau8-3']);
+    expect(Object.keys(kq.so)).toEqual(['chuong1', 'chuong2', 'chuong3', 'chuong4', 'sauTruyen', 'sau10-1', 'sau10-2', 'sau10-3']);
   });
 
   // Báo cáo đo cùng người chơi với balance.test.ts nên mốc lên Điện phải trùng với cách test đó đo.

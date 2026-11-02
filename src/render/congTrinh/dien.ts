@@ -1,6 +1,6 @@
 // Điện Vua Hùng 5×5: cung điện Hoàng Gia Lạc Việt có sân chầu, thềm rồng đá, đỉnh đồng, cổng tứ trụ. Bản vẽ ở docs/bo-cuc-cong-trinh.md.
 
-import type * as THREE from 'three';
+import * as THREE from 'three';
 import { above5, banner, bird, birdSpread, boatRoof, drum, drumTower, type Roof, roofFor, stiltHall } from '../buildings';
 import { Lot } from '../lot';
 import { C } from '../palette';
@@ -57,7 +57,7 @@ function royalCenser(m: ToonModel, x: number, y0: number, z: number, s = 1): voi
  */
 function royalPalaceHall(
   m: ToonModel,
-  o: { x: number; z: number; w: number; d: number; floor: number; postH: number; roofL: number; roofW: number; lift: number; roof: Roof; level: number },
+  o: { x: number; z: number; w: number; d: number; floor: number; postH: number; roofL: number; roofW: number; lift: number; roof: Roof; level: number; loft: number },
 ): void {
   const p = m.plain;
   const colH = o.postH - o.floor;
@@ -73,7 +73,8 @@ function royalPalaceHall(
       const px = o.x + cx;
       const pz = o.z + cz;
       p.cyl(0.1, 0.125, 0.1, C.rockDark, px, o.floor + 0.05, pz, undefined, 8);
-      p.cyl(0.078, 0.095, colH, colColor, px, colY, pz, undefined, 8);
+      // Cấp 9 trở lên: cột sơn đỏ chạm hoa văn trống đồng.
+      (o.level >= 9 ? m.band : p).cyl(0.078, 0.095, colH, colColor, px, colY, pz, undefined, 8);
       p.cyl(0.092, 0.092, 0.055, ringColor, px, o.floor + colH * 0.35, pz, undefined, 8);
       p.cyl(0.088, 0.088, 0.055, ringColor, px, o.floor + colH * 0.78, pz, undefined, 8);
     }
@@ -126,12 +127,64 @@ function royalPalaceHall(
     }
   }
 
+  // Cấp 9 trở lên: tầng gác trên vách, lan can son thếp vàng, ô cửa gác; mái đẩy lên theo.
+  if (o.loft > 0) {
+    const gy = o.postH + 0.07 + wallH;
+    p.box(wallW + 0.16, 0.06, wallD + 0.16, C.wood, o.x, gy + 0.03, o.z);
+    m.band.box(wallW * 0.92, o.loft, wallD * 0.86, C.woodLight, o.x, gy + 0.06 + o.loft / 2, o.z);
+    const gz = o.z + (wallD + 0.16) / 2;
+    m.band.box(wallW + 0.12, 0.15, 0.05, C.red, o.x, gy + 0.14, gz);
+    p.box(wallW + 0.14, 0.035, 0.07, C.gold, o.x, gy + 0.22, gz);
+    for (const k of [-0.36, -0.12, 0.12, 0.36]) p.box(0.2, 0.16, 0.04, C.woodDark, o.x + k * wallW, gy + 0.06 + o.loft * 0.55, o.z + (wallD * 0.86) / 2 + 0.01);
+  }
   // 4. Đòn tay gỗ nhô ra dưới diềm mái & Mái thuyền Hoàng Cung
-  const roofY = o.postH + 0.72 + o.roofW * 0.4;
+  const roofY = o.postH + 0.72 + o.roofW * 0.4 + o.loft;
   for (const sx of [-1, 1]) {
-    p.cyl(0.035, 0.035, o.roofL * 0.92, C.woodDark, o.x, o.postH + wallH + 0.08, o.z + sx * (wallD / 2 + 0.08), [0, 0, Math.PI / 2], 6);
+    p.cyl(0.035, 0.035, o.roofL * 0.92, C.woodDark, o.x, o.postH + wallH + 0.08 + o.loft, o.z + sx * (wallD / 2 + 0.08), [0, 0, Math.PI / 2], 6);
   }
   boatRoof(m, o.roof, { length: o.roofL, width: o.roofW, lift: o.lift, drop: o.roofW * 0.4, thickness: 0.11 }, o.x, roofY, o.z);
+}
+
+/** Tượng cóc đồng ngồi trên mặt trống, ngoảnh theo góc `ry` (ra mép trống). */
+function frog(m: ToonModel, x: number, y: number, z: number, ry: number, s: number): void {
+  const p = m.plain;
+  const fx = Math.sin(ry) * 0.05 * s;
+  const fz = Math.cos(ry) * 0.05 * s;
+  p.sphere(0.08 * s, C.bronzeDark, x, y + 0.05 * s, z, [1, 0.7, 1.15], 8);
+  p.sphere(0.05 * s, C.bronze, x + fx, y + 0.09 * s, z + fz, [1, 0.8, 1], 7);
+  for (const side of [-1, 1]) {
+    const ex = Math.cos(ry) * 0.03 * s * side;
+    const ez = -Math.sin(ry) * 0.03 * s * side;
+    p.sphere(0.02 * s, C.bronzeLight, x + fx + ex, y + 0.13 * s, z + fz + ez, [1, 1, 1], 5);
+  }
+}
+
+/**
+ * Cấp 10: cổng thành hai tầng thay Cổng Nghi Môn gỗ: hai trụ đất nện ốp đá, cửa vòm giữa, lầu cổng sơn son có lan can
+ * và hai tầng mái theo cấp. Lối giữa vẫn rộng như lối đá.
+ */
+function gateTower(m: ToonModel, gz: number, roof: Roof): void {
+  const p = m.plain;
+  for (const sx of [-1, 1]) {
+    p.box(0.42, 1.16, 0.52, C.earth, sx * 0.72, 0.58, gz);
+    m.band.box(0.44, 0.34, 0.54, C.rockDark, sx * 0.72, 0.17, gz);
+    p.box(0.46, 0.06, 0.56, C.rock, sx * 0.72, 1.17, gz);
+  }
+  // Xà cửa vòm và mặt tường trên vòm.
+  p.box(1.06, 0.24, 0.5, C.earth, 0, 1.06, gz);
+  // Vòm cửa: nửa vòng đá ốp hai mặt trước, sau.
+  for (const sz of [-1, 1]) p.add(new THREE.TorusGeometry(0.47, 0.05, 5, 12, Math.PI), C.rockDark, 0, 0.46, gz + sz * 0.26);
+  p.box(1.9, 0.08, 0.6, C.wood, 0, 1.22, gz);
+  // Lầu cổng: vách son có hoa văn, lan can thếp vàng, hoành phi.
+  m.band.box(1.3, 0.42, 0.36, C.red, 0, 1.47, gz);
+  for (const sz of [-1, 1]) {
+    p.box(1.78, 0.12, 0.04, C.red, 0, 1.33, gz + sz * 0.28);
+    p.box(1.8, 0.03, 0.06, C.gold, 0, 1.4, gz + sz * 0.28);
+  }
+  p.box(0.62, 0.2, 0.05, C.gold, 0, 1.5, gz + 0.2);
+  m.band.box(0.56, 0.15, 0.06, C.red, 0, 1.5, gz + 0.205);
+  boatRoof(m, roof, { length: 2.1, width: 0.78, lift: 0.28, drop: 0.24, thickness: 0.055 }, 0, 1.92, gz);
+  boatRoof(m, roof, { length: 1.3, width: 0.52, lift: 0.22, drop: 0.16, thickness: 0.045 }, 0, 2.24, gz, 0, true);
 }
 
 export function makeDien(level: number): THREE.Group {
@@ -249,6 +302,7 @@ export function makeDien(level: number): THREE.Group {
     lift: 1.05 * s + 0.15 * up,
     roof,
     level,
+    loft: level >= 9 ? 0.42 : 0,
   };
   royalPalaceHall(m, hall);
 
@@ -266,12 +320,12 @@ export function makeDien(level: number): THREE.Group {
     p.cyl(0.04, 0.045, 0.28, C.woodDark, lx, floor + 0.14, ladderTop + ladderRun + 0.08, undefined, 6);
     p.sphere(0.052, C.gold, lx, floor + 0.3, ladderTop + ladderRun + 0.08, [1, 1.15, 1], 6);
   }
-  const roofTop = hall.postH + 0.72 + hall.roofW * 0.4 + hall.lift;
+  const roofTop = hall.postH + 0.72 + hall.roofW * 0.4 + hall.lift * (roof.lac ? 1.25 : 1) + hall.loft;
 
   if (level >= 2) {
     // Chim đồng hai đầu nóc; cờ đại hồng kỳ hai bên lối; trống đồng đặt trên giá chạm khắc.
-    bird(m, hall.roofL / 2 - 0.1, roofTop + 0.05, hallZ, 1, 1.15);
-    bird(m, -hall.roofL / 2 + 0.1, roofTop + 0.05, hallZ, -1, 1.15);
+    if (!roof.lac) bird(m, hall.roofL / 2 - 0.1, roofTop + 0.05, hallZ, 1, 1.15);
+    if (!roof.lac) bird(m, -hall.roofL / 2 + 0.1, roofTop + 0.05, hallZ, -1, 1.15);
     for (const f of L.groups('2')) banner(m, f.x - 0.2, f.z, level >= 6 ? 2.75 : 2.45, C.red);
     const drums = L.groups('D');
     const big = level >= 5;
@@ -297,8 +351,9 @@ export function makeDien(level: number): THREE.Group {
     postFence(m, 2.45, 1.3);
     const G = L.zone('G');
     const gz = G.z + 0.15;
+    if (level >= 10) gateTower(m, gz, roof);
     // 2 cột trụ chính & 2 cột trụ biểu phụ của Cổng Nghi Môn
-    for (const sx of [-1, 1]) {
+    else for (const sx of [-1, 1]) {
       p.cyl(0.095, 0.115, 0.12, C.rockDark, sx * 0.56, 0.06, gz, undefined, 8);
       p.cyl(0.072, 0.085, 1.52, C.red, sx * 0.56, 0.78, gz, undefined, 8);
       p.cyl(0.092, 0.092, 0.07, C.gold, sx * 0.56, 1.12, gz, undefined, 8);
@@ -306,23 +361,25 @@ export function makeDien(level: number): THREE.Group {
       p.cyl(0.055, 0.065, 1.18, C.woodDark, sx * 0.92, 0.59, gz, undefined, 6);
       p.sphere(0.075, C.bronze, sx * 0.92, 1.22, gz, [1, 1.2, 1], 6);
     }
-    p.box(1.96, 0.09, 0.14, C.woodDark, 0, 1.08, gz);
-    p.box(1.48, 0.11, 0.16, C.red, 0, 1.48, gz);
-    // Bảng Hoành Phi Cổng Điện viền vàng
-    p.box(0.82, 0.26, 0.07, C.gold, 0, 1.3, gz + 0.06);
-    m.band.box(0.74, 0.2, 0.08, C.red, 0, 1.3, gz + 0.065);
-    boatRoof(m, roof, { length: 1.92, width: 0.66, lift: 0.26, drop: 0.22, thickness: 0.055 }, 0, 1.72, gz);
-    if (level >= 6) {
+    if (level < 10) {
+      p.box(1.96, 0.09, 0.14, C.woodDark, 0, 1.08, gz);
+      p.box(1.48, 0.11, 0.16, C.red, 0, 1.48, gz);
+      // Bảng Hoành Phi Cổng Điện viền vàng
+      p.box(0.82, 0.26, 0.07, C.gold, 0, 1.3, gz + 0.06);
+      m.band.box(0.74, 0.2, 0.08, C.red, 0, 1.3, gz + 0.065);
+      boatRoof(m, roof, { length: 1.92, width: 0.66, lift: 0.26, drop: 0.22, thickness: 0.055 }, 0, 1.72, gz);
+    }
+    if (level >= 6 && level < 10) {
       boatRoof(m, roof, { length: 1.22, width: 0.48, lift: 0.2, drop: 0.16, thickness: 0.045 }, 0, 2.02, gz, 0, true);
     }
-    if (level >= 8) {
+    if (level >= 8 && level < 10) {
       bird(m, 0.86, 1.98, gz, 1, 0.5);
       bird(m, -0.86, 1.98, gz, -1, 0.5);
     }
   }
   if (level >= 5) {
     // Mái tầng hai trên nóc Chính Điện, cổ diêm sơn đỏ chạm hoa văn, sống mái mạ đồng.
-    const y2 = hall.postH + 0.72 + hall.roofW * 0.4 + 0.66 + 0.1 * up;
+    const y2 = hall.postH + 0.72 + hall.roofW * 0.4 + 0.66 + 0.1 * up + hall.loft;
     m.band.box(hallW * 0.62, 0.28, hallD * 0.52, C.red, 0, y2 - 0.32, hallZ);
     boatRoof(m, roof, { length: hallW * 0.82, width: 1.38 + 0.08 * up, lift: 0.72 + 0.1 * up, drop: 0.5, thickness: 0.085 }, 0, y2, hallZ);
     if (roof.trim === null) p.box(hallW * 0.7, 0.07, 0.14, C.bronzeLight, 0, y2 + 0.04, hallZ);
@@ -354,18 +411,27 @@ export function makeDien(level: number): THREE.Group {
       birdSpread(m, c.x, 3.2, c.z, 0.82);
     }
     // Mái tầng ba trên cùng, đôi chim đồng lớn đậu hai đầu nóc.
-    const y3 = hall.postH + 0.72 + hall.roofW * 0.4 + 1.28 + 0.2 * up;
+    const y3 = hall.postH + 0.72 + hall.roofW * 0.4 + 1.28 + 0.2 * up + hall.loft;
     m.band.box(hallW * 0.44, 0.24, hallD * 0.38, C.red, 0, y3 - 0.26, hallZ);
     boatRoof(m, roof, { length: hallW * 0.62, width: 0.98 + 0.06 * up, lift: 0.58 + 0.08 * up, drop: 0.38, thickness: 0.075 }, 0, y3, hallZ, 0, true);
     if (roof.trim === null) p.box(hallW * 0.5, 0.06, 0.12, C.bronzeLight, 0, y3 + 0.03, hallZ);
     const top = y3 + 0.56;
-    bird(m, hallW * 0.3, top, hallZ, 1, 1.55);
-    bird(m, -hallW * 0.3, top, hallZ, -1, 1.55);
+    if (!roof.lac) bird(m, hallW * 0.3, top, hallZ, 1, 1.55);
+    if (!roof.lac) bird(m, -hallW * 0.3, top, hallZ, -1, 1.55);
     if (level >= 8) {
-      // Bệ Mặt Trời & Trống Đồng Ngọc Lũ tỏa hào quang vàng trên đỉnh nóc Chính Điện.
-      drum(m, 0, hallZ, 0.64, top - 0.18);
-      p.cyl(0.055, 0.08, 0.26, C.gold, 0, top - 0.12, hallZ, undefined, 8);
-      m.glow.sphere(0.085, 0xffe066, 0, top + 0.08, hallZ, [1.2, 1.2, 0.5], 8);
+      // Bệ Mặt Trời & Trống Đồng Ngọc Lũ tỏa hào quang vàng trên đỉnh nóc Chính Điện. Cấp 10 trống to gấp rưỡi, bốn
+      // tượng cóc đồng ngồi trên mặt trống như trống đồng thật.
+      const ds = level >= 10 ? 0.96 : 0.64;
+      drum(m, 0, hallZ, ds, top - 0.18);
+      if (level >= 10) {
+        for (let i = 0; i < 4; i++) {
+          const a = Math.PI / 4 + (i * Math.PI) / 2;
+          frog(m, Math.sin(a) * 0.27 * ds, top - 0.18 + 0.36 * ds, hallZ + Math.cos(a) * 0.27 * ds, a, 0.7);
+        }
+      } else {
+        p.cyl(0.055, 0.08, 0.26, C.gold, 0, top - 0.12, hallZ, undefined, 8);
+        m.glow.sphere(0.085, 0xffe066, 0, top + 0.08, hallZ, [1.2, 1.2, 0.5], 8);
+      }
     }
   }
   return m.group();

@@ -113,9 +113,25 @@ function watchHut(m: ToonModel, x: number, z: number, y0: number, level: number,
   }
 }
 
-/** Miếu thần lúa: nền đá, vách son có hoa văn, hai cột hiên, mái cong theo cấp, chim đồng trên nóc, lư hương trước cửa. */
-function shrine(m: ToonModel, x: number, z: number, y0: number, roof: Roof): void {
+/**
+ * Miếu thần lúa: nền đá, vách son có hoa văn, hai cột hiên, mái cong theo cấp, chim đồng trên nóc, lư hương trước cửa.
+ * `dinh` (cấp 10): thành đình nhỏ: nền cao thêm một bậc, thêm tầng mái trên, cây nêu tre treo cờ đỏ bên phải.
+ */
+function shrine(m: ToonModel, x: number, z: number, y0: number, roof: Roof, dinh = false): void {
   const p = m.plain;
+  if (dinh) {
+    p.box(0.96, 0.1, 0.9, C.rockDark, x, y0 + 0.05, z);
+    y0 += 0.1;
+    // Cây nêu: cây tre cao, ngọn còn lá, dải vải đỏ và khánh đồng treo đầu ngọn.
+    const nx = x + 0.4;
+    const nz = z + 0.34;
+    p.cyl(0.022, 0.03, 1.5, C.bamboo, nx, y0 + 0.75, nz, undefined, 5);
+    for (const k of [0.4, 0.8, 1.2]) p.cyl(0.03, 0.03, 0.025, C.bamboo, nx, y0 + k, nz, undefined, 5);
+    p.cone(0.1, 0.22, C.leaf[2], nx, y0 + 1.58, nz, undefined, 5);
+    m.band.box(0.04, 0.42, 0.12, C.red, nx - 0.02, y0 + 1.2, nz + 0.07);
+    p.cyl(0.004, 0.004, 0.2, C.ink, nx + 0.07, y0 + 1.36, nz, undefined, 3);
+    p.box(0.1, 0.06, 0.02, C.bronze, nx + 0.07, y0 + 1.24, nz);
+  }
   p.box(0.86, 0.16, 0.8, C.rock, x, y0 + 0.08, z);
   p.box(0.9, 0.04, 0.84, C.rockDark, x, y0 + 0.17, z);
   const fy = y0 + 0.19;
@@ -124,7 +140,11 @@ function shrine(m: ToonModel, x: number, z: number, y0: number, roof: Roof): voi
   for (const s of [-1, 1]) p.cyl(0.03, 0.03, 0.5, C.woodDark, x + s * 0.3, fy + 0.25, z + 0.2, undefined, 5);
   const ry = fy + 0.46 + 0.3;
   boatRoof(m, roof, { length: 1.0, width: 0.82, lift: 0.3, drop: 0.3, thickness: 0.05 }, x, ry, z - 0.02);
-  bird(m, x - 0.05, ry + 0.06, z - 0.02, 1, 0.45);
+  if (dinh) {
+    // Tầng mái trên của đình, cổ diêm son.
+    m.band.box(0.4, 0.12, 0.3, C.red, x, ry + 0.2, z - 0.02);
+    boatRoof(m, roof, { length: 0.7, width: 0.56, lift: 0.22, drop: 0.2, thickness: 0.04 }, x, ry + 0.4, z - 0.02, 0, true);
+  } else if (!roof.lac) bird(m, x - 0.05, ry + 0.06, z - 0.02, 1, 0.45);
   p.cyl(0.08, 0.06, 0.1, C.bronze, x, y0 + 0.24, z + 0.3, undefined, 8);
   p.cyl(0.006, 0.006, 0.14, C.cream, x, y0 + 0.36, z + 0.3, undefined, 3);
 }
@@ -263,7 +283,7 @@ export function makeRuong(level: number): THREE.Group {
     // Miếu thần lúa trên gò góc sau bên phải.
     const M = L.zone('M');
     mound(p, M, bank);
-    shrine(m, M.x - 0.03, M.z, bank, roof);
+    shrine(m, M.x - 0.03, M.z, bank, roof, level >= 10);
   }
   if (has('O')) {
     // Ao nước trong bờ đá giữa bốn thửa, lá sen + búp sen hồng, đàn cò; ống tre nối từ máng guồng đổ vào ao.
@@ -279,7 +299,24 @@ export function makeRuong(level: number): THREE.Group {
     }
     p.cone(0.032, 0.065, 0xe87a90, -0.18, bank + 0.05, 0.16, undefined, 6);
     p.cone(0.028, 0.055, 0xe87a90, 0.22, bank + 0.045, -0.14, undefined, 6);
-    egret(p, 0.1, 0.06, 0.6, bank - 0.12);
+    // Cấp 9: bờ ao lát phiến đá, cầu tre cong bắc qua ao nối hai nhánh bờ chữ thập; cò đứng tránh cầu.
+    if (level >= 9) {
+      for (let i = 0; i < 12; i++) {
+        const a = (i / 12) * Math.PI * 2 + 0.26;
+        p.box(0.16, 0.03, 0.09, i % 2 ? C.rock : C.rockDark, Math.sin(a) * 0.5, bank + 0.012, Math.cos(a) * 0.5, [0, a, 0]);
+      }
+      const span = 0.5;
+      const arch = (t: number) => bank + 0.07 + 0.09 * (1 - t * t);
+      for (let i = -4; i <= 4; i++) {
+        const t = i / 4;
+        p.box(0.1, 0.025, 0.2, C.bamboo, t * span, arch(t), 0, [0, 0, -0.35 * t]);
+      }
+      for (const sz of [-1, 1]) {
+        for (const t of [-1, -0.5, 0, 0.5, 1]) p.cyl(0.012, 0.012, 0.14, C.bamboo, t * span, arch(t) + 0.07, sz * 0.1, undefined, 4);
+        for (let i = -4; i < 4; i++) rod(p, [(i / 4) * span, arch(i / 4) + 0.14, sz * 0.1], [((i + 1) / 4) * span, arch((i + 1) / 4) + 0.14, sz * 0.1], 0.012, C.bamboo, 4);
+      }
+    }
+    egret(p, 0.1, level >= 9 ? 0.24 : 0.06, 0.6, bank - 0.12);
     egret(p, -0.18, -0.16, -2.3, bank - 0.12);
     egret(p, 1.25, 0.0, 1.9, dyke);
     const a: V3 = [-0.6, 0.52, WHEEL.z - 0.12];

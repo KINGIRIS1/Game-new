@@ -2,7 +2,7 @@
 // Bản vẽ ở docs/bo-cuc-cong-trinh.md.
 
 import type * as THREE from 'three';
-import { above5, BRICK, bird, boatRoof, granary, roofFor } from '../buildings';
+import { above5, BRICK, bird, boatRoof, coneRoof, granary, roofFor } from '../buildings';
 import { Lot } from '../lot';
 import { C } from '../palette';
 import { ToonModel } from '../toon';
@@ -53,8 +53,14 @@ export function makeKho(level: number): THREE.Group {
   const mound = 0.46 * vs;
   p.cyl(mound + 0.05, mound + 0.07, 0.06, C.rock, vx, 0.06, vz, undefined, 12);
   p.cyl(mound, mound + 0.02, 0.1, C.earthDark, vx, 0.09, vz, undefined, 12);
-  granary(m, vx, vz, vs, level >= 5, roof, tall);
+  // Cấp 9 trở lên: mái ngói hai tầng; chim Lạc (cấp 10) đậu trên chóp tầng trên.
+  granary(m, vx, vz, vs, level >= 5, level >= 9 ? { ...roof, lac: false } : roof, tall);
   const floorY = 0.8 * vs + tall;
+  if (level >= 9) {
+    const neck = floorY + 1.0 * vs;
+    m.band.cyl(0.17 * vs, 0.2 * vs, 0.2 * vs, C.woodLight, vx, neck + 0.1 * vs, vz, undefined, 10);
+    coneRoof(m, roof, 0.36 * vs, 0.42 * vs, vx, neck + 0.2 * vs + 0.19 * vs, vz, 12);
+  }
   const rimZ = vz + 0.42 * vs;
 
   if (level >= 2) {
@@ -103,6 +109,10 @@ export function makeKho(level: number): THREE.Group {
   if (level >= 4) {
     // Vựa phụ sau bên phải; cấp 8 thành kho sàn dài mái cong, chim đồng hai đầu nóc.
     const A = L.zone('4');
+    if (level >= 10) {
+      // Cấp 10: dải sân giữa vựa phụ và sân phơi lát gạch nối liền sân phơi.
+      for (let i = 0; i < 5; i++) p.box(0.24, 0.045, 0.44, i % 2 ? BRICK : 0xc0704c, 0.3 + i * 0.26, 0.055, -0.25);
+    }
     if (level >= 8) {
       // Kho sàn: sáu cột, sàn ván, vách hoa văn kín, cửa và thang trước, mái thuyền cong vút.
       const hx = A.x + 0.1;
@@ -115,8 +125,10 @@ export function makeKho(level: number): THREE.Group {
       for (let i = 0; i < 3; i++) p.box(0.2, 0.035, 0.08, C.woodDark, hx - 0.2, ph * (1 - (i + 1) / 4), hz + 0.4 + i * 0.09);
       const ry = ph + 0.78;
       boatRoof(m, roof, { length: 1.3, width: 0.92, lift: 0.45, drop: 0.32, thickness: 0.06 }, hx, ry, hz);
-      bird(m, hx + 0.47, ry + 0.4, hz, 1, 0.42);
-      bird(m, hx - 0.47, ry + 0.4, hz, -1, 0.42);
+      if (!roof.lac) {
+        bird(m, hx + 0.47, ry + 0.4, hz, 1, 0.42);
+        bird(m, hx - 0.47, ry + 0.4, hz, -1, 0.42);
+      }
     } else granary(m, A.x + 0.07, A.z, 0.9, false, roof, tall * 0.6);
   }
   if (level >= 6) {
@@ -125,9 +137,23 @@ export function makeKho(level: number): THREE.Group {
     const ch = 0.6 + 0.12 * (up - 1);
     const bands = 2 + up;
     p.cyl(0.42, 0.44, 0.08, C.rock, c.x, 0.08, c.z, undefined, 12);
-    m.band.cyl(0.37, 0.39, ch, C.thatch, c.x, 0.12 + ch / 2, c.z, undefined, 12);
-    for (let i = 0; i < bands; i++) p.cyl(0.395, 0.395, 0.035, C.bamboo, c.x, 0.22 + (i * (ch - 0.15)) / (bands - 1), c.z, undefined, 12);
-    p.sphere(0.35, C.ripe, c.x, 0.12 + ch, c.z, [1, 0.4, 1], 10);
+    if (level >= 10) {
+      // Cấp 10: cót thành vựa gỗ trên bốn chân thấp: vách ván ghép có hoa văn, nẹp gỗ sẫm, cửa nhỏ, mái thuyền.
+      const fy = 0.3;
+      for (const dx of [-0.26, 0.26]) for (const dz of [-0.26, 0.26]) p.cyl(0.04, 0.05, fy, C.woodDark, c.x + dx, fy / 2 + 0.08, c.z + dz, undefined, 6);
+      p.box(0.7, 0.05, 0.7, C.wood, c.x, fy + 0.1, c.z);
+      m.band.box(0.62, 0.56, 0.62, C.woodLight, c.x, fy + 0.4, c.z);
+      for (const k of [-0.31, 0.31]) {
+        p.box(0.04, 0.58, 0.04, C.woodDark, c.x + k, fy + 0.4, c.z + 0.31);
+        p.box(0.04, 0.58, 0.04, C.woodDark, c.x + k, fy + 0.4, c.z - 0.31);
+      }
+      p.box(0.18, 0.24, 0.03, C.woodDark, c.x + 0.12, fy + 0.3, c.z + 0.32);
+      boatRoof(m, roof, { length: 0.92, width: 0.86, lift: 0.22, drop: 0.28, thickness: 0.05 }, c.x, fy + 0.98, c.z);
+    } else {
+      m.band.cyl(0.37, 0.39, ch, C.thatch, c.x, 0.12 + ch / 2, c.z, undefined, 12);
+      for (let i = 0; i < bands; i++) p.cyl(0.395, 0.395, 0.035, C.bamboo, c.x, 0.22 + (i * (ch - 0.15)) / (bands - 1), c.z, undefined, 12);
+      p.sphere(0.35, C.ripe, c.x, 0.12 + ch, c.z, [1, 0.4, 1], 10);
+    }
   }
   return m.group();
 }

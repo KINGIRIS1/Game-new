@@ -506,3 +506,21 @@ L L , , V V
   - vó `V` có bè tre ngồi kéo vó sát bờ, cần vó tre bắc qua cột chống chìa ra sông, khung vó bắt chéo, bốn dây xuống bốn góc lưới;
   - thuyền đánh cá bơi chậm một vòng quanh chỗ neo trước bờ ván, người lái đò chèo (không đứng quăng chài trên thuyền);
   - thuyền lưới lớn có buồm (cấp 8) dùng dáng thuyền buôn thu nhỏ.
+
+## Cấp 9, 10 (chủ dự án đã duyệt, đã vẽ)
+
+Móng đã kín ở cấp 8, nên cấp 9, 10 không thêm ô con mới: mỗi loại đổi một phần sẵn có, đứng trong khối chữ của phần ấy. Mái theo cấp ghi ở mục Phong cách trong `docs/thiet-ke.md` (cấp 9 dải đồng hoa văn dưới diềm, cấp 10 chim Lạc hai đầu nóc).
+
+| Công trình | Phần | Cấp 9 | Cấp 10 |
+|---|---|---|---|
+| Điện | `H`, `G` | `H`: tầng gác giữa vách và mái, cột cái sơn đỏ in hoa văn | `G`: cổng thành hai trụ đất nện, vòm cửa, lầu cổng hai tầng mái; `H`: trống đồng trên nóc to gấp rưỡi, bốn tượng cóc đồng |
+| Ruộng lúa | `O`, `M` | `O`: bờ ao lát đá, cầu tre cong qua ao | `M`: miếu thành đình nhỏ hai tầng mái, cây nêu |
+| Bến chợ thuyền | `G` | cầu tàu lát đá trên trụ đá, cột neo đồng | thuyền buôn thứ hai thành thuyền buôn lớn hai buồm |
+| Nhà sàn | `H`, `E`, `h` | `H`: lan can sàn chạm hoa văn; `E`: cầu thang gỗ to, má thang đỏ | `h`: nếp nhà sàn thứ hai mái thuyền, hiên có mái nối hai nếp |
+| Bãi đất đá | `,`, `K`, `V` | `,`: đường ray gỗ, xe goòng chở đá | `V`: trâu thứ hai cùng kéo; `K`: lò nung ngói, chồng ngói, ống khói thứ hai |
+| Lò rèn | `8`, `7` | `8`: khuôn đúc trống lớn in hoa văn, trống vừa đúc to hơn | `7`: lò luyện thành tháp lò cao, vành gạch, khói đỏ |
+| Kho thóc | `V`, `6` | `V`: vựa chính mái hai tầng | `6`: cót thành vựa gỗ có mái; dải sân giữa lát gạch |
+| Xưởng mộc | `T`, `S` | `T`: thuyền lớn có mui cói, mái chèo hai bên | `S`: lán thứ hai thành nhà sàn chạm, chim Lạc đầu cột |
+| Làng chài | `V` | giàn vó lớn: cần dài, lưới rộng, cột chống đôi, đá đối trọng | thêm thuyền đánh cá có buồm cói ngoài xa |
+
+Chòi canh (móng 1×1, không có bản vẽ): cấp 9 ụ đá ốp bốn góc chân lầu; cấp 10 tầng giữa có mái hiên và hai nỏ lớn nữa.

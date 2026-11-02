@@ -315,7 +315,7 @@ describe('truyện, vua xuống biển và Đền Cuông', () => {
 
   it('nhiệm vụ 45–49: qua màn 25, 28, 30, 32 và dựng Đền Cuông', () => {
     const ids = QUESTS.map((q) => q.id);
-    expect(ids.slice(CH4_QUEST_START + 5)).toEqual(['quaMan25', 'quaMan28', 'quaMan30', 'hoGia', 'denCuong']);
+    expect(ids.slice(CH4_QUEST_START + 5, CH4_QUEST_START + 10)).toEqual(['quaMan25', 'quaMan28', 'quaMan30', 'hoGia', 'denCuong']);
     const s = ch4();
     s.questIndex = ids.indexOf('hoGia');
     expect(questProgress(s)).toEqual({ have: 24, need: 32 });

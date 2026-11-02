@@ -51,7 +51,7 @@ export const START_KHOANH: readonly number[] = squareKhoanh(20);
  * Cạnh vùng đất hình vuông theo cấp Điện trước khi có khoảnh tự chọn (bản lưu phiên bản 11). Chỉ dùng để nâng bản
  * lưu và để test dựng nhanh kinh đô theo cấp.
  */
-export const V11_AREA = [20, 25, 25, 30, 35, 40, 40, 45];
+export const V11_AREA = [20, 25, 25, 30, 35, 40, 40, 45, 45, 45];
 
 /**
  * Mặt nạ ô đã mở và ô nhỏ nhất đã mở (bên này), nhớ theo mảng `state.khoanh` (phát rừng thay mảng mới) và mảng

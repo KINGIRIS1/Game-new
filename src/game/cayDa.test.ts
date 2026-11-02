@@ -143,7 +143,7 @@ describe('cây, đá mọc trên ô trống', () => {
   it('thưởng tăng theo cấp Điện, cây được gạo nhiều hơn đá được đất đá', () => {
     for (const kind of ['cay', 'da'] as CayDaKind[]) {
       const amounts = CAY_DA_REWARD[kind].map((c) => c.gao ?? c.datDa ?? 0);
-      expect(amounts.length).toBe(8);
+      expect(amounts.length).toBe(10);
       for (let i = 1; i < amounts.length; i++) expect(amounts[i]).toBeGreaterThan(amounts[i - 1]);
     }
     CAY_DA_REWARD.cay.forEach((c, i) => expect(c.gao!).toBeGreaterThan(CAY_DA_REWARD.da[i].datDa!));
