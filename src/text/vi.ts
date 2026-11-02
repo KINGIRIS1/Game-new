@@ -35,6 +35,7 @@ export const vi = {
     voOc: { name: 'Vỏ ốc', icon: '🐚' },
     datDa: { name: 'Đất đá', icon: '🪨' },
     sat: { name: 'Sắt', icon: '⚒️' },
+    go: { name: 'Gỗ', icon: '🪵' },
   } satisfies Record<ResourceId, { name: string; icon: string }>,
 
   buildings: {
@@ -72,6 +73,11 @@ export const vi = {
       name: 'Lò rèn',
       icon: '⚒️',
       desc: 'Thợ rèn nấu quặng ra sắt để rèn giáo, rìu và đồ cho Thánh Gióng. Cần người làm.',
+    },
+    xuongMoc: {
+      name: 'Xưởng mộc',
+      icon: '🪚',
+      desc: 'Thợ mộc xẻ gỗ lim, đẽo thuyền, dựng khung nhà. Gỗ để mai sau đóng thuyền đánh cá, dựng cổng thành; thừa thì đổi với thuyền buôn. Cần người làm.',
     },
     kho: {
       name: 'Kho thóc',
@@ -707,7 +713,7 @@ export const vi = {
     khoanhCount: 'Khoảnh đất đã mở',
     khoanhCost: 'Giá phát rừng',
     khoanhOpen: 'Phát rừng',
-    khoanhOpened: 'Đã phát rừng, bờ cõi mở rộng!',
+    khoanhOpened: (go: number) => `Đã phát rừng, bờ cõi mở rộng! Cây chặt được ${go} 🪵`,
     khoanhMore: (level: number, n: number) => `Lên Điện cấp ${level} được phát thêm ${n} khoảnh.`,
     khoanhMax: 'Đã mở đủ đất cho kinh đô.',
     khoanhRiver: 'Khoảnh ven sông: dựng được bến, nhưng mùa lũ dễ ngập.',
@@ -715,6 +721,11 @@ export const vi = {
     mauKhoanh: (n: number) => `Mẫu còn ${n} khoảnh chưa phát: chỗ trong rừng sẽ bỏ qua.`,
     relaid: (refund: string) =>
       `Kinh đô đã dựng lại rộng hơn theo mẫu, nhà cửa giữ nguyên cấp và người làm.${refund ? ` Hoàn lại: ${refund}.` : ''}`,
+    /** Lạc hầu gợi ý một lần khi mở công trình mới (`NEW_HINTS`). */
+    newHint: {
+      xuongMoc:
+        '📜 Lạc hầu: Tâu bệ hạ, nay đã dựng được xưởng mộc. Thợ mộc xẻ gỗ để mai sau đóng thuyền, dựng cổng thành; gỗ thừa thì đổi với thuyền buôn.',
+    } as Partial<Record<BuildingType, string>>,
     storage: 'Sức chứa kho',
     wallEarth: 'Thành đất',
     workers: 'Người làm',

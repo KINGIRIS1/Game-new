@@ -17,6 +17,7 @@ import {
   U_NO,
   LAU_NO_TOWERS,
   MOVE_FRACTION,
+  NEW_HINTS,
   FIRST_FLOOD_MS,
   FIRST_LAND_MS,
   FLOOD_RECEDE_S,
@@ -235,8 +236,8 @@ export interface Merchant {
   seq: number;
 }
 
-/** Phiên bản bản lưu hiện tại (11: kinh đô lớn, móng to hơn một ô). */
-export const SAVE_VERSION = 13;
+/** Phiên bản bản lưu hiện tại (14: gỗ, tài nguyên thứ năm, và gợi ý của Lạc hầu về công trình mới). */
+export const SAVE_VERSION = 14;
 
 export interface GameState {
   version: typeof SAVE_VERSION;
@@ -273,6 +274,8 @@ export interface GameState {
   settings: { muted: boolean };
   /** Các khoảnh đất 5×5 đã mở (số `cz * 10 + cx`, xếp tăng dần). Phát rừng thì thay bằng mảng mới (`khoanh.ts`). */
   khoanh: number[];
+  /** Công trình mới (`NEW_HINTS`) Lạc hầu đã gợi ý lần đầu mở, mỗi loại một lần. */
+  hinted: string[];
   /** Vừa nâng từ kinh đô nhỏ: kinh đô đã dựng lại theo mẫu, trả lại chừng này của. Giao diện báo một lần rồi xóa. */
   relaid?: { refund: Cost; dropped: number };
 }
@@ -410,6 +413,7 @@ export function createInitialState(now: number): GameState {
     story: { seen: [] },
     settings: { muted: false },
     khoanh: [...START_KHOANH],
+    hinted: [],
   };
   levelFootprint(state, dien, footprintTop(state, 'dien', dien.x, dien.z));
   return state;
@@ -556,7 +560,7 @@ export function troopBonus(state: GameState): number {
 
 /** Sản lượng mỗi phút của cả kinh đô, chưa trừ gạo ăn và chưa tính thiếu gạo. Đền Phù Đổng và phúc lành Đất cộng thêm. */
 export function productionPerMinute(state: GameState): Resources {
-  const total: Resources = { gao: 0, voOc: 0, datDa: 0, sat: 0 };
+  const total: Resources = { gao: 0, voOc: 0, datDa: 0, sat: 0, go: 0 };
   for (const b of state.buildings) {
     const out = outputOf(b);
     for (const r of RESOURCE_IDS) total[r] += out[r] ?? 0;
@@ -575,7 +579,7 @@ export function isStarving(state: GameState): boolean {
 export function netPerMinute(state: GameState): Resources {
   const k = isStarving(state) ? STARVING_RATE : 1;
   const prod = productionPerMinute(state);
-  const net: Resources = { gao: 0, voOc: 0, datDa: 0, sat: 0 };
+  const net: Resources = { gao: 0, voOc: 0, datDa: 0, sat: 0, go: 0 };
   for (const r of RESOURCE_IDS) net[r] = prod[r] * k;
   net.gao -= upkeepPerMinute(state);
   return net;
@@ -602,6 +606,22 @@ export function unlocked(state: GameState, unlock: Unlock | undefined): boolean 
   if (unlock === 'ketChuong3') return state.adv.won;
   if (unlock === 'chuong4') return inChapter4(state);
   return true;
+}
+
+/**
+ * Công trình mới Lạc hầu cần gợi ý: loại đầu tiên trong `NEW_HINTS` đã mở theo truyện và cấp Điện mà chưa gợi ý.
+ * Giao diện báo rồi ghi vào `hinted` (`markHinted`).
+ */
+export function nextHint(state: GameState): BuildingType | null {
+  for (const type of NEW_HINTS) {
+    const def = BUILDINGS[type];
+    if (!state.hinted.includes(type) && unlocked(state, def.unlock) && dienLevel(state) >= def.minDien) return type;
+  }
+  return null;
+}
+
+export function markHinted(state: GameState, type: BuildingType): void {
+  if (!state.hinted.includes(type)) state.hinted = [...state.hinted, type];
 }
 
 export const UNLOCK_REASON: Record<Unlock, FailReason> = {
@@ -1008,7 +1028,7 @@ export function setWorkers(state: GameState, id: number, n: number): Result<Buil
 }
 
 /** Thứ tự ưu tiên khi tự phân công: có gạo ăn trước, rồi tới tiền, đất đá, sắt. */
-const ASSIGN_ORDER: BuildingType[] = ['ruong', 'ben', 'baiDa', 'loRen'];
+const ASSIGN_ORDER: BuildingType[] = ['ruong', 'ben', 'baiDa', 'loRen', 'xuongMoc'];
 
 /** Chia đều dân rảnh vào các chỗ còn trống, mỗi vòng một người cho mỗi công trình. */
 export function autoAssign(state: GameState): number {
@@ -1373,8 +1393,8 @@ export function dismissRaidResult(state: GameState): void {
 
 const round5 = (n: number) => Math.max(5, Math.round(n / 5) * 5);
 
-/** Ba lời mời đổi hàng, lặp lại được theo số chuyến và cấp Điện. */
-export function makeOffers(seq: number, level: number): Offer[] {
+/** Ba lời mời đổi hàng, lặp lại được theo số chuyến và cấp Điện; `go`: kinh đô đã có xưởng mộc thì buôn cả gỗ. */
+export function makeOffers(seq: number, level: number, go = false): Offer[] {
   let t = (seq * 2654435761 + 97) >>> 0;
   const rand = () => {
     t = (t + 0x6d2b79f5) >>> 0;
@@ -1382,8 +1402,9 @@ export function makeOffers(seq: number, level: number): Offer[] {
     r = (r + Math.imul(r ^ (r >>> 7), 61 | r)) ^ r;
     return ((r ^ (r >>> 14)) >>> 0) / 4294967296;
   };
-  // Chưa có lò rèn (Điện cấp 1) thì thuyền chưa buôn sắt.
+  // Chưa có lò rèn (Điện cấp 1) thì thuyền chưa buôn sắt; chưa có xưởng mộc thì chưa buôn gỗ.
   const pool: ResourceId[] = level >= 2 ? ['gao', 'voOc', 'datDa', 'sat'] : ['gao', 'voOc', 'datDa'];
+  if (go) pool.push('go');
   const offers: Offer[] = [];
   for (let i = 0; i < 3; i++) {
     const give = pool[Math.floor(rand() * pool.length)];
@@ -1403,7 +1424,7 @@ function updateMerchant(state: GameState): void {
   if (!m.visit && state.clock >= m.nextAt) {
     if (countOf(state, 'ben') > 0) {
       m.seq += 1;
-      m.visit = { leavesAt: state.clock + MERCHANT_STAY_MS, offers: makeOffers(m.seq, dienLevel(state)) };
+      m.visit = { leavesAt: state.clock + MERCHANT_STAY_MS, offers: makeOffers(m.seq, dienLevel(state), countOf(state, 'xuongMoc') > 0) };
       m.nextAt = state.clock + MERCHANT_EVERY_MS;
     } else {
       // Chưa có bến thì hẹn lại sau một lúc.
@@ -1429,7 +1450,7 @@ export function acceptOffer(state: GameState, index: number): Result<Offer> {
 
 /** Sản xuất, ăn uống và sinh thêm dân trong `ms` mili giây với hệ số tốc độ `rate`. */
 function produce(state: GameState, ms: number, rate: number): Resources {
-  const gained: Resources = { gao: 0, voOc: 0, datDa: 0, sat: 0 };
+  const gained: Resources = { gao: 0, voOc: 0, datDa: 0, sat: 0, go: 0 };
   if (ms <= 0) return gained;
   const starving = isStarving(state);
   const net = netPerMinute(state);
@@ -1459,7 +1480,7 @@ function produce(state: GameState, ms: number, rate: number): Resources {
 
 /** Thời gian trôi khi đang mở game: sản xuất, đồng hồ chơi chạy, thuyền buôn đến đi. */
 export function tick(state: GameState, ms: number): Resources {
-  if (ms <= 0) return { gao: 0, voOc: 0, datDa: 0, sat: 0 };
+  if (ms <= 0) return { gao: 0, voOc: 0, datDa: 0, sat: 0, go: 0 };
   const gained = produce(state, ms, 1);
   state.clock += ms;
   updateMerchant(state);

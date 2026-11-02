@@ -30,7 +30,7 @@ function capital8(): GameState {
   const s = createInitialState(0);
   s.questIndex = CH4_QUEST_START;
   setDien(s, 8);
-  s.resources = { gao: 60000, voOc: 60000, datDa: 60000, sat: 60000 };
+  s.resources = { gao: 60000, voOc: 60000, datDa: 60000, sat: 60000, go: 60000 };
   s.dan = 40;
   return s;
 }
@@ -47,7 +47,7 @@ describe('Điện và công trình cấp 8', () => {
   it('Điện lên cấp 8 khi đã vào chương 4, rồi hết cấp', () => {
     const s = createInitialState(0);
     setDien(s, 7);
-    s.resources = { gao: 60000, voOc: 60000, datDa: 60000, sat: 60000 };
+    s.resources = { gao: 60000, voOc: 60000, datDa: 60000, sat: 60000, go: 60000 };
     s.questIndex = CH3_QUEST_START;
     expect(inChapter4(s)).toBe(false);
     expect(canUpgrade(s, 1)).toEqual({ ok: false, reason: 'canChuong4' });

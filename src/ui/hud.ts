@@ -107,7 +107,13 @@ import { khoanhHtml } from './khoanh';
 import { mauHtml } from './mau';
 import type { MauId } from '../game/mau';
 
+/** Dòng báo thường hiện chừng này mili giây. */
+const TOAST_MS = 2600;
 const SHOWN_RESOURCES: ResourceId[] = ['gao', 'voOc', 'datDa', 'sat'];
+/** Tài nguyên hiện trên thanh trên: gỗ chỉ hiện từ khi mở xưởng mộc (Điện 2), hay khi đã có gỗ. */
+function shownResources(state: GameState): ResourceId[] {
+  return dienLevel(state) >= BUILDINGS.xuongMoc.minDien || state.resources.go > 0 ? [...SHOWN_RESOURCES, 'go'] : SHOWN_RESOURCES;
+}
 const BUILD_MENU: BuildingType[] = [
   'luy',
   'ruong',
@@ -116,6 +122,7 @@ const BUILD_MENU: BuildingType[] = [
   'baiDa',
   'kho',
   'loRen',
+  'xuongMoc',
   'doanhTrai',
   'traiGiao',
   'traiCung',
@@ -444,7 +451,7 @@ export class Hud {
   updateTop(state: GameState): void {
     const store = storageCap(state);
     const rate = netPerMinute(state);
-    const res = SHOWN_RESOURCES.map((r) => {
+    const res = shownResources(state).map((r) => {
       const v = state.resources[r];
       const n = Math.round(rate[r]);
       return `<div class="chip ${v >= store ? 'full' : ''}" title="${vi.resources[r].name}">
@@ -1328,19 +1335,22 @@ export class Hud {
 
   // ---------- Thông báo ----------
 
-  toast(message: string, bad = false): void {
+  /** Hiện một dòng báo trong `ms` mili giây (lời dài như gợi ý của Lạc hầu thì để lâu hơn). */
+  toast(message: string, bad = false, ms = TOAST_MS): void {
     const el = document.createElement('div');
-    el.className = `toast ${bad ? 'bad' : ''}`;
+    el.className = `toast ${bad ? 'bad' : ''} ${ms > TOAST_MS ? 'long' : ''}`;
     el.textContent = message;
+    // Mờ dần ngay trước khi gỡ, dù dòng báo hiện lâu hay chóng.
+    el.style.animation = `toast-in 0.2s ease, toast-out 0.3s ease ${(ms - 400) / 1000}s forwards`;
     this.toasts.appendChild(el);
     while (this.toasts.children.length > 3) this.toasts.firstElementChild?.remove();
-    setTimeout(() => el.remove(), 2600);
+    setTimeout(() => el.remove(), ms);
   }
 
   showOffline(ms: number, gained: Resources): void {
     const back = document.createElement('div');
     back.className = 'modal-back';
-    const gains = SHOWN_RESOURCES.filter((r) => gained[r] >= 1)
+    const gains = RESOURCE_IDS.filter((r) => gained[r] >= 1)
       .map((r) => `<span>${vi.resources[r].icon} +${fmt(gained[r])}</span>`)
       .join('');
     back.innerHTML = `<div class="modal"><h2>${vi.ui.offlineTitle}</h2>

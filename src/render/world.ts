@@ -198,7 +198,7 @@ const NEU_H = 4.2;
 const KHANH = 0xa8502e;
 
 /** Công trình cần người làm: hiện đúng số người đang làm. */
-const WORKED: BuildingType[] = ['ruong', 'ben', 'baiDa', 'loRen', 'ruongNep', 'vuon', 'chuongLon', 'bep'];
+const WORKED: BuildingType[] = ['ruong', 'ben', 'baiDa', 'loRen', 'xuongMoc', 'ruongNep', 'vuon', 'chuongLon', 'bep'];
 
 /** Số người hiện ra: công trình cần người làm thì đúng số người đang làm, còn lại cố định theo cấp. */
 function peopleCount(b: Building, spots: number): number {

@@ -42,11 +42,15 @@ try {
         const mod = await import('/scripts/congTrinh.ts');
         return { anh: mod.chupCap(m), loai: mod.LOAI[m] };
       }, m);
-      const hang = (list) => `<div style="display:flex;gap:10px;margin-bottom:6px">${list.map((a) => cell(a.cu, `Cấp ${a.cap}: dáng cũ phóng theo móng`)).join('')}</div>
-        <div style="display:flex;gap:10px;margin-bottom:18px">${list.map((a) => cell(a.moi, `Cấp ${a.cap}: vẽ lại trên móng`)).join('')}</div>`;
+      // Công trình mới (không có dáng cũ) thì chỉ một hàng ảnh vẽ trên móng.
+      const coCu = anh.some((a) => a.cu);
+      const hang = (list) =>
+        (coCu ? `<div style="display:flex;gap:10px;margin-bottom:6px">${list.map((a) => cell(a.cu, `Cấp ${a.cap}: dáng cũ phóng theo móng`)).join('')}</div>` : '') +
+        `<div style="display:flex;gap:10px;margin-bottom:18px">${list.map((a) => cell(a.moi, coCu ? `Cấp ${a.cap}: vẽ lại trên móng` : `Cấp ${a.cap}`)).join('')}</div>`;
       const nhom = [];
       for (let i = 0; i < anh.length; i += 4) nhom.push(anh.slice(i, i + 4));
-      html = `<body style="${css}"><div style="font-size:20px;margin-bottom:8px">${loai.ten}, móng ${loai.moi}×${loai.moi}: trên là dáng cũ phóng theo móng, dưới là vẽ lại; nét đen là ranh móng</div>
+      const tieuDe = coCu ? 'trên là dáng cũ phóng theo móng, dưới là vẽ lại' : 'vẽ trên móng';
+      html = `<body style="${css}"><div style="font-size:20px;margin-bottom:8px">${loai.ten}, móng ${loai.moi}×${loai.moi}: ${tieuDe}; nét đen là ranh móng</div>
         ${nhom.map(hang).join('')}</body>`;
     }
     await page.setContent(html);

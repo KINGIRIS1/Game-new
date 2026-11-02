@@ -1,7 +1,7 @@
 // Lưu game vào localStorage và xuất/nhập mã lưu (hay tệp lưu, cũng chứa đúng mã đó) để sao lưu hoặc chuyển máy.
 // Bản lưu cũ (phiên bản 1 của lát cắt 1, 2 của lát cắt 2a, 3 của lát cắt 2b, 4 của lát cắt 3a,
 // 5 của lát cắt 3b, 6 của chương 2, 7 của chương 3, 8 của cấp 6–7, 9 của Hội Tết, 10 của cấp 8) được nâng lên phiên bản
-// hiện tại khi nạp. Phiên bản 13 là chương 4 phần 2 (lính nỏ, ụ nỏ, thủy binh Triệu). Bản lưu còn ở kinh đô nhỏ (trước phiên bản 11) được dựng lại thành kinh đô lớn theo mẫu (`xepLai.ts`).
+// hiện tại khi nạp. Phiên bản 13 là chương 4 phần 2 (lính nỏ, ụ nỏ, thủy binh Triệu), 14 thêm gỗ (xưởng mộc). Bản lưu còn ở kinh đô nhỏ (trước phiên bản 11) được dựng lại thành kinh đô lớn theo mẫu (`xepLai.ts`).
 
 import { deflateSync, inflateSync } from 'fflate';
 import {
@@ -74,6 +74,7 @@ function migrate(raw: unknown): unknown {
   if (isObj(v) && v.version === 10) v = migrate10to11(v);
   if (isObj(v) && v.version === 11) v = migrate11to12(v);
   if (isObj(v) && v.version === 12) v = migrate12to13(v);
+  if (isObj(v) && v.version === 13) v = migrate13to14(v);
   return v;
 }
 
@@ -273,6 +274,22 @@ function migrate12to13(s: Raw): Raw {
   return s;
 }
 
+/**
+ * Phiên bản 13 → 14 (gỗ, xưởng mộc): kho có 0 gỗ, trận đang dở hay vừa xong chưa bị cướp gỗ, Lạc hầu chưa gợi ý
+ * công trình mới nào.
+ */
+function migrate13to14(s: Raw): Raw {
+  s.version = 14;
+  if (isObj(s.resources)) s.resources.go = 0;
+  for (const holder of [s.raid, s.campaign]) {
+    if (!isObj(holder)) continue;
+    if (isObj(holder.battle) && isObj(holder.battle.stolen)) holder.battle.stolen.go = 0;
+    if (isObj(holder.lastResult) && isObj(holder.lastResult.stolen)) holder.lastResult.stolen.go = 0;
+  }
+  s.hinted = [];
+  return s;
+}
+
 const isBanh = (v: unknown, test: (x: unknown) => boolean): boolean => isObj(v) && test(v.chung) && test(v.giay);
 const isBool = (x: unknown) => typeof x === 'boolean';
 
@@ -313,6 +330,7 @@ function isGameState(v: unknown): v is GameState {
   if (!isObj(v) || v.version !== SAVE_VERSION) return false;
   if (!Array.isArray(v.heights) || v.heights.length !== GRID * GRID || !v.heights.every(isNum)) return false;
   if (!isKhoanhList(v.khoanh) || v.khoanh.length === 0) return false;
+  if (!Array.isArray(v.hinted) || !v.hinted.every((t) => typeof t === 'string')) return false;
   const son = v.son;
   if (!isObj(son) || !isObj(son.gifts) || !isNum(son.restUntil) || typeof son.non !== 'boolean' || typeof son.won !== 'boolean') return false;
   if (!GIFT_IDS.every((k) => typeof (son.gifts as Raw)[k] === 'boolean')) return false;

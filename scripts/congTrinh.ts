@@ -227,16 +227,20 @@ function makeRenderer(): THREE.WebGLRenderer {
 
 export interface Shot {
   cap: number;
-  cu: string;
+  /** Ảnh dáng cũ; null với công trình mới chưa từng có dáng cũ (xưởng mộc...). */
+  cu: string | null;
   moi: string;
 }
 
-/** Từng cấp của một loại: mỗi cấp một cặp ảnh cũ, mới cùng tỉ lệ ô đất. Loại một cấp thì chỉ một cặp. */
+/**
+ * Từng cấp của một loại: mỗi cấp một cặp ảnh cũ, mới cùng tỉ lệ ô đất. Loại một cấp thì chỉ một cặp. Loại mới vẽ thẳng
+ * trên móng (không có trong `CU`) thì chỉ có ảnh mới.
+ */
 export function chupCap(loai: string): Shot[] {
   const type = loai as BuildingType;
   const moi = CONG_TRINH[type];
   const cu = CU[type];
-  if (!moi || !cu) throw new Error(`Không có công trình ${loai}. Có: ${Object.keys(CONG_TRINH).join(', ')}`);
+  if (!moi) throw new Error(`Không có công trình ${loai}. Có: ${Object.keys(CONG_TRINH).join(', ')}`);
   const renderer = makeRenderer();
   // Bến có thêm dải sông phía trước cho cầu tàu và thuyền.
   const size = moi.tiles + (type === 'ben' ? 6 : 2);
@@ -246,8 +250,8 @@ export function chupCap(loai: string): Shot[] {
   const river = type === 'ben' ? moi.tiles / 2 : undefined;
   const out: Shot[] = [];
   for (let level = 1; level <= BUILDINGS[type].maxLevel; level++) {
-    const shots: string[] = [];
-    for (const which of ['cu', 'moi'] as const) {
+    const shots: (string | null)[] = cu ? [] : [null];
+    for (const which of cu ? (['cu', 'moi'] as const) : (['moi'] as const)) {
       const scene = newScene(size);
       scene.add(groundPatch(size, [{ x: 0, z: 0, tiles: moi.tiles }], river));
       if (which === 'cu') placeOld(scene, type, level, 0, 0);
@@ -292,7 +296,7 @@ export function chupCanh(levels: number[], px = 32): Shot[] {
       for (const l of lots.slice(1)) put(scene, 'nhaSan', level, l.x, l.z);
       shots.push(render(renderer, scene, w, h, half, new THREE.Vector3(0, 1.2, 0)));
     }
-    out.push({ cap: level, cu: shots[0], moi: shots[1] });
+    out.push({ cap: level, cu: shots[0], moi: shots[1]! });
   }
   renderer.dispose();
   renderer.domElement.remove();

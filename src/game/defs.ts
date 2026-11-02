@@ -1,6 +1,6 @@
 // Mọi con số cân bằng game nằm ở đây để dễ tinh chỉnh bằng test.
 
-export const RESOURCE_IDS = ['gao', 'voOc', 'datDa', 'sat'] as const;
+export const RESOURCE_IDS = ['gao', 'voOc', 'datDa', 'sat', 'go'] as const;
 export type ResourceId = (typeof RESOURCE_IDS)[number];
 export type Resources = Record<ResourceId, number>;
 export type Cost = Partial<Resources>;
@@ -44,7 +44,9 @@ export type BuildingType =
   | 'cau'
   | 'rom'
   // Nơi ở của lính nỏ (chương 4).
-  | 'traiNo';
+  | 'traiNo'
+  // Xưởng mộc: ra gỗ (tài nguyên thứ năm).
+  | 'xuongMoc';
 
 /** Mốc mở khóa theo cốt truyện: sau kết chương 1, khi vào chương 2, sau kết chương 2, khi vào chương 3, sau kết chương 3, khi vào chương 4. */
 export type Unlock = 'ketChuong1' | 'chuong2' | 'ketChuong2' | 'chuong3' | 'ketChuong3' | 'chuong4';
@@ -279,6 +281,32 @@ export const BUILDINGS: Record<BuildingType, BuildingDef> = {
     hp: [180, 200, 220, 240, 260, 280, 300, 330],
     limit: [1, 2, 3, 3, 4, 5, 5, 5],
     minDien: 1,
+    buildable: true,
+    removable: false,
+  },
+  // Xưởng mộc: thợ mộc xẻ gỗ. Gỗ dùng dựng, nâng làng chài, cổng thành; thừa thì đổi với thuyền buôn.
+  xuongMoc: {
+    type: 'xuongMoc',
+    w: 3,
+    d: 3,
+    maxLevel: 8,
+    buildCost: { gao: 60, voOc: 40 },
+    upgradeCost: [
+      {},
+      {},
+      { voOc: 60, datDa: 30 },
+      { voOc: 120, datDa: 60 },
+      { voOc: 250, datDa: 120 },
+      { voOc: 500, datDa: 250 },
+      { voOc: 1000, datDa: 500 },
+      { voOc: 2000, datDa: 1000 },
+      { voOc: 4000, datDa: 2000 },
+    ],
+    production: [{ go: 10 }, { go: 16 }, { go: 24 }, { go: 36 }, { go: 50 }, { go: 68 }, { go: 90 }, { go: 118 }],
+    workers: [1, 2, 2, 3, 3, 4, 4, 4],
+    hp: [180, 200, 220, 240, 260, 280, 300, 330],
+    limit: [0, 1, 1, 2, 2, 2, 3, 3],
+    minDien: 2,
     buildable: true,
     removable: false,
   },
@@ -792,7 +820,7 @@ export const KHOANH_QUOTA = [18, 24, 32, 38, 48, 60, 72, 80];
 export const KHOANH_COST_FRAC: [number, number] = [0.02, 0.03];
 export const KHOANH_COST_MIN = { gao: 20, voOc: 10 };
 
-export const START_RESOURCES: Resources = { gao: 150, voOc: 120, datDa: 0, sat: 0 };
+export const START_RESOURCES: Resources = { gao: 150, voOc: 120, datDa: 0, sat: 0, go: 0 };
 export const START_DAN = 4;
 
 /** Mỗi người dân ăn chừng này gạo mỗi phút. */
@@ -811,7 +839,7 @@ export const MERCHANT_FIRST_MS = 2 * 60_000;
 export const MERCHANT_EVERY_MS = 5 * 60_000;
 export const MERCHANT_STAY_MS = 90_000;
 /** Giá trị quy đổi giữa các tài nguyên khi thuyền buôn ra giá. */
-export const TRADE_VALUE: Resources = { gao: 1, voOc: 1.4, datDa: 1.2, sat: 3 };
+export const TRADE_VALUE: Resources = { gao: 1, voOc: 1.4, datDa: 1.2, sat: 3, go: 1.3 };
 /** Thuyền buôn trả hơn giá trị thật chừng này để người chơi thấy đáng đổi. */
 export const TRADE_BONUS = 1.15;
 
@@ -1281,3 +1309,9 @@ export const CH3_QUEST_START = 30;
 export const CH4_QUEST_START = 40;
 /** Bản lưu cũ (phiên bản 3) đã làm qua nhiệm vụ này thì chỉ số nhiệm vụ phải dời thêm một. */
 export const QUEST_INSERTED_V4 = 11;
+
+/**
+ * Công trình mới thêm sau khi đã có người chơi: lần đầu mở được thì Lạc hầu nói một câu gợi ý (một lần, ghi ở
+ * `GameState.hinted`). Thêm loại vào đây không phải nâng bản lưu.
+ */
+export const NEW_HINTS: BuildingType[] = ['xuongMoc'];

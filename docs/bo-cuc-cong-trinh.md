@@ -438,3 +438,66 @@ c c c c , ,
 - `c` cấp 2, chiếu gói bánh, chõng tre có khuôn.
 - `G` cấp 3, cối đá, chày gỗ giã bánh giầy.
 - Ngày Tết thêm người ngồi gói bánh trên chiếu, nay nằm trong móng.
+
+## Công trình mới (chủ dự án đã duyệt)
+
+Bản vẽ đi kèm mục **Kế hoạch: cổng thành, xưởng mộc, làng chài** trong `docs/thiet-ke.md`. Cổng thành móng 1×1 nên không có ở đây. Cách đọc như trên; hai công trình này chưa có dáng cũ nên không có chữ **mới**.
+
+### Xưởng mộc: 3×3
+
+Lán thợ mộc góc sau bên trái, khung nhà dựng dở và đống gỗ tròn phía sau; giữa là chỗ cưa xẻ và đẽo thuyền; lối vào giữa mặt trước, hai bên là lán thứ hai và giá phơi ván.
+
+```
+L L L K K G
+L L L K K G
+X X , T T T
+X X , T T T
+S S , , P P
+S S , , B B
+```
+
+- `L` cấp 1, lán thợ mộc mái một dốc, bàn gỗ, giá treo cưa, rìu, đục (cấp 6: cột hiên chạm hoa văn trống đồng).
+- `G` cấp 1, đống gỗ tròn xếp dọc, cao thêm theo cấp.
+- `X` cấp 1, giá cưa xẻ: cây gỗ gác chéo trên giá cao, lưỡi cưa dọc thân.
+- `,` cấp 1, lối đất vào sân, mùn cưa vương hai bên.
+- `T` cấp 2, thuyền độc mộc đang đẽo trên hai mễ gỗ, phoi gỗ dưới chân (cấp 8: thuyền lớn mũi cong trên giàn đà).
+- `K` cấp 3, khung nhà sàn dựng dở: bốn cột, xà, kèo, chưa lợp mái.
+- `P` cấp 4, giá phơi ván dựng nghiêng.
+- `B` cấp 5, trâu kéo một cây gỗ vào sân.
+- `S` cấp 7, lán thứ hai bày sập gỗ chạm, hòm gỗ.
+- Bốn người làm: một thợ xẻ dưới giá cưa, một thợ xẻ đứng trên cây gỗ (hai người kéo cưa), một thợ mộc đẽo thuyền, một thợ mộc đẽo cột trước khung nhà.
+- Đã vẽ (`src/render/congTrinh/xuongMoc.ts`). Đã đổi khi vẽ:
+  - giá cưa `X`: cây gỗ gác dọc (từ sau ra trước) trên hai giá chữ A cao, tấm ván trên cây gỗ cho thợ xẻ đứng, lưỡi cưa sắt mài sáng đứng xuyên thân gỗ có tay cưa trên và dưới; thợ xẻ dưới đứng lệch sang trái, quay nghiêng cho thấy mặt;
+  - thợ mộc đẽo thuyền đứng sau thuyền, quay mặt ra trước; người thứ tư đẽo một cây cột nằm trước khung nhà `K` (thay cho người vác ván, để mỗi người làm một việc tại chỗ);
+  - lối `,` vẽ thành hai khối liền (dải giữa và mặt trước rộng gấp đôi) cho khỏi kẻ ô.
+
+### Làng chài: 3×3
+
+Mặt trước quay ra sông như bến. Lều chài góc sau bên trái, giàn phơi cá bên phải; lối giữa chạy ra bờ ván dọc mép nước; vó bè ở góc trước bên phải chìa cần ra sông.
+
+```
+N N N . Q Q
+N N N . P P
+G G , , P P
+G G , , M F
+L L , , V V
+= = = = V V
+```
+
+- `N` cấp 1, lều chài mái tranh thấp, lưới treo dưới hiên (cấp 4: nhà sàn ngư dân mái thuyền, cột cao).
+- `P` cấp 1, giàn phơi cá: sào tre, cá xâu treo thành hàng, nong cá dưới chân.
+- `,` cấp 1, lối đất ra bờ.
+- `=` cấp 1, bờ ván dọc mép sông, cọc cắm xuống nước.
+- `V` cấp 2, vó bè: khung tre, cần vó chìa ra sông, lưới vó vuông.
+- `L` cấp 3, giá phơi lưới.
+- `M` cấp 5, chum mắm.
+- `F` cấp 5, cờ đuôi nheo.
+- `G` cấp 7, sạp chợ cá bày thúng cá, mái theo cấp.
+- `Q` cấp 8, miếu thần sông nhỏ, bát hương, cây phướn.
+- Thuyền ngoài móng, trên sông trước bờ ván:
+  - thuyền nan có người quăng chài (cấp 1);
+  - thuyền đánh cá thứ hai (cấp 3);
+  - hàng đáy: một dãy cọc tre có lưới đáy chắn dòng (cấp 6);
+  - thuyền lưới lớn có buồm neo ngoài cùng (cấp 8).
+  - Thuyền bơi chậm quanh chỗ neo sát bờ, không ra tới luồng thuyền qua lại, không chạm bờ bên kia.
+- Ba ngư dân: một người vá lưới trên bờ ván, một người kéo vó, một người xếp cá lên giàn phơi.

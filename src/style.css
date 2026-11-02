@@ -797,6 +797,12 @@ textarea {
   background: rgba(140, 42, 31, 0.92);
 }
 
+/* Lời dài nhiều dòng (gợi ý của Lạc hầu): bo góc vừa phải thay cho viên thuốc. */
+.toast.long {
+  border-radius: 14px;
+  line-height: 1.4;
+}
+
 @keyframes toast-in {
   from {
     opacity: 0;

@@ -278,7 +278,7 @@ function newBattle(id: number, mode: Battle['mode'], wave: number, side: RaidSid
     events: [],
     seq: 0,
     nextId: 1,
-    stolen: { gao: 0, voOc: 0, datDa: 0, sat: 0 },
+    stolen: { gao: 0, voOc: 0, datDa: 0, sat: 0, go: 0 },
     killed: 0,
     total: 0,
     lost: { giao: 0, cung: 0, voi: 0, no: 0 },
