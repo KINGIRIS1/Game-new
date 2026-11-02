@@ -158,7 +158,7 @@ export const vi = {
     lauNo: {
       name: 'Lầu nỏ',
       icon: '🎯',
-      desc: 'Lầu gỗ ba tầng ghép từ hai chòi canh cấp 8, ba cây nỏ lớn chĩa ba hướng. Mỗi phát bắn ba giặc khác nhau. Tính là hai chòi canh trong số chòi canh tối đa. Không tách lại được.',
+      desc: 'Lầu gỗ ba tầng ghép từ hai chòi canh cấp 8, ba cây nỏ lớn chĩa ba hướng. Mỗi phát bắn ba giặc khác nhau. Tính là hai chòi canh trong số chòi canh tối đa. Không tách lại được. Sau truyện lên được cấp 2, 3.',
     },
     traiGiao: {
       name: 'Trại giáo',
@@ -1225,8 +1225,8 @@ export const vi = {
     noHeroWarn: 'Trận này không có tướng nào, rất khó thắng. Nên chờ tướng hồi sức.',
     templeDamaged: 'Đền Phù Đổng đang hư: quân ta mất 10% máu và sức đánh. Hãy sửa đền ở kinh đô.',
     armsTitle: 'Rèn binh khí',
-    armsHint: 'Mỗi bậc thêm 10% máu và sức đánh cho cả binh chủng, ở mọi trận. Bậc 1 cần lò rèn cấp 6, bậc 2 cần lò rèn cấp 7.',
-    armsTier: (n: number) => `Bậc ${n}/2`,
+    armsHint: 'Mỗi bậc thêm 10% máu và sức đánh cho cả binh chủng, ở mọi trận. Bậc 1 cần lò rèn cấp 6, bậc 2 cần lò rèn cấp 7, bậc 3 cần lò rèn cấp 9 (sau truyện).',
+    armsTier: (n: number, of: number) => `Bậc ${n}/${of}`,
     armsForge: (n: number) => `Rèn bậc ${n}`,
     armsDone: 'Đã rèn đủ',
     armsToast: (name: string, n: number) => `Thợ rèn đã rèn binh khí bậc ${n} cho ${name.toLowerCase()}`,
@@ -1310,7 +1310,8 @@ export const vi = {
     mergeNoPair: 'Cần thêm một chòi canh cấp 8 còn nguyên để ghép',
     merged: 'Đã ghép thành lầu nỏ!',
     dienUp: (level: number) => `Điện đã lên cấp ${level}: kho rộng hơn, công trình lên được cấp ${level}`,
-    lauNoShots: 'Mỗi phát bắn 3 giặc',
+    lauNoShots: 'Sức bắn',
+    mergeLevel: (n: number) => `Chòi đã lên cấp 9, 10 thì ra lầu nỏ cấp 2, 3. Ghép chòi này với một chòi cùng cấp thì được lầu nỏ cấp ${n}.`,
     tet: 'Hội Tết',
     banh: {
       chung: { name: 'Bánh chưng', icon: '🟩' },

@@ -7,6 +7,8 @@ import {
   BUILDINGS,
   CA_PER_MIN,
   CONG_THANH,
+  LAU_NO,
+  LAU_NO_FROM_LEVEL,
   DECOR_TYPES,
   FIELD,
   RESOURCE_IDS,
@@ -98,7 +100,7 @@ import {
 } from '../game/game';
 import { chapterStages } from '../game/campaign';
 import { caoLoJoined, caoLoResting } from '../game/caoLo';
-import { inChapter4, mergeCost, mergeable } from '../game/chuong4';
+import { inChapter4, mergeCost, mergeable, mergedLevel } from '../game/chuong4';
 import { giongAppeared, giongLook, giongReady, giongResting } from '../game/giong';
 import { KHOANH_N } from '../game/khoanh';
 import { inChapter2, sonJoined, sonLook, sonResting, giftCount } from '../game/son';
@@ -1040,7 +1042,11 @@ export class Hud {
       rows.push(`<div class="stat"><span>${vi.ui.khoanhCount}</span><span>${state.khoanh.length}/${KHOANH_N * KHOANH_N}</span></div>`);
     }
 
-    if (b.type === 'lauNo') rows.push(`<div class="stat"><span>${vi.ui.lauNoShots}</span><span></span></div>`);
+    if (b.type === 'lauNo') {
+      const shot = (lv: number) => vi.ui.gateShot(LAU_NO.dmg[lv - 1], LAU_NO.targets);
+      rows.push(`<div class="stat"><span>${vi.ui.lauNoShots}</span><span>${shot(b.level)}</span></div>`);
+      if (b.level < def.maxLevel) rows.push(`<div class="stat"><span>${vi.ui.nextLevel}</span><span>${shot(b.level + 1)}</span></div>`);
+    }
     if (isDecor(b.type)) rows.push(`<div class="stat"><span></span><span class="muted">${vi.ui.decorOnly}</span></div>`);
     if (b.type === 'doanhTrai') rows.push(this.barracksHtml(state, b));
     const home = UNIT_TYPES.find((k) => UNITS[k].home === b.type);
@@ -1105,6 +1111,7 @@ export class Hud {
       const cost = mergeCost();
       const can = pair && state.raid.phase === 'idle' && canAfford(state, cost);
       actions.push(`<div class="muted">${vi.ui.mergeInfo}</div>`);
+      if (b.level > LAU_NO_FROM_LEVEL) actions.push(`<div class="muted">${vi.ui.mergeLevel(mergedLevel(b, b))}</div>`);
       actions.push(`<button class="btn bronze" data-act="startMerge" data-id="${b.id}" ${can ? '' : 'disabled'}>🎯 ${vi.ui.merge} · ${costHtml(state, cost)}</button>`);
       if (!pair) actions.push(`<div class="why">${vi.ui.mergeNoPair}</div>`);
     }

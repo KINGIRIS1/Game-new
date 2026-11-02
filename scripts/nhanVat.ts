@@ -46,14 +46,17 @@ function theoCot(tao: () => THREE.Group, truong: 'horn' | 'win'): () => THREE.Gr
 export const NHOM: Record<string, Entry[]> = {
   linh: [
     { ten: 'Giáo binh bậc 2', tao: () => makeSoldier('giao', 2) },
+    { ten: 'Giáo binh bậc 3', tao: () => makeSoldier('giao', 3) },
     { ten: 'Cung thủ bậc 0', tao: () => makeSoldier('cung', 0) },
     { ten: 'Cung thủ bậc 2', tao: () => makeSoldier('cung', 2) },
+    { ten: 'Cung thủ bậc 3', tao: () => makeSoldier('cung', 3) },
     { ten: 'Giặc Ân cầm qua', tao: () => makeSoldier('giaoAn') },
     { ten: 'Giặc Ân cầm cung', tao: () => makeSoldier('cungAn') },
     { ten: 'Phó tướng Ân', tao: () => makeSoldier('phoTuong') },
     { ten: 'Lính Triệu', tao: () => makeSoldier('linhTrieu') },
     { ten: 'Lính nỏ Triệu', tao: () => makeSoldier('noTrieu') },
     { ten: 'Lính nỏ (bậc 2)', tao: () => makeSoldier('no', 2) },
+    { ten: 'Lính nỏ bậc 3', tao: () => makeSoldier('no', 3) },
     { ten: 'Lính thủy Triệu', tao: () => makeSoldier('linhThuy') },
     { ten: 'Cung thuyền Triệu', tao: () => makeSoldier('cungThuyen') },
     { ten: 'Lính rìu giáp mây', tao: () => makeSoldier('linhRiu') },
@@ -62,6 +65,7 @@ export const NHOM: Record<string, Entry[]> = {
   thu: [
     { ten: 'Voi chiến bậc 0', tao: () => makeBeast('voi', 0), co: 1.5, cach: 1.5 },
     { ten: 'Voi chiến bậc 2', tao: () => makeBeast('voi', 2), co: 1.6, cach: 1.5 },
+    { ten: 'Voi chiến bậc 3', tao: () => makeBeast('voi', 3), co: 1.7, cach: 1.5 },
     { ten: 'Chiến xa', tao: () => makeBeast('chienXa'), co: 1.3, cach: 1.6 },
     { ten: 'Đại tướng Ân', tao: () => makeBeast('daiTuong'), co: 1.4, cach: 1.6 },
     { ten: 'Kỵ binh Triệu', tao: () => makeBeast('kyBinh'), co: 1.4, cach: 1.3 },

@@ -14,6 +14,7 @@ import { makeBoat, makeCrossbowStand, makeFighter, makeTradeBoat } from './model
 import { C } from './palette';
 import { ShapeBuilder, saddleRoof, seeded } from './shapes';
 import { bakeSoldier } from './soldier';
+import { repeatingCrossbow } from './weapons';
 import { ToonModel, inkThin, outlineOf, toon } from './toon';
 
 /**
@@ -1594,11 +1595,23 @@ export function makeTraiNo(): THREE.Group {
  * Nỏ lớn gác qua lan can: chân xoay, báng gỗ dài, cánh nỏ đồng uốn chữ V, dây kéo về lẫy, mũi tên sắt lớn.
  * Chân nỏ ở (x, z) trên sàn cao `floor`, chĩa theo hướng `ry` (0 là ra trước, +z).
  */
-function bigCrossbow(x: number, floor: number, z: number, ry: number): THREE.Group {
+function bigCrossbow(x: number, floor: number, z: number, ry: number, repeating = false): THREE.Group {
   const g = new ToonModel();
   const p = g.plain;
   const ny = 0.36;
   p.cyl(0.05, 0.06, 0.3, C.woodDark, 0, 0.2, 0, undefined, 6);
+  if (repeating) {
+    // Nỏ liên châu lớn (lầu nỏ cấp 3): hộp tên đai đồng trên thân, cánh sừng bịt đồng, như nỏ của Cao Lỗ.
+    const k = 1.25;
+    const keep = g.plain.frame;
+    g.plain.frame = g.band.frame = new THREE.Matrix4().makeTranslation(0, ny, 0.12);
+    repeatingCrossbow(g, k);
+    g.plain.frame = g.band.frame = keep;
+    const c = g.group();
+    c.position.set(x, floor, z);
+    c.rotation.y = ry;
+    return c;
+  }
   p.box(0.11, 0.09, 0.8, C.wood, 0, ny, 0.25);
   for (const sx of [-1, 1]) {
     p.box(0.46, 0.07, 0.07, C.bronze, sx * 0.21, ny + 0.02, 0.58, [0, sx * 0.4, 0]);
@@ -1701,20 +1714,24 @@ export function makeChoiCanh(level: number): THREE.Group {
 
 /**
  * Lầu nỏ ghép từ hai chòi canh cấp 8: chân đất nện cao như thành Cổ Loa, có đai đồng và ô cửa bắn; lầu gỗ hai tầng,
- * sàn trên cùng có ba cây nỏ lớn chĩa ba hướng và ba lính nỏ; mái tranh ba tầng chồng nhau, chim đồng trên đỉnh.
- * Móng một ô như chòi canh, nhưng cao hơn hẳn để nhìn là biết.
+ * sàn trên cùng có ba cây nỏ lớn chĩa ba hướng và ba lính nỏ; mái ngói ba tầng chồng nhau, chim đồng trên đỉnh.
+ * Móng một ô như chòi canh, nhưng cao hơn hẳn để nhìn là biết. Mỗi cấp cao thêm một chút, mái theo cấp (cấp 1 như
+ * chòi canh cấp 8, cấp 2 như cấp 9, cấp 3 như cấp 10):
+ * - Cấp 2: lớp chân dưới cùng ốp đá hộc, bốn khiên đồng mặt trống treo quanh lan can tầng dưới.
+ * - Cấp 3: cả chân ốp đá, đai đồng vàng; ba nỏ lớn thành nỏ liên châu có hộp tên; chim đồng trên đỉnh to hơn.
  */
-export function makeLauNo(): THREE.Group {
+export function makeLauNo(level = 1): THREE.Group {
   const m = new ToonModel();
   const p = m.plain;
-  // Ghép từ hai chòi canh cấp 8 nên mái như cấp 8.
-  const roof = roofFor(8);
-  const base = 1.85;
-  // Chân đất nện thu nhỏ dần, đai đồng giữa các lớp, ô cửa bắn hai mặt trông ra.
+  const roof = roofFor(7 + level);
+  const base = 1.85 + (level - 1) * 0.12;
+  // Chân đất nện thu nhỏ dần, đai đồng giữa các lớp, ô cửa bắn hai mặt trông ra. Cấp 2 lớp dưới ốp đá, cấp 3 cả ba.
   for (let i = 0; i < 3; i++) {
     const w = 1.0 - i * 0.09;
-    p.box(w, base / 3, w, i % 2 ? C.earthDark : C.earth, 0, base / 6 + (i * base) / 3, 0);
-    if (i) p.box(w + 0.03, 0.05, w + 0.03, C.bronze, 0, (i * base) / 3, 0);
+    const stone = level >= 3 || (level >= 2 && i === 0);
+    const color = stone ? (i % 2 ? C.rockDark : C.rock) : i % 2 ? C.earthDark : C.earth;
+    p.box(w, base / 3, w, color, 0, base / 6 + (i * base) / 3, 0);
+    if (i) p.box(w + 0.03, 0.05, w + 0.03, level >= 3 ? C.gold : C.bronze, 0, (i * base) / 3, 0);
   }
   for (const y of [0.55, 1.2]) {
     p.box(0.12, 0.2, 0.04, 0x2a1d12, 0, y, 0.47);
@@ -1731,13 +1748,27 @@ export function makeLauNo(): THREE.Group {
       m.band.box(0.04, 0.16, w, C.red, sd * (w / 2 - 0.02), y + 0.11, 0);
     }
   }
+  if (level >= 2) {
+    // Bốn khiên đồng mặt trống treo giữa bốn mặt lan can tầng dưới (dưới diềm mái, nhìn từ xa thấy rõ), viền đồng
+    // sẫm (cấp 3 viền vàng).
+    const r = 0.14;
+    const out = 0.9 / 2 + 0.01;
+    const rim = level >= 3 ? C.gold : C.bronzeDark;
+    for (const s of [-1, 1]) {
+      // Mặt trước, mặt sau: trục khiên dọc z; mặt phải, mặt trái: trục khiên dọc x.
+      m.drum.cyl(r, r, 0.025, 0xffffff, 0, f1 + 0.13, s * (out + 0.012), [Math.PI / 2, 0, 0], 14);
+      p.cyl(r + 0.02, r + 0.02, 0.02, rim, 0, f1 + 0.13, s * out, [Math.PI / 2, 0, 0], 14);
+      m.drum.cyl(r, r, 0.025, 0xffffff, s * (out + 0.012), f1 + 0.13, 0, [0, 0, Math.PI / 2], 14);
+      p.cyl(r + 0.02, r + 0.02, 0.02, rim, s * out, f1 + 0.13, 0, [0, 0, Math.PI / 2], 14);
+    }
+  }
   // Mái tầng dưới che tầng giữa.
   boatRoof(m, roof, { length: 1.15, width: 1.05, lift: 0.2, drop: 0.28, thickness: 0.05 }, 0, f1 + 0.72, 0);
   // Mái ba tầng chồng nhau trên cùng, xoay đổi hướng, sống mái bọc đồng, chim đồng dang cánh trên đỉnh.
   boatRoof(m, roof, { length: 1.25, width: 1.15, lift: 0.25, drop: 0.34, thickness: 0.05 }, 0, f2 + 0.95, 0);
   boatRoof(m, roof, { length: 0.9, width: 0.8, lift: 0.2, drop: 0.24, thickness: 0.05 }, 0, f2 + 1.32, 0, Math.PI / 2, true);
   boatRoof(m, roof, { length: 0.55, width: 0.5, lift: 0.14, drop: 0.16, thickness: 0.04 }, 0, f2 + 1.6, 0);
-  birdSpread(m, 0, f2 + 1.68, 0, 0.75);
+  birdSpread(m, 0, f2 + 1.68, 0, level >= 3 ? 0.95 : 0.75);
   // Hai cờ đỏ cắm hai góc sau.
   for (const x of [-0.42, 0.42]) {
     p.cyl(0.02, 0.02, 0.9, C.woodDark, x, f2 + 0.6, -0.42, undefined, 5);
@@ -1745,7 +1776,8 @@ export function makeLauNo(): THREE.Group {
   }
   const g = m.group();
   // Ba nỏ lớn chĩa ra trước, sang phải và sang trái, mỗi nỏ một lính nỏ đứng sau.
-  g.add(bigCrossbow(0, f2, 0.12, 0), bigCrossbow(0.12, f2, -0.05, Math.PI / 2), bigCrossbow(-0.12, f2, -0.05, -Math.PI / 2));
+  const rep = level >= 3;
+  g.add(bigCrossbow(0, f2, 0.12, 0, rep), bigCrossbow(0.12, f2, -0.05, Math.PI / 2, rep), bigCrossbow(-0.12, f2, -0.05, -Math.PI / 2, rep));
   for (const [x, z, ry] of [[0.18, -0.2, 0], [-0.25, 0.2, -Math.PI / 2], [0.25, 0.25, Math.PI / 2]] as const) {
     const archer = bakeSoldier('cung', 0, { act: 'fight' });
     archer.scale.setScalar(0.5);
@@ -2895,7 +2927,7 @@ export function buildingModel(type: BuildingType, level: number): THREE.Group {
   if (type === 'vuon') return makeVuon(level);
   if (type === 'chuongLon') return makeChuongLon(level);
   if (type === 'bep') return makeBep(level);
-  if (type === 'lauNo') return makeLauNo();
+  if (type === 'lauNo') return makeLauNo(level);
   if (type === 'traiNo') return makeTraiNo();
   if (type === 'congThanh') return makeCongThanh(level);
   if (isDecor(type)) return decorModel(type);

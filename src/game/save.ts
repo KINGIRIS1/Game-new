@@ -8,6 +8,7 @@
 
 import { deflateSync, inflateSync } from 'fflate';
 import {
+  ARMS,
   BUILDINGS,
   GEAR_IDS,
   GIFT_IDS,
@@ -442,7 +443,7 @@ function isGameState(v: unknown): v is GameState {
   const troops = v.troops;
   if (!isObj(troops) || !UNIT_TYPES.every((k) => isNum(troops[k]) && troops[k] >= 0)) return false;
   const arms = v.arms;
-  if (!isObj(arms) || !UNIT_TYPES.every((k) => isNum(arms[k]) && arms[k] >= 0 && arms[k] <= 2)) return false;
+  if (!isObj(arms) || !UNIT_TYPES.every((k) => isNum(arms[k]) && arms[k] >= 0 && arms[k] <= ARMS.length)) return false;
   const raid = v.raid;
   if (!isObj(raid) || !isNum(raid.wave) || !isNum(raid.won) || !(raid.nextAt === null || isNum(raid.nextAt))) return false;
   if (!['idle', 'warning', 'battle'].includes(raid.phase as string)) return false;

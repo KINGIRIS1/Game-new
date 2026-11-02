@@ -1208,7 +1208,7 @@ function stepDefenses(state: GameState, battle: Battle, dt: number): void {
       if (targets.length) {
         for (const { o } of targets) {
           emit(battle, { kind: 'shot', x: tower.x, z: tower.z, tx: o.x, tz: o.z });
-          damageFighter(battle, { dmg: LAU_NO.dmg * (battle.crossbows ? CO_LOA_TOWER.dmg : 1) }, o);
+          damageFighter(battle, { dmg: LAU_NO.dmg[b.level - 1] * (battle.crossbows ? CO_LOA_TOWER.dmg : 1) }, o);
         }
         battle.towerCd[b.id] = LAU_NO.cooldown / fireRate(battle);
       }

@@ -134,8 +134,8 @@ describe('lầu nỏ', () => {
     const cost = BUILDINGS.lauNo.buildCost;
     expect(s.resources.voOc).toBe(before.voOc - cost.voOc!);
     expect(s.resources.sat).toBe(before.sat - cost.sat!);
-    // Không tách lại, không lên cấp, không dỡ được.
-    expect(canUpgrade(s, lau.id)).toEqual({ ok: false, reason: 'capToiDa' });
+    // Không tách lại, không dỡ được; lên cấp 2 phải chờ Điện 9 (sau truyện).
+    expect(canUpgrade(s, lau.id)).toEqual({ ok: false, reason: 'chuaDuCapDien' });
     expect(remove(s, lau.id).ok).toBe(false);
     expect(canPlace(s, 'lauNo', 20, 20).ok).toBe(false);
   });
@@ -173,7 +173,7 @@ describe('lầu nỏ', () => {
     const hp = foes.map((f) => f.hp);
     stepBattle(s, battle, 0.01);
     const lost = foes.map((f, i) => hp[i] - f.hp);
-    expect(lost.slice(0, 3).every((d) => Math.abs(d - LAU_NO.dmg) < 1e-6)).toBe(true);
+    expect(lost.slice(0, 3).every((d) => Math.abs(d - LAU_NO.dmg[0]) < 1e-6)).toBe(true);
     expect(lost[3]).toBe(0);
   });
 
