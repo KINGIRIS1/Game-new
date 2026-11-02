@@ -360,7 +360,7 @@ export const vi = {
     quaMan22: 'Triệu Đà đóng đại doanh ở núi Tiên Du. Xin đánh qua màn 22, phá doanh trại giặc.',
     coLoa: 'Triệu Đà dốc toàn quân tới chân thành Cổ Loa. Xin bệ hạ cầm nỏ thần đánh trận quyết chiến ở màn 24.',
     denCoLoa: 'Triệu Đà đã thua chạy. Xin dựng Đền Cổ Loa, ghi công thần Kim Quy và nỏ thần giữ nước.',
-    dien8: 'Âu Lạc đã yên, kinh đô còn lớn được nữa. Xin bệ hạ nâng Điện lên cấp 8: được phát thêm rừng, kho rộng hơn, ruộng, bến, lò rèn, chòi canh đều lên được cấp 8.',
+    dien8: 'Âu Lạc đã yên, kinh đô còn lớn được nữa. Xin bệ hạ nâng Điện lên cấp 8: kho rộng hơn, ruộng, bến, lò rèn, chòi canh đều lên được cấp 8.',
     lauNo: 'Cao Lỗ xin ghép hai chòi canh cấp 8 thành một lầu nỏ, mỗi phát bắn ba giặc. Chạm vào một chòi canh cấp 8 để ghép.',
     uNo: 'Thuyền lạ cướp bóc trên sông. Xin dựng 4 ụ nỏ trên thành Cổ Loa: chọn thẻ Ụ nỏ trong bảng Xây dựng rồi chạm vào đoạn thành.',
     luyenNo: 'Cao Lỗ xin dựng trại nỏ cho dân luyện nỏ, rồi luyện 4 lính nỏ. Lính nỏ bắn chậm mà đau, mạnh gấp đôi khi gặp quân nặng và tướng giặc.',
@@ -606,7 +606,7 @@ export const vi = {
         { who: 'vua', text: 'Ai đem sính lễ đến trước thì được rước Mị Nương: một trăm ván cơm nếp, một trăm nệp bánh chưng, voi chín ngà, gà chín cựa, ngựa chín hồng mao.' },
         { who: 'lacHau', text: 'Tâu bệ hạ, Thủy Tinh đã sai thủy quái đi tranh lễ vật. Xin góp gạo nấu cơm nếp, gói bánh chưng, và mở phó bản chương 2 để Lạc tướng giành voi, gà, ngựa về cho Sơn Tinh.' },
         { who: 'lacHau', text: 'Phòng khi Thủy Tinh nổi giận, xin cho đắp đê ven sông, đắp đất đắp nền cho cao. Chạm vào Sơn Tinh trước Điện để xem lễ vật.' },
-        { who: 'lacHau', text: 'Nay Điện Vua Hùng có thể nâng lên cấp 6, phát thêm rừng mở đất, các công trình cũng lên được cấp 6. Lò rèn cấp 6 rèn được binh khí sắt cho quân ta.' },
+        { who: 'lacHau', text: 'Nay Điện Vua Hùng có thể nâng lên cấp 6, kho rộng hơn, các công trình cũng lên được cấp 6. Lò rèn cấp 6 rèn được binh khí sắt cho quân ta.' },
       ],
     },
     ruocDau: {
