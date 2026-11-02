@@ -55,7 +55,10 @@ export type BuildingType =
   | 'congThanh'
   // Cầu qua sông Đà, qua sông Thao sang vùng đất bên kia (`benKia.ts`).
   | 'cauSongDa'
-  | 'cauSongThao';
+  | 'cauSongThao'
+  // Nhà làng bên kia sông đã về theo, và đồn biên giữ bờ bên kia.
+  | 'banLang'
+  | 'donBien';
 
 /**
  * Mốc mở khóa theo cốt truyện: sau kết chương 1, khi vào chương 2, sau kết chương 2, khi vào chương 3, sau kết chương 3,
@@ -759,6 +762,37 @@ export const BUILDINGS: Record<BuildingType, BuildingDef> = {
   // Cầu qua sông Đà nằm dọc (rộng 2 ô, vắt qua 7 ô sông), cầu qua sông Thao nằm ngang.
   cauSongDa: bridgeDef('cauSongDa', 2, 7),
   cauSongThao: bridgeDef('cauSongThao', 7, 2),
+  // Bản làng bên kia sông đã về theo (`benKia.ts`): nhà làng giữa khoảnh làng, không dựng hay dỡ được. Giặc bên kia
+  // đánh làng trước tiên; làng hư thì thôi làm ra, sửa tốn 30% lễ kết thân như công trình khác.
+  banLang: {
+    type: 'banLang',
+    w: 3,
+    d: 3,
+    maxLevel: 1,
+    buildCost: { gao: 600, voOc: 400 },
+    upgradeCost: [{}, {}],
+    production: [{}],
+    hp: [700],
+    limit: [0, 0, 0, 4, 4, 4, 4, 4],
+    minDien: 4,
+    buildable: false,
+    removable: false,
+  },
+  // Đồn biên: chỉ dựng bên kia sông, mỗi bờ một. Lính đóng ở đồn ra trận từ đây khi giữ kinh đô.
+  donBien: {
+    type: 'donBien',
+    w: 4,
+    d: 4,
+    maxLevel: 1,
+    buildCost: { gao: 800, voOc: 600, datDa: 600, sat: 100 },
+    upgradeCost: [{}, {}],
+    production: [{}],
+    hp: [900],
+    limit: [0, 0, 0, 0, 2, 2, 2, 2],
+    minDien: 5,
+    buildable: true,
+    removable: false,
+  },
 };
 
 /** Cầu qua sông (sông Đà hay sông Thao). */
@@ -789,6 +823,8 @@ export const VILLAGE_GIFT: Cost = { gao: 600, voOc: 400 };
 export const VILLAGE_SHARE = 0.5;
 /** Đào được của chôn: chừng này phần giá nâng Điện lên cấp kế tiếp, mọi loại tài nguyên trong giá ấy. */
 export const TREASURE_SHARE = 0.05;
+/** Một bờ bên kia có công trình thì cứ chừng này đợt giặc trên bộ (hay thủy binh) có một đợt tới bờ bên kia. */
+export const FAR_RAID_EVERY = 3;
 
 /** Đền Cuông còn nguyên: mỗi đợt thủy binh bớt chừng này phần số thuyền (làm tròn xuống, còn ít nhất một thuyền). */
 export const DEN_CUONG_BOATS = 0.2;

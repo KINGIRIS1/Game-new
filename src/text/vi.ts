@@ -250,6 +250,16 @@ export const vi = {
       icon: '🌉',
       desc: 'Cầu bắc qua sông Thao sang bờ đông. Bắc xong thì khoảnh đất đầu cầu bên kia mở ra; quân, trinh sát và dân qua cầu. Cầu phao tre bị lũ bậc 2 cuốn trôi, cầu gỗ chịu tới bậc 2, cầu gỗ lớn không sợ lũ. Mỗi sông một cầu, không dời được.',
     },
+    banLang: {
+      name: 'Bản làng',
+      icon: '🏘️',
+      desc: 'Làng người Lạc Việt bên kia sông đã về theo Văn Lang, làm ra theo nghề của làng, không cần dân bên này. Giặc bên kia sông nhắm phá làng trước tiên; làng hư thì thôi làm ra tới khi sửa.',
+    },
+    donBien: {
+      name: 'Đồn biên',
+      icon: '🛡️',
+      desc: 'Đồn giữ bờ bên kia sông: rào cọc, chòi canh, lán lính. Mỗi bờ một đồn. Chọn số lính đóng ở đồn: khi giữ kinh đô, lính đóng ra trận từ đồn, tới chỗ giặc bên kia sông sớm hơn hẳn. Lính đóng lấy từ lính giữ kinh đô, không thêm chỗ quân.',
+    },
   } satisfies Record<BuildingType, { name: string; icon: string; desc: string }>,
 
   reasons: {
@@ -340,6 +350,7 @@ export const vi = {
     chanLoiCau: 'Chừa đầu cầu làm lối lên cầu',
     daVeTheo: 'Làng đã về theo Văn Lang',
     chuaVeTay: 'Đất làng chưa về tay ta: dẹp đồn giặc giữ vùng này trước',
+    phaiBenKia: 'Đồn biên chỉ dựng trọn ở một bờ bên kia sông',
   } satisfies Record<FailReason, string>,
 
   quests: {
@@ -835,6 +846,9 @@ export const vi = {
     villageToast: (name: string) => `${name} đã về theo Văn Lang!`,
     cuaWorth: 'Đào được',
     cuaDug: 'Của chôn đã đào.',
+    villageWrecked: 'Giặc đã phá làng: làng thôi làm ra tới khi sửa.',
+    garrisonTitle: 'Lính đóng ở đồn',
+    garrisonHint: 'Đóng nhiều ở đồn thì doanh trại còn ít lính giữ bên này sông.',
     lang: {
       lua: { name: 'Làng trồng lúa', icon: '🏘️' },
       oc: { name: 'Làng mò ốc', icon: '🐚' },
@@ -995,6 +1009,8 @@ export const vi = {
     noRaidYet: 'Có doanh trại rồi, ít phút nữa trinh sát sẽ báo giặc tới.',
     callRaid: '⚔️ Nghênh chiến ngay',
     sideBac: 'phía Bắc',
+    sideNamXa: 'bên kia sông Đà',
+    sideDongXa: 'bên kia sông Thao',
     sideTay: 'phía Tây',
     raidWarning: (side: string, s: number) => `Trinh sát báo: giặc Ân kéo tới từ ${side}! Còn ${s} giây`,
     raidLook: 'Xem hướng',

@@ -25,7 +25,7 @@ import {
   type TuongId,
 } from './defs';
 import { initialCaoLo } from './caoLo';
-import { initialBenKia, isBenKiaState } from './benKia';
+import { initialBenKia, isBenKiaState, noGarrison } from './benKia';
 import { initialCayDa, isCayDaState } from './cayDa';
 import { initialAdv } from './coLoa';
 import { inChapter4 } from './chuong4';
@@ -96,6 +96,7 @@ function migrate(raw: unknown): unknown {
     const k = v.benKia as Raw;
     k.villages ??= [];
     k.dug ??= [];
+    k.garrison ??= noGarrison();
   }
   return v;
 }

@@ -1624,7 +1624,7 @@ Mỗi PR làm trên một nhánh từ `main` mới nhất.
 
 Mỗi PR: chạy `npm test` và `npm run build`; chụp kiểm tra ở khổ điện thoại (thanh trên đủ chỗ cho năm chip ở khổ `fold`); ghi số cuối cùng vào tài liệu này; sửa các mục chung (bốn tài nguyên thành năm, bảng Công trình) khi phần ấy đã làm.
 
-## Kế hoạch: vùng đất bên kia sông (chủ dự án đã duyệt, đang làm)
+## Kế hoạch: vùng đất bên kia sông (chủ dự án đã duyệt, đã làm)
 
 Chủ dự án yêu cầu: khám phá vùng đất mới bên kia sông để mở rộng lãnh thổ, có bắc cầu, điều quân. Kế hoạch này làm lần đầu trên một nhánh riêng (cả năm PR) khi `main` còn cũ, nhưng nhánh ấy không kịp gộp. Sau đó `main` đi trước 72 commit (sông rộng 7 ô, khoảnh tự chọn, gỗ, làng chài, cổng thành, chương 4, cây đá), nên làm lại từ đầu trên `main` mới, theo đúng các phương án chủ dự án đã đồng ý, trừ những chỗ đổi ghi ở dưới. Như các kế hoạch trước, số cho chỉnh ±20% theo test; làm xong phần nào thì ghi số cuối cùng của phần ấy.
 
@@ -1806,7 +1806,12 @@ j\i  0  1  2  3  4  5  6  7  8  9
    - **Cầu hư** (hay chưa có) thì công trình bên kia không làm ra gì, kể cả làng chài bên kia không đánh cá; bảng công trình báo đỏ. Làng vẫn làm ra.
    - **Bến, làng chài** dựng được sát sông ở bờ bên kia, quay mặt ra sông (`riverFacing`), thuyền neo đúng phía. Thuyền buôn ghé bến bên này trước.
    - Người chơi mô phỏng không sang sông, nên nhịp lên Điện ở `balance.test.ts` và sổ kinh tế không đổi.
-5. **PR 5: phòng thủ hai bờ**: giặc từ bìa rừng bên kia, đồn biên, thủy binh Triệu cập bờ bên kia.
+5. **PR 5: phòng thủ hai bờ** (đã làm): giặc từ bìa rừng bên kia, đồn biên, thủy binh Triệu cập bờ bên kia. Chi tiết đã làm:
+   - **Lịch**: bờ bên kia đã có công trình (kể cả nhà làng, đồn biên; cầu thì không tính) thì đợt giặc thứ 3, 6, 9… tới bờ bên kia (`farRaidBank`); hai bờ đều có thì thay phiên. Giặc trên bộ (giặc Ân, yêu tinh, quân Triệu) ra từ bìa rừng ngoài cùng bên ấy (`namXa`, `dongXa`); thủy binh Triệu cập bờ bên ấy. Lũ vẫn từ sông như cũ. Chưa có gì bên kia thì lịch như cũ. Trinh sát báo "bên kia sông Đà / bên kia sông Thao", dải đỏ ở bìa rừng bên ấy, nút xem lướt camera tới đó.
+   - **Bản làng thành công trình** (`banLang`, 3×3 giữa khoảnh làng, dựng khi làng về theo): giặc đánh được, máu 700. Làng hư thì thôi làm ra; sửa tốn 30% lễ kết thân như công trình khác.
+   - **Giặc bên kia** nhắm làng gần nhất trước; còn cầu sang bờ ấy thì qua cầu tìm kho rồi Điện; không có cầu (hay cầu hư) thì chỉ phá công trình bên ấy, hết thì rút về rừng.
+   - **Đồn biên** (`donBien`, 4×4, mỗi bờ một, cần Điện 5, 800 gạo, 600 vỏ ốc, 600 đất đá, 100 sắt, máu 900): rào cọc, chòi canh, hai lán lính, cờ đỏ. Bảng đồn biên chọn số lính mỗi binh chủng đóng ở đồn (không quá quân đang có, trừ phần đóng ở bờ kia). Khi giữ kinh đô, lính đóng ra trận từ đồn biên còn nguyên, lấy bớt từ phần lính giữ kinh đô của các doanh trại (không thêm quân); đồn hư thì lại ra từ doanh trại. Dời đồn biên cũng chỉ trong bờ bên kia.
+   - **Quân ta** vẫn đánh giặc gần nhất như cũ, đi thẳng tới giặc kể cả lội qua sông (như lúc đánh thủy quái mùa lũ); có đồn biên thì lính đóng đồn tới nơi sớm hơn hẳn.
 
 ## Nhịp chơi và lưu game
 
@@ -1849,5 +1854,5 @@ j\i  0  1  2  3  4  5  6  7  8  9
     **Vẽ lại công trình trên móng** (đã làm; xem mục cùng tên): mười bốn loại vẽ lại trên trọn móng; ba đền và ruộng nếp chủ dự án vẽ lại dáng, vẫn phóng theo móng.
 13. **Đường đi và đồ trang trí** (đã làm, xem mục cùng tên): bốn loại đường, bảy món trang trí, ba thẻ chọn trong bảng Xây dựng, thẻ Dọn trang trí.
 14. **Cổng thành, xưởng mộc, làng chài** (chủ dự án đã duyệt, đã làm; xem mục Kế hoạch cùng tên): gỗ là tài nguyên thứ năm, cá đỡ gạo ăn, cổng hút giặc trong vòng tường. Ba PR: gỗ và xưởng mộc, làng chài, cổng thành.
-15. **Vùng đất bên kia sông** (chủ dự án đã duyệt, đang làm; PR 1 đã làm, bản lưu v18; xem mục Kế hoạch cùng tên): lưới qua sông, cầu ba cấp, sương mù và trinh sát, đồn giặc bốn bậc theo chương, dẹp đồn chiếm vùng, đặc sản đất, bản làng, của chôn, giặc tới từ hai bờ và đồn biên.
+15. **Vùng đất bên kia sông** (chủ dự án đã duyệt, đã làm cả 5 PR, bản lưu v18; xem mục Kế hoạch cùng tên): lưới qua sông, cầu ba cấp, sương mù và trinh sát, đồn giặc bốn bậc theo chương, dẹp đồn chiếm vùng, đặc sản đất, bản làng, của chôn, giặc tới từ hai bờ và đồn biên.
 16. **Để sau**: chương 5 về Hai Bà Trưng (mới nhắc ở câu cuối chương 4); nhạc nền.

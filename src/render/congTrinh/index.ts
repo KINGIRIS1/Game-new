@@ -2,7 +2,7 @@
 
 import type * as THREE from 'three';
 import { isBridge, type BuildingType } from '../../game/defs';
-import { bridgeModel } from '../benKia';
+import { bridgeModel, makeBanLang, makeDonBien } from '../benKia';
 import { buildingModel, footScale } from '../buildings';
 import { BAI_DA } from './baiDa';
 import { BEN } from './ben';
@@ -50,6 +50,12 @@ export function lotModel(type: BuildingType, level: number): THREE.Group {
   // Cầu vẽ đúng cỡ móng: vắt vừa lòng sông, đầu cầu chạm hai bờ.
   if (isBridge(type)) {
     const g = bridgeModel(type, level);
+    g.userData.foot = 1;
+    return g;
+  }
+  // Nhà làng, đồn biên bên kia sông: vẽ thẳng trên móng.
+  if (type === 'banLang' || type === 'donBien') {
+    const g = type === 'banLang' ? makeBanLang() : makeDonBien();
     g.userData.foot = 1;
     return g;
   }

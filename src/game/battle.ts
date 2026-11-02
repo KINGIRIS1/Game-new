@@ -76,12 +76,16 @@ import {
 import { barracksList, guardPlan, heroPost } from './doanhTrai';
 import type { Building, GameState } from './game';
 import { openStart } from './khoanh';
-import { GRID, RIVER_DIVE, RIVER_START, inGrid, isRiver } from './map';
+import { FAR_FOREST, FOREST_BAND, GRID, RIVER_DIVE, RIVER_END, RIVER_START, farBankOf, inGrid, isRiver } from './map';
+import { bridgeUp, farSideBank, garrisonPosts } from './benKia';
 import { drowns, floodMap } from './terrain';
 
 export type Side = 'ta' | 'giac';
-/** Giặc Ân tới từ bìa rừng phía bắc hay tây; thủy quái tới từ sông phía nam hay đông. */
-export type RaidSide = 'bac' | 'tay' | 'nam' | 'dong';
+/**
+ * Giặc tới từ đâu: bìa rừng phía bắc, phía tây (bên này); dưới sông phía nam, phía đông (thủy quái, thủy binh); bên
+ * kia sông Đà (`namXa`), bên kia sông Thao (`dongXa`): giặc trên bộ ra từ bìa rừng bên ấy, thủy binh cập bờ bên ấy.
+ */
+export type RaidSide = 'bac' | 'tay' | 'nam' | 'dong' | 'namXa' | 'dongXa';
 /** Tướng ra trận cùng quân ta: Thánh Gióng, Sơn Tinh, An Dương Vương hoặc Cao Lỗ. Mỗi trận một tướng. */
 export type HeroKind = 'giong' | 'sonTinh' | 'anDuong' | 'caoLo';
 /** Lính thường, giặc, hoặc tướng. */
@@ -451,7 +455,8 @@ export function startBattle(state: GameState, wave: number, side: RaidSide, opts
   if (opts.huan) battle.huan = { ...opts.huan };
   const land = opts.land ?? null;
   battle.geo = RAID_SCALE;
-  const rand = rng(wave * 7919 + ['bac', 'tay', 'nam', 'dong'].indexOf(side) + 1);
+  const rand = rng(wave * 7919 + ['bac', 'tay', 'nam', 'dong', 'namXa', 'dongXa'].indexOf(side) + 1);
+  const far = farSideBank(side);
   // Giặc trên bộ ra từ dải ở bìa rừng (`raidSpawnBand`).
   const open = openStart(state);
   const lo = Math.min(open, fromRiver(24));
@@ -488,29 +493,49 @@ export function startBattle(state: GameState, wave: number, side: RaidSide, opts
     for (let i = 0; i < (forces[kind] ?? 0); i++) {
       // Giặc Ân ra từ bìa rừng: cạnh bắc (z nhỏ) hoặc cạnh tây (x nhỏ).
       // Thủy quái ngoi lên từ sông: phía nam (z lớn) hoặc phía đông (x lớn).
-      const along = lo + rand() * (RIVER_START - lo - 1);
+      // Bên kia sông: ra từ dải rừng ngoài cùng của bờ ấy, dọc suốt bờ.
+      const along = far ? FOREST_BAND + rand() * (RIVER_START - FOREST_BAND - 1) : lo + rand() * (RIVER_START - lo - 1);
       const r = rand();
-      const depth = flood ? RIVER_START + 0.4 + r * 1.4 : spawnDepth(open, r);
-      if (!flood) exitAt = Math.min(exitAt, depth - 0.6 * RAID_SCALE);
+      const depth = far ? FAR_FOREST + 0.3 + r * 1.4 : flood ? RIVER_START + 0.4 + r * 1.4 : spawnDepth(open, r);
+      if (!flood && !far) exitAt = Math.min(exitAt, depth - 0.6 * RAID_SCALE);
       const hp = ENEMIES[kind].hp * scale;
-      const alongX = side === 'bac' || side === 'nam';
+      const alongX = side === 'bac' || side === 'nam' || side === 'namXa';
       battle.fighters.push(newFighter(battle, 'giac', kind, alongX ? along : depth, alongX ? depth : along, hp));
       battle.total++;
     }
   }
-  if (!flood) battle.exitAt = Math.max(exitAt, -0.5);
-  // Lính người chơi bố trí giữ kinh đô ra trận từ doanh trại của mình; lính dự trữ ở lại.
+  if (!flood && !far) battle.exitAt = Math.max(exitAt, -0.5);
+  // Lính người chơi bố trí giữ kinh đô ra trận từ doanh trại của mình; lính dự trữ ở lại. Lính đóng ở đồn biên còn
+  // nguyên ra trận từ đồn ấy, bớt đi từ phần giữ kinh đô của các doanh trại (không thêm quân).
   const def = BUILDINGS.doanhTrai;
   const plan = guardPlan(state);
+  const spawnAt = (home: Building, kind: UnitType, n: number) => {
+    const hd = BUILDINGS[home.type];
+    for (let i = 0; i < n; i++) {
+      const x = home.x + hd.w / 2 + (rand() - 0.5) * hd.w;
+      const z = home.z + hd.d / 2 + (rand() - 0.5) * hd.d;
+      battle.fighters.push(newFighter(battle, 'ta', kind, x, z, UNITS[kind].hp * ownMult(battle, kind)));
+    }
+  };
+  const guarding = zeroArmy();
+  for (const g of plan.values()) for (const k of UNIT_TYPES) guarding[k] += g[k];
+  const posted = zeroArmy();
+  for (const { fort, army } of garrisonPosts(state)) {
+    for (const kind of UNIT_TYPES) {
+      const n = Math.min(army[kind], guarding[kind] - posted[kind]);
+      if (n <= 0) continue;
+      spawnAt(fort, kind, n);
+      posted[kind] += n;
+    }
+  }
   for (const barracks of barracksList(state)) {
     const guard = plan.get(barracks.id);
     if (!guard) continue;
     for (const kind of UNIT_TYPES) {
-      for (let i = 0; i < guard[kind]; i++) {
-        const x = barracks.x + def.w / 2 + (rand() - 0.5) * def.w;
-        const z = barracks.z + def.d / 2 + (rand() - 0.5) * def.d;
-        battle.fighters.push(newFighter(battle, 'ta', kind, x, z, UNITS[kind].hp * ownMult(battle, kind)));
-      }
+      // Phần đã ra từ đồn biên thì bớt dần ở các doanh trại.
+      const n = Math.max(0, guard[kind] - posted[kind]);
+      posted[kind] = Math.max(0, posted[kind] - guard[kind]);
+      spawnAt(barracks, kind, n);
     }
   }
   // Tướng ra trận từ sân doanh trại mình chỉ huy (không chỉ huy trại nào thì từ trại của Lạc tướng).
@@ -523,6 +548,8 @@ export function startBattle(state: GameState, wave: number, side: RaidSide, opts
   }
   return battle;
 }
+
+const zeroArmy = (): Record<UnitType, number> => ({ giao: 0, cung: 0, voi: 0, no: 0 });
 
 /**
  * Thủy binh Triệu xuống thuyền: mỗi thuyền chở BOAT.carry lính, thuyền dàn đều dọc mép sông xa ở phía nam
@@ -548,13 +575,16 @@ function boardBoats(
     count = Math.max(1, Math.floor(count * (1 - DEN_CUONG_BOATS)));
     crew = crew.slice(0, count * BOAT.carry);
   }
-  const alongX = side === 'nam';
-  const span = RIVER_START - 1 - lo;
+  const alongX = side === 'nam' || side === 'namXa';
+  const farSide = farSideBank(side) !== null;
+  // Cập bờ bên kia: thuyền dàn dọc suốt bờ ấy.
+  const from = farSide ? FOREST_BAND : lo;
+  const span = RIVER_START - 1 - from;
   for (let i = 0; i < count; i++) {
-    const along = lo + 0.5 + (span * (i + 0.5)) / count + (rand() - 0.5) * 0.8;
-    // Thuyền hiện ở mép luồng sông (`RIVER_DIVE`), chèo sang bờ mình.
-    const far = RIVER_DIVE - 0.6;
-    const bank = RIVER_START + 0.45;
+    const along = from + 0.5 + (span * (i + 0.5)) / count + (rand() - 0.5) * 0.8;
+    // Thuyền hiện ở mép luồng sông (`RIVER_DIVE`), chèo sang bờ mình (hay bờ bên kia).
+    const far = farSide ? RIVER_DIVE + 0.6 : RIVER_DIVE - 0.6;
+    const bank = farSide ? RIVER_END - 0.45 : RIVER_START + 0.45;
     battle.boats.push({
       x: alongX ? along : far,
       z: alongX ? far : along,
@@ -570,7 +600,7 @@ function boardBoats(
     const f = newFighter(battle, 'giac', kind, boat.x, boat.z, ENEMIES[kind].hp * scale);
     f.state = 'aboard';
     f.boat = b;
-    f.face = alongX ? Math.PI : -Math.PI / 2;
+    f.face = farSide ? (alongX ? 0 : Math.PI / 2) : alongX ? Math.PI : -Math.PI / 2;
     battle.fighters.push(f);
     battle.total++;
   });
@@ -595,14 +625,16 @@ function stepBoats(battle: Battle, dt: number): void {
       }
     }
     const crew = battle.fighters.filter((f) => f.boat === b && f.state === 'aboard');
-    const alongX = battle.side === 'nam';
+    const alongX = battle.side === 'nam' || battle.side === 'namXa';
+    // Cập bờ bên này thì đất ở phía x, z nhỏ; cập bờ bên kia thì đất ở phía x, z lớn.
+    const shore = farSideBank(battle.side) ? 0.3 : -0.3;
     crew.forEach((f, i) => {
       // Lính ngồi dọc thân thuyền; cập bờ thì nhảy lên mép đất, mỗi người một chỗ.
       const off = (i - (crew.length - 1) / 2) * 0.28;
       if (boat.landed) {
         f.state = 'move';
-        f.x = alongX ? boat.x + off * 1.4 : boat.x - 0.3;
-        f.z = alongX ? boat.z - 0.3 : boat.z + off * 1.4;
+        f.x = alongX ? boat.x + off * 1.4 : boat.x + shore;
+        f.z = alongX ? boat.z + shore : boat.z + off * 1.4;
       } else {
         f.x = alongX ? boat.x + off : boat.x;
         f.z = alongX ? boat.z : boat.z + off;
@@ -911,6 +943,19 @@ function chooseTarget(state: GameState, battle: Battle, f: Fighter): Building | 
     if (wall) return wall;
   }
   const live = state.buildings.filter(isTargetable);
+  const bank = farSideBank(battle.side);
+  if (bank) {
+    // Giặc bên kia sông đánh làng gần nhất trước; còn cầu thì qua cầu tìm kho, Điện; không thì phá công trình bên ấy.
+    const mine = live.filter((b) => farBankOf(b.x, b.z) === bank);
+    const across = bridgeUp(state, bank) ? live.filter((b) => farBankOf(b.x, b.z) === null) : [];
+    return (
+      pick(mine.filter((b) => b.type === 'banLang')) ??
+      pick(across.filter((b) => b.type === 'kho')) ??
+      pick(across.filter((b) => b.type === 'dien')) ??
+      pick(mine) ??
+      pick(across)
+    );
+  }
   return pick(live.filter((b) => b.type === 'kho')) ?? pick(live.filter((b) => b.type === 'dien')) ?? pick(live);
 }
 
@@ -999,6 +1044,9 @@ function damageBuilding(state: GameState, battle: Battle, attacker: Fighter, b: 
 
 /** Chỗ giặc bỏ chạy về: bìa rừng phía đã kéo tới, hay lặn xuống sông (bơi ra mép luồng sông rồi lặn). */
 function exitPoint(battle: Battle, f: Fighter): { x: number; z: number } {
+  // Bên kia sông: về bìa rừng ngoài cùng bên ấy.
+  if (battle.side === 'namXa') return { x: f.x, z: GRID + 0.5 };
+  if (battle.side === 'dongXa') return { x: GRID + 0.5, z: f.z };
   if (battle.side === 'nam') return { x: f.x, z: RIVER_DIVE + 0.5 };
   if (battle.side === 'dong') return { x: RIVER_DIVE + 0.5, z: f.z };
   const out = (battle.exitAt ?? -0.5) - 1;
@@ -1007,6 +1055,8 @@ function exitPoint(battle: Battle, f: Fighter): { x: number; z: number } {
 
 /** Giặc bỏ chạy đã thoát chưa: lặn xuống sông, hay lùi qua vạch xuất phát ở bìa rừng. */
 function escaped(battle: Battle, f: Fighter): boolean {
+  if (battle.side === 'namXa') return f.z > GRID - 0.3;
+  if (battle.side === 'dongXa') return f.x > GRID - 0.3;
   if (f.x < 0 || f.z < 0 || f.x > RIVER_DIVE || f.z > RIVER_DIVE) return true;
   const line = battle.exitAt ?? -0.5;
   if (battle.side === 'bac') return f.z < line;

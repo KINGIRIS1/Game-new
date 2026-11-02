@@ -16,7 +16,7 @@ import { buyHuan } from './game/thuThach';
 import { markStory, pendingStory } from './game/story';
 import { footprintTop } from './game/terrain';
 import { BUILDINGS, RESOURCE_IDS, STAGES, UNIT_TYPES, U_NO, isBridge, isDecor, isRoad, type BuildingType, type Cost, type ResourceId, type Row, type SkillId, type UnitType } from './game/defs';
-import { CAMPS, benKiaOpen, bridgeSnap, campHero, campTier, canStartCamp, joinVillage, plotAt, poiAt, sendScout, startCamp } from './game/benKia';
+import { CAMPS, benKiaOpen, bridgeSnap, campHero, campTier, canStartCamp, joinVillage, plotAt, poiAt, sendScout, setGarrison, startCamp } from './game/benKia';
 import { fmt } from './ui/format';
 import {
   canAfford,
@@ -60,7 +60,7 @@ import {
 } from './game/game';
 import { isOpen, khoanhOf, khoanhWood, openKhoanh, openable } from './game/khoanh';
 import { cayDaAt, clearCayDa } from './game/cayDa';
-import { GRID, RIVER_START } from './game/map';
+import { GRID, RIVER_START, farBankOf } from './game/map';
 import { fromCode, loadFromStorage, saveFileName, saveToStorage, toCode } from './game/save';
 import { HALF, RESOLUTIONS, World, type Resolution } from './render/world';
 import { vi } from './text/vi';
@@ -844,6 +844,17 @@ function start(): void {
         if (!r.ok) return fail(r.reason);
         play('claim');
         hud.toast(vi.ui.commandAssigned(vi.ui.tuongNames[a.tuong]));
+        commit();
+        return;
+      }
+
+      case 'garrisonDelta': {
+        const b = findBuilding(state, a.id);
+        const bank = b ? farBankOf(b.x, b.z) : null;
+        if (!bank) return;
+        const r = setGarrison(state, bank, a.unit, state.benKia.garrison[bank][a.unit] + a.delta);
+        if (!r.ok) return fail(r.reason);
+        play('tap');
         commit();
         return;
       }

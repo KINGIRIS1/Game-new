@@ -11,7 +11,7 @@ import { dienLevel, occupancy, type Building, type GameState } from '../game/gam
 import { giongLook, type GiongLook } from '../game/giong';
 import { KHOANH_N, khoanhOf, khoanhOrigin, openMask, openStart, openable } from '../game/khoanh';
 import { FAR_PLOTS, benKiaOpen, bridgeEnds, bridgeTo, plotAt, plotOf, plotOrigin, poiAt, poiPlots, type Dat } from '../game/benKia';
-import { DIEN_HOME, FOREST_BAND, GRID, KHOANH, RIVER_END, RIVER_START, baseHeights, farBankOf, isNearBank, isRiver, riverDistance, riverFacing } from '../game/map';
+import { DIEN_HOME, FAR_FOREST, FOREST_BAND, GRID, KHOANH, RIVER_END, RIVER_START, baseHeights, farBankOf, isNearBank, isRiver, riverDistance, riverFacing } from '../game/map';
 import { sonLook, type SonLook } from '../game/son';
 import { floodMap } from '../game/terrain';
 import { tetOpen } from '../game/tet';
@@ -1289,6 +1289,8 @@ export class World {
       const poi = poiAt(id)!;
       // Đất đặc sản về tay ta thì thôi vẽ dấu (đất đã pha màu, chừa chỗ dựng); của chôn đào rồi thì hết gò.
       if ((poi.kind === 'dacSan' && k.open.includes(id)) || (poi.kind === 'cua' && k.dug.includes(id))) continue;
+      // Làng về theo thì nhà làng là công trình (`banLang`), vẽ như công trình khác.
+      if (poi.kind === 'lang' && k.villages.includes(id)) continue;
       const o = plotOrigin(id);
       const marker = poiMarker(poi, poi.kind === 'lang' ? k.villages.includes(id) : k.cleared.includes(id), id);
       marker.position.set(wx(o.x) + 2.5, this.groundY(o.x + 2, o.z + 2), wz(o.z) + 2.5);
@@ -1847,6 +1849,17 @@ export class World {
     } else if (side === 'tay') {
       this.warning.scale.set(deep, 1, along);
       this.warning.position.set(wx(0) + mid, 1.0, wz(band.lo) + along / 2);
+    } else if (side === 'namXa' || side === 'dongXa') {
+      // Bìa rừng ngoài cùng bên kia sông, dọc suốt bờ.
+      const span = RIVER_START - FOREST_BAND;
+      const depth = GRID - FAR_FOREST + 1;
+      if (side === 'namXa') {
+        this.warning.scale.set(span, 1, depth);
+        this.warning.position.set(wx(FOREST_BAND) + span / 2, 1.0, wz(FAR_FOREST) + depth / 2 - 0.5);
+      } else {
+        this.warning.scale.set(depth, 1, span);
+        this.warning.position.set(wx(FAR_FOREST) + depth / 2 - 0.5, 1.0, wz(FOREST_BAND) + span / 2);
+      }
     } else if (side === 'nam') {
       this.warning.scale.set(len, 1, 2.6);
       this.warning.position.set(wx(0) + len / 2, WATER_Y + 0.08, wz(RIVER_START) + 1.4);
@@ -1875,7 +1888,16 @@ export class World {
     const along = (band.lo + RIVER_START) / 2;
     const deep = band.to + 3;
     const bank = RIVER_START - 4;
-    const at: Record<RaidSide, [number, number]> = { bac: [along, deep], tay: [deep, along], nam: [along, bank], dong: [bank, along] };
+    // Bên kia sông: bìa rừng ngoài cùng bên ấy, quãng giữa bờ.
+    const farDeep = FAR_FOREST - 3;
+    const at: Record<RaidSide, [number, number]> = {
+      bac: [along, deep],
+      tay: [deep, along],
+      nam: [along, bank],
+      dong: [bank, along],
+      namXa: [RIVER_START / 2, farDeep],
+      dongXa: [farDeep, RIVER_START / 2],
+    };
     const [x, z] = at[side];
     this.panGoal = new THREE.Vector3(wx(x), 0, wz(z));
   }

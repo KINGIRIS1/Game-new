@@ -254,3 +254,89 @@ export function poiMarker(poi: Poi, done: boolean, seed: number): THREE.Group {
   g.add(m.group());
   return g;
 }
+
+/**
+ * Nhà làng bên kia sông đã về theo (móng 3×3, gốc ở giữa): ba nhà sàn nhỏ quanh sân, cờ đỏ của ta, hai người dân.
+ * Dân đứng yên trong dáng làm việc (bản tĩnh) cho nhẹ máy.
+ */
+export function makeBanLang(): THREE.Group {
+  const g = new THREE.Group();
+  for (const [x, z, ry] of [
+    [-0.8, -0.6, 0.3],
+    [0.75, -0.45, -0.4],
+    [0, 0.75, 0.1],
+  ]) {
+    const house = makeNhaSan(1);
+    house.scale.setScalar(0.55);
+    house.position.set(x, 0, z);
+    house.rotation.y = ry;
+    g.add(house);
+  }
+  const m = new ToonModel();
+  m.plain.cyl(0.025, 0.025, 1.5, C.woodDark, 1.05, 0.75, 0.95, undefined, 5);
+  m.band.box(0.45, 0.3, 0.03, C.red, 1.29, 1.32, 0.95);
+  // Sân đất nện giữa làng.
+  m.plain.cyl(0.75, 0.8, 0.03, C.earth, 0, 0.015, 0, undefined, 12);
+  g.add(m.group());
+  for (const [x, z, ry, job] of [
+    [-0.15, 0.05, 0.6, 'nong'],
+    [0.85, 0.35, -1.2, 'phuNu'],
+  ] as [number, number, number, Job][]) {
+    const man = makeWorker(job);
+    man.position.set(x, 0, z);
+    man.rotation.y = ry;
+    man.scale.setScalar(0.85 * PERSON_SCALE);
+    (man.userData.pose as Poser | undefined)?.({ act: 'stand', time: x * 3 });
+    g.add(man);
+  }
+  return g;
+}
+
+/**
+ * Đồn biên giữ bờ bên kia (móng 4×4, gốc ở giữa): rào cọc nhọn vòng quanh chừa cổng phía sông, chòi canh mái tranh,
+ * hai lán lính, cờ đỏ của ta, giá giáo.
+ */
+export function makeDonBien(): THREE.Group {
+  const g = new THREE.Group();
+  const m = new ToonModel();
+  const p = m.plain;
+  // Sân đất nện.
+  p.box(3.5, 0.04, 3.5, C.earth, 0, 0.02, 0);
+  // Rào cọc nhọn bốn mặt, chừa cổng giữa mặt −z (phía sông khi xoay).
+  const half = 1.7;
+  for (let k = 0; k <= 16; k++) {
+    const t = -half + (k * 2 * half) / 16;
+    for (const [x, z] of [
+      [t, half],
+      [-half, t],
+      [half, t],
+      [t, -half],
+    ]) {
+      if (z === -half && Math.abs(t) < 0.45) continue;
+      p.cyl(0.06, 0.07, 0.62, C.woodDark, x, 0.31, z, undefined, 5);
+      p.cone(0.075, 0.18, C.woodLight, x, 0.71, z, undefined, 5);
+    }
+  }
+  // Chòi canh ở góc sau: bốn cột, sàn, mái tranh.
+  const cx = 1.05;
+  const cz = 1.05;
+  for (const dx of [-0.3, 0.3]) for (const dz of [-0.3, 0.3]) p.cyl(0.045, 0.05, 1.5, C.wood, cx + dx, 0.75, cz + dz, undefined, 6);
+  p.box(0.8, 0.08, 0.8, C.woodLight, cx, 1.2, cz);
+  boatRoof(m, roofFor(1), { length: 0.95, width: 0.85, lift: 0.18, drop: 0.25, thickness: 0.05 }, cx, 1.75, cz);
+  // Hai lán lính mái tranh dài.
+  for (const [x, z] of [
+    [-0.9, 0.85],
+    [-0.9, -0.35],
+  ]) {
+    p.box(1.1, 0.4, 0.6, C.woodLight, x, 0.2, z);
+    boatRoof(m, roofFor(1), { length: 1.3, width: 0.8, lift: 0.1, drop: 0.2, thickness: 0.05 }, x, 0.62, z);
+  }
+  // Giá giáo cạnh cổng.
+  for (let k = 0; k < 4; k++) p.cyl(0.015, 0.015, 1.1, C.woodDark, 0.7 + k * 0.12, 0.55, -1.15, [0.12, 0, 0], 4);
+  p.box(0.6, 0.05, 0.05, C.woodDark, 0.88, 0.85, -1.1);
+  // Cờ đỏ của ta trên chòi canh.
+  p.cyl(0.025, 0.025, 0.9, C.woodDark, cx + 0.3, 2.15, cz + 0.3, undefined, 5);
+  m.band.box(0.42, 0.28, 0.03, C.red, cx + 0.52, 2.45, cz + 0.3);
+  g.add(m.group());
+  return g;
+}

@@ -5,7 +5,7 @@ import { startBattle, stepBattle, type Battle, type RaidSide } from './battle';
 import { updateCampaign } from './campaign';
 import { initialCaoLo } from './caoLo';
 import { initialCayDa, updateCayDa, type CayDaState } from './cayDa';
-import { bridgeFit, bridgeheadCells, cutOff, farFactor, initialBenKia, openBridgehead, updateBenKia, villagesOutput, type BenKiaState } from './benKia';
+import { bridgeFit, bridgeheadCells, cutOff, farFactor, farRaidBank, fortFit, initialBenKia, landRaidSide, openBridgehead, updateBenKia, villagesOutput, type BenKiaState } from './benKia';
 import { huanTiers, initialThuThach } from './thuThach';
 import { inChapter4 } from './chuong4';
 import { advJoined, initialAdv, inChapter3, ruaVangCame, wallRings } from './coLoa';
@@ -76,7 +76,7 @@ import {
 } from './defs';
 import { capOf, generals } from './doanhTrai';
 import { START_KHOANH, isOpen, openMask, openStart } from './khoanh';
-import { DIEN_HOME, GRID, baseHeights, inGrid, touchesRiver } from './map';
+import { DIEN_HOME, GRID, baseHeights, farBankOf, inGrid, touchesRiver } from './map';
 
 export interface Building {
   id: number;
@@ -418,7 +418,8 @@ export type FailReason =
   | 'donDaDep'
   | 'chanLoiCau'
   | 'daVeTheo'
-  | 'chuaVeTay';
+  | 'chuaVeTay'
+  | 'phaiBenKia';
 
 export type Result<T = undefined> = { ok: true; value: T } | { ok: false; reason: FailReason };
 
@@ -787,6 +788,11 @@ function fitsAt(state: GameState, type: BuildingType, x: number, z: number, grid
   const def = BUILDINGS[type];
   // Ô đầu cầu (hai bờ) chừa làm lối lên cầu; đường đi thì trải được.
   if (!isRoad(type) && blocksBridge(state, x, z, def.w, def.d)) return 'chanLoiCau';
+  // Đồn biên chỉ dựng bên kia sông, mỗi bờ một.
+  if (type === 'donBien') {
+    const why = fortFit(state, x, z);
+    if (why) return why;
+  }
   const open = openMask(state);
   const over = replacedWall(state, type, x, z);
   for (let dx = 0; dx < def.w; dx++) {
@@ -1029,6 +1035,12 @@ export function moveCost(b: Pick<Building, 'type'>): Cost {
 function fitsWithout(state: GameState, b: Building, x: number, z: number, grid: Int32Array): FailReason | null {
   const def = BUILDINGS[b.type];
   if (!isRoad(b.type) && blocksBridge(state, x, z, def.w, def.d)) return 'chanLoiCau';
+  // Đồn biên dời đi vẫn phải ở bên kia sông, mỗi bờ một.
+  if (b.type === 'donBien') {
+    const bank = farBankOf(x, z);
+    if (!bank || farBankOf(x + def.w - 1, z + def.d - 1) !== bank) return 'phaiBenKia';
+    if (state.buildings.some((o) => o.id !== b.id && o.type === 'donBien' && farBankOf(o.x, o.z) === bank)) return 'datGioiHan';
+  }
   const open = openMask(state);
   for (let dx = 0; dx < def.w; dx++) {
     for (let dz = 0; dz < def.d; dz++) {
@@ -1487,8 +1499,16 @@ function updateRaid(state: GameState, ms: number): void {
     raid.foe = nextFoe(state);
     raid.phase = 'warning';
     const roll = (raid.wave * 2654435761) % 7 < 4;
-    // Lũ và thủy binh tới từ sông (phía nam hay đông), giặc trên bộ tới từ bìa rừng (phía bắc hay tây).
-    raid.side = raid.foe === 'thuy' || raid.foe === 'thuyBinh' ? (roll ? 'nam' : 'dong') : roll ? 'bac' : 'tay';
+    // Lũ và thủy binh tới từ sông (phía nam hay đông), giặc trên bộ tới từ bìa rừng (phía bắc hay tây). Bờ bên kia đã
+    // có công trình thì cứ ba đợt có một đợt tới bờ bên kia (`farRaidBank`): giặc trên bộ ra từ bìa rừng bên ấy, thủy
+    // binh cập bờ ấy. Lũ vẫn từ sông.
+    const far = raid.foe === 'thuyBinh' ? farRaidBank(state, raid.wave) : null;
+    raid.side =
+      raid.foe === 'thuy'
+        ? roll ? 'nam' : 'dong'
+        : raid.foe === 'thuyBinh'
+          ? far ? (far === 'nam' ? 'namXa' : 'dongXa') : roll ? 'nam' : 'dong'
+          : landRaidSide(state, raid.wave, roll);
     raid.startsAt = state.clock + RAID_WARNING_MS;
   }
   if (raid.phase === 'warning' && state.clock >= raid.startsAt) {

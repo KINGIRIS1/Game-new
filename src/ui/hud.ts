@@ -115,7 +115,8 @@ import { sonHtml } from './son';
 import { blessingHtml, tetHtml } from './tet';
 import { khoanhHtml } from './khoanh';
 import { benKiaHtml } from './benKia';
-import { campTier, cutOff, dacSanOf } from '../game/benKia';
+import { campTier, cutOff, dacSanOf, plotAt, villageOutput } from '../game/benKia';
+import { farBankOf } from '../game/map';
 import { mauHtml } from './mau';
 import type { MauId } from '../game/mau';
 
@@ -155,6 +156,7 @@ const BUILD_MENU: BuildingType[] = [
   'denCoLoa',
   'cauSongDa',
   'cauSongThao',
+  'donBien',
 ];
 /** Nhóm thẻ trong bảng Xây dựng: công trình, đường đi, đồ trang trí. */
 const BUILD_GROUPS: { key: keyof typeof vi.ui.buildGroups; types: BuildingType[] }[] = [
@@ -235,6 +237,7 @@ export type HudAction =
   | { kind: 'train'; unit: UnitType }
   | { kind: 'assignTuong'; id: number; tuong: TuongId }
   | { kind: 'guardDelta'; id: number; unit: UnitType; delta: 1 | -1 }
+  | { kind: 'garrisonDelta'; id: number; unit: UnitType; delta: 1 | -1 }
   | { kind: 'guardAuto' }
   | { kind: 'repair'; id: number }
   | { kind: 'repairAll' }
@@ -429,6 +432,8 @@ export class Hud {
         return this.onAction({ kind: 'assignTuong', id, tuong: el.dataset.tuong as TuongId });
       case 'guardDelta':
         return this.onAction({ kind: 'guardDelta', id, unit: el.dataset.unit as UnitType, delta: Number(el.dataset.delta) < 0 ? -1 : 1 });
+      case 'garrisonDelta':
+        return this.onAction({ kind: 'garrisonDelta', id, unit: el.dataset.unit as UnitType, delta: Number(el.dataset.delta) < 0 ? -1 : 1 });
       case 'forgeArms':
         return this.onAction({ kind: 'forgeArms', unit: el.dataset.unit as UnitType });
       case 'applyMau':
@@ -580,7 +585,7 @@ export class Hud {
   updateBanners(state: GameState): void {
     const parts: string[] = [];
     const raid = state.raid;
-    const sideName = { bac: vi.ui.sideBac, tay: vi.ui.sideTay, nam: vi.ui.sideNam, dong: vi.ui.sideDong }[raid.side];
+    const sideName = { bac: vi.ui.sideBac, tay: vi.ui.sideTay, nam: vi.ui.sideNam, dong: vi.ui.sideDong, namXa: vi.ui.sideNamXa, dongXa: vi.ui.sideDongXa }[raid.side];
     if (raid.phase === 'warning' && raid.foe === 'thuy') {
       const secs = Math.max(0, Math.ceil((raid.startsAt - state.clock) / 1000));
       parts.push(`<div class="banner bad">🌧️ ${vi.ui.floodWarning(sideName, secs, nextFloodLevel(state))}
@@ -756,6 +761,26 @@ export class Hud {
     this.sheet = { kind: 'mau' };
     this.mauArmed = null;
     this.refreshSheet(state);
+  }
+
+  /** Mục lính đóng ở đồn biên: mỗi binh chủng một hàng, bớt, thêm (không quá quân đang có, trừ phần đóng ở bờ kia). */
+  private garrisonHtml(state: GameState, b: Building): string {
+    const bank = farBankOf(b.x, b.z);
+    if (!bank) return '';
+    const here = state.benKia.garrison[bank];
+    const other = bank === 'nam' ? state.benKia.garrison.dong : state.benKia.garrison.nam;
+    const owned = UNIT_TYPES.filter((k) => state.troops[k] > 0 || here[k] > 0);
+    const rows = owned.map((k) => {
+      const max = Math.max(0, state.troops[k] - other[k]);
+      return `<div class="unit-row army">
+        <span class="unit-icon">${vi.units[k].icon}</span>
+        <span class="unit-info"><b>${vi.units[k].name}</b><small>${vi.ui.haveTroops(state.troops[k])}</small></span>
+        <button class="step" data-act="garrisonDelta" data-id="${b.id}" data-unit="${k}" data-delta="-1" ${here[k] > 0 ? '' : 'disabled'} aria-label="Bớt một lính đóng ở đồn">−</button>
+        <b class="count">${here[k]}</b>
+        <button class="step" data-act="garrisonDelta" data-id="${b.id}" data-unit="${k}" data-delta="1" ${here[k] < max ? '' : 'disabled'} aria-label="Thêm một lính đóng ở đồn">+</button>
+      </div>`;
+    });
+    return `<h3>🛡️ ${vi.benKia.garrisonTitle}</h3><p class="muted">${vi.benKia.garrisonHint}</p>${owned.length ? `<div class="units">${rows.join('')}</div>` : `<p class="why">${vi.ui.noTroops}</p>`}`;
   }
 
   /** Bảng Đất bên kia sông của khoảnh bên kia `id`. */
@@ -968,6 +993,12 @@ export class Hud {
     if (b.type === 'langChai') {
       rows.push(`<div class="stat"><span>${vi.ui.fishHere}</span><span>${fishRate(fishOf(b))}</span></div>`);
       if (b.level < def.maxLevel) rows.push(`<div class="stat"><span>${vi.ui.nextLevel}</span><span>${fishRate(CA_PER_MIN[b.level])}</span></div>`);
+    }
+    if (b.type === 'donBien') rows.push(this.garrisonHtml(state, b));
+    if (b.type === 'banLang') {
+      const id = plotAt(b.x, b.z);
+      if (id !== null) rows.push(`<div class="stat"><span>${vi.benKia.villageMakes}</span><span>${b.damaged ? '—' : prodHtml(villageOutput(state, id))}</span></div>`);
+      if (b.damaged) rows.push(`<p class="why warn">${vi.benKia.villageWrecked}</p>`);
     }
     if (b.type === 'congThanh') {
       const shot = (lv: number) => vi.ui.gateShot(CONG_THANH.dmg[lv - 1], CONG_THANH.targets[lv - 1]);
