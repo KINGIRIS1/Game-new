@@ -15,8 +15,8 @@ import { inChapter2, offerGift } from './game/son';
 import { buyHuan } from './game/thuThach';
 import { markStory, pendingStory } from './game/story';
 import { footprintTop } from './game/terrain';
-import { BUILDINGS, RESOURCE_IDS, STAGES, UNIT_TYPES, U_NO, isBridge, isDecor, isRoad, type BuildingType, type Cost, type ResourceId, type SkillId } from './game/defs';
-import { benKiaOpen, bridgeSnap, plotAt, sendScout } from './game/benKia';
+import { BUILDINGS, RESOURCE_IDS, STAGES, UNIT_TYPES, U_NO, isBridge, isDecor, isRoad, type BuildingType, type Cost, type ResourceId, type Row, type SkillId, type UnitType } from './game/defs';
+import { CAMPS, benKiaOpen, bridgeSnap, campHero, campTier, canStartCamp, plotAt, sendScout, startCamp } from './game/benKia';
 import { fmt } from './ui/format';
 import {
   canAfford,
@@ -240,9 +240,13 @@ function start(): void {
     }
   };
 
+  /** Quân đang hành quân qua cầu tới đồn giặc: chừng ba giây rồi mới sang bãi chiến. */
+  let marching: { plot: number; army: Record<UnitType, number>; rows: Record<UnitType, Row>; at: number } | null = null;
+  const MARCH_MS = 3200;
+
   world.view.onTap = (cx, cy) => {
-    // Trên bãi chiến chỉ xem, không chọn gì.
-    if (world.inField) return;
+    // Trên bãi chiến chỉ xem, không chọn gì; đang hành quân cũng vậy.
+    if (world.inField || marching) return;
     const hero: string | null = mode.kind === 'view' ? world.pickHero(cx, cy) : null;
     if (hero) {
       play('tap');
@@ -431,6 +435,20 @@ function start(): void {
         play('tap');
         hud.showMau(state);
         return;
+
+      case 'marchCamp': {
+        const check = canStartCamp(state, a.plot);
+        if (!check.ok) return fail(check.reason);
+        if (UNIT_TYPES.every((k) => !a.army[k]) && !campHero(state, a.plot)) return fail('chuaChonQuan');
+        hud.closeSheet();
+        select(null);
+        play('claim');
+        navigator.vibrate?.(40);
+        hud.toast(vi.benKia.campMarching);
+        world.startMarch(state, a.plot, a.army, MARCH_MS / 1000);
+        marching = { plot: a.plot, army: a.army, rows: a.rows, at: performance.now() + MARCH_MS };
+        return;
+      }
 
       case 'trinhSat': {
         const r = sendScout(state, a.id);
@@ -1026,7 +1044,8 @@ function start(): void {
       if (mode.kind !== 'view') exitMode();
       select(null);
       hud.closeCampaign();
-      world.showField(STAGES[battle.wave - 1].terrain);
+      const don = battle.camp !== undefined ? campTier(battle.camp) : null;
+      world.showField(don ? CAMPS[don].terrain : STAGES[battle.wave - 1].terrain);
     } else if (!battle && world.inField) {
       world.showField(null);
       hud.closeStageResult();
@@ -1096,6 +1115,15 @@ function start(): void {
       state.lastSeen = wall;
     }
 
+    if (marching && now >= marching.at) {
+      // Hành quân xong: sang bãi chiến đánh đồn.
+      const m = marching;
+      marching = null;
+      world.stopMarch();
+      const r = startCamp(state, m.plot, m.army, m.rows);
+      if (!r.ok) fail(r.reason);
+      commit();
+    }
     world.updateFlood(state);
     world.updateBattle(state.raid.battle, dt);
     watchCampaign();
@@ -1151,6 +1179,14 @@ function start(): void {
     },
     place: (type: BuildingType, x: number, z: number) => {
       const r = place(state, type, x, z);
+      commit();
+      return r;
+    },
+    /** Chỉ chạy cảnh quân hành quân qua cầu tới đồn ở khoảnh `plot` (không vào trận), để chụp thử. */
+    marchPreview: (plot: number, army: Record<UnitType, number>, secs = 8) => world.startMarch(state, plot, army, secs),
+    /** Điều quân đánh đồn ở khoảnh `plot` ngay (bỏ qua cảnh hành quân), để chụp thử bãi chiến bờ bên kia. */
+    camp: (plot: number) => {
+      const r = startCamp(state, plot, { ...state.troops }, state.campaign.rows);
       commit();
       return r;
     },

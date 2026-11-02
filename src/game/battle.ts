@@ -252,6 +252,8 @@ export interface Battle {
   /** Bậc huân công của từng nhánh (0–3): thêm máu và sức đánh. Bản lưu cũ không có thì coi như 0. */
   huan?: Record<HuanBranch, number>;
   /** Trận thử thách phó bản: kiểu thử thách. */
+  /** Trận ngoài bãi đánh đồn giặc bên kia sông (khoảnh có đồn) thay cho một màn phó bản; `wave` khi ấy là 0. */
+  camp?: number;
   challenge?: ChallengeKind;
   /** Thử thách Giặc dữ: sát thương giặc gây cho quân ta nhân chừng này. */
   fury?: number;
@@ -646,6 +648,8 @@ export interface FieldSetup {
   arms?: Record<UnitType, number>;
   huan?: Record<HuanBranch, number>;
   /** Trận thử thách: kiểu thử thách; Giặc dữ thì sát thương giặc nhân `fury`. */
+  /** Đánh đồn giặc bên kia sông (khoảnh có đồn) thay cho màn phó bản. */
+  camp?: number;
   challenge?: ChallengeKind;
   fury?: number;
 }
@@ -667,6 +671,7 @@ export function startFieldBattle(setup: FieldSetup): Battle {
   if (setup.arms) battle.arms = { ...setup.arms };
   if (setup.huan) battle.huan = { ...setup.huan };
   if (setup.challenge) battle.challenge = setup.challenge;
+  if (setup.camp !== undefined) battle.camp = setup.camp;
   if (setup.fury) battle.fury = setup.fury;
   const rand = rng(setup.id * 7919 + setup.stage);
   const ours: Record<Row, FighterKind[]> = { tien: [], trung: [], hau: [] };

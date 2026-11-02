@@ -336,6 +336,8 @@ export const vi = {
     cauHu: 'Cầu đang hư, sửa cầu rồi trinh sát mới qua được',
     xaQua: 'Xa quá, hãy dò dần từ khoảnh đã biết',
     trinhSatBan: 'Trinh sát đều đang đi, chờ họ về',
+    donDaDep: 'Đồn này đã dẹp xong',
+    chanLoiCau: 'Chừa đầu cầu làm lối lên cầu',
   } satisfies Record<FailReason, string>,
 
   quests: {
@@ -814,7 +816,15 @@ export const vi = {
     } satisfies Record<Tier, { name: string; icon: string }>,
     donDesc: (n: number) => `Giặc đóng đồn giữ ${n} khoảnh đất quanh đây. Dẹp đồn thì cả vùng ấy về tay ta.`,
     donNeed: { 1: 'Đánh được từ Điện cấp 4', 2: 'Đánh được từ chương 2', 3: 'Đánh được từ chương 3', 4: 'Đánh được từ chương 4' } satisfies Record<Tier, string>,
-    donSoon: 'Phần điều quân dẹp đồn sắp có.',
+    donCleared: 'Đồn đã dẹp, đất quanh đây đã về tay ta.',
+    campPrepare: 'Điều quân',
+    campMarching: 'Quân ta đang qua cầu…',
+    campWon: 'Dẹp xong đồn giặc',
+    campLost: 'Chưa dẹp được đồn giặc',
+    campCleared: 'Đồn giặc tan, cả vùng quanh đồn về tay ta.',
+    campReward: 'Thưởng (một lần)',
+    campArmyTitle: (don: string) => `Điều quân đánh ${don}`,
+    campRegion: (n: number) => `Dẹp xong thì ${n} khoảnh đất quanh đồn về tay ta.`,
     lang: {
       lua: { name: 'Làng trồng lúa', icon: '🏘️' },
       oc: { name: 'Làng mò ốc', icon: '🐚' },

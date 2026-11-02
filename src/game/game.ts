@@ -5,7 +5,7 @@ import { startBattle, stepBattle, type Battle, type RaidSide } from './battle';
 import { updateCampaign } from './campaign';
 import { initialCaoLo } from './caoLo';
 import { initialCayDa, updateCayDa, type CayDaState } from './cayDa';
-import { bridgeFit, initialBenKia, openBridgehead, updateBenKia, type BenKiaState } from './benKia';
+import { bridgeFit, bridgeheadCells, initialBenKia, openBridgehead, updateBenKia, type BenKiaState } from './benKia';
 import { huanTiers, initialThuThach } from './thuThach';
 import { inChapter4 } from './chuong4';
 import { advJoined, initialAdv, inChapter3, ruaVangCame, wallRings } from './coLoa';
@@ -160,6 +160,8 @@ export interface StageResult {
   gift?: GiftId;
   /** Trận thử thách: kiểu thử thách, huân công được (0 khi đã thắng thử thách này rồi, hay thua). */
   challenge?: { kind: ChallengeKind; huan: number };
+  /** Trận đánh đồn giặc bên kia sông (khoảnh có đồn), `stage` khi ấy là 0. */
+  camp?: number;
 }
 
 export interface CampaignState {
@@ -412,7 +414,9 @@ export type FailReason =
   | 'canCau'
   | 'cauHu'
   | 'xaQua'
-  | 'trinhSatBan';
+  | 'trinhSatBan'
+  | 'donDaDep'
+  | 'chanLoiCau';
 
 export type Result<T = undefined> = { ok: true; value: T } | { ok: false; reason: FailReason };
 
@@ -760,6 +764,8 @@ export function needsGeneral(state: GameState, type: BuildingType): boolean {
 function fitsAt(state: GameState, type: BuildingType, x: number, z: number, grid: Int32Array): FailReason | null {
   if (isBridge(type)) return bridgeFit(state, type, x, z) ?? (bridgeClear(type, x, z, grid) ? null : 'datBiChiem');
   const def = BUILDINGS[type];
+  // Ô đầu cầu (hai bờ) chừa làm lối lên cầu; đường đi thì trải được.
+  if (!isRoad(type) && blocksBridge(state, x, z, def.w, def.d)) return 'chanLoiCau';
   const open = openMask(state);
   const over = replacedWall(state, type, x, z);
   for (let dx = 0; dx < def.w; dx++) {
@@ -772,6 +778,14 @@ function fitsAt(state: GameState, type: BuildingType, x: number, z: number, grid
   }
   if (def.nearRiver && !touchesRiver(x, z, def.w, def.d)) return 'phaiSatSong';
   return null;
+}
+
+/** Móng (x, z, w, d) chồng lên ô đầu cầu của một cầu đang có. */
+function blocksBridge(state: GameState, x: number, z: number, w: number, d: number): boolean {
+  if (!state.buildings.some((b) => isBridge(b.type))) return false;
+  const heads = bridgeheadCells(state);
+  for (let dx = 0; dx < w; dx++) for (let dz = 0; dz < d; dz++) if (heads.has((z + dz) * GRID + x + dx)) return true;
+  return false;
 }
 
 /** Ô sông dưới cầu chưa có gì (cầu khác chẳng hạn). */
@@ -993,6 +1007,7 @@ export function moveCost(b: Pick<Building, 'type'>): Cost {
 /** Ô (x, z) có đặt được công trình `b` không, coi như `b` đã nhấc khỏi chỗ cũ. */
 function fitsWithout(state: GameState, b: Building, x: number, z: number, grid: Int32Array): FailReason | null {
   const def = BUILDINGS[b.type];
+  if (!isRoad(b.type) && blocksBridge(state, x, z, def.w, def.d)) return 'chanLoiCau';
   const open = openMask(state);
   for (let dx = 0; dx < def.w; dx++) {
     for (let dz = 0; dz < def.d; dz++) {

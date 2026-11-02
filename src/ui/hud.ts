@@ -114,6 +114,7 @@ import { sonHtml } from './son';
 import { blessingHtml, tetHtml } from './tet';
 import { khoanhHtml } from './khoanh';
 import { benKiaHtml } from './benKia';
+import { campTier } from '../game/benKia';
 import { mauHtml } from './mau';
 import type { MauId } from '../game/mau';
 
@@ -208,6 +209,7 @@ export type HudAction =
   | { kind: 'applyMau'; mau: MauId }
   | { kind: 'phatRung'; id: number }
   | { kind: 'trinhSat'; id: number }
+  | { kind: 'marchCamp'; plot: number; army: Record<UnitType, number>; rows: Record<UnitType, Row> }
   | { kind: 'offerBanh'; banh: Banh }
   | { kind: 'confirmPlace' }
   | { kind: 'cancelPlace' }
@@ -330,6 +332,8 @@ export class Hud {
   private readonly fieldTop: HTMLElement;
   private readonly fieldBar: HTMLElement;
   private camp: CampaignView | null = null;
+  /** Đang chọn quân đánh đồn bên kia sông (trong bảng Đất bên kia sông). */
+  private donPick: ArmyPick | null = null;
   private campHtml = '';
   /** Đoạn truyện đang kể và thẻ đang xem. */
   private story: { id: StoryId; step: number; replay?: boolean } | null = null;
@@ -431,6 +435,17 @@ export class Hud {
         return this.onAction({ kind: 'phatRung', id });
       case 'trinhSat':
         return this.onAction({ kind: 'trinhSat', id });
+      case 'donPrepare':
+        this.donPick = { ...defaultPick(this.getState()), don: id };
+        return this.refreshSheet(this.getState());
+      case 'donBack':
+        this.donPick = null;
+        return this.refreshSheet(this.getState());
+      case 'donMarch': {
+        if (!this.donPick) return;
+        const { don, army, rows } = this.donPick;
+        return this.onAction({ kind: 'marchCamp', plot: don!, army: { ...army }, rows: { ...rows } });
+      }
       case 'offerBanh':
         return this.onAction({ kind: 'offerBanh', banh: el.dataset.banh as Banh });
       case 'closeCampaign':
@@ -451,6 +466,8 @@ export class Hud {
       case 'backToStage':
       case 'armyDelta':
       case 'armyRow':
+        // Đang chọn quân đánh đồn trong bảng Đất bên kia sông.
+        if (this.donPick && this.sheet?.kind === 'benKia' && act !== 'backToStage') return this.donPickStep(act, el);
         return this.campaignStep(act, id, el);
       case 'march': {
         if (!this.camp?.stage) return;
@@ -740,6 +757,17 @@ export class Hud {
   /** Bảng Đất bên kia sông của khoảnh bên kia `id`. */
   showBenKia(state: GameState, id: number): void {
     this.sheet = { kind: 'benKia', id };
+    this.donPick = null;
+    this.refreshSheet(state);
+  }
+
+  /** Chọn số lính, hàng đứng khi điều quân đánh đồn. */
+  private donPickStep(act: string, el: HTMLElement): void {
+    const pick = this.donPick!;
+    const state = this.getState();
+    const unit = el.dataset.unit as UnitType;
+    if (act === 'armyDelta') stepPick(state, pick, unit, Number(el.dataset.delta));
+    else pick.rows[unit] = nextRow(pick.rows[unit]);
     this.refreshSheet(state);
   }
 
@@ -761,6 +789,7 @@ export class Hud {
 
   closeSheet(): void {
     this.sheet = null;
+    this.donPick = null;
     this.sheetEl.classList.remove('open');
     this.root.classList.remove('sheet-open');
   }
@@ -816,7 +845,8 @@ export class Hud {
       body = khoanhHtml(state, this.sheet.id);
     } else if (this.sheet.kind === 'benKia') {
       title = `🌄 ${vi.benKia.title}`;
-      body = benKiaHtml(state, this.sheet.id);
+      if (this.donPick) for (const k of UNIT_TYPES) this.donPick.army[k] = Math.min(this.donPick.army[k], state.troops[k]);
+      body = benKiaHtml(state, this.sheet.id, this.donPick);
     } else if (this.sheet.kind === 'tet') {
       title = `🎋 ${vi.ui.tet}`;
       body = tetHtml(state);
@@ -1376,7 +1406,8 @@ export class Hud {
     const hold = b.holdS !== undefined;
     const secs = Math.max(0, Math.ceil((hold ? b.holdS! : FIELD.maxS) - b.t));
     const tag = b.challenge ? ` · 🎖 ${vi.ui.challengeKinds[b.challenge].name}` : '';
-    this.fieldTop.querySelector('b')!.textContent = `${vi.ui.stageN(b.wave)} · ${vi.stages[b.wave - 1].name}${tag}`;
+    const don = b.camp !== undefined ? campTier(b.camp) : null;
+    this.fieldTop.querySelector('b')!.textContent = don ? `${vi.benKia.don[don].icon} ${vi.benKia.don[don].name}` : `${vi.ui.stageN(b.wave)} · ${vi.stages[b.wave - 1].name}${tag}`;
     this.fieldTop.querySelector('span')!.textContent = hold
       ? `${vi.ui.holdBanner(enemiesLeft(b), alliesLeft(b), secs)} · ${vi.ui.holdWave(wavesArrived(b), b.waveCount ?? 1)}`
       : vi.ui.fieldBanner(enemiesLeft(b), alliesLeft(b), secs);
