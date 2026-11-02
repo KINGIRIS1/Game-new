@@ -64,8 +64,8 @@ describe('lưới khoảnh', () => {
 });
 
 describe('phát rừng', () => {
-  it('lượt phát theo cấp Điện: 18, 24, 32, 38, 48, 60, 72, 80 khoảnh', () => {
-    expect(KHOANH_QUOTA).toEqual([18, 24, 32, 38, 48, 60, 72, 80]);
+  it('lượt phát theo cấp Điện: 18, 24, 32, 38, 48, 60, 72, 80, 88, 94 khoảnh', () => {
+    expect(KHOANH_QUOTA).toEqual([18, 24, 32, 38, 48, 60, 72, 80, 88, 94]);
     for (let l = 2; l <= 8; l++) expect(khoanhQuota(l)).toBeGreaterThan(khoanhQuota(l - 1));
     expect(khoanhQuota(8)).toBeLessThan(100);
     const s = rich(1);

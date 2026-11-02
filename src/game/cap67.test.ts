@@ -51,11 +51,11 @@ describe('Điện và công trình cấp 6–7', () => {
     setDien(s, 7);
     expect(upgrade(s, ruong.value.id).ok).toBe(true);
     expect(ruong.value.level).toBe(7);
-    expect(limitOf(s, 'ruong')).toBe(8);
+    expect(limitOf(s, 'ruong')).toBe(BUILDINGS.ruong.limit[6]);
     expect(BUILDINGS.doanhTrai.maxLevel).toBe(5);
-    // Mọi mảng theo cấp Điện đủ 8 phần (cấp 8 từ chương 4), mọi mảng theo cấp công trình đủ số cấp.
+    // Mọi mảng theo cấp Điện đủ 10 phần (cấp 8 từ chương 4, cấp 9, 10 sau truyện), mọi mảng theo cấp công trình đủ số cấp.
     for (const def of Object.values(BUILDINGS)) {
-      expect(def.limit.length).toBe(8);
+      expect(def.limit.length).toBe(10);
       expect(def.hp.length).toBe(def.maxLevel);
       expect(def.production.length).toBe(def.maxLevel);
       expect(def.upgradeCost.length).toBe(def.maxLevel + 1);

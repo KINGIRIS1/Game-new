@@ -46,7 +46,7 @@ describe('định nghĩa đường đi và đồ trang trí', () => {
       expect(isDecor(t), t).toBe(true);
       expect(def.removable && def.buildable, t).toBe(true);
       expect(def.maxLevel, t).toBe(1);
-      expect(def.limit.length, t).toBe(8);
+      expect(def.limit.length, t).toBe(10);
       expect(floodToleranceOf(t), t).toBeGreaterThan(10);
     }
     expect(BUILDINGS.cayDa.w).toBe(2);

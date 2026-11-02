@@ -111,7 +111,7 @@ const storyDien = () => STAGES[CH1_LAST - 1].minDien;
  * Lạc tướng từ Điện 2; Gióng thành tráng sĩ khi rèn xong giáp sắt ở lò rèn cấp 3; Sơn Tinh ở chương 2 (Điện 6);
  * An Dương Vương ở chương 3 (Điện 7); Cao Lỗ ở chương 4 (Điện 8).
  */
-export const MAU_BARRACKS = [0, 1, 2, 2, 2, 3, 4, 5];
+export const MAU_BARRACKS = [0, 1, 2, 2, 2, 3, 4, 5, 5, 5];
 
 /** Số chỗ mẫu chừa cho loại `type` ở cấp Điện `level`: đúng số tối đa theo cấp Điện (doanh trại: theo số tướng). */
 function wantOf(type: BuildingType, level: number): number {

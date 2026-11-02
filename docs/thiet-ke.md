@@ -80,11 +80,11 @@ Học cơ chế mở đất của Forge of Empires, Elvenar: đất chia khoản
 - **Lúc đầu** mở sẵn 16 khoảnh ở góc sông (vùng 20×20), Điện nằm giữa.
 - **Lượt phát** (tổng số khoảnh đã mở, tính cả 16 khoảnh mở sẵn) theo cấp Điện (`KHOANH_QUOTA`):
 
-  | Điện | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 |
-  |---|---|---|---|---|---|---|---|---|
-  | Khoảnh | 18 | 24 | 32 | 38 | 48 | 60 | 72 | 80 |
+  | Điện | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 |
+  |---|---|---|---|---|---|---|---|---|---|---|
+  | Khoảnh | 18 | 24 | 32 | 38 | 48 | 60 | 72 | 80 | 88 | 94 |
 
-  Tới Điện 8 còn 20 khoảnh rừng không bao giờ phát, nên viền kinh đô lượn tự nhiên.
+  Tới Điện 10 (sau truyện) còn 6 khoảnh rừng không bao giờ phát, nên viền kinh đô lượn tự nhiên.
 - **Phát được** khi khoảnh chạm đất đã mở theo bốn hướng, còn lượt, không có giặc, lũ hay trinh sát báo, đủ của.
 - **Giá** chỉ gạo và vỏ ốc, làm tròn 5: từ 2% (khoảnh đầu của cấp) tới 3% (khoảnh cuối của cấp) giá lần nâng Điện kế tiếp (ở Điện 8 lấy giá lên cấp 8), sàn 20 gạo, 10 vỏ ốc (`KHOANH_COST_FRAC`, `KHOANH_COST_MIN`). Ví dụ: Điện 1–3 chừng 20–25 gạo; Điện 5: 80–120; Điện 6: 145–215 gạo, 130–190 vỏ ốc; Điện 7, 8: 210–310 gạo. Người chơi mô phỏng tiêu cho phát rừng chừng 1–3% số chi mỗi chương, nhịp lên Điện không đổi.
 - **Gỗ khi phát rừng**: cây chặt được số gỗ bằng nửa số gạo của giá khoảnh, làm tròn 5, ít nhất 10 (`khoanhWood`; xem mục Kế hoạch: cổng thành, xưởng mộc, làng chài).
@@ -1399,10 +1399,10 @@ Chủ dự án thấy bản đồ kinh đô nhỏ, công trình sát nhau, bố 
    - **Khoảnh vừa phát** có sẵn 1–2 cái trên các ô trong khoảnh, kể cả khi kinh đô đã đủ 8 cái.
    - **Chạm để dọn**: được của theo cấp Điện, không vượt sức chứa kho. Từ Điện 5 trở lên bằng chừng 10–15 giây sản lượng của kinh đô (Điện 5 làm ra chừng 670 gạo, 420 đất đá mỗi phút); ở các cấp đầu kinh đô còn làm ra ít nên dọn đáng hơn:
 
-     | Điện | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 |
-     |---|---|---|---|---|---|---|---|---|
-     | Cây dại (gạo) | 20 | 35 | 60 | 90 | 130 | 190 | 270 | 380 |
-     | Tảng đá (đất đá) | 10 | 18 | 30 | 45 | 65 | 95 | 135 | 190 |
+     | Điện | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 |
+     |---|---|---|---|---|---|---|---|---|---|---|
+     | Cây dại (gạo) | 20 | 35 | 60 | 90 | 130 | 190 | 270 | 380 | 530 | 740 |
+     | Tảng đá (đất đá) | 10 | 18 | 30 | 45 | 65 | 95 | 135 | 190 | 265 | 370 |
 
    - **Không chặn gì**: dựng công trình, trải đường, đặt đồ trang trí, áp mẫu kinh đô đè lên thì dân dọn luôn, không được của; giặc đi qua được. Trang trí ô trống (khóm cỏ, hoa, đá nhỏ) né ô có cây đá.
    - **Lạc hầu gợi ý một lần** khi cái đầu tiên mọc: chạm vào để dọn. Dọn xong thì báo của được.
@@ -1620,7 +1620,7 @@ Mỗi PR làm trên một nhánh từ `main` mới nhất.
 
 Mỗi PR: chạy `npm test` và `npm run build`; chụp kiểm tra ở khổ điện thoại (thanh trên đủ chỗ cho năm chip ở khổ `fold`); ghi số cuối cùng vào tài liệu này; sửa các mục chung (bốn tài nguyên thành năm, bảng Công trình) khi phần ấy đã làm.
 
-## Kế hoạch: Điện cấp 9, 10 (chủ dự án đã duyệt, chưa làm)
+## Kế hoạch: Điện cấp 9, 10 (chủ dự án đã duyệt, đang làm)
 
 Chủ dự án yêu cầu lập kế hoạch cho cấp 9, 10 rồi **duyệt theo đúng đề xuất**: mốc mở A, đất 88 và 94 khoảnh, lầu nỏ lên cấp 2, 3, có rèn binh khí bậc 3, cùng mọi con số và dáng dưới đây. Như lúc làm cấp 6–8, sau khi duyệt cho chỉnh ±20% để khớp nhịp đo bằng test; làm xong phần nào thì ghi số cuối cùng của phần ấy.
 
@@ -1645,41 +1645,50 @@ Chủ dự án yêu cầu lập kế hoạch cho cấp 9, 10 rồi **duyệt the
 | Cấp | Mở khi | Giá nâng | Khoảnh | Sức chứa kho | Chỗ ở | Gạo, vỏ ốc /phút | Máu |
 |---|---|---|---|---|---|---|---|
 | 8 (đã có) | vào chương 4 | 10400 gạo, 9200 vỏ ốc, 8000 đất đá, 1800 sắt | 80 | 32000 | 11 | 18, 9 | 2000 |
-| 9 | Hết truyện | 16000 gạo, 14000 vỏ ốc, 12500 đất đá, 2800 sắt | 88 | 44000 | 12 | 20, 10 | 2200 |
-| 10 | Điện 9 + 16 thử thách | 24000 gạo, 21000 vỏ ốc, 19000 đất đá, 4200 sắt | 94 | 60000 | 13 | 22, 11 | 2400 |
+| 9 | Hết truyện | 14100 gạo, 12300 vỏ ốc, 11000 đất đá, 2400 sắt | 88 | 44000 | 12 | 20, 10 | 2200 |
+| 10 | Điện 9 + 16 thử thách | 19200 gạo, 16800 vỏ ốc, 15200 đất đá, 3400 sắt | 94 | 60000 | 13 | 22, 11 | 2400 |
 
-- Giá mỗi cấp chừng gấp 1,5 cấp trước (cấp 8 gấp 1,45 cấp 7), không gấp 2 như kế hoạch cấp 8 ban đầu, vì đã thấy gấp 2 thì nhịp quá dài (Điện 8 phải hạ 20%).
+- Bảng trên là số cuối cùng (PR luật đã làm). Đề xuất ban đầu: Điện 9 giá 16000 gạo, 14000 vỏ ốc, 12500 đất đá, 2800 sắt; Điện 10 giá 24000, 21000, 19000, 4200 (gấp chừng 1,5 cấp trước). Đo bằng người chơi mô phỏng thì quá chậm (xem mục Nhịp), nên hạ: Điện 9 bớt 12%, Điện 10 bớt 20% (mức tối đa đã cho).
+- Mốc mở: Điện 9 cần vua đã ra biển Mộ Dạ (`adv.bien`, thắng màn 32), báo "Mở sau khi hộ giá vua ra biển Mộ Dạ"; Điện 10 cần đã thắng `DIEN10_CHALLENGES` = 16 thử thách, báo "Cần thắng 16 thử thách phó bản".
 - Số công trình tối đa: **thêm 1 ruộng, 1 nhà sàn, 1 chòi canh mỗi cấp**; các loại khác giữ như Điện 8. Lũy, đê, thành, đường mỗi cấp thêm chừng 5% vì đất rộng thêm. `FIELD_CAP` giữ 38 (bãi chiến tối đa chừng 60 người). `GUARD_CAP` 62, 68. `TET_NEED` giữ 40.
 
 ### Chín loại công trình lên cấp 9, 10
 
-Giá chừng gấp 1,6 cấp trước, sản lượng thêm chừng 22% mỗi cấp (cấp 8 thêm 30%). Chỗ làm thêm 1 ở cấp 10 (dân Điện 10 có chỗ ở thêm từ nhà sàn).
+Số cuối cùng (PR luật đã làm): giá chừng gấp 1,3 cấp trước, tức đề xuất ban đầu (gấp 1,6) hạ 20%; sản lượng thêm chừng 22% mỗi cấp (cấp 8 thêm 30%), riêng bến thêm 48% rồi 22% (đề xuất 320, 390 nâng 20%). Chỗ làm thêm 1 ở cấp 10 (dân Điện 10 có chỗ ở thêm từ nhà sàn).
 
 | Công trình | Giá lên 9 | Giá lên 10 | Cấp 8 → 9 → 10 | Chỗ làm |
 |---|---|---|---|---|
-| Ruộng lúa | 5400 vỏ ốc, 3500 đất đá | 8600 vỏ ốc, 5600 đất đá | gạo 260 → 320 → 390 | 5, 6 |
-| Bến chợ thuyền | 6400 gạo, 3800 đất đá | 10200 gạo, 6100 đất đá | vỏ ốc 260 → 320 → 390 | 4, 5 |
-| Nhà sàn | 4800 vỏ ốc, 4200 đất đá | 7700 vỏ ốc, 6700 đất đá | chỗ ở 18 → 20 → 22 | – |
-| Bãi đất đá | 3000 gạo, 6400 vỏ ốc | 4800 gạo, 10200 vỏ ốc | đất đá 255 → 310 → 380 | 5, 6 |
-| Lò rèn | 8300 vỏ ốc, 9000 đất đá | 13300 vỏ ốc, 14400 đất đá | sắt 70 → 85 → 104 | 4, 5 |
-| Kho thóc | 8300 vỏ ốc, 10200 đất đá | 13300 vỏ ốc, 16400 đất đá | thêm sức chứa 13000 → 17000 → 22000 | – |
-| Chòi canh | 6100 vỏ ốc, 6100 đất đá, 1000 sắt | 9700 vỏ ốc, 9700 đất đá, 1600 sắt | sát thương 37 → 44 → 52 | – |
-| Xưởng mộc | 6400 vỏ ốc, 3200 đất đá | 10200 vỏ ốc, 5100 đất đá | gỗ 118 → 144 → 176 | 4, 5 |
-| Làng chài | 6400 gạo, 4200 gỗ | 10200 gạo, 6700 gỗ | cá 68 → 83 → 101 | 3, 4 |
+| Ruộng lúa | 4300 vỏ ốc, 2800 đất đá | 6900 vỏ ốc, 4500 đất đá | gạo 260 → 320 → 390 | 5, 6 |
+| Bến chợ thuyền | 5100 gạo, 3000 đất đá | 8200 gạo, 4900 đất đá | vỏ ốc 260 → 385 → 470 | 4, 5 |
+| Nhà sàn | 3800 vỏ ốc, 3400 đất đá | 6200 vỏ ốc, 5400 đất đá | chỗ ở 18 → 20 → 22 | – |
+| Bãi đất đá | 2400 gạo, 5100 vỏ ốc | 3800 gạo, 8200 vỏ ốc | đất đá 255 → 310 → 380 | 5, 6 |
+| Lò rèn | 6600 vỏ ốc, 7200 đất đá | 10600 vỏ ốc, 11500 đất đá | sắt 70 → 85 → 104 | 4, 5 |
+| Kho thóc | 6600 vỏ ốc, 8200 đất đá | 10600 vỏ ốc, 13100 đất đá | thêm sức chứa 13000 → 17000 → 22000 | – |
+| Chòi canh | 4900 vỏ ốc, 4900 đất đá, 800 sắt | 7800 vỏ ốc, 7800 đất đá, 1300 sắt | sát thương 37 → 44 → 52 | – |
+| Xưởng mộc | 5100 vỏ ốc, 2600 đất đá | 8200 vỏ ốc, 4100 đất đá | gỗ 118 → 144 → 176 | 4, 5 |
+| Làng chài | 5100 gạo, 3400 gỗ | 8200 gạo, 5400 gỗ | cá 68 → 83 → 101 | 3, 4 |
 
-- Xưởng mộc, làng chài thêm vào sau khi duyệt (hai loại này có trên `main` sau lúc lập kế hoạch), theo cùng quy tắc giá gấp 1,6, sản lượng thêm chừng 22%. Giá các loại cũ không dùng gỗ, giữ như quyết định lúc thêm gỗ. Cổng thành giữ 3 cấp.
+- Xưởng mộc, làng chài thêm vào sau khi duyệt (hai loại này có trên `main` sau lúc lập kế hoạch), theo cùng quy tắc với các loại kia. Giá các loại cũ không dùng gỗ, giữ như quyết định lúc thêm gỗ. Cổng thành giữ 3 cấp.
 
 - Máu mỗi công trình thêm chừng 10% mỗi cấp.
 - Lầu nỏ (nếu chủ dự án chọn cho lên cấp): cấp 2 cần Điện 9, giá 3200 vỏ ốc, 3200 đất đá, 800 sắt, mỗi mũi 34 → 41; cấp 3 cần Điện 10, giá 5000, 5000, 1300, mỗi mũi 49. Ba mũi mỗi phát giữ nguyên.
 
 ### Nhịp (đo bằng `balance.test.ts`, không tính thưởng phó bản)
 
-- Người chơi mô phỏng ở lại chương 4 tới Hết truyện, như các chương trước rồi mới lên cấp mới.
-- Đích: từ lúc mở cấp 9 tới Điện 9 **35–50 phút**; từ Điện 9 tới Điện 10 **45–65 phút** (thêm thời gian chờ đủ thử thách nếu chọn A thì test đặt sẵn thử thách).
-- Báo cáo kinh tế (`kinhTe.ts`) thêm giai đoạn Điện 9 và Điện 10; chạy skill rà kinh tế để chắc vỏ ốc không thành chỗ nghẽn như lúc lên Điện 8.
-- Giữ kinh đô sau Hết truyện: đợt giặc tính theo cấp Điện thì thêm hai bậc cho Điện 9, 10; test canh người chơi thường vẫn giữ được, chòi canh và lầu nỏ cấp mới không làm giặc quá dễ.
+- Người chơi mô phỏng lên Điện 8 rồi ở lại chương 4 chừng nửa giờ thì hết truyện (`playChapters({ last: 10 })`, mốc `hetTruyen`): coi như đã thắng màn 32 và đủ 16 thử thách, của dành dụm coi như đã tiêu hết, như lúc vào mỗi chương.
+- Đích: từ lúc hết truyện tới Điện 9 **35–50 phút**; từ Điện 9 tới Điện 10 **45–65 phút**.
+- Với giá đề xuất ban đầu: Điện 9 mất 68 phút, Điện 10 mất 131 phút. Vỏ ốc nghẽn: chín loại công trình cùng lên cấp tiêu gần 270 nghìn vỏ ốc, trong khi gạo tràn kho 61%.
+- Đã sửa (đo lại: **Điện 9 mất 37,5 phút, Điện 10 mất 64,7 phút**):
+  - giá lên cấp 9, 10 của chín loại hạ 20%, Điện 10 hạ 20%, Điện 9 hạ 12%;
+  - bến cấp 9, 10 làm ra 385, 470 vỏ ốc mỗi phút (đề xuất 320, 390, nâng 20%);
+  - người chơi mô phỏng thôi nâng ruộng khi kho gạo đã đầy 95%, như người chơi hợp lý (nâng thêm chỉ thêm gạo tràn kho). Luật này gần như không đổi nhịp chương 1–4 (Điện 8: 45,3 → 45,0 phút).
+- Nhịp rất nhạy: chỉ hạ giá công trình mà không hạ giá Điện thì Điện 10 lại chậm hơn, vì người chơi mô phỏng tiêu vỏ ốc vào công trình trước. Đổi giá cấp 9, 10 thì chạy lại `balance.test.ts`.
+- Báo cáo kinh tế (`kinhTe.ts`, `node scripts/kinh-te.mjs`) có thêm giai đoạn "Sau truyện" (tới lúc lên Điện 10) và mỗi giờ sau Điện 10 (`--sau-dien10`, thay `--sau-dien8`).
+- Giữ kinh đô: các đợt giặc không tính theo cấp Điện, nên Điện 9, 10 không đổi độ khó giữ kinh đô.
 
 ### Hình
+
+Chưa làm: PR luật để công trình cấp 9, 10 vẽ như cấp 8 (code vẽ dùng `level >= 8`; `footprint.test.ts` đã canh cả 10 cấp). Dáng xưởng mộc, làng chài cấp 9, 10 chủ dự án đã duyệt cùng PR luật.
 
 - **Mái theo cấp**: thêm hai bậc vào `roofFor`.
   - Cấp 9: mái ngói, sống mái và diềm bọc đồng vàng như cấp 8, **thêm dải hoa văn trống đồng** (vòng tròn tiếp tuyến) chạy dọc diềm mái.
@@ -1696,24 +1705,25 @@ Giá chừng gấp 1,6 cấp trước, sản lượng thêm chừng 22% mỗi c�
   | Lò rèn | khuôn đúc trống đồng lớn | tháp lò cao có khói đỏ |
   | Kho thóc | vựa chính lên mái ngói hai tầng | thêm sân phơi lát gạch, cót thành vựa gỗ |
   | Chòi canh | lầu canh thêm ụ đá chân chòi | chòi canh hai tầng, nỏ trên cả hai tầng |
-  | Xưởng mộc (thêm sau, chờ duyệt dáng) | thuyền lớn trên giàn đà có mui và mái chèo | lán thứ hai thành nhà sàn chạm, cột khắc chim Lạc |
-  | Làng chài (thêm sau, chờ duyệt dáng) | giàn vó lớn ven bờ | thêm thuyền đánh cá thứ hai có buồm cói |
+  | Xưởng mộc | thuyền lớn trên giàn đà có mui và mái chèo | lán thứ hai thành nhà sàn chạm, cột khắc chim Lạc |
+  | Làng chài | giàn vó lớn ven bờ | thêm thuyền đánh cá thứ hai có buồm cói |
 
 - Bản vẽ ô con trong `docs/bo-cuc-cong-trinh.md` ghi thêm cấp 9, 10 cho Điện và chín loại lên cấp; `footprint.test.ts` canh không tràn móng ở cả 10 cấp; chụp bằng `chup-cong-trinh.mjs` ở cấp 8, 9, 10 cạnh nhau để chủ dự án duyệt dáng.
 
-### Code phải sửa
+### Code (PR luật, đã làm)
 
-- `defs.ts`: `maxLevel` 10 cho Điện và 9 loại; mở rộng mọi mảng theo cấp Điện lên 10 phần tử; mốc mở cấp 9, 10 (thay `DIEN_CHAPTER` bằng điều kiện chung cho cả mốc truyện lẫn thử thách).
-- Bỏ các chỗ viết cứng số 8 trong `src/game/` (`save.ts`, `moPhong.ts`) và `src/render/` (34 chỗ `level >= 8`…); chỗ nào dò cấp tối đa thì dùng `maxLevel`.
-- `khoanh.ts` (lượt 88, 94 và khoảnh để rừng), `mau.ts` (khung mẫu ở Điện 9, 10 cho cả ba mẫu), camera thu nhỏ đủ thấy đất chừng 48×48.
-- `save.ts`: bản lưu lên số phiên bản kế tiếp (chỉ đổi số, vì cấp mới chỉ là số lớn hơn).
-- Bảng Điện, bảng công trình, bảng lò rèn (`hud.ts`, `binhKhi.ts`), chữ ở `vi.ts`; nhiệm vụ Lạc hầu 50–53 (lên Điện 9, một công trình cấp 9, lên Điện 10, một công trình cấp 10).
-- Test mới `cap910.test.ts`: mốc mở, giá, sản lượng, số tối đa, khoảnh, kho, lầu nỏ (nếu có), áp mẫu ở Điện 9, 10, nâng bản lưu. `balance.test.ts`, `kinhTe.test.ts` thêm hai giai đoạn.
+- `defs.ts`: `maxLevel` 10 cho Điện và chín loại; mọi mảng theo cấp Điện đủ 10 phần tử (số tối đa, `STORAGE_CAP`, `KHOANH_QUOTA`, `ROAD_LIMIT` 295, 310, `FIELD_CAP`, `GUARD_CAP`, `TET_NEED`, ụ nỏ, đồ trang trí, thưởng dọn cây đá 530, 740 gạo và 265, 370 đất đá); `TOWER.dmg`, `CA_PER_MIN` thêm hai cấp; `DIEN10_CHALLENGES`. Các loại khác giữ số tối đa như Điện 8.
+- `game.ts` (`canUpgrade`): lý do mới `canHetTruyen`, `canThuThach`. Nhiệm vụ mới kiểu `buildingLevel` (có công trình ở cấp ấy trở lên).
+- `khoanh.ts` (`V11_AREA` giữ 45 ở Điện 9, 10: khung mẫu 81 khoảnh vừa lượt 88), `mau.ts` (`MAU_BARRACKS` giữ 5). Mẫu kinh đô dựng được ở Điện 9, 10 cho cả bốn mẫu, đủ ruộng và chòi canh mới.
+- Bản lưu **phiên bản 18** (chỉ đổi số).
+- Nhiệm vụ Lạc hầu 50–53: lên Điện 9, một công trình cấp 9, lên Điện 10, một công trình cấp 10.
+- Bảng Điện, bảng công trình không phải sửa: đã đọc `maxLevel` và các mảng theo cấp.
+- Test: `cap910.test.ts` (mốc mở, giá, sản lượng, số tối đa, khoảnh, kho, nhiệm vụ, mẫu, bản lưu), `balance.test.ts` (nhịp Điện 9, 10), `kinhTe.test.ts` (giai đoạn sau truyện); các test cũ ghi cứng 8 cấp nay ghi 10.
 
 ### Thứ tự làm
 
 0. **Duyệt tài liệu này**: chủ dự án đã duyệt theo đề xuất.
-1. **PR cấp 9–10 phần luật**: mảng theo cấp lên 10, Điện 9–10, bảy loại, khoảnh, kho, mẫu, nhiệm vụ, bản lưu, test và nhịp. Hình tạm dùng dáng cấp 8 với mái mới.
+1. **PR cấp 9–10 phần luật** (đã làm): mảng theo cấp lên 10, Điện 9–10, chín loại, khoảnh, kho, mẫu, nhiệm vụ, bản lưu 18, test và nhịp. Hình tạm dùng dáng cấp 8; mái mới để sang PR hình.
 2. **PR cấp 9–10 phần hình**: bản vẽ ô con và dáng cấp 9, 10 cho Điện và chín loại (cả chòi canh, lầu nỏ), chụp kiểm tra, chủ dự án duyệt dáng.
 3. **PR binh khí bậc 3 và lầu nỏ lên cấp**.
 
@@ -1758,5 +1768,5 @@ Giá chừng gấp 1,6 cấp trước, sản lượng thêm chừng 22% mỗi c�
     **Vẽ lại công trình trên móng** (đã làm; xem mục cùng tên): mười bốn loại vẽ lại trên trọn móng; ba đền và ruộng nếp chủ dự án vẽ lại dáng, vẫn phóng theo móng.
 13. **Đường đi và đồ trang trí** (đã làm, xem mục cùng tên): bốn loại đường, bảy món trang trí, ba thẻ chọn trong bảng Xây dựng, thẻ Dọn trang trí.
 14. **Cổng thành, xưởng mộc, làng chài** (chủ dự án đã duyệt, đã làm; xem mục Kế hoạch cùng tên): gỗ là tài nguyên thứ năm, cá đỡ gạo ăn, cổng hút giặc trong vòng tường. Ba PR: gỗ và xưởng mộc, làng chài, cổng thành.
-15. **Điện cấp 9, 10** (đã duyệt, chưa làm; xem Kế hoạch cùng tên).
+15. **Điện cấp 9, 10** (đã duyệt, đang làm; PR luật đã làm; xem Kế hoạch cùng tên).
 16. **Để sau**: chương 5 về Hai Bà Trưng (mới nhắc ở câu cuối chương 4); nhạc nền.

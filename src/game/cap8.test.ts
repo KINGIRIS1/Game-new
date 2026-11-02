@@ -54,7 +54,8 @@ describe('Điện và công trình cấp 8', () => {
     s.questIndex = CH4_QUEST_START;
     expect(upgrade(s, 1).ok).toBe(true);
     expect(s.buildings[0].level).toBe(8);
-    expect(canUpgrade(s, 1)).toEqual({ ok: false, reason: 'capToiDa' });
+    // Cấp 9 mở sau truyện (cap910.test.ts).
+    expect(canUpgrade(s, 1)).toEqual({ ok: false, reason: 'canHetTruyen' });
   });
 
   it('Điện cấp 8 được phát tới 80 khoảnh (chừng 45×45 ô), kho rộng hơn', () => {
@@ -67,7 +68,7 @@ describe('Điện và công trình cấp 8', () => {
 
   it('bảy loại công trình lên được cấp 8 khi Điện đã cấp 8; số tối đa giữ như Điện 7', () => {
     const eight: BuildingType[] = ['ruong', 'ben', 'nhaSan', 'baiDa', 'loRen', 'kho', 'choiCanh'];
-    for (const t of eight) expect(BUILDINGS[t].maxLevel, t).toBe(8);
+    for (const t of eight) expect(BUILDINGS[t].maxLevel, t).toBeGreaterThanOrEqual(8);
     // Lầu nỏ chỉ có từ Điện 8 (ghép từ chòi canh); cổng thành 2 cái ở Điện 5–7, 4 cái ở Điện 8 (thêm hai cổng trên
     // vòng thành giữa của mẫu Cổ Loa); còn lại giữ như Điện 7.
     for (const def of Object.values(BUILDINGS)) if (def.type !== 'lauNo' && def.type !== 'congThanh') expect(def.limit[7], def.type).toBe(def.limit[6]);

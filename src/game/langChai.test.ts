@@ -65,15 +65,15 @@ describe('làng chài', () => {
     for (let level = 2; level <= 8; level++) expect(BUILDINGS.langChai.upgradeCost[level].go).toBeGreaterThan(0);
   });
 
-  it('cá 6 → 68 mỗi phút theo cấp khi đủ người, thiếu người thì ít đi theo tỉ lệ, làng hư thì không có cá', () => {
+  it('cá 6 → 101 mỗi phút theo cấp khi đủ người, thiếu người thì ít đi theo tỉ lệ, làng hư thì không có cá', () => {
     const s = capital(8);
     const b = village(s);
-    const perLevel = [1, 2, 3, 4, 5, 6, 7, 8].map((level) => {
+    const perLevel = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((level) => {
       b.level = level;
       b.workers = BUILDINGS.langChai.workers![level - 1];
       return fishOf(b);
     });
-    expect(perLevel).toEqual([6, 10, 15, 22, 30, 40, 52, 68]);
+    expect(perLevel).toEqual([6, 10, 15, 22, 30, 40, 52, 68, 83, 101]);
     expect(perLevel).toEqual(CA_PER_MIN);
     b.level = 5;
     b.workers = 1;

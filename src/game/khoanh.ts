@@ -50,7 +50,7 @@ export const START_KHOANH: readonly number[] = squareKhoanh(20);
  * Cạnh vùng đất hình vuông theo cấp Điện trước khi có khoảnh tự chọn (bản lưu phiên bản 11). Chỉ dùng để nâng bản
  * lưu và để test dựng nhanh kinh đô theo cấp.
  */
-export const V11_AREA = [20, 25, 25, 30, 35, 40, 40, 45];
+export const V11_AREA = [20, 25, 25, 30, 35, 40, 40, 45, 45, 45];
 
 /** Mặt nạ ô đã mở và ô nhỏ nhất đã mở, nhớ theo mảng `state.khoanh` (phát rừng thay mảng mới). */
 interface OpenCache {
@@ -107,7 +107,7 @@ export function khoanhLeft(state: GameState): number {
 const round5 = (n: number) => Math.round(n / 5) * 5;
 
 /**
- * Giá phát khoảnh tiếp theo: một phần giá lần nâng Điện kế tiếp (ở Điện 8 lấy giá lên cấp 8), nhích dần từ khoảnh đầu
+ * Giá phát khoảnh tiếp theo: một phần giá lần nâng Điện kế tiếp (ở Điện 10 lấy giá lên cấp 10), nhích dần từ khoảnh đầu
  * tới khoảnh cuối trong lượt của cấp Điện hiện tại; chỉ gạo và vỏ ốc.
  */
 export function khoanhCost(state: GameState): Cost {

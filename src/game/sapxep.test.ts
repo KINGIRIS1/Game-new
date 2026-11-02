@@ -82,7 +82,7 @@ const chapterFor = (id: MauId, dien: number): 1 | 2 | 3 | 4 =>
 /** Cấp Điện mẫu mở được trong game: Phong Châu từ đầu; Đê bao, Cổ Loa mở theo truyện, khi Điện đã cấp 5 (màn 8 cần Điện 5). */
 const levelsOf = (id: MauId): number[] => {
   const from = id === 'phongChau' ? 1 : STAGES[CH1_LAST - 1].minDien;
-  return Array.from({ length: 9 - from }, (_, i) => from + i);
+  return Array.from({ length: 11 - from }, (_, i) => from + i);
 };
 const SEGMENT_TYPES: BuildingType[] = ['luy', 'de', 'thanh', 'bayChong'];
 
@@ -132,7 +132,7 @@ describe('mẫu kinh đô', () => {
   });
 
   it('mỗi tướng một doanh trại: mẫu chừa đủ chỗ cho các tướng thường có ở từng cấp Điện', () => {
-    expect(MAU_BARRACKS.slice(1)).toEqual([1, 2, 2, 2, 3, 4, 5]);
+    expect(MAU_BARRACKS.slice(1)).toEqual([1, 2, 2, 2, 3, 4, 5, 5, 5]);
     for (const id of MAU_IDS) {
       for (const dien of levelsOf(id)) {
         const s = withGenerals(city(dien, chapterFor(id, dien)), dien);

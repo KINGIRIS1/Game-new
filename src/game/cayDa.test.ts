@@ -143,7 +143,7 @@ describe('cây, đá mọc trên ô trống', () => {
   it('thưởng tăng theo cấp Điện, cây được gạo nhiều hơn đá được đất đá', () => {
     for (const kind of ['cay', 'da'] as CayDaKind[]) {
       const amounts = CAY_DA_REWARD[kind].map((c) => c.gao ?? c.datDa ?? 0);
-      expect(amounts.length).toBe(8);
+      expect(amounts.length).toBe(10);
       for (let i = 1; i < amounts.length; i++) expect(amounts[i]).toBeGreaterThan(amounts[i - 1]);
     }
     CAY_DA_REWARD.cay.forEach((c, i) => expect(c.gao!).toBeGreaterThan(CAY_DA_REWARD.da[i].datDa!));
@@ -176,7 +176,7 @@ describe('cây, đá mọc trên ô trống', () => {
   });
 
   it('bản lưu 17: giữ cây đá; nâng bản lưu 16 thì chưa có cây đá, cái đầu mọc sau CAY_DA_FIRST_MS; dữ liệu hỏng thì bỏ', () => {
-    expect(SAVE_VERSION).toBe(17);
+    expect(SAVE_VERSION).toBeGreaterThanOrEqual(17);
     const s = capital();
     run(s, CAY_DA_FIRST_MS + 2 * CAY_DA_EVERY_MS);
     const back = deserialize(serialize(s))!;
@@ -187,7 +187,7 @@ describe('cây, đá mọc trên ô trống', () => {
     old.version = 16;
     delete old.cayDa;
     const up = deserialize(JSON.stringify(old))!;
-    expect(up.version).toBe(17);
+    expect(up.version).toBe(SAVE_VERSION);
     expect(up.cayDa).toEqual(initialCayDa(s.clock));
     expect(up.cayDa.nextAt).toBe(s.clock + CAY_DA_FIRST_MS);
 

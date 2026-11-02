@@ -17,6 +17,7 @@ import {
   CH3_QUEST_START,
   CH4_QUEST_START,
   DIEN_CHAPTER,
+  DIEN10_CHALLENGES,
   FIRST_THUY_BINH_MS,
   U_NO,
   LAU_NO_TOWERS,
@@ -276,7 +277,7 @@ export interface Merchant {
  * Phiên bản bản lưu hiện tại (11: kinh đô lớn; 12: khoảnh tự chọn; 13: lính nỏ, ụ nỏ; 14: Cao Lỗ, vua xuống biển;
  * 15: thử thách, huân công; 16: gỗ, tài nguyên thứ năm, và gợi ý của Lạc hầu về công trình mới).
  */
-export const SAVE_VERSION = 17;
+export const SAVE_VERSION = 18;
 
 export interface GameState {
   version: typeof SAVE_VERSION;
@@ -377,6 +378,8 @@ export type FailReason =
   | 'khongDuCho'
   | 'daTheoMau'
   | 'canChuong4'
+  | 'canHetTruyen'
+  | 'canThuThach'
   | 'khongGhepDuoc'
   | 'canNoiO'
   | 'noiOHu'
@@ -766,6 +769,9 @@ export function canUpgrade(state: GameState, id: number): Result {
   if (chapter === 2 && !inChapter2(state)) return fail('canChuong2');
   if (chapter === 3 && !inChapter3(state)) return fail('canChuong3');
   if (chapter === 4 && !inChapter4(state)) return fail('canChuong4');
+  // Sau truyện: Điện 9 khi vua đã ra biển Mộ Dạ (Hết truyện), Điện 10 khi đã thắng đủ thử thách phó bản.
+  if (b.type === 'dien' && b.level + 1 === 9 && !state.adv.bien) return fail('canHetTruyen');
+  if (b.type === 'dien' && b.level + 1 === 10 && state.thuThach.won.length < DIEN10_CHALLENGES) return fail('canThuThach');
   if (dienLevel(state) < dienNeededFor(b.type, b.level + 1)) return fail('chuaDuCapDien');
   if (!canAfford(state, cost)) return fail('thieuTaiNguyen');
   return ok(undefined);
@@ -829,6 +835,10 @@ export function questProgress(state: GameState): { have: number; need: number } 
     need = goal.amount;
   } else if (goal.kind === 'thuyBinhHeld') {
     have = state.raid.thuyBinhHeld;
+    need = goal.amount;
+  } else if (goal.kind === 'buildingLevel') {
+    const lv = goal.level;
+    have = state.buildings.filter((b) => b.type !== 'dien' && b.level >= lv).length;
     need = goal.amount;
   } else {
     have = dienLevel(state);

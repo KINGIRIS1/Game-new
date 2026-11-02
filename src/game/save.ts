@@ -85,6 +85,7 @@ function migrate(raw: unknown): unknown {
   if (isObj(v) && v.version === 14) v = migrate14to15(v);
   if (isObj(v) && v.version === 15) v = migrate15to16(v);
   if (isObj(v) && v.version === 16) v = migrate16to17(v);
+  if (isObj(v) && v.version === 17) v = migrate17to18(v);
   return v;
 }
 
@@ -328,6 +329,12 @@ function migrate15to16(s: Raw): Raw {
 function migrate16to17(s: Raw): Raw {
   s.version = 17;
   s.cayDa = initialCayDa(isNum(s.clock) ? s.clock : 0);
+  return s;
+}
+
+/** Phiên bản 17 → 18 (Điện cấp 9, 10): không thêm gì vào state; Điện và chín loại công trình được lên cấp 10. */
+function migrate17to18(s: Raw): Raw {
+  s.version = 18;
   return s;
 }
 
