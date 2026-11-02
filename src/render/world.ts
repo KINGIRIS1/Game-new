@@ -17,8 +17,9 @@ import { tetOpen } from '../game/tet';
 import { Battlefield } from './battlefield';
 import { BattleView } from './battleView';
 import { IsoCamera } from './camera';
-import { banhChung, banhGiay, footScale } from './buildings';
+import { banhChung, banhGiay } from './buildings';
 import { PERSON_SCALE } from './congTrinh/chung';
+import { BEP_TET_SEAT } from './congTrinh/bep';
 import { DIEN_LOT } from './congTrinh/dien';
 import { DOANH_TRAI_HERO } from './congTrinh/doanhTrai';
 import { CONG_TRINH, lotModel } from './congTrinh/index';
@@ -169,28 +170,15 @@ interface BuildingView {
 }
 
 /**
- * Chỗ đứng của người ở công trình còn vẽ theo móng cũ (ba đền, bốn công trình Hội Tết), tọa độ mô hình trước khi
- * phóng theo móng. Công trình vẽ trên móng mới (`congTrinh/`) cho chỗ đứng theo bản vẽ của nó.
+ * Chỗ đứng của người ở công trình còn vẽ theo móng cũ (ruộng nếp), tọa độ mô hình trước khi phóng theo móng. Công
+ * trình vẽ trên móng mới (`congTrinh/`, kể cả vườn, chuồng lợn, bếp) cho chỗ đứng theo bản vẽ của nó.
  */
 const SPOTS: Partial<Record<BuildingType, Spot[]>> = {
-  // Hội Tết: mỗi người một cột x − z như thợ đá, tránh bù nhìn, giàn, chuồng, nồi.
+  // Mỗi người một cột x − z như thợ đá, tránh bù nhìn.
   ruongNep: [
     { job: 'nong', x: -0.85, y: 0.06, z: 0.3, ry: 0.5 },
     { job: 'nong', x: 0.3, y: 0.06, z: 0.3, ry: -0.4 },
     { job: 'nong', x: 0.75, y: 0.06, z: -0.4, ry: -0.9 },
-  ],
-  vuon: [
-    { job: 'phuNu', x: -0.2, y: 0.08, z: 0.62, ry: -0.4 },
-    { job: 'phuNu', x: 0.78, y: 0.08, z: 0.02, ry: -1.8 },
-  ],
-  chuongLon: [
-    { job: 'nong', x: 0.65, y: 0.06, z: 0.72, ry: -2.0 },
-    { job: 'nong', x: 0.62, y: 0.06, z: -0.58, ry: -1.6 },
-  ],
-  bep: [
-    { job: 'phuNu', x: -0.74, y: 0.06, z: 0.14, ry: -2.9 },
-    { job: 'phuNu', x: 0.6, y: 0.06, z: -0.02, ry: 2.9 },
-    { job: 'phuNu', x: 0.4, y: 0.06, z: 0.4, ry: 0.9 },
   ],
 };
 
@@ -1123,7 +1111,7 @@ export class World {
   /**
    * Cảnh Tết, chỉ lúc Tết mở, trong sân chầu của Điện (khối `e`, `m` trong bản vẽ Điện): cây nêu bên trái lối giữa,
    * dây cờ đuôi nheo căng từ ngọn nêu tới hai cột cờ hai bên lối, mâm bánh đã dâng bày trước thềm (chỉ loại đã dâng),
-   * và một người ngồi chiếu gói bánh trước bếp. Không có pháo. Tướng và cột đá thề đứng bên phải lối.
+   * và một người ngồi trên chiếu gói bánh của bếp. Không có pháo. Tướng và cột đá thề đứng bên phải lối.
    */
   private syncTet(state: GameState): void {
     const dien = state.buildings.find((b) => b.type === 'dien');
@@ -1164,12 +1152,11 @@ export class World {
       root.add(tray);
     }
     if (bep) {
-      // Một người ngồi xếp bằng ở mép chiếu gói bánh trước bếp (chiếu ở tọa độ bếp -0.3, 0.55), quay vào chiếu.
+      // Một người ngồi xếp bằng trên chiếu gói bánh của bếp (trong móng, `BEP_TET_SEAT`), quay ra trước.
       const w = makeWorker('phuNu', true);
-      w.scale.setScalar(0.85);
-      const bk = footScale('bep');
-      w.position.set(wx(bep.x) + BUILDINGS.bep.w / 2 - 0.3 * bk, topY(h(bep)) + 0.08, wz(bep.z) + BUILDINGS.bep.d / 2 + 0.88 * bk);
-      w.rotation.y = Math.PI;
+      w.scale.setScalar(PERSON_SCALE);
+      w.position.set(wx(bep.x) + BUILDINGS.bep.w / 2 + BEP_TET_SEAT.x, topY(h(bep)) + 0.08, wz(bep.z) + BUILDINGS.bep.d / 2 + BEP_TET_SEAT.z);
+      w.rotation.y = BEP_TET_SEAT.ry;
       root.add(w);
     }
     this.scene.add(root);

@@ -67,7 +67,7 @@ Tài liệu này ghi lại các quyết định đã chốt với chủ dự án
 
 - Lưới **55×55 ô** (từ bản lưu phiên bản 11, xem mục Kế hoạch: kinh đô lớn). Hai nhánh sông rộng 3 ô chảy dọc hai cạnh (nam và đông, từ ô 52) rồi hợp lưu ở một góc, gợi ngã ba Bạch Hạc. Nước vẽ rộng 7 ô (bờ bên kia lùi ra ngoài lưới, từ ô 59) để bến chợ cấp 8 cùng hai thuyền buôn neo gọn giữa dòng, còn luồng cho thuyền qua lại sát bờ bên kia. Hai cạnh còn lại (bắc và tây) là rừng; hai ô ngoài cùng luôn là rừng, chỗ giặc trên bộ xuất phát.
 - Điện Vua Hùng (móng 5×5) ở ô (37, 37). Đất giữa dải rừng ngoài cùng và sông chia thành **10×10 khoảnh 5×5**. Lúc đầu mở sẵn 16 khoảnh ở góc sông (vùng **20×20**); muốn thêm đất thì **phát rừng** từng khoảnh, người chơi tự chọn (xem mục Khoảnh đất).
-- Công trình nhiều ô: mười một loại (Điện, ruộng, bến, nhà sàn, bãi đất đá, lò rèn, kho, doanh trại, trại giáo, trại cung, chuồng voi) vẽ lại trên trọn móng, có sân, lối, rào theo bản vẽ (xem mục Vẽ lại công trình trên móng). Các loại còn lại (ba đền, bốn công trình Hội Tết) vẫn là mô hình móng cũ phóng theo móng mới, chừa viền cỏ chừng 12% móng.
+- Công trình nhiều ô: mười bốn loại (Điện, ruộng, bến, nhà sàn, bãi đất đá, lò rèn, kho, doanh trại, trại giáo, trại cung, chuồng voi, vườn đậu lá dong, chuồng lợn, bếp gói bánh) vẽ lại trên trọn móng, có sân, lối, rào theo bản vẽ (xem mục Vẽ lại công trình trên móng). Các loại còn lại (bốn đền, ruộng nếp) vẫn là mô hình móng cũ phóng theo móng mới, chừa viền cỏ chừng 12% móng.
 - Ô đất có **độ cao theo bậc** ngay từ đầu game (xem mục Độ cao ô đất ở chương 2). Chương 1 chỉ để nhìn; từ chương 2 độ cao quyết định ô nào ngập lũ.
 
 ### Khoảnh đất (bản lưu phiên bản 12, đã làm)
@@ -851,7 +851,7 @@ Cả bốn cần dân làm, mở sau truyện Lang Liêu, cần Điện cấp 3.
 - Cảnh Tết, chỉ lúc Tết mở:
   - cây nêu trong sân chầu Điện, bên trái lối giữa: cây tre cao, ngọn còn chùm lá, treo dải vải đỏ và khánh đất nung;
   - dây cờ hội nhiều màu căng từ cây nêu tới hai cột cờ hai bên lối (Điện cấp 1 chưa có cột cờ thì tới hai cọc mốc góc trước);
-  - thêm một người ngồi xếp bằng ở mép chiếu gói bánh trước bếp (bếp đã có 2–3 người làm, thêm nữa thì chật);
+  - thêm một người ngồi xếp bằng trên chiếu gói bánh của bếp, trong móng bếp (bếp đã có 2–3 người làm, thêm nữa thì chật);
   - dâng rồi thì có mâm bánh chưng vuông, bánh giầy tròn bày trước thềm Điện, trong sân chầu, tới hết Tết;
   - cây nêu và mâm bánh nằm trong móng Điện nên luôn dựng được, không phụ thuộc ô quanh Điện;
   - không có pháo.
@@ -1387,7 +1387,7 @@ Chủ dự án thấy bản đồ kinh đô nhỏ, công trình sát nhau, bố 
 
 Chương 4 PR 2, PR 3 đã làm trước PR 3–4 của kế hoạch này (chỉ cần bản đồ mới của PR 1–2).
 
-## Vẽ lại công trình trên móng (chủ dự án đã duyệt, đang làm)
+## Vẽ lại công trình trên móng (chủ dự án đã duyệt, đã làm)
 
 Kinh đô lớn lúc đầu chỉ phóng mô hình cũ theo móng mới (`footScale`). Chủ dự án muốn công trình to hơn bằng cách **vẽ lại bố cục**, không chỉ phóng to, và đã duyệt bản vẽ bố cục từng công trình ở `docs/bo-cuc-cong-trinh.md`. Phần vẽ này làm song song với kinh đô lớn trên một bản đồ 38×38 (PR #27); `main` đã chọn lưới 55×55 của kinh đô lớn nên chỉ lấy phần vẽ sang. Cỡ móng hai bên trùng nhau (Điện 5×5; ruộng, ruộng nếp, doanh trại, đền 4×4; còn lại 3×3), nên bản vẽ dùng nguyên.
 
@@ -1414,8 +1414,9 @@ Kinh đô lớn lúc đầu chỉ phóng mô hình cũ theo móng mới (`footSc
 | Kho thóc | vựa chính, vựa phụ, cót quây ba phía quanh sân phơi thóc | đã vẽ |
 | Doanh trại | nhà dài suốt phía sau, sân tập rộng giữa cho tướng đứng, đài tướng và chòi trống bên phải, rào cọc nhọn từ cấp 3; thêm nhà dài thứ hai (cấp 4) | đã vẽ |
 | Trại giáo, trại cung, chuồng voi | hai lều chữ A và sân cọc rơm; lán một mái và trường bắn ngang hai bia; mái chóp và sân voi có máng, đống cỏ | đã vẽ |
-| Ba đền | đền lùi về sau, sân có tượng, cổng nhỏ; Phù Đổng thêm bụi tre đằng ngà, ao vết chân ngựa; Tản Viên thêm suối từ núi; Cổ Loa có cổng đất nện kiểu cổng thành | làm sau |
-| Ruộng nếp, vườn, chuồng lợn, bếp | ba thửa dài thấp dần ra trước; khóm lá dong và hai luống đậu dài; chuồng góc sau và sân lợn chạy, vũng bùn; gian bếp mái cao, nồi thò ra trước, chiếu gói bánh rộng | làm sau |
+| Ba đền | đền lùi về sau, sân có tượng, cổng nhỏ; Phù Đổng thêm bụi tre đằng ngà, ao vết chân ngựa; Tản Viên thêm suối từ núi; Cổ Loa có cổng đất nện kiểu cổng thành | chủ dự án đã vẽ lại theo sự tích (Võ miếu lửa sắt và tre đằng ngà; đền đá Tam Sơn Ba Vì và suối thác; Loa thành xoắn ốc và điện vòm mai Rùa Vàng), vẫn vẽ theo móng cũ rồi phóng theo móng |
+| Ruộng nếp | ba thửa dài thấp dần ra trước | chủ dự án đã làm lại chi tiết bông nếp, vẫn vẽ theo móng cũ rồi phóng theo móng |
+| Vườn, chuồng lợn, bếp | khóm lá dong và hai luống đậu dài; chuồng góc sau và sân lợn chạy, vũng bùn; gian bếp mái cao, nồi thò ra trước, chiếu gói bánh rộng | đã vẽ |
 
 - Lạc hầu, lính gác, tướng (Gióng lúc nhỏ, Sơn Tinh lúc cầu hôn, An Dương Vương cùng cột đá thề), cây nêu, dây cờ và mâm bánh ngày Tết nay ở trong sân chầu của Điện. Bỏ luật "ô trước Điện có công trình khác thì không dựng cây nêu".
 - Tướng ở doanh trại đứng giữa sân tập.
@@ -1425,13 +1426,16 @@ Kinh đô lớn lúc đầu chỉ phóng mô hình cũ theo móng mới (`footSc
 ### Code
 
 - `src/render/congTrinh/`: mỗi công trình đã vẽ lại một tệp (bản vẽ, mô hình, chỗ đứng người, khung chụp; bến thêm thuyền neo `benDocks`), phần dùng chung ở `chung.ts`, bảng tra `CONG_TRINH` và `lotModel` ở `index.ts`. `lotModel` dựng mô hình đặt vừa móng cho mọi loại: loại đã vẽ lại thì dựng thẳng, loại khác thì phóng dáng cũ theo móng.
-- Dáng cũ của mười một loại đã vẽ lại (`makeDien`...) còn ở `buildings.ts` chỉ để `node scripts/chup-cong-trinh.mjs` chụp so dáng cũ phóng theo móng với dáng vẽ lại, ở cả 8 cấp; game không dùng.
+- Dáng cũ của mười bốn loại đã vẽ lại (`makeDien`...) còn ở `buildings.ts` chỉ để `node scripts/chup-cong-trinh.mjs` chụp so dáng cũ phóng theo móng với dáng vẽ lại, ở cả 8 cấp; game không dùng.
 - `footprint.test.ts` canh mô hình không tràn quá nửa ô ra ngoài móng, bản vẽ đúng cỡ móng, và bến cùng thuyền neo không chạm bờ bên kia.
 
 ### Thứ tự làm
 
 1. **Mười một loại** (đã làm): Điện, ruộng, bến, nhà sàn, bãi đất đá, lò rèn, kho, doanh trại, trại giáo, trại cung, chuồng voi; cảnh Tết, tướng, thuyền buôn theo bố cục mới.
-2. **Ba đền, bốn công trình Hội Tết**; bỏ dáng cũ khỏi `buildings.ts`. Chụp kiểm tra mọi công trình ở mọi cấp.
+2. **Ba đền, bốn công trình Hội Tết** (đã làm):
+   - ba đền và ruộng nếp: chủ dự án đã vẽ lại dáng (ba đền theo sự tích, ruộng nếp chi tiết bông nếp), vẫn vẽ theo móng cũ rồi phóng theo móng;
+   - vườn đậu lá dong, chuồng lợn, bếp gói bánh: vẽ lại trên trọn móng ở `congTrinh/` theo bản vẽ. Người ngồi gói bánh ngày Tết nay ngồi trên chiếu trong móng bếp (`BEP_TET_SEAT`).
+   - Dáng cũ còn trong `buildings.ts` để chụp so; bỏ khi không cần so nữa.
 
 ## Nhịp chơi và lưu game
 
@@ -1471,6 +1475,6 @@ Kinh đô lớn lúc đầu chỉ phóng mô hình cũ theo móng mới (`footSc
 11. **Doanh trại và nơi ở riêng** (đã làm, xem mục cùng tên): doanh trại là nơi tướng ở và điều binh; trại giáo, trại cung, chuồng voi để luyện từng binh chủng; tướng ra trận từ doanh trại.
     **Nhiều doanh trại** (đã làm, xem mục Nhiều doanh trại, tướng chỉ huy, bố trí giữ kinh đô): mỗi tướng chỉ huy một doanh trại, tới 152 chỗ quân; phó bản mang tối đa 38 chỗ; người chơi tự bố trí lính giữ kinh đô ở từng trại.
 12. **Kinh đô lớn, công trình to, mở đất bằng khoảnh** (đã duyệt, đang làm; xem mục Kế hoạch cùng tên): công trình to hơn một ô mỗi chiều, lưới 55×55 (PR 1 đã làm), khoảnh 5×5 tự chọn (PR 2 đã làm), viền cỏ, trang trí ô trống, cây đá mọc. Làm trước chương 4 PR 2–4.
-    **Vẽ lại công trình trên móng** (đã duyệt, đang làm; xem mục cùng tên): mười một loại đã vẽ lại; ba đền và bốn công trình Hội Tết làm sau.
+    **Vẽ lại công trình trên móng** (đã làm; xem mục cùng tên): mười bốn loại vẽ lại trên trọn móng; ba đền và ruộng nếp chủ dự án vẽ lại dáng, vẫn phóng theo móng.
 13. **Đường đi và đồ trang trí** (đã làm, xem mục cùng tên): bốn loại đường, bảy món trang trí, ba thẻ chọn trong bảng Xây dựng, thẻ Dọn trang trí.
 14. **Để sau**: chương 5 về Hai Bà Trưng (mới nhắc ở câu cuối chương 4); nhạc nền.
