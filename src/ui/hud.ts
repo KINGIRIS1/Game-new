@@ -22,6 +22,7 @@ import {
   type ResourceId,
   type Resources,
   type GearId,
+  type HuanBranch,
   type GiftId,
   type Row,
   type SkillId,
@@ -97,7 +98,7 @@ import { floodToleranceOf, groundOf } from '../game/terrain';
 import { tetOpen, tetStarted, type Banh } from '../game/tet';
 import type { Resolution } from '../render/world';
 import { formatDuration, vi } from '../text/vi';
-import { armyHtml, defaultPick, mapHtml, nextRow, stageHtml, stageResultHtml, stepPick, type ArmyPick } from './campaign';
+import { armyHtml, defaultPick, huanHtml, mapHtml, nextRow, stageHtml, stageResultHtml, stepPick, type ArmyPick } from './campaign';
 import { armsHtml } from './binhKhi';
 import { advHtml, caoLoHtml } from './coLoa';
 import { costHtml, esc, fmt } from './format';
@@ -221,7 +222,8 @@ export type HudAction =
   | { kind: 'repairUNo'; id: number }
   | { kind: 'dismissRaid' }
   | { kind: 'openCampaign' }
-  | { kind: 'march'; stage: number; army: Record<UnitType, number>; rows: Record<UnitType, Row> }
+  | { kind: 'march'; stage: number; army: Record<UnitType, number>; rows: Record<UnitType, Row>; challenge: boolean }
+  | { kind: 'buyHuan'; branch: HuanBranch }
   | { kind: 'useSkill'; skill: SkillId }
   | { kind: 'openGiong' }
   | { kind: 'feedGiong' }
@@ -274,7 +276,8 @@ function skillButton(b: Battle, k: SkillId, small = false): string {
 interface CampaignView {
   chapter: Chapter;
   stage: number | null;
-  step: 'stage' | 'army';
+  /** Thẻ màn, bảng xếp quân (màn thường hay thử thách, theo `pick.challenge`), bảng Huân công. */
+  step: 'stage' | 'army' | 'huan';
   pick: ArmyPick;
 }
 
@@ -419,15 +422,19 @@ export class Hud {
       case 'campChapter':
       case 'pickStage':
       case 'prepareStage':
+      case 'prepareChallenge':
+      case 'openHuan':
       case 'backToStage':
       case 'armyDelta':
       case 'armyRow':
         return this.campaignStep(act, id, el);
       case 'march': {
         if (!this.camp?.stage) return;
-        const { army, rows } = this.camp.pick;
-        return this.onAction({ kind: 'march', stage: this.camp.stage, army: { ...army }, rows: { ...rows } });
+        const { army, rows, challenge } = this.camp.pick;
+        return this.onAction({ kind: 'march', stage: this.camp.stage, army: { ...army }, rows: { ...rows }, challenge });
       }
+      case 'buyHuan':
+        return this.onAction({ kind: 'buyHuan', branch: el.dataset.branch as HuanBranch });
       case 'openFile': {
         const input = this.sheetEl.querySelector<HTMLInputElement>('#save-file');
         if (!input) return;
@@ -1016,6 +1023,7 @@ export class Hud {
         <span class="unit-info"><b>${vi.units[k].name}</b> × ${state.troops[k]}
           <small>${vi.units[k].desc}</small>
           ${state.arms[k] ? `<small>⚔️ ${vi.ui.armsOnUnit(state.arms[k])}</small>` : ''}
+          ${state.thuThach.bac[k] ? `<small>🎖 ${vi.ui.huanOnUnit(state.thuThach.bac[k])}</small>` : ''}
           ${why ? `<small class="lack">${why}</small>` : ''}</span>
         <button class="btn small" data-act="train" data-unit="${k}" ${check.ok ? '' : 'disabled'}>${vi.ui.train}<br>${costHtml(state, def.cost)}</button>
       </div>`;
@@ -1246,9 +1254,12 @@ export class Hud {
     } else if (act === 'pickStage') {
       camp.stage = id;
       camp.step = 'stage';
-    } else if (act === 'prepareStage') {
+    } else if (act === 'prepareStage' || act === 'prepareChallenge') {
+      if (!camp.stage) return;
       camp.step = 'army';
-      camp.pick = defaultPick(state);
+      camp.pick = defaultPick(state, camp.stage, act === 'prepareChallenge');
+    } else if (act === 'openHuan') {
+      camp.step = camp.step === 'huan' ? 'stage' : 'huan';
     } else if (act === 'backToStage') {
       camp.step = 'stage';
     } else if (act === 'armyDelta') {
@@ -1265,7 +1276,8 @@ export class Hud {
     for (const k of UNIT_TYPES) camp.pick.army[k] = Math.min(camp.pick.army[k], state.troops[k]);
     const hint = [vi.ui.campaignHint, vi.ui.campaignHint, vi.ui.campaignHint2, vi.ui.campaignHint3, vi.ui.campaignHint4][camp.chapter];
     let panel = `<p class="muted">${hint}</p>`;
-    if (camp.stage) panel = camp.step === 'army' ? armyHtml(state, camp.pick, camp.stage) : stageHtml(state, camp.stage);
+    if (camp.step === 'huan') panel = huanHtml(state);
+    else if (camp.stage) panel = camp.step === 'army' ? armyHtml(state, camp.pick, camp.stage, camp.pick.challenge) : stageHtml(state, camp.stage);
     const now = chapterNow(state);
     const tabs =
       now > 1
@@ -1275,7 +1287,11 @@ export class Hud {
             .join('')}</div>`
         : '';
     const title = [vi.ui.campaignTitle, vi.ui.campaignTitle, vi.ui.campaignTitle2, vi.ui.campaignTitle3, vi.ui.campaignTitle4][camp.chapter];
-    const html = `<div class="camp-head"><h2>⚔️ ${title}</h2>${tabs}
+    // Chip huân công: có từ khi thắng màn đầu tiên (mở thử thách đầu tiên).
+    const huan = state.campaign.cleared > 0
+      ? `<button class="huan-chip ${camp.step === 'huan' ? 'on' : ''}" data-act="openHuan" aria-label="${vi.ui.huanTitle}">${vi.ui.huanChip(state.thuThach.huan)}</button>`
+      : '';
+    const html = `<div class="camp-head"><h2>⚔️ ${title}</h2>${tabs}${huan}
         <button class="close" data-act="closeCampaign" aria-label="${vi.ui.close}">✕</button></div>
       <div class="camp-main"><div class="camp-map">${mapHtml(state, camp.stage, camp.chapter)}</div><div class="camp-panel">${panel}</div></div>`;
     if (html !== this.campHtml || force) {
@@ -1291,7 +1307,8 @@ export class Hud {
     if (!b) return;
     const hold = b.holdS !== undefined;
     const secs = Math.max(0, Math.ceil((hold ? b.holdS! : FIELD.maxS) - b.t));
-    this.fieldTop.querySelector('b')!.textContent = `${vi.ui.stageN(b.wave)} · ${vi.stages[b.wave - 1].name}`;
+    const tag = b.challenge ? ` · 🎖 ${vi.ui.challengeKinds[b.challenge].name}` : '';
+    this.fieldTop.querySelector('b')!.textContent = `${vi.ui.stageN(b.wave)} · ${vi.stages[b.wave - 1].name}${tag}`;
     this.fieldTop.querySelector('span')!.textContent = hold
       ? `${vi.ui.holdBanner(enemiesLeft(b), alliesLeft(b), secs)} · ${vi.ui.holdWave(wavesArrived(b), b.waveCount ?? 1)}`
       : vi.ui.fieldBanner(enemiesLeft(b), alliesLeft(b), secs);

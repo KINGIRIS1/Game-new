@@ -3,7 +3,7 @@
 import './style.css';
 import { play, setMuted, stopRally, unlockAudio } from './audio/sfx';
 import { useSkill } from './game/battle';
-import { leaveBattlefield, retreat, startStage } from './game/campaign';
+import { leaveBattlefield, retreat, startStage, unitAllowed } from './game/campaign';
 import { forgeArms } from './game/binhKhi';
 import { assignCommander, autoGuard, setGuard } from './game/doanhTrai';
 import { forgeNoThan, inChapter3, wallRings } from './game/coLoa';
@@ -12,9 +12,10 @@ import { applyMau } from './game/mau';
 import { inChapter4, mergeTowers } from './game/chuong4';
 import { feedGiong, forgeGear } from './game/giong';
 import { inChapter2, offerGift } from './game/son';
+import { buyHuan } from './game/thuThach';
 import { markStory, pendingStory } from './game/story';
 import { footprintTop } from './game/terrain';
-import { BUILDINGS, RESOURCE_IDS, STAGES, U_NO, isDecor, isRoad, type BuildingType, type Cost, type ResourceId, type SkillId } from './game/defs';
+import { BUILDINGS, RESOURCE_IDS, STAGES, UNIT_TYPES, U_NO, isDecor, isRoad, type BuildingType, type Cost, type ResourceId, type SkillId } from './game/defs';
 import { fmt } from './ui/format';
 import {
   canAfford,
@@ -832,10 +833,19 @@ function start(): void {
         return;
 
       case 'march': {
-        const r = startStage(state, a.stage, a.army, a.rows);
+        const r = startStage(state, a.stage, a.army, a.rows, a.challenge);
         if (!r.ok) return fail(r.reason);
         play('claim');
         navigator.vibrate?.(40);
+        commit();
+        return;
+      }
+
+      case 'buyHuan': {
+        const r = buyHuan(state, a.branch);
+        if (!r.ok) return fail(r.reason);
+        play('upgrade');
+        hud.toast(vi.ui.huanToast(a.branch === 'tuong' ? vi.ui.huanTuong.name : vi.units[a.branch].name, r.value));
         commit();
         return;
       }
@@ -1070,8 +1080,11 @@ function start(): void {
       hud.showKhoanh(state, id);
     },
     /** Xuất toàn quân đánh màn `n`, rồi `skill(k)` để bấm kỹ năng: chụp thử trận ngoài bãi. */
-    march: (n: number) => {
-      const r = startStage(state, n, { ...state.troops }, state.campaign.rows);
+    march: (n: number, challenge = false) => {
+      // Thử thách Hai binh chủng: chỉ mang hai binh chủng được chỉ định.
+      const army = { ...state.troops };
+      for (const k of UNIT_TYPES) if (!unitAllowed(n, challenge, k)) army[k] = 0;
+      const r = startStage(state, n, army, state.campaign.rows, challenge);
       commit();
       return r;
     },

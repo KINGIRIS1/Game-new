@@ -2,7 +2,7 @@
 
 import type { HeroKind } from '../game/battle';
 import type { AdvLook } from '../game/coLoa';
-import type { BuildingType, EnemyType, GearId, GiftId, ResourceId, Row, SkillId, TuongId, UnitType } from '../game/defs';
+import type { BuildingType, ChallengeKind, EnemyType, GearId, GiftId, ResourceId, Row, SkillId, TuongId, UnitType } from '../game/defs';
 import type { FailReason, StoryId } from '../game/game';
 import type { GiongLook } from '../game/giong';
 import type { SonLook } from '../game/son';
@@ -287,6 +287,10 @@ export const vi = {
     canKetChuong4: 'Chỉ dựng được sau khi hộ giá vua ra biển Mộ Dạ',
     canCaoLo: 'Màn này cần Cao Lỗ đã cầm quân (thắng màn 25)',
     caoLoKietSuc: 'Cao Lỗ đang kiệt sức, chờ một lát',
+    thuThachKhoa: 'Thắng màn này trước đã mới mở thử thách',
+    thuThachBinhChung: 'Thử thách này chỉ được mang hai binh chủng đã chỉ định',
+    huanToiDa: 'Nhánh này đã đủ 3 bậc',
+    thieuHuanCong: 'Chưa đủ huân công',
     khongGhepDuoc: 'Chỉ ghép được hai chòi canh cấp 8 còn nguyên',
     canTuongChiHuy: 'Mỗi doanh trại cần một tướng chỉ huy. Chưa có tướng rảnh',
     tuongChuaCo: 'Tướng này chưa về với kinh đô',
@@ -1071,6 +1075,36 @@ export const vi = {
     armsDone: 'Đã rèn đủ',
     armsToast: (name: string, n: number) => `Thợ rèn đã rèn binh khí bậc ${n} cho ${name.toLowerCase()}`,
     armsOnUnit: (n: number) => `Binh khí bậc ${n}`,
+    challenge: 'Thử thách',
+    challengeOpen: '🎖 Thử thách',
+    challengeLocked: 'Thắng màn này thì mở thử thách',
+    challengeKinds: {
+      giacDu: { name: 'Giặc dữ', icon: '😠', rule: 'Giặc đánh đau hơn: sát thương giặc ×1,25.' },
+      khongTuong: { name: 'Không tướng', icon: '🚩', rule: 'Trận không có tướng nào, chỉ có quân ta và Trống trận.' },
+      haiBinh: { name: 'Hai binh chủng', icon: '⚖️', rule: 'Chỉ được mang hai binh chủng đã chỉ định.' },
+    } satisfies Record<ChallengeKind, { name: string; icon: string; rule: string }>,
+    challengeUnits: (names: string) => `Được mang: ${names}`,
+    challengeTougher: 'Giặc khỏe hơn màn thường. Thắng không có thêm của cải.',
+    challengeHuan: 'Huân công lần đầu thắng',
+    challengeDone: '⭐ Đã thắng thử thách',
+    challengeArmyTitle: (name: string) => `Xếp quân · Thử thách ${name}`,
+    challengeNoHero: 'Thử thách Không tướng: không tướng nào ra trận.',
+    challengeUnitBanned: 'Không mang được trong thử thách này',
+    challengeWonTitle: (n: number) => `Thắng thử thách màn ${n}!`,
+    challengeLostTitle: 'Thử thách chưa thành',
+    huanGot: (n: number) => `Huân công: +${n} 🎖`,
+    huanAgain: 'Đã thắng thử thách này rồi, không thêm huân công',
+    huanTitle: 'Huân công',
+    huanChip: (n: number) => `🎖 ${n}`,
+    huanHave: 'Huân công đang có',
+    huanHint: 'Thắng thử thách lần đầu thì được huân công. Mỗi bậc thêm 4% máu và sức đánh cho cả nhánh, ở mọi trận, giữ mãi.',
+    huanTuong: { name: 'Tướng', icon: '👑', desc: 'Cho mọi tướng: Gióng, Sơn Tinh, An Dương Vương, Cao Lỗ.' },
+    huanTier: (n: number) => `Bậc ${n}/3`,
+    huanBuy: (cost: number) => `Lên bậc · ${cost} 🎖`,
+    huanMax: 'Đã đủ 3 bậc',
+    huanToast: (name: string, n: number) => `${name} lên bậc huân công ${n}`,
+    huanOnUnit: (n: number) => `Huân công bậc ${n}`,
+    challengesWon: 'Thử thách đã thắng',
     rotate: 'Xoay cảnh 90°',
     mauTitle: 'Mẫu kinh đô',
     mauCard: 'Xếp kinh đô theo mẫu',

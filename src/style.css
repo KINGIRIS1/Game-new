@@ -906,6 +906,24 @@ textarea {
   font-size: 13px;
 }
 
+/* Chip huân công trên đầu bản đồ phó bản: chạm để mở bảng Huân công. */
+.huan-chip {
+  padding: 4px 11px;
+  min-height: 30px;
+  border-radius: 999px;
+  border: 1.5px solid var(--bronze-dark);
+  background: linear-gradient(180deg, #d9a84a, var(--bronze));
+  color: #fffaf0;
+  font-size: 14px;
+  font-weight: 800;
+  box-shadow: 0 2px 0 var(--bronze-dark);
+}
+
+.huan-chip.on {
+  outline: 2px solid var(--red);
+  outline-offset: 1px;
+}
+
 .camp-head .close {
   width: 34px;
   height: 34px;
@@ -1054,6 +1072,15 @@ textarea {
 
 .map .node .boss {
   font-size: 6px;
+}
+
+/* Đã thắng thử thách của màn: ngôi sao đồng dưới vòng màn. */
+.map .node .star {
+  font-size: 6px;
+  fill: #d9a84a;
+  stroke: var(--bronze-dark);
+  stroke-width: 0.35;
+  paint-order: stroke;
 }
 
 .map .node .halo {
@@ -1412,4 +1439,53 @@ textarea {
   margin: 6px auto;
   border: 1px solid var(--bronze-dark);
   image-rendering: pixelated;
+}
+
+/* Khung thử thách dưới thẻ màn đã thắng. */
+.challenge-box {
+  margin-top: 12px;
+  padding: 10px 12px;
+  border: 1.5px dashed var(--bronze);
+  border-radius: 12px;
+  background: rgba(184, 134, 47, 0.08);
+}
+
+/* Dòng luật thử thách. */
+.stage-card .rule {
+  margin: 4px 0;
+  font-weight: 700;
+  color: var(--bronze-dark);
+}
+
+.challenge-box h4 {
+  margin: 0 0 4px;
+  font-size: 14px;
+  color: var(--bronze-dark);
+}
+
+.challenge-box.done {
+  border-style: solid;
+}
+
+.challenge-box.locked {
+  opacity: 0.7;
+}
+
+/* Bảng Huân công: nấc bậc của từng nhánh. */
+.unit-row.huan .unit-info {
+  flex: 1;
+}
+
+.pips i {
+  display: inline-block;
+  width: 9px;
+  height: 9px;
+  margin-left: 3px;
+  border-radius: 50%;
+  border: 1.5px solid var(--bronze-dark);
+  vertical-align: -1px;
+}
+
+.pips i.on {
+  background: var(--bronze);
 }

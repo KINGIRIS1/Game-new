@@ -973,7 +973,7 @@ Chủ dự án muốn thêm vật liệu trải đường (đất, đá...) và 
 - Vẽ theo lô cho nhẹ máy: đường và món một ô dù nhiều tới hàng trăm vẫn chỉ vài lệnh vẽ (`src/render/decor.ts`).
 - Test: `trangTri.test.ts`.
 
-## Kế hoạch chương 4: Mỵ Châu, Trọng Thủy (chủ dự án đã duyệt, đang làm)
+## Kế hoạch chương 4: Mỵ Châu, Trọng Thủy (chủ dự án đã duyệt, đã làm)
 
 Chủ dự án đã chốt hướng qua một buổi hỏi đáp 26 câu. Ở nhiều câu, chủ dự án nhờ tìm hiểu các game cùng thể loại rồi đề xuất theo đó. Chỉ học cơ chế, còn luật chơi, nội dung và hình ảnh vẫn là của riêng game này:
 - **Clash of Clans**: làng không rộng thêm, mỗi lần mở cấp Tòa thị chính mới thì thêm cấp cho công trình cũ. Hai công trình phòng thủ đã tối đa ghép được thành một công trình mạnh hơn, ghép rồi không tách lại được. Từ đây có cấp 8 và **lầu nỏ**.
@@ -1212,7 +1212,7 @@ Bản đồ phó bản có thêm thẻ Chương 4, mở khi đã vào chương 4
 - Nhiệm vụ: nối thêm nhiệm vụ 45–49. Xong nhiệm vụ 49 thì bảng Lạc hầu báo truyện đã hết, kinh đô vẫn giữ (có nút Xem lại Hết truyện).
 - Test (`caoLo.test.ts`, mẫu ở `sapxep.test.ts`): độ khó màn 25–32 theo chuẩn; màn 32 thắng khi đầy thanh, thua khi hết quân; Nỏ liên châu, Lệnh bắn; chọn tướng phó bản và giữ kinh đô; thứ tự các đoạn truyện và Hết truyện; vua xuống biển, mở Đền Cuông; Đền Cuông bớt thuyền; mẫu kinh đô; nâng bản lưu 13 lên 14.
 
-### PR 4: thử thách phó bản và huân công
+### PR 4: thử thách phó bản và huân công (chủ dự án đã duyệt, đã làm)
 
 **Thử thách**
 
@@ -1236,6 +1236,39 @@ Bản đồ phó bản có thêm thẻ Chương 4, mở khi đã vào chương 4
   Ở màn Hai binh chủng, thường bỏ binh chủng khắc loại giặc đông nhất của màn. Màn 25 trở đi có thể chỉ định lính nỏ.
 - Màn 32 thử thách vẫn là cầm cự 90 giây.
 
+**Số cuối cùng** (`CHALLENGES` ở `defs.ts`, đo bằng `thuThach.test.ts`). Mỗi màn dò hai ngưỡng với 6 hạt giống: hệ số cao nhất mà người chơi giỏi còn thắng hết, hệ số thấp nhất mà người chơi thường đã thua phần lớn; rồi lấy khoảng giữa hai ngưỡng cho có khoảng an toàn cả hai phía.
+
+| Màn | Kiểu | Máu giặc | Màn | Kiểu | Máu giặc |
+|---|---|---|---|---|---|
+| 1 | Giặc dữ | ×58 | 17 | Không tướng | ×1,7 |
+| 2 | Giáo binh + voi chiến | ×24 | 18 | Giáo binh + voi chiến | ×3,2 |
+| 3 | Giặc dữ | ×16 | 19 | Giặc dữ | ×2,8 |
+| 4 | Giặc dữ | ×8,5 | 20 | Không tướng | ×1,1 |
+| 5 | Không tướng | ×3,5 | 21 | Giáo binh + cung thủ | ×3,3 |
+| 6 | Giáo binh + voi chiến | ×3,5 | 22 | Không tướng | ×0,95 |
+| 7 | Không tướng | ×2,4 | 23 | Giáo binh + voi chiến | ×2,6 |
+| 8 | Giặc dữ | ×2,2 | 24 | Giặc dữ | ×2,05 |
+| 9 | Không tướng | ×3,15 | 25 | Không tướng | ×1,05 |
+| 10 | Giáo binh + voi chiến | ×4 | 26 | Giáo binh + lính nỏ | ×3,15 |
+| 11 | Không tướng | ×1,9 | 27 | Không tướng | ×0,85 |
+| 12 | Giặc dữ | ×2,9 | 28 | Giặc dữ | ×2,2 |
+| 13 | Giáo binh + cung thủ | ×4,1 | 29 | Voi chiến + lính nỏ | ×2,6 |
+| 14 | Không tướng | ×1,4 | 30 | Không tướng | ×0,95 |
+| 15 | Giáo binh + voi chiến | ×3 | 31 | Giáo binh + lính nỏ | ×3,1 |
+| 16 | Giặc dữ | ×1,8 | 32 | Giặc dữ | ×3,3 |
+
+- Giặc đông nhất ở mọi màn đều là loại cung thủ khắc (lính giáo Ân, tôm binh, quỷ núi, lính Triệu, lính thủy). Nên màn Hai binh chủng bỏ cung thủ là chính; màn 13 và 21 bỏ voi chiến cho đỡ lặp.
+- Màn 1–4 ít giặc (màn 1 chỉ có 4 lính giáo Ân) mà quân mẫu 38 chỗ có Gióng hiển linh, nên hệ số máu phải rất lớn mới làm người chơi thường thua.
+- Thử thách Không tướng ở chương 3, 4 có hệ số thấp hơn màn thường, có màn dưới ×1: mất tướng là thiệt lớn nhất, vì màn thường đã cân theo tướng.
+
+**Những chỗ làm thêm, chủ dự án xem lại** (tài liệu chưa nói rõ):
+- Tướng khi đánh thử là tướng người chơi có **khi đã hết truyện**: chương 1 Gióng hiển linh có Nhổ tre, chương 2 Sơn Tinh hiển linh dời được non, chương 3 và màn 25 An Dương Vương hiển linh có Rùa Vàng, màn 26–32 Cao Lỗ có Lệnh bắn. Chuẩn đã tính binh khí rèn đủ 2 bậc (cuối chương 3), nên thử thách là việc chơi về sau. `thuThach.test.ts` canh tướng này đúng là tướng `heroFor` chọn khi đã qua màn 32.
+- Thắng thử thách chỉ có huân công: không có của cải, không mở màn, không kể truyện, không có lễ vật.
+- Thử thách Không tướng không cần tướng của màn: tướng đang nghỉ vẫn đánh được.
+- Quân mẫu Hai binh chủng chia đôi 38 chỗ cho hai binh chủng (vd. 20 giáo binh và 6 voi chiến).
+- Huân công cộng cả vào đòn kỹ năng của tướng (nhánh tướng), như Đền Phù Đổng.
+- Chip 🎖 có từ khi thắng màn đầu tiên. Thanh trên trong trận ghi kiểu thử thách; bảng nơi ở (nút Luyện) ghi bậc huân công của binh chủng, cạnh bậc binh khí.
+
 **Huân công**
 
 - Bảng **Huân công** mở từ bản đồ phó bản. Có 5 nhánh: giáo binh, cung thủ, voi chiến, lính nỏ, tướng. Mỗi nhánh 3 bậc.
@@ -1244,7 +1277,7 @@ Bản đồ phó bản có thêm thẻ Chương 4, mở khi đã vào chương 4
 - Chuẩn cân bằng của màn thường và của thử thách đều tính không có huân công.
 - Dáng: chip 🎖 trên bản đồ phó bản ghi số huân công đang có. Thẻ màn có thử thách đã thắng thì có ngôi sao đồng.
 
-- Bản lưu lên phiên bản kế tiếp (15 nếu làm ngay sau PR 3): thêm thử thách đã thắng, huân công đang có, bậc huân công từng nhánh.
+- Bản lưu lên **phiên bản 15**: thêm thử thách đã thắng, huân công đang có, bậc huân công từng nhánh (`thuThach`).
 - Test: mở thử thách sau khi thắng màn; luật từng kiểu; huân công chỉ cho một lần; mua bậc; tăng sức vào trận; mọi thử thách đạt chuẩn; nâng bản lưu cũ lên.
 
 ### Nhiệm vụ Lạc hầu chương 4
@@ -1272,7 +1305,7 @@ Thưởng khoảng gấp rưỡi nhiệm vụ chương 3. Nhận xong nhiệm v�
 2. **PR 1** (đã làm): Điện cấp 8, công trình cấp 8, lầu nỏ. Bản lưu v10.
 3. **PR 2** (đã làm, trên bản đồ mới): lính nỏ và trại nỏ, ụ nỏ, thủy binh Triệu đánh kinh đô, đoạn truyện "Cầu hôn". Bản lưu v13.
 4. **PR 3** (đã làm): Cao Lỗ, màn 25–32, bốn đoạn truyện còn lại, Đền Cuông, mẫu kinh đô chương 4 (vẽ trên bản đồ mới), màn hình Hết truyện. Bản lưu v14.
-5. **PR 4**: thử thách phó bản và huân công. Bản lưu v15.
+5. **PR 4** (đã làm): thử thách phó bản và huân công. Bản lưu v15.
 
 PR 2 làm sau kế hoạch Kinh đô lớn PR 1–2 (lưới 55×55 bản lưu v11, khoảnh tự chọn v12), vì thủy binh Triệu cập bờ cần bản đồ mới. Kinh đô lớn PR 4 (cây, đá mọc) chưa làm, sẽ lấy số bản lưu kế tiếp khi làm.
 
@@ -1426,7 +1459,7 @@ Kinh đô lớn lúc đầu chỉ phóng mô hình cũ theo móng mới (`footSc
 7. **Cấp 6–7 và rèn binh khí** (đã làm, xem mục Kế hoạch): Điện và 7 loại công trình lên cấp 6, 7, đất 25×25 rồi 26×26 (kinh đô lớn: 40×40), rèn binh khí hai bậc ở lò rèn, bản lưu phiên bản 8.
 8. **Hội Tết bánh chưng bánh giầy** (đã làm, xem mục PR 3): truyện Lang Liêu, ruộng nếp, vườn đậu lá dong, chuồng lợn, bếp gói bánh (3 cấp mỗi loại), Tết 20 phút một lần, phúc lành Đất và Trời, cảnh Tết trước Điện, bản lưu phiên bản 9.
 9. **Sửa sau chơi thử Hội Tết**: Thủy Tinh có hai phép, Dời non vẽ rõ hơn, xoay cảnh 4 hướng, dời công trình, mẫu kinh đô mỗi chương.
-10. **Chương 4: Mỵ Châu, Trọng Thủy** (đã duyệt, đang làm; PR 1, PR 2, PR 3 đã làm, còn PR 4; xem Kế hoạch chương 4): Điện và 7 loại công trình lên cấp 8, lầu nỏ, ụ nỏ trên thành, lính nỏ, thủy binh Triệu đi thuyền, Cao Lỗ, phó bản màn 25–32, Đền Cuông, màn hình Hết truyện, thử thách phó bản và huân công.
+10. **Chương 4: Mỵ Châu, Trọng Thủy** (đã làm cả 4 PR; xem Kế hoạch chương 4): Điện và 7 loại công trình lên cấp 8, lầu nỏ, ụ nỏ trên thành, lính nỏ, thủy binh Triệu đi thuyền, Cao Lỗ, phó bản màn 25–32, Đền Cuông, màn hình Hết truyện, thử thách phó bản và huân công.
 11. **Doanh trại và nơi ở riêng** (đã làm, xem mục cùng tên): doanh trại là nơi tướng ở và điều binh; trại giáo, trại cung, chuồng voi để luyện từng binh chủng; tướng ra trận từ doanh trại.
     **Nhiều doanh trại** (đã làm, xem mục Nhiều doanh trại, tướng chỉ huy, bố trí giữ kinh đô): mỗi tướng chỉ huy một doanh trại, tới 152 chỗ quân; phó bản mang tối đa 38 chỗ; người chơi tự bố trí lính giữ kinh đô ở từng trại.
 12. **Kinh đô lớn, công trình to, mở đất bằng khoảnh** (đã duyệt, đang làm; xem mục Kế hoạch cùng tên): công trình to hơn một ô mỗi chiều, lưới 55×55 (PR 1 đã làm), khoảnh 5×5 tự chọn (PR 2 đã làm), viền cỏ, trang trí ô trống, cây đá mọc. Làm trước chương 4 PR 2–4.
