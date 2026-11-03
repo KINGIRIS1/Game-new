@@ -1495,3 +1495,258 @@ textarea {
 .pips i.on {
   background: var(--bronze);
 }
+
+/* ---------- Màn hình vào game ---------- */
+
+/* Khung giao diện chính ẩn trong lúc màn hình vào game còn hiện, rồi hiện dần khi vào game. */
+#hud {
+  transition: opacity 0.45s ease;
+}
+
+body.man-vao-on #hud {
+  opacity: 0;
+  pointer-events: none;
+}
+
+body.man-vao-on #hud > * {
+  pointer-events: none;
+}
+
+.man-vao {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  align-items: center;
+  padding: calc(18px + var(--safe-top)) 16px calc(16px + var(--safe-bottom));
+  overflow: hidden;
+  /* Giấy dó phủ trên và dưới, chừa giữa màn hình cho thấy kinh đô. */
+  background:
+    linear-gradient(180deg, rgba(247, 236, 212, 0.96) 0%, rgba(247, 236, 212, 0.78) 30%, rgba(247, 236, 212, 0) 50%),
+    linear-gradient(0deg, rgba(247, 236, 212, 0.97) 0%, rgba(247, 236, 212, 0.82) 24%, rgba(247, 236, 212, 0) 44%);
+  transition: opacity 0.55s ease;
+}
+
+.man-vao.out {
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* Lớp đặc che cảnh 3D lúc còn đang dựng; dựng xong thì mờ đi cho kinh đô hiện ra. */
+.mv-veil {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background:
+    radial-gradient(circle at 50% 42%, rgba(217, 168, 74, 0.28), transparent 60%),
+    #f3e2c0;
+  transition: opacity 0.9s ease;
+}
+
+.man-vao.ready .mv-veil {
+  opacity: 0;
+}
+
+.mv-sound {
+  position: absolute;
+  top: calc(10px + var(--safe-top));
+  right: 12px;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: rgba(247, 236, 212, 0.94);
+  border: 1.5px solid var(--line);
+  box-shadow: var(--shadow);
+  font-size: 18px;
+}
+
+.mv-head {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 4px;
+}
+
+.mv-logo {
+  width: min(48vw, 30vh, 210px);
+  aspect-ratio: 1;
+  border-radius: 50%;
+  box-shadow:
+    0 0 0 4px rgba(138, 100, 32, 0.25),
+    0 10px 28px rgba(58, 42, 26, 0.35);
+  animation: mv-hien 0.8s ease-out both;
+}
+
+.mv-trong {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+/* Chim Lạc bay ngược chiều kim đồng hồ quanh mặt trống, như trên trống Ngọc Lũ. Tâm trống là gốc tọa độ của SVG. */
+.mv-chim {
+  transform-box: view-box;
+  transform-origin: 0 0;
+  animation: mv-bay 80s linear infinite;
+}
+
+@keyframes mv-bay {
+  to {
+    transform: rotate(-360deg);
+  }
+}
+
+@keyframes mv-hien {
+  from {
+    opacity: 0;
+    transform: scale(0.85);
+  }
+}
+
+.mv-title {
+  margin: 10px 0 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  line-height: 1;
+  font-family: 'Noto Serif', 'Times New Roman', Georgia, serif;
+  color: var(--bronze-dark);
+  text-shadow:
+    0 1px 0 #fff6e2,
+    0 2px 6px rgba(247, 236, 212, 0.9);
+}
+
+.mv-title small {
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: 0.42em;
+  /* Bù khoảng giãn chữ ở cuối dòng cho chữ đứng giữa. */
+  margin-right: -0.42em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+}
+
+.mv-title span {
+  margin-top: 4px;
+  font-size: clamp(40px, 13vw, 60px);
+  font-weight: 800;
+  letter-spacing: 0.02em;
+}
+
+.mv-tagline {
+  margin: 8px 0 0;
+  padding: 4px 14px;
+  max-width: 100%;
+  border-radius: 999px;
+  background: rgba(247, 236, 212, 0.88);
+  font-size: clamp(11.5px, 3.5vw, 13px);
+  text-wrap: balance;
+  font-style: italic;
+  color: var(--ink-soft);
+}
+
+.mv-foot {
+  width: min(360px, 100%);
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 12px;
+}
+
+.mv-card-slot:empty {
+  display: none;
+}
+
+.mv-card {
+  padding: 10px 14px;
+  border-radius: 14px;
+  background: rgba(247, 236, 212, 0.95);
+  border: 1.5px solid var(--bronze);
+  box-shadow: var(--shadow);
+  text-align: center;
+  animation: mv-len 0.5s ease-out both;
+}
+
+.mv-card.new {
+  font-style: italic;
+  color: var(--ink-soft);
+}
+
+.mv-chap {
+  font-size: 15px;
+  color: var(--ink);
+}
+
+.mv-chap b {
+  color: var(--bronze-dark);
+}
+
+.mv-stats {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 4px 14px;
+  margin-top: 6px;
+  font-size: 13px;
+  color: var(--ink-soft);
+}
+
+.mv-play {
+  padding: 15px 20px;
+  font-size: 20px;
+  border-radius: 16px;
+  letter-spacing: 0.02em;
+}
+
+.man-vao.ready .mv-play:not(:disabled) {
+  animation: mv-goi 2.4s ease-in-out 1s infinite;
+}
+
+@keyframes mv-goi {
+  50% {
+    box-shadow: 0 3px 0 var(--bronze-dark), 0 0 0 6px rgba(217, 168, 74, 0.35);
+  }
+}
+
+@keyframes mv-len {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+}
+
+/* Điện thoại cầm ngang: biểu tượng và tên bên trái, thẻ và nút bên phải. */
+@media (orientation: landscape) and (max-height: 520px) {
+  .man-vao {
+    flex-direction: row;
+    justify-content: space-around;
+    padding: calc(12px + var(--safe-top)) 24px calc(12px + var(--safe-bottom));
+    background:
+      linear-gradient(90deg, rgba(247, 236, 212, 0.94) 0%, rgba(247, 236, 212, 0.7) 34%, rgba(247, 236, 212, 0) 52%),
+      linear-gradient(270deg, rgba(247, 236, 212, 0.96) 0%, rgba(247, 236, 212, 0.86) 38%, rgba(247, 236, 212, 0) 56%);
+  }
+
+  .mv-logo {
+    width: min(42vh, 170px);
+  }
+
+  .mv-title span {
+    font-size: 40px;
+  }
+
+  .mv-foot {
+    width: min(320px, 46vw);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mv-chim,
+  .mv-logo,
+  .mv-card,
+  .man-vao.ready .mv-play:not(:disabled) {
+    animation: none;
+  }
+}

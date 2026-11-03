@@ -62,9 +62,12 @@ import { isOpen, khoanhOf, khoanhWood, openKhoanh, openable } from './game/khoan
 import { cayDaAt, clearCayDa } from './game/cayDa';
 import { GRID, RIVER_START, farBankOf } from './game/map';
 import { fromCode, loadFromStorage, saveFileName, saveToStorage, toCode } from './game/save';
+import { tomTat } from './game/manVao';
+import { TitleDrift } from './render/camera';
 import { HALF, RESOLUTIONS, World, type Resolution } from './render/world';
 import { vi } from './text/vi';
 import { Hud, buildingName, type HudAction } from './ui/hud';
+import { ManVao } from './ui/manVao';
 
 /**
  * Chạm từng ô để dựng lũy, gài bẫy, đắp đê, đắp thành Cổ Loa, trải đường, đặt đồ trang trí một ô, dựng ụ nỏ
@@ -106,9 +109,27 @@ function saveResolution(r: Resolution): void {
   }
 }
 
-function start(): void {
+/** Chờ trình duyệt vẽ xong một khung, để màn hình vào game kịp hiện trước khi dựng cảnh 3D (việc nặng, chạy liền một mạch). */
+const nextPaint = () => new Promise<void>((done) => requestAnimationFrame(() => setTimeout(done, 0)));
+
+async function start(): Promise<void> {
   const canvas = document.querySelector<HTMLCanvasElement>('#scene')!;
   const hudRoot = document.querySelector<HTMLElement>('#hud')!;
+
+  let state: GameState = loadFromStorage(localStorage) ?? createInitialState(Date.now());
+  setMuted(state.settings.muted);
+
+  // Màn hình vào game hiện ngay; nút Chơi tiếp chỉ bấm được khi cảnh đã dựng xong (`manVao.ready`).
+  const manVao = new ManVao(document.body, state.settings.muted, {
+    enter: () => enter(),
+    mute: () => {
+      state.settings.muted = !state.settings.muted;
+      setMuted(state.settings.muted);
+      saveToStorage(localStorage, state);
+      return state.settings.muted;
+    },
+  });
+  await nextPaint();
 
   let world: World;
   try {
@@ -119,10 +140,8 @@ function start(): void {
   }
   world.setResolution(loadResolution());
 
-  let state: GameState = loadFromStorage(localStorage) ?? createInitialState(Date.now());
   let mode: Mode = { kind: 'view', selected: null };
   let saveWarned = false;
-  setMuted(state.settings.muted);
 
   const hud = new Hud(hudRoot, handle, () => state);
 
@@ -1025,12 +1044,34 @@ function start(): void {
     hud.toast(vi.ui.relaid(refund));
   };
 
-  const offline = applyOffline(state, Date.now());
-  showRelaid();
-  showHint();
-  commit();
-  showOfflineIfLong(offline.ms, offline.gained);
-  if (state.raid.lastResult) hud.showRaidResult(state, state.raid.lastResult);
+  // Dựng cảnh theo bản lưu cho kinh đô hiện sau màn hình vào game. Luật chơi chưa chạy cho tới lúc vào game.
+  world.sync(state);
+  refreshUi();
+  const drift = new TitleDrift(world.view);
+  drift.start();
+  // Người chơi tự kéo camera lúc đang lướt về thì thôi lướt.
+  const userMove = world.view.onUserMove;
+  world.view.onUserMove = () => {
+    userMove?.();
+    drift.done = true;
+  };
+
+  let entered = false;
+  /** Bấm Chơi tiếp (hay Bắt đầu): thời gian nằm ở màn hình vào game tính như lúc vắng mặt, rồi báo thu hoạch như cũ. */
+  const enter = () => {
+    if (entered) return;
+    entered = true;
+    unlockAudio();
+    play('vaoGame');
+    manVao.close();
+    drift.release();
+    const offline = applyOffline(state, Date.now());
+    showRelaid();
+    showHint();
+    commit();
+    showOfflineIfLong(offline.ms, offline.gained);
+    if (state.raid.lastResult) hud.showRaidResult(state, state.raid.lastResult);
+  };
 
   /** Theo dõi giai đoạn giặc để phát âm thanh, hiện cảnh báo và bảng kết quả đúng lúc. */
   let shownPhase = state.raid.phase;
@@ -1125,6 +1166,13 @@ function start(): void {
   const frame = (now: number) => {
     const dt = Math.min((now - prev) / 1000, 0.1);
     prev = now;
+    drift.update(dt);
+    if (!entered) {
+      // Đang ở màn hình vào game: chỉ vẽ cảnh, không cho thời gian trôi trong game.
+      world.update(dt);
+      requestAnimationFrame(frame);
+      return;
+    }
 
     const wall = Date.now();
     const gap = wall - state.lastSeen;
@@ -1179,10 +1227,13 @@ function start(): void {
     requestAnimationFrame(frame);
   };
   requestAnimationFrame(frame);
+  manVao.ready(tomTat(state, Date.now()));
 
   // Cho phép kiểm thử tự động đọc trạng thái và tìm vị trí ô trên màn hình.
   (window as unknown as { __debug?: object }).__debug = {
     state: () => state,
+    /** Bấm qua màn hình vào game, như người chơi bấm Chơi tiếp. */
+    enter: () => enter(),
     tileToScreen: (x: number, z: number) => world.tileToScreen(x, z),
     renderInfo: () => ({ ...world.renderer.info.render }),
     rotate: (dir: 1 | -1) => world.rotateView(dir),
@@ -1241,4 +1292,4 @@ function start(): void {
   };
 }
 
-start();
+void start();

@@ -25,6 +25,7 @@ const KHUNG = {
 //   G = game.ts, M = moPhong.ts (người chơi mô phỏng), D = defs.ts, C = campaign.ts, S = story.ts, X = mau.ts,
 //   K = khoanh.ts, B = benKia.ts (bên kia sông).
 // `truoc` chạy trước khi tải lại trang (dựng state rồi lưu), `sau` chạy sau khi tải lại (bấm trận, bấm kỹ năng...).
+// Sau khi tải lại, script bấm qua màn hình vào game, trừ cảnh có `giuManVao`; `vang` (ms) lùi lần chơi trước.
 
 /** Cho kinh đô một doanh trại và một ít quân, giữ nguyên kho của người chơi. */
 const CO_QUAN = `
@@ -42,6 +43,14 @@ const CO_QUAN = `
 const KINH_DO = `M.playChapters({ s, until: (m) => m.at5 >= 0 });`;
 
 const CANH = {
+  'man-vao': {
+    mo: 'Màn hình vào game của bản lưu chương 1 (Điện cấp 5), vắng 3 giờ',
+    truoc: KINH_DO,
+    giuManVao: true,
+    vang: 3 * 3600 * 1000,
+    doi: 1800,
+  },
+  'man-vao-moi': { mo: 'Màn hình vào game khi chưa chơi (nút Bắt đầu)', truoc: '', giuTruyen: true, giuManVao: true, doi: 1800 },
   dau: { mo: 'Vừa vào game, đã đóng đoạn truyện mở đầu', truoc: '' },
   truyen: { mo: 'Vừa vào game, đang hiện đoạn truyện mở đầu', truoc: '', giuTruyen: true },
   'kinh-do': { mo: 'Kinh đô chương 1 lúc vừa lên Điện cấp 5 (người chơi mô phỏng chơi chừng một giờ)', truoc: KINH_DO },
@@ -206,9 +215,10 @@ async function chupMotCanh(browser, url, tenCanh, khung, opts) {
     // Dựng state, đánh dấu các đoạn truyện đã xem (trừ cảnh muốn xem truyện), lưu rồi tải lại cho giao diện sạch.
     const truoc = [canh.truoc, opts.truoc ?? ''].join('\n');
     const dongTruyen = canh.giuTruyen ? '' : 'for (let id; (id = S.pendingStory(s)); ) S.markStory(s, id);';
-    await chayMa(page, `${truoc}\n${dongTruyen}\ns.lastSeen = Date.now(); d.advance(0);`);
+    await chayMa(page, `${truoc}\n${dongTruyen}\ns.lastSeen = Date.now() - ${canh.vang ?? 0}; d.advance(0);`);
     await page.reload({ waitUntil: 'load' });
     await choGame(page);
+    if (!canh.giuManVao) await page.evaluate(() => window.__debug.enter());
     await page.waitForTimeout(800);
 
     await chayMa(page, [canh.sau ?? '', opts.sau ?? ''].join('\n'));

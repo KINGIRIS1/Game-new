@@ -2,7 +2,7 @@
 
 import { RALLY_BEAT, SKILLS } from '../game/defs';
 
-export type Sfx = 'tap' | 'place' | 'upgrade' | 'claim' | 'error' | 'trongTran';
+export type Sfx = 'tap' | 'place' | 'upgrade' | 'claim' | 'error' | 'trongTran' | 'vaoGame';
 
 let ctx: AudioContext | undefined;
 let muted = false;
@@ -74,6 +74,12 @@ export function play(name: Sfx): void {
       break;
     case 'error':
       tone(200, t, 0.12, 'square', 0.04, 150);
+      break;
+    case 'vaoGame':
+      // Vào game: ba tiếng trống đồng "tùng, tùng, tùng" nện dần mạnh, rồi một nốt ngũ cung ngân.
+      [0, 0.24, 0.48].forEach((d, i) => drum(t + d, 72 + i * 14, 0.3 + i * 0.1));
+      tone(392, t + 0.5, 0.6, 'triangle', 0.08);
+      tone(587, t + 0.62, 0.7, 'triangle', 0.06);
       break;
     case 'trongTran': {
       // Lạc tướng nện trống suốt thời gian thúc quân, đúng nhịp phần vẽ: tiếng trầm "tùng", tiếng nảy "tung" xen nhau,

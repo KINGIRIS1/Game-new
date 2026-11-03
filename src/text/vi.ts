@@ -2,7 +2,7 @@
 
 import type { HeroKind } from '../game/battle';
 import type { AdvLook } from '../game/coLoa';
-import type { BuildingType, CayDaKind, ChallengeKind, EnemyType, GearId, GiftId, ResourceId, Row, SkillId, TuongId, UnitType } from '../game/defs';
+import type { BuildingType, CayDaKind, ChallengeKind, Chapter, EnemyType, GearId, GiftId, ResourceId, Row, SkillId, TuongId, UnitType } from '../game/defs';
 import type { FailReason, StoryId } from '../game/game';
 import type { Bank, Dat, Nghe, Tier } from '../game/benKia';
 import type { GiongLook } from '../game/giong';
@@ -868,6 +868,34 @@ export const vi = {
       moSat: { name: 'Mỏ sắt lộ thiên', icon: '⚒️', desc: 'Quặng sắt đỏ gỉ. Lò rèn dựng trọn trên mỏ này làm ra nhiều hơn.' },
     } satisfies Record<Dat, { name: string; icon: string; desc: string }>,
     cua: { name: 'Của chôn', icon: '🏺', desc: 'Trống đồng, rìu đồng chôn dưới đất. Đất này về tay ta thì đào được.' },
+  },
+
+  /** Màn hình vào game: hiện mỗi lần mở game, trên cảnh kinh đô trôi chậm phía sau. */
+  manVao: {
+    titleSmall: 'Thời đại',
+    titleBig: 'Văn Lang',
+    tagline: 'Dựng kinh đô Phong Châu, giữ bờ cõi Văn Lang',
+    loading: 'Đang dựng kinh đô…',
+    start: 'Bắt đầu',
+    continue: 'Chơi tiếp',
+    chapter: (n: number) => `Chương ${n}`,
+    chapterNames: {
+      1: 'Thánh Gióng',
+      2: 'Sơn Tinh, Thủy Tinh',
+      3: 'An Dương Vương',
+      4: 'Mỵ Châu, Trọng Thủy',
+    } satisfies Record<Chapter, string>,
+    hetTruyen: 'Đã hết truyện',
+    dien: (level: number) => `Điện cấp ${level}`,
+    dan: (n: string) => `${n} dân`,
+    vang: (ms: number) => {
+      if (ms < 60_000) return 'Vừa chơi lúc nãy';
+      const days = Math.floor(ms / 86_400_000);
+      return days >= 1 ? `Vắng ${days} ngày` : `Vắng ${formatDuration(ms)}`;
+    },
+    newGame: 'Kinh đô mới, chờ người dựng nước',
+    soundOn: 'Đang bật tiếng, chạm để tắt',
+    soundOff: 'Đang tắt tiếng, chạm để bật',
   },
 
   ui: {

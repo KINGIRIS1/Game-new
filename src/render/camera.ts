@@ -236,3 +236,69 @@ export class IsoCamera {
     }
   }
 }
+
+/** Màn hình vào game: phóng gần hơn chỗ nhìn ban đầu chừng này lần. */
+const TITLE_ZOOM = 1.18;
+/** Camera trôi một vòng bầu dục quanh chỗ nhìn ban đầu, lệch tối đa chừng này ô theo mỗi trục. */
+const TITLE_SWAY = { x: 2.4, z: 1.6 };
+/** Vào game thì lướt về chỗ nhìn ban đầu trong chừng này giây. */
+const TITLE_BACK_S = 0.7;
+
+/**
+ * Camera của màn hình vào game: trôi chậm quanh chỗ nhìn ban đầu cho kinh đô phía sau có hồn; vào game thì lướt về
+ * đúng chỗ nhìn ban đầu và độ phóng cũ.
+ */
+export class TitleDrift {
+  private home: { x: number; z: number; zoom: number } | null = null;
+  private t = 0;
+  /** Đang lướt về: từ chỗ nào, đã được bao lâu; xong thì `done`. */
+  private back: { x: number; z: number; zoom: number; t: number } | null = null;
+  done = false;
+
+  constructor(private readonly view: IsoCamera) {}
+
+  /** Ghi lại chỗ nhìn hiện tại làm chỗ nhìn ban đầu (gọi sau khi World đã đặt tâm nhìn theo vùng đất). */
+  start(): void {
+    const v = this.view;
+    this.home = { x: v.target.x, z: v.target.z, zoom: v.zoom };
+    this.t = 0;
+    this.done = false;
+    this.place();
+  }
+
+  /** Thôi trôi, lướt về chỗ nhìn ban đầu. */
+  release(): void {
+    if (!this.home || this.back || this.done) return;
+    const v = this.view;
+    this.back = { x: v.target.x, z: v.target.z, zoom: v.zoom, t: 0 };
+  }
+
+  update(dt: number): void {
+    if (!this.home || this.done) return;
+    if (!this.back) {
+      this.t += dt;
+      this.place();
+      return;
+    }
+    const b = this.back;
+    b.t = Math.min(TITLE_BACK_S, b.t + dt);
+    const k = b.t / TITLE_BACK_S;
+    const e = k * k * (3 - 2 * k);
+    const v = this.view;
+    v.target.x = b.x + (this.home.x - b.x) * e;
+    v.target.z = b.z + (this.home.z - b.z) * e;
+    v.zoom = b.zoom + (this.home.zoom - b.zoom) * e;
+    v.apply();
+    if (b.t >= TITLE_BACK_S) this.done = true;
+  }
+
+  private place(): void {
+    const h = this.home!;
+    const v = this.view;
+    // Hai nhịp lệch nhau để đường trôi không lặp lại quá đều.
+    v.target.x = h.x + TITLE_SWAY.x * Math.sin(this.t * 0.11);
+    v.target.z = h.z + TITLE_SWAY.z * Math.sin(this.t * 0.07 + 1.3);
+    v.zoom = h.zoom * (TITLE_ZOOM + 0.04 * Math.sin(this.t * 0.05));
+    v.apply();
+  }
+}
