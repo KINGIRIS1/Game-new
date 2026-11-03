@@ -184,14 +184,16 @@ describe('nền đất bờ vát', () => {
   });
 
   describe('ô giữ phẳng', () => {
-    // Ô (3, 2) thuộc gò bậc 2, kề ô bậc 1 (2, 2) ở phía tây; ô (2, 6) kề sông ở phía nam; ô (5, 5) giữa đất phẳng.
-    const flat = new Set(['3,2', '2,6', '5,5']);
+    // Ô (3, 2) thuộc gò bậc 2, kề ô bậc 1 (2, 2) cũng giữ phẳng ở phía tây, kề ô thường bậc 1 (3, 1) ở phía bắc;
+    // ô (2, 6) kề sông ở phía nam; ô (5, 5) giữa đất phẳng.
+    const flat = new Set(['3,2', '2,2', '2,6', '5,5']);
     const fn = buildNen(input(flat));
     const ft = triangles(fn.geometry);
 
     it('phẳng trọn ô tới tận mép', () => {
       for (const [x, z] of [
         [3, 2],
+        [2, 2],
         [2, 6],
         [5, 5],
       ]) {
@@ -206,20 +208,41 @@ describe('nền đất bờ vát', () => {
       }
     });
 
-    it('mép cao hơn ô bên cạnh thì có vách đứng màu đất quay ra ngoài, mặt đất vẫn kín', () => {
+    it('ô thường thấp hơn bên cạnh dốc lên tới mép ô giữ phẳng, giữa ô vẫn đúng mặt ô', () => {
+      // Ô (3, 1) bậc 1 dốc lên mép nam giáp ô giữ phẳng bậc 2 (3, 2): nửa dải dốc cao nửa bậc.
+      expect(fn.heightAt(3.5, 1.5)).toBeCloseTo(LEVEL, 5);
+      expect(fn.heightAt(3.5, 1 + (1 - RAMP / 2))).toBeCloseTo(1.5 * LEVEL, 5);
+      expect(fn.heightAt(3.5, 1.9999)).toBeCloseTo(2 * LEVEL, 3);
+      // Không giữ phẳng thì dốc nằm trong ô cao (3, 2), ô (3, 1) phẳng trọn ô.
+      expect(nen.heightAt(3.5, 1 + (1 - RAMP / 2))).toBeCloseTo(LEVEL, 5);
+      // Ô thường cùng bậc (4, 2) giáp ô giữ phẳng (3, 2): mép chung phẳng ngang.
+      expect(fn.heightAt(4.01, 2.5)).toBeCloseTo(2 * LEVEL, 5);
+    });
+
+    it('mép cao hơn ô giữ phẳng bên cạnh, hay sông, thì có vách đứng màu đất quay ra ngoài, mặt đất vẫn kín', () => {
       const walls = ft.filter((t) => Math.abs(t.n.y) < 1e-4);
-      // Vách phía tây ô (3, 2) xuống ô bậc 1, vách phía nam ô (2, 6) xuống đáy sông.
+      // Vách phía tây ô (3, 2) xuống ô giữ phẳng bậc 1 (2, 2), vách phía nam ô (2, 6) xuống đáy sông.
       expect(walls.some((t) => t.p.every((v) => Math.abs(v.x - 3) < 1e-6) && t.n.x < -0.99)).toBe(true);
       expect(walls.some((t) => t.p.every((v) => Math.abs(v.z - 7) < 1e-6) && t.n.z > 0.99)).toBe(true);
+      // Mép bắc ô (3, 2) giáp ô thường (3, 1) dốc lên: không có vách giữa hai đỉnh mép phía đông.
+      expect(walls.some((t) => t.p.every((v) => Math.abs(v.z - 2) < 1e-6 && v.x > 3 + RAMP - 1e-6))).toBe(false);
       // Mặt đất kín, trừ bìa ngoài cùng của nền và mép sông (chân dốc, chân vách xuống đáy sông).
       const inside = (q: THREE.Vector3) => q.x > -2 + 1e-4 && q.x < G + 2 - 1e-4 && q.z > -2 + 1e-4 && q.z < 7 - 1e-4;
       expect(openPoints(ft, inside)).toEqual([]);
       expect(openPoints(tris, inside)).toEqual([]);
     });
 
-    it('ô bên cạnh không đổi: ô không giữ phẳng vẽ y như khi chưa có ô giữ phẳng', () => {
-      expect(fn.heightAt(2.9, 2.5)).toBeCloseTo(nen.heightAt(2.9, 2.5), 5);
-      expect(fn.heightAt(4.1, 2.1)).toBeCloseTo(nen.heightAt(4.1, 2.1), 5);
+    it('heightAt khớp đúng hình đã vẽ quanh ô giữ phẳng', () => {
+      const ray = new THREE.Raycaster();
+      const mesh = new THREE.Mesh(fn.geometry, new THREE.MeshBasicMaterial({ side: THREE.DoubleSide }));
+      for (let i = 0; i < 400; i++) {
+        const px = 0.05 + ((i * 37) % 97) / 97 * 6.9;
+        const pz = 0.05 + ((i * 61) % 89) / 89 * 6.8;
+        ray.set(new THREE.Vector3(px, 10, pz), new THREE.Vector3(0, -1, 0));
+        const hit = ray.intersectObject(mesh)[0];
+        expect(hit).toBeDefined();
+        expect(fn.heightAt(px, pz)).toBeCloseTo(hit.point.y, 4);
+      }
     });
   });
 
