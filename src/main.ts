@@ -68,7 +68,7 @@ import { HALF, RESOLUTIONS, World, type Resolution } from './render/world';
 import { vi } from './text/vi';
 import { Hud, buildingName, type HudAction } from './ui/hud';
 import { ManVao } from './ui/manVao';
-import { onThumb } from './render/anhCongTrinh';
+import { preloadThumbs } from './ui/xayDung';
 
 /**
  * Chạm từng ô để dựng lũy, gài bẫy, đắp đê, đắp thành Cổ Loa, trải đường, đặt đồ trang trí một ô, dựng ụ nỏ
@@ -145,8 +145,6 @@ async function start(): Promise<void> {
   let saveWarned = false;
 
   const hud = new Hud(hudRoot, handle, () => state);
-  // Ảnh công trình vẽ xong thì thay icon tạm trong bảng Xây dựng đang mở.
-  onThumb(() => hud.thumbsReady(state));
 
   const save = () => {
     if (!saveToStorage(localStorage, state) && !saveWarned) {
@@ -449,13 +447,6 @@ async function start(): Promise<void> {
         if (world.inField) return;
         play('tap');
         world.rotateView(1);
-        return;
-
-      case 'openMau':
-        if (mode.kind !== 'view') exitMode();
-        select(null);
-        play('tap');
-        hud.showMau(state);
         return;
 
       case 'marchCamp': {
@@ -1074,6 +1065,7 @@ async function start(): Promise<void> {
     commit();
     showOfflineIfLong(offline.ms, offline.gained);
     if (state.raid.lastResult) hud.showRaidResult(state, state.raid.lastResult);
+    preloadThumbs();
   };
 
   /** Theo dõi giai đoạn giặc để phát âm thanh, hiện cảnh báo và bảng kết quả đúng lúc. */

@@ -937,7 +937,7 @@ export const vi = {
     decorHint: 'Chạm vào từng ô đất để đặt',
     clearHint: 'Chạm vào ô đường hay món trang trí để dọn đi',
     cleared: (name: string) => `Đã dọn ${name}`,
-    buildGroups: { congTrinh: 'Công trình', duong: 'Đường đi', trangTri: 'Trang trí' },
+    buildGroups: { congTrinh: 'Công trình', duong: 'Đường đi', trangTri: 'Trang trí', mau: 'Mẫu kinh đô' },
     /** Nút dưới ảnh lớn trong bảng Xây dựng, theo việc của mục đang chọn. */
     buildGo: {
       build: '🔨 Xây',
@@ -946,7 +946,6 @@ export const vi = {
       chooseUNo: '🔨 Dựng ụ nỏ',
       chooseRaise: '⛰️ Đắp đất',
       chooseClear: '🧹 Dọn',
-      openMau: '🗺️ Xem mẫu',
     },
     roadCount: (have: number, max: number) => `Cả 4 loại đường: ${have}/${max} ô`,
     clearDecor: 'Dọn trang trí',
@@ -1310,8 +1309,6 @@ export const vi = {
     huanOnUnit: (n: number) => `Huân công bậc ${n}`,
     challengesWon: 'Thử thách đã thắng',
     rotate: 'Xoay cảnh 90°',
-    mauTitle: 'Mẫu kinh đô',
-    mauCard: 'Xếp kinh đô theo mẫu',
     mauHint: 'Mỗi chương mở một mẫu. Mẫu giãn theo cấp Điện: nâng Điện thì mẫu rộng ra, áp lại để lũy, đê, thành ra tới bìa mới và công trình mới có chỗ. Chỗ của mẫu nằm trong khoảnh rừng chưa phát thì bỏ qua: phát thêm rừng rồi áp lại. Áp mẫu thì mọi công trình được dời vào chỗ trong mẫu (mỗi cái mất 10% giá dựng), phần mẫu có mà mình chưa có được dựng thêm (trong giới hạn theo cấp Điện), đoạn lũy, đê, thành, bẫy thừa bị dỡ. Phải đủ tài nguyên mới áp được.',
     mau: {
       phongChau: {

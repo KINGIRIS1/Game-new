@@ -875,12 +875,13 @@ button {
 
 .build-tabs .tab {
   flex: 1;
-  padding: 8px 4px;
+  padding: 8px 2px;
   border-radius: 12px;
   border: 1.5px solid var(--line);
   background: #fffaf0;
   font-weight: 700;
-  font-size: 14px;
+  font-size: 13px;
+  line-height: 1.2;
   color: var(--ink-soft);
 }
 
@@ -1015,7 +1016,7 @@ button {
   opacity: 0.55;
 }
 
-/* Icon công cụ, hay icon tạm khi ảnh công trình chưa vẽ xong. */
+/* Icon công cụ (đắp đất, dọn trang trí). */
 .xd-icon {
   display: grid;
   place-items: center;
@@ -1023,15 +1024,34 @@ button {
   height: 100%;
 }
 
-.xd-icon.loading {
-  opacity: 0.45;
-  animation: xd-pulse 0.9s ease-in-out infinite alternate;
+/* Thẻ Mẫu kinh đô: ảnh là bản đồ thu nhỏ vuông, vẽ theo ô nên giữ cạnh sắc. */
+.xd-stage.square .xd-pic,
+.xd-mini.square img {
+  aspect-ratio: 1;
 }
 
-@keyframes xd-pulse {
-  to {
-    opacity: 0.2;
-  }
+.xd-stage.square img,
+.xd-mini.square img {
+  image-rendering: pixelated;
+}
+
+.xd-grid.square {
+  grid-template-columns: repeat(4, 1fr);
+}
+
+/* Lời tả dài (mẫu kinh đô) chạy trọn bề ngang dưới ảnh lớn. */
+.xd-note {
+  grid-column: 1 / -1;
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.35;
+  color: var(--ink-soft);
+}
+
+.xd-foot {
+  margin: 10px 2px 0;
+  font-size: 12px;
+  line-height: 1.35;
 }
 
 .cost {
@@ -1912,29 +1932,6 @@ textarea {
   display: flex;
   align-items: center;
   justify-content: space-between;
-}
-
-/* Mẫu kinh đô: thẻ mỗi mẫu, bản đồ thu nhỏ 27×27 ô (thêm một hàng sông). */
-.mau {
-  border: 1.5px solid var(--bronze);
-  border-radius: 12px;
-  padding: 8px 10px;
-  margin-bottom: 10px;
-  background: rgba(255, 255, 255, 0.35);
-}
-.mau.locked {
-  opacity: 0.6;
-}
-.mau h3 {
-  margin: 2px 0 4px;
-}
-.mini-map {
-  display: block;
-  width: min(100%, 260px);
-  aspect-ratio: 1;
-  margin: 6px auto;
-  border: 1px solid var(--bronze-dark);
-  image-rendering: pixelated;
 }
 
 /* Khung thử thách dưới thẻ màn đã thắng. */

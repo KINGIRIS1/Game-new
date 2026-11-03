@@ -1,6 +1,7 @@
-// Ảnh công trình cho bảng Xây dựng, vẽ từ chính mô hình trong game ở cấp 1 (cấp sẽ xây), trên bệ cỏ, nhìn chéo như
-// camera game. Một WebGLRenderer nhỏ riêng, dựng lúc cần, vẽ vài ảnh mỗi khung rồi tự hủy khi xong cho nhẹ máy.
-// Ảnh giữ ở dạng blob URL (chuỗi ngắn) để bảng so HTML không phải so cả ảnh.
+// Ảnh công trình cho bảng Xây dựng, vẽ sẵn từ chính mô hình trong game ở cấp 1 (cấp sẽ xây), trên bệ cỏ, nhìn chéo
+// như camera game. Ảnh không vẽ lúc chơi: `node scripts/anh-cong-trinh.mjs` vẽ ra `public/anh-cong-trinh/<loại>.webp`
+// và ghi dấu vân tay mô hình (`thumbHash`) vào `anhCongTrinhDau.ts`; game chỉ tải ảnh như ảnh thường.
+// `anhCongTrinh.test.ts` so dấu vân tay với mô hình hiện tại: đổi dáng công trình mà chưa vẽ lại ảnh thì test hỏng.
 
 import * as THREE from 'three';
 import { BUILDINGS, isBridge, type BuildingType } from '../game/defs';
@@ -13,75 +14,19 @@ import { ramp } from './toon';
 /** Loại công trình, hay ụ nỏ (dựng trên đoạn thành, không phải loại công trình riêng). */
 export type ThumbKind = BuildingType | 'uNo';
 
+/** Mọi loại có ảnh: mọi loại công trình và ụ nỏ. */
+export const THUMB_KINDS: ThumbKind[] = [...(Object.keys(BUILDINGS) as BuildingType[]), 'uNo'];
+
+/** Khổ ảnh (4:3). Ảnh lớn trong bảng rộng chừng 160 điểm CSS, nhân mật độ điểm ảnh điện thoại. */
+export const THUMB_W = 400;
+export const THUMB_H = 300;
+
+/** Tăng số này khi đổi cách dựng cảnh ảnh (bệ, khúc sông, khung hình) để test đòi vẽ lại mọi ảnh. */
+const THUMB_VERSION = 1;
+
 const AZ = Math.PI / 4;
 const EL = THREE.MathUtils.degToRad(38);
 const WATER_Y = -0.28;
-
-const cache = new Map<string, string>();
-const pending = new Set<string>();
-const queue: { kind: ThumbKind; px: number; key: string }[] = [];
-const listeners: (() => void)[] = [];
-let renderer: THREE.WebGLRenderer | null = null;
-let frame = 0;
-let idle = 0;
-let notifyAt = 0;
-
-/** Ảnh công trình `kind` khổ 4:3 rộng `px` điểm ảnh. Chưa có thì xếp hàng vẽ và trả null (bảng hiện icon tạm). */
-export function thumb(kind: ThumbKind, px: number): string | null {
-  const key = thumbKey(kind, px);
-  const url = cache.get(key);
-  if (url) return url;
-  if (!pending.has(key)) {
-    pending.add(key);
-    // Ảnh lớn là ảnh người chơi đang xem: vẽ trước các ảnh nhỏ còn chờ.
-    if (px > 256) queue.unshift({ kind, px, key });
-    else queue.push({ kind, px, key });
-    if (!frame) frame = requestAnimationFrame(work);
-  }
-  return null;
-}
-
-/** Ảnh đã vẽ xong theo khóa `thumbKey`, không xếp hàng vẽ. */
-export function cachedThumb(key: string): string | null {
-  return cache.get(key) ?? null;
-}
-
-export const thumbKey = (kind: ThumbKind, px: number) => `${kind}:${px}`;
-
-/** Gọi `cb` khi có thêm ảnh vẽ xong (gộp mỗi khung một lần). */
-export function onThumb(cb: () => void): void {
-  listeners.push(cb);
-}
-
-function work(): void {
-  frame = 0;
-  const t0 = performance.now();
-  // Mỗi khung vẽ tới chừng 12 ms rồi nhường cho cảnh chính.
-  while (queue.length && performance.now() - t0 < 12) draw(queue.shift()!);
-  if (queue.length) frame = requestAnimationFrame(work);
-  else {
-    clearTimeout(idle);
-    idle = window.setTimeout(release, 4000);
-  }
-}
-
-function release(): void {
-  if (!renderer || queue.length) return;
-  renderer.dispose();
-  renderer.forceContextLoss();
-  renderer = null;
-}
-
-function getRenderer(): THREE.WebGLRenderer {
-  if (renderer) return renderer;
-  const canvas = document.createElement('canvas');
-  renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true, preserveDrawingBuffer: true });
-  renderer.setPixelRatio(1);
-  renderer.setClearColor(0x000000, 0);
-  renderer.shadowMap.enabled = true;
-  renderer.shadowMap.type = THREE.PCFShadowMap;
-  return renderer;
-}
 
 const mat = (color: number) => new THREE.MeshToonMaterial({ color, gradientMap: ramp });
 const GRASS = mat(C.grass[0]);
@@ -103,8 +48,8 @@ function water(w: number, d: number, x: number, z: number): THREE.Mesh {
   return m;
 }
 
-/** Dựng cảnh nhỏ: công trình trên bệ cỏ; bến, làng chài có khúc sông và thuyền neo; cầu vắt qua khúc sông. */
-function model(kind: ThumbKind): THREE.Group {
+/** Cảnh của ảnh: công trình trên bệ cỏ; bến, làng chài có khúc sông và thuyền neo; cầu vắt qua khúc sông. */
+export function thumbScene(kind: ThumbKind): THREE.Group {
   const level = 1;
   const g = new THREE.Group();
   if (kind === 'luy' || kind === 'de' || kind === 'thanh' || kind === 'uNo') {
@@ -155,10 +100,60 @@ function model(kind: ThumbKind): THREE.Group {
   return g;
 }
 
-function draw(job: { kind: ThumbKind; px: number; key: string }): void {
-  const r = getRenderer();
+/**
+ * Dấu vân tay của cảnh ảnh: băm hình khối, màu đỉnh, vị trí mọi khối (làm tròn) theo thứ tự dựng. Đổi dáng hay màu
+ * công trình thì dấu đổi.
+ */
+export function thumbHash(kind: ThumbKind): string {
+  const root = thumbScene(kind);
+  root.updateMatrixWorld(true);
+  let h = 0x811c9dc5 ^ THUMB_VERSION;
+  const mix = (n: number) => {
+    h ^= n & 0xffff;
+    h = Math.imul(h, 0x01000193);
+    h ^= n >>> 16;
+    h = Math.imul(h, 0x01000193);
+  };
+  const arr = (a: ArrayLike<number>) => {
+    mix(a.length);
+    for (let i = 0; i < a.length; i++) mix(Math.round(a[i] * 1000));
+  };
+  root.traverse((o) => {
+    const m = o as THREE.Mesh;
+    if (!m.geometry) return;
+    arr(m.matrixWorld.elements);
+    const g = m.geometry as THREE.BufferGeometry;
+    for (const name of ['position', 'color']) {
+      const a = g.getAttribute(name);
+      if (a) arr(a.array as ArrayLike<number>);
+    }
+    if (g.index) arr(g.index.array);
+    const inst = (o as THREE.InstancedMesh).instanceMatrix;
+    if (inst) arr(inst.array);
+    for (const mat of ([] as THREE.Material[]).concat(m.material)) {
+      const c = (mat as THREE.MeshBasicMaterial).color;
+      if (c) mix(c.getHex());
+    }
+  });
+  return (h >>> 0).toString(16).padStart(8, '0');
+}
+
+/** Renderer để vẽ ảnh: nền trong suốt, có bóng đổ, vẽ gấp đôi cỡ ảnh để thu về cho mịn cạnh. */
+export function thumbRenderer(): THREE.WebGLRenderer {
+  const r = new THREE.WebGLRenderer({ antialias: true, alpha: true, preserveDrawingBuffer: true });
+  r.setPixelRatio(2);
+  r.shadowMap.enabled = true;
+  r.shadowMap.type = THREE.PCFSoftShadowMap;
+  return r;
+}
+
+/**
+ * Vẽ ảnh `kind` lên canvas của `renderer` (khổ `THUMB_W`×`THUMB_H`, nền trong suốt). Chỉ `scripts/anh-cong-trinh.mjs`
+ * gọi, lúc vẽ sẵn ảnh.
+ */
+export function renderThumb(renderer: THREE.WebGLRenderer, kind: ThumbKind): void {
   const scene = new THREE.Scene();
-  const root = model(job.kind);
+  const root = thumbScene(kind);
   root.traverse((o) => {
     if ((o as THREE.Mesh).isMesh) o.castShadow = true;
   });
@@ -167,9 +162,9 @@ function draw(job: { kind: ThumbKind; px: number; key: string }): void {
   const box = new THREE.Box3().setFromObject(root);
   const size = box.getSize(new THREE.Vector3());
   const center = box.getCenter(new THREE.Vector3());
-  addSunLights(scene, Math.max(size.x, size.z) * 0.8 + 2, 1024);
+  addSunLights(scene, Math.max(size.x, size.z) * 0.8 + 2, 2048);
 
-  // Camera nhìn chéo như trong game, khung ôm trọn khối bao.
+  // Camera nhìn chéo như trong game, khung 4:3 ôm trọn khối bao.
   const dir = new THREE.Vector3(Math.cos(EL) * Math.sin(AZ), Math.sin(EL), Math.cos(EL) * Math.cos(AZ));
   const cam = new THREE.OrthographicCamera(-1, 1, 1, -1, 0.1, 400);
   cam.position.copy(center).addScaledVector(dir, 100);
@@ -184,33 +179,15 @@ function draw(job: { kind: ThumbKind; px: number; key: string }): void {
     hx = Math.max(hx, Math.abs(p.x));
     hy = Math.max(hy, Math.abs(p.y));
   }
-  // Khung ngang 4:3: công trình nhìn chéo thường bè ngang hơn cao.
-  const w = job.px;
-  const h = Math.round(job.px * 0.75);
-  const halfY = Math.max(hy, hx * 0.75) * 1.04;
-  const halfX = halfY / 0.75;
-  cam.left = -halfX;
-  cam.right = halfX;
+  const aspect = THUMB_W / THUMB_H;
+  const halfY = Math.max(hy, hx / aspect) * 1.04;
+  cam.left = -halfY * aspect;
+  cam.right = halfY * aspect;
   cam.top = halfY;
   cam.bottom = -halfY;
   cam.updateProjectionMatrix();
 
-  r.setSize(w, h, false);
-  r.render(scene, cam);
-  // Chép ngay sang canvas 2D: đọc thẳng canvas WebGL bằng toBlob có lúc ra ảnh trống khi khung sau đã đổi cỡ.
-  const copy = document.createElement('canvas');
-  copy.width = w;
-  copy.height = h;
-  copy.getContext('2d')!.drawImage(r.domElement, 0, 0);
-  copy.toBlob((blob) => {
-    if (!blob) return;
-    cache.set(job.key, URL.createObjectURL(blob));
-    pending.delete(job.key);
-    if (!notifyAt) {
-      notifyAt = requestAnimationFrame(() => {
-        notifyAt = 0;
-        for (const cb of listeners) cb();
-      });
-    }
-  }, 'image/png');
+  renderer.setClearColor(0x000000, 0);
+  renderer.setSize(THUMB_W, THUMB_H, false);
+  renderer.render(scene, cam);
 }

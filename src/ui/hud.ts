@@ -117,8 +117,8 @@ import { khoanhHtml } from './khoanh';
 import { benKiaHtml } from './benKia';
 import { campTier, cutOff, dacSanOf, plotAt, villageOutput } from '../game/benKia';
 import { farBankOf } from '../game/map';
-import { mauHtml } from './mau';
-import { goLabel, patchThumbs, pickOf, xayDungHtml, type BuildItem } from './xayDung';
+import { mauItems } from './mau';
+import { goLabel, pickOf, thumbUrl, xayDungHtml, type BuildItem } from './xayDung';
 import type { MauId } from '../game/mau';
 
 /** Dòng báo thường hiện chừng này mili giây. */
@@ -159,11 +159,12 @@ const BUILD_MENU: BuildingType[] = [
   'cauSongThao',
   'donBien',
 ];
-/** Nhóm thẻ trong bảng Xây dựng: công trình, đường đi, đồ trang trí. */
+/** Nhóm thẻ trong bảng Xây dựng: công trình, đường đi, đồ trang trí, mẫu kinh đô. */
 const BUILD_GROUPS: { key: keyof typeof vi.ui.buildGroups; types: BuildingType[] }[] = [
   { key: 'congTrinh', types: BUILD_MENU },
   { key: 'duong', types: ROAD_TYPES },
   { key: 'trangTri', types: DECOR_TYPES },
+  { key: 'mau', types: [] },
 ];
 /** Bốn công trình làm bánh của Hội Tết: chỉ hiện trong bảng Xây dựng khi đã mở (sau kết chương 1). */
 const TET_TYPES: BuildingType[] = ['ruongNep', 'vuon', 'chuongLon', 'bep'];
@@ -208,7 +209,6 @@ export type HudAction =
   | { kind: 'openTet' }
   | { kind: 'startMove'; id: number }
   | { kind: 'startMerge'; id: number }
-  | { kind: 'openMau' }
   | { kind: 'rotateView' }
   | { kind: 'applyMau'; mau: MauId }
   | { kind: 'phatRung'; id: number }
@@ -274,7 +274,6 @@ type Sheet =
   | { kind: 'adv' }
   | { kind: 'caoLo' }
   | { kind: 'tet' }
-  | { kind: 'mau' }
   | { kind: 'khoanh'; id: number }
   | { kind: 'benKia'; id: number }
   | null;
@@ -438,6 +437,7 @@ export class Hud {
     switch (act) {
       case 'pickBuild':
         this.buildPick = el.dataset.key ?? null;
+        this.mauArmed = null;
         return this.refreshSheet(this.getState());
       case 'togglePop': {
         const p = el.dataset.pop as NonNullable<typeof this.pop>;
@@ -458,6 +458,7 @@ export class Hud {
       case 'buildTab':
         this.buildTab = el.dataset.tab as typeof this.buildTab;
         this.buildPick = null;
+        this.mauArmed = null;
         this.refreshSheet(this.getState());
         this.sheetEl.querySelector('.sheet-body')?.scrollTo(0, 0);
         return;
@@ -892,12 +893,6 @@ export class Hud {
   /** Mục đang chọn trong bảng Xây dựng (`BuildItem.key`); nhớ cho lần mở sau để xây tiếp cùng loại. */
   private buildPick: string | null = null;
 
-  showMau(state: GameState): void {
-    this.sheet = { kind: 'mau' };
-    this.mauArmed = null;
-    this.refreshSheet(state);
-  }
-
   /** Mục lính đóng ở đồn biên: mỗi binh chủng một hàng, bớt, thêm (không quá quân đang có, trừ phần đóng ở bờ kia). */
   private garrisonHtml(state: GameState, b: Building): string {
     const bank = farBankOf(b.x, b.z);
@@ -975,18 +970,8 @@ export class Hud {
     return { x: w / 2, y: (top + h - dock - this.sheetEl.offsetHeight) / 2 };
   }
 
-  /** Ảnh công trình vừa vẽ xong: thay icon tạm tại chỗ, rồi ghi nhớ HTML mới mà không vẽ lại cả bảng (khỏi nháy). */
-  thumbsReady(state: GameState): void {
-    if (this.sheet?.kind !== 'build') return;
-    patchThumbs(this.sheetEl);
-    this.refreshSheet(state, false, true);
-  }
-
-  /**
-   * Vẽ lại bảng đang mở. Bỏ qua nếu nội dung không đổi để không làm mất lần chạm của người chơi.
-   * `remember`: chỉ ghi nhớ HTML, không đụng tới bảng trên màn hình.
-   */
-  refreshSheet(state: GameState, force = false, remember = false): void {
+  /** Vẽ lại bảng đang mở. Bỏ qua nếu nội dung không đổi để không làm mất lần chạm của người chơi. */
+  refreshSheet(state: GameState, force = false): void {
     if (!this.sheet) return;
     if (this.sheet.kind === 'settings' && !force) return;
     let title = '';
@@ -1015,9 +1000,6 @@ export class Hud {
     } else if (this.sheet.kind === 'caoLo') {
       title = `🎯 ${vi.ui.caoLo}`;
       body = caoLoHtml(state);
-    } else if (this.sheet.kind === 'mau') {
-      title = `🗺️ ${vi.ui.mauTitle}`;
-      body = mauHtml(state, this.mauArmed);
     } else if (this.sheet.kind === 'khoanh') {
       // Đã phát xong thì đóng bảng.
       if (state.khoanh.includes(this.sheet.id)) return this.closeSheet();
@@ -1036,10 +1018,6 @@ export class Hud {
     }
     const html = `<div class="sheet-head"><h2>${title}</h2><button class="close" data-act="closeSheet" aria-label="${vi.ui.close}">✕</button></div>
       <div class="sheet-body">${body}</div>`;
-    if (remember) {
-      this.sheetHtml = html;
-      return;
-    }
     if (html !== this.sheetHtml || force) {
       // Bảng Xây dựng vẽ lại (đổi mục chọn, đủ tiền...) thì giữ chỗ đã cuộn.
       const body = this.sheetEl.querySelector('.sheet-body');
@@ -1061,16 +1039,18 @@ export class Hud {
   }
 
   private buildMenuHtml(state: GameState): string {
-    const { tabs, note, items } = this.buildMenuData(state);
-    this.buildPick = pickOf(items, this.buildPick);
-    return `${tabs}${note}${xayDungHtml(items, this.buildPick)}`;
+    const { tabs, note, items, prefer, foot } = this.buildMenuData(state);
+    this.buildPick = pickOf(items, this.buildPick, prefer);
+    return `${tabs}${note}${xayDungHtml(items, this.buildPick, foot)}`;
   }
 
-  /** Thẻ chọn nhóm, dòng ghi chú và các mục của nhóm đang xem trong bảng Xây dựng. */
-  private buildMenuData(state: GameState): { tabs: string; note: string; items: BuildItem[] } {
+  /**
+   * Thẻ chọn nhóm, dòng ghi chú, các mục của nhóm đang xem trong bảng Xây dựng, mục nên chọn sẵn và ghi chú cuối bảng.
+   */
+  private buildMenuData(state: GameState): { tabs: string; note: string; items: BuildItem[]; prefer?: string; foot?: string } {
     // Đắp đất là việc của dân, không phải công trình: chỉ hiện từ chương 2.
     const raise: BuildItem | null = inChapter2(state)
-      ? { key: 'raise', act: 'chooseRaise', thumb: null, icon: '⛰️', name: vi.ui.dapDat, meta: '1×1 ô', desc: vi.ui.dapDatDesc, go: goLabel('chooseRaise', false, false) }
+      ? { key: 'raise', act: 'chooseRaise', pic: null, icon: '⛰️', name: vi.ui.dapDat, meta: '1×1 ô', desc: vi.ui.dapDatDesc, go: goLabel('chooseRaise', false, false) }
       : null;
     // Công trình của chương 2, 3, 4 chỉ hiện khi đã sang chương ấy.
     const chapter = inChapter4(state) ? 4 : chapterNow(state);
@@ -1093,8 +1073,8 @@ export class Hud {
       return {
         key: type,
         act: 'chooseBuild',
-        type,
-        thumb: type,
+        attrs: `data-type="${type}"`,
+        pic: thumbUrl(type),
         icon: vi.buildings[type].icon,
         name: vi.buildings[type].name,
         meta: `${def.w}×${def.d} ô${count}`,
@@ -1104,7 +1084,6 @@ export class Hud {
         go: goLabel('chooseBuild', isRoad(type), isDecor(type)),
       };
     };
-    const mau: BuildItem = { key: 'mau', act: 'openMau', thumb: null, icon: '🗺️', name: vi.ui.mauTitle, meta: vi.ui.mauCard, go: goLabel('openMau', false, false) };
     // Ụ nỏ dựng trên đoạn thành Cổ Loa có sẵn, không chiếm đất: có từ chương 4.
     let uNo: BuildItem | null = null;
     if (inChapter4(state)) {
@@ -1114,7 +1093,7 @@ export class Hud {
       uNo = {
         key: 'uNo',
         act: 'chooseUNo',
-        thumb: 'uNo',
+        pic: thumbUrl('uNo'),
         icon: '🎯',
         name: vi.ui.uNo,
         meta: vi.ui.uNoCard(have, max),
@@ -1127,18 +1106,22 @@ export class Hud {
     const clear: BuildItem = {
       key: 'clear',
       act: 'chooseClear',
-      thumb: null,
+      pic: null,
       icon: '🧹',
       name: vi.ui.clearDecor,
       meta: vi.ui.clearDecorDesc,
       go: goLabel('chooseClear', false, false),
     };
-    // Ba nhóm thẻ chọn ở đầu bảng; mỗi lần chỉ hiện một nhóm cho khỏi cuộn dài trên điện thoại.
+    // Bốn nhóm thẻ chọn ở đầu bảng; mỗi lần chỉ hiện một nhóm cho khỏi cuộn dài trên điện thoại.
     const tabs = BUILD_GROUPS.map(
       ({ key }) =>
         `<button class="tab ${key === this.buildTab ? 'on' : ''}" data-act="buildTab" data-tab="${key}">${vi.ui.buildGroups[key]}</button>`,
     ).join('');
     const group = BUILD_GROUPS.find((g) => g.key === this.buildTab)!;
+    if (group.key === 'mau') {
+      const { items, prefer } = mauItems(state, this.mauArmed);
+      return { tabs: `<div class="build-tabs">${tabs}</div>`, note: '', items, prefer, foot: `<p class="muted xd-foot">${vi.ui.mauHint}</p>` };
+    }
     const cards = shownOf(group.types).map(card);
     const note =
       group.key === 'duong'
@@ -1146,7 +1129,7 @@ export class Hud {
         : group.key === 'trangTri'
           ? `<p class="muted">${vi.ui.decorOnly}</p>`
           : '';
-    const items = group.key === 'congTrinh' ? [mau, ...cards, uNo, raise] : group.key === 'trangTri' ? [...cards, clear] : cards;
+    const items = group.key === 'congTrinh' ? [...cards, uNo, raise] : group.key === 'trangTri' ? [...cards, clear] : cards;
     return { tabs: `<div class="build-tabs">${tabs}</div>`, note, items: items.filter((i): i is BuildItem => !!i) };
   }
 

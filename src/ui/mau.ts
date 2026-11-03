@@ -1,5 +1,5 @@
-// Giao diện mẫu kinh đô: mỗi mẫu một thẻ có bản đồ thu nhỏ, số công trình sẽ dời, dựng thêm, dỡ đi,
-// tổng giá và nút áp mẫu (bấm hai lần cho chắc). Chỉ dựng chuỗi HTML; Hud lo việc gắn vào trang và bắt sự kiện.
+// Thẻ Mẫu kinh đô trong bảng Xây dựng: mỗi mẫu một mục (bản đồ thu nhỏ làm ảnh, số công trình sẽ dời, dựng thêm,
+// dỡ đi, tổng giá, nút áp mẫu bấm hai lần cho chắc), bày như công trình (`xayDung.ts`).
 
 import { BUILDINGS, type BuildingType } from '../game/defs';
 import { dienLevel, unlocked, type GameState } from '../game/game';
@@ -8,6 +8,7 @@ import { isOpen, khoanhOf, openStart } from '../game/khoanh';
 import { RIVER_START } from '../game/map';
 import { vi } from '../text/vi';
 import { costHtml } from './format';
+import type { BuildItem } from './xayDung';
 
 /** Màu nền bản đồ thu nhỏ: đất đã khai phá, rừng chưa phát (mờ), sông. */
 const MINI = { land: '#b9c47e', wild: '#93a165', river: '#3f7f9a' };
@@ -81,7 +82,7 @@ function miniMap(state: GameState, id: MauId): string {
     url = canvas.toDataURL();
     miniCache.set(key, url);
   }
-  return `<img class="mini-map" src="${url}" alt="">`;
+  return url;
 }
 
 /** Số khoảnh rừng chưa phát mà mẫu ở cấp Điện hiện tại có chỗ đặt công trình trong đó. */
@@ -99,23 +100,26 @@ function wildKhoanh(state: GameState, id: MauId): number {
   return wild.size;
 }
 
-/** Bảng mẫu kinh đô. `armed` là mẫu vừa bấm Áp lần đầu, chờ bấm lần nữa. */
-export function mauHtml(state: GameState, armed: MauId | null): string {
-  const cards = MAU_IDS.map((id) => {
+/** Các mục của thẻ Mẫu kinh đô và mẫu nên chọn sẵn (mẫu mới mở nhất). `armed`: mẫu vừa bấm Áp lần đầu. */
+export function mauItems(state: GameState, armed: MauId | null): { items: BuildItem[]; prefer: MauId } {
+  let prefer: MauId = 'phongChau';
+  const items = MAU_IDS.map((id): BuildItem => {
     const t = vi.ui.mau[id];
-    if (!mauUnlocked(state, id)) {
-      return `<div class="mau locked"><h3>${t.icon} ${t.name}</h3><p class="muted">${t.lock}</p></div>`;
-    }
+    const base = { key: id, act: 'applyMau' as const, attrs: `data-mau="${id}"`, pic: miniMap(state, id), square: true, icon: t.icon, name: t.name };
+    if (!mauUnlocked(state, id)) return { ...base, meta: '', why: t.lock, go: vi.ui.mauApply, note: t.desc };
+    prefer = id;
     const plan = planMau(state, id);
     const check = canApplyMau(state, id);
-    const summary = vi.ui.mauPlan(plan.moves.length, plan.builds.length, plan.removes.length, plan.uNos.length);
-    const label = armed === id ? vi.ui.mauConfirm : vi.ui.mauApply;
-    const why = check.ok ? '' : `<div class="why">${vi.reasons[check.reason]}</div>`;
     const wild = wildKhoanh(state, id);
-    return `<div class="mau"><h3>${t.icon} ${t.name}</h3><p class="muted">${t.desc}</p>${miniMap(state, id)}
-      <p>${summary}</p>${wild ? `<p class="muted">${vi.ui.mauKhoanh(wild)}</p>` : ''}
-      <div class="actions"><button class="btn ${armed === id ? 'bronze' : ''}" data-act="applyMau" data-mau="${id}" ${check.ok ? '' : 'disabled'}>
-        ${label}${Object.keys(plan.cost).length ? ` · ${costHtml(state, plan.cost)}` : ''}</button></div>${why}</div>`;
-  }).join('');
-  return `<p class="muted">${vi.ui.mauHint}</p>${cards}`;
+    return {
+      ...base,
+      meta: vi.ui.mauPlan(plan.moves.length, plan.builds.length, plan.removes.length, plan.uNos.length),
+      cost: Object.keys(plan.cost).length ? costHtml(state, plan.cost) : '',
+      why: check.ok ? '' : vi.reasons[check.reason],
+      go: armed === id ? vi.ui.mauConfirm : vi.ui.mauApply,
+      armed: armed === id,
+      note: wild ? `${t.desc} ${vi.ui.mauKhoanh(wild)}` : t.desc,
+    };
+  });
+  return { items, prefer };
 }
