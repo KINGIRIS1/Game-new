@@ -1,0 +1,943 @@
+<title>Bố trí bản đồ biển Đông</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&family=Noto+Serif:wght@600;700&display=swap">
+<!--
+  PROTOTYPE, DÙNG XONG BỎ. Không gộp vào main, không phải code game.
+  Câu hỏi: biển Đông vừa thêm ở phía đông, nên xếp lại bản đồ thế nào (bờ biển, cửa sông, hai quần đảo) cho hợp?
+  Bốn bố cục (bản hiện tại và ba phương án) vẽ từ trên xuống, chuyển bằng thanh nổi ở đáy, phím ← →, hay địa chỉ
+  #goc, #sat-bo, #cua-bien, #duyen-hai. Tọa độ tính bằng ô như lưới kinh đô (src/game/map.ts, src/game/bien.ts).
+  Mở bằng cách bấm đúp tệp này, không cần cài gì.
+-->
+<style>
+  /* Bố cục: bản đồ lớn bên trái (điện thoại: ở trên), thẻ phương án bên phải; bảng so sánh và câu hỏi ở dưới; thanh chuyển phương án nổi ở đáy. */
+  :root {
+    --paper: #f6ecd6;
+    --paper-2: #ecdfc2;
+    --ink: #33251a;
+    --ink-soft: #6b5743;
+    --bronze: #9c6d1c;
+    --red: #a8352a;
+    --line: #d5bd8e;
+    --good: #3b7426;
+    --warn: #a4521a;
+    --chip: #fffaf0;
+    --bar: #2a1f16;
+    --bar-ink: #f6ecd6;
+    --f-display: 'Noto Serif', 'Times New Roman', Georgia, serif;
+    --f-body: 'Be Vietnam Pro', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --paper: #1b1611;
+      --paper-2: #251e17;
+      --ink: #efe3c9;
+      --ink-soft: #bba78a;
+      --bronze: #dcaa4e;
+      --red: #e2725f;
+      --line: #4b3d2c;
+      --good: #8fc871;
+      --warn: #e7a066;
+      --chip: #2c241b;
+      --bar: #f1e3c4;
+      --bar-ink: #2a1f16;
+      color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --paper: #1b1611;
+    --paper-2: #251e17;
+    --ink: #efe3c9;
+    --ink-soft: #bba78a;
+    --bronze: #dcaa4e;
+    --red: #e2725f;
+    --line: #4b3d2c;
+    --good: #8fc871;
+    --warn: #e7a066;
+    --chip: #2c241b;
+    --bar: #f1e3c4;
+    --bar-ink: #2a1f16;
+    color-scheme: dark;
+  }
+  * { box-sizing: border-box; }
+  body {
+    background: var(--paper);
+    color: var(--ink);
+    font: 15px/1.55 var(--f-body);
+    padding-left: max(16px, env(safe-area-inset-left, 0px));
+    padding-right: max(16px, env(safe-area-inset-right, 0px));
+    padding-block: 18px 96px;
+  }
+  .page { max-width: 1180px; margin: 0 auto; display: grid; gap: 28px; }
+  header.top { display: grid; gap: 6px; max-width: 70ch; }
+  .eyebrow {
+    font-size: 12px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--red);
+    display: flex; align-items: center; gap: 8px;
+  }
+  .eyebrow svg { width: 18px; height: 18px; color: var(--bronze); }
+  h1, h2, h3 { font-family: var(--f-display); text-wrap: balance; margin: 0; line-height: 1.25; }
+  h1 { font-size: clamp(24px, 4.4vw, 34px); }
+  h2 { font-size: 21px; }
+  h3 { font-size: 16px; }
+  p { margin: 0; }
+  .lead { color: var(--ink-soft); font-size: 16px; }
+
+  .main { display: grid; gap: 24px; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); align-items: start; }
+  @media (max-width: 860px) { .main { grid-template-columns: minmax(0, 1fr); } }
+
+  .mapcol { display: grid; gap: 12px; min-width: 0; }
+  .mapbox { position: relative; border: 1px solid var(--line); border-radius: 6px; overflow: hidden; background: var(--paper-2); }
+  canvas#map { display: block; width: 100%; touch-action: manipulation; cursor: crosshair; }
+  .readout {
+    font-size: 13.5px; color: var(--ink-soft); min-height: 2.6em; font-variant-numeric: tabular-nums;
+    border-left: 3px solid var(--bronze); padding: 4px 0 4px 10px;
+  }
+  .readout b { color: var(--ink); font-weight: 600; }
+  .controls { display: grid; gap: 10px; }
+  .row { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+  .row > span.lbl { font-size: 12px; font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase; color: var(--ink-soft); margin-right: 4px; min-width: 64px; }
+  button { font: inherit; color: inherit; }
+  .seg button, .chipbtn {
+    border: 1px solid var(--line); background: var(--chip); border-radius: 999px; padding: 5px 12px; font-size: 13.5px; cursor: pointer;
+  }
+  .seg button[aria-pressed="true"], .chipbtn[aria-pressed="true"] { background: var(--ink); color: var(--paper); border-color: var(--ink); }
+  .seg button:focus-visible, .chipbtn:focus-visible, .switcher button:focus-visible, tr[tabindex]:focus-visible { outline: 2px solid var(--bronze); outline-offset: 2px; }
+  .legend { display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: 12.5px; color: var(--ink-soft); }
+  .legend i { display: inline-block; width: 12px; height: 12px; border-radius: 2px; margin-right: 5px; vertical-align: -1px; border: 1px solid rgba(0,0,0,0.15); }
+
+  .info { display: grid; gap: 18px; min-width: 0; }
+  .vhead { display: grid; gap: 6px; }
+  .vtag { display: flex; gap: 8px; align-items: center; font-size: 12px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--ink-soft); }
+  .badge { display: inline-block; padding: 1px 8px; border-radius: 999px; font-size: 12px; font-weight: 600; letter-spacing: 0.02em; text-transform: none; border: 1px solid currentColor; }
+  .badge.rec { color: var(--good); }
+  .idea { font-size: 15.5px; }
+  .lists { display: grid; gap: 14px; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+  @media (max-width: 520px) { .lists { grid-template-columns: minmax(0, 1fr); } }
+  .lists h3, .block h3 { font-family: var(--f-body); font-size: 12px; font-weight: 700; letter-spacing: 0.07em; text-transform: uppercase; margin-bottom: 4px; }
+  .lists .pro h3 { color: var(--good); }
+  .lists .con h3 { color: var(--warn); }
+  ul { margin: 0; padding-left: 18px; display: grid; gap: 4px; }
+  .block { display: grid; gap: 6px; }
+  .block code, td code, li code { font-size: 12.5px; background: var(--paper-2); padding: 0 4px; border-radius: 3px; }
+  .work { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: 14px; }
+  .work b { font-weight: 600; }
+
+  .stats { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 0; border-top: 1px solid var(--line); font-variant-numeric: tabular-nums; }
+  .stats > div { padding: 7px 0; border-bottom: 1px solid var(--line); font-size: 14px; }
+  .stats .k { color: var(--ink-soft); padding-right: 12px; }
+  .stats .v { text-align: right; font-weight: 600; white-space: nowrap; }
+  .stats .v small { display: block; font-weight: 500; font-size: 12px; }
+  .up { color: var(--good); }
+  .down { color: var(--warn); }
+  .same { color: var(--ink-soft); }
+
+  section.compare, section.ask { display: grid; gap: 12px; }
+  .tablewrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 6px; }
+  table { border-collapse: collapse; width: 100%; min-width: 760px; font-size: 13.5px; font-variant-numeric: tabular-nums; }
+  th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { font-size: 12px; font-weight: 600; color: var(--ink-soft); background: var(--paper-2); }
+  tr[tabindex] { cursor: pointer; }
+  tr.cur td { background: var(--chip); }
+  tr.cur td:first-child { box-shadow: inset 3px 0 0 var(--red); }
+  .two { display: grid; gap: 24px; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+  @media (max-width: 760px) { .two { grid-template-columns: minmax(0, 1fr); } }
+  .note { color: var(--ink-soft); font-size: 13.5px; max-width: 70ch; }
+  ol.qs { margin: 0; padding-left: 20px; display: grid; gap: 8px; }
+
+  .switcher {
+    position: fixed; left: 50%; transform: translateX(-50%);
+    bottom: calc(14px + env(safe-area-inset-bottom, 0px));
+    display: flex; align-items: center; gap: 2px; padding: 5px; border-radius: 999px;
+    background: var(--bar); color: var(--bar-ink); box-shadow: 0 8px 24px rgba(20, 12, 4, 0.35); z-index: 20;
+    max-width: calc(100vw - 24px);
+  }
+  .switcher button { background: transparent; border: 0; color: inherit; cursor: pointer; border-radius: 999px; }
+  .switcher .arr { width: 40px; height: 40px; font-size: 22px; line-height: 1; }
+  .switcher .arr:hover { background: rgba(127,127,127,0.18); }
+  .switcher .name { padding: 4px 10px; text-align: center; min-width: 0; }
+  .switcher .name b { display: block; font-size: 14.5px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .switcher .name small { display: block; font-size: 11px; opacity: 0.75; letter-spacing: 0.05em; }
+  @media (prefers-reduced-motion: no-preference) { canvas#map { transition: opacity 0.12s; } }
+</style>
+
+<div class="page">
+  <header class="top">
+    <div class="eyebrow">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="1.4"><circle cx="12" cy="12" r="10.5"/><circle cx="12" cy="12" r="7"/></g><path fill="currentColor" d="M12 4.6l1.1 5 4.6-2.3-3.3 3.9 4.9 1.1-4.9 1.1 3.3 3.9-4.6-2.3-1.1 5-1.1-5-4.6 2.3 3.3-3.9-4.9-1.1 4.9-1.1-3.3-3.9 4.6 2.3z"/></svg>
+      Prototype · dùng xong bỏ
+    </div>
+    <h1>Bố trí lại bản đồ khi có biển Đông</h1>
+    <p class="lead">Biển, bến thuyền khơi và hai quần đảo vừa vào game. Nên xếp bờ biển, cửa sông, Hoàng Sa, Trường Sa nằm đâu so với kinh đô? Lật qua bốn bố cục bằng thanh ở đáy màn hình, chạm vào bản đồ để xem từng ô.</p>
+  </header>
+
+  <div class="main">
+    <section class="mapcol" aria-label="Bản đồ">
+      <div class="mapbox"><canvas id="map" aria-label="Bản đồ nhìn từ trên xuống"></canvas></div>
+      <div class="readout" id="readout">Chạm vào bản đồ để xem ô ấy là gì.</div>
+      <div class="controls">
+        <div class="row seg" id="frameSeg"><span class="lbl">Khung</span>
+          <button type="button" data-frame="all" id="fr-all">Toàn cảnh</button>
+          <button type="button" data-frame="near" id="fr-near">Quanh kinh đô</button>
+        </div>
+        <div class="row seg" id="viewSeg"><span class="lbl">Hướng</span>
+          <button type="button" data-view="top" id="vw-top">Bắc ở trên</button>
+          <button type="button" data-view="game" id="vw-game">Như camera trong game</button>
+        </div>
+        <div class="row" id="layerRow"><span class="lbl">Lớp</span></div>
+      </div>
+      <div class="legend" id="legend"></div>
+    </section>
+
+    <section class="info" id="info" aria-live="polite"></section>
+  </div>
+
+  <section class="compare">
+    <h2>So bốn bố cục</h2>
+    <p class="note">Số đo tính trên chính lưới kinh đô 76 × 76 ô. Bến mẫu: một bến thuyền khơi bên này sông Đà, sát ngã ba (chỗ neo ở ô 43,5; 53). Một chuyến thuyền = neo 24 giây, ra khơi, kéo lưới một vòng ngư trường, về (cùng tốc độ thuyền trong game). Chạm một hàng để xem bố cục ấy.</p>
+    <div class="tablewrap"><table id="cmp"></table></div>
+  </section>
+
+  <section class="ask two">
+    <div class="block">
+      <h2>Ngoài đời</h2>
+      <p class="note">Nhìn từ Phong Châu (Việt Trì ngày nay), số làm tròn:</p>
+      <ul>
+        <li>Biển gần nhất chừng 150 km về phía đông nam. Sông Hồng (sông Thao, sông Đà sau ngã ba Bạch Hạc) chảy về đông nam ra biển.</li>
+        <li>Quần đảo Hoàng Sa chừng 880 km, hướng 128° (đông nam).</li>
+        <li>Quần đảo Trường Sa chừng 1 560 km, hướng 144° (nam đông nam), xa gấp 1,8 lần Hoàng Sa.</li>
+        <li>Bờ biển Bắc Bộ chạy chéo từ đông bắc xuống tây nam.</li>
+      </ul>
+      <p class="note">Hướng tính như la bàn: 0° là bắc, 90° là đông, 180° là nam.</p>
+    </div>
+    <div class="block">
+      <h2>Cần chủ dự án chọn</h2>
+      <ol class="qs">
+        <li>Giữ nguyên, hay theo phương án B, C, D? Lấy mỗi phương án một ít cũng được (ví dụ bờ chéo của C với bãi biển chơi được của D).</li>
+        <li>Hai quần đảo đặt theo hướng thật (đông nam), hay đặt chỗ dễ kéo camera tới hơn?</li>
+        <li>Thuyền giặc Triệu có nên vào từ cửa biển không? Hiện thuyền giặc hiện ra ngay giữa sông.</li>
+        <li>Biển vẫn chỉ mở camera từ Điện 8, hay cho nhìn thấy sớm hơn (nhìn được, chưa dựng được)?</li>
+      </ol>
+      <p class="note">Khuyên dùng: <b>C · Cửa biển đông nam</b>. Biển hiện ra ngay sau ngã ba, đúng hướng ngoài đời, mà không đổi luật hay mất khoảnh nào. Bãi biển chơi được như D để dành làm cùng việc đóng quân ra đảo ở Điện 10.</p>
+    </div>
+  </section>
+</div>
+
+<nav class="switcher" aria-label="Chuyển bố cục">
+  <button type="button" class="arr" id="prev" aria-label="Bố cục trước">‹</button>
+  <button type="button" class="name" id="vname" aria-label="Bố cục đang xem"><b id="vlabel">Gốc · Hiện tại</b><small id="vcount">1 / 4</small></button>
+  <button type="button" class="arr" id="next" aria-label="Bố cục sau">›</button>
+</nav>
+
+<script>
+/* ==================================================================================================================
+   Module thuần: bố cục bản đồ (không DOM). Nhấc được sang src/game/bien.ts khi chốt phương án.
+   Tọa độ là ô như lưới kinh đô: x tăng về đông, z tăng về nam. Ô (x, z) phủ [x, x + 1) × [z, z + 1).
+   ================================================================================================================== */
+const BanDo = (() => {
+  const GRID = 76, RS = 52, RE = 59, FB = 2, FF = 74, KH = 5;
+  const DIEN = { x: 37, z: 37, w: 5 };
+  const TAM = { x: 39.5, z: 39.5 };
+  const NGA_BA = { x: 55.5, z: 55.5 };
+  const MID = 55.5;
+  const DAO = 20;
+  const NGU = { hoangSa: 22, truongSa: 26 };
+  const SEED = { hoangSa: 1974, truongSa: 1988 };
+  const REAL = { hoangSa: { deg: 128, km: 880 }, truongSa: { deg: 144, km: 1560 }, ratio: 1.78 };
+  const ISLETS = {
+    hoangSa: [[-15, -6, 1.4], [13, -12, 1.2], [16, 4, 1.8], [-12, 13, 1.0], [4, 16, 1.5], [-17, 5, 0.9], [11, 14, 0.8]],
+    truongSa: [[-16, -9, 1.3], [14, -14, 1.1], [19, 3, 1.6], [-14, 15, 1.0], [5, 18, 1.4], [-20, 3, 0.9], [21, -7, 0.8], [-4, -18, 1.2], [13, 16, 0.9], [-10, -17, 0.8]],
+  };
+  // Tốc độ thuyền khơi trong game (src/render/world.ts).
+  const SEA_DOCK_S = 24, SEA_SPEED = 2.2, SEA_FISH_SPEED = 1.5;
+  // Khung nhìn mặc định trên điện thoại dọc 390 × 844, độ phóng 0,72, camera ngẩng 38° nhìn về tây bắc (camera.ts).
+  const PHONE = { halfW: 13.2, halfD: 46.4 };
+
+  function hash01(seed, i, j) {
+    let t = (Math.imul(i + 1, 0x27d4eb2d) ^ Math.imul(j + 1, 0x165667b1) ^ Math.imul(seed, 0x9e3779b1)) >>> 0;
+    t = Math.imul(t ^ (t >>> 15), 1 | t);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  }
+  const squircle = (u, v, half) => Math.abs(u / half) ** 4 + Math.abs(v / half) ** 4;
+
+  // Đảo chính 20 × 20 theo đúng cách game dựng (daoChinh ở bien.ts): đất và số ô cách bờ.
+  const maskCache = {};
+  function islandMask(id) {
+    if (maskCache[id]) return maskCache[id];
+    const n = DAO, half = n / 2, land = new Uint8Array(n * n), bo = new Int16Array(n * n).fill(-1);
+    for (let j = 0; j < n; j++) for (let i = 0; i < n; i++)
+      land[j * n + i] = squircle(i + 0.5 - half, j + 0.5 - half, half) + 0.14 * hash01(SEED[id], i, j) <= 1 ? 1 : 0;
+    let edge = [];
+    const nb = (i, j) => [[i - 1, j], [i + 1, j], [i, j - 1], [i, j + 1]];
+    for (let k = 0; k < n * n; k++) {
+      if (!land[k]) continue;
+      const i = k % n, j = Math.floor(k / n);
+      if (nb(i, j).some(([a, b]) => a < 0 || b < 0 || a >= n || b >= n || !land[b * n + a])) { bo[k] = 0; edge.push(k); }
+    }
+    for (let d = 1; edge.length; d++) {
+      const next = [];
+      for (const k of edge) for (const [a, b] of nb(k % n, Math.floor(k / n))) {
+        if (a < 0 || b < 0 || a >= n || b >= n) continue;
+        const o = b * n + a;
+        if (land[o] && bo[o] < 0) { bo[o] = d; next.push(o); }
+      }
+      edge = next;
+    }
+    return (maskCache[id] = { land, bo });
+  }
+
+  // ---------- Lưới kinh đô (giống mọi bố cục) ----------
+  const inGrid = (x, z) => x >= 0 && z >= 0 && x < GRID && z < GRID;
+  const isRiver = (x, z) => inGrid(x, z) && ((z >= RS && z < RE) || (x >= RS && x < RE && z < RE));
+  function plotAt(x, z) {
+    if (z >= RE && z < FF && x >= FB && x < RS) return { bank: 'nam', i: Math.floor((x - FB) / KH), j: Math.floor((z - RE) / KH) };
+    if (x >= RE && x < FF && z >= FB && z < RS) return { bank: 'dong', i: Math.floor((z - FB) / KH), j: Math.floor((x - RE) / KH) };
+    return null;
+  }
+  function plotOrigin(bank, i, j) {
+    const along = FB + KH * i, deep = RE + KH * j;
+    return bank === 'nam' ? { x: along, z: deep } : { x: deep, z: along };
+  }
+  // Điểm lạ hai bờ bên kia (benKia.ts): đồn bậc 1–4, làng, đặc sản, của chôn.
+  const CAMPS = [[3, 0, 1], [8, 0, 1], [1, 1, 2], [5, 1, 2], [7, 2, 3], [3, 2, 4]];
+  const POI_LAYOUT = {
+    nam: [[4, 1, 'lang', 'Làng trồng lúa'], [0, 0, 'lang', 'Làng mò ốc'], [8, 1, 'dacSan', 'Bãi phù sa'], [0, 1, 'dacSan', 'Bãi phù sa'], [6, 2, 'dacSan', 'Núi đá'], [9, 2, 'cua', 'Của chôn'], [2, 2, 'cua', 'Của chôn']],
+    dong: [[4, 1, 'lang', 'Làng thợ đá'], [0, 0, 'lang', 'Làng thợ rèn'], [8, 1, 'dacSan', 'Núi đá'], [0, 1, 'dacSan', 'Mỏ sắt'], [6, 2, 'dacSan', 'Mỏ sắt'], [9, 2, 'cua', 'Của chôn'], [2, 2, 'cua', 'Của chôn']],
+  };
+  const REGION = [[2, 2, 0, 0, 0, 3, 1, 1, 1, 1], [2, 2, 2, 0, 3, 3, 3, 4, 1, 1], [2, 2, 5, 5, 5, 3, 4, 4, 4, 1]];
+  function pois() {
+    const out = [];
+    for (const bank of ['nam', 'dong']) {
+      for (const [i, j, tier] of CAMPS) out.push({ bank, i, j, kind: 'don', tier, name: 'Đồn giặc bậc ' + tier });
+      for (const [i, j, kind, name] of POI_LAYOUT[bank]) out.push({ bank, i, j, kind, name });
+    }
+    return out.map((p) => { const o = plotOrigin(p.bank, p.i, p.j); return { ...p, x: o.x + 2.5, z: o.z + 2.5 }; });
+  }
+  const campTierOf = (p) => CAMPS[REGION[p.j][p.i]][2];
+
+  function gridKind(x, z) {
+    if (isRiver(x, z)) return 'song';
+    if (x < RS && z < RS) return x < FB || z < FB ? 'rungThieng' : 'kinhDo';
+    return plotAt(x, z) ? 'benKia' : 'rungXa';
+  }
+  // Ngoài lưới: sông Thao chảy tới từ phía bắc, sông Đà chảy suốt từ tây sang đông (bố cục quyết định sông dừng ở đâu).
+  const offRiver = (x, z) => (z >= RS && z < RE) || (x >= RS && x < RE && z < 0);
+  const PROTECT = new Set(['kinhDo', 'rungThieng', 'benKia']);
+
+  const wob = (t, a, b, c) => a * Math.sin(t * b) + (c || 0);
+
+  // ---------- Bốn bố cục ----------
+  // field(x, z): tính theo ô, âm là đất, 0..3 là bãi cát, từ 3 là biển (càng lớn càng sâu).
+  const VARIANTS = [
+    {
+      key: 'goc', letter: 'Gốc', name: 'Hiện tại',
+      field: (x, z) => x + 0.5 - 79,
+      islands: { hoangSa: { x: 116, z: 14 }, truongSa: { x: 128, z: 82 } },
+      mouth: [{ x: 83, z: MID }, { x: 87, z: MID }],
+      sea: { x: 95, z: 100, label: 'Biển Đông' },
+      idea: 'Biển nằm ngoài lưới, sau bờ đông sông Thao và một dải rừng 5 ô. Bờ cát thẳng bắc–nam ở cột 79. Sông Đà chảy thẳng sang đông ra biển. Hoàng Sa ở đông bắc kinh đô, Trường Sa ở đông nam.',
+      changes: ['Không đổi gì: đây là bản đang chạy trên GitHub Pages.'],
+      pros: ['Đã làm xong, không tốn thêm việc.', 'Biển và đảo không đụng tới luật kinh đô, hai bờ bên kia.'],
+      cons: ['Đứng ở kinh đô phải kéo qua cả bờ đông và dải rừng mới thấy biển.', 'Bãi cát thẳng như kẻ chỉ suốt từ bắc xuống nam.', 'Hoàng Sa nằm phía bắc kinh đô; ngoài đời Hoàng Sa ở hướng đông nam.', 'Góc đông nam sau ngã ba là rừng bỏ không.'],
+      work: { size: 'Không', pr: '0', save: 'Giữ nguyên', rules: 'Không', parts: [] },
+      raids: { seaLanding: false, seaShips: false },
+    },
+    {
+      key: 'sat-bo', letter: 'B', name: 'Sát bờ đông',
+      field: (x, z) => x + 0.5 - 74 - Math.max(0, wob(z, 0.9, 0.137, 1.1) + 0.55 * Math.sin(z * 0.31 + 2)),
+      islands: { hoangSa: { x: 104, z: 42 }, truongSa: { x: 118, z: 100 } },
+      mouth: [{ x: 78, z: MID }, { x: 82, z: MID }],
+      sea: { x: 146, z: 122, label: 'Biển Đông' },
+      idea: 'Giữ bờ biển chạy bắc–nam nhưng kéo vào sát lưng bờ đông. Hai cột rừng ngoài cùng của bờ đông thành đụn cát, rừng phi lao; biển bắt đầu chừng cột 77. Bờ cát cong lượn, cửa sông Đà có cồn cát, rừng đước. Hoàng Sa dời xuống ngang kinh đô, Trường Sa ở đông nam.',
+      changes: ['<code>bien.ts</code>: bãi cát từ cột 74 thay vì 79, biển từ chừng cột 77 thay vì 82, bờ cong theo nhiễu; tọa độ hai quần đảo.', 'Hình: bỏ dải rừng ngoài lưới phía đông; đụn cát, phi lao trên hai cột rừng ngoài cùng của bờ đông; cồn cát, rừng đước ở cửa sông.', 'Giặc bờ đông vẫn ra từ hai cột ấy, nay là đụn cát.'],
+      pros: ['Ít việc nhất.', 'Biển liền lưng bờ đông, thuyền khơi ra ngư trường nhanh nhất.', 'Hoàng Sa ở bắc, Trường Sa ở nam, cả hai về phía đông, đông nam: đúng thứ tự như ngoài đời.'],
+      cons: ['Đứng ở kinh đô vẫn bị bờ đông che biển.', 'Hướng hai quần đảo còn lệch hướng thật chừng 15–30°.', 'Góc đông nam sau ngã ba vẫn là rừng bỏ không.'],
+      work: { size: 'Nhỏ', pr: '1', save: 'Giữ nguyên', rules: 'Không', parts: ['<code>src/game/bien.ts</code>', '<code>src/render/bien.ts</code>', '<code>src/render/world.ts</code> (đất phía đông)', '<code>bien.test.ts</code>'] },
+      estuary: { z: MID, spread: 7 },
+      raids: { seaLanding: false, seaShips: false },
+    },
+    {
+      key: 'cua-bien', letter: 'C', name: 'Cửa biển đông nam', rec: true,
+      field: (x, z) => (x + z + 1 - 124) / Math.SQRT2 - wob(x - z, 0.9, 0.11) - 0.5 * Math.sin((x - z) * 0.27 + 1),
+      islands: { hoangSa: { x: 108, z: 82 }, truongSa: { x: 102, z: 142 } },
+      mouth: [{ x: 72, z: MID }, { x: 76, z: 59.5 }],
+      sea: { x: 145, z: 95, label: 'Biển Đông' },
+      idea: 'Bờ biển chạy chéo từ đông bắc xuống tây nam như bờ biển Bắc Bộ, đi sát góc ngoài của hai bờ bên kia. Góc đông nam sau ngã ba (đang là rừng bỏ không) thành cửa sông có cồn cát, rừng đước rồi ra biển: hai sông gặp nhau ở ngã ba rồi đổ thẳng ra biển. Hoàng Sa ở đông nam, Trường Sa xa hơn về nam đông nam, gần đúng hướng thật.',
+      changes: ['<code>bien.ts</code>: biển theo đường chéo (x + z), cửa biển ở cuối sông Đà ngay sau ngã ba; tọa độ hai quần đảo; đường thuyền khơi.', 'Hình: góc đông nam trong lưới vẽ thành cồn, rừng đước, bãi cát, biển; đất ngoài lưới phía đông bắc, tây nam kéo dài tới bờ biển.', 'Camera từ Điện 8 kéo ra đông nam thay vì sang đông.', 'Luật kinh đô không đổi: góc đông nam vốn không khai phá được, không có khoảnh, giặc không ra từ đó.'],
+      pros: ['Biển hiện ra ngay sau ngã ba: mở game nhìn vào Điện là thấy cửa biển ở đáy màn hình.', 'Đúng địa lý: hai sông chảy về đông nam ra biển, hai quần đảo ở đông nam.', 'Không mất khoảnh nào, không đổi luật đánh bờ bên kia.', 'Góc rừng bỏ không thành cảnh cửa biển.'],
+      cons: ['Trường Sa xa hơn: camera phải kéo xa về đông nam.', 'Đất ngoài lưới phía tây nam rộng ra (chỉ để nhìn), thêm cây phải vẽ.'],
+      work: { size: 'Vừa', pr: '1', save: 'Giữ nguyên', rules: 'Không', parts: ['<code>src/game/bien.ts</code>', '<code>src/render/bien.ts</code>', '<code>src/render/world.ts</code> (góc đông nam, đất ngoài lưới, camera)', '<code>src/render/nenDat.ts</code> (góc trong lưới là nước)', '<code>bien.test.ts</code>, <code>nenDat.test.ts</code>'] },
+      estuary: { z: MID, spread: 9 },
+      raids: { seaLanding: false, seaShips: true },
+    },
+    {
+      key: 'duyen-hai', letter: 'D', name: 'Miền duyên hải',
+      field: (x, z) => x + 0.5 - 71 - (z >= FB && z < RS ? 0 : Math.max(-1, wob(z, 1.1, 0.19, 0.3))),
+      coastPlots: true,
+      islands: { hoangSa: { x: 100, z: 52 }, truongSa: { x: 112, z: 108 } },
+      mouth: [{ x: 75, z: MID }, { x: 79, z: MID }],
+      sea: { x: 148, z: 60, label: 'Biển Đông' },
+      idea: 'Bờ đông sông Thao thành dải đất giữa sông và biển. Hàng khoảnh thứ ba của bờ đông (sát rừng) thành khoảnh ven biển: bãi cát, đụn cát, dựng được bến thuyền khơi ngay trên bãi. Biển vào tới cột 74 trong lưới. Giặc bờ đông đổ bộ từ biển thay vì ra từ rừng; đồn bậc 3, 4 ở hàng ven biển thành đồn giặc biển.',
+      changes: ['Luật: ô bãi biển trong lưới (<code>map.ts</code>); bến thuyền khơi dựng sát biển hay sát sông; thuyền đi thẳng từ bãi ra khơi.', 'Trận: giặc bờ đông tới bằng thuyền, đổ bộ lên bãi; đo lại độ khó.', 'Hình: hai cột rừng ngoài cùng của bờ đông thành biển; khoảnh ven biển vẽ cát; bến khơi trên bãi.', 'Sau này quân ra đóng đảo (Điện 10) xuất phát từ bãi bờ đông.'],
+      pros: ['Biển thành chỗ chơi thật chứ không chỉ để nhìn.', 'Thêm lý do dẹp đồn bờ đông: mở được bãi biển.', 'Thuyền khơi từ bãi ra khơi ngắn.', 'Hợp truyện: quân Triệu tới từ biển.'],
+      cons: ['Nhiều việc nhất, đổi cách đánh bờ đông, phải đo lại độ khó.', 'Bờ đông vẫn che biển khi đứng ở kinh đô.', 'Thêm luật mới người chơi phải học.'],
+      work: { size: 'Lớn', pr: '2–3', save: 'Giữ nguyên (công trình đã dựng ở hàng ven biển để nguyên)', rules: 'Có', parts: ['<code>src/game/map.ts</code>, <code>bien.ts</code>, <code>battle.ts</code>, <code>benKia.ts</code>', '<code>src/render/world.ts</code>, <code>bien.ts</code>, <code>nenDat.ts</code>', 'test mới cho bãi biển, giặc đổ bộ'] },
+      coastDock: { x: 74.5, z: 31.5 },
+      raids: { seaLanding: true, seaShips: true },
+    },
+  ];
+
+  function islandAt(v, x, z) {
+    const px = x + 0.5, pz = z + 0.5;
+    for (const id of ['hoangSa', 'truongSa']) {
+      const c = v.islands[id];
+      const i = Math.floor(px - (c.x - DAO / 2)), j = Math.floor(pz - (c.z - DAO / 2));
+      if (i >= 0 && j >= 0 && i < DAO && j < DAO) {
+        const m = islandMask(id), k = j * DAO + i;
+        if (m.land[k]) return { kind: m.bo[k] === 0 ? 'daoCat' : 'dao', bo: m.bo[k], id };
+      }
+      for (const [dx, dz, r] of ISLETS[id]) {
+        const d = Math.hypot(px - (c.x + dx), pz - (c.z + dz));
+        if (d < r) return { kind: 'daoNho', id };
+        if (d < r + 1.6) return { kind: 'ran', id };
+      }
+      if (squircle(px - c.x, pz - c.z, DAO / 2 + 2.2) <= 1) return { kind: 'ran', id };
+    }
+    return null;
+  }
+
+  /** Ô (x, z) của bố cục v là gì: tên loại, độ sâu biển (nếu biển), khoảnh (nếu bên kia). */
+  function tileAt(v, x, z) {
+    const f = v.field(x, z);
+    const inG = inGrid(x, z);
+    const base = inG ? gridKind(x, z) : offRiver(x, z) ? 'song' : 'ngoai';
+    if (f >= 3) {
+      const isl = islandAt(v, x, z);
+      if (isl) return isl;
+    }
+    if (base === 'benKia') {
+      const p = plotAt(x, z);
+      if (v.coastPlots && p.bank === 'dong' && p.j === 2) return { kind: 'khoanhBien', plot: p, f };
+      return { kind: 'benKia', plot: p };
+    }
+    if (PROTECT.has(base)) return { kind: base };
+    if (f >= 3) return { kind: 'bien', depth: f - 3 };
+    if (f >= 0) {
+      if (base === 'song') return { kind: hash01(77, x, z) < 0.22 ? 'con' : 'cuaSong' };
+      return { kind: 'cat' };
+    }
+    if (v.estuary && base !== 'song' && f > -6 && Math.abs(z + 0.5 - v.estuary.z) < v.estuary.spread) return { kind: 'rungDuoc' };
+    if (v.coastPlots && base !== 'song' && f > -3) return { kind: 'cat' };
+    return { kind: base, plot: null };
+  }
+
+  const dist = (a, b) => Math.hypot(a.x - b.x, a.z - b.z);
+  const bearing = (p) => ((Math.atan2(p.x - TAM.x, -(p.z - TAM.z)) * 180) / Math.PI + 360) % 360;
+
+  /** Đường thuyền khơi từ chỗ neo `dock` tới ngư trường quần đảo `id`, và thời gian một chuyến (giây). */
+  function route(v, id, dock) {
+    const q = v.islands[id], r = NGU[id];
+    const path = [dock];
+    if (dock.z < RS + 1.5) { path.push({ x: dock.x, z: MID }); path.push(...v.mouth); }
+    else path.push({ x: dock.x + 4, z: dock.z });
+    const off = path[path.length - 1];
+    const a = Math.atan2(off.z - q.z, off.x - q.x);
+    path.push({ x: q.x + Math.cos(a) * r, z: q.z + Math.sin(a) * r });
+    let len = 0;
+    for (let k = 1; k < path.length; k++) len += dist(path[k - 1], path[k]);
+    const cycle = SEA_DOCK_S + (2 * len) / SEA_SPEED + (2 * Math.PI * r) / SEA_FISH_SPEED;
+    return { path, loop: { x: q.x, z: q.z, r }, len, cycle };
+  }
+
+  const NE = { x: Math.SQRT1_2, z: -Math.SQRT1_2 }, SE = { x: Math.SQRT1_2, z: Math.SQRT1_2 };
+  /** Bốn góc vùng đất thấy được lúc mở game trên điện thoại dọc, nhìn vào Điện. */
+  function phoneView() {
+    const c = TAM, { halfW: w, halfD: d } = PHONE;
+    return [[-1, -1], [1, -1], [1, 1], [-1, 1]].map(([a, b]) => ({ x: c.x + a * w * NE.x + b * d * SE.x, z: c.z + a * w * NE.z + b * d * SE.z }));
+  }
+  function inPhone(px, pz) {
+    const dx = px - TAM.x, dz = pz - TAM.z;
+    return Math.abs(dx * NE.x + dz * NE.z) <= PHONE.halfW && Math.abs(dx * SE.x + dz * SE.z) <= PHONE.halfD;
+  }
+
+  /** Khung tâm camera đi được từ Điện 8 (như CamBounds.sea): tới quá quần đảo xa nhất về phía biển. */
+  function camRect(v) {
+    const qs = Object.values(v.islands);
+    return { x0: -1, x1: Math.max(...qs.map((q) => q.x)) + 4, z0: Math.min(-2, ...qs.map((q) => q.z - 16)), z1: Math.max(GRID + 22, ...qs.map((q) => q.z + 16)) };
+  }
+
+  const metricCache = {};
+  function metrics(v) {
+    if (metricCache[v.key]) return metricCache[v.key];
+    let fromDien = Infinity, fromNgaBa = Infinity, phoneSea = 0, plotsChanged = 0;
+    const seen = new Set();
+    for (let z = -16; z < 175; z++) for (let x = -16; x < 165; x++) {
+      const t = tileAt(v, x, z);
+      const wet = t.kind === 'cat' || t.kind === 'bien' || t.kind === 'cuaSong' || t.kind === 'con';
+      if (t.kind === 'khoanhBien') { const k = t.plot.bank + t.plot.i + ',' + t.plot.j; if (!seen.has(k)) { seen.add(k); plotsChanged++; } }
+      if (!wet) continue;
+      const p = { x: x + 0.5, z: z + 0.5 };
+      fromDien = Math.min(fromDien, dist(p, TAM));
+      fromNgaBa = Math.min(fromNgaBa, dist(p, NGA_BA));
+      if ((t.kind === 'bien' || t.kind === 'cat') && inPhone(p.x, p.z)) phoneSea++;
+    }
+    const dock = { x: 43.5, z: 53 };
+    const isl = {};
+    for (const id of ['hoangSa', 'truongSa']) {
+      const q = v.islands[id];
+      isl[id] = { deg: bearing(q), dist: dist(q, TAM), err: Math.abs(bearing(q) - REAL[id].deg), trip: route(v, id, dock) };
+    }
+    const m = {
+      fromDien, fromNgaBa, phoneSea, plotsChanged,
+      riverToSea: Math.max(0, v.mouth[0].x - NGA_BA.x),
+      isl, ratio: isl.truongSa.dist / isl.hoangSa.dist,
+      coastTrip: v.coastDock ? route(v, 'hoangSa', v.coastDock) : null,
+      cam: camRect(v),
+    };
+    return (metricCache[v.key] = m);
+  }
+
+  return { GRID, RS, RE, FB, FF, KH, DIEN, TAM, NGA_BA, MID, NGU, REAL, VARIANTS, tileAt, route, metrics, pois, plotAt, campTierOf, phoneView, camRect, bearing };
+})();
+
+/* ==================================================================================================================
+   Trang: vẽ bản đồ, thẻ phương án, bảng so sánh. Chỉ gọi vào BanDo, không có gì chảy ngược lại.
+   ================================================================================================================== */
+const COLORS = {
+  kinhDo: '#a9b46a', rungThieng: '#55733a', benKia: '#94a25b', khoanhBien: '#d3c088', rungXa: '#5f7c3b', ngoai: '#7a8a4b',
+  song: '#3f7f8a', cuaSong: '#4f96a3', con: '#cdbb84', cat: '#dcc890', rungDuoc: '#476a3d',
+  ran: '#8fd3c6', daoCat: '#e4d49e', daoNho: '#e4d49e', dao: '#a2b45f',
+};
+const SEA = [[0, '#7cc2c4'], [2, '#5eaac0'], [7, '#3d8cab'], [20, '#2f6f8f'], [45, '#285f7d']];
+function hex(c) { return [parseInt(c.slice(1, 3), 16), parseInt(c.slice(3, 5), 16), parseInt(c.slice(5, 7), 16)]; }
+function seaColor(d) {
+  for (let k = 1; k < SEA.length; k++) {
+    if (d <= SEA[k][0]) {
+      const [d0, c0] = SEA[k - 1], [d1, c1] = SEA[k], t = (d - d0) / (d1 - d0), a = hex(c0), b = hex(c1);
+      return a.map((v, i) => v + (b[i] - v) * t);
+    }
+  }
+  return hex(SEA[SEA.length - 1][1]);
+}
+const NAMES = {
+  kinhDo: 'Đất kinh đô (bên này sông)', rungThieng: 'Rừng thiêng ngoài cùng: giặc Ân ra từ đây', benKia: 'Khoảnh bên kia sông', khoanhBien: 'Khoảnh ven biển (mới): bãi cát, dựng được bến khơi',
+  rungXa: 'Rừng không khai phá', ngoai: 'Đất ngoài lưới (chỉ để nhìn)', song: 'Sông', cuaSong: 'Cửa sông', con: 'Cồn cát giữa cửa sông', cat: 'Bãi cát ven biển',
+  rungDuoc: 'Rừng đước, bãi bồi cửa sông', bien: 'Biển', ran: 'Rạn san hô, nước nông quanh đảo', daoCat: 'Bãi cát đảo chính', daoNho: 'Đảo nhỏ', dao: 'Đảo chính',
+};
+const ISL_NAME = { hoangSa: 'Quần đảo Hoàng Sa', truongSa: 'Quần đảo Trường Sa' };
+const WIN = { all: { x0: -16, x1: 165, z0: -16, z1: 175 }, near: { x0: -4, x1: 98, z0: -4, z1: 98 } };
+const LAYERS = [
+  ['khoanh', 'Khoảnh', true], ['poi', 'Điểm lạ bên kia', false], ['route', 'Đường thuyền khơi', true],
+  ['giac', 'Hướng giặc', false], ['phone', 'Màn hình lúc mở game', true], ['cam', 'Tâm camera Điện 8', false],
+];
+
+const state = { v: 0, frame: 'all', view: 'top', layers: Object.fromEntries(LAYERS.map(([k, , on]) => [k, on])) };
+const tileCache = {};
+const canvas = document.getElementById('map');
+const ctx = canvas.getContext('2d');
+let geom = null;
+
+function tileImage(v) {
+  if (tileCache[v.key]) return tileCache[v.key];
+  const W = WIN.all, w = W.x1 - W.x0, h = W.z1 - W.z0;
+  const off = document.createElement('canvas');
+  off.width = w; off.height = h;
+  const oc = off.getContext('2d'), img = oc.createImageData(w, h);
+  for (let z = W.z0; z < W.z1; z++) for (let x = W.x0; x < W.x1; x++) {
+    const t = BanDo.tileAt(v, x, z);
+    let c;
+    if (t.kind === 'bien') c = seaColor(t.depth);
+    else if (t.kind === 'dao') c = hex(t.bo >= 5 ? '#6f8f44' : t.bo >= 3 ? '#86a34f' : t.bo >= 2 ? '#98ad58' : COLORS.dao);
+    else c = hex(COLORS[t.kind] || '#888888');
+    let n = 1;
+    if (t.kind !== 'bien' && t.kind !== 'song' && t.kind !== 'ran') n = 0.94 + 0.12 * hashN(x, z);
+    if ((t.kind === 'ngoai' || t.kind === 'rungXa' || t.kind === 'rungThieng') && hashN(z, x) < 0.28) n *= 0.86;
+    const k = ((z - W.z0) * w + (x - W.x0)) * 4;
+    img.data[k] = c[0] * n; img.data[k + 1] = c[1] * n; img.data[k + 2] = c[2] * n; img.data[k + 3] = 255;
+  }
+  oc.putImageData(img, 0, 0);
+  return (tileCache[v.key] = off);
+}
+function hashN(i, j) { let t = Math.imul(i + 1013, 0x27d4eb2d) ^ Math.imul(j + 7919, 0x165667b1); t = Math.imul(t ^ (t >>> 15), 1 | t); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }
+
+// Phép chiếu ô → màn hình (chưa nhân tỉ lệ): bắc ở trên, hay như camera game (bắc lệch lên phải, nghiêng 38°).
+const SQ = Math.SQRT1_2, TILT = Math.sin((38 * Math.PI) / 180);
+function lin(x, z) { return state.view === 'top' ? [x, z] : [(x - z) * SQ, (x + z) * SQ * TILT]; }
+function setupGeom() {
+  const W = WIN[state.frame];
+  const corners = [[W.x0, W.z0], [W.x1, W.z0], [W.x1, W.z1], [W.x0, W.z1]].map(([x, z]) => lin(x, z));
+  const xs = corners.map((c) => c[0]), ys = corners.map((c) => c[1]);
+  const bx0 = Math.min(...xs), bx1 = Math.max(...xs), by0 = Math.min(...ys), by1 = Math.max(...ys);
+  const cssW = canvas.parentElement.clientWidth;
+  const maxH = Math.max(320, window.innerHeight * 0.78);
+  let s = cssW / (bx1 - bx0);
+  let cssH = (by1 - by0) * s;
+  if (cssH > maxH) { s = maxH / (by1 - by0); cssH = maxH; }
+  const dpr = Math.min(window.devicePixelRatio || 1, 2.5);
+  canvas.style.height = cssH + 'px';
+  canvas.width = Math.round(cssW * dpr); canvas.height = Math.round(cssH * dpr);
+  const ox = (cssW - (bx1 - bx0) * s) / 2 - bx0 * s, oy = -by0 * s;
+  geom = { s, ox, oy, dpr, cssW, cssH };
+}
+function toScreen(p) { const [a, b] = lin(p.x, p.z); return [a * geom.s + geom.ox, b * geom.s + geom.oy]; }
+function fromScreen(sx, sy) {
+  const a = (sx - geom.ox) / geom.s, b = (sy - geom.oy) / geom.s;
+  if (state.view === 'top') return { x: a, z: b };
+  const u = a / SQ, w = b / (SQ * TILT);
+  return { x: (u + w) / 2, z: (w - u) / 2 };
+}
+
+function css(name) { return getComputedStyle(document.documentElement).getPropertyValue(name).trim(); }
+
+function poly(pts, close) {
+  ctx.beginPath();
+  pts.forEach((p, i) => { const [x, y] = toScreen(p); i ? ctx.lineTo(x, y) : ctx.moveTo(x, y); });
+  if (close) ctx.closePath();
+}
+function rectPts(x0, z0, x1, z1) { return [{ x: x0, z: z0 }, { x: x1, z: z0 }, { x: x1, z: z1 }, { x: x0, z: z1 }]; }
+function circlePts(c, r, n = 72) { return Array.from({ length: n }, (_, k) => ({ x: c.x + r * Math.cos((k / n) * 2 * Math.PI), z: c.z + r * Math.sin((k / n) * 2 * Math.PI) })); }
+
+function label(text, p, opts = {}) {
+  const [x, y] = toScreen(p);
+  const size = opts.size || 12;
+  ctx.font = `${opts.weight || 600} ${size}px ${css('--f-body') || 'sans-serif'}`;
+  ctx.textAlign = opts.align || 'center';
+  ctx.textBaseline = 'middle';
+  ctx.lineJoin = 'round';
+  ctx.lineWidth = 3.2;
+  ctx.strokeStyle = opts.halo || 'rgba(250, 244, 228, 0.88)';
+  ctx.strokeText(text, x, y);
+  ctx.fillStyle = opts.color || '#2b2118';
+  ctx.fillText(text, x, y);
+}
+function arrow(a, b, color, dashed) {
+  const [x0, y0] = toScreen(a), [x1, y1] = toScreen(b);
+  const ang = Math.atan2(y1 - y0, x1 - x0);
+  ctx.save();
+  ctx.strokeStyle = color; ctx.fillStyle = color; ctx.lineWidth = 2.4; ctx.lineCap = 'round';
+  if (dashed) ctx.setLineDash([5, 4]);
+  ctx.beginPath(); ctx.moveTo(x0, y0); ctx.lineTo(x1 - 6 * Math.cos(ang), y1 - 6 * Math.sin(ang)); ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.beginPath(); ctx.moveTo(x1, y1);
+  ctx.lineTo(x1 - 10 * Math.cos(ang - 0.45), y1 - 10 * Math.sin(ang - 0.45));
+  ctx.lineTo(x1 - 10 * Math.cos(ang + 0.45), y1 - 10 * Math.sin(ang + 0.45));
+  ctx.closePath(); ctx.fill();
+  ctx.restore();
+}
+
+function draw() {
+  const v = BanDo.VARIANTS[state.v];
+  const m = BanDo.metrics(v);
+  setupGeom();
+  const { dpr, s } = geom;
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  ctx.fillStyle = css('--paper-2') || '#ecdfc2';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  // Ô đất, nước: một điểm ảnh mỗi ô, phóng bằng phép chiếu.
+  const W = WIN.all;
+  if (state.view === 'top') ctx.setTransform(s * dpr, 0, 0, s * dpr, geom.ox * dpr, geom.oy * dpr);
+  else ctx.setTransform(SQ * s * dpr, SQ * TILT * s * dpr, -SQ * s * dpr, SQ * TILT * s * dpr, geom.ox * dpr, geom.oy * dpr);
+  ctx.imageSmoothingEnabled = false;
+  ctx.drawImage(tileImage(v), W.x0, W.z0);
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  const near = state.frame === 'near';
+
+  if (state.layers.khoanh) {
+    ctx.strokeStyle = 'rgba(40, 30, 18, 0.22)'; ctx.lineWidth = 0.7;
+    for (let k = 0; k <= 10; k++) {
+      const a = BanDo.FB + k * BanDo.KH;
+      poly([{ x: a, z: BanDo.FB }, { x: a, z: BanDo.RS }]); ctx.stroke();
+      poly([{ x: BanDo.FB, z: a }, { x: BanDo.RS, z: a }]); ctx.stroke();
+      poly([{ x: a, z: BanDo.RE }, { x: a, z: BanDo.FF }]); ctx.stroke();
+      poly([{ x: BanDo.RE, z: a }, { x: BanDo.FF, z: a }]); ctx.stroke();
+    }
+    for (let j = 0; j <= 3; j++) {
+      const b = BanDo.RE + j * BanDo.KH;
+      poly([{ x: BanDo.FB, z: b }, { x: BanDo.RS, z: b }]); ctx.stroke();
+      poly([{ x: b, z: BanDo.FB }, { x: b, z: BanDo.RS }]); ctx.stroke();
+    }
+    ctx.strokeStyle = 'rgba(40, 30, 18, 0.5)'; ctx.lineWidth = 1;
+    poly(rectPts(0, 0, BanDo.GRID, BanDo.GRID), true); ctx.stroke();
+  }
+
+  if (state.layers.cam) {
+    const c = m.cam;
+    ctx.save(); ctx.setLineDash([6, 5]); ctx.strokeStyle = '#7a4a10'; ctx.lineWidth = 1.6;
+    poly(rectPts(c.x0, c.z0, c.x1, c.z1), true); ctx.stroke(); ctx.restore();
+    label('Tâm camera đi được (Điện 8)', { x: (c.x0 + c.x1) / 2, z: c.z1 - 3 }, { size: 11, color: '#6a3f0c' });
+  }
+
+  if (state.layers.phone) {
+    const pts = BanDo.phoneView();
+    ctx.save();
+    ctx.fillStyle = 'rgba(255, 252, 240, 0.12)'; ctx.strokeStyle = 'rgba(255, 252, 240, 0.95)'; ctx.lineWidth = 1.8; ctx.setLineDash([3, 3]);
+    poly(pts, true); ctx.fill(); ctx.stroke(); ctx.restore();
+  }
+
+  // Sông, quần đảo, biển: tên.
+  const isl = v.islands;
+  if (state.layers.route) {
+    for (const [id, col] of [['hoangSa', '#fff6d2'], ['truongSa', '#ffd9a8']]) {
+      const r = m.isl[id].trip;
+      ctx.save(); ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+      ctx.strokeStyle = 'rgba(30, 20, 10, 0.55)'; ctx.lineWidth = 3.6; poly(r.path); ctx.stroke();
+      ctx.strokeStyle = col; ctx.lineWidth = 1.8; ctx.setLineDash([6, 4]); poly(r.path); ctx.stroke();
+      ctx.setLineDash([2, 4]); poly(circlePts(r.loop, r.loop.r), true); ctx.stroke();
+      ctx.restore();
+    }
+    if (m.coastTrip) {
+      ctx.save(); ctx.strokeStyle = '#fff6d2'; ctx.lineWidth = 1.8; ctx.setLineDash([2, 3]); poly(m.coastTrip.path); ctx.stroke(); ctx.restore();
+      const [bx, by] = toScreen({ x: 70.5, z: 31.5 });
+      ctx.fillStyle = '#2a5d74'; ctx.strokeStyle = '#fff6d2'; ctx.lineWidth = 1.5;
+      const sz = Math.max(5, 3 * s); ctx.fillRect(bx - sz / 2, by - sz / 2, sz, sz); ctx.strokeRect(bx - sz / 2, by - sz / 2, sz, sz);
+      label('Bến khơi trên bãi', { x: 66, z: 28.5 }, { size: 11 });
+    }
+    const [dx, dy] = toScreen({ x: 43.5, z: 50.5 });
+    const sz = Math.max(5, 3 * s);
+    ctx.fillStyle = '#2a5d74'; ctx.strokeStyle = '#fff6d2'; ctx.lineWidth = 1.5;
+    ctx.fillRect(dx - sz / 2, dy - sz / 2, sz, sz); ctx.strokeRect(dx - sz / 2, dy - sz / 2, sz, sz);
+  }
+
+  if (state.layers.poi) {
+    for (const p of BanDo.pois()) {
+      if (v.coastPlots && p.bank === 'dong' && p.j === 2 && p.kind === 'don') { drawPoi(p, '#1f5f86'); continue; }
+      drawPoi(p);
+    }
+  }
+
+  if (state.layers.giac) {
+    const red = '#b3261e';
+    arrow({ x: 14, z: -10 }, { x: 14, z: 3 }, red); arrow({ x: 34, z: -10 }, { x: 34, z: 3 }, red);
+    arrow({ x: -10, z: 16 }, { x: 3, z: 16 }, red); arrow({ x: -10, z: 34 }, { x: 3, z: 34 }, red);
+    arrow({ x: 18, z: 80 }, { x: 18, z: 72 }, red); arrow({ x: 38, z: 80 }, { x: 38, z: 72 }, red);
+    if (v.raids.seaLanding) {
+      arrow({ x: 88, z: 16 }, { x: 75, z: 16 }, '#1f5f86'); arrow({ x: 88, z: 36 }, { x: 75, z: 36 }, '#1f5f86');
+      label('Giặc bờ đông đổ bộ từ biển', { x: 92, z: 26 }, { size: 11, color: '#163e58', align: 'left' });
+    } else {
+      arrow({ x: 80, z: 16 }, { x: 72, z: 16 }, red); arrow({ x: 80, z: 36 }, { x: 72, z: 36 }, red);
+    }
+    if (v.raids.seaShips) {
+      const from = v.key === 'cua-bien' ? { x: 84, z: 70 } : { x: 90, z: 58 };
+      arrow(from, { x: 62, z: 55.5 }, '#1f5f86', true);
+      label('Thuyền Triệu từ biển vào (tùy chọn)', { x: from.x + 2, z: from.z + 4 }, { size: 11, color: '#163e58', align: 'left' });
+    }
+    label('Giặc Ân', { x: 24, z: -12 }, { size: 11, color: '#7c1d16' });
+  }
+
+  // Điện Vua Hùng.
+  ctx.save(); ctx.fillStyle = '#b0392b'; ctx.strokeStyle = '#f1c96a'; ctx.lineWidth = 1.4;
+  poly(rectPts(BanDo.DIEN.x, BanDo.DIEN.z, BanDo.DIEN.x + BanDo.DIEN.w, BanDo.DIEN.z + BanDo.DIEN.w), true); ctx.fill(); ctx.stroke(); ctx.restore();
+
+  const big = near ? 13 : 12, small = near ? 11.5 : 10.5;
+  label('Điện', { x: 39.5, z: 34 }, { size: small, color: '#7c1d16' });
+  label('Kinh đô', { x: 22, z: 22 }, { size: big });
+  label('Sông Thao', { x: 55.5, z: 14 }, { size: small, color: '#163e58' });
+  label('Sông Đà', { x: 16, z: 55.5 }, { size: small, color: '#163e58' });
+  label('Ngã ba', { x: 55.5, z: 55.5 }, { size: small - 0.5, color: '#163e58' });
+  label('Bờ đông', { x: 66.5, z: 26 }, { size: small });
+  label('Bờ nam', { x: 26, z: 66.5 }, { size: small });
+  label(v.sea.label, v.sea, { size: big + 2, color: '#f4fbff', halo: 'rgba(20, 60, 80, 0.75)', weight: 700 });
+  for (const id of ['hoangSa', 'truongSa']) {
+    const q = isl[id];
+    label(ISL_NAME[id], { x: q.x, z: q.z - BanDo.NGU[id] - 3 }, { size: small, color: '#f4fbff', halo: 'rgba(20, 60, 80, 0.75)' });
+  }
+  if (state.layers.phone) {
+    const pts = BanDo.phoneView();
+    label('Màn hình lúc mở game', { x: (pts[2].x + pts[3].x) / 2 + 2.5, z: (pts[2].z + pts[3].z) / 2 + 2.5 }, { size: 10.5, color: '#3b2a12' });
+  }
+  // La bàn.
+  const [cx, cy] = [geom.cssW - 34, 38];
+  const nv = lin(0, -1), len = Math.hypot(nv[0], nv[1]);
+  const ux = nv[0] / len, uy = nv[1] / len;
+  ctx.save(); ctx.fillStyle = 'rgba(255, 250, 238, 0.9)'; ctx.beginPath(); ctx.arc(cx, cy, 17, 0, Math.PI * 2); ctx.fill();
+  ctx.strokeStyle = '#7a4a10'; ctx.lineWidth = 1; ctx.stroke();
+  ctx.fillStyle = '#a8352a'; ctx.beginPath(); ctx.moveTo(cx + ux * 13, cy + uy * 13); ctx.lineTo(cx - uy * 4, cy + ux * 4); ctx.lineTo(cx + uy * 4, cy - ux * 4); ctx.closePath(); ctx.fill();
+  ctx.fillStyle = '#2b2118'; ctx.font = `700 9px ${css('--f-body')}`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.font = `700 11px ${css('--f-body')}`; ctx.lineWidth = 3; ctx.strokeStyle = 'rgba(255, 250, 238, 0.9)'; ctx.strokeText('B', cx + ux * 26, cy + uy * 26); ctx.fillText('B', cx + ux * 26, cy + uy * 26);
+  ctx.restore();
+}
+
+function drawPoi(p, tint) {
+  const [x, y] = toScreen(p);
+  const r = Math.max(3.5, geom.s * 1.6);
+  ctx.save();
+  ctx.lineWidth = 1.2; ctx.strokeStyle = 'rgba(255, 250, 238, 0.95)';
+  if (p.kind === 'don') {
+    ctx.fillStyle = tint || '#b3261e';
+    ctx.beginPath(); ctx.moveTo(x, y - r * 1.2); ctx.lineTo(x + r, y + r * 0.8); ctx.lineTo(x - r, y + r * 0.8); ctx.closePath(); ctx.fill(); ctx.stroke();
+    if (geom.s > 2.6) { ctx.fillStyle = '#fff'; ctx.font = `700 ${Math.round(r * 1.1)}px sans-serif`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(String(p.tier), x, y + r * 0.15); }
+  } else if (p.kind === 'lang') {
+    ctx.fillStyle = '#8a5a2b'; ctx.fillRect(x - r * 0.8, y - r * 0.4, r * 1.6, r * 1.2); ctx.strokeRect(x - r * 0.8, y - r * 0.4, r * 1.6, r * 1.2);
+    ctx.beginPath(); ctx.moveTo(x - r, y - r * 0.3); ctx.lineTo(x, y - r * 1.2); ctx.lineTo(x + r, y - r * 0.3); ctx.closePath(); ctx.fillStyle = '#c99a4b'; ctx.fill(); ctx.stroke();
+  } else if (p.kind === 'dacSan') {
+    ctx.fillStyle = '#6f4aa0'; ctx.beginPath(); ctx.moveTo(x, y - r); ctx.lineTo(x + r, y); ctx.lineTo(x, y + r); ctx.lineTo(x - r, y); ctx.closePath(); ctx.fill(); ctx.stroke();
+  } else {
+    ctx.fillStyle = '#d9a520'; ctx.beginPath(); ctx.arc(x, y, r * 0.8, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+  }
+  ctx.restore();
+}
+
+/* ---------- Thẻ phương án, số đo, bảng so sánh ---------- */
+const fmt = (n, d = 0) => n.toLocaleString('vi-VN', { maximumFractionDigits: d, minimumFractionDigits: d });
+const secs = (t) => `${Math.floor(t / 60)} phút ${String(Math.round(t % 60)).padStart(2, '0')} giây`;
+function delta(val, base, better, unit, d = 0) {
+  const diff = val - base;
+  if (Math.abs(diff) < (d ? 0.05 : 0.5)) return '<small class="same">như gốc</small>';
+  const good = better === 'less' ? diff < 0 : diff > 0;
+  return `<small class="${good ? 'up' : 'down'}">${diff > 0 ? '+' : '−'}${fmt(Math.abs(diff), d)}${unit} so với gốc</small>`;
+}
+
+function renderInfo() {
+  const v = BanDo.VARIANTS[state.v], m = BanDo.metrics(v), g = BanDo.metrics(BanDo.VARIANTS[0]);
+  const isGoc = state.v === 0;
+  const dd = (val, base, better, unit, d) => (isGoc ? '' : delta(val, base, better, unit, d));
+  const hs = m.isl.hoangSa, ts = m.isl.truongSa, ghs = g.isl.hoangSa, gts = g.isl.truongSa;
+  const li = (arr) => arr.map((x) => `<li>${x}</li>`).join('');
+  document.getElementById('info').innerHTML = `
+    <div class="vhead">
+      <div class="vtag">${isGoc ? 'Bản đang chạy' : 'Phương án ' + v.letter}${v.rec ? ' <span class="badge rec">Khuyên dùng</span>' : ''}</div>
+      <h2>${v.letter === 'Gốc' ? '' : v.letter + ' · '}${v.name}</h2>
+      <p class="idea">${v.idea}</p>
+    </div>
+    <div class="block"><h3>Số đo</h3>
+      <div class="stats">
+        <div class="k">Biển cách ngã ba sông</div><div class="v">${fmt(m.fromNgaBa)} ô${dd(m.fromNgaBa, g.fromNgaBa, 'less', ' ô')}</div>
+        <div class="k">Biển cách Điện</div><div class="v">${fmt(m.fromDien)} ô${dd(m.fromDien, g.fromDien, 'less', ' ô')}</div>
+        <div class="k">Mở game, nhìn vào Điện (điện thoại dọc) có thấy biển</div><div class="v">${m.phoneSea > 12 ? 'Có' : m.phoneSea > 0 ? 'Một góc nhỏ' : 'Không'}<small class="same">${fmt(m.phoneSea)} ô cát, biển trong màn hình</small></div>
+        <div class="k">Sông Đà từ ngã ba ra tới cửa biển</div><div class="v">${fmt(m.riverToSea)} ô${dd(m.riverToSea, g.riverToSea, 'less', ' ô')}</div>
+        <div class="k">Hoàng Sa nhìn từ Điện (thật 128°)</div><div class="v">${fmt(hs.deg)}°, cách ${fmt(hs.dist)} ô<small class="${hs.err <= 12 ? 'up' : hs.err <= 30 ? 'same' : 'down'}">lệch hướng thật ${fmt(hs.err)}°</small></div>
+        <div class="k">Trường Sa nhìn từ Điện (thật 144°)</div><div class="v">${fmt(ts.deg)}°, cách ${fmt(ts.dist)} ô<small class="${ts.err <= 12 ? 'up' : ts.err <= 30 ? 'same' : 'down'}">lệch hướng thật ${fmt(ts.err)}°</small></div>
+        <div class="k">Trường Sa xa gấp Hoàng Sa (thật 1,8)</div><div class="v">${fmt(m.ratio, 1)} lần</div>
+        <div class="k">Một chuyến thuyền khơi ra Hoàng Sa</div><div class="v">${secs(hs.trip.cycle)}${dd(hs.trip.cycle, ghs.trip.cycle, 'less', ' giây')}</div>
+        <div class="k">Một chuyến thuyền khơi ra Trường Sa</div><div class="v">${secs(ts.trip.cycle)}${dd(ts.trip.cycle, gts.trip.cycle, 'less', ' giây')}</div>
+        ${m.coastTrip ? `<div class="k">Bến trên bãi biển ra Hoàng Sa</div><div class="v">${secs(m.coastTrip.cycle)}${dd(m.coastTrip.cycle, ghs.trip.cycle, 'less', ' giây')}</div>` : ''}
+        <div class="k">Khoảnh bên kia đổi loại</div><div class="v">${m.plotsChanged ? m.plotsChanged + ' khoảnh thành ven biển' : 'Không'}</div>
+      </div>
+    </div>
+    <div class="block"><h3>Đổi gì</h3><ul>${li(v.changes)}</ul></div>
+    <div class="lists">
+      <div class="pro"><h3>Được</h3><ul>${li(v.pros)}</ul></div>
+      <div class="con"><h3>Chưa ổn</h3><ul>${li(v.cons)}</ul></div>
+    </div>
+    <div class="block"><h3>Việc phải làm</h3>
+      <div class="work"><span>Khối lượng: <b>${v.work.size}</b></span><span>PR: <b>${v.work.pr}</b></span><span>Đổi luật: <b>${v.work.rules}</b></span><span>Bản lưu: <b>${v.work.save}</b></span></div>
+      ${v.work.parts.length ? `<ul>${li(v.work.parts)}</ul>` : ''}
+    </div>`;
+}
+
+function renderTable() {
+  const rows = BanDo.VARIANTS.map((v, k) => {
+    const m = BanDo.metrics(v);
+    return `<tr tabindex="0" data-k="${k}" class="${k === state.v ? 'cur' : ''}">
+      <td><b>${v.letter === 'Gốc' ? 'Gốc' : v.letter}</b> · ${v.name}${v.rec ? ' <span class="badge rec">Khuyên dùng</span>' : ''}</td>
+      <td>${fmt(m.fromNgaBa)} ô</td>
+      <td>${m.phoneSea > 12 ? 'Có' : m.phoneSea > 0 ? 'Một góc nhỏ' : 'Không'}</td>
+      <td>${fmt(m.isl.hoangSa.deg)}° <span class="same">(lệch ${fmt(m.isl.hoangSa.err)}°)</span></td>
+      <td>${fmt(m.isl.truongSa.deg)}° <span class="same">(lệch ${fmt(m.isl.truongSa.err)}°)</span></td>
+      <td>${secs(m.isl.hoangSa.trip.cycle)}</td>
+      <td>${v.work.rules}</td>
+      <td>${v.work.size}</td>
+    </tr>`;
+  }).join('');
+  document.getElementById('cmp').innerHTML = `<thead><tr><th>Bố cục</th><th>Biển cách ngã ba</th><th>Thấy biển lúc mở game</th><th>Hướng Hoàng Sa (thật 128°)</th><th>Hướng Trường Sa (thật 144°)</th><th>Thuyền ra Hoàng Sa, một chuyến</th><th>Đổi luật</th><th>Việc</th></tr></thead><tbody>${rows}</tbody>`;
+}
+
+function renderLegend() {
+  const items = [
+    ['kinhDo', 'Đất kinh đô'], ['benKia', 'Bờ bên kia'], ['rungXa', 'Rừng không khai phá'], ['ngoai', 'Đất ngoài lưới'], ['song', 'Sông'],
+    ['cat', 'Bãi cát'], ['rungDuoc', 'Rừng đước'], ['bien', 'Biển'], ['ran', 'Rạn, nước nông'], ['dao', 'Đảo'],
+  ];
+  if (BanDo.VARIANTS[state.v].coastPlots) items.splice(2, 0, ['khoanhBien', 'Khoảnh ven biển (mới)']);
+  const col = (k) => (k === 'bien' ? '#3d8cab' : COLORS[k]);
+  let html = items.map(([k, n]) => `<span><i style="background:${col(k)}"></i>${n}</span>`).join('');
+  html += '<span><i style="background:#b0392b"></i>Điện Vua Hùng</span>';
+  if (state.layers.route) html += '<span><i style="background:#2a5d74"></i>Bến thuyền khơi mẫu</span>';
+  if (state.layers.poi) html += '<span><i style="background:#b3261e"></i>Đồn giặc (số là bậc)</span><span><i style="background:#c99a4b"></i>Làng</span><span><i style="background:#6f4aa0"></i>Đặc sản</span><span><i style="background:#d9a520"></i>Của chôn</span>';
+  document.getElementById('legend').innerHTML = html;
+}
+
+function renderControls() {
+  for (const b of document.querySelectorAll('#frameSeg button')) b.setAttribute('aria-pressed', String(b.dataset.frame === state.frame));
+  for (const b of document.querySelectorAll('#viewSeg button')) b.setAttribute('aria-pressed', String(b.dataset.view === state.view));
+  for (const b of document.querySelectorAll('#layerRow button')) b.setAttribute('aria-pressed', String(!!state.layers[b.dataset.layer]));
+  const v = BanDo.VARIANTS[state.v];
+  document.getElementById('vlabel').textContent = `${v.letter} · ${v.name}`;
+  document.getElementById('vcount').textContent = `${state.v + 1} / ${BanDo.VARIANTS.length}`;
+}
+
+function render() {
+  renderControls();
+  renderLegend();
+  renderInfo();
+  renderTable();
+  draw();
+}
+
+function setVariant(k) {
+  const n = BanDo.VARIANTS.length;
+  state.v = ((k % n) + n) % n;
+  try { history.replaceState(null, '', '#' + BanDo.VARIANTS[state.v].key); } catch (e) { /* khung xem không cho đổi địa chỉ */ }
+  document.getElementById('readout').innerHTML = 'Chạm vào bản đồ để xem ô ấy là gì.';
+  render();
+}
+
+function describe(x, z) {
+  const v = BanDo.VARIANTS[state.v];
+  const t = BanDo.tileAt(v, x, z);
+  let s = `<b>Ô (${x}, ${z})</b>: ${NAMES[t.kind] || t.kind}`;
+  if (t.kind === 'bien') s += `, cách bờ chừng ${Math.round(t.depth) + 3} ô`;
+  if (t.plot) {
+    const p = t.plot;
+    s += ` · ${p.bank === 'nam' ? 'bờ nam sông Đà' : 'bờ đông sông Thao'}, khoảnh (${p.i}, ${p.j}), vùng đồn bậc ${BanDo.campTierOf(p)}`;
+    const poi = BanDo.pois().find((q) => q.bank === p.bank && q.i === p.i && q.j === p.j);
+    if (poi) s += ` · có <b>${poi.name}</b>`;
+  }
+  if (t.id) s += ` · ${ISL_NAME[t.id]}`;
+  if (x >= BanDo.DIEN.x && x < BanDo.DIEN.x + 5 && z >= BanDo.DIEN.z && z < BanDo.DIEN.z + 5) s = `<b>Ô (${x}, ${z})</b>: Điện Vua Hùng`;
+  return s;
+}
+
+function boot() {
+  const row = document.getElementById('layerRow');
+  for (const [k, name] of LAYERS) {
+    const b = document.createElement('button');
+    b.type = 'button'; b.className = 'chipbtn'; b.dataset.layer = k; b.id = 'ly-' + k; b.textContent = name;
+    b.addEventListener('click', () => { state.layers[k] = !state.layers[k]; renderControls(); renderLegend(); draw(); });
+    row.appendChild(b);
+  }
+  for (const b of document.querySelectorAll('#frameSeg button')) b.addEventListener('click', () => { state.frame = b.dataset.frame; renderControls(); draw(); });
+  for (const b of document.querySelectorAll('#viewSeg button')) b.addEventListener('click', () => { state.view = b.dataset.view; renderControls(); draw(); });
+  document.getElementById('prev').addEventListener('click', () => setVariant(state.v - 1));
+  document.getElementById('next').addEventListener('click', () => setVariant(state.v + 1));
+  document.getElementById('vname').addEventListener('click', () => setVariant(state.v + 1));
+  document.getElementById('cmp').addEventListener('click', (e) => { const tr = e.target.closest('tr[data-k]'); if (tr) setVariant(Number(tr.dataset.k)); });
+  document.getElementById('cmp').addEventListener('keydown', (e) => { const tr = e.target.closest('tr[data-k]'); if (tr && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); setVariant(Number(tr.dataset.k)); } });
+  window.addEventListener('keydown', (e) => {
+    const el = document.activeElement;
+    if (el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.isContentEditable)) return;
+    if (e.key === 'ArrowLeft') setVariant(state.v - 1);
+    if (e.key === 'ArrowRight') setVariant(state.v + 1);
+  });
+  canvas.addEventListener('click', (e) => {
+    const r = canvas.getBoundingClientRect();
+    const p = fromScreen(e.clientX - r.left, e.clientY - r.top);
+    document.getElementById('readout').innerHTML = describe(Math.floor(p.x), Math.floor(p.z));
+  });
+  let raf = 0;
+  window.addEventListener('resize', () => { cancelAnimationFrame(raf); raf = requestAnimationFrame(draw); });
+  if (window.matchMedia) {
+    const mq = window.matchMedia('(prefers-color-scheme: dark)');
+    if (mq.addEventListener) mq.addEventListener('change', draw);
+  }
+  window.addEventListener('hashchange', () => {
+    const k = BanDo.VARIANTS.findIndex((v) => '#' + v.key === location.hash);
+    if (k >= 0 && k !== state.v) setVariant(k);
+  });
+  const start = BanDo.VARIANTS.findIndex((v) => '#' + v.key === location.hash);
+  state.v = start >= 0 ? start : 0;
+  render();
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(draw);
+}
+boot();
+</script>
