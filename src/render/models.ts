@@ -8,7 +8,7 @@ import { bakeThuyTinh, makeAnDuong, makeCaoLo, makeGiong, makeSonTinh } from './
 import { bakeMonster, isMonster } from './monsters';
 import { makeRower } from './people';
 import { C } from './palette';
-import { ShapeBuilder, instanceTemplates, seeded, type Placement } from './shapes';
+import { ShapeBuilder, batchTemplates, instanceTemplates, seeded, type Placement } from './shapes';
 import { bakeSoldier, isSoldier } from './soldier';
 import { ToonModel, inkThin, outlineOf, toon } from './toon';
 import { crossbowParts } from './weapons';
@@ -295,8 +295,15 @@ const forestBuilder = () => {
   return b;
 };
 
-function treeTemplates(): THREE.Mesh[] {
+/**
+ * Sáu mẫu cây rừng. `lite`: bản thấp (300–900 tam giác thay vì 250–3.300) dùng khi thu nhỏ, lúc cây chỉ còn bằng đầu
+ * ngón tay: giữ dáng, màu, tán và chỗ từng thân, chỉ bớt chi tiết nhỏ khuất dưới tán (rễ bạnh ít khúc, đốt tre,
+ * cành con, quả cau). Bản thấp rút số ngẫu nhiên y như bản đủ, nên đổi qua lại thì cây không xê dịch.
+ */
+function treeTemplates(lite = false): THREE.Mesh[] {
   const out: THREE.Mesh[] = [];
+  /** Rễ bạnh: bản thấp chỉ hai khúc mỗi rễ. */
+  const rootSegs = (segs: number) => (lite ? 2 : segs);
 
   // 0: Cây gỗ lớn rừng Phong Châu (Chò chỉ / Lim cổ thụ): thân cao vút có rễ bạnh, 4 cành cái vươn xa nâng 5 tầng tán mây tách bạch.
   let b = forestBuilder();
@@ -315,7 +322,7 @@ function treeTemplates(): THREE.Mesh[] {
       0.062,
       0.018,
       0x5a3a20,
-      4,
+      rootSegs(4),
     );
   }
   // Bốn cành cái vươn xa ở các độ cao lệch nhau, đỡ 4 tán lá tầng dưới & tầng giữa tách rời để lộ rõ chạc cây
@@ -344,6 +351,7 @@ function treeTemplates(): THREE.Mesh[] {
   b = forestBuilder();
   b.cyl(0.115, 0.195, 0.78, 0x5c3b22, 0, 0.39, 0, [-0.03, 0, 0.04], 7);
   for (let i = 0; i < 8; i++) {
+    if (lite && i % 2) continue;
     const a = (i / 8) * Math.PI * 2 + 0.2;
     const ca = Math.cos(a);
     const sa = Math.sin(a);
@@ -357,7 +365,7 @@ function treeTemplates(): THREE.Mesh[] {
       0.074,
       0.02,
       i % 2 === 0 ? C.trunk : 0x5a3a20,
-      5,
+      rootSegs(5),
     );
   }
   for (let i = 0; i < 5; i++) {
@@ -367,7 +375,7 @@ function treeTemplates(): THREE.Mesh[] {
     b.cyl(0.036, 0.065, 0.62, C.trunk, ca * 0.24, 0.82 + (i % 2) * 0.05, sa * 0.24, [sa * 1.08, 0, -ca * 1.08], 5);
     // Rễ phụ buông từ cành ngang xuống đất, có chạc rễ bám ở chân
     b.cyl(0.012, 0.02, 0.86, 0x6f4a2c, ca * 0.38, 0.44, sa * 0.38, undefined, 4);
-    b.cyl(0.012, 0.028, 0.18, 0x6f4a2c, ca * 0.43, 0.06, sa * 0.43, [sa * 1.1, 0, -ca * 1.1], 4);
+    if (!lite) b.cyl(0.012, 0.028, 0.18, 0x6f4a2c, ca * 0.43, 0.06, sa * 0.43, [sa * 1.1, 0, -ca * 1.1], 4);
     b.sphere(0.26, LEAF_SHADES[i % 4], ca * 0.48, 0.98 + (i % 2) * 0.06, sa * 0.48, [1.35, 0.48, 1.35], 7);
   }
   b.sphere(0.42, C.leaf[2], 0, 1.16, 0, [1.48, 0.5, 1.48], 8);
@@ -411,12 +419,12 @@ function treeTemplates(): THREE.Mesh[] {
     const topX = ox + Math.sin(tiltZ) * -h * 0.45;
     const topZ = oz + Math.sin(tiltX) * h * 0.45;
     b.cyl(0.034 * sc, 0.06 * sc, h, C.palm, (ox + topX) * 0.5, h * 0.5, (oz + topZ) * 0.5, [tiltX, 0, tiltZ], 6);
-    for (let k = 1; k <= 5; k++) {
+    for (let k = 1; k <= 5 && !lite; k++) {
       const t = k / 6;
       b.cyl(0.052 * sc, 0.052 * sc, 0.018, C.trunk, ox + (topX - ox) * t, h * t, oz + (topZ - oz) * t, [tiltX, 0, tiltZ], 6);
     }
     b.cyl(0.046 * sc, 0.038 * sc, 0.2 * sc, 0x6f8f44, topX, h + 0.04 * sc, topZ, undefined, 6);
-    for (let q = 0; q < 4; q++) {
+    for (let q = 0; q < 4 && !lite; q++) {
       const qa = (q / 4) * Math.PI * 2;
       b.sphere(0.036 * sc, q % 2 ? 0xd8963a : 0x6f8f2f, topX + Math.cos(qa) * 0.055 * sc, h - 0.06 * sc, topZ + Math.sin(qa) * 0.055 * sc, [1, 1.2, 1], 5);
     }
@@ -432,8 +440,8 @@ function treeTemplates(): THREE.Mesh[] {
   out.push(b.mesh(toon));
 
   // 4 & 5: Hai mẫu bụi tre rừng tự nhiên (nhiều thân uốn cong 2 đoạn, có măng tre và tán lá mọc dọc nửa trên thân).
-  out.push(bambooClump(5, 2.15, 4, false));
-  out.push(bambooClump(6, 2.0, 19, false));
+  out.push(bambooClump(5, 2.15, 4, false, lite));
+  out.push(bambooClump(6, 2.0, 19, false, lite));
   return out;
 }
 
@@ -453,8 +461,10 @@ function addBambooLeaf(b: ShapeBuilder, x: number, y: number, z: number, yaw: nu
  * - Từ giữa thân (`~42%` chiều cao) lên tới đỉnh, tại mỗi mắt tre mọc ra các cành tre mảnh (tay tre) đối xứng so le,
  *   trên cành mang từng chùm 3–4 lá tre nhỏ nhọn hình mũi mác xòe rủ — hoàn toàn không có khối tán tròn như cây gỗ.
  * - Khi là lũy tre (`mound = true`): có bờ đất đắp 2 bậc phủ cỏ, thanh tre đan ngang buộc lũy, hàng cọc chông tre vót nhọn và măng tre ở gốc.
+ * - `lite` (bản thấp của tre rừng, xem `treeTemplates`): mỗi thân ba lóng không đốt, không cành con, lá thưa một nửa
+ *   mà to hơn cho đủ khối xanh. Rút số ngẫu nhiên y như bản đủ nên các thân đứng đúng chỗ cũ.
  */
-function bambooClump(stalks: number, height: number, seed: number, mound: boolean): THREE.Mesh {
+function bambooClump(stalks: number, height: number, seed: number, mound: boolean, lite = false): THREE.Mesh {
   const b = new ShapeBuilder(false, true);
   const rand = seeded(seed);
   const yBase = mound ? 0.16 : 0;
@@ -477,7 +487,7 @@ function bambooClump(stalks: number, height: number, seed: number, mound: boolea
     }
   } else {
     // Mô đất nhỏ dưới chân bụi tre rừng
-    b.cyl(0.3, 0.36, 0.045, C.earthDark, 0, 0.022, 0, undefined, 8);
+    b.cyl(0.3, 0.36, 0.045, C.earthDark, 0, 0.022, 0, undefined, lite ? 6 : 8);
   }
 
   // Măng tre non mọc ở gốc bụi tre
@@ -517,9 +527,17 @@ function bambooClump(stalks: number, height: number, seed: number, mound: boolea
       pz += sa * Math.sin(lean) * segLen;
     }
 
-    for (let s = 0; s < segs; s++) {
+    // Bản thấp: mỗi lóng dài gấp đôi, nối thẳng hai mắt cách nhau.
+    const step = lite ? 2 : 1;
+    for (let s = 0; s < segs; s += step) {
       const p0 = pts[s];
-      const p1 = pts[s + 1];
+      const p1 = pts[s + step];
+      if (lite) {
+        const lean = (p0.lean + p1.lean) * 0.5;
+        const len = Math.hypot(p1.x - p0.x, p1.y - p0.y, p1.z - p0.z);
+        b.cyl(p1.r, p0.r, len * 1.02, stalkCol, (p0.x + p1.x) * 0.5, (p0.y + p1.y) * 0.5, (p0.z + p1.z) * 0.5, [sa * lean, 0, -ca * lean], 4);
+        continue;
+      }
       const mx = (p0.x + p1.x) * 0.5;
       const my = (p0.y + p1.y) * 0.5;
       const mz = (p0.z + p1.z) * 0.5;
@@ -552,7 +570,7 @@ function bambooClump(stalks: number, height: number, seed: number, mound: boolea
         const endY = pt.y + bCos * bLen;
         const endZ = pt.z + bzDir * bLen;
 
-        if (s < segs) {
+        if (s < segs && !lite) {
           // Cành tre mảnh mọc vươn từ đốt tre
           b.cyl(
             0.0035,
@@ -580,7 +598,10 @@ function bambooClump(stalks: number, height: number, seed: number, mound: boolea
           const lLen = (0.16 + (l % 2) * 0.035) * (1.05 - f * 0.15);
           const lWidth = 0.02 + (l % 2) * 0.004;
           const lCol = LEAF_SHADES[(i + s + l) % LEAF_SHADES.length];
-          addBambooLeaf(b, lx, ly, lz, lYaw, lPitch, lLen, lWidth, lCol);
+          // Bản thấp: bỏ chùm lá mắt thấp nhất và lá lẻ, lá còn lại to ra bù khối xanh.
+          if (lite && (s === 2 || l % 2)) continue;
+          if (lite) addBambooLeaf(b, lx, ly, lz, lYaw, lPitch, lLen * 1.3, lWidth * 1.8, lCol);
+          else addBambooLeaf(b, lx, ly, lz, lYaw, lPitch, lLen, lWidth, lCol);
         }
       }
     }
@@ -626,10 +647,34 @@ function wallRubble(): THREE.Mesh {
 
 let cachedTrees: THREE.Mesh[] | null = null;
 let cachedWalls: THREE.Mesh[] | null = null;
-const treeOutline = (geo: THREE.BufferGeometry) => outlineOf(geo, inkThin);
+/**
+ * Viền mực của mỗi mẫu (cây, lũy, đê, cọc mốc) dựng một lần, dùng lại mỗi lần vẽ lại lô: rừng dựng lại mỗi lần phát
+ * khoảnh, lũy mỗi lần một đoạn hư. Dựng mới mỗi lần thì tốn công gộp đỉnh và để lại hình cũ trên GPU.
+ */
+const outlines = new WeakMap<THREE.BufferGeometry, THREE.Mesh>();
+const treeOutline = (geo: THREE.BufferGeometry) => {
+  let o = outlines.get(geo);
+  if (!o) {
+    o = outlineOf(geo, inkThin);
+    outlines.set(geo, o);
+  }
+  return o;
+};
 
-/** Dựng cả một khu rừng. Mỗi mẫu cây là một InstancedMesh có viền mực thanh thoát. */
-export function buildForest(spots: TreeSpot[]): THREE.Object3D {
+let cachedLiteTrees: THREE.Mesh[] | null = null;
+
+export interface ForestOptions {
+  /** Máy có WEBGL_multi_draw (xem `batchTemplates`): gộp mọi cây vào một lô, chỉ vẽ cây trong khung nhìn và vùng bóng nắng. */
+  batched?: boolean;
+  /** Dựng thêm bản thấp (`treeTemplates(true)`), đổi qua lại bằng `setForestLite`. */
+  lod?: boolean;
+}
+
+/**
+ * Dựng cả một khu rừng, mỗi cây có viền mực thanh thoát. Không `batched` thì mỗi mẫu cây một InstancedMesh. Có `lod`
+ * thì trả nhóm hai bản (đủ, thấp) chung chỗ đứng từng cây, bản đủ đang hiện.
+ */
+export function buildForest(spots: TreeSpot[], opts: ForestOptions = {}): THREE.Object3D {
   cachedTrees ??= treeTemplates();
   const placements: Placement[] = spots.map((s) => {
     const r = seeded(s.seed);
@@ -637,7 +682,25 @@ export function buildForest(spots: TreeSpot[]): THREE.Object3D {
     const t = s.kind === 'bamboo' ? (s.seed % 2 ? 5 : 4) : pick < 0.34 ? 0 : pick < 0.64 ? 1 : pick < 0.84 ? 2 : 3;
     return { t, x: s.x, y: s.y, z: s.z, s: 0.86 + r() * 0.32, ry: r() * Math.PI * 2 };
   });
-  return instanceTemplates(cachedTrees, placements, treeOutline);
+  const lay = opts.batched ? batchTemplates : instanceTemplates;
+  const full = lay(cachedTrees, placements, treeOutline);
+  if (!opts.lod) return full;
+  cachedLiteTrees ??= treeTemplates(true);
+  const lite = lay(cachedLiteTrees, placements, treeOutline);
+  lite.visible = false;
+  const group = new THREE.Group();
+  group.add(full, lite);
+  group.userData.forestLod = true;
+  return group;
+}
+
+/** Cho mọi khu rừng dựng với `lod` trong `root` hiện bản thấp (`lite`) hay bản đủ. */
+export function setForestLite(root: THREE.Object3D, lite: boolean): void {
+  root.traverse((o) => {
+    if (!o.userData.forestLod) return;
+    o.children[0].visible = !lite;
+    o.children[1].visible = lite;
+  });
 }
 
 /** Cọc mốc ở góc khoảnh rừng phát được: cọc tre vót nhọn, buộc dải vải đỏ bay một bên. */
