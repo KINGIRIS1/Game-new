@@ -54,6 +54,12 @@ Tài liệu này ghi lại các quyết định đã chốt với chủ dự án
   - bảng màu: nền kem như giấy, đất vàng ô liu, nước xanh lam đục, điểm nhấn đồng, đỏ son và mực đen.
 - Phong cách này được chọn qua bản dùng thử so sánh 4 phương án: khối hộp ban đầu, voxel tinh xảo, đồ chơi bo tròn, và Nét Đông Sơn. Cả bộ dùng thử được cất ở branch `prototype/phong-cach-hinh-anh`.
 - Màn hình dọc, camera isometric, kéo và phóng to bằng chạm. Giao diện bằng HTML đặt đè lên cảnh 3D.
+- **Màn hình vào game**: hiện mỗi lần mở game (tải trang), trước khi vào kinh đô.
+  - Trên cùng là mặt trống đồng Đông Sơn làm biểu tượng: ngôi sao 14 cánh ở giữa, các vòng vạch, vòng tròn chấm giữa, răng cưa, và sáu chim Lạc bay ngược chiều kim đồng hồ (vòng chim xoay chậm). Dưới là tên game ("Thời đại" chữ nhỏ giãn, "Văn Lang" chữ to) và một dòng giới thiệu. Không có dòng tên các nhân vật.
+  - Dưới cùng là thẻ tóm tắt bản lưu (chương đang chơi và tên truyện của chương, hay "Đã hết truyện"; cấp Điện; số dân; đã vắng bao lâu) và nút **Chơi tiếp**. Chưa xem đoạn truyện mở đầu thì coi là game mới: thẻ ghi "Kinh đô mới, chờ người dựng nước", nút là **Bắt đầu**. Góc trên có nút bật, tắt tiếng.
+  - Màn hình hiện ngay khi trang tải, trong lúc dựng cảnh 3D; lúc ấy nút ghi "Đang dựng kinh đô…" và chưa bấm được. Dựng xong thì lớp phủ mờ đi, kinh đô của bản lưu hiện ra ở giữa màn hình (trên và dưới phủ màu giấy cho dễ đọc chữ), camera trôi chậm quanh chỗ nhìn ban đầu.
+  - Luật chơi đứng yên ở màn hình này: thời gian nằm ở đây tính như lúc vắng mặt. Bấm nút thì nghe ba tiếng trống đồng, màn hình mờ đi, camera lướt về chỗ nhìn ban đầu, giao diện chính hiện ra, rồi mới tới bảng báo thu hoạch lúc vắng, kết quả trận và đoạn truyện đang chờ như trước.
+  - Điện thoại cầm ngang: biểu tượng và tên bên trái, thẻ và nút bên phải.
 - Máy thử chính là **Samsung Galaxy Z Fold5**. Màn hình ngoài (dài, hẹp) dùng bảng trượt lên từ dưới. Màn hình trong (gần vuông) dùng bảng bên cạnh.
 - Mục tiêu 60 khung hình/giây trên Fold5, ít nhất 30 trên máy Android tầm trung đời cũ. Bãi chiến tối đa khoảng 40–60 lính.
 - Độ nét (pixel ratio) mặc định 1,5, không vượt quá màn hình thật, đặt lại mỗi lần đổi cỡ màn hình (mở hay gập Fold5). Cài đặt có 3 mức: Tiết kiệm (1), Vừa (1,5), Nét (2). Lựa chọn lưu riêng trên từng máy, không đi theo mã lưu.
