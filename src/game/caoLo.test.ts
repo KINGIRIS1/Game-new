@@ -9,14 +9,18 @@ import { CAO_LO_AT, CH4_LAST, LAY_TRAO_AT, LENH_BAN_AT, LONG_NGONG_AT, caoLoJoin
 import { advLook } from './coLoa';
 import {
   BOAT,
+  BUILD_MENU,
+  BUILDINGS,
   CAO_LO,
   CH4_QUEST_START,
+  DECOR_TYPES,
   DEFAULT_ROWS,
   FIELD,
   GIFT_IDS,
   LENH_BAN,
   LIEN_CHAU,
   QUESTS,
+  ROAD_TYPES,
   SKILLS,
   STAGES,
   UNITS,
@@ -290,6 +294,16 @@ describe('truyện, vua xuống biển và Đền Cuông', () => {
     expect(heroFor(s, 4, 25)).toMatchObject({ kind: 'anDuong', glow: true });
     s.campaign.battle = null;
     expect(canPlace(s, 'denCuong', edge(8, 1), edge(8, 1)).ok).toBe(true);
+  });
+
+  it('bảng Xây dựng có Đền Cuông, và mọi công trình dựng được khác (không sót loại nào)', () => {
+    expect(BUILD_MENU).toContain('denCuong');
+    const shown = new Set([...BUILD_MENU, ...ROAD_TYPES, ...DECOR_TYPES]);
+    const missing = Object.values(BUILDINGS)
+      .filter((d) => d.buildable && !shown.has(d.type))
+      .map((d) => d.type);
+    expect(missing).toEqual([]);
+    expect(new Set(BUILD_MENU).size).toBe(BUILD_MENU.length);
   });
 
   it('Đền Cuông còn nguyên: mỗi đợt thủy binh bớt 20% số thuyền (làm tròn xuống, còn ít nhất một), bớt chừng ấy lính', () => {

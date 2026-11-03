@@ -1793,7 +1793,7 @@ export class World {
   }
 
   /** Lướt camera để công trình hiện ra ở vị trí màn hình (screenX, screenY), ví dụ phần không bị bảng che. */
-  focusOn(b: Building, screenX: number, screenY: number): void {
+  focusOn(b: Pick<Building, 'type' | 'x' | 'z'>, screenX: number, screenY: number): void {
     const def = BUILDINGS[b.type];
     const at = this.view.groundPoint(screenX, screenY);
     if (!at) return;

@@ -49,6 +49,38 @@ export function farBankOf(x: number, z: number): 'nam' | 'dong' | null {
   return null;
 }
 
+/**
+ * Góc móng w × d khi người chơi chạm ô (tx, tz) lúc đặt công trình: móng lấy ô chạm làm tâm, rồi đẩy vào trọn một bờ
+ * đất (bên này, bờ đông sông Thao hay bờ nam sông Đà), không chìa xuống sông. Chạm trên đất thì giữ đúng bờ ấy; chạm
+ * xuống sông thì về bờ gần ô chạm nhất (cách đều thì về bên này).
+ */
+export function footOnLand(tx: number, tz: number, w: number, d: number): { x: number; z: number } {
+  const x0 = tx - Math.floor((w - 1) / 2);
+  const z0 = tz - Math.floor((d - 1) / 2);
+  const clamp = (v: number, lo: number, hi: number) => Math.min(Math.max(v, lo), hi);
+  // Ba bờ đất, mỗi bờ một khoảng góc móng: bên này, bờ đông sông Thao, bờ nam sông Đà.
+  const banks = [
+    { x: [0, RIVER_START - w], z: [0, RIVER_START - d] },
+    { x: [RIVER_END, GRID - w], z: [0, RIVER_START - d] },
+    { x: [0, GRID - w], z: [RIVER_END, GRID - d] },
+  ];
+  let best = { x: 0, z: 0 };
+  let bestGap = Infinity;
+  for (const b of banks) {
+    const x = clamp(x0, b.x[0], b.x[1]);
+    const z = clamp(z0, b.z[0], b.z[1]);
+    // Ô chạm cách móng bao nhiêu ô (0 khi ô chạm nằm trong móng).
+    const gx = Math.max(x - tx, tx - (x + w - 1), 0);
+    const gz = Math.max(z - tz, tz - (z + d - 1), 0);
+    const gap = Math.max(gx, gz);
+    if (gap < bestGap) {
+      best = { x, z };
+      bestGap = gap;
+    }
+  }
+  return best;
+}
+
 /** Móng (x, z, w, d) có cạnh sát bờ sông: bên này sông, hay bên kia sông (bờ đông sông Thao, bờ nam sông Đà). */
 export function touchesRiver(x: number, z: number, w: number, d: number): boolean {
   return x + w === RIVER_START || z + d === RIVER_START || (x === RIVER_END && z < RIVER_START) || (z === RIVER_END && x < RIVER_START);

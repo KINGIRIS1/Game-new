@@ -60,7 +60,7 @@ import {
 } from './game/game';
 import { isOpen, khoanhOf, khoanhWood, openKhoanh, openable } from './game/khoanh';
 import { cayDaAt, clearCayDa } from './game/cayDa';
-import { GRID, RIVER_START, farBankOf } from './game/map';
+import { GRID, RIVER_START, farBankOf, footOnLand } from './game/map';
 import { fromCode, loadFromStorage, saveFileName, saveToStorage, toCode } from './game/save';
 import { tomTat } from './game/manVao';
 import { TitleDrift } from './render/camera';
@@ -295,9 +295,10 @@ async function start(): Promise<void> {
         updateGhost();
         return;
       }
-      // Chạm vào ô sát bờ thì đẩy công trình lùi vào đất liền thay vì chìa xuống sông.
-      mode.x = Math.min(Math.max(tile.x - Math.floor((def.w - 1) / 2), 0), RIVER_START - def.w);
-      mode.z = Math.min(Math.max(tile.z - Math.floor((def.d - 1) / 2), 0), RIVER_START - def.d);
+      // Chạm vào ô sát bờ thì đẩy công trình lùi vào đất liền thay vì chìa xuống sông; chạm bên kia sông thì đặt bên kia.
+      const at = footOnLand(tile.x, tile.z, def.w, def.d);
+      mode.x = at.x;
+      mode.z = at.z;
       play('tap');
       updateGhost();
       return;
@@ -416,6 +417,12 @@ async function start(): Promise<void> {
         mode = { kind: 'place', type: a.type, ...nearestSpot(a.type) };
         hud.setMode('place');
         updateGhost();
+        // Chỗ đặt ở bờ khác chỗ đang nhìn (đồn biên chỉ dựng bên kia sông): lướt camera tới đó.
+        const seen = world.screenCenterTile();
+        if (farBankOf(mode.x, mode.z) !== farBankOf(seen.x, seen.z)) {
+          const c = hud.freeCenter();
+          world.focusOn({ type: a.type, x: mode.x, z: mode.z }, c.x, c.y);
+        }
         if (isBridge(a.type)) hud.toast(vi.ui.bridgeHint);
         return;
       }
