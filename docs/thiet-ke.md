@@ -162,6 +162,7 @@ Lúc đầu mỗi cấp Điện chỉ cho phát tới một số khoảnh (lư�
 | Đền Tản Viên | 4×4 | Có sau khi kết chương 2. Lũ dâng thấp đi một bậc |
 | Thành Cổ Loa | 1×1 | Có từ chương 3. Đoạn thành đất nện cao, chắc; đắp nhiều vòng quanh Điện |
 | Cổng thành | 1×1 | Có từ chương 3, Điện 5. Cửa trong vòng tường: giặc dồn về cổng, lính trên lầu cổng bắn (xem mục Kế hoạch: cổng thành, xưởng mộc, làng chài) |
+| Hồ Kim Quy | 8×8 | Có khi Rùa Vàng hiện lên (thắng màn 19). Lũy, thành đất, thành Cổ Loa, cổng thành thêm 30% máu (xem mục Hồ Kim Quy) |
 | Đền Cổ Loa | 4×4 | Có sau khi kết chương 3. Chòi canh bắn mạnh gấp rưỡi, xa thêm 1 ô |
 | Đường đi, đồ trang trí | 1×1 tới 3×3 | Chỉ để nhìn (xem mục Đường đi và đồ trang trí) |
 
@@ -1975,6 +1976,26 @@ j\i  0  1  2  3  4  5  6  7  8  9
    - **Đồn biên** (`donBien`, 4×4, mỗi bờ một, cần Điện 5, 800 gạo, 600 vỏ ốc, 600 đất đá, 100 sắt, máu 900): rào cọc, chòi canh, hai lán lính, cờ đỏ. Bảng đồn biên chọn số lính mỗi binh chủng đóng ở đồn (không quá quân đang có, trừ phần đóng ở bờ kia). Khi giữ kinh đô, lính đóng ra trận từ đồn biên còn nguyên, lấy bớt từ phần lính giữ kinh đô của các doanh trại (không thêm quân); đồn hư thì lại ra từ doanh trại. Dời đồn biên cũng chỉ trong bờ bên kia.
    - **Quân ta** vẫn đánh giặc gần nhất như cũ, đi thẳng tới giặc kể cả lội qua sông (như lúc đánh thủy quái mùa lũ); có đồn biên thì lính đóng đồn tới nơi sớm hơn hẳn.
 
+## Hồ Kim Quy (chủ dự án yêu cầu, đã làm)
+
+Chủ dự án yêu cầu một công trình lớn tên Hồ Kim Quy, nơi thần Kim Quy trú ngụ, móng 8×8. Chủ dự án chọn tác dụng và lúc mở; các số còn lại tự chọn, chủ dự án có thể đổi.
+
+**Chủ dự án đã chọn**
+
+- **Tác dụng**: hồ còn nguyên thì **lũy (cả thành đất), thành Cổ Loa, cổng thành thêm 30% máu** khi giặc đánh (`KIM_QUY_WALLS`, `KIM_QUY_WALL_TYPES` ở `defs.ts`), như truyện thần Kim Quy giúp An Dương Vương xây thành không đổ. Đê không được thêm. Hồ hư thì thôi.
+- **Mở khi Rùa Vàng hiện lên**: thắng màn 19 lần đầu ở chương 3 (mốc mở mới `ruaVang`, chưa tới thì báo "Phải diệt yêu tinh núi Thất Diệu (màn 19) để Rùa Vàng hiện lên"). Bảng Xây dựng chỉ hiện hồ từ chương 3.
+
+**Tự chọn, chủ dự án có thể đổi**
+
+- Dựng một lần, một cấp, không dỡ được, như các đền. Giá 2000 gạo, 2000 vỏ ốc, 2500 đất đá (đào hồ, kè bờ), 500 gỗ (miếu, cầu); chừng một lần thưởng màn 19. Máu 1000 như Đền Cổ Loa, giặc nhắm phá được.
+- Không sợ nước lũ (miếu đứng trên gò giữa hồ).
+- Trận giữ kinh đô ghi hồ còn nguyên lúc trận bắt đầu (`Battle.walls`, `hasKimQuy` ở `game.ts`); máu đầy của tường tính ở `maxHpOf` (`battle.ts`). Bản lưu giữ phiên bản 19: trận cũ không có cờ ấy thì coi như không có hồ.
+- Lạc hầu gợi ý một lần khi mở (`NEW_HINTS`).
+- **Mẫu kinh đô**: mẫu Cổ Loa chừa chỗ hồ ngoài vòng thành ngoài ở mọi cấp Điện; mẫu Cổ Loa giữ sông chừa chỗ từ Điện 6 (Điện 5 không đủ đất, hồ choán chỗ ruộng nếp; `Job` có thêm cấp Điện bắt đầu chừa chỗ, `mauFrom`). Mẫu Phong Châu, Đê bao không có chỗ hồ: áp hai mẫu ấy thì hồ đứng yên nếu không vướng, vướng thì dời ra chỗ trống gần nhất, không còn chỗ thì báo không đủ chỗ như mọi công trình (phát thêm rừng là được).
+- Người chơi mô phỏng không dựng hồ, nên nhịp lên Điện và sổ thu chi giữ nguyên.
+- **Dáng** (`src/render/congTrinh/hoKimQuy.ts`, bản vẽ ở `docs/bo-cuc-cong-trinh.md`): hồ bờ kè đá, sen nở ven bờ, lau sậy bờ sau; gò giữa hồ, miếu thờ thần mái thuyền lợp ngói viền đồng vàng, chim Lạc hai đầu nóc, đỉnh đồng ba chân trước cửa; cầu gỗ son cong vồng ra bờ trước; lối đá ra cổng hai cột chim Lạc; hai trống đồng trên giá, cờ đỏ cờ vàng; cây đa cổ thụ góc sau trái, bụi tre góc sau phải. Một thầy cúng đứng khấn trước miếu. **Rùa Vàng bơi** vòng quanh gò, có lúc lặn nửa mai; có hồ thì Rùa Vàng thôi bơi trên sông. Hồ hư thì miếu bốc khói, Rùa Vàng lặn mất (mặt hồ không nghiêng như công trình khác).
+- Test ở `hoKimQuy.test.ts`: móng, giới hạn, mốc mở, gợi ý, máu tường có và không có hồ, cờ của trận giữ kinh đô, yêu tinh phá thành chậm hơn, lũ, mẫu kinh đô.
+
 ## Nhịp chơi và lưu game
 
 - Nhịp chơi lai: mỗi lần mở game là một phiên ra quyết định ngắn.
@@ -2018,4 +2039,5 @@ j\i  0  1  2  3  4  5  6  7  8  9
 14. **Cổng thành, xưởng mộc, làng chài** (chủ dự án đã duyệt, đã làm; xem mục Kế hoạch cùng tên): gỗ là tài nguyên thứ năm, cá đỡ gạo ăn, cổng hút giặc trong vòng tường. Ba PR: gỗ và xưởng mộc, làng chài, cổng thành.
 15. **Vùng đất bên kia sông** (chủ dự án đã duyệt, đã làm cả 5 PR, bản lưu v18; xem mục Kế hoạch cùng tên): lưới qua sông, cầu ba cấp, sương mù và trinh sát, đồn giặc bốn bậc theo chương, dẹp đồn chiếm vùng, đặc sản đất, bản làng, của chôn, giặc tới từ hai bờ và đồn biên.
 16. **Điện cấp 9, 10** (đã duyệt, đang làm; PR luật và PR hình đã làm; xem Kế hoạch cùng tên).
+    **Hồ Kim Quy** (chủ dự án yêu cầu, đã làm; xem mục cùng tên): hồ 8×8 mở khi Rùa Vàng hiện lên, tường thành thêm 30% máu.
 17. **Để sau**: chương 5 về Hai Bà Trưng (mới nhắc ở câu cuối chương 4); nhạc nền.

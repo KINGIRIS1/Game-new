@@ -32,6 +32,8 @@ import {
   HILL,
   HUAN_BONUS,
   KIM_QUY,
+  KIM_QUY_WALLS,
+  KIM_QUY_WALL_TYPES,
   LOOT_FRACTION,
   NO_THAN,
   RAID_MAX_MS,
@@ -244,6 +246,8 @@ export interface Battle {
   shield: number;
   /** Đền Cổ Loa còn nguyên: chòi canh bắn mạnh hơn, xa hơn. */
   crossbows: boolean;
+  /** Hồ Kim Quy còn nguyên: tường thành thêm máu (`KIM_QUY_WALLS`). Bản lưu cũ không có thì coi như không. */
+  walls?: boolean;
   /**
    * Hệ số hình học: tầm đánh, tốc độ, bán kính kỹ năng tính bằng ô nhân với số này. Ngoài bãi là 1, giữ kinh đô
    * là `RAID_SCALE` (kinh đô giãn rộng). Bản lưu cũ không có thì coi như 1.
@@ -316,12 +320,14 @@ export function rectDist(x: number, z: number, b: Building): number {
   return Math.hypot(dx, dz);
 }
 
-function maxHpOf(b: Building): number {
-  return BUILDINGS[b.type].hp[b.level - 1] ?? 100;
+/** Máu đầy của công trình trong trận: Hồ Kim Quy còn nguyên thì tường thành thêm máu. */
+export function maxHpOf(battle: Pick<Battle, 'walls'>, b: Building): number {
+  const hp = BUILDINGS[b.type].hp[b.level - 1] ?? 100;
+  return battle.walls && KIM_QUY_WALL_TYPES.includes(b.type) ? hp * (1 + KIM_QUY_WALLS) : hp;
 }
 
 export function buildingHp(battle: Battle, b: Building): number {
-  return battle.hp[b.id] ?? maxHpOf(b);
+  return battle.hp[b.id] ?? maxHpOf(battle, b);
 }
 
 /**
@@ -423,6 +429,8 @@ export interface BattleOpts {
   land?: { foe: 'yeu' | 'trieu' | 'thuyBinh'; n: number } | null;
   /** Đền Cổ Loa còn nguyên. */
   crossbows?: boolean;
+  /** Hồ Kim Quy còn nguyên. */
+  walls?: boolean;
   /** Đền Cuông còn nguyên: thủy binh tới ít thuyền hơn. */
   fewerBoats?: boolean;
   /** Bậc binh khí đã rèn của từng binh chủng. */
@@ -451,6 +459,7 @@ export function startBattle(state: GameState, wave: number, side: RaidSide, opts
   const battle = newBattle(state.nextBattleId++, 'raid', wave, side);
   battle.bonus = opts.bonus ?? 0;
   battle.crossbows = opts.crossbows ?? false;
+  if (opts.walls) battle.walls = true;
   if (opts.arms) battle.arms = { ...opts.arms };
   if (opts.huan) battle.huan = { ...opts.huan };
   const land = opts.land ?? null;

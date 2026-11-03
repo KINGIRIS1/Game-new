@@ -507,6 +507,39 @@ L L , , V V
   - thuyền đánh cá bơi chậm một vòng quanh chỗ neo trước bờ ván, người lái đò chèo (không đứng quăng chài trên thuyền);
   - thuyền lưới lớn có buồm (cấp 8) dùng dáng thuyền buôn thu nhỏ.
 
+## Hồ Kim Quy: 8×8 (chủ dự án yêu cầu, đã vẽ)
+
+Bản vẽ đi kèm mục **Hồ Kim Quy** trong `docs/thiet-ke.md`. Một cấp, chưa có dáng cũ. Móng 8×8 vẽ thành 16×16 ký tự. Mặt trước (cổng, cầu) quay về +z; cây cao đứng góc sau.
+
+```
+T T T T . L L L L L L L . B B B
+T T T T ~ ~ ~ ~ ~ ~ ~ ~ ~ B B B
+T T T T ~ ~ ~ ~ ~ ~ ~ S S ~ . .
+T T T T ~ ~ ~ ~ ~ ~ ~ S S ~ ~ .
+. ~ ~ ~ ~ G G G G G G ~ ~ ~ ~ .
+. ~ ~ ~ ~ G M M M M G ~ ~ ~ ~ .
+. ~ ~ ~ ~ G M M M M G ~ ~ S S .
+. ~ ~ ~ ~ G M M M M G ~ ~ S S .
+. ~ ~ ~ ~ G G G G G G ~ ~ S S .
+. S S ~ ~ G G G G G G ~ ~ ~ ~ .
+. S S ~ ~ ~ ~ C C ~ ~ ~ ~ ~ ~ .
+. . ~ ~ ~ ~ ~ C C ~ ~ ~ ~ ~ . .
+. . . ~ ~ ~ ~ C C ~ ~ ~ ~ . . .
+. F . . . . . , , . . . . . F .
+. D D . . 7 . , , . 7 . . D D .
+. D D . . 7 . , , . 7 . . D D .
+```
+
+- `~` mặt hồ. Bờ hồ vẽ theo đúng viền ngoài các ô con `~ G M S C` (`lakeOutline`), làm mượt bậc thang và bo góc; kè đá viền quanh, đá kè rải dọc bờ; lòng hồ sâu sẫm màu hơn, vài vòng gợn sóng.
+- `G` gò giữa hồ: chân gò đất bầu dục viền đá, mặt cỏ; `M` miếu thờ thần Kim Quy trên nền đá viền đồng: bốn cột son, vách gỗ có dải hoa văn, cửa giữa có mặt trống đồng trên trán, mái thuyền lợp ngói viền đồng vàng, chim Lạc hai đầu nóc; đỉnh đồng ba chân và hai cờ nhỏ trước cửa; bậc đá xuống phía cầu.
+- `C` cầu gỗ son cong vồng từ chân gò ra bờ trước, cột chống xuống nước, lan can son.
+- `,` lối lát đá từ chân cầu ra cổng.
+- `7` cổng hai cột gỗ đai đồng, chim Lạc dang cánh trên đầu cột, xà son, biển gỗ có mặt trống đồng.
+- `D` trống đồng trên giá gỗ thấp; `F` cờ đỏ (trái), cờ vàng (phải).
+- `S` đám sen: lá nổi, hoa hồng nở, nụ trên cuống.
+- `L` lau sậy dọc bờ sau. `T` cây đa cổ thụ (mô hình cây đa trang trí), tán xòe xuống mặt hồ. `B` bụi tre.
+- Một thầy cúng (Lạc hầu) đứng khấn trước miếu. Rùa Vàng bơi vòng bầu dục quanh gò (`userData.swim`, World cho bơi ở `swimTurtle`).
+
 ## Cấp 9, 10 (chủ dự án đã duyệt, đã vẽ)
 
 Móng đã kín ở cấp 8, nên cấp 9, 10 không thêm ô con mới: mỗi loại đổi một phần sẵn có, đứng trong khối chữ của phần ấy. Mái theo cấp ghi ở mục Phong cách trong `docs/thiet-ke.md` (cấp 9 dải đồng hoa văn dưới diềm, cấp 10 chim Lạc hai đầu nóc).

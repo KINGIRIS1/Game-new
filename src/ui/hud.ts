@@ -140,7 +140,7 @@ const BUILD_GROUPS: { key: keyof typeof vi.ui.buildGroups; types: BuildingType[]
 /** Bốn công trình làm bánh của Hội Tết: chỉ hiện trong bảng Xây dựng khi đã mở (sau kết chương 1). */
 const TET_TYPES: BuildingType[] = ['ruongNep', 'vuon', 'chuongLon', 'bep'];
 /** Công trình chỉ hiện trong bảng Xây dựng khi đã sang chương có nó. */
-const CHAPTER_OF: Partial<Record<string, number>> = { chuong2: 2, ketChuong2: 2, chuong3: 3, ketChuong3: 3, chuong4: 4, ketChuong4: 4 };
+const CHAPTER_OF: Partial<Record<string, number>> = { chuong2: 2, ketChuong2: 2, chuong3: 3, ruaVang: 3, ketChuong3: 3, chuong4: 4, ketChuong4: 4 };
 
 /** Tên hiển thị của công trình, tính cả lũy tre đã đắp thành đất và đê đã kè đá. */
 export function buildingName(b: Pick<Building, 'type' | 'level'>): string {
