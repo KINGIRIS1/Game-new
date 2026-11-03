@@ -53,6 +53,7 @@ import {
 } from './models';
 import { makeWorker, type Job } from './people';
 import { C } from './palette';
+import { KIEU_NEN, NEN_OPTS, buildNen, grassNoise, type KieuNen } from './nenDat';
 import type { Poser } from './rig';
 import { ShapeBuilder, disposeInstances, disposeModel, seeded } from './shapes';
 import { ToonModel, inkThin, outlineOf, toon } from './toon';
@@ -261,6 +262,9 @@ export class World {
   readonly view: IsoCamera;
 
   private readonly land = new InstancedBoxes(GRID * GRID);
+  /** Kiểu nền đất đang vẽ; khác `hop` thì đất trong lưới là một khối liền `nen` (xem `nenDat.ts`). */
+  private nenKieu: KieuNen = 'hop';
+  private nen?: THREE.Mesh;
   /** Ô đất ứng với từng bản sao trong `land`, để biết người chơi chạm vào ô nào. */
   private readonly landTiles: number[] = [];
   /** Độ cao đã vẽ, so với state để biết khi nào phải dựng lại đất. */
@@ -1139,12 +1143,32 @@ export class World {
   }
 
 
+  /** Đổi kiểu nền đất (bản dùng thử) và vẽ lại đất. */
+  setNen(kieu: KieuNen): void {
+    if (!KIEU_NEN.includes(kieu)) return;
+    this.nenKieu = kieu;
+    if (this.state) this.rebuildLand(this.state);
+  }
+
   /** Đất trong lưới: mỗi ô một cột đất cao theo bậc, bậc cao sáng màu hơn một chút. */
   private rebuildLand(state: GameState): void {
     this.land.begin();
     this.landTiles.length = 0;
+    if (this.nen) {
+      this.scene.remove(this.nen);
+      this.nen.geometry.dispose();
+      this.nen = undefined;
+    }
     const c = new THREE.Color();
     const mask = openMask(state);
+    if (this.nenKieu !== 'hop') {
+      this.land.end();
+      this.land.mesh.visible = false;
+      this.nen = this.buildNen(mask, this.nenKieu);
+      this.scene.add(this.nen);
+      return;
+    }
+    this.land.mesh.visible = true;
     for (let x = 0; x < GRID; x++) {
       for (let z = 0; z < GRID; z++) {
         if (isRiver(x, z)) continue;
@@ -1164,6 +1188,48 @@ export class World {
     // Đất đổi bậc thì khối bao cũng đổi: tính lại khi chạm lần sau.
     this.land.mesh.boundingSphere = null;
     this.land.mesh.boundingBox = null;
+  }
+
+  /**
+   * Đất trong lưới dựng liền một khối theo kiểu nền: giữa ô phẳng, mép ô cao dốc xuống ô thấp, mặt dốc màu đất.
+   * Màu cỏ loang theo nhiễu liền qua mép ô (không còn ô cờ ba màu), bậc cao sáng màu hơn một chút như cũ.
+   */
+  private buildNen(mask: Uint8Array, kieu: Exclude<KieuNen, 'hop'>): THREE.Mesh {
+    const lo = new THREE.Color();
+    const hi = new THREE.Color();
+    const geo = buildNen(
+      {
+        grid: GRID,
+        top: (x, z) => (isRiver(x, z) ? null : topY(Math.max(this.heights[z * GRID + x] ?? 0, 0))),
+        riverY: WATER_Y - 0.14,
+        open: (x, z) => mask[z * GRID + x] === 1,
+        grass: (x, z, px, pz, out) => {
+          const open = mask[z * GRID + x] === 1;
+          const palette = open ? C.grass : C.grassLocked;
+          const h = Math.max(this.heights[z * GRID + x] ?? 0, 0);
+          lo.setHex(palette[1]);
+          hi.setHex(palette[2]);
+          out.copy(lo).lerp(hi, grassNoise(px, pz) * 1.25 - 0.1).offsetHSL(0, -0.02 * h, 0.022 * h - 0.02);
+          const dat = open ? datAt(x, z) : null;
+          if (dat) out.lerp(this.tint.setHex(DAT_TINT[dat]), 0.55 + 0.1 * grassNoise(px * 3, pz * 3));
+        },
+        earth: (x, z, out) => {
+          const open = mask[z * GRID + x] === 1;
+          out.top.setHex(C.earth);
+          out.foot.setHex(C.earthDark);
+          if (!open) {
+            out.top.multiplyScalar(0.85);
+            out.foot.multiplyScalar(0.85);
+          }
+        },
+        toWorld: (p) => p - HALF,
+      },
+      NEN_OPTS[kieu],
+    );
+    const mesh = new THREE.Mesh(geo, groundMaterial);
+    mesh.receiveShadow = true;
+    mesh.castShadow = false;
+    return mesh;
   }
 
   /**
@@ -1517,6 +1583,15 @@ export class World {
 
   /** Ô lưới dưới vị trí màn hình, hoặc null nếu chạm ra ngoài lưới. Chạm trúng mặt đất bậc nào thì lấy ô đó. */
   pickTile(clientX: number, clientY: number): { x: number; z: number } | null {
+    // Nền liền: mặt dốc nằm trong ô cao, nên điểm chạm rơi vào ô nào là ô ấy.
+    if (this.nen) {
+      const p = this.view.setRay(clientX, clientY).intersectObject(this.nen, false)[0]?.point;
+      if (p) {
+        const x = Math.floor(p.x + HALF);
+        const z = Math.floor(p.z + HALF);
+        if (x >= 0 && z >= 0 && x < GRID && z < GRID && !isRiver(x, z)) return { x, z };
+      }
+    }
     const hit = this.view.setRay(clientX, clientY).intersectObject(this.land.mesh, false)[0];
     if (hit && hit.instanceId !== undefined) {
       const i = this.landTiles[hit.instanceId];
