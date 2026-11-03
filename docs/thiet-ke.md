@@ -58,8 +58,8 @@ Tài liệu này ghi lại các quyết định đã chốt với chủ dự án
   - **Dải tài nguyên** sát mép trên, trải hết bề ngang, viền răng cưa như hoa văn trống đồng: cấp Điện, các tài nguyên ghi số gọn (531, 6,1k, 48,6k, 1,2tr; số đỏ khi kho đầy), dân, nút cài đặt. Có người rảnh thì ô dân xanh, kèm số người rảnh; chạm ô dân để giao việc cho người rảnh như trước. Chạm phần tài nguyên thì thả bảng kho: số đúng, sức chứa, thu chi mỗi phút, dân, quân.
   - **Dock** năm thẻ ở đáy cho một tay bấm: **Quân** (mở bảng doanh trại, ghi số chỗ quân), **Phó bản**, **Xây dựng** nổi tròn ở giữa, **Tướng** (danh sách Gióng, Sơn Tinh, An Dương Vương, Cao Lỗ, mỗi tướng ghi tiến độ x/5, x/3 hay ⚔️ sẵn sàng, 💤 đang nghỉ; thẻ có dấu ⚔️ khi có tướng sẵn sàng), **Lạc hầu** (thẻ nhiệm vụ; thẻ dock ghi tiến độ, chấm đỏ "!" khi có thưởng chờ nhận). Quân, Phó bản mờ tới khi có doanh trại; Tướng mờ tới khi có tướng. Chạm lại thẻ đang sáng thì đóng bảng. Nút xoay cảnh nổi trên góc phải dock.
   - **Dòng tin** ngay trên dock gom mọi tin: giặc sắp tới, đang đánh, thiếu gạo, Tết, thuyền buôn, trinh sát đang đi. Tin gấp (giặc, đói) lên trước; nhiều tin thì nút "1/3 ›" lật từng tin; có tin mới thì về tin gấp nhất. Giặc đánh kinh đô thì nút kỹ năng hiện ngay trên dòng tin.
-  - **Bảng trượt** mở ngay trên dock, cao tối đa 54% màn hình để còn thấy kinh đô. Màn rộng (cầm ngang, màn trong Fold5) thì bảng cao trọn mép phải, dock dồn sang phần còn lại bên trái.
-  - Đang đặt, dời, trải, ghép công trình: dock và dòng tin ẩn, thanh dưới chỉ còn Hủy, Đặt và nút xoay. Ngoài bãi chiến: dock và dòng tin ẩn, dải tài nguyên vẫn còn.
+  - **Bảng trượt** mở ngay trên dock, cao tối đa 54% màn hình để còn thấy kinh đô (bảng Xây dựng, bảng doanh trại 62% cho khỏi cuộn). Màn rộng (cầm ngang, màn trong Fold5) thì bảng cao trọn mép phải, dock dồn sang phần còn lại bên trái.
+  - Đang đặt, dời, trải, ghép công trình: dock và dòng tin ẩn, thanh dưới chỉ còn Hủy, Đặt và nút xoay cảnh; công trình xoay được thì thêm nút ↻ Xoay (xem mục Xoay công trình). Ngoài bãi chiến: dock và dòng tin ẩn, dải tài nguyên vẫn còn.
 - **Màn hình vào game**: hiện mỗi lần mở game (tải trang), trước khi vào kinh đô.
   - Trên cùng là mặt trống đồng Đông Sơn làm biểu tượng: ngôi sao 14 cánh ở giữa, các vòng vạch, vòng tròn chấm giữa, răng cưa, và sáu chim Lạc bay ngược chiều kim đồng hồ (vòng chim xoay chậm). Dưới là tên game ("Thời đại" chữ nhỏ giãn, "Văn Lang" chữ to) và một dòng giới thiệu. Không có dòng tên các nhân vật.
   - Dưới cùng là thẻ tóm tắt bản lưu (chương đang chơi và tên truyện của chương, hay "Đã hết truyện"; cấp Điện; số dân; đã vắng bao lâu) và nút **Chơi tiếp**. Chưa xem đoạn truyện mở đầu thì coi là game mới: thẻ ghi "Kinh đô mới, chờ người dựng nước", nút là **Bắt đầu**. Góc trên có nút bật, tắt tiếng.
@@ -246,7 +246,12 @@ Chủ dự án đổi: doanh trại là nơi các tướng ở; mỗi binh chủ
 - **Tướng ở doanh trại**:
   - Gióng đã thành tráng sĩ, Sơn Tinh đã rước Mị Nương thì đứng giữa sân doanh trại. Gióng lúc nhỏ vẫn ở trước Điện cho dân nuôi; Sơn Tinh lúc cầu hôn vẫn đứng trên mỏm đá trước Điện. An Dương Vương là vua, vẫn đứng trước Điện cạnh cột đá thề. Chưa có doanh trại thì tướng đứng trước Điện như cũ;
   - khi giữ kinh đô, tướng ra trận cùng quân từ sân trước doanh trại (chưa có doanh trại thì từ trước Điện). Có nhiều doanh trại thì tướng ở và ra trận từ trại mình chỉ huy. Vì thế nên đặt doanh trại gần chỗ giặc hay lũ tới: test mùa lũ bậc 3 đặt doanh trại trong đê, gần phía sông như mẫu Đê bao; doanh trại ở góc rừng xa sông thì thủy quái kịp phá đê.
-- **Bảng doanh trại**: số chỗ quân; mục **Tướng ở doanh trại** (Lạc tướng cầm quân mọi trận; Gióng, Sơn Tinh, An Dương Vương khi đã cùng ra trận, kèm trạng thái sẵn sàng, kiệt sức bao lâu hay hiển linh, và nút Xem mở bảng tướng); mục **Quân và nơi ở** (mỗi binh chủng: số lính, nút tới nơi ở, hoặc nút dựng nơi ở kèm giá khi chưa có); lịch đợt giặc và nút Nghênh chiến ngay.
+- **Bảng doanh trại**: dòng số chỗ quân trên cùng, dưới là bốn thẻ (chủ dự án yêu cầu chia thẻ cho khỏi cuộn xuống mới bố trí được; bảng nhớ thẻ đang xem, cao 62% màn như bảng Xây dựng):
+  - **Quân**: mỗi binh chủng số lính, nút tới nơi ở, hoặc nút dựng nơi ở kèm giá khi chưa có (nút xuống hàng dưới tên binh chủng); lịch đợt giặc và nút Nghênh chiến ngay;
+  - **Giữ kinh đô**: bố trí giữ kinh đô (xem mục Nhiều doanh trại);
+  - **Tướng**: tướng chỉ huy (Lạc tướng cầm quân mọi trận; Gióng, Sơn Tinh, An Dương Vương, Cao Lỗ khi đã cùng ra trận, kèm trạng thái sẵn sàng, kiệt sức bao lâu hay hiển linh, nút Giao trại này và nút Xem mở bảng tướng); thẻ có dấu đỏ "!" khi trại chưa có tướng chỉ huy;
+  - **Trại**: lời tả, cấp, số chỗ trại này giữ, nút Dời, Xoay, Nâng cấp, Đắp nền; thẻ có dấu ⬆ khi nâng cấp được.
+  Doanh trại hư thì báo và nút Sửa nằm trên các thẻ, thẻ nào cũng thấy.
 - **Bảng nơi ở**: số chỗ quân trong doanh trại, dòng binh chủng ấy với số lính, binh khí đã rèn và nút Luyện kèm giá.
 - **Dáng**: trại giáo có lều lính mái chữ A, giá giáo đồng, hai cọc rơm tập đâm và một giáo binh đâm thử; trại cung có lán một mái tựa vách phên, giá cung, bao tên, bia rơm tròn vòng đỏ trắng có tên găm và một cung thủ nhắm bia; chuồng voi có bốn cột lớn đỡ mái chóp bốn mặt, rào gỗ, máng nước, đống cỏ, cọc buộc voi và một voi chiến đang ăn cỏ. Doanh trại bỏ cọc rơm tập đâm ở cấp 2 (đã sang trại giáo), thay bằng đài tướng có chiếu và lọng đỏ; giữa sân để trống cho tướng đứng.
 - **Mẫu kinh đô**: cả ba mẫu có chỗ cho ba nơi ở, sát doanh trại. Áp mẫu chỉ dựng nơi ở khi doanh trại đủ cấp; doanh trại dựng theo mẫu tính là cấp 1, nên trại giáo dựng được cùng lúc.
@@ -910,6 +915,15 @@ Chủ dự án đã chọn qua bốn câu hỏi: Thủy Tinh có cả hai phép 
 - Giữ nguyên cấp, người làm, hư hỏng.
 - Không dời được Điện Vua Hùng. Không dời được lúc đang có giặc, lũ (kể cả lúc trinh sát báo).
 - Nền đất cũ ở lại chỗ cũ. Chỗ mới dân đắp móng phẳng bằng ô cao nhất dưới móng như khi dựng mới; đã đắp nền cao hơn thì phải đắp lại.
+- Đang dời công trình xoay được thì bấm ↻ Xoay để đổi hướng cùng lúc (xem Xoay công trình).
+
+**Xoay công trình** (chủ dự án yêu cầu; cách làm tự chọn, chủ dự án có thể đổi)
+- Công trình móng vuông nhiều ô xoay được từng nấc 90° (`canRotateType` ở `game.ts`). Móng vuông nên xoay không đổi ô nào bị chiếm, chỉ đổi hướng mặt trước: sân, lối, người làm, thuyền neo quay theo mô hình.
+- Không xoay: Điện Vua Hùng (đứng yên như khi dời), bến và làng chài (luôn quay mặt ra sông), cầu (theo dòng sông), công trình một ô (lũy, đê, thành, cổng thành tự quay theo tường, chòi canh, lầu nỏ, bẫy, đường, đồ trang trí một ô).
+- Khi dựng: thanh dưới có thêm nút **↻ Xoay** (cạnh Hủy, Đặt và nút ⟳ xoay cảnh); mỗi lần bấm, bóng công trình quay một nấc theo chiều kim đồng hồ trên màn hình. Dựng tiếp cùng loại thì giữ hướng vừa chọn.
+- Công trình đã dựng: nút **↻ Xoay** cạnh nút Dời trong bảng công trình, xoay tại chỗ, không tốn của, lúc nào cũng xoay được. Đang dời mà chỉ xoay, không đổi chỗ, thì cũng không tốn phí dời.
+- Doanh trại xoay thì tướng đứng giữa sân, ra trận và quân hành quân tới đồn bên kia sông đều đi từ mặt trước đã xoay. Bếp gói bánh xoay thì người gói bánh dịp Tết ngồi theo.
+- Bản lưu không đổi phiên bản: công trình có thêm trường tùy chọn `rot` (1–3 nấc); không có là hướng gốc. Hướng lạ thì bản lưu bị từ chối. `xoay.test.ts` canh.
 
 **Mẫu kinh đô** (`src/game/mau.ts`, dựng bằng code theo vùng đất của từng cấp Điện)
 - Mỗi chương mở một mẫu:
@@ -964,9 +978,13 @@ Chủ dự án muốn thêm vật liệu trải đường (đất, đá...) và 
 
 **Bảng Xây dựng** có bốn thẻ chọn ở đầu bảng: Công trình, Đường đi, Trang trí, Mẫu kinh đô (xem mục Mẫu kinh đô). Mỗi lần chỉ hiện một nhóm, cho khỏi cuộn dài trên điện thoại; bảng nhớ thẻ đang xem.
 
-Bảng Xây dựng bày theo kiểu trưng bày (chủ dự án chọn trong ba phương án thử, bỏ phần lật xem từng cấp): mỗi mục có ảnh vẽ từ chính mô hình công trình **cấp 1** thay cho icon. Trên là ảnh lớn của mục đang chọn, kèm tên, cỡ móng, số đã có, lời tả, giá và nút Xây (trải đường thì Trải đường, đồ trang trí thì Đặt); mục chưa xây được thì ghi lý do và nút mờ. Dưới là lưới ảnh nhỏ của cả nhóm, chạm để chọn; mục chưa xây được thì ảnh xám. Công cụ (Đắp đất, Dọn trang trí) giữ icon. Bảng nhớ mục đang chọn để xây tiếp cùng loại. Ảnh vẽ sẵn từ trước và đưa kèm game (chủ dự án thấy vẽ lúc chơi hiện chậm quá), vào game là tải sẵn, mở bảng là có ảnh ngay.
+Bảng Xây dựng bày theo kiểu trưng bày (chủ dự án chọn trong ba phương án thử, bỏ phần lật xem từng cấp): mỗi mục có ảnh vẽ từ chính mô hình công trình **cấp 1** thay cho icon. Trên là ảnh lớn của mục đang chọn, kèm tên, cỡ móng, số đã có, lời tả, giá và nút Xây (trải đường thì Trải đường, đồ trang trí thì Đặt); mục chưa xây được thì ghi lý do và nút mờ. Dưới là lưới ảnh nhỏ của cả nhóm, chạm để chọn; mục chưa xây được thì ảnh xám. Lưới **chia trang** (chủ dự án yêu cầu: trước phải cuộn xuống chọn rồi cuộn lên bấm Xây): điện thoại dọc mỗi trang 2 hàng × 5 cột (màn hẹp như màn ngoài Fold5 thì 4 cột), bảng bên phải màn rộng 4 cột, số hàng theo chiều cao màn; dưới lưới là nút ‹ › hai bên mép (giữa để trống chỗ nút Xây dựng tròn của dock), chấm trang và "Trang 1/3". Bảng cao 62% màn cho ảnh lớn, nút Xây và trọn một trang vừa bảng, khỏi cuộn; màn thấp phải cuộn thì ảnh lớn và nút Xây vẫn bám đầu bảng. Mở bảng, đổi thẻ thì về trang có mục đang chọn. Công cụ (Đắp đất, Dọn trang trí) giữ icon. Bảng nhớ mục đang chọn để xây tiếp cùng loại. Ảnh vẽ sẵn từ trước và đưa kèm game (chủ dự án thấy vẽ lúc chơi hiện chậm quá), vào game là tải sẵn, mở bảng là có ảnh ngay.
 
-**Đường đi** (`ROAD_TYPES` ở `defs.ts`): móng 1×1, chạm từng ô để trải như lũy.
+**Đường đi** (`ROAD_TYPES` ở `defs.ts`): móng 1×1, chạm từng ô để trải như lũy, hay **kéo thả** (chủ dự án yêu cầu: trải từng ô mất thời gian):
+- Lúc trải đường, một ngón kéo trên cảnh là vẽ dải ô thẳng từ ô đặt ngón theo trục kéo dài hơn (ngang hay dọc lưới, kéo xiên vẫn ra đường thẳng; `lineTiles` ở `map.ts`); hai ngón vẫn kéo, phóng, xoay cảnh (thêm ngón thứ hai giữa chừng thì bỏ dải đang vẽ).
+- Đang kéo: ô trải được tô xanh, ô không trải được tô đỏ; dòng gợi ý ghi "Thả tay để trải n ô" kèm giá cả dải.
+- Thả tay thì trải từng ô theo thứ tự (`placeLine` ở `game.ts`): ô vướng công trình, ngoài vùng đất bỏ qua; ô đã có đúng loại đường ấy bỏ qua; ô đường loại khác thì đổi vật liệu như trải đè; hết của hay đủ giới hạn thì các ô sau không trải. Báo số ô đã trải, có ô hỏng thì báo lý do của ô hỏng đầu.
+- Chỉ đường đi kéo thả được; lũy, đê, thành, đồ trang trí vẫn chạm từng ô.
 
 | Loại | Giá mỗi ô | Mở khi |
 |---|---|---|

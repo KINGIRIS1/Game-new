@@ -11,7 +11,7 @@ import { dienLevel, occupancy, type Building, type GameState } from '../game/gam
 import { giongLook, type GiongLook } from '../game/giong';
 import { KHOANH_N, khoanhOf, khoanhOrigin, openMask, openStart, openable } from '../game/khoanh';
 import { FAR_PLOTS, benKiaOpen, bridgeEnds, bridgeTo, plotAt, plotOf, plotOrigin, poiAt, poiPlots, type Dat } from '../game/benKia';
-import { DIEN_HOME, FAR_FOREST, FOREST_BAND, GRID, KHOANH, RIVER_END, RIVER_START, baseHeights, farBankOf, isNearBank, isRiver, riverDistance, riverFacing } from '../game/map';
+import { DIEN_HOME, FAR_FOREST, FOREST_BAND, GRID, KHOANH, RIVER_END, RIVER_START, baseHeights, farBankOf, isNearBank, isRiver, riverDistance, riverFacing, rotAngle, turnLocal } from '../game/map';
 import { sonLook, type SonLook } from '../game/son';
 import { floodMap } from '../game/terrain';
 import { tetOpen } from '../game/tet';
@@ -227,6 +227,8 @@ interface BuildingView {
   /** Ô góc đang vẽ: công trình được dời đi thì dựng lại ở chỗ mới. */
   x: number;
   z: number;
+  /** Hướng xoay đang vẽ (số nấc 90°). */
+  rot: number;
   /** Bậc nền đang vẽ. */
   ground: number;
   people: WorkerView[];
@@ -303,6 +305,8 @@ export class World {
   private readonly floodPreview = new InstancedBoxes(GRID * GRID);
   /** Ô của khoảnh rừng đang chọn (bảng Khoảnh rừng), tô vàng mờ. */
   private readonly chunkPick = new InstancedBoxes(KHOANH * KHOANH);
+  /** Dải ô đang kéo thả khi trải đường: xanh ô trải được, đỏ ô không. */
+  private readonly linePick = new InstancedBoxes(GRID);
   private chunkPicked = -1;
   private floodKey = '';
   private riverWater?: THREE.Object3D;
@@ -441,6 +445,13 @@ export class World {
     pickMat.emissive.set(0x6b5410);
     this.chunkPick.mesh.renderOrder = 2;
     this.scene.add(this.chunkPick.mesh);
+    const lineMat = this.linePick.mesh.material as THREE.MeshLambertMaterial;
+    lineMat.transparent = true;
+    lineMat.opacity = 0.55;
+    lineMat.depthWrite = false;
+    this.linePick.mesh.receiveShadow = false;
+    this.linePick.mesh.renderOrder = 2;
+    this.scene.add(this.linePick.mesh);
     this.rain = new THREE.InstancedMesh(
       new THREE.BoxGeometry(0.025, 0.55, 0.025),
       new THREE.MeshBasicMaterial({ color: C.rain, transparent: true, opacity: 0.55, depthWrite: false }),
@@ -797,7 +808,7 @@ export class World {
       if (b.type === 'luy' || b.type === 'de' || b.type === 'thanh' || isBatchedDecor(b.type)) continue;
       alive.add(b.id);
       const v = this.views.get(b.id);
-      if (!v || v.type !== b.type || v.level !== b.level || v.damaged !== !!b.damaged || v.workers !== b.workers || v.x !== b.x || v.z !== b.z) this.createView(b);
+      if (!v || v.type !== b.type || v.level !== b.level || v.damaged !== !!b.damaged || v.workers !== b.workers || v.x !== b.x || v.z !== b.z || v.rot !== (b.rot ?? 0)) this.createView(b);
       else if (v.ground !== this.heights[b.z * GRID + b.x]) {
         v.ground = this.heights[b.z * GRID + b.x];
         v.group.position.y = topY(v.ground);
@@ -1129,8 +1140,10 @@ export class World {
     if (old) this.dropView(old);
     const def = BUILDINGS[b.type];
     const group = this.makeBuilding(b.type, b.level);
-    // Bến, làng chài quay mặt trước ra sông: sông phía đông thì xoay một góc vuông.
+    // Bến, làng chài quay mặt trước ra sông: sông phía đông thì xoay một góc vuông. Công trình người chơi đã xoay thì
+    // quay theo hướng ấy (người làm, thuyền neo là con của mô hình nên quay theo).
     if (def.nearRiver) group.rotation.y = riverFacing(b.x, b.z, def.w, def.d);
+    else if (b.rot) group.rotation.y = rotAngle(b.rot);
     const ground = this.heights[b.z * GRID + b.x] ?? 0;
     group.position.set(wx(b.x) + def.w / 2, topY(ground), wz(b.z) + def.d / 2);
     group.userData.buildingId = b.id;
@@ -1185,7 +1198,7 @@ export class World {
       group.add(smoke);
     }
     this.buildingsRoot.add(group);
-    this.views.set(b.id, { group, type: b.type, level: b.level, damaged: !!b.damaged, workers: b.workers, x: b.x, z: b.z, ground, people, popAge: 0, baseScale: group.scale.x });
+    this.views.set(b.id, { group, type: b.type, level: b.level, damaged: !!b.damaged, workers: b.workers, x: b.x, z: b.z, rot: b.rot ?? 0, ground, people, popAge: 0, baseScale: group.scale.x });
   }
 
   /** Mô hình công trình đặt vừa móng (`lotModel`): vẽ trên móng mới, hay dáng cũ phóng theo móng. */
@@ -1519,7 +1532,8 @@ export class World {
       z: cells.reduce((a, c) => a + c[1], 0) / cells.length + 0.5,
     });
     const o = plotOrigin(plot);
-    const pts = [{ x: barracks.x + def.w / 2, z: barracks.z + def.d + 0.5 }, mid(ends.near), mid(ends.far), { x: o.x + 2.5, z: o.z + 2.5 }];
+    const gate = turnLocal(barracks.rot, 0, def.d / 2 + 0.5);
+    const pts = [{ x: barracks.x + def.w / 2 + gate.x, z: barracks.z + def.d / 2 + gate.z }, mid(ends.near), mid(ends.far), { x: o.x + 2.5, z: o.z + 2.5 }];
     const kinds = (['giao', 'cung', 'no', 'voi'] as const).filter((k) => (army[k] ?? 0) > 0);
     const total = kinds.reduce((n, k) => n + army[k], 0);
     const figs: THREE.Object3D[] = [];
@@ -1637,7 +1651,8 @@ export class World {
     const b = heroPost(state, tuong);
     if (!b) return null;
     const def = BUILDINGS.doanhTrai;
-    return { x: wx(b.x) + def.w / 2 + DOANH_TRAI_HERO.x, y: this.groundY(b.x, b.z) + 0.08, z: wz(b.z) + def.d / 2 + DOANH_TRAI_HERO.z };
+    const at = turnLocal(b.rot, DOANH_TRAI_HERO.x, DOANH_TRAI_HERO.z);
+    return { x: wx(b.x) + def.w / 2 + at.x, y: this.groundY(b.x, b.z) + 0.08, z: wz(b.z) + def.d / 2 + at.z };
   }
 
   /**
@@ -1753,7 +1768,7 @@ export class World {
     const bep = state.buildings.find((b) => b.type === 'bep' && !b.damaged);
     const o = state.tet.offered;
     const h = (b: Building) => this.heights[b.z * GRID + b.x] ?? 0;
-    const key = dien && tetOpen(state) ? [dien.x, dien.z, dien.level, h(dien), o.chung, o.giay, bep ? `${bep.x},${bep.z},${bep.level},${h(bep)}` : '-'].join(':') : '';
+    const key = dien && tetOpen(state) ? [dien.x, dien.z, dien.level, h(dien), o.chung, o.giay, bep ? `${bep.x},${bep.z},${bep.level},${h(bep)},${bep.rot ?? 0}` : '-'].join(':') : '';
     if (key === this.tetKey) return;
     this.tetKey = key;
     if (this.tetDecor) this.scene.remove(this.tetDecor);
@@ -1790,8 +1805,9 @@ export class World {
       // Một người ngồi xếp bằng trên chiếu gói bánh của bếp (trong móng, `BEP_TET_SEAT`), quay ra trước.
       const w = makeWorker('phuNu', true);
       w.scale.setScalar(PERSON_SCALE);
-      w.position.set(wx(bep.x) + BUILDINGS.bep.w / 2 + BEP_TET_SEAT.x, topY(h(bep)) + 0.08, wz(bep.z) + BUILDINGS.bep.d / 2 + BEP_TET_SEAT.z);
-      w.rotation.y = BEP_TET_SEAT.ry;
+      const seat = turnLocal(bep.rot, BEP_TET_SEAT.x, BEP_TET_SEAT.z);
+      w.position.set(wx(bep.x) + BUILDINGS.bep.w / 2 + seat.x, topY(h(bep)) + 0.08, wz(bep.z) + BUILDINGS.bep.d / 2 + seat.z);
+      w.rotation.y = BEP_TET_SEAT.ry + rotAngle(bep.rot);
       root.add(w);
     }
     this.scene.add(root);
@@ -2122,8 +2138,8 @@ export class World {
     this.ghost = undefined;
   }
 
-  /** Bóng mờ của công trình sắp đặt ở mặt đất bậc `h`, viền xanh nếu đặt được, đỏ nếu không. */
-  setGhost(type: BuildingType | null, x = 0, z = 0, valid = true, h = 0): void {
+  /** Bóng mờ của công trình sắp đặt ở mặt đất bậc `h`, xoay `rot` nấc 90°, viền xanh nếu đặt được, đỏ nếu không. */
+  setGhost(type: BuildingType | null, x = 0, z = 0, valid = true, h = 0, rot = 0): void {
     if (!type) {
       this.dropGhost();
       this.footprint.visible = false;
@@ -2152,7 +2168,7 @@ export class World {
     }
     const y = topY(h);
     this.ghost.position.set(wx(x) + def.w / 2, y + 0.02, wz(z) + def.d / 2);
-    if (def.nearRiver) this.ghost.rotation.y = riverFacing(x, z, def.w, def.d);
+    this.ghost.rotation.y = def.nearRiver ? riverFacing(x, z, def.w, def.d) : rotAngle(rot);
     // Cổng thành: bóng xoay theo đoạn tường ở chỗ đặt, như khi đã dựng.
     if (type === 'congThanh' && this.state) {
       const walls = new Set(this.state.buildings.filter((w) => GATE_WALLS.includes(w.type)).map((w) => w.z * GRID + w.x));
@@ -2162,6 +2178,15 @@ export class World {
     this.footprint.scale.set(def.w, 1, def.d);
     this.footprint.position.set(wx(x) + def.w / 2, y + 0.03, wz(z) + def.d / 2);
     (this.footprint.material as THREE.MeshBasicMaterial).color.set(valid ? 0x4caf50 : 0xe53935);
+  }
+
+  /** Tô dải ô đang kéo thả trải đường: xanh ô trải được, đỏ ô không; null để tắt. */
+  setLinePreview(cells: { x: number; z: number; ok: boolean }[] | null): void {
+    this.linePick.begin();
+    for (const c of cells ?? []) {
+      this.linePick.add(0.9, 0.06, 0.9, c.ok ? 0x4caf50 : 0xe53935, wx(c.x) + 0.5, this.groundY(c.x, c.z) + 0.06, wz(c.z) + 0.5);
+    }
+    this.linePick.end();
   }
 
   /** Tô vàng mờ các ô của khoảnh rừng `id` (đang mở bảng Khoảnh rừng); null để tắt. */
