@@ -54,6 +54,12 @@ Tài liệu này ghi lại các quyết định đã chốt với chủ dự án
   - bảng màu: nền kem như giấy, đất vàng ô liu, nước xanh lam đục, điểm nhấn đồng, đỏ son và mực đen.
 - Phong cách này được chọn qua bản dùng thử so sánh 4 phương án: khối hộp ban đầu, voxel tinh xảo, đồ chơi bo tròn, và Nét Đông Sơn. Cả bộ dùng thử được cất ở branch `prototype/phong-cach-hinh-anh`.
 - Màn hình dọc, camera isometric, kéo và phóng to bằng chạm. Giao diện bằng HTML đặt đè lên cảnh 3D.
+- **Khung giao diện ở kinh đô: dock dưới.** Chọn qua bản dùng thử so ba phương án trên chính màn hình chơi (A: góc màn hình, cột nút tròn hai bên; B: dock dưới; C: cột bên như thẻ tre, bảng mở từ bên phải). Cả bộ dùng thử cất ở PR #47 (commit `66ba2cd`, đóng không gộp). Khung cũ (thanh chip xuống ba hàng, băng báo và thẻ Lạc hầu xếp dưới) che gần một phần ba màn hình dọc; mở bảng thì gần như không còn thấy kinh đô.
+  - **Dải tài nguyên** sát mép trên, trải hết bề ngang, viền răng cưa như hoa văn trống đồng: cấp Điện, các tài nguyên ghi số gọn (531, 6,1k, 48,6k, 1,2tr; số đỏ khi kho đầy), dân, nút cài đặt. Có người rảnh thì ô dân xanh, kèm số người rảnh; chạm ô dân để giao việc cho người rảnh như trước. Chạm phần tài nguyên thì thả bảng kho: số đúng, sức chứa, thu chi mỗi phút, dân, quân.
+  - **Dock** năm thẻ ở đáy cho một tay bấm: **Quân** (mở bảng doanh trại, ghi số chỗ quân), **Phó bản**, **Xây dựng** nổi tròn ở giữa, **Tướng** (danh sách Gióng, Sơn Tinh, An Dương Vương, Cao Lỗ, mỗi tướng ghi tiến độ x/5, x/3 hay ⚔️ sẵn sàng, 💤 đang nghỉ; thẻ có dấu ⚔️ khi có tướng sẵn sàng), **Lạc hầu** (thẻ nhiệm vụ; thẻ dock ghi tiến độ, chấm đỏ "!" khi có thưởng chờ nhận). Quân, Phó bản mờ tới khi có doanh trại; Tướng mờ tới khi có tướng. Chạm lại thẻ đang sáng thì đóng bảng. Nút xoay cảnh nổi trên góc phải dock.
+  - **Dòng tin** ngay trên dock gom mọi tin: giặc sắp tới, đang đánh, thiếu gạo, Tết, thuyền buôn, trinh sát đang đi. Tin gấp (giặc, đói) lên trước; nhiều tin thì nút "1/3 ›" lật từng tin; có tin mới thì về tin gấp nhất. Giặc đánh kinh đô thì nút kỹ năng hiện ngay trên dòng tin.
+  - **Bảng trượt** mở ngay trên dock, cao tối đa 54% màn hình để còn thấy kinh đô. Màn rộng (cầm ngang, màn trong Fold5) thì bảng cao trọn mép phải, dock dồn sang phần còn lại bên trái.
+  - Đang đặt, dời, trải, ghép công trình: dock và dòng tin ẩn, thanh dưới chỉ còn Hủy, Đặt và nút xoay. Ngoài bãi chiến: dock và dòng tin ẩn, dải tài nguyên vẫn còn.
 - **Màn hình vào game**: hiện mỗi lần mở game (tải trang), trước khi vào kinh đô.
   - Trên cùng là mặt trống đồng Đông Sơn làm biểu tượng: ngôi sao 14 cánh ở giữa, các vòng vạch, vòng tròn chấm giữa, răng cưa, và sáu chim Lạc bay ngược chiều kim đồng hồ (vòng chim xoay chậm). Dưới là tên game ("Thời đại" chữ nhỏ giãn, "Văn Lang" chữ to) và một dòng giới thiệu. Không có dòng tên các nhân vật.
   - Dưới cùng là thẻ tóm tắt bản lưu (chương đang chơi và tên truyện của chương, hay "Đã hết truyện"; cấp Điện; số dân; đã vắng bao lâu) và nút **Chơi tiếp**. Chưa xem đoạn truyện mở đầu thì coi là game mới: thẻ ghi "Kinh đô mới, chờ người dựng nước", nút là **Bắt đầu**. Góc trên có nút bật, tắt tiếng.
@@ -292,7 +298,7 @@ Chủ dự án muốn có nhiều quân dự trữ: dựng thêm doanh trại, m
 
 ### Phó bản (đã làm ở lát cắt 3a)
 
-- Nút **⚔️ Phó bản** ở thanh dưới hiện khi đã có doanh trại.
+- Thẻ **🗺️ Phó bản** trên dock bấm được khi đã có doanh trại (trước đó mờ).
 - **Bản đồ "Đường tới núi Trâu"**: 8 màn nối nhau từ Phong Châu tới chân núi Trâu. Thắng màn trước mới mở màn sau.
 
   | Màn | Tên | Cần Điện | Quân giặc | Thưởng lần đầu |
@@ -367,7 +373,7 @@ Chủ dự án muốn có nhiều quân dự trữ: dựng thêm doanh trại, m
   - "Vươn vai thành tráng sĩ": Gióng thành tráng sĩ;
   - "Roi sắt gãy": thắng màn 6 lần đầu;
   - "Phù Đổng Thiên Vương": thắng màn 8 lần đầu.
-- **Gióng ở kinh đô**: đứng trước Điện, đổi dáng theo mốc gạo: cậu bé lên ba ngồi bệt trên chiếu, thiếu niên đứng ôm bát cơm đầy cạnh chồng bát đã ăn (từ mốc 2), tráng sĩ cưỡi ngựa sắt. Thành tráng sĩ thì về ở doanh trại (xem mục Doanh trại và nơi ở riêng). Chạm vào Gióng, vào chip trên thanh trên, hoặc nút trong bảng Điện, bảng lò rèn, để mở bảng Gióng.
+- **Gióng ở kinh đô**: đứng trước Điện, đổi dáng theo mốc gạo: cậu bé lên ba ngồi bệt trên chiếu, thiếu niên đứng ôm bát cơm đầy cạnh chồng bát đã ăn (từ mốc 2), tráng sĩ cưỡi ngựa sắt. Thành tráng sĩ thì về ở doanh trại (xem mục Doanh trại và nơi ở riêng). Chạm vào Gióng, vào Gióng trong thẻ Tướng trên dock, hoặc nút trong bảng Điện, bảng lò rèn, để mở bảng Gióng.
 - **Dáng Gióng** (`makeGiong` trong `src/render/models.ts`): to hơn hẳn lính thường để nhận ra ngay.
   - Tráng sĩ mặc giáp sắt viền đồng, đội mũ sắt có chùm lông chim như người trên trống đồng, khoác áo choàng đỏ ngắn vắt bay ra sau, giơ cao roi sắt (hay cây tre khi roi đã gãy).
   - Ngựa sắt màu thép xanh, có móng, vòng cổ và tấm trán bằng đồng; mắt, bờm, đuôi và lửa phun từ mõm tự sáng, không bị bóng đổ làm tối.
@@ -496,7 +502,7 @@ Vòng khắc chế của quân ta giữ nguyên: giáo binh thắng quân nặng
 
 ### Lễ vật và Sơn Tinh
 
-- Chạm vào Sơn Tinh (lúc cầu hôn đứng trên mỏm đá trước Điện, rước Mị Nương rồi thì ở doanh trại), vào chip ⛰️ trên thanh trên, hoặc nút trong bảng Điện, bảng doanh trại, để mở bảng Sơn Tinh.
+- Chạm vào Sơn Tinh (lúc cầu hôn đứng trên mỏm đá trước Điện, rước Mị Nương rồi thì ở doanh trại), vào Sơn Tinh trong thẻ Tướng trên dock, hoặc nút trong bảng Điện, bảng doanh trại, để mở bảng Sơn Tinh.
 
   | Lễ vật | Lấy ở đâu |
   |---|---|
@@ -587,7 +593,7 @@ Chủ dự án đã chốt:
   - giặc trên bộ không lội qua sông, nên vòng thành dựa vào bờ sông cũng kín;
   - đoạn thành bị phá thì vòng ấy hở;
   - thành dày hai lớp liền nhau cũng tính là hai vòng.
-- Chip 🏰 trên thanh trên ghi số vòng (x/3); bảng Điện, bảng một đoạn thành và bảng An Dương Vương cũng ghi. Khi đang đắp thành, dòng gợi ý báo số vòng hiện có.
+- Thẻ Tướng trên dock ghi số vòng ở dòng An Dương Vương (x/3); bảng Điện, bảng một đoạn thành và bảng An Dương Vương cũng ghi. Khi đang đắp thành, dòng gợi ý báo số vòng hiện có.
 - Giặc phải phá thành mới qua (chi phí tìm đường 45, cao hơn mọi loại tường khác).
 
 ### Giặc chương 3
@@ -617,7 +623,7 @@ Chủ dự án đã chốt:
 
 ### An Dương Vương và nỏ thần
 
-- Chạm vào An Dương Vương đứng trước Điện, vào chip 🏰/🏹 trên thanh trên, hoặc nút trong bảng Điện, để mở bảng An Dương Vương: số vòng thành, ba bước để có nỏ thần, nút chế nỏ, kỹ năng.
+- Chạm vào An Dương Vương đứng trước Điện, vào An Dương Vương trong thẻ Tướng trên dock, hoặc nút trong bảng Điện, để mở bảng An Dương Vương: số vòng thành, ba bước để có nỏ thần, nút chế nỏ, kỹ năng.
 - **Chế nỏ thần** (Cao Lỗ lấy vuốt Rùa Vàng làm lẫy) cần:
   - đã diệt yêu tinh (thắng màn 19);
   - thành Cổ Loa đủ **3 vòng** quanh Điện lúc chế;
@@ -690,7 +696,7 @@ Chủ dự án đã chốt:
 - **Báo trước khi xuất quân** (thẻ màn và bảng xếp quân), bằng dòng đỏ:
   - tướng lẽ ra ra trận đang kiệt sức: còn bao nhiêu giây, và ai ra thay hay trận này không có tướng. Vẫn cho xuất quân;
   - Đền Phù Đổng đang hư: quân ta mất 10% máu và sức đánh.
-- Chip tướng trên thanh trên hiện 💤 khi tướng nghỉ, kể cả khi Gióng đã về trời hay Sơn Tinh đã về núi (lúc khỏe thì chip ẩn như cũ).
+- Trong thẻ Tướng trên dock, tướng nghỉ thì ghi 💤, kể cả khi Gióng đã về trời hay Sơn Tinh đã về núi (lúc khỏe thì tướng đã đi không còn trong danh sách).
 
 ## Kế hoạch: kinh đô lớn tiếp và Hội Tết (đã chốt, đã làm)
 
@@ -709,7 +715,7 @@ Chủ dự án đã chốt qua một buổi hỏi đáp. Vấn đề: từ cuố
    - mở khi kết chương 1 (người đang ở chương 2, 3 mở ngay). Lạc hầu kể chuyện Lang Liêu như chuyện xưa, trước "Vua Hùng kén rể"; chỉ là truyện, không có trò thi tính điểm;
    - công trình mới, cần dân làm: **ruộng nếp** (4×4), **vườn** đậu xanh và lá dong (3×3), **chuồng lợn** (3×3, lợn không ăn gạo), **bếp gói bánh** (3×3);
    - bếp làm bánh chưng nhanh bằng nguồn chậm nhất trong ba nguồn, bánh giầy chỉ cần nếp. Nguyên liệu không tích trữ; bảng bếp báo nguồn nào đang thiếu;
-   - bánh tích trữ được, chỉ hiện trong bảng bếp và bảng Tết, không thêm chip trên thanh trên;
+   - bánh tích trữ được, chỉ hiện trong bảng bếp và bảng Tết, không thêm ô trên dải tài nguyên;
    - **Tết** khoảng 20 phút chơi một lần, mở 3 phút để dâng bánh; đang có giặc hay mùa lũ thì lùi tới khi xong trận; lần đầu 2 phút sau truyện. Lỡ Tết thì không có phúc lành, bánh vẫn còn;
    - dâng đủ bánh chưng được **phúc lành Đất** (mọi tài nguyên thêm khoảng 15%), đủ bánh giầy được **phúc lành Trời** (quân ta thêm khoảng 10% máu và sức đánh), kéo dài tới Tết sau, cộng thêm vào phần của các đền;
    - cảnh Tết: cây nêu trước Điện, cờ hội, dân quây quần gói bánh quanh bếp, mâm bánh trước Điện khi dâng; không có pháo.
@@ -809,7 +815,7 @@ Cả bốn cần dân làm, mở sau truyện Lang Liêu, cần Điện cấp 3.
 - Nguyên liệu không tích trữ: chỉ tính theo mỗi phút.
 - **Cách bếp chia nếp (mới):** bếp gói bánh chưng trước, nhanh bằng nguồn chậm nhất trong ba nguồn nếp, đậu lá, thịt lợn (và không quá sức bếp). **Nếp còn thừa** thì giã bánh giầy (không quá sức bếp). Ví dụ đủ bộ cấp 1: nếp 2, đậu lá 1, thịt 1, nên mỗi phút được 1 bánh chưng, nếp thừa 1 giã được 1 bánh giầy. Muốn nhiều bánh giầy hơn thì cấy thêm ruộng nếp.
 - Bảng bếp báo nguồn nào đang thiếu. Ví dụ "Thiếu thịt lợn: bánh chưng chỉ được 1 cái mỗi phút". Nhiều nguồn cùng chậm nhất thì báo hết. Nguyên liệu đủ mà bếp làm hết sức thì báo nâng bếp.
-- Bánh để trên gác bếp, tích trữ được. **Gác bếp chứa tối đa 30 → 45 → 60 cái mỗi loại theo cấp bếp (mới)**. Bánh chỉ hiện trong bảng bếp và bảng Tết, không thêm chip trên thanh trên.
+- Bánh để trên gác bếp, tích trữ được. **Gác bếp chứa tối đa 30 → 45 → 60 cái mỗi loại theo cấp bếp (mới)**. Bánh chỉ hiện trong bảng bếp và bảng Tết, không thêm ô trên dải tài nguyên.
 
 **Tết**
 
@@ -851,8 +857,8 @@ Cả bốn cần dân làm, mở sau truyện Lang Liêu, cần Điện cấp 3.
   - bánh đang có, so với số cần dâng ở Tết tới;
   - còn bao lâu tới Tết;
   - phúc lành đang có.
-- Tết mở thì có băng báo "Tết đến, dâng bánh trước Điện", kèm chip 🎋 đếm ngược trên thanh trên (chỉ hiện lúc Tết mở). Chạm vào chip mở bảng Tết, có hai nút dâng bánh chưng, dâng bánh giầy.
-- Bảng Điện ghi phúc lành đang có. Sản lượng mỗi phút trên thanh trên đã gồm phúc lành Đất.
+- Tết mở thì dòng tin trên dock báo "Tết đến, dâng bánh trước Điện" kèm giờ còn lại và nút Dâng bánh; dâng đủ hai loại rồi thì dòng tin chỉ còn đếm giờ Hội Tết. Nút trong tin mở bảng Tết, có hai nút dâng bánh chưng, dâng bánh giầy.
+- Bảng Điện ghi phúc lành đang có. Thu chi mỗi phút trong bảng kho (chạm dải tài nguyên) đã gồm phúc lành Đất.
 
 **Dáng công trình** (cỡ không quá 105%)
 
@@ -1476,7 +1482,7 @@ Kinh đô lớn lúc đầu chỉ phóng mô hình cũ theo móng mới (`footSc
 
 Chủ dự án muốn thêm ba công trình: cổng thành, xưởng mộc (thợ mộc, gỗ), làng chài (thuyền đánh cá, ngư dân, cá). Chủ dự án đã chốt hướng qua năm câu hỏi:
 
-- **Gỗ là tài nguyên thứ năm**: tích trong kho, có chip trên thanh trên, dùng cho các công trình mới. Giá công trình cũ giữ nguyên.
+- **Gỗ là tài nguyên thứ năm**: tích trong kho, có ô trên dải tài nguyên, dùng cho các công trình mới. Giá công trình cũ giữ nguyên.
 - **Cá là thức ăn thay gạo**: không tích trữ, không có chip. Dân và lính ăn cá trước, thiếu mới ăn gạo.
 - **Cổng thành là cửa trong vòng tường**, trên lầu cổng có lính bắn.
 - **Mở rải theo chương**: xưởng mộc, làng chài có từ chương 1; cổng thành có từ chương 3.
@@ -1486,8 +1492,8 @@ Chủ dự án đã duyệt mọi con số và dáng dưới đây trước khi 
 
 ### Gỗ 🪵
 
-- Tài nguyên thứ năm, dùng chung sức chứa kho với bốn loại kia. Chip gỗ trên thanh trên chỉ hiện từ khi mở xưởng mộc (Điện 2), hay khi đã có gỗ (phát rừng ở Điện 1).
-  - Màn hẹp có năm chip thì nút cài đặt xuống hàng dưới: khổ dọc 390 điểm từ Điện 5 (số lớn), khổ ngoài Fold5 từ Điện 2. Đã thử thu chip lại (chữ 12,5, đệm 6) vẫn không đủ chỗ nên giữ cỡ cũ.
+- Tài nguyên thứ năm, dùng chung sức chứa kho với bốn loại kia. Ô gỗ trên dải tài nguyên chỉ hiện từ khi mở xưởng mộc (Điện 2), hay khi đã có gỗ (phát rừng ở Điện 1).
+  - Dải tài nguyên ghi số gọn nên năm tài nguyên, dân và nút cài đặt vừa một hàng cả ở màn ngoài Fold5 (344 điểm).
 - **Nguồn vào**:
   - xưởng mộc;
   - phát rừng: mỗi khoảnh phát xong cho số gỗ bằng nửa số gạo của giá khoảnh ấy (Điện 1–3: 10 gỗ, Điện 5: 40–60, Điện 7: 105–155);
@@ -1544,7 +1550,7 @@ Móng 3×3, 8 cấp, phải sát bờ sông như bến, cần Điện 3, có t�
   - có đủ cá thì không bị thiếu gạo;
   - Đền Phù Đổng và phúc lành Đất cũng cộng vào cá như các sản lượng khác;
   - ví dụ ở Điện 5: dân và lính ăn chừng 75 gạo mỗi phút, hai làng chài cấp 5 đỡ được 60.
-  - Code: `foodPerMinute` (phần ăn), `fishPerMinute` (cá), `upkeepPerMinute` (gạo phải ăn, đã trừ cá) ở `game.ts`; thiếu gạo, thanh trên và sổ kinh tế dùng số gạo phải ăn. Sổ kinh tế ghi riêng khoản "Cá đỡ gạo ăn".
+  - Code: `foodPerMinute` (phần ăn), `fishPerMinute` (cá), `upkeepPerMinute` (gạo phải ăn, đã trừ cá) ở `game.ts`; thiếu gạo, bảng kho và sổ kinh tế dùng số gạo phải ăn. Sổ kinh tế ghi riêng khoản "Cá đỡ gạo ăn".
 - Bảng làng chài ghi: cá mỗi phút của làng ấy và của cấp sau, cá của cả kinh đô, dân và lính ăn bao nhiêu mỗi phút, số gạo cá đỡ được. Cá đã đủ cho cả kinh đô ăn thì báo dựng thêm hay nâng thêm chưa có ích, trừ khi thêm dân, thêm lính.
 - Áp mẫu kinh đô: làng chài đứng ngay sau bến, dọc sông, ngoài đê như bến (bãi ngoài đê nay dành cho mọi loại phải sát sông).
 - Lạc hầu gợi ý một lần khi lên Điện 3: dân ven sông xin lập làng chài, đóng thuyền bằng gỗ của xưởng mộc.
@@ -1906,7 +1912,7 @@ j\i  0  1  2  3  4  5  6  7  8  9
    - **Mây mù** chỉ hiện từ Điện cấp 4 (lúc kể đoạn "Bên kia sông"), để đầu chương 1 nhìn như cũ. Mây cuộn màu kem viền mực, mỗi khoảnh bảy cụm, ngọn cây nhô lên; khoảnh vừa dò thì mây phình ra, bay lên, mờ dần trong một giây. Góc đông nam sau ngã ba không thuộc khoảnh nào nên không có mây.
    - **Điểm lạ đã dò**: khoảnh ấy phát trống cả khoảnh. Đồn bậc 1 và 4 có rào cọc, lều, cờ, lửa trại; bậc 2 vũng bùn lau sậy xương cá; bậc 3 đá tím, ma trơi; mỗi đồn hai lính gác đứng yên đúng loại giặc. Làng: ba nhà sàn nhỏ, cờ trắng. Bãi phù sa: đất bùn nâu thẫm, vũng nước, khóm lau; núi đá đá xám; mỏ sắt đá đỏ gỉ. Của chôn: gò đất lấp ló mặt trống đồng. Đồn đã dẹp: đất cháy sém, cọc đổ, cờ đỏ của ta (dùng từ PR 3). Hình vẽ ở `src/render/benKia.ts`.
    - **Cầu**: cấp 1 bảy bè tre kết dây mây nhấp nhô theo sóng; cấp 2 cầu gỗ vồng nhẹ, lan can gỗ; cấp 3 vồng cao, lan can đỏ, lầu canh mái ngói ở đầu cầu bên này. Bảng cầu ghi sức chịu lũ của cấp này và cấp sau, và nhắc vòng thành dựa sông bị hở ở đầu cầu. Cầu bị lũ cuốn không tính là để mất mùa lũ.
-   - **Người trinh sát** (giáo binh có khung xương) chạy từ sân Điện qua cầu tới khoảnh đang dò, đúng nhịp đồng hồ chơi. Có chip 🧭 đếm ngược trên thanh trên; về tới nơi thì báo một dòng.
+   - **Người trinh sát** (giáo binh có khung xương) chạy từ sân Điện qua cầu tới khoảnh đang dò, đúng nhịp đồng hồ chơi. Dòng tin trên dock báo trinh sát đang đi, đếm ngược; về tới nơi thì báo một dòng.
    - **Bảng Đất bên kia sông**: chạm đất bên kia chưa mở (không trúng công trình). Ghi bờ, khoảnh thứ mấy, đã dò chưa, điểm lạ, đồn nào giữ vùng ấy, nút Sai trinh sát kèm giá hay lý do chưa sai được.
    - **Nặng máy**: mây cả 60 khoảnh là một lệnh vẽ (thêm viền mực một lệnh). Cảnh kinh đô Điện 5 có hai cầu, mây phủ gần hết: chừng 480–560 lệnh vẽ, 5,2–5,5 triệu tam giác.
 3. **PR 3: đồn giặc và điều quân** (đã làm): 12 đồn bốn bậc, dẹp đồn chiếm vùng, hành quân qua cầu, bãi chiến bờ bên kia, cân bằng theo chuẩn. Số cuối cùng:

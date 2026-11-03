@@ -12,6 +12,9 @@
   --shadow: 0 6px 18px rgba(58, 42, 26, 0.25);
   --safe-top: env(safe-area-inset-top, 0px);
   --safe-bottom: env(safe-area-inset-bottom, 0px);
+  /* Dải tài nguyên trên cùng và dock dưới cùng (chưa tính phần tai thỏ, thanh vuốt). */
+  --band-h: calc(44px + var(--safe-top));
+  --dock-h: 62px;
 }
 
 * {
@@ -52,7 +55,10 @@ body {
 
 /* Thông báo và gợi ý chỉ để đọc, không được chặn lần chạm xuống cảnh 3D. */
 #hud > .toasts,
-#hud > .hint {
+#hud > .hint,
+#hud > .ticker,
+#hud > .raid-skills,
+#hud > .dock-pop {
   pointer-events: none;
 }
 
@@ -65,152 +71,195 @@ button {
   touch-action: manipulation;
 }
 
-/* ---------- Thanh trên ---------- */
+/* ---------- Dải tài nguyên (sát mép trên) ---------- */
 
-/* Khu trên cùng: thanh tài nguyên, thông báo nổi, nhiệm vụ, xếp dọc để không chồng lên nhau. */
-.top-area {
-  position: absolute;
-  top: calc(8px + var(--safe-top));
-  left: 8px;
-  right: 8px;
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 6px;
-  pointer-events: none;
-}
-
-.top-area > * {
-  pointer-events: auto;
-}
-
+/* Dải trải hết bề ngang: cấp Điện, tài nguyên số gọn, dân, cài đặt. Viền răng cưa như hoa văn trống đồng. */
 .topbar {
-  width: 100%;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  align-items: center;
-  pointer-events: none;
-}
-
-.topbar > * {
-  pointer-events: auto;
-}
-
-.chip .rate.neg {
-  color: var(--red);
-}
-
-.chip.dan {
-  font: inherit;
-  font-size: 14px;
-  color: inherit;
-}
-
-.chip.dan.idle {
-  border-color: var(--green);
-}
-
-.banners {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  width: min(420px, 100%);
-}
-
-.banners:empty {
-  display: none;
-}
-
-.banner {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 6px 10px;
-  border-radius: 12px;
-  background: rgba(247, 236, 212, 0.95);
-  border: 1.5px solid var(--bronze);
-  box-shadow: var(--shadow);
-  font-size: 13px;
-}
-
-.banner .btn {
-  margin-left: auto;
-  white-space: nowrap;
-}
-
-.banner.bad {
-  border-color: var(--red);
-  color: var(--red-dark);
-  font-weight: 600;
-}
-
-/* Tết mở: viền đỏ vàng như câu đối, chữ đỏ. */
-.banner.tet {
-  border-color: var(--red);
-  background: linear-gradient(90deg, rgba(255, 238, 200, 0.97), rgba(250, 222, 170, 0.97));
-  color: var(--red-dark);
-  font-weight: 600;
-}
-
-/* Nguồn đang thiếu trong bảng bếp. */
-.stat.lack span:first-child {
-  font-weight: 700;
-}
-
-.chip {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 2;
   display: flex;
   align-items: center;
   gap: 4px;
-  padding: 5px 9px;
+  height: var(--band-h);
+  padding: calc(5px + var(--safe-top)) 6px 5px;
+  background: linear-gradient(180deg, rgba(251, 243, 225, 0.97), rgba(239, 223, 189, 0.97));
+  border-bottom: 2px solid var(--bronze);
+  box-shadow: 0 3px 10px rgba(58, 42, 26, 0.25);
+}
+
+.topbar::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -8px;
+  height: 6px;
+  background:
+    linear-gradient(135deg, var(--bronze) 25%, transparent 25%) -4px 0 / 8px 6px,
+    linear-gradient(225deg, var(--bronze) 25%, transparent 25%) -4px 0 / 8px 6px;
+  opacity: 0.7;
+  pointer-events: none;
+}
+
+.dien-level {
+  flex: none;
+  padding: 3px 7px;
   border-radius: 999px;
-  background: rgba(247, 236, 212, 0.94);
-  border: 1.5px solid var(--line);
-  box-shadow: var(--shadow);
-  font-size: 14px;
-  line-height: 1.1;
+  background: linear-gradient(180deg, #d9a84a, var(--bronze));
+  border: 1.5px solid var(--bronze-dark);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 700;
   white-space: nowrap;
 }
 
-.chip b {
+.res-strip {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 2px 0;
+}
+
+.res-strip.on .more {
+  color: var(--red);
+}
+
+.res {
+  flex: 1 1 0;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1px;
+  font-size: 13px;
+  white-space: nowrap;
+}
+
+.res + .res {
+  border-left: 1px solid rgba(138, 100, 32, 0.25);
+}
+
+.res b,
+.dan-btn b {
+  font-size: 12.5px;
   font-variant-numeric: tabular-nums;
 }
 
-.chip small {
+.res.full b {
+  color: var(--red);
+}
+
+.res-strip .more {
+  flex: none;
+  width: 12px;
   color: var(--ink-soft);
   font-size: 11px;
 }
 
-.chip .rate {
+/* Dân: chạm để giao việc cho người rảnh. Có người rảnh thì xanh, kèm số người rảnh. */
+.dan-btn {
+  position: relative;
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 1px;
+  padding: 3px 6px;
+  border-radius: 999px;
+  border: 1.5px solid transparent;
+  font-size: 13px;
+}
+
+.dan-btn.idle {
+  border-color: var(--green);
+  background: rgba(79, 138, 44, 0.12);
+}
+
+.dan-btn.idle b {
   color: var(--green);
-  font-size: 11px;
-  font-weight: 600;
 }
 
-.chip.full b {
-  color: var(--red);
+.dan-btn i {
+  position: absolute;
+  top: -6px;
+  right: -4px;
+  padding: 0 3px;
+  border-radius: 999px;
+  background: var(--green);
+  color: #fff;
+  font-size: 9px;
+  font-style: normal;
+  font-weight: 700;
+  line-height: 1.4;
 }
 
-/* Màn hình hẹp (màn hình ngoài Fold5): bỏ phần sức chứa để thanh trên không tràn. */
-@media (max-width: 420px) {
+.dan-btn i:empty {
+  display: none;
+}
+
+.topbar .icon-btn {
+  width: 32px;
+  height: 32px;
+  font-size: 16px;
+  box-shadow: none;
+}
+
+/* Màn hẹp (màn ngoài Fold5): thu chữ, bỏ vạch ngăn và mũi tên để năm tài nguyên vừa một hàng. */
+@media (max-width: 380px) {
   .topbar {
-    gap: 4px;
+    gap: 2px;
+    padding-left: 4px;
+    padding-right: 4px;
   }
 
-  .chip {
-    padding: 5px 7px;
-    font-size: 13px;
+  .dien-level {
+    padding: 2px 5px;
+    font-size: 12px;
   }
 
-  .chip small {
+  .res {
+    font-size: 11.5px;
+  }
+
+  .res + .res {
+    border-left: none;
+  }
+
+  .res b,
+  .dan-btn b {
+    font-size: 11.5px;
+    letter-spacing: -0.2px;
+  }
+
+  .res-strip .more {
     display: none;
   }
+
+  .dan-btn {
+    padding: 2px 4px;
+    font-size: 12px;
+  }
+
+  .topbar .icon-btn {
+    width: 28px;
+    height: 28px;
+    font-size: 14px;
+  }
 }
 
-.chip.level {
-  background: linear-gradient(180deg, #d9a84a, var(--bronze));
-  color: #fff;
-  border-color: var(--bronze-dark);
+/* Màn rộng: phần tài nguyên không giãn quá, dân và cài đặt vẫn ở mép phải. */
+@media (min-width: 600px) {
+  .res-strip {
+    max-width: 560px;
+    margin-right: auto;
+  }
+}
+
+.stat.lack span:first-child {
   font-weight: 700;
 }
 
@@ -229,64 +278,256 @@ button {
   flex: none;
 }
 
-/* ---------- Nhiệm vụ Lạc hầu ---------- */
-
-.quest {
-  width: min(420px, 100%);
-  padding: 8px 10px;
-  border-radius: 12px;
-  background: rgba(247, 236, 212, 0.95);
-  border: 1.5px solid var(--line);
-  box-shadow: var(--shadow);
-  font-size: 13px;
-  line-height: 1.35;
+/* Dưới dải tài nguyên: bảng kho thả xuống, khung báo trận ngoài bãi. */
+.top-area {
+  position: absolute;
+  top: calc(var(--band-h) + 10px);
+  left: 8px;
+  right: 8px;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  pointer-events: none;
 }
 
-.quest-head {
+.top-area > * {
+  pointer-events: auto;
+}
+
+.res-drop,
+.pop-card {
+  width: min(420px, 100%);
+  padding: 10px 12px;
+  border-radius: 14px;
+  background: var(--paper);
+  border: 1.5px solid var(--bronze);
+  box-shadow: var(--shadow);
+}
+
+.res-drop[hidden] {
+  display: none;
+}
+
+.res-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.res-table td {
+  padding: 5px 6px;
+  border-bottom: 1px dashed var(--line);
+  white-space: nowrap;
+}
+
+.res-table tr:last-child td {
+  border-bottom: none;
+}
+
+.res-table td:nth-child(2),
+.res-table td:nth-child(3) {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.res-table td:nth-child(3) {
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.res-table small {
+  color: var(--ink-soft);
+  font-size: 11px;
+}
+
+.res-table .pos {
+  color: var(--green);
+}
+
+.res-table .neg,
+.res-table .full b {
+  color: var(--red);
+}
+
+/* ---------- Dòng tin và ô bật lên trên dock ---------- */
+
+/* Mọi tin gom một dòng ngay trên dock, tin gấp (giặc, đói) trước; nhiều tin thì lật bằng nút 1/3 ›. */
+.ticker {
+  position: absolute;
+  left: 8px;
+  right: 62px;
+  bottom: calc(var(--dock-h) + var(--safe-bottom) + 10px);
+  display: flex;
+  pointer-events: none;
+}
+
+.raid-skills {
+  position: absolute;
+  left: 8px;
+  right: 8px;
+  bottom: calc(var(--dock-h) + var(--safe-bottom) + 62px);
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+  pointer-events: none;
+}
+
+.ticker > *,
+.raid-skills > *,
+.dock-pop > * {
+  pointer-events: auto;
+}
+
+.ticker-item {
   display: flex;
   align-items: center;
   gap: 6px;
+  max-width: 100%;
+  padding: 5px 6px 5px 10px;
+  border-radius: 18px;
+  background: rgba(247, 236, 212, 0.97);
+  border: 1.5px solid var(--bronze);
+  box-shadow: var(--shadow);
+  font-size: 12.5px;
+}
+
+.ticker-item .tx {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-height: 1.25;
+}
+
+.ticker-item .btn {
+  flex: none;
+  padding: 5px 10px;
+  white-space: nowrap;
+}
+
+.ticker-item.bad .tx {
+  /* Tin giặc phải đọc được tới số giây còn lại, kể cả ở màn hẹp. */
+  -webkit-line-clamp: 4;
+}
+
+.ticker-item.bad {
+  background: rgba(140, 42, 31, 0.95);
+  border-color: #e9b44c;
+  color: #fff;
+  font-weight: 600;
+}
+
+.ticker-item.tet {
+  border-color: var(--red);
+  background: linear-gradient(90deg, rgba(255, 238, 200, 0.97), rgba(250, 222, 170, 0.97));
+  color: var(--red-dark);
+  font-weight: 600;
+}
+
+/* Nút sáng trên nền đỏ (tin giặc). */
+.btn.light {
+  background: var(--paper);
+  border-color: var(--paper-2);
+  color: var(--red-dark);
+  box-shadow: 0 2px 0 rgba(0, 0, 0, 0.25);
+}
+
+.ticker-item .next {
+  flex: none;
+  padding: 4px 7px;
+  border-radius: 999px;
+  background: rgba(58, 42, 26, 0.1);
+  font-size: 11px;
   font-weight: 700;
+}
+
+.ticker-item.bad .next {
+  background: rgba(255, 255, 255, 0.18);
+}
+
+.dock-pop {
+  position: absolute;
+  left: 8px;
+  right: 8px;
+  bottom: calc(var(--dock-h) + var(--safe-bottom) + 10px);
+  z-index: 3;
+  display: flex;
+  justify-content: center;
+  pointer-events: none;
+}
+
+.dock-pop:empty {
+  display: none;
+}
+
+/* Thẻ Lạc hầu, danh sách tướng nằm đúng chỗ dòng tin: đang mở thì dòng tin tạm ẩn. */
+.dock-pop:not(:empty) ~ .ticker,
+.dock-pop:not(:empty) ~ .raid-skills {
+  display: none;
+}
+
+.pop-card h4 {
+  margin: 0 0 4px;
   color: var(--bronze-dark);
-  width: 100%;
-  text-align: left;
-  padding: 0;
+  font-size: 14px;
 }
 
-.quest-head .toggle {
-  margin-left: auto;
-  color: var(--ink-soft);
-  font-weight: 400;
-}
-
-.quest p {
-  margin: 4px 0 6px;
+.quest-card p {
+  margin: 0 0 8px;
+  font-size: 13.5px;
+  line-height: 1.4;
 }
 
 .quest-foot {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 8px;
 }
 
-.quest .progress {
+.quest-foot .btn {
+  margin-left: auto;
+}
+
+.quest-card .progress {
   font-weight: 700;
   font-variant-numeric: tabular-nums;
 }
 
-.quest .reward {
+.quest-card .reward {
   color: var(--ink-soft);
   font-size: 12px;
 }
 
-.quest.collapsed p,
-.quest.collapsed .quest-foot {
-  display: none;
+.hero-row {
+  width: 100%;
+  margin-top: 6px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border-radius: 10px;
+  background: var(--paper-2);
+  font-size: 14px;
 }
 
-.quest.ready {
-  border-color: var(--bronze);
-  animation: glow 1.4s ease-in-out infinite;
+.hero-row .ic {
+  font-size: 22px;
+}
+
+.hero-row b {
+  flex: 1;
+  text-align: left;
+}
+
+.hero-row .mark {
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
 }
 
 @keyframes glow {
@@ -337,7 +578,137 @@ button {
   color: #fffaf0;
 }
 
-/* ---------- Thanh dưới ---------- */
+/* ---------- Dock (đáy màn hình) ---------- */
+
+/* Năm thẻ cho một tay bấm: Quân, Phó bản, Xây dựng (nổi tròn ở giữa), Tướng, Lạc hầu.
+   Dock vẽ đè lên mép bảng trượt (nút Xây dựng lồi lên), nhưng dưới phó bản, hộp thoại, lời báo. */
+.dock {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 2;
+  display: flex;
+  align-items: stretch;
+  height: calc(var(--dock-h) + var(--safe-bottom));
+  padding: 0 4px var(--safe-bottom);
+  background: linear-gradient(180deg, #fbf3e1, var(--paper-2));
+  border-top: 2px solid var(--bronze);
+  box-shadow: 0 -4px 14px rgba(58, 42, 26, 0.25);
+}
+
+#hud > .campaign,
+#hud > .modal-back,
+#hud > .toasts {
+  z-index: 3;
+}
+
+.dock .tab {
+  position: relative;
+  flex: 1 1 0;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  padding: 6px 0 4px;
+  color: var(--ink-soft);
+}
+
+.dock .tab .ic {
+  position: relative;
+  font-size: 22px;
+  line-height: 1;
+}
+
+.dock .tab .lb {
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.dock .tab.on {
+  color: var(--red-dark);
+}
+
+.dock .tab.on::before {
+  content: '';
+  position: absolute;
+  top: -2px;
+  left: 20%;
+  right: 20%;
+  height: 3px;
+  border-radius: 0 0 3px 3px;
+  background: var(--red);
+}
+
+.dock .tab:disabled {
+  opacity: 0.4;
+}
+
+.dock .badge {
+  position: absolute;
+  top: -7px;
+  left: 62%;
+  padding: 0 4px;
+  border-radius: 999px;
+  background: var(--ink);
+  color: #fff;
+  font-size: 9.5px;
+  font-style: normal;
+  font-weight: 700;
+  line-height: 1.5;
+  white-space: nowrap;
+}
+
+.dock .badge.hot {
+  background: var(--red);
+}
+
+/* Có thưởng chờ nhận thì chấm đỏ ở thẻ Lạc hầu sáng lên nhịp nhàng. */
+.dock.quest-ready .tab:nth-child(5) .badge {
+  animation: glow 1.4s ease-in-out infinite;
+}
+
+.dock .tab.main .ic {
+  width: 58px;
+  height: 58px;
+  margin-top: -30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #d9574a, var(--red) 65%);
+  border: 3px solid #fbf3e1;
+  box-shadow: 0 3px 0 var(--red-dark), var(--shadow);
+  font-size: 26px;
+}
+
+.dock .tab.main .lb {
+  color: var(--red-dark);
+  font-weight: 700;
+}
+
+.dock .tab.main.on::before {
+  display: none;
+}
+
+.dock .tab.main:active .ic {
+  transform: translateY(2px);
+  box-shadow: 0 1px 0 var(--red-dark), var(--shadow);
+}
+
+.dock .rotate {
+  position: absolute;
+  right: 10px;
+  bottom: calc(100% + 10px);
+  width: 42px;
+  height: 42px;
+  font-size: 19px;
+}
+
+/* ---------- Thanh Hủy, Đặt (thay chỗ dock khi đặt, dời, trải, ghép) ---------- */
 
 .bottombar {
   position: absolute;
@@ -361,6 +732,16 @@ button {
   padding: 12px 22px;
 }
 
+#hud:not(.placing) .bottombar,
+#hud.placing .dock,
+#hud.placing .ticker,
+#hud.placing .dock-pop,
+#hud.sheet-open .ticker,
+#hud.sheet-open .dock-pop,
+#hud.sheet-open .dock .rotate {
+  display: none;
+}
+
 .hint {
   position: absolute;
   left: 50%;
@@ -378,14 +759,14 @@ button {
   pointer-events: none;
 }
 
-/* ---------- Bảng trượt (màn hình hẹp: từ dưới lên; màn hình rộng: bên phải) ---------- */
+/* ---------- Bảng trượt (màn hình hẹp: từ dưới lên, ngay trên dock; màn hình rộng: bên phải) ---------- */
 
 .sheet {
   position: absolute;
   left: 0;
   right: 0;
-  bottom: 0;
-  max-height: 62%;
+  bottom: calc(var(--dock-h) + var(--safe-bottom));
+  max-height: 54%;
   display: flex;
   flex-direction: column;
   background: var(--paper);
@@ -393,12 +774,17 @@ button {
   border-radius: 18px 18px 0 0;
   box-shadow: 0 -8px 24px rgba(58, 42, 26, 0.3);
   transform: translateY(105%);
-  transition: transform 0.22s ease;
-  padding-bottom: var(--safe-bottom);
+  /* Đóng thì trượt xuống rồi ẩn hẳn, khỏi lộ dưới dock. */
+  visibility: hidden;
+  transition:
+    transform 0.22s ease,
+    visibility 0s 0.22s;
 }
 
 .sheet.open {
   transform: none;
+  visibility: visible;
+  transition: transform 0.22s ease;
 }
 
 .sheet-head {
@@ -425,17 +811,23 @@ button {
 
 .sheet-body {
   overflow-y: auto;
-  padding: 10px 14px 16px;
+  /* Chừa đáy cho nút Xây dựng nổi lồi lên từ dock, khỏi che nút cuối bảng. */
+  padding: 10px 14px 40px;
   font-size: 14px;
   line-height: 1.4;
 }
 
+/* Màn rộng (máy cầm ngang, màn trong Fold5): bảng cao trọn mép phải, dock dồn sang phần còn lại bên trái. */
 @media (min-width: 600px) and (min-aspect-ratio: 4/5) {
+  .sheet-body {
+    padding-bottom: 16px;
+  }
+
   .sheet {
     left: auto;
-    top: calc(60px + var(--safe-top));
+    top: calc(var(--band-h) + 10px);
     right: 10px;
-    bottom: 10px;
+    bottom: calc(10px + var(--safe-bottom));
     width: 340px;
     max-height: none;
     border: 2px solid var(--line);
@@ -443,12 +835,27 @@ button {
     transform: translateX(115%);
   }
 
-  .quest {
-    width: 360px;
+  .dock {
+    left: 50%;
+    right: auto;
+    width: min(560px, 100%);
+    transform: translateX(-50%);
+    border: 2px solid var(--bronze);
+    border-bottom: none;
+    border-radius: 18px 18px 0 0;
   }
 
-  #hud.sheet-open .bottombar {
-    right: 350px;
+  #hud.sheet-open .dock {
+    left: calc((100% - 350px) / 2);
+    width: min(480px, calc(100% - 370px));
+  }
+
+  .ticker {
+    left: 50%;
+    right: auto;
+    width: min(520px, calc(100% - 140px));
+    transform: translateX(-50%);
+    justify-content: center;
   }
 
   #hud.sheet-open .hint,
@@ -1182,7 +1589,10 @@ textarea {
   display: none;
 }
 
-#hud.in-field .quest,
+#hud.in-field .dock,
+#hud.in-field .ticker,
+#hud.in-field .raid-skills,
+#hud.in-field .dock-pop,
 #hud.in-field .bottombar,
 #hud.in-field .hint {
   display: none;
@@ -1271,20 +1681,6 @@ textarea {
 
 .btn.skill.active {
   box-shadow: 0 3px 0 var(--bronze-dark), 0 0 0 4px rgba(217, 168, 74, 0.6);
-}
-
-.banner.skills {
-  flex-wrap: wrap;
-  justify-content: flex-end;
-  gap: 6px;
-  padding: 4px 6px;
-  background: transparent;
-  border: none;
-  box-shadow: none;
-}
-
-.banner.skills .btn {
-  margin-left: 0;
 }
 
 .hero-note {
