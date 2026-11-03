@@ -8,8 +8,11 @@ import * as THREE from 'three';
  * một luật chung cho cả lưới: đỉnh giữa ô là mặt ô; đỉnh trên mép là mặt thấp nhất trong các ô chung mép, chung góc
  * ấy. Hai ô kề nhau vì thế dùng chung đỉnh mép y hệt, không hở kẽ.
  *
- * Ô giữ phẳng (`flat`: ô có đồ một ô phủ kín ô như đường đi, lũy, đê) không có dốc: phẳng tới mép, ô bên cạnh thấp
- * hơn thì dựng vách đất đứng xuống mặt ô ấy, để đồ trên ô không chìa ra lơ lửng trên dốc.
+ * Ô giữ phẳng (`flat`: ô dưới móng công trình, đầu cầu, ô có đường đi, lũy, đê) không có dốc: phẳng tới tận mép, để
+ * nền công trình, đầu cầu không chìa ra lơ lửng trên dốc. Ô ấy giữ đỉnh mép ở mặt của mình: đỉnh mép thuộc ô giữ phẳng
+ * (hay ô sông, coi như giữ phẳng ở đáy sông) lấy mặt thấp nhất trong các ô giữ phẳng chung đỉnh, không tính ô thường.
+ * Ô thường thấp hơn bên cạnh vì thế dốc lên tới mép ô giữ phẳng (dốc nằm trong ô thấp, như chân nền đắp); ô giữ
+ * phẳng thấp hơn hay sông bên cạnh thì ô giữ phẳng dựng vách đất đứng xuống.
  *
  * Nền chia mảnh `CHUNK` × `CHUNK` ô, mỗi mảnh một mesh: đổi vài ô (đặt đường, đắp đất) chỉ dựng lại mảnh chứa ô ấy,
  * mảnh ngoài khung nhìn không vẽ.
@@ -38,7 +41,7 @@ export interface NenInput {
   top: (x: number, z: number) => number | null;
   /** Đáy sông: mép đất giáp sông dốc xuống tới đây (dưới mặt nước). */
   riverY: number;
-  /** Ô giữ phẳng trọn ô, mép dựng vách đứng (chỉ hỏi ô trong lưới). */
+  /** Ô giữ phẳng trọn ô, giữ mép ở mặt mình (chỉ hỏi ô trong lưới): ô thường thấp hơn bên cạnh dốc lên, sông thì dựng vách. */
   flat: (x: number, z: number) => boolean;
   /** Màu của ô (x, z) (có thể ngoài lưới). */
   colors: (x: number, z: number, out: TileColors) => void;
@@ -224,16 +227,26 @@ export class NenDat {
     this.colDone[f] = 0;
   }
 
-  /** Độ cao chung các đỉnh lưới con trong khoảng [a0, a1] × [b0, b1]: mặt thấp nhất trong các ô chứa đỉnh ấy. */
+  /**
+   * Độ cao chung các đỉnh lưới con trong khoảng [a0, a1] × [b0, b1]: mặt thấp nhất trong các ô giữ phẳng (kể cả sông)
+   * chứa đỉnh ấy; không ô nào giữ phẳng thì mặt thấp nhất trong các ô chứa đỉnh.
+   */
   private computeH(a0: number, b0: number, a1: number, b1: number): void {
-    const { T, N, ty, H } = this;
+    const { T, N, ty, H, flat, river } = this;
     for (let b = b0; b <= b1; b++) {
       const j = Math.min(Math.floor(b / 3), T - 1);
       const j2 = b % 3 === 0 && b > 0 && b < N - 1 ? j - 1 : j;
       for (let a = a0; a <= a1; a++) {
         const i = Math.min(Math.floor(a / 3), T - 1);
         const i2 = a % 3 === 0 && a > 0 && a < N - 1 ? i - 1 : i;
-        H[b * N + a] = Math.min(ty[j * T + i], ty[j * T + i2], ty[j2 * T + i], ty[j2 * T + i2]);
+        let low = Infinity;
+        let held = Infinity;
+        for (let q = 0; q < 4; q++) {
+          const t = (q < 2 ? j : j2) * T + (q % 2 ? i2 : i);
+          low = Math.min(low, ty[t]);
+          if (flat[t] || river[t]) held = Math.min(held, ty[t]);
+        }
+        H[b * N + a] = held < Infinity ? held : low;
       }
     }
   }
@@ -396,7 +409,7 @@ export class NenDat {
             }
           }
         }
-        // Vách đứng: mép ô giữ phẳng cao hơn mép ô bên cạnh (ô thấp hơn, hay sông) thì dựng vách xuống mép ấy.
+        // Vách đứng: mép ô giữ phẳng cao hơn mép ô bên cạnh (ô giữ phẳng thấp hơn, hay sông) thì dựng vách xuống mép ấy.
         if (!this.flat[t]) continue;
         for (const [dx, dz, pick] of SIDES) {
           const nx = fx + dx;

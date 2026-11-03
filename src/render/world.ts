@@ -128,17 +128,27 @@ const wz = (z: number) => z - HALF;
 const clampTile = (v: number) => Math.min(Math.max(v, 0), GRID - 1);
 
 /**
- * Ô giữ phẳng trọn ô trên nền đất (mép dựng vách đứng thay cho dốc): ô có đồ một ô phủ kín ô (đường đi, đồ trang trí,
- * lũy, thành, đê, bẫy...), để đồ ấy không chìa ra lơ lửng trên dải dốc. Công trình nhiều ô thì nền nhà phủ dốc như
- * một ụ đất, không cần.
+ * Ô giữ phẳng trọn ô trên nền đất (`nenDat.ts`): mọi ô dưới móng công trình (kể cả đường đi, đồ trang trí, lũy, đê)
+ * và ô đầu cầu hai bên sông. Nền công trình, đầu cầu phẳng tới tận mép, không chìa ra lơ lửng trên dải dốc; móng đắp
+ * cao hơn đất quanh thì đất quanh dốc lên tới chân móng, móng giáp sông thì dựng vách đất xuống sông như bờ kè.
  */
 function flatTiles(state: GameState): number[] {
-  const out: number[] = [];
+  const out = new Set<number>();
   for (const b of state.buildings) {
+    if (isBridge(b.type)) {
+      const ends = bridgeEnds(b.type, b.x, b.z);
+      for (const [x, z] of [...ends.near, ...ends.far]) if (x >= 0 && z >= 0 && x < GRID && z < GRID && !isRiver(x, z)) out.add(z * GRID + x);
+      continue;
+    }
     const def = BUILDINGS[b.type];
-    if (def.w === 1 && def.d === 1 && !isBridge(b.type)) out.push(b.z * GRID + b.x);
+    for (let z = b.z; z < b.z + def.d; z++) for (let x = b.x; x < b.x + def.w; x++) if (x >= 0 && z >= 0 && x < GRID && z < GRID) out.add(z * GRID + x);
   }
-  return out.sort((a, b) => a - b);
+  return [...out].sort((a, b) => a - b);
+}
+
+/** Dấu của các ô giữ phẳng: chỉ đổi khi dựng, dỡ, dời công trình (rẻ hơn tính lại cả danh sách ô mỗi lần sync). */
+function flatKeyOf(state: GameState): string {
+  return state.buildings.map((b) => `${b.type}@${b.x},${b.z}`).join(';');
 }
 
 /**
@@ -751,9 +761,9 @@ export class World {
     }
     const bridged = state.buildings.some((b) => isBridge(b.type));
     const landKey = `${level}:${state.khoanh.join(',')}:${bridged}:${state.benKia.open.join(',')}`;
-    const flatKey = flatTiles(state).join(',');
+    const flatKey = flatKeyOf(state);
     if (flatKey !== this.flatKey && landKey === this.landKey && !heightsChanged) {
-      // Chỉ đổi ô giữ phẳng (dựng, dỡ đường đi, lũy, đê...): dựng lại đất và lưới ô, không đụng tới rừng.
+      // Chỉ đổi ô giữ phẳng (dựng, dỡ, dời công trình, đường đi...): dựng lại đất và lưới ô, không đụng tới rừng.
       this.flatKey = flatKey;
       this.rebuildLand(state);
       this.rebuildGridOverlay(state);
@@ -1186,7 +1196,7 @@ export class World {
 
   /**
    * Đất trong lưới dựng liền một khối (`nenDat.ts`): giữa ô phẳng, mép ô cao dốc thoai thoải xuống ô thấp, mặt dốc
-   * pha màu đất; ô có đồ một ô giữ phẳng trọn ô, mép dựng vách đất. Màu cỏ loang theo nhiễu liền qua mép ô, đất đã mở
+   * pha màu đất; ô dưới móng công trình, đầu cầu giữ phẳng trọn ô (`flatTiles`), ô thấp quanh đó dốc lên tới mép. Màu cỏ loang theo nhiễu liền qua mép ô, đất đã mở
    * sáng hơn rừng, bậc cao sáng màu hơn một chút. Nền nới ra ngoài lưới `NEN_MARGIN` ô cho liền với rừng bao ngoài.
    */
   private rebuildLand(state: GameState): void {

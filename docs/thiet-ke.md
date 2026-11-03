@@ -437,8 +437,8 @@ Chủ dự án đã chốt bốn điểm:
   - càng xa sông về phía rừng càng nhiều đồi bậc 2–3.
 - Cảnh 3D: mỗi bậc cao 0,3 đơn vị. Nền đất kiểu **bờ vát** (chủ dự án chọn qua bản dùng thử so ba kiểu: vách đất, bờ vát, lát ô; thay cho mỗi ô một khối hộp):
   - đất dựng liền một khối, giữa ô phẳng đúng mặt ô (nơi đặt công trình, cây, lính);
-  - ô cạnh ô thấp hơn thì dải mép rộng 0,3 ô dốc thoai thoải xuống; dốc nằm trong ô cao, ô thấp phẳng trọn ô; mặt dốc lẫn cỏ và đất, mép trên sáng hơn chân dốc; góc dốc làm mượt cho bậc chạy chéo khỏi răng cưa;
-  - ô có đồ một ô phủ kín ô (đường đi, đồ trang trí, lũy, thành, đê, bẫy) giữ phẳng tới mép, cạnh ô thấp thì dựng vách đất đứng, để đồ không chìa ra lơ lửng trên dốc; công trình nhiều ô thì nền nhà phủ lên dốc như một ụ đất;
+  - ô cạnh ô thấp hơn thì dải mép rộng 0,3 ô dốc thoai thoải xuống; giữa hai ô đất thường, dốc nằm trong ô cao, ô thấp phẳng trọn ô; mặt dốc lẫn cỏ và đất, mép trên sáng hơn chân dốc; góc dốc làm mượt cho bậc chạy chéo khỏi răng cưa;
+  - ô dưới móng công trình (mọi loại, kể cả đường đi, đồ trang trí, lũy, thành, đê, bẫy) và ô đầu cầu hai bên sông giữ phẳng tới tận mép, để nền công trình, đầu cầu không chìa ra lơ lửng trên dốc. Móng cao hơn đất thường bên cạnh (đắp nền) thì đất bên cạnh dốc lên tới chân móng (dốc nằm trong ô thấp, như chân nền đắp); móng giáp sông, giáp móng khác thấp hơn thì dựng vách đất đứng (bờ kè dưới bến, làng chài, mố đầu cầu);
   - màu cỏ loang theo nhiễu, liền qua mép ô (không còn ô cờ ba màu); đất đã mở sáng hơn rừng, bậc cao sáng màu hơn chút;
   - lưới ô lúc đặt công trình, khóm cỏ, cọc mốc, lính và trinh sát đi theo đúng mặt dốc;
   - nền nới ra ngoài lưới 14 ô theo bậc của ô mép, xa hơn là dải đất nối liền dưới rừng bao ngoài.
