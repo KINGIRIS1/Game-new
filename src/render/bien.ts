@@ -46,7 +46,13 @@ const groundMaterial = new THREE.MeshLambertMaterial({ vertexColors: true });
  * Dải dọc bờ biển: các hàng điểm cách mép bãi cát `cs[k]` ô (`bienDo`), mỗi hàng chạy dọc bờ từ t = −`REACH` tới `REACH`;
  * mỗi điểm cao `y`, màu `color` theo hàng. Trả hình không chỉ mục, có pháp tuyến và màu từng đỉnh.
  */
-function coastBand(cs: number[], y: (x: number, z: number, k: number) => number, color: (k: number) => THREE.Color, half: number): THREE.BufferGeometry {
+function coastBand(
+  cs: number[],
+  y: (x: number, z: number, k: number) => number,
+  color: (k: number) => THREE.Color,
+  half: number,
+  alpha?: (k: number) => number,
+): THREE.BufferGeometry {
   const pos: number[] = [];
   const col: number[] = [];
   const pt = (t: number, k: number) => {
@@ -57,6 +63,7 @@ function coastBand(cs: number[], y: (x: number, z: number, k: number) => number,
     pos.push(...v);
     const c = color(k);
     col.push(c.r, c.g, c.b);
+    if (alpha) col.push(alpha(k));
   };
   for (let t = -REACH; t < REACH; ) {
     // Quanh cửa sông Đà chia mịn hơn để bãi cát thoải xuống lòng sông không gãy khúc.
@@ -79,8 +86,50 @@ function coastBand(cs: number[], y: (x: number, z: number, k: number) => number,
   }
   const g = new THREE.BufferGeometry();
   g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
-  g.setAttribute('color', new THREE.Float32BufferAttribute(col, 3));
+  g.setAttribute('color', new THREE.Float32BufferAttribute(col, alpha ? 4 : 3));
   g.computeVertexNormals();
+  return g;
+}
+
+/** Mây mù trên biển cao chừng này (trên mặt nước, dưới tên quần đảo). */
+const MIST_Y = 1.5;
+
+/**
+ * Mây mù phủ biển trước khi biển mở (dưới Điện 8): một màn sương kem mờ dần từ mép bãi ra khơi thì đặc lại, cùng các
+ * cụm mây dày dọc bờ và trùm kín hai quần đảo. `material` dùng chung cho cả cụm, để World cho tan dần khi biển mở.
+ */
+export function buildSeaMist(half: number, puff: THREE.Material): THREE.Group {
+  const g = new THREE.Group();
+  g.name = 'mayMu';
+  const cream = new THREE.Color(C.cream);
+  const veil = new THREE.Mesh(
+    coastBand([BAI_CAT - 0.5, BAI_CAT + 3, BAI_CAT + 9, OPEN_SEA], () => MIST_Y, () => cream, half, (k) => [0, 0.35, 0.6, 0.7][k]),
+    new THREE.MeshBasicMaterial({ vertexColors: true, transparent: true, depthWrite: false }),
+  );
+  veil.renderOrder = 2;
+  g.add(veil);
+  const b = new ShapeBuilder();
+  const rand = seeded(19);
+  const lump = (x: number, z: number, n: number, spread: number) => {
+    for (let k = 0; k < n; k++) {
+      const r = 0.9 + rand() * 0.7;
+      b.sphere(r, k % 3 ? C.cream : 0xe8d9b0, x + (rand() - 0.5) * spread - half, MIST_Y + 0.3 + rand() * 0.5, z + (rand() - 0.5) * spread - half, [1.5, 0.5, 1.5], 9);
+    }
+  };
+  // Dải mây dày ngoài mép bãi, dọc bờ chéo.
+  for (let t = -120; t < 120; t += 5) {
+    const p = bienDiem(t, BAI_CAT + 3 + rand() * 2);
+    lump(p.x, p.z, 4, 5);
+  }
+  // Mây trùm kín mỗi quần đảo (đảo chính và các đảo nhỏ quanh đó).
+  for (const q of QUAN_DAO) {
+    const r = q.nguTruong - 2;
+    for (let dz = -r; dz <= r; dz += 4) for (let dx = -r; dx <= r; dx += 4) if (dx * dx + dz * dz <= r * r) lump(q.x + dx, q.z + dz, 3, 4);
+  }
+  const puffs = b.mesh(puff);
+  puffs.castShadow = false;
+  puffs.receiveShadow = false;
+  g.add(puffs);
   return g;
 }
 

@@ -464,7 +464,7 @@ export function startBattle(state: GameState, wave: number, side: RaidSide, opts
   if (opts.huan) battle.huan = { ...opts.huan };
   const land = opts.land ?? null;
   battle.geo = RAID_SCALE;
-  const rand = rng(wave * 7919 + ['bac', 'tay', 'nam', 'dong', 'namXa', 'dongXa'].indexOf(side) + 1);
+  const rand = rng(battleSeed(wave, side));
   const far = farSideBank(side);
   // Giặc trên bộ ra từ dải ở bìa rừng (`raidSpawnBand`).
   const open = openStart(state);
@@ -568,6 +568,58 @@ const zeroArmy = (): Record<UnitType, number> => ({ giao: 0, cung: 0, voi: 0, no
  * Thủy binh Triệu xuống thuyền: mỗi thuyền chở BOAT.carry lính, thuyền dàn đều dọc mép sông xa ở phía nam
  * (hay đông), chèo thẳng vào bờ gần nhất. Lính trộn đều các loại trên mỗi thuyền.
  */
+/** Hạt giống số ngẫu nhiên của trận giữ kinh đô đợt `wave` tới từ phía `side`. */
+export function battleSeed(wave: number, side: RaidSide): number {
+  return wave * 7919 + ['bac', 'tay', 'nam', 'dong', 'namXa', 'dongXa'].indexOf(side) + 1;
+}
+
+/** Số thuyền chở `crew` lính thủy binh; Đền Cuông còn nguyên (`fewer`) thì bớt thuyền, còn ít nhất một thuyền. */
+export function boatCount(crew: number, fewer: boolean): number {
+  const count = Math.ceil(crew / BOAT.carry);
+  return fewer ? Math.max(1, Math.floor(count * (1 - DEN_CUONG_BOATS))) : count;
+}
+
+/**
+ * Chỗ `count` thuyền thủy binh hiện ra lúc trận mở (mép luồng sông phía `side`), chỗ cập bờ, giờ chèo. Dùng chung cho
+ * `startBattle` và đoàn thuyền từ biển vào trong lúc trinh sát báo (`upcomingBoats` ở `game.ts`), nên `rand` phải là
+ * dòng số của trận ấy chưa rút số nào (`battleSeed`).
+ */
+export function boatLayout(count: number, side: RaidSide, lo: number, rand: () => number): Boat[] {
+  const alongX = side === 'nam' || side === 'namXa';
+  const farSide = farSideBank(side) !== null;
+  // Cập bờ bên kia: thuyền dàn dọc suốt bờ ấy.
+  const from = farSide ? FOREST_BAND : lo;
+  const span = RIVER_START - 1 - from;
+  const boats: Boat[] = [];
+  for (let i = 0; i < count; i++) {
+    const along = from + 0.5 + (span * (i + 0.5)) / count + (rand() - 0.5) * 0.8;
+    // Thuyền hiện ở mép luồng sông (`RIVER_DIVE`), chèo sang bờ mình (hay bờ bên kia).
+    const far = farSide ? RIVER_DIVE + 0.6 : RIVER_DIVE - 0.6;
+    const bank = farSide ? RIVER_END - 0.45 : RIVER_START + 0.45;
+    boats.push({
+      x: alongX ? along : far,
+      z: alongX ? far : along,
+      tx: alongX ? along : bank,
+      tz: alongX ? bank : along,
+      delay: i * BOAT.stagger * (0.6 + rand() * 0.8),
+      landed: false,
+    });
+  }
+  return boats;
+}
+
+/**
+ * Chỗ các thuyền thủy binh đợt `wave` (đợt thủy binh thứ `n`) tới từ phía `side` sẽ hiện ra khi trận mở, y như
+ * `startBattle` đặt: cảnh vẽ đoàn thuyền từ biển vào cửa sông tới đúng chỗ ấy trong lúc trinh sát báo.
+ */
+export function plannedBoats(state: GameState, wave: number, side: RaidSide, n: number, fewer: boolean): { x: number; z: number }[] {
+  const count = boatCount(forceSize(thuyBinhForces(n)), fewer);
+  return boatLayout(count, side, raidSpawnBand(state).lo, rng(battleSeed(wave, side))).map((b) => ({ x: b.x, z: b.z }));
+}
+
+/** Tổng số lính của một đợt (mọi loại cộng lại). */
+export const forceSize = (forces: Partial<Record<EnemyType, number>>): number => Object.values(forces).reduce((a, n) => a + (n ?? 0), 0);
+
 function boardBoats(
   battle: Battle,
   forces: Partial<Record<EnemyType, number>>,
@@ -582,31 +634,12 @@ function boardBoats(
   // Xếp xen kẽ các loại để thuyền nào cũng có đủ lính thủy, cung thuyền, lính rìu.
   const left = kinds.map((k) => forces[k] ?? 0);
   while (left.some((n) => n > 0)) kinds.forEach((k, i) => left[i]-- > 0 && crew.push(k));
-  let count = Math.ceil(crew.length / BOAT.carry);
   // Đền Cuông còn nguyên: bớt thuyền (làm tròn xuống, còn ít nhất một thuyền), bớt chừng ấy lính.
-  if (fewer) {
-    count = Math.max(1, Math.floor(count * (1 - DEN_CUONG_BOATS)));
-    crew = crew.slice(0, count * BOAT.carry);
-  }
+  const count = boatCount(crew.length, fewer);
+  crew = crew.slice(0, count * BOAT.carry);
   const alongX = side === 'nam' || side === 'namXa';
   const farSide = farSideBank(side) !== null;
-  // Cập bờ bên kia: thuyền dàn dọc suốt bờ ấy.
-  const from = farSide ? FOREST_BAND : lo;
-  const span = RIVER_START - 1 - from;
-  for (let i = 0; i < count; i++) {
-    const along = from + 0.5 + (span * (i + 0.5)) / count + (rand() - 0.5) * 0.8;
-    // Thuyền hiện ở mép luồng sông (`RIVER_DIVE`), chèo sang bờ mình (hay bờ bên kia).
-    const far = farSide ? RIVER_DIVE + 0.6 : RIVER_DIVE - 0.6;
-    const bank = farSide ? RIVER_END - 0.45 : RIVER_START + 0.45;
-    battle.boats.push({
-      x: alongX ? along : far,
-      z: alongX ? far : along,
-      tx: alongX ? along : bank,
-      tz: alongX ? bank : along,
-      delay: i * BOAT.stagger * (0.6 + rand() * 0.8),
-      landed: false,
-    });
-  }
+  battle.boats.push(...boatLayout(count, side, lo, rand));
   crew.forEach((kind, i) => {
     const b = i % count;
     const boat = battle.boats[b];

@@ -1,7 +1,7 @@
 // Luật chơi: trạng thái, truy vấn, thao tác và dòng thời gian.
 // Không phụ thuộc DOM hay Three.js để test được bằng Vitest.
 
-import { startBattle, stepBattle, type Battle, type RaidSide } from './battle';
+import { plannedBoats, startBattle, stepBattle, type Battle, type RaidSide } from './battle';
 import { updateCampaign } from './campaign';
 import { initialCaoLo } from './caoLo';
 import { initialCayDa, updateCayDa, type CayDaState } from './cayDa';
@@ -1445,6 +1445,16 @@ export function hasKimQuy(state: GameState): boolean {
 }
 
 /** Đền Cuông còn nguyên: thủy binh Triệu tới ít thuyền hơn. */
+/**
+ * Đoàn thuyền thủy binh Triệu đang từ biển kéo vào trong lúc trinh sát báo (đợt sắp tới là thủy binh): chỗ mỗi thuyền
+ * sẽ hiện ra khi trận mở, y như trận đặt. Không có đợt thủy binh đang báo thì mảng rỗng.
+ */
+export function upcomingBoats(state: GameState): { x: number; z: number }[] {
+  const raid = state.raid;
+  if (raid.phase !== 'warning' || raid.foe !== 'thuyBinh') return [];
+  return plannedBoats(state, raid.wave + 1, raid.side, raid.thuyBinh + 1, hasCuong(state));
+}
+
 export function hasCuong(state: GameState): boolean {
   return state.buildings.some((b) => b.type === 'denCuong' && !b.damaged);
 }

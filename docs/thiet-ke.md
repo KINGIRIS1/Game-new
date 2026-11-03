@@ -1179,7 +1179,7 @@ Giá cấp 8 khoảng gấp 2 cấp 7, sản lượng tăng khoảng 30% (cấp 
   - từ đoạn 3 trở đi, kể cả sau Hết truyện: **ba đợt thay phiên**, thủy binh → quân Triệu trên bộ → lũ;
   - vẫn 15 phút một đợt, trinh sát báo trước 60 giây. Nút "Nghênh chiến ngay" gọi đợt kế tiếp.
 - **Thủy binh** đợt thứ n: `9 + n` lính thủy (tối đa 18), `5 + n` cung thuyền (tối đa 12), `2 + ⌊(n + 1)/2⌋` lính rìu (tối đa 7), máu ×(2,0 + 0,12 × (n − 1)).
-- **Thuyền**: mỗi thuyền chở 6 lính. Thuyền hiện ở mép sông phía nam hoặc phía đông, chèo vào bờ gần nhất, thả lính lên đất. Trinh sát báo hướng kèm dải đỏ trên mặt sông.
+- **Thuyền**: mỗi thuyền chở 6 lính. Thuyền hiện ở mép sông phía nam hoặc phía đông, chèo vào bờ gần nhất, thả lính lên đất. Trinh sát báo hướng kèm dải đỏ trên mặt sông. Từ khi có biển Đông, trong lúc báo đoàn thuyền từ khơi vào cửa biển, ngược sông tới đúng chỗ ấy (xem Kế hoạch: biển Đông, bến thuyền khơi); trận không đổi.
   - Số cuối cùng (`BOAT`): thuyền hiện sát bờ bên kia, chèo 0,6 ô mỗi giây, các thuyền dàn đều dọc bờ, rời đi lệch nhau chừng 1,2 giây; lính xếp xen kẽ các loại để thuyền nào cũng đủ lính thủy, cung thuyền, lính rìu. Đợt 1 có 19 lính trên 4 thuyền.
   - Lính còn trên thuyền chưa bị bắn, chưa đánh, nhưng vẫn tính là giặc còn lại.
   - Lính lên bờ rồi tìm đường như giặc trên bộ: không lội sông, phải phá hay đi vòng đê, thành, lũy. Chúng nhắm kho rồi Điện như quân Triệu.
@@ -2017,7 +2017,7 @@ Bản đầu đặt biển thẳng dọc mép đông, sau bờ đông sông Thao
 | **C · Cửa biển đông nam** (chọn) | bờ chéo như Bắc Bộ, góc đông nam sau ngã ba thành cửa biển | 12 ô | 122°, 149° | không | vừa |
 | D · Miền duyên hải | hàng khoảnh sát rừng của bờ đông thành bãi biển dựng được bến, giặc đổ bộ từ biển | 13 ô | 102°, 133° | có | lớn |
 
-Chủ dự án chọn **C**. Hai câu hỏi kèm theo chưa trả lời nên giữ như cũ: thuyền giặc Triệu vẫn hiện ra giữa sông (chưa vào từ cửa biển); camera vẫn chỉ kéo ra biển từ Điện 8.
+Chủ dự án chọn **C**, rồi trả lời ba câu hỏi kèm theo: hai quần đảo đặt **theo hướng ngoài đời**; thuyền giặc Triệu **vào từ biển**; biển **thấy từ Điện 1 nhưng mây che mờ** (xem hai mục dưới).
 
 ```
                  x 52–58     59 … 73     74–75   76 …
@@ -2035,7 +2035,9 @@ Chủ dự án chọn **C**. Hai câu hỏi kèm theo chưa trả lời nên gi�
 - Đất ngoài lưới phía đông bắc (sau bờ đông) và tây nam (sau bờ nam) kéo dài tới bờ biển chéo, gần bờ thấp dần (chỉ để nhìn). Độ cao trong state không đổi: chỉ hình vẽ thấp xuống (`shoreCap` ở `render/bien.ts`).
 - Mỗi quần đảo có một **đảo chính 20 × 20 ô** (chủ dự án yêu cầu sau khi xem bản đầu, lúc ấy đảo lớn nhất chỉ chừng 4 ô) và các đảo nhỏ quanh đó (Hoàng Sa 7, Trường Sa 10, rải rộng hơn). Đảo chính đất theo ô như kinh đô (`DAO_CHINH`, `daoChinh`, `daoGoc`): hình vuông bo góc, bờ lồi lõm theo hạt giống mỗi quần đảo (chừng 365 ô đất), mỗi ô biết cách bờ mấy ô. Đây là chỗ sau này dựng đồn đóng quân.
 - Mỗi quần đảo có **ngư trường**: vòng tròn quanh quần đảo (bán kính 22 và 26 ô), ngoài mọi đảo và rạn san hô, chỗ thuyền kéo lưới.
-- Giặc không tới từ biển; không dựng công trình trên biển; lũ không lan ra biển (lũ không loang vào góc rừng không khai phá).
+- Không dựng công trình trên biển; lũ không lan ra biển (lũ không loang vào góc rừng không khai phá). Thủy binh Triệu tới từ biển (dưới đây); giặc khác không tới từ biển.
+- **Thủy binh Triệu vào từ biển**: trong 60 giây trinh sát báo đợt thủy binh, đoàn thuyền đen buồm đỏ hiện ngoài khơi, vào cửa biển, ngược sông Đà (đánh phía sông Thao thì rẽ lên ở ngã ba), mỗi thuyền tới đúng chỗ nó hiện ra khi trận mở (`upcomingBoats` ở `game.ts`, `plannedBoats`, `boatLayout` ở `battle.ts`, cùng dòng số ngẫu nhiên của trận `battleSeed`). Trận đánh y như cũ (chỗ thuyền, giờ chèo, quân số), nên độ khó mọi đợt thủy binh giữ nguyên. Dòng báo ghi "thuyền đen buồm đỏ từ biển vào cửa sông, kéo tới sông phía …". Thuyền đi đều 2 ô mỗi giây, thuyền đi xa thì ra khơi sớm hơn, nên đoàn giãn thành hàng dọc sông.
+- **Biển thấy từ Điện 1, mây che mờ**: từ đầu game camera đã kéo được ra biển tới hai quần đảo (như Điện 8 trước kia). Dưới Điện 8 biển còn **mây mù**: màn sương kem mờ dần từ mép bãi ra khơi thì đặc lại (thấy mặt biển mờ mờ bên dưới), dải mây dày dọc bờ, mây trùm kín hai quần đảo (tên quần đảo vẫn nổi trên mây); chưa có cá voi, cá heo. Lên Điện 8 (biển mở, dựng được bến thuyền khơi) thì mây bay lên, tan trong chừng ba giây. Chạm vào đảo khi còn mây vẫn mở bảng quần đảo, ghi "Mây mù còn phủ kín biển. Lên Điện cấp 8 thì mây tan…".
 - Không nâng bản lưu.
 
 ### Bến thuyền khơi
@@ -2069,7 +2071,7 @@ Móng 3×3, phải sát bờ sông (bên này hay bên kia, sông Thao hay sông
 - **Biển** (`src/render/bien.ts`): mặt biển, bãi cát dựng theo dải dọc bờ chéo (`coastBand`, `bienDiem`): nước nông ngọc sát bãi sẫm dần ra khơi như bãi biển Mộ Dạ, bãi cát khô phủ mép nền đất rồi cát ướt thoải xuống nước, hai bên cửa sông bãi thoải xuống lòng sông thành doi cát, sông Đà dừng đúng mép biển; dải sóng trắng vỗ bờ trôi ra vào theo hướng vào bờ, vòng sóng quanh đảo. Vũng san hô màu ngọc quanh mỗi đảo (quanh đảo chính cũng vuông bo góc).
 - **Đảo chính** vẽ theo ô như đất kinh đô: viền bãi cát sát nước, cát lẫn cỏ, đất cỏ bậc 1, gò bậc 2 và đỉnh đồi bậc 3 giữa đảo (cỏ thẫm dần, đá tảng lộ), dừa ven bờ ngả ra biển, cây phong ba và dừa trong đảo, bụi cỏ lau, đá rải bãi cát; vành sóng vuông bo góc quanh đảo. **Đảo nhỏ**: bãi cát tròn, đảo khá lớn có thảm cỏ, dừa, bụi cây, đá. **Tên quần đảo** trên nền kem viền đồng, giữ cỡ trên màn hình dù phóng to hay thu nhỏ.
 - **Cá voi, cá heo** có khung xương (`makeWhale`, `makeDolphin`): lâu lâu (8–18 giây) một lần, gần chỗ camera nhìn ngoài biển (camera ở xa biển thì quanh một quần đảo). Cá voi xanh xám bụng trắng nổi lên, phun nước từ lỗ thở, bơi chậm, rồi chúi đầu, khúc đuôi cong vồng, vây đuôi dựng khỏi mặt nước, lặn mất, tóe nước. Đàn bốn cá heo nhảy vòng cung nối đuôi nhau, mỗi con ba lần, tóe nước khi lên khi xuống.
-- **Camera**: từ Điện 8 kéo được ra biển đông nam tới hết đảo chính Trường Sa; ra khỏi vùng đất về phía biển thì chỉ đi trong dải chéo dọc hai quần đảo (x − z, thu dần trong chừng 10 ô, `CamBounds.sea` ở `camera.ts`), khỏi lạc vào đất trống ngoài lưới. Gần bãi cát không có cây.
+- **Camera**: từ Điện 1 kéo được ra biển đông nam tới hết đảo chính Trường Sa (dưới Điện 8 biển còn mây mù); ra khỏi vùng đất về phía biển thì chỉ đi trong dải chéo dọc hai quần đảo (x − z, thu dần trong chừng 10 ô, `CamBounds.sea` ở `camera.ts`), khỏi lạc vào đất trống ngoài lưới. Gần bãi cát không có cây.
 
 ### Sau này (chưa làm)
 
