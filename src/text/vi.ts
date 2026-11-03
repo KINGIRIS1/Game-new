@@ -130,6 +130,11 @@ export const vi = {
       icon: '🚪',
       desc: 'Cửa trong vòng tường, lầu cổng có lính bắn giặc. Giặc thấy qua cổng dễ hơn phá tường nên dồn về cổng: bày chòi canh, bẫy chông quanh cổng thành chỗ đón đánh. Dựng trên ô trống hay chạm vào một đoạn lũy, thành đất, thành Cổ Loa để thay. Cổng tính là thành khi đếm vòng thành.',
     },
+    hoKimQuy: {
+      name: 'Hồ Kim Quy',
+      icon: '🐢',
+      desc: 'Nơi thần Kim Quy trú ngụ. Hồ còn nguyên thì lũy, thành đất, thành Cổ Loa và cổng thành thêm 30% máu: thần giúp thành không đổ. Giữa hồ có miếu thờ trên gò, Rùa Vàng bơi dưới làn sen. Chỉ dựng được sau khi Rùa Vàng hiện lên.',
+    },
     denCoLoa: {
       name: 'Đền Cổ Loa',
       icon: '🐢',
@@ -982,6 +987,8 @@ export const vi = {
         '📜 Lạc hầu: Tâu bệ hạ, dân ven sông xin lập làng chài. Đóng thuyền bằng gỗ của xưởng mộc, dân và lính có cá ăn thì bớt được gạo.',
       congThanh:
         '📜 Lạc hầu: Tâu bệ hạ, thành Cổ Loa nên có cổng. Giặc thấy cổng dễ qua sẽ dồn cả về đó: xin dựng cổng giữa vòng tường, bày chòi canh, bẫy chông quanh cổng mà đón đánh.',
+      hoKimQuy:
+        '📜 Lạc hầu: Tâu bệ hạ, thần Kim Quy đã hiện lên. Xin đào hồ lớn cho thần trú ngụ: hồ còn thì thần giữ cho lũy, thành, cổng thành chắc thêm ba phần.',
     } as Partial<Record<BuildingType, string>>,
     /** Cây dại, tảng đá mọc trên ô trống: Lạc hầu gợi ý một lần khi cái đầu tiên mọc; chạm vào thì dọn. */
     cayDaHint:

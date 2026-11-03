@@ -3,7 +3,7 @@ import { wallRings } from './coLoa';
 import { CH1_LAST } from './campaign';
 import { BUILDINGS, CH2_QUEST_START, CH3_QUEST_START, CH4_QUEST_START, GIFT_IDS, MOVE_FRACTION, STAGES, U_NO, type BuildingType } from './defs';
 import { canMove, createInitialState, dienLevel, limitOf, move, moveCost, occupancy, place, uNoCount, usedOf, type GameState } from './game';
-import { MAU_BARRACKS, applyMau, canApplyMau, inFrame, mauSlots, mauUnlocked, planMau, MAU_IDS, type MauId } from './mau';
+import { MAU_BARRACKS, applyMau, canApplyMau, inFrame, mauFrom, mauSlots, mauUnlocked, planMau, MAU_IDS, type MauId } from './mau';
 import { isOpen, khoanhOf } from './khoanh';
 import { DIEN_HOME, GRID, RIVER_START, touchesRiver } from './map';
 import { DIEN_END, bank, edge, setDien } from './testmap';
@@ -124,7 +124,13 @@ describe('mẫu kinh đô', () => {
         for (const t of types) {
           // Đền, Hội Tết mở sau kết chương 1, mà màn cuối chương 1 cần Điện 5: dưới Điện 5 mẫu không chừa chỗ.
           // Doanh trại: mỗi tướng thường có ở cấp Điện ấy một chỗ.
-          const want = t === 'doanhTrai' ? MAU_BARRACKS[dien - 1] : BUILDINGS[t].unlock && dien < STAGES[CH1_LAST - 1].minDien ? 0 : limitOf(s, t);
+          // Hồ Kim Quy (8×8): mẫu Cổ Loa giữ sông chỉ chừa chỗ từ Điện 6 (`mauFrom`).
+          const want =
+            t === 'doanhTrai'
+              ? MAU_BARRACKS[dien - 1]
+              : (BUILDINGS[t].unlock && dien < STAGES[CH1_LAST - 1].minDien) || dien < mauFrom(id, t)
+                ? 0
+                : limitOf(s, t);
           expect(slots.filter((x) => x.type === t).length, `${id} Điện ${dien}: ${t}`).toBe(want);
         }
       }

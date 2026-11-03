@@ -717,6 +717,7 @@ export function unlocked(state: GameState, unlock: Unlock | undefined): boolean 
   if (unlock === 'chuong2') return inChapter2(state);
   if (unlock === 'ketChuong2') return state.son.won;
   if (unlock === 'chuong3') return inChapter3(state);
+  if (unlock === 'ruaVang') return ruaVangCame(state);
   if (unlock === 'ketChuong3') return state.adv.won;
   if (unlock === 'chuong4') return inChapter4(state);
   if (unlock === 'ketChuong4') return state.adv.bien;
@@ -744,6 +745,7 @@ export const UNLOCK_REASON: Record<Unlock, FailReason> = {
   chuong2: 'canChuong2',
   ketChuong2: 'canKetChuong2',
   chuong3: 'canChuong3',
+  ruaVang: 'canRuaVang',
   ketChuong3: 'canKetChuong3',
   chuong4: 'canChuong4',
   ketChuong4: 'canKetChuong4',
@@ -1377,6 +1379,11 @@ export function hasCoLoa(state: GameState): boolean {
   return state.buildings.some((b) => b.type === 'denCoLoa' && !b.damaged);
 }
 
+/** Hồ Kim Quy còn nguyên: tường thành thêm máu khi giặc đánh. */
+export function hasKimQuy(state: GameState): boolean {
+  return state.buildings.some((b) => b.type === 'hoKimQuy' && !b.damaged);
+}
+
 /** Đền Cuông còn nguyên: thủy binh Triệu tới ít thuyền hơn. */
 export function hasCuong(state: GameState): boolean {
   return state.buildings.some((b) => b.type === 'denCuong' && !b.damaged);
@@ -1540,6 +1547,7 @@ function updateRaid(state: GameState, ms: number): void {
               ? { foe, n: raid.thuyBinh + 1 }
               : null,
       crossbows: hasCoLoa(state),
+      walls: hasKimQuy(state),
       fewerBoats: hasCuong(state),
       arms: state.arms,
       huan: huanTiers(state),

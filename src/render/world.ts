@@ -23,6 +23,7 @@ import { PERSON_SCALE } from './congTrinh/chung';
 import { BEP_TET_SEAT } from './congTrinh/bep';
 import { DIEN_LOT } from './congTrinh/dien';
 import { DOANH_TRAI_HERO } from './congTrinh/doanhTrai';
+import type { Swim } from './congTrinh/hoKimQuy';
 import { CONG_TRINH, lotModel } from './congTrinh/index';
 import { makeRuaVang } from './beasts';
 import { buildDecor, disposeDecor, isBatchedDecor, type DecorSpot } from './decor';
@@ -1160,9 +1161,18 @@ export class World {
       }
     }
     if (b.damaged) {
-      // Công trình bị phá: nghiêng đổ, khói đen bốc lên.
-      group.rotation.z = 0.12;
-      group.scale.y *= 0.85;
+      // Công trình bị phá: nghiêng đổ, khói đen bốc lên. Hồ Kim Quy không nghiêng cả mặt hồ, chỉ miếu bốc khói và
+      // Rùa Vàng lặn mất.
+      if (b.type === 'hoKimQuy') {
+        for (const c of [...group.children]) {
+          if (!c.userData.swim) continue;
+          group.remove(c);
+          disposeModel(c);
+        }
+      } else {
+        group.rotation.z = 0.12;
+        group.scale.y *= 0.85;
+      }
       const smoke = new THREE.Group();
       smoke.userData.smoke = true;
       const mat = new THREE.MeshBasicMaterial({ color: C.smoke, transparent: true, opacity: 0.5, depthWrite: false });
@@ -1882,7 +1892,8 @@ export class World {
 
   /** Rùa Vàng bơi qua bơi lại trên sông phía nam kinh đô, từ khi hiện lên diệt yêu tinh. */
   private syncTurtle(state: GameState): void {
-    const want = ruaVangCame(state);
+    // Đã có Hồ Kim Quy thì thần về ở hồ (rùa bơi trong mô hình hồ), không bơi trên sông nữa.
+    const want = ruaVangCame(state) && !state.buildings.some((b) => b.type === 'hoKimQuy');
     if (want && !this.turtle) {
       this.turtle = makeRuaVang();
       this.turtle.scale.setScalar(0.55);
@@ -1951,6 +1962,22 @@ export class World {
     // Mũi thuyền (+x của mô hình) theo hướng đi: vận tốc (span·cos a, −depth·sin a).
     boat.rotation.y = Math.atan2(depth * Math.sin(a), f.span * Math.cos(a));
     (boat.userData.pose as Poser | undefined)?.({ act: 'walk', phase: t * 3 + f.x * 5 });
+  }
+
+  /**
+   * Rùa Vàng trong Hồ Kim Quy: bơi chậm vòng bầu dục quanh gò giữa hồ (`Swim`, tọa độ móng), đầu theo hướng bơi,
+   * nhấp nhô theo sóng; mỗi vòng có lúc lặn xuống nửa mai rồi nổi lên.
+   */
+  private swimTurtle(turtle: THREE.Object3D, t: number): void {
+    const f = turtle.userData.swim as Swim;
+    const a = t * 0.16;
+    turtle.position.x = f.x + f.rx * Math.cos(a);
+    turtle.position.z = f.z + f.rz * Math.sin(a);
+    const dive = Math.max(0, Math.sin(a * 0.5 + 1)) ** 6;
+    turtle.position.y = f.y + Math.sin(t * 1.3) * 0.015 - dive * 0.06;
+    // Đầu rùa (+z của mô hình) theo hướng bơi: vận tốc (−rx·sin a, rz·cos a).
+    turtle.rotation.y = Math.atan2(-f.rx * Math.sin(a), f.rz * Math.cos(a));
+    (turtle.userData.pose as Poser | undefined)?.({ act: 'walk', phase: t * 2.4 });
   }
 
   /** Động tác theo nghề (people.ts): cúi bổ cuốc, bổ đá, quai búa, đi qua đi lại mang hàng, đứng gác nhìn quanh. */
@@ -2228,6 +2255,7 @@ export class World {
       for (const child of v.group.children) {
         if (child.userData.dock !== undefined) child.position.y = (child.userData.dock as number) + Math.sin(t * 1.6 + v.group.id) * 0.03;
         if (child.userData.fishing) this.rowFishingBoat(child, t);
+        if (child.userData.swim) this.swimTurtle(child, t + v.group.id);
         if (child.userData.flame) child.scale.y = 0.75 + 0.35 * Math.abs(Math.sin(t * 9 + child.id));
         if (child.userData.spin) child.rotation.x = t * (child.userData.spin as number);
         if (child.userData.door) {
