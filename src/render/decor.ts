@@ -634,7 +634,9 @@ function singleModel(type: BuildingType): THREE.Group {
     smallBody(body.plain, type, 0);
   }
   if (!flat.empty) g.add(flat.mesh(toon));
-  g.add(...body.group().children);
+  // Đường đất nện chỉ có phần phẳng: thân rỗng thì thôi (add() không đối số báo lỗi).
+  const parts = body.group().children;
+  if (parts.length) g.add(...parts);
   return g;
 }
 

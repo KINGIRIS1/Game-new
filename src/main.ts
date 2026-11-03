@@ -68,6 +68,7 @@ import { HALF, RESOLUTIONS, World, type Resolution } from './render/world';
 import { vi } from './text/vi';
 import { Hud, buildingName, type HudAction } from './ui/hud';
 import { ManVao } from './ui/manVao';
+import { onThumb } from './render/anhCongTrinh';
 
 /**
  * Chạm từng ô để dựng lũy, gài bẫy, đắp đê, đắp thành Cổ Loa, trải đường, đặt đồ trang trí một ô, dựng ụ nỏ
@@ -144,6 +145,8 @@ async function start(): Promise<void> {
   let saveWarned = false;
 
   const hud = new Hud(hudRoot, handle, () => state);
+  // Ảnh công trình vẽ xong thì thay icon tạm trong bảng Xây dựng đang mở.
+  onThumb(() => hud.thumbsReady(state));
 
   const save = () => {
     if (!saveToStorage(localStorage, state) && !saveWarned) {

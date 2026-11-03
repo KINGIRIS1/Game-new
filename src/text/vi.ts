@@ -938,6 +938,16 @@ export const vi = {
     clearHint: 'Chạm vào ô đường hay món trang trí để dọn đi',
     cleared: (name: string) => `Đã dọn ${name}`,
     buildGroups: { congTrinh: 'Công trình', duong: 'Đường đi', trangTri: 'Trang trí' },
+    /** Nút dưới ảnh lớn trong bảng Xây dựng, theo việc của mục đang chọn. */
+    buildGo: {
+      build: '🔨 Xây',
+      road: '🔨 Trải đường',
+      decor: '🔨 Đặt',
+      chooseUNo: '🔨 Dựng ụ nỏ',
+      chooseRaise: '⛰️ Đắp đất',
+      chooseClear: '🧹 Dọn',
+      openMau: '🗺️ Xem mẫu',
+    },
     roadCount: (have: number, max: number) => `Cả 4 loại đường: ${have}/${max} ô`,
     clearDecor: 'Dọn trang trí',
     clearDecorDesc: 'chạm ô để dọn đường, đồ trang trí',
