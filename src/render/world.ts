@@ -38,6 +38,8 @@ import {
   CITADEL_TOP,
   buildDikes,
   buildForest,
+  setForestLite,
+  type ForestOptions,
   buildStakes,
   buildWalls,
   makeBoat,
@@ -52,7 +54,7 @@ import {
 import { makeWorker, type Job } from './people';
 import { C } from './palette';
 import type { Poser } from './rig';
-import { ShapeBuilder, seeded } from './shapes';
+import { ShapeBuilder, disposeInstances, disposeModel, seeded } from './shapes';
 import { ToonModel, inkThin, outlineOf, toon } from './toon';
 
 /**
@@ -99,6 +101,12 @@ const FOREST_DENSITY = 0.3;
 export const RESOLUTIONS = { low: 1, medium: 1.5, high: 2 } as const;
 export type Resolution = keyof typeof RESOLUTIONS;
 
+/**
+ * Dưới độ phóng này rừng dùng cây bản thấp (`treeTemplates(true)`), kể cả độ phóng mặc định (0,72–0,84): nhìn từ trên
+ * cao thì bản thấp gần như y bản đủ, mà thu nhỏ thì thấy gần trọn rừng cả nghìn cây. Phóng to quá thì hiện bản đủ.
+ */
+const LITE_ZOOM = 1;
+
 /** Đất, nước và ô lưới dùng chất liệu Lambert đơn giản, công trình và cây mới dùng tô màu hoạt hình. */
 const groundMaterial = new THREE.MeshLambertMaterial({ vertexColors: true });
 
@@ -117,8 +125,8 @@ const wx = (x: number) => x - HALF;
 const wz = (z: number) => z - HALF;
 
 /**
- * Rừng bên kia sông (chưa khai phá) không đổ bóng, cho nhẹ máy: hai bờ bên kia thêm chừng nửa số cây, mà rừng ở xa
- * thì bóng đổ khó thấy.
+ * Rừng bên kia sông (chưa khai phá) và rừng bao ngoài lưới không đổ bóng, cho nhẹ máy: lượt vẽ bóng phải vẽ lại từng
+ * cây, mà rừng ở xa bìa đất thì bóng đổ khó thấy.
  */
 function shadowless(forest: THREE.Object3D): THREE.Object3D {
   forest.traverse((o) => (o.castShadow = false));
@@ -355,11 +363,18 @@ export class World {
   private decorKey = '';
   private time = 0;
   private res: Resolution = 'medium';
+  /** Máy vẽ được nhiều hình trong một lệnh (WEBGL_multi_draw): rừng gộp một lô, chỉ vẽ cây thấy được (`batchTemplates`). */
+  private readonly batched: boolean;
+  /** Rừng bao ngoài lưới, dựng một lần. */
+  private readonly outer: THREE.Object3D;
+  /** Rừng đang hiện bản thấp (độ phóng dưới `LITE_ZOOM`). */
+  private forestLite = false;
 
   constructor(canvas: HTMLCanvasElement) {
     this.renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' });
     this.renderer.shadowMap.enabled = true;
     this.renderer.shadowMap.type = THREE.PCFShadowMap;
+    this.batched = this.renderer.extensions.has('WEBGL_multi_draw');
 
     this.scene.background = new THREE.Color(C.sky);
     this.scene.fog = new THREE.Fog(C.sky, 75, 125);
@@ -372,7 +387,8 @@ export class World {
     this.lights = addSunLights(this.scene, 24, 2048);
     const edge = baseHeights();
     this.scene.add(this.staticTerrain(edge));
-    this.scene.add(this.outerForest(edge));
+    this.outer = this.outerForest(edge);
+    this.scene.add(this.outer);
     this.scene.add(this.land.mesh, this.ripples.mesh, this.buildingsRoot);
     // Nước lũ màu phù sa đục, mờ một chút để còn thấy móng nhà dưới nước.
     const floodMat = this.floodWater.mesh.material as THREE.MeshLambertMaterial;
@@ -502,7 +518,8 @@ export class World {
       }
     }
     const group = new THREE.Group();
-    group.add(buildForest(near), shadowless(buildForest(far)));
+    // Rừng ngoài lưới không đổ bóng: ở xa bìa đất, bóng khó thấy mà lượt vẽ bóng phải vẽ lại cả rừng.
+    group.add(shadowless(buildForest(near, this.forestOptions())), shadowless(buildForest(far, this.forestOptions())));
     return group;
   }
 
@@ -605,6 +622,18 @@ export class World {
     }
   }
 
+  private forestOptions(): ForestOptions {
+    return { batched: this.batched, lod: true };
+  }
+
+  /** Độ phóng dưới `LITE_ZOOM` thì mọi khu rừng hiện bản thấp, phóng to quá thì bản đủ. */
+  private updateForestLod(): void {
+    const lite = this.view.zoom < LITE_ZOOM;
+    if (lite === this.forestLite) return;
+    this.forestLite = lite;
+    for (const f of [this.outer, this.forest, this.farForest]) if (f) setForestLite(f, lite);
+  }
+
   get resolution(): Resolution {
     return this.res;
   }
@@ -626,7 +655,7 @@ export class World {
 
   /** Xóa mọi thứ đã vẽ theo state cũ, dùng khi nạp mã lưu hoặc chơi lại. */
   resetAll(): void {
-    for (const v of this.views.values()) this.buildingsRoot.remove(v.group);
+    for (const v of this.views.values()) this.dropView(v);
     this.views.clear();
     // Khóa không trùng với khóa nào (kể cả khóa rỗng khi không còn đoạn nào): lần vẽ sau gỡ lô cũ, vẽ lại từ đầu.
     this.wallKey = '#';
@@ -725,7 +754,7 @@ export class World {
     }
     for (const [id, v] of this.views) {
       if (!alive.has(id)) {
-        this.buildingsRoot.remove(v.group);
+        this.dropView(v);
         this.views.delete(id);
       }
     }
@@ -743,7 +772,10 @@ export class World {
     const key = walls.map((b) => `${b.id}:${b.x}:${b.z}:${b.level}:${b.damaged ? 1 : 0}:${this.heights[b.z * GRID + b.x]}`).join(',');
     if (key !== this.wallKey) {
       this.wallKey = key;
-      if (this.walls) this.scene.remove(this.walls);
+      if (this.walls) {
+        this.scene.remove(this.walls);
+        disposeInstances(this.walls);
+      }
       const spots: WallSpot[] = walls.map((w) => ({
         x: wx(w.x) + 0.5,
         y: this.groundY(w.x, w.z),
@@ -760,7 +792,10 @@ export class World {
     const dkey = dikes.map((b) => `${b.id}:${b.x}:${b.z}:${b.level}:${b.damaged ? 1 : 0}:${this.heights[b.z * GRID + b.x]}`).join(',');
     if (dkey !== this.dikeKey) {
       this.dikeKey = dkey;
-      if (this.dikes) this.scene.remove(this.dikes);
+      if (this.dikes) {
+        this.scene.remove(this.dikes);
+        disposeInstances(this.dikes);
+      }
       const spots: DikeSpot[] = dikes.map((d) => ({ x: wx(d.x) + 0.5, y: this.groundY(d.x, d.z), z: wz(d.z) + 0.5, level: d.level, damaged: !!d.damaged }));
       this.dikes = buildDikes(spots);
       this.scene.add(this.dikes);
@@ -771,7 +806,10 @@ export class World {
     const ckey = citadel.map((b) => `${b.id}:${b.x}:${b.z}:${b.damaged ? 1 : 0}:${b.uNo ?? ''}:${this.heights[b.z * GRID + b.x]}`).join(',');
     if (ckey !== this.citadelKey) {
       this.citadelKey = ckey;
-      if (this.citadel) this.scene.remove(this.citadel);
+      if (this.citadel) {
+        this.scene.remove(this.citadel);
+        disposeModel(this.citadel);
+      }
       const spots: CitadelSpot[] = citadel.map((c) => ({
         x: wx(c.x) + 0.5,
         y: this.groundY(c.x, c.z),
@@ -1025,9 +1063,15 @@ export class World {
     }
   }
 
+  /** Gỡ mô hình một công trình (dựng lại vì đổi cấp, đổi dân, hư; hay đã dỡ): trả hình và khung xương người làm. */
+  private dropView(v: BuildingView): void {
+    this.buildingsRoot.remove(v.group);
+    disposeModel(v.group);
+  }
+
   private createView(b: Building): void {
     const old = this.views.get(b.id);
-    if (old) this.buildingsRoot.remove(old.group);
+    if (old) this.dropView(old);
     const def = BUILDINGS[b.type];
     const group = this.makeBuilding(b.type, b.level);
     // Bến, làng chài quay mặt trước ra sông: sông phía đông thì xoay một góc vuông.
@@ -1127,7 +1171,10 @@ export class World {
    * mở) thì thưa hơn nữa và cắm cọc mốc buộc vải đỏ ở bốn góc.
    */
   private rebuildForest(state: GameState): void {
-    if (this.forest) this.scene.remove(this.forest);
+    if (this.forest) {
+      this.scene.remove(this.forest);
+      disposeInstances(this.forest);
+    }
     const mask = openMask(state);
     const ready = new Set(openable(state));
     const spots: TreeSpot[] = [];
@@ -1154,7 +1201,8 @@ export class World {
       }
     }
     const group = new THREE.Group();
-    group.add(buildForest(spots));
+    group.add(buildForest(spots, this.forestOptions()));
+    setForestLite(group, this.forestLite);
     // Cọc mốc ở bốn góc mỗi khoảnh phát được (góc chung của hai khoảnh chỉ cắm một cọc).
     const corners = new Map<number, { x: number; z: number }>();
     for (const k of ready) {
@@ -1188,8 +1236,12 @@ export class World {
     const key = `${k.open.join(',')}|${seen.join(',')}`;
     if (key === this.farForestKey && this.farForest) return;
     this.farForestKey = key;
-    if (this.farForest) this.scene.remove(this.farForest);
+    if (this.farForest) {
+      this.scene.remove(this.farForest);
+      disposeInstances(this.farForest);
+    }
     this.farForest = this.buildFarForest(state, new Set<number>([...k.open, ...seen]));
+    setForestLite(this.farForest, this.forestLite);
     this.scene.add(this.farForest);
   }
 
@@ -1213,7 +1265,7 @@ export class World {
         spots.push({ x: cx, y: this.groundY(x, z), z: cz, kind: rand() < 0.35 ? 'bamboo' : 'tree', seed: Math.floor(rand() * 1e9) });
       }
     }
-    return shadowless(buildForest(spots));
+    return shadowless(buildForest(spots, this.forestOptions()));
   }
 
   // ---------- Bên kia sông ----------
@@ -1966,17 +2018,27 @@ export class World {
     v.apply();
   }
 
+  /** Gỡ bóng mờ công trình đang đặt: trả hình và các chất liệu mờ nhân bản riêng cho nó. */
+  private dropGhost(): void {
+    if (!this.ghost) return;
+    this.scene.remove(this.ghost);
+    this.ghost.traverse((o) => {
+      if (o instanceof THREE.Mesh) for (const m of [o.material].flat()) (m as THREE.Material).dispose();
+    });
+    disposeModel(this.ghost);
+    this.ghost = undefined;
+  }
+
   /** Bóng mờ của công trình sắp đặt ở mặt đất bậc `h`, viền xanh nếu đặt được, đỏ nếu không. */
   setGhost(type: BuildingType | null, x = 0, z = 0, valid = true, h = 0): void {
     if (!type) {
-      if (this.ghost) this.scene.remove(this.ghost);
-      this.ghost = undefined;
+      this.dropGhost();
       this.footprint.visible = false;
       return;
     }
     const def = BUILDINGS[type];
     if (!this.ghost || this.ghost.userData.type !== type) {
-      if (this.ghost) this.scene.remove(this.ghost);
+      this.dropGhost();
       this.ghost = this.makeBuilding(type, 1);
       this.ghost.userData.type = type;
       // Mỗi bộ hình có chất liệu riêng, nên làm mờ bằng cách nhân bản chất liệu của chính nó.
@@ -2060,6 +2122,7 @@ export class World {
 
     this.view.tick(dt);
     this.followView();
+    this.updateForestLod();
     if (this.panGoal) {
       const before = this.view.target.clone();
       this.view.target.lerp(this.panGoal, 1 - Math.exp(-dt * 9));

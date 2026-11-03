@@ -474,6 +474,8 @@ export class BattleView {
       this.root.remove(v.obj);
       if (v.peak) this.root.remove(v.peak);
       v.obj.traverse((o) => {
+        // Khung xương có ảnh xương riêng trên GPU, trả cùng với hình.
+        if (o instanceof THREE.SkinnedMesh) o.skeleton.dispose();
         if (o instanceof THREE.Mesh) o.geometry.dispose();
       });
     }
