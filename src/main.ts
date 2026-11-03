@@ -68,8 +68,6 @@ import { HALF, RESOLUTIONS, World, type Resolution } from './render/world';
 import { vi } from './text/vi';
 import { Hud, buildingName, type HudAction } from './ui/hud';
 import { ManVao } from './ui/manVao';
-// PROTOTYPE, dùng xong bỏ: các biến thể khung giao diện, chỉ bật ở bản dev hay VITE_PROTOTYPE_HUD=1.
-import { installHudPrototype } from './ui/prototypeHud';
 
 /**
  * Chạm từng ô để dựng lũy, gài bẫy, đắp đê, đắp thành Cổ Loa, trải đường, đặt đồ trang trí một ô, dựng ụ nỏ
@@ -146,7 +144,6 @@ async function start(): Promise<void> {
   let saveWarned = false;
 
   const hud = new Hud(hudRoot, handle, () => state);
-  installHudPrototype(hud, hudRoot, handle, () => state);
 
   const save = () => {
     if (!saveToStorage(localStorage, state) && !saveWarned) {
