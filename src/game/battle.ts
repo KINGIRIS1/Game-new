@@ -76,7 +76,7 @@ import {
 import { barracksList, guardPlan, heroPost } from './doanhTrai';
 import type { Building, GameState } from './game';
 import { openStart } from './khoanh';
-import { FAR_FOREST, FOREST_BAND, GRID, RIVER_DIVE, RIVER_END, RIVER_START, farBankOf, inGrid, isRiver } from './map';
+import { FAR_FOREST, FOREST_BAND, GRID, RIVER_DIVE, RIVER_END, RIVER_START, farBankOf, inGrid, isRiver, turnLocal } from './map';
 import { bridgeUp, farSideBank, garrisonPosts } from './benKia';
 import { drowns, floodMap } from './terrain';
 
@@ -543,7 +543,11 @@ export function startBattle(state: GameState, wave: number, side: RaidSide, opts
   if (opts.hero) {
     const dien = state.buildings.find((b) => b.type === 'dien');
     const post = heroPost(state, opts.hero.kind);
-    if (post) addHero(battle, opts.hero, post.x + def.w / 2, post.z + def.d, 1);
+    if (post) {
+      // Mặt trước doanh trại (đã xoay thì theo hướng xoay).
+      const f = turnLocal(post.rot, 0, def.d / 2);
+      addHero(battle, opts.hero, post.x + def.w / 2 + f.x, post.z + def.d / 2 + f.z, 1);
+    }
     else if (dien) addHero(battle, opts.hero, dien.x + BUILDINGS.dien.w / 2, dien.z + BUILDINGS.dien.d + 0.6, 1);
   }
   return battle;

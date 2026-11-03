@@ -732,6 +732,24 @@ button {
   padding: 12px 22px;
 }
 
+/* Có thêm nút ↻ Xoay công trình: bốn nút trên một hàng, thu đệm cho vừa màn hẹp (màn ngoài Fold5). */
+.bottombar.crowded {
+  gap: 6px;
+  padding: 0 8px;
+}
+
+.bottombar.crowded .btn {
+  padding: 12px 12px;
+  white-space: nowrap;
+}
+
+@media (max-width: 380px) {
+  .bottombar.crowded .btn {
+    font-size: 15px;
+    padding: 11px 9px;
+  }
+}
+
 #hud:not(.placing) .bottombar,
 #hud.placing .dock,
 #hud.placing .ticker,
@@ -817,6 +835,16 @@ button {
   line-height: 1.4;
 }
 
+/* Bảng Xây dựng, bảng doanh trại cao hơn chút cho ảnh lớn, nút Xây và trọn một trang ảnh nhỏ vừa bảng, khỏi cuộn. Hàng cuối là nút
+   sang trang hai bên mép, giữa trống chỗ nút Xây dựng tròn lồi lên, nên bớt đệm đáy. */
+.sheet.tall {
+  max-height: 62%;
+}
+
+.sheet.build .sheet-body {
+  padding-bottom: 12px;
+}
+
 /* Màn rộng (máy cầm ngang, màn trong Fold5): bảng cao trọn mép phải, dock dồn sang phần còn lại bên trái. */
 @media (min-width: 600px) and (min-aspect-ratio: 4/5) {
   .sheet-body {
@@ -833,6 +861,11 @@ button {
     border: 2px solid var(--line);
     border-radius: 18px;
     transform: translateX(115%);
+  }
+
+  /* Bảng bên phải đã cao trọn màn: bỏ giới hạn chiều cao của bảng cao (`.sheet.tall`) ở màn hẹp. */
+  .sheet.tall {
+    max-height: none;
   }
 
   .dock {
@@ -891,13 +924,52 @@ button {
   color: #fff8e8;
 }
 
+/* Thẻ bảng doanh trại: dấu nhỏ góc thẻ (cấp trại, "!" khi trại chưa có tướng chỉ huy). */
+.barracks-tabs {
+  margin-top: 10px;
+}
+
+.barracks-tabs .tab {
+  position: relative;
+  flex: 1 1 auto;
+  padding: 8px 6px;
+  white-space: nowrap;
+}
+
+.tab-mark {
+  position: absolute;
+  top: -7px;
+  right: -4px;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 4px;
+  border-radius: 9px;
+  background: var(--ink-soft);
+  color: #fff;
+  font-size: 11px;
+  font-style: normal;
+  line-height: 18px;
+}
+
+.tab-mark.hot {
+  background: var(--red);
+}
+
+.actions.top {
+  margin-top: 8px;
+}
+
 .build-tabs + .muted {
   margin: 0 2px 10px;
   font-size: 13px;
 }
 
-/* Ảnh lớn của mục đang chọn: ảnh trái, tên, lời tả, giá, nút Xây phải. */
+/* Ảnh lớn của mục đang chọn: ảnh trái, tên, lời tả, giá, nút Xây phải. Bảng phải cuộn (màn thấp) thì ảnh lớn và nút
+   Xây vẫn bám đầu bảng. */
 .xd-stage {
+  position: sticky;
+  top: -10px;
+  z-index: 1;
   display: grid;
   grid-template-columns: 46% 1fr;
   gap: 10px;
@@ -966,11 +1038,68 @@ button {
   padding: 8px 10px;
 }
 
-/* Lưới ảnh nhỏ để chọn: 5 cột trên điện thoại dọc, 4 cột trong bảng bên phải. */
+/* Lưới ảnh nhỏ để chọn: 5 cột trên điện thoại dọc, 4 cột trên màn hẹp và trong bảng bên phải. */
 .xd-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(62px, 1fr));
   gap: 6px;
+}
+
+/* Chia trang: số cột cố định (`--cols`) để mỗi trang đúng cột × hàng. */
+.xd-grid.paged {
+  grid-template-columns: repeat(var(--cols, 5), minmax(0, 1fr));
+}
+
+/* Nút sang trang: trái là ‹ và chấm trang, phải là số trang và ›; giữa để trống cho nút Xây dựng tròn của dock. */
+.xd-pager {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.xd-pg {
+  width: 44px;
+  height: 34px;
+  border-radius: 10px;
+  border: 1.5px solid var(--line);
+  background: #fffaf0;
+  font-size: 22px;
+  font-weight: 700;
+  line-height: 1;
+  color: var(--red-dark);
+}
+
+.xd-pg:disabled {
+  opacity: 0.35;
+}
+
+.xd-dots {
+  display: inline-flex;
+  gap: 5px;
+}
+
+.xd-dots i {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--paper-2);
+  border: 1px solid var(--line);
+}
+
+.xd-dots i.on {
+  background: var(--red);
+  border-color: var(--red);
+}
+
+.xd-gap {
+  flex: 1;
+}
+
+.xd-count {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--ink-soft);
 }
 
 .xd-mini {
@@ -1090,6 +1219,16 @@ button {
   flex-direction: column;
   gap: 8px;
   margin-top: 14px;
+}
+
+/* Nút Dời và nút Xoay cạnh nhau trong bảng công trình: Dời giãn, Xoay vừa chữ. */
+.actions .btn-pair {
+  display: flex;
+  gap: 8px;
+}
+
+.actions .btn-pair > .btn:first-child {
+  flex: 1;
 }
 
 .actions .why {
@@ -1220,6 +1359,15 @@ button {
   font-size: 12px;
   line-height: 1.25;
   min-width: 78px;
+}
+
+/* Dòng có nút dài (dựng nơi ở kèm giá): nút xuống hàng dưới, trọn bề ngang. */
+.unit-row.wrap {
+  flex-wrap: wrap;
+}
+
+.unit-row.wrap > .btn {
+  flex-basis: 100%;
 }
 
 /* Nút xếp dọc ở cuối dòng (bảng tướng chỉ huy doanh trại). */

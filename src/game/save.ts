@@ -396,7 +396,8 @@ function isValidBuildings(list: unknown): boolean {
       b.level <= BUILDINGS[b.type as BuildingType].maxLevel &&
       (b.tuong === undefined || TUONG_IDS.includes(b.tuong as TuongId)) &&
       (b.guard === undefined || (isObj(b.guard) && UNIT_TYPES.every((k) => isNum((b.guard as Raw)[k]) && ((b.guard as Raw)[k] as number) >= 0))) &&
-      (b.uNo === undefined || ((b.uNo === 'ok' || b.uNo === 'hu') && b.type === 'thanh'))
+      (b.uNo === undefined || ((b.uNo === 'ok' || b.uNo === 'hu') && b.type === 'thanh')) &&
+      (b.rot === undefined || [0, 1, 2, 3].includes(b.rot as number))
     );
   });
   return ok && list.some((b: Raw) => b.type === 'dien');
