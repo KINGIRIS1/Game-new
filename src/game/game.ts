@@ -1014,7 +1014,8 @@ export function findSpot(
 ): { x: number; z: number } | null {
   const def = BUILDINGS[type];
   const probe = canPlace(state, type, -def.w, -def.d);
-  if (!probe.ok && probe.reason !== 'ngoaiVung') return null;
+  // Thử ở ngoài lưới: lý do tùy chỗ đặt (ngoài vùng, đồn biên phải ở bên kia sông) chưa nói gì; lý do khác thì chịu.
+  if (!probe.ok && probe.reason !== 'ngoaiVung' && probe.reason !== 'phaiBenKia') return null;
   const dien = state.buildings.find((b) => b.type === 'dien');
   const lo = openStart(state);
   const a = anchor ?? (isSolid(type) && dien ? { x: dien.x + BUILDINGS.dien.w / 2, z: dien.z + BUILDINGS.dien.d / 2 } : { x: lo, z: lo });

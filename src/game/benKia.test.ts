@@ -47,8 +47,8 @@ import type { HeroSetup } from './battle';
 import { wallRings } from './coLoa';
 import { BRIDGE_FLOOD, BUILDINGS, CH2_QUEST_START, CH3_QUEST_START, DAC_SAN_BONUS, FIELD, FIELD_CAP, SCOUT_COST, SCOUT_MS, UNITS, VILLAGE_GIFT, VILLAGE_SHARE, type UnitType } from './defs';
 import { armySpace } from './doanhTrai';
-import { canMove, canPlace, createInitialState, outputIn, outputOf, place, productionPerMinute, repair, templeBonus, tick, type Building, type GameState } from './game';
-import { FAR_FOREST, GRID, RIVER_DIVE, RIVER_END, RIVER_START, baseHeights, farBankOf, isNearBank, isRiver, riverDistance, riverFacing, touchesRiver } from './map';
+import { canMove, canPlace, createInitialState, findSpot, outputIn, outputOf, place, productionPerMinute, repair, templeBonus, tick, type Building, type GameState } from './game';
+import { FAR_FOREST, GRID, RIVER_DIVE, RIVER_END, RIVER_START, baseHeights, farBankOf, footOnLand, isNearBank, isRiver, riverDistance, riverFacing, touchesRiver } from './map';
 import { planMau } from './mau';
 import { SAVE_VERSION, deserialize, serialize } from './save';
 import { pendingStory } from './story';
@@ -812,5 +812,41 @@ describe('phòng thủ hai bờ', () => {
     expect(b2.fighters.filter((f) => f.side === 'ta' && f.kind === 'giao').length).toBe(10);
     // Bản lưu giữ số lính đóng.
     expect(deserialize(serialize(s))!.benKia.garrison.nam.giao).toBe(6);
+  });
+
+  it('đồn biên: tìm được chỗ dựng bên kia sông (bóng công trình hiện ra ở đó), bờ đã có đồn thì sang bờ kia hay thôi', () => {
+    const { s } = frontier();
+    const spot = findSpot(s, 'donBien', { x: 30, z: 30 });
+    expect(spot).not.toBe(null);
+    expect(farBankOf(spot!.x, spot!.z)).toBe('nam');
+    expect(canPlace(s, 'donBien', spot!.x, spot!.z).ok).toBe(true);
+    expect(place(s, 'donBien', spot!.x, spot!.z).ok).toBe(true);
+    // Bờ nam đã có đồn, bờ đông chưa mở khoảnh nào: không còn chỗ.
+    expect(findSpot(s, 'donBien', { x: 30, z: 30 })).toBe(null);
+  });
+
+  it('chạm ô để đặt công trình: móng ở trọn bờ của ô chạm; chạm xuống sông thì về bờ gần nhất', () => {
+    const bankOf = (at: { x: number; z: number }, w: number, d: number) => {
+      const banks = new Set<string>();
+      for (let dx = 0; dx < w; dx++) for (let dz = 0; dz < d; dz++) banks.add(isRiver(at.x + dx, at.z + dz) ? 'song' : (farBankOf(at.x + dx, at.z + dz) ?? 'nay'));
+      return [...banks];
+    };
+    // Bên này sông: giữ như cũ, sát bờ thì lùi vào đất liền.
+    expect(footOnLand(20, 20, 4, 4)).toEqual({ x: 19, z: 19 });
+    expect(footOnLand(RIVER_START - 1, 20, 4, 4)).toEqual({ x: RIVER_START - 4, z: 19 });
+    // Bên kia sông: móng nằm trọn bờ ấy (trước đây bị kéo về bên này).
+    expect(bankOf(footOnLand(30, RIVER_END + 3, 4, 4), 4, 4)).toEqual(['nam']);
+    expect(bankOf(footOnLand(30, RIVER_END, 4, 4), 4, 4)).toEqual(['nam']);
+    expect(bankOf(footOnLand(RIVER_END + 2, 20, 4, 4), 4, 4)).toEqual(['dong']);
+    expect(bankOf(footOnLand(GRID - 1, GRID - 1, 4, 4), 4, 4)).toEqual(['nam']);
+    // Ô chạm nằm trong móng.
+    const far = footOnLand(30, RIVER_END + 3, 4, 4);
+    expect(30 - far.x).toBeGreaterThanOrEqual(0);
+    expect(RIVER_END + 3 - far.z).toBeLessThan(4);
+    // Chạm dưới sông: sát bờ bên kia thì sang bên kia, sát bờ bên này thì về bên này.
+    expect(bankOf(footOnLand(30, RIVER_END - 1, 4, 4), 4, 4)).toEqual(['nam']);
+    expect(bankOf(footOnLand(30, RIVER_START, 4, 4), 4, 4)).toEqual(['nay']);
+    expect(bankOf(footOnLand(RIVER_END - 1, 20, 3, 3), 3, 3)).toEqual(['dong']);
+    expect(bankOf(footOnLand(RIVER_START, 20, 3, 3), 3, 3)).toEqual(['nay']);
   });
 });

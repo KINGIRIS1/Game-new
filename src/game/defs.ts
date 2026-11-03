@@ -124,6 +124,42 @@ export const DIEN10_CHALLENGES = 16;
 export const ROAD_LIMIT = [60, 90, 120, 160, 200, 240, 280, 280, 295, 310];
 export const ROAD_TYPES: BuildingType[] = ['duongDat', 'duongSoi', 'duongDa', 'duongGach'];
 export const DECOR_TYPES: BuildingType[] = ['cayDa', 'gieng', 'ao', 'hoa', 'co', 'cau', 'rom'];
+/**
+ * Thẻ Công trình của bảng Xây dựng, theo thứ tự hiện. Mọi công trình dựng được mà không phải đường đi hay đồ trang trí
+ * đều phải có ở đây (lầu nỏ không dựng mà ghép từ hai chòi canh).
+ */
+export const BUILD_MENU: BuildingType[] = [
+  'luy',
+  'ruong',
+  'ben',
+  'langChai',
+  'nhaSan',
+  'baiDa',
+  'kho',
+  'loRen',
+  'xuongMoc',
+  'doanhTrai',
+  'traiGiao',
+  'traiCung',
+  'chuongVoi',
+  'traiNo',
+  'choiCanh',
+  'bayChong',
+  'denPhuDong',
+  'ruongNep',
+  'vuon',
+  'chuongLon',
+  'bep',
+  'de',
+  'denTanVien',
+  'thanh',
+  'congThanh',
+  'denCoLoa',
+  'denCuong',
+  'cauSongDa',
+  'cauSongThao',
+  'donBien',
+];
 
 /** Một ô đường: một cấp, dỡ được, giới hạn chung. */
 function road(type: BuildingType, cost: Cost, minDien: number): BuildingDef {

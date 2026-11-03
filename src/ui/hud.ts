@@ -6,6 +6,7 @@ import { advJoined, advLook, advResting, inChapter3, ruaVangCame, wallRings } fr
 import {
   BUILDINGS,
   CA_PER_MIN,
+  BUILD_MENU,
   CONG_THANH,
   DECOR_TYPES,
   FIELD,
@@ -128,37 +129,6 @@ const SHOWN_RESOURCES: ResourceId[] = ['gao', 'voOc', 'datDa', 'sat'];
 function shownResources(state: GameState): ResourceId[] {
   return dienLevel(state) >= BUILDINGS.xuongMoc.minDien || state.resources.go > 0 ? [...SHOWN_RESOURCES, 'go'] : SHOWN_RESOURCES;
 }
-const BUILD_MENU: BuildingType[] = [
-  'luy',
-  'ruong',
-  'ben',
-  'langChai',
-  'nhaSan',
-  'baiDa',
-  'kho',
-  'loRen',
-  'xuongMoc',
-  'doanhTrai',
-  'traiGiao',
-  'traiCung',
-  'chuongVoi',
-  'traiNo',
-  'choiCanh',
-  'bayChong',
-  'denPhuDong',
-  'ruongNep',
-  'vuon',
-  'chuongLon',
-  'bep',
-  'de',
-  'denTanVien',
-  'thanh',
-  'congThanh',
-  'denCoLoa',
-  'cauSongDa',
-  'cauSongThao',
-  'donBien',
-];
 /** Nhóm thẻ trong bảng Xây dựng: công trình, đường đi, đồ trang trí, mẫu kinh đô. */
 const BUILD_GROUPS: { key: keyof typeof vi.ui.buildGroups; types: BuildingType[] }[] = [
   { key: 'congTrinh', types: BUILD_MENU },
@@ -169,7 +139,7 @@ const BUILD_GROUPS: { key: keyof typeof vi.ui.buildGroups; types: BuildingType[]
 /** Bốn công trình làm bánh của Hội Tết: chỉ hiện trong bảng Xây dựng khi đã mở (sau kết chương 1). */
 const TET_TYPES: BuildingType[] = ['ruongNep', 'vuon', 'chuongLon', 'bep'];
 /** Công trình chỉ hiện trong bảng Xây dựng khi đã sang chương có nó. */
-const CHAPTER_OF: Partial<Record<string, number>> = { chuong2: 2, ketChuong2: 2, chuong3: 3, ketChuong3: 3, chuong4: 4 };
+const CHAPTER_OF: Partial<Record<string, number>> = { chuong2: 2, ketChuong2: 2, chuong3: 3, ketChuong3: 3, chuong4: 4, ketChuong4: 4 };
 
 /** Tên hiển thị của công trình, tính cả lũy tre đã đắp thành đất và đê đã kè đá. */
 export function buildingName(b: Pick<Building, 'type' | 'level'>): string {
