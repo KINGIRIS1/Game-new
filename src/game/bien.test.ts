@@ -1,9 +1,11 @@
-// Canh biển Đông và bến thuyền khơi: biển ngoài lưới phía đông, hai quần đảo Hoàng Sa, Trường Sa; bến thuyền khơi cần
+// Canh biển Đông và bến thuyền khơi: biển phía đông nam, bờ chéo đi sát góc ngoài hai bờ bên kia, góc đông nam sau ngã ba
+// là cửa biển; hai quần đảo Hoàng Sa, Trường Sa theo hướng ngoài đời; bến thuyền khơi cần
 // Điện 8, phải sát sông, lên cấp theo Điện 9, 10, làm ra vỏ ốc và cá biển (đỡ gạo ăn như cá làng chài), lũ không làm
 // hư, Lạc hầu gợi ý một lần; đường thuyền khơi đi trên nước từ bến ra tới ngư trường quanh đảo.
 
 import { describe, expect, it } from 'vitest';
-import { BIEN_BO, BIEN_TU, CUA_BIEN, DAO_CHINH, QUAN_DAO, benDock, boatsAt, daoChinh, daoGoc, isSea, isWater, onIsland, seaIndex, seaRoute } from './bien';
+import { BAI_CAT, CUA_BIEN, DAO_CHINH, QUAN_DAO, benDock, bienDiem, bienDo, boatsAt, daoChinh, daoGoc, isSea, isWater, onIsland, seaIndex, seaRoute } from './bien';
+import { plotAt } from './benKia';
 import { BUILDINGS, CA_BIEN_PER_MIN, NEW_HINTS } from './defs';
 import {
   canPlace,
@@ -20,7 +22,7 @@ import {
   type Building,
   type GameState,
 } from './game';
-import { GRID, RIVER_END, RIVER_START, isRiver } from './map';
+import { GRID, RIVER_END, RIVER_START, isNearBank, isRiver } from './map';
 import { floodToleranceOf } from './terrain';
 import { DIEN, bank, setDien } from './testmap';
 
@@ -55,29 +57,63 @@ function sample(path: { x: number; z: number }[], step = 0.25): { x: number; z: 
 }
 
 describe('biển Đông', () => {
-  it('biển ở phía đông, ngoài lưới, sau bờ đông sông Thao và bãi cát; sông Đà đổ ra cửa biển', () => {
-    expect(BIEN_BO).toBeGreaterThan(GRID);
-    expect(BIEN_TU).toBeGreaterThan(BIEN_BO);
-    expect(isSea(BIEN_TU, 0)).toBe(true);
-    expect(isSea(GRID - 1, 0)).toBe(false);
-    // Cửa sông nằm giữa dòng sông Đà, ở mép biển; sông chảy liền từ lưới ra tới cửa.
+  it('bờ biển chạy chéo ở đông nam, bãi cát không chạm đất bên này hay khoảnh bên kia nào; góc đông nam là cửa biển', () => {
+    // Mọi góc ô đất bên này và mọi khoảnh bên kia cách mép bãi cát hơn một ô: không khoảnh nào mất đất.
+    let nearest = -Infinity;
+    for (let x = 0; x < GRID; x++) {
+      for (let z = 0; z < GRID; z++) {
+        if (!isNearBank(x, z) && plotAt(x, z) === null) continue;
+        for (const [dx, dz] of [[0, 0], [1, 0], [0, 1], [1, 1]]) nearest = Math.max(nearest, bienDo(x + dx, z + dz));
+      }
+    }
+    expect(nearest).toBeLessThan(-1);
+    // Góc đông nam sau ngã ba (rừng không khai phá) thành biển; từ ngã ba đi chừng mười ô về đông nam là tới bãi cát.
+    expect(isSea(GRID - 0.5, GRID - 0.5)).toBe(true);
+    expect(isWater(GRID - 0.5, GRID - 0.5)).toBe(true);
+    const mid = (RIVER_START + RIVER_END) / 2;
+    let k = 0;
+    while (bienDo(mid + k, mid + k) < 0) k += 0.5;
+    expect(k * Math.SQRT2).toBeGreaterThan(8);
+    expect(k * Math.SQRT2).toBeLessThan(16);
+    // Bờ chạy chéo: phía đông bắc, tây nam ngoài lưới còn đất liền.
+    expect(isWater(GRID + 1, 20)).toBe(false);
+    expect(isWater(20, GRID + 1)).toBe(false);
+    expect(isSea(GRID + 40, 0)).toBe(false);
+    expect(isSea(GRID + 40, 40)).toBe(true);
+    // Bãi cát rộng `BAI_CAT` ô rồi tới biển; điểm dựng theo bờ nằm đúng khoảng cách đã hỏi.
+    for (const t of [-60, -13, 0, 7, 22, 90]) {
+      for (const c of [-2, 0, 1.5, BAI_CAT, 10]) {
+        const p = bienDiem(t, c);
+        expect(p.x - p.z).toBeCloseTo(t);
+        expect(bienDo(p.x, p.z)).toBeCloseTo(c);
+      }
+    }
+    // Cửa sông nằm giữa dòng sông Đà, ra quá bãi cát; sông chảy liền từ ngã ba ra tới cửa.
     expect(CUA_BIEN.z).toBeGreaterThan(RIVER_START);
     expect(CUA_BIEN.z).toBeLessThan(RIVER_END);
-    for (let x = GRID - 1; x <= CUA_BIEN.x; x += 0.5) expect(isWater(x, CUA_BIEN.z)).toBe(true);
-    // Ngoài lưới mà không phải sông, không phải biển thì là đất (rừng, bãi cát).
-    expect(isWater(GRID + 1, 20)).toBe(false);
+    expect(isSea(CUA_BIEN.x, CUA_BIEN.z)).toBe(true);
+    expect(CUA_BIEN.x).toBeLessThan(GRID + 6);
+    for (let x = RIVER_START; x <= CUA_BIEN.x + 6; x += 0.5) expect(isWater(x, CUA_BIEN.z), `x ${x}`).toBe(true);
   });
 
-  it('hai quần đảo: Hoàng Sa phía bắc, Trường Sa phía nam, xa bờ hơn; đảo nằm giữa biển, không chồng nhau', () => {
+  it('hai quần đảo theo hướng ngoài đời: Hoàng Sa đông nam, Trường Sa nam đông nam và xa hơn; đảo giữa biển, không chồng nhau', () => {
     expect(QUAN_DAO.map((q) => q.id)).toEqual(['hoangSa', 'truongSa']);
     const [hs, ts] = QUAN_DAO;
-    expect(hs.z).toBeLessThan(ts.z);
-    expect(ts.x).toBeGreaterThan(hs.x);
+    // Hướng như la bàn nhìn từ tâm Điện (0° bắc, 90° đông): ngoài đời Hoàng Sa 128°, Trường Sa 144°.
+    const tam = DIEN + BUILDINGS.dien.w / 2;
+    const huong = (q: (typeof QUAN_DAO)[number]) => (Math.atan2(q.x - tam, -(q.z - tam)) * 180) / Math.PI;
+    const xa = (q: (typeof QUAN_DAO)[number]) => Math.hypot(q.x - tam, q.z - tam);
+    expect(huong(hs)).toBeGreaterThan(110);
+    expect(huong(hs)).toBeLessThan(135);
+    expect(huong(ts)).toBeGreaterThan(135);
+    expect(huong(ts)).toBeLessThan(160);
+    expect(xa(ts)).toBeGreaterThan(1.3 * xa(hs));
+    // Hai ngư trường không chồng lên nhau.
+    expect(Math.hypot(hs.x - ts.x, hs.z - ts.z)).toBeGreaterThan(hs.nguTruong + ts.nguTruong + 4);
     for (const q of QUAN_DAO) {
-      // Đảo chính và mọi đảo nhỏ nằm ngoài bãi cát ven biển, chừa nước cho thuyền đi.
-      expect(q.x - DAO_CHINH / 2).toBeGreaterThan(BIEN_TU + 8);
+      // Đảo chính, mọi đảo nhỏ và cả ngư trường nằm xa bãi cát, chừa nước cho thuyền đi.
+      expect(bienDo(q.x, q.z) - q.nguTruong).toBeGreaterThan(BAI_CAT + 8);
       for (const [i, d] of q.dao.entries()) {
-        expect(q.x + d.dx - d.r).toBeGreaterThan(BIEN_TU + 3);
         expect(onIsland(q.x + d.dx, q.z + d.dz)).toBe(q.id);
         // Đảo nhỏ không chạm đảo chính (chừa một ô nước), không chạm nhau.
         for (let k = 0; k < 24; k++) {

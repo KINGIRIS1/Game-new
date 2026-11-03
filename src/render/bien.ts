@@ -1,11 +1,12 @@
-// Biển Đông phía đông kinh đô (game/bien.ts): mặt biển ba sắc, bãi cát, sóng vỗ bờ, cửa sông Đà, hai quần đảo Hoàng Sa,
+// Biển Đông phía đông nam kinh đô (game/bien.ts): bờ chéo như bờ biển Bắc Bộ, mặt biển nông dần ra sâu, bãi cát dọc bờ,
+// sóng vỗ bờ, cửa sông Đà ngay sau ngã ba, hai quần đảo Hoàng Sa,
 // Trường Sa (đảo cát, cỏ, dừa, đá, rạn san hô, tên quần đảo), và cá voi, cá heo lâu lâu nổi lên: cá voi phun nước rồi
 // lặn, vẫy đuôi; đàn cá heo nhảy vòng cung. Cá voi, cá heo có khung xương (rig.ts) như mọi con vật.
 // Tọa độ thế giới: ô (x, z) ở (x − half, z − half) như world.ts (`half` là HALF ở đó).
 
 import * as THREE from 'three';
-import { BIEN_BO, BIEN_TU, BIEN_XA, DAO_CHINH, QUAN_DAO, daoChinh, daoGoc, isSea, onIsland, type QuanDao, type QuanDaoId } from '../game/bien';
-import { GRID, RIVER_END, RIVER_START } from '../game/map';
+import { BAI_CAT, DAO_CHINH, QUAN_DAO, bienDiem, bienDo, daoChinh, daoGoc, onIsland, type QuanDao, type QuanDaoId } from '../game/bien';
+import { RIVER_END, RIVER_START } from '../game/map';
 import { vi } from '../text/vi';
 import { C } from './palette';
 import { RigBuilder, resetBones, skinRig, type Act, type BoneDef, type Bones, type Poser } from './rig';
@@ -14,10 +15,79 @@ import { ToonModel } from './toon';
 
 /** Mặt nước sông, biển (như world.ts). */
 const WATER_Y = -0.28;
-/** Biển trải về phía bắc, phía nam ra ngoài lưới chừng này ô (tới chân trời trong sương). */
-const REACH = 90;
+/** Bờ biển dựng dọc bờ từ t = −`REACH` tới `REACH` (t = x − z), mỗi đoạn `T_STEP` ô: trọn chỗ đất ngoài lưới chạm biển. */
+const REACH = 200;
+const T_STEP = 1;
+/** Biển trải ra xa bờ chừng này ô (tới chân trời trong sương). */
+const OPEN_SEA = 200;
+/** Bãi cát bắt đầu từ chừng này ô sau mép bãi (âm, phía đất liền): phủ kín mép nền đất bậc thang dọc bờ chéo. */
+const BEACH_IN = -1.7;
+
+/** `shoreCap` trả số này cho đất liền xa bờ: không thấp xuống. */
+export const SHORE_LAND = 99;
+/** Ô có tâm cách mép bãi cát từ chừng này trở ra (`bienDo`) là bãi cát, biển: nền đất không vẽ ô ấy, bãi cát phủ lên. */
+const SHORE_WET = -0.3;
+
+/**
+ * Bậc đất cao nhất được vẽ ở chỗ cách mép bãi cát `c` ô (`bienDo`, âm là đất liền): sát bãi là bậc 0 (bãi bồi), vào
+ * trong lên dần; xa bờ thì `SHORE_LAND` (không đổi). −1 là bãi cát, biển: nền đất không vẽ.
+ */
+export function shoreCap(c: number): number {
+  if (c >= SHORE_WET) return -1;
+  if (c > -5) return 0;
+  if (c > -10) return 1;
+  if (c > -16) return 2;
+  return SHORE_LAND;
+}
 
 const groundMaterial = new THREE.MeshLambertMaterial({ vertexColors: true });
+
+/**
+ * Dải dọc bờ biển: các hàng điểm cách mép bãi cát `cs[k]` ô (`bienDo`), mỗi hàng chạy dọc bờ từ t = −`REACH` tới `REACH`;
+ * mỗi điểm cao `y`, màu `color` theo hàng. Trả hình không chỉ mục, có pháp tuyến và màu từng đỉnh.
+ */
+function coastBand(cs: number[], y: (x: number, z: number, k: number) => number, color: (k: number) => THREE.Color, half: number): THREE.BufferGeometry {
+  const pos: number[] = [];
+  const col: number[] = [];
+  const pt = (t: number, k: number) => {
+    const p = bienDiem(t, cs[k]);
+    return [p.x - half, y(p.x, p.z, k), p.z - half];
+  };
+  const push = (v: number[], k: number) => {
+    pos.push(...v);
+    const c = color(k);
+    col.push(c.r, c.g, c.b);
+  };
+  for (let t = -REACH; t < REACH; ) {
+    // Quanh cửa sông Đà chia mịn hơn để bãi cát thoải xuống lòng sông không gãy khúc.
+    const z = bienDiem(t, 0).z;
+    const step = z > RIVER_START - 6 && z < RIVER_END + 6 ? T_STEP / 4 : T_STEP;
+    for (let k = 0; k + 1 < cs.length; k++) {
+      // Bốn góc ô dải: (t, hàng k), (t, hàng k + 1), (t + bước, ...). Mặt hướng lên trên.
+      const a = pt(t, k);
+      const b = pt(t, k + 1);
+      const c = pt(t + step, k);
+      const d = pt(t + step, k + 1);
+      push(a, k);
+      push(b, k + 1);
+      push(c, k);
+      push(c, k);
+      push(b, k + 1);
+      push(d, k + 1);
+    }
+    t += step;
+  }
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+  g.setAttribute('color', new THREE.Float32BufferAttribute(col, 3));
+  g.computeVertexNormals();
+  return g;
+}
+
+/** Điểm (x, z) cách lòng sông Đà bao nhiêu ô (0 trong lòng sông): bãi cát hai bên cửa sông thoải xuống nước. */
+function fromChannel(z: number): number {
+  return z < RIVER_START ? RIVER_START - z : z > RIVER_END ? z - RIVER_END : 0;
+}
 
 /**
  * Mặt biển, bãi cát, đảo, tên quần đảo. Dựng một lần; không đổ bóng cho nhẹ máy (đảo nhận bóng như đất). `foam` là
@@ -29,16 +99,19 @@ export function buildSea(half: number): THREE.Group {
   const group = new THREE.Group();
   group.name = 'bien';
 
-  // Nước: ba dải từ nông tới sâu ven bờ, rồi biển sâu ra tới chân trời.
-  const water = new ShapeBuilder();
-  const z0 = wz(-REACH);
-  const z1 = wz(GRID + REACH);
-  const strip = (x0: number, x1: number, color: number, dy = 0) =>
-    water.box(x1 - x0, 1, z1 - z0, color, (x0 + x1) / 2, WATER_Y - 0.5 + dy, (z0 + z1) / 2);
-  strip(wx(BIEN_TU), wx(BIEN_TU + 1.2), C.seaShallow);
-  strip(wx(BIEN_TU + 1.2), wx(BIEN_TU + 3.5), C.seaMid);
-  strip(wx(BIEN_TU + 3.5), wx(BIEN_XA + REACH), C.sea);
+  // Nước: nông màu ngọc sát bãi, sẫm dần ra khơi, tới chân trời. Thấp hơn mặt sông một chút: ở cửa sông nước sông nằm trên.
+  const shallow = new THREE.Color(C.seaShallow);
+  const mid = new THREE.Color(C.seaMid);
+  const deep = new THREE.Color(C.sea);
+  const seaRows = [BAI_CAT - 0.6, BAI_CAT + 0.5, BAI_CAT + 1.8, BAI_CAT + 4.5, OPEN_SEA];
+  const seaColors = [shallow, shallow, mid, deep, deep];
+  const open = new THREE.Mesh(coastBand(seaRows, () => WATER_Y - 0.004, (k) => seaColors[k], half), groundMaterial);
+  open.castShadow = false;
+  open.receiveShadow = true;
+  group.add(open);
+
   // Quanh mỗi đảo: vũng nông màu ngọc (rạn san hô) trong vành nước vừa; đảo chính vuông bo góc thì vũng cũng vậy.
+  const water = new ShapeBuilder();
   for (const q of QUAN_DAO) {
     water.add(flatSquircle(DAO_CHINH / 2 + 3.4), C.seaMid, wx(q.x), WATER_Y + 0.004, wz(q.z));
     water.add(flatSquircle(DAO_CHINH / 2 + 1.7), C.reef, wx(q.x), WATER_Y + 0.008, wz(q.z));
@@ -52,26 +125,27 @@ export function buildSea(half: number): THREE.Group {
   waterMesh.receiveShadow = true;
   group.add(waterMesh);
 
-  // Bãi cát: cát khô sát rừng, cát ướt thoải xuống nước; chừa cửa sông Đà.
-  const sand = new ShapeBuilder();
-  const beach = (za: number, zb: number) => {
-    const w = BIEN_TU - BIEN_BO;
-    // Cát khô sát rừng, mặt hơi cao hơn mặt nước; cát ướt nghiêng thoải xuống chìm dưới nước.
-    sand.box(w * 0.7, 0.5, zb - za, C.beach, wx(BIEN_BO) + (w * 0.7) / 2, -0.22, (za + zb) / 2);
-    const slope = 0.2;
-    sand.box(w * 0.55, 0.3, zb - za, C.beachWet, wx(BIEN_TU) - w * 0.12, -0.31, (za + zb) / 2, [0, 0, -slope]);
-  };
-  beach(z0, wz(RIVER_START));
-  beach(wz(RIVER_END), z1);
-  // Hai doi cát hai bên cửa sông, thu hẹp dần ra biển.
-  for (const [za, zb] of [
-    [wz(RIVER_START) - 0.01, wz(RIVER_START) + 0.9],
-    [wz(RIVER_END) - 0.9, wz(RIVER_END) + 0.01],
-  ] as const) {
-    sand.box(BIEN_TU - BIEN_BO + 0.8, 0.5, zb - za, C.beachWet, wx(BIEN_BO) + (BIEN_TU - BIEN_BO + 0.8) / 2, -0.28, (za + zb) / 2);
-  }
-  const sandMesh = sand.mesh(groundMaterial);
+  // Bãi cát dọc bờ chéo: cát khô sát đất liền (phủ mép nền đất), cát ướt thoải dần xuống chìm dưới nước. Hai bên cửa
+  // sông Đà bãi thoải xuống lòng sông thành hai doi cát; trong lòng sông bãi chìm dưới nước sông.
+  const sandRows = [BEACH_IN, -1.0, -0.3, 0.4, 0.9, 1.3, 1.8, 2.3, 2.8, BAI_CAT + 0.4];
+  const sandY = [0.02, 0.018, 0.015, 0.0, -0.02, -0.04, -0.11, -0.2, -0.3, WATER_Y - 0.14];
+  const dry = new THREE.Color(C.beach);
+  const wet = new THREE.Color(C.beachWet);
+  const sandColors = [dry, dry, dry, dry, dry, dry.clone().lerp(wet, 0.5), wet, wet, wet, wet];
+  const sandMesh = new THREE.Mesh(
+    coastBand(
+      sandRows,
+      (x, z, k) => {
+        const w = THREE.MathUtils.smoothstep(fromChannel(z), 0, 3);
+        return x < RIVER_START ? sandY[k] : WATER_Y - 0.2 + (sandY[k] - (WATER_Y - 0.2)) * w;
+      },
+      (k) => sandColors[k],
+      half,
+    ),
+    groundMaterial,
+  );
   sandMesh.castShadow = false;
+  sandMesh.receiveShadow = true;
   group.add(sandMesh);
 
   group.add(islands(half));
@@ -274,6 +348,10 @@ interface Foam {
   r?: number;
   /** Vòng sóng phập phồng chừng này phần bán kính (mặc định 0,08; vành sóng đảo chính to nên ít hơn). */
   amp?: number;
+  /** Dải sóng vỗ bờ: hướng dọc bờ (góc quay quanh trục đứng) và hướng vào bờ (nx, nz). */
+  yaw?: number;
+  nx?: number;
+  nz?: number;
   phase: number;
 }
 
@@ -286,10 +364,17 @@ function foamLines(half: number): THREE.Group {
   g.name = 'song';
   const mat = new THREE.MeshBasicMaterial({ color: C.foam, transparent: true, opacity: 0.75, depthWrite: false });
   const lines: Foam[] = [];
-  for (let z = -REACH; z < GRID + REACH; z += FOAM_SEG) {
+  // Dọc bờ chéo, mỗi đoạn dài chừng `FOAM_SEG` ô (đi một bước t thì dọc bờ được chừng t / √2 ô).
+  const step = FOAM_SEG * Math.SQRT2;
+  for (let t = -REACH + step / 2; t < REACH; t += step) {
+    const p = bienDiem(t, BAI_CAT + 0.1);
     // Cửa sông không có sóng vỗ bờ.
-    if (z + FOAM_SEG > RIVER_START && z < RIVER_END) continue;
-    lines.push({ x: BIEN_TU - half + 0.15, z: z + FOAM_SEG / 2 - half, phase: z * 0.37 });
+    if (p.x > RIVER_START && p.z > RIVER_START - FOAM_SEG / 2 - 1 && p.z < RIVER_END + FOAM_SEG / 2 + 1) continue;
+    const a = bienDiem(t - 0.5, BAI_CAT + 0.1);
+    const b = bienDiem(t + 0.5, BAI_CAT + 0.1);
+    const land = bienDiem(t, BAI_CAT - 0.9);
+    const n = Math.hypot(land.x - p.x, land.z - p.z);
+    lines.push({ x: p.x - half, z: p.z - half, yaw: Math.atan2(b.x - a.x, b.z - a.z), nx: (land.x - p.x) / n, nz: (land.z - p.z) / n, phase: t * 0.26 });
   }
   const rings: Foam[] = [];
   for (const q of QUAN_DAO) q.dao.forEach((d, i) => rings.push({ x: q.x + d.dx - half, z: q.z + d.dz - half, r: d.r * 1.12, phase: i * 1.3 }));
@@ -316,6 +401,7 @@ const foamMatrix = new THREE.Matrix4();
 const foamPos = new THREE.Vector3();
 const foamScale = new THREE.Vector3();
 const foamRot = new THREE.Quaternion();
+const UP = new THREE.Vector3(0, 1, 0);
 
 /** Tên quần đảo rộng chừng này phần bề ngang màn hình dọc, phóng to hay thu nhỏ cũng vậy (camera trực giao). */
 const LABEL_W = 6.4;
@@ -338,12 +424,14 @@ export function animateSea(sea: THREE.Group, t: number, zoom: number): void {
       if (f.r === undefined) {
         // Dải sóng trôi lên bờ rồi rút, giãn ra khi lên.
         const k = (Math.sin(t * 0.9 + f.phase) + 1) / 2;
-        foamPos.set(f.x + k * 0.45, WATER_Y + 0.02, f.z);
+        foamPos.set(f.x + (f.nx ?? 0) * k * 0.45, WATER_Y + 0.02, f.z + (f.nz ?? 0) * k * 0.45);
         foamScale.set(1 + k * 1.5, 1, 1);
+        foamRot.setFromAxisAngle(UP, f.yaw ?? 0);
       } else {
         const r = f.r * (1 + (f.amp ?? 0.08) * (Math.sin(t * 1.1 + f.phase) + 1));
         foamPos.set(f.x, WATER_Y + 0.02, f.z);
         foamScale.set(r, 1, r);
+        foamRot.identity();
       }
       mesh.setMatrixAt(i, foamMatrix.compose(foamPos, foamRot, foamScale));
     });
@@ -566,12 +654,12 @@ export class SeaLife {
   /** Chỗ biển trống cho một lần cá nổi: gần (fx, fz) tọa độ ô, chừa xa đảo và bờ, cả chỗ bắt đầu lẫn chỗ kết thúc. */
   private pickSpot(fx: number, fz: number, travel: number): { x: number; z: number; dir: number } | null {
     for (let tries = 0; tries < 12; tries++) {
-      const x = Math.max(BIEN_TU + 5, fx + (this.rand() - 0.5) * 16);
+      const x = fx + (this.rand() - 0.5) * 16;
       const z = fz + (this.rand() - 0.5) * 16;
       const dir = this.rand() * Math.PI * 2;
       const ex = x + Math.sin(dir) * travel;
       const ez = z + Math.cos(dir) * travel;
-      if (ex < BIEN_TU + 4 || !isSea(ex, ez)) continue;
+      if (bienDo(x, z) < BAI_CAT + 4 || bienDo(ex, ez) < BAI_CAT + 4) continue;
       if (onIsland(x, z, 3) || onIsland(ex, ez, 3) || onIsland((x + ex) / 2, (z + ez) / 2, 3)) continue;
       return { x, z, dir };
     }
@@ -595,7 +683,7 @@ export class SeaLife {
     let fx = focus.x + this.half;
     let fz = focus.z + this.half;
     // Camera ở xa biển: cá nổi quanh một quần đảo.
-    if (fx < BIEN_BO - 8) {
+    if (bienDo(fx, fz) < -8) {
       const q = QUAN_DAO[Math.floor(this.rand() * QUAN_DAO.length)];
       fx = q.x;
       fz = q.z + (this.rand() < 0.5 ? -1 : 1) * (q.nguTruong + 4);

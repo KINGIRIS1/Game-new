@@ -1,7 +1,9 @@
-// Biển Đông phía đông kinh đô: sau bờ đông sông Thao là dải rừng, bãi cát rồi biển. Sông Đà chảy suốt về phía đông,
-// đổ ra cửa biển. Ngoài khơi có hai quần đảo Hoàng Sa (phía bắc) và Trường Sa (phía nam). Biển nằm ngoài lưới kinh đô:
-// không dựng công trình trên biển, giặc không tới từ biển; bến thuyền khơi (`benKhoi`, từ Điện 8) dựng sát sông, thuyền
-// đánh cá lớn xuôi sông ra biển đánh cá quanh hai quần đảo rồi về. Sau này Điện 10 điều quân ra đóng giữ đảo.
+// Biển Đông phía đông nam kinh đô, như bờ biển Bắc Bộ (chủ dự án chọn phương án "cửa biển đông nam"): bờ biển chạy
+// chéo từ đông bắc xuống tây nam, đi sát góc ngoài của hai bờ bên kia sông. Góc đông nam sau ngã ba (rừng không khai
+// phá) là cửa sông, bãi cát rồi biển: sông Thao đổ vào sông Đà ở ngã ba, sông Đà chảy tiếp ra cửa biển ngay đó. Ngoài
+// khơi có hai quần đảo theo hướng ngoài đời: Hoàng Sa ở đông nam, Trường Sa xa hơn về nam đông nam. Biển không dựng
+// công trình, giặc không tới từ biển; bến thuyền khơi (`benKhoi`, từ Điện 8) dựng sát sông, thuyền đánh cá lớn xuôi sông
+// ra biển đánh cá quanh hai quần đảo rồi về. Sau này Điện 10 điều quân ra đóng giữ đảo.
 // Mọi tọa độ tính bằng ô như lưới kinh đô (số thực, ô (x, z) phủ [x, x + 1) × [z, z + 1)).
 
 import { BUILDINGS } from './defs';
@@ -11,18 +13,42 @@ import { GRID, RIVER_END, RIVER_START, isRiver } from './map';
 /** Cấp Điện mở biển: dựng được bến thuyền khơi, camera kéo ra tới biển. */
 export const BIEN_DIEN = BUILDINGS.benKhoi.minDien;
 
-/** Bãi cát ven biển bắt đầu từ cột này (sau dải rừng mỏng ngoài bờ đông). */
-export const BIEN_BO = GRID + 3;
-/** Biển bắt đầu từ cột này: mọi ô có x từ đây trở ra là nước biển. */
-export const BIEN_TU = GRID + 6;
-/** Biển trải ra phía đông tới cột này (chỗ camera kéo xa nhất còn thấy nước). */
-export const BIEN_XA = BIEN_TU + 90;
+/**
+ * Mép bãi cát phía đất liền nằm quanh đường x + z = `BIEN_CHEO` (lệch theo nhiễu dọc bờ, `bienNhieu`). Chọn sao cho bãi
+ * cát không chạm khoảnh nào bên kia sông: góc ngoài khoảnh bờ đông, bờ nam (ô 73, 51 và 51, 73) còn cách bãi hơn một ô.
+ */
+export const BIEN_CHEO = 128;
+/** Bãi cát rộng chừng này ô (đo vuông góc với bờ); ra quá bãi là biển. */
+export const BAI_CAT = 3;
+
+/** Bờ biển lồi lõm: lệch (ô, vuông góc với bờ) theo vị trí dọc bờ `t` = x − z. */
+export function bienNhieu(t: number): number {
+  return 0.7 * Math.sin(t * 0.11) + 0.3 * Math.sin(t * 0.27 + 1);
+}
+
+/**
+ * Điểm (x, z) cách mép bãi cát bao nhiêu ô, đo vuông góc với bờ: âm là đất liền, 0 tới `BAI_CAT` là bãi cát, từ `BAI_CAT`
+ * là biển (càng lớn càng xa bờ).
+ */
+export function bienDo(x: number, z: number): number {
+  return (x + z - BIEN_CHEO) / Math.SQRT2 - bienNhieu(x - z);
+}
+
+/** Điểm cách mép bãi cát `c` ô (như `bienDo`) ở vị trí dọc bờ `t` = x − z: dựng bãi cát, mặt biển theo bờ. */
+export function bienDiem(t: number, c: number): { x: number; z: number } {
+  const s = BIEN_CHEO + Math.SQRT2 * (c + bienNhieu(t));
+  return { x: (s + t) / 2, z: (s - t) / 2 };
+}
 
 /** Dòng giữa sông Đà, sông Thao: thuyền lớn chạy giữa dòng. */
 export const RIVER_MID = (RIVER_START + RIVER_END) / 2;
 
-/** Cửa sông Đà ra biển. */
-export const CUA_BIEN = { x: BIEN_TU + 1, z: RIVER_MID };
+/** Cửa sông Đà ra biển: giữa dòng sông Đà, chỗ đầu tiên ra quá bãi cát một ô. */
+export const CUA_BIEN = (() => {
+  let x = RIVER_END;
+  while (bienDo(x, RIVER_MID) < BAI_CAT + 1) x += 0.25;
+  return { x, z: RIVER_MID };
+})();
 
 export type QuanDaoId = 'hoangSa' | 'truongSa';
 
@@ -52,12 +78,15 @@ export interface QuanDao {
   seed: number;
 }
 
-/** Hai quần đảo, cố định ở mọi máy: Hoàng Sa ở phía bắc, Trường Sa ở phía nam, xa bờ hơn và rải rộng hơn. */
+/**
+ * Hai quần đảo, cố định ở mọi máy, gần đúng hướng ngoài đời nhìn từ Phong Châu: Hoàng Sa hướng đông nam (chừng 122°,
+ * ngoài đời 128°), Trường Sa hướng nam đông nam (chừng 149°, ngoài đời 144°), xa hơn và rải rộng hơn.
+ */
 export const QUAN_DAO: readonly QuanDao[] = [
   {
     id: 'hoangSa',
-    x: BIEN_TU + 34,
-    z: 14,
+    x: 108,
+    z: 82,
     dao: [
       { dx: -15, dz: -6, r: 1.4 },
       { dx: 13, dz: -12, r: 1.2 },
@@ -72,8 +101,8 @@ export const QUAN_DAO: readonly QuanDao[] = [
   },
   {
     id: 'truongSa',
-    x: BIEN_TU + 46,
-    z: 82,
+    x: 102,
+    z: 142,
     dao: [
       { dx: -16, dz: -9, r: 1.3 },
       { dx: 14, dz: -14, r: 1.1 },
@@ -95,10 +124,9 @@ export function quanDao(id: QuanDaoId): QuanDao {
   return QUAN_DAO.find((q) => q.id === id)!;
 }
 
-/** Ô (x, z) là biển: ngoài lưới về phía đông, từ `BIEN_TU`. */
+/** Điểm (x, z) là biển: ra quá bãi cát (`bienDo` từ `BAI_CAT`). */
 export function isSea(x: number, z: number): boolean {
-  void z;
-  return x >= BIEN_TU;
+  return bienDo(x, z) >= BAI_CAT;
 }
 
 /** Số ngẫu nhiên 0..1 lặp lại được cho ô (i, j) theo hạt giống. */
@@ -212,17 +240,18 @@ export function onIsland(x: number, z: number, pad = 0): QuanDaoId | null {
 }
 
 /**
- * Điểm (x, z) là mặt nước thuyền đi được: sông trong lưới, sông Đà chảy tiếp ngoài lưới về phía đông (và sông Thao từ
- * phía bắc), hay biển ngoài các đảo.
+ * Điểm (x, z) là mặt nước thuyền đi được: sông trong lưới, sông Đà chảy tiếp qua bãi cát ra biển (và từ phía tây), sông
+ * Thao từ phía bắc, hay biển ngoài các đảo (cả góc đông nam trong lưới).
  */
 export function isWater(x: number, z: number): boolean {
   const tx = Math.floor(x);
   const tz = Math.floor(z);
-  if (tx >= 0 && tz >= 0 && tx < GRID && tz < GRID) return isRiver(tx, tz);
+  if (tx >= 0 && tz >= 0 && tx < GRID && tz < GRID && isRiver(tx, tz)) return true;
   if (isSea(x, z)) return onIsland(x, z) === null;
+  if (tx >= 0 && tz >= 0 && tx < GRID && tz < GRID) return false;
   const da = z >= RIVER_START && z < RIVER_END;
   const thao = tz < 0 && x >= RIVER_START && x < RIVER_END;
-  return (tx >= GRID && da) || thao;
+  return da || thao;
 }
 
 /** Bến ở sông nào: sông Thao (phía đông kinh đô, chảy từ bắc xuống) hay sông Đà (phía nam, chảy ra biển). */
@@ -271,8 +300,8 @@ export function seaRoute(b: Pick<Building, 'x' | 'z' | 'type'>, index = 0): SeaR
     path.push({ x: dock.x, z: RIVER_MID });
   }
   path.push(CUA_BIEN);
-  // Ra khơi một quãng rồi rẽ về phía quần đảo, tới mép ngư trường gần bờ nhất.
-  const off = { x: CUA_BIEN.x + 4, z: RIVER_MID };
+  // Ra khơi một quãng về phía đông nam (vuông góc với bờ) rồi rẽ về phía quần đảo, tới mép ngư trường gần bờ nhất.
+  const off = { x: CUA_BIEN.x + 3, z: RIVER_MID + 3 };
   path.push(off);
   const a = Math.atan2(off.z - q.z, off.x - q.x);
   path.push({ x: q.x + Math.cos(a) * q.nguTruong, z: q.z + Math.sin(a) * q.nguTruong });

@@ -881,16 +881,16 @@ export const vi = {
     cua: { name: 'Của chôn', icon: '🏺', desc: 'Trống đồng, rìu đồng chôn dưới đất. Đất này về tay ta thì đào được.' },
   },
 
-  /** Biển Đông phía đông kinh đô, hai quần đảo ngoài khơi (`game/bien.ts`). */
+  /** Biển Đông phía đông nam kinh đô, hai quần đảo ngoài khơi (`game/bien.ts`). */
   bien: {
     quanDao: {
       hoangSa: {
         name: 'Quần đảo Hoàng Sa',
-        desc: 'Đảo chính rộng, bãi cát trắng, dừa và phong ba, quanh là những đảo cát nhỏ, rạn san hô giữa biển Đông, phía bắc. Nước trong, cá chuồn, cá ngừ nhiều; chim biển làm tổ trên đảo.',
+        desc: 'Đảo chính rộng, bãi cát trắng, dừa và phong ba, quanh là những đảo cát nhỏ, rạn san hô giữa biển Đông, ngoài khơi phía đông nam. Nước trong, cá chuồn, cá ngừ nhiều; chim biển làm tổ trên đảo.',
       },
       truongSa: {
         name: 'Quần đảo Trường Sa',
-        desc: 'Đảo chính rộng có đồi cỏ, quanh là nhiều đảo nhỏ, bãi cạn rải rộng giữa biển Đông, phía nam, xa bờ hơn Hoàng Sa. Rạn san hô nhiều ốc, nhiều cá.',
+        desc: 'Đảo chính rộng có đồi cỏ, quanh là nhiều đảo nhỏ, bãi cạn rải rộng giữa biển Đông, xa hơn Hoàng Sa về phía nam. Rạn san hô nhiều ốc, nhiều cá.',
       },
     } satisfies Record<QuanDaoId, { name: string; desc: string }>,
     icon: '🏝️',
