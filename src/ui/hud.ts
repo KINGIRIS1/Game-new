@@ -118,6 +118,7 @@ import { benKiaHtml } from './benKia';
 import { campTier, cutOff, dacSanOf, plotAt, villageOutput } from '../game/benKia';
 import { farBankOf } from '../game/map';
 import { mauHtml } from './mau';
+import { currentVariant, mountSwitcher, patchThumbs, protoBuildHtml, protoClick, protoResetPick, type BuildItem, type BuildMenuData } from './prototype/xayDung';
 import type { MauId } from '../game/mau';
 
 /** Dòng báo thường hiện chừng này mili giây. */
@@ -379,6 +380,8 @@ export class Hud {
     root.addEventListener('click', this.onClick);
     root.addEventListener('change', this.onChange);
     this.setMode('view');
+    // PROTOTYPE: thanh chuyển phương án bảng Xây dựng.
+    mountSwitcher(root, () => this.refreshSheet(this.getState(), true));
   }
 
   /** Đọc tệp lưu vừa chọn ở bảng Cài đặt. */
@@ -398,6 +401,11 @@ export class Hud {
     const act = el.dataset.act!;
     const id = Number(el.dataset.id);
     switch (act) {
+      // PROTOTYPE: phương án Trưng bày chọn mục, lật cấp.
+      case 'protoPick':
+      case 'protoLevel':
+        if (protoClick(act, el, this.buildMenuData(this.getState()).items)) this.refreshSheet(this.getState());
+        return;
       case 'toggleQuest':
         this.questCollapsed = !this.questCollapsed;
         this.quest.classList.toggle('collapsed', this.questCollapsed);
@@ -406,6 +414,7 @@ export class Hud {
         return this.onAction({ kind: 'chooseBuild', type: el.dataset.type as BuildingType });
       case 'buildTab':
         this.buildTab = el.dataset.tab as typeof this.buildTab;
+        protoResetPick();
         this.refreshSheet(this.getState());
         this.sheetEl.querySelector('.sheet-body')?.scrollTo(0, 0);
         return;
@@ -754,6 +763,8 @@ export class Hud {
 
   /** Mẫu vừa bấm Áp lần đầu (chờ bấm lần nữa cho chắc). */
   mauArmed: MauId | null = null;
+  /** PROTOTYPE: loại bảng đang vẽ trên màn hình, để giữ chỗ cuộn khi vẽ lại cùng bảng. */
+  private sheetKindShown = '';
   /** Nhóm đang xem trong bảng Xây dựng; nhớ cho lần mở sau. */
   private buildTab: (typeof BUILD_GROUPS)[number]['key'] = 'congTrinh';
 
@@ -819,8 +830,9 @@ export class Hud {
   closeSheet(): void {
     this.sheet = null;
     this.donPick = null;
+    this.sheetKindShown = '';
     this.sheetEl.classList.remove('open');
-    this.root.classList.remove('sheet-open');
+    this.root.classList.remove('sheet-open', 'proto-build');
   }
 
   /** Tâm của phần màn hình không bị bảng trượt che, để camera đưa công trình đang chọn vào đó. */
@@ -834,8 +846,18 @@ export class Hud {
     return { x: w / 2, y: top + (h - this.sheetEl.offsetHeight - top) / 2 };
   }
 
-  /** Vẽ lại bảng đang mở. Bỏ qua nếu nội dung không đổi để không làm mất lần chạm của người chơi. */
-  refreshSheet(state: GameState, force = false): void {
+  /** PROTOTYPE: ảnh công trình vừa vẽ xong: thay icon tạm tại chỗ, rồi ghi nhớ HTML mới mà không vẽ lại cả bảng. */
+  thumbsReady(state: GameState): void {
+    if (this.sheet?.kind !== 'build') return;
+    patchThumbs(this.sheetEl);
+    this.refreshSheet(state, false, true);
+  }
+
+  /**
+   * Vẽ lại bảng đang mở. Bỏ qua nếu nội dung không đổi để không làm mất lần chạm của người chơi.
+   * `remember` (PROTOTYPE): chỉ ghi nhớ HTML, không đụng tới bảng trên màn hình.
+   */
+  refreshSheet(state: GameState, force = false, remember = false): void {
     if (!this.sheet) return;
     if (this.sheet.kind === 'settings' && !force) return;
     let title = '';
@@ -885,28 +907,55 @@ export class Hud {
     }
     const html = `<div class="sheet-head"><h2>${title}</h2><button class="close" data-act="closeSheet" aria-label="${vi.ui.close}">✕</button></div>
       <div class="sheet-body">${body}</div>`;
+    if (remember) {
+      this.sheetHtml = html;
+      return;
+    }
     if (html !== this.sheetHtml || force) {
+      // PROTOTYPE: giữ chỗ đã cuộn khi vẽ lại (ảnh công trình về dần sau khi mở bảng).
+      const body = this.sheetEl.querySelector('.sheet-body');
+      const top = body?.scrollTop ?? 0;
+      const left = this.sheetEl.querySelector('[data-keep-scroll]')?.scrollLeft ?? 0;
+      const same = this.sheet.kind === 'build' && this.sheetKindShown === 'build';
       this.sheetHtml = html;
       this.sheetEl.innerHTML = html;
+      if (same) {
+        this.sheetEl.querySelector('.sheet-body')?.scrollTo(0, top);
+        this.sheetEl.querySelector('[data-keep-scroll]')?.scrollTo(left, 0);
+      }
+      this.sheetKindShown = this.sheet.kind;
     }
     this.sheetEl.classList.add('open');
     this.root.classList.add('sheet-open');
+    this.root.classList.toggle('proto-build', this.sheet.kind === 'build');
   }
 
   private buildMenuHtml(state: GameState): string {
+    const data = this.buildMenuData(state);
+    // PROTOTYPE: phương án hiển thị có ảnh thật (`?variant=`); bản build thật luôn ra bảng gốc.
+    const variant = currentVariant();
+    if (variant !== 'goc') return protoBuildHtml(variant, data);
+    const card = (it: BuildItem) => `<button class="card ${it.why ? 'locked' : ''}" data-act="${it.act}"${it.type ? ` data-type="${it.type}"` : ''}>
+        <span class="icon">${it.icon}</span>
+        <span class="name">${it.name}</span>
+        <span class="meta">${it.meta}</span>
+        ${it.cost ?? ''}
+        ${it.why ? `<span class="why">${it.why}</span>` : ''}
+      </button>`;
+    return `${data.tabs}${data.note}<div class="cards">${data.items.map(card).join('')}</div>`;
+  }
+
+  /** Các mục của bảng Xây dựng ở nhóm đang xem, dùng chung cho bảng gốc và các phương án thử. */
+  private buildMenuData(state: GameState): BuildMenuData {
     // Đắp đất là việc của dân, không phải công trình: chỉ hiện từ chương 2.
-    const raise = inChapter2(state)
-      ? `<button class="card" data-act="chooseRaise">
-        <span class="icon">⛰️</span>
-        <span class="name">${vi.ui.dapDat}</span>
-        <span class="meta">1×1 ô · ${vi.ui.dapDatDesc}</span>
-      </button>`
-      : '';
+    const raise: BuildItem | null = inChapter2(state)
+      ? { key: 'raise', act: 'chooseRaise', thumb: null, icon: '⛰️', name: vi.ui.dapDat, meta: `1×1 ô · ${vi.ui.dapDatDesc}` }
+      : null;
     // Công trình của chương 2, 3, 4 chỉ hiện khi đã sang chương ấy.
     const chapter = inChapter4(state) ? 4 : chapterNow(state);
     const shownOf = (types: BuildingType[]) =>
       types.filter((type) => (CHAPTER_OF[BUILDINGS[type].unlock ?? ''] ?? 1) <= chapter && (!TET_TYPES.includes(type) || tetStarted(state)));
-    const card = (type: BuildingType) => {
+    const card = (type: BuildingType): BuildItem => {
       const def = BUILDINGS[type];
       const have = usedOf(state, type);
       const max = limitOf(state, type);
@@ -920,54 +969,58 @@ export class Hud {
       else if (!canAfford(state, def.buildCost)) why = vi.reasons.thieuTaiNguyen;
       // Bốn loại đường chung một giới hạn, ghi ở đầu nhóm.
       const count = isRoad(type) ? '' : ` · ${vi.ui.count(have, max)}`;
-      return `<button class="card ${why ? 'locked' : ''}" data-act="chooseBuild" data-type="${type}">
-        <span class="icon">${vi.buildings[type].icon}</span>
-        <span class="name">${vi.buildings[type].name}</span>
-        <span class="meta">${def.w}×${def.d} ô${count}</span>
-        ${costHtml(state, def.buildCost)}
-        ${why ? `<span class="why">${why}</span>` : ''}
-      </button>`;
+      return {
+        key: type,
+        act: 'chooseBuild',
+        type,
+        thumb: type,
+        icon: vi.buildings[type].icon,
+        name: vi.buildings[type].name,
+        meta: `${def.w}×${def.d} ô${count}`,
+        size: `${def.w}×${def.d} ô`,
+        have: isRoad(type) ? '' : `${have}/${max}`,
+        cost: costHtml(state, def.buildCost),
+        why,
+        desc: vi.buildings[type].desc,
+        maxLevel: def.maxLevel,
+      };
     };
-    const mau = `<button class="card" data-act="openMau">
-        <span class="icon">🗺️</span>
-        <span class="name">${vi.ui.mauTitle}</span>
-        <span class="meta">${vi.ui.mauCard}</span>
-      </button>`;
+    const mau: BuildItem = { key: 'mau', act: 'openMau', thumb: null, icon: '🗺️', name: vi.ui.mauTitle, meta: vi.ui.mauCard };
     // Ụ nỏ dựng trên đoạn thành Cổ Loa có sẵn, không chiếm đất: có từ chương 4.
-    let uNo = '';
+    let uNo: BuildItem | null = null;
     if (inChapter4(state)) {
       const have = uNoCount(state);
       const max = uNoLimit(state);
       const why = have >= max ? vi.reasons.datGioiHan : !canAfford(state, U_NO.cost) ? vi.reasons.thieuTaiNguyen : '';
-      uNo = `<button class="card ${why ? 'locked' : ''}" data-act="chooseUNo">
-        <span class="icon">🎯</span>
-        <span class="name">${vi.ui.uNo}</span>
-        <span class="meta">${vi.ui.uNoCard(have, max)}</span>
-        ${costHtml(state, U_NO.cost)}
-        ${why ? `<span class="why">${why}</span>` : ''}
-      </button>`;
+      uNo = {
+        key: 'uNo',
+        act: 'chooseUNo',
+        thumb: 'uNo',
+        icon: '🎯',
+        name: vi.ui.uNo,
+        meta: vi.ui.uNoCard(have, max),
+        have: `${have}/${max}`,
+        cost: costHtml(state, U_NO.cost),
+        why,
+      };
     }
     // Công cụ dọn đường, đồ trang trí: chạm từng ô như khi trải.
-    const clear = `<button class="card" data-act="chooseClear">
-        <span class="icon">🧹</span>
-        <span class="name">${vi.ui.clearDecor}</span>
-        <span class="meta">${vi.ui.clearDecorDesc}</span>
-      </button>`;
+    const clear: BuildItem = { key: 'clear', act: 'chooseClear', thumb: null, icon: '🧹', name: vi.ui.clearDecor, meta: vi.ui.clearDecorDesc };
     // Ba nhóm thẻ chọn ở đầu bảng; mỗi lần chỉ hiện một nhóm cho khỏi cuộn dài trên điện thoại.
     const tabs = BUILD_GROUPS.map(
       ({ key }) =>
         `<button class="tab ${key === this.buildTab ? 'on' : ''}" data-act="buildTab" data-tab="${key}">${vi.ui.buildGroups[key]}</button>`,
     ).join('');
     const group = BUILD_GROUPS.find((g) => g.key === this.buildTab)!;
-    const cards = shownOf(group.types).map(card).join('');
+    const cards = shownOf(group.types).map(card);
     const note =
       group.key === 'duong'
         ? `<p class="muted">${vi.ui.roadCount(usedOf(state, 'duongDat'), limitOf(state, 'duongDat'))}. ${vi.ui.decorOnly}</p>`
         : group.key === 'trangTri'
           ? `<p class="muted">${vi.ui.decorOnly}</p>`
           : '';
-    const items = group.key === 'congTrinh' ? [mau, cards, uNo, raise] : group.key === 'trangTri' ? [cards, clear] : [cards];
-    return `<div class="build-tabs">${tabs}</div>${note}<div class="cards">${items.join('')}</div>`;
+    const items = group.key === 'congTrinh' ? [mau, ...cards, uNo, raise] : group.key === 'trangTri' ? [...cards, clear] : cards;
+    return { tabs: `<div class="build-tabs">${tabs}</div>`, note, items: items.filter((i): i is BuildItem => !!i) };
   }
 
   private buildingHtml(state: GameState, id: number): string {
