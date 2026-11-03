@@ -935,11 +935,13 @@ Chủ dự án đã chọn qua bốn câu hỏi: Thủy Tinh có cả hai phép 
   - công trình không có chỗ trong mẫu mà vướng thì tìm chỗ trống gần nhất;
   - không còn chỗ nào thì không áp được.
 - Giá áp mẫu bằng giá dựng phần thêm cộng 10% giá dựng mỗi công trình phải dời. Phải đủ tài nguyên mới áp được. Đang có giặc thì không áp được.
-- Bảng Mẫu kinh đô mở từ bảng Xây dựng. Mỗi mẫu có:
+- Mẫu kinh đô là thẻ thứ tư trong bảng Xây dựng, bày như công trình (chủ dự án yêu cầu tách khỏi thẻ Công trình): ảnh lớn là bản đồ thu nhỏ của mẫu đang chọn, dưới là lưới bốn bản đồ nhỏ để chọn (mẫu chưa mở thì xám, ghi chương mở). Mẫu đang chọn có:
   - bản đồ thu nhỏ của mẫu ở cấp Điện hiện tại, vẽ từ bìa đất tới sông; rừng chưa phát vẽ mờ ở mép;
   - số công trình sẽ dời, dựng thêm, dỡ đi;
   - tổng giá;
-  - nút Áp mẫu. Bấm hai lần mới áp, cho khỏi lỡ tay.
+  - nút Áp mẫu. Bấm hai lần mới áp, cho khỏi lỡ tay;
+  - lời tả mẫu, số khoảnh rừng chưa phát mà mẫu có chỗ trong đó.
+- Mở thẻ lần đầu thì chọn sẵn mẫu mới mở nhất. Lời giải thích cách áp mẫu nằm cuối thẻ.
 - Test (`sapxep.test.ts`) canh các việc sau:
   - ở mọi cấp Điện, mẫu nằm trọn trong vùng đã khai phá, không chồng nhau, không lấn sông, bến sát sông, lũy/đê/thành/bẫy/chòi không quá số tối đa;
   - ở mọi cấp Điện mẫu mở được, mỗi loại đủ đúng số tối đa;
@@ -954,9 +956,9 @@ Chủ dự án đã chọn qua bốn câu hỏi: Thủy Tinh có cả hai phép 
 
 Chủ dự án muốn thêm vật liệu trải đường (đất, đá...) và đồ trang trí (cây đa, giếng nước, ao làng, hoa, cỏ...) vào phần xây dựng. Các con số và luật dưới đây là tự chọn, chủ dự án có thể đổi.
 
-**Bảng Xây dựng** có ba thẻ chọn ở đầu bảng: Công trình, Đường đi, Trang trí. Mỗi lần chỉ hiện một nhóm, cho khỏi cuộn dài trên điện thoại; bảng nhớ thẻ đang xem.
+**Bảng Xây dựng** có bốn thẻ chọn ở đầu bảng: Công trình, Đường đi, Trang trí, Mẫu kinh đô (xem mục Mẫu kinh đô). Mỗi lần chỉ hiện một nhóm, cho khỏi cuộn dài trên điện thoại; bảng nhớ thẻ đang xem.
 
-Bảng Xây dựng bày theo kiểu trưng bày (chủ dự án chọn trong ba phương án thử, bỏ phần lật xem từng cấp): mỗi mục có ảnh vẽ từ chính mô hình công trình **cấp 1** thay cho icon. Trên là ảnh lớn của mục đang chọn, kèm tên, cỡ móng, số đã có, lời tả, giá và nút Xây (trải đường thì Trải đường, đồ trang trí thì Đặt); mục chưa xây được thì ghi lý do và nút mờ. Dưới là lưới ảnh nhỏ của cả nhóm, chạm để chọn; mục chưa xây được thì ảnh xám. Công cụ (Mẫu kinh đô, Đắp đất, Dọn trang trí) giữ icon. Bảng nhớ mục đang chọn để xây tiếp cùng loại.
+Bảng Xây dựng bày theo kiểu trưng bày (chủ dự án chọn trong ba phương án thử, bỏ phần lật xem từng cấp): mỗi mục có ảnh vẽ từ chính mô hình công trình **cấp 1** thay cho icon. Trên là ảnh lớn của mục đang chọn, kèm tên, cỡ móng, số đã có, lời tả, giá và nút Xây (trải đường thì Trải đường, đồ trang trí thì Đặt); mục chưa xây được thì ghi lý do và nút mờ. Dưới là lưới ảnh nhỏ của cả nhóm, chạm để chọn; mục chưa xây được thì ảnh xám. Công cụ (Đắp đất, Dọn trang trí) giữ icon. Bảng nhớ mục đang chọn để xây tiếp cùng loại. Ảnh vẽ sẵn từ trước và đưa kèm game (chủ dự án thấy vẽ lúc chơi hiện chậm quá), vào game là tải sẵn, mở bảng là có ảnh ngay.
 
 **Đường đi** (`ROAD_TYPES` ở `defs.ts`): móng 1×1, chạm từng ô để trải như lũy.
 
