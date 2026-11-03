@@ -593,6 +593,7 @@ const RECIPES: Record<MauId, Recipe> = {
     jobs: [
       ['ben', byDien],
       ['langChai', byDien],
+      ['benKhoi', byDien],
       ['doanhTrai', byFront],
       ['denPhuDong', byAxis],
       ['traiGiao', byBarracks],
@@ -614,6 +615,7 @@ const RECIPES: Record<MauId, Recipe> = {
     jobs: [
       ['ben', byDien],
       ['langChai', byDien],
+      ['benKhoi', byDien],
       ['doanhTrai', byBank],
       ['denPhuDong', byAxis],
       ['denTanVien', byAxis],
@@ -637,6 +639,7 @@ const RECIPES: Record<MauId, Recipe> = {
     jobs: [
       ['ben', byDien],
       ['langChai', byDien],
+      ['benKhoi', byDien],
       ['doanhTrai', inRings(0, row(1, byAxis))],
       ['denCoLoa', inRings(1, byAxis)],
       ['nhaSan', inRings(2, byDien)],
@@ -660,6 +663,7 @@ const RECIPES: Record<MauId, Recipe> = {
     jobs: [
       ['ben', byDien],
       ['langChai', byDien],
+      ['benKhoi', byDien],
       ['doanhTrai', inRings(0, row(1, byAxis))],
       ['denCoLoa', inRings(1, byAxis)],
       ['nhaSan', inRings(2, byDien)],

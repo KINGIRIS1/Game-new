@@ -7,7 +7,7 @@ import * as THREE from 'three';
 import { BUILDINGS, isBridge, type BuildingType } from '../game/defs';
 import { CONG_TRINH, lotModel } from './congTrinh/index';
 import { addSunLights } from './lights';
-import { CITADEL_TOP, buildCitadel, buildDikes, buildWalls, makeBoat, makeSailBoat, makeTradeBoat, makeUNo } from './models';
+import { CITADEL_TOP, SEA_BOAT_SCALE, buildCitadel, buildDikes, buildWalls, makeBoat, makeSailBoat, makeThuyenKhoi, makeTradeBoat, makeUNo } from './models';
 import { C } from './palette';
 import { ramp } from './toon';
 
@@ -93,6 +93,13 @@ export function thumbScene(kind: ThumbKind): THREE.Group {
       boat.position.set(d.x, WATER_Y - 0.02, d.z);
       boat.rotation.y = d.ry;
       if (d.scale) boat.scale.setScalar(d.scale);
+      g.add(boat);
+    }
+    if (kind === 'benKhoi') {
+      // Thuyền khơi neo dọc cầu tàu, như lúc chờ ra biển (`benDock`: cách mép móng một ô).
+      const boat = makeThuyenKhoi(level);
+      boat.position.set(0, WATER_Y - 0.02, def.d / 2 + 1);
+      boat.scale.setScalar(SEA_BOAT_SCALE);
       g.add(boat);
     }
   }

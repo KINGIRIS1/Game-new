@@ -6,7 +6,7 @@ import type { FighterKind } from '../game/battle';
 import { bakeBeast, isBeast } from './beasts';
 import { bakeThuyTinh, makeAnDuong, makeCaoLo, makeGiong, makeSonTinh } from './heroes';
 import { bakeMonster, isMonster } from './monsters';
-import { makeRower } from './people';
+import { makeRower, makeWorker } from './people';
 import { C } from './palette';
 import { ShapeBuilder, batchTemplates, instanceTemplates, seeded, type Placement } from './shapes';
 import { bakeSoldier, isSoldier } from './soldier';
@@ -174,6 +174,19 @@ export function makeSailBoat(): THREE.Object3D {
 
 /** Thuyền Lạc Việt như trên trống đồng Đông Sơn: thân độc mộc be ván uốn thon 2 đầu, mũi chạm Đầu Chim Lạc bằng đồng, đuôi vây cá, mui vòm cói nan tre & người lái đò. */
 export function makeBoat(): THREE.Object3D {
+  const g = boatHull();
+  const rower = makeRower();
+  rower.scale.setScalar(0.75);
+  rower.position.set(-0.55, 0.12, 0);
+  rower.rotation.y = Math.PI / 2;
+  g.add(rower);
+  // Người lái đò chèo khi thuyền đi (world.ts gọi).
+  g.userData.pose = rower.userData.pose;
+  return g;
+}
+
+/** Thân thuyền Lạc Việt (không người lái): dùng chung cho thuyền con và thuyền khơi phóng to. */
+function boatHull(): THREE.Group {
   const m = new ToonModel();
   const p = m.plain;
 
@@ -240,14 +253,120 @@ export function makeBoat(): THREE.Object3D {
   p.sphere(0.065, C.thatchDark, 0.33, 0.15, -0.06, [1, 1.15, 1], 7);
   p.cyl(0.038, 0.045, 0.03, C.bamboo, 0.33, 0.22, -0.06, undefined, 6);
   p.sphere(0.055, 0xa85834, 0.36, 0.14, 0.07, [1, 1.2, 1], 7);
+  return m.group();
+}
 
-  const g = m.group();
+/**
+ * Buồm cánh dơi của thuyền đi biển: mặt buồm nâu hẹp ở chân, xòe rộng lên đỉnh, mép trên lượn như cánh dơi, nan tre
+ * tỏa từ chân buồm. Vẽ trong mặt phẳng dọc thuyền (u theo +x, v lên trên) quanh cột buồm ở (x, y0), xoay `yaw` đón gió.
+ */
+function batWingSail(m: ToonModel, x: number, y0: number, h: number, w: number, yaw: number, color: number): void {
+  const outline: [number, number][] = [
+    [-0.32, 0],
+    [0.22, 0],
+    [0.34, 0.62],
+    [0.18, 1.0],
+    [-0.2, 1.06],
+    [-0.55, 0.98],
+    [-0.82, 0.8],
+    [-0.62, 0.42],
+  ];
+  const shape = new THREE.Shape(outline.map(([u, v]) => new THREE.Vector2(u * w, v * h)));
+  const sail = new THREE.ExtrudeGeometry(shape, { depth: 0.025, bevelEnabled: false });
+  sail.translate(0, 0, -0.0125);
+  m.band.add(sail, color, x, y0, 0, [0, yaw, 0]);
+  // Nan tre tỏa từ chân buồm tới mép trên, cán buồm dưới và trên.
+  const foot = new THREE.Vector2(-0.05 * w, 0.02 * h);
+  for (const [u, v] of outline.slice(2, 7)) {
+    const tip = new THREE.Vector2(u * w, v * h);
+    const len = tip.distanceTo(foot);
+    const bar = new THREE.BoxGeometry(len, 0.022, 0.04);
+    bar.rotateZ(Math.atan2(tip.y - foot.y, tip.x - foot.x));
+    bar.translate((foot.x + tip.x) / 2, (foot.y + tip.y) / 2, 0);
+    m.plain.add(bar, C.bamboo, x, y0, 0, [0, yaw, 0]);
+  }
+  const boom = new THREE.BoxGeometry(0.56 * w, 0.035, 0.05);
+  boom.translate(-0.05 * w, 0, 0);
+  m.plain.add(boom, C.woodDark, x, y0, 0, [0, yaw, 0]);
+}
+
+/** Thuyền khơi đặt ở cỡ này trong cảnh (dài chừng 3,1 ô), vừa neo trước bến 3×3. */
+export const SEA_BOAT_SCALE = 0.92;
+
+/**
+ * Thuyền khơi (bến thuyền khơi): thuyền đánh cá lớn đi biển. Thân thuyền trống đồng phóng to, mắt thuyền vẽ hai bên
+ * mũi, buồm cánh dơi nâu có nan tre xòe: hai cột buồm ở cấp 1, 2, ba cột ở cấp 3. Lưới vây chất ở đuôi, thúng cá giữa
+ * sàn; cấp 2 thêm cờ đỏ đuôi thuyền, cấp 3 buồm viền son và trống đồng nhỏ ở mũi. Người lái chèo lái ở đuôi
+ * (`userData.pose`), hai ngư dân đứng trên sàn. Mũi hướng +x như mọi thuyền, dài chừng 3,4 ô.
+ */
+export function makeThuyenKhoi(level: number): THREE.Group {
+  const g = new THREE.Group();
+  const hull = boatHull();
+  hull.scale.set(1.6, 1.35, 1.6);
+  g.add(hull);
+  const m = new ToonModel(inkThin);
+  const p = m.plain;
+  const deck = 0.22;
+  // Mắt thuyền hai bên mũi: lòng trắng, con ngươi đen, viền son.
+  for (const sz of [-1, 1]) {
+    p.sphere(0.075, C.cream, 1.12, 0.2, sz * 0.305, [1.45, 0.95, 0.25], 8);
+    p.sphere(0.04, C.ink, 1.15, 0.205, sz * 0.318, [1.2, 1, 0.25], 6);
+    p.box(0.3, 0.025, 0.02, C.red, 1.08, 0.12, sz * 0.31, [sz * 0.1, 0, 0]);
+  }
+  // Cột buồm, buồm cánh dơi.
+  const masts: [number, number, number][] =
+    level >= 3
+      ? [
+          [0.72, 1.45, 0.62],
+          [0.0, 1.95, 0.85],
+          [-0.82, 1.2, 0.52],
+        ]
+      : [
+          [0.55, 1.5, 0.66],
+          [-0.2, 1.9, 0.85],
+        ];
+  const sailColor = C.sailBrown;
+  for (const [mx, h, w] of masts) {
+    p.cyl(0.07, 0.085, 0.1, C.bronze, mx, deck + 0.02, 0, undefined, 8);
+    p.cyl(0.03, 0.045, h + 0.2, C.woodDark, mx, deck + (h + 0.2) / 2, 0, undefined, 7);
+    batWingSail(m, mx, deck + 0.28, h - 0.3, w, 0.3, sailColor);
+    if (level >= 3) p.box(0.05, h - 0.3, 0.035, C.red, mx + 0.34 * w * Math.cos(0.3), deck + 0.28 + (h - 0.3) * 0.35, -0.34 * w * Math.sin(0.3), [0, 0.3, -0.18]);
+  }
+  // Cờ đuôi nheo trên đỉnh cột buồm cái.
+  const main = masts.reduce((a, b) => (b[1] > a[1] ? b : a));
+  m.band.box(0.32, 0.1, 0.02, C.red, main[0] - 0.17, deck + main[1] + 0.12, 0, [0, 0, 0.06]);
+  p.cone(0.04, 0.1, C.gold, main[0], deck + main[1] + 0.24, 0, undefined, 6);
+  // Lưới vây chất đống ở đuôi, phao gỗ; thúng cá giữa sàn.
+  p.sphere(0.24, 0x7a6448, -1.12, deck + 0.05, 0, [1.3, 0.55, 1.05], 9);
+  for (let i = 0; i < 5; i++) p.sphere(0.03, 0xe8dcb8, -1.3 + i * 0.09, deck + 0.17, -0.12 + (i % 2) * 0.24, [1.3, 0.8, 0.8], 5);
+  for (const [fx, fz] of [[0.35, -0.16], [0.42, 0.15], [-0.62, 0.17]] as const) {
+    p.cyl(0.09, 0.07, 0.1, C.thatch, fx, deck + 0.05, fz, undefined, 8);
+    p.sphere(0.035, C.fish, fx, deck + 0.11, fz, [1.6, 0.4, 0.6], 5);
+  }
+  if (level >= 2) {
+    // Cột cờ đuôi thuyền, cờ đỏ.
+    p.cyl(0.015, 0.02, 0.9, C.woodDark, -1.45, deck + 0.45, 0, undefined, 5);
+    m.band.box(0.3, 0.22, 0.02, C.red, -1.31, deck + 0.78, 0);
+  }
+  if (level >= 3) {
+    // Trống đồng nhỏ trên mũi: đánh hiệu khi thuyền về bến.
+    m.drum.cyl(0.11, 0.11, 0.08, C.bronze, 1.25, deck + 0.18, 0, undefined, 12);
+    p.cyl(0.12, 0.1, 0.06, C.bronzeDark, 1.25, deck + 0.11, 0, undefined, 12);
+  }
+  g.add(m.group());
+  // Người lái chèo lái ở đuôi, hai ngư dân đứng trên sàn.
   const rower = makeRower();
   rower.scale.setScalar(0.75);
-  rower.position.set(-0.55, 0.12, 0);
+  rower.position.set(-1.38, deck - 0.08, 0.05);
   rower.rotation.y = Math.PI / 2;
   g.add(rower);
-  // Người lái đò chèo khi thuyền đi (world.ts gọi).
+  for (const [x, z, ry] of [[0.95, 0.08, Math.PI / 2], [-0.55, -0.14, -Math.PI / 3]] as const) {
+    const man = makeWorker('nguDan');
+    man.scale.setScalar(0.75);
+    man.position.set(x, deck - 0.06, z);
+    man.rotation.y = ry;
+    g.add(man);
+  }
   g.userData.pose = rower.userData.pose;
   return g;
 }

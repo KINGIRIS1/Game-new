@@ -14,6 +14,7 @@ import { bake, datBonus, initialTet, troiBonus, updateTet, type TetState } from 
 import { footprintTop, groundOf, levelFootprint, tileHeight } from './terrain';
 import {
   BUILDINGS,
+  CA_BIEN_PER_MIN,
   CA_PER_MIN,
   CH3_QUEST_START,
   CH4_QUEST_START,
@@ -555,16 +556,20 @@ export function foodPerMinute(state: GameState): number {
   return total;
 }
 
-/** Cá một làng chài đánh được mỗi phút, tỉ lệ theo số người làm; làng hư thì không. */
+/**
+ * Cá một làng chài (hay cá biển một bến thuyền khơi) đánh được mỗi phút, tỉ lệ theo số người làm; công trình hư thì
+ * không.
+ */
 export function fishOf(b: Building): number {
-  if (b.type !== 'langChai' || b.damaged) return 0;
+  const table = b.type === 'langChai' ? CA_PER_MIN : b.type === 'benKhoi' ? CA_BIEN_PER_MIN : null;
+  if (!table || b.damaged) return 0;
   const slots = slotsOf(b);
-  return (CA_PER_MIN[b.level - 1] ?? 0) * (slots ? Math.min(b.workers, slots) / slots : 1);
+  return (table[b.level - 1] ?? 0) * (slots ? Math.min(b.workers, slots) / slots : 1);
 }
 
 /**
- * Cá cả kinh đô mỗi phút: mọi làng chài (làng chài bên kia sông mà cầu hư thì không ai sang đánh cá), cộng phần của
- * Đền Phù Đổng và phúc lành Đất như mọi sản lượng.
+ * Cá cả kinh đô mỗi phút: mọi làng chài, bến thuyền khơi (bên kia sông mà cầu hư thì không ai sang đánh cá), cộng
+ * phần của Đền Phù Đổng và phúc lành Đất như mọi sản lượng.
  */
 export function fishPerMinute(state: GameState): number {
   const fish = state.buildings.reduce((sum, b) => sum + (cutOff(state, b) ? 0 : fishOf(b)), 0);
@@ -1189,7 +1194,7 @@ export function setWorkers(state: GameState, id: number, n: number): Result<Buil
 }
 
 /** Thứ tự ưu tiên khi tự phân công: có gạo ăn trước, rồi tới tiền, đất đá, sắt. */
-const ASSIGN_ORDER: BuildingType[] = ['ruong', 'ben', 'baiDa', 'loRen', 'xuongMoc', 'langChai'];
+const ASSIGN_ORDER: BuildingType[] = ['ruong', 'ben', 'baiDa', 'loRen', 'xuongMoc', 'langChai', 'benKhoi'];
 
 /** Chia đều dân rảnh vào các chỗ còn trống, mỗi vòng một người cho mỗi công trình. */
 export function autoAssign(state: GameState): number {

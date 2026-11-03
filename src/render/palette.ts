@@ -76,4 +76,17 @@ export const C = {
   night: 0x3a4466,
   nightLand: 0x5e5a70,
   ditchWater: 0x356f7a,
+  // Biển Đông: nước biển ba sắc (như bãi biển Mộ Dạ), bãi cát, rạn san hô, vỏ ốc biển, cá voi, cá heo.
+  seaMid: 0x3a88a8,
+  seaShallow: 0x74bcc0,
+  beach: 0xd0bc88,
+  beachWet: 0xa89468,
+  reef: 0x8fd3c6,
+  shell: 0xf2e2cc,
+  shellPink: 0xe8b4a0,
+  whale: 0x60778c,
+  whaleBelly: 0xd4dcdf,
+  dolphin: 0x7d97aa,
+  dolphinBelly: 0xe6ece8,
+  sailBrown: 0xa8603a,
 } as const;

@@ -507,6 +507,32 @@ L L , , V V
   - thuyền đánh cá bơi chậm một vòng quanh chỗ neo trước bờ ván, người lái đò chèo (không đứng quăng chài trên thuyền);
   - thuyền lưới lớn có buồm (cấp 8) dùng dáng thuyền buôn thu nhỏ.
 
+### Bến thuyền khơi: 3×3
+
+Đi kèm mục **Kế hoạch: biển Đông, bến thuyền khơi** trong `docs/thiet-ke.md`. Mặt trước quay ra sông như bến, làng chài. Kho hải sản góc sau bên trái, giàn phơi lưới vây bên trái, đụn vỏ ốc bên phải; lối giữa ra cầu tàu dọc mép nước, cầu ván chìa ra chỗ thuyền khơi neo. Ba cấp mở theo Điện 8, 9, 10 nên mái theo cấp Điện ấy.
+
+```
+K K K . Q Q
+K K K . Q Q
+L L , , O O
+L L , , O O
+D D , , M T
+= = = = = =
+```
+
+- `K` cấp 1, kho hải sản: nhà sàn cao mái theo cấp, cá khô xâu treo dưới sàn, thang tre, thúng cá chân cột.
+- `L` cấp 1, giàn phơi lưới vây: hai cột cao, tấm lưới buông có hàng phao, cuộn chão (cấp 2: tấm lưới thứ hai có chì đá).
+- `O` cấp 1, đụn vỏ ốc biển kem, hồng trong nong lớn (cấp 2: thúng ốc; cấp 3: đụn thứ hai cao hơn).
+- `,` cấp 1, lối đất ra cầu tàu.
+- `M` cấp 1, chum mắm cá biển.
+- `T` cấp 1, tời gỗ kéo thuyền, chão chạy ra mép nước.
+- `=` cấp 1, cầu tàu ván trên cọc dọc mép sông; cầu ván chìa ra sông tới mạn thuyền khơi, cột neo bọc đồng; cờ đuôi nheo ở đầu cầu (chàm ở cấp 1, đỏ từ cấp 2).
+- `D` cấp 1, đá neo thuyền và thúng cá; cấp 2: chòi lửa hiệu bốn chân tre, chậu đồng có lửa.
+- `Q` cấp 1, 2: cột buồm dự phòng gác trên mễ, cuộn chão; cấp 3: miếu thờ cá Ông, nền đá, vòm xương sườn cá voi trước cửa, bát hương đồng.
+- Thuyền khơi không thuộc mô hình móng: neo dọc cầu tàu, cách mép móng một ô (`benDock` ở `game/bien.ts`), rồi ra biển (World dựng, `makeThuyenKhoi`).
+- Năm người làm: ngư dân vá lưới trước giàn `L`, người gánh cá đi dọc cầu tàu, người giữ kho trước `K`, ngư dân ở đầu cầu ván, người nhặt ốc bên `O`.
+- Đã vẽ (`src/render/congTrinh/benKhoi.ts`).
+
 ## Cấp 9, 10 (chủ dự án đã duyệt, đã vẽ)
 
 Móng đã kín ở cấp 8, nên cấp 9, 10 không thêm ô con mới: mỗi loại đổi một phần sẵn có, đứng trong khối chữ của phần ấy. Mái theo cấp ghi ở mục Phong cách trong `docs/thiet-ke.md` (cấp 9 dải đồng hoa văn dưới diềm, cấp 10 chim Lạc hai đầu nóc).

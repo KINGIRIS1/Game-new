@@ -5,6 +5,7 @@ import type { AdvLook } from '../game/coLoa';
 import type { BuildingType, CayDaKind, ChallengeKind, Chapter, EnemyType, GearId, GiftId, ResourceId, Row, SkillId, TuongId, UnitType } from '../game/defs';
 import type { FailReason, StoryId } from '../game/game';
 import type { Bank, Dat, Nghe, Tier } from '../game/benKia';
+import type { QuanDaoId } from '../game/bien';
 import type { GiongLook } from '../game/giong';
 import type { SonLook } from '../game/son';
 import type { Resolution } from '../render/world';
@@ -259,6 +260,11 @@ export const vi = {
       name: 'Đồn biên',
       icon: '🛡️',
       desc: 'Đồn giữ bờ bên kia sông: rào cọc, chòi canh, lán lính. Mỗi bờ một đồn. Chọn số lính đóng ở đồn: khi giữ kinh đô, lính đóng ra trận từ đồn, tới chỗ giặc bên kia sông sớm hơn hẳn. Lính đóng lấy từ lính giữ kinh đô, không thêm chỗ quân.',
+    },
+    benKhoi: {
+      name: 'Bến thuyền khơi',
+      icon: '⛵',
+      desc: 'Đóng thuyền đánh cá lớn có buồm, xuôi sông ra biển Đông đánh cá quanh quần đảo Hoàng Sa, Trường Sa. Thuyền về mang cá biển cho dân và lính ăn thay gạo, cùng vỏ ốc biển làm tiền. Phải dựng sát bờ sông. Cần người làm.',
     },
   } satisfies Record<BuildingType, { name: string; icon: string; desc: string }>,
 
@@ -869,6 +875,27 @@ export const vi = {
     cua: { name: 'Của chôn', icon: '🏺', desc: 'Trống đồng, rìu đồng chôn dưới đất. Đất này về tay ta thì đào được.' },
   },
 
+  /** Biển Đông phía đông kinh đô, hai quần đảo ngoài khơi (`game/bien.ts`). */
+  bien: {
+    quanDao: {
+      hoangSa: {
+        name: 'Quần đảo Hoàng Sa',
+        desc: 'Những đảo cát trắng, rạn san hô giữa biển Đông, phía bắc. Nước trong, cá chuồn, cá ngừ nhiều; chim biển làm tổ trên đảo.',
+      },
+      truongSa: {
+        name: 'Quần đảo Trường Sa',
+        desc: 'Nhiều đảo nhỏ, bãi cạn rải rộng giữa biển Đông, phía nam, xa bờ hơn Hoàng Sa. Rạn san hô nhiều ốc, nhiều cá.',
+      },
+    } satisfies Record<QuanDaoId, { name: string; desc: string }>,
+    icon: '🏝️',
+    daoCount: 'Số đảo',
+    boats: 'Thuyền khơi đánh cá ở đây',
+    noBoats: 'Chưa có thuyền khơi nào ra đây. Dựng bến thuyền khơi (Điện 8) ven sông.',
+    noBoatsYet: 'Biển mở từ Điện cấp 8: dựng bến thuyền khơi để thuyền lớn ra khơi.',
+    garrisonLater: 'Mai sau, Điện cấp 10 sẽ điều quân ra đóng giữ đảo.',
+    seeIsland: 'Ra xem đảo',
+  },
+
   /** Màn hình vào game: hiện mỗi lần mở game, trên cảnh kinh đô trôi chậm phía sau. */
   manVao: {
     titleSmall: 'Thời đại',
@@ -980,6 +1007,8 @@ export const vi = {
         '📜 Lạc hầu: Tâu bệ hạ, nay đã dựng được xưởng mộc. Thợ mộc xẻ gỗ để mai sau đóng thuyền, dựng cổng thành; gỗ thừa thì đổi với thuyền buôn.',
       langChai:
         '📜 Lạc hầu: Tâu bệ hạ, dân ven sông xin lập làng chài. Đóng thuyền bằng gỗ của xưởng mộc, dân và lính có cá ăn thì bớt được gạo.',
+      benKhoi:
+        '📜 Lạc hầu: Tâu bệ hạ, sông Đà chảy ra biển Đông; ngoài khơi có quần đảo Hoàng Sa, Trường Sa, cá nhiều, ốc lắm. Xin dựng bến thuyền khơi bên sông, đóng thuyền lớn bằng gỗ xưởng mộc mà ra biển.',
       congThanh:
         '📜 Lạc hầu: Tâu bệ hạ, thành Cổ Loa nên có cổng. Giặc thấy cổng dễ qua sẽ dồn cả về đó: xin dựng cổng giữa vòng tường, bày chòi canh, bẫy chông quanh cổng mà đón đánh.',
     } as Partial<Record<BuildingType, string>>,
@@ -994,6 +1023,10 @@ export const vi = {
     foodAll: 'Dân và lính ăn',
     fishSaved: 'Gạo cá đỡ được',
     fishEnough: 'Cá đã đủ cho cả kinh đô ăn: dựng hay nâng thêm làng chài chưa có ích, trừ khi thêm dân, thêm lính.',
+    /** Bảng bến thuyền khơi. */
+    seaFishHere: 'Cá biển bến này',
+    seaFishEnough: 'Cá đã đủ cho cả kinh đô ăn: cá biển thừa bỏ phí, nhưng vỏ ốc thuyền mang về vẫn vào kho.',
+    seaGround: 'Thuyền ra đánh cá',
     storage: 'Sức chứa kho',
     wallEarth: 'Thành đất',
     workers: 'Người làm',

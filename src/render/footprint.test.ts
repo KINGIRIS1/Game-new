@@ -10,7 +10,7 @@ const ctx = new Proxy({}, { get: (_t, k) => (k === 'canvas' ? {} : () => ({ addC
 vi.stubGlobal('document', { createElement: () => ({ width: 0, height: 0, getContext: () => ctx }) });
 
 /** Số ô mô hình được tràn ra ngoài móng mỗi phía. Bến có cầu tàu chìa xuống sông; chòi canh, lầu nỏ có mái chìa; cây đa cổ thụ tán xòe rộng. */
-const ALLOW: Record<string, number> = { ben: Infinity, langChai: Infinity, choiCanh: 0.8, lauNo: 0.8, cayDa: 0.95 };
+const ALLOW: Record<string, number> = { ben: Infinity, langChai: Infinity, benKhoi: Infinity, choiCanh: 0.8, lauNo: 0.8, cayDa: 0.95 };
 
 describe('mô hình vừa móng kinh đô lớn', () => {
   it('mọi loại, mọi cấp: không tràn quá nửa ô ra ngoài móng (trừ cầu tàu bến, vó và đáy làng chài, mái chòi canh)', async () => {
@@ -53,16 +53,23 @@ describe('mô hình vừa móng kinh đô lớn', () => {
     }
   });
 
-  it('bến, làng chài mọi cấp: cầu tàu, vó, đáy và thuyền nằm gọn trong sông, chừa luồng thuyền qua lại sát bờ bên kia', async () => {
+  it('bến, làng chài, bến thuyền khơi mọi cấp: cầu tàu, vó, đáy và thuyền nằm gọn trong sông, chừa luồng thuyền qua lại sát bờ bên kia', async () => {
     const { BUILDINGS } = await import('../game/defs');
     const { RIVER_END, RIVER_START } = await import('../game/map');
-    const { makeBoat, makeSailBoat, makeTradeBoat } = await import('./models');
+    const { SEA_BOAT_SCALE, makeBoat, makeSailBoat, makeThuyenKhoi, makeTradeBoat } = await import('./models');
     const { CONG_TRINH, lotModel } = await import('./congTrinh/index');
-    for (const type of ['ben', 'langChai'] as const) {
+    for (const type of ['ben', 'langChai', 'benKhoi'] as const) {
       const def = BUILDINGS[type];
       for (let level = 1; level <= def.maxLevel; level++) {
         const g = lotModel(type, level);
-        for (const d of CONG_TRINH[type]!.docks!(level)) {
+        if (type === 'benKhoi') {
+          // Thuyền khơi neo dọc cầu tàu, cách mép móng một ô (`benDock`).
+          const boat = makeThuyenKhoi(level);
+          boat.position.set(0, 0, def.d / 2 + 1);
+          boat.scale.setScalar(SEA_BOAT_SCALE);
+          g.add(boat);
+        }
+        for (const d of CONG_TRINH[type]!.docks?.(level) ?? []) {
           const boat = d.kind === 'trader' ? makeTradeBoat(d.big) : d.big ? makeSailBoat() : makeBoat();
           // Thuyền đánh cá bơi vòng quanh chỗ neo: xa bờ nhất khi ở đỉnh vòng, mũi xuôi theo bờ.
           const fishing = d.kind === 'fishing';
