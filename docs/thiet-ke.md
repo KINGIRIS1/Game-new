@@ -79,7 +79,7 @@ Tài liệu này ghi lại các quyết định đã chốt với chủ dự án
 
 ## Bản đồ
 
-- Lưới **76×76 ô** (từ bản lưu phiên bản 18; phiên bản 11–17 là 55×55, xem mục Kế hoạch: kinh đô lớn và Kế hoạch: vùng đất bên kia sông). Hai nhánh sông rộng 7 ô (ô 52–58) bao kinh đô ở phía nam và phía đông, gợi ngã ba Bạch Hạc: sông Thao phía đông chảy từ bắc xuống, đổ vào sông Đà ở góc đông nam; sông Đà chảy suốt về phía đông. Sông rộng 7 ô để bến chợ cấp 8 cùng hai thuyền buôn neo gọn giữa dòng, còn luồng cho thuyền qua lại sát bờ bên kia (trước bản lưu 18, sông trong lưới chỉ rộng 3 ô, nước vẽ lùi bờ bên kia ra ngoài lưới). Bên kia sông là bờ đông sông Thao và bờ nam sông Đà (từ ô 59, chưa khai phá). Hai cạnh bắc và tây là rừng; hai ô ngoài cùng luôn là rừng, chỗ giặc trên bộ xuất phát.
+- Lưới **76×76 ô** (từ bản lưu phiên bản 18; phiên bản 11–17 là 55×55, xem mục Kế hoạch: kinh đô lớn và Kế hoạch: vùng đất bên kia sông). Hai nhánh sông rộng 7 ô (ô 52–58) bao kinh đô ở phía nam và phía đông, gợi ngã ba Bạch Hạc: sông Thao phía đông chảy từ bắc xuống, đổ vào sông Đà ở góc đông nam; sông Đà chảy suốt về phía đông. Sông rộng 7 ô để bến chợ cấp 8 cùng hai thuyền buôn neo gọn giữa dòng, còn luồng cho thuyền qua lại sát bờ bên kia (trước bản lưu 18, sông trong lưới chỉ rộng 3 ô, nước vẽ lùi bờ bên kia ra ngoài lưới). Bên kia sông là bờ đông sông Thao và bờ nam sông Đà (từ ô 59, chưa khai phá). Hai cạnh bắc và tây là rừng; hai ô ngoài cùng luôn là rừng, chỗ giặc trên bộ xuất phát. Phía đông nam là biển Đông: bờ biển chạy chéo như bờ biển Bắc Bộ, góc đông nam sau ngã ba là cửa biển (xem mục Kế hoạch: biển Đông, bến thuyền khơi).
 - Điện Vua Hùng (móng 5×5) ở ô (37, 37). Đất giữa dải rừng ngoài cùng và sông chia thành **10×10 khoảnh 5×5**. Lúc đầu mở sẵn 16 khoảnh ở góc sông (vùng **20×20**); muốn thêm đất thì **phát rừng** từng khoảnh, người chơi tự chọn, phát bao nhiêu tùy ý, giá tăng từng nấc (xem mục Khoảnh đất).
 - Công trình nhiều ô: mười bốn loại (Điện, ruộng, bến, nhà sàn, bãi đất đá, lò rèn, kho, doanh trại, trại giáo, trại cung, chuồng voi, vườn đậu lá dong, chuồng lợn, bếp gói bánh) vẽ lại trên trọn móng, có sân, lối, rào theo bản vẽ (xem mục Vẽ lại công trình trên móng). Xưởng mộc, làng chài là công trình mới, vẽ thẳng trên móng theo bản vẽ. Các loại còn lại (bốn đền, ruộng nếp) vẫn là mô hình móng cũ phóng theo móng mới, chừa viền cỏ chừng 12% móng.
 - Ô đất có **độ cao theo bậc** ngay từ đầu game (xem mục Độ cao ô đất ở chương 2). Chương 1 chỉ để nhìn; từ chương 2 độ cao quyết định ô nào ngập lũ.
@@ -1179,7 +1179,7 @@ Giá cấp 8 khoảng gấp 2 cấp 7, sản lượng tăng khoảng 30% (cấp 
   - từ đoạn 3 trở đi, kể cả sau Hết truyện: **ba đợt thay phiên**, thủy binh → quân Triệu trên bộ → lũ;
   - vẫn 15 phút một đợt, trinh sát báo trước 60 giây. Nút "Nghênh chiến ngay" gọi đợt kế tiếp.
 - **Thủy binh** đợt thứ n: `9 + n` lính thủy (tối đa 18), `5 + n` cung thuyền (tối đa 12), `2 + ⌊(n + 1)/2⌋` lính rìu (tối đa 7), máu ×(2,0 + 0,12 × (n − 1)).
-- **Thuyền**: mỗi thuyền chở 6 lính. Thuyền hiện ở mép sông phía nam hoặc phía đông, chèo vào bờ gần nhất, thả lính lên đất. Trinh sát báo hướng kèm dải đỏ trên mặt sông.
+- **Thuyền**: mỗi thuyền chở 6 lính. Thuyền hiện ở mép sông phía nam hoặc phía đông, chèo vào bờ gần nhất, thả lính lên đất. Trinh sát báo hướng kèm dải đỏ trên mặt sông. Từ khi có biển Đông, trong lúc báo đoàn thuyền từ khơi vào cửa biển, ngược sông tới đúng chỗ ấy (xem Kế hoạch: biển Đông, bến thuyền khơi); trận không đổi.
   - Số cuối cùng (`BOAT`): thuyền hiện sát bờ bên kia, chèo 0,6 ô mỗi giây, các thuyền dàn đều dọc bờ, rời đi lệch nhau chừng 1,2 giây; lính xếp xen kẽ các loại để thuyền nào cũng đủ lính thủy, cung thuyền, lính rìu. Đợt 1 có 19 lính trên 4 thuyền.
   - Lính còn trên thuyền chưa bị bắn, chưa đánh, nhưng vẫn tính là giặc còn lại.
   - Lính lên bờ rồi tìm đường như giặc trên bộ: không lội sông, phải phá hay đi vòng đê, thành, lũy. Chúng nhắm kho rồi Điện như quân Triệu.
@@ -2002,26 +2002,43 @@ Chủ dự án yêu cầu một công trình lớn tên Hồ Kim Quy, nơi thầ
 Chủ dự án yêu cầu: "Thêm biển, thuyền đánh cá cỡ lớn lên lv 8 mở", rồi dặn thêm: đặt biển ở **phía Đông**; có hai quần đảo **Hoàng Sa, Trường Sa**; sau này sẽ có cơ chế **điều quân ra đóng ở đảo ở Điện 10**; ngoài biển **lâu lâu có cá voi, cá heo bơi lội, nhảy lên**.
 
 **Đã chốt** (chủ dự án chọn cả ba phương án khuyên dùng):
-1. **Biển ngoài lưới, sau bờ đông**: sông Đà đổ ra cửa biển ngay sau mép đông của lưới. Biển, bãi cát và hai quần đảo vẽ ngoài lưới; lưới kinh đô giữ 76×76, không nâng bản lưu. Phương án bỏ: nới lưới sang đông (biển thật trong lưới, chạm mọi phần), bản đồ Biển Đông riêng (không thấy từ kinh đô).
+1. **Biển ngoài lưới, sau bờ đông**: sông Đà đổ ra cửa biển ngay sau mép đông của lưới. Biển, bãi cát và hai quần đảo vẽ ngoài lưới; lưới kinh đô giữ 76×76, không nâng bản lưu. (Sau đổi: bờ biển chéo ở đông nam, cửa biển ở góc đông nam trong lưới; xem Bố trí lại bản đồ.) Phương án bỏ: nới lưới sang đông (biển thật trong lưới, chạm mọi phần), bản đồ Biển Đông riêng (không thấy từ kinh đô).
 2. **Thuyền đánh cá cỡ lớn là công trình mới**: **bến thuyền khơi**, dựng sát sông như bến, làng chài, mở ở Điện 8. Phương án bỏ: làng chài từ cấp 8 có thuyền ra biển (không có công trình riêng).
 3. **Thuyền mang về cá biển và vỏ ốc**, đều mỗi phút như mọi công trình. Cá đỡ gạo ăn như cá làng chài; vỏ ốc vào kho (vỏ ốc tiền thời Văn Lang vốn là ốc biển). Lý do: sổ kinh tế cho thấy từ chương 2 cá làng chài đã đỡ hết gạo ăn của người chơi mô phỏng, thêm cá thuần thì gần như vô ích. Phương án bỏ: chuyến khơi theo đợt mang một mẻ lớn; chỉ cá.
 
-### Bản đồ
+### Bố trí lại bản đồ (chủ dự án chọn phương án C, đã làm)
+
+Bản đầu đặt biển thẳng dọc mép đông, sau bờ đông sông Thao và một dải rừng 5 ô; Hoàng Sa ở đông bắc kinh đô. Chủ dự án yêu cầu "lập phương án bố trí lại map cho phù hợp vì vừa thêm phần biển". Bản dùng thử (bản đồ vẽ từ trên xuống, lật qua bốn bố cục, có số đo; giữ ở commit "Prototype bố trí bản đồ khi có biển Đông" của nhánh PR) so:
+
+| Bố cục | Ý chính | Biển cách ngã ba | Hướng Hoàng Sa, Trường Sa (ngoài đời 128°, 144°) | Đổi luật | Việc |
+|---|---|---|---|---|---|
+| Gốc | biển sau bờ đông, bờ thẳng bắc–nam | 24 ô | 72°, 116° | không | không |
+| B · Sát bờ đông | kéo biển vào sát lưng bờ đông, cửa sông có cồn | 20 ô | 92°, 128° | không | nhỏ |
+| **C · Cửa biển đông nam** (chọn) | bờ chéo như Bắc Bộ, góc đông nam sau ngã ba thành cửa biển | 12 ô | 122°, 149° | không | vừa |
+| D · Miền duyên hải | hàng khoảnh sát rừng của bờ đông thành bãi biển dựng được bến, giặc đổ bộ từ biển | 13 ô | 102°, 133° | có | lớn |
+
+Chủ dự án chọn **C**, rồi trả lời ba câu hỏi kèm theo: hai quần đảo đặt **theo hướng ngoài đời**; thuyền giặc Triệu **vào từ biển**; biển **thấy từ Điện 1 nhưng mây che mờ** (xem hai mục dưới).
 
 ```
-             x … 73   74–75   76–78        79–81      82 …
-  z 2–51     BỜ ĐÔNG  rừng    rừng mỏng   bãi cát    BIỂN (Hoàng Sa ngoài khơi phía bắc)
-  z 52–58    ──────── sông Đà ───────────────────────► cửa biển
-  z 59 …     BỜ NAM / rừng góc đông nam    bãi cát    BIỂN (Trường Sa ngoài khơi phía nam)
+                 x 52–58     59 … 73     74–75   76 …
+  z 2–51        sông Thao   BỜ ĐÔNG     rừng    đất liền ngoài lưới ╲ bãi cát ╲ BIỂN
+  z 52–58       ───────── sông Đà ─────────► cửa biển (chừng x 72–79)
+  z 59 … 75     BỜ NAM … │ góc đông nam: đất thấp dần, bãi cát, biển
+                                        ╲  Hoàng Sa (108, 82)
+                                          ╲      Trường Sa (102, 142)
 ```
 
-- Code: `src/game/bien.ts`. Bãi cát từ cột `BIEN_BO` (79), biển từ cột `BIEN_TU` (82) trở ra (`isSea`); sông Đà chảy liền ra cửa biển (`CUA_BIEN`, giữa dòng). Mặt nước thuyền đi được: sông trong lưới, sông Đà ngoài lưới, biển ngoài các đảo (`isWater`).
-- **Hai quần đảo** cố định ở mọi máy (`QUAN_DAO`), mỗi quần đảo có một **đảo chính 20 × 20 ô** (chủ dự án yêu cầu sau khi xem bản đầu, lúc ấy đảo lớn nhất chỉ chừng 4 ô) và các đảo nhỏ quanh đó:
-  - **Hoàng Sa**: đảo chính tâm ô (116, 14), 7 đảo nhỏ, phía bắc;
-  - **Trường Sa**: đảo chính tâm ô (128, 82), 10 đảo nhỏ rải rộng hơn, phía nam, xa bờ hơn.
-  - Đảo chính đất theo ô như kinh đô (`DAO_CHINH`, `daoChinh`, `daoGoc`): hình vuông bo góc 20 × 20, bờ lồi lõm theo hạt giống mỗi quần đảo (chừng 365 ô đất), mỗi ô biết cách bờ mấy ô. Đây là chỗ sau này dựng đồn đóng quân.
-  - Mỗi quần đảo có **ngư trường**: vòng tròn quanh quần đảo (bán kính 22 và 26 ô), ngoài mọi đảo và rạn san hô, chỗ thuyền kéo lưới.
-- Giặc không tới từ biển; không dựng công trình trên biển; lũ không lan ra biển.
+- **Bờ biển chạy chéo** từ đông bắc xuống tây nam: mép bãi cát quanh đường x + z = 128 (`BIEN_CHEO`), lồi lõm theo nhiễu dọc bờ (`bienNhieu`). `bienDo(x, z)` là khoảng cách (ô, đo vuông góc với bờ) tới mép bãi cát: âm là đất liền, 0 tới 3 (`BAI_CAT`) là bãi cát, từ 3 là biển (`isSea`). Bãi cát cách mọi khoảnh bên kia và đất bên này hơn một ô (`bien.test.ts` canh): **không mất khoảnh nào**, không đổi luật đánh bờ bên kia.
+- **Góc đông nam sau ngã ba** (rừng không khai phá, không thuộc khoảnh nào, giặc không ra từ đó) thành đất thấp dần, bãi cát rồi biển. **Cửa biển** ở cuối sông Đà chừng 12 ô sau ngã ba (`CUA_BIEN`, ô 79,25; 55,5). Từ Điện nhìn về ngã ba đã thấy bãi cát cửa biển ở mép màn hình.
+- **Hai quần đảo theo hướng ngoài đời** nhìn từ Phong Châu: **Hoàng Sa** tâm ô (108, 82), hướng 122°, cách Điện 81 ô; **Trường Sa** tâm ô (102, 142), hướng 149°, cách 120 ô (xa gấp 1,5 lần). Ngư trường không chồng nhau, cách bãi cát xa.
+- Mặt nước thuyền đi được (`isWater`): sông trong lưới, sông Đà qua bãi cát ra cửa biển, sông Thao từ phía bắc, biển ngoài các đảo (cả góc đông nam trong lưới). Đường thuyền khơi: xuôi sông Đà ra cửa biển, ra khơi ba ô về đông nam rồi rẽ về ngư trường. Một chuyến ra Hoàng Sa từ bến sát ngã ba chừng 2 phút 46 giây (trước 3 phút 4 giây).
+- Đất ngoài lưới phía đông bắc (sau bờ đông) và tây nam (sau bờ nam) kéo dài tới bờ biển chéo, gần bờ thấp dần (chỉ để nhìn). Độ cao trong state không đổi: chỉ hình vẽ thấp xuống (`shoreCap` ở `render/bien.ts`).
+- Mỗi quần đảo có một **đảo chính 20 × 20 ô** (chủ dự án yêu cầu sau khi xem bản đầu, lúc ấy đảo lớn nhất chỉ chừng 4 ô) và các đảo nhỏ quanh đó (Hoàng Sa 7, Trường Sa 10, rải rộng hơn). Đảo chính đất theo ô như kinh đô (`DAO_CHINH`, `daoChinh`, `daoGoc`): hình vuông bo góc, bờ lồi lõm theo hạt giống mỗi quần đảo (chừng 365 ô đất), mỗi ô biết cách bờ mấy ô. Đây là chỗ sau này dựng đồn đóng quân.
+- Mỗi quần đảo có **ngư trường**: vòng tròn quanh quần đảo (bán kính 22 và 26 ô), ngoài mọi đảo và rạn san hô, chỗ thuyền kéo lưới.
+- Không dựng công trình trên biển; lũ không lan ra biển (lũ không loang vào góc rừng không khai phá). Thủy binh Triệu tới từ biển (dưới đây); giặc khác không tới từ biển.
+- **Thủy binh Triệu vào từ biển**: trong 60 giây trinh sát báo đợt thủy binh, đoàn thuyền đen buồm đỏ hiện ngoài khơi, vào cửa biển, ngược sông Đà (đánh phía sông Thao thì rẽ lên ở ngã ba), mỗi thuyền tới đúng chỗ nó hiện ra khi trận mở (`upcomingBoats` ở `game.ts`, `plannedBoats`, `boatLayout` ở `battle.ts`, cùng dòng số ngẫu nhiên của trận `battleSeed`). Trận đánh y như cũ (chỗ thuyền, giờ chèo, quân số), nên độ khó mọi đợt thủy binh giữ nguyên. Dòng báo ghi "thuyền đen buồm đỏ từ biển vào cửa sông, kéo tới sông phía …". Thuyền đi đều 2 ô mỗi giây, thuyền đi xa thì ra khơi sớm hơn, nên đoàn giãn thành hàng dọc sông.
+- **Biển thấy từ Điện 1, mây che mờ**: từ đầu game camera đã kéo được ra biển tới hai quần đảo (như Điện 8 trước kia). Dưới Điện 8 biển còn **mây mù**: màn sương kem mờ dần từ mép bãi ra khơi thì đặc lại (thấy mặt biển mờ mờ bên dưới), dải mây dày dọc bờ, mây trùm kín hai quần đảo (tên quần đảo vẫn nổi trên mây); chưa có cá voi, cá heo. Lên Điện 8 (biển mở, dựng được bến thuyền khơi) thì mây bay lên, tan trong chừng ba giây. Chạm vào đảo khi còn mây vẫn mở bảng quần đảo, ghi "Mây mù còn phủ kín biển. Lên Điện cấp 8 thì mây tan…".
+- Không nâng bản lưu.
 
 ### Bến thuyền khơi
 
@@ -2051,10 +2068,10 @@ Móng 3×3, phải sát bờ sông (bên này hay bên kia, sông Thao hay sông
 - **Bến thuyền khơi** (`src/render/congTrinh/benKhoi.ts`, bản vẽ ở `docs/bo-cuc-cong-trinh.md`): kho hải sản sàn cao có cá khô treo dưới sàn, giàn phơi lưới vây, đụn vỏ ốc biển trong nong lớn, chum mắm, tời kéo thuyền, cầu tàu dọc mép sông và cầu ván chìa ra chỗ thuyền khơi neo; cấp 2 thêm chòi lửa hiệu và tấm lưới thứ hai, cờ đỏ; cấp 3 thêm miếu thờ cá Ông (vòm xương sườn cá voi trước cửa) và đụn ốc thứ hai. Mái theo cấp Điện mở cấp ấy (8, 9, 10). Năm người làm: ngư dân vá lưới, người gánh cá đi dọc cầu tàu, người giữ kho, ngư dân ở đầu cầu ván, người nhặt ốc.
 - **Thuyền khơi** (`makeThuyenKhoi` ở `models.ts`): thân thuyền trống đồng phóng to (dài chừng 3,1 ô), **mắt thuyền** vẽ hai bên mũi, **buồm cánh dơi** nâu có nan tre xòe (hai cột buồm ở cấp 1, 2; ba cột, buồm viền son, trống đồng nhỏ ở mũi ở cấp 3), lưới vây chất ở đuôi, thúng cá, người lái chèo lái, hai ngư dân trên sàn.
 - **Chuyến khơi** (chỉ để nhìn, World theo đồng hồ cảnh): neo trước bến 24 giây, ra giữa dòng, xuôi sông (sông Thao thì rẽ ở ngã ba), qua cửa biển, ra ngư trường, kéo lưới một vòng quanh quần đảo, rồi đi ngược đường cũ về bến. Ra biển thì chòng chành mạnh hơn. Bến hư thì thuyền nằm neo.
-- **Biển** (`src/render/bien.ts`): nước ba sắc như bãi biển Mộ Dạ (nông ngọc, vừa, sâu), bãi cát khô và cát ướt thoải xuống nước, hai doi cát ở cửa sông, dải sóng trắng vỗ bờ trôi ra vào, vòng sóng quanh đảo. Vũng san hô màu ngọc quanh mỗi đảo (quanh đảo chính cũng vuông bo góc).
+- **Biển** (`src/render/bien.ts`): mặt biển, bãi cát dựng theo dải dọc bờ chéo (`coastBand`, `bienDiem`): nước nông ngọc sát bãi sẫm dần ra khơi như bãi biển Mộ Dạ, bãi cát khô phủ mép nền đất rồi cát ướt thoải xuống nước, hai bên cửa sông bãi thoải xuống lòng sông thành doi cát, sông Đà dừng đúng mép biển; dải sóng trắng vỗ bờ trôi ra vào theo hướng vào bờ, vòng sóng quanh đảo. Vũng san hô màu ngọc quanh mỗi đảo (quanh đảo chính cũng vuông bo góc).
 - **Đảo chính** vẽ theo ô như đất kinh đô: viền bãi cát sát nước, cát lẫn cỏ, đất cỏ bậc 1, gò bậc 2 và đỉnh đồi bậc 3 giữa đảo (cỏ thẫm dần, đá tảng lộ), dừa ven bờ ngả ra biển, cây phong ba và dừa trong đảo, bụi cỏ lau, đá rải bãi cát; vành sóng vuông bo góc quanh đảo. **Đảo nhỏ**: bãi cát tròn, đảo khá lớn có thảm cỏ, dừa, bụi cây, đá. **Tên quần đảo** trên nền kem viền đồng, giữ cỡ trên màn hình dù phóng to hay thu nhỏ.
 - **Cá voi, cá heo** có khung xương (`makeWhale`, `makeDolphin`): lâu lâu (8–18 giây) một lần, gần chỗ camera nhìn ngoài biển (camera ở xa biển thì quanh một quần đảo). Cá voi xanh xám bụng trắng nổi lên, phun nước từ lỗ thở, bơi chậm, rồi chúi đầu, khúc đuôi cong vồng, vây đuôi dựng khỏi mặt nước, lặn mất, tóe nước. Đàn bốn cá heo nhảy vòng cung nối đuôi nhau, mỗi con ba lần, tóe nước khi lên khi xuống.
-- **Camera**: từ Điện 8 kéo được ra biển tới hết đảo chính Trường Sa; ra khỏi vùng đất về phía biển thì giới hạn bắc nam nới dần (`CamBounds.sea` ở `camera.ts`) để thấy cả hai quần đảo. Rừng ngoài lưới phía đông chỉ còn dải 3 ô tới bãi cát.
+- **Camera**: từ Điện 1 kéo được ra biển đông nam tới hết đảo chính Trường Sa (dưới Điện 8 biển còn mây mù); ra khỏi vùng đất về phía biển thì chỉ đi trong dải chéo dọc hai quần đảo (x − z, thu dần trong chừng 10 ô, `CamBounds.sea` ở `camera.ts`), khỏi lạc vào đất trống ngoài lưới. Gần bãi cát không có cây.
 
 ### Sau này (chưa làm)
 

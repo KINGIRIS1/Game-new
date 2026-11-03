@@ -881,16 +881,16 @@ export const vi = {
     cua: { name: 'Của chôn', icon: '🏺', desc: 'Trống đồng, rìu đồng chôn dưới đất. Đất này về tay ta thì đào được.' },
   },
 
-  /** Biển Đông phía đông kinh đô, hai quần đảo ngoài khơi (`game/bien.ts`). */
+  /** Biển Đông phía đông nam kinh đô, hai quần đảo ngoài khơi (`game/bien.ts`). */
   bien: {
     quanDao: {
       hoangSa: {
         name: 'Quần đảo Hoàng Sa',
-        desc: 'Đảo chính rộng, bãi cát trắng, dừa và phong ba, quanh là những đảo cát nhỏ, rạn san hô giữa biển Đông, phía bắc. Nước trong, cá chuồn, cá ngừ nhiều; chim biển làm tổ trên đảo.',
+        desc: 'Đảo chính rộng, bãi cát trắng, dừa và phong ba, quanh là những đảo cát nhỏ, rạn san hô giữa biển Đông, ngoài khơi phía đông nam. Nước trong, cá chuồn, cá ngừ nhiều; chim biển làm tổ trên đảo.',
       },
       truongSa: {
         name: 'Quần đảo Trường Sa',
-        desc: 'Đảo chính rộng có đồi cỏ, quanh là nhiều đảo nhỏ, bãi cạn rải rộng giữa biển Đông, phía nam, xa bờ hơn Hoàng Sa. Rạn san hô nhiều ốc, nhiều cá.',
+        desc: 'Đảo chính rộng có đồi cỏ, quanh là nhiều đảo nhỏ, bãi cạn rải rộng giữa biển Đông, xa hơn Hoàng Sa về phía nam. Rạn san hô nhiều ốc, nhiều cá.',
       },
     } satisfies Record<QuanDaoId, { name: string; desc: string }>,
     icon: '🏝️',
@@ -900,7 +900,7 @@ export const vi = {
     daoNho: (n: number) => `${n} đảo`,
     boats: 'Thuyền khơi đánh cá ở đây',
     noBoats: 'Chưa có thuyền khơi nào ra đây. Dựng bến thuyền khơi (Điện 8) ven sông.',
-    noBoatsYet: 'Biển mở từ Điện cấp 8: dựng bến thuyền khơi để thuyền lớn ra khơi.',
+    noBoatsYet: 'Mây mù còn phủ kín biển. Lên Điện cấp 8 thì mây tan: dựng bến thuyền khơi để thuyền lớn ra khơi.',
     garrisonLater: 'Mai sau, Điện cấp 10 sẽ điều quân ra đóng giữ đảo.',
     seeIsland: 'Ra xem đảo',
   },
@@ -1275,7 +1275,7 @@ export const vi = {
     trieuLostTitle: 'Quân Triệu đã cướp phá kinh đô',
     nextYeu: (min: number) => (min <= 0 ? 'Đêm yêu tinh sắp tới' : `Đêm yêu tinh tới sau khoảng ${min} phút chơi`),
     nextTrieu: (min: number) => (min <= 0 ? 'Quân Triệu sắp tới' : `Quân Triệu tới sau khoảng ${min} phút chơi`),
-    thuyBinhWarning: (side: string, s: number) => `Trinh sát báo: thuyền đen buồm đỏ kéo tới trên sông ${side}! Còn ${s} giây`,
+    thuyBinhWarning: (side: string, s: number) => `Trinh sát báo: thuyền đen buồm đỏ từ biển vào cửa sông, kéo tới sông ${side}! Còn ${s} giây`,
     thuyBinhBattle: (left: number, ours: number) => `Thủy binh Triệu cập bờ đánh kinh đô! Còn ${left} giặc, quân ta ${ours}`,
     thuyBinhWonTitle: 'Đánh lui thủy binh!',
     thuyBinhLostTitle: 'Thủy binh đã cướp phá kinh đô',

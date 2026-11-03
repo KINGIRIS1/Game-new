@@ -17,11 +17,14 @@ const TURN_S = 0.35;
 /** Hai ngón vặn quá góc này (radian, khoảng 35°) thì xoay một nấc. */
 const TWIST_SNAP = THREE.MathUtils.degToRad(35);
 
-/** Giới hạn tâm nhìn: vuông `min`..`max` theo cả x, z; `sea` nới ra biển phía đông. */
+/**
+ * Giới hạn tâm nhìn: vuông `min`..`max` theo cả x, z; `sea` nới ra biển phía đông nam tới `maxX`, `maxZ`, nhưng ra quá
+ * vùng đất thì chỉ đi trong dải chéo x − z từ `minT` tới `maxT` (dải dọc hai quần đảo), khỏi lạc vào đất trống.
+ */
 export interface CamBounds {
   min: number;
   max: number;
-  sea?: { maxX: number; minZ: number; maxZ: number };
+  sea?: { maxX: number; maxZ: number; minT: number; maxT: number };
 }
 
 export class IsoCamera {
@@ -31,8 +34,7 @@ export class IsoCamera {
   zoom = 0.72;
   /**
    * Giới hạn di chuyển của tâm nhìn trên mặt đất (World đặt theo vùng đất đã khai phá). `sea`: từ Điện 8 kéo được ra
-   * biển phía đông tới `maxX`; càng ra xa vùng đất thì càng kéo được rộng lên bắc, xuống nam (`minZ`, `maxZ`) để thấy
-   * hai quần đảo.
+   * biển phía đông nam tới hai quần đảo; càng ra xa vùng đất thì dải chéo đi được càng hẹp lại quanh hai quần đảo.
    */
   bounds: CamBounds = { min: -27, max: 27 };
   onTap?: (clientX: number, clientY: number) => void;
@@ -84,16 +86,29 @@ export class IsoCamera {
   apply(): void {
     this.zoom = THREE.MathUtils.clamp(this.zoom, MIN_ZOOM, MAX_ZOOM);
     const b = this.bounds;
-    this.target.x = THREE.MathUtils.clamp(this.target.x, b.min, b.sea ? Math.max(b.max, b.sea.maxX) : b.max);
-    let zMin = b.min;
-    let zMax = b.max;
-    if (b.sea && this.target.x > b.max) {
-      // Ra khỏi vùng đất về phía biển: nới dần giới hạn bắc nam trong chừng 10 ô, khỏi giật khi kéo về.
-      const k = Math.min(1, (this.target.x - b.max) / 10);
-      zMin = THREE.MathUtils.lerp(b.min, Math.min(b.min, b.sea.minZ), k);
-      zMax = THREE.MathUtils.lerp(b.max, Math.max(b.max, b.sea.maxZ), k);
+    const sea = b.sea;
+    const maxX = sea ? Math.max(b.max, sea.maxX) : b.max;
+    const maxZ = sea ? Math.max(b.max, sea.maxZ) : b.max;
+    const box = () => {
+      this.target.x = THREE.MathUtils.clamp(this.target.x, b.min, maxX);
+      this.target.z = THREE.MathUtils.clamp(this.target.z, b.min, maxZ);
+    };
+    box();
+    if (sea) {
+      // Ra khỏi vùng đất về phía biển: dải chéo đi được thu dần trong chừng 10 ô, từ cả vùng đất về dải quanh hai quần
+      // đảo, khỏi giật khi kéo về. Lệch khỏi dải thì trượt dọc x + z không đổi (song song bờ biển) về lại trong dải.
+      const k = THREE.MathUtils.clamp((Math.max(this.target.x, this.target.z) - b.max) / 10, 0, 1);
+      const span = b.max - b.min;
+      const lo = THREE.MathUtils.lerp(-span, Math.max(-span, sea.minT), k);
+      const hi = THREE.MathUtils.lerp(span, Math.min(span, sea.maxT), k);
+      const t = this.target.x - this.target.z;
+      const d = t < lo ? lo - t : t > hi ? hi - t : 0;
+      if (d !== 0) {
+        this.target.x += d / 2;
+        this.target.z -= d / 2;
+        box();
+      }
     }
-    this.target.z = THREE.MathUtils.clamp(this.target.z, zMin, zMax);
     const h = this.baseHeight() / this.zoom;
     const w = h * (this.width / this.height);
     const cam = this.camera;
