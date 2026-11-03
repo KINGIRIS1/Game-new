@@ -1,14 +1,14 @@
-// PROTOTYPE, dùng xong bỏ: ảnh thật của công trình cho bảng Xây dựng (thay icon), vẽ từ chính mô hình trong game.
-// Một WebGLRenderer nhỏ riêng, dựng lúc cần, vẽ vài ảnh mỗi khung rồi tự hủy khi xong cho nhẹ máy.
+// Ảnh công trình cho bảng Xây dựng, vẽ từ chính mô hình trong game ở cấp 1 (cấp sẽ xây), trên bệ cỏ, nhìn chéo như
+// camera game. Một WebGLRenderer nhỏ riêng, dựng lúc cần, vẽ vài ảnh mỗi khung rồi tự hủy khi xong cho nhẹ máy.
 // Ảnh giữ ở dạng blob URL (chuỗi ngắn) để bảng so HTML không phải so cả ảnh.
 
 import * as THREE from 'three';
-import { BUILDINGS, isBridge, type BuildingType } from '../../game/defs';
-import { CONG_TRINH, lotModel } from '../congTrinh/index';
-import { addSunLights } from '../lights';
-import { CITADEL_TOP, buildCitadel, buildDikes, buildWalls, makeBoat, makeSailBoat, makeTradeBoat, makeUNo } from '../models';
-import { C } from '../palette';
-import { ramp } from '../toon';
+import { BUILDINGS, isBridge, type BuildingType } from '../game/defs';
+import { CONG_TRINH, lotModel } from './congTrinh/index';
+import { addSunLights } from './lights';
+import { CITADEL_TOP, buildCitadel, buildDikes, buildWalls, makeBoat, makeSailBoat, makeTradeBoat, makeUNo } from './models';
+import { C } from './palette';
+import { ramp } from './toon';
 
 /** Loại công trình, hay ụ nỏ (dựng trên đoạn thành, không phải loại công trình riêng). */
 export type ThumbKind = BuildingType | 'uNo';
@@ -19,23 +19,23 @@ const WATER_Y = -0.28;
 
 const cache = new Map<string, string>();
 const pending = new Set<string>();
-const queue: { kind: ThumbKind; level: number; px: number; key: string }[] = [];
+const queue: { kind: ThumbKind; px: number; key: string }[] = [];
 const listeners: (() => void)[] = [];
 let renderer: THREE.WebGLRenderer | null = null;
 let frame = 0;
 let idle = 0;
 let notifyAt = 0;
 
-/** Ảnh `kind` ở cấp `level`, khổ 4:3 rộng `px` điểm ảnh. Chưa có thì xếp hàng vẽ và trả null (bảng hiện icon tạm). */
-export function thumb(kind: ThumbKind, level = 1, px = 256): string | null {
-  const key = thumbKey(kind, level, px);
+/** Ảnh công trình `kind` khổ 4:3 rộng `px` điểm ảnh. Chưa có thì xếp hàng vẽ và trả null (bảng hiện icon tạm). */
+export function thumb(kind: ThumbKind, px: number): string | null {
+  const key = thumbKey(kind, px);
   const url = cache.get(key);
   if (url) return url;
   if (!pending.has(key)) {
     pending.add(key);
-    // Ảnh lớn là ảnh người chơi đang xem (vừa lật cấp): vẽ trước các ảnh nhỏ còn chờ.
-    if (px > 256) queue.unshift({ kind, level, px, key });
-    else queue.push({ kind, level, px, key });
+    // Ảnh lớn là ảnh người chơi đang xem: vẽ trước các ảnh nhỏ còn chờ.
+    if (px > 256) queue.unshift({ kind, px, key });
+    else queue.push({ kind, px, key });
     if (!frame) frame = requestAnimationFrame(work);
   }
   return null;
@@ -46,7 +46,7 @@ export function cachedThumb(key: string): string | null {
   return cache.get(key) ?? null;
 }
 
-export const thumbKey = (kind: ThumbKind, level: number, px: number) => `${kind}:${level}:${px}`;
+export const thumbKey = (kind: ThumbKind, px: number) => `${kind}:${px}`;
 
 /** Gọi `cb` khi có thêm ảnh vẽ xong (gộp mỗi khung một lần). */
 export function onThumb(cb: () => void): void {
@@ -104,12 +104,13 @@ function water(w: number, d: number, x: number, z: number): THREE.Mesh {
 }
 
 /** Dựng cảnh nhỏ: công trình trên bệ cỏ; bến, làng chài có khúc sông và thuyền neo; cầu vắt qua khúc sông. */
-function model(kind: ThumbKind, level: number): THREE.Group {
+function model(kind: ThumbKind): THREE.Group {
+  const level = 1;
   const g = new THREE.Group();
   if (kind === 'luy' || kind === 'de' || kind === 'thanh' || kind === 'uNo') {
     // Đoạn tường gấp góc cho thấy các đoạn nối nhau.
     const cells: [number, number][] = kind === 'uNo' ? [[-1, 0], [0, 0], [1, 0]] : [[-1, 0.5], [0, 0.5], [1, 0.5], [1, -0.5]];
-    g.add(plinth(3, kind === 'uNo' ? 1 : 2, 0, kind === 'uNo' ? 0 : 0));
+    g.add(plinth(3, kind === 'uNo' ? 1 : 2));
     if (kind === 'luy') g.add(buildWalls(cells.map(([x, z], i) => ({ x, y: 0, z, seed: i * 92821 + 7, level, damaged: false }))));
     else if (kind === 'de') g.add(buildDikes(cells.map(([x, z]) => ({ x, y: 0, z, level, damaged: false }))));
     else {
@@ -154,10 +155,10 @@ function model(kind: ThumbKind, level: number): THREE.Group {
   return g;
 }
 
-function draw(job: { kind: ThumbKind; level: number; px: number; key: string }): void {
+function draw(job: { kind: ThumbKind; px: number; key: string }): void {
   const r = getRenderer();
   const scene = new THREE.Scene();
-  const root = model(job.kind, job.level);
+  const root = model(job.kind);
   root.traverse((o) => {
     if ((o as THREE.Mesh).isMesh) o.castShadow = true;
   });

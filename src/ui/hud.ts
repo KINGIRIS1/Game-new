@@ -118,7 +118,7 @@ import { benKiaHtml } from './benKia';
 import { campTier, cutOff, dacSanOf, plotAt, villageOutput } from '../game/benKia';
 import { farBankOf } from '../game/map';
 import { mauHtml } from './mau';
-import { currentVariant, mountSwitcher, patchThumbs, protoBuildHtml, protoClick, protoResetPick, type BuildItem, type BuildMenuData } from './prototype/xayDung';
+import { goLabel, patchThumbs, pickOf, xayDungHtml, type BuildItem } from './xayDung';
 import type { MauId } from '../game/mau';
 
 /** Dòng báo thường hiện chừng này mili giây. */
@@ -380,8 +380,6 @@ export class Hud {
     root.addEventListener('click', this.onClick);
     root.addEventListener('change', this.onChange);
     this.setMode('view');
-    // PROTOTYPE: thanh chuyển phương án bảng Xây dựng.
-    mountSwitcher(root, () => this.refreshSheet(this.getState(), true));
   }
 
   /** Đọc tệp lưu vừa chọn ở bảng Cài đặt. */
@@ -401,11 +399,9 @@ export class Hud {
     const act = el.dataset.act!;
     const id = Number(el.dataset.id);
     switch (act) {
-      // PROTOTYPE: phương án Trưng bày chọn mục, lật cấp.
-      case 'protoPick':
-      case 'protoLevel':
-        if (protoClick(act, el, this.buildMenuData(this.getState()).items)) this.refreshSheet(this.getState());
-        return;
+      case 'pickBuild':
+        this.buildPick = el.dataset.key ?? null;
+        return this.refreshSheet(this.getState());
       case 'toggleQuest':
         this.questCollapsed = !this.questCollapsed;
         this.quest.classList.toggle('collapsed', this.questCollapsed);
@@ -414,7 +410,7 @@ export class Hud {
         return this.onAction({ kind: 'chooseBuild', type: el.dataset.type as BuildingType });
       case 'buildTab':
         this.buildTab = el.dataset.tab as typeof this.buildTab;
-        protoResetPick();
+        this.buildPick = null;
         this.refreshSheet(this.getState());
         this.sheetEl.querySelector('.sheet-body')?.scrollTo(0, 0);
         return;
@@ -763,10 +759,12 @@ export class Hud {
 
   /** Mẫu vừa bấm Áp lần đầu (chờ bấm lần nữa cho chắc). */
   mauArmed: MauId | null = null;
-  /** PROTOTYPE: loại bảng đang vẽ trên màn hình, để giữ chỗ cuộn khi vẽ lại cùng bảng. */
+  /** Loại bảng đang vẽ trên màn hình, để giữ chỗ cuộn khi vẽ lại cùng bảng. */
   private sheetKindShown = '';
   /** Nhóm đang xem trong bảng Xây dựng; nhớ cho lần mở sau. */
   private buildTab: (typeof BUILD_GROUPS)[number]['key'] = 'congTrinh';
+  /** Mục đang chọn trong bảng Xây dựng (`BuildItem.key`); nhớ cho lần mở sau để xây tiếp cùng loại. */
+  private buildPick: string | null = null;
 
   showMau(state: GameState): void {
     this.sheet = { kind: 'mau' };
@@ -832,7 +830,7 @@ export class Hud {
     this.donPick = null;
     this.sheetKindShown = '';
     this.sheetEl.classList.remove('open');
-    this.root.classList.remove('sheet-open', 'proto-build');
+    this.root.classList.remove('sheet-open');
   }
 
   /** Tâm của phần màn hình không bị bảng trượt che, để camera đưa công trình đang chọn vào đó. */
@@ -846,7 +844,7 @@ export class Hud {
     return { x: w / 2, y: top + (h - this.sheetEl.offsetHeight - top) / 2 };
   }
 
-  /** PROTOTYPE: ảnh công trình vừa vẽ xong: thay icon tạm tại chỗ, rồi ghi nhớ HTML mới mà không vẽ lại cả bảng. */
+  /** Ảnh công trình vừa vẽ xong: thay icon tạm tại chỗ, rồi ghi nhớ HTML mới mà không vẽ lại cả bảng (khỏi nháy). */
   thumbsReady(state: GameState): void {
     if (this.sheet?.kind !== 'build') return;
     patchThumbs(this.sheetEl);
@@ -855,7 +853,7 @@ export class Hud {
 
   /**
    * Vẽ lại bảng đang mở. Bỏ qua nếu nội dung không đổi để không làm mất lần chạm của người chơi.
-   * `remember` (PROTOTYPE): chỉ ghi nhớ HTML, không đụng tới bảng trên màn hình.
+   * `remember`: chỉ ghi nhớ HTML, không đụng tới bảng trên màn hình.
    */
   refreshSheet(state: GameState, force = false, remember = false): void {
     if (!this.sheet) return;
@@ -912,44 +910,32 @@ export class Hud {
       return;
     }
     if (html !== this.sheetHtml || force) {
-      // PROTOTYPE: giữ chỗ đã cuộn khi vẽ lại (ảnh công trình về dần sau khi mở bảng).
+      // Bảng Xây dựng vẽ lại (đổi mục chọn, đủ tiền...) thì giữ chỗ đã cuộn.
       const body = this.sheetEl.querySelector('.sheet-body');
       const top = body?.scrollTop ?? 0;
-      const left = this.sheetEl.querySelector('[data-keep-scroll]')?.scrollLeft ?? 0;
       const same = this.sheet.kind === 'build' && this.sheetKindShown === 'build';
       this.sheetHtml = html;
       this.sheetEl.innerHTML = html;
       if (same) {
         this.sheetEl.querySelector('.sheet-body')?.scrollTo(0, top);
-        this.sheetEl.querySelector('[data-keep-scroll]')?.scrollTo(left, 0);
       }
       this.sheetKindShown = this.sheet.kind;
     }
     this.sheetEl.classList.add('open');
     this.root.classList.add('sheet-open');
-    this.root.classList.toggle('proto-build', this.sheet.kind === 'build');
   }
 
   private buildMenuHtml(state: GameState): string {
-    const data = this.buildMenuData(state);
-    // PROTOTYPE: phương án hiển thị có ảnh thật (`?variant=`); bản build thật luôn ra bảng gốc.
-    const variant = currentVariant();
-    if (variant !== 'goc') return protoBuildHtml(variant, data);
-    const card = (it: BuildItem) => `<button class="card ${it.why ? 'locked' : ''}" data-act="${it.act}"${it.type ? ` data-type="${it.type}"` : ''}>
-        <span class="icon">${it.icon}</span>
-        <span class="name">${it.name}</span>
-        <span class="meta">${it.meta}</span>
-        ${it.cost ?? ''}
-        ${it.why ? `<span class="why">${it.why}</span>` : ''}
-      </button>`;
-    return `${data.tabs}${data.note}<div class="cards">${data.items.map(card).join('')}</div>`;
+    const { tabs, note, items } = this.buildMenuData(state);
+    this.buildPick = pickOf(items, this.buildPick);
+    return `${tabs}${note}${xayDungHtml(items, this.buildPick)}`;
   }
 
-  /** Các mục của bảng Xây dựng ở nhóm đang xem, dùng chung cho bảng gốc và các phương án thử. */
-  private buildMenuData(state: GameState): BuildMenuData {
+  /** Thẻ chọn nhóm, dòng ghi chú và các mục của nhóm đang xem trong bảng Xây dựng. */
+  private buildMenuData(state: GameState): { tabs: string; note: string; items: BuildItem[] } {
     // Đắp đất là việc của dân, không phải công trình: chỉ hiện từ chương 2.
     const raise: BuildItem | null = inChapter2(state)
-      ? { key: 'raise', act: 'chooseRaise', thumb: null, icon: '⛰️', name: vi.ui.dapDat, meta: `1×1 ô · ${vi.ui.dapDatDesc}` }
+      ? { key: 'raise', act: 'chooseRaise', thumb: null, icon: '⛰️', name: vi.ui.dapDat, meta: '1×1 ô', desc: vi.ui.dapDatDesc, go: goLabel('chooseRaise', false, false) }
       : null;
     // Công trình của chương 2, 3, 4 chỉ hiện khi đã sang chương ấy.
     const chapter = inChapter4(state) ? 4 : chapterNow(state);
@@ -977,15 +963,13 @@ export class Hud {
         icon: vi.buildings[type].icon,
         name: vi.buildings[type].name,
         meta: `${def.w}×${def.d} ô${count}`,
-        size: `${def.w}×${def.d} ô`,
-        have: isRoad(type) ? '' : `${have}/${max}`,
         cost: costHtml(state, def.buildCost),
         why,
         desc: vi.buildings[type].desc,
-        maxLevel: def.maxLevel,
+        go: goLabel('chooseBuild', isRoad(type), isDecor(type)),
       };
     };
-    const mau: BuildItem = { key: 'mau', act: 'openMau', thumb: null, icon: '🗺️', name: vi.ui.mauTitle, meta: vi.ui.mauCard };
+    const mau: BuildItem = { key: 'mau', act: 'openMau', thumb: null, icon: '🗺️', name: vi.ui.mauTitle, meta: vi.ui.mauCard, go: goLabel('openMau', false, false) };
     // Ụ nỏ dựng trên đoạn thành Cổ Loa có sẵn, không chiếm đất: có từ chương 4.
     let uNo: BuildItem | null = null;
     if (inChapter4(state)) {
@@ -999,13 +983,21 @@ export class Hud {
         icon: '🎯',
         name: vi.ui.uNo,
         meta: vi.ui.uNoCard(have, max),
-        have: `${have}/${max}`,
         cost: costHtml(state, U_NO.cost),
         why,
+        go: goLabel('chooseUNo', false, false),
       };
     }
     // Công cụ dọn đường, đồ trang trí: chạm từng ô như khi trải.
-    const clear: BuildItem = { key: 'clear', act: 'chooseClear', thumb: null, icon: '🧹', name: vi.ui.clearDecor, meta: vi.ui.clearDecorDesc };
+    const clear: BuildItem = {
+      key: 'clear',
+      act: 'chooseClear',
+      thumb: null,
+      icon: '🧹',
+      name: vi.ui.clearDecor,
+      meta: vi.ui.clearDecorDesc,
+      go: goLabel('chooseClear', false, false),
+    };
     // Ba nhóm thẻ chọn ở đầu bảng; mỗi lần chỉ hiện một nhóm cho khỏi cuộn dài trên điện thoại.
     const tabs = BUILD_GROUPS.map(
       ({ key }) =>

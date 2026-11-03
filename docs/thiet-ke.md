@@ -950,6 +950,8 @@ Chủ dự án muốn thêm vật liệu trải đường (đất, đá...) và 
 
 **Bảng Xây dựng** có ba thẻ chọn ở đầu bảng: Công trình, Đường đi, Trang trí. Mỗi lần chỉ hiện một nhóm, cho khỏi cuộn dài trên điện thoại; bảng nhớ thẻ đang xem.
 
+Bảng Xây dựng bày theo kiểu trưng bày (chủ dự án chọn trong ba phương án thử, bỏ phần lật xem từng cấp): mỗi mục có ảnh vẽ từ chính mô hình công trình **cấp 1** thay cho icon. Trên là ảnh lớn của mục đang chọn, kèm tên, cỡ móng, số đã có, lời tả, giá và nút Xây (trải đường thì Trải đường, đồ trang trí thì Đặt); mục chưa xây được thì ghi lý do và nút mờ. Dưới là lưới ảnh nhỏ của cả nhóm, chạm để chọn; mục chưa xây được thì ảnh xám. Công cụ (Mẫu kinh đô, Đắp đất, Dọn trang trí) giữ icon. Bảng nhớ mục đang chọn để xây tiếp cùng loại.
+
 **Đường đi** (`ROAD_TYPES` ở `defs.ts`): móng 1×1, chạm từng ô để trải như lũy.
 
 | Loại | Giá mỗi ô | Mở khi |
