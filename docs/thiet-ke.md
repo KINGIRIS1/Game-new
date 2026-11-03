@@ -4,7 +4,7 @@ Tài liệu này ghi lại các quyết định đã chốt với chủ dự án
 
 ## Tổng quan
 
-- Game xây dựng chiến thuật cho một người chơi, chạy trên trình duyệt và ưu tiên điện thoại. Đăng miễn phí lên GitHub Pages. Làm cho vui, không kiếm tiền.
+- Game xây dựng chiến thuật, chơi một người là chính, chạy trên trình duyệt và ưu tiên điện thoại. Đang lên kế hoạch phần Đấu thành trực tuyến tự chọn (xem Kế hoạch: Đấu thành). Đăng miễn phí lên GitHub Pages. Làm cho vui, không kiếm tiền.
 - Chỉ có tiếng Việt. Mọi chữ hiển thị nằm trong `src/text/vi.ts`, tách khỏi code để sau này dịch.
 - Người chơi là **Vua Hùng**, xây dựng **kinh đô Phong Châu**. Lạc hầu hướng dẫn, Lạc tướng cầm quân, Bồ chính coi làng. Từ chương 3, Vua Hùng truyền ngôi cho Thục Phán; người chơi trị vì tiếp trên cùng kinh đô với tư cách **An Dương Vương**. Chương 4 kể chuyện Mỵ Châu, Trọng Thủy; hết truyện thì người chơi vẫn trông coi kinh đô, chơi tiếp (xem Kế hoạch chương 4).
 - Học các cơ chế quen thuộc của thể loại xây dựng chiến thuật (như Clash of Clans, Rise of Kingdoms), nhưng luật chơi, nội dung và hình ảnh là của riêng game này, không sao chép game nào.
@@ -1935,6 +1935,73 @@ j\i  0  1  2  3  4  5  6  7  8  9
    - **Đồn biên** (`donBien`, 4×4, mỗi bờ một, cần Điện 5, 800 gạo, 600 vỏ ốc, 600 đất đá, 100 sắt, máu 900): rào cọc, chòi canh, hai lán lính, cờ đỏ. Bảng đồn biên chọn số lính mỗi binh chủng đóng ở đồn (không quá quân đang có, trừ phần đóng ở bờ kia). Khi giữ kinh đô, lính đóng ra trận từ đồn biên còn nguyên, lấy bớt từ phần lính giữ kinh đô của các doanh trại (không thêm quân); đồn hư thì lại ra từ doanh trại. Dời đồn biên cũng chỉ trong bờ bên kia.
    - **Quân ta** vẫn đánh giặc gần nhất như cũ, đi thẳng tới giặc kể cả lội qua sông (như lúc đánh thủy quái mùa lũ); có đồn biên thì lính đóng đồn tới nơi sớm hơn hẳn.
 
+## Kế hoạch: Đấu thành (đề xuất, chờ chủ dự án duyệt)
+
+Chủ dự án yêu cầu lập phương án PvP giữa các người chơi: **cử quân đánh thành người khác, cướp tài nguyên, giống các game cùng thể loại** (học cơ chế như Clash of Clans; luật chơi và hình ảnh vẫn là của riêng game này). Như các kế hoạch trước, sau khi duyệt cho chỉnh số ±20% theo test; làm xong phần nào thì ghi số cuối cùng của phần ấy.
+
+**Hiện trạng** (khảo sát code):
+- Game chỉ có một người chơi, đăng tĩnh lên GitHub Pages, không có server, không gọi mạng. Mã lưu chỉ để sao lưu và chuyển máy.
+- Mọi trận hiện nay là người chơi giữ kinh đô trước giặc máy (`raid`) hoặc đánh ngoài bãi (`field`). Trong trận giữ kinh đô, giặc là phe `giac`: tự tìm đường (`findPath` trên `costGrid`, tường và cổng tốn đường), nhắm kho rồi Điện (`chooseTarget`), phá công trình chắn lối, cướp của khi phá kho hay Điện (`LOOT_FRACTION`). Tháp, lầu nỏ, ụ nỏ, cổng thành, bẫy chông chỉ bắn phe `giac` (`stepDefenses`); lính giữ kinh đô phe `ta` ra từ doanh trại (`guardPlan`) và đi thẳng tới giặc gần nhất (`stepChase`).
+- Trận đánh gần như tất định: số ngẫu nhiên có hạt giống (`rng`), luật không dùng `Math.random`. Nhưng vòng chơi chạy cả bước lẻ theo khung hình (`dt = min(BATTLE_STEP, left)`), kỹ năng áp giữa hai khung hình, và có 20 chỗ dùng `Math.hypot` (kết quả có thể lệch chút ít giữa Safari và Chrome). `Fighter.face` (dùng `atan2`) chỉ để vẽ, luật không đọc.
+
+### Đã chốt
+
+1. **Có server miễn phí.** Đánh bất đồng bộ: kinh đô người kia là một bản chụp, người giữ thành không điều khiển, có thể đang tắt máy.
+2. **Cướp của thật.** Thắng thì người tấn công lấy của trong kho người giữ thành.
+3. **Tự bật Đấu thành.** Mở khi Điện đủ cấp. Người chơi bấm Tham gia (đặt tên) thì mới đánh được người khác và bị người khác đánh. Ai không bật thì vẫn chơi một mình như cũ, không cần mạng.
+4. **Mức mất vừa phải.** Mỗi trận bị lấy tối đa 20% của trong kho, trừ phần giữ an toàn. Bị đánh xong được khiên 8 giờ. Công trình và lính của người giữ thành không hư hại thật, chỉ mất của.
+5. **Đăng nhập ẩn danh** khi bấm Tham gia, không hỏi email. Muốn chuyển máy mà giữ được thành thì gắn tài khoản Google.
+
+### Đề xuất (chủ dự án chưa chọn, chờ duyệt)
+
+1. **Điều quân như phó bản.** Trước trận chọn quân (tối đa `FIELD_CAP` chỗ theo cấp Điện, 38 chỗ từ Điện 5) và hướng tràn vào (bìa rừng phía bắc hay phía tây). Quân tự tìm đường phá công trình như giặc hiện nay. Trong trận chỉ bấm kỹ năng tướng, Trống trận và nút Rút quân. Lính người tấn công tử trận thì mất thật, như phó bản.
+2. **Ba sao trong 3 phút.** Phá ≥50% công trình được 1 sao, phá Điện thêm 1 sao, phá hết được 3 sao; có ghi phần trăm phá hủy. Đường đi, đồ trang trí, cầu không tính.
+3. **Mở ở Điện cấp 5.**
+4. **Phần giữ an toàn**: 25% sức chứa kho (`STORAGE_CAP`) mỗi loại của. Mỗi loại cướp được tối đa 20% × (của đang có − phần giữ an toàn); lấy được bao nhiêu trong mức ấy thì tính 50% theo số kho bị phá (không có kho thì phần này tính theo phần trăm phá), 30% nếu phá Điện, 20% theo phần trăm phá hủy. Đánh người kém cấp Điện hơn mình thì mỗi cấp chênh lệch giảm một nửa. Kho người tấn công đầy thì phần thừa bỏ phí.
+5. **Chiến công** để ghép trận và xếp hạng: thắng (từ 1 sao) được 10–40 chiến công tùy chênh lệch, người giữ thành mất bấy nhiêu; 0 sao thì ngược lại. Không xuống dưới 0.
+6. **Ghép trận**: không phải mình, đã hết khiên, không có ai đang đánh, Điện chênh ±1 (thiếu người thì nới ra ±2), mình chưa đánh người ấy trong 12 giờ, chiến công gần nhau. Được bấm Tìm khác.
+7. **Đi đánh người khác thì mất khiên** của mình.
+8. **Bản chụp kinh đô** mang công trình bờ bên này, lính giữ kinh đô theo bố trí hiện tại (tính sẵn ở máy người giữ thành, vì phụ thuộc mốc truyện), tướng giữ thành, Đền, binh khí, huân công, độ cao ô đất, khoảnh đã mở, của trong kho. Bản chụp tự tải lên khi kinh đô đổi, tối đa 10 phút một lần.
+9. **Kinh đô máy** (dựng từ người chơi mô phỏng `moPhong.ts`) để đánh khi chưa đủ người chơi, không cướp của thật, chỉ được chiến công ít.
+10. Trận Đấu thành hai bên cùng là lính ta, nên **vẽ vòng dưới chân** để phân biệt: màu đồng cho bên tấn công, đỏ son cho bên giữ thành. Thế khắc giữa lính với lính theo tam giác sẵn có: giáo khắc voi, cung khắc giáo, voi khắc cung và nỏ, nỏ khắc voi.
+
+### Server
+
+- **Supabase gói miễn phí**: Postgres, phân quyền theo dòng (RLS), đăng nhập ẩn danh, gắn Google, Edge Function chạy Deno/V8 với 2 giây CPU mỗi lần gọi. Cloudflare Workers miễn phí chỉ cho 10 ms CPU, không đủ đánh lại một trận; Firebase Functions phải lên gói trả tiền.
+- Gói miễn phí tạm dừng dự án sau 7 ngày không ai vào: một workflow GitHub chạy định kỳ 3 ngày một lần gọi server để giữ máy chủ thức.
+- **Server là trọng tài.** Máy khách chỉ gửi đầu vào (quân, hướng, kỹ năng bấm ở bước nào). Server tự đánh lại trận bằng chính luật `src/game` (đóng gói thành một tệp cho Edge Function) để tính sao, của cướp, chiến công. Kết quả server là kết quả cuối. Bản game và bản luật trên server mang cùng một mã băm; lệch thì server báo người chơi cập nhật game.
+- **Bảng**: người chơi (tên, chiến công, cấp Điện, hạn khiên, khóa đang bị đánh), bản chụp kinh đô, trận đánh (hạt giống, quân, đầu vào, sao, của cướp, quân mất). Máy khách chỉ đọc trận mình đánh hay mình bị đánh; mọi lệnh ghi đi qua Edge Function. Dữ liệu quá 30 ngày tự xóa.
+- **Hai người không cùng đánh một thành**: bắt đầu trận thì khóa người giữ thành 4 phút. Thoát giữa trận thì server tự đóng trận với đầu vào đã có, nên không giữ được quân.
+- **Mở game** thì hỏi server các trận mình bị đánh: mỗi loại của trừ min(của bị cướp, của đang có), rồi mở bảng Bị đánh. Mất mạng thì chỉ báo một dòng, game vẫn chơi một mình bình thường. Thư viện mạng chỉ tải khi mở bảng Đấu thành.
+
+### Chống gian lận (vừa sức một game làm cho vui)
+
+- Của cướp và chiến công chỉ do server tính khi đánh lại trận.
+- Bản chụp phải hợp lý: số mỗi loại công trình không quá giới hạn, cấp không quá cấp Điện cho phép, không chồng nhau, đúng một Điện, quân giữ thành không quá `GUARD_CAP`, binh khí và huân công không quá bậc tối đa, của không quá sức chứa kho. Quân mang đi đánh không quá quân trong bản chụp của chính người tấn công.
+- Giới hạn số lần gọi (tìm đối thủ 30 lần một giờ, đánh 10 lần một giờ). Tên 2–16 chữ, lọc từ tục.
+- Người chơi vẫn sửa được bản lưu của chính mình; việc ấy chỉ ảnh hưởng chính họ, còn mức trần của bị cướp và khiên bảo vệ người khác.
+
+### Thứ tự làm
+
+1. **PR 0: tài liệu** (PR này, nháp, chờ duyệt): mục này.
+2. **PR 1: trận đánh tất định**, không đổi luật chơi: thay `Math.hypot` bằng căn bậc hai của tổng bình phương (cho cùng kết quả trên mọi trình duyệt), lưu sẵn lưới chi phí tìm đường mỗi trận để server đánh lại một trận 3 phút dưới 2 giây CPU. Test: đánh cùng một trận hai lần ra y hệt, chia khung hình kiểu gì cũng như nhau, đo thời gian. Mọi test cân bằng cũ giữ nguyên kết quả.
+3. **PR 2: luật Đấu thành** trong `src/game/` (tệp mới `dauThanh.ts`):
+   - bản chụp, kiểm bản chụp;
+   - chế độ trận `pvp`: người tấn công là phe `giac` dùng lính ta, dùng lại AI phá công trình của giặc; cộng thêm (Đền, binh khí, huân công), kỹ năng, Trống trận, Lệnh bắn tính theo phe người chơi điều khiển chứ không cố định phe `ta`;
+   - chạy trọn bước, đầu vào ghi theo bước;
+   - sao, của cướp, chiến công;
+   - bản lưu 20.
+   Test cân bằng với kinh đô của người chơi mô phỏng: cùng cấp Điện, đủ quân thì được 1–2 sao, nửa quân thì 0 sao.
+4. **PR 3: đánh thử ngoài mạng**: bảng Đấu thành, chọn quân và hướng, thanh trận (đếm ngược, phần trăm, sao, Rút quân), bảng kết quả, vòng màu hai phe. Đánh kinh đô của chính mình hay kinh đô máy, chưa có của cướp thật, để chủ dự án chơi thử, chỉnh cân bằng trước khi có server.
+5. **PR 4: server**: thư mục `supabase/` (bảng, phân quyền, Edge Function), đóng gói luật cho server, test đánh lại trận trên Deno so với Node, triển khai trong `deploy.yml`, workflow giữ máy chủ thức.
+6. **PR 5: nối mạng**: tham gia, tải bản chụp, tìm đối thủ, đánh, nhận của, bảng Bị đánh, trừ của khi mở game, trận đánh dở. Kiểm trận ra cùng kết quả trên WebKit (họ nhà Safari) và Node.
+7. **PR 6: thêm sau**: người giữ thành xem lại trận bị đánh, bảng xếp hạng, gắn Google và lưu game lên mây để chuyển máy.
+
+**Chủ dự án cần tự làm trước PR 4**:
+1. Tạo dự án Supabase (vùng Singapore).
+2. Bật đăng nhập ẩn danh và cho gắn tài khoản; bật đăng nhập Google (tạo OAuth client ở Google Cloud, thêm `https://kingiris1.github.io/Game-new/` vào Site URL và danh sách chuyển hướng).
+3. Thêm vào GitHub hai biến (công khai được nhờ RLS): địa chỉ dự án và khóa anon; ba bí mật: access token, mã dự án, mật khẩu cơ sở dữ liệu.
+
 ## Nhịp chơi và lưu game
 
 - Nhịp chơi lai: mỗi lần mở game là một phiên ra quyết định ngắn.
@@ -1978,4 +2045,5 @@ j\i  0  1  2  3  4  5  6  7  8  9
 14. **Cổng thành, xưởng mộc, làng chài** (chủ dự án đã duyệt, đã làm; xem mục Kế hoạch cùng tên): gỗ là tài nguyên thứ năm, cá đỡ gạo ăn, cổng hút giặc trong vòng tường. Ba PR: gỗ và xưởng mộc, làng chài, cổng thành.
 15. **Vùng đất bên kia sông** (chủ dự án đã duyệt, đã làm cả 5 PR, bản lưu v18; xem mục Kế hoạch cùng tên): lưới qua sông, cầu ba cấp, sương mù và trinh sát, đồn giặc bốn bậc theo chương, dẹp đồn chiếm vùng, đặc sản đất, bản làng, của chôn, giặc tới từ hai bờ và đồn biên.
 16. **Điện cấp 9, 10** (đã duyệt, đang làm; PR luật và PR hình đã làm; xem Kế hoạch cùng tên).
-17. **Để sau**: chương 5 về Hai Bà Trưng (mới nhắc ở câu cuối chương 4); nhạc nền.
+17. **Đấu thành** (đề xuất, chờ duyệt; xem Kế hoạch cùng tên): đánh thành người chơi khác, cướp của, server Supabase miễn phí.
+18. **Để sau**: chương 5 về Hai Bà Trưng (mới nhắc ở câu cuối chương 4); nhạc nền.
