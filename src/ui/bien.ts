@@ -1,14 +1,17 @@
 // Bảng quần đảo ngoài biển Đông: chạm vào đảo thì hiện tên, lời tả, số đảo, thuyền khơi nào đánh cá ở đây. Chỉ dựng
 // chuỗi HTML; Hud lo việc gắn vào trang và bắt sự kiện.
 
-import { BIEN_DIEN, boatsAt, quanDao, type QuanDaoId } from '../game/bien';
+import { BIEN_DIEN, DAO_CHINH, boatsAt, quanDao, type QuanDaoId } from '../game/bien';
 import { dienLevel, fishOf, type GameState } from '../game/game';
 import { vi } from '../text/vi';
 import { fmt } from './format';
 
 export function quanDaoHtml(state: GameState, id: QuanDaoId): string {
   const q = quanDao(id);
-  const rows = [`<div class="stat"><span>${vi.bien.daoCount}</span><span>${q.dao.length}</span></div>`];
+  const rows = [
+    `<div class="stat"><span>${vi.bien.daoChinh}</span><span>${vi.bien.daoSize(DAO_CHINH)}</span></div>`,
+    `<div class="stat"><span>${vi.bien.daoCount}</span><span>${vi.bien.daoNho(q.dao.length)}</span></div>`,
+  ];
   const boats = boatsAt(state, id);
   if (boats.length) {
     const fish = boats.reduce((n, b) => n + fishOf(b), 0);

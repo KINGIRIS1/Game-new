@@ -880,15 +880,18 @@ export const vi = {
     quanDao: {
       hoangSa: {
         name: 'Quần đảo Hoàng Sa',
-        desc: 'Những đảo cát trắng, rạn san hô giữa biển Đông, phía bắc. Nước trong, cá chuồn, cá ngừ nhiều; chim biển làm tổ trên đảo.',
+        desc: 'Đảo chính rộng, bãi cát trắng, dừa và phong ba, quanh là những đảo cát nhỏ, rạn san hô giữa biển Đông, phía bắc. Nước trong, cá chuồn, cá ngừ nhiều; chim biển làm tổ trên đảo.',
       },
       truongSa: {
         name: 'Quần đảo Trường Sa',
-        desc: 'Nhiều đảo nhỏ, bãi cạn rải rộng giữa biển Đông, phía nam, xa bờ hơn Hoàng Sa. Rạn san hô nhiều ốc, nhiều cá.',
+        desc: 'Đảo chính rộng có đồi cỏ, quanh là nhiều đảo nhỏ, bãi cạn rải rộng giữa biển Đông, phía nam, xa bờ hơn Hoàng Sa. Rạn san hô nhiều ốc, nhiều cá.',
       },
     } satisfies Record<QuanDaoId, { name: string; desc: string }>,
     icon: '🏝️',
-    daoCount: 'Số đảo',
+    daoChinh: 'Đảo chính',
+    daoSize: (n: number) => `${n} × ${n} ô`,
+    daoCount: 'Đảo nhỏ quanh đảo chính',
+    daoNho: (n: number) => `${n} đảo`,
     boats: 'Thuyền khơi đánh cá ở đây',
     noBoats: 'Chưa có thuyền khơi nào ra đây. Dựng bến thuyền khơi (Điện 8) ven sông.',
     noBoatsYet: 'Biển mở từ Điện cấp 8: dựng bến thuyền khơi để thuyền lớn ra khơi.',

@@ -3,7 +3,7 @@
 // hư, Lạc hầu gợi ý một lần; đường thuyền khơi đi trên nước từ bến ra tới ngư trường quanh đảo.
 
 import { describe, expect, it } from 'vitest';
-import { BIEN_BO, BIEN_TU, CUA_BIEN, QUAN_DAO, benDock, boatsAt, isSea, isWater, onIsland, seaIndex, seaRoute } from './bien';
+import { BIEN_BO, BIEN_TU, CUA_BIEN, DAO_CHINH, QUAN_DAO, benDock, boatsAt, daoChinh, daoGoc, isSea, isWater, onIsland, seaIndex, seaRoute } from './bien';
 import { BUILDINGS, CA_BIEN_PER_MIN, NEW_HINTS } from './defs';
 import {
   canPlace,
@@ -74,16 +74,49 @@ describe('biển Đông', () => {
     expect(hs.z).toBeLessThan(ts.z);
     expect(ts.x).toBeGreaterThan(hs.x);
     for (const q of QUAN_DAO) {
-      // Đảo đầu tiên là đảo lớn nhất (sau này dựng đồn đóng quân).
-      expect(Math.max(...q.dao.map((d) => d.r))).toBe(q.dao[0].r);
+      // Đảo chính và mọi đảo nhỏ nằm ngoài bãi cát ven biển, chừa nước cho thuyền đi.
+      expect(q.x - DAO_CHINH / 2).toBeGreaterThan(BIEN_TU + 8);
       for (const [i, d] of q.dao.entries()) {
         expect(q.x + d.dx - d.r).toBeGreaterThan(BIEN_TU + 3);
         expect(onIsland(q.x + d.dx, q.z + d.dz)).toBe(q.id);
+        // Đảo nhỏ không chạm đảo chính (chừa một ô nước), không chạm nhau.
+        for (let k = 0; k < 24; k++) {
+          const a = (k / 24) * Math.PI * 2;
+          const x = q.x + d.dx + Math.cos(a) * d.r;
+          const z = q.z + d.dz + Math.sin(a) * d.r;
+          expect(Math.abs((x - q.x) / (DAO_CHINH / 2 + 1)) ** 4 + Math.abs((z - q.z) / (DAO_CHINH / 2 + 1)) ** 4, `${q.id} đảo nhỏ ${i}`).toBeGreaterThan(1);
+        }
         for (const e of q.dao.slice(i + 1)) expect(Math.hypot(d.dx - e.dx, d.dz - e.dz)).toBeGreaterThan(d.r + e.r + 0.8);
         // Ngư trường bao ngoài mọi đảo, chừa rạn san hô.
         expect(q.nguTruong - Math.hypot(d.dx, d.dz) - d.r).toBeGreaterThan(1.5);
       }
+      expect(q.nguTruong - (DAO_CHINH / 2) * Math.SQRT2).toBeGreaterThan(1.5);
     }
+  });
+
+  it('đảo chính mỗi quần đảo cỡ 20 × 20 ô: hình vuông bo góc, bờ lồi lõm, bãi cát sát nước, giữa đảo xa bờ', () => {
+    expect(DAO_CHINH).toBe(20);
+    for (const q of QUAN_DAO) {
+      const tiles = daoChinh(q);
+      const is = tiles.map((o) => o.i);
+      const js = tiles.map((o) => o.j);
+      // Trải trọn 20 ô mỗi chiều, góc bo tròn nên không kín cả 400 ô.
+      expect(Math.max(...is) - Math.min(...is) + 1).toBe(20);
+      expect(Math.max(...js) - Math.min(...js) + 1).toBe(20);
+      expect(tiles.length).toBeGreaterThan(320);
+      expect(tiles.length).toBeLessThan(390);
+      // Ô sát nước là bờ (cách bờ 0); giữa đảo cách bờ ít nhất 8 ô.
+      expect(tiles.filter((o) => o.bo === 0).length).toBeGreaterThan(60);
+      expect(Math.max(...tiles.map((o) => o.bo))).toBeGreaterThanOrEqual(8);
+      // Tâm quần đảo nằm trên đảo chính; ngoài góc đảo là nước.
+      const g = daoGoc(q);
+      expect(onIsland(q.x, q.z)).toBe(q.id);
+      expect(onIsland(g.x + 0.3, g.z + 0.3)).toBeNull();
+      expect(isWater(g.x + 0.3, g.z + 0.3)).toBe(true);
+    }
+    // Bờ hai đảo chính khác nhau (mỗi quần đảo một hạt giống).
+    const key = (q: (typeof QUAN_DAO)[number]) => daoChinh(q).map((o) => `${o.i},${o.j}`).join(';');
+    expect(key(QUAN_DAO[0])).not.toBe(key(QUAN_DAO[1]));
   });
 });
 

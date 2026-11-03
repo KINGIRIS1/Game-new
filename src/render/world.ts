@@ -759,7 +759,7 @@ export class World {
       // Kéo cảnh trong vùng đất đã khai phá, chừa một dải rừng và một phần sông; có cầu thì kéo được sang bên kia.
       const bounds: CamBounds = { min: wx(lo) - 3, max: bridged ? wx(GRID) - 2 : wx(RIVER_START) + 2 };
       // Từ Điện 8 (biển mở): kéo được ra biển phía đông, tới quá quần đảo Trường Sa.
-      if (level >= BIEN_DIEN) bounds.sea = { maxX: wx(BIEN_TU + 30), minZ: wz(6), maxZ: wz(GRID + 2) };
+      if (level >= BIEN_DIEN) bounds.sea = { maxX: wx(BIEN_TU + 50), minZ: wz(-2), maxZ: wz(GRID + 22) };
       if (this.cityCam) this.cityCam.bounds = bounds;
       else this.view.bounds = bounds;
       // Lần đầu dựng cảnh: nhìn vào giữa vùng đất đã khai phá (Điện ở gần góc sông, nhìn vào Điện thì nửa màn hình là sông).

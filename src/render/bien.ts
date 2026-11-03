@@ -4,7 +4,7 @@
 // Tọa độ thế giới: ô (x, z) ở (x − half, z − half) như world.ts (`half` là HALF ở đó).
 
 import * as THREE from 'three';
-import { BIEN_BO, BIEN_TU, BIEN_XA, QUAN_DAO, isSea, onIsland, type QuanDaoId } from '../game/bien';
+import { BIEN_BO, BIEN_TU, BIEN_XA, DAO_CHINH, QUAN_DAO, daoChinh, daoGoc, isSea, onIsland, type QuanDao, type QuanDaoId } from '../game/bien';
 import { GRID, RIVER_END, RIVER_START } from '../game/map';
 import { vi } from '../text/vi';
 import { C } from './palette';
@@ -38,8 +38,10 @@ export function buildSea(half: number): THREE.Group {
   strip(wx(BIEN_TU), wx(BIEN_TU + 1.2), C.seaShallow);
   strip(wx(BIEN_TU + 1.2), wx(BIEN_TU + 3.5), C.seaMid);
   strip(wx(BIEN_TU + 3.5), wx(BIEN_XA + REACH), C.sea);
-  // Quanh mỗi đảo: vũng nông màu ngọc (rạn san hô) trong vành nước vừa.
+  // Quanh mỗi đảo: vũng nông màu ngọc (rạn san hô) trong vành nước vừa; đảo chính vuông bo góc thì vũng cũng vậy.
   for (const q of QUAN_DAO) {
+    water.add(flatSquircle(DAO_CHINH / 2 + 3.4), C.seaMid, wx(q.x), WATER_Y + 0.004, wz(q.z));
+    water.add(flatSquircle(DAO_CHINH / 2 + 1.7), C.reef, wx(q.x), WATER_Y + 0.008, wz(q.z));
     for (const d of q.dao) {
       water.add(new THREE.CylinderGeometry(d.r + 2, d.r + 2, 0.02, 28), C.seaMid, wx(q.x + d.dx), WATER_Y + 0.004, wz(q.z + d.dz));
       water.add(new THREE.CylinderGeometry(d.r + 1.05, d.r + 1.05, 0.02, 24), C.reef, wx(q.x + d.dx), WATER_Y + 0.008, wz(q.z + d.dz));
@@ -76,7 +78,7 @@ export function buildSea(half: number): THREE.Group {
   group.add(foamLines(half));
   for (const q of QUAN_DAO) {
     const label = nameLabel(vi.bien.quanDao[q.id].name);
-    label.position.set(wx(q.x), 3.4, wz(q.z - q.dao[0].r - 2.5));
+    label.position.set(wx(q.x), 3.6, wz(q.z - DAO_CHINH / 2 - 3));
     label.userData.label = true;
     group.add(label);
   }
@@ -84,10 +86,12 @@ export function buildSea(half: number): THREE.Group {
 }
 
 /** Cây dừa trên đảo: thân cong vươn ra, tàu lá xòe, chùm quả. */
-function palm(m: ToonModel, x: number, y: number, z: number, h: number, lean: number, seed: number): void {
+function palm(m: ToonModel, x: number, y: number, z: number, h: number, lean: number, seed: number, toward?: number): void {
   const p = m.plain;
   const rand = seeded(seed);
-  const dir = rand() * Math.PI * 2;
+  const spin = rand() * Math.PI * 2;
+  // Dừa ven bờ ngả ra phía biển (`toward`), lệch chút cho tự nhiên.
+  const dir = toward === undefined ? spin : toward + (rand() - 0.5) * 0.9;
   const n = 4;
   let px = x;
   let py = y;
@@ -114,12 +118,120 @@ function palm(m: ToonModel, x: number, y: number, z: number, h: number, lean: nu
   for (let i = 0; i < 3; i++) p.sphere(0.045, C.trunk, px + Math.cos(i * 2.1) * 0.06, py - 0.08, pz + Math.sin(i * 2.1) * 0.06, [1, 1, 1], 6);
 }
 
-/** Đảo cát của hai quần đảo: bãi cát thoải, đảo lớn có thảm cỏ, dừa, bụi cây; đá xám rải mép nước. */
+/** Điểm trên bờ hình vuông bo góc nửa cạnh `half` (như bờ đảo chính, `game/bien.ts`), theo góc `a`. */
+function squirclePoint(a: number, half: number, outward = 0): THREE.Vector2 {
+  const c = Math.cos(a);
+  const s = Math.sin(a);
+  const k = 2 / 4;
+  return new THREE.Vector2(Math.sign(c) * Math.abs(c) ** k * (half + outward), Math.sign(s) * Math.abs(s) ** k * (half + outward));
+}
+
+function squircleOutline(half: number): THREE.Vector2[] {
+  return Array.from({ length: 72 }, (_, i) => squirclePoint((i / 72) * Math.PI * 2, half));
+}
+
+/** Mặt phẳng nằm ngang hình vuông bo góc (vũng nông quanh đảo chính). */
+function flatSquircle(half: number): THREE.BufferGeometry {
+  return new THREE.ShapeGeometry(new THREE.Shape(squircleOutline(half))).rotateX(-Math.PI / 2);
+}
+
+/** Vành sóng hình vuông bo góc quanh đảo chính, nằm ngang, dày `w` ô. */
+function squircleRing(half: number, w: number): THREE.BufferGeometry {
+  const shape = new THREE.Shape(squircleOutline(half + w));
+  shape.holes.push(new THREE.Path(squircleOutline(half).reverse()));
+  return new THREE.ShapeGeometry(shape).rotateX(-Math.PI / 2);
+}
+
+/** Cây phong ba trên đảo: thân thấp ngả theo gió, tán lá dày xanh thẫm. */
+function phongBa(m: ToonModel, x: number, y: number, z: number, s: number, seed: number): void {
+  const p = m.plain;
+  const rand = seeded(seed);
+  const lean = (rand() - 0.5) * 0.5;
+  p.cyl(0.05 * s, 0.08 * s, 0.45 * s, C.trunk, x, y + 0.22 * s, z, [lean, 0, lean * 0.6], 6);
+  for (let i = 0; i < 3; i++) {
+    const a = rand() * Math.PI * 2;
+    p.sphere((0.22 + rand() * 0.1) * s, i % 2 ? C.leaf[2] : C.leaf[0], x + Math.cos(a) * 0.14 * s + lean * 0.2, y + (0.5 + rand() * 0.15) * s, z + Math.sin(a) * 0.14 * s, [1.25, 0.75, 1.15], 8);
+  }
+}
+
+/** Màu cỏ gò (bậc 2) và đỉnh đồi (bậc 3) giữa đảo chính: thẫm dần lên cao. */
+const HILL = [0x9aa65e, 0x86934f];
+
+/** Độ cao mặt ô đảo chính (thế giới) theo bậc: bãi cát sát nước thấp nhất, rồi cát, đất cỏ bậc 1, gò bậc 2, đỉnh bậc 3. */
+const DAO_TOP = [-0.14, -0.04, 0.3, 0.6, 0.9];
+
+/** Gò đồi giữa đảo chính: nhiễu thô theo ô, ổn định theo hạt giống. */
+function hillNoise(seed: number): (i: number, j: number) => number {
+  const rand = seeded(seed * 7 + 3);
+  const cells = Array.from({ length: 36 }, () => rand());
+  const at = (a: number, b: number) => cells[Math.min(5, Math.max(0, b)) * 6 + Math.min(5, Math.max(0, a))];
+  const fade = (t: number) => t * t * (3 - 2 * t);
+  return (i, j) => {
+    const fx = i / 4;
+    const fz = j / 4;
+    const a = Math.floor(fx);
+    const b = Math.floor(fz);
+    const u = fade(fx - a);
+    const v = fade(fz - b);
+    const top = at(a, b) + (at(a + 1, b) - at(a, b)) * u;
+    const bot = at(a, b + 1) + (at(a + 1, b + 1) - at(a, b + 1)) * u;
+    return top + (bot - top) * v;
+  };
+}
+
+/**
+ * Đảo chính 20 × 20 ô, đất theo ô như kinh đô: viền bãi cát sát nước, cát lẫn cỏ, đất cỏ bậc 1, gò bậc 2, đỉnh đá bậc 3
+ * giữa đảo. Dừa mọc ven bờ nghiêng ra biển, cây phong ba và dừa trong đảo, đá rải bãi cát.
+ */
+function mainIsland(q: QuanDao, half: number, land: ShapeBuilder, m: ToonModel): void {
+  const g = daoGoc(q);
+  const rand = seeded(q.seed);
+  const hill = hillNoise(q.seed);
+  const cx = q.x - half;
+  const cz = q.z - half;
+  const bottom = WATER_Y - 0.6;
+  for (const o of daoChinh(q)) {
+    const x = g.x + o.i + 0.5 - half;
+    const z = g.z + o.j + 0.5 - half;
+    let level = o.bo === 0 ? 0 : o.bo === 1 ? 1 : 2;
+    if (o.bo >= 4 && hill(o.i, o.j) > 0.52) level = 3;
+    if (o.bo >= 7 && hill(o.i, o.j) > 0.62) level = 4;
+    const top = DAO_TOP[level];
+    const shade = (o.i * 7 + o.j * 13) % 3;
+    const color = level === 0 ? C.beachWet : level === 1 ? C.beach : level >= 3 ? HILL[level - 3] : o.bo === 2 ? 0xbcb36e : C.grass[shade];
+    land.box(1, top - bottom, 1, color, x, (top + bottom) / 2, z);
+    const r = rand();
+    const y = top;
+    if (level === 0) {
+      if (r < 0.07) m.plain.sphere(0.14 + rand() * 0.12, rand() < 0.5 ? C.rock : C.rockDark, x + (rand() - 0.5) * 0.5, y + 0.03, z + (rand() - 0.5) * 0.5, [1.2, 0.7, 1], 7);
+    } else if (level === 1 || o.bo === 2) {
+      // Dừa ven bờ nghiêng ra phía biển.
+      if (r < 0.17) palm(m, x + (rand() - 0.5) * 0.4, y, z + (rand() - 0.5) * 0.4, 1.0 + rand() * 0.5, 0.25 + rand() * 0.2, Math.floor(rand() * 1e6), Math.atan2(z - cz, x - cx));
+    } else if (level === 4) {
+      // Đỉnh đồi: đá tảng lộ giữa cỏ, bụi cây thấp.
+      if (r < 0.3) m.plain.sphere(0.2 + rand() * 0.14, rand() < 0.5 ? C.rock : C.rockDark, x + (rand() - 0.5) * 0.4, y + 0.06, z + (rand() - 0.5) * 0.4, [1.1, 0.8, 1], 7);
+      else if (r < 0.45) phongBa(m, x + (rand() - 0.5) * 0.4, y, z + (rand() - 0.5) * 0.4, 0.7 + rand() * 0.3, Math.floor(rand() * 1e6));
+    } else if (r < 0.22) {
+      if (rand() < 0.55) phongBa(m, x + (rand() - 0.5) * 0.4, y, z + (rand() - 0.5) * 0.4, 0.9 + rand() * 0.4, Math.floor(rand() * 1e6));
+      else palm(m, x + (rand() - 0.5) * 0.4, y, z + (rand() - 0.5) * 0.4, 1.0 + rand() * 0.5, 0.15 + rand() * 0.2, Math.floor(rand() * 1e6));
+    } else if (r < 0.27) {
+      // Bụi cỏ lau thấp.
+      for (let k = 0; k < 3; k++) m.plain.cone(0.05, 0.28, C.leaf[3], x + (rand() - 0.5) * 0.5, y + 0.13, z + (rand() - 0.5) * 0.5, [(rand() - 0.5) * 0.4, 0, (rand() - 0.5) * 0.4], 4);
+    }
+  }
+}
+
+/**
+ * Hai quần đảo: đảo chính 20 × 20 ô (`mainIsland`) và các đảo nhỏ quanh đó: bãi cát thoải, đảo khá lớn có thảm cỏ,
+ * dừa, bụi cây; đá xám rải mép nước.
+ */
 function islands(half: number): THREE.Group {
   const m = new ToonModel();
   const p = m.plain;
+  const land = new ShapeBuilder();
   for (const q of QUAN_DAO) {
-    const rand = seeded(q.id === 'hoangSa' ? 1974 : 1988);
+    mainIsland(q, half, land, m);
+    const rand = seeded(q.seed + 1);
     q.dao.forEach((d, i) => {
       const x = q.x + d.dx - half;
       const z = q.z + d.dz - half;
@@ -147,6 +259,9 @@ function islands(half: number): THREE.Group {
   }
   const g = m.group();
   for (const o of g.children) o.castShadow = false;
+  const ground = land.mesh(groundMaterial);
+  ground.castShadow = false;
+  g.add(ground);
   g.name = 'dao';
   return g;
 }
@@ -157,6 +272,8 @@ interface Foam {
   z: number;
   /** Vòng sóng quanh đảo thì có bán kính; dải sóng vỗ bờ thì không. */
   r?: number;
+  /** Vòng sóng phập phồng chừng này phần bán kính (mặc định 0,08; vành sóng đảo chính to nên ít hơn). */
+  amp?: number;
   phase: number;
 }
 
@@ -181,7 +298,11 @@ function foamLines(half: number): THREE.Group {
   // Vòng sóng bán kính 1, dày chừng 0,1 ô; phóng theo cỡ đảo.
   const ring = new THREE.InstancedMesh(new THREE.RingGeometry(1, 1.09, 28).rotateX(-Math.PI / 2), mat, rings.length);
   ring.userData.foam = rings;
-  for (const m of [line, ring]) {
+  // Vành sóng vuông bo góc quanh đảo chính.
+  const mains: Foam[] = QUAN_DAO.map((q, i) => ({ x: q.x - half, z: q.z - half, r: 1, amp: 0.012, phase: i * 2.1 }));
+  const main = new THREE.InstancedMesh(squircleRing(DAO_CHINH / 2 + 0.55, 0.16), mat, mains.length);
+  main.userData.foam = mains;
+  for (const m of [line, ring, main]) {
     m.renderOrder = 1;
     m.frustumCulled = false;
     g.add(m);
@@ -220,7 +341,7 @@ export function animateSea(sea: THREE.Group, t: number, zoom: number): void {
         foamPos.set(f.x + k * 0.45, WATER_Y + 0.02, f.z);
         foamScale.set(1 + k * 1.5, 1, 1);
       } else {
-        const r = f.r * (1 + 0.08 * (Math.sin(t * 1.1 + f.phase) + 1));
+        const r = f.r * (1 + (f.amp ?? 0.08) * (Math.sin(t * 1.1 + f.phase) + 1));
         foamPos.set(f.x, WATER_Y + 0.02, f.z);
         foamScale.set(r, 1, r);
       }
