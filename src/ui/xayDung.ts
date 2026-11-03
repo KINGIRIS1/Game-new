@@ -1,4 +1,5 @@
-// Bảng Xây dựng kiểu trưng bày: ảnh lớn của mục đang chọn, lời tả, giá, nút chính; dưới là lưới ảnh nhỏ để chọn.
+// Bảng Xây dựng kiểu trưng bày: ảnh lớn của mục đang chọn, lời tả, giá, nút chính; dưới là lưới ảnh nhỏ để chọn,
+// chia trang cho vừa bảng, khỏi cuộn: chọn mục xong là thấy ngay nút Xây.
 // Dùng chung cho các thẻ công trình, đường đi, trang trí và mẫu kinh đô. Ảnh công trình vẽ sẵn
 // (`scripts/anh-cong-trinh.mjs`, public/anh-cong-trinh/), game chỉ tải như ảnh thường.
 
@@ -64,8 +65,27 @@ function pic(it: BuildItem): string {
   return it.pic ? `<img src="${it.pic}" alt="" draggable="false" decoding="async">` : `<span class="xd-icon">${it.icon}</span>`;
 }
 
-/** Ảnh lớn và thông tin của mục `pick`, lưới ảnh nhỏ của cả nhóm, rồi `foot` (ghi chú cuối bảng). */
-export function xayDungHtml(items: BuildItem[], pick: string | null, foot = ''): string {
+/** Một trang của lưới ảnh nhỏ: trang thứ `page` (từ 0), mỗi trang `cols` cột × `rows` hàng. */
+export interface BuildPage {
+  page: number;
+  cols: number;
+  rows: number;
+}
+
+/** Số trang của lưới `n` mục, mỗi trang `per` mục. */
+export const pageCount = (n: number, per: number): number => Math.max(1, Math.ceil(n / Math.max(1, per)));
+
+/** Trang có mục `pick` (không có thì trang đầu). */
+export function pageOf(items: BuildItem[], pick: string | null, per: number): number {
+  const i = items.findIndex((it) => it.key === pick);
+  return i < 0 ? 0 : Math.floor(i / Math.max(1, per));
+}
+
+/**
+ * Ảnh lớn và thông tin của mục `pick`, lưới ảnh nhỏ của cả nhóm (chỉ trang `pg.page` khi có `pg`, kèm nút sang trang),
+ * rồi `foot` (ghi chú cuối bảng).
+ */
+export function xayDungHtml(items: BuildItem[], pick: string | null, foot = '', pg?: BuildPage): string {
   const it = items.find((i) => i.key === pick);
   const stage = it
     ? `<div class="xd-stage ${it.square ? 'square' : ''}">
@@ -81,7 +101,11 @@ export function xayDungHtml(items: BuildItem[], pick: string | null, foot = ''):
       ${it.note ? `<p class="xd-note">${it.note}</p>` : ''}
     </div>`
     : '';
+  const per = pg ? pg.cols * pg.rows : items.length;
+  const pages = pageCount(items.length, per);
+  const page = Math.min(Math.max(0, pg?.page ?? 0), pages - 1);
   const minis = items
+    .slice(page * per, page * per + per)
     .map(
       (m) => `<button class="xd-mini ${m.square ? 'square' : ''} ${m.key === pick ? 'on' : ''} ${m.why ? 'locked' : ''}" data-act="pickBuild" data-key="${m.key}" aria-label="${m.name}">
         ${pic(m)}<span class="xd-name">${m.name}</span></button>`,
@@ -89,7 +113,19 @@ export function xayDungHtml(items: BuildItem[], pick: string | null, foot = ''):
     .join('');
   // Nhóm toàn ảnh vuông (bốn mẫu kinh đô) thì lưới bốn cột cho ảnh to hơn.
   const square = items.length > 0 && items.every((i) => i.square);
-  return `${stage}<div class="xd-grid ${square ? 'square' : ''}">${minis}</div>${foot}`;
+  const cols = pg && !square ? `style="--cols:${pg.cols}"` : '';
+  // Nút sang trang để hai bên mép, giữa chừa trống: nút Xây dựng tròn trên dock lồi lên đúng chỗ giữa.
+  const pager =
+    pages > 1
+      ? `<div class="xd-pager">
+        <button class="xd-pg" data-act="buildPage" data-page="${page - 1}" ${page > 0 ? '' : 'disabled'} aria-label="${vi.ui.pagePrev}">‹</button>
+        <span class="xd-dots" aria-label="${vi.ui.pageOf(page + 1, pages)}">${Array.from({ length: pages }, (_, i) => `<i class="${i === page ? 'on' : ''}"></i>`).join('')}</span>
+        <span class="xd-gap"></span>
+        <span class="xd-count">${vi.ui.pageOf(page + 1, pages)}</span>
+        <button class="xd-pg" data-act="buildPage" data-page="${page + 1}" ${page < pages - 1 ? '' : 'disabled'} aria-label="${vi.ui.pageNext}">›</button>
+      </div>`
+      : '';
+  return `${stage}<div class="xd-grid ${square ? 'square' : ''} ${pg ? 'paged' : ''}" ${cols}>${minis}</div>${pager}${foot}`;
 }
 
 /** Chữ trên nút Xây theo việc của mục. */

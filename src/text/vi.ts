@@ -131,6 +131,11 @@ export const vi = {
       icon: '🚪',
       desc: 'Cửa trong vòng tường, lầu cổng có lính bắn giặc. Giặc thấy qua cổng dễ hơn phá tường nên dồn về cổng: bày chòi canh, bẫy chông quanh cổng thành chỗ đón đánh. Dựng trên ô trống hay chạm vào một đoạn lũy, thành đất, thành Cổ Loa để thay. Cổng tính là thành khi đếm vòng thành.',
     },
+    hoKimQuy: {
+      name: 'Hồ Kim Quy',
+      icon: '🐢',
+      desc: 'Nơi thần Kim Quy trú ngụ. Hồ còn nguyên thì lũy, thành đất, thành Cổ Loa và cổng thành thêm 30% máu: thần giúp thành không đổ. Giữa hồ có miếu thờ trên gò, Rùa Vàng bơi dưới làn sen. Chỉ dựng được sau khi Rùa Vàng hiện lên.',
+    },
     denCoLoa: {
       name: 'Đền Cổ Loa',
       icon: '🐢',
@@ -359,6 +364,7 @@ export const vi = {
     daVeTheo: 'Làng đã về theo Văn Lang',
     chuaVeTay: 'Đất làng chưa về tay ta: dẹp đồn giặc giữ vùng này trước',
     phaiBenKia: 'Đồn biên chỉ dựng trọn ở một bờ bên kia sông',
+    khongXoayDuoc: 'Công trình này không xoay được',
   } satisfies Record<FailReason, string>,
 
   quests: {
@@ -962,8 +968,12 @@ export const vi = {
     gateGuard: 'Lính trên lầu',
     gateShot: (dmg: number, n: number) => `🏹 ${dmg} · ${n} giặc mỗi phát`,
     placeHint: 'Chạm vào ô đất để chọn chỗ, rồi bấm Đặt',
+    placeTurnHint: 'Chạm vào ô đất để chọn chỗ, bấm ↻ để xoay, rồi bấm Đặt',
     wallHint: 'Chạm vào từng ô đất để dựng lũy',
-    roadHint: 'Chạm vào từng ô để trải đường. Trải lên ô đường loại khác thì đổi vật liệu',
+    roadHint: 'Kéo một ngón để trải cả dải thẳng, hay chạm từng ô. Hai ngón để kéo cảnh. Trải lên đường loại khác thì đổi vật liệu',
+    /** Đang kéo thả trải đường: số ô sẽ trải và giá. */
+    roadDrag: (n: number, cost: string) => (n ? `Thả tay để trải ${n} ô · ${cost}` : 'Dải này không trải được ô nào'),
+    roadPaved: (n: number) => `Đã trải ${n} ô đường. Kéo tiếp để trải thêm`,
     decorHint: 'Chạm vào từng ô đất để đặt',
     clearHint: 'Chạm vào ô đường hay món trang trí để dọn đi',
     cleared: (name: string) => `Đã dọn ${name}`,
@@ -1014,6 +1024,8 @@ export const vi = {
         '📜 Lạc hầu: Tâu bệ hạ, sông Đà chảy ra biển Đông; ngoài khơi có quần đảo Hoàng Sa, Trường Sa, cá nhiều, ốc lắm. Xin dựng bến thuyền khơi bên sông, đóng thuyền lớn bằng gỗ xưởng mộc mà ra biển.',
       congThanh:
         '📜 Lạc hầu: Tâu bệ hạ, thành Cổ Loa nên có cổng. Giặc thấy cổng dễ qua sẽ dồn cả về đó: xin dựng cổng giữa vòng tường, bày chòi canh, bẫy chông quanh cổng mà đón đánh.',
+      hoKimQuy:
+        '📜 Lạc hầu: Tâu bệ hạ, thần Kim Quy đã hiện lên. Xin đào hồ lớn cho thần trú ngụ: hồ còn thì thần giữ cho lũy, thành, cổng thành chắc thêm ba phần.',
     } as Partial<Record<BuildingType, string>>,
     /** Cây dại, tảng đá mọc trên ô trống: Lạc hầu gợi ý một lần khi cái đầu tiên mọc; chạm vào thì dọn. */
     cayDaHint:
@@ -1055,7 +1067,8 @@ export const vi = {
     troopSpaceAll: (used: number, cap: number, n: number) =>
       n > 1 ? `Quân trong ${n} doanh trại: ${used}/${cap} chỗ` : `Quân trong doanh trại: ${used}/${cap} chỗ`,
     barracksCap: (cap: number) => `Doanh trại này giữ ${cap} chỗ`,
-    commanderTitle: 'Tướng chỉ huy',
+    /** Bốn thẻ của bảng doanh trại. */
+    barracksTabs: { quan: 'Quân', giu: 'Giữ kinh đô', tuong: 'Tướng', trai: 'Trại' },
     commanderHint: 'Mỗi doanh trại một tướng chỉ huy, có tướng mới giữ chỗ quân. Có thêm tướng thì dựng thêm doanh trại. Giữ kinh đô, tướng ra trận từ trại mình chỉ huy.',
     commandsHere: 'chỉ huy doanh trại này',
     commandsOther: 'chỉ huy doanh trại khác',
@@ -1066,7 +1079,6 @@ export const vi = {
     commandAssigned: (name: string) => `${name} chỉ huy doanh trại này`,
     tuongNames: { lacTuong: 'Lạc tướng', giong: 'Thánh Gióng', sonTinh: 'Sơn Tinh', anDuong: 'An Dương Vương', caoLo: 'Cao Lỗ' } satisfies Record<TuongId, string>,
     tuongIcons: { lacTuong: '🥁', giong: '🐎', sonTinh: '⛰️', anDuong: '🏹', caoLo: '🎯' } satisfies Record<TuongId, string>,
-    guardTitle: 'Bố trí giữ kinh đô',
     guardInfo: (used: number, cap: number) => `Giữ kinh đô: ${used}/${cap} chỗ (theo cấp Điện)`,
     guardAutoNote: 'Đang bố trí tự động: mọi lính giữ kinh đô cho tới đủ chỗ, chia đều các doanh trại. Bấm − + để tự bố trí.',
     guardManualNote: 'Lính bố trí ở trại nào thì ra trận từ trại ấy. Lính chết được quân dự trữ bù vào.',
@@ -1087,7 +1099,6 @@ export const vi = {
     advAtDien: 'ngự ở Điện',
     advAtSea: 'đã xuống biển, hiển linh',
     caoLoAtDien: 'đứng trước Điện',
-    homesTitle: 'Quân và nơi ở',
     trainAt: (name: string) => `Ở và luyện tại ${name.toLowerCase()}`,
     buildHome: (name: string) => `Dựng ${name.toLowerCase()}`,
     needBarracks: (lv: number) => (lv <= 1 ? 'Cần doanh trại' : `Cần doanh trại cấp ${lv}`),
@@ -1383,6 +1394,14 @@ export const vi = {
     moveHere: 'Dời tới đây',
     moveHint: 'Chạm ô đất để chọn chỗ mới, rồi bấm Dời tới đây. Nền đất cũ ở lại chỗ cũ.',
     moved: (name: string) => `Đã dời ${name.toLowerCase()}`,
+    /** Nút xoay công trình (khác nút ⟳ xoay cảnh). */
+    turn: 'Xoay',
+    /** Trang của lưới ảnh nhỏ trong bảng Xây dựng. */
+    pagePrev: 'Trang trước',
+    pageNext: 'Trang sau',
+    pageOf: (page: number, pages: number) => `Trang ${page}/${pages}`,
+    turnTitle: 'Xoay công trình 90°',
+    turned: (name: string) => `Đã xoay ${name.toLowerCase()}`,
     merge: 'Ghép thành lầu nỏ',
     mergeHint: 'Chạm vào một chòi canh cấp 8 khác còn nguyên để ghép. Lầu nỏ đứng ở chỗ chòi đang chọn.',
     mergeInfo: 'Hai chòi canh cấp 8 ghép được thành một lầu nỏ, mỗi phát bắn ba giặc. Không tách lại được.',

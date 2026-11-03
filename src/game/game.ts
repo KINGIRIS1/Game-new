@@ -96,6 +96,8 @@ export interface Building {
   guard?: Record<UnitType, number>;
   /** Đoạn thành Cổ Loa có ụ nỏ trên mặt thành: còn tốt, hay đã hư theo thành (phải sửa riêng). */
   uNo?: 'ok' | 'hu';
+  /** Công trình xoay được (`canRotateType`): đã xoay mấy nấc 90° (1–3). Không có là hướng gốc. */
+  rot?: number;
 }
 
 export interface RaidResult {
@@ -423,7 +425,8 @@ export type FailReason =
   | 'chanLoiCau'
   | 'daVeTheo'
   | 'chuaVeTay'
-  | 'phaiBenKia';
+  | 'phaiBenKia'
+  | 'khongXoayDuoc';
 
 export type Result<T = undefined> = { ok: true; value: T } | { ok: false; reason: FailReason };
 
@@ -722,6 +725,7 @@ export function unlocked(state: GameState, unlock: Unlock | undefined): boolean 
   if (unlock === 'chuong2') return inChapter2(state);
   if (unlock === 'ketChuong2') return state.son.won;
   if (unlock === 'chuong3') return inChapter3(state);
+  if (unlock === 'ruaVang') return ruaVangCame(state);
   if (unlock === 'ketChuong3') return state.adv.won;
   if (unlock === 'chuong4') return inChapter4(state);
   if (unlock === 'ketChuong4') return state.adv.bien;
@@ -749,6 +753,7 @@ export const UNLOCK_REASON: Record<Unlock, FailReason> = {
   chuong2: 'canChuong2',
   ketChuong2: 'canKetChuong2',
   chuong3: 'canChuong3',
+  ruaVang: 'canRuaVang',
   ketChuong3: 'canKetChuong3',
   chuong4: 'canChuong4',
   ketChuong4: 'canKetChuong4',
@@ -945,19 +950,40 @@ export function fillWorkers(state: GameState, b: Building): void {
   if (add > 0) b.workers += add;
 }
 
-export function place(state: GameState, type: BuildingType, x: number, z: number): Result<Building> {
+/**
+ * Dựng công trình loại `type` ở góc móng (x, z). Loại xoay được thì dựng theo hướng `rot` (số nấc 90°, xem
+ * `canRotateType`); loại khác bỏ qua `rot`.
+ */
+export function place(state: GameState, type: BuildingType, x: number, z: number, rot = 0): Result<Building> {
   const check = canPlace(state, type, x, z);
   if (!check.ok) return check;
   const over = replacedWall(state, type, x, z);
   if (over) state.buildings = state.buildings.filter((b) => b.id !== over.id);
   pay(state, BUILDINGS[type].buildCost);
   const b: Building = { id: state.nextId++, type, x, z, level: 1, workers: 0 };
+  if (canRotateType(type)) setRot(b, rot);
   // Dân đắp móng phẳng bằng chỗ cao nhất dưới móng.
   levelFootprint(state, b, footprintTop(state, type, x, z));
   state.buildings.push(b);
   fillWorkers(state, b);
   openBridgehead(state, b);
   return ok(b);
+}
+
+/**
+ * Dựng `type` lên từng ô của dải `tiles` theo thứ tự (kéo thả trải đường). Ô nào không dựng được thì bỏ qua, dựng
+ * tiếp ô sau; ô đã có đúng loại ấy thì không tính là hỏng. Trả các công trình đã dựng và lý do của ô hỏng đầu tiên.
+ */
+export function placeLine(state: GameState, type: BuildingType, tiles: { x: number; z: number }[]): { placed: Building[]; reason: FailReason | null } {
+  const placed: Building[] = [];
+  let reason: FailReason | null = null;
+  for (const t of tiles) {
+    if (buildingAt(state, t.x, t.z)?.type === type) continue;
+    const r = place(state, type, t.x, t.z);
+    if (r.ok) placed.push(r.value);
+    else reason ??= r.reason;
+  }
+  return { placed, reason };
 }
 
 /**
@@ -1088,14 +1114,45 @@ export function canMove(state: GameState, id: number, x: number, z: number): Res
  * Dời công trình sang (x, z): giữ cấp, người làm, hư hỏng. Nền đất cũ ở lại chỗ cũ; chỗ mới dân đắp móng
  * phẳng bằng ô cao nhất dưới móng như khi dựng mới (đã đắp nền cao hơn thì phải đắp lại).
  */
-export function move(state: GameState, id: number, x: number, z: number): Result<Building> {
+export function move(state: GameState, id: number, x: number, z: number, rot?: number): Result<Building> {
   const check = canMove(state, id, x, z);
   if (!check.ok) return check;
   const b = findBuilding(state, id)!;
   pay(state, moveCost(b));
   b.x = x;
   b.z = z;
+  if (rot !== undefined && canRotateType(b.type)) setRot(b, rot);
   levelFootprint(state, b, footprintTop(state, b.type, x, z));
+  return ok(b);
+}
+
+// ---------- Xoay công trình ----------
+
+/**
+ * Loại công trình xoay được, mỗi nấc 90°: móng vuông nhiều ô, nên xoay không đổi ô nào bị chiếm, chỉ đổi hướng mặt
+ * trước (và chỗ tướng đứng, ra trận ở doanh trại). Điện đứng yên như khi dời; bến, làng chài luôn quay mặt ra sông;
+ * cầu theo dòng sông; công trình một ô (lũy, đê, thành, cổng, chòi, đường, đồ trang trí nhỏ) không cần xoay.
+ */
+export function canRotateType(type: BuildingType): boolean {
+  const def = BUILDINGS[type];
+  return def.w === def.d && def.w > 1 && type !== 'dien' && !def.nearRiver && !isBridge(type);
+}
+
+/** Hướng xoay của công trình: số nấc 90° (0–3). */
+export const rotOf = (b: Pick<Building, 'rot'>): number => b.rot ?? 0;
+
+function setRot(b: Building, rot: number): void {
+  const r = ((Math.round(rot) % 4) + 4) % 4;
+  if (r) b.rot = r;
+  else delete b.rot;
+}
+
+/** Xoay công trình tại chỗ sang hướng `rot` (số nấc 90°). Không tốn của, lúc nào cũng xoay được. */
+export function rotateBuilding(state: GameState, id: number, rot: number): Result<Building> {
+  const b = findBuilding(state, id);
+  if (!b) return fail('khongTimThay');
+  if (!canRotateType(b.type)) return fail('khongXoayDuoc');
+  setRot(b, rot);
   return ok(b);
 }
 
@@ -1382,6 +1439,11 @@ export function hasCoLoa(state: GameState): boolean {
   return state.buildings.some((b) => b.type === 'denCoLoa' && !b.damaged);
 }
 
+/** Hồ Kim Quy còn nguyên: tường thành thêm máu khi giặc đánh. */
+export function hasKimQuy(state: GameState): boolean {
+  return state.buildings.some((b) => b.type === 'hoKimQuy' && !b.damaged);
+}
+
 /** Đền Cuông còn nguyên: thủy binh Triệu tới ít thuyền hơn. */
 export function hasCuong(state: GameState): boolean {
   return state.buildings.some((b) => b.type === 'denCuong' && !b.damaged);
@@ -1545,6 +1607,7 @@ function updateRaid(state: GameState, ms: number): void {
               ? { foe, n: raid.thuyBinh + 1 }
               : null,
       crossbows: hasCoLoa(state),
+      walls: hasKimQuy(state),
       fewerBoats: hasCuong(state),
       arms: state.arms,
       huan: huanTiers(state),

@@ -355,12 +355,13 @@ function placePair(d: Draft, a: BuildingType, b: BuildingType, score: Score): bo
 /**
  * Một việc xếp: một loại, hay hai loại cùng cỡ đứng đối xứng nhau qua đường chéo; và cách chấm chỗ.
  * Xếp từng cặp đối xứng, số lẻ thì cái còn lại đứng trên đường chéo (hết chỗ đối xứng thì đứng lệch).
+ * Số thứ ba (nếu có): mẫu chỉ chừa chỗ cho việc này từ cấp Điện ấy (đất cấp thấp không đủ chỗ).
  */
-type Job = [BuildingType | [BuildingType, BuildingType], Score];
+type Job = [BuildingType | [BuildingType, BuildingType], Score, number?];
 
-function placeJob(d: Draft, [what, score]: Job): void {
+function placeJob(d: Draft, [what, score, from = 0]: Job): void {
   const [a, b] = Array.isArray(what) ? what : [what, what];
-  const left = (t: BuildingType) => wantOf(t, d.level) - d.count(t);
+  const left = (t: BuildingType) => (d.level < from ? 0 : wantOf(t, d.level)) - d.count(t);
   for (;;) {
     const pair = a === b ? left(a) >= 2 : left(a) >= 1 && left(b) >= 1;
     if (!pair || !placePair(d, a, b, score)) break;
@@ -633,7 +634,7 @@ const RECIPES: Record<MauId, Recipe> = {
     ],
   },
   // Thành Cổ Loa: ba vòng thành kín quanh Điện; vòng trong chỉ có Điện và sân; nhà sàn, kho, lò rèn, bếp giữa các
-  // vòng; ruộng, đền, doanh trại ngoài vòng ngoài; đê bao ngoài cùng.
+  // vòng; ruộng, đền, doanh trại, Hồ Kim Quy ngoài vòng ngoài; đê bao ngoài cùng.
   coLoa: {
     walls: coLoaWalls,
     jobs: [
@@ -648,6 +649,7 @@ const RECIPES: Record<MauId, Recipe> = {
       ['loRen', inRings(1, byDien)],
       [['vuon', 'chuongLon'], inRings(1, byKitchen)],
       [['denPhuDong', 'denTanVien'], inRings(0, row(1, byBarracks))],
+      ['hoKimQuy', inRings(0, byHill)],
       ['traiGiao', inRings(0, row(2, byBarracks))],
       [['traiCung', 'chuongVoi'], inRings(0, row(2, byBarracks))],
       ['ruong', inRings(0, row(1, byRiver))],
@@ -657,7 +659,7 @@ const RECIPES: Record<MauId, Recipe> = {
     ],
   },
   // Cổ Loa giữ sông (chương 4): như mẫu Cổ Loa, thêm ụ nỏ trên vòng thành ngoài, lầu nỏ giữ sông, trại nỏ cạnh
-  // doanh trại, Đền Cuông phía bắc ngoài vòng ngoài.
+  // doanh trại, Đền Cuông phía bắc ngoài vòng ngoài, Hồ Kim Quy trên đường chéo về góc rừng.
   coLoaSong: {
     walls: coLoaSongWalls,
     jobs: [
@@ -671,6 +673,8 @@ const RECIPES: Record<MauId, Recipe> = {
       ['bep', inRings(2, byDien)],
       ['loRen', inRings(1, byDien)],
       [['vuon', 'chuongLon'], inRings(1, byKitchen)],
+      // Ở Điện 5 hồ choán mất chỗ ruộng nếp: mẫu chừa chỗ hồ từ Điện 6.
+      ['hoKimQuy', inRings(0, byAxis), 6],
       [['denPhuDong', 'denTanVien'], inRings(0, row(1, byBarracks))],
       ['denCuong', inRings(0, row(1, byAxis))],
       ['traiGiao', inRings(0, row(2, byBarracks))],
@@ -703,6 +707,12 @@ function draw(id: MauId, level: number): Slot[] {
 
 const DRAWN = new Map<string, Slot[]>();
 /** Mọi chỗ trong mẫu `id` ở cấp Điện `level` (cả Điện), đều trong vùng đất đã khai phá ở cấp ấy. */
+/** Mẫu `id` chừa chỗ cho loại `type` từ cấp Điện này (0 nếu theo số tối đa ở mọi cấp, xem `Job`). */
+export function mauFrom(id: MauId, type: BuildingType): number {
+  for (const [what, , from = 0] of RECIPES[id].jobs) if (what === type || (Array.isArray(what) && what.includes(type))) return from;
+  return 0;
+}
+
 export function mauSlots(id: MauId, level: number): Slot[] {
   const lv = Math.min(Math.max(Math.round(level), 1), BUILDINGS.dien.maxLevel);
   const key = `${id}:${lv}`;

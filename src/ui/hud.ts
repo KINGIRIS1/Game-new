@@ -59,6 +59,7 @@ import {
   uNoLimit,
   uNoRepairCost,
   canUpgrade,
+  canRotateType,
   moveCost,
   countOf,
   currentQuest,
@@ -122,7 +123,7 @@ import { seaIndex, seaRoute, type QuanDaoId } from '../game/bien';
 import { quanDaoHtml } from './bien';
 import { farBankOf } from '../game/map';
 import { mauItems } from './mau';
-import { goLabel, pickOf, thumbUrl, xayDungHtml, type BuildItem } from './xayDung';
+import { goLabel, pageCount, pageOf, pickOf, thumbUrl, xayDungHtml, type BuildItem } from './xayDung';
 import type { MauId } from '../game/mau';
 
 /** Dòng báo thường hiện chừng này mili giây. */
@@ -142,7 +143,7 @@ const BUILD_GROUPS: { key: keyof typeof vi.ui.buildGroups; types: BuildingType[]
 /** Bốn công trình làm bánh của Hội Tết: chỉ hiện trong bảng Xây dựng khi đã mở (sau kết chương 1). */
 const TET_TYPES: BuildingType[] = ['ruongNep', 'vuon', 'chuongLon', 'bep'];
 /** Công trình chỉ hiện trong bảng Xây dựng khi đã sang chương có nó. */
-const CHAPTER_OF: Partial<Record<string, number>> = { chuong2: 2, ketChuong2: 2, chuong3: 3, ketChuong3: 3, chuong4: 4, ketChuong4: 4 };
+const CHAPTER_OF: Partial<Record<string, number>> = { chuong2: 2, ketChuong2: 2, chuong3: 3, ruaVang: 3, ketChuong3: 3, chuong4: 4, ketChuong4: 4 };
 
 /** Tên hiển thị của công trình, tính cả lũy tre đã đắp thành đất và đê đã kè đá. */
 export function buildingName(b: Pick<Building, 'type' | 'level'>): string {
@@ -181,6 +182,10 @@ export type HudAction =
   | { kind: 'forgeArms'; unit: UnitType }
   | { kind: 'openTet' }
   | { kind: 'startMove'; id: number }
+  /** Xoay bóng công trình đang đặt, dời một nấc 90°. */
+  | { kind: 'rotatePlace' }
+  /** Xoay công trình đã dựng tại chỗ một nấc 90° (nút trong bảng công trình). */
+  | { kind: 'rotateBuilding'; id: number }
   | { kind: 'startMerge'; id: number }
   | { kind: 'rotateView' }
   | { kind: 'applyMau'; mau: MauId }
@@ -238,6 +243,9 @@ export type HudAction =
   | { kind: 'fieldToMap' };
 
 export type HudMode = 'view' | 'place' | 'move' | 'paint' | 'merge';
+
+/** Thẻ của bảng doanh trại: quân và nơi ở, bố trí giữ kinh đô, tướng chỉ huy, thông tin và nâng cấp trại. */
+type BarracksTab = 'quan' | 'giu' | 'tuong' | 'trai';
 
 type Sheet =
   | { kind: 'build' }
@@ -415,6 +423,14 @@ export class Hud {
         this.buildPick = el.dataset.key ?? null;
         this.mauArmed = null;
         return this.refreshSheet(this.getState());
+      case 'buildPage':
+        this.buildPage = Number(el.dataset.page);
+        return this.refreshSheet(this.getState());
+      case 'barracksTab':
+        this.barracksTab = el.dataset.tab as BarracksTab;
+        this.refreshSheet(this.getState());
+        this.sheetEl.querySelector('.sheet-body')?.scrollTo(0, 0);
+        return;
       case 'togglePop': {
         const p = el.dataset.pop as NonNullable<typeof this.pop>;
         return this.setPop(this.pop === p ? null : p);
@@ -434,6 +450,7 @@ export class Hud {
       case 'buildTab':
         this.buildTab = el.dataset.tab as typeof this.buildTab;
         this.buildPick = null;
+        this.buildPage = null;
         this.mauArmed = null;
         this.refreshSheet(this.getState());
         this.sheetEl.querySelector('.sheet-body')?.scrollTo(0, 0);
@@ -446,6 +463,7 @@ export class Hud {
       case 'raiseBuilding':
       case 'startMove':
       case 'startMerge':
+      case 'rotateBuilding':
         return this.onAction({ kind: act, id });
       case 'offerGift':
         return this.onAction({ kind: 'offerGift', gift: el.dataset.gift as GiftId });
@@ -776,8 +794,10 @@ export class Hud {
 
   // ---------- Thanh Hủy, Đặt (thay chỗ dock khi đặt, dời, trải, ghép) ----------
 
-  setMode(mode: HudMode, placeValid = true, hint?: string): void {
+  /** Đổi chế độ thanh dưới. `turnable`: công trình đang đặt, dời xoay được, hiện nút ↻ Xoay. */
+  setMode(mode: HudMode, placeValid = true, hint?: string, turnable = false): void {
     this.mode = mode;
+    this.turnable = turnable;
     this.root.classList.toggle('placing', mode !== 'view');
     if (mode !== 'view' && this.pop) {
       this.pop = null;
@@ -792,11 +812,16 @@ export class Hud {
       this.hint.hidden = true;
     } else if (mode === 'place' || mode === 'move') {
       const label = mode === 'move' ? vi.ui.moveHere : vi.ui.place;
+      // Nút xoay công trình chữ rõ "Xoay", khác nút tròn ⟳ xoay cảnh.
+      const turn = turnable
+        ? `<button class="btn bronze turn" data-act="rotatePlace" aria-label="${vi.ui.turnTitle}" title="${vi.ui.turnTitle}">↻ ${vi.ui.turn}</button>`
+        : '';
       this.bottombar.innerHTML = `
-        <button class="btn ghost" data-act="cancelPlace">✕ ${vi.ui.cancel}</button>
+        <button class="btn ghost" data-act="cancelPlace">✕ ${vi.ui.cancel}</button>${turn}
         <button class="btn" data-act="confirmPlace" ${placeValid ? '' : 'disabled'}>✓ ${label}</button>${rotate}`;
+      this.bottombar.classList.toggle('crowded', turnable);
       this.hint.hidden = false;
-      this.hint.textContent = mode === 'move' ? vi.ui.moveHint : vi.ui.placeHint;
+      this.hint.textContent = this.placeHint();
     } else if (mode === 'merge') {
       this.bottombar.innerHTML = `<button class="btn ghost" data-act="cancelPlace">✕ ${vi.ui.cancel}</button>${rotate}`;
       this.hint.hidden = false;
@@ -812,8 +837,16 @@ export class Hud {
   setPlaceValid(valid: boolean, reason?: string): void {
     const btn = this.bottombar.querySelector<HTMLButtonElement>('[data-act="confirmPlace"]');
     if (btn) btn.disabled = !valid;
-    const hint = this.mode === 'move' ? vi.ui.moveHint : vi.ui.placeHint;
-    if (btn) this.hint.textContent = valid || !reason ? hint : reason;
+    if (btn) this.hint.textContent = valid || !reason ? this.placeHint() : reason;
+  }
+
+  /** Công trình đang đặt, dời có xoay được không (thanh dưới có nút ↻ Xoay). */
+  private turnable = false;
+
+  /** Dòng gợi ý khi đặt, dời công trình. */
+  private placeHint(): string {
+    if (this.mode === 'move') return vi.ui.moveHint;
+    return this.turnable ? vi.ui.placeTurnHint : vi.ui.placeHint;
   }
 
   /** Đổi tạm dòng gợi ý (chế độ dựng lũy). */
@@ -829,6 +862,7 @@ export class Hud {
 
   showBuildMenu(state: GameState): void {
     this.sheet = { kind: 'build' };
+    this.buildPage = null;
     this.refreshSheet(state);
   }
 
@@ -870,6 +904,10 @@ export class Hud {
   private buildTab: (typeof BUILD_GROUPS)[number]['key'] = 'congTrinh';
   /** Mục đang chọn trong bảng Xây dựng (`BuildItem.key`); nhớ cho lần mở sau để xây tiếp cùng loại. */
   private buildPick: string | null = null;
+  /** Trang đang xem của lưới ảnh nhỏ; null là trang có mục đang chọn (mở bảng, đổi thẻ). */
+  private buildPage: number | null = null;
+  /** Thẻ đang xem trong bảng doanh trại; nhớ cho lần mở sau. */
+  private barracksTab: BarracksTab = 'quan';
 
   /** Mục lính đóng ở đồn biên: mỗi binh chủng một hàng, bớt, thêm (không quá quân đang có, trừ phần đóng ở bờ kia). */
   private garrisonHtml(state: GameState, b: Building): string {
@@ -1018,6 +1056,8 @@ export class Hud {
       this.sheetKindShown = this.sheet.kind;
     }
     const opening = !this.sheetEl.classList.contains('open');
+    this.sheetEl.classList.toggle('build', this.sheet.kind === 'build');
+    this.sheetEl.classList.toggle('tall', this.sheet.kind === 'build' || this.barracksOpen(state));
     this.sheetEl.classList.add('open');
     this.root.classList.add('sheet-open');
     // Thẻ Lạc hầu, danh sách tướng nằm đúng chỗ bảng: mở bảng thì đóng chúng.
@@ -1028,7 +1068,22 @@ export class Hud {
   private buildMenuHtml(state: GameState): string {
     const { tabs, note, items, prefer, foot } = this.buildMenuData(state);
     this.buildPick = pickOf(items, this.buildPick, prefer);
-    return `${tabs}${note}${xayDungHtml(items, this.buildPick, foot)}`;
+    const { cols, rows } = Hud.buildGrid();
+    const per = cols * rows;
+    const page = Math.min(this.buildPage ?? pageOf(items, this.buildPick, per), pageCount(items.length, per) - 1);
+    this.buildPage = page;
+    return `${tabs}${note}${xayDungHtml(items, this.buildPick, foot, { page, cols, rows })}`;
+  }
+
+  /**
+   * Cỡ một trang lưới ảnh nhỏ trong bảng Xây dựng, cho ảnh lớn, nút Xây và cả trang vừa bảng mà không phải cuộn:
+   * điện thoại dọc 2 hàng (5 cột, màn hẹp như màn ngoài Fold5 thì 4); bảng bên phải màn rộng 4 cột, số hàng theo
+   * chiều cao màn.
+   */
+  private static buildGrid(): { cols: number; rows: number } {
+    const side = window.matchMedia('(min-width: 600px) and (min-aspect-ratio: 4/5)').matches;
+    if (side) return { cols: 4, rows: Math.min(8, Math.max(1, Math.floor((window.innerHeight - 430) / 78))) };
+    return { cols: window.innerWidth >= 370 ? 5 : 4, rows: 2 };
   }
 
   /**
@@ -1200,7 +1255,7 @@ export class Hud {
 
     if (b.type === 'lauNo') rows.push(`<div class="stat"><span>${vi.ui.lauNoShots}</span><span></span></div>`);
     if (isDecor(b.type)) rows.push(`<div class="stat"><span></span><span class="muted">${vi.ui.decorOnly}</span></div>`);
-    if (b.type === 'doanhTrai') rows.push(this.barracksHtml(state, b));
+    if (b.type === 'doanhTrai') rows.push(`<div class="stat"><span>${vi.ui.barracksCap(capOf(state, b))}</span></div>`);
     const home = UNIT_TYPES.find((k) => UNITS[k].home === b.type);
     if (home) rows.push(this.homeHtml(state, home));
     if (TET_TYPES.includes(b.type)) rows.push(tetHtml(state));
@@ -1240,11 +1295,14 @@ export class Hud {
     }
 
     const actions: string[] = [];
+    // Công trình hư: báo và nút sửa đầu mục. Doanh trại thì để trên các thẻ, thẻ nào cũng thấy.
+    let repair = '';
     if (b.damaged) {
       const rc = repairCost(b);
-      actions.push(`<div class="why">${vi.ui.damaged}</div>`);
-      actions.push(`<button class="btn bronze" data-act="repair" data-id="${b.id}" ${canAfford(state, rc) && state.raid.phase !== 'battle' ? '' : 'disabled'}>
-        ${vi.ui.repair} · ${costHtml(state, rc)}</button>`);
+      repair = `<div class="why">${vi.ui.damaged}</div>
+        <button class="btn bronze" data-act="repair" data-id="${b.id}" ${canAfford(state, rc) && state.raid.phase !== 'battle' ? '' : 'disabled'}>
+        ${vi.ui.repair} · ${costHtml(state, rc)}</button>`;
+      if (b.type !== 'doanhTrai') actions.push(repair);
     }
     if (b.type === 'thanh' && b.uNo === 'hu') {
       // Sửa thành trước rồi mới sửa được ụ trên mặt thành.
@@ -1270,7 +1328,13 @@ export class Hud {
     if (b.type !== 'dien') {
       const mc = moveCost(b);
       const free = state.raid.phase === 'idle' && canAfford(state, mc);
-      actions.push(`<button class="btn ghost" data-act="startMove" data-id="${b.id}" ${free ? '' : 'disabled'}>↔ ${vi.ui.move} · ${costHtml(state, mc)}</button>`);
+      const moveBtn = `<button class="btn ghost" data-act="startMove" data-id="${b.id}" ${free ? '' : 'disabled'}>↔ ${vi.ui.move} · ${costHtml(state, mc)}</button>`;
+      // Xoay tại chỗ không tốn của: nút nhỏ cạnh nút Dời.
+      actions.push(
+        canRotateType(b.type)
+          ? `<div class="btn-pair">${moveBtn}<button class="btn ghost" data-act="rotateBuilding" data-id="${b.id}" title="${vi.ui.turnTitle}">↻ ${vi.ui.turn}</button></div>`
+          : moveBtn,
+      );
     }
     const cost = upgradeCostOf(b);
     if (cost) {
@@ -1306,7 +1370,9 @@ export class Hud {
       actions.push(`<button class="btn ghost" data-act="removeWall" data-id="${b.id}">${label}</button>`);
     }
 
-    return `<div class="info"><p>${esc(vi.buildings[b.type].desc)}</p>${rows.join('')}<div class="actions">${actions.join('')}</div></div>`;
+    const info = `<div class="info"><p>${esc(vi.buildings[b.type].desc)}</p>${rows.join('')}<div class="actions">${actions.join('')}</div></div>`;
+    if (b.type === 'doanhTrai') return this.barracksHtml(state, b, info, repair);
+    return info;
   }
 
   /** Một dòng binh chủng ở nơi ở riêng: số lính, binh khí đã rèn, nút Luyện kèm giá. */
@@ -1368,7 +1434,7 @@ export class Hud {
       </div>`;
     });
     const none = map.has(b.id) ? '' : `<p class="why">${vi.ui.noCommander}</p>`;
-    return `<h3>${vi.ui.commanderTitle}</h3><p class="muted">${vi.ui.commanderHint}</p>${none}<div class="units">${rows.join('')}</div>`;
+    return `<p class="muted">${vi.ui.commanderHint}</p>${none}<div class="units">${rows.join('')}</div>`;
   }
 
   /**
@@ -1401,8 +1467,7 @@ export class Hud {
     const left = reserve(state);
     const spare = UNIT_TYPES.filter((k) => left[k] > 0).map((k) => `${vi.units[k].icon} ${left[k]}`).join(' · ') || vi.ui.reserveNone;
     const manual = guardManual(state);
-    return `<h3>🛡️ ${vi.ui.guardTitle}</h3>
-      <div class="stat"><span>${vi.ui.guardInfo(used, guardCap(state))}</span><span>${vi.ui.guardHere(armySpace(got))}</span></div>
+    return `<div class="stat"><span>${vi.ui.guardInfo(used, guardCap(state))}</span><span>${vi.ui.guardHere(armySpace(got))}</span></div>
       <p class="muted">${manual ? vi.ui.guardManualNote : vi.ui.guardAutoNote}</p>
       ${[...full].map((t) => `<p class="why">${t}</p>`).join('')}
       ${owned.length ? `<div class="units">${rows.join('')}</div>` : `<p class="muted">${vi.ui.noTroops}</p>`}
@@ -1410,8 +1475,36 @@ export class Hud {
       ${manual ? `<button class="btn ghost small" data-act="guardAuto">${vi.ui.guardAuto}</button>` : ''}`;
   }
 
-  /** Doanh trại: nơi tướng ở, giữ chỗ quân và điều binh. Mỗi binh chủng luyện ở nơi ở riêng. */
-  private barracksHtml(state: GameState, b: Building): string {
+  /**
+   * Bảng doanh trại chia thẻ cho khỏi cuộn dài: Quân (binh chủng, nơi ở, lịch giặc), Giữ kinh đô (bố trí), Tướng
+   * (tướng chỉ huy), Trại (lời tả, cấp, nâng cấp, dời, xoay: `info`). Dòng chỗ quân và nút sửa (`repair`) ở trên các thẻ.
+   */
+  private barracksHtml(state: GameState, b: Building, info: string, repair: string): string {
+    const tab = this.barracksTab;
+    const noCommander = !commanders(state).has(b.id);
+    const tabs = (
+      [
+        ['quan', vi.ui.barracksTabs.quan, ''],
+        ['giu', vi.ui.barracksTabs.giu, ''],
+        ['tuong', vi.ui.barracksTabs.tuong, noCommander ? '!' : ''],
+        // Nâng cấp được thì thẻ Trại có dấu ⬆.
+        ['trai', vi.ui.barracksTabs.trai, upgradeCostOf(b) && canUpgrade(state, b.id).ok ? '⬆' : ''],
+      ] as const
+    )
+      .map(
+        ([key, label, mark]) =>
+          `<button class="tab ${key === tab ? 'on' : ''}" data-act="barracksTab" data-tab="${key}">${label}${mark ? `<i class="tab-mark ${mark === '!' ? 'hot' : ''}">${mark}</i>` : ''}</button>`,
+      )
+      .join('');
+    const body =
+      tab === 'giu' ? this.guardHtml(state, b) : tab === 'tuong' ? this.generalsHtml(state, b) : tab === 'trai' ? info : this.troopsHtml(state);
+    return `${this.troopSpaceHtml(state)}${repair ? `<div class="actions top">${repair}</div>` : ''}
+      <div class="build-tabs barracks-tabs">${tabs}</div>
+      <div class="barracks-body">${body}</div>`;
+  }
+
+  /** Thẻ Quân của doanh trại: mỗi binh chủng một dòng (số lính, nút tới nơi ở hay dựng nơi ở), lịch đợt giặc. */
+  private troopsHtml(state: GameState): string {
     const homes = UNIT_TYPES.filter((k) => k !== 'no' || inChapter4(state) || state.troops.no > 0).map((k) => {
       const type = UNITS[k].home;
       const home = homeOf(state, k);
@@ -1424,7 +1517,8 @@ export class Hud {
         act = `<button class="btn small" data-act="chooseBuild" data-type="${type}" ${blocker ? 'disabled' : ''}>${vi.ui.buildHome(name)}<br>${costHtml(state, BUILDINGS[type].buildCost)}</button>`;
       }
       const why = home ? (home.damaged ? vi.reasons.noiOHu : '') : (Hud.placeBlocker(state, type) ?? '');
-      return `<div class="unit-row">
+      // Chưa có nơi ở: nút Dựng kèm giá dài, xuống hàng dưới tên binh chủng cho chữ khỏi bị bóp hẹp.
+      return `<div class="unit-row ${home ? '' : 'wrap'}">
         <span class="unit-icon">${vi.units[k].icon}</span>
         <span class="unit-info"><b>${vi.units[k].name}</b> × ${state.troops[k]}
           <small>${vi.ui.trainAt(name)}</small>
@@ -1454,12 +1548,7 @@ export class Hud {
         call = vi.ui.callRaid;
       }
     }
-    return `${this.troopSpaceHtml(state)}
-      <div class="stat"><span>${vi.ui.barracksCap(capOf(state, b))}</span></div>
-      ${this.generalsHtml(state, b)}
-      ${this.guardHtml(state, b)}
-      <h3>${vi.ui.homesTitle}</h3>
-      <div class="units">${homes}</div>
+    return `<div class="units">${homes}</div>
       ${next ? `<p class="muted">${next}</p>` : ''}${call ? `<button class="btn ghost small" data-act="callRaid">${call}</button>` : ''}`;
   }
 

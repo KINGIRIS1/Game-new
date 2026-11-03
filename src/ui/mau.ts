@@ -40,6 +40,7 @@ const TILE: Partial<Record<BuildingType, string>> = {
   denPhuDong: '#e0703a',
   denTanVien: '#2f8a6a',
   denCoLoa: '#c8a020',
+  hoKimQuy: '#2f9ab8',
   vuon: '#4f9a42',
   chuongLon: '#3a3330',
   bep: '#c45a2a',

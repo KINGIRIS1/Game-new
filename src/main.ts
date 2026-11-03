@@ -31,6 +31,10 @@ import {
   buildingAt,
   canMove,
   canPlace,
+  canRotateType,
+  placeLine,
+  rotOf,
+  rotateBuilding,
   clearDecorAt,
   findSpot,
   claimQuest,
@@ -61,7 +65,7 @@ import {
 } from './game/game';
 import { isOpen, khoanhOf, khoanhWood, openKhoanh, openable } from './game/khoanh';
 import { cayDaAt, clearCayDa } from './game/cayDa';
-import { GRID, RIVER_START, farBankOf, footOnLand } from './game/map';
+import { GRID, RIVER_START, farBankOf, footOnLand, lineTiles } from './game/map';
 import { fromCode, loadFromStorage, saveFileName, saveToStorage, toCode } from './game/save';
 import { tomTat } from './game/manVao';
 import { TitleDrift } from './render/camera';
@@ -81,7 +85,8 @@ const isPainted = (type: BuildingType) => PAINTED.includes(type) || (isDecor(typ
 
 type Mode =
   | { kind: 'view'; selected: number | null }
-  | { kind: 'place'; type: BuildingType; x: number; z: number; moving?: number }
+  /** Đặt mới hay dời (`moving`): góc móng (x, z), hướng xoay `rot` (số nấc 90°, chỉ loại xoay được). */
+  | { kind: 'place'; type: BuildingType; x: number; z: number; rot: number; moving?: number }
   | { kind: 'paint'; type: PaintType }
   /** Đang chọn chòi canh thứ hai để ghép với chòi `from` thành lầu nỏ. */
   | { kind: 'merge'; from: number };
@@ -216,10 +221,24 @@ async function start(): Promise<void> {
 
   // ---------- Chế độ đặt công trình ----------
 
+  /** Hướng xoay vừa chọn khi đặt mỗi loại: dựng tiếp cùng loại thì giữ hướng ấy. */
+  const lastRot: Partial<Record<BuildingType, number>> = {};
+
+  /** Đang dời mà vẫn ở chỗ cũ, chỉ đổi hướng: xoay tại chỗ, không tốn của. */
+  const onlyTurning = () => {
+    if (mode.kind !== 'place' || mode.moving === undefined) return false;
+    const b = findBuilding(state, mode.moving);
+    return !!b && b.x === mode.x && b.z === mode.z && rotOf(b) !== mode.rot;
+  };
+
   const updateGhost = () => {
     if (mode.kind !== 'place') return;
-    const check = mode.moving !== undefined ? canMove(state, mode.moving, mode.x, mode.z) : canPlace(state, mode.type, mode.x, mode.z);
-    world.setGhost(mode.type, mode.x, mode.z, check.ok, footprintTop(state, mode.type, mode.x, mode.z));
+    const check = onlyTurning()
+      ? { ok: true as const }
+      : mode.moving !== undefined
+        ? canMove(state, mode.moving, mode.x, mode.z)
+        : canPlace(state, mode.type, mode.x, mode.z);
+    world.setGhost(mode.type, mode.x, mode.z, check.ok, footprintTop(state, mode.type, mode.x, mode.z), mode.rot);
     hud.setPlaceValid(check.ok, check.ok ? undefined : vi.reasons[check.reason]);
   };
 
@@ -239,6 +258,9 @@ async function start(): Promise<void> {
   };
 
   const exitMode = () => {
+    world.view.drawMode = false;
+    world.view.stopDrawing();
+    world.setLinePreview(null);
     mode = { kind: 'view', selected: null };
     world.setGhost(null);
     world.setSelection(null);
@@ -384,6 +406,69 @@ async function start(): Promise<void> {
     select(id);
   };
 
+  // ---------- Kéo thả trải đường ----------
+
+  /** Dải ô đang kéo (ô đầu, ô cuối), và chỗ ngón đang ở chờ xét ở khung hình sau (xét mỗi khung một lần cho nhẹ máy). */
+  let drag: { from: { x: number; z: number }; tiles: { x: number; z: number }[] } | null = null;
+  let dragAt: { fx: number; fy: number; tx: number; ty: number } | null = null;
+  let dragFrame = 0;
+
+  /** Giá của `n` ô đường loại `type`, ghi chữ cho dòng gợi ý. */
+  const costText = (type: BuildingType, n: number) =>
+    RESOURCE_IDS.filter((r) => (BUILDINGS[type].buildCost[r] ?? 0) > 0)
+      .map((r) => `${vi.resources[r].icon} ${fmt((BUILDINGS[type].buildCost[r] ?? 0) * n)}`)
+      .join(' ');
+
+  /** Xét dải ô theo chỗ ngón vừa kéo tới: tô xanh đỏ, dòng gợi ý ghi số ô và giá. */
+  const updateDrag = () => {
+    dragFrame = 0;
+    if (!dragAt || mode.kind !== 'paint' || !isRoad(mode.type as BuildingType)) return;
+    const type = mode.type as BuildingType;
+    const from = drag?.from ?? world.pickTile(dragAt.fx, dragAt.fy);
+    const to = world.pickTile(dragAt.tx, dragAt.ty);
+    if (!from) return;
+    const tiles = to ? lineTiles(from, to) : (drag?.tiles ?? [from]);
+    drag = { from, tiles };
+    const cells = tiles.map((t) => ({ ...t, ok: buildingAt(state, t.x, t.z)?.type === type || canPlace(state, type, t.x, t.z).ok }));
+    world.setLinePreview(cells);
+    const n = cells.filter((c) => c.ok && buildingAt(state, c.x, c.z)?.type !== type).length;
+    hud.setHint(vi.ui.roadDrag(n, costText(type, n)));
+  };
+
+  world.view.onDraw = (phase, fx, fy, tx, ty) => {
+    if (phase === 'move') {
+      dragAt = { fx, fy, tx, ty };
+      if (!dragFrame) dragFrame = requestAnimationFrame(updateDrag);
+      return;
+    }
+    if (dragFrame) cancelAnimationFrame(dragFrame);
+    dragFrame = 0;
+    if (phase === 'end') {
+      dragAt = { fx, fy, tx, ty };
+      updateDrag();
+    }
+    const done = drag;
+    drag = null;
+    dragAt = null;
+    world.setLinePreview(null);
+    if (mode.kind !== 'paint' || !isRoad(mode.type as BuildingType)) return;
+    if (phase === 'cancel' || !done) {
+      hud.setHint(vi.ui.roadHint);
+      return;
+    }
+    const r = placeLine(state, mode.type as BuildingType, done.tiles);
+    if (!r.placed.length) {
+      hud.setHint(vi.ui.roadHint);
+      if (r.reason) fail(r.reason);
+      return;
+    }
+    play('place');
+    hud.setHint(vi.ui.roadPaved(r.placed.length));
+    // Có ô hỏng (hết của, đủ giới hạn, vướng công trình) thì báo lý do của ô hỏng đầu.
+    if (r.reason) hud.toast(vi.reasons[r.reason], true);
+    commit();
+  };
+
   // ---------- Thao tác từ giao diện ----------
 
   function handle(a: HudAction): void {
@@ -407,6 +492,8 @@ async function start(): Promise<void> {
         play('tap');
         if (isPainted(a.type)) {
           mode = { kind: 'paint', type: a.type };
+          // Trải đường: một ngón kéo để trải cả dải, hai ngón kéo cảnh.
+          world.view.drawMode = isRoad(a.type);
           const hint = isRoad(a.type)
             ? vi.ui.roadHint
             : isDecor(a.type)
@@ -423,8 +510,8 @@ async function start(): Promise<void> {
           if (a.type === 'de') hud.toast(vi.ui.floodPreview(nextFloodLevel(state)));
           return;
         }
-        mode = { kind: 'place', type: a.type, ...nearestSpot(a.type) };
-        hud.setMode('place');
+        mode = { kind: 'place', type: a.type, rot: lastRot[a.type] ?? 0, ...nearestSpot(a.type) };
+        hud.setMode('place', true, undefined, canRotateType(a.type));
         updateGhost();
         // Chỗ đặt ở bờ khác chỗ đang nhìn (đồn biên chỉ dựng bên kia sông): lướt camera tới đó.
         const seen = world.screenCenterTile();
@@ -438,8 +525,18 @@ async function start(): Promise<void> {
 
       case 'confirmPlace': {
         if (mode.kind !== 'place') return;
+        if (onlyTurning()) {
+          const t = rotateBuilding(state, mode.moving!, mode.rot);
+          if (!t.ok) return fail(t.reason);
+          play('place');
+          hud.toast(vi.ui.turned(buildingName(t.value)));
+          exitMode();
+          commit();
+          world.pop(t.value.id);
+          return;
+        }
         if (mode.moving !== undefined) {
-          const m = move(state, mode.moving, mode.x, mode.z);
+          const m = move(state, mode.moving, mode.x, mode.z, mode.rot);
           if (!m.ok) return fail(m.reason);
           play('place');
           hud.toast(vi.ui.moved(buildingName(m.value)));
@@ -448,13 +545,32 @@ async function start(): Promise<void> {
           world.pop(m.value.id);
           return;
         }
-        const r = place(state, mode.type, mode.x, mode.z);
+        const r = place(state, mode.type, mode.x, mode.z, mode.rot);
         if (!r.ok) return fail(r.reason);
+        lastRot[mode.type] = mode.rot;
         play('place');
         hud.toast(vi.ui.placed(buildingName(r.value)));
         exitMode();
         commit();
         world.pop(r.value.id);
+        return;
+      }
+
+      case 'rotatePlace':
+        // Xoay bóng công trình đang đặt, dời một nấc theo chiều kim đồng hồ trên màn hình.
+        if (mode.kind !== 'place' || !canRotateType(mode.type)) return;
+        play('tap');
+        mode.rot = (mode.rot + 3) % 4;
+        updateGhost();
+        return;
+
+      case 'rotateBuilding': {
+        const b = findBuilding(state, a.id);
+        if (!b) return fail('khongTimThay');
+        const r = rotateBuilding(state, b.id, (rotOf(b) + 3) % 4);
+        if (!r.ok) return fail(r.reason);
+        play('tap');
+        commit();
         return;
       }
 
@@ -539,8 +655,8 @@ async function start(): Promise<void> {
         world.setSelection(null);
         world.showGrid(true);
         play('tap');
-        mode = { kind: 'place', type: b.type, x: b.x, z: b.z, moving: b.id };
-        hud.setMode('move');
+        mode = { kind: 'place', type: b.type, x: b.x, z: b.z, rot: rotOf(b), moving: b.id };
+        hud.setMode('move', true, undefined, canRotateType(b.type));
         updateGhost();
         return;
       }
@@ -1267,8 +1383,8 @@ async function start(): Promise<void> {
       tick(state, ms);
       commit();
     },
-    place: (type: BuildingType, x: number, z: number) => {
-      const r = place(state, type, x, z);
+    place: (type: BuildingType, x: number, z: number, rot = 0) => {
+      const r = place(state, type, x, z, rot);
       commit();
       return r;
     },

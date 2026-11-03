@@ -59,14 +59,16 @@ export type BuildingType =
   // Nhà làng bên kia sông đã về theo, và đồn biên giữ bờ bên kia.
   | 'banLang'
   | 'donBien'
+  // Hồ Kim Quy: nơi thần Kim Quy (Rùa Vàng) trú ngụ, mở khi Rùa Vàng hiện lên (chương 3).
+  | 'hoKimQuy'
   // Bến thuyền khơi: thuyền đánh cá lớn ra biển Đông, mang về cá biển và vỏ ốc (từ Điện 8, `bien.ts`).
   | 'benKhoi';
 
 /**
- * Mốc mở khóa theo cốt truyện: sau kết chương 1, khi vào chương 2, sau kết chương 2, khi vào chương 3, sau kết chương 3,
- * khi vào chương 4, sau kết chương 4 (vua xuống biển).
+ * Mốc mở khóa theo cốt truyện: sau kết chương 1, khi vào chương 2, sau kết chương 2, khi vào chương 3, khi Rùa Vàng
+ * hiện lên (thắng màn 19), sau kết chương 3, khi vào chương 4, sau kết chương 4 (vua xuống biển).
  */
-export type Unlock = 'ketChuong1' | 'chuong2' | 'ketChuong2' | 'chuong3' | 'ketChuong3' | 'chuong4' | 'ketChuong4';
+export type Unlock = 'ketChuong1' | 'chuong2' | 'ketChuong2' | 'chuong3' | 'ruaVang' | 'ketChuong3' | 'chuong4' | 'ketChuong4';
 
 export interface BuildingDef {
   type: BuildingType;
@@ -157,6 +159,7 @@ export const BUILD_MENU: BuildingType[] = [
   'denTanVien',
   'thanh',
   'congThanh',
+  'hoKimQuy',
   'denCoLoa',
   'denCuong',
   'cauSongDa',
@@ -665,6 +668,23 @@ export const BUILDINGS: Record<BuildingType, BuildingDef> = {
     removable: false,
     unlock: 'ketChuong3',
   },
+  // Hồ Kim Quy: hồ lớn nơi thần Kim Quy trú ngụ, giữa hồ có miếu trên gò. Hồ còn nguyên thì tường thành thêm máu
+  // (`KIM_QUY_WALLS`), như truyện thần Kim Quy giúp An Dương Vương xây thành không đổ.
+  hoKimQuy: {
+    type: 'hoKimQuy',
+    w: 8,
+    d: 8,
+    maxLevel: 1,
+    buildCost: { gao: 2000, voOc: 2000, datDa: 2500, go: 500 },
+    upgradeCost: [{}, {}],
+    production: [{}],
+    hp: [1000],
+    limit: [1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+    minDien: 1,
+    buildable: true,
+    removable: false,
+    unlock: 'ruaVang',
+  },
   // Hội Tết bánh chưng bánh giầy: bốn công trình làm bánh, mở sau truyện Lang Liêu (kết chương 1).
   // Ba cấp: cấp 2 cần Điện cấp 5, cấp 3 cần Điện cấp 6. Làm ra nguyên liệu và bánh, không làm ra tài nguyên.
   ruongNep: {
@@ -1020,6 +1040,8 @@ export const FLOOD_TOLERANCE: Partial<Record<BuildingType, number>> = {
   denTanVien: 1,
   denCoLoa: 1,
   denCuong: 1,
+  // Hồ không sợ nước: miếu đứng trên gò giữa hồ.
+  hoKimQuy: 99,
   ben: 99,
   langChai: 99,
   benKhoi: 99,
@@ -1068,6 +1090,10 @@ export const ARMS_BONUS = 0.1;
 
 /** Đền Phù Đổng (còn nguyên) cộng thêm phần này vào sản lượng mọi tài nguyên, và vào máu, sát thương của quân ta. */
 export const TEMPLE_BONUS = 0.1;
+/** Hồ Kim Quy còn nguyên: lũy (cả thành đất), thành Cổ Loa, cổng thành thêm chừng này phần máu khi giặc đánh. */
+export const KIM_QUY_WALLS = 0.3;
+/** Tường được Hồ Kim Quy thêm máu. */
+export const KIM_QUY_WALL_TYPES: BuildingType[] = ['luy', 'thanh', 'congThanh'];
 
 /** Sức chứa mỗi loại tài nguyên theo cấp Điện Vua Hùng, chỉ số 0 là cấp 1. Kho thóc cộng thêm. */
 export const STORAGE_CAP = [500, 1000, 2000, 4000, 8000, 14000, 22000, 32000, 44000, 60000];
@@ -1750,7 +1776,7 @@ export const QUEST_INSERTED_V4 = 11;
  * Công trình mới thêm sau khi đã có người chơi: lần đầu mở được thì Lạc hầu nói một câu gợi ý (một lần, ghi ở
  * `GameState.hinted`). Thêm loại vào đây không phải nâng bản lưu.
  */
-export const NEW_HINTS: BuildingType[] = ['xuongMoc', 'langChai', 'congThanh', 'benKhoi'];
+export const NEW_HINTS: BuildingType[] = ['xuongMoc', 'langChai', 'congThanh', 'hoKimQuy', 'benKhoi'];
 
 /**
  * Cá mỗi phút của một làng chài đủ người, theo cấp (chỉ số 0 là cấp 1). Cá không tích trữ: dân và lính ăn cá trước,

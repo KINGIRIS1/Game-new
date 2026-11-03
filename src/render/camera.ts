@@ -1,5 +1,6 @@
 // Camera isometric nhìn chéo từ trên xuống: một ngón kéo để di chuyển, hai ngón chụm để phóng to,
 // hai ngón vặn theo vòng tròn (hay nút ⟳) để xoay cảnh theo nấc 90°: có 4 hướng nhìn chéo.
+// Chế độ vẽ (`drawMode`, lúc trải đường): một ngón kéo để vẽ dải ô (`onDraw`), hai ngón vẫn kéo, phóng, xoay cảnh.
 
 import * as THREE from 'three';
 
@@ -35,6 +36,15 @@ export class IsoCamera {
    */
   bounds: CamBounds = { min: -27, max: 27 };
   onTap?: (clientX: number, clientY: number) => void;
+  /** Chế độ vẽ: một ngón kéo thì gọi `onDraw` thay vì kéo cảnh. */
+  drawMode = false;
+  /**
+   * Kéo một ngón ở chế độ vẽ: từ chỗ đặt ngón (from) tới chỗ ngón đang ở (to). `move` mỗi lần ngón dịch, `end` khi
+   * nhấc ngón, `cancel` khi đặt thêm ngón thứ hai (chuyển sang kéo, phóng cảnh) hay cử chỉ bị hủy.
+   */
+  onDraw?: (phase: 'move' | 'end' | 'cancel', fromX: number, fromY: number, toX: number, toY: number) => void;
+  /** Đang vẽ dở bằng một ngón. */
+  private drawing = false;
 
   private width = 1;
   private height = 1;
@@ -185,6 +195,7 @@ export class IsoCamera {
       this.gesture = { startX: e.clientX, startY: e.clientY, startTime: e.timeStamp, moved: 0, multi: false };
     } else {
       this.gesture.multi = true;
+      this.stopDrawing();
       const [a, b] = [...this.pointers.values()];
       this.twist = { angle: Math.atan2(b.y - a.y, b.x - a.x), acc: 0 };
     }
@@ -196,8 +207,13 @@ export class IsoCamera {
     if (this.pointers.size === 1) {
       this.gesture.moved = Math.max(this.gesture.moved, Math.hypot(e.clientX - this.gesture.startX, e.clientY - this.gesture.startY));
       if (this.gesture.moved > TAP_SLOP_PX) {
-        this.onUserMove?.();
-        this.pan(prev.x, prev.y, e.clientX, e.clientY);
+        if (this.drawMode && !this.gesture.multi) {
+          this.drawing = true;
+          this.onDraw?.('move', this.gesture.startX, this.gesture.startY, e.clientX, e.clientY);
+        } else if (!this.drawing) {
+          this.onUserMove?.();
+          this.pan(prev.x, prev.y, e.clientX, e.clientY);
+        }
       }
       this.pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
       return;
@@ -231,13 +247,27 @@ export class IsoCamera {
   private onUp = (e: PointerEvent): void => {
     const wasSingle = this.pointers.size === 1 && !this.gesture.multi;
     this.pointers.delete(e.pointerId);
+    if (this.drawing) {
+      this.drawing = false;
+      if (wasSingle) this.onDraw?.('end', this.gesture.startX, this.gesture.startY, e.clientX, e.clientY);
+      else this.onDraw?.('cancel', 0, 0, 0, 0);
+      return;
+    }
     const quick = e.timeStamp - this.gesture.startTime < TAP_MAX_MS;
     if (wasSingle && quick && this.gesture.moved <= TAP_SLOP_PX) this.onTap?.(e.clientX, e.clientY);
   };
 
   private onCancel = (e: PointerEvent): void => {
     this.pointers.delete(e.pointerId);
+    this.stopDrawing();
   };
+
+  /** Bỏ dải đang vẽ dở (thêm ngón thứ hai, cử chỉ bị hủy, hay tắt chế độ vẽ). */
+  stopDrawing(): void {
+    if (!this.drawing) return;
+    this.drawing = false;
+    this.onDraw?.('cancel', 0, 0, 0, 0);
+  }
 
   private onWheel = (e: WheelEvent): void => {
     e.preventDefault();
