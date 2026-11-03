@@ -6,6 +6,7 @@ import { bridgeModel, makeBanLang, makeDonBien } from '../benKia';
 import { buildingModel, footScale } from '../buildings';
 import { BAI_DA } from './baiDa';
 import { BEN } from './ben';
+import { BEN_KHOI } from './benKhoi';
 import { BEP } from './bep';
 import type { CongTrinh } from './chung';
 import { CHUONG_LON } from './chuongLon';
@@ -41,6 +42,7 @@ export const CONG_TRINH: Partial<Record<BuildingType, CongTrinh>> = {
   xuongMoc: XUONG_MOC,
   langChai: LANG_CHAI,
   hoKimQuy: HO_KIM_QUY,
+  benKhoi: BEN_KHOI,
 };
 
 /**

@@ -17,13 +17,24 @@ const TURN_S = 0.35;
 /** Hai ngón vặn quá góc này (radian, khoảng 35°) thì xoay một nấc. */
 const TWIST_SNAP = THREE.MathUtils.degToRad(35);
 
+/** Giới hạn tâm nhìn: vuông `min`..`max` theo cả x, z; `sea` nới ra biển phía đông. */
+export interface CamBounds {
+  min: number;
+  max: number;
+  sea?: { maxX: number; minZ: number; maxZ: number };
+}
+
 export class IsoCamera {
   readonly camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 1, 400);
   readonly target = new THREE.Vector3();
   /** Mặc định thấy chừng 20 ô bề ngang: công trình to (móng 3×3 tới 5×5) vẫn rõ dáng. */
   zoom = 0.72;
-  /** Giới hạn di chuyển của tâm nhìn trên mặt đất (World đặt theo vùng đất đã khai phá). */
-  bounds = { min: -27, max: 27 };
+  /**
+   * Giới hạn di chuyển của tâm nhìn trên mặt đất (World đặt theo vùng đất đã khai phá). `sea`: từ Điện 8 kéo được ra
+   * biển phía đông tới `maxX`; càng ra xa vùng đất thì càng kéo được rộng lên bắc, xuống nam (`minZ`, `maxZ`) để thấy
+   * hai quần đảo.
+   */
+  bounds: CamBounds = { min: -27, max: 27 };
   onTap?: (clientX: number, clientY: number) => void;
   /** Chế độ vẽ: một ngón kéo thì gọi `onDraw` thay vì kéo cảnh. */
   drawMode = false;
@@ -72,8 +83,17 @@ export class IsoCamera {
 
   apply(): void {
     this.zoom = THREE.MathUtils.clamp(this.zoom, MIN_ZOOM, MAX_ZOOM);
-    this.target.x = THREE.MathUtils.clamp(this.target.x, this.bounds.min, this.bounds.max);
-    this.target.z = THREE.MathUtils.clamp(this.target.z, this.bounds.min, this.bounds.max);
+    const b = this.bounds;
+    this.target.x = THREE.MathUtils.clamp(this.target.x, b.min, b.sea ? Math.max(b.max, b.sea.maxX) : b.max);
+    let zMin = b.min;
+    let zMax = b.max;
+    if (b.sea && this.target.x > b.max) {
+      // Ra khỏi vùng đất về phía biển: nới dần giới hạn bắc nam trong chừng 10 ô, khỏi giật khi kéo về.
+      const k = Math.min(1, (this.target.x - b.max) / 10);
+      zMin = THREE.MathUtils.lerp(b.min, Math.min(b.min, b.sea.minZ), k);
+      zMax = THREE.MathUtils.lerp(b.max, Math.max(b.max, b.sea.maxZ), k);
+    }
+    this.target.z = THREE.MathUtils.clamp(this.target.z, zMin, zMax);
     const h = this.baseHeight() / this.zoom;
     const w = h * (this.width / this.height);
     const cam = this.camera;

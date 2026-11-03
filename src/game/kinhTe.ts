@@ -26,7 +26,7 @@ const KHOAN = {
   nhiemVu: 'Thưởng nhiệm vụ',
   doiHang: 'Đổi hàng thuyền buôn (vào trừ ra)',
   an: 'Dân và lính ăn',
-  ca: 'Cá đỡ gạo ăn (làng chài)',
+  ca: 'Cá đỡ gạo ăn (làng chài, thuyền khơi)',
   xay: 'Dựng công trình',
   phatRung: 'Phát rừng mở khoảnh',
   nangDien: 'Nâng Điện',

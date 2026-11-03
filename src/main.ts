@@ -17,6 +17,7 @@ import { markStory, pendingStory } from './game/story';
 import { footprintTop } from './game/terrain';
 import { BUILDINGS, RESOURCE_IDS, STAGES, UNIT_TYPES, U_NO, isBridge, isDecor, isRoad, type BuildingType, type Cost, type ResourceId, type Row, type SkillId, type UnitType } from './game/defs';
 import { CAMPS, benKiaOpen, bridgeSnap, campHero, campTier, canStartCamp, joinVillage, plotAt, poiAt, sendScout, setGarrison, startCamp } from './game/benKia';
+import type { QuanDaoId } from './game/bien';
 import { fmt } from './ui/format';
 import {
   canAfford,
@@ -297,6 +298,14 @@ async function start(): Promise<void> {
       else if (hero === 'adv') hud.showAdv(state);
       else if (hero === 'caoLo') hud.showCaoLo(state);
       else hud.showSon(state);
+      return;
+    }
+    // Chạm vào đảo ngoài biển Đông: bảng quần đảo.
+    const dao = mode.kind === 'view' ? world.pickIsland(cx, cy) : null;
+    if (dao) {
+      play('tap');
+      select(null);
+      hud.showQuanDao(state, dao);
       return;
     }
     const tile = world.pickTile(cx, cy);
@@ -1047,6 +1056,12 @@ async function start(): Promise<void> {
         world.lookAtEdge(state.raid.side);
         return;
 
+      case 'seeIsland':
+        // Đóng bảng cho thấy trọn biển, lướt camera ra quần đảo thuyền bến này đánh cá.
+        select(null);
+        world.panToIsland(a.id);
+        return;
+
       case 'openBarracks': {
         const barracks = state.buildings.find((b) => b.type === 'doanhTrai');
         if (barracks) {
@@ -1403,7 +1418,13 @@ async function start(): Promise<void> {
       commit();
       return r;
     },
-    skill: (k: SkillId) => {
+    /** Mở bảng quần đảo `id` như khi chạm vào đảo. */
+    quanDao: (id: QuanDaoId) => hud.showQuanDao(state, id),
+    /** Đặt đồng hồ cảnh (giây): thuyền khơi, cá voi, cá heo theo đồng hồ này, để chụp thử thuyền đang ở biển. */
+    seaTime: (t: number) => world.seekTime(t),
+    /** Cho cá voi (`whale`) hay đàn cá heo (`dolphins`) nổi lên ngay gần chỗ camera nhìn. */
+    seaLife: (kind: 'whale' | 'dolphins') => world.showSeaLife(kind),
+        skill: (k: SkillId) => {
       const battle = state.campaign.battle ?? state.raid.battle;
       return !!battle && useSkill(battle, k);
     },

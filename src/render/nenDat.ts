@@ -49,6 +49,11 @@ export interface NenInput {
   origin: number;
   /** Số ô nới ra ngoài lưới mỗi phía (mặc định `NEN_MARGIN`). */
   margin?: number;
+  /**
+   * Ô ngoài lưới (x, z) có mặt đất riêng không: trả mặt đất, `null` là nước (như sông: bãi cát, biển phía đông vẽ
+   * riêng), `undefined` (hay không có hàm) là lấy theo ô mép lưới gần nhất như thường.
+   */
+  outside?: (x: number, z: number) => number | null | undefined;
 }
 
 /** Số ngẫu nhiên 0..1 lặp lại được cho mỗi nút (i, j) theo hạt giống. */
@@ -220,7 +225,9 @@ export class NenDat {
     const { G, LO, T, input } = this;
     const x = LO + (f % T);
     const z = LO + Math.floor(f / T);
-    const top = input.top(Math.min(Math.max(x, 0), G - 1), Math.min(Math.max(z, 0), G - 1));
+    const inside = x >= 0 && z >= 0 && x < G && z < G;
+    const own = inside ? undefined : input.outside?.(x, z);
+    const top = own !== undefined ? own : input.top(Math.min(Math.max(x, 0), G - 1), Math.min(Math.max(z, 0), G - 1));
     this.river[f] = top === null ? 1 : 0;
     this.ty[f] = top ?? input.riverY;
     this.flat[f] = top !== null && x >= 0 && z >= 0 && x < G && z < G && input.flat(x, z) ? 1 : 0;

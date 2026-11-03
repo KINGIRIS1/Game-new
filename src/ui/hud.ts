@@ -5,6 +5,7 @@ import { enemiesLeft, alliesLeft, holdProgress, skillReady, wavesArrived, type B
 import { advJoined, advLook, advResting, inChapter3, ruaVangCame, wallRings } from '../game/coLoa';
 import {
   BUILDINGS,
+  CA_BIEN_PER_MIN,
   CA_PER_MIN,
   BUILD_MENU,
   CONG_THANH,
@@ -118,6 +119,8 @@ import { blessingHtml, tetHtml } from './tet';
 import { khoanhHtml } from './khoanh';
 import { benKiaHtml } from './benKia';
 import { campTier, cutOff, dacSanOf, plotAt, villageOutput } from '../game/benKia';
+import { seaIndex, seaRoute, type QuanDaoId } from '../game/bien';
+import { quanDaoHtml } from './bien';
 import { farBankOf } from '../game/map';
 import { mauItems } from './mau';
 import { goLabel, pageCount, pageOf, pickOf, thumbUrl, xayDungHtml, type BuildItem } from './xayDung';
@@ -219,6 +222,8 @@ export type HudAction =
   | { kind: 'repairAll' }
   | { kind: 'callRaid' }
   | { kind: 'lookRaid' }
+  /** Lướt camera ra quần đảo ngoài biển Đông (bảng bến thuyền khơi). */
+  | { kind: 'seeIsland'; id: QuanDaoId }
   | { kind: 'openBarracks' }
   | { kind: 'selectBuilding'; id: number }
   | { kind: 'chooseUNo' }
@@ -254,6 +259,7 @@ type Sheet =
   | { kind: 'tet' }
   | { kind: 'khoanh'; id: number }
   | { kind: 'benKia'; id: number }
+  | { kind: 'quanDao'; id: QuanDaoId }
   | null;
 
 /** Máy có gửi được tệp qua bảng chia sẻ của hệ điều hành (Zalo, Messenger, Drive...) không. Hỏi một lần. */
@@ -481,6 +487,8 @@ export class Hud {
         return this.onAction({ kind: 'applyMau', mau: el.dataset.mau as MauId });
       case 'phatRung':
         return this.onAction({ kind: 'phatRung', id });
+      case 'seeIsland':
+        return this.onAction({ kind: 'seeIsland', id: el.dataset.dao as QuanDaoId });
       case 'trinhSat':
         return this.onAction({ kind: 'trinhSat', id });
       case 'ketThan':
@@ -938,6 +946,12 @@ export class Hud {
     this.refreshSheet(state);
   }
 
+  /** Bảng quần đảo `id` ngoài biển Đông (vừa chạm vào đảo). */
+  showQuanDao(state: GameState, id: QuanDaoId): void {
+    this.sheet = { kind: 'quanDao', id };
+    this.refreshSheet(state);
+  }
+
   /** Bảng Khoảnh rừng của khoảnh `id` (vừa chạm vào rừng). */
   showKhoanh(state: GameState, id: number): void {
     this.sheet = { kind: 'khoanh', id };
@@ -1013,6 +1027,9 @@ export class Hud {
       if (state.khoanh.includes(this.sheet.id)) return this.closeSheet();
       title = `🌳 ${vi.ui.khoanhTitle}`;
       body = khoanhHtml(state, this.sheet.id);
+    } else if (this.sheet.kind === 'quanDao') {
+      title = `${vi.bien.icon} ${vi.bien.quanDao[this.sheet.id].name}`;
+      body = quanDaoHtml(state, this.sheet.id);
     } else if (this.sheet.kind === 'benKia') {
       title = `🌄 ${vi.benKia.title}`;
       if (this.donPick) for (const k of UNIT_TYPES) this.donPick.army[k] = Math.min(this.donPick.army[k], state.troops[k]);
@@ -1182,6 +1199,14 @@ export class Hud {
       rows.push(`<div class="stat"><span>${vi.ui.fishHere}</span><span>${fishRate(fishOf(b))}</span></div>`);
       if (b.level < def.maxLevel) rows.push(`<div class="stat"><span>${vi.ui.nextLevel}</span><span>${fishRate(CA_PER_MIN[b.level])}</span></div>`);
     }
+    if (b.type === 'benKhoi') {
+      // Cá biển của bến này, và thuyền ra ngư trường quanh quần đảo nào (bến chẵn Hoàng Sa, bến lẻ Trường Sa).
+      rows.push(`<div class="stat"><span>${vi.ui.seaFishHere}</span><span>${fishRate(fishOf(b))}</span></div>`);
+      if (b.level < def.maxLevel) rows.push(`<div class="stat"><span>${vi.ui.nextLevel}</span><span>${fishRate(CA_BIEN_PER_MIN[b.level])}</span></div>`);
+      const ground = seaRoute(b, seaIndex(state, b)).quanDao;
+      rows.push(`<div class="stat"><span>${vi.ui.seaGround}</span><span>${vi.bien.icon} ${vi.bien.quanDao[ground].name}</span></div>`);
+      rows.push(`<div class="actions"><button class="btn bronze" data-act="seeIsland" data-dao="${ground}">${vi.bien.icon} ${vi.bien.seeIsland}</button></div>`);
+    }
     if (b.type === 'donBien') rows.push(this.garrisonHtml(state, b));
     if (b.type === 'banLang') {
       const id = plotAt(b.x, b.z);
@@ -1234,14 +1259,15 @@ export class Hud {
     const home = UNIT_TYPES.find((k) => UNITS[k].home === b.type);
     if (home) rows.push(this.homeHtml(state, home));
     if (TET_TYPES.includes(b.type)) rows.push(tetHtml(state));
-    if (b.type === 'langChai') {
-      // Cả kinh đô: cá mỗi phút, phần ăn của dân và lính, số gạo cá đỡ được; cá đủ ăn thì báo dựng thêm chưa có ích.
+    if (b.type === 'langChai' || b.type === 'benKhoi') {
+      // Cả kinh đô: cá mỗi phút, phần ăn của dân và lính, số gạo cá đỡ được; cá đủ ăn thì báo dựng thêm chưa có ích
+      // (bến thuyền khơi vẫn có ích vì vỏ ốc).
       const fish = fishPerMinute(state);
       const food = foodPerMinute(state);
       rows.push(`<div class="stat"><span>${vi.ui.fishAll}</span><span>${fishRate(fish)}</span></div>`);
       rows.push(`<div class="stat"><span>${vi.ui.foodAll}</span><span>${vi.resources.gao.icon} ${fmt(food)}${vi.ui.perMinute}</span></div>`);
       rows.push(`<div class="stat"><span>${vi.ui.fishSaved}</span><span>${vi.resources.gao.icon} ${fmt(Math.min(fish, food))}${vi.ui.perMinute}</span></div>`);
-      if (fish >= food) rows.push(`<div class="stat"><span></span><span class="muted">${vi.ui.fishEnough}</span></div>`);
+      if (fish >= food) rows.push(`<div class="stat"><span></span><span class="muted">${b.type === 'benKhoi' ? vi.ui.seaFishEnough : vi.ui.fishEnough}</span></div>`);
     }
     if (b.type === 'dien' && tetStarted(state)) {
       rows.push(`<h3>🎋 ${vi.ui.blessTitle}</h3>${blessingHtml(state)}`);

@@ -105,7 +105,7 @@ function buildRoomy(s: GameState, type: BuildingType): 'built' | 'needLand' | 'n
  * thêm, nâng khi thiếu gỗ (`woodShort`); làng chài thôi dựng, nâng, và rút bớt ngư dân khi cá đã đủ ăn (`wanted`,
  * `trimFishers`).
  */
-export const ECONOMY: BuildingType[] = ['ruong', 'ben', 'nhaSan', 'baiDa', 'kho', 'loRen', 'xuongMoc', 'langChai'];
+export const ECONOMY: BuildingType[] = ['ruong', 'ben', 'nhaSan', 'baiDa', 'kho', 'loRen', 'xuongMoc', 'langChai', 'benKhoi'];
 /** Số lũy người chơi mô phỏng dựng cho đủ nhiệm vụ đầu. */
 export const LUY_COUNT = 6;
 

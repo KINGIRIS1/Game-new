@@ -7,6 +7,7 @@ export const ANH_DAU: Record<string, string> = {
   banLang: 'aba5fd56',
   bayChong: 'edc5323a',
   ben: 'efbdb553',
+  benKhoi: '3d12f6db',
   bep: 'f1603f4a',
   cau: '627fc387',
   cauSongDa: '5b9e10b4',

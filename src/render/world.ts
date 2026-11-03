@@ -12,12 +12,13 @@ import { giongLook, type GiongLook } from '../game/giong';
 import { KHOANH_N, khoanhOf, khoanhOrigin, openMask, openStart, openable } from '../game/khoanh';
 import { FAR_PLOTS, benKiaOpen, bridgeEnds, bridgeTo, plotAt, plotOf, plotOrigin, poiAt, poiPlots, type Dat } from '../game/benKia';
 import { DIEN_HOME, FAR_FOREST, FOREST_BAND, GRID, KHOANH, RIVER_END, RIVER_START, baseHeights, farBankOf, isNearBank, isRiver, riverDistance, riverFacing, rotAngle, turnLocal } from '../game/map';
+import { BIEN_BO, BIEN_DIEN, BIEN_TU, QUAN_DAO, benDock, riverOf, seaIndex, seaRoute, type QuanDaoId, type SeaRoute } from '../game/bien';
 import { sonLook, type SonLook } from '../game/son';
 import { floodMap } from '../game/terrain';
 import { tetOpen } from '../game/tet';
 import { Battlefield } from './battlefield';
 import { BattleView } from './battleView';
-import { IsoCamera } from './camera';
+import { IsoCamera, type CamBounds } from './camera';
 import { DOOR_OPEN, banhChung, banhGiay } from './buildings';
 import { PERSON_SCALE } from './congTrinh/chung';
 import { BEP_TET_SEAT } from './congTrinh/bep';
@@ -30,6 +31,7 @@ import { buildDecor, disposeDecor, isBatchedDecor, type DecorSpot } from './deco
 import { buildWild, disposeWild, wildSpots } from './oTrong';
 import { buildCayDaBatch, disposeCayDaBatch, makeCayDa, type CayDaPlace } from './cayDa';
 import { cloudPuffs, poiMarker } from './benKia';
+import { SeaLife, animateSea, buildSea, islandAt } from './bien';
 import { makeSoldier } from './soldier';
 import { makeAnDuong, makeCaoLo, makeGiong, makeSonTinh } from './heroes';
 import { addSunLights, type SunLights } from './lights';
@@ -46,7 +48,9 @@ import {
   makeBoat,
   makeFighter,
   makeSailBoat,
+  makeThuyenKhoi,
   makeTradeBoat,
+  SEA_BOAT_SCALE,
   type CitadelSpot,
   type DikeSpot,
   type TreeSpot,
@@ -255,7 +259,7 @@ const NEU_H = 4.2;
 const KHANH = 0xa8502e;
 
 /** Công trình cần người làm: hiện đúng số người đang làm. */
-const WORKED: BuildingType[] = ['ruong', 'ben', 'baiDa', 'loRen', 'xuongMoc', 'langChai', 'ruongNep', 'vuon', 'chuongLon', 'bep'];
+const WORKED: BuildingType[] = ['ruong', 'ben', 'baiDa', 'loRen', 'xuongMoc', 'langChai', 'benKhoi', 'ruongNep', 'vuon', 'chuongLon', 'bep'];
 
 /** Số người hiện ra: công trình cần người làm thì đúng số người đang làm, còn lại cố định theo cấp. */
 function peopleCount(b: Building, spots: number): number {
@@ -284,6 +288,28 @@ function gateTurn(state: GameState, b: { x: number; z: number }, walls: Set<numb
   if (ew > ns || (ew === ns && Math.abs(dz) >= Math.abs(dx))) return dz < 0 ? Math.PI : 0;
   return dx < 0 ? -Math.PI / 2 : Math.PI / 2;
 }
+
+/**
+ * Thuyền khơi của một bến thuyền khơi: đường đi (ô) và lịch một chuyến. Chuyến lặp mãi theo đồng hồ cảnh: neo ở bến,
+ * xuôi sông ra biển, đánh cá một vòng quanh quần đảo, về bến. Chỉ để nhìn: cá và vỏ ốc tính đều mỗi phút (`game.ts`).
+ */
+interface SeaBoat {
+  obj: THREE.Group;
+  key: string;
+  route: SeaRoute;
+  /** Điểm của đường đi (thế giới) và quãng đường cộng dồn tới từng điểm. */
+  pts: THREE.Vector2[];
+  acc: number[];
+  /** Hướng mũi thuyền khi neo: xuôi theo dòng sông trước bến. */
+  dockHeading: number;
+  /** Lệch pha để hai thuyền không cùng nhịp. */
+  phase: number;
+}
+
+/** Thuyền khơi: neo ở bến chừng này giây, chạy chừng này ô mỗi giây, kéo lưới chậm hơn khi đánh cá quanh đảo. */
+const SEA_DOCK_S = 24;
+const SEA_SPEED = 2.2;
+const SEA_FISH_SPEED = 1.5;
 
 export class World {
   readonly renderer: THREE.WebGLRenderer;
@@ -376,7 +402,7 @@ export class World {
   /** Bãi chiến phó bản, dựng khi cần lần đầu. */
   private field?: Battlefield;
   /** Đang xem bãi chiến: chỗ camera nhìn kinh đô trước đó, để trả về sau trận. */
-  private cityCam: { target: THREE.Vector3; zoom: number; bounds: { min: number; max: number }; facing: number } | null = null;
+  private cityCam: { target: THREE.Vector3; zoom: number; bounds: CamBounds; facing: number } | null = null;
   private readonly warning: THREE.Mesh;
   private merchantBoat?: THREE.Object3D;
   /** Gióng đứng trước Điện, đổi dáng khi lớn lên; không còn khi đã bay về trời. */
@@ -407,6 +433,12 @@ export class World {
   private readonly outer: THREE.Object3D;
   /** Rừng đang hiện bản thấp (độ phóng dưới `LITE_ZOOM`). */
   private forestLite = false;
+  /** Biển Đông phía đông: mặt biển, bãi cát, hai quần đảo (`render/bien.ts`), dựng một lần. */
+  private readonly sea: THREE.Group;
+  /** Cá voi, cá heo lâu lâu nổi lên ngoài biển. */
+  private readonly seaLife: SeaLife;
+  /** Thuyền khơi của từng bến thuyền khơi: neo trước bến, xuôi sông ra biển đánh cá quanh đảo rồi về. */
+  private readonly seaBoats = new Map<number, SeaBoat>();
 
   constructor(canvas: HTMLCanvasElement) {
     this.renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' });
@@ -427,6 +459,9 @@ export class World {
     this.scene.add(this.staticTerrain(edge));
     this.outer = this.outerForest(edge);
     this.scene.add(this.outer);
+    this.sea = buildSea(HALF);
+    this.scene.add(this.sea);
+    this.seaLife = new SeaLife(this.scene, HALF);
     this.scene.add(this.ripples.mesh, this.buildingsRoot);
     // Nước lũ màu phù sa đục, mờ một chút để còn thấy móng nhà dưới nước.
     const floodMat = this.floodWater.mesh.material as THREE.MeshLambertMaterial;
@@ -497,8 +532,8 @@ export class World {
 
   /**
    * Đất xa ngoài lưới và nước sông. Nền đất (`rebuildLand`) đã nới ra ngoài lưới `NEN_MARGIN` ô; xa hơn nữa là từng dải
-   * đất kéo dài theo đúng bậc của ô mép lưới (bên này phía bắc, phía tây; bên kia phía nam, phía đông), để mép rừng
-   * liền với nền. Nước chỉ phủ hai dòng sông: mùa lũ cả mặt nước dâng lên mà không tràn lên đất (ô ngập vẽ riêng
+   * đất kéo dài theo đúng bậc của ô mép lưới (bên này phía bắc, phía tây; bên kia phía nam), để mép rừng liền với
+   * nền. Phía đông nền và dải đất dừng ở bãi cát ven biển (`BIEN_BO`). Nước chỉ phủ hai dòng sông: mùa lũ cả mặt nước dâng lên mà không tràn lên đất (ô ngập vẽ riêng
    * theo `floodMap`).
    */
   private staticTerrain(edge: number[]): THREE.Object3D {
@@ -516,27 +551,26 @@ export class World {
     const at = (x: number, z: number) => edge[clampTile(z) * GRID + clampTile(x)];
     const river = (x: number, z: number) => isRiver(clampTile(x), clampTile(z));
     const last = GRID - 1;
-    for (let x = -M; x < GRID + M; x++) {
-      // Phía bắc (bên này và bờ đông bên kia), phía nam bên kia (bờ nam). Cột sông Thao chỉ có nước ở phía bắc.
+    for (let x = -M; x < BIEN_BO; x++) {
+      // Phía bắc (bên này và bờ đông bên kia), phía nam bên kia (bờ nam), tới bãi cát ven biển phía đông. Cột sông
+      // Thao chỉ có nước ở phía bắc.
       if (!river(x, 0)) strip(1, far, at(x, 0), wx(x) + 0.5, wz(-M) - far / 2);
       if (!river(x, last)) strip(1, far, at(x, last), wx(x) + 0.5, wz(GRID + M) + far / 2);
     }
     for (let z = -M; z < GRID + M; z++) {
       // Phía tây (bên này và bờ nam bên kia), phía đông bên kia (bờ đông). Hàng sông Đà chỉ có nước.
       if (!river(0, z)) strip(far, 1, at(0, z), wx(-M) - far / 2, wz(z) + 0.5);
-      if (!river(last, z)) strip(far, 1, at(last, z), wx(GRID + M) + far / 2, wz(z) + 0.5);
     }
-    // Bốn góc xa: tây bắc, đông bắc (sau bờ đông), tây nam và đông nam (sau bờ nam).
+    // Hai góc xa phía tây: tây bắc, tây nam. Phía đông sau nền là bãi cát và biển Đông (`render/bien.ts`).
     strip(far, far, at(0, 0), wx(-M) - far / 2, wz(-M) - far / 2);
-    strip(far, far, at(last, 0), wx(GRID + M) + far / 2, wz(-M) - far / 2);
     strip(far, far, at(0, last), wx(-M) - far / 2, wz(GRID + M) + far / 2);
-    strip(far, far, at(last, last), wx(GRID + M) + far / 2, wz(GRID + M) + far / 2);
     const water = new ShapeBuilder();
     const box = (x0: number, x1: number, z0: number, z1: number, color: number) =>
       water.box(x1 - x0, 1, z1 - z0, color, (x0 + x1) / 2, WATER_Y - 0.5, (z0 + z1) / 2);
-    // Sông Thao (phía đông) chảy từ bắc xuống tới ngã ba; sông Đà (phía nam) chảy suốt, qua ngã ba về phía đông.
+    // Sông Thao (phía đông) chảy từ bắc xuống tới ngã ba; sông Đà (phía nam) chảy suốt, qua ngã ba về phía đông, đổ ra
+    // biển Đông.
     box(wx(RIVER_START), wx(RIVER_END), wz(-M) - far, wz(RIVER_START), C.water[0]);
-    box(wx(-M) - far, wx(GRID + M) + far, wz(RIVER_START), wz(RIVER_END), C.water[1]);
+    box(wx(-M) - far, wx(BIEN_TU), wz(RIVER_START), wz(RIVER_END), C.water[1]);
     const landMesh = land.mesh(groundMaterial);
     landMesh.castShadow = false;
     const waterMesh = water.mesh(groundMaterial);
@@ -547,14 +581,14 @@ export class World {
   }
 
   /**
-   * Rừng bao ngoài lưới. Bên này (phía bắc, phía tây) rừng dày sâu 10 ô; sau hai bờ bên kia chỉ một dải thưa 5 ô,
-   * vì trong lưới bên ấy đã có rừng sâu 17 ô, cho nhẹ máy.
+   * Rừng bao ngoài lưới. Bên này (phía bắc, phía tây) rừng dày sâu 10 ô; sau hai bờ bên kia chỉ một dải thưa 5 ô
+   * (phía đông 3 ô, tới bãi cát ven biển), vì trong lưới bên ấy đã có rừng sâu 17 ô, cho nhẹ máy.
    */
   private outerForest(edge: number[]): THREE.Object3D {
     const near: TreeSpot[] = [];
     const far: TreeSpot[] = [];
     const rand = seeded(7);
-    for (let x = -10; x < GRID + 5; x++) {
+    for (let x = -10; x < BIEN_BO; x++) {
       for (let z = -10; z < GRID + 5; z++) {
         if (x >= 0 && z >= 0 && x < GRID && z < GRID) continue;
         // Ô ngoài lưới mang đúng bậc của ô mép lưới gần nhất; ô ấy là sông thì chỗ này cũng là nước.
@@ -785,7 +819,9 @@ export class World {
       this.landKey = landKey;
       const lo = openStart(state);
       // Kéo cảnh trong vùng đất đã khai phá, chừa một dải rừng và một phần sông; có cầu thì kéo được sang bên kia.
-      const bounds = { min: wx(lo) - 3, max: bridged ? wx(GRID) - 2 : wx(RIVER_START) + 2 };
+      const bounds: CamBounds = { min: wx(lo) - 3, max: bridged ? wx(GRID) - 2 : wx(RIVER_START) + 2 };
+      // Từ Điện 8 (biển mở): kéo được ra biển phía đông, tới quá quần đảo Trường Sa.
+      if (level >= BIEN_DIEN) bounds.sea = { maxX: wx(BIEN_TU + 50), minZ: wz(-2), maxZ: wz(GRID + 22) };
       if (this.cityCam) this.cityCam.bounds = bounds;
       else this.view.bounds = bounds;
       // Lần đầu dựng cảnh: nhìn vào giữa vùng đất đã khai phá (Điện ở gần góc sông, nhìn vào Điện thì nửa màn hình là sông).
@@ -827,6 +863,7 @@ export class World {
     }
 
     this.syncMerchant(state);
+    this.syncSeaBoats(state);
     this.syncGiong(state);
     this.syncSon(state);
     this.syncAdv(state);
@@ -1130,6 +1167,129 @@ export class World {
     }
   }
 
+  /**
+   * Thuyền khơi của mỗi bến thuyền khơi: dựng theo cấp bến, đường đi theo chỗ bến (`seaRoute`). Bến hư thì thuyền
+   * nằm neo ở bến, không ra khơi.
+   */
+  private syncSeaBoats(state: GameState): void {
+    const alive = new Set<number>();
+    for (const b of state.buildings) {
+      if (b.type !== 'benKhoi') continue;
+      alive.add(b.id);
+      const index = seaIndex(state, b);
+      const key = `${b.level}:${b.x}:${b.z}:${index}:${b.damaged ? 1 : 0}`;
+      const old = this.seaBoats.get(b.id);
+      if (old?.key === key) continue;
+      if (old) {
+        this.scene.remove(old.obj);
+        disposeModel(old.obj);
+      }
+      const route = seaRoute(b, index);
+      const pts = route.path.map((p) => new THREE.Vector2(wx(p.x), wz(p.z)));
+      const acc = [0];
+      for (let i = 1; i < pts.length; i++) acc.push(acc[i - 1] + pts[i].distanceTo(pts[i - 1]));
+      const obj = makeThuyenKhoi(b.level);
+      obj.rotation.order = 'YXZ';
+      obj.scale.setScalar(SEA_BOAT_SCALE);
+      this.scene.add(obj);
+      const dock = benDock(b);
+      obj.position.set(wx(dock.x), WATER_Y - 0.02, wz(dock.z));
+      this.seaBoats.set(b.id, {
+        obj,
+        key,
+        route: b.damaged ? { ...route, path: [route.path[0]] } : route,
+        pts: b.damaged ? [pts[0]] : pts,
+        acc: b.damaged ? [0] : acc,
+        dockHeading: riverOf(b) === 'thao' ? -Math.PI / 2 : 0,
+        phase: index * 57,
+      });
+    }
+    for (const [id, boat] of this.seaBoats) {
+      if (alive.has(id)) continue;
+      this.scene.remove(boat.obj);
+      disposeModel(boat.obj);
+      this.seaBoats.delete(id);
+    }
+  }
+
+  /**
+   * Thuyền khơi ở đâu lúc `t`: một chuyến gồm neo ở bến, xuôi sông qua cửa biển ra ngư trường, kéo lưới một vòng quanh
+   * quần đảo, rồi đi ngược đường cũ về bến. Mũi thuyền theo hướng đi (nhìn trước, sau một quãng ngắn cho mượt khi rẽ).
+   */
+  private moveSeaBoat(s: SeaBoat, t: number): void {
+    const len = s.acc[s.acc.length - 1];
+    const r = s.route.loop.r;
+    const out = len / SEA_SPEED;
+    const fish = len > 0 ? (Math.PI * 2 * r) / SEA_FISH_SPEED : 0;
+    const cycle = SEA_DOCK_S + 2 * out + fish;
+    const k = (t + s.phase) % cycle;
+    const o = s.obj;
+    const at = (d: number): THREE.Vector2 => {
+      // Quãng đường d trên cả chuyến (đi, vòng đánh cá, về) ra điểm thế giới.
+      if (d <= 0) return s.pts[0].clone();
+      if (d >= 2 * len + 2 * Math.PI * r) return s.pts[0].clone();
+      if (d > len && d < len + 2 * Math.PI * r) {
+        const end = s.pts[s.pts.length - 1];
+        const cx = wx(s.route.loop.x);
+        const cz = wz(s.route.loop.z);
+        const a = Math.atan2(end.y - cz, end.x - cx) + (d - len) / r;
+        return new THREE.Vector2(cx + Math.cos(a) * r, cz + Math.sin(a) * r);
+      }
+      const e = d <= len ? d : 2 * len + 2 * Math.PI * r - d;
+      let i = 1;
+      while (i < s.acc.length - 1 && s.acc[i] < e) i++;
+      const u = (e - s.acc[i - 1]) / Math.max(1e-6, s.acc[i] - s.acc[i - 1]);
+      return s.pts[i - 1].clone().lerp(s.pts[i], Math.min(1, Math.max(0, u)));
+    };
+    let d: number;
+    let moving = true;
+    if (k < SEA_DOCK_S || len === 0) {
+      d = 0;
+      moving = false;
+    } else if (k < SEA_DOCK_S + out) d = (k - SEA_DOCK_S) * SEA_SPEED;
+    else if (k < SEA_DOCK_S + out + fish) d = len + (k - SEA_DOCK_S - out) * SEA_FISH_SPEED;
+    else d = len + 2 * Math.PI * r + (k - SEA_DOCK_S - out - fish) * SEA_SPEED;
+    const p = at(d);
+    o.position.x = p.x;
+    o.position.z = p.y;
+    if (moving) {
+      const ahead = at(d + 0.9);
+      const behind = at(d - 0.9);
+      if (ahead.distanceToSquared(behind) > 1e-6) o.rotation.y = Math.atan2(-(ahead.y - behind.y), ahead.x - behind.x);
+    } else o.rotation.y = s.dockHeading;
+    // Ra biển thì sóng to hơn: nhấp nhô, chòng chành.
+    const atSea = p.x > wx(BIEN_TU);
+    const swell = atSea ? 1 : 0.35;
+    o.position.y = WATER_Y - 0.02 + Math.sin(t * 1.3 + s.phase) * 0.05 * swell;
+    o.rotation.x = Math.sin(t * 0.9 + s.phase) * 0.05 * swell;
+    o.rotation.z = Math.sin(t * 1.1 + s.phase * 0.5) * 0.04 * swell;
+    (o.userData.pose as Poser | undefined)?.({ act: moving ? 'walk' : 'stand', phase: t * 2.4, time: t });
+  }
+
+  /** Quần đảo dưới vị trí màn hình (chạm trúng đảo hay vũng nông quanh đảo), không thì null. */
+  pickIsland(clientX: number, clientY: number): QuanDaoId | null {
+    if (this.inField) return null;
+    const p = this.view.groundPoint(clientX, clientY);
+    if (!p) return null;
+    return islandAt(p.x + HALF, p.z + HALF);
+  }
+
+  /** Đặt đồng hồ cảnh (giây), cho ảnh chụp thử: thuyền khơi, cá voi, cá heo chạy theo đồng hồ này. */
+  seekTime(t: number): void {
+    this.time = t;
+  }
+
+  /** Cho cá voi hay đàn cá heo nổi lên ngay gần chỗ camera nhìn (ảnh chụp thử). */
+  showSeaLife(kind: 'whale' | 'dolphins'): void {
+    this.seaLife.show(kind, this.time, this.view.target);
+  }
+
+  /** Lướt camera ra quần đảo `id` ngoài biển (giữ độ phóng). */
+  panToIsland(id: QuanDaoId): void {
+    const q = QUAN_DAO.find((o) => o.id === id)!;
+    this.panGoal = new THREE.Vector3(wx(q.x), 0, wz(q.z));
+  }
+
   /** Gỡ mô hình một công trình (dựng lại vì đổi cấp, đổi dân, hư; hay đã dỡ): trả hình và khung xương người làm. */
   private dropView(v: BuildingView): void {
     this.buildingsRoot.remove(v.group);
@@ -1269,6 +1429,8 @@ export class World {
           }
         },
         origin: -HALF,
+        // Phía đông sau dải rừng mỏng là bãi cát rồi biển Đông, vẽ riêng (`render/bien.ts`): nền dừng ở đó.
+        outside: (x) => (x >= BIEN_BO ? null : undefined),
       },
       groundMaterial,
     );
@@ -2311,6 +2473,13 @@ export class World {
 
     if (this.merchantBoat) {
       this.merchantBoat.position.y = WATER_Y - 0.02 + Math.sin(t * 1.2) * 0.04;
+    }
+
+    // Biển Đông: sóng vỗ bờ, cá voi, cá heo, thuyền khơi đi về.
+    if (!this.inField) {
+      animateSea(this.sea, t, this.view.zoom);
+      this.seaLife.update(t, dt, this.view.target);
+      for (const boat of this.seaBoats.values()) this.moveSeaBoat(boat, t);
     }
 
     // Cây dại, tảng đá mới mọc: lớn dần lên, nhún nhẹ khi đủ cỡ.

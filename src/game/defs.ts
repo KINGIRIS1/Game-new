@@ -60,7 +60,9 @@ export type BuildingType =
   | 'banLang'
   | 'donBien'
   // Hồ Kim Quy: nơi thần Kim Quy (Rùa Vàng) trú ngụ, mở khi Rùa Vàng hiện lên (chương 3).
-  | 'hoKimQuy';
+  | 'hoKimQuy'
+  // Bến thuyền khơi: thuyền đánh cá lớn ra biển Đông, mang về cá biển và vỏ ốc (từ Điện 8, `bien.ts`).
+  | 'benKhoi';
 
 /**
  * Mốc mở khóa theo cốt truyện: sau kết chương 1, khi vào chương 2, sau kết chương 2, khi vào chương 3, khi Rùa Vàng
@@ -135,6 +137,7 @@ export const BUILD_MENU: BuildingType[] = [
   'ruong',
   'ben',
   'langChai',
+  'benKhoi',
   'nhaSan',
   'baiDa',
   'kho',
@@ -420,6 +423,25 @@ export const BUILDINGS: Record<BuildingType, BuildingDef> = {
     hp: [160, 180, 200, 220, 240, 260, 280, 310, 340, 375],
     limit: [0, 0, 1, 1, 2, 2, 3, 3, 3, 3],
     minDien: 3,
+    nearRiver: true,
+    buildable: true,
+    removable: false,
+  },
+  // Bến thuyền khơi: đóng thuyền đánh cá lớn, xuôi sông ra biển Đông đánh cá quanh Hoàng Sa, Trường Sa. Mang về cá
+  // biển (đỡ gạo ăn như cá làng chài, `CA_BIEN_PER_MIN`) và vỏ ốc. Mở ở Điện 8, cấp 2 ở Điện 9, cấp 3 ở Điện 10.
+  benKhoi: {
+    type: 'benKhoi',
+    w: 3,
+    d: 3,
+    maxLevel: 3,
+    buildCost: { gao: 3000, go: 3000, sat: 400 },
+    upgradeCost: [{}, {}, { gao: 5000, go: 4500, sat: 700 }, { gao: 8000, go: 7000, sat: 1100 }],
+    production: [{ voOc: 120 }, { voOc: 170 }, { voOc: 230 }],
+    workers: [3, 4, 5],
+    hp: [420, 480, 540],
+    limit: [0, 0, 0, 0, 0, 0, 0, 1, 2, 2],
+    minDien: 8,
+    levelMinDien: [0, 0, 9, 10],
     nearRiver: true,
     buildable: true,
     removable: false,
@@ -1022,6 +1044,7 @@ export const FLOOD_TOLERANCE: Partial<Record<BuildingType, number>> = {
   hoKimQuy: 99,
   ben: 99,
   langChai: 99,
+  benKhoi: 99,
   luy: 99,
   bayChong: 99,
   de: 99,
@@ -1753,10 +1776,13 @@ export const QUEST_INSERTED_V4 = 11;
  * Công trình mới thêm sau khi đã có người chơi: lần đầu mở được thì Lạc hầu nói một câu gợi ý (một lần, ghi ở
  * `GameState.hinted`). Thêm loại vào đây không phải nâng bản lưu.
  */
-export const NEW_HINTS: BuildingType[] = ['xuongMoc', 'langChai', 'congThanh', 'hoKimQuy'];
+export const NEW_HINTS: BuildingType[] = ['xuongMoc', 'langChai', 'congThanh', 'hoKimQuy', 'benKhoi'];
 
 /**
  * Cá mỗi phút của một làng chài đủ người, theo cấp (chỉ số 0 là cấp 1). Cá không tích trữ: dân và lính ăn cá trước,
  * phần còn thiếu mới ăn gạo; cá thừa bỏ phí.
  */
 export const CA_PER_MIN = [6, 10, 15, 22, 30, 40, 52, 68, 83, 101];
+
+/** Cá biển mỗi phút của một bến thuyền khơi đủ người, theo cấp. Đỡ gạo ăn như cá làng chài, thừa thì bỏ phí. */
+export const CA_BIEN_PER_MIN = [50, 70, 90];
