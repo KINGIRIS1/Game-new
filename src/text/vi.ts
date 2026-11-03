@@ -826,7 +826,6 @@ export const vi = {
     scouting: (secs: number) => `Trinh sát đang tới, còn ${secs} giây.`,
     scoutSent: 'Trinh sát đã lên đường',
     scoutBack: 'Trinh sát đã về, đất bên kia hiện ra thêm',
-    scoutChip: 'Trinh sát đang đi',
     don: {
       1: { name: 'Đồn giặc Ân', icon: '⛺' },
       2: { name: 'Ổ thủy quái', icon: '🦐' },
@@ -901,6 +900,15 @@ export const vi = {
   ui: {
     lacHau: 'Lạc hầu',
     build: 'Xây dựng',
+    // Khung chính: dải tài nguyên trên cùng, dock năm thẻ ở đáy, dòng tin trên dock.
+    dockLabel: 'Việc chính',
+    tabArmy: 'Quân',
+    tabHeroes: 'Tướng',
+    resDetail: 'Xem kho và thu chi mỗi phút',
+    freeShort: (n: number) => `${n} rảnh`,
+    nextAlert: 'Tin sau',
+    tetLeft: (secs: number) => `🎋 Hội Tết còn ${Math.floor(secs / 60)}:${String(secs % 60).padStart(2, '0')}`,
+    scoutAway: (secs: number) => `🧭 Trinh sát đang đi, còn ${secs} giây`,
     buildTitle: 'Xây dựng',
     close: 'Đóng',
     level: 'Cấp',
