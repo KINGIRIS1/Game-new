@@ -64,7 +64,6 @@ import { GRID, RIVER_START, farBankOf, footOnLand } from './game/map';
 import { fromCode, loadFromStorage, saveFileName, saveToStorage, toCode } from './game/save';
 import { tomTat } from './game/manVao';
 import { TitleDrift } from './render/camera';
-import type { KieuNen } from './render/nenDat';
 import { HALF, RESOLUTIONS, World, type Resolution } from './render/world';
 import { vi } from './text/vi';
 import { Hud, buildingName, type HudAction } from './ui/hud';
@@ -1245,8 +1244,6 @@ async function start(): Promise<void> {
       world.view.zoom = zoom;
       world.view.apply();
     },
-    /** Đổi kiểu nền đất (bản dùng thử): 'hop', 'vach', 'vat', 'o'. */
-    nen: (kieu: KieuNen) => world.setNen(kieu),
     resync: () => {
       world.resetAll();
       world.sync(state);

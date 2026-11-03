@@ -193,7 +193,7 @@ const thinOutline = (geo: THREE.BufferGeometry) => {
 
 /**
  * Vẽ mọi món trên ô trống thành một nhóm, mỗi mẫu một InstancedMesh có viền mực. `ground(x, z)` cho mặt đất (tọa độ
- * thế giới) của ô; `wx`, `wz` đổi tọa độ ô sang tọa độ thế giới. Món nhỏ sát đất: nhận bóng mà không đổ bóng.
+ * thế giới) ở điểm (x, z) tính theo ô; `wx`, `wz` đổi tọa độ ô sang tọa độ thế giới. Món nhỏ sát đất: nhận bóng mà không đổ bóng.
  */
 export function buildWild(spots: WildSpot[], ground: (x: number, z: number) => number, toWorld: (v: number) => number): THREE.Object3D {
   const t = wildTemplates();
@@ -201,7 +201,7 @@ export function buildWild(spots: WildSpot[], ground: (x: number, z: number) => n
   for (const s of spots) {
     const i = t.of.get(`${s.kind}:${s.v}`);
     if (i === undefined) continue;
-    list.push({ t: i, x: toWorld(s.x), y: ground(Math.floor(s.x), Math.floor(s.z)), z: toWorld(s.z), s: s.s, ry: s.ry });
+    list.push({ t: i, x: toWorld(s.x), y: ground(s.x, s.z), z: toWorld(s.z), s: s.s, ry: s.ry });
   }
   const g = instanceTemplates(t.meshes, list, thinOutline);
   g.traverse((o) => {

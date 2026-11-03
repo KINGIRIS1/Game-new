@@ -435,7 +435,13 @@ Chủ dự án đã chốt bốn điểm:
   - hai ô sát sông là bãi bồi, bậc 0;
   - vào trong là đồng bằng bậc 1, có gò bậc 2;
   - càng xa sông về phía rừng càng nhiều đồi bậc 2–3.
-- Cảnh 3D vẽ mỗi ô một cột đất cao 0,3 đơn vị mỗi bậc, bậc cao sáng màu hơn chút. Rừng ngoài lưới nối liền theo bậc của ô mép.
+- Cảnh 3D: mỗi bậc cao 0,3 đơn vị. Nền đất kiểu **bờ vát** (chủ dự án chọn qua bản dùng thử so ba kiểu: vách đất, bờ vát, lát ô; thay cho mỗi ô một khối hộp):
+  - đất dựng liền một khối, giữa ô phẳng đúng mặt ô (nơi đặt công trình, cây, lính);
+  - ô cạnh ô thấp hơn thì dải mép rộng 0,3 ô dốc thoai thoải xuống; dốc nằm trong ô cao, ô thấp phẳng trọn ô; mặt dốc lẫn cỏ và đất, mép trên sáng hơn chân dốc; góc dốc làm mượt cho bậc chạy chéo khỏi răng cưa;
+  - ô có đồ một ô phủ kín ô (đường đi, đồ trang trí, lũy, thành, đê, bẫy) giữ phẳng tới mép, cạnh ô thấp thì dựng vách đất đứng, để đồ không chìa ra lơ lửng trên dốc; công trình nhiều ô thì nền nhà phủ lên dốc như một ụ đất;
+  - màu cỏ loang theo nhiễu, liền qua mép ô (không còn ô cờ ba màu); đất đã mở sáng hơn rừng, bậc cao sáng màu hơn chút;
+  - lưới ô lúc đặt công trình, khóm cỏ, cọc mốc, lính và trinh sát đi theo đúng mặt dốc;
+  - nền nới ra ngoài lưới 14 ô theo bậc của ô mép, xa hơn là dải đất nối liền dưới rừng bao ngoài.
 - Dựng công trình thì **móng được đắp phẳng bằng ô cao nhất dưới móng**, không mất thêm gì. Bản lưu cũ được đắp móng y như vậy.
 - Từ chương 2:
   - **Đắp đất** (thẻ ⛰️ trong bảng Xây dựng): chạm từng ô trống đã khai phá để đắp cao thêm một bậc, giá 20 + 10 × bậc hiện tại đất đá, cao nhất bậc 4;
