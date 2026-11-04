@@ -2349,7 +2349,7 @@ Thưởng khoảng gấp rưỡi nhiệm vụ chương 4.
    - Code: `chuong5.ts` (`inChapter5`), `CH5_QUEST_START` = 52, `scheduleHan` và nhánh `han` ở `game.ts` (`nextFoe`, `foeChapter`, `finishRaid`), `LAND_FORCES` ở `battle.ts`, `migrate19to20` ở `save.ts` (thêm `raid.han`, `raid.hanHeld`; bản lưu đang ở chương 5 mà chưa có giặc thì xếp đợt Hán). `chapterOf` (`manVao.ts`) ra 5; sang chương 5 thì màn hình vào game không còn coi là Hết truyện.
    - Bản đồ phó bản chưa có chương 5: giao diện phó bản dừng ở chương 4 (`MapChapter` ở `src/ui/campaign.ts`, `mapChapterNow` ở `hud.ts`) tới PR 2. PR 2 đã thêm thẻ Chương 5.
 3. **PR 2 (đã làm)**: Hai Bà (hai tướng cùng ra một trận, mỗi bà một kỹ năng, giữ kinh đô, chỉ huy doanh trại), nghĩa binh, màn 33–36 và Tô Định, bãi Hát Môn và Luy Lâu, thẻ Chương 5 trên bản đồ phó bản, đoạn truyện 1–3 (`meLinh`, `hatMon`, `trungVuong` ở `story.ts`), nhiệm vụ 55–57, bản lưu v21. Xem các mục Số cuối PR 2 ở trên.
-4. **PR 3**: lâu thuyền và thủy quân Hán ở kinh đô, Mã Viện, màn 37–40 (màn 40 cầm cự), bãi Lãng Bạc và Cấm Khê, đoạn truyện 4–6, màn hình Hết truyện mới, Đền Hát Môn, nhiệm vụ 58–61.
+4. **PR 3 (đã làm)**: lâu thuyền và thủy quân Hán ở kinh đô, Mã Viện, màn 37–40 (màn 40 cầm cự), bãi Lãng Bạc và Cấm Khê, đoạn truyện 4–6 (`phucBa`, `langBac`, `songHat`), màn hình Hết truyện mới (`hetTruyen5`), Đền Hát Môn, nhiệm vụ 58–61, bản lưu v22 (`migrate21to22`: thêm `raid.thuyHan`, `raid.thuyHanHeld`, `raid.lauSunk`; đã thắng màn 37 mà chưa có giặc thì hẹn thủy quân Hán). Xem các mục Số cuối PR 3 ở trên; `maVien.test.ts` canh.
 5. **PR 4**: nữ tướng, thử thách màn 33–40, huân công bậc 4.
 
 Mỗi PR nào thêm trường lưu mới thì nâng bản lưu một bậc (dự kiến v20 tới v23), có test nâng bản lưu cũ. Mỗi PR: chạy `npm test` và `npm run build`; sửa `src/render/` hay `src/ui/` thì chụp kiểm tra ở khổ điện thoại; sau đó ghi số cuối cùng vào tài liệu này.
@@ -2398,5 +2398,5 @@ Mỗi PR nào thêm trường lưu mới thì nâng bản lưu một bậc (dự
 15. **Vùng đất bên kia sông** (chủ dự án đã duyệt, đã làm cả 5 PR, bản lưu v18; xem mục Kế hoạch cùng tên): lưới qua sông, cầu ba cấp, sương mù và trinh sát, đồn giặc bốn bậc theo chương, dẹp đồn chiếm vùng, đặc sản đất, bản làng, của chôn, giặc tới từ hai bờ và đồn biên.
 16. **Điện cấp 9, 10** (đã duyệt, đã làm cả 3 PR: luật, hình, binh khí bậc 3 và lầu nỏ lên cấp; xem Kế hoạch cùng tên).
     **Hồ Kim Quy** (chủ dự án yêu cầu, đã làm; xem mục cùng tên): hồ 8×8 mở khi Rùa Vàng hiện lên, tường thành thêm 30% máu.
-17. **Chương 5: Hai Bà Trưng** (chủ dự án đã duyệt, đã làm PR 1, 2, tiếp theo là PR 3; xem Kế hoạch chương 5): mỗi bà cưỡi một voi ra trận với Voi xung trận và Hiệu triệu gọi nghĩa binh, quân Hán và lâu thuyền đánh kinh đô, phó bản màn 33–40 với Tô Định và Mã Viện, Đền Hát Môn, nữ tướng, thử thách màn 33–40.
+17. **Chương 5: Hai Bà Trưng** (chủ dự án đã duyệt, đã làm PR 1, 2, 3, tiếp theo là PR 4; xem Kế hoạch chương 5): mỗi bà cưỡi một voi ra trận với Voi xung trận và Hiệu triệu gọi nghĩa binh, quân Hán và lâu thuyền đánh kinh đô, phó bản màn 33–40 với Tô Định và Mã Viện, Đền Hát Môn, nữ tướng, thử thách màn 33–40.
 18. **Để sau**: nhạc nền.
