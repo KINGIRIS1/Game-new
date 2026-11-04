@@ -494,6 +494,59 @@ export function daiDao(s: Parts): void {
   for (const y of [0.2, 0.34]) p.cone(0.024, 0.09, IRON_DARK, 0, top + y, -0.05, [-Math.PI / 2 + 0.35, 0, 0], 4);
 }
 
+/**
+ * Cờ nữ tướng: cán dài `len`, tay nắm cách đuôi `grip`; lá cờ buộc vào cán ở `top` (tính từ chỗ tay nắm), cao `h`,
+ * chia ba khúc mỗi khúc dài `w` để gắn vào ba xương nối nhau cho cờ bay lượn sóng.
+ */
+export const CO_NU = { len: 1.85, grip: 0.22, top: 1.53, h: 0.42, w: 0.26 } as const;
+
+/** Cán cờ nữ tướng: tre sẫm, đốc bịt đồng, chóp đồng hình mũi giáo, tua màu `tassel` dưới chóp. Gốc ở chỗ tay nắm. */
+export function coNuCan(s: Parts, tassel: number): void {
+  const p = s.plain;
+  const { len, grip } = CO_NU;
+  const top = len - grip;
+  p.cyl(0.018, 0.021, len, C.woodDark, 0, len / 2 - grip, 0, undefined, 6);
+  p.cyl(0.025, 0.025, 0.035, C.bronzeDark, 0, -grip + 0.017, 0, undefined, 6);
+  p.cyl(0.026, 0.026, 0.035, C.bronze, 0, top, 0, undefined, 6);
+  p.cone(0.033, 0.13, C.bronze, 0, top + 0.08, 0, undefined, 5);
+  p.cone(0.036, 0.09, tassel, 0, top - 0.045, 0, [Math.PI, 0, 0], 6);
+}
+
+/**
+ * Một khúc lá cờ nữ tướng (`i` 0, 1, 2 từ cán ra), màu `color`, viền trên dưới dải hoa văn `trim`: khúc sát cán có
+ * dải viền dọc cán, khúc giữa có mặt trời trống đồng vàng (hai mặt cờ), khúc ngoài xẻ đuôi nheo. Gốc ở mép trên sát
+ * cán (hay sát khúc trước), lá cờ rủ xuống −y, bay về −z.
+ */
+export function coNuLa(s: Parts, i: number, color: number, trim: number): void {
+  const p = s.plain;
+  const { h, w } = CO_NU;
+  const z = -w / 2;
+  p.box(0.016, h, w + 0.012, color, 0, -h / 2, z);
+  s.band.box(0.022, 0.05, w + 0.012, trim, 0, -0.025, z);
+  s.band.box(0.022, 0.05, w + 0.012, trim, 0, -h + 0.025, z);
+  if (i === 0) p.box(0.024, h, 0.03, trim, 0, -h / 2, -0.016);
+  if (i === 1) {
+    s.drum.cyl(0.1, 0.1, 0.026, C.gold, 0, -h / 2, z, [0, 0, Math.PI / 2], 16);
+    p.cyl(0.112, 0.112, 0.022, C.bronzeDark, 0, -h / 2, z, [0, 0, Math.PI / 2], 16);
+  }
+  if (i === 2) {
+    // Đuôi nheo: hai tua chếch lên, chếch xuống, xẻ giữa.
+    for (const k of [-1, 1]) p.box(0.016, 0.14, 0.16, color, 0, -h / 2 + k * (h / 2 - 0.075), -w - 0.06, [k * 0.3, 0, 0]);
+  }
+}
+
+/** Kiếm ngắn sắt của Lê Chân: lưỡi thẳng dài 0,42 có gờ sống, mũi nhọn, chắn tay đồng, chuôi quấn dây đỏ, đốc đồng; lưỡi dọc +y. */
+export function doanKiem(s: Parts): void {
+  const p = s.plain;
+  const len = 0.42;
+  p.box(0.018, len * 0.85, 0.06, IRON, 0, 0.07 + len * 0.425, 0);
+  p.sphere(0.03, IRON, 0, 0.07 + len * 0.86, 0, [0.6, 2.4, 1], 6);
+  p.box(0.022, len * 0.9, 0.012, IRON_DARK, 0, 0.07 + len * 0.45, 0);
+  p.box(0.13, 0.03, 0.055, C.bronze, 0, 0.06, 0);
+  p.cyl(0.018, 0.02, 0.1, C.red, 0, 0, 0, undefined, 6);
+  p.sphere(0.03, C.bronze, 0, -0.06, 0, [1, 1, 1], 6);
+}
+
 /** Chỗ buộc lá cờ lệnh trên cán, tính từ chỗ tay nắm. */
 export const CO_LENH_TOP = 0.84;
 

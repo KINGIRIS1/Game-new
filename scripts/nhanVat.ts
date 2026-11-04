@@ -6,7 +6,19 @@ import { addSunLights } from '../src/render/lights';
 import { C } from '../src/render/palette';
 import type { Act, Poser } from '../src/render/rig';
 import { makeBeast, makeRoyalHorse, makeRuaVang } from '../src/render/beasts';
-import { makeAnDuong, makeCaoLo, makeDrummer, makeGiong, makeLacTuong, makeSonTinh, makeThuyTinh, makeTrungNhi, makeTrungTrac } from '../src/render/heroes';
+import type { NuTuongId } from '../src/game/defs';
+import {
+  makeAnDuong,
+  makeCaoLo,
+  makeDrummer,
+  makeGiong,
+  makeLacTuong,
+  makeNuTuong,
+  makeSonTinh,
+  makeThuyTinh,
+  makeTrungNhi,
+  makeTrungTrac,
+} from '../src/render/heroes';
 import { makeMonster } from '../src/render/monsters';
 import { makeRower, makeWorker } from '../src/render/people';
 import { makeEnemyBoat, makeLauThuyen } from '../src/render/models';
@@ -93,6 +105,39 @@ function soCo(): THREE.Group {
   return g;
 }
 
+/** Nữ tướng: đứng (cờ bay theo `time`), đi, phất cờ hô quân (cờ phất ra ngoài, vào trong), thắng trận. */
+const NU_COT: [string, Act][] = [
+  ['Đứng', { act: 'stand', time: 0 }],
+  ['Đứng (t=0,8)', { act: 'stand', time: 0.8 }],
+  ['Đi (bước trái)', { act: 'walk', phase: -Math.PI / 2, stride: 0.5, time: 0.3 }],
+  ['Đi (giữa bước)', { act: 'walk', phase: 0, stride: 0.5, time: 0.5 }],
+  ['Đi (bước phải)', { act: 'walk', phase: Math.PI / 2, stride: 0.5, time: 0.7 }],
+  ['Phất cờ (t=0)', { act: 'fight', time: 0 }],
+  ['Phất cờ (t=0,45)', { act: 'fight', time: 0.45 }],
+  ['Phất cờ (t=1,4)', { act: 'fight', time: 1.4 }],
+  ['Thắng', { act: 'stand', win: 1, time: 0.3 }],
+];
+const NU_IDS: NuTuongId[] = ['leChan', 'thanhThien', 'batNan', 'phungThiChinh'];
+
+/**
+ * Một hàng nhân vật đứng cạnh nhau cách `gap`, thẳng hàng ngang ảnh (với hướng chụp mặc định −0,6, xoay thêm `xoay`
+ * như trường `xoay` của mục). Tư thế của hàng đặt cho từng người.
+ */
+function motHang(tao: (() => THREE.Group)[], gap: number, xoay = 0): () => THREE.Group {
+  return () => {
+    const g = new THREE.Group();
+    const a = 0.6 - xoay;
+    const dir = new THREE.Vector3(Math.cos(a), 0, -Math.sin(a));
+    const parts = tao.map((f) => f());
+    parts.forEach((p, i) => {
+      p.position.copy(dir).multiplyScalar((i - (parts.length - 1) / 2) * gap);
+      g.add(p);
+    });
+    g.userData.pose = (act: Act) => parts.forEach((p) => (p.userData.pose as Poser)(act));
+    return g;
+  };
+}
+
 export const NHOM: Record<string, Entry[]> = {
   linh: [
     { ten: 'Giáo binh bậc 2', tao: () => makeSoldier('giao', 2) },
@@ -157,6 +202,35 @@ export const NHOM: Record<string, Entry[]> = {
     { ten: 'Trưng Trắc (hiển linh)', tao: () => makeTrungTrac({ glow: true }), co: 2.3, cach: 2.1 },
     { ten: 'Lạc tướng đứng chầu (sân Điện)', tao: () => makeLacTuong(), co: 1.25, cach: 1.1 },
     { ten: 'Gióng đứng chầu (sân Điện, hiển linh)', tao: () => makeGiong('trangSi', { bamboo: true, glow: true, onFoot: true }), co: 1.4, cach: 1.1 },
+    { ten: 'Lê Chân (nỏ sau lưng, kiếm ngắn)', tao: () => makeNuTuong('leChan'), co: 1.9, cach: 1.15, cao: 300, cot: NU_COT },
+    { ten: 'Thánh Thiên (cung, bao tên sau lưng)', tao: () => makeNuTuong('thanhThien'), co: 1.9, cach: 1.15, cao: 300, cot: NU_COT },
+    { ten: 'Bát Nàn (giáo)', tao: () => makeNuTuong('batNan'), co: 1.9, cach: 1.15, cao: 300, cot: NU_COT },
+    { ten: 'Phùng Thị Chính (địu con, gươm)', tao: () => makeNuTuong('phungThiChinh'), co: 1.9, cach: 1.15, cao: 300, cot: NU_COT },
+    { ten: 'Phùng Thị Chính (hiển linh)', tao: () => makeNuTuong('phungThiChinh', { glow: true }), co: 1.75, cach: 1.15, cot: NU_COT.slice(0, 3) },
+    {
+      ten: 'Bốn nữ tướng nhìn sau lưng (đứng)',
+      tao: motHang(NU_IDS.map((k) => () => makeNuTuong(k)), 1.1, Math.PI),
+      xoay: Math.PI,
+      co: 1.75,
+      cach: 1.3,
+      cot: [NU_COT[0]],
+    },
+    {
+      ten: 'Bốn nữ tướng nhìn sau lưng (phất cờ)',
+      tao: motHang(NU_IDS.map((k) => () => makeNuTuong(k)), 1.1, Math.PI),
+      xoay: Math.PI,
+      co: 1.9,
+      cach: 1.5,
+      cao: 300,
+      cot: [NU_COT[6]],
+    },
+    {
+      ten: 'So cỡ: Trưng Trắc, Trưng Nhị đứng chầu (1,3), Lê Chân, Thánh Thiên, Bát Nàn, Phùng Thị Chính (1,22)',
+      tao: motHang([() => makeTrungTrac({ onFoot: true }), () => makeTrungNhi({ onFoot: true }), ...NU_IDS.map((k) => () => makeNuTuong(k))], 0.95),
+      co: 1.75,
+      cach: 1.6,
+      cot: MOT_COT,
+    },
   ],
   ky_nang: [
     { ten: 'Kỹ năng (cột: 0, 0,1 … 1)', tao: () => makeGiong('trangSi'), co: 1.6, cach: 1.4 },
@@ -171,6 +245,8 @@ export const NHOM: Record<string, Entry[]> = {
     { ten: 'Trưng Trắc thắng trận', tao: theoCot(() => makeTrungTrac(), 'win'), co: 2.4, cach: 2.1 },
     { ten: 'Trưng Nhị thắng trận', tao: theoCot(() => makeTrungNhi(), 'win'), co: 2.6, cach: 2.1 },
     { ten: 'Mã Viện lệnh nỏ', tao: () => makeBeast('maVien'), co: 1.6, cach: 1.4 },
+    { ten: 'Nữ tướng phất cờ (Lê Chân; cột là đồng hồ, giây)', tao: () => makeNuTuong('leChan'), co: 1.95, cach: 1.15, cao: 300 },
+    { ten: 'Nữ tướng thắng trận (Phùng Thị Chính)', tao: theoCot(() => makeNuTuong('phungThiChinh'), 'win'), co: 1.95, cach: 1.15, cao: 300 },
     { ten: 'Người đánh trống', tao: () => makeDrummer(), co: 0.9, cach: 1.1 },
   ],
   thuyen: [

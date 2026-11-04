@@ -115,4 +115,15 @@ export const C = {
   cornDry: 0xc9b062,
   // Vòng sáng Hiệu triệu: xanh lá loang dưới chân quân ta được hồi máu.
   heal: 0x7fd88a,
+  // Bốn nữ tướng của Hai Bà, mỗi người một màu áo (khác áo đỏ thắm, áo vàng của Hai Bà, khác cả nền cỏ): Lê Chân lam
+  // biển, Thánh Thiên lục lá, Bát Nàn tím hoa cà, Phùng Thị Chính hồng sen; địu con vải chàm.
+  nuLam: 0x2f6fbf,
+  nuLamLight: 0x8fc0ea,
+  nuLuc: 0x2f9a52,
+  nuLucLight: 0x9ad88a,
+  nuTim: 0x7b4cb0,
+  nuTimLight: 0xc4a0e8,
+  nuHong: 0xe27a9b,
+  nuHongLight: 0xf6c2d0,
+  diuCham: 0x34406a,
 } as const;
