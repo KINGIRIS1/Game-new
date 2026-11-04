@@ -73,10 +73,12 @@ function lacViet(r: HumanRig, plate: boolean, tier = 0): void {
   humanHead(r);
   hairCap(r);
   headband(r, C.red);
-  featherCrown(r, [C.red, C.cream], {
+  // Bậc 3: lông chim vàng xen giữa, cao hơn, vành mũ đồng vàng.
+  featherCrown(r, tier >= 3 ? [C.red, C.gold, C.cream] : [C.red, C.cream], {
     count: tier >= 2 ? 9 : 7,
-    len: tier >= 2 ? 0.42 : 0.36,
+    len: tier >= 3 ? 0.47 : tier >= 2 ? 0.42 : 0.36,
     bronzeRim: true,
+    rim: tier >= 3 ? C.gold : undefined,
     tier2: tier >= 2,
   });
 }
@@ -135,8 +137,8 @@ const SPECS: Record<SoldierKind, Spec> = {
     draw: (r, tier) => {
       lacViet(r, true, tier);
       r.local('hand', GRIP_R, null, (s) => spear(s, tier));
-      // Khiên tròn mặt trống đồng ở cẳng tay trái; bậc 2 viền sắt và tua đỏ.
-      r.local('armL', [-0.2, 0.39, 0.06], null, (s) => drumShield(s, tier >= 2));
+      // Khiên tròn mặt trống đồng ở cẳng tay trái; bậc 2 viền sắt và tua đỏ; bậc 3 to hơn, viền đồng vàng, hai tua.
+      r.local('armL', [-0.2, 0.39, 0.06], null, (s) => drumShield(s, tier >= 2, tier >= 3 ? 0.185 : 0.165, tier >= 3));
     },
   },
   cung: {
@@ -144,14 +146,14 @@ const SPECS: Record<SoldierKind, Spec> = {
     draw: (r, tier) => {
       lacViet(r, false, tier);
       if (tier >= 1) {
-        // Giáp ngực da thuộc nẹp đinh đồng
-        r.on('chest').plain.box(0.25, 0.22, 0.02, LEATHER, 0, 0.49, 0.11);
-        r.on('chest').plain.sphere(0.018, C.bronzeLight, 0, 0.49, 0.122);
+        // Giáp ngực da thuộc nẹp đinh đồng; bậc 3 giáp ngực đồng có núm vàng.
+        r.on('chest').plain.box(0.25, 0.22, 0.02, tier >= 3 ? C.bronze : LEATHER, 0, 0.49, 0.11);
+        r.on('chest').plain.sphere(tier >= 3 ? 0.03 : 0.018, tier >= 3 ? C.gold : C.bronzeLight, 0, 0.49, 0.122);
       }
-      // Bậc 1 mũi tên sắt, bao tên da; bậc 2 cung sừng, bao tên đồng.
-      r.local('handL', GRIP_L, null, (s) => bow(s, tier >= 2));
+      // Bậc 1 mũi tên sắt, bao tên da; bậc 2 cung sừng, bao tên đồng; bậc 3 cung bịt vàng, bao tên đồng vàng.
+      r.local('handL', GRIP_L, null, (s) => bow(s, tier >= 2, tier >= 3));
       r.local('hand', GRIP_R, null, (s) => arrow(s, tier >= 1));
-      backQuiver(r, tier >= 2 ? C.bronze : tier >= 1 ? LEATHER : C.woodLight, tier >= 1);
+      backQuiver(r, tier >= 3 ? C.gold : tier >= 2 ? C.bronze : tier >= 1 ? LEATHER : C.woodLight, tier >= 1);
     },
   },
   no: {
@@ -173,15 +175,23 @@ const SPECS: Record<SoldierKind, Spec> = {
       const head = r.on('head').plain;
       head.sphere(0.235, C.bronze, 0, 0.84, -0.025, [1, 0.62, 1], 10);
       head.cyl(0.238, 0.238, 0.035, C.bronzeDark, 0, 0.84, -0.025, undefined, 12);
-      // 3 chóp lông vũ biểu tượng chim thần
-      for (let i = -1; i <= 1; i++) {
-        head.box(0.05, 0.3, 0.025, i ? C.cream : C.red, i * 0.065, 1.04, -0.06, [0, 0, -i * 0.28]);
+      // 3 chóp lông vũ biểu tượng chim thần; bậc 3 năm chóp, hai chóp ngoài lông vàng, vành mũ đồng vàng.
+      const plumes = tier >= 3 ? 2 : 1;
+      for (let i = -plumes; i <= plumes; i++) {
+        const color = i === 0 ? C.red : Math.abs(i) === 2 ? C.gold : C.cream;
+        head.box(0.05, 0.3, 0.025, color, i * 0.065, 1.04 - Math.abs(i) * 0.02, -0.06, [0, 0, -i * 0.28]);
       }
+      if (tier >= 3) r.on('head').band.cyl(0.242, 0.242, 0.03, C.gold, 0, 0.815, -0.025, undefined, 12);
       r.local('hand', GRIP_R, null, (s) => {
         crossbowParts(s, false, 0.95);
+        // Bậc 2 cánh nỏ bọc sừng; bậc 3 đầu cánh bịt đồng vàng, đai vàng quấn cổ nỏ.
         if (tier >= 2) for (const sx of [-1, 1]) s.plain.box(0.2, 0.035, 0.035, 0xe6d6a8, sx * 0.2, 0, 0.32, [0, sx * 0.25, 0]);
+        if (tier >= 3) {
+          for (const sx of [-1, 1]) s.plain.sphere(0.035, C.gold, sx * 0.39, 0, 0.27, [1, 1, 1], 6);
+          s.band.box(0.09, 0.09, 0.06, C.gold, 0, 0, 0.3);
+        }
       });
-      backQuiver(r, tier >= 2 ? C.bronze : LEATHER, tier >= 1);
+      backQuiver(r, tier >= 3 ? C.gold : tier >= 2 ? C.bronze : LEATHER, tier >= 1);
     },
   },
   giaoAn: {

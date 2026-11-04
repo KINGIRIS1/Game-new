@@ -70,7 +70,7 @@ describe('rèn binh khí', () => {
     return s;
   }
 
-  it('bậc 1 cần lò rèn cấp 6, bậc 2 cần lò rèn cấp 7; rèn đủ thì thôi', () => {
+  it('bậc 1 cần lò rèn cấp 6, bậc 2 cần lò rèn cấp 7; bậc 3 chờ lò rèn cấp 9 (sau truyện)', () => {
     const s = withForge(5);
     expect(canForgeArms(s, 'giao')).toEqual({ ok: false, reason: 'canLoRen' });
     s.buildings.find((b) => b.type === 'loRen')!.level = 6;
@@ -80,7 +80,7 @@ describe('rèn binh khí', () => {
     expect(canForgeArms(s, 'giao')).toEqual({ ok: false, reason: 'canLoRen' });
     s.buildings.find((b) => b.type === 'loRen')!.level = 7;
     expect(forgeArms(s, 'giao')).toEqual({ ok: true, value: 2 });
-    expect(canForgeArms(s, 'giao')).toEqual({ ok: false, reason: 'capToiDa' });
+    expect(canForgeArms(s, 'giao')).toEqual({ ok: false, reason: 'canLoRen' });
     expect(s.arms).toEqual({ giao: 2, cung: 0, voi: 0, no: 0 });
     // Lò rèn hư thì không rèn được.
     s.buildings.find((b) => b.type === 'loRen')!.damaged = true;

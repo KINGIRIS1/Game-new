@@ -22,12 +22,16 @@ export function spear(s: Parts, tier = 0, len = 1.3): void {
   p.cyl(0.018, 0.018, len, C.woodDark, 0, len / 2 - 0.25, 0, undefined, 6);
   const top = len - 0.25;
   const iron = tier >= 1;
-  p.cyl(0.024, 0.02, 0.07, iron ? IRON_DARK : C.bronzeDark, 0, top + 0.02, 0, undefined, 6);
-  s.band.cyl(0.026, 0.026, 0.035, iron ? IRON : C.bronze, 0, top + 0.015, 0, undefined, 8);
+  // Bậc 3: lưỡi sắt to hơn, gờ sống, họng và đai bọc đồng vàng.
+  const gold = tier >= 3;
+  p.cyl(0.024, 0.02, 0.07, gold ? C.gold : iron ? IRON_DARK : C.bronzeDark, 0, top + 0.02, 0, undefined, 6);
+  s.band.cyl(0.026, 0.026, 0.035, gold ? C.gold : iron ? IRON : C.bronze, 0, top + 0.015, 0, undefined, 8);
   // Lưỡi giáo hình lá 3 cạnh đặc trưng Cổ Loa, dẹt và sắc nhọn.
-  p.sphere(iron ? 0.072 : 0.06, iron ? IRON : C.bronze, 0, top + (iron ? 0.2 : 0.17), 0, [1, iron ? 2.7 : 2.5, 0.32], 8);
+  const blade = gold ? 0.084 : iron ? 0.072 : 0.06;
+  const at = top + (gold ? 0.23 : iron ? 0.2 : 0.17);
+  p.sphere(blade, iron ? IRON : C.bronze, 0, at, 0, [1, iron ? 2.7 : 2.5, 0.32], 8);
   // Gờ sống giáo nổi chạy dọc giữa lưỡi giáo
-  p.box(0.01, (iron ? 0.28 : 0.24), 0.038, iron ? IRON_DARK : C.bronzeLight, 0, top + (iron ? 0.2 : 0.17), 0);
+  p.box(gold ? 0.014 : 0.01, gold ? 0.33 : iron ? 0.28 : 0.24, 0.038, gold ? C.gold : iron ? IRON_DARK : C.bronzeLight, 0, at, 0);
   // Tua đỏ chiến binh ở cổ giáo
   p.cone(0.048, 0.13, C.red, 0, top - 0.04, 0, [Math.PI, 0, 0], 8);
   if (tier >= 2) {
@@ -80,15 +84,17 @@ export function sword(s: Parts, len = 0.6, guard: number = C.bronze): void {
 
 /**
  * Cây cung cầm tay trái: dựng đứng, lưng cung cong về trước (+z), dây cung phía người bắn.
- * `horn`: cung sừng ngà, đầu bịt đồng.
+ * `horn`: cung sừng ngà, đầu bịt đồng. `gold`: đầu bịt đồng vàng, chuôi quấn đai vàng.
  */
-export function bow(s: Parts, horn = false): void {
+export function bow(s: Parts, horn = false, gold = false): void {
   const p = s.plain;
   const w = horn ? 0.045 : 0.032;
   const color = horn ? HORN : C.woodDark;
   p.box(w, 0.22, w, color, 0, 0, 0.02);
   for (const k of [-1, 1]) p.box(w, 0.22, w, color, 0, k * 0.2, -0.03, [-k * 0.5, 0, 0]);
-  if (horn) for (const k of [-1, 1]) p.sphere(0.03, C.bronze, 0, k * 0.3, -0.08, [1, 1, 1], 6);
+  if (horn) for (const k of [-1, 1]) p.sphere(gold ? 0.038 : 0.03, gold ? C.gold : C.bronze, 0, k * 0.3, -0.08, [1, 1, 1], 6);
+  // `gold` (rèn bậc 3): đầu cánh bịt đồng vàng, chuôi cung quấn đai vàng.
+  if (gold) s.band.cyl(0.034, 0.034, 0.09, C.gold, 0, 0, 0.02, undefined, 8);
   p.box(0.01, 0.6, 0.01, C.cream, 0, 0, -0.085);
 }
 
@@ -326,16 +332,18 @@ export function longDao(s: Parts): void {
 }
 
 /** Khiên tròn mặt trống đồng Đông Sơn, mặt hướng +z; `iron`: viền sắt. */
-export function drumShield(s: Parts, iron: boolean, r = 0.165): void {
+export function drumShield(s: Parts, iron: boolean, r = 0.165, gold = false): void {
   // Mặt trống đồng Đông Sơn
   s.drum.cyl(r, r, 0.035, 0xffffff, 0, 0, 0, [Math.PI / 2, 0, 0], 16);
   // Núm khiên / mặt trời nổi giữa tâm khiên
-  s.plain.sphere(0.045, iron ? IRON : C.bronzeLight, 0, 0, 0.02, [1, 1, 0.65], 8);
+  s.plain.sphere(0.045, gold ? C.gold : iron ? IRON : C.bronzeLight, 0, 0, 0.02, [1, 1, 0.65], 8);
   // Viền ngoài của khiên đồng / sắt đúc đinh tán
   s.plain.cyl(r + 0.014, r + 0.014, 0.028, iron ? IRON_DARK : C.bronzeDark, 0, 0, -0.002, [Math.PI / 2, 0, 0], 16);
   if (iron) {
-    s.plain.add(new THREE.TorusGeometry(r + 0.006, 0.022, 6, 20), IRON, 0, 0, 0.006);
+    // `gold` (rèn bậc 3): viền bọc đồng vàng, hai tua đỏ.
+    s.plain.add(new THREE.TorusGeometry(r + 0.006, 0.022, 6, 20), gold ? C.gold : IRON, 0, 0, 0.006);
     // Tua cờ đỏ kẹp viền khiên chiến binh tinh nhuệ
     s.plain.box(0.035, 0.08, 0.012, C.red, 0, -(r + 0.02), 0.005, [0, 0, 0.2]);
+    if (gold) s.plain.box(0.035, 0.08, 0.012, C.red, 0, r + 0.02, 0.005, [0, 0, -0.2]);
   }
 }
