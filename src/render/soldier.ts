@@ -2,7 +2,8 @@
 // cầm rìu; quân Triệu cầm kiếm, cầm nỏ; lính nỏ của ta (quỳ một gối khi bắn); thủy binh Triệu (lính thủy, cung
 // thuyền, lính rìu giáp mây) và tướng thủy binh cầm đao dài; quân Hán (lính kích, nỏ thủ, giáp sĩ cầm đao vòng và
 // khiên) và thái thú Tô Định (bỏ chạy thì rơi mũ, ôm ấn); nghĩa binh của Hai Bà cầm giáo tre. Mỗi lính một dáng,
-// mỗi loại vũ khí một bộ động tác.
+// mỗi loại vũ khí một bộ động tác. Người cưỡi thú (Lạc tướng, quân Ân trên chiến xa, kỵ binh Triệu, Triệu Đà, Mã Viện
+// cầm đại đao và cờ lệnh) cũng dựng ở đây, beasts.ts đặt lên lưng thú.
 
 import * as THREE from 'three';
 import type { FighterKind } from '../game/battle';
@@ -30,7 +31,26 @@ import {
 import { C } from './palette';
 import { RigBuilder, bakeRig, skinRig, type Act, type BoneDef, type Bones, type Poser } from './rig';
 import type { ShapeBuilder } from './shapes';
-import { LEATHER, arrow, bigAxe, bow, crossbowParts, daoVong, drumShield, giaoTre, kich, longDao, qua, quiver, spear, sword } from './weapons';
+import {
+  CO_LENH_TOP,
+  LEATHER,
+  arrow,
+  bigAxe,
+  bow,
+  coLenhCan,
+  coLenhLa,
+  crossbowParts,
+  daiDao,
+  daoVong,
+  drumShield,
+  giaoTre,
+  kich,
+  longDao,
+  qua,
+  quiver,
+  spear,
+  sword,
+} from './weapons';
 
 /** Lính đông trong trận (tới vài chục): bớt số mặt cho nhẹ máy (xem `ShapeBuilder.detail`). */
 const DETAIL = 0.7;
@@ -80,7 +100,7 @@ const RATTAN_DARK = 0x9a7a3a;
 const ARMOR_BLACK = 0x2a272e;
 const FEATHER_BLACK = 0x3c3842;
 /** Khăn đen của quân Hán, viền khiên giáp sĩ Hán. */
-const HAN_BLACK = 0x2e2a28;
+const HAN_BLACK = C.hanBlack;
 /** Bắn thì quỳ một gối: hông hạ chừng này. */
 const KNEEL_DROP = 0.17;
 /** Khớp mũ quan của Tô Định (trên đỉnh đầu) và chỗ ấn đeo ở đai (trước bụng bên trái). */
@@ -744,7 +764,44 @@ function shapeOf(kind: SoldierKind, tier: number) {
 // ---------- Người cưỡi ----------
 
 /** Người cưỡi voi, cưỡi ngựa hay đứng trên chiến xa. Khung xương người dời lên lưng thú (beasts.ts). */
-export type RiderKind = 'lacTuong' | 'anXa' | 'daiTuong' | 'kyBinh' | 'trieuDa';
+export type RiderKind = 'lacTuong' | 'anXa' | 'daiTuong' | 'kyBinh' | 'trieuDa' | 'maVien';
+
+/** Chỗ buộc lá cờ lệnh của Mã Viện trên cán (tư thế gốc: tay trái buông, cán dựng đứng từ chỗ tay nắm). */
+const MA_VIEN_FLAG: [number, number, number] = [GRIP_L[0], GRIP_L[1] + CO_LENH_TOP, GRIP_L[2]];
+
+/**
+ * Mã Viện: tay trái cầm cờ lệnh dựng đứng bên ngựa, lá cờ bay phần phật. `skill` (Lệnh nỏ) 0..1: rướn người giơ đại
+ * đao chỉ thẳng về trước, tay trái giơ cờ lệnh quá đầu phất sang hai bên hai lượt, rồi hạ xuống.
+ */
+function poseMaVien(bones: Bones<string>, a: Act): void {
+  const b = bones as unknown as Human;
+  const cloth = bones.coLenh;
+  if (a.act === 'dead') {
+    cloth.rotation.y = 0.7 * (a.fall ?? 1);
+    return;
+  }
+  const t = a.time ?? 0;
+  const sway = a.act === 'walk' ? Math.sin(a.phase ?? 0) : 0;
+  b.armL.rotation.set(-0.42 - 0.06 * sway, 0, -0.3);
+  b.handL.rotation.set(0.1, 0, 0.14);
+  let flap = 0.25 * Math.sin(t * 5.2) + 0.12 * sway;
+  if (a.skill !== undefined) {
+    const k = a.skill;
+    const up = smooth(k, 0, 0.18) * (1 - smooth(k, 0.82, 1));
+    const sweep = Math.sin(Math.PI * 4 * Math.min(Math.max((k - 0.15) / 0.65, 0), 1));
+    b.chest.rotation.x = lerp(b.chest.rotation.x, 0.16, up);
+    b.chest.rotation.y = lerp(b.chest.rotation.y, 0.12, up);
+    b.head.rotation.set(lerp(b.head.rotation.x, -0.15, up), lerp(b.head.rotation.y, -0.12, up), 0);
+    // Đao chếch lên chừng 35° cho khỏi trông như chĩa xuống đất khi nhìn từ trên cao.
+    b.armR.rotation.set(lerp(b.armR.rotation.x, -2.0, up), lerp(b.armR.rotation.y, 0, up), lerp(b.armR.rotation.z, 0.12, up));
+    b.hand.rotation.set(lerp(b.hand.rotation.x, 0.8, up), lerp(b.hand.rotation.y, 0, up), lerp(b.hand.rotation.z, 0, up));
+    b.armL.rotation.set(lerp(b.armL.rotation.x, -2.75, up), 0, lerp(-0.3, -0.32 - 0.32 * sweep, up));
+    b.handL.rotation.set(lerp(0.1, -0.05, up), 0, lerp(0.14, 0.75 * sweep, up));
+    flap = lerp(flap, 0.85 * Math.sin(Math.PI * 9 * k), up);
+  }
+  cloth.rotation.y = flap;
+  gripHands(b);
+}
 
 const RIDERS: Record<RiderKind, Spec> = {
   // Lạc tướng cưỡi voi: như giáo binh, cầm giáo mũi đồng, không khiên.
@@ -810,7 +867,74 @@ const RIDERS: Record<RiderKind, Spec> = {
       r.local('hand', GRIP_R, null, (s) => sword(s, 0.9, C.gold));
     },
   },
+  // Phục Ba tướng quân Mã Viện: lão tướng râu tóc bạc, giáp lá đồng đỏ, áo choàng đỏ son, mũ trụ đồng chùm lông đỏ,
+  // đại đao; tay trái cầm cờ lệnh đen (xương riêng cho lá cờ bay).
+  maVien: {
+    style: 'chop',
+    heavy: true,
+    bones: { coLenh: { parent: 'handL', at: MA_VIEN_FLAG } },
+    draw: (r) => {
+      humanBody(r, {
+        legs: C.hanRedDark,
+        cloth: C.copper,
+        pattern: false,
+        long: true,
+        top: C.copper,
+        sleeves: C.hanRed,
+        belt: C.gold,
+        greaves: C.copperDark,
+        wristband: C.copperDark,
+      });
+      // Vạt giáp lá đồng phủ tới gối, giáp ngực ba hàng lá, hộ tâm đồng vàng, đai đỏ.
+      lamellae(r.on('hips').plain, C.copperDark, 0.19, 0.125, 0.11, 0.41, [0.17, 0.25, 0.33]);
+      hanVest(r, C.copper, C.copperDark);
+      const chest = r.on('chest').plain;
+      chest.cyl(0.052, 0.052, 0.016, C.gold, 0, 0.5, 0.15, [Math.PI / 2, 0, 0], 10);
+      chest.sphere(0.02, C.goldDark, 0, 0.5, 0.16, [1, 1, 0.6], 6);
+      // Giáp vai đồng hai lớp viền vàng.
+      for (const sx of [-1, 1]) {
+        chest.sphere(0.092, C.copper, sx * 0.19, 0.57, 0, [1.2, 0.7, 1.1], 8);
+        chest.box(0.14, 0.022, 0.16, C.gold, sx * 0.205, 0.53, 0, [0, 0, -sx * 0.38]);
+        chest.sphere(0.078, C.copperDark, sx * 0.22, 0.5, 0, [1.05, 0.6, 1], 8);
+      }
+      // Áo choàng đỏ son viền vàng, buông qua lưng ngựa.
+      chest.box(0.5, 0.58, 0.035, C.hanRed, 0, 0.36, -0.2, [0.2, 0, 0]);
+      chest.box(0.52, 0.045, 0.04, C.gold, 0, 0.08, -0.255, [0.2, 0, 0]);
+      for (const sx of [-1, 1]) chest.sphere(0.03, C.gold, sx * 0.16, 0.6, -0.12, [1, 1, 1], 6);
+      // Mặt lão tướng: mày bạc rậm xếch, ria bạc, râu bạc dài chẻ hai chòm; tóc mai bạc lòi dưới mũ.
+      humanHead(r, { blush: false, mustache: C.beard });
+      const head = r.on('head').plain;
+      for (const s of [-1, 1]) {
+        head.box(0.085, 0.026, 0.022, C.beard, s * 0.078, 0.805, 0.178, [0, 0, -s * 0.34]);
+        head.cone(0.055, 0.3, C.beard, s * 0.035, 0.55, 0.14, [Math.PI + 0.3, 0, s * 0.12], 6);
+        head.sphere(0.06, C.beard, s * 0.17, 0.72, -0.06, [0.6, 1.1, 1], 6);
+      }
+      head.cone(0.07, 0.2, C.beard, 0, 0.6, 0.15, [Math.PI + 0.25, 0, 0], 6);
+      // Mũ trụ đồng đỏ: chỏm tròn, vành vàng, che gáy, che má, chóp vàng cắm chùm lông đỏ cao.
+      head.sphere(0.242, C.copper, 0, 0.848, -0.025, [1, 0.66, 1], 10);
+      head.cyl(0.246, 0.246, 0.032, C.gold, 0, 0.83, -0.025, undefined, 12);
+      head.box(0.37, 0.14, 0.05, C.copper, 0, 0.74, -0.2, [0.35, 0, 0]);
+      head.box(0.38, 0.025, 0.055, C.gold, 0, 0.68, -0.22, [0.35, 0, 0]);
+      for (const sx of [-1, 1]) head.box(0.03, 0.15, 0.1, C.copperDark, sx * 0.218, 0.73, -0.02);
+      head.box(0.07, 0.07, 0.03, C.gold, 0, 0.9, 0.205, [0, 0, Math.PI / 4]);
+      head.cyl(0.026, 0.036, 0.1, C.gold, 0, 1.03, -0.03, undefined, 6);
+      head.cone(0.07, 0.34, C.hanRed, 0, 1.22, -0.08, [-0.3, 0, 0], 7);
+      for (const sx of [-1, 1]) head.cone(0.045, 0.26, C.hanRed, sx * 0.06, 1.16, -0.1, [-0.45, 0, -sx * 0.4], 6);
+      r.local('hand', GRIP_R, null, daiDao);
+      r.local('handL', GRIP_L, null, coLenhCan);
+      (r as unknown as RigBuilder<string>).local('coLenh', MA_VIEN_FLAG, null, coLenhLa);
+    },
+    after: poseMaVien,
+  },
 };
+
+/** Xương thêm của người cưỡi ngoài thân người (beasts.ts dời lên lưng thú cùng thân người). */
+export function riderBones(kind: RiderKind): Record<string, BoneDef<string>> {
+  return RIDERS[kind].bones ?? {};
+}
+
+/** Người cưỡi có kỹ năng riêng (`Act.skill`): thú dưới chân chồm theo. */
+export const riderHasSkill = (kind: RiderKind): boolean => kind === 'maVien';
 
 /** Vẽ người cưỡi (đứng ở gốc như lính thường; beasts.ts dời lên lưng thú bằng `place`). */
 export function drawRider(r: HumanRig, kind: RiderKind): void {
@@ -841,6 +965,7 @@ export function poseRider(kind: RiderKind, b: Human, a: Act, seat: 'ride' | 'sta
     b.legR.rotation.set(0.15, 0, 0.08);
   }
   gripHands(b);
+  spec.after?.(b as unknown as Bones<string>, a);
 }
 
 /** Lính có xương, cho trận đánh: `userData.pose(a)` đặt tư thế mỗi khung hình. `tier`: bậc binh khí đã rèn (quân ta). */

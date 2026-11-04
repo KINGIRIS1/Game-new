@@ -1,6 +1,6 @@
 // Thú có khung xương (rig.ts) và người cưỡi (soldier.ts): voi chiến có Lạc tướng cưỡi, chiến xa và đại tướng Ân,
-// kỵ binh Triệu, Triệu Đà, hổ tinh, gà trắng nghìn năm, Rùa Vàng, ngựa vua chở An Dương Vương và Mỵ Châu,
-// voi trận của Hai Bà Trưng (người cưỡi dựng ở heroes.ts).
+// kỵ binh Triệu, Triệu Đà, Mã Viện cưỡi ngựa trắng, hổ tinh, gà trắng nghìn năm, Rùa Vàng, ngựa vua chở An Dương
+// Vương và Mỵ Châu, voi trận của Hai Bà Trưng (người cưỡi dựng ở heroes.ts).
 // Gốc là mặt đất dưới thú, đầu hướng +z.
 // Thú bốn chân đi theo nhịp chéo (chân trước trái cùng chân sau phải); ngã thì lăn nghiêng (`userData.fall`).
 
@@ -9,7 +9,7 @@ import type { FighterKind } from '../game/battle';
 import { HUMAN, beginPose, featherCrown, hairCap, humanBody, humanHead, lerp, strikeCurve, type Human, type HumanRig } from './body';
 import { C } from './palette';
 import { RigBuilder, bakeRig, moveBones, resetBones, skinRig, type Act, type BoneDef, type Bones, type Poser, type RigSlots } from './rig';
-import { drawRider, poseRider, type RiderKind } from './soldier';
+import { drawRider, poseRider, riderBones, riderHasSkill, type RiderKind } from './soldier';
 import { IRON, IRON_DARK, coLac } from './weapons';
 
 type Defs = Record<string, BoneDef<string>>;
@@ -51,7 +51,8 @@ const HORSE: Defs = {
 };
 const HORSE_LEG = 0.62;
 
-function drawHorse(r: Rig, color: number, saddle: number | null): void {
+/** Ngựa màu `color`, đệm yên `saddle` (không có thì ngựa kéo xe), bờm và đuôi màu `mane`. */
+function drawHorse(r: Rig, color: number, saddle: number | null, mane: number = C.ink): void {
   const body = r.on('qBody');
   body.plain.sphere(0.33, color, 0, 0.78, 0, [0.8, 0.78, 1.4], 12);
   if (saddle) body.band.box(0.5, 0.06, 0.46, saddle, 0, 1.0, -0.04);
@@ -68,15 +69,34 @@ function drawHorse(r: Rig, color: number, saddle: number | null): void {
   }
   const neck = r.on('qNeck').plain;
   neck.cyl(0.1, 0.14, 0.46, color, 0, 1.05, 0.42, [-0.6, 0, 0], 8);
-  // Bờm đen dọc cổ.
-  neck.box(0.04, 0.32, 0.36, C.ink, 0, 1.18, 0.38, [-0.6, 0, 0]);
+  // Bờm dọc cổ.
+  neck.box(0.04, 0.32, 0.36, mane, 0, 1.18, 0.38, [-0.6, 0, 0]);
   const head = r.on('qHead').plain;
   head.box(0.17, 0.18, 0.4, color, 0, 1.25, 0.64, [0.35, 0, 0]);
   for (const s of [-1, 1]) {
     head.cone(0.035, 0.12, color, s * 0.06, 1.42, 0.5, [-0.3, 0, s * 0.25], 5);
     head.sphere(0.024, C.ink, s * 0.088, 1.3, 0.6, [0.5, 1, 1], 5);
   }
-  r.on('qTail').plain.cone(0.06, 0.5, C.ink, 0, 0.85, -0.52, [-2.3, 0, 0], 6);
+  r.on('qTail').plain.cone(0.06, 0.5, mane, 0, 0.85, -0.52, [-2.3, 0, 0], 6);
+}
+
+/**
+ * Ngựa trắng của Mã Viện: bờm, đuôi xám bạc, đệm yên đỏ son, vạt yên đỏ son viền vàng buông hai bên sườn, tấm che
+ * trán đồng đỏ, dây cương đồng, chùm tua đỏ đeo dưới cổ.
+ */
+function drawWhiteHorse(r: Rig): void {
+  drawHorse(r, C.horseWhite, C.hanRed, C.horseWhiteMane);
+  const head = r.on('qHead').plain;
+  head.box(0.08, 0.2, 0.3, C.copper, 0, 1.33, 0.72, [0.35, 0, 0]);
+  head.box(0.19, 0.035, 0.05, C.copperDark, 0, 1.22, 0.76, [0.35, 0, 0]);
+  const neck = r.on('qNeck').plain;
+  neck.sphere(0.04, C.gold, 0, 0.98, 0.56, [1, 1, 1], 6);
+  neck.cone(0.075, 0.2, C.hanRed, 0, 0.86, 0.57, [Math.PI, 0, 0], 7);
+  const body = r.on('qBody').plain;
+  for (const sx of [-1, 1]) {
+    body.box(0.025, 0.2, 0.4, C.hanRed, sx * 0.255, 0.9, -0.04, [0, 0, sx * 0.3]);
+    body.box(0.03, 0.03, 0.41, C.gold, sx * 0.285, 0.805, -0.04, [0, 0, sx * 0.3]);
+  }
 }
 
 /** Ngựa đi, đứng (gật đầu, phẩy đuôi), cào chân khi người cưỡi ra đòn, ngã. */
@@ -652,8 +672,8 @@ function poseRooster(b: B, a: Act): void {
 
 // ---------- Thú và người cưỡi trong trận ----------
 
-export type BeastKind = 'voi' | 'chienXa' | 'daiTuong' | 'kyBinh' | 'trieuDa' | 'hoTinh' | 'gaTrang';
-const KINDS: readonly FighterKind[] = ['voi', 'chienXa', 'daiTuong', 'kyBinh', 'trieuDa', 'hoTinh', 'gaTrang'];
+export type BeastKind = 'voi' | 'chienXa' | 'daiTuong' | 'kyBinh' | 'trieuDa' | 'maVien' | 'hoTinh' | 'gaTrang';
+const KINDS: readonly FighterKind[] = ['voi', 'chienXa', 'daiTuong', 'kyBinh', 'trieuDa', 'maVien', 'hoTinh', 'gaTrang'];
 export const isBeast = (k: FighterKind): k is BeastKind => KINDS.includes(k);
 
 interface Spec {
@@ -662,10 +682,14 @@ interface Spec {
   pose(b: B, a: Act): void;
 }
 
-/** Người cưỡi trên lưng thú hay trên xe: gốc người cưỡi (giữa hai bàn chân) ở chỗ `at`, hông là con của `parent`. */
+/**
+ * Người cưỡi trên lưng thú hay trên xe: gốc người cưỡi (giữa hai bàn chân) ở chỗ `at`, hông là con của `parent`.
+ * Người cưỡi có kỹ năng riêng (Mã Viện phất cờ Lệnh nỏ) thì thú chồm chân trước theo kỹ năng.
+ */
 function riderSpec(mount: Defs, parent: string, at: V3, kind: RiderKind, seat: 'ride' | 'stand', drawMount: (r: Rig, tier: number) => void, poseMount: (b: B, a: Act, e: number) => void): Spec {
+  const skill = riderHasSkill(kind);
   return {
-    defs: { ...BASE, ...mount, ...moveBones(HUMAN, parent, at) },
+    defs: { ...BASE, ...mount, ...moveBones({ ...HUMAN, ...riderBones(kind) }, parent, at) },
     draw: (r, tier) => {
       drawMount(r, tier);
       r.place(at, 1, () => drawRider(r as unknown as HumanRig, kind));
@@ -673,7 +697,9 @@ function riderSpec(mount: Defs, parent: string, at: V3, kind: RiderKind, seat: '
     pose: (b, a) => {
       // Người cưỡi trước (đặt lại mọi xương), thú sau.
       poseRider(kind, b as unknown as Human, a, seat);
-      poseMount(b, a, a.act === 'fight' ? strikeCurve(a.strike, 0.3, 0.5) : 0);
+      const e = a.act === 'fight' ? strikeCurve(a.strike, 0.3, 0.5) : 0;
+      const rear = skill && a.skill !== undefined && a.act !== 'dead' ? Math.sin(Math.PI * Math.min(Math.max(a.skill, 0), 1)) : 0;
+      poseMount(b, a, Math.max(e, rear));
       if (b.wheelL && a.act === 'walk') b.wheelL.rotation.x = b.wheelR.rotation.x = (a.phase ?? 0) * 0.5;
     },
   };
@@ -697,6 +723,7 @@ const SPECS: Record<BeastKind, Spec> = {
     },
     poseHorse,
   ),
+  maVien: riderSpec(HORSE, 'qBody', [0, 0.92, -0.08], 'maVien', 'ride', drawWhiteHorse, poseHorse),
   hoTinh: { defs: { ...BASE, ...TIGER }, draw: drawTiger, pose: poseTiger },
   gaTrang: { defs: { ...BASE, ...ROOSTER }, draw: drawRooster, pose: poseRooster },
 };

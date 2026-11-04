@@ -8,10 +8,11 @@ import { bakeThuyTinh, makeAnDuong, makeCaoLo, makeGiong, makeSonTinh, makeTrung
 import { bakeMonster, isMonster } from './monsters';
 import { makeRower, makeWorker } from './people';
 import { C } from './palette';
+import { RigBuilder, resetBones, skinRig, type BoneDef, type Poser } from './rig';
 import { ShapeBuilder, batchTemplates, instanceTemplates, seeded, type Placement } from './shapes';
 import { bakeSoldier, isSoldier } from './soldier';
 import { ToonModel, inkThin, outlineOf, toon } from './toon';
-import { crossbowParts } from './weapons';
+import { LEATHER, crossbowParts } from './weapons';
 
 /** Một chỗ mọc cây, tọa độ thế giới. `seed` giữ cho mỗi cây khác nhau nhưng không đổi giữa các lần vẽ. */
 export interface TreeSpot {
@@ -38,7 +39,8 @@ export interface WallSpot {
 /**
  * Lính trong trận. Lính đi bộ (quân ta, giặc Ân, quân Triệu; soldier.ts), thú và người cưỡi (voi chiến, chiến xa,
  * kỵ binh, Triệu Đà, hổ tinh, gà trắng; beasts.ts) có khung xương: ở đây trả về bản tĩnh đứng nghỉ.
- * Thủy quái, quỷ núi, ma trơi (monsters.ts) và các tướng (heroes.ts) cũng có khung xương.
+ * Thủy quái, quỷ núi, ma trơi (monsters.ts) và các tướng (heroes.ts) cũng có khung xương. Mã Viện cưỡi ngựa trắng là
+ * thú có người cưỡi (bản tĩnh); lâu thuyền Hán trả về mô hình có xương (`makeLauThuyen`, có `userData.pose`).
  * `tier`: bậc binh khí đã rèn ở lò rèn (0–2) của giáo binh, cung thủ, voi chiến:
  * - giáo binh: bậc 1 đầu giáo sắt, bậc 2 thêm tua đỏ và khiên viền sắt (soldier.ts);
  * - cung thủ: bậc 1 mũi tên sắt trong bao tên da, bậc 2 cung sừng và bao tên đồng (soldier.ts);
@@ -55,6 +57,7 @@ export function makeFighter(kind: FighterKind, tier = 0): THREE.Group {
   if (isBeast(kind)) return bakeBeast(kind, tier);
   if (isMonster(kind)) return bakeMonster(kind);
   if (kind === 'thuyTinh') return bakeThuyTinh();
+  if (kind === 'lauThuyen') return makeLauThuyen();
   throw new Error(`Chưa có hình cho ${kind}`);
 }
 
@@ -1019,8 +1022,14 @@ export function makeCrossbowStand(): THREE.Group {
 
 // ---------- Chương 4: lính nỏ, thủy binh Triệu, thuyền giặc, ụ nỏ ----------
 
-/** Thuyền giặc Triệu: thân đen dài, mũi cong vểnh lên như móc câu, cột buồm và buồm đỏ. Dài theo trục z (mũi ra trước). */
-export function makeEnemyBoat(): THREE.Group {
+/**
+ * Thuyền chở lính giặc cập bờ, dài 1,6, rộng 0,5, dài theo trục z (mũi ra trước, +z), gốc ở mặt nước giữa thân.
+ * - `trieu`: thuyền thủy binh Triệu, thân đen dài, mũi cong vểnh lên như móc câu, cột buồm và buồm đỏ.
+ * - `han`: thuyền thủy quân Hán, thân gỗ nâu sẫm, mạn sơn đỏ son, mũi vuông vểnh, mui cói che phía đuôi, cờ đen viền
+ *   đỏ son cắm đuôi thuyền. Giữa thuyền để trống cho lính đứng.
+ */
+export function makeEnemyBoat(style: 'trieu' | 'han' = 'trieu'): THREE.Group {
+  if (style === 'han') return hanBoat();
   const m = new ToonModel(inkThin);
   const p = m.plain;
   p.box(0.5, 0.22, 1.6, C.trieuCloth, 0, 0.11, 0);
@@ -1038,6 +1047,333 @@ export function makeEnemyBoat(): THREE.Group {
   // Mái chèo hai bên mạn.
   for (const s of [-1, 1]) for (const z of [-0.4, 0.3]) p.box(0.04, 0.04, 0.6, C.woodDark, s * 0.4, 0.12, z, [0, s * 0.9, s * 0.4]);
   return m.group();
+}
+
+/** Thuyền chở lính Hán (xem `makeEnemyBoat`). */
+function hanBoat(): THREE.Group {
+  const m = new ToonModel(inkThin);
+  const p = m.plain;
+  p.box(0.5, 0.22, 1.6, C.hanWood, 0, 0.11, 0);
+  p.box(0.4, 0.02, 1.5, C.hanWoodLight, 0, 0.225, 0);
+  // Mạn đỏ son, dải đen dưới mạn.
+  for (const sx of [-1, 1]) {
+    p.box(0.05, 0.07, 1.62, C.hanRed, sx * 0.25, 0.235, 0);
+    p.box(0.035, 0.03, 1.58, C.hanBlack, sx * 0.255, 0.1, 0);
+  }
+  // Mũi vuông vểnh lên, ván mũi đỏ son; đuôi vát lên.
+  p.box(0.46, 0.13, 0.36, C.hanWood, 0, 0.27, 0.86, [-0.45, 0, 0]);
+  p.box(0.42, 0.11, 0.03, C.hanRed, 0, 0.36, 1.03, [-0.45, 0, 0]);
+  p.box(0.44, 0.13, 0.34, C.hanWood, 0, 0.26, -0.86, [0.42, 0, 0]);
+  // Mui cói khum che phía đuôi, hai vành gỗ.
+  const mui = (r: number, len: number) => new THREE.CylinderGeometry(r, r, len, 8, 1, false, -Math.PI / 2, Math.PI);
+  p.add(mui(0.21, 0.42), C.thatchDark, 0, 0.23, -0.5, [-Math.PI / 2, 0, 0]);
+  for (const z of [-0.33, -0.67]) p.add(mui(0.225, 0.035), C.hanWood, 0, 0.23, z, [-Math.PI / 2, 0, 0]);
+  // Cờ đen viền đỏ son cắm sau mui.
+  p.cyl(0.022, 0.026, 1.1, C.hanBlack, 0, 0.75, -0.8, undefined, 6);
+  p.cone(0.035, 0.1, C.gold, 0, 1.35, -0.8, undefined, 5);
+  p.box(0.02, 0.36, 0.44, C.hanBlack, 0, 1.08, -1.04);
+  p.box(0.026, 0.04, 0.44, C.hanRed, 0, 1.25, -1.04);
+  p.box(0.026, 0.04, 0.44, C.hanRed, 0, 0.91, -1.04);
+  p.box(0.026, 0.36, 0.04, C.hanRed, 0, 1.08, -1.25);
+  // Mái chèo hai bên mạn.
+  for (const s of [-1, 1]) for (const z of [-0.1, 0.45]) p.box(0.04, 0.04, 0.6, C.hanWoodLight, s * 0.4, 0.12, z, [0, s * 0.9, s * 0.4]);
+  return m.group();
+}
+
+/** Khối hộp vát, tâm ở giữa chiều cao: đáy `w0` × `d0`, đỉnh `w1` × `d1` (x × z), cao `h`. */
+function frustumGeo(w0: number, d0: number, w1: number, d1: number, h: number): THREE.BufferGeometry {
+  const g = new THREE.BoxGeometry(1, h, 1);
+  const pos = g.getAttribute('position');
+  for (let i = 0; i < pos.count; i++) {
+    const top = pos.getY(i) > 0;
+    pos.setX(i, pos.getX(i) * (top ? w1 : w0));
+    pos.setZ(i, pos.getZ(i) * (top ? d1 : d0));
+  }
+  g.computeVertexNormals();
+  return g;
+}
+
+/** Một tầng lầu của lâu thuyền: sàn ở `y`, vách cao `h`, nửa rộng `hw` (theo x), từ `z0` tới `z1`. */
+interface LauTang {
+  y: number;
+  h: number;
+  hw: number;
+  z0: number;
+  z1: number;
+}
+/** Ba tầng lầu, nhỏ dần lên trên. Mái chái ngói đen của tầng dưới là sân thượng của tầng trên. */
+const LAU_TANG: LauTang[] = [
+  { y: 0.42, h: 0.58, hw: 0.4, z0: -1.35, z1: 1.15 },
+  { y: 1.0, h: 0.56, hw: 0.27, z0: -1.0, z1: 0.6 },
+  { y: 1.56, h: 0.48, hw: 0.14, z0: -0.62, z1: 0.18 },
+];
+/** Mái chái chìa ra ngoài vách chừng này. */
+const LAU_EAVE = 0.12;
+/** Nửa bề ngang thân ở mặt sàn chính, đáy thuyền dưới mặt nước, độ loe của mạn (x tăng chừng này mỗi đơn vị cao). */
+const LAU_BEAM = 0.6;
+const LAU_KEEL = -0.14;
+const LAU_FLARE = 0.125 / 0.56;
+/** Mái chèo: sáu mái mỗi mạn, trục chèo ở lỗ chèo trên mạn, vẽ chúc xuống nước góc này. */
+const LAU_OARS = [-1.25, -0.75, -0.25, 0.25, 0.75, 1.25];
+const LAU_OAR_Y = 0.26;
+const LAU_OAR_DIP = 0.5;
+/** Lính nỏ: tầng, chỗ dọc thân, mạn nhìn ra (±1 theo x), cách tâm thân theo x. */
+const LAU_CREW: { tang: number; z: number; sx: number; x: number }[] = [
+  ...[-1, 1].flatMap((sx) => [-0.9, 0.05, 0.9].map((z) => ({ tang: 0, z, sx, x: 0.49 }))),
+  ...[-1, 1].flatMap((sx) => [-0.6, 0.2].map((z) => ({ tang: 1, z, sx, x: 0.335 }))),
+  ...[-1, 1].map((sx) => ({ tang: 2, z: 0.4, sx, x: 0.12 })),
+];
+/** Cột cờ trên nóc lầu: chân cột, đỉnh, chỗ dọc thân; lá cờ hai khúc, mỗi khúc dài `LAU_FLAG_W`. */
+const LAU_POLE = { y0: 2.3, y1: 3.5, z: -0.22 };
+const LAU_FLAG_W = 0.38;
+const LAU_FLAG_H = 0.46;
+/** Chìm hẳn thì thân đã hạ chừng này dưới mặt nước. */
+const LAU_SINK_DEPTH = 4;
+/** Gợi ý cho phần vẽ trận: lâu thuyền chìm hẳn trong chừng này giây (`fall` từ 0 tới 1). */
+export const LAU_THUYEN_SINK = 3;
+
+const LAU_BONES = (() => {
+  const defs: Record<string, BoneDef<string>> = {
+    base: { parent: null, at: [0, 0, 0] },
+    hull: { parent: 'base', at: [0, 0, 0] },
+  };
+  for (const sx of [-1, 1]) {
+    LAU_OARS.forEach((z, i) => (defs[`oar${sx}_${i}`] = { parent: 'hull', at: [sx * (LAU_BEAM - 0.02), LAU_OAR_Y, z] }));
+  }
+  LAU_CREW.forEach((c, i) => (defs[`no${i}`] = { parent: 'hull', at: [c.sx * (c.x + 0.1), LAU_TANG[c.tang].y + 0.265, c.z] }));
+  defs.co = { parent: 'hull', at: [0, LAU_POLE.y1 - 0.06, LAU_POLE.z] };
+  defs.co2 = { parent: 'co', at: [0, LAU_POLE.y1 - 0.06, LAU_POLE.z - LAU_FLAG_W] };
+  return defs;
+})();
+
+/** Lan can đỏ từ (x0, z0) tới (x1, z1) trên sàn cao `y`: cột con, tay vịn trên, thanh giữa. */
+function lanCan(p: ShapeBuilder, x0: number, z0: number, x1: number, z1: number, y: number, h = 0.14): void {
+  const len = Math.hypot(x1 - x0, z1 - z0);
+  const n = Math.max(1, Math.round(len / 0.32));
+  const yaw = Math.atan2(x1 - x0, z1 - z0);
+  for (let i = 0; i <= n; i++) {
+    const k = i / n;
+    p.box(0.026, h, 0.026, C.hanRed, x0 + (x1 - x0) * k, y + h / 2, z0 + (z1 - z0) * k);
+  }
+  p.box(0.034, 0.026, len + 0.03, C.hanRed, (x0 + x1) / 2, y + h, (z0 + z1) / 2, [0, yaw, 0]);
+  p.box(0.018, 0.018, len, C.hanRedDark, (x0 + x1) / 2, y + h * 0.5, (z0 + z1) / 2, [0, yaw, 0]);
+}
+
+/** Một tầng lầu: vách gỗ, cột đỏ ở góc và giữa, ô cửa nỏ đen hai bên; mái chái ngói đen (trừ tầng trên cùng). */
+function lauTang(p: ShapeBuilder, t: LauTang, top: boolean): void {
+  const len = t.z1 - t.z0;
+  const zc = (t.z0 + t.z1) / 2;
+  const wall = top ? t.h : t.h - 0.04;
+  p.box(t.hw * 2, wall, len, C.woodLight, 0, t.y + wall / 2, zc);
+  const cols = Math.max(1, Math.round(len / 0.45));
+  for (let i = 0; i <= cols; i++) {
+    const z = t.z0 + (len * i) / cols;
+    for (const sx of [-1, 1]) p.cyl(0.032, 0.032, wall, C.hanRed, sx * t.hw, t.y + wall / 2, z, undefined, 6);
+    if (i === cols) continue;
+    // Ô cửa nỏ giữa hai cột.
+    for (const sx of [-1, 1]) p.box(0.016, 0.12, 0.14, C.hanBlack, sx * (t.hw + 0.006), t.y + wall * 0.58, z + len / cols / 2);
+  }
+  if (top) return;
+  // Mái chái: dốc từ chân tầng trên ra ngoài vách, ván diềm đỏ sẫm, bốn góc vểnh lên.
+  const e = LAU_EAVE;
+  p.add(frustumGeo((t.hw + e) * 2, len + e * 2, t.hw * 2, len, 0.1), C.hanTile, 0, t.y + t.h - 0.03, zc);
+  p.add(frustumGeo((t.hw + e) * 2 + 0.02, len + e * 2 + 0.02, (t.hw + e) * 2 + 0.02, len + e * 2 + 0.02, 0.025), C.hanRedDark, 0, t.y + t.h - 0.085, zc);
+  for (const sx of [-1, 1]) {
+    for (const [z, sz] of [
+      [t.z0 - e, -1],
+      [t.z1 + e, 1],
+    ] as const) {
+      p.cone(0.028, 0.13, C.hanTile, sx * (t.hw + e - 0.01), t.y + t.h - 0.03, z - sz * 0.01, [sz * 0.75, 0, -sx * 0.75], 4);
+    }
+  }
+}
+
+/** Lính nỏ Hán gọn (cao chừng 0,44) đứng trên sàn cao `y` ở (x, z), nhìn ra mạn `sx`; nỏ vẽ trên xương `bone`. */
+function lauCrew(r: RigBuilder<string>, bone: string, x: number, y: number, z: number, sx: number): void {
+  const p = r.on('hull').plain;
+  // Áo dài đỏ son tới chân, giáp da che ngực.
+  p.cyl(0.046, 0.066, 0.2, C.hanRed, x, y + 0.1, z, undefined, 6);
+  p.cyl(0.054, 0.048, 0.1, LEATHER, x, y + 0.245, z, undefined, 6);
+  // Đầu to, khăn đen viền đỏ, hai mắt nhìn ra mạn.
+  p.sphere(0.07, C.skin, x, y + 0.36, z, [1, 0.95, 0.95], 7);
+  p.sphere(0.073, C.hanBlack, x - sx * 0.01, y + 0.385, z, [1, 0.62, 1], 7);
+  p.cyl(0.074, 0.074, 0.013, C.hanRed, x - sx * 0.01, y + 0.37, z, undefined, 6);
+  for (const s of [-1, 1]) p.box(0.012, 0.02, 0.013, C.ink, x + sx * 0.066, y + 0.355, z + s * 0.025);
+  // Hai tay đưa ra trước đỡ nỏ.
+  for (const s of [-1, 1]) p.cyl(0.018, 0.018, 0.1, C.hanRed, x + sx * 0.05, y + 0.265, z + s * 0.042, [0, 0, Math.PI / 2], 5);
+  // Nỏ: báng gỗ dọc hướng bắn, cánh nỏ ngang, dây, lẫy đồng, mũi tên lắp sẵn.
+  r.local(bone, [x + sx * 0.1, y + 0.265, z], [0, (sx * Math.PI) / 2, 0], (s) => {
+    const q = s.plain;
+    q.box(0.026, 0.026, 0.2, C.wood, 0, 0, 0.02);
+    for (const k of [-1, 1]) q.box(0.12, 0.02, 0.02, C.woodDark, k * 0.058, 0.004, 0.105, [0, k * 0.28, 0]);
+    q.box(0.19, 0.006, 0.006, C.cream, 0, 0.006, 0.075);
+    q.box(0.02, 0.034, 0.032, C.bronze, 0, -0.022, -0.02);
+    q.box(0.008, 0.008, 0.13, C.arrow, 0, 0.018, 0.07);
+  });
+}
+
+/** Vẽ lâu thuyền lên các xương (xem `makeLauThuyen`). */
+function drawLauThuyen(r: RigBuilder<string>): void {
+  const p = r.on('hull').plain;
+  const deck = LAU_TANG[0].y;
+  const hullH = deck - LAU_KEEL;
+  const bottom = LAU_BEAM - LAU_FLARE * hullH;
+  const tilt = Math.atan(LAU_FLARE);
+  // Thân gỗ nâu sẫm loe lên, sàn gỗ sáng hơn.
+  p.add(frustumGeo(bottom * 2, 3.0, LAU_BEAM * 2, 3.45, hullH), C.hanWood, 0, LAU_KEEL + hullH / 2, -0.1);
+  p.box(LAU_BEAM * 2 - 0.08, 0.02, 3.3, C.hanWoodLight, 0, deck + 0.005, -0.1);
+  // Mạn: dải đỏ son dưới mép sàn, dải đen sát nước, lỗ chèo đen, mắt thuyền hai bên mũi.
+  const sideX = (y: number) => bottom + LAU_FLARE * (y - LAU_KEEL);
+  for (const sx of [-1, 1]) {
+    p.box(0.03, 0.07, 3.4, C.hanRed, sx * (sideX(0.36) + 0.012), 0.36, -0.1, [0, 0, -sx * tilt]);
+    p.box(0.03, 0.04, 3.1, C.hanBlack, sx * (sideX(0.06) + 0.012), 0.06, -0.1, [0, 0, -sx * tilt]);
+    for (const z of LAU_OARS) p.box(0.03, 0.07, 0.07, C.hanBlack, sx * (sideX(LAU_OAR_Y) + 0.008), LAU_OAR_Y, z, [0, 0, -sx * tilt]);
+    p.cyl(0.075, 0.075, 0.02, C.cream, sx * (sideX(0.24) + 0.02), 0.24, 1.42, [0, 0, Math.PI / 2], 10);
+    p.cyl(0.04, 0.04, 0.022, C.ink, sx * (sideX(0.24) + 0.026), 0.24, 1.44, [0, 0, Math.PI / 2], 8);
+  }
+  // Mũi, đuôi: sàn cao hơn sàn chính, mặt vát ra ngoài, ván ngang đỏ son, lan can đỏ; đuôi có bánh lái lớn.
+  for (const [zc, sz, len] of [
+    [1.78, 1, 0.5],
+    [-1.86, -1, 0.46],
+  ] as const) {
+    const h = 0.62;
+    const y = deck + 0.2 - h / 2;
+    p.add(frustumGeo(LAU_BEAM * 2 - 0.3, len - 0.2, LAU_BEAM * 2 - 0.04, len + 0.24, h), C.hanWood, 0, y, zc);
+    p.box(LAU_BEAM * 2 - 0.12, 0.02, len + 0.16, C.hanWoodLight, 0, deck + 0.205, zc);
+    p.box(LAU_BEAM * 2 - 0.2, 0.06, 0.03, C.hanRed, 0, deck + 0.12, zc + sz * (len / 2 + 0.1), [-sz * 0.6, 0, 0]);
+    p.box(LAU_BEAM * 2 - 0.26, 0.035, 0.03, C.hanBlack, 0, deck - 0.02, zc + sz * (len / 2 + 0.03), [-sz * 0.6, 0, 0]);
+    const z1 = zc + sz * (len / 2 + 0.04);
+    lanCan(p, -(LAU_BEAM - 0.08), z1, LAU_BEAM - 0.08, z1, deck + 0.2, 0.12);
+  }
+  p.box(0.05, 0.6, 0.32, C.hanWood, 0, 0.05, -2.2);
+  p.cyl(0.03, 0.03, 0.62, C.hanWood, 0, 0.72, -2.12, [0.55, 0, 0], 6);
+  // Lan can đỏ quanh sàn chính và quanh sân thượng mỗi tầng.
+  for (const sx of [-1, 1]) lanCan(p, sx * (LAU_BEAM - 0.03), -1.5, sx * (LAU_BEAM - 0.03), 1.38, deck);
+  for (let i = 1; i < LAU_TANG.length; i++) {
+    const t = LAU_TANG[i - 1];
+    const x = t.hw - 0.01;
+    for (const sx of [-1, 1]) lanCan(p, sx * x, t.z0 + 0.03, sx * x, t.z1 - 0.03, LAU_TANG[i].y, 0.12);
+    lanCan(p, -x, t.z1 - 0.03, x, t.z1 - 0.03, LAU_TANG[i].y, 0.12);
+    lanCan(p, -x, t.z0 + 0.03, x, t.z0 + 0.03, LAU_TANG[i].y, 0.12);
+  }
+  // Ba tầng lầu; tầng trên cùng là vọng lâu mái ngói đen bốn mái, nóc có hai đầu vểnh.
+  LAU_TANG.forEach((t, i) => lauTang(p, t, i === LAU_TANG.length - 1));
+  const top = LAU_TANG[LAU_TANG.length - 1];
+  const roofY = top.y + top.h;
+  const len = top.z1 - top.z0;
+  const zc = (top.z0 + top.z1) / 2;
+  const e = 0.14;
+  p.add(frustumGeo((top.hw + e) * 2, len + e * 2, 0.06, len * 0.6, 0.3), C.hanTile, 0, roofY + 0.15, zc);
+  p.add(frustumGeo((top.hw + e) * 2 + 0.02, len + e * 2 + 0.02, (top.hw + e) * 2 + 0.02, len + e * 2 + 0.02, 0.025), C.hanRedDark, 0, roofY + 0.012, zc);
+  p.box(0.07, 0.05, len * 0.7, C.hanBlack, 0, roofY + 0.32, zc);
+  for (const sz of [-1, 1]) p.cone(0.035, 0.16, C.hanBlack, 0, roofY + 0.38, zc + sz * len * 0.35, [sz * 0.55, 0, 0], 5);
+  for (const sx of [-1, 1]) {
+    for (const sz of [-1, 1]) {
+      p.cone(0.03, 0.16, C.hanTile, sx * (top.hw + e - 0.01), roofY + 0.03, zc + sz * (len / 2 + e - 0.01), [sz * 0.8, 0, -sx * 0.8], 4);
+    }
+  }
+  // Cột cờ trên nóc: cán đen, chóp vàng, tua đỏ; lá cờ đen lớn viền đỏ son hai khúc bay về đuôi, giữa thêu vòng đỏ.
+  p.cyl(0.026, 0.032, LAU_POLE.y1 - LAU_POLE.y0 + 0.05, C.hanBlack, 0, (LAU_POLE.y0 + LAU_POLE.y1) / 2, LAU_POLE.z, undefined, 6);
+  p.cone(0.045, 0.14, C.gold, 0, LAU_POLE.y1 + 0.07, LAU_POLE.z, undefined, 5);
+  p.cone(0.05, 0.1, C.hanRed, 0, LAU_POLE.y1 - 0.02, LAU_POLE.z, [Math.PI, 0, 0], 6);
+  const fy = LAU_POLE.y1 - 0.06;
+  for (const [bone, z0] of [
+    ['co', LAU_POLE.z],
+    ['co2', LAU_POLE.z - LAU_FLAG_W],
+  ] as const) {
+    const q = r.on(bone).plain;
+    const zm = z0 - LAU_FLAG_W / 2;
+    q.box(0.018, LAU_FLAG_H, LAU_FLAG_W + 0.01, C.hanBlack, 0, fy - LAU_FLAG_H / 2, zm);
+    q.box(0.026, 0.045, LAU_FLAG_W + 0.01, C.hanRed, 0, fy - 0.022, zm);
+    q.box(0.026, 0.045, LAU_FLAG_W + 0.01, C.hanRed, 0, fy - LAU_FLAG_H + 0.022, zm);
+  }
+  const end = r.on('co2').plain;
+  const zEnd = LAU_POLE.z - LAU_FLAG_W * 2;
+  end.box(0.026, LAU_FLAG_H, 0.045, C.hanRed, 0, fy - LAU_FLAG_H / 2, zEnd + 0.02);
+  for (const y of [fy - 0.06, fy - LAU_FLAG_H / 2, fy - LAU_FLAG_H + 0.06]) end.cone(0.028, 0.1, C.hanRed, 0, y, zEnd - 0.04, [-Math.PI / 2, 0, 0], 5);
+  for (const sx of [-1, 1]) r.on('co').plain.cyl(0.12, 0.12, 0.006, C.hanRed, sx * 0.011, fy - LAU_FLAG_H / 2, LAU_POLE.z - LAU_FLAG_W, [0, 0, Math.PI / 2], 12);
+  // Mái chèo: cán gỗ, bản chèo dựng đứng; vẽ chúc xuống nước từ trục chèo.
+  for (const sx of [-1, 1]) {
+    const roll = Math.atan2(-sx * Math.cos(LAU_OAR_DIP), -Math.sin(LAU_OAR_DIP));
+    LAU_OARS.forEach((z, i) => {
+      r.local(`oar${sx}_${i}`, [sx * (LAU_BEAM - 0.02), LAU_OAR_Y, z], [0, 0, roll], (s) => {
+        s.plain.cyl(0.017, 0.017, 1.0, C.wood, 0, 0.32, 0, undefined, 5);
+        s.plain.box(0.075, 0.24, 0.02, C.woodLight, 0, 0.9, 0);
+      });
+    });
+  }
+  // Lính nỏ đứng ở từng tầng, nhìn ra hai mạn.
+  LAU_CREW.forEach((c, i) => lauCrew(r, `no${i}`, c.sx * c.x, LAU_TANG[c.tang].y, c.z, c.sx));
+}
+
+const smoothK = THREE.MathUtils.smoothstep;
+
+/**
+ * Lâu thuyền Hán: thuyền chiến lớn ba tầng lầu, thân dài chừng 4,3 (đuôi z ≈ −2,2, mũi z ≈ 2,15; bánh lái chìa tới
+ * −2,36), rộng 1,2 ở mặt sàn (mái chèo chìa ra chừng 1,35 mỗi bên khi chèo, 1,2 khi gác xuôi lúc đậu), cao chừng 3,65
+ * tới chóp cột cờ.
+ * - Trục: dài theo z, mũi ra trước (+z) như mọi lính và `makeEnemyBoat`; hai mạn nhìn ra ±x, mạn nào cũng có lính nỏ.
+ *   Phần vẽ trận xoay `rotation.y = face` như lính: `face` = π/2 (bờ nam) cho mũi xuôi theo +x, mạn +x nhìn lên bờ
+ *   (−z); `face` = 0 (bờ đông) cho mũi xuôi theo +z, mạn −x nhìn lên bờ (−x).
+ * - Gốc ở mặt nước giữa thân: đáy thuyền chìm 0,14 dưới gốc.
+ * - Hai hàng mái chèo (sáu mái mỗi mạn), lầu gỗ ba tầng mái ngói đen, lan can đỏ, cờ đen lớn trên nóc, mười hai lính nỏ
+ *   Hán đứng ở ba tầng. Có xương (một lần vẽ cho mỗi chất liệu): thân, từng mái chèo, nỏ của từng lính, hai khúc cờ.
+ * - `userData.pose(a: Act)`: `stand` đậu, nhấp nhô theo `time`, mái chèo gác lên; `walk` chèo (mái chèo khua theo
+ *   `time`); `fight` lính nỏ nâng nỏ ngắm, `strike` 0..1 thì nỏ giật lên rồi hạ xuống lên dây; `dead` với `fall` 0..1
+ *   thì nghiêng dần, chúi mũi rồi chìm hẳn dưới nước khi `fall` = 1 (`LAU_THUYEN_SINK` giây là vừa).
+ * - `userData.fall = 'none'`: phần vẽ trận không lật mô hình khi chìm, tư thế tự lo.
+ */
+export function makeLauThuyen(): THREE.Group {
+  const r = new RigBuilder<string>(LAU_BONES, 0.75);
+  drawLauThuyen(r);
+  const { group, bones } = skinRig(r.build());
+  const oars = LAU_OARS.flatMap((_, i) => [-1, 1].map((sx) => ({ bone: bones[`oar${sx}_${i}`], sx, i })));
+  const bows = LAU_CREW.map((c, i) => ({ bone: bones[`no${i}`], sx: c.sx }));
+  const pose: Poser = (a) => {
+    resetBones(bones);
+    const t = a.time ?? 0;
+    const hull = bones.hull;
+    if (a.act === 'dead') {
+      // Nghiêng dần sang mạn, chúi mũi, rồi chìm hẳn; mái chèo buông thõng, nỏ chúc xuống, cờ rủ.
+      const f = Math.min(Math.max(a.fall ?? 1, 0), 1);
+      hull.rotation.z = 0.45 * smoothK(f, 0, 0.5);
+      hull.rotation.x = 0.2 * smoothK(f, 0.3, 1);
+      hull.position.y = -LAU_SINK_DEPTH * f ** 2.2;
+      if (f >= 1) hull.scale.setScalar(1e-3);
+      for (const o of oars) o.bone.rotation.set(0, o.sx * 0.35 * Math.sin(o.i * 2.3 + o.sx) * f, -o.sx * 0.2 * f);
+      for (const b of bows) b.bone.rotation.z = -b.sx * 0.6 * f;
+      bones.co.rotation.y = 0.5 * f;
+      return;
+    }
+    const rowing = a.act === 'walk';
+    hull.position.y = 0.035 * Math.sin(t * 1.7);
+    hull.rotation.z = 0.025 * Math.sin(t * 1.1);
+    hull.rotation.x = 0.014 * Math.sin(t * 1.3 + 1);
+    const stroke = t * 4.2;
+    if (rowing) hull.rotation.x += 0.012 * Math.sin(stroke);
+    for (const o of oars) {
+      // Chèo: kéo bản chèo dưới nước về phía đuôi, nhấc lên đưa về phía mũi. Đậu: gác mái chèo lên khỏi nước, xuôi
+      // về phía đuôi cho khỏi chìa lên bờ (thuyền đậu cách bờ 1,5).
+      const sweep = rowing ? 0.38 * Math.sin(stroke) : 0.85 + 0.02 * Math.sin(t * 0.9 + o.i);
+      const lift = rowing ? 0.15 * (1 - Math.cos(stroke)) : 0.35;
+      o.bone.rotation.set(0, o.sx * sweep, o.sx * lift);
+    }
+    // Đứng, chèo: nỏ chúc xuống. Đánh: nâng ngang ngắm; ra đòn thì nỏ giật lên, lùi về, rồi hạ xuống lên dây.
+    const k = a.act === 'fight' ? a.strike : undefined;
+    const kick = k !== undefined && k < 0.3 ? Math.sin((Math.PI * k) / 0.3) : 0;
+    const load = k !== undefined && k > 0.3 && k < 0.85 ? Math.sin((Math.PI * (k - 0.3)) / 0.55) : 0;
+    for (const b of bows) {
+      const pitch = a.act === 'fight' ? 0.55 * kick - 0.45 * load : -0.4;
+      b.bone.rotation.z = b.sx * pitch;
+      b.bone.position.x -= b.sx * 0.035 * kick;
+    }
+    bones.co.rotation.y = 0.22 * Math.sin(t * 3.1);
+    bones.co2.rotation.y = 0.32 * Math.sin(t * 3.1 - 1.2);
+  };
+  pose({ act: 'stand' });
+  group.userData.pose = pose;
+  group.userData.fall = 'none';
+  return group;
 }
 
 /** Mặt thành Cổ Loa cao chừng này trên mặt đất (chỗ đặt ụ nỏ). */

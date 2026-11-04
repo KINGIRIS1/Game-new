@@ -76,6 +76,16 @@ export const C = {
   hanRedDark: 0x8e2a1c,
   hanIron: 0x8a9096,
   hanIronDark: 0x5a6066,
+  // Khăn, cờ đen quân Hán; mái ngói đen và thân gỗ nâu sẫm của lâu thuyền, thuyền Hán; giáp đồng đỏ và ngựa trắng
+  // của Mã Viện.
+  hanBlack: 0x2e2a28,
+  hanTile: 0x2b2c33,
+  hanWood: 0x4e3020,
+  hanWoodLight: 0x7a5436,
+  copper: 0xb8653a,
+  copperDark: 0x7c3c22,
+  horseWhite: 0xf1ede3,
+  horseWhiteMane: 0xc9c3b6,
   horseBlack: 0x34302c,
   beard: 0xe8e4dc,
   night: 0x3a4466,

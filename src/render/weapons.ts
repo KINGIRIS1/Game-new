@@ -468,3 +468,55 @@ export function coLac(s: Parts): void {
     p.box(0.01, 0.1, 0.06, C.gold, x, cy - 0.04, cz - 0.15, [0.3, 0, 0]);
   }
 }
+
+/**
+ * Đại đao của Mã Viện: cán dài 1,55 sơn đỏ sẫm, đai đồng đỏ, đuôi cán mũi sắt; khâu đồng hình đầu thú ngậm lưỡi, tua
+ * đen buông dưới khâu; lưỡi sắt to bản hình trăng khuyết, mũi ngả về sau, sống lưỡi đồng đỏ có hai răng cưa.
+ * Tay nắm cách đuôi cán 0,32; lưỡi sắc hướng +z.
+ */
+export function daiDao(s: Parts): void {
+  const p = s.plain;
+  const len = 1.55;
+  const top = len - 0.32;
+  p.cyl(0.022, 0.025, len, C.hanRedDark, 0, len / 2 - 0.32, 0, undefined, 6);
+  for (const y of [-0.12, 0.36, 0.82]) p.cyl(0.029, 0.029, 0.03, C.copper, 0, y, 0, undefined, 6);
+  p.cone(0.028, 0.14, IRON, 0, -0.39, 0, [Math.PI, 0, 0], 5);
+  p.sphere(0.055, C.copper, 0, top + 0.02, 0.01, [1, 1.1, 1.35], 7);
+  p.box(0.04, 0.05, 0.09, C.copperDark, 0, top + 0.07, 0.055);
+  p.cone(0.065, 0.17, C.hanBlack, 0, top - 0.1, -0.01, [Math.PI, 0, 0], 7);
+  // Lưỡi: phần dưới to bản phình cong ra trước, phần trên ngả về sau thành mũi nhọn.
+  p.box(0.026, 0.36, 0.19, IRON, 0, top + 0.27, 0.1);
+  p.sphere(0.11, IRON, 0, top + 0.31, 0.19, [0.12, 1.8, 0.55], 8);
+  p.box(0.024, 0.22, 0.16, IRON, 0, top + 0.52, 0.05, [-0.5, 0, 0]);
+  p.cone(0.06, 0.16, IRON, 0, top + 0.67, -0.04, [-0.75, 0, 0], 4);
+  // Sống lưỡi đồng đỏ, hai răng cưa sắt sau sống.
+  p.box(0.034, 0.38, 0.026, C.copperDark, 0, top + 0.27, -0.005);
+  for (const y of [0.2, 0.34]) p.cone(0.024, 0.09, IRON_DARK, 0, top + y, -0.05, [-Math.PI / 2 + 0.35, 0, 0], 4);
+}
+
+/** Chỗ buộc lá cờ lệnh trên cán, tính từ chỗ tay nắm. */
+export const CO_LENH_TOP = 0.84;
+
+/**
+ * Cán cờ lệnh của Mã Viện: gỗ sơn đen dài 1,0 (tay nắm cách đuôi 0,12), chóp mũi giáo vàng, tua đỏ dưới chóp.
+ * Lá cờ vẽ riêng (`coLenhLa`, gốc ở `CO_LENH_TOP`) để gắn vào xương riêng cho bay phần phật.
+ */
+export function coLenhCan(s: Parts): void {
+  const p = s.plain;
+  p.cyl(0.015, 0.017, 1.0, C.hanBlack, 0, 0.38, 0, undefined, 6);
+  p.cone(0.028, 0.11, C.gold, 0, 0.935, 0, undefined, 5);
+  p.cone(0.034, 0.08, C.hanRed, 0, 0.855, 0, [Math.PI, 0, 0], 6);
+}
+
+/** Lá cờ lệnh đen viền đỏ son, giữa thêu vòng đỏ, tua đỏ cuối cờ; buộc vào cán ở gốc, bay về −z, dài 0,38, cao 0,28. */
+export function coLenhLa(s: Parts): void {
+  const p = s.plain;
+  const w = 0.38;
+  const h = 0.28;
+  p.box(0.014, h, w, C.hanBlack, 0, -h / 2 - 0.01, -w / 2);
+  p.box(0.022, 0.032, w, C.hanRed, 0, -0.016, -w / 2);
+  p.box(0.022, 0.032, w, C.hanRed, 0, -h + 0.006, -w / 2);
+  p.box(0.022, h, 0.032, C.hanRed, 0, -h / 2 - 0.01, -w + 0.016);
+  for (const sx of [-1, 1]) p.cyl(0.06, 0.06, 0.006, C.hanRed, sx * 0.009, -h / 2 - 0.01, -w / 2, [0, 0, Math.PI / 2], 10);
+  for (const y of [-0.05, -h + 0.03]) p.cone(0.022, 0.08, C.hanRed, 0, y, -w - 0.03, [-Math.PI / 2, 0, 0], 5);
+}
