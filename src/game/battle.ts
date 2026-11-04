@@ -47,6 +47,7 @@ import {
   SON,
   SWIMMERS,
   NGHIA_BINH,
+  NU_TUONG_BONUS,
   HAT_MON_NGHIA_BINH,
   TOWER,
   TO_DINH_FLEE,
@@ -80,6 +81,7 @@ import {
   type EnemyType,
   type FighterStats,
   type HuanBranch,
+  type NuTuongId,
   type Foe,
   type Resources,
   type Row,
@@ -89,6 +91,7 @@ import {
   RAID_SCALE,
 } from './defs';
 import { barracksList, guardPlan, heroPost } from './doanhTrai';
+import { nuBoosts, nuPosts } from './nuTuong';
 import type { Building, GameState } from './game';
 import { openStart } from './khoanh';
 import { FAR_FOREST, FOREST_BAND, GRID, RIVER_DIVE, RIVER_END, RIVER_START, farBankOf, inGrid, isRiver, turnLocal } from './map';
@@ -177,6 +180,8 @@ export interface Fighter {
    * bờ; hết giờ thì chèo về (ox, oz) rồi rút đi.
    */
   ship?: { ox: number; oz: number; tx: number; tz: number; delay: number };
+  /** Lính ta được nữ tướng cộng thêm máu và sức đánh (đúng binh chủng của phó tướng, hay của nữ tướng ở doanh trại). */
+  nu?: boolean;
 }
 
 export interface BattleEvent {
@@ -303,7 +308,7 @@ export interface Battle {
   exitAt?: number;
   /** Bậc binh khí đã rèn của từng binh chủng ta (0–2): thêm máu và sức đánh. */
   arms: Record<UnitType, number>;
-  /** Bậc huân công của từng nhánh (0–3): thêm máu và sức đánh. Bản lưu cũ không có thì coi như 0. */
+  /** Bậc huân công của từng nhánh (0–4): thêm máu và sức đánh. Bản lưu cũ không có thì coi như 0. */
   huan?: Record<HuanBranch, number>;
   /** Trận thử thách phó bản: kiểu thử thách. */
   /** Trận ngoài bãi đánh đồn giặc bên kia sông (khoảnh có đồn) thay cho một màn phó bản; `wave` khi ấy là 0. */
@@ -327,6 +332,11 @@ export interface Battle {
   sunk?: number;
   /** Giây còn phải chờ để dùng lại từng kỹ năng. */
   skillCd: Partial<Record<SkillId, number>>;
+  /**
+   * Trận ngoài bãi: nữ tướng đi theo làm phó tướng, đứng cầm cờ ở (x, z) sau hàng hậu; không đánh, giặc không nhắm.
+   * Bản lưu cũ không có.
+   */
+  nuTuong?: { kind: NuTuongId; x: number; z: number };
   /** Kết cục trận ngoài bãi; trận giữ kinh đô luôn để null. */
   outcome: 'win' | 'lose' | 'retreat' | null;
 }
@@ -452,9 +462,12 @@ export function huanBonus(battle: Pick<Battle, 'huan'>, kind: FighterKind): numb
   return branch ? (battle.huan?.[branch] ?? 0) * HUAN_BONUS : 0;
 }
 
-/** Hệ số máu và sức đánh của một người bên ta: Đền, phúc lành, binh khí đã rèn, huân công. Nghĩa binh không được cộng. */
-const ownMult = (battle: Battle, kind: FighterKind) =>
-  kind === 'nghiaBinh' ? 1 : 1 + battle.bonus + armsBonus(battle, kind) + huanBonus(battle, kind);
+/**
+ * Hệ số máu và sức đánh của một người bên ta: Đền, phúc lành, binh khí đã rèn, huân công, nữ tướng (`nu`: lính đúng
+ * binh chủng của nữ tướng). Nghĩa binh không được cộng.
+ */
+const ownMult = (battle: Battle, kind: FighterKind, nu = false) =>
+  kind === 'nghiaBinh' ? 1 : 1 + battle.bonus + armsBonus(battle, kind) + huanBonus(battle, kind) + (nu ? NU_TUONG_BONUS : 0);
 
 /** Kỹ năng của từng tướng: kỹ năng đầu có ngay, kỹ năng sau mở giữa chương. */
 export function heroSkills(hero: HeroSetup): SkillId[] {
@@ -595,12 +608,17 @@ export function startBattle(state: GameState, wave: number, side: RaidSide, opts
   // nguyên ra trận từ đồn ấy, bớt đi từ phần giữ kinh đô của các doanh trại (không thêm quân).
   const def = BUILDINGS.doanhTrai;
   const plan = guardPlan(state);
+  // Lính của doanh trại có nữ tướng cùng binh chủng thì được nữ tướng cộng thêm.
+  const nus = nuPosts(state);
   const spawnAt = (home: Building, kind: UnitType, n: number) => {
     const hd = BUILDINGS[home.type];
+    const nu = nuBoosts(nus.get(home.id), kind);
     for (let i = 0; i < n; i++) {
       const x = home.x + hd.w / 2 + (rand() - 0.5) * hd.w;
       const z = home.z + hd.d / 2 + (rand() - 0.5) * hd.d;
-      battle.fighters.push(newFighter(battle, 'ta', kind, x, z, UNITS[kind].hp * ownMult(battle, kind)));
+      const f = newFighter(battle, 'ta', kind, x, z, UNITS[kind].hp * ownMult(battle, kind, nu));
+      if (nu) f.nu = true;
+      battle.fighters.push(f);
     }
   };
   const guarding = zeroArmy();
@@ -923,6 +941,8 @@ export interface FieldSetup {
   camp?: number;
   challenge?: ChallengeKind;
   fury?: number;
+  /** Nữ tướng đi theo làm phó tướng: binh chủng của người ấy được cộng thêm. */
+  nuTuong?: NuTuongId | null;
 }
 
 /** An Dương Vương, Cao Lỗ bắn nỏ: đứng lùi sau hàng đầu của quân ta chừng này ô. */
@@ -950,7 +970,12 @@ export function startFieldBattle(setup: FieldSetup): Battle {
   const theirs: Record<Row, FighterKind[]> = { tien: [], trung: [], hau: [] };
   for (const k of Object.keys(setup.enemies) as EnemyType[]) for (let i = 0; i < (setup.enemies[k] ?? 0); i++) theirs[ENEMY_ROWS[k]].push(k);
   const front = (FIELD.d - FIELD.gap) / 2;
-  deploy(battle, 'ta', ours, FIELD.d - front, 1, rand, (k) => UNITS[k as UnitType].hp * FIELD.hpMul * ownMult(battle, k));
+  const nu = setup.nuTuong ?? null;
+  deploy(battle, 'ta', ours, FIELD.d - front, 1, rand, (k) => UNITS[k as UnitType].hp * FIELD.hpMul * ownMult(battle, k, nuBoosts(nu, k)));
+  if (nu) {
+    for (const f of battle.fighters) if (nuBoosts(nu, f.kind)) f.nu = true;
+    battle.nuTuong = { kind: nu, x: FIELD.w / 2, z: nuRestZ(battle) };
+  }
   deploy(battle, 'giac', theirs, front, -1, rand, (k) => ENEMIES[k as EnemyType].hp * setup.hpScale * FIELD.hpMul);
   battle.total = battle.fighters.filter((f) => f.side === 'giac').length;
   // Màn cầm cự: các đợt sau chưa tới bãi, nhưng vẫn tính vào tổng số giặc.
@@ -1251,7 +1276,7 @@ function damageFighter(battle: Battle, attacker: { kind?: FighterKind; dmg: numb
 function strike(battle: Battle, f: Fighter, foe: Fighter): void {
   const st = statsOf(f.kind);
   if (st.range > 2) emit(battle, { kind: 'shot', x: f.x, z: f.z, tx: foe.x, tz: foe.z, by: f.kind });
-  const mult = f.side === 'ta' ? ownMult(battle, f.kind) * (battle.rally > 0 ? RALLY.dmg : 1) : 1;
+  const mult = f.side === 'ta' ? ownMult(battle, f.kind, f.nu) * (battle.rally > 0 ? RALLY.dmg : 1) : 1;
   const dmg = st.dmg * mult;
   damageFighter(battle, { kind: f.kind, dmg }, foe);
   if (isHero(f.kind)) {
@@ -1643,6 +1668,7 @@ export function stepField(battle: Battle, dt: number): boolean {
     stepChase(battle, f, dt);
   }
   separate(battle);
+  stepNuTuong(battle, dt);
   const pending = battle.waves?.length ?? 0;
   if (alliesLeft(battle) === 0) battle.outcome = 'lose';
   // Màn cầm cự: giữ đủ thời gian thì thắng, không cần diệt hết giặc; diệt hết mọi đợt sớm hơn cũng thắng.
@@ -1650,6 +1676,42 @@ export function stepField(battle: Battle, dt: number): boolean {
   else if (enemiesLeft(battle) === 0 && !pending) battle.outcome = 'win';
   else if (battle.holdS === undefined && battle.t > FIELD.maxS) battle.outcome = 'lose';
   return battle.outcome !== null;
+}
+
+/** Phó tướng đứng lùi sau người ta ở cuối hàng chừng này ô, đi theo chậm rãi. */
+const NU_BACK = 1.2;
+const NU_SPEED = 0.8;
+
+/** Chỗ phó tướng đứng: sau người ta ở cuối hàng hậu (quân ta ở phía z lớn), không ra khỏi bãi. */
+function nuRestZ(battle: Battle): number {
+  let rear = -Infinity;
+  for (const f of battle.fighters) if (f.side === 'ta' && isAlive(f)) rear = Math.max(rear, f.z);
+  return Math.min(FIELD.d - 0.4, (Number.isFinite(rear) ? rear : FIELD.d - 1) + NU_BACK);
+}
+
+/**
+ * Phó tướng đi chậm theo sau quân ta, giữ chỗ sau người cuối hàng và lệch theo chỗ quân ta đông. Giặc không nhắm
+ * nên không cần tránh.
+ */
+function stepNuTuong(battle: Battle, dt: number): void {
+  const nu = battle.nuTuong;
+  if (!nu) return;
+  let sx = 0;
+  let n = 0;
+  for (const f of battle.fighters) if (f.side === 'ta' && isAlive(f)) (sx += f.x), n++;
+  const tx = n ? Math.min(FIELD.w - 1, Math.max(1, sx / n)) : nu.x;
+  const tz = nuRestZ(battle);
+  const dx = tx - nu.x;
+  const dz = tz - nu.z;
+  const d = Math.hypot(dx, dz);
+  const step = NU_SPEED * dt;
+  if (d <= step) {
+    nu.x = tx;
+    nu.z = tz;
+  } else if (d > 0.15) {
+    nu.x += (dx / d) * step;
+    nu.z += (dz / d) * step;
+  }
 }
 
 /** Màn cầm cự: đã giữ được bao nhiêu phần thời gian (0..1), để vẽ thanh "Vua tới biển". */

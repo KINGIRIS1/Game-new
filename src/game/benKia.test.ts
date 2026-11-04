@@ -491,6 +491,17 @@ describe('đồn giặc và điều quân', () => {
     return s;
   }
 
+  it('nữ tướng đi theo làm phó tướng khi đánh đồn, như ở phó bản (chương 5 PR 4)', () => {
+    const s = ready();
+    s.campaign.cleared = 34;
+    const id = campAt(s, 1);
+    const rows = { giao: 'tien', cung: 'hau', voi: 'trung', no: 'hau' } as const;
+    expect(startCamp(s, id, { ...s.troops }, rows, 'thanhThien')).toEqual({ ok: false, reason: 'tuongChuaCo' });
+    expect(startCamp(s, id, { ...s.troops }, rows, 'leChan').ok).toBe(true);
+    expect(s.campaign.battle!.nuTuong?.kind).toBe('leChan');
+    expect(s.campaign.phoTuong).toBe('leChan');
+  });
+
   it('đánh được khi đã dò thấy đồn, có doanh trại, có cầu còn nguyên, tới đúng chương', () => {
     const s = ready();
     const t1 = campAt(s, 1);

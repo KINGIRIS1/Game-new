@@ -462,8 +462,7 @@ describe('bản lưu 23', () => {
     s.raid.lauSunk = 5;
     s.raid.foe = 'thuyHan';
     const back = deserialize(serialize(s))!;
-    expect(SAVE_VERSION).toBe(23);
-    expect(back.version).toBe(23);
+    expect(back.version).toBe(SAVE_VERSION);
     expect([back.raid.thuyHan, back.raid.thuyHanHeld, back.raid.lauSunk, back.raid.foe]).toEqual([4, 3, 5, 'thuyHan']);
   });
 

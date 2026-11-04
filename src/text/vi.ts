@@ -2,7 +2,7 @@
 
 import type { HeroKind } from '../game/battle';
 import type { AdvLook } from '../game/coLoa';
-import type { BuildingType, CayDaKind, ChallengeKind, Chapter, EnemyType, GearId, GiftId, ResourceId, Row, SkillId, TuongId, UnitType } from '../game/defs';
+import type { BuildingType, CayDaKind, ChallengeKind, Chapter, EnemyType, GearId, GiftId, NuTuongId, ResourceId, Row, SkillId, TuongId, UnitType } from '../game/defs';
 import type { FailReason, StoryId } from '../game/game';
 import type { Bank, Dat, Nghe, Tier } from '../game/benKia';
 import type { QuanDaoId } from '../game/bien';
@@ -350,12 +350,13 @@ export const vi = {
     haiBaKietSuc: 'Cả Hai Bà đều đang kiệt sức, chờ một lát',
     thuThachKhoa: 'Thắng màn này trước đã mới mở thử thách',
     thuThachBinhChung: 'Thử thách này chỉ được mang hai binh chủng đã chỉ định',
-    huanToiDa: 'Nhánh này đã đủ 3 bậc',
+    huanToiDa: 'Nhánh này đã đủ 4 bậc',
     thieuHuanCong: 'Chưa đủ huân công',
     khongGhepDuoc: 'Chỉ ghép được hai chòi canh cấp 8 còn nguyên',
     canTuongChiHuy: 'Mỗi doanh trại cần một tướng chỉ huy. Chưa có tướng rảnh',
     tuongChuaCo: 'Tướng này chưa về với kinh đô',
     daChiHuy: 'Tướng này đang chỉ huy doanh trại này rồi',
+    nuDaO: 'Nữ tướng này đang ở doanh trại này rồi',
     quaChoPhoBan: 'Mang quá số chỗ cho một trận phó bản',
     quaChoGiuThanh: 'Đã đủ chỗ giữ kinh đô theo cấp Điện',
     traiDay: 'Doanh trại này đã đủ chỗ, hãy nâng cấp',
@@ -452,6 +453,38 @@ export const vi = {
     voi: { name: 'Voi chiến', icon: '🐘', desc: 'Rất khỏe, chiếm 3 chỗ. Khắc chế cung thủ Ân.' },
     no: { name: 'Lính nỏ', icon: '🎯', desc: 'Nỏ lớn bắn xa, chậm mà đau, chiếm 2 chỗ. Mạnh gấp đôi khi bắn quân nặng và tướng giặc.' },
   } satisfies Record<UnitType, { name: string; icon: string; desc: string }>,
+
+  /** Bốn nữ tướng của Hai Bà Trưng (chương 5 PR 4): phó tướng ở phó bản, mỗi người ở một doanh trại. */
+  nuTuong: {
+    list: {
+      leChan: { name: 'Lê Chân', icon: '⚓' },
+      thanhThien: { name: 'Thánh Thiên', icon: '🪶' },
+      batNan: { name: 'Bát Nàn', icon: '🛡️' },
+      phungThiChinh: { name: 'Phùng Thị Chính', icon: '👶' },
+    } satisfies Record<NuTuongId, { name: string; icon: string }>,
+    pickTitle: 'Nữ tướng đi theo (phó tướng)',
+    pickHint: 'Bà đứng cầm cờ sau hàng hậu, không đánh. Binh chủng của bà được thêm 12% máu và sức đánh. Chạm lại để không mang ai.',
+    boost: (icon: string, unit: string) => `${icon} ${unit} +12%`,
+    noUnit: (icon: string, unit: string) => `${icon} ${unit} +12% (không mang theo)`,
+    barracksTitle: 'Nữ tướng ở trại',
+    barracksHint: 'Mỗi trại một nữ tướng. Lính giữ kinh đô của trại, thuộc binh chủng của bà, được thêm 12% máu và sức đánh.',
+    here: 'Ở trại này',
+    other: 'Ở trại khác',
+    none: 'Chưa ở trại nào',
+    assign: 'Về trại này',
+    assigned: (name: string) => `${name} đã về doanh trại này`,
+    /** Lạc hầu báo một lần khi mỗi nữ tướng theo về. */
+    hint: {
+      leChan:
+        '📜 Lạc hầu: Tâu bệ hạ, nữ tướng Lê Chân ở trang An Biên ven biển đã về theo Hai Bà, lo lính nỏ. Ra trận xin chọn bà làm phó tướng ở bảng xếp quân, ở kinh đô thì giao bà về một doanh trại.',
+      thanhThien:
+        '📜 Lạc hầu: Tâu bệ hạ, nữ tướng Thánh Thiên đã về theo Hai Bà, lo cung thủ. Ra trận xin chọn bà làm phó tướng ở bảng xếp quân, ở kinh đô thì giao bà về một doanh trại.',
+      batNan:
+        '📜 Lạc hầu: Tâu bệ hạ, nữ tướng Bát Nàn đã về theo Hai Bà, lo giáo binh. Ra trận xin chọn bà làm phó tướng ở bảng xếp quân, ở kinh đô thì giao bà về một doanh trại.',
+      phungThiChinh:
+        '📜 Lạc hầu: Tâu bệ hạ, nữ tướng Phùng Thị Chính địu con vẫn cầm gươm theo Hai Bà, lo voi chiến. Ra trận xin chọn bà làm phó tướng ở bảng xếp quân, ở kinh đô thì giao bà về một doanh trại.',
+    } satisfies Record<NuTuongId, string>,
+  },
 
   enemies: {
     giaoAn: 'lính giáo Ân',
@@ -1496,9 +1529,9 @@ export const vi = {
     huanHave: 'Huân công đang có',
     huanHint: 'Thắng thử thách lần đầu thì được huân công. Mỗi bậc thêm 4% máu và sức đánh cho cả nhánh, ở mọi trận, giữ mãi.',
     huanTuong: { name: 'Tướng', icon: '👑', desc: 'Cho mọi tướng: Gióng, Sơn Tinh, An Dương Vương, Cao Lỗ.' },
-    huanTier: (n: number) => `Bậc ${n}/3`,
+    huanTier: (n: number) => `Bậc ${n}/4`,
     huanBuy: (cost: number) => `Lên bậc · ${cost} 🎖`,
-    huanMax: 'Đã đủ 3 bậc',
+    huanMax: 'Đã đủ 4 bậc',
     huanToast: (name: string, n: number) => `${name} lên bậc huân công ${n}`,
     huanOnUnit: (n: number) => `Huân công bậc ${n}`,
     challengesWon: 'Thử thách đã thắng',

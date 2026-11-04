@@ -1764,7 +1764,7 @@ const hai = (a: UnitType, b: UnitType, hpScale: number, extra?: Partial<Record<E
   ...(extra ? { extra } : {}),
 });
 /**
- * Thử thách của từng màn 1–32 (chỉ số 0 là màn 1). Giặc dữ ở các màn có trùm và màn 1, 3. Hai binh chủng thường bỏ
+ * Thử thách của từng màn 1–40 (chỉ số 0 là màn 1). Giặc dữ ở các màn có trùm và màn 1, 3. Hai binh chủng thường bỏ
  * cung thủ, binh chủng khắc loại giặc đông nhất của màn (màn 13, 21 bỏ voi chiến); từ màn 26 có lính nỏ.
  * Màn 1–4 vốn ít giặc nên thử thách có thêm giặc (`extra`), cho đông ngang màn 5–8.
  * Hệ số máu giặc đo bằng test (`thuThach.test.ts`): người chơi giỏi thắng, người chơi thường thua.
@@ -1802,14 +1802,27 @@ export const CHALLENGES: ChallengeDef[] = [
   kt(0.95),
   hai('giao', 'no', 3.1),
   du(3.3),
+  // Chương 5: Không tướng ở màn 33, 35, 38; Hai binh chủng ở màn 34, 37 (lính Hán đông nhất, cung thủ khắc, nên bỏ
+  // cung thủ); Giặc dữ ở màn 36 (Tô Định), 39 (Mã Viện), 40 (cầm cự ở Cấm Khê).
+  kt(0.9),
+  hai('giao', 'voi', 2.2),
+  kt(0.95),
+  du(1.9),
+  hai('giao', 'no', 2.85),
+  kt(0.95),
+  du(1.5),
+  du(2.7),
 ];
 /** Huân công cho lần đầu thắng thử thách, theo chương của màn: màn 1–8 được 1, … màn 25–32 được 4, màn 33–40 được 5. */
 export const HUAN_REWARD: Record<Chapter, number> = { 1: 1, 2: 2, 3: 3, 4: 4, 5: 5 };
 /** Nhánh huân công: bốn binh chủng và tướng (cho mọi tướng). */
 export type HuanBranch = UnitType | 'tuong';
 export const HUAN_BRANCHES: HuanBranch[] = ['giao', 'cung', 'voi', 'no', 'tuong'];
-/** Giá bậc 1, 2, 3 của mỗi nhánh. Một nhánh hết 16, năm nhánh hết 80, bằng huân công của cả 32 thử thách. */
-export const HUAN_COST = [3, 5, 8];
+/**
+ * Giá bậc 1–4 của mỗi nhánh. Một nhánh hết 24, năm nhánh hết 120, bằng huân công của cả 40 thử thách (bậc 4 thêm ở
+ * chương 5, vừa bằng 40 huân công của thử thách màn 33–40).
+ */
+export const HUAN_COST = [3, 5, 8, 8];
 /** Mỗi bậc huân công thêm chừng này vào máu và sức đánh của nhánh ấy, ở mọi trận. */
 export const HUAN_BONUS = 0.04;
 

@@ -9,9 +9,10 @@ import { CH2_LAST, canStartStage, chapterStages, stageDef, stageHero, stageHeroC
 import { CH5_LAST, HAI_BA_KINDS, haiBaJoined, haiBaResting, isHaiBa } from '../game/chuong5';
 import { CH4_LAST } from '../game/caoLo';
 import { CH3_LAST } from '../game/coLoa';
-import { BOSSES, CHALLENGES, HUAN_BRANCHES, HUAN_COST, ROWS, UNITS, UNIT_TYPES, stageEnemies, type Chapter, type EnemyType, type HuanBranch, type Row, type UnitType } from '../game/defs';
+import { BOSSES, CHALLENGES, HUAN_BRANCHES, HUAN_COST, NU_TUONG, NU_TUONG_IDS, ROWS, UNITS, UNIT_TYPES, stageEnemies, type Chapter, type EnemyType, type HuanBranch, type NuTuongId, type Row, type UnitType } from '../game/defs';
 import { armySpace, fieldCap, fitArmy } from '../game/doanhTrai';
 import type { GameState, StageResult } from '../game/game';
+import { nuJoined, nuTuongList, phoTuongOf } from '../game/nuTuong';
 import { giftOfStage, heroFor, heroesFor, restingHero } from '../game/son';
 import { challengeEnemies, challengeOf, challengeOpen, challengeWon, huanNextCost, huanReward } from '../game/thuThach';
 import { vi } from '../text/vi';
@@ -28,6 +29,8 @@ export interface ArmyPick {
   challenge: boolean;
   /** Điều quân đánh đồn giặc bên kia sông (khoảnh có đồn) thay cho màn phó bản; `stage` khi ấy là 0. */
   don?: number;
+  /** Nữ tướng đi theo làm phó tướng (chương 5); null là không mang ai. */
+  nu?: NuTuongId | null;
 }
 
 /** Chương có bản đồ phó bản: cả năm chương. */
@@ -333,7 +336,7 @@ function challengeHtml(state: GameState, n: number): string {
   </div>`;
 }
 
-/** Bảng Huân công: năm nhánh, mỗi nhánh ba bậc. */
+/** Bảng Huân công: năm nhánh, mỗi nhánh bốn bậc. */
 export function huanHtml(state: GameState): string {
   const tt = state.thuThach;
   const rows = HUAN_BRANCHES.map((k: HuanBranch) => {
@@ -419,6 +422,7 @@ export function armyHtml(state: GameState, pick: ArmyPick, stage: number, challe
     <h3>${don ? vi.benKia.campArmyTitle(vi.benKia.don[don].name) : kind ? vi.ui.challengeArmyTitle(vi.ui.challengeKinds[kind].name) : vi.ui.armyTitle}</h3>
     ${kind ? challengeRules(stage) : `<p class="muted">${vi.ui.armyHint}</p>`}
     ${kind === 'khongTuong' ? `<p class="rule">${vi.ui.challengeKinds.khongTuong.icon} ${vi.ui.challengeNoHero}</p>` : don ? heroNote(hero) : heroPickHtml(state, stage, challenge, hero)}
+    ${nuPickHtml(state, pick)}
     ${don ? warningsFor(state, CAMPS[don].chapter) : battleWarnings(state, stage, challenge)}
     ${owned.length ? `<div class="stat"><span>${vi.ui.fieldSpace(space, cap)}</span></div><div class="units">${rows}</div>` : `<p class="why">${vi.ui.noTroops}</p>`}
     ${bannedHtml}
@@ -440,7 +444,34 @@ export function defaultPick(state: GameState, stage = 0, challenge = false): Arm
   // Thử thách Hai binh chủng: chỉ mang hai binh chủng được chỉ định.
   const troops = { ...state.troops };
   for (const k of UNIT_TYPES) if (!unitAllowed(stage, challenge, k)) troops[k] = 0;
-  return { army: fitArmy(troops, fieldCap(state)), rows: { ...state.campaign.rows }, stage, challenge };
+  return { army: fitArmy(troops, fieldCap(state)), rows: { ...state.campaign.rows }, stage, challenge, nu: phoTuongOf(state) };
+}
+
+/** Chạm thẻ nữ tướng ở bảng xếp quân: chọn người ấy làm phó tướng; chạm lại người đang chọn (hay thẻ Không) thì bỏ. */
+export function pickNu(state: GameState, pick: ArmyPick, id: string | undefined): void {
+  const nu = NU_TUONG_IDS.find((n) => n === id) ?? null;
+  pick.nu = !nu || pick.nu === nu || !nuJoined(state, nu) ? null : nu;
+}
+
+/**
+ * Chọn phó tướng ở bảng xếp quân, khi đã có nữ tướng theo về: mỗi thẻ một nữ tướng, ghi binh chủng được cộng; chạm
+ * lại để bỏ. Binh chủng không mang theo (hay bị cấm ở thử thách Hai binh chủng) thì thẻ ghi cho biết.
+ */
+function nuPickHtml(state: GameState, pick: ArmyPick): string {
+  const list = nuTuongList(state);
+  if (!list.length) return '';
+  const opts = list
+    .map((n) => {
+      const sel = pick.nu === n;
+      const unit = NU_TUONG[n].unit;
+      const note = pick.army[unit] > 0 ? vi.nuTuong.boost(vi.units[unit].icon, vi.units[unit].name) : vi.nuTuong.noUnit(vi.units[unit].icon, vi.units[unit].name);
+      return `<button class="hero-opt nu-opt ${sel ? 'sel' : ''}" data-act="armyNu" data-nu="${n}" aria-pressed="${sel}">
+        <span class="unit-icon">${vi.nuTuong.list[n].icon}</span>
+        <span class="unit-info"><b>${vi.nuTuong.list[n].name}</b><small>${esc(note)}</small></span>
+      </button>`;
+    })
+    .join('');
+  return `<div class="hero-pick"><h4>${vi.nuTuong.pickTitle}</h4><p class="muted">${vi.nuTuong.pickHint}</p><div class="hero-opts">${opts}</div></div>`;
 }
 
 /** Thêm hay bớt một lính binh chủng `k` mang theo, không quá số lính có và số chỗ một trận phó bản. */

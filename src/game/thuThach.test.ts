@@ -1,5 +1,5 @@
 // Canh chương 4 phần 4: thử thách phó bản (mở sau khi thắng màn, ba kiểu luật, độ khó mọi thử thách theo chuẩn đã
-// chốt) và huân công (chỉ cho một lần, mua bậc, tăng sức ở mọi trận), bản lưu phiên bản 15.
+// chốt) và huân công (chỉ cho một lần, mua bậc, tăng sức ở mọi trận), bản lưu phiên bản 15. Chương 5 PR 4 thêm thử thách màn 33–40 và huân công bậc 4.
 
 import { describe, expect, it } from 'vitest';
 import { huanBonus, isHero, startBattle, startFieldBattle, stepField, type Battle } from './battle';
@@ -7,6 +7,7 @@ import { canStartStage, startStage, updateCampaign } from './campaign';
 import {
   CHALLENGES,
   CH4_QUEST_START,
+  CH5_QUEST_START,
   DEFAULT_ROWS,
   ENEMIES,
   FIELD,
@@ -23,9 +24,10 @@ import {
 } from './defs';
 import { createInitialState, place, type GameState } from './game';
 import { SAVE_VERSION, deserialize, serialize } from './save';
-import { heroFor } from './son';
+import { CH5_LAST } from './chuong5';
+import { heroFor, heroesFor } from './son';
 import { markStory } from './story';
-import { FIELD_SLOTS, SAMPLE_ARMY, SAMPLE_ARMY4, SEEDS, challengeArmy, fightChallenge, lateHero } from './testkit';
+import { FIELD_SLOTS, SAMPLE_ARMY, SAMPLE_ARMY4, SEEDS, challengeArmy, fightChallenge, lateHero, lateHeroes } from './testkit';
 import { buyHuan, canBuyHuan, challengeEnemies, challengeOf, challengeOpen, huanEarned, huanReward } from './thuThach';
 import { DIEN_END, setDien } from './testmap';
 
@@ -89,11 +91,10 @@ describe('mở thử thách', () => {
 
   it('kiểu thử thách từng màn đúng như đã chốt', () => {
     const by = (kind: ChallengeKind) => CHALLENGES.map((c, i) => (c.kind === kind ? i + 1 : 0)).filter(Boolean);
-    // Thử thách màn 33–40 để PR 4 của chương 5.
-    expect(CHALLENGES.length).toBe(32);
-    expect(by('giacDu')).toEqual([1, 3, 4, 8, 12, 16, 19, 24, 28, 32]);
-    expect(by('khongTuong')).toEqual([5, 7, 9, 11, 14, 17, 20, 22, 25, 27, 30]);
-    expect(by('haiBinh')).toEqual([2, 6, 10, 13, 15, 18, 21, 23, 26, 29, 31]);
+    expect(CHALLENGES.length).toBe(STAGES.length);
+    expect(by('giacDu')).toEqual([1, 3, 4, 8, 12, 16, 19, 24, 28, 32, 36, 39, 40]);
+    expect(by('khongTuong')).toEqual([5, 7, 9, 11, 14, 17, 20, 22, 25, 27, 30, 33, 35, 38]);
+    expect(by('haiBinh')).toEqual([2, 6, 10, 13, 15, 18, 21, 23, 26, 29, 31, 34, 37]);
     for (const [i, c] of CHALLENGES.entries()) {
       if (c.kind !== 'haiBinh') continue;
       const n = i + 1;
@@ -190,12 +191,13 @@ describe('luật từng kiểu thử thách', () => {
 });
 
 describe('huân công', () => {
-  it('cả 32 thử thách cho đúng 80 huân công, bằng giá mua đủ năm nhánh', () => {
+  it('cả 40 thử thách cho đúng 120 huân công, bằng giá mua đủ năm nhánh; màn 33–40 cho 40, bằng giá bậc 4', () => {
     const total = STAGES.reduce((n, _, i) => n + huanReward(i + 1), 0);
-    expect(huanReward(33)).toBe(0);
-    expect(total).toBe(80);
-    expect([huanReward(1), huanReward(9), huanReward(17), huanReward(25)]).toEqual([1, 2, 3, 4]);
-    expect(HUAN_COST.reduce((a, b) => a + b, 0) * HUAN_BRANCHES.length).toBe(80);
+    expect(huanReward(41)).toBe(0);
+    expect(total).toBe(120);
+    expect([huanReward(1), huanReward(9), huanReward(17), huanReward(25), huanReward(33), huanReward(40)]).toEqual([1, 2, 3, 4, 5, 5]);
+    expect(HUAN_COST.reduce((a, b) => a + b, 0) * HUAN_BRANCHES.length).toBe(120);
+    expect(HUAN_COST[3] * HUAN_BRANCHES.length).toBe(40);
   });
 
   it('thắng thử thách lần đầu được huân công, không có của cải, không mở màn mới; thắng lại không có thêm', () => {
@@ -226,17 +228,19 @@ describe('huân công', () => {
     expect(s.thuThach).toMatchObject({ huan: 0, won: [] });
   });
 
-  it('mua bậc: giá 3, 5, 8; thiếu huân công hay đủ 3 bậc thì không mua được', () => {
+  it('mua bậc: giá 3, 5, 8, 8; thiếu huân công hay đủ 4 bậc thì không mua được', () => {
     const s = late();
     expect(canBuyHuan(s, 'giao')).toEqual({ ok: false, reason: 'thieuHuanCong' });
-    s.thuThach.huan = 16;
+    s.thuThach.huan = 24;
     expect(buyHuan(s, 'giao')).toEqual({ ok: true, value: 1 });
-    expect(s.thuThach.huan).toBe(13);
+    expect(s.thuThach.huan).toBe(21);
     expect(buyHuan(s, 'giao')).toEqual({ ok: true, value: 2 });
     expect(buyHuan(s, 'giao')).toEqual({ ok: true, value: 3 });
+    expect(s.thuThach.huan).toBe(8);
+    expect(buyHuan(s, 'giao')).toEqual({ ok: true, value: 4 });
     expect(s.thuThach.huan).toBe(0);
     expect(canBuyHuan(s, 'giao')).toEqual({ ok: false, reason: 'huanToiDa' });
-    expect(huanEarned(s)).toBe(16);
+    expect(huanEarned(s)).toBe(24);
   });
 
   it('mỗi bậc thêm 4% máu và sức đánh cho binh chủng ấy, nhánh tướng cho mọi tướng, cộng với binh khí và Đền', () => {
@@ -270,7 +274,12 @@ describe('huân công', () => {
 describe('độ khó thử thách', () => {
   it('tướng đánh thử là tướng người chơi có khi đã hết truyện', () => {
     const s = late();
-    for (let n = 1; n <= CHALLENGES.length; n++) expect(heroFor(s, STAGES[n - 1].chapter, n)).toEqual(lateHero(n));
+    for (let n = 1; n <= 32; n++) expect(heroFor(s, STAGES[n - 1].chapter, n)).toEqual(lateHero(n));
+    // Hết truyện chương 5: Hai Bà hiển linh cùng ra trận, Trưng Nhị có Hiệu triệu.
+    s.questIndex = CH5_QUEST_START;
+    s.campaign.cleared = CH5_LAST;
+    for (let n = 1; n <= 32; n++) expect(heroFor(s, STAGES[n - 1].chapter, n)).toEqual(lateHero(n));
+    for (let n = 33; n <= CHALLENGES.length; n++) expect(heroesFor(s, 5, n)).toEqual(lateHeroes(n));
   });
 
   it('quân mẫu thử thách vừa 38 chỗ, Hai binh chủng chỉ có hai binh chủng được mang', () => {
@@ -281,11 +290,11 @@ describe('độ khó thử thách', () => {
       expect(space).toBeGreaterThanOrEqual(FIELD_SLOTS - 1);
       const ch = challengeOf(n)!;
       if (ch.kind === 'haiBinh') for (const k of Object.keys(army) as UnitType[]) expect(army[k] > 0).toBe(ch.units!.includes(k));
-      else expect(army).toEqual(STAGES[n - 1].chapter === 4 ? SAMPLE_ARMY4 : SAMPLE_ARMY);
+      else expect(army).toEqual(STAGES[n - 1].chapter >= 4 ? SAMPLE_ARMY4 : SAMPLE_ARMY);
     }
   });
 
-  for (let n = 1; n <= 32; n++) {
+  for (let n = 1; n <= CHALLENGES.length; n++) {
     const ch = CHALLENGES[n - 1];
     it(`thử thách màn ${n} (${ch.kind}, máu giặc ×${ch.hpScale}): người chơi giỏi thắng cả 3 hạt giống, người chơi thường thua ít nhất 2`, () => {
       for (const id of SEEDS) {
@@ -316,9 +325,9 @@ describe('bản lưu phiên bản 15', () => {
     expect(back.thuThach).toEqual({ won: [], huan: 0, bac: { giao: 0, cung: 0, voi: 0, no: 0, tuong: 0 } });
   });
 
-  it('bản lưu có bậc huân công quá 3 thì không nạp', () => {
+  it('bản lưu có bậc huân công quá 4 thì không nạp', () => {
     const bad = JSON.parse(serialize(late())) as Record<string, any>;
-    bad.thuThach.bac.giao = 4;
+    bad.thuThach.bac.giao = 5;
     expect(deserialize(JSON.stringify(bad))).toBeUndefined();
   });
 });

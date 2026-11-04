@@ -25,6 +25,7 @@ import {
   type Cost,
   type Resources,
   type EnemyType,
+  type NuTuongId,
   type Row,
   type Terrain,
   type UnitType,
@@ -33,6 +34,7 @@ import { armySpace, fieldCap } from './doanhTrai';
 import { canAfford, countOf, dienLevel, gain, pay, troopBonus, type Building, type FailReason, type GameState, type Result } from './game';
 import { heroFor, inChapter2, restAfter } from './son';
 import { huanTiers } from './thuThach';
+import { phoTuongCheck, phoTuongOf, rememberPhoTuong } from './nuTuong';
 import { openMask } from './khoanh';
 import { FAR_FOREST, FOREST_BAND, GRID, KHOANH, RIVER_END, RIVER_START, farBankOf } from './map';
 
@@ -453,10 +455,21 @@ export function canStartCamp(state: GameState, id: number): Result {
   return ok(undefined);
 }
 
-/** Điều quân đánh đồn ở khoảnh `id` với số lính `army`, đứng theo hàng `rows`: trận ngoài bãi như phó bản. */
-export function startCamp(state: GameState, id: number, army: Record<UnitType, number>, rows: Record<UnitType, Row>): Result {
+/**
+ * Điều quân đánh đồn ở khoảnh `id` với số lính `army`, đứng theo hàng `rows`: trận ngoài bãi như phó bản. `nu`: nữ
+ * tướng đi theo làm phó tướng như ở phó bản.
+ */
+export function startCamp(
+  state: GameState,
+  id: number,
+  army: Record<UnitType, number>,
+  rows: Record<UnitType, Row>,
+  nu?: NuTuongId | null,
+): Result {
   const check = canStartCamp(state, id);
   if (!check.ok) return check;
+  const nuCheck = phoTuongCheck(state, nu);
+  if (!nuCheck.ok) return nuCheck;
   if (UNIT_TYPES.some((k) => (army[k] ?? 0) < 0 || (army[k] ?? 0) > state.troops[k])) return fail('khongDuQuan');
   if (armySpace(army) > fieldCap(state)) return fail('quaChoPhoBan');
   const def = CAMPS[campTier(id)!];
@@ -464,6 +477,7 @@ export function startCamp(state: GameState, id: number, army: Record<UnitType, n
   if (!hero && UNIT_TYPES.every((k) => !army[k])) return fail('chuaChonQuan');
   state.campaign.rows = { ...rows };
   state.campaign.lastResult = null;
+  rememberPhoTuong(state, nu);
   state.campaign.battle = startFieldBattle({
     id: state.nextBattleId++,
     stage: 0,
@@ -476,6 +490,7 @@ export function startCamp(state: GameState, id: number, army: Record<UnitType, n
     bonus: troopBonus(state),
     arms: state.arms,
     huan: huanTiers(state),
+    nuTuong: phoTuongOf(state),
   });
   return ok(undefined);
 }

@@ -74,6 +74,7 @@ import {
   type GiftId,
   type HuanBranch,
   type Row,
+  type NuTuongId,
   type TuongId,
   type Unlock,
   type UnitType,
@@ -94,6 +95,8 @@ export interface Building {
   damaged?: boolean;
   /** Doanh trại: tướng chỉ huy người chơi đã giao. Chưa giao thì tướng rảnh tự nhận (`commanders` ở `doanhTrai.ts`). */
   tuong?: TuongId;
+  /** Doanh trại: nữ tướng người chơi đã giao về đây (chương 5). Chưa giao thì nữ tướng rảnh tự về (`nuPosts`). */
+  nuTuong?: NuTuongId;
   /** Doanh trại: số lính mỗi binh chủng người chơi bố trí giữ kinh đô ở đây. Chưa doanh trại nào có thì bố trí tự động. */
   guard?: Record<UnitType, number>;
   /** Đoạn thành Cổ Loa có ụ nỏ trên mặt thành: còn tốt, hay đã hư theo thành (phải sửa riêng). */
@@ -185,6 +188,8 @@ export interface CampaignState {
   /** Trận đang đánh. Đánh xong vẫn giữ để vẽ cảnh cuối tới khi người chơi xem xong kết quả. */
   battle: Battle | null;
   lastResult: StageResult | null;
+  /** Nữ tướng chọn làm phó tướng lần xuất quân trước (`nuTuong.ts`); không có là không mang ai. */
+  phoTuong?: NuTuongId;
 }
 
 export interface GiongState {
@@ -237,7 +242,7 @@ export interface ThuThachState {
   won: number[];
   /** Huân công đang có, chưa tiêu. */
   huan: number;
-  /** Bậc huân công đã mua của từng nhánh (0–3). */
+  /** Bậc huân công đã mua của từng nhánh (0–4). */
   bac: Record<HuanBranch, number>;
 }
 
@@ -308,9 +313,9 @@ export interface Merchant {
  * Phiên bản bản lưu hiện tại (11: kinh đô lớn; 12: khoảnh tự chọn; 13: lính nỏ, ụ nỏ; 14: Cao Lỗ, vua xuống biển;
  * 15: thử thách, huân công; 16: gỗ, tài nguyên thứ năm, và gợi ý của Lạc hầu về công trình mới; 17: cây, đá mọc trên
  * ô trống; 18: lưới nới qua sông, 76×76; 20: Điện 10×10; 21: chương 5, quân Hán; 22: Hai Bà Trưng; 23: thủy quân Hán,
- * lâu thuyền).
+ * lâu thuyền; 24: nữ tướng, thử thách màn 33–40).
  */
-export const SAVE_VERSION = 23;
+export const SAVE_VERSION = 24;
 
 export interface GameState {
   version: typeof SAVE_VERSION;
@@ -424,6 +429,7 @@ export type FailReason =
   | 'canTuongChiHuy'
   | 'tuongChuaCo'
   | 'daChiHuy'
+  | 'nuDaO'
   | 'quaChoPhoBan'
   | 'quaChoGiuThanh'
   | 'traiDay'

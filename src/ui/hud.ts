@@ -11,6 +11,7 @@ import {
   CONG_THANH,
   LAU_NO,
   LAU_NO_FROM_LEVEL,
+  NU_TUONG,
   DECOR_TYPES,
   FIELD,
   RESOURCE_IDS,
@@ -35,6 +36,7 @@ import {
   type GiftId,
   type Row,
   type SkillId,
+  type NuTuongId,
   type TuongId,
   type UnitType,
 } from '../game/defs';
@@ -51,6 +53,7 @@ import {
   guardTotal,
   reserve,
 } from '../game/doanhTrai';
+import { nuPosts, nuTuongList } from '../game/nuTuong';
 import {
   barracksLevel,
   canAfford,
@@ -112,7 +115,7 @@ import { floodToleranceOf, groundOf } from '../game/terrain';
 import { tetOpen, tetStarted, type Banh } from '../game/tet';
 import type { Resolution } from '../render/world';
 import { formatDuration, vi } from '../text/vi';
-import { armyHtml, defaultPick, huanHtml, mapHtml, nextRow, stageHtml, stageResultHtml, stepPick, type ArmyPick, type MapChapter } from './campaign';
+import { armyHtml, defaultPick, huanHtml, mapHtml, nextRow, pickNu, stageHtml, stageResultHtml, stepPick, type ArmyPick, type MapChapter } from './campaign';
 import { armsHtml } from './binhKhi';
 import { advHtml, caoLoHtml } from './coLoa';
 import { costHtml, esc, fmt, fmtShort } from './format';
@@ -200,7 +203,7 @@ export type HudAction =
   | { kind: 'phatRung'; id: number }
   | { kind: 'trinhSat'; id: number }
   | { kind: 'ketThan'; id: number }
-  | { kind: 'marchCamp'; plot: number; army: Record<UnitType, number>; rows: Record<UnitType, Row> }
+  | { kind: 'marchCamp'; plot: number; army: Record<UnitType, number>; rows: Record<UnitType, Row>; nu: NuTuongId | null }
   | { kind: 'offerBanh'; banh: Banh }
   | { kind: 'confirmPlace' }
   | { kind: 'cancelPlace' }
@@ -223,6 +226,7 @@ export type HudAction =
   | { kind: 'acceptOffer'; index: number }
   | { kind: 'train'; unit: UnitType }
   | { kind: 'assignTuong'; id: number; tuong: TuongId }
+  | { kind: 'assignNu'; id: number; nu: NuTuongId }
   | { kind: 'guardDelta'; id: number; unit: UnitType; delta: 1 | -1 }
   | { kind: 'garrisonDelta'; id: number; unit: UnitType; delta: 1 | -1 }
   | { kind: 'guardAuto' }
@@ -239,7 +243,7 @@ export type HudAction =
   | { kind: 'repairUNo'; id: number }
   | { kind: 'dismissRaid' }
   | { kind: 'openCampaign' }
-  | { kind: 'march'; stage: number; army: Record<UnitType, number>; rows: Record<UnitType, Row>; challenge: boolean; hero: HeroKind | null }
+  | { kind: 'march'; stage: number; army: Record<UnitType, number>; rows: Record<UnitType, Row>; challenge: boolean; hero: HeroKind | null; nu: NuTuongId | null }
   | { kind: 'buyHuan'; branch: HuanBranch }
   | { kind: 'useSkill'; skill: SkillId }
   | { kind: 'openGiong' }
@@ -492,6 +496,8 @@ export class Hud {
         return this.onAction({ kind: 'train', unit: el.dataset.unit as UnitType });
       case 'assignTuong':
         return this.onAction({ kind: 'assignTuong', id, tuong: el.dataset.tuong as TuongId });
+      case 'assignNu':
+        return this.onAction({ kind: 'assignNu', id, nu: el.dataset.nu as NuTuongId });
       case 'guardDelta':
         return this.onAction({ kind: 'guardDelta', id, unit: el.dataset.unit as UnitType, delta: Number(el.dataset.delta) < 0 ? -1 : 1 });
       case 'garrisonDelta':
@@ -516,8 +522,8 @@ export class Hud {
         return this.refreshSheet(this.getState());
       case 'donMarch': {
         if (!this.donPick) return;
-        const { don, army, rows } = this.donPick;
-        return this.onAction({ kind: 'marchCamp', plot: don!, army: { ...army }, rows: { ...rows } });
+        const { don, army, rows, nu } = this.donPick;
+        return this.onAction({ kind: 'marchCamp', plot: don!, army: { ...army }, rows: { ...rows }, nu: nu ?? null });
       }
       case 'offerBanh':
         return this.onAction({ kind: 'offerBanh', banh: el.dataset.banh as Banh });
@@ -540,13 +546,14 @@ export class Hud {
       case 'armyDelta':
       case 'armyRow':
       case 'armyHero':
+      case 'armyNu':
         // Đang chọn quân đánh đồn trong bảng Đất bên kia sông.
         if (this.donPick && this.sheet?.kind === 'benKia' && act !== 'backToStage') return this.donPickStep(act, el);
         return this.campaignStep(act, id, el);
       case 'march': {
         if (!this.camp?.stage) return;
-        const { army, rows, challenge, hero } = this.camp.pick;
-        return this.onAction({ kind: 'march', stage: this.camp.stage, army: { ...army }, rows: { ...rows }, challenge, hero: hero ?? null });
+        const { army, rows, challenge, hero, nu } = this.camp.pick;
+        return this.onAction({ kind: 'march', stage: this.camp.stage, army: { ...army }, rows: { ...rows }, challenge, hero: hero ?? null, nu: nu ?? null });
       }
       case 'buyHuan':
         return this.onAction({ kind: 'buyHuan', branch: el.dataset.branch as HuanBranch });
@@ -971,6 +978,7 @@ export class Hud {
     const state = this.getState();
     const unit = el.dataset.unit as UnitType;
     if (act === 'armyDelta') stepPick(state, pick, unit, Number(el.dataset.delta));
+    else if (act === 'armyNu') pickNu(state, pick, el.dataset.nu);
     else pick.rows[unit] = nextRow(pick.rows[unit]);
     this.refreshSheet(state);
   }
@@ -1470,7 +1478,33 @@ export class Hud {
       </div>`;
     });
     const none = map.has(b.id) ? '' : `<p class="why">${vi.ui.noCommander}</p>`;
-    return `<p class="muted">${vi.ui.commanderHint}</p>${none}<div class="units">${rows.join('')}</div>`;
+    return `<p class="muted">${vi.ui.commanderHint}</p>${none}<div class="units">${rows.join('')}</div>${this.nuTuongHtml(state, b)}`;
+  }
+
+  /**
+   * Nữ tướng ở các doanh trại (chương 5): mỗi trại một người; lính giữ kinh đô của trại, thuộc binh chủng của nữ
+   * tướng, được cộng thêm. Bấm "Về trại này" để nữ tướng ấy về đây (đang ở trại khác thì hai người đổi chỗ).
+   */
+  private nuTuongHtml(state: GameState, b: Building): string {
+    const list = nuTuongList(state);
+    if (!list.length) return '';
+    const map = nuPosts(state);
+    const busy = state.raid.phase === 'battle';
+    const rows = list.map((n) => {
+      const post = [...map].find(([, x]) => x === n)?.[0];
+      const here = post === b.id;
+      const where = here ? vi.nuTuong.here : post !== undefined ? vi.nuTuong.other : vi.nuTuong.none;
+      const unit = vi.units[NU_TUONG[n].unit];
+      const buttons: string[] = [];
+      if (!here) buttons.push(`<button class="btn small" data-act="assignNu" data-id="${b.id}" data-nu="${n}" ${busy ? 'disabled' : ''}>${vi.nuTuong.assign}</button>`);
+      if (post !== undefined && !here) buttons.push(`<button class="btn small ghost" data-act="selectBuilding" data-id="${post}">${vi.ui.toPost} ›</button>`);
+      return `<div class="unit-row ${here ? 'here' : ''}">
+        <span class="unit-icon">${vi.nuTuong.list[n].icon}</span>
+        <span class="unit-info"><b>${vi.nuTuong.list[n].name}</b><small>${here ? '⭐ ' : ''}${where}</small><small>${vi.nuTuong.boost(unit.icon, unit.name)}</small></span>
+        <span class="btn-col">${buttons.join('')}</span>
+      </div>`;
+    });
+    return `<h4 class="sub-head">${vi.nuTuong.barracksTitle}</h4><p class="muted">${vi.nuTuong.barracksHint}</p><div class="units">${rows.join('')}</div>`;
   }
 
   /**
@@ -1672,7 +1706,7 @@ export class Hud {
     const state = this.getState();
     const unit = el.dataset.unit as UnitType;
     if (act === 'campChapter') {
-      camp.chapter = id === 4 ? 4 : id === 3 ? 3 : id === 2 ? 2 : 1;
+      camp.chapter = ([1, 2, 3, 4, 5] as const).find((c) => c === id) ?? 1;
       camp.stage = this.nextStage(state, camp.chapter);
       camp.step = 'stage';
     } else if (act === 'pickStage') {
@@ -1694,6 +1728,8 @@ export class Hud {
       // Phó bản chương 2: chạm thẻ Sơn Tinh hay Gióng để chọn tướng ra trận; tướng kiệt sức thì không chọn được.
       const hero = el.dataset.hero as HeroKind;
       if (stageHeroCheck(state, camp.stage, hero, camp.pick.challenge).ok) camp.pick.hero = hero;
+    } else if (act === 'armyNu') {
+      pickNu(state, camp.pick, el.dataset.nu);
     }
     this.refreshCampaign(state);
   }

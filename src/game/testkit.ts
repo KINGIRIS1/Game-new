@@ -65,23 +65,30 @@ function playOut(b: Battle, play: Play): Battle {
 /**
  * Tướng ra trận màn `n` khi đã hết truyện (thử thách là để đánh lại các màn đã qua): Gióng hiển linh có Nhổ tre ở
  * chương 1, Sơn Tinh hiển linh dời được non ở chương 2, An Dương Vương hiển linh có Rùa Vàng ở chương 3 và màn 25,
- * Cao Lỗ có Lệnh bắn ở màn 26–32. Đúng như `heroFor` chọn khi đã qua màn 32.
+ * Cao Lỗ có Lệnh bắn ở màn 26–32, Hai Bà hiển linh (Trưng Nhị có Hiệu triệu) ở chương 5. Đúng như `heroesFor` chọn
+ * khi đã qua màn 40. `lateHero` là tướng đầu.
  */
-export function lateHero(n: number): HeroSetup {
+export function lateHeroes(n: number): HeroSetup[] {
   const chapter = STAGES[n - 1].chapter;
-  if (chapter === 1) return { kind: 'giong', bamboo: true, glow: true, non: false };
-  if (chapter === 2) return { kind: 'sonTinh', bamboo: false, glow: true, non: true };
-  if (chapter === 3 || n === 25) return { kind: 'anDuong', bamboo: false, glow: true, non: false, kimQuy: true };
-  return { kind: 'caoLo', bamboo: false, glow: false, non: false, lenhBan: true };
+  if (chapter === 1) return [{ kind: 'giong', bamboo: true, glow: true, non: false }];
+  if (chapter === 2) return [{ kind: 'sonTinh', bamboo: false, glow: true, non: true }];
+  if (chapter === 3 || n === 25) return [{ kind: 'anDuong', bamboo: false, glow: true, non: false, kimQuy: true }];
+  if (chapter === 4) return [{ kind: 'caoLo', bamboo: false, glow: false, non: false, lenhBan: true }];
+  return [
+    { kind: 'trungTrac', bamboo: false, glow: true, non: false },
+    { kind: 'trungNhi', bamboo: false, glow: true, non: false, hieuTrieu: true },
+  ];
 }
 
+export const lateHero = (n: number): HeroSetup => lateHeroes(n)[0];
+
 /**
- * Quân mẫu của thử thách màn `n`, 38 chỗ: quân mẫu chương (chương 4 có lính nỏ). Thử thách Hai binh chủng thì chia
+ * Quân mẫu của thử thách màn `n`, 38 chỗ: quân mẫu chương (chương 4, 5 có lính nỏ). Thử thách Hai binh chủng thì chia
  * đôi số chỗ cho hai binh chủng được mang, phần lẻ cho binh chủng nhẹ hơn.
  */
 export function challengeArmy(n: number): Army {
   const ch = challengeOf(n)!;
-  if (ch.kind !== 'haiBinh') return { ...(STAGES[n - 1].chapter === 4 ? SAMPLE_ARMY4 : SAMPLE_ARMY) };
+  if (ch.kind !== 'haiBinh') return { ...(STAGES[n - 1].chapter >= 4 ? SAMPLE_ARMY4 : SAMPLE_ARMY) };
   const [a, b] = [...ch.units!].sort((x, y) => UNITS[y].space - UNITS[x].space);
   const army: Army = { giao: 0, cung: 0, voi: 0, no: 0 };
   army[a] = Math.floor(FIELD_SLOTS / 2 / UNITS[a].space);
@@ -96,11 +103,11 @@ export const FULL_ARMS: Army = { giao: 2, cung: 2, voi: 2, no: 2 };
  * Đánh thử thử thách màn `n` theo chuẩn đã chốt, không tính huân công và phúc lành:
  * - `gioi`: bấm kỹ năng ngay khi hồi, có Đền Phù Đổng, đã rèn đủ 2 bậc cho mọi binh chủng;
  * - `thuong`: như người chơi thường của màn thường (bấm chậm, không Đền, chưa rèn).
- * Quân mẫu 38 chỗ (`challengeArmy`), tướng khi đã hết truyện (`lateHero`), trừ thử thách Không tướng.
+ * Quân mẫu 38 chỗ (`challengeArmy`), tướng khi đã hết truyện (`lateHeroes`), trừ thử thách Không tướng.
  */
 export function fightChallenge(n: number, play: 'thuong' | 'gioi', id = 1, army = challengeArmy(n)): Battle {
   const def = STAGES[n - 1];
-  const hero = challengeOf(n)!.kind === 'khongTuong' ? null : lateHero(n);
+  const [hero = null, hero2 = null] = challengeOf(n)!.kind === 'khongTuong' ? [] : lateHeroes(n);
   const gioi = play === 'gioi';
   const b = startFieldBattle({
     id,
@@ -110,6 +117,7 @@ export function fightChallenge(n: number, play: 'thuong' | 'gioi', id = 1, army 
     army,
     rows: DEFAULT_ROWS,
     hero,
+    hero2,
     bonus: gioi ? TEMPLE_BONUS : 0,
     arms: gioi ? FULL_ARMS : undefined,
     ...challengeField(n),

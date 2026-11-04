@@ -20,9 +20,11 @@ import {
   ROWS,
   STAGES,
   TUONG_IDS,
+  NU_TUONG_IDS,
   UNIT_TYPES,
   isBridge,
   type BuildingType,
+  type NuTuongId,
   type TuongId,
 } from './defs';
 import { initialCaoLo } from './caoLo';
@@ -108,6 +110,7 @@ function migrate(raw: unknown): unknown {
   if (isObj(v) && v.version === 20) v = migrate20to21(v);
   if (isObj(v) && v.version === 21) v = migrate21to22(v);
   if (isObj(v) && v.version === 22) v = migrate22to23(v);
+  if (isObj(v) && v.version === 23) v = migrate23to24(v);
   return v;
 }
 
@@ -445,6 +448,16 @@ function migrate22to23(s: Raw): Raw {
   return s;
 }
 
+/**
+ * Phiên bản 23 → 24 (chương 5 PR 4): bốn nữ tướng, thử thách màn 33–40, huân công bậc 4. Trường mới đều tùy chọn
+ * (nữ tướng ở doanh trại `Building.nuTuong`, phó tướng chọn lần trước `campaign.phoTuong`); nữ tướng theo về tính từ
+ * màn đã thắng, nên bản lưu cũ đã qua màn 34 có ngay Lê Chân.
+ */
+function migrate23to24(s: Raw): Raw {
+  s.version = 24;
+  return s;
+}
+
 const isBanh = (v: unknown, test: (x: unknown) => boolean): boolean => isObj(v) && test(v.chung) && test(v.giay);
 const isBool = (x: unknown) => typeof x === 'boolean';
 
@@ -464,6 +477,7 @@ function isValidBuildings(list: unknown): boolean {
       b.level >= 1 &&
       b.level <= BUILDINGS[b.type as BuildingType].maxLevel &&
       (b.tuong === undefined || TUONG_IDS.includes(b.tuong as TuongId)) &&
+      (b.nuTuong === undefined || (b.type === 'doanhTrai' && NU_TUONG_IDS.includes(b.nuTuong as NuTuongId))) &&
       (b.guard === undefined || (isObj(b.guard) && UNIT_TYPES.every((k) => isNum((b.guard as Raw)[k]) && ((b.guard as Raw)[k] as number) >= 0))) &&
       (b.uNo === undefined || ((b.uNo === 'ok' || b.uNo === 'hu') && b.type === 'thanh')) &&
       (b.rot === undefined || [0, 1, 2, 3].includes(b.rot as number))
@@ -522,6 +536,7 @@ function isGameState(v: unknown): v is GameState {
   if (![raid.nights, raid.nightsHeld, raid.trieu, raid.trieuHeld, raid.thuyBinh, raid.thuyBinhHeld, raid.han, raid.hanHeld, raid.thuyHan, raid.thuyHanHeld, raid.lauSunk].every(isNum)) return false;
   const camp = v.campaign;
   if (!isObj(camp) || !isNum(camp.cleared) || !isObj(camp.rows)) return false;
+  if (camp.phoTuong !== undefined && !NU_TUONG_IDS.includes(camp.phoTuong as NuTuongId)) return false;
   if (!UNIT_TYPES.every((k) => ROWS.includes((camp.rows as Raw)[k] as never))) return false;
   if (!(camp.battle === null || isObj(camp.battle)) || !(camp.lastResult === null || isObj(camp.lastResult))) return false;
   const res = v.resources;

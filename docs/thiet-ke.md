@@ -2317,6 +2317,30 @@ Bản đồ phó bản có thêm thẻ Chương 5, mở khi vào chương 5. B�
 - Thắng lần đầu được **5 huân công** mỗi màn, cả 8 màn là 40.
 - Mỗi nhánh huân công thêm **bậc 4**, giá 8 huân công, thêm 4% như các bậc trước. Năm nhánh hết đúng 40, vừa bằng số huân công mới; tổng cả 40 thử thách là 120.
 
+**Số cuối PR 4** (`NU_TUONG`, `NU_TUONG_BONUS` = 0,12, `CHALLENGES`, `HUAN_COST` = [3, 5, 8, 8] ở `defs.ts`; luật nữ tướng ở `nuTuong.ts`; `nuTuong.test.ts`, `thuThach.test.ts` canh):
+
+- Thử thách màn 33–40, đo như màn 1–32 (6 hạt giống, lấy khoảng giữa hai ngưỡng). Người chơi giỏi có Hai Bà hiển linh, Trưng Nhị có Hiệu triệu (`lateHeroes` ở `testkit.ts`); quân mẫu chương 4 có lính nỏ (`SAMPLE_ARMY4`). Hai binh chủng bỏ cung thủ (lính kích Hán đông nhất, cung thủ khắc).
+
+  | Màn | Kiểu | Máu giặc | Giỏi thắng hết tới | Thường thua phần lớn từ |
+  |---|---|---|---|---|
+  | 33 | Không tướng | ×0,9 | ×1,11 | ×0,69 |
+  | 34 | Giáo binh + voi chiến | ×2,2 | ×2,3 | ×2,09 |
+  | 35 | Không tướng | ×0,95 | ×1,18 | ×0,69 |
+  | 36 | Giặc dữ | ×1,9 | ×2,18 | ×1,6 |
+  | 37 | Giáo binh + lính nỏ | ×2,85 | ×3,37 | ×2,36 |
+  | 38 | Không tướng | ×0,95 | ×1,18 | ×0,69 |
+  | 39 | Giặc dữ | ×1,5 | ×1,66 | ×1,3 |
+  | 40 | Giặc dữ (cầm cự 100 giây) | ×2,7 | ×3,16 | ×2,27 |
+
+- Nữ tướng theo về tính từ màn đã thắng (`campaign.cleared` tới màn của người ấy, `nuJoined`), không cần trường lưu riêng: bản lưu cũ đã qua màn 34 có ngay Lê Chân.
+- **Phó tướng**: bảng xếp quân (cả đánh đồn) có thẻ mỗi nữ tướng đã theo về, ghi binh chủng được cộng (binh chủng không mang theo thì ghi "không mang theo"); chạm lại để không mang ai. Lần sau chọn sẵn người lần trước (`campaign.phoTuong`). Thử thách Không tướng vẫn mang được nữ tướng, vì nữ tướng không đánh (chỗ làm thêm, chủ dự án có thể đổi). Trong trận nữ tướng không phải người đánh (`Battle.nuTuong`, không nằm trong `fighters`): đứng sau người cuối hàng 1,2 ô, đi chậm theo khi quân ta tiến lên, lệch theo chỗ quân ta đông. Lính đúng binh chủng được đánh dấu `Fighter.nu`.
+- **Ở doanh trại**: như tướng chỉ huy, nữ tướng rảnh tự về doanh trại chưa có nữ tướng theo thứ tự dựng; người chơi giao lại ở thẻ Tướng chỉ huy (mục Nữ tướng ở trại, nút Về trại này), đang ở trại khác thì hai người đổi chỗ (`nuPosts`, `assignNu`). Ít trại hơn người thì có người chưa ở trại nào. Lính giữ kinh đô ra từ trại ấy, đúng binh chủng của nữ tướng, được cộng; lính ra từ đồn biên thì không.
+- **Lạc hầu báo** một lần mỗi người (`nextNuHint`, ghi `nu:<tên>` vào `hinted`), hai câu: nữ tướng đã về, lo binh chủng nào; chọn làm phó tướng ở bảng xếp quân hay giao về một doanh trại.
+- **Ở sân Điện**: bốn nữ tướng đứng chầu hàng sau Hai Bà (chỗ `t` số 8, 11, 9, 13: Lê Chân sau Trưng Trắc, Thánh Thiên sau Trưng Nhị, Bát Nàn sau Sơn Tinh, Phùng Thị Chính sau Cao Lỗ), kể cả khi đang ở doanh trại.
+- Biểu tượng: Lê Chân ⚓, Thánh Thiên 🪶, Bát Nàn 🛡️, Phùng Thị Chính 👶.
+- Bản lưu v24 (`migrate23to24`): chỉ thêm trường tùy chọn `Building.nuTuong` (doanh trại) và `campaign.phoTuong`; bậc huân công tối đa 4.
+- Sửa kèm: chạm thẻ chương 5 ở bản đồ phó bản trước đây mở nhầm chương 1.
+
 ### Nhiệm vụ Lạc hầu chương 5
 
 Theo phương án A ở điều 1: hai nhiệm vụ sẵn có số 52, 53 thành hai nhiệm vụ đầu chương 5, rồi nối thêm 8 nhiệm vụ vào cuối danh sách (không xô lệch số thứ tự nhiệm vụ của người đang chơi). Mỗi PR nối phần của mình.
@@ -2350,9 +2374,9 @@ Thưởng khoảng gấp rưỡi nhiệm vụ chương 4.
    - Bản đồ phó bản chưa có chương 5: giao diện phó bản dừng ở chương 4 (`MapChapter` ở `src/ui/campaign.ts`, `mapChapterNow` ở `hud.ts`) tới PR 2. PR 2 đã thêm thẻ Chương 5.
 3. **PR 2 (đã làm)**: Hai Bà (hai tướng cùng ra một trận, mỗi bà một kỹ năng, giữ kinh đô, chỉ huy doanh trại), nghĩa binh, màn 33–36 và Tô Định, bãi Hát Môn và Luy Lâu, thẻ Chương 5 trên bản đồ phó bản, đoạn truyện 1–3 (`meLinh`, `hatMon`, `trungVuong` ở `story.ts`), nhiệm vụ 55–57, bản lưu v22. Xem các mục Số cuối PR 2 ở trên.
 4. **PR 3 (đã làm)**: lâu thuyền và thủy quân Hán ở kinh đô, Mã Viện, màn 37–40 (màn 40 cầm cự), bãi Lãng Bạc và Cấm Khê, đoạn truyện 4–6 (`phucBa`, `langBac`, `songHat`), màn hình Hết truyện mới (`hetTruyen5`), Đền Hát Môn, nhiệm vụ 58–61, bản lưu v23 (`migrate22to23`: thêm `raid.thuyHan`, `raid.thuyHanHeld`, `raid.lauSunk`; đã thắng màn 37 mà chưa có giặc thì hẹn thủy quân Hán). Xem các mục Số cuối PR 3 ở trên; `maVien.test.ts` canh.
-5. **PR 4**: nữ tướng, thử thách màn 33–40, huân công bậc 4.
+5. **PR 4 (đã làm)**: nữ tướng, thử thách màn 33–40, huân công bậc 4, bản lưu v24. Xem Số cuối PR 4 ở trên.
 
-Mỗi PR nào thêm trường lưu mới thì nâng bản lưu một bậc (v21 tới v23, sau bản lưu 20 của Điện Vua Hùng 10×10; PR 4 lên v24), có test nâng bản lưu cũ. Mỗi PR: chạy `npm test` và `npm run build`; sửa `src/render/` hay `src/ui/` thì chụp kiểm tra ở khổ điện thoại; sau đó ghi số cuối cùng vào tài liệu này.
+Mỗi PR nào thêm trường lưu mới thì nâng bản lưu một bậc (v21 tới v24, sau bản lưu 20 của Điện Vua Hùng 10×10), có test nâng bản lưu cũ. Mỗi PR: chạy `npm test` và `npm run build`; sửa `src/render/` hay `src/ui/` thì chụp kiểm tra ở khổ điện thoại; sau đó ghi số cuối cùng vào tài liệu này.
 
 ## Điện Vua Hùng 10×10 (chủ dự án yêu cầu, đã làm)
 
@@ -2430,5 +2454,5 @@ Chủ dự án yêu cầu: Điện to 10×10 hoặc hơn; sân có Vua Hùng ng�
 16. **Điện cấp 9, 10** (đã duyệt, đã làm cả 3 PR: luật, hình, binh khí bậc 3 và lầu nỏ lên cấp; xem Kế hoạch cùng tên).
     **Hồ Kim Quy** (chủ dự án yêu cầu, đã làm; xem mục cùng tên): hồ 8×8 mở khi Rùa Vàng hiện lên, tường thành thêm 30% máu.
     **Điện Vua Hùng 10×10** (chủ dự án yêu cầu, đã làm; xem mục cùng tên): dời, xoay được; sân chầu có Vua Hùng ngồi ngai vàng, 14 chỗ tướng đứng chầu; bản lưu v20.
-17. **Chương 5: Hai Bà Trưng** (chủ dự án đã duyệt, đã làm PR 1, 2, 3, tiếp theo là PR 4; xem Kế hoạch chương 5): mỗi bà cưỡi một voi ra trận với Voi xung trận và Hiệu triệu gọi nghĩa binh, quân Hán và lâu thuyền đánh kinh đô, phó bản màn 33–40 với Tô Định và Mã Viện, Đền Hát Môn, nữ tướng, thử thách màn 33–40.
+17. **Chương 5: Hai Bà Trưng** (chủ dự án đã duyệt, đã làm cả bốn PR; xem Kế hoạch chương 5): mỗi bà cưỡi một voi ra trận với Voi xung trận và Hiệu triệu gọi nghĩa binh, quân Hán và lâu thuyền đánh kinh đô, phó bản màn 33–40 với Tô Định và Mã Viện, Đền Hát Môn, nữ tướng, thử thách màn 33–40.
 18. **Để sau**: nhạc nền.

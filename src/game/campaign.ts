@@ -12,11 +12,12 @@ import { inChapter4 } from './chuong4';
 import { CH5_LAST, MA_VIEN_AT, haiBaSetups, inChapter5 } from './chuong5';
 import { CH3_LAST, KIM_QUY_AT, advJoined, advResting, inChapter3 } from './coLoa';
 import { armySpace, fieldCap } from './doanhTrai';
-import { REPLAY_SHARE, RESOURCE_IDS, STAGES, UNIT_TYPES, type Chapter, type Cost, type Row, type StageDef, type UnitType } from './defs';
+import { REPLAY_SHARE, RESOURCE_IDS, STAGES, UNIT_TYPES, type Chapter, type Cost, type NuTuongId, type Row, type StageDef, type UnitType } from './defs';
 import { BATTLE_STEP, countOf, dienLevel, gain, scheduleThuyHan, troopBonus, type FailReason, type GameState, type Result, type StageResult } from './game';
 import { giongReady, giongResting } from './giong';
 import { heroesFor, inChapter2, restAfter, sonJoined, sonOnly, sonResting, winGift } from './son';
 import { challengeField, challengeOf, challengeOpen, huanTiers, winChallenge } from './thuThach';
+import { phoTuongCheck, phoTuongOf, rememberPhoTuong } from './nuTuong';
 
 /** Thắng màn này lần đầu thì roi sắt gãy. */
 export const WHIP_BREAKS_AT = 6;
@@ -143,6 +144,7 @@ export function unitAllowed(n: number, challenge: boolean, k: UnitType): boolean
 /**
  * Xuất quân đánh màn `n` với số lính `army`, đứng theo hàng `rows`. `challenge`: đánh thử thách của màn (đã thắng
  * màn ấy ở chế độ thường). `pick`: tướng chọn ở bảng xếp quân (phó bản chương 2); bỏ trống thì lấy tướng chọn sẵn.
+ * `nu`: nữ tướng đi theo làm phó tướng (`null` là không mang ai; bỏ trống thì người chọn lần trước).
  */
 export function startStage(
   state: GameState,
@@ -151,9 +153,12 @@ export function startStage(
   rows: Record<UnitType, Row>,
   challenge = false,
   pick?: HeroKind | null,
+  nu?: NuTuongId | null,
 ): Result {
   const check = canStartStage(state, n, challenge);
   if (!check.ok) return check;
+  const nuCheck = phoTuongCheck(state, nu);
+  if (!nuCheck.ok) return nuCheck;
   if (pick && !heroless(n, challenge)) {
     const heroCheck = stageHeroCheck(state, n, pick, challenge);
     if (!heroCheck.ok) return heroCheck;
@@ -168,6 +173,7 @@ export function startStage(
   if (!hero && UNIT_TYPES.every((k) => !army[k])) return fail('chuaChonQuan');
   state.campaign.rows = { ...rows };
   state.campaign.lastResult = null;
+  rememberPhoTuong(state, nu);
   state.campaign.battle = startFieldBattle({
     id: state.nextBattleId++,
     stage: n,
@@ -182,6 +188,7 @@ export function startStage(
     bonus: troopBonus(state),
     arms: state.arms,
     huan: huanTiers(state),
+    nuTuong: phoTuongOf(state),
     ...(challenge ? challengeField(n) : {}),
   });
   return ok(undefined);

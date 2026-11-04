@@ -2526,3 +2526,10 @@ body.man-vao-on #hud > * {
     animation: none;
   }
 }
+
+/* Mục nữ tướng trong thẻ Tướng chỉ huy của doanh trại (chương 5). */
+.sub-head {
+  margin: 14px 0 4px;
+  font-size: 13px;
+  color: var(--red-dark);
+}
