@@ -53,6 +53,8 @@ import {
   UNIT_TYPES,
   floodForces,
   floodHpScale,
+  hanForces,
+  hanHpScale,
   raidForces,
   raidHpScale,
   thuyBinhForces,
@@ -420,13 +422,22 @@ function addHero(battle: Battle, hero: HeroSetup, x: number, z: number, hpMul: n
   battle.fighters.push(f);
 }
 
+/** Giặc đánh kinh đô thay cho giặc Ân: quân mỗi đợt và hệ số máu theo số lần đã tới. */
+type LandFoe = 'yeu' | 'trieu' | 'thuyBinh' | 'han';
+const LAND_FORCES: Record<LandFoe, { forces: (n: number) => Partial<Record<EnemyType, number>>; hpScale: (n: number) => number }> = {
+  yeu: { forces: yeuForces, hpScale: yeuHpScale },
+  trieu: { forces: trieuForces, hpScale: trieuHpScale },
+  thuyBinh: { forces: thuyBinhForces, hpScale: thuyBinhHpScale },
+  han: { forces: hanForces, hpScale: hanHpScale },
+};
+
 export interface BattleOpts {
   hero?: HeroSetup | null;
   bonus?: number;
   /** Mùa lũ thứ `n`, nước dâng tới `level` bậc, thủy quái bơi từ sông lên. */
   flood?: { n: number; level: number } | null;
-  /** Yêu tinh, quân Triệu hay thủy binh Triệu kéo tới lần thứ `n` (thay cho giặc Ân). */
-  land?: { foe: 'yeu' | 'trieu' | 'thuyBinh'; n: number } | null;
+  /** Yêu tinh, quân Triệu, thủy binh Triệu hay quân Hán kéo tới lần thứ `n` (thay cho giặc Ân). */
+  land?: { foe: LandFoe; n: number } | null;
   /** Đền Cổ Loa còn nguyên. */
   crossbows?: boolean;
   /** Hồ Kim Quy còn nguyên. */
@@ -479,24 +490,8 @@ export function startBattle(state: GameState, wave: number, side: RaidSide, opts
   } else if (land) {
     battle.foe = land.foe;
   }
-  const forces = flood
-    ? floodForces(flood.n)
-    : land?.foe === 'yeu'
-      ? yeuForces(land.n)
-      : land?.foe === 'trieu'
-        ? trieuForces(land.n)
-        : land?.foe === 'thuyBinh'
-          ? thuyBinhForces(land.n)
-          : raidForces(wave);
-  const scale = flood
-    ? floodHpScale(flood.n)
-    : land?.foe === 'yeu'
-      ? yeuHpScale(land.n)
-      : land?.foe === 'trieu'
-        ? trieuHpScale(land.n)
-        : land?.foe === 'thuyBinh'
-          ? thuyBinhHpScale(land.n)
-          : raidHpScale(wave);
+  const forces = flood ? floodForces(flood.n) : land ? LAND_FORCES[land.foe].forces(land.n) : raidForces(wave);
+  const scale = flood ? floodHpScale(flood.n) : land ? LAND_FORCES[land.foe].hpScale(land.n) : raidHpScale(wave);
   if (land?.foe === 'thuyBinh') boardBoats(battle, forces, scale, side, lo, rand, opts.fewerBoats ?? false);
   else for (const kind of Object.keys(forces) as EnemyType[]) {
     for (let i = 0; i < (forces[kind] ?? 0); i++) {

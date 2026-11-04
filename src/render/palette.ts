@@ -71,6 +71,11 @@ export const C = {
   comb: 0xd8322a,
   trieuCloth: 0x2b2a30,
   trieuRed: 0x9a2a24,
+  // Chương 5: quân Hán áo đỏ son, giáp lá sắt xám.
+  hanRed: 0xc8402a,
+  hanRedDark: 0x8e2a1c,
+  hanIron: 0x8a9096,
+  hanIronDark: 0x5a6066,
   horseBlack: 0x34302c,
   beard: 0xe8e4dc,
   night: 0x3a4466,

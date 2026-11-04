@@ -1,6 +1,7 @@
 // Màn hình vào game: tóm tắt bản lưu để người chơi biết mình đang ở đâu trước khi vào kinh đô.
 
 import { inChapter4 } from './chuong4';
+import { inChapter5 } from './chuong5';
 import { inChapter3 } from './coLoa';
 import type { Chapter } from './defs';
 import { dienLevel, type GameState } from './game';
@@ -12,7 +13,7 @@ export type TomTat = {
   chapter: Chapter;
   dien: number;
   dan: number;
-  /** Đã xem màn hình Hết truyện. */
+  /** Đã xem màn hình Hết truyện (chương 4). Sang chương 5 thì truyện còn tiếp, chưa tính là hết. */
   hetTruyen: boolean;
   /** Đã vắng bao lâu kể từ lần chơi trước (ms). */
   vang: number;
@@ -20,6 +21,7 @@ export type TomTat = {
 
 /** Chương đang chơi, theo nhiệm vụ đã nhận. */
 export function chapterOf(s: GameState): Chapter {
+  if (inChapter5(s)) return 5;
   if (inChapter4(s)) return 4;
   if (inChapter3(s)) return 3;
   if (inChapter2(s)) return 2;
@@ -32,7 +34,7 @@ export function tomTat(s: GameState, now: number): TomTat {
     chapter: chapterOf(s),
     dien: dienLevel(s),
     dan: s.dan,
-    hetTruyen: s.story.seen.includes('hetTruyen'),
+    hetTruyen: s.story.seen.includes('hetTruyen') && !inChapter5(s),
     vang: Math.max(0, now - s.lastSeen),
   };
 }

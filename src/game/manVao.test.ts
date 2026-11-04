@@ -1,7 +1,7 @@
 // Màn hình vào game: game mới hay chơi tiếp, chương đang chơi, Điện, dân, đã vắng bao lâu, đã hết truyện chưa.
 
 import { describe, expect, it } from 'vitest';
-import { CH2_QUEST_START, CH3_QUEST_START, CH4_QUEST_START } from './defs';
+import { CH2_QUEST_START, CH3_QUEST_START, CH4_QUEST_START, CH5_QUEST_START } from './defs';
 import { createInitialState } from './game';
 import { chapterOf, tomTat } from './manVao';
 import { deserialize, serialize } from './save';
@@ -34,6 +34,8 @@ describe('Màn hình vào game', () => {
     expect(chapterOf(s)).toBe(3);
     s.questIndex = CH4_QUEST_START;
     expect(chapterOf(s)).toBe(4);
+    s.questIndex = CH5_QUEST_START;
+    expect(chapterOf(s)).toBe(5);
   });
 
   it('đếm thời gian vắng từ lần chơi trước, không âm khi đồng hồ máy lùi', () => {
@@ -50,5 +52,10 @@ describe('Màn hình vào game', () => {
     const t = tomTat(deserialize(serialize(s))!, 0);
     expect(t.dien).toBe(6);
     expect(t.hetTruyen).toBe(true);
+    // Sang chương 5 thì truyện còn tiếp.
+    s.questIndex = CH5_QUEST_START;
+    const t5 = tomTat(deserialize(serialize(s))!, 0);
+    expect(t5.chapter).toBe(5);
+    expect(t5.hetTruyen).toBe(false);
   });
 });

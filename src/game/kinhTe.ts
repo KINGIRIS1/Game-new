@@ -48,7 +48,7 @@ const CHUONG = [
   ['chuong2', 'Chương 2 (tới lúc vào chương 3)'],
   ['chuong3', 'Chương 3 (tới lúc vào chương 4)'],
   ['chuong4', 'Chương 4 (tới lúc hết truyện, lên Điện 8 rồi chơi thêm chừng nửa giờ)'],
-  ['sauTruyen', 'Sau truyện (tới lúc lên Điện 10)'],
+  ['sauTruyen', 'Sau truyện chương 4 và đầu chương 5 (tới lúc lên Điện 10)'],
 ] as const;
 
 const zero = (): Resources => ({ gao: 0, voOc: 0, datDa: 0, sat: 0, go: 0 });

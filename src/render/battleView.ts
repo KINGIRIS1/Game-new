@@ -1110,7 +1110,7 @@ export class BattleView {
     for (const e of battle.events) {
       if (e.seq <= this.lastSeq) continue;
       if (e.kind === 'shot' && e.tx !== undefined && e.tz !== undefined) {
-        // Cá phun nước bắn tia nước, ma trơi phun cầu lửa xanh, An Dương Vương bắn tên đồng vàng, nỏ Triệu bắn tên sẫm.
+        // Cá phun nước bắn tia nước, ma trơi phun cầu lửa xanh, An Dương Vương bắn tên đồng vàng, nỏ Triệu, nỏ Hán bắn tên sẫm.
         const mesh =
           e.by === 'caPhun'
             ? new THREE.Mesh(waterBallGeo, waterBallMat)
@@ -1120,14 +1120,14 @@ export class BattleView {
                 ? new THREE.Mesh(boltGeo, goldMat)
                 : e.by === 'caoLo'
                   ? new THREE.Mesh(bronzeBoltGeo, bronzeBoltMat)
-                  : e.by === 'noTrieu'
+                  : e.by === 'noTrieu' || e.by === 'noHan'
                   ? new THREE.Mesh(darkBoltGeo, darkBoltMat)
                   : new THREE.Mesh(arrowGeo, arrowMat);
         const from = new THREE.Vector3(e.x + ox, this.heightAt(e.x, e.z) + 0.8, e.z + oz);
         const to = new THREE.Vector3(e.tx + ox, this.heightAt(e.tx, e.tz) + 0.5, e.tz + oz);
         mesh.position.copy(from);
         this.root.add(mesh);
-        const fast = e.by === 'anDuong' || e.by === 'caoLo' || e.by === 'noTrieu' || e.by === 'no';
+        const fast = e.by === 'anDuong' || e.by === 'caoLo' || e.by === 'noTrieu' || e.by === 'noHan' || e.by === 'no';
         this.arrows.push({ mesh, from, to, age: 0, dur: Math.max(0.12, from.distanceTo(to) / (fast ? 18 : 12)), arc: fast ? 0.25 : 0.6, flash: e.by === 'anDuong' });
       }
       if (e.kind === 'volley') this.volley(battle, e.seq, e.x, e.z);

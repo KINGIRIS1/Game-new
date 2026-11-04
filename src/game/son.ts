@@ -33,11 +33,13 @@ export function sonSetup(s: GameState): HeroSetup | null {
 /**
  * Thứ tự tướng ưu tiên ra trận chương này (`stage`: màn phó bản; không có là trận giữ kinh đô), trước Sơn Tinh và
  * Gióng:
+ * - chương 5: Cao Lỗ (Hai Bà Trưng chưa có);
  * - chương 4: phó bản màn 25 có An Dương Vương, màn 26–32 có Cao Lỗ; giữ kinh đô có An Dương Vương tới khi vua
  *   xuống biển, rồi Cao Lỗ;
  * - chương 3: An Dương Vương.
  */
 function leadsFor(s: GameState, chapter: Chapter, stage?: number): ('anDuong' | 'caoLo')[] {
+  if (chapter === 5) return ['caoLo'];
   if (chapter === 4) {
     if (stage === undefined) return s.adv.bien ? ['caoLo'] : ['anDuong', 'caoLo'];
     return stage <= CAO_LO_AT ? ['anDuong'] : ['caoLo'];

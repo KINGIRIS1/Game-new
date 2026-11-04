@@ -29,11 +29,14 @@ export interface ArmyPick {
   don?: number;
 }
 
+/** Chương đã có bản đồ phó bản (chương 5 chưa có màn nào). */
+export type MapChapter = Exclude<Chapter, 5>;
+
 /**
  * Vị trí các màn trên bản đồ (hệ tọa độ 100 × 160), đi từ Phong Châu ở dưới lên núi ở trên.
  * Chương 1 lên núi Trâu, chương 2 lên núi Tản Viên ba đỉnh. Chương 3 lên núi Thất Diệu rồi quay về giữ thành Cổ Loa.
  */
-const NODES: Record<Chapter, [number, number][]> = {
+const NODES: Record<MapChapter, [number, number][]> = {
   1: [
     [26, 144],
     [62, 131],
@@ -93,7 +96,7 @@ const FEATHERS = [
   .join('');
 
 /** Núi, sông và tên đất vẽ sau đường đi, khác nhau ở mỗi chương. */
-const SCENERY: Record<Chapter, string> = {
+const SCENERY: Record<MapChapter, string> = {
   1: `<path class="mtn far" d="M8 30 L24 10 L40 30 Z M60 30 L78 8 L96 30 Z"/>
     <path class="mtn" d="M30 34 L50 4 L70 34 Z"/>
     <text class="label" x="50" y="40">Núi Trâu</text>
@@ -145,7 +148,7 @@ function bossIcon(n: number): string {
   return stageDef(n)!.chapter === 1 ? '👹' : vi.enemyIcons[boss];
 }
 
-export function mapHtml(state: GameState, selected: number | null, chapter: Chapter = 1): string {
+export function mapHtml(state: GameState, selected: number | null, chapter: MapChapter = 1): string {
   const points = NODES[chapter];
   const stages = chapterStages(chapter);
   const road = [START, ...points].map(([x, y], i) => `${i ? 'L' : 'M'}${x} ${y}`).join(' ');

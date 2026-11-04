@@ -1,7 +1,7 @@
 // Người chơi mô phỏng: chơi từng giây theo cách hợp lý. Dùng chung cho test nhịp tiến trình (`balance.test.ts`),
 // báo cáo kinh tế (`kinhTe.ts`) và cảnh chụp thử (`scripts/chup.mjs`). Không chạy trong game thật.
 
-import { BUILDINGS, CH2_QUEST_START, CH3_QUEST_START, CH4_QUEST_START, DIEN10_CHALLENGES, QUESTS, type BuildingType } from './defs';
+import { BUILDINGS, CH2_QUEST_START, CH3_QUEST_START, CH4_QUEST_START, QUESTS, type BuildingType } from './defs';
 import {
   acceptOffer,
   autoAssign,
@@ -218,7 +218,7 @@ export type Moc = {
   at7: number;
   enter4: number;
   at8: number;
-  /** Lúc Hết truyện (thắng màn 32, đủ thử thách): mở Điện 9, rồi Điện 10. */
+  /** Lúc Hết truyện (thắng màn 32): mở Điện 9; nhận thưởng nhiệm vụ Điện 9 thì vào chương 5, mở Điện 10. */
   hetTruyen: number;
   at9: number;
   at10: number;
@@ -234,7 +234,8 @@ export const STAY_AFTER_S = 30 * 60;
  * Chơi tiếp qua các chương: sau khi lên Điện 5 còn chừng nửa giờ chương 1 (Gióng, màn 5–8) thì vào chương 2;
  * lên Điện 6 rồi còn chừng nửa giờ chương 2 thì vào chương 3. Dừng khi lên Điện 7, hay (với `last: 8`) chơi tiếp
  * chừng nửa giờ chương 3 rồi vào chương 4, dừng khi lên Điện 8. Với `last: 9` hay `10`: lên Điện 8 rồi còn chừng nửa
- * giờ chương 4 thì hết truyện (thắng màn 32, coi như đã thắng đủ thử thách cho Điện 10), dừng khi lên Điện 9 hay 10.
+ * giờ chương 4 thì hết truyện (thắng màn 32), dừng khi lên Điện 9; với `last: 10` nhận thưởng nhiệm vụ Điện 9 thì vào
+ * chương 5 (Hai Bà Trưng), dừng khi lên Điện 10.
  * Lúc vào mỗi chương, của dành dụm coi như đã tiêu hết (dựng đền, lễ vật, rèn đồ, quân), nên số phút đo được là
  * số phút sản lượng của kinh đô cần để lên cấp.
  *
@@ -286,7 +287,6 @@ export function playChapters(
       lam('vaoChuong', () => {
         s.adv.bien = true;
         s.campaign.cleared = Math.max(s.campaign.cleared, 32);
-        s.thuThach.won = Array.from({ length: DIEN10_CHALLENGES }, (_, i) => i + 1);
         s.questIndex = HAU_QUEST_START;
         s.resources = { gao: 0, voOc: 0, datDa: 0, sat: 0, go: 0 };
       });

@@ -1,6 +1,7 @@
 // Lính đi bộ có khung xương (rig.ts, body.ts): giáo binh, cung thủ của ta; giặc Ân cầm qua, cầm cung, phó tướng
 // cầm rìu; quân Triệu cầm kiếm, cầm nỏ; lính nỏ của ta (quỳ một gối khi bắn); thủy binh Triệu (lính thủy, cung
-// thuyền, lính rìu giáp mây) và tướng thủy binh cầm đao dài. Mỗi lính một dáng, mỗi loại vũ khí một bộ động tác.
+// thuyền, lính rìu giáp mây) và tướng thủy binh cầm đao dài; quân Hán (lính kích, nỏ thủ, giáp sĩ cầm đao vòng và
+// khiên). Mỗi lính một dáng, mỗi loại vũ khí một bộ động tác.
 
 import type * as THREE from 'three';
 import type { FighterKind } from '../game/battle';
@@ -27,7 +28,8 @@ import {
 } from './body';
 import { C } from './palette';
 import { RigBuilder, bakeRig, skinRig, type Act, type Poser } from './rig';
-import { LEATHER, arrow, bigAxe, bow, crossbowParts, drumShield, longDao, qua, quiver, spear, sword } from './weapons';
+import type { ShapeBuilder } from './shapes';
+import { LEATHER, arrow, bigAxe, bow, crossbowParts, daoVong, drumShield, kich, longDao, qua, quiver, spear, sword } from './weapons';
 
 /** Lính đông trong trận (tới vài chục): bớt số mặt cho nhẹ máy (xem `ShapeBuilder.detail`). */
 const DETAIL = 0.7;
@@ -44,8 +46,27 @@ export type SoldierKind =
   | 'linhThuy'
   | 'cungThuyen'
   | 'linhRiu'
-  | 'tuongThuy';
-const KINDS: readonly FighterKind[] = ['giao', 'cung', 'no', 'giaoAn', 'cungAn', 'phoTuong', 'linhTrieu', 'noTrieu', 'linhThuy', 'cungThuyen', 'linhRiu', 'tuongThuy'];
+  | 'tuongThuy'
+  | 'linhHan'
+  | 'noHan'
+  | 'giapHan';
+const KINDS: readonly FighterKind[] = [
+  'giao',
+  'cung',
+  'no',
+  'giaoAn',
+  'cungAn',
+  'phoTuong',
+  'linhTrieu',
+  'noTrieu',
+  'linhThuy',
+  'cungThuyen',
+  'linhRiu',
+  'tuongThuy',
+  'linhHan',
+  'noHan',
+  'giapHan',
+];
 
 /** Giáp mây đan của lính rìu Triệu. */
 const RATTAN = 0xc9a45a;
@@ -53,6 +74,8 @@ const RATTAN_DARK = 0x9a7a3a;
 /** Giáp sơn đen và lông chim đen của tướng thủy binh Triệu. */
 const ARMOR_BLACK = 0x2a272e;
 const FEATHER_BLACK = 0x3c3842;
+/** Khăn đen của quân Hán, viền khiên giáp sĩ Hán. */
+const HAN_BLACK = 0x2e2a28;
 /** Bắn thì quỳ một gối: hông hạ chừng này. */
 const KNEEL_DROP = 0.17;
 export const isSoldier = (k: FighterKind): k is SoldierKind => KINDS.includes(k);
@@ -108,6 +131,32 @@ function trieuSoldier(r: HumanRig): void {
   p.sphere(0.225, C.trieuCloth, 0, 0.835, -0.03, [1, 0.6, 1], 10);
   p.sphere(0.08, C.trieuCloth, 0, 0.99, -0.05, [1, 1, 1], 8);
   p.box(0.04, 0.16, 0.02, C.trieuRed, 0.08, 0.76, -0.21, [0.2, 0, 0.2]);
+}
+
+/** Hàng lá giáp chạy ngang quanh một ống (`r0` ở đáy `y0`, `r1` ở đỉnh `y1`), mỗi hàng một vòng sẫm. */
+function lamellae(p: ShapeBuilder, color: number, r0: number, r1: number, y0: number, y1: number, rows: number[]): void {
+  for (const y of rows) {
+    const rr = r0 + ((y - y0) / (y1 - y0)) * (r1 - r0) + 0.004;
+    p.cyl(rr, rr, 0.014, color, 0, y, 0, undefined, 10);
+  }
+}
+
+/** Giáp lá che ngực quân Hán (`vest`), ba hàng lá viền sẫm (`dark`). */
+function hanVest(r: HumanRig, vest: number, dark: number): void {
+  const chest = r.on('chest').plain;
+  chest.cyl(0.155, 0.138, 0.2, vest, 0, 0.48, 0, undefined, 10);
+  lamellae(chest, dark, 0.138, 0.155, 0.38, 0.58, [0.43, 0.49, 0.55]);
+}
+
+/** Quân Hán: quần đỏ sẫm, áo dài đỏ son quá gối, giáp (`vest`: lá sắt hay da) che ngực, khăn đen viền đỏ, vạt khăn dựng sau gáy. */
+function hanSoldier(r: HumanRig, vest: number, dark: number): void {
+  humanBody(r, { legs: C.hanRedDark, cloth: C.hanRed, pattern: false, long: true, top: C.hanRed, sleeves: C.hanRed, belt: dark });
+  hanVest(r, vest, dark);
+  humanHead(r, { brows: true });
+  const head = r.on('head').plain;
+  head.sphere(0.222, HAN_BLACK, 0, 0.84, -0.03, [1, 0.6, 1], 10);
+  head.cyl(0.226, 0.226, 0.03, C.hanRed, 0, 0.815, -0.03, undefined, 12);
+  head.box(0.17, 0.13, 0.06, HAN_BLACK, 0, 0.96, -0.12, [-0.3, 0, 0]);
 }
 
 /** Bao tên sau lưng, miệng bao chếch qua vai phải để tay phải rút tên. */
@@ -368,6 +417,67 @@ const SPECS: Record<SoldierKind, Spec> = {
       head.sphere(0.035, C.gold, 0, 1.0, -0.03, [1, 1, 1], 6);
       featherCrown(r, [FEATHER_BLACK, ARMOR_BLACK], { count: 7, len: 0.46 });
       r.local('hand', GRIP_R, null, longDao);
+    },
+  },
+  // Chương 5: quân Hán áo đỏ son.
+  linhHan: {
+    style: 'spear',
+    draw: (r) => {
+      // Lính kích: giáp lá sắt, kích sắt lưỡi ngang.
+      hanSoldier(r, C.hanIron, C.hanIronDark);
+      r.local('hand', GRIP_R, null, kich);
+    },
+  },
+  noHan: {
+    style: 'crossbow',
+    draw: (r) => {
+      // Nỏ thủ: giáp da, nỏ lớn lẫy đồng, đứng bắn; bao tên đỏ sẫm sau lưng.
+      hanSoldier(r, LEATHER, C.woodDark);
+      r.local('hand', GRIP_R, null, (s) => crossbowParts(s, false, 0.92));
+      backQuiver(r, C.hanRedDark, true);
+    },
+  },
+  giapHan: {
+    style: 'chop',
+    shield: true,
+    short: true,
+    draw: (r) => {
+      // Giáp sĩ: giáp lá sắt phủ tới gối, giáp vai, mũ sắt che gáy và má, chóp tua đỏ; khiên chữ nhật lớn sơn đỏ viền
+      // đen núm sắt; đao vòng.
+      humanBody(r, {
+        legs: C.hanRedDark,
+        cloth: C.hanIron,
+        pattern: false,
+        long: true,
+        top: C.hanIron,
+        sleeves: C.hanRed,
+        belt: C.hanRedDark,
+        greaves: C.hanIronDark,
+        wristband: C.hanIronDark,
+      });
+      lamellae(r.on('hips').plain, C.hanIronDark, 0.19, 0.125, 0.11, 0.41, [0.17, 0.25, 0.33]);
+      hanVest(r, C.hanIron, C.hanIronDark);
+      const chest = r.on('chest').plain;
+      for (const sx of [-1, 1]) {
+        chest.sphere(0.085, C.hanIron, sx * 0.18, 0.565, 0, [1.15, 0.7, 1.05], 8);
+        chest.box(0.13, 0.02, 0.15, C.hanIronDark, sx * 0.2, 0.525, 0, [0, 0, -sx * 0.4]);
+      }
+      humanHead(r, { brows: true });
+      const head = r.on('head').plain;
+      head.sphere(0.238, C.hanIron, 0, 0.845, -0.025, [1, 0.66, 1], 10);
+      head.cyl(0.242, 0.242, 0.03, C.hanIronDark, 0, 0.83, -0.025, undefined, 12);
+      head.box(0.36, 0.14, 0.05, C.hanIron, 0, 0.74, -0.2, [0.35, 0, 0]);
+      for (const sx of [-1, 1]) head.box(0.03, 0.14, 0.1, C.hanIron, sx * 0.215, 0.73, -0.03);
+      head.cyl(0.022, 0.022, 0.06, C.hanIronDark, 0, 1.0, -0.03, undefined, 6);
+      head.cone(0.065, 0.15, C.hanRed, 0, 1.08, -0.04, [Math.PI, 0, 0], 7);
+      r.local('armL', [-0.21, 0.38, 0.07], null, (s) => {
+        s.plain.box(0.38, 0.56, 0.03, HAN_BLACK, 0, 0, 0);
+        s.plain.box(0.32, 0.5, 0.04, C.hanRed, 0, 0, 0);
+        s.plain.box(0.32, 0.03, 0.046, HAN_BLACK, 0, 0.12, 0);
+        s.plain.box(0.32, 0.03, 0.046, HAN_BLACK, 0, -0.12, 0);
+        s.plain.sphere(0.055, C.hanIron, 0, 0, 0.03, [1, 1, 0.6], 8);
+      });
+      r.local('hand', GRIP_R, null, daoVong);
     },
   },
 };

@@ -347,3 +347,41 @@ export function drumShield(s: Parts, iron: boolean, r = 0.165, gold = false): vo
     if (gold) s.plain.box(0.035, 0.08, 0.012, C.red, 0, r + 0.02, 0.005, [0, 0, -0.2]);
   }
 }
+
+/**
+ * Kích sắt của lính Hán: cán dài 1,4 sơn đen, tay nắm cách đuôi 0,25, mũi giáo sắt trên đỉnh, lưỡi ngang hình trăng
+ * khuyết chĩa sang +x (bên phải lính) hơi cong lên, tua lông đen dưới họng.
+ */
+export function kich(s: Parts): void {
+  const p = s.plain;
+  const len = 1.4;
+  p.cyl(0.018, 0.018, len, C.ink, 0, len / 2 - 0.25, 0, undefined, 6);
+  const top = len - 0.25;
+  p.cyl(0.026, 0.022, 0.1, IRON_DARK, 0, top + 0.02, 0, undefined, 6);
+  // Mũi giáo sắt hình lá, gờ sống sẫm.
+  p.sphere(0.06, IRON, 0, top + 0.2, 0, [1, 2.6, 0.32], 8);
+  p.box(0.01, 0.24, 0.036, IRON_DARK, 0, top + 0.2, 0);
+  // Lưỡi ngang (qua) chĩa sang phải, mũi hơi cong lên; đuôi lưỡi ngắn bên trái giữ thăng bằng.
+  p.box(0.2, 0.05, 0.018, IRON, 0.11, top + 0.05, 0, [0, 0, 0.18]);
+  p.cone(0.03, 0.1, IRON, 0.24, top + 0.09, 0, [0, 0, -Math.PI / 2 + 0.35], 4);
+  p.box(0.06, 0.035, 0.02, IRON_DARK, -0.045, top + 0.04, 0);
+  // Tua lông đen dưới họng kích.
+  p.cone(0.045, 0.13, C.ink, 0, top - 0.07, 0, [Math.PI, 0, 0], 7);
+}
+
+/**
+ * Đao vòng (hoàn thủ đao) của giáp sĩ Hán: lưỡi sắt thẳng một bên dài 0,64, lưỡi sắc hướng +z, sống sẫm, mũi vát,
+ * chuôi quấn vải đen, đốc là vòng sắt. Gốc ở chỗ tay nắm.
+ */
+export function daoVong(s: Parts): void {
+  const p = s.plain;
+  const len = 0.64;
+  p.box(0.018, len, 0.055, IRON, 0, 0.07 + len / 2, 0.006);
+  p.box(0.022, len, 0.014, IRON_DARK, 0, 0.07 + len / 2, -0.022);
+  // Mũi vát chéo từ lưỡi lên sống.
+  p.box(0.018, 0.06, 0.05, IRON, 0, 0.07 + len + 0.012, -0.004, [0.75, 0, 0]);
+  p.box(0.05, 0.03, 0.09, IRON_DARK, 0, 0.055, 0);
+  p.cyl(0.02, 0.02, 0.13, C.ink, 0, -0.02, 0, undefined, 6);
+  // Vòng đốc nằm trong mặt phẳng lưỡi.
+  p.add(new THREE.TorusGeometry(0.042, 0.011, 6, 12), IRON_DARK, 0, -0.12, 0, [0, Math.PI / 2, 0]);
+}

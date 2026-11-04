@@ -115,14 +115,11 @@ export interface BuildingDef {
 /** Dời công trình sang chỗ khác tốn chừng này phần giá dựng (làm tròn lên). Điện Vua Hùng không dời được. */
 export const MOVE_FRACTION = 0.1;
 
-/** Điện Vua Hùng lên cấp 6 khi đã vào chương 2, cấp 7 khi đã vào chương 3, cấp 8 khi đã vào chương 4 (chỉ số là cấp đích). */
-export const DIEN_CHAPTER: Partial<Record<number, 2 | 3 | 4>> = { 6: 2, 7: 3, 8: 4 };
-
 /**
- * Sau truyện: Điện lên cấp 9 khi đã hộ giá vua ra biển Mộ Dạ (thắng màn 32, màn hình Hết truyện), cấp 10 khi đã có
- * Điện 9 và thắng chừng này thử thách phó bản.
+ * Điện Vua Hùng lên cấp 6 khi đã vào chương 2, cấp 7 khi đã vào chương 3, cấp 8 khi đã vào chương 4, cấp 10 khi đã
+ * vào chương 5 (chỉ số là cấp đích). Cấp 9 mở khi đã hộ giá vua ra biển Mộ Dạ (thắng màn 32, màn hình Hết truyện).
  */
-export const DIEN10_CHALLENGES = 16;
+export const DIEN_CHAPTER: Partial<Record<number, 2 | 3 | 4 | 5>> = { 6: 2, 7: 3, 8: 4, 10: 5 };
 
 /** Tổng số ô đường (cả bốn loại) được trải, theo cấp Điện. */
 export const ROAD_LIMIT = [60, 90, 120, 160, 200, 240, 280, 280, 295, 310];
@@ -1189,7 +1186,10 @@ export type EnemyType =
   | 'linhThuy'
   | 'cungThuyen'
   | 'linhRiu'
-  | 'tuongThuy';
+  | 'tuongThuy'
+  | 'linhHan'
+  | 'noHan'
+  | 'giapHan';
 export const UNIT_TYPES: UnitType[] = ['giao', 'cung', 'voi', 'no'];
 
 export interface FighterStats {
@@ -1216,18 +1216,18 @@ export interface UnitDef extends FighterStats {
 }
 
 /** Quân nặng của giặc: giáo binh và lính nỏ khắc chế. */
-const HEAVY: EnemyType[] = ['chienXa', 'caSau', 'hoTinh', 'kyBinh', 'linhRiu'];
+const HEAVY: EnemyType[] = ['chienXa', 'caSau', 'hoTinh', 'kyBinh', 'linhRiu', 'giapHan'];
 
 /**
- * Quân ta: giáo binh thắng quân nặng (chiến xa, cá sấu, hổ tinh, kỵ binh, lính rìu), cung thủ thắng lính bộ
- * (lính giáo Ân, tôm binh, quỷ núi, lính khiên Triệu, lính thủy), voi chiến thắng quân bắn xa
- * (cung thủ Ân, cá phun nước, ma trơi, nỏ thủ Triệu, cung thuyền).
+ * Quân ta: giáo binh thắng quân nặng (chiến xa, cá sấu, hổ tinh, kỵ binh, lính rìu, giáp sĩ Hán), cung thủ thắng
+ * lính bộ (lính giáo Ân, tôm binh, quỷ núi, lính khiên Triệu, lính thủy, lính kích Hán), voi chiến thắng quân bắn xa
+ * (cung thủ Ân, cá phun nước, ma trơi, nỏ thủ Triệu, cung thuyền, nỏ thủ Hán).
  * Lính nỏ (chương 4) đứng ngoài vòng khắc chế: đánh mạnh gấp đôi quân nặng và mọi trùm.
  */
 export const UNITS: Record<UnitType, UnitDef> = {
   giao: { hp: 60, dmg: 8, range: 0.8, speed: 1.6, cooldown: 1.0, strongVs: HEAVY, cost: { gao: 20, voOc: 8 }, home: 'traiGiao', space: 1, upkeep: 0.6 },
-  cung: { hp: 40, dmg: 7, range: 3.8, speed: 1.5, cooldown: 1.2, strongVs: ['giaoAn', 'tomBinh', 'quyNui', 'linhTrieu', 'linhThuy'], cost: { gao: 25, voOc: 8, sat: 4 }, home: 'traiCung', space: 1, upkeep: 0.6 },
-  voi: { hp: 200, dmg: 15, range: 0.9, speed: 1.1, cooldown: 1.5, strongVs: ['cungAn', 'caPhun', 'maTroi', 'noTrieu', 'cungThuyen'], cost: { gao: 60, voOc: 20, sat: 12 }, home: 'chuongVoi', space: 3, upkeep: 1.5 },
+  cung: { hp: 40, dmg: 7, range: 3.8, speed: 1.5, cooldown: 1.2, strongVs: ['giaoAn', 'tomBinh', 'quyNui', 'linhTrieu', 'linhThuy', 'linhHan'], cost: { gao: 25, voOc: 8, sat: 4 }, home: 'traiCung', space: 1, upkeep: 0.6 },
+  voi: { hp: 200, dmg: 15, range: 0.9, speed: 1.1, cooldown: 1.5, strongVs: ['cungAn', 'caPhun', 'maTroi', 'noTrieu', 'cungThuyen', 'noHan'], cost: { gao: 60, voOc: 20, sat: 12 }, home: 'chuongVoi', space: 3, upkeep: 1.5 },
   no: {
     hp: 50,
     dmg: 26,
@@ -1272,6 +1272,10 @@ export const ENEMIES: Record<EnemyType, FighterStats> = {
   linhRiu: { hp: 310, dmg: 25, range: 0.9, speed: 1.5, cooldown: 1.4, strongVs: ['cung'] },
   // Tướng thủy binh Triệu cầm đao dài, trùm màn 28 ở cửa sông.
   tuongThuy: { hp: 1500, dmg: 32, range: 1.2, speed: 1.3, cooldown: 1.2 },
+  // Quân Hán (chương 5), mạnh hơn quân Triệu chừng 10%: lính kích, nỏ thủ bắn xa, giáp sĩ là quân nặng.
+  linhHan: { hp: 105, dmg: 13, range: 1.0, speed: 1.4, cooldown: 1.0 },
+  noHan: { hp: 60, dmg: 13, range: 4.2, speed: 1.3, cooldown: 1.5 },
+  giapHan: { hp: 330, dmg: 26, range: 0.9, speed: 1.5, cooldown: 1.4, strongVs: ['cung'] },
 };
 
 /**
@@ -1371,9 +1375,9 @@ export const FIRST_LAND_MS = 3 * 60_000;
 
 /**
  * Ai đánh kinh đô: giặc Ân (chương 1), Thủy Tinh dâng nước kèm thủy quái, yêu tinh núi Thất Diệu, quân Triệu Đà
- * trên bộ, hay thủy binh Triệu đi thuyền (chương 4).
+ * trên bộ, thủy binh Triệu đi thuyền (chương 4), hay quân Hán trên bộ (chương 5).
  */
-export type Foe = 'an' | 'thuy' | 'yeu' | 'trieu' | 'thuyBinh';
+export type Foe = 'an' | 'thuy' | 'yeu' | 'trieu' | 'thuyBinh' | 'han';
 
 /** Yêu tinh núi Thất Diệu đêm thứ `n` kéo về phá thành. */
 export function yeuForces(n: number): Partial<Record<EnemyType, number>> {
@@ -1404,6 +1408,16 @@ export function thuyBinhForces(n: number): Partial<Record<EnemyType, number>> {
   };
 }
 export const thuyBinhHpScale = (n: number) => 2.0 + 0.12 * (n - 1);
+
+/** Quân Hán trên bộ đợt thứ `n` đánh kinh đô (chương 5). */
+export function hanForces(n: number): Partial<Record<EnemyType, number>> {
+  return {
+    linhHan: Math.min(10 + n, 20),
+    noHan: Math.min(5 + Math.floor(n / 2), 12),
+    giapHan: Math.min(2 + Math.floor(n / 3), 6),
+  };
+}
+export const hanHpScale = (n: number) => 2.2 + 0.12 * (n - 1);
 /**
  * Thuyền giặc: mỗi thuyền chở `carry` lính, hiện ở mép sông xa rồi chèo vào bờ gần nhất với tốc độ `speed`
  * (ô mỗi giây), thuyền sau rời bến chậm hơn thuyền trước `stagger` giây. Thuyền không có máu, neo tới hết trận.
@@ -1411,6 +1425,8 @@ export const thuyBinhHpScale = (n: number) => 2.0 + 0.12 * (n - 1);
 export const BOAT = { carry: 6, speed: 0.6, stagger: 1.2 };
 /** Vào chương 4: đợt thủy binh đầu tiên tới sau chừng này thời gian chơi. */
 export const FIRST_THUY_BINH_MS = 3 * 60_000;
+/** Vào chương 5: đợt quân Hán đầu tiên tới sau chừng này thời gian chơi. */
+export const FIRST_HAN_MS = 3 * 60_000;
 
 /**
  * Trận giữ kinh đô: kinh đô đã giãn rộng chừng này lần (công trình to hơn một ô mỗi chiều), nên mọi tầm bắn,
@@ -1477,6 +1493,9 @@ export const ENEMY_ROWS: Record<EnemyType, Row> = {
   linhRiu: 'trung',
   cungThuyen: 'hau',
   tuongThuy: 'hau',
+  linhHan: 'tien',
+  giapHan: 'trung',
+  noHan: 'hau',
 };
 
 /**
@@ -1488,7 +1507,7 @@ export const FIELD = { w: 9, d: 22, gap: 10, hpMul: 1.6, maxS: 90 };
 
 export type Terrain = 'rung' | 'benSong' | 'lang' | 'don' | 'nui' | 'doi' | 'ngap' | 'tanVien' | 'thatDieu' | 'coLoa' | 'cuaSong' | 'moDa' | 'benKia';
 
-export type Chapter = 1 | 2 | 3 | 4;
+export type Chapter = 1 | 2 | 3 | 4 | 5;
 
 /** Một đợt giặc kéo tới bãi chiến lúc `at` giây (màn cầm cự). */
 export interface StageWave {
@@ -1655,8 +1674,8 @@ export const CHALLENGES: ChallengeDef[] = [
   hai('giao', 'no', 3.1),
   du(3.3),
 ];
-/** Huân công cho lần đầu thắng thử thách, theo chương của màn: màn 1–8 được 1, … màn 25–32 được 4. */
-export const HUAN_REWARD: Record<Chapter, number> = { 1: 1, 2: 2, 3: 3, 4: 4 };
+/** Huân công cho lần đầu thắng thử thách, theo chương của màn: màn 1–8 được 1, … màn 25–32 được 4, màn 33–40 được 5. */
+export const HUAN_REWARD: Record<Chapter, number> = { 1: 1, 2: 2, 3: 3, 4: 4, 5: 5 };
 /** Nhánh huân công: bốn binh chủng và tướng (cho mọi tướng). */
 export type HuanBranch = UnitType | 'tuong';
 export const HUAN_BRANCHES: HuanBranch[] = ['giao', 'cung', 'voi', 'no', 'tuong'];
@@ -1702,6 +1721,7 @@ export type QuestGoal =
   | { kind: 'uNo'; amount: number }
   | { kind: 'unitTroops'; unit: UnitType; amount: number }
   | { kind: 'thuyBinhHeld'; amount: number }
+  | { kind: 'hanHeld'; amount: number }
   /** Có ít nhất `amount` công trình (không kể Điện) ở cấp `level` trở lên. */
   | { kind: 'buildingLevel'; level: number; amount: number };
 
@@ -1766,11 +1786,13 @@ export const QUESTS: QuestDef[] = [
   { id: 'quaMan30', goal: { kind: 'stage', stage: 30 }, reward: { voOc: 1500, sat: 500 } },
   { id: 'hoGia', goal: { kind: 'stage', stage: 32 }, reward: { gao: 3000, voOc: 3000 } },
   { id: 'denCuong', goal: { kind: 'count', building: 'denCuong', amount: 1 }, reward: { datDa: 2200, sat: 700 } },
-  // Sau truyện: Điện cấp 9, 10.
+  // Sau truyện chương 4: Điện cấp 9.
   { id: 'dien9', goal: { kind: 'dienLevel', level: 9 }, reward: { gao: 3000, voOc: 3000 } },
   { id: 'cap9', goal: { kind: 'buildingLevel', level: 9, amount: 1 }, reward: { datDa: 2500, sat: 600 } },
+  // Chương 5: Hai Bà Trưng. Mở đầu bằng Điện cấp 10. Mỗi phần làm xong thì nối thêm nhiệm vụ của phần ấy vào cuối.
   { id: 'dien10', goal: { kind: 'dienLevel', level: 10 }, reward: { gao: 4500, voOc: 4500 } },
   { id: 'cap10', goal: { kind: 'buildingLevel', level: 10, amount: 1 }, reward: { datDa: 3500, sat: 900 } },
+  { id: 'chongHan', goal: { kind: 'hanHeld', amount: 1 }, reward: { voOc: 2500, sat: 700 } },
 ];
 /** Nhận xong thưởng nhiệm vụ cuối chương 1 (Đền Phù Đổng) thì sang chương 2. */
 export const CH2_QUEST_START = 20;
@@ -1778,6 +1800,8 @@ export const CH2_QUEST_START = 20;
 export const CH3_QUEST_START = 30;
 /** Nhận xong thưởng nhiệm vụ cuối chương 3 (Đền Cổ Loa) thì sang chương 4. */
 export const CH4_QUEST_START = 40;
+/** Nhận xong thưởng nhiệm vụ "một công trình cấp 9" (đã có Điện 9, sau Hết truyện chương 4) thì sang chương 5. */
+export const CH5_QUEST_START = 52;
 /** Bản lưu cũ (phiên bản 3) đã làm qua nhiệm vụ này thì chỉ số nhiệm vụ phải dời thêm một. */
 export const QUEST_INSERTED_V4 = 11;
 

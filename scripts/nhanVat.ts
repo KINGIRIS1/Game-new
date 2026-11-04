@@ -61,6 +61,9 @@ export const NHOM: Record<string, Entry[]> = {
     { ten: 'Cung thuyền Triệu', tao: () => makeSoldier('cungThuyen') },
     { ten: 'Lính rìu giáp mây', tao: () => makeSoldier('linhRiu') },
     { ten: 'Tướng thủy binh Triệu', tao: () => makeSoldier('tuongThuy'), co: 0.9, cach: 0.85 },
+    { ten: 'Lính kích Hán', tao: () => makeSoldier('linhHan') },
+    { ten: 'Nỏ thủ Hán', tao: () => makeSoldier('noHan') },
+    { ten: 'Giáp sĩ Hán', tao: () => makeSoldier('giapHan') },
   ],
   thu: [
     { ten: 'Voi chiến bậc 0', tao: () => makeBeast('voi', 0), co: 1.5, cach: 1.5 },

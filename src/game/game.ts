@@ -8,6 +8,7 @@ import { initialCayDa, updateCayDa, type CayDaState } from './cayDa';
 import { bridgeFit, bridgeheadCells, cutOff, farFactor, farRaidBank, fortFit, initialBenKia, landRaidSide, openBridgehead, updateBenKia, villagesOutput, type BenKiaState } from './benKia';
 import { huanTiers, initialThuThach } from './thuThach';
 import { inChapter4 } from './chuong4';
+import { inChapter5 } from './chuong5';
 import { advJoined, initialAdv, inChapter3, ruaVangCame, wallRings } from './coLoa';
 import { heroFor, inChapter2, initialSon, restAfter, sonJoined } from './son';
 import { bake, datBonus, initialTet, troiBonus, updateTet, type TetState } from './tet';
@@ -18,8 +19,9 @@ import {
   CA_PER_MIN,
   CH3_QUEST_START,
   CH4_QUEST_START,
+  CH5_QUEST_START,
   DIEN_CHAPTER,
-  DIEN10_CHALLENGES,
+  FIRST_HAN_MS,
   FIRST_THUY_BINH_MS,
   U_NO,
   LAU_NO_TOWERS,
@@ -142,6 +144,9 @@ export interface RaidState {
   /** Số đợt thủy binh Triệu đi thuyền đánh kinh đô, và số đợt đánh lui được hết. */
   thuyBinh: number;
   thuyBinhHeld: number;
+  /** Số đợt quân Hán đánh kinh đô (chương 5), và số đợt đánh lui được hết. */
+  han: number;
+  hanHeld: number;
   /** Mực nước lũ đang thấy (bậc), 0 khi không có lũ. Dâng trong trận, rút dần sau trận. */
   water: number;
   /** Lúc giặc tràn vào (hết thời gian báo trước). */
@@ -284,9 +289,9 @@ export interface Merchant {
 /**
  * Phiên bản bản lưu hiện tại (11: kinh đô lớn; 12: khoảnh tự chọn; 13: lính nỏ, ụ nỏ; 14: Cao Lỗ, vua xuống biển;
  * 15: thử thách, huân công; 16: gỗ, tài nguyên thứ năm, và gợi ý của Lạc hầu về công trình mới; 17: cây, đá mọc trên
- * ô trống; 18: lưới nới qua sông, 76×76).
+ * ô trống; 18: lưới nới qua sông, 76×76; 20: chương 5, quân Hán).
  */
-export const SAVE_VERSION = 19;
+export const SAVE_VERSION = 20;
 
 export interface GameState {
   version: typeof SAVE_VERSION;
@@ -392,7 +397,7 @@ export type FailReason =
   | 'daTheoMau'
   | 'canChuong4'
   | 'canHetTruyen'
-  | 'canThuThach'
+  | 'canChuong5'
   | 'khongGhepDuoc'
   | 'canNoiO'
   | 'noiOHu'
@@ -451,6 +456,8 @@ export function initialRaid(): RaidState {
     trieuHeld: 0,
     thuyBinh: 0,
     thuyBinhHeld: 0,
+    han: 0,
+    hanHeld: 0,
     water: 0,
     startsAt: 0,
     battle: null,
@@ -842,14 +849,15 @@ export function canUpgrade(state: GameState, id: number): Result {
   if (!b) return fail('khongTimThay');
   const cost = upgradeCostOf(b);
   if (!cost) return fail('capToiDa');
-  // Điện lên cấp 6 khi đã vào chương 2, cấp 7 khi đã vào chương 3, cấp 8 khi đã vào chương 4.
+  // Điện lên cấp 6 khi đã vào chương 2, cấp 7 khi đã vào chương 3, cấp 8 khi đã vào chương 4, cấp 10 khi đã vào
+  // chương 5.
   const chapter = b.type === 'dien' ? DIEN_CHAPTER[b.level + 1] : undefined;
   if (chapter === 2 && !inChapter2(state)) return fail('canChuong2');
   if (chapter === 3 && !inChapter3(state)) return fail('canChuong3');
   if (chapter === 4 && !inChapter4(state)) return fail('canChuong4');
-  // Sau truyện: Điện 9 khi vua đã ra biển Mộ Dạ (Hết truyện), Điện 10 khi đã thắng đủ thử thách phó bản.
+  if (chapter === 5 && !inChapter5(state)) return fail('canChuong5');
+  // Sau truyện chương 4: Điện 9 khi vua đã ra biển Mộ Dạ (Hết truyện).
   if (b.type === 'dien' && b.level + 1 === 9 && !state.adv.bien) return fail('canHetTruyen');
-  if (b.type === 'dien' && b.level + 1 === 10 && state.thuThach.won.length < DIEN10_CHALLENGES) return fail('canThuThach');
   if (dienLevel(state) < dienNeededFor(b.type, b.level + 1)) return fail('chuaDuCapDien');
   if (!canAfford(state, cost)) return fail('thieuTaiNguyen');
   return ok(undefined);
@@ -913,6 +921,9 @@ export function questProgress(state: GameState): { have: number; need: number } 
     need = goal.amount;
   } else if (goal.kind === 'thuyBinhHeld') {
     have = state.raid.thuyBinhHeld;
+    need = goal.amount;
+  } else if (goal.kind === 'hanHeld') {
+    have = state.raid.hanHeld;
     need = goal.amount;
   } else if (goal.kind === 'buildingLevel') {
     const lv = goal.level;
@@ -1284,6 +1295,8 @@ export function claimQuest(state: GameState): Result<Cost> {
   if (state.questIndex === CH3_QUEST_START) scheduleLandRaid(state);
   // Vào chương 4: ít phút sau, thủy binh Triệu đội lốt cướp sông đi thuyền tới.
   if (state.questIndex === CH4_QUEST_START) scheduleThuyBinh(state);
+  // Vào chương 5: ít phút sau, quân Hán kéo tới.
+  if (state.questIndex === CH5_QUEST_START) scheduleHan(state);
   return ok(quest.reward);
 }
 
@@ -1474,11 +1487,13 @@ function landFoe(state: GameState): 'yeu' | 'trieu' | null {
 /**
  * Đợt sắp tới là ai: chương 1 giặc Ân; chương 2 mùa lũ; chương 3 thì giặc trên bộ và mùa lũ xen nhau,
  * đợt trước là giặc trên bộ thì đợt này là lũ. Chương 4: thủy binh Triệu và lũ xen nhau; từ khi lẫy nỏ thần
- * bị tráo thì ba đợt thay phiên: thủy binh → quân Triệu trên bộ → lũ.
+ * bị tráo thì ba đợt thay phiên: thủy binh → quân Triệu trên bộ → lũ. Chương 5: thủy binh và quân Triệu thôi tới,
+ * quân Hán trên bộ và lũ xen nhau.
  */
 export function nextFoe(state: GameState): Foe {
   const raid = state.raid;
   if (raid.phase !== 'idle') return raid.foe;
+  if (inChapter5(state)) return raid.foe === 'han' ? 'thuy' : 'han';
   if (inChapter4(state)) {
     if (raid.foe === 'thuyBinh') return state.adv.layTrao ? 'trieu' : 'thuy';
     if (raid.foe === 'trieu' && state.adv.layTrao) return 'thuy';
@@ -1491,9 +1506,10 @@ export function nextFoe(state: GameState): Foe {
 
 /**
  * Đợt giặc này thuộc chương nào, để chọn tướng ra trận. Quân Triệu ở chương 4 và thủy binh tính như trận chương 4:
- * An Dương Vương giữ kinh đô tới khi xuống biển, rồi Cao Lỗ.
+ * An Dương Vương giữ kinh đô tới khi xuống biển, rồi Cao Lỗ. Quân Hán là trận chương 5.
  */
 function foeChapter(state: GameState, foe: Foe): Chapter {
+  if (foe === 'han') return 5;
   if (foe === 'thuyBinh' || (foe === 'trieu' && inChapter4(state))) return 4;
   return foe === 'an' ? 1 : foe === 'thuy' ? 2 : 3;
 }
@@ -1540,6 +1556,10 @@ function finishRaid(state: GameState): void {
     raid.thuyBinh += 1;
     if (won) raid.thuyBinhHeld += 1;
   }
+  if (battle.foe === 'han') {
+    raid.han += 1;
+    if (won) raid.hanHeld += 1;
+  }
   restAfter(state, battle);
   raid.wave = battle.wave;
   raid.phase = 'idle';
@@ -1568,6 +1588,15 @@ export function scheduleThuyBinh(state: GameState): void {
   if (raid.phase !== 'idle') return;
   raid.nextAt = Math.min(raid.nextAt ?? Infinity, state.clock + FIRST_THUY_BINH_MS);
   // Đợt tới phải là thủy binh: coi như đợt trước là lũ.
+  raid.foe = 'thuy';
+}
+
+/** Vào chương 5: đợt quân Hán đầu tới sau một lúc (không muộn hơn lịch sẵn có). */
+export function scheduleHan(state: GameState): void {
+  const raid = state.raid;
+  if (raid.phase !== 'idle') return;
+  raid.nextAt = Math.min(raid.nextAt ?? Infinity, state.clock + FIRST_HAN_MS);
+  // Đợt tới phải là quân Hán: coi như đợt trước là lũ.
   raid.foe = 'thuy';
 }
 
@@ -1617,7 +1646,9 @@ function updateRaid(state: GameState, ms: number): void {
             ? { foe, n: raid.trieu + 1 }
             : foe === 'thuyBinh'
               ? { foe, n: raid.thuyBinh + 1 }
-              : null,
+              : foe === 'han'
+                ? { foe, n: raid.han + 1 }
+                : null,
       crossbows: hasCoLoa(state),
       walls: hasKimQuy(state),
       fewerBoats: hasCuong(state),

@@ -1696,10 +1696,10 @@ Chủ dự án yêu cầu lập kế hoạch cho cấp 9, 10 rồi **duyệt the
 |---|---|---|---|---|---|---|
 | 8 (đã có) | vào chương 4 | 10400 gạo, 9200 vỏ ốc, 8000 đất đá, 1800 sắt | 32000 | 11 | 18, 9 | 2000 |
 | 9 | Hết truyện | 14100 gạo, 12300 vỏ ốc, 11000 đất đá, 2400 sắt | 44000 | 12 | 20, 10 | 2200 |
-| 10 | Điện 9 + 16 thử thách | 19200 gạo, 16800 vỏ ốc, 15200 đất đá, 3400 sắt | 60000 | 13 | 22, 11 | 2400 |
+| 10 | vào chương 5 | 19200 gạo, 16800 vỏ ốc, 15200 đất đá, 3400 sắt | 60000 | 13 | 22, 11 | 2400 |
 
 - Bảng trên là số cuối cùng (PR luật đã làm). Đề xuất ban đầu: Điện 9 giá 16000 gạo, 14000 vỏ ốc, 12500 đất đá, 2800 sắt; Điện 10 giá 24000, 21000, 19000, 4200 (gấp chừng 1,5 cấp trước). Đo bằng người chơi mô phỏng thì quá chậm (xem mục Nhịp), nên hạ: Điện 9 bớt 12%, Điện 10 bớt 20% (mức tối đa đã cho).
-- Mốc mở: Điện 9 cần vua đã ra biển Mộ Dạ (`adv.bien`, thắng màn 32), báo "Mở sau khi hộ giá vua ra biển Mộ Dạ"; Điện 10 cần đã thắng `DIEN10_CHALLENGES` = 16 thử thách, báo "Cần thắng 16 thử thách phó bản".
+- Mốc mở: Điện 9 cần vua đã ra biển Mộ Dạ (`adv.bien`, thắng màn 32), báo "Mở sau khi hộ giá vua ra biển Mộ Dạ"; Điện 10 lúc đầu cần thắng 16 thử thách (`DIEN10_CHALLENGES`). **Kế hoạch chương 5 (điều 1) bỏ mốc này**: Điện 10 mở khi vào chương 5 (`DIEN_CHAPTER[10]` = 5), báo "Mở ở chương 5: Hai Bà Trưng" (`canChuong5`).
 - Số công trình tối đa: **thêm 1 ruộng, 1 nhà sàn, 1 chòi canh mỗi cấp**; các loại khác giữ như Điện 8. Lũy, đê, thành, đường mỗi cấp thêm chừng 5% vì đất rộng thêm. `FIELD_CAP` giữ 38 (bãi chiến tối đa chừng 60 người). `GUARD_CAP` 62, 68. `TET_NEED` giữ 40.
 
 ### Chín loại công trình lên cấp 9, 10
@@ -1725,8 +1725,8 @@ Số cuối cùng (PR luật đã làm): giá chừng gấp 1,3 cấp trước, 
 
 ### Nhịp (đo bằng `balance.test.ts`, không tính thưởng phó bản)
 
-- Người chơi mô phỏng lên Điện 8 rồi ở lại chương 4 chừng nửa giờ thì hết truyện (`playChapters({ last: 10 })`, mốc `hetTruyen`): coi như đã thắng màn 32 và đủ 16 thử thách, của dành dụm coi như đã tiêu hết, như lúc vào mỗi chương.
-- Đích: từ lúc hết truyện tới Điện 9 **35–50 phút**; từ Điện 9 tới Điện 10 **45–65 phút**.
+- Người chơi mô phỏng lên Điện 8 rồi ở lại chương 4 chừng nửa giờ thì hết truyện (`playChapters({ last: 10 })`, mốc `hetTruyen`): coi như đã thắng màn 32, của dành dụm coi như đã tiêu hết, như lúc vào mỗi chương.
+- Đích: từ lúc hết truyện tới Điện 9 **35–50 phút**; từ Điện 9 tới Điện 10 **45–65 phút**. Từ chương 5, người chơi mô phỏng nhận thưởng nhiệm vụ "một công trình cấp 9" là vào chương 5 và lên được Điện 10, nhịp đo giữ nguyên.
 - Với giá đề xuất ban đầu: Điện 9 mất 68 phút, Điện 10 mất 131 phút. Vỏ ốc nghẽn: chín loại công trình cùng lên cấp tiêu gần 270 nghìn vỏ ốc, trong khi gạo tràn kho 61%.
 - Đã sửa (đo lại: **Điện 9 mất 37,5 phút, Điện 10 mất 64,7 phút**; sau khi gộp phát rừng thoải mái và vùng bên kia sông: 37,8 và 64,0 phút):
   - giá lên cấp 9, 10 của chín loại hạ 20%, Điện 10 hạ 20%, Điện 9 hạ 12%;
@@ -1777,8 +1777,8 @@ Số cuối cùng (PR luật đã làm): giá chừng gấp 1,3 cấp trước, 
 
 ### Code (PR luật, đã làm)
 
-- `defs.ts`: `maxLevel` 10 cho Điện và chín loại; mọi mảng theo cấp Điện đủ 10 phần tử (số tối đa, `STORAGE_CAP`, `ROAD_LIMIT` 295, 310, `FIELD_CAP`, `GUARD_CAP`, `TET_NEED`, ụ nỏ, đồ trang trí, thưởng dọn cây đá 530, 740 gạo và 265, 370 đất đá); `TOWER.dmg`, `CA_PER_MIN` thêm hai cấp; `DIEN10_CHALLENGES`. Các loại khác giữ số tối đa như Điện 8.
-- `game.ts` (`canUpgrade`): lý do mới `canHetTruyen`, `canThuThach`. Nhiệm vụ mới kiểu `buildingLevel` (có công trình ở cấp ấy trở lên).
+- `defs.ts`: `maxLevel` 10 cho Điện và chín loại; mọi mảng theo cấp Điện đủ 10 phần tử (số tối đa, `STORAGE_CAP`, `ROAD_LIMIT` 295, 310, `FIELD_CAP`, `GUARD_CAP`, `TET_NEED`, ụ nỏ, đồ trang trí, thưởng dọn cây đá 530, 740 gạo và 265, 370 đất đá); `TOWER.dmg`, `CA_PER_MIN` thêm hai cấp; `DIEN10_CHALLENGES` (chương 5 đã bỏ). Các loại khác giữ số tối đa như Điện 8.
+- `game.ts` (`canUpgrade`): lý do mới `canHetTruyen`, `canThuThach` (chương 5 thay bằng `canChuong5`). Nhiệm vụ mới kiểu `buildingLevel` (có công trình ở cấp ấy trở lên).
 - `khoanh.ts` (`V11_AREA` giữ 45 ở Điện 9, 10: khung mẫu giữ như Điện 8), `mau.ts` (`MAU_BARRACKS` giữ 5). Cầu qua sông, bản làng, đồn biên (vùng bên kia sông) giữ số tối đa như Điện 8; làng bên kia làm ra theo cấp Điện nên Điện 9, 10 làng làm ra nhiều hơn. Mẫu kinh đô dựng được ở Điện 9, 10 cho cả bốn mẫu, đủ ruộng và chòi canh mới.
 - Bản lưu **phiên bản 19** (chỉ đổi số; phiên bản 18 là vùng đất bên kia sông).
 - Nhiệm vụ Lạc hầu 50–53: lên Điện 9, một công trình cấp 9, lên Điện 10, một công trình cấp 10.
@@ -2128,7 +2128,7 @@ Như chương 4, chỉ học cơ chế của các game cùng thể loại, còn 
 ### Hiện trạng (khảo sát code)
 
 - Có 54 nhiệm vụ (số 0–53): 50 nhiệm vụ của bốn chương, rồi 4 nhiệm vụ sau truyện (lên Điện 9, một công trình cấp 9, lên Điện 10, một công trình cấp 10).
-- Điện 9 mở khi xem Hết truyện. Điện 10 cần thêm 16 thử thách (`DIEN10_CHALLENGES`). Điện cao nhất là cấp 10.
+- Điện 9 mở khi xem Hết truyện. Điện 10 cần thêm 16 thử thách (`DIEN10_CHALLENGES`). Điện cao nhất là cấp 10. (Trước PR 1; PR 1 đã bỏ mốc thử thách.)
 - `Chapter` là 1–4. `chapterOf` tính chương theo số nhiệm vụ đã nhận thưởng (`CH2_QUEST_START` … `CH4_QUEST_START`).
 - Mỗi trận chỉ có một tướng (`Battle.hero`). Quân ta chưa có cách gọi thêm người giữa trận; giặc thì có (Thủy Tinh gọi thủy quái, `TT_SUMMON`).
 - Kinh đô chương 4: thủy binh Triệu, quân Triệu trên bộ và lũ thay phiên nhau (`nextFoe`). Thuyền giặc chỉ chở lính cập bờ, không tự đánh.
@@ -2209,9 +2209,10 @@ Ba loại lính theo đúng vòng khắc chế như giặc các chương trướ
 - **Tô Định bỏ chạy**: còn 30% máu thì quay đầu chạy về cuối bãi, nhanh gấp rưỡi. Chạy thoát khỏi bãi thì tính như đã hạ, đúng như truyện kể hắn bỏ trốn về Nam Hải. Phải diệt hết quân của hắn mới thắng màn.
 - **Mã Viện có Lệnh nỏ**: lần đầu sau 8 giây, rồi cứ 14 giây, một loạt tên nỏ rơi xuống chỗ quân ta đứng đông nhất: 40 sát thương mỗi người trong 3 ô. Đây là trùm đầu tiên bắn vào chỗ quân ta dồn cục, người chơi phải đánh nhanh hay xếp hàng thưa.
 - **Dáng** (`soldier.ts`, `beasts.ts`): quân Hán mặc áo đỏ son để khác quân Triệu áo đen.
-  - Lính kích: áo đỏ son ngắn, giáp lá xám sắt, khăn đen, cầm kích (giáo có thêm lưỡi trăng khuyết một bên).
-  - Nỏ thủ: áo đỏ, giáp da nâu, nỏ lớn lẫy đồng, đứng bắn.
-  - Giáp sĩ: giáp lá sắt phủ tới gối, mũ sắt, khiên chữ nhật lớn sơn đỏ, đao vòng.
+  - Lính kích: quần đỏ sẫm, áo dài đỏ son quá gối, giáp lá xám sắt che ngực (ba hàng lá), khăn đen viền đỏ dựng vạt sau gáy, cầm kích sắt cán đen (mũi giáo và lưỡi ngang chĩa sang phải, tua lông đen; `kich` ở `weapons.ts`).
+  - Nỏ thủ: áo như lính kích nhưng giáp da nâu, nỏ lớn lẫy đồng, đứng bắn (tên sẫm bay nhanh như nỏ Triệu), bao tên đỏ sẫm sau lưng.
+  - Giáp sĩ: giáp lá sắt phủ tới gối, giáp vai, tay áo đỏ, mũ sắt che gáy và má có chóp tua đỏ, khiên chữ nhật lớn sơn đỏ viền đen núm sắt, đao vòng (lưỡi thẳng một bên, đốc vòng sắt; `daoVong`).
+  - Màu ở `palette.ts`: `hanRed`, `hanRedDark`, `hanIron`, `hanIronDark`. PR 1 đã làm ba lính.
   - Tô Định: quan phục đen dài, mũ quan cao, ấn đeo ở đai, bụng phệ, cầm kiếm; lúc bỏ chạy thì rơi mũ, ôm ấn chạy.
   - Mã Viện: râu tóc bạc, giáp đồng đỏ, áo choàng đỏ, mũ trụ có chùm lông đỏ, cưỡi ngựa trắng, cầm đại đao; Lệnh nỏ thì giơ đao chỉ, cờ lệnh đen phất.
 
@@ -2225,6 +2226,7 @@ Ba loại lính theo đúng vòng khắc chế như giặc các chương trướ
   - Đánh chìm thì thuyền nghiêng, chìm dần. Hết giờ trận mà lâu thuyền còn thì rút đi như giặc còn sống lúc hết giờ.
   - Dáng (`makeLauThuyen` ở `models.ts`): thân thuyền dài chừng 4 ô, hai hàng mái chèo, lầu gỗ ba tầng mái ngói đen, lan can đỏ, cờ đen lớn trên nóc, lính nỏ Hán đứng ở từng tầng.
 - Hai bà giữ kinh đô. Trước PR 2 (chưa có hai bà) thì Cao Lỗ giữ.
+- **Số cuối PR 1 (đã làm)**: giữ nguyên đề xuất. Ba lính như bảng trên (`linhHan`, `noHan`, `giapHan` ở `defs.ts`; cung thủ khắc lính kích, voi khắc nỏ thủ, giáp sĩ là quân nặng khắc cung thủ). `hanForces(n)`, `hanHpScale(n)` như trên; đợt Hán đầu tới sau `FIRST_HAN_MS` = 3 phút kể từ lúc nhận thưởng nhiệm vụ 51, rồi quân Hán và lũ xen nhau (`nextFoe`; `raid.han`, `raid.hanHeld` đếm đợt đã tới và đã giữ được). Đợt quân Hán ra từ bìa rừng (`landRaidSide`). Cao Lỗ giữ kinh đô (`leadsFor` chương 5), kiệt sức thì Sơn Tinh, rồi Gióng; mùa lũ vẫn là Sơn Tinh. `chuong5.test.ts` canh: đợt Hán đầu do Cao Lỗ và quân mẫu chương 4 cùng năm chòi canh thắng được.
 
 ### Phó bản chương 5: từ Hát Môn tới Cấm Khê
 
@@ -2299,7 +2301,7 @@ Theo phương án A ở điều 1: hai nhiệm vụ sẵn có số 52, 53 thành
 |---|---|---|---|
 | 52 | Lên Điện cấp 10 (sẵn có) | 4500 gạo, 4500 vỏ ốc | 1 |
 | 53 | Một công trình lên cấp 10 (sẵn có) | 3500 đất đá, 900 sắt | 1 |
-| 54 | Đánh lui một đợt quân Hán ở kinh đô | 2500 vỏ ốc, 700 sắt | 1 |
+| 54 | Đánh lui một đợt quân Hán ở kinh đô (`chongHan`, kiểu `hanHeld`) | 2500 vỏ ốc, 700 sắt | 1 |
 | 55 | Luyện 6 voi chiến (Hai Bà cần tượng binh) | 2500 gạo, 600 sắt | 2 |
 | 56 | Qua màn 33 | 2500 gạo, 2000 vỏ ốc | 2 |
 | 57 | Hạ thành Luy Lâu (qua màn 36) | 3000 gạo, 2000 đất đá | 2 |
@@ -2319,7 +2321,9 @@ Thưởng khoảng gấp rưỡi nhiệm vụ chương 4.
 ### Thứ tự làm chương 5
 
 1. **Duyệt tài liệu này**: tám điều ở trên, mọi con số và dáng.
-2. **PR 1**: vào chương 5, Điện 10 mở theo chương, quân Hán (ba loại lính) đánh kinh đô xen với lũ, nhiệm vụ 54, bản lưu v20. Chưa có truyện; Lạc hầu báo đã sang chương 5, chờ phần sau.
+2. **PR 1 (đã làm)**: vào chương 5, Điện 10 mở theo chương, quân Hán (ba loại lính) đánh kinh đô xen với lũ, nhiệm vụ 54, bản lưu v20. Chưa có truyện; Lạc hầu báo đã sang chương 5, chờ phần sau.
+   - Code: `chuong5.ts` (`inChapter5`), `CH5_QUEST_START` = 52, `scheduleHan` và nhánh `han` ở `game.ts` (`nextFoe`, `foeChapter`, `finishRaid`), `LAND_FORCES` ở `battle.ts`, `migrate19to20` ở `save.ts` (thêm `raid.han`, `raid.hanHeld`; bản lưu đang ở chương 5 mà chưa có giặc thì xếp đợt Hán). `chapterOf` (`manVao.ts`) ra 5; sang chương 5 thì màn hình vào game không còn coi là Hết truyện.
+   - Bản đồ phó bản chưa có chương 5: giao diện phó bản dừng ở chương 4 (`MapChapter` ở `src/ui/campaign.ts`, `mapChapterNow` ở `hud.ts`) tới PR 2.
 3. **PR 2**: Hai Bà (hai tướng cùng ra một trận, mỗi bà một kỹ năng, giữ kinh đô, chỉ huy doanh trại), nghĩa binh, màn 33–36 và Tô Định, bãi Hát Môn và Luy Lâu, thẻ Chương 5 trên bản đồ phó bản, đoạn truyện 1–3, nhiệm vụ 55–57.
 4. **PR 3**: lâu thuyền và thủy quân Hán ở kinh đô, Mã Viện, màn 37–40 (màn 40 cầm cự), bãi Lãng Bạc và Cấm Khê, đoạn truyện 4–6, màn hình Hết truyện mới, Đền Hát Môn, nhiệm vụ 58–61.
 5. **PR 4**: nữ tướng, thử thách màn 33–40, huân công bậc 4.
@@ -2370,5 +2374,5 @@ Mỗi PR nào thêm trường lưu mới thì nâng bản lưu một bậc (dự
 15. **Vùng đất bên kia sông** (chủ dự án đã duyệt, đã làm cả 5 PR, bản lưu v18; xem mục Kế hoạch cùng tên): lưới qua sông, cầu ba cấp, sương mù và trinh sát, đồn giặc bốn bậc theo chương, dẹp đồn chiếm vùng, đặc sản đất, bản làng, của chôn, giặc tới từ hai bờ và đồn biên.
 16. **Điện cấp 9, 10** (đã duyệt, đã làm cả 3 PR: luật, hình, binh khí bậc 3 và lầu nỏ lên cấp; xem Kế hoạch cùng tên).
     **Hồ Kim Quy** (chủ dự án yêu cầu, đã làm; xem mục cùng tên): hồ 8×8 mở khi Rùa Vàng hiện lên, tường thành thêm 30% máu.
-17. **Chương 5: Hai Bà Trưng** (chủ dự án đã duyệt, đang làm PR 1; xem Kế hoạch chương 5): mỗi bà cưỡi một voi ra trận với Voi xung trận và Hiệu triệu gọi nghĩa binh, quân Hán và lâu thuyền đánh kinh đô, phó bản màn 33–40 với Tô Định và Mã Viện, Đền Hát Môn, nữ tướng, thử thách màn 33–40.
+17. **Chương 5: Hai Bà Trưng** (chủ dự án đã duyệt, đã làm PR 1, tiếp theo là PR 2; xem Kế hoạch chương 5): mỗi bà cưỡi một voi ra trận với Voi xung trận và Hiệu triệu gọi nghĩa binh, quân Hán và lâu thuyền đánh kinh đô, phó bản màn 33–40 với Tô Định và Mã Viện, Đền Hát Môn, nữ tướng, thử thách màn 33–40.
 18. **Để sau**: nhạc nền.

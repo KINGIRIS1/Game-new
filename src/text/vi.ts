@@ -335,7 +335,7 @@ export const vi = {
     daTheoMau: 'Kinh đô đã xếp đúng theo mẫu này',
     canChuong4: 'Mở ở chương 4: Mỵ Châu, Trọng Thủy',
     canHetTruyen: 'Mở sau khi hộ giá vua ra biển Mộ Dạ (thắng màn 32)',
-    canThuThach: 'Cần thắng 16 thử thách phó bản',
+    canChuong5: 'Mở ở chương 5: Hai Bà Trưng',
     canKetChuong4: 'Chỉ dựng được sau khi hộ giá vua ra biển Mộ Dạ',
     canCaoLo: 'Màn này cần Cao Lỗ đã cầm quân (thắng màn 25)',
     caoLoKietSuc: 'Cao Lỗ đang kiệt sức, chờ một lát',
@@ -422,9 +422,12 @@ export const vi = {
     denCuong: 'Dân lập đền thờ vua dưới chân núi Mộ Dạ. Xin dựng Đền Cuông: đền còn nguyên thì thủy binh Triệu tới ít thuyền hơn.',
     dien9: 'Truyện xưa đã kể xong, kinh đô vẫn còn đó. Xin nâng Điện lên cấp 9: được phát thêm rừng, kho rộng hơn, ruộng, nhà sàn, chòi canh dựng thêm được.',
     cap9: 'Xin nâng một công trình lên cấp 9: ruộng, bến, bãi đá, lò rèn, xưởng mộc làm ra nhiều hơn, kho chứa nhiều hơn.',
-    dien10: 'Xin nâng Điện lên cấp 10, cấp cao nhất. Cần đã thắng 16 thử thách phó bản.',
+    dien10:
+      'Chương 5: Hai Bà Trưng. Hơn hai trăm năm đã qua, nhà Hán sang đô hộ, quân Hán sắp kéo tới kinh đô. Xin nâng Điện lên cấp 10, cấp cao nhất, để giữ đất Mê Linh.',
     cap10: 'Xin nâng một công trình lên cấp 10, cấp cao nhất của kinh đô.',
-    allDone: 'Truyện An Dương Vương đã hết, nhưng kinh đô vẫn còn. Thủy binh, quân Triệu và mùa lũ vẫn thay phiên tới. Xin giữ thành, giữ đê, giữ bờ sông cho vững.',
+    chongHan: 'Thái thú Tô Định sai quân Hán áo đỏ đi thu cống, cướp phá khắp nơi. Xin bệ hạ giữ vững kinh đô, đánh lui một đợt quân Hán.',
+    allDone:
+      'Thủy binh, quân Triệu đã thôi tới, nay quân Hán và mùa lũ thay phiên đánh kinh đô. Ở đất Mê Linh, hai chị em họ Trưng đang ngầm lo việc lớn. Truyện Hai Bà Trưng sẽ kể tiếp ở bản sau.',
   } as Record<string, string>,
 
   units: {
@@ -457,6 +460,9 @@ export const vi = {
     cungThuyen: 'cung thuyền Triệu',
     linhRiu: 'lính rìu giáp mây',
     tuongThuy: 'tướng thủy binh Triệu',
+    linhHan: 'lính kích Hán',
+    noHan: 'nỏ thủ Hán',
+    giapHan: 'giáp sĩ Hán',
   } satisfies Record<EnemyType, string>,
 
   enemyIcons: {
@@ -482,6 +488,9 @@ export const vi = {
     cungThuyen: '🏹',
     linhRiu: '🪓',
     tuongThuy: '⚓',
+    linhHan: '⚔️',
+    noHan: '🎯',
+    giapHan: '🪖',
   } satisfies Record<EnemyType, string>,
 
   /** Tên và lời dẫn từng màn phó bản, theo thứ tự trong STAGES. */
@@ -921,6 +930,7 @@ export const vi = {
       2: 'Sơn Tinh, Thủy Tinh',
       3: 'An Dương Vương',
       4: 'Mỵ Châu, Trọng Thủy',
+      5: 'Hai Bà Trưng',
     } satisfies Record<Chapter, string>,
     hetTruyen: 'Đã hết truyện',
     dien: (level: number) => `Điện cấp ${level}`,
@@ -1280,6 +1290,11 @@ export const vi = {
     trieuLostTitle: 'Quân Triệu đã cướp phá kinh đô',
     nextYeu: (min: number) => (min <= 0 ? 'Đêm yêu tinh sắp tới' : `Đêm yêu tinh tới sau khoảng ${min} phút chơi`),
     nextTrieu: (min: number) => (min <= 0 ? 'Quân Triệu sắp tới' : `Quân Triệu tới sau khoảng ${min} phút chơi`),
+    hanWarning: (side: string, s: number) => `Trinh sát báo: quân Hán áo đỏ kéo tới từ ${side}! Còn ${s} giây`,
+    hanBattle: (left: number, ours: number) => `Quân Hán đang đánh kinh đô! Còn ${left} giặc, quân ta ${ours}`,
+    hanWonTitle: 'Đánh lui quân Hán!',
+    hanLostTitle: 'Quân Hán đã cướp phá kinh đô',
+    nextHan: (min: number) => (min <= 0 ? 'Quân Hán sắp tới' : `Quân Hán tới sau khoảng ${min} phút chơi`),
     thuyBinhWarning: (side: string, s: number) => `Trinh sát báo: thuyền đen buồm đỏ từ biển vào cửa sông, kéo tới sông ${side}! Còn ${s} giây`,
     thuyBinhBattle: (left: number, ours: number) => `Thủy binh Triệu cập bờ đánh kinh đô! Còn ${left} giặc, quân ta ${ours}`,
     thuyBinhWonTitle: 'Đánh lui thủy binh!',

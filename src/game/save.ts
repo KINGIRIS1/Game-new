@@ -30,7 +30,8 @@ import { initialBenKia, isBenKiaState, noGarrison } from './benKia';
 import { initialCayDa, isCayDaState } from './cayDa';
 import { initialAdv } from './coLoa';
 import { inChapter4 } from './chuong4';
-import { SAVE_VERSION, autoAssign, housing, initialCampaign, initialGiong, initialRaid, scheduleThuyBinh, type GameState } from './game';
+import { inChapter5 } from './chuong5';
+import { SAVE_VERSION, autoAssign, housing, initialCampaign, initialGiong, initialRaid, scheduleHan, scheduleThuyBinh, type GameState } from './game';
 import { GRID, baseHeights, isRiver } from './map';
 import { initialSon } from './son';
 import { initialTet } from './tet';
@@ -100,6 +101,7 @@ function migrate(raw: unknown): unknown {
     k.garrison ??= noGarrison();
   }
   if (isObj(v) && v.version === 18) v = migrate18to19(v);
+  if (isObj(v) && v.version === 19) v = migrate19to20(v);
   return v;
 }
 
@@ -377,6 +379,24 @@ function migrate18to19(s: Raw): Raw {
   return s;
 }
 
+/**
+ * Phiên bản 19 → 20 (chương 5: vào chương khi nhận thưởng nhiệm vụ 51, quân Hán đánh kinh đô): thêm số đợt quân Hán.
+ * Người chơi đã sang chương 5 thì đợt quân Hán đầu tới sau một lúc, như lúc vừa vào chương.
+ */
+function migrate19to20(s: Raw): Raw {
+  s.version = 20;
+  const raid = s.raid;
+  if (isObj(raid)) {
+    raid.han = 0;
+    raid.hanHeld = 0;
+    if (raid.phase === 'idle' && isNum(s.questIndex) && isNum(s.clock)) {
+      const state = s as unknown as GameState;
+      if (inChapter5(state)) scheduleHan(state);
+    }
+  }
+  return s;
+}
+
 const isBanh = (v: unknown, test: (x: unknown) => boolean): boolean => isObj(v) && test(v.chung) && test(v.giay);
 const isBool = (x: unknown) => typeof x === 'boolean';
 
@@ -448,8 +468,8 @@ function isGameState(v: unknown): v is GameState {
   const raid = v.raid;
   if (!isObj(raid) || !isNum(raid.wave) || !isNum(raid.won) || !(raid.nextAt === null || isNum(raid.nextAt))) return false;
   if (!['idle', 'warning', 'battle'].includes(raid.phase as string)) return false;
-  if (!['an', 'thuy', 'yeu', 'trieu', 'thuyBinh'].includes(raid.foe as string) || !isNum(raid.floods) || !isNum(raid.floodsHeld) || !isNum(raid.water)) return false;
-  if (![raid.nights, raid.nightsHeld, raid.trieu, raid.trieuHeld, raid.thuyBinh, raid.thuyBinhHeld].every(isNum)) return false;
+  if (!['an', 'thuy', 'yeu', 'trieu', 'thuyBinh', 'han'].includes(raid.foe as string) || !isNum(raid.floods) || !isNum(raid.floodsHeld) || !isNum(raid.water)) return false;
+  if (![raid.nights, raid.nightsHeld, raid.trieu, raid.trieuHeld, raid.thuyBinh, raid.thuyBinhHeld, raid.han, raid.hanHeld].every(isNum)) return false;
   const camp = v.campaign;
   if (!isObj(camp) || !isNum(camp.cleared) || !isObj(camp.rows)) return false;
   if (!UNIT_TYPES.every((k) => ROWS.includes((camp.rows as Raw)[k] as never))) return false;
