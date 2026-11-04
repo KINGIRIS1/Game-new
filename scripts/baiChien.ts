@@ -5,7 +5,7 @@
 import * as THREE from 'three';
 import { startFieldBattle } from '../src/game/battle';
 import { FIELD, STAGES, type Terrain } from '../src/game/defs';
-import { Battlefield, MO_DA } from '../src/render/battlefield';
+import { Battlefield, CAM_KHE, MO_DA } from '../src/render/battlefield';
 import { IsoCamera } from '../src/render/camera';
 
 export interface Anh {
@@ -14,11 +14,30 @@ export interface Anh {
   triangles: number;
 }
 
+/** Tùy chọn chụp thêm. */
+export interface Tuy {
+  /** Màn cầm cự: đặt đồng hồ trận tới phần này của thanh (0..1). */
+  tien?: number;
+  /** Kết cục: thắng (kết chương thì camera lùi theo `focus()` như World.updateField), thua. */
+  ket?: 'win' | 'lose';
+  /** Khung nhìn rộng đề nghị cho Cấm Khê (`CAM_KHE.view`). */
+  rong?: boolean;
+  /** Nhìn vào điểm (x, z) trong bãi thay cho giữa bãi. */
+  nhin?: [number, number];
+}
+
+/** Điểm (x, z) trong bãi ra tọa độ cảnh: bãi xoay 45°, gốc ở giữa bãi (như `Battlefield`). */
+function fieldPoint(x: number, z: number): THREE.Vector3 {
+  const dx = x - FIELD.w / 2;
+  const dz = z - FIELD.d / 2;
+  return new THREE.Vector3((dx + dz) * Math.SQRT1_2, 0, (dz - dx) * Math.SQRT1_2);
+}
+
 /**
  * Chụp bãi nền `t` ở khung `w`×`h` điểm CSS, mật độ `dpr`. `stage`: lấy quân giặc của màn này (0 là không có lính).
  * `zoom`: nhân thêm vào độ phóng vừa khít bãi (nhỏ hơn 1 là lùi xa). `moc`: vẽ đường ngựa và chỗ Rùa Vàng của Mộ Dạ.
  */
-export function chupBai(t: Terrain, stage: number, w: number, h: number, dpr: number, zoom: number, moc: boolean): Anh {
+export function chupBai(t: Terrain, stage: number, w: number, h: number, dpr: number, zoom: number, moc: boolean, tuy: Tuy = {}): Anh {
   const canvas = document.createElement('canvas');
   document.body.appendChild(canvas);
   const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, preserveDrawingBuffer: true });
@@ -38,8 +57,18 @@ export function chupBai(t: Terrain, stage: number, w: number, h: number, dpr: nu
       hpScale: def.hpScale,
       army: { giao: 11, cung: 10, voi: 3, no: 4 },
       rows: { giao: 'tien', cung: 'hau', voi: 'trung', no: 'trung' },
+      waves: def.waves,
+      holdS: def.holdS,
     });
+    if (def.holdS && tuy.tien !== undefined) battle.t = tuy.tien * def.holdS;
     for (let i = 0; i < 5; i++) field.update(battle, 0.05);
+    if (tuy.ket) {
+      battle.outcome = tuy.ket;
+      if (def.terrain === 'moDa') battle.seaWin = true;
+      if (def.terrain === 'camKhe') battle.hatWin = true;
+      // Chờ chừng bốn giây cho cảnh kết (dân vào rừng, Rùa Vàng nổi lên).
+      for (let i = 0; i < 80; i++) field.update(battle, 0.05);
+    }
   } else field.update(null, 0.05);
   if (moc) field.scene.add(mocMoDa());
 
@@ -47,9 +76,19 @@ export function chupBai(t: Terrain, stage: number, w: number, h: number, dpr: nu
   const cam = new IsoCamera(div);
   cam.setSize(w, h);
   cam.setFacing(0);
-  cam.bounds = { min: -6, max: 6 };
+  cam.bounds = { min: -30, max: 30 };
   cam.target.set(0, 0, 0);
-  cam.zoomToFit(FIELD.w + 1.5, FIELD.d * 0.62 + 3);
+  if (tuy.rong && t === 'camKhe') {
+    cam.zoomToFit(CAM_KHE.view.w, CAM_KHE.view.h);
+    cam.target.copy(fieldPoint(CAM_KHE.view.x, FIELD.d / 2));
+  } else cam.zoomToFit(FIELD.w + 1.5, FIELD.d * 0.62 + 3);
+  // Cảnh kết chương có điểm nhìn riêng: camera tới đó và lùi xa như World.updateField lúc đã lướt tới nơi.
+  const focus = tuy.ket === 'win' ? field.focus() : null;
+  if (focus) {
+    cam.target.set(focus.x, 0, focus.z);
+    cam.zoom = cam.fitZoom(FIELD.w + 16, FIELD.d * 0.8 + 10);
+  }
+  if (tuy.nhin) cam.target.copy(fieldPoint(...tuy.nhin));
   cam.zoom *= zoom;
   cam.apply();
   renderer.render(field.scene, cam.camera);
