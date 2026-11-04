@@ -284,14 +284,21 @@ function canShareFile(): boolean {
   return shareFileOk;
 }
 
-/** Chữ trên nút kỹ năng: tên khi sẵn sàng, chỉ biểu tượng và số giây khi đang hồi (cho gọn trên điện thoại). */
-function skillLabel(b: Battle, k: SkillId): string {
-  const cd = Math.ceil(b.skillCd[k] ?? 0);
-  return cd > 0 && !b.outcome ? `${vi.skills[k].icon} ${cd}s` : `${vi.skills[k].icon} ${vi.skills[k].name}`;
+/**
+ * Nút kỹ năng: tên khi sẵn sàng; đang hồi thì biểu tượng và số giây đè lên chỗ tên (tên ẩn đi mà vẫn giữ chỗ), để nút
+ * không hẹp lại rồi rộng ra làm cả hàng nút nhảy dòng.
+ */
+function skillButton(b: Battle, k: SkillId, small = false): string {
+  return `<button class="btn bronze skill ${small ? 'small' : ''}" data-act="useSkill" data-skill="${k}" title="${vi.skills[k].desc}" ${skillReady(b, k) ? '' : 'disabled'}><span class="sk-name">${vi.skills[k].icon} ${vi.skills[k].name}</span><span class="sk-cd"></span></button>`;
 }
 
-function skillButton(b: Battle, k: SkillId, small = false): string {
-  return `<button class="btn bronze skill ${small ? 'small' : ''}" data-act="useSkill" data-skill="${k}" title="${vi.skills[k].desc}" ${skillReady(b, k) ? '' : 'disabled'}>${skillLabel(b, k)}</button>`;
+/** Đổi trạng thái và số giây hồi trên nút kỹ năng đã dựng. */
+function syncSkill(btn: HTMLButtonElement, b: Battle, k: SkillId): void {
+  const cd = b.outcome ? 0 : Math.ceil(b.skillCd[k] ?? 0);
+  btn.disabled = !skillReady(b, k);
+  btn.classList.toggle('cooling', cd > 0);
+  const tail = btn.querySelector('.sk-cd');
+  if (tail) tail.textContent = cd > 0 ? `${vi.skills[k].icon} ${cd}s` : '';
 }
 
 /** Bản đồ phó bản đang mở: chương nào, màn đang xem, đang xem thẻ màn hay đang xếp quân. */
@@ -712,9 +719,7 @@ export class Hud {
     }
     if (b) {
       for (const btn of this.raidSkills.querySelectorAll<HTMLButtonElement>('[data-skill]')) {
-        const k = btn.dataset.skill as SkillId;
-        btn.disabled = !skillReady(b, k);
-        btn.textContent = skillLabel(b, k);
+        syncSkill(btn, b, btn.dataset.skill as SkillId);
       }
     }
   }
@@ -1769,8 +1774,7 @@ export class Hud {
     }
     for (const btn of box.querySelectorAll<HTMLButtonElement>('[data-skill]')) {
       const k = btn.dataset.skill as SkillId;
-      btn.disabled = !skillReady(b, k);
-      btn.textContent = skillLabel(b, k);
+      syncSkill(btn, b, k);
       btn.classList.toggle('active', (k === 'trongTran' && b.rally > 0) || (k === 'ruaVang' && b.shield > 0) || (k === 'lenhBan' && (b.lenh ?? 0) > 0));
     }
     this.fieldBar.querySelector<HTMLButtonElement>('[data-act="retreat"]')!.disabled = !!b.outcome;

@@ -1371,6 +1371,8 @@ async function start(): Promise<void> {
     renderInfo: () => ({ ...world.renderer.info.render }),
     rotate: (dir: 1 | -1) => world.rotateView(dir),
     camera: (x: number, z: number, zoom: number) => {
+      // Đặt camera tay thì thôi lướt về chỗ cũ (máy chụp chạy chậm, lướt chưa xong sẽ kéo camera đi mất).
+      drift.done = true;
       world.view.target.set(x - HALF, 0, z - HALF);
       world.view.zoom = zoom;
       world.view.apply();

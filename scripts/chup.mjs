@@ -47,7 +47,11 @@ const CHUONG5 = (cleared) => `M.playChapters({ s, last: 8 });${CO_QUAN}
   const cho5 = G.troopCap(s);
   s.troops = { giao: Math.floor(cho5 * 0.3), cung: Math.floor(cho5 * 0.2), voi: Math.floor(cho5 * 0.03), no: Math.floor(cho5 * 0.15) };
   s.questIndex = D.CH5_QUEST_START; s.campaign.cleared = ${cleared};
+  // Đã hết truyện chương 4: lẫy bị tráo, Cao Lỗ có Lệnh bắn, vua đã theo Rùa Vàng xuống biển.
+  s.adv.layTrao = true; s.caoLo.lenhBan = true; s.adv.bien = true;
   for (let id; (id = S.pendingStory(s)); ) S.markStory(s, id);
+  // Lời gợi ý công trình mới che giữa bãi chiến: coi như đã đọc.
+  for (let t; (t = G.nextHint(s)); ) G.markHinted(s, t);
 `;
 
 const CANH = {

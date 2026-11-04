@@ -2185,17 +2185,23 @@ Chủ dự án chọn mỗi bà cưỡi một voi: Trưng Trắc và Trưng Nh�
   - ngoài bãi, sát thương kỹ năng nhân 1,6 như các tướng khác.
 - **Nghĩa binh**: 55 máu, 7 sát thương, tầm 0,8 ô, đi 1,6 ô mỗi giây, nghỉ 1 giây. Không luyện, không chiếm chỗ doanh trại, không ăn gạo, hết trận thì về làng, không chết thật. Không được cộng binh khí, huân công. Không thuộc vòng khắc chế.
 - **Giữ kinh đô** từ khi vào chương 5 (quân Hán, thủy quân Hán): cả hai bà cùng ra. Mỗi bà chỉ huy được một doanh trại như các tướng khác (`TuongId` thêm `trungTrac`, `trungNhi`) và ra trận từ trại mình; bà chưa chỉ huy trại nào thì ra từ trước Điện. Số doanh trại tối đa giữ 5: người chơi giao lại trại cho hai bà.
-- Đứng trước Điện: hai voi đứng hai bên lối vào sân chầu, Cao Lỗ lùi sang một bước.
+- Đứng trước Điện: hai voi đứng ngoài cổng sân chầu, hai bên lối vào, cách giữa cổng 1,2 ô (Trưng Trắc bên trái, Trưng Nhị bên phải theo hướng nhìn ra). Sân chầu đã chật (Lạc hầu, lính gác, Cao Lỗ, cây nêu Tết) nên voi đứng ngoài rào, Cao Lỗ không phải lùi. Chỗ ấy bị công trình, cây đá chắn thì voi đứng ở cặp ô trống 1 × 2 gần đó nhất, cách móng Điện tối đa 3 ô, đúng bên của bà; không còn chỗ thì không vẽ. Bà chỉ huy doanh trại thì đứng ở đài tướng trong sân trại ấy.
 - Sau Hết truyện chương 5: hai bà hiển linh, vẫn giữ kinh đô và ra trận màn 33–40. Khác An Dương Vương (thôi giữ kinh đô khi xuống biển), vì chương 5 không còn tướng nào thay.
 - **Dáng** (`makeTrungTrac`, `makeTrungNhi` ở `heroes.ts`, có xương, chung một voi trận `makeVoiTran` ở `beasts.ts`): voi lớn hơn voi chiến thường một phần ba, ngà bọc đồng, bành voi có lọng.
   - Trưng Trắc: voi đệm đỏ có mặt trống đồng, lọng đỏ; áo đỏ thắm, giáp ngực đồng, mũ lông chim cao kiểu Đông Sơn, cầm gươm đồng. Voi xung trận: voi giơ vòi rống, lao tới, bụi tung theo đường.
   - Trưng Nhị: voi đệm vàng, lọng vàng, cờ đỏ hình chim Lạc cắm sau bành; áo vàng, mũ lông chim, cầm cung. Hiệu triệu: rút cờ phất, tiếng trống, nghĩa binh chạy ra từ hai bên, vòng sáng xanh loang dưới chân quân ta được hồi máu.
   - Thắng trận: Trưng Trắc giơ gươm, Trưng Nhị phất cờ, hai voi giơ vòi.
 - **Nghĩa binh** (`soldier.ts`): áo nâu, khăn vấn, chân đất, không giáp, cầm giáo tre hay gậy tầm vông.
+- **Hình đã làm (PR 2)**:
+  - Voi trận `makeVoiTran` (`beasts.ts`): bành có lọng, ngà bọc đồng, đệm thêu mặt trống; voi chồm, rống, lao tới; ngã thì lăn nghiêng. Ở kinh đô voi thu nhỏ còn 0,65 cho vừa ô, nhún nhẹ lúc đứng.
+  - Voi xung trận: Trưng Trắc rạp người chĩa gươm, voi lao theo đường kỹ năng, bụi tung. Giặc choáng vì voi húc không mọc đá như Dời non (đá chỉ vẽ khi trận có Sơn Tinh).
+  - Hiệu triệu: Trưng Nhị rút cờ chim Lạc phất ba vòng, vòng sáng xanh lá (`C.heal`) loang dưới chân quân ta được hồi máu, nghĩa binh chạy ra.
+  - Tô Định: mũ quan, áo Hán, bụng phệ. Bỏ chạy (`Act.flee`): bỏ mũ, giấu kiếm, hai tay ôm ấn.
+  - Nút kỹ năng trên bãi chiến giữ nguyên cỡ khi đang hồi: số giây đè lên chỗ tên, tên ẩn mà vẫn giữ chỗ, để hàng hai nút của Hai Bà không nhảy dòng.
 - **Số cuối PR 2 (đã làm)**: giữ nguyên đề xuất. Chỉ số ở `defs.ts`: `TRUNG_TRAC`, `TRUNG_NHI`, `HAI_BA_REST_MS` (2 phút), `VOI_XUNG`, `HIEU_TRIEU`, `NGHIA_BINH`; hồi kỹ năng ở `SKILLS` (`voiXung` 12 giây, `hieuTrieu` 25 giây).
   - Hai tướng một trận: `Battle.hero` là Trưng Trắc, `Battle.hero2` là Trưng Nhị; `heroSetups(b)` cho cả hai (`battle.ts`). Bà nào ngã thì `down` riêng; hết trận thì `restAfter` (`son.ts`) cho bà ấy nghỉ (`restHaiBa`, `s.haiBa` ở `chuong5.ts`).
   - Chọn tướng: `heroesFor` (`son.ts`) chương 5 ra Hai Bà khỏe; cả hai kiệt sức thì như chương 4 (Cao Lỗ, Sơn Tinh, Gióng) ở kinh đô, còn phó bản thì khóa (`haiBaKietSuc` ở `canStartStage`). Bảng xếp quân báo bà nào nghỉ, bà kia ra một mình.
-  - Giữ kinh đô: mỗi bà ra từ doanh trại mình chỉ huy; chưa chỉ huy trại nào thì đứng hai bên trước Điện, cách 1,2 ô.
+  - Giữ kinh đô: mỗi bà ra từ doanh trại mình chỉ huy; chưa chỉ huy trại nào thì ra từ hai bên trước Điện, cách 1,2 ô.
   - Nghĩa binh là quân ta (`nghiaBinh`): ngã thì không vào `battle.lost` (không mất lính thật); còn đứng thì vẫn tính là quân ta còn trên bãi (`alliesLeft`), như tướng.
   - Thanh máu mỗi bà trên đầu bãi chiến (`.hero-hp` ở `hud.ts`), chỉ hiện khi trận có hai tướng. Ô Tướng ở dock có hai dòng Trưng Trắc, Trưng Nhị (⚔️ sẵn sàng, 💤 đang nghỉ).
   - Bản lưu 21 (`migrate20to21`): thêm `haiBa`.

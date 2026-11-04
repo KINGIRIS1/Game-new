@@ -2,11 +2,11 @@
 // và trận ngoài bãi (trong cảnh bãi chiến). Tọa độ trận cộng `offset` thành tọa độ trong nhóm.
 
 import * as THREE from 'three';
-import type { Battle, FighterKind } from '../game/battle';
-import { FIRE, HILL, LIEN_CHAU, RALLY_BEAT, ROCKS, SKILLS, TT_WAVE, type UnitType } from '../game/defs';
+import { heroSetups, type Battle, type FighterKind } from '../game/battle';
+import { FIRE, HIEU_TRIEU, HILL, LIEN_CHAU, RALLY_BEAT, ROCKS, SKILLS, TT_WAVE, type UnitType } from '../game/defs';
 import { isBeast, makeBeast, makeRuaVang } from './beasts';
 import { isMonster, makeMonster } from './monsters';
-import { makeAnDuong, makeCaoLo, makeGiong, makeSonTinh, makeThuyTinh } from './heroes';
+import { makeAnDuong, makeCaoLo, makeGiong, makeSonTinh, makeThuyTinh, makeTrungNhi, makeTrungTrac } from './heroes';
 import { makeEnemyBoat, makeFighter, makeMountain } from './models';
 import { C } from './palette';
 import type { Poser } from './rig';
@@ -148,6 +148,8 @@ interface Arrow {
 interface Ring {
   mesh: THREE.Mesh;
   age: number;
+  /** Loang tới bán kính này (ô); không có thì như cũ, chừng 6,5 ô. */
+  size?: number;
 }
 
 const SCALE: Partial<Record<FighterKind, number>> = {
@@ -167,6 +169,10 @@ const SCALE: Partial<Record<FighterKind, number>> = {
   gaTrang: 1.05,
   kyBinh: 0.75,
   trieuDa: 0.85,
+  // Hai Bà trên voi trận cỡ như voi chiến (voi trận đã to hơn voi chiến một phần ba); Tô Định nhỉnh hơn lính.
+  trungTrac: 0.75,
+  trungNhi: 0.75,
+  toDinh: 1,
 };
 /** Nỏ thần: mũi tên vàng bay vút lên trong chừng này giây, rồi hóa mưa tên rơi xuống từng tên giặc. */
 const VOLLEY_RISE = 0.3;
@@ -205,6 +211,10 @@ const SURGE_LIFE = 1.0;
 const WHIRL_LIFE = 1.1;
 /** Động tác làm phép của Sơn Tinh và Thủy Tinh kéo dài chừng này giây. */
 const CAST_TIME = 0.8;
+/** Hai Bà làm kỹ năng lâu hơn: voi chồm lên rống rồi mới lao (Voi xung trận), rút cờ phất ba vòng rồi cắm lại (Hiệu triệu). */
+const BA_CAST_TIME = 1.2;
+const castTime = (k: FighterKind) => (k === 'trungTrac' || k === 'trungNhi' ? BA_CAST_TIME : CAST_TIME);
+const isHaiBa = (k: FighterKind) => k === 'trungTrac' || k === 'trungNhi';
 /** Tôm binh trồi khỏi nước trong chừng này giây. */
 const EMERGE_TIME = 0.5;
 const rainGeo = new THREE.BoxGeometry(0.03, 0.03, 0.55);
@@ -531,6 +541,7 @@ export class BattleView {
 
   private syncFighters(battle: Battle, dt: number): void {
     const { x: ox, z: oz } = this.offset;
+    const hasRocks = heroSetups(battle).some((h) => h.kind === 'sonTinh');
     for (const f of battle.fighters) {
       let view = this.fighters.get(f.id);
       if (f.state === 'gone') {
@@ -542,8 +553,13 @@ export class BattleView {
       }
       if (!view) {
         if (f.state === 'dead') continue;
+        const glow = heroSetups(battle).find((h) => h.kind === f.kind)?.glow;
         const obj =
-          f.kind === 'giong'
+          f.kind === 'trungTrac'
+            ? makeTrungTrac({ glow })
+            : f.kind === 'trungNhi'
+              ? makeTrungNhi({ glow })
+              : f.kind === 'giong'
             ? makeGiong('trangSi', { bamboo: battle.hero?.bamboo, glow: battle.hero?.glow })
             : f.kind === 'sonTinh'
               ? makeSonTinh({ glow: battle.hero?.glow })
@@ -570,7 +586,8 @@ export class BattleView {
       obj.position.z = f.z + oz;
       obj.rotation.y = f.face;
       const base = this.heightAt(f.x, f.z);
-      this.syncRocks(view, f.stun ?? 0, f.id, dt);
+      // Chỉ Dời non mới mọc đá; giặc choáng vì Voi xung trận thì không.
+      this.syncRocks(view, hasRocks ? (f.stun ?? 0) : 0, f.id, dt);
       this.syncAura(view, f.side === 'ta' && f.state !== 'dead' && battle.rally > 0 && !battle.outcome);
       this.syncShell(view, f.side === 'ta' && f.state !== 'dead' && battle.shield > 0 && !battle.outcome);
       this.syncOrder(view, f.kind === 'no' && f.state !== 'dead' && (battle.lenh ?? 0) > 0 && !battle.outcome);
@@ -671,6 +688,32 @@ export class BattleView {
           continue;
         }
       }
+      if (isHaiBa(f.kind)) {
+        for (const c of obj.children) if (c.userData.halo) c.rotation.z = this.time * 0.6;
+        if (battle.outcome === 'win') {
+          // Thắng trận: Trưng Trắc giơ gươm, Trưng Nhị phất cờ, hai voi giơ vòi.
+          view.rise += dt;
+          obj.position.y = base;
+          obj.rotation.x = 0;
+          view.pose?.({ act: 'stand', win: Math.min(view.rise * 1.5, 1), time: this.time + f.id });
+          continue;
+        }
+        if (view.dash) {
+          // Voi xung trận: voi chồm lên rống, rồi lao dọc đường xung (luật trận đã đặt bà ở cuối đường).
+          const d = view.dash;
+          d.age += dt;
+          const k = Math.min(d.age / BA_CAST_TIME, 1);
+          const run = THREE.MathUtils.smoothstep(k, 0.28, 0.95);
+          const x = lerp(d.fromX, d.toX, run);
+          const z = lerp(d.fromZ, d.toZ, run);
+          obj.position.set(x + ox, this.heightAt(x, z), z + oz);
+          if (Math.hypot(d.toX - d.fromX, d.toZ - d.fromZ) > 0.01) obj.rotation.y = Math.atan2(d.toX - d.fromX, d.toZ - d.fromZ);
+          obj.rotation.x = 0;
+          view.pose?.({ act: 'stand', time: this.time + f.id, skill: k });
+          if (k >= 1) view.dash = undefined;
+          continue;
+        }
+      }
       if (f.state === 'aboard') {
         // Thủy binh còn trên thuyền: đứng trên sàn thuyền, nhấp nhô theo thuyền.
         const boat = f.boat !== undefined ? battle.boats[f.boat] : undefined;
@@ -704,22 +747,24 @@ export class BattleView {
             : f.kind === 'anDuong' || f.kind === 'caoLo'
               ? view.lift
               : view.cast && view.cast > 0
-                ? 1 - view.cast / CAST_TIME
+                ? 1 - view.cast / castTime(f.kind)
                 : undefined;
         // Cao Lỗ thổi tù và ra Lệnh bắn.
         const horn = view.horn && view.horn > 0 ? 1 - view.horn / HORN_TIME : undefined;
+        // Tô Định bỏ chạy thì rơi mũ, ôm ấn (kể cả lúc bị choáng giữa đường chạy).
+        const fled = f.state === 'flee' || undefined;
         view.pose(
           walking
-            ? { act: 'walk', phase, stride: wading ? 0.3 : rally || flee ? 0.65 : 0.5, time, skill, horn }
+            ? { act: 'walk', phase, stride: wading ? 0.3 : rally || flee ? 0.65 : 0.5, time, skill, horn, flee: fled }
             : f.state === 'fight'
               ? { act: 'fight', strike: f.swing > 0 ? 1 - f.swing / 0.3 : undefined, time, skill, horn }
-              : { act: 'stand', time, skill, horn },
+              : { act: 'stand', time, skill, horn, flee: fled },
         );
       } else obj.position.y = base + (moving ? Math.abs(Math.sin(this.time * (wading ? 5 : 10) + f.id)) * hop : 0);
       this.syncWet(view, f.side === 'ta' && wading && !battle.outcome);
       if (view.cast && view.cast > 0) {
         view.cast = Math.max(0, view.cast - dt);
-        const k = 1 - view.cast / CAST_TIME;
+        const k = 1 - view.cast / castTime(f.kind);
         if (f.kind === 'sonTinh') {
           // Nhún người lấy đà rồi dậm xuống đúng lúc dộng gậy.
           obj.position.y += 0.35 * this.scale * Math.sin(Math.PI * smoothstep(k, 0.1, 0.6));
@@ -1002,6 +1047,51 @@ export class BattleView {
     this.rings.push({ mesh, age: 0 });
   }
 
+  /**
+   * Voi xung trận: voi Trưng Trắc chồm lên rống rồi lao từ (x, z) tới (tx, tz); bụi đất tung dọc đường theo bước voi.
+   * Giặc bị hất, choáng thì luật trận đã đặt chỗ; phần vẽ chỉ cho voi lao tới đó.
+   */
+  private voiXung(battle: Battle, x: number, z: number, tx: number, tz: number): void {
+    const { x: ox, z: oz } = this.offset;
+    const hero = battle.fighters.find((f) => f.kind === 'trungTrac');
+    const view = hero && this.fighters.get(hero.id);
+    if (view) {
+      view.dash = { fromX: x, fromZ: z, toX: tx, toZ: tz, age: 0 };
+      view.cast = undefined;
+    }
+    for (let i = 0; i <= 8; i++) {
+      const k = i / 8;
+      const px = lerp(x, tx, k);
+      const pz = lerp(z, tz, k);
+      const delay = BA_CAST_TIME * (0.28 + 0.67 * THREE.MathUtils.smoothstep(k, 0, 1));
+      for (const side of [-0.45, 0.45]) {
+        const sx = (tz - z) * side * 0.2;
+        const sz = -(tx - x) * side * 0.2;
+        this.addPuff(px + sx + ox, this.heightAt(px, pz) + 0.2, pz + sz + oz, C.earth, delay, 0.8, 1.8);
+      }
+    }
+  }
+
+  /**
+   * Hiệu triệu: Trưng Nhị rút cờ phất, vòng sáng xanh loang dưới chân quân ta được hồi máu, bụi tung ở chỗ từng
+   * nghĩa binh chạy ra.
+   */
+  private hieuTrieu(battle: Battle, x: number, z: number): void {
+    const { x: ox, z: oz } = this.offset;
+    const hero = battle.fighters.find((f) => f.kind === 'trungNhi');
+    const view = hero && this.fighters.get(hero.id);
+    if (view) view.cast = BA_CAST_TIME;
+    const mesh = new THREE.Mesh(ringGeo, new THREE.MeshBasicMaterial({ color: C.heal, transparent: true, depthWrite: false }));
+    mesh.position.set(x + ox, this.heightAt(x, z) + 0.08, z + oz);
+    mesh.renderOrder = 3;
+    this.root.add(mesh);
+    this.rings.push({ mesh, age: 0, size: HIEU_TRIEU.radius * this.geo });
+    const fresh = battle.fighters
+      .filter((f) => f.kind === 'nghiaBinh' && f.state !== 'dead' && f.state !== 'gone' && !this.fighters.has(f.id))
+      .slice(0, HIEU_TRIEU.count);
+    fresh.forEach((f, i) => this.addPuff(f.x + ox, this.heightAt(f.x, f.z) + 0.2, f.z + oz, C.earth, 0.3 + i * 0.05, 0.7, 1.4));
+  }
+
   /** Lệnh bắn: Cao Lỗ nâng tù và lên thổi, một vòng sóng đỏ đồng loang ra từ chỗ ngài đứng. */
   private lenhBan(battle: Battle, x: number, z: number): void {
     const { x: ox, z: oz } = this.offset;
@@ -1178,6 +1268,12 @@ export class BattleView {
         }
       }
       if (e.kind === 'exhaust') this.addPuff(e.x + ox, this.heightAt(e.x, e.z) + 0.6, e.z + oz, C.smoke, 0, 1.2, 3);
+      if (e.kind === 'charge' && e.tx !== undefined && e.tz !== undefined) this.voiXung(battle, e.x, e.z, e.tx, e.tz);
+      if (e.kind === 'call') this.hieuTrieu(battle, e.x, e.z);
+      if (e.kind === 'escape') {
+        // Tô Định chạy thoát khỏi bãi: bụi tung ở mép bãi phía giặc.
+        for (let i = 0; i < 6; i++) this.addPuff(e.x + (i - 2.5) * 0.35 + ox, this.heightAt(e.x, e.z) + 0.25, e.z + oz, C.earth, i * 0.05, 0.9, 1.8);
+      }
     }
     this.lastSeq = battle.seq;
   }
@@ -1449,7 +1545,7 @@ export class BattleView {
       const r = this.rings[i];
       r.age += dt;
       const k = r.age / RING_LIFE;
-      r.mesh.scale.setScalar(0.5 + k * 6);
+      r.mesh.scale.setScalar(0.5 + k * ((r.size ?? 6.5) - 0.5));
       (r.mesh.material as THREE.MeshBasicMaterial).opacity = 0.9 * (1 - k);
       if (k >= 1) {
         this.root.remove(r.mesh);

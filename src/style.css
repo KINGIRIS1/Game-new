@@ -2002,6 +2002,24 @@ textarea {
 
 .btn.skill {
   white-space: nowrap;
+  position: relative;
+}
+
+/* Đang hồi: số giây đè lên chỗ tên, tên ẩn mà vẫn giữ chỗ cho nút khỏi đổi cỡ. */
+.btn.skill .sk-cd {
+  position: absolute;
+  inset: 0;
+  display: none;
+  align-items: center;
+  justify-content: center;
+}
+
+.btn.skill.cooling .sk-cd {
+  display: flex;
+}
+
+.btn.skill.cooling .sk-name {
+  visibility: hidden;
 }
 
 .btn.skill.active {

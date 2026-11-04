@@ -103,4 +103,6 @@ export const C = {
   quanPhuc: 0x25222a,
   corn: 0x84a443,
   cornDry: 0xc9b062,
+  // Vòng sáng Hiệu triệu: xanh lá loang dưới chân quân ta được hồi máu.
+  heal: 0x7fd88a,
 } as const;
