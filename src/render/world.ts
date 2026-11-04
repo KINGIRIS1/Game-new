@@ -442,7 +442,7 @@ export class World {
   private readonly warning: THREE.Mesh;
   private merchantBoat?: THREE.Object3D;
   /** Gióng đứng chầu trong sân Điện, đổi dáng khi lớn lên; tráng sĩ thì ở doanh trại; bay về trời thì hiển linh (`court`). */
-  private giong?: { obj: THREE.Group; look: GiongLook; key: string };
+  private giong?: { obj: THREE.Group; look: GiongLook; key: string; y: number; ride: boolean };
   /** Sơn Tinh đứng chầu trong sân Điện ở chương 2 (rước dâu rồi thì ở doanh trại), đánh lui Thủy Tinh thì về núi. */
   private son?: { obj: THREE.Group; look: SonLook; key: string };
   /** An Dương Vương đứng chầu trong sân Điện từ chương 3, cạnh cột đá thề. */
@@ -2050,21 +2050,25 @@ export class World {
     return dien ? this.courtSpot(dien, tuong) : null;
   }
 
-  /** Gióng lúc nhỏ ở trước Điện, bên phải bậc lên; thành tráng sĩ thì về doanh trại. */
+  /**
+   * Gióng lúc nhỏ đứng chầu trong sân Điện cho dân nuôi; thành tráng sĩ thì về doanh trại, cưỡi ngựa sắt. Chưa có doanh
+   * trại thì tráng sĩ xuống ngựa đứng chầu trong sân (tướng đứng trong sân Điện không cưỡi thú).
+   */
   private syncGiong(state: GameState): void {
     const look = giongLook(state);
+    const camp = look === 'trangSi' && !!this.barracksSpot(state, 'giong');
     const spot = this.heroHome(state, 'giong', look === 'trangSi');
-    const key = look && spot ? `${look}:${spot.x}:${spot.y}:${spot.z}:${spot.ry}` : '';
+    const key = look && spot ? `${look}:${camp}:${spot.x}:${spot.y}:${spot.z}:${spot.ry}` : '';
     if (this.giong?.key === key) return;
     if (this.giong) this.scene.remove(this.giong.obj);
     this.giong = undefined;
     if (!look || !spot) return;
-    const obj = makeGiong(look);
+    const obj = makeGiong(look, { onFoot: look === 'trangSi' && !camp });
     obj.scale.setScalar(look === 'trangSi' ? 0.9 : look === 'be' ? 1.1 : 1);
     obj.position.set(spot.x, spot.y, spot.z);
     obj.rotation.y = spot.ry ?? -Math.PI / 2 + 0.5;
     this.scene.add(obj);
-    this.giong = { obj, look, key };
+    this.giong = { obj, look, key, y: spot.y, ride: look === 'trangSi' && camp };
   }
 
   /**
@@ -2115,9 +2119,9 @@ export class World {
     this.pillar = undefined;
     if (!pkey || !dien || !spot) return;
     const obj = this.makePillar();
-    // Cột đá đứng sau lưng tướng, phía ngoài lối, còn trong sân Điện.
+    // Cột đá đứng sau lưng tướng, chếch ra phía ngoài lối, giữa bốn chỗ đứng chầu cho khỏi vướng ai.
     const c = courtSlot('anDuong');
-    const at = this.dienPoint(dien, c.x + Math.sign(c.x) * 0.6, c.z - 0.35);
+    const at = this.dienPoint(dien, c.x + Math.sign(c.x) * 0.5, c.z - 0.5);
     obj.position.set(at.x, spot.y, at.z);
     obj.rotation.y = 0.3 + rotAngle(dien.rot);
     this.scene.add(obj);
@@ -2170,7 +2174,7 @@ export class World {
       if (this.court.has(t)) continue;
       const obj =
         t === 'giong'
-          ? makeGiong('trangSi', { glow: true })
+          ? makeGiong('trangSi', { bamboo: true, glow: true, onFoot: true })
           : t === 'sonTinh'
             ? makeSonTinh({ glow: true })
             : t === 'anDuong'
@@ -2808,7 +2812,7 @@ export class World {
     if (this.giong) {
       const g = this.giong;
       // Cậu bé lắc lư, thiếu niên cúi ăn cơm, ngựa sắt thở ra lửa.
-      if (g.look === 'trangSi') g.obj.position.y = Math.abs(Math.sin(t * 2)) * 0.03;
+      if (g.ride) g.obj.position.y = g.y + Math.abs(Math.sin(t * 2)) * 0.03;
       (g.obj.userData.pose as Poser | undefined)?.({ act: 'stand', time: t });
     }
 

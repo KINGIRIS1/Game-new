@@ -96,6 +96,7 @@ export const NHOM: Record<string, Entry[]> = {
     { ten: 'Cao Lỗ (nỏ liên châu)', tao: () => makeCaoLo(), co: 1.25, cach: 1.1 },
     { ten: 'Cao Lỗ (hiển linh)', tao: () => makeCaoLo({ glow: true }), co: 1.3, cach: 1.1 },
     { ten: 'Lạc tướng đứng chầu (sân Điện)', tao: () => makeLacTuong(), co: 1.25, cach: 1.1 },
+    { ten: 'Gióng đứng chầu (sân Điện, hiển linh)', tao: () => makeGiong('trangSi', { bamboo: true, glow: true, onFoot: true }), co: 1.4, cach: 1.1 },
   ],
   ky_nang: [
     { ten: 'Kỹ năng (cột: 0, 0,1 … 1)', tao: () => makeGiong('trangSi'), co: 1.6, cach: 1.4 },

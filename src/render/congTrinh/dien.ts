@@ -20,17 +20,17 @@ export const DIEN_LOT = new Lot(10, [
   '...ccHHHHHHHHHHCC...',
   '...ccNNNNNNNNNNCC...',
   '.....NNNNTTNNNN.....',
-  '.......dTTTTd.......',
+  '.2.....dTTTTd.....2.',
   '.vv..............vv.',
   '.vv.....VVVV.....vv.',
-  '.....t..VVVV..t.....',
-  '...2....VVVV....2...',
-  '........m,,.........',
-  '.....t...,,...t.....',
-  '...D.....,,.....D...',
+  '...t.t..VVVV..t.t...',
+  '........VVVV........',
+  '...t.t..m,,...t.t...',
   '.........,,.........',
-  '.LL..e...,,...t..LL.',
-  '.LL.....l,,l.....LL.',
+  '.D.t.t...,,...t.t.D.',
+  '.........,,.........',
+  '.LL..t...,,...t..LL.',
+  '.LL.e...l,,l.....LL.',
   '.......GGGGGG.......',
 ]);
 
@@ -54,15 +54,24 @@ const dienBase = (level: number) => (level >= 4 ? 0.45 : 0);
 export const bannerHeight = (level: number) => (level >= 6 ? 3.2 : 2.9);
 
 /**
- * Thứ tự các tướng đứng chầu theo ô `t` của bản vẽ (từ trên xuống, trái sang): hai bên ngai là Lạc tướng (trái) và
- * Gióng trên ngựa sắt (phải, chỗ rộng nhất cho ngựa); hàng sau Sơn Tinh (trái) và An Dương Vương (phải); Cao Lỗ đứng
- * sau An Dương Vương.
+ * Chỗ đứng chầu (ô `t` của bản vẽ, đọc từ trên xuống, trái sang): mỗi bên lối giữa hai cột, cột trong cách lối giữa
+ * 2,25 ô, cột ngoài 3,25 ô; các hàng cách nhau 1 ô từ ngang ngai ra phía cổng; cột trong bốn hàng, cột ngoài ba hàng
+ * (hàng thứ tư vướng lầu trống). Tất cả 14 chỗ:
+ *
+ *   hàng ngang ngai:  0 ngoài trái   1 trong trái   2 trong phải   3 ngoài phải
+ *   hàng hai:         4              5              6              7
+ *   hàng ba:          8              9             10             11
+ *   hàng gần cổng:                  12             13
+ *
+ * Gần ngai là chỗ trên. Lạc tướng (trái) và Gióng (phải) đứng hai bên ngai; hàng sau Sơn Tinh (trái), An Dương Vương
+ * (phải); Cao Lỗ sau An Dương Vương. Còn 9 chỗ cho tướng các chương sau (Hai Bà Trưng nên đứng ở 0 và 3, ngang ngai).
+ * Tướng đứng trong sân không cưỡi thú.
  */
-const COURT_ORDER: readonly TuongId[] = ['lacTuong', 'giong', 'sonTinh', 'anDuong', 'caoLo'];
+const COURT_SLOT: Record<TuongId, number> = { lacTuong: 1, giong: 2, sonTinh: 5, anDuong: 6, caoLo: 10 };
 
 /** Chỗ tướng `t` đứng chầu (tọa độ móng Điện) và hướng mặt: quay vào lối giữa, chếch ra phía cổng cho dễ thấy mặt. */
 export function courtSlot(t: TuongId): { x: number; z: number; ry: number } {
-  const c = DIEN_LOT.cells('t')[COURT_ORDER.indexOf(t)];
+  const c = DIEN_LOT.cells('t')[COURT_SLOT[t]];
   return { x: c.x, z: c.z, ry: c.x < 0 ? 0.85 : -0.85 };
 }
 
@@ -621,4 +630,4 @@ export function makeDien(level: number): THREE.Group {
   return g;
 }
 
-export const DIEN: CongTrinh = { tiles: 10, make: makeDien, spots: dienSpots, view: { half: 8.5, lookY: 2.4, px: 28 } };
+export const DIEN: CongTrinh = { tiles: 10, make: makeDien, spots: dienSpots, view: { half: 10, lookY: 3.4, px: 26 } };

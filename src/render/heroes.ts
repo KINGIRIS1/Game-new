@@ -443,6 +443,16 @@ function poseGiongRider(b: Human, a: Act): void {
   gripHands(b, ARM * K_GIONG);
 }
 
+/** Gióng xuống ngựa đứng chầu trong sân Điện: roi sắt (hay tre) dựng bên phải, tay trái nắm hờ, thở nhẹ. */
+function poseGiongStand(b: Human, a: Act): void {
+  const t = a.time ?? 0;
+  beginPose(b, t);
+  b.armR.rotation.set(-0.2, 0, 0.2);
+  b.hand.rotation.set(0.12 + 0.02 * Math.sin(t * 1.2), 0, -0.12);
+  b.armL.rotation.set(-0.3, 0, -0.26);
+  gripHands(b, ARM * K_GIONG);
+}
+
 // Cậu bé lên ba ngồi bệt trên chiếu.
 const CHILD: Defs = {
   ...BASE,
@@ -566,8 +576,9 @@ function poseTeen(b: B, a: Act): void {
 /**
  * Thánh Gióng theo từng dáng: cậu bé lên ba ngồi trên chiếu, thiếu niên ôm bát cơm, tráng sĩ cưỡi ngựa sắt giơ cao
  * roi sắt (hay cây tre khi roi đã gãy), lửa phun ra từ mõm ngựa. `glow`: Phù Đổng Thiên Vương hiển linh, có hào quang.
+ * `onFoot`: tráng sĩ xuống ngựa, đứng chầu trong sân Điện (tướng đứng trong sân không cưỡi thú).
  */
-export function makeGiong(look: GiongLook, opts: { bamboo?: boolean; glow?: boolean } = {}): THREE.Group {
+export function makeGiong(look: GiongLook, opts: { bamboo?: boolean; glow?: boolean; onFoot?: boolean } = {}): THREE.Group {
   if (look === 'be') {
     const r = new RigBuilder(CHILD);
     drawChild(r);
@@ -579,6 +590,13 @@ export function makeGiong(look: GiongLook, opts: { bamboo?: boolean; glow?: bool
     drawTeen(r);
     const { group, bones } = skinRig(r.build());
     return finish(group, (a) => poseTeen(bones, a));
+  }
+  if (opts.onFoot) {
+    const r = new RigBuilder({ ...BASE, ...bigHuman('base', [0, 0, 0], K_GIONG) });
+    drawBig(r, [0, 0, 0], K_GIONG, (h) => drawGiongRider(h, opts.bamboo ?? false));
+    const { group, bones } = skinRig(r.build());
+    if (opts.glow) addHalo(group, 1.5, -0.38);
+    return finish(group, (a) => poseGiongStand(bones as unknown as Human, a));
   }
   const r = new RigBuilder({ ...BASE, ...IRON_HORSE, ...bigHuman('qBody', GIONG_AT, K_GIONG) });
   drawIronHorse(r);
