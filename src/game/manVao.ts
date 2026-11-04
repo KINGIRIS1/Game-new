@@ -13,7 +13,7 @@ export type TomTat = {
   chapter: Chapter;
   dien: number;
   dan: number;
-  /** Đã xem màn hình Hết truyện (chương 4). Sang chương 5 thì truyện còn tiếp, chưa tính là hết. */
+  /** Đã xem màn hình Hết truyện: chương 4 khi chưa sang chương 5 (sang rồi thì truyện còn tiếp), hay chương 5. */
   hetTruyen: boolean;
   /** Đã vắng bao lâu kể từ lần chơi trước (ms). */
   vang: number;
@@ -34,7 +34,8 @@ export function tomTat(s: GameState, now: number): TomTat {
     chapter: chapterOf(s),
     dien: dienLevel(s),
     dan: s.dan,
-    hetTruyen: s.story.seen.includes('hetTruyen') && !inChapter5(s),
+    // Hết truyện chương 4 rồi sang chương 5 thì lại đang kể, tới khi hết truyện chương 5.
+    hetTruyen: s.story.seen.includes('hetTruyen5') || (s.story.seen.includes('hetTruyen') && !inChapter5(s)),
     vang: Math.max(0, now - s.lastSeen),
   };
 }

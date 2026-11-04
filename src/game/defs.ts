@@ -1305,8 +1305,9 @@ export const ENEMIES: Record<EnemyType, FighterStats> = {
   // Phục Ba tướng quân Mã Viện, trùm màn 39, 40: cưỡi ngựa trắng, có Lệnh nỏ (`MA_VIEN_VOLLEY`).
   maVien: { hp: 2000, dmg: 36, range: 1.3, speed: 1.3, cooldown: 1.2 },
   // Lâu thuyền Hán (thủy quân Hán ở kinh đô): đậu dưới sông, mỗi loạt 3 mũi nỏ (`LAU_THUYEN`). Chỉ quân bắn xa và
-  // công trình phòng thủ bắn tới.
-  lauThuyen: { hp: 1800, dmg: 18, range: 5, speed: 0.6, cooldown: 2 },
+  // công trình phòng thủ bắn tới. Bắn xa hơn cung thủ, nên cung thủ đứng bờ sông hay ngã trước khi thuyền chìm:
+  // máu, sát thương thấp hơn đề xuất (1800, 18) cho đợt đầu vừa sức quân mẫu (`chuong5.test.ts`).
+  lauThuyen: { hp: 900, dmg: 12, range: 5, speed: 0.6, cooldown: 2 },
 };
 
 /**
@@ -1432,7 +1433,7 @@ export const TO_DINH_FLEE = { at: 0.3, speed: 1.5 };
  * Lệnh nỏ của Mã Viện: lần đầu sau `first` giây, rồi cứ `every` giây, một loạt tên nỏ rơi xuống chỗ quân ta đứng đông
  * nhất, `dmg` sát thương mỗi người trong `radius` ô. Tên rơi sau `delay` giây kể từ lúc phất cờ.
  */
-export const MA_VIEN_VOLLEY = { first: 8, every: 14, dmg: 40, radius: 3, delay: 0.8 };
+export const MA_VIEN_VOLLEY = { first: 8, every: 14, dmg: 30, radius: 2, delay: 0.8 };
 /**
  * Lâu thuyền Hán: đậu giữa ba ô sông sát bờ, không cập bờ. Cứ `cooldown` giây (ở `ENEMIES.lauThuyen`) bắn một loạt
  * `shots` mũi nỏ vào công trình hay lính gần nhất trong tầm, mỗi mũi `dmg` sát thương. Chỉ quân bắn xa và công trình
@@ -1691,9 +1692,10 @@ export const STAGES: StageDef[] = [
   { chapter: 5, minDien: 5, needsGiong: false, enemies: { linhHan: 12, noHan: 8, giapHan: 4, toDinh: 1 }, hpScale: 1.85, reward: { gao: 11500, voOc: 9500, datDa: 8300, sat: 2000 }, terrain: 'luyLau' },
   // Màn 37–40: Mã Viện sang. Màn 39 là Mã Viện ở hồ Lãng Bạc, màn 40 giữ cửa rừng Cấm Khê cho dân rút về núi
   // (cầm cự 100 giây, Mã Viện tới ở đợt cuối).
-  { chapter: 5, minDien: 5, needsGiong: false, enemies: { linhHan: 13, noHan: 8, giapHan: 4 }, hpScale: 2.4, reward: { gao: 12000, voOc: 10000, datDa: 8700, sat: 2100 }, terrain: 'cuaSong' },
-  { chapter: 5, minDien: 5, needsGiong: false, enemies: { linhHan: 12, noHan: 9, giapHan: 4 }, hpScale: 2.4, reward: { gao: 12500, voOc: 10500, datDa: 9100, sat: 2200 }, terrain: 'langBac' },
-  { chapter: 5, minDien: 5, needsGiong: false, enemies: { linhHan: 12, noHan: 8, giapHan: 4, maVien: 1 }, hpScale: 2.3, reward: { gao: 13500, voOc: 11200, datDa: 9800, sat: 2400 }, terrain: 'langBac' },
+  { chapter: 5, minDien: 5, needsGiong: false, enemies: { linhHan: 13, noHan: 8, giapHan: 4 }, hpScale: 2.1, reward: { gao: 12000, voOc: 10000, datDa: 8700, sat: 2100 }, terrain: 'cuaSong' },
+  { chapter: 5, minDien: 5, needsGiong: false, enemies: { linhHan: 12, noHan: 9, giapHan: 4 }, hpScale: 2.0, reward: { gao: 12500, voOc: 10500, datDa: 9100, sat: 2200 }, terrain: 'langBac' },
+  // Mã Viện không bỏ chạy như Tô Định và có Lệnh nỏ, nên máu giặc thấp hơn các màn trước.
+  { chapter: 5, minDien: 5, needsGiong: false, enemies: { linhHan: 12, noHan: 8, giapHan: 4, maVien: 1 }, hpScale: 1.5, reward: { gao: 13500, voOc: 11200, datDa: 9800, sat: 2400 }, terrain: 'langBac' },
   {
     chapter: 5,
     minDien: 5,
@@ -1704,7 +1706,7 @@ export const STAGES: StageDef[] = [
       { at: 70, enemies: { linhHan: 4, noHan: 2, giapHan: 2, maVien: 1 } },
     ],
     holdS: 100,
-    hpScale: 3.1,
+    hpScale: 2.8,
     reward: { gao: 14000, voOc: 12000, datDa: 10500, sat: 2500 },
     terrain: 'camKhe',
   },

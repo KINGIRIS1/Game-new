@@ -2221,6 +2221,7 @@ Ba loại lính theo đúng vòng khắc chế như giặc các chương trướ
 - Lính nỏ đánh mạnh gấp đôi giáp sĩ, Tô Định, Mã Viện như với quân nặng và trùm các chương trước.
 - **Tô Định bỏ chạy**: còn 30% máu thì quay đầu chạy về cuối bãi, nhanh gấp rưỡi. Chạy thoát khỏi bãi thì tính như đã hạ, đúng như truyện kể hắn bỏ trốn về Nam Hải. Phải diệt hết quân của hắn mới thắng màn.
 - **Mã Viện có Lệnh nỏ**: lần đầu sau 8 giây, rồi cứ 14 giây, một loạt tên nỏ rơi xuống chỗ quân ta đứng đông nhất: 40 sát thương mỗi người trong 3 ô. Đây là trùm đầu tiên bắn vào chỗ quân ta dồn cục, người chơi phải đánh nhanh hay xếp hàng thưa.
+  - **Số cuối PR 3**: Lệnh nỏ 30 sát thương mỗi người trong 2 ô (`MA_VIEN_VOLLEY` ở `defs.ts`: `first` 8, `every` 14, `dmg` 30, `radius` 2, tên rơi sau `delay` 0,8 giây kể từ lúc Mã Viện phất cờ; bị choáng thì hoãn). Đề xuất 40 sát thương trong 3 ô giết ngay cung thủ (40 máu) cả cụm, màn 39 thua ở mọi mức máu thử. Mã Viện giữ máu, sát thương như bảng; `stepMaVien` ở `battle.ts`, `densest(battle, r, 'ta')` tìm chỗ quân ta đông nhất.
 - **Dáng** (`soldier.ts`, `beasts.ts`): quân Hán mặc áo đỏ son để khác quân Triệu áo đen.
   - Lính kích: quần đỏ sẫm, áo dài đỏ son quá gối, giáp lá xám sắt che ngực (ba hàng lá), khăn đen viền đỏ dựng vạt sau gáy, cầm kích sắt cán đen (mũi giáo và lưỡi ngang chĩa sang phải, tua lông đen; `kich` ở `weapons.ts`).
   - Nỏ thủ: áo như lính kích nhưng giáp da nâu, nỏ lớn lẫy đồng, đứng bắn (tên sẫm bay nhanh như nỏ Triệu), bao tên đỏ sẫm sau lưng.
@@ -2237,6 +2238,10 @@ Ba loại lính theo đúng vòng khắc chế như giặc các chương trướ
 - **Lâu thuyền** (`lauThuyen`): thuyền lớn ba tầng, đậu giữa ba ô sông sát bờ, không cập bờ. 1800 máu, nhân hệ số máu của đợt. Cứ 2 giây bắn một loạt 3 mũi nỏ vào công trình hay lính gần nhất trong 5 ô (nhân `RAID_SCALE`), mỗi mũi 18 sát thương.
   - Chỉ quân bắn xa (cung thủ, lính nỏ, Cao Lỗ), chòi canh, lầu nỏ, ụ nỏ, lính trên lầu cổng thành bắn tới được. Giáo binh, voi chiến và Hai Bà trên bờ không đánh tới.
   - Đánh chìm thì thuyền nghiêng, chìm dần. Hết giờ trận mà lâu thuyền còn thì rút đi như giặc còn sống lúc hết giờ.
+  - **Số cuối PR 3**: lâu thuyền **900 máu, 12 sát thương mỗi mũi** (đề xuất 1800 và 18), vẫn nhân hệ số máu của đợt (`thuyHanHpScale(n)` = 2,2 + 0,12 mỗi đợt). Lâu thuyền bắn xa hơn cung thủ (5 ô so với 3,8 ô, cùng nhân `RAID_SCALE`), nên với số đề xuất nó bắn ngã hết cung thủ, lính nỏ trước khi chìm, đợt đầu không giữ nổi. Đậu cách bờ `LAU_THUYEN.moor` = 1,5 ô, các chiếc cách nhau `spacing` = 5 ô dọc bờ, quanh giữa đoạn thuyền chở lính cập bờ (`shipLayout` ở `battle.ts`).
+  - Bắn tới lâu thuyền: cung thủ, lính nỏ, Cao Lỗ, An Dương Vương (`SHIP_HITTERS`, `reaches` ở `battle.ts`) và mọi công trình phòng thủ. Chòi canh phải dựng gần bờ (tầm 4,5 ô nhân `RAID_SCALE`): chòi cách sông 5 ô trở ra không bắn tới. Kỹ năng vùng (Voi xung trận, Nhổ tre, đá Dời non) cũng không trúng. Lâu thuyền không cướp của; thuyền chưa chìm lúc hết giờ thì đợt ấy tính thua.
+  - Lịch: thắng màn 37 lần đầu thì đợt tới là thủy quân Hán, tới trong 3 phút (`scheduleThuyHan` ở `game.ts`), rồi thủy quân Hán, quân Hán trên bộ, lũ thay phiên (`nextFoe`). Đếm ở `raid.thuyHan`, `raid.thuyHanHeld`, `raid.lauSunk` (nhiệm vụ 58). Bờ bên kia có công trình thì cứ ba đợt có một đợt cập bờ bên kia như thủy binh Triệu (`farRaidBank`). Trinh sát báo trước chỗ cả lâu thuyền (`upcomingBoats` cho `big: true`, `plannedBoats` rút số thuyền chở lính trước rồi tới lâu thuyền).
+  - `maVien.test.ts` canh: đợt thủy quân Hán đầu do quân mẫu chương 4, Hai Bà và năm chòi canh cấp 1 dựng cách sông 2 ô thắng được ở cả hai bờ; không quân bắn xa thì thuyền không sứt máu và rút đi.
   - Dáng (`makeLauThuyen` ở `models.ts`): thân thuyền dài chừng 4 ô, hai hàng mái chèo, lầu gỗ ba tầng mái ngói đen, lan can đỏ, cờ đen lớn trên nóc, lính nỏ Hán đứng ở từng tầng.
 - Hai bà giữ kinh đô (từ PR 2). Cả hai kiệt sức thì Cao Lỗ giữ, rồi Sơn Tinh, Gióng.
 - **Số cuối PR 1 (đã làm)**: giữ nguyên đề xuất. Ba lính như bảng trên (`linhHan`, `noHan`, `giapHan` ở `defs.ts`; cung thủ khắc lính kích, voi khắc nỏ thủ, giáp sĩ là quân nặng khắc cung thủ). `hanForces(n)`, `hanHpScale(n)` như trên; đợt Hán đầu tới sau `FIRST_HAN_MS` = 3 phút kể từ lúc nhận thưởng nhiệm vụ 51, rồi quân Hán và lũ xen nhau (`nextFoe`; `raid.han`, `raid.hanHeld` đếm đợt đã tới và đã giữ được). Đợt quân Hán ra từ bìa rừng (`landRaidSide`). Cao Lỗ giữ kinh đô (`leadsFor` chương 5), kiệt sức thì Sơn Tinh, rồi Gióng; mùa lũ vẫn là Sơn Tinh. `chuong5.test.ts` canh: đợt Hán đầu do Cao Lỗ và quân mẫu chương 4 cùng năm chòi canh thắng được.
@@ -2275,6 +2280,7 @@ Bản đồ phó bản có thêm thẻ Chương 5, mở khi vào chương 5. B�
   - Bãi: màn 33 bãi làng, 34 bãi Hát Môn (`hatMon`), 35 bãi thành Cổ Loa, 36 bãi Luy Lâu (`luyLau`) ở `battlefield.ts`.
   - Bản đồ phó bản (`src/ui/campaign.ts`): `NODES[5]`, cảnh `SCENERY[5]` (sông Hát, Cổ Loa, Luy Lâu, Hợp Phố, Lãng Bạc, Cấm Khê), điểm xuất quân Mê Linh. Thẻ chọn chương đổi thành chữ "Chương" kèm năm nút số cho vừa khổ điện thoại hẹp.
   - Thử thách màn 33–36 chưa có (PR 4): `CHALLENGES` vẫn 32, `huanReward` của màn chưa có thử thách là 0.
+- **Số cuối PR 3 (màn 37–40)**: quân giặc và thưởng như bảng. Máu giặc đo theo chuẩn: màn 37 ×2,1, màn 38 ×2,0, màn 39 ×1,5, màn 40 ×2,8 (`STAGES`). Mã Viện không bỏ chạy như Tô Định và có Lệnh nỏ, nên màn 39 thấp hơn hẳn: không có Lệnh nỏ cũng chỉ giữ được tới ×1,5. Màn 40 cầm cự `holdS` 100 giây, đợt sau lúc 35 và 70 giây (`waves`), thua khi quân ta ngã hết; quá 90 giây không còn tính thua với màn cầm cự (`stepField`). Màn 39, 40 không bấm kỹ năng thì thua. `maVien.test.ts` canh độ khó từng màn.
 - Thắng màn 40: hai bà đứng trên voi nhìn về phía sông, camera lùi xa (bảng kết quả chờ 3,5 giây như các màn kết chương), rồi tới đoạn 6 và màn hình Hết truyện mới. Không vẽ cảnh gieo mình xuống sông.
 
 ### Đền Hát Môn
@@ -2284,6 +2290,7 @@ Bản đồ phó bản có thêm thẻ Chương 5, mở khi vào chương 5. B�
 - Sức chịu nước lũ như các đền khác.
 - Dáng: đền nền đá mái cong hai tầng có chim đồng; sân trước có đàn tế đắp đất với cột cờ đỏ; hai voi đá quỳ hai bên sân; lư hương đồng; cây đa bên cạnh.
 - Không làm mẫu kinh đô mới, vì chương 5 không thêm đất hay công trình phòng thủ. Mẫu "Cổ Loa giữ sông" thêm một chỗ 4×4 cho Đền Hát Môn.
+- **Số cuối PR 3**: như trên. `HAT_MON_NGHIA_BINH` = 6 ở `defs.ts`; nghĩa binh đứng vòng trước sân đền lúc trận mở (`startBattle`), máu `NGHIA_BINH.hp`, không tính là quân mất. Mốc mở `ketChuong5` (`chuong5Won`). Chỗ trong mẫu Cổ Loa giữ sông ngay sau Đền Cuông, cùng hàng ngoài vòng ngoài, chừa từ Điện 9 (số thứ ba của `Job` ở `mau.ts`): vào chương 5 thì đã có Điện 9, còn dưới Điện 9 đền choán mất chỗ ruộng.
 
 ### PR 4: nữ tướng, thử thách màn 33–40
 
