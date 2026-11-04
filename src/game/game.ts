@@ -80,7 +80,7 @@ import {
 } from './defs';
 import { capOf, generals } from './doanhTrai';
 import { START_KHOANH, isOpen, openMask, openStart } from './khoanh';
-import { DIEN_HOME, GRID, baseHeights, farBankOf, inGrid, touchesRiver } from './map';
+import { DIEN_HOME, GRID, baseHeights, farBankOf, inGrid, isNearBank, touchesRiver } from './map';
 
 export interface Building {
   id: number;
@@ -307,9 +307,10 @@ export interface Merchant {
 /**
  * Phiên bản bản lưu hiện tại (11: kinh đô lớn; 12: khoảnh tự chọn; 13: lính nỏ, ụ nỏ; 14: Cao Lỗ, vua xuống biển;
  * 15: thử thách, huân công; 16: gỗ, tài nguyên thứ năm, và gợi ý của Lạc hầu về công trình mới; 17: cây, đá mọc trên
- * ô trống; 18: lưới nới qua sông, 76×76; 20: chương 5, quân Hán; 21: Hai Bà Trưng).
+ * ô trống; 18: lưới nới qua sông, 76×76; 20: Điện 10×10; 21: chương 5, quân Hán; 22: Hai Bà Trưng; 23: thủy quân Hán,
+ * lâu thuyền).
  */
-export const SAVE_VERSION = 22;
+export const SAVE_VERSION = 23;
 
 export interface GameState {
   version: typeof SAVE_VERSION;
@@ -356,7 +357,7 @@ export interface GameState {
   /** Vùng đất bên kia sông (`benKia.ts`): khoảnh đã dò, đã mở, trinh sát đang đi, đồn đã dẹp. */
   benKia: BenKiaState;
   /** Vừa nâng từ kinh đô nhỏ: kinh đô đã dựng lại theo mẫu, trả lại chừng này của. Giao diện báo một lần rồi xóa. */
-  relaid?: { refund: Cost; dropped: number };
+  relaid?: { refund: Cost; dropped: number; dien?: boolean };
 }
 
 export type FailReason =
@@ -1090,6 +1091,20 @@ export function findSpot(
   const probe = canPlace(state, type, -def.w, -def.d);
   // Thử ở ngoài lưới: lý do tùy chỗ đặt (ngoài vùng, đồn biên phải ở bên kia sông) chưa nói gì; lý do khác thì chịu.
   if (!probe.ok && probe.reason !== 'ngoaiVung' && probe.reason !== 'phaiBenKia') return null;
+  return roomFor(state, type, anchor, roomyOnly);
+}
+
+/**
+ * Chỗ đặt `type` như `findSpot` nhưng chỉ xét chỗ (đất đã mở, không chồng công trình, bến sát sông), không xét giới
+ * hạn, mốc mở hay giá: để đưa một công trình đã có (chưa nằm trong state) vào chỗ khác, như khi Điện nới móng.
+ */
+export function roomFor(
+  state: GameState,
+  type: BuildingType,
+  anchor?: { x: number; z: number },
+  roomyOnly = false,
+): { x: number; z: number } | null {
+  const def = BUILDINGS[type];
   const dien = state.buildings.find((b) => b.type === 'dien');
   const lo = openStart(state);
   const a = anchor ?? (isSolid(type) && dien ? { x: dien.x + BUILDINGS.dien.w / 2, z: dien.z + BUILDINGS.dien.d / 2 } : { x: lo, z: lo });
@@ -1120,6 +1135,8 @@ export function moveCost(b: Pick<Building, 'type'>): Cost {
 function fitsWithout(state: GameState, b: Building, x: number, z: number, grid: Int32Array): FailReason | null {
   const def = BUILDINGS[b.type];
   if (!isRoad(b.type) && blocksBridge(state, x, z, def.w, def.d)) return 'chanLoiCau';
+  // Điện ở bên này sông: giặc, trinh sát, tướng đều lấy Điện làm gốc phía kinh đô.
+  if (b.type === 'dien' && !(isNearBank(x, z) && isNearBank(x + def.w - 1, z + def.d - 1))) return 'khongTheDoi';
   // Đồn biên dời đi vẫn phải ở bên kia sông, mỗi bờ một.
   if (b.type === 'donBien') {
     const bank = farBankOf(x, z);
@@ -1143,7 +1160,6 @@ function fitsWithout(state: GameState, b: Building, x: number, z: number, grid: 
 export function canMove(state: GameState, id: number, x: number, z: number): Result {
   const b = findBuilding(state, id);
   if (!b) return fail('khongTimThay');
-  if (b.type === 'dien') return fail('khongTheDoi');
   if (isBridge(b.type)) return fail('cauKhongDoi');
   if (state.raid.phase !== 'idle') return fail('dangCoGiac');
   if (b.x === x && b.z === z) return fail('trungCho');
@@ -1173,12 +1189,13 @@ export function move(state: GameState, id: number, x: number, z: number, rot?: n
 
 /**
  * Loại công trình xoay được, mỗi nấc 90°: móng vuông nhiều ô, nên xoay không đổi ô nào bị chiếm, chỉ đổi hướng mặt
- * trước (và chỗ tướng đứng, ra trận ở doanh trại). Điện đứng yên như khi dời; bến, làng chài luôn quay mặt ra sông;
+ * trước (và chỗ tướng đứng, ra trận ở doanh trại; ở Điện thì sân chầu, ngai vua, chỗ tướng chầu xoay theo). Bến, làng
+ * chài luôn quay mặt ra sông;
  * cầu theo dòng sông; công trình một ô (lũy, đê, thành, cổng, chòi, đường, đồ trang trí nhỏ) không cần xoay.
  */
 export function canRotateType(type: BuildingType): boolean {
   const def = BUILDINGS[type];
-  return def.w === def.d && def.w > 1 && type !== 'dien' && !def.nearRiver && !isBridge(type);
+  return def.w === def.d && def.w > 1 && !def.nearRiver && !isBridge(type);
 }
 
 /** Hướng xoay của công trình: số nấc 90° (0–3). */

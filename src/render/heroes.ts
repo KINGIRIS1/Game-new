@@ -1,6 +1,6 @@
 // Các tướng có khung xương (rig.ts, body.ts): Thánh Gióng ba dáng và ngựa sắt, Sơn Tinh, Thủy Tinh, An Dương Vương, Cao Lỗ,
-// Hai Bà Trưng trên voi trận (voi ở beasts.ts), và Lạc tướng đánh trống trận ở bãi chiến. Tướng to hơn lính: thân
-// người thường phóng to bằng `place` + `moveBones`.
+// Hai Bà Trưng trên voi trận (voi ở beasts.ts), Lạc tướng đánh trống trận ở bãi chiến, Lạc tướng đứng chầu và Vua Hùng
+// ngồi ngai vàng trong sân Điện. Tướng to hơn lính: thân người thường phóng to bằng `place` + `moveBones`.
 
 import * as THREE from 'three';
 import type { GiongLook } from '../game/giong';
@@ -30,7 +30,7 @@ import {
 import { C } from './palette';
 import { RigBuilder, bakeRig, moveBones, skinRig, type Act, type BoneDef, type Bones, type Poser } from './rig';
 import { ToonModel, inkThin } from './toon';
-import { IRON, IRON_DARK, LEATHER, arrow, bow, coLac, crossbowParts, guomDong, hornTrumpet, quiver, repeatingCrossbow, type Parts } from './weapons';
+import { IRON, IRON_DARK, LEATHER, arrow, bow, coLac, crossbowParts, drumShield, guomDong, hornTrumpet, quiver, repeatingCrossbow, spear, type Parts } from './weapons';
 
 type Defs = Record<string, BoneDef<string>>;
 type Rig = RigBuilder<string>;
@@ -445,6 +445,16 @@ function poseGiongRider(b: Human, a: Act): void {
   gripHands(b, ARM * K_GIONG);
 }
 
+/** Gióng xuống ngựa đứng chầu trong sân Điện: roi sắt (hay tre) dựng bên phải, tay trái nắm hờ, thở nhẹ. */
+function poseGiongStand(b: Human, a: Act): void {
+  const t = a.time ?? 0;
+  beginPose(b, t);
+  b.armR.rotation.set(-0.2, 0, 0.2);
+  b.hand.rotation.set(0.12 + 0.02 * Math.sin(t * 1.2), 0, -0.12);
+  b.armL.rotation.set(-0.3, 0, -0.26);
+  gripHands(b, ARM * K_GIONG);
+}
+
 // Cậu bé lên ba ngồi bệt trên chiếu.
 const CHILD: Defs = {
   ...BASE,
@@ -568,8 +578,9 @@ function poseTeen(b: B, a: Act): void {
 /**
  * Thánh Gióng theo từng dáng: cậu bé lên ba ngồi trên chiếu, thiếu niên ôm bát cơm, tráng sĩ cưỡi ngựa sắt giơ cao
  * roi sắt (hay cây tre khi roi đã gãy), lửa phun ra từ mõm ngựa. `glow`: Phù Đổng Thiên Vương hiển linh, có hào quang.
+ * `onFoot`: tráng sĩ xuống ngựa, đứng chầu trong sân Điện (tướng đứng trong sân không cưỡi thú).
  */
-export function makeGiong(look: GiongLook, opts: { bamboo?: boolean; glow?: boolean } = {}): THREE.Group {
+export function makeGiong(look: GiongLook, opts: { bamboo?: boolean; glow?: boolean; onFoot?: boolean } = {}): THREE.Group {
   if (look === 'be') {
     const r = new RigBuilder(CHILD);
     drawChild(r);
@@ -581,6 +592,13 @@ export function makeGiong(look: GiongLook, opts: { bamboo?: boolean; glow?: bool
     drawTeen(r);
     const { group, bones } = skinRig(r.build());
     return finish(group, (a) => poseTeen(bones, a));
+  }
+  if (opts.onFoot) {
+    const r = new RigBuilder({ ...BASE, ...bigHuman('base', [0, 0, 0], K_GIONG) });
+    drawBig(r, [0, 0, 0], K_GIONG, (h) => drawGiongRider(h, opts.bamboo ?? false));
+    const { group, bones } = skinRig(r.build());
+    if (opts.glow) addHalo(group, 1.5, -0.38);
+    return finish(group, (a) => poseGiongStand(bones as unknown as Human, a));
   }
   const r = new RigBuilder({ ...BASE, ...IRON_HORSE, ...bigHuman('qBody', GIONG_AT, K_GIONG) });
   drawIronHorse(r);
@@ -1544,8 +1562,12 @@ function poseTrungNhi(bones: B, a: Act): VoiTranMood {
   return mood;
 }
 
-/** Trưng Trắc cưỡi voi trận đệm đỏ có mặt trống đồng, lọng đỏ. `glow`: hiển linh, có hào quang. */
-export function makeTrungTrac(opts: { glow?: boolean } = {}): THREE.Group {
+/**
+ * Trưng Trắc cưỡi voi trận đệm đỏ có mặt trống đồng, lọng đỏ. `glow`: hiển linh, có hào quang. `onFoot`: xuống voi,
+ * đứng chầu trong sân Điện (tướng đứng trong sân không cưỡi thú).
+ */
+export function makeTrungTrac(opts: { glow?: boolean; onFoot?: boolean } = {}): THREE.Group {
+  if (opts.onFoot) return standingBa(drawTrungTrac, 'trungTrac', opts.glow);
   const group = makeVoiTran(
     { pad: C.red, trim: C.gold, drum: true, parasol: C.trungRed },
     {
@@ -1558,8 +1580,12 @@ export function makeTrungTrac(opts: { glow?: boolean } = {}): THREE.Group {
   return group;
 }
 
-/** Trưng Nhị cưỡi voi trận đệm vàng, lọng vàng, cờ đỏ chim Lạc cắm sau bành. `glow`: hiển linh, có hào quang. */
-export function makeTrungNhi(opts: { glow?: boolean } = {}): THREE.Group {
+/**
+ * Trưng Nhị cưỡi voi trận đệm vàng, lọng vàng, cờ đỏ chim Lạc cắm sau bành. `glow`: hiển linh, có hào quang.
+ * `onFoot`: xuống voi, đứng chầu trong sân Điện.
+ */
+export function makeTrungNhi(opts: { glow?: boolean; onFoot?: boolean } = {}): THREE.Group {
+  if (opts.onFoot) return standingBa(drawTrungNhi, 'trungNhi', opts.glow);
   const group = makeVoiTran(
     { pad: C.trungYellow, trim: C.red, parasol: C.trungYellow, flag: K_BA },
     {
@@ -1572,6 +1598,33 @@ export function makeTrungNhi(opts: { glow?: boolean } = {}): THREE.Group {
     },
   );
   if (opts.glow) addHalo(group, ...HALO_BA);
+  return group;
+}
+
+/**
+ * Hai Bà đứng chầu trong sân Điện, cùng cỡ Lạc tướng đứng chầu: Trưng Trắc dựng gươm trước vai phải, Trưng Nhị cầm
+ * cung dựng bên trái, tay phải buông cầm tên; thở nhẹ.
+ */
+function standingBa(draw: (h: HumanRig) => void, kind: 'trungTrac' | 'trungNhi', glow = false): THREE.Group {
+  const r = new RigBuilder({ ...BASE, ...bigHuman('base', [0, 0, 0], K_LAC) });
+  drawBig(r, [0, 0, 0], K_LAC, draw);
+  const { group, bones } = skinRig(r.build());
+  const b = bones as unknown as Human;
+  finish(group, (a) => {
+    const t = a.time ?? 0;
+    beginPose(b, t);
+    if (kind === 'trungTrac') {
+      b.armR.rotation.set(-0.35, 0, 0.18);
+      b.hand.rotation.set(0.35 + 0.02 * Math.sin(t * 1.3), 0, -0.1);
+      b.armL.rotation.set(-0.1, 0, -0.18);
+    } else {
+      b.armL.rotation.set(-0.35, 0, -0.25);
+      b.handL.rotation.set(0.35, 0, 0.1);
+      b.armR.rotation.set(-0.05, 0, 0.2);
+    }
+    gripHands(b, ARM * K_LAC);
+  });
+  if (glow) addHalo(group, 1.5, -0.38);
   return group;
 }
 
@@ -1643,4 +1696,86 @@ export function makeDrummer(): THREE.Group {
   group.add(faceGroup);
   group.userData.face = faceGroup;
   return group;
+}
+
+// ---------- Sân chầu Điện: Lạc tướng đứng chầu, Vua Hùng ngồi ngai vàng ----------
+
+const K_LAC = 1.3;
+
+/** Lạc tướng đứng chầu: khố đỏ hoa văn, giáp đồng có gương hộ tâm, áo choàng đỏ, mũ lông chim, giáo mũi sắt, khiên mặt trống. */
+function drawLacTuong(h: HumanRig): void {
+  humanBody(h, { cloth: C.red, top: C.bronze, belt: C.bronze, armband: C.bronze, greaves: C.bronze, drumPlate: true });
+  const chest = h.on('chest').plain;
+  chest.box(0.4, 0.45, 0.035, C.red, 0, 0.42, -0.18, [0.18, 0, 0]);
+  for (const s of [-1, 1]) chest.sphere(0.06, C.bronze, s * 0.14, 0.56, 0, [1, 0.8, 1], 8);
+  humanHead(h, { brows: true, mustache: C.hair });
+  hairCap(h);
+  headband(h, C.red);
+  featherCrown(h, [C.red, C.cream], { len: 0.44 });
+  h.local('hand', GRIP_R, null, (s) => spear(s, 1, 1.45));
+  h.local('armL', [-0.2, 0.39, 0.06], null, (s) => drumShield(s, false, 0.17));
+}
+
+/** Đứng nghiêm, giáo dựng bên phải, khiên trước bụng, thở nhẹ. */
+function poseLacTuong(b: Human, a: Act): void {
+  const t = a.time ?? 0;
+  beginPose(b, t);
+  b.armL.rotation.set(-0.45, 0, -0.28);
+  b.hand.rotation.set(0.06 + 0.02 * Math.sin(t * 1.3), 0, -0.06);
+  gripHands(b, ARM * K_LAC);
+}
+
+/** Lạc tướng đứng chầu trong sân Điện (ở bãi chiến thì là người đánh trống, `makeDrummer`). */
+export function makeLacTuong(): THREE.Group {
+  const r = new RigBuilder({ ...BASE, ...bigHuman('base', [0, 0, 0], K_LAC) });
+  drawBig(r, [0, 0, 0], K_LAC, drawLacTuong);
+  const { group, bones } = skinRig(r.build());
+  return finish(group, (a) => poseLacTuong(bones as unknown as Human, a));
+}
+
+const K_VUA = 1.45;
+/** Chỗ vua ngồi chạm mặt ngai, tính từ gốc tượng (giữa hai bàn chân lúc đứng): mặt dưới đùi khi ngồi. */
+export const VUA_SEAT = (HUMAN.legL.at[1] - 0.045) * K_VUA;
+
+/**
+ * Vua Hùng: hoàng bào đỏ son dài dệt hoa văn trống đồng, áo vàng nghệ, đai vàng, gương đồng hộ tâm, áo choàng đỏ sau
+ * lưng, râu bạc, mũ lông chim hai tầng vành vàng có mặt trời đồng giữa trán.
+ */
+function drawVuaHung(h: HumanRig): void {
+  humanBody(h, { cloth: C.red, long: true, pattern: true, top: C.ripe, sleeves: C.ripe, belt: C.gold, armband: C.gold, drumPlate: true });
+  const hips = h.on('hips');
+  hips.plain.box(0.1, 0.08, 0.044, C.gold, 0, 0.405, 0.138);
+  hips.band.box(0.13, 0.24, 0.03, C.gold, 0, 0.25, 0.165, [-0.1, 0, 0]);
+  const chest = h.on('chest');
+  chest.plain.box(0.48, 0.5, 0.035, C.red, 0, 0.4, -0.18, [0.16, 0, 0]);
+  chest.band.box(0.5, 0.07, 0.04, C.gold, 0, 0.16, -0.22, [0.16, 0, 0]);
+  // Vai áo vàng viền đỏ và chuỗi hạt đồng trước ngực.
+  for (const s of [-1, 1]) {
+    chest.plain.sphere(0.075, C.ripe, s * 0.16, 0.56, 0, [1.2, 0.7, 1.1], 8);
+    chest.plain.box(0.1, 0.022, 0.12, C.red, s * 0.17, 0.54, 0, [0, 0, -s * 0.3]);
+  }
+  chest.plain.add(new THREE.TorusGeometry(0.1, 0.012, 5, 16, Math.PI), C.bronzeLight, 0, 0.57, 0.06, [Math.PI / 2 + 0.5, 0, Math.PI]);
+  humanHead(h, { brows: true, mustache: C.beard, beard: C.beard });
+  hairCap(h);
+  featherCrown(h, [C.red, C.gold, C.cream], { count: 11, len: 0.5, spread: 0.21, bronzeRim: true, rim: C.gold, tier2: true });
+  const head = h.on('head').plain;
+  head.cyl(0.05, 0.05, 0.02, C.gold, 0, 0.84, 0.205, [Math.PI / 2, 0, 0], 12);
+  head.sphere(0.022, C.red, 0, 0.84, 0.218, [1, 1, 0.6], 7);
+}
+
+/** Vua Hùng ngồi ngai vàng, bản tĩnh (ngồi yên) để đặt vào mô hình Điện: lưng thẳng, đùi gần nằm ngang, hai tay đặt trên gối. */
+export function bakeVuaHung(): THREE.Group {
+  const r = new RigBuilder({ ...BASE, ...bigHuman('base', [0, 0, 0], K_VUA) });
+  drawBig(r, [0, 0, 0], K_VUA, drawVuaHung);
+  return bakeRig(r.build(), (bones) => {
+    const b = bones as unknown as Human;
+    beginPose(b, 0);
+    b.legL.rotation.order = b.legR.rotation.order = 'YXZ';
+    b.legL.rotation.set(-1.32, 0.1, 0);
+    b.legR.rotation.set(-1.32, -0.1, 0);
+    b.armL.rotation.set(-0.95, 0.2, -0.16);
+    b.armR.rotation.set(-0.95, -0.2, 0.16);
+    b.chest.rotation.x = -0.03;
+    gripHands(b, ARM * K_VUA);
+  });
 }

@@ -10,9 +10,48 @@ Cách đọc bản vẽ:
 - Người, thú, đồ vật giữ cỡ như bây giờ. Mỗi cấp vẫn thêm một phần lớn nhìn rõ; cấp thấp móng còn thưa, lên cấp thì lấp dần.
 - Khi làm, bản vẽ này chép vào code như bản vẽ mẫu kinh đô ở `src/game/mau.ts`, rồi sửa ở code. Tệp này giữ bản đã duyệt; chỗ nào đổi khi vẽ thật thì sửa cả ở đây.
 
-### Điện Vua Hùng: 4×4 → 5×5
+### Điện Vua Hùng: 4×4 → 5×5 → 10×10
 
-Cung điện có sân chầu: nhà chính lùi về sau, sân chầu phía trước có lối đá thẳng từ cổng lên thềm. Lạc hầu, lính gác, cây nêu, mâm bánh và tướng đứng trong sân, không cần ô trống ngoài móng nữa.
+Từ bản lưu 20 Điện móng 10×10 (chủ dự án yêu cầu; xem mục Điện Vua Hùng 10×10 trong `docs/thiet-ke.md`). Nửa sau là khối cung điện vẽ theo bản 5×5 đã duyệt (ở dưới) phóng 1,5 lần; nửa trước là sân chầu: Vua Hùng ngồi ngai vàng trên bệ trước thềm, các tướng đứng chầu hai bên lối giữa, lối đá thẳng ra cổng. Người, ngai, cờ, trống trong sân giữ cỡ thật.
+
+```
+. . . 7 . . . . . . . . . . . . 7 . . .
+. . . . . H H H H H H H H H H . . . . .
+. . . c c H H H H H H H H H H C C . . .
+. . . c c H H H H H H H H H H C C . . .
+. . . c c H H H H H H H H H H C C . . .
+. . . c c H H H H H H H H H H C C . . .
+. . . c c N N N N N N N N N N C C . . .
+. . . . . N N N N T T N N N N . . . . .
+. 2 . . . . . d T T T T d . . . . . 2 .
+. v v . . . . . . . . . . . . . . v v .
+. v v . . . . . V V V V . . . . . v v .
+. . . t . t . . V V V V . . t . t . . .
+. . . . . . . . V V V V . . . . . . . .
+. . . t . t . . m , , . . . t . t . . .
+. . . . . . . . . , , . . . . . . . . .
+. D . t . t . . . , , . . . t . t . D .
+. . . . . . . . . , , . . . . . . . . .
+. L L . . t . . . , , . . . t . . L L .
+. L L . e . . . l , , l . . . . . L L .
+. . . . . . . G G G G G G . . . . . . .
+```
+
+- `7`, `H`, `c`, `C`, `N`, `T`, `d`: khối cung điện (cột chim Lạc, nhà chính, hai chái, nền, thềm, đôi đỉnh đồng), vẽ theo bản 5×5 ở dưới, phóng 1,5 lần; chỗ chữ trên đây chỉ là chỗ chừng của khối sau khi phóng.
+- `V` cấp 1, bệ ngai: Vua Hùng ngồi ngai vàng ở mọi cấp. Cấp 1–3 ụ đất trải chiếu; cấp 4 bệ đá ba bậc, thảm đỏ; cấp 6 mép bậc viền vàng; cấp 9 mặt bậc chạm hoa văn. Ngai cấp 3 có lọng (cấp 6 lọng vàng), cấp 5 đôi quạt lông chim, cấp 7 chim Lạc trên tựa ngai.
+- `t` cấp 1, 14 chỗ tướng đứng chầu, hai cột mỗi bên (cột trong cách lối giữa 2,25 ô, cột ngoài 3,25 ô). Lạc tướng, Gióng hai bên ngai; Sơn Tinh, An Dương Vương hàng hai, Hai Bà Trưng cột ngoài hàng hai; Cao Lỗ hàng ba bên phải; còn lại để dành cho các chương sau. Tướng đứng trong sân không cưỡi thú.
+- `,` cấp 1, lối đi từ bệ ngai ra cổng (cấp 4: lát đá; cấp 6: viền vàng).
+- `m` cấp 1, chỗ bày mâm bánh ngày Tết, trước bệ ngai.
+- `e` cấp 1, chỗ cây nêu ngày Tết, dây cờ căng tới hai cột cờ `2`.
+- `l` cấp 1, chỗ Lạc hầu và lính gác (từ cấp 2) đứng trong cổng.
+- `2` cấp 2, cờ đỏ ở sau sân, cạnh voi đá.
+- `D` cấp 2, trống đồng trên giá cạnh lầu trống (cấp 2–4 một trống bên phải; cấp 5 hai trống lớn).
+- `G` cấp 4, cổng Nghi Môn phóng 1,3 lần (cấp 6 hai tầng mái, cấp 8 chim đồng, cấp 10 cổng thành), rào cột quanh móng thay bốn cọc mốc tre.
+- `v` cấp 5, đôi voi đá trên bệ (cấp 8 yên gấm vàng).
+- `L` cấp 6, lầu trống đồng ở hai góc trước, phóng 1,25 lần.
+- Cấp 1–3: bốn cọc mốc tre buộc vải đỏ ở bốn góc. Cấp 2: viền đá quanh sân.
+
+Khối cung điện (bản 5×5 trước bản lưu 20; nay chỉ dùng các chữ `7`, `H`, `c`, `C`, `N`, `T`, phần sân của bản này đã dời sang sân chầu ở trên):
 
 ```
 7 . H H H H H H . 7
@@ -28,21 +67,11 @@ L m m . , , . . . L
 ```
 
 - `H` cấp 1, nhà chính mái thuyền (cấp 5: mái hai tầng; cấp 7: mái ba tầng, đôi chim đồng lớn; cấp 8: trống đồng lớn trên nóc).
-- `m` cấp 1, chỗ bày mâm bánh ngày Tết.
-- `,` cấp 1, lối đi giữa sân (cấp 4: lát đá).
-- `l` cấp 1, chỗ Lạc hầu và lính gác đứng.
-- `e` cấp 1, chỗ cây nêu và dây cờ ngày Tết.
-- `a` cấp 1, chỗ tướng đứng (Sơn Tinh, An Dương Vương, cột đá thề).
-- `2` cấp 2, cờ đỏ hai bên lối.
-- `D` cấp 2, trống đồng trên giá (cấp 5: hai trống lớn).
 - `C` cấp 3, chái nhà bên phải.
 - `N` cấp 4, nền đất đắp viền đá dưới nhà (cấp 6: nền đá thứ hai, lan can đỏ; cấp 8: viền đồng).
-- `T` cấp 4, thềm đá ba bậc (cấp 8: thềm rộng, viền đá sẫm).
-- `G` cấp 4, cổng gỗ có mái nhỏ giữa rào, mái theo cấp (mới; cấp 8: mái ngói viền đồng, chim đồng).
-- `L` cấp 6, lầu trống đồng ở hai góc trước.
+- `T` cấp 4, thềm đá ba bậc, đôi đỉnh đồng hai bên (cấp 8: thềm rộng, viền đá sẫm).
 - `7` cấp 7, cột chim Lạc đai đồng.
-- `c` cấp 7, chái nhà bên trái, cho cân hai bên (mới).
-- Cấp 1–3: bốn cọc mốc tre buộc vải đỏ ở bốn góc (mới). Cấp 4: hàng rào cột chạm đầu bọc đồng chạy quanh mép móng thay cọc mốc, chừa cổng giữa mặt trước. Nhà chính to hơn dáng cũ chừng 15%.
+- `c` cấp 7, chái nhà bên trái, cho cân hai bên.
 
 ### Ruộng lúa: 3×3 → 4×4
 
@@ -598,7 +627,7 @@ Móng đã kín ở cấp 8, nên cấp 9, 10 không thêm ô con mới: mỗi l
 
 | Công trình | Phần | Cấp 9 | Cấp 10 |
 |---|---|---|---|
-| Điện | `H`, `G` | `H`: tầng gác giữa vách và mái, cột cái sơn đỏ in hoa văn | `G`: cổng thành hai trụ đất nện, vòm cửa, lầu cổng hai tầng mái; `H`: trống đồng trên nóc to gấp rưỡi, bốn tượng cóc đồng |
+| Điện | `H`, `G`, `V` | `H`: tầng gác giữa vách và mái, cột cái sơn đỏ in hoa văn; `V`: mặt bậc bệ ngai chạm hoa văn | `G`: cổng thành hai trụ đất nện, vòm cửa, lầu cổng hai tầng mái; `H`: trống đồng trên nóc to gấp rưỡi, bốn tượng cóc đồng |
 | Ruộng lúa | `O`, `M` | `O`: bờ ao lát đá, cầu tre cong qua ao | `M`: miếu thành đình nhỏ hai tầng mái, cây nêu |
 | Bến chợ thuyền | `G` | cầu tàu lát đá trên trụ đá, cột neo đồng | thuyền buôn thứ hai thành thuyền buôn lớn hai buồm |
 | Nhà sàn | `H`, `E`, `h` | `H`: lan can sàn chạm hoa văn; `E`: cầu thang gỗ to, má thang đỏ | `h`: nếp nhà sàn thứ hai mái thuyền, hiên có mái nối hai nếp |

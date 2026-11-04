@@ -1,13 +1,14 @@
 // Canh chương 5 phần 1: vào chương 5 (nhận thưởng nhiệm vụ 51), Điện 10 mở theo chương, quân Hán (lính kích, nỏ thủ,
-// giáp sĩ) đánh kinh đô xen với lũ, nhiệm vụ 54, bản lưu phiên bản 20.
+// giáp sĩ) đánh kinh đô xen với lũ, nhiệm vụ 54, bản lưu phiên bản 21.
 // Phần 2: Hai Bà Trưng (hai tướng cùng ra một trận, mỗi bà một kỹ năng), nghĩa binh, màn 33–36 và Tô Định bỏ chạy,
-// đoạn truyện 1–3, nhiệm vụ 55–57, bản lưu phiên bản 21.
+// đoạn truyện 1–3, nhiệm vụ 55–57, bản lưu phiên bản 22.
 
 import { describe, expect, it } from 'vitest';
 import { heroSetups, skillOwner, skillReady, startBattle, startFieldBattle, stepField, useSkill, type Battle, type BattleEvent, type HeroSetup } from './battle';
 import { canStartStage, retreat, stageHeroList, startStage } from './campaign';
 import { HIEU_TRIEU_AT, LUY_LAU_AT, haiBaSetups, inChapter5 } from './chuong5';
 import {
+  BUILDINGS,
   CH5_QUEST_START,
   DEFAULT_ROWS,
   ENEMIES,
@@ -221,7 +222,7 @@ describe('bản lưu chương 5', () => {
     expect(back.raid.foe).toBe('han');
   });
 
-  it('nâng bản lưu 19 lên 20: thêm số đợt quân Hán; đã ở chương 5 thì hẹn quân Hán', () => {
+  it('nâng bản lưu 20 lên 21: thêm số đợt quân Hán; đã ở chương 5 thì hẹn quân Hán', () => {
     for (const questIndex of [CH5_QUEST_START - 1, CH5_QUEST_START, CH5_QUEST_START + 2]) {
       const s = ch5();
       s.questIndex = questIndex;
@@ -229,7 +230,7 @@ describe('bản lưu chương 5', () => {
       s.raid.nextAt = s.clock + 10 * 60_000;
       s.raid.foe = 'thuyBinh';
       const raw = JSON.parse(serialize(s));
-      raw.version = 19;
+      raw.version = 20;
       delete raw.raid.han;
       delete raw.raid.hanHeld;
       const back = deserialize(JSON.stringify(raw))!;
@@ -368,7 +369,9 @@ describe('Hai Bà Trưng', () => {
     const dien = s.buildings.find((x) => x.type === 'dien')!;
     // Trưng Nhị ra từ mặt trước doanh trại, Trưng Trắc đứng trước Điện.
     expect(Math.hypot(at('trungNhi').x - (trai.x + 2), at('trungNhi').z - (trai.z + 4))).toBeLessThan(3);
-    expect(Math.abs(at('trungTrac').z - dien.z)).toBeLessThan(10);
+    // Trước sân Điện (Điện chưa xoay): ngay ngoài mặt trước móng, bên trái lối giữa.
+    expect(Math.abs(at('trungTrac').z - (dien.z + BUILDINGS.dien.d))).toBeLessThan(1.5);
+    expect(at('trungTrac').x).toBeLessThan(dien.x + BUILDINGS.dien.w / 2);
     expect(Math.hypot(at('trungTrac').x - at('trungNhi').x, at('trungTrac').z - at('trungNhi').z)).toBeGreaterThan(1);
   });
 });
@@ -466,12 +469,12 @@ describe('truyện và nhiệm vụ chương 5 phần 2', () => {
     expect(p.have).toBeGreaterThanOrEqual(p.need);
   });
 
-  it('bản lưu 20 lên 21: thêm chỗ nghỉ của Hai Bà; lưu rồi đọc lại giữ nguyên', () => {
+  it('bản lưu 21 lên 22: thêm chỗ nghỉ của Hai Bà; lưu rồi đọc lại giữ nguyên', () => {
     const s = ch5();
     s.haiBa = { trungTrac: 5000, trungNhi: 0 };
     expect(deserialize(serialize(s))!.haiBa).toEqual({ trungTrac: 5000, trungNhi: 0 });
     const raw = JSON.parse(serialize(s));
-    raw.version = 20;
+    raw.version = 21;
     delete raw.haiBa;
     const back = deserialize(JSON.stringify(raw))!;
     expect(back.version).toBe(SAVE_VERSION);

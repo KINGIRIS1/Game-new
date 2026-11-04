@@ -21,8 +21,12 @@ export const FAR_FOREST = GRID - 2;
 export const FOREST_BAND = 2;
 /** Cạnh một khoảnh đất (ô). Đất giữa dải rừng ngoài cùng và sông chia thành 10×10 khoảnh (`khoanh.ts`). */
 export const KHOANH = 5;
-/** Góc móng Điện Vua Hùng (cả x và z): Điện 5×5 nằm đúng khoảnh thứ 8 tính từ dải rừng. */
-export const DIEN_HOME = 37;
+/**
+ * Góc móng Điện Vua Hùng (cả x và z) ở ván mới và trong mẫu kinh đô: Điện 10×10 phủ trọn bốn khoảnh thứ 7, 8 tính từ
+ * dải rừng, mép đông nam ở ô 41 như Điện 5×5 cũ (bản lưu cũ nới Điện về phía rừng). Điện dời được, nên Điện của một
+ * ván có thể ở chỗ khác.
+ */
+export const DIEN_HOME = 32;
 
 export function inGrid(x: number, z: number): boolean {
   return x >= 0 && z >= 0 && x < GRID && z < GRID;

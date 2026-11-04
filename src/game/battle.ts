@@ -646,8 +646,10 @@ export function startBattle(state: GameState, wave: number, side: RaidSide, opts
       const f = turnLocal(post.rot, 0, def.d / 2);
       addHero(battle, hero, post.x + def.w / 2 + f.x, post.z + def.d / 2 + f.z, 1);
     } else if (dien) {
+      // Trước sân Điện (đã xoay thì theo hướng xoay); Hai Bà mỗi bà một bên lối vào.
       const side = HAI_BA.includes(hero.kind) ? (hero.kind === 'trungTrac' ? -1.2 : 1.2) : i * 1.2;
-      addHero(battle, hero, dien.x + BUILDINGS.dien.w / 2 + side, dien.z + BUILDINGS.dien.d + 0.6, 1);
+      const f = turnLocal(dien.rot, side, BUILDINGS.dien.d / 2 + 0.6);
+      addHero(battle, hero, dien.x + BUILDINGS.dien.w / 2 + f.x, dien.z + BUILDINGS.dien.d / 2 + f.z, 1);
     }
   }
   return battle;

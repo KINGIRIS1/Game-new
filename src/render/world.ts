@@ -7,10 +7,10 @@ import { raidSpawnBand, type Battle, type RaidSide } from '../game/battle';
 import { caoLoAtDien } from '../game/caoLo';
 import { HAI_BA_KINDS, haiBaJoined, type HaiBaKind } from '../game/chuong5';
 import { advLook, inChapter3, ruaVangCame, type AdvLook } from '../game/coLoa';
-import { heroPost } from '../game/doanhTrai';
-import { buildingAt, dienLevel, occupancy, upcomingBoats, type Building, type GameState } from '../game/game';
+import { generals, heroPost } from '../game/doanhTrai';
+import { dienLevel, occupancy, upcomingBoats, type Building, type GameState } from '../game/game';
 import { giongLook, type GiongLook } from '../game/giong';
-import { KHOANH_N, isOpen, khoanhOf, khoanhOrigin, openMask, openStart, openable } from '../game/khoanh';
+import { KHOANH_N, khoanhOf, khoanhOrigin, openMask, openStart, openable } from '../game/khoanh';
 import { FAR_PLOTS, benKiaOpen, bridgeEnds, bridgeTo, plotAt, plotOf, plotOrigin, poiAt, poiPlots, type Dat } from '../game/benKia';
 import { DIEN_HOME, FAR_FOREST, FOREST_BAND, GRID, KHOANH, RIVER_END, RIVER_START, baseHeights, farBankOf, inGrid, isNearBank, isRiver, riverDistance, riverFacing, rotAngle, turnLocal } from '../game/map';
 import { BAI_CAT, BIEN_DIEN, CUA_BIEN, QUAN_DAO, RIVER_MID, benDock, bienDo, isSea, riverOf, seaIndex, seaRoute, type QuanDaoId, type SeaRoute } from '../game/bien';
@@ -23,7 +23,7 @@ import { IsoCamera, type CamBounds } from './camera';
 import { DOOR_OPEN, banhChung, banhGiay } from './buildings';
 import { PERSON_SCALE } from './congTrinh/chung';
 import { BEP_TET_SEAT } from './congTrinh/bep';
-import { DIEN_LOT } from './congTrinh/dien';
+import { DIEN_LOT, bannerHeight, courtSlot } from './congTrinh/dien';
 import { DOANH_TRAI_HERO } from './congTrinh/doanhTrai';
 import type { Swim } from './congTrinh/hoKimQuy';
 import { CONG_TRINH, lotModel } from './congTrinh/index';
@@ -34,7 +34,7 @@ import { buildCayDaBatch, disposeCayDaBatch, makeCayDa, type CayDaPlace } from '
 import { cloudPuffs, poiMarker } from './benKia';
 import { SHORE_LAND, SeaLife, animateSea, buildSea, buildSeaMist, islandAt, shoreCap } from './bien';
 import { makeSoldier } from './soldier';
-import { makeAnDuong, makeCaoLo, makeGiong, makeSonTinh, makeTrungNhi, makeTrungTrac } from './heroes';
+import { makeAnDuong, makeCaoLo, makeGiong, makeLacTuong, makeSonTinh, makeTrungNhi, makeTrungTrac } from './heroes';
 import { addSunLights, type SunLights } from './lights';
 import {
   buildCitadel,
@@ -238,6 +238,14 @@ interface Spot {
   walk?: number;
 }
 
+/** Chỗ tướng đứng (tọa độ cảnh); `ry`: góc quay mặt khi đứng chầu trong sân Điện. */
+interface HeroSpot {
+  x: number;
+  y: number;
+  z: number;
+  ry?: number;
+}
+
 interface WorkerView {
   obj: THREE.Group;
   spot: Spot;
@@ -277,12 +285,8 @@ const SPOTS: Partial<Record<BuildingType, Spot[]>> = {
 
 /** Cây nêu ngày Tết cao chừng này. Khánh đất nung treo trên nêu. */
 const NEU_H = 4.2;
-/** Hai Bà trên voi trận ở kinh đô: voi to hơn người đứng (Cao Lỗ 0,9) mà vẫn vừa sân hai ô trước Điện. */
+/** Hai Bà trên voi trận ở sân doanh trại: voi to hơn người đứng (Cao Lỗ 0,9) mà vẫn vừa sân trại. */
 const HAI_BA_SCALE = 0.65;
-/** Tâm voi cách mép trước móng Điện bao nhiêu ô (đuôi voi vừa chạm rào, vòi chưa ra khỏi sân hai ô). */
-const HAI_BA_FRONT = 0.95;
-/** Sân trước Điện bị chắn thì voi tìm chỗ trống 1 × 2 ô cách móng Điện tối đa chừng này ô. */
-const HAI_BA_REACH = 3;
 const KHANH = 0xa8502e;
 
 /** Công trình cần người làm: hiện đúng số người đang làm. */
@@ -441,17 +445,22 @@ export class World {
   private cityCam: { target: THREE.Vector3; zoom: number; bounds: CamBounds; facing: number } | null = null;
   private readonly warning: THREE.Mesh;
   private merchantBoat?: THREE.Object3D;
-  /** Gióng đứng trước Điện, đổi dáng khi lớn lên; không còn khi đã bay về trời. */
-  private giong?: { obj: THREE.Group; look: GiongLook; key: string };
-  /** Sơn Tinh đứng trước Điện ở chương 2, tới khi đánh lui Thủy Tinh thì về núi. */
+  /** Gióng đứng chầu trong sân Điện, đổi dáng khi lớn lên; tráng sĩ thì ở doanh trại; bay về trời thì hiển linh (`court`). */
+  private giong?: { obj: THREE.Group; look: GiongLook; key: string; y: number; ride: boolean };
+  /** Sơn Tinh đứng chầu trong sân Điện ở chương 2 (rước dâu rồi thì ở doanh trại), đánh lui Thủy Tinh thì về núi. */
   private son?: { obj: THREE.Group; look: SonLook; key: string };
-  /** An Dương Vương đứng trước Điện ở chương 3, cạnh cột đá thề. */
+  /** An Dương Vương đứng chầu trong sân Điện từ chương 3, cạnh cột đá thề. */
   private adv?: { obj: THREE.Group; look: AdvLook; key: string; y: number };
-  /** Cao Lỗ đứng trước Điện từ khi cầm quân (chương 4), cạnh An Dương Vương; vua xuống biển thì đứng chỗ của vua. */
+  /** Cao Lỗ đứng chầu trong sân Điện từ khi cầm quân (chương 4), sau An Dương Vương. */
   private caoLo?: { obj: THREE.Group; key: string; y: number };
   /** Hai Bà Trưng trên voi trận, mỗi bà một mô hình. */
   private haiBa = new Map<HaiBaKind, { obj: THREE.Group; key: string; y: number }>();
   private pillar?: { obj: THREE.Group; key: string };
+  /**
+   * Tướng đứng chầu trong sân Điện mà không có dáng truyện riêng: Lạc tướng, và tướng đã về trời, về núi, xuống biển
+   * (hiển linh, có hào quang). Tướng có dáng truyện ở trên (`giong`, `son`, `adv`, `caoLo`).
+   */
+  private court = new Map<TuongId, { obj: THREE.Group; key: string }>();
   /** Cảnh Tết trước Điện và quanh bếp gói bánh, chỉ có lúc Tết mở. */
   private tetDecor?: THREE.Group;
   private tetKey = '';
@@ -960,6 +969,7 @@ export class World {
     this.syncSon(state);
     this.syncAdv(state);
     this.syncCaoLo(state);
+    this.syncCourt(state);
     this.syncHaiBa(state);
     this.syncTurtle(state);
     this.syncTet(state);
@@ -1022,7 +1032,8 @@ export class World {
         u.position.set(spots[i].x, spots[i].y + CITADEL_TOP, spots[i].z);
         // Lính nỏ quay ra ngoài thành, về phía xa Điện.
         const dien = state.buildings.find((b) => b.type === 'dien');
-        if (dien) u.rotation.y = Math.atan2(c.x - dien.x - 2, c.z - dien.z - 2);
+        const mid = (BUILDINGS.dien.w - 1) / 2;
+        if (dien) u.rotation.y = Math.atan2(c.x - dien.x - mid, c.z - dien.z - mid);
         this.citadel!.add(u);
       });
       this.scene.add(this.citadel);
@@ -1855,7 +1866,10 @@ export class World {
         z: cells.reduce((a, c) => a + c[1], 0) / cells.length + 0.5,
       });
       const o = plotOrigin(sc.plot);
-      const pts = [{ x: dien.x + BUILDINGS.dien.w / 2, z: dien.z + BUILDINGS.dien.d + 0.5 }, mid(ends.near), mid(ends.far), { x: o.x + 2.5, z: o.z + 2.5 }];
+      // Ra từ cổng Điện (Điện đã xoay thì cổng theo hướng xoay).
+      const gate = turnLocal(dien.rot, 0, BUILDINGS.dien.d / 2 + 0.5);
+      const front = { x: dien.x + BUILDINGS.dien.w / 2 + gate.x, z: dien.z + BUILDINGS.dien.d / 2 + gate.z };
+      const pts = [front, mid(ends.near), mid(ends.far), { x: o.x + 2.5, z: o.z + 2.5 }];
       const lens = pts.slice(1).map((q, i) => Math.hypot(q.x - pts[i].x, q.z - pts[i].z));
       const total = lens.reduce((a, b) => a + b, 0);
       let d = THREE.MathUtils.clamp((state.clock - sc.from) / Math.max(1, sc.at - sc.from), 0, 1) * total;
@@ -2010,18 +2024,25 @@ export class World {
     return x >= 0 && z >= 0 && x < GRID && z < GRID ? { x, z } : null;
   }
 
-  /**
-   * Chỗ tướng đứng trong sân chầu của Điện, bên phải lối giữa (khối `a` trong bản vẽ Điện): nơi Gióng lúc nhỏ,
-   * Sơn Tinh lúc cầu hôn và An Dương Vương đứng. Móng Điện phẳng nên đứng cùng độ cao mặt sân.
-   */
-  private heroSpot(dien: Building): { x: number; y: number; z: number } {
-    const a = DIEN_LOT.zone('a');
+  /** Điểm (lx, lz) trên móng Điện (gốc ở tâm móng, như bản vẽ Điện) đổi ra tọa độ cảnh, theo hướng Điện đã xoay. */
+  private dienPoint(dien: Building, lx: number, lz: number): { x: number; z: number } {
     const def = BUILDINGS.dien;
-    return { x: wx(dien.x) + def.w / 2 + a.x - 0.15, y: this.groundY(dien.x, dien.z) + 0.05, z: wz(dien.z) + def.d / 2 + a.z };
+    const t = turnLocal(dien.rot, lx, lz);
+    return { x: wx(dien.x) + def.w / 2 + t.x, z: wz(dien.z) + def.d / 2 + t.z };
+  }
+
+  /**
+   * Chỗ tướng `tuong` đứng chầu trong sân Điện, hai bên lối giữa trước ngai vàng (ô `t` trong bản vẽ Điện,
+   * `courtSlot`), và góc quay mặt, theo hướng Điện đã xoay. Móng Điện phẳng nên đứng cùng độ cao mặt sân.
+   */
+  private courtSpot(dien: Building, tuong: TuongId): Required<HeroSpot> {
+    const c = courtSlot(tuong);
+    const at = this.dienPoint(dien, c.x, c.z);
+    return { x: at.x, y: this.groundY(dien.x, dien.z) + 0.05, z: at.z, ry: c.ry + rotAngle(dien.rot) };
   }
 
   /** Chỗ tướng đứng giữa sân doanh trại tướng ấy chỉ huy (không chỉ huy trại nào thì trại của Lạc tướng). Chưa có doanh trại thì null. */
-  private barracksSpot(state: GameState, tuong: TuongId): { x: number; y: number; z: number } | null {
+  private barracksSpot(state: GameState, tuong: TuongId): HeroSpot | null {
     const b = heroPost(state, tuong);
     return b ? this.postSpot(b) : null;
   }
@@ -2035,43 +2056,47 @@ export class World {
 
   /**
    * Chỗ đứng của tướng: tướng đã cùng ra trận (Gióng tráng sĩ, Sơn Tinh đã rước dâu) ở doanh trại;
-   * Gióng lúc nhỏ ở trước Điện cho dân nuôi, Sơn Tinh lúc cầu hôn đứng chầu trước Điện.
+   * Gióng lúc nhỏ cho dân nuôi, Sơn Tinh lúc cầu hôn đứng chầu trong sân Điện (chưa có doanh trại thì tướng cũng ở đó).
    */
-  private heroHome(state: GameState, tuong: TuongId, atBarracks: boolean): { x: number; y: number; z: number } | null {
+  private heroHome(state: GameState, tuong: TuongId, atBarracks: boolean): HeroSpot | null {
     if (atBarracks) {
       const spot = this.barracksSpot(state, tuong);
       if (spot) return spot;
     }
     const dien = state.buildings.find((b) => b.type === 'dien');
-    return dien ? this.heroSpot(dien) : null;
+    return dien ? this.courtSpot(dien, tuong) : null;
   }
 
-  /** Gióng lúc nhỏ ở trước Điện, bên phải bậc lên; thành tráng sĩ thì về doanh trại. */
+  /**
+   * Gióng lúc nhỏ đứng chầu trong sân Điện cho dân nuôi; thành tráng sĩ thì về doanh trại, cưỡi ngựa sắt. Chưa có doanh
+   * trại thì tráng sĩ xuống ngựa đứng chầu trong sân (tướng đứng trong sân Điện không cưỡi thú).
+   */
   private syncGiong(state: GameState): void {
     const look = giongLook(state);
+    const camp = look === 'trangSi' && !!this.barracksSpot(state, 'giong');
     const spot = this.heroHome(state, 'giong', look === 'trangSi');
-    const key = look && spot ? `${look}:${spot.x}:${spot.y}:${spot.z}` : '';
+    const key = look && spot ? `${look}:${camp}:${spot.x}:${spot.y}:${spot.z}:${spot.ry}` : '';
     if (this.giong?.key === key) return;
     if (this.giong) this.scene.remove(this.giong.obj);
     this.giong = undefined;
     if (!look || !spot) return;
-    const obj = makeGiong(look);
+    const obj = makeGiong(look, { onFoot: look === 'trangSi' && !camp });
     obj.scale.setScalar(look === 'trangSi' ? 0.9 : look === 'be' ? 1.1 : 1);
     obj.position.set(spot.x, spot.y, spot.z);
-    obj.rotation.y = look === 'trangSi' ? -Math.PI / 2 + 0.5 : 0.3;
+    obj.rotation.y = spot.ry ?? -Math.PI / 2 + 0.5;
     this.scene.add(obj);
-    this.giong = { obj, look, key };
+    this.giong = { obj, look, key, y: spot.y, ride: look === 'trangSi' && camp };
   }
 
   /**
-   * Sơn Tinh lúc cầu hôn đứng trên mỏm đá trước Điện; rước Mị Nương rồi thì cùng ra trận, ở doanh trại.
-   * Đánh lui Thủy Tinh thì về núi.
+   * Sơn Tinh lúc cầu hôn đứng trên mỏm đá trong sân Điện; rước Mị Nương rồi thì cùng ra trận, ở doanh trại.
+   * Đánh lui Thủy Tinh thì về núi (rồi hiển linh trong sân Điện, `syncCourt`).
    */
   private syncSon(state: GameState): void {
     const look = sonLook(state);
     const camp = look === 'trangSi' && !!this.barracksSpot(state, 'sonTinh');
     const spot = this.heroHome(state, 'sonTinh', look === 'trangSi');
-    const key = look && spot ? `${look}:${camp}:${spot.x}:${spot.y}:${spot.z}` : '';
+    const key = look && spot ? `${look}:${camp}:${spot.x}:${spot.y}:${spot.z}:${spot.ry}` : '';
     if (this.son?.key === key) return;
     if (this.son) this.scene.remove(this.son.obj);
     this.son = undefined;
@@ -2079,20 +2104,20 @@ export class World {
     const obj = makeSonTinh({ rock: !camp });
     obj.scale.setScalar(0.95);
     obj.position.set(spot.x, spot.y, spot.z);
-    obj.rotation.y = 0.4;
+    obj.rotation.y = spot.ry ?? 0.4;
     this.scene.add(obj);
     this.son = { obj, look, key };
   }
 
   /**
-   * An Dương Vương đứng trước Điện ở chương 3: chưa có nỏ thần thì cầm rìu đồng, có rồi thì cầm nỏ thần.
-   * Cạnh ngài là cột đá thề Thục Phán dựng khi nhận ngôi, thề giữ đền thờ các vua Hùng.
+   * An Dương Vương đứng chầu trong sân Điện từ chương 3: chưa có nỏ thần thì cầm rìu đồng, có rồi thì cầm nỏ thần.
+   * Sau lưng ngài là cột đá thề Thục Phán dựng khi nhận ngôi, thề giữ đền thờ các vua Hùng.
    */
   private syncAdv(state: GameState): void {
     const look = advLook(state);
     const dien = state.buildings.find((b) => b.type === 'dien');
-    const spot = dien ? this.heroSpot(dien) : null;
-    const key = look && spot ? `${look}:${spot.x}:${spot.y}:${spot.z}` : '';
+    const spot = dien ? this.courtSpot(dien, 'anDuong') : null;
+    const key = look && spot ? `${look}:${spot.x}:${spot.y}:${spot.z}:${spot.ry}` : '';
     if (this.adv?.key !== key) {
       if (this.adv) this.scene.remove(this.adv.obj);
       this.adv = undefined;
@@ -2100,30 +2125,31 @@ export class World {
         const obj = makeAnDuong({ crossbow: look === 'noThan' });
         obj.scale.setScalar(0.9);
         obj.position.set(spot.x, spot.y, spot.z);
-        obj.rotation.y = 0.4;
+        obj.rotation.y = spot.ry;
         this.scene.add(obj);
         this.adv = { obj, look, key, y: spot.y };
       }
     }
-    const pkey = inChapter3(state) && spot ? `${spot.x}:${spot.y}:${spot.z}` : '';
+    const pkey = inChapter3(state) && dien && spot ? `${spot.x}:${spot.y}:${spot.z}:${spot.ry}` : '';
     if (this.pillar?.key === pkey) return;
     if (this.pillar) this.scene.remove(this.pillar.obj);
     this.pillar = undefined;
-    if (!pkey || !spot) return;
+    if (!pkey || !dien || !spot) return;
     const obj = this.makePillar();
-    // Cột đá đứng sau lưng tướng, phía phải, còn trong sân Điện.
-    obj.position.set(spot.x + 0.55, spot.y, spot.z - 0.35);
-    obj.rotation.y = 0.3;
+    // Cột đá đứng sau lưng tướng, chếch ra phía ngoài lối, giữa bốn chỗ đứng chầu cho khỏi vướng ai.
+    const c = courtSlot('anDuong');
+    const at = this.dienPoint(dien, c.x + Math.sign(c.x) * 0.5, c.z - 0.5);
+    obj.position.set(at.x, spot.y, at.z);
+    obj.rotation.y = 0.3 + rotAngle(dien.rot);
     this.scene.add(obj);
     this.pillar = { obj, key: pkey };
   }
 
-  /** Cao Lỗ đứng trước Điện cạnh An Dương Vương, lùi sang trái một bước; vua xuống biển rồi thì đứng chỗ của vua. */
+  /** Cao Lỗ đứng chầu trong sân Điện, sau An Dương Vương, từ khi cầm quân. */
   private syncCaoLo(state: GameState): void {
     const dien = state.buildings.find((b) => b.type === 'dien');
-    const base = dien && caoLoAtDien(state) ? this.heroSpot(dien) : null;
-    const spot = base && advLook(state) ? { ...base, x: base.x - 0.6, z: base.z + 0.6 } : base;
-    const key = spot ? `${spot.x}:${spot.y}:${spot.z}` : '';
+    const spot = dien && caoLoAtDien(state) ? this.courtSpot(dien, 'caoLo') : null;
+    const key = spot ? `${spot.x}:${spot.y}:${spot.z}:${spot.ry}` : '';
     if (this.caoLo?.key === key) return;
     if (this.caoLo) this.scene.remove(this.caoLo.obj);
     this.caoLo = undefined;
@@ -2131,24 +2157,21 @@ export class World {
     const obj = makeCaoLo();
     obj.scale.setScalar(0.9);
     obj.position.set(spot.x, spot.y, spot.z);
-    obj.rotation.y = 0.4;
+    obj.rotation.y = spot.ry;
     this.scene.add(obj);
     this.caoLo = { obj, key, y: spot.y };
   }
 
   /**
-   * Hai Bà Trưng ở kinh đô từ khi vào chương 5, mỗi bà trên voi trận của mình. Bà chỉ huy doanh trại thì voi đứng giữa
-   * sân trại ấy. Chưa chỉ huy trại nào thì voi đứng ngoài cổng sân chầu Điện, mỗi bà một bên lối vào (Trưng Trắc bên
-   * trái), cách tâm 1,2 ô, đúng chỗ bà ra trận khi giữ kinh đô (`startBattle`); sân chầu trong móng thì chật, đã có Lạc
-   * hầu, lính gác, Cao Lỗ, cây nêu ngày Tết. Sân trước Điện bị công trình chắn thì voi đứng ở chỗ trống 1 × 2 ô gần cổng
-   * nhất quanh Điện, mỗi bà một bên; không còn chỗ nào thì không vẽ.
+   * Hai Bà Trưng ở kinh đô từ khi vào chương 5. Bà chỉ huy doanh trại thì cưỡi voi trận đứng giữa sân trại ấy. Chưa
+   * chỉ huy trại nào thì xuống voi đứng chầu trong sân Điện (tướng đứng trong sân không cưỡi thú), ở cột ngoài ngang
+   * ngai: Trưng Trắc bên trái, Trưng Nhị bên phải (`courtSlot`).
    */
   private syncHaiBa(state: GameState): void {
     const dien = state.buildings.find((b) => b.type === 'dien');
-    const taken = new Set<number>();
     for (const kind of HAI_BA_KINDS) {
-      const spot = haiBaJoined(state) ? this.haiBaSpot(state, kind, dien, taken) : null;
-      const key = spot ? `${spot.x}:${spot.y}:${spot.z}:${spot.ry}` : '';
+      const spot = haiBaJoined(state) ? this.haiBaSpot(state, kind, dien) : null;
+      const key = spot ? `${spot.x}:${spot.y}:${spot.z}:${spot.ry}:${spot.onFoot}` : '';
       const cur = this.haiBa.get(kind);
       if ((cur?.key ?? '') === key) continue;
       if (cur) {
@@ -2157,8 +2180,8 @@ export class World {
         this.haiBa.delete(kind);
       }
       if (!spot) continue;
-      const obj = kind === 'trungTrac' ? makeTrungTrac() : makeTrungNhi();
-      obj.scale.setScalar(HAI_BA_SCALE);
+      const obj = kind === 'trungTrac' ? makeTrungTrac({ onFoot: spot.onFoot }) : makeTrungNhi({ onFoot: spot.onFoot });
+      obj.scale.setScalar(spot.onFoot ? 0.9 : HAI_BA_SCALE);
       obj.position.set(spot.x, spot.y, spot.z);
       obj.rotation.y = spot.ry;
       this.scene.add(obj);
@@ -2166,88 +2189,104 @@ export class World {
     }
   }
 
-  /** Chỗ voi của bà `kind`. `taken` giữ các ô voi bà trước đã đứng (tọa độ z × GRID + x), để hai voi khỏi đè nhau. */
-  private haiBaSpot(state: GameState, kind: HaiBaKind, dien: Building | undefined, taken: Set<number>): { x: number; y: number; z: number; ry: number } | null {
+  /** Chỗ bà `kind` ở kinh đô: giữa sân doanh trại bà chỉ huy (cưỡi voi), hay đứng chầu trong sân Điện. */
+  private haiBaSpot(state: GameState, kind: HaiBaKind, dien: Building | undefined): Required<HeroSpot> & { onFoot: boolean } | null {
     const post = heroPost(state, kind, false);
-    if (post) return { ...this.postSpot(post), ry: 0.4 + rotAngle(post.rot) };
-    if (!dien) return null;
-    const def = BUILDINGS.dien;
-    const side = kind === 'trungTrac' ? -1 : 1;
-    // Voi quay mặt ra trước (như Điện), thân dài chừng 1,8 ô nên phủ hai ô theo chiều trước sau.
-    const cayDa = new Set(state.cayDa.list.map((c) => c.z * GRID + c.x));
-    const free = (x: number, z: number) => {
-      if (!inGrid(x, z) || isRiver(x, z) || !isOpen(state, x, z) || taken.has(z * GRID + x) || cayDa.has(z * GRID + x)) return false;
-      const b = buildingAt(state, x, z);
-      return !b || isRoad(b.type);
-    };
-    const gateX = dien.x + def.w / 2 + side * 1.2;
-    const front = dien.z + def.d;
-    // Chỗ chính: ngoài cổng, hai ô ngay trước móng. Không được thì xét mọi cặp ô quanh Điện, gần chỗ chính nhất trước.
-    let best: { x: number; z: number } | null = null;
-    let bestD = Infinity;
-    for (let z = dien.z - HAI_BA_REACH; z <= front + HAI_BA_REACH - 2; z++) {
-      for (let x = dien.x - HAI_BA_REACH; x < dien.x + def.w + HAI_BA_REACH; x++) {
-        // Mỗi bà một bên Điện: Trưng Trắc bên trái tâm, Trưng Nhị bên phải.
-        if (Math.sign(x + 0.5 - (dien.x + def.w / 2)) !== side) continue;
-        if (!free(x, z) || !free(x, z + 1)) continue;
-        const d = Math.hypot(x + 0.5 - gateX, z + 1 - (front + HAI_BA_FRONT));
-        if (d < bestD) {
-          bestD = d;
-          best = { x, z };
-        }
+    if (post) return { ...this.postSpot(post), ry: 0.4 + rotAngle(post.rot), onFoot: false };
+    return dien ? { ...this.courtSpot(dien, kind), onFoot: true } : null;
+  }
+
+  /**
+   * Tướng đứng chầu trong sân Điện mà không có dáng truyện riêng ở kinh đô: Lạc tướng (luôn có), và tướng đã về trời,
+   * về núi, xuống biển mà vẫn chỉ huy (hiển linh, có hào quang). Cùng với các dáng truyện (Gióng lúc nhỏ, Sơn Tinh cầu
+   * hôn, An Dương Vương, Cao Lỗ), mọi tướng đã có đều đứng hai bên ngai vàng, trừ tướng đang ở doanh trại.
+   */
+  private syncCourt(state: GameState): void {
+    const dien = state.buildings.find((b) => b.type === 'dien');
+    const want = new Map<TuongId, Required<HeroSpot>>();
+    if (dien) {
+      for (const t of generals(state)) {
+        const ghost =
+          (t === 'giong' && !giongLook(state)) ||
+          (t === 'sonTinh' && !sonLook(state)) ||
+          (t === 'anDuong' && !advLook(state)) ||
+          (t === 'caoLo' && !caoLoAtDien(state));
+        if (t === 'lacTuong' || ghost) want.set(t, this.courtSpot(dien, t));
       }
     }
-    if (!best) return null;
-    taken.add(best.z * GRID + best.x).add((best.z + 1) * GRID + best.x);
-    // Ở đúng chỗ chính thì đứng sát rào cổng; chỗ khác thì giữa hai ô.
-    const main = Math.floor(gateX) === best.x && best.z === front;
-    const tx = main ? gateX : best.x + 0.5;
-    const tz = main ? front + HAI_BA_FRONT : best.z + 1;
-    // Mỗi voi quay nghiêng ra ngoài một chút, như hai voi chầu hai bên cổng.
-    return { x: wx(tx), y: this.surfaceY(tx, tz), z: wz(tz), ry: side * 0.3 };
+    for (const [t, v] of this.court) {
+      const spot = want.get(t);
+      if (spot && v.key === `${spot.x}:${spot.y}:${spot.z}:${spot.ry}`) continue;
+      this.scene.remove(v.obj);
+      disposeModel(v.obj);
+      this.court.delete(t);
+    }
+    for (const [t, spot] of want) {
+      if (this.court.has(t)) continue;
+      const obj =
+        t === 'giong'
+          ? makeGiong('trangSi', { bamboo: true, glow: true, onFoot: true })
+          : t === 'sonTinh'
+            ? makeSonTinh({ glow: true })
+            : t === 'anDuong'
+              ? makeAnDuong({ crossbow: true, glow: true })
+              : t === 'caoLo'
+                ? makeCaoLo({ glow: true })
+                : makeLacTuong();
+      obj.scale.setScalar(t === 'sonTinh' ? 0.95 : 0.9);
+      obj.position.set(spot.x, spot.y, spot.z);
+      obj.rotation.y = spot.ry;
+      this.scene.add(obj);
+      this.court.set(t, { obj, key: `${spot.x}:${spot.y}:${spot.z}:${spot.ry}` });
+    }
   }
 
   /**
    * Cảnh Tết, chỉ lúc Tết mở, trong sân chầu của Điện (khối `e`, `m` trong bản vẽ Điện): cây nêu bên trái lối giữa,
-   * dây cờ đuôi nheo căng từ ngọn nêu tới hai cột cờ hai bên lối, mâm bánh đã dâng bày trước thềm (chỉ loại đã dâng),
-   * và một người ngồi trên chiếu gói bánh của bếp. Không có pháo. Tướng và cột đá thề đứng bên phải lối.
+   * dây cờ đuôi nheo căng từ ngọn nêu tới hai cột cờ hai bên sân, mâm bánh đã dâng bày trước bệ ngai (chỉ loại đã
+   * dâng), và một người ngồi trên chiếu gói bánh của bếp. Không có pháo. Điện đã xoay thì cả cảnh xoay theo.
    */
   private syncTet(state: GameState): void {
     const dien = state.buildings.find((b) => b.type === 'dien');
     const bep = state.buildings.find((b) => b.type === 'bep' && !b.damaged);
     const o = state.tet.offered;
     const h = (b: Building) => this.heights[b.z * GRID + b.x] ?? 0;
-    const key = dien && tetOpen(state) ? [dien.x, dien.z, dien.level, h(dien), o.chung, o.giay, bep ? `${bep.x},${bep.z},${bep.level},${h(bep)},${bep.rot ?? 0}` : '-'].join(':') : '';
+    const key =
+      dien && tetOpen(state)
+        ? [dien.x, dien.z, dien.rot ?? 0, dien.level, h(dien), o.chung, o.giay, bep ? `${bep.x},${bep.z},${bep.level},${h(bep)},${bep.rot ?? 0}` : '-'].join(':')
+        : '';
     if (key === this.tetKey) return;
     this.tetKey = key;
     if (this.tetDecor) this.scene.remove(this.tetDecor);
     this.tetDecor = undefined;
     if (!key || !dien) return;
     const root = new THREE.Group();
-    // Tọa độ trong bản vẽ Điện (gốc ở tâm móng) đổi ra tọa độ cảnh. Móng Điện phẳng nên mặt sân cùng một độ cao.
-    const def = BUILDINGS.dien;
-    const cx = wx(dien.x) + def.w / 2;
-    const cz = wz(dien.z) + def.d / 2;
+    // Tọa độ trong bản vẽ Điện (gốc ở tâm móng) đổi ra tọa độ cảnh theo hướng xoay. Móng Điện phẳng nên mặt sân cùng
+    // một độ cao.
     const y = topY(h(dien)) + 0.05;
-    // Dây cờ buộc vào đầu hai cột cờ hai bên lối (Điện cấp 1 chưa có cột cờ thì buộc vào hai cọc mốc góc trước).
-    const flagH = dien.level >= 6 ? 2.7 : 2.4;
+    const turn = rotAngle(dien.rot);
+    const at = (lx: number, lz: number, ly: number) => {
+      const p = this.dienPoint(dien, lx, lz);
+      return new THREE.Vector3(p.x, y + ly, p.z);
+    };
+    // Dây cờ buộc gần đầu hai cột cờ hai bên sân (Điện cấp 1 chưa có cột cờ thì buộc vào hai cọc mốc góc trước).
     const [left, right] =
       dien.level >= 2
-        ? DIEN_LOT.groups('2').map((f) => new THREE.Vector3(cx + f.x - 0.2, y + flagH - 0.1, cz + f.z))
-        : [-1, 1].map((sx) => new THREE.Vector3(cx + sx * 2.3, y + 0.7, cz + 2.3));
+        ? DIEN_LOT.groups('2').map((f) => at(f.x - 0.2, f.z, bannerHeight(dien.level) - 0.15))
+        : [-1, 1].map((sx) => at(sx * 4.6, 4.6, 0.7));
     const e = DIEN_LOT.zone('e');
     const neu = this.makeNeu();
-    neu.position.set(cx + e.x, y, cz + e.z);
-    neu.rotation.y = Math.PI / 4;
+    neu.position.copy(at(e.x, e.z, 0));
+    neu.rotation.y = Math.PI / 4 + turn;
     root.add(neu);
-    const top = new THREE.Vector3(cx + e.x, y + NEU_H - 0.3, cz + e.z);
+    const top = at(e.x, e.z, NEU_H - 0.3);
     root.add(this.makeFlagLine(top, left, 4));
     root.add(this.makeFlagLine(top, right, 9));
     if (o.chung || o.giay) {
       const m = DIEN_LOT.zone('m');
       const tray = this.makeTray(o.chung, o.giay);
-      tray.position.set(cx + m.x, y, cz + m.z);
-      tray.rotation.y = Math.PI / 4;
+      tray.position.copy(at(m.x, m.z, 0));
+      tray.rotation.y = Math.PI / 4 + turn;
       root.add(tray);
     }
     if (bep) {
@@ -2376,6 +2415,12 @@ export class World {
     if (this.son && ray.intersectObject(this.son.obj, true).length) return 'son';
     if (this.adv && ray.intersectObject(this.adv.obj, true).length) return 'adv';
     if (this.caoLo && ray.intersectObject(this.caoLo.obj, true).length) return 'caoLo';
+    // Tướng hiển linh đứng chầu trong sân Điện cũng mở bảng của tướng ấy (Lạc tướng không có bảng riêng).
+    const panel: Partial<Record<TuongId, 'giong' | 'son' | 'adv' | 'caoLo'>> = { giong: 'giong', sonTinh: 'son', anDuong: 'adv', caoLo: 'caoLo' };
+    for (const [t, v] of this.court) {
+      const id = panel[t];
+      if (id && ray.intersectObject(v.obj, true).length) return id;
+    }
     return null;
   }
 
@@ -2792,6 +2837,12 @@ export class World {
       (this.adv.obj.userData.pose as Poser | undefined)?.({ act: 'stand', time: t });
     }
 
+    let courtI = 0;
+    for (const v of this.court.values()) {
+      // Tướng đứng chầu thở nhẹ, mỗi người một nhịp.
+      (v.obj.userData.pose as Poser | undefined)?.({ act: 'stand', time: t + 1.3 * courtI++ });
+    }
+
     if (this.caoLo) {
       // Cao Lỗ đứng nghỉ, nỏ cầm ngang thắt lưng, khẽ nhún.
       this.caoLo.obj.position.y = this.caoLo.y + Math.abs(Math.sin(t * 1.5 + 1)) * 0.02;
@@ -2825,7 +2876,7 @@ export class World {
     if (this.giong) {
       const g = this.giong;
       // Cậu bé lắc lư, thiếu niên cúi ăn cơm, ngựa sắt thở ra lửa.
-      if (g.look === 'trangSi') g.obj.position.y = Math.abs(Math.sin(t * 2)) * 0.03;
+      if (g.ride) g.obj.position.y = g.y + Math.abs(Math.sin(t * 2)) * 0.03;
       (g.obj.userData.pose as Poser | undefined)?.({ act: 'stand', time: t });
     }
 

@@ -336,7 +336,7 @@ export const vi = {
     chuaToiTet: 'Chưa tới Tết',
     daDang: 'Tết này đã dâng bánh này rồi',
     thieuBanh: 'Chưa đủ bánh để dâng',
-    khongTheDoi: 'Không dời được Điện Vua Hùng',
+    khongTheDoi: 'Điện Vua Hùng phải ở bên này sông',
     trungCho: 'Công trình đang ở đúng chỗ này rồi',
     khongDuCho: 'Không đủ chỗ để xếp mọi công trình theo mẫu',
     daTheoMau: 'Kinh đô đã xếp đúng theo mẫu này',
@@ -1135,6 +1135,8 @@ export const vi = {
     mauKhoanh: (n: number) => `Mẫu còn ${n} khoảnh chưa phát: chỗ trong rừng sẽ bỏ qua.`,
     relaid: (refund: string) =>
       `Kinh đô đã dựng lại rộng hơn theo mẫu, nhà cửa giữ nguyên cấp và người làm.${refund ? ` Hoàn lại: ${refund}.` : ''}`,
+    relaidDien: (refund: string) =>
+      `Điện Vua Hùng đã mở rộng thành 10×10 ô, có sân chầu. Công trình vướng đã dời sang chỗ trống gần nhất, giữ nguyên cấp.${refund ? ` Hoàn lại: ${refund}.` : ''}`,
     /** Lạc hầu gợi ý một lần khi mở công trình mới (`NEW_HINTS`). */
     newHint: {
       xuongMoc:

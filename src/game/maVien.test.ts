@@ -1,6 +1,6 @@
 // Canh chương 5 phần 3: Mã Viện sang (thắng màn 37), thủy quân Hán và lâu thuyền đánh kinh đô, Lệnh nỏ của Mã Viện,
 // màn 37–40 (màn 40 cầm cự ở Cấm Khê), Đền Hát Môn, đoạn truyện 4–6, màn hình Hết truyện mới, nhiệm vụ 58–61,
-// bản lưu phiên bản 22.
+// bản lưu phiên bản 23.
 
 import { describe, expect, it } from 'vitest';
 import { startBattle, startFieldBattle, stepBattle, stepField, useSkill, type Battle, type BattleEvent, type HeroSetup } from './battle';
@@ -454,7 +454,7 @@ describe('truyện và nhiệm vụ chương 5 phần 3', () => {
   });
 });
 
-describe('bản lưu 22', () => {
+describe('bản lưu 23', () => {
   it('lưu rồi đọc lại giữ số đợt thủy quân Hán, số lâu thuyền đã đánh chìm', () => {
     const s = ch5();
     s.raid.thuyHan = 4;
@@ -462,18 +462,18 @@ describe('bản lưu 22', () => {
     s.raid.lauSunk = 5;
     s.raid.foe = 'thuyHan';
     const back = deserialize(serialize(s))!;
-    expect(SAVE_VERSION).toBe(22);
-    expect(back.version).toBe(22);
+    expect(SAVE_VERSION).toBe(23);
+    expect(back.version).toBe(23);
     expect([back.raid.thuyHan, back.raid.thuyHanHeld, back.raid.lauSunk, back.raid.foe]).toEqual([4, 3, 5, 'thuyHan']);
   });
 
-  it('nâng bản lưu 21 lên 22: thêm số đợt thủy quân Hán; đã thắng màn 37 thì hẹn thủy quân Hán', () => {
+  it('nâng bản lưu 22 lên 23: thêm số đợt thủy quân Hán; đã thắng màn 37 thì hẹn thủy quân Hán', () => {
     for (const cleared of [MA_VIEN_AT - 1, MA_VIEN_AT]) {
       const s = ch5(cleared);
       s.raid.nextAt = s.clock + 10 * 60_000;
       s.raid.foe = 'han';
       const raw = JSON.parse(serialize(s));
-      raw.version = 21;
+      raw.version = 22;
       delete raw.raid.thuyHan;
       delete raw.raid.thuyHanHeld;
       delete raw.raid.lauSunk;

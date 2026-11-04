@@ -145,7 +145,10 @@ export function lacBird(m: ToonModel, x: number, y: number, z: number, ry: numbe
   const k = m.plain.spread;
   const f = new THREE.Matrix4().compose(new THREE.Vector3(x * k, y, z * k), new THREE.Quaternion().setFromEuler(new THREE.Euler(0, ry, 0)), new THREE.Vector3(1, 1, 1));
   const keep = [m.plain.spread, m.band.spread];
-  m.plain.frame = m.band.frame = f;
+  // Đang vẽ trong khung riêng (vd. khối nhà chính Điện phóng to) thì đặt chim trong khung ấy; vẽ xong trả lại khung cũ.
+  const frames = [m.plain.frame, m.band.frame] as const;
+  m.plain.frame = frames[0] ? frames[0].clone().multiply(f) : f;
+  m.band.frame = frames[1] ? frames[1].clone().multiply(f) : f;
   m.plain.spread = m.band.spread = 1;
   // Dáng như `birdSpread` nhưng ít mặt (thân cầu dẹt, cổ trụ, cánh hộp): mái cấp 10 có hàng trăm con khắp kinh đô.
   const p = m.plain;
@@ -154,7 +157,7 @@ export function lacBird(m: ToonModel, x: number, y: number, z: number, ry: numbe
   p.cone(0.03 * s, 0.26 * s, C.bronzeLight, 0, 0.26 * s, 0.38 * s, [Math.PI / 2, 0, 0], 4);
   for (const side of [-1, 1]) m.band.box(0.42 * s, 0.03, 0.18 * s, C.bronzeLight, side * 0.24 * s, 0.2 * s, -0.02 * s, [0, 0, side * 0.45]);
   p.box(0.16 * s, 0.03, 0.2 * s, C.bronzeDark, 0, 0.08 * s, -0.22 * s, [0.5, 0, 0]);
-  m.plain.frame = m.band.frame = null;
+  [m.plain.frame, m.band.frame] = frames;
   [m.plain.spread, m.band.spread] = keep;
 }
 

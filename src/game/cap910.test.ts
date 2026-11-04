@@ -26,7 +26,7 @@ import { canUpgrade, claimQuest, createInitialState, currentQuest, limitOf, plac
 import { MAU_IDS, mauSlots, planMau } from './mau';
 import { HAU_QUEST_START } from './moPhong';
 import { SAVE_VERSION, deserialize, serialize } from './save';
-import { edge, setDien } from './testmap';
+import { edge, oldDien, setDien } from './testmap';
 
 /** Chín loại công trình lên được cấp 9, 10 cùng Điện. */
 const NINE: BuildingType[] = ['ruong', 'ben', 'nhaSan', 'baiDa', 'loRen', 'kho', 'choiCanh', 'xuongMoc', 'langChai'];
@@ -147,7 +147,7 @@ describe('Điện cấp 9, 10', () => {
     expect(planMau(s, 'coLoaSong').stuck).toEqual([]);
   });
 
-  it('bản lưu 18 nâng lên được, Điện giữ nguyên; Điện 10 lưu rồi mở lại được', () => {
+  it('bản lưu 18 lên bản mới giữ nguyên cấp Điện; Điện 10 lưu rồi mở lại được', () => {
     const s = capital(10);
     const back = deserialize(serialize(s))!;
     expect(back.buildings[0].level).toBe(10);
@@ -155,6 +155,7 @@ describe('Điện cấp 9, 10', () => {
     old.version = 18;
     delete old.raid.han;
     delete old.raid.hanHeld;
+    oldDien(old as unknown as Parameters<typeof oldDien>[0]);
     const up = deserialize(JSON.stringify(old))!;
     expect(up.version).toBe(SAVE_VERSION);
     expect(up.buildings[0].level).toBe(8);

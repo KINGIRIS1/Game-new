@@ -649,7 +649,6 @@ async function start(): Promise<void> {
       case 'startMove': {
         const b = findBuilding(state, a.id);
         if (!b) return fail('khongTimThay');
-        if (b.type === 'dien') return fail('khongTheDoi');
         if (state.raid.phase !== 'idle') return fail('dangCoGiac');
         hud.closeSheet();
         world.setSelection(null);
@@ -1173,8 +1172,9 @@ async function start(): Promise<void> {
       .filter(([, n]) => n > 0)
       .map(([r, n]) => `${fmt(n)} ${vi.resources[r].icon}`)
       .join(', ');
+    const text = state.relaid.dien ? vi.ui.relaidDien(refund) : vi.ui.relaid(refund);
     delete state.relaid;
-    hud.toast(vi.ui.relaid(refund));
+    hud.toast(text);
   };
 
   // Dựng cảnh theo bản lưu cho kinh đô hiện sau màn hình vào game. Luật chơi chưa chạy cho tới lúc vào game.

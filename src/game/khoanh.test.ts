@@ -24,9 +24,9 @@ import {
 } from './khoanh';
 import { FOREST_BAND, GRID, KHOANH, RIVER_START } from './map';
 import { SAVE_VERSION, deserialize, serialize } from './save';
-import { DIEN, setDien } from './testmap';
+import { DIEN, oldDien, setDien } from './testmap';
 
-/** Kinh đô giàu, Điện cấp `level`, đất mới có 16 khoảnh mở sẵn. */
+/** Kinh đô giàu, Điện cấp `level`, đất mới có 25 khoảnh mở sẵn. */
 function rich(level = 1): GameState {
   const s = createInitialState(0);
   s.buildings[0].level = level;
@@ -35,7 +35,7 @@ function rich(level = 1): GameState {
 }
 
 /** Khoảnh rừng ngay phía bắc (z nhỏ hơn) vùng mở sẵn, cùng cột với Điện. */
-const NORTH = khoanhId(7, 5);
+const NORTH = khoanhId(7, 4);
 
 describe('lưới khoảnh', () => {
   it('10×10 khoảnh 5×5 phủ đất giữa dải rừng ngoài cùng và sông', () => {
@@ -51,15 +51,16 @@ describe('lưới khoảnh', () => {
     }
   });
 
-  it('lúc đầu mở sẵn 16 khoảnh ở góc sông (vùng 20×20), Điện nằm gọn trong đó', () => {
+  it('lúc đầu mở sẵn 25 khoảnh ở góc sông (vùng 25×25), Điện nằm gọn trong đó, cách rìa rừng 5 ô', () => {
     const s = createInitialState(0);
     expect(s.khoanh).toEqual([...START_KHOANH]);
-    expect(START_KHOANH.length).toBe(16);
-    expect(squareKhoanh(20)).toEqual([...START_KHOANH]);
+    expect(START_KHOANH.length).toBe(25);
+    expect(squareKhoanh(25)).toEqual([...START_KHOANH]);
     expect(isOpen(s, DIEN, DIEN)).toBe(true);
-    expect(isOpen(s, RIVER_START - 20, RIVER_START - 1)).toBe(true);
-    expect(isOpen(s, RIVER_START - 21, RIVER_START - 1)).toBe(false);
-    expect(openStart(s)).toBe(RIVER_START - 20);
+    expect(isOpen(s, RIVER_START - 25, RIVER_START - 1)).toBe(true);
+    expect(isOpen(s, RIVER_START - 26, RIVER_START - 1)).toBe(false);
+    expect(openStart(s)).toBe(RIVER_START - 25);
+    expect(DIEN - openStart(s)).toBe(5);
   });
 });
 
@@ -82,12 +83,12 @@ describe('phát rừng', () => {
     const s = rich(3);
     expect(canOpenKhoanh(s, khoanhId(0, 0))).toEqual({ ok: false, reason: 'khoanhChuaSat' });
     // Chéo góc với vùng mở sẵn: chưa sát.
-    expect(canOpenKhoanh(s, khoanhId(5, 5))).toEqual({ ok: false, reason: 'khoanhChuaSat' });
+    expect(canOpenKhoanh(s, khoanhId(4, 4))).toEqual({ ok: false, reason: 'khoanhChuaSat' });
     expect(canOpenKhoanh(s, khoanhId(7, 7))).toEqual({ ok: false, reason: 'khoanhDaMo' });
     expect(canOpenKhoanh(s, 100)).toEqual({ ok: false, reason: 'khongTimThay' });
     expect(openable(s)).toContain(NORTH);
-    expect(openable(s)).not.toContain(khoanhId(5, 5));
-    expect(openable(s).length).toBe(8);
+    expect(openable(s)).not.toContain(khoanhId(4, 4));
+    expect(openable(s).length).toBe(10);
   });
 
   it('phát xong thì đất mở ngay: dựng được công trình trên khoảnh mới', () => {
@@ -124,14 +125,14 @@ describe('phát rừng', () => {
       prev = c;
       total += c.gao!;
     }
-    // Khoảnh cuối cùng đắt gấp cả trăm khoảnh đầu; phát hết rừng tốn chừng 44 nghìn gạo.
-    expect(prev.gao!).toBeGreaterThan(100 * KHOANH_COST_BASE.gao);
+    // Khoảnh cuối cùng đắt gấp chừng 75 lần khoảnh đầu; phát hết rừng tốn chừng 44 nghìn gạo.
+    expect(prev.gao!).toBeGreaterThan(70 * KHOANH_COST_BASE.gao);
     expect(prev.gao!).toBeLessThan(3000);
     expect(total).toBeGreaterThan(40000);
     expect(total).toBeLessThan(50000);
     // Phát xong một khoảnh thì khoảnh sau lên một nấc.
     const s = rich(3);
-    for (let cz = 5; cz >= 0; cz--) {
+    for (let cz = 4; cz >= 0; cz--) {
       const before = khoanhCost(s);
       const r = openKhoanh(s, khoanhId(7, cz));
       expect(r.ok && r.value).toEqual(before);
@@ -153,7 +154,7 @@ describe('phát rừng', () => {
 
   it('mở một dải lồi ra phía rừng: dải giặc xuất phát vẫn ở ngoài đất đã mở', () => {
     const s = rich(8);
-    for (let cz = 5; cz >= 0; cz--) expect(openKhoanh(s, khoanhId(7, cz)).ok).toBe(true);
+    for (let cz = 4; cz >= 0; cz--) expect(openKhoanh(s, khoanhId(7, cz)).ok).toBe(true);
     expect(openStart(s)).toBe(FOREST_BAND);
     const band = raidSpawnBand(s);
     expect(band.to).toBeLessThanOrEqual(FOREST_BAND);
@@ -170,23 +171,27 @@ describe('nâng bản lưu phiên bản 11 lên 12', () => {
       setDien(s, level);
       s.resources = { gao: 1e5, voOc: 1e5, datDa: 1e5, sat: 1e5, go: 1e5 };
       const lo = RIVER_START - V11_AREA[level - 1];
-      expect(place(s, 'luy', lo, lo).ok).toBe(true);
+      expect(place(s, 'luy', lo, RIVER_START - 1).ok).toBe(true);
       const raw = JSON.parse(serialize(s));
       raw.version = 11;
+      oldDien(raw);
       delete raw.khoanh;
       const back = deserialize(JSON.stringify(raw))!;
       expect(back).toBeDefined();
       expect(back.version).toBe(SAVE_VERSION);
-      expect(back.khoanh).toEqual(squareKhoanh(V11_AREA[level - 1]));
+      // Bước 19 → 20 mở thêm cho đủ 25 khoảnh mở sẵn như ván mới.
+      const side = Math.max(V11_AREA[level - 1], 25);
+      expect(back.khoanh).toEqual(squareKhoanh(side));
       expect(back.buildings).toEqual(s.buildings);
       expect(isOpen(back, lo, lo)).toBe(true);
-      expect(isOpen(back, lo - 1, lo)).toBe(false);
+      expect(isOpen(back, RIVER_START - side - 1, lo)).toBe(false);
     });
   }
 
   it('đất hình vuông đổi sang khoảnh rồi vẫn phát thêm được, giá theo số khoảnh đã có (Điện 6: 64 khoảnh)', () => {
     const s = createInitialState(0);
     setDien(s, 6);
+    s.khoanh = squareKhoanh(V11_AREA[5]);
     s.resources = { gao: 1e5, voOc: 1e5, datDa: 1e5, sat: 1e5, go: 1e5 };
     expect(s.khoanh.length).toBe(64);
     expect(canOpenKhoanh(s, khoanhId(1, 9))).toEqual({ ok: true, value: khoanhCostAt(64) });
