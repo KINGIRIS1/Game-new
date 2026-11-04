@@ -190,11 +190,11 @@ export function headband(r: HumanRig, color: number, h = 0.04): void {
 export function featherCrown(
   r: HumanRig,
   colors: readonly number[] = [C.red, C.cream],
-  opts: { count?: number; len?: number; spread?: number; bronzeRim?: boolean; tier2?: boolean } = {},
+  opts: { count?: number; len?: number; spread?: number; bronzeRim?: boolean; rim?: number; tier2?: boolean } = {},
 ): void {
   const p = r.on('head').plain;
   if (opts.bronzeRim) {
-    r.on('head').band.cyl(0.228, 0.232, 0.045, C.bronze, 0, 0.83, -0.03, undefined, 14);
+    r.on('head').band.cyl(0.228, 0.232, 0.045, opts.rim ?? C.bronze, 0, 0.83, -0.03, undefined, 14);
     p.cyl(0.235, 0.235, 0.012, C.bronzeDark, 0, 0.81, -0.03, undefined, 14);
   }
   const n = opts.count ?? 7;

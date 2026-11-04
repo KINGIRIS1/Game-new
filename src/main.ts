@@ -1396,6 +1396,8 @@ async function start(): Promise<void> {
       commit();
       return r;
     },
+    /** Mở bảng công trình `id` như khi chạm vào nó (chụp thử bảng của công trình bị công trình khác che). */
+    select: (id: number | null) => select(id),
     /** Mở bảng Đất bên kia sông của khoảnh bên kia `id`, như khi chạm vào đất ấy. */
     benKia: (id: number) => {
       select(null);

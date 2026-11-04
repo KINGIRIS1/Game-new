@@ -146,7 +146,8 @@ const ELEPHANT: Defs = {
 
 /**
  * Voi chiến. `tier`: bậc giáp đã rèn: bậc 1 giáp trán sắt và giáp sườn sắt viền đồng; bậc 2 thêm ngà dài bịt đồng,
- * bành gỗ quây quanh chỗ ngồi và lọng đỏ.
+ * bành gỗ quây quanh chỗ ngồi và lọng đỏ; bậc 3 giáp trán đồng vàng có núm mặt trời, chuông đồng đeo cổ, lọng hai
+ * tầng có chóp vàng.
  */
 function drawElephant(r: Rig, tier: number): void {
   const body = r.on('qBody');
@@ -183,8 +184,8 @@ function drawElephant(r: Rig, tier: number): void {
   tail.cyl(0.02, 0.025, 0.3, C.elephant, 0, 0.68, -0.52, [0.25, 0, 0], 5);
   tail.sphere(0.04, C.ink, 0, 0.53, -0.56, [1, 1.4, 1], 5);
   if (tier >= 1) {
-    head.box(0.34, 0.26, 0.05, IRON, 0, 1.02, 0.7, [-0.35, 0, 0]);
-    head.box(0.36, 0.04, 0.06, C.bronze, 0, 1.15, 0.66, [-0.35, 0, 0]);
+    head.box(0.34, 0.26, 0.05, tier >= 3 ? C.gold : IRON, 0, 1.02, 0.7, [-0.35, 0, 0]);
+    head.box(0.36, 0.04, 0.06, tier >= 3 ? C.bronzeDark : C.bronze, 0, 1.15, 0.66, [-0.35, 0, 0]);
     for (const s of [-1, 1]) {
       p.box(0.04, 0.3, 0.6, IRON_DARK, s * 0.35, 0.86, -0.05, [0, 0, s * 0.2]);
       for (const y of [0.72, 1.0]) p.box(0.05, 0.04, 0.62, C.bronze, s * (0.32 + (1.0 - y) * 0.2), y, -0.05, [0, 0, s * 0.2]);
@@ -202,6 +203,14 @@ function drawElephant(r: Rig, tier: number): void {
     p.cyl(0.02, 0.02, 0.95, C.woodDark, 0, 2.02, -0.35, undefined, 5);
     body.band.cone(0.42, 0.2, C.red, 0, 2.55, -0.35, undefined, 12);
     p.cyl(0.43, 0.43, 0.04, C.bronze, 0, 2.45, -0.35, undefined, 12);
+  }
+  if (tier >= 3) {
+    // Núm mặt trời giữa giáp trán vàng; chuông đồng đeo cổ; lọng thêm tầng trên chóp vàng, viền tầng dưới vàng.
+    head.sphere(0.05, C.bronzeLight, 0, 1.03, 0.72, [1, 1, 0.5], 8);
+    for (const s of [-1, 1]) head.sphere(0.05, C.gold, s * 0.16, 0.7, 0.55, [1, 1.15, 1], 6);
+    p.cyl(0.43, 0.43, 0.045, C.gold, 0, 2.45, -0.35, undefined, 12);
+    body.band.cone(0.24, 0.16, C.red, 0, 2.72, -0.35, undefined, 10);
+    p.cone(0.06, 0.16, C.gold, 0, 2.86, -0.35, undefined, 6);
   }
 }
 

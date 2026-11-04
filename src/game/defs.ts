@@ -757,17 +757,19 @@ export const BUILDINGS: Record<BuildingType, BuildingDef> = {
   },
   // Lầu nỏ: ghép hai chòi canh cấp 8 thành một (`mergeTowers` ở chuong4.ts), không dựng thẳng được.
   // Giá dựng là giá ghép. Mỗi lầu nỏ tính là hai chòi canh trong số chòi canh tối đa.
+  // Sau truyện lên cấp 2 ở Điện 9, cấp 3 ở Điện 10 (mỗi mũi `LAU_NO.dmg` theo cấp).
   lauNo: {
     type: 'lauNo',
     w: 1,
     d: 1,
-    maxLevel: 1,
+    maxLevel: 3,
     buildCost: { voOc: 2000, datDa: 2000, sat: 500 },
-    upgradeCost: [{}, {}],
-    production: [{}],
-    hp: [1400],
+    upgradeCost: [{}, {}, { voOc: 3200, datDa: 3200, sat: 800 }, { voOc: 5000, datDa: 5000, sat: 1300 }],
+    production: [{}, {}, {}],
+    hp: [1400, 1540, 1700],
     limit: [0, 0, 0, 0, 0, 0, 0, 3, 3, 3],
     minDien: 8,
+    levelMinDien: [0, 0, 9, 10],
     buildable: false,
     removable: false,
   },
@@ -977,8 +979,11 @@ export const GUARD_CAP = [0, 14, 20, 28, 38, 44, 50, 56, 62, 68];
 /** Chòi canh lên tới cấp này mới ghép được thành lầu nỏ; một lầu nỏ tính bằng chừng này chòi canh. */
 export const LAU_NO_FROM_LEVEL = 8;
 export const LAU_NO_TOWERS = 2;
-/** Lầu nỏ mỗi phát bắn `targets` giặc khác nhau, mỗi mũi `dmg` sát thương. Đền Cổ Loa cộng như với chòi canh. */
-export const LAU_NO = { targets: 3, dmg: 34, range: 5.5, cooldown: 1.1 };
+/**
+ * Lầu nỏ mỗi phát bắn `targets` giặc khác nhau, mỗi mũi `dmg[cấp − 1]` sát thương. Đền Cổ Loa cộng như với chòi canh.
+ * Ghép hai chòi canh đã lên cấp 9, 10 thì lầu nỏ ra ngay cấp 2, 3 (theo chòi thấp hơn), để khỏi mất công nâng chòi.
+ */
+export const LAU_NO = { targets: 3, dmg: [34, 41, 49], range: 5.5, cooldown: 1.1 };
 
 /**
  * Cổng thành: lính trên lầu cổng bắn giặc trong tầm (nhân `RAID_SCALE` khi giữ kinh đô như chòi canh), mỗi phát
@@ -1079,12 +1084,14 @@ export const floodHpScale = (n: number) => 1.3 + 0.12 * (n - 1);
 // ---------- Rèn binh khí ----------
 
 /**
- * Rèn binh khí ở lò rèn: mỗi binh chủng rèn riêng, hai bậc. Bậc 1 cần lò rèn cấp 6, bậc 2 cần lò rèn cấp 7.
- * Mỗi bậc thêm `ARMS_BONUS` vào máu và sức đánh của binh chủng ấy, ở mọi trận.
+ * Rèn binh khí ở lò rèn: mỗi binh chủng rèn riêng, ba bậc. Bậc 1 cần lò rèn cấp 6, bậc 2 cần lò rèn cấp 7, bậc 3
+ * cần lò rèn cấp 9. Mỗi bậc thêm `ARMS_BONUS` vào máu và sức đánh của binh chủng ấy, ở mọi trận.
  */
 export const ARMS: { cost: Cost; forgeLevel: number }[] = [
   { cost: { sat: 400, voOc: 400 }, forgeLevel: 6 },
   { cost: { sat: 900, voOc: 900 }, forgeLevel: 7 },
+  // Bậc 3 sau truyện: lò rèn cấp 9 (cần Điện 9, tức đã hết truyện).
+  { cost: { sat: 2000, voOc: 2000 }, forgeLevel: 9 },
 ];
 export const ARMS_BONUS = 0.1;
 

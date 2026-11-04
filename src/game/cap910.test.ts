@@ -1,8 +1,28 @@
-// Điện cấp 9, 10 sau truyện: mốc mở, giá, sản lượng, số tối đa, kho, nhiệm vụ, mẫu kinh đô, bản lưu.
+// Điện cấp 9, 10 sau truyện: mốc mở, giá, sản lượng, số tối đa, kho, nhiệm vụ, mẫu kinh đô, bản lưu; lầu nỏ lên cấp 2,
+// 3 và rèn binh khí bậc 3.
 
 import { describe, expect, it } from 'vitest';
-import { BUILDINGS, CA_PER_MIN, CH4_QUEST_START, DIEN10_CHALLENGES, GUARD_CAP, QUESTS, STORAGE_CAP, TOWER, type BuildingType } from './defs';
-import { canUpgrade, claimQuest, createInitialState, currentQuest, limitOf, place, questDone, storageCap, upgrade, type GameState } from './game';
+import { startBattle, startFieldBattle, stepBattle } from './battle';
+import { canForgeArms, forgeArms } from './binhKhi';
+import { mergeTowers } from './chuong4';
+import {
+  ARMS,
+  ARMS_BONUS,
+  BUILDINGS,
+  CA_PER_MIN,
+  CH4_QUEST_START,
+  DEFAULT_ROWS,
+  DIEN10_CHALLENGES,
+  FIELD,
+  GUARD_CAP,
+  LAU_NO,
+  QUESTS,
+  STORAGE_CAP,
+  TOWER,
+  UNITS,
+  type BuildingType,
+} from './defs';
+import { canUpgrade, claimQuest, createInitialState, currentQuest, limitOf, place, questDone, storageCap, upgrade, type Building, type GameState } from './game';
 import { MAU_IDS, mauSlots, planMau } from './mau';
 import { HAU_QUEST_START } from './moPhong';
 import { SAVE_VERSION, deserialize, serialize } from './save';
@@ -136,5 +156,107 @@ describe('Điện cấp 9, 10', () => {
     const up = deserialize(JSON.stringify(old))!;
     expect(up.version).toBe(19);
     expect(up.buildings[0].level).toBe(8);
+  });
+});
+
+/** Dựng chòi canh ở (x, z) rồi đặt thẳng lên cấp `level`. */
+function tower(s: GameState, x: number, z: number, level: number): Building {
+  const r = place(s, 'choiCanh', x, z);
+  if (!r.ok) throw new Error(r.reason);
+  r.value.level = level;
+  return r.value;
+}
+
+describe('lầu nỏ lên cấp 2, 3', () => {
+  it('cấp 2 cần Điện 9, cấp 3 cần Điện 10, giá và máu theo cấp, rồi hết cấp', () => {
+    expect(BUILDINGS.lauNo.maxLevel).toBe(3);
+    expect(BUILDINGS.lauNo.upgradeCost[2]).toEqual({ voOc: 3200, datDa: 3200, sat: 800 });
+    expect(BUILDINGS.lauNo.upgradeCost[3]).toEqual({ voOc: 5000, datDa: 5000, sat: 1300 });
+    expect(BUILDINGS.lauNo.hp).toEqual([1400, 1540, 1700]);
+    expect(LAU_NO.dmg).toEqual([34, 41, 49]);
+    const s = capital(8);
+    const a = tower(s, edge(8, 1), edge(8, 3), 8);
+    const b = tower(s, edge(8, 3), edge(8, 3), 8);
+    const lau = mergeTowers(s, a.id, b.id);
+    if (!lau.ok) throw new Error(lau.reason);
+    expect(lau.value.level).toBe(1);
+    expect(canUpgrade(s, a.id)).toEqual({ ok: false, reason: 'chuaDuCapDien' });
+    setDien(s, 9);
+    const before = { ...s.resources };
+    expect(upgrade(s, a.id).ok).toBe(true);
+    expect(lau.value.level).toBe(2);
+    expect(s.resources.sat).toBe(before.sat - 800);
+    expect(canUpgrade(s, a.id)).toEqual({ ok: false, reason: 'chuaDuCapDien' });
+    setDien(s, 10);
+    expect(upgrade(s, a.id).ok).toBe(true);
+    expect(lau.value.level).toBe(3);
+    expect(canUpgrade(s, a.id)).toEqual({ ok: false, reason: 'capToiDa' });
+  });
+
+  it('ghép hai chòi canh đã lên cấp 9, 10 thì lầu nỏ ra ngay cấp 2, 3, theo chòi thấp hơn', () => {
+    const s = capital(10);
+    const pair = (la: number, lb: number, x: number) => {
+      const a = tower(s, x, edge(10, 3), la);
+      const b = tower(s, x + 2, edge(10, 3), lb);
+      const r = mergeTowers(s, a.id, b.id);
+      if (!r.ok) throw new Error(r.reason);
+      return r.value.level;
+    };
+    expect(pair(9, 10, edge(10, 1))).toBe(2);
+    expect(pair(10, 10, edge(10, 5))).toBe(3);
+    expect(pair(8, 10, edge(10, 9))).toBe(1);
+  });
+
+  it('lầu nỏ cấp 3 mỗi phát bắn ba giặc, mỗi mũi sát thương theo cấp', () => {
+    const s = capital(10);
+    const x = edge(10, 4);
+    const z = edge(10, 4);
+    const a = tower(s, x, z, 10);
+    const b = tower(s, x + 2, z, 10);
+    mergeTowers(s, a.id, b.id);
+    const battle = startBattle(s, 4, 'bac');
+    const foes = battle.fighters.filter((f) => f.side === 'giac').slice(0, 4);
+    expect(foes.length).toBe(4);
+    foes.forEach((f, i) => {
+      f.x = x + 0.5 + 1 + i * 0.3;
+      f.z = z + 0.5;
+      f.state = 'move';
+      f.cd = 99;
+    });
+    for (const f of battle.fighters) if (f.side === 'giac' && !foes.includes(f)) f.state = 'gone';
+    // Chỉ lầu nỏ bắn: lính ta đứng ngoài trận.
+    for (const f of battle.fighters) if (f.side === 'ta') f.state = 'gone';
+    const hp = foes.map((f) => f.hp);
+    stepBattle(s, battle, 0.01);
+    const lost = foes.map((f, i) => hp[i] - f.hp);
+    expect(lost.slice(0, 3).every((d) => Math.abs(d - LAU_NO.dmg[2]) < 1e-6), String(lost)).toBe(true);
+    expect(lost[3]).toBe(0);
+  });
+});
+
+describe('rèn binh khí bậc 3', () => {
+  it('bậc 3 cần lò rèn cấp 9 (sau truyện), giá cao hơn bậc 2, rồi hết bậc', () => {
+    expect(ARMS.length).toBe(3);
+    expect(ARMS[2]).toEqual({ cost: { sat: 2000, voOc: 2000 }, forgeLevel: 9 });
+    const s = capital(9);
+    const lo = place(s, 'loRen', edge(9, 1), edge(9, 10));
+    if (!lo.ok) throw new Error(lo.reason);
+    lo.value.level = 8;
+    s.arms.no = 2;
+    expect(canForgeArms(s, 'no')).toEqual({ ok: false, reason: 'canLoRen' });
+    lo.value.level = 9;
+    const sat = s.resources.sat;
+    expect(forgeArms(s, 'no')).toEqual({ ok: true, value: 3 });
+    expect(s.resources.sat).toBe(sat - 2000);
+    expect(canForgeArms(s, 'no')).toEqual({ ok: false, reason: 'capToiDa' });
+    // Lưu rồi nạp lại giữ bậc 3.
+    expect(deserialize(serialize(s))!.arms.no).toBe(3);
+  });
+
+  it('bậc 3 thêm 30% máu cho binh chủng ấy', () => {
+    const setup = { id: 1, stage: 9, enemies: { tomBinh: 1 }, hpScale: 1, army: { giao: 1, cung: 1, voi: 0, no: 0 }, rows: DEFAULT_ROWS };
+    const armed = startFieldBattle({ ...setup, arms: { giao: 3, cung: 0, voi: 0, no: 0 } });
+    const giao = armed.fighters.find((f) => f.kind === 'giao')!;
+    expect(giao.maxHp).toBeCloseTo(UNITS.giao.hp * FIELD.hpMul * (1 + 3 * ARMS_BONUS), 5);
   });
 });

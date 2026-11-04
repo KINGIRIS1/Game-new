@@ -30,7 +30,7 @@ Tài liệu này ghi lại các quyết định đã chốt với chủ dự án
   - **mỗi cấp đổi hẳn dáng**: thêm một phần lớn nhìn thấy rõ và to dần, từ khoảng 85% ở cấp 1 lên 105% ở cấp 5, rồi 110%, 115%, 120% ở cấp 6, 7, 8.
     - Ví dụ Điện: cấp 2 thêm cờ, trống và chim đồng; cấp 3 thêm chái nhà bên; cấp 4 thêm nền đá và hàng rào; cấp 5 lợp mái hai tầng.
     - **Cấp 6, 7, 8 to mà không tràn ô**: móng giữ nguyên số ô. Cả khối phóng to nhưng tâm từng phần giữ chỗ như cấp 5 (thu tâm, `ShapeBuilder.spread`), nền và rào thu lại vừa ô; mỗi phần to ra tại chỗ. Người làm việc giữ cỡ như cấp 5. Nhà cũng cao dần (cột, sàn, mái), và mỗi cấp thêm chi tiết. Điện đã kín bốn ô nên giữ 105%, to lên bằng nền đá thứ hai dưới nhà chính, cột cao, mái rộng và vút hơn. Bến to 106%, 110%, 114%; bãi đất đá 105%, 110%, 114% so với cấp 5; chòi canh móng một ô chỉ cao lên; ruộng giữ cỡ, lúa và chòi canh ruộng cao lên.
-    - **Mái theo cấp** (nhìn mái để biết cấp, chung cho mọi công trình có mái): tới cấp 5 mái tranh; cấp 6 mái tranh có sống mái và diềm mái sơn đỏ; cấp 7 mái ngói đất nung đỏ cam như ngói thành Cổ Loa; cấp 8 mái ngói, sống mái và diềm mái bọc đồng vàng; cấp 9 thêm dải đồng hoa văn trống đồng (vòng tròn tiếp tuyến) rủ dưới diềm mái; cấp 10 thêm chim Lạc đồng dang cánh ở hai đầu nóc, đầu mái vút hơn. Mái nón, mái tròn thì viền là vành diềm mái và chóp mái (cấp 9 vành đồng hoa văn quanh diềm, cấp 10 chim Lạc trên chóp). Lầu nỏ mái như cấp 8. Đền và bốn công trình Hội Tết giữ mái tranh.
+    - **Mái theo cấp** (nhìn mái để biết cấp, chung cho mọi công trình có mái): tới cấp 5 mái tranh; cấp 6 mái tranh có sống mái và diềm mái sơn đỏ; cấp 7 mái ngói đất nung đỏ cam như ngói thành Cổ Loa; cấp 8 mái ngói, sống mái và diềm mái bọc đồng vàng; cấp 9 thêm dải đồng hoa văn trống đồng (vòng tròn tiếp tuyến) rủ dưới diềm mái; cấp 10 thêm chim Lạc đồng dang cánh ở hai đầu nóc, đầu mái vút hơn. Mái nón, mái tròn thì viền là vành diềm mái và chóp mái (cấp 9 vành đồng hoa văn quanh diềm, cấp 10 chim Lạc trên chóp). Lầu nỏ mái như chòi canh cấp 8, lên cấp 2, 3 thì mái như cấp 9, 10. Đền và bốn công trình Hội Tết giữ mái tranh.
     - Cả bảng nằm ở `src/render/buildings.ts`.
   - **dân ăn mặc theo nơi làm việc**, mỗi nghề một dụng cụ và một động tác (`src/render/people.ts`):
     - nông dân quấn khăn, cầm cuốc, cúi cấy;
@@ -769,6 +769,7 @@ Giá mỗi cấp mới khoảng gấp đôi cấp trước; sản lượng mỗi
 |---|---|---|---|
 | 1 | lò rèn cấp 6 | 400 sắt, 400 vỏ ốc | +10% máu và sức đánh |
 | 2 | lò rèn cấp 7, đã rèn bậc 1 | 900 sắt, 900 vỏ ốc | thêm +10% (cộng 20%) |
+| 3 | lò rèn cấp 9 (sau truyện), đã rèn bậc 2 | 2000 sắt, 2000 vỏ ốc | thêm +10% (cộng 30%); thêm sau, xem mục Kế hoạch: Điện cấp 9, 10 |
 
 Rèn riêng cho giáo binh, cung thủ, voi chiến. Có tác dụng ở mọi trận (phó bản, giữ kinh đô), cộng thêm vào phần của Đền Phù Đổng và phúc lành Tết. Chuẩn cân bằng phó bản vẫn tính lính chưa rèn.
 
@@ -1102,7 +1103,7 @@ Giá cấp 8 khoảng gấp 2 cấp 7, sản lượng tăng khoảng 30% (cấp 
 
 - Bảng chòi canh cấp 8 có nút **Ghép thành lầu nỏ**. Bấm rồi chạm vào một chòi canh cấp 8 khác còn nguyên. Lầu nỏ đứng ở chỗ chòi thứ nhất, chòi thứ hai biến mất, để trống ô ấy.
 - Cần Điện cấp 8 và hai chòi canh cấp 8 còn nguyên. Giá ghép: 2000 vỏ ốc, 2000 đất đá, 500 sắt.
-- Không tách lại được. Lầu nỏ không lên cấp.
+- Không tách lại được. Lúc đầu lầu nỏ không lên cấp; sau truyện lên được cấp 2, 3 (xem mục Kế hoạch: Điện cấp 9, 10).
 - **Mỗi lầu nỏ tính là 2 chòi canh** trong số tối đa. Với 7 chòi canh tối đa thì có nhiều nhất 3 lầu nỏ và 1 chòi canh. Ghép không cho thêm công trình, chỉ dồn sức.
 - Chỉ số: mỗi phát bắn **3 giặc khác nhau** (ít giặc hơn thì bắn chừng ấy), mỗi mũi 34 sát thương, tầm 5,5 ô, nghỉ 1,1 giây, máu 1400, móng 1×1 như chòi canh. Khi có từ 3 giặc trong tầm trở lên, lầu nỏ mạnh hơn hai chòi canh cấp 8 cộng lại khoảng 40%.
 - Đền Cổ Loa còn nguyên thì lầu nỏ cũng bắn mạnh gấp rưỡi và xa thêm 1 ô như chòi canh.
@@ -1139,7 +1140,7 @@ Giá cấp 8 khoảng gấp 2 cấp 7, sản lượng tăng khoảng 30% (cấp 
 - Lính nỏ **đứng ngoài vòng khắc chế**: không có loại giặc nào được dành riêng cho lính nỏ. Lính nỏ đánh mạnh gấp đôi **quân nặng** (chiến xa, cá sấu, hổ tinh, kỵ binh, lính rìu) và **mọi trùm**.
 - Bắn chậm, mỗi phát đau, ít máu, nên yếu khi bị áp sát. Mặc định đứng hậu quân cùng cung thủ.
 - So với cung thủ: tính trên mỗi chỗ trong doanh trại thì đánh thường ngang nhau, nhưng gặp quân nặng và trùm thì lính nỏ gấp đôi.
-- Rèn binh khí 2 bậc như ba binh chủng kia, cùng giá. Dáng: bậc 1 mũi tên sắt, bậc 2 nỏ cánh sừng và bao tên đồng.
+- Rèn binh khí 2 bậc như ba binh chủng kia, cùng giá (sau truyện thêm bậc 3 cho cả bốn binh chủng). Dáng: bậc 1 mũi tên sắt, bậc 2 nỏ cánh sừng và bao tên đồng.
 - Dáng: mũ đồng, giáp da, cầm nỏ gỗ lớn có lẫy đồng. Khi bắn thì quỳ một gối.
 - Lính nỏ đứng ngoài vòng khắc chế, còn ba binh chủng kia nhận thêm thủy binh vào vòng: cung thủ thắng lính thủy, voi thắng cung thuyền, giáo binh thắng lính rìu.
 - Rèn binh khí và dòng lính nỏ trong bảng doanh trại, bảng lò rèn chỉ hiện từ chương 4.
@@ -1666,7 +1667,7 @@ Mỗi PR làm trên một nhánh từ `main` mới nhất.
 
 Mỗi PR: chạy `npm test` và `npm run build`; chụp kiểm tra ở khổ điện thoại (thanh trên đủ chỗ cho năm chip ở khổ `fold`); ghi số cuối cùng vào tài liệu này; sửa các mục chung (bốn tài nguyên thành năm, bảng Công trình) khi phần ấy đã làm.
 
-## Kế hoạch: Điện cấp 9, 10 (chủ dự án đã duyệt, đang làm)
+## Kế hoạch: Điện cấp 9, 10 (chủ dự án đã duyệt, đã làm)
 
 Chủ dự án yêu cầu lập kế hoạch cho cấp 9, 10 rồi **duyệt theo đúng đề xuất**: mốc mở A, đất 88 và 94 khoảnh (sau bỏ, xem điều 2), lầu nỏ lên cấp 2, 3, có rèn binh khí bậc 3, cùng mọi con số và dáng dưới đây. Như lúc làm cấp 6–8, sau khi duyệt cho chỉnh ±20% để khớp nhịp đo bằng test; làm xong phần nào thì ghi số cuối cùng của phần ấy.
 
@@ -1781,12 +1782,47 @@ Số cuối cùng (PR luật đã làm): giá chừng gấp 1,3 cấp trước, 
 - Bảng Điện, bảng công trình không phải sửa: đã đọc `maxLevel` và các mảng theo cấp.
 - Test: `cap910.test.ts` (mốc mở, giá, sản lượng, số tối đa, khoảnh, kho, nhiệm vụ, mẫu, bản lưu), `balance.test.ts` (nhịp Điện 9, 10), `kinhTe.test.ts` (giai đoạn sau truyện); các test cũ ghi cứng 8 cấp nay ghi 10.
 
+### Binh khí bậc 3 và lầu nỏ lên cấp (PR 3, đã làm)
+
+Số cuối cùng. Kế hoạch đã duyệt có số của lầu nỏ; giá binh khí bậc 3, luật ghép chòi cao và dáng chưa có trong kế hoạch, được đề xuất khi làm PR này; chủ dự án cho gộp theo đề xuất.
+
+**Lầu nỏ lên cấp** (`lauNo` ở `defs.ts`: `maxLevel` 3, `levelMinDien` [0, 0, 9, 10]; `LAU_NO.dmg` theo cấp)
+
+| Cấp | Cần | Giá nâng | Mỗi mũi (3 mũi mỗi phát) | Máu |
+|---|---|---|---|---|
+| 1 | ghép hai chòi canh cấp 8, Điện 8 | 2000 vỏ ốc, 2000 đất đá, 500 sắt (giá ghép) | 34 | 1400 |
+| 2 | Điện 9 | 3200 vỏ ốc, 3200 đất đá, 800 sắt | 41 | 1540 |
+| 3 | Điện 10 | 5000 vỏ ốc, 5000 đất đá, 1300 sắt | 49 | 1700 |
+
+- Tầm, nghỉ giữa hai phát, số tối đa (3 lầu nỏ, mỗi lầu tính hai chòi canh), Đền Cổ Loa và Lệnh bắn giữ như cấp 1.
+- **Ghép chòi canh đã lên cấp 9, 10** (`mergedLevel` ở `chuong4.ts`): lầu nỏ ra ngay cấp 2, 3 theo chòi thấp hơn trong hai chòi (cấp 8 và cấp 10 ghép ra cấp 1). Nâng hai chòi lên cấp 9 tốn hơn nâng một lầu nỏ lên cấp 2, nên luật này chỉ để người chơi khỏi mất công nâng chòi, không thành đường tắt. Bảng chòi canh cấp 9, 10 có thêm một dòng báo lầu nỏ sẽ ra cấp mấy.
+- Bảng lầu nỏ ghi sức bắn (mỗi mũi, số giặc mỗi phát) và sức bắn cấp sau, như bảng cổng thành.
+- Dáng (`makeLauNo(level)` ở `buildings.ts`, mỗi cấp cao thêm một chút, mái theo cấp: cấp 1 như cấp 8, cấp 2 như cấp 9, cấp 3 như cấp 10):
+  - cấp 2: lớp chân dưới cùng ốp đá hộc, bốn khiên đồng mặt trống treo giữa bốn mặt lan can tầng dưới (dưới diềm mái nên nhìn từ xa thấy rõ);
+  - cấp 3: cả ba lớp chân ốp đá, đai đồng vàng giữa các lớp, viền khiên vàng; ba nỏ lớn thành ba nỏ liên châu có hộp tên (dáng nỏ của Cao Lỗ); chim đồng trên đỉnh to hơn.
+
+**Rèn binh khí bậc 3** (`ARMS[2]` ở `defs.ts`)
+
+- Cần lò rèn cấp 9 (lò rèn cấp 9 cần Điện 9, tức đã hết truyện), đã rèn bậc 2. Giá **2000 sắt, 2000 vỏ ốc** mỗi binh chủng (bậc 2 là 900, 900; gấp chừng 2,2 lần như từ bậc 1 lên bậc 2). Thêm 10% máu và sức đánh như hai bậc trước (cộng 30%), ở mọi trận.
+- Cả bốn binh chủng. Bảng lò rèn ghi "Bậc n/3"; chưa có lò rèn cấp 9 thì nút Rèn bậc 3 mờ, có dòng "Cần lò rèn cấp 9".
+- Chuẩn cân bằng phó bản và thử thách không đổi: người chơi giỏi vẫn tính rèn đủ 2 bậc (`FULL_ARMS` ở `testkit.ts`), vì bậc 3 chỉ có sau truyện. Người chơi mô phỏng không rèn binh khí, nên nhịp Điện 9, 10 không đổi.
+- Dáng bậc 3 (chung một dấu hiệu: đồng vàng):
+
+  | Binh chủng | Rèn bậc 3 |
+  |---|---|
+  | Giáo binh | lông chim vàng xen giữa mũ lông, cao hơn, vành mũ đồng vàng; lưỡi giáo sắt to hơn, họng, đai và gờ sống bọc đồng vàng; khiên to hơn, viền đồng vàng, núm vàng, hai tua đỏ |
+  | Cung thủ | mũ lông như giáo binh; giáp ngực đồng có núm vàng thay giáp da; cung sừng đầu bịt vàng, chuôi quấn đai vàng; bao tên đồng vàng |
+  | Lính nỏ | mũ đồng năm chóp lông (hai chóp ngoài lông vàng), vành mũ vàng; đầu cánh nỏ bịt vàng, đai vàng quấn cổ nỏ; bao tên đồng vàng |
+  | Voi chiến | giáp trán đồng vàng có núm mặt trời; hai chuông đồng vàng đeo cổ; lọng hai tầng, viền tầng dưới vàng, chóp vàng |
+
+- Test: `cap910.test.ts` (lầu nỏ lên cấp, giá, máu, ghép chòi cao, sát thương theo cấp trong trận; rèn bậc 3, giá, máu, lưu và nạp lại). Bản lưu giữ phiên bản 19 (bậc rèn và cấp lầu nỏ chỉ nới giới hạn, không đổi cấu trúc).
+
 ### Thứ tự làm
 
 0. **Duyệt tài liệu này**: chủ dự án đã duyệt theo đề xuất.
 1. **PR cấp 9–10 phần luật** (đã làm): mảng theo cấp lên 10, Điện 9–10, chín loại, kho, mẫu, nhiệm vụ, bản lưu 19, test và nhịp. Hình tạm dùng dáng cấp 8; mái mới để sang PR hình.
 2. **PR cấp 9–10 phần hình** (đã làm): mái cấp 9, 10 và dáng cấp 9, 10 cho Điện và chín loại (cả chòi canh), chụp kiểm tra. Lầu nỏ đổi dáng cùng PR lầu nỏ lên cấp.
-3. **PR binh khí bậc 3 và lầu nỏ lên cấp**.
+3. **PR binh khí bậc 3 và lầu nỏ lên cấp** (đã làm): xem mục Binh khí bậc 3 và lầu nỏ lên cấp ở trên.
 
 ## Kế hoạch: vùng đất bên kia sông (chủ dự án đã duyệt, đã làm)
 
@@ -2119,6 +2155,6 @@ Móng 3×3, phải sát bờ sông (bên này hay bên kia, sông Thao hay sông
 13. **Đường đi và đồ trang trí** (đã làm, xem mục cùng tên): bốn loại đường, bảy món trang trí, ba thẻ chọn trong bảng Xây dựng, thẻ Dọn trang trí.
 14. **Cổng thành, xưởng mộc, làng chài** (chủ dự án đã duyệt, đã làm; xem mục Kế hoạch cùng tên): gỗ là tài nguyên thứ năm, cá đỡ gạo ăn, cổng hút giặc trong vòng tường. Ba PR: gỗ và xưởng mộc, làng chài, cổng thành.
 15. **Vùng đất bên kia sông** (chủ dự án đã duyệt, đã làm cả 5 PR, bản lưu v18; xem mục Kế hoạch cùng tên): lưới qua sông, cầu ba cấp, sương mù và trinh sát, đồn giặc bốn bậc theo chương, dẹp đồn chiếm vùng, đặc sản đất, bản làng, của chôn, giặc tới từ hai bờ và đồn biên.
-16. **Điện cấp 9, 10** (đã duyệt, đang làm; PR luật và PR hình đã làm; xem Kế hoạch cùng tên).
+16. **Điện cấp 9, 10** (đã duyệt, đã làm cả 3 PR: luật, hình, binh khí bậc 3 và lầu nỏ lên cấp; xem Kế hoạch cùng tên).
     **Hồ Kim Quy** (chủ dự án yêu cầu, đã làm; xem mục cùng tên): hồ 8×8 mở khi Rùa Vàng hiện lên, tường thành thêm 30% máu.
 17. **Để sau**: chương 5 về Hai Bà Trưng (mới nhắc ở câu cuối chương 4); nhạc nền.
