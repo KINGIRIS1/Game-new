@@ -196,22 +196,25 @@ function drawIronHorse(r: Rig): void {
     lp.box(0.09, 0.04, 0.05, C.gold, x, 0.025, z + 0.07);
   }
 
-  // Cổ ngựa bọc 4 vòng giáp xếp lớp và bờm lửa 2 tầng.
+  // Cổ ngựa sắt bọc 4 vòng giáp xếp lớp vươn từ ngực (y=0.96, z=0.32) lên đầu (y=1.32, z=0.58), cùng bờm lửa rực cháy.
   const neck = r.on('qNeck');
-  neck.plain.cyl(0.125, 0.185, 0.56, IRON, 0, 1.12, 0.44, [-0.62, 0, 0], 10);
+  neck.plain.cyl(0.13, 0.19, 0.52, IRON, 0, 1.14, 0.45, [0.62, 0, 0], 10);
   for (let i = 0; i < 4; i++) {
     const t = i / 3;
-    const ny = 0.96 + t * 0.28;
-    const nz = 0.32 + t * 0.2;
-    const rad = lerp(0.185, 0.135, t);
-    neck.plain.cyl(rad, rad + 0.01, 0.045, i % 2 ? C.bronze : IRON_DARK, 0, ny, nz, [-0.62, 0, 0], 10);
+    const ny = 0.98 + t * 0.32;
+    const nz = 0.34 + t * 0.22;
+    const rad = lerp(0.19, 0.135, t);
+    neck.plain.cyl(rad, rad + 0.012, 0.05, i % 2 ? C.bronze : IRON_DARK, 0, ny, nz, [0.62, 0, 0], 10);
   }
+  // Bờm lửa Thánh Gióng mọc dọc theo sống cổ phía trên, ngọn lửa bốc cao và cuộn bay về sau theo chiều gió phi.
   for (let i = 0; i < 7; i++) {
-    const ny = 1.44 - i * 0.055;
-    const nz = 0.58 - i * 0.065;
-    neck.glow.cone(0.082, 0.34 + i * 0.025, i % 2 ? C.ember : C.fire, 0, ny, nz - 0.12, [-0.85, 0, 0], 6);
+    const t = i / 6;
+    const ny = 1.08 + t * 0.32;
+    const nz = 0.22 + t * 0.22;
+    const len = 0.34 + (1 - Math.abs(t - 0.5) * 2) * 0.08;
+    neck.glow.cone(0.08, len, i % 2 ? C.ember : C.fire, 0, ny + 0.06, nz - 0.04, [-0.75, 0, 0], 6);
     for (const s of [-1, 1]) {
-      neck.glow.cone(0.05, 0.22 + i * 0.015, i % 2 ? C.fire : C.ember, s * 0.06, ny - 0.03, nz - 0.1, [-0.85, 0, s * 0.28], 5);
+      neck.glow.cone(0.05, len * 0.68, i % 2 ? C.fire : C.ember, s * 0.065, ny + 0.04, nz - 0.02, [-0.75, 0, s * 0.28], 5);
     }
   }
 

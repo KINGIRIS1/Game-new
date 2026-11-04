@@ -41,12 +41,12 @@ export function quadFall(b: B, f: number): void {
 /** Ngựa đứng, lưng cao chừng 0,85. */
 const HORSE: Defs = {
   qBody: { parent: 'base', at: [0, 0.78, 0] },
-  qFL: { parent: 'qBody', at: [-0.14, 0.62, 0.3] },
-  qFR: { parent: 'qBody', at: [0.14, 0.62, 0.3] },
-  qBL: { parent: 'qBody', at: [-0.14, 0.62, -0.3] },
-  qBR: { parent: 'qBody', at: [0.14, 0.62, -0.3] },
-  qNeck: { parent: 'qBody', at: [0, 0.9, 0.32] },
-  qHead: { parent: 'qNeck', at: [0, 1.2, 0.52] },
+  qFL: { parent: 'qBody', at: [-0.14, 0.62, 0.32] },
+  qFR: { parent: 'qBody', at: [0.14, 0.62, 0.32] },
+  qBL: { parent: 'qBody', at: [-0.14, 0.62, -0.32] },
+  qBR: { parent: 'qBody', at: [0.14, 0.62, -0.32] },
+  qNeck: { parent: 'qBody', at: [0, 0.86, 0.34] },
+  qHead: { parent: 'qNeck', at: [0, 1.24, 0.66] },
   qTail: { parent: 'qBody', at: [0, 0.9, -0.42] },
 };
 const HORSE_LEG = 0.62;
@@ -54,29 +54,49 @@ const HORSE_LEG = 0.62;
 /** Ngựa màu `color`, đệm yên `saddle` (không có thì ngựa kéo xe), bờm và đuôi màu `mane`. */
 function drawHorse(r: Rig, color: number, saddle: number | null, mane: number = C.ink): void {
   const body = r.on('qBody');
-  body.plain.sphere(0.33, color, 0, 0.78, 0, [0.8, 0.78, 1.4], 12);
+  // Thân ngựa: khối cơ ngực nở, bụng thon và mông nở.
+  body.plain.sphere(0.33, color, 0, 0.78, 0, [0.8, 0.8, 1.35], 12);
+  body.plain.sphere(0.28, color, 0, 0.8, 0.28, [0.82, 0.82, 0.9], 10);
+  body.plain.sphere(0.29, color, 0, 0.81, -0.28, [0.82, 0.82, 0.9], 10);
   if (saddle) body.band.box(0.5, 0.06, 0.46, saddle, 0, 1.0, -0.04);
   for (const [b, x, z] of [
-    ['qFL', -0.14, 0.3],
-    ['qFR', 0.14, 0.3],
-    ['qBL', -0.14, -0.3],
-    ['qBR', 0.14, -0.3],
+    ['qFL', -0.14, 0.32],
+    ['qFR', 0.14, 0.32],
+    ['qBL', -0.14, -0.32],
+    ['qBR', 0.14, -0.32],
   ] as const) {
     const p = r.on(b).plain;
     p.cyl(0.07, 0.055, 0.34, color, x, 0.46, z, undefined, 7);
     p.cyl(0.045, 0.05, 0.26, color, x, 0.17, z, undefined, 6);
     p.cyl(0.055, 0.06, 0.06, C.ink, x, 0.03, z, undefined, 6);
   }
+
+  // Cổ ngựa vươn cao và hướng về trước chuẩn giải phẫu (từ ngực y=0.86, z=0.34 lên đầu y=1.24, z=0.66).
   const neck = r.on('qNeck').plain;
-  neck.cyl(0.1, 0.14, 0.46, color, 0, 1.05, 0.42, [-0.6, 0, 0], 8);
-  // Bờm dọc cổ.
-  neck.box(0.04, 0.32, 0.36, mane, 0, 1.18, 0.38, [-0.6, 0, 0]);
-  const head = r.on('qHead').plain;
-  head.box(0.17, 0.18, 0.4, color, 0, 1.25, 0.64, [0.35, 0, 0]);
-  for (const s of [-1, 1]) {
-    head.cone(0.035, 0.12, color, s * 0.06, 1.42, 0.5, [-0.3, 0, s * 0.25], 5);
-    head.sphere(0.024, C.ink, s * 0.088, 1.3, 0.6, [0.5, 1, 1], 5);
+  neck.cyl(0.11, 0.17, 0.48, color, 0, 1.05, 0.5, [0.7, 0, 0], 10);
+  neck.cyl(0.08, 0.13, 0.42, color, 0, 1.0, 0.53, [0.74, 0, 0], 8);
+  // Bờm dày mọc dọc theo sống gáy cổ phía trên.
+  neck.box(0.045, 0.08, 0.44, mane, 0, 1.13, 0.41, [0.7, 0, 0]);
+  for (let i = 0; i < 5; i++) {
+    const t = i / 4;
+    const my = 0.98 + t * 0.34;
+    const mz = 0.28 + t * 0.28;
+    neck.box(0.05, 0.07, 0.09, mane, 0, my, mz, [0.85, 0, 0]);
   }
+
+  // Đầu ngựa: quai hàm tròn, mõm thon dài chúc xuống, mắt, tai vểnh, đầu mũi và lỗ mũi.
+  const head = r.on('qHead').plain;
+  head.sphere(0.12, color, 0, 1.26, 0.68, [0.85, 0.95, 0.95], 10);
+  head.box(0.13, 0.13, 0.3, color, 0, 1.2, 0.82, [0.42, 0, 0]);
+  head.box(0.1, 0.06, 0.22, color, 0, 1.13, 0.78, [0.46, 0, 0]);
+  head.sphere(0.055, C.ink, 0, 1.14, 0.95, [0.95, 0.8, 0.9], 8);
+  for (const s of [-1, 1]) {
+    head.sphere(0.016, 0x110c08, s * 0.038, 1.15, 0.98);
+    head.cone(0.035, 0.13, color, s * 0.065, 1.44, 0.64, [-0.2, 0, s * 0.2], 5);
+    head.sphere(0.024, C.ink, s * 0.085, 1.28, 0.74, [0.5, 1, 1], 6);
+  }
+  // Bờm trán rủ giữa hai tai.
+  head.cone(0.035, 0.12, mane, 0, 1.38, 0.72, [0.8, 0, 0], 4);
   r.on('qTail').plain.cone(0.06, 0.5, mane, 0, 0.85, -0.52, [-2.3, 0, 0], 6);
 }
 
@@ -87,8 +107,8 @@ function drawHorse(r: Rig, color: number, saddle: number | null, mane: number = 
 function drawWhiteHorse(r: Rig): void {
   drawHorse(r, C.horseWhite, C.hanRed, C.horseWhiteMane);
   const head = r.on('qHead').plain;
-  head.box(0.08, 0.2, 0.3, C.copper, 0, 1.33, 0.72, [0.35, 0, 0]);
-  head.box(0.19, 0.035, 0.05, C.copperDark, 0, 1.22, 0.76, [0.35, 0, 0]);
+  head.box(0.08, 0.2, 0.3, C.copper, 0, 1.28, 0.76, [0.42, 0, 0]);
+  head.box(0.19, 0.035, 0.05, C.copperDark, 0, 1.22, 0.76, [0.42, 0, 0]);
   const neck = r.on('qNeck').plain;
   neck.sphere(0.04, C.gold, 0, 0.98, 0.56, [1, 1, 1], 6);
   neck.cone(0.075, 0.2, C.hanRed, 0, 0.86, 0.57, [Math.PI, 0, 0], 7);
