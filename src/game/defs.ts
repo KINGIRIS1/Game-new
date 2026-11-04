@@ -62,13 +62,16 @@ export type BuildingType =
   // Hồ Kim Quy: nơi thần Kim Quy (Rùa Vàng) trú ngụ, mở khi Rùa Vàng hiện lên (chương 3).
   | 'hoKimQuy'
   // Bến thuyền khơi: thuyền đánh cá lớn ra biển Đông, mang về cá biển và vỏ ốc (từ Điện 8, `bien.ts`).
-  | 'benKhoi';
+  | 'benKhoi'
+  // Đền Hát Môn thờ Hai Bà Trưng (kết chương 5): đền còn nguyên thì mỗi trận giữ kinh đô có nghĩa binh ra đánh.
+  | 'denHatMon';
 
 /**
  * Mốc mở khóa theo cốt truyện: sau kết chương 1, khi vào chương 2, sau kết chương 2, khi vào chương 3, khi Rùa Vàng
- * hiện lên (thắng màn 19), sau kết chương 3, khi vào chương 4, sau kết chương 4 (vua xuống biển).
+ * hiện lên (thắng màn 19), sau kết chương 3, khi vào chương 4, sau kết chương 4 (vua xuống biển), sau kết chương 5
+ * (thắng màn 40, giữ Cấm Khê).
  */
-export type Unlock = 'ketChuong1' | 'chuong2' | 'ketChuong2' | 'chuong3' | 'ruaVang' | 'ketChuong3' | 'chuong4' | 'ketChuong4';
+export type Unlock = 'ketChuong1' | 'chuong2' | 'ketChuong2' | 'chuong3' | 'ruaVang' | 'ketChuong3' | 'chuong4' | 'ketChuong4' | 'ketChuong5';
 
 export interface BuildingDef {
   type: BuildingType;
@@ -159,6 +162,7 @@ export const BUILD_MENU: BuildingType[] = [
   'hoKimQuy',
   'denCoLoa',
   'denCuong',
+  'denHatMon',
   'cauSongDa',
   'cauSongThao',
   'donBien',
@@ -864,6 +868,22 @@ export const BUILDINGS: Record<BuildingType, BuildingDef> = {
     removable: false,
     unlock: 'ketChuong4',
   },
+  // Đền Hát Môn thờ Hai Bà, nơi Hai Bà tế cờ khởi nghĩa: đền còn nguyên thì mỗi trận giữ kinh đô có nghĩa binh ra đánh.
+  denHatMon: {
+    type: 'denHatMon',
+    w: 4,
+    d: 4,
+    maxLevel: 1,
+    buildCost: { gao: 5000, voOc: 5000, datDa: 5000, sat: 1400 },
+    upgradeCost: [{}, {}],
+    production: [{}],
+    hp: [1100],
+    limit: [1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+    minDien: 1,
+    buildable: true,
+    removable: false,
+    unlock: 'ketChuong5',
+  },
   // Cầu qua sông Đà nằm dọc (rộng 2 ô, vắt qua 7 ô sông), cầu qua sông Thao nằm ngang.
   cauSongDa: bridgeDef('cauSongDa', 2, 7),
   cauSongThao: bridgeDef('cauSongThao', 7, 2),
@@ -1042,6 +1062,7 @@ export const FLOOD_TOLERANCE: Partial<Record<BuildingType, number>> = {
   denTanVien: 1,
   denCoLoa: 1,
   denCuong: 1,
+  denHatMon: 1,
   // Hồ không sợ nước: miếu đứng trên gò giữa hồ.
   hoKimQuy: 99,
   ben: 99,
@@ -1190,7 +1211,9 @@ export type EnemyType =
   | 'linhHan'
   | 'noHan'
   | 'giapHan'
-  | 'toDinh';
+  | 'toDinh'
+  | 'maVien'
+  | 'lauThuyen';
 export const UNIT_TYPES: UnitType[] = ['giao', 'cung', 'voi', 'no'];
 
 export interface FighterStats {
@@ -1235,7 +1258,7 @@ export const UNITS: Record<UnitType, UnitDef> = {
     range: 4.5,
     speed: 1.3,
     cooldown: 2.4,
-    strongVs: [...HEAVY, 'phoTuong', 'daiTuong', 'thuongLuong', 'thuyTinh', 'gaTrang', 'trieuDa', 'tuongThuy', 'toDinh'],
+    strongVs: [...HEAVY, 'phoTuong', 'daiTuong', 'thuongLuong', 'thuyTinh', 'gaTrang', 'trieuDa', 'tuongThuy', 'toDinh', 'maVien'],
     cost: { gao: 50, voOc: 15, sat: 10 },
     home: 'traiNo',
     space: 2,
@@ -1279,6 +1302,11 @@ export const ENEMIES: Record<EnemyType, FighterStats> = {
   giapHan: { hp: 330, dmg: 26, range: 0.9, speed: 1.5, cooldown: 1.4, strongVs: ['cung'] },
   // Thái thú Tô Định, trùm màn 36: còn ít máu thì bỏ chạy (`TO_DINH_FLEE`).
   toDinh: { hp: 1600, dmg: 30, range: 1.2, speed: 1.3, cooldown: 1.2 },
+  // Phục Ba tướng quân Mã Viện, trùm màn 39, 40: cưỡi ngựa trắng, có Lệnh nỏ (`MA_VIEN_VOLLEY`).
+  maVien: { hp: 2000, dmg: 36, range: 1.3, speed: 1.3, cooldown: 1.2 },
+  // Lâu thuyền Hán (thủy quân Hán ở kinh đô): đậu dưới sông, mỗi loạt 3 mũi nỏ (`LAU_THUYEN`). Chỉ quân bắn xa và
+  // công trình phòng thủ bắn tới.
+  lauThuyen: { hp: 1800, dmg: 18, range: 5, speed: 0.6, cooldown: 2 },
 };
 
 /**
@@ -1286,7 +1314,7 @@ export const ENEMIES: Record<EnemyType, FighterStats> = {
  * gà trắng nghìn năm ở đỉnh Thất Diệu, Triệu Đà dưới chân thành Cổ Loa (và trên đường ra biển), tướng thủy binh
  * Triệu ở cửa sông.
  */
-export const BOSSES: EnemyType[] = ['phoTuong', 'daiTuong', 'thuongLuong', 'thuyTinh', 'gaTrang', 'trieuDa', 'tuongThuy', 'toDinh'];
+export const BOSSES: EnemyType[] = ['phoTuong', 'daiTuong', 'thuongLuong', 'thuyTinh', 'gaTrang', 'trieuDa', 'tuongThuy', 'toDinh', 'maVien'];
 /** Thủy quái bơi được dưới sông và chỗ nước ngập. */
 export const SWIMMERS: EnemyType[] = ['tomBinh', 'caPhun', 'caSau', 'thuongLuong', 'thuyTinh'];
 
@@ -1398,6 +1426,17 @@ export const HIEU_TRIEU = { count: 5, radius: 3, heal: 0.15 };
 export const NGHIA_BINH: FighterStats = { hp: 55, dmg: 7, range: 0.8, speed: 1.6, cooldown: 1.0 };
 /** Tô Định còn chừng này phần máu thì bỏ chạy về cuối bãi, nhanh gấp `speed` lần; chạy thoát thì tính như đã hạ. */
 export const TO_DINH_FLEE = { at: 0.3, speed: 1.5 };
+/**
+ * Lệnh nỏ của Mã Viện: lần đầu sau `first` giây, rồi cứ `every` giây, một loạt tên nỏ rơi xuống chỗ quân ta đứng đông
+ * nhất, `dmg` sát thương mỗi người trong `radius` ô. Tên rơi sau `delay` giây kể từ lúc phất cờ.
+ */
+export const MA_VIEN_VOLLEY = { first: 8, every: 14, dmg: 40, radius: 3, delay: 0.8 };
+/**
+ * Lâu thuyền Hán: đậu giữa ba ô sông sát bờ, không cập bờ. Cứ `cooldown` giây (ở `ENEMIES.lauThuyen`) bắn một loạt
+ * `shots` mũi nỏ vào công trình hay lính gần nhất trong tầm, mỗi mũi `dmg` sát thương. Chỉ quân bắn xa và công trình
+ * phòng thủ bắn tới. Đậu cách bờ `moor` ô, thuyền này cách thuyền kia `spacing` ô dọc bờ.
+ */
+export const LAU_THUYEN = { shots: 3, moor: 1.5, spacing: 5 };
 
 /** Vào chương 3, hay khi An Dương Vương cầm nỏ thần: đợt giặc đầu tiên trên bộ tới sau chừng này thời gian chơi. */
 export const FIRST_LAND_MS = 3 * 60_000;
@@ -1406,7 +1445,7 @@ export const FIRST_LAND_MS = 3 * 60_000;
  * Ai đánh kinh đô: giặc Ân (chương 1), Thủy Tinh dâng nước kèm thủy quái, yêu tinh núi Thất Diệu, quân Triệu Đà
  * trên bộ, thủy binh Triệu đi thuyền (chương 4), hay quân Hán trên bộ (chương 5).
  */
-export type Foe = 'an' | 'thuy' | 'yeu' | 'trieu' | 'thuyBinh' | 'han';
+export type Foe = 'an' | 'thuy' | 'yeu' | 'trieu' | 'thuyBinh' | 'han' | 'thuyHan';
 
 /** Yêu tinh núi Thất Diệu đêm thứ `n` kéo về phá thành. */
 export function yeuForces(n: number): Partial<Record<EnemyType, number>> {
@@ -1447,6 +1486,19 @@ export function hanForces(n: number): Partial<Record<EnemyType, number>> {
   };
 }
 export const hanHpScale = (n: number) => 2.2 + 0.12 * (n - 1);
+
+/**
+ * Thủy quân Hán đợt thứ `n` (từ khi Mã Viện sang): lính kích và giáp sĩ đi thuyền chở lính cập bờ, kèm lâu thuyền
+ * (1 chiếc ở đợt 1, 2; 2 chiếc từ đợt 3) đậu dưới sông bắn lên bờ.
+ */
+export function thuyHanForces(n: number): Partial<Record<EnemyType, number>> {
+  return {
+    linhHan: Math.min(10 + n, 20),
+    giapHan: Math.min(3 + Math.floor(n / 2), 8),
+    lauThuyen: n >= 3 ? 2 : 1,
+  };
+}
+export const thuyHanHpScale = (n: number) => 2.2 + 0.12 * (n - 1);
 /**
  * Thuyền giặc: mỗi thuyền chở `carry` lính, hiện ở mép sông xa rồi chèo vào bờ gần nhất với tốc độ `speed`
  * (ô mỗi giây), thuyền sau rời bến chậm hơn thuyền trước `stagger` giây. Thuyền không có máu, neo tới hết trận.
@@ -1526,6 +1578,8 @@ export const ENEMY_ROWS: Record<EnemyType, Row> = {
   giapHan: 'trung',
   noHan: 'hau',
   toDinh: 'hau',
+  maVien: 'hau',
+  lauThuyen: 'hau',
 };
 
 /**
@@ -1535,7 +1589,7 @@ export const ENEMY_ROWS: Record<EnemyType, Row> = {
  */
 export const FIELD = { w: 9, d: 22, gap: 10, hpMul: 1.6, maxS: 90 };
 
-export type Terrain = 'rung' | 'benSong' | 'lang' | 'don' | 'nui' | 'doi' | 'ngap' | 'tanVien' | 'thatDieu' | 'coLoa' | 'cuaSong' | 'moDa' | 'benKia' | 'hatMon' | 'luyLau';
+export type Terrain = 'rung' | 'benSong' | 'lang' | 'don' | 'nui' | 'doi' | 'ngap' | 'tanVien' | 'thatDieu' | 'coLoa' | 'cuaSong' | 'moDa' | 'benKia' | 'hatMon' | 'luyLau' | 'langBac' | 'camKhe';
 
 export type Chapter = 1 | 2 | 3 | 4 | 5;
 
@@ -1633,6 +1687,25 @@ export const STAGES: StageDef[] = [
   { chapter: 5, minDien: 5, needsGiong: false, enemies: { linhHan: 13, noHan: 8, giapHan: 4 }, hpScale: 2.0, reward: { gao: 10000, voOc: 8400, datDa: 7300, sat: 1800 }, terrain: 'hatMon' },
   { chapter: 5, minDien: 5, needsGiong: false, enemies: { linhHan: 12, noHan: 9, giapHan: 4 }, hpScale: 2.0, reward: { gao: 10500, voOc: 8800, datDa: 7700, sat: 1900 }, terrain: 'coLoa' },
   { chapter: 5, minDien: 5, needsGiong: false, enemies: { linhHan: 12, noHan: 8, giapHan: 4, toDinh: 1 }, hpScale: 1.85, reward: { gao: 11500, voOc: 9500, datDa: 8300, sat: 2000 }, terrain: 'luyLau' },
+  // Màn 37–40: Mã Viện sang. Màn 39 là Mã Viện ở hồ Lãng Bạc, màn 40 giữ cửa rừng Cấm Khê cho dân rút về núi
+  // (cầm cự 100 giây, Mã Viện tới ở đợt cuối).
+  { chapter: 5, minDien: 5, needsGiong: false, enemies: { linhHan: 13, noHan: 8, giapHan: 4 }, hpScale: 2.4, reward: { gao: 12000, voOc: 10000, datDa: 8700, sat: 2100 }, terrain: 'cuaSong' },
+  { chapter: 5, minDien: 5, needsGiong: false, enemies: { linhHan: 12, noHan: 9, giapHan: 4 }, hpScale: 2.4, reward: { gao: 12500, voOc: 10500, datDa: 9100, sat: 2200 }, terrain: 'langBac' },
+  { chapter: 5, minDien: 5, needsGiong: false, enemies: { linhHan: 12, noHan: 8, giapHan: 4, maVien: 1 }, hpScale: 2.3, reward: { gao: 13500, voOc: 11200, datDa: 9800, sat: 2400 }, terrain: 'langBac' },
+  {
+    chapter: 5,
+    minDien: 5,
+    needsGiong: false,
+    enemies: { linhHan: 5, noHan: 3, giapHan: 2 },
+    waves: [
+      { at: 35, enemies: { linhHan: 4, noHan: 3, giapHan: 3 } },
+      { at: 70, enemies: { linhHan: 4, noHan: 2, giapHan: 2, maVien: 1 } },
+    ],
+    holdS: 100,
+    hpScale: 3.1,
+    reward: { gao: 14000, voOc: 12000, datDa: 10500, sat: 2500 },
+    terrain: 'camKhe',
+  },
 ];
 
 /** Mọi giặc của màn, cả các đợt kéo tới sau (màn cầm cự). */
@@ -1759,6 +1832,8 @@ export type QuestGoal =
   | { kind: 'unitTroops'; unit: UnitType; amount: number }
   | { kind: 'thuyBinhHeld'; amount: number }
   | { kind: 'hanHeld'; amount: number }
+  /** Đánh chìm được `amount` lâu thuyền Hán ở kinh đô (cộng dồn qua mọi đợt). */
+  | { kind: 'lauSunk'; amount: number }
   /** Có ít nhất `amount` công trình (không kể Điện) ở cấp `level` trở lên. */
   | { kind: 'buildingLevel'; level: number; amount: number };
 
@@ -1833,6 +1908,10 @@ export const QUESTS: QuestDef[] = [
   { id: 'luyenVoi', goal: { kind: 'unitTroops', unit: 'voi', amount: 6 }, reward: { gao: 2500, sat: 600 } },
   { id: 'quaMan33', goal: { kind: 'stage', stage: 33 }, reward: { gao: 2500, voOc: 2000 } },
   { id: 'haLuyLau', goal: { kind: 'stage', stage: 36 }, reward: { gao: 3000, datDa: 2000 } },
+  { id: 'chimLauThuyen', goal: { kind: 'lauSunk', amount: 1 }, reward: { voOc: 2500, sat: 800 } },
+  { id: 'quaMan39', goal: { kind: 'stage', stage: 39 }, reward: { voOc: 3000, datDa: 2500 } },
+  { id: 'camKhe', goal: { kind: 'stage', stage: 40 }, reward: { gao: 5000, voOc: 5000 } },
+  { id: 'denHatMon', goal: { kind: 'count', building: 'denHatMon', amount: 1 }, reward: { datDa: 3500, sat: 1100 } },
 ];
 /** Nhận xong thưởng nhiệm vụ cuối chương 1 (Đền Phù Đổng) thì sang chương 2. */
 export const CH2_QUEST_START = 20;

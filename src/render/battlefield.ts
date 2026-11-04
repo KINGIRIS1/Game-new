@@ -27,7 +27,7 @@ const groundMaterial = new THREE.MeshLambertMaterial({ vertexColors: true });
 /** Đất có đồi tô phẳng từng mặt tam giác, ra dáng low-poly như các mô hình khác. */
 const reliefMaterial = new THREE.MeshLambertMaterial({ vertexColors: true, flatShading: true });
 
-const TERRAINS: Terrain[] = ['rung', 'benSong', 'lang', 'don', 'nui', 'doi', 'ngap', 'tanVien', 'thatDieu', 'coLoa', 'cuaSong', 'moDa', 'benKia', 'hatMon', 'luyLau'];
+const TERRAINS: Terrain[] = ['rung', 'benSong', 'lang', 'don', 'nui', 'doi', 'ngap', 'tanVien', 'thatDieu', 'coLoa', 'cuaSong', 'moDa', 'benKia', 'hatMon', 'luyLau', 'langBac', 'camKhe'];
 const OUTSIDE: Record<Terrain, number> = {
   rung: C.grassLocked[0],
   benSong: C.grassLocked[1],
@@ -44,6 +44,8 @@ const OUTSIDE: Record<Terrain, number> = {
   benKia: 0x7f8a4c,
   hatMon: C.grassLocked[1],
   luyLau: 0x939556,
+  langBac: C.grassLocked[1],
+  camKhe: 0x6f7a44,
 };
 const FIELD_COLOR: Record<Terrain, number> = {
   rung: C.grass[0],
@@ -61,6 +63,8 @@ const FIELD_COLOR: Record<Terrain, number> = {
   benKia: 0xb4ac74,
   hatMon: 0xbcb27a,
   luyLau: 0xb9a678,
+  langBac: 0xb8b27a,
+  camKhe: 0x9ca466,
 };
 /** Màu các mảng loang trên đất: cỏ rậm, cỏ úa, đất trống, đá; đồi sim nở hoa tím. */
 const PATCH: Record<Terrain, number> = {
@@ -79,6 +83,8 @@ const PATCH: Record<Terrain, number> = {
   benKia: 0x6a4a2c,
   hatMon: 0x9aa25a,
   luyLau: C.earth,
+  langBac: 0x8d9656,
+  camKhe: 0x66763c,
 };
 /** Đồng ngập lũ và đỉnh Tản Viên: nước lũ phủ chỗ trũng quanh bãi, ở độ cao này. */
 const FLOOD_Y = -0.3;
@@ -101,6 +107,8 @@ const HILLS: Record<Terrain, { height: number; freq: number }> = {
   benKia: { height: 1.5, freq: 0.06 },
   hatMon: { height: 1.3, freq: 0.05 },
   luyLau: { height: 1.2, freq: 0.05 },
+  langBac: { height: 1.2, freq: 0.05 },
+  camKhe: { height: 2.6, freq: 0.07 },
 };
 const TREE_DENSITY: Record<Terrain, number> = {
   rung: 0.8,
@@ -118,6 +126,8 @@ const TREE_DENSITY: Record<Terrain, number> = {
   benKia: 0.4,
   hatMon: 0.4,
   luyLau: 0.3,
+  langBac: 0.35,
+  camKhe: 0.8,
 };
 /** Trời và đèn theo nền: núi Thất Diệu là đêm tím, còn lại là ngày. */
 const SKY: Partial<Record<Terrain, { sky: number; sun: number; hemi: number; sunColor: number; hemiSky: number; hemiGround: number }>> = {

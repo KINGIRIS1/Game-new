@@ -5,7 +5,7 @@
 import { benKiaOpen } from './benKia';
 import { CAO_LO_AT, LONG_NGONG_AT, advAtSea } from './caoLo';
 import { inChapter4 } from './chuong4';
-import { HIEU_TRIEU_AT, LUY_LAU_AT, inChapter5 } from './chuong5';
+import { HIEU_TRIEU_AT, LANG_BAC_AT, LUY_LAU_AT, chuong5Won, inChapter5, maVienCame } from './chuong5';
 import { advJoined, inChapter3, ruaVangCame } from './coLoa';
 import type { GameState, StoryId } from './game';
 import { giongAppeared, giongReady } from './giong';
@@ -37,6 +37,10 @@ const STORY_ORDER: StoryId[] = [
   'meLinh',
   'hatMon',
   'trungVuong',
+  'phucBa',
+  'langBac',
+  'songHat',
+  'hetTruyen5',
 ];
 const STORY_WHEN: Record<StoryId, (s: GameState) => boolean> = {
   mo: () => true,
@@ -74,6 +78,13 @@ const STORY_WHEN: Record<StoryId, (s: GameState) => boolean> = {
   hatMon: (s) => inChapter5(s) && s.campaign.cleared >= HIEU_TRIEU_AT,
   // Thắng màn 36: Tô Định bỏ trốn, Trưng Trắc lên ngôi.
   trungVuong: (s) => inChapter5(s) && s.campaign.cleared >= LUY_LAU_AT,
+  // Thắng màn 37: Mã Viện đem thủy quân sang, lâu thuyền Hán tới đánh kinh đô.
+  phucBa: maVienCame,
+  // Thắng màn 39: đánh lớn ở Lãng Bạc, Hai Bà lui về Cấm Khê.
+  langBac: (s) => inChapter5(s) && s.campaign.cleared >= LANG_BAC_AT,
+  // Thắng màn 40: giữ Cấm Khê cho dân rút về núi, Hai Bà gieo mình xuống sông Hát. Sau đó là màn hình Hết truyện mới.
+  songHat: chuong5Won,
+  hetTruyen5: chuong5Won,
 };
 
 /** Đoạn truyện đến lúc kể mà người chơi chưa xem, theo đúng thứ tự. */

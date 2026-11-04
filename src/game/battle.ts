@@ -162,6 +162,16 @@ export interface Fighter {
   slow?: number;
   /** Thủy Tinh: còn bao lâu tới lần hô sóng, lần gọi thủy quái tiếp theo, và đã gọi mấy lần. */
   spell?: { wave: number; summon: number; summoned: number };
+  /**
+   * Mã Viện: còn bao lâu tới lần Lệnh nỏ tiếp theo; `land` là giây còn lại tới lúc loạt tên đang bay rơi xuống
+   * (tx, tz).
+   */
+  volley?: { next: number; land?: number; tx?: number; tz?: number };
+  /**
+   * Lâu thuyền Hán: hiện ở (ox, oz) ngoài luồng sông, sau `delay` giây thì chèo tới chỗ neo (tx, tz) rồi đậu bắn lên
+   * bờ; hết giờ thì chèo về (ox, oz) rồi rút đi. `sink` là giây đã chìm (thuyền bị đánh chìm, chỉ để vẽ).
+   */
+  ship?: { ox: number; oz: number; tx: number; tz: number; delay: number; sink?: number };
 }
 
 export interface BattleEvent {
@@ -194,7 +204,13 @@ export interface BattleEvent {
     /** Tô Định chạy thoát khỏi bãi. */
     | 'escape'
     /** Màn cầm cự: một đợt giặc mới kéo tới bãi. */
-    | 'arrive';
+    | 'arrive'
+    /** Lệnh nỏ: Mã Viện ở (x, z) phất cờ, loạt tên nỏ bay tới rơi quanh (tx, tz). */
+    | 'barrage'
+    /** Lệnh nỏ: loạt tên rơi xuống quanh (x, z). */
+    | 'barrageHit'
+    /** Lâu thuyền bị đánh chìm ở (x, z). */
+    | 'sink';
   x: number;
   z: number;
   tx?: number;
@@ -255,6 +271,8 @@ export interface Battle {
   advWin?: boolean;
   /** Trận cuối chương 4 vừa thắng: phần vẽ cho Rùa Vàng khổng lồ nổi lên ở mép biển. */
   seaWin?: boolean;
+  /** Trận cuối chương 5 vừa thắng (giữ Cấm Khê): phần vẽ cho hai bà đứng trên voi nhìn về phía sông, camera lùi xa. */
+  hatWin?: boolean;
   /** Màn cầm cự: các đợt giặc còn chưa tới bãi (theo thứ tự thời gian). */
   waves?: StageWave[];
   /** Màn cầm cự: giữ đủ chừng này giây mà quân ta chưa chết hết thì thắng. */
@@ -298,8 +316,10 @@ export interface Battle {
   drowned: number[];
   /** Giặc bơi được dưới sông (thủy quái). */
   swim: boolean;
-  /** Thuyền giặc của thủy binh Triệu (rỗng nếu không phải đợt thủy binh). */
+  /** Thuyền chở lính của thủy binh Triệu hay thủy quân Hán (rỗng nếu không phải đợt đi thuyền). */
   boats: Boat[];
+  /** Số lâu thuyền Hán đã bị đánh chìm trong trận này. Bản lưu cũ không có thì coi như 0. */
+  sunk?: number;
   /** Giây còn phải chờ để dùng lại từng kỹ năng. */
   skillCd: Partial<Record<SkillId, number>>;
   /** Kết cục trận ngoài bãi; trận giữ kinh đô luôn để null. */

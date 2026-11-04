@@ -8,7 +8,7 @@ import { initialCayDa, updateCayDa, type CayDaState } from './cayDa';
 import { bridgeFit, bridgeheadCells, cutOff, farFactor, farRaidBank, fortFit, initialBenKia, landRaidSide, openBridgehead, updateBenKia, villagesOutput, type BenKiaState } from './benKia';
 import { huanTiers, initialThuThach } from './thuThach';
 import { inChapter4 } from './chuong4';
-import { inChapter5, initialHaiBa } from './chuong5';
+import { chuong5Won, inChapter5, initialHaiBa } from './chuong5';
 import { advJoined, initialAdv, inChapter3, ruaVangCame, wallRings } from './coLoa';
 import { heroesFor, inChapter2, initialSon, restAfter, sonJoined } from './son';
 import { bake, datBonus, initialTet, troiBonus, updateTet, type TetState } from './tet';
@@ -147,6 +147,10 @@ export interface RaidState {
   /** Số đợt quân Hán đánh kinh đô (chương 5), và số đợt đánh lui được hết. */
   han: number;
   hanHeld: number;
+  /** Số đợt thủy quân Hán (từ khi Mã Viện sang), số đợt đánh lui được hết, và số lâu thuyền đã đánh chìm. */
+  thuyHan: number;
+  thuyHanHeld: number;
+  lauSunk: number;
   /** Mực nước lũ đang thấy (bậc), 0 khi không có lũ. Dâng trong trận, rút dần sau trận. */
   water: number;
   /** Lúc giặc tràn vào (hết thời gian báo trước). */
@@ -277,7 +281,12 @@ export type StoryId =
   | 'hetTruyen'
   | 'meLinh'
   | 'hatMon'
-  | 'trungVuong';
+  | 'trungVuong'
+  | 'phucBa'
+  | 'langBac'
+  | 'songHat'
+  /** Màn hình Hết truyện sau đoạn cuối chương 5. */
+  | 'hetTruyen5';
 
 /** Một lời mời đổi hàng của thuyền buôn: đưa `give`, nhận `get`. */
 export interface Offer {
@@ -424,6 +433,7 @@ export type FailReason =
   | 'daCoUNo'
   | 'khongCoUNo'
   | 'canKetChuong4'
+  | 'canKetChuong5'
   | 'canCaoLo'
   | 'caoLoKietSuc'
   | 'haiBaKietSuc'
@@ -469,6 +479,9 @@ export function initialRaid(): RaidState {
     thuyBinhHeld: 0,
     han: 0,
     hanHeld: 0,
+    thuyHan: 0,
+    thuyHanHeld: 0,
+    lauSunk: 0,
     water: 0,
     startsAt: 0,
     battle: null,
@@ -750,6 +763,7 @@ export function unlocked(state: GameState, unlock: Unlock | undefined): boolean 
   if (unlock === 'ketChuong3') return state.adv.won;
   if (unlock === 'chuong4') return inChapter4(state);
   if (unlock === 'ketChuong4') return state.adv.bien;
+  if (unlock === 'ketChuong5') return chuong5Won(state);
   return true;
 }
 
@@ -778,6 +792,7 @@ export const UNLOCK_REASON: Record<Unlock, FailReason> = {
   ketChuong3: 'canKetChuong3',
   chuong4: 'canChuong4',
   ketChuong4: 'canKetChuong4',
+  ketChuong5: 'canKetChuong5',
 };
 
 /**
@@ -936,6 +951,9 @@ export function questProgress(state: GameState): { have: number; need: number } 
     need = goal.amount;
   } else if (goal.kind === 'hanHeld') {
     have = state.raid.hanHeld;
+    need = goal.amount;
+  } else if (goal.kind === 'lauSunk') {
+    have = state.raid.lauSunk;
     need = goal.amount;
   } else if (goal.kind === 'buildingLevel') {
     const lv = goal.level;

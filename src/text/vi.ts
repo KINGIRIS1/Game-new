@@ -248,6 +248,11 @@ export const vi = {
       icon: '🌅',
       desc: 'Đền thờ An Dương Vương dưới chân núi Mộ Dạ, nơi vua theo Rùa Vàng xuống biển. Đền còn nguyên thì mỗi đợt thủy binh Triệu tới ít hơn 20% số thuyền. Chỉ dựng được sau khi hộ giá vua ra biển.',
     },
+    denHatMon: {
+      name: 'Đền Hát Môn',
+      icon: '🐘',
+      desc: 'Đền thờ Hai Bà Trưng ở cửa sông Hát, nơi Hai Bà tế cờ khởi nghĩa. Đền còn nguyên thì mỗi trận giữ kinh đô có 6 nghĩa binh từ đền ra đánh giặc. Chỉ dựng được sau khi giữ Cấm Khê (màn 40).',
+    },
     cauSongDa: {
       name: 'Cầu sông Đà',
       icon: '🌉',
@@ -339,6 +344,7 @@ export const vi = {
     canHetTruyen: 'Mở sau khi hộ giá vua ra biển Mộ Dạ (thắng màn 32)',
     canChuong5: 'Mở ở chương 5: Hai Bà Trưng',
     canKetChuong4: 'Chỉ dựng được sau khi hộ giá vua ra biển Mộ Dạ',
+    canKetChuong5: 'Chỉ dựng được sau khi giữ Cấm Khê (màn 40)',
     canCaoLo: 'Màn này cần Cao Lỗ đã cầm quân (thắng màn 25)',
     caoLoKietSuc: 'Cao Lỗ đang kiệt sức, chờ một lát',
     haiBaKietSuc: 'Cả Hai Bà đều đang kiệt sức, chờ một lát',
@@ -432,6 +438,10 @@ export const vi = {
     luyenVoi: 'Hai Bà cưỡi voi ra trận, nghĩa quân cũng cần tượng binh. Xin luyện 6 voi chiến ở chuồng voi.',
     quaMan33: 'Lính Hán đang thu cống ở Mê Linh. Xin Hai Bà dẫn quân đuổi chúng đi (màn 33).',
     haLuyLau: 'Tô Định đóng ở thành Luy Lâu. Hạ được thành thì đất Lĩnh Nam về tay ta (màn 36).',
+    chimLauThuyen: 'Lâu thuyền Hán đậu dưới sông bắn lên bờ, giáo binh và voi không đánh tới. Xin cho cung thủ, lính nỏ và chòi canh đánh chìm một lâu thuyền.',
+    quaMan39: 'Mã Viện đóng quân ở hồ Lãng Bạc. Xin Hai Bà đem quân ra đánh lớn (màn 39).',
+    camKhe: 'Quân Hán quá đông. Xin giữ cửa rừng Cấm Khê cho dân rút về núi (màn 40).',
+    denHatMon: 'Dân lập đền thờ Hai Bà ở cửa sông Hát. Xin dựng Đền Hát Môn: đền còn nguyên thì mỗi trận giữ kinh đô có nghĩa binh ra đánh giặc.',
     allDone:
       'Trưng Trắc đã lên ngôi, đóng đô ở Mê Linh. Quân Hán và mùa lũ vẫn thay phiên đánh kinh đô. Truyện Hai Bà Trưng sẽ kể tiếp ở bản sau.',
   } as Record<string, string>,
@@ -470,6 +480,8 @@ export const vi = {
     noHan: 'nỏ thủ Hán',
     giapHan: 'giáp sĩ Hán',
     toDinh: 'thái thú Tô Định',
+    maVien: 'Phục Ba tướng quân Mã Viện',
+    lauThuyen: 'lâu thuyền Hán',
   } satisfies Record<EnemyType, string>,
 
   enemyIcons: {
@@ -499,6 +511,8 @@ export const vi = {
     noHan: '🎯',
     giapHan: '🪖',
     toDinh: '🏮',
+    maVien: '🏇',
+    lauThuyen: '🚢',
   } satisfies Record<EnemyType, string>,
 
   /** Tên và lời dẫn từng màn phó bản, theo thứ tự trong STAGES. */
@@ -539,6 +553,10 @@ export const vi = {
     { name: 'Cửa sông Hát', intro: 'Nghĩa quân tụ về cửa sông Hát, nơi Hai Bà tế cờ. Quân Hán kéo tới hòng phá đàn tế. Giữ lấy cửa sông!' },
     { name: 'Thành Cổ Loa', intro: 'Quân Hán chiếm thành Cổ Loa xưa của An Dương Vương. Hai Bà dẫn nghĩa quân lấy lại thành.' },
     { name: 'Thành Luy Lâu', intro: 'Thái thú Tô Định đóng ở thành Luy Lâu, dốc hết quân ra chống. Hạ được thành thì cả Lĩnh Nam theo về. Trận quyết chiến!' },
+    { name: 'Bờ biển Hợp Phố', intro: 'Thuyền lạ cập bờ biển Hợp Phố, lính Hán đổ lên bãi. Hai Bà đem quân ra chặn, bắt lấy vài tên mà hỏi.' },
+    { name: 'Đường vào Lãng Bạc', intro: 'Quân Hán men theo bờ biển tiến vào Lãng Bạc. Hai Bà chặn đường, không cho giặc tới gần hồ.' },
+    { name: 'Hồ Lãng Bạc', intro: 'Phục Ba tướng quân Mã Viện đóng quân bên hồ Lãng Bạc. Lão tướng có Lệnh nỏ, tên nỏ rơi xuống chỗ quân ta đứng đông. Đánh nhanh, đứng thưa! Trận quyết chiến!' },
+    { name: 'Cấm Khê', intro: 'Quân Hán quá đông, Hai Bà lui về Cấm Khê. Giặc kéo tới ba đợt, Mã Viện ở đợt cuối. Giữ cửa rừng cho dân rút về núi!' },
   ],
 
   rows: { tien: 'Tiền quân', trung: 'Trung quân', hau: 'Hậu quân' } satisfies Record<Row, string>,
@@ -876,7 +894,49 @@ export const vi = {
         { who: 'ke', text: 'Sáu mươi lăm thành ở Lĩnh Nam theo về. Trưng Trắc lên ngôi vua, đóng đô ở Mê Linh.' },
         { who: 'trungTrac', text: 'Ta tha thuế hai năm cho dân. Người cày có ruộng, người chài có sông.' },
         { who: 'trungNhi', text: 'Nhà Hán chưa chịu thôi đâu. Chị em ta phải giữ kinh đô cho vững.' },
-        { who: 'lacHau', text: 'Tâu Trưng Vương, quân Hán vẫn sẽ tới đánh kinh đô. Các màn sau của chương 5 sẽ mở ở bản sau.' },
+        { who: 'lacHau', text: 'Tâu Trưng Vương, quân Hán vẫn sẽ tới đánh kinh đô. Ở bờ biển Hợp Phố có thuyền lạ, xin cho quân ra dò (màn 37).' },
+      ],
+    },
+    phucBa: {
+      title: 'Phục Ba tướng quân',
+      lines: [
+        { who: 'ke', text: 'Quân ta bắt được mấy tên lính Hán ở bờ biển Hợp Phố. Tra hỏi, mới biết vua Hán đã sai lão tướng Mã Viện, hiệu Phục Ba tướng quân, sang đánh.' },
+        { who: 'ke', text: 'Mã Viện đem hai vạn quân, hai nghìn xe thuyền, men theo bờ biển mà sang.' },
+        { who: 'trungTrac', text: 'Giặc cậy thuyền to, ta cậy lòng dân. Giữ lấy từng khúc sông!' },
+        { who: 'trungNhi', text: 'Thuyền lầu đậu dưới sông thì giáo không với tới. Phải có cung nỏ và chòi canh.' },
+        { who: 'lacHau', text: 'Tâu Trưng Vương, từ nay thủy quân Hán cũng tới đánh kinh đô: thuyền chở lính cập bờ, kèm lâu thuyền đậu dưới sông bắn lên bờ.' },
+        { who: 'lacHau', text: 'Chỉ cung thủ, lính nỏ, chòi canh, lầu nỏ, ụ nỏ và lầu cổng thành bắn tới lâu thuyền. Thủy quân Hán, quân Hán trên bộ và mùa lũ sẽ thay phiên nhau tới.' },
+      ],
+    },
+    langBac: {
+      title: 'Lãng Bạc',
+      lines: [
+        { who: 'ke', text: 'Hai Bà đem quân đánh lớn với Mã Viện ở Lãng Bạc. Hai bên giáp trận suốt mấy ngày.' },
+        { who: 'ke', text: 'Nữ tướng Phùng Thị Chính sinh con ngay giữa trận. Bà địu con sau lưng, vẫn cầm gươm xông lên đánh giặc.' },
+        { who: 'trungNhi', text: 'Quân Hán đông quá, chị ơi. Ta lui về giữ Cấm Khê, nơi núi rừng hiểm trở.' },
+        { who: 'trungTrac', text: 'Lui để giữ lấy dân. Còn dân là còn nước.' },
+        { who: 'lacHau', text: 'Tâu Trưng Vương, màn cuối chương 5 đã mở: giữ cửa rừng Cấm Khê cho dân rút về núi.' },
+      ],
+    },
+    songHat: {
+      title: 'Sông Hát',
+      lines: [
+        { who: 'ke', text: 'Nghĩa quân giữ cửa rừng Cấm Khê, cho dân gồng gánh, dắt trâu rút về núi.' },
+        { who: 'ke', text: 'Hai Bà chống giữ tới cùng, rồi gieo mình xuống dòng sông Hát.' },
+        { who: 'ke', text: 'Dân lập đền thờ Hai Bà ở Hát Môn, nơi Hai Bà tế cờ khởi nghĩa, và ở nhiều nơi khác.' },
+        { who: 'lacHau', text: 'Kinh đô vẫn còn đây. Hai Bà hiển linh giữ đất, vẫn cùng quân ta ra trận.' },
+        { who: 'lacHau', text: 'Xin dựng Đền Hát Môn: đền còn nguyên thì mỗi trận giữ kinh đô có nghĩa binh từ đền ra đánh giặc.' },
+      ],
+    },
+    hetTruyen5: {
+      title: 'Hết truyện',
+      lines: [
+        { who: 'ke', text: 'Thánh Gióng vươn vai thành tráng sĩ, đuổi giặc Ân khỏi bờ cõi rồi bay về trời.' },
+        { who: 'ke', text: 'Sơn Tinh dời non chặn nước, thắng Thủy Tinh, rước Mị Nương về núi Tản Viên.' },
+        { who: 'ke', text: 'An Dương Vương đắp thành Cổ Loa ba vòng, có nỏ thần đánh tan Triệu Đà.' },
+        { who: 'ke', text: 'Lẫy nỏ bị tráo, nỏ thần mất thiêng, nước Âu Lạc rơi vào tay Triệu Đà.' },
+        { who: 'ke', text: 'Hai Bà Trưng thề ở Hát Môn, đuổi Tô Định, giữ nước tới hơi thở cuối cùng.' },
+        { who: 'ke', text: 'Hơn hai trăm năm sau, ở núi Nưa đất Cửu Chân, có một người con gái cưỡi voi trắng một ngà…' },
       ],
     },
   } satisfies Record<StoryId, { title: string; lines: { who: Speaker; text: string }[] }>,
@@ -1368,8 +1428,8 @@ export const vi = {
     heroNames: { giong: 'Gióng', sonTinh: 'Sơn Tinh', anDuong: 'An Dương Vương', caoLo: 'Cao Lỗ', trungTrac: 'Trưng Trắc', trungNhi: 'Trưng Nhị' } satisfies Record<HeroKind, string>,
     campaignTitle4: 'Đường ra biển',
     campaignHint4: 'Màn 25 An Dương Vương cầm nỏ dẹp cướp sông. Từ màn 26, Cao Lỗ cầm quân. Màn 32 cầm chân giặc cho vua ra biển.',
-    campaignTitle5: 'Từ Hát Môn tới Luy Lâu',
-    campaignHint5: 'Hai Bà Trưng cùng ra trận, mỗi bà một voi. Thắng màn 33, Trưng Nhị có Hiệu triệu. Màn 36 đuổi thái thú Tô Định.',
+    campaignTitle5: 'Từ Hát Môn tới Cấm Khê',
+    campaignHint5: 'Hai Bà Trưng cùng ra trận, mỗi bà một voi. Thắng màn 33, Trưng Nhị có Hiệu triệu. Màn 36 đuổi Tô Định, màn 39 gặp Mã Viện, màn 40 giữ Cấm Khê cho dân rút.',
     advHienLinhJoins: 'An Dương Vương hiển linh cùng ra trận',
     caoLoJoins: 'Cao Lỗ cầm nỏ lớn cùng ra trận',
     haiBaJoin: 'Hai Bà Trưng cùng ra trận, mỗi bà một voi',
@@ -1384,6 +1444,10 @@ export const vi = {
     holdWave: (n: number, max: number) => `Đợt giặc ${n}/${max}`,
     holdInfo: (s: number, waves: number) => `Cầm chân giặc ${s} giây cho vua tới biển; giặc tới ${waves} đợt. Còn người là thắng.`,
     seaWinTitle: 'Vua đã tới biển!',
+    /** Màn cầm cự Cấm Khê (màn 40): thanh "Dân rút về núi". */
+    holdBannerCamKhe: (left: number, ours: number, s: number) => `Dân rút về núi sau ${s} giây · còn ${left} giặc · quân ta ${ours}`,
+    holdInfoCamKhe: (s: number, waves: number) => `Giữ cửa rừng ${s} giây cho dân rút về núi; giặc tới ${waves} đợt. Còn người là thắng.`,
+    hatWinTitle: 'Dân đã rút về núi!',
     endingTitle: 'Hết truyện',
     endingPlay: 'Chơi tiếp',
     endingOpen: '📜 Xem lại Hết truyện',

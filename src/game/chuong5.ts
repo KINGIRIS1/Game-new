@@ -15,6 +15,17 @@ export const inChapter5 = (s: GameState) => s.questIndex >= CH5_QUEST_START;
 export const HIEU_TRIEU_AT = 33;
 /** Thắng màn này lần đầu (thành Luy Lâu): Tô Định bỏ trốn, Trưng Trắc lên ngôi. */
 export const LUY_LAU_AT = 36;
+/** Thắng màn này lần đầu (bờ biển Hợp Phố): biết tin Mã Viện sang, từ đây thủy quân Hán có lâu thuyền đánh kinh đô. */
+export const MA_VIEN_AT = 37;
+/** Thắng màn này lần đầu (hồ Lãng Bạc, trùm Mã Viện): Hai Bà lui về giữ Cấm Khê. */
+export const LANG_BAC_AT = 39;
+/** Màn cuối chương 5 (Cấm Khê, cầm cự): thắng lần đầu thì kể đoạn Sông Hát rồi hiện màn hình Hết truyện mới. */
+export const CH5_LAST = 40;
+
+/** Mã Viện đã sang (thắng màn 37): thủy quân Hán đánh kinh đô. */
+export const maVienCame = (s: GameState) => inChapter5(s) && s.campaign.cleared >= MA_VIEN_AT;
+/** Đã giữ được Cấm Khê (thắng màn 40): hết truyện chương 5, mở Đền Hát Môn, Hai Bà hiển linh. */
+export const chuong5Won = (s: GameState) => inChapter5(s) && s.campaign.cleared >= CH5_LAST;
 
 export type HaiBaKind = 'trungTrac' | 'trungNhi';
 export const HAI_BA_KINDS: HaiBaKind[] = ['trungTrac', 'trungNhi'];
