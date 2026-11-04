@@ -2116,9 +2116,9 @@ Móng 3×3, phải sát bờ sông (bên này hay bên kia, sông Thao hay sông
 
 - **Điện 10 điều quân ra đóng giữ đảo** (chủ dự án đã nói sẽ có): mỗi quần đảo đã có đảo chính 20 × 20 ô đất theo ô (`daoChinh`), làm chỗ dựng đồn. Cần chốt với chủ dự án: đóng quân được gì, có giặc biển đánh đảo không, quân ra đảo bằng thuyền nào.
 
-## Kế hoạch chương 5: Hai Bà Trưng (đề xuất, chờ chủ dự án duyệt)
+## Kế hoạch chương 5: Hai Bà Trưng (chủ dự án đã duyệt)
 
-Chủ dự án yêu cầu bắt đầu chương 5. Câu cuối màn hình Hết truyện đã dẫn sang: "Hơn hai trăm năm sau, ở đất Mê Linh có hai chị em họ Trưng…". Kế hoạch theo khung của chương 4: một truyện, một tướng mới, một thứ giặc mới, tám màn phó bản, một đền, nhiệm vụ Lạc hầu, chia 4 PR. Mọi con số dưới đây là đề xuất ban đầu. Sau khi duyệt, như các lần trước, cho chỉnh ±20% để khớp nhịp và độ khó đo bằng test; làm xong phần nào thì ghi số cuối cùng của phần ấy. **Chưa viết code chương 5 cho tới khi chủ dự án duyệt.**
+Chủ dự án yêu cầu bắt đầu chương 5. Câu cuối màn hình Hết truyện đã dẫn sang: "Hơn hai trăm năm sau, ở đất Mê Linh có hai chị em họ Trưng…". Kế hoạch theo khung của chương 4: một truyện, một tướng mới, một thứ giặc mới, tám màn phó bản, một đền, nhiệm vụ Lạc hầu, chia 4 PR. Mọi con số dưới đây là đề xuất ban đầu. Sau khi duyệt, như các lần trước, cho chỉnh ±20% để khớp nhịp và độ khó đo bằng test; làm xong phần nào thì ghi số cuối cùng của phần ấy. **Chủ dự án duyệt theo đề xuất, trừ điều 3: mỗi bà cưỡi một voi** (phương án B, hai tướng cùng ra một trận).
 
 Như chương 4, chỉ học cơ chế của các game cùng thể loại, còn luật chơi, nội dung và hình ảnh là của riêng game này:
 - **Rise of Kingdoms**: tướng chính đi kèm một phó tướng, phó tướng cộng sức cho một loại quân. Từ đây có **nữ tướng** (PR 4).
@@ -2134,13 +2134,13 @@ Như chương 4, chỉ học cơ chế của các game cùng thể loại, còn 
 - Kinh đô chương 4: thủy binh Triệu, quân Triệu trên bộ và lũ thay phiên nhau (`nextFoe`). Thuyền giặc chỉ chở lính cập bờ, không tự đánh.
 - Bản lưu đang ở phiên bản 19.
 
-### Tám điều cần chủ dự án chốt
+### Tám điều đã chốt (theo đề xuất, trừ điều 3)
 
 1. **Mốc vào chương 5 và Điện 10**. Đề xuất (A): vào chương 5 khi nhận thưởng nhiệm vụ "một công trình cấp 9" (số 51), tức đã có Điện 9. **Điện 10 mở khi vào chương 5**, bỏ mốc 16 thử thách. Hai nhiệm vụ sẵn có (lên Điện 10, một công trình cấp 10) thành hai nhiệm vụ đầu chương 5, như "Lên Điện cấp 8" mở đầu chương 4. Cách này không dời số thứ tự nhiệm vụ của ai. Phương án khác:
    - (B) giữ mốc 16 thử thách cho Điện 10, vào chương 5 khi đã lên Điện 10. Chương 5 tới muộn, người chơi phải đánh xong 16 thử thách trước;
    - (C) vào chương 5 ngay khi Hết truyện. Phải chèn nhiệm vụ chương 5 lên trước nhiệm vụ Điện 9, dời số nhiệm vụ của người đang chơi (nâng bản lưu như lần chèn nhiệm vụ ở bản lưu 4).
 2. **Người chơi là ai**. Đề xuất: kinh đô gọi là **Mê Linh**. Trước khi đuổi được Tô Định, đây là đất của Lạc tướng Mê Linh; thắng màn 36 thì Trưng Trắc lên ngôi, người chơi trị vì tiếp trên cùng kinh đô với tư cách **Trưng Vương**. Lạc hầu vẫn hướng dẫn (Lạc hầu là chức, không phải một người).
-3. **Hai Bà ra trận thế nào**. Đề xuất (A): **hai bà cùng cưỡi một voi chiến**, tính là một tướng có hai kỹ năng, mỗi bà một kỹ năng. Mỗi trận vẫn một tướng như cũ. Phương án (B): mỗi bà một voi, hai tướng cùng ra một trận. Đẹp hơn, nhưng là lần đầu một trận có hai tướng, phải sửa mọi chỗ đang chỉ biết một tướng: thanh máu tướng, kiệt sức, nút kỹ năng, tướng chỉ huy doanh trại, chỗ đứng trước Điện.
+3. **Hai Bà ra trận thế nào**. Đề xuất (A): hai bà cùng cưỡi một voi chiến, tính là một tướng có hai kỹ năng. **Chủ dự án chọn (B): mỗi bà một voi, hai tướng cùng ra một trận.** Đây là lần đầu một trận có hai tướng, phải sửa mọi chỗ đang chỉ biết một tướng: thanh máu tướng, kiệt sức, nút kỹ năng, tướng chỉ huy doanh trại, chỗ đứng trước Điện (xem mục Hai Bà Trưng).
 4. **Kết**. Đề xuất: kể trọn như chương 4. Mã Viện sang, Hai Bà lui về Cấm Khê, rồi gieo mình xuống sông Hát; chỉ kể nhẹ một câu, không vẽ. Màn 40 là màn cầm cự. Phương án khác: chương 5 dừng ở lúc Trưng Trắc lên ngôi (màn 36), phần Mã Viện để sau.
 5. **Lâu thuyền** đánh kinh đô từ khi Mã Viện sang: thuyền lớn đậu dưới sông bắn lên bờ, giáo binh và voi không đánh tới, phải có quân bắn xa và công trình phòng thủ. Có làm không?
 6. **Nữ tướng** (PR 4): bốn nữ tướng theo về theo mốc màn, đi theo làm phó tướng. Có làm không, hay để sau?
@@ -2151,7 +2151,7 @@ Như chương 4, chỉ học cơ chế của các game cùng thể loại, còn 
 
 Sáu đoạn, mỗi đoạn kể đúng một lần, theo thứ tự, sau các đoạn của chương 4. Người nói mới: Trưng Trắc, Trưng Nhị.
 
-1. **Đất Mê Linh** (vào chương 5): Hơn hai trăm năm sau, nước ta bị nhà Hán đô hộ. Thái thú Tô Định tham lam, tàn bạo, bắt dân lên rừng săn voi lấy ngà, xuống biển mò ngọc trai. Lạc tướng Mê Linh có hai con gái là Trưng Trắc, Trưng Nhị, được mẹ là bà Man Thiện dạy võ nghệ, giỏi cưỡi voi. Trưng Trắc lấy Thi Sách, con Lạc tướng Chu Diên; hai nhà ngầm lo việc lớn. Hai Bà ra trận từ đoạn này. Lạc hầu nhắc Điện lên được cấp 10 (nếu chọn A ở điều 1).
+1. **Đất Mê Linh** (vào chương 5): Hơn hai trăm năm sau, nước ta bị nhà Hán đô hộ. Thái thú Tô Định tham lam, tàn bạo, bắt dân lên rừng săn voi lấy ngà, xuống biển mò ngọc trai. Lạc tướng Mê Linh có hai con gái là Trưng Trắc, Trưng Nhị, được mẹ là bà Man Thiện dạy võ nghệ, giỏi cưỡi voi. Trưng Trắc lấy Thi Sách, con Lạc tướng Chu Diên; hai nhà ngầm lo việc lớn. Hai Bà ra trận từ đoạn này. Lạc hầu nhắc Điện lên được cấp 10.
 2. **Lời thề Hát Môn** (thắng màn 33 lần đầu): Tô Định giết Thi Sách. Trưng Trắc gác tang, mặc giáp, cùng em tế cờ ở cửa sông Hát, đọc lời thề:
    > Một xin rửa sạch nước thù,
    > Hai xin đem lại nghiệp xưa họ Hùng,
@@ -2167,18 +2167,30 @@ Sáu đoạn, mỗi đoạn kể đúng một lần, theo thứ tự, sau các �
 - Màn hình Hết truyện cũ (sau chương 4) giữ nguyên, nay thành đoạn chuyển sang chương 5, vì câu cuối đã dẫn sang Mê Linh. Điện 9 vẫn mở khi xem màn hình ấy.
 - Màn hình Hết truyện mới: năm dòng tóm tắt năm chương (thêm một dòng: "Hai Bà Trưng thề ở Hát Môn, đuổi Tô Định, giữ nước tới hơi thở cuối cùng"), rồi câu cuối (điều 8). Nút Chơi tiếp. Mở lại được từ bảng Lạc hầu. Màn hình vào game ghi "Chương 5" và "đã hết truyện" theo màn hình mới.
 
-### Hai Bà Trưng (tướng thứ năm)
+### Hai Bà Trưng (hai tướng, mỗi bà một voi)
 
-- Ra trận từ khi vào chương 5. Cưỡi voi chiến lớn: **850 máu** (ngoài bãi bền gấp 1,6), **22 sát thương**, tầm 1,2 ô, nghỉ 1,1 giây, đi 1,6 ô mỗi giây. Đòn đánh găm thêm nửa sát thương lên giặc quanh mục tiêu trong 1,3 ô như các tướng khác. Máu cao hơn các tướng trước vì voi to, đứng hàng đầu chịu đòn.
-- Hết máu thì kiệt sức, nghỉ 2 phút chơi. Màn 33–40 cần Hai Bà; Hai Bà kiệt sức thì các màn ấy khóa, có dòng báo như với các tướng khác.
+Chủ dự án chọn mỗi bà cưỡi một voi: Trưng Trắc và Trưng Nhị là hai tướng, cùng ra một trận. Hai bà khác vai để hai voi không đánh giống nhau.
+
+| Tướng | Vai | Máu | Sát thương | Tầm (ô) | Đi (ô/giây) | Nghỉ (giây) | Kỹ năng |
+|---|---|---|---|---|---|---|---|
+| Trưng Trắc `trungTrac` | đánh gần, voi đứng hàng đầu | 650 | 20 | 1,2 | 1,6 | 1,1 | Voi xung trận |
+| Trưng Nhị `trungNhi` | bắn cung trên lưng voi, lùi sau hàng đầu 1,8 ô như An Dương Vương | 520 | 17 | 4,0 | 1,6 | 1,1 | Hiệu triệu |
+
+- Ngoài bãi bền gấp 1,6. Đòn đánh găm thêm nửa sát thương lên giặc quanh mục tiêu trong 1,3 ô như các tướng khác. Hai bà cộng lại mạnh hơn một tướng chương 4, vì giặc chương 5 đông và khỏe hơn; máu giặc các màn đo với cả hai bà.
+- Mỗi bà một thanh máu và một nút kỹ năng trên bãi chiến. Bà nào hết máu thì ngã, kiệt sức nghỉ 2 phút chơi; bà kia vẫn đánh tiếp.
+- Màn 33–40 cần ít nhất một bà khỏe. Một bà đang kiệt sức thì bà kia ra trận một mình, bảng xếp quân báo; cả hai kiệt sức thì màn khóa, có dòng báo như với các tướng khác. Chuẩn cân bằng tính cả hai bà.
 - **Kỹ năng**:
-  - **Voi xung trận** 🐘 (Trưng Trắc thúc voi, có từ đầu): voi lao thẳng 5 ô về phía giặc đứng đông nhất. Giặc trên đường đi (rộng 1,6 ô) mất 90 máu, bị hất sang hai bên 1 ô và choáng 1,5 giây. Hồi 12 giây. Khác Phun lửa của Gióng ở chỗ đường ngắn hơn nhưng có hất và choáng;
-  - **Hiệu triệu** 📣 (Trưng Nhị phất cờ, có từ khi thắng màn 33): 5 nghĩa binh chạy ra quanh voi, đánh tới hết trận; quân ta trong 3 ô quanh voi hồi 15% máu. Hồi 25 giây. Mỗi lúc có nhiều nhất 5 nghĩa binh; gọi lại thì chỉ bù chỗ người đã ngã;
+  - **Voi xung trận** 🐘 (Trưng Trắc, có từ đầu): voi lao thẳng 5 ô về phía giặc đứng đông nhất. Giặc trên đường đi (rộng 1,6 ô) mất 90 máu, bị hất sang hai bên 1 ô và choáng 1,5 giây. Hồi 12 giây. Khác Phun lửa của Gióng ở chỗ đường ngắn hơn nhưng có hất và choáng;
+  - **Hiệu triệu** 📣 (Trưng Nhị, có từ khi thắng màn 33): 5 nghĩa binh chạy ra quanh voi Trưng Nhị, đánh tới hết trận; quân ta trong 3 ô quanh voi hồi 15% máu. Hồi 25 giây. Mỗi lúc có nhiều nhất 5 nghĩa binh; gọi lại thì chỉ bù chỗ người đã ngã;
   - ngoài bãi, sát thương kỹ năng nhân 1,6 như các tướng khác.
 - **Nghĩa binh**: 55 máu, 7 sát thương, tầm 0,8 ô, đi 1,6 ô mỗi giây, nghỉ 1 giây. Không luyện, không chiếm chỗ doanh trại, không ăn gạo, hết trận thì về làng, không chết thật. Không được cộng binh khí, huân công. Không thuộc vòng khắc chế.
-- Giữ kinh đô từ khi vào chương 5: đứng trước Điện ở chỗ Cao Lỗ đang đứng, Cao Lỗ lùi sang một bước. Chỉ huy được một doanh trại như các tướng khác (`TuongId` thêm `haiBa`).
-- Sau Hết truyện chương 5: Hai Bà hiển linh, vẫn giữ kinh đô và ra trận màn 33–40. Khác An Dương Vương (thôi giữ kinh đô khi xuống biển), vì chương 5 không còn tướng nào thay.
-- **Dáng** (`makeHaiBa` ở `heroes.ts`, có xương): voi lớn hơn voi chiến thường một phần ba, ngà bọc đồng, đệm đỏ có mặt trống đồng, bành voi có lọng vàng. Trưng Trắc ngồi trước: áo đỏ thắm, giáp ngực đồng, mũ lông chim cao kiểu Đông Sơn, cầm gươm đồng. Trưng Nhị ngồi sau: áo vàng, cầm cờ đỏ có hình chim Lạc. Voi xung trận: voi giơ vòi rống, lao tới, bụi tung theo đường. Hiệu triệu: Trưng Nhị phất cờ, tiếng trống, nghĩa binh chạy ra từ hai bên, vòng sáng xanh loang dưới chân quân ta được hồi máu. Thắng trận: Trưng Trắc giơ gươm, Trưng Nhị phất cờ, voi giơ vòi.
+- **Giữ kinh đô** từ khi vào chương 5 (quân Hán, thủy quân Hán): cả hai bà cùng ra. Mỗi bà chỉ huy được một doanh trại như các tướng khác (`TuongId` thêm `trungTrac`, `trungNhi`) và ra trận từ trại mình; bà chưa chỉ huy trại nào thì ra từ trước Điện. Số doanh trại tối đa giữ 5: người chơi giao lại trại cho hai bà.
+- Đứng trước Điện: hai voi đứng hai bên lối vào sân chầu, Cao Lỗ lùi sang một bước.
+- Sau Hết truyện chương 5: hai bà hiển linh, vẫn giữ kinh đô và ra trận màn 33–40. Khác An Dương Vương (thôi giữ kinh đô khi xuống biển), vì chương 5 không còn tướng nào thay.
+- **Dáng** (`makeTrungTrac`, `makeTrungNhi` ở `heroes.ts`, có xương, chung một voi trận `makeVoiTran` ở `beasts.ts`): voi lớn hơn voi chiến thường một phần ba, ngà bọc đồng, bành voi có lọng.
+  - Trưng Trắc: voi đệm đỏ có mặt trống đồng, lọng đỏ; áo đỏ thắm, giáp ngực đồng, mũ lông chim cao kiểu Đông Sơn, cầm gươm đồng. Voi xung trận: voi giơ vòi rống, lao tới, bụi tung theo đường.
+  - Trưng Nhị: voi đệm vàng, lọng vàng, cờ đỏ hình chim Lạc cắm sau bành; áo vàng, mũ lông chim, cầm cung. Hiệu triệu: rút cờ phất, tiếng trống, nghĩa binh chạy ra từ hai bên, vòng sáng xanh loang dưới chân quân ta được hồi máu.
+  - Thắng trận: Trưng Trắc giơ gươm, Trưng Nhị phất cờ, hai voi giơ vòi.
 - **Nghĩa binh** (`soldier.ts`): áo nâu, khăn vấn, chân đất, không giáp, cầm giáo tre hay gậy tầm vông.
 
 ### Quân Hán
@@ -2212,7 +2224,7 @@ Ba loại lính theo đúng vòng khắc chế như giặc các chương trướ
   - Chỉ quân bắn xa (cung thủ, lính nỏ, Cao Lỗ), chòi canh, lầu nỏ, ụ nỏ, lính trên lầu cổng thành bắn tới được. Giáo binh, voi chiến và Hai Bà trên bờ không đánh tới.
   - Đánh chìm thì thuyền nghiêng, chìm dần. Hết giờ trận mà lâu thuyền còn thì rút đi như giặc còn sống lúc hết giờ.
   - Dáng (`makeLauThuyen` ở `models.ts`): thân thuyền dài chừng 4 ô, hai hàng mái chèo, lầu gỗ ba tầng mái ngói đen, lan can đỏ, cờ đen lớn trên nóc, lính nỏ Hán đứng ở từng tầng.
-- Hai Bà giữ kinh đô. Trước PR 2 (chưa có Hai Bà) thì Cao Lỗ giữ.
+- Hai bà giữ kinh đô. Trước PR 2 (chưa có hai bà) thì Cao Lỗ giữ.
 
 ### Phó bản chương 5: từ Hát Môn tới Cấm Khê
 
@@ -2221,16 +2233,16 @@ Bản đồ phó bản có thêm thẻ Chương 5, mở khi vào chương 5. B�
 | Màn | Tên | Quân giặc | Máu (ước) | Thưởng lần đầu |
 |---|---|---|---|---|
 | 33 | Mê Linh: đuổi lính thu cống | 13 lính kích, 8 nỏ thủ, 4 giáp sĩ | ×2,3 | 9500 gạo, 8000 vỏ ốc, 7000 đất đá, 1700 sắt |
-| 34 | Cửa sông Hát | 14 lính kích, 8 nỏ thủ, 4 giáp sĩ | ×2,3 | 10000, 8400, 7300, 1800 |
-| 35 | Lấy lại thành Cổ Loa | 13 lính kích, 9 nỏ thủ, 4 giáp sĩ | ×2,3 | 10500, 8800, 7700, 1900 |
+| 34 | Cửa sông Hát | 13 lính kích, 8 nỏ thủ, 4 giáp sĩ | ×2,3 | 10000, 8400, 7300, 1800 |
+| 35 | Lấy lại thành Cổ Loa | 12 lính kích, 9 nỏ thủ, 4 giáp sĩ | ×2,3 | 10500, 8800, 7700, 1900 |
 | 36 | Thành Luy Lâu, trùm **Tô Định** | 12 lính kích, 8 nỏ thủ, 4 giáp sĩ, Tô Định | ×2,2 | 11500, 9500, 8300, 2000 |
-| 37 | Bờ biển Hợp Phố | 14 lính kích, 8 nỏ thủ, 4 giáp sĩ | ×2,4 | 12000, 10000, 8700, 2100 |
-| 38 | Đường vào Lãng Bạc | 13 lính kích, 9 nỏ thủ, 4 giáp sĩ | ×2,4 | 12500, 10500, 9100, 2200 |
+| 37 | Bờ biển Hợp Phố | 13 lính kích, 8 nỏ thủ, 4 giáp sĩ | ×2,4 | 12000, 10000, 8700, 2100 |
+| 38 | Đường vào Lãng Bạc | 12 lính kích, 9 nỏ thủ, 4 giáp sĩ | ×2,4 | 12500, 10500, 9100, 2200 |
 | 39 | Hồ Lãng Bạc, trùm **Mã Viện** | 12 lính kích, 8 nỏ thủ, 4 giáp sĩ, Mã Viện | ×2,3 | 13500, 11200, 9800, 2400 |
 | 40 | Cấm Khê: giữ đường cho dân rút | 3 đợt (xem dưới), Mã Viện ở đợt cuối | ×3,1 | 14000, 12000, 10500, 2500 |
 
-- Mọi màn cần Điện cấp 5 như chương 2–4 và cần Hai Bà. Đánh lại được 30%.
-- Mỗi màn tối đa **26 giặc** (chương 4 là 28), vì nghĩa binh thêm tới 5 người: 28 lính quân mẫu, Hai Bà, 5 nghĩa binh và 26 giặc là vừa 60 người trên bãi.
+- Mọi màn cần Điện cấp 5 như chương 2–4 và cần ít nhất một bà. Đánh lại được 30%.
+- Mỗi màn tối đa **25 giặc** (chương 4 là 28), vì có hai tướng và nghĩa binh thêm tới 5 người: 28 lính quân mẫu, hai bà, 5 nghĩa binh và 25 giặc là vừa 60 người trên bãi.
 - **Quân mẫu chương 5** như chương 4: 11 giáo, 10 cung, 3 voi, 4 lính nỏ, đúng 38 chỗ.
 - Máu giặc đo bằng test theo Chuẩn cân bằng phó bản: lấy mức cao nhất mà người chơi thường thắng cả 10 hạt giống thử, còn không tướng hay nửa quân thì chơi giỏi vẫn thua. Gặp Tô Định, Mã Viện mà không bấm kỹ năng thì thua.
 - **Màn 40 là cầm cự**, như màn 32:
@@ -2244,7 +2256,7 @@ Bản đồ phó bản có thêm thẻ Chương 5, mở khi vào chương 5. B�
   - **Lãng Bạc** (màn 38, 39): một bên là đầm hồ rộng có lau sậy, gò đất giữa bãi, lâu thuyền Hán đậu xa trên hồ (chỉ là cảnh);
   - **Cấm Khê** (màn 40): khe núi, suối chảy dọc bãi, rừng rậm hai bên, đường mòn cho dân rút vào núi;
   - màn 33 dùng bãi làng, 35 bãi thành Cổ Loa, 37 bãi cửa sông.
-- Thắng màn 40: Hai Bà đứng trên voi nhìn về phía sông, camera lùi xa (bảng kết quả chờ 3,5 giây như các màn kết chương), rồi tới đoạn 6 và màn hình Hết truyện mới. Không vẽ cảnh gieo mình xuống sông.
+- Thắng màn 40: hai bà đứng trên voi nhìn về phía sông, camera lùi xa (bảng kết quả chờ 3,5 giây như các màn kết chương), rồi tới đoạn 6 và màn hình Hết truyện mới. Không vẽ cảnh gieo mình xuống sông.
 
 ### Đền Hát Môn
 
@@ -2308,7 +2320,7 @@ Thưởng khoảng gấp rưỡi nhiệm vụ chương 4.
 
 1. **Duyệt tài liệu này**: tám điều ở trên, mọi con số và dáng.
 2. **PR 1**: vào chương 5, Điện 10 mở theo chương, quân Hán (ba loại lính) đánh kinh đô xen với lũ, nhiệm vụ 54, bản lưu v20. Chưa có truyện; Lạc hầu báo đã sang chương 5, chờ phần sau.
-3. **PR 2**: Hai Bà (tướng, hai kỹ năng, giữ kinh đô, chỉ huy doanh trại), nghĩa binh, màn 33–36 và Tô Định, bãi Hát Môn và Luy Lâu, thẻ Chương 5 trên bản đồ phó bản, đoạn truyện 1–3, nhiệm vụ 55–57.
+3. **PR 2**: Hai Bà (hai tướng cùng ra một trận, mỗi bà một kỹ năng, giữ kinh đô, chỉ huy doanh trại), nghĩa binh, màn 33–36 và Tô Định, bãi Hát Môn và Luy Lâu, thẻ Chương 5 trên bản đồ phó bản, đoạn truyện 1–3, nhiệm vụ 55–57.
 4. **PR 3**: lâu thuyền và thủy quân Hán ở kinh đô, Mã Viện, màn 37–40 (màn 40 cầm cự), bãi Lãng Bạc và Cấm Khê, đoạn truyện 4–6, màn hình Hết truyện mới, Đền Hát Môn, nhiệm vụ 58–61.
 5. **PR 4**: nữ tướng, thử thách màn 33–40, huân công bậc 4.
 
@@ -2358,5 +2370,5 @@ Mỗi PR nào thêm trường lưu mới thì nâng bản lưu một bậc (dự
 15. **Vùng đất bên kia sông** (chủ dự án đã duyệt, đã làm cả 5 PR, bản lưu v18; xem mục Kế hoạch cùng tên): lưới qua sông, cầu ba cấp, sương mù và trinh sát, đồn giặc bốn bậc theo chương, dẹp đồn chiếm vùng, đặc sản đất, bản làng, của chôn, giặc tới từ hai bờ và đồn biên.
 16. **Điện cấp 9, 10** (đã duyệt, đã làm cả 3 PR: luật, hình, binh khí bậc 3 và lầu nỏ lên cấp; xem Kế hoạch cùng tên).
     **Hồ Kim Quy** (chủ dự án yêu cầu, đã làm; xem mục cùng tên): hồ 8×8 mở khi Rùa Vàng hiện lên, tường thành thêm 30% máu.
-17. **Chương 5: Hai Bà Trưng** (đề xuất, chờ chủ dự án duyệt; xem Kế hoạch chương 5): Hai Bà cưỡi voi ra trận với Voi xung trận và Hiệu triệu gọi nghĩa binh, quân Hán và lâu thuyền đánh kinh đô, phó bản màn 33–40 với Tô Định và Mã Viện, Đền Hát Môn, nữ tướng, thử thách màn 33–40.
+17. **Chương 5: Hai Bà Trưng** (chủ dự án đã duyệt, đang làm PR 1; xem Kế hoạch chương 5): mỗi bà cưỡi một voi ra trận với Voi xung trận và Hiệu triệu gọi nghĩa binh, quân Hán và lâu thuyền đánh kinh đô, phó bản màn 33–40 với Tô Định và Mã Viện, Đền Hát Môn, nữ tướng, thử thách màn 33–40.
 18. **Để sau**: nhạc nền.
