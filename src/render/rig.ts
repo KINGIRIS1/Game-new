@@ -58,6 +58,8 @@ export interface Act {
   win?: number;
   /** Tướng thổi tù và hiệu lệnh (Lệnh bắn của Cao Lỗ): tiến trình 0..1, nâng tù và lên miệng, thổi, rồi hạ xuống. */
   horn?: number;
+  /** Bỏ chạy (Tô Định thua trận): rơi mũ, khi đi thì hai tay ôm ấn trước bụng. */
+  flee?: boolean;
 }
 
 export type Poser = (a: Act) => void;

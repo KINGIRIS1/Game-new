@@ -6,7 +6,7 @@ import { addSunLights } from '../src/render/lights';
 import { C } from '../src/render/palette';
 import type { Act, Poser } from '../src/render/rig';
 import { makeBeast, makeRoyalHorse, makeRuaVang } from '../src/render/beasts';
-import { makeAnDuong, makeCaoLo, makeDrummer, makeGiong, makeSonTinh, makeThuyTinh } from '../src/render/heroes';
+import { makeAnDuong, makeCaoLo, makeDrummer, makeGiong, makeSonTinh, makeThuyTinh, makeTrungNhi, makeTrungTrac } from '../src/render/heroes';
 import { makeMonster } from '../src/render/monsters';
 import { makeRower, makeWorker } from '../src/render/people';
 import { makeSoldier } from '../src/render/soldier';
@@ -43,6 +43,16 @@ function theoCot(tao: () => THREE.Group, truong: 'horn' | 'win'): () => THREE.Gr
   };
 }
 
+/** Mọi tư thế đều đang bỏ chạy (Tô Định thua trận). */
+function boChay(tao: () => THREE.Group): () => THREE.Group {
+  return () => {
+    const g = tao();
+    const pose = g.userData.pose as Poser;
+    g.userData.pose = (a: Act) => pose({ ...a, flee: true });
+    return g;
+  };
+}
+
 export const NHOM: Record<string, Entry[]> = {
   linh: [
     { ten: 'Giáo binh bậc 2', tao: () => makeSoldier('giao', 2) },
@@ -64,6 +74,9 @@ export const NHOM: Record<string, Entry[]> = {
     { ten: 'Lính kích Hán', tao: () => makeSoldier('linhHan') },
     { ten: 'Nỏ thủ Hán', tao: () => makeSoldier('noHan') },
     { ten: 'Giáp sĩ Hán', tao: () => makeSoldier('giapHan') },
+    { ten: 'Nghĩa binh', tao: () => makeSoldier('nghiaBinh') },
+    { ten: 'Tô Định', tao: () => makeSoldier('toDinh'), co: 0.9, cach: 0.85 },
+    { ten: 'Tô Định bỏ chạy', tao: boChay(() => makeSoldier('toDinh')), co: 0.9, cach: 0.85 },
   ],
   thu: [
     { ten: 'Voi chiến bậc 0', tao: () => makeBeast('voi', 0), co: 1.5, cach: 1.5 },
@@ -98,6 +111,9 @@ export const NHOM: Record<string, Entry[]> = {
     { ten: 'An Dương Vương (rìu)', tao: () => makeAnDuong(), co: 1.3, cach: 1.1 },
     { ten: 'Cao Lỗ (nỏ liên châu)', tao: () => makeCaoLo(), co: 1.25, cach: 1.1 },
     { ten: 'Cao Lỗ (hiển linh)', tao: () => makeCaoLo({ glow: true }), co: 1.3, cach: 1.1 },
+    { ten: 'Trưng Trắc', tao: () => makeTrungTrac(), co: 2.3, cach: 2.1 },
+    { ten: 'Trưng Nhị', tao: () => makeTrungNhi(), co: 2.3, cach: 2.1 },
+    { ten: 'Trưng Trắc (hiển linh)', tao: () => makeTrungTrac({ glow: true }), co: 2.3, cach: 2.1 },
   ],
   ky_nang: [
     { ten: 'Kỹ năng (cột: 0, 0,1 … 1)', tao: () => makeGiong('trangSi'), co: 1.6, cach: 1.4 },
@@ -107,6 +123,10 @@ export const NHOM: Record<string, Entry[]> = {
     { ten: 'Cao Lỗ nỏ liên châu', tao: () => makeCaoLo(), co: 1.3, cach: 1.1 },
     { ten: 'Cao Lỗ lệnh bắn (thổi tù và)', tao: theoCot(() => makeCaoLo(), 'horn'), co: 1.3, cach: 1.1 },
     { ten: 'Cao Lỗ thắng trận', tao: theoCot(() => makeCaoLo(), 'win'), co: 1.3, cach: 1.1 },
+    { ten: 'Trưng Trắc voi xung trận', tao: () => makeTrungTrac(), co: 2.4, cach: 2.1 },
+    { ten: 'Trưng Nhị hiệu triệu', tao: () => makeTrungNhi(), co: 2.6, cach: 2.1 },
+    { ten: 'Trưng Trắc thắng trận', tao: theoCot(() => makeTrungTrac(), 'win'), co: 2.4, cach: 2.1 },
+    { ten: 'Trưng Nhị thắng trận', tao: theoCot(() => makeTrungNhi(), 'win'), co: 2.6, cach: 2.1 },
     { ten: 'Người đánh trống', tao: () => makeDrummer(), co: 0.9, cach: 1.1 },
   ],
   dan: [

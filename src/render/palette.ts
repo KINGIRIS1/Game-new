@@ -94,4 +94,13 @@ export const C = {
   dolphin: 0x7d97aa,
   dolphinBelly: 0xe6ece8,
   sailBrown: 0xa8603a,
+  // Chương 5: Hai Bà Trưng (áo đỏ thắm, áo vàng), nghĩa binh áo nâu khăn vấn, Tô Định quan phục đen, ruộng ngô Hát Môn.
+  trungRed: 0xbc1f2e,
+  trungYellow: 0xe9b43a,
+  trungYellowDark: 0xb98420,
+  aoNau: 0x7a5434,
+  khanNau: 0x4d3423,
+  quanPhuc: 0x25222a,
+  corn: 0x84a443,
+  cornDry: 0xc9b062,
 } as const;

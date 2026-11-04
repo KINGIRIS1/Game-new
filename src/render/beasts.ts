@@ -1,5 +1,6 @@
 // Thú có khung xương (rig.ts) và người cưỡi (soldier.ts): voi chiến có Lạc tướng cưỡi, chiến xa và đại tướng Ân,
-// kỵ binh Triệu, Triệu Đà, hổ tinh, gà trắng nghìn năm, Rùa Vàng, ngựa vua chở An Dương Vương và Mỵ Châu.
+// kỵ binh Triệu, Triệu Đà, hổ tinh, gà trắng nghìn năm, Rùa Vàng, ngựa vua chở An Dương Vương và Mỵ Châu,
+// voi trận của Hai Bà Trưng (người cưỡi dựng ở heroes.ts).
 // Gốc là mặt đất dưới thú, đầu hướng +z.
 // Thú bốn chân đi theo nhịp chéo (chân trước trái cùng chân sau phải); ngã thì lăn nghiêng (`userData.fall`).
 
@@ -9,7 +10,7 @@ import { HUMAN, beginPose, featherCrown, hairCap, humanBody, humanHead, lerp, st
 import { C } from './palette';
 import { RigBuilder, bakeRig, moveBones, resetBones, skinRig, type Act, type BoneDef, type Bones, type Poser, type RigSlots } from './rig';
 import { drawRider, poseRider, type RiderKind } from './soldier';
-import { IRON, IRON_DARK } from './weapons';
+import { IRON, IRON_DARK, coLac } from './weapons';
 
 type Defs = Record<string, BoneDef<string>>;
 type Rig = RigBuilder<string>;
@@ -149,11 +150,12 @@ const ELEPHANT: Defs = {
  * bành gỗ quây quanh chỗ ngồi và lọng đỏ; bậc 3 giáp trán đồng vàng có núm mặt trời, chuông đồng đeo cổ, lọng hai
  * tầng có chóp vàng.
  */
-function drawElephant(r: Rig, tier: number): void {
+function drawElephant(r: Rig, tier: number, look: { pad?: number | null; tusks?: boolean } = {}): void {
   const body = r.on('qBody');
   const p = body.plain;
   p.sphere(0.42, C.elephant, 0, 0.72, 0, [0.85, 0.8, 1.2], 12);
-  body.band.box(0.62, 0.08, 0.7, C.red, 0, 1.05, -0.05);
+  // Voi trận (`makeVoiTran`) tự vẽ đệm và ngà riêng.
+  if (look.pad !== null) body.band.box(0.62, 0.08, 0.7, look.pad ?? C.red, 0, 1.05, -0.05);
   for (const [b, x, z] of [
     ['qFL', -0.2, 0.28],
     ['qFR', 0.2, 0.28],
@@ -168,7 +170,7 @@ function drawElephant(r: Rig, tier: number): void {
   head.sphere(0.27, C.elephant, 0, 0.92, 0.48, [1, 1, 0.95], 10);
   for (const s of [-1, 1]) {
     head.sphere(0.035, C.ink, s * 0.15, 1.02, 0.66, [1, 1, 0.5], 6);
-    head.cone(0.03, 0.26, C.cream, s * 0.1, 0.72, 0.68, [1.2, 0, 0], 5);
+    if (look.tusks !== false) head.cone(0.03, 0.26, C.cream, s * 0.1, 0.72, 0.68, [1.2, 0, 0], 5);
   }
   for (const [b, s] of [
     ['qEarL', -1],
@@ -239,6 +241,249 @@ function poseElephant(b: B, a: Act, e: number): void {
     b.qBody.rotation.x = -0.1 * e;
     b.qTail.rotation.z = 0.1 * Math.sin(t * 2);
   }
+}
+
+// ---------- Voi trận của Hai Bà ----------
+
+/** Voi trận to hơn voi chiến một phần ba. */
+export const K_VOI_TRAN = 4 / 3;
+/** Mặt nệm trong bành (tọa độ voi chưa phóng): người cưỡi ngồi lên đây. */
+const CUSHION_TOP = 1.165;
+/** Chân cán lọng ngay sau thành sau của bành, và tâm tán lọng (tọa độ voi chưa phóng). */
+const PARASOL_FOOT: V3 = [0, 1.08, -0.43];
+const PARASOL_TOP = 2.58;
+/** Chỗ tay nắm cán cờ cắm ở góc sau bên phải bành (tọa độ mô hình); cán ngả ra ngoài cho khỏi vướng lọng. */
+const FLAG_SOCKET: V3 = [0.38, 1.75, -0.56];
+const FLAG_TILT: V3 = [-0.12, 0, -0.42];
+
+/** Gốc thân người cưỡi (giữa hai bàn chân khi đứng) cỡ `k`: hông vừa chạm nệm bành. */
+export function voiTranSeat(k: number): V3 {
+  return [0, CUSHION_TOP * K_VOI_TRAN - 0.2 * k, -0.12 * K_VOI_TRAN];
+}
+
+const VOI_TRAN: Defs = {
+  ...BASE,
+  ...moveBones(ELEPHANT, 'base', [0, 0, 0], K_VOI_TRAN),
+  qFlag: { parent: 'qBody', at: FLAG_SOCKET },
+};
+
+/** Voi trận: màu đệm, viền, lọng; có mặt trống đồng hai bên đệm hay không; có cờ chim Lạc sau bành hay không. */
+export interface VoiTranLook {
+  /** Đệm phủ lưng voi. */
+  pad: number;
+  /** Viền đệm, tua, nệm bành, vành lọng. */
+  trim: number;
+  /** Mặt trống đồng hai bên đệm. */
+  drum?: boolean;
+  /** Tán lọng. */
+  parasol: number;
+  /** Cờ chim Lạc cắm sau bành: cỡ cờ (bằng cỡ người cưỡi); bỏ trống là không có cờ. */
+  flag?: number;
+}
+
+/** Voi làm gì thêm, do người cưỡi định theo động tác của mình (kỹ năng, thắng trận). Mỗi số 0..1. */
+export interface VoiTranMood {
+  /** Dậm chân, giơ vòi theo đòn đánh; bỏ trống thì theo `strike` của người cưỡi. */
+  strike?: number;
+  /** Giơ vòi rống. */
+  trumpet?: number;
+  /** Chồm hai chân trước. */
+  rear?: number;
+  /** Lao tới: sức lao, và pha bước (`chargePhase`). */
+  charge?: number;
+  chargePhase?: number;
+}
+
+/** Người cưỡi voi trận: xương thêm, hình vẽ, và tư thế (gọi trước voi, trả về voi làm gì thêm). */
+export interface VoiTranRider {
+  defs: Defs;
+  draw(r: Rig): void;
+  pose(b: B, a: Act): VoiTranMood;
+}
+
+/**
+ * Voi trận: đệm vòm phủ lưng viền tua, mặt trống đồng hai bên (`drum`), bành gỗ dải hoa văn nẹp đồng có nệm, ngà dài
+ * bọc đồng bịt mũi đồng, giáp trán đồng núm vàng có chùm lông đỏ, vòng đồng cổ chân, lọng hai tầng chóp vàng cắm sau
+ * bành, và cờ chim Lạc ở góc sau bên phải (`flag`).
+ */
+function drawVoiTran(r: Rig, look: VoiTranLook): void {
+  r.place([0, 0, 0], K_VOI_TRAN, () => {
+    drawElephant(r, 0, { pad: null, tusks: false });
+    const body = r.on('qBody');
+    const p = body.plain;
+    // Đệm vòm trùm lưng như tấm phủ ngựa vua, viền và tua quanh mép.
+    const cap = Math.PI * 0.42;
+    const pad: V3 = [0.374, 0.352, 0.53];
+    const padY = 0.72;
+    const padZ = -0.03;
+    body.band.add(new THREE.SphereGeometry(1, 18, 7, 0, Math.PI * 2, 0, cap), look.pad, 0, padY, padZ, [0, 0, 0], pad);
+    const rimY = padY + pad[1] * Math.cos(cap);
+    const rx = pad[0] * Math.sin(cap);
+    const rz = pad[2] * Math.sin(cap);
+    p.add(new THREE.TorusGeometry(1, 0.035, 5, 24), look.trim, 0, rimY, padZ, [Math.PI / 2, 0, 0], [rx, rz, 1]);
+    for (let i = 0; i < 16; i++) {
+      const a = ((i + 0.5) / 16) * Math.PI * 2;
+      p.cone(0.03, 0.09, look.trim, Math.sin(a) * rx, rimY - 0.05, padZ + Math.cos(a) * rz, [Math.PI, 0, 0], 5);
+    }
+    if (look.drum) {
+      const th = Math.PI * 0.3;
+      const tilt = Math.atan2(Math.sin(th) / pad[0], Math.cos(th) / pad[1]);
+      for (const s of [-1, 1]) {
+        const x = s * (pad[0] * Math.sin(th) + 0.012);
+        const y = padY + pad[1] * Math.cos(th) + 0.01;
+        body.drum.cyl(0.13, 0.13, 0.024, C.gold, x, y, padZ, [0, 0, -s * tilt], 16);
+        p.cyl(0.148, 0.148, 0.014, C.bronzeDark, x, y, padZ, [0, 0, -s * tilt], 16);
+      }
+    }
+    // Bành gỗ: sàn, thành hai bên và trước thấp, thành sau cao, cột góc bịt đồng, nệm.
+    p.box(0.5, 0.05, 0.6, C.woodDark, 0, 1.09, -0.1);
+    for (const s of [-1, 1]) {
+      body.band.box(0.035, 0.12, 0.6, C.woodLight, s * 0.25, 1.17, -0.1);
+      p.box(0.045, 0.025, 0.62, C.bronze, s * 0.25, 1.235, -0.1);
+    }
+    body.band.box(0.5, 0.08, 0.035, C.woodLight, 0, 1.15, 0.2);
+    p.box(0.52, 0.025, 0.045, C.bronze, 0, 1.195, 0.2);
+    body.band.box(0.5, 0.18, 0.035, C.woodLight, 0, 1.2, -0.4);
+    p.box(0.52, 0.025, 0.045, C.bronze, 0, 1.295, -0.4);
+    for (const [x, z, h] of [
+      [-0.25, 0.2, 0.15],
+      [0.25, 0.2, 0.15],
+      [-0.25, -0.4, 0.25],
+      [0.25, -0.4, 0.25],
+    ] as const) {
+      p.cyl(0.026, 0.026, h, C.woodDark, x, 1.09 + h / 2, z, undefined, 6);
+      p.sphere(0.034, C.bronzeLight, x, 1.09 + h, z, [1, 1, 1], 6);
+    }
+    p.box(0.42, 0.05, 0.5, look.trim, 0, CUSHION_TOP - 0.025, -0.08);
+    // Ngà dài bọc đồng: khâu đồng ở gốc, dải đồng hoa văn, vòng đồng, mũi bịt đồng nhọn.
+    for (const s of [-1, 1]) {
+      r.local('qHead', [s * 0.115, 0.6, 0.6], [1.3, 0, -s * 0.12], (t) => {
+        t.plain.cone(0.05, 0.5, C.cream, 0, 0.25, 0, undefined, 7);
+        t.plain.cyl(0.06, 0.062, 0.09, C.bronze, 0, 0.045, 0, undefined, 8);
+        t.band.cyl(0.042, 0.05, 0.1, C.bronze, 0, 0.16, 0, undefined, 8);
+        t.plain.cyl(0.033, 0.033, 0.022, C.bronzeLight, 0, 0.3, 0, undefined, 6);
+        t.plain.cone(0.02, 0.15, C.bronzeLight, 0, 0.46, 0, undefined, 6);
+      });
+    }
+    // Giáp trán đồng có núm vàng và chùm lông đỏ.
+    const head = r.on('qHead');
+    head.band.box(0.3, 0.26, 0.05, C.bronze, 0, 1.02, 0.7, [-0.35, 0, 0]);
+    head.plain.box(0.32, 0.035, 0.06, C.gold, 0, 1.15, 0.66, [-0.35, 0, 0]);
+    head.plain.sphere(0.05, C.gold, 0, 1.03, 0.725, [1, 1, 0.55], 8);
+    head.plain.cone(0.05, 0.2, C.red, 0, 1.24, 0.6, [-0.25, 0, 0], 6);
+    // Vòng đồng cổ chân.
+    for (const [b, x, z] of [
+      ['qFL', -0.2, 0.28],
+      ['qFR', 0.2, 0.28],
+      ['qBL', -0.2, -0.28],
+      ['qBR', 0.2, -0.28],
+    ] as const) {
+      r.on(b).band.cyl(0.125, 0.13, 0.07, C.bronze, x, 0.14, z, undefined, 10);
+    }
+    // Lọng hai tầng cắm sau thành sau: cán gỗ kẹp đồng, tán dưới viền, tán trên, chóp vàng, tua rủ quanh vành.
+    const [px, py, pz] = PARASOL_FOOT;
+    p.cyl(0.022, 0.022, PARASOL_TOP - py, C.woodDark, px, (py + PARASOL_TOP) / 2, pz, undefined, 6);
+    p.cyl(0.036, 0.036, 0.1, C.bronze, px, 1.25, pz, undefined, 6);
+    body.band.cone(0.5, 0.2, look.parasol, px, PARASOL_TOP, pz, undefined, 14);
+    p.cyl(0.51, 0.51, 0.045, look.trim, px, PARASOL_TOP - 0.1, pz, undefined, 14);
+    body.band.cone(0.27, 0.16, look.parasol, px, PARASOL_TOP + 0.15, pz, undefined, 12);
+    p.cyl(0.28, 0.28, 0.03, look.trim, px, PARASOL_TOP + 0.07, pz, undefined, 12);
+    p.sphere(0.045, C.gold, px, PARASOL_TOP + 0.25, pz, [1, 1, 1], 7);
+    p.cone(0.05, 0.16, C.gold, px, PARASOL_TOP + 0.34, pz, undefined, 6);
+    for (let i = 0; i < 12; i++) {
+      const a = (i / 12) * Math.PI * 2;
+      p.box(0.03, 0.14, 0.03, look.trim, px + Math.sin(a) * 0.49, PARASOL_TOP - 0.19, pz + Math.cos(a) * 0.49);
+    }
+  });
+  if (look.flag) {
+    const k = look.flag;
+    r.place(FLAG_SOCKET, k, () => r.local('qFlag', [0, 0, 0], FLAG_TILT, coLac));
+    // Ống đồng giữ chân cán cờ, buộc vào cột góc bành.
+    r.place(FLAG_SOCKET, k, () => r.local('qBody', [0, 0, 0], FLAG_TILT, (s) => s.plain.cyl(0.034, 0.034, 0.2, C.bronze, 0, -0.14, 0, undefined, 6)));
+  }
+}
+
+/**
+ * Voi trận đi chậm, vòi đung đưa, tai quạt; dậm chân giơ vòi theo đòn đánh. Người cưỡi định thêm (`m`): giơ vòi rống,
+ * chồm hai chân trước (xoay quanh hông sau, chân sau vẫn chạm đất), lao tới.
+ */
+function poseVoiTran(b: B, a: Act, m: VoiTranMood): void {
+  const t = a.time ?? 0;
+  const K = K_VOI_TRAN;
+  const trumpet = m.trumpet ?? 0;
+  const flap = 0.15 + 0.15 * Math.sin(t * 2.4) + 0.5 * trumpet;
+  b.qEarL.rotation.y = flap;
+  b.qEarR.rotation.y = -flap;
+  b.qFlag.rotation.set(0.05 * Math.sin(t * 1.9), 0, 0.04 * Math.sin(t * 1.3));
+  if (a.act === 'dead') {
+    const f = a.fall ?? 1;
+    quadFall(b, f);
+    b.qTrunk.rotation.x = 0.3 * f;
+    return;
+  }
+  const charge = m.charge ?? 0;
+  if (charge > 0) {
+    const sw = quadWalk(b, m.chargePhase ?? 0, 0.55 * charge, 0.5 * K);
+    b.qBody.rotation.set(0.08 * charge, 0, 0.03 * sw);
+    b.qHead.rotation.x = 0.18 * charge;
+    b.qTrunk.rotation.x = -0.75 * charge + 0.12 * sw;
+    b.qTrunk2.rotation.x = -0.6 * charge;
+    b.qTail.rotation.x = 0.6 * charge;
+  } else if (a.act === 'walk') {
+    const ph = (a.phase ?? 0) * 0.55;
+    const sw = quadWalk(b, ph, (a.stride ?? 0.5) * 0.5, 0.5 * K);
+    b.qBody.rotation.z = 0.03 * sw;
+    b.qTrunk.rotation.x = 0.15 * sw;
+    b.qTrunk2.rotation.x = 0.25 * Math.sin(ph - 0.8);
+    b.qTail.rotation.z = 0.2 * sw;
+  } else {
+    const e = m.strike ?? (a.act === 'fight' ? strikeCurve(a.strike, 0.3, 0.5) : 0);
+    b.qTrunk.rotation.x = 0.08 * Math.sin(t * 1.3) - 1.0 * e;
+    b.qTrunk2.rotation.x = 0.12 * Math.sin(t * 1.3 - 0.7) - 1.2 * e;
+    b.qHead.rotation.x = -0.2 * e;
+    b.qFL.rotation.x = b.qFR.rotation.x = -0.35 * e;
+    b.qBody.rotation.x = -0.1 * e;
+    b.qTail.rotation.z = 0.1 * Math.sin(t * 2);
+  }
+  if (trumpet > 0) {
+    b.qTrunk.rotation.x = lerp(b.qTrunk.rotation.x, -2.25 + 0.06 * Math.sin(t * 9), trumpet);
+    b.qTrunk2.rotation.x = lerp(b.qTrunk2.rotation.x, -0.85, trumpet);
+    b.qHead.rotation.x = lerp(b.qHead.rotation.x, -0.3, trumpet);
+  }
+  const rear = m.rear ?? 0;
+  if (rear > 0) {
+    // Ngả thân lên quanh hông sau (so với khớp thân: thấp hơn 0,22, lùi 0,28), dời thân bù cho hông sau đứng yên.
+    const ang = 0.4 * rear;
+    const hy = -0.22 * K;
+    const hz = -0.28 * K;
+    b.qBody.rotation.x -= ang;
+    b.qBody.position.y += hy * (1 - Math.cos(ang)) - hz * Math.sin(ang);
+    b.qBody.position.z += hz * (1 - Math.cos(ang)) + hy * Math.sin(ang);
+    b.qBL.rotation.x = b.qBR.rotation.x = ang;
+    b.qFL.rotation.x = -1.0 * rear;
+    b.qFR.rotation.x = -0.7 * rear;
+  }
+}
+
+/**
+ * Voi trận của Hai Bà (`look`: màu đệm, lọng, trống đồng, cờ) có người cưỡi (`rider`, heroes.ts) hay không.
+ * `userData.pose(a)` đặt tư thế cả người lẫn voi; ngã thì lăn nghiêng.
+ */
+export function makeVoiTran(look: VoiTranLook, rider?: VoiTranRider): THREE.Group {
+  // Có người cưỡi thì là tướng: đủ chi tiết như các tướng khác.
+  const r = new RigBuilder({ ...VOI_TRAN, ...rider?.defs }, rider ? 1 : DETAIL);
+  drawVoiTran(r, look);
+  rider?.draw(r);
+  const { group, bones } = skinRig(r.build());
+  const pose: Poser = (a) => {
+    resetBones(bones);
+    const mood = rider ? rider.pose(bones, a) : {};
+    poseVoiTran(bones, a, mood);
+  };
+  pose({ act: 'stand' });
+  group.userData.pose = pose;
+  group.userData.fall = 'side';
+  return group;
 }
 
 // ---------- Hổ tinh ----------

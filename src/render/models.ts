@@ -4,7 +4,7 @@
 import * as THREE from 'three';
 import type { FighterKind } from '../game/battle';
 import { bakeBeast, isBeast } from './beasts';
-import { bakeThuyTinh, makeAnDuong, makeCaoLo, makeGiong, makeSonTinh } from './heroes';
+import { bakeThuyTinh, makeAnDuong, makeCaoLo, makeGiong, makeSonTinh, makeTrungNhi, makeTrungTrac } from './heroes';
 import { bakeMonster, isMonster } from './monsters';
 import { makeRower, makeWorker } from './people';
 import { C } from './palette';
@@ -49,6 +49,8 @@ export function makeFighter(kind: FighterKind, tier = 0): THREE.Group {
   if (kind === 'sonTinh') return makeSonTinh();
   if (kind === 'anDuong') return makeAnDuong({ crossbow: true });
   if (kind === 'caoLo') return makeCaoLo();
+  if (kind === 'trungTrac') return makeTrungTrac();
+  if (kind === 'trungNhi') return makeTrungNhi();
   if (isSoldier(kind)) return bakeSoldier(kind, tier);
   if (isBeast(kind)) return bakeBeast(kind, tier);
   if (isMonster(kind)) return bakeMonster(kind);

@@ -385,3 +385,86 @@ export function daoVong(s: Parts): void {
   // Vòng đốc nằm trong mặt phẳng lưỡi.
   p.add(new THREE.TorusGeometry(0.042, 0.011, 6, 12), IRON_DARK, 0, -0.12, 0, [0, Math.PI / 2, 0]);
 }
+
+/** Tre tầm vông phơi khô: vàng nâu, mắt tre sẫm, đầu vót nhọn hơ lửa sẫm màu, mặt vót trắng ngà. */
+const TAM_VONG = 0xc2a25a;
+const TAM_VONG_NODE = 0x87692f;
+const TAM_VONG_CUT = 0xe6d49a;
+
+/**
+ * Giáo tre của nghĩa binh: cây tầm vông dài 1,35, tay nắm cách đuôi 0,3, ba mắt tre, đầu vót nhọn xiên một bên
+ * (mặt vót trắng ngà, mũi hơ lửa sẫm), buộc túm lạt dưới mũi.
+ */
+export function giaoTre(s: Parts): void {
+  const p = s.plain;
+  const len = 1.35;
+  const top = len - 0.3;
+  p.cyl(0.022, 0.025, top + 0.3, TAM_VONG, 0, (top - 0.3) / 2, 0, undefined, 6);
+  for (const y of [-0.12, 0.3, 0.68]) p.cyl(0.028, 0.028, 0.025, TAM_VONG_NODE, 0, y, 0, undefined, 6);
+  // Mũi vót xiên: phần vát trắng ngà, chóp hơ lửa sẫm.
+  p.cone(0.023, 0.26, TAM_VONG_CUT, 0, top + 0.13, 0, undefined, 5);
+  p.box(0.004, 0.2, 0.03, TAM_VONG_NODE, 0, top + 0.1, 0.012, [0.08, 0, 0]);
+  p.cone(0.008, 0.07, C.woodDark, 0, top + 0.235, 0, undefined, 4);
+  p.cyl(0.03, 0.03, 0.05, C.thatchDark, 0, top - 0.03, 0, undefined, 6);
+}
+
+/**
+ * Gươm đồng của Trưng Trắc: lưỡi đồng hình lá dài 0,62, gờ sống sáng, chắn tay vàng, chuôi quấn dây đỏ, đốc tròn vàng,
+ * tua đỏ buông ở đốc. Lưỡi sắc hướng +z.
+ */
+export function guomDong(s: Parts): void {
+  const p = s.plain;
+  const len = 0.62;
+  // Lưỡi thon dần về mũi, phình nhẹ ở giữa như lưỡi kiếm Đông Sơn.
+  p.box(0.022, len * 0.75, 0.07, C.bronze, 0, 0.08 + len * 0.375, 0);
+  p.sphere(0.05, C.bronze, 0, 0.08 + len * 0.78, 0, [0.44, 2.2, 1], 8);
+  p.box(0.026, len * 0.95, 0.014, C.bronzeLight, 0, 0.08 + len * 0.47, 0);
+  s.band.box(0.03, 0.09, 0.075, C.gold, 0, 0.12, 0);
+  p.box(0.15, 0.035, 0.06, C.gold, 0, 0.065, 0);
+  p.cyl(0.02, 0.022, 0.12, C.red, 0, -0.01, 0, undefined, 6);
+  p.sphere(0.034, C.gold, 0, -0.085, 0, [1, 1, 1], 7);
+  p.cone(0.03, 0.12, C.red, 0, -0.15, 0, [Math.PI, 0, 0], 6);
+}
+
+/**
+ * Cờ hiệu đỏ của Trưng Nhị: cán tre dài 1,5 (gốc ở chỗ tay nắm, cách đuôi 0,25), chóp đồng hình mũi giáo, tua vàng;
+ * lá cờ đỏ dài chừng 0,7 × 0,5 bay về phía −z, ba khúc lệch nhau cho ra dáng cờ bay, viền dải hoa văn vàng, giữa
+ * thêu chim Lạc vàng dang cánh, mỏ dài chĩa lên, đuôi cờ xẻ hai tua.
+ */
+export function coLac(s: Parts): void {
+  const p = s.plain;
+  const len = 1.5;
+  const top = len - 0.25;
+  p.cyl(0.02, 0.022, len, C.woodDark, 0, len / 2 - 0.25, 0, undefined, 6);
+  p.cyl(0.026, 0.026, 0.04, C.bronze, 0, top, 0, undefined, 6);
+  p.cone(0.035, 0.14, C.bronze, 0, top + 0.09, 0, undefined, 5);
+  p.cone(0.04, 0.12, C.gold, 0, top - 0.06, 0, [Math.PI, 0, 0], 6);
+  // Lá cờ ba khúc, khúc ngoài rủ thấp dần.
+  const fy = top - 0.32;
+  const h = 0.48;
+  const segs = 3;
+  const w = 0.72 / segs;
+  for (let i = 0; i < segs; i++) {
+    const z = -0.02 - w * (i + 0.5);
+    const y = fy - i * 0.025;
+    const rx = i % 2 ? 0.04 : -0.04;
+    p.box(0.018, h - i * 0.03, w + 0.01, C.red, Math.sin(i * 1.7) * 0.02, y, z, [rx, (i % 2 ? 1 : -1) * 0.12, 0]);
+    s.band.box(0.022, 0.05, w + 0.01, C.gold, Math.sin(i * 1.7) * 0.02, y + (h - i * 0.03) / 2 - 0.025, z, [rx, (i % 2 ? 1 : -1) * 0.12, 0]);
+    s.band.box(0.022, 0.05, w + 0.01, C.gold, Math.sin(i * 1.7) * 0.02, y - (h - i * 0.03) / 2 + 0.025, z, [rx, (i % 2 ? 1 : -1) * 0.12, 0]);
+  }
+  // Đuôi cờ xẻ hai tua.
+  for (const k of [-1, 1]) p.box(0.016, 0.1, 0.16, C.red, 0.02, fy - 0.06 + k * 0.13, -0.8, [k * 0.2, 0.1, 0]);
+  // Chim Lạc vàng thêu giữa lá cờ (hai mặt): thân thon, cổ vươn, mỏ dài, mào, cánh dang, đuôi xòe.
+  for (const sx of [-1, 1]) {
+    const x = sx * 0.014;
+    const cz = -0.3;
+    const cy = fy;
+    p.sphere(0.05, C.gold, x, cy, cz, [0.3, 0.75, 1.5], 6);
+    p.box(0.01, 0.12, 0.026, C.gold, x, cy + 0.08, cz + 0.06, [-0.5, 0, 0]);
+    p.cone(0.016, 0.16, C.gold, x, cy + 0.12, cz + 0.17, [Math.PI / 2 - 0.3, 0, 0], 4);
+    p.box(0.01, 0.07, 0.016, C.gold, x, cy + 0.17, cz + 0.06, [0.6, 0, 0]);
+    p.box(0.01, 0.05, 0.2, C.gold, x, cy + 0.06, cz - 0.02, [-0.9, 0, 0]);
+    p.box(0.01, 0.05, 0.18, C.gold, x, cy - 0.04, cz - 0.04, [0.6, 0, 0]);
+    p.box(0.01, 0.1, 0.06, C.gold, x, cy - 0.04, cz - 0.15, [0.3, 0, 0]);
+  }
+}
