@@ -566,6 +566,32 @@ T T T T ~ ~ ~ ~ ~ ~ ~ S S ~ ~ .
 - `L` lau sậy dọc bờ sau. `T` cây đa cổ thụ (mô hình cây đa trang trí), tán xòe xuống mặt hồ. `B` bụi tre.
 - Một thầy cúng (Lạc hầu) đứng khấn trước miếu. Rùa Vàng bơi vòng bầu dục quanh gò (`userData.swim`, World cho bơi ở `swimTurtle`).
 
+## Đền Hát Môn: 4×4 (chương 5, đã vẽ)
+
+Bản vẽ đi kèm mục **Đền Hát Môn** trong `docs/thiet-ke.md`. Một cấp, chưa có dáng cũ. Đền thờ Hai Bà lùi về sau, sân lát đá trước đền có đàn tế đắp đất nơi Hai Bà tế cờ; cây đa cao đứng góc sau bên trái cho khỏi che sân.
+
+```
+T T H H H H . B
+T T H H H H . B
+T T H H H H . .
+. . N N N N . .
+. . . L L . . .
+V V . D D . V V
+V V . D D . V V
+. . . , , . . .
+```
+
+- `H` đền thờ Hai Bà: tám cột son trên chân đá, vách gỗ dải hoa văn, cửa giữa có mặt trống đồng trên trán, xà son; mái cong hai tầng lợp ngói viền đồng vàng, tầng trên đặt trên gác lửng có hàng ô cửa, chim Lạc đồng hai đầu nóc.
+- `N` thềm đền: nền đá hai bậc phủ cả `H` và `N`, ba bậc đá lên giữa thềm.
+- `L` lư hương đồng ba chân trên trụ đá: nắp chóp có núm, hai quai, nén hương đỏ lửa.
+- `D` đàn tế đắp đất hai tầng, bậc đất mặt trước: cột cờ son cao giữa đàn, cờ đỏ thắm lớn viền vàng; trống đồng nhỏ và mâm lễ trên đàn; phướn đỏ, phướn vàng hai góc sau.
+- `V` hai voi đá quỳ trên bệ đá hai bên sân, quay chếch vào lối giữa: chân trước duỗi, chân sau xếp, tai lớn, vòi cuộn chạm bệ, ngà ngắn, vải bành chạm nổi trên lưng.
+- `,` lối vào; sân lát đá hai màu so le từ thềm ra lối, viền đá hai bên; ngoài sân là cỏ.
+- `T` cây đa cổ thụ: gốc to bành rễ, vòng đá kè, dải vải đỏ buộc thân, rễ phụ buông, tán xòe nhiều vòm (tràn ra ngoài móng chưa tới nửa ô).
+- `B` bụi tre góc sau bên phải.
+- Thầy cúng (Lạc hầu) đứng khấn bên trái lư hương, quay vào đền; chỗ thứ hai là người dâng lễ bên đàn tế.
+- Đã vẽ (`src/render/congTrinh/denHatMon.ts`). Đã đổi khi vẽ: bỏ hai cờ đứng hai bên thềm (đâm vào diềm mái, lẫn với cờ đàn tế), thay bằng phướn đỏ, vàng trên đàn tế.
+
 ## Cấp 9, 10 (chủ dự án đã duyệt, đã vẽ)
 
 Móng đã kín ở cấp 8, nên cấp 9, 10 không thêm ô con mới: mỗi loại đổi một phần sẵn có, đứng trong khối chữ của phần ấy. Mái theo cấp ghi ở mục Phong cách trong `docs/thiet-ke.md` (cấp 9 dải đồng hoa văn dưới diềm, cấp 10 chim Lạc hai đầu nóc).
