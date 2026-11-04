@@ -22,7 +22,7 @@ export const ANH_DAU: Record<string, string> = {
   denCoLoa: '399156a5',
   denCuong: '620653b4',
   denHatMon: '8cab8a15',
-  denPhuDong: '00aa80d2',
+  denPhuDong: '0ede1029',
   denTanVien: '60cf4d9d',
   dien: '41c129e3',
   doanhTrai: '505f378a',
