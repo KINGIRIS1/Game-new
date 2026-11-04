@@ -982,6 +982,21 @@ export const isRoad = (type: BuildingType): boolean => BUILDINGS[type].decor ===
  */
 export type TuongId = 'lacTuong' | 'giong' | 'sonTinh' | 'anDuong' | 'caoLo' | 'trungTrac' | 'trungNhi';
 export const TUONG_IDS: TuongId[] = ['lacTuong', 'giong', 'sonTinh', 'anDuong', 'caoLo', 'trungTrac', 'trungNhi'];
+
+/**
+ * Bốn nữ tướng của Hai Bà Trưng (chương 5 PR 4), theo về khi thắng màn `stage` lần đầu, mỗi người lo một binh chủng
+ * `unit`. Ở phó bản đi theo làm phó tướng (đứng cầm cờ sau hàng hậu, không đánh); ở kinh đô giao cho một doanh
+ * trại. Binh chủng của nữ tướng được thêm `NU_TUONG_BONUS` máu và sức đánh.
+ */
+export type NuTuongId = 'leChan' | 'thanhThien' | 'batNan' | 'phungThiChinh';
+export const NU_TUONG_IDS: NuTuongId[] = ['leChan', 'thanhThien', 'batNan', 'phungThiChinh'];
+export const NU_TUONG: Record<NuTuongId, { stage: number; unit: UnitType }> = {
+  leChan: { stage: 34, unit: 'no' },
+  thanhThien: { stage: 35, unit: 'cung' },
+  batNan: { stage: 37, unit: 'giao' },
+  phungThiChinh: { stage: 39, unit: 'voi' },
+};
+export const NU_TUONG_BONUS = 0.12;
 /**
  * Số chỗ quân tối đa mang ra một trận phó bản, theo cấp Điện (chỉ số 0 là cấp 1): bằng sức chứa doanh trại cao nhất
  * dựng được ở cấp Điện ấy, không quá 38, để nhiều doanh trại không làm phó bản dễ đi.
