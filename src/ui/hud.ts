@@ -1,7 +1,7 @@
 // Giao diện HTML đặt đè lên cảnh 3D: thanh tài nguyên, nhiệm vụ, bảng xây dựng, bảng công trình, cài đặt,
 // bản đồ phó bản và các nút trong trận.
 
-import { enemiesLeft, alliesLeft, holdProgress, skillReady, wavesArrived, type Battle } from '../game/battle';
+import { enemiesLeft, alliesLeft, holdProgress, skillReady, wavesArrived, type Battle, type HeroKind } from '../game/battle';
 import { advJoined, advLook, advResting, inChapter3, ruaVangCame, wallRings } from '../game/coLoa';
 import {
   BUILDINGS,
@@ -101,7 +101,7 @@ import {
   type StageResult,
   type StoryId,
 } from '../game/game';
-import { chapterStages } from '../game/campaign';
+import { chapterStages, stageHeroCheck } from '../game/campaign';
 import { caoLoJoined, caoLoResting } from '../game/caoLo';
 import { inChapter4, mergeCost, mergeable, mergedLevel } from '../game/chuong4';
 import { giongAppeared, giongLook, giongReady, giongResting } from '../game/giong';
@@ -233,7 +233,7 @@ export type HudAction =
   | { kind: 'repairUNo'; id: number }
   | { kind: 'dismissRaid' }
   | { kind: 'openCampaign' }
-  | { kind: 'march'; stage: number; army: Record<UnitType, number>; rows: Record<UnitType, Row>; challenge: boolean }
+  | { kind: 'march'; stage: number; army: Record<UnitType, number>; rows: Record<UnitType, Row>; challenge: boolean; hero: HeroKind | null }
   | { kind: 'buyHuan'; branch: HuanBranch }
   | { kind: 'useSkill'; skill: SkillId }
   | { kind: 'openGiong' }
@@ -526,13 +526,14 @@ export class Hud {
       case 'backToStage':
       case 'armyDelta':
       case 'armyRow':
+      case 'armyHero':
         // Đang chọn quân đánh đồn trong bảng Đất bên kia sông.
         if (this.donPick && this.sheet?.kind === 'benKia' && act !== 'backToStage') return this.donPickStep(act, el);
         return this.campaignStep(act, id, el);
       case 'march': {
         if (!this.camp?.stage) return;
-        const { army, rows, challenge } = this.camp.pick;
-        return this.onAction({ kind: 'march', stage: this.camp.stage, army: { ...army }, rows: { ...rows }, challenge });
+        const { army, rows, challenge, hero } = this.camp.pick;
+        return this.onAction({ kind: 'march', stage: this.camp.stage, army: { ...army }, rows: { ...rows }, challenge, hero: hero ?? null });
       }
       case 'buyHuan':
         return this.onAction({ kind: 'buyHuan', branch: el.dataset.branch as HuanBranch });
@@ -1661,6 +1662,10 @@ export class Hud {
       stepPick(state, camp.pick, unit, Number(el.dataset.delta));
     } else if (act === 'armyRow') {
       camp.pick.rows[unit] = nextRow(camp.pick.rows[unit]);
+    } else if (act === 'armyHero' && camp.stage) {
+      // Phó bản chương 2: chạm thẻ Sơn Tinh hay Gióng để chọn tướng ra trận; tướng kiệt sức thì không chọn được.
+      const hero = el.dataset.hero as HeroKind;
+      if (stageHeroCheck(state, camp.stage, hero, camp.pick.challenge).ok) camp.pick.hero = hero;
     }
     this.refreshCampaign(state);
   }

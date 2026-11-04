@@ -527,6 +527,7 @@ Vòng khắc chế của quân ta giữ nguyên: giáo binh thắng quân nặng
 
 - Đủ năm lễ vật thì Sơn Tinh rước Mị Nương và **cùng ra trận**:
   - mỗi trận một tướng: trận chương 2 (phó bản chương 2, mùa lũ) có Sơn Tinh, các trận khác có Gióng hiển linh. Chưa rước Mị Nương, hay Sơn Tinh đang kiệt sức, thì trận chương 2 có Gióng hiển linh;
+  - **chọn tướng ở bảng xếp quân** (chủ dự án yêu cầu): trận phó bản chương 2 (cả thử thách, trừ Không tướng) có hai thẻ Sơn Tinh và Phù Đổng Thiên Vương, chạm để chọn, mặc định Sơn Tinh. Mỗi thẻ ghi kỹ năng của tướng; tướng đang kiệt sức thì thẻ mờ đi, ghi "Đang kiệt sức" (không đếm ngược từng giây để bảng khỏi vẽ lại liên tục, nuốt mất lần chạm). Trận chương 1, 3, 4 không có thẻ chọn, tướng ra trận theo thứ tự chọn sẵn; mùa lũ không có bảng xếp quân nên vẫn lấy Sơn Tinh trước;
   - 560 máu (ngoài bãi bền gấp 1,6), 20 sát thương, mỗi đòn gậy làm rung đất, quét thêm nửa sát thương lên giặc quanh mục tiêu trong 1,3 ô như Gióng;
   - hết máu thì kiệt sức, nghỉ 2 phút chơi, không tính vào lính tử trận.
 - **Kỹ năng của Sơn Tinh**:
@@ -551,10 +552,11 @@ Vòng khắc chế của quân ta giữ nguyên: giáo binh thắng quân nặng
   | 13 | Làng chìm trong lũ | 14 tôm, 8 cá phun, 4 cá sấu | ×2,1 | cần Sơn Tinh |
   | 14 | Sông Đà cuồn cuộn | 14 tôm, 8 cá phun, 4 cá sấu | ×2,1 | cần Sơn Tinh, mở Dời non |
   | 15 | Chân núi Tản | 14 tôm, 9 cá phun, 4 cá sấu | ×2,5 | cần Sơn Tinh |
-  | 16 | Đỉnh Tản Viên | 12 tôm, 8 cá phun, 3 cá sấu, Thủy Tinh | ×1,8 | cần Sơn Tinh; Thủy Tinh có hai phép |
+  | 16 | Đỉnh Tản Viên | 12 tôm, 8 cá phun, 3 cá sấu, Thủy Tinh | ×1,8 | chỉ Sơn Tinh; Thủy Tinh có hai phép |
 
   - Mọi màn cần Điện cấp 5. Thưởng lần đầu từ 1200 gạo, 800 vỏ ốc, 600 đất đá, 150 sắt (màn 9) tới 3000 gạo, 2000 vỏ ốc, 2000 đất đá, 500 sắt (màn 16). Đánh lại được 30%.
   - Máu của màn 9–11 cao hơn màn 12–16 vì màn 9–11 có Gióng hiển linh hai kỹ năng, còn màn 12–14 Sơn Tinh mới có một kỹ năng.
+  - "Cần Sơn Tinh" nghĩa là phải rước Mị Nương rồi mới mở màn. Ở màn 12–15 người chơi chọn Gióng hiển linh đánh thay được; Sơn Tinh kiệt sức thì Gióng tự ra thay, cả hai kiệt sức thì phải chờ. **Màn 16 chỉ Sơn Tinh ra trận** ("Chỉ Sơn Tinh mới địch nổi Thủy Tinh", `sonOnly`), vì cảnh kết chương là núi Tản Viên dâng dưới chân Sơn Tinh.
   - Máu giặc các màn 9–24 được đặt lại theo chuẩn cân bằng mới (xem mục **Chuẩn cân bằng phó bản**).
 - Bãi chiến mới:
   - **đồi sim**: đồi lượn cao, mảng hoa sim tím;
@@ -562,6 +564,7 @@ Vòng khắc chế của quân ta giữ nguyên: giáo binh thắng quân nặng
   - **đỉnh Tản Viên**: ba ngọn núi Ba Vì sau lưng giặc, mây vờn lưng chừng núi, nước lũ dưới chân.
   - Màn 10, 14 dùng bến sông; màn 11 rừng; màn 13 làng; màn 15 chân núi.
 - Cân bằng đo bằng test theo **Chuẩn cân bằng phó bản**, với quân mẫu chương 2: 14 giáo, 12 cung, 4 voi (vừa 38 chỗ doanh trại cấp 5). Tướng là Gióng hiển linh ở màn 9–11, Sơn Tinh ở màn 12–16. Thủy Tinh không bấm kỹ năng thì thua.
+  - Gióng hiển linh đánh thay ở màn 12–15 thì khó hơn Sơn Tinh (đo với 6 hạt giống): người chơi giỏi thắng cả bốn màn (màn 15 năm trên sáu lần); người chơi thường thắng màn 12–14 chừng hai trên ba lần, thua màn 15. Ở màn 16 Gióng chơi giỏi cũng thua gần hết, nên màn này chỉ Sơn Tinh. `chuong2.test.ts` canh Gióng chơi giỏi thắng màn 12–15, người chơi thường thua màn 15, chơi giỏi thua màn 16.
 
 ### Hướng dẫn của Lạc hầu chương 2
 

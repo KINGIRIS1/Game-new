@@ -2,7 +2,7 @@
 
 import './style.css';
 import { play, setMuted, stopRally, unlockAudio } from './audio/sfx';
-import { useSkill } from './game/battle';
+import { useSkill, type HeroKind } from './game/battle';
 import { leaveBattlefield, retreat, startStage, unitAllowed } from './game/campaign';
 import { forgeArms } from './game/binhKhi';
 import { assignCommander, autoGuard, setGuard } from './game/doanhTrai';
@@ -1090,7 +1090,7 @@ async function start(): Promise<void> {
         return;
 
       case 'march': {
-        const r = startStage(state, a.stage, a.army, a.rows, a.challenge);
+        const r = startStage(state, a.stage, a.army, a.rows, a.challenge, a.hero);
         if (!r.ok) return fail(r.reason);
         play('claim');
         navigator.vibrate?.(40);
@@ -1411,12 +1411,15 @@ async function start(): Promise<void> {
       world.setChunkSelection(id);
       hud.showKhoanh(state, id);
     },
-    /** Xuất toàn quân đánh màn `n`, rồi `skill(k)` để bấm kỹ năng: chụp thử trận ngoài bãi. */
-    march: (n: number, challenge = false) => {
+    /**
+     * Xuất toàn quân đánh màn `n` cùng tướng `hero` (phó bản chương 2; bỏ trống thì tướng chọn sẵn), rồi `skill(k)`
+     * để bấm kỹ năng: chụp thử trận ngoài bãi.
+     */
+    march: (n: number, challenge = false, hero?: HeroKind) => {
       // Thử thách Hai binh chủng: chỉ mang hai binh chủng được chỉ định.
       const army = { ...state.troops };
       for (const k of UNIT_TYPES) if (!unitAllowed(n, challenge, k)) army[k] = 0;
-      const r = startStage(state, n, army, state.campaign.rows, challenge);
+      const r = startStage(state, n, army, state.campaign.rows, challenge, hero);
       commit();
       return r;
     },

@@ -5,7 +5,7 @@
 // cầm chân giặc cho vua ra biển Mộ Dạ.
 // Chọn lính mang theo, xếp hàng theo binh chủng, xuất quân; lính chết thì mất, thắng thì có thưởng.
 
-import { retreatField, startFieldBattle, stepField } from './battle';
+import { retreatField, startFieldBattle, stepField, type HeroKind } from './battle';
 import { finishCamp } from './benKia';
 import { CH4_LAST, LAY_TRAO_AT, LENH_BAN_AT, caoLoJoined, caoLoResting } from './caoLo';
 import { inChapter4 } from './chuong4';
@@ -14,7 +14,7 @@ import { armySpace, fieldCap } from './doanhTrai';
 import { REPLAY_SHARE, RESOURCE_IDS, STAGES, UNIT_TYPES, type Chapter, type Cost, type Row, type StageDef, type UnitType } from './defs';
 import { BATTLE_STEP, countOf, dienLevel, gain, troopBonus, type FailReason, type GameState, type Result, type StageResult } from './game';
 import { giongReady, giongResting } from './giong';
-import { heroFor, inChapter2, restAfter, sonJoined, sonResting, winGift } from './son';
+import { heroFor, inChapter2, restAfter, sonJoined, sonOnly, sonResting, winGift } from './son';
 import { challengeField, challengeOf, challengeOpen, huanTiers, winChallenge } from './thuThach';
 
 /** Thắng màn này lần đầu thì roi sắt gãy. */
@@ -70,7 +70,11 @@ export function canStartStage(state: GameState, n: number, challenge = false): R
   if (needs.needsGiong && !giongReady(state)) return fail('canThanhGiong');
   if (needs.needsGiong && giongResting(state)) return fail('giongKietSuc');
   if (needs.needsSon && !sonJoined(state)) return fail('canSonTinh');
-  if (needs.needsSon && sonResting(state)) return fail('sonKietSuc');
+  // Sơn Tinh kiệt sức thì Gióng hiển linh đánh thay được, trừ màn chỉ Sơn Tinh đánh được.
+  if (needs.needsSon && sonResting(state)) {
+    if (sonOnly(n) || !giongReady(state)) return fail('sonKietSuc');
+    if (giongResting(state)) return fail('tuongKietSuc');
+  }
   if (needs.needsAdv && !advJoined(state)) return fail('canAnDuong');
   if (needs.needsAdv && advResting(state)) return fail('advKietSuc');
   if (needs.needsCaoLo && !caoLoJoined(state)) return fail('canCaoLo');
@@ -81,10 +85,44 @@ export function canStartStage(state: GameState, n: number, challenge = false): R
   return ok(undefined);
 }
 
-/** Tướng ra trận màn `n`: như màn thường, trừ thử thách Không tướng. */
-export function stageHero(state: GameState, n: number, challenge = false) {
+/**
+ * Tướng ra trận màn `n`: như màn thường, trừ thử thách Không tướng. `pick`: tướng người chơi chọn ở bảng xếp quân
+ * (`stageHeroes`); không chọn, hay tướng ấy không ra trận được, thì lấy tướng chọn sẵn.
+ */
+export function stageHero(state: GameState, n: number, challenge = false, pick?: HeroKind | null) {
   const def = stageDef(n);
-  return !def || heroless(n, challenge) ? null : heroFor(state, def.chapter, n);
+  return !def || heroless(n, challenge) ? null : heroFor(state, def.chapter, n, pick);
+}
+
+/**
+ * Các tướng người chơi chọn được ở bảng xếp quân màn `n`, theo thứ tự chọn sẵn, kể cả tướng đang kiệt sức. Chỉ phó
+ * bản chương 2 cho chọn: Sơn Tinh (đã rước Mị Nương) hay Gióng hiển linh; màn 16 chỉ Sơn Tinh. Các chương khác tướng
+ * ra trận theo thứ tự của `heroFor`.
+ */
+export function stageHeroes(state: GameState, n: number, challenge = false): HeroKind[] {
+  const def = stageDef(n);
+  if (!def || def.chapter !== 2 || heroless(n, challenge)) return [];
+  const out: HeroKind[] = [];
+  if (sonJoined(state)) out.push('sonTinh');
+  if (giongReady(state) && !sonOnly(n)) out.push('giong');
+  return out;
+}
+
+/** Tướng `kind` ra trận màn `n` được không: phải có trong `stageHeroes` và không kiệt sức. */
+export function stageHeroCheck(state: GameState, n: number, kind: HeroKind, challenge = false): Result {
+  const def = stageDef(n);
+  if (!def) return fail('khongTimThay');
+  if (kind === 'sonTinh') {
+    if (def.chapter !== 2) return fail('canChuong2');
+    if (!sonJoined(state)) return fail('canSonTinh');
+    if (sonResting(state)) return fail('sonKietSuc');
+  } else if (kind === 'giong') {
+    if (def.chapter !== 2) return fail('canChuong2');
+    if (sonOnly(n)) return fail('chiSonTinh');
+    if (!giongReady(state)) return fail('canThanhGiong');
+    if (giongResting(state)) return fail('giongKietSuc');
+  } else return fail('khongTimThay');
+  return stageHeroes(state, n, challenge).includes(kind) ? ok(undefined) : fail('khongTimThay');
 }
 
 /** Thử thách Hai binh chủng: binh chủng `k` có được mang không. Màn thường và các kiểu thử thách khác mang được hết. */
@@ -95,17 +133,28 @@ export function unitAllowed(n: number, challenge: boolean, k: UnitType): boolean
 
 /**
  * Xuất quân đánh màn `n` với số lính `army`, đứng theo hàng `rows`. `challenge`: đánh thử thách của màn (đã thắng
- * màn ấy ở chế độ thường).
+ * màn ấy ở chế độ thường). `pick`: tướng chọn ở bảng xếp quân (phó bản chương 2); bỏ trống thì lấy tướng chọn sẵn.
  */
-export function startStage(state: GameState, n: number, army: Record<UnitType, number>, rows: Record<UnitType, Row>, challenge = false): Result {
+export function startStage(
+  state: GameState,
+  n: number,
+  army: Record<UnitType, number>,
+  rows: Record<UnitType, Row>,
+  challenge = false,
+  pick?: HeroKind | null,
+): Result {
   const check = canStartStage(state, n, challenge);
   if (!check.ok) return check;
+  if (pick && !heroless(n, challenge)) {
+    const heroCheck = stageHeroCheck(state, n, pick, challenge);
+    if (!heroCheck.ok) return heroCheck;
+  }
   if (UNIT_TYPES.some((k) => (army[k] ?? 0) < 0 || (army[k] ?? 0) > state.troops[k])) return fail('khongDuQuan');
   if (UNIT_TYPES.some((k) => (army[k] ?? 0) > 0 && !unitAllowed(n, challenge, k))) return fail('thuThachBinhChung');
   // Nhiều doanh trại cho nhiều quân dự trữ, nhưng mỗi trận phó bản chỉ mang tối đa chừng này chỗ (38 từ Điện 5).
   if (armySpace(army) > fieldCap(state)) return fail('quaChoPhoBan');
   const def = stageDef(n)!;
-  const hero = stageHero(state, n, challenge);
+  const hero = stageHero(state, n, challenge, pick);
   // Có tướng thì ra trận một mình cũng được.
   if (!hero && UNIT_TYPES.every((k) => !army[k])) return fail('chuaChonQuan');
   state.campaign.rows = { ...rows };

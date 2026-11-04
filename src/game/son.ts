@@ -1,11 +1,12 @@
 // Chương 2: Sơn Tinh, Thủy Tinh. Vua Hùng thứ mười tám kén rể cho Mị Nương, thách cưới năm lễ vật.
 // Đủ lễ vật thì Sơn Tinh đến trước rước Mị Nương, cùng ra trận; Thủy Tinh nổi giận dâng nước đánh kinh đô.
-// Kèm việc chọn tướng cho từng trận: mỗi trận một tướng, Gióng, Sơn Tinh hay An Dương Vương.
+// Kèm việc chọn tướng cho từng trận: mỗi trận một tướng, Gióng, Sơn Tinh hay An Dương Vương. Phó bản chương 2 thì
+// người chơi chọn Sơn Tinh hay Gióng hiển linh ở bảng xếp quân (`stageHeroes` ở campaign.ts).
 
 import type { Battle, HeroKind, HeroSetup } from './battle';
 import { CAO_LO_AT, caoLoJoined, caoLoSetup } from './caoLo';
 import { advJoined, advSetup } from './coLoa';
-import { ADV_REST_MS, CAO_LO_REST_MS, CH2_QUEST_START, GIFTS, GIFT_IDS, GIONG_REST_MS, SON_REST_MS, type Chapter, type GiftId } from './defs';
+import { ADV_REST_MS, CAO_LO_REST_MS, CH2_QUEST_START, GIFTS, GIFT_IDS, GIONG_REST_MS, SON_REST_MS, STAGES, type Chapter, type GiftId } from './defs';
 import { canAfford, pay, scheduleFirstFlood, type FailReason, type GameState, type Result, type SonState } from './game';
 import { giongReady, heroSetup } from './giong';
 
@@ -44,22 +45,24 @@ function leadsFor(s: GameState, chapter: Chapter, stage?: number): ('anDuong' | 
   return chapter === 3 ? ['anDuong'] : [];
 }
 
+/** Màn phó bản chỉ Sơn Tinh ra trận được, Gióng không đánh thay (màn 16). */
+export const sonOnly = (stage?: number) => stage !== undefined && !!STAGES[stage - 1]?.sonOnly;
+
 /**
  * Tướng ra trận. Trận chương 4 và chương 3 có tướng của chương (`leadsFor`) khi tướng ấy đã về với kinh đô và không
  * kiệt sức; An Dương Vương xuống biển rồi thì không giữ kinh đô nữa. Trận chương 2 (phó bản chương 2, mùa lũ), hay
  * khi tướng của chương chưa có hoặc đang nghỉ, có Sơn Tinh khi Sơn Tinh đã rước Mị Nương và không kiệt sức. Còn lại
- * có Gióng nếu Gióng đã thành tráng sĩ và không kiệt sức.
+ * có Gióng nếu Gióng đã thành tráng sĩ và không kiệt sức; màn chỉ Sơn Tinh (`sonOnly`) thì Gióng không ra thay.
+ * `pick`: người chơi chọn Gióng ở bảng xếp quân phó bản chương 2 (`stageHeroes`) thì Gióng ra trận thay Sơn Tinh.
  */
-export function heroFor(s: GameState, chapter: Chapter, stage?: number): HeroSetup | null {
+export function heroFor(s: GameState, chapter: Chapter, stage?: number, pick?: HeroKind | null): HeroSetup | null {
   for (const lead of leadsFor(s, chapter, stage)) {
     const hero = lead === 'anDuong' ? advSetup(s) : caoLoSetup(s);
     if (hero) return hero;
   }
-  if (chapter >= 2) {
-    const son = sonSetup(s);
-    if (son) return son;
-  }
-  return heroSetup(s);
+  const giong = sonOnly(stage) ? null : heroSetup(s);
+  if (pick === 'giong' && giong) return giong;
+  return (chapter >= 2 ? sonSetup(s) : null) ?? giong;
 }
 
 /**
