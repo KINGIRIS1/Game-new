@@ -215,7 +215,7 @@ describe('bản lưu chương 5', () => {
     s.raid.foe = 'han';
     const back = deserialize(serialize(s))!;
     expect(back.version).toBe(SAVE_VERSION);
-    expect(SAVE_VERSION).toBe(21);
+    expect(SAVE_VERSION).toBeGreaterThanOrEqual(21);
     expect(back.raid.han).toBe(3);
     expect(back.raid.hanHeld).toBe(2);
     expect(back.raid.foe).toBe('han');

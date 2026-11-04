@@ -1424,6 +1424,8 @@ export const HIEU_TRIEU = { count: 5, radius: 3, heal: 0.15 };
  * công, Đền; không thuộc vòng khắc chế.
  */
 export const NGHIA_BINH: FighterStats = { hp: 55, dmg: 7, range: 0.8, speed: 1.6, cooldown: 1.0 };
+/** Đền Hát Môn còn nguyên: mỗi trận giữ kinh đô có chừng này nghĩa binh từ đền ra đánh giặc. */
+export const HAT_MON_NGHIA_BINH = 6;
 /** Tô Định còn chừng này phần máu thì bỏ chạy về cuối bãi, nhanh gấp `speed` lần; chạy thoát thì tính như đã hạ. */
 export const TO_DINH_FLEE = { at: 0.3, speed: 1.5 };
 /**

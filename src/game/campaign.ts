@@ -9,11 +9,11 @@ import { retreatField, startFieldBattle, stepField, type HeroKind } from './batt
 import { finishCamp } from './benKia';
 import { CH4_LAST, LAY_TRAO_AT, LENH_BAN_AT, caoLoJoined, caoLoResting } from './caoLo';
 import { inChapter4 } from './chuong4';
-import { haiBaSetups, inChapter5 } from './chuong5';
+import { CH5_LAST, MA_VIEN_AT, haiBaSetups, inChapter5 } from './chuong5';
 import { CH3_LAST, KIM_QUY_AT, advJoined, advResting, inChapter3 } from './coLoa';
 import { armySpace, fieldCap } from './doanhTrai';
 import { REPLAY_SHARE, RESOURCE_IDS, STAGES, UNIT_TYPES, type Chapter, type Cost, type Row, type StageDef, type UnitType } from './defs';
-import { BATTLE_STEP, countOf, dienLevel, gain, troopBonus, type FailReason, type GameState, type Result, type StageResult } from './game';
+import { BATTLE_STEP, countOf, dienLevel, gain, scheduleThuyHan, troopBonus, type FailReason, type GameState, type Result, type StageResult } from './game';
 import { giongReady, giongResting } from './giong';
 import { heroesFor, inChapter2, restAfter, sonJoined, sonOnly, sonResting, winGift } from './son';
 import { challengeField, challengeOf, challengeOpen, huanTiers, winChallenge } from './thuThach';
@@ -241,6 +241,9 @@ function finishStage(state: GameState): void {
     state.adv.bien = true;
     battle.seaWin = true;
   }
+  // Chương 5: thắng màn 37 thì biết Mã Viện sang, thủy quân Hán kéo tới đánh kinh đô; giữ được Cấm Khê thì kết chương.
+  if (first && battle.wave === MA_VIEN_AT) scheduleThuyHan(state);
+  if (first && battle.wave === CH5_LAST) battle.hatWin = true;
   const result: StageResult = {
     stage: battle.wave,
     outcome,

@@ -47,7 +47,7 @@ export function haiBaSetups(s: GameState): HeroSetup[] {
   return HAI_BA_KINDS.filter((k) => !haiBaResting(s, k)).map((kind) => ({
     kind,
     bamboo: false,
-    glow: false,
+    glow: chuong5Won(s),
     non: false,
     ...(kind === 'trungNhi' ? { hieuTrieu: hieuTrieuOpen(s) } : {}),
   }));

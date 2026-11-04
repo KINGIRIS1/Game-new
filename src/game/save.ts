@@ -30,8 +30,8 @@ import { initialBenKia, isBenKiaState, noGarrison } from './benKia';
 import { initialCayDa, isCayDaState } from './cayDa';
 import { initialAdv } from './coLoa';
 import { inChapter4 } from './chuong4';
-import { inChapter5, initialHaiBa } from './chuong5';
-import { SAVE_VERSION, autoAssign, housing, initialCampaign, initialGiong, initialRaid, scheduleHan, scheduleThuyBinh, type GameState } from './game';
+import { inChapter5, initialHaiBa, maVienCame } from './chuong5';
+import { SAVE_VERSION, autoAssign, housing, initialCampaign, initialGiong, initialRaid, scheduleHan, scheduleThuyBinh, scheduleThuyHan, type GameState } from './game';
 import { GRID, baseHeights, isRiver } from './map';
 import { initialSon } from './son';
 import { initialTet } from './tet';
@@ -103,6 +103,7 @@ function migrate(raw: unknown): unknown {
   if (isObj(v) && v.version === 18) v = migrate18to19(v);
   if (isObj(v) && v.version === 19) v = migrate19to20(v);
   if (isObj(v) && v.version === 20) v = migrate20to21(v);
+  if (isObj(v) && v.version === 21) v = migrate21to22(v);
   return v;
 }
 
@@ -405,6 +406,25 @@ function migrate20to21(s: Raw): Raw {
   return s;
 }
 
+/**
+ * Phiên bản 21 → 22 (chương 5 PR 3): Mã Viện sang, thủy quân Hán và lâu thuyền đánh kinh đô. Thêm số đợt thủy quân Hán
+ * đã tới, đã giữ được, số lâu thuyền đã đánh chìm. Đã thắng màn 37 mà chưa có đợt thủy quân Hán thì xếp đợt đầu.
+ */
+function migrate21to22(s: Raw): Raw {
+  s.version = 22;
+  const raid = s.raid;
+  if (isObj(raid)) {
+    raid.thuyHan = 0;
+    raid.thuyHanHeld = 0;
+    raid.lauSunk = 0;
+    if (raid.phase === 'idle' && isNum(s.clock) && isObj(s.campaign)) {
+      const state = s as unknown as GameState;
+      if (maVienCame(state)) scheduleThuyHan(state);
+    }
+  }
+  return s;
+}
+
 const isBanh = (v: unknown, test: (x: unknown) => boolean): boolean => isObj(v) && test(v.chung) && test(v.giay);
 const isBool = (x: unknown) => typeof x === 'boolean';
 
@@ -478,8 +498,8 @@ function isGameState(v: unknown): v is GameState {
   const raid = v.raid;
   if (!isObj(raid) || !isNum(raid.wave) || !isNum(raid.won) || !(raid.nextAt === null || isNum(raid.nextAt))) return false;
   if (!['idle', 'warning', 'battle'].includes(raid.phase as string)) return false;
-  if (!['an', 'thuy', 'yeu', 'trieu', 'thuyBinh', 'han'].includes(raid.foe as string) || !isNum(raid.floods) || !isNum(raid.floodsHeld) || !isNum(raid.water)) return false;
-  if (![raid.nights, raid.nightsHeld, raid.trieu, raid.trieuHeld, raid.thuyBinh, raid.thuyBinhHeld, raid.han, raid.hanHeld].every(isNum)) return false;
+  if (!['an', 'thuy', 'yeu', 'trieu', 'thuyBinh', 'han', 'thuyHan'].includes(raid.foe as string) || !isNum(raid.floods) || !isNum(raid.floodsHeld) || !isNum(raid.water)) return false;
+  if (![raid.nights, raid.nightsHeld, raid.trieu, raid.trieuHeld, raid.thuyBinh, raid.thuyBinhHeld, raid.han, raid.hanHeld, raid.thuyHan, raid.thuyHanHeld, raid.lauSunk].every(isNum)) return false;
   const camp = v.campaign;
   if (!isObj(camp) || !isNum(camp.cleared) || !isObj(camp.rows)) return false;
   if (!UNIT_TYPES.every((k) => ROWS.includes((camp.rows as Raw)[k] as never))) return false;

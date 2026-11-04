@@ -47,6 +47,7 @@ import {
   SON,
   SWIMMERS,
   NGHIA_BINH,
+  HAT_MON_NGHIA_BINH,
   TOWER,
   TO_DINH_FLEE,
   TRAP_DMG,
@@ -61,6 +62,10 @@ import {
   floodHpScale,
   hanForces,
   hanHpScale,
+  LAU_THUYEN,
+  MA_VIEN_VOLLEY,
+  thuyHanForces,
+  thuyHanHpScale,
   raidForces,
   raidHpScale,
   thuyBinhForces,
@@ -168,10 +173,10 @@ export interface Fighter {
    */
   volley?: { next: number; land?: number; tx?: number; tz?: number };
   /**
-   * Lâu thuyền Hán: hiện ở (ox, oz) ngoài luồng sông, sau `delay` giây thì chèo tới chỗ neo (tx, tz) rồi đậu bắn lên
-   * bờ; hết giờ thì chèo về (ox, oz) rồi rút đi. `sink` là giây đã chìm (thuyền bị đánh chìm, chỉ để vẽ).
+   * Lâu thuyền Hán: hiện ở (ox, oz) giữa luồng sông, sau `delay` giây thì chèo tới chỗ neo (tx, tz) rồi đậu bắn lên
+   * bờ; hết giờ thì chèo về (ox, oz) rồi rút đi.
    */
-  ship?: { ox: number; oz: number; tx: number; tz: number; delay: number; sink?: number };
+  ship?: { ox: number; oz: number; tx: number; tz: number; delay: number };
 }
 
 export interface BattleEvent {
@@ -479,13 +484,22 @@ function addHero(battle: Battle, hero: HeroSetup, x: number, z: number, hpMul: n
 }
 
 /** Giặc đánh kinh đô thay cho giặc Ân: quân mỗi đợt và hệ số máu theo số lần đã tới. */
-type LandFoe = 'yeu' | 'trieu' | 'thuyBinh' | 'han';
+type LandFoe = 'yeu' | 'trieu' | 'thuyBinh' | 'han' | 'thuyHan';
 const LAND_FORCES: Record<LandFoe, { forces: (n: number) => Partial<Record<EnemyType, number>>; hpScale: (n: number) => number }> = {
   yeu: { forces: yeuForces, hpScale: yeuHpScale },
   trieu: { forces: trieuForces, hpScale: trieuHpScale },
   thuyBinh: { forces: thuyBinhForces, hpScale: thuyBinhHpScale },
   han: { forces: hanForces, hpScale: hanHpScale },
+  thuyHan: { forces: thuyHanForces, hpScale: thuyHanHpScale },
 };
+/** Giặc đi thuyền tới: thủy binh Triệu, thủy quân Hán (thuyền chở lính cập bờ; thủy quân Hán có thêm lâu thuyền). */
+const BY_BOAT: LandFoe[] = ['thuyBinh', 'thuyHan'];
+
+/** Chỉ quân bắn xa (cung thủ, lính nỏ, Cao Lỗ, An Dương Vương) và công trình phòng thủ bắn tới lâu thuyền. */
+const SHIP_HITTERS: FighterKind[] = ['cung', 'no', 'caoLo', 'anDuong'];
+/** `by` đánh được `o` không: lâu thuyền đậu dưới sông, quân cận chiến và tướng trên bờ không đánh tới. */
+const reaches = (by: FighterKind | undefined, o: Fighter) => o.kind !== 'lauThuyen' || by === undefined || SHIP_HITTERS.includes(by);
+
 
 export interface BattleOpts {
   hero?: HeroSetup | null;
@@ -550,8 +564,18 @@ export function startBattle(state: GameState, wave: number, side: RaidSide, opts
   }
   const forces = flood ? floodForces(flood.n) : land ? LAND_FORCES[land.foe].forces(land.n) : raidForces(wave);
   const scale = flood ? floodHpScale(flood.n) : land ? LAND_FORCES[land.foe].hpScale(land.n) : raidHpScale(wave);
-  if (land?.foe === 'thuyBinh') boardBoats(battle, forces, scale, side, lo, rand, opts.fewerBoats ?? false);
-  else for (const kind of Object.keys(forces) as EnemyType[]) {
+  if (land && BY_BOAT.includes(land.foe)) {
+    // Lâu thuyền không chở lính: thuyền chở lính rút số trước, lâu thuyền rút sau (như `plannedBoats`).
+    const { lauThuyen: ships = 0, ...crew } = forces;
+    boardBoats(battle, crew, scale, side, lo, rand, opts.fewerBoats ?? false);
+    for (const ship of shipLayout(ships, side, lo, rand)) {
+      const f = newFighter(battle, 'giac', 'lauThuyen', ship.ox, ship.oz, ENEMIES.lauThuyen.hp * scale);
+      f.ship = ship;
+      f.face = shipFace(side);
+      battle.fighters.push(f);
+      battle.total++;
+    }
+  } else for (const kind of Object.keys(forces) as EnemyType[]) {
     for (let i = 0; i < (forces[kind] ?? 0); i++) {
       // Giặc Ân ra từ bìa rừng: cạnh bắc (z nhỏ) hoặc cạnh tây (x nhỏ).
       // Thủy quái ngoi lên từ sông: phía nam (z lớn) hoặc phía đông (x lớn).
@@ -598,6 +622,17 @@ export function startBattle(state: GameState, wave: number, side: RaidSide, opts
       const n = Math.max(0, guard[kind] - posted[kind]);
       posted[kind] = Math.max(0, posted[kind] - guard[kind]);
       spawnAt(barracks, kind, n);
+    }
+  }
+  // Đền Hát Môn còn nguyên: nghĩa binh từ sân đền ra đánh giặc (ngã thì không mất lính thật).
+  const den = state.buildings.find((b) => b.type === 'denHatMon' && !b.damaged);
+  if (den) {
+    const hd = BUILDINGS.denHatMon;
+    for (let i = 0; i < HAT_MON_NGHIA_BINH; i++) {
+      const a = (i / HAT_MON_NGHIA_BINH) * Math.PI * 2;
+      const x = den.x + hd.w / 2 + Math.sin(a) * 0.8;
+      const z = den.z + hd.d + 0.4 + Math.cos(a) * 0.5;
+      battle.fighters.push(newFighter(battle, 'ta', 'nghiaBinh', x, z, NGHIA_BINH.hp));
     }
   }
   // Tướng ra trận từ sân doanh trại mình chỉ huy (không chỉ huy trại nào thì từ trại của Lạc tướng; Hai Bà thì từ
@@ -668,9 +703,107 @@ export function boatLayout(count: number, side: RaidSide, lo: number, rand: () =
  * Chỗ các thuyền thủy binh đợt `wave` (đợt thủy binh thứ `n`) tới từ phía `side` sẽ hiện ra khi trận mở, y như
  * `startBattle` đặt: cảnh vẽ đoàn thuyền từ biển vào cửa sông tới đúng chỗ ấy trong lúc trinh sát báo.
  */
-export function plannedBoats(state: GameState, wave: number, side: RaidSide, n: number, fewer: boolean): { x: number; z: number }[] {
-  const count = boatCount(forceSize(thuyBinhForces(n)), fewer);
-  return boatLayout(count, side, raidSpawnBand(state).lo, rng(battleSeed(wave, side))).map((b) => ({ x: b.x, z: b.z }));
+export function plannedBoats(
+  state: GameState,
+  wave: number,
+  side: RaidSide,
+  foe: 'thuyBinh' | 'thuyHan',
+  n: number,
+  fewer: boolean,
+): { x: number; z: number; big?: boolean }[] {
+  const { lauThuyen: ships = 0, ...crew } = LAND_FORCES[foe].forces(n);
+  const lo = raidSpawnBand(state).lo;
+  const rand = rng(battleSeed(wave, side));
+  const boats = boatLayout(boatCount(forceSize(crew), fewer), side, lo, rand).map((b) => ({ x: b.x, z: b.z }));
+  return [...boats, ...shipLayout(ships, side, lo, rand).map((s) => ({ x: s.ox, z: s.oz, big: true }))];
+}
+
+/**
+ * Chỗ `count` lâu thuyền hiện ra (giữa luồng sông, xa bờ hơn thuyền chở lính), chỗ đậu (giữa ba ô sông sát bờ,
+ * `LAU_THUYEN.moor`) và giờ chèo. Các chiếc cách nhau `LAU_THUYEN.spacing` ô dọc bờ, quanh giữa đoạn thuyền chở lính
+ * cập bờ. `rand` là dòng số của trận sau khi đã rút số cho thuyền chở lính.
+ */
+function shipLayout(count: number, side: RaidSide, lo: number, rand: () => number): NonNullable<Fighter['ship']>[] {
+  const alongX = side === 'nam' || side === 'namXa';
+  const farSide = farSideBank(side) !== null;
+  const from = farSide ? FOREST_BAND : lo;
+  const mid = (from + RIVER_START - 1) / 2;
+  const out = farSide ? RIVER_DIVE - 1 : RIVER_DIVE + 1;
+  const moor = farSide ? RIVER_END - LAU_THUYEN.moor : RIVER_START + LAU_THUYEN.moor;
+  const ships: NonNullable<Fighter['ship']>[] = [];
+  for (let i = 0; i < count; i++) {
+    const along = mid + (i - (count - 1) / 2) * LAU_THUYEN.spacing + (rand() - 0.5);
+    ships.push({
+      ox: alongX ? along : out,
+      oz: alongX ? out : along,
+      tx: alongX ? along : moor,
+      tz: alongX ? moor : along,
+      delay: 0.5 + rand() * 1.5,
+    });
+  }
+  return ships;
+}
+
+/** Lâu thuyền quay mũi xuôi dòng (dọc bờ), mạn hướng lên bờ. */
+const shipFace = (side: RaidSide) => (side === 'nam' || side === 'namXa' ? Math.PI / 2 : 0);
+
+/**
+ * Lâu thuyền: chèo từ giữa sông tới chỗ đậu, đậu rồi cứ `cooldown` giây bắn một loạt `LAU_THUYEN.shots` mũi nỏ vào
+ * công trình hay lính ta gần nhất trong tầm (mỗi mũi một mục tiêu, ít mục tiêu thì bắn dồn). Hết giờ (bỏ chạy) thì
+ * chèo về chỗ hiện ra rồi rút đi.
+ */
+function stepShip(state: GameState, battle: Battle, f: Fighter, dt: number): void {
+  const ship = f.ship!;
+  const st = statsOf(f.kind);
+  const speed = BOAT.speed * dt;
+  const row = (tx: number, tz: number) => {
+    const dx = tx - f.x;
+    const dz = tz - f.z;
+    const d = Math.hypot(dx, dz);
+    if (d <= speed) {
+      f.x = tx;
+      f.z = tz;
+      return true;
+    }
+    f.x += (dx / d) * speed;
+    f.z += (dz / d) * speed;
+    return false;
+  };
+  if (f.state === 'flee') {
+    if (row(ship.ox, ship.oz)) f.state = 'gone';
+    return;
+  }
+  if (battle.t < ship.delay) return;
+  if (f.x !== ship.tx || f.z !== ship.tz) {
+    f.state = 'move';
+    row(ship.tx, ship.tz);
+    return;
+  }
+  f.state = 'fight';
+  if (f.cd > 0) return;
+  const reach = st.range * geoOf(battle);
+  const marks: { d: number; x: number; z: number; hit: () => void }[] = [];
+  for (const o of battle.fighters) {
+    if (o.side !== 'ta' || !isAlive(o)) continue;
+    const d = Math.hypot(o.x - f.x, o.z - f.z);
+    if (d <= reach) marks.push({ d, x: o.x, z: o.z, hit: () => damageFighter(battle, { kind: f.kind, dmg: st.dmg }, o) });
+  }
+  for (const b of state.buildings) {
+    if (!targetableIn(battle, b)) continue;
+    const d = rectDist(f.x, f.z, b);
+    if (d > reach) continue;
+    const def = BUILDINGS[b.type];
+    marks.push({ d, x: b.x + def.w / 2, z: b.z + def.d / 2, hit: () => damageBuilding(state, battle, f, b, st.dmg) });
+  }
+  if (!marks.length) return;
+  marks.sort((p, q) => p.d - q.d);
+  for (let i = 0; i < LAU_THUYEN.shots; i++) {
+    const m = marks[i % Math.min(marks.length, LAU_THUYEN.shots)];
+    emit(battle, { kind: 'shot', x: f.x, z: f.z, tx: m.x, tz: m.z, by: 'noHan' });
+    m.hit();
+  }
+  f.cd = st.cooldown;
+  f.swing = 0.3;
 }
 
 /** Tổng số lính của một đợt (mọi loại cộng lại). */
@@ -1030,7 +1163,7 @@ function nearestEnemyOf(battle: Battle, f: Fighter, within = Infinity): Fighter 
   let best: Fighter | null = null;
   let bestD = within;
   for (const o of battle.fighters) {
-    if (o.side === f.side || (o.state !== 'move' && o.state !== 'fight' && o.state !== 'flee')) continue;
+    if (o.side === f.side || (o.state !== 'move' && o.state !== 'fight' && o.state !== 'flee') || !reaches(f.kind, o)) continue;
     const d = Math.hypot(o.x - f.x, o.z - f.z);
     if (d < bestD) {
       bestD = d;
@@ -1082,6 +1215,7 @@ function moveToward(f: Fighter, tx: number, tz: number, dt: number, mult = 1, ge
 }
 
 function damageFighter(battle: Battle, attacker: { kind?: FighterKind; dmg: number }, target: Fighter): void {
+  if (!reaches(attacker.kind, target)) return;
   const bonus = attacker.kind && statsOf(attacker.kind).strongVs?.includes(target.kind as UnitType | EnemyType) ? 2 : 1;
   // Rùa Vàng che chở: quân ta chỉ chịu một phần sát thương. Thử thách Giặc dữ: giặc đánh đau hơn.
   const shield = target.side === 'ta' && battle.shield > 0 ? KIM_QUY.reduce : 1;
@@ -1101,7 +1235,11 @@ function damageFighter(battle: Battle, attacker: { kind?: FighterKind; dmg: numb
   if (target.hp <= 0 && target.state !== 'dead') {
     target.state = 'dead';
     target.hp = 0;
-    emit(battle, { kind: 'die', x: target.x, z: target.z });
+    if (target.ship) {
+      // Lâu thuyền bị đánh chìm: nghiêng, chìm dần (phần vẽ lo).
+      battle.sunk = (battle.sunk ?? 0) + 1;
+      emit(battle, { kind: 'sink', x: target.x, z: target.z });
+    } else emit(battle, { kind: 'die', x: target.x, z: target.z });
     if (target.side === 'giac') battle.killed++;
     else if (target.kind in battle.lost) battle.lost[target.kind as UnitType]++;
   }
@@ -1117,7 +1255,7 @@ function strike(battle: Battle, f: Fighter, foe: Fighter): void {
   if (isHero(f.kind)) {
     // Đòn của tướng quét cả giặc đứng quanh.
     for (const o of battle.fighters) {
-      if (o === foe || o.side === f.side || !isAlive(o)) continue;
+      if (o === foe || o.side === f.side || !isAlive(o) || !reaches(f.kind, o)) continue;
       if (Math.hypot(o.x - foe.x, o.z - foe.z) <= HERO_CLEAVE.radius * geoOf(battle)) damageFighter(battle, { dmg: dmg * HERO_CLEAVE.share }, o);
     }
   }
@@ -1137,7 +1275,8 @@ function damageBuilding(state: GameState, battle: Battle, attacker: Fighter, b: 
   const def = BUILDINGS[b.type];
   emit(battle, { kind: 'wreck', x: b.x + def.w / 2, z: b.z + def.d / 2 });
   const share = LOOT_FRACTION[b.type];
-  if (share && attacker.side === 'giac') {
+  // Lâu thuyền bắn từ dưới sông: phá được mà không cướp được của.
+  if (share && attacker.side === 'giac' && !attacker.ship) {
     for (const r of RESOURCE_IDS) {
       const take = Math.floor(state.resources[r] * share);
       state.resources[r] -= take;
@@ -1425,7 +1564,8 @@ export function stepBattle(state: GameState, battle: Battle, dt: number): boolea
     if (f.state === 'dead' || f.state === 'gone' || f.state === 'aboard') continue;
     f.cd -= dt;
     f.swing = Math.max(0, f.swing - dt);
-    if (f.side === 'giac') stepEnemy(state, battle, f, dt);
+    if (f.ship) stepShip(state, battle, f, dt);
+    else if (f.side === 'giac') stepEnemy(state, battle, f, dt);
     else stepChase(battle, f, dt);
   }
   stepDefenses(state, battle, dt);
@@ -1497,6 +1637,7 @@ export function stepField(battle: Battle, dt: number): boolean {
     if (f.slow) f.slow = Math.max(0, f.slow - dt);
     if (f.kind === 'thuyTinh') stepThuyTinh(battle, f, dt);
     if (f.kind === 'toDinh' && stepToDinh(battle, f, dt)) continue;
+    if (f.kind === 'maVien') stepMaVien(battle, f, dt);
     stepChase(battle, f, dt);
   }
   separate(battle);
@@ -1505,7 +1646,7 @@ export function stepField(battle: Battle, dt: number): boolean {
   // Màn cầm cự: giữ đủ thời gian thì thắng, không cần diệt hết giặc; diệt hết mọi đợt sớm hơn cũng thắng.
   else if (battle.holdS !== undefined && battle.t >= battle.holdS) battle.outcome = 'win';
   else if (enemiesLeft(battle) === 0 && !pending) battle.outcome = 'win';
-  else if (battle.t > FIELD.maxS) battle.outcome = 'lose';
+  else if (battle.holdS === undefined && battle.t > FIELD.maxS) battle.outcome = 'lose';
   return battle.outcome !== null;
 }
 
@@ -1534,6 +1675,39 @@ function stepToDinh(battle: Battle, f: Fighter, dt: number): boolean {
     emit(battle, { kind: 'escape', x: f.x, z: f.z });
   }
   return true;
+}
+
+/**
+ * Mã Viện ra Lệnh nỏ: lần đầu sau `first` giây, rồi cứ `every` giây, một loạt tên nỏ bay tới chỗ quân ta đứng đông
+ * nhất, `delay` giây sau thì rơi xuống: mỗi người ta trong `radius` ô chịu `dmg` sát thương.
+ */
+function stepMaVien(battle: Battle, f: Fighter, dt: number): void {
+  const v = (f.volley ??= { next: MA_VIEN_VOLLEY.first });
+  const g = geoOf(battle);
+  if (v.land !== undefined) {
+    v.land -= dt;
+    if (v.land <= 0) {
+      const tx = v.tx!;
+      const tz = v.tz!;
+      for (const o of battle.fighters) {
+        if (o.side !== 'ta' || !isAlive(o)) continue;
+        if (Math.hypot(o.x - tx, o.z - tz) <= MA_VIEN_VOLLEY.radius * g) damageFighter(battle, { kind: f.kind, dmg: MA_VIEN_VOLLEY.dmg }, o);
+      }
+      emit(battle, { kind: 'barrageHit', x: tx, z: tz });
+      v.land = undefined;
+    }
+  }
+  v.next -= dt;
+  if (v.next > 0 || (f.stun ?? 0) > 0) return;
+  const at = densest(battle, MA_VIEN_VOLLEY.radius * g, 'ta');
+  if (!at) return;
+  v.next = MA_VIEN_VOLLEY.every;
+  v.land = MA_VIEN_VOLLEY.delay;
+  v.tx = at.x;
+  v.tz = at.z;
+  f.face = Math.atan2(at.x - f.x, at.z - f.z);
+  f.swing = 0.3;
+  emit(battle, { kind: 'barrage', x: f.x, z: f.z, tx: at.x, tz: at.z });
 }
 
 /** Thủy Tinh làm phép: hô mưa gọi gió (sóng quét đẩy lùi quân ta) và gọi thủy quái lên đánh tiếp. */
@@ -1591,14 +1765,17 @@ export function heroOf(battle: Battle): Fighter | undefined {
   return battle.fighters.find((f) => isHero(f.kind) && isAlive(f));
 }
 
-/** Chỗ giặc đứng đông nhất: tên giặc có nhiều đồng bọn quanh mình trong bán kính `r` nhất. */
-function densest(battle: Battle, r: number): Fighter | null {
+/**
+ * Chỗ đứng đông nhất của phe `side` (mặc định là giặc): người có nhiều đồng đội quanh mình trong bán kính `r` nhất.
+ * Lâu thuyền dưới sông không tính.
+ */
+function densest(battle: Battle, r: number, side: Side = 'giac'): Fighter | null {
   let best: Fighter | null = null;
   let bestN = -1;
   for (const f of battle.fighters) {
-    if (f.side !== 'giac' || !isAlive(f)) continue;
+    if (f.side !== side || !isAlive(f) || f.kind === 'lauThuyen') continue;
     let n = 0;
-    for (const o of battle.fighters) if (o.side === 'giac' && isAlive(o) && Math.hypot(o.x - f.x, o.z - f.z) <= r) n++;
+    for (const o of battle.fighters) if (o.side === side && isAlive(o) && Math.hypot(o.x - f.x, o.z - f.z) <= r) n++;
     if (n > bestN) {
       bestN = n;
       best = f;
@@ -1619,7 +1796,8 @@ export function skillOwner(battle: Battle, skill: SkillId): Fighter | undefined 
 export function skillReady(battle: Battle, skill: SkillId): boolean {
   if (battle.outcome || !battle.skills.includes(skill) || (battle.skillCd[skill] ?? 0) > 0) return false;
   if (skill === 'trongTran') return alliesLeft(battle) > 0;
-  return !!skillOwner(battle, skill) && enemiesLeft(battle) > 0;
+  // Kỹ năng nhắm giặc trên bờ: chỉ còn lâu thuyền dưới sông thì chưa bấm được.
+  return !!skillOwner(battle, skill) && battle.fighters.some((f) => f.side === 'giac' && isAlive(f) && f.kind !== 'lauThuyen');
 }
 
 /** Bấm kỹ năng. Trả về false khi kỹ năng chưa hồi, không có trong trận này, hoặc trận đã xong. */
@@ -1659,7 +1837,7 @@ export function useSkill(battle: Battle, skill: SkillId): boolean {
   } else if (skill === 'nhoTre') {
     // Nhổ tre quật giặc: đòn diện rộng quanh Gióng, giặc bị hất lùi ra.
     for (const o of battle.fighters) {
-      if (o.side === 'ta' || !isAlive(o)) continue;
+      if (o.side === 'ta' || !isAlive(o) || !reaches('giong', o)) continue;
       const d = Math.hypot(o.x - hero.x, o.z - hero.z);
       if (d > SMASH.radius * g) continue;
       damageFighter(battle, { kind: 'giong', dmg: SMASH.dmg * scale }, o);
@@ -1726,7 +1904,7 @@ export function useSkill(battle: Battle, skill: SkillId): boolean {
     const dz = (at.z - hero.z) / d;
     const len = VOI_XUNG.length * g;
     for (const o of battle.fighters) {
-      if (o.side === 'ta' || !isAlive(o)) continue;
+      if (o.side === 'ta' || !isAlive(o) || !reaches('trungTrac', o)) continue;
       const along = (o.x - hero.x) * dx + (o.z - hero.z) * dz;
       const across = (o.x - hero.x) * dz - (o.z - hero.z) * dx;
       if (along < -0.3 || along > len || Math.abs(across) > (VOI_XUNG.width * g) / 2) continue;
@@ -1770,7 +1948,7 @@ export function useSkill(battle: Battle, skill: SkillId): boolean {
   } else {
     // Dời non: đá mọc lên dưới chân mọi kẻ địch quanh Sơn Tinh, giữ chân chúng vài giây.
     for (const o of battle.fighters) {
-      if (o.side === 'ta' || !isAlive(o)) continue;
+      if (o.side === 'ta' || !isAlive(o) || !reaches('sonTinh', o)) continue;
       if (Math.hypot(o.x - hero.x, o.z - hero.z) > ROCKS.radius * g) continue;
       damageFighter(battle, { kind: 'sonTinh', dmg: ROCKS.dmg * scale }, o);
       if (isAlive(o)) o.stun = ROCKS.stun;
