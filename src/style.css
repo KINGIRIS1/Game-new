@@ -1575,10 +1575,23 @@ textarea {
   flex-basis: 100%;
 }
 
-.camp-tabs .btn {
-  padding: 4px 10px;
-  min-height: 30px;
+.camp-tabs {
+  align-items: center;
+}
+
+.camp-tabs .lb {
   font-size: 13px;
+  font-weight: 700;
+  color: var(--ink-soft);
+  margin-right: 2px;
+}
+
+/* Mỗi chương một nút số tròn, đủ năm chương vẫn vừa khổ hẹp. */
+.camp-tabs .btn {
+  padding: 0;
+  min-width: 38px;
+  min-height: 34px;
+  font-size: 15px;
 }
 
 /* Chip huân công trên đầu bản đồ phó bản: chạm để mở bảng Huân công. */
@@ -1902,6 +1915,56 @@ textarea {
   font-style: normal;
   font-size: 15px;
   transform: translateX(-50%);
+}
+
+/* Hai Bà cùng ra trận: mỗi bà một thanh máu. */
+.hero-hp {
+  display: flex;
+  gap: 10px;
+}
+
+.hero-hp[hidden] {
+  display: none;
+}
+
+.hero-hp .hh {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+  font-size: 12px;
+}
+
+.hero-hp .hh b {
+  color: var(--ink);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.hero-hp .hh em {
+  font-style: normal;
+}
+
+.hero-hp .hh i {
+  flex: 1;
+  height: 7px;
+  min-width: 30px;
+  border-radius: 4px;
+  background: var(--paper-2);
+  border: 1px solid var(--bronze);
+  overflow: hidden;
+}
+
+.hero-hp .hh u {
+  display: block;
+  height: 100%;
+  background: linear-gradient(90deg, #a8322a, #d8643c);
+  transition: width 0.2s;
+}
+
+.hero-hp .hh.down {
+  opacity: 0.55;
 }
 
 #hud.in-field .fieldbar {

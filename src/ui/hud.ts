@@ -1,7 +1,7 @@
 // Giao diện HTML đặt đè lên cảnh 3D: thanh tài nguyên, nhiệm vụ, bảng xây dựng, bảng công trình, cài đặt,
 // bản đồ phó bản và các nút trong trận.
 
-import { enemiesLeft, alliesLeft, holdProgress, skillReady, wavesArrived, type Battle, type HeroKind } from '../game/battle';
+import { enemiesLeft, alliesLeft, heroSetups, holdProgress, skillReady, wavesArrived, type Battle, type HeroKind } from '../game/battle';
 import { advJoined, advLook, advResting, inChapter3, ruaVangCame, wallRings } from '../game/coLoa';
 import {
   BUILDINGS,
@@ -104,6 +104,7 @@ import {
 import { chapterStages, stageHeroCheck } from '../game/campaign';
 import { caoLoJoined, caoLoResting } from '../game/caoLo';
 import { inChapter4, mergeCost, mergeable, mergedLevel } from '../game/chuong4';
+import { HAI_BA_KINDS, haiBaJoined, haiBaResting } from '../game/chuong5';
 import { inChapter5 } from '../game/chuong5';
 import { giongAppeared, giongLook, giongReady, giongResting } from '../game/giong';
 import { KHOANH_N } from '../game/khoanh';
@@ -170,7 +171,7 @@ function chapterNow(state: GameState): Chapter {
 
 /** Chương mới nhất có bản đồ phó bản: chương 5 chưa có màn nên vẫn mở bản đồ chương 4. */
 function mapChapterNow(state: GameState): MapChapter {
-  return Math.min(chapterNow(state), 4) as MapChapter;
+  return chapterNow(state);
 }
 
 export type HudAction =
@@ -361,7 +362,7 @@ export class Hud {
       <header class="topbar"></header>
       <div class="top-area">
         <div class="res-drop" hidden></div>
-        <div class="field-top"><b></b><span></span><div class="hold-bar" hidden><i></i><em>🐎</em></div></div>
+        <div class="field-top"><b></b><span></span><div class="hold-bar" hidden><i></i><em>🐎</em></div><div class="hero-hp" hidden></div></div>
       </div>
       <div class="hint" hidden></div>
       <div class="dock-pop"></div>
@@ -753,6 +754,10 @@ export class Hud {
     }
     // Cao Lỗ cầm quân từ màn 25.
     if (caoLoJoined(state)) list.push({ act: 'openCaoLo', icon: '🎯', name: vi.ui.caoLo, mark: caoLoResting(state) ? '💤' : '⚔️' });
+    // Hai Bà Trưng từ chương 5: chưa có bảng riêng, chỉ báo bà nào sẵn sàng, bà nào đang nghỉ.
+    if (haiBaJoined(state)) {
+      for (const k of HAI_BA_KINDS) list.push({ act: '', icon: vi.ui.tuongIcons[k], name: vi.ui.heroNames[k], mark: haiBaResting(state, k) ? '💤' : '⚔️' });
+    }
     return list;
   }
 
@@ -796,7 +801,10 @@ export class Hud {
       }
     } else if (this.pop === 'heroes') {
       pop = `<div class="pop-card"><h4>🎖️ ${vi.ui.tabHeroes}</h4>${heroes
-        .map((h) => `<button class="hero-row" data-act="${h.act}"><span class="ic">${h.icon}</span><b>${h.name}</b><span class="mark">${h.mark}</span></button>`)
+        .map((h) => {
+          const inner = `<span class="ic">${h.icon}</span><b>${h.name}</b><span class="mark">${h.mark}</span>`;
+          return h.act ? `<button class="hero-row" data-act="${h.act}">${inner}</button>` : `<div class="hero-row">${inner}</div>`;
+        })
         .join('')}</div>`;
     }
     if (pop !== this.popHtml) {
@@ -1434,8 +1442,8 @@ export class Hud {
       sonTinh: () => status(sonResting(state), state.son.restUntil, state.son.won),
       anDuong: () => `${status(advResting(state), state.adv.restUntil, state.adv.bien)} · ${state.adv.bien ? vi.ui.advAtSea : vi.ui.advAtDien}`,
       caoLo: () => `${status(caoLoResting(state), state.caoLo.restUntil)} · ${vi.ui.caoLoAtDien}`,
-      trungTrac: () => vi.ui.heroReady,
-      trungNhi: () => vi.ui.heroReady,
+      trungTrac: () => `${status(haiBaResting(state, 'trungTrac'), state.haiBa.trungTrac)} · ${vi.ui.haiBaDesc}`,
+      trungNhi: () => `${status(haiBaResting(state, 'trungNhi'), state.haiBa.trungNhi)} · ${vi.ui.haiBaDesc}`,
     };
     const open: Partial<Record<TuongId, string>> = { giong: 'openGiong', sonTinh: 'openSon', anDuong: 'openAdv', caoLo: 'openCaoLo' };
     const busy = state.raid.phase === 'battle';
@@ -1627,7 +1635,7 @@ export class Hud {
     this.closeSheet();
     // Mở ở chương có màn kế tiếp chưa thắng, hay chương mới nhất nếu đã thắng hết.
     const now = mapChapterNow(state);
-    const chapter = ([1, 2, 3] as const).find((c) => c <= now && this.nextStage(state, c) !== null) ?? now;
+    const chapter = ([1, 2, 3, 4] as const).find((c) => c <= now && this.nextStage(state, c) !== null) ?? now;
     this.camp = { chapter, stage: this.nextStage(state, chapter), step: 'stage', pick: defaultPick(state) };
     this.campaignEl.hidden = false;
     this.pop = null;
@@ -1686,19 +1694,19 @@ export class Hud {
     const camp = this.camp;
     if (!camp) return;
     for (const k of UNIT_TYPES) camp.pick.army[k] = Math.min(camp.pick.army[k], state.troops[k]);
-    const hint = [vi.ui.campaignHint, vi.ui.campaignHint, vi.ui.campaignHint2, vi.ui.campaignHint3, vi.ui.campaignHint4][camp.chapter];
+    const hint = [vi.ui.campaignHint, vi.ui.campaignHint, vi.ui.campaignHint2, vi.ui.campaignHint3, vi.ui.campaignHint4, vi.ui.campaignHint5][camp.chapter];
     let panel = `<p class="muted">${hint}</p>`;
     if (camp.step === 'huan') panel = huanHtml(state);
     else if (camp.stage) panel = camp.step === 'army' ? armyHtml(state, camp.pick, camp.stage, camp.pick.challenge) : stageHtml(state, camp.stage);
     const now = mapChapterNow(state);
     const tabs =
       now > 1
-        ? `<div class="camp-tabs">${([1, 2, 3, 4] as const)
+        ? `<div class="camp-tabs"><span class="lb">${vi.ui.chapterTabs}</span>${([1, 2, 3, 4, 5] as const)
             .filter((c) => c <= now)
-            .map((c) => `<button class="btn small ${c === camp.chapter ? 'bronze' : 'ghost'}" data-act="campChapter" data-id="${c}">${vi.ui.chapterTab(c)}</button>`)
+            .map((c) => `<button class="btn small ${c === camp.chapter ? 'bronze' : 'ghost'}" data-act="campChapter" data-id="${c}" aria-label="${vi.ui.chapterTab(c)}">${c}</button>`)
             .join('')}</div>`
         : '';
-    const title = [vi.ui.campaignTitle, vi.ui.campaignTitle, vi.ui.campaignTitle2, vi.ui.campaignTitle3, vi.ui.campaignTitle4][camp.chapter];
+    const title = [vi.ui.campaignTitle, vi.ui.campaignTitle, vi.ui.campaignTitle2, vi.ui.campaignTitle3, vi.ui.campaignTitle4, vi.ui.campaignTitle5][camp.chapter];
     // Chip huân công: có từ khi thắng màn đầu tiên (mở thử thách đầu tiên).
     const huan = state.campaign.cleared > 0
       ? `<button class="huan-chip ${camp.step === 'huan' ? 'on' : ''}" data-act="openHuan" aria-label="${vi.ui.huanTitle}">${vi.ui.huanChip(state.thuThach.huan)}</button>`
@@ -1732,6 +1740,26 @@ export class Hud {
       const k = `${Math.round(holdProgress(b) * 1000) / 10}%`;
       bar.querySelector<HTMLElement>('i')!.style.width = k;
       bar.querySelector<HTMLElement>('em')!.style.left = k;
+    }
+    // Hai tướng cùng ra trận (Hai Bà): mỗi bà một thanh máu, bà nào kiệt sức thì thanh mờ, có dấu nghỉ.
+    const heroHp = this.fieldTop.querySelector<HTMLElement>('.hero-hp')!;
+    const setups = heroSetups(b);
+    heroHp.hidden = setups.length < 2;
+    if (setups.length >= 2) {
+      const hpKey = `${b.id}:${setups.map((h) => h.kind).join(',')}`;
+      if (heroHp.dataset.key !== hpKey) {
+        heroHp.dataset.key = hpKey;
+        heroHp.innerHTML = setups
+          .map((h) => `<span class="hh" data-hero="${h.kind}"><em>${vi.ui.tuongIcons[h.kind]}</em><b>${vi.ui.heroNames[h.kind]}</b><i><u></u></i></span>`)
+          .join('');
+      }
+      for (const h of setups) {
+        const f = b.fighters.find((x) => x.kind === h.kind);
+        const el = heroHp.querySelector<HTMLElement>(`[data-hero="${h.kind}"]`)!;
+        el.classList.toggle('down', h.down);
+        el.querySelector<HTMLElement>('u')!.style.width = `${f && !h.down ? Math.round((100 * f.hp) / f.maxHp) : 0}%`;
+        el.querySelector('em')!.textContent = h.down ? '💤' : vi.ui.tuongIcons[h.kind];
+      }
     }
     const box = this.fieldBar.querySelector<HTMLElement>('.skills')!;
     const key = `${b.id}:${b.skills.join(',')}`;

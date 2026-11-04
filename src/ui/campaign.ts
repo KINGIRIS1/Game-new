@@ -5,13 +5,14 @@
 
 import { heroSkills, type HeroKind, type HeroSetup } from '../game/battle';
 import { CAMPS, campHero, campTier } from '../game/benKia';
-import { CH2_LAST, canStartStage, chapterStages, stageDef, stageHero, stageHeroCheck, stageHeroes, stageOpen, stageReward, unitAllowed } from '../game/campaign';
+import { CH2_LAST, canStartStage, chapterStages, stageDef, stageHero, stageHeroCheck, stageHeroList, stageHeroes, stageOpen, stageReward, unitAllowed } from '../game/campaign';
+import { HAI_BA_KINDS, haiBaJoined, haiBaResting, isHaiBa } from '../game/chuong5';
 import { CH4_LAST } from '../game/caoLo';
 import { CH3_LAST } from '../game/coLoa';
 import { BOSSES, CHALLENGES, HUAN_BRANCHES, HUAN_COST, ROWS, UNITS, UNIT_TYPES, stageEnemies, type Chapter, type EnemyType, type HuanBranch, type Row, type UnitType } from '../game/defs';
 import { armySpace, fieldCap, fitArmy } from '../game/doanhTrai';
 import type { GameState, StageResult } from '../game/game';
-import { giftOfStage, heroFor, restingHero } from '../game/son';
+import { giftOfStage, heroFor, heroesFor, restingHero } from '../game/son';
 import { challengeEnemies, challengeOf, challengeOpen, challengeWon, huanNextCost, huanReward } from '../game/thuThach';
 import { vi } from '../text/vi';
 import { costHtml, esc } from './format';
@@ -29,8 +30,8 @@ export interface ArmyPick {
   don?: number;
 }
 
-/** Chương đã có bản đồ phó bản (chương 5 chưa có màn nào). */
-export type MapChapter = Exclude<Chapter, 5>;
+/** Chương có bản đồ phó bản: cả năm chương. */
+export type MapChapter = Chapter;
 
 /**
  * Vị trí các màn trên bản đồ (hệ tọa độ 100 × 160), đi từ Phong Châu ở dưới lên núi ở trên.
@@ -79,8 +80,22 @@ const NODES: Record<MapChapter, [number, number][]> = {
     [36, 58],
     [56, 22],
   ],
+  // Chương 5: từ Mê Linh xuống cửa sông Hát tế cờ (màn 33, 34), hạ thành Cổ Loa, thành Luy Lâu (35, 36). Màn 37–40
+  // (bờ biển Hợp Phố, đường vào Lãng Bạc, hồ Lãng Bạc, núi rừng Cấm Khê) để chỗ sẵn cho phần sau.
+  5: [
+    [34, 136],
+    [14, 110],
+    [50, 100],
+    [82, 86],
+    [86, 52],
+    [62, 60],
+    [42, 44],
+    [22, 22],
+  ],
 };
 const START: [number, number] = [12, 154];
+/** Tên đất ở chỗ xuất quân: kinh đô Phong Châu, chương 5 là đất Mê Linh. */
+const startName = (chapter: MapChapter) => (chapter === 5 ? 'Mê Linh' : 'Phong Châu');
 
 /** Chương 4: lông ngỗng trắng Mỵ Châu rắc dọc đường chạy về phương Nam, từ thành Cổ Loa ra biển. */
 const FEATHERS = [
@@ -133,6 +148,21 @@ const SCENERY: Record<MapChapter, string> = {
     <text class="label" x="30" y="111">Thành Cổ Loa</text>
     ${FEATHERS}
     <text class="label" x="80" y="60">Cửa sông</text>`,
+  5: `<path class="river" d="M6 160 C 4 140, 14 126, 8 112 S 2 84, 12 70 S 26 50, 20 36"/>
+    <text class="label" x="25" y="98">Sông Hát</text>
+    <path class="river" d="M-2 124 C 24 120, 44 130, 66 118 S 92 110, 104 102"/>
+    <ellipse class="citadel" cx="50" cy="100" rx="14" ry="7"/>
+    <ellipse class="citadel" cx="50" cy="100" rx="9" ry="4.5"/>
+    <text class="label" x="50" y="113">Cổ Loa</text>
+    <rect class="citadel" x="73" y="79" width="18" height="14" rx="1.5"/>
+    <text class="label" x="82" y="100">Luy Lâu</text>
+    <path class="flood" d="M78 0 L104 0 L104 44 C 96 40, 90 30, 84 24 S 74 8, 78 0 Z"/>
+    <text class="label" x="92" y="40">Hợp Phố</text>
+    <ellipse class="flood" cx="44" cy="44" rx="12" ry="7"/>
+    <text class="label" x="44" y="56">Lãng Bạc</text>
+    <path class="mtn far" d="M2 26 L12 10 L22 26 Z M26 22 L34 8 L42 22 Z"/>
+    <path class="mtn" d="M8 30 L20 12 L32 30 Z"/>
+    <text class="label" x="22" y="36">Cấm Khê</text>`,
 };
 
 const allEnemies = (n: number) => {
@@ -149,8 +179,9 @@ function bossIcon(n: number): string {
 }
 
 export function mapHtml(state: GameState, selected: number | null, chapter: MapChapter = 1): string {
-  const points = NODES[chapter];
   const stages = chapterStages(chapter);
+  // Chương chưa làm đủ màn (chương 5) thì chỉ vẽ các màn đã có.
+  const points = NODES[chapter].slice(0, stages.length);
   const road = [START, ...points].map(([x, y], i) => `${i ? 'L' : 'M'}${x} ${y}`).join(' ');
   const nodes = points.map(([x, y], i) => {
     const n = stages[i];
@@ -172,12 +203,12 @@ export function mapHtml(state: GameState, selected: number | null, chapter: MapC
       ${star}
     </g>`;
   }).join('');
-  const title = [vi.ui.campaignTitle, vi.ui.campaignTitle, vi.ui.campaignTitle2, vi.ui.campaignTitle3, vi.ui.campaignTitle4][chapter];
+  const title = [vi.ui.campaignTitle, vi.ui.campaignTitle, vi.ui.campaignTitle2, vi.ui.campaignTitle3, vi.ui.campaignTitle4, vi.ui.campaignTitle5][chapter];
   return `<svg class="map" viewBox="0 0 100 160" preserveAspectRatio="xMidYMid meet" role="img" aria-label="${title}">
     ${SCENERY[chapter]}
     <path class="road" d="${road}"/>
     <text class="start" x="${START[0]}" y="${START[1] + 1}">🏯</text>
-    <text class="label" x="${START[0] + 19}" y="${START[1] + 2}">Phong Châu</text>
+    <text class="label" x="${START[0] + 19}" y="${START[1] + 2}">${startName(chapter)}</text>
     ${nodes}
   </svg>`;
 }
@@ -200,9 +231,15 @@ export function stageBlocker(state: GameState, n: number, challenge = false): st
   return vi.reasons[check.reason];
 }
 
-/** Dòng báo tướng nào cùng ra trận. */
-export function heroNote(hero: HeroSetup | null): string {
+/** Dòng báo tướng nào cùng ra trận (chương 5: Hai Bà, hay một bà khi bà kia đang nghỉ). */
+export function heroNote(heroes: HeroSetup | HeroSetup[] | null): string {
+  const list = Array.isArray(heroes) ? heroes : heroes ? [heroes] : [];
+  const hero = list[0];
   if (!hero) return '';
+  if (isHaiBa(hero.kind)) {
+    if (list.length > 1) return `<p class="hero-note">🐘 ${vi.ui.haiBaJoin}</p>`;
+    return `<p class="hero-note">${vi.ui.tuongIcons[hero.kind]} ${vi.ui.haiBaOne(vi.ui.heroNames[hero.kind])}</p>`;
+  }
   if (hero.kind === 'caoLo') return `<p class="hero-note">🎯 ${vi.ui.caoLoJoins}</p>`;
   if (hero.kind === 'anDuong') return `<p class="hero-note">🏹 ${hero.glow ? vi.ui.advHienLinhJoins : vi.ui.advJoins}</p>`;
   if (hero.kind === 'sonTinh') return `<p class="hero-note">⛰️ ${hero.glow ? vi.ui.sonHienLinhJoins : vi.ui.sonJoins}</p>`;
@@ -224,7 +261,18 @@ export function battleWarnings(state: GameState, stage: number, challenge = fals
 /** Lời báo đỏ trước một trận ngoài bãi có tướng như trận chương `chapter` (màn `stage` nếu là màn phó bản). */
 export function warningsFor(state: GameState, chapter: Chapter, stage?: number, heroless = false): string {
   const out: string[] = [];
-  const rest = heroless ? null : restingHero(state, chapter, stage);
+  // Chương 5: báo từng bà đang kiệt sức; một bà nghỉ thì bà kia ra trận một mình, cả hai nghỉ thì màn khóa.
+  const haiBa = !heroless && chapter === 5 && haiBaJoined(state);
+  const rest = heroless || haiBa ? null : restingHero(state, chapter, stage);
+  if (haiBa) {
+    const resting = HAI_BA_KINDS.filter((k) => haiBaResting(state, k));
+    for (const k of resting) {
+      const secs = Math.ceil((state.haiBa[k] - state.clock) / 1000);
+      const other = HAI_BA_KINDS.find((o) => o !== k)!;
+      const tail = resting.length === 1 ? ` ${vi.ui.heroStandIn(vi.ui.heroNames[other])}` : '';
+      out.push(`💤 ${vi.ui.heroRestWarn(vi.ui.heroNames[k], secs)}${tail}`);
+    }
+  }
   if (rest) {
     const standIn = heroFor(state, chapter, stage);
     const tail = standIn ? vi.ui.heroStandIn(vi.ui.heroNames[standIn.kind]) : vi.ui.noHeroWarn;
@@ -246,7 +294,7 @@ export function stageHtml(state: GameState, n: number): string {
     ${stageDef(n)?.holdS ? `<p class="hero-note">🌊 ${vi.ui.holdInfo(stageDef(n)!.holdS!, (stageDef(n)!.waves?.length ?? 0) + 1)}</p>` : ''}
     <div class="stat"><span>${first ? vi.ui.firstReward : vi.ui.replayReward}</span>${costHtml(null, stageReward(state, n))}</div>
     ${gift && !state.son.gifts[gift] ? `<div class="stat"><span>${vi.ui.giftWon}</span><b>${vi.gifts[gift].icon} ${esc(vi.gifts[gift].name)}</b></div>` : ''}
-    ${heroNote(heroFor(state, stageDef(n)!.chapter, n))}
+    ${heroNote(heroesFor(state, stageDef(n)!.chapter, n))}
     ${battleWarnings(state, n)}
     <div class="actions">
       ${why ? `<span class="why">${esc(why)}</span>` : ''}
@@ -322,7 +370,7 @@ const heroName = (state: GameState, k: HeroKind) => (k === 'sonTinh' ? vi.ui.son
  */
 function heroPickHtml(state: GameState, stage: number, challenge: boolean, hero: HeroSetup | null): string {
   const roster = stageHeroes(state, stage, challenge);
-  if (roster.length < 2) return heroNote(hero);
+  if (roster.length < 2) return heroNote(stageHeroList(state, stage, challenge, hero?.kind));
   const opts = roster
     .map((k) => {
       const check = stageHeroCheck(state, stage, k, challenge);

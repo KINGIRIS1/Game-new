@@ -2192,6 +2192,13 @@ Chủ dự án chọn mỗi bà cưỡi một voi: Trưng Trắc và Trưng Nh�
   - Trưng Nhị: voi đệm vàng, lọng vàng, cờ đỏ hình chim Lạc cắm sau bành; áo vàng, mũ lông chim, cầm cung. Hiệu triệu: rút cờ phất, tiếng trống, nghĩa binh chạy ra từ hai bên, vòng sáng xanh loang dưới chân quân ta được hồi máu.
   - Thắng trận: Trưng Trắc giơ gươm, Trưng Nhị phất cờ, hai voi giơ vòi.
 - **Nghĩa binh** (`soldier.ts`): áo nâu, khăn vấn, chân đất, không giáp, cầm giáo tre hay gậy tầm vông.
+- **Số cuối PR 2 (đã làm)**: giữ nguyên đề xuất. Chỉ số ở `defs.ts`: `TRUNG_TRAC`, `TRUNG_NHI`, `HAI_BA_REST_MS` (2 phút), `VOI_XUNG`, `HIEU_TRIEU`, `NGHIA_BINH`; hồi kỹ năng ở `SKILLS` (`voiXung` 12 giây, `hieuTrieu` 25 giây).
+  - Hai tướng một trận: `Battle.hero` là Trưng Trắc, `Battle.hero2` là Trưng Nhị; `heroSetups(b)` cho cả hai (`battle.ts`). Bà nào ngã thì `down` riêng; hết trận thì `restAfter` (`son.ts`) cho bà ấy nghỉ (`restHaiBa`, `s.haiBa` ở `chuong5.ts`).
+  - Chọn tướng: `heroesFor` (`son.ts`) chương 5 ra Hai Bà khỏe; cả hai kiệt sức thì như chương 4 (Cao Lỗ, Sơn Tinh, Gióng) ở kinh đô, còn phó bản thì khóa (`haiBaKietSuc` ở `canStartStage`). Bảng xếp quân báo bà nào nghỉ, bà kia ra một mình.
+  - Giữ kinh đô: mỗi bà ra từ doanh trại mình chỉ huy; chưa chỉ huy trại nào thì đứng hai bên trước Điện, cách 1,2 ô.
+  - Nghĩa binh là quân ta (`nghiaBinh`): ngã thì không vào `battle.lost` (không mất lính thật); còn đứng thì vẫn tính là quân ta còn trên bãi (`alliesLeft`), như tướng.
+  - Thanh máu mỗi bà trên đầu bãi chiến (`.hero-hp` ở `hud.ts`), chỉ hiện khi trận có hai tướng. Ô Tướng ở dock có hai dòng Trưng Trắc, Trưng Nhị (⚔️ sẵn sàng, 💤 đang nghỉ).
+  - Bản lưu 21 (`migrate20to21`): thêm `haiBa`.
 
 ### Quân Hán
 
@@ -2225,7 +2232,7 @@ Ba loại lính theo đúng vòng khắc chế như giặc các chương trướ
   - Chỉ quân bắn xa (cung thủ, lính nỏ, Cao Lỗ), chòi canh, lầu nỏ, ụ nỏ, lính trên lầu cổng thành bắn tới được. Giáo binh, voi chiến và Hai Bà trên bờ không đánh tới.
   - Đánh chìm thì thuyền nghiêng, chìm dần. Hết giờ trận mà lâu thuyền còn thì rút đi như giặc còn sống lúc hết giờ.
   - Dáng (`makeLauThuyen` ở `models.ts`): thân thuyền dài chừng 4 ô, hai hàng mái chèo, lầu gỗ ba tầng mái ngói đen, lan can đỏ, cờ đen lớn trên nóc, lính nỏ Hán đứng ở từng tầng.
-- Hai bà giữ kinh đô. Trước PR 2 (chưa có hai bà) thì Cao Lỗ giữ.
+- Hai bà giữ kinh đô (từ PR 2). Cả hai kiệt sức thì Cao Lỗ giữ, rồi Sơn Tinh, Gióng.
 - **Số cuối PR 1 (đã làm)**: giữ nguyên đề xuất. Ba lính như bảng trên (`linhHan`, `noHan`, `giapHan` ở `defs.ts`; cung thủ khắc lính kích, voi khắc nỏ thủ, giáp sĩ là quân nặng khắc cung thủ). `hanForces(n)`, `hanHpScale(n)` như trên; đợt Hán đầu tới sau `FIRST_HAN_MS` = 3 phút kể từ lúc nhận thưởng nhiệm vụ 51, rồi quân Hán và lũ xen nhau (`nextFoe`; `raid.han`, `raid.hanHeld` đếm đợt đã tới và đã giữ được). Đợt quân Hán ra từ bìa rừng (`landRaidSide`). Cao Lỗ giữ kinh đô (`leadsFor` chương 5), kiệt sức thì Sơn Tinh, rồi Gióng; mùa lũ vẫn là Sơn Tinh. `chuong5.test.ts` canh: đợt Hán đầu do Cao Lỗ và quân mẫu chương 4 cùng năm chòi canh thắng được.
 
 ### Phó bản chương 5: từ Hát Môn tới Cấm Khê
@@ -2258,6 +2265,10 @@ Bản đồ phó bản có thêm thẻ Chương 5, mở khi vào chương 5. B�
   - **Lãng Bạc** (màn 38, 39): một bên là đầm hồ rộng có lau sậy, gò đất giữa bãi, lâu thuyền Hán đậu xa trên hồ (chỉ là cảnh);
   - **Cấm Khê** (màn 40): khe núi, suối chảy dọc bãi, rừng rậm hai bên, đường mòn cho dân rút vào núi;
   - màn 33 dùng bãi làng, 35 bãi thành Cổ Loa, 37 bãi cửa sông.
+- **Số cuối PR 2 (đã làm, màn 33–36)**: quân giặc và thưởng như bảng. Máu giặc đo theo chuẩn: màn 33 ×1,8, màn 34 ×2,0, màn 35 ×2,0, màn 36 ×1,85 (`STAGES` ở `defs.ts`). Màn 33 thấp hơn ước chừng một phần năm vì Trưng Nhị chưa có Hiệu triệu. Màn 36 không bấm kỹ năng thì thua. Tô Định bỏ chạy theo `TO_DINH_FLEE` (còn 30% máu, nhanh gấp rưỡi), chạy tới cuối bãi thì ra khỏi bãi (`gone`) và tính như đã hạ. `chuong5.test.ts` canh độ khó từng màn với 10 hạt giống.
+  - Bãi: màn 33 bãi làng, 34 bãi Hát Môn (`hatMon`), 35 bãi thành Cổ Loa, 36 bãi Luy Lâu (`luyLau`) ở `battlefield.ts`.
+  - Bản đồ phó bản (`src/ui/campaign.ts`): `NODES[5]`, cảnh `SCENERY[5]` (sông Hát, Cổ Loa, Luy Lâu, Hợp Phố, Lãng Bạc, Cấm Khê), điểm xuất quân Mê Linh. Thẻ chọn chương đổi thành chữ "Chương" kèm năm nút số cho vừa khổ điện thoại hẹp.
+  - Thử thách màn 33–36 chưa có (PR 4): `CHALLENGES` vẫn 32, `huanReward` của màn chưa có thử thách là 0.
 - Thắng màn 40: hai bà đứng trên voi nhìn về phía sông, camera lùi xa (bảng kết quả chờ 3,5 giây như các màn kết chương), rồi tới đoạn 6 và màn hình Hết truyện mới. Không vẽ cảnh gieo mình xuống sông.
 
 ### Đền Hát Môn
@@ -2323,8 +2334,8 @@ Thưởng khoảng gấp rưỡi nhiệm vụ chương 4.
 1. **Duyệt tài liệu này**: tám điều ở trên, mọi con số và dáng.
 2. **PR 1 (đã làm)**: vào chương 5, Điện 10 mở theo chương, quân Hán (ba loại lính) đánh kinh đô xen với lũ, nhiệm vụ 54, bản lưu v20. Chưa có truyện; Lạc hầu báo đã sang chương 5, chờ phần sau.
    - Code: `chuong5.ts` (`inChapter5`), `CH5_QUEST_START` = 52, `scheduleHan` và nhánh `han` ở `game.ts` (`nextFoe`, `foeChapter`, `finishRaid`), `LAND_FORCES` ở `battle.ts`, `migrate19to20` ở `save.ts` (thêm `raid.han`, `raid.hanHeld`; bản lưu đang ở chương 5 mà chưa có giặc thì xếp đợt Hán). `chapterOf` (`manVao.ts`) ra 5; sang chương 5 thì màn hình vào game không còn coi là Hết truyện.
-   - Bản đồ phó bản chưa có chương 5: giao diện phó bản dừng ở chương 4 (`MapChapter` ở `src/ui/campaign.ts`, `mapChapterNow` ở `hud.ts`) tới PR 2.
-3. **PR 2**: Hai Bà (hai tướng cùng ra một trận, mỗi bà một kỹ năng, giữ kinh đô, chỉ huy doanh trại), nghĩa binh, màn 33–36 và Tô Định, bãi Hát Môn và Luy Lâu, thẻ Chương 5 trên bản đồ phó bản, đoạn truyện 1–3, nhiệm vụ 55–57.
+   - Bản đồ phó bản chưa có chương 5: giao diện phó bản dừng ở chương 4 (`MapChapter` ở `src/ui/campaign.ts`, `mapChapterNow` ở `hud.ts`) tới PR 2. PR 2 đã thêm thẻ Chương 5.
+3. **PR 2 (đã làm)**: Hai Bà (hai tướng cùng ra một trận, mỗi bà một kỹ năng, giữ kinh đô, chỉ huy doanh trại), nghĩa binh, màn 33–36 và Tô Định, bãi Hát Môn và Luy Lâu, thẻ Chương 5 trên bản đồ phó bản, đoạn truyện 1–3 (`meLinh`, `hatMon`, `trungVuong` ở `story.ts`), nhiệm vụ 55–57, bản lưu v21. Xem các mục Số cuối PR 2 ở trên.
 4. **PR 3**: lâu thuyền và thủy quân Hán ở kinh đô, Mã Viện, màn 37–40 (màn 40 cầm cự), bãi Lãng Bạc và Cấm Khê, đoạn truyện 4–6, màn hình Hết truyện mới, Đền Hát Môn, nhiệm vụ 58–61.
 5. **PR 4**: nữ tướng, thử thách màn 33–40, huân công bậc 4.
 
@@ -2374,5 +2385,5 @@ Mỗi PR nào thêm trường lưu mới thì nâng bản lưu một bậc (dự
 15. **Vùng đất bên kia sông** (chủ dự án đã duyệt, đã làm cả 5 PR, bản lưu v18; xem mục Kế hoạch cùng tên): lưới qua sông, cầu ba cấp, sương mù và trinh sát, đồn giặc bốn bậc theo chương, dẹp đồn chiếm vùng, đặc sản đất, bản làng, của chôn, giặc tới từ hai bờ và đồn biên.
 16. **Điện cấp 9, 10** (đã duyệt, đã làm cả 3 PR: luật, hình, binh khí bậc 3 và lầu nỏ lên cấp; xem Kế hoạch cùng tên).
     **Hồ Kim Quy** (chủ dự án yêu cầu, đã làm; xem mục cùng tên): hồ 8×8 mở khi Rùa Vàng hiện lên, tường thành thêm 30% máu.
-17. **Chương 5: Hai Bà Trưng** (chủ dự án đã duyệt, đã làm PR 1, tiếp theo là PR 2; xem Kế hoạch chương 5): mỗi bà cưỡi một voi ra trận với Voi xung trận và Hiệu triệu gọi nghĩa binh, quân Hán và lâu thuyền đánh kinh đô, phó bản màn 33–40 với Tô Định và Mã Viện, Đền Hát Môn, nữ tướng, thử thách màn 33–40.
+17. **Chương 5: Hai Bà Trưng** (chủ dự án đã duyệt, đã làm PR 1, 2, tiếp theo là PR 3; xem Kế hoạch chương 5): mỗi bà cưỡi một voi ra trận với Voi xung trận và Hiệu triệu gọi nghĩa binh, quân Hán và lâu thuyền đánh kinh đô, phó bản màn 33–40 với Tô Định và Mã Viện, Đền Hát Môn, nữ tướng, thử thách màn 33–40.
 18. **Để sau**: nhạc nền.
