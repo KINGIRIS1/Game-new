@@ -3,9 +3,9 @@
 // thẻ màn (kèm khung thử thách), bảng xếp quân (màn thường hay thử thách), bảng Huân công và bảng kết quả trận.
 // Chỉ dựng chuỗi HTML; Hud lo việc gắn vào trang và bắt sự kiện.
 
-import type { HeroSetup } from '../game/battle';
+import { heroSkills, type HeroKind, type HeroSetup } from '../game/battle';
 import { CAMPS, campHero, campTier } from '../game/benKia';
-import { CH2_LAST, canStartStage, chapterStages, stageDef, stageHero, stageOpen, stageReward, unitAllowed } from '../game/campaign';
+import { CH2_LAST, canStartStage, chapterStages, stageDef, stageHero, stageHeroCheck, stageHeroes, stageOpen, stageReward, unitAllowed } from '../game/campaign';
 import { CH4_LAST } from '../game/caoLo';
 import { CH3_LAST } from '../game/coLoa';
 import { BOSSES, CHALLENGES, HUAN_BRANCHES, HUAN_COST, ROWS, UNITS, UNIT_TYPES, stageEnemies, type Chapter, type EnemyType, type HuanBranch, type Row, type UnitType } from '../game/defs';
@@ -16,10 +16,12 @@ import { challengeEnemies, challengeOf, challengeOpen, challengeWon, huanNextCos
 import { vi } from '../text/vi';
 import { costHtml, esc } from './format';
 
-/** Lựa chọn trên bảng xếp quân: số lính mang theo và hàng đứng của từng binh chủng. */
+/** Lựa chọn trên bảng xếp quân: số lính mang theo, hàng đứng của từng binh chủng, tướng ra trận. */
 export interface ArmyPick {
   army: Record<UnitType, number>;
   rows: Record<UnitType, Row>;
+  /** Tướng người chơi chạm chọn (phó bản chương 2: Sơn Tinh hay Gióng). Chưa chọn thì lấy tướng chọn sẵn. */
+  hero?: HeroKind | null;
   /** Màn và chế độ đang xếp quân (thử thách Hai binh chủng chỉ mang được hai binh chủng). */
   stage: number;
   challenge: boolean;
@@ -308,9 +310,37 @@ export function huanHtml(state: GameState): string {
   </div>`;
 }
 
+const heroIcon = (k: HeroKind) => (k === 'sonTinh' ? '⛰️' : '🐎');
+const heroName = (state: GameState, k: HeroKind) => (k === 'sonTinh' ? vi.ui.son : state.giong.ascended ? vi.ui.phuDong : vi.ui.giong);
+
+/**
+ * Chọn tướng ra trận khi màn cho chọn hơn một tướng (phó bản chương 2): mỗi trận một tướng, chạm để đổi.
+ * Tướng kiệt sức thì thẻ mờ đi. Không đếm ngược từng giây: bảng vẽ lại liên tục thì nuốt mất lần chạm.
+ */
+function heroPickHtml(state: GameState, stage: number, challenge: boolean, hero: HeroSetup | null): string {
+  const roster = stageHeroes(state, stage, challenge);
+  if (roster.length < 2) return heroNote(hero);
+  const opts = roster
+    .map((k) => {
+      const check = stageHeroCheck(state, stage, k, challenge);
+      const sel = hero?.kind === k;
+      const note = check.ok
+        ? heroSkills(stageHero(state, stage, challenge, k)!).map((sk) => `${vi.skills[sk].icon} ${vi.skills[sk].name}`).join(' · ')
+        : check.reason === 'sonKietSuc' || check.reason === 'giongKietSuc'
+          ? vi.ui.heroResting
+          : vi.reasons[check.reason];
+      return `<button class="hero-opt ${sel ? 'sel' : ''}" data-act="armyHero" data-hero="${k}" aria-pressed="${sel}" ${check.ok ? '' : 'disabled'}>
+        <span class="unit-icon">${heroIcon(k)}</span>
+        <span class="unit-info"><b>${heroName(state, k)}</b><small>${esc(note)}</small></span>
+      </button>`;
+    })
+    .join('');
+  return `<div class="hero-pick"><h4>${vi.ui.heroPickTitle}</h4><div class="hero-opts">${opts}</div></div>`;
+}
+
 export function armyHtml(state: GameState, pick: ArmyPick, stage: number, challenge = false): string {
   const don = pick.don !== undefined ? campTier(pick.don) : null;
-  const hero = pick.don !== undefined ? campHero(state, pick.don) : stageHero(state, stage, challenge);
+  const hero = pick.don !== undefined ? campHero(state, pick.don) : stageHero(state, stage, challenge, pick.hero);
   const owned = UNIT_TYPES.filter((k) => state.troops[k] > 0 && unitAllowed(stage, challenge, k));
   const banned = UNIT_TYPES.filter((k) => state.troops[k] > 0 && !unitAllowed(stage, challenge, k));
   const total = UNIT_TYPES.reduce((s, k) => s + pick.army[k], 0);
@@ -337,7 +367,7 @@ export function armyHtml(state: GameState, pick: ArmyPick, stage: number, challe
   return `<div class="stage-card">
     <h3>${don ? vi.benKia.campArmyTitle(vi.benKia.don[don].name) : kind ? vi.ui.challengeArmyTitle(vi.ui.challengeKinds[kind].name) : vi.ui.armyTitle}</h3>
     ${kind ? challengeRules(stage) : `<p class="muted">${vi.ui.armyHint}</p>`}
-    ${kind === 'khongTuong' ? `<p class="rule">${vi.ui.challengeKinds.khongTuong.icon} ${vi.ui.challengeNoHero}</p>` : heroNote(hero)}
+    ${kind === 'khongTuong' ? `<p class="rule">${vi.ui.challengeKinds.khongTuong.icon} ${vi.ui.challengeNoHero}</p>` : don ? heroNote(hero) : heroPickHtml(state, stage, challenge, hero)}
     ${don ? warningsFor(state, CAMPS[don].chapter) : battleWarnings(state, stage, challenge)}
     ${owned.length ? `<div class="stat"><span>${vi.ui.fieldSpace(space, cap)}</span></div><div class="units">${rows}</div>` : `<p class="why">${vi.ui.noTroops}</p>`}
     ${bannedHtml}

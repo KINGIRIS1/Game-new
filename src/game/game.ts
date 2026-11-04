@@ -373,6 +373,8 @@ export type FailReason =
   | 'khongDapNen'
   | 'canSonTinh'
   | 'sonKietSuc'
+  | 'tuongKietSuc'
+  | 'chiSonTinh'
   | 'daCoLeVat'
   | 'leVatPhoBan'
   | 'canChuong3'
