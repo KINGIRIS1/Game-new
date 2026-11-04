@@ -36,8 +36,8 @@ import { initialSon } from './son';
 import { initialTet } from './tet';
 import { initialThuThach } from './thuThach';
 import { footprintTop, levelFootprint } from './terrain';
-import { KHOANH_N, V11_AREA, squareKhoanh } from './khoanh';
-import { isLegacyLayout, legacyBaseHeights, levelLegacyFootprints, relayLegacy } from './xepLai';
+import { AREA, KHOANH_N, START_KHOANH, V11_AREA, squareKhoanh } from './khoanh';
+import { growDien, isLegacyLayout, legacyBaseHeights, levelLegacyFootprints, relayLegacy } from './xepLai';
 
 export { SAVE_VERSION };
 
@@ -74,6 +74,9 @@ const isNum = (v: unknown): v is number => typeof v === 'number' && Number.isFin
 /** Nâng dần bản lưu cũ lên phiên bản hiện tại. */
 function migrate(raw: unknown): unknown {
   let v = raw;
+  // Kinh đô nhỏ (trước phiên bản 11) dựng lại theo mẫu với Điện 10×10 ngay ở bước 10 → 11; từ phiên bản 11 tới 19
+  // Điện còn 5×5, tới bước 19 → 20 mới nới móng.
+  const grow = isObj(v) && isNum(v.version) && v.version >= 11 && v.version < 20;
   if (isObj(v) && v.version === 1 && Array.isArray(v.buildings)) v = migrate1to2(v);
   if (isObj(v) && v.version === 2) v = migrate2to3(v);
   if (isObj(v) && v.version === 3) v = migrate3to4(v);
@@ -100,6 +103,7 @@ function migrate(raw: unknown): unknown {
     k.garrison ??= noGarrison();
   }
   if (isObj(v) && v.version === 18) v = migrate18to19(v);
+  if (isObj(v) && v.version === 19) v = migrate19to20(v, grow);
   return v;
 }
 
@@ -234,19 +238,20 @@ function migrate9to10(s: Raw): Raw {
  */
 function migrate10to11(s: Raw): Raw {
   s.version = 11;
-  // Dựng lại theo mẫu cần biết đất đã mở: đất phiên bản 11 là hình vuông theo cấp Điện (xem bước 11 → 12).
-  s.khoanh = v11Khoanh(s);
+  // Dựng lại theo mẫu cần biết đất đã mở: hình vuông theo cấp Điện (xem bước 11 → 12). Kinh đô dựng lại với Điện
+  // 10×10 nên đất mở theo khung mẫu bây giờ (`AREA`, nới một khoảnh so với đất phiên bản 11).
+  s.khoanh = v11Khoanh(s, AREA);
   if (isLegacyLayout(s) && Array.isArray(s.heights) && isValidBuildings(s.buildings) && isObj(s.raid) && isObj(s.resources)) {
     relayLegacy(s as unknown as GameState);
   }
   return s;
 }
 
-/** Đất đã mở ở phiên bản 11: hình vuông neo góc sông, cạnh theo cấp Điện, khớp đúng lưới khoảnh. */
-function v11Khoanh(s: Raw): number[] {
+/** Đất đã mở ở phiên bản 11: hình vuông neo góc sông, cạnh theo cấp Điện (`sides`), khớp đúng lưới khoảnh. */
+function v11Khoanh(s: Raw, sides: readonly number[] = V11_AREA): number[] {
   const dien = Array.isArray(s.buildings) ? (s.buildings as Raw[]).find((b) => isObj(b) && b.type === 'dien') : undefined;
-  const level = dien && isNum(dien.level) ? Math.min(Math.max(Math.round(dien.level), 1), V11_AREA.length) : 1;
-  return squareKhoanh(V11_AREA[level - 1]);
+  const level = dien && isNum(dien.level) ? Math.min(Math.max(Math.round(dien.level), 1), sides.length) : 1;
+  return squareKhoanh(sides[level - 1]);
 }
 
 /**
@@ -374,6 +379,21 @@ function migrate17to18(s: Raw): Raw {
 /** Phiên bản 18 → 19 (Điện cấp 9, 10): không thêm gì vào state; Điện và chín loại công trình được lên cấp 10. */
 function migrate18to19(s: Raw): Raw {
   s.version = 19;
+  return s;
+}
+
+/**
+ * Phiên bản 19 → 20 (Điện 10×10, dời và xoay được): đất mở sẵn lúc đầu nới thành 25 khoảnh như ván mới (khoảnh nào
+ * chưa phát thì mở luôn, không tốn của); Điện 5×5 nới về phía rừng thành 10×10, công trình vướng dời sang chỗ trống
+ * gần nhất (`growDien`). `grow`: bản lưu vốn từ phiên bản 11 trở lên (kinh đô nhỏ đã dựng lại với Điện 10×10 ở bước
+ * 10 → 11).
+ */
+function migrate19to20(s: Raw, grow: boolean): Raw {
+  s.version = 20;
+  if (Array.isArray(s.khoanh)) s.khoanh = [...new Set([...s.khoanh, ...START_KHOANH])].sort((a, b) => a - b);
+  if (grow && isValidBuildings(s.buildings) && Array.isArray(s.heights) && Array.isArray(s.khoanh) && isObj(s.resources) && isObj(s.cayDa)) {
+    growDien(s as unknown as GameState);
+  }
   return s;
 }
 

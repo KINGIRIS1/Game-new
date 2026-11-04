@@ -112,7 +112,7 @@ export interface BuildingDef {
   decor?: 'duong' | 'trangTri';
 }
 
-/** Dời công trình sang chỗ khác tốn chừng này phần giá dựng (làm tròn lên). Điện Vua Hùng không dời được. */
+/** Dời công trình sang chỗ khác tốn chừng này phần giá dựng (làm tròn lên). Điện Vua Hùng không có giá dựng nên dời không tốn của. */
 export const MOVE_FRACTION = 0.1;
 
 /** Điện Vua Hùng lên cấp 6 khi đã vào chương 2, cấp 7 khi đã vào chương 3, cấp 8 khi đã vào chương 4 (chỉ số là cấp đích). */
@@ -219,8 +219,8 @@ function bridgeDef(type: 'cauSongDa' | 'cauSongThao', w: number, d: number): Bui
 export const BUILDINGS: Record<BuildingType, BuildingDef> = {
   dien: {
     type: 'dien',
-    w: 5,
-    d: 5,
+    w: 10,
+    d: 10,
     maxLevel: 10,
     buildCost: {},
     upgradeCost: [
@@ -321,7 +321,7 @@ export const BUILDINGS: Record<BuildingType, BuildingDef> = {
     upgradeCost: [{}, {}, { datDa: 20 }],
     production: [{}, {}],
     hp: [120, 420],
-    limit: [40, 70, 100, 130, 150, 170, 180, 180, 190, 200],
+    limit: [50, 70, 100, 130, 150, 170, 180, 180, 190, 200],
     minDien: 1,
     levelMinDien: [0, 0, 3],
     buildable: true,
@@ -1108,10 +1108,12 @@ export const STORAGE_CAP = [500, 1000, 2000, 4000, 8000, 14000, 22000, 32000, 44
 // ---------- Khoảnh đất ----------
 
 /**
- * Giá phát khoảnh rừng đầu tiên (khoảnh thứ 17, sau 16 khoảnh mở sẵn lúc đầu): chỉ gạo và vỏ ốc. Đất bên này sông
+ * Giá phát khoảnh rừng đầu tiên (khoảnh thứ 26, sau 25 khoảnh mở sẵn lúc đầu): chỉ gạo và vỏ ốc. Đất bên này sông
  * phát thoải mái, không giới hạn lượt theo cấp Điện; giá tăng từng nấc theo số khoảnh đã phát (`KHOANH_COST_STEP`).
+ * Trước khi Điện 10×10 chỉ mở sẵn 16 khoảnh, khoảnh thứ 17 giá 20 gạo, 15 vỏ ốc; khoảnh thứ 26 vẫn giá như nấc cũ,
+ * nên phát hết rừng tốn ngần ấy như cũ.
  */
-export const KHOANH_COST_BASE = { gao: 20, voOc: 15 };
+export const KHOANH_COST_BASE = { gao: 34, voOc: 25 };
 /** Mỗi khoảnh đã phát thêm thì giá khoảnh sau nhân chừng này. Khoảnh cuối cùng (thứ 100) chừng 2500 gạo. */
 export const KHOANH_COST_STEP = 1.06;
 

@@ -557,7 +557,11 @@ export function startBattle(state: GameState, wave: number, side: RaidSide, opts
       const f = turnLocal(post.rot, 0, def.d / 2);
       addHero(battle, opts.hero, post.x + def.w / 2 + f.x, post.z + def.d / 2 + f.z, 1);
     }
-    else if (dien) addHero(battle, opts.hero, dien.x + BUILDINGS.dien.w / 2, dien.z + BUILDINGS.dien.d + 0.6, 1);
+    else if (dien) {
+      // Trước sân Điện (đã xoay thì theo hướng xoay).
+      const f = turnLocal(dien.rot, 0, BUILDINGS.dien.d / 2 + 0.6);
+      addHero(battle, opts.hero, dien.x + BUILDINGS.dien.w / 2 + f.x, dien.z + BUILDINGS.dien.d / 2 + f.z, 1);
+    }
   }
   return battle;
 }

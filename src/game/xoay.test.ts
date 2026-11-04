@@ -25,11 +25,11 @@ function placeOk(s: GameState, type: BuildingType, x: number, z: number, rot = 0
 }
 
 describe('xoay công trình', () => {
-  it('chỉ công trình móng vuông nhiều ô xoay được; Điện, bến, làng chài, cầu, công trình một ô thì không', () => {
-    for (const t of ['ruong', 'nhaSan', 'doanhTrai', 'traiGiao', 'kho', 'loRen', 'denPhuDong', 'cayDa', 'ao', 'donBien'] as const) {
+  it('chỉ công trình móng vuông nhiều ô xoay được (cả Điện); bến, làng chài, cầu, công trình một ô thì không', () => {
+    for (const t of ['dien', 'ruong', 'nhaSan', 'doanhTrai', 'traiGiao', 'kho', 'loRen', 'denPhuDong', 'cayDa', 'ao', 'donBien'] as const) {
       expect(canRotateType(t), t).toBe(true);
     }
-    for (const t of ['dien', 'ben', 'langChai', 'cauSongDa', 'luy', 'thanh', 'congThanh', 'choiCanh', 'duongDat', 'hoa'] as const) {
+    for (const t of ['ben', 'langChai', 'cauSongDa', 'luy', 'thanh', 'congThanh', 'choiCanh', 'duongDat', 'hoa'] as const) {
       expect(canRotateType(t), t).toBe(false);
     }
     // Mọi loại xoay được đều móng vuông: xoay không đổi ô nào bị chiếm.
@@ -48,7 +48,7 @@ describe('xoay công trình', () => {
     expect(ben.rot).toBeUndefined();
   });
 
-  it('xoay tại chỗ không tốn của, vòng lại sau bốn nấc; Điện, bến không xoay được', () => {
+  it('xoay tại chỗ không tốn của, vòng lại sau bốn nấc; Điện xoay được, bến thì không', () => {
     const s = city();
     const a = placeOk(s, 'doanhTrai', edge(5, 1), edge(5, 1));
     const before = { ...s.resources };
@@ -62,7 +62,9 @@ describe('xoay công trình', () => {
     expect(s.resources).toEqual(before);
     expect({ x: a.x, z: a.z }).toEqual(at);
     const dien = s.buildings.find((b) => b.type === 'dien')!;
-    expect(rotateBuilding(s, dien.id, 1)).toEqual({ ok: false, reason: 'khongXoayDuoc' });
+    expect(rotateBuilding(s, dien.id, 2).ok).toBe(true);
+    expect(rotOf(dien)).toBe(2);
+    expect(s.resources).toEqual(before);
     const ben = placeOk(s, 'ben', bank('ben'), edge(5, 1));
     expect(rotateBuilding(s, ben.id, 1)).toEqual({ ok: false, reason: 'khongXoayDuoc' });
     expect(rotateBuilding(s, 9999, 1)).toEqual({ ok: false, reason: 'khongTimThay' });
