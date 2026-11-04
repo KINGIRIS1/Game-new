@@ -443,7 +443,7 @@ export const vi = {
     camKhe: 'Quân Hán quá đông. Xin giữ cửa rừng Cấm Khê cho dân rút về núi (màn 40).',
     denHatMon: 'Dân lập đền thờ Hai Bà ở cửa sông Hát. Xin dựng Đền Hát Môn: đền còn nguyên thì mỗi trận giữ kinh đô có nghĩa binh ra đánh giặc.',
     allDone:
-      'Trưng Trắc đã lên ngôi, đóng đô ở Mê Linh. Quân Hán và mùa lũ vẫn thay phiên đánh kinh đô. Truyện Hai Bà Trưng sẽ kể tiếp ở bản sau.',
+      'Hai Bà đã hiển linh giữ đất, dân lập đền thờ ở Hát Môn. Thủy quân Hán, quân Hán và mùa lũ vẫn thay phiên đánh kinh đô. Chuyện các nữ tướng của Hai Bà sẽ kể ở bản sau.',
   } as Record<string, string>,
 
   units: {

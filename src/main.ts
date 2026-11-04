@@ -761,7 +761,8 @@ async function start(): Promise<void> {
       case 'openEnding':
         if (hud.storyOpen || hud.modalOpen) return;
         play('tap');
-        hud.showStory('hetTruyen', true);
+        // Mở lại màn hình Hết truyện mới nhất đã xem.
+        hud.showStory(state.story.seen.includes('hetTruyen5') ? 'hetTruyen5' : 'hetTruyen', true);
         return;
 
       case 'forgeNoThan': {
@@ -1256,7 +1257,7 @@ async function start(): Promise<void> {
     if (r === shownStage) return;
     if (!resultAt) {
       stopRally();
-      resultAt = now + (battle?.ascend || battle?.sonWin || battle?.advWin || battle?.seaWin ? 3500 : 700);
+      resultAt = now + (battle?.ascend || battle?.sonWin || battle?.advWin || battle?.seaWin || battle?.hatWin ? 3500 : 700);
       play(r.outcome === 'win' ? 'upgrade' : 'error');
       commit();
     }

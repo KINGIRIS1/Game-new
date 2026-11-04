@@ -6,7 +6,7 @@
 import { heroSkills, type HeroKind, type HeroSetup } from '../game/battle';
 import { CAMPS, campHero, campTier } from '../game/benKia';
 import { CH2_LAST, canStartStage, chapterStages, stageDef, stageHero, stageHeroCheck, stageHeroList, stageHeroes, stageOpen, stageReward, unitAllowed } from '../game/campaign';
-import { HAI_BA_KINDS, haiBaJoined, haiBaResting, isHaiBa } from '../game/chuong5';
+import { CH5_LAST, HAI_BA_KINDS, haiBaJoined, haiBaResting, isHaiBa } from '../game/chuong5';
 import { CH4_LAST } from '../game/caoLo';
 import { CH3_LAST } from '../game/coLoa';
 import { BOSSES, CHALLENGES, HUAN_BRANCHES, HUAN_COST, ROWS, UNITS, UNIT_TYPES, stageEnemies, type Chapter, type EnemyType, type HuanBranch, type Row, type UnitType } from '../game/defs';
@@ -291,7 +291,7 @@ export function stageHtml(state: GameState, n: number): string {
     <h3>${vi.ui.stageN(n)} · ${esc(text.name)} ${hasBoss(n) ? `<span class="tag">👹 ${vi.ui.stageBoss}</span>` : ''}</h3>
     <p class="intro">${esc(text.intro)}</p>
     <div class="stat"><span>${vi.ui.enemyArmy}</span><b>${enemyList(n)}</b></div>
-    ${stageDef(n)?.holdS ? `<p class="hero-note">🌊 ${vi.ui.holdInfo(stageDef(n)!.holdS!, (stageDef(n)!.waves?.length ?? 0) + 1)}</p>` : ''}
+    ${holdNote(n)}
     <div class="stat"><span>${first ? vi.ui.firstReward : vi.ui.replayReward}</span>${costHtml(null, stageReward(state, n))}</div>
     ${gift && !state.son.gifts[gift] ? `<div class="stat"><span>${vi.ui.giftWon}</span><b>${vi.gifts[gift].icon} ${esc(vi.gifts[gift].name)}</b></div>` : ''}
     ${heroNote(heroesFor(state, stageDef(n)!.chapter, n))}
@@ -452,6 +452,16 @@ export function stepPick(state: GameState, pick: ArmyPick, k: UnitType, delta: n
   pick.army[k] = n;
 }
 
+/** Lời dặn màn cầm cự: màn 32 cầm chân giặc cho vua tới biển, màn 40 giữ cửa rừng cho dân rút về núi. */
+function holdNote(n: number): string {
+  const def = stageDef(n);
+  if (!def?.holdS) return '';
+  const waves = (def.waves?.length ?? 0) + 1;
+  return def.terrain === 'camKhe'
+    ? `<p class="hero-note">⛰️ ${vi.ui.holdInfoCamKhe(def.holdS, waves)}</p>`
+    : `<p class="hero-note">🌊 ${vi.ui.holdInfo(def.holdS, waves)}</p>`;
+}
+
 export function stageResultHtml(r: StageResult): string {
   const lost = UNIT_TYPES.filter((k) => r.lost[k] > 0).map((k) => `${vi.units[k].icon} ${r.lost[k]}`).join(' ') || vi.ui.raidNone;
   const won1st = r.outcome === 'win' && r.first;
@@ -460,6 +470,7 @@ export function stageResultHtml(r: StageResult): string {
   let title: string;
   if (don) title = r.outcome === 'win' ? `🚩 ${vi.benKia.campWon}` : r.outcome === 'retreat' ? `🏳️ ${vi.ui.stageRetreatTitle}` : `🔥 ${vi.benKia.campLost}`;
   else if (r.challenge) title = r.outcome === 'win' ? `🎖 ${vi.ui.challengeWonTitle(r.stage)}` : r.outcome === 'retreat' ? `🏳️ ${vi.ui.stageRetreatTitle}` : `🔥 ${vi.ui.challengeLostTitle}`;
+  else if (won1st && r.stage === CH5_LAST) title = `⛰️ ${vi.ui.hatWinTitle}`;
   else if (won1st && r.stage === CH4_LAST) title = `🌊 ${vi.ui.seaWinTitle}`;
   else if (won1st && r.stage === CH3_LAST) title = `🐢 ${vi.ui.advWinTitle}`;
   else if (won1st && r.stage === CH2_LAST) title = `⛰️ ${vi.ui.sonWinTitle}`;

@@ -104,8 +104,7 @@ import {
 import { chapterStages, stageHeroCheck } from '../game/campaign';
 import { caoLoJoined, caoLoResting } from '../game/caoLo';
 import { inChapter4, mergeCost, mergeable, mergedLevel } from '../game/chuong4';
-import { HAI_BA_KINDS, haiBaJoined, haiBaResting } from '../game/chuong5';
-import { inChapter5 } from '../game/chuong5';
+import { CH5_LAST, HAI_BA_KINDS, haiBaJoined, haiBaResting, inChapter5 } from '../game/chuong5';
 import { giongAppeared, giongLook, giongReady, giongResting } from '../game/giong';
 import { KHOANH_N } from '../game/khoanh';
 import { inChapter2, sonJoined, sonLook, sonResting, giftCount } from '../game/son';
@@ -117,7 +116,7 @@ import { armyHtml, defaultPick, huanHtml, mapHtml, nextRow, stageHtml, stageResu
 import { armsHtml } from './binhKhi';
 import { advHtml, caoLoHtml } from './coLoa';
 import { costHtml, esc, fmt, fmtShort } from './format';
-import { endingHtml, giongHtml, storyHtml } from './giong';
+import { endingHtml, giongHtml, isEnding, storyHtml } from './giong';
 import { sonHtml } from './son';
 import { blessingHtml, tetHtml } from './tet';
 import { khoanhHtml } from './khoanh';
@@ -147,7 +146,7 @@ const BUILD_GROUPS: { key: keyof typeof vi.ui.buildGroups; types: BuildingType[]
 /** Bốn công trình làm bánh của Hội Tết: chỉ hiện trong bảng Xây dựng khi đã mở (sau kết chương 1). */
 const TET_TYPES: BuildingType[] = ['ruongNep', 'vuon', 'chuongLon', 'bep'];
 /** Công trình chỉ hiện trong bảng Xây dựng khi đã sang chương có nó. */
-const CHAPTER_OF: Partial<Record<string, number>> = { chuong2: 2, ketChuong2: 2, chuong3: 3, ruaVang: 3, ketChuong3: 3, chuong4: 4, ketChuong4: 4 };
+const CHAPTER_OF: Partial<Record<string, number>> = { chuong2: 2, ketChuong2: 2, chuong3: 3, ruaVang: 3, ketChuong3: 3, chuong4: 4, ketChuong4: 4, ketChuong5: 5 };
 
 /** Tên hiển thị của công trình, tính cả lũy tre đã đắp thành đất và đê đã kè đá. */
 export function buildingName(b: Pick<Building, 'type' | 'level'>): string {
@@ -1120,7 +1119,7 @@ export class Hud {
     const raise: BuildItem | null = inChapter2(state)
       ? { key: 'raise', act: 'chooseRaise', pic: null, icon: '⛰️', name: vi.ui.dapDat, meta: '1×1 ô', desc: vi.ui.dapDatDesc, go: goLabel('chooseRaise', false, false) }
       : null;
-    // Công trình của chương 2, 3, 4 chỉ hiện khi đã sang chương ấy.
+    // Công trình của chương 2–5 chỉ hiện khi đã sang chương ấy.
     const chapter = chapterNow(state);
     const shownOf = (types: BuildingType[]) =>
       types.filter((type) => (CHAPTER_OF[BUILDINGS[type].unlock ?? ''] ?? 1) <= chapter && (!TET_TYPES.includes(type) || tetStarted(state)));
@@ -1735,13 +1734,19 @@ export class Hud {
     const tag = b.challenge ? ` · 🎖 ${vi.ui.challengeKinds[b.challenge].name}` : '';
     const don = b.camp !== undefined ? campTier(b.camp) : null;
     this.fieldTop.querySelector('b')!.textContent = don ? `${vi.benKia.don[don].icon} ${vi.benKia.don[don].name}` : `${vi.ui.stageN(b.wave)} · ${vi.stages[b.wave - 1].name}${tag}`;
+    // Màn 40 giữ cửa rừng Cấm Khê cho dân rút về núi; màn 32 cầm chân giặc cho vua tới biển.
+    const camKhe = hold && b.camp === undefined && b.wave === CH5_LAST;
+    const holdText = camKhe ? vi.ui.holdBannerCamKhe : vi.ui.holdBanner;
     this.fieldTop.querySelector('span')!.textContent = hold
-      ? `${vi.ui.holdBanner(enemiesLeft(b), alliesLeft(b), secs)} · ${vi.ui.holdWave(wavesArrived(b), b.waveCount ?? 1)}`
+      ? `${holdText(enemiesLeft(b), alliesLeft(b), secs)} · ${vi.ui.holdWave(wavesArrived(b), b.waveCount ?? 1)}`
       : vi.ui.fieldBanner(enemiesLeft(b), alliesLeft(b), secs);
-    // Màn cầm cự: thanh "Vua tới biển", ngựa vua chạy theo thanh.
+    // Màn cầm cự: thanh "Vua tới biển" có ngựa vua, thanh "Dân rút về núi" có trâu dắt theo, chạy theo thanh.
     const bar = this.fieldTop.querySelector<HTMLElement>('.hold-bar')!;
     bar.hidden = !hold;
     if (hold) {
+      const rider = bar.querySelector<HTMLElement>('em')!;
+      const icon = camKhe ? '🐃' : '🐎';
+      if (rider.textContent !== icon) rider.textContent = icon;
       const k = `${Math.round(holdProgress(b) * 1000) / 10}%`;
       bar.querySelector<HTMLElement>('i')!.style.width = k;
       bar.querySelector<HTMLElement>('em')!.style.left = k;
@@ -1798,8 +1803,8 @@ export class Hud {
   showStory(id: StoryId, replay = false): void {
     this.story = { id, step: 0, replay };
     const back = document.createElement('div');
-    back.className = `modal-back story-back ${id === 'hetTruyen' ? 'ending-back' : ''}`;
-    back.innerHTML = id === 'hetTruyen' ? endingHtml() : storyHtml(id, 0);
+    back.className = `modal-back story-back ${isEnding(id) ? 'ending-back' : ''}`;
+    back.innerHTML = isEnding(id) ? endingHtml(id) : storyHtml(id, 0);
     this.root.appendChild(back);
   }
 
@@ -1807,7 +1812,7 @@ export class Hud {
     const story = this.story;
     const back = this.root.querySelector('.modal-back.story-back');
     if (!story || !back) return;
-    if (story.id === 'hetTruyen' || story.replay) {
+    if (isEnding(story.id) || story.replay) {
       back.remove();
       this.story = null;
       if (!story.replay) this.onAction({ kind: 'storyDone', id: story.id });
