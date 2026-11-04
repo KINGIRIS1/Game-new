@@ -90,14 +90,19 @@ export type Side = 'ta' | 'giac';
  * kia sông Đà (`namXa`), bên kia sông Thao (`dongXa`): giặc trên bộ ra từ bìa rừng bên ấy, thủy binh cập bờ bên ấy.
  */
 export type RaidSide = 'bac' | 'tay' | 'nam' | 'dong' | 'namXa' | 'dongXa';
-/** Tướng ra trận cùng quân ta: Thánh Gióng, Sơn Tinh, An Dương Vương hoặc Cao Lỗ. Mỗi trận một tướng. */
-export type HeroKind = 'giong' | 'sonTinh' | 'anDuong' | 'caoLo';
-/** Lính thường, giặc, hoặc tướng. */
-export type FighterKind = UnitType | EnemyType | HeroKind;
-export const HERO_KINDS: HeroKind[] = ['giong', 'sonTinh', 'anDuong', 'caoLo'];
-export const isHero = (k: FighterKind): k is HeroKind => k === 'giong' || k === 'sonTinh' || k === 'anDuong' || k === 'caoLo';
+/**
+ * Tướng ra trận cùng quân ta: Thánh Gióng, Sơn Tinh, An Dương Vương, Cao Lỗ, hay Hai Bà Trưng (chương 5). Mỗi trận một
+ * tướng, riêng Hai Bà: mỗi bà một voi, cùng ra một trận.
+ */
+export type HeroKind = 'giong' | 'sonTinh' | 'anDuong' | 'caoLo' | 'trungTrac' | 'trungNhi';
+/** Lính thường, giặc, tướng, hoặc nghĩa binh (Hiệu triệu của Trưng Nhị gọi ra). */
+export type FighterKind = UnitType | EnemyType | HeroKind | 'nghiaBinh';
+export const HERO_KINDS: HeroKind[] = ['giong', 'sonTinh', 'anDuong', 'caoLo', 'trungTrac', 'trungNhi'];
+export const isHero = (k: FighterKind): k is HeroKind => (HERO_KINDS as FighterKind[]).includes(k);
+/** Hai Bà Trưng: hai tướng cùng ra một trận. */
+export const HAI_BA: HeroKind[] = ['trungTrac', 'trungNhi'];
 /** Tướng bắn xa: ngoài bãi đứng lùi sau hàng đầu quân ta. */
-const ARCHER_HEROES: HeroKind[] = ['anDuong', 'caoLo'];
+const ARCHER_HEROES: HeroKind[] = ['anDuong', 'caoLo', 'trungNhi'];
 
 /**
  * Tướng ra trận. Gióng: đánh bằng roi sắt hay bằng tre (`bamboo`, roi đã gãy). Sơn Tinh: đã mở Dời non chưa (`non`).

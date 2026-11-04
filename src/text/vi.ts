@@ -463,6 +463,7 @@ export const vi = {
     linhHan: 'lính kích Hán',
     noHan: 'nỏ thủ Hán',
     giapHan: 'giáp sĩ Hán',
+    toDinh: 'thái thú Tô Định',
   } satisfies Record<EnemyType, string>,
 
   enemyIcons: {
@@ -491,6 +492,7 @@ export const vi = {
     linhHan: '⚔️',
     noHan: '🎯',
     giapHan: '🪖',
+    toDinh: '🏮',
   } satisfies Record<EnemyType, string>,
 
   /** Tên và lời dẫn từng màn phó bản, theo thứ tự trong STAGES. */
@@ -1089,8 +1091,8 @@ export const vi = {
     assignHere: 'Giao trại này',
     toPost: 'Tới trại',
     commandAssigned: (name: string) => `${name} chỉ huy doanh trại này`,
-    tuongNames: { lacTuong: 'Lạc tướng', giong: 'Thánh Gióng', sonTinh: 'Sơn Tinh', anDuong: 'An Dương Vương', caoLo: 'Cao Lỗ' } satisfies Record<TuongId, string>,
-    tuongIcons: { lacTuong: '🥁', giong: '🐎', sonTinh: '⛰️', anDuong: '🏹', caoLo: '🎯' } satisfies Record<TuongId, string>,
+    tuongNames: { lacTuong: 'Lạc tướng', giong: 'Thánh Gióng', sonTinh: 'Sơn Tinh', anDuong: 'An Dương Vương', caoLo: 'Cao Lỗ', trungTrac: 'Trưng Trắc', trungNhi: 'Trưng Nhị' } satisfies Record<TuongId, string>,
+    tuongIcons: { lacTuong: '🥁', giong: '🐎', sonTinh: '⛰️', anDuong: '🏹', caoLo: '🎯', trungTrac: '🐘', trungNhi: '🚩' } satisfies Record<TuongId, string>,
     guardInfo: (used: number, cap: number) => `Giữ kinh đô: ${used}/${cap} chỗ (theo cấp Điện)`,
     guardAutoNote: 'Đang bố trí tự động: mọi lính giữ kinh đô cho tới đủ chỗ, chia đều các doanh trại. Bấm − + để tự bố trí.',
     guardManualNote: 'Lính bố trí ở trại nào thì ra trận từ trại ấy. Lính chết được quân dự trữ bù vào.',
@@ -1314,7 +1316,7 @@ export const vi = {
     campaignTitle3: 'Giữ thành Cổ Loa',
     campaignHint3: 'Ba màn đầu lên núi Thất Diệu diệt yêu tinh. Từ màn 20, An Dương Vương cầm nỏ thần cùng ra trận đánh quân Triệu Đà.',
     advWinTitle: 'Triệu Đà thua chạy!',
-    heroNames: { giong: 'Gióng', sonTinh: 'Sơn Tinh', anDuong: 'An Dương Vương', caoLo: 'Cao Lỗ' } satisfies Record<HeroKind, string>,
+    heroNames: { giong: 'Gióng', sonTinh: 'Sơn Tinh', anDuong: 'An Dương Vương', caoLo: 'Cao Lỗ', trungTrac: 'Trưng Trắc', trungNhi: 'Trưng Nhị' } satisfies Record<HeroKind, string>,
     campaignTitle4: 'Đường ra biển',
     campaignHint4: 'Màn 25 An Dương Vương cầm nỏ dẹp cướp sông. Từ màn 26, Cao Lỗ cầm quân. Màn 32 cầm chân giặc cho vua ra biển.',
     advHienLinhJoins: 'An Dương Vương hiển linh cùng ra trận',

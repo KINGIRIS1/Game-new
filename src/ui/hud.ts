@@ -1434,6 +1434,8 @@ export class Hud {
       sonTinh: () => status(sonResting(state), state.son.restUntil, state.son.won),
       anDuong: () => `${status(advResting(state), state.adv.restUntil, state.adv.bien)} · ${state.adv.bien ? vi.ui.advAtSea : vi.ui.advAtDien}`,
       caoLo: () => `${status(caoLoResting(state), state.caoLo.restUntil)} · ${vi.ui.caoLoAtDien}`,
+      trungTrac: () => vi.ui.heroReady,
+      trungNhi: () => vi.ui.heroReady,
     };
     const open: Partial<Record<TuongId, string>> = { giong: 'openGiong', sonTinh: 'openSon', anDuong: 'openAdv', caoLo: 'openCaoLo' };
     const busy = state.raid.phase === 'battle';

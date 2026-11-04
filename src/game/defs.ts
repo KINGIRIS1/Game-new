@@ -960,8 +960,8 @@ export const isRoad = (type: BuildingType): boolean => BUILDINGS[type].decor ===
  * rước Mị Nương, An Dương Vương khi có nỏ thần, Cao Lỗ khi thắng màn 25 (về trời, về núi, xuống biển rồi vẫn chỉ huy).
  * Doanh trại có tướng mới giữ chỗ quân.
  */
-export type TuongId = 'lacTuong' | 'giong' | 'sonTinh' | 'anDuong' | 'caoLo';
-export const TUONG_IDS: TuongId[] = ['lacTuong', 'giong', 'sonTinh', 'anDuong', 'caoLo'];
+export type TuongId = 'lacTuong' | 'giong' | 'sonTinh' | 'anDuong' | 'caoLo' | 'trungTrac' | 'trungNhi';
+export const TUONG_IDS: TuongId[] = ['lacTuong', 'giong', 'sonTinh', 'anDuong', 'caoLo', 'trungTrac', 'trungNhi'];
 /**
  * Số chỗ quân tối đa mang ra một trận phó bản, theo cấp Điện (chỉ số 0 là cấp 1): bằng sức chứa doanh trại cao nhất
  * dựng được ở cấp Điện ấy, không quá 38, để nhiều doanh trại không làm phó bản dễ đi.
@@ -1189,7 +1189,8 @@ export type EnemyType =
   | 'tuongThuy'
   | 'linhHan'
   | 'noHan'
-  | 'giapHan';
+  | 'giapHan'
+  | 'toDinh';
 export const UNIT_TYPES: UnitType[] = ['giao', 'cung', 'voi', 'no'];
 
 export interface FighterStats {
@@ -1234,7 +1235,7 @@ export const UNITS: Record<UnitType, UnitDef> = {
     range: 4.5,
     speed: 1.3,
     cooldown: 2.4,
-    strongVs: [...HEAVY, 'phoTuong', 'daiTuong', 'thuongLuong', 'thuyTinh', 'gaTrang', 'trieuDa', 'tuongThuy'],
+    strongVs: [...HEAVY, 'phoTuong', 'daiTuong', 'thuongLuong', 'thuyTinh', 'gaTrang', 'trieuDa', 'tuongThuy', 'toDinh'],
     cost: { gao: 50, voOc: 15, sat: 10 },
     home: 'traiNo',
     space: 2,
@@ -1276,6 +1277,8 @@ export const ENEMIES: Record<EnemyType, FighterStats> = {
   linhHan: { hp: 105, dmg: 13, range: 1.0, speed: 1.4, cooldown: 1.0 },
   noHan: { hp: 60, dmg: 13, range: 4.2, speed: 1.3, cooldown: 1.5 },
   giapHan: { hp: 330, dmg: 26, range: 0.9, speed: 1.5, cooldown: 1.4, strongVs: ['cung'] },
+  // Thái thú Tô Định, trùm màn 36: còn ít máu thì bỏ chạy (`TO_DINH_FLEE`).
+  toDinh: { hp: 1600, dmg: 30, range: 1.2, speed: 1.3, cooldown: 1.2 },
 };
 
 /**
@@ -1283,7 +1286,7 @@ export const ENEMIES: Record<EnemyType, FighterStats> = {
  * gà trắng nghìn năm ở đỉnh Thất Diệu, Triệu Đà dưới chân thành Cổ Loa (và trên đường ra biển), tướng thủy binh
  * Triệu ở cửa sông.
  */
-export const BOSSES: EnemyType[] = ['phoTuong', 'daiTuong', 'thuongLuong', 'thuyTinh', 'gaTrang', 'trieuDa', 'tuongThuy'];
+export const BOSSES: EnemyType[] = ['phoTuong', 'daiTuong', 'thuongLuong', 'thuyTinh', 'gaTrang', 'trieuDa', 'tuongThuy', 'toDinh'];
 /** Thủy quái bơi được dưới sông và chỗ nước ngập. */
 export const SWIMMERS: EnemyType[] = ['tomBinh', 'caPhun', 'caSau', 'thuongLuong', 'thuyTinh'];
 
@@ -1496,6 +1499,7 @@ export const ENEMY_ROWS: Record<EnemyType, Row> = {
   linhHan: 'tien',
   giapHan: 'trung',
   noHan: 'hau',
+  toDinh: 'hau',
 };
 
 /**
@@ -1505,7 +1509,7 @@ export const ENEMY_ROWS: Record<EnemyType, Row> = {
  */
 export const FIELD = { w: 9, d: 22, gap: 10, hpMul: 1.6, maxS: 90 };
 
-export type Terrain = 'rung' | 'benSong' | 'lang' | 'don' | 'nui' | 'doi' | 'ngap' | 'tanVien' | 'thatDieu' | 'coLoa' | 'cuaSong' | 'moDa' | 'benKia';
+export type Terrain = 'rung' | 'benSong' | 'lang' | 'don' | 'nui' | 'doi' | 'ngap' | 'tanVien' | 'thatDieu' | 'coLoa' | 'cuaSong' | 'moDa' | 'benKia' | 'hatMon' | 'luyLau';
 
 export type Chapter = 1 | 2 | 3 | 4 | 5;
 
