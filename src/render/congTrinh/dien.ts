@@ -84,13 +84,18 @@ export function dienSpots(level: number): LotSpot[] {
   ];
 }
 
-/** Vẽ `draw` trong khung riêng: mọi hình phóng `k` lần quanh gốc rồi dời tới (x, z). */
+/**
+ * Vẽ `draw` trong khung riêng: mọi hình phóng `k` lần quanh gốc rồi dời tới (x, z). Hàm vẽ bên trong tự đặt khung
+ * (chim Lạc trên mái cấp 10, `lacBird`) phải nhân vào khung đang có và trả lại khi xong, không thì phần vẽ sau mất
+ * phóng (`footprint.test.ts` canh khối nhà chính cấp 10 không bị thu nhỏ).
+ */
 function scaled(m: ToonModel, x: number, z: number, k: number, draw: () => void): void {
   const frame = new THREE.Matrix4().makeTranslation(x, 0, z).multiply(new THREE.Matrix4().makeScale(k, k, k));
   const builders = [m.plain, m.band, m.drum, m.glow];
+  const before = builders.map((b) => b.frame);
   for (const b of builders) b.frame = frame;
   draw();
-  for (const b of builders) b.frame = null;
+  builders.forEach((b, i) => (b.frame = before[i]));
 }
 
 /** Đỉnh đồng / Lư hương hoàng cung 3 chân đặt hai bên thềm chầu. */
