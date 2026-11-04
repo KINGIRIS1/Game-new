@@ -468,9 +468,9 @@ export const vi = {
     noUnit: (icon: string, unit: string) => `${icon} ${unit} +12% (không mang theo)`,
     barracksTitle: 'Nữ tướng ở trại',
     barracksHint: 'Mỗi trại một nữ tướng. Lính giữ kinh đô của trại, thuộc binh chủng của bà, được thêm 12% máu và sức đánh.',
-    here: 'Ở trại này',
-    other: 'Ở trại khác',
-    none: 'Chưa ở trại nào',
+    here: 'ở trại này',
+    other: 'ở trại khác',
+    none: 'chưa ở trại nào',
     assign: 'Về trại này',
     assigned: (name: string) => `${name} đã về doanh trại này`,
     /** Lạc hầu báo một lần khi mỗi nữ tướng theo về. */
