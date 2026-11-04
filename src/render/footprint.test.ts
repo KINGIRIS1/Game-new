@@ -40,6 +40,18 @@ describe('mô hình vừa móng kinh đô lớn', () => {
     }
   });
 
+  it('vẽ trong khung riêng (khối nhà chính Điện phóng 1,5 lần): mái cấp 10 có chim Lạc trả lại khung, phần vẽ sau vẫn trong khung', async () => {
+    const { boatRoof, coneRoof, roofFor } = await import('./buildings');
+    const { ToonModel } = await import('./toon');
+    const m = new ToonModel();
+    const frame = new THREE.Matrix4().makeScale(1.5, 1.5, 1.5);
+    m.plain.frame = m.band.frame = frame;
+    boatRoof(m, roofFor(10), { length: 2, width: 1, lift: 0.5, drop: 0.3, thickness: 0.08 }, 0, 1, 0);
+    coneRoof(m, roofFor(10), 0.5, 0.4, 0, 1, 0);
+    expect(m.plain.frame).toBe(frame);
+    expect(m.band.frame).toBe(frame);
+  });
+
   it('công trình nhiều ô còn vẽ theo móng cũ: phóng theo móng mới và chừa viền cỏ', async () => {
     const { BUILDINGS } = await import('../game/defs');
     const { footScale } = await import('./buildings');

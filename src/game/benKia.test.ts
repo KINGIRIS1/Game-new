@@ -53,7 +53,7 @@ import { planMau } from './mau';
 import { SAVE_VERSION, deserialize, serialize } from './save';
 import { pendingStory } from './story';
 import { drowns, floodMap } from './terrain';
-import { edge, setDien } from './testmap';
+import { edge, oldDien, setDien } from './testmap';
 import { HALF_ARMY, HALF_ARMY4, SAMPLE_ARMY, SAMPLE_ARMY4, SEEDS, fightField } from './testkit';
 
 /** Dấu vân tay độ cao tự nhiên của lưới 55×55 trước khi nới lưới (tính từ `map.ts` cũ). */
@@ -133,6 +133,7 @@ describe('nâng bản lưu 17 lên 18', () => {
   function asV17(s: GameState): Record<string, any> {
     const raw = JSON.parse(serialize(s));
     raw.version = 17;
+    oldDien(raw);
     const old: number[] = [];
     for (let z = 0; z < OLD_GRID; z++) for (let x = 0; x < OLD_GRID; x++) old.push(s.heights[z * GRID + x]);
     raw.heights = old;
@@ -322,7 +323,7 @@ describe('cầu qua sông', () => {
     const s = rich();
     const id = freeRiverPlot('nam', 4);
     const o = plotOrigin(id);
-    const kho = place(s, 'kho', 40, 30);
+    const kho = place(s, 'kho', 40, 28);
     if (!kho.ok) throw new Error(kho.reason);
     const from = { x: o.x + 2, z: o.z + 8 };
     expect(findPath(s, from.x, from.z, kho.value)).toBeNull();
@@ -721,7 +722,7 @@ describe('phòng thủ hai bờ', () => {
     revealPlots(s, Array.from({ length: 30 }, (_, k) => k), true);
     const lang = poiPlots().find((p) => plotOf(p).bank === 'nam' && poiAt(p)!.kind === 'lang' && plotOf(p).i === 4)!;
     expect(joinVillage(s, lang).ok).toBe(true);
-    const kho = place(s, 'kho', 40, 30);
+    const kho = place(s, 'kho', 40, 28);
     if (!kho.ok) throw new Error(kho.reason);
     const dt = place(s, 'doanhTrai', 26, 40);
     if (!dt.ok) throw new Error(dt.reason);

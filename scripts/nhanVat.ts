@@ -6,7 +6,7 @@ import { addSunLights } from '../src/render/lights';
 import { C } from '../src/render/palette';
 import type { Act, Poser } from '../src/render/rig';
 import { makeBeast, makeRoyalHorse, makeRuaVang } from '../src/render/beasts';
-import { makeAnDuong, makeCaoLo, makeDrummer, makeGiong, makeSonTinh, makeThuyTinh } from '../src/render/heroes';
+import { makeAnDuong, makeCaoLo, makeDrummer, makeGiong, makeLacTuong, makeSonTinh, makeThuyTinh } from '../src/render/heroes';
 import { makeMonster } from '../src/render/monsters';
 import { makeRower, makeWorker } from '../src/render/people';
 import { makeSoldier } from '../src/render/soldier';
@@ -95,6 +95,8 @@ export const NHOM: Record<string, Entry[]> = {
     { ten: 'An Dương Vương (rìu)', tao: () => makeAnDuong(), co: 1.3, cach: 1.1 },
     { ten: 'Cao Lỗ (nỏ liên châu)', tao: () => makeCaoLo(), co: 1.25, cach: 1.1 },
     { ten: 'Cao Lỗ (hiển linh)', tao: () => makeCaoLo({ glow: true }), co: 1.3, cach: 1.1 },
+    { ten: 'Lạc tướng đứng chầu (sân Điện)', tao: () => makeLacTuong(), co: 1.25, cach: 1.1 },
+    { ten: 'Gióng đứng chầu (sân Điện, hiển linh)', tao: () => makeGiong('trangSi', { bamboo: true, glow: true, onFoot: true }), co: 1.4, cach: 1.1 },
   ],
   ky_nang: [
     { ten: 'Kỹ năng (cột: 0, 0,1 … 1)', tao: () => makeGiong('trangSi'), co: 1.6, cach: 1.4 },

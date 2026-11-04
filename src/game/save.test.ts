@@ -2,7 +2,8 @@ import { describe, expect, it } from 'vitest';
 import { wallRings } from './coLoa';
 import { BUILDINGS, CH3_QUEST_START, raiseTileCost, type BuildingType } from './defs';
 import { createInitialState, dienLevel, limitOf, occupancy, place, type Building, type GameState } from './game';
-import { V11_AREA, isOpen, squareKhoanh } from './khoanh';
+import { AREA, START_KHOANH, isOpen, squareKhoanh } from './khoanh';
+import { oldDien } from './testmap';
 import { DIEN_HOME, GRID, touchesRiver } from './map';
 import { mauSlots } from './mau';
 import { legacyBaseHeights, levelLegacyFootprints } from './xepLai';
@@ -170,8 +171,8 @@ describe('nâng bản lưu kinh đô nhỏ lên kinh đô lớn (phiên bản 10
     expect(s).toBeDefined();
     expect(s.version).toBe(SAVE_VERSION);
     expect(s.heights.length).toBe(GRID * GRID);
-    // Đất đã mở là vùng hình vuông của Điện cấp 5 trước khi có khoảnh tự chọn.
-    expect(s.khoanh).toEqual(squareKhoanh(V11_AREA[4]));
+    // Đất đã mở là vùng hình vuông của Điện cấp 5 trước khi có khoảnh tự chọn, nới một khoảnh cho Điện 10×10.
+    expect(s.khoanh).toEqual(squareKhoanh(AREA[4]));
     expect(s.buildings[0]).toMatchObject({ type: 'dien', x: DIEN_HOME, z: DIEN_HOME, level: 5 });
     laidOut(s);
     // Không mất công trình nào ngoài đoạn lũy; giữ cấp, người làm.
@@ -219,6 +220,53 @@ describe('nâng bản lưu kinh đô nhỏ lên kinh đô lớn (phiên bản 10
     raw.version = 10;
     const back = deserialize(JSON.stringify(raw))!;
     expect(back.buildings).toEqual(s.buildings);
+    expect(back.relaid).toBeUndefined();
+  });
+});
+
+describe('nâng bản lưu 19 lên 20: Điện 10×10', () => {
+  it('Điện 5×5 nới về phía rừng thành 10×10, giữ mép phía sông; công trình vướng dời đi giữ cấp; lũy vướng thì dỡ, hoàn của; đất mở sẵn đủ 25 khoảnh', () => {
+    const s = createInitialState(0);
+    s.resources = { gao: 1000, voOc: 1000, datDa: 1000, sat: 100, go: 100 };
+    s.dan = 20;
+    const raw = JSON.parse(serialize(s));
+    raw.version = 19;
+    raw.khoanh = squareKhoanh(20);
+    oldDien(raw);
+    // Nhà sàn và một đoạn lũy nằm trên phần đất Điện 10×10 sẽ lấn vào; kho ở ngoài.
+    raw.buildings.push(
+      { id: 2, type: 'nhaSan', x: DIEN_HOME + 1, z: DIEN_HOME + 1, level: 2, workers: 0 },
+      { id: 3, type: 'luy', x: DIEN_HOME + 3, z: DIEN_HOME + 8, level: 1, workers: 0 },
+      { id: 4, type: 'kho', x: DIEN_HOME + 12, z: DIEN_HOME + 2, level: 1, workers: 0 },
+    );
+    raw.nextId = 5;
+    const back = deserialize(JSON.stringify(raw))!;
+    expect(back.version).toBe(SAVE_VERSION);
+    expect(back.buildings[0]).toMatchObject({ type: 'dien', x: DIEN_HOME, z: DIEN_HOME, level: 1 });
+    expect(back.khoanh).toEqual([...START_KHOANH]);
+    const nha = back.buildings.find((b) => b.id === 2)!;
+    expect(nha).toMatchObject({ type: 'nhaSan', level: 2 });
+    expect(nha.x >= DIEN_HOME + BUILDINGS.dien.w || nha.z >= DIEN_HOME + BUILDINGS.dien.d || nha.x + 3 <= DIEN_HOME || nha.z + 3 <= DIEN_HOME).toBe(true);
+    expect(back.buildings.find((b) => b.id === 4)).toMatchObject({ x: DIEN_HOME + 12, z: DIEN_HOME + 2 });
+    expect(back.buildings.some((b) => b.id === 3)).toBe(false);
+    expect(back.resources.voOc).toBe(1000 + BUILDINGS.luy.buildCost.voOc!);
+    expect(back.relaid).toMatchObject({ dien: true, dropped: 1 });
+    // Không công trình nào chồng nhau, tất cả trên đất đã mở.
+    let cells = 0;
+    for (const b of back.buildings) {
+      const def = BUILDINGS[b.type];
+      cells += def.w * def.d;
+      for (let dx = 0; dx < def.w; dx++) for (let dz = 0; dz < def.d; dz++) expect(isOpen(back, b.x + dx, b.z + dz)).toBe(true);
+    }
+    expect(occupancy(back).filter((v) => v > 0).length).toBe(cells);
+  });
+
+  it('không công trình nào vướng thì không báo', () => {
+    const raw = JSON.parse(serialize(createInitialState(0)));
+    raw.version = 19;
+    oldDien(raw);
+    const back = deserialize(JSON.stringify(raw))!;
+    expect(back.buildings[0]).toMatchObject({ x: DIEN_HOME, z: DIEN_HOME });
     expect(back.relaid).toBeUndefined();
   });
 });

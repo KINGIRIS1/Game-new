@@ -1,4 +1,4 @@
-// Khoảnh đất: đất giữa dải rừng ngoài cùng và sông chia thành 10×10 khoảnh 5×5. Lúc đầu mở sẵn 16 khoảnh ở góc
+// Khoảnh đất: đất giữa dải rừng ngoài cùng và sông chia thành 10×10 khoảnh 5×5. Lúc đầu mở sẵn 25 khoảnh ở góc
 // sông; người chơi phát thêm khoảnh rừng nào tùy ý (miễn sát đất đã mở), không giới hạn lượt, trả gạo và vỏ ốc, giá
 // tăng từng nấc theo số khoảnh đã phát. Không phụ thuộc DOM hay Three.js.
 
@@ -44,14 +44,21 @@ export function squareKhoanh(size: number): number[] {
   return out;
 }
 
-/** Lúc đầu mở sẵn 16 khoảnh ở góc sông: vùng 20×20, Điện ở giữa. */
-export const START_KHOANH: readonly number[] = squareKhoanh(20);
+/** Lúc đầu mở sẵn 25 khoảnh ở góc sông: vùng 25×25, Điện 10×10 cách rìa rừng 5 ô, cách sông 10 ô. */
+export const START_KHOANH: readonly number[] = squareKhoanh(25);
 
 /**
  * Cạnh vùng đất hình vuông theo cấp Điện trước khi có khoảnh tự chọn (bản lưu phiên bản 11). Chỉ dùng để nâng bản
  * lưu và để test dựng nhanh kinh đô theo cấp.
  */
 export const V11_AREA = [20, 25, 25, 30, 35, 40, 40, 45, 45, 45];
+
+/**
+ * Cạnh vùng đất hình vuông neo góc sông theo cấp Điện từ khi Điện 10×10 (bản lưu 20): như `V11_AREA` nới thêm một
+ * khoảnh về phía rừng, vì Điện lấn về phía rừng đúng chừng ấy, nên Điện vẫn cách bìa vùng đất như Điện 5×5 cũ. Khung
+ * dựng mẫu kinh đô (`frameStart` ở `mau.ts`) và test dựng nhanh kinh đô theo cấp dùng cạnh này.
+ */
+export const AREA = V11_AREA.map((a) => Math.min(a + KHOANH, RIVER_START - FOREST_BAND));
 
 /**
  * Mặt nạ ô đã mở và ô nhỏ nhất đã mở (bên này), nhớ theo mảng `state.khoanh` (phát rừng thay mảng mới) và mảng
@@ -117,7 +124,7 @@ export function openStart(state: GameState): number {
  */
 const roundPrice = (n: number) => (n < 100 ? Math.round(n) : n < 1000 ? Math.round(n / 5) * 5 : Math.round(n / 10) * 10);
 
-/** Giá phát khoảnh rừng khi đã mở `count` khoảnh (tính cả 16 khoảnh mở sẵn): nấc thứ `count − 16`. */
+/** Giá phát khoảnh rừng khi đã mở `count` khoảnh (tính cả 25 khoảnh mở sẵn): nấc thứ `count − 25`. */
 export function khoanhCostAt(count: number): Cost {
   const step = KHOANH_COST_STEP ** Math.max(0, count - START_KHOANH.length);
   return { gao: roundPrice(KHOANH_COST_BASE.gao * step), voOc: roundPrice(KHOANH_COST_BASE.voOc * step) };

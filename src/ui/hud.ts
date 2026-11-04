@@ -1333,7 +1333,7 @@ export class Hud {
       actions.push(`<button class="btn bronze" data-act="startMerge" data-id="${b.id}" ${can ? '' : 'disabled'}>🎯 ${vi.ui.merge} · ${costHtml(state, cost)}</button>`);
       if (!pair) actions.push(`<div class="why">${vi.ui.mergeNoPair}</div>`);
     }
-    if (b.type !== 'dien') {
+    {
       const mc = moveCost(b);
       const free = state.raid.phase === 'idle' && canAfford(state, mc);
       const moveBtn = `<button class="btn ghost" data-act="startMove" data-id="${b.id}" ${free ? '' : 'disabled'}>↔ ${vi.ui.move} · ${costHtml(state, mc)}</button>`;

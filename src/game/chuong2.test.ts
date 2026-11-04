@@ -54,11 +54,12 @@ function ch2(): GameState {
   s.questIndex = CH2_QUEST_START;
   s.giong = { fed: 5, gear: { ngua: true, roi: true, giap: true }, whipBroken: true, restUntil: 0, ascended: true };
   s.campaign.cleared = 8;
-  const barracks = place(s, 'doanhTrai', edge(5, 1), edge(5, 1));
+  // Doanh trại cách sông như khi Điện còn 5×5 (Điện lớn lấn về phía rừng, bìa đất lùi theo).
+  const barracks = place(s, 'doanhTrai', edge(5, 6), edge(5, 6));
   if (!barracks.ok) throw new Error(barracks.reason);
   barracks.value.level = 5;
   // Chương 1 kết thúc bằng việc dựng Đền Phù Đổng.
-  if (!place(s, 'denPhuDong', edge(5, 6), edge(5, 1)).ok) throw new Error('dựng đền thử thất bại');
+  if (!place(s, 'denPhuDong', edge(5, 11), edge(5, 6)).ok) throw new Error('dựng đền thử thất bại');
   s.troops = { ...ARMY };
   return s;
 }
