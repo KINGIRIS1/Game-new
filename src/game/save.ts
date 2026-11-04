@@ -30,7 +30,7 @@ import { initialBenKia, isBenKiaState, noGarrison } from './benKia';
 import { initialCayDa, isCayDaState } from './cayDa';
 import { initialAdv } from './coLoa';
 import { inChapter4 } from './chuong4';
-import { inChapter5 } from './chuong5';
+import { inChapter5, initialHaiBa } from './chuong5';
 import { SAVE_VERSION, autoAssign, housing, initialCampaign, initialGiong, initialRaid, scheduleHan, scheduleThuyBinh, type GameState } from './game';
 import { GRID, baseHeights, isRiver } from './map';
 import { initialSon } from './son';
@@ -102,6 +102,7 @@ function migrate(raw: unknown): unknown {
   }
   if (isObj(v) && v.version === 18) v = migrate18to19(v);
   if (isObj(v) && v.version === 19) v = migrate19to20(v);
+  if (isObj(v) && v.version === 20) v = migrate20to21(v);
   return v;
 }
 
@@ -397,6 +398,13 @@ function migrate19to20(s: Raw): Raw {
   return s;
 }
 
+/** Phiên bản 20 → 21 (chương 5 PR 2): Hai Bà Trưng ra trận, mỗi bà nghỉ riêng khi kiệt sức. */
+function migrate20to21(s: Raw): Raw {
+  s.version = 21;
+  s.haiBa = initialHaiBa();
+  return s;
+}
+
 const isBanh = (v: unknown, test: (x: unknown) => boolean): boolean => isObj(v) && test(v.chung) && test(v.giay);
 const isBool = (x: unknown) => typeof x === 'boolean';
 
@@ -450,6 +458,8 @@ function isGameState(v: unknown): v is GameState {
   if (typeof adv.layTrao !== 'boolean' || typeof adv.bien !== 'boolean') return false;
   const cao = v.caoLo;
   if (!isObj(cao) || !isNum(cao.restUntil) || typeof cao.lenhBan !== 'boolean') return false;
+  const ba = v.haiBa;
+  if (!isObj(ba) || !isNum(ba.trungTrac) || !isNum(ba.trungNhi)) return false;
   const tt = v.thuThach;
   if (!isObj(tt) || !isNum(tt.huan) || tt.huan < 0 || !Array.isArray(tt.won) || !tt.won.every((n) => isNum(n) && n >= 1 && n <= STAGES.length)) return false;
   if (!isObj(tt.bac) || !HUAN_BRANCHES.every((k) => isNum((tt.bac as Raw)[k]) && ((tt.bac as Raw)[k] as number) >= 0 && ((tt.bac as Raw)[k] as number) <= HUAN_COST.length)) return false;

@@ -1,10 +1,11 @@
-// Các đoạn truyện của chương 1 (Thánh Gióng), chương 2 (Sơn Tinh, Thủy Tinh), chương 3 (An Dương Vương)
-// và chương 4 (Mỵ Châu, Trọng Thủy):
+// Các đoạn truyện của chương 1 (Thánh Gióng), chương 2 (Sơn Tinh, Thủy Tinh), chương 3 (An Dương Vương),
+// chương 4 (Mỵ Châu, Trọng Thủy) và chương 5 (Hai Bà Trưng):
 // kể mỗi đoạn một lần, đúng thứ tự.
 
 import { benKiaOpen } from './benKia';
 import { CAO_LO_AT, LONG_NGONG_AT, advAtSea } from './caoLo';
 import { inChapter4 } from './chuong4';
+import { HIEU_TRIEU_AT, LUY_LAU_AT, inChapter5 } from './chuong5';
 import { advJoined, inChapter3, ruaVangCame } from './coLoa';
 import type { GameState, StoryId } from './game';
 import { giongAppeared, giongReady } from './giong';
@@ -33,6 +34,9 @@ const STORY_ORDER: StoryId[] = [
   'longNgong',
   'ngocTrai',
   'hetTruyen',
+  'meLinh',
+  'hatMon',
+  'trungVuong',
 ];
 const STORY_WHEN: Record<StoryId, (s: GameState) => boolean> = {
   mo: () => true,
@@ -64,6 +68,12 @@ const STORY_WHEN: Record<StoryId, (s: GameState) => boolean> = {
   // Thắng màn 32: tới biển Mộ Dạ, vua theo Rùa Vàng xuống biển. Sau đó là màn hình Hết truyện.
   ngocTrai: advAtSea,
   hetTruyen: advAtSea,
+  // Vào chương 5: đất Mê Linh dưới ách nhà Hán, Hai Bà ra trận.
+  meLinh: inChapter5,
+  // Thắng màn 33: Tô Định giết Thi Sách, Hai Bà tế cờ ở cửa sông Hát. Trưng Nhị có Hiệu triệu.
+  hatMon: (s) => inChapter5(s) && s.campaign.cleared >= HIEU_TRIEU_AT,
+  // Thắng màn 36: Tô Định bỏ trốn, Trưng Trắc lên ngôi.
+  trungVuong: (s) => inChapter5(s) && s.campaign.cleared >= LUY_LAU_AT,
 };
 
 /** Đoạn truyện đến lúc kể mà người chơi chưa xem, theo đúng thứ tự. */

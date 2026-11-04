@@ -2103,6 +2103,14 @@ textarea {
   border-color: #c06a8a;
 }
 
+.speaker.trungTrac .avatar {
+  border-color: var(--red);
+}
+
+.speaker.trungNhi .avatar {
+  border-color: #c99a2e;
+}
+
 /* Màn hình Hết truyện: bốn dòng tóm tắt bốn chương rồi câu nhắc chuyện về sau. */
 .ending-list {
   margin: 4px 0 10px;
@@ -2121,6 +2129,8 @@ textarea {
 }
 
 .story .line {
+  /* Lời thề Hát Môn xuống dòng theo câu thơ. */
+  white-space: pre-line;
   margin: 10px 0 14px;
   font-size: 16px;
   line-height: 1.5;

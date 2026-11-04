@@ -26,10 +26,12 @@ export const REACTION_S = 1.5;
 /** Mỗi màn đánh thử với vài hạt giống, vì chỗ đứng ban đầu của lính có ngẫu nhiên. */
 export const SEEDS = [1, 2, 3];
 
-export function fightStage(stage: number, army: Army, hero: HeroSetup | null, play: Play, id = 1): Battle {
+/** Đánh thử màn `stage`. `hero` là một tướng, hay hai tướng cùng ra trận (Hai Bà Trưng ở chương 5). */
+export function fightStage(stage: number, army: Army, hero: HeroSetup | HeroSetup[] | null, play: Play, id = 1, hpScale = STAGES[stage - 1].hpScale): Battle {
   const def = STAGES[stage - 1];
   const bonus = play === 'thuong' ? 0 : TEMPLE_BONUS;
-  const b = startFieldBattle({ id, stage, enemies: def.enemies, waves: def.waves, holdS: def.holdS, hpScale: def.hpScale, army, rows: DEFAULT_ROWS, hero, bonus });
+  const [h1 = null, h2 = null] = Array.isArray(hero) ? hero : [hero];
+  const b = startFieldBattle({ id, stage, enemies: def.enemies, waves: def.waves, holdS: def.holdS, hpScale, army, rows: DEFAULT_ROWS, hero: h1, hero2: h2, bonus });
   return playOut(b, play);
 }
 

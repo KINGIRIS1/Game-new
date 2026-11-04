@@ -27,7 +27,9 @@ type Speaker =
   | 'trieuDa'
   | 'langLieu'
   | 'myChau'
-  | 'trongThuy';
+  | 'trongThuy'
+  | 'trungTrac'
+  | 'trungNhi';
 
 export const vi = {
   gameTitle: 'Thời đại Văn Lang',
@@ -339,6 +341,7 @@ export const vi = {
     canKetChuong4: 'Chỉ dựng được sau khi hộ giá vua ra biển Mộ Dạ',
     canCaoLo: 'Màn này cần Cao Lỗ đã cầm quân (thắng màn 25)',
     caoLoKietSuc: 'Cao Lỗ đang kiệt sức, chờ một lát',
+    haiBaKietSuc: 'Cả Hai Bà đều đang kiệt sức, chờ một lát',
     thuThachKhoa: 'Thắng màn này trước đã mới mở thử thách',
     thuThachBinhChung: 'Thử thách này chỉ được mang hai binh chủng đã chỉ định',
     huanToiDa: 'Nhánh này đã đủ 3 bậc',
@@ -425,9 +428,12 @@ export const vi = {
     dien10:
       'Chương 5: Hai Bà Trưng. Hơn hai trăm năm đã qua, nhà Hán sang đô hộ, quân Hán sắp kéo tới kinh đô. Xin nâng Điện lên cấp 10, cấp cao nhất, để giữ đất Mê Linh.',
     cap10: 'Xin nâng một công trình lên cấp 10, cấp cao nhất của kinh đô.',
-    chongHan: 'Thái thú Tô Định sai quân Hán áo đỏ đi thu cống, cướp phá khắp nơi. Xin bệ hạ giữ vững kinh đô, đánh lui một đợt quân Hán.',
+    chongHan: 'Thái thú Tô Định sai quân Hán áo đỏ đi thu cống, cướp phá khắp nơi. Xin Hai Bà giữ vững kinh đô, đánh lui một đợt quân Hán.',
+    luyenVoi: 'Hai Bà cưỡi voi ra trận, nghĩa quân cũng cần tượng binh. Xin luyện 6 voi chiến ở chuồng voi.',
+    quaMan33: 'Lính Hán đang thu cống ở Mê Linh. Xin Hai Bà dẫn quân đuổi chúng đi (màn 33).',
+    haLuyLau: 'Tô Định đóng ở thành Luy Lâu. Hạ được thành thì đất Lĩnh Nam về tay ta (màn 36).',
     allDone:
-      'Thủy binh, quân Triệu đã thôi tới, nay quân Hán và mùa lũ thay phiên đánh kinh đô. Ở đất Mê Linh, hai chị em họ Trưng đang ngầm lo việc lớn. Truyện Hai Bà Trưng sẽ kể tiếp ở bản sau.',
+      'Trưng Trắc đã lên ngôi, đóng đô ở Mê Linh. Quân Hán và mùa lũ vẫn thay phiên đánh kinh đô. Truyện Hai Bà Trưng sẽ kể tiếp ở bản sau.',
   } as Record<string, string>,
 
   units: {
@@ -529,6 +535,10 @@ export const vi = {
     { name: 'Rừng biên Cổ Loa', intro: 'Giặc men rừng vây phía bắc thành. Cao Lỗ truyền lính nỏ giữ bìa rừng.' },
     { name: 'Cổng Cổ Loa', intro: 'Nỏ thần không còn thiêng, giặc đã tới chân thành. Cao Lỗ giữ cổng cho vua cùng Mỵ Châu lên ngựa chạy về phương Nam.' },
     { name: 'Đường ra biển Mộ Dạ', intro: 'Vua cùng Mỵ Châu phi ngựa về phương Nam, giặc lần theo lông ngỗng đuổi sát sau lưng. Cầm chân giặc cho tới khi vua tới biển!' },
+    { name: 'Mê Linh', intro: 'Lính Hán về Mê Linh thu cống, bắt dân lên rừng săn voi, xuống biển mò ngọc trai. Hai Bà cưỡi voi ra đuổi lính thu cống.' },
+    { name: 'Cửa sông Hát', intro: 'Nghĩa quân tụ về cửa sông Hát, nơi Hai Bà tế cờ. Quân Hán kéo tới hòng phá đàn tế. Giữ lấy cửa sông!' },
+    { name: 'Thành Cổ Loa', intro: 'Quân Hán chiếm thành Cổ Loa xưa của An Dương Vương. Hai Bà dẫn nghĩa quân lấy lại thành.' },
+    { name: 'Thành Luy Lâu', intro: 'Thái thú Tô Định đóng ở thành Luy Lâu, dốc hết quân ra chống. Hạ được thành thì cả Lĩnh Nam theo về. Trận quyết chiến!' },
   ],
 
   rows: { tien: 'Tiền quân', trung: 'Trung quân', hau: 'Hậu quân' } satisfies Record<Row, string>,
@@ -545,6 +555,8 @@ export const vi = {
     ruaVang: { name: 'Rùa Vàng', icon: '🐢', desc: 'Rùa Vàng nổi lên che chở: quân ta hồi máu, chỉ chịu nửa sát thương trong chốc lát.' },
     lienChau: { name: 'Nỏ liên châu', icon: '🎯', desc: 'Cao Lỗ bắn nỏ liên châu: một loạt tên rơi xuống chỗ giặc đứng đông nhất.' },
     lenhBan: { name: 'Lệnh bắn', icon: '📯', desc: 'Cao Lỗ thổi tù và ra lệnh: lính nỏ bắn nhanh gấp đôi trong chốc lát; giữ kinh đô thì cả ụ nỏ và lầu nỏ.' },
+    voiXung: { name: 'Voi xung trận', icon: '🐘', desc: 'Voi của Trưng Trắc lao thẳng vào chỗ giặc đông nhất: giặc trên đường bị húc dạt sang hai bên, choáng một lúc.' },
+    hieuTrieu: { name: 'Hiệu triệu', icon: '📣', desc: 'Trưng Nhị phất cờ hiệu triệu: năm nghĩa binh chạy ra đánh giặc, quân ta quanh voi hồi máu.' },
   } satisfies Record<SkillId, { name: string; icon: string; desc: string }>,
 
   gear: {
@@ -594,6 +606,8 @@ export const vi = {
     langLieu: { name: 'Lang Liêu', icon: '🌾' },
     myChau: { name: 'Mỵ Châu', icon: '👸' },
     trongThuy: { name: 'Trọng Thủy', icon: '🧑' },
+    trungTrac: { name: 'Trưng Trắc', icon: '🐘' },
+    trungNhi: { name: 'Trưng Nhị', icon: '🚩' },
   } satisfies Record<Speaker, { name: string; icon: string }>,
 
   /**
@@ -830,6 +844,39 @@ export const vi = {
         { who: 'ke', text: 'An Dương Vương đắp thành Cổ Loa ba vòng, có nỏ thần đánh tan Triệu Đà.' },
         { who: 'ke', text: 'Lẫy nỏ bị tráo, nỏ thần mất thiêng, nước Âu Lạc rơi vào tay Triệu Đà.' },
         { who: 'ke', text: 'Hơn hai trăm năm sau, ở đất Mê Linh có hai chị em họ Trưng…' },
+      ],
+    },
+    meLinh: {
+      title: 'Đất Mê Linh',
+      lines: [
+        { who: 'ke', text: 'Hơn hai trăm năm sau, nước ta bị nhà Hán đô hộ. Thái thú Tô Định tham lam, tàn bạo, bắt dân lên rừng săn voi lấy ngà, xuống biển mò ngọc trai.' },
+        { who: 'ke', text: 'Lạc tướng Mê Linh có hai con gái là Trưng Trắc, Trưng Nhị. Hai Bà được mẹ là bà Man Thiện dạy võ nghệ, giỏi cưỡi voi.' },
+        { who: 'ke', text: 'Trưng Trắc lấy Thi Sách, con Lạc tướng Chu Diên. Hai nhà ngầm lo việc lớn.' },
+        { who: 'trungTrac', text: 'Dân ta khổ đã lâu. Em ơi, ta luyện voi, rèn giáo, chờ ngày đuổi giặc.' },
+        { who: 'trungNhi', text: 'Chị cưỡi voi đi trước, em giương cung theo sau. Voi Mê Linh không chịu thua ngựa Hán.' },
+        { who: 'lacHau', text: 'Tâu hai Bà, từ nay hai Bà cùng ra trận, mỗi bà một voi, mỗi bà chỉ huy được một doanh trại. Trưng Trắc có Voi xung trận.' },
+        { who: 'lacHau', text: 'Quân Hán sẽ tới đánh kinh đô, xen với mùa lũ. Điện lên được cấp 10, bản đồ phó bản có thêm chương 5.' },
+      ],
+    },
+    hatMon: {
+      title: 'Lời thề Hát Môn',
+      lines: [
+        { who: 'ke', text: 'Tô Định hay tin các Lạc tướng ngầm lo việc lớn, bèn giết Thi Sách để răn đe.' },
+        { who: 'ke', text: 'Trưng Trắc gác tang, mặc giáp, cùng em tế cờ ở cửa sông Hát. Trước ba quân, Bà đọc lời thề:' },
+        { who: 'trungTrac', text: 'Một xin rửa sạch nước thù,\nHai xin đem lại nghiệp xưa họ Hùng,\nBa kẻo oan ức lòng chồng,\nBốn xin vẻn vẹn sở công lênh này.' },
+        { who: 'ke', text: 'Dân các nơi nô nức kéo về theo Hai Bà.' },
+        { who: 'trungNhi', text: 'Ai có giáo cầm giáo, ai có gậy cầm gậy! Theo cờ ta mà đánh giặc!' },
+        { who: 'lacHau', text: 'Tâu hai Bà, Trưng Nhị nay có Hiệu triệu: phất cờ gọi 5 nghĩa binh ra giữa trận, quân ta quanh voi được hồi máu.' },
+      ],
+    },
+    trungVuong: {
+      title: 'Trưng Vương',
+      lines: [
+        { who: 'ke', text: 'Nghĩa quân hạ Mê Linh, Cổ Loa, rồi Luy Lâu. Tô Định cắt tóc, cạo râu, bỏ trốn về Nam Hải.' },
+        { who: 'ke', text: 'Sáu mươi lăm thành ở Lĩnh Nam theo về. Trưng Trắc lên ngôi vua, đóng đô ở Mê Linh.' },
+        { who: 'trungTrac', text: 'Ta tha thuế hai năm cho dân. Người cày có ruộng, người chài có sông.' },
+        { who: 'trungNhi', text: 'Nhà Hán chưa chịu thôi đâu. Chị em ta phải giữ kinh đô cho vững.' },
+        { who: 'lacHau', text: 'Tâu Trưng Vương, quân Hán vẫn sẽ tới đánh kinh đô. Các màn sau của chương 5 sẽ mở ở bản sau.' },
       ],
     },
   } satisfies Record<StoryId, { title: string; lines: { who: Speaker; text: string }[] }>,

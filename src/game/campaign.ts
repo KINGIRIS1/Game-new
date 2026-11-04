@@ -9,12 +9,13 @@ import { retreatField, startFieldBattle, stepField, type HeroKind } from './batt
 import { finishCamp } from './benKia';
 import { CH4_LAST, LAY_TRAO_AT, LENH_BAN_AT, caoLoJoined, caoLoResting } from './caoLo';
 import { inChapter4 } from './chuong4';
+import { haiBaSetups, inChapter5 } from './chuong5';
 import { CH3_LAST, KIM_QUY_AT, advJoined, advResting, inChapter3 } from './coLoa';
 import { armySpace, fieldCap } from './doanhTrai';
 import { REPLAY_SHARE, RESOURCE_IDS, STAGES, UNIT_TYPES, type Chapter, type Cost, type Row, type StageDef, type UnitType } from './defs';
 import { BATTLE_STEP, countOf, dienLevel, gain, troopBonus, type FailReason, type GameState, type Result, type StageResult } from './game';
 import { giongReady, giongResting } from './giong';
-import { heroFor, inChapter2, restAfter, sonJoined, sonOnly, sonResting, winGift } from './son';
+import { heroesFor, inChapter2, restAfter, sonJoined, sonOnly, sonResting, winGift } from './son';
 import { challengeField, challengeOf, challengeOpen, huanTiers, winChallenge } from './thuThach';
 
 /** Thắng màn này lần đầu thì roi sắt gãy. */
@@ -64,6 +65,7 @@ export function canStartStage(state: GameState, n: number, challenge = false): R
   if (def.chapter === 2 && !inChapter2(state)) return fail('canChuong2');
   if (def.chapter === 3 && !inChapter3(state)) return fail('canChuong3');
   if (def.chapter === 4 && !inChapter4(state)) return fail('canChuong4');
+  if (def.chapter === 5 && !inChapter5(state)) return fail('canChuong5');
   if (!stageOpen(state, n)) return fail('manKhoa');
   if (challenge && !challengeOpen(state, n)) return fail('thuThachKhoa');
   const needs: Partial<StageDef> = heroless(n, challenge) ? {} : def;
@@ -79,6 +81,8 @@ export function canStartStage(state: GameState, n: number, challenge = false): R
   if (needs.needsAdv && advResting(state)) return fail('advKietSuc');
   if (needs.needsCaoLo && !caoLoJoined(state)) return fail('canCaoLo');
   if (needs.needsCaoLo && caoLoResting(state)) return fail('caoLoKietSuc');
+  // Chương 5: cần ít nhất một bà khỏe; cả hai bà kiệt sức thì màn khóa.
+  if (def.chapter === 5 && !heroless(n, challenge) && !haiBaSetups(state).length) return fail('haiBaKietSuc');
   if (dienLevel(state) < def.minDien) return fail('chuaDuCapDien');
   if (state.raid.phase !== 'idle') return fail('dangCoGiac');
   if (state.campaign.battle) return fail('dangDanhPhoBan');
@@ -90,8 +94,13 @@ export function canStartStage(state: GameState, n: number, challenge = false): R
  * (`stageHeroes`); không chọn, hay tướng ấy không ra trận được, thì lấy tướng chọn sẵn.
  */
 export function stageHero(state: GameState, n: number, challenge = false, pick?: HeroKind | null) {
+  return stageHeroList(state, n, challenge, pick)[0] ?? null;
+}
+
+/** Các tướng ra trận màn `n` (chương 5: Hai Bà, bà nào khỏe thì ra). */
+export function stageHeroList(state: GameState, n: number, challenge = false, pick?: HeroKind | null) {
   const def = stageDef(n);
-  return !def || heroless(n, challenge) ? null : heroFor(state, def.chapter, n, pick);
+  return !def || heroless(n, challenge) ? [] : heroesFor(state, def.chapter, n, pick);
 }
 
 /**
@@ -154,7 +163,7 @@ export function startStage(
   // Nhiều doanh trại cho nhiều quân dự trữ, nhưng mỗi trận phó bản chỉ mang tối đa chừng này chỗ (38 từ Điện 5).
   if (armySpace(army) > fieldCap(state)) return fail('quaChoPhoBan');
   const def = stageDef(n)!;
-  const hero = stageHero(state, n, challenge, pick);
+  const [hero = null, hero2 = null] = stageHeroList(state, n, challenge, pick);
   // Có tướng thì ra trận một mình cũng được.
   if (!hero && UNIT_TYPES.every((k) => !army[k])) return fail('chuaChonQuan');
   state.campaign.rows = { ...rows };
@@ -169,6 +178,7 @@ export function startStage(
     army: { ...army },
     rows: { ...rows },
     hero,
+    hero2,
     bonus: troopBonus(state),
     arms: state.arms,
     huan: huanTiers(state),

@@ -1373,6 +1373,32 @@ export const LIEN_CHAU = { dmg: 120, radius: 3.5 };
 /** Lệnh bắn: trong lúc có lệnh, lính nỏ (và khi giữ kinh đô cả ụ nỏ, lầu nỏ) bắn nhanh gấp chừng này lần. */
 export const LENH_BAN = { rate: 2 };
 
+// ---------- Hai Bà Trưng (chương 5) ----------
+
+/** Trưng Trắc cưỡi voi trận đánh gần, đứng hàng đầu. */
+export const TRUNG_TRAC: FighterStats = { hp: 650, dmg: 20, range: 1.2, speed: 1.6, cooldown: 1.1 };
+/** Trưng Nhị bắn cung trên lưng voi trận, đứng lùi sau hàng đầu như An Dương Vương. */
+export const TRUNG_NHI: FighterStats = { hp: 520, dmg: 17, range: 4.0, speed: 1.6, cooldown: 1.1 };
+/** Bà nào kiệt sức thì nghỉ chừng này thời gian chơi; bà kia vẫn ra trận được. */
+export const HAI_BA_REST_MS = 2 * 60_000;
+/**
+ * Voi xung trận (Trưng Trắc): voi lao thẳng `length` ô về phía giặc đứng đông nhất. Giặc trên đường (rộng `width` ô)
+ * mất `dmg` máu, bị hất sang hai bên `push` ô và choáng `stun` giây.
+ */
+export const VOI_XUNG = { dmg: 90, length: 5, width: 1.6, push: 1, stun: 1.5 };
+/**
+ * Hiệu triệu (Trưng Nhị): `count` nghĩa binh chạy ra quanh voi, đánh tới hết trận (mỗi lúc nhiều nhất `count` người,
+ * gọi lại thì bù chỗ người đã ngã); quân ta trong `radius` ô quanh voi hồi `heal` phần máu.
+ */
+export const HIEU_TRIEU = { count: 5, radius: 3, heal: 0.15 };
+/**
+ * Nghĩa binh: không luyện, không chiếm chỗ doanh trại, không ăn gạo, không chết thật. Không được cộng binh khí, huân
+ * công, Đền; không thuộc vòng khắc chế.
+ */
+export const NGHIA_BINH: FighterStats = { hp: 55, dmg: 7, range: 0.8, speed: 1.6, cooldown: 1.0 };
+/** Tô Định còn chừng này phần máu thì bỏ chạy về cuối bãi, nhanh gấp `speed` lần; chạy thoát thì tính như đã hạ. */
+export const TO_DINH_FLEE = { at: 0.3, speed: 1.5 };
+
 /** Vào chương 3, hay khi An Dương Vương cầm nỏ thần: đợt giặc đầu tiên trên bộ tới sau chừng này thời gian chơi. */
 export const FIRST_LAND_MS = 3 * 60_000;
 
@@ -1602,6 +1628,11 @@ export const STAGES: StageDef[] = [
     reward: { gao: 9000, voOc: 7500, datDa: 6500, sat: 1600 },
     terrain: 'moDa',
   },
+  // Chương 5: Hai Bà Trưng cùng ra trận (cần ít nhất một bà khỏe). Màn 36 là thái thú Tô Định ở thành Luy Lâu.
+  { chapter: 5, minDien: 5, needsGiong: false, enemies: { linhHan: 13, noHan: 8, giapHan: 4 }, hpScale: 1.8, reward: { gao: 9500, voOc: 8000, datDa: 7000, sat: 1700 }, terrain: 'lang' },
+  { chapter: 5, minDien: 5, needsGiong: false, enemies: { linhHan: 13, noHan: 8, giapHan: 4 }, hpScale: 2.0, reward: { gao: 10000, voOc: 8400, datDa: 7300, sat: 1800 }, terrain: 'hatMon' },
+  { chapter: 5, minDien: 5, needsGiong: false, enemies: { linhHan: 12, noHan: 9, giapHan: 4 }, hpScale: 2.0, reward: { gao: 10500, voOc: 8800, datDa: 7700, sat: 1900 }, terrain: 'coLoa' },
+  { chapter: 5, minDien: 5, needsGiong: false, enemies: { linhHan: 12, noHan: 8, giapHan: 4, toDinh: 1 }, hpScale: 1.85, reward: { gao: 11500, voOc: 9500, datDa: 8300, sat: 2000 }, terrain: 'luyLau' },
 ];
 
 /** Mọi giặc của màn, cả các đợt kéo tới sau (màn cầm cự). */
@@ -1689,8 +1720,8 @@ export const HUAN_COST = [3, 5, 8];
 export const HUAN_BONUS = 0.04;
 
 /** Kỹ năng bấm tay trong trận: Trống trận của Lạc tướng, hai kỹ năng của mỗi tướng Gióng, Sơn Tinh, An Dương Vương, Cao Lỗ. */
-export type SkillId = 'trongTran' | 'phunLua' | 'nhoTre' | 'bocDoi' | 'doiNon' | 'noThan' | 'ruaVang' | 'lienChau' | 'lenhBan';
-export const SKILL_IDS: SkillId[] = ['trongTran', 'phunLua', 'nhoTre', 'bocDoi', 'doiNon', 'noThan', 'ruaVang', 'lienChau', 'lenhBan'];
+export type SkillId = 'trongTran' | 'phunLua' | 'nhoTre' | 'bocDoi' | 'doiNon' | 'noThan' | 'ruaVang' | 'lienChau' | 'lenhBan' | 'voiXung' | 'hieuTrieu';
+export const SKILL_IDS: SkillId[] = ['trongTran', 'phunLua', 'nhoTre', 'bocDoi', 'doiNon', 'noThan', 'ruaVang', 'lienChau', 'lenhBan', 'voiXung', 'hieuTrieu'];
 export const SKILLS: Record<SkillId, { cooldown: number; duration: number }> = {
   trongTran: { cooldown: 20, duration: 6 },
   phunLua: { cooldown: 15, duration: 0 },
@@ -1701,6 +1732,8 @@ export const SKILLS: Record<SkillId, { cooldown: number; duration: number }> = {
   ruaVang: { cooldown: 24, duration: 6 },
   lienChau: { cooldown: 12, duration: 0 },
   lenhBan: { cooldown: 22, duration: 6 },
+  voiXung: { cooldown: 12, duration: 0 },
+  hieuTrieu: { cooldown: 25, duration: 0 },
 };
 /** Trống trận thúc quân: quân ta đánh mạnh hơn và chạy nhanh hơn trong một lúc. */
 export const RALLY = { dmg: 1.5, speed: 1.3 };
@@ -1797,6 +1830,9 @@ export const QUESTS: QuestDef[] = [
   { id: 'dien10', goal: { kind: 'dienLevel', level: 10 }, reward: { gao: 4500, voOc: 4500 } },
   { id: 'cap10', goal: { kind: 'buildingLevel', level: 10, amount: 1 }, reward: { datDa: 3500, sat: 900 } },
   { id: 'chongHan', goal: { kind: 'hanHeld', amount: 1 }, reward: { voOc: 2500, sat: 700 } },
+  { id: 'luyenVoi', goal: { kind: 'unitTroops', unit: 'voi', amount: 6 }, reward: { gao: 2500, sat: 600 } },
+  { id: 'quaMan33', goal: { kind: 'stage', stage: 33 }, reward: { gao: 2500, voOc: 2000 } },
+  { id: 'haLuyLau', goal: { kind: 'stage', stage: 36 }, reward: { gao: 3000, datDa: 2000 } },
 ];
 /** Nhận xong thưởng nhiệm vụ cuối chương 1 (Đền Phù Đổng) thì sang chương 2. */
 export const CH2_QUEST_START = 20;

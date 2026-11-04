@@ -3,8 +3,9 @@
 // Kèm việc chọn tướng cho từng trận: mỗi trận một tướng, Gióng, Sơn Tinh hay An Dương Vương. Phó bản chương 2 thì
 // người chơi chọn Sơn Tinh hay Gióng hiển linh ở bảng xếp quân (`stageHeroes` ở campaign.ts).
 
-import type { Battle, HeroKind, HeroSetup } from './battle';
+import { heroSetups, type Battle, type HeroKind, type HeroSetup } from './battle';
 import { CAO_LO_AT, caoLoJoined, caoLoSetup } from './caoLo';
+import { HAI_BA_KINDS, haiBaJoined, haiBaSetups, isHaiBa, restHaiBa } from './chuong5';
 import { advJoined, advSetup } from './coLoa';
 import { ADV_REST_MS, CAO_LO_REST_MS, CH2_QUEST_START, GIFTS, GIFT_IDS, GIONG_REST_MS, SON_REST_MS, STAGES, type Chapter, type GiftId } from './defs';
 import { canAfford, pay, scheduleFirstFlood, type FailReason, type GameState, type Result, type SonState } from './game';
@@ -31,9 +32,9 @@ export function sonSetup(s: GameState): HeroSetup | null {
 }
 
 /**
- * Thứ tự tướng ưu tiên ra trận chương này (`stage`: màn phó bản; không có là trận giữ kinh đô), trước Sơn Tinh và
- * Gióng:
- * - chương 5: Cao Lỗ (Hai Bà Trưng chưa có);
+ * Thứ tự tướng ưu tiên ra trận chương này (`stage`: màn phó bản; không có là trận giữ kinh đô), sau Hai Bà (chương 5,
+ * `heroesFor`) và trước Sơn Tinh, Gióng:
+ * - chương 5: Cao Lỗ (khi cả hai bà đều kiệt sức);
  * - chương 4: phó bản màn 25 có An Dương Vương, màn 26–32 có Cao Lỗ; giữ kinh đô có An Dương Vương tới khi vua
  *   xuống biển, rồi Cao Lỗ;
  * - chương 3: An Dương Vương.
@@ -58,6 +59,24 @@ export const sonOnly = (stage?: number) => stage !== undefined && !!STAGES[stage
  * `pick`: người chơi chọn Gióng ở bảng xếp quân phó bản chương 2 (`stageHeroes`) thì Gióng ra trận thay Sơn Tinh.
  */
 export function heroFor(s: GameState, chapter: Chapter, stage?: number, pick?: HeroKind | null): HeroSetup | null {
+  return heroesFor(s, chapter, stage, pick)[0] ?? null;
+}
+
+/**
+ * Các tướng ra trận (một, hay hai với Hai Bà). Chương 5: Hai Bà cùng ra, bà nào kiệt sức thì bà kia ra một mình; cả
+ * hai kiệt sức thì như `heroFor` của chương trước (Cao Lỗ, Sơn Tinh, Gióng). Phó bản chương 5 cần ít nhất một bà
+ * (`canStartStage`).
+ */
+export function heroesFor(s: GameState, chapter: Chapter, stage?: number, pick?: HeroKind | null): HeroSetup[] {
+  if (chapter === 5) {
+    const ba = haiBaSetups(s);
+    if (ba.length) return ba;
+  }
+  const one = soloHero(s, chapter, stage, pick);
+  return one ? [one] : [];
+}
+
+function soloHero(s: GameState, chapter: Chapter, stage?: number, pick?: HeroKind | null): HeroSetup | null {
   for (const lead of leadsFor(s, chapter, stage)) {
     const hero = lead === 'anDuong' ? advSetup(s) : caoLoSetup(s);
     if (hero) return hero;
@@ -73,6 +92,7 @@ export function heroFor(s: GameState, chapter: Chapter, stage?: number, pick?: H
  */
 export function restingHero(s: GameState, chapter: Chapter, stage?: number): { kind: HeroKind; secs: number } | null {
   const order: { kind: HeroKind; joined: boolean; until: number }[] = [];
+  if (chapter === 5) for (const kind of HAI_BA_KINDS) order.push({ kind, joined: haiBaJoined(s), until: s.haiBa[kind] });
   for (const lead of leadsFor(s, chapter, stage)) {
     if (lead === 'anDuong') order.push({ kind: 'anDuong', joined: advJoined(s), until: s.adv.restUntil });
     else order.push({ kind: 'caoLo', joined: caoLoJoined(s), until: s.caoLo.restUntil });
@@ -84,13 +104,16 @@ export function restingHero(s: GameState, chapter: Chapter, stage?: number): { k
   return { kind: first.kind, secs: Math.ceil((first.until - s.clock) / 1000) };
 }
 
-/** Sau trận: tướng đã kiệt sức thì phải nghỉ một lúc mới ra trận lại được. */
+/** Sau trận: tướng đã kiệt sức thì phải nghỉ một lúc mới ra trận lại được (Hai Bà: bà nào kiệt sức thì bà ấy nghỉ). */
 export function restAfter(s: GameState, battle: Battle): void {
-  if (!battle.hero?.down) return;
-  if (battle.hero.kind === 'anDuong') s.adv.restUntil = s.clock + ADV_REST_MS;
-  else if (battle.hero.kind === 'caoLo') s.caoLo.restUntil = s.clock + CAO_LO_REST_MS;
-  else if (battle.hero.kind === 'sonTinh') s.son.restUntil = s.clock + SON_REST_MS;
-  else s.giong.restUntil = s.clock + GIONG_REST_MS;
+  for (const hero of heroSetups(battle)) {
+    if (!hero.down) continue;
+    if (isHaiBa(hero.kind)) restHaiBa(s, hero.kind);
+    else if (hero.kind === 'anDuong') s.adv.restUntil = s.clock + ADV_REST_MS;
+    else if (hero.kind === 'caoLo') s.caoLo.restUntil = s.clock + CAO_LO_REST_MS;
+    else if (hero.kind === 'sonTinh') s.son.restUntil = s.clock + SON_REST_MS;
+    else s.giong.restUntil = s.clock + GIONG_REST_MS;
+  }
 }
 
 /** Lễ vật này dâng được ở kinh đô chưa (cơm nếp, bánh chưng). Voi, gà, ngựa phải giành ở phó bản. */

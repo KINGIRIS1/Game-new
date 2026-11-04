@@ -102,9 +102,12 @@ export function assignCommander(s: GameState, id: number, tuong: TuongId): Resul
   return ok(tuong);
 }
 
-/** Doanh trại tướng ra trận cùng quân khi giữ kinh đô: trại tướng ấy chỉ huy, không thì trại của Lạc tướng. */
-export function heroPost(s: GameState, tuong: TuongId): Building | undefined {
-  return postOf(s, tuong) ?? postOf(s, 'lacTuong') ?? barracksList(s)[0];
+/**
+ * Doanh trại tướng ra trận cùng quân khi giữ kinh đô: trại tướng ấy chỉ huy, không thì trại của Lạc tướng
+ * (`fallback`; Hai Bà không chỉ huy trại nào thì ra từ trước Điện, nên không lấy trại khác).
+ */
+export function heroPost(s: GameState, tuong: TuongId, fallback = true): Building | undefined {
+  return postOf(s, tuong) ?? (fallback ? (postOf(s, 'lacTuong') ?? barracksList(s)[0]) : undefined);
 }
 
 // ---------- Giới hạn quân ra trận ----------

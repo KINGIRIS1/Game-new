@@ -89,7 +89,8 @@ describe('mở thử thách', () => {
 
   it('kiểu thử thách từng màn đúng như đã chốt', () => {
     const by = (kind: ChallengeKind) => CHALLENGES.map((c, i) => (c.kind === kind ? i + 1 : 0)).filter(Boolean);
-    expect(CHALLENGES.length).toBe(STAGES.length);
+    // Thử thách màn 33–40 để PR 4 của chương 5.
+    expect(CHALLENGES.length).toBe(32);
     expect(by('giacDu')).toEqual([1, 3, 4, 8, 12, 16, 19, 24, 28, 32]);
     expect(by('khongTuong')).toEqual([5, 7, 9, 11, 14, 17, 20, 22, 25, 27, 30]);
     expect(by('haiBinh')).toEqual([2, 6, 10, 13, 15, 18, 21, 23, 26, 29, 31]);
@@ -165,7 +166,7 @@ describe('luật từng kiểu thử thách', () => {
 
   it('màn 1–4 vốn ít giặc nên thử thách có thêm giặc, đông ngang màn 5–8; bãi chiến không quá 60 người', () => {
     const count = (e: Partial<Record<EnemyType, number>>) => Object.values(e).reduce((a, b) => a + (b ?? 0), 0);
-    for (let n = 1; n <= STAGES.length; n++) {
+    for (let n = 1; n <= CHALLENGES.length; n++) {
       const ch = challengeOf(n)!;
       expect(!!ch.extra).toBe(n <= 4);
       const foes = count(challengeEnemies(n));
@@ -191,6 +192,7 @@ describe('luật từng kiểu thử thách', () => {
 describe('huân công', () => {
   it('cả 32 thử thách cho đúng 80 huân công, bằng giá mua đủ năm nhánh', () => {
     const total = STAGES.reduce((n, _, i) => n + huanReward(i + 1), 0);
+    expect(huanReward(33)).toBe(0);
     expect(total).toBe(80);
     expect([huanReward(1), huanReward(9), huanReward(17), huanReward(25)]).toEqual([1, 2, 3, 4]);
     expect(HUAN_COST.reduce((a, b) => a + b, 0) * HUAN_BRANCHES.length).toBe(80);
@@ -268,11 +270,11 @@ describe('huân công', () => {
 describe('độ khó thử thách', () => {
   it('tướng đánh thử là tướng người chơi có khi đã hết truyện', () => {
     const s = late();
-    for (let n = 1; n <= STAGES.length; n++) expect(heroFor(s, STAGES[n - 1].chapter, n)).toEqual(lateHero(n));
+    for (let n = 1; n <= CHALLENGES.length; n++) expect(heroFor(s, STAGES[n - 1].chapter, n)).toEqual(lateHero(n));
   });
 
   it('quân mẫu thử thách vừa 38 chỗ, Hai binh chủng chỉ có hai binh chủng được mang', () => {
-    for (let n = 1; n <= STAGES.length; n++) {
+    for (let n = 1; n <= CHALLENGES.length; n++) {
       const army = challengeArmy(n);
       const space = (Object.keys(army) as UnitType[]).reduce((t, k) => t + army[k] * UNITS[k].space, 0);
       expect(space).toBeLessThanOrEqual(FIELD_SLOTS);

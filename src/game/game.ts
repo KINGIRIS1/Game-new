@@ -8,9 +8,9 @@ import { initialCayDa, updateCayDa, type CayDaState } from './cayDa';
 import { bridgeFit, bridgeheadCells, cutOff, farFactor, farRaidBank, fortFit, initialBenKia, landRaidSide, openBridgehead, updateBenKia, villagesOutput, type BenKiaState } from './benKia';
 import { huanTiers, initialThuThach } from './thuThach';
 import { inChapter4 } from './chuong4';
-import { inChapter5 } from './chuong5';
+import { inChapter5, initialHaiBa } from './chuong5';
 import { advJoined, initialAdv, inChapter3, ruaVangCame, wallRings } from './coLoa';
-import { heroFor, inChapter2, initialSon, restAfter, sonJoined } from './son';
+import { heroesFor, inChapter2, initialSon, restAfter, sonJoined } from './son';
 import { bake, datBonus, initialTet, troiBonus, updateTet, type TetState } from './tet';
 import { footprintTop, groundOf, levelFootprint, tileHeight } from './terrain';
 import {
@@ -244,6 +244,12 @@ export interface CaoLoState {
   lenhBan: boolean;
 }
 
+/** Hai Bà Trưng (chương 5): đồng hồ chơi lúc từng bà hồi sức sau khi kiệt sức trong trận. */
+export interface HaiBaState {
+  trungTrac: number;
+  trungNhi: number;
+}
+
 /** Các đoạn truyện, hiện mỗi đoạn một lần theo đúng thứ tự. */
 export type StoryId =
   | 'mo'
@@ -267,8 +273,11 @@ export type StoryId =
   | 'layNo'
   | 'longNgong'
   | 'ngocTrai'
-  /** Màn hình Hết truyện sau đoạn cuối chương 4 (không phải hộp thoại). */
-  | 'hetTruyen';
+  /** Màn hình Hết truyện sau đoạn cuối chương 4 (không phải hộp thoại); nay dẫn sang chương 5. */
+  | 'hetTruyen'
+  | 'meLinh'
+  | 'hatMon'
+  | 'trungVuong';
 
 /** Một lời mời đổi hàng của thuyền buôn: đưa `give`, nhận `get`. */
 export interface Offer {
@@ -289,9 +298,9 @@ export interface Merchant {
 /**
  * Phiên bản bản lưu hiện tại (11: kinh đô lớn; 12: khoảnh tự chọn; 13: lính nỏ, ụ nỏ; 14: Cao Lỗ, vua xuống biển;
  * 15: thử thách, huân công; 16: gỗ, tài nguyên thứ năm, và gợi ý của Lạc hầu về công trình mới; 17: cây, đá mọc trên
- * ô trống; 18: lưới nới qua sông, 76×76; 20: chương 5, quân Hán).
+ * ô trống; 18: lưới nới qua sông, 76×76; 20: chương 5, quân Hán; 21: Hai Bà Trưng).
  */
-export const SAVE_VERSION = 20;
+export const SAVE_VERSION = 21;
 
 export interface GameState {
   version: typeof SAVE_VERSION;
@@ -323,6 +332,7 @@ export interface GameState {
   son: SonState;
   adv: AdvState;
   caoLo: CaoLoState;
+  haiBa: HaiBaState;
   thuThach: ThuThachState;
   /** Hội Tết bánh chưng bánh giầy. */
   tet: TetState;
@@ -416,6 +426,7 @@ export type FailReason =
   | 'canKetChuong4'
   | 'canCaoLo'
   | 'caoLoKietSuc'
+  | 'haiBaKietSuc'
   | 'thuThachKhoa'
   | 'thuThachBinhChung'
   | 'huanToiDa'
@@ -496,6 +507,7 @@ export function createInitialState(now: number): GameState {
     son: initialSon(),
     adv: initialAdv(),
     caoLo: initialCaoLo(),
+    haiBa: initialHaiBa(),
     thuThach: initialThuThach(),
     tet: initialTet(),
     story: { seen: [] },
@@ -1633,10 +1645,12 @@ function updateRaid(state: GameState, ms: number): void {
   if (raid.phase === 'warning' && state.clock >= raid.startsAt) {
     raid.phase = 'battle';
     const foe = raid.foe;
-    const hero = heroFor(state, foeChapter(state, foe));
+    // Chương 5: Hai Bà cùng ra trận (bà nào kiệt sức thì bà kia ra một mình).
+    const [hero = null, hero2 = null] = heroesFor(state, foeChapter(state, foe));
     raid.battle = startBattle(state, raid.wave + 1, raid.side, {
       // Lẫy nỏ thần đã bị tráo: giữ kinh đô thì An Dương Vương không còn Nỏ thần.
       hero: hero?.kind === 'anDuong' && state.adv.layTrao ? { ...hero, layTrao: true } : hero,
+      hero2,
       bonus: troopBonus(state),
       flood: foe === 'thuy' ? { n: raid.floods + 1, level: nextFloodLevel(state) } : null,
       land:
