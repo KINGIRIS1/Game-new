@@ -645,8 +645,10 @@ export class Hud {
               : raid.foe === 'han'
                 ? `⚠️ ${vi.ui.hanWarning(sideName, secs)}`
                 : raid.foe === 'thuyBinh'
-                ? `⛵ ${vi.ui.thuyBinhWarning(sideName, secs)}`
-                : `⚠️ ${vi.ui.raidWarning(sideName, secs)}`;
+                  ? `⛵ ${vi.ui.thuyBinhWarning(sideName, secs)}`
+                  : raid.foe === 'thuyHan'
+                    ? `⛵ ${vi.ui.thuyHanWarning(sideName, secs)}`
+                    : `⚠️ ${vi.ui.raidWarning(sideName, secs)}`;
         list.push({ id: 'giac', text, tone: 'bad', act: 'lookRaid', label: vi.ui.raidLook });
       }
     }
@@ -664,8 +666,10 @@ export class Hud {
               : b.foe === 'han'
                 ? `⚔️ ${vi.ui.hanBattle(left, ours)}`
                 : b.foe === 'thuyBinh'
-                ? `⛵ ${vi.ui.thuyBinhBattle(left, ours)}`
-                : `⚔️ ${vi.ui.raidBattle(left, ours)}`;
+                  ? `⛵ ${vi.ui.thuyBinhBattle(left, ours)}`
+                  : b.foe === 'thuyHan'
+                    ? `⛵ ${vi.ui.thuyHanBattle(left, ours)}`
+                    : `⚔️ ${vi.ui.raidBattle(left, ours)}`;
       list.push({ id: 'tran', text, tone: 'bad' });
     }
     if (isStarving(state)) list.push({ id: 'doi', text: `🍚 ${vi.ui.starving}`, tone: 'bad' });
@@ -1565,8 +1569,8 @@ export class Hud {
       const min = raid.nextAt === null ? 0 : Math.ceil((raid.nextAt - state.clock) / 60000);
       const foe = nextFoe(state);
       if (inChapter2(state) && !floodSeason(state)) next = vi.ui.calmBeforeWedding;
-      else if (foe === 'thuyBinh') {
-        next = vi.ui.nextThuyBinh(min);
+      else if (foe === 'thuyBinh' || foe === 'thuyHan') {
+        next = foe === 'thuyBinh' ? vi.ui.nextThuyBinh(min) : vi.ui.nextThuyHan(min);
         call = vi.ui.callRaid;
       } else if (foe === 'yeu' || foe === 'trieu' || foe === 'han') {
         next = foe === 'yeu' ? vi.ui.nextYeu(min) : foe === 'trieu' ? vi.ui.nextTrieu(min) : vi.ui.nextHan(min);
@@ -1887,6 +1891,7 @@ export class Hud {
     else if (r.foe === 'trieu') title = r.won ? '🏹 ' + vi.ui.trieuWonTitle : '🔥 ' + vi.ui.trieuLostTitle;
     else if (r.foe === 'han') title = r.won ? '🏹 ' + vi.ui.hanWonTitle : '🔥 ' + vi.ui.hanLostTitle;
     else if (r.foe === 'thuyBinh') title = r.won ? '🎯 ' + vi.ui.thuyBinhWonTitle : '🔥 ' + vi.ui.thuyBinhLostTitle;
+    else if (r.foe === 'thuyHan') title = r.won ? '🎯 ' + vi.ui.thuyHanWonTitle : '🔥 ' + vi.ui.thuyHanLostTitle;
     else title = r.won ? '🥁 ' + vi.ui.raidWonTitle : '🔥 ' + vi.ui.raidLostTitle;
     back.innerHTML = `<div class="modal">
       <h2>${title}</h2>
@@ -1897,6 +1902,7 @@ export class Hud {
         <div>${vi.ui.raidStolen}: ${stolen}</div>
         <div>${vi.ui.raidWrecked(r.wrecked.length)}</div>
         ${flood ? `<div>${vi.ui.floodDrowned(r.drowned.length)}</div>` : ''}
+        ${r.foe === 'thuyHan' && !r.won ? `<div class="muted">⛵ ${vi.ui.shipsLeft}</div>` : ''}
       </div>
       <div class="actions">
         ${damaged ? `<button class="btn bronze" data-act="repairAll">${vi.ui.repairAll} · ${costHtml(state, cost)}</button>` : ''}
