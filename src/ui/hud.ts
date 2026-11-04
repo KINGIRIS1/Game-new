@@ -1,7 +1,7 @@
 // Giao diện HTML đặt đè lên cảnh 3D: thanh tài nguyên, nhiệm vụ, bảng xây dựng, bảng công trình, cài đặt,
 // bản đồ phó bản và các nút trong trận.
 
-import { enemiesLeft, alliesLeft, holdProgress, skillReady, wavesArrived, type Battle, type HeroKind } from '../game/battle';
+import { enemiesLeft, alliesLeft, heroSetups, holdProgress, skillReady, wavesArrived, type Battle, type HeroKind } from '../game/battle';
 import { advJoined, advLook, advResting, inChapter3, ruaVangCame, wallRings } from '../game/coLoa';
 import {
   BUILDINGS,
@@ -11,6 +11,7 @@ import {
   CONG_THANH,
   LAU_NO,
   LAU_NO_FROM_LEVEL,
+  NU_TUONG,
   DECOR_TYPES,
   FIELD,
   RESOURCE_IDS,
@@ -35,6 +36,7 @@ import {
   type GiftId,
   type Row,
   type SkillId,
+  type NuTuongId,
   type TuongId,
   type UnitType,
 } from '../game/defs';
@@ -51,6 +53,7 @@ import {
   guardTotal,
   reserve,
 } from '../game/doanhTrai';
+import { nuPosts, nuTuongList } from '../game/nuTuong';
 import {
   barracksLevel,
   canAfford,
@@ -104,6 +107,7 @@ import {
 import { chapterStages, stageHeroCheck } from '../game/campaign';
 import { caoLoJoined, caoLoResting } from '../game/caoLo';
 import { inChapter4, mergeCost, mergeable, mergedLevel } from '../game/chuong4';
+import { CH5_LAST, HAI_BA_KINDS, haiBaJoined, haiBaResting, inChapter5 } from '../game/chuong5';
 import { giongAppeared, giongLook, giongReady, giongResting } from '../game/giong';
 import { KHOANH_N } from '../game/khoanh';
 import { inChapter2, sonJoined, sonLook, sonResting, giftCount } from '../game/son';
@@ -111,11 +115,11 @@ import { floodToleranceOf, groundOf } from '../game/terrain';
 import { tetOpen, tetStarted, type Banh } from '../game/tet';
 import type { Resolution } from '../render/world';
 import { formatDuration, vi } from '../text/vi';
-import { armyHtml, defaultPick, huanHtml, mapHtml, nextRow, stageHtml, stageResultHtml, stepPick, type ArmyPick } from './campaign';
+import { armyHtml, defaultPick, huanHtml, mapHtml, nextRow, pickNu, stageHtml, stageResultHtml, stepPick, type ArmyPick, type MapChapter } from './campaign';
 import { armsHtml } from './binhKhi';
 import { advHtml, caoLoHtml } from './coLoa';
 import { costHtml, esc, fmt, fmtShort } from './format';
-import { endingHtml, giongHtml, storyHtml } from './giong';
+import { endingHtml, giongHtml, isEnding, storyHtml } from './giong';
 import { sonHtml } from './son';
 import { blessingHtml, tetHtml } from './tet';
 import { khoanhHtml } from './khoanh';
@@ -145,7 +149,7 @@ const BUILD_GROUPS: { key: keyof typeof vi.ui.buildGroups; types: BuildingType[]
 /** Bốn công trình làm bánh của Hội Tết: chỉ hiện trong bảng Xây dựng khi đã mở (sau kết chương 1). */
 const TET_TYPES: BuildingType[] = ['ruongNep', 'vuon', 'chuongLon', 'bep'];
 /** Công trình chỉ hiện trong bảng Xây dựng khi đã sang chương có nó. */
-const CHAPTER_OF: Partial<Record<string, number>> = { chuong2: 2, ketChuong2: 2, chuong3: 3, ruaVang: 3, ketChuong3: 3, chuong4: 4, ketChuong4: 4 };
+const CHAPTER_OF: Partial<Record<string, number>> = { chuong2: 2, ketChuong2: 2, chuong3: 3, ruaVang: 3, ketChuong3: 3, chuong4: 4, ketChuong4: 4, ketChuong5: 5 };
 
 /** Tên hiển thị của công trình, tính cả lũy tre đã đắp thành đất và đê đã kè đá. */
 export function buildingName(b: Pick<Building, 'type' | 'level'>): string {
@@ -162,9 +166,14 @@ function unlockWhy(state: GameState, type: BuildingType): string {
   return vi.reasons[UNLOCK_REASON[u]];
 }
 
-/** Chương đang chơi: 1, 2, 3 hay 4. */
+/** Chương đang chơi: 1 tới 5. */
 function chapterNow(state: GameState): Chapter {
-  return inChapter4(state) ? 4 : inChapter3(state) ? 3 : inChapter2(state) ? 2 : 1;
+  return inChapter5(state) ? 5 : inChapter4(state) ? 4 : inChapter3(state) ? 3 : inChapter2(state) ? 2 : 1;
+}
+
+/** Chương mới nhất có bản đồ phó bản: chương 5 chưa có màn nên vẫn mở bản đồ chương 4. */
+function mapChapterNow(state: GameState): MapChapter {
+  return chapterNow(state);
 }
 
 export type HudAction =
@@ -194,7 +203,7 @@ export type HudAction =
   | { kind: 'phatRung'; id: number }
   | { kind: 'trinhSat'; id: number }
   | { kind: 'ketThan'; id: number }
-  | { kind: 'marchCamp'; plot: number; army: Record<UnitType, number>; rows: Record<UnitType, Row> }
+  | { kind: 'marchCamp'; plot: number; army: Record<UnitType, number>; rows: Record<UnitType, Row>; nu: NuTuongId | null }
   | { kind: 'offerBanh'; banh: Banh }
   | { kind: 'confirmPlace' }
   | { kind: 'cancelPlace' }
@@ -217,6 +226,7 @@ export type HudAction =
   | { kind: 'acceptOffer'; index: number }
   | { kind: 'train'; unit: UnitType }
   | { kind: 'assignTuong'; id: number; tuong: TuongId }
+  | { kind: 'assignNu'; id: number; nu: NuTuongId }
   | { kind: 'guardDelta'; id: number; unit: UnitType; delta: 1 | -1 }
   | { kind: 'garrisonDelta'; id: number; unit: UnitType; delta: 1 | -1 }
   | { kind: 'guardAuto' }
@@ -233,7 +243,7 @@ export type HudAction =
   | { kind: 'repairUNo'; id: number }
   | { kind: 'dismissRaid' }
   | { kind: 'openCampaign' }
-  | { kind: 'march'; stage: number; army: Record<UnitType, number>; rows: Record<UnitType, Row>; challenge: boolean; hero: HeroKind | null }
+  | { kind: 'march'; stage: number; army: Record<UnitType, number>; rows: Record<UnitType, Row>; challenge: boolean; hero: HeroKind | null; nu: NuTuongId | null }
   | { kind: 'buyHuan'; branch: HuanBranch }
   | { kind: 'useSkill'; skill: SkillId }
   | { kind: 'openGiong' }
@@ -277,19 +287,26 @@ function canShareFile(): boolean {
   return shareFileOk;
 }
 
-/** Chữ trên nút kỹ năng: tên khi sẵn sàng, chỉ biểu tượng và số giây khi đang hồi (cho gọn trên điện thoại). */
-function skillLabel(b: Battle, k: SkillId): string {
-  const cd = Math.ceil(b.skillCd[k] ?? 0);
-  return cd > 0 && !b.outcome ? `${vi.skills[k].icon} ${cd}s` : `${vi.skills[k].icon} ${vi.skills[k].name}`;
+/**
+ * Nút kỹ năng: tên khi sẵn sàng; đang hồi thì biểu tượng và số giây đè lên chỗ tên (tên ẩn đi mà vẫn giữ chỗ), để nút
+ * không hẹp lại rồi rộng ra làm cả hàng nút nhảy dòng.
+ */
+function skillButton(b: Battle, k: SkillId, small = false): string {
+  return `<button class="btn bronze skill ${small ? 'small' : ''}" data-act="useSkill" data-skill="${k}" title="${vi.skills[k].desc}" ${skillReady(b, k) ? '' : 'disabled'}><span class="sk-name">${vi.skills[k].icon} ${vi.skills[k].name}</span><span class="sk-cd"></span></button>`;
 }
 
-function skillButton(b: Battle, k: SkillId, small = false): string {
-  return `<button class="btn bronze skill ${small ? 'small' : ''}" data-act="useSkill" data-skill="${k}" title="${vi.skills[k].desc}" ${skillReady(b, k) ? '' : 'disabled'}>${skillLabel(b, k)}</button>`;
+/** Đổi trạng thái và số giây hồi trên nút kỹ năng đã dựng. */
+function syncSkill(btn: HTMLButtonElement, b: Battle, k: SkillId): void {
+  const cd = b.outcome ? 0 : Math.ceil(b.skillCd[k] ?? 0);
+  btn.disabled = !skillReady(b, k);
+  btn.classList.toggle('cooling', cd > 0);
+  const tail = btn.querySelector('.sk-cd');
+  if (tail) tail.textContent = cd > 0 ? `${vi.skills[k].icon} ${cd}s` : '';
 }
 
 /** Bản đồ phó bản đang mở: chương nào, màn đang xem, đang xem thẻ màn hay đang xếp quân. */
 interface CampaignView {
-  chapter: Chapter;
+  chapter: MapChapter;
   stage: number | null;
   /** Thẻ màn, bảng xếp quân (màn thường hay thử thách, theo `pick.challenge`), bảng Huân công. */
   step: 'stage' | 'army' | 'huan';
@@ -355,7 +372,7 @@ export class Hud {
       <header class="topbar"></header>
       <div class="top-area">
         <div class="res-drop" hidden></div>
-        <div class="field-top"><b></b><span></span><div class="hold-bar" hidden><i></i><em>🐎</em></div></div>
+        <div class="field-top"><b></b><span></span><div class="hold-bar" hidden><i></i><em>🐎</em></div><div class="hero-hp" hidden></div></div>
       </div>
       <div class="hint" hidden></div>
       <div class="dock-pop"></div>
@@ -479,6 +496,8 @@ export class Hud {
         return this.onAction({ kind: 'train', unit: el.dataset.unit as UnitType });
       case 'assignTuong':
         return this.onAction({ kind: 'assignTuong', id, tuong: el.dataset.tuong as TuongId });
+      case 'assignNu':
+        return this.onAction({ kind: 'assignNu', id, nu: el.dataset.nu as NuTuongId });
       case 'guardDelta':
         return this.onAction({ kind: 'guardDelta', id, unit: el.dataset.unit as UnitType, delta: Number(el.dataset.delta) < 0 ? -1 : 1 });
       case 'garrisonDelta':
@@ -503,8 +522,8 @@ export class Hud {
         return this.refreshSheet(this.getState());
       case 'donMarch': {
         if (!this.donPick) return;
-        const { don, army, rows } = this.donPick;
-        return this.onAction({ kind: 'marchCamp', plot: don!, army: { ...army }, rows: { ...rows } });
+        const { don, army, rows, nu } = this.donPick;
+        return this.onAction({ kind: 'marchCamp', plot: don!, army: { ...army }, rows: { ...rows }, nu: nu ?? null });
       }
       case 'offerBanh':
         return this.onAction({ kind: 'offerBanh', banh: el.dataset.banh as Banh });
@@ -527,13 +546,14 @@ export class Hud {
       case 'armyDelta':
       case 'armyRow':
       case 'armyHero':
+      case 'armyNu':
         // Đang chọn quân đánh đồn trong bảng Đất bên kia sông.
         if (this.donPick && this.sheet?.kind === 'benKia' && act !== 'backToStage') return this.donPickStep(act, el);
         return this.campaignStep(act, id, el);
       case 'march': {
         if (!this.camp?.stage) return;
-        const { army, rows, challenge, hero } = this.camp.pick;
-        return this.onAction({ kind: 'march', stage: this.camp.stage, army: { ...army }, rows: { ...rows }, challenge, hero: hero ?? null });
+        const { army, rows, challenge, hero, nu } = this.camp.pick;
+        return this.onAction({ kind: 'march', stage: this.camp.stage, army: { ...army }, rows: { ...rows }, challenge, hero: hero ?? null, nu: nu ?? null });
       }
       case 'buyHuan':
         return this.onAction({ kind: 'buyHuan', branch: el.dataset.branch as HuanBranch });
@@ -629,9 +649,13 @@ export class Hud {
             ? `🌙 ${vi.ui.yeuWarning(sideName, secs)}`
             : raid.foe === 'trieu'
               ? `⚠️ ${vi.ui.trieuWarning(sideName, secs)}`
-              : raid.foe === 'thuyBinh'
-                ? `⛵ ${vi.ui.thuyBinhWarning(sideName, secs)}`
-                : `⚠️ ${vi.ui.raidWarning(sideName, secs)}`;
+              : raid.foe === 'han'
+                ? `⚠️ ${vi.ui.hanWarning(sideName, secs)}`
+                : raid.foe === 'thuyBinh'
+                  ? `⛵ ${vi.ui.thuyBinhWarning(sideName, secs)}`
+                  : raid.foe === 'thuyHan'
+                    ? `⛵ ${vi.ui.thuyHanWarning(sideName, secs)}`
+                    : `⚠️ ${vi.ui.raidWarning(sideName, secs)}`;
         list.push({ id: 'giac', text, tone: 'bad', act: 'lookRaid', label: vi.ui.raidLook });
       }
     }
@@ -646,9 +670,13 @@ export class Hud {
             ? `🌙 ${vi.ui.yeuBattle(left, ours)}`
             : b.foe === 'trieu'
               ? `⚔️ ${vi.ui.trieuBattle(left, ours)}`
-              : b.foe === 'thuyBinh'
-                ? `⛵ ${vi.ui.thuyBinhBattle(left, ours)}`
-                : `⚔️ ${vi.ui.raidBattle(left, ours)}`;
+              : b.foe === 'han'
+                ? `⚔️ ${vi.ui.hanBattle(left, ours)}`
+                : b.foe === 'thuyBinh'
+                  ? `⛵ ${vi.ui.thuyBinhBattle(left, ours)}`
+                  : b.foe === 'thuyHan'
+                    ? `⛵ ${vi.ui.thuyHanBattle(left, ours)}`
+                    : `⚔️ ${vi.ui.raidBattle(left, ours)}`;
       list.push({ id: 'tran', text, tone: 'bad' });
     }
     if (isStarving(state)) list.push({ id: 'doi', text: `🍚 ${vi.ui.starving}`, tone: 'bad' });
@@ -701,9 +729,7 @@ export class Hud {
     }
     if (b) {
       for (const btn of this.raidSkills.querySelectorAll<HTMLButtonElement>('[data-skill]')) {
-        const k = btn.dataset.skill as SkillId;
-        btn.disabled = !skillReady(b, k);
-        btn.textContent = skillLabel(b, k);
+        syncSkill(btn, b, btn.dataset.skill as SkillId);
       }
     }
   }
@@ -743,6 +769,10 @@ export class Hud {
     }
     // Cao Lỗ cầm quân từ màn 25.
     if (caoLoJoined(state)) list.push({ act: 'openCaoLo', icon: '🎯', name: vi.ui.caoLo, mark: caoLoResting(state) ? '💤' : '⚔️' });
+    // Hai Bà Trưng từ chương 5: chưa có bảng riêng, chỉ báo bà nào sẵn sàng, bà nào đang nghỉ.
+    if (haiBaJoined(state)) {
+      for (const k of HAI_BA_KINDS) list.push({ act: '', icon: vi.ui.tuongIcons[k], name: vi.ui.heroNames[k], mark: haiBaResting(state, k) ? '💤' : '⚔️' });
+    }
     return list;
   }
 
@@ -786,7 +816,10 @@ export class Hud {
       }
     } else if (this.pop === 'heroes') {
       pop = `<div class="pop-card"><h4>🎖️ ${vi.ui.tabHeroes}</h4>${heroes
-        .map((h) => `<button class="hero-row" data-act="${h.act}"><span class="ic">${h.icon}</span><b>${h.name}</b><span class="mark">${h.mark}</span></button>`)
+        .map((h) => {
+          const inner = `<span class="ic">${h.icon}</span><b>${h.name}</b><span class="mark">${h.mark}</span>`;
+          return h.act ? `<button class="hero-row" data-act="${h.act}">${inner}</button>` : `<div class="hero-row">${inner}</div>`;
+        })
         .join('')}</div>`;
     }
     if (pop !== this.popHtml) {
@@ -945,6 +978,7 @@ export class Hud {
     const state = this.getState();
     const unit = el.dataset.unit as UnitType;
     if (act === 'armyDelta') stepPick(state, pick, unit, Number(el.dataset.delta));
+    else if (act === 'armyNu') pickNu(state, pick, el.dataset.nu);
     else pick.rows[unit] = nextRow(pick.rows[unit]);
     this.refreshSheet(state);
   }
@@ -1097,8 +1131,8 @@ export class Hud {
     const raise: BuildItem | null = inChapter2(state)
       ? { key: 'raise', act: 'chooseRaise', pic: null, icon: '⛰️', name: vi.ui.dapDat, meta: '1×1 ô', desc: vi.ui.dapDatDesc, go: goLabel('chooseRaise', false, false) }
       : null;
-    // Công trình của chương 2, 3, 4 chỉ hiện khi đã sang chương ấy.
-    const chapter = inChapter4(state) ? 4 : chapterNow(state);
+    // Công trình của chương 2–5 chỉ hiện khi đã sang chương ấy.
+    const chapter = chapterNow(state);
     const shownOf = (types: BuildingType[]) =>
       types.filter((type) => (CHAPTER_OF[BUILDINGS[type].unlock ?? ''] ?? 1) <= chapter && (!TET_TYPES.includes(type) || tetStarted(state)));
     const card = (type: BuildingType): BuildItem => {
@@ -1424,6 +1458,8 @@ export class Hud {
       sonTinh: () => status(sonResting(state), state.son.restUntil, state.son.won),
       anDuong: () => `${status(advResting(state), state.adv.restUntil, state.adv.bien)} · ${state.adv.bien ? vi.ui.advAtSea : vi.ui.advAtDien}`,
       caoLo: () => `${status(caoLoResting(state), state.caoLo.restUntil)} · ${vi.ui.caoLoAtDien}`,
+      trungTrac: () => `${status(haiBaResting(state, 'trungTrac'), state.haiBa.trungTrac)} · ${vi.ui.haiBaDesc}`,
+      trungNhi: () => `${status(haiBaResting(state, 'trungNhi'), state.haiBa.trungNhi)} · ${vi.ui.haiBaDesc}`,
     };
     const open: Partial<Record<TuongId, string>> = { giong: 'openGiong', sonTinh: 'openSon', anDuong: 'openAdv', caoLo: 'openCaoLo' };
     const busy = state.raid.phase === 'battle';
@@ -1442,7 +1478,33 @@ export class Hud {
       </div>`;
     });
     const none = map.has(b.id) ? '' : `<p class="why">${vi.ui.noCommander}</p>`;
-    return `<p class="muted">${vi.ui.commanderHint}</p>${none}<div class="units">${rows.join('')}</div>`;
+    return `<p class="muted">${vi.ui.commanderHint}</p>${none}<div class="units">${rows.join('')}</div>${this.nuTuongHtml(state, b)}`;
+  }
+
+  /**
+   * Nữ tướng ở các doanh trại (chương 5): mỗi trại một người; lính giữ kinh đô của trại, thuộc binh chủng của nữ
+   * tướng, được cộng thêm. Bấm "Về trại này" để nữ tướng ấy về đây (đang ở trại khác thì hai người đổi chỗ).
+   */
+  private nuTuongHtml(state: GameState, b: Building): string {
+    const list = nuTuongList(state);
+    if (!list.length) return '';
+    const map = nuPosts(state);
+    const busy = state.raid.phase === 'battle';
+    const rows = list.map((n) => {
+      const post = [...map].find(([, x]) => x === n)?.[0];
+      const here = post === b.id;
+      const where = here ? vi.nuTuong.here : post !== undefined ? vi.nuTuong.other : vi.nuTuong.none;
+      const unit = vi.units[NU_TUONG[n].unit];
+      const buttons: string[] = [];
+      if (!here) buttons.push(`<button class="btn small" data-act="assignNu" data-id="${b.id}" data-nu="${n}" ${busy ? 'disabled' : ''}>${vi.nuTuong.assign}</button>`);
+      if (post !== undefined && !here) buttons.push(`<button class="btn small ghost" data-act="selectBuilding" data-id="${post}">${vi.ui.toPost} ›</button>`);
+      return `<div class="unit-row ${here ? 'here' : ''}">
+        <span class="unit-icon">${vi.nuTuong.list[n].icon}</span>
+        <span class="unit-info"><b>${vi.nuTuong.list[n].name}</b><small>${here ? '⭐ ' : ''}${where}</small><small>${vi.nuTuong.boost(unit.icon, unit.name)}</small></span>
+        <span class="btn-col">${buttons.join('')}</span>
+      </div>`;
+    });
+    return `<h4 class="sub-head">${vi.nuTuong.barracksTitle}</h4><p class="muted">${vi.nuTuong.barracksHint}</p><div class="units">${rows.join('')}</div>`;
   }
 
   /**
@@ -1541,11 +1603,11 @@ export class Hud {
       const min = raid.nextAt === null ? 0 : Math.ceil((raid.nextAt - state.clock) / 60000);
       const foe = nextFoe(state);
       if (inChapter2(state) && !floodSeason(state)) next = vi.ui.calmBeforeWedding;
-      else if (foe === 'thuyBinh') {
-        next = vi.ui.nextThuyBinh(min);
+      else if (foe === 'thuyBinh' || foe === 'thuyHan') {
+        next = foe === 'thuyBinh' ? vi.ui.nextThuyBinh(min) : vi.ui.nextThuyHan(min);
         call = vi.ui.callRaid;
-      } else if (foe === 'yeu' || foe === 'trieu') {
-        next = foe === 'yeu' ? vi.ui.nextYeu(min) : vi.ui.nextTrieu(min);
+      } else if (foe === 'yeu' || foe === 'trieu' || foe === 'han') {
+        next = foe === 'yeu' ? vi.ui.nextYeu(min) : foe === 'trieu' ? vi.ui.nextTrieu(min) : vi.ui.nextHan(min);
         call = vi.ui.callRaid;
       } else if (floodSeason(state)) {
         next = vi.ui.nextFlood(min, nextFloodLevel(state));
@@ -1614,8 +1676,8 @@ export class Hud {
   showCampaign(state: GameState): void {
     this.closeSheet();
     // Mở ở chương có màn kế tiếp chưa thắng, hay chương mới nhất nếu đã thắng hết.
-    const now = chapterNow(state);
-    const chapter = (([1, 2, 3] as const).find((c) => c <= now && this.nextStage(state, c) !== null) ?? now) as Chapter;
+    const now = mapChapterNow(state);
+    const chapter = ([1, 2, 3, 4] as const).find((c) => c <= now && this.nextStage(state, c) !== null) ?? now;
     this.camp = { chapter, stage: this.nextStage(state, chapter), step: 'stage', pick: defaultPick(state) };
     this.campaignEl.hidden = false;
     this.pop = null;
@@ -1644,7 +1706,7 @@ export class Hud {
     const state = this.getState();
     const unit = el.dataset.unit as UnitType;
     if (act === 'campChapter') {
-      camp.chapter = id === 4 ? 4 : id === 3 ? 3 : id === 2 ? 2 : 1;
+      camp.chapter = ([1, 2, 3, 4, 5] as const).find((c) => c === id) ?? 1;
       camp.stage = this.nextStage(state, camp.chapter);
       camp.step = 'stage';
     } else if (act === 'pickStage') {
@@ -1666,6 +1728,8 @@ export class Hud {
       // Phó bản chương 2: chạm thẻ Sơn Tinh hay Gióng để chọn tướng ra trận; tướng kiệt sức thì không chọn được.
       const hero = el.dataset.hero as HeroKind;
       if (stageHeroCheck(state, camp.stage, hero, camp.pick.challenge).ok) camp.pick.hero = hero;
+    } else if (act === 'armyNu') {
+      pickNu(state, camp.pick, el.dataset.nu);
     }
     this.refreshCampaign(state);
   }
@@ -1674,19 +1738,19 @@ export class Hud {
     const camp = this.camp;
     if (!camp) return;
     for (const k of UNIT_TYPES) camp.pick.army[k] = Math.min(camp.pick.army[k], state.troops[k]);
-    const hint = [vi.ui.campaignHint, vi.ui.campaignHint, vi.ui.campaignHint2, vi.ui.campaignHint3, vi.ui.campaignHint4][camp.chapter];
+    const hint = [vi.ui.campaignHint, vi.ui.campaignHint, vi.ui.campaignHint2, vi.ui.campaignHint3, vi.ui.campaignHint4, vi.ui.campaignHint5][camp.chapter];
     let panel = `<p class="muted">${hint}</p>`;
     if (camp.step === 'huan') panel = huanHtml(state);
     else if (camp.stage) panel = camp.step === 'army' ? armyHtml(state, camp.pick, camp.stage, camp.pick.challenge) : stageHtml(state, camp.stage);
-    const now = chapterNow(state);
+    const now = mapChapterNow(state);
     const tabs =
       now > 1
-        ? `<div class="camp-tabs">${([1, 2, 3, 4] as const)
+        ? `<div class="camp-tabs"><span class="lb">${vi.ui.chapterTabs}</span>${([1, 2, 3, 4, 5] as const)
             .filter((c) => c <= now)
-            .map((c) => `<button class="btn small ${c === camp.chapter ? 'bronze' : 'ghost'}" data-act="campChapter" data-id="${c}">${vi.ui.chapterTab(c)}</button>`)
+            .map((c) => `<button class="btn small ${c === camp.chapter ? 'bronze' : 'ghost'}" data-act="campChapter" data-id="${c}" aria-label="${vi.ui.chapterTab(c)}">${c}</button>`)
             .join('')}</div>`
         : '';
-    const title = [vi.ui.campaignTitle, vi.ui.campaignTitle, vi.ui.campaignTitle2, vi.ui.campaignTitle3, vi.ui.campaignTitle4][camp.chapter];
+    const title = [vi.ui.campaignTitle, vi.ui.campaignTitle, vi.ui.campaignTitle2, vi.ui.campaignTitle3, vi.ui.campaignTitle4, vi.ui.campaignTitle5][camp.chapter];
     // Chip huân công: có từ khi thắng màn đầu tiên (mở thử thách đầu tiên).
     const huan = state.campaign.cleared > 0
       ? `<button class="huan-chip ${camp.step === 'huan' ? 'on' : ''}" data-act="openHuan" aria-label="${vi.ui.huanTitle}">${vi.ui.huanChip(state.thuThach.huan)}</button>`
@@ -1710,16 +1774,42 @@ export class Hud {
     const tag = b.challenge ? ` · 🎖 ${vi.ui.challengeKinds[b.challenge].name}` : '';
     const don = b.camp !== undefined ? campTier(b.camp) : null;
     this.fieldTop.querySelector('b')!.textContent = don ? `${vi.benKia.don[don].icon} ${vi.benKia.don[don].name}` : `${vi.ui.stageN(b.wave)} · ${vi.stages[b.wave - 1].name}${tag}`;
+    // Màn 40 giữ cửa rừng Cấm Khê cho dân rút về núi; màn 32 cầm chân giặc cho vua tới biển.
+    const camKhe = hold && b.camp === undefined && b.wave === CH5_LAST;
+    const holdText = camKhe ? vi.ui.holdBannerCamKhe : vi.ui.holdBanner;
     this.fieldTop.querySelector('span')!.textContent = hold
-      ? `${vi.ui.holdBanner(enemiesLeft(b), alliesLeft(b), secs)} · ${vi.ui.holdWave(wavesArrived(b), b.waveCount ?? 1)}`
+      ? `${holdText(enemiesLeft(b), alliesLeft(b), secs)} · ${vi.ui.holdWave(wavesArrived(b), b.waveCount ?? 1)}`
       : vi.ui.fieldBanner(enemiesLeft(b), alliesLeft(b), secs);
-    // Màn cầm cự: thanh "Vua tới biển", ngựa vua chạy theo thanh.
+    // Màn cầm cự: thanh "Vua tới biển" có ngựa vua, thanh "Dân rút về núi" có trâu dắt theo, chạy theo thanh.
     const bar = this.fieldTop.querySelector<HTMLElement>('.hold-bar')!;
     bar.hidden = !hold;
     if (hold) {
+      const rider = bar.querySelector<HTMLElement>('em')!;
+      const icon = camKhe ? '🐃' : '🐎';
+      if (rider.textContent !== icon) rider.textContent = icon;
       const k = `${Math.round(holdProgress(b) * 1000) / 10}%`;
       bar.querySelector<HTMLElement>('i')!.style.width = k;
       bar.querySelector<HTMLElement>('em')!.style.left = k;
+    }
+    // Hai tướng cùng ra trận (Hai Bà): mỗi bà một thanh máu, bà nào kiệt sức thì thanh mờ, có dấu nghỉ.
+    const heroHp = this.fieldTop.querySelector<HTMLElement>('.hero-hp')!;
+    const setups = heroSetups(b);
+    heroHp.hidden = setups.length < 2;
+    if (setups.length >= 2) {
+      const hpKey = `${b.id}:${setups.map((h) => h.kind).join(',')}`;
+      if (heroHp.dataset.key !== hpKey) {
+        heroHp.dataset.key = hpKey;
+        heroHp.innerHTML = setups
+          .map((h) => `<span class="hh" data-hero="${h.kind}"><em>${vi.ui.tuongIcons[h.kind]}</em><b>${vi.ui.heroNames[h.kind]}</b><i><u></u></i></span>`)
+          .join('');
+      }
+      for (const h of setups) {
+        const f = b.fighters.find((x) => x.kind === h.kind);
+        const el = heroHp.querySelector<HTMLElement>(`[data-hero="${h.kind}"]`)!;
+        el.classList.toggle('down', h.down);
+        el.querySelector<HTMLElement>('u')!.style.width = `${f && !h.down ? Math.round((100 * f.hp) / f.maxHp) : 0}%`;
+        el.querySelector('em')!.textContent = h.down ? '💤' : vi.ui.tuongIcons[h.kind];
+      }
     }
     const box = this.fieldBar.querySelector<HTMLElement>('.skills')!;
     const key = `${b.id}:${b.skills.join(',')}`;
@@ -1729,8 +1819,7 @@ export class Hud {
     }
     for (const btn of box.querySelectorAll<HTMLButtonElement>('[data-skill]')) {
       const k = btn.dataset.skill as SkillId;
-      btn.disabled = !skillReady(b, k);
-      btn.textContent = skillLabel(b, k);
+      syncSkill(btn, b, k);
       btn.classList.toggle('active', (k === 'trongTran' && b.rally > 0) || (k === 'ruaVang' && b.shield > 0) || (k === 'lenhBan' && (b.lenh ?? 0) > 0));
     }
     this.fieldBar.querySelector<HTMLButtonElement>('[data-act="retreat"]')!.disabled = !!b.outcome;
@@ -1754,8 +1843,8 @@ export class Hud {
   showStory(id: StoryId, replay = false): void {
     this.story = { id, step: 0, replay };
     const back = document.createElement('div');
-    back.className = `modal-back story-back ${id === 'hetTruyen' ? 'ending-back' : ''}`;
-    back.innerHTML = id === 'hetTruyen' ? endingHtml() : storyHtml(id, 0);
+    back.className = `modal-back story-back ${isEnding(id) ? 'ending-back' : ''}`;
+    back.innerHTML = isEnding(id) ? endingHtml(id) : storyHtml(id, 0);
     this.root.appendChild(back);
   }
 
@@ -1763,7 +1852,7 @@ export class Hud {
     const story = this.story;
     const back = this.root.querySelector('.modal-back.story-back');
     if (!story || !back) return;
-    if (story.id === 'hetTruyen' || story.replay) {
+    if (isEnding(story.id) || story.replay) {
       back.remove();
       this.story = null;
       if (!story.replay) this.onAction({ kind: 'storyDone', id: story.id });
@@ -1836,7 +1925,9 @@ export class Hud {
       title = '🌙 ' + (!r.won ? vi.ui.yeuLostTitle : broken ? vi.ui.yeuHeldTitle : vi.ui.yeuWonTitle);
     }
     else if (r.foe === 'trieu') title = r.won ? '🏹 ' + vi.ui.trieuWonTitle : '🔥 ' + vi.ui.trieuLostTitle;
+    else if (r.foe === 'han') title = r.won ? '🏹 ' + vi.ui.hanWonTitle : '🔥 ' + vi.ui.hanLostTitle;
     else if (r.foe === 'thuyBinh') title = r.won ? '🎯 ' + vi.ui.thuyBinhWonTitle : '🔥 ' + vi.ui.thuyBinhLostTitle;
+    else if (r.foe === 'thuyHan') title = r.won ? '🎯 ' + vi.ui.thuyHanWonTitle : '🔥 ' + vi.ui.thuyHanLostTitle;
     else title = r.won ? '🥁 ' + vi.ui.raidWonTitle : '🔥 ' + vi.ui.raidLostTitle;
     back.innerHTML = `<div class="modal">
       <h2>${title}</h2>
@@ -1847,6 +1938,7 @@ export class Hud {
         <div>${vi.ui.raidStolen}: ${stolen}</div>
         <div>${vi.ui.raidWrecked(r.wrecked.length)}</div>
         ${flood ? `<div>${vi.ui.floodDrowned(r.drowned.length)}</div>` : ''}
+        ${r.foe === 'thuyHan' && !r.won ? `<div class="muted">⛵ ${vi.ui.shipsLeft}</div>` : ''}
       </div>
       <div class="actions">
         ${damaged ? `<button class="btn bronze" data-act="repairAll">${vi.ui.repairAll} · ${costHtml(state, cost)}</button>` : ''}

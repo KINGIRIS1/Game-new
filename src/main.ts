@@ -6,6 +6,7 @@ import { useSkill, type HeroKind } from './game/battle';
 import { leaveBattlefield, retreat, startStage, unitAllowed } from './game/campaign';
 import { forgeArms } from './game/binhKhi';
 import { assignCommander, autoGuard, setGuard } from './game/doanhTrai';
+import { assignNu, markNuHinted, nextNuHint } from './game/nuTuong';
 import { forgeNoThan, inChapter3, wallRings } from './game/coLoa';
 import { offer } from './game/tet';
 import { applyMau } from './game/mau';
@@ -15,7 +16,7 @@ import { inChapter2, offerGift } from './game/son';
 import { buyHuan } from './game/thuThach';
 import { markStory, pendingStory } from './game/story';
 import { footprintTop } from './game/terrain';
-import { BUILDINGS, RESOURCE_IDS, STAGES, UNIT_TYPES, U_NO, isBridge, isDecor, isRoad, type BuildingType, type Cost, type ResourceId, type Row, type SkillId, type UnitType } from './game/defs';
+import { BUILDINGS, RESOURCE_IDS, STAGES, UNIT_TYPES, U_NO, isBridge, isDecor, isRoad, type BuildingType, type Cost, type NuTuongId, type ResourceId, type Row, type SkillId, type UnitType } from './game/defs';
 import { CAMPS, benKiaOpen, bridgeSnap, campHero, campTier, canStartCamp, joinVillage, plotAt, poiAt, sendScout, setGarrison, startCamp } from './game/benKia';
 import type { QuanDaoId } from './game/bien';
 import { fmt } from './ui/format';
@@ -177,6 +178,14 @@ async function start(): Promise<void> {
     if (text) hud.toast(text, false, 8000);
   };
 
+  /** Nữ tướng vừa theo về (chương 5): Lạc hầu báo một lần, để lâu cho kịp đọc. */
+  const showNuHint = () => {
+    const nu = nextNuHint(state);
+    if (!nu) return;
+    markNuHinted(state, nu);
+    hud.toast(vi.nuTuong.hint[nu], false, 8000);
+  };
+
   /** Cây dại, tảng đá đầu tiên mọc: Lạc hầu gợi ý một lần cách dọn. */
   const showCayDaHint = () => {
     if (!state.cayDa.list.length || state.hinted.includes('cayDa')) return;
@@ -198,6 +207,7 @@ async function start(): Promise<void> {
   /** Gọi sau mọi thao tác: lưu, vẽ lại cảnh và giao diện. */
   const commit = () => {
     showHint();
+    showNuHint();
     showCayDaHint();
     save();
     world.sync(state);
@@ -284,7 +294,7 @@ async function start(): Promise<void> {
   };
 
   /** Quân đang hành quân qua cầu tới đồn giặc: chừng ba giây rồi mới sang bãi chiến. */
-  let marching: { plot: number; army: Record<UnitType, number>; rows: Record<UnitType, Row>; at: number } | null = null;
+  let marching: { plot: number; army: Record<UnitType, number>; rows: Record<UnitType, Row>; nu: NuTuongId | null; at: number } | null = null;
   const MARCH_MS = 3200;
 
   world.view.onTap = (cx, cy) => {
@@ -591,7 +601,7 @@ async function start(): Promise<void> {
         navigator.vibrate?.(40);
         hud.toast(vi.benKia.campMarching);
         world.startMarch(state, a.plot, a.army, MARCH_MS / 1000);
-        marching = { plot: a.plot, army: a.army, rows: a.rows, at: performance.now() + MARCH_MS };
+        marching = { plot: a.plot, army: a.army, rows: a.rows, nu: a.nu, at: performance.now() + MARCH_MS };
         return;
       }
 
@@ -760,7 +770,8 @@ async function start(): Promise<void> {
       case 'openEnding':
         if (hud.storyOpen || hud.modalOpen) return;
         play('tap');
-        hud.showStory('hetTruyen', true);
+        // Mở lại màn hình Hết truyện mới nhất đã xem.
+        hud.showStory(state.story.seen.includes('hetTruyen5') ? 'hetTruyen5' : 'hetTruyen', true);
         return;
 
       case 'forgeNoThan': {
@@ -992,6 +1003,15 @@ async function start(): Promise<void> {
         return;
       }
 
+      case 'assignNu': {
+        const r = assignNu(state, a.id, a.nu);
+        if (!r.ok) return fail(r.reason);
+        play('claim');
+        hud.toast(vi.nuTuong.assigned(vi.nuTuong.list[a.nu].name));
+        commit();
+        return;
+      }
+
       case 'garrisonDelta': {
         const b = findBuilding(state, a.id);
         const bank = b ? farBankOf(b.x, b.z) : null;
@@ -1089,7 +1109,7 @@ async function start(): Promise<void> {
         return;
 
       case 'march': {
-        const r = startStage(state, a.stage, a.army, a.rows, a.challenge, a.hero);
+        const r = startStage(state, a.stage, a.army, a.rows, a.challenge, a.hero, a.nu);
         if (!r.ok) return fail(r.reason);
         play('claim');
         navigator.vibrate?.(40);
@@ -1256,7 +1276,7 @@ async function start(): Promise<void> {
     if (r === shownStage) return;
     if (!resultAt) {
       stopRally();
-      resultAt = now + (battle?.ascend || battle?.sonWin || battle?.advWin || battle?.seaWin ? 3500 : 700);
+      resultAt = now + (battle?.ascend || battle?.sonWin || battle?.advWin || battle?.seaWin || battle?.hatWin ? 3500 : 700);
       play(r.outcome === 'win' ? 'upgrade' : 'error');
       commit();
     }
@@ -1323,7 +1343,7 @@ async function start(): Promise<void> {
       const m = marching;
       marching = null;
       world.stopMarch();
-      const r = startCamp(state, m.plot, m.army, m.rows);
+      const r = startCamp(state, m.plot, m.army, m.rows, m.nu);
       if (!r.ok) fail(r.reason);
       commit();
     }
@@ -1371,6 +1391,8 @@ async function start(): Promise<void> {
     renderInfo: () => ({ ...world.renderer.info.render }),
     rotate: (dir: 1 | -1) => world.rotateView(dir),
     camera: (x: number, z: number, zoom: number) => {
+      // Đặt camera tay thì thôi lướt về chỗ cũ (máy chụp chạy chậm, lướt chưa xong sẽ kéo camera đi mất).
+      drift.done = true;
       world.view.target.set(x - HALF, 0, z - HALF);
       world.view.zoom = zoom;
       world.view.apply();
@@ -1412,14 +1434,14 @@ async function start(): Promise<void> {
       hud.showKhoanh(state, id);
     },
     /**
-     * Xuất toàn quân đánh màn `n` cùng tướng `hero` (phó bản chương 2; bỏ trống thì tướng chọn sẵn), rồi `skill(k)`
-     * để bấm kỹ năng: chụp thử trận ngoài bãi.
+     * Xuất toàn quân đánh màn `n` cùng tướng `hero` (phó bản chương 2; bỏ trống thì tướng chọn sẵn) và phó tướng `nu`
+     * (chương 5), rồi `skill(k)` để bấm kỹ năng: chụp thử trận ngoài bãi.
      */
-    march: (n: number, challenge = false, hero?: HeroKind) => {
+    march: (n: number, challenge = false, hero?: HeroKind, nu?: NuTuongId | null) => {
       // Thử thách Hai binh chủng: chỉ mang hai binh chủng được chỉ định.
       const army = { ...state.troops };
       for (const k of UNIT_TYPES) if (!unitAllowed(n, challenge, k)) army[k] = 0;
-      const r = startStage(state, n, army, state.campaign.rows, challenge, hero);
+      const r = startStage(state, n, army, state.campaign.rows, challenge, hero, nu);
       commit();
       return r;
     },

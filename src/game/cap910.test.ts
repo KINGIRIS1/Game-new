@@ -11,8 +11,8 @@ import {
   BUILDINGS,
   CA_PER_MIN,
   CH4_QUEST_START,
+  CH5_QUEST_START,
   DEFAULT_ROWS,
-  DIEN10_CHALLENGES,
   FIELD,
   GUARD_CAP,
   LAU_NO,
@@ -44,7 +44,7 @@ function capital(level: number): GameState {
 }
 
 describe('Điện cấp 9, 10', () => {
-  it('Điện 9 mở khi hết truyện, Điện 10 khi đã thắng 16 thử thách, rồi hết cấp', () => {
+  it('Điện 9 mở khi hết truyện, Điện 10 khi đã vào chương 5 (không cần thử thách), rồi hết cấp', () => {
     const s = capital(8);
     s.adv.bien = false;
     s.questIndex = CH4_QUEST_START;
@@ -52,10 +52,10 @@ describe('Điện cấp 9, 10', () => {
     s.adv.bien = true;
     expect(upgrade(s, 1).ok).toBe(true);
     expect(s.buildings[0].level).toBe(9);
-    expect(DIEN10_CHALLENGES).toBe(16);
-    s.thuThach.won = Array.from({ length: 15 }, (_, i) => i + 1);
-    expect(canUpgrade(s, 1)).toEqual({ ok: false, reason: 'canThuThach' });
-    s.thuThach.won.push(16);
+    s.questIndex = CH5_QUEST_START - 1;
+    expect(canUpgrade(s, 1)).toEqual({ ok: false, reason: 'canChuong5' });
+    s.questIndex = CH5_QUEST_START;
+    expect(s.thuThach.won).toEqual([]);
     expect(upgrade(s, 1).ok).toBe(true);
     expect(s.buildings[0].level).toBe(10);
     expect(canUpgrade(s, 1)).toEqual({ ok: false, reason: 'capToiDa' });
@@ -119,8 +119,9 @@ describe('Điện cấp 9, 10', () => {
     expect(canUpgrade(s, ruong.value.id)).toEqual({ ok: false, reason: 'capToiDa' });
   });
 
-  it('nhiệm vụ sau truyện: lên Điện 9, một công trình cấp 9, lên Điện 10, một công trình cấp 10', () => {
-    expect(QUESTS.slice(HAU_QUEST_START).map((q) => q.id)).toEqual(['dien9', 'cap9', 'dien10', 'cap10']);
+  it('nhiệm vụ sau truyện: lên Điện 9, một công trình cấp 9, rồi chương 5 mở đầu bằng lên Điện 10, một công trình cấp 10', () => {
+    expect(QUESTS.slice(HAU_QUEST_START, HAU_QUEST_START + 4).map((q) => q.id)).toEqual(['dien9', 'cap9', 'dien10', 'cap10']);
+    expect(QUESTS[CH5_QUEST_START].id).toBe('dien10');
     expect(QUESTS[HAU_QUEST_START - 1].id).toBe('denCuong');
     const s = capital(9);
     expect(currentQuest(s)?.id).toBe('dien9');
@@ -148,12 +149,13 @@ describe('Điện cấp 9, 10', () => {
 
   it('bản lưu 18 lên bản mới giữ nguyên cấp Điện; Điện 10 lưu rồi mở lại được', () => {
     const s = capital(10);
-    expect(SAVE_VERSION).toBe(20);
     const back = deserialize(serialize(s))!;
     expect(back.buildings[0].level).toBe(10);
-    const old = JSON.parse(serialize(capital(8))) as Record<string, unknown>;
+    const old = JSON.parse(serialize(capital(8))) as { version: number; raid: Record<string, unknown> };
     old.version = 18;
-    oldDien(old as Parameters<typeof oldDien>[0]);
+    delete old.raid.han;
+    delete old.raid.hanHeld;
+    oldDien(old as unknown as Parameters<typeof oldDien>[0]);
     const up = deserialize(JSON.stringify(old))!;
     expect(up.version).toBe(SAVE_VERSION);
     expect(up.buildings[0].level).toBe(8);

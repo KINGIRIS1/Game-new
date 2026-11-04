@@ -1,9 +1,12 @@
 // Các tướng có khung xương (rig.ts, body.ts): Thánh Gióng ba dáng và ngựa sắt, Sơn Tinh, Thủy Tinh, An Dương Vương, Cao Lỗ,
-// Lạc tướng đánh trống trận ở bãi chiến, Lạc tướng đứng chầu và Vua Hùng ngồi ngai vàng trong sân Điện. Tướng to hơn lính: thân người thường phóng to bằng `place` + `moveBones`.
+// Hai Bà Trưng trên voi trận (voi ở beasts.ts), bốn nữ tướng của Hai Bà đứng cầm cờ, Lạc tướng đánh trống trận ở bãi
+// chiến, Lạc tướng đứng chầu và Vua Hùng ngồi ngai vàng trong sân Điện. Tướng to hơn lính: thân người thường phóng to
+// bằng `place` + `moveBones`.
 
 import * as THREE from 'three';
+import type { NuTuongId } from '../game/defs';
 import type { GiongLook } from '../game/giong';
-import { quadFall, quadWalk } from './beasts';
+import { makeVoiTran, quadFall, quadWalk, voiTranSeat, type VoiTranMood } from './beasts';
 import {
   GRIP_L,
   GRIP_R,
@@ -22,13 +25,33 @@ import {
   stance,
   strikeCurve,
   walkCycle,
+  type BodyLook,
   type Human,
   type HumanRig,
 } from './body';
 import { C } from './palette';
 import { RigBuilder, bakeRig, moveBones, skinRig, type Act, type BoneDef, type Bones, type Poser } from './rig';
 import { ToonModel, inkThin } from './toon';
-import { IRON, IRON_DARK, LEATHER, crossbowParts, drumShield, hornTrumpet, repeatingCrossbow, spear, type Parts } from './weapons';
+import {
+  CO_NU,
+  IRON,
+  IRON_DARK,
+  LEATHER,
+  arrow,
+  bow,
+  coLac,
+  coNuCan,
+  coNuLa,
+  crossbowParts,
+  doanKiem,
+  drumShield,
+  guomDong,
+  hornTrumpet,
+  quiver,
+  repeatingCrossbow,
+  spear,
+  type Parts,
+} from './weapons';
 
 type Defs = Record<string, BoneDef<string>>;
 type Rig = RigBuilder<string>;
@@ -1348,6 +1371,290 @@ export function makeCaoLo(opts: { glow?: boolean } = {}): THREE.Group {
   return finish(group, (a) => poseCaoLo(bones, a));
 }
 
+// ---------- Hai Bà Trưng ----------
+
+/** Cỡ thân Hai Bà, và gốc thân người (giữa hai bàn chân khi đứng) khi ngồi bành voi trận. */
+const K_BA = 1.4;
+const SEAT_BA = voiTranSeat(K_BA);
+/** Hào quang khi hiển linh: sau đầu, dưới tán lọng. */
+const HALO_BA: [number, number] = [SEAT_BA[1] + 0.8 * K_BA, SEAT_BA[2] - 0.45];
+const LIPS = 0xc0303a;
+
+/** Điểm trên thân Hai Bà (tọa độ thân người) ra tọa độ mô hình. */
+const onSeat = (v: V3): V3 => [SEAT_BA[0] + v[0] * K_BA, SEAT_BA[1] + v[1] * K_BA, SEAT_BA[2] + v[2] * K_BA];
+
+/** Áo dài tới chân (`cloth`), quần cùng màu, cổ áo giao lĩnh viền (`trim`), kiềng vàng, đai vàng, vòng tay vàng. */
+function drawBaBody(h: HumanRig, cloth: number, trim: number, extra: Partial<BodyLook> = {}): void {
+  humanBody(h, { legs: cloth, cloth, long: true, pattern: true, top: cloth, sleeves: cloth, belt: C.gold, armband: C.gold, ...extra });
+  const chest = h.on('chest').plain;
+  for (const s of [-1, 1]) chest.box(0.032, 0.15, 0.012, trim, s * 0.032, 0.515, 0.112, [0.15, 0, s * 0.5]);
+  chest.add(new THREE.TorusGeometry(0.068, 0.014, 5, 14), C.gold, 0, 0.578, 0.02, [Math.PI / 2 + 0.25, 0, 0]);
+}
+
+/** Mặt nữ (Hai Bà, nữ tướng): má hồng, mày cong mảnh, môi son, hoa tai vàng, tóc phủ đỉnh đầu. */
+function drawWomanFace(h: HumanRig): void {
+  humanHead(h, { earrings: C.gold });
+  hairCap(h);
+  const head = h.on('head').plain;
+  for (const s of [-1, 1]) head.box(0.07, 0.013, 0.016, C.ink, s * 0.075, 0.805, 0.18, [0, 0, s * 0.12]);
+  head.sphere(0.022, LIPS, 0, 0.675, 0.188, [1.3, 0.55, 0.5], 6);
+}
+
+/**
+ * Đầu Hai Bà: mặt nữ má hồng, mày cong mảnh, môi son, hoa tai vàng; tóc dài xõa lưng, tóc mai, búi sau gáy cài trâm
+ * vàng; mũ lông chim cao hai tầng vành vàng kiểu Đông Sơn.
+ */
+function drawBaHead(h: HumanRig, feathers: readonly number[]): void {
+  drawWomanFace(h);
+  const head = h.on('head').plain;
+  head.sphere(0.18, C.hair, 0, 0.6, -0.15, [1, 1.45, 0.5], 9);
+  for (const s of [-1, 1]) head.box(0.05, 0.2, 0.08, C.hair, s * 0.19, 0.7, 0.05, [0, 0, -s * 0.12]);
+  head.sphere(0.085, C.hair, 0, 0.84, -0.26, [1.1, 0.9, 0.9], 8);
+  head.cyl(0.01, 0.01, 0.28, C.gold, 0, 0.86, -0.27, [0, 0, Math.PI / 2 - 0.25], 5);
+  for (const s of [-1, 1]) head.sphere(0.022, C.red, s * 0.14, 0.86 + s * 0.035, -0.27, [1, 1, 1], 6);
+  featherCrown(h, feathers, { count: 7, len: 0.48, spread: 0.22, bronzeRim: true, rim: C.gold, tier2: true });
+}
+
+/** Trưng Trắc: áo đỏ thắm, giáp ngực đồng hoa văn có hộ tâm mặt trống đồng, giáp vai đồng nhỏ, gươm đồng. */
+function drawTrungTrac(h: HumanRig): void {
+  drawBaBody(h, C.trungRed, C.gold);
+  const chest = h.on('chest');
+  chest.band.cyl(0.136, 0.112, 0.2, C.bronze, 0, 0.485, 0, undefined, 12);
+  chest.plain.cyl(0.12, 0.138, 0.026, C.gold, 0, 0.578, 0, undefined, 12);
+  chest.plain.cyl(0.114, 0.114, 0.02, C.gold, 0, 0.392, 0, undefined, 12);
+  chest.drum.cyl(0.058, 0.058, 0.02, C.gold, 0, 0.49, 0.13, [Math.PI / 2, 0, 0], 14);
+  for (const s of [-1, 1]) {
+    chest.plain.sphere(0.07, C.bronzeLight, s * 0.165, 0.565, 0, [1.05, 0.7, 1], 8);
+    chest.plain.box(0.09, 0.02, 0.11, C.gold, s * 0.175, 0.54, 0, [0, 0, -s * 0.3]);
+  }
+  drawBaHead(h, [C.red, C.gold, C.cream]);
+  h.local('hand', GRIP_R, null, guomDong);
+}
+
+/** Trưng Nhị: áo vàng cổ viền đỏ, dây đeo đỏ bắt chéo, bao tên đồng sau lưng, cung sừng bịt vàng, tên đồng. */
+function drawTrungNhi(h: HumanRig): void {
+  drawBaBody(h, C.trungYellow, C.red, { crossStrap: C.red });
+  h.on('chest').plain.cyl(0.128, 0.128, 0.022, C.trungYellowDark, 0, 0.405, 0, undefined, 12);
+  drawBaHead(h, [C.red, C.cream, C.gold]);
+  h.local('chest', [0.06, 0.55, -0.15], [-0.3, 0, -0.35], (s) => quiver(s, C.bronze, { iron: false }));
+  h.local('handL', GRIP_L, null, (s) => bow(s, true, true));
+  h.local('hand', GRIP_R, null, (s) => arrow(s));
+}
+
+/** Ngồi bành: hông giữ trên nệm, hai chân duỗi ra trước, hơi dạng. Gọi sau khi đặt tay. */
+function sitBa(b: Human): void {
+  b.hips.position.copy(b.hips.userData.rest as THREE.Vector3);
+  b.legL.rotation.set(-1.4, 0, -0.18);
+  b.legR.rotation.set(-1.4, 0, 0.18);
+}
+
+/**
+ * Trưng Trắc: nghỉ thì gươm dựng trước vai phải; đánh thì giơ gươm quá đầu rồi chém xuống trước mặt (voi dậm chân
+ * giơ vòi theo). `skill` (Voi xung trận): voi chồm lên rống, bà giơ cao gươm; voi lao tới, bà rạp người chĩa gươm về
+ * trước; rồi về nghỉ. `win`: giơ cao gươm, voi giơ vòi.
+ */
+function poseTrungTrac(bones: B, a: Act): VoiTranMood {
+  const b = bones as unknown as Human;
+  beginPose(b, a.time);
+  const t = a.time ?? 0;
+  const mood: VoiTranMood = {};
+  const sway = a.act === 'walk' ? Math.sin((a.phase ?? 0) * 0.55) : 0;
+  b.chest.rotation.z = 0.05 * sway;
+  b.armR.rotation.set(-0.55, 0, 0.25);
+  b.hand.rotation.set(0.15 + 0.04 * Math.sin(t * 1.2), 0, -0.15);
+  b.armL.rotation.set(-0.6, 0, -0.15);
+  if (a.act === 'dead') {
+    const f = a.fall ?? 1;
+    fallPose(b, f);
+    b.chest.rotation.x = -0.35 * f;
+    b.hand.rotation.x = lerp(0.15, -0.9, f);
+  } else if (a.skill !== undefined) {
+    const k = a.skill;
+    const up = smooth(k, 0, 0.12) * (1 - smooth(k, 0.25, 0.38));
+    const run = smooth(k, 0.28, 0.38) * (1 - smooth(k, 0.82, 0.95));
+    const busy = Math.max(up, run);
+    mood.strike = 0;
+    mood.rear = smooth(k, 0, 0.12) * (1 - smooth(k, 0.22, 0.32));
+    mood.trumpet = smooth(k, 0, 0.1) * (1 - smooth(k, 0.28, 0.4));
+    mood.charge = run;
+    mood.chargePhase = k * 24;
+    b.chest.rotation.set(lerp(-0.15 * up, 0.35, run), 0, 0);
+    b.head.rotation.x = lerp(-0.15 * up, -0.3, run);
+    b.armR.rotation.set(lerp(lerp(-0.55, -2.5, up), -1.45, run), 0, lerp(lerp(0.25, 0.4, up), 0.1, run));
+    b.hand.rotation.set(lerp(lerp(0.15, 0.4, up), 1.25, run), 0, lerp(-0.15, lerp(-0.3, 0, run), busy));
+    b.armL.rotation.set(lerp(lerp(-0.6, -1.2, up), -0.9, run), 0, lerp(-0.15, -0.45, busy));
+  } else if (a.win !== undefined) {
+    const w = a.win;
+    mood.strike = 0;
+    mood.trumpet = w;
+    b.chest.rotation.x = -0.12 * w;
+    b.head.rotation.x = -0.15 * w;
+    // Gươm chĩa lên trời chếch ra trước, ra ngoài, cho khỏi đâm vào tán lọng.
+    b.armR.rotation.set(lerp(-0.55, -2.35, w), 0, lerp(0.25, 0.45, w));
+    b.hand.rotation.set(lerp(0.15, 0.5, w), 0, lerp(-0.15, -0.35, w));
+    b.armL.rotation.set(lerp(-0.6, -0.35, w), 0, lerp(-0.15, -0.55, w));
+  } else if (a.act === 'fight') {
+    const e = strikeCurve(a.strike, 0.22, 0.4);
+    b.chest.rotation.set(lerp(-0.08, 0.35, e), lerp(0.25, -0.2, e), 0);
+    b.head.rotation.set(lerp(0.05, -0.25, e), -b.chest.rotation.y, 0);
+    b.armR.rotation.set(lerp(-2.8, -1.0, e), 0, lerp(0.2, 0.05, e));
+    b.hand.rotation.set(lerp(-0.7, 1.7, e), 0, 0);
+    b.armL.rotation.set(lerp(-0.7, -0.3, e), 0, -0.35);
+  }
+  sitBa(b);
+  gripHands(b, ARM * K_BA);
+  return mood;
+}
+
+/** Ba vòng phất cờ của Hiệu triệu (tiến trình kỹ năng). */
+const WAVE_FROM = 0.28;
+const WAVE_TO = 0.78;
+
+/**
+ * Trưng Nhị: nghỉ thì cung cầm tay trái dựng bên hông; đánh thì bắn cung như cung thủ (ngồi nghiêng người, kéo dây tới
+ * má, buông, rút tên sau vai). `skill` (Hiệu triệu): với ra sau rút cờ chim Lạc, giơ cao, phất ba vòng lớn, rồi cắm
+ * lại (voi rống theo). `win`: rút cờ phất mãi, voi giơ vòi.
+ */
+function poseTrungNhi(bones: B, a: Act): VoiTranMood {
+  const b = bones as unknown as Human;
+  beginPose(b, a.time);
+  const t = a.time ?? 0;
+  const mood: VoiTranMood = { strike: 0 };
+  const sway = a.act === 'walk' ? Math.sin((a.phase ?? 0) * 0.55) : 0;
+  b.chest.rotation.z = 0.05 * sway;
+  b.armL.rotation.set(-0.5, 0, -0.2);
+  b.handL.rotation.set(-0.05, 0, 0.1);
+  b.armR.rotation.set(-0.55, 0, 0.15);
+  let arrowOn = false;
+  let flagOn = false;
+  // Tay phải cầm cờ: với ra sau (`reach`), giơ cao (`raise`), phất vòng (`phi`).
+  let reach = 0;
+  let raise = 0;
+  let phi = 0;
+  if (a.act === 'dead') {
+    const f = a.fall ?? 1;
+    fallPose(b, f);
+    b.chest.rotation.x = -0.35 * f;
+    b.handL.rotation.x = lerp(-0.05, -0.6, f);
+  } else if (a.skill !== undefined) {
+    const k = a.skill;
+    reach = smooth(k, 0, 0.12) * (1 - smooth(k, 0.13, 0.25)) + smooth(k, 0.82, 0.9) * (1 - smooth(k, 0.93, 1));
+    raise = smooth(k, 0.12, 0.28) * (1 - smooth(k, 0.78, 0.88));
+    phi = (Math.PI * 2 * 3 * Math.min(Math.max(k - WAVE_FROM, 0), WAVE_TO - WAVE_FROM)) / (WAVE_TO - WAVE_FROM);
+    flagOn = k >= 0.12 && k < 0.9;
+    mood.trumpet = 0.7 * raise;
+  } else if (a.win !== undefined) {
+    const w = a.win;
+    reach = smooth(w, 0, 0.3) * (1 - smooth(w, 0.3, 0.6));
+    raise = smooth(w, 0.35, 1);
+    phi = t * 4;
+    flagOn = w >= 0.3;
+    mood.trumpet = w;
+  } else if (a.act === 'fight') {
+    const k = a.strike;
+    const flick = k !== undefined && k < 0.25 ? Math.sin((Math.PI * k) / 0.25) : 0;
+    const back = k !== undefined && k > 0.2 && k < 0.7 ? Math.sin((Math.PI * (k - 0.2)) / 0.5) : 0;
+    const yaw = k === undefined ? 0.9 : k < 0.5 ? lerp(0.9, 0.6, smooth(k, 0.1, 0.5)) : lerp(0.6, 0.9, smooth(k, 0.7, 1));
+    b.hips.rotation.y = yaw * 0.3;
+    b.chest.rotation.y = yaw * 0.7;
+    b.head.rotation.set(-0.05, -yaw, 0);
+    b.armL.rotation.set(-1.5, -yaw, 0);
+    b.handL.rotation.set(0, -yaw, 0.12);
+    b.armR.rotation.set(lerp(-1.5, -2.9, back), lerp(lerp(-yaw - 0.05, 0.6, flick), 0.3, back), 0);
+    b.hand.rotation.set(Math.PI / 2, -yaw, 0);
+    arrowOn = k === undefined || k >= 0.55;
+  }
+  if (reach > 0 || raise > 0) {
+    // Tay cầm cung hạ xuống; vai phải xoay ra sau với cờ, rồi giơ cờ quá đầu phất vòng (đỉnh cờ vẽ vòng tròn, luôn
+    // chúc ra trước cho khỏi vướng lọng). Giơ lên thì xoay cán cho lá cờ bay ra bên phải, ngoài tán lọng.
+    const wave = raise * Math.sin(phi);
+    b.chest.rotation.y = 0.5 * reach - 0.12 * wave;
+    b.chest.rotation.x = lerp(b.chest.rotation.x, 0.05, raise);
+    b.head.rotation.set(-0.2 * raise, 0.6 * reach, 0);
+    b.armL.rotation.set(lerp(-0.5, -0.3, raise), 0, lerp(-0.2, -0.35, raise));
+    b.armR.rotation.set(lerp(lerp(-0.55, 0.75, reach), -2.5, raise), 0, lerp(lerp(0.15, 0.6, reach), 0.25 + 0.15 * wave, raise));
+    b.hand.rotation.set(
+      lerp(lerp(0.3, -0.35, reach), -0.6 * Math.sin(phi), raise),
+      lerp(0, -Math.PI / 2, raise),
+      lerp(lerp(0, -0.4, reach), -0.35 - 0.3 * Math.cos(phi), raise),
+    );
+  }
+  sitBa(b);
+  gripHands(b, ARM * K_BA);
+  bones.flagGrip.position.copy(b.hand.position);
+  bones.flagGrip.rotation.copy(b.hand.rotation);
+  hide(b.hand, !arrowOn);
+  hide(bones.flagGrip, !flagOn);
+  hide(bones.qFlag, flagOn);
+  return mood;
+}
+
+/**
+ * Trưng Trắc cưỡi voi trận đệm đỏ có mặt trống đồng, lọng đỏ. `glow`: hiển linh, có hào quang. `onFoot`: xuống voi,
+ * đứng chầu trong sân Điện (tướng đứng trong sân không cưỡi thú).
+ */
+export function makeTrungTrac(opts: { glow?: boolean; onFoot?: boolean } = {}): THREE.Group {
+  if (opts.onFoot) return standingBa(drawTrungTrac, 'trungTrac', opts.glow);
+  const group = makeVoiTran(
+    { pad: C.red, trim: C.gold, drum: true, parasol: C.trungRed },
+    {
+      defs: bigHuman('qBody', SEAT_BA, K_BA),
+      draw: (r) => drawBig(r, SEAT_BA, K_BA, drawTrungTrac),
+      pose: poseTrungTrac,
+    },
+  );
+  if (opts.glow) addHalo(group, ...HALO_BA);
+  return group;
+}
+
+/**
+ * Trưng Nhị cưỡi voi trận đệm vàng, lọng vàng, cờ đỏ chim Lạc cắm sau bành. `glow`: hiển linh, có hào quang.
+ * `onFoot`: xuống voi, đứng chầu trong sân Điện.
+ */
+export function makeTrungNhi(opts: { glow?: boolean; onFoot?: boolean } = {}): THREE.Group {
+  if (opts.onFoot) return standingBa(drawTrungNhi, 'trungNhi', opts.glow);
+  const group = makeVoiTran(
+    { pad: C.trungYellow, trim: C.red, parasol: C.trungYellow, flag: K_BA },
+    {
+      defs: { ...bigHuman('qBody', SEAT_BA, K_BA), flagGrip: { parent: 'chest', at: onSeat(GRIP_R) } },
+      draw: (r) => {
+        drawBig(r, SEAT_BA, K_BA, drawTrungNhi);
+        r.place(SEAT_BA, K_BA, () => r.local('flagGrip', GRIP_R, null, coLac));
+      },
+      pose: poseTrungNhi,
+    },
+  );
+  if (opts.glow) addHalo(group, ...HALO_BA);
+  return group;
+}
+
+/**
+ * Hai Bà đứng chầu trong sân Điện, cùng cỡ Lạc tướng đứng chầu: Trưng Trắc dựng gươm trước vai phải, Trưng Nhị cầm
+ * cung dựng bên trái, tay phải buông cầm tên; thở nhẹ.
+ */
+function standingBa(draw: (h: HumanRig) => void, kind: 'trungTrac' | 'trungNhi', glow = false): THREE.Group {
+  const r = new RigBuilder({ ...BASE, ...bigHuman('base', [0, 0, 0], K_LAC) });
+  drawBig(r, [0, 0, 0], K_LAC, draw);
+  const { group, bones } = skinRig(r.build());
+  const b = bones as unknown as Human;
+  finish(group, (a) => {
+    const t = a.time ?? 0;
+    beginPose(b, t);
+    if (kind === 'trungTrac') {
+      b.armR.rotation.set(-0.35, 0, 0.18);
+      b.hand.rotation.set(0.35 + 0.02 * Math.sin(t * 1.3), 0, -0.1);
+      b.armL.rotation.set(-0.1, 0, -0.18);
+    } else {
+      b.armL.rotation.set(-0.35, 0, -0.25);
+      b.handL.rotation.set(0.35, 0, 0.1);
+      b.armR.rotation.set(-0.05, 0, 0.2);
+    }
+    gripHands(b, ARM * K_LAC);
+  });
+  if (glow) addHalo(group, 1.5, -0.38);
+  return group;
+}
+
 // ---------- Lạc tướng đánh trống trận ----------
 
 /** Dùi trống lúc nghỉ, lúc giơ cao lấy đà, và lúc nện xuống mặt trống (góc chúc xuống, radian). */
@@ -1498,4 +1805,219 @@ export function bakeVuaHung(): THREE.Group {
     b.chest.rotation.x = -0.03;
     gripHands(b, ARM * K_VUA);
   });
+}
+
+// ---------- Bốn nữ tướng của Hai Bà ----------
+
+/** Cỡ thân nữ tướng: nhỏ hơn Hai Bà đứng chầu (`K_LAC` 1,3) một chút, cho thấy là phó tướng. */
+const K_NU = 1.22;
+/** Ba xương lá cờ nối nhau từ cán ra, cho cờ bay lượn sóng. */
+const NU_FLAG = ['nuFlag0', 'nuFlag1', 'nuFlag2'] as const;
+/** Chỗ buộc khúc cờ `i` (tọa độ thân người, tư thế gốc): trên cán cờ cầm tay trái. */
+const nuFlagAt = (i: number): V3 => [GRIP_L[0], GRIP_L[1] + CO_NU.top, GRIP_L[2] - i * CO_NU.w];
+/** Cổ em bé địu sau lưng Phùng Thị Chính (tọa độ thân người): sau vai phải, đầu ló qua vai. */
+const NU_BABY: V3 = [0.19, 0.64, -0.2];
+/** Lúc phất cờ hô quân, vũ khí tay phải chĩa về trước (góc đồ cầm tay). */
+const NU_POINT = 0.75;
+
+interface NuLook {
+  /** Áo dài, quần cùng màu; lá cờ cùng màu áo. */
+  cloth: number;
+  /** Viền cổ áo, viền và tua cờ. */
+  trim: number;
+  /** Lông chim trên mũ (lông giữa là màu đầu). */
+  feathers: readonly number[];
+  /** Thêm cho thân: giáp, dây đeo, bao cổ tay. */
+  body?: Partial<BodyLook>;
+  /** Đồ đeo sau lưng và vũ khí tay phải. */
+  gear: (h: HumanRig, r: Rig) => void;
+  /** Lúc đứng: góc cánh tay phải và góc đồ cầm tay phải. */
+  armR: V3;
+  hand: V3;
+}
+
+/** Xoay `rot` (thứ tự XYZ như `RigBuilder.local`) rồi nghiêng thêm `tilt` quanh trục z của mô hình (trong mặt lưng). */
+function tilted(rot: V3, tilt: number): V3 {
+  const q = new THREE.Quaternion()
+    .setFromAxisAngle(new THREE.Vector3(0, 0, 1), tilt)
+    .multiply(new THREE.Quaternion().setFromEuler(new THREE.Euler(...rot)));
+  const e = new THREE.Euler().setFromQuaternion(q);
+  return [e.x, e.y, e.z];
+}
+
+/**
+ * Đầu nữ tướng: mặt nữ như Hai Bà; tóc búi cao sau gáy cài trâm vàng, tóc mai ngắn (không xõa lưng như Hai Bà, chừa
+ * chỗ đeo nỏ, cung, địu con); mũ lông chim một tầng vành đồng (Hai Bà hai tầng vành vàng).
+ */
+function drawNuHead(h: HumanRig, feathers: readonly number[]): void {
+  drawWomanFace(h);
+  const head = h.on('head').plain;
+  head.sphere(0.165, C.hair, 0, 0.71, -0.1, [1.12, 0.82, 0.75], 9);
+  for (const s of [-1, 1]) head.box(0.045, 0.15, 0.07, C.hair, s * 0.19, 0.72, 0.04, [0, 0, -s * 0.1]);
+  head.sphere(0.09, C.hair, 0, 0.9, -0.21, [1.1, 1, 0.9], 8);
+  head.cyl(0.008, 0.008, 0.24, C.gold, 0, 0.92, -0.23, [0, 0, Math.PI / 2 - 0.25], 5);
+  featherCrown(h, feathers, { count: 5, len: 0.4, spread: 0.26, bronzeRim: true });
+}
+
+/**
+ * Địu con của Phùng Thị Chính: túi địu vải chàm dệt hoa văn ôm lưng, quai qua hai vai (dây chéo trước ngực vẽ ở
+ * thân); em bé quấn khăn đỏ ngồi trong túi, đầu đội mũ khăn đỏ ló qua vai phải (xương `nuBe`, ngó quanh).
+ */
+function drawDiuCon(h: HumanRig, r: Rig): void {
+  const chest = h.on('chest');
+  chest.band.sphere(0.13, C.diuCham, 0.04, 0.44, -0.2, [1.05, 1.1, 0.7], 10);
+  for (const s of [-1, 1]) chest.plain.box(0.035, 0.03, 0.17, C.diuCham, s * 0.095, 0.585, -0.07, [-0.25, 0, 0]);
+  chest.plain.sphere(0.09, C.red, 0.14, 0.55, -0.22, [1, 0.9, 0.9], 8);
+  const [x, y, z] = NU_BABY;
+  const be = r.on('nuBe').plain;
+  be.sphere(0.085, C.skin, x, y + 0.075, z, [1, 0.95, 0.95], 10);
+  be.sphere(0.088, C.red, x, y + 0.1, z - 0.045, [1.05, 1, 0.85], 9);
+  be.sphere(0.034, C.red, x, y + 0.18, z - 0.05, [1, 1, 1], 6);
+  for (const s of [-1, 1]) {
+    be.sphere(0.014, C.ink, x + s * 0.03, y + 0.07, z + 0.075, [1, 1.3, 0.5], 5);
+    be.sphere(0.016, 0xe58a6a, x + s * 0.045, y + 0.045, z + 0.066, [1, 0.6, 0.4], 5);
+  }
+}
+
+const NU_LOOK: Record<NuTuongId, NuLook> = {
+  // Lê Chân (lập trang An Biên ven biển, lo lính nỏ): áo lam biển viền kem, hộ tâm đồng, nỏ đeo chéo sau lưng (dây da
+  // bắt chéo trước ngực), tay phải giơ kiếm ngắn sắt chếch trước vai.
+  leChan: {
+    cloth: C.nuLam,
+    trim: C.cream,
+    feathers: [C.cream, C.nuLamLight, C.red],
+    body: { plate: C.bronzeLight, crossStrap: LEATHER },
+    gear: (h) => {
+      // Báng nằm ngang lưng, đầu nỏ sang phải; cánh nỏ dựng đứng ngoài vai phải cho nhìn trước, nhìn sau đều thấy.
+      h.local('chest', [-0.02, 0.42, -0.2], tilted([-Math.PI / 2, Math.PI / 2, 0], 0.25), (s) => crossbowParts(s, false, 0.75));
+      h.local('hand', GRIP_R, null, doanKiem);
+    },
+    armR: [-0.9, 0, 0.25],
+    hand: [-0.45, 0, -0.35],
+  },
+  // Thánh Thiên (lo cung thủ): áo lục lá viền vàng, bao cổ tay da, bao tên da sau vai phải, cung sừng đeo chéo lưng.
+  thanhThien: {
+    cloth: C.nuLuc,
+    trim: C.gold,
+    feathers: [C.gold, C.cream, C.red],
+    body: { crossStrap: LEATHER, wristband: LEATHER },
+    gear: (h, r) => {
+      h.local('chest', [0.1, 0.52, -0.16], [-0.3, 0, -0.35], (s) => quiver(s, LEATHER, { iron: false }));
+      // Cung sừng to (1,2 lần cung lính) đeo chếch sau lưng: đầu trên sau gáy, đầu dưới ló ngoài hông phải.
+      r.place([0.02, 0.5, -0.25], 1.2, () => h.local('chest', [0, 0, 0], tilted([0, -Math.PI / 2, 0], 0.3), (s) => bow(s, true)));
+    },
+    armR: [-0.1, 0, 0.22],
+    hand: [0, 0, 0],
+  },
+  // Bát Nàn (lo giáo binh): áo tím hoa cà viền vàng, gương đồng hộ tâm, giáp vai đồng, tay phải cầm giáo mũi sắt dựng đứng.
+  batNan: {
+    cloth: C.nuTim,
+    trim: C.gold,
+    feathers: [C.red, C.nuTimLight, C.cream],
+    body: { drumPlate: true },
+    gear: (h) => {
+      for (const s of [-1, 1]) h.on('chest').plain.sphere(0.062, C.bronzeLight, s * 0.16, 0.565, 0, [1.05, 0.7, 1], 8);
+      h.local('hand', GRIP_R, null, (s) => spear(s, 1, 1.45));
+    },
+    armR: [-0.12, 0, 0.2],
+    hand: [0.1, 0, -0.06],
+  },
+  // Phùng Thị Chính (lo voi chiến): áo hồng sen viền kem, địu con vải chàm sau lưng, tay phải dựng gươm đồng chếch ngoài vai phải.
+  phungThiChinh: {
+    cloth: C.nuHong,
+    trim: C.cream,
+    feathers: [C.red, C.nuHongLight, C.cream],
+    body: { crossStrap: C.diuCham },
+    gear: (h, r) => {
+      drawDiuCon(h, r);
+      h.local('hand', GRIP_R, null, guomDong);
+    },
+    armR: [-0.35, 0, 0.18],
+    hand: [0.3, 0, -0.35],
+  },
+};
+
+/**
+ * Nữ tướng không đánh. Đứng: tay trái dựng cờ cạnh hông, thở nhẹ, cờ bay phấp phới. Đi: vẫn dựng cờ, tay phải vung
+ * theo bước. `fight` là phất cờ hô quân: ưỡn người giơ cờ cao quá đầu phất qua lại (theo `time`), tay phải chĩa vũ khí
+ * về trước. `win`: giơ cờ và vũ khí lên trời. `dead` thì cứ đứng.
+ */
+function poseNu(bones: B, a: Act, look: NuLook): void {
+  const b = bones as unknown as Human;
+  const t = a.time ?? 0;
+  beginPose(b, t);
+  b.armL.rotation.set(-0.5, 0, -0.26);
+  b.handL.rotation.set(0, 0, 0.03);
+  b.armR.rotation.set(...look.armR);
+  b.hand.rotation.set(...look.hand);
+  // Cờ lệch ra ngoài `bias`, mỗi khúc lượn chậm hơn khúc trong một nhịp.
+  let speed = 2.6;
+  let amp = 0.2;
+  let bias = 0.35;
+  if (a.win !== undefined) {
+    const w = a.win;
+    b.chest.rotation.x = -0.1 * w;
+    b.head.rotation.x = -0.18 * w;
+    b.armL.rotation.set(lerp(-0.5, -2.75, w), 0, lerp(-0.26, -0.42, w));
+    b.handL.rotation.set(0, 0, lerp(0.03, 0.18 + 0.22 * Math.sin(t * 4), w));
+    b.armR.rotation.set(lerp(look.armR[0], -2.75, w), 0, lerp(look.armR[2], 0.42, w));
+    b.hand.rotation.set(lerp(look.hand[0], -0.15, w), 0, lerp(look.hand[2], -0.22, w));
+    speed = lerp(2.6, 6, w);
+    amp = lerp(0.2, 0.38, w);
+    bias = lerp(0.35, 0.2, w);
+  } else if (a.act === 'walk') {
+    const sw = walkCycle(b, a.phase ?? 0, (a.stride ?? 0.5) * 0.8);
+    b.armL.rotation.set(-0.55 - 0.06 * sw, 0, -0.26);
+    b.handL.rotation.set(0.05 * sw, 0, 0.03);
+    b.armR.rotation.set(look.armR[0] + 0.3 * sw, 0, look.armR[2]);
+    b.hand.rotation.set(look.hand[0] + 0.08 * sw, 0, look.hand[2]);
+    speed = 4.2;
+    amp = 0.28;
+    bias = 0.45;
+  } else if (a.act === 'fight') {
+    const wave = Math.sin(t * 3.4);
+    stance(b, 0.22, 0.18);
+    b.chest.rotation.set(-0.08, 0.12, 0.04 * wave);
+    b.head.rotation.set(-0.15, -0.12, 0);
+    b.armL.rotation.set(-2.65, 0, -0.4 - 0.08 * wave);
+    b.handL.rotation.set(-0.05, 0, 0.12 + 0.3 * wave);
+    b.armR.rotation.set(-1.3, 0, 0.14);
+    b.hand.rotation.set(NU_POINT, 0, 0);
+    speed = 7;
+    amp = 0.4;
+    bias = 0.25;
+  }
+  gripHands(b, ARM * K_NU);
+  NU_FLAG.forEach((name, i) => {
+    bones[name].rotation.y = (i ? 0 : bias) + amp * (1 + 0.2 * i) * Math.sin(t * speed - i * 1.1);
+  });
+  const be = bones.nuBe as THREE.Bone | undefined;
+  if (be) {
+    const bob = a.act === 'walk' ? 0.1 * Math.sin((a.phase ?? 0) * 2) : 0.05 * Math.sin(t * 1.7);
+    be.rotation.set(bob, 0.45 + 0.4 * Math.sin(t * 0.8), 0);
+  }
+}
+
+/**
+ * Nữ tướng của Hai Bà (`kind`): đứng, không cưỡi thú, cỡ thân 1,22 (đỉnh đầu 1,17, đỉnh mũ lông chim 1,55; Hai Bà đứng
+ * chầu 1,74), mặt trước hướng +z, gốc ở giữa hai bàn chân. Mỗi người một màu áo, lá cờ cùng màu cầm tay trái: chóp cờ
+ * cao 2,57 lúc đứng, 2,84 lúc phất cờ (cờ phất ra tới 1,9 bên trái), 3,06 lúc giơ cờ thắng trận. `userData.pose` đặt
+ * tư thế (xem `poseNu`). `glow`: hiển linh, có hào quang sau đầu.
+ */
+export function makeNuTuong(kind: NuTuongId, opts: { glow?: boolean } = {}): THREE.Group {
+  const look = NU_LOOK[kind];
+  const extra: Defs = {};
+  NU_FLAG.forEach((name, i) => (extra[name] = { parent: i ? NU_FLAG[i - 1] : 'handL', at: nuFlagAt(i) }));
+  if (kind === 'phungThiChinh') extra.nuBe = { parent: 'chest', at: NU_BABY };
+  const r = new RigBuilder({ ...BASE, ...bigHuman('base', [0, 0, 0], K_NU), ...(moveBones(extra, 'base', [0, 0, 0], K_NU) as Defs) });
+  drawBig(r, [0, 0, 0], K_NU, (h) => {
+    drawBaBody(h, look.cloth, look.trim, { belt: C.bronze, armband: C.bronze, ...look.body });
+    drawNuHead(h, look.feathers);
+    h.local('handL', GRIP_L, null, (s) => coNuCan(s, look.trim));
+    NU_FLAG.forEach((name, i) => r.local(name, nuFlagAt(i), null, (s) => coNuLa(s, i, look.cloth, look.trim)));
+    look.gear(h, r);
+  });
+  const { group, bones } = skinRig(r.build());
+  if (opts.glow) addHalo(group, 1.35, -0.45);
+  return finish(group, (a) => poseNu(bones, a, look));
 }

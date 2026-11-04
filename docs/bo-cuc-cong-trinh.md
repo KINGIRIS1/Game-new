@@ -39,7 +39,7 @@ Từ bản lưu 20 Điện móng 10×10 (chủ dự án yêu cầu; xem mục Đ
 
 - `7`, `H`, `c`, `C`, `N`, `T`, `d`: khối cung điện (cột chim Lạc, nhà chính, hai chái, nền, thềm, đôi đỉnh đồng), vẽ theo bản 5×5 ở dưới, phóng 1,5 lần; chỗ chữ trên đây chỉ là chỗ chừng của khối sau khi phóng.
 - `V` cấp 1, bệ ngai: Vua Hùng ngồi ngai vàng ở mọi cấp. Cấp 1–3 ụ đất trải chiếu; cấp 4 bệ đá ba bậc, thảm đỏ; cấp 6 mép bậc viền vàng; cấp 9 mặt bậc chạm hoa văn. Ngai cấp 3 có lọng (cấp 6 lọng vàng), cấp 5 đôi quạt lông chim, cấp 7 chim Lạc trên tựa ngai.
-- `t` cấp 1, 14 chỗ tướng đứng chầu, hai cột mỗi bên (cột trong cách lối giữa 2,25 ô, cột ngoài 3,25 ô). Lạc tướng, Gióng hai bên ngai; Sơn Tinh, An Dương Vương hàng hai; Cao Lỗ hàng ba bên phải; còn lại để dành cho các chương sau. Tướng đứng trong sân không cưỡi thú.
+- `t` cấp 1, 14 chỗ tướng đứng chầu, hai cột mỗi bên (cột trong cách lối giữa 2,25 ô, cột ngoài 3,25 ô). Lạc tướng, Gióng hai bên ngai; Sơn Tinh, An Dương Vương hàng hai, Hai Bà Trưng cột ngoài hàng hai; Cao Lỗ hàng ba bên phải; còn lại để dành cho các chương sau. Tướng đứng trong sân không cưỡi thú.
 - `,` cấp 1, lối đi từ bệ ngai ra cổng (cấp 4: lát đá; cấp 6: viền vàng).
 - `m` cấp 1, chỗ bày mâm bánh ngày Tết, trước bệ ngai.
 - `e` cấp 1, chỗ cây nêu ngày Tết, dây cờ căng tới hai cột cờ `2`.
@@ -594,6 +594,32 @@ T T T T ~ ~ ~ ~ ~ ~ ~ S S ~ ~ .
 - `S` đám sen: lá nổi, hoa hồng nở, nụ trên cuống.
 - `L` lau sậy dọc bờ sau. `T` cây đa cổ thụ (mô hình cây đa trang trí), tán xòe xuống mặt hồ. `B` bụi tre.
 - Một thầy cúng (Lạc hầu) đứng khấn trước miếu. Rùa Vàng bơi vòng bầu dục quanh gò (`userData.swim`, World cho bơi ở `swimTurtle`).
+
+## Đền Hát Môn: 4×4 (chương 5, đã vẽ)
+
+Bản vẽ đi kèm mục **Đền Hát Môn** trong `docs/thiet-ke.md`. Một cấp, chưa có dáng cũ. Đền thờ Hai Bà lùi về sau, sân lát đá trước đền có đàn tế đắp đất nơi Hai Bà tế cờ; cây đa cao đứng góc sau bên trái cho khỏi che sân.
+
+```
+T T H H H H . B
+T T H H H H . B
+T T H H H H . .
+. . N N N N . .
+. . . L L . . .
+V V . D D . V V
+V V . D D . V V
+. . . , , . . .
+```
+
+- `H` đền thờ Hai Bà: tám cột son trên chân đá, vách gỗ dải hoa văn, cửa giữa có mặt trống đồng trên trán, xà son; mái cong hai tầng lợp ngói viền đồng vàng, tầng trên đặt trên gác lửng có hàng ô cửa, chim Lạc đồng hai đầu nóc.
+- `N` thềm đền: nền đá hai bậc phủ cả `H` và `N`, ba bậc đá lên giữa thềm.
+- `L` lư hương đồng ba chân trên trụ đá: nắp chóp có núm, hai quai, nén hương đỏ lửa.
+- `D` đàn tế đắp đất hai tầng, bậc đất mặt trước: cột cờ son cao giữa đàn, cờ đỏ thắm lớn viền vàng; trống đồng nhỏ và mâm lễ trên đàn; phướn đỏ, phướn vàng hai góc sau.
+- `V` hai voi đá quỳ trên bệ đá hai bên sân, quay chếch vào lối giữa: chân trước duỗi, chân sau xếp, tai lớn, vòi cuộn chạm bệ, ngà ngắn, vải bành chạm nổi trên lưng.
+- `,` lối vào; sân lát đá hai màu so le từ thềm ra lối, viền đá hai bên; ngoài sân là cỏ.
+- `T` cây đa cổ thụ: gốc to bành rễ, vòng đá kè, dải vải đỏ buộc thân, rễ phụ buông, tán xòe nhiều vòm (tràn ra ngoài móng chưa tới nửa ô).
+- `B` bụi tre góc sau bên phải.
+- Thầy cúng (Lạc hầu) đứng khấn bên trái lư hương, quay vào đền; chỗ thứ hai là người dâng lễ bên đàn tế.
+- Đã vẽ (`src/render/congTrinh/denHatMon.ts`). Đã đổi khi vẽ: bỏ hai cờ đứng hai bên thềm (đâm vào diềm mái, lẫn với cờ đàn tế), thay bằng phướn đỏ, vàng trên đàn tế.
 
 ## Cấp 9, 10 (chủ dự án đã duyệt, đã vẽ)
 

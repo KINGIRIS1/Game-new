@@ -3,7 +3,7 @@
 // (world.ts dựng tướng ở `courtSlot`), cờ, trống, voi đá, lầu trống, cổng tứ trụ. Bản vẽ ở docs/bo-cuc-cong-trinh.md.
 
 import * as THREE from 'three';
-import type { TuongId } from '../../game/defs';
+import type { NuTuongId, TuongId } from '../../game/defs';
 import { above5, banner, bird, birdSpread, boatRoof, drum, drumTower, type Roof, roofFor, stiltHall } from '../buildings';
 import { bakeVuaHung, VUA_SEAT } from '../heroes';
 import { Lot, type Zone } from '../lot';
@@ -64,13 +64,27 @@ export const bannerHeight = (level: number) => (level >= 6 ? 3.2 : 2.9);
  *   hàng gần cổng:                  12             13
  *
  * Gần ngai là chỗ trên. Lạc tướng (trái) và Gióng (phải) đứng hai bên ngai; hàng sau Sơn Tinh (trái), An Dương Vương
- * (phải); Cao Lỗ sau An Dương Vương. Còn 9 chỗ cho tướng các chương sau (Hai Bà Trưng nên đứng ở 0 và 3, ngang ngai).
- * Tướng đứng trong sân không cưỡi thú.
+ * (phải); Cao Lỗ sau An Dương Vương. Hai Bà Trưng đứng cột ngoài hàng hai (Trưng Trắc 4, Trưng Nhị 7), ngang Sơn Tinh
+ * và An Dương Vương: chỗ 0 và 3 sát đôi voi đá góc sau sân (cấp 5) nên người đứng đó lẫn vào voi. Bốn nữ tướng đứng
+ * hàng sau Hai Bà: Lê Chân sau Trưng Trắc (8), Thánh Thiên sau Trưng Nhị (11), Bát Nàn sau Sơn Tinh (9), Phùng Thị
+ * Chính sau Cao Lỗ (13). Còn chỗ 12 (và 0, 3) cho tướng các chương sau. Tướng đứng trong sân không cưỡi thú.
  */
-const COURT_SLOT: Record<TuongId, number> = { lacTuong: 1, giong: 2, sonTinh: 5, anDuong: 6, caoLo: 10 };
+const COURT_SLOT: Record<TuongId | NuTuongId, number> = {
+  lacTuong: 1,
+  giong: 2,
+  sonTinh: 5,
+  anDuong: 6,
+  caoLo: 10,
+  trungTrac: 4,
+  trungNhi: 7,
+  leChan: 8,
+  thanhThien: 11,
+  batNan: 9,
+  phungThiChinh: 13,
+};
 
 /** Chỗ tướng `t` đứng chầu (tọa độ móng Điện) và hướng mặt: quay vào lối giữa, chếch ra phía cổng cho dễ thấy mặt. */
-export function courtSlot(t: TuongId): { x: number; z: number; ry: number } {
+export function courtSlot(t: TuongId | NuTuongId): { x: number; z: number; ry: number } {
   const c = DIEN_LOT.cells('t')[COURT_SLOT[t]];
   return { x: c.x, z: c.z, ry: c.x < 0 ? 0.85 : -0.85 };
 }

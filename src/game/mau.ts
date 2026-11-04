@@ -659,7 +659,7 @@ const RECIPES: Record<MauId, Recipe> = {
     ],
   },
   // Cổ Loa giữ sông (chương 4): như mẫu Cổ Loa, thêm ụ nỏ trên vòng thành ngoài, lầu nỏ giữ sông, trại nỏ cạnh
-  // doanh trại, Đền Cuông phía bắc ngoài vòng ngoài, Hồ Kim Quy trên đường chéo về góc rừng.
+  // doanh trại, Đền Cuông và Đền Hát Môn phía bắc ngoài vòng ngoài, Hồ Kim Quy trên đường chéo về góc rừng.
   coLoaSong: {
     walls: coLoaSongWalls,
     jobs: [
@@ -677,6 +677,9 @@ const RECIPES: Record<MauId, Recipe> = {
       ['hoKimQuy', inRings(0, byAxis), 6],
       [['denPhuDong', 'denTanVien'], inRings(0, row(1, byBarracks))],
       ['denCuong', inRings(0, row(1, byAxis))],
+      // Đền Hát Môn (chương 5) cạnh Đền Cuông, cùng hàng ngoài vòng ngoài. Vào chương 5 thì đã có Điện 9; dưới
+      // Điện 9 đền choán mất chỗ ruộng, nên mẫu chừa chỗ đền từ Điện 9.
+      ['denHatMon', inRings(0, row(1, byAxis)), 9],
       ['traiGiao', inRings(0, row(2, byBarracks))],
       [['traiCung', 'chuongVoi'], inRings(0, row(2, byBarracks))],
       ['traiNo', inRings(0, row(2, byBarracks))],

@@ -41,6 +41,18 @@ const CO_QUAN = `
   s.troops = { giao: Math.floor(cho / 2), cung: Math.floor(cho / 3), voi: 0, no: 0 };
 `;
 const KINH_DO = `M.playChapters({ s, until: (m) => m.at5 >= 0 });`;
+/** Kinh đô Điện 8 vừa sang chương 5 (đã thắng tới màn `cleared`), có doanh trại và quân, đã xem hết truyện tới lúc ấy. */
+const CHUONG5 = (cleared) => `M.playChapters({ s, last: 8 });${CO_QUAN}
+  for (const b of s.buildings) if (b.type === 'doanhTrai') b.level = D.BUILDINGS.doanhTrai.maxLevel;
+  const cho5 = G.troopCap(s);
+  s.troops = { giao: Math.floor(cho5 * 0.3), cung: Math.floor(cho5 * 0.2), voi: Math.floor(cho5 * 0.03), no: Math.floor(cho5 * 0.15) };
+  s.questIndex = D.CH5_QUEST_START; s.campaign.cleared = ${cleared};
+  // Đã hết truyện chương 4: lẫy bị tráo, Cao Lỗ có Lệnh bắn, vua đã theo Rùa Vàng xuống biển.
+  s.adv.layTrao = true; s.caoLo.lenhBan = true; s.adv.bien = true;
+  for (let id; (id = S.pendingStory(s)); ) S.markStory(s, id);
+  // Lời gợi ý công trình mới che giữa bãi chiến: coi như đã đọc.
+  for (let t; (t = G.nextHint(s)); ) G.markHinted(s, t);
+`;
 
 const CANH = {
   'man-vao': {
@@ -85,6 +97,13 @@ const CANH = {
     truoc: KINH_DO + CO_QUAN,
     sau: `const r = d.march(1); if (!r.ok) throw new Error('Không đánh màn 1 được: ' + r.reason);`,
     doi: 3000,
+  },
+  chuong5: { mo: 'Kinh đô chương 5 (Điện 8, có doanh trại), đã thắng màn 33', truoc: CHUONG5(33) },
+  'pho-ban-5': {
+    mo: 'Hai Bà Trưng đánh màn 36 (thành Luy Lâu, có Tô Định) ngoài bãi, chụp sau 4 giây',
+    truoc: CHUONG5(35),
+    sau: `const r = d.march(36); if (!r.ok) throw new Error('Không đánh màn 36 được: ' + r.reason);`,
+    doi: 4000,
   },
 };
 

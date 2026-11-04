@@ -2,21 +2,23 @@
 // đêm yêu tinh, cảnh Tết (cây nêu, dây cờ, mâm bánh, người gói bánh) và các hiệu ứng khi đặt công trình.
 
 import * as THREE from 'three';
-import { BUILDINGS, FIELD, isBridge, isRoad, type BuildingType, type Terrain, type TuongId } from '../game/defs';
+import { BUILDINGS, FIELD, NU_TUONG_IDS, isBridge, isRoad, type BuildingType, type NuTuongId, type Terrain, type TuongId } from '../game/defs';
 import { raidSpawnBand, type Battle, type RaidSide } from '../game/battle';
 import { caoLoAtDien } from '../game/caoLo';
+import { HAI_BA_KINDS, haiBaJoined, type HaiBaKind } from '../game/chuong5';
 import { advLook, inChapter3, ruaVangCame, type AdvLook } from '../game/coLoa';
 import { generals, heroPost } from '../game/doanhTrai';
+import { nuTuongList } from '../game/nuTuong';
 import { dienLevel, occupancy, upcomingBoats, type Building, type GameState } from '../game/game';
 import { giongLook, type GiongLook } from '../game/giong';
 import { KHOANH_N, khoanhOf, khoanhOrigin, openMask, openStart, openable } from '../game/khoanh';
 import { FAR_PLOTS, benKiaOpen, bridgeEnds, bridgeTo, plotAt, plotOf, plotOrigin, poiAt, poiPlots, type Dat } from '../game/benKia';
-import { DIEN_HOME, FAR_FOREST, FOREST_BAND, GRID, KHOANH, RIVER_END, RIVER_START, baseHeights, farBankOf, isNearBank, isRiver, riverDistance, riverFacing, rotAngle, turnLocal } from '../game/map';
+import { DIEN_HOME, FAR_FOREST, FOREST_BAND, GRID, KHOANH, RIVER_END, RIVER_START, baseHeights, farBankOf, inGrid, isNearBank, isRiver, riverDistance, riverFacing, rotAngle, turnLocal } from '../game/map';
 import { BAI_CAT, BIEN_DIEN, CUA_BIEN, QUAN_DAO, RIVER_MID, benDock, bienDo, isSea, riverOf, seaIndex, seaRoute, type QuanDaoId, type SeaRoute } from '../game/bien';
 import { sonLook, type SonLook } from '../game/son';
 import { floodMap } from '../game/terrain';
 import { tetOpen } from '../game/tet';
-import { Battlefield } from './battlefield';
+import { Battlefield, CAM_KHE } from './battlefield';
 import { BattleView } from './battleView';
 import { IsoCamera, type CamBounds } from './camera';
 import { DOOR_OPEN, banhChung, banhGiay } from './buildings';
@@ -33,7 +35,10 @@ import { buildCayDaBatch, disposeCayDaBatch, makeCayDa, type CayDaPlace } from '
 import { cloudPuffs, poiMarker } from './benKia';
 import { SHORE_LAND, SeaLife, animateSea, buildSea, buildSeaMist, islandAt, shoreCap } from './bien';
 import { makeSoldier } from './soldier';
-import { makeAnDuong, makeCaoLo, makeGiong, makeLacTuong, makeSonTinh } from './heroes';
+import { makeAnDuong, makeCaoLo, makeGiong, makeLacTuong, makeNuTuong, makeSonTinh, makeTrungNhi, makeTrungTrac } from './heroes';
+
+/** Người đứng chầu là nữ tướng (chương 5), không phải tướng chỉ huy. */
+const isNuTuong = (t: TuongId | NuTuongId): t is NuTuongId => (NU_TUONG_IDS as string[]).includes(t);
 import { addSunLights, type SunLights } from './lights';
 import {
   buildCitadel,
@@ -47,6 +52,7 @@ import {
   buildWalls,
   makeBoat,
   makeEnemyBoat,
+  makeLauThuyen,
   makeFighter,
   makeSailBoat,
   makeThuyenKhoi,
@@ -283,6 +289,8 @@ const SPOTS: Partial<Record<BuildingType, Spot[]>> = {
 
 /** Cây nêu ngày Tết cao chừng này. Khánh đất nung treo trên nêu. */
 const NEU_H = 4.2;
+/** Hai Bà trên voi trận ở sân doanh trại: voi to hơn người đứng (Cao Lỗ 0,9) mà vẫn vừa sân trại. */
+const HAI_BA_SCALE = 0.65;
 const KHANH = 0xa8502e;
 
 /** Công trình cần người làm: hiện đúng số người đang làm. */
@@ -449,12 +457,14 @@ export class World {
   private adv?: { obj: THREE.Group; look: AdvLook; key: string; y: number };
   /** Cao Lỗ đứng chầu trong sân Điện từ khi cầm quân (chương 4), sau An Dương Vương. */
   private caoLo?: { obj: THREE.Group; key: string; y: number };
+  /** Hai Bà Trưng trên voi trận, mỗi bà một mô hình. */
+  private haiBa = new Map<HaiBaKind, { obj: THREE.Group; key: string; y: number }>();
   private pillar?: { obj: THREE.Group; key: string };
   /**
    * Tướng đứng chầu trong sân Điện mà không có dáng truyện riêng: Lạc tướng, và tướng đã về trời, về núi, xuống biển
    * (hiển linh, có hào quang). Tướng có dáng truyện ở trên (`giong`, `son`, `adv`, `caoLo`).
    */
-  private court = new Map<TuongId, { obj: THREE.Group; key: string }>();
+  private court = new Map<TuongId | NuTuongId, { obj: THREE.Group; key: string }>();
   /** Cảnh Tết trước Điện và quanh bếp gói bánh, chỉ có lúc Tết mở. */
   private tetDecor?: THREE.Group;
   private tetKey = '';
@@ -480,7 +490,7 @@ export class World {
   private readonly seaLife: SeaLife;
   /** Thuyền khơi của từng bến thuyền khơi: neo trước bến, xuôi sông ra biển đánh cá quanh đảo rồi về. */
   private readonly seaBoats = new Map<number, SeaBoat>();
-  /** Đoàn thuyền thủy binh Triệu từ biển kéo vào trong lúc trinh sát báo (`upcomingBoats`), dựng lại theo đợt. */
+  /** Đoàn thuyền thủy binh Triệu, thủy quân Hán (cả lâu thuyền) từ biển kéo vào trong lúc trinh sát báo (`upcomingBoats`), dựng lại theo đợt. */
   private fleet: { key: string; boats: FleetBoat[] } | null = null;
   /**
    * Mây mù phủ biển khi biển chưa mở (dưới Điện 8): camera kéo ra biển được nhưng chỉ thấy mờ mờ. Lên Điện 8 thì mây
@@ -822,7 +832,11 @@ export class World {
   resetAll(): void {
     for (const v of this.views.values()) this.dropView(v);
     this.views.clear();
-    if (this.fleet) for (const b of this.fleet.boats) this.scene.remove(b.obj);
+    if (this.fleet)
+      for (const b of this.fleet.boats) {
+        this.scene.remove(b.obj);
+        disposeModel(b.obj);
+      }
     this.fleet = null;
     // Khóa không trùng với khóa nào (kể cả khóa rỗng khi không còn đoạn nào): lần vẽ sau gỡ lô cũ, vẽ lại từ đầu.
     this.wallKey = '#';
@@ -960,6 +974,7 @@ export class World {
     this.syncAdv(state);
     this.syncCaoLo(state);
     this.syncCourt(state);
+    this.syncHaiBa(state);
     this.syncTurtle(state);
     this.syncTet(state);
 
@@ -1290,8 +1305,9 @@ export class World {
       const path = new THREE.Path();
       path.moveTo(wx(pts[0].x), wz(pts[0].y));
       for (const q of pts.slice(1)) path.lineTo(wx(q.x), wz(q.y));
-      const obj = makeEnemyBoat();
-      obj.scale.setScalar(0.9);
+      // Lâu thuyền dựng đúng cỡ; thuyền chở lính theo kiểu Triệu hay Hán.
+      const obj = p.big ? makeLauThuyen() : makeEnemyBoat(state.raid.foe === 'thuyHan' ? 'han' : 'trieu');
+      if (!p.big) obj.scale.setScalar(0.9);
       obj.visible = false;
       this.scene.add(obj);
       return { obj, path, len: path.getLength(), phase: i * 1.7 };
@@ -1354,6 +1370,8 @@ export class World {
       const behind = b.path.getPointAt(Math.max(u - 0.6 / b.len, 0));
       b.obj.position.set(p.x, WATER_Y - 0.02 + Math.sin(t * 2.4 + b.phase) * 0.03, p.y);
       if (ahead.distanceToSquared(behind) > 1e-6) b.obj.rotation.y = Math.atan2(ahead.x - behind.x, ahead.y - behind.y);
+      // Lâu thuyền khua mái chèo.
+      (b.obj.userData.pose as Poser | undefined)?.({ act: 'walk', time: t + b.phase });
     }
   }
 
@@ -1586,7 +1604,6 @@ export class World {
 
   /** Dựng nền lần đầu; nền đọc mặt đất, đất mở, ô giữ phẳng từ World mỗi khi dựng lại một phần. */
   private makeLand(): NenDat {
-    const inGrid = (x: number, z: number) => x >= 0 && z >= 0 && x < GRID && z < GRID;
     const level = (x: number, z: number) => {
       const tx = clampTile(x);
       const tz = clampTile(z);
@@ -2022,7 +2039,7 @@ export class World {
    * Chỗ tướng `tuong` đứng chầu trong sân Điện, hai bên lối giữa trước ngai vàng (ô `t` trong bản vẽ Điện,
    * `courtSlot`), và góc quay mặt, theo hướng Điện đã xoay. Móng Điện phẳng nên đứng cùng độ cao mặt sân.
    */
-  private courtSpot(dien: Building, tuong: TuongId): Required<HeroSpot> {
+  private courtSpot(dien: Building, tuong: TuongId | NuTuongId): Required<HeroSpot> {
     const c = courtSlot(tuong);
     const at = this.dienPoint(dien, c.x, c.z);
     return { x: at.x, y: this.groundY(dien.x, dien.z) + 0.05, z: at.z, ry: c.ry + rotAngle(dien.rot) };
@@ -2031,7 +2048,11 @@ export class World {
   /** Chỗ tướng đứng giữa sân doanh trại tướng ấy chỉ huy (không chỉ huy trại nào thì trại của Lạc tướng). Chưa có doanh trại thì null. */
   private barracksSpot(state: GameState, tuong: TuongId): HeroSpot | null {
     const b = heroPost(state, tuong);
-    if (!b) return null;
+    return b ? this.postSpot(b) : null;
+  }
+
+  /** Chỗ tướng đứng giữa sân doanh trại `b` (đài tướng, đã xoay theo trại). */
+  private postSpot(b: Building): { x: number; y: number; z: number } {
     const def = BUILDINGS.doanhTrai;
     const at = turnLocal(b.rot, DOANH_TRAI_HERO.x, DOANH_TRAI_HERO.z);
     return { x: wx(b.x) + def.w / 2 + at.x, y: this.groundY(b.x, b.z) + 0.08, z: wz(b.z) + def.d / 2 + at.z };
@@ -2146,14 +2167,50 @@ export class World {
   }
 
   /**
+   * Hai Bà Trưng ở kinh đô từ khi vào chương 5. Bà chỉ huy doanh trại thì cưỡi voi trận đứng giữa sân trại ấy. Chưa
+   * chỉ huy trại nào thì xuống voi đứng chầu trong sân Điện (tướng đứng trong sân không cưỡi thú), ở cột ngoài ngang
+   * ngai: Trưng Trắc bên trái, Trưng Nhị bên phải (`courtSlot`).
+   */
+  private syncHaiBa(state: GameState): void {
+    const dien = state.buildings.find((b) => b.type === 'dien');
+    for (const kind of HAI_BA_KINDS) {
+      const spot = haiBaJoined(state) ? this.haiBaSpot(state, kind, dien) : null;
+      const key = spot ? `${spot.x}:${spot.y}:${spot.z}:${spot.ry}:${spot.onFoot}` : '';
+      const cur = this.haiBa.get(kind);
+      if ((cur?.key ?? '') === key) continue;
+      if (cur) {
+        this.scene.remove(cur.obj);
+        disposeModel(cur.obj);
+        this.haiBa.delete(kind);
+      }
+      if (!spot) continue;
+      const obj = kind === 'trungTrac' ? makeTrungTrac({ onFoot: spot.onFoot }) : makeTrungNhi({ onFoot: spot.onFoot });
+      obj.scale.setScalar(spot.onFoot ? 0.9 : HAI_BA_SCALE);
+      obj.position.set(spot.x, spot.y, spot.z);
+      obj.rotation.y = spot.ry;
+      this.scene.add(obj);
+      this.haiBa.set(kind, { obj, key, y: spot.y });
+    }
+  }
+
+  /** Chỗ bà `kind` ở kinh đô: giữa sân doanh trại bà chỉ huy (cưỡi voi), hay đứng chầu trong sân Điện. */
+  private haiBaSpot(state: GameState, kind: HaiBaKind, dien: Building | undefined): Required<HeroSpot> & { onFoot: boolean } | null {
+    const post = heroPost(state, kind, false);
+    if (post) return { ...this.postSpot(post), ry: 0.4 + rotAngle(post.rot), onFoot: false };
+    return dien ? { ...this.courtSpot(dien, kind), onFoot: true } : null;
+  }
+
+  /**
    * Tướng đứng chầu trong sân Điện mà không có dáng truyện riêng ở kinh đô: Lạc tướng (luôn có), và tướng đã về trời,
    * về núi, xuống biển mà vẫn chỉ huy (hiển linh, có hào quang). Cùng với các dáng truyện (Gióng lúc nhỏ, Sơn Tinh cầu
    * hôn, An Dương Vương, Cao Lỗ), mọi tướng đã có đều đứng hai bên ngai vàng, trừ tướng đang ở doanh trại.
    */
   private syncCourt(state: GameState): void {
     const dien = state.buildings.find((b) => b.type === 'dien');
-    const want = new Map<TuongId, Required<HeroSpot>>();
+    const want = new Map<TuongId | NuTuongId, Required<HeroSpot>>();
     if (dien) {
+      // Nữ tướng đã theo về đứng chầu hàng sau Hai Bà, kể cả khi đang ở doanh trại.
+      for (const n of nuTuongList(state)) want.set(n, this.courtSpot(dien, n));
       for (const t of generals(state)) {
         const ghost =
           (t === 'giong' && !giongLook(state)) ||
@@ -2172,8 +2229,9 @@ export class World {
     }
     for (const [t, spot] of want) {
       if (this.court.has(t)) continue;
-      const obj =
-        t === 'giong'
+      const obj = isNuTuong(t)
+        ? makeNuTuong(t)
+        : t === 'giong'
           ? makeGiong('trangSi', { bamboo: true, glow: true, onFoot: true })
           : t === 'sonTinh'
             ? makeSonTinh({ glow: true })
@@ -2367,7 +2425,7 @@ export class World {
     // Tướng hiển linh đứng chầu trong sân Điện cũng mở bảng của tướng ấy (Lạc tướng không có bảng riêng).
     const panel: Partial<Record<TuongId, 'giong' | 'son' | 'adv' | 'caoLo'>> = { giong: 'giong', sonTinh: 'son', anDuong: 'adv', caoLo: 'caoLo' };
     for (const [t, v] of this.court) {
-      const id = panel[t];
+      const id = isNuTuong(t) ? undefined : panel[t];
       if (id && ray.intersectObject(v.obj, true).length) return id;
     }
     return null;
@@ -2559,10 +2617,16 @@ export class World {
 
   /**
    * Vừa khít bề ngang bãi, chừa chỗ cho lính đứng sát mép. Bãi Mộ Dạ (màn cầm cự) nhìn rộng sang phải hơn để thấy
-   * đường ngựa vua chạy dọc mép bãi và biển.
+   * đường ngựa vua chạy dọc mép bãi và biển; bãi Cấm Khê nhìn rộng để thấy đường mòn dân rút bên trái và suối bên phải.
    */
   private fitField(): void {
     const v = this.view;
+    if (this.field?.current === 'camKhe') {
+      v.zoomToFit(CAM_KHE.view.w, CAM_KHE.view.h);
+      const dx = CAM_KHE.view.x - FIELD.w / 2;
+      v.target.set(Math.SQRT1_2 * dx, 0, -Math.SQRT1_2 * dx);
+      return;
+    }
     if (this.field?.current === 'moDa') {
       v.zoomToFit(FIELD.w + 6, FIELD.d * 0.62 + 5);
       // Dời tâm nhìn sang phải bãi chừng 2 ô (bãi xoay 45°).
@@ -2790,6 +2854,13 @@ export class World {
       // Cao Lỗ đứng nghỉ, nỏ cầm ngang thắt lưng, khẽ nhún.
       this.caoLo.obj.position.y = this.caoLo.y + Math.abs(Math.sin(t * 1.5 + 1)) * 0.02;
       (this.caoLo.obj.userData.pose as Poser | undefined)?.({ act: 'stand', time: t + 2 });
+    }
+
+    for (const [kind, h] of this.haiBa) {
+      // Hai voi đứng chầu, khẽ nhún, mỗi voi một nhịp.
+      const off = kind === 'trungTrac' ? 0 : 1.3;
+      h.obj.position.y = h.y + Math.abs(Math.sin(t * 1.2 + off)) * 0.015;
+      (h.obj.userData.pose as Poser | undefined)?.({ act: 'stand', time: t + off });
     }
 
     if (this.turtle) {

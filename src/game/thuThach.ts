@@ -22,8 +22,8 @@ export const challengeOpen = (s: GameState, n: number) => !!challengeOf(n) && n 
 
 export const challengeWon = (s: GameState, n: number) => s.thuThach.won.includes(n);
 
-/** Huân công cho lần đầu thắng thử thách màn `n`. */
-export const huanReward = (n: number) => (STAGES[n - 1] ? HUAN_REWARD[STAGES[n - 1].chapter] : 0);
+/** Huân công cho lần đầu thắng thử thách màn `n` (màn chưa có thử thách thì 0). */
+export const huanReward = (n: number) => (challengeOf(n) && STAGES[n - 1] ? HUAN_REWARD[STAGES[n - 1].chapter] : 0);
 
 /** Giặc đứng sẵn trên bãi lúc vào thử thách màn `n`: giặc của màn thường, cộng giặc kéo thêm (màn 1–4). */
 export function challengeEnemies(n: number): Partial<Record<EnemyType, number>> {

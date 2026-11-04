@@ -5,13 +5,15 @@
 
 import { heroSkills, type HeroKind, type HeroSetup } from '../game/battle';
 import { CAMPS, campHero, campTier } from '../game/benKia';
-import { CH2_LAST, canStartStage, chapterStages, stageDef, stageHero, stageHeroCheck, stageHeroes, stageOpen, stageReward, unitAllowed } from '../game/campaign';
+import { CH2_LAST, canStartStage, chapterStages, stageDef, stageHero, stageHeroCheck, stageHeroList, stageHeroes, stageOpen, stageReward, unitAllowed } from '../game/campaign';
+import { CH5_LAST, HAI_BA_KINDS, haiBaJoined, haiBaResting, isHaiBa } from '../game/chuong5';
 import { CH4_LAST } from '../game/caoLo';
 import { CH3_LAST } from '../game/coLoa';
-import { BOSSES, CHALLENGES, HUAN_BRANCHES, HUAN_COST, ROWS, UNITS, UNIT_TYPES, stageEnemies, type Chapter, type EnemyType, type HuanBranch, type Row, type UnitType } from '../game/defs';
+import { BOSSES, CHALLENGES, HUAN_BRANCHES, HUAN_COST, NU_TUONG, NU_TUONG_IDS, ROWS, UNITS, UNIT_TYPES, stageEnemies, type Chapter, type EnemyType, type HuanBranch, type NuTuongId, type Row, type UnitType } from '../game/defs';
 import { armySpace, fieldCap, fitArmy } from '../game/doanhTrai';
 import type { GameState, StageResult } from '../game/game';
-import { giftOfStage, heroFor, restingHero } from '../game/son';
+import { nuJoined, nuTuongList, phoTuongOf } from '../game/nuTuong';
+import { giftOfStage, heroFor, heroesFor, restingHero } from '../game/son';
 import { challengeEnemies, challengeOf, challengeOpen, challengeWon, huanNextCost, huanReward } from '../game/thuThach';
 import { vi } from '../text/vi';
 import { costHtml, esc } from './format';
@@ -27,13 +29,18 @@ export interface ArmyPick {
   challenge: boolean;
   /** Điều quân đánh đồn giặc bên kia sông (khoảnh có đồn) thay cho màn phó bản; `stage` khi ấy là 0. */
   don?: number;
+  /** Nữ tướng đi theo làm phó tướng (chương 5); null là không mang ai. */
+  nu?: NuTuongId | null;
 }
+
+/** Chương có bản đồ phó bản: cả năm chương. */
+export type MapChapter = Chapter;
 
 /**
  * Vị trí các màn trên bản đồ (hệ tọa độ 100 × 160), đi từ Phong Châu ở dưới lên núi ở trên.
  * Chương 1 lên núi Trâu, chương 2 lên núi Tản Viên ba đỉnh. Chương 3 lên núi Thất Diệu rồi quay về giữ thành Cổ Loa.
  */
-const NODES: Record<Chapter, [number, number][]> = {
+const NODES: Record<MapChapter, [number, number][]> = {
   1: [
     [26, 144],
     [62, 131],
@@ -76,8 +83,22 @@ const NODES: Record<Chapter, [number, number][]> = {
     [36, 58],
     [56, 22],
   ],
+  // Chương 5: từ Mê Linh xuống cửa sông Hát tế cờ (màn 33, 34), hạ thành Cổ Loa, thành Luy Lâu (35, 36). Màn 37–40
+  // (bờ biển Hợp Phố, đường vào Lãng Bạc, hồ Lãng Bạc, núi rừng Cấm Khê) để chỗ sẵn cho phần sau.
+  5: [
+    [34, 136],
+    [14, 110],
+    [50, 100],
+    [82, 86],
+    [86, 52],
+    [62, 60],
+    [42, 44],
+    [22, 22],
+  ],
 };
 const START: [number, number] = [12, 154];
+/** Tên đất ở chỗ xuất quân: kinh đô Phong Châu, chương 5 là đất Mê Linh. */
+const startName = (chapter: MapChapter) => (chapter === 5 ? 'Mê Linh' : 'Phong Châu');
 
 /** Chương 4: lông ngỗng trắng Mỵ Châu rắc dọc đường chạy về phương Nam, từ thành Cổ Loa ra biển. */
 const FEATHERS = [
@@ -93,7 +114,7 @@ const FEATHERS = [
   .join('');
 
 /** Núi, sông và tên đất vẽ sau đường đi, khác nhau ở mỗi chương. */
-const SCENERY: Record<Chapter, string> = {
+const SCENERY: Record<MapChapter, string> = {
   1: `<path class="mtn far" d="M8 30 L24 10 L40 30 Z M60 30 L78 8 L96 30 Z"/>
     <path class="mtn" d="M30 34 L50 4 L70 34 Z"/>
     <text class="label" x="50" y="40">Núi Trâu</text>
@@ -130,6 +151,21 @@ const SCENERY: Record<Chapter, string> = {
     <text class="label" x="30" y="111">Thành Cổ Loa</text>
     ${FEATHERS}
     <text class="label" x="80" y="60">Cửa sông</text>`,
+  5: `<path class="river" d="M6 160 C 4 140, 14 126, 8 112 S 2 84, 12 70 S 26 50, 20 36"/>
+    <text class="label" x="25" y="98">Sông Hát</text>
+    <path class="river" d="M-2 124 C 24 120, 44 130, 66 118 S 92 110, 104 102"/>
+    <ellipse class="citadel" cx="50" cy="100" rx="14" ry="7"/>
+    <ellipse class="citadel" cx="50" cy="100" rx="9" ry="4.5"/>
+    <text class="label" x="50" y="113">Cổ Loa</text>
+    <rect class="citadel" x="73" y="79" width="18" height="14" rx="1.5"/>
+    <text class="label" x="82" y="100">Luy Lâu</text>
+    <path class="flood" d="M78 0 L104 0 L104 44 C 96 40, 90 30, 84 24 S 74 8, 78 0 Z"/>
+    <text class="label" x="92" y="40">Hợp Phố</text>
+    <ellipse class="flood" cx="44" cy="44" rx="12" ry="7"/>
+    <text class="label" x="44" y="56">Lãng Bạc</text>
+    <path class="mtn far" d="M2 26 L12 10 L22 26 Z M26 22 L34 8 L42 22 Z"/>
+    <path class="mtn" d="M8 30 L20 12 L32 30 Z"/>
+    <text class="label" x="22" y="36">Cấm Khê</text>`,
 };
 
 const allEnemies = (n: number) => {
@@ -145,9 +181,10 @@ function bossIcon(n: number): string {
   return stageDef(n)!.chapter === 1 ? '👹' : vi.enemyIcons[boss];
 }
 
-export function mapHtml(state: GameState, selected: number | null, chapter: Chapter = 1): string {
-  const points = NODES[chapter];
+export function mapHtml(state: GameState, selected: number | null, chapter: MapChapter = 1): string {
   const stages = chapterStages(chapter);
+  // Chương chưa làm đủ màn (chương 5) thì chỉ vẽ các màn đã có.
+  const points = NODES[chapter].slice(0, stages.length);
   const road = [START, ...points].map(([x, y], i) => `${i ? 'L' : 'M'}${x} ${y}`).join(' ');
   const nodes = points.map(([x, y], i) => {
     const n = stages[i];
@@ -169,12 +206,12 @@ export function mapHtml(state: GameState, selected: number | null, chapter: Chap
       ${star}
     </g>`;
   }).join('');
-  const title = [vi.ui.campaignTitle, vi.ui.campaignTitle, vi.ui.campaignTitle2, vi.ui.campaignTitle3, vi.ui.campaignTitle4][chapter];
+  const title = [vi.ui.campaignTitle, vi.ui.campaignTitle, vi.ui.campaignTitle2, vi.ui.campaignTitle3, vi.ui.campaignTitle4, vi.ui.campaignTitle5][chapter];
   return `<svg class="map" viewBox="0 0 100 160" preserveAspectRatio="xMidYMid meet" role="img" aria-label="${title}">
     ${SCENERY[chapter]}
     <path class="road" d="${road}"/>
     <text class="start" x="${START[0]}" y="${START[1] + 1}">🏯</text>
-    <text class="label" x="${START[0] + 19}" y="${START[1] + 2}">Phong Châu</text>
+    <text class="label" x="${START[0] + 19}" y="${START[1] + 2}">${startName(chapter)}</text>
     ${nodes}
   </svg>`;
 }
@@ -197,9 +234,15 @@ export function stageBlocker(state: GameState, n: number, challenge = false): st
   return vi.reasons[check.reason];
 }
 
-/** Dòng báo tướng nào cùng ra trận. */
-export function heroNote(hero: HeroSetup | null): string {
+/** Dòng báo tướng nào cùng ra trận (chương 5: Hai Bà, hay một bà khi bà kia đang nghỉ). */
+export function heroNote(heroes: HeroSetup | HeroSetup[] | null): string {
+  const list = Array.isArray(heroes) ? heroes : heroes ? [heroes] : [];
+  const hero = list[0];
   if (!hero) return '';
+  if (isHaiBa(hero.kind)) {
+    if (list.length > 1) return `<p class="hero-note">🐘 ${vi.ui.haiBaJoin}</p>`;
+    return `<p class="hero-note">${vi.ui.tuongIcons[hero.kind]} ${vi.ui.haiBaOne(vi.ui.heroNames[hero.kind])}</p>`;
+  }
   if (hero.kind === 'caoLo') return `<p class="hero-note">🎯 ${vi.ui.caoLoJoins}</p>`;
   if (hero.kind === 'anDuong') return `<p class="hero-note">🏹 ${hero.glow ? vi.ui.advHienLinhJoins : vi.ui.advJoins}</p>`;
   if (hero.kind === 'sonTinh') return `<p class="hero-note">⛰️ ${hero.glow ? vi.ui.sonHienLinhJoins : vi.ui.sonJoins}</p>`;
@@ -221,7 +264,18 @@ export function battleWarnings(state: GameState, stage: number, challenge = fals
 /** Lời báo đỏ trước một trận ngoài bãi có tướng như trận chương `chapter` (màn `stage` nếu là màn phó bản). */
 export function warningsFor(state: GameState, chapter: Chapter, stage?: number, heroless = false): string {
   const out: string[] = [];
-  const rest = heroless ? null : restingHero(state, chapter, stage);
+  // Chương 5: báo từng bà đang kiệt sức; một bà nghỉ thì bà kia ra trận một mình, cả hai nghỉ thì màn khóa.
+  const haiBa = !heroless && chapter === 5 && haiBaJoined(state);
+  const rest = heroless || haiBa ? null : restingHero(state, chapter, stage);
+  if (haiBa) {
+    const resting = HAI_BA_KINDS.filter((k) => haiBaResting(state, k));
+    for (const k of resting) {
+      const secs = Math.ceil((state.haiBa[k] - state.clock) / 1000);
+      const other = HAI_BA_KINDS.find((o) => o !== k)!;
+      const tail = resting.length === 1 ? ` ${vi.ui.heroStandIn(vi.ui.heroNames[other])}` : '';
+      out.push(`💤 ${vi.ui.heroRestWarn(vi.ui.heroNames[k], secs)}${tail}`);
+    }
+  }
   if (rest) {
     const standIn = heroFor(state, chapter, stage);
     const tail = standIn ? vi.ui.heroStandIn(vi.ui.heroNames[standIn.kind]) : vi.ui.noHeroWarn;
@@ -240,10 +294,10 @@ export function stageHtml(state: GameState, n: number): string {
     <h3>${vi.ui.stageN(n)} · ${esc(text.name)} ${hasBoss(n) ? `<span class="tag">👹 ${vi.ui.stageBoss}</span>` : ''}</h3>
     <p class="intro">${esc(text.intro)}</p>
     <div class="stat"><span>${vi.ui.enemyArmy}</span><b>${enemyList(n)}</b></div>
-    ${stageDef(n)?.holdS ? `<p class="hero-note">🌊 ${vi.ui.holdInfo(stageDef(n)!.holdS!, (stageDef(n)!.waves?.length ?? 0) + 1)}</p>` : ''}
+    ${holdNote(n)}
     <div class="stat"><span>${first ? vi.ui.firstReward : vi.ui.replayReward}</span>${costHtml(null, stageReward(state, n))}</div>
     ${gift && !state.son.gifts[gift] ? `<div class="stat"><span>${vi.ui.giftWon}</span><b>${vi.gifts[gift].icon} ${esc(vi.gifts[gift].name)}</b></div>` : ''}
-    ${heroNote(heroFor(state, stageDef(n)!.chapter, n))}
+    ${heroNote(heroesFor(state, stageDef(n)!.chapter, n))}
     ${battleWarnings(state, n)}
     <div class="actions">
       ${why ? `<span class="why">${esc(why)}</span>` : ''}
@@ -282,7 +336,7 @@ function challengeHtml(state: GameState, n: number): string {
   </div>`;
 }
 
-/** Bảng Huân công: năm nhánh, mỗi nhánh ba bậc. */
+/** Bảng Huân công: năm nhánh, mỗi nhánh bốn bậc. */
 export function huanHtml(state: GameState): string {
   const tt = state.thuThach;
   const rows = HUAN_BRANCHES.map((k: HuanBranch) => {
@@ -319,7 +373,7 @@ const heroName = (state: GameState, k: HeroKind) => (k === 'sonTinh' ? vi.ui.son
  */
 function heroPickHtml(state: GameState, stage: number, challenge: boolean, hero: HeroSetup | null): string {
   const roster = stageHeroes(state, stage, challenge);
-  if (roster.length < 2) return heroNote(hero);
+  if (roster.length < 2) return heroNote(stageHeroList(state, stage, challenge, hero?.kind));
   const opts = roster
     .map((k) => {
       const check = stageHeroCheck(state, stage, k, challenge);
@@ -368,6 +422,7 @@ export function armyHtml(state: GameState, pick: ArmyPick, stage: number, challe
     <h3>${don ? vi.benKia.campArmyTitle(vi.benKia.don[don].name) : kind ? vi.ui.challengeArmyTitle(vi.ui.challengeKinds[kind].name) : vi.ui.armyTitle}</h3>
     ${kind ? challengeRules(stage) : `<p class="muted">${vi.ui.armyHint}</p>`}
     ${kind === 'khongTuong' ? `<p class="rule">${vi.ui.challengeKinds.khongTuong.icon} ${vi.ui.challengeNoHero}</p>` : don ? heroNote(hero) : heroPickHtml(state, stage, challenge, hero)}
+    ${nuPickHtml(state, pick)}
     ${don ? warningsFor(state, CAMPS[don].chapter) : battleWarnings(state, stage, challenge)}
     ${owned.length ? `<div class="stat"><span>${vi.ui.fieldSpace(space, cap)}</span></div><div class="units">${rows}</div>` : `<p class="why">${vi.ui.noTroops}</p>`}
     ${bannedHtml}
@@ -389,7 +444,34 @@ export function defaultPick(state: GameState, stage = 0, challenge = false): Arm
   // Thử thách Hai binh chủng: chỉ mang hai binh chủng được chỉ định.
   const troops = { ...state.troops };
   for (const k of UNIT_TYPES) if (!unitAllowed(stage, challenge, k)) troops[k] = 0;
-  return { army: fitArmy(troops, fieldCap(state)), rows: { ...state.campaign.rows }, stage, challenge };
+  return { army: fitArmy(troops, fieldCap(state)), rows: { ...state.campaign.rows }, stage, challenge, nu: phoTuongOf(state) };
+}
+
+/** Chạm thẻ nữ tướng ở bảng xếp quân: chọn người ấy làm phó tướng; chạm lại người đang chọn (hay thẻ Không) thì bỏ. */
+export function pickNu(state: GameState, pick: ArmyPick, id: string | undefined): void {
+  const nu = NU_TUONG_IDS.find((n) => n === id) ?? null;
+  pick.nu = !nu || pick.nu === nu || !nuJoined(state, nu) ? null : nu;
+}
+
+/**
+ * Chọn phó tướng ở bảng xếp quân, khi đã có nữ tướng theo về: mỗi thẻ một nữ tướng, ghi binh chủng được cộng; chạm
+ * lại để bỏ. Binh chủng không mang theo (hay bị cấm ở thử thách Hai binh chủng) thì thẻ ghi cho biết.
+ */
+function nuPickHtml(state: GameState, pick: ArmyPick): string {
+  const list = nuTuongList(state);
+  if (!list.length) return '';
+  const opts = list
+    .map((n) => {
+      const sel = pick.nu === n;
+      const unit = NU_TUONG[n].unit;
+      const note = pick.army[unit] > 0 ? vi.nuTuong.boost(vi.units[unit].icon, vi.units[unit].name) : vi.nuTuong.noUnit(vi.units[unit].icon, vi.units[unit].name);
+      return `<button class="hero-opt nu-opt ${sel ? 'sel' : ''}" data-act="armyNu" data-nu="${n}" aria-pressed="${sel}">
+        <span class="unit-icon">${vi.nuTuong.list[n].icon}</span>
+        <span class="unit-info"><b>${vi.nuTuong.list[n].name}</b><small>${esc(note)}</small></span>
+      </button>`;
+    })
+    .join('');
+  return `<div class="hero-pick"><h4>${vi.nuTuong.pickTitle}</h4><p class="muted">${vi.nuTuong.pickHint}</p><div class="hero-opts">${opts}</div></div>`;
 }
 
 /** Thêm hay bớt một lính binh chủng `k` mang theo, không quá số lính có và số chỗ một trận phó bản. */
@@ -401,6 +483,16 @@ export function stepPick(state: GameState, pick: ArmyPick, k: UnitType, delta: n
   pick.army[k] = n;
 }
 
+/** Lời dặn màn cầm cự: màn 32 cầm chân giặc cho vua tới biển, màn 40 giữ cửa rừng cho dân rút về núi. */
+function holdNote(n: number): string {
+  const def = stageDef(n);
+  if (!def?.holdS) return '';
+  const waves = (def.waves?.length ?? 0) + 1;
+  return def.terrain === 'camKhe'
+    ? `<p class="hero-note">⛰️ ${vi.ui.holdInfoCamKhe(def.holdS, waves)}</p>`
+    : `<p class="hero-note">🌊 ${vi.ui.holdInfo(def.holdS, waves)}</p>`;
+}
+
 export function stageResultHtml(r: StageResult): string {
   const lost = UNIT_TYPES.filter((k) => r.lost[k] > 0).map((k) => `${vi.units[k].icon} ${r.lost[k]}`).join(' ') || vi.ui.raidNone;
   const won1st = r.outcome === 'win' && r.first;
@@ -409,6 +501,7 @@ export function stageResultHtml(r: StageResult): string {
   let title: string;
   if (don) title = r.outcome === 'win' ? `🚩 ${vi.benKia.campWon}` : r.outcome === 'retreat' ? `🏳️ ${vi.ui.stageRetreatTitle}` : `🔥 ${vi.benKia.campLost}`;
   else if (r.challenge) title = r.outcome === 'win' ? `🎖 ${vi.ui.challengeWonTitle(r.stage)}` : r.outcome === 'retreat' ? `🏳️ ${vi.ui.stageRetreatTitle}` : `🔥 ${vi.ui.challengeLostTitle}`;
+  else if (won1st && r.stage === CH5_LAST) title = `⛰️ ${vi.ui.hatWinTitle}`;
   else if (won1st && r.stage === CH4_LAST) title = `🌊 ${vi.ui.seaWinTitle}`;
   else if (won1st && r.stage === CH3_LAST) title = `🐢 ${vi.ui.advWinTitle}`;
   else if (won1st && r.stage === CH2_LAST) title = `⛰️ ${vi.ui.sonWinTitle}`;

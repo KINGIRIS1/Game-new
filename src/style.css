@@ -1575,10 +1575,23 @@ textarea {
   flex-basis: 100%;
 }
 
-.camp-tabs .btn {
-  padding: 4px 10px;
-  min-height: 30px;
+.camp-tabs {
+  align-items: center;
+}
+
+.camp-tabs .lb {
   font-size: 13px;
+  font-weight: 700;
+  color: var(--ink-soft);
+  margin-right: 2px;
+}
+
+/* Mỗi chương một nút số tròn, đủ năm chương vẫn vừa khổ hẹp. */
+.camp-tabs .btn {
+  padding: 0;
+  min-width: 38px;
+  min-height: 34px;
+  font-size: 15px;
 }
 
 /* Chip huân công trên đầu bản đồ phó bản: chạm để mở bảng Huân công. */
@@ -1904,6 +1917,56 @@ textarea {
   transform: translateX(-50%);
 }
 
+/* Hai Bà cùng ra trận: mỗi bà một thanh máu. */
+.hero-hp {
+  display: flex;
+  gap: 10px;
+}
+
+.hero-hp[hidden] {
+  display: none;
+}
+
+.hero-hp .hh {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+  font-size: 12px;
+}
+
+.hero-hp .hh b {
+  color: var(--ink);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.hero-hp .hh em {
+  font-style: normal;
+}
+
+.hero-hp .hh i {
+  flex: 1;
+  height: 7px;
+  min-width: 30px;
+  border-radius: 4px;
+  background: var(--paper-2);
+  border: 1px solid var(--bronze);
+  overflow: hidden;
+}
+
+.hero-hp .hh u {
+  display: block;
+  height: 100%;
+  background: linear-gradient(90deg, #a8322a, #d8643c);
+  transition: width 0.2s;
+}
+
+.hero-hp .hh.down {
+  opacity: 0.55;
+}
+
 #hud.in-field .fieldbar {
   position: absolute;
   left: 0;
@@ -1939,6 +2002,24 @@ textarea {
 
 .btn.skill {
   white-space: nowrap;
+  position: relative;
+}
+
+/* Đang hồi: số giây đè lên chỗ tên, tên ẩn mà vẫn giữ chỗ cho nút khỏi đổi cỡ. */
+.btn.skill .sk-cd {
+  position: absolute;
+  inset: 0;
+  display: none;
+  align-items: center;
+  justify-content: center;
+}
+
+.btn.skill.cooling .sk-cd {
+  display: flex;
+}
+
+.btn.skill.cooling .sk-name {
+  visibility: hidden;
 }
 
 .btn.skill.active {
@@ -2103,6 +2184,14 @@ textarea {
   border-color: #c06a8a;
 }
 
+.speaker.trungTrac .avatar {
+  border-color: var(--red);
+}
+
+.speaker.trungNhi .avatar {
+  border-color: #c99a2e;
+}
+
 /* Màn hình Hết truyện: bốn dòng tóm tắt bốn chương rồi câu nhắc chuyện về sau. */
 .ending-list {
   margin: 4px 0 10px;
@@ -2121,6 +2210,8 @@ textarea {
 }
 
 .story .line {
+  /* Lời thề Hát Môn xuống dòng theo câu thơ. */
+  white-space: pre-line;
   margin: 10px 0 14px;
   font-size: 16px;
   line-height: 1.5;
@@ -2434,4 +2525,11 @@ body.man-vao-on #hud > * {
   .man-vao.ready .mv-play:not(:disabled) {
     animation: none;
   }
+}
+
+/* Mục nữ tướng trong thẻ Tướng chỉ huy của doanh trại (chương 5). */
+.sub-head {
+  margin: 14px 0 4px;
+  font-size: 13px;
+  color: var(--red-dark);
 }
