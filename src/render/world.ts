@@ -17,7 +17,7 @@ import { BAI_CAT, BIEN_DIEN, CUA_BIEN, QUAN_DAO, RIVER_MID, benDock, bienDo, isS
 import { sonLook, type SonLook } from '../game/son';
 import { floodMap } from '../game/terrain';
 import { tetOpen } from '../game/tet';
-import { Battlefield } from './battlefield';
+import { Battlefield, CAM_KHE } from './battlefield';
 import { BattleView } from './battleView';
 import { IsoCamera, type CamBounds } from './camera';
 import { DOOR_OPEN, banhChung, banhGiay } from './buildings';
@@ -48,6 +48,7 @@ import {
   buildWalls,
   makeBoat,
   makeEnemyBoat,
+  makeLauThuyen,
   makeFighter,
   makeSailBoat,
   makeThuyenKhoi,
@@ -476,7 +477,7 @@ export class World {
   private readonly seaLife: SeaLife;
   /** Thuyền khơi của từng bến thuyền khơi: neo trước bến, xuôi sông ra biển đánh cá quanh đảo rồi về. */
   private readonly seaBoats = new Map<number, SeaBoat>();
-  /** Đoàn thuyền thủy binh Triệu từ biển kéo vào trong lúc trinh sát báo (`upcomingBoats`), dựng lại theo đợt. */
+  /** Đoàn thuyền thủy binh Triệu, thủy quân Hán (cả lâu thuyền) từ biển kéo vào trong lúc trinh sát báo (`upcomingBoats`), dựng lại theo đợt. */
   private fleet: { key: string; boats: FleetBoat[] } | null = null;
   /**
    * Mây mù phủ biển khi biển chưa mở (dưới Điện 8): camera kéo ra biển được nhưng chỉ thấy mờ mờ. Lên Điện 8 thì mây
@@ -818,7 +819,11 @@ export class World {
   resetAll(): void {
     for (const v of this.views.values()) this.dropView(v);
     this.views.clear();
-    if (this.fleet) for (const b of this.fleet.boats) this.scene.remove(b.obj);
+    if (this.fleet)
+      for (const b of this.fleet.boats) {
+        this.scene.remove(b.obj);
+        disposeModel(b.obj);
+      }
     this.fleet = null;
     // Khóa không trùng với khóa nào (kể cả khóa rỗng khi không còn đoạn nào): lần vẽ sau gỡ lô cũ, vẽ lại từ đầu.
     this.wallKey = '#';
@@ -1285,8 +1290,9 @@ export class World {
       const path = new THREE.Path();
       path.moveTo(wx(pts[0].x), wz(pts[0].y));
       for (const q of pts.slice(1)) path.lineTo(wx(q.x), wz(q.y));
-      const obj = makeEnemyBoat();
-      obj.scale.setScalar(0.9);
+      // Lâu thuyền dựng đúng cỡ; thuyền chở lính theo kiểu Triệu hay Hán.
+      const obj = p.big ? makeLauThuyen() : makeEnemyBoat(state.raid.foe === 'thuyHan' ? 'han' : 'trieu');
+      if (!p.big) obj.scale.setScalar(0.9);
       obj.visible = false;
       this.scene.add(obj);
       return { obj, path, len: path.getLength(), phase: i * 1.7 };
@@ -1349,6 +1355,8 @@ export class World {
       const behind = b.path.getPointAt(Math.max(u - 0.6 / b.len, 0));
       b.obj.position.set(p.x, WATER_Y - 0.02 + Math.sin(t * 2.4 + b.phase) * 0.03, p.y);
       if (ahead.distanceToSquared(behind) > 1e-6) b.obj.rotation.y = Math.atan2(ahead.x - behind.x, ahead.y - behind.y);
+      // Lâu thuyền khua mái chèo.
+      (b.obj.userData.pose as Poser | undefined)?.({ act: 'walk', time: t + b.phase });
     }
   }
 
@@ -2557,10 +2565,16 @@ export class World {
 
   /**
    * Vừa khít bề ngang bãi, chừa chỗ cho lính đứng sát mép. Bãi Mộ Dạ (màn cầm cự) nhìn rộng sang phải hơn để thấy
-   * đường ngựa vua chạy dọc mép bãi và biển.
+   * đường ngựa vua chạy dọc mép bãi và biển; bãi Cấm Khê nhìn rộng để thấy đường mòn dân rút bên trái và suối bên phải.
    */
   private fitField(): void {
     const v = this.view;
+    if (this.field?.current === 'camKhe') {
+      v.zoomToFit(CAM_KHE.view.w, CAM_KHE.view.h);
+      const dx = CAM_KHE.view.x - FIELD.w / 2;
+      v.target.set(Math.SQRT1_2 * dx, 0, -Math.SQRT1_2 * dx);
+      return;
+    }
     if (this.field?.current === 'moDa') {
       v.zoomToFit(FIELD.w + 6, FIELD.d * 0.62 + 5);
       // Dời tâm nhìn sang phải bãi chừng 2 ô (bãi xoay 45°).

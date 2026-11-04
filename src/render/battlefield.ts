@@ -17,7 +17,7 @@ import { gripHands, type Human } from './body';
 import { rod } from './congTrinh/chung';
 import { addSunLights, type SunLights } from './lights';
 import { STICK_POSE, makeDrummer } from './heroes';
-import { buildForest, makeBoat, makeEnemyBoat, makeEnemyFlag, makeMountain, makeTent, setForestLite, type TreeSpot } from './models';
+import { buildForest, makeBoat, makeEnemyBoat, makeEnemyFlag, makeLauThuyen, makeMountain, makeTent, setForestLite, type TreeSpot } from './models';
 import { makeNhaSan, makeRuong } from './buildings';
 import { makeBridge } from './benKia';
 import { C } from './palette';
@@ -187,8 +187,6 @@ const LANG_BAC = { left: -3.4, top: -3.6, mound: { x: FIELD.w + 5.6, z: FIELD.d 
 const MARSH = { deep: 0x3b6f6a, shallow: 0x7ea58a, mud: 0x8f7d54, wetMud: 0x6d5c3e };
 /** Sen trên đầm: ba sắc lá, hoa hồng, nụ nhạt. */
 const LOTUS = { leaf: [0x4f7f34, 0x5f9040, 0x46722e], flower: 0xf0a0b8, light: 0xf8d0dc };
-/** Lâu thuyền Hán: gỗ thân sẫm, vách lầu, ván sàn. */
-const SHIP = { hull: 0x3a2a1e, hullDark: 0x271a12, wall: 0x5e3d26, deck: 0x7a5232 };
 /** Cấm Khê: sỏi đá bờ suối, đường mòn đất (mép sẫm, giữa sáng). */
 const GRAVEL = 0xa49a84;
 const TRAIL = { edge: 0x8a6e48, mid: 0xb49468 };
@@ -373,6 +371,7 @@ export class Battlefield {
 
   /** Vẽ trận đang diễn ra, và Lạc tướng đánh trống khi có Trống trận. */
   update(battle: Battle | null, dt: number): void {
+    this.view.winLook = this.terrain === 'camKhe' ? CAM_KHE.river : undefined;
     this.view.update(battle, dt);
     this.time += dt;
     this.syncSea(battle, dt);
@@ -910,11 +909,11 @@ function buildDecor(t: Terrain): THREE.Group {
       g.add(beachRocks(relief), feathers(relief));
     } else if (t === 'langBac') {
       // Lâu thuyền Hán đậu xa trên hồ sau lưng giặc; lau sậy dày dọc bờ đầm, sen nổi ven bờ.
-      // TODO ghép: thay bằng makeLauThuyen()
-      const ship = lakeShip();
+      // Lâu thuyền thân dọc trục z (mũi +z): xoay thêm 90° cho thân nằm dọc trục x của bãi.
+      const ship = makeLauThuyen();
       ship.userData.boat = true;
       ship.position.set(LANG_BAC.ship.x, WATER_Y - 0.1, LANG_BAC.ship.z);
-      ship.rotation.y = LANG_BAC.ship.ry;
+      ship.rotation.y = LANG_BAC.ship.ry + Math.PI / 2;
       g.add(ship);
       // Chừa lạch nước trước mũi thuyền cho thấy thân thuyền sau đám lau.
       const clear = [-1.2, 0, 1.2].map((dx) => ({ x: DRUMMER.x + dx, z: DRUMMER.z + 1 }));
@@ -1599,55 +1598,6 @@ function redBanner(): THREE.Group {
   m.plain.cone(0.05, 0.14, C.bronze, 0, 2.37, 0, undefined, 4);
   m.band.box(0.62, 0.46, 0.03, C.red, 0.33, 2.02, 0);
   m.plain.box(0.64, 0.05, 0.035, C.gold, 0.33, 1.77, 0);
-  return m.group();
-}
-
-/**
- * Lâu thuyền Hán đậu xa trên hồ Lãng Bạc (chỉ là cảnh): thân gỗ sẫm dài chừng 4 ô dọc trục x, mũi lái vút cong; ba
- * tầng lầu gỗ mỗi tầng một mái ngói đen, vách có lỗ cửa và hàng khiên đỏ đen; cờ đen viền đỏ trên cột mũi, cột lái và
- * nóc lầu; mái chèo hai bên mạn chúc xuống nước. Gốc ở giữa thân, ngang mặt nước.
- */
-function lakeShip(): THREE.Group {
-  const m = new ToonModel(inkThin);
-  const p = m.plain;
-  // Thân thuyền: đáy thon, mạn choãi; mũi (+x) và lái (−x) vút cong lên.
-  frustum(p, 3.3, 0.8, 0.5, 1.12, 1.4, SHIP.hull, 0, -0.18, 0);
-  for (const s of [-1, 1]) {
-    p.box(0.75, 0.2, 0.86, SHIP.hull, s * 1.95, 0.3, 0, [0, 0, s * 0.42]);
-    p.box(0.42, 0.16, 0.62, SHIP.hullDark, s * 2.38, 0.53, 0, [0, 0, s * 0.75]);
-    // Dải ván sẫm dọc mạn, đinh đồng.
-    p.box(3.7, 0.06, 0.04, SHIP.hullDark, 0, 0.2, s * 0.57);
-    for (let k = 0; k < 7; k++) p.sphere(0.025, C.bronze, -1.5 + k * 0.5, 0.2, s * 0.6, [1, 1, 0.6], 5);
-  }
-  p.box(3.5, 0.05, 1.08, SHIP.deck, 0, 0.33, 0);
-  // Mái chèo hai bên mạn, chúc xuống nước.
-  for (const s of [-1, 1]) for (let k = 0; k < 6; k++) rod(p, [-1.25 + k * 0.5, 0.36, s * 0.55], [-1.5 + k * 0.5, -0.32, s * 1.15], 0.018, C.woodLight, 4);
-  // Ba tầng lầu: vách gỗ có lỗ cửa tối, cột son ở góc, mái ngói đen chìa rộng.
-  const tiers: [number, number, number, number][] = [
-    // dài, sâu, cao vách, đáy vách
-    [2.9, 0.92, 0.5, 0.36],
-    [2.0, 0.72, 0.44, 1.02],
-    [1.1, 0.54, 0.38, 1.6],
-  ];
-  tiers.forEach(([w, d, h, y], i) => {
-    p.box(w, h, d, SHIP.wall, 0, y + h / 2, 0);
-    for (const s of [-1, 1]) {
-      for (let k = 0; k < Math.round(w / 0.42); k++) p.box(0.16, h * 0.4, 0.02, 0x22140c, -w / 2 + 0.25 + k * 0.42, y + h * 0.55, s * (d / 2 + 0.005));
-      for (const sx of [-1, 1]) p.box(0.07, h + 0.02, 0.07, C.hanRedDark, sx * (w / 2 - 0.02), y + h / 2, s * (d / 2 - 0.02));
-    }
-    const top = i === 2;
-    frustum(p, w + 0.46, d + 0.42, top ? 0.34 : 0.16, top ? 0.42 : 0.86, top ? 0.06 : 0.7, LUY.tile, 0, y + h, 0);
-    p.box(w + 0.5, 0.04, d + 0.46, LUY.tileEdge, 0, y + h, 0);
-  });
-  // Nóc lầu trên cùng: sống mái cong hai đầu.
-  p.box(0.5, 0.06, 0.08, LUY.tileEdge, 0, 2.33, 0);
-  for (const s of [-1, 1]) p.box(0.16, 0.06, 0.06, LUY.tileEdge, s * 0.3, 2.37, 0, [0, 0, -s * 0.6]);
-  // Hàng khiên tròn đỏ đen dọc mạn tầng dưới.
-  for (const s of [-1, 1]) for (let k = 0; k < 6; k++) p.cyl(0.11, 0.11, 0.03, k % 2 ? C.hanRed : LUY.cloth, -1.25 + k * 0.5, 0.48, s * 0.57, [Math.PI / 2, 0, 0], 8);
-  // Cờ đen viền đỏ: cột mũi cao, cột lái, trên nóc lầu.
-  blackFlag(m, 1.75, 0.33, 0, 2.2, 1.1);
-  blackFlag(m, -1.9, 0.5, 0, 1.4, 0.8);
-  blackFlag(m, 0.05, 2.36, 0, 0.7, 0.7);
   return m.group();
 }
 
