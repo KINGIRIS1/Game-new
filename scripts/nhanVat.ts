@@ -78,6 +78,21 @@ const LAU_THUYEN: [string, Act][] = [
 ];
 const MOT_COT: [string, Act][] = [['Đứng', { act: 'stand' }]];
 
+/** Lâu thuyền đặt cạnh thuyền chở lính Hán và nỏ thủ Hán theo cỡ trong trận giữ kinh đô (1 ô = 1). */
+function soCo(): THREE.Group {
+  const g = new THREE.Group();
+  g.add(makeLauThuyen());
+  const boat = makeEnemyBoat('han');
+  boat.scale.setScalar(0.9);
+  // Đặt chếch sau đuôi để ảnh chụp (xoay 1,67) thấy thuyền nhỏ nằm bên trái lâu thuyền.
+  boat.position.set(-1.45, 0, -2.6);
+  const man = makeSoldier('noHan');
+  man.scale.setScalar(0.8);
+  man.position.set(-1.45, 0.2, -2.4);
+  g.add(boat, man);
+  return g;
+}
+
 export const NHOM: Record<string, Entry[]> = {
   linh: [
     { ten: 'Giáo binh bậc 2', tao: () => makeSoldier('giao', 2) },
@@ -161,6 +176,7 @@ export const NHOM: Record<string, Entry[]> = {
     { ten: 'Lâu thuyền Hán (mạn bên kia)', tao: () => makeLauThuyen(), co: 2.3, cach: 4.3, cao: 300, nuoc: true, xoay: 1.67 + Math.PI, cot: LAU_THUYEN.slice(5, 8) },
     { ten: 'Thuyền chở lính Triệu', tao: () => makeEnemyBoat(), co: 1.0, cach: 2.2, cao: 300, nuoc: true, xoay: 1.67, cot: MOT_COT },
     { ten: 'Thuyền chở lính Hán', tao: () => makeEnemyBoat('han'), co: 1.0, cach: 2.2, cao: 300, nuoc: true, xoay: 1.67, cot: MOT_COT },
+    { ten: 'So cỡ ở kinh đô: lâu thuyền (1), thuyền chở lính Hán (0,9), nỏ thủ Hán (0,8)', tao: soCo, co: 2.3, cach: 6, cao: 300, nuoc: true, xoay: 1.67, cot: MOT_COT },
   ],
   dan: [
     { ten: 'Nông dân', tao: () => makeWorker('nong') },
