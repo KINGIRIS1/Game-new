@@ -2338,6 +2338,16 @@ Bản đồ phó bản có thêm thẻ Chương 5, mở khi vào chương 5. B�
 - **Lạc hầu báo** một lần mỗi người (`nextNuHint`, ghi `nu:<tên>` vào `hinted`), hai câu: nữ tướng đã về, lo binh chủng nào; chọn làm phó tướng ở bảng xếp quân hay giao về một doanh trại.
 - **Ở sân Điện**: bốn nữ tướng đứng chầu hàng sau Hai Bà (chỗ `t` số 8, 11, 9, 13: Lê Chân sau Trưng Trắc, Thánh Thiên sau Trưng Nhị, Bát Nàn sau Sơn Tinh, Phùng Thị Chính sau Cao Lỗ), kể cả khi đang ở doanh trại.
 - Biểu tượng: Lê Chân ⚓, Thánh Thiên 🪶, Bát Nàn 🛡️, Phùng Thị Chính 👶.
+- **Dáng** (`makeNuTuong` ở `render/heroes.ts`): cỡ thân 1,22 (Hai Bà đứng chầu 1,3), tóc búi cao cài trâm vàng, mũ lông chim một tầng vành đồng (Hai Bà hai tầng vành vàng), đai và vòng tay đồng; tay trái cầm cờ cán dài cùng màu áo, giữa cờ có mặt trời trống đồng, cuối cờ xẻ đuôi nheo. Đứng thì cờ bay; đi vẫn dựng cờ; giữa trận thì phất cờ hô quân (giơ cờ quá đầu, tay phải chĩa vũ khí về trước); thắng thì giơ cờ và vũ khí lên trời.
+
+  | Nữ tướng | Áo | Đồ riêng |
+  |---|---|---|
+  | Lê Chân | lam biển, viền kem | hộ tâm đồng; nỏ nằm ngang lưng; kiếm ngắn sắt |
+  | Thánh Thiên | lục lá, viền vàng | bao cổ tay da; bao tên da sau vai phải; cung sừng đeo chếch sau lưng |
+  | Bát Nàn | tím hoa cà, viền vàng | gương đồng hộ tâm, giáp vai đồng; giáo mũi sắt |
+  | Phùng Thị Chính | hồng sen, viền kem | địu con vải chàm, em bé đội khăn đỏ ló qua vai phải; gươm đồng |
+
+  Nhìn chéo từ trên cao, đầu chibi to che phần lưng trên, nên đồ sau lưng chìa ra hai bên vai cho thấy được.
 - Bản lưu v24 (`migrate23to24`): chỉ thêm trường tùy chọn `Building.nuTuong` (doanh trại) và `campaign.phoTuong`; bậc huân công tối đa 4.
 - Sửa kèm: chạm thẻ chương 5 ở bản đồ phó bản trước đây mở nhầm chương 1.
 

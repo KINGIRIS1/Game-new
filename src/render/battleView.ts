@@ -3,14 +3,14 @@
 
 import * as THREE from 'three';
 import { heroSetups, type Battle, type FighterKind } from '../game/battle';
-import { FIRE, HIEU_TRIEU, HILL, LIEN_CHAU, MA_VIEN_VOLLEY, RALLY_BEAT, ROCKS, SKILLS, TT_WAVE, type UnitType } from '../game/defs';
+import { FIRE, HIEU_TRIEU, HILL, LIEN_CHAU, MA_VIEN_VOLLEY, RALLY_BEAT, ROCKS, SKILLS, TT_WAVE, type NuTuongId, type UnitType } from '../game/defs';
 import { isBeast, makeBeast, makeRuaVang } from './beasts';
 import { isMonster, makeMonster } from './monsters';
-import { makeAnDuong, makeCaoLo, makeGiong, makeSonTinh, makeThuyTinh, makeTrungNhi, makeTrungTrac } from './heroes';
+import { makeAnDuong, makeCaoLo, makeGiong, makeNuTuong, makeSonTinh, makeThuyTinh, makeTrungNhi, makeTrungTrac } from './heroes';
 import { LAU_THUYEN_SINK, makeEnemyBoat, makeFighter, makeMountain } from './models';
 import { C } from './palette';
 import type { Poser } from './rig';
-import { ShapeBuilder, seeded } from './shapes';
+import { ShapeBuilder, disposeModel, seeded } from './shapes';
 import { isSoldier, makeSoldier } from './soldier';
 import { ToonModel, drumWaveTex, inkThin, outlineOf, toon } from './toon';
 
@@ -177,6 +177,8 @@ const SCALE: Partial<Record<FighterKind, number>> = {
   trungNhi: 0.75,
   toDinh: 1,
 };
+/** Nữ tướng phó tướng đứng sau hàng hậu: cỡ như tướng đi bộ, nhỏ hơn Hai Bà trên voi. */
+const NU_SCALE = 0.95;
 /** Nỏ thần: mũi tên vàng bay vút lên trong chừng này giây, rồi hóa mưa tên rơi xuống từng tên giặc. */
 const VOLLEY_RISE = 0.3;
 const VOLLEY_AIM = 0.9;
@@ -431,6 +433,8 @@ export class BattleView {
   private geo = 1;
   /** Chỗ Hai Bà quay nhìn về khi thắng kết chương 5 (sông Hát sau lưng quân ta ở Cấm Khê), tọa độ trận. */
   winLook?: { x: number; z: number };
+  /** Nữ tướng đi theo làm phó tướng (trận ngoài bãi): mô hình, chỗ khung trước, đà thắng trận. */
+  private nu: { obj: THREE.Group; kind: NuTuongId; x: number; z: number; win: number } | null = null;
 
   update(battle: Battle | null, dt: number): void {
     this.geo = battle?.geo ?? 1;
@@ -442,12 +446,49 @@ export class BattleView {
     if (battle) {
       this.syncBoats(battle);
       this.syncFighters(battle, dt);
+      this.syncNu(battle, dt);
       this.readEvents(battle);
       this.syncRally(battle);
       shellMat.opacity = 0.75 * Math.min(1, battle.shield / 0.8);
       orderMat.opacity = (0.45 + 0.35 * Math.abs(Math.sin(this.time * 9))) * Math.min(1, (battle.lenh ?? 0) / 0.6);
     }
     this.animate(dt);
+  }
+
+  /**
+   * Nữ tướng phó tướng đứng cầm cờ sau hàng hậu, mặt quay về phía giặc: đi theo khi quân ta tiến lên, đứng thì phất cờ
+   * hô quân; thắng trận thì giơ cờ lên trời. Không phải người đánh nên không có thanh máu, không ngã.
+   */
+  private syncNu(battle: Battle, dt: number): void {
+    const nu = battle.nuTuong;
+    if (!nu) return;
+    if (!this.nu || this.nu.kind !== nu.kind) {
+      if (this.nu) {
+        this.root.remove(this.nu.obj);
+        disposeModel(this.nu.obj);
+      }
+      const obj = makeNuTuong(nu.kind);
+      obj.scale.setScalar(NU_SCALE * this.scale);
+      this.root.add(obj);
+      this.nu = { obj, kind: nu.kind, x: nu.x, z: nu.z, win: 0 };
+    }
+    const v = this.nu;
+    const moved = Math.hypot(nu.x - v.x, nu.z - v.z);
+    v.x = nu.x;
+    v.z = nu.z;
+    const [ox, oz] = [this.offset.x, this.offset.z];
+    v.obj.position.set(nu.x + ox, this.heightAt(nu.x, nu.z), nu.z + oz);
+    // Quân ta ở phía z lớn, giặc ở phía z nhỏ.
+    v.obj.rotation.y = Math.PI;
+    const pose = v.obj.userData.pose as Poser | undefined;
+    if (battle.outcome === 'win') {
+      v.win = Math.min(1, v.win + dt * 1.5);
+      pose?.({ act: 'stand', win: v.win, time: this.time });
+    } else if (moved > 0.002 && dt > 0) {
+      pose?.({ act: 'walk', phase: this.time * 7, stride: 0.45, time: this.time });
+    } else {
+      pose?.({ act: battle.outcome ? 'stand' : 'fight', time: this.time });
+    }
   }
 
   /**
@@ -487,6 +528,11 @@ export class BattleView {
   }
 
   private clear(): void {
+    if (this.nu) {
+      this.root.remove(this.nu.obj);
+      disposeModel(this.nu.obj);
+      this.nu = null;
+    }
     for (const b of this.boats) this.root.remove(b);
     this.boats.length = 0;
     // Lưỡi lửa dùng hình dựng sẵn cho mọi trận: gỡ khỏi lính trước khi giải phóng hình của lính.

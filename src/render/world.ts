@@ -2,12 +2,13 @@
 // đêm yêu tinh, cảnh Tết (cây nêu, dây cờ, mâm bánh, người gói bánh) và các hiệu ứng khi đặt công trình.
 
 import * as THREE from 'three';
-import { BUILDINGS, FIELD, isBridge, isRoad, type BuildingType, type Terrain, type TuongId } from '../game/defs';
+import { BUILDINGS, FIELD, NU_TUONG_IDS, isBridge, isRoad, type BuildingType, type NuTuongId, type Terrain, type TuongId } from '../game/defs';
 import { raidSpawnBand, type Battle, type RaidSide } from '../game/battle';
 import { caoLoAtDien } from '../game/caoLo';
 import { HAI_BA_KINDS, haiBaJoined, type HaiBaKind } from '../game/chuong5';
 import { advLook, inChapter3, ruaVangCame, type AdvLook } from '../game/coLoa';
 import { generals, heroPost } from '../game/doanhTrai';
+import { nuTuongList } from '../game/nuTuong';
 import { dienLevel, occupancy, upcomingBoats, type Building, type GameState } from '../game/game';
 import { giongLook, type GiongLook } from '../game/giong';
 import { KHOANH_N, khoanhOf, khoanhOrigin, openMask, openStart, openable } from '../game/khoanh';
@@ -34,7 +35,10 @@ import { buildCayDaBatch, disposeCayDaBatch, makeCayDa, type CayDaPlace } from '
 import { cloudPuffs, poiMarker } from './benKia';
 import { SHORE_LAND, SeaLife, animateSea, buildSea, buildSeaMist, islandAt, shoreCap } from './bien';
 import { makeSoldier } from './soldier';
-import { makeAnDuong, makeCaoLo, makeGiong, makeLacTuong, makeSonTinh, makeTrungNhi, makeTrungTrac } from './heroes';
+import { makeAnDuong, makeCaoLo, makeGiong, makeLacTuong, makeNuTuong, makeSonTinh, makeTrungNhi, makeTrungTrac } from './heroes';
+
+/** Người đứng chầu là nữ tướng (chương 5), không phải tướng chỉ huy. */
+const isNuTuong = (t: TuongId | NuTuongId): t is NuTuongId => (NU_TUONG_IDS as string[]).includes(t);
 import { addSunLights, type SunLights } from './lights';
 import {
   buildCitadel,
@@ -460,7 +464,7 @@ export class World {
    * Tướng đứng chầu trong sân Điện mà không có dáng truyện riêng: Lạc tướng, và tướng đã về trời, về núi, xuống biển
    * (hiển linh, có hào quang). Tướng có dáng truyện ở trên (`giong`, `son`, `adv`, `caoLo`).
    */
-  private court = new Map<TuongId, { obj: THREE.Group; key: string }>();
+  private court = new Map<TuongId | NuTuongId, { obj: THREE.Group; key: string }>();
   /** Cảnh Tết trước Điện và quanh bếp gói bánh, chỉ có lúc Tết mở. */
   private tetDecor?: THREE.Group;
   private tetKey = '';
@@ -2035,7 +2039,7 @@ export class World {
    * Chỗ tướng `tuong` đứng chầu trong sân Điện, hai bên lối giữa trước ngai vàng (ô `t` trong bản vẽ Điện,
    * `courtSlot`), và góc quay mặt, theo hướng Điện đã xoay. Móng Điện phẳng nên đứng cùng độ cao mặt sân.
    */
-  private courtSpot(dien: Building, tuong: TuongId): Required<HeroSpot> {
+  private courtSpot(dien: Building, tuong: TuongId | NuTuongId): Required<HeroSpot> {
     const c = courtSlot(tuong);
     const at = this.dienPoint(dien, c.x, c.z);
     return { x: at.x, y: this.groundY(dien.x, dien.z) + 0.05, z: at.z, ry: c.ry + rotAngle(dien.rot) };
@@ -2203,8 +2207,10 @@ export class World {
    */
   private syncCourt(state: GameState): void {
     const dien = state.buildings.find((b) => b.type === 'dien');
-    const want = new Map<TuongId, Required<HeroSpot>>();
+    const want = new Map<TuongId | NuTuongId, Required<HeroSpot>>();
     if (dien) {
+      // Nữ tướng đã theo về đứng chầu hàng sau Hai Bà, kể cả khi đang ở doanh trại.
+      for (const n of nuTuongList(state)) want.set(n, this.courtSpot(dien, n));
       for (const t of generals(state)) {
         const ghost =
           (t === 'giong' && !giongLook(state)) ||
@@ -2223,8 +2229,9 @@ export class World {
     }
     for (const [t, spot] of want) {
       if (this.court.has(t)) continue;
-      const obj =
-        t === 'giong'
+      const obj = isNuTuong(t)
+        ? makeNuTuong(t)
+        : t === 'giong'
           ? makeGiong('trangSi', { bamboo: true, glow: true, onFoot: true })
           : t === 'sonTinh'
             ? makeSonTinh({ glow: true })
@@ -2418,7 +2425,7 @@ export class World {
     // Tướng hiển linh đứng chầu trong sân Điện cũng mở bảng của tướng ấy (Lạc tướng không có bảng riêng).
     const panel: Partial<Record<TuongId, 'giong' | 'son' | 'adv' | 'caoLo'>> = { giong: 'giong', sonTinh: 'son', anDuong: 'adv', caoLo: 'caoLo' };
     for (const [t, v] of this.court) {
-      const id = panel[t];
+      const id = isNuTuong(t) ? undefined : panel[t];
       if (id && ray.intersectObject(v.obj, true).length) return id;
     }
     return null;
