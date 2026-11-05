@@ -24,6 +24,7 @@ import {
   NU_TUONG_IDS,
   UNIT_TYPES,
   isBridge,
+  raiseBuildingCost,
   type BuildingType,
   type NuTuongId,
   type TuongId,
@@ -35,7 +36,7 @@ import { initialAdv } from './coLoa';
 import { inChapter4 } from './chuong4';
 import { inChapter5, initialHaiBa, maVienCame } from './chuong5';
 import { SAVE_VERSION, autoAssign, housing, initialCampaign, initialGiong, initialRaid, scheduleHan, scheduleThuyBinh, scheduleThuyHan, type GameState } from './game';
-import { GRID, baseHeights, isRiver } from './map';
+import { GRID, RIVER_HEIGHT, baseHeights, isRiver } from './map';
 import { initialSon } from './son';
 import { initialTet } from './tet';
 import { initialThuThach } from './thuThach';
@@ -67,7 +68,24 @@ export function deserialize(json: string): GameState | undefined {
     return undefined;
   }
   const upgraded = migrate(raw);
-  return isGameState(upgraded) ? upgraded : undefined;
+  if (!isGameState(upgraded)) return undefined;
+  lowerRiverBed(upgraded);
+  return upgraded;
+}
+
+/**
+ * Ô sông luôn ở độ cao lòng sông (`RIVER_HEIGHT`). Trước khi cấm đắp nền cầu, bấm Đắp nền ở bảng cầu nâng các ô sông
+ * dưới cầu lên, cầu lơ lửng khỏi bờ: hạ về lòng sông và hoàn số đất đá đã bỏ ra đắp. Chạy mỗi lần nạp, đã đúng thì
+ * không đổi gì (không cần lên phiên bản).
+ */
+function lowerRiverBed(state: GameState): void {
+  for (const b of state.buildings) {
+    if (!isBridge(b.type)) continue;
+    const def = BUILDINGS[b.type];
+    const top = state.heights[b.z * GRID + b.x];
+    for (let h = RIVER_HEIGHT; h < top; h++) state.resources.datDa += raiseBuildingCost(def.w, def.d, h).datDa ?? 0;
+  }
+  for (let z = 0; z < GRID; z++) for (let x = 0; x < GRID; x++) if (isRiver(x, z)) state.heights[z * GRID + x] = RIVER_HEIGHT;
 }
 
 type Raw = Record<string, unknown>;
