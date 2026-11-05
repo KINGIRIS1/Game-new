@@ -7,7 +7,7 @@ import { CELL, Lot, type Zone } from '../lot';
 import { C } from '../palette';
 import { type ShapeBuilder, seeded } from '../shapes';
 import { ToonModel, inkThin } from '../toon';
-import { type CongTrinh, type LotSpot, type V3, rod } from './chung';
+import { type CongTrinh, type LotOpts, type LotSpot, type V3, rod } from './chung';
 
 export const RUONG_LOT = new Lot(4, [
   'CCaabbMM',
@@ -149,7 +149,7 @@ function shrine(m: ToonModel, x: number, z: number, y0: number, roof: Roof, dinh
   p.cyl(0.006, 0.006, 0.14, C.cream, x, y0 + 0.36, z + 0.3, undefined, 3);
 }
 
-export function makeRuong(level: number): THREE.Group {
+export function makeRuong(level: number, opts: LotOpts = {}): THREE.Group {
   const m = new ToonModel(inkThin);
   const p = m.plain;
   const L = RUONG_LOT;
@@ -160,8 +160,9 @@ export function makeRuong(level: number): THREE.Group {
   const bank = 0.12 + lv * 0.02;
   const dyke = bank * 0.85;
 
-  // Nước ruộng phủ cả lòng ruộng. Cấp 1 hai thửa trước mới cày: nước đục, luống đất chạy ngang.
-  p.box(2 * RIM, 0.04, 2 * RIM, C.paddyWater, 0, 0.05, 0);
+  // Nước ruộng phủ cả lòng ruộng (đã bồi phù sa thì đục đỏ nâu). Cấp 1 hai thửa trước mới cày: nước đục, luống đất
+  // chạy ngang.
+  p.box(2 * RIM, 0.04, 2 * RIM, opts.boi ? C.paddySilt : C.paddyWater, 0, 0.05, 0);
   if (level < 2) {
     const w = RIM - DYKE;
     for (const sx of [-1, 1]) {

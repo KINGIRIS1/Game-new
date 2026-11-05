@@ -17,6 +17,7 @@ export const ANH_DAU: Record<string, string> = {
   chuongLon: '0d0fda29',
   chuongVoi: '303552b7',
   co: '310ce01b',
+  congDe: '23de10ca',
   congThanh: '1eed1503',
   de: '7f4d5fae',
   denCoLoa: '399156a5',
