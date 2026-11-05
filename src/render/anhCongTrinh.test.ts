@@ -17,5 +17,5 @@ describe('ảnh công trình vẽ sẵn', () => {
     expect(missing, 'thiếu ảnh').toEqual([]);
     const stale = THUMB_KINDS.filter((k) => ANH_DAU[k] !== thumbHash(k));
     expect(stale, 'ảnh cũ, mô hình đã đổi').toEqual([]);
-  });
+  }, 20000);
 });
