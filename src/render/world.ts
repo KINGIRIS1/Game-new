@@ -32,7 +32,7 @@ import { makeRuaVang } from './beasts';
 import { buildDecor, disposeDecor, isBatchedDecor, type DecorSpot } from './decor';
 import { buildWild, disposeWild, wildSpots } from './oTrong';
 import { buildCayDaBatch, disposeCayDaBatch, makeCayDa, type CayDaPlace } from './cayDa';
-import { cloudPuffs, poiMarker } from './benKia';
+import { bridgeDeckY, cloudPuffs, poiMarker, type BridgeBanks } from './benKia';
 import { SHORE_LAND, SeaLife, animateSea, buildSea, buildSeaMist, islandAt, shoreCap } from './bien';
 import { makeSoldier } from './soldier';
 import { makeAnDuong, makeCaoLo, makeGiong, makeLacTuong, makeNuTuong, makeSonTinh, makeTrungNhi, makeTrungTrac } from './heroes';
@@ -88,6 +88,8 @@ const WATER_Y = -0.28;
 /** Mỗi bậc đất cao chừng này (đơn vị thế giới). Mặt ô bậc h nằm ở h * LEVEL_H. */
 export const LEVEL_H = 0.3;
 const topY = (h: number) => Math.max(h, 0) * LEVEL_H;
+/** Dấu mặt bờ hai đầu cầu (`BridgeBanks`), để biết lúc nào phải dựng lại cầu; công trình khác là chuỗi rỗng. */
+const bankKey = (b?: BridgeBanks) => (b ? `${b.near.toFixed(3)},${b.far.toFixed(3)}` : '');
 
 /**
  * Mặt nước lũ khi nước dâng tới mực `level` (bậc): ở mực L, nước phủ ô bậc L − 1 mà chưa tới mặt ô bậc L.
@@ -271,6 +273,8 @@ interface BuildingView {
   ground: number;
   /** Ruộng đang vẽ dáng đã bồi phù sa. */
   boi: boolean;
+  /** Cầu: mặt bờ hai đầu đang vẽ (`bankKey`); bờ đắp cao thêm thì dựng lại cho đầu cầu gác đúng mặt bờ. */
+  banks: string;
   people: WorkerView[];
   popAge: number;
   baseScale: number;
@@ -952,8 +956,9 @@ export class World {
       if (b.type === 'luy' || b.type === 'de' || b.type === 'thanh' || isBatchedDecor(b.type)) continue;
       alive.add(b.id);
       const v = this.views.get(b.id);
-      if (!v || v.type !== b.type || v.level !== b.level || v.damaged !== !!b.damaged || v.workers !== b.workers || v.x !== b.x || v.z !== b.z || v.rot !== (b.rot ?? 0) || v.boi !== !!b.boi) this.createView(b);
-      else if (v.ground !== this.heights[b.z * GRID + b.x]) {
+      const banks = isBridge(b.type) ? bankKey(this.bridgeBanks(b.type, b.x, b.z)) : '';
+      if (!v || v.type !== b.type || v.level !== b.level || v.damaged !== !!b.damaged || v.workers !== b.workers || v.x !== b.x || v.z !== b.z || v.rot !== (b.rot ?? 0) || v.boi !== !!b.boi || v.banks !== banks) this.createView(b);
+      else if (!banks && v.ground !== this.heights[b.z * GRID + b.x]) {
         v.ground = this.heights[b.z * GRID + b.x];
         v.group.position.y = topY(v.ground);
       }
@@ -1520,13 +1525,15 @@ export class World {
     const old = this.views.get(b.id);
     if (old) this.dropView(old);
     const def = BUILDINGS[b.type];
-    const group = this.makeBuilding(b.type, b.level, !!b.boi);
+    const banks = isBridge(b.type) ? this.bridgeBanks(b.type, b.x, b.z) : undefined;
+    const group = this.makeBuilding(b.type, b.level, !!b.boi, banks);
     // Bến, làng chài quay mặt trước ra sông: sông phía đông thì xoay một góc vuông. Công trình người chơi đã xoay thì
     // quay theo hướng ấy (người làm, thuyền neo là con của mô hình nên quay theo).
     if (def.nearRiver) group.rotation.y = riverFacing(b.x, b.z, def.w, def.d);
     else if (b.rot) group.rotation.y = rotAngle(b.rot);
     const ground = this.heights[b.z * GRID + b.x] ?? 0;
-    group.position.set(wx(b.x) + def.w / 2, topY(ground), wz(b.z) + def.d / 2);
+    // Cầu: gốc mô hình ở mặt bãi bậc 0 (mặt sông cố định), hai đầu tự leo lên mặt bờ theo `banks`.
+    group.position.set(wx(b.x) + def.w / 2, banks ? 0 : topY(ground), wz(b.z) + def.d / 2);
     group.userData.buildingId = b.id;
     // Cổng dựng (hay dựng lại) giữa lúc có giặc thì cửa đóng sẵn.
     if (this.gatesShut) for (const child of group.children) if (child.userData.door) child.rotation.y = 0;
@@ -1591,12 +1598,46 @@ export class World {
       group.add(smoke);
     }
     this.buildingsRoot.add(group);
-    this.views.set(b.id, { group, type: b.type, level: b.level, damaged: !!b.damaged, workers: b.workers, x: b.x, z: b.z, rot: b.rot ?? 0, ground, boi: !!b.boi, people, popAge: 0, baseScale: group.scale.x });
+    this.views.set(b.id, { group, type: b.type, level: b.level, damaged: !!b.damaged, workers: b.workers, x: b.x, z: b.z, rot: b.rot ?? 0, ground, boi: !!b.boi, banks: bankKey(banks), people, popAge: 0, baseScale: group.scale.x });
   }
 
-  /** Mô hình công trình đặt vừa móng (`lotModel`): vẽ trên móng mới, hay dáng cũ phóng theo móng. `boi`: ruộng có phù sa. */
-  private makeBuilding(type: BuildingType, level: number, boi = false): THREE.Group {
-    return lotModel(type, level, { boi });
+  /**
+   * Mô hình công trình đặt vừa móng (`lotModel`): vẽ trên móng mới, hay dáng cũ phóng theo móng. `boi`: ruộng có phù
+   * sa. `banks`: cầu, mặt bờ hai đầu.
+   */
+  private makeBuilding(type: BuildingType, level: number, boi = false, banks?: BridgeBanks): THREE.Group {
+    return lotModel(type, level, { boi, banks });
+  }
+
+  /**
+   * Mặt bờ hai đầu cầu loại `type` đặt ở góc (x, z), tính theo đất đang vẽ: mỗi đầu lấy ô cao hơn trong hai ô đầu cầu
+   * (ô đầu cầu giữ phẳng tới mép, `flatTiles`).
+   */
+  private bridgeBanks(type: 'cauSongDa' | 'cauSongThao', x: number, z: number): BridgeBanks {
+    const ends = bridgeEnds(type, x, z);
+    const top = (cells: [number, number][]) => {
+      const inside = cells.filter(([tx, tz]) => tx >= 0 && tz >= 0 && tx < GRID && tz < GRID);
+      return inside.length ? Math.max(...inside.map(([tx, tz]) => this.groundY(tx, tz))) : 0;
+    };
+    return { near: top(ends.near), far: top(ends.far) };
+  }
+
+  /**
+   * Mặt cầu còn nguyên dưới chân người đi tại (x, z) theo ô, kể cả ván gác lên bờ; null nếu không đứng trên cầu nào.
+   */
+  private bridgeWalkY(x: number, z: number): number | null {
+    for (const b of this.state?.buildings ?? []) {
+      if (!isBridge(b.type) || b.damaged) continue;
+      const def = BUILDINGS[b.type];
+      const da = b.type === 'cauSongDa';
+      // Tọa độ dọc cầu tính từ giữa cầu (đầu bên này ở âm), và ngang cầu.
+      const along = da ? z - (b.z + def.d / 2) : x - (b.x + def.w / 2);
+      const across = da ? x - (b.x + def.w / 2) : z - (b.z + def.d / 2);
+      const half = (da ? def.d : def.w) / 2;
+      if (Math.abs(across) > 1 || Math.abs(along) > half + 0.5) continue;
+      return bridgeDeckY(b.level, along, this.bridgeBanks(b.type, b.x, b.z));
+    }
+    return null;
   }
 
 
@@ -1905,7 +1946,7 @@ export class World {
       const z = a.z + (b.z - a.z) * u;
       const tx = Math.floor(x);
       const tz = Math.floor(z);
-      obj.position.set(wx(x), isRiver(tx, tz) ? 0.12 : this.surfaceY(x, z), wz(z));
+      obj.position.set(wx(x), this.bridgeWalkY(x, z) ?? (isRiver(tx, tz) ? 0.12 : this.surfaceY(x, z)), wz(z));
       obj.rotation.y = Math.atan2(b.x - a.x, b.z - a.z);
       (obj.userData.pose as Poser | undefined)?.({ act: 'walk', phase: t * 8, stride: 0.5, time: t });
     }
@@ -1968,9 +2009,9 @@ export class World {
 
   /** Mặt đất dưới chân người đi tại (x, z) theo ô; trên cầu thì đứng trên mặt cầu. */
   private walkY(x: number, z: number): number {
-    const tx = Math.floor(x);
-    const tz = Math.floor(z);
-    return isRiver(tx, tz) ? 0.12 : this.surfaceY(x, z);
+    const deck = this.bridgeWalkY(x, z);
+    if (deck !== null) return deck;
+    return isRiver(Math.floor(x), Math.floor(z)) ? 0.12 : this.surfaceY(x, z);
   }
 
   private updateMarch(dt: number, t: number): void {
@@ -2689,10 +2730,14 @@ export class World {
       return;
     }
     const def = BUILDINGS[type];
-    if (!this.ghost || this.ghost.userData.type !== type) {
+    // Bóng cầu gác đầu lên mặt bờ ở chỗ đặt, nên dời tới chỗ bờ cao thấp khác thì dựng lại.
+    const banks = isBridge(type) ? this.bridgeBanks(type, x, z) : undefined;
+    const key = `${type}:${bankKey(banks)}`;
+    if (!this.ghost || this.ghost.userData.key !== key) {
       this.dropGhost();
-      this.ghost = this.makeBuilding(type, 1);
+      this.ghost = this.makeBuilding(type, 1, false, banks);
       this.ghost.userData.type = type;
+      this.ghost.userData.key = key;
       // Mỗi bộ hình có chất liệu riêng, nên làm mờ bằng cách nhân bản chất liệu của chính nó.
       this.ghost.traverse((o) => {
         if (o instanceof THREE.Mesh) {

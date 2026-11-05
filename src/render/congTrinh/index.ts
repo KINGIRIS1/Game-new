@@ -56,7 +56,7 @@ export const CONG_TRINH: Partial<Record<BuildingType, CongTrinh>> = {
 export function lotModel(type: BuildingType, level: number, opts: LotOpts = {}): THREE.Group {
   // Cầu vẽ đúng cỡ móng: vắt vừa lòng sông, đầu cầu chạm hai bờ.
   if (isBridge(type)) {
-    const g = bridgeModel(type, level);
+    const g = bridgeModel(type, level, opts.banks);
     g.userData.foot = 1;
     return g;
   }

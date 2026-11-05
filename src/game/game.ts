@@ -1241,8 +1241,11 @@ export function rotateBuilding(state: GameState, id: number, rot: number): Resul
 
 // ---------- Đắp đất, đắp nền ----------
 
-/** Lũy, bẫy, đê, cống đê, thành, cổng thành là công trình một ô gắn với đất: muốn cao hơn thì đắp ô đất trước khi dựng. */
-const NO_RAISE: BuildingType[] = ['luy', 'bayChong', 'de', 'congDe', 'thanh', 'congThanh'];
+/**
+ * Lũy, bẫy, đê, cống đê, thành, cổng thành là công trình một ô gắn với đất: muốn cao hơn thì đắp ô đất trước khi dựng.
+ * Cầu vắt qua sông, hai đầu gác lên bờ: đắp nền thì chỉ nâng lòng sông dưới cầu, cầu lơ lửng khỏi bờ.
+ */
+const NO_RAISE: BuildingType[] = ['luy', 'bayChong', 'de', 'congDe', 'thanh', 'congThanh', 'cauSongDa', 'cauSongThao'];
 
 export function canRaiseTile(state: GameState, x: number, z: number): Result<Cost> {
   if (!inChapter2(state)) return fail('canChuong2');
