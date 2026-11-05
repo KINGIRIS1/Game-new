@@ -45,7 +45,7 @@ import {
 } from './benKia';
 import type { HeroSetup } from './battle';
 import { wallRings } from './coLoa';
-import { BRIDGE_FLOOD, BUILDINGS, CH2_QUEST_START, CH3_QUEST_START, DAC_SAN_BONUS, FIELD, FIELD_CAP, SCOUT_COST, SCOUT_MS, UNITS, VILLAGE_GIFT, VILLAGE_SHARE, raiseBuildingCost, type UnitType } from './defs';
+import { BRIDGE_FLOOD, BUILDINGS, CH2_QUEST_START, CH3_QUEST_START, DAC_SAN_BONUS, FIELD, FIELD_CAP, SCOUT_COST, SCOUT_MS, UNITS, VILLAGE_GIFT, VILLAGE_SHARE, isBridge, raiseBuildingCost, type UnitType } from './defs';
 import { armySpace } from './doanhTrai';
 import { canMove, canPlace, createInitialState, findSpot, outputIn, outputOf, place, productionPerMinute, raiseBuilding, repair, templeBonus, tick, type Building, type GameState } from './game';
 import { FAR_FOREST, GRID, RIVER_DIVE, RIVER_END, RIVER_HEIGHT, RIVER_START, baseHeights, farBankOf, footOnLand, isNearBank, isRiver, riverDistance, riverFacing, touchesRiver } from './map';
@@ -797,6 +797,72 @@ describe('phòng thủ hai bờ', () => {
     for (let i = 0; i < 40; i++) stepBattle(s, b, 0.05);
     const near = new Set(s.buildings.filter((x) => farBankOf(x.x, x.z) === null).map((x) => x.id));
     for (const f of b.fighters.filter((x) => x.side === 'giac')) expect(f.targetBuilding === null || !near.has(f.targetBuilding)).toBe(true);
+  });
+
+  /** Ô sông lính ta không được đứng: sông, không phải mặt cầu còn nguyên, không phải ô sát bờ. */
+  function deep(s: GameState, x: number, z: number): boolean {
+    const tx = Math.floor(x);
+    const tz = Math.floor(z);
+    if (!isRiver(tx, tz)) return false;
+    for (let dz = -1; dz <= 1; dz++) for (let dx = -1; dx <= 1; dx++) if (tx + dx >= 0 && tz + dz >= 0 && !isRiver(tx + dx, tz + dz)) return false;
+    return !s.buildings.some((b) => isBridge(b.type) && !b.damaged && tx >= b.x && tx < b.x + BUILDINGS[b.type].w && tz >= b.z && tz < b.z + BUILDINGS[b.type].d);
+  }
+
+  it('lính ta sang bờ bên kia đánh giặc thì đi qua cầu, không lội qua sông', () => {
+    const { s } = frontier();
+    s.troops = { giao: 12, cung: 6, voi: 0, no: 0 };
+    const cau = s.buildings.find((b) => b.type === 'cauSongDa')!;
+    const b = startBattle(s, 3, 'namXa', {});
+    const ours = b.fighters.filter((f) => f.side === 'ta');
+    expect(ours.length).toBeGreaterThan(0);
+    const onDeck = (f: { x: number; z: number }) =>
+      f.x >= cau.x && f.x < cau.x + BUILDINGS.cauSongDa.w && f.z >= cau.z && f.z < cau.z + BUILDINGS.cauSongDa.d;
+    const walked = new Set<number>();
+    let crossed = 0;
+    for (let i = 0; i < 1600 && !stepBattle(s, b, 0.05); i++) {
+      for (const f of ours) {
+        if (f.state === 'dead' || f.state === 'gone') continue;
+        expect(deep(s, f.x, f.z)).toBe(false);
+        if (onDeck(f)) walked.add(f.id);
+        // Sang tới bờ bên kia thì đã đi qua mặt cầu.
+        if (f.z >= RIVER_END) {
+          expect(walked.has(f.id)).toBe(true);
+          crossed++;
+        }
+      }
+    }
+    expect(crossed).toBeGreaterThan(0);
+  });
+
+  it('cầu hư thì lính ta đứng bên này: không lội qua sông, chỉ cung thủ bắn với tới', () => {
+    const { s } = frontier();
+    s.troops = { giao: 12, cung: 6, voi: 0, no: 0 };
+    s.buildings.find((b) => b.type === 'cauSongDa')!.damaged = true;
+    const b = startBattle(s, 3, 'namXa', {});
+    const ours = b.fighters.filter((f) => f.side === 'ta');
+    for (let i = 0; i < 1200; i++) {
+      stepBattle(s, b, 0.05);
+      for (const f of ours) expect(f.z).toBeLessThan(RIVER_START + 1);
+    }
+  });
+
+  it('mùa lũ: lính ta lội ra ô sông sát bờ đánh thủy quái, không lội xa hơn', () => {
+    const s = rich(6);
+    s.raid.nextAt = null;
+    const dt = place(s, 'doanhTrai', 26, 40);
+    if (!dt.ok) throw new Error(dt.reason);
+    s.troops = { giao: 12, cung: 6, voi: 0, no: 0 };
+    const b = startBattle(s, 6, 'nam', { flood: { n: 3, level: 1 } });
+    const ours = b.fighters.filter((f) => f.side === 'ta');
+    expect(ours.length).toBeGreaterThan(0);
+    let hits = 0;
+    for (let i = 0; i < 1600 && !stepBattle(s, b, 0.05); i++) {
+      for (const f of ours) {
+        expect(f.z).toBeLessThan(RIVER_START + 1);
+        if (f.state === 'fight') hits++;
+      }
+    }
+    expect(hits).toBeGreaterThan(0);
   });
 
   it('thủy binh Triệu cập bờ bên kia khi đợt ấy tới bờ bên kia, rồi đánh làng', () => {

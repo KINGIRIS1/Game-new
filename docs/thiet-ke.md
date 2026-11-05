@@ -1885,7 +1885,7 @@ Chủ dự án yêu cầu: khám phá vùng đất mới bên kia sông để m�
   | 2 | Cầu gỗ | Điện 6 | 1400 vỏ ốc, 1000 đất đá, 800 gỗ, 250 sắt | 1500 | chịu tới bậc 2, bậc 3 thì hư |
   | 3 | Cầu gỗ lớn có lầu đầu cầu | Điện 7 | 2400 vỏ ốc, 2000 đất đá, 1500 gỗ, 500 sắt | 2600 | không sợ lũ |
 
-- Quân ta, giặc trên bộ và người làm đi qua cầu như đi trên đất. Cầu hư thì không ai qua được. Sửa cầu tốn 30% giá như công trình khác. Giặc không nhắm phá cầu. Thuyền đi dưới gầm cầu.
+- Quân ta, giặc trên bộ và người làm đi qua cầu như đi trên đất; quân ta đuổi giặc sang bờ bên kia thì đi vòng qua cầu, không lội sông. Cầu hư thì không ai qua được. Sửa cầu tốn 30% giá như công trình khác. Giặc không nhắm phá cầu. Thuyền đi dưới gầm cầu.
 - Cầu bị lũ cuốn thì phải sửa, nhưng không tính là để mất mùa lũ.
 - **Chỗ có cầu thì sông không còn là hào kín**: đếm vòng thành coi ô cầu là đi được. Vòng thành dựa vào bờ sông mà hở ở đầu cầu thì không tính nữa. Mẫu Cổ Loa có vòng kín quanh Điện, không chạm sông, nên không đổi.
 - Áp mẫu kinh đô chừa ô đầu cầu bên này.
@@ -2021,7 +2021,7 @@ j\i  0  1  2  3  4  5  6  7  8  9
    - **Bản làng thành công trình** (`banLang`, 3×3 giữa khoảnh làng, dựng khi làng về theo): giặc đánh được, máu 700. Làng hư thì thôi làm ra; sửa tốn 30% lễ kết thân như công trình khác.
    - **Giặc bên kia** nhắm làng gần nhất trước; còn cầu sang bờ ấy thì qua cầu tìm kho rồi Điện; không có cầu (hay cầu hư) thì chỉ phá công trình bên ấy, hết thì rút về rừng.
    - **Đồn biên** (`donBien`, 4×4, mỗi bờ một, cần Điện 5, 800 gạo, 600 vỏ ốc, 600 đất đá, 100 sắt, máu 900): rào cọc, chòi canh, hai lán lính, cờ đỏ. Bảng đồn biên chọn số lính mỗi binh chủng đóng ở đồn (không quá quân đang có, trừ phần đóng ở bờ kia). Khi giữ kinh đô, lính đóng ra trận từ đồn biên còn nguyên, lấy bớt từ phần lính giữ kinh đô của các doanh trại (không thêm quân); đồn hư thì lại ra từ doanh trại. Dời đồn biên cũng chỉ trong bờ bên kia.
-   - **Quân ta** vẫn đánh giặc gần nhất như cũ, đi thẳng tới giặc kể cả lội qua sông (như lúc đánh thủy quái mùa lũ); có đồn biên thì lính đóng đồn tới nơi sớm hơn hẳn.
+   - **Quân ta** đánh giặc gần nhất mà mình đánh tới được. Sông là hào: quân ta không lội qua sông (chủ dự án chốt, trước đây quân ta đi thẳng tới giặc kể cả lội qua sông). Giặc ở bờ bên kia thì quân ta đi vòng qua cầu còn nguyên (`stepGuard`, tìm đường trên đất `landMap`). Không có cầu hay cầu hư thì quân bên này đứng lại, chỉ lính bắn xa với tới được thì bắn qua sông. Đánh thủy quái, thuyền giặc thì lội ra được một ô sông sát bờ, không xa hơn. Có đồn biên thì lính đóng đồn đã ở sẵn bờ ấy.
 
 ## Hồ Kim Quy (chủ dự án yêu cầu, đã làm)
 
