@@ -820,10 +820,18 @@ export function planMau(state: GameState, id: MauId): MauPlan {
     // Lầu nỏ một ô như chòi canh, đứng vào chỗ chòi canh của mẫu và tính là hai chòi canh trong giới hạn.
     // Mẫu có chỗ dành cho lầu nỏ thì lầu nỏ xếp trước, vào đúng những chỗ ấy.
     // Công trình bên kia sông đứng yên, không vào chỗ của mẫu (vẫn tính vào số tối đa).
-    const sameSlot = (b: Building) => (b.type === type || (type === 'choiCanh' && b.type === 'lauNo')) && isNearBank(b.x, b.z);
+    // Cống đê đứng vào chỗ đê của mẫu, vẫn là cống (xếp trước các đoạn đê để khỏi bị dỡ khi thừa).
+    const sameSlot = (b: Building) =>
+      (b.type === type || (type === 'choiCanh' && b.type === 'lauNo') || (type === 'de' && b.type === 'congDe')) && isNearBank(b.x, b.z);
     const have = state.buildings
       .filter(sameSlot)
-      .sort((a, b) => Number(b.type === 'lauNo') - Number(a.type === 'lauNo') || b.level - a.level || a.id - b.id);
+      .sort(
+        (a, b) =>
+          Number(b.type === 'lauNo') - Number(a.type === 'lauNo') ||
+          Number(b.type === 'congDe') - Number(a.type === 'congDe') ||
+          b.level - a.level ||
+          a.id - b.id,
+      );
     // Công trình đã đứng đúng một chỗ trong mẫu thì giữ nguyên.
     const rest: Building[] = [];
     for (const b of have) {
@@ -867,7 +875,13 @@ export function planMau(state: GameState, id: MauId): MauPlan {
   // Công trình thừa hay không có trong mẫu: đứng yên nếu không vướng chỗ của mẫu; đoạn lũy, đê, thành, bẫy
   // thừa thì dỡ; đường đi, đồ trang trí vướng thì dỡ; công trình khác vướng thì tìm chỗ trống gần nhất.
   for (const b of state.buildings) {
-    if (b.type === 'dien' || types.includes(b.type) || (b.type === 'lauNo' && types.includes('choiCanh'))) continue;
+    if (
+      b.type === 'dien' ||
+      types.includes(b.type) ||
+      (b.type === 'lauNo' && types.includes('choiCanh')) ||
+      (b.type === 'congDe' && types.includes('de'))
+    )
+      continue;
     leftovers.push(b);
   }
   const inMau = new Set(types);
@@ -1059,7 +1073,7 @@ export function seatInMau(state: GameState, id: MauId, list: Building[], rings =
   const homeless: Building[] = [];
   const order = [...list].sort((a, b) => BUILDINGS[b.type].w - BUILDINGS[a.type].w || b.level - a.level || a.id - b.id);
   for (const b of order) {
-    const want = b.type === 'lauNo' ? 'choiCanh' : b.type;
+    const want = b.type === 'lauNo' ? 'choiCanh' : b.type === 'congDe' ? 'de' : b.type;
     const i = slots.findIndex((s) => s.type === want && free(s.type, s.x, s.z));
     if (i >= 0) {
       const s = slots.splice(i, 1)[0];

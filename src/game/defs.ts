@@ -64,7 +64,9 @@ export type BuildingType =
   // Bến thuyền khơi: thuyền đánh cá lớn ra biển Đông, mang về cá biển và vỏ ốc (từ Điện 8, `bien.ts`).
   | 'benKhoi'
   // Đền Hát Môn thờ Hai Bà Trưng (kết chương 5): đền còn nguyên thì mỗi trận giữ kinh đô có nghĩa binh ra đánh.
-  | 'denHatMon';
+  | 'denHatMon'
+  // Cống đê: đóng thì chặn lũ như kè đá, mở thì đón nước lũ vào bồi phù sa cho ruộng (chương 2).
+  | 'congDe';
 
 /**
  * Mốc mở khóa theo cốt truyện: sau kết chương 1, khi vào chương 2, sau kết chương 2, khi vào chương 3, khi Rùa Vàng
@@ -156,6 +158,7 @@ export const BUILD_MENU: BuildingType[] = [
   'chuongLon',
   'bep',
   'de',
+  'congDe',
   'denTanVien',
   'thanh',
   'congThanh',
@@ -618,6 +621,23 @@ export const BUILDINGS: Record<BuildingType, BuildingDef> = {
     production: [{}, {}],
     hp: [600, 1500],
     limit: [130, 130, 130, 130, 130, 140, 150, 150, 160, 165],
+    minDien: 1,
+    buildable: true,
+    removable: true,
+    unlock: 'chuong2',
+  },
+  // Cống đê: một ô trong dải đê (dựng trên ô trống hay thay một đoạn đê). Đóng thì cao như kè đá, mở thì nước lũ
+  // tràn vào sau đê; ruộng chỉ dính nước vào qua cống thì không hư mà được bồi phù sa (`floodHits` ở `terrain.ts`).
+  congDe: {
+    type: 'congDe',
+    w: 1,
+    d: 1,
+    maxLevel: 1,
+    buildCost: { datDa: 200, go: 120, voOc: 60 },
+    upgradeCost: [{}, {}],
+    production: [{}],
+    hp: [1500],
+    limit: [2, 2, 2, 2, 2, 2, 2, 2, 3, 3],
     minDien: 1,
     buildable: true,
     removable: true,
@@ -1088,7 +1108,16 @@ export const FLOOD_TOLERANCE: Partial<Record<BuildingType, number>> = {
   de: 99,
   thanh: 99,
   congThanh: 99,
+  congDe: 99,
 };
+/** Cống đê đóng cao như kè đá (cấp 2 của đê). */
+export const CONG_DE_RAISE = DIKE_RAISE[1];
+/** Giặc tìm đường coi cống đê như một đoạn kè đá. */
+export const CONG_DE_PATH = 40;
+/** Ruộng lúa, ruộng nếp được bồi phù sa làm ra thêm chừng này (giữ tới hết mùa lũ sau). */
+export const PHU_SA_BONUS = 0.4;
+/** Những loại được bồi phù sa khi nước lũ vào qua cống. */
+export const PHU_SA_TYPES: BuildingType[] = ['ruong', 'ruongNep'];
 /** Nước lũ dâng mỗi bậc trong chừng này giây. */
 export const FLOOD_RISE_S = 6;
 /** Xong trận thì nước rút hết trong chừng này giây (chỉ để vẽ, công trình không hư thêm). */
@@ -1962,7 +1991,7 @@ export const QUEST_INSERTED_V4 = 11;
  * Công trình mới thêm sau khi đã có người chơi: lần đầu mở được thì Lạc hầu nói một câu gợi ý (một lần, ghi ở
  * `GameState.hinted`). Thêm loại vào đây không phải nâng bản lưu.
  */
-export const NEW_HINTS: BuildingType[] = ['xuongMoc', 'langChai', 'congThanh', 'hoKimQuy', 'benKhoi'];
+export const NEW_HINTS: BuildingType[] = ['xuongMoc', 'langChai', 'congThanh', 'hoKimQuy', 'benKhoi', 'congDe'];
 
 /**
  * Cá mỗi phút của một làng chài đủ người, theo cấp (chỉ số 0 là cấp 1). Cá không tích trữ: dân và lính ăn cá trước,

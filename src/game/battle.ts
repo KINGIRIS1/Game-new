@@ -21,6 +21,7 @@ import {
   isDecor,
   CO_LOA_TOWER,
   CONG_THANH,
+  CONG_DE_PATH,
   LAU_NO,
   ENEMIES,
   ENEMY_ROWS,
@@ -96,7 +97,7 @@ import type { Building, GameState } from './game';
 import { openStart } from './khoanh';
 import { FAR_FOREST, FOREST_BAND, GRID, RIVER_DIVE, RIVER_END, RIVER_START, farBankOf, inGrid, isRiver, turnLocal } from './map';
 import { bridgeUp, farSideBank, garrisonPosts } from './benKia';
-import { drowns, floodMap } from './terrain';
+import { floodHits } from './terrain';
 
 export type Side = 'ta' | 'giac';
 /**
@@ -324,6 +325,8 @@ export interface Battle {
   water: number;
   /** Công trình bị nước lũ làm hư trong trận này. */
   drowned: number[];
+  /** Ruộng được bồi phù sa trong trận này (nước vào qua cống đang mở). Bản lưu cũ đang dở trận thì chưa có. */
+  boi?: number[];
   /** Giặc bơi được dưới sông (thủy quái). */
   swim: boolean;
   /** Thuyền chở lính của thủy binh Triệu hay thủy quân Hán (rỗng nếu không phải đợt đi thuyền). */
@@ -395,13 +398,13 @@ export function buildingHp(battle: Battle, b: Building): number {
 }
 
 /**
- * Công trình giặc có thể nhắm tới (không tính lũy, bẫy, đê, thành, cổng thành, đường đi, đồ trang trí, không tính cái
+ * Công trình giặc có thể nhắm tới (không tính lũy, bẫy, đê, cống đê, thành, cổng thành, đường đi, đồ trang trí, không tính cái
  * đã hư). Cổng thành như tường: giặc chỉ phá khi đường đi qua cổng.
  */
 function isTargetable(b: Building): boolean {
   return !b.damaged && !UNTARGETED.includes(b.type) && !isDecor(b.type) && !isBridge(b.type);
 }
-const UNTARGETED: BuildingType[] = ['luy', 'bayChong', 'de', 'thanh', 'congThanh'];
+const UNTARGETED: BuildingType[] = ['luy', 'bayChong', 'de', 'thanh', 'congThanh', 'congDe'];
 
 /** Thành Cổ Loa và cổng thành: yêu tinh nhắm phá trước tiên. */
 const isCitadel = (b: Building) => (b.type === 'thanh' || b.type === 'congThanh') && !b.damaged;
@@ -1064,7 +1067,9 @@ function costGrid(state: GameState, targetId: number | null, swim: boolean): Flo
               ? 45
               : b.type === 'congThanh'
                 ? CONG_THANH.pathCost
-                : 25;
+                : b.type === 'congDe'
+                  ? CONG_DE_PATH
+                  : 25;
     for (let dx = 0; dx < def.w; dx++) for (let dz = 0; dz < def.d; dz++) cost[tileIndex(b.x + dx, b.z + dz)] = c;
   }
   return cost;
@@ -1563,13 +1568,17 @@ function advanceClock(battle: Battle, dt: number): void {
 /**
  * Mùa lũ: nước dâng dần mỗi bậc FLOOD_RISE_S giây tới mực lũ, loang từ sông vào ô thấp.
  * Công trình bị ngập quá sức chịu của nền thì hư. Đê bị thủy quái phá thì nước tràn qua chỗ vỡ.
+ * Cống đê đang mở cho nước vào sau đê: ruộng chỉ dính nước ấy thì được bồi phù sa thay vì hư.
  */
 function stepFlood(state: GameState, battle: Battle): void {
   if (battle.floodTo <= 0) return;
   battle.water = Math.min(battle.floodTo, battle.t / FLOOD_RISE_S);
-  const wet = floodMap(state, battle.water);
-  for (const b of state.buildings) {
-    if (!drowns(state, b, wet, battle.water)) continue;
+  const hits = floodHits(state, battle.water);
+  for (const b of hits.boi) {
+    battle.boi ??= [];
+    if (!battle.boi.includes(b.id)) battle.boi.push(b.id);
+  }
+  for (const b of hits.drown) {
     b.damaged = true;
     battle.drowned.push(b.id);
     const def = BUILDINGS[b.type];

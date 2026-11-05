@@ -12,6 +12,8 @@ import {
   LAU_NO,
   LAU_NO_FROM_LEVEL,
   NU_TUONG,
+  PHU_SA_BONUS,
+  PHU_SA_TYPES,
   DECOR_TYPES,
   FIELD,
   RESOURCE_IDS,
@@ -87,6 +89,7 @@ import {
   netPerMinute,
   nextFoe,
   outputIn,
+  phuSaPreview,
   questDone,
   questProgress,
   repairAllCost,
@@ -111,7 +114,7 @@ import { CH5_LAST, HAI_BA_KINDS, haiBaJoined, haiBaResting, inChapter5 } from '.
 import { giongAppeared, giongLook, giongReady, giongResting } from '../game/giong';
 import { KHOANH_N } from '../game/khoanh';
 import { inChapter2, sonJoined, sonLook, sonResting, giftCount } from '../game/son';
-import { floodToleranceOf, groundOf } from '../game/terrain';
+import { floodToleranceOf, groundOf, hasOpenCong } from '../game/terrain';
 import { tetOpen, tetStarted, type Banh } from '../game/tet';
 import type { Resolution } from '../render/world';
 import { formatDuration, vi } from '../text/vi';
@@ -209,6 +212,7 @@ export type HudAction =
   | { kind: 'cancelPlace' }
   | { kind: 'upgrade'; id: number }
   | { kind: 'removeWall'; id: number }
+  | { kind: 'toggleCong'; id: number }
   | { kind: 'claimQuest' }
   | { kind: 'openSettings' }
   | { kind: 'toggleMute' }
@@ -479,6 +483,7 @@ export class Hud {
       case 'repairUNo':
       case 'upgrade':
       case 'removeWall':
+      case 'toggleCong':
       case 'raiseBuilding':
       case 'startMove':
       case 'startMerge':
@@ -643,6 +648,11 @@ export class Hud {
       const secs = Math.max(0, Math.ceil((raid.startsAt - state.clock) / 1000));
       if (raid.foe === 'thuy') {
         list.push({ id: 'giac', text: `🌧️ ${vi.ui.floodWarning(sideName, secs, nextFloodLevel(state))}`, tone: 'bad', act: 'lookRaid', label: vi.ui.floodLook });
+        // Cống đang mở: nhắc ruộng nào được bồi, công trình nào sẽ ngập, còn kịp đóng.
+        if (hasOpenCong(state)) {
+          const p = phuSaPreview(state);
+          list.push({ id: 'phuSa', text: vi.ui.phuSaWarning(p.boi.length, p.drown.length), tone: 'info' });
+        }
       } else {
         const text =
           raid.foe === 'yeu'
@@ -1250,6 +1260,10 @@ export class Hud {
       if (id !== null) rows.push(`<div class="stat"><span>${vi.benKia.villageMakes}</span><span>${b.damaged ? '—' : prodHtml(villageOutput(state, id))}</span></div>`);
       if (b.damaged) rows.push(`<p class="why warn">${vi.benKia.villageWrecked}</p>`);
     }
+    if (PHU_SA_TYPES.includes(b.type) && b.boi && !b.damaged) {
+      rows.push(`<div class="stat"><span>${vi.ui.phuSa}</span><span>${vi.ui.phuSaRow(Math.round(PHU_SA_BONUS * 100))}</span></div>`);
+    }
+    if (b.type === 'congDe') rows.push(this.congHtml(state, b));
     if (b.type === 'congThanh') {
       const shot = (lv: number) => vi.ui.gateShot(CONG_THANH.dmg[lv - 1], CONG_THANH.targets[lv - 1]);
       rows.push(`<div class="stat"><span>${vi.ui.gateGuard}</span><span>${shot(b.level)}</span></div>`);
@@ -1345,6 +1359,10 @@ export class Hud {
         ${vi.ui.repair} · ${costHtml(state, rc)}</button>`;
       if (b.type !== 'doanhTrai') actions.push(repair);
     }
+    // Cống đê: đóng mở lúc nào cũng được, kể cả giữa mùa lũ.
+    if (b.type === 'congDe' && !b.damaged) {
+      actions.push(`<button class="btn bronze" data-act="toggleCong" data-id="${b.id}">${b.mo ? vi.ui.congClose : vi.ui.congOpen}</button>`);
+    }
     if (b.type === 'thanh' && b.uNo === 'hu') {
       // Sửa thành trước rồi mới sửa được ụ trên mặt thành.
       const rc = uNoRepairCost();
@@ -1408,13 +1426,26 @@ export class Hud {
             ? vi.ui.removeCitadel
             : b.type === 'congThanh'
               ? vi.ui.removeGate
-              : vi.ui.remove;
+              : b.type === 'congDe'
+                ? vi.ui.removeCong
+                : vi.ui.remove;
       actions.push(`<button class="btn ghost" data-act="removeWall" data-id="${b.id}">${label}</button>`);
     }
 
     const info = `<div class="info"><p>${esc(vi.buildings[b.type].desc)}</p>${rows.join('')}<div class="actions">${actions.join('')}</div></div>`;
     if (b.type === 'doanhTrai') return this.barracksHtml(state, b, info, repair);
     return info;
+  }
+
+  /** Bảng cống đê: đang đóng hay mở, xem trước mùa lũ tới khi mở. Nút đóng mở ở hàng nút cuối bảng. */
+  private congHtml(state: GameState, b: Building): string {
+    const rows = [`<div class="stat"><span>${vi.ui.congState}</span><span>${b.mo ? vi.ui.congIsOpen : vi.ui.congIsShut}</span></div>`];
+    if (b.mo && !b.damaged) {
+      const p = phuSaPreview(state);
+      rows.push(`<div class="stat"><span>${vi.ui.congPreview}</span><span>${vi.ui.congPreviewText(p.level, p.boi.length, p.drown.length)}</span></div>`);
+      rows.push(`<div class="stat"><span></span><span class="muted">${vi.ui.phuSaPreview(p.level)}</span></div>`);
+    }
+    return rows.join('');
   }
 
   /** Một dòng binh chủng ở nơi ở riêng: số lính, binh khí đã rèn, nút Luyện kèm giá. */
@@ -1938,6 +1969,7 @@ export class Hud {
         <div>${vi.ui.raidStolen}: ${stolen}</div>
         <div>${vi.ui.raidWrecked(r.wrecked.length)}</div>
         ${flood ? `<div>${vi.ui.floodDrowned(r.drowned.length)}</div>` : ''}
+        ${r.boi ? `<div>${vi.ui.phuSaResult(r.boi)}</div>` : ''}
         ${r.foe === 'thuyHan' && !r.won ? `<div class="muted">⛵ ${vi.ui.shipsLeft}</div>` : ''}
       </div>
       <div class="actions">

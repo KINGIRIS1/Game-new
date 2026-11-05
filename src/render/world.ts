@@ -16,7 +16,7 @@ import { FAR_PLOTS, benKiaOpen, bridgeEnds, bridgeTo, plotAt, plotOf, plotOrigin
 import { DIEN_HOME, FAR_FOREST, FOREST_BAND, GRID, KHOANH, RIVER_END, RIVER_START, baseHeights, farBankOf, inGrid, isNearBank, isRiver, riverDistance, riverFacing, rotAngle, turnLocal } from '../game/map';
 import { BAI_CAT, BIEN_DIEN, CUA_BIEN, QUAN_DAO, RIVER_MID, benDock, bienDo, isSea, riverOf, seaIndex, seaRoute, type QuanDaoId, type SeaRoute } from '../game/bien';
 import { sonLook, type SonLook } from '../game/son';
-import { floodMap } from '../game/terrain';
+import { floodHits } from '../game/terrain';
 import { tetOpen } from '../game/tet';
 import { Battlefield, CAM_KHE } from './battlefield';
 import { BattleView } from './battleView';
@@ -269,6 +269,8 @@ interface BuildingView {
   rot: number;
   /** Bậc nền đang vẽ. */
   ground: number;
+  /** Ruộng đang vẽ dáng đã bồi phù sa. */
+  boi: boolean;
   people: WorkerView[];
   popAge: number;
   baseScale: number;
@@ -303,12 +305,14 @@ function peopleCount(b: Building, spots: number): number {
   return Math.min(1, spots);
 }
 
-/** Đoạn tường mà cổng thành nối vào: cổng xoay theo những đoạn này. */
-const GATE_WALLS: BuildingType[] = ['luy', 'de', 'thanh', 'congThanh'];
+/** Đoạn tường mà cổng thành, cống đê nối vào: cổng, cống xoay theo những đoạn này. */
+const GATE_WALLS: BuildingType[] = ['luy', 'de', 'thanh', 'congThanh', 'congDe'];
+/** Công trình một ô nằm trong dải tường, xoay theo đoạn tường kề bên (`gateTurn`). */
+const GATE_TYPES: BuildingType[] = ['congThanh', 'congDe'];
 
 /**
- * Góc xoay cổng thành: đoạn tường hai bên chạy dọc trục x (ô đông, tây có tường) thì cửa trông theo trục z, ngược lại
- * trông theo trục x; mặt trước (+z của mô hình) quay ra phía xa Điện, tức ra ngoài thành. Không có tường kề hay kề cả
+ * Góc xoay cổng thành (hay cống đê): đoạn tường hai bên chạy dọc trục x (ô đông, tây có tường) thì cửa trông theo trục
+ * z, ngược lại trông theo trục x; mặt trước (+z của mô hình) quay ra phía xa Điện, tức ra ngoài thành (cống: ra sông). Không có tường kề hay kề cả
  * hai trục như nhau thì theo trục xa Điện hơn.
  */
 function gateTurn(state: GameState, b: { x: number; z: number }, walls: Set<number>): number {
@@ -948,14 +952,17 @@ export class World {
       if (b.type === 'luy' || b.type === 'de' || b.type === 'thanh' || isBatchedDecor(b.type)) continue;
       alive.add(b.id);
       const v = this.views.get(b.id);
-      if (!v || v.type !== b.type || v.level !== b.level || v.damaged !== !!b.damaged || v.workers !== b.workers || v.x !== b.x || v.z !== b.z || v.rot !== (b.rot ?? 0)) this.createView(b);
+      if (!v || v.type !== b.type || v.level !== b.level || v.damaged !== !!b.damaged || v.workers !== b.workers || v.x !== b.x || v.z !== b.z || v.rot !== (b.rot ?? 0) || v.boi !== !!b.boi) this.createView(b);
       else if (v.ground !== this.heights[b.z * GRID + b.x]) {
         v.ground = this.heights[b.z * GRID + b.x];
         v.group.position.y = topY(v.ground);
       }
-      if (b.type === 'congThanh') {
+      if (GATE_TYPES.includes(b.type)) {
         wallTiles ??= new Set(state.buildings.filter((w) => GATE_WALLS.includes(w.type)).map((w) => w.z * GRID + w.x));
-        this.views.get(b.id)!.group.rotation.y = gateTurn(state, b, wallTiles);
+        const group = this.views.get(b.id)!.group;
+        group.rotation.y = gateTurn(state, b, wallTiles);
+        // Ván phai cống đê nâng lên khi mở, hạ xuống khi đóng (`update`).
+        if (b.type === 'congDe') group.userData.mo = !!b.mo;
       }
     }
     for (const [id, v] of this.views) {
@@ -1201,26 +1208,31 @@ export class World {
     this.syncFlood(state);
   }
 
-  /** Nước lũ phủ các ô đang ngập, nước sông dâng theo; mưa giông khi Thủy Tinh dâng nước. */
+  /**
+   * Nước lũ phủ các ô đang ngập, nước sông dâng theo; mưa giông khi Thủy Tinh dâng nước. Nước êm vào sau đê qua cống
+   * mở (`floodHits`) màu đỏ nâu phù sa.
+   */
   private syncFlood(state: GameState): void {
     const raid = state.raid;
     this.stormGoal = raid.foe === 'thuy' && raid.phase !== 'idle' ? 1 : raid.water > 0.02 ? 0.5 : 0;
     this.nightGoal = raid.foe === 'yeu' && raid.phase !== 'idle' ? 1 : 0;
     const water = raid.water;
-    const key = water > 0.005 ? `${water.toFixed(2)}:${state.buildings.filter((b) => b.type === 'de' && b.damaged).length}` : '';
+    const walls = state.buildings.filter((b) => (b.type === 'de' && b.damaged) || b.type === 'congDe');
+    const key = water > 0.005 ? `${water.toFixed(2)}:${walls.map((b) => `${b.id}${b.mo ? 'm' : ''}${b.damaged ? 'h' : ''}`).join(',')}` : '';
     if (key === this.floodKey) return;
     this.floodKey = key;
     const surface = waterSurface(water);
     if (this.riverWater) this.riverWater.position.y = Math.max(0, surface - WATER_Y);
     this.floodWater.begin();
     if (water > 0.005) {
-      const wet = floodMap(state, water);
+      const { wet, calm } = floodHits(state, water);
       for (let z = 0; z < RIVER_START; z++) {
         for (let x = 0; x < RIVER_START; x++) {
           if (!wet[z * GRID + x]) continue;
           const top = this.groundY(x, z);
           if (surface <= top + 0.01) continue;
-          const shade = (x * 5 + z * 3) % 2 ? C.flood : C.floodDeep;
+          const deep = (x * 5 + z * 3) % 2 === 0;
+          const shade = calm?.[z * GRID + x] ? (deep ? C.siltDeep : C.silt) : deep ? C.floodDeep : C.flood;
           this.floodWater.add(1, surface - top, 1, shade, wx(x) + 0.5, (surface + top) / 2, wz(z) + 0.5);
         }
       }
@@ -1228,15 +1240,19 @@ export class World {
     this.floodWater.end();
   }
 
-  /** Tô xanh những ô sẽ ngập khi lũ dâng tới `level`; null để tắt. */
+  /**
+   * Tô những ô sẽ ngập khi lũ dâng tới `level`: xanh là nước dữ (tràn bờ, qua đê vỡ), vàng đất là nước êm chỉ vào qua
+   * cống đang mở (bồi phù sa cho ruộng). null để tắt.
+   */
   setFloodPreview(state: GameState | null, level = 0): void {
     this.floodPreview.begin();
     if (state && level > 0) {
-      const wet = floodMap(state, level);
+      const { wet, calm } = floodHits(state, level);
       for (let z = 0; z < RIVER_START; z++) {
         for (let x = 0; x < RIVER_START; x++) {
           if (!wet[z * GRID + x]) continue;
-          this.floodPreview.add(0.96, 0.04, 0.96, 0x3f8fd0, wx(x) + 0.5, this.groundY(x, z) + 0.04, wz(z) + 0.5);
+          const color = calm?.[z * GRID + x] ? 0xd9a441 : 0x3f8fd0;
+          this.floodPreview.add(0.96, 0.04, 0.96, color, wx(x) + 0.5, this.groundY(x, z) + 0.04, wz(z) + 0.5);
         }
       }
     }
@@ -1504,7 +1520,7 @@ export class World {
     const old = this.views.get(b.id);
     if (old) this.dropView(old);
     const def = BUILDINGS[b.type];
-    const group = this.makeBuilding(b.type, b.level);
+    const group = this.makeBuilding(b.type, b.level, !!b.boi);
     // Bến, làng chài quay mặt trước ra sông: sông phía đông thì xoay một góc vuông. Công trình người chơi đã xoay thì
     // quay theo hướng ấy (người làm, thuyền neo là con của mô hình nên quay theo).
     if (def.nearRiver) group.rotation.y = riverFacing(b.x, b.z, def.w, def.d);
@@ -1514,6 +1530,9 @@ export class World {
     group.userData.buildingId = b.id;
     // Cổng dựng (hay dựng lại) giữa lúc có giặc thì cửa đóng sẵn.
     if (this.gatesShut) for (const child of group.children) if (child.userData.door) child.rotation.y = 0;
+    // Cống đê dựng lại thì ván phai đứng sẵn theo cống đang mở hay đóng.
+    group.userData.mo = !!b.mo;
+    for (const child of group.children) if (child.userData.phai !== undefined) child.position.y = b.mo ? (child.userData.phai as number) : 0;
     // Dân làm việc theo nghề; Điện có Lạc hầu, từ cấp 2 có thêm lính gác. Công trình hư thì không ai làm.
     // Công trình móng mới (`congTrinh/`) cho chỗ đứng theo bản vẽ, mô hình không phóng nên người giữ cỡ
     // `PERSON_SCALE`. Dáng cũ thì chỗ đứng thu theo hệ số thu tâm (`spread`, xem buildings.ts) và người thu lại
@@ -1572,12 +1591,12 @@ export class World {
       group.add(smoke);
     }
     this.buildingsRoot.add(group);
-    this.views.set(b.id, { group, type: b.type, level: b.level, damaged: !!b.damaged, workers: b.workers, x: b.x, z: b.z, rot: b.rot ?? 0, ground, people, popAge: 0, baseScale: group.scale.x });
+    this.views.set(b.id, { group, type: b.type, level: b.level, damaged: !!b.damaged, workers: b.workers, x: b.x, z: b.z, rot: b.rot ?? 0, ground, boi: !!b.boi, people, popAge: 0, baseScale: group.scale.x });
   }
 
-  /** Mô hình công trình đặt vừa móng (`lotModel`): vẽ trên móng mới, hay dáng cũ phóng theo móng. */
-  private makeBuilding(type: BuildingType, level: number): THREE.Group {
-    return lotModel(type, level);
+  /** Mô hình công trình đặt vừa móng (`lotModel`): vẽ trên móng mới, hay dáng cũ phóng theo móng. `boi`: ruộng có phù sa. */
+  private makeBuilding(type: BuildingType, level: number, boi = false): THREE.Group {
+    return lotModel(type, level, { boi });
   }
 
 
@@ -2693,8 +2712,8 @@ export class World {
     const y = topY(h);
     this.ghost.position.set(wx(x) + def.w / 2, y + 0.02, wz(z) + def.d / 2);
     this.ghost.rotation.y = def.nearRiver ? riverFacing(x, z, def.w, def.d) : rotAngle(rot);
-    // Cổng thành: bóng xoay theo đoạn tường ở chỗ đặt, như khi đã dựng.
-    if (type === 'congThanh' && this.state) {
+    // Cổng thành, cống đê: bóng xoay theo đoạn tường ở chỗ đặt, như khi đã dựng.
+    if (GATE_TYPES.includes(type) && this.state) {
       const walls = new Set(this.state.buildings.filter((w) => GATE_WALLS.includes(w.type)).map((w) => w.z * GRID + w.x));
       this.ghost.rotation.y = gateTurn(this.state, { x, z }, walls);
     }
@@ -2794,6 +2813,11 @@ export class World {
           // Cánh cổng thành khép dần khi có giặc, mở dần khi yên.
           const goal = this.gatesShut ? 0 : (child.userData.door as number) * DOOR_OPEN;
           child.rotation.y += (goal - child.rotation.y) * (1 - Math.exp(-dt * 3));
+        }
+        if (child.userData.phai !== undefined) {
+          // Ván phai cống đê kéo lên dần khi mở, thả xuống dần khi đóng.
+          const goal = v.group.userData.mo ? (child.userData.phai as number) : 0;
+          child.position.y += (goal - child.position.y) * (1 - Math.exp(-dt * 2.5));
         }
         if (child.userData.smoke) {
           for (const puff of child.children) {

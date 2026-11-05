@@ -80,10 +80,16 @@ export interface Dock {
 }
 
 /** Một công trình vẽ trên móng mới. */
+/** Tùy chọn dáng theo trạng thái công trình (không theo cấp). */
+export interface LotOpts {
+  /** Ruộng đã bồi phù sa: nước ruộng đục đỏ nâu. */
+  boi?: boolean;
+}
+
 export interface CongTrinh {
   /** Cạnh móng (ô). */
   tiles: number;
-  make: (level: number) => THREE.Group;
+  make: (level: number, opts?: LotOpts) => THREE.Group;
   /** Mọi chỗ đứng của người ở cấp này; world.ts lấy đúng số người đang làm (hay 1–2 người) từ đầu danh sách. */
   spots: (level: number) => LotSpot[];
   view: View;

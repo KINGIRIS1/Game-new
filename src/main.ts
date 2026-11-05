@@ -56,6 +56,7 @@ import {
   remove,
   repair,
   repairAll,
+  setCong,
   setWorkers,
   train,
   tick,
@@ -252,11 +253,15 @@ async function start(): Promise<void> {
     hud.setPlaceValid(check.ok, check.ok ? undefined : vi.reasons[check.reason]);
   };
 
-  /** Tô xanh vùng sẽ ngập ở mùa lũ tới: khi đắp đê, đắp đất, và lúc trinh sát báo lũ. */
+  /**
+   * Tô vùng sẽ ngập ở mùa lũ tới (xanh là nước tràn, vàng là nước vào qua cống mở): khi đắp đê, đắp đất, đặt cống,
+   * xem bảng một cống, và lúc trinh sát báo lũ.
+   */
   const refreshFloodPreview = () => {
-    const painting = mode.kind === 'paint' && (mode.type === 'de' || mode.type === 'raise');
+    const painting = (mode.kind === 'paint' && (mode.type === 'de' || mode.type === 'raise')) || (mode.kind === 'place' && mode.type === 'congDe');
+    const gate = mode.kind === 'view' && mode.selected !== null && findBuilding(state, mode.selected)?.type === 'congDe';
     const warning = state.raid.phase === 'warning' && state.raid.foe === 'thuy';
-    world.setFloodPreview(painting || warning ? state : null, nextFloodLevel(state));
+    world.setFloodPreview(painting || gate || warning ? state : null, nextFloodLevel(state));
   };
 
   /** Tìm chỗ đặt được gần tâm màn hình nhất, ưu tiên chỗ thoáng, để bóng công trình hiện ra ở chỗ hợp lý. */
@@ -291,6 +296,7 @@ async function start(): Promise<void> {
     } else {
       hud.closeSheet();
     }
+    refreshFloodPreview();
   };
 
   /** Quân đang hành quân qua cầu tới đồn giặc: chừng ba giây rồi mới sang bãi chiến. */
@@ -523,6 +529,7 @@ async function start(): Promise<void> {
         mode = { kind: 'place', type: a.type, rot: lastRot[a.type] ?? 0, ...nearestSpot(a.type) };
         hud.setMode('place', true, undefined, canRotateType(a.type));
         updateGhost();
+        refreshFloodPreview();
         // Chỗ đặt ở bờ khác chỗ đang nhìn (đồn biên chỉ dựng bên kia sông): lướt camera tới đó.
         const seen = world.screenCenterTile();
         if (farBankOf(mode.x, mode.z) !== farBankOf(seen.x, seen.z)) {
@@ -836,6 +843,16 @@ async function start(): Promise<void> {
         commit();
         world.pop(r.value.id);
         world.setSelection(r.value);
+        return;
+      }
+
+      case 'toggleCong': {
+        const b = findBuilding(state, a.id);
+        const r = setCong(state, a.id, !b?.mo);
+        if (!r.ok) return fail(r.reason);
+        play('tap');
+        hud.toast(r.value.mo ? vi.ui.congIsOpen : vi.ui.congIsShut);
+        commit();
         return;
       }
 

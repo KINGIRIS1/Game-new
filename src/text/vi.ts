@@ -118,6 +118,11 @@ export const vi = {
       icon: '🟫',
       desc: 'Đê đắp cao hơn mặt đất 2 bậc, chặn nước lũ tràn từ sông vào. Đê phải liền một dải mới chặn được; thủy quái phá vỡ đê thì nước tràn qua chỗ vỡ. Kè đá cao 3 bậc, chắc hơn nhiều.',
     },
+    congDe: {
+      name: 'Cống đê',
+      icon: '🌾',
+      desc: 'Cống gỗ đá trong dải đê, dựng trên ô trống hay thay một đoạn đê. Đóng thì chặn lũ như kè đá. Mở thì lũ vào sau đê: ruộng chỉ dính nước qua cống được bồi phù sa, làm ra thêm 40% tới hết mùa lũ sau; nhà cửa trong vùng nước vẫn hư.',
+    },
     denTanVien: {
       name: 'Đền Tản Viên',
       icon: '⛰️',
@@ -1119,6 +1124,21 @@ export const vi = {
     remove: 'Dỡ lũy',
     removeDike: 'Dỡ đê',
     removeGate: 'Dỡ cổng',
+    removeCong: 'Dỡ cống',
+    congOpen: '🌊 Mở cống',
+    congClose: '🚧 Đóng cống',
+    congState: 'Cống',
+    congIsOpen: 'Đang mở: lũ tới sẽ tràn vào sau đê',
+    congIsShut: 'Đang đóng: chặn lũ như kè đá',
+    congPreview: 'Mùa lũ tới',
+    congPreviewText: (level: number, boi: number, drown: number) =>
+      `Bậc ${level}: ${boi} ruộng được bồi phù sa${drown ? `, ${drown} công trình sẽ ngập` : ''}`,
+    phuSa: 'Phù sa',
+    phuSaRow: (pct: number) => `🌾 Làm ra thêm ${pct}% tới hết mùa lũ sau`,
+    phuSaWarning: (boi: number, drown: number) =>
+      `🌾 Cống đang mở: ${boi} ruộng sẽ được bồi phù sa${drown ? `, ${drown} công trình sẽ ngập` : ''}`,
+    phuSaResult: (n: number) => `🌾 Phù sa bồi ${n} ruộng`,
+    phuSaPreview: (level: number) => `Ô tô vàng là nước vào qua cống: ruộng được bồi phù sa, nhà cửa vẫn hư. Ô xanh là nước tràn khi lũ dâng tới bậc ${level}`,
     gateGuard: 'Lính trên lầu',
     gateShot: (dmg: number, n: number) => `🏹 ${dmg} · ${n} giặc mỗi phát`,
     placeHint: 'Chạm vào ô đất để chọn chỗ, rồi bấm Đặt',
@@ -1180,6 +1200,8 @@ export const vi = {
         '📜 Lạc hầu: Tâu bệ hạ, sông Đà chảy ra biển Đông; ngoài khơi có quần đảo Hoàng Sa, Trường Sa, cá nhiều, ốc lắm. Xin dựng bến thuyền khơi bên sông, đóng thuyền lớn bằng gỗ xưởng mộc mà ra biển.',
       congThanh:
         '📜 Lạc hầu: Tâu bệ hạ, thành Cổ Loa nên có cổng. Giặc thấy cổng dễ qua sẽ dồn cả về đó: xin dựng cổng giữa vòng tường, bày chòi canh, bẫy chông quanh cổng mà đón đánh.',
+      congDe:
+        '📜 Lạc hầu: Tâu bệ hạ, nước lũ tuy dữ nhưng chở phù sa. Xin dựng cống trên đê: mùa lũ mở cống cho nước vào ruộng thì lúa tốt tới mùa sau. Có điều nước không chừa nhà cửa, chỗ nước vào chỉ nên có ruộng.',
       hoKimQuy:
         '📜 Lạc hầu: Tâu bệ hạ, thần Kim Quy đã hiện lên. Xin đào hồ lớn cho thần trú ngụ: hồ còn thì thần giữ cho lũy, thành, cổng thành chắc thêm ba phần.',
     } as Partial<Record<BuildingType, string>>,
