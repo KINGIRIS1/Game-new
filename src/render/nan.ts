@@ -206,6 +206,76 @@ interface RawMesh {
 }
 
 /**
+ * Lấy mẫu trường trên lưới `n` điểm (gốc `o`, cạnh `cell`). Dò thô trước ở góc các khối 4×4×4 ô: khối nào mọi góc
+ * đều xa mặt quá nửa đường chéo khối (cộng lề) thì cả khối cùng một phía mặt, khỏi tính từng điểm, lấy nội suy từ góc
+ * (chỉ cần đúng dấu, vì không ô nào trong khối cắt mặt). Điểm thuộc khối gần mặt thì tính đúng.
+ */
+function sampleGrid(f: Sdf, n: number[], o: number[], cell: number): Float32Array {
+  const [nx, ny, nz] = n;
+  const val = new Float32Array(nx * ny * nz);
+  const B = 4;
+  const nb = n.map((v) => Math.ceil((v - 1) / B));
+  const cn = nb.map((v) => v + 1);
+  // Góc khối: điểm lưới ở chỉ số bội của B (điểm cuối mỗi trục là góc cuối).
+  const at = (b: number, a: number) => Math.min(b * B, n[a] - 1);
+  const corner = new Float32Array(cn[0] * cn[1] * cn[2]);
+  for (let k = 0; k < cn[2]; k++)
+    for (let j = 0; j < cn[1]; j++)
+      for (let i = 0; i < cn[0]; i++) corner[i + cn[0] * (j + cn[1] * k)] = f(o[0] + at(i, 0) * cell, o[1] + at(j, 1) * cell, o[2] + at(k, 2) * cell);
+  const margin = Math.sqrt(3) * B * cell * 0.5 * 1.3 + 2 * cell;
+  const done = new Uint8Array(nx * ny * nz);
+  const far: number[] = [];
+  for (let bk = 0; bk < nb[2]; bk++)
+    for (let bj = 0; bj < nb[1]; bj++)
+      for (let bi = 0; bi < nb[0]; bi++) {
+        let sign = 0;
+        let skip = true;
+        for (let c = 0; c < 8 && skip; c++) {
+          const d = corner[bi + (c & 1) + cn[0] * (bj + ((c >> 1) & 1) + cn[1] * (bk + (c >> 2)))];
+          const sg = d < 0 ? -1 : 1;
+          if (Math.abs(d) < margin || (sign !== 0 && sg !== sign)) skip = false;
+          sign = sg;
+        }
+        if (skip) {
+          far.push(bi, bj, bk);
+          continue;
+        }
+        for (let k = at(bk, 2); k <= at(bk + 1, 2); k++)
+          for (let j = at(bj, 1); j <= at(bj + 1, 1); j++)
+            for (let i = at(bi, 0); i <= at(bi + 1, 0); i++) {
+              const id = i + nx * (j + ny * k);
+              if (done[id]) continue;
+              val[id] = f(o[0] + i * cell, o[1] + j * cell, o[2] + k * cell);
+              done[id] = 1;
+            }
+      }
+  for (let q = 0; q < far.length; q += 3) {
+    const [bi, bj, bk] = [far[q], far[q + 1], far[q + 2]];
+    const i0 = at(bi, 0);
+    const j0 = at(bj, 1);
+    const k0 = at(bk, 2);
+    const di = Math.max(1, at(bi + 1, 0) - i0);
+    const dj = Math.max(1, at(bj + 1, 1) - j0);
+    const dk = Math.max(1, at(bk + 1, 2) - k0);
+    const cv = (a: number, b: number, c: number) => corner[bi + a + cn[0] * (bj + b + cn[1] * (bk + c))];
+    for (let k = k0; k <= k0 + dk && k < nz; k++)
+      for (let j = j0; j <= j0 + dj && j < ny; j++)
+        for (let i = i0; i <= i0 + di && i < nx; i++) {
+          const id = i + nx * (j + ny * k);
+          if (done[id]) continue;
+          const u = (i - i0) / di;
+          const v = (j - j0) / dj;
+          const w = (k - k0) / dk;
+          val[id] =
+            (1 - w) * ((1 - v) * ((1 - u) * cv(0, 0, 0) + u * cv(1, 0, 0)) + v * ((1 - u) * cv(0, 1, 0) + u * cv(1, 1, 0))) +
+            w * ((1 - v) * ((1 - u) * cv(0, 0, 1) + u * cv(1, 0, 1)) + v * ((1 - u) * cv(0, 1, 1) + u * cv(1, 1, 1)));
+          done[id] = 1;
+        }
+  }
+  return val;
+}
+
+/**
  * Surface nets: lấy mẫu trường trên lưới ô vuông cạnh `cell` trong hộp `min`..`max`, mỗi ô cắt mặt cho một đỉnh
  * (trung bình các điểm cắt trên cạnh ô, rồi kéo về mặt), mỗi cạnh lưới cắt mặt cho một tứ giác. Lưới đặt đối xứng
  * quanh tâm hộp, nên hình đối xứng trái phải ra lưới đối xứng.
@@ -214,10 +284,7 @@ export function surfaceNets(f: Sdf, min: V3, max: V3, cell: number): RawMesh {
   const n = [0, 1, 2].map((a) => Math.ceil((max[a] - min[a]) / cell) + 1);
   const o = [0, 1, 2].map((a) => (min[a] + max[a]) / 2 - ((n[a] - 1) * cell) / 2);
   const [nx, ny, nz] = n;
-  const val = new Float32Array(nx * ny * nz);
-  for (let k = 0; k < nz; k++)
-    for (let j = 0; j < ny; j++)
-      for (let i = 0; i < nx; i++) val[i + nx * (j + ny * k)] = f(o[0] + i * cell, o[1] + j * cell, o[2] + k * cell);
+  const val = sampleGrid(f, n, o, cell);
   const cx = nx - 1;
   const cy = ny - 1;
   const cellVert = new Int32Array(cx * cy * (nz - 1)).fill(-1);
@@ -325,61 +392,116 @@ export function simplify(mesh: RawMesh, target: number): RawMesh {
   const meanArea = areaSum / faces.length;
   const version = new Int32Array(nv);
   const gone = new Uint8Array(nv);
-  // Đống nhỏ nhất: [chi phí, u, v, x, y, z, phiên bản u, phiên bản v].
-  const heap: number[][] = [];
-  const push = (e: number[]) => {
-    heap.push(e);
-    let i = heap.length - 1;
+  // Đống nhỏ nhất trên mảng số: mỗi mục là chi phí, hai đầu cạnh, điểm gộp, phiên bản hai đầu lúc tính.
+  let cap = 1024;
+  let costA = new Float64Array(cap);
+  let data = new Float64Array(cap * 7);
+  let heap = new Int32Array(cap);
+  let size = 0;
+  const free: number[] = [];
+  let used = 0;
+  const grow = () => {
+    cap *= 2;
+    const c2 = new Float64Array(cap);
+    c2.set(costA);
+    costA = c2;
+    const d2 = new Float64Array(cap * 7);
+    d2.set(data);
+    data = d2;
+    const h2 = new Int32Array(cap);
+    h2.set(heap);
+    heap = h2;
+  };
+  const push = (cost: number, u: number, v: number, x: number, y: number, z: number) => {
+    let e: number;
+    if (free.length) e = free.pop()!;
+    else {
+      if (used >= cap) grow();
+      e = used++;
+    }
+    costA[e] = cost;
+    const o = e * 7;
+    data[o] = u;
+    data[o + 1] = v;
+    data[o + 2] = x;
+    data[o + 3] = y;
+    data[o + 4] = z;
+    data[o + 5] = version[u];
+    data[o + 6] = version[v];
+    let i = size++;
     while (i > 0) {
       const p = (i - 1) >> 1;
-      if (heap[p][0] <= heap[i][0]) break;
-      [heap[p], heap[i]] = [heap[i], heap[p]];
+      if (costA[heap[p]] <= cost) break;
+      heap[i] = heap[p];
       i = p;
     }
+    heap[i] = e;
   };
-  const pop = () => {
+  const pop = (): number => {
     const top = heap[0];
-    const last = heap.pop()!;
-    if (heap.length) {
-      heap[0] = last;
+    const last = heap[--size];
+    if (size) {
+      const c = costA[last];
       let i = 0;
       for (;;) {
         const l = i * 2 + 1;
         const r = l + 1;
         let m = i;
-        if (l < heap.length && heap[l][0] < heap[m][0]) m = l;
-        if (r < heap.length && heap[r][0] < heap[m][0]) m = r;
+        let mc = c;
+        if (l < size && costA[heap[l]] < mc) {
+          m = l;
+          mc = costA[heap[l]];
+        }
+        if (r < size && costA[heap[r]] < mc) m = r;
         if (m === i) break;
-        [heap[m], heap[i]] = [heap[i], heap[m]];
+        heap[i] = heap[m];
         i = m;
       }
+      heap[i] = last;
     }
     return top;
   };
   const consider = (u: number, v: number) => {
-    const q = new Float64Array(10);
-    for (let k = 0; k < 10; k++) q[k] = Q[u][k] + Q[v][k];
-    const a = P(u);
-    const b = P(v);
-    let best: V3 = a;
-    let cost = Infinity;
-    for (const p of [a, b, [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2, (a[2] + b[2]) / 2] as V3]) {
-      const e = err(q, ...p);
-      if (e < cost) {
-        cost = e;
-        best = p;
-      }
+    const qu = Q[u];
+    const qv = Q[v];
+    const ax = pos[u * 3];
+    const ay = pos[u * 3 + 1];
+    const az = pos[u * 3 + 2];
+    const bx = pos[v * 3];
+    const by = pos[v * 3 + 1];
+    const bz = pos[v * 3 + 2];
+    const mx = (ax + bx) / 2;
+    const my = (ay + by) / 2;
+    const mz = (az + bz) / 2;
+    const ea = err(qu, ax, ay, az) + err(qv, ax, ay, az);
+    const eb = err(qu, bx, by, bz) + err(qv, bx, by, bz);
+    const em = err(qu, mx, my, mz) + err(qv, mx, my, mz);
+    let cost = ea;
+    let x = ax;
+    let y = ay;
+    let z = az;
+    if (eb < cost) {
+      cost = eb;
+      x = bx;
+      y = by;
+      z = bz;
+    }
+    if (em < cost) {
+      cost = em;
+      x = mx;
+      y = my;
+      z = mz;
     }
     // Ưu tiên gộp cạnh ngắn khi sai số ngang nhau, để tam giác đều.
-    cost += 0.02 * meanArea * dist2v(a, b);
-    push([cost, u, v, ...best, version[u], version[v]]);
+    cost += 0.02 * meanArea * ((ax - bx) ** 2 + (ay - by) ** 2 + (az - bz) ** 2);
+    push(cost, u, v, x, y, z);
   };
-  const seen = new Set<string>();
+  const seen = new Set<number>();
   faces.forEach((f) => {
     for (let k = 0; k < 3; k++) {
       const u = Math.min(f[k], f[(k + 1) % 3]);
       const v = Math.max(f[k], f[(k + 1) % 3]);
-      const key = `${u},${v}`;
+      const key = u * nv + v;
       if (seen.has(key)) continue;
       seen.add(key);
       consider(u, v);
@@ -390,9 +512,16 @@ export function simplify(mesh: RawMesh, target: number): RawMesh {
     const l = dist2v(a, b) + dist2v(b, c) + dist2v(c, a);
     return l > 0 ? (n * 3.4641) / l : 0;
   };
-  while (count > target && heap.length) {
-    const [, u, v, x, y, z, vu, vv] = pop();
-    if (gone[u] || gone[v] || version[u] !== vu || version[v] !== vv) continue;
+  while (count > target && size) {
+    const e = pop();
+    free.push(e);
+    const o = e * 7;
+    const u = data[o];
+    const v = data[o + 1];
+    const x = data[o + 2];
+    const y = data[o + 3];
+    const z = data[o + 4];
+    if (gone[u] || gone[v] || version[u] !== data[o + 5] || version[v] !== data[o + 6]) continue;
     // Đỉnh chung của hai đầu cạnh chỉ được là hai đỉnh của hai mặt kề cạnh (giữ lưới đa tạp).
     const nu = new Set<number>();
     for (const fi of vf[u]) for (const w of faces[fi]) if (w !== u) nu.add(w);

@@ -8,6 +8,7 @@ import * as THREE from 'three';
 import { BAI_CAT, DAO_CHINH, QUAN_DAO, bienDiem, bienDo, daoChinh, daoGoc, onIsland, type QuanDao, type QuanDaoId } from '../game/bien';
 import { RIVER_END, RIVER_START } from '../game/map';
 import { vi } from '../text/vi';
+import { dolphinBody, whaleBody } from './nanThu';
 import { C } from './palette';
 import { RigBuilder, resetBones, skinRig, type Act, type BoneDef, type Bones, type Poser } from './rig';
 import { ShapeBuilder, seeded } from './shapes';
@@ -533,31 +534,9 @@ const WHALE: Defs = {
   finR: { parent: 'base', at: [0.48, -0.12, 0.4] },
 };
 
-/** Cá voi: mình to thuôn xanh xám, bụng trắng có rãnh, đầu dẹt, lỗ phun nước trên lưng, vây ngực dài, đuôi xòe hai thùy. */
+/** Cá voi nặn liền (nanThu.ts): mình to thuôn xanh xám, bụng trắng có rãnh, lỗ phun nước, vây ngực dài, đuôi xòe hai thùy. */
 function drawWhale(r: RigBuilder<string>): void {
-  const p = r.on('base').plain;
-  p.sphere(0.7, C.whale, 0, 0, 0.15, [0.85, 0.66, 1.85], 14);
-  p.sphere(0.62, C.whaleBelly, 0, -0.12, 0.3, [0.78, 0.5, 1.6], 12);
-  // Rãnh họng dưới cằm.
-  for (const dx of [-0.2, -0.07, 0.07, 0.2]) p.box(0.025, 0.02, 0.9, C.whale, dx, -0.42, 0.75);
-  for (const s of [-1, 1]) {
-    p.sphere(0.06, C.ink, s * 0.47, 0.02, 0.95, [0.6, 1, 1], 6);
-    p.sphere(0.035, C.cream, s * 0.495, 0.04, 0.97, [0.5, 1, 1], 5);
-  }
-  p.sphere(0.06, C.ink, 0, 0.44, 0.62, [1.2, 0.4, 0.8], 6);
-  p.cone(0.12, 0.26, C.whale, 0, 0.42, -0.6, [-0.5, 0, 0], 6);
-  const t1 = r.on('tail1').plain;
-  t1.sphere(0.42, C.whale, 0, 0.04, -1.2, [0.7, 0.62, 1.2], 10);
-  const t2 = r.on('tail2').plain;
-  t2.sphere(0.24, C.whale, 0, 0.05, -1.78, [0.65, 0.6, 1.3], 8);
-  const f = r.on('fluke').plain;
-  for (const s of [-1, 1]) f.sphere(0.4, C.whale, s * 0.38, 0.05, -2.1, [1.15, 0.12, 0.5], 10);
-  for (const [b, s] of [
-    ['finL', -1],
-    ['finR', 1],
-  ] as const) {
-    r.on(b).plain.sphere(0.32, C.whale, s * 0.78, -0.2, 0.3, [1.3, 0.12, 0.42], 8);
-  }
+  whaleBody(r);
 }
 
 /**
@@ -585,26 +564,9 @@ const DOLPHIN: Defs = {
   finR: { parent: 'base', at: [0.14, -0.06, 0.18] },
 };
 
-/** Cá heo: mình thon xám xanh, bụng trắng, mõm dài, vây lưng cong, mắt hiền. */
+/** Cá heo nặn liền (nanThu.ts): mình thon xám xanh, bụng trắng, mõm dài, vây lưng cong, mắt hiền. */
 function drawDolphin(r: RigBuilder<string>): void {
-  const p = r.on('base').plain;
-  p.sphere(0.22, C.dolphin, 0, 0, 0.05, [0.72, 0.78, 2.1], 12);
-  p.sphere(0.19, C.dolphinBelly, 0, -0.06, 0.1, [0.62, 0.55, 1.85], 10);
-  p.capsule(0.055, 0.16, C.dolphin, 0, -0.05, 0.55, [Math.PI / 2, 0, 0]);
-  p.cone(0.09, 0.22, C.dolphin, 0, 0.22, -0.05, [-0.55, 0, 0], 5);
-  for (const s of [-1, 1]) {
-    p.sphere(0.028, C.ink, s * 0.135, 0.04, 0.36, [0.5, 1, 1], 5);
-    p.sphere(0.012, C.cream, s * 0.145, 0.05, 0.37, [0.5, 1, 1], 4);
-  }
-  r.on('tail').plain.sphere(0.12, C.dolphin, 0, 0.02, -0.45, [0.6, 0.6, 1.6], 8);
-  const f = r.on('fluke').plain;
-  for (const s of [-1, 1]) f.sphere(0.12, C.dolphin, s * 0.12, 0.02, -0.68, [1.2, 0.15, 0.55], 7);
-  for (const [b, s] of [
-    ['finL', -1],
-    ['finR', 1],
-  ] as const) {
-    r.on(b).plain.sphere(0.1, C.dolphin, s * 0.22, -0.1, 0.12, [1.3, 0.15, 0.5], 6);
-  }
+  dolphinBody(r);
 }
 
 /** Cá heo bơi: đuôi quẫy nhanh; khi nhảy (`act: 'walk'`) đuôi quẫy mạnh hơn. */

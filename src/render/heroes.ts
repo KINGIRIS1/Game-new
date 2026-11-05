@@ -52,6 +52,7 @@ import {
   yem,
 } from './nanDo';
 import { clayPiece, figure, prim, rigid, segs, type Piece } from './nanNguoi';
+import { horseBody, horseDrape, type HorseShape } from './nanThu';
 import { C } from './palette';
 import { RigBuilder, bakeRig, moveBones, skinRig, type Act, type BoneDef, type Bones, type Poser } from './rig';
 import { ToonModel, inkThin } from './toon';
@@ -159,115 +160,74 @@ const IRON_HORSE: Defs = {
   qTail: { parent: 'qBody', at: [0, 0.96, -0.48] },
 };
 
+/** Chỗ các xương ngựa sắt cho thân nặn (to ngang hơn ngựa thường). */
+const IRON_SHAPE: HorseShape = { y: 0.82, legX: 0.175, legZ: 0.34, neck: [0, 0.96, 0.32], head: [0, 1.32, 0.58], tail: [0, 0.96, -0.48], girth: 1.12 };
+
 /** Ngựa sắt của Gióng: thiết giáp đóng đinh tán đồng, ngực gắn mặt trống đồng, lò lửa trong sườn, bờm và đuôi lửa nhiều tầng. */
 function drawIronHorse(r: Rig): void {
+  // Thân, chân, cổ, đầu ngựa sắt nặn liền khối (sắt, móng đồng sẫm, mõm sắt sẫm); bờm, đuôi là lửa.
+  horseBody(r, { coat: IRON, mane: IRON_DARK, hoof: C.bronzeDark, muzzle: IRON_DARK, sock: IRON_DARK, bare: true }, IRON_SHAPE);
   const body = r.on('qBody');
   const p = body.plain;
-
-  // Thân ngựa sắt 3 khối cơ bắp (ngực nở, bụng thon, mông nở) và khe lò lửa hai bên sườn.
-  p.sphere(0.35, IRON, 0, 0.82, 0, [0.82, 0.82, 1.42], 14);
-  p.sphere(0.31, IRON_LIGHT, 0, 0.86, 0.24, [0.88, 0.86, 0.95], 12);
-  p.sphere(0.3, IRON, 0, 0.85, -0.26, [0.84, 0.84, 0.95], 12);
+  // Khe lò lửa hai bên sườn.
   for (const s of [-1, 1]) {
     for (let i = 0; i < 3; i++) {
-      const z = 0.14 - i * 0.11;
-      body.glow.box(0.025, 0.13 - i * 0.015, 0.04, i % 2 ? C.ember : C.fire, s * 0.278, 0.78 + i * 0.01, z, [0.2, 0, s * 0.12]);
-      p.box(0.03, 0.16, 0.03, IRON_DARK, s * 0.275, 0.78 + i * 0.01, z + 0.045, [0.2, 0, s * 0.12]);
+      const z = 0.12 - i * 0.11;
+      body.glow.box(0.025, 0.13 - i * 0.015, 0.04, i % 2 ? C.ember : C.fire, s * 0.255, 0.8 + i * 0.01, z, [0.2, 0, s * 0.12]);
+      p.box(0.03, 0.16, 0.03, IRON_DARK, s * 0.252, 0.8 + i * 0.01, z + 0.045, [0.2, 0, s * 0.12]);
     }
   }
-
-  // Giáp ngực gắn mặt trống đồng Đông Sơn + giáp ốp vai và mông đóng đinh tán vàng.
-  body.band.cyl(0.31, 0.33, 0.16, C.bronze, 0, 0.84, 0.27, [0.25, 0, 0], 14);
-  body.drum.cyl(0.14, 0.14, 0.04, C.gold, 0, 0.85, 0.56, [Math.PI / 2 - 0.15, 0, 0], 16);
-  p.add(new THREE.TorusGeometry(0.145, 0.02, 6, 20), C.bronzeDark, 0, 0.85, 0.57, [-0.15, 0, 0]);
+  // Mặt trống đồng gắn ngực, viền đồng sẫm.
+  body.drum.cyl(0.13, 0.13, 0.04, C.gold, 0, 0.86, 0.52, [Math.PI / 2 - 0.15, 0, 0], 16);
+  p.add(new THREE.TorusGeometry(0.135, 0.02, 6, 20), C.bronzeDark, 0, 0.86, 0.53, [-0.15, 0, 0]);
+  // Yên ngựa chiến: tấm phủ dệt hoa văn viền đồng, cầu yên trước/sau, bàn đạp đồng.
+  horseDrape(r, { color: C.red, z0: -0.3, z1: 0.18, half: 1.25, pattern: true, trim: C.bronze }, IRON_SHAPE);
+  p.box(0.3, 0.13, 0.07, C.bronze, 0, 1.17, 0.17, [-0.25, 0, 0]);
+  p.box(0.32, 0.14, 0.08, C.bronze, 0, 1.18, -0.29, [0.3, 0, 0]);
   for (const s of [-1, 1]) {
-    p.sphere(0.18, IRON_DARK, s * 0.24, 0.82, 0.3, [0.55, 0.85, 1.1], 10);
-    p.box(0.04, 0.05, 0.34, C.bronze, s * 0.31, 0.75, 0.3, [0.15, s * 0.15, 0]);
-    for (const dz of [-0.1, 0, 0.1]) p.sphere(0.024, C.gold, s * 0.325, 0.84, 0.3 + dz, [1, 1, 1], 6);
-    p.sphere(0.17, IRON_DARK, s * 0.22, 0.86, -0.3, [0.55, 0.8, 1.05], 10);
-    p.box(0.04, 0.045, 0.3, C.bronze, s * 0.29, 0.79, -0.3, [-0.15, -s * 0.12, 0]);
+    p.box(0.02, 0.26, 0.025, IRON_DARK, s * 0.29, 0.82, 0.02);
+    p.add(new THREE.TorusGeometry(0.05, 0.014, 5, 10), C.bronzeLight, s * 0.3, 0.66, 0.02, [0, Math.PI / 2, 0]);
   }
-
-  // Yên ngựa chiến, tấm che hông dệt hoa văn Đông Sơn, cầu yên trước/sau và bàn đạp đồng.
-  body.band.box(0.58, 0.09, 0.56, C.red, 0, 1.08, -0.04);
-  for (const s of [-1, 1]) {
-    body.band.box(0.04, 0.28, 0.52, C.red, s * 0.29, 0.96, -0.04, [0, 0, s * 0.12]);
-    p.box(0.045, 0.04, 0.54, C.bronze, s * 0.31, 0.82, -0.04, [0, 0, s * 0.12]);
-    for (const dz of [-0.18, 0, 0.18]) p.sphere(0.024, C.gold, s * 0.315, 0.95, -0.04 + dz, [1, 1, 1], 6);
-    p.box(0.02, 0.28, 0.025, IRON_DARK, s * 0.31, 0.84, 0.02);
-    p.add(new THREE.TorusGeometry(0.05, 0.014, 5, 10), C.bronzeLight, s * 0.32, 0.67, 0.02, [0, Math.PI / 2, 0]);
-  }
-  p.box(0.34, 0.14, 0.07, C.bronze, 0, 1.16, 0.2, [-0.25, 0, 0]);
-  p.box(0.36, 0.15, 0.08, C.bronze, 0, 1.17, -0.27, [0.3, 0, 0]);
-
-  // Bốn chân có khớp gối bọc đồng, ống chân sắt, vòng cổ chân có cựa lửa và móng bịt đồng.
-  for (const [b, x, z, front] of [
-    ['qFL', -0.175, 0.34, true],
-    ['qFR', 0.175, 0.34, true],
-    ['qBL', -0.175, -0.34, false],
-    ['qBR', 0.175, -0.34, false],
+  // Cựa lửa sau cổ chân.
+  for (const [b, x, z] of [
+    ['qFL', -0.175, 0.35],
+    ['qFR', 0.175, 0.35],
+    ['qBL', -0.175, -0.385],
+    ['qBR', 0.175, -0.385],
   ] as const) {
-    const leg = r.on(b);
-    const lp = leg.plain;
-    lp.cyl(0.088, 0.068, 0.34, IRON, x, 0.48, z, [front ? 0.06 : -0.08, 0, 0], 8);
-    lp.sphere(0.074, IRON_DARK, x, 0.31, z + (front ? 0.015 : -0.015), [1, 0.85, 1.1], 8);
-    lp.sphere(0.042, C.bronze, x + (x < 0 ? -0.05 : 0.05), 0.31, z + (front ? 0.015 : -0.015), [0.6, 1, 1], 6);
-    lp.cyl(0.064, 0.054, 0.28, IRON_DARK, x, 0.17, z, [front ? -0.04 : 0.05, 0, 0], 8);
-    lp.cyl(0.078, 0.084, 0.06, C.bronze, x, 0.08, z, undefined, 10);
-    leg.glow.cone(0.038, 0.14, C.ember, x, 0.12, z - 0.08, [-2.1, 0, 0], 5);
-    lp.cyl(0.082, 0.098, 0.07, C.bronzeDark, x, 0.035, z + 0.015, undefined, 10);
-    lp.box(0.09, 0.04, 0.05, C.gold, x, 0.025, z + 0.07);
+    r.on(b).glow.cone(0.034, 0.13, C.ember, x, 0.12, z - 0.07, [-2.1, 0, 0], 5);
   }
 
-  // Cổ ngựa sắt bọc 4 vòng giáp xếp lớp vươn từ ngực (y=0.96, z=0.32) lên đầu (y=1.32, z=0.58), cùng bờm lửa rực cháy.
-  const neck = r.on('qNeck');
-  neck.plain.cyl(0.13, 0.19, 0.52, IRON, 0, 1.14, 0.45, [0.62, 0, 0], 10);
-  for (let i = 0; i < 4; i++) {
-    const t = i / 3;
-    const ny = 0.98 + t * 0.32;
-    const nz = 0.34 + t * 0.22;
-    const rad = lerp(0.19, 0.135, t);
-    neck.plain.cyl(rad, rad + 0.012, 0.05, i % 2 ? C.bronze : IRON_DARK, 0, ny, nz, [0.62, 0, 0], 10);
-  }
   // Bờm lửa Thánh Gióng mọc dọc theo sống cổ phía trên, ngọn lửa bốc cao và cuộn bay về sau theo chiều gió phi.
+  const neck = r.on('qNeck');
   for (let i = 0; i < 7; i++) {
     const t = i / 6;
-    const ny = 1.08 + t * 0.32;
+    const ny = 1.12 + t * 0.3;
     const nz = 0.22 + t * 0.22;
     const len = 0.34 + (1 - Math.abs(t - 0.5) * 2) * 0.08;
-    neck.glow.cone(0.08, len, i % 2 ? C.ember : C.fire, 0, ny + 0.06, nz - 0.04, [-0.75, 0, 0], 6);
+    neck.glow.cone(0.075, len, i % 2 ? C.ember : C.fire, 0, ny + 0.06, nz - 0.04, [-0.75, 0, 0], 6);
     for (const s of [-1, 1]) {
-      neck.glow.cone(0.05, len * 0.68, i % 2 ? C.fire : C.ember, s * 0.065, ny + 0.04, nz - 0.02, [-0.75, 0, s * 0.28], 5);
+      neck.glow.cone(0.048, len * 0.68, i % 2 ? C.fire : C.ember, s * 0.06, ny + 0.04, nz - 0.02, [-0.75, 0, s * 0.28], 5);
     }
   }
 
-  // Đầu ngựa chạm khắc, mặt nạ trán đồng vàng, mắt lửa, khoen hàm thiết và dây cương đồng.
+  // Mặt nạ trán đồng vàng, mắt lửa, lỗ mũi phả lửa, ngọn lửa trên trán, dây cương đồng.
   const head = r.on('qHead');
   const hp = head.plain;
-  hp.sphere(0.16, IRON, 0, 1.38, 0.58, [0.92, 0.9, 1.15], 10);
-  hp.box(0.16, 0.15, 0.34, IRON, 0, 1.33, 0.74, [0.38, 0, 0]);
-  hp.box(0.13, 0.075, 0.28, IRON_DARK, 0, 1.22, 0.72, [0.52, 0, 0]);
-  head.glow.sphere(0.065, C.ember, 0, 1.27, 0.82, [0.9, 0.7, 1.2], 8);
-  hp.box(0.18, 0.04, 0.38, C.bronze, 0, 1.41, 0.72, [0.38, 0, 0]);
-  hp.box(0.045, 0.065, 0.4, C.gold, 0, 1.43, 0.71, [0.38, 0, 0]);
-  head.glow.cone(0.055, 0.22, C.ember, 0, 1.56, 0.56, [-0.35, 0, 0], 5);
-
+  const [hx, hy, hz] = IRON_SHAPE.head;
+  hp.box(0.07, 0.035, 0.3, C.bronze, hx, hy + 0.1, hz + 0.12, [0.42, 0, 0]);
+  hp.box(0.03, 0.04, 0.32, C.gold, hx, hy + 0.115, hz + 0.12, [0.42, 0, 0]);
+  head.glow.cone(0.05, 0.2, C.ember, hx, hy + 0.24, hz - 0.02, [-0.35, 0, 0], 5);
   for (const s of [-1, 1]) {
-    hp.box(0.03, 0.12, 0.22, C.bronzeDark, s * 0.088, 1.32, 0.68, [0.38, s * 0.08, 0]);
-    hp.sphere(0.038, IRON_DARK, s * 0.065, 1.3, 0.88, [0.8, 0.9, 1.1], 6);
-    head.glow.sphere(0.024, C.ember, s * 0.068, 1.295, 0.9, [1, 1, 1], 5);
-    head.glow.sphere(0.046, C.fire, s * 0.095, 1.39, 0.66, [0.7, 0.9, 1.1], 8);
-    head.glow.sphere(0.025, C.ember, s * 0.105, 1.39, 0.68, [1, 1, 1], 6);
-    hp.box(0.05, 0.03, 0.11, C.gold, s * 0.098, 1.435, 0.66, [0.3, 0, -s * 0.35]);
-    hp.cone(0.044, 0.16, IRON_DARK, s * 0.08, 1.53, 0.52, [-0.35, 0, s * 0.25], 5);
-    hp.cone(0.028, 0.12, C.gold, s * 0.11, 1.48, 0.56, [-0.15, 0, s * 0.55], 5);
-    hp.add(new THREE.TorusGeometry(0.032, 0.009, 5, 10), C.gold, s * 0.085, 1.23, 0.78, [0, Math.PI / 2, 0]);
-    hp.box(0.016, 0.02, 0.58, C.bronzeLight, s * 0.11, 1.26, 0.48, [0.08, -s * 0.08, 0]);
+    head.glow.sphere(0.03, C.fire, s * 0.078, hy + 0.035, hz + 0.075, [0.6, 0.9, 1], 8);
+    head.glow.sphere(0.018, C.ember, s * 0.037, hy - 0.115, hz + 0.33, [1, 1, 1], 5);
+    hp.add(new THREE.TorusGeometry(0.03, 0.009, 5, 10), C.gold, s * 0.062, hy - 0.08, hz + 0.18, [0, Math.PI / 2, 0]);
+    hp.box(0.016, 0.02, 0.58, C.bronzeLight, s * 0.11, hy - 0.06, hz - 0.1, [0.08, -s * 0.08, 0]);
   }
 
   // Đuôi lửa: bọc gốc đuôi đồng + 7 ngọn lửa xòe dài.
   const tail = r.on('qTail');
-  tail.plain.cyl(0.065, 0.08, 0.12, C.bronze, 0, 0.94, -0.52, [-1.4, 0, 0], 8);
+  tail.plain.cyl(0.06, 0.075, 0.12, C.bronze, 0, 0.94, -0.52, [-1.4, 0, 0], 8);
   for (const [dx, dy, rz, len, col] of [
     [0, 0.02, 0, 0.68, C.ember],
     [-0.06, 0, 0.28, 0.6, C.fire],
