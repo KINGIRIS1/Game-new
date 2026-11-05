@@ -62,6 +62,17 @@ export interface BodyLook {
   wristband?: number;
   /** Xăm mình thủy quái / họa tiết sông nước Đông Sơn. */
   tattoo?: boolean;
+  /** Tay áo rộng loe (quan phục). */
+  wideSleeves?: boolean;
+  /** Hộ uyển: ống giáp ôm cẳng tay, và màu viền hai đầu. */
+  bracer?: number;
+  bracerTrim?: number;
+  /** Dáng thân khác thân thường: bụng phệ. */
+  build?: 'belly';
+  /** Viền gấu khố, váy; viền cổ áo chữ V; viền cổ tay áo. */
+  hem?: number;
+  collar?: number;
+  cuff?: number;
 }
 
 /** Thân nặn liền khối mặc đồ `look`: chân, hông, ngực, tay (xem nanNguoi.ts). */

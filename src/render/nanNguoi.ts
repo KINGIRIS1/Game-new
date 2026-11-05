@@ -41,7 +41,7 @@ const A_POSE = 0.2;
 const smooth = THREE.MathUtils.smoothstep;
 
 /** Một mảnh đã nặn: hình có trọng số, chất liệu, tên xương mà `skinIndex` trỏ tới. */
-interface Piece {
+export interface Piece {
   slot: RigSlot;
   geo: THREE.BufferGeometry;
   bones: string[];
@@ -50,7 +50,7 @@ interface Piece {
 const figures = new Map<string, Piece[]>();
 
 /** Dựng (lần đầu) hay lấy lại các mảnh của dáng `key`, rồi gắn vào khung xương. */
-function figure(r: HumanRig, key: string, make: (detail: number) => Piece[]): void {
+export function figure(r: HumanRig, key: string, make: (detail: number) => Piece[]): void {
   const k = `${key}@${r.detail}`;
   let pieces = figures.get(k);
   if (!pieces) {
@@ -61,7 +61,7 @@ function figure(r: HumanRig, key: string, make: (detail: number) => Piece[]): vo
 }
 
 /** Hình gắn cứng vào một xương. */
-function rigid(geo: THREE.BufferGeometry, bone: string, slot: RigSlot = 'plain'): Piece {
+export function rigid(geo: THREE.BufferGeometry, bone: string, slot: RigSlot = 'plain'): Piece {
   const n = geo.getAttribute('position').count;
   const w = new Float32Array(n * 4);
   for (let v = 0; v < n; v++) w[v * 4] = 1;
@@ -71,7 +71,7 @@ function rigid(geo: THREE.BufferGeometry, bone: string, slot: RigSlot = 'plain')
 }
 
 /** Khối hình học có sẵn (vòng, đĩa, cầu nhỏ) tô một màu, gắn cứng vào xương. */
-function prim(geo: THREE.BufferGeometry, color: number, bone: string): Piece {
+export function prim(geo: THREE.BufferGeometry, color: number, bone: string): Piece {
   const g = geo.index ? geo.toNonIndexed() : geo;
   if (g !== geo) geo.dispose();
   g.deleteAttribute('uv');
@@ -80,14 +80,14 @@ function prim(geo: THREE.BufferGeometry, color: number, bone: string): Piece {
   return rigid(g, bone);
 }
 
-function clayPiece(mesh: ClayMesh, slot: RigSlot = 'plain'): Piece {
+export function clayPiece(mesh: ClayMesh, slot: RigSlot = 'plain'): Piece {
   return { slot, geo: clayGeometry(mesh), bones: mesh.bones };
 }
 
 /** Số mặt quanh theo độ chi tiết, chia hết cho 4 cho đối xứng trước sau, trái phải. */
-const segs = (n: number, detail: number, min = 8) => Math.max(min, Math.round((n * detail) / 4) * 4);
+export const segs = (n: number, detail: number, min = 8) => Math.max(min, Math.round((n * detail) / 4) * 4);
 
-function aPose(bone: 'armL' | 'armR'): THREE.Matrix4 {
+export function aPose(bone: 'armL' | 'armR'): THREE.Matrix4 {
   const at = new THREE.Vector3(...HUMAN[bone].at);
   const s = bone === 'armR' ? 1 : -1;
   return new THREE.Matrix4()
@@ -97,7 +97,7 @@ function aPose(bone: 'armL' | 'armR'): THREE.Matrix4 {
 }
 
 /** Độ cao một điểm (tư thế nặn) đo dọc cánh tay ở tư thế gốc: tay dang `A_POSE` quanh vai. */
-function armY(s: number, x: number, y: number): number {
+export function armY(s: number, x: number, y: number): number {
   const [sx, sy] = [s * HUMAN.armR.at[0], HUMAN.armR.at[1]];
   const a = -s * A_POSE;
   return sy + Math.sin(a) * (x - sx) + Math.cos(a) * (y - sy);
@@ -110,7 +110,7 @@ const SKIRT_HEM = 0.19;
 /** Gấu váy dài (quá gối, gần mắt cá). */
 const ROBE_HEM = 0.085;
 
-type SkirtFit = (theta: number, u: number) => number;
+export type SkirtFit = (theta: number, u: number) => number;
 
 /**
  * Bán kính khố (hay váy dài) theo góc `theta` (0 sang phải, π/2 ra trước) và `u` (0 ở cạp, 1 ở gấu). Vải buông: dò
@@ -137,7 +137,7 @@ function skirtFit(hip: Sdf, hem: number, flare: number): SkirtFit {
   };
 }
 
-interface BodyBase {
+export interface BodyBase {
   clay: Clay;
   spec: MeshSpec;
   /** Cả thân, ở tư thế nặn. */
@@ -151,11 +151,31 @@ interface BodyBase {
   zone: Record<'arms' | 'legs' | 'torso', Sdf>;
 }
 
-const bases = new Map<number, BodyBase>();
+const bases = new Map<string, BodyBase>();
+/** Dáng thân của người vẽ gần nhất trên mỗi khung (đồ mặc nặn sau đo theo thân ấy). */
+const looks = new WeakMap<HumanRig, BodyLook>();
 
-/** Thân, tay, chân nặn liền (da trần), mỗi độ chi tiết một lần. */
-function bodyBase(detail: number): BodyBase {
-  const got = bases.get(detail);
+/** Thân gốc mà người trên khung `r` đang dùng (xem `nanBody`). */
+export function bodyOf(r: HumanRig): BodyBase {
+  return bodyBase(r.detail, looks.get(r)?.build);
+}
+
+/** Đồ mặc của người vẽ gần nhất trên khung `r`. */
+export function lookOf(r: HumanRig): BodyLook | undefined {
+  return looks.get(r);
+}
+
+/** Bán kính khố (hay váy dài) của người trên khung `r` (xem `skirtFit`), và gấu ở đâu. */
+export function skirtOf(r: HumanRig): { fit: SkirtFit; top: number; hem: number } {
+  const base = bodyOf(r);
+  const long = !!looks.get(r)?.long;
+  return { fit: long ? base.long : base.short, top: SKIRT_TOP, hem: long ? ROBE_HEM : SKIRT_HEM };
+}
+
+/** Thân, tay, chân nặn liền (da trần), mỗi độ chi tiết, mỗi dáng một lần. `belly`: bụng phệ (quan Hán). */
+export function bodyBase(detail: number, build?: BodyLook['build']): BodyBase {
+  const key = `${detail}:${build ?? ''}`;
+  const got = bases.get(key);
   if (got) return got;
   const clay = new Clay(C.skin, { armL: aPose('armL'), armR: aPose('armR') });
   // Ngực nở, bụng thon, ngực trước hơi nổi.
@@ -176,6 +196,7 @@ function bodyBase(detail: number): BodyBase {
   clay.add('chest', cone([0, 0.545, -0.01], [0, 0.645, 0], 0.047, 0.041), { k: 0.035, to: { bone: 'head', a: [0, 0.585, 0], b: [0, 0.63, 0] } });
   // Eo pha sang ngực, hông, mông.
   clay.add('hips', ellipsoid([0, 0.392, 0], [0.093, 0.05, 0.072]), { k: 0.04, to: { bone: 'chest', a: [0, 0.4, 0], b: [0, 0.46, 0] } });
+  if (build === 'belly') clay.add('hips', ellipsoid([0, 0.39, 0.04], [0.118, 0.1, 0.105]), { k: 0.05, to: { bone: 'chest', a: [0, 0.42, 0], b: [0, 0.48, 0] } });
   clay.add('hips', ellipsoid([0, 0.305, -0.004], [0.104, 0.085, 0.08]), { k: 0.04 });
   for (const s of [-1, 1]) clay.add('hips', ellipsoid([s * 0.045, 0.28, -0.04], [0.055, 0.055, 0.048]), { k: 0.03 });
   // Chân: đùi, gối, bắp chân, cổ chân, bàn chân bẹt có gót.
@@ -225,7 +246,7 @@ function bodyBase(detail: number): BodyBase {
     long: skirtFit(hip, ROBE_HEM, 0.05),
     zone: { arms: zone(['armL', 'armR']), legs: zone(['legL', 'legR']), torso: zone(['chest', 'hips']) },
   };
-  bases.set(detail, base);
+  bases.set(key, base);
   return base;
 }
 
@@ -243,11 +264,10 @@ function clothes(base: BodyBase, look: BodyLook): Paint[] {
   const armAbove = (y0: number): Sdf => (x, y, z) => Math.max(zone.arms(x, y, z), y0 - armY(Math.sign(x) || 1, x, y));
   if (look.top !== undefined) {
     const top = look.top;
-    layer((x, y, z) => {
-      // Cổ áo: tròn sau gáy, khoét chữ V trước ngực.
-      const neck = 0.566 - (z > 0 ? 0.055 * Math.max(0, 1 - Math.abs(x) / 0.05) * smooth(z, 0.02, 0.08) : 0);
-      return Math.max(zone.torso(x, y, z), y - neck, 0.36 - y);
-    }, top);
+    // Cổ áo: tròn sau gáy, khoét chữ V trước ngực.
+    const neck = (x: number, z: number) => 0.566 - (z > 0 ? 0.055 * Math.max(0, 1 - Math.abs(x) / 0.05) * smooth(z, 0.02, 0.08) : 0);
+    layer((x, y, z) => Math.max(zone.torso(x, y, z), y - neck(x, z), 0.36 - y), top);
+    if (look.collar !== undefined) layer((x, y, z) => Math.max(zone.torso(x, y, z), Math.abs(y + 0.012 - neck(x, z)) - 0.013), look.collar, 1);
     // Vai áo phủ bắp vai.
     layer(armAbove(0.49), look.sleeves ?? top);
   }
@@ -264,7 +284,7 @@ function clothes(base: BodyBase, look: BodyLook): Paint[] {
 
 /** Thân mặc đồ: thân nặn tô áo quần; khố hay váy dài, vạt khố, đai, vòng tay, cổ tay áo, xà cạp, dây chéo, gương đồng. */
 function sculptBody(look: BodyLook, detail: number): Piece[] {
-  const base = bodyBase(detail);
+  const base = bodyBase(detail, look.build);
   const { f } = base;
   const pieces: Piece[] = [clayPiece(base.clay.build(base.spec, clothes(base, look)))];
 
@@ -287,6 +307,7 @@ function sculptBody(look: BodyLook, detail: number): Piece[] {
       // Váy dài: hoa văn chỉ ở dải trên, phần dưới trơn.
       vEnd: look.long ? 0.55 : undefined,
       radius: (_rs, th, t) => fit(th, t),
+      colorAt: look.hem === undefined ? undefined : (_th, u) => (u > 0.86 ? look.hem : undefined),
     },
     cloth,
   );
@@ -334,7 +355,35 @@ function sculptBody(look: BodyLook, detail: number): Piece[] {
     const fa = base.clay.field(arm);
     const ring = (y0: number, y1: number, color: number, grow = 0.006, lip = 0.006) =>
       rigid(wrap(fa, { a: [x, y0, 0], b: [x, y1, 0], t0: 0, t1: 1, seg: segs(12, detail), rings: 1, rmax: 0.06, lip, radius: (rs, _th, t) => rs + grow + (y1 < y0 ? 0 : 0.004 * t) }, color), arm);
-    if (look.sleeves !== undefined) pieces.push(ring(0.375, 0.345, look.sleeves, 0.005, 0.005));
+    if (look.sleeves !== undefined && look.wideSleeves) {
+      // Tay áo rộng loe dần xuống cổ tay.
+      pieces.push(
+        rigid(
+          wrap(
+            fa,
+            {
+              a: [x, 0.5, 0],
+              b: [x, 0.33, 0],
+              t0: 0,
+              t1: 1,
+              seg: segs(14, detail),
+              rings: Math.max(3, Math.round(4 * detail)),
+              rmax: 0.08,
+              lip: 0.008,
+              radius: (rs, _th, t) => rs + 0.004 + 0.045 * t * t,
+              colorAt: look.cuff === undefined ? undefined : (_th, u) => (u > 0.8 ? look.cuff : undefined),
+            },
+            look.sleeves,
+          ),
+          arm,
+        ),
+      );
+    } else if (look.sleeves !== undefined) pieces.push(ring(0.375, 0.345, look.cuff ?? look.sleeves, 0.005, 0.005));
+    if (look.bracer) {
+      // Hộ uyển: ống giáp ôm cẳng tay, hai đầu viền.
+      pieces.push(ring(0.425, 0.335, look.bracer, 0.009));
+      if (look.bracerTrim) for (const y of [0.425, 0.345]) pieces.push(ring(y, y - 0.016, look.bracerTrim, 0.013));
+    }
     if (look.armband) pieces.push(ring(0.488, 0.458, look.armband));
     if (look.wristband) pieces.push(ring(0.372, 0.33, look.wristband, 0.007));
   }
@@ -394,6 +443,7 @@ function sculptBody(look: BodyLook, detail: number): Piece[] {
 
 /** Thân người nặn mặc đồ `look` (thay khối trụ, cầu ghép cũ của `humanBody`). */
 export function nanBody(r: HumanRig, look: BodyLook): void {
+  looks.set(r, look);
   figure(r, `body:${JSON.stringify(look)}`, (detail) => sculptBody(look, detail));
 }
 
@@ -405,7 +455,7 @@ function hairline(x: number, z: number): number {
   return 0.842 - 0.05 * smooth(a, 0.35, 1.45) - 0.16 * smooth(a, 1.85, 2.9);
 }
 
-interface HeadBase {
+export interface HeadBase {
   clay: Clay;
   /** Vùng tóc (âm là tóc), để tô màu tóc. */
   hair: Sdf | null;
@@ -415,7 +465,7 @@ interface HeadBase {
 const heads = new Map<string, HeadBase>();
 
 /** Đầu to tròn: sọ, mặt bầu, má phúng phính, cằm, mũi nhỏ; có tóc thì tóc dày có chân tóc. Mỗi kiểu một lần. */
-function headBase(withHair: boolean): HeadBase {
+export function headBase(withHair: boolean): HeadBase {
   const key = withHair ? 'hair' : 'bald';
   const got = heads.get(key);
   if (got) return got;
@@ -524,7 +574,7 @@ function headbandPiece(f: Sdf, color: number, detail: number, h: number): Piece 
  * Một chiếc lông: thuôn như lá, gốc nhỏ, phình ở hai phần ba rồi tròn về ngọn, có sống nổi hai mặt, cong ra sau.
  * `o` gốc, `d` hướng mọc, `w` hướng bề ngang, `n` hướng mặt trước.
  */
-function feather(o: V3, d: THREE.Vector3, w: THREE.Vector3, n: THREE.Vector3, len: number, width: number, color: number, detail: number): THREE.BufferGeometry {
+export function feather(o: V3, d: THREE.Vector3, w: THREE.Vector3, n: THREE.Vector3, len: number, width: number, color: number, detail: number): THREE.BufferGeometry {
   const rows = Math.max(4, Math.round(7 * detail));
   const pos: number[] = [];
   const col: number[] = [];
@@ -583,10 +633,15 @@ export interface CrownOpts {
   bronzeRim?: boolean;
   rim?: number;
   tier2?: boolean;
+  /** Gốc lông (mặc định cắm trên đỉnh tóc, hơi lùi sau) và độ ngả ra sau, bề ngang lá lông. */
+  y?: number;
+  z?: number;
+  tilt?: number;
+  width?: number;
 }
 
 /** Mũ lông chim xòe quạt ngả ra sau, cắm vào vành mũ đồng có hoa văn. */
-function crownPieces(f: Sdf, colors: readonly number[], opts: CrownOpts, detail: number): Piece[] {
+export function crownPieces(f: Sdf, colors: readonly number[], opts: CrownOpts, detail: number): Piece[] {
   const out: Piece[] = [];
   if (opts.bronzeRim) {
     const seg = segs(28, detail, 16);
@@ -632,8 +687,12 @@ function crownPieces(f: Sdf, colors: readonly number[], opts: CrownOpts, detail:
   };
   const n = opts.count ?? 7;
   // Ngả ra sau vừa phải: ngả nhiều thì quân đi lên (camera sau lưng) chỉ thấy lông ngắn cũn.
-  row(n, opts.len ?? 0.36, -0.2, [0, 0.925, -0.1], 0.08, 0);
-  if (opts.tier2) row(Math.max(3, n - 2), (opts.len ?? 0.36) * 0.62, -0.06, [0, 0.935, -0.07], 0.068, 1);
+  const tilt = opts.tilt ?? -0.2;
+  const y = opts.y ?? 0.925;
+  const z = opts.z ?? -0.1;
+  const width = opts.width ?? 0.08;
+  row(n, opts.len ?? 0.36, tilt, [0, y, z], width, 0);
+  if (opts.tier2) row(Math.max(3, n - 2), (opts.len ?? 0.36) * 0.62, tilt + 0.14, [0, y + 0.01, z + 0.03], width * 0.85, 1);
   return out;
 }
 

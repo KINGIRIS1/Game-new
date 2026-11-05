@@ -930,6 +930,8 @@ export interface WrapOpts {
   lip?: number;
   /** Góc 0 hướng theo đâu (mặc định +x với trục đứng). */
   side?: V3;
+  /** Màu riêng theo chỗ (góc, `u` từ 0 ở vòng đầu tới 1 ở vòng cuối); bỏ trống là màu chung. Cho viền gấu, sọc. */
+  colorAt?: (theta: number, u: number) => THREE.ColorRepresentation | undefined;
 }
 
 /**
@@ -950,6 +952,9 @@ export function wrap(f: Sdf, o: WrapOpts, color: THREE.ColorRepresentation): THR
   const pos: number[] = [];
   const uv: number[] = [];
   const idx: number[] = [];
+  const tint: number[] = [];
+  const base = new THREE.Color(color);
+  const cc = new THREE.Color();
   const cols = o.seg + 1;
   // Hàng 0 và hàng cuối là mép gấp vào trong.
   const rows = o.rings + 3;
@@ -967,6 +972,8 @@ export function wrap(f: Sdf, o: WrapOpts, color: THREE.ColorRepresentation): THR
       let rr = radius(rs, th, t);
       if (r === 0 || r === rows - 1) rr = Math.max(rr - lip, rs - 0.004, 0.002);
       pos.push(c.x + dir.x * rr, c.y + dir.y * rr, c.z + dir.z * rr);
+      const own = o.colorAt?.(th, ring / o.rings);
+      (own === undefined ? base : cc.set(own)).toArray(tint, tint.length);
       const vEnd = o.vEnd ?? tEnd;
       uv.push((s / o.seg) * (o.uvRepeat ?? 1), THREE.MathUtils.clamp(1 - (t - o.t0) / (vEnd - o.t0), 0.004, 1));
     }
@@ -980,6 +987,7 @@ export function wrap(f: Sdf, o: WrapOpts, color: THREE.ColorRepresentation): THR
   const g = new THREE.BufferGeometry();
   g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
   if (o.uvRepeat) g.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2));
+  if (o.colorAt) g.setAttribute('color', new THREE.Float32BufferAttribute(tint, 3));
   g.setIndex(idx);
   g.computeVertexNormals();
   // Mặt quay ra ngoài trục.
@@ -993,7 +1001,7 @@ export function wrap(f: Sdf, o: WrapOpts, color: THREE.ColorRepresentation): THR
   }
   const out = g.toNonIndexed();
   g.dispose();
-  paintGeometry(out, color);
+  if (!o.colorAt) paintGeometry(out, color);
   return out;
 }
 
