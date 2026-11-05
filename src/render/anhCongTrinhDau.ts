@@ -45,7 +45,7 @@ export const ANH_DAU: Record<string, string> = {
   ruongNep: 'b5c0cb1f',
   thanh: 'da61fb35',
   traiCung: 'f5b523eb',
-  traiGiao: '7943838c',
+  traiGiao: '340ce1e4',
   traiNo: 'b9c1bc50',
   uNo: '087c8508',
   vuon: '3bce8891',

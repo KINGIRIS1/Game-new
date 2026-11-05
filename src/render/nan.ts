@@ -508,6 +508,21 @@ interface Part {
   inv: number[] | null;
 }
 
+/** Hòa các khối theo thứ tự đắp, khoét: khoảng cách tại một điểm ở tư thế nặn. */
+function blendParts(parts: readonly Part[], x: number, y: number, z: number): number {
+  let d = Infinity;
+  for (const p of parts) {
+    const di = evalAt(p.f, p.inv, x, y, z);
+    let k = p.k;
+    if (p.near) {
+      const r = Math.hypot(x - p.near.c[0], y - p.near.c[1], z - p.near.c[2]);
+      k *= 1 - THREE.MathUtils.smoothstep(r, p.near.r, p.near.r + p.near.fade);
+    }
+    d = p.sub ? smax(d, -di, k) : d === Infinity ? di : smin(d, di, k);
+  }
+  return d;
+}
+
 interface Paint {
   f: Sdf;
   color: number;
@@ -607,19 +622,13 @@ export class Clay {
   }
 
   /** Khoảng cách ở tư thế nặn. */
-  readonly dist: Sdf = (x, y, z) => {
-    let d = Infinity;
-    for (const p of this.parts) {
-      const di = evalAt(p.f, p.inv, x, y, z);
-      let k = p.k;
-      if (p.near) {
-        const r = Math.hypot(x - p.near.c[0], y - p.near.c[1], z - p.near.c[2]);
-        k *= 1 - THREE.MathUtils.smoothstep(r, p.near.r, p.near.r + p.near.fade);
-      }
-      d = p.sub ? smax(d, -di, k) : d === Infinity ? di : smin(d, di, k);
-    }
-    return d;
-  };
+  readonly dist: Sdf = (x, y, z) => blendParts(this.parts, x, y, z);
+
+  /** Trường khoảng cách chỉ gồm các khối của những xương này (vd. hông và chân để may khố, không chạm tay buông bên hông). */
+  only(bones: readonly string[]): Sdf {
+    const parts = this.parts.filter((p) => bones.includes(p.bone));
+    return (x, y, z) => blendParts(parts, x, y, z);
+  }
 
   /** Trường khoảng cách nhìn từ tư thế gốc của xương `bone`: dựng đồ gắn cứng vào xương ấy (vòng tay, xà cạp). */
   field(bone: string): Sdf {

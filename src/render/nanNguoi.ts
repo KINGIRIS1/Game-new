@@ -16,6 +16,7 @@ import {
   flatBelow,
   hit,
   paintGeometry,
+  radiusAt,
   ribbon,
   slab,
   smax,
@@ -82,16 +83,33 @@ function aPose(bone: 'armL' | 'armR'): THREE.Matrix4 {
 
 // ---------- Thân ----------
 
-/** Khố: bầu dục ôm hông, nở dần xuống dưới, xếp nếp. `u` 0 ở cạp, 1 ở gấu. */
-function skirtRadius(theta: number, u: number): number {
-  const k = Math.pow(u, 1.3);
-  const ax = 0.106 + 0.042 * k;
-  const az = 0.084 + 0.038 * k;
-  const r = (ax * az) / Math.hypot(az * Math.cos(theta), ax * Math.sin(theta));
-  return r + 0.0035 * Math.sin(12 * theta) * u;
-}
 const SKIRT_TOP = 0.418;
 const SKIRT_HEM = 0.19;
+
+/**
+ * Bán kính khố theo góc `theta` (0 sang phải, π/2 ra trước) và `u` (0 ở cạp, 1 ở gấu). Khố buông như vải: dò mặt hông,
+ * đùi (`hip`, không gồm tay buông bên hông), ở mỗi góc lấy chỗ rộng nhất từ cạp xuống tới đó cho vải không bó vào giữa
+ * hai đùi, nới ra một chút, nở nhẹ xuống gấu, xếp nếp.
+ */
+function skirtFit(hip: Sdf): (theta: number, u: number) => number {
+  const STEPS = 16;
+  const memo = new Map<number, number[]>();
+  return (theta, u) => {
+    let prof = memo.get(theta);
+    if (!prof) {
+      prof = [];
+      let m = 0;
+      for (let i = 0; i <= STEPS; i++) {
+        const y = SKIRT_TOP + (SKIRT_HEM - SKIRT_TOP) * (i / STEPS);
+        m = Math.max(m, radiusAt(hip, [0, y, 0], [Math.cos(theta), 0, Math.sin(theta)], 0.3));
+        prof.push(m);
+      }
+      memo.set(theta, prof);
+    }
+    const k = THREE.MathUtils.clamp(u, 0, 1);
+    return prof[Math.round(k * STEPS)] + 0.01 + 0.014 * k + 0.0035 * Math.sin(12 * theta) * k;
+  };
+}
 
 interface NanBody {
   pieces: Piece[];
@@ -159,6 +177,7 @@ function sculptBody(look: BodyLook, detail: number): NanBody {
   const pieces: Piece[] = [clayPiece(mesh)];
 
   // Khố có dải hoa văn, xếp nếp, nở dần xuống gấu; vạt trước, vạt sau buông dài.
+  const skirtR = skirtFit(clay.only(['hips', 'legL', 'legR']));
   const cloth = look.cloth;
   const skirt = wrap(
     f,
@@ -172,7 +191,7 @@ function sculptBody(look: BodyLook, detail: number): NanBody {
       rmax: 0.3,
       lip: 0.01,
       uvRepeat: look.pattern === false ? undefined : 1,
-      radius: (rs, th, t) => Math.max(rs + 0.01, skirtRadius(th, t)),
+      radius: (_rs, th, t) => skirtR(th, t),
     },
     cloth,
   );
@@ -188,7 +207,7 @@ function sculptBody(look: BodyLook, detail: number): NanBody {
       const P = (u: number, v: number): V3 => {
         const th = mid + (u - 0.5) * 2 * half;
         const y = SKIRT_HEM + 0.03 - v * len;
-        const r = skirtRadius(th, 1) - 0.004 + v * 0.02 + 0.006 * Math.sin(u * Math.PI);
+        const r = skirtR(th, 1) - 0.004 + v * 0.02 + 0.006 * Math.sin(u * Math.PI);
         // Gấu vạt hơi tròn.
         const yy = y + v * v * 0.012 * (1 - Math.sin(u * Math.PI));
         return [Math.cos(th) * r, yy, Math.sin(th) * r];
@@ -200,11 +219,11 @@ function sculptBody(look: BodyLook, detail: number): NanBody {
       pieces.push(rigid(slab(P, inward, Math.max(2, Math.round(4 * detail)), 3, 0.01, cloth), 'hips'));
     }
   }
-  // Đai lưng ôm eo, đè lên cạp khố.
+  // Đai lưng ôm eo, đè lên cạp khố; đo trên thân, không tính tay buông bên hông.
   pieces.push(
     rigid(
       wrap(
-        f,
+        clay.only(['chest', 'hips']),
         {
           a: [0, 0.432, 0],
           b: [0, 0.382, 0],
@@ -214,7 +233,7 @@ function sculptBody(look: BodyLook, detail: number): NanBody {
           rings: 1,
           rmax: 0.25,
           lip: 0.008,
-          radius: (rs, th) => Math.max(rs, skirtRadius(th, 0)) + 0.009,
+          radius: (rs, th) => Math.max(rs, skirtR(th, 0)) + 0.009,
         },
         look.belt ?? C.bronze,
       ),
