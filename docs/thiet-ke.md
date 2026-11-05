@@ -51,6 +51,7 @@ Tài liệu này ghi lại các quyết định đã chốt với chủ dự án
     - quân ta buộc tóc bằng dải vải đỏ dưới mũ lông chim, không dùng vành đồng, để nhìn xa không lẫn với mũ trụ đồng của giặc Ân;
     - mặt quân ta và dân có đốm sáng trong mắt và má hồng; giặc và tướng có mày xếch;
     - lính, thú, dân dựng ít mặt hơn tướng cho nhẹ máy (số mặt nhân 0,7, 0,75, 0,6), nên kinh đô gần như không nặng thêm mà số lệnh vẽ giảm.
+    - **bản thử chờ chủ dự án duyệt** (PR nháp): giáo binh có thân **nặn liền khối** thay cho khối hộp ghép. Thân, tay, chân, cổ, đầu là một mặt cong liền (nặn bằng hàm khoảng cách, hòa mềm chỗ vai, hông, cổ), da ở khớp uốn theo hai xương; mặt, tóc, hoa văn vẽ sắc nét trên mặt cong; khố có nếp và vạt trước sau; lông chim thuôn như lá, có sống lông. Giữ nguyên nhận diện: khố đỏ hoa văn, đai đồng, gương đồng hộ tâm, băng đỏ, mũ lông chim. Duyệt thì làm tiếp các nhân vật khác.
   - bảng màu: nền kem như giấy, đất vàng ô liu, nước xanh lam đục, điểm nhấn đồng, đỏ son và mực đen.
 - Phong cách này được chọn qua bản dùng thử so sánh 4 phương án: khối hộp ban đầu, voxel tinh xảo, đồ chơi bo tròn, và Nét Đông Sơn. Cả bộ dùng thử được cất ở branch `prototype/phong-cach-hinh-anh`.
 - Màn hình dọc, camera isometric, kéo và phóng to bằng chạm. Giao diện bằng HTML đặt đè lên cảnh 3D.

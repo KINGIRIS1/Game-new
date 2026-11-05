@@ -1,5 +1,6 @@
 // Khung xương dựng bằng code. Mỗi khối hình gắn cứng vào một xương ("rigid skinning"): cả người vẫn gộp thành
 // một mesh cho mỗi chất liệu như ToonModel, nên số lệnh vẽ không tăng, mà đầu, tay, chân, vũ khí xoay được quanh khớp.
+// Hình nặn liền khối (nan.ts) thì mỗi đỉnh mang sẵn trọng số tới bốn xương, pha dần ở khớp (`skinned`).
 // Viền mực cũng là SkinnedMesh dùng chung bộ xương, nên chạy theo động tác.
 
 import * as THREE from 'three';
@@ -31,6 +32,8 @@ export interface RigShape<B extends string> {
   defs: Record<B, BoneDef<B>>;
   names: B[];
   parts: { geo: THREE.BufferGeometry; mat: THREE.Material }[];
+  /** Viền mực đã dựng (gộp mọi chất liệu), giữ lại khi một hình dùng cho nhiều nhân vật. */
+  outline?: THREE.BufferGeometry;
 }
 
 export type Bones<B extends string> = Record<B, THREE.Bone>;
@@ -64,16 +67,51 @@ export interface Act {
 
 export type Poser = (a: Act) => void;
 
+export type RigSlot = (typeof SLOTS)[number];
+
 /** Gom khối hình theo xương, rồi gộp thành `RigShape`. */
 export class RigBuilder<B extends string> {
   private readonly slots = new Map<B, RigSlots>();
+  /** Hình có trọng số sẵn (thân nặn), theo chất liệu; `skinIndex` đã trỏ vào thứ tự xương của `defs`. */
+  private readonly skins: Record<RigSlot, THREE.BufferGeometry[]> = { plain: [], band: [], drum: [], glow: [] };
   /** Khung đang đặt bằng `place` (dời, đổi cỡ cả một nhóm khối); null là tọa độ mô hình. */
   private base: THREE.Matrix4 | null = null;
   /** `detail`: độ chi tiết của mọi khối (xem `ShapeBuilder.detail`). */
   constructor(
     private readonly defs: Record<B, BoneDef<B>>,
-    private readonly detail = 1,
+    readonly detail = 1,
   ) {}
+
+  /**
+   * Thêm hình đã có trọng số xương (thân nặn liền khối): `skinIndex` của `geo` trỏ vào `bones` (tên xương).
+   * Hình được chép, đặt theo khung `place` đang dùng. Cần `position`, `normal`, `color`; `uv` nếu chất liệu có hoa văn.
+   */
+  skinned(slot: RigSlot, geo: THREE.BufferGeometry, bones: readonly string[]): void {
+    const names = Object.keys(this.defs);
+    const map = bones.map((b) => {
+      const i = names.indexOf(b);
+      if (i < 0) throw new Error(`Khung xương không có xương ${b}`);
+      return i;
+    });
+    const g = new THREE.BufferGeometry();
+    for (const a of ['position', 'normal', 'color', 'skinWeight']) g.setAttribute(a, geo.getAttribute(a).clone());
+    const n = g.getAttribute('position').count;
+    const uv = geo.getAttribute('uv');
+    if (slot === 'band' || slot === 'drum') g.setAttribute('uv', uv ? uv.clone() : new THREE.BufferAttribute(new Float32Array(n * 2), 2));
+    const src = geo.getAttribute('skinIndex');
+    const index = new Uint16Array(n * 4);
+    for (let v = 0; v < n; v++) for (let c = 0; c < 4; c++) index[v * 4 + c] = map[src.getComponent(v, c)] ?? 0;
+    g.setAttribute('skinIndex', new THREE.Uint16BufferAttribute(index, 4));
+    if (this.base) {
+      g.applyMatrix4(this.base);
+      const nor = g.getAttribute('normal');
+      for (let v = 0; v < n; v++) {
+        const l = Math.hypot(nor.getX(v), nor.getY(v), nor.getZ(v)) || 1;
+        nor.setXYZ(v, nor.getX(v) / l, nor.getY(v) / l, nor.getZ(v) / l);
+      }
+    }
+    this.skins[slot].push(g);
+  }
 
   /** Các khối vẽ sau đây gắn vào xương `b`. Tọa độ vẫn là tọa độ mô hình ở tư thế gốc, như ToonModel. */
   on(b: B): RigSlots {
@@ -137,6 +175,8 @@ export class RigBuilder<B extends string> {
         g.setAttribute('skinWeight', new THREE.Float32BufferAttribute(weight, 4));
         geos.push(g);
       });
+      geos.push(...this.skins[k]);
+      this.skins[k] = [];
       if (!geos.length) continue;
       const geo = mergeGeometries(geos, false);
       for (const g of geos) g.dispose();
@@ -226,7 +266,8 @@ export function skinRig<B extends string>(shape: RigShape<B>, ink = inkThin): { 
     group.add(mesh);
   };
   for (const p of shape.parts) add(p.geo, p.mat, true);
-  add(skinnedOutline(shape.parts.map((p) => p.geo)), ink, false);
+  shape.outline ??= skinnedOutline(shape.parts.map((p) => p.geo));
+  add(shape.outline, ink, false);
   group.userData.bones = bones;
   return { group, bones };
 }
@@ -242,17 +283,28 @@ export function bakeRig<B extends string>(shape: RigShape<B>, pose?: (bones: Bon
   const normals = mats.map((m) => new THREE.Matrix3().getNormalMatrix(m));
   const out = new THREE.Group();
   const v3 = new THREE.Vector3();
+  const p = new THREE.Vector3();
+  const n = new THREE.Vector3();
   for (const part of shape.parts) {
     const g = part.geo.clone();
     const pos = g.getAttribute('position');
     const nor = g.getAttribute('normal');
     const bone = g.getAttribute('skinIndex');
+    const weight = g.getAttribute('skinWeight');
     for (let v = 0; v < pos.count; v++) {
-      const k = bone.getX(v);
-      v3.fromBufferAttribute(pos, v).applyMatrix4(mats[k]);
-      pos.setXYZ(v, v3.x, v3.y, v3.z);
-      v3.fromBufferAttribute(nor, v).applyNormalMatrix(normals[k]);
-      nor.setXYZ(v, v3.x, v3.y, v3.z);
+      // Đỉnh gắn nhiều xương (thân nặn) thì pha các phép biến đổi theo trọng số.
+      p.set(0, 0, 0);
+      n.set(0, 0, 0);
+      for (let c = 0; c < 4; c++) {
+        const w = weight.getComponent(v, c);
+        if (w <= 0) continue;
+        const k = bone.getComponent(v, c);
+        p.addScaledVector(v3.fromBufferAttribute(pos, v).applyMatrix4(mats[k]), w);
+        n.addScaledVector(v3.fromBufferAttribute(nor, v).applyNormalMatrix(normals[k]), w);
+      }
+      pos.setXYZ(v, p.x, p.y, p.z);
+      n.normalize();
+      nor.setXYZ(v, n.x, n.y, n.z);
     }
     g.deleteAttribute('skinIndex');
     g.deleteAttribute('skinWeight');

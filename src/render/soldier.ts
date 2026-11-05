@@ -28,8 +28,9 @@ import {
   type Human,
   type HumanRig,
 } from './body';
+import { nanLacViet } from './nanNguoi';
 import { C } from './palette';
-import { RigBuilder, bakeRig, skinRig, type Act, type BoneDef, type Bones, type Poser } from './rig';
+import { RigBuilder, bakeRig, skinRig, type Act, type BoneDef, type Bones, type Poser, type RigShape } from './rig';
 import type { ShapeBuilder } from './shapes';
 import {
   CO_LENH_TOP,
@@ -216,7 +217,7 @@ const SPECS: Record<SoldierKind, Spec> = {
     style: 'spear',
     shield: true,
     draw: (r, tier) => {
-      lacViet(r, true, tier);
+      nanLacViet(r, true, tier);
       r.local('hand', GRIP_R, null, (s) => spear(s, tier));
       // Khiên tròn mặt trống đồng ở cẳng tay trái; bậc 2 viền sắt và tua đỏ; bậc 3 to hơn, viền đồng vàng, hai tua.
       r.local('armL', [-0.2, 0.39, 0.06], null, (s) => drumShield(s, tier >= 2, tier >= 3 ? 0.185 : 0.165, tier >= 3));
@@ -754,11 +755,22 @@ function poseSoldier(spec: Spec, b: Human, a: Act): void {
   spec.after?.(b as unknown as Bones<string>, a);
 }
 
-function shapeOf(kind: SoldierKind, tier: number) {
-  const spec = SPECS[kind];
-  const r = new RigBuilder<string>({ ...HUMAN, ...spec.bones }, DETAIL);
-  spec.draw(r as unknown as HumanRig, tier);
-  return r.build();
+/**
+ * Hình của mỗi loại lính, mỗi bậc dựng một lần rồi dùng chung cho mọi lính cùng loại (trận có vài chục lính). Lính
+ * bị gỡ thì hình trả khỏi GPU, lần vẽ sau three.js tự nạp lại.
+ */
+const shapes = new Map<string, RigShape<string>>();
+function shapeOf(kind: SoldierKind, tier: number): RigShape<string> {
+  const key = `${kind}:${tier}`;
+  let shape = shapes.get(key);
+  if (!shape) {
+    const spec = SPECS[kind];
+    const r = new RigBuilder<string>({ ...HUMAN, ...spec.bones }, DETAIL);
+    spec.draw(r as unknown as HumanRig, tier);
+    shape = r.build();
+    shapes.set(key, shape);
+  }
+  return shape;
 }
 
 // ---------- Người cưỡi ----------
