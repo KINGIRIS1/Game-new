@@ -2,8 +2,8 @@
 // và trận ngoài bãi (trong cảnh bãi chiến). Tọa độ trận cộng `offset` thành tọa độ trong nhóm.
 
 import * as THREE from 'three';
-import { heroSetups, type Battle, type FighterKind } from '../game/battle';
-import { FIRE, HIEU_TRIEU, HILL, LIEN_CHAU, MA_VIEN_VOLLEY, RALLY_BEAT, ROCKS, SKILLS, TT_WAVE, type NuTuongId, type UnitType } from '../game/defs';
+import { heroSetups, type Battle, type Fighter, type FighterKind } from '../game/battle';
+import { FIRE, HIEU_TRIEU, HILL, LIEN_CHAU, MA_VIEN_VOLLEY, RALLY_BEAT, ROCKS, SKILLS, SWIMMERS, TT_WAVE, type NuTuongId, type UnitType } from '../game/defs';
 import { isBeast, makeBeast, makeRuaVang } from './beasts';
 import { isMonster, makeMonster } from './monsters';
 import { makeAnDuong, makeCaoLo, makeGiong, makeNuTuong, makeSonTinh, makeThuyTinh, makeTrungNhi, makeTrungTrac } from './heroes';
@@ -177,6 +177,8 @@ const SCALE: Partial<Record<FighterKind, number>> = {
   trungNhi: 0.75,
   toDinh: 1,
 };
+/** Thứ đi dưới nước: lâu thuyền, lính còn trên thuyền, thủy quái. Qua ô cầu thì đi dưới gầm, không lên mặt cầu. */
+const inWater = (f: Fighter): boolean => f.kind === 'lauThuyen' || f.state === 'aboard' || (SWIMMERS as readonly FighterKind[]).includes(f.kind);
 /** Nữ tướng phó tướng đứng sau hàng hậu: cỡ như tướng đi bộ, nhỏ hơn Hai Bà trên voi. */
 const NU_SCALE = 0.95;
 /** Nỏ thần: mũi tên vàng bay vút lên trong chừng này giây, rồi hóa mưa tên rơi xuống từng tên giặc. */
@@ -417,14 +419,15 @@ export class BattleView {
 
   /**
    * `scale`: phóng to lính so với cỡ trong kinh đô (bãi chiến nhìn gần hơn cần lính to hơn).
-   * `heightAt`: chỗ đứng (độ cao) tại tọa độ trận, cho kinh đô có đất bậc thang và nước lũ.
+   * `heightAt`: chỗ đứng (độ cao) tại tọa độ trận, cho kinh đô có đất bậc thang, nước lũ và cầu qua sông. `wet`: thứ đi
+   *   dưới nước (thuyền, lính còn trên thuyền, thủy quái), dưới gầm cầu thì vẫn ở mặt sông chứ không lên mặt cầu.
    * `drumAt`: mặt trống của Lạc tướng (tọa độ trận), nơi sóng trống tỏa ra. Không có thì sóng tỏa từ giữa quân ta.
    */
   constructor(
     private readonly root: THREE.Object3D,
     private readonly offset: { x: number; z: number },
     private readonly scale = 1,
-    private readonly heightAt: (x: number, z: number) => number = () => 0,
+    private readonly heightAt: (x: number, z: number, wet?: boolean) => number = () => 0,
     private readonly drumAt?: { x: number; z: number },
   ) {}
 
@@ -594,7 +597,7 @@ export class BattleView {
         this.root.add(obj);
         this.boats[i] = obj;
       }
-      obj.position.set(b.x + ox, this.heightAt(b.x, b.z) + 0.26 + Math.sin(this.time * 2.4 + i) * 0.03, b.z + oz);
+      obj.position.set(b.x + ox, this.heightAt(b.x, b.z, true) + 0.26 + Math.sin(this.time * 2.4 + i) * 0.03, b.z + oz);
     });
   }
 
@@ -645,7 +648,7 @@ export class BattleView {
       obj.position.x = f.x + ox;
       obj.position.z = f.z + oz;
       obj.rotation.y = f.face;
-      const base = this.heightAt(f.x, f.z);
+      const base = this.heightAt(f.x, f.z, inWater(f));
       // Chỉ Dời non mới mọc đá; giặc choáng vì Voi xung trận thì không.
       this.syncRocks(view, hasRocks ? (f.stun ?? 0) : 0, f.id, dt);
       this.syncAura(view, f.side === 'ta' && f.state !== 'dead' && battle.rally > 0 && !battle.outcome);
@@ -783,7 +786,7 @@ export class BattleView {
       if (f.state === 'aboard') {
         // Thủy binh còn trên thuyền: đứng trên sàn thuyền, nhấp nhô theo thuyền.
         const boat = f.boat !== undefined ? battle.boats[f.boat] : undefined;
-        obj.position.y = this.heightAt(f.x, f.z) + 0.26 + 0.2 * this.scale + (boat ? Math.sin(this.time * 2.4 + f.boat!) * 0.03 : 0);
+        obj.position.y = this.heightAt(f.x, f.z, true) + 0.26 + 0.2 * this.scale + (boat ? Math.sin(this.time * 2.4 + f.boat!) * 0.03 : 0);
         obj.rotation.x = 0;
         continue;
       }
@@ -1057,7 +1060,7 @@ export class BattleView {
       spout.add(mesh, outlineOf(mesh.geometry, inkThin));
       spout.scale.set(1, 0.01, 1);
       g.add(spout);
-      g.position.set(f.x + ox, this.heightAt(f.x, f.z), f.z + oz);
+      g.position.set(f.x + ox, this.heightAt(f.x, f.z, true), f.z + oz);
       g.scale.setScalar(this.scale);
       this.root.add(g);
       this.whirls.push({ group: g, rings, spout, age: 0 });

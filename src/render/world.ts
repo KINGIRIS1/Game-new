@@ -450,7 +450,7 @@ export class World {
   private readonly footprint: THREE.Mesh;
   private readonly selection: THREE.LineLoop;
   private panGoal: THREE.Vector3 | null = null;
-  private readonly raidView = new BattleView(this.scene, { x: -HALF, z: -HALF }, 1, (x, z) => this.fighterY(x, z));
+  private readonly raidView = new BattleView(this.scene, { x: -HALF, z: -HALF }, 1, (x, z, wet) => this.fighterY(x, z, wet));
   /** Bãi chiến phó bản, dựng khi cần lần đầu. */
   private field?: Battlefield;
   /** Đang xem bãi chiến: chỗ camera nhìn kinh đô trước đó, để trả về sau trận. */
@@ -887,12 +887,16 @@ export class World {
     return this.groundY(tx, tz);
   }
 
-  /** Chỗ lính đứng trong trận giữ kinh đô (tọa độ trận): mặt đất, hay ngập nửa người dưới nước. */
-  private fighterY(x: number, z: number): number {
+  /**
+   * Chỗ lính đứng trong trận giữ kinh đô (tọa độ trận): mặt đất, mặt cầu, hay ngập nửa người dưới nước. `wet`: thứ đi
+   * dưới nước (thuyền, thủy quái) qua ô cầu thì đi dưới gầm, vẫn ở mặt sông.
+   */
+  private fighterY(x: number, z: number, wet = false): number {
     const tx = Math.floor(x);
     const tz = Math.floor(z);
-    const inRiver = tx < 0 || tz < 0 || tx >= GRID || tz >= GRID || isRiver(tx, tz);
-    const ground = inRiver ? WATER_Y : this.surfaceY(x, z);
+    const deck = wet ? null : this.bridgeWalkY(x, z);
+    const inRiver = deck === null && (tx < 0 || tz < 0 || tx >= GRID || tz >= GRID || isRiver(tx, tz));
+    const ground = deck ?? (inRiver ? WATER_Y : this.surfaceY(x, z));
     const water = this.state?.raid.water ?? 0;
     const surface = water > 0 ? waterSurface(water) : WATER_Y;
     if (inRiver) return Math.max(WATER_Y, surface) - 0.3;
