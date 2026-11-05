@@ -49,16 +49,36 @@ export interface Piece {
 
 const figures = new Map<string, Piece[]>();
 
-/** Một dáng đã nặn ở dạng gửi được qua `postMessage`: worker nặn sẵn (nanSan.ts) gửi về luồng chính. */
+/**
+ * Một dáng đã nặn ở dạng gửi được qua `postMessage` hay cất vào IndexedDB: worker nặn sẵn (nanSan.ts) gửi về luồng
+ * chính, kho trình duyệt (nanKho.ts) gói lại rồi cất.
+ */
 export interface FigureData {
   key: string;
   pieces: { slot: RigSlot; bones: string[]; attrs: Record<string, { array: THREE.TypedArray; size: number; normalized: boolean }>; index: Uint16Array | Uint32Array | null }[];
 }
 
-const sent = new Set<string>();
+/** Kho các dáng đã nặn từ lần chơi trước (nanKho.ts): `take` lấy ra một dáng (rồi kho bỏ bản gói đi). */
+export interface FigureStore {
+  has(key: string): boolean;
+  take(key: string): FigureData | undefined;
+}
 
-/** Các dáng đã nặn mà chưa gửi đi (worker gọi sau mỗi việc). Mảng được chép ra, bộ nhớ đệm của worker vẫn dùng tiếp. */
-export function newFigures(): FigureData[] {
+let store: FigureStore | null = null;
+export function setFigureStore(s: FigureStore): void {
+  store = s;
+}
+
+/** Dáng đã gửi đi: ở worker là đã gửi về luồng chính, ở luồng chính là đã cất vào kho trình duyệt. */
+const sent = new Set<string>();
+/** Dáng đã dùng tới từ lần hỏi trước (`takeTouched`): worker báo mỗi việc nặn sẵn cần những dáng nào. */
+const touched = new Set<string>();
+
+/**
+ * Các dáng đã nặn mà chưa gửi đi, đánh dấu là đã gửi. `copy`: chép mảng ra (gửi qua `postMessage` thì chép, để bộ
+ * nhớ đệm của worker vẫn dùng tiếp; gói vào kho thì khỏi chép).
+ */
+export function newFigures(copy = true): FigureData[] {
   const out: FigureData[] = [];
   for (const [key, pieces] of figures) {
     if (sent.has(key)) continue;
@@ -68,36 +88,69 @@ export function newFigures(): FigureData[] {
       pieces: pieces.map((p) => ({
         slot: p.slot,
         bones: p.bones,
-        attrs: Object.fromEntries(Object.entries(p.geo.attributes).map(([n, a]) => [n, { array: (a as THREE.BufferAttribute).array.slice(), size: a.itemSize, normalized: a.normalized }])),
-        index: p.geo.index ? (p.geo.index.array.slice() as Uint16Array | Uint32Array) : null,
+        attrs: Object.fromEntries(
+          Object.entries(p.geo.attributes).map(([n, a]) => {
+            const arr = (a as THREE.BufferAttribute).array;
+            return [n, { array: copy ? arr.slice() : arr, size: a.itemSize, normalized: a.normalized }];
+          }),
+        ),
+        index: p.geo.index ? ((copy ? p.geo.index.array.slice() : p.geo.index.array) as Uint16Array | Uint32Array) : null,
       })),
     });
   }
   return out;
 }
 
-/** Nhận các dáng worker đã nặn sẵn: dáng nào luồng chính chưa có thì cất vào bộ nhớ đệm, lúc cần khỏi nặn. */
-export function addFigures(list: readonly FigureData[]): void {
-  for (const f of list) {
-    if (figures.has(f.key)) continue;
-    figures.set(
-      f.key,
-      f.pieces.map((p) => {
-        const geo = new THREE.BufferGeometry();
-        for (const [n, a] of Object.entries(p.attrs)) geo.setAttribute(n, new THREE.BufferAttribute(a.array, a.size, a.normalized));
-        if (p.index) geo.setIndex(new THREE.BufferAttribute(p.index, 1));
-        return { slot: p.slot, geo, bones: p.bones };
-      }),
-    );
-  }
+function piecesOf(f: FigureData): Piece[] {
+  return f.pieces.map((p) => {
+    const geo = new THREE.BufferGeometry();
+    for (const [n, a] of Object.entries(p.attrs)) geo.setAttribute(n, new THREE.BufferAttribute(a.array, a.size, a.normalized));
+    if (p.index) geo.setIndex(new THREE.BufferAttribute(p.index, 1));
+    return { slot: p.slot, geo, bones: p.bones };
+  });
 }
 
-/** Dựng (lần đầu) hay lấy lại các mảnh của dáng `key`, rồi gắn vào khung xương. */
+/** Nhận các dáng worker đã nặn sẵn: dáng nào luồng chính chưa có thì cất vào bộ nhớ đệm, lúc cần khỏi nặn. */
+export function addFigures(list: readonly FigureData[]): void {
+  for (const f of list) if (!figures.has(f.key)) figures.set(f.key, piecesOf(f));
+}
+
+/** Đã có dáng `key` (khóa kèm độ chi tiết), trong bộ nhớ hay trong kho trình duyệt. */
+export function hasFigure(key: string): boolean {
+  return figures.has(key) || !!store?.has(key);
+}
+
+/** Số dáng đang có trong bộ nhớ (tăng khi nặn thêm hay lấy từ kho): kho trình duyệt xem có gì mới để lưu. */
+export function figureCount(): number {
+  return figures.size;
+}
+
+/** Số dáng phải nặn và tổng thời gian nặn ở luồng này (số liệu chụp thử: kho, worker đỡ được bao nhiêu). */
+export const sculptStats = { lan: 0, ms: 0 };
+
+/** Các dáng đã dùng tới từ lần hỏi trước. */
+export function takeTouched(): string[] {
+  const out = [...touched];
+  touched.clear();
+  return out;
+}
+
+/** Dựng (lần đầu) hay lấy lại các mảnh của dáng `key`, rồi gắn vào khung xương. Kho trình duyệt có thì khỏi nặn. */
 export function figure(r: HumanRig, key: string, make: (detail: number) => Piece[]): void {
   const k = `${key}@${r.detail}`;
+  touched.add(k);
   let pieces = figures.get(k);
   if (!pieces) {
-    pieces = make(r.detail);
+    const kept = store?.take(k);
+    if (kept) {
+      pieces = piecesOf(kept);
+      sent.add(k);
+    } else {
+      const t0 = performance.now();
+      pieces = make(r.detail);
+      sculptStats.lan++;
+      sculptStats.ms += performance.now() - t0;
+    }
     figures.set(k, pieces);
   }
   for (const p of pieces) r.skinned(p.slot, p.geo, p.bones);
