@@ -5,6 +5,7 @@
 // Gốc tọa độ là tâm móng, mặt trước hướng +z, đơn vị là ô đất.
 
 import * as THREE from 'three';
+import type { BridgeBanks } from '../benKia';
 import type { Job } from '../people';
 import { C } from '../palette';
 import type { ShapeBuilder } from '../shapes';
@@ -84,6 +85,8 @@ export interface Dock {
 export interface LotOpts {
   /** Ruộng đã bồi phù sa: nước ruộng đục đỏ nâu. */
   boi?: boolean;
+  /** Cầu: mặt bờ ở hai đầu cầu, để đầu cầu gác đúng lên bờ. Bỏ trống là bờ bậc 0. */
+  banks?: BridgeBanks;
 }
 
 export interface CongTrinh {
