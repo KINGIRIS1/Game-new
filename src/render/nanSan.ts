@@ -6,12 +6,23 @@ import type { NuTuongId } from '../game/defs';
 import { isBeast, makeBeast } from './beasts';
 import { makeDolphin, makeWhale } from './caBien';
 import { makeNuTuong } from './heroes';
+import type { FigureData } from './nanNguoi';
 import { makeFighter } from './models';
 import { isMonster, makeMonster } from './monsters';
 import { isSoldier, makeSoldier } from './soldier';
 
 /** Một người đánh (loại, bậc binh khí), một nữ tướng cầm cờ, hay cá ngoài biển. */
 export type Job = readonly ['danh', FighterKind, number] | readonly ['nu', NuTuongId] | readonly ['ca', 'whale' | 'dolphin'];
+
+/**
+ * Worker làm xong một việc: các dáng mới nặn, và mọi dáng việc ấy cần (kể cả dáng đã nặn ở việc trước; null nếu việc
+ * hỏng giữa chừng).
+ */
+export interface JobDone {
+  job: string;
+  keys: string[] | null;
+  figs: FigureData[];
+}
 
 export function runJob(j: Job): void {
   if (j[0] === 'nu') makeNuTuong(j[1]);

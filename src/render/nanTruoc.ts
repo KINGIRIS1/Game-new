@@ -3,8 +3,16 @@
 
 import type { FighterKind } from '../game/battle';
 import { NU_TUONG, STAGES, UNITS, type NuTuongId, type UnitType } from '../game/defs';
-import { addFigures, type FigureData } from './nanNguoi';
-import type { Job } from './nanSan';
+import { demViec, ghiViec, luuSau, viecCan } from './nanKho';
+import { addFigures, hasFigure } from './nanNguoi';
+import type { Job, JobDone } from './nanSan';
+import workerUrl from './nanSan.worker.ts?worker&url';
+
+/**
+ * Phiên bản kho hình nặn (nanKho.ts): tên tệp worker của bản build có dấu nội dung, đổi khi mã nhân vật đổi (mọi
+ * tệp gọi `figure` đều nằm trong worker). Số đầu là phiên bản cách gói (nanGoi.ts). Bản dev không dùng kho.
+ */
+export const KHO_PHIEN_BAN: string | null = import.meta.env.DEV ? null : `1|${workerUrl.split('/').pop()}`;
 
 /** Tướng theo chương. */
 const HEROES: Record<number, FighterKind[]> = { 1: ['giong'], 2: ['sonTinh'], 3: ['anDuong'], 4: ['caoLo'], 5: ['trungTrac', 'trungNhi'] };
@@ -28,7 +36,6 @@ export function prewarmJobs(chapter: number, arms: Record<UnitType, number>, sea
     for (const h of HEROES[ch] ?? []) add(['danh', h, 0]);
     if (ch === 5) {
       add(['danh', 'nghiaBinh', 0]);
-      add(['danh', 'lauThuyen', 0]);
       for (const id of Object.keys(NU_TUONG) as NuTuongId[]) add(['nu', id]);
     }
   }
@@ -42,25 +49,64 @@ export function prewarmJobs(chapter: number, arms: Record<UnitType, number>, sea
 /** Việc đã giao cho worker (kể cả đang làm), để lần gọi sau chỉ giao việc mới. */
 const given = new Set<string>();
 
+/** Kho trình duyệt đã có đủ các dáng việc `id` cần (biết từ lần chơi trước), khỏi giao cho worker. */
+function daCo(id: string): boolean {
+  const keys = viecCan(id);
+  return !!keys && keys.every(hasFigure);
+}
+
+const makeWorker = () =>
+  // Bản dev: worker kiểu module; bản build (định dạng iife của Vite): kiểu thường.
+  new Worker(workerUrl, { type: import.meta.env.DEV ? 'module' : 'classic' });
+
+/** Worker mở sẵn lúc tải trang (`moSanWorker`), chờ việc. */
+let san: Worker | null = null;
+
 /**
- * Mở một worker nặn sẵn các việc trong `jobs` chưa giao lần nào (gọi lúc mở game, rồi mỗi khi sang chương, rèn binh
- * khí bậc mới). Worker xong việc thì đóng. Máy không có Worker thì thôi: luồng chính tự nặn lúc cần.
+ * Mở sẵn worker ngay khi tải trang, trước khi đọc kho và dựng cảnh: worker cần luồng chính rảnh một chút mới khởi động
+ * được, mà dựng cảnh thì chiếm luồng chính liền mấy giây.
+ */
+export function moSanWorker(): void {
+  if (san || typeof Worker === 'undefined') return;
+  try {
+    san = makeWorker();
+  } catch {
+    san = null;
+  }
+}
+
+/**
+ * Giao cho worker nặn sẵn các việc trong `jobs` chưa giao lần nào và kho trình duyệt chưa có đủ (gọi lúc mở game, rồi
+ * mỗi khi sang chương, rèn binh khí bậc mới). Worker xong việc thì đóng. Máy không có Worker thì thôi: luồng chính tự
+ * nặn lúc cần.
  */
 export function nanTruoc(jobs: readonly Job[]): void {
   if (typeof Worker === 'undefined') return;
   const fresh = jobs.filter((j) => !given.has(j.join(':')));
-  if (!fresh.length) return;
-  let worker: Worker;
+  for (const j of fresh) given.add(j.join(':'));
+  const todo = fresh.filter((j) => !daCo(j.join(':')));
+  demViec(
+    todo.map((j) => j.join(':')),
+    fresh.length - todo.length,
+  );
+  let worker = san;
+  san = null;
+  if (!todo.length) {
+    worker?.terminate();
+    return;
+  }
   try {
-    worker = new Worker(new URL('./nanSan.worker.ts', import.meta.url), { type: 'module' });
+    worker ??= makeWorker();
   } catch {
     return;
   }
-  for (const j of fresh) given.add(j.join(':'));
-  worker.onmessage = (e: MessageEvent<FigureData[] | null>) => {
-    if (e.data) addFigures(e.data);
-    else worker.terminate();
+  const w = worker;
+  w.onmessage = (e: MessageEvent<JobDone | null>) => {
+    if (!e.data) return w.terminate();
+    addFigures(e.data.figs);
+    ghiViec(e.data.job, e.data.keys);
+    luuSau();
   };
-  worker.onerror = () => worker.terminate();
-  worker.postMessage(fresh);
+  w.onerror = () => w.terminate();
+  w.postMessage(todo);
 }

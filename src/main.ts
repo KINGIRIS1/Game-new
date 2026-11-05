@@ -75,7 +75,8 @@ import { TitleDrift } from './render/camera';
 import { HALF, RESOLUTIONS, World, type Resolution } from './render/world';
 import { vi } from './text/vi';
 import { Hud, buildingName, type HudAction } from './ui/hud';
-import { nanTruoc, prewarmJobs } from './render/nanTruoc';
+import { khoNanTk, luuSau, moKhoNan } from './render/nanKho';
+import { KHO_PHIEN_BAN, moSanWorker, nanTruoc, prewarmJobs } from './render/nanTruoc';
 import { ManVao } from './ui/manVao';
 import { preloadThumbs } from './ui/xayDung';
 
@@ -127,10 +128,12 @@ async function start(): Promise<void> {
   const canvas = document.querySelector<HTMLCanvasElement>('#scene')!;
   const hudRoot = document.querySelector<HTMLElement>('#hud')!;
 
+  moSanWorker();
   let state: GameState = loadFromStorage(localStorage) ?? createInitialState(Date.now());
   setMuted(state.settings.muted);
   // Worker nặn sẵn nhân vật của chương đang chơi, song song với việc dựng cảnh, để quân mới ra trận khỏi khựng hình.
-  // Sang chương mới, rèn binh khí bậc mới, Điện ra tới biển thì nặn thêm (`prewarm` ở vòng lặp).
+  // Sang chương mới, rèn binh khí bậc mới, Điện ra tới biển thì nặn thêm (`prewarm` ở vòng lặp). Gọi sau khi mở kho
+  // hình nặn, để bỏ qua việc kho đã có đủ dáng.
   let prewarmKey = '';
   const prewarm = () => {
     const sea = dienLevel(state) >= 8;
@@ -139,7 +142,6 @@ async function start(): Promise<void> {
     prewarmKey = key;
     nanTruoc(prewarmJobs(chapterOf(state), state.arms, sea));
   };
-  prewarm();
 
   // Màn hình vào game hiện ngay; nút Chơi tiếp chỉ bấm được khi cảnh đã dựng xong (`manVao.ready`).
   const manVao = new ManVao(document.body, state.settings.muted, {
@@ -152,6 +154,9 @@ async function start(): Promise<void> {
     },
   });
   await nextPaint();
+  // Kho hình nặn của lần chơi trước (IndexedDB): dân, tướng đứng chầu lấy ra dùng ngay, khỏi nặn lại lúc dựng cảnh.
+  await moKhoNan(KHO_PHIEN_BAN);
+  prewarm();
 
   let world: World;
   try {
@@ -1403,6 +1408,7 @@ async function start(): Promise<void> {
       refreshUi();
       watchStory();
       prewarm();
+      luuSau();
     }
     if (now - lastSave > AUTOSAVE_MS) {
       lastSave = now;
@@ -1482,6 +1488,7 @@ async function start(): Promise<void> {
     seaTime: (t: number) => world.seekTime(t),
     /** Cho cá voi (`whale`) hay đàn cá heo (`dolphins`) nổi lên ngay gần chỗ camera nhìn. */
     seaLife: (kind: 'whale' | 'dolphins') => world.showSeaLife(kind),
+    khoNan: () => khoNanTk(),
         skill: (k: SkillId) => {
       const battle = state.campaign.battle ?? state.raid.battle;
       return !!battle && useSkill(battle, k);
