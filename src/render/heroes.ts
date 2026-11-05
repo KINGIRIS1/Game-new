@@ -349,8 +349,49 @@ function giongWeapon(s: Parts, bamboo: boolean): void {
 }
 
 /**
+ * Chi tiết mũ trụ sắt của Gióng (chỏm mũ là elip tâm (0; 0,845; −0,02), bán kính ngang 0,241, đứng 0,156): hai nẹp
+ * đồng chéo chia múi chỏm mũ, hàng đinh tán vàng trên vành (chừa trước trán cho nẹp vàng, ngọc đỏ), mặt trống đồng nhỏ
+ * viền đồng trên trán, đinh tán trên miếng che má, hai lớp che gáy sắt xòe dần xuống, mép dưới viền vàng.
+ */
+function giongHelmetDetail(r: HumanRig): void {
+  const head = r.on('head');
+  const hp = head.plain;
+  // Nẹp chéo: cung vòng xuyến dựng đứng, ép theo dáng chỏm mũ rồi xoay quanh trục đứng ra hai bên, khỏi lấn trán;
+  // hai đầu cung dừng trên hàng đinh của vành.
+  const END = 0.28;
+  for (const a of [-1.0, 1.0]) {
+    hp.add(new THREE.TorusGeometry(1, 0.04, 4, 14, Math.PI - 2 * END), C.bronze, 0, 0.845, -0.02, [0, a, END], [0.243, 0.158, 0.32]);
+  }
+  const RIVETS = 12;
+  for (let i = 0; i < RIVETS; i++) {
+    const t = ((i + 0.5) / RIVETS) * Math.PI * 2;
+    if (Math.abs(Math.atan2(Math.sin(t), Math.cos(t))) < 0.5) continue;
+    hp.sphere(0.012, C.gold, Math.sin(t) * 0.244, 0.868, Math.cos(t) * 0.244 - 0.02, [1, 1, 1], 5);
+  }
+  // Mặt trống đồng trên trán, ngả theo mặt chỏm mũ.
+  head.drum.cyl(0.04, 0.04, 0.012, C.gold, 0, 0.92, 0.193, [Math.PI / 2 - 0.55, 0, 0], 14);
+  hp.add(new THREE.TorusGeometry(0.043, 0.008, 5, 16), C.bronze, 0, 0.92, 0.196, [-0.55, 0, 0]);
+  for (const s of [-1, 1]) {
+    hp.sphere(0.012, C.gold, s * 0.223, 0.775, 0.03, [1, 1, 1], 5);
+    hp.sphere(0.012, C.gold, s * 0.22, 0.715, 0.045, [1, 1, 1], 5);
+  }
+  // Che gáy: hai lớp sắt nửa vòng sau gáy (mép trên lớp trên khuất dưới vành), lớp dưới sẫm hơn, xòe rộng hơn;
+  // mép dưới viền vàng.
+  const SIDE = 0.7;
+  const back = Math.PI - 2 * SIDE;
+  for (const [y, top, bottom, color] of [
+    [0.79, 0.238, 0.246, IRON],
+    [0.748, 0.244, 0.254, IRON_DARK],
+  ] as const) {
+    hp.add(new THREE.CylinderGeometry(top, bottom, 0.048, 12, 1, true, Math.PI / 2 + SIDE, back), color, 0, y, -0.02);
+  }
+  hp.add(new THREE.TorusGeometry(0.255, 0.008, 4, 12, back), C.gold, 0, 0.725, -0.02, [-Math.PI / 2, 0, SIDE]);
+}
+
+/**
  * Tráng sĩ Gióng: giáp sắt hộ tâm trống đồng, giáp vai cánh chim Lạc ba lớp lông, áo choàng đại hồng bào, mũ trụ sắt
- * 9 lông chim; mặt hiền có thần (mắt to có đốm sáng, mày rậm, miệng cười, má hồng).
+ * 9 lông chim (nẹp đồng chia múi, đinh tán vàng, mặt trống đồng trên trán, che gáy hai lớp: `giongHelmetDetail`); mặt
+ * hiền có thần (mắt to có đốm sáng, mày rậm, miệng cười, má hồng).
  */
 function drawGiongRider(r: HumanRig, bamboo: boolean): void {
   humanBody(r, {
@@ -437,6 +478,7 @@ function drawGiongRider(r: HumanRig, bamboo: boolean): void {
   }
   hp.sphere(0.028, C.red, 0, 0.845, 0.232, [1, 1.2, 0.6], 7);
   hp.cyl(0.045, 0.065, 0.06, C.gold, 0, 0.99, -0.03, undefined, 8);
+  giongHelmetDetail(r);
   featherCrown(r, [C.red, C.ember, C.cream, C.gold], { count: 9, len: 0.44, spread: 0.23 });
   r.local('hand', GRIP_R, null, (s) => giongWeapon(s, bamboo));
 }
