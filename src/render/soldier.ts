@@ -28,7 +28,6 @@ import {
   type Human,
   type HumanRig,
 } from './body';
-import { nanLacViet } from './nanNguoi';
 import { C } from './palette';
 import { RigBuilder, bakeRig, skinRig, type Act, type BoneDef, type Bones, type Poser, type RigShape } from './rig';
 import type { ShapeBuilder } from './shapes';
@@ -217,7 +216,7 @@ const SPECS: Record<SoldierKind, Spec> = {
     style: 'spear',
     shield: true,
     draw: (r, tier) => {
-      nanLacViet(r, true, tier);
+      lacViet(r, true, tier);
       r.local('hand', GRIP_R, null, (s) => spear(s, tier));
       // Khiên tròn mặt trống đồng ở cẳng tay trái; bậc 2 viền sắt và tua đỏ; bậc 3 to hơn, viền đồng vàng, hai tua.
       r.local('armL', [-0.2, 0.39, 0.06], null, (s) => drumShield(s, tier >= 2, tier >= 3 ? 0.185 : 0.165, tier >= 3));

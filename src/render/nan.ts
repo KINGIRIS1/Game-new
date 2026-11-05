@@ -523,7 +523,8 @@ function blendParts(parts: readonly Part[], x: number, y: number, z: number): nu
   return d;
 }
 
-interface Paint {
+/** Một lớp màu tô lên đất nặn (`Clay.layer`). */
+export interface Paint {
   f: Sdf;
   color: number;
   inv: number[] | null;
@@ -567,6 +568,9 @@ export class Clay {
   private readonly hides: { f: Sdf; inv: number[] | null }[] = [];
   private readonly fwd = new Map<string, THREE.Matrix4>();
   private readonly back = new Map<string, number[]>();
+  /** Hình đã dựng (trước khi tô) theo cách dựng, và đỉnh đã tính (pháp tuyến, trọng số): tô màu khác thì dùng lại. */
+  private readonly shaped = new Map<string, Tri[]>();
+  private readonly verts = new Map<string, Vert>();
 
   /** `base`: màu da; `pose`: ma trận từ tư thế gốc sang tư thế nặn của từng xương. */
   constructor(
@@ -610,8 +614,13 @@ export class Clay {
 
   /** Tô màu `color` lên phần mặt nằm trong `f` (tọa độ tư thế gốc của xương `bone`). Lớp sau đè lớp trước. */
   paint(bone: string, f: Sdf, color: number, fine = 0): this {
-    this.paints.push({ f, color, inv: this.back.get(bone) ?? null, fine });
+    this.paints.push(this.layer(bone, f, color, fine));
     return this;
+  }
+
+  /** Một lớp màu như `paint` mà không giữ lại: truyền vào `build` để tô riêng cho một dáng. */
+  layer(bone: string, f: Sdf, color: number, fine = 0): Paint {
+    return { f, color, inv: this.back.get(bone) ?? null, fine };
   }
 
   private toSculpt(bone: string, p: V3): V3 {
@@ -668,7 +677,11 @@ export class Clay {
     return out;
   }
 
-  build(spec: MeshSpec): ClayMesh {
+  /** Lưới mặt (trước khi tô), dựng một lần cho mỗi cách dựng. */
+  private shape(spec: MeshSpec): Tri[] {
+    const key = JSON.stringify(spec);
+    const done = this.shaped.get(key);
+    if (done) return done;
     const f = this.dist;
     let raw = spec.kind === 'nets' ? surfaceNets(f, spec.min, spec.max, spec.cell) : radialMesh(f, spec.c, spec.detail, spec.rmax, spec.front);
     if (spec.kind === 'nets' && spec.target) {
@@ -689,7 +702,18 @@ export class Clay {
       const hidden = (p: V3) => this.hides.some((h) => evalAt(h.f, h.inv, ...p) < 0);
       tris = tris.filter((t) => !t.p.every(hidden));
     }
-    for (const paint of this.paints) {
+    this.shaped.set(key, tris);
+    return tris;
+  }
+
+  /**
+   * Dựng hình ở tư thế gốc, tô các lớp màu đã `paint` rồi tới `extra`. Gọi lại với lớp màu khác thì dùng lại lưới và
+   * các đỉnh đã tính, chỉ cắt màu lại (một thân nặn, nhiều cách ăn mặc).
+   */
+  build(spec: MeshSpec, extra: readonly Paint[] = []): ClayMesh {
+    const f = this.dist;
+    let tris = this.shape(spec);
+    for (const paint of [...this.paints, ...extra]) {
       const g: Sdf = (x, y, z) => evalAt(paint.f, paint.inv, x, y, z);
       for (let i = 0; i < paint.fine; i++) tris = refine(tris, g);
       tris = cutPaint(tris, g, paint.color);
@@ -707,7 +731,7 @@ export class Clay {
     const col = new Float32Array(nv * 3);
     const skin = new Uint16Array(nv * 4);
     const weight = new Float32Array(nv * 4);
-    const cache = new Map<string, { p: V3; n: V3; s: number[]; w: number[] }>();
+    const cache = this.verts;
     const color = new THREE.Color();
     let v = 0;
     for (const t of tris) {
@@ -733,14 +757,14 @@ export class Clay {
             }
           }
           const l = Math.hypot(...bn) || 1;
-          vert = { p: bp, n: [bn[0] / l, bn[1] / l, bn[2] / l], s: ws.map(([b]) => boneIndex(b)), w: ws.map(([, w]) => w / sum) };
+          vert = { p: bp, n: [bn[0] / l, bn[1] / l, bn[2] / l], s: ws.map(([b]) => b), w: ws.map(([, w]) => w / sum) };
           cache.set(key, vert);
         }
         pos.set(vert.p, v * 3);
         nor.set(vert.n, v * 3);
         col.set([color.r, color.g, color.b], v * 3);
         for (let a = 0; a < vert.s.length; a++) {
-          skin[v * 4 + a] = vert.s[a];
+          skin[v * 4 + a] = boneIndex(vert.s[a]);
           weight[v * 4 + a] = vert.w[a];
         }
         v++;
@@ -753,6 +777,14 @@ export class Clay {
 interface Tri {
   p: [V3, V3, V3];
   color: number;
+}
+
+/** Một đỉnh đã tính: chỗ và pháp tuyến ở tư thế gốc, tên xương và trọng số. */
+interface Vert {
+  p: V3;
+  n: V3;
+  s: string[];
+  w: number[];
 }
 
 function evalAt(f: Sdf, m: number[] | null, x: number, y: number, z: number): number {

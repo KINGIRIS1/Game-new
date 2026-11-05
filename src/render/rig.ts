@@ -76,6 +76,8 @@ export class RigBuilder<B extends string> {
   private readonly skins: Record<RigSlot, THREE.BufferGeometry[]> = { plain: [], band: [], drum: [], glow: [] };
   /** Khung đang đặt bằng `place` (dời, đổi cỡ cả một nhóm khối); null là tọa độ mô hình. */
   private base: THREE.Matrix4 | null = null;
+  /** Việc dựng hoãn tới `build`, mỗi việc nhớ khung `place` lúc hoãn. */
+  private readonly later: (() => void)[] = [];
   /** `detail`: độ chi tiết của mọi khối (xem `ShapeBuilder.detail`). */
   constructor(
     private readonly defs: Record<B, BoneDef<B>>,
@@ -111,6 +113,20 @@ export class RigBuilder<B extends string> {
       }
     }
     this.skins[slot].push(g);
+  }
+
+  /**
+   * Hoãn một việc dựng tới lúc `build`, trong khung `place` đang dùng: vd. đầu nặn chờ biết người ấy có tóc, băng
+   * đầu, mũ lông chim không (các lời gọi vẽ ấy tới sau) rồi mới nặn một lần.
+   */
+  defer(run: () => void): void {
+    const frame = this.base;
+    this.later.push(() => {
+      const prev = this.base;
+      this.base = frame;
+      run();
+      this.base = prev;
+    });
   }
 
   /** Các khối vẽ sau đây gắn vào xương `b`. Tọa độ vẫn là tọa độ mô hình ở tư thế gốc, như ToonModel. */
@@ -156,6 +172,8 @@ export class RigBuilder<B extends string> {
   }
 
   build(): RigShape<B> {
+    for (const run of this.later.splice(0)) run();
+    for (const s of this.slots.values()) for (const k of SLOTS) s[k].frame = this.base;
     const names = Object.keys(this.defs) as B[];
     const parts: RigShape<B>['parts'] = [];
     for (const k of SLOTS) {
