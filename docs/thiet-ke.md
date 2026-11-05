@@ -51,6 +51,12 @@ Tài liệu này ghi lại các quyết định đã chốt với chủ dự án
     - quân ta buộc tóc bằng dải vải đỏ dưới mũ lông chim, không dùng vành đồng, để nhìn xa không lẫn với mũ trụ đồng của giặc Ân;
     - mặt quân ta và dân có đốm sáng trong mắt và má hồng; giặc và tướng có mày xếch;
     - lính, thú, dân dựng ít mặt hơn tướng cho nhẹ máy (số mặt nhân 0,7, 0,75, 0,6), nên kinh đô gần như không nặng thêm mà số lệnh vẽ giảm.
+  - **Nhân vật làm bằng Meshy** (chủ dự án duyệt bước 1: chỉ Gióng hiển linh đứng chầu trong sân Điện). Thử đưa mô hình làm bằng Meshy (meshy.ai) vào game ở một chỗ, xem có hợp phong cách không rồi mới tính chỗ khác:
+    - Ảnh tham chiếu là Gióng tráng sĩ dựng bằng code, nhìn thẳng, nền trắng, tô mềm không viền, dang tay chữ A, không cầm binh khí. Meshy dựng mô hình Smart Topology (`meshy-t2.5`, khoảng 6.000 mặt, ảnh màu 2K, tư thế chữ T), gắn xương rồi làm động tác đứng (Idle). Bước 1 tốn 23 credit: dựng 15, gắn xương 5, động tác 3.
+    - `scripts/mo-hinh.mjs` thu gọn tệp Meshy cho điện thoại: giữ đoạn đứng (đổi tên `dung`), bỏ kênh động tác không đổi suốt đoạn, chỉ giữ ảnh màu (thu về cạnh 1024, nén WebP), lượng tử hóa và nén lưới meshopt. Tệp ra `src/assets/mo-hinh/giong.glb`; Vite đặt tên có dấu băm nên máy người chơi tải lại khi tệp đổi.
+    - `moHinh.ts` nạp tệp lúc cần (bộ nạp GLTF tách mảnh riêng, người chơi chưa tới lúc Gióng hiển linh thì không tải), tô kiểu hoạt hình 3 dải sáng và viền mực chạy theo xương như mọi nhân vật, cao bằng bản dựng bằng code. Khóm tre đằng ngà vẫn dựng bằng code, gắn vào xương bàn tay phải; hào quang sau lưng như cũ. Lúc chưa nạp xong hay nạp hỏng thì hiện Gióng dựng bằng code.
+    - `moHinh.test.ts` canh tệp: tối đa 700 KB, 8.000 tam giác, một ảnh WebP cạnh tối đa 1024, có đoạn đứng và xương bàn tay.
+    - Bước 2 (chưa duyệt): Gióng Meshy cưỡi ngựa sắt dựng bằng code ngoài trận.
   - bảng màu: nền kem như giấy, đất vàng ô liu, nước xanh lam đục, điểm nhấn đồng, đỏ son và mực đen.
 - Phong cách này được chọn qua bản dùng thử so sánh 4 phương án: khối hộp ban đầu, voxel tinh xảo, đồ chơi bo tròn, và Nét Đông Sơn. Cả bộ dùng thử được cất ở branch `prototype/phong-cach-hinh-anh`.
 - Màn hình dọc, camera isometric, kéo và phóng to bằng chạm. Giao diện bằng HTML đặt đè lên cảnh 3D.

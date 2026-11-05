@@ -35,7 +35,7 @@ import { buildCayDaBatch, disposeCayDaBatch, makeCayDa, type CayDaPlace } from '
 import { cloudPuffs, poiMarker } from './benKia';
 import { SHORE_LAND, SeaLife, animateSea, buildSea, buildSeaMist, islandAt, shoreCap } from './bien';
 import { makeSoldier } from './soldier';
-import { makeAnDuong, makeCaoLo, makeGiong, makeLacTuong, makeNuTuong, makeSonTinh, makeTrungNhi, makeTrungTrac } from './heroes';
+import { makeAnDuong, makeCaoLo, makeGiong, makeGiongHienLinh, makeLacTuong, makeNuTuong, makeSonTinh, makeTrungNhi, makeTrungTrac } from './heroes';
 
 /** Người đứng chầu là nữ tướng (chương 5), không phải tướng chỉ huy. */
 const isNuTuong = (t: TuongId | NuTuongId): t is NuTuongId => (NU_TUONG_IDS as string[]).includes(t);
@@ -2232,7 +2232,7 @@ export class World {
       const obj = isNuTuong(t)
         ? makeNuTuong(t)
         : t === 'giong'
-          ? makeGiong('trangSi', { bamboo: true, glow: true, onFoot: true })
+          ? makeGiongHienLinh()
           : t === 'sonTinh'
             ? makeSonTinh({ glow: true })
             : t === 'anDuong'
