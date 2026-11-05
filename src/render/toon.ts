@@ -167,8 +167,7 @@ export const toonDrum = new THREE.MeshToonMaterial({ vertexColors: true, gradien
 /** Lửa, mắt ngựa sắt, hào quang: không nhận ánh sáng nên luôn rực, kể cả khi nằm trong bóng. */
 export const glowMaterial = new THREE.MeshBasicMaterial({ vertexColors: true });
 
-/** Chất liệu viền mực nét `thickness` (đơn vị của hình). */
-export function inkMaterial(thickness: number): THREE.MeshBasicMaterial {
+function inkMaterial(thickness: number): THREE.MeshBasicMaterial {
   const m = new THREE.MeshBasicMaterial({ color: C.ink, side: THREE.BackSide });
   // Viền mực kiểu "inverted hull": vẽ mặt sau, đẩy mỗi đỉnh ra ngoài theo pháp tuyến.
   m.onBeforeCompile = (shader) => {

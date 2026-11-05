@@ -30,7 +30,6 @@ import {
   type HumanRig,
 } from './body';
 import { C } from './palette';
-import { MO_HINH, moHinh } from './moHinh';
 import { RigBuilder, bakeRig, moveBones, skinRig, type Act, type BoneDef, type Bones, type Poser } from './rig';
 import { ToonModel, inkThin } from './toon';
 import {
@@ -598,29 +597,6 @@ function poseTeen(b: B, a: Act): void {
   h.hand.rotation.set(lerp(0.6, -0.3, c), 0, 0);
   h.head.rotation.x = 0.22 * c;
   gripHands(h, ARM * K_TEEN);
-}
-
-/**
- * Gióng hiển linh đứng chầu trong sân Điện: mô hình Meshy (`moHinh.ts`) cầm khóm tre đằng ngà dựng bằng code, sau
- * lưng có hào quang. Lúc mô hình chưa nạp xong thì là bản dựng bằng code như cũ.
- */
-export function makeGiongHienLinh(): THREE.Group {
-  const bamboo = new ToonModel(inkThin);
-  giongWeapon(bamboo, true);
-  const item = bamboo.group();
-  item.traverse((o) => {
-    if ((o as THREE.Mesh).isMesh && (o as THREE.Mesh).material !== inkThin) o.castShadow = true;
-  });
-  return moHinh('giong', makeGiong('trangSi', { bamboo: true, glow: true, onFoot: true }), {
-    // Như tay cầm của bản dựng bằng code (`poseGiongStand`): khóm tre hơi ngả ra trước và ra ngoài. Tay phải mô hình
-    // Meshy ở phía -x (bản dựng bằng code ở +x) nên ngả ra ngoài là quay quanh z theo chiều dương.
-    hold: { item, rot: new THREE.Euler(0.12, 0, 0.12), scale: K_GIONG },
-    // Hào quang sau đầu, cao như bản dựng bằng code: bốn phần năm quãng từ cổ (xương đầu) lên đỉnh mũ.
-    dress: (g, at) => {
-      const neck = at('Head')?.y ?? 0.75;
-      addHalo(g, neck + 0.8 * (MO_HINH.giong.height - neck), -0.38);
-    },
-  });
 }
 
 /**
