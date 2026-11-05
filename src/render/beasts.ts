@@ -772,7 +772,7 @@ function poseTurtle(b: B, a: Act): void {
 
 /** Rùa Vàng có xương: `userData.pose` cho bơi (đi) hay nằm chèo nhẹ (đứng). */
 export function makeRuaVang(): THREE.Group {
-  const r = new RigBuilder(TURTLE);
+  const r = new RigBuilder(TURTLE, DETAIL);
   drawTurtle(r);
   const { group, bones } = skinRig(r.build());
   const pose: Poser = (a) => poseTurtle(bones, a);
@@ -783,7 +783,7 @@ export function makeRuaVang(): THREE.Group {
 
 /** Rùa Vàng bản tĩnh, cho công trình. */
 export function bakeRuaVang(): THREE.Group {
-  const r = new RigBuilder(TURTLE);
+  const r = new RigBuilder(TURTLE, DETAIL);
   drawTurtle(r);
   return bakeRig(r.build(), (b) => poseTurtle(b, { act: 'stand' }));
 }
