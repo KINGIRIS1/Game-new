@@ -49,6 +49,49 @@ export interface Piece {
 
 const figures = new Map<string, Piece[]>();
 
+/** Một dáng đã nặn ở dạng gửi được qua `postMessage`: worker nặn sẵn (nanSan.ts) gửi về luồng chính. */
+export interface FigureData {
+  key: string;
+  pieces: { slot: RigSlot; bones: string[]; attrs: Record<string, { array: THREE.TypedArray; size: number; normalized: boolean }>; index: Uint16Array | Uint32Array | null }[];
+}
+
+const sent = new Set<string>();
+
+/** Các dáng đã nặn mà chưa gửi đi (worker gọi sau mỗi việc). Mảng được chép ra, bộ nhớ đệm của worker vẫn dùng tiếp. */
+export function newFigures(): FigureData[] {
+  const out: FigureData[] = [];
+  for (const [key, pieces] of figures) {
+    if (sent.has(key)) continue;
+    sent.add(key);
+    out.push({
+      key,
+      pieces: pieces.map((p) => ({
+        slot: p.slot,
+        bones: p.bones,
+        attrs: Object.fromEntries(Object.entries(p.geo.attributes).map(([n, a]) => [n, { array: (a as THREE.BufferAttribute).array.slice(), size: a.itemSize, normalized: a.normalized }])),
+        index: p.geo.index ? (p.geo.index.array.slice() as Uint16Array | Uint32Array) : null,
+      })),
+    });
+  }
+  return out;
+}
+
+/** Nhận các dáng worker đã nặn sẵn: dáng nào luồng chính chưa có thì cất vào bộ nhớ đệm, lúc cần khỏi nặn. */
+export function addFigures(list: readonly FigureData[]): void {
+  for (const f of list) {
+    if (figures.has(f.key)) continue;
+    figures.set(
+      f.key,
+      f.pieces.map((p) => {
+        const geo = new THREE.BufferGeometry();
+        for (const [n, a] of Object.entries(p.attrs)) geo.setAttribute(n, new THREE.BufferAttribute(a.array, a.size, a.normalized));
+        if (p.index) geo.setIndex(new THREE.BufferAttribute(p.index, 1));
+        return { slot: p.slot, geo, bones: p.bones };
+      }),
+    );
+  }
+}
+
 /** Dựng (lần đầu) hay lấy lại các mảnh của dáng `key`, rồi gắn vào khung xương. */
 export function figure(r: HumanRig, key: string, make: (detail: number) => Piece[]): void {
   const k = `${key}@${r.detail}`;

@@ -13,6 +13,13 @@ export type V3 = [number, number, number];
 /** Trường khoảng cách có dấu: âm ở trong, dương ở ngoài, gần bằng khoảng cách tới mặt. */
 export type Sdf = (x: number, y: number, z: number) => number;
 
+/** Cầu bao (tâm, bán kính) của các khối cơ bản: khối ở xa điểm đang xét thì `blendParts` bỏ qua, khỏi tính. */
+const bounds = new WeakMap<Sdf, readonly [number, number, number, number]>();
+function bounded(f: Sdf, c: V3, r: number): Sdf {
+  bounds.set(f, [c[0], c[1], c[2], r]);
+  return f;
+}
+
 // ---------- Hình cơ bản ----------
 
 /** Ma trận xoay ngược (3×3, theo hàng) của góc Euler như THREE.Euler; null nếu không xoay. */
@@ -24,7 +31,7 @@ function invRot(rot?: V3): number[] | null {
 
 export function sphere(c: V3, r: number): Sdf {
   const [cx, cy, cz] = c;
-  return (x, y, z) => Math.sqrt((x - cx) ** 2 + (y - cy) ** 2 + (z - cz) ** 2) - r;
+  return bounded((x, y, z) => Math.sqrt((x - cx) ** 2 + (y - cy) ** 2 + (z - cz) ** 2) - r, c, r);
 }
 
 /** Bầu dục bán kính `r` theo ba trục, xoay `rot` quanh tâm (gần đúng kiểu Inigo Quilez). */
@@ -36,7 +43,7 @@ export function ellipsoid(c: V3, r: V3, rot?: V3): Sdf {
   const d2 = d * d;
   const m = invRot(rot);
   const small = Math.min(a, b, d);
-  return (x, y, z) => {
+  const f: Sdf = (x, y, z) => {
     let px = x - cx;
     let py = y - cy;
     let pz = z - cz;
@@ -51,6 +58,7 @@ export function ellipsoid(c: V3, r: V3, rot?: V3): Sdf {
     const k1 = Math.sqrt((px / a2) ** 2 + (py / b2) ** 2 + (pz / d2) ** 2);
     return k1 < 1e-9 ? -small : (k0 * (k0 - 1)) / k1;
   };
+  return bounded(f, c, Math.max(a, b, d));
 }
 
 /** Viên nang thuôn: đầu `a` bán kính `ra`, đầu `b` bán kính `rb` (bắp tay, bắp chân, cổ). */
@@ -63,7 +71,7 @@ export function cone(a: V3, b: V3, ra: number, rb: number): Sdf {
   const rr = ra - rb;
   const a2 = l2 - rr * rr;
   const il2 = 1 / l2;
-  return (x, y, z) => {
+  const f: Sdf = (x, y, z) => {
     const pax = x - ax;
     const pay = y - ay;
     const paz = z - az;
@@ -80,6 +88,7 @@ export function cone(a: V3, b: V3, ra: number, rb: number): Sdf {
     if (Math.sign(yv) * a2 * y2 < k) return Math.sqrt(x2 + y2) * il2 - ra;
     return (Math.sqrt(x2 * a2 * il2) + yv * rr) * il2 - ra;
   };
+  return bounded(f, [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2, (a[2] + b[2]) / 2], Math.sqrt(l2) / 2 + Math.max(ra, rb));
 }
 
 /** Hộp bo góc: nửa cạnh `half`, bo `round`, xoay `rot` quanh tâm. */
@@ -89,7 +98,7 @@ export function roundBox(c: V3, half: V3, round: number, rot?: V3): Sdf {
   const hx = half[0] - round;
   const hy = half[1] - round;
   const hz = half[2] - round;
-  return (x, y, z) => {
+  const f: Sdf = (x, y, z) => {
     let px = x - cx;
     let py = y - cy;
     let pz = z - cz;
@@ -106,6 +115,7 @@ export function roundBox(c: V3, half: V3, round: number, rot?: V3): Sdf {
     const out = Math.sqrt(Math.max(qx, 0) ** 2 + Math.max(qy, 0) ** 2 + Math.max(qz, 0) ** 2);
     return out + Math.min(Math.max(qx, qy, qz), 0) - round;
   };
+  return bounded(f, c, Math.hypot(hx, hy, hz) + round);
 }
 
 /** Hợp mềm hai khoảng cách: chỗ hai khối gần nhau trong `k` thì đắp thêm cho liền, như nặn đất. */
@@ -507,10 +517,53 @@ export function simplify(mesh: RawMesh, target: number): RawMesh {
       consider(u, v);
     }
   });
-  const quality = (a: V3, b: V3, c: V3) => {
-    const n = Math.hypot(...faceNormal(a, b, c));
-    const l = dist2v(a, b) + dist2v(b, c) + dist2v(c, a);
-    return l > 0 ? (n * 3.4641) / l : 0;
+  const mark = new Int32Array(nv);
+  let stamp = 0;
+  /** Mặt `f` có lật hay méo quá không khi đỉnh `u`, `v` dời tới (x, y, z). */
+  const bad = (f: number[], u: number, v: number, x: number, y: number, z: number): boolean => {
+    // Trước khi dời: các đỉnh ở `pos`; sau khi dời: đỉnh u, v ở (x, y, z).
+    const pa = f[0] * 3;
+    const pb = f[1] * 3;
+    const pc = f[2] * 3;
+    const m0 = f[0] === u || f[0] === v;
+    const m1 = f[1] === u || f[1] === v;
+    const m2 = f[2] === u || f[2] === v;
+    const a0 = m0 ? x : pos[pa];
+    const a1 = m0 ? y : pos[pa + 1];
+    const a2 = m0 ? z : pos[pa + 2];
+    const b0 = m1 ? x : pos[pb];
+    const b1 = m1 ? y : pos[pb + 1];
+    const b2 = m1 ? z : pos[pb + 2];
+    const c0 = m2 ? x : pos[pc];
+    const c1 = m2 ? y : pos[pc + 1];
+    const c2 = m2 ? z : pos[pc + 2];
+    const ux = pos[pb] - pos[pa];
+    const uy = pos[pb + 1] - pos[pa + 1];
+    const uz = pos[pb + 2] - pos[pa + 2];
+    const wx = pos[pc] - pos[pa];
+    const wy = pos[pc + 1] - pos[pa + 1];
+    const wz = pos[pc + 2] - pos[pa + 2];
+    const n0x = uy * wz - uz * wy;
+    const n0y = uz * wx - ux * wz;
+    const n0z = ux * wy - uy * wx;
+    const ex = b0 - a0;
+    const ey = b1 - a1;
+    const ez = b2 - a2;
+    const fx = c0 - a0;
+    const fy = c1 - a1;
+    const fz = c2 - a2;
+    const n1x = ey * fz - ez * fy;
+    const n1y = ez * fx - ex * fz;
+    const n1z = ex * fy - ey * fx;
+    const l0 = Math.sqrt(n0x * n0x + n0y * n0y + n0z * n0z);
+    const l1 = Math.sqrt(n1x * n1x + n1y * n1y + n1z * n1z);
+    if (l1 < 1e-12 || (n0x * n1x + n0y * n1y + n0z * n1z) / (l0 * l1) < 0.5) return true;
+    // Tam giác đều thì chất lượng 1, dẹt lép thì gần 0.
+    const gx = c0 - b0;
+    const gy = c1 - b1;
+    const gz = c2 - b2;
+    const l = ex * ex + ey * ey + ez * ez + fx * fx + fy * fy + fz * fz + gx * gx + gy * gy + gz * gz;
+    return l <= 0 || (l1 * 3.4641) / l < 0.2;
   };
   while (count > target && size) {
     const e = pop();
@@ -523,26 +576,28 @@ export function simplify(mesh: RawMesh, target: number): RawMesh {
     const z = data[o + 4];
     if (gone[u] || gone[v] || version[u] !== data[o + 5] || version[v] !== data[o + 6]) continue;
     // Đỉnh chung của hai đầu cạnh chỉ được là hai đỉnh của hai mặt kề cạnh (giữ lưới đa tạp).
-    const nu = new Set<number>();
-    for (const fi of vf[u]) for (const w of faces[fi]) if (w !== u) nu.add(w);
-    let shared = 0;
-    for (const fi of vf[v]) for (const w of faces[fi]) if (w !== v && nu.has(w)) shared++;
+    stamp++;
     let common = 0;
-    for (const fi of vf[u]) if (faces[fi].includes(v)) common++;
+    for (const fi of vf[u]) {
+      const f = faces[fi];
+      if (f[0] === v || f[1] === v || f[2] === v) common++;
+      for (let k = 0; k < 3; k++) if (f[k] !== u) mark[f[k]] = stamp;
+    }
+    let shared = 0;
+    for (const fi of vf[v]) {
+      const f = faces[fi];
+      for (let k = 0; k < 3; k++) if (f[k] !== v && mark[f[k]] === stamp) shared++;
+    }
     if (shared / 2 > common) continue;
     // Không lật mặt, không ra tam giác quá méo.
     let ok = true;
     for (const w of [u, v]) {
       for (const fi of vf[w]) {
         const f = faces[fi];
-        if (f.includes(u) && f.includes(v)) continue;
-        const before = f.map(P) as [V3, V3, V3];
-        const after = f.map((t) => (t === u || t === v ? ([x, y, z] as V3) : P(t))) as [V3, V3, V3];
-        const n0 = faceNormal(...before);
-        const n1 = faceNormal(...after);
-        const l0 = Math.hypot(...n0);
-        const l1 = Math.hypot(...n1);
-        if (l1 < 1e-12 || (n0[0] * n1[0] + n0[1] * n1[1] + n0[2] * n1[2]) / (l0 * l1) < 0.5 || quality(...after) < 0.2) {
+        const hasU = f[0] === u || f[1] === u || f[2] === u;
+        const hasV = f[0] === v || f[1] === v || f[2] === v;
+        if (hasU && hasV) continue;
+        if (bad(f, u, v, x, y, z)) {
           ok = false;
           break;
         }
@@ -569,9 +624,16 @@ export function simplify(mesh: RawMesh, target: number): RawMesh {
     }
     vf[v].clear();
     version[u]++;
-    const near = new Set<number>();
-    for (const fi of vf[u]) for (const w of faces[fi]) if (w !== u) near.add(w);
-    for (const w of near) consider(Math.min(u, w), Math.max(u, w));
+    stamp++;
+    for (const fi of vf[u]) {
+      const f = faces[fi];
+      for (let k = 0; k < 3; k++) {
+        const w = f[k];
+        if (w === u || mark[w] === stamp) continue;
+        mark[w] = stamp;
+        consider(Math.min(u, w), Math.max(u, w));
+      }
+    }
     // Phiên bản của đỉnh lân cận đổi theo u, nên tính lại cạnh của chúng với u ở trên là đủ.
   }
   const remap = new Int32Array(nv).fill(-1);
@@ -635,13 +697,34 @@ interface Part {
   apart?: string;
   /** Ma trận xoay ngược từ tư thế nặn về tư thế gốc (3×4, theo hàng), null nếu xương không xoay. */
   inv: number[] | null;
+  /** Cầu bao của khối (tọa độ tư thế gốc), nếu biết. */
+  bound?: readonly [number, number, number, number];
 }
 
 /** Hòa các khối theo thứ tự đắp, khoét: khoảng cách tại một điểm ở tư thế nặn. */
 function blendParts(parts: readonly Part[], x: number, y: number, z: number): number {
   let d = Infinity;
   for (const p of parts) {
-    const di = evalAt(p.f, p.inv, x, y, z);
+    let px = x;
+    let py = y;
+    let pz = z;
+    const m = p.inv;
+    if (m) {
+      px = m[0] * x + m[1] * y + m[2] * z + m[3];
+      py = m[4] * x + m[5] * y + m[6] * z + m[7];
+      pz = m[8] * x + m[9] * y + m[10] * z + m[11];
+    }
+    // Khối ở xa tới mức không đổi được kết quả (khoảng cách tới cầu bao quá ngưỡng hòa) thì bỏ qua.
+    const b = p.bound;
+    if (b && d !== Infinity) {
+      const reach = (p.sub ? p.k - d : d + p.k) + b[3];
+      if (reach < 0) continue;
+      const dx = px - b[0];
+      const dy = py - b[1];
+      const dz = pz - b[2];
+      if (dx * dx + dy * dy + dz * dz > reach * reach) continue;
+    }
+    const di = p.f(px, py, pz);
     let k = p.k;
     if (p.near) {
       const r = Math.hypot(x - p.near.c[0], y - p.near.c[1], z - p.near.c[2]);
@@ -725,6 +808,7 @@ export class Clay {
       w: o.w ?? Math.max(k, 0.015),
       apart: o.apart,
       inv: this.back.get(bone) ?? null,
+      bound: bounds.get(f),
     });
     return this;
   }
@@ -737,7 +821,7 @@ export class Clay {
 
   /** Khoét bớt khối `f` (hốc mắt, kẽ ngón). */
   sub(bone: string, f: Sdf, k = 0.01): this {
-    this.parts.push({ bone, f, k, sub: true, w: 0, inv: this.back.get(bone) ?? null });
+    this.parts.push({ bone, f, k, sub: true, w: 0, inv: this.back.get(bone) ?? null, bound: bounds.get(f) });
     return this;
   }
 
