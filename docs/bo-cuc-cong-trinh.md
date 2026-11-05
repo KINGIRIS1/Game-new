@@ -621,6 +621,27 @@ V V . D D . V V
 - Thầy cúng (Lạc hầu) đứng khấn bên trái lư hương, quay vào đền; chỗ thứ hai là người dâng lễ bên đàn tế.
 - Đã vẽ (`src/render/congTrinh/denHatMon.ts`). Đã đổi khi vẽ: bỏ hai cờ đứng hai bên thềm (đâm vào diềm mái, lẫn với cờ đàn tế), thay bằng phướn đỏ, vàng trên đàn tế.
 
+## Sân trống đồng: 3×3 (đồ trang trí, đã vẽ)
+
+Bản vẽ đi kèm mục đồ trang trí trong `docs/thiet-ke.md`. Một cấp, không có người đứng.
+
+```
+C . . . . C
+. . B B . .
+. B T T B .
+. B T T B .
+L . d B . L
+. . , , . .
+```
+
+- `T` trống đồng lớn dáng Đông Sơn: chân loe, lưng thắt, tang phình, mặt rộng chìa ra, bốn đôi quai, bốn tượng cóc đồng trên mặt trống.
+- `B` bệ đá tròn hai bậc, mặt bệ dát dải hoa văn quanh chân trống; ngoài bệ là sân lát đá tròn có viền đá, ngoài sân là cỏ.
+- `d` giá dùi trống trên bệ: hai cọc gỗ gác đôi dùi đầu bọc vải đỏ.
+- `C` hai cột chim Lạc góc sau: chân đá, cột gỗ đai đồng, dải hoa văn son, chim Lạc dang cánh.
+- `L` hai bát lửa đồng ba chân hai bên lối.
+- `,` bậc đá lên bệ ở mặt trước.
+- Đã vẽ (`src/render/congTrinh/sanTrong.ts`).
+
 ## Cấp 9, 10 (chủ dự án đã duyệt, đã vẽ)
 
 Móng đã kín ở cấp 8, nên cấp 9, 10 không thêm ô con mới: mỗi loại đổi một phần sẵn có, đứng trong khối chữ của phần ấy. Mái theo cấp ghi ở mục Phong cách trong `docs/thiet-ke.md` (cấp 9 dải đồng hoa văn dưới diềm, cấp 10 chim Lạc hai đầu nóc).

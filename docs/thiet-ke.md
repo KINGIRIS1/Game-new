@@ -1010,6 +1010,7 @@ Bảng Xây dựng bày theo kiểu trưng bày (chủ dự án chọn trong ba 
 | Cây đa (gốc to, rễ phụ buông, am thờ dưới gốc) | 2×2 | 🌾 80, 🐚 60 | Điện cấp 2 | 1, 1, 2, 2, 3, 3, 4, 4 |
 | Giếng nước (thành đá ong, giá gàu, chum) | 1×1 | 🐚 20, 🪨 20 | Điện cấp 2 | 1, 2, 2, 3, 3, 4, 5, 5 |
 | Ao làng (sen, lau sậy, cầu ao) | 3×3 | 🌾 60, 🐚 60 | Điện cấp 2 | 1, 1, 1, 2, 2, 2, 3, 3 |
+| Sân trống đồng (trống đồng lớn, bốn tượng cóc, hai cột chim Lạc, hai bát lửa) | 3×3 | 🐚 200, 🪨 150, ⚒️ 30 | Điện cấp 3 | 0, 0, 1, 1, 1, 2, 2, 2 |
 | Khóm hoa (dâm bụt, cúc, mười giờ) | 1×1 | 🐚 3 | từ đầu | 10, 15, 20, 25, 30, 35, 40, 40 |
 | Bãi cỏ (thảm cỏ điểm hoa dại, liền nhau thành thảm) | 1×1 | 🐚 1 | từ đầu | 20, 30, 40, 50, 60, 70, 80, 80 |
 | Cây cau | 1×1 | 🌾 10, 🐚 5 | từ đầu | 4, 6, 8, 10, 12, 14, 16, 16 |
@@ -1017,6 +1018,7 @@ Bảng Xây dựng bày theo kiểu trưng bày (chủ dự án chọn trong ba 
 
 - Món một ô chạm từng ô để đặt như đường; cây đa, ao làng đặt như công trình (chọn chỗ rồi bấm Đặt).
 - Cây đa, ao làng vẽ theo móng cũ rồi phóng theo móng mới, chừa viền cỏ như công trình (`footScale`); tán đa chìa ra quá móng một chút như đa thật.
+- Sân trống đồng (chủ dự án chọn) đặt như cây đa, ao làng, vẽ thẳng trên móng 3×3 (`src/render/congTrinh/sanTrong.ts`, bản vẽ ở `docs/bo-cuc-cong-trinh.md`). Giá và mốc mở là tự chọn, chủ dự án có thể đổi. Điện 9, 10 giữ hai sân.
 
 **Luật chung** của đường và đồ trang trí (`isDecor` ở `defs.ts`):
 - Chỉ để nhìn, không cho thêm tài nguyên hay sức mạnh gì.

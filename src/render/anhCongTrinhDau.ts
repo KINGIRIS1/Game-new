@@ -43,6 +43,7 @@ export const ANH_DAU: Record<string, string> = {
   rom: '1cd29a52',
   ruong: 'ff969911',
   ruongNep: 'b5c0cb1f',
+  sanTrong: '57ca985d',
   thanh: 'da61fb35',
   traiCung: 'f5b523eb',
   traiGiao: 'dbbaccdc',
