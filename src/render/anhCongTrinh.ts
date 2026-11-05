@@ -68,6 +68,14 @@ export function thumbScene(kind: ThumbKind): THREE.Group {
     }
     return g;
   }
+  if (kind === 'congDe') {
+    // Cống nằm giữa hai đoạn đê, mặt trước trông ra khúc sông.
+    g.add(plinth(3, 1));
+    g.add(water(3.3, 0.8, 0, 1.05));
+    g.add(buildDikes([-1, 1].map((x) => ({ x, y: 0, z: 0, level, damaged: false }))));
+    g.add(lotModel(kind, level));
+    return g;
+  }
   const def = BUILDINGS[kind];
   const b = lotModel(kind, level);
   if (isBridge(kind)) {

@@ -12,7 +12,7 @@ import { chuong5Won, inChapter5, initialHaiBa, maVienCame } from './chuong5';
 import { advJoined, initialAdv, inChapter3, ruaVangCame, wallRings } from './coLoa';
 import { heroesFor, inChapter2, initialSon, restAfter, sonJoined } from './son';
 import { bake, datBonus, initialTet, troiBonus, updateTet, type TetState } from './tet';
-import { footprintTop, groundOf, levelFootprint, tileHeight } from './terrain';
+import { floodHits, footprintTop, groundOf, levelFootprint, tileHeight, type FloodHits } from './terrain';
 import {
   BUILDINGS,
   CA_BIEN_PER_MIN,
@@ -30,6 +30,8 @@ import {
   FIRST_FLOOD_MS,
   FIRST_LAND_MS,
   FLOOD_RECEDE_S,
+  PHU_SA_BONUS,
+  PHU_SA_TYPES,
   GIFT_IDS,
   MAX_HEIGHT,
   floodLevel,
@@ -103,6 +105,10 @@ export interface Building {
   uNo?: 'ok' | 'hu';
   /** Công trình xoay được (`canRotateType`): đã xoay mấy nấc 90° (1–3). Không có là hướng gốc. */
   rot?: number;
+  /** Cống đê đang mở: nước lũ tràn vào sau đê (`floodHits` ở `terrain.ts`). Không có là đóng. */
+  mo?: true;
+  /** Ruộng lúa, ruộng nếp được bồi phù sa ở mùa lũ vừa rồi: làm ra thêm `PHU_SA_BONUS` tới hết mùa lũ sau. */
+  boi?: true;
 }
 
 export interface RaidResult {
@@ -116,6 +122,8 @@ export interface RaidResult {
   wrecked: number[];
   /** Công trình bị nước lũ làm hư. */
   drowned: number[];
+  /** Mùa lũ: số ruộng được bồi phù sa (nước vào qua cống đang mở). */
+  boi?: number;
   stolen: Resources;
   /** Ai đã đánh kinh đô đợt này. */
   foe: Foe;
@@ -705,15 +713,21 @@ export function troopBonus(state: GameState): number {
   return templeBonus(state) + troiBonus(state);
 }
 
+/** Phần cộng thêm của phù sa: ruộng lúa, ruộng nếp được bồi ở mùa lũ vừa rồi làm ra thêm `PHU_SA_BONUS`. */
+export function phuSaBonus(b: Building): number {
+  return b.boi && PHU_SA_TYPES.includes(b.type) ? PHU_SA_BONUS : 0;
+}
+
 /**
- * Sản lượng mỗi phút của công trình `b` trong kinh đô: theo người làm, cộng đặc sản đất bên kia sông, bằng 0 khi cầu
- * sang bờ ấy hư (chưa cộng đền, phúc lành).
+ * Sản lượng mỗi phút của công trình `b` trong kinh đô: theo người làm, cộng đặc sản đất bên kia sông và phù sa, bằng 0
+ * khi cầu sang bờ ấy hư (chưa cộng đền, phúc lành).
  */
 export function outputIn(state: GameState, b: Building): Cost {
   const out = outputOf(b);
-  const k = farFactor(state, b);
+  const far = farFactor(state, b);
+  if (far === 0) return {};
+  const k = far + phuSaBonus(b);
   if (k === 1) return out;
-  if (k === 0) return {};
   for (const r of RESOURCE_IDS) if (out[r]) out[r] = out[r]! * k;
   return out;
 }
@@ -804,14 +818,15 @@ export const UNLOCK_REASON: Record<Unlock, FailReason> = {
 
 /**
  * Công trình bị thay khi dựng `type` ở (x, z): thành Cổ Loa đắp đè lên lũy tre (hay thành đất) được, lũy cũ được dỡ đi;
- * cổng thành dựng thay một đoạn lũy, thành đất hay thành Cổ Loa (ụ nỏ trên đoạn thành mất theo); trải loại đường khác
- * đè lên ô đường cũ thì đổi vật liệu. Không hoàn lại giá đoạn bị thay.
+ * cổng thành dựng thay một đoạn lũy, thành đất hay thành Cổ Loa (ụ nỏ trên đoạn thành mất theo); cống đê dựng thay
+ * một đoạn đê; trải loại đường khác đè lên ô đường cũ thì đổi vật liệu. Không hoàn lại giá đoạn bị thay.
  */
 function replacedWall(state: GameState, type: BuildingType, x: number, z: number): Building | undefined {
-  if (type !== 'thanh' && type !== 'congThanh' && !isRoad(type)) return undefined;
+  if (type !== 'thanh' && type !== 'congThanh' && type !== 'congDe' && !isRoad(type)) return undefined;
   const b = buildingAt(state, x, z);
   if (type === 'thanh') return b?.type === 'luy' ? b : undefined;
   if (type === 'congThanh') return b?.type === 'luy' || b?.type === 'thanh' ? b : undefined;
+  if (type === 'congDe') return b?.type === 'de' ? b : undefined;
   return b && isRoad(b.type) && b.type !== type ? b : undefined;
 }
 
@@ -1184,6 +1199,8 @@ export function move(state: GameState, id: number, x: number, z: number, rot?: n
   if (!check.ok) return check;
   const b = findBuilding(state, id)!;
   pay(state, moveCost(b));
+  // Ruộng dời sang đất mới thì mất phù sa đã bồi.
+  if (b.x !== x || b.z !== z) delete b.boi;
   b.x = x;
   b.z = z;
   if (rot !== undefined && canRotateType(b.type)) setRot(b, rot);
@@ -1224,8 +1241,8 @@ export function rotateBuilding(state: GameState, id: number, rot: number): Resul
 
 // ---------- Đắp đất, đắp nền ----------
 
-/** Lũy, bẫy, đê, thành, cổng thành là công trình một ô gắn với đất: muốn cao hơn thì đắp ô đất trước khi dựng. */
-const NO_RAISE: BuildingType[] = ['luy', 'bayChong', 'de', 'thanh', 'congThanh'];
+/** Lũy, bẫy, đê, cống đê, thành, cổng thành là công trình một ô gắn với đất: muốn cao hơn thì đắp ô đất trước khi dựng. */
+const NO_RAISE: BuildingType[] = ['luy', 'bayChong', 'de', 'congDe', 'thanh', 'congThanh'];
 
 export function canRaiseTile(state: GameState, x: number, z: number): Result<Cost> {
   if (!inChapter2(state)) return fail('canChuong2');
@@ -1596,6 +1613,9 @@ function finishRaid(state: GameState): void {
   if (won) raid.won += 1;
   if (flood) {
     raid.floods += 1;
+    // Phù sa: ruộng được bồi ở mùa lũ này giữ tới hết mùa lũ sau; ruộng khác mất phù sa đã có.
+    const boi = settlePhuSa(state, battle.boi ?? []);
+    if (boi) raid.lastResult.boi = boi;
     // Cầu bị lũ cuốn thì phải sửa, nhưng không tính là để mất mùa lũ.
     const lost = battle.drowned.filter((id) => {
       const b = findBuilding(state, id);
@@ -1629,6 +1649,40 @@ function finishRaid(state: GameState): void {
   raid.phase = 'idle';
   raid.battle = null;
   raid.nextAt = state.clock + RAID_EVERY_MS;
+}
+
+/**
+ * Hết một mùa lũ: ruộng lúa, ruộng nếp có tên trong `ids` (được nước qua cống bồi trong trận) mà không hư thì có phù sa,
+ * ruộng khác mất phù sa. Trả về số ruộng được bồi.
+ */
+function settlePhuSa(state: GameState, ids: number[]): number {
+  let n = 0;
+  for (const b of state.buildings) {
+    if (!PHU_SA_TYPES.includes(b.type)) continue;
+    if (ids.includes(b.id) && !b.damaged) {
+      b.boi = true;
+      n++;
+    } else delete b.boi;
+  }
+  return n;
+}
+
+/** Đóng (`mo` false) hay mở cống đê. Lúc nào cũng được, kể cả giữa mùa lũ: nước sau cống theo đó mà vào hay rút. */
+export function setCong(state: GameState, id: number, mo: boolean): Result<Building> {
+  const b = findBuilding(state, id);
+  if (!b || b.type !== 'congDe') return fail('khongTimThay');
+  if (mo) b.mo = true;
+  else delete b.mo;
+  return ok(b);
+}
+
+/**
+ * Xem trước mùa lũ tới (mực `nextFloodLevel`) với các cống như đang đóng mở: ô nào ngập, ruộng nào được bồi phù sa,
+ * công trình nào sẽ hư nếu nước lên tới đỉnh (không tính thủy quái phá đê).
+ */
+export function phuSaPreview(state: GameState): FloodHits & { level: number } {
+  const level = nextFloodLevel(state);
+  return { ...floodHits(state, level), level };
 }
 
 /** Đủ lễ vật, Sơn Tinh rước Mị Nương: Thủy Tinh nổi giận, mùa lũ đầu tiên tới sau một lúc. */

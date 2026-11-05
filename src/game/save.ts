@@ -16,6 +16,7 @@ import {
   HUAN_COST,
   MERCHANT_FIRST_MS,
   QUEST_INSERTED_V4,
+  PHU_SA_TYPES,
   RESOURCE_IDS,
   ROWS,
   STAGES,
@@ -480,7 +481,9 @@ function isValidBuildings(list: unknown): boolean {
       (b.nuTuong === undefined || (b.type === 'doanhTrai' && NU_TUONG_IDS.includes(b.nuTuong as NuTuongId))) &&
       (b.guard === undefined || (isObj(b.guard) && UNIT_TYPES.every((k) => isNum((b.guard as Raw)[k]) && ((b.guard as Raw)[k] as number) >= 0))) &&
       (b.uNo === undefined || ((b.uNo === 'ok' || b.uNo === 'hu') && b.type === 'thanh')) &&
-      (b.rot === undefined || [0, 1, 2, 3].includes(b.rot as number))
+      (b.rot === undefined || [0, 1, 2, 3].includes(b.rot as number)) &&
+      (b.mo === undefined || (b.mo === true && b.type === 'congDe')) &&
+      (b.boi === undefined || (b.boi === true && PHU_SA_TYPES.includes(b.type as BuildingType)))
     );
   });
   return ok && list.some((b: Raw) => b.type === 'dien');

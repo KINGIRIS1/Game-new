@@ -161,6 +161,7 @@ Lúc đầu mỗi cấp Điện chỉ cho phát tới một số khoảnh (lư�
 | Bẫy chông tre | 1×1 | Gây sát thương cho giặc giẫm vào |
 | Đền Phù Đổng | 4×4 | Có sau khi kết chương. Thêm 10% sản lượng mọi tài nguyên, thêm 10% máu và sức đánh cho quân ta |
 | Đê đất → Kè đá | 1×1 | Có từ chương 2. Chặn nước lũ tràn từ sông vào |
+| Cống đê | 1×1 | Có từ chương 2. Đóng thì chặn lũ như kè đá; mở thì nước lũ vào sau đê, ruộng chỉ dính nước qua cống được bồi phù sa (xem mục Phù sa: cống đê) |
 | Đền Tản Viên | 4×4 | Có sau khi kết chương 2. Lũ dâng thấp đi một bậc |
 | Thành Cổ Loa | 1×1 | Có từ chương 3. Đoạn thành đất nện cao, chắc; đắp nhiều vòng quanh Điện |
 | Cổng thành | 1×1 | Có từ chương 3, Điện 5. Cửa trong vòng tường: giặc dồn về cổng, lính trên lầu cổng bắn (xem mục Kế hoạch: cổng thành, xưởng mộc, làng chài) |
@@ -459,7 +460,7 @@ Chủ dự án đã chốt bốn điểm:
 
 ### Đê
 
-- 1×1 ô, dựng bằng cách chạm từng ô như lũy, tối đa 90 đoạn, có từ chương 2.
+- 1×1 ô, dựng bằng cách chạm từng ô như lũy, có từ chương 2. Tối đa 130 đoạn tới Điện 5, rồi 140, 150, 150, 160, 165 ở Điện 6 tới 10.
 
   | Cấp | Tên | Giá | Cao hơn mặt đất | Máu |
   |---|---|---|---|---|
@@ -467,14 +468,15 @@ Chủ dự án đã chốt bốn điểm:
   | 2 | Kè đá | 40 đất đá, 20 vỏ ốc | 3 bậc | 1500 |
 
 - Đê còn nguyên chặn nước; đê phải **liền một dải** mới chặn được. Giặc không nhắm đánh đê, nhưng đê chắn đường thì giặc phá. Đê vỡ thì nước tràn qua chỗ vỡ.
-- Khi đang đắp đê, đắp đất, hay lúc trinh sát báo lũ, những ô sẽ ngập ở mùa lũ tới được tô xanh.
+- Khi đang đắp đê, đắp đất, đặt cống, xem bảng một cống hay lúc trinh sát báo lũ, những ô sẽ ngập ở mùa lũ tới được tô xanh; ô chỉ ngập vì có cống đang mở tô vàng (xem mục Phù sa: cống đê).
 
 ### Nước lũ
 
 - Nước loang từ sông sang bốn phía, chỉ vào ô **đã khai phá** thấp hơn mực nước (bậc nền cộng chiều cao đê). Rừng chưa phát giữ đất, không ngập.
 - Công trình bị nước làm hư (như bị giặc phá, sửa tốn 30% giá) khi móng nằm trong vùng ngập và mực nước cao hơn bậc nền cộng sức chịu:
   - Điện, nhà sàn, kho thóc dựng trên cột, hai đền xây trên nền đá: chịu được 1 bậc;
-  - bến chợ thuyền, lũy, bẫy chông, đê: không sợ nước;
+  - bến chợ thuyền, lũy, bẫy chông, đê, cống đê: không sợ nước;
+  - ruộng lúa, ruộng nếp chỉ dính nước vào qua cống đang mở thì không hư mà được bồi phù sa (xem mục Phù sa: cống đê);
   - còn lại ngập là hư.
 - Cảnh 3D: nước lũ màu phù sa phủ ô ngập, nước sông và bờ bên kia dâng theo; trời tối sầm, mưa xối xả; xong trận nước rút dần trong 8 giây.
 
@@ -2420,6 +2422,48 @@ Chủ dự án yêu cầu: Điện to 10×10 hoặc hơn; sân có Vua Hùng ng�
 - Cờ hai bên sân đứng ở sau, cạnh đôi voi đá (cấp 5; cấp 8 yên gấm vàng); trống đồng trên giá cạnh hai lầu trống ở hai góc trước (cấp 6). Lạc hầu và lính gác đứng hai bên lối trong cổng. Ngày Tết cây nêu đứng góc trước bên trái, dây cờ căng tới hai cột cờ, mâm bánh bày trước bệ ngai.
 - Điện xoay thì cả sân xoay theo: tướng, cột đá thề, cảnh Tết, người trinh sát ra từ cổng.
 
+## Phù sa: cống đê (chủ dự án chọn, đã làm)
+
+Ở game khác, thiên tai chỉ có hại: chặn được thì chặn, không thì sửa. Ở đây lũ vừa là giặc vừa là lộc, như nghề lúa nước ven sông Hồng thật: đê chặn lũ, nhưng mở cống cho nước chở phù sa vào ruộng thì lúa tốt.
+
+Chủ dự án đã chốt ba điều:
+
+1. Phù sa giữ **tới hết mùa lũ sau**, như phúc lành Tết giữ tới Tết sau.
+2. Chỉ nước vào **qua cống đang mở** mới bồi phù sa. Nước tràn qua đê vỡ, cống vỡ hay tràn bờ thì ruộng vẫn **hư như cũ**.
+3. **Đóng, mở cống được cả giữa mùa lũ.**
+
+### Cống đê
+
+- Móng 1×1, một cấp, có từ chương 2 như đê. Tối đa 2 cái, Điện 9–10 được 3. Giá 200 đất đá, 120 gỗ, 60 vỏ ốc. Máu 1500, bằng kè đá.
+- Dựng trên ô trống, hay chạm vào một đoạn đê để thay đoạn ấy (như cổng thành thay lũy), không hoàn của đoạn đê. Không dựng lên lũy, thành.
+- Mới dựng thì **đóng**: chặn nước như kè đá (cao 3 bậc). **Mở** thì không chặn nước. Cống vỡ thì như đê vỡ.
+- Giặc coi cống như kè đá: không nhắm đánh, giá ô 40 trên đường đi, chắn đường thì phá. Lũ không làm hư cống. Không đắp nền được.
+- Áp mẫu có đê (Đê bao, Cổ Loa, Cổ Loa giữ sông): cống đứng vào chỗ đê của mẫu, vẫn là cống, vẫn đóng mở như cũ.
+
+### Nước êm và nước dữ
+
+- **Nước dữ** là những ô vẫn ngập khi mọi cống còn nguyên đều đóng (tràn bờ, qua đê vỡ, cống vỡ). **Nước êm** là phần chỉ ngập vì có cống đang mở.
+- Ruộng lúa, ruộng nếp: có ô nào dính nước dữ thì hư như cũ. Chỉ dính nước êm, mực nước cao hơn nền ruộng, thì không hư mà **được bồi phù sa** trong mùa lũ này.
+- Công trình khác trong vùng nước êm vẫn hư theo sức chịu như lũ thường (nhà sàn, kho, Điện chịu được 1 bậc). Đó là cái giá phải trả: chỗ nước vào chỉ nên có ruộng.
+- Đóng cống giữa trận thì nước sau cống rút ngay ở bước sau; ruộng đã được bồi trước đó vẫn tính là được bồi.
+- **Giữ được mùa lũ** vẫn tính khi chỉ có ruộng được bồi (ruộng được bồi không phải công trình bị ngập).
+
+### Phù sa
+
+- Hết mỗi mùa lũ: ruộng được bồi trong mùa này (mà không hư) có phù sa, ruộng khác mất phù sa. Trận yêu tinh, quân Triệu, quân Hán xen giữa hai mùa lũ không đụng tới phù sa.
+- Ruộng có phù sa làm ra thêm **40%** (gạo của ruộng lúa, nếp của ruộng nếp), cộng chung với đặc sản đất, đền, phúc lành.
+- Nâng cấp vẫn giữ phù sa; dời ruộng đi chỗ khác thì mất.
+- Hình: mặt nước ruộng có phù sa đổi sang màu nâu đục; nước êm trong trận lũ màu đất phù sa vàng nâu, khác nước lũ.
+
+### Giao diện
+
+- Bảng cống: đang đóng hay mở; khi mở thì xem trước mùa lũ tới (bậc, số ruộng được bồi, số công trình sẽ ngập); nút Mở cống / Đóng cống, Dỡ cống. Xem bảng cống thì cảnh tô vàng ô nước êm, tô xanh ô nước dữ.
+- Trinh sát báo lũ mà có cống mở thì dòng tin nhắc số ruộng được bồi, số công trình sẽ ngập (còn kịp đóng).
+- Bảng ruộng có phù sa có dòng "Làm ra thêm 40% tới hết mùa lũ sau". Bảng kết quả trận lũ có dòng "Phù sa bồi N ruộng".
+- Lạc hầu gợi ý một lần khi vào chương 2 (cống đê mở khóa cùng đê).
+- Không nâng bản lưu: `Building.mo` (cống mở), `Building.boi` (ruộng có phù sa), `Battle.boi`, `RaidResult.boi` đều tùy chọn (bản lưu 24).
+- Người chơi mô phỏng không dựng đê, không gặp lũ, nên nhịp tiến trình và sổ kinh tế không đổi. `phuSa.test.ts` canh luật.
+
 ## Nhịp chơi và lưu game
 
 - Nhịp chơi lai: mỗi lần mở game là một phiên ra quyết định ngắn.
@@ -2466,4 +2510,5 @@ Chủ dự án yêu cầu: Điện to 10×10 hoặc hơn; sân có Vua Hùng ng�
     **Hồ Kim Quy** (chủ dự án yêu cầu, đã làm; xem mục cùng tên): hồ 8×8 mở khi Rùa Vàng hiện lên, tường thành thêm 30% máu.
     **Điện Vua Hùng 10×10** (chủ dự án yêu cầu, đã làm; xem mục cùng tên): dời, xoay được; sân chầu có Vua Hùng ngồi ngai vàng, 14 chỗ tướng đứng chầu; bản lưu v20.
 17. **Chương 5: Hai Bà Trưng** (chủ dự án đã duyệt, đã làm cả bốn PR; xem Kế hoạch chương 5): mỗi bà cưỡi một voi ra trận với Voi xung trận và Hiệu triệu gọi nghĩa binh, quân Hán và lâu thuyền đánh kinh đô, phó bản màn 33–40 với Tô Định và Mã Viện, Đền Hát Môn, nữ tướng, thử thách màn 33–40.
-18. **Để sau**: nhạc nền.
+18. **Phù sa: cống đê** (chủ dự án chọn, đã làm; xem mục cùng tên): mở cống cho lũ vào ruộng, ruộng được bồi phù sa làm ra thêm 40% tới hết mùa lũ sau; nước vào qua cống vẫn làm hư nhà cửa.
+19. **Để sau**: nhạc nền.
