@@ -69,6 +69,9 @@ export interface BodyLook {
   bracerTrim?: number;
   /** Dáng thân khác thân thường: bụng phệ. */
   build?: 'belly';
+  /** Vòng viền ở cổ chân trên xà cạp; hộ gối (màu). */
+  greavesTrim?: number;
+  knee?: number;
   /** Viền gấu khố, váy; viền cổ áo chữ V; viền cổ tay áo. */
   hem?: number;
   collar?: number;
@@ -95,6 +98,9 @@ export interface FaceLook {
   beardLen?: number;
   /** Râu cằm chẻ hai chòm. */
   beardSplit?: boolean;
+  /** Mặt nữ: mày cong mảnh, môi son (màu). */
+  femBrows?: boolean;
+  lips?: number;
   /** Hoa tai đồng tròn xoắn ốc (phụ nữ Lạc Việt). */
   earrings?: number;
   /** Trâm cài tóc bằng đồng. */

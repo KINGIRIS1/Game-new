@@ -71,13 +71,13 @@ export function rigid(geo: THREE.BufferGeometry, bone: string, slot: RigSlot = '
 }
 
 /** Khối hình học có sẵn (vòng, đĩa, cầu nhỏ) tô một màu, gắn cứng vào xương. */
-export function prim(geo: THREE.BufferGeometry, color: number, bone: string): Piece {
+export function prim(geo: THREE.BufferGeometry, color: number, bone: string, slot: RigSlot = 'plain'): Piece {
   const g = geo.index ? geo.toNonIndexed() : geo;
   if (g !== geo) geo.dispose();
   g.deleteAttribute('uv');
   g.computeVertexNormals();
   paintGeometry(g, color);
-  return rigid(g, bone);
+  return rigid(g, bone, slot);
 }
 
 export function clayPiece(mesh: ClayMesh, slot: RigSlot = 'plain'): Piece {
@@ -387,6 +387,19 @@ function sculptBody(look: BodyLook, detail: number): Piece[] {
     if (look.armband) pieces.push(ring(0.488, 0.458, look.armband));
     if (look.wristband) pieces.push(ring(0.372, 0.33, look.wristband, 0.007));
   }
+  // Hộ gối: chỏm tròn trước gối.
+  if (look.knee !== undefined) {
+    for (const [leg, s] of [
+      ['legL', -1],
+      ['legR', 1],
+    ] as const) {
+      const c = hit(f, [s * 0.066, 0.165, 0.4], [0, 0, -1]) ?? [s * 0.066, 0.165, 0.04];
+      const g = new THREE.SphereGeometry(0.04, segs(10, detail, 8), segs(8, detail, 6));
+      g.scale(1, 0.95, 0.6);
+      g.translate(c[0], c[1], c[2] + 0.006);
+      pieces.push(prim(g, look.knee, leg));
+    }
+  }
   // Xà cạp: ôm ống chân, loe ở trên, có dải hoa văn dưới gối.
   if (look.greaves) {
     for (const [leg, s] of [
@@ -407,6 +420,8 @@ function sculptBody(look: BodyLook, detail: number): Piece[] {
           'band',
         ),
       );
+      if (look.greavesTrim !== undefined)
+        pieces.push(rigid(wrap(f, { a: [x, 0.044, -0.002], b: [x, 0.07, 0], t0: 0, t1: 1, seg: segs(14, detail), rings: 1, rmax: 0.07, lip: 0.005, radius: (rs) => rs + 0.014 }, look.greavesTrim), leg));
     }
   }
   // Dây da bắt chéo trước ngực, vắt qua vai ra sau lưng.
@@ -503,8 +518,14 @@ function facePaints(base: HeadBase, face: FaceLook, detail: number): Paint[] {
       out.push(clay.layer('head', ellipsoid(on(s * 0.114, 0.697), [0.031, 0.017, 0.03]), CHEEK, fine - 1));
     }
     if (face.brows) out.push(clay.layer('head', ellipsoid(on(s * 0.078, 0.8), [0.042, 0.012, 0.03], [0, 0, -s * 0.32]), face.browColor ?? C.ink, fine));
+    if (face.femBrows) {
+      // Mày cong mảnh: vành cung trên mắt.
+      const c = on(s * 0.074, 0.79);
+      out.push(clay.layer('head', (x, y, z) => Math.max(Math.abs(Math.hypot(x - c[0], (y - c[1] + 0.03) * 1.6) - 0.05) - 0.0055, Math.abs(z - c[2]) - 0.04, c[1] - 0.012 - y), face.browColor ?? C.ink, fine));
+    }
   }
-  out.push(clay.layer('head', ellipsoid(on(0, 0.663), [0.019, 0.006, 0.03]), MOUTH, fine));
+  if (face.lips !== undefined) out.push(clay.layer('head', ellipsoid(on(0, 0.664), [0.024, 0.009, 0.03]), face.lips, fine));
+  else out.push(clay.layer('head', ellipsoid(on(0, 0.663), [0.019, 0.006, 0.03]), MOUTH, fine));
   return out;
 }
 

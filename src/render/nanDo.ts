@@ -6,7 +6,7 @@
 
 import * as THREE from 'three';
 import type { HumanRig } from './body';
-import { Clay, cone, decal, ellipsoid, hit, normalAt, radiusAt, ribbon, slab, sphere, wrap, type Sdf, type V3 } from './nan';
+import { Clay, cone, decal, ellipsoid, hit, normalAt, paintGeometry, radiusAt, ribbon, slab, sphere, wrap, type Sdf, type V3 } from './nan';
 import { aPose, bodyOf, clayPiece, crownPieces, figure, headBase, lookOf, prim, rigid, segs, skirtOf, type CrownOpts, type Piece } from './nanNguoi';
 
 const smooth = THREE.MathUtils.smoothstep;
@@ -47,7 +47,7 @@ function tuftPiece(base: V3, dir: V3, len: number, r0: number, color: number, de
 
 // ---------- Mũ trụ, khăn ----------
 
-export interface HelmetOpts {
+export interface HelmetOpts extends Ornaments {
   color: number;
   /** Mép dưới (mặc định 0,8: ngang trán, trên tai). */
   rim?: number;
@@ -89,7 +89,8 @@ function helmetPieces(o: HelmetOpts, detail: number): Piece[] {
   const top = (hit(shell, [0, 1.6, -0.02], [0, -1, 0]) ?? [0, 1.0, 0])[1];
   const out: Piece[] = [];
   const seg = segs(28, detail, 16);
-  const folds = (th: number, t: number) => (o.cloth ? 0.0045 * Math.sin(7 * th + 9 * t) * Math.sin(Math.PI * Math.min(1, t * 1.2)) : 0);
+  // Nếp vải chỉ ở phần dưới chỏm (lên tới đỉnh thì phẳng, khỏi thành hình sao).
+  const folds = (th: number, t: number) => (o.cloth ? 0.004 * Math.sin(7 * th + 9 * t) * Math.sin(Math.PI * Math.min(1, t * 1.2)) * (1 - smooth(t, 0.25, 0.6)) : 0);
   // Chỏm: các vòng ôm từ mép lên tới đỉnh, mép dưới gấp vào thấy bề dày.
   out.push(
     rigid(
@@ -115,8 +116,9 @@ function helmetPieces(o: HelmetOpts, detail: number): Piece[] {
       bone,
     ),
   );
-  // Đỉnh: núm, gai, ống cắm tua (luôn có một núm nhỏ bịt đỉnh).
+  // Đỉnh: núm, gai, ống cắm tua (mũ cứng luôn có một núm nhỏ bịt đỉnh; khăn vải thì không).
   const tp = o.top ?? { kind: 'knob' as const, color: o.color };
+  const knob = !(o.cloth && !o.top);
   const h = tp.h ?? (tp.kind === 'spike' ? 0.16 : 0.05);
   const c0: V3 = [0, top - 0.012, -0.02];
   let g: THREE.BufferGeometry;
@@ -131,7 +133,8 @@ function helmetPieces(o: HelmetOpts, detail: number): Piece[] {
     g = new THREE.CylinderGeometry(0.03, 0.024, h, segs(10, detail, 8));
     g.translate(c0[0], c0[1] + h / 2, c0[2]);
   }
-  out.push(prim(g, tp.color, bone));
+  if (knob) out.push(prim(g, tp.color, bone));
+  else g.dispose();
   if (tp.kind !== 'knob') {
     const collar = new THREE.TorusGeometry(0.034, 0.01, 6, segs(12, detail, 8));
     collar.rotateX(Math.PI / 2);
@@ -191,6 +194,7 @@ function helmetPieces(o: HelmetOpts, detail: number): Piece[] {
     const c = hit(shell, [0, rim + 0.06, 0.6], [0, 0, -1]);
     if (c) out.push(rigid(decal(shell, c, { r: 0.05, lift: 0.008, seg: segs(16, detail, 10), rings: 1 }, o.brow), bone));
   }
+  out.push(...ornamentPieces(shell, rim + (o.band !== undefined ? (o.bandH ?? 0.035) * 0.5 : 0.05), o, detail, bone));
   return out;
 }
 
@@ -214,7 +218,7 @@ export interface KhanOpts {
 export function khan(r: HumanRig, o: KhanOpts): void {
   figure(r, keyOf(r, 'khan', o), (detail) => {
     const head = headBase(true).f;
-    const out = helmetPieces({ color: o.color, rim: 0.79, lift: 0.0, puff: 0.02, cloth: true }, detail);
+    const out = helmetPieces({ color: o.color, rim: 0.79, lift: 0.0, puff: 0.014, cloth: true }, detail);
     const n = o.rolls ?? 2;
     for (let i = 0; i < n; i++) {
       const y0 = 0.79 + i * 0.034;
@@ -232,7 +236,7 @@ export function khan(r: HumanRig, o: KhanOpts): void {
               rings: 2,
               rmax: 0.4,
               lip: 0.014,
-              radius: (rs, _th, t) => rs + 0.03 + 0.012 * Math.sin(Math.PI * t) - 0.004 * i,
+              radius: (rs, _th, t) => rs + 0.022 + 0.01 * Math.sin(Math.PI * t) - 0.004 * i,
             },
             i % 2 ? (o.roll ?? o.color) : o.color,
           ),
@@ -274,7 +278,7 @@ export function streamer(r: HumanRig, o: { from: V3; dir: V3; len: number; width
 }
 
 /** Búi tóc tròn (đỉnh đầu hay sau gáy), có dây buộc. */
-export function bun(r: HumanRig, o: { color: number; at: V3; size?: number; tie?: number }): void {
+export function bun(r: HumanRig, o: { color: number; at: V3; size?: number; tie?: number; pin?: { color: number; len?: number; tilt?: number; ends?: number } }): void {
   figure(r, keyOf(r, 'bun', o), (detail) => {
     const s = o.size ?? 0.075;
     const clay = new Clay(o.color);
@@ -286,6 +290,20 @@ export function bun(r: HumanRig, o: { color: number; at: V3; size?: number; tie?
       ring.rotateX(Math.PI / 2);
       ring.translate(o.at[0], o.at[1] - s * 0.45, o.at[2]);
       out.push(prim(ring, o.tie, 'head'));
+    }
+    if (o.pin) {
+      // Trâm cài xuyên ngang búi, hai đầu có hạt.
+      const len = o.pin.len ?? s * 3.4;
+      const tilt = o.pin.tilt ?? 0;
+      const g = new THREE.CylinderGeometry(0.008, 0.008, len, 6);
+      g.rotateZ(Math.PI / 2 - tilt);
+      g.translate(...o.at);
+      out.push(prim(g, o.pin.color, 'head'));
+      for (const k of [-1, 1]) {
+        const e = new THREE.SphereGeometry(0.02, 8, 6);
+        e.translate(o.at[0] + k * Math.cos(tilt) * len * 0.5, o.at[1] + k * Math.sin(tilt) * len * 0.5, o.at[2]);
+        out.push(prim(e, o.pin.ends ?? o.pin.color, 'head'));
+      }
     }
     return out;
   });
@@ -330,7 +348,8 @@ export function hat(r: HumanRig, o: HatOpts): void {
       pts.push(new THREE.Vector2(R, y + 0.004), new THREE.Vector2(R + 0.004, y - 0.008), new THREE.Vector2(R - 0.01, y - 0.016), new THREE.Vector2(crown * 0.9, y - 0.006));
       pts.push(new THREE.Vector2(crown * 0.8, y + H * 0.55), new THREE.Vector2(1e-3, y + H * 0.7));
     }
-    const g = new THREE.LatheGeometry(pts, segs(24, detail, 14));
+    // Đường viền đi từ chóp ra vành rồi vòng vào lòng; tiện theo chiều ngược lại cho mặt quay ra ngoài.
+    const g = new THREE.LatheGeometry(pts.reverse(), segs(24, detail, 14));
     const nonIdx = g.toNonIndexed();
     g.dispose();
     nonIdx.deleteAttribute('uv');
@@ -435,7 +454,7 @@ function armorSurface(r: HumanRig, thick: number): Sdf {
 }
 
 /** Hộ tâm tròn giữa ngực (gương đồng, mặt trống đồng), có vành và núm, nằm trên giáp dày `thick` (0 là trên da). */
-export function chestDisc(r: HumanRig, o: { color: number; r?: number; y?: number; rim?: number; drum?: boolean; boss?: number; thick?: number }): void {
+export function chestDisc(r: HumanRig, o: { color: number; r?: number; y?: number; rim?: number; drum?: boolean; boss?: number; glow?: boolean; thick?: number }): void {
   figure(r, keyOf(r, 'disc', o, true), (detail) => {
     const f = armorSurface(r, (o.thick ?? 0.016) + 0.004);
     const y = o.y ?? 0.495;
@@ -450,7 +469,7 @@ export function chestDisc(r: HumanRig, o: { color: number; r?: number; y?: numbe
       b.scale(1, 1, 0.55);
       b.lookAt(new THREE.Vector3(...n));
       b.translate(c[0] + n[0] * 0.014, c[1] + n[1] * 0.014, c[2] + n[2] * 0.014);
-      out.push(prim(b, o.boss, 'chest'));
+      out.push(prim(b, o.boss, 'chest', o.glow ? 'glow' : 'plain'));
     }
     return out;
   });
@@ -701,4 +720,512 @@ export function cloak(r: HumanRig, o: CloakOpts): void {
 /** Chùm lông chim cắm trên mũ (như `featherCrown` nhưng gốc đặt tùy ý, vd. trên chóp mũ trụ). */
 export function plumes(r: HumanRig, colors: readonly number[], o: CrownOpts): void {
   figure(r, keyOf(r, 'plumes', { colors, o }), (detail) => crownPieces(headBase(true).f, colors, o, detail));
+}
+
+// ---------- Miện, ngọc, sừng ----------
+
+/** Đồ trang trí trước trán, quanh vành (dùng chung cho mũ trụ và miện). */
+export interface Ornaments {
+  /** Tấm hình thoi (màu), tấm tròn mặt trời có hoa văn trống đồng (màu) trước trán. */
+  plate?: number;
+  disc?: number;
+  /** Ngọc giữa trán (màu); `glow` thì phát sáng. */
+  gem?: number;
+  glow?: boolean;
+  /** Diềm chữ V trước trán (màu). */
+  chevron?: number;
+  /** Mũi miện quanh mép trên (`low`: mũi xen kẽ thấp hơn). */
+  spikes?: { color: number; n: number; h: number; low?: number };
+  /** Hai sừng cong vút lên ở thái dương. */
+  horns?: { color: number; len: number; r?: number; out?: number };
+}
+
+/** Sừng, mũi nhọn cong: chuỗi đoạn thuôn qua các điểm `pts`, bán kính `rs` ở mỗi điểm, nặn liền một khối. */
+function curvedSpike(pts: V3[], rs: number[], color: number, detail: number, bone: string): Piece {
+  const clay = new Clay(color);
+  for (let i = 0; i < pts.length - 1; i++) clay.add(bone, cone(pts[i], pts[i + 1], rs[i], rs[i + 1]), { k: i ? 0.01 : 0 });
+  const m = Math.max(...rs) + 0.01;
+  const lo: V3 = [Math.min(...pts.map((p) => p[0])) - m, Math.min(...pts.map((p) => p[1])) - m, Math.min(...pts.map((p) => p[2])) - m];
+  const hi: V3 = [Math.max(...pts.map((p) => p[0])) + m, Math.max(...pts.map((p) => p[1])) + m, Math.max(...pts.map((p) => p[2])) + m];
+  return clayPiece(clay.build({ kind: 'nets', min: lo, max: hi, cell: Math.max(0.004, Math.min(...rs.slice(0, -1)) / 3) / detail, target: Math.round(140 * detail) }));
+}
+
+/** Các món trang trí của `o` trên mặt `f` (mũ, tóc), giữa trán ở độ cao `y`. */
+function ornamentPieces(f: Sdf, y: number, o: Ornaments, detail: number, bone = 'head'): Piece[] {
+  const out: Piece[] = [];
+  const shell: Sdf = (x, yy, z) => f(x, yy, z) - 0.006;
+  const front = hit(shell, [0, y, 0.6], [0, 0, -1]) ?? [0, y, 0.21];
+  const n = normalAt(shell, ...front);
+  let lift = 0;
+  if (o.chevron !== undefined) {
+    const path: V3[] = [
+      [-0.13, y + 0.05, 0.16],
+      [-0.065, y + 0.02, 0.2],
+      [0, y - 0.012, 0.22],
+      [0.065, y + 0.02, 0.2],
+      [0.13, y + 0.05, 0.16],
+    ];
+    out.push(rigid(ribbon(shell, path, 0.026, 0.009, o.chevron, segs(14, detail)), bone));
+    lift = 0.006;
+  }
+  if (o.plate !== undefined) {
+    // Bốn mặt: đỉnh nhọn trên dưới, hai bên (hình thoi).
+    out.push(rigid(decal(shell, front, { r: 0.048, lift: 0.009 + lift, seg: 4, rings: 1 }, o.plate), bone));
+    lift += 0.009;
+  }
+  if (o.disc !== undefined) {
+    out.push(rigid(decal(shell, front, { r: 0.05, lift: 0.009 + lift, seg: segs(18, detail, 12), rings: detail >= 1 ? 2 : 1 }, o.disc), bone, 'drum'));
+    lift += 0.009;
+  }
+  if (o.gem !== undefined) {
+    const g = new THREE.SphereGeometry(0.024, 10, 8);
+    g.scale(1, 1.2, 0.6);
+    g.lookAt(new THREE.Vector3(...n));
+    const d = lift + 0.012;
+    g.translate(front[0] + n[0] * d, front[1] + n[1] * d, front[2] + n[2] * d);
+    out.push(prim(g, o.gem, bone, o.glow ? 'glow' : 'plain'));
+  }
+  if (o.spikes) {
+    const { n: count, h, low, color } = o.spikes;
+    for (let i = 0; i < count; i++) {
+      const a = (i / count) * Math.PI * 2;
+      const dir: V3 = [Math.sin(a), 0, Math.cos(a)];
+      const p = hit(shell, [dir[0] * 0.6, y + 0.03, -0.02 + dir[2] * 0.6], [-dir[0], 0, -dir[2]]);
+      if (!p) continue;
+      const hs = low !== undefined && i % 2 ? low : h;
+      const g = new THREE.ConeGeometry(0.024, hs, 4);
+      g.rotateY(a + Math.PI / 4);
+      g.translate(p[0] + dir[0] * 0.004, p[1] + hs / 2, p[2] + dir[2] * 0.004);
+      out.push(prim(g, color, bone));
+    }
+  }
+  if (o.horns) {
+    const { len, color } = o.horns;
+    const r0 = o.horns.r ?? 0.03;
+    const spread = o.horns.out ?? 1;
+    for (const s of [-1, 1]) {
+      const b = hit(shell, [s * 0.6, y + 0.02, 0.02], [-s, 0, 0]) ?? [s * 0.2, y, 0.02];
+      const p0: V3 = [b[0] - s * 0.01, b[1], b[2]];
+      const p1: V3 = [p0[0] + s * 0.45 * len * spread, p0[1] + 0.35 * len, p0[2] - 0.05 * len];
+      const p2: V3 = [p1[0] + s * 0.18 * len * spread, p1[1] + 0.45 * len, p1[2] - 0.12 * len];
+      const p3: V3 = [p2[0] - s * 0.02 * len, p2[1] + 0.25 * len, p2[2] - 0.12 * len];
+      out.push(curvedSpike([p0, p1, p2, p3], [r0, r0 * 0.75, r0 * 0.45, 0.003], color, detail, bone));
+    }
+  }
+  return out;
+}
+
+export interface DiademOpts extends Ornaments {
+  /** Vành miện (màu); bỏ trống thì chỉ có đồ trang trí trước trán. */
+  color?: number;
+  /** Mép dưới, bề cao, nới khỏi mặt tóc. */
+  y?: number;
+  h?: number;
+  puff?: number;
+  pattern?: boolean;
+  /** Vành mảnh viền mép dưới, mép trên (màu). */
+  rim?: number;
+  edge?: number;
+}
+
+/** Miện ôm quanh đầu (trên tóc): vành có hoa văn, viền, tấm và ngọc trước trán, mũi miện, sừng. */
+export function diadem(r: HumanRig, o: DiademOpts): void {
+  figure(r, keyOf(r, 'diadem', o), (detail) => {
+    const f = headBase(true).f;
+    const y = o.y ?? 0.8;
+    const h = o.h ?? 0.05;
+    const puff = o.puff ?? 0.008;
+    const seg = segs(28, detail, 16);
+    const out: Piece[] = [];
+    const ring = (y0: number, y1: number, grow: number, color: number, slot: 'plain' | 'band' = 'plain') =>
+      rigid(
+        wrap(f, { a: [0, y0, -0.02], b: [0, y1, -0.02], t0: 0, t1: 1, seg, rings: slot === 'band' ? 2 : 1, rmax: 0.4, lip: 0.008, uvRepeat: slot === 'band' ? 4 / 3 : undefined, radius: (rs, _th, t) => rs + grow + 0.004 * t }, color),
+        'head',
+        slot,
+      );
+    if (o.color !== undefined) out.push(ring(y, y + h, puff + 0.006, o.color, o.pattern ? 'band' : 'plain'));
+    if (o.rim !== undefined) out.push(ring(y - 0.008, y + 0.012, puff + 0.012, o.rim));
+    if (o.edge !== undefined) out.push(ring(y + h - 0.012, y + h + 0.006, puff + 0.014, o.edge));
+    const shell: Sdf = (x, yy, z) => f(x, yy, z) - (o.color !== undefined ? puff + 0.012 : 0.004);
+    out.push(...ornamentPieces(shell, y + h * 0.5, o, detail));
+    return out;
+  });
+}
+
+/** Kiềng (vòng cổ) tròn quanh cổ, hơi chúc ra trước. */
+export function necklace(r: HumanRig, o: { color: number; r?: number; y?: number; z?: number; tilt?: number; thick?: number; half?: boolean }): void {
+  figure(r, keyOf(r, 'necklace', o), (detail) => {
+    const g = new THREE.TorusGeometry(o.r ?? 0.07, o.thick ?? 0.014, 6, segs(18, detail, 12), o.half ? Math.PI : Math.PI * 2);
+    if (o.half) g.rotateZ(Math.PI);
+    g.rotateX(Math.PI / 2 + (o.tilt ?? 0.25));
+    g.translate(0, o.y ?? 0.578, o.z ?? 0.02);
+    return [prim(g, o.color, 'chest')];
+  });
+}
+
+/** Bán kính đai lưng ở góc `th` (đai ôm eo, đè lên cạp khố; như `sculptBody`). */
+function beltRadius(r: HumanRig, th: number): number {
+  const base = bodyOf(r);
+  const { fit } = skirtOf(r);
+  return Math.max(radiusAt(base.torso, [0, 0.405, 0], [Math.cos(th), 0, Math.sin(th)], 0.25), fit(th, 0)) + 0.009;
+}
+
+/** Khóa đai: tấm cong ôm trước đai lưng, có ngọc (hay núm) giữa. */
+export function buckle(r: HumanRig, o: { color: number; gem?: number; glow?: boolean; w?: number; h?: number }): void {
+  figure(r, keyOf(r, 'buckle', o, true), (detail) => {
+    const R = beltRadius(r, Math.PI / 2) + 0.002;
+    const w = o.w ?? 0.05;
+    const hh = o.h ?? 0.038;
+    const half = w / R;
+    const P = (u: number, v: number): V3 => {
+      const th = Math.PI / 2 + (u - 0.5) * 2 * half;
+      // Góc vát tròn: hai mép trên dưới thu vào ở hai đầu.
+      const y = 0.405 + (0.5 - v) * 2 * hh * (1 - 0.18 * (2 * u - 1) ** 4);
+      return [Math.cos(th) * R, y, Math.sin(th) * R];
+    };
+    const inward = (u: number): V3 => {
+      const th = Math.PI / 2 + (u - 0.5) * 2 * half;
+      return [-Math.cos(th), 0, -Math.sin(th)];
+    };
+    const flip = (u: number, v: number): V3 => {
+      const d = inward(u);
+      const p = P(u, v);
+      return [p[0] - d[0] * 0.012, p[1], p[2] - d[2] * 0.012];
+    };
+    const out: Piece[] = [rigid(slab(flip, inward, Math.max(3, Math.round(6 * detail)), 2, 0.012, o.color), 'hips')];
+    if (o.gem !== undefined) {
+      const g = new THREE.SphereGeometry(0.024, 10, 8);
+      g.scale(1, 1, 0.6);
+      g.translate(0, 0.405, R + 0.02);
+      out.push(prim(g, o.gem, 'hips', o.glow ? 'glow' : 'plain'));
+    }
+    return out;
+  });
+}
+
+/** Vạt (lễ phục, giáp) buông trước bụng từ đai lưng xuống `to`, nửa bề ngang `half` (radian quanh thân). */
+export function apron(r: HumanRig, o: { color: number; to: number; half?: number; pattern?: boolean; trim?: number; flare?: number }): void {
+  figure(r, keyOf(r, 'apron', o, true), (detail) => {
+    const { fit, top, hem } = skirtOf(r);
+    const y0 = 0.4;
+    const half = o.half ?? 0.42;
+    const flare = o.flare ?? 0.03;
+    const mid = Math.PI / 2;
+    const P = (u: number, v: number): V3 => {
+      const th = mid + (u - 0.5) * 2 * half * (1 + 0.15 * v);
+      const y = y0 + (o.to - y0) * v;
+      const rr = fit(th, THREE.MathUtils.clamp((top - y) / (top - hem), 0, 1)) + 0.016 + flare * v * v;
+      // Gấu vạt hơi tròn.
+      return [Math.cos(th) * rr, y + 0.012 * v * (1 - Math.sin(u * Math.PI)), Math.sin(th) * rr];
+    };
+    const inward = (u: number): V3 => {
+      const th = mid + (u - 0.5) * 2 * half;
+      return [-Math.cos(th), 0, -Math.sin(th)];
+    };
+    const cols = Math.max(3, Math.round(5 * detail));
+    const rows = Math.max(3, Math.round(5 * detail));
+    const out: Piece[] = [rigid(slab(P, inward, cols, rows, 0.01, o.color, o.pattern), 'hips', o.pattern ? 'band' : 'plain')];
+    if (o.trim !== undefined) {
+      const T = (u: number, v: number): V3 => {
+        const p = P(u, 0.9 + 0.1 * v);
+        const n = inward(u);
+        return [p[0] - n[0] * 0.004, p[1], p[2] - n[2] * 0.004];
+      };
+      out.push(rigid(slab(T, inward, cols, 1, 0.012, o.trim), 'hips'));
+    }
+    return out;
+  });
+}
+
+/** Yếm: tấm vải ôm trước ngực từ cổ xuống bụng, có thể có mặt trống đồng thêu giữa. */
+export function yem(r: HumanRig, o: { color: number; pattern?: boolean; disc?: number; top?: number; bottom?: number; half?: number; trim?: number }): void {
+  figure(r, keyOf(r, 'yem', o, true), (detail) => {
+    const torso = bodyOf(r).torso;
+    const skirt = skirtOf(r);
+    const y1 = o.top ?? 0.575;
+    const y0 = o.bottom ?? 0.41;
+    const half = o.half ?? 0.62;
+    const mid = Math.PI / 2;
+    const memo = new Map<string, number>();
+    const rad = (th: number, y: number) => {
+      const k = `${th.toFixed(4)}:${y.toFixed(4)}`;
+      let v = memo.get(k);
+      if (v === undefined) {
+        v = radiusAt(torso, [0, y, 0], [Math.cos(th), 0, Math.sin(th)], 0.3);
+        // Dưới thắt lưng thì phủ ngoài đai, khố (tạp dề dài).
+        if (y < 0.44) v = Math.max(v, skirt.fit(th, THREE.MathUtils.clamp((skirt.top - y) / (skirt.top - skirt.hem), 0, 1)) + 0.004, y > 0.37 ? beltRadius(r, th) + 0.002 : 0);
+        memo.set(k, v);
+      }
+      return v;
+    };
+    const P = (u: number, v: number): V3 => {
+      const y = y1 + (y0 - y1) * v;
+      // Hẹp ở cổ, rộng dần xuống bụng.
+      const w = half * (0.55 + 0.45 * Math.min(1, v * 1.6));
+      const th = mid + (u - 0.5) * 2 * w;
+      const rr = rad(th, y) + 0.008;
+      return [Math.cos(th) * rr, y, Math.sin(th) * rr];
+    };
+    const inward = (u: number, v: number): V3 => {
+      const w = half * (0.55 + 0.45 * Math.min(1, v * 1.6));
+      const th = mid + (u - 0.5) * 2 * w;
+      return [-Math.cos(th), 0, -Math.sin(th)];
+    };
+    const cols = Math.max(4, Math.round(6 * detail));
+    const rows = Math.max(3, Math.round((y1 - y0 > 0.2 ? 7 : 5) * detail));
+    const out: Piece[] = [rigid(slab(P, inward, cols, rows, 0.008, o.color, o.pattern), 'chest', o.pattern ? 'band' : 'plain')];
+    if (o.trim !== undefined) {
+      // Dải viền ngang mép trên.
+      const T = (u: number, v: number): V3 => {
+        const p = P(u, 0.06 * v);
+        const n = inward(u, 0);
+        return [p[0] - n[0] * 0.004, p[1], p[2] - n[2] * 0.004];
+      };
+      out.push(rigid(slab(T, inward, cols, 1, 0.012, o.trim), 'chest'));
+    }
+    if (o.disc !== undefined) {
+      const f: Sdf = (x, y, z) => torso(x, y, z) - 0.016;
+      const c = hit(f, [0, (y0 + y1) / 2 - 0.01, 0.5], [0, 0, -1]) ?? [0, 0.49, 0.13];
+      out.push(rigid(decal(f, c, { r: 0.05, lift: 0.006, seg: segs(18, detail, 12), rings: detail >= 1 ? 2 : 1 }, o.disc), 'chest', 'drum'));
+    }
+    return out;
+  });
+}
+
+/**
+ * Tóc dài: mớ tóc phủ gáy buông xuống lưng tới `to` (thuôn dần, đầu tóc tròn), tóc mai hai bên (`locks`: dài bao
+ * nhiêu). Phần trên theo đầu, phần dưới theo ngực cho khỏi xuyên lưng khi cúi ngẩng.
+ */
+export function hairDown(r: HumanRig, o: { color: number; to?: number; width?: number; locks?: number }): void {
+  figure(r, keyOf(r, 'hairDown', o), (detail) => {
+    const to = o.to ?? 0.45;
+    const w = o.width ?? 0.17;
+    const clay = new Clay(o.color);
+    // Mớ tóc dẹt sau lưng: trụ thuôn nén mỏng theo chiều trước sau.
+    const squash = 0.45;
+    const zc = -0.17;
+    const back = cone([0, 0.78, zc / squash], [0, to + w * 0.5, (zc - 0.03) / squash], w, w * 0.7);
+    const mass: Sdf = (x, y, z) => back(x, y, z / squash) * squash;
+    clay.add('head', ellipsoid([0, 0.77, -0.06], [0.212, 0.19, 0.2]), { k: 0 });
+    clay.add('head', mass, { k: 0.04, to: { bone: 'chest', a: [0, 0.7, -0.17], b: [0, 0.56, -0.19] } });
+    if (o.locks) {
+      for (const s of [-1, 1]) {
+        const top: V3 = [s * 0.19, 0.8, 0.06];
+        clay.add('head', cone(top, [s * 0.205, 0.8 - o.locks, 0.075], 0.03, 0.014), { k: 0.015 });
+      }
+    }
+    // Chừa mặt và đỉnh đầu (đã có lớp tóc ôm sọ).
+    clay.sub('head', ellipsoid([0, 0.72, 0.12], [0.17, 0.2, 0.14]), 0.02);
+    const lo: V3 = [-0.26, to - 0.02, -0.32];
+    const hi: V3 = [0.26, 0.98, 0.14];
+    return [clayPiece(clay.build({ kind: 'nets', min: lo, max: hi, cell: 0.012 / detail, target: Math.round(420 * detail) }))];
+  });
+}
+
+/** Cụm đá núi đắp trên vai (khối đá gốc, chóp đá nhọn, mầm cây xanh), theo cánh tay. */
+export function shoulderRocks(r: HumanRig, o: { color: number; dark?: number; sprout?: number; size?: number }): void {
+  figure(r, keyOf(r, 'rocks', o), (detail) => {
+    const k = o.size ?? 1;
+    const out: Piece[] = [];
+    for (const [arm, s] of [
+      ['armL', -1],
+      ['armR', 1],
+    ] as const) {
+      const clay = new Clay(o.color);
+      const c: V3 = [s * 0.155, 0.6, 0];
+      clay.add(arm, ellipsoid(c, [0.075 * k, 0.05 * k, 0.072 * k], [0, 0, -s * 0.2]), { k: 0 });
+      clay.add(arm, cone([s * 0.15, 0.6, 0.005], [s * 0.165, 0.6 + 0.13 * k, 0], 0.05 * k, 0.006), { k: 0.012 });
+      clay.add(arm, cone([s * 0.19, 0.59, -0.02], [s * 0.245, 0.59 + 0.085 * k, -0.025], 0.036 * k, 0.005), { k: 0.012 });
+      clay.add(arm, cone([s * 0.12, 0.6, 0.03], [s * 0.115, 0.6 + 0.075 * k, 0.04], 0.03 * k, 0.005), { k: 0.012 });
+      // Vết nứt, mặt đá sẫm phía dưới.
+      clay.sub(arm, ellipsoid([s * 0.2, 0.64, 0.05], [0.012, 0.05, 0.012], [0.3, 0, -s * 0.5]), 0.004);
+      const paints = [];
+      if (o.dark !== undefined) paints.push(clay.layer(arm, (_x, y) => y - 0.585, o.dark));
+      if (o.sprout !== undefined) paints.push(clay.layer(arm, sphere([s * 0.115, 0.6 + 0.075 * k, 0.04], 0.035 * k), o.sprout));
+      const lo: V3 = [s > 0 ? 0.05 : -0.31, 0.53, -0.1];
+      const hi: V3 = [s > 0 ? 0.31 : -0.05, 0.6 + 0.15 * k, 0.11];
+      out.push(clayPiece(clay.build({ kind: 'nets', min: lo, max: hi, cell: 0.009 / detail, target: Math.round(300 * detail) }, paints)));
+    }
+    return out;
+  });
+}
+
+/** Váy lá rừng: các lá thuôn nhọn buông quanh hông từ đai xuống `to`, chồng mí, mỗi lá một màu xanh. */
+export function leafSkirt(r: HumanRig, o: { colors: readonly number[]; n?: number; to?: number; len?: number }): void {
+  figure(r, keyOf(r, 'leaves', o, true), (detail) => {
+    const { fit, top, hem } = skirtOf(r);
+    const n = o.n ?? 10;
+    const y0 = 0.41;
+    const y1 = o.to ?? 0.22;
+    const out: Piece[] = [];
+    const half = (Math.PI / n) * 1.25;
+    for (let i = 0; i < n; i++) {
+      const mid = (i / n) * Math.PI * 2 + Math.PI / 2;
+      const lift = (i % 2) * 0.006;
+      // Lá: cuống hẹp, phình ở một phần ba, thuôn nhọn ở ngọn.
+      const width = (v: number) => Math.pow(Math.sin(Math.PI * Math.min(1, 0.12 + 0.95 * v)), 0.7) * (1 - 0.15 * v);
+      const P = (u: number, v: number): V3 => {
+        const th = mid + (u - 0.5) * 2 * half * width(v);
+        const y = y0 + (y1 - y0) * v;
+        const rr = fit(th, THREE.MathUtils.clamp((top - y) / (top - hem), 0, 1)) + 0.018 + lift + 0.03 * v * v + 0.006 * Math.sin(u * Math.PI);
+        return [Math.cos(th) * rr, y, Math.sin(th) * rr];
+      };
+      const inward = (u: number, v: number): V3 => {
+        const th = mid + (u - 0.5) * 2 * half * width(v);
+        return [-Math.cos(th), 0, -Math.sin(th)];
+      };
+      out.push(rigid(slab(P, inward, 2, Math.max(4, Math.round(6 * detail)), 0.008, o.colors[i % o.colors.length]), 'hips'));
+    }
+    return out;
+  });
+}
+
+/**
+ * Chỏm tóc trẻ con trên đầu cạo trọc: chỏm trước đỉnh buộc dây, đuôi tóc vểnh ra trước; hai chỏm nhỏ hai bên.
+ * Tâm chỏm trước `front`, chỏm bên ở `side` (tọa độ bên phải).
+ */
+export function tufts(r: HumanRig, o: { color: number; tie?: number; front?: V3; side?: V3; size?: number }): void {
+  figure(r, keyOf(r, 'tufts', o), (detail) => [...tuftsPieces(o, detail, 'head')]);
+}
+
+export function tuftsPieces(o: { color: number; tie?: number; front?: V3; side?: V3; size?: number }, detail: number, bone: string): Piece[] {
+  const k = o.size ?? 0.07;
+  const f = o.front ?? [0, 0.955, 0.055];
+  const sd = o.side ?? [0.13, 0.89, -0.02];
+  const clay = new Clay(o.color);
+  // Chỏm trước hình quả đào: gốc tròn, ngọn nhọn vểnh ra trước.
+  const tailA: V3 = [f[0], f[1] + k * 0.3, f[2] + k * 0.35];
+  const tailB: V3 = [f[0], f[1] + k * 1.5, f[2] + k * 1.0];
+  clay.add(bone, ellipsoid(f, [k, k * 0.72, k]), { k: 0 });
+  clay.add(bone, cone(tailA, tailB, k * 0.55, k * 0.05), { k: 0.02 });
+  for (const s of [-1, 1]) {
+    const c: V3 = [s * sd[0], sd[1], sd[2]];
+    clay.add(bone, ellipsoid(c, [k * 0.55, k * 0.45, k * 0.55]), { k: 0 });
+    clay.add(bone, cone(c, [c[0] + s * k * 1.05, c[1] + k * 0.6, c[2]], k * 0.34, k * 0.05), { k: 0.01 });
+  }
+  const m = k * 2.2;
+  const lo: V3 = [-sd[0] - m, Math.min(f[1], sd[1]) - m, Math.min(f[2], sd[2]) - m];
+  const hi: V3 = [sd[0] + m, f[1] + m, f[2] + k * 2.2];
+  const out: Piece[] = [clayPiece(clay.build({ kind: 'nets', min: lo, max: hi, cell: Math.max(0.004, k / 9) / detail, target: Math.round(380 * detail) }))];
+  if (o.tie !== undefined) {
+    // Dây buộc quanh gốc ngọn tóc, vuông góc với ngọn.
+    const t = 0.32;
+    const c = new THREE.Vector3(...tailA).lerp(new THREE.Vector3(...tailB), t);
+    const g = new THREE.TorusGeometry(k * (0.55 + (0.05 - 0.55) * t) + k * 0.06, k * 0.11, 6, segs(12, detail, 8));
+    g.lookAt(new THREE.Vector3(tailB[0] - tailA[0], tailB[1] - tailA[1], tailB[2] - tailA[2]));
+    g.translate(c.x, c.y, c.z);
+    out.push(prim(g, o.tie, bone));
+  }
+  return out;
+}
+
+/** Bao (thóc, túi gấm): túi tròn phình, cổ túi thắt dây, miệng túm. Gắn vào `bone` (mặc định ngực). */
+export function sack(r: HumanRig, o: { color: number; at: V3; size: V3; tie?: number; neck?: number; bone?: string; tilt?: number }): void {
+  figure(r, keyOf(r, 'sack', o), (detail) => {
+    const bone = o.bone ?? 'chest';
+    const [sx, sy, sz] = o.size;
+    const clay = new Clay(o.color);
+    const c = o.at;
+    clay.add(bone, ellipsoid(c, [sx, sy, sz], [o.tilt ?? 0, 0, 0]), { k: 0 });
+    // Nếp nhăn: vài rãnh nông chạy dọc.
+    for (const a of [-0.6, 0, 0.6]) clay.sub(bone, ellipsoid([c[0] + Math.sin(a) * sx, c[1] - sy * 0.1, c[2] + Math.cos(a) * sz], [sx * 0.08, sy * 0.6, sz * 0.08]), 0.01);
+    const nk = o.neck ?? 0;
+    const top: V3 = [c[0], c[1] + sy * 0.9, c[2]];
+    if (nk > 0) {
+      clay.add(bone, cone(top, [top[0], top[1] + nk, top[2]], sx * 0.32, sx * 0.24), { k: 0.025 });
+      clay.add(bone, ellipsoid([top[0], top[1] + nk * 1.1, top[2]], [sx * 0.34, nk * 0.35, sz * 0.34]), { k: 0.015 });
+    }
+    const m = Math.max(sx, sy, sz) * 1.3 + nk;
+    const out: Piece[] = [clayPiece(clay.build({ kind: 'nets', min: [c[0] - m, c[1] - m, c[2] - m], max: [c[0] + m, c[1] + m, c[2] + m], cell: Math.max(0.006, Math.min(sx, sy, sz) / 7) / detail, target: Math.round(320 * detail) }))];
+    if (o.tie !== undefined && nk > 0) {
+      const g = new THREE.TorusGeometry(sx * 0.27, 0.01, 5, segs(12, detail, 8));
+      g.rotateX(Math.PI / 2);
+      g.translate(top[0], top[1] + nk * 0.45, top[2]);
+      out.push(prim(g, o.tie, bone));
+    }
+    return out;
+  });
+}
+
+/** Gùi, giỏ đan tre tiện tròn: thân phình (hay thuôn), miệng có vành, nan đan sọc sẫm; dải hoa văn quanh miệng. */
+export function basket(r: HumanRig, o: { color: number; dark?: number; at: V3; r0: number; r1: number; h: number; bulge?: number; tilt?: V3; rim?: number; band?: number; bone?: string }): void {
+  figure(r, keyOf(r, 'basket', o), (detail) => {
+    const bone = o.bone ?? 'chest';
+    const pts: THREE.Vector2[] = [];
+    const n = 8;
+    const bulge = o.bulge ?? 0.15;
+    for (let i = 0; i <= n; i++) {
+      const t = i / n;
+      pts.push(new THREE.Vector2(o.r0 + (o.r1 - o.r0) * t + bulge * o.r1 * Math.sin(Math.PI * t), -o.h / 2 + o.h * t));
+    }
+    // Mép miệng gấp vào trong, đáy.
+    pts.push(new THREE.Vector2(o.r1 - 0.012, o.h / 2 - 0.004), new THREE.Vector2(o.r1 - 0.016, o.h / 2 - 0.05));
+    pts.unshift(new THREE.Vector2(0.001, -o.h / 2));
+    const g = new THREE.LatheGeometry(pts, segs(18, detail, 12));
+    const geo = g.toNonIndexed();
+    g.dispose();
+    geo.deleteAttribute('uv');
+    geo.computeVertexNormals();
+    const p = geo.getAttribute('position');
+    const col = new Float32Array(p.count * 3);
+    const base = new THREE.Color(o.color);
+    const dark = new THREE.Color(o.dark ?? new THREE.Color(o.color).multiplyScalar(0.78).getHex());
+    for (let i = 0; i < p.count; i++) {
+      const y = p.getY(i);
+      const a = Math.atan2(p.getZ(i), p.getX(i));
+      // Nan đan: ô cờ chéo.
+      const weave = Math.sin(a * 9 + y * 60) * Math.sin(a * 9 - y * 60) > 0.25;
+      (weave ? dark : base).toArray(col, i * 3);
+    }
+    geo.setAttribute('color', new THREE.BufferAttribute(col, 3));
+    const place = (x: THREE.BufferGeometry) => {
+      if (o.tilt) x.rotateX(o.tilt[0]).rotateY(o.tilt[1]).rotateZ(o.tilt[2]);
+      x.translate(...o.at);
+      return x;
+    };
+    const out: Piece[] = [rigid(place(geo), bone)];
+    if (o.rim !== undefined || o.band !== undefined) {
+      const rg = new THREE.TorusGeometry(o.r1 + 0.004, 0.014, 6, segs(18, detail, 12));
+      rg.rotateX(Math.PI / 2);
+      rg.translate(0, o.h / 2 - 0.006, 0);
+      out.push(prim(place(rg), o.rim ?? o.band ?? o.color, bone));
+    }
+    if (o.band !== undefined) {
+      const bg = new THREE.CylinderGeometry(o.r1 + 0.006, o.r1 + 0.004 - (o.r1 - o.r0) * 0.12, o.h * 0.14, segs(18, detail, 12), 1, true);
+      bg.translate(0, o.h * 0.36, 0);
+      const gb = place(bg);
+      const nb = gb.toNonIndexed();
+      gb.dispose();
+      out.push(rigid(nb, bone, 'band'));
+      paintGeometry(nb, o.band);
+    }
+    return out;
+  });
+}
+
+/** Khối đá đẽo (góc vát tròn) vác trên vai, gắn theo `bone`. */
+export function stoneBlock(r: HumanRig, o: { color: number; dark?: number; at: V3; size: V3; rot?: V3; bone?: string }): void {
+  figure(r, keyOf(r, 'stone', o), (detail) => {
+    const bone = o.bone ?? 'chest';
+    const [hx, hy, hz] = o.size.map((v) => v / 2);
+    const rot = new THREE.Matrix4().makeRotationFromEuler(new THREE.Euler(...(o.rot ?? [0, 0, 0]))).invert();
+    const e = rot.elements;
+    const rr = Math.min(hx, hy, hz) * 0.35;
+    const box: Sdf = (x, y, z) => {
+      const px = x - o.at[0];
+      const py = y - o.at[1];
+      const pz = z - o.at[2];
+      const lx = Math.abs(e[0] * px + e[4] * py + e[8] * pz) - (hx - rr);
+      const ly = Math.abs(e[1] * px + e[5] * py + e[9] * pz) - (hy - rr);
+      const lz = Math.abs(e[2] * px + e[6] * py + e[10] * pz) - (hz - rr);
+      return Math.hypot(Math.max(lx, 0), Math.max(ly, 0), Math.max(lz, 0)) + Math.min(Math.max(lx, ly, lz), 0) - rr;
+    };
+    const clay = new Clay(o.color);
+    clay.add(bone, box, { k: 0 });
+    // Vết đục: vài vệt khoét nông.
+    clay.sub(bone, sphere([o.at[0] + hx * 0.4, o.at[1] + hy, o.at[2]], hy * 0.35), 0.01);
+    const paints = o.dark === undefined ? [] : [clay.layer(bone, (_x, y) => o.at[1] - hy * 0.2 - y, o.dark)];
+    const m = Math.hypot(hx, hy, hz) + 0.02;
+    return [clayPiece(clay.build({ kind: 'nets', min: [o.at[0] - m, o.at[1] - m, o.at[2] - m], max: [o.at[0] + m, o.at[1] + m, o.at[2] + m], cell: Math.max(0.007, rr / 2) / detail, target: Math.round(260 * detail) }, paints))];
+  });
 }

@@ -19,6 +19,7 @@ import {
   type Human,
   type HumanRig,
 } from './body';
+import { apron, basket, buckle, bun, diadem, hairDown, hat, khan, necklace, sack, sash, stoneBlock, streamer, studs, yem } from './nanDo';
 import { C } from './palette';
 import { RigBuilder, skinRig, type Act, type Poser } from './rig';
 import { spear, type Parts } from './weapons';
@@ -42,7 +43,6 @@ interface Look {
   greaves?: number;
   wristband?: number;
   earrings?: number;
-  hairPin?: number;
 }
 
 const LOOKS: Record<Job, Look> = {
@@ -51,7 +51,7 @@ const LOOKS: Record<Job, Look> = {
   thoDa: { cloth: 0x6f6a63, pattern: false, hair: 'khanTho', headColor: 0x55504a, wristband: 0x5a483a },
   thoRen: { cloth: 0x3f3229, pattern: false, hair: 'daiTran', headColor: C.red, wristband: 0x4a3424 },
   giuKho: { cloth: C.woodLight, shirt: C.cream, hair: 'khanTho', headColor: 0xd4b882 },
-  phuNu: { cloth: C.red, shirt: 0xc85a3a, skirt: true, hair: 'tocBuiNu', earrings: C.bronzeLight, hairPin: C.bronzeLight },
+  phuNu: { cloth: C.red, shirt: 0xc85a3a, skirt: true, hair: 'tocBuiNu', earrings: C.bronzeLight },
   lacHau: { cloth: C.cream, shirt: C.cream, skirt: true, hair: 'miengHoang' },
   linhGac: { cloth: C.red, hair: 'longChim', drumPlate: true, crossStrap: C.woodDark, greaves: C.bronze, wristband: C.bronze },
   // Thợ xưởng mộc: khăn thợ màu gỗ, khố nâu; thợ xẻ kéo cưa xẻ của xưởng (tay không), thợ mộc cầm rìu đẽo.
@@ -62,52 +62,39 @@ const LOOKS: Record<Job, Look> = {
 };
 
 function hair(r: HumanRig, look: Look): void {
-  const p = r.on('head').plain;
   hairCap(r, look.hair === 'khanXep' ? C.indigo : C.hair);
   switch (look.hair) {
     case 'nonLa': {
-      // Nón lá truyền thống Lạc Việt đan lá cọ/tre hình chóp nhọn che nắng mưa
-      p.cone(0.28, 0.15, C.thatch, 0, 0.96, 0.01, [0.08, 0, 0], 14);
-      p.cyl(0.285, 0.285, 0.014, 0xcfa560, 0, 0.89, 0.0, [0.08, 0, 0], 14);
-      // Quai nón ôm hàm
-      p.box(0.014, 0.16, 0.01, C.woodDark, -0.15, 0.77, 0.03, [0, 0, -0.2]);
-      p.box(0.014, 0.16, 0.01, C.woodDark, 0.15, 0.77, 0.03, [0, 0, 0.2]);
+      // Nón lá truyền thống Lạc Việt đan lá cọ/tre hình chóp nhọn che nắng mưa, quai nón ôm hàm.
+      hat(r, { kind: 'non', color: C.thatch, trim: 0xcfa560, r: 0.3, y: 0.885, h: 0.16, tilt: 0.08 });
+      for (const s of [-1, 1]) streamer(r, { from: [s * 0.2, 0.86, 0.02], dir: [-s * 0.25, -1, 0.12], len: 0.17, width: 0.016, color: C.woodDark });
       break;
     }
     case 'khanXep': {
-      // Khăn xếp quấn đầu chỉnh chu màu xanh chàm
-      p.cyl(0.225, 0.23, 0.08, C.indigo, 0, 0.83, -0.02, undefined, 14);
-      p.cyl(0.232, 0.235, 0.03, 0x5a75a8, 0, 0.85, -0.02, undefined, 14);
-      p.sphere(0.07, C.hair, 0, 0.96, -0.07, [1, 1, 1], 8);
+      // Khăn xếp quấn đầu chỉnh chu màu xanh chàm, hai lớp.
+      khan(r, { color: C.indigo, roll: 0x5a75a8, rolls: 2 });
       break;
     }
     case 'khanTho': {
-      // Khăn quấn đầu thợ đá / thủ kho nẹp gọn gàng, thắt nút sau gáy
-      p.cyl(0.224, 0.228, 0.065, look.headColor ?? 0x55504a, 0, 0.825, -0.02, undefined, 12);
-      p.box(0.06, 0.08, 0.03, look.headColor ?? 0x55504a, 0, 0.82, -0.24, [0.3, 0, 0]);
-      p.box(0.04, 0.12, 0.02, look.headColor ?? 0x55504a, -0.03, 0.74, -0.25, [0.4, 0, -0.2]);
+      // Khăn quấn đầu thợ đá / thủ kho nẹp gọn gàng, thắt nút sau gáy.
+      khan(r, { color: look.headColor ?? 0x55504a, rolls: 1, knot: true, tails: 0.1 });
       break;
     }
     case 'daiTran': {
       headband(r, look.headColor ?? C.red);
       // Dải vải buộc trán có 2 đuôi vải bay sau gáy
-      p.box(0.04, 0.14, 0.015, look.headColor ?? C.red, 0.04, 0.74, -0.23, [0.35, 0, 0.2]);
-      p.box(0.04, 0.12, 0.015, look.headColor ?? C.red, -0.04, 0.75, -0.23, [0.35, 0, -0.2]);
+      for (const s of [-1, 1]) streamer(r, { from: [s * 0.03, 0.81, -0.205], dir: [s * 0.3, -1, -0.45], len: 0.15, width: 0.04, color: look.headColor ?? C.red });
       break;
     }
     case 'tocBuiNu': {
-      // Tóc búi cao quý phái của phụ nữ Lạc Việt, cài trâm đồng
-      p.sphere(0.1, C.hair, 0, 0.98, -0.04, [1, 1.1, 1], 10);
-      p.box(0.14, 0.36, 0.05, C.hair, 0, 0.65, -0.19, [0.1, 0, 0]);
-      p.cyl(0.008, 0.008, 0.32, C.bronzeLight, 0, 0.98, -0.04, [0, 0, Math.PI / 2], 6);
-      p.sphere(0.02, C.bronzeLight, -0.16, 0.98, -0.04, [1, 1, 1], 6);
-      p.sphere(0.02, C.bronzeLight, 0.16, 0.98, -0.04, [1, 1, 1], 6);
+      // Tóc búi cao quý phái của phụ nữ Lạc Việt, cài trâm đồng, đuôi tóc buông sau lưng.
+      bun(r, { color: C.hair, at: [0, 0.975, -0.04], size: 0.1, pin: { color: C.bronzeLight, len: 0.32 } });
+      hairDown(r, { color: C.hair, to: 0.5, width: 0.075 });
       break;
     }
     case 'miengHoang': {
       // Mũ miện lông chim hồng hoàng của Lạc hầu: đai vàng ròng chạm mặt trời
-      r.on('head').band.cyl(0.228, 0.235, 0.055, C.gold, 0, 0.835, -0.025, undefined, 16);
-      p.sphere(0.035, C.bronzeLight, 0, 0.855, 0.19, [1, 1, 0.6], 8);
+      diadem(r, { color: C.gold, pattern: true, y: 0.808, h: 0.055, disc: C.bronzeLight });
       featherCrown(r, [C.gold, C.red, C.cream], { count: 9, len: 0.44, spread: 0.24, tier2: true });
       break;
     }
@@ -211,7 +198,7 @@ function drawWorker(r: HumanRig, job: Job, sitting: boolean): void {
     greaves: look.greaves,
     wristband: look.wristband,
   });
-  humanHead(r, { earrings: look.earrings, hairPin: look.hairPin });
+  humanHead(r, { earrings: look.earrings });
   hair(r, look);
   const tool = TOOLS[job];
   if (tool) r.local('hand', GRIP_R, null, tool);
@@ -219,11 +206,9 @@ function drawWorker(r: HumanRig, job: Job, sitting: boolean): void {
 
   // Đồ mang theo trên người và đạo cụ đặc trưng theo nghề.
   if (job === 'nong') {
-    // Bình bầu hồ lô đựng nước vắt chéo bên hông
-    chest.plain.sphere(0.05, 0xcfa560, -0.16, 0.38, 0.02, [1, 1.2, 1], 7);
-    chest.plain.sphere(0.035, 0xcfa560, -0.16, 0.44, 0.02, [1, 1.2, 1], 6);
-    chest.plain.cyl(0.012, 0.012, 0.03, C.woodDark, -0.16, 0.47, 0.02, undefined, 4);
-    chest.plain.box(0.012, 0.25, 0.01, 0x5a3720, -0.06, 0.46, 0.08, [0, 0, -0.6]);
+    // Bình bầu hồ lô đựng nước đeo bên hông, dây vắt chéo.
+    gourd(r, [-0.165, 0.38, 0.03]);
+    sash(r, { color: 0x5a3720, side: 1, width: 0.022 });
   }
   if (job === 'buon') {
     const head = r.on('head').plain;
@@ -234,23 +219,17 @@ function drawWorker(r: HumanRig, job: Job, sitting: boolean): void {
     head.cyl(0.035, 0.035, 0.2, C.gold, 0, 1.08, 0, [Math.PI / 2, 0, 0], 8);
     head.cyl(0.035, 0.035, 0.2, C.indigo, 0.09, 1.08, 0, [Math.PI / 2, 0, 0], 8);
     // Túi gấm bên hông
-    chest.plain.sphere(0.055, C.red, 0.16, 0.38, 0.02, [1, 1.2, 0.8], 6);
-    chest.plain.sphere(0.02, C.gold, 0.16, 0.43, 0.02, [1, 1, 1], 4);
+    sack(r, { color: C.red, at: [0.165, 0.37, 0.03], size: [0.05, 0.055, 0.04], neck: 0.025, tie: C.gold, bone: 'hips' });
   }
   if (job === 'thoDa') {
-    // Khối sa thạch góc cạnh vác trên vai
-    chest.plain.box(0.24, 0.18, 0.2, C.rock, -0.22, 0.68, -0.02, [0, 0.2, 0.25]);
-    chest.plain.box(0.2, 0.14, 0.16, C.rockDark, -0.22, 0.68, -0.02, [0, 0.2, 0.25]);
-    // Tạp dề da thợ đục đá
-    chest.plain.box(0.24, 0.28, 0.03, 0x5a483a, 0, 0.4, 0.12);
+    // Khối sa thạch góc cạnh vác trên vai, tạp dề da thợ đục đá.
+    stoneBlock(r, { color: C.rock, dark: C.rockDark, at: [-0.22, 0.68, -0.02], size: [0.24, 0.17, 0.2], rot: [0, 0.2, 0.25] });
+    yem(r, { color: 0x5a483a, top: 0.54, bottom: 0.27, half: 0.55 });
   }
   if (job === 'thoRen') {
-    // Tạp dề da chống lửa có đai da nẹp đinh
-    chest.plain.box(0.25, 0.36, 0.035, 0x4a3424, 0, 0.43, 0.13);
-    chest.plain.box(0.03, 0.16, 0.02, 0x3a2516, -0.08, 0.54, 0.11, [0, 0, 0.3]);
-    chest.plain.box(0.03, 0.16, 0.02, 0x3a2516, 0.08, 0.54, 0.11, [0, 0, -0.3]);
-    chest.plain.sphere(0.015, C.bronze, -0.08, 0.46, 0.145);
-    chest.plain.sphere(0.015, C.bronze, 0.08, 0.46, 0.145);
+    // Tạp dề da chống lửa có quai da, đinh đồng.
+    yem(r, { color: 0x4a3424, top: 0.6, bottom: 0.25, half: 0.6, trim: 0x3a2516 });
+    studs(r, { color: C.bronze, at: [-0.08, 0.08].map((x): [number, number] => [x, 0.46]), thick: 0.012 });
     // Tay trái kẹp phôi đồng đỏ lửa rực sáng
     r.local('handL', GRIP_L, null, (s) => {
       s.plain.cyl(0.012, 0.012, 0.32, C.iron, 0, 0.1, 0, undefined, 4);
@@ -260,36 +239,31 @@ function drawWorker(r: HumanRig, job: Job, sitting: boolean): void {
     });
   }
   if (job === 'nguDan') {
-    // Giỏ cá đan tre đeo bên hông trái, đuôi cá thò lên miệng giỏ.
-    chest.plain.cyl(0.08, 0.06, 0.14, C.thatch, -0.17, 0.3, 0.02, undefined, 8);
-    chest.plain.cyl(0.085, 0.085, 0.02, C.thatchDark, -0.17, 0.37, 0.02, undefined, 8);
-    chest.plain.cone(0.03, 0.08, C.fish, -0.15, 0.42, 0.02, [0, 0, 0.3], 4);
-    chest.plain.box(0.012, 0.22, 0.01, 0x5a3720, -0.08, 0.46, 0.08, [0, 0, -0.5]);
+    // Giỏ cá đan tre đeo bên hông trái, đuôi cá thò lên miệng giỏ, dây đeo chéo.
+    basket(r, { color: C.thatch, dark: C.thatchDark, at: [-0.175, 0.31, 0.03], r0: 0.05, r1: 0.06, h: 0.15, bulge: 0.45, rim: C.thatchDark, bone: 'hips' });
+    chest.plain.cone(0.03, 0.08, C.fish, -0.155, 0.42, 0.03, [0, 0, 0.3], 4);
+    sash(r, { color: 0x5a3720, side: 1, width: 0.02 });
   }
   if (job === 'thoXe' || job === 'thoMoc') {
-    // Yếm vải thô che bụi gỗ, đai lưng có ống mực (thợ mộc) hay túi đinh tre (thợ xẻ).
-    chest.plain.box(0.24, 0.3, 0.03, 0x8a6a46, 0, 0.42, 0.12);
-    chest.plain.box(0.26, 0.035, 0.03, 0x4a3424, 0, 0.56, 0.12);
+    // Yếm vải thô che bụi gỗ có viền da, đai lưng có ống mực (thợ mộc) hay túi đinh tre (thợ xẻ).
+    yem(r, { color: 0x8a6a46, top: 0.57, bottom: 0.27, half: 0.55, trim: 0x4a3424 });
     if (job === 'thoMoc') {
       chest.plain.cyl(0.035, 0.035, 0.06, C.woodLight, 0.15, 0.38, 0.06, [0, 0, Math.PI / 2], 8);
       chest.plain.sphere(0.012, C.ink, 0.19, 0.38, 0.06);
     } else {
-      chest.plain.sphere(0.045, C.thatch, -0.15, 0.36, 0.06, [1, 1.3, 0.8], 6);
+      sack(r, { color: C.thatch, at: [-0.155, 0.365, 0.05], size: [0.042, 0.055, 0.034], neck: 0.02, tie: C.woodDark, bone: 'hips' });
     }
   }
   if (job === 'giuKho') {
-    // Bao thóc đầy ắp cột miệng dây thừng
-    chest.plain.sphere(0.18, 0xd4b882, 0, 0.64, -0.19, [1.2, 0.85, 0.9], 10);
-    chest.plain.cyl(0.06, 0.04, 0.08, 0xc4a66e, 0, 0.8, -0.2, undefined, 6);
-    chest.plain.box(0.12, 0.02, 0.02, C.woodDark, 0, 0.77, -0.2);
+    // Bao thóc đầy ắp cột miệng dây thừng, quàng sau lưng.
+    sack(r, { color: 0xd4b882, at: [0, 0.64, -0.2], size: [0.21, 0.15, 0.16], neck: 0.06, tie: C.woodDark });
     // Cuộn trúc giản (sách thẻ tre) kẹp bên sườn trái
     chest.plain.cyl(0.035, 0.035, 0.24, C.woodLight, -0.16, 0.45, 0, [0.3, 0, 0], 8);
   }
   if (job === 'phuNu') {
     if (!sitting) {
       // Gùi tre đan tinh tế sau lưng có hoa dại
-      chest.plain.cyl(0.14, 0.1, 0.32, C.thatch, 0, 0.55, -0.2, [0.15, 0, 0], 10);
-      chest.band.cyl(0.145, 0.105, 0.06, C.red, 0, 0.62, -0.21, [0.15, 0, 0], 10);
+      basket(r, { color: C.thatch, dark: C.thatchDark, at: [0, 0.55, -0.205], r0: 0.095, r1: 0.14, h: 0.32, bulge: 0.08, tilt: [0.15, 0, 0], band: C.red });
       chest.plain.sphere(0.03, C.red, -0.04, 0.72, -0.18);
       chest.plain.sphere(0.028, C.gold, 0.04, 0.73, -0.18);
       chest.plain.sphere(0.022, C.cream, 0, 0.75, -0.19);
@@ -303,13 +277,17 @@ function drawWorker(r: HumanRig, job: Job, sitting: boolean): void {
     }
   }
   if (job === 'lacHau') {
-    // Chuỗi ngọc bích quý phái trước ngực
-    chest.plain.cyl(0.08, 0.08, 0.015, 0x3a7d65, 0, 0.56, 0.08, [0.35, 0, 0], 10);
-    chest.plain.sphere(0.025, C.gold, 0, 0.51, 0.12);
-    // Dải lụa đỏ thắm buông từ thắt lưng
-    chest.plain.box(0.07, 0.28, 0.018, C.red, 0, 0.26, 0.14);
-    chest.plain.box(0.05, 0.06, 0.022, C.gold, 0, 0.38, 0.14);
+    // Chuỗi ngọc bích quý phái trước ngực, mặt ngọc vàng; dải lụa đỏ thắm buông từ thắt lưng, khóa vàng.
+    necklace(r, { color: 0x3a7d65, r: 0.08, y: 0.56, z: 0.05, tilt: 0.35, thick: 0.013 });
+    chest.plain.sphere(0.025, C.gold, 0, 0.505, 0.125);
+    apron(r, { color: C.red, to: 0.12, half: 0.2 });
+    buckle(r, { color: C.gold, w: 0.035, h: 0.03 });
   }
+}
+
+/** Bầu hồ lô: hai bầu tròn liền nhau, cuống gỗ (đeo bên hông, theo hông). */
+function gourd(r: HumanRig, at: [number, number, number]): void {
+  sack(r, { color: 0xcfa560, at, size: [0.05, 0.058, 0.05], neck: 0.05, tie: C.woodDark, bone: 'hips' });
 }
 
 /** Đồ mang trên người khi đứng hay đi: tay đỡ thúng trên đầu, vác đá trên vai, quàng bao thóc. */

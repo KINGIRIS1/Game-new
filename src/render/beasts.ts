@@ -6,9 +6,12 @@
 
 import * as THREE from 'three';
 import type { FighterKind } from '../game/battle';
-import { HUMAN, beginPose, featherCrown, hairCap, humanBody, humanHead, lerp, strikeCurve, type Human, type HumanRig } from './body';
+import { HUMAN, beginPose, featherCrown, hairCap, headband, humanBody, humanHead, lerp, strikeCurve, type Human, type HumanRig } from './body';
+import { Clay, ellipsoid } from './nan';
+import { armor, bun, chestDisc, diadem, hairDown, necklace, pauldrons } from './nanDo';
+import { clayPiece, figure, type Piece } from './nanNguoi';
 import { C } from './palette';
-import { RigBuilder, bakeRig, moveBones, resetBones, skinRig, type Act, type BoneDef, type Bones, type Poser, type RigSlots } from './rig';
+import { RigBuilder, bakeRig, moveBones, resetBones, skinRig, type Act, type BoneDef, type Bones, type Poser, type RigSlot, type RigSlots } from './rig';
 import { drawRider, poseRider, riderBones, riderHasSkill, type RiderKind } from './soldier';
 import { IRON, IRON_DARK, coLac } from './weapons';
 
@@ -1021,8 +1024,12 @@ function prefixBones(defs: Defs, pre: string): Defs {
 /** Vẽ thân người thứ hai trong cùng khung xương: các hàm vẽ người (body.ts) gọi `on('hips')`... thành `on(pre + 'hips')`. */
 function prefixRig(r: Rig, pre: string): HumanRig {
   const rig = {
+    detail: r.detail,
     on: (b: string) => r.on(pre + b),
     local: (b: string, origin: V3, rot: V3 | null, draw: (s: RigSlots) => void) => r.local(pre + b, origin, rot, draw),
+    skinned: (slot: RigSlot, geo: THREE.BufferGeometry, bones: readonly string[]) => r.skinned(slot, geo, bones.map((b) => pre + b)),
+    defer: (run: () => void) => r.defer(run),
+    place: (at: V3, k: number, draw: () => void) => r.place(at, k, draw),
   };
   return rig as unknown as HumanRig;
 }
@@ -1081,23 +1088,13 @@ function drawRoyalMount(r: Rig): void {
 
 /** An Dương Vương cưỡi ngựa: hoàng bào đỏ, giáp ngực đồng chạm mặt trống, vương miện vàng, mũ lông chim, râu đen. */
 function drawKingRider(h: HumanRig): void {
-  humanBody(h, { legs: C.red, cloth: C.red, flaps: false, top: C.bronze, sleeves: C.red, belt: C.gold, armband: C.gold });
-  const chest = h.on('chest');
-  chest.band.cyl(0.155, 0.136, 0.22, C.bronze, 0, 0.485, 0, undefined, 12);
-  chest.plain.cyl(0.118, 0.132, 0.034, C.gold, 0, 0.58, 0, undefined, 12);
-  chest.drum.cyl(0.07, 0.07, 0.022, C.gold, 0, 0.495, 0.137, [Math.PI / 2, 0, 0], 14);
-  for (const s of [-1, 1]) chest.plain.sphere(0.085, C.bronzeLight, s * 0.18, 0.57, 0, [1.1, 0.75, 1.05], 8);
-  humanHead(h, { brows: true, mustache: C.hair });
+  humanBody(h, { legs: C.red, cloth: C.red, flaps: false, top: C.bronze, sleeves: C.red, belt: C.gold, armband: C.gold, bracer: C.bronze, bracerTrim: C.gold });
+  armor(h, { color: C.bronze, trim: C.gold, pattern: true, y0: 0.395, y1: 0.6 });
+  chestDisc(h, { color: C.gold, drum: true, r: 0.07, rim: C.goldDark, thick: 0.02 });
+  pauldrons(h, { color: C.bronzeLight, trim: C.gold, size: 1.05 });
+  humanHead(h, { brows: true, mustache: C.hair, beard: C.hair, beardLen: 0.12 });
   hairCap(h);
-  const head = h.on('head');
-  head.plain.cone(0.055, 0.13, C.hair, 0, 0.62, 0.16, [Math.PI + 0.28, 0, 0], 6);
-  head.band.cyl(0.228, 0.232, 0.062, C.gold, 0, 0.835, -0.03, undefined, 16);
-  head.plain.box(0.075, 0.075, 0.032, C.gold, 0, 0.85, 0.198, [0, 0, Math.PI / 4]);
-  head.plain.sphere(0.026, C.red, 0, 0.85, 0.215, [1, 1.2, 0.6], 7);
-  for (let i = 0; i < 10; i++) {
-    const a = (i / 10) * Math.PI * 2;
-    head.plain.cone(0.026, i % 2 === 0 ? 0.085 : 0.058, C.gold, Math.sin(a) * 0.222, 0.89, Math.cos(a) * 0.222 - 0.03, undefined, 4);
-  }
+  diadem(h, { color: C.gold, pattern: true, y: 0.806, h: 0.06, rim: C.goldDark, plate: C.gold, gem: C.red, spikes: { color: C.gold, n: 10, h: 0.085, low: 0.058 } });
   featherCrown(h, [C.red, C.gold, C.cream, C.ember], { count: 9, len: 0.42, spread: 0.23 });
 }
 
@@ -1108,45 +1105,60 @@ function drawKingRider(h: HumanRig): void {
 function drawMyChau(r: Rig): void {
   const h = prefixRig(r, MC);
   humanBody(h, { legs: ROSE, cloth: ROSE, flaps: false, top: ROSE, sleeves: ROSE, belt: C.gold, armband: C.gold });
-  const chest = h.on('chest').plain;
-  chest.add(new THREE.TorusGeometry(0.075, 0.016, 5, 14), C.gold, 0, 0.575, 0.03, [Math.PI / 2 + 0.25, 0, 0]);
-  // Cổ áo lông ngỗng xù quanh vai.
+  necklace(h, { color: C.gold, r: 0.075, y: 0.575, z: 0.03, tilt: 0.25, thick: 0.016 });
+  // Tóc dài xõa sau lưng, tóc mai hai bên má, búi tóc cài trâm vàng, vành vàng trên trán.
+  humanHead(h, { femBrows: true, lips: 0xc0303a });
+  hairCap(h);
+  headband(h, C.gold, 0.022);
+  hairDown(h, { color: C.hair, to: 0.44, width: 0.17, locks: 0.2 });
+  bun(h, { color: C.hair, at: [0, 0.975, -0.1], size: 0.07, pin: { color: C.gold, len: 0.22, tilt: 0.3, ends: C.red } });
+  // Cổ áo lông ngỗng xù quanh vai, hai vạt lông xếp lớp sau lưng.
+  figure(h, 'gooseCape', gooseCape);
+}
+
+/**
+ * Áo lông ngỗng nặn: cổ áo là vòng lông xù ôm vai; mỗi vạt một tấm lót, ngoài phủ lông xếp lớp như vảy (lông trắng
+ * xen lông ngà, hàng sau so le hàng trước); vạt dưới rộng hơn, mép dưới lông dài lởm chởm.
+ */
+function gooseCape(detail: number): Piece[] {
+  const out: Piece[] = [];
+  const collar = new Clay(GOOSE);
+  const shade: ReturnType<Clay['layer']>[] = [];
   for (let i = 0; i < 9; i++) {
     const a = (i / 8) * Math.PI;
-    chest.sphere(0.06, i % 2 ? GOOSE_SHADE : GOOSE, Math.cos(a) * 0.15, 0.585, -Math.sin(a) * 0.12 + 0.01, [1.3, 0.7, 1], 6);
+    const c: V3 = [Math.cos(a) * 0.15, 0.585, -Math.sin(a) * 0.12 + 0.01];
+    collar.add('chest', ellipsoid(c, [0.078, 0.042, 0.06]), { k: 0.012 });
+    if (i % 2) shade.push(collar.layer('chest', ellipsoid(c, [0.07, 0.05, 0.065]), GOOSE_SHADE));
   }
-  humanHead(h);
-  hairCap(h);
-  const head = h.on('head').plain;
-  // Tóc dài xõa sau lưng, tóc mai hai bên má, búi tóc cài trâm vàng, vành vàng trên trán.
-  head.sphere(0.18, C.hair, 0, 0.6, -0.15, [1, 1.45, 0.5], 9);
-  for (const s of [-1, 1]) head.box(0.05, 0.22, 0.09, C.hair, s * 0.19, 0.7, 0.04, [0, 0, -s * 0.12]);
-  head.sphere(0.07, C.hair, 0, 0.98, -0.1, [1, 0.85, 1], 7);
-  head.cyl(0.01, 0.01, 0.22, C.gold, 0, 0.99, -0.1, [0, 0, Math.PI / 2 - 0.3], 5);
-  head.sphere(0.025, C.red, 0.1, 1.02, -0.1, [1, 1, 1], 6);
-  head.cyl(0.222, 0.226, 0.022, C.gold, 0, 0.84, -0.03, undefined, 14);
-  // Áo lông ngỗng: mỗi vạt một tấm lót trắng, ngoài phủ lông xếp lớp như vảy (lông trắng xen lông ngà, hàng sau so le
-  // hàng trước); vạt dưới rộng hơn, mép dưới lông dài lởm chởm.
+  out.push(clayPiece(collar.build({ kind: 'nets', min: [-0.26, 0.5, -0.22], max: [0.26, 0.66, 0.1], cell: 0.009 / detail, target: Math.round(420 * detail) }, shade)));
   for (const [bone, top, bottom, w0, w1] of [
-    [MC + 'Cape', CAPE_TOP, CAPE_MID[1] - 0.02, 0.34, 0.4],
-    [MC + 'Cape2', CAPE_MID, 0.1, 0.4, 0.5],
+    ['Cape', CAPE_TOP, CAPE_MID[1] - 0.02, 0.34, 0.4],
+    ['Cape2', CAPE_MID, 0.1, 0.4, 0.5],
   ] as const) {
-    const p = r.on(bone).plain;
-    const h = top[1] - bottom;
-    p.box((w0 + w1) / 2, h, 0.025, GOOSE_SHADE, 0, top[1] - h / 2, top[2] - 0.01);
-    const rows = Math.round(h / 0.06);
+    const clay = new Clay(GOOSE_SHADE);
+    const hh = top[1] - bottom;
+    const z0 = top[2];
+    clay.add(bone, ellipsoid([0, top[1] - hh / 2, z0 - 0.012], [(w0 + w1) / 4, hh / 2, 0.014]), { k: 0 });
+    const rows = Math.round(hh / 0.06);
+    const paints: ReturnType<Clay['layer']>[] = [];
     for (let row = 0; row < rows; row++) {
       const k = (row + 0.5) / rows;
-      const y = top[1] - k * h;
+      const y = top[1] - k * hh;
       const half = lerp(w0, w1, k) / 2;
       const n = 5;
       for (let i = 0; i < n; i++) {
         const x = lerp(-half, half, (i + (row % 2 ? 0.75 : 0.25)) / n);
-        const tip = bone === MC + 'Cape2' && row === rows - 1;
-        p.sphere(0.05, (row + i) % 2 ? GOOSE : GOOSE_SHADE, x, y - (tip ? 0.03 : 0), top[2] - 0.03 - row * 0.004, [1.05, tip ? 2.2 : 1.6, 0.32], 6);
+        const tip = bone === 'Cape2' && row === rows - 1;
+        const c: V3 = [x, y - (tip ? 0.03 : 0), z0 - 0.03 - row * 0.004];
+        const f = ellipsoid(c, [0.052, tip ? 0.11 : 0.08, 0.016]);
+        clay.add(bone, f, { k: 0.006 });
+        if ((row + i) % 2) paints.push(clay.layer(bone, ellipsoid(c, [0.056, tip ? 0.115 : 0.085, 0.03]), GOOSE));
       }
     }
+    const wmax = Math.max(w0, w1) / 2 + 0.08;
+    out.push(clayPiece(clay.build({ kind: 'nets', min: [-wmax, bottom - 0.15, z0 - 0.09], max: [wmax, top[1] + 0.08, z0 + 0.02], cell: 0.008 / detail, target: Math.round(700 * detail) }, paints)));
   }
+  return out;
 }
 
 /**

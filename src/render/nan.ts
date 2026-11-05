@@ -1149,8 +1149,11 @@ export function slab(
   nv: number,
   thick: number,
   color: THREE.ColorRepresentation,
+  /** Có uv (u ngang, v từ 1 ở mép trên xuống 0) cho chất liệu dải hoa văn. */
+  withUv = false,
 ): THREE.BufferGeometry {
   const pos: number[] = [];
+  const uv: number[] = [];
   const idx: number[] = [];
   const grid = (off: number) => {
     const start = pos.length / 3;
@@ -1159,6 +1162,7 @@ export function slab(
         const p = P(i / nu, j / nv);
         const d = inward(i / nu, j / nv);
         pos.push(p[0] + d[0] * off, p[1] + d[1] * off, p[2] + d[2] * off);
+        uv.push(i / nu, 1 - j / nv);
       }
     return start;
   };
@@ -1192,6 +1196,7 @@ export function slab(
   edge(ring);
   const g = new THREE.BufferGeometry();
   g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+  if (withUv) g.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2));
   g.setIndex(idx);
   // Mặt ngoài phải quay ngược hướng `inward`.
   const pa = new THREE.Vector3().fromBufferAttribute(g.getAttribute('position'), idx[0]);
