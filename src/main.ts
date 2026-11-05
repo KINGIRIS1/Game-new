@@ -22,6 +22,7 @@ import type { QuanDaoId } from './game/bien';
 import { fmt } from './ui/format';
 import {
   canAfford,
+  dienLevel,
   placeUNo,
   repairUNo,
   uNoCount,
@@ -69,11 +70,12 @@ import { isOpen, khoanhOf, khoanhWood, openKhoanh, openable } from './game/khoan
 import { cayDaAt, clearCayDa } from './game/cayDa';
 import { GRID, RIVER_START, farBankOf, footOnLand, lineTiles } from './game/map';
 import { fromCode, loadFromStorage, saveFileName, saveToStorage, toCode } from './game/save';
-import { tomTat } from './game/manVao';
+import { chapterOf, tomTat } from './game/manVao';
 import { TitleDrift } from './render/camera';
 import { HALF, RESOLUTIONS, World, type Resolution } from './render/world';
 import { vi } from './text/vi';
 import { Hud, buildingName, type HudAction } from './ui/hud';
+import { nanTruoc, prewarmJobs } from './render/nanTruoc';
 import { ManVao } from './ui/manVao';
 import { preloadThumbs } from './ui/xayDung';
 
@@ -127,6 +129,17 @@ async function start(): Promise<void> {
 
   let state: GameState = loadFromStorage(localStorage) ?? createInitialState(Date.now());
   setMuted(state.settings.muted);
+  // Worker nặn sẵn nhân vật của chương đang chơi, song song với việc dựng cảnh, để quân mới ra trận khỏi khựng hình.
+  // Sang chương mới, rèn binh khí bậc mới, Điện ra tới biển thì nặn thêm (`prewarm` ở vòng lặp).
+  let prewarmKey = '';
+  const prewarm = () => {
+    const sea = dienLevel(state) >= 8;
+    const key = `${chapterOf(state)}|${Object.values(state.arms).join()}|${sea}`;
+    if (key === prewarmKey) return;
+    prewarmKey = key;
+    nanTruoc(prewarmJobs(chapterOf(state), state.arms, sea));
+  };
+  prewarm();
 
   // Màn hình vào game hiện ngay; nút Chơi tiếp chỉ bấm được khi cảnh đã dựng xong (`manVao.ready`).
   const manVao = new ManVao(document.body, state.settings.muted, {
@@ -1389,6 +1402,7 @@ async function start(): Promise<void> {
       }
       refreshUi();
       watchStory();
+      prewarm();
     }
     if (now - lastSave > AUTOSAVE_MS) {
       lastSave = now;
