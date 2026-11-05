@@ -29,6 +29,30 @@ import {
   type Human,
   type HumanRig,
 } from './body';
+import { Clay, cone, decal, ellipsoid, hit, radiusAt, slab, sphere, type Sdf } from './nan';
+import {
+  apron,
+  armor,
+  buckle,
+  bun,
+  chestDisc,
+  cloak,
+  diadem,
+  hairDown,
+  helmet,
+  leafSkirt,
+  necklace,
+  pauldrons,
+  plumes,
+  shoulderRocks,
+  skirtArmor,
+  studs,
+  tufts,
+  tuftsPieces,
+  yem,
+} from './nanDo';
+import { clayPiece, figure, prim, rigid, segs, type Piece } from './nanNguoi';
+import { horseBody, horseDrape, type HorseShape } from './nanThu';
 import { C } from './palette';
 import { RigBuilder, bakeRig, moveBones, skinRig, type Act, type BoneDef, type Bones, type Poser } from './rig';
 import { ToonModel, inkThin } from './toon';
@@ -136,115 +160,74 @@ const IRON_HORSE: Defs = {
   qTail: { parent: 'qBody', at: [0, 0.96, -0.48] },
 };
 
+/** Chỗ các xương ngựa sắt cho thân nặn (to ngang hơn ngựa thường). */
+const IRON_SHAPE: HorseShape = { y: 0.82, legX: 0.175, legZ: 0.34, neck: [0, 0.96, 0.32], head: [0, 1.32, 0.58], tail: [0, 0.96, -0.48], girth: 1.12 };
+
 /** Ngựa sắt của Gióng: thiết giáp đóng đinh tán đồng, ngực gắn mặt trống đồng, lò lửa trong sườn, bờm và đuôi lửa nhiều tầng. */
 function drawIronHorse(r: Rig): void {
+  // Thân, chân, cổ, đầu ngựa sắt nặn liền khối (sắt, móng đồng sẫm, mõm sắt sẫm); bờm, đuôi là lửa.
+  horseBody(r, { coat: IRON, mane: IRON_DARK, hoof: C.bronzeDark, muzzle: IRON_DARK, sock: IRON_DARK, bare: true }, IRON_SHAPE);
   const body = r.on('qBody');
   const p = body.plain;
-
-  // Thân ngựa sắt 3 khối cơ bắp (ngực nở, bụng thon, mông nở) và khe lò lửa hai bên sườn.
-  p.sphere(0.35, IRON, 0, 0.82, 0, [0.82, 0.82, 1.42], 14);
-  p.sphere(0.31, IRON_LIGHT, 0, 0.86, 0.24, [0.88, 0.86, 0.95], 12);
-  p.sphere(0.3, IRON, 0, 0.85, -0.26, [0.84, 0.84, 0.95], 12);
+  // Khe lò lửa hai bên sườn.
   for (const s of [-1, 1]) {
     for (let i = 0; i < 3; i++) {
-      const z = 0.14 - i * 0.11;
-      body.glow.box(0.025, 0.13 - i * 0.015, 0.04, i % 2 ? C.ember : C.fire, s * 0.278, 0.78 + i * 0.01, z, [0.2, 0, s * 0.12]);
-      p.box(0.03, 0.16, 0.03, IRON_DARK, s * 0.275, 0.78 + i * 0.01, z + 0.045, [0.2, 0, s * 0.12]);
+      const z = 0.12 - i * 0.11;
+      body.glow.box(0.025, 0.13 - i * 0.015, 0.04, i % 2 ? C.ember : C.fire, s * 0.255, 0.8 + i * 0.01, z, [0.2, 0, s * 0.12]);
+      p.box(0.03, 0.16, 0.03, IRON_DARK, s * 0.252, 0.8 + i * 0.01, z + 0.045, [0.2, 0, s * 0.12]);
     }
   }
-
-  // Giáp ngực gắn mặt trống đồng Đông Sơn + giáp ốp vai và mông đóng đinh tán vàng.
-  body.band.cyl(0.31, 0.33, 0.16, C.bronze, 0, 0.84, 0.27, [0.25, 0, 0], 14);
-  body.drum.cyl(0.14, 0.14, 0.04, C.gold, 0, 0.85, 0.56, [Math.PI / 2 - 0.15, 0, 0], 16);
-  p.add(new THREE.TorusGeometry(0.145, 0.02, 6, 20), C.bronzeDark, 0, 0.85, 0.57, [-0.15, 0, 0]);
+  // Mặt trống đồng gắn ngực, viền đồng sẫm.
+  body.drum.cyl(0.13, 0.13, 0.04, C.gold, 0, 0.86, 0.52, [Math.PI / 2 - 0.15, 0, 0], 16);
+  p.add(new THREE.TorusGeometry(0.135, 0.02, 6, 20), C.bronzeDark, 0, 0.86, 0.53, [-0.15, 0, 0]);
+  // Yên ngựa chiến: tấm phủ dệt hoa văn viền đồng, cầu yên trước/sau, bàn đạp đồng.
+  horseDrape(r, { color: C.red, z0: -0.3, z1: 0.18, half: 1.25, pattern: true, trim: C.bronze }, IRON_SHAPE);
+  p.box(0.3, 0.13, 0.07, C.bronze, 0, 1.17, 0.17, [-0.25, 0, 0]);
+  p.box(0.32, 0.14, 0.08, C.bronze, 0, 1.18, -0.29, [0.3, 0, 0]);
   for (const s of [-1, 1]) {
-    p.sphere(0.18, IRON_DARK, s * 0.24, 0.82, 0.3, [0.55, 0.85, 1.1], 10);
-    p.box(0.04, 0.05, 0.34, C.bronze, s * 0.31, 0.75, 0.3, [0.15, s * 0.15, 0]);
-    for (const dz of [-0.1, 0, 0.1]) p.sphere(0.024, C.gold, s * 0.325, 0.84, 0.3 + dz, [1, 1, 1], 6);
-    p.sphere(0.17, IRON_DARK, s * 0.22, 0.86, -0.3, [0.55, 0.8, 1.05], 10);
-    p.box(0.04, 0.045, 0.3, C.bronze, s * 0.29, 0.79, -0.3, [-0.15, -s * 0.12, 0]);
+    p.box(0.02, 0.26, 0.025, IRON_DARK, s * 0.29, 0.82, 0.02);
+    p.add(new THREE.TorusGeometry(0.05, 0.014, 5, 10), C.bronzeLight, s * 0.3, 0.66, 0.02, [0, Math.PI / 2, 0]);
   }
-
-  // Yên ngựa chiến, tấm che hông dệt hoa văn Đông Sơn, cầu yên trước/sau và bàn đạp đồng.
-  body.band.box(0.58, 0.09, 0.56, C.red, 0, 1.08, -0.04);
-  for (const s of [-1, 1]) {
-    body.band.box(0.04, 0.28, 0.52, C.red, s * 0.29, 0.96, -0.04, [0, 0, s * 0.12]);
-    p.box(0.045, 0.04, 0.54, C.bronze, s * 0.31, 0.82, -0.04, [0, 0, s * 0.12]);
-    for (const dz of [-0.18, 0, 0.18]) p.sphere(0.024, C.gold, s * 0.315, 0.95, -0.04 + dz, [1, 1, 1], 6);
-    p.box(0.02, 0.28, 0.025, IRON_DARK, s * 0.31, 0.84, 0.02);
-    p.add(new THREE.TorusGeometry(0.05, 0.014, 5, 10), C.bronzeLight, s * 0.32, 0.67, 0.02, [0, Math.PI / 2, 0]);
-  }
-  p.box(0.34, 0.14, 0.07, C.bronze, 0, 1.16, 0.2, [-0.25, 0, 0]);
-  p.box(0.36, 0.15, 0.08, C.bronze, 0, 1.17, -0.27, [0.3, 0, 0]);
-
-  // Bốn chân có khớp gối bọc đồng, ống chân sắt, vòng cổ chân có cựa lửa và móng bịt đồng.
-  for (const [b, x, z, front] of [
-    ['qFL', -0.175, 0.34, true],
-    ['qFR', 0.175, 0.34, true],
-    ['qBL', -0.175, -0.34, false],
-    ['qBR', 0.175, -0.34, false],
+  // Cựa lửa sau cổ chân.
+  for (const [b, x, z] of [
+    ['qFL', -0.175, 0.35],
+    ['qFR', 0.175, 0.35],
+    ['qBL', -0.175, -0.385],
+    ['qBR', 0.175, -0.385],
   ] as const) {
-    const leg = r.on(b);
-    const lp = leg.plain;
-    lp.cyl(0.088, 0.068, 0.34, IRON, x, 0.48, z, [front ? 0.06 : -0.08, 0, 0], 8);
-    lp.sphere(0.074, IRON_DARK, x, 0.31, z + (front ? 0.015 : -0.015), [1, 0.85, 1.1], 8);
-    lp.sphere(0.042, C.bronze, x + (x < 0 ? -0.05 : 0.05), 0.31, z + (front ? 0.015 : -0.015), [0.6, 1, 1], 6);
-    lp.cyl(0.064, 0.054, 0.28, IRON_DARK, x, 0.17, z, [front ? -0.04 : 0.05, 0, 0], 8);
-    lp.cyl(0.078, 0.084, 0.06, C.bronze, x, 0.08, z, undefined, 10);
-    leg.glow.cone(0.038, 0.14, C.ember, x, 0.12, z - 0.08, [-2.1, 0, 0], 5);
-    lp.cyl(0.082, 0.098, 0.07, C.bronzeDark, x, 0.035, z + 0.015, undefined, 10);
-    lp.box(0.09, 0.04, 0.05, C.gold, x, 0.025, z + 0.07);
+    r.on(b).glow.cone(0.034, 0.13, C.ember, x, 0.12, z - 0.07, [-2.1, 0, 0], 5);
   }
 
-  // Cổ ngựa sắt bọc 4 vòng giáp xếp lớp vươn từ ngực (y=0.96, z=0.32) lên đầu (y=1.32, z=0.58), cùng bờm lửa rực cháy.
-  const neck = r.on('qNeck');
-  neck.plain.cyl(0.13, 0.19, 0.52, IRON, 0, 1.14, 0.45, [0.62, 0, 0], 10);
-  for (let i = 0; i < 4; i++) {
-    const t = i / 3;
-    const ny = 0.98 + t * 0.32;
-    const nz = 0.34 + t * 0.22;
-    const rad = lerp(0.19, 0.135, t);
-    neck.plain.cyl(rad, rad + 0.012, 0.05, i % 2 ? C.bronze : IRON_DARK, 0, ny, nz, [0.62, 0, 0], 10);
-  }
   // Bờm lửa Thánh Gióng mọc dọc theo sống cổ phía trên, ngọn lửa bốc cao và cuộn bay về sau theo chiều gió phi.
+  const neck = r.on('qNeck');
   for (let i = 0; i < 7; i++) {
     const t = i / 6;
-    const ny = 1.08 + t * 0.32;
+    const ny = 1.12 + t * 0.3;
     const nz = 0.22 + t * 0.22;
     const len = 0.34 + (1 - Math.abs(t - 0.5) * 2) * 0.08;
-    neck.glow.cone(0.08, len, i % 2 ? C.ember : C.fire, 0, ny + 0.06, nz - 0.04, [-0.75, 0, 0], 6);
+    neck.glow.cone(0.075, len, i % 2 ? C.ember : C.fire, 0, ny + 0.06, nz - 0.04, [-0.75, 0, 0], 6);
     for (const s of [-1, 1]) {
-      neck.glow.cone(0.05, len * 0.68, i % 2 ? C.fire : C.ember, s * 0.065, ny + 0.04, nz - 0.02, [-0.75, 0, s * 0.28], 5);
+      neck.glow.cone(0.048, len * 0.68, i % 2 ? C.fire : C.ember, s * 0.06, ny + 0.04, nz - 0.02, [-0.75, 0, s * 0.28], 5);
     }
   }
 
-  // Đầu ngựa chạm khắc, mặt nạ trán đồng vàng, mắt lửa, khoen hàm thiết và dây cương đồng.
+  // Mặt nạ trán đồng vàng, mắt lửa, lỗ mũi phả lửa, ngọn lửa trên trán, dây cương đồng.
   const head = r.on('qHead');
   const hp = head.plain;
-  hp.sphere(0.16, IRON, 0, 1.38, 0.58, [0.92, 0.9, 1.15], 10);
-  hp.box(0.16, 0.15, 0.34, IRON, 0, 1.33, 0.74, [0.38, 0, 0]);
-  hp.box(0.13, 0.075, 0.28, IRON_DARK, 0, 1.22, 0.72, [0.52, 0, 0]);
-  head.glow.sphere(0.065, C.ember, 0, 1.27, 0.82, [0.9, 0.7, 1.2], 8);
-  hp.box(0.18, 0.04, 0.38, C.bronze, 0, 1.41, 0.72, [0.38, 0, 0]);
-  hp.box(0.045, 0.065, 0.4, C.gold, 0, 1.43, 0.71, [0.38, 0, 0]);
-  head.glow.cone(0.055, 0.22, C.ember, 0, 1.56, 0.56, [-0.35, 0, 0], 5);
-
+  const [hx, hy, hz] = IRON_SHAPE.head;
+  hp.box(0.07, 0.035, 0.3, C.bronze, hx, hy + 0.1, hz + 0.12, [0.42, 0, 0]);
+  hp.box(0.03, 0.04, 0.32, C.gold, hx, hy + 0.115, hz + 0.12, [0.42, 0, 0]);
+  head.glow.cone(0.05, 0.2, C.ember, hx, hy + 0.24, hz - 0.02, [-0.35, 0, 0], 5);
   for (const s of [-1, 1]) {
-    hp.box(0.03, 0.12, 0.22, C.bronzeDark, s * 0.088, 1.32, 0.68, [0.38, s * 0.08, 0]);
-    hp.sphere(0.038, IRON_DARK, s * 0.065, 1.3, 0.88, [0.8, 0.9, 1.1], 6);
-    head.glow.sphere(0.024, C.ember, s * 0.068, 1.295, 0.9, [1, 1, 1], 5);
-    head.glow.sphere(0.046, C.fire, s * 0.095, 1.39, 0.66, [0.7, 0.9, 1.1], 8);
-    head.glow.sphere(0.025, C.ember, s * 0.105, 1.39, 0.68, [1, 1, 1], 6);
-    hp.box(0.05, 0.03, 0.11, C.gold, s * 0.098, 1.435, 0.66, [0.3, 0, -s * 0.35]);
-    hp.cone(0.044, 0.16, IRON_DARK, s * 0.08, 1.53, 0.52, [-0.35, 0, s * 0.25], 5);
-    hp.cone(0.028, 0.12, C.gold, s * 0.11, 1.48, 0.56, [-0.15, 0, s * 0.55], 5);
-    hp.add(new THREE.TorusGeometry(0.032, 0.009, 5, 10), C.gold, s * 0.085, 1.23, 0.78, [0, Math.PI / 2, 0]);
-    hp.box(0.016, 0.02, 0.58, C.bronzeLight, s * 0.11, 1.26, 0.48, [0.08, -s * 0.08, 0]);
+    head.glow.sphere(0.03, C.fire, s * 0.078, hy + 0.035, hz + 0.075, [0.6, 0.9, 1], 8);
+    head.glow.sphere(0.018, C.ember, s * 0.037, hy - 0.115, hz + 0.33, [1, 1, 1], 5);
+    hp.add(new THREE.TorusGeometry(0.03, 0.009, 5, 10), C.gold, s * 0.062, hy - 0.08, hz + 0.18, [0, Math.PI / 2, 0]);
+    hp.box(0.016, 0.02, 0.58, C.bronzeLight, s * 0.11, hy - 0.06, hz - 0.1, [0.08, -s * 0.08, 0]);
   }
 
   // Đuôi lửa: bọc gốc đuôi đồng + 7 ngọn lửa xòe dài.
   const tail = r.on('qTail');
-  tail.plain.cyl(0.065, 0.08, 0.12, C.bronze, 0, 0.94, -0.52, [-1.4, 0, 0], 8);
+  tail.plain.cyl(0.06, 0.075, 0.12, C.bronze, 0, 0.94, -0.52, [-1.4, 0, 0], 8);
   for (const [dx, dy, rz, len, col] of [
     [0, 0.02, 0, 0.68, C.ember],
     [-0.06, 0, 0.28, 0.6, C.fire],
@@ -358,70 +341,33 @@ function drawGiongRider(r: HumanRig, bamboo: boolean): void {
     sleeves: IRON,
     belt: C.gold,
     armband: C.gold,
+    greaves: IRON,
+    greavesTrim: C.gold,
+    knee: C.bronze,
+    bracer: IRON_DARK,
+    bracerTrim: C.gold,
   });
-  for (const [b, x] of [
-    ['legL', -0.065],
-    ['legR', 0.065],
-  ] as const) {
-    const lp = r.on(b).plain;
-    lp.cyl(0.052, 0.044, 0.14, IRON, x, 0.11, 0.008, undefined, 8);
-    lp.sphere(0.044, C.bronze, x, 0.185, 0.035, [0.9, 0.9, 0.7], 8);
-    lp.cyl(0.054, 0.054, 0.03, C.gold, x, 0.05, 0.008, undefined, 8);
-  }
-
-  const hips = r.on('hips');
-  hips.plain.box(0.09, 0.075, 0.04, C.gold, 0, 0.405, 0.135);
-  hips.plain.sphere(0.026, C.red, 0, 0.405, 0.155, [1, 1, 0.6], 6);
-  for (const s of [-1, 1]) {
-    hips.band.box(0.04, 0.19, 0.17, IRON, s * 0.145, 0.3, 0, [0, 0, -s * 0.18]);
-    hips.plain.box(0.044, 0.032, 0.18, C.bronze, s * 0.16, 0.21, 0, [0, 0, -s * 0.18]);
-  }
-
-  const chest = r.on('chest');
-  chest.band.cyl(0.148, 0.126, 0.21, IRON, 0, 0.485, 0, undefined, 12);
-  chest.plain.cyl(0.115, 0.13, 0.035, C.gold, 0, 0.58, 0, undefined, 12);
-  chest.drum.cyl(0.072, 0.072, 0.022, C.gold, 0, 0.495, 0.13, [Math.PI / 2, 0, 0], 14);
-  chest.plain.add(new THREE.TorusGeometry(0.074, 0.012, 6, 16), C.bronze, 0, 0.495, 0.138);
-
-  for (const s of [-1, 1]) {
-    chest.plain.sphere(0.082, IRON, s * 0.155, 0.565, 0, [1.15, 0.82, 1.08], 10);
-    chest.plain.sphere(0.068, IRON_DARK, s * 0.175, 0.525, 0, [1.1, 0.7, 1.02], 8);
-    chest.plain.box(0.11, 0.025, 0.13, C.gold, s * 0.165, 0.545, 0, [0, 0, -s * 0.25]);
-    chest.plain.cone(0.032, 0.11, C.gold, s * 0.205, 0.615, -0.01, [0, 0, -s * 0.65], 5);
-    chest.plain.sphere(0.032, C.gold, s * 0.115, 0.56, 0.095, [1, 1, 0.6], 7);
-  }
-
-  chest.plain.box(0.36, 0.48, 0.032, C.red, 0, 0.45, -0.22, [0.72, 0, 0]);
-  chest.band.box(0.38, 0.07, 0.036, C.gold, 0, 0.28, -0.37, [0.72, 0, 0]);
-  for (const s of [-1, 1]) {
-    chest.plain.box(0.14, 0.46, 0.028, C.red, s * 0.17, 0.44, -0.2, [0.7, s * 0.18, -s * 0.15]);
-  }
-
-  for (const [b, s] of [
-    ['armL', -1],
-    ['armR', 1],
-  ] as const) {
-    const ap = r.on(b).plain;
-    const x = s * 0.135;
-    ap.cyl(0.046, 0.04, 0.11, IRON_DARK, x, 0.375, 0, undefined, 8);
-    ap.cyl(0.049, 0.049, 0.024, C.gold, x, 0.425, 0, undefined, 8);
-    ap.cyl(0.044, 0.044, 0.022, C.bronze, x, 0.325, 0, undefined, 8);
-  }
-
+  buckle(r, { color: C.gold, gem: C.red });
+  skirtArmor(r, { color: IRON, trim: C.bronze, rows: 2, to: 0.2, panels: [0, Math.PI], half: 0.5 });
+  armor(r, { color: IRON, trim: C.gold, pattern: true, y0: 0.395, y1: 0.6 });
+  chestDisc(r, { color: C.gold, drum: true, r: 0.072, rim: C.bronze, thick: 0.02 });
+  pauldrons(r, { color: IRON, trim: C.gold, layers: 2, size: 1.1, spike: C.gold });
+  // Đại hồng bào xòe ra sau lưng ngựa.
+  cloak(r, { color: C.red, trim: C.gold, clasp: C.gold, hem: 0.2, flare: 0.22 });
   humanHead(r, { brows: true });
-  const head = r.on('head');
-  const hp = head.plain;
-  hp.sphere(0.236, IRON, 0, 0.845, -0.02, [1.02, 0.66, 1.02], 12);
-  hp.box(0.036, 0.16, 0.26, C.gold, 0, 0.93, 0.02, [-0.15, 0, 0]);
-  head.band.cyl(0.242, 0.242, 0.048, C.bronze, 0, 0.84, -0.02, undefined, 14);
-  for (const s of [-1, 1]) {
-    hp.box(0.13, 0.032, 0.03, C.gold, s * 0.062, 0.845, 0.215, [0, -s * 0.22, s * 0.18]);
-    hp.box(0.028, 0.13, 0.1, IRON_DARK, s * 0.205, 0.745, 0.04, [0.12, s * 0.2, -s * 0.12]);
-    hp.box(0.032, 0.135, 0.024, C.bronze, s * 0.208, 0.745, 0.085, [0.12, s * 0.2, -s * 0.12]);
-  }
-  hp.sphere(0.028, C.red, 0, 0.845, 0.232, [1, 1.2, 0.6], 7);
-  hp.cyl(0.045, 0.065, 0.06, C.gold, 0, 0.99, -0.03, undefined, 8);
-  featherCrown(r, [C.red, C.ember, C.cream, C.gold], { count: 9, len: 0.44, spread: 0.23 });
+  helmet(r, {
+    color: IRON,
+    band: C.bronze,
+    bandPattern: true,
+    ridge: C.gold,
+    cheek: 0.11,
+    guard: IRON_DARK,
+    guardTrim: C.bronze,
+    top: { kind: 'tube', color: C.gold, h: 0.06 },
+    chevron: C.gold,
+    gem: C.red,
+  });
+  plumes(r, [C.red, C.ember, C.cream, C.gold], { count: 9, len: 0.44, spread: 0.23, y: 0.99, z: -0.05 });
   r.local('hand', GRIP_R, null, (s) => giongWeapon(s, bamboo));
 }
 
@@ -499,44 +445,75 @@ function drawChild(r: Rig): void {
   base.plain.box(0.04, 0.026, 0.58, C.red, 0.355, 0.018, 0.04);
   base.plain.cyl(0.065, 0.042, 0.055, C.bronze, 0.25, 0.055, 0.18, undefined, 10);
   base.plain.sphere(0.058, C.cream, 0.25, 0.088, 0.18, [1, 0.7, 1], 8);
+  figure(r as unknown as HumanRig, 'giongBe', childPieces);
+}
 
-  const hips = r.on('cHips').plain;
+/** Thân cậu bé nặn liền khối: bụng tròn, chân duỗi trước, tay mũm mĩm, đầu to má phúng phính; yếm, kiềng, vòng. */
+function childPieces(detail: number): Piece[] {
+  const body = new Clay(C.skin);
+  body.add('cChest', ellipsoid([0, 0.215, 0], [0.142, 0.16, 0.125]), { k: 0 });
+  body.add('cChest', ellipsoid([0, 0.17, 0.03], [0.138, 0.12, 0.118]), { k: 0.05 });
+  body.add('cChest', cone([0, 0.3, -0.005], [0, 0.4, 0], 0.075, 0.062), { k: 0.04 });
+  body.add('cHips', ellipsoid([0, 0.1, -0.015], [0.15, 0.075, 0.13]), { k: 0.04 });
   for (const s of [-1, 1]) {
-    hips.cyl(0.054, 0.048, 0.24, C.skin, s * 0.085, 0.08, 0.13, [Math.PI / 2, 0, -s * 0.08], 8);
-    hips.sphere(0.048, C.skin, s * 0.095, 0.095, 0.26, [0.9, 1.15, 0.75], 7);
-    hips.cyl(0.052, 0.052, 0.022, C.gold, s * 0.09, 0.08, 0.22, [Math.PI / 2, 0, 0], 8);
+    body.add('cHips', cone([s * 0.078, 0.085, 0.02], [s * 0.095, 0.08, 0.23], 0.058, 0.046), { k: 0.03 });
+    body.add('cHips', ellipsoid([s * 0.097, 0.1, 0.262], [0.042, 0.055, 0.034]), { k: 0.025 });
+    const arm = s < 0 ? 'cArmL' : 'cArmR';
+    body.add(arm, cone([s * 0.128, 0.31, 0.01], [s * 0.172, 0.15, 0.075], 0.042, 0.034), { k: 0.03 });
+    body.add(arm, ellipsoid([s * 0.178, 0.125, 0.088], [0.04, 0.042, 0.04]), { k: 0.02 });
   }
-  const chest = r.on('cChest');
-  chest.plain.cyl(0.125, 0.155, 0.3, C.skin, 0, 0.22, 0, undefined, 10);
-  chest.band.box(0.23, 0.24, 0.042, C.red, 0, 0.235, 0.132);
-  chest.drum.cyl(0.065, 0.065, 0.015, C.gold, 0, 0.235, 0.152, [Math.PI / 2, 0, 0], 12);
-  chest.plain.add(new THREE.TorusGeometry(0.105, 0.014, 6, 16), C.gold, 0, 0.365, 0.02, [Math.PI / 2 + 0.2, 0, 0]);
-  for (const [b, s] of [
-    ['cArmL', -1],
-    ['cArmR', 1],
-  ] as const) {
-    const p = r.on(b).plain;
-    p.cyl(0.038, 0.034, 0.2, C.skin, s * 0.155, 0.22, 0.04, [0.4, 0, s * 0.3], 8);
-    p.cyl(0.04, 0.04, 0.02, C.gold, s * 0.165, 0.16, 0.065, [0.4, 0, s * 0.3], 8);
-    p.sphere(0.044, C.skin, s * 0.175, 0.13, 0.085, [1, 1, 1], 7);
-  }
-  const h = r.on('cHead').plain;
-  h.sphere(0.242, C.skin, 0, 0.58, 0, [1, 0.96, 0.96], 14);
+  const out: Piece[] = [clayPiece(body.build({ kind: 'nets', min: [-0.27, 0.0, -0.17], max: [0.27, 0.43, 0.32], cell: 0.011 / detail, target: Math.round(1100 * detail) }))];
+  // Yếm đào thêu mặt trống đồng.
+  const chest = body.only(['cChest']);
+  const P = (u: number, v: number): V3 => {
+    const y = 0.33 - 0.2 * v;
+    const th = Math.PI / 2 + (u - 0.5) * 2 * (0.5 + 0.25 * Math.min(1, v * 1.5));
+    const rr = radiusAt(chest, [0, y, 0.0], [Math.cos(th), 0, Math.sin(th)], 0.3) + 0.006;
+    return [Math.cos(th) * rr, y, Math.sin(th) * rr];
+  };
+  const inward = (u: number, v: number): V3 => {
+    const th = Math.PI / 2 + (u - 0.5) * 2 * (0.5 + 0.25 * Math.min(1, v * 1.5));
+    return [-Math.cos(th), 0, -Math.sin(th)];
+  };
+  out.push(rigid(slab(P, inward, Math.max(4, Math.round(6 * detail)), Math.max(3, Math.round(4 * detail)), 0.008, C.red, true), 'cChest', 'band'));
+  const plateF: Sdf = (x, y, z) => chest(x, y, z) - 0.015;
+  const c = hit(plateF, [0, 0.235, 0.5], [0, 0, -1]) ?? [0, 0.235, 0.14];
+  out.push(rigid(decal(plateF, c, { r: 0.058, lift: 0.004, seg: segs(18, detail, 12), rings: 2 }, C.gold), 'cChest', 'drum'));
+  const kieng = new THREE.TorusGeometry(0.098, 0.014, 6, 18);
+  kieng.rotateX(Math.PI / 2 + 0.2);
+  kieng.translate(0, 0.362, 0.02);
+  out.push(prim(kieng, C.gold, 'cChest'));
   for (const s of [-1, 1]) {
-    h.sphere(0.036, C.skin, s * 0.232, 0.57, 0, [0.55, 1, 0.9], 6);
-    h.sphere(0.033, C.ink, s * 0.086, 0.575, 0.212, [1, 1.4, 0.5], 7);
-    h.sphere(0.013, C.cream, s * 0.078, 0.59, 0.23, [1, 1, 1], 5);
-    h.box(0.055, 0.014, 0.016, C.hair, s * 0.086, 0.635, 0.21, [0, 0, -s * 0.15]);
-    h.sphere(0.038, 0xe58a6a, s * 0.135, 0.515, 0.185, [1, 0.62, 0.45], 6);
+    const v = new THREE.TorusGeometry(0.04, 0.009, 5, 12);
+    v.lookAt(new THREE.Vector3(s * 0.044, -0.16, 0.065));
+    v.translate(s * 0.166, 0.165, 0.063);
+    out.push(prim(v, C.gold, s < 0 ? 'cArmL' : 'cArmR'));
+    const a = new THREE.TorusGeometry(0.05, 0.009, 5, 12);
+    a.translate(s * 0.093, 0.082, 0.205);
+    out.push(prim(a, C.gold, 'cHips'));
   }
-  h.box(0.048, 0.016, 0.018, C.red, 0, 0.495, 0.222);
-  h.sphere(0.085, C.hair, 0, 0.805, 0.065, [1, 0.78, 1], 9);
-  h.add(new THREE.TorusGeometry(0.042, 0.011, 5, 12), C.red, 0, 0.835, 0.095, [Math.PI / 2 - 0.5, 0, 0]);
-  h.cone(0.048, 0.15, C.hair, 0, 0.87, 0.135, [0.85, 0, 0], 7);
+  // Đầu to tròn, má phúng phính, mắt to có đốm sáng, má hồng, miệng chúm.
+  const head = new Clay(C.skin);
+  head.add('cHead', ellipsoid([0, 0.585, 0], [0.24, 0.228, 0.226]), { k: 0 });
+  for (const s of [-1, 1]) head.add('cHead', ellipsoid([s * 0.11, 0.515, 0.12], [0.075, 0.062, 0.07]), { k: 0.06 });
+  head.add('cHead', ellipsoid([0, 0.55, 0.21], [0.022, 0.02, 0.016]), { k: 0.02 });
+  const on = (x: number, y: number): V3 => hit(head.dist, [x, y, 0.5], [0, 0, -1]) ?? [x, y, 0.21];
+  const paints = [-1, 1].flatMap((s) => [
+    head.layer('cHead', ellipsoid(on(s * 0.086, 0.578), [0.034, 0.046, 0.03]), C.ink, 2),
+    head.layer('cHead', sphere(on(s * 0.076, 0.595), 0.013), C.cream, 2),
+    head.layer('cHead', ellipsoid(on(s * 0.088, 0.64), [0.03, 0.008, 0.03], [0, 0, -s * 0.15]), C.hair, 1),
+    head.layer('cHead', ellipsoid(on(s * 0.135, 0.515), [0.038, 0.022, 0.03]), 0xe58a6a),
+  ]);
+  paints.push(head.layer('cHead', ellipsoid(on(0, 0.497), [0.022, 0.009, 0.03]), C.red, 1));
+  out.push(clayPiece(head.build({ kind: 'radial', c: [0, 0.585, 0], detail: Math.max(3, Math.round(4 * detail)), rmax: 0.34, front: 0.3 }, paints)));
   for (const s of [-1, 1]) {
-    h.sphere(0.046, C.hair, s * 0.15, 0.74, -0.02, [1, 0.8, 1], 7);
-    h.cone(0.028, 0.08, C.hair, s * 0.18, 0.78, -0.02, [0, 0, -s * 0.6], 5);
+    const ear = new THREE.SphereGeometry(0.036, 8, 6);
+    ear.scale(0.55, 1, 0.9);
+    ear.translate(s * 0.232, 0.57, 0);
+    out.push(prim(ear, C.skin, 'cHead'));
   }
+  out.push(...tuftsPieces({ color: C.hair, front: [0, 0.8, 0.07], side: [0.15, 0.745, -0.02], size: 0.08 }, detail, 'cHead'));
+  return out;
 }
 
 /** Cậu bé lắc lư, hai tay đập đập xuống chiếu. */
@@ -563,18 +540,10 @@ function drawTeen(r: Rig): void {
 
   drawBig(r, [0, 0, 0], K_TEEN, (h) => {
     humanBody(h, { cloth: C.red, pattern: true, belt: C.bronze, armband: C.bronze });
-    const chest = h.on('chest');
-    chest.band.box(0.19, 0.2, 0.035, C.red, 0, 0.5, 0.116);
-    chest.drum.cyl(0.055, 0.055, 0.015, C.gold, 0, 0.5, 0.132, [Math.PI / 2, 0, 0], 10);
-    chest.plain.add(new THREE.TorusGeometry(0.068, 0.01, 6, 14), C.gold, 0, 0.575, 0.01, [Math.PI / 2 + 0.15, 0, 0]);
+    yem(h, { color: C.red, pattern: true, disc: C.gold, top: 0.575, bottom: 0.415 });
+    necklace(h, { color: C.gold, r: 0.068, y: 0.575, z: 0.01, tilt: 0.15, thick: 0.01 });
     humanHead(h);
-    const head = h.on('head').plain;
-    head.sphere(0.07, C.hair, 0, 0.955, 0.055, [1, 0.78, 1], 9);
-    head.add(new THREE.TorusGeometry(0.036, 0.009, 5, 12), C.red, 0, 0.98, 0.08, [Math.PI / 2 - 0.5, 0, 0]);
-    head.cone(0.04, 0.13, C.hair, 0, 1.01, 0.105, [0.85, 0, 0], 6);
-    for (const s of [-1, 1]) {
-      head.sphere(0.038, C.hair, s * 0.13, 0.89, -0.02, [1, 0.8, 1], 7);
-    }
+    tufts(h, { color: C.hair, front: [0, 0.955, 0.055], side: [0.13, 0.89, -0.02], size: 0.068 });
     h.local('handL', GRIP_L, null, (s) => {
       s.band.cyl(0.15, 0.088, 0.11, C.bronze, 0, 0.03, 0.06, undefined, 12);
       s.plain.sphere(0.138, C.cream, 0, 0.095, 0.06, [1, 0.8, 1], 10);
@@ -691,85 +660,35 @@ function sonStaff(s: Parts): void {
 
 /** Sơn Tinh, chúa vùng non cao: giáp đồng chạm trống đồng, vai đắp đá núi Ba Vì, váy thổ cẩm và lá rừng, mũ Sơn Vương. */
 function drawSon(h: HumanRig): void {
-  humanBody(h, { cloth: C.mountainCloak, pattern: true, flaps: true, top: C.bronze, belt: C.bronzeDark, armband: C.gold });
-
-  // Xà cạp đồng đen, vòng chân vàng và hộ gối đá núi
-  for (const [b, x] of [
-    ['legL', -0.065],
-    ['legR', 0.065],
-  ] as const) {
-    const lp = h.on(b).plain;
-    lp.cyl(0.054, 0.048, 0.13, C.bronzeDark, x, 0.1, 0.005, undefined, 8);
-    lp.cyl(0.058, 0.058, 0.032, C.gold, x, 0.045, 0.008, undefined, 8);
-    lp.sphere(0.044, C.rock, x, 0.175, 0.032, [0.95, 0.85, 0.7], 7);
-  }
-
-  // Đai lưng Sơn Vương khảm ngọc xanh & váy lá rừng 2 tầng xen phiến đá
-  const hips = h.on('hips');
-  const hp = hips.plain;
-  hp.box(0.095, 0.075, 0.042, C.gold, 0, 0.405, 0.135);
-  hips.glow.sphere(0.026, JADE, 0, 0.405, 0.156, [1, 1, 0.6], 6);
-  for (let i = 0; i < 10; i++) {
-    const a = (i / 10) * Math.PI * 2;
-    hp.cone(0.068, 0.24, C.leaf[i % 4], Math.sin(a) * 0.145, 0.26, Math.cos(a) * 0.135, [Math.PI + Math.cos(a) * 0.3, 0, -Math.sin(a) * 0.3], 4);
-  }
-  for (const s of [-1, 1]) {
-    hp.box(0.042, 0.17, 0.16, C.rockDark, s * 0.148, 0.31, 0, [0, 0, -s * 0.2]);
-    hp.box(0.046, 0.03, 0.17, C.gold, s * 0.16, 0.23, 0, [0, 0, -s * 0.2]);
-  }
-
-  // Giáp ngực Đông Sơn, hộ tâm phiến mặt trống đồng, vai đắp đá núi 3 đỉnh & áo choàng rừng già 3 nếp
-  const chest = h.on('chest');
-  chest.band.cyl(0.158, 0.136, 0.22, C.bronze, 0, 0.485, 0, undefined, 12);
-  chest.plain.cyl(0.118, 0.132, 0.034, C.gold, 0, 0.58, 0, undefined, 12);
-  chest.drum.cyl(0.072, 0.072, 0.022, C.gold, 0, 0.495, 0.138, [Math.PI / 2, 0, 0], 14);
-  chest.plain.add(new THREE.TorusGeometry(0.074, 0.012, 6, 16), C.bronzeDark, 0, 0.495, 0.145);
-
-  // Áo choàng rừng già 3 nếp viền thổ cẩm Đông Sơn và đuôi lá
-  chest.plain.box(0.4, 0.48, 0.034, C.mountainCloak, 0, 0.4, -0.19, [0.2, 0, 0]);
-  chest.band.box(0.42, 0.065, 0.038, C.bronze, 0, 0.19, -0.235, [0.2, 0, 0]);
-  for (const s of [-1, 1]) {
-    chest.plain.box(0.14, 0.46, 0.03, C.leaf[2], s * 0.18, 0.4, -0.18, [0.2, s * 0.15, -s * 0.12]);
-    chest.plain.sphere(0.032, C.gold, s * 0.115, 0.56, 0.1, [1, 1, 0.6], 7);
-  }
-  for (let i = 0; i < 5; i++) {
-    chest.plain.cone(0.058, 0.17, C.leaf[i % 4], -0.18 + i * 0.09, 0.15, -0.245, [Math.PI + 0.22, 0, 0], 4);
-  }
-
-  // Giáp vai đá núi Ba Vì (mỗi vai có khối đá gốc + 2 chóp đá + mầm cây xanh + viền vàng)
-  for (const s of [-1, 1]) {
-    chest.plain.sphere(0.095, C.rockDark, s * 0.185, 0.575, 0, [1.1, 0.78, 1.05], 8);
-    chest.plain.box(0.12, 0.026, 0.14, C.gold, s * 0.18, 0.535, 0, [0, 0, -s * 0.22]);
-    chest.plain.cone(0.052, 0.13, C.rock, s * 0.195, 0.65, 0, [0, 0, -s * 0.35], 6);
-    chest.plain.cone(0.038, 0.1, C.rockDark, s * 0.23, 0.62, -0.02, [0, 0, -s * 0.65], 5);
-    chest.plain.cone(0.042, 0.11, C.leaf[1], s * 0.165, 0.655, 0.02, [0, 0, -s * 0.18], 5);
-  }
-
-  // Hộ uyển đồng khắc hoa văn ở hai cẳng tay
-  for (const [b, s] of [
-    ['armL', -1],
-    ['armR', 1],
-  ] as const) {
-    const ap = h.on(b).plain;
-    const x = s * 0.135;
-    ap.cyl(0.045, 0.039, 0.1, C.bronzeDark, x, 0.375, 0, undefined, 8);
-    ap.cyl(0.048, 0.048, 0.022, C.gold, x, 0.42, 0, undefined, 8);
-  }
+  humanBody(h, {
+    cloth: C.mountainCloak,
+    pattern: true,
+    flaps: true,
+    top: C.bronze,
+    belt: C.bronzeDark,
+    armband: C.gold,
+    greaves: C.bronzeDark,
+    greavesTrim: C.gold,
+    knee: C.rock,
+    bracer: C.bronzeDark,
+    bracerTrim: C.gold,
+  });
+  // Đai lưng Sơn Vương khảm ngọc xanh, váy lá rừng, phiến đá che hông.
+  buckle(h, { color: C.gold, gem: JADE, glow: true });
+  leafSkirt(h, { colors: C.leaf, n: 10, to: 0.21 });
+  skirtArmor(h, { color: C.rockDark, trim: C.gold, rows: 1, to: 0.23, panels: [0, Math.PI], half: 0.45 });
+  // Giáp ngực Đông Sơn, hộ tâm mặt trống đồng, áo choàng rừng già viền đồng.
+  armor(h, { color: C.bronze, trim: C.gold, pattern: true, y0: 0.395, y1: 0.6 });
+  chestDisc(h, { color: C.gold, drum: true, r: 0.072, rim: C.bronzeDark, thick: 0.02 });
+  cloak(h, { color: C.mountainCloak, trim: C.bronze, clasp: C.gold, hem: 0.14 });
+  // Giáp vai đá núi Ba Vì: lớp giáp viền vàng, trên đắp khối đá có chóp và mầm cây.
+  pauldrons(h, { color: C.rockDark, trim: C.gold, size: 1.05 });
+  shoulderRocks(h, { color: C.rock, dark: C.rockDark, sprout: C.leaf[1], size: 1.05 });
 
   // Khuôn mặt uy nghi có râu ngắn, miện đồng vàng khảm ngọc núi và 9 lông chim rừng
-  humanHead(h, { brows: true, mustache: C.hair });
+  humanHead(h, { brows: true, mustache: C.hair, beard: C.hair, beardLen: 0.1 });
   hairCap(h);
-  const head = h.on('head');
-  // Chòm râu ngắn dưới cằm
-  head.plain.cone(0.065, 0.14, C.hair, 0, 0.62, 0.155, [Math.PI + 0.3, 0, 0], 6);
-  // Vành miện đồng khắc hoa văn trống đồng + diềm vàng + ngọc lục bảo giữa trán
-  head.band.cyl(0.226, 0.23, 0.052, C.bronze, 0, 0.83, -0.03, undefined, 14);
-  head.plain.cyl(0.232, 0.232, 0.018, C.gold, 0, 0.855, -0.03, undefined, 14);
-  head.plain.box(0.07, 0.07, 0.03, C.gold, 0, 0.84, 0.195, [0, 0, Math.PI / 4]);
-  head.glow.sphere(0.024, JADE, 0, 0.84, 0.21, [1, 1.2, 0.6], 6);
-  for (const s of [-1, 1]) {
-    head.plain.cone(0.03, 0.11, C.gold, s * 0.22, 0.88, 0.02, [0.2, 0, -s * 0.45], 5);
-  }
+  diadem(h, { color: C.bronze, pattern: true, y: 0.804, h: 0.052, edge: C.gold, plate: C.gold, gem: JADE, glow: true, horns: { color: C.gold, len: 0.085, r: 0.02, out: 1.3 } });
   featherCrown(h, [C.red, C.cream, C.leaf[3], C.gold], { count: 9, len: 0.44, spread: 0.23 });
   h.local('hand', GRIP_R, null, sonStaff);
 }
@@ -913,64 +832,24 @@ function drawThuy(r: Rig): void {
       sleeves: C.sea,
       belt: C.gold,
       armband: C.gold,
+      bracer: C.serpent,
+      bracerTrim: C.gold,
     });
+    // Đai lưng khảm thủy châu phát sáng, vạt bọt sóng trước bụng, tấm giáp hông vảy thuồng luồng.
+    buckle(h, { color: C.gold, gem: C.ghost, glow: true });
+    apron(h, { color: C.foam, to: 0.14, half: 0.36, pattern: true, trim: C.gold });
+    skirtArmor(h, { color: C.serpent, trim: C.gold, rows: 2, to: 0.2, panels: [0, Math.PI], half: 0.48 });
+    // Giáp vảy giao long, hộ tâm mặt trống đồng có thủy châu, áo choàng thủy triều viền bọt sóng.
+    armor(h, { color: C.serpent, trim: C.gold, rows: 3, scales: true, y0: 0.395, y1: 0.6 });
+    chestDisc(h, { color: C.gold, drum: true, r: 0.07, thick: 0.03, boss: C.ghost, glow: true });
+    cloak(h, { color: C.sea, trim: C.foam, clasp: C.gold, hem: 0.12 });
+    // Giáp vai vây thuồng luồng, gai vây cong vút.
+    pauldrons(h, { color: C.serpent, trim: C.gold, layers: 2, size: 1.1, spike: C.gold });
 
-    // Đai lưng khảm thủy châu phát sáng & tấm giáp hông vảy thuồng luồng
-    const hips = h.on('hips');
-    hips.plain.box(0.09, 0.075, 0.04, C.gold, 0, 0.405, 0.135);
-    hips.glow.sphere(0.028, C.ghost, 0, 0.405, 0.156, [1, 1, 0.6], 7);
-    hips.band.box(0.12, 0.24, 0.028, C.foam, 0, 0.25, 0.155, [-0.1, 0, 0]);
-    for (const s of [-1, 1]) {
-      hips.plain.box(0.04, 0.2, 0.17, C.serpent, s * 0.15, 0.3, 0, [0, 0, -s * 0.2]);
-      hips.plain.box(0.045, 0.03, 0.18, C.gold, s * 0.165, 0.21, 0, [0, 0, -s * 0.2]);
-    }
-
-    // Giáp ngực Hải Vương, hộ tâm mặt trống đồng, giáp vai vây thuồng luồng & áo choàng sóng nước
-    const chest = h.on('chest');
-    chest.band.cyl(0.152, 0.132, 0.21, C.serpent, 0, 0.485, 0, undefined, 12);
-    chest.plain.cyl(0.115, 0.13, 0.034, C.gold, 0, 0.58, 0, undefined, 12);
-    chest.drum.cyl(0.07, 0.07, 0.022, C.gold, 0, 0.495, 0.132, [Math.PI / 2, 0, 0], 14);
-    chest.glow.sphere(0.022, C.ghost, 0, 0.495, 0.148, [1, 1, 0.6], 6);
-
-    // Áo choàng thủy triều sau lưng viền bọt sóng
-    chest.plain.box(0.4, 0.48, 0.032, C.sea, 0, 0.4, -0.19, [0.22, 0, 0]);
-    chest.band.box(0.42, 0.065, 0.036, C.foam, 0, 0.19, -0.24, [0.22, 0, 0]);
-    for (const s of [-1, 1]) {
-      chest.plain.sphere(0.086, C.serpent, s * 0.17, 0.57, 0, [1.15, 0.8, 1.05], 9);
-      chest.plain.box(0.11, 0.025, 0.13, C.gold, s * 0.17, 0.54, 0, [0, 0, -s * 0.25]);
-      // Gai vây cá cong vút trên hai vai
-      chest.plain.cone(0.038, 0.15, C.gold, s * 0.22, 0.63, -0.01, [-0.15, 0, -s * 0.65], 5);
-      chest.plain.cone(0.028, 0.11, C.foam, s * 0.18, 0.65, -0.02, [-0.2, 0, -s * 0.35], 4);
-    }
-
-    // Hộ uyển cẳng tay có vây bén
-    for (const [b, s] of [
-      ['armL', -1],
-      ['armR', 1],
-    ] as const) {
-      const ap = h.on(b).plain;
-      const x = s * 0.135;
-      ap.cyl(0.044, 0.038, 0.1, C.serpent, x, 0.375, 0, undefined, 8);
-      ap.cone(0.022, 0.08, C.gold, x + s * 0.045, 0.39, -0.01, [0, 0, -s * 0.8], 4);
-    }
-
-    // Khuôn mặt Long Vương, râu rong biển 3 nhánh & Mão đồng vàng vây rồng
-    humanHead(h, { brows: true, mustache: C.serpent, beard: C.serpent });
-    const head = h.on('head');
-    const hp = head.plain;
-    for (const s of [-1, 1]) {
-      hp.cone(0.055, 0.22, C.sea, s * 0.08, 0.59, 0.13, [Math.PI + 0.22, 0, s * 0.25], 6);
-    }
-    // Mão đồng vàng ôm đỉnh đầu (cao thoáng để lộ rõ mắt và mày dữ)
-    hp.sphere(0.228, C.bronze, 0, 0.855, -0.02, [1.02, 0.6, 1.02], 12);
-    head.band.cyl(0.236, 0.236, 0.048, C.gold, 0, 0.84, -0.02, undefined, 14);
-    // Diềm trán chữ V khảm thủy châu phát sáng + 2 sừng giao long bên thái dương
-    for (const s of [-1, 1]) {
-      hp.box(0.12, 0.03, 0.028, C.gold, s * 0.058, 0.845, 0.21, [0, -s * 0.22, s * 0.18]);
-      hp.cone(0.034, 0.16, C.gold, s * 0.215, 0.91, 0.01, [-0.25, 0, -s * 0.48], 5);
-    }
-    head.glow.sphere(0.03, C.ghost, 0, 0.85, 0.228, [1, 1.2, 0.6], 7);
-    featherCrown(h, [C.sea, C.foam, C.gold], { count: 7, len: 0.38, spread: 0.26 });
+    // Khuôn mặt Long Vương, râu rong biển chẻ hai chòm, mão đồng vàng vây rồng khảm thủy châu, hai sừng giao long.
+    humanHead(h, { brows: true, mustache: C.serpent, beard: C.serpent, beardLen: 0.24, beardSplit: true });
+    helmet(h, { color: C.bronze, rim: 0.81, band: C.gold, bandH: 0.04, chevron: C.gold, gem: C.ghost, glow: true, horns: { color: C.gold, len: 0.17, r: 0.03 } });
+    plumes(h, [C.sea, C.foam, C.gold], { count: 7, len: 0.38, spread: 0.26, y: 0.97, z: -0.06 });
     h.local('hand', GRIP_R, null, trident);
   });
 }
@@ -1051,76 +930,27 @@ function drawAdv(h: HumanRig, crossbow: boolean): void {
     sleeves: C.red,
     belt: C.gold,
     armband: C.gold,
+    hem: C.gold,
+    greaves: C.bronzeDark,
+    greavesTrim: C.gold,
+    bracer: C.bronze,
+    bracerTrim: C.gold,
   });
+  // Đai vàng đế vương, vạt lễ phục thêu hoa văn trước bụng, phiến giáp đùi mạ vàng.
+  buckle(h, { color: C.gold, gem: C.red });
+  apron(h, { color: C.gold, to: 0.13, half: 0.38, pattern: true, trim: C.goldDark });
+  skirtArmor(h, { color: C.bronze, trim: C.gold, rows: 2, to: 0.2, panels: [0, Math.PI], half: 0.5 });
+  // Giáp ngực hoàng gia, gương hộ tâm mặt trống đồng vàng ròng, giáp vai hai tầng, đại hồng bào viền vàng.
+  armor(h, { color: C.bronze, trim: C.gold, pattern: true, y0: 0.395, y1: 0.6 });
+  chestDisc(h, { color: C.gold, drum: true, r: 0.078, rim: C.goldDark, thick: 0.02 });
+  pauldrons(h, { color: C.bronzeLight, trim: C.gold, layers: 2, size: 1.15, spike: C.gold });
+  cloak(h, { color: C.red, trim: C.gold, clasp: C.gold, hem: 0.1 });
 
-  // Hài và giáp ống chân đồng đen viền vàng ròng
-  for (const [b, x] of [
-    ['legL', -0.065],
-    ['legR', 0.065],
-  ] as const) {
-    const lp = h.on(b).plain;
-    lp.cyl(0.056, 0.05, 0.12, C.bronzeDark, x, 0.09, 0.01, undefined, 8);
-    lp.cyl(0.06, 0.062, 0.035, C.gold, x, 0.04, 0.015, undefined, 8);
-  }
-
-  // Đai vàng đế vương, vạt lễ phục trước bụng thêu hoa văn Đông Sơn & phiến giáp đùi mạ vàng
-  const hips = h.on('hips');
-  hips.plain.box(0.1, 0.08, 0.044, C.gold, 0, 0.405, 0.138);
-  hips.plain.sphere(0.028, C.red, 0, 0.405, 0.16, [1, 1, 0.6], 7);
-  hips.band.box(0.13, 0.25, 0.03, C.gold, 0, 0.24, 0.158, [-0.1, 0, 0]);
-  for (const s of [-1, 1]) {
-    hips.band.box(0.042, 0.2, 0.18, C.bronze, s * 0.152, 0.3, 0, [0, 0, -s * 0.18]);
-    hips.plain.box(0.046, 0.032, 0.19, C.gold, s * 0.168, 0.21, 0, [0, 0, -s * 0.18]);
-  }
-
-  // Giáp ngực hoàng gia, gương hộ tâm mặt trống đồng vàng ròng, giáp vai 2 tầng & đại hồng bào 3 nếp
-  const chest = h.on('chest');
-  chest.band.cyl(0.158, 0.138, 0.22, C.bronze, 0, 0.485, 0, undefined, 12);
-  chest.plain.cyl(0.118, 0.134, 0.038, C.gold, 0, 0.582, 0, undefined, 12);
-  chest.drum.cyl(0.078, 0.078, 0.024, C.gold, 0, 0.495, 0.138, [Math.PI / 2, 0, 0], 16);
-  chest.plain.add(new THREE.TorusGeometry(0.08, 0.013, 6, 18), C.goldDark, 0, 0.495, 0.146);
-
-  // Đại hồng bào 3 nếp dài sau lưng, gấu áo dệt hoa văn vàng
-  chest.plain.box(0.46, 0.58, 0.035, C.red, 0, 0.39, -0.2, [0.18, 0, 0]);
-  chest.band.box(0.48, 0.075, 0.04, C.gold, 0, 0.13, -0.25, [0.18, 0, 0]);
-  for (const s of [-1, 1]) {
-    chest.plain.box(0.15, 0.55, 0.03, C.red, s * 0.19, 0.39, -0.19, [0.18, s * 0.15, -s * 0.12]);
-    // Giáp vai 2 tầng bằng đồng sáng & vàng ròng + khuy giữ áo choàng
-    chest.plain.sphere(0.092, C.bronzeLight, s * 0.185, 0.58, 0, [1.15, 0.78, 1.05], 9);
-    chest.plain.sphere(0.074, C.bronze, s * 0.205, 0.535, 0, [1.1, 0.7, 1], 8);
-    chest.plain.box(0.12, 0.026, 0.14, C.gold, s * 0.19, 0.555, 0, [0, 0, -s * 0.25]);
-    chest.plain.cone(0.038, 0.12, C.gold, s * 0.24, 0.635, 0, [0, 0, -s * 0.75], 5);
-    chest.plain.sphere(0.034, C.gold, s * 0.12, 0.56, 0.105, [1, 1, 0.6], 7);
-  }
-
-  // Hộ uyển đồng mạ vàng ở hai cẳng tay
-  for (const [b, s] of [
-    ['armL', -1],
-    ['armR', 1],
-  ] as const) {
-    const ap = h.on(b).plain;
-    const x = s * 0.135;
-    ap.cyl(0.046, 0.04, 0.1, C.bronze, x, 0.375, 0, undefined, 8);
-    ap.cyl(0.05, 0.05, 0.024, C.gold, x, 0.42, 0, undefined, 8);
-  }
-
-  // Khuôn mặt đế vương (râu mép + chòm râu cằm), Vương miện vàng Âu Lạc chạm hoa văn trống đồng & 9 lông chim hồng hoàng
-  humanHead(h, { brows: true, mustache: C.hair });
+  // Khuôn mặt đế vương (râu mép + chòm râu cằm), vương miện vàng Âu Lạc chạm hoa văn trống đồng, mười mũi miện,
+  // huy hiệu mặt trời và hồng ngọc giữa trán, 9 lông chim hồng hoàng.
+  humanHead(h, { brows: true, mustache: C.hair, beard: C.hair, beardLen: 0.12 });
   hairCap(h);
-  const head = h.on('head');
-  const hp = head.plain;
-  hp.cone(0.055, 0.13, C.hair, 0, 0.62, 0.16, [Math.PI + 0.28, 0, 0], 6);
-  head.band.cyl(0.228, 0.232, 0.062, C.gold, 0, 0.835, -0.03, undefined, 16);
-  hp.cyl(0.236, 0.236, 0.02, C.goldDark, 0, 0.805, -0.03, undefined, 16);
-  // Huy hiệu mặt trời & hồng ngọc giữa trán
-  hp.box(0.075, 0.075, 0.032, C.gold, 0, 0.85, 0.198, [0, 0, Math.PI / 4]);
-  hp.sphere(0.026, C.red, 0, 0.85, 0.215, [1, 1.2, 0.6], 7);
-  // 10 mũi miện vàng cao thấp xen kẽ quanh vương miện
-  for (let i = 0; i < 10; i++) {
-    const a = (i / 10) * Math.PI * 2;
-    const hSpk = i % 2 === 0 ? 0.085 : 0.058;
-    hp.cone(0.026, hSpk, C.gold, Math.sin(a) * 0.222, 0.89, Math.cos(a) * 0.222 - 0.03, undefined, 4);
-  }
+  diadem(h, { color: C.gold, pattern: true, y: 0.806, h: 0.06, rim: C.goldDark, plate: C.gold, gem: C.red, spikes: { color: C.gold, n: 10, h: 0.085, low: 0.058 } });
   featherCrown(h, [C.red, C.gold, C.cream, C.ember], { count: 9, len: 0.45, spread: 0.23 });
 
   if (crossbow) {
@@ -1205,58 +1035,28 @@ const CAO_HORN: V3 = [-0.18, 0.32, 0.08];
  * hoa văn, mũ lông chim kiểu tướng, bao tên đồng sau lưng, tù và sừng trâu đeo hông, tay phải cầm nỏ liên châu.
  */
 function drawCaoLo(h: HumanRig): void {
-  humanBody(h, { cloth: C.indigo, pattern: true, flaps: true, top: LEATHER, belt: C.bronzeDark, armband: C.bronze });
-
-  // Xà cạp da, vòng đồng cổ chân.
-  for (const [b, x] of [
-    ['legL', -0.065],
-    ['legR', 0.065],
-  ] as const) {
-    const lp = h.on(b).plain;
-    lp.cyl(0.054, 0.048, 0.13, LEATHER_DARK, x, 0.1, 0.005, undefined, 8);
-    lp.cyl(0.057, 0.057, 0.026, C.bronze, x, 0.05, 0.008, undefined, 8);
-  }
-
-  // Khóa đai đồng, hai vạt giáp da đính đinh đồng che hông.
-  const hips = h.on('hips');
-  hips.plain.box(0.09, 0.07, 0.04, C.bronze, 0, 0.405, 0.136);
-  hips.plain.sphere(0.02, C.bronzeLight, 0, 0.405, 0.158, [1, 1, 0.6], 6);
-  for (const s of [-1, 1]) {
-    hips.plain.box(0.04, 0.18, 0.15, LEATHER, s * 0.15, 0.31, 0, [0, 0, -s * 0.18]);
-    for (const dz of [-0.04, 0.04]) hips.plain.sphere(0.016, C.bronzeLight, s * 0.172, 0.31, dz, [1, 1, 1], 5);
-  }
-
-  // Giáp da: vành cổ đồng, hộ tâm mặt trống đồng, hai hàng đinh đồng khảm quanh ngực, giáp vai da viền đồng.
-  const chest = h.on('chest');
-  chest.plain.cyl(0.152, 0.134, 0.22, LEATHER, 0, 0.485, 0, undefined, 12);
-  chest.plain.cyl(0.118, 0.13, 0.03, C.bronze, 0, 0.58, 0, undefined, 12);
-  chest.plain.cyl(0.137, 0.137, 0.025, C.bronzeDark, 0, 0.385, 0, undefined, 12);
-  chest.drum.cyl(0.066, 0.066, 0.022, C.gold, 0, 0.49, 0.142, [Math.PI / 2, 0, 0], 14);
-  chest.plain.add(new THREE.TorusGeometry(0.068, 0.011, 6, 16), C.bronzeDark, 0, 0.49, 0.148);
-  for (const [y, r] of [
-    [0.44, 0.143],
-    [0.54, 0.151],
-  ] as const) {
-    for (const a of [-1.5, -1.0, -0.55, 0.55, 1.0, 1.5, Math.PI - 0.5, Math.PI, Math.PI + 0.5]) {
-      chest.plain.sphere(0.017, C.bronzeLight, Math.sin(a) * r, y, Math.cos(a) * r, [1, 1, 1], 5);
-    }
-  }
-  for (const s of [-1, 1]) {
-    chest.plain.sphere(0.088, LEATHER, s * 0.18, 0.565, 0, [1.1, 0.72, 1.05], 8);
-    chest.plain.box(0.11, 0.022, 0.15, C.bronze, s * 0.19, 0.53, 0, [0, 0, -s * 0.3]);
-    chest.plain.sphere(0.02, C.bronzeLight, s * 0.2, 0.6, 0, [1, 1, 1], 5);
-  }
-
-  // Hộ uyển da thắt vòng đồng.
-  for (const [b, s] of [
-    ['armL', -1],
-    ['armR', 1],
-  ] as const) {
-    const ap = h.on(b).plain;
-    const x = s * 0.135;
-    ap.cyl(0.045, 0.039, 0.1, LEATHER_DARK, x, 0.37, 0, undefined, 8);
-    ap.cyl(0.047, 0.047, 0.02, C.bronze, x, 0.41, 0, undefined, 8);
-  }
+  humanBody(h, {
+    cloth: C.indigo,
+    pattern: true,
+    flaps: true,
+    top: LEATHER,
+    belt: C.bronzeDark,
+    armband: C.bronze,
+    greaves: LEATHER_DARK,
+    greavesTrim: C.bronze,
+    bracer: LEATHER_DARK,
+    bracerTrim: C.bronze,
+  });
+  // Khóa đai đồng, hai vạt giáp da che hông.
+  buckle(h, { color: C.bronze, gem: C.bronzeLight });
+  skirtArmor(h, { color: LEATHER, trim: LEATHER_DARK, rows: 2, to: 0.22, panels: [0, Math.PI], half: 0.45 });
+  // Giáp da viền đồng, hộ tâm mặt trống đồng, hai hàng đinh đồng khảm quanh ngực, giáp vai da viền đồng.
+  armor(h, { color: LEATHER, trim: C.bronze, y0: 0.39, y1: 0.6 });
+  chestDisc(h, { color: C.gold, drum: true, r: 0.066, rim: C.bronzeDark, thick: 0.02 });
+  const row = (y: number, xs: number[]): [number, number][] => xs.map((x) => [x, y]);
+  studs(h, { color: C.bronzeLight, at: [...row(0.44, [-0.12, -0.085, 0.085, 0.12]), ...row(0.54, [-0.12, -0.09, 0.09, 0.12])], thick: 0.02 });
+  studs(h, { color: C.bronzeLight, at: [...row(0.44, [-0.07, 0, 0.07]), ...row(0.54, [-0.07, 0, 0.07])], back: true, thick: 0.02 });
+  pauldrons(h, { color: LEATHER, trim: C.bronze, size: 1.05 });
 
   // Bao tên đồng đeo chéo sau lưng, miệng bao qua vai phải, đuôi tên lông đỏ.
   h.local('chest', [0.12, 0.5, -0.17], [0.2, 0, -0.4], (s) => {
@@ -1275,15 +1075,10 @@ function drawCaoLo(h: HumanRig): void {
   });
 
   // Mặt cương nghị: mày xếch, râu mép và chòm râu đen; tóc búi cài trâm đồng, dải đồng buộc trán, mũ lông chim tướng.
-  humanHead(h, { brows: true, mustache: C.hair });
+  humanHead(h, { brows: true, mustache: C.hair, beard: C.hair, beardLen: 0.17 });
   hairCap(h);
   headband(h, C.bronze, 0.035);
-  const head = h.on('head').plain;
-  head.cone(0.07, 0.17, C.hair, 0, 0.6, 0.152, [Math.PI + 0.3, 0, 0], 6);
-  head.sphere(0.085, C.hair, 0, 1.0, -0.005, [1, 0.9, 1], 8);
-  head.cyl(0.07, 0.07, 0.025, C.bronze, 0, 0.94, -0.005, undefined, 8);
-  head.cyl(0.012, 0.012, 0.26, C.bronzeLight, 0, 1.0, -0.005, [0, 0, Math.PI / 2 - 0.15], 5);
-  for (const s of [-1, 1]) head.sphere(0.02, C.bronzeLight, s * 0.13, 1.0 + s * 0.02, -0.005, [1, 1, 1], 5);
+  bun(h, { color: C.hair, at: [0, 0.985, -0.01], size: 0.08, tie: C.bronze, pin: { color: C.bronzeLight, len: 0.26, tilt: 0.15 } });
   featherCrown(h, [C.red, C.cream, C.bronzeLight], { count: 7, len: 0.4 });
 
   // Tù và sừng trâu đeo hông trái (giấu đi lúc cầm lên thổi), và tù và cầm tay trái (chỉ hiện lúc thổi).
@@ -1388,19 +1183,14 @@ const onSeat = (v: V3): V3 => [SEAT_BA[0] + v[0] * K_BA, SEAT_BA[1] + v[1] * K_B
 
 /** Áo dài tới chân (`cloth`), quần cùng màu, cổ áo giao lĩnh viền (`trim`), kiềng vàng, đai vàng, vòng tay vàng. */
 function drawBaBody(h: HumanRig, cloth: number, trim: number, extra: Partial<BodyLook> = {}): void {
-  humanBody(h, { legs: cloth, cloth, long: true, pattern: true, top: cloth, sleeves: cloth, belt: C.gold, armband: C.gold, ...extra });
-  const chest = h.on('chest').plain;
-  for (const s of [-1, 1]) chest.box(0.032, 0.15, 0.012, trim, s * 0.032, 0.515, 0.112, [0.15, 0, s * 0.5]);
-  chest.add(new THREE.TorusGeometry(0.068, 0.014, 5, 14), C.gold, 0, 0.578, 0.02, [Math.PI / 2 + 0.25, 0, 0]);
+  humanBody(h, { legs: cloth, cloth, long: true, pattern: true, top: cloth, sleeves: cloth, belt: C.gold, armband: C.gold, collar: trim, ...extra });
+  necklace(h, { color: C.gold, r: 0.068, y: 0.578, tilt: 0.25 });
 }
 
 /** Mặt nữ (Hai Bà, nữ tướng): má hồng, mày cong mảnh, môi son, hoa tai vàng, tóc phủ đỉnh đầu. */
 function drawWomanFace(h: HumanRig): void {
-  humanHead(h, { earrings: C.gold });
+  humanHead(h, { earrings: C.gold, femBrows: true, lips: LIPS });
   hairCap(h);
-  const head = h.on('head').plain;
-  for (const s of [-1, 1]) head.box(0.07, 0.013, 0.016, C.ink, s * 0.075, 0.805, 0.18, [0, 0, s * 0.12]);
-  head.sphere(0.022, LIPS, 0, 0.675, 0.188, [1.3, 0.55, 0.5], 6);
 }
 
 /**
@@ -1409,27 +1199,17 @@ function drawWomanFace(h: HumanRig): void {
  */
 function drawBaHead(h: HumanRig, feathers: readonly number[]): void {
   drawWomanFace(h);
-  const head = h.on('head').plain;
-  head.sphere(0.18, C.hair, 0, 0.6, -0.15, [1, 1.45, 0.5], 9);
-  for (const s of [-1, 1]) head.box(0.05, 0.2, 0.08, C.hair, s * 0.19, 0.7, 0.05, [0, 0, -s * 0.12]);
-  head.sphere(0.085, C.hair, 0, 0.84, -0.26, [1.1, 0.9, 0.9], 8);
-  head.cyl(0.01, 0.01, 0.28, C.gold, 0, 0.86, -0.27, [0, 0, Math.PI / 2 - 0.25], 5);
-  for (const s of [-1, 1]) head.sphere(0.022, C.red, s * 0.14, 0.86 + s * 0.035, -0.27, [1, 1, 1], 6);
+  hairDown(h, { color: C.hair, to: 0.44, width: 0.17, locks: 0.17 });
+  bun(h, { color: C.hair, at: [0, 0.84, -0.245], size: 0.085, pin: { color: C.gold, len: 0.28, tilt: 0.25, ends: C.red } });
   featherCrown(h, feathers, { count: 7, len: 0.48, spread: 0.22, bronzeRim: true, rim: C.gold, tier2: true });
 }
 
 /** Trưng Trắc: áo đỏ thắm, giáp ngực đồng hoa văn có hộ tâm mặt trống đồng, giáp vai đồng nhỏ, gươm đồng. */
 function drawTrungTrac(h: HumanRig): void {
   drawBaBody(h, C.trungRed, C.gold);
-  const chest = h.on('chest');
-  chest.band.cyl(0.136, 0.112, 0.2, C.bronze, 0, 0.485, 0, undefined, 12);
-  chest.plain.cyl(0.12, 0.138, 0.026, C.gold, 0, 0.578, 0, undefined, 12);
-  chest.plain.cyl(0.114, 0.114, 0.02, C.gold, 0, 0.392, 0, undefined, 12);
-  chest.drum.cyl(0.058, 0.058, 0.02, C.gold, 0, 0.49, 0.13, [Math.PI / 2, 0, 0], 14);
-  for (const s of [-1, 1]) {
-    chest.plain.sphere(0.07, C.bronzeLight, s * 0.165, 0.565, 0, [1.05, 0.7, 1], 8);
-    chest.plain.box(0.09, 0.02, 0.11, C.gold, s * 0.175, 0.54, 0, [0, 0, -s * 0.3]);
-  }
+  armor(h, { color: C.bronze, trim: C.gold, pattern: true, y0: 0.392, y1: 0.59, thick: 0.012 });
+  chestDisc(h, { color: C.gold, drum: true, r: 0.058, thick: 0.016 });
+  pauldrons(h, { color: C.bronzeLight, trim: C.gold, size: 0.9 });
   drawBaHead(h, [C.red, C.gold, C.cream]);
   h.local('hand', GRIP_R, null, guomDong);
 }
@@ -1437,7 +1217,6 @@ function drawTrungTrac(h: HumanRig): void {
 /** Trưng Nhị: áo vàng cổ viền đỏ, dây đeo đỏ bắt chéo, bao tên đồng sau lưng, cung sừng bịt vàng, tên đồng. */
 function drawTrungNhi(h: HumanRig): void {
   drawBaBody(h, C.trungYellow, C.red, { crossStrap: C.red });
-  h.on('chest').plain.cyl(0.128, 0.128, 0.022, C.trungYellowDark, 0, 0.405, 0, undefined, 12);
   drawBaHead(h, [C.red, C.cream, C.gold]);
   h.local('chest', [0.06, 0.55, -0.15], [-0.3, 0, -0.35], (s) => quiver(s, C.bronze, { iron: false }));
   h.local('handL', GRIP_L, null, (s) => bow(s, true, true));
@@ -1681,9 +1460,8 @@ export function makeDrummer(): THREE.Group {
   }
   drawBig(r, [0, 0, 0], 1.05, (h) => {
     humanBody(h, { cloth: C.red, top: C.bronze, armband: C.bronze });
-    const chest = h.on('chest').plain;
-    chest.box(0.4, 0.45, 0.035, C.red, 0, 0.42, -0.18, [0.18, 0, 0]);
-    for (const s of [-1, 1]) chest.sphere(0.06, C.bronze, s * 0.14, 0.56, 0, [1, 0.8, 1], 8);
+    cloak(h, { color: C.red, hem: 0.17 });
+    pauldrons(h, { color: C.bronze, size: 0.85 });
     humanHead(h, { brows: true });
     hairCap(h);
     headband(h, C.red);
@@ -1735,9 +1513,8 @@ const K_LAC = 1.3;
 /** Lạc tướng đứng chầu: khố đỏ hoa văn, giáp đồng có gương hộ tâm, áo choàng đỏ, mũ lông chim, giáo mũi sắt, khiên mặt trống. */
 function drawLacTuong(h: HumanRig): void {
   humanBody(h, { cloth: C.red, top: C.bronze, belt: C.bronze, armband: C.bronze, greaves: C.bronze, drumPlate: true });
-  const chest = h.on('chest').plain;
-  chest.box(0.4, 0.45, 0.035, C.red, 0, 0.42, -0.18, [0.18, 0, 0]);
-  for (const s of [-1, 1]) chest.sphere(0.06, C.bronze, s * 0.14, 0.56, 0, [1, 0.8, 1], 8);
+  cloak(h, { color: C.red, trim: C.bronzeDark, hem: 0.16 });
+  pauldrons(h, { color: C.bronze, size: 0.85 });
   humanHead(h, { brows: true, mustache: C.hair });
   hairCap(h);
   headband(h, C.red);
@@ -1772,25 +1549,19 @@ export const VUA_SEAT = (HUMAN.legL.at[1] - 0.045) * K_VUA;
  * lưng, râu bạc, mũ lông chim hai tầng vành vàng có mặt trời đồng giữa trán.
  */
 function drawVuaHung(h: HumanRig): void {
-  humanBody(h, { cloth: C.red, long: true, pattern: true, top: C.ripe, sleeves: C.ripe, belt: C.gold, armband: C.gold, drumPlate: true });
-  const hips = h.on('hips');
-  hips.plain.box(0.1, 0.08, 0.044, C.gold, 0, 0.405, 0.138);
-  hips.band.box(0.13, 0.24, 0.03, C.gold, 0, 0.25, 0.165, [-0.1, 0, 0]);
-  const chest = h.on('chest');
-  chest.plain.box(0.48, 0.5, 0.035, C.red, 0, 0.4, -0.18, [0.16, 0, 0]);
-  chest.band.box(0.5, 0.07, 0.04, C.gold, 0, 0.16, -0.22, [0.16, 0, 0]);
+  humanBody(h, { cloth: C.red, long: true, pattern: true, top: C.ripe, sleeves: C.ripe, belt: C.gold, armband: C.gold, drumPlate: true, collar: C.red, hem: C.gold });
+  buckle(h, { color: C.gold, gem: C.red });
+  // Vạt lễ phục ngắn (vua ngồi, đùi nằm ngang trước bụng).
+  apron(h, { color: C.gold, to: 0.3, half: 0.34, pattern: true });
+  cloak(h, { color: C.red, trim: C.gold, hem: 0.16, half: 1.0 });
   // Vai áo vàng viền đỏ và chuỗi hạt đồng trước ngực.
-  for (const s of [-1, 1]) {
-    chest.plain.sphere(0.075, C.ripe, s * 0.16, 0.56, 0, [1.2, 0.7, 1.1], 8);
-    chest.plain.box(0.1, 0.022, 0.12, C.red, s * 0.17, 0.54, 0, [0, 0, -s * 0.3]);
-  }
-  chest.plain.add(new THREE.TorusGeometry(0.1, 0.012, 5, 16, Math.PI), C.bronzeLight, 0, 0.57, 0.06, [Math.PI / 2 + 0.5, 0, Math.PI]);
-  humanHead(h, { brows: true, mustache: C.beard, beard: C.beard });
+  pauldrons(h, { color: C.ripe, trim: C.red, size: 1.1 });
+  necklace(h, { color: C.bronzeLight, r: 0.1, y: 0.57, z: 0.06, tilt: 0.5, thick: 0.012, half: true });
+  humanHead(h, { brows: true, browColor: C.beard, mustache: C.beard, beard: C.beard, beardLen: 0.22 });
   hairCap(h);
   featherCrown(h, [C.red, C.gold, C.cream], { count: 11, len: 0.5, spread: 0.21, bronzeRim: true, rim: C.gold, tier2: true });
-  const head = h.on('head').plain;
-  head.cyl(0.05, 0.05, 0.02, C.gold, 0, 0.84, 0.205, [Math.PI / 2, 0, 0], 12);
-  head.sphere(0.022, C.red, 0, 0.84, 0.218, [1, 1, 0.6], 7);
+  // Mặt trời đồng giữa trán, hồng ngọc giữa.
+  diadem(h, { y: 0.815, h: 0.04, disc: C.gold, gem: C.red });
 }
 
 /** Vua Hùng ngồi ngai vàng, bản tĩnh (ngồi yên) để đặt vào mô hình Điện: lưng thẳng, đùi gần nằm ngang, hai tay đặt trên gối. */
@@ -1854,11 +1625,8 @@ function tilted(rot: V3, tilt: number): V3 {
  */
 function drawNuHead(h: HumanRig, feathers: readonly number[]): void {
   drawWomanFace(h);
-  const head = h.on('head').plain;
-  head.sphere(0.165, C.hair, 0, 0.71, -0.1, [1.12, 0.82, 0.75], 9);
-  for (const s of [-1, 1]) head.box(0.045, 0.15, 0.07, C.hair, s * 0.19, 0.72, 0.04, [0, 0, -s * 0.1]);
-  head.sphere(0.09, C.hair, 0, 0.9, -0.21, [1.1, 1, 0.9], 8);
-  head.cyl(0.008, 0.008, 0.24, C.gold, 0, 0.92, -0.23, [0, 0, Math.PI / 2 - 0.25], 5);
+  hairDown(h, { color: C.hair, to: 0.63, width: 0.15, locks: 0.12 });
+  bun(h, { color: C.hair, at: [0, 0.9, -0.2], size: 0.09, pin: { color: C.gold, len: 0.24, tilt: 0.25 } });
   featherCrown(h, feathers, { count: 5, len: 0.4, spread: 0.26, bronzeRim: true });
 }
 
@@ -1866,20 +1634,30 @@ function drawNuHead(h: HumanRig, feathers: readonly number[]): void {
  * Địu con của Phùng Thị Chính: túi địu vải chàm dệt hoa văn ôm lưng, quai qua hai vai (dây chéo trước ngực vẽ ở
  * thân); em bé quấn khăn đỏ ngồi trong túi, đầu đội mũ khăn đỏ ló qua vai phải (xương `nuBe`, ngó quanh).
  */
-function drawDiuCon(h: HumanRig, r: Rig): void {
-  const chest = h.on('chest');
-  chest.band.sphere(0.13, C.diuCham, 0.04, 0.44, -0.2, [1.05, 1.1, 0.7], 10);
-  for (const s of [-1, 1]) chest.plain.box(0.035, 0.03, 0.17, C.diuCham, s * 0.095, 0.585, -0.07, [-0.25, 0, 0]);
-  chest.plain.sphere(0.09, C.red, 0.14, 0.55, -0.22, [1, 0.9, 0.9], 8);
-  const [x, y, z] = NU_BABY;
-  const be = r.on('nuBe').plain;
-  be.sphere(0.085, C.skin, x, y + 0.075, z, [1, 0.95, 0.95], 10);
-  be.sphere(0.088, C.red, x, y + 0.1, z - 0.045, [1.05, 1, 0.85], 9);
-  be.sphere(0.034, C.red, x, y + 0.18, z - 0.05, [1, 1, 1], 6);
-  for (const s of [-1, 1]) {
-    be.sphere(0.014, C.ink, x + s * 0.03, y + 0.07, z + 0.075, [1, 1.3, 0.5], 5);
-    be.sphere(0.016, 0xe58a6a, x + s * 0.045, y + 0.045, z + 0.066, [1, 0.6, 0.4], 5);
-  }
+function drawDiuCon(h: HumanRig): void {
+  figure(h, 'diuCon', (detail) => {
+    // Túi địu ôm lưng, bọc khăn đỏ của em bé ló trên miệng túi.
+    const bag = new Clay(C.diuCham);
+    bag.add('chest', ellipsoid([0.04, 0.45, -0.2], [0.13, 0.14, 0.08]), { k: 0 });
+    bag.add('chest', ellipsoid([0.12, 0.555, -0.215], [0.085, 0.065, 0.075]), { k: 0.04 });
+    bag.sub('chest', ellipsoid([0.02, 0.45, -0.07], [0.2, 0.25, 0.08]), 0.02);
+    const wrap = bag.layer('chest', (x, y, z) => Math.max(0.52 - y, Math.hypot(x - 0.13, z + 0.215) - 0.12), C.red);
+    const bagMesh = bag.build({ kind: 'nets', min: [-0.12, 0.29, -0.31], max: [0.24, 0.64, -0.1], cell: 0.012 / detail, target: Math.round(420 * detail) }, [wrap]);
+    // Em bé: đầu tròn, mũ khăn đỏ có núm, mắt, má hồng.
+    const [x, y, z] = NU_BABY;
+    const be = new Clay(C.skin);
+    be.add('nuBe', ellipsoid([x, y + 0.075, z], [0.085, 0.081, 0.081]), { k: 0 });
+    be.add('nuBe', ellipsoid([x, y + 0.1, z - 0.045], [0.092, 0.088, 0.078]), { k: 0.01 });
+    be.add('nuBe', sphere([x, y + 0.18, z - 0.05], 0.032), { k: 0.012 });
+    const on = (dx: number, dy: number): V3 => hit(be.dist, [x + dx, y + dy, z + 0.4], [0, 0, -1]) ?? [x + dx, y + dy, z + 0.08];
+    const paints = [
+      be.layer('nuBe', (px, py, pz) => Math.max(ellipsoid([x, y + 0.1, z - 0.045], [0.095, 0.091, 0.081])(px, py, pz), y + 0.095 - py - 0.04 * (pz - z)), C.red),
+      be.layer('nuBe', sphere([x, y + 0.18, z - 0.05], 0.04), C.red),
+      ...[-1, 1].flatMap((sd) => [be.layer('nuBe', ellipsoid(on(sd * 0.03, 0.07), [0.013, 0.018, 0.02]), C.ink, 1), be.layer('nuBe', ellipsoid(on(sd * 0.047, 0.045), [0.016, 0.01, 0.02]), 0xe58a6a)]),
+    ];
+    const beMesh = be.build({ kind: 'radial', c: [x, y + 0.09, z], detail: Math.max(2, Math.round(3 * detail)), rmax: 0.2 }, paints);
+    return [clayPiece(bagMesh), clayPiece(beMesh)];
+  });
 }
 
 const NU_LOOK: Record<NuTuongId, NuLook> = {
@@ -1919,7 +1697,7 @@ const NU_LOOK: Record<NuTuongId, NuLook> = {
     feathers: [C.red, C.nuTimLight, C.cream],
     body: { drumPlate: true },
     gear: (h) => {
-      for (const s of [-1, 1]) h.on('chest').plain.sphere(0.062, C.bronzeLight, s * 0.16, 0.565, 0, [1.05, 0.7, 1], 8);
+      pauldrons(h, { color: C.bronzeLight, size: 0.88 });
       h.local('hand', GRIP_R, null, (s) => spear(s, 1, 1.45));
     },
     armR: [-0.12, 0, 0.2],
@@ -1931,8 +1709,8 @@ const NU_LOOK: Record<NuTuongId, NuLook> = {
     trim: C.cream,
     feathers: [C.red, C.nuHongLight, C.cream],
     body: { crossStrap: C.diuCham },
-    gear: (h, r) => {
-      drawDiuCon(h, r);
+    gear: (h) => {
+      drawDiuCon(h);
       h.local('hand', GRIP_R, null, guomDong);
     },
     armR: [-0.35, 0, 0.18],

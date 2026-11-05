@@ -8,8 +8,9 @@ import * as THREE from 'three';
 import { BAI_CAT, DAO_CHINH, QUAN_DAO, bienDiem, bienDo, daoChinh, daoGoc, onIsland, type QuanDao, type QuanDaoId } from '../game/bien';
 import { RIVER_END, RIVER_START } from '../game/map';
 import { vi } from '../text/vi';
+import { makeDolphin, makeWhale } from './caBien';
 import { C } from './palette';
-import { RigBuilder, resetBones, skinRig, type Act, type BoneDef, type Bones, type Poser } from './rig';
+import type { Poser } from './rig';
 import { ShapeBuilder, seeded } from './shapes';
 import { ToonModel } from './toon';
 
@@ -519,125 +520,6 @@ export function islandAt(x: number, z: number): QuanDaoId | null {
   return onIsland(x, z, 1.2);
 }
 
-// ---------- Cá voi, cá heo ----------
-
-type B = Bones<string>;
-type Defs = Record<string, BoneDef<string>>;
-
-const WHALE: Defs = {
-  base: { parent: null, at: [0, 0, 0] },
-  tail1: { parent: 'base', at: [0, 0.05, -0.95] },
-  tail2: { parent: 'tail1', at: [0, 0.05, -1.55] },
-  fluke: { parent: 'tail2', at: [0, 0.05, -2.0] },
-  finL: { parent: 'base', at: [-0.48, -0.12, 0.4] },
-  finR: { parent: 'base', at: [0.48, -0.12, 0.4] },
-};
-
-/** Cá voi: mình to thuôn xanh xám, bụng trắng có rãnh, đầu dẹt, lỗ phun nước trên lưng, vây ngực dài, đuôi xòe hai thùy. */
-function drawWhale(r: RigBuilder<string>): void {
-  const p = r.on('base').plain;
-  p.sphere(0.7, C.whale, 0, 0, 0.15, [0.85, 0.66, 1.85], 14);
-  p.sphere(0.62, C.whaleBelly, 0, -0.12, 0.3, [0.78, 0.5, 1.6], 12);
-  // Rãnh họng dưới cằm.
-  for (const dx of [-0.2, -0.07, 0.07, 0.2]) p.box(0.025, 0.02, 0.9, C.whale, dx, -0.42, 0.75);
-  for (const s of [-1, 1]) {
-    p.sphere(0.06, C.ink, s * 0.47, 0.02, 0.95, [0.6, 1, 1], 6);
-    p.sphere(0.035, C.cream, s * 0.495, 0.04, 0.97, [0.5, 1, 1], 5);
-  }
-  p.sphere(0.06, C.ink, 0, 0.44, 0.62, [1.2, 0.4, 0.8], 6);
-  p.cone(0.12, 0.26, C.whale, 0, 0.42, -0.6, [-0.5, 0, 0], 6);
-  const t1 = r.on('tail1').plain;
-  t1.sphere(0.42, C.whale, 0, 0.04, -1.2, [0.7, 0.62, 1.2], 10);
-  const t2 = r.on('tail2').plain;
-  t2.sphere(0.24, C.whale, 0, 0.05, -1.78, [0.65, 0.6, 1.3], 8);
-  const f = r.on('fluke').plain;
-  for (const s of [-1, 1]) f.sphere(0.4, C.whale, s * 0.38, 0.05, -2.1, [1.15, 0.12, 0.5], 10);
-  for (const [b, s] of [
-    ['finL', -1],
-    ['finR', 1],
-  ] as const) {
-    r.on(b).plain.sphere(0.32, C.whale, s * 0.78, -0.2, 0.3, [1.3, 0.12, 0.42], 8);
-  }
-}
-
-/**
- * Cá voi bơi: đuôi đập lên xuống thành sóng chạy về sau, vây ngực chèo chậm. Lặn (`act: 'fight'`, `strike` 0..1):
- * khúc đuôi cong vồng lên dần, vây đuôi dựng đứng khỏi mặt nước như khi cá voi chúi xuống sâu.
- */
-function poseWhale(b: B, a: Act): void {
-  resetBones(b);
-  const t = a.time ?? 0;
-  const w = 1.6;
-  const curl = a.act === 'fight' ? (a.strike ?? 0) : 0;
-  const swim = 1 - curl;
-  b.tail1.rotation.x = 0.12 * swim * Math.sin(t * w) + 0.22 * curl;
-  b.tail2.rotation.x = 0.22 * swim * Math.sin(t * w - 0.7) + 0.32 * curl;
-  b.fluke.rotation.x = 0.3 * swim * Math.sin(t * w - 1.4) + 0.38 * curl;
-  b.finL.rotation.z = 0.15 * Math.sin(t * w * 0.5);
-  b.finR.rotation.z = -0.15 * Math.sin(t * w * 0.5);
-}
-
-const DOLPHIN: Defs = {
-  base: { parent: null, at: [0, 0, 0] },
-  tail: { parent: 'base', at: [0, 0.02, -0.32] },
-  fluke: { parent: 'tail', at: [0, 0.02, -0.62] },
-  finL: { parent: 'base', at: [-0.14, -0.06, 0.18] },
-  finR: { parent: 'base', at: [0.14, -0.06, 0.18] },
-};
-
-/** Cá heo: mình thon xám xanh, bụng trắng, mõm dài, vây lưng cong, mắt hiền. */
-function drawDolphin(r: RigBuilder<string>): void {
-  const p = r.on('base').plain;
-  p.sphere(0.22, C.dolphin, 0, 0, 0.05, [0.72, 0.78, 2.1], 12);
-  p.sphere(0.19, C.dolphinBelly, 0, -0.06, 0.1, [0.62, 0.55, 1.85], 10);
-  p.capsule(0.055, 0.16, C.dolphin, 0, -0.05, 0.55, [Math.PI / 2, 0, 0]);
-  p.cone(0.09, 0.22, C.dolphin, 0, 0.22, -0.05, [-0.55, 0, 0], 5);
-  for (const s of [-1, 1]) {
-    p.sphere(0.028, C.ink, s * 0.135, 0.04, 0.36, [0.5, 1, 1], 5);
-    p.sphere(0.012, C.cream, s * 0.145, 0.05, 0.37, [0.5, 1, 1], 4);
-  }
-  r.on('tail').plain.sphere(0.12, C.dolphin, 0, 0.02, -0.45, [0.6, 0.6, 1.6], 8);
-  const f = r.on('fluke').plain;
-  for (const s of [-1, 1]) f.sphere(0.12, C.dolphin, s * 0.12, 0.02, -0.68, [1.2, 0.15, 0.55], 7);
-  for (const [b, s] of [
-    ['finL', -1],
-    ['finR', 1],
-  ] as const) {
-    r.on(b).plain.sphere(0.1, C.dolphin, s * 0.22, -0.1, 0.12, [1.3, 0.15, 0.5], 6);
-  }
-}
-
-/** Cá heo bơi: đuôi quẫy nhanh; khi nhảy (`act: 'walk'`) đuôi quẫy mạnh hơn. */
-function poseDolphin(b: B, a: Act): void {
-  resetBones(b);
-  const t = a.time ?? 0;
-  const k = a.act === 'walk' ? 0.45 : 0.25;
-  b.tail.rotation.x = k * Math.sin(t * 8);
-  b.fluke.rotation.x = (k + 0.15) * Math.sin(t * 8 - 0.8);
-  b.finL.rotation.z = 0.2;
-  b.finR.rotation.z = -0.2;
-}
-
-function makeCreature(defs: Defs, draw: (r: RigBuilder<string>) => void, pose: (b: B, a: Act) => void): THREE.Group {
-  const r = new RigBuilder(defs, 0.8);
-  draw(r);
-  const { group, bones } = skinRig(r.build());
-  const poser: Poser = (a) => pose(bones, a);
-  poser({ act: 'stand' });
-  group.userData.pose = poser;
-  return group;
-}
-
-/** Cá voi có xương, mặt trước hướng +z, dài chừng 3,2 ô (chưa phóng). */
-export function makeWhale(): THREE.Group {
-  return makeCreature(WHALE, drawWhale, poseWhale);
-}
-
-/** Cá heo có xương, mặt trước hướng +z, dài chừng 1,1 ô. */
-export function makeDolphin(): THREE.Group {
-  return makeCreature(DOLPHIN, drawDolphin, poseDolphin);
-}
-
 /** Một lần cá voi nổi lên, hay một đàn cá heo nhảy: chỗ bắt đầu (thế giới), hướng bơi, giờ bắt đầu. */
 interface SeaEvent {
   kind: 'whale' | 'dolphins';
@@ -670,7 +552,7 @@ const POD = 4;
  * ở quanh một quần đảo), cá voi nổi lên phun nước rồi lặn, hay đàn bốn cá heo nhảy nối đuôi nhau.
  */
 export class SeaLife {
-  private readonly whale: THREE.Group;
+  private whale: THREE.Group | null = null;
   private readonly dolphins: THREE.Group[] = [];
   private readonly sprays: Spray[] = [];
   private readonly sprayMat = new THREE.MeshBasicMaterial({ color: C.foam, transparent: true, opacity: 0.85, depthWrite: false });
@@ -685,18 +567,26 @@ export class SeaLife {
     private readonly root: THREE.Object3D,
     private readonly half: number,
   ) {
+  }
+
+  /** Dựng cá lần đầu cá nổi lên (dưới Điện 8 chưa có cá nào, khỏi tốn công nặn lúc vào game). */
+  private ensure(kind: SeaEvent['kind']): void {
     // Xoay hướng bơi trước, rồi mới chúi, ngẩng theo trục ngang của chính con cá.
-    this.whale = makeWhale();
-    this.whale.scale.setScalar(1.35);
-    this.whale.rotation.order = 'YXZ';
-    this.whale.visible = false;
-    root.add(this.whale);
-    for (let i = 0; i < POD; i++) {
-      const d = makeDolphin();
-      d.rotation.order = 'YXZ';
-      d.visible = false;
-      root.add(d);
-      this.dolphins.push(d);
+    if (kind === 'whale' && !this.whale) {
+      this.whale = makeWhale();
+      this.whale.scale.setScalar(1.35);
+      this.whale.rotation.order = 'YXZ';
+      this.whale.visible = false;
+      this.root.add(this.whale);
+    }
+    if (kind === 'dolphins' && !this.dolphins.length) {
+      for (let i = 0; i < POD; i++) {
+        const d = makeDolphin();
+        d.rotation.order = 'YXZ';
+        d.visible = false;
+        this.root.add(d);
+        this.dolphins.push(d);
+      }
     }
   }
 
@@ -717,7 +607,7 @@ export class SeaLife {
 
   /** Cho cá voi hay đàn cá heo nổi lên ngay gần chỗ camera nhìn (ảnh chụp thử). */
   show(kind: SeaEvent['kind'], t: number, focus: THREE.Vector3): void {
-    this.whale.visible = false;
+    if (this.whale) this.whale.visible = false;
     for (const d of this.dolphins) d.visible = false;
     this.event = null;
     this.spawn(t, focus, kind);
@@ -739,6 +629,7 @@ export class SeaLife {
     }
     const spot = this.pickSpot(fx, fz, travel);
     if (!spot) return;
+    this.ensure(kind);
     this.event = { kind, x: spot.x - this.half, z: spot.z - this.half, dir: spot.dir, start: t, dur };
     this.spouted = false;
     this.splashed.clear();
@@ -788,7 +679,7 @@ export class SeaLife {
     const e = this.event;
     const k = t - e.start;
     if (k >= e.dur) {
-      this.whale.visible = false;
+      if (this.whale) this.whale.visible = false;
       for (const d of this.dolphins) d.visible = false;
       this.event = null;
       return;
@@ -802,7 +693,7 @@ export class SeaLife {
    * khỏi mặt nước rồi lặn hẳn, tóe nước khi đuôi chìm.
    */
   private stepWhale(e: SeaEvent, k: number, t: number): void {
-    const w = this.whale;
+    const w = this.whale!;
     w.visible = true;
     const along = 0.7 * k;
     w.position.x = e.x + Math.sin(e.dir) * along;
