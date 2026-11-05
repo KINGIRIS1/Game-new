@@ -612,8 +612,9 @@ export function makeGiongHienLinh(): THREE.Group {
     if ((o as THREE.Mesh).isMesh && (o as THREE.Mesh).material !== inkThin) o.castShadow = true;
   });
   return moHinh('giong', makeGiong('trangSi', { bamboo: true, glow: true, onFoot: true }), {
-    // Như tay cầm của bản dựng bằng code (`poseGiongStand`): khóm tre hơi ngả ra trước và ra ngoài.
-    hold: { item, rot: new THREE.Euler(0.12, 0, -0.12), scale: K_GIONG },
+    // Như tay cầm của bản dựng bằng code (`poseGiongStand`): khóm tre hơi ngả ra trước và ra ngoài. Tay phải mô hình
+    // Meshy ở phía -x (bản dựng bằng code ở +x) nên ngả ra ngoài là quay quanh z theo chiều dương.
+    hold: { item, rot: new THREE.Euler(0.12, 0, 0.12), scale: K_GIONG },
     // Hào quang sau đầu, cao như bản dựng bằng code: bốn phần năm quãng từ cổ (xương đầu) lên đỉnh mũ.
     dress: (g, at) => {
       const neck = at('Head')?.y ?? 0.75;

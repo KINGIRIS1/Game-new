@@ -1,6 +1,6 @@
 // Canh tệp mô hình Meshy của game (src/assets/mo-hinh/, thu gọn bằng scripts/mo-hinh.mjs): đủ nhẹ cho điện thoại (cỡ
-// tệp, số tam giác, cạnh ảnh), chỉ dùng phần mở rộng mà `moHinh.ts` nạp được, có đoạn động tác đứng và xương bàn tay
-// để cầm đồ. Đọc thẳng khối JSON của tệp GLB, không cần trình duyệt.
+// tệp, số tam giác, cạnh ảnh), chỉ dùng phần mở rộng mà `moHinh.ts` nạp được, có đủ xương người mà `moHinh.ts` làm
+// tư thế. Đọc thẳng khối JSON của tệp GLB, không cần trình duyệt.
 // Phần vẽ tạo canvas khi nạp module: giả lập `document` cho đủ dùng.
 
 import { describe, expect, it, vi } from 'vitest';
@@ -71,8 +71,8 @@ function webpSize(b: Uint8Array): [number, number] {
 }
 
 describe('mô hình Meshy', () => {
-  it('mỗi nhân vật: tệp gọn, đủ đoạn đứng và xương tay, chỉ dùng phần mở rộng nạp được', async () => {
-    const { MO_HINH } = await import('./moHinh');
+  it('mỗi nhân vật: tệp gọn, đủ xương người, chỉ dùng phần mở rộng nạp được', async () => {
+    const { MO_HINH, XUONG } = await import('./moHinh');
     for (const [id, def] of Object.entries(MO_HINH)) {
       expect(def.url, id).toMatch(new RegExp(`${id}\\.glb$`));
       const data = bytesOf(id);
@@ -96,9 +96,10 @@ describe('mô hình Meshy', () => {
         expect(Math.max(w, h), `${id}: cạnh ảnh`).toBeLessThanOrEqual(MAX_SIDE);
       }
 
-      expect((json.animations ?? []).map((a) => a.name), `${id}: đoạn động tác`).toContain(def.idle);
+      // Tư thế làm bằng code trên bộ xương (`MeshyRig`): cần đủ xương người, không cần đoạn động tác.
       const joints = new Set((json.skins ?? []).flatMap((s) => s.joints.map((j) => json.nodes[j].name)));
-      for (const b of def.hand) expect(joints.has(b), `${id}: xương ${b}`).toBe(true);
+      for (const b of Object.values(XUONG)) expect(joints.has(b), `${id}: xương ${b}`).toBe(true);
+      expect(json.animations ?? [], `${id}: không mang đoạn động tác thừa`).toHaveLength(0);
     }
   });
 });

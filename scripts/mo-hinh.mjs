@@ -1,11 +1,13 @@
 #!/usr/bin/env node
-// Thu gọn tệp GLB nhân vật Meshy (đã gắn xương và có động tác) cho game, ra src/assets/mo-hinh/<tên>.glb:
-//   - giữ các đoạn động tác được chọn (đổi tên theo game), bỏ kênh động tác không đổi suốt đoạn;
-//   - chỉ giữ ảnh màu gốc, thu về cạnh --anh điểm ảnh (mặc định 1024) và nén WebP; bỏ ảnh kim loại, nhám, pháp tuyến;
+// Thu gọn tệp GLB nhân vật Meshy (đã gắn xương) cho game, ra src/assets/mo-hinh/<tên>.glb:
+//   - bỏ mọi đoạn động tác (game làm tư thế bằng code trên bộ xương, `render/moHinh.ts`), trừ đoạn chọn bằng --doan
+//     (đổi tên theo game; bỏ kênh không đổi suốt đoạn);
+//   - chỉ giữ ảnh màu gốc, thu về cạnh --anh điểm ảnh (mặc định 1024) và nén WebP; bỏ ảnh kim loại, nhám, pháp tuyến
+//     và tiếp tuyến;
 //   - bỏ dữ liệu không còn dùng, lượng tử hóa và nén lưới bằng meshopt (EXT_meshopt_compression; game giải bằng
 //     MeshoptDecoder của three).
 // Cách dùng: node scripts/mo-hinh.mjs <tệp vào.glb> <tên> [--anh 1024] [--doan <tên trong tệp>=<tên mới> ...]
-// Không có --doan thì đoạn đầu tiên đổi tên thành "dung" (đứng). Ảnh thu nhỏ bằng Chromium của Playwright.
+// Ảnh thu nhỏ bằng Chromium của Playwright.
 
 import { createRequire } from 'node:module';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
@@ -41,7 +43,6 @@ const root = doc.getRoot();
 // Đoạn động tác.
 const anims = root.listAnimations();
 console.log('Đoạn trong tệp:', anims.map((a) => a.getName()).join(', ') || '(không có)');
-if (!rename.size && anims.length) rename.set(anims[0].getName(), 'dung');
 let dropped = 0;
 for (const a of anims) {
   const to = rename.get(a.getName());
@@ -77,6 +78,9 @@ for (const m of root.listMaterials()) {
   m.setMetallicRoughnessTexture(null).setNormalTexture(null).setOcclusionTexture(null).setEmissiveTexture(null);
   m.setMetallicFactor(0).setRoughnessFactor(1).setDoubleSided(false);
 }
+
+// Tiếp tuyến chỉ cần cho ảnh pháp tuyến, đã bỏ.
+for (const mesh of root.listMeshes()) for (const p of mesh.listPrimitives()) p.setAttribute('TANGENT', null);
 
 // Bỏ thứ không còn ai dùng.
 await doc.transform(prune());
