@@ -1886,7 +1886,7 @@ Chủ dự án yêu cầu: khám phá vùng đất mới bên kia sông để m�
 - Cầu bị lũ cuốn thì phải sửa, nhưng không tính là để mất mùa lũ.
 - **Chỗ có cầu thì sông không còn là hào kín**: đếm vòng thành coi ô cầu là đi được. Vòng thành dựa vào bờ sông mà hở ở đầu cầu thì không tính nữa. Mẫu Cổ Loa có vòng kín quanh Điện, không chạm sông, nên không đổi.
 - Áp mẫu kinh đô chừa ô đầu cầu bên này.
-- **Hai đầu cầu gác lên mặt bờ**: cầu phao có ván dốc từ bè lên bờ, cầu gỗ có ván gác và xà chặn nằm trên đất bờ; bờ đầu cầu đắp cao thì đầu cầu lên theo, cầu gỗ vồng giữa sông cao hơn cả hai bờ. Người trinh sát, quân hành quân đi trên mặt cầu đúng như hình vẽ.
+- **Hai đầu cầu gác lên mặt bờ**: cầu phao có ván dốc từ bè lên bờ, cầu gỗ có ván gác và xà chặn nằm trên đất bờ; bờ đầu cầu đắp cao thì đầu cầu lên theo, cầu gỗ vồng giữa sông cao hơn cả hai bờ. Người trinh sát, quân hành quân, lính hai bên trong trận giữ kinh đô đi trên mặt cầu đúng như hình vẽ; thuyền, thủy quái qua chỗ cầu thì đi dưới gầm.
 - Cầu không đắp nền được. Bản lưu cũ đã lỡ đắp nền cầu thì khi tải, lòng sông dưới cầu hạ lại như cũ và hoàn đủ số đất đá đã tiêu.
 
 ### Sương mù và trinh sát
