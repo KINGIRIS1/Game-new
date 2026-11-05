@@ -348,7 +348,10 @@ function giongWeapon(s: Parts, bamboo: boolean): void {
   }
 }
 
-/** Tráng sĩ Gióng: giáp sắt hộ tâm trống đồng, giáp vai cánh chim Lạc, áo choàng đại hồng bào, mũ trụ sắt 9 lông chim. */
+/**
+ * Tráng sĩ Gióng: giáp sắt hộ tâm trống đồng, giáp vai cánh chim Lạc ba lớp lông, áo choàng đại hồng bào, mũ trụ sắt
+ * 9 lông chim; mặt hiền có thần (mắt to có đốm sáng, mày rậm, miệng cười, má hồng).
+ */
 function drawGiongRider(r: HumanRig, bamboo: boolean): void {
   humanBody(r, {
     legs: IRON_DARK,
@@ -387,8 +390,21 @@ function drawGiongRider(r: HumanRig, bamboo: boolean): void {
     chest.plain.sphere(0.082, IRON, s * 0.155, 0.565, 0, [1.15, 0.82, 1.08], 10);
     chest.plain.sphere(0.068, IRON_DARK, s * 0.175, 0.525, 0, [1.1, 0.7, 1.02], 8);
     chest.plain.box(0.11, 0.025, 0.13, C.gold, s * 0.165, 0.545, 0, [0, 0, -s * 0.25]);
-    chest.plain.cone(0.032, 0.11, C.gold, s * 0.205, 0.615, -0.01, [0, 0, -s * 0.65], 5);
     chest.plain.sphere(0.032, C.gold, s * 0.115, 0.56, 0.095, [1, 1, 0.6], 7);
+    // Cánh chim Lạc trên giáp vai: ba lớp lông sắt bản rộng xuôi xuống phủ bắp tay, lớp sau dài hơn lớp trước,
+    // đầu lông viền vàng, như cánh chim khép trên mặt trống đồng.
+    for (let j = 0; j < 3; j++) {
+      const a = 2.0 + j * 0.2;
+      const len = 0.085 + j * 0.02;
+      const dx = Math.sin(a);
+      const dy = Math.cos(a);
+      const bx = s * 0.19;
+      const by = 0.585;
+      const bz = 0.045 - j * 0.045;
+      const rot: [number, number, number] = [0, 0, -s * a];
+      chest.plain.box(0.062, len, 0.022, j === 1 ? IRON_LIGHT : IRON, bx + s * dx * len * 0.5, by + dy * len * 0.5, bz, rot);
+      chest.plain.box(0.064, 0.026, 0.024, C.gold, bx + s * dx * (len + 0.01), by + dy * (len + 0.01), bz, rot);
+    }
   }
 
   chest.plain.box(0.36, 0.48, 0.032, C.red, 0, 0.45, -0.22, [0.72, 0, 0]);
@@ -408,7 +424,7 @@ function drawGiongRider(r: HumanRig, bamboo: boolean): void {
     ap.cyl(0.044, 0.044, 0.022, C.bronze, x, 0.325, 0, undefined, 8);
   }
 
-  humanHead(r, { brows: true });
+  humanHead(r, { gentle: true });
   const head = r.on('head');
   const hp = head.plain;
   hp.sphere(0.236, IRON, 0, 0.845, -0.02, [1.02, 0.66, 1.02], 12);

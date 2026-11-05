@@ -145,6 +145,8 @@ export interface FaceLook {
   beard?: number;
   /** Hoa tai đồng tròn xoắn ốc (phụ nữ Lạc Việt). */
   earrings?: number;
+  /** Mặt tướng hiền (Gióng): mắt to có đốm sáng, mày rậm ít xếch, miệng cười, má hồng. */
+  gentle?: boolean;
   /** Trâm cài tóc bằng đồng. */
   hairPin?: number;
 }
@@ -153,21 +155,31 @@ export interface FaceLook {
 export function humanHead(r: HumanRig, face: FaceLook = {}): void {
   const p = r.on('head').plain;
   p.sphere(0.2, C.skin, 0, 0.76, 0, [1, 0.95, 0.95], 12);
-  const blush = face.blush ?? !face.brows;
+  const gentle = !!face.gentle;
+  const blush = face.blush ?? (gentle || !face.brows);
   for (const s of [-1, 1]) {
     p.sphere(0.03, C.skin, s * 0.195, 0.75, 0, [0.6, 1, 1], 5);
-    p.sphere(0.03, C.ink, s * 0.072, 0.745, 0.172, [1, 1.45, 0.5], 6);
-    if (blush) {
-      p.sphere(0.011, C.cream, s * 0.066, 0.76, 0.19, [1, 1, 1], 5);
-      p.sphere(0.03, CHEEK, s * 0.115, 0.7, 0.148, [1, 0.6, 0.4], 5);
+    if (gentle) {
+      p.sphere(0.036, C.ink, s * 0.074, 0.748, 0.168, [1, 1.4, 0.5], 7);
+      p.sphere(0.013, C.cream, s * 0.062, 0.768, 0.19, [1, 1, 1], 5);
+      p.sphere(0.034, CHEEK, s * 0.122, 0.698, 0.146, [1, 0.6, 0.4], 5);
+    } else {
+      p.sphere(0.03, C.ink, s * 0.072, 0.745, 0.172, [1, 1.45, 0.5], 6);
+      if (blush) {
+        p.sphere(0.011, C.cream, s * 0.066, 0.76, 0.19, [1, 1, 1], 5);
+        p.sphere(0.03, CHEEK, s * 0.115, 0.7, 0.148, [1, 0.6, 0.4], 5);
+      }
     }
-    if (face.brows) p.box(0.075, 0.018, 0.02, C.ink, s * 0.078, 0.8, 0.178, [0, 0, -s * 0.32]);
+    if (gentle) p.box(0.088, 0.028, 0.022, C.ink, s * 0.08, 0.806, 0.176, [0, 0, -s * 0.16]);
+    else if (face.brows) p.box(0.075, 0.018, 0.02, C.ink, s * 0.078, 0.8, 0.178, [0, 0, -s * 0.32]);
     if (face.mustache) p.box(0.08, 0.022, 0.02, face.mustache, s * 0.05, 0.69, 0.188, [0, 0, s * 0.35]);
     if (face.earrings) {
       p.cyl(0.032, 0.032, 0.015, face.earrings, s * 0.2, 0.71, 0, [0, 0, Math.PI / 2], 8);
       p.sphere(0.016, C.bronzeLight, s * 0.208, 0.69, 0, [1, 1, 1], 6);
     }
   }
+  // Miệng cười chúm chím: một hạt nhỏ dẹt.
+  if (gentle) p.sphere(0.018, C.ink, 0, 0.69, 0.17, [1.25, 0.5, 0.45], 6);
   if (face.beard) p.cone(0.1, 0.3, face.beard, 0, 0.56, 0.13, [Math.PI + 0.25, 0, 0], 7);
   if (face.hairPin) {
     p.cyl(0.008, 0.008, 0.32, face.hairPin, 0, 0.98, -0.05, [0, 0, Math.PI / 2], 6);
