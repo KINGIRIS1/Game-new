@@ -202,7 +202,7 @@ describe('bản lưu 24', () => {
     s.campaign.phoTuong = 'batNan';
     const back = deserialize(serialize(s))!;
     expect(back.version).toBe(SAVE_VERSION);
-    expect(SAVE_VERSION).toBe(24);
+    expect(SAVE_VERSION).toBeGreaterThanOrEqual(24);
     expect(back.buildings.find((b) => b.id === a.id)!.nuTuong).toBe('phungThiChinh');
     expect(back.campaign.phoTuong).toBe('batNan');
     expect(nuJoined(back, 'phungThiChinh')).toBe(true);

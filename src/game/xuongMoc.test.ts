@@ -122,12 +122,15 @@ describe('gỗ', () => {
 
   it('Lạc hầu gợi ý xưởng mộc một lần, khi Điện lên cấp 2', () => {
     const s = capital(1);
+    // Nhà thợ hồ mở từ đầu nên Lạc hầu gợi ý trước (`xay.test.ts`).
+    expect(nextHint(s)).toBe('thoHo');
+    markHinted(s, 'thoHo');
     expect(nextHint(s)).toBeNull();
     setDien(s, 2);
     expect(nextHint(s)).toBe('xuongMoc');
     markHinted(s, 'xuongMoc');
     expect(nextHint(s)).toBeNull();
-    expect(s.hinted).toEqual(['xuongMoc']);
+    expect(s.hinted).toEqual(['thoHo', 'xuongMoc']);
   });
 
   it('nâng bản lưu 15 lên 16: kho có 0 gỗ, chưa gợi ý gì, trận vừa xong chưa bị cướp gỗ', () => {
