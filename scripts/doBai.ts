@@ -5,7 +5,7 @@ import { BAI_THEO, baiById, baiOf, sdfCan, stageBai } from '../src/game/baiChien
 import { startFieldBattle, stepField, useSkill, type Battle, type FieldSetup, type HeroSetup } from '../src/game/battle';
 import { CAMP1_ARMY, CAMPS } from '../src/game/benKia';
 import { CHALLENGES, DEFAULT_ROWS, FIELD, STAGES, TEMPLE_BONUS, type SkillId } from '../src/game/defs';
-import { HALF_ARMY, HALF_ARMY4, SAMPLE_ARMY, SAMPLE_ARMY4, fightChallenge, playOut, type Army } from '../src/game/testkit';
+import { HALF_ARMY, HALF_ARMY4, SAMPLE_ARMY, SAMPLE_ARMY4, fightChallenge, fightStage, playOut, type Army } from '../src/game/testkit';
 
 /** Một tiêu chí: tên, kết quả mong muốn, và cách đánh một trận với hạt giống `id`. */
 interface TieuChi {
@@ -89,7 +89,13 @@ function stageSetup(n: number, army: Army, id: number, hero: HeroSetup | null = 
 
 function tieuChi(cac: string[]): TieuChi[] {
   const out: TieuChi[] = [];
-  const want = (k: string) => !cac.length || cac.includes(k);
+  // `c1`, `c2`, `c3`: mọi màn, thử thách, đồn của chương ấy (đồn bậc 1, 2, 4 tính vào chương 1, bậc 3 vào chương 3).
+  const chuong = (k: string) => {
+    const n = Number(k.slice(1));
+    if (k[0] === 'd') return n === 3 ? 3 : 1;
+    return STAGES[n - 1]?.chapter ?? 0;
+  };
+  const want = (k: string) => !cac.length || cac.includes(k) || cac.includes(`c${chuong(k)}`);
   let step: (b: Battle) => void = () => {};
   const on = (b: Battle) => step(b);
   for (let n = 1; n <= 4; n++) {
@@ -107,6 +113,24 @@ function tieuChi(cac: string[]): TieuChi[] {
     out.push({ tran: `màn ${n}`, ten: 'nửa quân thua', muon: 'lose', danh: (id) => danhGiong(stageSetup(n, half(a), id, g), true, on) });
     if (n === 8) out.push({ tran: 'màn 8', ten: 'không bấm kỹ năng thua', muon: 'lose', danh: (id) => danhGiong(stageSetup(n, a, id, g), false, on) });
   }
+  // Chương 2, 3 (`chuong2.test.ts`, `chuong3.test.ts`): người chơi thường có tướng thì thắng; không tướng, hay nửa quân,
+  // chơi giỏi cũng thua.
+  const GIONG: HeroSetup = { kind: 'giong', bamboo: true, glow: true, non: false };
+  const SON: HeroSetup = { kind: 'sonTinh', bamboo: false, glow: true, non: true };
+  const tuong = (n: number): HeroSetup =>
+    n <= 11 ? GIONG : n <= 16 ? { kind: 'sonTinh', bamboo: false, glow: false, non: n > 14 } : n <= 19 ? SON : { kind: 'anDuong', bamboo: false, glow: false, non: false, kimQuy: n > 22 };
+  for (let n = 9; n <= 24; n++) {
+    if (!want(`m${n}`)) continue;
+    const h = tuong(n);
+    const ten = `màn ${n}`;
+    out.push({ tran: ten, ten: 'có tướng, chơi thường thắng', muon: 'win', danh: (id) => fightStage(n, SAMPLE_ARMY, h, 'thuong', id, undefined, on) });
+    out.push({ tran: ten, ten: 'không tướng, chơi giỏi thua', muon: 'lose', danh: (id) => fightStage(n, SAMPLE_ARMY, null, 'gioi', id, undefined, on) });
+    out.push({ tran: ten, ten: 'nửa quân, chơi giỏi thua', muon: 'lose', danh: (id) => fightStage(n, HALF_ARMY, h, 'gioi', id, undefined, on) });
+    if (n >= 12 && n <= 15) out.push({ tran: ten, ten: 'Gióng thay Sơn Tinh, chơi giỏi thắng', muon: 'win', danh: (id) => fightStage(n, SAMPLE_ARMY, GIONG, 'gioi', id, undefined, on) });
+    if (n === 15) out.push({ tran: ten, ten: 'Gióng thay Sơn Tinh, chơi thường thua', muon: 'lose', danh: (id) => fightStage(n, SAMPLE_ARMY, GIONG, 'thuong', id, undefined, on) });
+    if (n === 16) out.push({ tran: ten, ten: 'Gióng thay Sơn Tinh, chơi giỏi thua', muon: 'lose', danh: (id) => fightStage(n, SAMPLE_ARMY, GIONG, 'gioi', id, undefined, on) });
+    if (n === 16 || n === 24) out.push({ tran: ten, ten: 'không bấm kỹ năng thua', muon: 'lose', danh: (id) => fightStage(n, SAMPLE_ARMY, h, 'khongBam', id, undefined, on) });
+  }
   const camp = (tier: 1 | 2 | 3 | 4, army: Army, hero: HeroSetup | null, play: 'thuong' | 'gioi', id: number) => {
     const def = CAMPS[tier];
     const b = startFieldBattle({ id, stage: 0, enemies: def.enemies, hpScale: def.hpScale, army, rows: DEFAULT_ROWS, hero, bonus: play === 'thuong' ? 0 : TEMPLE_BONUS, bai: baiOf(def.terrain, def.chapter) });
@@ -116,8 +140,9 @@ function tieuChi(cac: string[]): TieuChi[] {
     out.push({ tran: 'đồn 1', ten: 'quân mẫu thắng', muon: 'win', danh: (id) => camp(1, CAMP1_ARMY, null, 'thuong', id) });
     out.push({ tran: 'đồn 1', ten: 'nửa quân, chơi giỏi thua', muon: 'lose', danh: (id) => camp(1, { giao: 5, cung: 3, voi: 1, no: 0 }, null, 'gioi', id) });
   }
-  const HEROES: [2 | 4, HeroSetup][] = [
-    [2, { kind: 'giong', bamboo: true, glow: true, non: false }],
+  const HEROES: [2 | 3 | 4, HeroSetup][] = [
+    [2, GIONG],
+    [3, SON],
     [4, { kind: 'anDuong', bamboo: false, glow: false, non: false, kimQuy: true }],
   ];
   for (const [tier, hero] of HEROES) {
@@ -128,12 +153,11 @@ function tieuChi(cac: string[]): TieuChi[] {
     out.push({ tran: `đồn ${tier}`, ten: 'không tướng, chơi giỏi thua', muon: 'lose', danh: (id) => camp(tier, army, null, 'gioi', id) });
     out.push({ tran: `đồn ${tier}`, ten: 'nửa quân, chơi giỏi thua', muon: 'lose', danh: (id) => camp(tier, halfA, hero, 'gioi', id) });
   }
-  for (let n = 1; n <= 8; n++) {
+  for (let n = 1; n <= 24; n++) {
     if (!want(`t${n}`)) continue;
     const kind = CHALLENGES[n - 1].kind;
-    // Thử thách đánh hết trong `fightChallenge`, không đếm lính kẹt.
-    out.push({ tran: `thử thách ${n}`, ten: `${kind}: chơi giỏi thắng`, muon: 'win', danh: (id) => fightChallenge(n, 'gioi', id) });
-    out.push({ tran: `thử thách ${n}`, ten: `${kind}: chơi thường thua`, muon: 'lose', danh: (id) => fightChallenge(n, 'thuong', id) });
+    out.push({ tran: `thử thách ${n}`, ten: `${kind}: chơi giỏi thắng`, muon: 'win', danh: (id) => fightChallenge(n, 'gioi', id, undefined, on) });
+    out.push({ tran: `thử thách ${n}`, ten: `${kind}: chơi thường thua`, muon: 'lose', danh: (id) => fightChallenge(n, 'thuong', id, undefined, on) });
   }
   // Gắn bộ đếm kẹt cho trận đang đánh.
   return out.map((c) => ({
@@ -149,8 +173,8 @@ function tieuChi(cac: string[]): TieuChi[] {
 }
 
 /**
- * Đo các tiêu chí `cac` (rỗng là tất cả: `m1`…`m8` màn, `d1`, `d2`, `d4` đồn, `t1`…`t8` thử thách) với `seeds` hạt
- * giống. `phang`: bỏ mọi bố cục, đo trên bãi phẳng để có mức gốc.
+ * Đo các tiêu chí `cac` (rỗng là tất cả: `m1`…`m24` màn, `d1`…`d4` đồn, `t1`…`t24` thử thách, `c1`…`c3` cả chương)
+ * với `seeds` hạt giống. `phang`: bỏ mọi bố cục, đo trên bãi phẳng để có mức gốc.
  */
 export function doBai(opts: { cac?: string[]; seeds?: number; phang?: boolean }): Dong[] {
   const saved = { ...BAI_THEO };
@@ -188,7 +212,7 @@ export function inBang(rows: Dong[], phang: boolean): string {
   const lines = [
     `Bãi ${phang ? 'phẳng (mức gốc)' : 'có vật cản'}. Đạt: số hạt giống ra đúng kết quả mong muốn (thắng thì phải xong trước ${FIELD.maxS} giây).`,
     '',
-    'Lính kẹt: đang đi mà hơn 3 giây dời chưa tới 0,05 ô (kể cả bị đám đông chặn); cạnh vật cản: kẹt cách vật cản dưới 1 ô. Thử thách không đếm kẹt.',
+    'Lính kẹt: đang đi mà hơn 3 giây dời chưa tới 0,05 ô (kể cả bị đám đông chặn); cạnh vật cản: kẹt cách vật cản dưới 1 ô.',
     '',
     '| Trận | Tiêu chí | Đạt | Giữa (s) | Lâu nhất (s) | Lính kẹt | Kẹt cạnh vật cản | Thắng mà tướng ngã |',
     '|---|---|---|---|---|---|---|---|',
