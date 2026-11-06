@@ -87,6 +87,8 @@ export interface LotOpts {
   boi?: boolean;
   /** Cầu: mặt bờ ở hai đầu cầu, để đầu cầu gác đúng lên bờ. Bỏ trống là bờ bậc 0. */
   banks?: BridgeBanks;
+  /** Bậc lên thành: cao chừng này từ chân bậc lên tới mặt đoạn thành kề bên. Bỏ trống là cao như thành Cổ Loa. */
+  rise?: number;
 }
 
 export interface CongTrinh {

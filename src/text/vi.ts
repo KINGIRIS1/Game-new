@@ -138,6 +138,11 @@ export const vi = {
       icon: '🚪',
       desc: 'Cửa trong vòng tường, lầu cổng có lính bắn giặc. Giặc thấy qua cổng dễ hơn phá tường nên dồn về cổng: bày chòi canh, bẫy chông quanh cổng thành chỗ đón đánh. Dựng trên ô trống hay chạm vào một đoạn lũy, thành đất, thành Cổ Loa để thay. Cổng tính là thành khi đếm vòng thành.',
     },
+    bacThanh: {
+      name: 'Bậc lên thành',
+      icon: '🪜',
+      desc: 'Bậc đất nện có tay vịn gỗ, dựng sát mặt trong (phía Điện) một đoạn thành đất hay thành Cổ Loa. Khi giữ kinh đô, cung thủ và lính nỏ theo bậc lên mặt cả dải thành liền với bậc mà bắn xuống: bắn xa thêm 1 ô, giặc cận chiến không với tới, phải phá đoạn thành mới đánh được. Đoạn thành bị phá thì lính trên đó xuống đánh dưới đất.',
+    },
     hoKimQuy: {
       name: 'Hồ Kim Quy',
       icon: '🐢',
@@ -296,6 +301,7 @@ export const vi = {
     datBiChiem: 'Chỗ này đã có công trình',
     ngoaiVung: 'Đất này chưa khai phá',
     phaiSatSong: 'Công trình này phải nằm sát bờ sông',
+    phaiSatThanh: 'Bậc phải dựng sát mặt trong (phía Điện) một đoạn thành đất hay thành Cổ Loa',
     datGioiHan: 'Đã đạt số lượng tối đa, hãy nâng Điện Vua Hùng',
     capToiDa: 'Đã đạt cấp tối đa',
     khongTheXay: 'Không thể xây công trình này',
@@ -1278,6 +1284,8 @@ export const vi = {
         '📜 Lạc hầu: Tâu bệ hạ, sông Đà chảy ra biển Đông; ngoài khơi có quần đảo Hoàng Sa, Trường Sa, cá nhiều, ốc lắm. Xin dựng bến thuyền khơi bên sông, đóng thuyền lớn bằng gỗ xưởng mộc mà ra biển.',
       congThanh:
         '📜 Lạc hầu: Tâu bệ hạ, thành Cổ Loa nên có cổng. Giặc thấy cổng dễ qua sẽ dồn cả về đó: xin dựng cổng giữa vòng tường, bày chòi canh, bẫy chông quanh cổng mà đón đánh.',
+      bacThanh:
+        '📜 Lạc hầu: Tâu bệ hạ, thành đất đã cao. Xin đắp bậc lên thành: giặc tới thì cung thủ, lính nỏ theo bậc lên mặt thành mà bắn xuống, giặc cầm giáo không với tới được.',
       congDe:
         '📜 Lạc hầu: Tâu bệ hạ, nước lũ tuy dữ nhưng chở phù sa. Xin dựng cống trên đê: mùa lũ mở cống cho nước vào ruộng thì lúa tốt tới mùa sau. Có điều nước không chừa nhà cửa, chỗ nước vào chỉ nên có ruộng.',
       thoHo:
