@@ -1638,6 +1638,12 @@ export const ENEMY_ROWS: Record<EnemyType, Row> = {
  */
 export const FIELD = { w: 9, d: 22, gap: 10, hpMul: 1.6, maxS: 90 };
 
+/**
+ * Bãi chiến có vật cản (`baiChien.ts`): lội nước nông đi bằng chừng này phần tốc độ, lội bùn bằng chừng này phần.
+ * Thủy quái (`SWIMMERS`) bơi trong nước như đi thường.
+ */
+export const BAI_CHAM = { nuoc: 0.6, bun: 0.75 };
+
 export type Terrain = 'rung' | 'benSong' | 'lang' | 'don' | 'nui' | 'doi' | 'ngap' | 'tanVien' | 'thatDieu' | 'coLoa' | 'cuaSong' | 'moDa' | 'benKia' | 'hatMon' | 'luyLau' | 'langBac' | 'camKhe';
 
 export type Chapter = 1 | 2 | 3 | 4 | 5;

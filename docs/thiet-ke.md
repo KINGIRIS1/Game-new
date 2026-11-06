@@ -337,6 +337,7 @@ Chủ dự án muốn có nhiều quân dự trữ: dựng thêm doanh trại, m
   - rừng mọc thành cụm có trảng trống, tre thành khóm riêng, thưa dần ra mép;
   - hai bên dàn ba hàng cách nhau 10 ô rồi xông vào đánh kẻ gần nhất;
   - lính đẩy nhau ra, không đứng chồng lên nhau;
+  - dải giữa bãi có vật cản theo nền, lính đi vòng (xem mục **Bãi chiến có vật cản**; đang làm, bố cục bật dần theo chương);
   - ngoài bãi mọi người bền gấp 1,6 lần, để trận kéo dài chừng 10–35 giây và kịp bấm Trống trận.
 - **Kết thúc trận**:
   - thắng khi diệt hết giặc;
@@ -2467,6 +2468,47 @@ Chủ dự án đã chốt ba điều:
 - Lạc hầu gợi ý một lần khi vào chương 2 (cống đê mở khóa cùng đê).
 - Không nâng bản lưu: `Building.mo` (cống mở), `Building.boi` (ruộng có phù sa), `Battle.boi`, `RaidResult.boi` đều tùy chọn (bản lưu 24).
 - Người chơi mô phỏng không dựng đê, không gặp lũ, nên nhịp tiến trình và sổ kinh tế không đổi. `phuSa.test.ts` canh luật.
+
+## Bãi chiến có vật cản (chủ dự án chọn, đang làm)
+
+Trước đây chương nào cũng đánh trên cùng một bãi chữ nhật phẳng 9×22 ô; cảnh của 17 nền chỉ nằm ngoài mép bãi. Chủ dự án muốn vẽ lại bãi chiến từng chương và thêm chướng ngại vật. Chủ dự án đã chọn ba điều (theo đề xuất):
+
+1. **Vật cản chặn đường.** Đá, khóm tre, tường vỡ, nhà, rào, thuyền mắc cạn chặn lối; lính tự tìm đường vòng. Nước nông, bùn chỉ làm chậm. Tên và kỹ năng vùng vẫn bắn qua vật cản. Đo lại độ khó cả 40 màn, 40 thử thách và đồn giặc.
+2. **Mỗi nền một bố cục.** Rừng, bến sông, làng (nền dùng cho nhiều màn nhất) có thêm biến thể theo chương.
+3. **Giữ cỡ bãi 9×22.** Camera, chỗ dàn quân và khoảng cách hai bên giữ nguyên.
+
+### Luật
+
+- **Chỗ đặt vật cản**: vật cản và vùng nước, bùn chỉ nằm trong dải giữa, z 7–14,5 (`DAI_GIUA`). Hai dải dàn quân để trống: giặc ở z 0,3–6,4, quân ta ở z 15–21,7 (cả chỗ tướng đứng lúc vào trận), cách vật cản ít nhất 0,6 ô.
+- **Lối đi**:
+  - hai vật cản, hay vật cản với mép bãi, hoặc liền nhau, hoặc cách nhau ít nhất 1,6 ô (voi lọt qua);
+  - có ít nhất một lối rộng 2,5 ô nối hai dải dàn quân;
+  - hàng ngang nào cũng còn ít nhất 4 trên 9 ô trống;
+  - vật cản dày ít nhất 0,6 ô; vật cản sát mép bãi thì chìa ra ngoài bãi ít nhất 0,5 ô.
+- **Nước, bùn**: lội nước đi bằng 60% tốc độ, lội bùn 75% (`BAI_CHAM`). Vùng chậm không quá nửa dải giữa. Thủy quái (`SWIMMERS`) bơi trong nước như đi thường.
+- **Tên, kỹ năng**: tên và kỹ năng vùng (Bốc đồi, Dời non, Nỏ thần, Liên châu, Lệnh nỏ, Rùa Vàng) bay qua vật cản, trận không tính tầm nhìn. Ai đánh gần mà tầm từ 1,2 ô trở lên (tướng, trùm) đâm qua được rào mỏng.
+- **Đẩy, lướt, gọi thêm quân**: Phun lửa, Nhổ tre, Voi xung trận, sóng Thủy Tinh dời người tới mép vật cản thì dừng; dải lửa Phun lửa vẫn cháy đủ dài. Quân gọi thêm (tôm binh, nghĩa binh) hiện ở chỗ trống gần nhất. Tô Định bỏ chạy thì đi vòng vật cản về cuối bãi.
+- **Vẻ ngoài**: mặt bãi vẫn phẳng, sáng một màu cho dễ nhìn lính. Vật cản thấp, dưới chừng 1,3 ô; nhà, ruộng ngô chỉ sát mép bãi, để camera nghiêng 45° không che lính.
+- **Điểm mặc định** (chủ dự án đổi được): thủy quái bơi trong nước như đi thường; ma trơi không bay qua vật cản; chưa ghi tên địa hình lên thẻ màn, chưa có lời gợi ý của Lạc hầu.
+
+### Đi quanh vật cản (`src/game/baiChien.ts`, đã làm ở PR 1)
+
+- Bố cục là hình tròn (`tron`), đoạn dày đầu tròn hay đầu vuông (`doan`), đa giác (`da`, chỉ cho vùng chậm), theo tọa độ bãi. Mọi bố cục ở `BAI`; nền nào dùng bố cục nào theo chương ở `BAI_THEO` (`baiOf`, `stageBai`).
+- Trận biết bố cục qua `FieldSetup.bai` và `Battle.bai` (tùy chọn): xuất quân phó bản, thử thách, đánh đồn đều truyền bố cục của nền. Bản lưu cũ đang dở trận, id lạ, trận thử không truyền gì thì đánh trên bãi phẳng y như cũ. Không nâng bản lưu.
+- Mỗi phe một bản đồ khoảng cách (Dijkstra trên lưới ô 0,5 ô, 18×44 ô, vật cản phồng theo thân to nhất 0,45 ô) tới người phe kia gần nhất, dựng theo chỗ đứng mỗi 0,25 giây trận, chỉ khi có người cần đi vòng.
+- Đường thẳng tới kẻ địch thông (trong tầm đánh thì thôi xét) thì đi thẳng như bãi phẳng. Vướng thì lần theo bản đồ tối đa 6 ô, nhắm ô xa nhất còn thấy được, và cứ đi vòng 0,5 giây rồi mới xét lại. Người không bơi đang đứng trên đất khô thì đường lội nước cũng tính là vướng, để biết đường vòng có nhanh hơn không.
+- Đi xong, đẩy nhau xong, bị hất xong thì trượt dọc vật cản theo một trục, không thì đứng lại: không ai bị đẩy xuyên qua vật cản.
+- Trận có vật cản nặng hơn bãi phẳng chừng 30%; bãi phẳng không tốn thêm gì.
+- `baiChien.test.ts` canh: bố cục rỗng đánh y hệt bãi phẳng; đánh lại ra y hệt; cả trận không ai lọt vào vật cản (bị đẩy, bị hất, quân gọi thêm, Tô Định bỏ chạy, nữ tướng); đám đông dồn vào tường không ai xuyên qua; voi lọt lối trống; cung thủ bắn qua tường; lội nước chậm, thủy quái không chậm; Phun lửa dừng trước đá mà lửa vẫn cháy; mở lại bản lưu giữa trận vẫn đánh trên bố cục ấy. Hàm `kiemBai` trong test kiểm mọi bố cục thật theo luật trên.
+
+### Thứ tự làm
+
+1. **PR 1**: luật đi quanh vật cản, chưa bật bố cục nào; lối chơi không đổi (đã làm).
+2. **PR 2**: vẽ vật cản (`src/render/vatCan.ts`: mảng đất dưới vật cản, viền mực theo mép chặn, mảng nước, bùn, lính lội nước), bố cục chương 1 (rừng, bến sông, làng, đồn giặc, chân núi) và đồn bên kia sông; đo lại độ khó chương 1, đồn, thử thách 1–8.
+3. **PR 3**: bố cục chương 2–3 (đồi sim, đồng ngập, Tản Viên, Thất Diệu, Cổ Loa, biến thể rừng, bến sông, làng); đo lại chương 2, 3, thử thách 9–24.
+4. **PR 4**: bố cục chương 4–5 (cửa sông, Mộ Dạ, Hát Môn, Luy Lâu, Lãng Bạc, Cấm Khê, làng Mê Linh); đo lại chương 4, 5, thử thách 25–40.
+
+Mỗi PR chỉnh bố cục trước, rồi mới chỉnh máu giặc (`hpScale`) nếu lệch chuẩn cân bằng, và ghi số cuối vào tài liệu này.
 
 ## Nhịp chơi và lưu game
 

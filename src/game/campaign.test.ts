@@ -4,6 +4,7 @@ import { alliesLeft, startFieldBattle, stepField, useSkill, type Battle } from '
 import { canStartStage, leaveBattlefield, retreat, stageReward, startStage } from './campaign';
 import { DEFAULT_ROWS, FIELD, STAGES, UNITS, type UnitType } from './defs';
 import { callRaidNow, canTrain, createInitialState, place, questProgress, tick, train, type GameState } from './game';
+import { stageBai } from './baiChien';
 
 type Army = Record<UnitType, number>;
 
@@ -29,7 +30,7 @@ function withTroops(s: GameState, army: Army): GameState {
 
 function fieldFight(stage: number, army: Army, drum = false, id = 1): Battle {
   const def = STAGES[stage - 1];
-  const b = startFieldBattle({ id, stage, enemies: def.enemies, hpScale: def.hpScale, army, rows: DEFAULT_ROWS });
+  const b = startFieldBattle({ id, stage, enemies: def.enemies, hpScale: def.hpScale, army, rows: DEFAULT_ROWS, bai: stageBai(stage) });
   for (let i = 0; i < 20 * 120 && !stepField(b, 0.05); i++) if (drum) useSkill(b, 'trongTran');
   return b;
 }

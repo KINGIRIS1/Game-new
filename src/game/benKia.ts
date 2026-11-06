@@ -4,6 +4,7 @@
 // mỗi khoảnh thuộc vùng của một đồn giặc, dẹp đồn thì cả vùng về tay ta. Không phụ thuộc DOM hay Three.js.
 
 import { startFieldBattle, type Battle, type RaidSide } from './battle';
+import { baiOf } from './baiChien';
 import { inChapter3 } from './coLoa';
 import { inChapter4 } from './chuong4';
 import {
@@ -491,6 +492,7 @@ export function startCamp(
     arms: state.arms,
     huan: huanTiers(state),
     nuTuong: phoTuongOf(state),
+    bai: baiOf(def.terrain, def.chapter),
   });
   return ok(undefined);
 }
