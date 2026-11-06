@@ -8,7 +8,7 @@ Tài liệu này ghi lại các quyết định đã chốt với chủ dự án
 - Chỉ có tiếng Việt. Mọi chữ hiển thị nằm trong `src/text/vi.ts`, tách khỏi code để sau này dịch.
 - Người chơi là **Vua Hùng**, xây dựng **kinh đô Phong Châu**. Lạc hầu hướng dẫn, Lạc tướng cầm quân, Bồ chính coi làng. Từ chương 3, Vua Hùng truyền ngôi cho Thục Phán; người chơi trị vì tiếp trên cùng kinh đô với tư cách **An Dương Vương**. Chương 4 kể chuyện Mỵ Châu, Trọng Thủy; hết truyện thì người chơi vẫn trông coi kinh đô, chơi tiếp (xem Kế hoạch chương 4).
 - Học các cơ chế quen thuộc của thể loại xây dựng chiến thuật (như Clash of Clans, Rise of Kingdoms), nhưng luật chơi, nội dung và hình ảnh là của riêng game này, không sao chép game nào.
-- Chương 1 dài khoảng 30–60 phút chơi. Chương 2, 3 và 4 nối tiếp ngay trên cùng kinh đô.
+- Chương 1 dài chừng 1,5 giờ chơi nếu không đố sử lần nào (đố đúng hết thì chừng 1 giờ, xem mục Thời gian xây, tốp thợ, đố sử). Chương 2, 3 và 4 nối tiếp ngay trên cùng kinh đô.
 
 ## Hình ảnh, âm thanh, công nghệ
 
@@ -122,7 +122,7 @@ Lúc đầu mỗi cấp Điện chỉ cho phát tới một số khoảnh (lư�
 - 5 tài nguyên: **gạo, vỏ ốc** (làm tiền, vì thời Văn Lang chưa có tiền xu), **đất đá, sắt**, và **gỗ** từ xưởng mộc (từ Điện 2, xem mục Kế hoạch: cổng thành, xưởng mộc, làng chài).
 - **Dân làng** đến từ nhà sàn và được phân công vào ruộng, chợ, bãi đất đá, lò rèn, xưởng mộc, làng chài, bến thuyền khơi. Dân và lính ăn gạo theo thời gian; có làng chài (hay bến thuyền khơi) thì ăn cá trước, thiếu mới ăn gạo. Thiếu gạo thì mọi việc sản xuất chậm còn một nửa và không luyện thêm quân được. Không ai chết đói.
 - **Chợ thuyền**: tự sinh vỏ ốc theo số dân làm ở chợ. Khoảng 5 phút có một thuyền buôn cập bến với 3 lời mời đổi hàng, thuyền rời bến thì lời mời hết hạn.
-- Nâng cấp **xong ngay** khi đủ tài nguyên. Không có đồng hồ đếm ngược hàng giờ.
+- Dựng mới, nâng cấp có **thời gian xây**: trả của lúc bắt đầu, giao cho một tốp thợ, cấp thấp vài giây tới vài phút, cấp 8–10 tới một, hai giờ. Trả lời đúng câu đố sử thì xong sớm (xem mục Thời gian xây, tốp thợ, đố sử).
 - **Điện Vua Hùng** lên tối đa cấp 5 trong chương 1. Không công trình nào được vượt cấp Điện Vua Hùng.
 
 ### Dân làng (đã làm ở lát cắt 2a)
@@ -140,7 +140,7 @@ Lúc đầu mỗi cấp Điện chỉ cho phát tới một số khoảnh (lư�
   - Mỗi chuyến có 3 lời mời đổi hàng, trả hơn giá trị khoảng 15%. Chưa có Điện cấp 2 thì chưa buôn sắt. Có xưởng mộc thì thêm lời mời thứ tư về gỗ.
   - Thuyền buôn và giặc chỉ đến theo **đồng hồ chơi**, tức là thời gian đang mở game.
 - Bản lưu lát cắt 1 được tự nâng lên: có đủ dân ở và chia vào làm ngay.
-- Nhịp đo bằng test mô phỏng một người chơi biết dành dụm: lên Điện cấp 2 khoảng 5 phút, cấp 3 khoảng 22 phút, cấp 5 khoảng 63 phút. Phần thưởng phó bản ở lát cắt 3 sẽ rút ngắn thêm.
+- Nhịp đo bằng test mô phỏng một người chơi biết dành dụm: không đố sử thì lên Điện cấp 2 khoảng 7 phút, cấp 3 khoảng 25 phút, cấp 5 khoảng 82 phút; đố đúng hết thì 5, 22, 67 phút. Phần thưởng phó bản rút ngắn thêm.
 
 ### Công trình
 
@@ -168,6 +168,7 @@ Lúc đầu mỗi cấp Điện chỉ cho phát tới một số khoảnh (lư�
 | Thành Cổ Loa | 1×1 | Có từ chương 3. Đoạn thành đất nện cao, chắc; đắp nhiều vòng quanh Điện |
 | Cổng thành | 1×1 | Có từ chương 3, Điện 5. Cửa trong vòng tường: giặc dồn về cổng, lính trên lầu cổng bắn (xem mục Kế hoạch: cổng thành, xưởng mộc, làng chài) |
 | Bậc lên thành | 1×1 | Có từ Điện 3. Dựng sát mặt trong một đoạn thành đất hay thành Cổ Loa: khi giữ kinh đô cung thủ, lính nỏ theo bậc lên nóc thành bắn xuống (xem mục Bậc lên thành, lối đi trên nóc thành) |
+| Nhà thợ hồ | 3×3 | Thêm một tốp thợ xây; nhà lên cấp thì tốp ấy làm nhanh hơn (xem mục Thời gian xây, tốp thợ, đố sử) |
 | Hồ Kim Quy | 8×8 | Có khi Rùa Vàng hiện lên (thắng màn 19). Lũy, thành đất, thành Cổ Loa, cổng thành thêm 30% máu (xem mục Hồ Kim Quy) |
 | Đền Cổ Loa | 4×4 | Có sau khi kết chương 3. Chòi canh bắn mạnh gấp rưỡi, xa thêm 1 ô |
 | Đường đi, đồ trang trí | 1×1 tới 3×3 | Chỉ để nhìn (xem mục Đường đi và đồ trang trí) |
@@ -463,7 +464,7 @@ Chủ dự án đã chốt bốn điểm:
 
 ### Đê
 
-- 1×1 ô, dựng bằng cách chạm từng ô như lũy, có từ chương 2. Tối đa 130 đoạn tới Điện 5, rồi 140, 150, 150, 160, 165 ở Điện 6 tới 10.
+- 1×1 ô, dựng bằng cách chạm từng ô hay kéo cả dải, cả khung như lũy (xem mục Đắp cả mảng tường), có từ chương 2. Tối đa 130 đoạn tới Điện 5, rồi 140, 150, 150, 160, 165 ở Điện 6 tới 10.
 
   | Cấp | Tên | Giá | Cao hơn mặt đất | Máu |
   |---|---|---|---|---|
@@ -608,7 +609,7 @@ Chủ dự án đã chốt:
 
 ### Thành Cổ Loa
 
-- Thẻ **Thành Cổ Loa** trong bảng Xây dựng (có từ chương 3): chạm từng ô như lũy, đê. Mỗi đoạn 1×1 ô, giá 30 đất đá, 10 vỏ ốc, 1000 máu, tối đa 150 đoạn, không sợ nước lũ, không đắp nền được.
+- Thẻ **Thành Cổ Loa** trong bảng Xây dựng (có từ chương 3): chạm từng ô hay kéo cả dải, cả khung như lũy, đê (xem mục Đắp cả mảng tường). Mỗi đoạn 1×1 ô, giá 30 đất đá, 10 vỏ ốc, 1000 máu, tối đa 150 đoạn, không sợ nước lũ, không đắp nền được.
 - **Đắp đè lên lũy tre** (hay thành đất) được: lũy cũ được dỡ đi, chỉ trả giá thành.
 - **Số vòng thành** = số đoạn thành còn nguyên ít nhất mà giặc phải phá qua để đi từ bìa rừng tới Điện:
   - giặc đi tám hướng như khi tìm đường thật, nên các đoạn thành phải nối liền theo cạnh ô; nối chéo góc là hở;
@@ -996,7 +997,7 @@ Bảng Xây dựng bày theo kiểu trưng bày (chủ dự án chọn trong ba 
 - Lúc trải đường, một ngón kéo trên cảnh là vẽ dải ô thẳng từ ô đặt ngón theo trục kéo dài hơn (ngang hay dọc lưới, kéo xiên vẫn ra đường thẳng; `lineTiles` ở `map.ts`); hai ngón vẫn kéo, phóng, xoay cảnh (thêm ngón thứ hai giữa chừng thì bỏ dải đang vẽ).
 - Đang kéo: ô trải được tô xanh, ô không trải được tô đỏ; dòng gợi ý ghi "Thả tay để trải n ô" kèm giá cả dải.
 - Thả tay thì trải từng ô theo thứ tự (`placeLine` ở `game.ts`): ô vướng công trình, ngoài vùng đất bỏ qua; ô đã có đúng loại đường ấy bỏ qua; ô đường loại khác thì đổi vật liệu như trải đè; hết của hay đủ giới hạn thì các ô sau không trải. Báo số ô đã trải, có ô hỏng thì báo lý do của ô hỏng đầu.
-- Chỉ đường đi kéo thả được; lũy, đê, thành, đồ trang trí vẫn chạm từng ô.
+- Lũy, bẫy chông, đê, thành Cổ Loa cũng kéo thả được, thêm cách kéo khung chữ nhật (xem mục Đắp cả mảng tường); đồ trang trí vẫn chạm từng ô.
 
 | Loại | Giá mỗi ô | Mở khi |
 |---|---|---|
@@ -1034,6 +1035,100 @@ Bảng Xây dựng bày theo kiểu trưng bày (chủ dự án chọn trong ba 
 - Bản lưu không đổi phiên bản: chỉ thêm loại công trình mới.
 - Vẽ theo lô cho nhẹ máy: đường và món một ô dù nhiều tới hàng trăm vẫn chỉ vài lệnh vẽ (`src/render/decor.ts`).
 - Test: `trangTri.test.ts`.
+
+## Đắp cả mảng tường (chủ dự án yêu cầu, đã làm)
+
+Chủ dự án muốn xây cả mảng thành thay vì đặt từng ô, và chọn cách kéo dải thẳng và khung chữ nhật.
+
+- Lũy, bẫy chông, đê, thành Cổ Loa: một ngón kéo trên cảnh là vẽ, hai ngón vẫn kéo, phóng, xoay cảnh (như trải đường); chạm một ô vẫn đắp một ô. Cổng thành, cống đê vẫn đặt như công trình.
+- Thanh dưới có nút đổi cách kéo, nhãn ghi cách đang dùng:
+  - **─ Dải**: dải ô thẳng theo trục kéo dài hơn, như trải đường (`lineTiles`);
+  - **▭ Khung**: viền chữ nhật từ ô đặt ngón tới ô thả tay (`rectTiles` ở `map.ts`). Đi một vòng chu vi bắt đầu từ góc đặt ngón, mỗi ô một lần, ô sau liền cạnh ô trước, ô cuối liền cạnh ô đầu: khung đắp đủ là một vòng thành kín (giặc đi tám hướng nên tường phải liền cạnh), đê kín không lọt nước. Hai góc cùng hàng hay cùng cột thì là dải thẳng.
+  - Lựa chọn nhớ riêng trên từng máy, không đi theo mã lưu.
+- Đang kéo: ô đắp được tô xanh, ô không đắp được tô đỏ; dòng gợi ý ghi "Thả tay để đắp thành n ô" kèm giá cả mảng. Giá và số tối đa cộng dồn theo thứ tự đắp (`planLine` ở `game.ts`), nên hết của hay đủ giới hạn giữa chừng thì phần sau tô đỏ, giá chỉ tính phần đắp được. Trải đường cũng xét như vậy.
+- Thả tay thì cả mảng thành **một việc cho một tốp thợ** (`startWalls` ở `xay.ts`, xem mục Thời gian xây, tốp thợ, đố sử): ô vướng công trình, ngoài vùng đất, ô hết của hay đủ giới hạn thì bỏ qua; ô đã có đúng loại ấy bỏ qua; trả của các ô đắp được ngay, thợ đắp lần lượt theo thứ tự kéo, ô nào xong là thành tường ngay; ô chưa đắp là cọc mốc buộc cờ đỏ. Thành Cổ Loa kéo đè lên lũy thì lũy cũ vẫn đứng tới khi ô ấy xong, không hở tường lúc đang đắp. Báo số ô và lúc xong; có ô hỏng thì báo lý do của ô hỏng đầu. Hết tốp thợ rảnh thì cả dải tô đỏ, dòng gợi ý báo lúc sớm nhất có tốp rảnh. Đường đi vẫn trải xong ngay (`placeLine`).
+- Bảng một đoạn lũy, đê có nút **Nâng cả đoạn liền (n ô)**: lên thành đất hay kè đá cả dải liền cùng loại cùng cấp (`wallComponent`, `planWallUpgrade`), phần đủ của, làm một việc.
+- Test: `keoTuong.test.ts`, `xay.test.ts`.
+
+## Thời gian xây, tốp thợ, đố sử (chủ dự án yêu cầu, đã làm)
+
+Trước đây mọi công trình dựng và nâng cấp xong ngay khi đủ của. Chủ dự án muốn xây phải có thời gian hoàn thành, và đã chốt:
+
+| Điều | Đã chốt |
+|---|---|
+| Thời gian | Vừa: cấp thấp vài giây tới vài phút, cấp 8–10 tới một, hai giờ, Điện 10 chừng 3 giờ |
+| Nhịp | Không đố sử lần nào thì tới Điện 5 (hết chương 1) chừng 1,5 giờ chơi |
+| Tốp thợ | Điện có sẵn 1 tốp; thêm **nhà thợ hồ**, mỗi nhà một tốp, nhà lên cấp thì tốp ấy làm nhanh hơn |
+| Hết thợ | Báo bận, phải chờ (không có hàng chờ) |
+| Lúc nâng cấp | Công trình vẫn làm việc ở cấp cũ; công trình mới dựng thì chưa làm gì tới khi xong |
+| Lúc tắt game | Thợ xây tiếp **đủ tốc độ, không giới hạn** thời gian vắng |
+| Xong sớm | Mỗi việc được hỏi **3 câu trắc nghiệm ngẫu nhiên** về lịch sử Việt Nam (mọi thời kỳ); mỗi câu đúng bớt 1/3 thời gian của việc ấy |
+| Tường | Kéo dải thẳng hay khung chữ nhật; một lần kéo giao một tốp, đắp dần từng ô (mục Đắp cả mảng tường) |
+
+### Việc xây và tốp thợ
+
+- Mỗi lần dựng mới, nâng cấp hay đắp một mảng tường là một **việc**, giao cho tốp thợ rảnh nhanh nhất. Không còn tốp rảnh thì nút mờ, ghi "Các tốp thợ đều bận, xong sớm nhất sau 3:20".
+- Trả của lúc bắt đầu. **Hủy xây** (bấm hai lần) thì hoàn đủ của phần chưa xong; phần đã xong giữ nguyên.
+- Tiến độ đo bằng công đã làm (`lam`, ms ở tốc độ 1), cộng theo thời gian trôi nhân tốc độ tốp, cả lúc mở game lẫn lúc vắng. Không theo đồng hồ chơi, vì đồng hồ chơi đứng yên lúc vắng.
+- Lúc vắng: thợ xây tiếp đủ tốc độ, bao lâu cũng được; sản xuất vẫn chỉ tính 8 giờ đầu ở nửa sức. Quãng vắng chia khúc theo lúc từng phần việc xong, nên công trình xong giữa chừng làm ra từ lúc xong. Bảng báo lúc vắng ghi số phần việc đã xong. Vì vậy chỉnh đồng hồ điện thoại tới trước là xong hết việc; game chơi một mình, không kiếm tiền, nên chấp nhận.
+- Công trình **đang dựng mới** nằm trong việc, chưa vào kinh đô:
+  - chiếm ô, tính vào số tối đa;
+  - không làm ra gì, không cho sức chứa, chỗ ở, chỗ quân, không tính nhiệm vụ, không gọi thuyền buôn hay giặc;
+  - giặc không nhắm, đi qua được; lũ không làm hư.
+- Công trình **đang nâng** vẫn làm việc ở cấp cũ, xong thì lên cấp. Không nâng chồng, không dỡ, không ghép lầu nỏ, không gắn ụ nỏ khi đang có việc. Điện đang nâng thì mọi giới hạn vẫn theo cấp cũ tới khi xong.
+- Dời, xoay, sửa công trình đang nâng vẫn được. Dỡ thì phải hủy việc trước.
+- Giữ **xong ngay**: đường đi, đồ trang trí, sửa chữa, đắp đất, đắp nền, dời, xoay, ghép lầu nỏ, gắn ụ nỏ, nhà làng bản làng.
+- Áp mẫu kinh đô: dời ngay như cũ; phần dựng thêm giao cả cho một tốp, làm lần lượt (nhà gần Điện trước, rồi tường, rồi các đoạn đổi loại). Đoạn tường mẫu dỡ đi mà trùng chỗ tường mới thì giữ lại tới khi đắp xong, để khỏi hở thành.
+
+### Nhà thợ hồ
+
+- Móng 3×3, 10 cấp (không vượt cấp Điện), tối đa 1, 1, 2, 2, 3, 3, 3, 4, 4, 4 nhà ở Điện 1–10. Giá rẻ, quanh giá nhà sàn. Không dỡ được. Có trong bảng Xây dựng; Lạc hầu gợi ý một lần. Không thêm nhiệm vụ.
+- Tốc độ tốp theo cấp nhà (`THO_TOC`): 1; 1,1; 1,2; 1,3; 1,45; 1,6; 1,75; 1,9; 2,05; 2,25. Tốp của Điện tốc độ 1.
+- Nhà đang dựng thì chưa có tốp. Nhà đang nâng vẫn có tốp ở tốc độ cũ, và tốp của chính nhà ấy làm việc nâng được.
+- Dáng theo bản vẽ ở `docs/bo-cuc-cong-trinh.md`: lán thợ, chồng gạch mộc, sân đóng gạch, đống đất sét, cọc dây căng mốc; cấp 2 hố nhào đất, cấp 3 đầm nện, cấp 5 lò nung ngói.
+
+### Thời gian (`defs.ts`)
+
+| Cấp đích | 1 (dựng) | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 |
+|---|---|---|---|---|---|---|---|---|---|---|
+| Công trình thường (`XAY_MS`) | 15 giây | 30 giây | 1 phút | 2 phút | 4 phút | 8 phút | 15 phút | 30 phút | 50 phút | 80 phút |
+| Điện (`XAY_RIENG.dien`) | — | 1 phút | 3 phút | 6 phút | 12 phút | 25 phút | 45 phút | 75 phút | 2 giờ | 3 giờ |
+
+- Hệ số theo loại (`XAY_HE_SO`): chòi canh 0,5; kho 0,8; doanh trại 1,2; nhà thợ hồ 0,6.
+- Bảng riêng (`XAY_RIENG`): Đền Phù Đổng 5 phút, Đền Tản Viên 10, Đền Cổ Loa 15, Hồ Kim Quy 15, Đền Cuông 20, Đền Hát Môn 25 phút; trại giáo, trại cung 30 giây, chuồng voi 1 phút, trại nỏ 5 phút; bốn công trình làm bánh 2, 4, 8 phút; cổng thành 5, 15, 30 phút; cống đê 2 phút; cầu 5, 15, 30 phút; đồn biên 5 phút; bến thuyền khơi 20, 40, 80 phút; lầu nỏ lên cấp 2, 3 mất 50, 80 phút.
+- Tường tính theo ô (`XAY_O_MS`): lũy 1,5 giây, lên thành đất 4 giây; bẫy chông 2 giây; đê 3 giây, lên kè đá 5 giây; thành Cổ Loa 8 giây.
+- Thời gian thật bằng thời gian gốc chia tốc độ tốp. Bảng Xây dựng, nút nâng cấp, dòng gợi ý kéo tường ghi ⏱ theo tốp rảnh nhanh nhất.
+
+### Đố sử
+
+- Mỗi việc có 3 lượt hỏi (nút 📜 Đố sử trong bảng công trình đang xây và bảng Thợ hồ). Lạc hầu bốc một câu ngẫu nhiên, tránh 40 câu vừa hỏi gần đây (`daHoi`). Câu đang hỏi lưu vào việc (`cau`), nên đóng hộp thoại mở lại (hay nạp lại game) vẫn là câu cũ; thứ tự bốn đáp án suy ra từ mã việc và lượt hỏi (`thuTu` ở `ui/xay.ts`).
+- Trả lời đúng thì việc xong sớm một phần ba tổng thời gian: đúng cả ba là xong ngay. Sai thì mất lượt ấy. Trả lời xong thì tô đúng sai, Lạc hầu giảng đáp án, có nút Câu tiếp khi còn lượt.
+- Ngân hàng 137 câu ở `src/text/cauDo.ts`, chia 13 thời kỳ: Văn Lang, Âu Lạc; Bắc thuộc và các cuộc khởi nghĩa; Ngô, Đinh, Tiền Lê; Lý; Trần, Hồ; Lam Sơn, nhà Lê; Mạc, Trịnh, Nguyễn; Tây Sơn; Nguyễn; cận đại; hiện đại; văn hóa; biển đảo. Chỉ lấy sự kiện đã rõ; truyền thuyết thì ghi "theo truyền thuyết". Mã câu nằm trong bản lưu: không đổi, không dùng lại mã đã bỏ.
+
+### Giao diện, hình
+
+- Ô 🔨 dưới dải tài nguyên ghi tốp rảnh trên tổng (hết tốp rảnh thì đổi màu, ghi lúc sớm nhất có tốp rảnh); chạm mở bảng Thợ hồ: các tốp, việc đang làm, còn bao lâu, Xem, Đố sử, Hủy xây. Dòng tin có tin việc xong sớm nhất.
+- Bảng công trình đang dựng hay đang nâng có khối việc: thanh tiến độ, "Còn 12:34" (đếm ngược thay tại chỗ, bảng không dựng lại), tốp nào làm, Đố sử, Hủy xây. Chạm chỗ đang dựng thì mở bảng công trình chờ dựng.
+- Trên cảnh: công trình đang dựng có giàn giáo tre, hai thợ, mô hình cấp 1 mọc dần theo tiến độ; công trình đang nâng có giàn giáo quanh mô hình cấp cũ; ô tường đang đắp có cọc mốc buộc cờ đỏ căng dây; nhãn ⏳ đếm giờ nổi trên chỗ mỗi tốp đang làm. Xong việc thì báo "Đã dựng xong ...".
+
+### Nhịp đo được (`balance.test.ts`, không tính thưởng phó bản)
+
+| Số câu đúng mỗi việc | Điện 2 | Điện 3 | Điện 4 | Điện 5 | Vào ch. 2 tới Điện 6 | Vào ch. 3 tới Điện 7 | Vào ch. 4 tới Điện 8 | Hết truyện tới Điện 9 | Điện 9 tới Điện 10 |
+|---|---|---|---|---|---|---|---|---|---|
+| 0 | 7,4 | 25,1 | 49,5 | 82,4 | 28,9 | 56,8 | 94,7 | 90,2 | 114,4 |
+| 1 | 6,8 | 26,5 | 47,0 | 78,2 | 24,2 | 47,8 | 71,8 | 83,9 | 76,9 |
+| 2 | 6,4 | 25,2 | 44,9 | 73,8 | 20,1 | 41,3 | 56,1 | 64,4 | 38,7 |
+| 3 | 4,7 | 21,7 | 41,8 | 66,8 | 16,1 | 34,7 | 45,6 | 44,2 | 58,3 |
+
+- Số phút. Đố đúng hết (3 câu) thì nhịp như trước khi có thời gian xây; `balance.test.ts` canh cả hai đầu: không đố sử (Điện 5 trong 75–100 phút, Điện 6, 7, 8 trong 22–40, 45–70, 80–110 phút sau khi vào chương, Điện 9, 10 trong 75–105, 95–130 phút) và đố đúng hết (mốc cũ).
+- Người chơi mô phỏng (`moPhong.ts`) giao việc cho tốp rảnh, dựng nhà thợ hồ khi còn phải chờ thợ, đố đúng `dung` câu mỗi việc. Báo cáo kinh tế (`kinhTe.ts`) ghi tốp thợ lúc cuối mỗi giai đoạn và tốp thợ bận bao nhiêu phần trăm thời gian.
+
+### Code
+
+- Luật: `xay.ts` (việc, tốp thợ, bắt đầu, hủy, tiến độ, đố sử), `game.ts` (`tick`, `applyOffline`, `occupancy`, `usedOf`, `pendingAt`, `occupant`), `mau.ts` (`startMau`), `save.ts` (bản lưu 25: `state.xay = { viec, nextId, daHoi, seq }`; nạp thì bỏ việc trỏ tới công trình không còn). Test: `xay.test.ts`, `cauDo.test.ts`, `keoTuong.test.ts`.
+- Giao diện: `ui/xay.ts` (khối việc, bảng Thợ hồ, đếm ngược `fillXay`, nhãn nổi `XayLabels`, hộp thoại đố sử), `hud.ts`, `main.ts` (theo dõi `xay.seq` để vẽ lại và báo xong).
+- Hình: `makeScaffold`, `buildWallSites` (`models.ts`), `syncSites`, `growView` (`world.ts`), nhà thợ hồ `congTrinh/thoHo.ts`.
+- Chụp thử: `node scripts/chup.mjs xay` (ba tốp thợ đang làm). `window.__debug.xongHet()` cho mọi tốp xong việc.
 
 ## Kế hoạch chương 4: Mỵ Châu, Trọng Thủy (chủ dự án đã duyệt, đã làm)
 
@@ -2030,8 +2125,8 @@ Chủ dự án yêu cầu cầu thang lên thành để khi giặc đánh, cung 
 
 **Bậc lên thành** (`bacThanh`)
 
-- Một ô, có từ Điện 3 (khi lũy lên được thành đất). Giá 150 đất đá, 100 gỗ; máu 800. Tối đa 2 ở Điện 3–4, 3 ở Điện 5–6, 4 ở Điện 7–8, 5 ở Điện 9–10. Không lên cấp.
-- **Đặt**: sát (chung cạnh) mặt trong một đoạn thành đất (lũy cấp 2) hay thành Cổ Loa, tức là ô bậc gần tâm Điện hơn đoạn thành (`stairWall` ở `game.ts`). Lũy tre không có mặt cho lính đứng. Dời bậc cũng phải sát mặt trong thành. Bậc ở mặt trong để lính trong thành lên được, và trận biết giặc đã vào trong hay còn ngoài thành.
+- Một ô, có từ Điện 3 (khi lũy lên được thành đất). Giá 150 đất đá, 100 gỗ; máu 800. Tối đa 2 ở Điện 3–4, 3 ở Điện 5–6, 4 ở Điện 7–8, 5 ở Điện 9–10. Không lên cấp. Dựng mất 15 giây như công trình thường (`XAY_MS`, xem mục Thời gian xây, tốp thợ, đố sử); bậc đang dựng thì lính chưa lên được.
+- **Đặt**: sát (chung cạnh) mặt trong một đoạn thành đất (lũy cấp 2) hay thành Cổ Loa đã đắp xong, tức là ô bậc gần tâm Điện hơn đoạn thành (`stairWall` ở `game.ts`). Đoạn thành còn đang đắp dở, lũy đang lên thành đất thì chưa dựa được. Lũy tre không có mặt cho lính đứng. Dời bậc cũng phải sát mặt trong thành. Bậc ở mặt trong để lính trong thành lên được, và trận biết giặc đã vào trong hay còn ngoài thành.
 - Giặc không nhắm phá bậc (như tường), chỉ phá khi bậc chắn đường. Lũ không làm hư. Áp mẫu kinh đô: mẫu chưa có chỗ cho bậc; bậc không vướng thì đứng yên, vướng chỗ của mẫu thì bị dỡ như đoạn tường thừa (dời ra xa thành thì vô dụng).
 - Lạc hầu gợi ý một lần khi kinh đô đã có đoạn thành đất hay thành Cổ Loa.
 
@@ -2052,7 +2147,7 @@ Chủ dự án yêu cầu cầu thang lên thành để khi giặc đánh, cung 
 - Chòi canh nhỏ trên thành Cổ Loa và ụ nỏ dựng trên bốn cột cao, sàn cao gần một người (`WALL_DECK`), lính đi dọc nóc thành lọt qua bên dưới.
 - Lính trên thành đứng trên nóc thành; ai đi qua bậc thì theo dốc bậc (`fighterY` ở `world.ts`). Mũi tên bay từ nóc thành, tới nóc thành khi người bắn, người trúng đứng trên thành.
 
-- Test (`bacThanh.test.ts`): chỗ đặt (mặt trong, thành đất, thành Cổ Loa, không lũy tre, dời), số tối đa, gợi ý của Lạc hầu; cung thủ lên thành Cổ Loa và thành đất, chỉ đứng trên nóc thành hay bậc, bắn được; không bậc thì không ai lên; giáo binh không lên, lính nỏ lên; bắn xa thêm 1 ô; giặc đánh gần không với tới, giặc bắn xa thì có; đoạn thành dưới chân bị phá thì xuống đất.
+- Test (`bacThanh.test.ts`): chỗ đặt (mặt trong, thành đất, thành Cổ Loa, không lũy tre, dời), số tối đa, thời gian xây (đoạn thành đắp dở chưa dựa được), gợi ý của Lạc hầu; cung thủ lên thành Cổ Loa và thành đất, chỉ đứng trên nóc thành hay bậc, bắn được; không bậc thì không ai lên; giáo binh không lên, lính nỏ lên; bắn xa thêm 1 ô; giặc đánh gần không với tới, giặc bắn xa thì có; đoạn thành dưới chân bị phá thì xuống đất.
 
 ## Hồ Kim Quy (chủ dự án yêu cầu, đã làm)
 

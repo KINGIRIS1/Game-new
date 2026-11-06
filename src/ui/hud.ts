@@ -117,11 +117,13 @@ import { inChapter2, sonJoined, sonLook, sonResting, giftCount } from '../game/s
 import { floodToleranceOf, groundOf, hasOpenCong } from '../game/terrain';
 import { tetOpen, tetStarted, type Banh } from '../game/tet';
 import type { Resolution } from '../render/world';
-import { formatDuration, vi } from '../text/vi';
+import { formatClock, formatDuration, formatXay, vi } from '../text/vi';
+import { canStartUpgrade, conLai, isBusy, pendingBuilding, planWallUpgrade, soTho, thoRanh, thoRanhSau, viecOf, wallComponent, xayMs } from '../game/xay';
+import { XayLabels, fillXay, jobHtml, jobName, pendingHtml, quizHtml, realMs, thoHtml, type QuizResult } from './xay';
 import { armyHtml, defaultPick, huanHtml, mapHtml, nextRow, pickNu, stageHtml, stageResultHtml, stepPick, type ArmyPick, type MapChapter } from './campaign';
 import { armsHtml } from './binhKhi';
 import { advHtml, caoLoHtml } from './coLoa';
-import { costHtml, esc, fmt, fmtShort } from './format';
+import { buildingName, costHtml, esc, fmt, fmtShort } from './format';
 import { endingHtml, giongHtml, isEnding, storyHtml } from './giong';
 import { sonHtml } from './son';
 import { blessingHtml, tetHtml } from './tet';
@@ -154,12 +156,17 @@ const TET_TYPES: BuildingType[] = ['ruongNep', 'vuon', 'chuongLon', 'bep'];
 /** Công trình chỉ hiện trong bảng Xây dựng khi đã sang chương có nó. */
 const CHAPTER_OF: Partial<Record<string, number>> = { chuong2: 2, ketChuong2: 2, chuong3: 3, ruaVang: 3, ketChuong3: 3, chuong4: 4, ketChuong4: 4, ketChuong5: 5 };
 
-/** Tên hiển thị của công trình, tính cả lũy tre đã đắp thành đất và đê đã kè đá. */
-export function buildingName(b: Pick<Building, 'type' | 'level'>): string {
-  if (b.type === 'luy' && b.level >= 2) return vi.ui.wallEarth;
-  if (isBridge(b.type)) return vi.ui.bridgeName(b.level, b.type === 'cauSongDa' ? vi.ui.songDa : vi.ui.songThao);
-  if (b.type === 'de' && b.level >= 2) return vi.ui.dikeStone;
-  return vi.buildings[b.type].name;
+export { buildingName } from './format';
+
+/** Hết tốp thợ rảnh: báo bận, kèm lúc sớm nhất có tốp rảnh (chữ thường, cho dòng báo). */
+function hetThoText(state: GameState): string {
+  const ms = thoRanhSau(state);
+  return Number.isFinite(ms) ? vi.ui.hetThoSau(formatClock(ms)) : vi.reasons.hetTho;
+}
+
+/** Như `hetThoText` nhưng cho bảng: số giờ đếm ngược thay tại chỗ (`fillXay`), bảng khỏi phải dựng lại mỗi giây. */
+function hetThoHtml(state: GameState): string {
+  return Number.isFinite(thoRanhSau(state)) ? vi.ui.hetThoSau('<b data-ranh></b>') : vi.reasons.hetTho;
 }
 
 /** Lý do chưa tới mốc truyện mở công trình này, rỗng khi đã mở. */
@@ -202,6 +209,8 @@ export type HudAction =
   | { kind: 'rotateBuilding'; id: number }
   | { kind: 'startMerge'; id: number }
   | { kind: 'rotateView' }
+  /** Đổi cách kéo thả đắp tường: dải thẳng hay khung chữ nhật. */
+  | { kind: 'toggleWallShape' }
   | { kind: 'applyMau'; mau: MauId }
   | { kind: 'phatRung'; id: number }
   | { kind: 'trinhSat'; id: number }
@@ -256,9 +265,16 @@ export type HudAction =
   | { kind: 'storyDone'; id: StoryId }
   | { kind: 'retreat' }
   | { kind: 'leaveField' }
-  | { kind: 'fieldToMap' };
+  | { kind: 'fieldToMap' }
+  | { kind: 'cancelJob'; id: number }
+  | { kind: 'wallUpgradeAll'; id: number }
+  | { kind: 'openTho' }
+  | { kind: 'askQuiz'; id: number }
+  | { kind: 'answerQuiz'; id: number; dung: boolean; pick: number };
 
 export type HudMode = 'view' | 'place' | 'move' | 'paint' | 'merge';
+/** Kéo thả đắp tường: dải thẳng hay viền chữ nhật. */
+export type WallShape = 'line' | 'rect';
 
 /** Thẻ của bảng doanh trại: quân và nơi ở, bố trí giữ kinh đô, tướng chỉ huy, thông tin và nâng cấp trại. */
 type BarracksTab = 'quan' | 'giu' | 'tuong' | 'trai';
@@ -276,6 +292,7 @@ type Sheet =
   | { kind: 'khoanh'; id: number }
   | { kind: 'benKia'; id: number }
   | { kind: 'quanDao'; id: QuanDaoId }
+  | { kind: 'tho' }
   | null;
 
 /** Máy có gửi được tệp qua bảng chia sẻ của hệ điều hành (Zalo, Messenger, Drive...) không. Hỏi một lần. */
@@ -326,6 +343,10 @@ export class Hud {
   private readonly root: HTMLElement;
   /** Dải tài nguyên sát mép trên. */
   private readonly topbar: HTMLElement;
+  /** Ô tốp thợ dưới dải tài nguyên: số tốp rảnh trên tổng, chạm mở bảng Thợ hồ. */
+  private readonly thoChip: HTMLElement;
+  /** Nhãn đếm giờ nổi trên chỗ đang xây (`main.ts` gọi mỗi khung). */
+  readonly xayLabels: XayLabels;
   /** Bảng kho và thu chi mỗi phút, thả xuống dưới dải tài nguyên. */
   private readonly resDrop: HTMLElement;
   /** Nút kỹ năng khi giặc đánh kinh đô, ngay trên dòng tin. */
@@ -374,6 +395,7 @@ export class Hud {
     this.root = root;
     root.innerHTML = `
       <header class="topbar"></header>
+      <button class="tho-chip" data-act="openTho" title="${vi.ui.thoChipTitle}" hidden></button>
       <div class="top-area">
         <div class="res-drop" hidden></div>
         <div class="field-top"><b></b><span></span><div class="hold-bar" hidden><i></i><em>🐎</em></div><div class="hero-hp" hidden></div></div>
@@ -388,6 +410,7 @@ export class Hud {
         <button class="btn ghost small" data-act="retreat" title="${vi.ui.retreat}">🏳️</button>
         <span class="skills"></span>
       </footer>
+      <div class="xay-labels"></div>
       <aside class="sheet" aria-live="polite"></aside>
       <section class="campaign" hidden></section>
       <div class="toasts"></div>`;
@@ -395,6 +418,8 @@ export class Hud {
     this.fieldTop = root.querySelector('.field-top')!;
     this.fieldBar = root.querySelector('.fieldbar')!;
     this.topbar = root.querySelector('.topbar')!;
+    this.thoChip = root.querySelector('.tho-chip')!;
+    this.xayLabels = new XayLabels(root.querySelector('.xay-labels')!);
     this.resDrop = root.querySelector('.res-drop')!;
     this.raidSkills = root.querySelector('.raid-skills')!;
     this.ticker = root.querySelector('.ticker')!;
@@ -461,6 +486,9 @@ export class Hud {
       case 'nextAlert':
         this.alertIndex++;
         return this.updateBanners(this.getState());
+      case 'openTho':
+        if (this.sheet?.kind === 'tho') return this.onAction({ kind: 'closeSheet' });
+        return this.onAction({ kind: 'openTho' });
       case 'openBuild':
         // Chạm lại thẻ đang sáng thì đóng bảng.
         if (this.sheet?.kind === 'build') return this.onAction({ kind: 'closeSheet' });
@@ -488,7 +516,22 @@ export class Hud {
       case 'startMove':
       case 'startMerge':
       case 'rotateBuilding':
+      case 'wallUpgradeAll':
         return this.onAction({ kind: act, id });
+      case 'askQuiz':
+        return this.onAction({ kind: 'askQuiz', id });
+      case 'answerQuiz':
+        return this.onAction({ kind: 'answerQuiz', id, dung: el.dataset.dung === '1', pick: Number(el.dataset.i) });
+      case 'closeQuiz':
+        return this.closeQuiz();
+      case 'cancelJob':
+        // Hủy việc xây: bấm lần đầu chỉ hỏi lại, bấm lần nữa mới hủy.
+        if (this.cancelArmed !== id) {
+          this.cancelArmed = id;
+          return this.refreshSheet(this.getState());
+        }
+        this.cancelArmed = null;
+        return this.onAction({ kind: 'cancelJob', id });
       case 'offerGift':
         return this.onAction({ kind: 'offerGift', gift: el.dataset.gift as GiftId });
       case 'workers':
@@ -597,6 +640,14 @@ export class Hud {
     }
     const store = storageCap(state);
     this.topbar.querySelector('.dien-level b')!.textContent = String(dienLevel(state));
+    // Tốp thợ: hết tốp rảnh thì ô đổi màu, ghi lúc sớm nhất có tốp rảnh.
+    const tho = soTho(state);
+    const allBusy = tho.ranh === 0 && viecOf(state).length > 0;
+    this.thoChip.hidden = tho.tong === 0;
+    this.thoChip.classList.toggle('busy', allBusy);
+    this.thoChip.classList.toggle('on', this.sheet?.kind === 'tho');
+    const chip = `🔨 ${tho.ranh}/${tho.tong}${allBusy ? ` · ${formatClock(thoRanhSau(state))}` : ''}`;
+    if (this.thoChip.textContent !== chip) this.thoChip.textContent = chip;
     for (const el of this.topbar.querySelectorAll<HTMLElement>('[data-res]')) {
       const v = state.resources[el.dataset.res as ResourceId];
       el.querySelector('b')!.textContent = fmtShort(v);
@@ -703,6 +754,12 @@ export class Hud {
     if (state.benKia.scouts.length) {
       const secs = Math.max(0, Math.ceil((Math.min(...state.benKia.scouts.map((sc) => sc.at)) - state.clock) / 1000));
       list.push({ id: 'trinhSat', text: vi.ui.scoutAway(secs), tone: 'info' });
+    }
+    // Việc xây sắp xong nhất.
+    const jobs = viecOf(state);
+    if (jobs.length) {
+      const v = jobs.reduce((a, j) => (conLai(state, j) < conLai(state, a) ? j : a));
+      list.push({ id: 'xay', text: vi.ui.tickerXay(jobName(state, v), formatClock(conLai(state, v))), tone: 'info', act: 'openTho', label: vi.ui.thoTitle });
     }
     return list;
   }
@@ -840,8 +897,11 @@ export class Hud {
 
   // ---------- Thanh Hủy, Đặt (thay chỗ dock khi đặt, dời, trải, ghép) ----------
 
-  /** Đổi chế độ thanh dưới. `turnable`: công trình đang đặt, dời xoay được, hiện nút ↻ Xoay. */
-  setMode(mode: HudMode, placeValid = true, hint?: string, turnable = false): void {
+  /**
+   * Đổi chế độ thanh dưới. `turnable`: công trình đang đặt, dời xoay được, hiện nút ↻ Xoay. `shape`: đang đắp tường,
+   * hiện nút đổi kéo dải thẳng hay khung chữ nhật.
+   */
+  setMode(mode: HudMode, placeValid = true, hint?: string, turnable = false, shape?: WallShape): void {
     this.mode = mode;
     this.turnable = turnable;
     this.root.classList.toggle('placing', mode !== 'view');
@@ -853,6 +913,7 @@ export class Hud {
     }
     // Nút xoay cảnh ở mọi chế độ: lúc đặt, dời, dựng lũy là lúc cần xoay nhất.
     const rotate = `<button class="icon-btn rotate" data-act="rotateView" aria-label="${vi.ui.rotate}" title="${vi.ui.rotate}">⟳</button>`;
+    this.bottombar.classList.remove('crowded');
     if (mode === 'view') {
       this.bottombar.innerHTML = '';
       this.hint.hidden = true;
@@ -873,7 +934,11 @@ export class Hud {
       this.hint.hidden = false;
       this.hint.textContent = vi.ui.mergeHint;
     } else {
-      this.bottombar.innerHTML = `<button class="btn" data-act="cancelPlace">✓ ${vi.ui.done}</button>${rotate}`;
+      const toggle = shape
+        ? `<button class="btn bronze turn" data-act="toggleWallShape" aria-label="${vi.ui.wallShapeTitle}" title="${vi.ui.wallShapeTitle}">${vi.ui.wallShape[shape]}</button>`
+        : '';
+      this.bottombar.innerHTML = `<button class="btn" data-act="cancelPlace">✓ ${vi.ui.done}</button>${toggle}${rotate}`;
+      this.bottombar.classList.toggle('crowded', !!shape);
       this.hint.hidden = false;
       this.hint.textContent = hint ?? vi.ui.wallHint;
     }
@@ -937,6 +1002,25 @@ export class Hud {
     this.refreshSheet(state);
   }
 
+  /** Hộp thoại đố sử của việc `viec`, câu `cau` ở lượt `hoi`; có `result` thì hiện kết quả vừa trả lời. */
+  showQuiz(viec: number, cau: number, hoi: number, result?: QuizResult): void {
+    this.closeQuiz();
+    const back = document.createElement('div');
+    back.className = 'modal-back quiz-back';
+    back.innerHTML = quizHtml(viec, cau, hoi, result);
+    this.root.appendChild(back);
+  }
+
+  closeQuiz(): void {
+    this.root.querySelector('.modal-back.quiz-back')?.remove();
+  }
+
+  /** Bảng Thợ hồ: các tốp thợ và việc đang làm. */
+  showTho(state: GameState): void {
+    this.sheet = { kind: 'tho' };
+    this.refreshSheet(state);
+  }
+
   showCaoLo(state: GameState): void {
     this.sheet = { kind: 'caoLo' };
     this.refreshSheet(state);
@@ -944,6 +1028,8 @@ export class Hud {
 
   /** Mẫu vừa bấm Áp lần đầu (chờ bấm lần nữa cho chắc). */
   mauArmed: MauId | null = null;
+  /** Việc xây vừa bấm Hủy lần đầu (chờ bấm lần nữa cho chắc). */
+  private cancelArmed: number | null = null;
   /** Loại bảng đang vẽ trên màn hình, để giữ chỗ cuộn khi vẽ lại cùng bảng. */
   private sheetKindShown = '';
   /** Nhóm đang xem trong bảng Xây dựng; nhớ cho lần mở sau. */
@@ -1019,6 +1105,7 @@ export class Hud {
     const was = this.sheet !== null;
     this.sheet = null;
     this.donPick = null;
+    this.cancelArmed = null;
     this.sheetKindShown = '';
     this.sheetEl.classList.remove('open');
     this.root.classList.remove('sheet-open');
@@ -1050,9 +1137,19 @@ export class Hud {
       body = this.buildMenuHtml(state);
     } else if (this.sheet.kind === 'building') {
       const b = findBuilding(state, this.sheet.id);
-      if (!b) return this.closeSheet();
-      title = `${vi.buildings[b.type].icon} ${buildingName(b)}`;
-      body = this.buildingHtml(state, b.id);
+      const dung = b ? undefined : pendingBuilding(state, this.sheet.id);
+      if (dung) {
+        // Công trình đang dựng mới: chưa vào kinh đô, bảng chỉ có việc xây; xong thì thành bảng công trình như thường.
+        title = `${vi.buildings[dung.type].icon} ${buildingName(dung)}`;
+        body = pendingHtml(state, dung, this.cancelArmed);
+      } else {
+        if (!b) return this.closeSheet();
+        title = `${vi.buildings[b.type].icon} ${buildingName(b)}`;
+        body = this.buildingHtml(state, b.id);
+      }
+    } else if (this.sheet.kind === 'tho') {
+      title = `🔨 ${vi.ui.thoTitle}`;
+      body = thoHtml(state, this.cancelArmed);
     } else if (this.sheet.kind === 'merchant') {
       if (!state.merchant.visit) return this.closeSheet();
       title = `⛵ ${vi.ui.merchantTitle}`;
@@ -1102,6 +1199,7 @@ export class Hud {
       }
       this.sheetKindShown = this.sheet.kind;
     }
+    fillXay(this.sheetEl, state);
     const opening = !this.sheetEl.classList.contains('open');
     this.sheetEl.classList.toggle('build', this.sheet.kind === 'build');
     this.sheetEl.classList.toggle('tall', this.sheet.kind === 'build' || this.barracksOpen(state));
@@ -1157,8 +1255,11 @@ export class Hud {
       // Đường đầy giới hạn vẫn trải đè đổi vật liệu được.
       else if (have >= max && !isRoad(type)) why = needsGeneral(state, type) ? vi.reasons.canTuongChiHuy : vi.reasons.datGioiHan;
       else if (!canAfford(state, def.buildCost)) why = vi.reasons.thieuTaiNguyen;
+      const ms = xayMs(type, 1);
+      if (!why && ms > 0 && !thoRanh(state)) why = hetThoHtml(state);
       // Bốn loại đường chung một giới hạn, ghi ở đầu nhóm.
       const count = isRoad(type) ? '' : ` · ${vi.ui.count(have, max)}`;
+      const time = ms > 0 ? ` · ${vi.ui.xayTime(formatXay(realMs(state, ms)))}` : '';
       return {
         key: type,
         act: 'chooseBuild',
@@ -1166,7 +1267,7 @@ export class Hud {
         pic: thumbUrl(type),
         icon: vi.buildings[type].icon,
         name: vi.buildings[type].name,
-        meta: `${def.w}×${def.d} ô${count}`,
+        meta: `${def.w}×${def.d} ô${count}${time}`,
         cost: costHtml(state, def.buildCost),
         why,
         desc: vi.buildings[type].desc,
@@ -1397,15 +1498,34 @@ export class Hud {
       );
     }
     const cost = upgradeCostOf(b);
-    if (cost) {
-      const check = canUpgrade(state, b.id);
+    if (isBusy(state, b.id)) {
+      // Đang có thợ nâng cấp hay đắp loại khác: không nâng chồng, khối việc ở đầu bảng.
+    } else if (cost) {
+      const check = canStartUpgrade(state, b.id);
       const label =
         b.type === 'luy' ? `🧱 Đắp ${vi.ui.wallEarth.toLowerCase()}` : b.type === 'de' ? `🪨 ${vi.ui.dikeStone}` : `⬆ ${vi.ui.upgradeTo(b.level + 1)}`;
+      const ms = xayMs(b.type, b.level + 1);
+      const time = ms > 0 ? ` · ${vi.ui.xayTime(formatXay(realMs(state, ms)))}` : '';
       actions.push(`<button class="btn" data-act="upgrade" data-id="${b.id}" ${check.ok ? '' : 'disabled'}>
-        ${label} · ${costHtml(state, cost)}</button>`);
+        ${label} · ${costHtml(state, cost)}${time}</button>`);
       if (!check.ok) {
-        const why = check.reason === 'chuaDuCapDien' ? `Cần Điện cấp ${dienNeededFor(b.type, b.level + 1)}` : vi.reasons[check.reason];
+        const why =
+          check.reason === 'chuaDuCapDien'
+            ? `Cần Điện cấp ${dienNeededFor(b.type, b.level + 1)}`
+            : check.reason === 'hetTho'
+              ? hetThoHtml(state)
+              : vi.reasons[check.reason];
         actions.push(`<div class="why">${why}</div>`);
+      }
+      // Lũy, đê: nâng cả đoạn liền cùng loại cùng cấp một lượt.
+      const run = wallComponent(state, b.id).length;
+      if (run > 1) {
+        const plan = planWallUpgrade(state, b.id);
+        const n = plan.ok ? plan.value.ids.length : run;
+        const wcost = plan.ok ? plan.value.cost : cost;
+        const wtime = plan.ok ? ` · ${vi.ui.xayTime(formatXay(realMs(state, plan.value.ms)))}` : '';
+        actions.push(`<button class="btn ghost" data-act="wallUpgradeAll" data-id="${b.id}" ${plan.ok ? '' : 'disabled'}>
+          ${vi.ui.wallUpgradeAll(label, n)} · ${costHtml(state, wcost)}${wtime}</button>`);
       }
     } else if (def.maxLevel > 1) {
       actions.push(`<div class="muted" style="text-align:center">${vi.ui.maxLevel}</div>`);
@@ -1432,7 +1552,8 @@ export class Hud {
       actions.push(`<button class="btn ghost" data-act="removeWall" data-id="${b.id}">${label}</button>`);
     }
 
-    const info = `<div class="info"><p>${esc(vi.buildings[b.type].desc)}</p>${rows.join('')}<div class="actions">${actions.join('')}</div></div>`;
+    const job = jobHtml(state, b.id, this.cancelArmed);
+    const info = `<div class="info"><p>${esc(vi.buildings[b.type].desc)}</p>${job}${rows.join('')}<div class="actions">${actions.join('')}</div></div>`;
     if (b.type === 'doanhTrai') return this.barracksHtml(state, b, info, repair);
     return info;
   }
@@ -1925,7 +2046,7 @@ export class Hud {
     setTimeout(() => el.remove(), ms);
   }
 
-  showOffline(ms: number, gained: Resources): void {
+  showOffline(ms: number, gained: Resources, built = 0): void {
     const back = document.createElement('div');
     back.className = 'modal-back';
     const gains = RESOURCE_IDS.filter((r) => gained[r] >= 1)
@@ -1934,6 +2055,7 @@ export class Hud {
     back.innerHTML = `<div class="modal"><h2>${vi.ui.offlineTitle}</h2>
       <div>${vi.ui.offlineBody(formatDuration(ms))}</div>
       <div class="gains">${gains}</div>
+      ${built ? `<div>${vi.ui.offlineBuilt(built)}</div>` : ''}
       <button class="btn bronze">${vi.ui.ok}</button></div>`;
     back.querySelector('button')!.addEventListener('click', () => back.remove());
     this.root.appendChild(back);
@@ -1993,6 +2115,7 @@ export class Hud {
     // Đường đầy giới hạn vẫn vào trải được: trải đè lên ô đường loại khác thì đổi vật liệu, không thêm ô.
     if (!isRoad(type) && usedOf(state, type) >= limitOf(state, type)) return needsGeneral(state, type) ? vi.reasons.canTuongChiHuy : vi.reasons.datGioiHan;
     if (!canAfford(state, BUILDINGS[type].buildCost)) return vi.reasons.thieuTaiNguyen;
+    if (xayMs(type, 1) > 0 && !thoRanh(state)) return hetThoText(state);
     return null;
   }
 }

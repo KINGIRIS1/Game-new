@@ -341,7 +341,7 @@ describe('lưu game, gợi ý, mẫu kinh đô', () => {
 
   it('Lạc hầu gợi ý cống đê một lần từ chương 2', () => {
     const s = ch2();
-    for (const t of ['xuongMoc', 'langChai'] as const) markHinted(s, t);
+    for (const t of ['thoHo', 'xuongMoc', 'langChai'] as const) markHinted(s, t);
     expect(nextHint(s)).toBe('congDe');
     markHinted(s, 'congDe');
     expect(nextHint(s)).toBeNull();

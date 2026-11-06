@@ -2,7 +2,7 @@
 // đêm yêu tinh, cảnh Tết (cây nêu, dây cờ, mâm bánh, người gói bánh) và các hiệu ứng khi đặt công trình.
 
 import * as THREE from 'three';
-import { BUILDINGS, FIELD, NU_TUONG_IDS, isBridge, isRoad, type BuildingType, type NuTuongId, type Terrain, type TuongId } from '../game/defs';
+import { BUILDINGS, FIELD, NU_TUONG_IDS, XAY_O_MS, isBridge, isRoad, type BuildingType, type NuTuongId, type Terrain, type TuongId } from '../game/defs';
 import { raidSpawnBand, type Battle, type RaidSide } from '../game/battle';
 import { caoLoAtDien } from '../game/caoLo';
 import { HAI_BA_KINDS, haiBaJoined, type HaiBaKind } from '../game/chuong5';
@@ -18,6 +18,7 @@ import { BAI_CAT, BIEN_DIEN, CUA_BIEN, QUAN_DAO, RIVER_MID, benDock, bienDo, isS
 import { sonLook, type SonLook } from '../game/son';
 import { floodHits } from '../game/terrain';
 import { tetOpen } from '../game/tet';
+import { isBusy, itemProgress, pendingBuildings, pendingOf } from '../game/xay';
 import { Battlefield, CAM_KHE } from './battlefield';
 import { BattleView } from './battleView';
 import { IsoCamera, type CamBounds } from './camera';
@@ -52,7 +53,9 @@ import {
   setForestLite,
   type ForestOptions,
   buildStakes,
+  buildWallSites,
   buildWalls,
+  makeScaffold,
   makeBoat,
   makeEnemyBoat,
   makeLauThuyen,
@@ -281,7 +284,20 @@ interface BuildingView {
   people: WorkerView[];
   popAge: number;
   baseScale: number;
+  /** Công trình đang dựng mới (chưa vào kinh đô): mô hình mọc dần theo tiến độ (`update`). */
+  dung: boolean;
 }
+
+/** Giàn giáo quanh công trình đang dựng hay đang nâng cấp, có vài thợ làm. */
+interface SiteView {
+  group: THREE.Group;
+  /** Chỗ và cỡ móng đang vẽ: đổi thì dựng lại. */
+  key: string;
+  people: WorkerView[];
+}
+
+/** Loại tường vẽ theo lô (lũy, đê, thành): đang đắp thì vẽ cọc mốc trên ô, không dựng giàn giáo. */
+const BATCHED_WALLS: BuildingType[] = ['luy', 'de', 'thanh'];
 
 /**
  * Chỗ đứng của người ở công trình còn vẽ theo móng cũ (ruộng nếp), tọa độ mô hình trước khi phóng theo móng. Công
@@ -309,6 +325,8 @@ const WORKED: BuildingType[] = ['ruong', 'ben', 'baiDa', 'loRen', 'xuongMoc', 'l
 function peopleCount(b: Building, spots: number): number {
   if (WORKED.includes(b.type)) return Math.min(b.workers, spots);
   if (b.type === 'nhaSan' || b.type === 'doanhTrai') return Math.min(b.level >= 2 ? 2 : 1, spots);
+  // Nhà thợ hồ: thợ đóng gạch, thợ cả, thêm người nhào đất, nện tường theo cấp.
+  if (b.type === 'thoHo') return Math.min(b.level >= 3 ? 4 : b.level >= 2 ? 3 : 2, spots);
   return Math.min(1, spots);
 }
 
@@ -491,6 +509,11 @@ export class World {
   private wallTops = new Map<number, number>();
   /** Bậc lên thành còn nguyên theo ô: chân bậc, độ cao leo lên, góc mép cao (`stairOf`), để lính đi qua theo dốc. */
   private stairRamps = new Map<number, { base: number; rise: number; turn: number }>();
+  /** Giàn giáo các công trình đang có thợ làm, theo id công trình. */
+  private sites = new Map<number, SiteView>();
+  /** Lô cọc mốc trên các ô tường đang đắp dở, đang nâng, đang đổi loại. */
+  private wallSites?: THREE.Object3D;
+  private wallSiteKey = '';
   private dikeKey = '';
   private citadelKey = '';
   private decorKey = '';
@@ -850,6 +873,9 @@ export class World {
   resetAll(): void {
     for (const v of this.views.values()) this.dropView(v);
     this.views.clear();
+    for (const site of this.sites.values()) this.dropSite(site);
+    this.sites.clear();
+    this.wallSiteKey = '#';
     if (this.fleet)
       for (const b of this.fleet.boats) {
         this.scene.remove(b.obj);
@@ -977,12 +1003,16 @@ export class World {
     const alive = new Set<number>();
     this.gatesShut = state.raid.phase !== 'idle';
     let wallTiles: Set<number> | null = null;
-    for (const b of state.buildings) {
-      if (b.type === 'luy' || b.type === 'de' || b.type === 'thanh' || isBatchedDecor(b.type)) continue;
+    // Công trình đang dựng mới chưa vào `state.buildings` nhưng đã chiếm chỗ: vẽ mô hình mọc dần trong giàn giáo.
+    const pend = pendingBuildings(state);
+    const dungIds = new Set(pend.map((b) => b.id));
+    for (const b of pend.length ? [...state.buildings, ...pend] : state.buildings) {
+      if (BATCHED_WALLS.includes(b.type) || isBatchedDecor(b.type)) continue;
       alive.add(b.id);
       const v = this.views.get(b.id);
+      const dung = dungIds.has(b.id);
       const banks = isBridge(b.type) ? bankKey(this.bridgeBanks(b.type, b.x, b.z)) : b.type === 'bacThanh' ? this.stairOf(b).key : '';
-      if (!v || v.type !== b.type || v.level !== b.level || v.damaged !== !!b.damaged || v.workers !== b.workers || v.x !== b.x || v.z !== b.z || v.rot !== (b.rot ?? 0) || v.boi !== !!b.boi || v.banks !== banks) this.createView(b);
+      if (!v || v.type !== b.type || v.level !== b.level || v.damaged !== !!b.damaged || v.workers !== b.workers || v.x !== b.x || v.z !== b.z || v.rot !== (b.rot ?? 0) || v.boi !== !!b.boi || v.banks !== banks || v.dung !== dung) this.createView(b, dung);
       else if (!banks && v.ground !== this.heights[b.z * GRID + b.x]) {
         v.ground = this.heights[b.z * GRID + b.x];
         v.group.position.y = topY(v.ground);
@@ -1001,6 +1031,7 @@ export class World {
         this.views.delete(id);
       }
     }
+    this.syncSites(state, pend);
 
     this.syncMerchant(state);
     this.syncSeaBoats(state);
@@ -1548,7 +1579,7 @@ export class World {
     disposeModel(v.group);
   }
 
-  private createView(b: Building): void {
+  private createView(b: Building, dung = false): void {
     const old = this.views.get(b.id);
     if (old) this.dropView(old);
     const def = BUILDINGS[b.type];
@@ -1577,7 +1608,7 @@ export class World {
     const people: WorkerView[] = [];
     const moi = CONG_TRINH[b.type];
     const spots: Spot[] = moi ? moi.spots(b.level) : (SPOTS[b.type] ?? []);
-    const n = b.damaged ? 0 : b.type === 'dien' ? spots.length : peopleCount(b, spots.length);
+    const n = b.damaged || dung ? 0 : b.type === 'dien' ? spots.length : peopleCount(b, spots.length);
     const spread = moi ? 1 : ((group.userData.spread as number | undefined) ?? 1);
     const personScale = moi ? PERSON_SCALE : (0.85 * spread) / ((group.userData.foot as number | undefined) ?? 1);
     for (let i = 0; i < n; i++) {
@@ -1628,7 +1659,83 @@ export class World {
       group.add(smoke);
     }
     this.buildingsRoot.add(group);
-    this.views.set(b.id, { group, type: b.type, level: b.level, damaged: !!b.damaged, workers: b.workers, x: b.x, z: b.z, rot: b.rot ?? 0, ground, boi: !!b.boi, banks: stair?.key ?? bankKey(banks), people, popAge: 0, baseScale: group.scale.x });
+    this.views.set(b.id, { group, type: b.type, level: b.level, damaged: !!b.damaged, workers: b.workers, x: b.x, z: b.z, rot: b.rot ?? 0, ground, boi: !!b.boi, banks: stair?.key ?? bankKey(banks), people, popAge: 0, baseScale: group.scale.x, dung });
+    if (dung) this.growView(this.views.get(b.id)!);
+  }
+
+  /** Công trình đang dựng mới: mô hình cao dần theo phần việc đã làm, mới đắp móng thì chỉ còn lớp nền. */
+  private growView(v: BuildingView): void {
+    const id = v.group.userData.buildingId as number;
+    const k = this.state ? (itemProgress(this.state, id) ?? 1) : 1;
+    v.group.scale.y = v.baseScale * (0.06 + 0.94 * k);
+  }
+
+  private dropSite(site: SiteView): void {
+    this.buildingsRoot.remove(site.group);
+    disposeModel(site.group);
+  }
+
+  /**
+   * Giàn giáo quanh công trình đang dựng mới hay đang nâng cấp (trừ tường vẽ theo lô), và lô cọc mốc trên các ô tường
+   * đang đắp dở, đang nâng, đang đổi loại.
+   */
+  private syncSites(state: GameState, pend: Building[]): void {
+    const busy = state.xay?.viec.length ? state.buildings.filter((b) => isBusy(state, b.id)) : [];
+    const dung = (b: Building) => pend.includes(b);
+    const keep = new Set<number>();
+    const wallSpots: { x: number; y: number; z: number; seed: number }[] = [];
+    let wallKey = '';
+    for (const b of [...pend, ...busy]) {
+      const def = BUILDINGS[b.type];
+      if (XAY_O_MS[b.type] || pendingOf(state, b.id)?.doi) {
+        // Ô tường: cọc mốc. Tường cũ còn đứng (đang nâng, đang đổi loại) thì cọc cắm trên mặt tường.
+        const top = dung(b) ? 0 : b.type === 'luy' ? 0.55 : b.type === 'thanh' ? CITADEL_TOP : 0.3;
+        wallSpots.push({ x: wx(b.x) + 0.5, y: this.groundY(b.x, b.z) + top, z: wz(b.z) + 0.5, seed: b.x * 7 + b.z * 3 });
+        wallKey += `${b.id}:${b.x}:${b.z}:${top}:${this.heights[b.z * GRID + b.x]},`;
+        continue;
+      }
+      if (isBatchedDecor(b.type)) continue;
+      keep.add(b.id);
+      const ground = this.heights[b.z * GRID + b.x] ?? 0;
+      const key = `${b.x}:${b.z}:${def.w}:${def.d}:${ground}`;
+      const old = this.sites.get(b.id);
+      if (old?.key === key) continue;
+      if (old) this.dropSite(old);
+      const group = makeScaffold(def.w, def.d);
+      group.position.set(wx(b.x) + def.w / 2, topY(ground), wz(b.z) + def.d / 2);
+      group.userData.buildingId = b.id;
+      // Hai thợ ở mép trước móng (phần viền cỏ móng chừa ra): một người nện đất, một người đẽo tre.
+      const people: WorkerView[] = [];
+      const jobs: Job[] = ['thoDa', 'thoMoc'];
+      jobs.forEach((job, i) => {
+        const spot: Spot = { job, x: (i ? 0.3 : -0.3) * (def.w / 2), y: 0, z: def.d / 2 - 0.22, ry: i ? -0.4 : 0.4 };
+        const obj = makeWorker(job);
+        obj.position.set(spot.x, spot.y, spot.z);
+        obj.rotation.y = spot.ry;
+        obj.scale.setScalar(PERSON_SCALE);
+        group.add(obj);
+        people.push({ obj, spot, phase: b.id * 1.3 + i * 2.7 });
+      });
+      this.buildingsRoot.add(group);
+      this.sites.set(b.id, { group, key, people });
+    }
+    for (const [id, site] of this.sites) {
+      if (keep.has(id)) continue;
+      this.dropSite(site);
+      this.sites.delete(id);
+    }
+    if (wallKey !== this.wallSiteKey) {
+      this.wallSiteKey = wallKey;
+      if (this.wallSites) {
+        this.scene.remove(this.wallSites);
+        disposeInstances(this.wallSites);
+        this.wallSites = undefined;
+      }
+      if (wallSpots.length) {
+        this.wallSites = buildWallSites(wallSpots);
+        this.scene.add(this.wallSites);
+      }
+    }
   }
 
   /**
@@ -2590,6 +2697,14 @@ export class World {
     return null;
   }
 
+  /** Vị trí màn hình của điểm cao `lift` trên mặt đất ở tọa độ ô (x, z) (số thực); null khi ra sau camera. */
+  screenAt(x: number, z: number, lift: number): { x: number; y: number } | null {
+    const p = new THREE.Vector3(wx(x), this.groundY(Math.floor(x), Math.floor(z)) + lift, wz(z)).project(this.view.camera);
+    if (p.z > 1 || p.z < -1) return null;
+    const rect = this.renderer.domElement.getBoundingClientRect();
+    return { x: rect.left + ((p.x + 1) / 2) * rect.width, y: rect.top + ((1 - p.y) / 2) * rect.height };
+  }
+
   /** Vị trí màn hình của tâm ô (x, z). Dùng cho kiểm thử tự động. */
   tileToScreen(x: number, z: number): { x: number; y: number } {
     const p = new THREE.Vector3(wx(x) + 0.5, this.groundY(x, z), wz(z) + 0.5).project(this.view.camera);
@@ -2925,8 +3040,10 @@ export class World {
       if (this.view.target.distanceTo(this.panGoal) < 0.01 || (dt > 0 && this.view.target.distanceTo(before) < 1e-4)) this.panGoal = null;
     }
 
+    for (const site of this.sites.values()) for (const w of site.people) this.animateWorker(w, t);
     for (const v of this.views.values()) {
       for (const w of v.people) this.animateWorker(w, t);
+      if (v.dung) this.growView(v);
       if (v.popAge > 0) {
         v.popAge += dt;
         const k = Math.min(v.popAge / 0.4, 1);

@@ -1,7 +1,7 @@
 // Định dạng chữ và số dùng chung cho các phần giao diện.
 
-import { RESOURCE_IDS, type Cost } from '../game/defs';
-import type { GameState } from '../game/game';
+import { RESOURCE_IDS, isBridge, type Cost } from '../game/defs';
+import type { Building, GameState } from '../game/game';
 import { vi } from '../text/vi';
 
 export const esc = (s: string) => s.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]!);
@@ -23,4 +23,12 @@ export function costHtml(state: GameState | null, cost: Cost): string {
     return `<span class="${lack ? 'lack' : ''}">${vi.resources[r].icon} ${fmt(cost[r]!)}</span>`;
   });
   return parts.length ? `<span class="cost">${parts.join('')}</span>` : vi.ui.free;
+}
+
+/** Tên hiển thị của công trình, tính cả lũy tre đã đắp thành đất và đê đã kè đá. */
+export function buildingName(b: Pick<Building, 'type' | 'level'>): string {
+  if (b.type === 'luy' && b.level >= 2) return vi.ui.wallEarth;
+  if (isBridge(b.type)) return vi.ui.bridgeName(b.level, b.type === 'cauSongDa' ? vi.ui.songDa : vi.ui.songThao);
+  if (b.type === 'de' && b.level >= 2) return vi.ui.dikeStone;
+  return vi.buildings[b.type].name;
 }

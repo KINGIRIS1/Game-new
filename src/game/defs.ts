@@ -67,6 +67,8 @@ export type BuildingType =
   | 'denHatMon'
   // Cống đê: đóng thì chặn lũ như kè đá, mở thì đón nước lũ vào bồi phù sa cho ruộng (chương 2).
   | 'congDe'
+  // Nhà thợ hồ: mỗi nhà một tốp thợ dựng, nâng công trình (`xay.ts`); nhà lên cấp thì tốp ấy làm nhanh hơn.
+  | 'thoHo'
   // Bậc lên thành: lối cho cung thủ, lính nỏ lên mặt thành đất, thành Cổ Loa mà bắn xuống khi giữ kinh đô.
   | 'bacThanh';
 
@@ -140,6 +142,7 @@ export const BUILD_MENU: BuildingType[] = [
   'luy',
   'ruong',
   'ben',
+  'thoHo',
   'langChai',
   'benKhoi',
   'nhaSan',
@@ -957,7 +960,88 @@ export const BUILDINGS: Record<BuildingType, BuildingDef> = {
     buildable: true,
     removable: false,
   },
+  // Nhà thợ hồ: mỗi nhà một tốp thợ (`xay.ts`), lên cấp thì tốp ấy xây nhanh hơn (`THO_TOC`).
+  thoHo: {
+    type: 'thoHo',
+    w: 3,
+    d: 3,
+    maxLevel: 10,
+    buildCost: { gao: 40, voOc: 30 },
+    upgradeCost: [
+      {},
+      {},
+      { voOc: 40, datDa: 20 },
+      { voOc: 80, datDa: 60 },
+      { voOc: 160, datDa: 130 },
+      { voOc: 300, datDa: 260 },
+      { voOc: 600, datDa: 520 },
+      { voOc: 1200, datDa: 1000 },
+      { voOc: 2400, datDa: 2100 },
+      { voOc: 3000, datDa: 2700 },
+      { voOc: 5000, datDa: 4300 },
+    ],
+    production: [{}, {}, {}, {}, {}, {}, {}, {}, {}, {}],
+    hp: [160, 180, 200, 220, 240, 260, 280, 310, 340, 375],
+    limit: [1, 1, 2, 2, 3, 3, 3, 4, 4, 4],
+    minDien: 1,
+    buildable: true,
+    removable: false,
+  },
 };
+
+const PHUT = 60_000;
+
+/**
+ * Thời gian dựng, nâng cấp (ms, tốp thợ tốc độ 1) theo cấp đích: chỉ số 1 là dựng mới, chỉ số 2 là lên cấp 2. Nhân
+ * `XAY_HE_SO` theo loại; loại có bảng riêng (`XAY_RIENG`) hay tính theo ô (`XAY_O_MS`) thì dùng bảng ấy. Đường đi, đồ
+ * trang trí xong ngay. Thời gian thật bằng thời gian này chia tốc độ tốp thợ (`xayMs`, `tocDo` ở `xay.ts`).
+ */
+export const XAY_MS = [0, 15_000, 30_000, PHUT, 2 * PHUT, 4 * PHUT, 8 * PHUT, 15 * PHUT, 30 * PHUT, 50 * PHUT, 80 * PHUT];
+/** Hệ số thời gian của từng loại so với `XAY_MS` (không có là 1). */
+export const XAY_HE_SO: Partial<Record<BuildingType, number>> = { choiCanh: 0.5, kho: 0.8, doanhTrai: 1.2, thoHo: 0.6 };
+/** Thời gian dựng, nâng của các loại có bảng riêng (ms, chỉ số là cấp đích như `XAY_MS`). */
+export const XAY_RIENG: Partial<Record<BuildingType, number[]>> = {
+  dien: [0, 0, PHUT, 3 * PHUT, 6 * PHUT, 12 * PHUT, 25 * PHUT, 45 * PHUT, 75 * PHUT, 120 * PHUT, 180 * PHUT],
+  denPhuDong: [0, 5 * PHUT],
+  denTanVien: [0, 10 * PHUT],
+  denCoLoa: [0, 15 * PHUT],
+  hoKimQuy: [0, 15 * PHUT],
+  denCuong: [0, 20 * PHUT],
+  denHatMon: [0, 25 * PHUT],
+  traiGiao: [0, 30_000],
+  traiCung: [0, 30_000],
+  chuongVoi: [0, PHUT],
+  traiNo: [0, 5 * PHUT],
+  ruongNep: [0, 2 * PHUT, 4 * PHUT, 8 * PHUT],
+  vuon: [0, 2 * PHUT, 4 * PHUT, 8 * PHUT],
+  chuongLon: [0, 2 * PHUT, 4 * PHUT, 8 * PHUT],
+  bep: [0, 2 * PHUT, 4 * PHUT, 8 * PHUT],
+  congThanh: [0, 5 * PHUT, 15 * PHUT, 30 * PHUT],
+  congDe: [0, 2 * PHUT],
+  cauSongDa: [0, 5 * PHUT, 15 * PHUT, 30 * PHUT],
+  cauSongThao: [0, 5 * PHUT, 15 * PHUT, 30 * PHUT],
+  donBien: [0, 5 * PHUT],
+  benKhoi: [0, 20 * PHUT, 40 * PHUT, 80 * PHUT],
+  lauNo: [0, 0, 50 * PHUT, 80 * PHUT],
+};
+/**
+ * Tường đắp từng ô (ms mỗi ô, chỉ số là cấp đích): kéo cả dải, cả khung thì một tốp đắp lần lượt, ô nào xong là thành
+ * tường ngay. Lũy lên cấp 2 là đắp thành đất, đê lên cấp 2 là kè đá.
+ */
+export const XAY_O_MS: Partial<Record<BuildingType, number[]>> = {
+  luy: [0, 1500, 4000],
+  bayChong: [0, 2000],
+  de: [0, 3000, 5000],
+  thanh: [0, 8000],
+};
+/** Tốc độ tốp thợ của nhà thợ hồ theo cấp nhà (chỉ số 0 là cấp 1). */
+export const THO_TOC = [1, 1.1, 1.2, 1.3, 1.45, 1.6, 1.75, 1.9, 2.05, 2.25];
+/** Tốc độ tốp thợ có sẵn của Điện. */
+export const THO_DIEN_TOC = 1;
+/** Mỗi việc xây được hỏi chừng này câu đố sử; mỗi câu đúng bớt một phần chừng ấy công của việc. */
+export const QUIZ_TURNS = 3;
+/** Nhớ chừng này câu vừa hỏi để khỏi hỏi lại sớm. */
+export const DA_HOI_NHO = 40;
 
 /** Cầu qua sông (sông Đà hay sông Thao). */
 export const isBridge = (type: BuildingType): type is 'cauSongDa' | 'cauSongThao' => type === 'cauSongDa' || type === 'cauSongThao';
@@ -2026,7 +2110,7 @@ export const QUEST_INSERTED_V4 = 11;
  * Công trình mới thêm sau khi đã có người chơi: lần đầu mở được thì Lạc hầu nói một câu gợi ý (một lần, ghi ở
  * `GameState.hinted`). Thêm loại vào đây không phải nâng bản lưu.
  */
-export const NEW_HINTS: BuildingType[] = ['xuongMoc', 'langChai', 'congThanh', 'hoKimQuy', 'benKhoi', 'congDe', 'bacThanh'];
+export const NEW_HINTS: BuildingType[] = ['thoHo', 'xuongMoc', 'langChai', 'congThanh', 'hoKimQuy', 'benKhoi', 'congDe', 'bacThanh'];
 
 /**
  * Cá mỗi phút của một làng chài đủ người, theo cấp (chỉ số 0 là cấp 1). Cá không tích trữ: dân và lính ăn cá trước,

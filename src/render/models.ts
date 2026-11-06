@@ -851,6 +851,100 @@ export function buildStakes(spots: { x: number; y: number; z: number; seed: numb
   );
 }
 
+/**
+ * Giàn giáo tre quanh móng `w` × `d` ô của công trình đang dựng hay đang nâng cấp: cột tre dựng quanh chu vi, hai tầng
+ * thanh ngang buộc lạt, chéo giằng mặt trước, thang tre, đống đất và chồng gạch mộc ở góc, cờ đỏ trên cột góc. Tâm ở
+ * giữa móng, chân ở mặt nền. Mỗi chỗ đang xây dựng một bản riêng (ít chỗ, gỡ bằng `disposeModel`).
+ */
+export function makeScaffold(w: number, d: number): THREE.Group {
+  const m = new ToonModel(inkThin);
+  const p = m.plain;
+  const hx = w / 2 - 0.14;
+  const hz = d / 2 - 0.14;
+  const h = Math.min(1.1 + 0.28 * Math.max(w, d), 3.4);
+  const r = 0.035 + 0.004 * Math.max(w, d);
+  // Cột tre cách nhau chừng 1,4 ô theo mỗi cạnh, cột góc cao hơn.
+  const along = (len: number) => {
+    const n = Math.max(1, Math.round((2 * len) / 1.4));
+    return Array.from({ length: n + 1 }, (_, i) => -len + (2 * len * i) / n);
+  };
+  const xs = along(hx);
+  const zs = along(hz);
+  const poles: [number, number][] = [];
+  for (const x of xs) poles.push([x, -hz], [x, hz]);
+  for (const z of zs.slice(1, -1)) poles.push([-hx, z], [hx, z]);
+  for (const [x, z] of poles) {
+    const corner = Math.abs(Math.abs(x) - hx) < 1e-6 && Math.abs(Math.abs(z) - hz) < 1e-6;
+    const ph = corner ? h + 0.25 : h;
+    p.cyl(r * 0.85, r, ph, C.bamboo, x, ph / 2, z, undefined, 5);
+  }
+  // Hai tầng thanh ngang mỗi cạnh, lạt buộc sẫm ở chỗ thanh gặp cột góc.
+  for (const y of [h * 0.42, h * 0.86]) {
+    for (const z of [-hz, hz]) p.cyl(r * 0.7, r * 0.7, 2 * hx + 0.1, C.bamboo, 0, y, z, [0, 0, Math.PI / 2], 5);
+    for (const x of [-hx, hx]) p.cyl(r * 0.7, r * 0.7, 2 * hz + 0.1, C.bamboo, x, y, 0, [Math.PI / 2, 0, 0], 5);
+    for (const [x, z] of [
+      [-hx, -hz],
+      [hx, -hz],
+      [-hx, hz],
+      [hx, hz],
+    ])
+      p.cyl(r * 1.35, r * 1.35, 0.06, C.bronzeDark, x, y, z, undefined, 5);
+  }
+  // Ván lót tầng giữa mặt trước cho thợ đứng.
+  p.box(2 * hx * 0.8, 0.04, 0.22, C.woodLight, 0, h * 0.42 + 0.04, hz + 0.08);
+  // Chéo giằng mặt trước.
+  const diag = Math.hypot(2 * hx, h * 0.44);
+  p.cyl(r * 0.6, r * 0.6, diag, C.bamboo, 0, h * 0.64, hz + 0.02, [0, 0, Math.atan2(2 * hx, h * 0.44)], 5);
+  // Thang tre dựng nghiêng ở mặt trước, lệch sang trái.
+  const lx = -hx * 0.55;
+  const lh = h * 0.5;
+  for (const dx of [-0.13, 0.13]) p.cyl(0.025, 0.025, lh, C.bamboo, lx + dx, lh / 2, hz + 0.2, [-0.32, 0, 0], 5);
+  for (let i = 1; i < 5; i++) p.cyl(0.018, 0.018, 0.26, C.woodDark, lx, (lh * i) / 5, hz + 0.2 + 0.32 * (0.5 - i / 5) * (lh / 2), [0, 0, Math.PI / 2], 4);
+  // Đống đất và chồng gạch mộc ở góc trước bên phải, trong móng.
+  const cx = hx - 0.35;
+  const cz = hz - 0.4;
+  p.cone(0.32, 0.3, C.earth, cx, 0.15, cz, undefined, 7);
+  p.cone(0.2, 0.2, C.earthDark, cx - 0.2, 0.1, cz - 0.18, undefined, 6);
+  for (let i = 0; i < 3; i++) p.box(0.34, 0.08, 0.18, C.soil, cx - 0.55, 0.04 + i * 0.08, cz + (i % 2) * 0.03, [0, i * 0.3, 0]);
+  // Cờ đỏ trên cột góc trước bên phải.
+  p.box(0.32, 0.18, 0.02, C.red, hx + 0.17, h + 0.12, hz, [0, 0, -0.08]);
+  const g = m.group();
+  g.userData.scaffold = true;
+  return g;
+}
+
+function wallSiteTemplate(): THREE.Mesh {
+  const b = new ShapeBuilder(false, true);
+  // Nền đất vừa xới sẫm màu nổi giữa cỏ, đống đất đắp dở giữa ô, hai cọc tre chéo góc buộc cờ đỏ căng dây mốc, sọt đất.
+  b.box(0.86, 0.07, 0.86, C.earthDark, 0, 0.035, 0);
+  b.cone(0.3, 0.26, C.earth, 0.04, 0.2, 0.02, undefined, 7);
+  b.cone(0.18, 0.16, C.soil, -0.16, 0.14, -0.18, undefined, 6);
+  for (const [x, z] of [
+    [-0.36, 0.36],
+    [0.36, -0.36],
+  ] as const) {
+    b.cyl(0.035, 0.045, 1.0, C.bamboo, x, 0.5, z, undefined, 5);
+    b.cyl(0.05, 0.05, 0.03, C.bronzeDark, x, 0.78, z, undefined, 5);
+    b.box(0.3, 0.17, 0.02, C.red, x + 0.16, 0.9, z, [0, Math.PI / 4, -0.12]);
+  }
+  b.cyl(0.008, 0.008, 1.02, C.cream, 0, 0.78, 0, [0, Math.PI / 4, Math.PI / 2], 4);
+  b.cyl(0.12, 0.09, 0.15, C.thatchDark, 0.3, 0.14, 0.26, undefined, 6);
+  b.cone(0.12, 0.07, C.earth, 0.3, 0.25, 0.26, undefined, 6);
+  return b.mesh(toon);
+}
+
+let cachedWallSites: THREE.Mesh[] | null = null;
+
+/** Dựng các ô tường đang đắp dở (tọa độ thế giới, mặt đất dưới chân): đất xới, cọc căng dây mốc, sọt đất. */
+export function buildWallSites(spots: { x: number; y: number; z: number; seed: number }[]): THREE.Object3D {
+  cachedWallSites ??= [wallSiteTemplate()];
+  return instanceTemplates(
+    cachedWallSites,
+    spots.map((s) => ({ t: 0, x: s.x, y: s.y, z: s.z, s: 1, ry: (s.seed % 4) * (Math.PI / 2) })),
+    treeOutline,
+  );
+}
+
 /** Dựng toàn bộ lũy: lũy tre là bụi tre dày đan cọc trên mô đất, thành đất là khối đất nện nóc trống làm lối đi, xoay ngẫu nhiên. */
 export function buildWalls(spots: WallSpot[]): THREE.Object3D {
   cachedWalls ??= [bambooClump(11, 1.85, 3, true), bambooClump(12, 1.95, 9, true), earthWall(5), earthWall(11), wallRubble()];

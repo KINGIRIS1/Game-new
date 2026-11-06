@@ -130,6 +130,8 @@ describe('làng chài', () => {
 
   it('Lạc hầu gợi ý làng chài khi lên Điện 3, sau lời gợi ý xưởng mộc', () => {
     const s = capital(2);
+    // Nhà thợ hồ mở từ đầu nên Lạc hầu gợi ý trước (`xay.test.ts`).
+    markHinted(s, 'thoHo');
     expect(nextHint(s)).toBe('xuongMoc');
     markHinted(s, 'xuongMoc');
     expect(nextHint(s)).toBeNull();

@@ -4,10 +4,11 @@
 
 import { describe, expect, it } from 'vitest';
 import { startBattle, stepBattle, type Battle, type Fighter } from './battle';
-import { BUILDINGS, CH3_QUEST_START, RAID_SCALE, TREN_THANH, UNITS, type UnitType } from './defs';
+import { BUILDINGS, CH3_QUEST_START, RAID_SCALE, TREN_THANH, UNITS, XAY_MS, type UnitType } from './defs';
 import { canMove, canPlace, createInitialState, limitOf, markHinted, nextHint, place, type GameState } from './game';
 import { GRID, RIVER_START } from './map';
 import { DIEN, setDien } from './testmap';
+import { advanceXay, startBuild, startWalls, xayMs } from './xay';
 
 /** Kinh đô đã vào chương 3, Điện `level`, của nhiều. */
 function ch3(level = 5): GameState {
@@ -88,9 +89,24 @@ describe('bậc lên thành', () => {
     expect([1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((level) => BUILDINGS.bacThanh.limit[level - 1])).toEqual([0, 0, 2, 2, 3, 3, 4, 4, 5, 5]);
   });
 
+  it('có thời gian xây: đoạn thành đắp dở chưa dựa được, bậc đang dựng thì chưa vào kinh đô', () => {
+    const s = ch3(5);
+    const tiles = Array.from({ length: 5 }, (_, i) => ({ x: DIEN + i, z: AT }));
+    expect(startWalls(s, 'thanh', tiles).n).toBe(5);
+    expect(canPlace(s, 'bacThanh', DIEN + 1, AT + 1)).toEqual({ ok: false, reason: 'phaiSatThanh' });
+    advanceXay(s, 5 * xayMs('thanh', 1));
+    expect(s.buildings.filter((b) => b.type === 'thanh')).toHaveLength(5);
+    const job = startBuild(s, 'bacThanh', DIEN + 1, AT + 1);
+    expect(job.ok && job.value).toBeTruthy();
+    expect(xayMs('bacThanh', 1)).toBe(XAY_MS[1]);
+    expect(s.buildings.some((b) => b.type === 'bacThanh')).toBe(false);
+    advanceXay(s, xayMs('bacThanh', 1));
+    expect(s.buildings.some((b) => b.type === 'bacThanh' && b.x === DIEN + 1 && b.z === AT + 1)).toBe(true);
+  });
+
   it('Lạc hầu gợi ý một lần khi đã có đoạn thành đất hay thành Cổ Loa', () => {
     const s = ch3(5);
-    for (const t of ['xuongMoc', 'langChai', 'congThanh', 'congDe'] as const) markHinted(s, t);
+    for (const t of ['thoHo', 'xuongMoc', 'langChai', 'congThanh', 'congDe'] as const) markHinted(s, t);
     expect(place(s, 'luy', DIEN, AT).ok).toBe(true);
     expect(nextHint(s)).toBeNull();
     s.buildings.find((b) => b.type === 'luy')!.level = 2;
