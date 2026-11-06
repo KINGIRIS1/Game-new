@@ -38,6 +38,7 @@ import {
   isBridge,
   isDecor,
   isRoad,
+  isWalkWall,
   ROAD_TYPES,
   raiseBuildingCost,
   raiseTileCost,
@@ -379,6 +380,7 @@ export type FailReason =
   | 'datBiChiem'
   | 'ngoaiVung'
   | 'phaiSatSong'
+  | 'phaiSatThanh'
   | 'datGioiHan'
   | 'capToiDa'
   | 'khongTheXay'
@@ -688,6 +690,31 @@ export function buildingAt(state: GameState, x: number, z: number): Building | u
   return id ? findBuilding(state, id) : undefined;
 }
 
+/**
+ * Đoạn thành đất hay thành Cổ Loa (`isWalkWall`) chung cạnh với ô (x, z) mà ô ấy ở mặt trong (gần tâm Điện hơn đoạn
+ * thành): bậc lên thành ở đó dựa vào đoạn này (lấy đoạn đầu tiên theo thứ tự đông, tây, nam, bắc). Bậc ở mặt trong
+ * thì lính trong thành lên được, và trận biết giặc đã vào trong hay còn ngoài thành (gần bậc hay gần mặt thành hơn).
+ * `grid` là lưới chiếm ô nếu đã có sẵn.
+ */
+export function stairWall(state: GameState, x: number, z: number, grid = occupancy(state)): Building | undefined {
+  const dien = state.buildings.find((b) => b.type === 'dien');
+  const cx = dien ? dien.x + BUILDINGS.dien.w / 2 : DIEN_HOME;
+  const cz = dien ? dien.z + BUILDINGS.dien.d / 2 : DIEN_HOME;
+  const here = Math.hypot(x + 0.5 - cx, z + 0.5 - cz);
+  for (const [dx, dz] of [
+    [1, 0],
+    [-1, 0],
+    [0, 1],
+    [0, -1],
+  ]) {
+    if (!inGrid(x + dx, z + dz)) continue;
+    const id = grid[(z + dz) * GRID + x + dx];
+    const b = id ? findBuilding(state, id) : undefined;
+    if (b && isWalkWall(b) && Math.hypot(b.x + 0.5 - cx, b.z + 0.5 - cz) > here) return b;
+  }
+  return undefined;
+}
+
 export function canAfford(state: GameState, cost: Cost): boolean {
   return RESOURCE_IDS.every((r) => state.resources[r] >= (cost[r] ?? 0));
 }
@@ -789,12 +816,14 @@ export function unlocked(state: GameState, unlock: Unlock | undefined): boolean 
 }
 
 /**
- * Công trình mới Lạc hầu cần gợi ý: loại đầu tiên trong `NEW_HINTS` đã mở theo truyện và cấp Điện mà chưa gợi ý.
- * Giao diện báo rồi ghi vào `hinted` (`markHinted`).
+ * Công trình mới Lạc hầu cần gợi ý: loại đầu tiên trong `NEW_HINTS` đã mở theo truyện và cấp Điện mà chưa gợi ý
+ * (bậc lên thành thì cần có thành để dựa vào). Giao diện báo rồi ghi vào `hinted` (`markHinted`).
  */
 export function nextHint(state: GameState): BuildingType | null {
   for (const type of NEW_HINTS) {
     const def = BUILDINGS[type];
+    // Bậc lên thành chỉ gợi ý khi kinh đô đã có đoạn thành đất hay thành Cổ Loa để dựa vào.
+    if (type === 'bacThanh' && !state.buildings.some(isWalkWall)) continue;
     if (!state.hinted.includes(type) && unlocked(state, def.unlock) && dienLevel(state) >= def.minDien) return type;
   }
   return null;
@@ -875,6 +904,7 @@ function fitsAt(state: GameState, type: BuildingType, x: number, z: number, grid
     }
   }
   if (def.nearRiver && !touchesRiver(x, z, def.w, def.d)) return 'phaiSatSong';
+  if (type === 'bacThanh' && !stairWall(state, x, z, grid)) return 'phaiSatThanh';
   return null;
 }
 
@@ -1175,6 +1205,7 @@ function fitsWithout(state: GameState, b: Building, x: number, z: number, grid: 
     }
   }
   if (def.nearRiver && !touchesRiver(x, z, def.w, def.d)) return 'phaiSatSong';
+  if (b.type === 'bacThanh' && !stairWall(state, x, z, grid)) return 'phaiSatThanh';
   return null;
 }
 
@@ -1245,7 +1276,7 @@ export function rotateBuilding(state: GameState, id: number, rot: number): Resul
  * Lũy, bẫy, đê, cống đê, thành, cổng thành là công trình một ô gắn với đất: muốn cao hơn thì đắp ô đất trước khi dựng.
  * Cầu vắt qua sông, hai đầu gác lên bờ: đắp nền thì chỉ nâng lòng sông dưới cầu, cầu lơ lửng khỏi bờ.
  */
-const NO_RAISE: BuildingType[] = ['luy', 'bayChong', 'de', 'congDe', 'thanh', 'congThanh', 'cauSongDa', 'cauSongThao'];
+const NO_RAISE: BuildingType[] = ['luy', 'bayChong', 'de', 'congDe', 'thanh', 'congThanh', 'bacThanh', 'cauSongDa', 'cauSongThao'];
 
 export function canRaiseTile(state: GameState, x: number, z: number): Result<Cost> {
   if (!inChapter2(state)) return fail('canChuong2');

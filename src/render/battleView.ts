@@ -427,7 +427,7 @@ export class BattleView {
     private readonly root: THREE.Object3D,
     private readonly offset: { x: number; z: number },
     private readonly scale = 1,
-    private readonly heightAt: (x: number, z: number, wet?: boolean) => number = () => 0,
+    private readonly heightAt: (x: number, z: number, wet?: boolean, wall?: boolean) => number = () => 0,
     private readonly drumAt?: { x: number; z: number },
   ) {}
 
@@ -648,7 +648,7 @@ export class BattleView {
       obj.position.x = f.x + ox;
       obj.position.z = f.z + oz;
       obj.rotation.y = f.face;
-      const base = this.heightAt(f.x, f.z, inWater(f));
+      const base = this.heightAt(f.x, f.z, inWater(f), f.wall);
       // Chỉ Dời non mới mọc đá; giặc choáng vì Voi xung trận thì không.
       this.syncRocks(view, hasRocks ? (f.stun ?? 0) : 0, f.id, dt);
       this.syncAura(view, f.side === 'ta' && f.state !== 'dead' && battle.rally > 0 && !battle.outcome);
@@ -1346,8 +1346,8 @@ export class BattleView {
                   : new THREE.Mesh(arrowGeo, arrowMat);
         // Lâu thuyền bắn từ các tầng lầu, cao hơn lính trên bờ.
         const ship = e.by === 'noHan' && battle.fighters.some((f) => f.kind === 'lauThuyen' && f.x === e.x && f.z === e.z);
-        const from = new THREE.Vector3(e.x + ox, this.heightAt(e.x, e.z) + (ship ? SHIP_FLOAT + SHIP_SHOT_Y : 0.8), e.z + oz);
-        const to = new THREE.Vector3(e.tx + ox, this.heightAt(e.tx, e.tz) + 0.5, e.tz + oz);
+        const from = new THREE.Vector3(e.x + ox, this.heightAt(e.x, e.z, false, e.fromWall) + (ship ? SHIP_FLOAT + SHIP_SHOT_Y : 0.8), e.z + oz);
+        const to = new THREE.Vector3(e.tx + ox, this.heightAt(e.tx, e.tz, false, e.toWall) + 0.5, e.tz + oz);
         mesh.position.copy(from);
         this.root.add(mesh);
         const fast = e.by === 'anDuong' || e.by === 'caoLo' || e.by === 'noTrieu' || e.by === 'noHan' || e.by === 'no';

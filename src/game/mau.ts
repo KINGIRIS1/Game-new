@@ -740,13 +740,21 @@ const LOCK_REASON: Record<MauId, FailReason> = { phongChau: 'khongTimThay', deBa
 
 /** Công trình một ô gắn với đất (lũy, đê, thành, bẫy): áp mẫu thì đoạn thừa bị dỡ đi, không dời. */
 const SEGMENTS: BuildingType[] = ['luy', 'de', 'thanh', 'bayChong'];
+/**
+ * Không có chỗ trong mẫu mà vướng chỗ của mẫu thì dỡ, không dời: lũy, đê, thành, bẫy, đường đi, đồ trang trí, bậc lên
+ * thành (dời ra xa thành thì vô dụng).
+ */
+const dropIfBlocked = (type: BuildingType) => SEGMENTS.includes(type) || isDecor(type) || type === 'bacThanh';
 
 export interface MauPlan {
   /** Công trình đang có sẽ dời tới chỗ mới. */
   moves: { id: number; x: number; z: number }[];
   /** Công trình sẽ dựng thêm. */
   builds: Slot[];
-  /** Đoạn lũy, đê, thành, bẫy sẽ dỡ đi (thừa so với mẫu, hay vướng chỗ của mẫu); đường đi, đồ trang trí vướng mẫu. */
+  /**
+   * Đoạn lũy, đê, thành, bẫy sẽ dỡ đi (thừa so với mẫu, hay vướng chỗ của mẫu); đường đi, đồ trang trí, bậc lên thành
+   * vướng mẫu.
+   */
   removes: number[];
   /** Tổng giá: dựng phần thiếu và phí dời. */
   cost: Cost;
@@ -889,7 +897,7 @@ export function planMau(state: GameState, id: MauId): MauPlan {
   for (const b of leftovers) {
     if (SEGMENTS.includes(b.type) && inMau.has(b.type)) plan.removes.push(b.id);
     else if (free(b.type, b.x, b.z)) mark(b.type, b.x, b.z);
-    else if (SEGMENTS.includes(b.type) || isDecor(b.type)) plan.removes.push(b.id);
+    else if (dropIfBlocked(b.type)) plan.removes.push(b.id);
     else blocked.push(b);
   }
   for (const b of blocked) {
@@ -1081,7 +1089,7 @@ export function seatInMau(state: GameState, id: MauId, list: Building[], rings =
       b.z = s.z;
       mark(b.type, b.x, b.z);
       state.buildings.push(b);
-    } else if (SEGMENTS.includes(b.type) || isDecor(b.type)) dropped.push(b);
+    } else if (dropIfBlocked(b.type)) dropped.push(b);
     else homeless.push(b);
   }
   for (const b of homeless) {
