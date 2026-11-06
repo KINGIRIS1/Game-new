@@ -7,6 +7,7 @@ import { canPlace, createInitialState, place, productionPerMinute, tick, type Ga
 import { canFeed, canForge, feedGiong, forgeGear, giongLook, giongReady, heroSetup } from './giong';
 import { markStory, pendingStory } from './story';
 import { deserialize, serialize } from './save';
+import { stageBai } from './baiChien';
 
 type Army = Record<UnitType, number>;
 
@@ -35,7 +36,16 @@ const SKILL_ORDER: SkillId[] = ['trongTran', 'phunLua', 'nhoTre'];
 
 function fieldFight(stage: number, army: Army, hero: boolean, skills = true): Battle {
   const def = STAGES[stage - 1];
-  const b = startFieldBattle({ id: 1, stage, enemies: def.enemies, hpScale: def.hpScale, army, rows: DEFAULT_ROWS, hero: hero ? { kind: 'giong', bamboo: stage > 6, glow: false, non: false } : null });
+  const b = startFieldBattle({
+    id: 1,
+    stage,
+    enemies: def.enemies,
+    hpScale: def.hpScale,
+    army,
+    rows: DEFAULT_ROWS,
+    hero: hero ? { kind: 'giong', bamboo: stage > 6, glow: false, non: false } : null,
+    bai: stageBai(stage),
+  });
   for (let i = 0; i < 20 * 120 && !stepField(b, 0.05); i++) if (skills && b.t > 3) for (const k of SKILL_ORDER) useSkill(b, k);
   return b;
 }

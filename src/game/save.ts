@@ -16,6 +16,7 @@ import {
   HUAN_COST,
   MERCHANT_FIRST_MS,
   QUEST_INSERTED_V4,
+  QUIZ_TURNS,
   PHU_SA_TYPES,
   RESOURCE_IDS,
   ROWS,
@@ -27,6 +28,7 @@ import {
   raiseBuildingCost,
   type BuildingType,
   type NuTuongId,
+  type ResourceId,
   type TuongId,
 } from './defs';
 import { initialCaoLo } from './caoLo';
@@ -40,6 +42,7 @@ import { GRID, RIVER_HEIGHT, baseHeights, isRiver } from './map';
 import { initialSon } from './son';
 import { initialTet } from './tet';
 import { initialThuThach } from './thuThach';
+import { initialXay } from './xay';
 import { footprintTop, levelFootprint } from './terrain';
 import { AREA, KHOANH_N, START_KHOANH, V11_AREA, squareKhoanh } from './khoanh';
 import { growDien, isLegacyLayout, legacyBaseHeights, levelLegacyFootprints, relayLegacy } from './xepLai';
@@ -70,6 +73,7 @@ export function deserialize(json: string): GameState | undefined {
   const upgraded = migrate(raw);
   if (!isGameState(upgraded)) return undefined;
   lowerRiverBed(upgraded);
+  cleanXay(upgraded);
   return upgraded;
 }
 
@@ -130,6 +134,7 @@ function migrate(raw: unknown): unknown {
   if (isObj(v) && v.version === 21) v = migrate21to22(v);
   if (isObj(v) && v.version === 22) v = migrate22to23(v);
   if (isObj(v) && v.version === 23) v = migrate23to24(v);
+  if (isObj(v) && v.version === 24) v = migrate24to25(v);
   return v;
 }
 
@@ -477,34 +482,83 @@ function migrate23to24(s: Raw): Raw {
   return s;
 }
 
+/**
+ * Phiên bản 24 → 25: thời gian xây, tốp thợ, nhà thợ hồ, đố sử (`xay.ts`). Bản lưu cũ chưa có việc xây nào đang làm:
+ * mọi công trình đã xong như trước.
+ */
+function migrate24to25(s: Raw): Raw {
+  s.version = 25;
+  s.xay = initialXay();
+  return s;
+}
+
 const isBanh = (v: unknown, test: (x: unknown) => boolean): boolean => isObj(v) && test(v.chung) && test(v.giay);
 const isBool = (x: unknown) => typeof x === 'boolean';
 
 function isValidBuildings(list: unknown): boolean {
   if (!Array.isArray(list)) return false;
-  const ok = list.every((b: unknown) => {
-    if (!isObj(b)) return false;
-    return (
-      isNum(b.id) &&
-      isNum(b.x) &&
-      isNum(b.z) &&
-      isNum(b.level) &&
-      isNum(b.workers) &&
-      b.workers >= 0 &&
-      typeof b.type === 'string' &&
-      b.type in BUILDINGS &&
-      b.level >= 1 &&
-      b.level <= BUILDINGS[b.type as BuildingType].maxLevel &&
-      (b.tuong === undefined || TUONG_IDS.includes(b.tuong as TuongId)) &&
-      (b.nuTuong === undefined || (b.type === 'doanhTrai' && NU_TUONG_IDS.includes(b.nuTuong as NuTuongId))) &&
-      (b.guard === undefined || (isObj(b.guard) && UNIT_TYPES.every((k) => isNum((b.guard as Raw)[k]) && ((b.guard as Raw)[k] as number) >= 0))) &&
-      (b.uNo === undefined || ((b.uNo === 'ok' || b.uNo === 'hu') && b.type === 'thanh')) &&
-      (b.rot === undefined || [0, 1, 2, 3].includes(b.rot as number)) &&
-      (b.mo === undefined || (b.mo === true && b.type === 'congDe')) &&
-      (b.boi === undefined || (b.boi === true && PHU_SA_TYPES.includes(b.type as BuildingType)))
-    );
+  return list.every(isValidBuilding) && list.some((b: Raw) => b.type === 'dien');
+}
+
+function isValidBuilding(b: unknown): boolean {
+  if (!isObj(b)) return false;
+  return (
+    isNum(b.id) &&
+    isNum(b.x) &&
+    isNum(b.z) &&
+    isNum(b.level) &&
+    isNum(b.workers) &&
+    b.workers >= 0 &&
+    typeof b.type === 'string' &&
+    b.type in BUILDINGS &&
+    b.level >= 1 &&
+    b.level <= BUILDINGS[b.type as BuildingType].maxLevel &&
+    (b.tuong === undefined || TUONG_IDS.includes(b.tuong as TuongId)) &&
+    (b.nuTuong === undefined || (b.type === 'doanhTrai' && NU_TUONG_IDS.includes(b.nuTuong as NuTuongId))) &&
+    (b.guard === undefined || (isObj(b.guard) && UNIT_TYPES.every((k) => isNum((b.guard as Raw)[k]) && ((b.guard as Raw)[k] as number) >= 0))) &&
+    (b.uNo === undefined || ((b.uNo === 'ok' || b.uNo === 'hu') && b.type === 'thanh')) &&
+    (b.rot === undefined || [0, 1, 2, 3].includes(b.rot as number)) &&
+    (b.mo === undefined || (b.mo === true && b.type === 'congDe')) &&
+    (b.boi === undefined || (b.boi === true && PHU_SA_TYPES.includes(b.type as BuildingType)))
+  );
+}
+
+/**
+ * Việc xây đang làm hợp lệ: mỗi phần việc là dựng mới (công trình chờ dựng hợp lệ, nằm gọn trong lưới), nâng một cấp
+ * hay đổi loại; số phần đã xong, công đã làm, lượt đố sử trong giới hạn.
+ */
+function isXayState(v: unknown): boolean {
+  if (!isObj(v) || !Array.isArray(v.viec) || !isNum(v.nextId) || !isNum(v.seq)) return false;
+  if (!Array.isArray(v.daHoi) || !v.daHoi.every(isNum)) return false;
+  return v.viec.every((j: unknown) => {
+    if (!isObj(j) || !isNum(j.id) || !isNum(j.tho) || !isNum(j.xong) || !isNum(j.lam) || !isNum(j.hoi)) return false;
+    if (!Array.isArray(j.o) || !j.o.length || j.xong < 0 || j.xong >= j.o.length || j.lam < 0 || j.hoi < 0 || j.hoi > QUIZ_TURNS) return false;
+    if (j.cau !== undefined && !isNum(j.cau)) return false;
+    return j.o.every((p: unknown) => {
+      if (!isObj(p) || !isNum(p.id) || !isNum(p.ms) || p.ms < 0 || !isObj(p.gia)) return false;
+      if (!Object.entries(p.gia).every(([r, n]) => RESOURCE_IDS.includes(r as ResourceId) && isNum(n) && n >= 0)) return false;
+      if (p.len !== undefined && p.len !== true) return false;
+      if (p.uNo !== undefined && p.uNo !== true) return false;
+      if (p.doi !== undefined && !(typeof p.doi === 'string' && p.doi in BUILDINGS)) return false;
+      if (p.moi === undefined) return p.len === true || p.doi !== undefined;
+      const b = p.moi as Raw;
+      return isValidBuilding(b) && b.id === p.id && b.level === 1 && buildingsInGrid([b as unknown as GameState['buildings'][number]]);
+    });
   });
-  return ok && list.some((b: Raw) => b.type === 'dien');
+}
+
+/**
+ * Dọn việc xây sau khi nạp: phần việc chưa xong mà công trình nâng, đổi loại không còn thì bỏ; việc không còn phần
+ * nào chưa xong thì bỏ. Đã đúng thì không đổi gì.
+ */
+function cleanXay(state: GameState): void {
+  const ids = new Set(state.buildings.map((b) => b.id));
+  for (const j of state.xay.viec) {
+    const done = j.o.slice(0, j.xong);
+    const rest = j.o.slice(j.xong).filter((p) => p.moi || ids.has(p.id));
+    j.o = [...done, ...rest];
+  }
+  state.xay.viec = state.xay.viec.filter((j) => j.xong < j.o.length);
 }
 
 /** Mọi công trình nằm gọn trong lưới, không ô nào dưới sông; riêng cầu thì nằm trọn trên sông. */
@@ -525,6 +579,7 @@ function isGameState(v: unknown): v is GameState {
   if (!Array.isArray(v.hinted) || !v.hinted.every((t) => typeof t === 'string')) return false;
   if (!isCayDaState(v.cayDa)) return false;
   if (!isBenKiaState(v.benKia)) return false;
+  if (!isXayState(v.xay)) return false;
   const son = v.son;
   if (!isObj(son) || !isObj(son.gifts) || !isNum(son.restUntil) || typeof son.non !== 'boolean' || typeof son.won !== 'boolean') return false;
   if (!GIFT_IDS.every((k) => typeof (son.gifts as Raw)[k] === 'boolean')) return false;

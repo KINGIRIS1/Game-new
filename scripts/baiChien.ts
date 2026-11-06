@@ -3,8 +3,9 @@
 // Không cần state game, nên chụp được cả nền của màn chưa mở. Chạy trong trình duyệt qua Vite.
 
 import * as THREE from 'three';
-import { startFieldBattle } from '../src/game/battle';
-import { FIELD, STAGES, type Terrain } from '../src/game/defs';
+import { THAN_TO, baiById, baiOf, cellX, cellZ, luoiDi, NX, NZ, O } from '../src/game/baiChien';
+import { skillReady, startFieldBattle, stepField, useSkill } from '../src/game/battle';
+import { FIELD, SKILL_IDS, STAGES, type SkillId, type Terrain } from '../src/game/defs';
 import { Battlefield, CAM_KHE, MO_DA } from '../src/render/battlefield';
 import { IsoCamera } from '../src/render/camera';
 
@@ -24,6 +25,12 @@ export interface Tuy {
   rong?: boolean;
   /** Nhìn vào điểm (x, z) trong bãi thay cho giữa bãi. */
   nhin?: [number, number];
+  /** Bố cục vật cản (`baiChien.ts`): id, `phang` là bãi phẳng; không ghi thì lấy bố cục của nền ở chương của màn. */
+  bai?: string;
+  /** Cho trận chạy thêm chừng này giây (bấm kỹ năng như người chơi thường) rồi mới chụp. */
+  chay?: number;
+  /** Vẽ đè lưới đi: ô bị chặn với thân to màu đỏ, ô làm chậm màu xanh. */
+  luoi?: boolean;
 }
 
 /** Điểm (x, z) trong bãi ra tọa độ cảnh: bãi xoay 45°, gốc ở giữa bãi (như `Battlefield`). */
@@ -47,7 +54,8 @@ export function chupBai(t: Terrain, stage: number, w: number, h: number, dpr: nu
   renderer.setSize(w, h);
 
   const field = new Battlefield();
-  field.setTerrain(t);
+  const bai = tuy.bai === 'phang' ? null : (tuy.bai ?? baiOf(t, STAGES[stage - 1]?.chapter ?? 1));
+  field.setTerrain(t, bai);
   if (stage > 0) {
     const def = STAGES[stage - 1];
     const battle = startFieldBattle({
@@ -59,9 +67,20 @@ export function chupBai(t: Terrain, stage: number, w: number, h: number, dpr: nu
       rows: { giao: 'tien', cung: 'hau', voi: 'trung', no: 'trung' },
       waves: def.waves,
       holdS: def.holdS,
+      bai,
     });
     if (def.holdS && tuy.tien !== undefined) battle.t = tuy.tien * def.holdS;
     for (let i = 0; i < 5; i++) field.update(battle, 0.05);
+    // Cho trận chạy: kỹ năng sẵn sàng 1,5 giây thì bấm, như người chơi thường.
+    const ready: Partial<Record<SkillId, number>> = {};
+    for (let i = 0; i < (tuy.chay ?? 0) * 20 && !battle.outcome; i++) {
+      stepField(battle, 0.05);
+      for (const k of SKILL_IDS) {
+        if (!skillReady(battle, k)) delete ready[k];
+        else if (battle.t - (ready[k] ??= battle.t) >= 1.5) useSkill(battle, k);
+      }
+      field.update(battle, 0.05);
+    }
     if (tuy.ket) {
       battle.outcome = tuy.ket;
       if (def.terrain === 'moDa') battle.seaWin = true;
@@ -71,6 +90,8 @@ export function chupBai(t: Terrain, stage: number, w: number, h: number, dpr: nu
     }
   } else field.update(null, 0.05);
   if (moc) field.scene.add(mocMoDa());
+  const layout = baiById(bai);
+  if (tuy.luoi && layout) field.scene.add(mocLuoi(layout));
 
   const div = document.createElement('div');
   const cam = new IsoCamera(div);
@@ -117,5 +138,26 @@ function mocMoDa(): THREE.Group {
   ring.rotation.x = Math.PI / 2;
   ring.position.set(MO_DA.turtle.x, 0.1, MO_DA.turtle.z);
   g.add(ring);
+  return outer;
+}
+
+/** Lưới đi của bố cục, đặt như bãi: ô bị chặn với thân to đỏ nhạt, ô làm chậm xanh nhạt (so mô hình với luật). */
+function mocLuoi(bai: NonNullable<ReturnType<typeof baiById>>): THREE.Group {
+  const outer = new THREE.Group();
+  outer.rotation.y = Math.PI / 4;
+  const g = new THREE.Group();
+  g.position.set(-FIELD.w / 2, 0, -FIELD.d / 2);
+  outer.add(g);
+  const l = luoiDi(bai, THAN_TO);
+  const red = new THREE.MeshBasicMaterial({ color: 0xff2020, transparent: true, opacity: 0.35, depthWrite: false });
+  const blue = new THREE.MeshBasicMaterial({ color: 0x2060ff, transparent: true, opacity: 0.3, depthWrite: false });
+  const tile = new THREE.PlaneGeometry(O * 0.92, O * 0.92).rotateX(-Math.PI / 2);
+  for (let c = 0; c < NX * NZ; c++) {
+    const mat = !l.free[c] ? red : l.cham[c] < 1 ? blue : null;
+    if (!mat) continue;
+    const m = new THREE.Mesh(tile, mat);
+    m.position.set(cellX(c), 0.08, cellZ(c));
+    g.add(m);
+  }
   return outer;
 }

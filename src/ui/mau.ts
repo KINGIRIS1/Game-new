@@ -3,10 +3,12 @@
 
 import { BUILDINGS, type BuildingType } from '../game/defs';
 import { dienLevel, unlocked, type GameState } from '../game/game';
-import { canApplyMau, frameStart, mauSlots, mauUnlocked, planMau, MAU_IDS, type MauId } from '../game/mau';
+import { canStartMau, frameStart, mauSlots, mauUnlocked, planMau, MAU_IDS, type MauId } from '../game/mau';
+import { xayMs } from '../game/xay';
+import { realMs } from './xay';
 import { isOpen, khoanhOf, openStart } from '../game/khoanh';
 import { RIVER_START } from '../game/map';
-import { vi } from '../text/vi';
+import { formatXay, vi } from '../text/vi';
 import { costHtml } from './format';
 import type { BuildItem } from './xayDung';
 
@@ -145,11 +147,14 @@ export function mauItems(state: GameState, armed: MauId | null): { items: BuildI
     if (!mauUnlocked(state, id)) return { ...base, meta: '', why: t.lock, go: vi.ui.mauApply, note: t.desc };
     prefer = id;
     const plan = planMau(state, id);
-    const check = canApplyMau(state, id);
+    const check = canStartMau(state, id);
     const wild = wildKhoanh(state, id);
+    // Phần dựng thêm giao cả cho một tốp, làm lần lượt.
+    const ms = plan.builds.reduce((n, s) => n + xayMs(s.type, 1), 0);
+    const time = ms > 0 ? ` · ${vi.ui.xayTime(formatXay(realMs(state, ms)))}` : '';
     return {
       ...base,
-      meta: vi.ui.mauPlan(plan.moves.length, plan.builds.length, plan.removes.length, plan.uNos.length),
+      meta: vi.ui.mauPlan(plan.moves.length, plan.builds.length, plan.removes.length, plan.uNos.length) + time,
       cost: Object.keys(plan.cost).length ? costHtml(state, plan.cost) : '',
       why: check.ok ? '' : vi.reasons[check.reason],
       go: armed === id ? vi.ui.mauConfirm : vi.ui.mauApply,
