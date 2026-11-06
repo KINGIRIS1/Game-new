@@ -74,6 +74,7 @@ import type { Poser } from './rig';
 import { ShapeBuilder, disposeInstances, disposeModel, seeded } from './shapes';
 import { ToonModel, inkThin, outlineOf, toon } from './toon';
 import { SANG_NGAY, TroiMau, apMauToi, doSang, phaThoiTiet, phaTroi, toiTheoTroi } from './troi';
+import { DuocLayer, QuangDong, duocCho, type DuocSpot } from './duoc';
 
 /**
  * Ô (HALF, HALF) nằm ở gốc tọa độ cảnh. Giữ như tâm lưới 55×55 cũ (khi sông còn ở mép lưới) để camera, ánh nắng,
@@ -132,6 +133,12 @@ const groundMaterial = new THREE.MeshLambertMaterial({ vertexColors: true });
 const DAT_TINT: Record<Dat, number> = { phuSa: 0x6e5034, nuiDa: 0x8d887c, moSat: 0x9a4a2a };
 
 /** Đặc sản đất của ô (x, z) bên kia sông, nếu có. */
+/** Số giả ngẫu nhiên 0..1 cố định theo `n` (đuốc thắp so le). */
+function hash01(n: number): number {
+  const x = Math.sin(n * 127.1 + 311.7) * 43758.5453;
+  return x - Math.floor(x);
+}
+
 function datAt(x: number, z: number): Dat | null {
   const id = plotAt(x, z);
   const poi = id === null ? undefined : poiAt(id);
@@ -421,8 +428,10 @@ export class World {
   private gioGhim: number | null = null;
   private readonly troiNen = new TroiMau();
   private readonly troi = new TroiMau();
-  /** Độ tối lúc này (0 ban ngày, 1 ban đêm hay đêm yêu tinh), cho đèn đuốc. */
+  /** Độ tối lúc này (0 ban ngày, 1 ban đêm hay đêm yêu tinh). */
   private toi = 0;
+  /** Độ tối theo giờ (không tính đêm yêu tinh, để đêm yêu tinh ban ngày trông như cũ), cho đèn đuốc. */
+  private toiGio = 0;
   private readonly wisps = new THREE.Group();
   private readonly lights: SunLights;
   private state?: GameState;
@@ -515,6 +524,12 @@ export class World {
   private dikeKey = '';
   private citadelKey = '';
   private decorKey = '';
+  /** Đèn đuốc ban đêm (`duoc.ts`): đuốc cắm ở công trình, đèn thuyền, đom đóm quanh ruộng. */
+  private readonly duoc = new DuocLayer();
+  private duocKey = '';
+  private readonly denThuyen = new QuangDong(64, 0xffb45a, 0.42, 0.5, 0.9);
+  private readonly domDom = new QuangDong(72, 0xd6ff70, 0.1, 0.55, 1.2);
+  private readonly denTmp = new THREE.Vector3();
   private time = 0;
   private res: Resolution = 'medium';
   /** Máy vẽ được nhiều hình trong một lệnh (WEBGL_multi_draw): rừng gộp một lô, chỉ vẽ cây thấy được (`batchTemplates`). */
@@ -598,6 +613,7 @@ export class World {
     this.addBoats();
     this.initRipples();
     this.initWisps();
+    this.scene.add(this.duoc.group, this.denThuyen.mesh, this.domDom.mesh);
 
     this.footprint = new THREE.Mesh(
       new THREE.PlaneGeometry(1, 1).rotateX(-Math.PI / 2),
@@ -885,6 +901,7 @@ export class World {
     this.dikeKey = '#';
     this.citadelKey = '#';
     this.decorKey = '#';
+    this.duocKey = '#';
     this.wildDirty = true;
     for (const o of this.cayDaGrowing.values()) this.scene.remove(o);
     this.cayDaGrowing.clear();
@@ -1104,6 +1121,37 @@ export class World {
     this.syncFarForest(state);
     this.syncFog(state);
     this.syncPois(state);
+    this.syncDuoc();
+  }
+
+  /**
+   * Chỗ đuốc theo công trình đang vẽ (`duocCho`, đổi ra cảnh theo chỗ và hướng xoay của mô hình) và quầng sáng cho lửa
+   * sẵn có trong mô hình (`userData.flame`). Công trình hư, đang xây thì không thắp. Chỉ dựng lại khi công trình đổi.
+   */
+  private syncDuoc(): void {
+    const views = [...this.views.entries()].filter(([, v]) => !v.damaged && !v.dung);
+    const key = views.map(([id, v]) => `${id}:${v.type}:${v.level}:${v.x}:${v.z}:${v.group.rotation.y.toFixed(2)}:${v.group.position.y.toFixed(2)}`).join(',');
+    if (key === this.duocKey) return;
+    this.duocKey = key;
+    const spots: DuocSpot[] = [];
+    const p = new THREE.Vector3();
+    for (const [id, v] of views) {
+      const g = v.group;
+      const cos = Math.cos(g.rotation.y);
+      const sin = Math.sin(g.rotation.y);
+      duocCho(v.type).forEach((c, i) => {
+        // Xoay quanh trục đứng như `Object3D.rotation.y`.
+        spots.push({ x: g.position.x + c.x * cos + c.z * sin, y: g.position.y, z: g.position.z - c.x * sin + c.z * cos, kind: 'cot', seed: hash01(id * 7 + i) });
+      });
+      g.updateWorldMatrix(true, true);
+      let i = 0;
+      g.traverse((o) => {
+        if (!o.userData.flame) return;
+        o.getWorldPosition(p);
+        spots.push({ x: p.x, y: p.y, z: p.z, kind: 'lua', seed: hash01(id * 13 + i++) });
+      });
+    }
+    this.duoc.set(spots);
   }
 
   /**
@@ -3097,6 +3145,7 @@ export class World {
     }
 
     this.updateStorm(dt);
+    this.updateDen(t);
     this.updateFog(dt);
     this.updateScouts(t);
     this.updateMarch(dt, t);
@@ -3158,6 +3207,51 @@ export class World {
     this.renderer.render(this.inField && this.field ? this.field.scene : this.scene, this.view.camera);
   }
 
+  /**
+   * Đèn đuốc theo độ tối (`toiGio`, tính ở `updateStorm`): đuốc ở công trình thắp dần từ lúc chiều tà, thuyền mang đèn,
+   * đom đóm bay quanh ruộng gần chỗ camera nhìn lúc đêm khuya, trời không mưa.
+   */
+  private updateDen(t: number): void {
+    const sang = THREE.MathUtils.smoothstep(this.toiGio, 0.15, 0.45);
+    this.duoc.update(sang, t);
+    this.denThuyen.begin(sang, t);
+    if (sang > 0.001) {
+      const p = this.denTmp;
+      const lamp = (o: THREE.Object3D, lift: number) => {
+        o.getWorldPosition(p);
+        this.denThuyen.add(p.x, p.y + lift, p.z);
+      };
+      for (const b of this.boats) lamp(b.obj, 0.4);
+      if (this.merchantBoat) lamp(this.merchantBoat, 0.55);
+      for (const b of this.seaBoats.values()) lamp(b.obj, 0.55);
+      for (const v of this.views.values()) for (const c of v.group.children) if (c.userData.dock !== undefined) lamp(c, 0.4);
+    }
+    this.denThuyen.end();
+
+    const khuya = THREE.MathUtils.smoothstep(this.toiGio, 0.7, 1) * (1 - Math.min(1, this.storm * 10));
+    this.domDom.begin(khuya, t);
+    if (khuya > 0.001) {
+      const c = this.view.target;
+      let k = 0;
+      for (const v of this.views.values()) {
+        if (v.type !== 'ruong' && v.type !== 'ruongNep' && v.type !== 'vuon') continue;
+        const g = v.group.position;
+        if (Math.abs(g.x - c.x) > 18 || Math.abs(g.z - c.z) > 18) continue;
+        const r = BUILDINGS[v.type].w / 2;
+        for (let i = 0; i < 4; i++, k++) {
+          const ph = k * 2.399;
+          this.domDom.add(
+            g.x + Math.sin(t * 0.31 + ph) * r * 0.9,
+            g.y + 0.45 + Math.sin(t * 0.9 + ph * 1.7) * 0.2,
+            g.z + Math.cos(t * 0.27 + ph * 1.3) * r * 0.9,
+            0.6 + 0.4 * Math.max(0, Math.sin(t * 2.3 + ph * 3.1)),
+          );
+        }
+      }
+    }
+    this.domDom.end();
+  }
+
   /** Đêm yêu tinh: ma trơi bập bềnh, sáng mờ dần theo trời tối. Màu trời và đèn tính chung ở `updateStorm`. */
   private updateNight(dt: number): void {
     this.night += (this.nightGoal - this.night) * Math.min(1, dt * 1.2);
@@ -3209,7 +3303,8 @@ export class World {
     // Ô báo ngập, khoảnh đang chọn, dải tường đang kéo là chỉ dẫn: ban đêm bù sáng cho dễ thấy (ban ngày giữ đúng 1).
     const bu = Math.min(2.5, SANG_NGAY / doSang(this.troiNen));
     for (const m of [this.floodPreview, this.chunkPick, this.linePick]) (m.mesh.material as THREE.MeshLambertMaterial).color.setScalar(bu);
-    this.toi = Math.max(w.dem + 0.5 * (w.chieu + w.rang), n);
+    this.toiGio = w.dem + 0.5 * (w.chieu + w.rang);
+    this.toi = Math.max(this.toiGio, n);
     this.rain.visible = !this.inField && k > 0.05;
     if (!this.rain.visible) return;
     const m = new THREE.Matrix4();

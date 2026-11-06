@@ -2605,7 +2605,7 @@ Trước đây chương nào cũng đánh trên cùng một bãi chữ nhật ph
 
 Mỗi PR chỉnh bố cục trước, rồi mới chỉnh máu giặc (`hpScale`) nếu lệch chuẩn cân bằng, và ghi số cuối vào tài liệu này.
 
-## Ngày đêm (chủ dự án chọn, đang làm)
+## Ngày đêm (chủ dự án chọn, đã làm)
 
 Trước đây kinh đô lúc nào cũng là ban ngày; "đêm" duy nhất là lúc đêm yêu tinh tới. Chủ dự án muốn kinh đô có ngày đêm cho sống động. Chủ dự án đã chốt bốn điều (theo đề xuất):
 
@@ -2640,11 +2640,21 @@ Phương án bỏ: ngày đêm có luật (ruộng làm nhiều ban ngày, làng
 - Lửa sẵn có (lò rèn, lò nung, đèn Điện) tự sáng nên nổi lên ban đêm.
 - Bãi chiến phó bản, đánh đồn có trời riêng, không theo giờ kinh đô. Trận giữ kinh đô thì theo giờ (đồng hồ vẫn chạy trong trận). Màn hình vào game giữ giờ của bản lưu.
 
-### Đèn đuốc (PR 2, chưa làm)
+### Đèn đuốc (`src/render/duoc.ts`, đã làm ở PR 2)
 
-- Công trình thắp đuốc từ chiều tà, tắt lúc rạng đông: cán đuốc tre, ngọn lửa, quầng sáng, vũng sáng dưới chân đuốc. Không dùng đèn thật (đèn thật làm nặng mọi chất liệu). Ban ngày không có gì mới.
-- Lửa sẵn có thêm quầng sáng. Thuyền chài, thuyền buôn, thuyền khơi mang đèn. Đom đóm quanh ruộng, bìa rừng.
-- Công trình hư hay đang xây thì không thắp.
+- Công trình thắp đuốc từ chiều tà, tắt lúc rạng đông, so le từng cây: người ta cắm cán đuốc tre (cán mọc lên từ đất), lửa bén, quầng sáng ấm, vũng sáng trên đất dưới chân đuốc. Ban ngày không có gì mới.
+- Chỗ cắm:
+  - phần lớn công trình: hai cây gần hai góc trước, cắm vào ô trống (`.`) gần góc nhất của bản vẽ ô con; góc kín cả thì cắm ở mép lối đi (xưởng mộc, lò rèn, nhà thợ hồ);
+  - bến, làng chài, bến khơi: phía bờ (quay mặt ra sông);
+  - Điện: bốn cây hai bên lối đá giữa sân chầu, hai cây hai bên cổng;
+  - chòi canh, lầu nỏ: một cây; cổng thành: hai cây;
+  - không cắm ở ruộng, ruộng nếp, vườn (có đom đóm), lũy, đê, cống, thành, bẫy, cầu, đường, đồ trang trí; công trình hư, đang xây thì không thắp.
+- Lửa sẵn có (lò rèn, lò nung, bãi đá) thêm quầng sáng. Thuyền trên sông, thuyền neo ở bến, thuyền buôn, thuyền khơi mang đèn.
+- Đom đóm xanh vàng bay quanh ruộng, vườn gần chỗ camera nhìn, lúc đêm khuya, trời không mưa.
+- Đèn theo giờ, không theo đêm yêu tinh: yêu tinh tới giữa ban ngày thì không thắp, trông như đêm yêu tinh cũ.
+- Không dùng đèn thật: thêm đèn thì mọi chất liệu phải dựng lại và nặng thêm. Quầng, vũng là tấm cộng màu, thắp, lập lòe trong shader. Lớp đuốc nằm ngoài mô hình công trình nên ảnh công trình không đổi.
+- Độ nặng (Điện 8, khổ điện thoại): ban ngày không thêm gì; ban đêm thêm 7 lệnh vẽ (1133 → 1140) và chừng 9,5 nghìn tam giác.
+- Để sau: đuốc trên thành Cổ Loa, hai đầu cầu.
 
 ### Giao diện
 
@@ -2655,6 +2665,7 @@ Phương án bỏ: ngày đêm có luật (ruộng làm nhiều ban ngày, làng
 
 - `defs.ts`: `NGAY_MS`, `BUOI_MS`. `ngayDem.ts`: `buoiLuc`, `troiLuc` (trọng số bốn buổi), `doToi`, `gioBuoi`. `ngayDem.test.ts` canh.
 - `troi.ts`: `TROI_BUOI`, `phaTroi`, `phaThoiTiet` (pha mưa giông, đêm yêu tinh), `toiTheoTroi`; `World.updateStorm` gán vào cảnh mỗi khung. `troi.test.ts` canh ban ngày y số cũ, đêm yêu tinh y cũ ở mọi giờ, đêm thường tối mà sáng hơn đêm yêu tinh.
+- `duoc.ts`: `duocCho` (chỗ cắm trong móng, theo bản vẽ ô con `DUOC_LOTS`), `DuocLayer` (cán, lửa, quầng, vũng, mỗi thứ một lô bản sao; World dựng lại ở `syncDuoc` khi công trình đổi), `QuangDong` (đèn thuyền, đom đóm, đặt lại mỗi khung ở `World.updateDen`). `duoc.test.ts` canh đuốc nằm trong móng, trên ô trống hay mép lối đi, công trình thắp đuốc nào cũng có đuốc.
 - `window.__debug.gio(buổi | phần của ngày | null)` ghim giờ, `__debug.troi()` cho trời lúc này. `scripts/chup.mjs --gio`; mặc định ghim ban ngày nên ảnh chụp cũ không đổi. Cảnh `chieu-ta`, `dem`, `rang-dong`, `dien8-dem`, `yeu-tinh`, `dem-yeu`, `dem-tran`.
 - Không nâng bản lưu: giờ suy từ `state.clock`.
 
@@ -2705,5 +2716,5 @@ Phương án bỏ: ngày đêm có luật (ruộng làm nhiều ban ngày, làng
     **Điện Vua Hùng 10×10** (chủ dự án yêu cầu, đã làm; xem mục cùng tên): dời, xoay được; sân chầu có Vua Hùng ngồi ngai vàng, 14 chỗ tướng đứng chầu; bản lưu v20.
 17. **Chương 5: Hai Bà Trưng** (chủ dự án đã duyệt, đã làm cả bốn PR; xem Kế hoạch chương 5): mỗi bà cưỡi một voi ra trận với Voi xung trận và Hiệu triệu gọi nghĩa binh, quân Hán và lâu thuyền đánh kinh đô, phó bản màn 33–40 với Tô Định và Mã Viện, Đền Hát Môn, nữ tướng, thử thách màn 33–40.
 18. **Phù sa: cống đê** (chủ dự án chọn, đã làm; xem mục cùng tên): mở cống cho lũ vào ruộng, ruộng được bồi phù sa làm ra thêm 40% tới hết mùa lũ sau; nước vào qua cống vẫn làm hư nhà cửa.
-19. **Ngày đêm** (chủ dự án chọn, đang làm; xem mục cùng tên): kinh đô có ngày, chiều tà, đêm, rạng đông, 12 phút chơi một vòng, chỉ để nhìn. PR 1 trời và cài đặt (đã làm), PR 2 đèn đuốc, đom đóm.
+19. **Ngày đêm** (chủ dự án chọn, đã làm; xem mục cùng tên): kinh đô có ngày, chiều tà, đêm, rạng đông, 12 phút chơi một vòng, chỉ để nhìn. PR 1 trời và cài đặt, PR 2 đèn đuốc, đèn thuyền, đom đóm.
 20. **Để sau**: nhạc nền.
