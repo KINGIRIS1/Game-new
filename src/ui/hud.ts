@@ -226,6 +226,7 @@ export type HudAction =
   | { kind: 'openSettings' }
   | { kind: 'toggleMute' }
   | { kind: 'setResolution'; resolution: Resolution }
+  | { kind: 'setNgayDem'; on: boolean }
   | { kind: 'copyCode' }
   | { kind: 'saveFile' }
   | { kind: 'shareFile' }
@@ -282,7 +283,7 @@ type BarracksTab = 'quan' | 'giu' | 'tuong' | 'trai';
 type Sheet =
   | { kind: 'build' }
   | { kind: 'building'; id: number }
-  | { kind: 'settings'; resolution: Resolution }
+  | { kind: 'settings'; resolution: Resolution; ngayDem: boolean }
   | { kind: 'merchant' }
   | { kind: 'giong' }
   | { kind: 'son' }
@@ -583,6 +584,8 @@ export class Hud {
         return this.onAction({ kind: 'forgeGear', gear: el.dataset.gear as GearId });
       case 'setResolution':
         return this.onAction({ kind: 'setResolution', resolution: el.dataset.resolution as Resolution });
+      case 'setNgayDem':
+        return this.onAction({ kind: 'setNgayDem', on: el.dataset.on === '1' });
       case 'storyNext':
         return this.storyNext();
       case 'campChapter':
@@ -1096,8 +1099,8 @@ export class Hud {
     this.refreshSheet(state);
   }
 
-  showSettings(state: GameState, resolution: Resolution): void {
-    this.sheet = { kind: 'settings', resolution };
+  showSettings(state: GameState, resolution: Resolution, ngayDem: boolean): void {
+    this.sheet = { kind: 'settings', resolution, ngayDem };
     this.refreshSheet(state, true);
   }
 
@@ -1183,7 +1186,7 @@ export class Hud {
       body = tetHtml(state);
     } else {
       title = `⚙️ ${vi.ui.settings}`;
-      body = this.settingsHtml(state, this.sheet.resolution);
+      body = this.settingsHtml(state, this.sheet.resolution, this.sheet.ngayDem);
     }
     const html = `<div class="sheet-head"><h2>${title}</h2><button class="close" data-act="closeSheet" aria-label="${vi.ui.close}">✕</button></div>
       <div class="sheet-body">${body}</div>`;
@@ -1790,15 +1793,20 @@ export class Hud {
     return `<p class="muted">${vi.ui.merchantHint} (${secs}s)</p><div class="offers">${rows}</div>`;
   }
 
-  private settingsHtml(state: GameState, resolution: Resolution): string {
+  private settingsHtml(state: GameState, resolution: Resolution, ngayDem: boolean): string {
     const levels = (Object.keys(vi.resolutions) as Resolution[])
       .map((r) => `<button class="btn small ${r === resolution ? 'bronze' : 'ghost'}" data-act="setResolution" data-resolution="${r}">${vi.resolutions[r]}</button>`)
+      .join('');
+    const ngayDemBtns = ([true, false] as const)
+      .map((on) => `<button class="btn small ${on === ngayDem ? 'bronze' : 'ghost'}" data-act="setNgayDem" data-on="${on ? 1 : 0}">${on ? vi.ui.ngayDemOn : vi.ui.ngayDemOff}</button>`)
       .join('');
     return `
       <div class="setting-row"><span>${vi.ui.sound}</span>
         <button class="btn small ghost" data-act="toggleMute">${state.settings.muted ? '🔇 ' + vi.ui.off : '🔊 ' + vi.ui.on}</button></div>
       <div class="setting-row"><span>${vi.ui.resolution}</span><div class="choices">${levels}</div></div>
       <p class="muted">${vi.ui.resolutionHint}</p>
+      <div class="setting-row"><span>${vi.ui.ngayDem}</span><div class="choices">${ngayDemBtns}</div></div>
+      <p class="muted">${vi.ui.ngayDemHint}</p>
       <h3 class="setting-title">${vi.ui.backupTitle}</h3>
       <div class="setting-row"><span>${vi.ui.saveFile}</span><div class="choices">
         <button class="btn small ghost" data-act="saveFile">💾 ${vi.ui.download}</button>

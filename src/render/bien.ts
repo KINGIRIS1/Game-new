@@ -13,6 +13,7 @@ import { C } from './palette';
 import type { Poser } from './rig';
 import { ShapeBuilder, seeded } from './shapes';
 import { ToonModel } from './toon';
+import { toiTheoTroi } from './troi';
 
 /** Mặt nước sông, biển (như world.ts). */
 const WATER_Y = -0.28;
@@ -105,7 +106,7 @@ export function buildSeaMist(half: number, puff: THREE.Material): THREE.Group {
   const cream = new THREE.Color(C.cream);
   const veil = new THREE.Mesh(
     coastBand([BAI_CAT - 0.5, BAI_CAT + 3, BAI_CAT + 9, OPEN_SEA], () => MIST_Y, () => cream, half, (k) => [0, 0.35, 0.6, 0.7][k]),
-    new THREE.MeshBasicMaterial({ vertexColors: true, transparent: true, depthWrite: false }),
+    toiTheoTroi(new THREE.MeshBasicMaterial({ vertexColors: true, transparent: true, depthWrite: false })),
   );
   veil.renderOrder = 2;
   g.add(veil);
@@ -412,7 +413,7 @@ interface Foam {
 function foamLines(half: number): THREE.Group {
   const g = new THREE.Group();
   g.name = 'song';
-  const mat = new THREE.MeshBasicMaterial({ color: C.foam, transparent: true, opacity: 0.75, depthWrite: false });
+  const mat = toiTheoTroi(new THREE.MeshBasicMaterial({ color: C.foam, transparent: true, opacity: 0.75, depthWrite: false }));
   const lines: Foam[] = [];
   // Dọc bờ chéo, mỗi đoạn dài chừng `FOAM_SEG` ô (đi một bước t thì dọc bờ được chừng t / √2 ô).
   const step = FOAM_SEG * Math.SQRT2;
@@ -555,7 +556,7 @@ export class SeaLife {
   private whale: THREE.Group | null = null;
   private readonly dolphins: THREE.Group[] = [];
   private readonly sprays: Spray[] = [];
-  private readonly sprayMat = new THREE.MeshBasicMaterial({ color: C.foam, transparent: true, opacity: 0.85, depthWrite: false });
+  private readonly sprayMat = toiTheoTroi(new THREE.MeshBasicMaterial({ color: C.foam, transparent: true, opacity: 0.85, depthWrite: false }));
   private readonly sprayGeo = new THREE.SphereGeometry(0.09, 6, 4);
   private event: SeaEvent | null = null;
   private next = 4;

@@ -1153,6 +1153,16 @@ export const TET_NEED = [12, 12, 12, 12, 20, 30, 40, 40, 40, 40];
 export const TET_DAT_BONUS = 0.15;
 export const TET_TROI_BONUS = 0.1;
 
+// ---------- Ngày đêm (chỉ để nhìn, không đổi luật) ----------
+
+/** Một ngày ở kinh đô dài chừng này thời gian chơi (đồng hồ chơi `state.clock`; đứng yên lúc vắng). */
+export const NGAY_MS = 12 * 60_000;
+/**
+ * Lúc mỗi buổi bắt đầu, tính từ đầu ngày. Đồng hồ chơi 0 là đầu ngày (sáng sớm), nên ván mới thấy ban ngày trước:
+ * ngày 7,5 phút, chiều tà 1 phút, đêm 2,5 phút, rạng đông 1 phút.
+ */
+export const BUOI_MS = { ngay: 0, chieu: 450_000, dem: 510_000, rang: 660_000 } as const;
+
 // ---------- Độ cao ô đất và lũ ----------
 
 /** Ô đất cao nhất đắp được. Đất tự nhiên cao tới bậc 3. */
