@@ -1757,6 +1757,12 @@ export const ENEMY_ROWS: Record<EnemyType, Row> = {
  */
 export const FIELD = { w: 9, d: 22, gap: 10, hpMul: 1.6, maxS: 90 };
 
+/**
+ * Bãi chiến có vật cản (`baiChien.ts`): lội nước nông đi bằng chừng này phần tốc độ, lội bùn bằng chừng này phần.
+ * Thủy quái (`SWIMMERS`) bơi trong nước như đi thường.
+ */
+export const BAI_CHAM = { nuoc: 0.6, bun: 0.75 };
+
 export type Terrain = 'rung' | 'benSong' | 'lang' | 'don' | 'nui' | 'doi' | 'ngap' | 'tanVien' | 'thatDieu' | 'coLoa' | 'cuaSong' | 'moDa' | 'benKia' | 'hatMon' | 'luyLau' | 'langBac' | 'camKhe';
 
 export type Chapter = 1 | 2 | 3 | 4 | 5;
@@ -1919,13 +1925,13 @@ const hai = (a: UnitType, b: UnitType, hpScale: number, extra?: Partial<Record<E
  */
 export const CHALLENGES: ChallengeDef[] = [
   du(3.2, { giaoAn: 10, cungAn: 7, chienXa: 3 }),
-  hai('giao', 'voi', 3.95, { giaoAn: 7, cungAn: 5, chienXa: 2 }),
+  hai('giao', 'voi', 4.15, { giaoAn: 7, cungAn: 5, chienXa: 2 }),
   du(3.8, { giaoAn: 7, cungAn: 4, chienXa: 2 }),
   du(2.6, { giaoAn: 7, cungAn: 4, chienXa: 2 }),
   kt(3.5),
   hai('giao', 'voi', 3.5),
   kt(2.4),
-  du(2.2),
+  du(2.35),
   kt(3.15),
   hai('giao', 'voi', 4),
   kt(1.9),
@@ -1945,7 +1951,7 @@ export const CHALLENGES: ChallengeDef[] = [
   kt(1.05),
   hai('giao', 'no', 3.15),
   kt(0.85),
-  du(2.2),
+  du(2.35),
   hai('voi', 'no', 2.6),
   kt(0.95),
   hai('giao', 'no', 3.1),

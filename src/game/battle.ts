@@ -100,6 +100,7 @@ import { openStart } from './khoanh';
 import { FAR_FOREST, FOREST_BAND, GRID, RIVER_DIVE, RIVER_END, RIVER_START, farBankOf, inGrid, isRiver, turnLocal } from './map';
 import { bridgeUp, farSideBank, garrisonPosts } from './benKia';
 import { floodHits } from './terrain';
+import { baiById, capNhatNav, chamAt, dayRa, huongTheo, kep, que, taoNav, truot, type Nav, type Toi } from './baiChien';
 
 export type Side = 'ta' | 'giac';
 /**
@@ -349,6 +350,11 @@ export interface Battle {
    * Bản lưu cũ không có.
    */
   nuTuong?: { kind: NuTuongId; x: number; z: number };
+  /**
+   * Trận ngoài bãi: bố cục bãi chiến có vật cản (id trong `BAI` ở `baiChien.ts`). Không có (bản lưu cũ, trận thử) hay
+   * id lạ thì đánh trên bãi phẳng.
+   */
+  bai?: string;
   /** Kết cục trận ngoài bãi; trận giữ kinh đô luôn để null. */
   outcome: 'win' | 'lose' | 'retreat' | null;
 }
@@ -505,6 +511,8 @@ function addHero(battle: Battle, hero: HeroSetup, x: number, z: number, hpMul: n
   else battle.hero = { ...hero, down: false };
   battle.skills.push(...heroSkills(hero));
   const f = newFighter(battle, 'ta', hero.kind, x, z, statsOf(hero.kind).hp * hpMul * ownMult(battle, hero.kind));
+  const nav = navOf(battle);
+  if (nav) dayRa(nav.bai, bodyRadius(hero.kind), f);
   battle.fighters.push(f);
 }
 
@@ -955,6 +963,8 @@ export interface FieldSetup {
   fury?: number;
   /** Nữ tướng đi theo làm phó tướng: binh chủng của người ấy được cộng thêm. */
   nuTuong?: NuTuongId | null;
+  /** Bố cục bãi chiến có vật cản (`stageBai`, `baiOf` ở `baiChien.ts`); bỏ trống là bãi phẳng. */
+  bai?: string | null;
 }
 
 /** An Dương Vương, Cao Lỗ bắn nỏ: đứng lùi sau hàng đầu của quân ta chừng này ô. */
@@ -976,6 +986,7 @@ export function startFieldBattle(setup: FieldSetup): Battle {
   if (setup.challenge) battle.challenge = setup.challenge;
   if (setup.camp !== undefined) battle.camp = setup.camp;
   if (setup.fury) battle.fury = setup.fury;
+  if (baiById(setup.bai)) battle.bai = setup.bai!;
   const rand = rng(setup.id * 7919 + setup.stage);
   const ours: Record<Row, FighterKind[]> = { tien: [], trung: [], hau: [] };
   for (const k of UNIT_TYPES) for (let i = 0; i < (setup.army[k] ?? 0); i++) ours[setup.rows[k]].push(k);
@@ -1018,6 +1029,7 @@ function arriveWaves(battle: Battle): void {
 
 /** Dàn quân từ hàng đầu `front` lùi dần về phía `dir` (+1: về z lớn, −1: về z nhỏ). */
 function deploy(battle: Battle, side: Side, rows: Record<Row, FighterKind[]>, front: number, dir: number, rand: () => number, hpOf: (k: FighterKind) => number): void {
+  const nav = navOf(battle);
   let z = front;
   for (const row of ROWS) {
     const list = rows[row];
@@ -1028,6 +1040,8 @@ function deploy(battle: Battle, side: Side, rows: Record<Row, FighterKind[]>, fr
         const x = (FIELD.w * (i + 1)) / (line.length + 1) + (rand() - 0.5) * 0.3;
         const f = newFighter(battle, side, kind, x, clampField(z + (rand() - 0.5) * 0.2, FIELD.d), hpOf(kind));
         f.face = dir > 0 ? Math.PI : 0;
+        // Dải dàn quân để trống theo luật bố cục; vẫn đưa ra chỗ trống cho chắc.
+        if (nav) dayRa(nav.bai, bodyRadius(kind), f);
         battle.fighters.push(f);
       });
       z += dir * 0.9;
@@ -1036,7 +1050,71 @@ function deploy(battle: Battle, side: Side, rows: Record<Row, FighterKind[]>, fr
   }
 }
 
-const clampField = (v: number, max: number) => Math.min(max - 0.3, Math.max(0.3, v));
+const clampField = kep;
+
+/** Tìm đường của từng trận ngoài bãi có vật cản: dẫn xuất từ bố cục, không lưu (mở lại bản lưu thì dựng lại). */
+const navs = new WeakMap<Battle, Nav>();
+
+/** Trận ngoài bãi có bố cục vật cản thì cho trạng thái tìm đường; bãi phẳng hay trận giữ kinh đô thì null. */
+function navOf(battle: Battle): Nav | null {
+  if (battle.mode !== 'field') return null;
+  const bai = baiById(battle.bai);
+  if (!bai) return null;
+  let nav = navs.get(battle);
+  if (!nav || nav.bai !== bai) navs.set(battle, (nav = taoNav(bai)));
+  return nav;
+}
+
+/** Đi chậm khi lội nước, bùn (thủy quái bơi như đi thường). */
+const swims = (k: FighterKind) => SWIMMERS.includes(k as EnemyType);
+
+/** Ai còn đánh được, ai còn là đích cho phe kia nhắm tới (như `nearestEnemyOf`). */
+const targetable = (o: Fighter) => o.state === 'move' || o.state === 'fight' || o.state === 'flee';
+
+/** Dựng lại bản đồ khoảng cách của hai phe khi tới lượt (mỗi `NAV_S` giây trận). */
+function navTick(battle: Battle): void {
+  const nav = navOf(battle);
+  if (!nav) return;
+  capNhatNav(nav, battle.t, () => {
+    const giac = battle.fighters.filter((o) => o.side === 'giac' && targetable(o));
+    const ta = battle.fighters.filter((o) => o.side === 'ta' && targetable(o));
+    return { giac, ta, giacBoi: giac.length > 0 && giac.every((o) => swims(o.kind)) };
+  });
+}
+
+/**
+ * Bước về phía (tx, tz) trên bãi có vật cản: đường thẳng thông thì đi thẳng, vướng thì lần theo bản đồ khoảng cách
+ * tới `toi` (khóa đi vòng `VONG_KHOA` giây cho khỏi đổi qua đổi lại); lội nước, bùn thì chậm; đi xong thì trượt dọc vật cản.
+ */
+function walkField(nav: Nav, f: Fighter, toi: Toi, tx: number, tz: number, reach: number, dt: number, mult: number): void {
+  const r = bodyRadius(f.kind);
+  const boi = swims(f.kind);
+  f.repathIn = Math.max(0, f.repathIn - dt);
+  const go = huongTheo(nav, toi, f.x, f.z, r, tx, tz, reach, boi, f.repathIn > 0);
+  if (go.vong && f.repathIn <= 0) f.repathIn = VONG_KHOA;
+  const ox = f.x;
+  const oz = f.z;
+  moveToward(f, go.x, go.z, dt, mult * (boi ? 1 : chamAt(nav.bai, f.x, f.z)));
+  truot(nav.bai, r, f, ox, oz);
+}
+/** Đã phải đi vòng thì cứ lần theo bản đồ khoảng cách chừng này giây rồi mới xét lại đường thẳng. */
+const VONG_KHOA = 0.5;
+
+/** Kỹ năng hất, lướt dời `f` tới (x, z) (đã giữ trong bãi): bãi có vật cản thì dừng ở mép vật cản. */
+function pushTo(battle: Battle, f: Fighter, x: number, z: number): void {
+  const nav = navOf(battle);
+  if (nav) que(nav.bai, bodyRadius(f.kind), f, x, z);
+  else {
+    f.x = x;
+    f.z = z;
+  }
+}
+
+/** Người vừa hiện ra giữa trận (quân gọi thêm): bãi có vật cản thì đưa ra chỗ trống gần nhất. */
+function placeFree(battle: Battle, f: Fighter): void {
+  const nav = navOf(battle);
+  if (nav) dayRa(nav.bai, bodyRadius(f.kind), f);
+}
 
 function emit(battle: Battle, e: Omit<BattleEvent, 'seq'>): void {
   battle.events.push({ ...e, seq: ++battle.seq });
@@ -1454,14 +1532,18 @@ function stepChase(battle: Battle, f: Fighter, dt: number): void {
     return;
   }
   const d = Math.hypot(foe.x - f.x, foe.z - f.z);
-  if (d <= st.range * geoOf(battle) + 0.3) {
+  const reach = st.range * geoOf(battle) + 0.3;
+  if (d <= reach) {
     f.state = 'fight';
     f.face = Math.atan2(foe.x - f.x, foe.z - f.z);
     if (f.cd <= 0) strike(battle, f, foe);
     return;
   }
   f.state = 'move';
-  moveToward(f, foe.x, foe.z, dt, f.side === 'ta' && battle.rally > 0 ? RALLY.speed : 1, geoOf(battle));
+  const mult = f.side === 'ta' && battle.rally > 0 ? RALLY.speed : 1;
+  const nav = navOf(battle);
+  if (nav) walkField(nav, f, f.side === 'ta' ? 'giac' : 'ta', foe.x, foe.z, reach, dt, mult);
+  else moveToward(f, foe.x, foe.z, dt, mult, geoOf(battle));
 }
 
 // ---------- Lính ta đi trên đất (trận giữ kinh đô) ----------
@@ -2203,11 +2285,15 @@ const BIG: FighterKind[] = [
   'trungNhi',
   'toDinh',
 ];
-const bodyRadius = (k: FighterKind) => (BIG.includes(k) ? 0.45 : 0.27);
+const BIG_SET = new Set<FighterKind>(BIG);
+const bodyRadius = (k: FighterKind) => (BIG_SET.has(k) ? 0.45 : 0.27);
 
 /** Đẩy lính đứng chồng lên nhau ra, và giữ mọi người trong bãi. */
 function separate(battle: Battle): void {
   const live = battle.fighters.filter(isAlive);
+  // Bãi có vật cản: nhớ chỗ trước khi đẩy, để đẩy xong thì trượt dọc vật cản chứ không bị đẩy xuyên qua.
+  const nav = navOf(battle);
+  const before = nav ? live.map((f) => [f.x, f.z] as const) : null;
   for (let i = 0; i < live.length; i++) {
     const a = live[i];
     for (let j = i + 1; j < live.length; j++) {
@@ -2226,10 +2312,11 @@ function separate(battle: Battle): void {
       b.z += nz * push;
     }
   }
-  for (const f of live) {
+  live.forEach((f, i) => {
     f.x = clampField(f.x, FIELD.w);
     f.z = clampField(f.z, FIELD.d);
-  }
+    if (nav) truot(nav.bai, bodyRadius(f.kind), f, before![i][0], before![i][1]);
+  });
 }
 
 /** Chạy trận ngoài bãi thêm `dt` giây. Trả về true khi đã phân thắng bại (xem `outcome`). */
@@ -2237,6 +2324,7 @@ export function stepField(battle: Battle, dt: number): boolean {
   if (battle.outcome) return true;
   advanceClock(battle, dt);
   arriveWaves(battle);
+  navTick(battle);
   for (const f of battle.fighters) {
     if (!isAlive(f)) continue;
     f.cd -= dt;
@@ -2279,8 +2367,14 @@ function stepNuTuong(battle: Battle, dt: number): void {
   let sx = 0;
   let n = 0;
   for (const f of battle.fighters) if (f.side === 'ta' && isAlive(f)) (sx += f.x), n++;
-  const tx = n ? Math.min(FIELD.w - 1, Math.max(1, sx / n)) : nu.x;
-  const tz = nuRestZ(battle);
+  // Bãi có vật cản: chỗ đứng đưa ra chỗ trống, đi thì trượt dọc vật cản (không cần tìm đường, chỉ là người cầm cờ).
+  const nav = navOf(battle);
+  const at = { x: n ? Math.min(FIELD.w - 1, Math.max(1, sx / n)) : nu.x, z: nuRestZ(battle) };
+  if (nav) dayRa(nav.bai, NU_R, at);
+  const tx = at.x;
+  const tz = at.z;
+  const ox = nu.x;
+  const oz = nu.z;
   const dx = tx - nu.x;
   const dz = tz - nu.z;
   const d = Math.hypot(dx, dz);
@@ -2292,7 +2386,10 @@ function stepNuTuong(battle: Battle, dt: number): void {
     nu.x += (dx / d) * step;
     nu.z += (dz / d) * step;
   }
+  if (nav) truot(nav.bai, NU_R, nu, ox, oz);
 }
+/** Thân nữ tướng khi tránh vật cản (như lính thường). */
+const NU_R = 0.27;
 
 /** Màn cầm cự: đã giữ được bao nhiêu phần thời gian (0..1), để vẽ thanh "Vua tới biển". */
 export function holdProgress(battle: Battle): number {
@@ -2312,7 +2409,10 @@ function stepToDinh(battle: Battle, f: Fighter, dt: number): boolean {
   if (f.state !== 'flee' && f.hp > f.maxHp * TO_DINH_FLEE.at) return false;
   f.state = 'flee';
   if (stunned(f, dt)) return true;
-  moveToward(f, f.x, 0, dt, TO_DINH_FLEE.speed, geoOf(battle));
+  // Bãi có vật cản: đường thẳng về cuối bãi vướng thì lần theo bản đồ đường rút.
+  const nav = navOf(battle);
+  if (nav) walkField(nav, f, 'rut', f.x, 0, 0, dt, TO_DINH_FLEE.speed);
+  else moveToward(f, f.x, 0, dt, TO_DINH_FLEE.speed, geoOf(battle));
   if (f.z <= 0.4) {
     f.state = 'gone';
     battle.killed++;
@@ -2374,8 +2474,7 @@ function stepThuyTinh(battle: Battle, f: Fighter, dt: number): void {
         if (along < -0.3 || along > TT_WAVE.length || across > TT_WAVE.width / 2) continue;
         damageFighter(battle, { kind: 'thuyTinh', dmg: TT_WAVE.dmg }, o);
         if (!isAlive(o)) continue;
-        o.x = clampField(o.x + dx * TT_WAVE.push, FIELD.w);
-        o.z = clampField(o.z + dz * TT_WAVE.push, FIELD.d);
+        pushTo(battle, o, clampField(o.x + dx * TT_WAVE.push, FIELD.w), clampField(o.z + dz * TT_WAVE.push, FIELD.d));
         o.slow = TT_WAVE.slowS;
       }
       f.face = Math.atan2(dx, dz);
@@ -2389,6 +2488,7 @@ function stepThuyTinh(battle: Battle, f: Fighter, dt: number): void {
     for (let i = 0; i < TT_SUMMON.count; i++) {
       const a = (i / TT_SUMMON.count) * Math.PI * 2 + spell.summoned;
       const t = newFighter(battle, 'giac', 'tomBinh', clampField(f.x + Math.sin(a) * 1.1, FIELD.w), clampField(f.z + Math.cos(a) * 1.1, FIELD.d), hp);
+      placeFree(battle, t);
       battle.fighters.push(t);
       battle.total += 1;
     }
@@ -2474,8 +2574,13 @@ export function useSkill(battle: Battle, skill: SkillId): boolean {
     }
     const fromX = hero.x;
     const fromZ = hero.z;
-    hero.x = clampField(hero.x + dx * FIRE.length * g * 0.8, battle.mode === 'field' ? FIELD.w : RIVER_START);
-    hero.z = clampField(hero.z + dz * FIRE.length * g * 0.8, battle.mode === 'field' ? FIELD.d : RIVER_START);
+    // Bãi có vật cản: ngựa sắt lao tới mép vật cản thì dừng, dải lửa vẫn cháy đủ dài.
+    pushTo(
+      battle,
+      hero,
+      clampField(hero.x + dx * FIRE.length * g * 0.8, battle.mode === 'field' ? FIELD.w : RIVER_START),
+      clampField(hero.z + dz * FIRE.length * g * 0.8, battle.mode === 'field' ? FIELD.d : RIVER_START),
+    );
     hero.face = Math.atan2(dx, dz);
     emit(battle, { kind: 'fire', x: fromX, z: fromZ, tx: hero.x, tz: hero.z });
   } else if (skill === 'nhoTre') {
@@ -2486,8 +2591,14 @@ export function useSkill(battle: Battle, skill: SkillId): boolean {
       if (d > SMASH.radius * g) continue;
       damageFighter(battle, { kind: 'giong', dmg: SMASH.dmg * scale }, o);
       if (d > 1e-6 && isAlive(o)) {
-        o.x += ((o.x - hero.x) / d) * SMASH.push * g;
-        o.z += ((o.z - hero.z) / d) * SMASH.push * g;
+        const nx = o.x + ((o.x - hero.x) / d) * SMASH.push * g;
+        const nz = o.z + ((o.z - hero.z) / d) * SMASH.push * g;
+        // Bãi phẳng giữ như cũ (bước sau mới kẹp vào bãi); bãi có vật cản thì hất tới mép vật cản.
+        if (navOf(battle)) pushTo(battle, o, clampField(nx, FIELD.w), clampField(nz, FIELD.d));
+        else {
+          o.x = nx;
+          o.z = nz;
+        }
       }
     }
     hero.swing = 0.3;
@@ -2555,16 +2666,20 @@ export function useSkill(battle: Battle, skill: SkillId): boolean {
       damageFighter(battle, { kind: 'trungTrac', dmg: VOI_XUNG.dmg * scale }, o);
       if (!isAlive(o)) continue;
       const side = across >= 0 ? 1 : -1;
-      o.x += dz * side * VOI_XUNG.push * g;
-      o.z -= dx * side * VOI_XUNG.push * g;
+      const nx = o.x + dz * side * VOI_XUNG.push * g;
+      const nz = o.z - dx * side * VOI_XUNG.push * g;
+      if (navOf(battle)) pushTo(battle, o, clampField(nx, FIELD.w), clampField(nz, FIELD.d));
+      else {
+        o.x = nx;
+        o.z = nz;
+      }
       o.stun = Math.max(o.stun ?? 0, VOI_XUNG.stun);
     }
     const fromX = hero.x;
     const fromZ = hero.z;
     const maxX = battle.mode === 'field' ? FIELD.w : RIVER_START;
     const maxZ = battle.mode === 'field' ? FIELD.d : RIVER_START;
-    hero.x = clampField(hero.x + dx * len, maxX);
-    hero.z = clampField(hero.z + dz * len, maxZ);
+    pushTo(battle, hero, clampField(hero.x + dx * len, maxX), clampField(hero.z + dz * len, maxZ));
     hero.face = Math.atan2(dx, dz);
     hero.swing = 0.3;
     emit(battle, { kind: 'charge', x: fromX, z: fromZ, tx: hero.x, tz: hero.z });
@@ -2581,6 +2696,7 @@ export function useSkill(battle: Battle, skill: SkillId): boolean {
       const z = clampField(hero.z + Math.cos(a) * 0.9 * g, maxZ);
       const f = newFighter(battle, 'ta', 'nghiaBinh', x, z, NGHIA_BINH.hp * hpMul);
       f.face = hero.face;
+      placeFree(battle, f);
       battle.fighters.push(f);
     }
     for (const o of battle.fighters) {

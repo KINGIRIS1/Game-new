@@ -191,7 +191,7 @@ export function makeBoat(): THREE.Object3D {
 }
 
 /** Thân thuyền Lạc Việt (không người lái): dùng chung cho thuyền con và thuyền khơi phóng to. */
-function boatHull(): THREE.Group {
+export function boatHull(): THREE.Group {
   const m = new ToonModel();
   const p = m.plain;
 
@@ -588,7 +588,7 @@ function addBambooLeaf(b: ShapeBuilder, x: number, y: number, z: number, yaw: nu
  * - `lite` (bản thấp của tre rừng, xem `treeTemplates`): mỗi thân ba lóng không đốt, không cành con, lá thưa một nửa
  *   mà to hơn cho đủ khối xanh. Rút số ngẫu nhiên y như bản đủ nên các thân đứng đúng chỗ cũ.
  */
-function bambooClump(stalks: number, height: number, seed: number, mound: boolean, lite = false): THREE.Mesh {
+export function bambooClump(stalks: number, height: number, seed: number, mound: boolean, lite = false): THREE.Mesh {
   const b = new ShapeBuilder(false, true);
   const rand = seeded(seed);
   const yBase = mound ? 0.16 : 0;

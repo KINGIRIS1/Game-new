@@ -2852,12 +2852,12 @@ export class World {
     return this.cityCam !== null;
   }
 
-  /** Sang bãi chiến với nền `terrain`, hoặc về lại kinh đô khi `terrain` là null. */
-  showField(terrain: Terrain | null): void {
+  /** Sang bãi chiến với nền `terrain` và bố cục vật cản `bai` (`baiChien.ts`), hoặc về lại kinh đô khi `terrain` là null. */
+  showField(terrain: Terrain | null, bai: string | null = null): void {
     const v = this.view;
     if (terrain) {
       this.field ??= new Battlefield();
-      this.field.setTerrain(terrain);
+      this.field.setTerrain(terrain, bai);
       if (!this.cityCam) this.cityCam = { target: v.target.clone(), zoom: v.zoom, bounds: { ...v.bounds }, facing: v.facing };
       this.panGoal = null;
       // Bãi chiến vẽ cho hướng nhìn mặc định: quân ta ở dưới, giặc ở trên.
