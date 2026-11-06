@@ -4,7 +4,7 @@
 
 import { describe, expect, it } from 'vitest';
 import { skillReady, type HeroSetup, type PvpAttack } from './battle';
-import { DAU_THANH, GUARD_CAP, SKILL_IDS, UNITS, type SkillId } from './defs';
+import { BUILDINGS, DAU_THANH, GUARD_CAP, SKILL_IDS, UNITS, type SkillId } from './defs';
 import { armySpace, type Army } from './doanhTrai';
 import {
   beginPvp,
@@ -28,7 +28,8 @@ import {
 } from './dauThanh';
 import { createInitialState, place, tick } from './game';
 import { HALF_ARMY, HALF_ARMY4, REACTION_S, SAMPLE_ARMY, SAMPLE_ARMY4, SEEDS } from './testkit';
-import { edge, setDien } from './testmap';
+import { RIVER_START } from './map';
+import { DIEN, edge, setDien } from './testmap';
 
 /** Tướng của người đánh thành ở cấp Điện `dien`: Gióng có Nhổ tre ở Điện 5, Sơn Tinh ở Điện 6, An Dương Vương ở Điện 7, Cao Lỗ từ Điện 8. */
 function heroAt(dien: number): HeroSetup[] {
@@ -147,6 +148,33 @@ describe('trận Đấu thành', () => {
     expect(b.stolen).toEqual({ gao: 0, voOc: 0, datDa: 0, sat: 0, go: 0 });
     expect(run.def.resources).toEqual(snap.resources);
     expect(b.t).toBeLessThanOrEqual(DAU_THANH.holdS + 0.1);
+  }, 30000);
+
+  it('bậc lên thành: cung thủ giữ thành lên mặt thành, mỗi người một ô; quân đánh thành không lên', () => {
+    // Kinh đô có vòng thành đất (lũy cấp 2) quanh Điện, dựa vào hai bờ sông, bậc lên thành phía bắc; chỉ giữ bằng cung thủ.
+    const s = capital();
+    const at = DIEN - 4;
+    for (let z = at; z < RIVER_START; z++) expect(place(s, 'luy', at, z).ok).toBe(true);
+    for (let x = at + 1; x < RIVER_START; x++) expect(place(s, 'luy', x, at).ok).toBe(true);
+    for (const b of s.buildings) if (b.type === 'luy') b.level = 2;
+    s.buildings = s.buildings.filter((b) => b.type !== 'doanhTrai');
+    const camp = place(s, 'doanhTrai', DIEN + BUILDINGS.dien.w + 1, DIEN + 2);
+    if (!camp.ok) throw new Error(camp.reason);
+    camp.value.level = 5;
+    s.troops = { giao: 0, cung: 12, voi: 0, no: 0 };
+    expect(place(s, 'bacThanh', DIEN + 4, at + 1).ok).toBe(true);
+    const snap = makeSnapshot(s);
+    expect(validateSnapshot(snap)).toBeNull();
+    const run = beginPvp(snap, attackAt(snap, SAMPLE_ARMY, 3));
+    let most = 0;
+    while (!stepPvp(run, 50)) {
+      const up = run.battle.fighters.filter((f) => f.wall && f.state === 'fight');
+      for (const f of up) expect(f.side).toBe('giac');
+      // Đứng bắn trên mặt thành thì mỗi người một ô (như lính ta khi giữ kinh đô).
+      expect(new Set(up.map((f) => `${Math.floor(f.x)},${Math.floor(f.z)}`)).size).toBe(up.length);
+      most = Math.max(most, up.length);
+    }
+    expect(most).toBeGreaterThanOrEqual(2);
   }, 30000);
 
   it('rút quân: trận xong ngay ở bước sau', () => {

@@ -7,7 +7,7 @@ import * as THREE from 'three';
 import { BUILDINGS, isBridge, type BuildingType } from '../game/defs';
 import { CONG_TRINH, lotModel } from './congTrinh/index';
 import { addSunLights } from './lights';
-import { CITADEL_TOP, SEA_BOAT_SCALE, buildCitadel, buildDikes, buildWalls, makeBoat, makeSailBoat, makeThuyenKhoi, makeTradeBoat, makeUNo } from './models';
+import { CITADEL_TOP, SEA_BOAT_SCALE, buildCitadel, buildDikes, buildWallTops, buildWalls, makeBoat, makeSailBoat, makeThuyenKhoi, makeTradeBoat, makeUNo } from './models';
 import { C } from './palette';
 import { ramp } from './toon';
 
@@ -60,12 +60,24 @@ export function thumbScene(kind: ThumbKind): THREE.Group {
     else if (kind === 'de') g.add(buildDikes(cells.map(([x, z]) => ({ x, y: 0, z, level, damaged: false }))));
     else {
       g.add(buildCitadel(cells.map(([x, z], i) => ({ x, y: 0, z, seed: i * 31 + 5, damaged: false }))));
+      g.add(buildWallTops(cells.map(([x, z]) => ({ tx: x, tz: Math.round(z + 0.5), x, y: 0, z, kind: 'citadel' as const })), () => false));
       if (kind === 'uNo') {
         const u = makeUNo();
         u.position.set(0, CITADEL_TOP, 0);
         g.add(u);
       }
     }
+    return g;
+  }
+  if (kind === 'bacThanh') {
+    // Bậc dựa vào mặt trong một dải thành Cổ Loa, leo từ phía trước lên mặt thành phía sau.
+    g.add(plinth(3, 2));
+    g.add(buildCitadel([-1, 0, 1].map((x, i) => ({ x, y: 0, z: -0.5, seed: i * 31 + 5, damaged: false }))));
+    g.add(buildWallTops([-1, 0, 1].map((x) => ({ tx: x, tz: 0, x, y: 0, z: -0.5, kind: 'citadel' as const })), (tx, tz) => tx === 0 && tz === 1));
+    const b = lotModel(kind, level, { rise: CITADEL_TOP });
+    b.position.set(0, 0, 0.5);
+    b.rotation.y = Math.PI;
+    g.add(b);
     return g;
   }
   if (kind === 'congDe') {

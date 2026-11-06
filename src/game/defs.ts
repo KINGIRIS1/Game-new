@@ -68,7 +68,9 @@ export type BuildingType =
   // Cống đê: đóng thì chặn lũ như kè đá, mở thì đón nước lũ vào bồi phù sa cho ruộng (chương 2).
   | 'congDe'
   // Nhà thợ hồ: mỗi nhà một tốp thợ dựng, nâng công trình (`xay.ts`); nhà lên cấp thì tốp ấy làm nhanh hơn.
-  | 'thoHo';
+  | 'thoHo'
+  // Bậc lên thành: lối cho cung thủ, lính nỏ lên mặt thành đất, thành Cổ Loa mà bắn xuống khi giữ kinh đô.
+  | 'bacThanh';
 
 /**
  * Mốc mở khóa theo cốt truyện: sau kết chương 1, khi vào chương 2, sau kết chương 2, khi vào chương 3, khi Rùa Vàng
@@ -165,6 +167,7 @@ export const BUILD_MENU: BuildingType[] = [
   'denTanVien',
   'thanh',
   'congThanh',
+  'bacThanh',
   'hoKimQuy',
   'denCoLoa',
   'denCuong',
@@ -404,6 +407,22 @@ export const BUILDINGS: Record<BuildingType, BuildingDef> = {
     buildable: true,
     removable: true,
     unlock: 'chuong3',
+  },
+  // Bậc lên thành: một ô sát một đoạn thành đất (lũy cấp 2) hay thành Cổ Loa. Khi giữ kinh đô, cung thủ và lính nỏ
+  // theo bậc lên mặt cả dải thành liền với bậc mà bắn xuống (`stepGuard` ở `battle.ts`).
+  bacThanh: {
+    type: 'bacThanh',
+    w: 1,
+    d: 1,
+    maxLevel: 1,
+    buildCost: { datDa: 150, go: 100 },
+    upgradeCost: [{}, {}],
+    production: [{}],
+    hp: [800],
+    limit: [0, 0, 2, 2, 3, 3, 4, 4, 5, 5],
+    minDien: 3,
+    buildable: true,
+    removable: true,
   },
   // Làng chài: ngư dân đánh cá ven sông. Cá không tích trữ: dân và lính ăn cá trước, thiếu mới ăn gạo (`CA_PER_MIN`).
   langChai: {
@@ -1065,6 +1084,21 @@ export const DEN_CUONG_BOATS = 0.2;
  * Là một phần của đoạn thành: giặc không nhắm ụ, thành bị phá thì ụ hư theo, sửa thành xong phải sửa ụ.
  * `limit` theo cấp Điện (chỉ số 0 là cấp 1).
  */
+/** Đoạn tường có mặt cho lính đứng: thành đất (lũy cấp 2) và thành Cổ Loa. Cổng thành nối liền mặt hai bên. */
+export function isWalkWall(b: { type: BuildingType; level: number }): boolean {
+  return b.type === 'thanh' || (b.type === 'luy' && b.level >= 2);
+}
+
+/**
+ * Lính lên mặt thành theo bậc lên thành (`bacThanh`): những binh chủng tự lên khi giữ kinh đô, chúng bắn xa thêm
+ * `range` ô (trước khi nhân `RAID_SCALE`), giặc có tầm đánh không quá `melee` ô không với tới.
+ */
+export const TREN_THANH = {
+  units: ['cung', 'no'] as UnitType[],
+  range: 1,
+  melee: 2,
+};
+
 export const U_NO = {
   cost: { voOc: 150, datDa: 150, sat: 30 } as Cost,
   limit: [0, 0, 0, 0, 0, 0, 8, 16, 16, 16],
@@ -1193,6 +1227,7 @@ export const FLOOD_TOLERANCE: Partial<Record<BuildingType, number>> = {
   thanh: 99,
   congThanh: 99,
   congDe: 99,
+  bacThanh: 99,
 };
 /** Cống đê đóng cao như kè đá (cấp 2 của đê). */
 export const CONG_DE_RAISE = DIKE_RAISE[1];
@@ -2083,7 +2118,7 @@ export const QUEST_INSERTED_V4 = 11;
  * Công trình mới thêm sau khi đã có người chơi: lần đầu mở được thì Lạc hầu nói một câu gợi ý (một lần, ghi ở
  * `GameState.hinted`). Thêm loại vào đây không phải nâng bản lưu.
  */
-export const NEW_HINTS: BuildingType[] = ['thoHo', 'xuongMoc', 'langChai', 'congThanh', 'hoKimQuy', 'benKhoi', 'congDe'];
+export const NEW_HINTS: BuildingType[] = ['thoHo', 'xuongMoc', 'langChai', 'congThanh', 'hoKimQuy', 'benKhoi', 'congDe', 'bacThanh'];
 
 /**
  * Cá mỗi phút của một làng chài đủ người, theo cấp (chỉ số 0 là cấp 1). Cá không tích trữ: dân và lính ăn cá trước,
