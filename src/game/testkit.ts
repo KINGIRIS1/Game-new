@@ -1,7 +1,8 @@
 // Đánh thử một màn phó bản cho các test cân bằng chương 2, 3, 4 và thử thách, theo cách chơi chuẩn đã chốt với chủ dự án.
 
 import { skillReady, startFieldBattle, stepField, useSkill, type Battle, type HeroSetup } from './battle';
-import { DEFAULT_ROWS, SKILL_IDS, STAGES, TEMPLE_BONUS, UNITS, type EnemyType, type SkillId, type UnitType } from './defs';
+import { baiOf, stageBai } from './baiChien';
+import { DEFAULT_ROWS, SKILL_IDS, STAGES, TEMPLE_BONUS, UNITS, type Chapter, type EnemyType, type SkillId, type Terrain, type UnitType } from './defs';
 import { challengeField, challengeOf } from './thuThach';
 
 export type Army = Record<UnitType, number>;
@@ -27,25 +28,44 @@ export const REACTION_S = 1.5;
 export const SEEDS = [1, 2, 3];
 
 /** Đánh thử màn `stage`. `hero` là một tướng, hay hai tướng cùng ra trận (Hai Bà Trưng ở chương 5). */
-export function fightStage(stage: number, army: Army, hero: HeroSetup | HeroSetup[] | null, play: Play, id = 1, hpScale = STAGES[stage - 1].hpScale): Battle {
+export function fightStage(
+  stage: number,
+  army: Army,
+  hero: HeroSetup | HeroSetup[] | null,
+  play: Play,
+  id = 1,
+  hpScale = STAGES[stage - 1].hpScale,
+  onStep?: (b: Battle) => void,
+): Battle {
   const def = STAGES[stage - 1];
   const bonus = play === 'thuong' ? 0 : TEMPLE_BONUS;
   const [h1 = null, h2 = null] = Array.isArray(hero) ? hero : [hero];
-  const b = startFieldBattle({ id, stage, enemies: def.enemies, waves: def.waves, holdS: def.holdS, hpScale, army, rows: DEFAULT_ROWS, hero: h1, hero2: h2, bonus });
-  return playOut(b, play);
+  const b = startFieldBattle({ id, stage, enemies: def.enemies, waves: def.waves, holdS: def.holdS, hpScale, army, rows: DEFAULT_ROWS, hero: h1, hero2: h2, bonus, bai: stageBai(stage) });
+  return playOut(b, play, onStep);
 }
 
-/** Đánh thử một trận ngoài bãi với quân giặc `foe` (đồn giặc bên kia sông), theo cùng cách chơi như màn phó bản. */
-export function fightField(foe: { enemies: Partial<Record<EnemyType, number>>; hpScale: number }, army: Army, hero: HeroSetup | null, play: Play, id = 1): Battle {
+/**
+ * Đánh thử một trận ngoài bãi với quân giặc `foe` (đồn giặc bên kia sông), theo cùng cách chơi như màn phó bản. Đồn
+ * có nền và chương (`CAMPS`) thì đánh trên bố cục bãi chiến của đồn ấy.
+ */
+export function fightField(
+  foe: { enemies: Partial<Record<EnemyType, number>>; hpScale: number; terrain?: Terrain; chapter?: Chapter },
+  army: Army,
+  hero: HeroSetup | null,
+  play: Play,
+  id = 1,
+): Battle {
   const bonus = play === 'thuong' ? 0 : TEMPLE_BONUS;
-  const b = startFieldBattle({ id, stage: 0, enemies: foe.enemies, hpScale: foe.hpScale, army, rows: DEFAULT_ROWS, hero, bonus });
+  const bai = foe.terrain && foe.chapter ? baiOf(foe.terrain, foe.chapter) : null;
+  const b = startFieldBattle({ id, stage: 0, enemies: foe.enemies, hpScale: foe.hpScale, army, rows: DEFAULT_ROWS, hero, bonus, bai });
   return playOut(b, play);
 }
 
-/** Đánh tới khi xong trận (hay hết giờ), bấm kỹ năng theo cách chơi `play`. */
-function playOut(b: Battle, play: Play): Battle {
+/** Đánh tới khi xong trận (hay hết giờ), bấm kỹ năng theo cách chơi `play`. `onStep` được gọi sau mỗi bước. */
+export function playOut(b: Battle, play: Play, onStep?: (b: Battle) => void): Battle {
   const readySince: Partial<Record<SkillId, number>> = {};
   for (let i = 0; i < 20 * 120 && !stepField(b, 0.05); i++) {
+    onStep?.(b);
     if (play === 'khongBam' || b.t <= 3) continue;
     for (const k of SKILL_IDS) {
       if (!skillReady(b, k)) {
@@ -120,6 +140,7 @@ export function fightChallenge(n: number, play: 'thuong' | 'gioi', id = 1, army 
     hero2,
     bonus: gioi ? TEMPLE_BONUS : 0,
     arms: gioi ? FULL_ARMS : undefined,
+    bai: stageBai(n),
     ...challengeField(n),
   });
   return playOut(b, play);
