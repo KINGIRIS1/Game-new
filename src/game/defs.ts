@@ -1293,18 +1293,20 @@ const HEAVY: EnemyType[] = ['chienXa', 'caSau', 'hoTinh', 'kyBinh', 'linhRiu', '
  * lính bộ (lính giáo Ân, tôm binh, quỷ núi, lính khiên Triệu, lính thủy, lính kích Hán), voi chiến thắng quân bắn xa
  * (cung thủ Ân, cá phun nước, ma trơi, nỏ thủ Triệu, cung thuyền, nỏ thủ Hán).
  * Lính nỏ (chương 4) đứng ngoài vòng khắc chế: đánh mạnh gấp đôi quân nặng và mọi trùm.
+ * Đấu thành (lính ta đánh lính ta): giáo binh khắc voi chiến, cung thủ khắc giáo binh, voi chiến khắc cung thủ và
+ * lính nỏ, lính nỏ khắc voi chiến. Trận khác không có lính ta đánh lính ta nên không đổi gì.
  */
 export const UNITS: Record<UnitType, UnitDef> = {
-  giao: { hp: 60, dmg: 8, range: 0.8, speed: 1.6, cooldown: 1.0, strongVs: HEAVY, cost: { gao: 20, voOc: 8 }, home: 'traiGiao', space: 1, upkeep: 0.6 },
-  cung: { hp: 40, dmg: 7, range: 3.8, speed: 1.5, cooldown: 1.2, strongVs: ['giaoAn', 'tomBinh', 'quyNui', 'linhTrieu', 'linhThuy', 'linhHan'], cost: { gao: 25, voOc: 8, sat: 4 }, home: 'traiCung', space: 1, upkeep: 0.6 },
-  voi: { hp: 200, dmg: 15, range: 0.9, speed: 1.1, cooldown: 1.5, strongVs: ['cungAn', 'caPhun', 'maTroi', 'noTrieu', 'cungThuyen', 'noHan'], cost: { gao: 60, voOc: 20, sat: 12 }, home: 'chuongVoi', space: 3, upkeep: 1.5 },
+  giao: { hp: 60, dmg: 8, range: 0.8, speed: 1.6, cooldown: 1.0, strongVs: [...HEAVY, 'voi'], cost: { gao: 20, voOc: 8 }, home: 'traiGiao', space: 1, upkeep: 0.6 },
+  cung: { hp: 40, dmg: 7, range: 3.8, speed: 1.5, cooldown: 1.2, strongVs: ['giaoAn', 'tomBinh', 'quyNui', 'linhTrieu', 'linhThuy', 'linhHan', 'giao'], cost: { gao: 25, voOc: 8, sat: 4 }, home: 'traiCung', space: 1, upkeep: 0.6 },
+  voi: { hp: 200, dmg: 15, range: 0.9, speed: 1.1, cooldown: 1.5, strongVs: ['cungAn', 'caPhun', 'maTroi', 'noTrieu', 'cungThuyen', 'noHan', 'cung', 'no'], cost: { gao: 60, voOc: 20, sat: 12 }, home: 'chuongVoi', space: 3, upkeep: 1.5 },
   no: {
     hp: 50,
     dmg: 26,
     range: 4.5,
     speed: 1.3,
     cooldown: 2.4,
-    strongVs: [...HEAVY, 'phoTuong', 'daiTuong', 'thuongLuong', 'thuyTinh', 'gaTrang', 'trieuDa', 'tuongThuy', 'toDinh', 'maVien'],
+    strongVs: [...HEAVY, 'phoTuong', 'daiTuong', 'thuongLuong', 'thuyTinh', 'gaTrang', 'trieuDa', 'tuongThuy', 'toDinh', 'maVien', 'voi'],
     cost: { gao: 50, voOc: 15, sat: 10 },
     home: 'traiNo',
     space: 2,
@@ -2001,3 +2003,37 @@ export const CA_PER_MIN = [6, 10, 15, 22, 30, 40, 52, 68, 83, 101];
 
 /** Cá biển mỗi phút của một bến thuyền khơi đủ người, theo cấp. Đỡ gạo ăn như cá làng chài, thừa thì bỏ phí. */
 export const CA_BIEN_PER_MIN = [50, 70, 90];
+
+/**
+ * Đấu thành: đánh kinh đô người chơi khác (bản chụp), cướp của.
+ * - `unlockDien`: mở ở Điện cấp này.
+ * - `holdS`: mỗi trận đánh tối đa chừng này giây.
+ * - `star1`: phá từ phần này số công trình tính điểm thì được sao đầu; phá Điện thêm một sao, phá hết thêm một sao.
+ * - Của cướp: mỗi loại tối đa `maxLoot` × (của đang có − `protect` × sức chứa kho); lấy được bao nhiêu trong mức ấy
+ *   thì tính `khoW` theo số kho bị phá (không có kho thì tính theo phần trăm phá), `dienW` nếu phá Điện, `pctW` theo
+ *   phần trăm phá. Đánh người kém cấp Điện hơn mình thì mỗi cấp chênh lệch giảm một nửa.
+ * - Chiến công: thắng (từ một sao) được `trophyBase` cộng chênh lệch chiến công chia `trophySpread`, kẹp trong
+ *   `trophyMin`–`trophyMax`; người giữ thành mất bấy nhiêu. Không sao thì ngược lại.
+ * - Kinh đô máy: quân giữ thành đủ `GUARD_CAP`, của bằng `botStock` sức chứa kho.
+ * - `hpMul`, `siege` theo cấp Điện kinh đô bị đánh (chỉ số 0 là Điện 1): mọi người trong trận bền hơn `hpMul` lần
+ *   (như ngoài bãi bền hơn `FIELD.hpMul`), đòn quân đánh thành vào công trình mạnh gấp `siege` lần. Tháp, cổng, ụ nỏ
+ *   bắn mạnh dần theo cấp mà lính ta thì không, nên kinh đô cấp càng cao càng cần số lớn. Số đo bằng
+ *   `dauThanh.test.ts`: đủ quân mẫu cùng cấp Điện được 1–2 sao, nửa quân không sao.
+ */
+export const DAU_THANH = {
+  unlockDien: 5,
+  holdS: 180,
+  star1: 0.5,
+  maxLoot: 0.2,
+  protect: 0.25,
+  khoW: 0.5,
+  dienW: 0.3,
+  pctW: 0.2,
+  trophyBase: 25,
+  trophySpread: 20,
+  trophyMin: 10,
+  trophyMax: 40,
+  botStock: 0.6,
+  hpMul: [3, 3, 3, 3, 3, 3, 4, 6, 6, 10],
+  siege: [2, 2, 2, 2, 2, 1, 1, 4, 4, 4],
+};

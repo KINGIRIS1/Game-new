@@ -7,6 +7,9 @@
 // Chương 4: thủy binh Triệu đi thuyền từ sông tới, cập bờ thả lính lên đất rồi đánh như giặc trên bộ;
 // ụ nỏ trên thành Cổ Loa tự bắn. Cao Lỗ bắn nỏ liên châu, ra Lệnh bắn cho lính nỏ. Màn 32 là màn cầm cự: giặc
 // kéo tới nhiều đợt, giữ đủ thời gian thì thắng.
+// Đấu thành (`pvp`): người chơi đánh kinh đô người khác (bản chụp, `dauThanh.ts`). Quân người chơi vẫn là phe `ta`
+// (kỹ năng, Trống trận, Đền, binh khí như mọi trận) nhưng đi như giặc: tìm đường, phá công trình (`stepEnemy`);
+// quân giữ thành là phe `giac` đi như lính giữ kinh đô (`stepGuard`); chòi canh, lầu nỏ, bẫy bắn phe `ta`.
 
 import {
   ADV,
@@ -22,6 +25,7 @@ import {
   CO_LOA_TOWER,
   CONG_THANH,
   CONG_DE_PATH,
+  DAU_THANH,
   LAU_NO,
   ENEMIES,
   ENEMY_ROWS,
@@ -243,7 +247,7 @@ export interface Boat {
 export interface Battle {
   /** Mã riêng của trận, để phần vẽ biết đã sang trận mới. */
   id: number;
-  mode: 'raid' | 'field';
+  mode: 'raid' | 'field' | 'pvp';
   /** Trận giữ kinh đô: đợt giặc thứ mấy. Trận ngoài bãi: màn thứ mấy. */
   wave: number;
   side: RaidSide;
@@ -340,7 +344,16 @@ export interface Battle {
    * Bản lưu cũ không có.
    */
   nuTuong?: { kind: NuTuongId; x: number; z: number };
-  /** Kết cục trận ngoài bãi; trận giữ kinh đô luôn để null. */
+  /**
+   * Đấu thành: phần cộng thêm của người giữ thành (Đền, binh khí, huân công) cho quân giữ thành (phe `giac`). Phần
+   * của người tấn công là `bonus`, `arms`, `huan` như mọi trận.
+   */
+  def?: { bonus: number; arms: Record<UnitType, number>; huan?: Record<HuanBranch, number> };
+  /** Đấu thành: mọi người trong trận bền hơn chừng này lần (như `FIELD.hpMul` ngoài bãi), đòn kỹ năng mạnh lên theo. */
+  hpMul?: number;
+  /** Đấu thành: đòn quân đánh thành vào công trình mạnh gấp chừng này lần (công thành). */
+  siege?: number;
+  /** Kết cục trận ngoài bãi; trận giữ kinh đô luôn để null; Đấu thành chỉ để 'retreat' khi rút quân. */
   outcome: 'win' | 'lose' | 'retreat' | null;
 }
 
@@ -499,8 +512,15 @@ export function huanBonus(battle: Pick<Battle, 'huan'>, kind: FighterKind): numb
  * Hệ số máu và sức đánh của một người bên ta: Đền, phúc lành, binh khí đã rèn, huân công, nữ tướng (`nu`: lính đúng
  * binh chủng của nữ tướng). Nghĩa binh không được cộng.
  */
-const ownMult = (battle: Battle, kind: FighterKind, nu = false) =>
-  kind === 'nghiaBinh' ? 1 : 1 + battle.bonus + armsBonus(battle, kind) + huanBonus(battle, kind) + (nu ? NU_TUONG_BONUS : 0);
+const ownMult = (battle: Battle, kind: FighterKind, nu = false) => multOf(battle, kind, nu);
+
+/** Như `ownMult`, theo phần cộng thêm `mods` (của người tấn công hay người giữ thành trong Đấu thành). */
+const multOf = (mods: Pick<Battle, 'bonus' | 'arms' | 'huan'>, kind: FighterKind, nu = false) =>
+  kind === 'nghiaBinh' ? 1 : 1 + mods.bonus + armsBonus(mods, kind) + huanBonus(mods, kind) + (nu ? NU_TUONG_BONUS : 0);
+
+/** Hệ số máu và sức đánh của `f`: quân ta theo `ownMult`; quân giữ thành trong Đấu thành theo người giữ thành. */
+const sideMult = (battle: Battle, f: Fighter) =>
+  f.side === 'ta' ? ownMult(battle, f.kind, f.nu) : battle.def ? multOf(battle.def, f.kind, f.nu) : 1;
 
 /** Kỹ năng của từng tướng: kỹ năng đầu có ngay, kỹ năng sau mở giữa chương. */
 export function heroSkills(hero: HeroSetup): SkillId[] {
@@ -953,6 +973,123 @@ function newFighter(battle: Battle, side: Side, kind: FighterKind, x: number, z:
   };
 }
 
+// ---------- Đấu thành ----------
+
+/** Phần cộng thêm vào máu và sức đánh của một bên trong Đấu thành: Đền và phúc lành, binh khí, huân công. */
+export interface PvpMods {
+  bonus: number;
+  arms: Record<UnitType, number>;
+  huan?: Record<HuanBranch, number>;
+}
+
+/** Một tốp lính giữ thành ra từ công trình thứ `at` (chỉ số trong `state.buildings` của kinh đô bị đánh). */
+export interface PvpGuard {
+  at: number;
+  kind: UnitType;
+  n: number;
+  /** Được nữ tướng ở doanh trại ấy cộng thêm. */
+  nu?: boolean;
+}
+
+/** Bên giữ thành: lính giữ thành, tướng (không có kỹ năng), Đền Cổ Loa, Hồ Kim Quy. */
+export interface PvpDefense extends PvpMods {
+  /** Mọi người trong trận bền hơn chừng này lần (`Battle.hpMul`), theo cấp Điện kinh đô bị đánh. */
+  hpMul?: number;
+  /** Đòn quân đánh thành vào công trình mạnh gấp chừng này lần (`Battle.siege`), theo cấp Điện kinh đô bị đánh. */
+  siege?: number;
+  guards: PvpGuard[];
+  heroes: HeroSetup[];
+  crossbows: boolean;
+  walls: boolean;
+}
+
+/** Bên đánh thành: quân mang theo, tướng, hướng tràn vào, hạt giống số ngẫu nhiên của trận. */
+export interface PvpAttack extends PvpMods {
+  army: Record<UnitType, number>;
+  heroes: HeroSetup[];
+  side: 'bac' | 'tay';
+  seed: number;
+}
+
+/** Công trình tính điểm phá trong Đấu thành: như công trình giặc nhắm tới (không tính tường, lũy, đê, cổng, bẫy, đường, trang trí, cầu). */
+export const isScored = (b: Pick<Building, 'type'>): boolean => !UNTARGETED.includes(b.type) && !isDecor(b.type) && !isBridge(b.type);
+
+/**
+ * Trận Đấu thành trên kinh đô bị đánh `state` (bản dùng một lần, dựng từ bản chụp). Quân đánh thành (phe `ta`) ra
+ * từ dải bìa rừng phía bắc hay tây như giặc trên bộ, tướng ở giữa dải; lính giữ thành (phe `giac`) ra từ doanh trại
+ * như khi giữ kinh đô; Đền Hát Môn còn thì có nghĩa binh; tướng giữ thành đứng trước Điện.
+ */
+export function startPvp(state: GameState, defense: PvpDefense, attack: PvpAttack): Battle {
+  const battle = newBattle(state.nextBattleId++, 'pvp', 0, attack.side);
+  battle.bonus = attack.bonus;
+  battle.arms = { ...attack.arms };
+  if (attack.huan) battle.huan = { ...attack.huan };
+  battle.def = { bonus: defense.bonus, arms: { ...defense.arms }, ...(defense.huan ? { huan: { ...defense.huan } } : {}) };
+  battle.crossbows = defense.crossbows;
+  if (defense.walls) battle.walls = true;
+  battle.geo = RAID_SCALE;
+  const hpMul = defense.hpMul ?? 1;
+  battle.hpMul = hpMul;
+  battle.siege = defense.siege ?? 1;
+  const rand = rng(attack.seed);
+  const open = openStart(state);
+  const lo = Math.min(open, fromRiver(24));
+  const alongX = attack.side === 'bac';
+  const put = (along: number, depth: number) => (alongX ? { x: along, z: depth } : { x: depth, z: along });
+  for (const kind of UNIT_TYPES) {
+    for (let i = 0; i < attack.army[kind]; i++) {
+      const p = put(lo + rand() * (RIVER_START - lo - 1), spawnDepth(open, rand()));
+      battle.fighters.push(newFighter(battle, 'ta', kind, p.x, p.z, UNITS[kind].hp * hpMul * ownMult(battle, kind)));
+    }
+  }
+  attack.heroes.forEach((hero, i) => {
+    const p = put((lo + RIVER_START - 1) / 2 + (i ? 1.2 : 0), spawnDepth(open, 0.5));
+    addHero(battle, hero, p.x, p.z, hpMul);
+  });
+  const mods = battle.def;
+  const push = (kind: FighterKind, x: number, z: number, hp: number, nu = false) => {
+    const f = newFighter(battle, 'giac', kind, x, z, hp * hpMul);
+    if (nu) f.nu = true;
+    battle.fighters.push(f);
+    battle.total++;
+  };
+  for (const g of defense.guards) {
+    const home = state.buildings[g.at];
+    if (!home) continue;
+    const hd = BUILDINGS[home.type];
+    for (let i = 0; i < g.n; i++) {
+      const x = home.x + hd.w / 2 + (rand() - 0.5) * hd.w;
+      const z = home.z + hd.d / 2 + (rand() - 0.5) * hd.d;
+      push(g.kind, x, z, UNITS[g.kind].hp * multOf(mods, g.kind, !!g.nu), !!g.nu);
+    }
+  }
+  const den = state.buildings.find((b) => b.type === 'denHatMon' && !b.damaged);
+  if (den) {
+    const hd = BUILDINGS.denHatMon;
+    for (let i = 0; i < HAT_MON_NGHIA_BINH; i++) {
+      const a = (i / HAT_MON_NGHIA_BINH) * Math.PI * 2;
+      push('nghiaBinh', den.x + hd.w / 2 + dsin(a) * 0.8, den.z + hd.d + 0.4 + dcos(a) * 0.5, NGHIA_BINH.hp);
+    }
+  }
+  const dien = state.buildings.find((b) => b.type === 'dien');
+  if (dien) {
+    defense.heroes.forEach((hero, i) => {
+      const f = turnLocal(dien.rot, (i ? 1 : -1) * 1.2, BUILDINGS.dien.d / 2 + 0.6);
+      push(hero.kind, dien.x + BUILDINGS.dien.w / 2 + f.x, dien.z + BUILDINGS.dien.d / 2 + f.z, statsOf(hero.kind).hp * multOf(mods, hero.kind));
+    });
+  }
+  return battle;
+}
+
+/**
+ * Trận Đấu thành đã xong chưa: đã rút quân, hết giờ (`DAU_THANH.holdS`), quân đánh thành không còn ai, hay đã phá
+ * hết công trình tính điểm.
+ */
+export function pvpOver(state: GameState, battle: Battle): boolean {
+  if (battle.outcome === 'retreat' || battle.t >= DAU_THANH.holdS || alliesLeft(battle) === 0) return true;
+  return !state.buildings.some((b) => isScored(b) && !b.damaged);
+}
+
 export interface FieldSetup {
   id: number;
   stage: number;
@@ -1370,7 +1507,7 @@ function damageFighter(battle: Battle, attacker: { kind?: FighterKind; dmg: numb
     if (target.hp <= 0 && target.state !== 'gone') {
       target.hp = 0;
       target.state = 'gone';
-      const setup = heroSetups(battle).find((h) => h.kind === target.kind);
+      const setup = target.side === 'ta' ? heroSetups(battle).find((h) => h.kind === target.kind) : undefined;
       if (setup) setup.down = true;
       emit(battle, { kind: 'exhaust', x: target.x, z: target.z });
     }
@@ -1393,7 +1530,7 @@ function damageFighter(battle: Battle, attacker: { kind?: FighterKind; dmg: numb
 function strike(battle: Battle, f: Fighter, foe: Fighter): void {
   const st = statsOf(f.kind);
   if (st.range > 2) emit(battle, { kind: 'shot', x: f.x, z: f.z, tx: foe.x, tz: foe.z, by: f.kind });
-  const mult = f.side === 'ta' ? ownMult(battle, f.kind, f.nu) * (battle.rally > 0 ? RALLY.dmg : 1) : 1;
+  const mult = sideMult(battle, f) * (f.side === 'ta' && battle.rally > 0 ? RALLY.dmg : 1);
   const dmg = st.dmg * mult;
   damageFighter(battle, { kind: f.kind, dmg }, foe);
   if (isHero(f.kind)) {
@@ -1403,8 +1540,8 @@ function strike(battle: Battle, f: Fighter, foe: Fighter): void {
       if (dist(o.x - foe.x, o.z - foe.z) <= HERO_CLEAVE.radius * geoOf(battle)) damageFighter(battle, { dmg: dmg * HERO_CLEAVE.share }, o);
     }
   }
-  // Lệnh bắn: lính nỏ lên dây nhanh hơn.
-  f.cd = f.kind === 'no' ? st.cooldown / fireRate(battle) : st.cooldown;
+  // Lệnh bắn: lính nỏ ta lên dây nhanh hơn.
+  f.cd = f.kind === 'no' && f.side === 'ta' ? st.cooldown / fireRate(battle) : st.cooldown;
   f.swing = 0.3;
 }
 
@@ -1420,7 +1557,7 @@ function damageBuilding(state: GameState, battle: Battle, attacker: Fighter, b: 
   emit(battle, { kind: 'wreck', x: b.x + def.w / 2, z: b.z + def.d / 2 });
   const share = LOOT_FRACTION[b.type];
   // Lâu thuyền bắn từ dưới sông: phá được mà không cướp được của.
-  if (share && attacker.side === 'giac' && !attacker.ship) {
+  if (share && attacker.side === 'giac' && !attacker.ship && battle.mode !== 'pvp') {
     for (const r of RESOURCE_IDS) {
       const take = Math.floor(state.resources[r] * share);
       state.resources[r] -= take;
@@ -1464,6 +1601,10 @@ function stunned(f: Fighter, dt: number): boolean {
 function stepEnemy(state: GameState, battle: Battle, f: Fighter, dt: number): void {
   const st = statsOf(f.kind);
   const reach = st.range * geoOf(battle);
+  // Đấu thành: quân ta đánh thành được Trống trận cho đi nhanh, đánh mạnh; đòn vào công trình cũng tính Đền, binh khí.
+  const ours = f.side === 'ta';
+  const speed = ours && battle.rally > 0 ? RALLY.speed : 1;
+  const hit = ours ? st.dmg * ownMult(battle, f.kind, f.nu) * (battle.rally > 0 ? RALLY.dmg : 1) * (battle.siege ?? 1) : st.dmg;
   if (f.state === 'flee') {
     const out = exitPoint(battle, f);
     moveToward(f, out.x, out.z, dt, 1, geoOf(battle));
@@ -1487,7 +1628,8 @@ function stepEnemy(state: GameState, battle: Battle, f: Fighter, dt: number): vo
     f.path = null;
   }
   if (!target) {
-    f.state = 'flee';
+    // Hết công trình để phá: giặc rút; quân ta đánh thành thì đứng lại (trận Đấu thành tự kết thúc).
+    f.state = ours ? 'move' : 'flee';
     return;
   }
   if (rectDist(f.x, f.z, target) <= reach + 0.1) {
@@ -1496,7 +1638,7 @@ function stepEnemy(state: GameState, battle: Battle, f: Fighter, dt: number): vo
       const def = BUILDINGS[target.type];
       if (st.range > 2) emit(battle, { kind: 'shot', x: f.x, z: f.z, tx: target.x + def.w / 2, tz: target.z + def.d / 2 });
       f.face = Math.atan2(target.x + def.w / 2 - f.x, target.z + def.d / 2 - f.z);
-      damageBuilding(state, battle, f, target, st.dmg);
+      damageBuilding(state, battle, f, target, hit);
       f.cd = st.cooldown;
       f.swing = 0.3;
     }
@@ -1510,7 +1652,7 @@ function stepEnemy(state: GameState, battle: Battle, f: Fighter, dt: number): vo
   }
   if (!f.path || f.pathAt >= f.path.length) {
     f.state = 'move';
-    moveToward(f, target.x + BUILDINGS[target.type].w / 2, target.z + BUILDINGS[target.type].d / 2, dt, 1, geoOf(battle));
+    moveToward(f, target.x + BUILDINGS[target.type].w / 2, target.z + BUILDINGS[target.type].d / 2, dt, speed, geoOf(battle));
     return;
   }
   const next = f.path[f.pathAt];
@@ -1527,7 +1669,7 @@ function stepEnemy(state: GameState, battle: Battle, f: Fighter, dt: number): vo
       f.state = 'fight';
       f.face = Math.atan2(nx + 0.5 - f.x, nz + 0.5 - f.z);
       if (f.cd <= 0) {
-        damageBuilding(state, battle, f, blocker, st.dmg);
+        damageBuilding(state, battle, f, blocker, hit);
         f.cd = st.cooldown;
         f.swing = 0.3;
       }
@@ -1535,7 +1677,7 @@ function stepEnemy(state: GameState, battle: Battle, f: Fighter, dt: number): vo
     }
   }
   f.state = 'move';
-  if (moveToward(f, nx + 0.5, nz + 0.5, dt, 1, geoOf(battle)) && !blocker) f.pathAt++;
+  if (moveToward(f, nx + 0.5, nz + 0.5, dt, speed, geoOf(battle)) && !blocker) f.pathAt++;
 }
 
 /** Xông tới kẻ địch gần nhất rồi đánh: quân hai bên ngoài bãi (trận giữ kinh đô thì lính ta đi theo `stepGuard`). */
@@ -1760,7 +1902,7 @@ function stepGuard(battle: Battle, f: Fighter, dt: number, ctx: GuardCtx): void 
     return;
   }
   f.state = 'move';
-  const mult = battle.rally > 0 ? RALLY.speed : 1;
+  const mult = f.side === 'ta' && battle.rally > 0 ? RALLY.speed : 1;
   const { map } = ctx;
   if (clearLine(map, f.x, f.z, foe.x, foe.z, reach)) {
     f.path = null;
@@ -1783,6 +1925,9 @@ function stepGuard(battle: Battle, f: Fighter, dt: number, ctx: GuardCtx): void 
 }
 
 function stepDefenses(state: GameState, battle: Battle, dt: number): void {
+  // Công trình bắn phe đánh kinh đô: giặc, hay quân ta khi Đấu thành. Lệnh bắn là của tướng ta, không giúp thành người.
+  const foeSide: Side = battle.mode === 'pvp' ? 'ta' : 'giac';
+  const rate = battle.mode === 'pvp' ? 1 : fireRate(battle);
   for (const b of state.buildings) {
     if (b.damaged) continue;
     if (b.type === 'choiCanh') {
@@ -1793,7 +1938,7 @@ function stepDefenses(state: GameState, battle: Battle, dt: number): void {
       let best: Fighter | null = null;
       let bestD = (TOWER.range + (battle.crossbows ? CO_LOA_TOWER.range : 0)) * geoOf(battle);
       for (const o of battle.fighters) {
-        if (o.side !== 'giac' || (o.state !== 'move' && o.state !== 'fight' && o.state !== 'flee')) continue;
+        if (o.side !== foeSide || (o.state !== 'move' && o.state !== 'fight' && o.state !== 'flee')) continue;
         const d = dist(o.x - tower.x, o.z - tower.z);
         if (d < bestD) {
           bestD = d;
@@ -1814,7 +1959,7 @@ function stepDefenses(state: GameState, battle: Battle, dt: number): void {
       const tower = { x: b.x + 0.5, z: b.z + 0.5 };
       const range = (LAU_NO.range + (battle.crossbows ? CO_LOA_TOWER.range : 0)) * geoOf(battle);
       const targets = battle.fighters
-        .filter((o) => o.side === 'giac' && (o.state === 'move' || o.state === 'fight' || o.state === 'flee'))
+        .filter((o) => o.side === foeSide && (o.state === 'move' || o.state === 'fight' || o.state === 'flee'))
         .map((o) => ({ o, d: dist(o.x - tower.x, o.z - tower.z) }))
         .filter((t) => t.d < range)
         .sort((p, q) => p.d - q.d)
@@ -1824,7 +1969,7 @@ function stepDefenses(state: GameState, battle: Battle, dt: number): void {
           emit(battle, { kind: 'shot', x: tower.x, z: tower.z, tx: o.x, tz: o.z });
           damageFighter(battle, { dmg: LAU_NO.dmg[b.level - 1] * (battle.crossbows ? CO_LOA_TOWER.dmg : 1) }, o);
         }
-        battle.towerCd[b.id] = LAU_NO.cooldown / fireRate(battle);
+        battle.towerCd[b.id] = LAU_NO.cooldown / rate;
       }
     }
     if (b.type === 'congThanh') {
@@ -1835,7 +1980,7 @@ function stepDefenses(state: GameState, battle: Battle, dt: number): void {
       const gate = { x: b.x + 0.5, z: b.z + 0.5 };
       const range = (CONG_THANH.range + (battle.crossbows ? CO_LOA_TOWER.range : 0)) * geoOf(battle);
       const targets = battle.fighters
-        .filter((o) => o.side === 'giac' && (o.state === 'move' || o.state === 'fight' || o.state === 'flee'))
+        .filter((o) => o.side === foeSide && (o.state === 'move' || o.state === 'fight' || o.state === 'flee'))
         .map((o) => ({ o, d: dist(o.x - gate.x, o.z - gate.z) }))
         .filter((t) => t.d < range)
         .sort((p, q) => p.d - q.d)
@@ -1857,7 +2002,7 @@ function stepDefenses(state: GameState, battle: Battle, dt: number): void {
       let best: Fighter | null = null;
       let bestD = U_NO.range + (battle.crossbows ? CO_LOA_TOWER.range : 0);
       for (const o of battle.fighters) {
-        if (o.side !== 'giac' || (o.state !== 'move' && o.state !== 'fight' && o.state !== 'flee')) continue;
+        if (o.side !== foeSide || (o.state !== 'move' && o.state !== 'fight' && o.state !== 'flee')) continue;
         const d = dist(o.x - at.x, o.z - at.z);
         if (d < bestD) {
           bestD = d;
@@ -1867,12 +2012,12 @@ function stepDefenses(state: GameState, battle: Battle, dt: number): void {
       if (best) {
         emit(battle, { kind: 'shot', x: at.x, z: at.z, tx: best.x, tz: best.z, by: 'no' });
         damageFighter(battle, { dmg: U_NO.dmg * (battle.crossbows ? CO_LOA_TOWER.dmg : 1) }, best);
-        battle.towerCd[b.id] = U_NO.cooldown / fireRate(battle);
+        battle.towerCd[b.id] = U_NO.cooldown / rate;
       }
     }
     if (b.type === 'bayChong' && !battle.trapsUsed.includes(b.id)) {
       const victims = battle.fighters.filter(
-        (o) => o.side === 'giac' && (o.state === 'move' || o.state === 'fight') && dist(o.x - b.x - 0.5, o.z - b.z - 0.5) < 0.7,
+        (o) => o.side === foeSide && (o.state === 'move' || o.state === 'fight') && dist(o.x - b.x - 0.5, o.z - b.z - 0.5) < 0.7,
       );
       if (victims.length) {
         battle.trapsUsed.push(b.id);
@@ -1927,7 +2072,7 @@ export function stepBattle(state: GameState, battle: Battle, dt: number): boolea
   advanceClock(battle, dt);
   stepFlood(state, battle);
   stepBoats(battle, dt);
-  if (battle.t * 1000 > RAID_MAX_MS) {
+  if (battle.mode !== 'pvp' && battle.t * 1000 > RAID_MAX_MS) {
     // Quá lâu thì giặc rút; quá lâu nữa thì coi như đã rút hết.
     for (const f of battle.fighters) if (f.side === 'giac' && (f.state === 'move' || f.state === 'fight')) f.state = 'flee';
     if (battle.t * 1000 > RAID_MAX_MS + 30_000) for (const f of battle.fighters) if (f.state === 'flee') f.state = 'gone';
@@ -1938,11 +2083,11 @@ export function stepBattle(state: GameState, battle: Battle, dt: number): boolea
     f.cd -= dt;
     f.swing = Math.max(0, f.swing - dt);
     if (f.ship) stepShip(state, battle, f, dt);
-    else if (f.side === 'giac') stepEnemy(state, battle, f, dt);
+    else if (f.side === (battle.mode === 'pvp' ? 'ta' : 'giac')) stepEnemy(state, battle, f, dt);
     else stepGuard(battle, f, dt, (ctx ??= { map: landMap(state, battle), shore: new Map() }));
   }
   stepDefenses(state, battle, dt);
-  return enemiesLeft(battle) === 0;
+  return battle.mode === 'pvp' ? pvpOver(state, battle) : enemiesLeft(battle) === 0;
 }
 
 /** Còn đứng trên bãi: chưa chết, chưa chạy thoát, không còn ngồi trên thuyền. */
@@ -2167,12 +2312,12 @@ function stepThuyTinh(battle: Battle, f: Fighter, dt: number): void {
 
 /** Rút quân khỏi trận ngoài bãi: lính còn sống được giữ lại, không có thưởng. */
 export function retreatField(battle: Battle): void {
-  if (battle.mode === 'field' && !battle.outcome) battle.outcome = 'retreat';
+  if ((battle.mode === 'field' || battle.mode === 'pvp') && !battle.outcome) battle.outcome = 'retreat';
 }
 
 /** Tướng đang đứng trong trận (chưa kiệt sức). */
 export function heroOf(battle: Battle): Fighter | undefined {
-  return battle.fighters.find((f) => isHero(f.kind) && isAlive(f));
+  return battle.fighters.find((f) => f.side === 'ta' && isHero(f.kind) && isAlive(f));
 }
 
 /**
@@ -2200,7 +2345,7 @@ const allSkillsOf = (kind: HeroKind) =>
 
 /** Tướng đang đứng trong trận làm được kỹ năng này (Hai Bà mỗi bà một kỹ năng). */
 export function skillOwner(battle: Battle, skill: SkillId): Fighter | undefined {
-  return battle.fighters.find((f) => isHero(f.kind) && isAlive(f) && allSkillsOf(f.kind).includes(skill));
+  return battle.fighters.find((f) => f.side === 'ta' && isHero(f.kind) && isAlive(f) && allSkillsOf(f.kind).includes(skill));
 }
 
 export function skillReady(battle: Battle, skill: SkillId): boolean {
@@ -2216,7 +2361,7 @@ export function useSkill(battle: Battle, skill: SkillId): boolean {
   const def = SKILLS[skill];
   battle.skillCd[skill] = def.cooldown;
   // Ngoài bãi mọi người bền hơn, nên đòn kỹ năng cũng mạnh lên tương ứng.
-  const scale = (battle.mode === 'field' ? FIELD.hpMul : 1) * (1 + battle.bonus + (battle.huan?.tuong ?? 0) * HUAN_BONUS);
+  const scale = (battle.mode === 'field' ? FIELD.hpMul : (battle.hpMul ?? 1)) * (1 + battle.bonus + (battle.huan?.tuong ?? 0) * HUAN_BONUS);
   const g = geoOf(battle);
   // Tướng làm kỹ năng (Trống trận là của Lạc tướng, không cần tướng đứng trên bãi).
   const hero = skillOwner(battle, skill)!;
@@ -2338,7 +2483,7 @@ export function useSkill(battle: Battle, skill: SkillId): boolean {
     // Hiệu triệu: nghĩa binh chạy ra quanh voi Trưng Nhị (bù cho đủ số người), quân ta quanh voi hồi máu.
     const alive = battle.fighters.filter((f) => f.kind === 'nghiaBinh' && isAlive(f)).length;
     const n = Math.max(0, HIEU_TRIEU.count - alive);
-    const hpMul = battle.mode === 'field' ? FIELD.hpMul : 1;
+    const hpMul = battle.mode === 'field' ? FIELD.hpMul : (battle.hpMul ?? 1);
     const maxX = battle.mode === 'field' ? FIELD.w : RIVER_START;
     const maxZ = battle.mode === 'field' ? FIELD.d : RIVER_START;
     for (let i = 0; i < n; i++) {
