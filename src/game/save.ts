@@ -661,13 +661,13 @@ export function saveFileName(now: Date): string {
   return `thoi-dai-van-lang-${day}-${two(now.getHours())}${two(now.getMinutes())}.txt`;
 }
 
-function toBase64(bytes: Uint8Array): string {
+export function toBase64(bytes: Uint8Array): string {
   let bin = '';
   for (const byte of bytes) bin += String.fromCharCode(byte);
   return btoa(bin);
 }
 
-function fromBase64(text: string): Uint8Array {
+export function fromBase64(text: string): Uint8Array {
   return Uint8Array.from(atob(text), (c) => c.charCodeAt(0));
 }
 

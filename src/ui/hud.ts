@@ -15,6 +15,7 @@ import {
   PHU_SA_BONUS,
   PHU_SA_TYPES,
   DECOR_TYPES,
+  DAU_THANH,
   FIELD,
   RESOURCE_IDS,
   ROAD_TYPES,
@@ -56,6 +57,8 @@ import {
   reserve,
 } from '../game/doanhTrai';
 import { nuPosts, nuTuongList } from '../game/nuTuong';
+import { scorePvp } from '../game/dauThanh';
+import { dauHtml, dauMapHtml, newDauView, pickTarget, stepDauArmy, type DauTarget, type DauView } from './dauThanh';
 import {
   barracksLevel,
   canAfford,
@@ -270,7 +273,11 @@ export type HudAction =
   | { kind: 'wallUpgradeAll'; id: number }
   | { kind: 'openTho' }
   | { kind: 'askQuiz'; id: number }
-  | { kind: 'answerQuiz'; id: number; dung: boolean; pick: number };
+  | { kind: 'answerQuiz'; id: number; dung: boolean; pick: number }
+  /** Đấu thành: đánh thử kinh đô `target` (0 là kinh đô của mình, số khác là kinh đô máy Điện ấy). */
+  | { kind: 'dauThanh'; target: DauTarget; side: 'bac' | 'tay'; army: Record<UnitType, number> }
+  | { kind: 'dauHome' }
+  | { kind: 'dauAgain' };
 
 export type HudMode = 'view' | 'place' | 'move' | 'paint' | 'merge';
 /** Kéo thả đắp tường: dải thẳng hay viền chữ nhật. */
@@ -329,9 +336,18 @@ function syncSkill(btn: HTMLButtonElement, b: Battle, k: SkillId): void {
 interface CampaignView {
   chapter: MapChapter;
   stage: number | null;
-  /** Thẻ màn, bảng xếp quân (màn thường hay thử thách, theo `pick.challenge`), bảng Huân công. */
-  step: 'stage' | 'army' | 'huan';
+  /** Thẻ màn, bảng xếp quân (màn thường hay thử thách, theo `pick.challenge`), bảng Huân công, bảng Đấu thành. */
+  step: 'stage' | 'army' | 'huan' | 'dau';
   pick: ArmyPick;
+  /** Bảng Đấu thành (giữ lại lựa chọn khi chuyển qua lại các bảng). */
+  dau?: DauView;
+}
+
+/** Trận Đấu thành đang đánh (trận không nằm trong state): kinh đô bị đánh, tên để ghi trên thanh trận. */
+export interface HudPvp {
+  battle: Battle;
+  def: GameState;
+  name: string;
 }
 
 function prodHtml(prod: Cost): string {
@@ -386,6 +402,8 @@ export class Hud {
   /** Đoạn truyện đang kể và thẻ đang xem. */
   private story: { id: StoryId; step: number; replay?: boolean } | null = null;
   private skillKey = '';
+  /** Trận Đấu thành đang đánh, để thanh trận và nút kỹ năng dùng thay cho trận phó bản. */
+  private pvp: HudPvp | null = null;
 
   constructor(
     root: HTMLElement,
@@ -595,6 +613,12 @@ export class Hud {
       case 'armyRow':
       case 'armyHero':
       case 'armyNu':
+      case 'openDau':
+      case 'dauTarget':
+      case 'dauSide':
+      case 'dauNext':
+      case 'dauBack':
+      case 'dauDelta':
         // Đang chọn quân đánh đồn trong bảng Đất bên kia sông.
         if (this.donPick && this.sheet?.kind === 'benKia' && act !== 'backToStage') return this.donPickStep(act, el);
         return this.campaignStep(act, id, el);
@@ -605,6 +629,11 @@ export class Hud {
       }
       case 'buyHuan':
         return this.onAction({ kind: 'buyHuan', branch: el.dataset.branch as HuanBranch });
+      case 'dauAttack': {
+        const dau = this.camp?.dau;
+        if (!dau) return;
+        return this.onAction({ kind: 'dauThanh', target: dau.target, side: dau.side, army: { ...dau.army } });
+      }
       case 'openFile': {
         const input = this.sheetEl.querySelector<HTMLInputElement>('#save-file');
         if (!input) return;
@@ -1882,8 +1911,30 @@ export class Hud {
       if (stageHeroCheck(state, camp.stage, hero, camp.pick.challenge).ok) camp.pick.hero = hero;
     } else if (act === 'armyNu') {
       pickNu(state, camp.pick, el.dataset.nu);
+    } else if (act === 'openDau') {
+      camp.step = camp.step === 'dau' ? 'stage' : 'dau';
+      camp.dau ??= newDauView(state);
+    } else if (camp.dau && act === 'dauTarget') {
+      Object.assign(camp.dau, pickTarget(state, id));
+    } else if (camp.dau && act === 'dauSide') {
+      camp.dau.side = el.dataset.side === 'tay' ? 'tay' : 'bac';
+    } else if (camp.dau && act === 'dauNext') {
+      camp.dau.step = 'army';
+    } else if (camp.dau && act === 'dauBack') {
+      camp.dau.step = 'target';
+    } else if (camp.dau && act === 'dauDelta') {
+      stepDauArmy(state, camp.dau, unit, Number(el.dataset.delta));
     }
     this.refreshCampaign(state);
+  }
+
+  /** Mở thẳng bảng Đấu thành (nút Đánh lại sau trận), ở bước chọn kinh đô hay bước chọn quân. */
+  showDau(state: GameState, step: DauView['step'] = 'target'): void {
+    this.showCampaign(state);
+    const camp = this.camp!;
+    camp.step = 'dau';
+    camp.dau = { ...newDauView(state), step };
+    this.refreshCampaign(state, true);
   }
 
   refreshCampaign(state: GameState, force = false): void {
@@ -1892,7 +1943,10 @@ export class Hud {
     for (const k of UNIT_TYPES) camp.pick.army[k] = Math.min(camp.pick.army[k], state.troops[k]);
     const hint = [vi.ui.campaignHint, vi.ui.campaignHint, vi.ui.campaignHint2, vi.ui.campaignHint3, vi.ui.campaignHint4, vi.ui.campaignHint5][camp.chapter];
     let panel = `<p class="muted">${hint}</p>`;
-    if (camp.step === 'huan') panel = huanHtml(state);
+    if (camp.step === 'dau' && camp.dau) {
+      for (const k of UNIT_TYPES) camp.dau.army[k] = Math.min(camp.dau.army[k], state.troops[k]);
+      panel = dauHtml(state, camp.dau);
+    } else if (camp.step === 'huan') panel = huanHtml(state);
     else if (camp.stage) panel = camp.step === 'army' ? armyHtml(state, camp.pick, camp.stage, camp.pick.challenge) : stageHtml(state, camp.stage);
     const now = mapChapterNow(state);
     const tabs =
@@ -1907,9 +1961,13 @@ export class Hud {
     const huan = state.campaign.cleared > 0
       ? `<button class="huan-chip ${camp.step === 'huan' ? 'on' : ''}" data-act="openHuan" aria-label="${vi.ui.huanTitle}">${vi.ui.huanChip(state.thuThach.huan)}</button>`
       : '';
-    const html = `<div class="camp-head"><h2>⚔️ ${title}</h2>${tabs}${huan}
+    // Chip Đấu thành: đánh thử kinh đô người khác (bảng ghi lý do khi chưa đánh được).
+    const dau = `<button class="huan-chip dau-chip ${camp.step === 'dau' ? 'on' : ''}" data-act="openDau" aria-label="${vi.dauThanh.title}">${vi.dauThanh.chip}</button>`;
+    const map = camp.step === 'dau' && camp.dau ? dauMapHtml(camp.dau) : mapHtml(state, camp.stage, camp.chapter);
+    const head = camp.step === 'dau' ? `🏯 ${vi.dauThanh.title}` : `⚔️ ${title}`;
+    const html = `<div class="camp-head"><h2>${head}</h2>${camp.step === 'dau' ? '' : tabs}${huan}${dau}
         <button class="close" data-act="closeCampaign" aria-label="${vi.ui.close}">✕</button></div>
-      <div class="camp-main"><div class="camp-map">${mapHtml(state, camp.stage, camp.chapter)}</div><div class="camp-panel">${panel}</div></div>`;
+      <div class="camp-main"><div class="camp-map">${map}</div><div class="camp-panel">${panel}</div></div>`;
     if (html !== this.campHtml || force) {
       this.campHtml = html;
       this.campaignEl.innerHTML = html;
@@ -1918,20 +1976,28 @@ export class Hud {
 
   /** Thanh trên và nút dưới khi đang đánh ngoài bãi. Nút kỹ năng chỉ đổi chữ tại chỗ để không nuốt lần chạm. */
   updateField(state: GameState): void {
-    const b = state.campaign.battle;
+    const b = this.pvp?.battle ?? state.campaign.battle;
     this.root.classList.toggle('in-field', !!b);
     if (!b) return;
+    if (this.pvp) {
+      // Đấu thành: tên kinh đô bị đánh; phần trăm phá, sao, giây còn lại.
+      const score = scorePvp(this.pvp.def);
+      this.fieldTop.querySelector('b')!.textContent = vi.dauThanh.banner(this.pvp.name);
+      this.fieldTop.querySelector('span')!.textContent = vi.dauThanh.status(Math.floor(score.pct * 100), score.stars, Math.max(0, Math.ceil(DAU_THANH.holdS - b.t)));
+      this.fieldTop.querySelector<HTMLElement>('.hold-bar')!.hidden = true;
+    }
     const hold = b.holdS !== undefined;
     const secs = Math.max(0, Math.ceil((hold ? b.holdS! : FIELD.maxS) - b.t));
     const tag = b.challenge ? ` · 🎖 ${vi.ui.challengeKinds[b.challenge].name}` : '';
     const don = b.camp !== undefined ? campTier(b.camp) : null;
-    this.fieldTop.querySelector('b')!.textContent = don ? `${vi.benKia.don[don].icon} ${vi.benKia.don[don].name}` : `${vi.ui.stageN(b.wave)} · ${vi.stages[b.wave - 1].name}${tag}`;
+    if (!this.pvp) this.fieldTop.querySelector('b')!.textContent = don ? `${vi.benKia.don[don].icon} ${vi.benKia.don[don].name}` : `${vi.ui.stageN(b.wave)} · ${vi.stages[b.wave - 1].name}${tag}`;
     // Màn 40 giữ cửa rừng Cấm Khê cho dân rút về núi; màn 32 cầm chân giặc cho vua tới biển.
     const camKhe = hold && b.camp === undefined && b.wave === CH5_LAST;
     const holdText = camKhe ? vi.ui.holdBannerCamKhe : vi.ui.holdBanner;
-    this.fieldTop.querySelector('span')!.textContent = hold
-      ? `${holdText(enemiesLeft(b), alliesLeft(b), secs)} · ${vi.ui.holdWave(wavesArrived(b), b.waveCount ?? 1)}`
-      : vi.ui.fieldBanner(enemiesLeft(b), alliesLeft(b), secs);
+    if (!this.pvp)
+      this.fieldTop.querySelector('span')!.textContent = hold
+        ? `${holdText(enemiesLeft(b), alliesLeft(b), secs)} · ${vi.ui.holdWave(wavesArrived(b), b.waveCount ?? 1)}`
+        : vi.ui.fieldBanner(enemiesLeft(b), alliesLeft(b), secs);
     // Màn cầm cự: thanh "Vua tới biển" có ngựa vua, thanh "Dân rút về núi" có trâu dắt theo, chạy theo thanh.
     const bar = this.fieldTop.querySelector<HTMLElement>('.hold-bar')!;
     bar.hidden = !hold;
@@ -1975,6 +2041,24 @@ export class Hud {
       btn.classList.toggle('active', (k === 'trongTran' && b.rally > 0) || (k === 'ruaVang' && b.shield > 0) || (k === 'lenhBan' && (b.lenh ?? 0) > 0));
     }
     this.fieldBar.querySelector<HTMLButtonElement>('[data-act="retreat"]')!.disabled = !!b.outcome;
+  }
+
+  /** Đang đánh Đấu thành (hay đã xong, null): thanh trận dùng trận này. */
+  setPvp(pvp: HudPvp | null): void {
+    this.pvp = pvp;
+    this.updateField(this.getState());
+  }
+
+  showDauResult(html: string): void {
+    this.closeDauResult();
+    const back = document.createElement('div');
+    back.className = 'modal-back stage dau';
+    back.innerHTML = html;
+    this.root.appendChild(back);
+  }
+
+  closeDauResult(): void {
+    this.root.querySelector('.modal-back.dau')?.remove();
   }
 
   // ---------- Truyện ----------
