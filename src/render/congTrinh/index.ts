@@ -21,6 +21,7 @@ import { LO_REN } from './loRen';
 import { NHA_SAN } from './nhaSan';
 import { RUONG } from './ruong';
 import { TRAI_CUNG } from './traiCung';
+import { THO_HO } from './thoHo';
 import { TRAI_GIAO } from './traiGiao';
 import { VUON } from './vuon';
 import { XUONG_MOC } from './xuongMoc';
@@ -45,6 +46,7 @@ export const CONG_TRINH: Partial<Record<BuildingType, CongTrinh>> = {
   hoKimQuy: HO_KIM_QUY,
   benKhoi: BEN_KHOI,
   denHatMon: DEN_HAT_MON,
+  thoHo: THO_HO,
 };
 
 /**

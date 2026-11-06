@@ -9,14 +9,17 @@ import { assignCommander, autoGuard, setGuard } from './game/doanhTrai';
 import { assignNu, markNuHinted, nextNuHint } from './game/nuTuong';
 import { forgeNoThan, inChapter3, wallRings } from './game/coLoa';
 import { offer } from './game/tet';
-import { applyMau } from './game/mau';
+import { startMau } from './game/mau';
+import { advanceXay, askQuiz, canStartBuild, cancelJob, conLai, startBuild, startUpgrade, startWallUpgrade, startWalls, thoRanh, thoRanhSau, traLoi, viecOf, xayMs, type CongViec } from './game/xay';
+import { CAU_DO_IDS } from './text/cauDo';
+import { jobDoneText } from './ui/xay';
 import { inChapter4, mergeTowers } from './game/chuong4';
 import { feedGiong, forgeGear } from './game/giong';
 import { inChapter2, offerGift } from './game/son';
 import { buyHuan } from './game/thuThach';
 import { markStory, pendingStory } from './game/story';
 import { footprintTop } from './game/terrain';
-import { BUILDINGS, RESOURCE_IDS, STAGES, UNIT_TYPES, U_NO, isBridge, isDecor, isRoad, type BuildingType, type Cost, type NuTuongId, type ResourceId, type Row, type SkillId, type UnitType } from './game/defs';
+import { BUILDINGS, QUIZ_TURNS, RESOURCE_IDS, STAGES, UNIT_TYPES, U_NO, isBridge, isDecor, isRoad, type BuildingType, type Cost, type NuTuongId, type ResourceId, type Row, type SkillId, type UnitType } from './game/defs';
 import { CAMPS, benKiaOpen, bridgeSnap, campHero, campTier, canStartCamp, joinVillage, plotAt, poiAt, sendScout, setGarrison, startCamp } from './game/benKia';
 import type { QuanDaoId } from './game/bien';
 import { fmt } from './ui/format';
@@ -32,7 +35,8 @@ import {
   nextHint,
   buildingAt,
   canMove,
-  canPlace,
+  occupant,
+  pendingAt,
   canRotateType,
   placeLine,
   planLine,
@@ -62,7 +66,6 @@ import {
   setWorkers,
   train,
   tick,
-  upgrade,
   type FailReason,
   type GameState,
   type StageResult,
@@ -74,7 +77,7 @@ import { fromCode, loadFromStorage, saveFileName, saveToStorage, toCode } from '
 import { chapterOf, tomTat } from './game/manVao';
 import { TitleDrift } from './render/camera';
 import { HALF, RESOLUTIONS, World, type Resolution } from './render/world';
-import { vi } from './text/vi';
+import { formatClock, formatXay, vi } from './text/vi';
 import { Hud, buildingName, type HudAction, type WallShape } from './ui/hud';
 import { khoNanTk, luuSau, moKhoNan } from './render/nanKho';
 import { KHO_PHIEN_BAN, moSanWorker, nanTruoc, prewarmJobs } from './render/nanTruoc';
@@ -246,6 +249,28 @@ async function start(): Promise<void> {
     commit();
   };
 
+  /** Việc xây đang làm lần xét trước (theo id), để báo khi một việc xong hết. */
+  let jobsSeen = new Map<number, CongViec>();
+  let lastXaySeq = state.xay.seq;
+  /**
+   * Thợ xong phần việc nào (`xay.seq` đổi): vẽ lại cảnh, báo việc đã xong hết. `quiet`: sau lúc vắng thì không báo
+   * từng việc (bảng báo lúc vắng đã ghi số việc xong).
+   */
+  const watchXay = (quiet = false) => {
+    const now = new Map(viecOf(state).map((v) => [v.id, v]));
+    if (state.xay.seq !== lastXaySeq) {
+      lastXaySeq = state.xay.seq;
+      const done = [...jobsSeen.values()].filter((v) => !now.has(v.id));
+      if (!quiet && done.length) {
+        play('upgrade');
+        for (const v of done) hud.toast(jobDoneText(state, v));
+      }
+      commit();
+      if (!quiet) for (const v of done) for (const p of v.o) world.pop(p.id);
+    }
+    jobsSeen = now;
+  };
+
   /** Gọi sau mọi thao tác: lưu, vẽ lại cảnh và giao diện. */
   const commit = () => {
     showHint();
@@ -267,8 +292,8 @@ async function start(): Promise<void> {
       .map((r) => `${vi.resources[r].icon} +${cost[r]}`)
       .join('  ');
 
-  const showOfflineIfLong = (ms: number, gained: ReturnType<typeof applyOffline>['gained']) => {
-    if (ms >= OFFLINE_NOTICE_MS && RESOURCE_IDS.some((r) => gained[r] >= 1)) hud.showOffline(ms, gained);
+  const showOfflineIfLong = (ms: number, gained: ReturnType<typeof applyOffline>['gained'], built = 0) => {
+    if (ms >= OFFLINE_NOTICE_MS && (built > 0 || RESOURCE_IDS.some((r) => gained[r] >= 1))) hud.showOffline(ms, gained, built);
   };
 
   // ---------- Chế độ đặt công trình ----------
@@ -289,7 +314,7 @@ async function start(): Promise<void> {
       ? { ok: true as const }
       : mode.moving !== undefined
         ? canMove(state, mode.moving, mode.x, mode.z)
-        : canPlace(state, mode.type, mode.x, mode.z);
+        : canStartBuild(state, mode.type, mode.x, mode.z);
     world.setGhost(mode.type, mode.x, mode.z, check.ok, footprintTop(state, mode.type, mode.x, mode.z), mode.rot);
     hud.setPlaceValid(check.ok, check.ok ? undefined : vi.reasons[check.reason]);
   };
@@ -326,7 +351,8 @@ async function start(): Promise<void> {
   };
 
   const select = (id: number | null) => {
-    const b = id === null ? undefined : findBuilding(state, id);
+    // Công trình đang dựng mới (chưa vào kinh đô) cũng chọn được: bảng của nó chỉ có việc xây.
+    const b = id === null ? undefined : occupant(state, id);
     mode = { kind: 'view', selected: b ? b.id : null };
     world.setSelection(b ?? null);
     world.setChunkSelection(null);
@@ -417,14 +443,23 @@ async function start(): Promise<void> {
         commit();
         return;
       }
+      // Tường chạm từng ô: mỗi ô một việc cho một tốp thợ. Đường, đồ trang trí xong ngay.
+      if (xayMs(mode.type as BuildingType, 1) > 0) {
+        const w = startWalls(state, mode.type as BuildingType, [tile]);
+        if (!w.job) return fail(w.reason ?? 'datBiChiem');
+        play('place');
+        hud.setHint(vi.ui.wallStarted(w.n, formatClock(conLai(state, w.job)), !!thoRanh(state)));
+        commit();
+        return;
+      }
       const r = place(state, mode.type, tile.x, tile.z);
       if (!r.ok) return fail(r.reason);
       play('place');
-      if (mode.type === 'thanh') hud.setHint(wallHint(mode.type));
       commit();
       return;
     }
-    const id = world.pickBuildingId(cx, cy) ?? (tile ? buildingAt(state, tile.x, tile.z)?.id : undefined) ?? null;
+    const id =
+      world.pickBuildingId(cx, cy) ?? (tile ? (buildingAt(state, tile.x, tile.z) ?? pendingAt(state, tile.x, tile.z))?.id : undefined) ?? null;
     if (mode.kind === 'merge') {
       if (id === null) return;
       const r = mergeTowers(state, mode.from, id);
@@ -499,8 +534,17 @@ async function start(): Promise<void> {
     drag = { from, tiles };
     // Cộng dồn giá và số tối đa theo thứ tự: hết của hay đủ giới hạn giữa dải thì phần sau tô đỏ.
     const plan = planLine(state, type, tiles);
+    const ms = xayMs(type, 1);
+    // Tường phải có tốp thợ rảnh: hết tốp thì cả dải tô đỏ, dòng gợi ý báo lúc có tốp rảnh.
+    const tho = ms > 0 ? thoRanh(state) : undefined;
+    if (ms > 0 && !tho) {
+      world.setLinePreview(plan.cells.map((c) => ({ ...c, ok: false })));
+      hud.setHint(vi.ui.hetThoSau(formatClock(thoRanhSau(state))));
+      return;
+    }
     world.setLinePreview(plan.cells);
-    hud.setHint(isWall(type) ? vi.ui.wallDrag(vi.ui.wallVerb[type] ?? '', plan.n, costText(plan.cost)) : vi.ui.roadDrag(plan.n, costText(plan.cost)));
+    const time = tho ? ` · ${vi.ui.xayTime(formatXay((plan.n * ms) / tho.toc))}` : '';
+    hud.setHint(isWall(type) ? vi.ui.wallDrag(vi.ui.wallVerb[type] ?? '', plan.n, costText(plan.cost)) + (plan.n ? time : '') : vi.ui.roadDrag(plan.n, costText(plan.cost)));
   };
 
   world.view.onDraw = (phase, fx, fy, tx, ty) => {
@@ -526,14 +570,22 @@ async function start(): Promise<void> {
       hud.setHint(idleHint);
       return;
     }
-    const r = placeLine(state, type, done.tiles);
-    if (!r.placed.length) {
+    // Tường: cả dải thành một việc cho một tốp thợ, đắp lần lượt theo thứ tự kéo. Đường trải xong ngay.
+    const timed = xayMs(type, 1) > 0;
+    const w = timed ? startWalls(state, type, done.tiles) : null;
+    const r = w ? { n: w.n, reason: w.reason } : (() => {
+      const p = placeLine(state, type, done.tiles);
+      return { n: p.placed.length, reason: p.reason };
+    })();
+    if (!r.n) {
       hud.setHint(idleHint);
       if (r.reason) fail(r.reason);
       return;
     }
     play('place');
-    hud.setHint(isWall(type) ? vi.ui.wallBuilt(r.placed.length, wallExtra(type)) : vi.ui.roadPaved(r.placed.length));
+    hud.setHint(
+      w?.job ? vi.ui.wallStarted(r.n, formatClock(conLai(state, w.job)), !!thoRanh(state)) : isWall(type) ? vi.ui.wallBuilt(r.n, wallExtra(type)) : vi.ui.roadPaved(r.n),
+    );
     // Có ô hỏng (hết của, đủ giới hạn, vướng công trình) thì báo lý do của ô hỏng đầu.
     if (r.reason) hud.toast(vi.reasons[r.reason], true);
     commit();
@@ -605,6 +657,19 @@ async function start(): Promise<void> {
           exitMode();
           commit();
           world.pop(m.value.id);
+          return;
+        }
+        if (xayMs(mode.type, 1) > 0) {
+          // Giao một tốp thợ dựng: công trình vào kinh đô khi xong.
+          const s = startBuild(state, mode.type, mode.x, mode.z, mode.rot);
+          if (!s.ok) return fail(s.reason);
+          lastRot[mode.type] = mode.rot;
+          play('place');
+          const name = buildingName({ type: mode.type, level: 1 });
+          const left = formatClock(s.value ? conLai(state, s.value) : 0);
+          hud.toast(s.value?.o[0].doi ? vi.ui.doiStarted(name, left) : vi.ui.xayStarted(name, left));
+          exitMode();
+          commit();
           return;
         }
         const r = place(state, mode.type, mode.x, mode.z, mode.rot);
@@ -705,13 +770,15 @@ async function start(): Promise<void> {
           return;
         }
         hud.mauArmed = null;
-        const r = applyMau(state, a.mau);
+        // Dời ngay; phần dựng thêm giao cả cho một tốp thợ, làm lần lượt.
+        const r = startMau(state, a.mau);
         if (!r.ok) {
           hud.refreshSheet(state);
           return fail(r.reason);
         }
         play('upgrade');
-        hud.toast(vi.ui.mauDone(vi.ui.mau[a.mau].name));
+        const job = r.value.builds.length ? viecOf(state).at(-1) : undefined;
+        hud.toast(job ? vi.ui.mauStarted(vi.ui.mau[a.mau].name, job.o.length, formatClock(conLai(state, job))) : vi.ui.mauDone(vi.ui.mau[a.mau].name));
         commit();
         return;
       }
@@ -883,8 +950,17 @@ async function start(): Promise<void> {
         return;
 
       case 'upgrade': {
-        const r = upgrade(state, a.id);
-        if (!r.ok) return fail(r.reason);
+        const s = startUpgrade(state, a.id);
+        if (!s.ok) return fail(s.reason);
+        if (s.value) {
+          // Giao một tốp thợ nâng: công trình làm ở cấp cũ tới khi xong.
+          const b = findBuilding(state, a.id)!;
+          play('place');
+          hud.toast(vi.ui.nangStarted(buildingName(b), b.level + 1, formatClock(conLai(state, s.value))));
+          commit();
+          return;
+        }
+        const r = { ok: true as const, value: findBuilding(state, a.id)! };
         play('upgrade');
         hud.toast(
           r.value.type === 'dien'
@@ -898,6 +974,66 @@ async function start(): Promise<void> {
         world.setSelection(r.value);
         return;
       }
+
+      case 'wallUpgradeAll': {
+        const s = startWallUpgrade(state, a.id);
+        if (!s.ok) return fail(s.reason);
+        play('place');
+        hud.toast(vi.ui.wallUpStarted(s.value.o.length, formatClock(conLai(state, s.value))));
+        commit();
+        return;
+      }
+
+      case 'cancelJob': {
+        const r = cancelJob(state, a.id);
+        if (!r.ok) return fail(r.reason);
+        jobsSeen.delete(a.id);
+        play('tap');
+        hud.toast(vi.ui.jobCancelled(costText(r.value)));
+        commit();
+        return;
+      }
+
+      case 'askQuiz': {
+        // Lạc hầu đố sử: hỏi câu đang dở, hay bốc câu mới (ghi vào việc ngay để mở lại vẫn là câu ấy).
+        const r = askQuiz(state, a.id, CAU_DO_IDS);
+        if (!r.ok) {
+          hud.closeQuiz();
+          return fail(r.reason);
+        }
+        play('tap');
+        const v = viecOf(state).find((j) => j.id === a.id)!;
+        commit();
+        hud.showQuiz(a.id, r.value, v.hoi);
+        return;
+      }
+
+      case 'answerQuiz': {
+        const v = viecOf(state).find((j) => j.id === a.id);
+        if (!v || v.cau === undefined) {
+          hud.closeQuiz();
+          hud.toast(vi.ui.quizGone, true);
+          return;
+        }
+        const cau = v.cau;
+        const hoi = v.hoi;
+        const r = traLoi(state, a.id, a.dung);
+        if (!r.ok) return fail(r.reason);
+        play(a.dung ? 'claim' : 'error');
+        // Đúng cả ba thì việc xong ngay, không còn trong danh sách.
+        const still = viecOf(state).find((j) => j.id === a.id);
+        const left = still ? conLai(state, still) : 0;
+        commit();
+        hud.showQuiz(a.id, cau, hoi, { pick: a.pick, dung: a.dung, left, turns: still ? QUIZ_TURNS - still.hoi : 0 });
+        return;
+      }
+
+      case 'openTho':
+        if (mode.kind !== 'view') exitMode();
+        select(null);
+        play('tap');
+        hud.showTho(state);
+        return;
 
       case 'toggleCong': {
         const b = findBuilding(state, a.id);
@@ -1291,7 +1427,8 @@ async function start(): Promise<void> {
     showRelaid();
     showHint();
     commit();
-    showOfflineIfLong(offline.ms, offline.gained);
+    watchXay(true);
+    showOfflineIfLong(offline.ms, offline.gained, offline.built);
     if (state.raid.lastResult) hud.showRaidResult(state, state.raid.lastResult);
     preloadThumbs();
   };
@@ -1401,8 +1538,9 @@ async function start(): Promise<void> {
     const gap = wall - state.lastSeen;
     if (gap > GAP_AS_OFFLINE_MS) {
       const off = applyOffline(state, wall);
-      showOfflineIfLong(off.ms, off.gained);
+      showOfflineIfLong(off.ms, off.gained, off.built);
       commit();
+      watchXay(true);
     } else {
       tick(state, gap);
       state.lastSeen = wall;
@@ -1422,6 +1560,7 @@ async function start(): Promise<void> {
     watchCampaign();
     world.updateField(state.campaign.battle, dt);
     world.update(dt);
+    hud.xayLabels.update(state, (x, z, lift) => (world.inField ? null : world.screenAt(x, z, lift)));
     watchRaid();
     if (now - lastUi > 250) {
       lastUi = now;
@@ -1440,6 +1579,7 @@ async function start(): Promise<void> {
         lastKnown = state.benKia.known.length;
         world.sync(state);
       }
+      watchXay();
       refreshUi();
       watchStory();
       prewarm();
@@ -1475,6 +1615,11 @@ async function start(): Promise<void> {
     },
     advance: (ms: number) => {
       tick(state, ms);
+      commit();
+    },
+    /** Cho mọi tốp thợ xong hết việc đang làm (chụp thử cảnh đã xây xong). */
+    xongHet: () => {
+      advanceXay(state, 1e13);
       commit();
     },
     place: (type: BuildingType, x: number, z: number, rot = 0) => {

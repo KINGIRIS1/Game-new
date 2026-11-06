@@ -468,7 +468,7 @@ c c c c , ,
 - `G` cấp 3, cối đá, chày gỗ giã bánh giầy.
 - Ngày Tết thêm người ngồi gói bánh trên chiếu, nay nằm trong móng.
 
-## Công trình mới (chủ dự án đã duyệt, đã vẽ xưởng mộc, làng chài)
+## Công trình mới (chủ dự án đã duyệt, đã vẽ xưởng mộc, làng chài, nhà thợ hồ)
 
 Bản vẽ đi kèm mục **Kế hoạch: cổng thành, xưởng mộc, làng chài** trong `docs/thiet-ke.md`. Cổng thành móng 1×1 nên không có ở đây. Cách đọc như trên; hai công trình này chưa có dáng cũ nên không có chữ **mới**.
 
@@ -562,6 +562,31 @@ D D , , M T
 - Năm người làm: ngư dân vá lưới trước giàn `L`, người gánh cá đi dọc cầu tàu, người giữ kho trước `K`, ngư dân ở đầu cầu ván, người nhặt ốc bên `O`.
 - Đã vẽ (`src/render/congTrinh/benKhoi.ts`).
 
+### Nhà thợ hồ: 3×3
+
+Đi kèm mục **Thời gian xây, tốp thợ** trong `docs/thiet-ke.md`: mỗi nhà một tốp thợ. Lán thợ góc sau bên trái, chồng gạch mộc và đống đất sét phía sau; sân đóng gạch giữa bên phải, hố nhào đất bên trái; phía trước là đoạn tường đất nện trong khuôn ván, cọc dây căng mốc và lò nung ngói; lối giữa mặt trước.
+
+```
+L L L G G D
+L L L G G D
+S S , N N N
+S S , N N N
+K K , , C C
+K K , , T T
+```
+
+- `L` cấp 1, lán thợ mái theo cấp, vách phên treo vồ nện, bay, thước tre; bàn kê tấm ván vẽ mốc nhà và gạch mẫu (cấp 6: cột hiên quấn đai đồng; cấp 10: chim Lạc trên đầu hai cột trước).
+- `G` cấp 1, chồng gạch mộc xếp so le, tấm ván che trên; cao thêm một lớp mỗi cấp tới sáu lớp (cấp 9: hai lớp trên là gạch nung đỏ).
+- `D` cấp 1, đống đất sét, thuổng cắm, sọt đất.
+- `N` cấp 1, sân đóng gạch: khuôn gỗ hai ngăn, cục đất nhào, hàng gạch mộc phơi trên sân, thêm một hàng mỗi cấp tới năm hàng.
+- `C` cấp 1, cọc tre buộc vải đỏ căng dây mốc góc vuông, giá ba chân treo quả dọi.
+- `,` cấp 1, lối đất vào sân.
+- `S` cấp 2, hố nhào đất: bờ đất vuông, lòng đất sét lẫn nước và rơm, chum nước.
+- `K` cấp 3, đầm nện: đoạn tường đất nện dựng dở giữa hai tấm ván khuôn kẹp cọc, chày nện, sọt đất; tường cao thêm theo cấp tới cấp 8.
+- `T` cấp 5, lò nung ngói vòm đất, miệng lò đỏ lửa, ống khói, chồng ngói nung, củi.
+- Người làm: thợ đóng gạch ở sân, thợ cả dưới lán; cấp 2 thêm người giẫm đất trong hố nhào, cấp 3 thêm thợ nện tường.
+- Đã vẽ (`src/render/congTrinh/thoHo.ts`).
+
 ## Hồ Kim Quy: 8×8 (chủ dự án yêu cầu, đã vẽ)
 
 Bản vẽ đi kèm mục **Hồ Kim Quy** trong `docs/thiet-ke.md`. Một cấp, chưa có dáng cũ. Móng 8×8 vẽ thành 16×16 ký tự. Mặt trước (cổng, cầu) quay về +z; cây cao đứng góc sau.
@@ -636,5 +661,6 @@ Móng đã kín ở cấp 8, nên cấp 9, 10 không thêm ô con mới: mỗi l
 | Kho thóc | `V`, `6` | `V`: vựa chính mái hai tầng | `6`: cót thành vựa gỗ có mái; dải sân giữa lát gạch |
 | Xưởng mộc | `T`, `S` | `T`: thuyền lớn có mui cói, mái chèo hai bên | `S`: lán thứ hai thành nhà sàn chạm, chim Lạc đầu cột |
 | Làng chài | `V` | giàn vó lớn: cần dài, lưới rộng, cột chống đôi, đá đối trọng | thêm thuyền đánh cá có buồm cói ngoài xa |
+| Nhà thợ hồ | `G`, `L` | `G`: hai lớp trên chồng gạch là gạch nung đỏ | `L`: chim Lạc trên đầu hai cột trước lán |
 
 Chòi canh (móng 1×1, không có bản vẽ): cấp 9 ụ đá ốp bốn góc chân lầu; cấp 10 tầng giữa có mái hiên và hai nỏ lớn nữa.

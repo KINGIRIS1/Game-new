@@ -283,6 +283,11 @@ export const vi = {
       icon: '⛵',
       desc: 'Đóng thuyền đánh cá lớn có buồm, xuôi sông ra biển Đông đánh cá quanh quần đảo Hoàng Sa, Trường Sa. Thuyền về mang cá biển cho dân và lính ăn thay gạo, cùng vỏ ốc biển làm tiền. Phải dựng sát bờ sông. Cần người làm.',
     },
+    thoHo: {
+      name: 'Nhà thợ hồ',
+      icon: '🔨',
+      desc: 'Lán của một tốp thợ hồ: đóng gạch, nện đất, dựng giàn tre. Mỗi nhà thêm một tốp thợ để dựng, nâng công trình cùng lúc; nhà lên cấp thì tốp ấy làm nhanh hơn.',
+    },
   } satisfies Record<BuildingType, { name: string; icon: string; desc: string }>,
 
   reasons: {
@@ -382,6 +387,9 @@ export const vi = {
     chuaVeTay: 'Đất làng chưa về tay ta: dẹp đồn giặc giữ vùng này trước',
     phaiBenKia: 'Đồn biên chỉ dựng trọn ở một bờ bên kia sông',
     khongXoayDuoc: 'Công trình này không xoay được',
+    hetTho: 'Các tốp thợ đều bận',
+    dangXay: 'Công trình đang có thợ làm',
+    daHoiDu: 'Việc này đã hỏi đủ câu đố',
   } satisfies Record<FailReason, string>,
 
   quests: {
@@ -1183,6 +1191,61 @@ export const vi = {
     decorOnly: 'Chỉ để nhìn: giặc không nhắm phá, đi qua được; lũ không làm hư.',
     placed: (name: string) => `Đã dựng ${name}`,
     upgraded: (name: string, n: number) => `${name} lên cấp ${n}`,
+    /** Thời gian xây: giao việc cho tốp thợ, xong thì báo. */
+    xayStarted: (name: string, time: string) => `Thợ bắt đầu dựng ${name} · xong sau ${time}`,
+    nangStarted: (name: string, n: number, time: string) => `Thợ bắt đầu nâng ${name} lên cấp ${n} · xong sau ${time}`,
+    doiStarted: (name: string, time: string) => `Thợ bắt đầu đắp ${name} · xong sau ${time}`,
+    wallStarted: (n: number, time: string, more: boolean) =>
+      `Thợ bắt đầu đắp ${n} ô · xong sau ${time}. ${more ? 'Kéo tiếp để đắp thêm' : 'Các tốp thợ đều bận, chờ xong rồi đắp tiếp'}`,
+    wallUpStarted: (n: number, time: string) => `Thợ bắt đầu nâng ${n} đoạn · xong sau ${time}`,
+    mauStarted: (name: string, n: number, time: string) => `Đã xếp kinh đô theo mẫu ${name}. Thợ dựng thêm ${n} phần · xong sau ${time}`,
+    xayDone: (name: string) => `🔨 Đã dựng xong ${name}`,
+    nangDone: (name: string, n: number) => `🔨 ${name} đã lên cấp ${n}`,
+    wallDone: (n: number, name: string) => `🔨 Đã đắp xong ${n} ô ${name}`,
+    mauXong: '🔨 Thợ đã dựng xong phần còn lại của mẫu kinh đô',
+    hetThoSau: (time: string) => `Các tốp thợ đều bận, xong sớm nhất sau ${time}`,
+    xayTime: (time: string) => `⏱\u00a0${time}`,
+    levelShort: (n: number) => `cấp ${n}`,
+    jobWalls: (n: number, name: string) => `${n} ô ${name}`,
+    jobMany: (n: number) => `Mẫu kinh đô: ${n} phần`,
+    /** Bảng công trình đang có thợ làm. */
+    xayDung: 'Đang dựng',
+    xayNang: (n: number) => `Đang nâng lên cấp ${n}`,
+    xayDoi: (name: string) => `Đang đắp ${name} thay đoạn này, đoạn cũ còn đứng tới khi xong`,
+    xayPending: 'Thợ đang dựng: chưa làm ra gì, chưa cho chỗ ở, chỗ chứa. Giặc, lũ chưa đụng tới.',
+    xayLeft: 'Còn',
+    xayParts: (done: number, all: number) => `${done}/${all} phần đã xong`,
+    xayThoLabel: 'Tốp thợ',
+    thoDien: 'Tốp thợ của Điện',
+    thoNha: (n: number) => `Tốp nhà thợ hồ cấp ${n}`,
+    thoSpeed: (k: number) => `nhanh ×${k.toLocaleString('vi-VN', { maximumFractionDigits: 2 })}`,
+    cancelJob: '✕ Hủy xây',
+    cancelJobArm: '✕ Bấm lần nữa để hủy, hoàn của phần chưa xong',
+    jobCancelled: (cost: string) => (cost ? `Đã hủy việc xây, hoàn ${cost}` : 'Đã hủy việc xây'),
+    wallUpgradeAll: (label: string, n: number) => `${label} cả đoạn liền (${n} ô)`,
+    /** Ô tốp thợ dưới dải tài nguyên và bảng Thợ hồ. */
+    thoChipTitle: 'Tốp thợ rảnh trên tổng số tốp. Chạm để xem các việc đang xây',
+    thoTitle: 'Thợ hồ',
+    thoCount: (free: number, all: number) => `Tốp thợ rảnh: ${free}/${all}`,
+    thoNone: 'Chưa có việc xây nào. Mở Xây dựng để giao việc cho thợ.',
+    thoIdle: 'Đang rảnh',
+    thoMore: 'Dựng thêm nhà thợ hồ để có thêm tốp thợ; nhà lên cấp thì tốp ấy làm nhanh hơn.',
+    thoGo: 'Xem',
+    /** Dòng tin: việc xây sắp xong nhất. */
+    tickerXay: (name: string, time: string) => `🔨 ${name} xong sau ${time}`,
+    offlineBuilt: (n: number) => `Thợ đã xây xong ${n} phần việc.`,
+    /** Đố sử: mỗi việc xây ba lượt hỏi, câu đúng bớt một phần ba thời gian. */
+    quizBtn: (left: number) => `📜 Đố sử · còn ${left}/3`,
+    quizPending: '📜 Trả lời câu đố',
+    quizTitle: '📜 Lạc hầu đố sử',
+    quizIntro: 'Trả lời đúng thì thợ xong sớm một phần ba thời gian của việc này.',
+    quizTurn: (n: number, ky: string) => `Câu ${n}/3 · ${ky}`,
+    quizRight: (time: string) => `Đúng rồi! Thợ xong sớm một phần ba: còn ${time}`,
+    quizDone: 'Đúng rồi! Thợ đã xây xong.',
+    quizWrong: 'Chưa đúng, mất lượt này.',
+    quizNext: (left: number) => `📜 Câu tiếp · ${left}/3`,
+    quizClose: 'Đóng',
+    quizGone: 'Việc xây này đã xong hay đã hủy',
     /** Tên cầu theo cấp, ghép với tên sông. */
     bridgeName: (level: number, song: string) => `${['Cầu phao tre', 'Cầu gỗ', 'Cầu gỗ lớn'][Math.min(Math.max(level, 1), 3) - 1]} ${song}`,
     songDa: 'sông Đà',
@@ -1217,6 +1280,8 @@ export const vi = {
         '📜 Lạc hầu: Tâu bệ hạ, thành Cổ Loa nên có cổng. Giặc thấy cổng dễ qua sẽ dồn cả về đó: xin dựng cổng giữa vòng tường, bày chòi canh, bẫy chông quanh cổng mà đón đánh.',
       congDe:
         '📜 Lạc hầu: Tâu bệ hạ, nước lũ tuy dữ nhưng chở phù sa. Xin dựng cống trên đê: mùa lũ mở cống cho nước vào ruộng thì lúa tốt tới mùa sau. Có điều nước không chừa nhà cửa, chỗ nước vào chỉ nên có ruộng.',
+      thoHo:
+        '📜 Lạc hầu: Tâu bệ hạ, dựng nhà, nâng nhà đều phải chờ thợ làm. Điện có sẵn một tốp thợ; xin dựng nhà thợ hồ để có thêm tốp, nhiều việc làm cùng lúc. Việc lâu thì bệ hạ hỏi thần mấy câu sử nước nhà, đáp đúng thì thợ hăng hái làm mau.',
       hoKimQuy:
         '📜 Lạc hầu: Tâu bệ hạ, thần Kim Quy đã hiện lên. Xin đào hồ lớn cho thần trú ngụ: hồ còn thì thần giữ cho lũy, thành, cổng thành chắc thêm ba phần.',
     } as Partial<Record<BuildingType, string>>,
@@ -1658,6 +1723,30 @@ export const vi = {
     tetEndedLost: 'Hết Tết mà chưa dâng bánh: phúc lành đã hết.',
   },
 };
+
+/** Đếm ngược: 0:15, 12:34, 1:05:20 (làm tròn lên giây). */
+export function formatClock(ms: number): string {
+  const s = Math.max(0, Math.ceil(ms / 1000 - 1e-6));
+  const h = Math.floor(s / 3600);
+  const m = Math.floor((s % 3600) / 60);
+  const two = (n: number) => String(n).padStart(2, '0');
+  return h ? `${h}:${two(m)}:${two(s % 60)}` : `${m}:${two(s % 60)}`;
+}
+
+/** Thời gian xây ghi gọn: 1,5 giây, 15 giây, 4 phút, 2 phút 30 giây, 1 giờ 20 phút. */
+export function formatXay(ms: number): string {
+  const s = ms / 1000;
+  // Số và đơn vị không tách dòng.
+  if (s < 10) return `${s.toLocaleString('vi-VN', { maximumFractionDigits: 1 })}\u00a0giây`;
+  if (s < 60) return `${Math.round(s)}\u00a0giây`;
+  const all = Math.round(s);
+  if (all < 3600) {
+    const m = Math.floor(all / 60);
+    const x = all % 60;
+    return x ? `${m}\u00a0phút ${x}\u00a0giây` : `${m}\u00a0phút`;
+  }
+  return formatDuration(Math.round(ms / 60000) * 60000);
+}
 
 export function formatDuration(ms: number): string {
   const totalMin = Math.floor(ms / 60000);
