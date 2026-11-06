@@ -2556,10 +2556,35 @@ Chủ dự án yêu cầu lập phương án PvP giữa các người chơi: **c
 6. **PR 5: nối mạng**: tham gia, tải bản chụp, tìm đối thủ, đánh, nhận của, bảng Bị đánh, trừ của khi mở game, trận đánh dở. Kiểm trận ra cùng kết quả trên WebKit (họ nhà Safari) và Node.
 7. **PR 6: thêm sau**: người giữ thành xem lại trận bị đánh, bảng xếp hạng, gắn Google và lưu game lên mây để chuyển máy.
 
-**Chủ dự án cần tự làm trước PR 4**:
-1. Tạo dự án Supabase (vùng Singapore).
-2. Bật đăng nhập ẩn danh và cho gắn tài khoản; bật đăng nhập Google (tạo OAuth client ở Google Cloud, thêm `https://kingiris1.github.io/Game-new/` vào Site URL và danh sách chuyển hướng).
-3. Thêm vào GitHub hai biến (công khai được nhờ RLS): địa chỉ dự án và khóa anon; ba bí mật: access token, mã dự án, mật khẩu cơ sở dữ liệu.
+**Chủ dự án cần tự làm trước PR 4** (phiên Claude không tạo hộ được: cần tài khoản riêng, và khóa bí mật chỉ chủ dự án giữ; khóa bí mật không dán vào khung chat):
+1. **Tạo dự án**: vào supabase.com, đăng nhập bằng GitHub, New project:
+   - tên `thoi-dai-van-lang`, Region Southeast Asia (Singapore), gói Free;
+   - Generate password rồi cất mật khẩu cơ sở dữ liệu;
+   - tùy chọn bảo mật (Data API) giữ mặc định.
+2. **Đăng nhập ẩn danh**: Authentication → Sign In / Providers, bật Allow anonymous sign-ins và Allow manual linking (để sau gắn Google), Save.
+3. **Địa chỉ trang game**: Authentication → URL Configuration:
+   - Site URL `https://kingiris1.github.io/Game-new/`;
+   - Redirect URLs thêm `https://kingiris1.github.io/Game-new/**` và `http://localhost:5173/**`.
+4. **Hai thứ công khai được** (lộ ra cũng không sao nhờ RLS):
+   - Project URL `https://<mã dự án>.supabase.co`; mã dự án là đoạn sau `/project/` trên thanh địa chỉ, hay Project Settings → General → Project ID;
+   - khóa publishable (Project Settings → API Keys, bắt đầu bằng `sb_publishable_`). Dự án chỉ có khóa `anon` (tab Legacy) thì dùng khóa ấy, như nhau.
+   - Không dùng khóa secret hay `service_role` ở máy khách.
+5. **Access token** (bí mật): ảnh đại diện → Account → Access Tokens → Generate new token (tên `github-deploy`). Token chỉ hiện một lần.
+6. **Cất vào GitHub**: repo → Settings → Secrets and variables → Actions:
+   - Variables: `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY`;
+   - Secrets: `SUPABASE_ACCESS_TOKEN`, `SUPABASE_PROJECT_REF` (mã dự án), `SUPABASE_DB_PASSWORD`.
+
+Không cần làm tay: pg_cron (dọn dữ liệu quá 30 ngày) do migration của PR 4 tự bật (lỡ không bật được thì Integrations → Cron → Enable); giữ máy chủ thức do workflow của PR 4 lo. Phiên Claude chưa vào được Supabase nên PR 4 triển khai qua GitHub Actions bằng các khóa trên; muốn Claude kiểm thẳng server thì cho môi trường của repo này vào `<mã dự án>.supabase.co` và `api.supabase.com`.
+
+**Chủ dự án cần tự làm trước PR 6** (gắn Google):
+1. Google Cloud Console → tạo dự án → Google Auth Platform:
+   - Branding: tên app, email;
+   - Audience: External, rồi Publish app;
+   - chỉ xin quyền email, profile nên Google không bắt duyệt app.
+2. Clients → Create client, loại Web application:
+   - Authorized JavaScript origins `https://kingiris1.github.io`, `http://localhost:5173`;
+   - Authorized redirect URIs `https://<mã dự án>.supabase.co/auth/v1/callback` (trang Google của Supabase có sẵn dòng Callback URL để chép).
+3. Chép Client ID, Client secret vào Supabase → Authentication → Sign In / Providers → Google → Enable → Save.
 
 ## Nhịp chơi và lưu game
 
