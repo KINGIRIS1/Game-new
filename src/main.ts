@@ -1468,7 +1468,7 @@ async function start(): Promise<void> {
       select(null);
       hud.closeCampaign();
       const don = battle.camp !== undefined ? campTier(battle.camp) : null;
-      world.showField(don ? CAMPS[don].terrain : STAGES[battle.wave - 1].terrain);
+      world.showField(don ? CAMPS[don].terrain : STAGES[battle.wave - 1].terrain, battle.bai ?? null);
     } else if (!battle && world.inField) {
       world.showField(null);
       hud.closeStageResult();

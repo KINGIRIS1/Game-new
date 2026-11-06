@@ -197,3 +197,88 @@ describe('bãi chiến chương 5', () => {
     expect(bf.focus()).toBeNull();
   }, 30000);
 });
+
+describe('vật cản giữa bãi', () => {
+  it('mỗi bố cục: mặt bãi phẳng; mảng đất khớp vật cản, nước bùn khớp vùng chậm; mô hình không lấn dải dàn quân; dáng nào cũng có hình', async () => {
+    const { FIELD } = await import('../game/defs');
+    const { BAI, chamAt, sdHinh, sdfCan } = await import('../game/baiChien');
+    const { Battlefield } = await import('./battlefield');
+    const { coVe } = await import('./vatCan');
+    const ids = Object.keys(BAI);
+    expect(ids.length).toBeGreaterThanOrEqual(6);
+    for (const id of ids) {
+      const bai = BAI[id];
+      for (const c of bai.can) expect(coVe(c), `${id}: dáng ${c.ve}`).toBe(true);
+      const bf = new Battlefield();
+      bf.setTerrain(bai.terrain, id);
+      expectFlatField(bf, FIELD.w, FIELD.d);
+      const decor = bf.scene.getObjectByName('decor')!;
+      const group = decor.getObjectByName('vatCan')!;
+      expect(group, id).toBeDefined();
+      bf.scene.updateMatrixWorld(true);
+      const decals = group.children.filter((o): o is THREE.Mesh => o instanceof THREE.Mesh && !!o.userData.vatCan);
+      const ray = new THREE.Raycaster();
+      const down = new THREE.Vector3(0, -1, 0);
+      const hit = (x: number, z: number) => {
+        ray.set(decor.localToWorld(new THREE.Vector3(x, 1, z)), down);
+        return ray.intersectObjects(decals, false).length > 0;
+      };
+      // Cách vật cản, vùng chậm xa thì là mặt bãi; trong vật cản, trong vùng chậm thì có mảng đè lên.
+      const nearSlow = (x: number, z: number) => Math.min(...bai.cham.map((v) => sdHinh(v.hinh, x, z)), Infinity);
+      for (let x = 0.25; x < FIELD.w; x += 0.5) {
+        for (let z = 6.25; z < 15.5; z += 0.5) {
+          const s = sdfCan(bai, x, z);
+          const w = nearSlow(x, z);
+          if (s > 0.6 && w > 0.45) expect(hit(x, z), `${id}: mặt bãi trống ở (${x}, ${z})`).toBe(false);
+          if (s < -0.1) expect(hit(x, z), `${id}: mảng đất dưới vật cản ở (${x}, ${z})`).toBe(true);
+          if (w < -0.1) expect(chamAt(bai, x, z) < 1 && hit(x, z), `${id}: nước, bùn ở (${x}, ${z})`).toBe(true);
+        }
+      }
+      // Mô hình vật cản (kể cả nhà, thuyền dựng riêng) nằm trong dải giữa, không lấn chỗ dàn quân.
+      const toField = new THREE.Matrix4().copy(decor.matrixWorld).invert();
+      const m = new THREE.Matrix4();
+      const v = new THREE.Vector3();
+      group.traverse((o) => {
+        if (!(o instanceof THREE.Mesh) || o.userData.vatCan || o instanceof THREE.InstancedMesh) return;
+        m.multiplyMatrices(toField, o.matrixWorld);
+        const pos = o.geometry.attributes.position;
+        let z0 = Infinity;
+        let z1 = -Infinity;
+        for (let i = 0; i < pos.count; i++) {
+          v.fromBufferAttribute(pos, i).applyMatrix4(m);
+          z0 = Math.min(z0, v.z);
+          z1 = Math.max(z1, v.z);
+        }
+        expect(z0, `${id}: mô hình lấn dải giặc`).toBeGreaterThan(6.4);
+        expect(z1, `${id}: mô hình lấn dải quân ta`).toBeLessThan(15);
+      });
+    }
+  }, 60000);
+
+  it('chỉ đổi bố cục cũng dựng lại cảnh; bãi phẳng không có vật cản; lính lội nước, bùn thì chân chìm', async () => {
+    const { BAI } = await import('../game/baiChien');
+    const { Battlefield } = await import('./battlefield');
+    const { loiAt } = await import('./vatCan');
+    const bf = new Battlefield();
+    bf.setTerrain('benSong');
+    const flat = bf.scene.getObjectByName('decor')!;
+    expect(flat.getObjectByName('vatCan')).toBeUndefined();
+    bf.setTerrain('benSong', 'benSong');
+    const laid = bf.scene.getObjectByName('decor')!;
+    expect(laid).not.toBe(flat);
+    expect(laid.getObjectByName('vatCan')).toBeDefined();
+    bf.setTerrain('benSong', 'benSong');
+    expect(bf.scene.getObjectByName('decor')).toBe(laid);
+    bf.setTerrain('benSong', 'khongCo');
+    expect(bf.scene.getObjectByName('decor')!.getObjectByName('vatCan')).toBeUndefined();
+    // Lạch nước bến sông: giữa lạch chìm 0,12 ô; bãi bùn bên kia sông: 0,05 ô; ngoài vùng chậm thì đứng trên mặt bãi.
+    const nuoc = BAI.benSong.cham[0].hinh;
+    if (nuoc.k !== 'doan') throw new Error('lạch nước là một đoạn');
+    expect(loiAt(BAI.benSong, (nuoc.ax + nuoc.bx) / 2, (nuoc.az + nuoc.bz) / 2)).toBeCloseTo(-0.12);
+    const bun = BAI.benKia.cham[0].hinh;
+    if (bun.k !== 'tron') throw new Error('bãi bùn là một hình tròn');
+    expect(loiAt(BAI.benKia, bun.x, bun.z)).toBeCloseTo(-0.05);
+    expect(loiAt(BAI.benKia, 4.5, 18)).toBe(0);
+    expect(loiAt(undefined, bun.x, bun.z)).toBe(0);
+  });
+});
