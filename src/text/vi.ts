@@ -1143,11 +1143,26 @@ export const vi = {
     gateShot: (dmg: number, n: number) => `🏹 ${dmg} · ${n} giặc mỗi phát`,
     placeHint: 'Chạm vào ô đất để chọn chỗ, rồi bấm Đặt',
     placeTurnHint: 'Chạm vào ô đất để chọn chỗ, bấm ↻ để xoay, rồi bấm Đặt',
-    wallHint: 'Chạm vào từng ô đất để dựng lũy',
+    wallHint: 'Kéo một ngón để dựng lũy cả dải thẳng, hay chạm từng ô. Hai ngón để kéo cảnh',
     roadHint: 'Kéo một ngón để trải cả dải thẳng, hay chạm từng ô. Hai ngón để kéo cảnh. Trải lên đường loại khác thì đổi vật liệu',
     /** Đang kéo thả trải đường: số ô sẽ trải và giá. */
     roadDrag: (n: number, cost: string) => (n ? `Thả tay để trải ${n} ô · ${cost}` : 'Dải này không trải được ô nào'),
     roadPaved: (n: number) => `Đã trải ${n} ô đường. Kéo tiếp để trải thêm`,
+    /** Đắp tường kéo thả: việc làm với từng loại (lũy, bẫy, đê, thành Cổ Loa). */
+    wallVerb: { luy: 'dựng lũy', bayChong: 'gài bẫy', de: 'đắp đê', thanh: 'đắp thành' } as Record<string, string>,
+    /** Dòng gợi ý khi đắp tường: kéo dải thẳng hay khung chữ nhật, hay chạm từng ô. `extra` ghi thêm theo loại. */
+    wallDragHint: (verb: string, shape: 'line' | 'rect', extra = '') =>
+      (shape === 'rect'
+        ? `Kéo một ngón từ góc tới góc để ${verb} cả vòng chữ nhật, hay chạm từng ô. Hai ngón để kéo cảnh`
+        : `Kéo một ngón để ${verb} cả dải thẳng, hay chạm từng ô. Hai ngón để kéo cảnh`) + (extra ? `. ${extra}` : ''),
+    /** Đang kéo thả đắp tường: số ô sẽ đắp và giá. */
+    wallDrag: (verb: string, n: number, cost: string) => (n ? `Thả tay để ${verb} ${n} ô · ${cost}` : 'Chỗ này không đắp được ô nào'),
+    wallBuilt: (n: number, extra = '') => `Đã đắp ${n} ô. Kéo tiếp để đắp thêm` + (extra ? `. ${extra}` : ''),
+    /** Nút đổi cách kéo đắp tường (nhãn ghi cách đang dùng). */
+    wallShape: { line: '─ Dải', rect: '▭ Khung' },
+    wallShapeTitle: 'Đổi cách kéo: dải thẳng hay khung chữ nhật',
+    dikeExtra: 'Đê phải liền một dải mới chặn được nước',
+    citadelExtra: (n: number) => `Đang có ${n} vòng quanh Điện`,
     decorHint: 'Chạm vào từng ô đất để đặt',
     clearHint: 'Chạm vào ô đường hay món trang trí để dọn đi',
     cleared: (name: string) => `Đã dọn ${name}`,
@@ -1303,7 +1318,6 @@ export const vi = {
     repair: '🔧 Sửa',
     repairAll: '🔧 Sửa tất cả',
     repaired: (n: number) => (n ? `Đã sửa ${n} công trình` : 'Chưa đủ tài nguyên để sửa'),
-    trapHint: 'Chạm vào từng ô đất để gài bẫy',
     settings: 'Cài đặt',
     sound: 'Âm thanh',
     resolution: 'Độ nét',
@@ -1400,7 +1414,6 @@ export const vi = {
     dapDat: 'Đắp đất',
     dapDatDesc: 'Đắp ô đất trống cao thêm một bậc để nước lũ không tràn tới. Đất càng cao càng tốn đất đá.',
     dapDatHint: 'Chạm vào ô đất trống để đắp cao thêm một bậc',
-    dikeHint: 'Chạm vào từng ô đất để đắp đê. Đê phải liền một dải mới chặn được nước',
     raisedTile: (h: number) => `Đất đã cao bậc ${h}`,
     ground: 'Nền',
     groundLevel: (h: number) => `Bậc ${h}`,
@@ -1433,7 +1446,6 @@ export const vi = {
     rings: (n: number, max: number) => `Thành có ${n}/${max} vòng quanh Điện`,
     ringsHint: 'Giặc phải phá qua bao nhiêu lớp thành mới tới được Điện thì có bấy nhiêu vòng. Các đoạn thành phải nối liền theo cạnh ô (chéo góc là hở), dựa vào bờ sông cũng kín.',
     ringsNow: (n: number) => `Thành có ${n} vòng quanh Điện`,
-    citadelHint: (n: number) => `Chạm từng ô để đắp thành, đè lên lũy được. Đang có ${n} vòng quanh Điện`,
     removeCitadel: 'Dỡ thành',
     noThanTitle: 'Nỏ thần',
     stepYeu: 'Diệt yêu tinh núi Thất Diệu (thắng màn 19)',

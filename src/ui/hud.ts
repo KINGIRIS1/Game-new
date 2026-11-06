@@ -202,6 +202,8 @@ export type HudAction =
   | { kind: 'rotateBuilding'; id: number }
   | { kind: 'startMerge'; id: number }
   | { kind: 'rotateView' }
+  /** Đổi cách kéo thả đắp tường: dải thẳng hay khung chữ nhật. */
+  | { kind: 'toggleWallShape' }
   | { kind: 'applyMau'; mau: MauId }
   | { kind: 'phatRung'; id: number }
   | { kind: 'trinhSat'; id: number }
@@ -259,6 +261,8 @@ export type HudAction =
   | { kind: 'fieldToMap' };
 
 export type HudMode = 'view' | 'place' | 'move' | 'paint' | 'merge';
+/** Kéo thả đắp tường: dải thẳng hay viền chữ nhật. */
+export type WallShape = 'line' | 'rect';
 
 /** Thẻ của bảng doanh trại: quân và nơi ở, bố trí giữ kinh đô, tướng chỉ huy, thông tin và nâng cấp trại. */
 type BarracksTab = 'quan' | 'giu' | 'tuong' | 'trai';
@@ -840,8 +844,11 @@ export class Hud {
 
   // ---------- Thanh Hủy, Đặt (thay chỗ dock khi đặt, dời, trải, ghép) ----------
 
-  /** Đổi chế độ thanh dưới. `turnable`: công trình đang đặt, dời xoay được, hiện nút ↻ Xoay. */
-  setMode(mode: HudMode, placeValid = true, hint?: string, turnable = false): void {
+  /**
+   * Đổi chế độ thanh dưới. `turnable`: công trình đang đặt, dời xoay được, hiện nút ↻ Xoay. `shape`: đang đắp tường,
+   * hiện nút đổi kéo dải thẳng hay khung chữ nhật.
+   */
+  setMode(mode: HudMode, placeValid = true, hint?: string, turnable = false, shape?: WallShape): void {
     this.mode = mode;
     this.turnable = turnable;
     this.root.classList.toggle('placing', mode !== 'view');
@@ -853,6 +860,7 @@ export class Hud {
     }
     // Nút xoay cảnh ở mọi chế độ: lúc đặt, dời, dựng lũy là lúc cần xoay nhất.
     const rotate = `<button class="icon-btn rotate" data-act="rotateView" aria-label="${vi.ui.rotate}" title="${vi.ui.rotate}">⟳</button>`;
+    this.bottombar.classList.remove('crowded');
     if (mode === 'view') {
       this.bottombar.innerHTML = '';
       this.hint.hidden = true;
@@ -873,7 +881,11 @@ export class Hud {
       this.hint.hidden = false;
       this.hint.textContent = vi.ui.mergeHint;
     } else {
-      this.bottombar.innerHTML = `<button class="btn" data-act="cancelPlace">✓ ${vi.ui.done}</button>${rotate}`;
+      const toggle = shape
+        ? `<button class="btn bronze turn" data-act="toggleWallShape" aria-label="${vi.ui.wallShapeTitle}" title="${vi.ui.wallShapeTitle}">${vi.ui.wallShape[shape]}</button>`
+        : '';
+      this.bottombar.innerHTML = `<button class="btn" data-act="cancelPlace">✓ ${vi.ui.done}</button>${toggle}${rotate}`;
+      this.bottombar.classList.toggle('crowded', !!shape);
       this.hint.hidden = false;
       this.hint.textContent = hint ?? vi.ui.wallHint;
     }

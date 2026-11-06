@@ -462,7 +462,7 @@ Chủ dự án đã chốt bốn điểm:
 
 ### Đê
 
-- 1×1 ô, dựng bằng cách chạm từng ô như lũy, có từ chương 2. Tối đa 130 đoạn tới Điện 5, rồi 140, 150, 150, 160, 165 ở Điện 6 tới 10.
+- 1×1 ô, dựng bằng cách chạm từng ô hay kéo cả dải, cả khung như lũy (xem mục Đắp cả mảng tường), có từ chương 2. Tối đa 130 đoạn tới Điện 5, rồi 140, 150, 150, 160, 165 ở Điện 6 tới 10.
 
   | Cấp | Tên | Giá | Cao hơn mặt đất | Máu |
   |---|---|---|---|---|
@@ -607,7 +607,7 @@ Chủ dự án đã chốt:
 
 ### Thành Cổ Loa
 
-- Thẻ **Thành Cổ Loa** trong bảng Xây dựng (có từ chương 3): chạm từng ô như lũy, đê. Mỗi đoạn 1×1 ô, giá 30 đất đá, 10 vỏ ốc, 1000 máu, tối đa 150 đoạn, không sợ nước lũ, không đắp nền được.
+- Thẻ **Thành Cổ Loa** trong bảng Xây dựng (có từ chương 3): chạm từng ô hay kéo cả dải, cả khung như lũy, đê (xem mục Đắp cả mảng tường). Mỗi đoạn 1×1 ô, giá 30 đất đá, 10 vỏ ốc, 1000 máu, tối đa 150 đoạn, không sợ nước lũ, không đắp nền được.
 - **Đắp đè lên lũy tre** (hay thành đất) được: lũy cũ được dỡ đi, chỉ trả giá thành.
 - **Số vòng thành** = số đoạn thành còn nguyên ít nhất mà giặc phải phá qua để đi từ bìa rừng tới Điện:
   - giặc đi tám hướng như khi tìm đường thật, nên các đoạn thành phải nối liền theo cạnh ô; nối chéo góc là hở;
@@ -995,7 +995,7 @@ Bảng Xây dựng bày theo kiểu trưng bày (chủ dự án chọn trong ba 
 - Lúc trải đường, một ngón kéo trên cảnh là vẽ dải ô thẳng từ ô đặt ngón theo trục kéo dài hơn (ngang hay dọc lưới, kéo xiên vẫn ra đường thẳng; `lineTiles` ở `map.ts`); hai ngón vẫn kéo, phóng, xoay cảnh (thêm ngón thứ hai giữa chừng thì bỏ dải đang vẽ).
 - Đang kéo: ô trải được tô xanh, ô không trải được tô đỏ; dòng gợi ý ghi "Thả tay để trải n ô" kèm giá cả dải.
 - Thả tay thì trải từng ô theo thứ tự (`placeLine` ở `game.ts`): ô vướng công trình, ngoài vùng đất bỏ qua; ô đã có đúng loại đường ấy bỏ qua; ô đường loại khác thì đổi vật liệu như trải đè; hết của hay đủ giới hạn thì các ô sau không trải. Báo số ô đã trải, có ô hỏng thì báo lý do của ô hỏng đầu.
-- Chỉ đường đi kéo thả được; lũy, đê, thành, đồ trang trí vẫn chạm từng ô.
+- Lũy, bẫy chông, đê, thành Cổ Loa cũng kéo thả được, thêm cách kéo khung chữ nhật (xem mục Đắp cả mảng tường); đồ trang trí vẫn chạm từng ô.
 
 | Loại | Giá mỗi ô | Mở khi |
 |---|---|---|
@@ -1033,6 +1033,19 @@ Bảng Xây dựng bày theo kiểu trưng bày (chủ dự án chọn trong ba 
 - Bản lưu không đổi phiên bản: chỉ thêm loại công trình mới.
 - Vẽ theo lô cho nhẹ máy: đường và món một ô dù nhiều tới hàng trăm vẫn chỉ vài lệnh vẽ (`src/render/decor.ts`).
 - Test: `trangTri.test.ts`.
+
+## Đắp cả mảng tường (chủ dự án yêu cầu, đã làm)
+
+Chủ dự án muốn xây cả mảng thành thay vì đặt từng ô, và chọn cách kéo dải thẳng và khung chữ nhật.
+
+- Lũy, bẫy chông, đê, thành Cổ Loa: một ngón kéo trên cảnh là vẽ, hai ngón vẫn kéo, phóng, xoay cảnh (như trải đường); chạm một ô vẫn đắp một ô. Cổng thành, cống đê vẫn đặt như công trình.
+- Thanh dưới có nút đổi cách kéo, nhãn ghi cách đang dùng:
+  - **─ Dải**: dải ô thẳng theo trục kéo dài hơn, như trải đường (`lineTiles`);
+  - **▭ Khung**: viền chữ nhật từ ô đặt ngón tới ô thả tay (`rectTiles` ở `map.ts`). Đi một vòng chu vi bắt đầu từ góc đặt ngón, mỗi ô một lần, ô sau liền cạnh ô trước, ô cuối liền cạnh ô đầu: khung đắp đủ là một vòng thành kín (giặc đi tám hướng nên tường phải liền cạnh), đê kín không lọt nước. Hai góc cùng hàng hay cùng cột thì là dải thẳng.
+  - Lựa chọn nhớ riêng trên từng máy, không đi theo mã lưu.
+- Đang kéo: ô đắp được tô xanh, ô không đắp được tô đỏ; dòng gợi ý ghi "Thả tay để đắp thành n ô" kèm giá cả mảng. Giá và số tối đa cộng dồn theo thứ tự đắp (`planLine` ở `game.ts`), nên hết của hay đủ giới hạn giữa chừng thì phần sau tô đỏ, giá chỉ tính phần đắp được. Trải đường cũng xét như vậy.
+- Thả tay thì đắp từng ô theo thứ tự (`placeLine`): ô vướng công trình, ngoài vùng đất, ô hết của hay đủ giới hạn thì bỏ qua; ô đã có đúng loại ấy bỏ qua; thành Cổ Loa kéo đè lên lũy thì thay lũy như chạm từng ô. Báo số ô đã đắp (thành thì kèm số vòng quanh Điện), có ô hỏng thì báo lý do của ô hỏng đầu. Đắp đê xong thì bóng lũ vẽ lại.
+- Test: `keoTuong.test.ts`.
 
 ## Kế hoạch chương 4: Mỵ Châu, Trọng Thủy (chủ dự án đã duyệt, đã làm)
 

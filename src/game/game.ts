@@ -1035,16 +1035,75 @@ export function place(state: GameState, type: BuildingType, x: number, z: number
   return ok(b);
 }
 
+/** Một ô của dải kéo thả: dựng được (`ok`), đã có đúng loại ấy (`has`, không dựng thêm), hay hỏng vì `reason`. */
+export interface LineCell {
+  x: number;
+  z: number;
+  ok: boolean;
+  has?: true;
+  reason?: FailReason;
+}
+
 /**
- * Dựng `type` lên từng ô của dải `tiles` theo thứ tự (kéo thả trải đường). Ô nào không dựng được thì bỏ qua, dựng
- * tiếp ô sau; ô đã có đúng loại ấy thì không tính là hỏng. Trả các công trình đã dựng và lý do của ô hỏng đầu tiên.
+ * Xét dải `tiles` khi kéo thả trải đường, đắp tường: từng ô dựng được không, theo thứ tự, có cộng dồn giá và số tối
+ * đa của các ô trước trong dải (nên ô cuối dải tô đỏ khi hết của hay đủ giới hạn giữa chừng). Ô đã có đúng loại ấy
+ * thì không dựng thêm, không tính giá. Trả từng ô, số ô sẽ dựng và tổng giá.
+ */
+export function planLine(state: GameState, type: BuildingType, tiles: { x: number; z: number }[]): { cells: LineCell[]; n: number; cost: Cost } {
+  const def = BUILDINGS[type];
+  const limit = limitOf(state, type);
+  let used = usedOf(state, type);
+  const left: Resources = { ...state.resources };
+  const cost: Cost = {};
+  const seen = new Set<number>();
+  const cells: LineCell[] = [];
+  let n = 0;
+  for (const t of tiles) {
+    const key = t.z * GRID + t.x;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    if (buildingAt(state, t.x, t.z)?.type === type) {
+      cells.push({ x: t.x, z: t.z, ok: true, has: true });
+      continue;
+    }
+    const r = canPlace(state, type, t.x, t.z);
+    // Đổi vật liệu một ô đường không thêm ô nào.
+    const swap = isRoad(type) && !!replacedWall(state, type, t.x, t.z);
+    let reason: FailReason | null = r.ok ? null : r.reason;
+    if (!reason && !swap && used >= limit) reason = needsGeneral(state, type) ? 'canTuongChiHuy' : 'datGioiHan';
+    if (!reason && RESOURCE_IDS.some((id) => (def.buildCost[id] ?? 0) > left[id])) reason = 'thieuTaiNguyen';
+    if (reason) {
+      cells.push({ x: t.x, z: t.z, ok: false, reason });
+      continue;
+    }
+    if (!swap) used++;
+    for (const id of RESOURCE_IDS) {
+      const c = def.buildCost[id] ?? 0;
+      if (!c) continue;
+      left[id] -= c;
+      cost[id] = (cost[id] ?? 0) + c;
+    }
+    n++;
+    cells.push({ x: t.x, z: t.z, ok: true });
+  }
+  return { cells, n, cost };
+}
+
+/**
+ * Dựng `type` lên từng ô của dải `tiles` theo thứ tự (kéo thả trải đường, đắp tường). Ô nào không dựng được thì bỏ
+ * qua, dựng tiếp ô sau; ô đã có đúng loại ấy thì không tính là hỏng. Trả các công trình đã dựng và lý do của ô hỏng
+ * đầu tiên.
  */
 export function placeLine(state: GameState, type: BuildingType, tiles: { x: number; z: number }[]): { placed: Building[]; reason: FailReason | null } {
   const placed: Building[] = [];
   let reason: FailReason | null = null;
-  for (const t of tiles) {
-    if (buildingAt(state, t.x, t.z)?.type === type) continue;
-    const r = place(state, type, t.x, t.z);
+  for (const c of planLine(state, type, tiles).cells) {
+    if (c.has) continue;
+    if (!c.ok) {
+      reason ??= c.reason ?? null;
+      continue;
+    }
+    const r = place(state, type, c.x, c.z);
     if (r.ok) placed.push(r.value);
     else reason ??= r.reason;
   }

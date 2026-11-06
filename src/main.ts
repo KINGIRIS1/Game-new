@@ -35,6 +35,7 @@ import {
   canPlace,
   canRotateType,
   placeLine,
+  planLine,
   rotOf,
   rotateBuilding,
   clearDecorAt,
@@ -68,13 +69,13 @@ import {
 } from './game/game';
 import { isOpen, khoanhOf, khoanhWood, openKhoanh, openable } from './game/khoanh';
 import { cayDaAt, clearCayDa } from './game/cayDa';
-import { GRID, RIVER_START, farBankOf, footOnLand, lineTiles } from './game/map';
+import { GRID, RIVER_START, farBankOf, footOnLand, lineTiles, rectTiles } from './game/map';
 import { fromCode, loadFromStorage, saveFileName, saveToStorage, toCode } from './game/save';
 import { chapterOf, tomTat } from './game/manVao';
 import { TitleDrift } from './render/camera';
 import { HALF, RESOLUTIONS, World, type Resolution } from './render/world';
 import { vi } from './text/vi';
-import { Hud, buildingName, type HudAction } from './ui/hud';
+import { Hud, buildingName, type HudAction, type WallShape } from './ui/hud';
 import { khoNanTk, luuSau, moKhoNan } from './render/nanKho';
 import { KHO_PHIEN_BAN, moSanWorker, nanTruoc, prewarmJobs } from './render/nanTruoc';
 import { ManVao } from './ui/manVao';
@@ -87,6 +88,10 @@ import { preloadThumbs } from './ui/xayDung';
 type PaintType = BuildingType | 'raise' | 'clear' | 'uNo';
 const PAINTED: BuildingType[] = ['luy', 'bayChong', 'de', 'thanh'];
 const isPainted = (type: BuildingType) => PAINTED.includes(type) || (isDecor(type) && BUILDINGS[type].w === 1);
+/** Tường (lũy, bẫy, đê, thành Cổ Loa): kéo thả đắp cả dải hay cả khung. */
+const isWall = (type: PaintType) => PAINTED.includes(type as BuildingType);
+/** Kéo một ngón để trải, đắp cả dải: đường đi và tường. */
+const isDragged = (type: PaintType) => isWall(type) || isRoad(type as BuildingType);
 
 type Mode =
   | { kind: 'view'; selected: number | null }
@@ -103,6 +108,24 @@ const GAP_AS_OFFLINE_MS = 5_000;
 const AUTOSAVE_MS = 10_000;
 /** Độ nét lưu riêng trên từng máy, không đi theo mã lưu: máy mạnh máy yếu tự chọn. */
 const RESOLUTION_KEY = 'thoi-dai-van-lang/resolution';
+/** Cách kéo đắp tường lần trước (dải thẳng hay khung chữ nhật), lưu riêng trên từng máy. */
+const WALL_SHAPE_KEY = 'thoi-dai-van-lang/wall-shape';
+
+function loadWallShape(): WallShape {
+  try {
+    return localStorage.getItem(WALL_SHAPE_KEY) === 'rect' ? 'rect' : 'line';
+  } catch {
+    return 'line';
+  }
+}
+
+function saveWallShape(shape: WallShape): void {
+  try {
+    localStorage.setItem(WALL_SHAPE_KEY, shape);
+  } catch {
+    // Không lưu được thì lần sau kéo dải thẳng như mặc định.
+  }
+}
 
 function loadResolution(): Resolution {
   try {
@@ -397,7 +420,7 @@ async function start(): Promise<void> {
       const r = place(state, mode.type, tile.x, tile.z);
       if (!r.ok) return fail(r.reason);
       play('place');
-      if (mode.type === 'thanh') hud.setHint(vi.ui.citadelHint(wallRings(state)));
+      if (mode.type === 'thanh') hud.setHint(wallHint(mode.type));
       commit();
       return;
     }
@@ -447,26 +470,37 @@ async function start(): Promise<void> {
   let dragAt: { fx: number; fy: number; tx: number; ty: number } | null = null;
   let dragFrame = 0;
 
-  /** Giá của `n` ô đường loại `type`, ghi chữ cho dòng gợi ý. */
-  const costText = (type: BuildingType, n: number) =>
-    RESOURCE_IDS.filter((r) => (BUILDINGS[type].buildCost[r] ?? 0) > 0)
-      .map((r) => `${vi.resources[r].icon} ${fmt((BUILDINGS[type].buildCost[r] ?? 0) * n)}`)
+  /** Giá cả dải, ghi chữ cho dòng gợi ý. */
+  const costText = (cost: Cost) =>
+    RESOURCE_IDS.filter((r) => (cost[r] ?? 0) > 0)
+      .map((r) => `${vi.resources[r].icon} ${fmt(cost[r] ?? 0)}`)
       .join(' ');
+
+  /** Đắp tường: kéo dải thẳng hay khung chữ nhật (nút đổi ở thanh dưới, nhớ lần trước). */
+  let wallShape = loadWallShape();
+
+  /** Ghi thêm theo loại tường: đê phải liền dải, thành ghi số vòng quanh Điện. */
+  const wallExtra = (type: PaintType) =>
+    type === 'de' ? vi.ui.dikeExtra : type === 'thanh' ? vi.ui.citadelExtra(wallRings(state)) : '';
+
+  /** Dòng gợi ý khi đắp tường loại `type`. */
+  const wallHint = (type: PaintType) => vi.ui.wallDragHint(vi.ui.wallVerb[type] ?? '', wallShape, wallExtra(type));
 
   /** Xét dải ô theo chỗ ngón vừa kéo tới: tô xanh đỏ, dòng gợi ý ghi số ô và giá. */
   const updateDrag = () => {
     dragFrame = 0;
-    if (!dragAt || mode.kind !== 'paint' || !isRoad(mode.type as BuildingType)) return;
+    if (!dragAt || mode.kind !== 'paint' || !isDragged(mode.type)) return;
     const type = mode.type as BuildingType;
     const from = drag?.from ?? world.pickTile(dragAt.fx, dragAt.fy);
     const to = world.pickTile(dragAt.tx, dragAt.ty);
     if (!from) return;
-    const tiles = to ? lineTiles(from, to) : (drag?.tiles ?? [from]);
+    const shape = isWall(type) && wallShape === 'rect' ? rectTiles : lineTiles;
+    const tiles = to ? shape(from, to) : (drag?.tiles ?? [from]);
     drag = { from, tiles };
-    const cells = tiles.map((t) => ({ ...t, ok: buildingAt(state, t.x, t.z)?.type === type || canPlace(state, type, t.x, t.z).ok }));
-    world.setLinePreview(cells);
-    const n = cells.filter((c) => c.ok && buildingAt(state, c.x, c.z)?.type !== type).length;
-    hud.setHint(vi.ui.roadDrag(n, costText(type, n)));
+    // Cộng dồn giá và số tối đa theo thứ tự: hết của hay đủ giới hạn giữa dải thì phần sau tô đỏ.
+    const plan = planLine(state, type, tiles);
+    world.setLinePreview(plan.cells);
+    hud.setHint(isWall(type) ? vi.ui.wallDrag(vi.ui.wallVerb[type] ?? '', plan.n, costText(plan.cost)) : vi.ui.roadDrag(plan.n, costText(plan.cost)));
   };
 
   world.view.onDraw = (phase, fx, fy, tx, ty) => {
@@ -485,22 +519,25 @@ async function start(): Promise<void> {
     drag = null;
     dragAt = null;
     world.setLinePreview(null);
-    if (mode.kind !== 'paint' || !isRoad(mode.type as BuildingType)) return;
+    if (mode.kind !== 'paint' || !isDragged(mode.type)) return;
+    const type = mode.type as BuildingType;
+    const idleHint = isWall(type) ? wallHint(type) : vi.ui.roadHint;
     if (phase === 'cancel' || !done) {
-      hud.setHint(vi.ui.roadHint);
+      hud.setHint(idleHint);
       return;
     }
-    const r = placeLine(state, mode.type as BuildingType, done.tiles);
+    const r = placeLine(state, type, done.tiles);
     if (!r.placed.length) {
-      hud.setHint(vi.ui.roadHint);
+      hud.setHint(idleHint);
       if (r.reason) fail(r.reason);
       return;
     }
     play('place');
-    hud.setHint(vi.ui.roadPaved(r.placed.length));
+    hud.setHint(isWall(type) ? vi.ui.wallBuilt(r.placed.length, wallExtra(type)) : vi.ui.roadPaved(r.placed.length));
     // Có ô hỏng (hết của, đủ giới hạn, vướng công trình) thì báo lý do của ô hỏng đầu.
     if (r.reason) hud.toast(vi.reasons[r.reason], true);
     commit();
+    if (type === 'de') refreshFloodPreview();
   };
 
   // ---------- Thao tác từ giao diện ----------
@@ -526,20 +563,10 @@ async function start(): Promise<void> {
         play('tap');
         if (isPainted(a.type)) {
           mode = { kind: 'paint', type: a.type };
-          // Trải đường: một ngón kéo để trải cả dải, hai ngón kéo cảnh.
-          world.view.drawMode = isRoad(a.type);
-          const hint = isRoad(a.type)
-            ? vi.ui.roadHint
-            : isDecor(a.type)
-              ? vi.ui.decorHint
-              : a.type === 'luy'
-                ? vi.ui.wallHint
-                : a.type === 'de'
-                  ? vi.ui.dikeHint
-                  : a.type === 'thanh'
-                    ? vi.ui.citadelHint(wallRings(state))
-                    : vi.ui.trapHint;
-          hud.setMode('paint', true, hint);
+          // Trải đường, đắp tường: một ngón kéo để trải, đắp cả dải, hai ngón kéo cảnh.
+          world.view.drawMode = isDragged(a.type);
+          const hint = isRoad(a.type) ? vi.ui.roadHint : isDecor(a.type) ? vi.ui.decorHint : wallHint(a.type);
+          hud.setMode('paint', true, hint, false, isWall(a.type) ? wallShape : undefined);
           refreshFloodPreview();
           if (a.type === 'de') hud.toast(vi.ui.floodPreview(nextFloodLevel(state)));
           return;
@@ -608,6 +635,14 @@ async function start(): Promise<void> {
         commit();
         return;
       }
+
+      case 'toggleWallShape':
+        if (mode.kind !== 'paint' || !isWall(mode.type)) return;
+        play('tap');
+        wallShape = wallShape === 'line' ? 'rect' : 'line';
+        saveWallShape(wallShape);
+        hud.setMode('paint', true, wallHint(mode.type), false, wallShape);
+        return;
 
       case 'rotateView':
         // Xoay góc nhìn kinh đô 90°; bãi chiến phó bản không xoay.
@@ -1457,6 +1492,8 @@ async function start(): Promise<void> {
     },
     /** Mở bảng công trình `id` như khi chạm vào nó (chụp thử bảng của công trình bị công trình khác che). */
     select: (id: number | null) => select(id),
+    /** Chọn công trình trong bảng Xây dựng như bấm nút Xây (đặt, trải, đắp tường). */
+    build: (type: BuildingType) => handle({ kind: 'chooseBuild', type }),
     /** Mở bảng Đất bên kia sông của khoảnh bên kia `id`, như khi chạm vào đất ấy. */
     benKia: (id: number) => {
       select(null);
