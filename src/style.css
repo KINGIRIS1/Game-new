@@ -1612,6 +1612,36 @@ textarea {
   outline-offset: 1px;
 }
 
+/* Chip Đấu thành: cạnh chip huân công, nền đỏ son cho khác. */
+.dau-chip {
+  margin-left: 6px;
+  background: linear-gradient(180deg, #c4503f, var(--red));
+  border-color: #6e1f18;
+  box-shadow: 0 2px 0 #6e1f18;
+}
+
+/* Bản đồ thu nhỏ kinh đô chọn đánh, thay cho bản đồ phó bản khi mở bảng Đấu thành. */
+.dau-map {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  image-rendering: pixelated;
+  border-radius: 12px;
+}
+
+.dau-sides {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.dau-result .dau-stars {
+  font-size: 34px;
+  letter-spacing: 4px;
+  text-align: center;
+  margin: 2px 0 8px;
+}
+
 .camp-head .close {
   width: 34px;
   height: 34px;

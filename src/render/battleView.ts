@@ -31,6 +31,8 @@ interface FighterView {
   aura?: THREE.Mesh;
   /** Vòng sáng hình mai rùa dưới chân lính ta khi Rùa Vàng che chở. */
   shell?: THREE.Mesh;
+  /** Đấu thành: vòng màu dưới chân để biết phe (hai bên cùng là lính ta): đồng là quân đánh thành, đỏ son là quân giữ thành. */
+  team?: THREE.Mesh;
   /** An Dương Vương đang chĩa nỏ thần lên trời: còn bao lâu. */
   volley: number;
   /** Đang làm phép (Sơn Tinh dời non, Thủy Tinh hô sóng hay gọi thủy quái): còn bao lâu. */
@@ -321,6 +323,12 @@ const bronzeBoltGeo = new THREE.BoxGeometry(0.05, 0.05, 0.6);
 const bronzeBoltMat = new THREE.MeshBasicMaterial({ color: C.bronzeLight });
 /** Lệnh bắn: vòng sáng đỏ đồng dưới chân lính nỏ trong lúc có lệnh. Dùng chung một chất liệu, nhấp nháy theo nhịp. */
 const orderGeo = new THREE.RingGeometry(0.22, 0.36, 4).rotateX(-Math.PI / 2);
+/** Đấu thành: vòng tròn đặc dưới chân, đồng cho quân đánh thành, đỏ son cho quân giữ thành. */
+const teamGeo = new THREE.RingGeometry(0.2, 0.42, 20).rotateX(-Math.PI / 2);
+const teamMat: Record<'ta' | 'giac', THREE.MeshBasicMaterial> = {
+  ta: new THREE.MeshBasicMaterial({ color: C.bronzeLight, transparent: true, opacity: 0.85, depthWrite: false }),
+  giac: new THREE.MeshBasicMaterial({ color: C.red, transparent: true, opacity: 0.85, depthWrite: false }),
+};
 const orderMat = new THREE.MeshBasicMaterial({ color: C.red, transparent: true, opacity: 0.75, depthWrite: false });
 /** Nỏ liên châu: số mũi tên rơi xuống vùng trúng, và chừng này giây sau khi bắn mới rơi. */
 const RAIN_ARROWS = 18;
@@ -652,6 +660,7 @@ export class BattleView {
       // Chỉ Dời non mới mọc đá; giặc choáng vì Voi xung trận thì không.
       this.syncRocks(view, hasRocks ? (f.stun ?? 0) : 0, f.id, dt);
       this.syncAura(view, f.side === 'ta' && f.state !== 'dead' && battle.rally > 0 && !battle.outcome);
+      this.syncTeam(view, battle.mode === 'pvp' && f.state !== 'dead' ? f.side : null);
       this.syncShell(view, f.side === 'ta' && f.state !== 'dead' && battle.shield > 0 && !battle.outcome);
       this.syncOrder(view, f.kind === 'no' && f.state !== 'dead' && (battle.lenh ?? 0) > 0 && !battle.outcome);
       if (f.kind === 'lauThuyen') {
@@ -1080,6 +1089,19 @@ export class BattleView {
     } else if (!on && view.aura) {
       view.aura.removeFromParent();
       view.aura = undefined;
+    }
+  }
+
+  /** Đấu thành: thêm hay bỏ vòng màu phe dưới chân. */
+  private syncTeam(view: FighterView, side: 'ta' | 'giac' | null): void {
+    if (side && !view.team) {
+      view.team = new THREE.Mesh(teamGeo, teamMat[side]);
+      view.team.position.y = 0.03;
+      view.team.renderOrder = 1;
+      view.obj.add(view.team);
+    } else if (!side && view.team) {
+      view.team.removeFromParent();
+      view.team = undefined;
     }
   }
 

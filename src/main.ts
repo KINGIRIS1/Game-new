@@ -2,10 +2,11 @@
 
 import './style.css';
 import { play, setMuted, stopRally, unlockAudio } from './audio/sfx';
-import { useSkill, type HeroKind } from './game/battle';
+import { skillReady, useSkill, type HeroKind } from './game/battle';
+import { attackFrom, beginPvp, canPractice, lootPvp, pushInput, scorePvp, stepPvp, validateArmy, type PvpRun } from './game/dauThanh';
 import { leaveBattlefield, retreat, startStage, unitAllowed } from './game/campaign';
 import { forgeArms } from './game/binhKhi';
-import { assignCommander, autoGuard, setGuard } from './game/doanhTrai';
+import { assignCommander, autoGuard, fieldCap, fitArmy, setGuard } from './game/doanhTrai';
 import { assignNu, markNuHinted, nextNuHint } from './game/nuTuong';
 import { forgeNoThan, inChapter3, wallRings } from './game/coLoa';
 import { offer } from './game/tet';
@@ -79,6 +80,7 @@ import { khoNanTk, luuSau, moKhoNan } from './render/nanKho';
 import { KHO_PHIEN_BAN, moSanWorker, nanTruoc, prewarmJobs } from './render/nanTruoc';
 import { ManVao } from './ui/manVao';
 import { preloadThumbs } from './ui/xayDung';
+import { dauResultHtml, targetSnapshot } from './ui/dauThanh';
 
 /**
  * Chạm từng ô để dựng lũy, gài bẫy, đắp đê, đắp thành Cổ Loa, trải đường, đặt đồ trang trí một ô, dựng ụ nỏ
@@ -229,7 +231,7 @@ async function start(): Promise<void> {
     showNuHint();
     showCayDaHint();
     save();
-    world.sync(state);
+    world.sync(scene());
     refreshFloodPreview();
     refreshUi();
   };
@@ -317,13 +319,23 @@ async function start(): Promise<void> {
     refreshFloodPreview();
   };
 
+  /**
+   * Trận Đấu thành đang đánh thử (không nằm trong state, không lưu): trận, tên kinh đô bị đánh, camera trước trận để
+   * về lại đúng chỗ, lúc trận xong (để bảng kết quả hiện trễ một chút cho kịp thấy đòn cuối).
+   */
+  let pvp: { run: PvpRun; name: string; cam: { x: number; z: number; zoom: number }; doneAt: number; shown: boolean } | null = null;
+  /** Cảnh đang vẽ: kinh đô bị đánh khi đang Đấu thành, không thì kinh đô của mình. */
+  function scene(): GameState {
+    return pvp?.run.def ?? state;
+  }
+
   /** Quân đang hành quân qua cầu tới đồn giặc: chừng ba giây rồi mới sang bãi chiến. */
   let marching: { plot: number; army: Record<UnitType, number>; rows: Record<UnitType, Row>; nu: NuTuongId | null; at: number } | null = null;
   const MARCH_MS = 3200;
 
   world.view.onTap = (cx, cy) => {
-    // Trên bãi chiến chỉ xem, không chọn gì; đang hành quân cũng vậy.
-    if (world.inField || marching) return;
+    // Trên bãi chiến chỉ xem, không chọn gì; đang hành quân, đang Đấu thành cũng vậy.
+    if (world.inField || marching || pvp) return;
     const hero: string | null = mode.kind === 'view' ? world.pickHero(cx, cy) : null;
     if (hero) {
       play('tap');
@@ -1162,6 +1174,14 @@ async function start(): Promise<void> {
       }
 
       case 'useSkill': {
+        if (pvp) {
+          // Đấu thành: ghi lần bấm, áp ở đầu bước trận kế tiếp (đánh lại ra y hệt).
+          if (!skillReady(pvp.run.battle, a.skill)) return;
+          pushInput(pvp.run, a.skill);
+          play(a.skill === 'trongTran' ? 'trongTran' : 'claim');
+          navigator.vibrate?.(a.skill === 'trongTran' ? 30 : 60);
+          return;
+        }
         const battle = state.campaign.battle ?? (state.raid.phase === 'battle' ? state.raid.battle : null);
         if (!battle || !useSkill(battle, a.skill)) return;
         play(a.skill === 'trongTran' ? 'trongTran' : 'claim');
@@ -1201,9 +1221,45 @@ async function start(): Promise<void> {
         return;
 
       case 'retreat':
+        if (pvp) {
+          pushInput(pvp.run, 'rut');
+          play('tap');
+          return;
+        }
         if (!retreat(state).ok) return;
         play('tap');
         commit();
+        return;
+
+      case 'dauThanh': {
+        const why = canPractice(state) ?? validateArmy(state, a.army);
+        if (why) {
+          play('error');
+          hud.toast(vi.dauThanh.reasons[why], true);
+          return;
+        }
+        const snap = targetSnapshot(state, a.target);
+        // Đánh thử: hạt giống theo giờ, mỗi lần đánh lại mỗi khác (đánh thật thì máy chủ cấp hạt giống).
+        const run = beginPvp(snap, attackFrom(state, a.army, a.side, Date.now() % 2_147_483_647));
+        const t = world.view.target;
+        pvp = { run, name: a.target ? vi.dauThanh.bot(a.target) : vi.dauThanh.own, cam: { x: t.x, z: t.z, zoom: world.view.zoom }, doneAt: 0, shown: false };
+        if (mode.kind !== 'view') exitMode();
+        select(null);
+        hud.closeCampaign();
+        world.resetAll();
+        world.sync(run.def);
+        world.lookAtEdge(a.side);
+        hud.setPvp({ battle: run.battle, def: run.def, name: pvp.name });
+        play('claim');
+        navigator.vibrate?.(40);
+        return;
+      }
+
+      case 'dauHome':
+      case 'dauAgain':
+        leavePvp();
+        play('tap');
+        if (a.kind === 'dauAgain') hud.showDau(state);
         return;
 
       case 'leaveField':
@@ -1259,6 +1315,37 @@ async function start(): Promise<void> {
     showOfflineIfLong(offline.ms, offline.gained);
     if (state.raid.lastResult) hud.showRaidResult(state, state.raid.lastResult);
     preloadThumbs();
+  };
+
+  /** Về kinh đô sau trận Đấu thành: vẽ lại kinh đô của mình, camera về chỗ cũ. Đánh thử nên quân, của không đổi. */
+  const leavePvp = () => {
+    if (!pvp) return;
+    const cam = pvp.cam;
+    pvp = null;
+    hud.setPvp(null);
+    hud.closeDauResult();
+    world.updateBattle(null, 0);
+    world.resetAll();
+    world.sync(state);
+    world.view.target.set(cam.x, 0, cam.z);
+    world.view.zoom = cam.zoom;
+    world.view.apply();
+    refreshUi();
+  };
+
+  /** Trận Đấu thành xong thì hiện bảng kết quả (sao, phần trăm phá, quân ngã, của cướp được nếu đánh thật). */
+  const watchPvp = (now: number) => {
+    if (!pvp || !pvp.run.done || pvp.shown) return;
+    if (!pvp.doneAt) {
+      pvp.doneAt = now + 900;
+      stopRally();
+      const score = scorePvp(pvp.run.def);
+      play(score.stars ? 'upgrade' : 'error');
+    }
+    if (now < pvp.doneAt) return;
+    pvp.shown = true;
+    const score = scorePvp(pvp.run.def);
+    hud.showDauResult(dauResultHtml(score, pvp.run.battle.lost, lootPvp(pvp.run.snap, score, dienLevel(state))));
   };
 
   /** Theo dõi giai đoạn giặc để phát âm thanh, hiện cảnh báo và bảng kết quả đúng lúc. */
@@ -1323,7 +1410,7 @@ async function start(): Promise<void> {
 
   /** Kể đoạn truyện đến lúc, khi không đang đánh và không có hộp thoại nào khác đang mở. */
   const watchStory = () => {
-    if (hud.storyOpen || hud.modalOpen || state.campaign.battle || state.raid.phase === 'battle') return;
+    if (hud.storyOpen || hud.modalOpen || state.campaign.battle || state.raid.phase === 'battle' || pvp) return;
     const id = pendingStory(state);
     if (!id) return;
     if (mode.kind !== 'view') exitMode();
@@ -1369,9 +1456,12 @@ async function start(): Promise<void> {
       showOfflineIfLong(off.ms, off.gained);
       commit();
     } else {
-      tick(state, gap);
+      // Đang Đấu thành: kinh tế vẫn chạy, đồng hồ giặc đứng lại.
+      tick(state, gap, !!pvp);
       state.lastSeen = wall;
     }
+    // Trận Đấu thành chạy theo khung hình (đã chặn 0,1 giây), chỉ trọn bước; ẩn tab thì trận dừng.
+    if (pvp) stepPvp(pvp.run, dt * 1000);
 
     if (marching && now >= marching.at) {
       // Hành quân xong: sang bãi chiến đánh đồn.
@@ -1382,28 +1472,29 @@ async function start(): Promise<void> {
       if (!r.ok) fail(r.reason);
       commit();
     }
-    world.updateFlood(state);
-    world.updateBattle(state.raid.battle, dt);
+    world.updateFlood(scene());
+    world.updateBattle(pvp ? pvp.run.battle : state.raid.battle, dt);
     watchCampaign();
     world.updateField(state.campaign.battle, dt);
     world.update(dt);
     watchRaid();
+    watchPvp(now);
     if (now - lastUi > 250) {
       lastUi = now;
-      // Trong trận, công trình có thể bị phá bất cứ lúc nào: vẽ lại cảnh theo state.
-      if (state.raid.phase === 'battle') world.sync(state);
+      // Trong trận, công trình có thể bị phá bất cứ lúc nào: vẽ lại cảnh theo state (Đấu thành: kinh đô bị đánh).
+      if (state.raid.phase === 'battle' || pvp) world.sync(scene());
       // Cây dại, tảng đá mọc theo đồng hồ chơi: mọc thêm thì vẽ (trang trí ô trống né chỗ ấy) và gợi ý lần đầu.
       const cayKey = `${state.cayDa.seq}:${state.cayDa.list.length}`;
       if (cayKey !== lastCayKey) {
         lastCayKey = cayKey;
-        world.sync(state);
+        world.sync(scene());
         showCayDaHint();
       }
       // Trinh sát về tới nơi: đất bên kia hiện ra thêm.
       if (state.benKia.known.length !== lastKnown) {
         if (state.benKia.known.length > lastKnown && !state.benKia.scouts.length) hud.toast(vi.benKia.scoutBack);
         lastKnown = state.benKia.known.length;
-        world.sync(state);
+        world.sync(scene());
       }
       refreshUi();
       watchStory();
@@ -1436,8 +1527,25 @@ async function start(): Promise<void> {
     },
     resync: () => {
       world.resetAll();
-      world.sync(state);
+      world.sync(scene());
     },
+    /**
+     * Đấu thành: đánh thử kinh đô `target` (0 là kinh đô của mình, số khác là kinh đô máy Điện ấy) với quân đang có
+     * (vừa số chỗ một trận), để chụp thử. `secs`: cho trận chạy trước chừng ấy giây.
+     */
+    dauThanh: (target = dienLevel(state), side: 'bac' | 'tay' = 'bac', secs = 0) => {
+      handle({ kind: 'dauThanh', target, side, army: fitArmy({ ...state.troops }, fieldCap(state)) });
+      if (pvp && secs > 0) stepPvp(pvp.run, secs * 1000);
+      return !!pvp;
+    },
+    /** Mở bảng Đấu thành ở bước chọn kinh đô (`army`: bước chọn quân), để chụp thử. */
+    dauPanel: (army = false) => hud.showDau(state, army ? 'army' : 'target'),
+    /** Đấu thành: cho trận đang đánh chạy hết (bảng kết quả hiện ngay sau đó). */
+    dauFinish: () => {
+      if (pvp) stepPvp(pvp.run, 400_000);
+    },
+    /** Trận Đấu thành đang đánh (để chụp thử quay camera về quân). */
+    dauBattle: () => pvp?.run.battle ?? null,
     advance: (ms: number) => {
       tick(state, ms);
       commit();

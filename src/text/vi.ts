@@ -6,6 +6,7 @@ import type { BuildingType, CayDaKind, ChallengeKind, Chapter, EnemyType, GearId
 import type { FailReason, StoryId } from '../game/game';
 import type { Bank, Dat, Nghe, Tier } from '../game/benKia';
 import type { QuanDaoId } from '../game/bien';
+import type { PvpFail } from '../game/dauThanh';
 import type { GiongLook } from '../game/giong';
 import type { SonLook } from '../game/son';
 import type { Resolution } from '../render/world';
@@ -1090,6 +1091,49 @@ export const vi = {
     newGame: 'Kinh đô mới, chờ người dựng nước',
     soundOn: 'Đang bật tiếng, chạm để tắt',
     soundOff: 'Đang tắt tiếng, chạm để bật',
+  },
+
+  /** Đấu thành: đánh kinh đô người chơi khác, cướp của (`game/dauThanh.ts`). Máy chủ chưa mở thì chỉ đánh thử. */
+  dauThanh: {
+    chip: '🏯 Đấu thành',
+    title: 'Đấu thành',
+    intro: 'Cử quân đánh kinh đô người khác: phá công trình, cướp của trong kho. Máy chủ chưa mở, nên giờ chỉ đánh thử: quân ngã không mất, kho không thêm gì.',
+    rules: 'Ba phút. Phá nửa số công trình được 1 sao, phá Điện thêm 1 sao, phá hết được 3 sao. Tường, lũy, đê, cổng, bẫy, đường, trang trí không tính.',
+    targetTitle: 'Chọn kinh đô để đánh thử',
+    own: 'Kinh đô của mình',
+    ownDesc: 'Đánh thử chính kinh đô này, đúng như người khác sẽ thấy khi đánh.',
+    bot: (dien: number) => `Kinh đô máy Điện ${dien}`,
+    botDesc: 'Dựng theo mẫu kinh đô, tháp và lính giữ thành đủ.',
+    info: (dien: number, guards: number, towers: number) => `Điện cấp ${dien} · ${guards} lính giữ thành · ${towers} tháp, cổng, ụ nỏ`,
+    lootCap: 'Của cướp được nhiều nhất',
+    sideTitle: 'Tràn vào từ',
+    sides: { bac: '⬆️ Phía bắc', tay: '⬅️ Phía tây' },
+    next: 'Chọn quân',
+    armyTitle: 'Quân đi đánh thành',
+    armyHint: 'Quân tự tìm đường phá công trình như giặc. Trong trận chỉ bấm kỹ năng tướng và Trống trận.',
+    heroes: (names: string) => `Tướng đi cùng: ${names}`,
+    noHero: 'Không có tướng nào đi cùng (tướng đang nghỉ hay chưa theo về).',
+    attack: '⚔️ Đánh',
+    banner: (name: string) => `🏯 Đấu thành · ${name}`,
+    status: (pct: number, stars: number, s: number) => `Phá ${pct}% · ${'⭐'.repeat(stars)}${'☆'.repeat(3 - stars)} · ${s} giây`,
+    resultWon: (stars: number) => `${'⭐'.repeat(stars)} Phá thành`,
+    resultLost: 'Không phá được thành',
+    resultPct: (pct: number) => `Phá ${pct}% công trình`,
+    resultDien: 'Phá được Điện',
+    resultNoDien: 'Chưa phá được Điện',
+    resultFallen: 'Quân ngã',
+    resultLoot: 'Của cướp được nếu đánh thật',
+    practiceNote: 'Đánh thử: quân ngã đứng dậy về doanh trại, kho không thêm gì.',
+    home: 'Về kinh đô',
+    again: 'Đánh lại',
+    reasons: {
+      canDien5: 'Cần Điện cấp 5 mới đánh thành được.',
+      canDoanhTrai: 'Cần một doanh trại để điều quân.',
+      dangCoGiac: 'Giặc đang tới: giữ kinh đô trước đã.',
+      dangDanhPhoBan: 'Quân đang đánh phó bản.',
+      khongCoQuan: 'Chưa chọn quân nào.',
+      quaQuan: 'Quân chọn quá số đang có hay quá số chỗ một trận.',
+    } satisfies Record<PvpFail, string>,
   },
 
   ui: {

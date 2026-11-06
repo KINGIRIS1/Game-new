@@ -2517,15 +2517,41 @@ Chủ dự án yêu cầu lập phương án PvP giữa các người chơi: **c
 ### Thứ tự làm
 
 1. **PR 0: tài liệu** (đã duyệt): mục này.
-2. **PR 1: trận đánh tất định**, không đổi luật chơi: thay `Math.hypot` bằng căn bậc hai của tổng bình phương (cho cùng kết quả trên mọi trình duyệt), lưu sẵn lưới chi phí tìm đường mỗi trận để server đánh lại một trận 3 phút dưới 2 giây CPU. Test: đánh cùng một trận hai lần ra y hệt, chia khung hình kiểu gì cũng như nhau, đo thời gian. Mọi test cân bằng cũ giữ nguyên kết quả.
-3. **PR 2: luật Đấu thành** trong `src/game/` (tệp mới `dauThanh.ts`):
-   - bản chụp, kiểm bản chụp;
-   - chế độ trận `pvp`: người tấn công là phe `giac` dùng lính ta, dùng lại AI phá công trình của giặc; cộng thêm (Đền, binh khí, huân công), kỹ năng, Trống trận, Lệnh bắn tính theo phe người chơi điều khiển chứ không cố định phe `ta`;
-   - chạy trọn bước, đầu vào ghi theo bước;
-   - sao, của cướp, chiến công;
-   - bản lưu 20.
-   Test cân bằng với kinh đô của người chơi mô phỏng: cùng cấp Điện, đủ quân thì được 1–2 sao, nửa quân thì 0 sao.
-4. **PR 3: đánh thử ngoài mạng**: bảng Đấu thành, chọn quân và hướng, thanh trận (đếm ngược, phần trăm, sao, Rút quân), bảng kết quả, vòng màu hai phe. Đánh kinh đô của chính mình hay kinh đô máy, chưa có của cướp thật, để chủ dự án chơi thử, chỉnh cân bằng trước khi có server.
+2. **PR 1: trận đánh tất định** (đã làm), không đổi luật chơi:
+   - Trận chỉ dùng căn bậc hai và bốn phép tính: `dist` thay cả 31 chỗ `Math.hypot`, `dsin`/`dcos` (đa thức Taylor tới bậc 15, lệch dưới 1e-9) thay ba chỗ `Math.sin`, `Math.cos` khi đặt lính mới sinh. `Math.atan2` chỉ ghi hướng nhìn để vẽ nên giữ.
+   - Lưới chi phí tìm đường lưu sẵn theo trận, dựng lại khi công trình đổi (dựng, dỡ, dời, nâng cấp, bị phá, được sửa); mảng nháp của A* dùng lại; hàng đợi ưu tiên dời lỗ thay vì tráo cặp. Cùng đường đi như trước.
+   - Trận nặng (31 quân Hán đánh kinh đô Điện 8 có vòng thành, chòi canh) chạy chừng 235 ms trên Node, trước chừng 260 ms. Hồ sơ CPU: hai phần ba thời gian là A*.
+   - `tatDinh.test.ts`. Mọi test cũ giữ nguyên kết quả.
+3. **PR 2: luật Đấu thành** (đã làm) trong `src/game/` (tệp mới `dauThanh.ts`). Chỗ đổi so với kế hoạch và số cuối cùng:
+   - **Người đánh thành là phe `ta`** (kế hoạch cũ để phe `giac`), quân giữ thành là phe `giac`: kỹ năng, Trống trận, Rùa Vàng, Đền, binh khí, huân công, cách vẽ đã sẵn cho phe `ta`. Chỉ đổi các chỗ chọn đường đi theo vai: trong trận `pvp`, quân ta đi như giặc (tìm đường, phá công trình chắn lối, nhắm kho rồi Điện rồi công trình gần nhất); quân giữ thành đi như lính giữ kinh đô; chòi canh, lầu nỏ, cổng, ụ nỏ, bẫy bắn quân ta; Lệnh bắn chỉ giúp lính nỏ ta, không làm lầu nỏ bên kia bắn nhanh. Không cướp của giữa trận, không rút khi hết giờ.
+   - **Hai hệ số mới theo cấp Điện kinh đô bị đánh** (`DAU_THANH.hpMul`, `siege`; không có trong đề xuất, thêm khi đo): đo lần đầu thì tháp kinh đô máy Điện 8 bắn chừng 600 máu mỗi giây mà cả 38 chỗ quân mẫu chỉ có chừng 2.200 máu, và lính ta đánh công trình rất yếu (giáo 8, cung 7 mỗi đòn; cổng thành 3.000–6.000 máu), nên không tường nào phá nổi. Vì vậy trong trận Đấu thành mọi người bền hơn `hpMul` lần (như ngoài bãi bền hơn 1,6 lần), đòn quân đánh thành vào công trình mạnh gấp `siege` lần:
+
+     | Điện | 1–5 | 6 | 7 | 8 | 9 | 10 |
+     |---|---|---|---|---|---|---|
+     | `hpMul` | 3 | 3 | 4 | 6 | 6 | 10 |
+     | `siege` | 2 | 1 | 1 | 4 | 4 | 4 |
+
+     Số không tăng đều vì mỗi cấp kinh đô máy theo một mẫu khác (Điện 6 Đê bao không có vòng thành; Điện 7 có hai vòng thành Cổ Loa; Điện 8 thêm 16 ụ nỏ, bốn cổng).
+   - **Chuẩn cân bằng**: trận rung theo chỗ đứng ban đầu và phía tràn vào (bắc, tây cho kết quả khác nhau dù mẫu đối xứng), nên chấm theo trung bình sáu trận (ba hạt giống, hai phía), người đánh cùng cấp Điện kinh đô máy, binh khí như kinh đô máy, không Đền, bấm như người chơi thường, có tướng của cấp ấy: đủ 38 chỗ quân mẫu trung bình 1–2 sao, nửa quân dưới nửa sao. Số đo (bắc ba hạt rồi tây ba hạt):
+     - Điện 5: đủ quân 3,1,1,1,3,1 sao; nửa quân 0,0,1,1,0,0.
+     - Điện 6: đủ quân 2 sao cả sáu trận; nửa quân 0.
+     - Điện 7: đủ quân 1 sao cả sáu trận; nửa quân 0.
+     - Điện 8: đủ quân 2,1,2,2,0,1; nửa quân 0.
+     - Điện 9: đủ quân 1,1,1,1,1,2; nửa quân 0.
+     - Điện 10: đủ quân 1 sao cả sáu trận; **nửa quân vẫn hay được 1 sao** (1,1,1,0,0,1): Hai Bà hai tướng máu nhân 10 gần như không ngã, nên quân ít quân nhiều không khác mấy. Giới hạn hệ số máu của tướng thì đủ quân cũng thua hết, nên để vậy, chờ chủ dự án chơi thử.
+     `dauThanh.test.ts` canh Điện 5, 7, 8.
+   - **Kinh đô máy** (`botSnapshot`): dựng thẳng từ mẫu kinh đô của cấp ấy (Điện 5 Phong Châu, 6 Đê bao, 7 Cổ Loa, 8–10 Cổ Loa giữ sông), mọi công trình ở cấp cao nhất Điện cho, cổng thành ở chỗ cổng của mẫu từ chương 3, ụ nỏ từ Điện 8, lính giữ thành đủ `GUARD_CAP` chia đều các doanh trại theo tỉ lệ quân mẫu, binh khí 0, 1, 2, 2, 3, 3 bậc ở Điện 5–10, không tướng, của bằng 60% sức chứa kho.
+   - **Bản chụp** (`makeSnapshot`, mã `TDVS1:`): công trình bờ bên này trừ cầu, đường, trang trí, luôn còn nguyên; lính giữ thành tính sẵn từ bố trí giữ kinh đô (bỏ phần đóng đồn biên bên kia sông); tướng giữ thành (kể cả đang nghỉ) đứng trước Điện, không dùng kỹ năng. Kiểm bản chụp sửa tay (`validateSnapshot`) như đã định.
+   - **Của cướp**: theo đúng công thức đã duyệt. Quân đánh thành nhắm kho trước, nên phá được kho mà 0 sao vẫn cướp được phần kho (như thể loại).
+   - **Bản lưu không đổi**: đánh thử không lưu gì; `GameState.dauThanh` (tên, chiến công, khiên, trận bị đánh đã trừ) để PR 5 làm cùng nối mạng.
+   - Đang đánh thử thì đồng hồ giặc đứng lại (`tick(state, ms, busy)`), như khi đang đánh phó bản.
+4. **PR 3: đánh thử ngoài mạng** (đã làm):
+   - Chip **🏯 Đấu thành** trên đầu bản đồ phó bản (cạnh chip huân công) mở bảng Đấu thành thay chỗ thẻ màn: bản đồ thu nhỏ kinh đô chọn đánh (bên trái hay trên), chọn kinh đô (của mình, hay kinh đô máy kém một cấp, cùng cấp, hơn một cấp Điện, từ Điện 5), của cướp được nhiều nhất, luật ba sao, hướng tràn vào (bắc, tây); bước sau chọn quân (không quá số chỗ một trận phó bản), ghi tướng đi cùng. Chưa đủ Điện 5, chưa có doanh trại, đang có giặc thì ghi lý do.
+   - Bấm Đánh: cảnh đổi sang kinh đô bị đánh (dựng từ bản chụp), camera lướt tới bìa rừng phía tràn vào. Thanh trận như ngoài bãi: tên kinh đô, phần trăm phá, sao, giây còn lại, nút kỹ năng, Trống trận, Rút quân. Lần bấm ghi theo bước, áp ở đầu bước trận kế tiếp.
+   - Vòng màu dưới chân để biết phe (hai bên cùng là lính ta): đồng nhạt cho quân đánh thành, đỏ son cho quân giữ thành.
+   - Bảng kết quả: sao, phần trăm phá, phá được Điện chưa, quân ngã, của cướp được nếu đánh thật; nút Đánh lại, Về kinh đô. Đánh thử nên **quân ngã không mất, kho không thêm gì, không tính chiến công** (đề xuất 1 "lính tử trận mất thật" áp khi đánh thật ở PR 5). Về kinh đô thì cảnh và camera về như trước trận.
+   - Trong lúc đánh: kinh tế của mình vẫn chạy, giặc không tới, chạm cảnh không chọn công trình.
+   - Chụp thử: `node scripts/chup.mjs dau-thanh`, `dau-thanh-quan`, `dau-thanh-tran`, `dau-thanh-giu`, `dau-thanh-ket-qua`; `window.__debug.dauThanh(target, side, secs)`, `dauPanel(army)`, `dauFinish()`, `dauBattle()`.
 5. **PR 4: server**: thư mục `supabase/` (bảng, phân quyền, Edge Function), đóng gói luật cho server, test đánh lại trận trên Deno so với Node, triển khai trong `deploy.yml`, workflow giữ máy chủ thức.
 6. **PR 5: nối mạng**: tham gia, tải bản chụp, tìm đối thủ, đánh, nhận của, bảng Bị đánh, trừ của khi mở game, trận đánh dở. Kiểm trận ra cùng kết quả trên WebKit (họ nhà Safari) và Node.
 7. **PR 6: thêm sau**: người giữ thành xem lại trận bị đánh, bảng xếp hạng, gắn Google và lưu game lên mây để chuyển máy.
@@ -2582,5 +2608,5 @@ Chủ dự án yêu cầu lập phương án PvP giữa các người chơi: **c
     **Điện Vua Hùng 10×10** (chủ dự án yêu cầu, đã làm; xem mục cùng tên): dời, xoay được; sân chầu có Vua Hùng ngồi ngai vàng, 14 chỗ tướng đứng chầu; bản lưu v20.
 17. **Chương 5: Hai Bà Trưng** (chủ dự án đã duyệt, đã làm cả bốn PR; xem Kế hoạch chương 5): mỗi bà cưỡi một voi ra trận với Voi xung trận và Hiệu triệu gọi nghĩa binh, quân Hán và lâu thuyền đánh kinh đô, phó bản màn 33–40 với Tô Định và Mã Viện, Đền Hát Môn, nữ tướng, thử thách màn 33–40.
 18. **Phù sa: cống đê** (chủ dự án chọn, đã làm; xem mục cùng tên): mở cống cho lũ vào ruộng, ruộng được bồi phù sa làm ra thêm 40% tới hết mùa lũ sau; nước vào qua cống vẫn làm hư nhà cửa.
-19. **Đấu thành** (chủ dự án đã duyệt, đang làm PR 1–3 chưa có server; xem Kế hoạch cùng tên): đánh thành người chơi khác, cướp của, server Supabase miễn phí.
+19. **Đấu thành** (chủ dự án đã duyệt; đã làm PR 1–3: trận tất định, luật, đánh thử ngoài mạng; còn server; xem Kế hoạch cùng tên): đánh thành người chơi khác, cướp của, server Supabase miễn phí.
 20. **Để sau**: nhạc nền.
