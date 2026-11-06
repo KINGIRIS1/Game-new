@@ -1610,14 +1610,14 @@ export class World {
     }
     if (b.damaged) {
       // Công trình bị phá: nghiêng đổ, khói đen bốc lên. Hồ Kim Quy không nghiêng cả mặt hồ, chỉ miếu bốc khói và
-      // Rùa Vàng lặn mất.
+      // Rùa Vàng lặn mất. Đền Rồng Tiên cũng không nghiêng (hồ, núi nghiêng trông sai), chỉ đền bốc khói.
       if (b.type === 'hoKimQuy') {
         for (const c of [...group.children]) {
           if (!c.userData.swim) continue;
           group.remove(c);
           disposeModel(c);
         }
-      } else {
+      } else if (b.type !== 'denRongTien') {
         group.rotation.z = 0.12;
         group.scale.y *= 0.85;
       }
@@ -1630,6 +1630,11 @@ export class World {
         smoke.add(puff);
       }
       smoke.position.y = 1.2;
+      // Đền Rồng Tiên: khói bốc trên nóc đền chính (lùi về sau móng), cuộn to hợp với đền lớn.
+      if (b.type === 'denRongTien') {
+        smoke.position.set(0, 3.0, -2.9);
+        smoke.scale.setScalar(1.7);
+      }
       group.add(smoke);
     }
     this.buildingsRoot.add(group);

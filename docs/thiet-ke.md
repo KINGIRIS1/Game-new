@@ -170,6 +170,7 @@ Lúc đầu mỗi cấp Điện chỉ cho phát tới một số khoảnh (lư�
 | Nhà thợ hồ | 3×3 | Thêm một tốp thợ xây; nhà lên cấp thì tốp ấy làm nhanh hơn (xem mục Thời gian xây, tốp thợ, đố sử) |
 | Hồ Kim Quy | 8×8 | Có khi Rùa Vàng hiện lên (thắng màn 19). Lũy, thành đất, thành Cổ Loa, cổng thành thêm 30% máu (xem mục Hồ Kim Quy) |
 | Đền Cổ Loa | 4×4 | Có sau khi kết chương 3. Chòi canh bắn mạnh gấp rưỡi, xa thêm 1 ô |
+| Đền Rồng Tiên | 8×8 | Thờ Lạc Long Quân và Âu Cơ. Có ở chương 5, Điện cấp 10. Vỏ ốc, cá, đất đá, sắt, gỗ làm ra thêm 20% (xem mục Đền Rồng Tiên) |
 | Đường đi, đồ trang trí | 1×1 tới 3×3 | Chỉ để nhìn (xem mục Đường đi và đồ trang trí) |
 
 Giá đắp nền tính theo lõi móng (bỏ viền cỏ một ô), nên giữ như trước khi móng to ra.
@@ -2470,6 +2471,7 @@ Theo phương án A ở điều 1: hai nhiệm vụ sẵn có số 52, 53 thành
 | 59 | Qua màn 39 | 3000 vỏ ốc, 2500 đất đá | 3 |
 | 60 | Giữ Cấm Khê (qua màn 40) | 5000 gạo, 5000 vỏ ốc | 3 |
 | 61 | Dựng Đền Hát Môn | 3500 đất đá, 1100 sắt | 3 |
+| 62 | Dựng Đền Rồng Tiên (thêm sau, xem mục Đền Rồng Tiên) | 4500 đất đá, 1400 sắt | |
 
 Thưởng khoảng gấp rưỡi nhiệm vụ chương 4.
 
@@ -2564,6 +2566,38 @@ Chủ dự án đã chốt ba điều:
 - Không nâng bản lưu: `Building.mo` (cống mở), `Building.boi` (ruộng có phù sa), `Battle.boi`, `RaidResult.boi` đều tùy chọn (bản lưu 24).
 - Người chơi mô phỏng không dựng đê, không gặp lũ, nên nhịp tiến trình và sổ kinh tế không đổi. `phuSa.test.ts` canh luật.
 
+## Đền Rồng Tiên (chủ dự án yêu cầu, đã làm)
+
+Chủ dự án yêu cầu thêm một công trình lớn: đền thờ Lạc Long Quân và Âu Cơ. Chủ dự án chọn tên, cỡ, lúc mở, tác dụng, dáng và có thêm nhiệm vụ; các số còn lại tự chọn, chủ dự án có thể đổi.
+
+**Chủ dự án đã chọn**
+
+- **Tên** Đền Rồng Tiên (con Rồng cháu Tiên), mã `denRongTien`; lời tả ghi rõ thờ Lạc Long Quân và Âu Cơ, tổ tiên các vua Hùng.
+- **Móng 8×8** như Hồ Kim Quy.
+- **Mở ở Điện cấp 10**, tức chỉ có ở chương 5. Mốc mở mới `chuong5` (`inChapter5`) để bảng Xây dựng chỉ hiện đền từ chương 5; chưa sang chương 5 thì báo "Mở ở chương 5: Hai Bà Trưng", sang rồi mà Điện chưa cấp 10 thì báo thiếu cấp Điện.
+- **Tác dụng "Rồng biển, Tiên núi"**, như truyện năm mươi con theo cha xuống biển, năm mươi con theo mẹ lên núi: đền còn nguyên thì của từ nước (vỏ ốc, cá làng chài, cá biển) và của từ núi (đất đá, sắt, gỗ) làm ra thêm **20%** (`RONG_TIEN_BONUS`, `RONG_TIEN_RES` ở `defs.ts`; `rongTienBonus` ở `game.ts`, cộng trong `productionPerMinute` và `fishPerMinute`). Gạo không thêm. Cộng dồn với Đền Phù Đổng và phúc lành Đất (vỏ ốc gấp 1 + 0,1 + 0,2 khi có cả hai đền). Đền hư thì thôi, sửa xong lại có; tính liền mỗi lúc như Đền Phù Đổng.
+- **Dáng "một đền, hai nửa"** (bản vẽ ở `docs/bo-cuc-cong-trinh.md`).
+- **Thêm nhiệm vụ 62**: dựng Đền Rồng Tiên, nối sau nhiệm vụ Đền Hát Môn. Bản lưu đã xong hết nhiệm vụ cũ cũng thấy nhiệm vụ mới. Lạc hầu còn gợi ý một lần khi Điện lên cấp 10 (`NEW_HINTS`).
+
+**Tự chọn, chủ dự án có thể đổi**
+
+- Dựng một lần, một cấp, không dỡ được, như các đền. Giá 7000 gạo, 7000 vỏ ốc, 8000 đất đá, 1800 sắt, 2000 gỗ (Đền Hát Môn 5000×3 và 1400 sắt; kho Điện 10 chứa 60 nghìn). Máu 1300, giặc nhắm phá được. Dựng 30 phút (`XAY_RIENG`; Đền Hát Môn 25 phút).
+- Chịu nước ngập một bậc như các đền.
+- Thưởng nhiệm vụ 62: 4500 đất đá, 1400 sắt (nhiệm vụ Đền Hát Môn 3500 đất đá, 1100 sắt).
+- **Mẫu kinh đô**: mẫu Cổ Loa giữ sông chừa chỗ đền từ Điện 10, ngay sau chỗ Hồ Kim Quy, đối xứng với hồ qua đường chéo (số thứ ba của `Job` ở `mau.ts`); các công trình khác của mẫu vẫn đủ chỗ. Ba mẫu kia không có chỗ đền: áp thì đền đứng yên nếu không vướng, vướng thì dời ra chỗ trống gần nhất.
+- Người chơi mô phỏng không dựng đền, nên nhịp lên Điện và sổ thu chi giữ nguyên.
+- Không nâng bản lưu: loại công trình, mốc mở, gợi ý mới không thêm trường vào state; nhiệm vụ nối vào cuối danh sách.
+- **Dáng** (`src/render/congTrinh/denRongTien.ts`):
+  - Đền chính lùi về sau giữa móng, mái cong hai tầng lợp ngói viền đồng, chim Lạc hai đầu nóc; lan can đá có đầu rồng ở bậc lên thềm.
+  - Trước thềm, mỗi bên một tượng trên bệ đá (`bakeLacLongQuan`, `bakeAuCo` ở `heroes.ts`):
+    - Lạc Long Quân bên hồ: mũ sừng rồng, giáp vảy rồng xanh, gươm đồng.
+    - Âu Cơ bên núi: áo hồng, áo choàng lông chim trắng, mũ lông chim, chắp tay.
+  - Lư hương đồng trước thềm; bọc trăm trứng bằng đá trong chậu hoa sen giữa sân.
+  - Nửa trái là hồ có rồng xanh uốn ba khúc nhô khỏi mặt nước, đầu ngẩng giỡn ngọc; nửa phải là ba ngọn núi, chim tiên trắng dang cánh trên đỉnh cao nhất, mây vờn, hoa dại chân núi.
+  - Lối đá ra cổng hai cột chim Lạc; cờ xanh nước bên hồ, cờ vàng núi bên núi; hai trống đồng.
+  - Đền hư thì không nghiêng cả móng (hồ, núi nghiêng trông sai), chỉ bốc khói trên mái đền.
+- Test ở `denRongTien.test.ts`: móng, giới hạn, mốc mở, gợi ý, tác dụng có, không và hư đền, cộng dồn với Đền Phù Đổng, nhiệm vụ 62, lũ, mẫu kinh đô.
+
 ## Bãi chiến có vật cản (chủ dự án chọn, đang làm)
 
 Trước đây chương nào cũng đánh trên cùng một bãi chữ nhật phẳng 9×22 ô; cảnh của 17 nền chỉ nằm ngoài mép bãi. Chủ dự án muốn vẽ lại bãi chiến từng chương và thêm chướng ngại vật. Chủ dự án đã chọn ba điều (theo đề xuất):
@@ -2652,4 +2686,5 @@ Mỗi PR chỉnh bố cục trước, rồi mới chỉnh máu giặc (`hpScale`
     **Điện Vua Hùng 10×10** (chủ dự án yêu cầu, đã làm; xem mục cùng tên): dời, xoay được; sân chầu có Vua Hùng ngồi ngai vàng, 14 chỗ tướng đứng chầu; bản lưu v20.
 17. **Chương 5: Hai Bà Trưng** (chủ dự án đã duyệt, đã làm cả bốn PR; xem Kế hoạch chương 5): mỗi bà cưỡi một voi ra trận với Voi xung trận và Hiệu triệu gọi nghĩa binh, quân Hán và lâu thuyền đánh kinh đô, phó bản màn 33–40 với Tô Định và Mã Viện, Đền Hát Môn, nữ tướng, thử thách màn 33–40.
 18. **Phù sa: cống đê** (chủ dự án chọn, đã làm; xem mục cùng tên): mở cống cho lũ vào ruộng, ruộng được bồi phù sa làm ra thêm 40% tới hết mùa lũ sau; nước vào qua cống vẫn làm hư nhà cửa.
-19. **Để sau**: nhạc nền.
+19. **Đền Rồng Tiên** (chủ dự án yêu cầu, đã làm; xem mục cùng tên): đền 8×8 thờ Lạc Long Quân và Âu Cơ, mở ở Điện 10; của từ nước, từ núi làm ra thêm 20%; nhiệm vụ 62.
+20. **Để sau**: nhạc nền.
