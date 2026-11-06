@@ -25,6 +25,7 @@ import {
   troopSpace,
   uNoCount,
   uNoLimit,
+  upcomingBoats,
   upkeepPerMinute,
   type Building,
   type GameState,
@@ -253,6 +254,29 @@ describe('thủy binh Triệu', () => {
       const landed = b.fighters.filter((f) => f.side === 'giac' && f.state !== 'dead');
       expect(landed.every((f) => f.state !== 'aboard')).toBe(true);
       expect(landed.some((f) => (side === 'nam' ? f.z : f.x) < RIVER_START)).toBe(true);
+    }
+  });
+
+  it('trinh sát báo thủy binh: biết trước chỗ từng thuyền hiện ra (đoàn thuyền từ biển vào tới đó), đúng chỗ trận đặt', () => {
+    for (const side of ['nam', 'dong'] as const) {
+      const s = ch4();
+      expect(upcomingBoats(s)).toEqual([]);
+      s.raid.foe = 'thuy';
+      s.raid.wave = side === 'nam' ? 0 : 1;
+      expect(callRaidNow(s).ok).toBe(true);
+      expect(s.raid.foe).toBe('thuyBinh');
+      expect(s.raid.side).toBe(side);
+      const plan = upcomingBoats(s);
+      expect(plan.length).toBeGreaterThan(0);
+      tick(s, RAID_WARNING_MS);
+      const boats = s.raid.battle!.boats;
+      expect(boats.length).toBe(plan.length);
+      boats.forEach((b, i) => {
+        expect(b.x).toBeCloseTo(plan[i].x, 9);
+        expect(b.z).toBeCloseTo(plan[i].z, 9);
+      });
+      // Trận đã mở thì không còn đoàn thuyền đang tới.
+      expect(upcomingBoats(s)).toEqual([]);
     }
   });
 

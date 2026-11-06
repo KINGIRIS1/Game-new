@@ -3,3 +3,5 @@ dist/
 *.log
 .DS_Store
 chup/
+.claude/worktrees/
+meshy_output/

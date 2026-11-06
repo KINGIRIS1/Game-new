@@ -25,6 +25,7 @@ const KHUNG = {
 //   G = game.ts, M = moPhong.ts (người chơi mô phỏng), D = defs.ts, C = campaign.ts, S = story.ts, X = mau.ts,
 //   K = khoanh.ts, B = benKia.ts (bên kia sông).
 // `truoc` chạy trước khi tải lại trang (dựng state rồi lưu), `sau` chạy sau khi tải lại (bấm trận, bấm kỹ năng...).
+// Sau khi tải lại, script bấm qua màn hình vào game, trừ cảnh có `giuManVao`; `vang` (ms) lùi lần chơi trước.
 
 /** Cho kinh đô một doanh trại và một ít quân, giữ nguyên kho của người chơi. */
 const CO_QUAN = `
@@ -40,8 +41,68 @@ const CO_QUAN = `
   s.troops = { giao: Math.floor(cho / 2), cung: Math.floor(cho / 3), voi: 0, no: 0 };
 `;
 const KINH_DO = `M.playChapters({ s, until: (m) => m.at5 >= 0 });`;
+/** Kinh đô Điện 8 vừa sang chương 5 (đã thắng tới màn `cleared`), có doanh trại và quân, đã xem hết truyện tới lúc ấy. */
+const CHUONG5 = (cleared) => `M.playChapters({ s, last: 8 });${CO_QUAN}
+  for (const b of s.buildings) if (b.type === 'doanhTrai') b.level = D.BUILDINGS.doanhTrai.maxLevel;
+  const cho5 = G.troopCap(s);
+  s.troops = { giao: Math.floor(cho5 * 0.3), cung: Math.floor(cho5 * 0.2), voi: Math.floor(cho5 * 0.03), no: Math.floor(cho5 * 0.15) };
+  s.questIndex = D.CH5_QUEST_START; s.campaign.cleared = ${cleared};
+  // Đã hết truyện chương 4: lẫy bị tráo, Cao Lỗ có Lệnh bắn, vua đã theo Rùa Vàng xuống biển.
+  s.adv.layTrao = true; s.caoLo.lenhBan = true; s.adv.bien = true;
+  for (let id; (id = S.pendingStory(s)); ) S.markStory(s, id);
+  // Lời gợi ý công trình mới che giữa bãi chiến: coi như đã đọc.
+  for (let t; (t = G.nextHint(s)); ) G.markHinted(s, t);
+`;
+
+/**
+ * Kinh đô chương 2 dựng như `phuSa.test.ts`: Điện 5, đê bao cách sông 4 ô, cống đê (đang mở) trên dải đê, sau cống trên
+ * đất bậc 1 có hai ruộng lúa, ruộng nếp, bãi đất đá, nhà sàn; mùa lũ tới dâng bậc 2.
+ */
+const PHU_SA = `
+  const Mp = await import('/src/game/map.ts');
+  const fresh = G.createInitialState(Date.now());
+  for (const k of Object.keys(s)) delete s[k];
+  Object.assign(s, fresh);
+  s.buildings.find((b) => b.type === 'dien').level = 5;
+  s.khoanh = K.squareKhoanh(K.AREA[4]);
+  s.questIndex = D.CH2_QUEST_START;
+  s.resources = { gao: 9e4, voOc: 9e4, datDa: 9e4, sat: 9e4, go: 9e4 };
+  s.dan = 60;
+  s.giong.ascended = true;
+  for (const g of D.GIFT_IDS) s.son.gifts[g] = true;
+  const must = (r) => { if (!r.ok) throw new Error(r.reason); return r.value; };
+  const DIEN = Mp.DIEN_HOME, LINE = Mp.RIVER_START - 4, EDGE = Mp.RIVER_START - K.AREA[4];
+  must(G.place(s, 'doanhTrai', EDGE + 2, EDGE + 4));
+  for (let x = EDGE; x <= LINE; x++) must(G.place(s, 'de', x, LINE));
+  for (let z = EDGE; z < LINE; z++) must(G.place(s, 'de', LINE, z));
+  const cong = must(G.place(s, 'congDe', DIEN + 2, LINE));
+  must(G.setCong(s, cong.id, true));
+  must(G.place(s, 'ruong', DIEN, LINE - 4));
+  must(G.place(s, 'ruong', DIEN + 5, LINE - 4));
+  must(G.place(s, 'baiDa', DIEN + 10, LINE - 4));
+  must(G.place(s, 'nhaSan', DIEN + 13, LINE - 4));
+  must(G.place(s, 'ruongNep', LINE - 5, DIEN + 4));
+  s.raid.floods = 2;
+  for (let t; (t = G.nextHint(s)); ) G.markHinted(s, t);
+`;
+/** Gọi lũ tới ngay; `giay` > 0 thì cho hết trinh sát báo và nước dâng chừng ấy giây (thủy quái đứng yên dưới sông). */
+const LU_TOI = (giay) => `
+  const r = G.callRaidNow(s); if (!r.ok) throw new Error('Không gọi lũ được: ' + r.reason);
+  ${giay > 0 ? `d.advance(D.RAID_WARNING_MS); for (const f of s.raid.battle.fighters) if (f.side === 'giac') f.state = 'aboard'; d.advance(${giay * 1000});` : 'd.advance(0);'}
+`;
+
+/** Nhìn vào cống và ruộng sau cống. */
+const NHIN_CONG = `const c = s.buildings.find((b) => b.type === 'congDe'); d.camera(c.x + 4, c.z - 5, 1.1);`;
 
 const CANH = {
+  'man-vao': {
+    mo: 'Màn hình vào game của bản lưu chương 1 (Điện cấp 5), vắng 3 giờ',
+    truoc: KINH_DO,
+    giuManVao: true,
+    vang: 3 * 3600 * 1000,
+    doi: 1800,
+  },
+  'man-vao-moi': { mo: 'Màn hình vào game khi chưa chơi (nút Bắt đầu)', truoc: '', giuTruyen: true, giuManVao: true, doi: 1800 },
   dau: { mo: 'Vừa vào game, đã đóng đoạn truyện mở đầu', truoc: '' },
   truyen: { mo: 'Vừa vào game, đang hiện đoạn truyện mở đầu', truoc: '', giuTruyen: true },
   'kinh-do': { mo: 'Kinh đô chương 1 lúc vừa lên Điện cấp 5 (người chơi mô phỏng chơi chừng một giờ)', truoc: KINH_DO },
@@ -76,6 +137,36 @@ const CANH = {
     truoc: KINH_DO + CO_QUAN,
     sau: `const r = d.march(1); if (!r.ok) throw new Error('Không đánh màn 1 được: ' + r.reason);`,
     doi: 3000,
+  },
+  'phu-sa': {
+    mo: 'Kinh đô chương 2 có đê bao, cống đê đang mở, ruộng sau cống; trinh sát vừa báo lũ bậc 2 (tô vàng, xanh)',
+    truoc: PHU_SA,
+    sau: LU_TOI(0),
+    truocKhiChup: NHIN_CONG,
+  },
+  'phu-sa-lu': {
+    mo: 'Như phu-sa, nước lũ đã dâng 12 giây (bậc 2): nước êm vào qua cống bồi ruộng',
+    truoc: PHU_SA,
+    sau: LU_TOI(12),
+    doi: 1500,
+    truocKhiChup: NHIN_CONG,
+  },
+  'phu-sa-boi': {
+    mo: 'Như phu-sa, mùa lũ vừa qua: ruộng sau cống đã có phù sa, bãi đất đá bị ngập',
+    truoc: PHU_SA + LU_TOI(12).replace('d.advance(0);', '') + `
+      for (const f of s.raid.battle.fighters) if (f.side === 'giac') f.state = 'dead';
+      s.raid.battle.killed = s.raid.battle.total;
+      d.advance(10000);
+      G.dismissRaidResult(s);
+    `,
+    truocKhiChup: NHIN_CONG,
+  },
+  chuong5: { mo: 'Kinh đô chương 5 (Điện 8, có doanh trại), đã thắng màn 33', truoc: CHUONG5(33) },
+  'pho-ban-5': {
+    mo: 'Hai Bà Trưng đánh màn 36 (thành Luy Lâu, có Tô Định) ngoài bãi, chụp sau 4 giây',
+    truoc: CHUONG5(35),
+    sau: `const r = d.march(36); if (!r.ok) throw new Error('Không đánh màn 36 được: ' + r.reason);`,
+    doi: 4000,
   },
 };
 
@@ -206,9 +297,10 @@ async function chupMotCanh(browser, url, tenCanh, khung, opts) {
     // Dựng state, đánh dấu các đoạn truyện đã xem (trừ cảnh muốn xem truyện), lưu rồi tải lại cho giao diện sạch.
     const truoc = [canh.truoc, opts.truoc ?? ''].join('\n');
     const dongTruyen = canh.giuTruyen ? '' : 'for (let id; (id = S.pendingStory(s)); ) S.markStory(s, id);';
-    await chayMa(page, `${truoc}\n${dongTruyen}\ns.lastSeen = Date.now(); d.advance(0);`);
+    await chayMa(page, `${truoc}\n${dongTruyen}\ns.lastSeen = Date.now() - ${canh.vang ?? 0}; d.advance(0);`);
     await page.reload({ waitUntil: 'load' });
     await choGame(page);
+    if (!canh.giuManVao) await page.evaluate(() => window.__debug.enter());
     await page.waitForTimeout(800);
 
     await chayMa(page, [canh.sau ?? '', opts.sau ?? ''].join('\n'));

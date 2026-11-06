@@ -211,7 +211,8 @@ describe('độ khó khi có cổng', () => {
         expect(withGates.lost + withGates.wrecked, `đợt ${n} ${side}`).toBeGreaterThan(10);
       }
     }
-  });
+    // Mười trận mô phỏng trọn vẹn: chừng 4 giây trên máy thường, quá 5 giây (mặc định của Vitest) khi máy GitHub chạy chung các test khác.
+  }, 30000);
 });
 
 describe('mẫu kinh đô có cổng thành', () => {

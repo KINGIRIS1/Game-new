@@ -8,6 +8,7 @@
 
 import { deflateSync, inflateSync } from 'fflate';
 import {
+  ARMS,
   BUILDINGS,
   GEAR_IDS,
   GIFT_IDS,
@@ -15,13 +16,17 @@ import {
   HUAN_COST,
   MERCHANT_FIRST_MS,
   QUEST_INSERTED_V4,
+  PHU_SA_TYPES,
   RESOURCE_IDS,
   ROWS,
   STAGES,
   TUONG_IDS,
+  NU_TUONG_IDS,
   UNIT_TYPES,
   isBridge,
+  raiseBuildingCost,
   type BuildingType,
+  type NuTuongId,
   type TuongId,
 } from './defs';
 import { initialCaoLo } from './caoLo';
@@ -29,14 +34,15 @@ import { initialBenKia, isBenKiaState, noGarrison } from './benKia';
 import { initialCayDa, isCayDaState } from './cayDa';
 import { initialAdv } from './coLoa';
 import { inChapter4 } from './chuong4';
-import { SAVE_VERSION, autoAssign, housing, initialCampaign, initialGiong, initialRaid, scheduleThuyBinh, type GameState } from './game';
-import { GRID, baseHeights, isRiver } from './map';
+import { inChapter5, initialHaiBa, maVienCame } from './chuong5';
+import { SAVE_VERSION, autoAssign, housing, initialCampaign, initialGiong, initialRaid, scheduleHan, scheduleThuyBinh, scheduleThuyHan, type GameState } from './game';
+import { GRID, RIVER_HEIGHT, baseHeights, isRiver } from './map';
 import { initialSon } from './son';
 import { initialTet } from './tet';
 import { initialThuThach } from './thuThach';
 import { footprintTop, levelFootprint } from './terrain';
-import { KHOANH_N, V11_AREA, squareKhoanh } from './khoanh';
-import { isLegacyLayout, legacyBaseHeights, levelLegacyFootprints, relayLegacy } from './xepLai';
+import { AREA, KHOANH_N, START_KHOANH, V11_AREA, squareKhoanh } from './khoanh';
+import { growDien, isLegacyLayout, legacyBaseHeights, levelLegacyFootprints, relayLegacy } from './xepLai';
 
 export { SAVE_VERSION };
 
@@ -62,7 +68,24 @@ export function deserialize(json: string): GameState | undefined {
     return undefined;
   }
   const upgraded = migrate(raw);
-  return isGameState(upgraded) ? upgraded : undefined;
+  if (!isGameState(upgraded)) return undefined;
+  lowerRiverBed(upgraded);
+  return upgraded;
+}
+
+/**
+ * Ô sông luôn ở độ cao lòng sông (`RIVER_HEIGHT`). Trước khi cấm đắp nền cầu, bấm Đắp nền ở bảng cầu nâng các ô sông
+ * dưới cầu lên, cầu lơ lửng khỏi bờ: hạ về lòng sông và hoàn số đất đá đã bỏ ra đắp. Chạy mỗi lần nạp, đã đúng thì
+ * không đổi gì (không cần lên phiên bản).
+ */
+function lowerRiverBed(state: GameState): void {
+  for (const b of state.buildings) {
+    if (!isBridge(b.type)) continue;
+    const def = BUILDINGS[b.type];
+    const top = state.heights[b.z * GRID + b.x];
+    for (let h = RIVER_HEIGHT; h < top; h++) state.resources.datDa += raiseBuildingCost(def.w, def.d, h).datDa ?? 0;
+  }
+  for (let z = 0; z < GRID; z++) for (let x = 0; x < GRID; x++) if (isRiver(x, z)) state.heights[z * GRID + x] = RIVER_HEIGHT;
 }
 
 type Raw = Record<string, unknown>;
@@ -73,6 +96,9 @@ const isNum = (v: unknown): v is number => typeof v === 'number' && Number.isFin
 /** Nâng dần bản lưu cũ lên phiên bản hiện tại. */
 function migrate(raw: unknown): unknown {
   let v = raw;
+  // Kinh đô nhỏ (trước phiên bản 11) dựng lại theo mẫu với Điện 10×10 ngay ở bước 10 → 11; từ phiên bản 11 tới 19
+  // Điện còn 5×5, tới bước 19 → 20 mới nới móng.
+  const grow = isObj(v) && isNum(v.version) && v.version >= 11 && v.version < 20;
   if (isObj(v) && v.version === 1 && Array.isArray(v.buildings)) v = migrate1to2(v);
   if (isObj(v) && v.version === 2) v = migrate2to3(v);
   if (isObj(v) && v.version === 3) v = migrate3to4(v);
@@ -99,6 +125,11 @@ function migrate(raw: unknown): unknown {
     k.garrison ??= noGarrison();
   }
   if (isObj(v) && v.version === 18) v = migrate18to19(v);
+  if (isObj(v) && v.version === 19) v = migrate19to20(v, grow);
+  if (isObj(v) && v.version === 20) v = migrate20to21(v);
+  if (isObj(v) && v.version === 21) v = migrate21to22(v);
+  if (isObj(v) && v.version === 22) v = migrate22to23(v);
+  if (isObj(v) && v.version === 23) v = migrate23to24(v);
   return v;
 }
 
@@ -233,19 +264,20 @@ function migrate9to10(s: Raw): Raw {
  */
 function migrate10to11(s: Raw): Raw {
   s.version = 11;
-  // Dựng lại theo mẫu cần biết đất đã mở: đất phiên bản 11 là hình vuông theo cấp Điện (xem bước 11 → 12).
-  s.khoanh = v11Khoanh(s);
+  // Dựng lại theo mẫu cần biết đất đã mở: hình vuông theo cấp Điện (xem bước 11 → 12). Kinh đô dựng lại với Điện
+  // 10×10 nên đất mở theo khung mẫu bây giờ (`AREA`, nới một khoảnh so với đất phiên bản 11).
+  s.khoanh = v11Khoanh(s, AREA);
   if (isLegacyLayout(s) && Array.isArray(s.heights) && isValidBuildings(s.buildings) && isObj(s.raid) && isObj(s.resources)) {
     relayLegacy(s as unknown as GameState);
   }
   return s;
 }
 
-/** Đất đã mở ở phiên bản 11: hình vuông neo góc sông, cạnh theo cấp Điện, khớp đúng lưới khoảnh. */
-function v11Khoanh(s: Raw): number[] {
+/** Đất đã mở ở phiên bản 11: hình vuông neo góc sông, cạnh theo cấp Điện (`sides`), khớp đúng lưới khoảnh. */
+function v11Khoanh(s: Raw, sides: readonly number[] = V11_AREA): number[] {
   const dien = Array.isArray(s.buildings) ? (s.buildings as Raw[]).find((b) => isObj(b) && b.type === 'dien') : undefined;
-  const level = dien && isNum(dien.level) ? Math.min(Math.max(Math.round(dien.level), 1), V11_AREA.length) : 1;
-  return squareKhoanh(V11_AREA[level - 1]);
+  const level = dien && isNum(dien.level) ? Math.min(Math.max(Math.round(dien.level), 1), sides.length) : 1;
+  return squareKhoanh(sides[level - 1]);
 }
 
 /**
@@ -376,6 +408,75 @@ function migrate18to19(s: Raw): Raw {
   return s;
 }
 
+/**
+ * Phiên bản 19 → 20 (Điện 10×10, dời và xoay được): đất mở sẵn lúc đầu nới thành 25 khoảnh như ván mới (khoảnh nào
+ * chưa phát thì mở luôn, không tốn của); Điện 5×5 nới về phía rừng thành 10×10, công trình vướng dời sang chỗ trống
+ * gần nhất (`growDien`). `grow`: bản lưu vốn từ phiên bản 11 trở lên (kinh đô nhỏ đã dựng lại với Điện 10×10 ở bước
+ * 10 → 11).
+ */
+function migrate19to20(s: Raw, grow: boolean): Raw {
+  s.version = 20;
+  if (Array.isArray(s.khoanh)) s.khoanh = [...new Set([...s.khoanh, ...START_KHOANH])].sort((a, b) => a - b);
+  if (grow && isValidBuildings(s.buildings) && Array.isArray(s.heights) && Array.isArray(s.khoanh) && isObj(s.resources) && isObj(s.cayDa)) {
+    growDien(s as unknown as GameState);
+  }
+  return s;
+}
+
+/**
+ * Phiên bản 20 → 21 (chương 5: vào chương khi nhận thưởng nhiệm vụ 51, quân Hán đánh kinh đô): thêm số đợt quân Hán.
+ * Người chơi đã sang chương 5 thì đợt quân Hán đầu tới sau một lúc, như lúc vừa vào chương.
+ */
+function migrate20to21(s: Raw): Raw {
+  s.version = 21;
+  const raid = s.raid;
+  if (isObj(raid)) {
+    raid.han = 0;
+    raid.hanHeld = 0;
+    if (raid.phase === 'idle' && isNum(s.questIndex) && isNum(s.clock)) {
+      const state = s as unknown as GameState;
+      if (inChapter5(state)) scheduleHan(state);
+    }
+  }
+  return s;
+}
+
+/** Phiên bản 21 → 22 (chương 5 PR 2): Hai Bà Trưng ra trận, mỗi bà nghỉ riêng khi kiệt sức. */
+function migrate21to22(s: Raw): Raw {
+  s.version = 22;
+  s.haiBa = initialHaiBa();
+  return s;
+}
+
+/**
+ * Phiên bản 22 → 23 (chương 5 PR 3): Mã Viện sang, thủy quân Hán và lâu thuyền đánh kinh đô. Thêm số đợt thủy quân Hán
+ * đã tới, đã giữ được, số lâu thuyền đã đánh chìm. Đã thắng màn 37 mà chưa có đợt thủy quân Hán thì xếp đợt đầu.
+ */
+function migrate22to23(s: Raw): Raw {
+  s.version = 23;
+  const raid = s.raid;
+  if (isObj(raid)) {
+    raid.thuyHan = 0;
+    raid.thuyHanHeld = 0;
+    raid.lauSunk = 0;
+    if (raid.phase === 'idle' && isNum(s.clock) && isObj(s.campaign)) {
+      const state = s as unknown as GameState;
+      if (maVienCame(state)) scheduleThuyHan(state);
+    }
+  }
+  return s;
+}
+
+/**
+ * Phiên bản 23 → 24 (chương 5 PR 4): bốn nữ tướng, thử thách màn 33–40, huân công bậc 4. Trường mới đều tùy chọn
+ * (nữ tướng ở doanh trại `Building.nuTuong`, phó tướng chọn lần trước `campaign.phoTuong`); nữ tướng theo về tính từ
+ * màn đã thắng, nên bản lưu cũ đã qua màn 34 có ngay Lê Chân.
+ */
+function migrate23to24(s: Raw): Raw {
+  s.version = 24;
+  return s;
+}
+
 const isBanh = (v: unknown, test: (x: unknown) => boolean): boolean => isObj(v) && test(v.chung) && test(v.giay);
 const isBool = (x: unknown) => typeof x === 'boolean';
 
@@ -395,8 +496,12 @@ function isValidBuildings(list: unknown): boolean {
       b.level >= 1 &&
       b.level <= BUILDINGS[b.type as BuildingType].maxLevel &&
       (b.tuong === undefined || TUONG_IDS.includes(b.tuong as TuongId)) &&
+      (b.nuTuong === undefined || (b.type === 'doanhTrai' && NU_TUONG_IDS.includes(b.nuTuong as NuTuongId))) &&
       (b.guard === undefined || (isObj(b.guard) && UNIT_TYPES.every((k) => isNum((b.guard as Raw)[k]) && ((b.guard as Raw)[k] as number) >= 0))) &&
-      (b.uNo === undefined || ((b.uNo === 'ok' || b.uNo === 'hu') && b.type === 'thanh'))
+      (b.uNo === undefined || ((b.uNo === 'ok' || b.uNo === 'hu') && b.type === 'thanh')) &&
+      (b.rot === undefined || [0, 1, 2, 3].includes(b.rot as number)) &&
+      (b.mo === undefined || (b.mo === true && b.type === 'congDe')) &&
+      (b.boi === undefined || (b.boi === true && PHU_SA_TYPES.includes(b.type as BuildingType)))
     );
   });
   return ok && list.some((b: Raw) => b.type === 'dien');
@@ -428,6 +533,8 @@ function isGameState(v: unknown): v is GameState {
   if (typeof adv.layTrao !== 'boolean' || typeof adv.bien !== 'boolean') return false;
   const cao = v.caoLo;
   if (!isObj(cao) || !isNum(cao.restUntil) || typeof cao.lenhBan !== 'boolean') return false;
+  const ba = v.haiBa;
+  if (!isObj(ba) || !isNum(ba.trungTrac) || !isNum(ba.trungNhi)) return false;
   const tt = v.thuThach;
   if (!isObj(tt) || !isNum(tt.huan) || tt.huan < 0 || !Array.isArray(tt.won) || !tt.won.every((n) => isNum(n) && n >= 1 && n <= STAGES.length)) return false;
   if (!isObj(tt.bac) || !HUAN_BRANCHES.every((k) => isNum((tt.bac as Raw)[k]) && ((tt.bac as Raw)[k] as number) >= 0 && ((tt.bac as Raw)[k] as number) <= HUAN_COST.length)) return false;
@@ -442,14 +549,15 @@ function isGameState(v: unknown): v is GameState {
   const troops = v.troops;
   if (!isObj(troops) || !UNIT_TYPES.every((k) => isNum(troops[k]) && troops[k] >= 0)) return false;
   const arms = v.arms;
-  if (!isObj(arms) || !UNIT_TYPES.every((k) => isNum(arms[k]) && arms[k] >= 0 && arms[k] <= 2)) return false;
+  if (!isObj(arms) || !UNIT_TYPES.every((k) => isNum(arms[k]) && arms[k] >= 0 && arms[k] <= ARMS.length)) return false;
   const raid = v.raid;
   if (!isObj(raid) || !isNum(raid.wave) || !isNum(raid.won) || !(raid.nextAt === null || isNum(raid.nextAt))) return false;
   if (!['idle', 'warning', 'battle'].includes(raid.phase as string)) return false;
-  if (!['an', 'thuy', 'yeu', 'trieu', 'thuyBinh'].includes(raid.foe as string) || !isNum(raid.floods) || !isNum(raid.floodsHeld) || !isNum(raid.water)) return false;
-  if (![raid.nights, raid.nightsHeld, raid.trieu, raid.trieuHeld, raid.thuyBinh, raid.thuyBinhHeld].every(isNum)) return false;
+  if (!['an', 'thuy', 'yeu', 'trieu', 'thuyBinh', 'han', 'thuyHan'].includes(raid.foe as string) || !isNum(raid.floods) || !isNum(raid.floodsHeld) || !isNum(raid.water)) return false;
+  if (![raid.nights, raid.nightsHeld, raid.trieu, raid.trieuHeld, raid.thuyBinh, raid.thuyBinhHeld, raid.han, raid.hanHeld, raid.thuyHan, raid.thuyHanHeld, raid.lauSunk].every(isNum)) return false;
   const camp = v.campaign;
   if (!isObj(camp) || !isNum(camp.cleared) || !isObj(camp.rows)) return false;
+  if (camp.phoTuong !== undefined && !NU_TUONG_IDS.includes(camp.phoTuong as NuTuongId)) return false;
   if (!UNIT_TYPES.every((k) => ROWS.includes((camp.rows as Raw)[k] as never))) return false;
   if (!(camp.battle === null || isObj(camp.battle)) || !(camp.lastResult === null || isObj(camp.lastResult))) return false;
   const res = v.resources;

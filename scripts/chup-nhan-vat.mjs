@@ -35,8 +35,10 @@ try {
     },
     [nhom, huong],
   );
+  // Hàng có cột riêng (khác cột chung ghi ở cuối ảnh) thì ghi tên cột ngay dưới hàng ấy.
+  const rieng = (h) => (h.cot && h.cot.join() !== cot.join() ? `<div style="font-weight:400">${h.cot.join(' · ')}</div>` : '');
   const html = `<body style="margin:0;padding:12px;background:#efe3c6;font:600 15px system-ui;color:#3a2a1a;width:max-content">
-    ${hang.map((h) => `<div style="margin:6px 0 2px">${h.ten}</div><img src="${h.anh}" style="display:block">`).join('')}
+    ${hang.map((h) => `<div style="margin:6px 0 2px">${h.ten}</div><img src="${h.anh}" style="display:block">${rieng(h)}`).join('')}
     <div style="margin-top:6px;font-weight:400">Cột: ${cot.join(' · ')}</div></body>`;
   await page.setContent(html);
   await mkdir(path.join(ROOT, 'chup'), { recursive: true });

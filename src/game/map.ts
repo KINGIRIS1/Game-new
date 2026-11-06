@@ -21,8 +21,12 @@ export const FAR_FOREST = GRID - 2;
 export const FOREST_BAND = 2;
 /** Cạnh một khoảnh đất (ô). Đất giữa dải rừng ngoài cùng và sông chia thành 10×10 khoảnh (`khoanh.ts`). */
 export const KHOANH = 5;
-/** Góc móng Điện Vua Hùng (cả x và z): Điện 5×5 nằm đúng khoảnh thứ 8 tính từ dải rừng. */
-export const DIEN_HOME = 37;
+/**
+ * Góc móng Điện Vua Hùng (cả x và z) ở ván mới và trong mẫu kinh đô: Điện 10×10 phủ trọn bốn khoảnh thứ 7, 8 tính từ
+ * dải rừng, mép đông nam ở ô 41 như Điện 5×5 cũ (bản lưu cũ nới Điện về phía rừng). Điện dời được, nên Điện của một
+ * ván có thể ở chỗ khác.
+ */
+export const DIEN_HOME = 32;
 
 export function inGrid(x: number, z: number): boolean {
   return x >= 0 && z >= 0 && x < GRID && z < GRID;
@@ -49,6 +53,38 @@ export function farBankOf(x: number, z: number): 'nam' | 'dong' | null {
   return null;
 }
 
+/**
+ * Góc móng w × d khi người chơi chạm ô (tx, tz) lúc đặt công trình: móng lấy ô chạm làm tâm, rồi đẩy vào trọn một bờ
+ * đất (bên này, bờ đông sông Thao hay bờ nam sông Đà), không chìa xuống sông. Chạm trên đất thì giữ đúng bờ ấy; chạm
+ * xuống sông thì về bờ gần ô chạm nhất (cách đều thì về bên này).
+ */
+export function footOnLand(tx: number, tz: number, w: number, d: number): { x: number; z: number } {
+  const x0 = tx - Math.floor((w - 1) / 2);
+  const z0 = tz - Math.floor((d - 1) / 2);
+  const clamp = (v: number, lo: number, hi: number) => Math.min(Math.max(v, lo), hi);
+  // Ba bờ đất, mỗi bờ một khoảng góc móng: bên này, bờ đông sông Thao, bờ nam sông Đà.
+  const banks = [
+    { x: [0, RIVER_START - w], z: [0, RIVER_START - d] },
+    { x: [RIVER_END, GRID - w], z: [0, RIVER_START - d] },
+    { x: [0, GRID - w], z: [RIVER_END, GRID - d] },
+  ];
+  let best = { x: 0, z: 0 };
+  let bestGap = Infinity;
+  for (const b of banks) {
+    const x = clamp(x0, b.x[0], b.x[1]);
+    const z = clamp(z0, b.z[0], b.z[1]);
+    // Ô chạm cách móng bao nhiêu ô (0 khi ô chạm nằm trong móng).
+    const gx = Math.max(x - tx, tx - (x + w - 1), 0);
+    const gz = Math.max(z - tz, tz - (z + d - 1), 0);
+    const gap = Math.max(gx, gz);
+    if (gap < bestGap) {
+      best = { x, z };
+      bestGap = gap;
+    }
+  }
+  return best;
+}
+
 /** Móng (x, z, w, d) có cạnh sát bờ sông: bên này sông, hay bên kia sông (bờ đông sông Thao, bờ nam sông Đà). */
 export function touchesRiver(x: number, z: number, w: number, d: number): boolean {
   return x + w === RIVER_START || z + d === RIVER_START || (x === RIVER_END && z < RIVER_START) || (z === RIVER_END && x < RIVER_START);
@@ -64,6 +100,44 @@ export function riverFacing(x: number, z: number, w: number, d: number): number 
   if (z === RIVER_END) return Math.PI;
   if (x === RIVER_END) return -Math.PI / 2;
   return 0;
+}
+
+/**
+ * Góc quay quanh trục đứng của công trình xoay `rot` nấc (0–3, mỗi nấc 90°), cùng quy ước với `riverFacing`: mô hình
+ * vẽ mặt trước hướng +z, góc π/2 quay mặt trước sang +x.
+ */
+export function rotAngle(rot = 0): number {
+  return (((rot % 4) + 4) % 4) * (Math.PI / 2);
+}
+
+/**
+ * Điểm (lx, lz) trên mô hình (gốc ở tâm móng) sau khi công trình xoay `rot` nấc, như `Object3D.rotation.y = rotAngle(rot)`.
+ * Tính bằng số nguyên cho khỏi sai số khi so ô.
+ */
+export function turnLocal(rot: number | undefined, lx: number, lz: number): { x: number; z: number } {
+  switch ((((rot ?? 0) % 4) + 4) % 4) {
+    case 1:
+      return { x: lz, z: -lx };
+    case 2:
+      return { x: -lx, z: -lz };
+    case 3:
+      return { x: -lz, z: lx };
+    default:
+      return { x: lx, z: lz };
+  }
+}
+
+/**
+ * Dải ô thẳng khi kéo thả trải đường từ ô `a` tới ô `b`: đi theo trục kéo dài hơn (ngang hay dọc lưới), từ `a` tới
+ * ngang tầm `b`. Kéo xiên thì vẫn ra một đường thẳng; hai trục dài bằng nhau thì theo trục x.
+ */
+export function lineTiles(a: { x: number; z: number }, b: { x: number; z: number }): { x: number; z: number }[] {
+  const alongX = Math.abs(b.x - a.x) >= Math.abs(b.z - a.z);
+  const n = alongX ? b.x - a.x : b.z - a.z;
+  const step = Math.sign(n);
+  const out: { x: number; z: number }[] = [];
+  for (let i = 0; i <= Math.abs(n); i++) out.push(alongX ? { x: a.x + i * step, z: a.z } : { x: a.x, z: a.z + i * step });
+  return out;
 }
 
 // ---------- Độ cao ô đất ----------

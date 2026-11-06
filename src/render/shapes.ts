@@ -179,37 +179,109 @@ export interface Placement {
   ry: number;
 }
 
+const tmpMatrix = new THREE.Matrix4();
+const tmpQuat = new THREE.Quaternion();
+const tmpAt = new THREE.Vector3();
+const tmpSize = new THREE.Vector3();
+const UP = new THREE.Vector3(0, 1, 0);
+
+/** Ma trận đặt một bản sao: dời tới chỗ, xoay quanh trục đứng, phóng đều. */
+function placementMatrix(p: Placement): THREE.Matrix4 {
+  tmpQuat.setFromAxisAngle(UP, p.ry);
+  return tmpMatrix.compose(tmpAt.set(p.x, p.y ?? 0, p.z), tmpQuat, tmpSize.setScalar(p.s));
+}
+
 /** Vẽ nhiều bản sao của vài mẫu (cây, bụi tre) bằng InstancedMesh, mỗi mẫu một lần vẽ. */
 export function instanceTemplates(templates: THREE.Mesh[], placements: Placement[], outline?: (geo: THREE.BufferGeometry) => THREE.Mesh): THREE.Group {
   const group = new THREE.Group();
-  const m = new THREE.Matrix4();
-  const q = new THREE.Quaternion();
-  const up = new THREE.Vector3(0, 1, 0);
   templates.forEach((tpl, ti) => {
     const mine = placements.filter((p) => p.t === ti);
     if (!mine.length) return;
     const inst = new THREE.InstancedMesh(tpl.geometry, tpl.material, mine.length);
     inst.castShadow = true;
     inst.receiveShadow = true;
-    mine.forEach((p, i) => {
-      q.setFromAxisAngle(up, p.ry);
-      m.compose(new THREE.Vector3(p.x, p.y ?? 0, p.z), q, new THREE.Vector3(p.s, p.s, p.s));
-      inst.setMatrixAt(i, m);
-    });
+    mine.forEach((p, i) => inst.setMatrixAt(i, placementMatrix(p)));
     inst.computeBoundingSphere();
     group.add(inst);
     if (outline) {
       const o = outline(tpl.geometry);
       const oi = new THREE.InstancedMesh(o.geometry, o.material, mine.length);
-      for (let i = 0; i < mine.length; i++) {
-        inst.getMatrixAt(i, m);
-        oi.setMatrixAt(i, m);
-      }
+      oi.instanceMatrix.copyArray(inst.instanceMatrix.array);
       oi.computeBoundingSphere();
       group.add(oi);
     }
   });
   return group;
+}
+
+/**
+ * Như `instanceTemplates`, nhưng gộp mọi mẫu cùng chất liệu vào một BatchedMesh (viền mực một BatchedMesh nữa).
+ *
+ * Mỗi mẫu một InstancedMesh thì khối bao của lô trùm cả bản đồ: three.js không bỏ được bản sao nào nằm ngoài khung
+ * nhìn hay ngoài vùng bóng nắng, rừng cả nghìn cây vẽ trọn mọi khung hình. BatchedMesh xét từng bản sao, chỉ vẽ cái
+ * thấy được, mà cả lô vẫn một lệnh vẽ mỗi lượt. Cần WEBGL_multi_draw: thiếu thì three.js vẽ từng bản sao một, nên
+ * máy không có thì dùng `instanceTemplates`.
+ */
+export function batchTemplates(templates: THREE.Mesh[], placements: Placement[], outline?: (geo: THREE.BufferGeometry) => THREE.Mesh): THREE.Group {
+  const group = new THREE.Group();
+  const batch = (material: THREE.Material, geos: Map<number, THREE.BufferGeometry>, mine: Placement[]) => {
+    let vertices = 0;
+    let indices = 0;
+    for (const g of geos.values()) {
+      vertices += g.getAttribute('position').count;
+      indices += g.index?.count ?? 0;
+    }
+    const bm = new THREE.BatchedMesh(mine.length, vertices, indices, material);
+    // Chất liệu đặc, không cần xếp xa gần: bỏ bước xếp cho nhẹ mỗi khung.
+    bm.sortObjects = false;
+    const ids = new Map<number, number>();
+    for (const [t, g] of geos) ids.set(t, bm.addGeometry(g));
+    for (const p of mine) bm.setMatrixAt(bm.addInstance(ids.get(p.t)!), placementMatrix(p));
+    group.add(bm);
+    return bm;
+  };
+  // Chia theo chất liệu (mẫu cây hiện đều một chất liệu, nên thường chỉ một nhóm).
+  const byMaterial = new Map<THREE.Material, number[]>();
+  templates.forEach((tpl, t) => {
+    if (!placements.some((p) => p.t === t)) return;
+    const mat = tpl.material as THREE.Material;
+    byMaterial.set(mat, [...(byMaterial.get(mat) ?? []), t]);
+  });
+  for (const [material, ts] of byMaterial) {
+    const mine = placements.filter((p) => ts.includes(p.t));
+    const fill = batch(material, new Map(ts.map((t) => [t, templates[t].geometry])), mine);
+    fill.castShadow = true;
+    fill.receiveShadow = true;
+    if (!outline) continue;
+    const inks = ts.map((t) => outline(templates[t].geometry));
+    const ink = batch(inks[0].material as THREE.Material, new Map(ts.map((t, i) => [t, inks[i].geometry])), mine);
+    ink.castShadow = false;
+  }
+  return group;
+}
+
+/**
+ * Gỡ lô bản sao đã vẽ (rừng, lũy, đê...): trả bộ nhớ vị trí các bản sao trên GPU, giữ lại hình mẫu và viền mực
+ * dùng chung để vẽ lô sau.
+ */
+export function disposeInstances(obj: THREE.Object3D): void {
+  obj.traverse((o) => {
+    // BatchedMesh giữ bản sao chép riêng của các mẫu: trả luôn, mẫu gốc vẫn còn.
+    if (o instanceof THREE.InstancedMesh || o instanceof THREE.BatchedMesh) o.dispose();
+  });
+}
+
+/**
+ * Gỡ một mô hình dựng riêng (công trình, người làm, lính): trả hình và khung xương (ảnh xương trên GPU) của nó.
+ * Chất liệu dùng chung giữa mọi mô hình nên giữ lại. Hình dùng chung (nếu có) bị trả thì lần vẽ sau tự nạp lại.
+ */
+export function disposeModel(obj: THREE.Object3D): void {
+  obj.traverse((o) => {
+    if (o instanceof THREE.SkinnedMesh) o.skeleton.dispose();
+    // Lô bản sao trong mô hình dùng hình mẫu chung: chỉ trả vị trí các bản sao.
+    if (o instanceof THREE.InstancedMesh || o instanceof THREE.BatchedMesh) o.dispose();
+    else if (o instanceof THREE.Mesh) o.geometry.dispose();
+  });
 }
 
 /** Geometry chỉ còn vị trí, gộp đỉnh trùng và có pháp tuyến mượt, dùng để đẩy viền mực ra ngoài. */

@@ -67,8 +67,9 @@ describe('Điện và công trình cấp 8', () => {
     const eight: BuildingType[] = ['ruong', 'ben', 'nhaSan', 'baiDa', 'loRen', 'kho', 'choiCanh'];
     for (const t of eight) expect(BUILDINGS[t].maxLevel, t).toBeGreaterThanOrEqual(8);
     // Lầu nỏ chỉ có từ Điện 8 (ghép từ chòi canh); cổng thành 2 cái ở Điện 5–7, 4 cái ở Điện 8 (thêm hai cổng trên
-    // vòng thành giữa của mẫu Cổ Loa); còn lại giữ như Điện 7.
-    for (const def of Object.values(BUILDINGS)) if (def.type !== 'lauNo' && def.type !== 'congThanh') expect(def.limit[7], def.type).toBe(def.limit[6]);
+    // vòng thành giữa của mẫu Cổ Loa); bến thuyền khơi mở ở Điện 8 (biển Đông); còn lại giữ như Điện 7.
+    const newAt8: BuildingType[] = ['lauNo', 'congThanh', 'benKhoi'];
+    for (const def of Object.values(BUILDINGS)) if (!newAt8.includes(def.type)) expect(def.limit[7], def.type).toBe(def.limit[6]);
     const s = capital8();
     setDien(s, 7);
     const ruong = place(s, 'ruong', edge(7, 1), edge(7, 1));
@@ -134,8 +135,8 @@ describe('lầu nỏ', () => {
     const cost = BUILDINGS.lauNo.buildCost;
     expect(s.resources.voOc).toBe(before.voOc - cost.voOc!);
     expect(s.resources.sat).toBe(before.sat - cost.sat!);
-    // Không tách lại, không lên cấp, không dỡ được.
-    expect(canUpgrade(s, lau.id)).toEqual({ ok: false, reason: 'capToiDa' });
+    // Không tách lại, không dỡ được; lên cấp 2 phải chờ Điện 9 (sau truyện).
+    expect(canUpgrade(s, lau.id)).toEqual({ ok: false, reason: 'chuaDuCapDien' });
     expect(remove(s, lau.id).ok).toBe(false);
     expect(canPlace(s, 'lauNo', 20, 20).ok).toBe(false);
   });
@@ -173,7 +174,7 @@ describe('lầu nỏ', () => {
     const hp = foes.map((f) => f.hp);
     stepBattle(s, battle, 0.01);
     const lost = foes.map((f, i) => hp[i] - f.hp);
-    expect(lost.slice(0, 3).every((d) => Math.abs(d - LAU_NO.dmg) < 1e-6)).toBe(true);
+    expect(lost.slice(0, 3).every((d) => Math.abs(d - LAU_NO.dmg[0]) < 1e-6)).toBe(true);
     expect(lost[3]).toBe(0);
   });
 

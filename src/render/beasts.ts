@@ -1,15 +1,20 @@
 // Thú có khung xương (rig.ts) và người cưỡi (soldier.ts): voi chiến có Lạc tướng cưỡi, chiến xa và đại tướng Ân,
-// kỵ binh Triệu, Triệu Đà, hổ tinh, gà trắng nghìn năm, Rùa Vàng, ngựa vua chở An Dương Vương và Mỵ Châu.
+// kỵ binh Triệu, Triệu Đà, Mã Viện cưỡi ngựa trắng, hổ tinh, gà trắng nghìn năm, Rùa Vàng, ngựa vua chở An Dương
+// Vương và Mỵ Châu, voi trận của Hai Bà Trưng (người cưỡi dựng ở heroes.ts).
 // Gốc là mặt đất dưới thú, đầu hướng +z.
 // Thú bốn chân đi theo nhịp chéo (chân trước trái cùng chân sau phải); ngã thì lăn nghiêng (`userData.fall`).
 
 import * as THREE from 'three';
 import type { FighterKind } from '../game/battle';
-import { HUMAN, beginPose, featherCrown, hairCap, humanBody, humanHead, lerp, strikeCurve, type Human, type HumanRig } from './body';
+import { HUMAN, beginPose, featherCrown, hairCap, headband, humanBody, humanHead, lerp, strikeCurve, type Human, type HumanRig } from './body';
+import { Clay, ellipsoid } from './nan';
+import { armor, bun, chestDisc, diadem, hairDown, necklace, pauldrons } from './nanDo';
+import { clayPiece, figure, type Piece } from './nanNguoi';
+import { elephantBody, elephantDrape, horseBody, horseDrape, roosterBody, tigerBody, turtleBody, turtleDrum } from './nanThu';
 import { C } from './palette';
-import { RigBuilder, bakeRig, moveBones, resetBones, skinRig, type Act, type BoneDef, type Bones, type Poser, type RigSlots } from './rig';
-import { drawRider, poseRider, type RiderKind } from './soldier';
-import { IRON, IRON_DARK } from './weapons';
+import { RigBuilder, bakeRig, moveBones, resetBones, skinRig, type Act, type BoneDef, type Bones, type Poser, type RigSlot, type RigSlots } from './rig';
+import { drawRider, poseRider, riderBones, riderHasSkill, type RiderKind } from './soldier';
+import { IRON, IRON_DARK, coLac } from './weapons';
 
 type Defs = Record<string, BoneDef<string>>;
 type Rig = RigBuilder<string>;
@@ -40,42 +45,39 @@ export function quadFall(b: B, f: number): void {
 /** Ngựa đứng, lưng cao chừng 0,85. */
 const HORSE: Defs = {
   qBody: { parent: 'base', at: [0, 0.78, 0] },
-  qFL: { parent: 'qBody', at: [-0.14, 0.62, 0.3] },
-  qFR: { parent: 'qBody', at: [0.14, 0.62, 0.3] },
-  qBL: { parent: 'qBody', at: [-0.14, 0.62, -0.3] },
-  qBR: { parent: 'qBody', at: [0.14, 0.62, -0.3] },
-  qNeck: { parent: 'qBody', at: [0, 0.9, 0.32] },
-  qHead: { parent: 'qNeck', at: [0, 1.2, 0.52] },
+  qFL: { parent: 'qBody', at: [-0.14, 0.62, 0.32] },
+  qFR: { parent: 'qBody', at: [0.14, 0.62, 0.32] },
+  qBL: { parent: 'qBody', at: [-0.14, 0.62, -0.32] },
+  qBR: { parent: 'qBody', at: [0.14, 0.62, -0.32] },
+  qNeck: { parent: 'qBody', at: [0, 0.86, 0.34] },
+  qHead: { parent: 'qNeck', at: [0, 1.24, 0.66] },
   qTail: { parent: 'qBody', at: [0, 0.9, -0.42] },
 };
 const HORSE_LEG = 0.62;
 
-function drawHorse(r: Rig, color: number, saddle: number | null): void {
-  const body = r.on('qBody');
-  body.plain.sphere(0.33, color, 0, 0.78, 0, [0.8, 0.78, 1.4], 12);
-  if (saddle) body.band.box(0.5, 0.06, 0.46, saddle, 0, 1.0, -0.04);
-  for (const [b, x, z] of [
-    ['qFL', -0.14, 0.3],
-    ['qFR', 0.14, 0.3],
-    ['qBL', -0.14, -0.3],
-    ['qBR', 0.14, -0.3],
-  ] as const) {
-    const p = r.on(b).plain;
-    p.cyl(0.07, 0.055, 0.34, color, x, 0.46, z, undefined, 7);
-    p.cyl(0.045, 0.05, 0.26, color, x, 0.17, z, undefined, 6);
-    p.cyl(0.055, 0.06, 0.06, C.ink, x, 0.03, z, undefined, 6);
-  }
-  const neck = r.on('qNeck').plain;
-  neck.cyl(0.1, 0.14, 0.46, color, 0, 1.05, 0.42, [-0.6, 0, 0], 8);
-  // Bờm đen dọc cổ.
-  neck.box(0.04, 0.32, 0.36, C.ink, 0, 1.18, 0.38, [-0.6, 0, 0]);
+/** Ngựa màu `color`, đệm yên `saddle` (không có thì ngựa kéo xe), bờm và đuôi màu `mane`. */
+function drawHorse(r: Rig, color: number, saddle: number | null, mane: number = C.ink): void {
+  horseBody(r, { coat: color, mane });
+  if (saddle) horseDrape(r, { color: saddle, z0: -0.22, z1: 0.16, half: 0.95, pattern: true });
+}
+
+/**
+ * Ngựa trắng của Mã Viện: bờm, đuôi xám bạc, đệm yên đỏ son, vạt yên đỏ son viền vàng buông hai bên sườn, tấm che
+ * trán đồng đỏ, dây cương đồng, chùm tua đỏ đeo dưới cổ.
+ */
+function drawWhiteHorse(r: Rig): void {
+  drawHorse(r, C.horseWhite, C.hanRed, C.horseWhiteMane);
   const head = r.on('qHead').plain;
-  head.box(0.17, 0.18, 0.4, color, 0, 1.25, 0.64, [0.35, 0, 0]);
-  for (const s of [-1, 1]) {
-    head.cone(0.035, 0.12, color, s * 0.06, 1.42, 0.5, [-0.3, 0, s * 0.25], 5);
-    head.sphere(0.024, C.ink, s * 0.088, 1.3, 0.6, [0.5, 1, 1], 5);
+  head.box(0.08, 0.2, 0.3, C.copper, 0, 1.28, 0.76, [0.42, 0, 0]);
+  head.box(0.19, 0.035, 0.05, C.copperDark, 0, 1.22, 0.76, [0.42, 0, 0]);
+  const neck = r.on('qNeck').plain;
+  neck.sphere(0.04, C.gold, 0, 0.98, 0.56, [1, 1, 1], 6);
+  neck.cone(0.075, 0.2, C.hanRed, 0, 0.86, 0.57, [Math.PI, 0, 0], 7);
+  const body = r.on('qBody').plain;
+  for (const sx of [-1, 1]) {
+    body.box(0.025, 0.2, 0.4, C.hanRed, sx * 0.255, 0.9, -0.04, [0, 0, sx * 0.3]);
+    body.box(0.03, 0.03, 0.41, C.gold, sx * 0.285, 0.805, -0.04, [0, 0, sx * 0.3]);
   }
-  r.on('qTail').plain.cone(0.06, 0.5, C.ink, 0, 0.85, -0.52, [-2.3, 0, 0], 6);
 }
 
 /** Ngựa đi, đứng (gật đầu, phẩy đuôi), cào chân khi người cưỡi ra đòn, ngã. */
@@ -146,45 +148,20 @@ const ELEPHANT: Defs = {
 
 /**
  * Voi chiến. `tier`: bậc giáp đã rèn: bậc 1 giáp trán sắt và giáp sườn sắt viền đồng; bậc 2 thêm ngà dài bịt đồng,
- * bành gỗ quây quanh chỗ ngồi và lọng đỏ.
+ * bành gỗ quây quanh chỗ ngồi và lọng đỏ; bậc 3 giáp trán đồng vàng có núm mặt trời, chuông đồng đeo cổ, lọng hai
+ * tầng có chóp vàng.
  */
-function drawElephant(r: Rig, tier: number): void {
+function drawElephant(r: Rig, tier: number, look: { pad?: number | null; tusks?: boolean } = {}): void {
   const body = r.on('qBody');
   const p = body.plain;
-  p.sphere(0.42, C.elephant, 0, 0.72, 0, [0.85, 0.8, 1.2], 12);
-  body.band.box(0.62, 0.08, 0.7, C.red, 0, 1.05, -0.05);
-  for (const [b, x, z] of [
-    ['qFL', -0.2, 0.28],
-    ['qFR', 0.2, 0.28],
-    ['qBL', -0.2, -0.28],
-    ['qBR', 0.2, -0.28],
-  ] as const) {
-    const leg = r.on(b).plain;
-    leg.cyl(0.11, 0.12, 0.5, C.elephant, x, 0.25, z, undefined, 8);
-    leg.sphere(0.05, C.cream, x, 0.04, z + 0.1, [1.6, 0.6, 0.6], 5);
-  }
+  elephantBody(r, { skin: C.elephant });
+  // Voi trận (`makeVoiTran`) tự vẽ đệm và ngà riêng.
+  if (look.pad !== null) elephantDrape(r, { color: look.pad ?? C.red, z0: -0.4, z1: 0.32, half: 1.0, pattern: true });
   const head = r.on('qHead').plain;
-  head.sphere(0.27, C.elephant, 0, 0.92, 0.48, [1, 1, 0.95], 10);
-  for (const s of [-1, 1]) {
-    head.sphere(0.035, C.ink, s * 0.15, 1.02, 0.66, [1, 1, 0.5], 6);
-    head.cone(0.03, 0.26, C.cream, s * 0.1, 0.72, 0.68, [1.2, 0, 0], 5);
-  }
-  for (const [b, s] of [
-    ['qEarL', -1],
-    ['qEarR', 1],
-  ] as const) {
-    r.on(b).plain.sphere(0.2, C.elephant, s * 0.26, 0.95, 0.4, [0.35, 1, 0.9], 8);
-  }
-  for (let i = 0; i < 4; i++) {
-    r.on(i < 2 ? 'qTrunk' : 'qTrunk2').plain.cyl(0.07 - i * 0.01, 0.08 - i * 0.01, 0.2, C.elephant, 0, 0.78 - i * 0.16, 0.7 + i * 0.03, [0.15 * i, 0, 0], 6);
-  }
-  r.on('qTrunk2').plain.sphere(0.04, C.elephant, 0, 0.24, 0.84, [1, 1, 1], 6);
-  const tail = r.on('qTail').plain;
-  tail.cyl(0.02, 0.025, 0.3, C.elephant, 0, 0.68, -0.52, [0.25, 0, 0], 5);
-  tail.sphere(0.04, C.ink, 0, 0.53, -0.56, [1, 1.4, 1], 5);
+  if (look.tusks !== false) for (const s of [-1, 1]) head.cone(0.03, 0.26, C.cream, s * 0.1, 0.72, 0.68, [1.2, 0, 0], 5);
   if (tier >= 1) {
-    head.box(0.34, 0.26, 0.05, IRON, 0, 1.02, 0.7, [-0.35, 0, 0]);
-    head.box(0.36, 0.04, 0.06, C.bronze, 0, 1.15, 0.66, [-0.35, 0, 0]);
+    head.box(0.34, 0.26, 0.05, tier >= 3 ? C.gold : IRON, 0, 1.02, 0.7, [-0.35, 0, 0]);
+    head.box(0.36, 0.04, 0.06, tier >= 3 ? C.bronzeDark : C.bronze, 0, 1.15, 0.66, [-0.35, 0, 0]);
     for (const s of [-1, 1]) {
       p.box(0.04, 0.3, 0.6, IRON_DARK, s * 0.35, 0.86, -0.05, [0, 0, s * 0.2]);
       for (const y of [0.72, 1.0]) p.box(0.05, 0.04, 0.62, C.bronze, s * (0.32 + (1.0 - y) * 0.2), y, -0.05, [0, 0, s * 0.2]);
@@ -202,6 +179,14 @@ function drawElephant(r: Rig, tier: number): void {
     p.cyl(0.02, 0.02, 0.95, C.woodDark, 0, 2.02, -0.35, undefined, 5);
     body.band.cone(0.42, 0.2, C.red, 0, 2.55, -0.35, undefined, 12);
     p.cyl(0.43, 0.43, 0.04, C.bronze, 0, 2.45, -0.35, undefined, 12);
+  }
+  if (tier >= 3) {
+    // Núm mặt trời giữa giáp trán vàng; chuông đồng đeo cổ; lọng thêm tầng trên chóp vàng, viền tầng dưới vàng.
+    head.sphere(0.05, C.bronzeLight, 0, 1.03, 0.72, [1, 1, 0.5], 8);
+    for (const s of [-1, 1]) head.sphere(0.05, C.gold, s * 0.16, 0.7, 0.55, [1, 1.15, 1], 6);
+    p.cyl(0.43, 0.43, 0.045, C.gold, 0, 2.45, -0.35, undefined, 12);
+    body.band.cone(0.24, 0.16, C.red, 0, 2.72, -0.35, undefined, 10);
+    p.cone(0.06, 0.16, C.gold, 0, 2.86, -0.35, undefined, 6);
   }
 }
 
@@ -232,6 +217,249 @@ function poseElephant(b: B, a: Act, e: number): void {
   }
 }
 
+// ---------- Voi trận của Hai Bà ----------
+
+/** Voi trận to hơn voi chiến một phần ba. */
+export const K_VOI_TRAN = 4 / 3;
+/** Mặt nệm trong bành (tọa độ voi chưa phóng): người cưỡi ngồi lên đây. */
+const CUSHION_TOP = 1.165;
+/** Chân cán lọng ngay sau thành sau của bành, và tâm tán lọng (tọa độ voi chưa phóng). */
+const PARASOL_FOOT: V3 = [0, 1.08, -0.43];
+const PARASOL_TOP = 2.58;
+/** Chỗ tay nắm cán cờ cắm ở góc sau bên phải bành (tọa độ mô hình); cán ngả ra ngoài cho khỏi vướng lọng. */
+const FLAG_SOCKET: V3 = [0.38, 1.75, -0.56];
+const FLAG_TILT: V3 = [-0.12, 0, -0.42];
+
+/** Gốc thân người cưỡi (giữa hai bàn chân khi đứng) cỡ `k`: hông vừa chạm nệm bành. */
+export function voiTranSeat(k: number): V3 {
+  return [0, CUSHION_TOP * K_VOI_TRAN - 0.2 * k, -0.12 * K_VOI_TRAN];
+}
+
+const VOI_TRAN: Defs = {
+  ...BASE,
+  ...moveBones(ELEPHANT, 'base', [0, 0, 0], K_VOI_TRAN),
+  qFlag: { parent: 'qBody', at: FLAG_SOCKET },
+};
+
+/** Voi trận: màu đệm, viền, lọng; có mặt trống đồng hai bên đệm hay không; có cờ chim Lạc sau bành hay không. */
+export interface VoiTranLook {
+  /** Đệm phủ lưng voi. */
+  pad: number;
+  /** Viền đệm, tua, nệm bành, vành lọng. */
+  trim: number;
+  /** Mặt trống đồng hai bên đệm. */
+  drum?: boolean;
+  /** Tán lọng. */
+  parasol: number;
+  /** Cờ chim Lạc cắm sau bành: cỡ cờ (bằng cỡ người cưỡi); bỏ trống là không có cờ. */
+  flag?: number;
+}
+
+/** Voi làm gì thêm, do người cưỡi định theo động tác của mình (kỹ năng, thắng trận). Mỗi số 0..1. */
+export interface VoiTranMood {
+  /** Dậm chân, giơ vòi theo đòn đánh; bỏ trống thì theo `strike` của người cưỡi. */
+  strike?: number;
+  /** Giơ vòi rống. */
+  trumpet?: number;
+  /** Chồm hai chân trước. */
+  rear?: number;
+  /** Lao tới: sức lao, và pha bước (`chargePhase`). */
+  charge?: number;
+  chargePhase?: number;
+}
+
+/** Người cưỡi voi trận: xương thêm, hình vẽ, và tư thế (gọi trước voi, trả về voi làm gì thêm). */
+export interface VoiTranRider {
+  defs: Defs;
+  draw(r: Rig): void;
+  pose(b: B, a: Act): VoiTranMood;
+}
+
+/**
+ * Voi trận: đệm vòm phủ lưng viền tua, mặt trống đồng hai bên (`drum`), bành gỗ dải hoa văn nẹp đồng có nệm, ngà dài
+ * bọc đồng bịt mũi đồng, giáp trán đồng núm vàng có chùm lông đỏ, vòng đồng cổ chân, lọng hai tầng chóp vàng cắm sau
+ * bành, và cờ chim Lạc ở góc sau bên phải (`flag`).
+ */
+function drawVoiTran(r: Rig, look: VoiTranLook): void {
+  r.place([0, 0, 0], K_VOI_TRAN, () => {
+    drawElephant(r, 0, { pad: null, tusks: false });
+    const body = r.on('qBody');
+    const p = body.plain;
+    // Đệm vòm trùm lưng như tấm phủ ngựa vua, viền và tua quanh mép.
+    const cap = Math.PI * 0.42;
+    const pad: V3 = [0.374, 0.352, 0.53];
+    const padY = 0.72;
+    const padZ = -0.03;
+    body.band.add(new THREE.SphereGeometry(1, 18, 7, 0, Math.PI * 2, 0, cap), look.pad, 0, padY, padZ, [0, 0, 0], pad);
+    const rimY = padY + pad[1] * Math.cos(cap);
+    const rx = pad[0] * Math.sin(cap);
+    const rz = pad[2] * Math.sin(cap);
+    p.add(new THREE.TorusGeometry(1, 0.035, 5, 24), look.trim, 0, rimY, padZ, [Math.PI / 2, 0, 0], [rx, rz, 1]);
+    for (let i = 0; i < 16; i++) {
+      const a = ((i + 0.5) / 16) * Math.PI * 2;
+      p.cone(0.03, 0.09, look.trim, Math.sin(a) * rx, rimY - 0.05, padZ + Math.cos(a) * rz, [Math.PI, 0, 0], 5);
+    }
+    if (look.drum) {
+      const th = Math.PI * 0.3;
+      const tilt = Math.atan2(Math.sin(th) / pad[0], Math.cos(th) / pad[1]);
+      for (const s of [-1, 1]) {
+        const x = s * (pad[0] * Math.sin(th) + 0.012);
+        const y = padY + pad[1] * Math.cos(th) + 0.01;
+        body.drum.cyl(0.13, 0.13, 0.024, C.gold, x, y, padZ, [0, 0, -s * tilt], 16);
+        p.cyl(0.148, 0.148, 0.014, C.bronzeDark, x, y, padZ, [0, 0, -s * tilt], 16);
+      }
+    }
+    // Bành gỗ: sàn, thành hai bên và trước thấp, thành sau cao, cột góc bịt đồng, nệm.
+    p.box(0.5, 0.05, 0.6, C.woodDark, 0, 1.09, -0.1);
+    for (const s of [-1, 1]) {
+      body.band.box(0.035, 0.12, 0.6, C.woodLight, s * 0.25, 1.17, -0.1);
+      p.box(0.045, 0.025, 0.62, C.bronze, s * 0.25, 1.235, -0.1);
+    }
+    body.band.box(0.5, 0.08, 0.035, C.woodLight, 0, 1.15, 0.2);
+    p.box(0.52, 0.025, 0.045, C.bronze, 0, 1.195, 0.2);
+    body.band.box(0.5, 0.18, 0.035, C.woodLight, 0, 1.2, -0.4);
+    p.box(0.52, 0.025, 0.045, C.bronze, 0, 1.295, -0.4);
+    for (const [x, z, h] of [
+      [-0.25, 0.2, 0.15],
+      [0.25, 0.2, 0.15],
+      [-0.25, -0.4, 0.25],
+      [0.25, -0.4, 0.25],
+    ] as const) {
+      p.cyl(0.026, 0.026, h, C.woodDark, x, 1.09 + h / 2, z, undefined, 6);
+      p.sphere(0.034, C.bronzeLight, x, 1.09 + h, z, [1, 1, 1], 6);
+    }
+    p.box(0.42, 0.05, 0.5, look.trim, 0, CUSHION_TOP - 0.025, -0.08);
+    // Ngà dài bọc đồng: khâu đồng ở gốc, dải đồng hoa văn, vòng đồng, mũi bịt đồng nhọn.
+    for (const s of [-1, 1]) {
+      r.local('qHead', [s * 0.115, 0.6, 0.6], [1.3, 0, -s * 0.12], (t) => {
+        t.plain.cone(0.05, 0.5, C.cream, 0, 0.25, 0, undefined, 7);
+        t.plain.cyl(0.06, 0.062, 0.09, C.bronze, 0, 0.045, 0, undefined, 8);
+        t.band.cyl(0.042, 0.05, 0.1, C.bronze, 0, 0.16, 0, undefined, 8);
+        t.plain.cyl(0.033, 0.033, 0.022, C.bronzeLight, 0, 0.3, 0, undefined, 6);
+        t.plain.cone(0.02, 0.15, C.bronzeLight, 0, 0.46, 0, undefined, 6);
+      });
+    }
+    // Giáp trán đồng có núm vàng và chùm lông đỏ.
+    const head = r.on('qHead');
+    head.band.box(0.3, 0.26, 0.05, C.bronze, 0, 1.02, 0.7, [-0.35, 0, 0]);
+    head.plain.box(0.32, 0.035, 0.06, C.gold, 0, 1.15, 0.66, [-0.35, 0, 0]);
+    head.plain.sphere(0.05, C.gold, 0, 1.03, 0.725, [1, 1, 0.55], 8);
+    head.plain.cone(0.05, 0.2, C.red, 0, 1.24, 0.6, [-0.25, 0, 0], 6);
+    // Vòng đồng cổ chân.
+    for (const [b, x, z] of [
+      ['qFL', -0.2, 0.28],
+      ['qFR', 0.2, 0.28],
+      ['qBL', -0.2, -0.28],
+      ['qBR', 0.2, -0.28],
+    ] as const) {
+      r.on(b).band.cyl(0.125, 0.13, 0.07, C.bronze, x, 0.14, z, undefined, 10);
+    }
+    // Lọng hai tầng cắm sau thành sau: cán gỗ kẹp đồng, tán dưới viền, tán trên, chóp vàng, tua rủ quanh vành.
+    const [px, py, pz] = PARASOL_FOOT;
+    p.cyl(0.022, 0.022, PARASOL_TOP - py, C.woodDark, px, (py + PARASOL_TOP) / 2, pz, undefined, 6);
+    p.cyl(0.036, 0.036, 0.1, C.bronze, px, 1.25, pz, undefined, 6);
+    body.band.cone(0.5, 0.2, look.parasol, px, PARASOL_TOP, pz, undefined, 14);
+    p.cyl(0.51, 0.51, 0.045, look.trim, px, PARASOL_TOP - 0.1, pz, undefined, 14);
+    body.band.cone(0.27, 0.16, look.parasol, px, PARASOL_TOP + 0.15, pz, undefined, 12);
+    p.cyl(0.28, 0.28, 0.03, look.trim, px, PARASOL_TOP + 0.07, pz, undefined, 12);
+    p.sphere(0.045, C.gold, px, PARASOL_TOP + 0.25, pz, [1, 1, 1], 7);
+    p.cone(0.05, 0.16, C.gold, px, PARASOL_TOP + 0.34, pz, undefined, 6);
+    for (let i = 0; i < 12; i++) {
+      const a = (i / 12) * Math.PI * 2;
+      p.box(0.03, 0.14, 0.03, look.trim, px + Math.sin(a) * 0.49, PARASOL_TOP - 0.19, pz + Math.cos(a) * 0.49);
+    }
+  });
+  if (look.flag) {
+    const k = look.flag;
+    r.place(FLAG_SOCKET, k, () => r.local('qFlag', [0, 0, 0], FLAG_TILT, coLac));
+    // Ống đồng giữ chân cán cờ, buộc vào cột góc bành.
+    r.place(FLAG_SOCKET, k, () => r.local('qBody', [0, 0, 0], FLAG_TILT, (s) => s.plain.cyl(0.034, 0.034, 0.2, C.bronze, 0, -0.14, 0, undefined, 6)));
+  }
+}
+
+/**
+ * Voi trận đi chậm, vòi đung đưa, tai quạt; dậm chân giơ vòi theo đòn đánh. Người cưỡi định thêm (`m`): giơ vòi rống,
+ * chồm hai chân trước (xoay quanh hông sau, chân sau vẫn chạm đất), lao tới.
+ */
+function poseVoiTran(b: B, a: Act, m: VoiTranMood): void {
+  const t = a.time ?? 0;
+  const K = K_VOI_TRAN;
+  const trumpet = m.trumpet ?? 0;
+  const flap = 0.15 + 0.15 * Math.sin(t * 2.4) + 0.5 * trumpet;
+  b.qEarL.rotation.y = flap;
+  b.qEarR.rotation.y = -flap;
+  b.qFlag.rotation.set(0.05 * Math.sin(t * 1.9), 0, 0.04 * Math.sin(t * 1.3));
+  if (a.act === 'dead') {
+    const f = a.fall ?? 1;
+    quadFall(b, f);
+    b.qTrunk.rotation.x = 0.3 * f;
+    return;
+  }
+  const charge = m.charge ?? 0;
+  if (charge > 0) {
+    const sw = quadWalk(b, m.chargePhase ?? 0, 0.55 * charge, 0.5 * K);
+    b.qBody.rotation.set(0.08 * charge, 0, 0.03 * sw);
+    b.qHead.rotation.x = 0.18 * charge;
+    b.qTrunk.rotation.x = -0.75 * charge + 0.12 * sw;
+    b.qTrunk2.rotation.x = -0.6 * charge;
+    b.qTail.rotation.x = 0.6 * charge;
+  } else if (a.act === 'walk') {
+    const ph = (a.phase ?? 0) * 0.55;
+    const sw = quadWalk(b, ph, (a.stride ?? 0.5) * 0.5, 0.5 * K);
+    b.qBody.rotation.z = 0.03 * sw;
+    b.qTrunk.rotation.x = 0.15 * sw;
+    b.qTrunk2.rotation.x = 0.25 * Math.sin(ph - 0.8);
+    b.qTail.rotation.z = 0.2 * sw;
+  } else {
+    const e = m.strike ?? (a.act === 'fight' ? strikeCurve(a.strike, 0.3, 0.5) : 0);
+    b.qTrunk.rotation.x = 0.08 * Math.sin(t * 1.3) - 1.0 * e;
+    b.qTrunk2.rotation.x = 0.12 * Math.sin(t * 1.3 - 0.7) - 1.2 * e;
+    b.qHead.rotation.x = -0.2 * e;
+    b.qFL.rotation.x = b.qFR.rotation.x = -0.35 * e;
+    b.qBody.rotation.x = -0.1 * e;
+    b.qTail.rotation.z = 0.1 * Math.sin(t * 2);
+  }
+  if (trumpet > 0) {
+    b.qTrunk.rotation.x = lerp(b.qTrunk.rotation.x, -2.25 + 0.06 * Math.sin(t * 9), trumpet);
+    b.qTrunk2.rotation.x = lerp(b.qTrunk2.rotation.x, -0.85, trumpet);
+    b.qHead.rotation.x = lerp(b.qHead.rotation.x, -0.3, trumpet);
+  }
+  const rear = m.rear ?? 0;
+  if (rear > 0) {
+    // Ngả thân lên quanh hông sau (so với khớp thân: thấp hơn 0,22, lùi 0,28), dời thân bù cho hông sau đứng yên.
+    const ang = 0.4 * rear;
+    const hy = -0.22 * K;
+    const hz = -0.28 * K;
+    b.qBody.rotation.x -= ang;
+    b.qBody.position.y += hy * (1 - Math.cos(ang)) - hz * Math.sin(ang);
+    b.qBody.position.z += hz * (1 - Math.cos(ang)) + hy * Math.sin(ang);
+    b.qBL.rotation.x = b.qBR.rotation.x = ang;
+    b.qFL.rotation.x = -1.0 * rear;
+    b.qFR.rotation.x = -0.7 * rear;
+  }
+}
+
+/**
+ * Voi trận của Hai Bà (`look`: màu đệm, lọng, trống đồng, cờ) có người cưỡi (`rider`, heroes.ts) hay không.
+ * `userData.pose(a)` đặt tư thế cả người lẫn voi; ngã thì lăn nghiêng.
+ */
+export function makeVoiTran(look: VoiTranLook, rider?: VoiTranRider): THREE.Group {
+  // Có người cưỡi thì là tướng: đủ chi tiết như các tướng khác.
+  const r = new RigBuilder({ ...VOI_TRAN, ...rider?.defs }, rider ? 1 : DETAIL);
+  drawVoiTran(r, look);
+  rider?.draw(r);
+  const { group, bones } = skinRig(r.build());
+  const pose: Poser = (a) => {
+    resetBones(bones);
+    const mood = rider ? rider.pose(bones, a) : {};
+    poseVoiTran(bones, a, mood);
+  };
+  pose({ act: 'stand' });
+  group.userData.pose = pose;
+  group.userData.fall = 'side';
+  return group;
+}
+
 // ---------- Hổ tinh ----------
 
 const TIGER: Defs = {
@@ -247,43 +475,9 @@ const TIGER: Defs = {
 
 /** Hổ vằn cam đen, to, chồm về trước (vai cao hơn mông), mắt đỏ, trán có vằn, đuôi cong vồng lên. */
 function drawTiger(r: Rig): void {
-  const p = r.on('qBody').plain;
-  p.sphere(0.36, C.tiger, 0, 0.66, 0, [0.82, 0.72, 1.45], 12);
-  p.sphere(0.3, C.tigerBelly, 0, 0.54, 0.05, [0.7, 0.5, 1.25], 10);
-  for (let i = 0; i < 5; i++) {
-    const z = -0.38 + i * 0.17;
-    const top = 0.66 + 0.26 * Math.sqrt(Math.max(0, 1 - (z / 0.52) ** 2));
-    p.box(0.22, 0.03, 0.06, C.ink, 0, top, z);
-    for (const sd of [-1, 1]) p.box(0.03, 0.2, 0.06, C.ink, sd * 0.285, 0.7, z, [0, 0, sd * 0.35]);
-  }
-  for (const [b, x, front] of [
-    ['qFL', -0.17, true],
-    ['qFR', 0.17, true],
-    ['qBL', -0.17, false],
-    ['qBR', 0.17, false],
-  ] as const) {
-    const leg = r.on(b).plain;
-    if (front) leg.cyl(0.075, 0.085, 0.56, C.tiger, x, 0.3, 0.36, [-0.25, 0, 0], 7);
-    else leg.cyl(0.085, 0.095, 0.44, C.tiger, x, 0.23, -0.36, [0.15, 0, 0], 7);
-    leg.sphere(0.08, C.tigerBelly, x, 0.05, front ? 0.48 : -0.3, [1, 0.6, 1.3], 6);
-    leg.box(0.03, 0.1, 0.06, C.ink, x + (x > 0 ? 0.07 : -0.07), front ? 0.32 : 0.25, front ? 0.38 : -0.36);
-  }
+  tigerBody(r);
   const h = r.on('qHead').plain;
-  h.sphere(0.28, C.tiger, 0, 0.98, 0.6, [1.12, 1, 1], 12);
-  h.sphere(0.16, C.tigerBelly, 0, 0.88, 0.8, [1.3, 0.8, 0.8], 10);
-  h.sphere(0.045, C.ink, 0, 0.95, 0.92, [1.4, 1, 1], 6);
-  for (const dx of [-0.06, 0, 0.06]) h.box(0.025, 0.1, 0.02, C.ink, dx, 1.16, 0.84, [-0.5, 0, 0]);
-  for (const sd of [-1, 1]) {
-    h.sphere(0.085, C.tiger, sd * 0.19, 1.2, 0.54, [1, 1, 0.6], 8);
-    h.sphere(0.04, C.ink, sd * 0.19, 1.21, 0.58, [1, 1, 0.4], 6);
-    h.sphere(0.045, C.ember, sd * 0.1, 1.04, 0.84, [1, 0.8, 0.6], 6);
-    h.cone(0.03, 0.12, C.cream, sd * 0.05, 0.78, 0.88, [Math.PI, 0, 0], 4);
-    h.box(0.1, 0.02, 0.02, C.ink, sd * 0.25, 1.0, 0.7, [0, sd * 0.4, 0]);
-  }
-  r.on('qTail').plain.cyl(0.045, 0.055, 0.45, C.tiger, 0, 0.64, -0.7, [-1.45, 0, 0], 6);
-  const tip = r.on('qTail2').plain;
-  tip.cyl(0.04, 0.045, 0.3, C.tiger, 0, 0.78, -0.96, [-0.65, 0, 0], 6);
-  tip.sphere(0.05, C.ink, 0, 0.92, -1.05, [1, 1.3, 1], 6);
+  for (const sd of [-1, 1]) h.cone(0.03, 0.12, C.cream, sd * 0.05, 0.78, 0.87, [Math.PI, 0, 0], 4);
 }
 
 /** Hổ rình (thấp người, đuôi quất), vồ (chồm lên, hai chân trước vươn tới, cắn), đi lừ đừ. */
@@ -331,34 +525,9 @@ const ROOSTER: Defs = {
 
 /** Gà trống trắng khổng lồ: mào đỏ to, tích đỏ, mắt đỏ rực, đuôi cong vút, cựa nhọn. */
 function drawRooster(r: Rig): void {
-  for (const [b, s] of [
-    ['qBL', -1],
-    ['qBR', 1],
-  ] as const) {
-    const p = r.on(b).plain;
-    p.cyl(0.05, 0.06, 0.5, C.bronzeLight, s * 0.14, 0.25, 0, undefined, 6);
-    p.cone(0.035, 0.18, C.bronzeLight, s * 0.14, 0.16, -0.12, [-Math.PI / 2 - 0.3, 0, 0], 5);
-    for (const a of [-0.5, 0, 0.5]) p.box(0.04, 0.03, 0.2, C.bronzeLight, s * 0.14 + Math.sin(a) * 0.08, 0.02, 0.08, [0, a, 0]);
-  }
-  r.on('qBody').plain.sphere(0.48, C.rooster, 0, 0.88, 0, [0.9, 0.85, 1.15], 14);
-  for (const [b, s] of [
-    ['qWingL', -1],
-    ['qWingR', 1],
-  ] as const) {
-    r.on(b).plain.sphere(0.3, C.cream, s * 0.32, 0.9, -0.05, [0.35, 0.7, 1.05], 10);
-  }
-  r.on('qNeck').plain.cyl(0.18, 0.24, 0.5, C.rooster, 0, 1.3, 0.32, [0.35, 0, 0], 10);
-  const h = r.on('qHead');
-  h.plain.sphere(0.22, C.rooster, 0, 1.6, 0.42, [1, 1, 1.05], 12);
-  h.plain.cone(0.07, 0.24, C.bronzeLight, 0, 1.56, 0.7, [Math.PI / 2, 0, 0], 6);
-  for (let i = 0; i < 5; i++) h.plain.sphere(0.08 + (i === 2 ? 0.03 : 0), C.comb, 0, 1.82 + Math.sin((i / 4) * Math.PI) * 0.08, 0.26 + i * 0.08, [0.6, 1.2, 0.8], 8);
-  h.plain.sphere(0.07, C.comb, 0, 1.42, 0.62, [0.7, 1.4, 0.6], 8);
-  for (const s of [-1, 1]) h.glow.sphere(0.045, C.comb, s * 0.13, 1.64, 0.56, [1, 1, 0.6], 6);
-  const tail = r.on('qTail').plain;
-  for (let i = 0; i < 6; i++) {
-    const a = -0.6 + i * 0.24;
-    tail.box(0.08, 0.95, 0.14, i % 2 ? C.cream : C.rooster, Math.sin(a) * 0.18, 1.25 + Math.cos(a) * 0.15, -0.62, [-0.55, 0, a]);
-  }
+  roosterBody(r);
+  // Mắt đỏ rực.
+  for (const s of [-1, 1]) r.on('qHead').glow.sphere(0.04, C.comb, s * 0.13, 1.64, 0.56, [1, 1, 0.6], 6);
 }
 
 /** Gà đi nghênh ngang gật gù, thủ thì xòe cánh, mổ thì vươn cổ mổ xuống và vỗ cánh. */
@@ -398,8 +567,8 @@ function poseRooster(b: B, a: Act): void {
 
 // ---------- Thú và người cưỡi trong trận ----------
 
-export type BeastKind = 'voi' | 'chienXa' | 'daiTuong' | 'kyBinh' | 'trieuDa' | 'hoTinh' | 'gaTrang';
-const KINDS: readonly FighterKind[] = ['voi', 'chienXa', 'daiTuong', 'kyBinh', 'trieuDa', 'hoTinh', 'gaTrang'];
+export type BeastKind = 'voi' | 'chienXa' | 'daiTuong' | 'kyBinh' | 'trieuDa' | 'maVien' | 'hoTinh' | 'gaTrang';
+const KINDS: readonly FighterKind[] = ['voi', 'chienXa', 'daiTuong', 'kyBinh', 'trieuDa', 'maVien', 'hoTinh', 'gaTrang'];
 export const isBeast = (k: FighterKind): k is BeastKind => KINDS.includes(k);
 
 interface Spec {
@@ -408,10 +577,14 @@ interface Spec {
   pose(b: B, a: Act): void;
 }
 
-/** Người cưỡi trên lưng thú hay trên xe: gốc người cưỡi (giữa hai bàn chân) ở chỗ `at`, hông là con của `parent`. */
+/**
+ * Người cưỡi trên lưng thú hay trên xe: gốc người cưỡi (giữa hai bàn chân) ở chỗ `at`, hông là con của `parent`.
+ * Người cưỡi có kỹ năng riêng (Mã Viện phất cờ Lệnh nỏ) thì thú chồm chân trước theo kỹ năng.
+ */
 function riderSpec(mount: Defs, parent: string, at: V3, kind: RiderKind, seat: 'ride' | 'stand', drawMount: (r: Rig, tier: number) => void, poseMount: (b: B, a: Act, e: number) => void): Spec {
+  const skill = riderHasSkill(kind);
   return {
-    defs: { ...BASE, ...mount, ...moveBones(HUMAN, parent, at) },
+    defs: { ...BASE, ...mount, ...moveBones({ ...HUMAN, ...riderBones(kind) }, parent, at) },
     draw: (r, tier) => {
       drawMount(r, tier);
       r.place(at, 1, () => drawRider(r as unknown as HumanRig, kind));
@@ -419,7 +592,9 @@ function riderSpec(mount: Defs, parent: string, at: V3, kind: RiderKind, seat: '
     pose: (b, a) => {
       // Người cưỡi trước (đặt lại mọi xương), thú sau.
       poseRider(kind, b as unknown as Human, a, seat);
-      poseMount(b, a, a.act === 'fight' ? strikeCurve(a.strike, 0.3, 0.5) : 0);
+      const e = a.act === 'fight' ? strikeCurve(a.strike, 0.3, 0.5) : 0;
+      const rear = skill && a.skill !== undefined && a.act !== 'dead' ? Math.sin(Math.PI * Math.min(Math.max(a.skill, 0), 1)) : 0;
+      poseMount(b, a, Math.max(e, rear));
       if (b.wheelL && a.act === 'walk') b.wheelL.rotation.x = b.wheelR.rotation.x = (a.phase ?? 0) * 0.5;
     },
   };
@@ -443,6 +618,7 @@ const SPECS: Record<BeastKind, Spec> = {
     },
     poseHorse,
   ),
+  maVien: riderSpec(HORSE, 'qBody', [0, 0.92, -0.08], 'maVien', 'ride', drawWhiteHorse, poseHorse),
   hoTinh: { defs: { ...BASE, ...TIGER }, draw: drawTiger, pose: poseTiger },
   gaTrang: { defs: { ...BASE, ...ROOSTER }, draw: drawRooster, pose: poseRooster },
 };
@@ -503,94 +679,34 @@ function drawTurtle(r: Rig): void {
   const SHELL_GOLD = 0xf0c242;
   const SHELL_RIM = 0x8f6b1c;
   const TURTLE_SKIN = C.turtle;
-  const TURTLE_DARK = 0x8f7d2e;
   const DIVINE_GLOW = 0xffe878;
 
-  // 1. Yếm rùa (Plastron) dưới bụng & vành mai cuốn (Marginal rim) bè rộng
-  p.cyl(0.56, 0.52, 0.07, SHELL_RIM, 0, 0.035, 0, undefined, 16);
-  p.add(new THREE.SphereGeometry(1, 20, 10, 0, Math.PI * 2, 0, Math.PI / 2), C.goldDark, 0, 0.04, 0, [0, 0, 0], [0.68, 0.14, 0.78]);
-  // Vòm mai chính bằng vàng ròng
-  p.add(new THREE.SphereGeometry(1, 20, 12, 0, Math.PI * 2, 0, Math.PI / 2), C.gold, 0, 0.06, 0, [0, 0, 0], [0.62, 0.39, 0.72]);
-
-  // 14 phiến giáp viền mai (Marginal scutes) chạm nổi chạy vòng quanh mép mai
-  for (let i = 0; i < 14; i++) {
-    const a = (i / 14) * Math.PI * 2;
-    const sa = Math.sin(a);
-    const ca = Math.cos(a);
-    const rx = sa * 0.63;
-    const rz = ca * 0.73;
-    p.box(0.16, 0.055, 0.14, i % 2 === 0 ? SHELL_GOLD : C.goldDark, rx, 0.095, rz, [-ca * 0.22, a, sa * 0.22]);
-    p.sphere(0.024, C.bronzeDark, rx * 0.96, 0.125, rz * 0.96, [1, 0.6, 1], 5);
-  }
-  // Vòm mai bảo vệ cổ (+z) và đuôi (-z)
-  p.box(0.32, 0.06, 0.14, C.gold, 0, 0.14, 0.7, [-0.28, 0, 0]);
-  p.box(0.24, 0.05, 0.12, C.goldDark, 0, 0.11, -0.71, [0.25, 0, 0]);
-
-  // 8 múi giáp lục giác bên sườn mai (Costal scutes) + 3 múi sống lưng (Vertebral scutes)
-  for (let i = 0; i < 8; i++) {
-    const a = ((i + 0.5) / 8) * Math.PI * 2;
-    const sa = Math.sin(a);
-    const ca = Math.cos(a);
-    const rx = sa * 0.46;
-    const rz = ca * 0.54;
-    p.cyl(0.11, 0.135, 0.045, C.goldDark, rx, 0.25, rz, [ca * 0.42, 0, -sa * 0.42], 6);
-    p.cyl(0.075, 0.09, 0.05, SHELL_GOLD, rx * 0.98, 0.26, rz * 0.98, [ca * 0.42, 0, -sa * 0.42], 6);
-  }
-  for (const [z, y, sc] of [
-    [0.42, 0.34, 1.0],
-    [0.0, 0.41, 1.15],
-    [-0.42, 0.34, 0.95],
-  ] as const) {
-    p.cyl(0.09 * sc, 0.12 * sc, 0.05, C.goldDark, 0, y, z, [z * 0.55, 0, 0], 6);
-  }
-
-  // 2. Tâm mai chạm Mặt Trống Đồng Đông Sơn & Bệ Ngọc Linh Quang Kim Quy trên đỉnh mai
-  p.add(new THREE.CylinderGeometry(0.41, 0.44, 0.045, 20), C.goldDark, 0, 0.41, 0, [0, 0, 0], [1, 1, 1.14]);
-  body.drum.add(new THREE.CylinderGeometry(0.38, 0.39, 0.045, 20), C.gold, 0, 0.435, 0, [0, 0, 0], [1, 1, 1.14]);
-  // Bệ sen vàng & Viên Linh Châu Kim Quy tỏa sáng ở chính tâm mai + 4 linh vật góc mặt trống
+  // 1. Mai vàng ròng có rãnh chia múi lục giác, vành mai bè, yếm; cổ, đầu Long Quy, chân chèo, đuôi nặn liền.
+  turtleBody(r, { shell: C.gold, groove: C.goldDark, skin: TURTLE_SKIN, cap: C.gold, beak: SHELL_GOLD });
+  // 2. Tâm mai chạm Mặt Trống Đồng Đông Sơn & Viên Linh Châu Kim Quy tỏa sáng ở chính tâm mai + 4 linh vật góc mặt trống
+  turtleDrum(r, { color: C.gold, rim: SHELL_RIM });
   p.cyl(0.085, 0.11, 0.03, C.goldDark, 0, 0.462, 0, undefined, 8);
   g.sphere(0.065, DIVINE_GLOW, 0, 0.488, 0, [1, 0.68, 1], 8);
   for (const [dx, dz] of [
-    [0, 0.33],
-    [0, -0.33],
-    [0.29, 0],
-    [-0.29, 0],
+    [0, 0.26],
+    [0, -0.26],
+    [0.23, 0],
+    [-0.23, 0],
   ] as const) {
-    g.sphere(0.028, DIVINE_GLOW, dx, 0.46, dz, [1.1, 0.55, 1.1], 6);
+    g.sphere(0.028, DIVINE_GLOW, dx, 0.455 - 0.12 * (dx * dx + dz * dz), dz, [1.1, 0.55, 1.1], 6);
   }
 
-  // 3. Cổ Long Quy ('qNeck') vươn cao liền mạch từ cửa mai (0, 0.18, 0.62) lên đầu (0, 0.60, 0.98)
-  const neck = r.on('qNeck').plain;
-  const neckAng = 0.68;
-  const caN = Math.cos(neckAng);
-  const saN = Math.sin(neckAng);
-  neck.cyl(0.13, 0.17, 0.56, TURTLE_SKIN, 0, 0.38, 0.79, [neckAng, 0, 0], 8);
-  for (let i = 0; i < 4; i++) {
-    const s = -0.15 + (i / 3) * 0.3;
-    const ay = 0.38 + s * caN;
-    const az = 0.79 + s * saN;
-    // Đốt giáp yếm cổ bằng vàng ôm sát mặt trước cổ (+z, -y)
-    neck.box(0.135 - i * 0.012, 0.048, 0.032, SHELL_GOLD, 0, ay - 0.115 * saN, az + 0.115 * caN, [neckAng, 0, 0]);
-  }
-
-  // 4. Đầu Thần Kim Quy ('qHead'): dáng Long Quy cổ đại, mỏ sừng vàng quặp, mắt thần phát sáng, mày rồng, sừng Kim Quy & râu thần
+  // 3. Đầu Thần Kim Quy ('qHead'): mắt thần phát sáng, mày rồng, sừng Kim Quy & râu thần; ngọc trên mũ giáp đỉnh đầu.
   const head = r.on('qHead');
   const h = head.plain;
   const hg = head.glow;
-  // Sọ rùa thần & mũ giáp kim quy đỉnh đầu
-  h.sphere(0.205, TURTLE_SKIN, 0, 0.64, 1.0, [1.0, 0.88, 1.16], 10);
-  h.sphere(0.155, C.gold, 0, 0.72, 0.98, [0.92, 0.5, 1.06], 8);
-  hg.sphere(0.035, DIVINE_GLOW, 0, 0.75, 1.09, [0.85, 0.65, 1.05], 6);
-  // Mõm trên thuôn gọn & Mỏ sừng Kim Quy quặp xuống sắc bén ở chóp mũi (+z)
-  h.sphere(0.12, TURTLE_SKIN, 0, 0.615, 1.13, [0.95, 0.72, 1.18], 8);
-  h.cone(0.052, 0.1, SHELL_GOLD, 0, 0.585, 1.24, [Math.PI * 0.62, 0, 0], 5);
-  h.sphere(0.095, TURTLE_DARK, 0, 0.555, 1.11, [0.9, 0.55, 1.15], 7);
+  hg.sphere(0.035, DIVINE_GLOW, 0, 0.79, 1.06, [0.85, 0.65, 1.05], 6);
   // Mắt thần rực sáng, mày rồng vàng uốn vút, sừng thái dương & râu thần
   for (const s of [-1, 1]) {
-    h.sphere(0.044, C.ink, s * 0.128, 0.67, 1.11, [0.9, 1.05, 0.9], 6);
-    hg.sphere(0.03, 0xffd24c, s * 0.14, 0.672, 1.126, [0.85, 0.95, 0.85], 6);
+    h.sphere(0.044, C.ink, s * 0.128, 0.67, 1.14, [0.9, 1.05, 0.9], 6);
+    hg.sphere(0.03, 0xffd24c, s * 0.138, 0.672, 1.165, [0.85, 0.95, 0.85], 6);
     // Chân mày rồng vàng uy nghiêm
-    h.box(0.042, 0.03, 0.14, C.gold, s * 0.13, 0.72, 1.09, [-0.2, s * 0.25, -s * 0.28]);
+    h.box(0.042, 0.03, 0.14, C.gold, s * 0.13, 0.725, 1.115, [-0.2, s * 0.25, -s * 0.28]);
     // Sừng Long Quy bằng vàng ròng vươn chéo lên và ra sau (-z)
     h.cyl(0.02, 0.038, 0.15, C.goldDark, s * 0.11, 0.76, 0.91, [-0.75, 0, -s * 0.26], 6);
     h.cone(0.022, 0.13, C.gold, s * 0.132, 0.82, 0.81, [-0.85, 0, -s * 0.3], 5);
@@ -600,52 +716,34 @@ function drawTurtle(r: Rig): void {
   // Chòm râu thần dưới cằm
   h.cone(0.022, 0.16, SHELL_GOLD, 0, 0.47, 1.11, [-Math.PI * 0.74, 0, 0], 5);
 
-  // 5. Bốn chân chèo bọc vảy giáp vàng & Móng vuốt Kim Quy phát sáng (vật báu rèn lẫy Nỏ Thần)
+  // 4. Móng vuốt Kim Quy phát sáng ở rìa bốn chân chèo (vật báu rèn lẫy Nỏ Thần), gai vảy vàng trên đuôi.
   for (const [b, s] of [
     ['qFL', -1],
     ['qFR', 1],
   ] as const) {
-    const leg = r.on(b);
-    const f = leg.plain;
-    const fg = leg.glow;
-    // Bắp chân trước & bàn chân chèo lớn
-    f.cyl(0.125, 0.09, 0.22, TURTLE_SKIN, s * 0.58, 0.07, 0.46, [0, -s * 0.25, s * 1.25], 7);
-    f.box(0.42, 0.058, 0.22, TURTLE_SKIN, s * 0.74, 0.045, 0.48, [0.06, -s * 0.45, 0]);
-    // 3 lớp vảy giáp vàng trên lưng chân chèo
-    for (let k = 0; k < 3; k++) {
-      f.box(0.11, 0.03, 0.16 - k * 0.02, k % 2 === 0 ? C.gold : C.goldDark, s * (0.62 + k * 0.1), 0.078 - k * 0.006, 0.49 - k * 0.02, [0.06, -s * 0.45, 0]);
-    }
-    // 3 móng vuốt Kim Quy bằng vàng sáng nằm ngang theo rìa chân chèo
+    const fg = r.on(b).glow;
     for (let c = 0; c < 3; c++) {
       const claw = new THREE.ConeGeometry(0.022, 0.11, 4);
       claw.rotateX(Math.PI / 2 + 0.12);
       claw.rotateY(s * (0.75 + c * 0.22));
-      fg.add(claw, DIVINE_GLOW, s * (0.74 + c * 0.085), 0.04, 0.58 - c * 0.055);
+      fg.add(claw, DIVINE_GLOW, s * (0.76 + c * 0.085), 0.04, 0.58 - c * 0.055);
     }
   }
   for (const [b, s] of [
     ['qBL', -1],
     ['qBR', 1],
   ] as const) {
-    const leg = r.on(b);
-    const f = leg.plain;
-    const fg = leg.glow;
-    f.cyl(0.1, 0.075, 0.18, TURTLE_SKIN, s * 0.52, 0.06, -0.45, [0, s * 0.3, s * 1.2], 6);
-    f.box(0.32, 0.055, 0.18, TURTLE_SKIN, s * 0.64, 0.04, -0.5, [0.04, s * 0.48, 0]);
-    f.box(0.2, 0.028, 0.13, C.goldDark, s * 0.6, 0.068, -0.49, [0.04, s * 0.48, 0]);
+    const fg = r.on(b).glow;
     for (let c = 0; c < 3; c++) {
       const claw = new THREE.ConeGeometry(0.018, 0.09, 4);
       claw.rotateX(Math.PI / 2 + 0.12);
       claw.rotateY(s * (2.15 + c * 0.2));
-      fg.add(claw, DIVINE_GLOW, s * (0.68 + c * 0.065), 0.036, -0.56 - c * 0.04);
+      fg.add(claw, DIVINE_GLOW, s * (0.7 + c * 0.065), 0.036, -0.58 - c * 0.04);
     }
   }
-
-  // 6. Đuôi Linh Quy ('qTail') có gai vảy vàng
   const tail = r.on('qTail').plain;
-  tail.cone(0.075, 0.28, TURTLE_SKIN, 0, 0.065, -0.82, [-Math.PI / 2 + 0.12, 0, 0], 6);
   for (let i = 0; i < 3; i++) {
-    tail.cone(0.022 - i * 0.004, 0.055, C.gold, 0, 0.095 - i * 0.006, -0.74 - i * 0.065, [-0.35, 0, 0], 4);
+    tail.cone(0.022 - i * 0.004, 0.055, C.gold, 0, 0.12 - i * 0.008, -0.7 - i * 0.065, [-0.35, 0, 0], 4);
   }
 }
 
@@ -674,7 +772,7 @@ function poseTurtle(b: B, a: Act): void {
 
 /** Rùa Vàng có xương: `userData.pose` cho bơi (đi) hay nằm chèo nhẹ (đứng). */
 export function makeRuaVang(): THREE.Group {
-  const r = new RigBuilder(TURTLE);
+  const r = new RigBuilder(TURTLE, DETAIL);
   drawTurtle(r);
   const { group, bones } = skinRig(r.build());
   const pose: Poser = (a) => poseTurtle(bones, a);
@@ -685,7 +783,7 @@ export function makeRuaVang(): THREE.Group {
 
 /** Rùa Vàng bản tĩnh, cho công trình. */
 export function bakeRuaVang(): THREE.Group {
-  const r = new RigBuilder(TURTLE);
+  const r = new RigBuilder(TURTLE, DETAIL);
   drawTurtle(r);
   return bakeRig(r.build(), (b) => poseTurtle(b, { act: 'stand' }));
 }
@@ -720,8 +818,12 @@ function prefixBones(defs: Defs, pre: string): Defs {
 /** Vẽ thân người thứ hai trong cùng khung xương: các hàm vẽ người (body.ts) gọi `on('hips')`... thành `on(pre + 'hips')`. */
 function prefixRig(r: Rig, pre: string): HumanRig {
   const rig = {
+    detail: r.detail,
     on: (b: string) => r.on(pre + b),
     local: (b: string, origin: V3, rot: V3 | null, draw: (s: RigSlots) => void) => r.local(pre + b, origin, rot, draw),
+    skinned: (slot: RigSlot, geo: THREE.BufferGeometry, bones: readonly string[]) => r.skinned(slot, geo, bones.map((b) => pre + b)),
+    defer: (run: () => void) => r.defer(run),
+    place: (at: V3, k: number, draw: () => void) => r.place(at, k, draw),
   };
   return rig as unknown as HumanRig;
 }
@@ -749,17 +851,11 @@ const ROYAL_HORSE: Defs = {
 function drawRoyalMount(r: Rig): void {
   r.place([0, 0, 0], K_ROYAL, () => {
     drawHorse(r, ROYAL_COAT, null);
-    // Tấm phủ lưng đỏ hoa văn trùm như vòm trên lưng ngựa, mặt trống đồng hai bên sườn, tua vàng quanh mép.
+    // Tấm phủ lưng đỏ hoa văn trùm lưng ngựa viền vàng, mặt trống đồng hai bên sườn.
+    horseDrape(r, { color: C.red, z0: -0.36, z1: 0.3, half: 1.25, pattern: true, trim: C.gold });
     const body = r.on('qBody');
-    const capTheta = Math.PI * 0.4;
-    body.band.add(new THREE.SphereGeometry(1, 16, 6, 0, Math.PI * 2, 0, capTheta), C.red, 0, 0.785, -0.04, [0, 0, 0], [0.28, 0.272, 0.37]);
-    for (let i = 0; i < 12; i++) {
-      const a = ((i + 0.5) / 12) * Math.PI * 2;
-      const rim = Math.sin(capTheta);
-      body.plain.cone(0.026, 0.07, C.gold, Math.sin(a) * 0.28 * rim, 0.785 + 0.272 * Math.cos(capTheta) - 0.03, -0.04 + Math.cos(a) * 0.37 * rim, [0, 0, Math.PI], 5);
-    }
     for (const s of [-1, 1]) {
-      body.drum.cyl(0.07, 0.07, 0.02, C.gold, s * 0.245, 0.935, -0.04, [0, 0, -s * (Math.PI / 2 - 0.57)], 12);
+      body.drum.cyl(0.07, 0.07, 0.02, C.gold, s * 0.24, 0.92, -0.04, [0, 0, -s * (Math.PI / 2 - 0.62)], 12);
     }
     // Đai ngực đỏ có lục lạc đồng.
     const neck = r.on('qNeck');
@@ -780,23 +876,13 @@ function drawRoyalMount(r: Rig): void {
 
 /** An Dương Vương cưỡi ngựa: hoàng bào đỏ, giáp ngực đồng chạm mặt trống, vương miện vàng, mũ lông chim, râu đen. */
 function drawKingRider(h: HumanRig): void {
-  humanBody(h, { legs: C.red, cloth: C.red, flaps: false, top: C.bronze, sleeves: C.red, belt: C.gold, armband: C.gold });
-  const chest = h.on('chest');
-  chest.band.cyl(0.155, 0.136, 0.22, C.bronze, 0, 0.485, 0, undefined, 12);
-  chest.plain.cyl(0.118, 0.132, 0.034, C.gold, 0, 0.58, 0, undefined, 12);
-  chest.drum.cyl(0.07, 0.07, 0.022, C.gold, 0, 0.495, 0.137, [Math.PI / 2, 0, 0], 14);
-  for (const s of [-1, 1]) chest.plain.sphere(0.085, C.bronzeLight, s * 0.18, 0.57, 0, [1.1, 0.75, 1.05], 8);
-  humanHead(h, { brows: true, mustache: C.hair });
+  humanBody(h, { legs: C.red, cloth: C.red, flaps: false, top: C.bronze, sleeves: C.red, belt: C.gold, armband: C.gold, bracer: C.bronze, bracerTrim: C.gold });
+  armor(h, { color: C.bronze, trim: C.gold, pattern: true, y0: 0.395, y1: 0.6 });
+  chestDisc(h, { color: C.gold, drum: true, r: 0.07, rim: C.goldDark, thick: 0.02 });
+  pauldrons(h, { color: C.bronzeLight, trim: C.gold, size: 1.05 });
+  humanHead(h, { brows: true, mustache: C.hair, beard: C.hair, beardLen: 0.12 });
   hairCap(h);
-  const head = h.on('head');
-  head.plain.cone(0.055, 0.13, C.hair, 0, 0.62, 0.16, [Math.PI + 0.28, 0, 0], 6);
-  head.band.cyl(0.228, 0.232, 0.062, C.gold, 0, 0.835, -0.03, undefined, 16);
-  head.plain.box(0.075, 0.075, 0.032, C.gold, 0, 0.85, 0.198, [0, 0, Math.PI / 4]);
-  head.plain.sphere(0.026, C.red, 0, 0.85, 0.215, [1, 1.2, 0.6], 7);
-  for (let i = 0; i < 10; i++) {
-    const a = (i / 10) * Math.PI * 2;
-    head.plain.cone(0.026, i % 2 === 0 ? 0.085 : 0.058, C.gold, Math.sin(a) * 0.222, 0.89, Math.cos(a) * 0.222 - 0.03, undefined, 4);
-  }
+  diadem(h, { color: C.gold, pattern: true, y: 0.806, h: 0.06, rim: C.goldDark, plate: C.gold, gem: C.red, spikes: { color: C.gold, n: 10, h: 0.085, low: 0.058 } });
   featherCrown(h, [C.red, C.gold, C.cream, C.ember], { count: 9, len: 0.42, spread: 0.23 });
 }
 
@@ -807,45 +893,60 @@ function drawKingRider(h: HumanRig): void {
 function drawMyChau(r: Rig): void {
   const h = prefixRig(r, MC);
   humanBody(h, { legs: ROSE, cloth: ROSE, flaps: false, top: ROSE, sleeves: ROSE, belt: C.gold, armband: C.gold });
-  const chest = h.on('chest').plain;
-  chest.add(new THREE.TorusGeometry(0.075, 0.016, 5, 14), C.gold, 0, 0.575, 0.03, [Math.PI / 2 + 0.25, 0, 0]);
-  // Cổ áo lông ngỗng xù quanh vai.
+  necklace(h, { color: C.gold, r: 0.075, y: 0.575, z: 0.03, tilt: 0.25, thick: 0.016 });
+  // Tóc dài xõa sau lưng, tóc mai hai bên má, búi tóc cài trâm vàng, vành vàng trên trán.
+  humanHead(h, { femBrows: true, lips: 0xc0303a });
+  hairCap(h);
+  headband(h, C.gold, 0.022);
+  hairDown(h, { color: C.hair, to: 0.44, width: 0.17, locks: 0.2 });
+  bun(h, { color: C.hair, at: [0, 0.975, -0.1], size: 0.07, pin: { color: C.gold, len: 0.22, tilt: 0.3, ends: C.red } });
+  // Cổ áo lông ngỗng xù quanh vai, hai vạt lông xếp lớp sau lưng.
+  figure(h, 'gooseCape', gooseCape);
+}
+
+/**
+ * Áo lông ngỗng nặn: cổ áo là vòng lông xù ôm vai; mỗi vạt một tấm lót, ngoài phủ lông xếp lớp như vảy (lông trắng
+ * xen lông ngà, hàng sau so le hàng trước); vạt dưới rộng hơn, mép dưới lông dài lởm chởm.
+ */
+function gooseCape(detail: number): Piece[] {
+  const out: Piece[] = [];
+  const collar = new Clay(GOOSE);
+  const shade: ReturnType<Clay['layer']>[] = [];
   for (let i = 0; i < 9; i++) {
     const a = (i / 8) * Math.PI;
-    chest.sphere(0.06, i % 2 ? GOOSE_SHADE : GOOSE, Math.cos(a) * 0.15, 0.585, -Math.sin(a) * 0.12 + 0.01, [1.3, 0.7, 1], 6);
+    const c: V3 = [Math.cos(a) * 0.15, 0.585, -Math.sin(a) * 0.12 + 0.01];
+    collar.add('chest', ellipsoid(c, [0.078, 0.042, 0.06]), { k: 0.012 });
+    if (i % 2) shade.push(collar.layer('chest', ellipsoid(c, [0.07, 0.05, 0.065]), GOOSE_SHADE));
   }
-  humanHead(h);
-  hairCap(h);
-  const head = h.on('head').plain;
-  // Tóc dài xõa sau lưng, tóc mai hai bên má, búi tóc cài trâm vàng, vành vàng trên trán.
-  head.sphere(0.18, C.hair, 0, 0.6, -0.15, [1, 1.45, 0.5], 9);
-  for (const s of [-1, 1]) head.box(0.05, 0.22, 0.09, C.hair, s * 0.19, 0.7, 0.04, [0, 0, -s * 0.12]);
-  head.sphere(0.07, C.hair, 0, 0.98, -0.1, [1, 0.85, 1], 7);
-  head.cyl(0.01, 0.01, 0.22, C.gold, 0, 0.99, -0.1, [0, 0, Math.PI / 2 - 0.3], 5);
-  head.sphere(0.025, C.red, 0.1, 1.02, -0.1, [1, 1, 1], 6);
-  head.cyl(0.222, 0.226, 0.022, C.gold, 0, 0.84, -0.03, undefined, 14);
-  // Áo lông ngỗng: mỗi vạt một tấm lót trắng, ngoài phủ lông xếp lớp như vảy (lông trắng xen lông ngà, hàng sau so le
-  // hàng trước); vạt dưới rộng hơn, mép dưới lông dài lởm chởm.
+  out.push(clayPiece(collar.build({ kind: 'nets', min: [-0.26, 0.5, -0.22], max: [0.26, 0.66, 0.1], cell: 0.009 / detail, target: Math.round(420 * detail) }, shade)));
   for (const [bone, top, bottom, w0, w1] of [
-    [MC + 'Cape', CAPE_TOP, CAPE_MID[1] - 0.02, 0.34, 0.4],
-    [MC + 'Cape2', CAPE_MID, 0.1, 0.4, 0.5],
+    ['Cape', CAPE_TOP, CAPE_MID[1] - 0.02, 0.34, 0.4],
+    ['Cape2', CAPE_MID, 0.1, 0.4, 0.5],
   ] as const) {
-    const p = r.on(bone).plain;
-    const h = top[1] - bottom;
-    p.box((w0 + w1) / 2, h, 0.025, GOOSE_SHADE, 0, top[1] - h / 2, top[2] - 0.01);
-    const rows = Math.round(h / 0.06);
+    const clay = new Clay(GOOSE_SHADE);
+    const hh = top[1] - bottom;
+    const z0 = top[2];
+    clay.add(bone, ellipsoid([0, top[1] - hh / 2, z0 - 0.012], [(w0 + w1) / 4, hh / 2, 0.014]), { k: 0 });
+    const rows = Math.round(hh / 0.06);
+    const paints: ReturnType<Clay['layer']>[] = [];
     for (let row = 0; row < rows; row++) {
       const k = (row + 0.5) / rows;
-      const y = top[1] - k * h;
+      const y = top[1] - k * hh;
       const half = lerp(w0, w1, k) / 2;
       const n = 5;
       for (let i = 0; i < n; i++) {
         const x = lerp(-half, half, (i + (row % 2 ? 0.75 : 0.25)) / n);
-        const tip = bone === MC + 'Cape2' && row === rows - 1;
-        p.sphere(0.05, (row + i) % 2 ? GOOSE : GOOSE_SHADE, x, y - (tip ? 0.03 : 0), top[2] - 0.03 - row * 0.004, [1.05, tip ? 2.2 : 1.6, 0.32], 6);
+        const tip = bone === 'Cape2' && row === rows - 1;
+        const c: V3 = [x, y - (tip ? 0.03 : 0), z0 - 0.03 - row * 0.004];
+        const f = ellipsoid(c, [0.052, tip ? 0.11 : 0.08, 0.016]);
+        clay.add(bone, f, { k: 0.006 });
+        if ((row + i) % 2) paints.push(clay.layer(bone, ellipsoid(c, [0.056, tip ? 0.115 : 0.085, 0.03]), GOOSE));
       }
     }
+    const wmax = Math.max(w0, w1) / 2 + 0.08;
+    out.push(clayPiece(clay.build({ kind: 'nets', min: [-wmax, bottom - 0.15, z0 - 0.09], max: [wmax, top[1] + 0.08, z0 + 0.02], cell: 0.008 / detail, target: Math.round(700 * detail) }, paints)));
   }
+  return out;
 }
 
 /**

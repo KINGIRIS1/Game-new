@@ -2,10 +2,10 @@ import { describe, expect, it } from 'vitest';
 import { wallRings } from './coLoa';
 import { CH1_LAST } from './campaign';
 import { BUILDINGS, CH2_QUEST_START, CH3_QUEST_START, CH4_QUEST_START, GIFT_IDS, MOVE_FRACTION, STAGES, U_NO, type BuildingType } from './defs';
-import { canMove, createInitialState, dienLevel, limitOf, move, moveCost, occupancy, place, uNoCount, usedOf, type GameState } from './game';
-import { MAU_BARRACKS, applyMau, canApplyMau, inFrame, mauSlots, mauUnlocked, planMau, MAU_IDS, type MauId } from './mau';
+import { canMove, createInitialState, dienLevel, limitOf, move, moveCost, occupancy, place, rotOf, rotateBuilding, uNoCount, usedOf, type GameState } from './game';
+import { MAU_BARRACKS, applyMau, canApplyMau, inFrame, mauFrom, mauSlots, mauUnlocked, planMau, MAU_IDS, type MauId } from './mau';
 import { isOpen, khoanhOf } from './khoanh';
-import { DIEN_HOME, GRID, RIVER_START, touchesRiver } from './map';
+import { DIEN_HOME, GRID, RIVER_END, RIVER_START, touchesRiver } from './map';
 import { DIEN_END, bank, edge, setDien } from './testmap';
 import { floodMap } from './terrain';
 
@@ -36,7 +36,7 @@ function withGenerals(s: GameState, dien = dienLevel(s)): GameState {
 }
 
 describe('dời công trình', () => {
-  it('dời mất 10% giá dựng, giữ cấp và người làm; Điện không dời được', () => {
+  it('dời mất 10% giá dựng, giữ cấp và người làm', () => {
     const s = city(5);
     const r = place(s, 'ruong', edge(5, 3), edge(5, 3));
     if (!r.ok) throw new Error(r.reason);
@@ -48,7 +48,19 @@ describe('dời công trình', () => {
     expect(m.ok).toBe(true);
     expect(r.value).toMatchObject({ x: edge(5, 8), z: edge(5, 8), level: 4, workers: 3 });
     expect(s.resources.voOc).toBe(before - 3);
-    expect(canMove(s, s.buildings[0].id, edge(5), edge(5))).toEqual({ ok: false, reason: 'khongTheDoi' });
+  });
+
+  it('Điện dời được trong đất bên này sông, không tốn của, giữ cấp; không sang bên kia sông', () => {
+    const s = city(5);
+    const dien = s.buildings[0];
+    expect(dien.type).toBe('dien');
+    expect(moveCost(dien)).toEqual({});
+    const before = { ...s.resources };
+    expect(move(s, dien.id, edge(5, 1), edge(5, 1)).ok).toBe(true);
+    expect(dien).toMatchObject({ x: edge(5, 1), z: edge(5, 1), level: 5 });
+    expect(s.resources).toEqual(before);
+    expect(canMove(s, dien.id, RIVER_END, edge(5, 1))).toEqual({ ok: false, reason: 'khongTheDoi' });
+    expect(canMove(s, dien.id, edge(5, 1), RIVER_START - 5)).toEqual({ ok: false, reason: 'khongTheDoi' });
   });
 
   it('không dời vào chỗ bận, ra ngoài vùng, bến xa sông, đang có giặc, hay khi thiếu của', () => {
@@ -124,7 +136,13 @@ describe('mẫu kinh đô', () => {
         for (const t of types) {
           // Đền, Hội Tết mở sau kết chương 1, mà màn cuối chương 1 cần Điện 5: dưới Điện 5 mẫu không chừa chỗ.
           // Doanh trại: mỗi tướng thường có ở cấp Điện ấy một chỗ.
-          const want = t === 'doanhTrai' ? MAU_BARRACKS[dien - 1] : BUILDINGS[t].unlock && dien < STAGES[CH1_LAST - 1].minDien ? 0 : limitOf(s, t);
+          // Hồ Kim Quy (8×8): mẫu Cổ Loa giữ sông chỉ chừa chỗ từ Điện 6 (`mauFrom`).
+          const want =
+            t === 'doanhTrai'
+              ? MAU_BARRACKS[dien - 1]
+              : (BUILDINGS[t].unlock && dien < STAGES[CH1_LAST - 1].minDien) || dien < mauFrom(id, t)
+                ? 0
+                : limitOf(s, t);
           expect(slots.filter((x) => x.type === t).length, `${id} Điện ${dien}: ${t}`).toBe(want);
         }
       }
@@ -193,7 +211,7 @@ describe('mẫu kinh đô', () => {
   it('áp mẫu: dời mọi công trình vào chỗ trong mẫu, dựng thêm phần thiếu, trả đủ giá, giữ cấp và người làm', () => {
     const s = city(5);
     const r1 = place(s, 'ruong', edge(5), edge(5));
-    const r2 = place(s, 'nhaSan', edge(5, 28), edge(5, 28));
+    const r2 = place(s, 'nhaSan', edge(5, 33), edge(5, 33));
     const luy = place(s, 'luy', edge(5, 13), edge(5, 13));
     if (!r1.ok || !r2.ok || !luy.ok) throw new Error('đặt hỏng');
     r1.value.level = 5;
@@ -217,6 +235,24 @@ describe('mẫu kinh đô', () => {
     expect(s.buildings.filter((b) => b.type === 'ruong').length).toBe(limitOf(s, 'ruong'));
     // Áp lần nữa thì không còn gì để làm.
     expect(canApplyMau(s, 'phongChau')).toEqual({ ok: false, reason: 'daTheoMau' });
+  });
+
+  it('áp mẫu đưa Điện đã dời, đã xoay về chỗ của mẫu, mặt trước quay ra sông; dời Điện không tốn của', () => {
+    const s = city(5);
+    const dien = s.buildings[0];
+    expect(move(s, dien.id, edge(5, 1), edge(5, 1), 2).ok).toBe(true);
+    expect(rotOf(dien)).toBe(2);
+    const plan = planMau(s, 'phongChau');
+    expect(plan.turnDien).toBe(true);
+    expect(plan.moves).toContainEqual({ id: dien.id, x: DIEN_HOME, z: DIEN_HOME });
+    expect(applyMau(s, 'phongChau').ok).toBe(true);
+    expect(dien).toMatchObject({ x: DIEN_HOME, z: DIEN_HOME, level: 5 });
+    expect('rot' in dien).toBe(false);
+    expect(canApplyMau(s, 'phongChau')).toEqual({ ok: false, reason: 'daTheoMau' });
+    // Chỉ xoay Điện tại chỗ thì áp mẫu cũng quay Điện lại.
+    expect(rotateBuilding(s, dien.id, 1).ok).toBe(true);
+    expect(planMau(s, 'phongChau')).toMatchObject({ turnDien: true, moves: [] });
+    expect(canApplyMau(s, 'phongChau').ok).toBe(true);
   });
 
   it('áp mẫu dựng nơi ở riêng của binh chủng theo cấp doanh trại: cấp 1 trại giáo, cấp 3 thêm trại cung, chuồng voi', () => {

@@ -2,10 +2,12 @@
 // dựng lại kinh đô theo mẫu của chương đang chơi, miễn phí, giữ cấp và người làm; trả lại của cho phần
 // không còn chỗ (đoạn lũy, đê, thành, bẫy thừa) và cho đất đã đắp.
 
-import { BUILDINGS, RAID_WARNING_MS, RESOURCE_IDS, raiseBuildingCost, raiseTileCost, type BuildingType, type Cost } from './defs';
+import { BUILDINGS, RAID_WARNING_MS, RESOURCE_IDS, U_NO, isDecor, raiseBuildingCost, raiseTileCost, type BuildingType, type Cost } from './defs';
+import { pruneCayDa } from './cayDa';
 import { inChapter3 } from './coLoa';
-import type { Building, GameState } from './game';
-import { DIEN_HOME, baseHeights } from './map';
+import { roomFor, type Building, type GameState } from './game';
+import { khoanhOf } from './khoanh';
+import { DIEN_HOME, FOREST_BAND, RIVER_START, baseHeights } from './map';
 import { seatInMau, type MauId } from './mau';
 import { inChapter2 } from './son';
 import { footprintTop, levelFootprint } from './terrain';
@@ -219,4 +221,58 @@ export function relayLegacy(state: GameState): void {
     raid.startsAt = state.clock + RAID_WARNING_MS;
   }
   state.relaid = { refund, dropped: dropped.length };
+}
+
+// ---------- Điện nới móng (bản lưu 20) ----------
+
+/** Cạnh móng Điện trước bản lưu 20. */
+export const OLD_DIEN = 5;
+
+/** Đoạn tường, bẫy, cổng gắn với đất: vướng móng Điện mới thì dỡ, hoàn của (dời lẻ một đoạn thì vòng tường hở). */
+const WALL_TYPES: BuildingType[] = ['luy', 'de', 'thanh', 'bayChong', 'congThanh'];
+
+/**
+ * Điện 5×5 của bản lưu cũ nới thành Điện 10×10 về phía rừng (bắc, tây), giữ mép đông nam (sân trước, phía sông) như
+ * cũ; móng mới đè lên khoảnh nào chưa mở thì mở luôn. Công trình vướng móng mới dời sang chỗ trống gần Điện nhất, giữ
+ * cấp, người làm, tướng; đoạn lũy, đê, thành, bẫy, cổng thành, đường đi, đồ trang trí vướng thì dỡ. Công trình không
+ * còn chỗ và phần bị dỡ được hoàn đủ của đã bỏ ra. Có công trình phải dời thì ghi vào `state.relaid` để báo một lần.
+ */
+export function growDien(state: GameState): void {
+  const dien = state.buildings.find((b) => b.type === 'dien');
+  if (!dien) return;
+  const def = BUILDINGS.dien;
+  const grow = def.w - OLD_DIEN;
+  const clamp = (v: number) => Math.min(Math.max(v, FOREST_BAND), RIVER_START - def.w);
+  dien.x = clamp(dien.x - grow);
+  dien.z = clamp(dien.z - grow);
+  const open = new Set(state.khoanh);
+  for (let dx = 0; dx < def.w; dx++) for (let dz = 0; dz < def.d; dz++) open.add(khoanhOf(dien.x + dx, dien.z + dz));
+  open.delete(-1);
+  if (open.size !== state.khoanh.length) state.khoanh = [...open].sort((a, b) => a - b);
+  const overlaps = (b: Building) => {
+    const w = BUILDINGS[b.type];
+    return b.x < dien.x + def.w && b.x + w.w > dien.x && b.z < dien.z + def.d && b.z + w.d > dien.z;
+  };
+  const hit = state.buildings.filter((b) => b !== dien && overlaps(b));
+  state.buildings = state.buildings.filter((b) => !hit.includes(b));
+  levelFootprint(state, dien, footprintTop(state, 'dien', dien.x, dien.z));
+  const refund: Cost = {};
+  let dropped = 0;
+  const order = [...hit].sort((a, b) => BUILDINGS[b.type].w - BUILDINGS[a.type].w || b.level - a.level || a.id - b.id);
+  for (const b of order) {
+    const spot = WALL_TYPES.includes(b.type) || isDecor(b.type) ? null : roomFor(state, b.type);
+    if (!spot) {
+      addCost(refund, investedCost(b));
+      if (b.uNo) addCost(refund, U_NO.cost);
+      dropped++;
+      continue;
+    }
+    b.x = spot.x;
+    b.z = spot.z;
+    state.buildings.push(b);
+    levelFootprint(state, b, footprintTop(state, b.type, b.x, b.z));
+  }
+  for (const r of RESOURCE_IDS) if (refund[r]) state.resources[r] += refund[r]!;
+  pruneCayDa(state);
+  if (hit.length) state.relaid = { refund, dropped, dien: true };
 }

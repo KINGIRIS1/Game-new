@@ -22,6 +22,8 @@ export const C = {
   hair: 0x22180f,
   soil: 0x9a7448,
   paddyWater: 0x4f8f96,
+  /** Nước ruộng đã bồi phù sa (và nước êm vào qua cống): đục đỏ nâu như nước sông Hồng mùa lũ. */
+  paddySilt: 0xc58a4e,
   rice: 0x8fae4a,
   ripe: 0xe0b440,
   leaf: [0x5f7f3a, 0x6f8f44, 0x4f6f30, 0x86a34f],
@@ -55,6 +57,9 @@ export const C = {
   mountainCloak: 0x55703a,
   flood: 0x7f8a6a,
   floodDeep: 0x6c7a5c,
+  /** Nước êm vào sau đê qua cống mở, chở phù sa. */
+  silt: 0xa07a4c,
+  siltDeep: 0x8e6a40,
   rain: 0xc8d8e0,
   storm: 0x9ea6a2,
   // Chương 3: An Dương Vương, Rùa Vàng, yêu tinh núi Thất Diệu, quân Triệu Đà.
@@ -71,9 +76,59 @@ export const C = {
   comb: 0xd8322a,
   trieuCloth: 0x2b2a30,
   trieuRed: 0x9a2a24,
+  // Chương 5: quân Hán áo đỏ son, giáp lá sắt xám.
+  hanRed: 0xc8402a,
+  hanRedDark: 0x8e2a1c,
+  hanIron: 0x8a9096,
+  hanIronDark: 0x5a6066,
+  // Khăn, cờ đen quân Hán; mái ngói đen và thân gỗ nâu sẫm của lâu thuyền, thuyền Hán; giáp đồng đỏ và ngựa trắng
+  // của Mã Viện.
+  hanBlack: 0x2e2a28,
+  hanTile: 0x2b2c33,
+  hanWood: 0x4e3020,
+  hanWoodLight: 0x7a5436,
+  copper: 0xb8653a,
+  copperDark: 0x7c3c22,
+  horseWhite: 0xf1ede3,
+  horseWhiteMane: 0xc9c3b6,
   horseBlack: 0x34302c,
   beard: 0xe8e4dc,
   night: 0x3a4466,
   nightLand: 0x5e5a70,
   ditchWater: 0x356f7a,
+  // Biển Đông: nước biển ba sắc (như bãi biển Mộ Dạ), bãi cát, rạn san hô, vỏ ốc biển, cá voi, cá heo.
+  seaMid: 0x3a88a8,
+  seaShallow: 0x74bcc0,
+  beach: 0xd0bc88,
+  beachWet: 0xa89468,
+  reef: 0x8fd3c6,
+  shell: 0xf2e2cc,
+  shellPink: 0xe8b4a0,
+  whale: 0x60778c,
+  whaleBelly: 0xd4dcdf,
+  dolphin: 0x7d97aa,
+  dolphinBelly: 0xe6ece8,
+  sailBrown: 0xa8603a,
+  // Chương 5: Hai Bà Trưng (áo đỏ thắm, áo vàng), nghĩa binh áo nâu khăn vấn, Tô Định quan phục đen, ruộng ngô Hát Môn.
+  trungRed: 0xbc1f2e,
+  trungYellow: 0xe9b43a,
+  trungYellowDark: 0xb98420,
+  aoNau: 0x7a5434,
+  khanNau: 0x4d3423,
+  quanPhuc: 0x25222a,
+  corn: 0x84a443,
+  cornDry: 0xc9b062,
+  // Vòng sáng Hiệu triệu: xanh lá loang dưới chân quân ta được hồi máu.
+  heal: 0x7fd88a,
+  // Bốn nữ tướng của Hai Bà, mỗi người một màu áo (khác áo đỏ thắm, áo vàng của Hai Bà, khác cả nền cỏ): Lê Chân lam
+  // biển, Thánh Thiên lục lá, Bát Nàn tím hoa cà, Phùng Thị Chính hồng sen; địu con vải chàm.
+  nuLam: 0x2f6fbf,
+  nuLamLight: 0x8fc0ea,
+  nuLuc: 0x2f9a52,
+  nuLucLight: 0x9ad88a,
+  nuTim: 0x7b4cb0,
+  nuTimLight: 0xc4a0e8,
+  nuHong: 0xe27a9b,
+  nuHongLight: 0xf6c2d0,
+  diuCham: 0x34406a,
 } as const;

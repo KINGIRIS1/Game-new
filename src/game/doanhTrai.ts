@@ -3,6 +3,7 @@
 // người chơi tự bố trí lính ở từng doanh trại (cả kinh đô tối đa `GUARD_CAP` chỗ); chưa bố trí thì tự động.
 
 import { caoLoJoined } from './caoLo';
+import { inChapter5 } from './chuong5';
 import { advJoined } from './coLoa';
 import { BUILDINGS, FIELD_CAP, GUARD_CAP, TUONG_IDS, UNITS, UNIT_TYPES, type TuongId, type UnitType } from './defs';
 import { dienLevel, type Building, type FailReason, type GameState, type Result } from './game';
@@ -29,6 +30,7 @@ export function tuongJoined(s: GameState, id: TuongId): boolean {
   if (id === 'sonTinh') return sonJoined(s);
   if (id === 'anDuong') return advJoined(s);
   if (id === 'caoLo') return caoLoJoined(s);
+  if (id === 'trungTrac' || id === 'trungNhi') return inChapter5(s);
   return true;
 }
 
@@ -100,9 +102,12 @@ export function assignCommander(s: GameState, id: number, tuong: TuongId): Resul
   return ok(tuong);
 }
 
-/** Doanh trại tướng ra trận cùng quân khi giữ kinh đô: trại tướng ấy chỉ huy, không thì trại của Lạc tướng. */
-export function heroPost(s: GameState, tuong: TuongId): Building | undefined {
-  return postOf(s, tuong) ?? postOf(s, 'lacTuong') ?? barracksList(s)[0];
+/**
+ * Doanh trại tướng ra trận cùng quân khi giữ kinh đô: trại tướng ấy chỉ huy, không thì trại của Lạc tướng
+ * (`fallback`; Hai Bà không chỉ huy trại nào thì ra từ trước Điện, nên không lấy trại khác).
+ */
+export function heroPost(s: GameState, tuong: TuongId, fallback = true): Building | undefined {
+  return postOf(s, tuong) ?? (fallback ? (postOf(s, 'lacTuong') ?? barracksList(s)[0]) : undefined);
 }
 
 // ---------- Giới hạn quân ra trận ----------

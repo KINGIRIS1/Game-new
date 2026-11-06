@@ -22,12 +22,16 @@ export function spear(s: Parts, tier = 0, len = 1.3): void {
   p.cyl(0.018, 0.018, len, C.woodDark, 0, len / 2 - 0.25, 0, undefined, 6);
   const top = len - 0.25;
   const iron = tier >= 1;
-  p.cyl(0.024, 0.02, 0.07, iron ? IRON_DARK : C.bronzeDark, 0, top + 0.02, 0, undefined, 6);
-  s.band.cyl(0.026, 0.026, 0.035, iron ? IRON : C.bronze, 0, top + 0.015, 0, undefined, 8);
+  // Bậc 3: lưỡi sắt to hơn, gờ sống, họng và đai bọc đồng vàng.
+  const gold = tier >= 3;
+  p.cyl(0.024, 0.02, 0.07, gold ? C.gold : iron ? IRON_DARK : C.bronzeDark, 0, top + 0.02, 0, undefined, 6);
+  s.band.cyl(0.026, 0.026, 0.035, gold ? C.gold : iron ? IRON : C.bronze, 0, top + 0.015, 0, undefined, 8);
   // Lưỡi giáo hình lá 3 cạnh đặc trưng Cổ Loa, dẹt và sắc nhọn.
-  p.sphere(iron ? 0.072 : 0.06, iron ? IRON : C.bronze, 0, top + (iron ? 0.2 : 0.17), 0, [1, iron ? 2.7 : 2.5, 0.32], 8);
+  const blade = gold ? 0.084 : iron ? 0.072 : 0.06;
+  const at = top + (gold ? 0.23 : iron ? 0.2 : 0.17);
+  p.sphere(blade, iron ? IRON : C.bronze, 0, at, 0, [1, iron ? 2.7 : 2.5, 0.32], 8);
   // Gờ sống giáo nổi chạy dọc giữa lưỡi giáo
-  p.box(0.01, (iron ? 0.28 : 0.24), 0.038, iron ? IRON_DARK : C.bronzeLight, 0, top + (iron ? 0.2 : 0.17), 0);
+  p.box(gold ? 0.014 : 0.01, gold ? 0.33 : iron ? 0.28 : 0.24, 0.038, gold ? C.gold : iron ? IRON_DARK : C.bronzeLight, 0, at, 0);
   // Tua đỏ chiến binh ở cổ giáo
   p.cone(0.048, 0.13, C.red, 0, top - 0.04, 0, [Math.PI, 0, 0], 8);
   if (tier >= 2) {
@@ -80,15 +84,17 @@ export function sword(s: Parts, len = 0.6, guard: number = C.bronze): void {
 
 /**
  * Cây cung cầm tay trái: dựng đứng, lưng cung cong về trước (+z), dây cung phía người bắn.
- * `horn`: cung sừng ngà, đầu bịt đồng.
+ * `horn`: cung sừng ngà, đầu bịt đồng. `gold`: đầu bịt đồng vàng, chuôi quấn đai vàng.
  */
-export function bow(s: Parts, horn = false): void {
+export function bow(s: Parts, horn = false, gold = false): void {
   const p = s.plain;
   const w = horn ? 0.045 : 0.032;
   const color = horn ? HORN : C.woodDark;
   p.box(w, 0.22, w, color, 0, 0, 0.02);
   for (const k of [-1, 1]) p.box(w, 0.22, w, color, 0, k * 0.2, -0.03, [-k * 0.5, 0, 0]);
-  if (horn) for (const k of [-1, 1]) p.sphere(0.03, C.bronze, 0, k * 0.3, -0.08, [1, 1, 1], 6);
+  if (horn) for (const k of [-1, 1]) p.sphere(gold ? 0.038 : 0.03, gold ? C.gold : C.bronze, 0, k * 0.3, -0.08, [1, 1, 1], 6);
+  // `gold` (rèn bậc 3): đầu cánh bịt đồng vàng, chuôi cung quấn đai vàng.
+  if (gold) s.band.cyl(0.034, 0.034, 0.09, C.gold, 0, 0, 0.02, undefined, 8);
   p.box(0.01, 0.6, 0.01, C.cream, 0, 0, -0.085);
 }
 
@@ -326,16 +332,244 @@ export function longDao(s: Parts): void {
 }
 
 /** Khiên tròn mặt trống đồng Đông Sơn, mặt hướng +z; `iron`: viền sắt. */
-export function drumShield(s: Parts, iron: boolean, r = 0.165): void {
+export function drumShield(s: Parts, iron: boolean, r = 0.165, gold = false): void {
   // Mặt trống đồng Đông Sơn
   s.drum.cyl(r, r, 0.035, 0xffffff, 0, 0, 0, [Math.PI / 2, 0, 0], 16);
   // Núm khiên / mặt trời nổi giữa tâm khiên
-  s.plain.sphere(0.045, iron ? IRON : C.bronzeLight, 0, 0, 0.02, [1, 1, 0.65], 8);
+  s.plain.sphere(0.045, gold ? C.gold : iron ? IRON : C.bronzeLight, 0, 0, 0.02, [1, 1, 0.65], 8);
   // Viền ngoài của khiên đồng / sắt đúc đinh tán
   s.plain.cyl(r + 0.014, r + 0.014, 0.028, iron ? IRON_DARK : C.bronzeDark, 0, 0, -0.002, [Math.PI / 2, 0, 0], 16);
   if (iron) {
-    s.plain.add(new THREE.TorusGeometry(r + 0.006, 0.022, 6, 20), IRON, 0, 0, 0.006);
+    // `gold` (rèn bậc 3): viền bọc đồng vàng, hai tua đỏ.
+    s.plain.add(new THREE.TorusGeometry(r + 0.006, 0.022, 6, 20), gold ? C.gold : IRON, 0, 0, 0.006);
     // Tua cờ đỏ kẹp viền khiên chiến binh tinh nhuệ
     s.plain.box(0.035, 0.08, 0.012, C.red, 0, -(r + 0.02), 0.005, [0, 0, 0.2]);
+    if (gold) s.plain.box(0.035, 0.08, 0.012, C.red, 0, r + 0.02, 0.005, [0, 0, -0.2]);
   }
+}
+
+/**
+ * Kích sắt của lính Hán: cán dài 1,4 sơn đen, tay nắm cách đuôi 0,25, mũi giáo sắt trên đỉnh, lưỡi ngang hình trăng
+ * khuyết chĩa sang +x (bên phải lính) hơi cong lên, tua lông đen dưới họng.
+ */
+export function kich(s: Parts): void {
+  const p = s.plain;
+  const len = 1.4;
+  p.cyl(0.018, 0.018, len, C.ink, 0, len / 2 - 0.25, 0, undefined, 6);
+  const top = len - 0.25;
+  p.cyl(0.026, 0.022, 0.1, IRON_DARK, 0, top + 0.02, 0, undefined, 6);
+  // Mũi giáo sắt hình lá, gờ sống sẫm.
+  p.sphere(0.06, IRON, 0, top + 0.2, 0, [1, 2.6, 0.32], 8);
+  p.box(0.01, 0.24, 0.036, IRON_DARK, 0, top + 0.2, 0);
+  // Lưỡi ngang (qua) chĩa sang phải, mũi hơi cong lên; đuôi lưỡi ngắn bên trái giữ thăng bằng.
+  p.box(0.2, 0.05, 0.018, IRON, 0.11, top + 0.05, 0, [0, 0, 0.18]);
+  p.cone(0.03, 0.1, IRON, 0.24, top + 0.09, 0, [0, 0, -Math.PI / 2 + 0.35], 4);
+  p.box(0.06, 0.035, 0.02, IRON_DARK, -0.045, top + 0.04, 0);
+  // Tua lông đen dưới họng kích.
+  p.cone(0.045, 0.13, C.ink, 0, top - 0.07, 0, [Math.PI, 0, 0], 7);
+}
+
+/**
+ * Đao vòng (hoàn thủ đao) của giáp sĩ Hán: lưỡi sắt thẳng một bên dài 0,64, lưỡi sắc hướng +z, sống sẫm, mũi vát,
+ * chuôi quấn vải đen, đốc là vòng sắt. Gốc ở chỗ tay nắm.
+ */
+export function daoVong(s: Parts): void {
+  const p = s.plain;
+  const len = 0.64;
+  p.box(0.018, len, 0.055, IRON, 0, 0.07 + len / 2, 0.006);
+  p.box(0.022, len, 0.014, IRON_DARK, 0, 0.07 + len / 2, -0.022);
+  // Mũi vát chéo từ lưỡi lên sống.
+  p.box(0.018, 0.06, 0.05, IRON, 0, 0.07 + len + 0.012, -0.004, [0.75, 0, 0]);
+  p.box(0.05, 0.03, 0.09, IRON_DARK, 0, 0.055, 0);
+  p.cyl(0.02, 0.02, 0.13, C.ink, 0, -0.02, 0, undefined, 6);
+  // Vòng đốc nằm trong mặt phẳng lưỡi.
+  p.add(new THREE.TorusGeometry(0.042, 0.011, 6, 12), IRON_DARK, 0, -0.12, 0, [0, Math.PI / 2, 0]);
+}
+
+/** Tre tầm vông phơi khô: vàng nâu, mắt tre sẫm, đầu vót nhọn hơ lửa sẫm màu, mặt vót trắng ngà. */
+const TAM_VONG = 0xc2a25a;
+const TAM_VONG_NODE = 0x87692f;
+const TAM_VONG_CUT = 0xe6d49a;
+
+/**
+ * Giáo tre của nghĩa binh: cây tầm vông dài 1,35, tay nắm cách đuôi 0,3, ba mắt tre, đầu vót nhọn xiên một bên
+ * (mặt vót trắng ngà, mũi hơ lửa sẫm), buộc túm lạt dưới mũi.
+ */
+export function giaoTre(s: Parts): void {
+  const p = s.plain;
+  const len = 1.35;
+  const top = len - 0.3;
+  p.cyl(0.022, 0.025, top + 0.3, TAM_VONG, 0, (top - 0.3) / 2, 0, undefined, 6);
+  for (const y of [-0.12, 0.3, 0.68]) p.cyl(0.028, 0.028, 0.025, TAM_VONG_NODE, 0, y, 0, undefined, 6);
+  // Mũi vót xiên: phần vát trắng ngà, chóp hơ lửa sẫm.
+  p.cone(0.023, 0.26, TAM_VONG_CUT, 0, top + 0.13, 0, undefined, 5);
+  p.box(0.004, 0.2, 0.03, TAM_VONG_NODE, 0, top + 0.1, 0.012, [0.08, 0, 0]);
+  p.cone(0.008, 0.07, C.woodDark, 0, top + 0.235, 0, undefined, 4);
+  p.cyl(0.03, 0.03, 0.05, C.thatchDark, 0, top - 0.03, 0, undefined, 6);
+}
+
+/**
+ * Gươm đồng của Trưng Trắc: lưỡi đồng hình lá dài 0,62, gờ sống sáng, chắn tay vàng, chuôi quấn dây đỏ, đốc tròn vàng,
+ * tua đỏ buông ở đốc. Lưỡi sắc hướng +z.
+ */
+export function guomDong(s: Parts): void {
+  const p = s.plain;
+  const len = 0.62;
+  // Lưỡi thon dần về mũi, phình nhẹ ở giữa như lưỡi kiếm Đông Sơn.
+  p.box(0.022, len * 0.75, 0.07, C.bronze, 0, 0.08 + len * 0.375, 0);
+  p.sphere(0.05, C.bronze, 0, 0.08 + len * 0.78, 0, [0.44, 2.2, 1], 8);
+  p.box(0.026, len * 0.95, 0.014, C.bronzeLight, 0, 0.08 + len * 0.47, 0);
+  s.band.box(0.03, 0.09, 0.075, C.gold, 0, 0.12, 0);
+  p.box(0.15, 0.035, 0.06, C.gold, 0, 0.065, 0);
+  p.cyl(0.02, 0.022, 0.12, C.red, 0, -0.01, 0, undefined, 6);
+  p.sphere(0.034, C.gold, 0, -0.085, 0, [1, 1, 1], 7);
+  p.cone(0.03, 0.12, C.red, 0, -0.15, 0, [Math.PI, 0, 0], 6);
+}
+
+/**
+ * Cờ hiệu đỏ của Trưng Nhị: cán tre dài 1,5 (gốc ở chỗ tay nắm, cách đuôi 0,25), chóp đồng hình mũi giáo, tua vàng;
+ * lá cờ đỏ dài chừng 0,7 × 0,5 bay về phía −z, ba khúc lệch nhau cho ra dáng cờ bay, viền dải hoa văn vàng, giữa
+ * thêu chim Lạc vàng dang cánh, mỏ dài chĩa lên, đuôi cờ xẻ hai tua.
+ */
+export function coLac(s: Parts): void {
+  const p = s.plain;
+  const len = 1.5;
+  const top = len - 0.25;
+  p.cyl(0.02, 0.022, len, C.woodDark, 0, len / 2 - 0.25, 0, undefined, 6);
+  p.cyl(0.026, 0.026, 0.04, C.bronze, 0, top, 0, undefined, 6);
+  p.cone(0.035, 0.14, C.bronze, 0, top + 0.09, 0, undefined, 5);
+  p.cone(0.04, 0.12, C.gold, 0, top - 0.06, 0, [Math.PI, 0, 0], 6);
+  // Lá cờ ba khúc, khúc ngoài rủ thấp dần.
+  const fy = top - 0.32;
+  const h = 0.48;
+  const segs = 3;
+  const w = 0.72 / segs;
+  for (let i = 0; i < segs; i++) {
+    const z = -0.02 - w * (i + 0.5);
+    const y = fy - i * 0.025;
+    const rx = i % 2 ? 0.04 : -0.04;
+    p.box(0.018, h - i * 0.03, w + 0.01, C.red, Math.sin(i * 1.7) * 0.02, y, z, [rx, (i % 2 ? 1 : -1) * 0.12, 0]);
+    s.band.box(0.022, 0.05, w + 0.01, C.gold, Math.sin(i * 1.7) * 0.02, y + (h - i * 0.03) / 2 - 0.025, z, [rx, (i % 2 ? 1 : -1) * 0.12, 0]);
+    s.band.box(0.022, 0.05, w + 0.01, C.gold, Math.sin(i * 1.7) * 0.02, y - (h - i * 0.03) / 2 + 0.025, z, [rx, (i % 2 ? 1 : -1) * 0.12, 0]);
+  }
+  // Đuôi cờ xẻ hai tua.
+  for (const k of [-1, 1]) p.box(0.016, 0.1, 0.16, C.red, 0.02, fy - 0.06 + k * 0.13, -0.8, [k * 0.2, 0.1, 0]);
+  // Chim Lạc vàng thêu giữa lá cờ (hai mặt): thân thon, cổ vươn, mỏ dài, mào, cánh dang, đuôi xòe.
+  for (const sx of [-1, 1]) {
+    const x = sx * 0.014;
+    const cz = -0.3;
+    const cy = fy;
+    p.sphere(0.05, C.gold, x, cy, cz, [0.3, 0.75, 1.5], 6);
+    p.box(0.01, 0.12, 0.026, C.gold, x, cy + 0.08, cz + 0.06, [-0.5, 0, 0]);
+    p.cone(0.016, 0.16, C.gold, x, cy + 0.12, cz + 0.17, [Math.PI / 2 - 0.3, 0, 0], 4);
+    p.box(0.01, 0.07, 0.016, C.gold, x, cy + 0.17, cz + 0.06, [0.6, 0, 0]);
+    p.box(0.01, 0.05, 0.2, C.gold, x, cy + 0.06, cz - 0.02, [-0.9, 0, 0]);
+    p.box(0.01, 0.05, 0.18, C.gold, x, cy - 0.04, cz - 0.04, [0.6, 0, 0]);
+    p.box(0.01, 0.1, 0.06, C.gold, x, cy - 0.04, cz - 0.15, [0.3, 0, 0]);
+  }
+}
+
+/**
+ * Đại đao của Mã Viện: cán dài 1,55 sơn đỏ sẫm, đai đồng đỏ, đuôi cán mũi sắt; khâu đồng hình đầu thú ngậm lưỡi, tua
+ * đen buông dưới khâu; lưỡi sắt to bản hình trăng khuyết, mũi ngả về sau, sống lưỡi đồng đỏ có hai răng cưa.
+ * Tay nắm cách đuôi cán 0,32; lưỡi sắc hướng +z.
+ */
+export function daiDao(s: Parts): void {
+  const p = s.plain;
+  const len = 1.55;
+  const top = len - 0.32;
+  p.cyl(0.022, 0.025, len, C.hanRedDark, 0, len / 2 - 0.32, 0, undefined, 6);
+  for (const y of [-0.12, 0.36, 0.82]) p.cyl(0.029, 0.029, 0.03, C.copper, 0, y, 0, undefined, 6);
+  p.cone(0.028, 0.14, IRON, 0, -0.39, 0, [Math.PI, 0, 0], 5);
+  p.sphere(0.055, C.copper, 0, top + 0.02, 0.01, [1, 1.1, 1.35], 7);
+  p.box(0.04, 0.05, 0.09, C.copperDark, 0, top + 0.07, 0.055);
+  p.cone(0.065, 0.17, C.hanBlack, 0, top - 0.1, -0.01, [Math.PI, 0, 0], 7);
+  // Lưỡi: phần dưới to bản phình cong ra trước, phần trên ngả về sau thành mũi nhọn.
+  p.box(0.026, 0.36, 0.19, IRON, 0, top + 0.27, 0.1);
+  p.sphere(0.11, IRON, 0, top + 0.31, 0.19, [0.12, 1.8, 0.55], 8);
+  p.box(0.024, 0.22, 0.16, IRON, 0, top + 0.52, 0.05, [-0.5, 0, 0]);
+  p.cone(0.06, 0.16, IRON, 0, top + 0.67, -0.04, [-0.75, 0, 0], 4);
+  // Sống lưỡi đồng đỏ, hai răng cưa sắt sau sống.
+  p.box(0.034, 0.38, 0.026, C.copperDark, 0, top + 0.27, -0.005);
+  for (const y of [0.2, 0.34]) p.cone(0.024, 0.09, IRON_DARK, 0, top + y, -0.05, [-Math.PI / 2 + 0.35, 0, 0], 4);
+}
+
+/**
+ * Cờ nữ tướng: cán dài `len`, tay nắm cách đuôi `grip`; lá cờ buộc vào cán ở `top` (tính từ chỗ tay nắm), cao `h`,
+ * chia ba khúc mỗi khúc dài `w` để gắn vào ba xương nối nhau cho cờ bay lượn sóng.
+ */
+export const CO_NU = { len: 1.85, grip: 0.22, top: 1.53, h: 0.42, w: 0.26 } as const;
+
+/** Cán cờ nữ tướng: tre sẫm, đốc bịt đồng, chóp đồng hình mũi giáo, tua màu `tassel` dưới chóp. Gốc ở chỗ tay nắm. */
+export function coNuCan(s: Parts, tassel: number): void {
+  const p = s.plain;
+  const { len, grip } = CO_NU;
+  const top = len - grip;
+  p.cyl(0.018, 0.021, len, C.woodDark, 0, len / 2 - grip, 0, undefined, 6);
+  p.cyl(0.025, 0.025, 0.035, C.bronzeDark, 0, -grip + 0.017, 0, undefined, 6);
+  p.cyl(0.026, 0.026, 0.035, C.bronze, 0, top, 0, undefined, 6);
+  p.cone(0.033, 0.13, C.bronze, 0, top + 0.08, 0, undefined, 5);
+  p.cone(0.036, 0.09, tassel, 0, top - 0.045, 0, [Math.PI, 0, 0], 6);
+}
+
+/**
+ * Một khúc lá cờ nữ tướng (`i` 0, 1, 2 từ cán ra), màu `color`, viền trên dưới dải hoa văn `trim`: khúc sát cán có
+ * dải viền dọc cán, khúc giữa có mặt trời trống đồng vàng (hai mặt cờ), khúc ngoài xẻ đuôi nheo. Gốc ở mép trên sát
+ * cán (hay sát khúc trước), lá cờ rủ xuống −y, bay về −z.
+ */
+export function coNuLa(s: Parts, i: number, color: number, trim: number): void {
+  const p = s.plain;
+  const { h, w } = CO_NU;
+  const z = -w / 2;
+  p.box(0.016, h, w + 0.012, color, 0, -h / 2, z);
+  s.band.box(0.022, 0.05, w + 0.012, trim, 0, -0.025, z);
+  s.band.box(0.022, 0.05, w + 0.012, trim, 0, -h + 0.025, z);
+  if (i === 0) p.box(0.024, h, 0.03, trim, 0, -h / 2, -0.016);
+  if (i === 1) {
+    s.drum.cyl(0.1, 0.1, 0.026, C.gold, 0, -h / 2, z, [0, 0, Math.PI / 2], 16);
+    p.cyl(0.112, 0.112, 0.022, C.bronzeDark, 0, -h / 2, z, [0, 0, Math.PI / 2], 16);
+  }
+  if (i === 2) {
+    // Đuôi nheo: hai tua chếch lên, chếch xuống, xẻ giữa.
+    for (const k of [-1, 1]) p.box(0.016, 0.14, 0.16, color, 0, -h / 2 + k * (h / 2 - 0.075), -w - 0.06, [k * 0.3, 0, 0]);
+  }
+}
+
+/** Kiếm ngắn sắt của Lê Chân: lưỡi thẳng dài 0,42 có gờ sống, mũi nhọn, chắn tay đồng, chuôi quấn dây đỏ, đốc đồng; lưỡi dọc +y. */
+export function doanKiem(s: Parts): void {
+  const p = s.plain;
+  const len = 0.42;
+  p.box(0.018, len * 0.85, 0.06, IRON, 0, 0.07 + len * 0.425, 0);
+  p.sphere(0.03, IRON, 0, 0.07 + len * 0.86, 0, [0.6, 2.4, 1], 6);
+  p.box(0.022, len * 0.9, 0.012, IRON_DARK, 0, 0.07 + len * 0.45, 0);
+  p.box(0.13, 0.03, 0.055, C.bronze, 0, 0.06, 0);
+  p.cyl(0.018, 0.02, 0.1, C.red, 0, 0, 0, undefined, 6);
+  p.sphere(0.03, C.bronze, 0, -0.06, 0, [1, 1, 1], 6);
+}
+
+/** Chỗ buộc lá cờ lệnh trên cán, tính từ chỗ tay nắm. */
+export const CO_LENH_TOP = 0.84;
+
+/**
+ * Cán cờ lệnh của Mã Viện: gỗ sơn đen dài 1,0 (tay nắm cách đuôi 0,12), chóp mũi giáo vàng, tua đỏ dưới chóp.
+ * Lá cờ vẽ riêng (`coLenhLa`, gốc ở `CO_LENH_TOP`) để gắn vào xương riêng cho bay phần phật.
+ */
+export function coLenhCan(s: Parts): void {
+  const p = s.plain;
+  p.cyl(0.015, 0.017, 1.0, C.hanBlack, 0, 0.38, 0, undefined, 6);
+  p.cone(0.028, 0.11, C.gold, 0, 0.935, 0, undefined, 5);
+  p.cone(0.034, 0.08, C.hanRed, 0, 0.855, 0, [Math.PI, 0, 0], 6);
+}
+
+/** Lá cờ lệnh đen viền đỏ son, giữa thêu vòng đỏ, tua đỏ cuối cờ; buộc vào cán ở gốc, bay về −z, dài 0,38, cao 0,28. */
+export function coLenhLa(s: Parts): void {
+  const p = s.plain;
+  const w = 0.38;
+  const h = 0.28;
+  p.box(0.014, h, w, C.hanBlack, 0, -h / 2 - 0.01, -w / 2);
+  p.box(0.022, 0.032, w, C.hanRed, 0, -0.016, -w / 2);
+  p.box(0.022, 0.032, w, C.hanRed, 0, -h + 0.006, -w / 2);
+  p.box(0.022, h, 0.032, C.hanRed, 0, -h / 2 - 0.01, -w + 0.016);
+  for (const sx of [-1, 1]) p.cyl(0.06, 0.06, 0.006, C.hanRed, sx * 0.009, -h / 2 - 0.01, -w / 2, [0, 0, Math.PI / 2], 10);
+  for (const y of [-0.05, -h + 0.03]) p.cone(0.022, 0.08, C.hanRed, 0, y, -w - 0.03, [-Math.PI / 2, 0, 0], 5);
 }

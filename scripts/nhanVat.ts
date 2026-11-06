@@ -6,9 +6,22 @@ import { addSunLights } from '../src/render/lights';
 import { C } from '../src/render/palette';
 import type { Act, Poser } from '../src/render/rig';
 import { makeBeast, makeRoyalHorse, makeRuaVang } from '../src/render/beasts';
-import { makeAnDuong, makeCaoLo, makeDrummer, makeGiong, makeSonTinh, makeThuyTinh } from '../src/render/heroes';
+import type { NuTuongId } from '../src/game/defs';
+import {
+  makeAnDuong,
+  makeCaoLo,
+  makeDrummer,
+  makeGiong,
+  makeLacTuong,
+  makeNuTuong,
+  makeSonTinh,
+  makeThuyTinh,
+  makeTrungNhi,
+  makeTrungTrac,
+} from '../src/render/heroes';
 import { makeMonster } from '../src/render/monsters';
 import { makeRower, makeWorker } from '../src/render/people';
+import { makeEnemyBoat, makeLauThuyen } from '../src/render/models';
 import { makeSoldier } from '../src/render/soldier';
 
 interface Entry {
@@ -18,6 +31,14 @@ interface Entry {
   co?: number;
   /** Khoảng cách giữa các tư thế. */
   cach?: number;
+  /** Chiều cao ảnh (điểm ảnh), mặc định 260. */
+  cao?: number;
+  /** Nền là mặt nước (thuyền): phần chìm dưới mặt nước bị che. */
+  nuoc?: boolean;
+  /** Xoay thêm quanh trục đứng (radian), vd. cho thấy mạn thuyền. */
+  xoay?: number;
+  /** Cột riêng của mục này thay cho cột của nhóm. */
+  cot?: [string, Act][];
 }
 
 /** Các tư thế chụp, theo cột. */
@@ -43,29 +64,114 @@ function theoCot(tao: () => THREE.Group, truong: 'horn' | 'win'): () => THREE.Gr
   };
 }
 
+/** Mọi tư thế đều đang bỏ chạy (Tô Định thua trận). */
+function boChay(tao: () => THREE.Group): () => THREE.Group {
+  return () => {
+    const g = tao();
+    const pose = g.userData.pose as Poser;
+    g.userData.pose = (a: Act) => pose({ ...a, flee: true });
+    return g;
+  };
+}
+
+/** Lâu thuyền: đậu, chèo, lính nỏ bắn, chìm dần. Chèo: `time` chọn nhịp mái chèo (t × 4,2 rad). */
+const LAU_THUYEN: [string, Act][] = [
+  ['Đậu', { act: 'stand', time: 0 }],
+  ['Đậu (t=1,2)', { act: 'stand', time: 1.2 }],
+  ['Chèo (kéo)', { act: 'walk', time: 0 }],
+  ['Chèo (cuối nhát)', { act: 'walk', time: Math.PI / 2 / 4.2 }],
+  ['Chèo (nhấc)', { act: 'walk', time: Math.PI / 4.2 }],
+  ['Ngắm', { act: 'fight', time: 0 }],
+  ['Bắn (giật)', { act: 'fight', strike: 0.15, time: 0 }],
+  ['Lên dây', { act: 'fight', strike: 0.55, time: 0 }],
+  ['Chìm 0,25', { act: 'dead', fall: 0.25 }],
+  ['Chìm 0,5', { act: 'dead', fall: 0.5 }],
+  ['Chìm 0,8', { act: 'dead', fall: 0.8 }],
+];
+const MOT_COT: [string, Act][] = [['Đứng', { act: 'stand' }]];
+
+/** Lâu thuyền đặt cạnh thuyền chở lính Hán và nỏ thủ Hán theo cỡ trong trận giữ kinh đô (1 ô = 1). */
+function soCo(): THREE.Group {
+  const g = new THREE.Group();
+  g.add(makeLauThuyen());
+  const boat = makeEnemyBoat('han');
+  boat.scale.setScalar(0.9);
+  // Đặt chếch sau đuôi để ảnh chụp (xoay 1,67) thấy thuyền nhỏ nằm bên trái lâu thuyền.
+  boat.position.set(-1.45, 0, -2.6);
+  const man = makeSoldier('noHan');
+  man.scale.setScalar(0.8);
+  man.position.set(-1.45, 0.2, -2.4);
+  g.add(boat, man);
+  return g;
+}
+
+/** Nữ tướng: đứng (cờ bay theo `time`), đi, phất cờ hô quân (cờ phất ra ngoài, vào trong), thắng trận. */
+const NU_COT: [string, Act][] = [
+  ['Đứng', { act: 'stand', time: 0 }],
+  ['Đứng (t=0,8)', { act: 'stand', time: 0.8 }],
+  ['Đi (bước trái)', { act: 'walk', phase: -Math.PI / 2, stride: 0.5, time: 0.3 }],
+  ['Đi (giữa bước)', { act: 'walk', phase: 0, stride: 0.5, time: 0.5 }],
+  ['Đi (bước phải)', { act: 'walk', phase: Math.PI / 2, stride: 0.5, time: 0.7 }],
+  ['Phất cờ (t=0)', { act: 'fight', time: 0 }],
+  ['Phất cờ (t=0,45)', { act: 'fight', time: 0.45 }],
+  ['Phất cờ (t=1,4)', { act: 'fight', time: 1.4 }],
+  ['Thắng', { act: 'stand', win: 1, time: 0.3 }],
+];
+const NU_IDS: NuTuongId[] = ['leChan', 'thanhThien', 'batNan', 'phungThiChinh'];
+
+/**
+ * Một hàng nhân vật đứng cạnh nhau cách `gap`, thẳng hàng ngang ảnh (với hướng chụp mặc định −0,6, xoay thêm `xoay`
+ * như trường `xoay` của mục). Tư thế của hàng đặt cho từng người.
+ */
+function motHang(tao: (() => THREE.Group)[], gap: number, xoay = 0): () => THREE.Group {
+  return () => {
+    const g = new THREE.Group();
+    const a = 0.6 - xoay;
+    const dir = new THREE.Vector3(Math.cos(a), 0, -Math.sin(a));
+    const parts = tao.map((f) => f());
+    parts.forEach((p, i) => {
+      p.position.copy(dir).multiplyScalar((i - (parts.length - 1) / 2) * gap);
+      g.add(p);
+    });
+    g.userData.pose = (act: Act) => parts.forEach((p) => (p.userData.pose as Poser)(act));
+    return g;
+  };
+}
+
 export const NHOM: Record<string, Entry[]> = {
   linh: [
     { ten: 'Giáo binh bậc 2', tao: () => makeSoldier('giao', 2) },
+    { ten: 'Giáo binh bậc 3', tao: () => makeSoldier('giao', 3) },
     { ten: 'Cung thủ bậc 0', tao: () => makeSoldier('cung', 0) },
     { ten: 'Cung thủ bậc 2', tao: () => makeSoldier('cung', 2) },
+    { ten: 'Cung thủ bậc 3', tao: () => makeSoldier('cung', 3) },
     { ten: 'Giặc Ân cầm qua', tao: () => makeSoldier('giaoAn') },
     { ten: 'Giặc Ân cầm cung', tao: () => makeSoldier('cungAn') },
     { ten: 'Phó tướng Ân', tao: () => makeSoldier('phoTuong') },
     { ten: 'Lính Triệu', tao: () => makeSoldier('linhTrieu') },
     { ten: 'Lính nỏ Triệu', tao: () => makeSoldier('noTrieu') },
     { ten: 'Lính nỏ (bậc 2)', tao: () => makeSoldier('no', 2) },
+    { ten: 'Lính nỏ bậc 3', tao: () => makeSoldier('no', 3) },
     { ten: 'Lính thủy Triệu', tao: () => makeSoldier('linhThuy') },
     { ten: 'Cung thuyền Triệu', tao: () => makeSoldier('cungThuyen') },
     { ten: 'Lính rìu giáp mây', tao: () => makeSoldier('linhRiu') },
     { ten: 'Tướng thủy binh Triệu', tao: () => makeSoldier('tuongThuy'), co: 0.9, cach: 0.85 },
+    { ten: 'Lính kích Hán', tao: () => makeSoldier('linhHan') },
+    { ten: 'Nỏ thủ Hán', tao: () => makeSoldier('noHan') },
+    { ten: 'Giáp sĩ Hán', tao: () => makeSoldier('giapHan') },
+    { ten: 'Nghĩa binh', tao: () => makeSoldier('nghiaBinh') },
+    { ten: 'Tô Định', tao: () => makeSoldier('toDinh'), co: 0.9, cach: 0.85 },
+    { ten: 'Tô Định bỏ chạy', tao: boChay(() => makeSoldier('toDinh')), co: 0.9, cach: 0.85 },
   ],
   thu: [
     { ten: 'Voi chiến bậc 0', tao: () => makeBeast('voi', 0), co: 1.5, cach: 1.5 },
     { ten: 'Voi chiến bậc 2', tao: () => makeBeast('voi', 2), co: 1.6, cach: 1.5 },
+    { ten: 'Voi chiến bậc 3', tao: () => makeBeast('voi', 3), co: 1.7, cach: 1.5 },
     { ten: 'Chiến xa', tao: () => makeBeast('chienXa'), co: 1.3, cach: 1.6 },
     { ten: 'Đại tướng Ân', tao: () => makeBeast('daiTuong'), co: 1.4, cach: 1.6 },
     { ten: 'Kỵ binh Triệu', tao: () => makeBeast('kyBinh'), co: 1.4, cach: 1.3 },
     { ten: 'Triệu Đà', tao: () => makeBeast('trieuDa'), co: 1.4, cach: 1.3 },
+    { ten: 'Mã Viện', tao: () => makeBeast('maVien'), co: 1.5, cach: 1.4 },
     { ten: 'Hổ tinh', tao: () => makeBeast('hoTinh'), co: 1.0, cach: 1.3 },
     { ten: 'Gà trắng', tao: () => makeBeast('gaTrang'), co: 1.3, cach: 1.3 },
     { ten: 'Rùa Vàng', tao: () => makeRuaVang(), co: 0.9, cach: 1.7 },
@@ -91,6 +197,40 @@ export const NHOM: Record<string, Entry[]> = {
     { ten: 'An Dương Vương (rìu)', tao: () => makeAnDuong(), co: 1.3, cach: 1.1 },
     { ten: 'Cao Lỗ (nỏ liên châu)', tao: () => makeCaoLo(), co: 1.25, cach: 1.1 },
     { ten: 'Cao Lỗ (hiển linh)', tao: () => makeCaoLo({ glow: true }), co: 1.3, cach: 1.1 },
+    { ten: 'Trưng Trắc', tao: () => makeTrungTrac(), co: 2.3, cach: 2.1 },
+    { ten: 'Trưng Nhị', tao: () => makeTrungNhi(), co: 2.3, cach: 2.1 },
+    { ten: 'Trưng Trắc (hiển linh)', tao: () => makeTrungTrac({ glow: true }), co: 2.3, cach: 2.1 },
+    { ten: 'Lạc tướng đứng chầu (sân Điện)', tao: () => makeLacTuong(), co: 1.25, cach: 1.1 },
+    { ten: 'Gióng đứng chầu (sân Điện, hiển linh)', tao: () => makeGiong('trangSi', { bamboo: true, glow: true, onFoot: true }), co: 1.4, cach: 1.1 },
+    { ten: 'Lê Chân (nỏ sau lưng, kiếm ngắn)', tao: () => makeNuTuong('leChan'), co: 1.9, cach: 1.15, cao: 300, cot: NU_COT },
+    { ten: 'Thánh Thiên (cung, bao tên sau lưng)', tao: () => makeNuTuong('thanhThien'), co: 1.9, cach: 1.15, cao: 300, cot: NU_COT },
+    { ten: 'Bát Nàn (giáo)', tao: () => makeNuTuong('batNan'), co: 1.9, cach: 1.15, cao: 300, cot: NU_COT },
+    { ten: 'Phùng Thị Chính (địu con, gươm)', tao: () => makeNuTuong('phungThiChinh'), co: 1.9, cach: 1.15, cao: 300, cot: NU_COT },
+    { ten: 'Phùng Thị Chính (hiển linh)', tao: () => makeNuTuong('phungThiChinh', { glow: true }), co: 1.75, cach: 1.15, cot: NU_COT.slice(0, 3) },
+    {
+      ten: 'Bốn nữ tướng nhìn sau lưng (đứng)',
+      tao: motHang(NU_IDS.map((k) => () => makeNuTuong(k)), 1.1, Math.PI),
+      xoay: Math.PI,
+      co: 1.75,
+      cach: 1.3,
+      cot: [NU_COT[0]],
+    },
+    {
+      ten: 'Bốn nữ tướng nhìn sau lưng (phất cờ)',
+      tao: motHang(NU_IDS.map((k) => () => makeNuTuong(k)), 1.1, Math.PI),
+      xoay: Math.PI,
+      co: 1.9,
+      cach: 1.5,
+      cao: 300,
+      cot: [NU_COT[6]],
+    },
+    {
+      ten: 'So cỡ: Trưng Trắc, Trưng Nhị đứng chầu (1,3), Lê Chân, Thánh Thiên, Bát Nàn, Phùng Thị Chính (1,22)',
+      tao: motHang([() => makeTrungTrac({ onFoot: true }), () => makeTrungNhi({ onFoot: true }), ...NU_IDS.map((k) => () => makeNuTuong(k))], 0.95),
+      co: 1.75,
+      cach: 1.6,
+      cot: MOT_COT,
+    },
   ],
   ky_nang: [
     { ten: 'Kỹ năng (cột: 0, 0,1 … 1)', tao: () => makeGiong('trangSi'), co: 1.6, cach: 1.4 },
@@ -100,7 +240,21 @@ export const NHOM: Record<string, Entry[]> = {
     { ten: 'Cao Lỗ nỏ liên châu', tao: () => makeCaoLo(), co: 1.3, cach: 1.1 },
     { ten: 'Cao Lỗ lệnh bắn (thổi tù và)', tao: theoCot(() => makeCaoLo(), 'horn'), co: 1.3, cach: 1.1 },
     { ten: 'Cao Lỗ thắng trận', tao: theoCot(() => makeCaoLo(), 'win'), co: 1.3, cach: 1.1 },
+    { ten: 'Trưng Trắc voi xung trận', tao: () => makeTrungTrac(), co: 2.4, cach: 2.1 },
+    { ten: 'Trưng Nhị hiệu triệu', tao: () => makeTrungNhi(), co: 2.6, cach: 2.1 },
+    { ten: 'Trưng Trắc thắng trận', tao: theoCot(() => makeTrungTrac(), 'win'), co: 2.4, cach: 2.1 },
+    { ten: 'Trưng Nhị thắng trận', tao: theoCot(() => makeTrungNhi(), 'win'), co: 2.6, cach: 2.1 },
+    { ten: 'Mã Viện lệnh nỏ', tao: () => makeBeast('maVien'), co: 1.6, cach: 1.4 },
+    { ten: 'Nữ tướng phất cờ (Lê Chân; cột là đồng hồ, giây)', tao: () => makeNuTuong('leChan'), co: 1.95, cach: 1.15, cao: 300 },
+    { ten: 'Nữ tướng thắng trận (Phùng Thị Chính)', tao: theoCot(() => makeNuTuong('phungThiChinh'), 'win'), co: 1.95, cach: 1.15, cao: 300 },
     { ten: 'Người đánh trống', tao: () => makeDrummer(), co: 0.9, cach: 1.1 },
+  ],
+  thuyen: [
+    { ten: 'Lâu thuyền Hán', tao: () => makeLauThuyen(), co: 2.3, cach: 4.3, cao: 300, nuoc: true, xoay: 1.67, cot: LAU_THUYEN },
+    { ten: 'Lâu thuyền Hán (mạn bên kia)', tao: () => makeLauThuyen(), co: 2.3, cach: 4.3, cao: 300, nuoc: true, xoay: 1.67 + Math.PI, cot: LAU_THUYEN.slice(5, 8) },
+    { ten: 'Thuyền chở lính Triệu', tao: () => makeEnemyBoat(), co: 1.0, cach: 2.2, cao: 300, nuoc: true, xoay: 1.67, cot: MOT_COT },
+    { ten: 'Thuyền chở lính Hán', tao: () => makeEnemyBoat('han'), co: 1.0, cach: 2.2, cao: 300, nuoc: true, xoay: 1.67, cot: MOT_COT },
+    { ten: 'So cỡ ở kinh đô: lâu thuyền (1), thuyền chở lính Hán (0,9), nỏ thủ Hán (0,8)', tao: soCo, co: 2.3, cach: 6, cao: 300, nuoc: true, xoay: 1.67, cot: MOT_COT },
   ],
   dan: [
     { ten: 'Nông dân', tao: () => makeWorker('nong') },
@@ -133,8 +287,8 @@ const KY_NANG: [string, Act][] = [0, 0.1, 0.2, 0.35, 0.5, 0.6, 0.7, 0.85, 1].map
 const AZ = Math.PI / 4;
 const EL = THREE.MathUtils.degToRad(38);
 
-/** Chụp một nhóm: mỗi nhân vật một ảnh, các tư thế xếp thành hàng. Trả về dataURL. */
-export function chup(nhom: string, huong = -0.6): { ten: string; anh: string }[] {
+/** Chụp một nhóm: mỗi nhân vật một ảnh, các tư thế xếp thành hàng. Trả về dataURL và tên các cột. */
+export function chup(nhom: string, huong = -0.6): { ten: string; anh: string; cot: string[] }[] {
   const list = NHOM[nhom];
   if (!list) throw new Error(`Không có nhóm ${nhom}. Có: ${Object.keys(NHOM).join(', ')}`);
   const canvas = document.createElement('canvas');
@@ -144,28 +298,28 @@ export function chup(nhom: string, huong = -0.6): { ten: string; anh: string }[]
   renderer.shadowMap.enabled = true;
   renderer.shadowMap.type = THREE.PCFShadowMap;
   const right = new THREE.Vector3(Math.cos(AZ), 0, -Math.sin(AZ));
-  const out: { ten: string; anh: string }[] = [];
+  const out: { ten: string; anh: string; cot: string[] }[] = [];
   for (const e of list) {
     const half = e.co ?? 0.8;
     const gap = e.cach ?? 0.75;
-    const h = 260;
-    const w = Math.round(((TU_THE.length + 1) * gap * h) / (2 * half));
+    const h = e.cao ?? 260;
+    const cols = e.cot ?? (nhom === 'ky_nang' ? KY_NANG : nhom === 'dan' ? DAN : TU_THE);
+    const w = Math.round(((Math.max(cols.length, 3) + 1) * gap * h) / (2 * half));
     renderer.setSize(w, h);
     const scene = new THREE.Scene();
     scene.background = new THREE.Color(C.sky);
     addSunLights(scene, 8, 2048);
-    const ground = new THREE.Mesh(new THREE.PlaneGeometry(60, 60), new THREE.MeshToonMaterial({ color: C.grass[0] }));
+    const ground = new THREE.Mesh(new THREE.PlaneGeometry(60, 60), new THREE.MeshToonMaterial({ color: e.nuoc ? C.water[0] : C.grass[0] }));
     ground.rotation.x = -Math.PI / 2;
     ground.receiveShadow = true;
     scene.add(ground);
-    const cols = nhom === 'ky_nang' ? KY_NANG : nhom === 'dan' ? DAN : TU_THE;
     cols.forEach(([, act], i) => {
       const g = e.tao();
       const k = i - (cols.length - 1) / 2;
       const beat = g.userData.beat as ((l: number, r: number) => void) | undefined;
       if (beat) beat(i % 2 ? 0.32 : -0.75, i % 2 ? -0.75 : 0.32);
       g.position.copy(right).multiplyScalar(k * gap);
-      g.rotation.y = AZ + huong;
+      g.rotation.y = AZ + huong + (e.xoay ?? 0);
       (g.userData.pose as Poser | undefined)?.(act);
       // Ngã: phần vẽ trận ngả cả người ra sau.
       if (act.act === 'dead') {
@@ -180,7 +334,7 @@ export function chup(nhom: string, huong = -0.6): { ten: string; anh: string }[]
     cam.position.set(Math.cos(EL) * Math.sin(AZ), Math.sin(EL), Math.cos(EL) * Math.cos(AZ)).multiplyScalar(40).add(target);
     cam.lookAt(target);
     renderer.render(scene, cam);
-    out.push({ ten: e.ten, anh: canvas.toDataURL('image/png') });
+    out.push({ ten: e.ten, anh: canvas.toDataURL('image/png'), cot: cols.map(([t]) => t) });
   }
   renderer.dispose();
   canvas.remove();

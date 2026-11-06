@@ -1,4 +1,4 @@
-// Giao diện rèn binh khí trong bảng lò rèn: mỗi binh chủng hai bậc.
+// Giao diện rèn binh khí trong bảng lò rèn: mỗi binh chủng ba bậc (bậc 3 sau truyện).
 // Chỉ dựng chuỗi HTML; Hud lo việc gắn vào trang và bắt sự kiện.
 
 import { canForgeArms, nextArms } from '../game/binhKhi';
@@ -24,7 +24,7 @@ export function armsHtml(state: GameState): string {
       action = `<button class="btn small" data-act="forgeArms" data-unit="${k}" ${check.ok ? '' : 'disabled'}>${vi.ui.armsForge(tier + 1)}<br>${costHtml(state, next.cost)}</button>`;
     }
     return `<div class="unit-row"><span class="unit-icon">${vi.units[k].icon}</span>
-      <span class="unit-info"><b>${vi.units[k].name}</b><small>${vi.ui.armsTier(tier)} <span class="level-pips">${pips}</span></small>
+      <span class="unit-info"><b>${vi.units[k].name}</b><small>${vi.ui.armsTier(tier, ARMS.length)} <span class="level-pips">${pips}</span></small>
       ${why ? `<small class="lack">${why}</small>` : ''}</span>${action}</div>`;
   }).join('');
   return `<h3>⚔️ ${vi.ui.armsTitle}</h3><p class="muted">${vi.ui.armsHint}</p><div class="units">${rows}</div>`;

@@ -42,11 +42,16 @@ export function giongHtml(state: GameState): string {
     <h3>⚒️ ${vi.ui.gearTitle}</h3><div class="units">${gear}</div>${skillsHtml(state)}</div>`;
 }
 
+/** Hai màn hình Hết truyện: sau chương 4 và sau chương 5. */
+export type EndingId = 'hetTruyen' | 'hetTruyen5';
+export const isEnding = (id: string): id is EndingId => id === 'hetTruyen' || id === 'hetTruyen5';
+
 /**
- * Màn hình Hết truyện sau đoạn cuối chương 4: bốn dòng tóm tắt bốn chương, một câu nhắc chuyện về sau, nút Chơi tiếp.
+ * Màn hình Hết truyện: mỗi chương đã kể một dòng tóm tắt (bốn dòng sau chương 4, năm dòng sau chương 5), một câu
+ * nhắc chuyện về sau, nút Chơi tiếp.
  */
-export function endingHtml(): string {
-  const story = vi.stories.hetTruyen;
+export function endingHtml(id: EndingId = 'hetTruyen'): string {
+  const story = vi.stories[id];
   const last = story.lines.length - 1;
   const rows = story.lines
     .map((l, i) => (i < last ? `<li>${esc(l.text)}</li>` : ''))

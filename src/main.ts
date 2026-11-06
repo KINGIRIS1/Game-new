@@ -2,10 +2,11 @@
 
 import './style.css';
 import { play, setMuted, stopRally, unlockAudio } from './audio/sfx';
-import { useSkill } from './game/battle';
+import { useSkill, type HeroKind } from './game/battle';
 import { leaveBattlefield, retreat, startStage, unitAllowed } from './game/campaign';
 import { forgeArms } from './game/binhKhi';
 import { assignCommander, autoGuard, setGuard } from './game/doanhTrai';
+import { assignNu, markNuHinted, nextNuHint } from './game/nuTuong';
 import { forgeNoThan, inChapter3, wallRings } from './game/coLoa';
 import { offer } from './game/tet';
 import { applyMau } from './game/mau';
@@ -15,11 +16,13 @@ import { inChapter2, offerGift } from './game/son';
 import { buyHuan } from './game/thuThach';
 import { markStory, pendingStory } from './game/story';
 import { footprintTop } from './game/terrain';
-import { BUILDINGS, RESOURCE_IDS, STAGES, UNIT_TYPES, U_NO, isBridge, isDecor, isRoad, type BuildingType, type Cost, type ResourceId, type Row, type SkillId, type UnitType } from './game/defs';
+import { BUILDINGS, RESOURCE_IDS, STAGES, UNIT_TYPES, U_NO, isBridge, isDecor, isRoad, type BuildingType, type Cost, type NuTuongId, type ResourceId, type Row, type SkillId, type UnitType } from './game/defs';
 import { CAMPS, benKiaOpen, bridgeSnap, campHero, campTier, canStartCamp, joinVillage, plotAt, poiAt, sendScout, setGarrison, startCamp } from './game/benKia';
+import type { QuanDaoId } from './game/bien';
 import { fmt } from './ui/format';
 import {
   canAfford,
+  dienLevel,
   placeUNo,
   repairUNo,
   uNoCount,
@@ -30,6 +33,10 @@ import {
   buildingAt,
   canMove,
   canPlace,
+  canRotateType,
+  placeLine,
+  rotOf,
+  rotateBuilding,
   clearDecorAt,
   findSpot,
   claimQuest,
@@ -50,6 +57,7 @@ import {
   remove,
   repair,
   repairAll,
+  setCong,
   setWorkers,
   train,
   tick,
@@ -60,11 +68,17 @@ import {
 } from './game/game';
 import { isOpen, khoanhOf, khoanhWood, openKhoanh, openable } from './game/khoanh';
 import { cayDaAt, clearCayDa } from './game/cayDa';
-import { GRID, RIVER_START, farBankOf } from './game/map';
+import { GRID, RIVER_START, farBankOf, footOnLand, lineTiles } from './game/map';
 import { fromCode, loadFromStorage, saveFileName, saveToStorage, toCode } from './game/save';
+import { chapterOf, tomTat } from './game/manVao';
+import { TitleDrift } from './render/camera';
 import { HALF, RESOLUTIONS, World, type Resolution } from './render/world';
 import { vi } from './text/vi';
 import { Hud, buildingName, type HudAction } from './ui/hud';
+import { khoNanTk, luuSau, moKhoNan } from './render/nanKho';
+import { KHO_PHIEN_BAN, moSanWorker, nanTruoc, prewarmJobs } from './render/nanTruoc';
+import { ManVao } from './ui/manVao';
+import { preloadThumbs } from './ui/xayDung';
 
 /**
  * Chạm từng ô để dựng lũy, gài bẫy, đắp đê, đắp thành Cổ Loa, trải đường, đặt đồ trang trí một ô, dựng ụ nỏ
@@ -76,7 +90,8 @@ const isPainted = (type: BuildingType) => PAINTED.includes(type) || (isDecor(typ
 
 type Mode =
   | { kind: 'view'; selected: number | null }
-  | { kind: 'place'; type: BuildingType; x: number; z: number; moving?: number }
+  /** Đặt mới hay dời (`moving`): góc móng (x, z), hướng xoay `rot` (số nấc 90°, chỉ loại xoay được). */
+  | { kind: 'place'; type: BuildingType; x: number; z: number; rot: number; moving?: number }
   | { kind: 'paint'; type: PaintType }
   /** Đang chọn chòi canh thứ hai để ghép với chòi `from` thành lầu nỏ. */
   | { kind: 'merge'; from: number };
@@ -106,9 +121,42 @@ function saveResolution(r: Resolution): void {
   }
 }
 
-function start(): void {
+/** Chờ trình duyệt vẽ xong một khung, để màn hình vào game kịp hiện trước khi dựng cảnh 3D (việc nặng, chạy liền một mạch). */
+const nextPaint = () => new Promise<void>((done) => requestAnimationFrame(() => setTimeout(done, 0)));
+
+async function start(): Promise<void> {
   const canvas = document.querySelector<HTMLCanvasElement>('#scene')!;
   const hudRoot = document.querySelector<HTMLElement>('#hud')!;
+
+  moSanWorker();
+  let state: GameState = loadFromStorage(localStorage) ?? createInitialState(Date.now());
+  setMuted(state.settings.muted);
+  // Worker nặn sẵn nhân vật của chương đang chơi, song song với việc dựng cảnh, để quân mới ra trận khỏi khựng hình.
+  // Sang chương mới, rèn binh khí bậc mới, Điện ra tới biển thì nặn thêm (`prewarm` ở vòng lặp). Gọi sau khi mở kho
+  // hình nặn, để bỏ qua việc kho đã có đủ dáng.
+  let prewarmKey = '';
+  const prewarm = () => {
+    const sea = dienLevel(state) >= 8;
+    const key = `${chapterOf(state)}|${Object.values(state.arms).join()}|${sea}`;
+    if (key === prewarmKey) return;
+    prewarmKey = key;
+    nanTruoc(prewarmJobs(chapterOf(state), state.arms, sea));
+  };
+
+  // Màn hình vào game hiện ngay; nút Chơi tiếp chỉ bấm được khi cảnh đã dựng xong (`manVao.ready`).
+  const manVao = new ManVao(document.body, state.settings.muted, {
+    enter: () => enter(),
+    mute: () => {
+      state.settings.muted = !state.settings.muted;
+      setMuted(state.settings.muted);
+      saveToStorage(localStorage, state);
+      return state.settings.muted;
+    },
+  });
+  await nextPaint();
+  // Kho hình nặn của lần chơi trước (IndexedDB): dân, tướng đứng chầu lấy ra dùng ngay, khỏi nặn lại lúc dựng cảnh.
+  await moKhoNan(KHO_PHIEN_BAN);
+  prewarm();
 
   let world: World;
   try {
@@ -119,10 +167,8 @@ function start(): void {
   }
   world.setResolution(loadResolution());
 
-  let state: GameState = loadFromStorage(localStorage) ?? createInitialState(Date.now());
   let mode: Mode = { kind: 'view', selected: null };
   let saveWarned = false;
-  setMuted(state.settings.muted);
 
   const hud = new Hud(hudRoot, handle, () => state);
 
@@ -151,6 +197,14 @@ function start(): void {
     if (text) hud.toast(text, false, 8000);
   };
 
+  /** Nữ tướng vừa theo về (chương 5): Lạc hầu báo một lần, để lâu cho kịp đọc. */
+  const showNuHint = () => {
+    const nu = nextNuHint(state);
+    if (!nu) return;
+    markNuHinted(state, nu);
+    hud.toast(vi.nuTuong.hint[nu], false, 8000);
+  };
+
   /** Cây dại, tảng đá đầu tiên mọc: Lạc hầu gợi ý một lần cách dọn. */
   const showCayDaHint = () => {
     if (!state.cayDa.list.length || state.hinted.includes('cayDa')) return;
@@ -172,6 +226,7 @@ function start(): void {
   /** Gọi sau mọi thao tác: lưu, vẽ lại cảnh và giao diện. */
   const commit = () => {
     showHint();
+    showNuHint();
     showCayDaHint();
     save();
     world.sync(state);
@@ -195,18 +250,36 @@ function start(): void {
 
   // ---------- Chế độ đặt công trình ----------
 
+  /** Hướng xoay vừa chọn khi đặt mỗi loại: dựng tiếp cùng loại thì giữ hướng ấy. */
+  const lastRot: Partial<Record<BuildingType, number>> = {};
+
+  /** Đang dời mà vẫn ở chỗ cũ, chỉ đổi hướng: xoay tại chỗ, không tốn của. */
+  const onlyTurning = () => {
+    if (mode.kind !== 'place' || mode.moving === undefined) return false;
+    const b = findBuilding(state, mode.moving);
+    return !!b && b.x === mode.x && b.z === mode.z && rotOf(b) !== mode.rot;
+  };
+
   const updateGhost = () => {
     if (mode.kind !== 'place') return;
-    const check = mode.moving !== undefined ? canMove(state, mode.moving, mode.x, mode.z) : canPlace(state, mode.type, mode.x, mode.z);
-    world.setGhost(mode.type, mode.x, mode.z, check.ok, footprintTop(state, mode.type, mode.x, mode.z));
+    const check = onlyTurning()
+      ? { ok: true as const }
+      : mode.moving !== undefined
+        ? canMove(state, mode.moving, mode.x, mode.z)
+        : canPlace(state, mode.type, mode.x, mode.z);
+    world.setGhost(mode.type, mode.x, mode.z, check.ok, footprintTop(state, mode.type, mode.x, mode.z), mode.rot);
     hud.setPlaceValid(check.ok, check.ok ? undefined : vi.reasons[check.reason]);
   };
 
-  /** Tô xanh vùng sẽ ngập ở mùa lũ tới: khi đắp đê, đắp đất, và lúc trinh sát báo lũ. */
+  /**
+   * Tô vùng sẽ ngập ở mùa lũ tới (xanh là nước tràn, vàng là nước vào qua cống mở): khi đắp đê, đắp đất, đặt cống,
+   * xem bảng một cống, và lúc trinh sát báo lũ.
+   */
   const refreshFloodPreview = () => {
-    const painting = mode.kind === 'paint' && (mode.type === 'de' || mode.type === 'raise');
+    const painting = (mode.kind === 'paint' && (mode.type === 'de' || mode.type === 'raise')) || (mode.kind === 'place' && mode.type === 'congDe');
+    const gate = mode.kind === 'view' && mode.selected !== null && findBuilding(state, mode.selected)?.type === 'congDe';
     const warning = state.raid.phase === 'warning' && state.raid.foe === 'thuy';
-    world.setFloodPreview(painting || warning ? state : null, nextFloodLevel(state));
+    world.setFloodPreview(painting || gate || warning ? state : null, nextFloodLevel(state));
   };
 
   /** Tìm chỗ đặt được gần tâm màn hình nhất, ưu tiên chỗ thoáng, để bóng công trình hiện ra ở chỗ hợp lý. */
@@ -218,6 +291,9 @@ function start(): void {
   };
 
   const exitMode = () => {
+    world.view.drawMode = false;
+    world.view.stopDrawing();
+    world.setLinePreview(null);
     mode = { kind: 'view', selected: null };
     world.setGhost(null);
     world.setSelection(null);
@@ -238,10 +314,11 @@ function start(): void {
     } else {
       hud.closeSheet();
     }
+    refreshFloodPreview();
   };
 
   /** Quân đang hành quân qua cầu tới đồn giặc: chừng ba giây rồi mới sang bãi chiến. */
-  let marching: { plot: number; army: Record<UnitType, number>; rows: Record<UnitType, Row>; at: number } | null = null;
+  let marching: { plot: number; army: Record<UnitType, number>; rows: Record<UnitType, Row>; nu: NuTuongId | null; at: number } | null = null;
   const MARCH_MS = 3200;
 
   world.view.onTap = (cx, cy) => {
@@ -255,6 +332,14 @@ function start(): void {
       else if (hero === 'adv') hud.showAdv(state);
       else if (hero === 'caoLo') hud.showCaoLo(state);
       else hud.showSon(state);
+      return;
+    }
+    // Chạm vào đảo ngoài biển Đông: bảng quần đảo.
+    const dao = mode.kind === 'view' ? world.pickIsland(cx, cy) : null;
+    if (dao) {
+      play('tap');
+      select(null);
+      hud.showQuanDao(state, dao);
       return;
     }
     const tile = world.pickTile(cx, cy);
@@ -275,9 +360,10 @@ function start(): void {
         updateGhost();
         return;
       }
-      // Chạm vào ô sát bờ thì đẩy công trình lùi vào đất liền thay vì chìa xuống sông.
-      mode.x = Math.min(Math.max(tile.x - Math.floor((def.w - 1) / 2), 0), RIVER_START - def.w);
-      mode.z = Math.min(Math.max(tile.z - Math.floor((def.d - 1) / 2), 0), RIVER_START - def.d);
+      // Chạm vào ô sát bờ thì đẩy công trình lùi vào đất liền thay vì chìa xuống sông; chạm bên kia sông thì đặt bên kia.
+      const at = footOnLand(tile.x, tile.z, def.w, def.d);
+      mode.x = at.x;
+      mode.z = at.z;
       play('tap');
       updateGhost();
       return;
@@ -354,6 +440,69 @@ function start(): void {
     select(id);
   };
 
+  // ---------- Kéo thả trải đường ----------
+
+  /** Dải ô đang kéo (ô đầu, ô cuối), và chỗ ngón đang ở chờ xét ở khung hình sau (xét mỗi khung một lần cho nhẹ máy). */
+  let drag: { from: { x: number; z: number }; tiles: { x: number; z: number }[] } | null = null;
+  let dragAt: { fx: number; fy: number; tx: number; ty: number } | null = null;
+  let dragFrame = 0;
+
+  /** Giá của `n` ô đường loại `type`, ghi chữ cho dòng gợi ý. */
+  const costText = (type: BuildingType, n: number) =>
+    RESOURCE_IDS.filter((r) => (BUILDINGS[type].buildCost[r] ?? 0) > 0)
+      .map((r) => `${vi.resources[r].icon} ${fmt((BUILDINGS[type].buildCost[r] ?? 0) * n)}`)
+      .join(' ');
+
+  /** Xét dải ô theo chỗ ngón vừa kéo tới: tô xanh đỏ, dòng gợi ý ghi số ô và giá. */
+  const updateDrag = () => {
+    dragFrame = 0;
+    if (!dragAt || mode.kind !== 'paint' || !isRoad(mode.type as BuildingType)) return;
+    const type = mode.type as BuildingType;
+    const from = drag?.from ?? world.pickTile(dragAt.fx, dragAt.fy);
+    const to = world.pickTile(dragAt.tx, dragAt.ty);
+    if (!from) return;
+    const tiles = to ? lineTiles(from, to) : (drag?.tiles ?? [from]);
+    drag = { from, tiles };
+    const cells = tiles.map((t) => ({ ...t, ok: buildingAt(state, t.x, t.z)?.type === type || canPlace(state, type, t.x, t.z).ok }));
+    world.setLinePreview(cells);
+    const n = cells.filter((c) => c.ok && buildingAt(state, c.x, c.z)?.type !== type).length;
+    hud.setHint(vi.ui.roadDrag(n, costText(type, n)));
+  };
+
+  world.view.onDraw = (phase, fx, fy, tx, ty) => {
+    if (phase === 'move') {
+      dragAt = { fx, fy, tx, ty };
+      if (!dragFrame) dragFrame = requestAnimationFrame(updateDrag);
+      return;
+    }
+    if (dragFrame) cancelAnimationFrame(dragFrame);
+    dragFrame = 0;
+    if (phase === 'end') {
+      dragAt = { fx, fy, tx, ty };
+      updateDrag();
+    }
+    const done = drag;
+    drag = null;
+    dragAt = null;
+    world.setLinePreview(null);
+    if (mode.kind !== 'paint' || !isRoad(mode.type as BuildingType)) return;
+    if (phase === 'cancel' || !done) {
+      hud.setHint(vi.ui.roadHint);
+      return;
+    }
+    const r = placeLine(state, mode.type as BuildingType, done.tiles);
+    if (!r.placed.length) {
+      hud.setHint(vi.ui.roadHint);
+      if (r.reason) fail(r.reason);
+      return;
+    }
+    play('place');
+    hud.setHint(vi.ui.roadPaved(r.placed.length));
+    // Có ô hỏng (hết của, đủ giới hạn, vướng công trình) thì báo lý do của ô hỏng đầu.
+    if (r.reason) hud.toast(vi.reasons[r.reason], true);
+    commit();
+  };
+
   // ---------- Thao tác từ giao diện ----------
 
   function handle(a: HudAction): void {
@@ -377,6 +526,8 @@ function start(): void {
         play('tap');
         if (isPainted(a.type)) {
           mode = { kind: 'paint', type: a.type };
+          // Trải đường: một ngón kéo để trải cả dải, hai ngón kéo cảnh.
+          world.view.drawMode = isRoad(a.type);
           const hint = isRoad(a.type)
             ? vi.ui.roadHint
             : isDecor(a.type)
@@ -393,17 +544,34 @@ function start(): void {
           if (a.type === 'de') hud.toast(vi.ui.floodPreview(nextFloodLevel(state)));
           return;
         }
-        mode = { kind: 'place', type: a.type, ...nearestSpot(a.type) };
-        hud.setMode('place');
+        mode = { kind: 'place', type: a.type, rot: lastRot[a.type] ?? 0, ...nearestSpot(a.type) };
+        hud.setMode('place', true, undefined, canRotateType(a.type));
         updateGhost();
+        refreshFloodPreview();
+        // Chỗ đặt ở bờ khác chỗ đang nhìn (đồn biên chỉ dựng bên kia sông): lướt camera tới đó.
+        const seen = world.screenCenterTile();
+        if (farBankOf(mode.x, mode.z) !== farBankOf(seen.x, seen.z)) {
+          const c = hud.freeCenter();
+          world.focusOn({ type: a.type, x: mode.x, z: mode.z }, c.x, c.y);
+        }
         if (isBridge(a.type)) hud.toast(vi.ui.bridgeHint);
         return;
       }
 
       case 'confirmPlace': {
         if (mode.kind !== 'place') return;
+        if (onlyTurning()) {
+          const t = rotateBuilding(state, mode.moving!, mode.rot);
+          if (!t.ok) return fail(t.reason);
+          play('place');
+          hud.toast(vi.ui.turned(buildingName(t.value)));
+          exitMode();
+          commit();
+          world.pop(t.value.id);
+          return;
+        }
         if (mode.moving !== undefined) {
-          const m = move(state, mode.moving, mode.x, mode.z);
+          const m = move(state, mode.moving, mode.x, mode.z, mode.rot);
           if (!m.ok) return fail(m.reason);
           play('place');
           hud.toast(vi.ui.moved(buildingName(m.value)));
@@ -412,8 +580,9 @@ function start(): void {
           world.pop(m.value.id);
           return;
         }
-        const r = place(state, mode.type, mode.x, mode.z);
+        const r = place(state, mode.type, mode.x, mode.z, mode.rot);
         if (!r.ok) return fail(r.reason);
+        lastRot[mode.type] = mode.rot;
         play('place');
         hud.toast(vi.ui.placed(buildingName(r.value)));
         exitMode();
@@ -422,18 +591,29 @@ function start(): void {
         return;
       }
 
+      case 'rotatePlace':
+        // Xoay bóng công trình đang đặt, dời một nấc theo chiều kim đồng hồ trên màn hình.
+        if (mode.kind !== 'place' || !canRotateType(mode.type)) return;
+        play('tap');
+        mode.rot = (mode.rot + 3) % 4;
+        updateGhost();
+        return;
+
+      case 'rotateBuilding': {
+        const b = findBuilding(state, a.id);
+        if (!b) return fail('khongTimThay');
+        const r = rotateBuilding(state, b.id, (rotOf(b) + 3) % 4);
+        if (!r.ok) return fail(r.reason);
+        play('tap');
+        commit();
+        return;
+      }
+
       case 'rotateView':
         // Xoay góc nhìn kinh đô 90°; bãi chiến phó bản không xoay.
         if (world.inField) return;
         play('tap');
         world.rotateView(1);
-        return;
-
-      case 'openMau':
-        if (mode.kind !== 'view') exitMode();
-        select(null);
-        play('tap');
-        hud.showMau(state);
         return;
 
       case 'marchCamp': {
@@ -446,7 +626,7 @@ function start(): void {
         navigator.vibrate?.(40);
         hud.toast(vi.benKia.campMarching);
         world.startMarch(state, a.plot, a.army, MARCH_MS / 1000);
-        marching = { plot: a.plot, army: a.army, rows: a.rows, at: performance.now() + MARCH_MS };
+        marching = { plot: a.plot, army: a.army, rows: a.rows, nu: a.nu, at: performance.now() + MARCH_MS };
         return;
       }
 
@@ -504,14 +684,13 @@ function start(): void {
       case 'startMove': {
         const b = findBuilding(state, a.id);
         if (!b) return fail('khongTimThay');
-        if (b.type === 'dien') return fail('khongTheDoi');
         if (state.raid.phase !== 'idle') return fail('dangCoGiac');
         hud.closeSheet();
         world.setSelection(null);
         world.showGrid(true);
         play('tap');
-        mode = { kind: 'place', type: b.type, x: b.x, z: b.z, moving: b.id };
-        hud.setMode('move');
+        mode = { kind: 'place', type: b.type, x: b.x, z: b.z, rot: rotOf(b), moving: b.id };
+        hud.setMode('move', true, undefined, canRotateType(b.type));
         updateGhost();
         return;
       }
@@ -616,7 +795,8 @@ function start(): void {
       case 'openEnding':
         if (hud.storyOpen || hud.modalOpen) return;
         play('tap');
-        hud.showStory('hetTruyen', true);
+        // Mở lại màn hình Hết truyện mới nhất đã xem.
+        hud.showStory(state.story.seen.includes('hetTruyen5') ? 'hetTruyen5' : 'hetTruyen', true);
         return;
 
       case 'forgeNoThan': {
@@ -681,6 +861,16 @@ function start(): void {
         commit();
         world.pop(r.value.id);
         world.setSelection(r.value);
+        return;
+      }
+
+      case 'toggleCong': {
+        const b = findBuilding(state, a.id);
+        const r = setCong(state, a.id, !b?.mo);
+        if (!r.ok) return fail(r.reason);
+        play('tap');
+        hud.toast(r.value.mo ? vi.ui.congIsOpen : vi.ui.congIsShut);
+        commit();
         return;
       }
 
@@ -848,6 +1038,15 @@ function start(): void {
         return;
       }
 
+      case 'assignNu': {
+        const r = assignNu(state, a.id, a.nu);
+        if (!r.ok) return fail(r.reason);
+        play('claim');
+        hud.toast(vi.nuTuong.assigned(vi.nuTuong.list[a.nu].name));
+        commit();
+        return;
+      }
+
       case 'garrisonDelta': {
         const b = findBuilding(state, a.id);
         const bank = b ? farBankOf(b.x, b.z) : null;
@@ -911,6 +1110,12 @@ function start(): void {
         world.lookAtEdge(state.raid.side);
         return;
 
+      case 'seeIsland':
+        // Đóng bảng cho thấy trọn biển, lướt camera ra quần đảo thuyền bến này đánh cá.
+        select(null);
+        world.panToIsland(a.id);
+        return;
+
       case 'openBarracks': {
         const barracks = state.buildings.find((b) => b.type === 'doanhTrai');
         if (barracks) {
@@ -939,7 +1144,7 @@ function start(): void {
         return;
 
       case 'march': {
-        const r = startStage(state, a.stage, a.army, a.rows, a.challenge);
+        const r = startStage(state, a.stage, a.army, a.rows, a.challenge, a.hero, a.nu);
         if (!r.ok) return fail(r.reason);
         play('claim');
         navigator.vibrate?.(40);
@@ -1021,16 +1226,40 @@ function start(): void {
       .filter(([, n]) => n > 0)
       .map(([r, n]) => `${fmt(n)} ${vi.resources[r].icon}`)
       .join(', ');
+    const text = state.relaid.dien ? vi.ui.relaidDien(refund) : vi.ui.relaid(refund);
     delete state.relaid;
-    hud.toast(vi.ui.relaid(refund));
+    hud.toast(text);
   };
 
-  const offline = applyOffline(state, Date.now());
-  showRelaid();
-  showHint();
-  commit();
-  showOfflineIfLong(offline.ms, offline.gained);
-  if (state.raid.lastResult) hud.showRaidResult(state, state.raid.lastResult);
+  // Dựng cảnh theo bản lưu cho kinh đô hiện sau màn hình vào game. Luật chơi chưa chạy cho tới lúc vào game.
+  world.sync(state);
+  refreshUi();
+  const drift = new TitleDrift(world.view);
+  drift.start();
+  // Người chơi tự kéo camera lúc đang lướt về thì thôi lướt.
+  const userMove = world.view.onUserMove;
+  world.view.onUserMove = () => {
+    userMove?.();
+    drift.done = true;
+  };
+
+  let entered = false;
+  /** Bấm Chơi tiếp (hay Bắt đầu): thời gian nằm ở màn hình vào game tính như lúc vắng mặt, rồi báo thu hoạch như cũ. */
+  const enter = () => {
+    if (entered) return;
+    entered = true;
+    unlockAudio();
+    play('vaoGame');
+    manVao.close();
+    drift.release();
+    const offline = applyOffline(state, Date.now());
+    showRelaid();
+    showHint();
+    commit();
+    showOfflineIfLong(offline.ms, offline.gained);
+    if (state.raid.lastResult) hud.showRaidResult(state, state.raid.lastResult);
+    preloadThumbs();
+  };
 
   /** Theo dõi giai đoạn giặc để phát âm thanh, hiện cảnh báo và bảng kết quả đúng lúc. */
   let shownPhase = state.raid.phase;
@@ -1082,7 +1311,7 @@ function start(): void {
     if (r === shownStage) return;
     if (!resultAt) {
       stopRally();
-      resultAt = now + (battle?.ascend || battle?.sonWin || battle?.advWin || battle?.seaWin ? 3500 : 700);
+      resultAt = now + (battle?.ascend || battle?.sonWin || battle?.advWin || battle?.seaWin || battle?.hatWin ? 3500 : 700);
       play(r.outcome === 'win' ? 'upgrade' : 'error');
       commit();
     }
@@ -1125,6 +1354,13 @@ function start(): void {
   const frame = (now: number) => {
     const dt = Math.min((now - prev) / 1000, 0.1);
     prev = now;
+    drift.update(dt);
+    if (!entered) {
+      // Đang ở màn hình vào game: chỉ vẽ cảnh, không cho thời gian trôi trong game.
+      world.update(dt);
+      requestAnimationFrame(frame);
+      return;
+    }
 
     const wall = Date.now();
     const gap = wall - state.lastSeen;
@@ -1142,7 +1378,7 @@ function start(): void {
       const m = marching;
       marching = null;
       world.stopMarch();
-      const r = startCamp(state, m.plot, m.army, m.rows);
+      const r = startCamp(state, m.plot, m.army, m.rows, m.nu);
       if (!r.ok) fail(r.reason);
       commit();
     }
@@ -1171,6 +1407,8 @@ function start(): void {
       }
       refreshUi();
       watchStory();
+      prewarm();
+      luuSau();
     }
     if (now - lastSave > AUTOSAVE_MS) {
       lastSave = now;
@@ -1179,14 +1417,19 @@ function start(): void {
     requestAnimationFrame(frame);
   };
   requestAnimationFrame(frame);
+  manVao.ready(tomTat(state, Date.now()));
 
   // Cho phép kiểm thử tự động đọc trạng thái và tìm vị trí ô trên màn hình.
   (window as unknown as { __debug?: object }).__debug = {
     state: () => state,
+    /** Bấm qua màn hình vào game, như người chơi bấm Chơi tiếp. */
+    enter: () => enter(),
     tileToScreen: (x: number, z: number) => world.tileToScreen(x, z),
     renderInfo: () => ({ ...world.renderer.info.render }),
     rotate: (dir: 1 | -1) => world.rotateView(dir),
     camera: (x: number, z: number, zoom: number) => {
+      // Đặt camera tay thì thôi lướt về chỗ cũ (máy chụp chạy chậm, lướt chưa xong sẽ kéo camera đi mất).
+      drift.done = true;
       world.view.target.set(x - HALF, 0, z - HALF);
       world.view.zoom = zoom;
       world.view.apply();
@@ -1199,8 +1442,8 @@ function start(): void {
       tick(state, ms);
       commit();
     },
-    place: (type: BuildingType, x: number, z: number) => {
-      const r = place(state, type, x, z);
+    place: (type: BuildingType, x: number, z: number, rot = 0) => {
+      const r = place(state, type, x, z, rot);
       commit();
       return r;
     },
@@ -1212,6 +1455,8 @@ function start(): void {
       commit();
       return r;
     },
+    /** Mở bảng công trình `id` như khi chạm vào nó (chụp thử bảng của công trình bị công trình khác che). */
+    select: (id: number | null) => select(id),
     /** Mở bảng Đất bên kia sông của khoảnh bên kia `id`, như khi chạm vào đất ấy. */
     benKia: (id: number) => {
       select(null);
@@ -1225,20 +1470,30 @@ function start(): void {
       world.setChunkSelection(id);
       hud.showKhoanh(state, id);
     },
-    /** Xuất toàn quân đánh màn `n`, rồi `skill(k)` để bấm kỹ năng: chụp thử trận ngoài bãi. */
-    march: (n: number, challenge = false) => {
+    /**
+     * Xuất toàn quân đánh màn `n` cùng tướng `hero` (phó bản chương 2; bỏ trống thì tướng chọn sẵn) và phó tướng `nu`
+     * (chương 5), rồi `skill(k)` để bấm kỹ năng: chụp thử trận ngoài bãi.
+     */
+    march: (n: number, challenge = false, hero?: HeroKind, nu?: NuTuongId | null) => {
       // Thử thách Hai binh chủng: chỉ mang hai binh chủng được chỉ định.
       const army = { ...state.troops };
       for (const k of UNIT_TYPES) if (!unitAllowed(n, challenge, k)) army[k] = 0;
-      const r = startStage(state, n, army, state.campaign.rows, challenge);
+      const r = startStage(state, n, army, state.campaign.rows, challenge, hero, nu);
       commit();
       return r;
     },
-    skill: (k: SkillId) => {
+    /** Mở bảng quần đảo `id` như khi chạm vào đảo. */
+    quanDao: (id: QuanDaoId) => hud.showQuanDao(state, id),
+    /** Đặt đồng hồ cảnh (giây): thuyền khơi, cá voi, cá heo theo đồng hồ này, để chụp thử thuyền đang ở biển. */
+    seaTime: (t: number) => world.seekTime(t),
+    /** Cho cá voi (`whale`) hay đàn cá heo (`dolphins`) nổi lên ngay gần chỗ camera nhìn. */
+    seaLife: (kind: 'whale' | 'dolphins') => world.showSeaLife(kind),
+    khoNan: () => khoNanTk(),
+        skill: (k: SkillId) => {
       const battle = state.campaign.battle ?? state.raid.battle;
       return !!battle && useSkill(battle, k);
     },
   };
 }
 
-start();
+void start();

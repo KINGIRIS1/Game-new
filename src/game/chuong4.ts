@@ -31,6 +31,15 @@ export function canMergeTowers(state: GameState, id: number, otherId: number): R
 }
 
 /**
+ * Cấp lầu nỏ ghép từ hai chòi canh này: chòi cấp 8 ra lầu nỏ cấp 1, chòi đã lên cấp 9, 10 (sau truyện) ra lầu nỏ cấp
+ * 2, 3, theo chòi thấp hơn, để khỏi mất công nâng chòi.
+ */
+export function mergedLevel(a: Building, b: Building): number {
+  const level = Math.min(a.level, b.level) - LAU_NO_FROM_LEVEL + 1;
+  return Math.min(Math.max(level, 1), BUILDINGS.lauNo.maxLevel);
+}
+
+/**
  * Ghép hai chòi canh cấp 8 thành lầu nỏ. Lầu nỏ đứng ở chỗ chòi canh thứ nhất, chòi thứ hai biến mất để trống ô ấy.
  * Không tách lại được. Một lầu nỏ tính là hai chòi canh trong số chòi canh tối đa.
  */
@@ -38,10 +47,11 @@ export function mergeTowers(state: GameState, id: number, otherId: number): Resu
   const check = canMergeTowers(state, id, otherId);
   if (!check.ok) return check;
   pay(state, mergeCost());
-  state.buildings = state.buildings.filter((b) => b.id !== otherId);
   const a = findBuilding(state, id)!;
+  const level = mergedLevel(a, findBuilding(state, otherId)!);
+  state.buildings = state.buildings.filter((b) => b.id !== otherId);
   a.type = 'lauNo';
-  a.level = 1;
+  a.level = level;
   a.workers = 0;
   return ok(a);
 }

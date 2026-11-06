@@ -14,12 +14,13 @@ import {
   findSpot,
   limitOf,
   place,
+  placeLine,
   raiseTile,
   usedOf,
   type GameState,
 } from './game';
 import { applyMau, mauSlots, planMau } from './mau';
-import { GRID } from './map';
+import { GRID, lineTiles } from './map';
 import { DIEN, DIEN_END, edge, setDien } from './testmap';
 import { drowns, floodMap, floodToleranceOf } from './terrain';
 
@@ -102,6 +103,36 @@ describe('trải đường', () => {
     expect(place(s, 'duongDat', x, z).ok).toBe(true);
     // Đường không đè được lên nhà, đồ trang trí không đè được lên đường.
     expect(place(s, 'hoa', x, z)).toEqual({ ok: false, reason: 'datBiChiem' });
+  });
+
+  it('kéo thả: dải ô thẳng theo trục kéo dài hơn, từ ô đầu tới ngang tầm ô cuối', () => {
+    expect(lineTiles({ x: 3, z: 5 }, { x: 3, z: 5 })).toEqual([{ x: 3, z: 5 }]);
+    expect(lineTiles({ x: 3, z: 5 }, { x: 6, z: 6 })).toEqual([3, 4, 5, 6].map((x) => ({ x, z: 5 })));
+    expect(lineTiles({ x: 3, z: 5 }, { x: 2, z: 1 })).toEqual([5, 4, 3, 2, 1].map((z) => ({ x: 3, z })));
+    // Hai trục dài bằng nhau thì theo trục x.
+    expect(lineTiles({ x: 3, z: 5 }, { x: 1, z: 7 })).toEqual([3, 2, 1].map((x) => ({ x, z: 5 })));
+  });
+
+  it('kéo thả trải cả dải: bỏ qua ô vướng nhà và ô đã có đúng loại, đổi vật liệu ô đường khác, dừng ở giới hạn', () => {
+    const s = city(3);
+    const z = edge(3, 2);
+    const at = (i: number) => edge(3, 1 + i);
+    if (!place(s, 'nhaSan', at(4), z).ok) throw new Error('đặt nhà hỏng');
+    if (!place(s, 'duongDat', at(0), z).ok) throw new Error('trải hỏng');
+    if (!place(s, 'duongSoi', at(1), z).ok) throw new Error('trải hỏng');
+    const tiles = lineTiles({ x: at(0), z }, { x: at(9), z });
+    const before = usedOf(s, 'duongDat');
+    const r = placeLine(s, 'duongDat', tiles);
+    // Ô 0 đã có đường đất: bỏ qua, không lỗi. Ô 1 đổi sỏi thành đất. Ô 4–6 vướng nhà sàn (móng 3 ô).
+    expect(r.placed.map((b) => b.x)).toEqual([1, 2, 3, 7, 8, 9].map(at));
+    expect(r.reason).toBe('datBiChiem');
+    expect(usedOf(s, 'duongDat')).toBe(before + 5);
+    expect(buildingAt(s, at(1), z)?.type).toBe('duongDat');
+    // Gần đầy giới hạn thì trải tới đủ rồi báo đạt giới hạn.
+    for (let i = 0; usedOf(s, 'duongDat') < limitOf(s, 'duongDat') - 2; i++) place(s, 'duongDat', edge(3, 1 + (i % 12)), edge(3, 6 + Math.floor(i / 12)));
+    const r2 = placeLine(s, 'duongDat', lineTiles({ x: at(0), z: z + 1 }, { x: at(5), z: z + 1 }));
+    expect(r2.placed.length).toBe(2);
+    expect(r2.reason).toBe('datGioiHan');
   });
 
   it('nhà không dựng đè lên đường hay đồ trang trí; dọn đi rồi mới dựng được', () => {

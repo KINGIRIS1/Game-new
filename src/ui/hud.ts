@@ -1,12 +1,19 @@
 // Giao diện HTML đặt đè lên cảnh 3D: thanh tài nguyên, nhiệm vụ, bảng xây dựng, bảng công trình, cài đặt,
 // bản đồ phó bản và các nút trong trận.
 
-import { enemiesLeft, alliesLeft, holdProgress, skillReady, wavesArrived, type Battle } from '../game/battle';
+import { enemiesLeft, alliesLeft, heroSetups, holdProgress, skillReady, wavesArrived, type Battle, type HeroKind } from '../game/battle';
 import { advJoined, advLook, advResting, inChapter3, ruaVangCame, wallRings } from '../game/coLoa';
 import {
   BUILDINGS,
+  CA_BIEN_PER_MIN,
   CA_PER_MIN,
+  BUILD_MENU,
   CONG_THANH,
+  LAU_NO,
+  LAU_NO_FROM_LEVEL,
+  NU_TUONG,
+  PHU_SA_BONUS,
+  PHU_SA_TYPES,
   DECOR_TYPES,
   FIELD,
   RESOURCE_IDS,
@@ -31,6 +38,7 @@ import {
   type GiftId,
   type Row,
   type SkillId,
+  type NuTuongId,
   type TuongId,
   type UnitType,
 } from '../game/defs';
@@ -47,6 +55,7 @@ import {
   guardTotal,
   reserve,
 } from '../game/doanhTrai';
+import { nuPosts, nuTuongList } from '../game/nuTuong';
 import {
   barracksLevel,
   canAfford,
@@ -57,6 +66,7 @@ import {
   uNoLimit,
   uNoRepairCost,
   canUpgrade,
+  canRotateType,
   moveCost,
   countOf,
   currentQuest,
@@ -79,6 +89,7 @@ import {
   netPerMinute,
   nextFoe,
   outputIn,
+  phuSaPreview,
   questDone,
   questProgress,
   repairAllCost,
@@ -96,28 +107,32 @@ import {
   type StageResult,
   type StoryId,
 } from '../game/game';
-import { chapterStages } from '../game/campaign';
+import { chapterStages, stageHeroCheck } from '../game/campaign';
 import { caoLoJoined, caoLoResting } from '../game/caoLo';
-import { inChapter4, mergeCost, mergeable } from '../game/chuong4';
+import { inChapter4, mergeCost, mergeable, mergedLevel } from '../game/chuong4';
+import { CH5_LAST, HAI_BA_KINDS, haiBaJoined, haiBaResting, inChapter5 } from '../game/chuong5';
 import { giongAppeared, giongLook, giongReady, giongResting } from '../game/giong';
 import { KHOANH_N } from '../game/khoanh';
 import { inChapter2, sonJoined, sonLook, sonResting, giftCount } from '../game/son';
-import { floodToleranceOf, groundOf } from '../game/terrain';
+import { floodToleranceOf, groundOf, hasOpenCong } from '../game/terrain';
 import { tetOpen, tetStarted, type Banh } from '../game/tet';
 import type { Resolution } from '../render/world';
 import { formatDuration, vi } from '../text/vi';
-import { armyHtml, defaultPick, huanHtml, mapHtml, nextRow, stageHtml, stageResultHtml, stepPick, type ArmyPick } from './campaign';
+import { armyHtml, defaultPick, huanHtml, mapHtml, nextRow, pickNu, stageHtml, stageResultHtml, stepPick, type ArmyPick, type MapChapter } from './campaign';
 import { armsHtml } from './binhKhi';
 import { advHtml, caoLoHtml } from './coLoa';
-import { costHtml, esc, fmt } from './format';
-import { endingHtml, giongHtml, storyHtml } from './giong';
+import { costHtml, esc, fmt, fmtShort } from './format';
+import { endingHtml, giongHtml, isEnding, storyHtml } from './giong';
 import { sonHtml } from './son';
 import { blessingHtml, tetHtml } from './tet';
 import { khoanhHtml } from './khoanh';
 import { benKiaHtml } from './benKia';
 import { campTier, cutOff, dacSanOf, plotAt, villageOutput } from '../game/benKia';
+import { seaIndex, seaRoute, type QuanDaoId } from '../game/bien';
+import { quanDaoHtml } from './bien';
 import { farBankOf } from '../game/map';
-import { mauHtml } from './mau';
+import { mauItems } from './mau';
+import { goLabel, pageCount, pageOf, pickOf, thumbUrl, xayDungHtml, type BuildItem } from './xayDung';
 import type { MauId } from '../game/mau';
 
 /** Dòng báo thường hiện chừng này mili giây. */
@@ -127,47 +142,17 @@ const SHOWN_RESOURCES: ResourceId[] = ['gao', 'voOc', 'datDa', 'sat'];
 function shownResources(state: GameState): ResourceId[] {
   return dienLevel(state) >= BUILDINGS.xuongMoc.minDien || state.resources.go > 0 ? [...SHOWN_RESOURCES, 'go'] : SHOWN_RESOURCES;
 }
-const BUILD_MENU: BuildingType[] = [
-  'luy',
-  'ruong',
-  'ben',
-  'langChai',
-  'nhaSan',
-  'baiDa',
-  'kho',
-  'loRen',
-  'xuongMoc',
-  'doanhTrai',
-  'traiGiao',
-  'traiCung',
-  'chuongVoi',
-  'traiNo',
-  'choiCanh',
-  'bayChong',
-  'denPhuDong',
-  'ruongNep',
-  'vuon',
-  'chuongLon',
-  'bep',
-  'de',
-  'denTanVien',
-  'thanh',
-  'congThanh',
-  'denCoLoa',
-  'cauSongDa',
-  'cauSongThao',
-  'donBien',
-];
-/** Nhóm thẻ trong bảng Xây dựng: công trình, đường đi, đồ trang trí. */
+/** Nhóm thẻ trong bảng Xây dựng: công trình, đường đi, đồ trang trí, mẫu kinh đô. */
 const BUILD_GROUPS: { key: keyof typeof vi.ui.buildGroups; types: BuildingType[] }[] = [
   { key: 'congTrinh', types: BUILD_MENU },
   { key: 'duong', types: ROAD_TYPES },
   { key: 'trangTri', types: DECOR_TYPES },
+  { key: 'mau', types: [] },
 ];
 /** Bốn công trình làm bánh của Hội Tết: chỉ hiện trong bảng Xây dựng khi đã mở (sau kết chương 1). */
 const TET_TYPES: BuildingType[] = ['ruongNep', 'vuon', 'chuongLon', 'bep'];
 /** Công trình chỉ hiện trong bảng Xây dựng khi đã sang chương có nó. */
-const CHAPTER_OF: Partial<Record<string, number>> = { chuong2: 2, ketChuong2: 2, chuong3: 3, ketChuong3: 3, chuong4: 4 };
+const CHAPTER_OF: Partial<Record<string, number>> = { chuong2: 2, ketChuong2: 2, chuong3: 3, ruaVang: 3, ketChuong3: 3, chuong4: 4, ketChuong4: 4, ketChuong5: 5 };
 
 /** Tên hiển thị của công trình, tính cả lũy tre đã đắp thành đất và đê đã kè đá. */
 export function buildingName(b: Pick<Building, 'type' | 'level'>): string {
@@ -184,9 +169,14 @@ function unlockWhy(state: GameState, type: BuildingType): string {
   return vi.reasons[UNLOCK_REASON[u]];
 }
 
-/** Chương đang chơi: 1, 2, 3 hay 4. */
+/** Chương đang chơi: 1 tới 5. */
 function chapterNow(state: GameState): Chapter {
-  return inChapter4(state) ? 4 : inChapter3(state) ? 3 : inChapter2(state) ? 2 : 1;
+  return inChapter5(state) ? 5 : inChapter4(state) ? 4 : inChapter3(state) ? 3 : inChapter2(state) ? 2 : 1;
+}
+
+/** Chương mới nhất có bản đồ phó bản: chương 5 chưa có màn nên vẫn mở bản đồ chương 4. */
+function mapChapterNow(state: GameState): MapChapter {
+  return chapterNow(state);
 }
 
 export type HudAction =
@@ -206,19 +196,23 @@ export type HudAction =
   | { kind: 'forgeArms'; unit: UnitType }
   | { kind: 'openTet' }
   | { kind: 'startMove'; id: number }
+  /** Xoay bóng công trình đang đặt, dời một nấc 90°. */
+  | { kind: 'rotatePlace' }
+  /** Xoay công trình đã dựng tại chỗ một nấc 90° (nút trong bảng công trình). */
+  | { kind: 'rotateBuilding'; id: number }
   | { kind: 'startMerge'; id: number }
-  | { kind: 'openMau' }
   | { kind: 'rotateView' }
   | { kind: 'applyMau'; mau: MauId }
   | { kind: 'phatRung'; id: number }
   | { kind: 'trinhSat'; id: number }
   | { kind: 'ketThan'; id: number }
-  | { kind: 'marchCamp'; plot: number; army: Record<UnitType, number>; rows: Record<UnitType, Row> }
+  | { kind: 'marchCamp'; plot: number; army: Record<UnitType, number>; rows: Record<UnitType, Row>; nu: NuTuongId | null }
   | { kind: 'offerBanh'; banh: Banh }
   | { kind: 'confirmPlace' }
   | { kind: 'cancelPlace' }
   | { kind: 'upgrade'; id: number }
   | { kind: 'removeWall'; id: number }
+  | { kind: 'toggleCong'; id: number }
   | { kind: 'claimQuest' }
   | { kind: 'openSettings' }
   | { kind: 'toggleMute' }
@@ -236,6 +230,7 @@ export type HudAction =
   | { kind: 'acceptOffer'; index: number }
   | { kind: 'train'; unit: UnitType }
   | { kind: 'assignTuong'; id: number; tuong: TuongId }
+  | { kind: 'assignNu'; id: number; nu: NuTuongId }
   | { kind: 'guardDelta'; id: number; unit: UnitType; delta: 1 | -1 }
   | { kind: 'garrisonDelta'; id: number; unit: UnitType; delta: 1 | -1 }
   | { kind: 'guardAuto' }
@@ -243,6 +238,8 @@ export type HudAction =
   | { kind: 'repairAll' }
   | { kind: 'callRaid' }
   | { kind: 'lookRaid' }
+  /** Lướt camera ra quần đảo ngoài biển Đông (bảng bến thuyền khơi). */
+  | { kind: 'seeIsland'; id: QuanDaoId }
   | { kind: 'openBarracks' }
   | { kind: 'selectBuilding'; id: number }
   | { kind: 'chooseUNo' }
@@ -250,7 +247,7 @@ export type HudAction =
   | { kind: 'repairUNo'; id: number }
   | { kind: 'dismissRaid' }
   | { kind: 'openCampaign' }
-  | { kind: 'march'; stage: number; army: Record<UnitType, number>; rows: Record<UnitType, Row>; challenge: boolean }
+  | { kind: 'march'; stage: number; army: Record<UnitType, number>; rows: Record<UnitType, Row>; challenge: boolean; hero: HeroKind | null; nu: NuTuongId | null }
   | { kind: 'buyHuan'; branch: HuanBranch }
   | { kind: 'useSkill'; skill: SkillId }
   | { kind: 'openGiong' }
@@ -263,6 +260,9 @@ export type HudAction =
 
 export type HudMode = 'view' | 'place' | 'move' | 'paint' | 'merge';
 
+/** Thẻ của bảng doanh trại: quân và nơi ở, bố trí giữ kinh đô, tướng chỉ huy, thông tin và nâng cấp trại. */
+type BarracksTab = 'quan' | 'giu' | 'tuong' | 'trai';
+
 type Sheet =
   | { kind: 'build' }
   | { kind: 'building'; id: number }
@@ -273,9 +273,9 @@ type Sheet =
   | { kind: 'adv' }
   | { kind: 'caoLo' }
   | { kind: 'tet' }
-  | { kind: 'mau' }
   | { kind: 'khoanh'; id: number }
   | { kind: 'benKia'; id: number }
+  | { kind: 'quanDao'; id: QuanDaoId }
   | null;
 
 /** Máy có gửi được tệp qua bảng chia sẻ của hệ điều hành (Zalo, Messenger, Drive...) không. Hỏi một lần. */
@@ -291,19 +291,26 @@ function canShareFile(): boolean {
   return shareFileOk;
 }
 
-/** Chữ trên nút kỹ năng: tên khi sẵn sàng, chỉ biểu tượng và số giây khi đang hồi (cho gọn trên điện thoại). */
-function skillLabel(b: Battle, k: SkillId): string {
-  const cd = Math.ceil(b.skillCd[k] ?? 0);
-  return cd > 0 && !b.outcome ? `${vi.skills[k].icon} ${cd}s` : `${vi.skills[k].icon} ${vi.skills[k].name}`;
+/**
+ * Nút kỹ năng: tên khi sẵn sàng; đang hồi thì biểu tượng và số giây đè lên chỗ tên (tên ẩn đi mà vẫn giữ chỗ), để nút
+ * không hẹp lại rồi rộng ra làm cả hàng nút nhảy dòng.
+ */
+function skillButton(b: Battle, k: SkillId, small = false): string {
+  return `<button class="btn bronze skill ${small ? 'small' : ''}" data-act="useSkill" data-skill="${k}" title="${vi.skills[k].desc}" ${skillReady(b, k) ? '' : 'disabled'}><span class="sk-name">${vi.skills[k].icon} ${vi.skills[k].name}</span><span class="sk-cd"></span></button>`;
 }
 
-function skillButton(b: Battle, k: SkillId, small = false): string {
-  return `<button class="btn bronze skill ${small ? 'small' : ''}" data-act="useSkill" data-skill="${k}" title="${vi.skills[k].desc}" ${skillReady(b, k) ? '' : 'disabled'}>${skillLabel(b, k)}</button>`;
+/** Đổi trạng thái và số giây hồi trên nút kỹ năng đã dựng. */
+function syncSkill(btn: HTMLButtonElement, b: Battle, k: SkillId): void {
+  const cd = b.outcome ? 0 : Math.ceil(b.skillCd[k] ?? 0);
+  btn.disabled = !skillReady(b, k);
+  btn.classList.toggle('cooling', cd > 0);
+  const tail = btn.querySelector('.sk-cd');
+  if (tail) tail.textContent = cd > 0 ? `${vi.skills[k].icon} ${cd}s` : '';
 }
 
 /** Bản đồ phó bản đang mở: chương nào, màn đang xem, đang xem thẻ màn hay đang xếp quân. */
 interface CampaignView {
-  chapter: Chapter;
+  chapter: MapChapter;
   stage: number | null;
   /** Thẻ màn, bảng xếp quân (màn thường hay thử thách, theo `pick.challenge`), bảng Huân công. */
   step: 'stage' | 'army' | 'huan';
@@ -317,22 +324,37 @@ function prodHtml(prod: Cost): string {
 
 export class Hud {
   private readonly root: HTMLElement;
+  /** Dải tài nguyên sát mép trên. */
   private readonly topbar: HTMLElement;
-  private readonly banners: HTMLElement;
-  private readonly quest: HTMLElement;
+  /** Bảng kho và thu chi mỗi phút, thả xuống dưới dải tài nguyên. */
+  private readonly resDrop: HTMLElement;
+  /** Nút kỹ năng khi giặc đánh kinh đô, ngay trên dòng tin. */
+  private readonly raidSkills: HTMLElement;
+  /** Dòng tin ngay trên dock: giặc, đói, Tết, thuyền buôn, trinh sát; nhiều tin thì lật từng tin. */
+  private readonly ticker: HTMLElement;
+  /** Ô bật lên trên dock: thẻ Lạc hầu hay danh sách tướng. */
+  private readonly dockPop: HTMLElement;
+  /** Dock năm thẻ ở đáy: Quân, Phó bản, Xây dựng, Tướng, Lạc hầu. */
+  private readonly dock: HTMLElement;
+  /** Thanh Hủy, Đặt thay chỗ dock khi đang đặt, dời, trải, ghép. */
   private readonly bottombar: HTMLElement;
   private readonly hint: HTMLElement;
   private readonly sheetEl: HTMLElement;
   private readonly toasts: HTMLElement;
   private sheet: Sheet = null;
   private sheetHtml = '';
-  private questHtml = '';
-  private topHtml = '';
-  private bannerHtml = '';
-  private questCollapsed = false;
+  /** Ô bật lên đang mở: bảng kho (trên), thẻ Lạc hầu hay danh sách tướng (trên dock). */
+  private pop: 'res' | 'quest' | 'heroes' | null = null;
+  /** Tin đang xem trên dòng tin, và bộ tin lúc ấy (đổi bộ tin thì về tin đầu, tin gấp nhất). */
+  private alertIndex = 0;
+  private alertIds = '';
+  private tickerKey = '';
+  private raidSkillKey = '';
+  private bandKey = '';
+  private dockHtml = '';
+  private popHtml = '';
+  private resHtml = '';
   private mode: HudMode = 'view';
-  /** Đã có doanh trại: hiện nút Phó bản ở thanh dưới. */
-  private campaignReady = false;
   private readonly campaignEl: HTMLElement;
   private readonly fieldTop: HTMLElement;
   private readonly fieldBar: HTMLElement;
@@ -351,13 +373,16 @@ export class Hud {
   ) {
     this.root = root;
     root.innerHTML = `
+      <header class="topbar"></header>
       <div class="top-area">
-        <header class="topbar"></header>
-        <div class="banners"></div>
-        <section class="quest"></section>
-        <div class="field-top"><b></b><span></span><div class="hold-bar" hidden><i></i><em>🐎</em></div></div>
+        <div class="res-drop" hidden></div>
+        <div class="field-top"><b></b><span></span><div class="hold-bar" hidden><i></i><em>🐎</em></div><div class="hero-hp" hidden></div></div>
       </div>
       <div class="hint" hidden></div>
+      <div class="dock-pop"></div>
+      <div class="raid-skills"></div>
+      <div class="ticker"></div>
+      <nav class="dock" aria-label="${vi.ui.dockLabel}"></nav>
       <footer class="bottombar"></footer>
       <footer class="fieldbar">
         <button class="btn ghost small" data-act="retreat" title="${vi.ui.retreat}">🏳️</button>
@@ -370,15 +395,34 @@ export class Hud {
     this.fieldTop = root.querySelector('.field-top')!;
     this.fieldBar = root.querySelector('.fieldbar')!;
     this.topbar = root.querySelector('.topbar')!;
-    this.banners = root.querySelector('.banners')!;
-    this.quest = root.querySelector('.quest')!;
+    this.resDrop = root.querySelector('.res-drop')!;
+    this.raidSkills = root.querySelector('.raid-skills')!;
+    this.ticker = root.querySelector('.ticker')!;
+    this.dockPop = root.querySelector('.dock-pop')!;
+    this.dock = root.querySelector('.dock')!;
     this.bottombar = root.querySelector('.bottombar')!;
     this.hint = root.querySelector('.hint')!;
     this.sheetEl = root.querySelector('.sheet')!;
     this.toasts = root.querySelector('.toasts')!;
     root.addEventListener('click', this.onClick);
     root.addEventListener('change', this.onChange);
+    // Chạm ra ngoài ô bật lên (kể cả xuống cảnh 3D) thì đóng ô ấy.
+    document.addEventListener('pointerdown', (e) => {
+      if (!this.pop) return;
+      const t = e.target as HTMLElement;
+      if (t.closest('[data-pop], .res-drop, .dock-pop')) return;
+      this.setPop(null);
+    });
     this.setMode('view');
+  }
+
+  /** Mở hay đóng ô bật lên. Thẻ Lạc hầu, danh sách tướng nằm chỗ bảng trượt nên đóng bảng đang mở. */
+  private setPop(pop: typeof this.pop): void {
+    if (pop && pop !== 'res' && this.sheet) this.onAction({ kind: 'closeSheet' });
+    this.pop = pop;
+    const state = this.getState();
+    this.updateTop(state);
+    this.updateQuest(state);
   }
 
   /** Đọc tệp lưu vừa chọn ở bảng Cài đặt. */
@@ -398,14 +442,39 @@ export class Hud {
     const act = el.dataset.act!;
     const id = Number(el.dataset.id);
     switch (act) {
-      case 'toggleQuest':
-        this.questCollapsed = !this.questCollapsed;
-        this.quest.classList.toggle('collapsed', this.questCollapsed);
+      case 'pickBuild':
+        this.buildPick = el.dataset.key ?? null;
+        this.mauArmed = null;
+        return this.refreshSheet(this.getState());
+      case 'buildPage':
+        this.buildPage = Number(el.dataset.page);
+        return this.refreshSheet(this.getState());
+      case 'barracksTab':
+        this.barracksTab = el.dataset.tab as BarracksTab;
+        this.refreshSheet(this.getState());
+        this.sheetEl.querySelector('.sheet-body')?.scrollTo(0, 0);
         return;
+      case 'togglePop': {
+        const p = el.dataset.pop as NonNullable<typeof this.pop>;
+        return this.setPop(this.pop === p ? null : p);
+      }
+      case 'nextAlert':
+        this.alertIndex++;
+        return this.updateBanners(this.getState());
+      case 'openBuild':
+        // Chạm lại thẻ đang sáng thì đóng bảng.
+        if (this.sheet?.kind === 'build') return this.onAction({ kind: 'closeSheet' });
+        return this.onAction({ kind: 'openBuild' });
+      case 'openBarracks':
+        if (this.barracksOpen(this.getState())) return this.onAction({ kind: 'closeSheet' });
+        return this.onAction({ kind: 'openBarracks' });
       case 'chooseBuild':
         return this.onAction({ kind: 'chooseBuild', type: el.dataset.type as BuildingType });
       case 'buildTab':
         this.buildTab = el.dataset.tab as typeof this.buildTab;
+        this.buildPick = null;
+        this.buildPage = null;
+        this.mauArmed = null;
         this.refreshSheet(this.getState());
         this.sheetEl.querySelector('.sheet-body')?.scrollTo(0, 0);
         return;
@@ -414,9 +483,11 @@ export class Hud {
       case 'repairUNo':
       case 'upgrade':
       case 'removeWall':
+      case 'toggleCong':
       case 'raiseBuilding':
       case 'startMove':
       case 'startMerge':
+      case 'rotateBuilding':
         return this.onAction({ kind: act, id });
       case 'offerGift':
         return this.onAction({ kind: 'offerGift', gift: el.dataset.gift as GiftId });
@@ -430,6 +501,8 @@ export class Hud {
         return this.onAction({ kind: 'train', unit: el.dataset.unit as UnitType });
       case 'assignTuong':
         return this.onAction({ kind: 'assignTuong', id, tuong: el.dataset.tuong as TuongId });
+      case 'assignNu':
+        return this.onAction({ kind: 'assignNu', id, nu: el.dataset.nu as NuTuongId });
       case 'guardDelta':
         return this.onAction({ kind: 'guardDelta', id, unit: el.dataset.unit as UnitType, delta: Number(el.dataset.delta) < 0 ? -1 : 1 });
       case 'garrisonDelta':
@@ -440,6 +513,8 @@ export class Hud {
         return this.onAction({ kind: 'applyMau', mau: el.dataset.mau as MauId });
       case 'phatRung':
         return this.onAction({ kind: 'phatRung', id });
+      case 'seeIsland':
+        return this.onAction({ kind: 'seeIsland', id: el.dataset.dao as QuanDaoId });
       case 'trinhSat':
         return this.onAction({ kind: 'trinhSat', id });
       case 'ketThan':
@@ -452,8 +527,8 @@ export class Hud {
         return this.refreshSheet(this.getState());
       case 'donMarch': {
         if (!this.donPick) return;
-        const { don, army, rows } = this.donPick;
-        return this.onAction({ kind: 'marchCamp', plot: don!, army: { ...army }, rows: { ...rows } });
+        const { don, army, rows, nu } = this.donPick;
+        return this.onAction({ kind: 'marchCamp', plot: don!, army: { ...army }, rows: { ...rows }, nu: nu ?? null });
       }
       case 'offerBanh':
         return this.onAction({ kind: 'offerBanh', banh: el.dataset.banh as Banh });
@@ -475,13 +550,15 @@ export class Hud {
       case 'backToStage':
       case 'armyDelta':
       case 'armyRow':
+      case 'armyHero':
+      case 'armyNu':
         // Đang chọn quân đánh đồn trong bảng Đất bên kia sông.
         if (this.donPick && this.sheet?.kind === 'benKia' && act !== 'backToStage') return this.donPickStep(act, el);
         return this.campaignStep(act, id, el);
       case 'march': {
         if (!this.camp?.stage) return;
-        const { army, rows, challenge } = this.camp.pick;
-        return this.onAction({ kind: 'march', stage: this.camp.stage, army: { ...army }, rows: { ...rows }, challenge });
+        const { army, rows, challenge, hero, nu } = this.camp.pick;
+        return this.onAction({ kind: 'march', stage: this.camp.stage, army: { ...army }, rows: { ...rows }, challenge, hero: hero ?? null, nu: nu ?? null });
       }
       case 'buyHuan':
         return this.onAction({ kind: 'buyHuan', branch: el.dataset.branch as HuanBranch });
@@ -501,107 +578,96 @@ export class Hud {
     }
   };
 
-  // ---------- Thanh trên ----------
+  // ---------- Dải tài nguyên (mép trên) ----------
 
+  /** Dải tài nguyên: cấp Điện, các tài nguyên số gọn, dân, nút cài đặt. Chạm dải thì thả bảng kho và thu chi.
+   *  Khung dựng lại chỉ khi đổi bộ tài nguyên; số thì thay tại chỗ để không thay nút giữa lúc người chơi chạm. */
   updateTop(state: GameState): void {
+    const ids = shownResources(state);
+    const key = ids.join();
+    if (key !== this.bandKey) {
+      this.bandKey = key;
+      this.topbar.innerHTML = `<div class="dien-level" title="${vi.buildings.dien.name}">🏯<b></b></div>
+        <button class="res-strip" data-act="togglePop" data-pop="res" aria-label="${vi.ui.resDetail}">
+          ${ids.map((r) => `<span class="res" data-res="${r}" title="${vi.resources[r].name}">${vi.resources[r].icon}<b></b></span>`).join('')}
+          <span class="more"></span>
+        </button>
+        <button class="dan-btn" data-act="danInfo">👥<b></b><i></i></button>
+        <button class="icon-btn" data-act="openSettings" aria-label="${vi.ui.settings}">⚙️</button>`;
+    }
     const store = storageCap(state);
-    const rate = netPerMinute(state);
-    const res = shownResources(state).map((r) => {
-      const v = state.resources[r];
-      const n = Math.round(rate[r]);
-      return `<div class="chip ${v >= store ? 'full' : ''}" title="${vi.resources[r].name}">
-        ${vi.resources[r].icon} <b>${fmt(v)}</b><small>/${fmt(store)}</small>
-        <span class="rate ${n < 0 ? 'neg' : ''}">${n < 0 ? '−' + fmt(-n) : '+' + fmt(n)}</span>
-      </div>`;
-    }).join('');
+    this.topbar.querySelector('.dien-level b')!.textContent = String(dienLevel(state));
+    for (const el of this.topbar.querySelectorAll<HTMLElement>('[data-res]')) {
+      const v = state.resources[el.dataset.res as ResourceId];
+      el.querySelector('b')!.textContent = fmtShort(v);
+      el.classList.toggle('full', v >= store);
+    }
+    const open = this.pop === 'res';
+    const strip = this.topbar.querySelector<HTMLElement>('.res-strip')!;
+    strip.classList.toggle('on', open);
+    strip.setAttribute('aria-expanded', String(open));
+    strip.querySelector('.more')!.textContent = open ? '▴' : '▾';
     const free = freeDan(state);
     const room = housing(state);
-    const dan = `<button class="chip dan ${free > 0 ? 'idle' : ''}" data-act="danInfo" title="${vi.ui.danTitle(state.dan, room, free)}">
-      👥 <b>${state.dan}</b><small>/${room}</small>${free > 0 ? `<span class="rate">${free} rảnh</span>` : ''}</button>`;
-    const ready = countOf(state, 'doanhTrai') > 0;
-    if (ready !== this.campaignReady) {
-      this.campaignReady = ready;
-      if (this.mode === 'view') this.setMode('view');
+    const dan = this.topbar.querySelector<HTMLElement>('.dan-btn')!;
+    dan.classList.toggle('idle', free > 0);
+    dan.title = vi.ui.danTitle(state.dan, room, free);
+    dan.querySelector('b')!.textContent = String(state.dan);
+    dan.querySelector('i')!.textContent = free > 0 ? `+${free}` : '';
+
+    // Bảng kho: số đúng, sức chứa, thu chi mỗi phút; dân và quân.
+    let html = '';
+    if (open) {
+      const rate = netPerMinute(state);
+      const rows = ids.map((r) => {
+        const v = state.resources[r];
+        const n = Math.round(rate[r]);
+        return `<tr><td>${vi.resources[r].icon} ${vi.resources[r].name}</td><td class="${v >= store ? 'full' : ''}"><b>${fmt(v)}</b><small>/${fmt(store)}</small></td>
+          <td class="${n < 0 ? 'neg' : 'pos'}">${n < 0 ? '−' + fmt(-n) : '+' + fmt(n)}${vi.ui.perMinute}</td></tr>`;
+      });
+      rows.push(`<tr><td>👥 ${vi.ui.dan}</td><td><b>${state.dan}</b><small>/${room}</small></td><td class="pos">${vi.ui.freeShort(free)}</td></tr>`);
+      const cap = troopCap(state);
+      if (cap) rows.push(`<tr><td>⚔️ ${vi.ui.tabArmy}</td><td><b>${troopSpace(state)}</b><small>/${cap}</small></td><td></td></tr>`);
+      html = `<table class="res-table">${rows.join('')}</table>`;
     }
-    const cap = troopCap(state);
-    const army = cap
-      ? `<button class="chip dan" data-act="openBarracks" title="${vi.ui.troopSpace(troopSpace(state), cap)}">⚔️ <b>${troopSpace(state)}</b><small>/${cap}</small></button>`
-      : '';
-    const look = giongLook(state);
-    let giong = '';
-    if (look) {
-      const mark = giongReady(state) ? (giongResting(state) ? '💤' : '⚔️') : `${state.giong.fed}/5`;
-      giong = `<button class="chip dan" data-act="openGiong" title="${vi.ui.giong}">${vi.giongLooks[look].icon} <b>${mark}</b></button>`;
-    } else if (state.giong.ascended && giongResting(state)) {
-      // Gióng đã về trời thì không đứng ở kinh đô, nhưng vẫn báo khi đang kiệt sức để người chơi khỏi xuất quân thiếu tướng.
-      giong = `<button class="chip dan" data-act="openGiong" title="${vi.ui.giong}">🐎 <b>💤</b></button>`;
+    if (html !== this.resHtml) {
+      this.resHtml = html;
+      this.resDrop.innerHTML = html;
     }
-    const sLook = sonLook(state);
-    let son = '';
-    if (sLook) {
-      const mark = sonJoined(state) ? (sonResting(state) ? '💤' : '⚔️') : `${giftCount(state)}/5`;
-      son = `<button class="chip dan" data-act="openSon" title="${vi.ui.son}">${vi.sonLooks[sLook].icon} <b>${mark}</b></button>`;
-    } else if (state.son.won && sonResting(state)) {
-      son = `<button class="chip dan" data-act="openSon" title="${vi.ui.son}">⛰️ <b>💤</b></button>`;
-    }
-    const aLook = advLook(state);
-    let adv = '';
-    if (aLook) {
-      const mark = advJoined(state) ? (advResting(state) ? '💤' : '⚔️') : `${Math.min(wallRings(state), RINGS_NEEDED)}/${RINGS_NEEDED}`;
-      adv = `<button class="chip dan" data-act="openAdv" title="${vi.ui.adv}">${vi.advLooks[aLook].icon} <b>${mark}</b></button>`;
-    } else if (state.adv.bien && advResting(state)) {
-      // Vua đã xuống biển thì không đứng ở Điện, nhưng vẫn báo khi đang kiệt sức (vẫn ra trận ở màn 17–25).
-      adv = `<button class="chip dan" data-act="openAdv" title="${vi.ui.adv}">🏹 <b>💤</b></button>`;
-    }
-    // Cao Lỗ cầm quân từ màn 25.
-    if (caoLoJoined(state)) {
-      adv += `<button class="chip dan" data-act="openCaoLo" title="${vi.ui.caoLo}">🎯 <b>${caoLoResting(state) ? '💤' : '⚔️'}</b></button>`;
-    }
-    // Tết đang mở: chip 🎋 đếm ngược, chạm vào để mở bảng Tết.
-    let tet = '';
-    if (tetOpen(state)) {
-      const secs = Math.max(0, Math.ceil((state.tet.openUntil - state.clock) / 1000));
-      tet = `<button class="chip dan" data-act="openTet" title="${vi.ui.tet}">🎋 <b>${Math.floor(secs / 60)}:${String(secs % 60).padStart(2, '0')}</b></button>`;
-    }
-    // Trinh sát đang đi: chip 🧭 đếm ngược tới lúc người về sớm nhất.
-    let scout = '';
-    if (state.benKia.scouts.length) {
-      const secs = Math.max(0, Math.ceil((Math.min(...state.benKia.scouts.map((sc) => sc.at)) - state.clock) / 1000));
-      scout = `<div class="chip dan" title="${vi.benKia.scoutChip}">🧭 <b>${secs}s</b></div>`;
-    }
-    const html = `<div class="chip level" title="${vi.buildings.dien.name}">🏯 ${dienLevel(state)}</div>${res}${dan}${army}${giong}${son}${adv}${tet}${scout}
-      <span class="spacer"></span>
-      <button class="icon-btn" data-act="openSettings" aria-label="${vi.ui.settings}">⚙️</button>`;
-    // So với chuỗi đã vẽ lần trước (không so với innerHTML vì trình duyệt chuẩn hóa lại chuỗi),
-    // để không thay nút ⚙️ giữa lúc người chơi đang chạm.
-    if (html !== this.topHtml) {
-      this.topHtml = html;
-      this.topbar.innerHTML = html;
-    }
+    this.resDrop.hidden = !open;
   }
 
-  // ---------- Thông báo nổi: thiếu gạo, thuyền buôn ----------
+  // ---------- Dòng tin trên dock: giặc, đói, Tết, thuyền buôn, trinh sát ----------
 
-  updateBanners(state: GameState): void {
-    const parts: string[] = [];
+  /** Các tin đang có, tin gấp (giặc, đói) trước. */
+  private alerts(state: GameState): { id: string; text: string; tone: 'bad' | 'tet' | 'info'; act?: string; label?: string }[] {
+    const list: ReturnType<Hud['alerts']> = [];
     const raid = state.raid;
     const sideName = { bac: vi.ui.sideBac, tay: vi.ui.sideTay, nam: vi.ui.sideNam, dong: vi.ui.sideDong, namXa: vi.ui.sideNamXa, dongXa: vi.ui.sideDongXa }[raid.side];
-    if (raid.phase === 'warning' && raid.foe === 'thuy') {
+    if (raid.phase === 'warning') {
       const secs = Math.max(0, Math.ceil((raid.startsAt - state.clock) / 1000));
-      parts.push(`<div class="banner bad">🌧️ ${vi.ui.floodWarning(sideName, secs, nextFloodLevel(state))}
-        <button class="btn small" data-act="lookRaid">${vi.ui.floodLook}</button></div>`);
-    } else if (raid.phase === 'warning') {
-      const secs = Math.max(0, Math.ceil((raid.startsAt - state.clock) / 1000));
-      const text =
-        raid.foe === 'yeu'
-          ? `🌙 ${vi.ui.yeuWarning(sideName, secs)}`
-          : raid.foe === 'trieu'
-            ? `⚠️ ${vi.ui.trieuWarning(sideName, secs)}`
-            : raid.foe === 'thuyBinh'
-              ? `⛵ ${vi.ui.thuyBinhWarning(sideName, secs)}`
-              : `⚠️ ${vi.ui.raidWarning(sideName, secs)}`;
-      parts.push(`<div class="banner bad">${text}
-        <button class="btn small" data-act="lookRaid">${vi.ui.raidLook}</button></div>`);
+      if (raid.foe === 'thuy') {
+        list.push({ id: 'giac', text: `🌧️ ${vi.ui.floodWarning(sideName, secs, nextFloodLevel(state))}`, tone: 'bad', act: 'lookRaid', label: vi.ui.floodLook });
+        // Cống đang mở: nhắc ruộng nào được bồi, công trình nào sẽ ngập, còn kịp đóng.
+        if (hasOpenCong(state)) {
+          const p = phuSaPreview(state);
+          list.push({ id: 'phuSa', text: vi.ui.phuSaWarning(p.boi.length, p.drown.length), tone: 'info' });
+        }
+      } else {
+        const text =
+          raid.foe === 'yeu'
+            ? `🌙 ${vi.ui.yeuWarning(sideName, secs)}`
+            : raid.foe === 'trieu'
+              ? `⚠️ ${vi.ui.trieuWarning(sideName, secs)}`
+              : raid.foe === 'han'
+                ? `⚠️ ${vi.ui.hanWarning(sideName, secs)}`
+                : raid.foe === 'thuyBinh'
+                  ? `⛵ ${vi.ui.thuyBinhWarning(sideName, secs)}`
+                  : raid.foe === 'thuyHan'
+                    ? `⛵ ${vi.ui.thuyHanWarning(sideName, secs)}`
+                    : `⚠️ ${vi.ui.raidWarning(sideName, secs)}`;
+        list.push({ id: 'giac', text, tone: 'bad', act: 'lookRaid', label: vi.ui.raidLook });
+      }
     }
     if (raid.phase === 'battle' && raid.battle) {
       const b = raid.battle;
@@ -614,79 +680,194 @@ export class Hud {
             ? `🌙 ${vi.ui.yeuBattle(left, ours)}`
             : b.foe === 'trieu'
               ? `⚔️ ${vi.ui.trieuBattle(left, ours)}`
-              : b.foe === 'thuyBinh'
-                ? `⛵ ${vi.ui.thuyBinhBattle(left, ours)}`
-                : `⚔️ ${vi.ui.raidBattle(left, ours)}`;
-      // Lẫy nỏ thần đã bị tráo: ô kỹ năng Nỏ thần còn đó nhưng không bấm được.
-      const stolen = b.hero?.layTrao ? `<button class="btn bronze skill small" disabled>${vi.skills.noThan.icon} ${vi.ui.layTrao}</button>` : '';
-      parts.push(`<div class="banner bad">${text}</div>
-        <div class="banner skills">${stolen}${b.skills.map((k) => skillButton(b, k, true)).join('')}</div>`);
+              : b.foe === 'han'
+                ? `⚔️ ${vi.ui.hanBattle(left, ours)}`
+                : b.foe === 'thuyBinh'
+                  ? `⛵ ${vi.ui.thuyBinhBattle(left, ours)}`
+                  : b.foe === 'thuyHan'
+                    ? `⛵ ${vi.ui.thuyHanBattle(left, ours)}`
+                    : `⚔️ ${vi.ui.raidBattle(left, ours)}`;
+      list.push({ id: 'tran', text, tone: 'bad' });
     }
-    if (tetOpen(state) && !(state.tet.offered.chung && state.tet.offered.giay)) {
+    if (isStarving(state)) list.push({ id: 'doi', text: `🍚 ${vi.ui.starving}`, tone: 'bad' });
+    if (tetOpen(state)) {
       const secs = Math.max(0, Math.ceil((state.tet.openUntil - state.clock) / 1000));
-      parts.push(`<div class="banner tet">${vi.ui.tetBanner(secs)}
-        <button class="btn small bronze" data-act="openTet">${vi.ui.tetOfferBtn}</button></div>`);
+      if (!(state.tet.offered.chung && state.tet.offered.giay)) list.push({ id: 'tet', text: vi.ui.tetBanner(secs), tone: 'tet', act: 'openTet', label: vi.ui.tetOfferBtn });
+      else list.push({ id: 'tet', text: vi.ui.tetLeft(secs), tone: 'info', act: 'openTet', label: vi.ui.tet });
     }
-    if (isStarving(state)) parts.push(`<div class="banner bad">🍚 ${vi.ui.starving}</div>`);
     const visit = state.merchant.visit;
     if (visit) {
       const secs = Math.max(0, Math.ceil((visit.leavesAt - state.clock) / 1000));
-      parts.push(`<div class="banner">⛵ ${vi.ui.merchantHere(secs)}
-        <button class="btn small bronze" data-act="openMerchant">${vi.ui.merchantOpen}</button></div>`);
+      list.push({ id: 'thuyen', text: `⛵ ${vi.ui.merchantHere(secs)}`, tone: 'info', act: 'openMerchant', label: vi.ui.merchantOpen });
     }
-    const html = parts.join('');
-    if (html !== this.bannerHtml) {
-      this.bannerHtml = html;
-      this.banners.innerHTML = html;
+    if (state.benKia.scouts.length) {
+      const secs = Math.max(0, Math.ceil((Math.min(...state.benKia.scouts.map((sc) => sc.at)) - state.clock) / 1000));
+      list.push({ id: 'trinhSat', text: vi.ui.scoutAway(secs), tone: 'info' });
+    }
+    return list;
+  }
+
+  /** Dòng tin và nút kỹ năng khi giặc đánh kinh đô. Chữ đếm ngược thay tại chỗ để nút trong tin không bị thay giữa lúc chạm. */
+  updateBanners(state: GameState): void {
+    const list = this.alerts(state);
+    const ids = list.map((a) => a.id).join();
+    // Có tin mới (hay tin cũ hết) thì về tin đầu: tin gấp nhất luôn hiện trước.
+    if (ids !== this.alertIds) {
+      this.alertIds = ids;
+      this.alertIndex = 0;
+    }
+    const i = list.length ? this.alertIndex % list.length : 0;
+    const a = list[i];
+    const key = a ? `${a.id}|${a.act ?? ''}|${a.label ?? ''}|${a.tone}|${i}/${list.length}` : '';
+    if (key !== this.tickerKey) {
+      this.tickerKey = key;
+      this.ticker.innerHTML = a
+        ? `<div class="ticker-item ${a.tone}"><span class="tx"></span>
+          ${a.act ? `<button class="btn small ${a.tone === 'bad' ? 'light' : 'bronze'}" data-act="${a.act}">${a.label}</button>` : ''}
+          ${list.length > 1 ? `<button class="next" data-act="nextAlert" aria-label="${vi.ui.nextAlert}">${i + 1}/${list.length} ›</button>` : ''}</div>`
+        : '';
+    }
+    if (a) this.ticker.querySelector('.tx')!.textContent = a.text;
+
+    // Nút kỹ năng khi giặc đánh kinh đô: dựng lại khi đổi bộ kỹ năng, còn lại chỉ đổi chữ và trạng thái.
+    const b = state.raid.phase === 'battle' ? state.raid.battle : null;
+    const skillKey = b ? `${b.id}:${b.skills.join(',')}:${b.hero?.layTrao ? 1 : 0}` : '';
+    if (skillKey !== this.raidSkillKey) {
+      this.raidSkillKey = skillKey;
+      const stolen = b?.hero?.layTrao ? `<button class="btn bronze skill small" disabled>${vi.skills.noThan.icon} ${vi.ui.layTrao}</button>` : '';
+      this.raidSkills.innerHTML = b ? stolen + b.skills.map((k) => skillButton(b, k, true)).join('') : '';
+    }
+    if (b) {
+      for (const btn of this.raidSkills.querySelectorAll<HTMLButtonElement>('[data-skill]')) {
+        syncSkill(btn, b, btn.dataset.skill as SkillId);
+      }
     }
   }
 
-  // ---------- Nhiệm vụ Lạc hầu ----------
+  // ---------- Dock: Quân, Phó bản, Xây dựng, Tướng, Lạc hầu ----------
 
+  /** Bảng đang mở là bảng doanh trại (thẻ Quân sáng). */
+  private barracksOpen(state: GameState): boolean {
+    return this.sheet?.kind === 'building' && findBuilding(state, this.sheet.id)?.type === 'doanhTrai';
+  }
+
+  /** Các tướng đang có ở kinh đô (hay đang nghỉ dù đã đi), với dấu: đang góp đủ chưa, sẵn sàng ⚔️ hay nghỉ 💤. */
+  private heroes(state: GameState): { act: string; icon: string; name: string; mark: string }[] {
+    const list: ReturnType<Hud['heroes']> = [];
+    const look = giongLook(state);
+    if (look) {
+      const mark = giongReady(state) ? (giongResting(state) ? '💤' : '⚔️') : `${state.giong.fed}/5`;
+      list.push({ act: 'openGiong', icon: vi.giongLooks[look].icon, name: vi.ui.giong, mark });
+    } else if (state.giong.ascended && giongResting(state)) {
+      // Gióng đã về trời thì không đứng ở kinh đô, nhưng vẫn báo khi đang kiệt sức để người chơi khỏi xuất quân thiếu tướng.
+      list.push({ act: 'openGiong', icon: '🐎', name: vi.ui.giong, mark: '💤' });
+    }
+    const sLook = sonLook(state);
+    if (sLook) {
+      const mark = sonJoined(state) ? (sonResting(state) ? '💤' : '⚔️') : `${giftCount(state)}/5`;
+      list.push({ act: 'openSon', icon: vi.sonLooks[sLook].icon, name: vi.ui.son, mark });
+    } else if (state.son.won && sonResting(state)) {
+      list.push({ act: 'openSon', icon: '⛰️', name: vi.ui.son, mark: '💤' });
+    }
+    const aLook = advLook(state);
+    if (aLook) {
+      const mark = advJoined(state) ? (advResting(state) ? '💤' : '⚔️') : `${Math.min(wallRings(state), RINGS_NEEDED)}/${RINGS_NEEDED}`;
+      list.push({ act: 'openAdv', icon: vi.advLooks[aLook].icon, name: vi.ui.adv, mark });
+    } else if (state.adv.bien && advResting(state)) {
+      // Vua đã xuống biển thì không đứng ở Điện, nhưng vẫn báo khi đang kiệt sức (vẫn ra trận ở màn 17–25).
+      list.push({ act: 'openAdv', icon: '🏹', name: vi.ui.adv, mark: '💤' });
+    }
+    // Cao Lỗ cầm quân từ màn 25.
+    if (caoLoJoined(state)) list.push({ act: 'openCaoLo', icon: '🎯', name: vi.ui.caoLo, mark: caoLoResting(state) ? '💤' : '⚔️' });
+    // Hai Bà Trưng từ chương 5: chưa có bảng riêng, chỉ báo bà nào sẵn sàng, bà nào đang nghỉ.
+    if (haiBaJoined(state)) {
+      for (const k of HAI_BA_KINDS) list.push({ act: '', icon: vi.ui.tuongIcons[k], name: vi.ui.heroNames[k], mark: haiBaResting(state, k) ? '💤' : '⚔️' });
+    }
+    return list;
+  }
+
+  /** Dock năm thẻ và ô bật lên trên dock (thẻ Lạc hầu, danh sách tướng). */
   updateQuest(state: GameState): void {
     const quest = currentQuest(state);
     const progress = questProgress(state);
     const done = questDone(state);
-    let body: string;
-    if (!quest || !progress) {
-      // Hết truyện rồi thì mở lại được màn hình Hết truyện.
-      const ending = state.story.seen.includes('hetTruyen') ? `<div class="quest-foot"><button class="btn small ghost" data-act="openEnding">${vi.ui.endingOpen}</button></div>` : '';
-      body = `<p>${esc(vi.quests.allDone)}</p>${ending}`;
-    } else {
-      body = `<p>${esc(vi.quests[quest.id])}</p>
-        <div class="quest-foot">
-          <span class="progress">${progress.have}/${progress.need}</span>
-          <span class="reward">${vi.ui.reward}: ${costHtml(null, quest.reward)}</span>
-          <span class="spacer"></span>
-          ${done ? `<button class="btn small bronze" data-act="claimQuest">${vi.ui.claim}</button>` : ''}
-        </div>`;
+    const heroes = this.heroes(state);
+    const cap = troopCap(state);
+    const tab = (o: { act: string; pop?: string; icon: string; label: string; on: boolean; off?: boolean; badge?: string; hot?: boolean; main?: boolean; title?: string }) =>
+      `<button class="tab ${o.on ? 'on' : ''} ${o.main ? 'main' : ''}" data-act="${o.act}" ${o.pop ? `data-pop="${o.pop}"` : ''} ${o.title ? `title="${o.title}"` : ''} ${o.off ? 'disabled' : ''}>
+        <span class="ic">${o.icon}${o.badge ? `<i class="badge ${o.hot ? 'hot' : ''}">${o.badge}</i>` : ''}</span><span class="lb">${o.label}</span></button>`;
+    // Xây dựng nổi tròn ở giữa: việc làm nhiều nhất, ngón cái với tới dễ nhất.
+    const dock =
+      tab({ act: 'openBarracks', icon: '⚔️', label: vi.ui.tabArmy, on: this.barracksOpen(state), off: !cap, badge: cap ? `${troopSpace(state)}/${cap}` : '', title: cap ? vi.ui.troopSpace(troopSpace(state), cap) : '' }) +
+      tab({ act: 'openCampaign', icon: '🗺️', label: vi.ui.campaign, on: this.camp !== null, off: countOf(state, 'doanhTrai') === 0 }) +
+      tab({ act: 'openBuild', icon: '🔨', label: vi.ui.build, on: this.sheet?.kind === 'build', main: true }) +
+      tab({ act: 'togglePop', pop: 'heroes', icon: '🎖️', label: vi.ui.tabHeroes, on: this.pop === 'heroes', off: !heroes.length, badge: heroes.some((h) => h.mark === '⚔️') ? '⚔️' : '', hot: true }) +
+      tab({ act: 'togglePop', pop: 'quest', icon: '📜', label: vi.ui.lacHau, on: this.pop === 'quest', badge: done ? '!' : progress ? `${progress.have}/${progress.need}` : '', hot: done }) +
+      `<button class="icon-btn rotate" data-act="rotateView" aria-label="${vi.ui.rotate}" title="${vi.ui.rotate}">⟳</button>`;
+    if (dock !== this.dockHtml) {
+      this.dockHtml = dock;
+      this.dock.innerHTML = dock;
     }
-    const html = `<button class="quest-head" data-act="toggleQuest">📜 ${vi.ui.lacHau}<span class="toggle">${this.questCollapsed ? '▾' : '▴'}</span></button>${body}`;
-    if (html !== this.questHtml) {
-      this.questHtml = html;
-      this.quest.innerHTML = html;
+    this.dock.classList.toggle('quest-ready', done);
+
+    let pop = '';
+    if (this.pop === 'quest') {
+      if (!quest || !progress) {
+        // Hết truyện rồi thì mở lại được màn hình Hết truyện.
+        const ending = state.story.seen.includes('hetTruyen') ? `<div class="quest-foot"><button class="btn small ghost" data-act="openEnding">${vi.ui.endingOpen}</button></div>` : '';
+        pop = `<div class="pop-card quest-card"><h4>📜 ${vi.ui.lacHau}</h4><p>${esc(vi.quests.allDone)}</p>${ending}</div>`;
+      } else {
+        pop = `<div class="pop-card quest-card ${done ? 'ready' : ''}"><h4>📜 ${vi.ui.lacHau}</h4><p>${esc(vi.quests[quest.id])}</p>
+          <div class="quest-foot">
+            <span class="progress">${progress.have}/${progress.need}</span>
+            <span class="reward">${vi.ui.reward}: ${costHtml(null, quest.reward)}</span>
+            ${done ? `<button class="btn small bronze" data-act="claimQuest">${vi.ui.claim}</button>` : ''}
+          </div></div>`;
+      }
+    } else if (this.pop === 'heroes') {
+      pop = `<div class="pop-card"><h4>🎖️ ${vi.ui.tabHeroes}</h4>${heroes
+        .map((h) => {
+          const inner = `<span class="ic">${h.icon}</span><b>${h.name}</b><span class="mark">${h.mark}</span>`;
+          return h.act ? `<button class="hero-row" data-act="${h.act}">${inner}</button>` : `<div class="hero-row">${inner}</div>`;
+        })
+        .join('')}</div>`;
     }
-    this.quest.classList.toggle('ready', done);
-    this.quest.classList.toggle('collapsed', this.questCollapsed);
+    if (pop !== this.popHtml) {
+      this.popHtml = pop;
+      this.dockPop.innerHTML = pop;
+    }
   }
 
-  // ---------- Thanh dưới ----------
+  // ---------- Thanh Hủy, Đặt (thay chỗ dock khi đặt, dời, trải, ghép) ----------
 
-  setMode(mode: HudMode, placeValid = true, hint?: string): void {
+  /** Đổi chế độ thanh dưới. `turnable`: công trình đang đặt, dời xoay được, hiện nút ↻ Xoay. */
+  setMode(mode: HudMode, placeValid = true, hint?: string, turnable = false): void {
     this.mode = mode;
+    this.turnable = turnable;
+    this.root.classList.toggle('placing', mode !== 'view');
+    if (mode !== 'view' && this.pop) {
+      this.pop = null;
+      const state = this.getState();
+      this.updateTop(state);
+      this.updateQuest(state);
+    }
     // Nút xoay cảnh ở mọi chế độ: lúc đặt, dời, dựng lũy là lúc cần xoay nhất.
     const rotate = `<button class="icon-btn rotate" data-act="rotateView" aria-label="${vi.ui.rotate}" title="${vi.ui.rotate}">⟳</button>`;
     if (mode === 'view') {
-      const camp = this.campaignReady ? `<button class="btn bronze" data-act="openCampaign">⚔️ ${vi.ui.campaign}</button>` : '';
-      this.bottombar.innerHTML = `<button class="btn" data-act="openBuild">🔨 ${vi.ui.build}</button>${camp}${rotate}`;
+      this.bottombar.innerHTML = '';
       this.hint.hidden = true;
     } else if (mode === 'place' || mode === 'move') {
       const label = mode === 'move' ? vi.ui.moveHere : vi.ui.place;
+      // Nút xoay công trình chữ rõ "Xoay", khác nút tròn ⟳ xoay cảnh.
+      const turn = turnable
+        ? `<button class="btn bronze turn" data-act="rotatePlace" aria-label="${vi.ui.turnTitle}" title="${vi.ui.turnTitle}">↻ ${vi.ui.turn}</button>`
+        : '';
       this.bottombar.innerHTML = `
-        <button class="btn ghost" data-act="cancelPlace">✕ ${vi.ui.cancel}</button>
+        <button class="btn ghost" data-act="cancelPlace">✕ ${vi.ui.cancel}</button>${turn}
         <button class="btn" data-act="confirmPlace" ${placeValid ? '' : 'disabled'}>✓ ${label}</button>${rotate}`;
+      this.bottombar.classList.toggle('crowded', turnable);
       this.hint.hidden = false;
-      this.hint.textContent = mode === 'move' ? vi.ui.moveHint : vi.ui.placeHint;
+      this.hint.textContent = this.placeHint();
     } else if (mode === 'merge') {
       this.bottombar.innerHTML = `<button class="btn ghost" data-act="cancelPlace">✕ ${vi.ui.cancel}</button>${rotate}`;
       this.hint.hidden = false;
@@ -702,8 +883,16 @@ export class Hud {
   setPlaceValid(valid: boolean, reason?: string): void {
     const btn = this.bottombar.querySelector<HTMLButtonElement>('[data-act="confirmPlace"]');
     if (btn) btn.disabled = !valid;
-    const hint = this.mode === 'move' ? vi.ui.moveHint : vi.ui.placeHint;
-    if (btn) this.hint.textContent = valid || !reason ? hint : reason;
+    if (btn) this.hint.textContent = valid || !reason ? this.placeHint() : reason;
+  }
+
+  /** Công trình đang đặt, dời có xoay được không (thanh dưới có nút ↻ Xoay). */
+  private turnable = false;
+
+  /** Dòng gợi ý khi đặt, dời công trình. */
+  private placeHint(): string {
+    if (this.mode === 'move') return vi.ui.moveHint;
+    return this.turnable ? vi.ui.placeTurnHint : vi.ui.placeHint;
   }
 
   /** Đổi tạm dòng gợi ý (chế độ dựng lũy). */
@@ -719,6 +908,7 @@ export class Hud {
 
   showBuildMenu(state: GameState): void {
     this.sheet = { kind: 'build' };
+    this.buildPage = null;
     this.refreshSheet(state);
   }
 
@@ -754,14 +944,16 @@ export class Hud {
 
   /** Mẫu vừa bấm Áp lần đầu (chờ bấm lần nữa cho chắc). */
   mauArmed: MauId | null = null;
+  /** Loại bảng đang vẽ trên màn hình, để giữ chỗ cuộn khi vẽ lại cùng bảng. */
+  private sheetKindShown = '';
   /** Nhóm đang xem trong bảng Xây dựng; nhớ cho lần mở sau. */
   private buildTab: (typeof BUILD_GROUPS)[number]['key'] = 'congTrinh';
-
-  showMau(state: GameState): void {
-    this.sheet = { kind: 'mau' };
-    this.mauArmed = null;
-    this.refreshSheet(state);
-  }
+  /** Mục đang chọn trong bảng Xây dựng (`BuildItem.key`); nhớ cho lần mở sau để xây tiếp cùng loại. */
+  private buildPick: string | null = null;
+  /** Trang đang xem của lưới ảnh nhỏ; null là trang có mục đang chọn (mở bảng, đổi thẻ). */
+  private buildPage: number | null = null;
+  /** Thẻ đang xem trong bảng doanh trại; nhớ cho lần mở sau. */
+  private barracksTab: BarracksTab = 'quan';
 
   /** Mục lính đóng ở đồn biên: mỗi binh chủng một hàng, bớt, thêm (không quá quân đang có, trừ phần đóng ở bờ kia). */
   private garrisonHtml(state: GameState, b: Building): string {
@@ -796,7 +988,14 @@ export class Hud {
     const state = this.getState();
     const unit = el.dataset.unit as UnitType;
     if (act === 'armyDelta') stepPick(state, pick, unit, Number(el.dataset.delta));
+    else if (act === 'armyNu') pickNu(state, pick, el.dataset.nu);
     else pick.rows[unit] = nextRow(pick.rows[unit]);
+    this.refreshSheet(state);
+  }
+
+  /** Bảng quần đảo `id` ngoài biển Đông (vừa chạm vào đảo). */
+  showQuanDao(state: GameState, id: QuanDaoId): void {
+    this.sheet = { kind: 'quanDao', id };
     this.refreshSheet(state);
   }
 
@@ -817,21 +1016,27 @@ export class Hud {
   }
 
   closeSheet(): void {
+    const was = this.sheet !== null;
     this.sheet = null;
     this.donPick = null;
+    this.sheetKindShown = '';
     this.sheetEl.classList.remove('open');
     this.root.classList.remove('sheet-open');
+    // Tắt thẻ đang sáng trên dock ngay, không chờ lần vẽ sau.
+    if (was) this.updateQuest(this.getState());
   }
 
-  /** Tâm của phần màn hình không bị bảng trượt che, để camera đưa công trình đang chọn vào đó. */
+  /** Tâm của phần màn hình không bị dải tài nguyên, dock và bảng trượt che, để camera đưa công trình đang chọn vào đó. */
   freeCenter(): { x: number; y: number } {
     const w = window.innerWidth;
     const h = window.innerHeight;
-    if (!this.sheet) return { x: w / 2, y: h / 2 };
+    const top = this.topbar.offsetHeight;
+    const dock = this.dock.offsetHeight;
+    if (!this.sheet) return { x: w / 2, y: (top + h - dock) / 2 };
     const sideBySide = window.matchMedia('(min-width: 600px) and (min-aspect-ratio: 4/5)').matches;
-    if (sideBySide) return { x: (w - this.sheetEl.offsetWidth - 10) / 2, y: h / 2 + 30 };
-    const top = 70;
-    return { x: w / 2, y: top + (h - this.sheetEl.offsetHeight - top) / 2 };
+    if (sideBySide) return { x: (w - this.sheetEl.offsetWidth - 10) / 2, y: (top + h - dock) / 2 };
+    // Bảng nằm ngay trên dock (offsetHeight không tính phần đang trượt lên).
+    return { x: w / 2, y: (top + h - dock - this.sheetEl.offsetHeight) / 2 };
   }
 
   /** Vẽ lại bảng đang mở. Bỏ qua nếu nội dung không đổi để không làm mất lần chạm của người chơi. */
@@ -864,14 +1069,14 @@ export class Hud {
     } else if (this.sheet.kind === 'caoLo') {
       title = `🎯 ${vi.ui.caoLo}`;
       body = caoLoHtml(state);
-    } else if (this.sheet.kind === 'mau') {
-      title = `🗺️ ${vi.ui.mauTitle}`;
-      body = mauHtml(state, this.mauArmed);
     } else if (this.sheet.kind === 'khoanh') {
       // Đã phát xong thì đóng bảng.
       if (state.khoanh.includes(this.sheet.id)) return this.closeSheet();
       title = `🌳 ${vi.ui.khoanhTitle}`;
       body = khoanhHtml(state, this.sheet.id);
+    } else if (this.sheet.kind === 'quanDao') {
+      title = `${vi.bien.icon} ${vi.bien.quanDao[this.sheet.id].name}`;
+      body = quanDaoHtml(state, this.sheet.id);
     } else if (this.sheet.kind === 'benKia') {
       title = `🌄 ${vi.benKia.title}`;
       if (this.donPick) for (const k of UNIT_TYPES) this.donPick.army[k] = Math.min(this.donPick.army[k], state.troops[k]);
@@ -886,27 +1091,61 @@ export class Hud {
     const html = `<div class="sheet-head"><h2>${title}</h2><button class="close" data-act="closeSheet" aria-label="${vi.ui.close}">✕</button></div>
       <div class="sheet-body">${body}</div>`;
     if (html !== this.sheetHtml || force) {
+      // Bảng Xây dựng vẽ lại (đổi mục chọn, đủ tiền...) thì giữ chỗ đã cuộn.
+      const body = this.sheetEl.querySelector('.sheet-body');
+      const top = body?.scrollTop ?? 0;
+      const same = this.sheet.kind === 'build' && this.sheetKindShown === 'build';
       this.sheetHtml = html;
       this.sheetEl.innerHTML = html;
+      if (same) {
+        this.sheetEl.querySelector('.sheet-body')?.scrollTo(0, top);
+      }
+      this.sheetKindShown = this.sheet.kind;
     }
+    const opening = !this.sheetEl.classList.contains('open');
+    this.sheetEl.classList.toggle('build', this.sheet.kind === 'build');
+    this.sheetEl.classList.toggle('tall', this.sheet.kind === 'build' || this.barracksOpen(state));
     this.sheetEl.classList.add('open');
     this.root.classList.add('sheet-open');
+    // Thẻ Lạc hầu, danh sách tướng nằm đúng chỗ bảng: mở bảng thì đóng chúng.
+    if (this.pop === 'quest' || this.pop === 'heroes') this.pop = null;
+    if (opening) this.updateQuest(state);
   }
 
   private buildMenuHtml(state: GameState): string {
+    const { tabs, note, items, prefer, foot } = this.buildMenuData(state);
+    this.buildPick = pickOf(items, this.buildPick, prefer);
+    const { cols, rows } = Hud.buildGrid();
+    const per = cols * rows;
+    const page = Math.min(this.buildPage ?? pageOf(items, this.buildPick, per), pageCount(items.length, per) - 1);
+    this.buildPage = page;
+    return `${tabs}${note}${xayDungHtml(items, this.buildPick, foot, { page, cols, rows })}`;
+  }
+
+  /**
+   * Cỡ một trang lưới ảnh nhỏ trong bảng Xây dựng, cho ảnh lớn, nút Xây và cả trang vừa bảng mà không phải cuộn:
+   * điện thoại dọc 2 hàng (5 cột, màn hẹp như màn ngoài Fold5 thì 4); bảng bên phải màn rộng 4 cột, số hàng theo
+   * chiều cao màn.
+   */
+  private static buildGrid(): { cols: number; rows: number } {
+    const side = window.matchMedia('(min-width: 600px) and (min-aspect-ratio: 4/5)').matches;
+    if (side) return { cols: 4, rows: Math.min(8, Math.max(1, Math.floor((window.innerHeight - 430) / 78))) };
+    return { cols: window.innerWidth >= 370 ? 5 : 4, rows: 2 };
+  }
+
+  /**
+   * Thẻ chọn nhóm, dòng ghi chú, các mục của nhóm đang xem trong bảng Xây dựng, mục nên chọn sẵn và ghi chú cuối bảng.
+   */
+  private buildMenuData(state: GameState): { tabs: string; note: string; items: BuildItem[]; prefer?: string; foot?: string } {
     // Đắp đất là việc của dân, không phải công trình: chỉ hiện từ chương 2.
-    const raise = inChapter2(state)
-      ? `<button class="card" data-act="chooseRaise">
-        <span class="icon">⛰️</span>
-        <span class="name">${vi.ui.dapDat}</span>
-        <span class="meta">1×1 ô · ${vi.ui.dapDatDesc}</span>
-      </button>`
-      : '';
-    // Công trình của chương 2, 3, 4 chỉ hiện khi đã sang chương ấy.
-    const chapter = inChapter4(state) ? 4 : chapterNow(state);
+    const raise: BuildItem | null = inChapter2(state)
+      ? { key: 'raise', act: 'chooseRaise', pic: null, icon: '⛰️', name: vi.ui.dapDat, meta: '1×1 ô', desc: vi.ui.dapDatDesc, go: goLabel('chooseRaise', false, false) }
+      : null;
+    // Công trình của chương 2–5 chỉ hiện khi đã sang chương ấy.
+    const chapter = chapterNow(state);
     const shownOf = (types: BuildingType[]) =>
       types.filter((type) => (CHAPTER_OF[BUILDINGS[type].unlock ?? ''] ?? 1) <= chapter && (!TET_TYPES.includes(type) || tetStarted(state)));
-    const card = (type: BuildingType) => {
+    const card = (type: BuildingType): BuildItem => {
       const def = BUILDINGS[type];
       const have = usedOf(state, type);
       const max = limitOf(state, type);
@@ -920,54 +1159,67 @@ export class Hud {
       else if (!canAfford(state, def.buildCost)) why = vi.reasons.thieuTaiNguyen;
       // Bốn loại đường chung một giới hạn, ghi ở đầu nhóm.
       const count = isRoad(type) ? '' : ` · ${vi.ui.count(have, max)}`;
-      return `<button class="card ${why ? 'locked' : ''}" data-act="chooseBuild" data-type="${type}">
-        <span class="icon">${vi.buildings[type].icon}</span>
-        <span class="name">${vi.buildings[type].name}</span>
-        <span class="meta">${def.w}×${def.d} ô${count}</span>
-        ${costHtml(state, def.buildCost)}
-        ${why ? `<span class="why">${why}</span>` : ''}
-      </button>`;
+      return {
+        key: type,
+        act: 'chooseBuild',
+        attrs: `data-type="${type}"`,
+        pic: thumbUrl(type),
+        icon: vi.buildings[type].icon,
+        name: vi.buildings[type].name,
+        meta: `${def.w}×${def.d} ô${count}`,
+        cost: costHtml(state, def.buildCost),
+        why,
+        desc: vi.buildings[type].desc,
+        go: goLabel('chooseBuild', isRoad(type), isDecor(type)),
+      };
     };
-    const mau = `<button class="card" data-act="openMau">
-        <span class="icon">🗺️</span>
-        <span class="name">${vi.ui.mauTitle}</span>
-        <span class="meta">${vi.ui.mauCard}</span>
-      </button>`;
     // Ụ nỏ dựng trên đoạn thành Cổ Loa có sẵn, không chiếm đất: có từ chương 4.
-    let uNo = '';
+    let uNo: BuildItem | null = null;
     if (inChapter4(state)) {
       const have = uNoCount(state);
       const max = uNoLimit(state);
       const why = have >= max ? vi.reasons.datGioiHan : !canAfford(state, U_NO.cost) ? vi.reasons.thieuTaiNguyen : '';
-      uNo = `<button class="card ${why ? 'locked' : ''}" data-act="chooseUNo">
-        <span class="icon">🎯</span>
-        <span class="name">${vi.ui.uNo}</span>
-        <span class="meta">${vi.ui.uNoCard(have, max)}</span>
-        ${costHtml(state, U_NO.cost)}
-        ${why ? `<span class="why">${why}</span>` : ''}
-      </button>`;
+      uNo = {
+        key: 'uNo',
+        act: 'chooseUNo',
+        pic: thumbUrl('uNo'),
+        icon: '🎯',
+        name: vi.ui.uNo,
+        meta: vi.ui.uNoCard(have, max),
+        cost: costHtml(state, U_NO.cost),
+        why,
+        go: goLabel('chooseUNo', false, false),
+      };
     }
     // Công cụ dọn đường, đồ trang trí: chạm từng ô như khi trải.
-    const clear = `<button class="card" data-act="chooseClear">
-        <span class="icon">🧹</span>
-        <span class="name">${vi.ui.clearDecor}</span>
-        <span class="meta">${vi.ui.clearDecorDesc}</span>
-      </button>`;
-    // Ba nhóm thẻ chọn ở đầu bảng; mỗi lần chỉ hiện một nhóm cho khỏi cuộn dài trên điện thoại.
+    const clear: BuildItem = {
+      key: 'clear',
+      act: 'chooseClear',
+      pic: null,
+      icon: '🧹',
+      name: vi.ui.clearDecor,
+      meta: vi.ui.clearDecorDesc,
+      go: goLabel('chooseClear', false, false),
+    };
+    // Bốn nhóm thẻ chọn ở đầu bảng; mỗi lần chỉ hiện một nhóm cho khỏi cuộn dài trên điện thoại.
     const tabs = BUILD_GROUPS.map(
       ({ key }) =>
         `<button class="tab ${key === this.buildTab ? 'on' : ''}" data-act="buildTab" data-tab="${key}">${vi.ui.buildGroups[key]}</button>`,
     ).join('');
     const group = BUILD_GROUPS.find((g) => g.key === this.buildTab)!;
-    const cards = shownOf(group.types).map(card).join('');
+    if (group.key === 'mau') {
+      const { items, prefer } = mauItems(state, this.mauArmed);
+      return { tabs: `<div class="build-tabs">${tabs}</div>`, note: '', items, prefer, foot: `<p class="muted xd-foot">${vi.ui.mauHint}</p>` };
+    }
+    const cards = shownOf(group.types).map(card);
     const note =
       group.key === 'duong'
         ? `<p class="muted">${vi.ui.roadCount(usedOf(state, 'duongDat'), limitOf(state, 'duongDat'))}. ${vi.ui.decorOnly}</p>`
         : group.key === 'trangTri'
           ? `<p class="muted">${vi.ui.decorOnly}</p>`
           : '';
-    const items = group.key === 'congTrinh' ? [mau, cards, uNo, raise] : group.key === 'trangTri' ? [cards, clear] : [cards];
-    return `<div class="build-tabs">${tabs}</div>${note}<div class="cards">${items.join('')}</div>`;
+    const items = group.key === 'congTrinh' ? [...cards, uNo, raise] : group.key === 'trangTri' ? [...cards, clear] : cards;
+    return { tabs: `<div class="build-tabs">${tabs}</div>`, note, items: items.filter((i): i is BuildItem => !!i) };
   }
 
   private buildingHtml(state: GameState, id: number): string {
@@ -994,12 +1246,24 @@ export class Hud {
       rows.push(`<div class="stat"><span>${vi.ui.fishHere}</span><span>${fishRate(fishOf(b))}</span></div>`);
       if (b.level < def.maxLevel) rows.push(`<div class="stat"><span>${vi.ui.nextLevel}</span><span>${fishRate(CA_PER_MIN[b.level])}</span></div>`);
     }
+    if (b.type === 'benKhoi') {
+      // Cá biển của bến này, và thuyền ra ngư trường quanh quần đảo nào (bến chẵn Hoàng Sa, bến lẻ Trường Sa).
+      rows.push(`<div class="stat"><span>${vi.ui.seaFishHere}</span><span>${fishRate(fishOf(b))}</span></div>`);
+      if (b.level < def.maxLevel) rows.push(`<div class="stat"><span>${vi.ui.nextLevel}</span><span>${fishRate(CA_BIEN_PER_MIN[b.level])}</span></div>`);
+      const ground = seaRoute(b, seaIndex(state, b)).quanDao;
+      rows.push(`<div class="stat"><span>${vi.ui.seaGround}</span><span>${vi.bien.icon} ${vi.bien.quanDao[ground].name}</span></div>`);
+      rows.push(`<div class="actions"><button class="btn bronze" data-act="seeIsland" data-dao="${ground}">${vi.bien.icon} ${vi.bien.seeIsland}</button></div>`);
+    }
     if (b.type === 'donBien') rows.push(this.garrisonHtml(state, b));
     if (b.type === 'banLang') {
       const id = plotAt(b.x, b.z);
       if (id !== null) rows.push(`<div class="stat"><span>${vi.benKia.villageMakes}</span><span>${b.damaged ? '—' : prodHtml(villageOutput(state, id))}</span></div>`);
       if (b.damaged) rows.push(`<p class="why warn">${vi.benKia.villageWrecked}</p>`);
     }
+    if (PHU_SA_TYPES.includes(b.type) && b.boi && !b.damaged) {
+      rows.push(`<div class="stat"><span>${vi.ui.phuSa}</span><span>${vi.ui.phuSaRow(Math.round(PHU_SA_BONUS * 100))}</span></div>`);
+    }
+    if (b.type === 'congDe') rows.push(this.congHtml(state, b));
     if (b.type === 'congThanh') {
       const shot = (lv: number) => vi.ui.gateShot(CONG_THANH.dmg[lv - 1], CONG_THANH.targets[lv - 1]);
       rows.push(`<div class="stat"><span>${vi.ui.gateGuard}</span><span>${shot(b.level)}</span></div>`);
@@ -1040,20 +1304,25 @@ export class Hud {
       rows.push(`<div class="stat"><span>${vi.ui.khoanhCount}</span><span>${state.khoanh.length}/${KHOANH_N * KHOANH_N}</span></div>`);
     }
 
-    if (b.type === 'lauNo') rows.push(`<div class="stat"><span>${vi.ui.lauNoShots}</span><span></span></div>`);
+    if (b.type === 'lauNo') {
+      const shot = (lv: number) => vi.ui.gateShot(LAU_NO.dmg[lv - 1], LAU_NO.targets);
+      rows.push(`<div class="stat"><span>${vi.ui.lauNoShots}</span><span>${shot(b.level)}</span></div>`);
+      if (b.level < def.maxLevel) rows.push(`<div class="stat"><span>${vi.ui.nextLevel}</span><span>${shot(b.level + 1)}</span></div>`);
+    }
     if (isDecor(b.type)) rows.push(`<div class="stat"><span></span><span class="muted">${vi.ui.decorOnly}</span></div>`);
-    if (b.type === 'doanhTrai') rows.push(this.barracksHtml(state, b));
+    if (b.type === 'doanhTrai') rows.push(`<div class="stat"><span>${vi.ui.barracksCap(capOf(state, b))}</span></div>`);
     const home = UNIT_TYPES.find((k) => UNITS[k].home === b.type);
     if (home) rows.push(this.homeHtml(state, home));
     if (TET_TYPES.includes(b.type)) rows.push(tetHtml(state));
-    if (b.type === 'langChai') {
-      // Cả kinh đô: cá mỗi phút, phần ăn của dân và lính, số gạo cá đỡ được; cá đủ ăn thì báo dựng thêm chưa có ích.
+    if (b.type === 'langChai' || b.type === 'benKhoi') {
+      // Cả kinh đô: cá mỗi phút, phần ăn của dân và lính, số gạo cá đỡ được; cá đủ ăn thì báo dựng thêm chưa có ích
+      // (bến thuyền khơi vẫn có ích vì vỏ ốc).
       const fish = fishPerMinute(state);
       const food = foodPerMinute(state);
       rows.push(`<div class="stat"><span>${vi.ui.fishAll}</span><span>${fishRate(fish)}</span></div>`);
       rows.push(`<div class="stat"><span>${vi.ui.foodAll}</span><span>${vi.resources.gao.icon} ${fmt(food)}${vi.ui.perMinute}</span></div>`);
       rows.push(`<div class="stat"><span>${vi.ui.fishSaved}</span><span>${vi.resources.gao.icon} ${fmt(Math.min(fish, food))}${vi.ui.perMinute}</span></div>`);
-      if (fish >= food) rows.push(`<div class="stat"><span></span><span class="muted">${vi.ui.fishEnough}</span></div>`);
+      if (fish >= food) rows.push(`<div class="stat"><span></span><span class="muted">${b.type === 'benKhoi' ? vi.ui.seaFishEnough : vi.ui.fishEnough}</span></div>`);
     }
     if (b.type === 'dien' && tetStarted(state)) {
       rows.push(`<h3>🎋 ${vi.ui.blessTitle}</h3>${blessingHtml(state)}`);
@@ -1081,11 +1350,18 @@ export class Hud {
     }
 
     const actions: string[] = [];
+    // Công trình hư: báo và nút sửa đầu mục. Doanh trại thì để trên các thẻ, thẻ nào cũng thấy.
+    let repair = '';
     if (b.damaged) {
       const rc = repairCost(b);
-      actions.push(`<div class="why">${vi.ui.damaged}</div>`);
-      actions.push(`<button class="btn bronze" data-act="repair" data-id="${b.id}" ${canAfford(state, rc) && state.raid.phase !== 'battle' ? '' : 'disabled'}>
-        ${vi.ui.repair} · ${costHtml(state, rc)}</button>`);
+      repair = `<div class="why">${vi.ui.damaged}</div>
+        <button class="btn bronze" data-act="repair" data-id="${b.id}" ${canAfford(state, rc) && state.raid.phase !== 'battle' ? '' : 'disabled'}>
+        ${vi.ui.repair} · ${costHtml(state, rc)}</button>`;
+      if (b.type !== 'doanhTrai') actions.push(repair);
+    }
+    // Cống đê: đóng mở lúc nào cũng được, kể cả giữa mùa lũ.
+    if (b.type === 'congDe' && !b.damaged) {
+      actions.push(`<button class="btn bronze" data-act="toggleCong" data-id="${b.id}">${b.mo ? vi.ui.congClose : vi.ui.congOpen}</button>`);
     }
     if (b.type === 'thanh' && b.uNo === 'hu') {
       // Sửa thành trước rồi mới sửa được ụ trên mặt thành.
@@ -1105,13 +1381,20 @@ export class Hud {
       const cost = mergeCost();
       const can = pair && state.raid.phase === 'idle' && canAfford(state, cost);
       actions.push(`<div class="muted">${vi.ui.mergeInfo}</div>`);
+      if (b.level > LAU_NO_FROM_LEVEL) actions.push(`<div class="muted">${vi.ui.mergeLevel(mergedLevel(b, b))}</div>`);
       actions.push(`<button class="btn bronze" data-act="startMerge" data-id="${b.id}" ${can ? '' : 'disabled'}>🎯 ${vi.ui.merge} · ${costHtml(state, cost)}</button>`);
       if (!pair) actions.push(`<div class="why">${vi.ui.mergeNoPair}</div>`);
     }
-    if (b.type !== 'dien') {
+    {
       const mc = moveCost(b);
       const free = state.raid.phase === 'idle' && canAfford(state, mc);
-      actions.push(`<button class="btn ghost" data-act="startMove" data-id="${b.id}" ${free ? '' : 'disabled'}>↔ ${vi.ui.move} · ${costHtml(state, mc)}</button>`);
+      const moveBtn = `<button class="btn ghost" data-act="startMove" data-id="${b.id}" ${free ? '' : 'disabled'}>↔ ${vi.ui.move} · ${costHtml(state, mc)}</button>`;
+      // Xoay tại chỗ không tốn của: nút nhỏ cạnh nút Dời.
+      actions.push(
+        canRotateType(b.type)
+          ? `<div class="btn-pair">${moveBtn}<button class="btn ghost" data-act="rotateBuilding" data-id="${b.id}" title="${vi.ui.turnTitle}">↻ ${vi.ui.turn}</button></div>`
+          : moveBtn,
+      );
     }
     const cost = upgradeCostOf(b);
     if (cost) {
@@ -1143,11 +1426,26 @@ export class Hud {
             ? vi.ui.removeCitadel
             : b.type === 'congThanh'
               ? vi.ui.removeGate
-              : vi.ui.remove;
+              : b.type === 'congDe'
+                ? vi.ui.removeCong
+                : vi.ui.remove;
       actions.push(`<button class="btn ghost" data-act="removeWall" data-id="${b.id}">${label}</button>`);
     }
 
-    return `<div class="info"><p>${esc(vi.buildings[b.type].desc)}</p>${rows.join('')}<div class="actions">${actions.join('')}</div></div>`;
+    const info = `<div class="info"><p>${esc(vi.buildings[b.type].desc)}</p>${rows.join('')}<div class="actions">${actions.join('')}</div></div>`;
+    if (b.type === 'doanhTrai') return this.barracksHtml(state, b, info, repair);
+    return info;
+  }
+
+  /** Bảng cống đê: đang đóng hay mở, xem trước mùa lũ tới khi mở. Nút đóng mở ở hàng nút cuối bảng. */
+  private congHtml(state: GameState, b: Building): string {
+    const rows = [`<div class="stat"><span>${vi.ui.congState}</span><span>${b.mo ? vi.ui.congIsOpen : vi.ui.congIsShut}</span></div>`];
+    if (b.mo && !b.damaged) {
+      const p = phuSaPreview(state);
+      rows.push(`<div class="stat"><span>${vi.ui.congPreview}</span><span>${vi.ui.congPreviewText(p.level, p.boi.length, p.drown.length)}</span></div>`);
+      rows.push(`<div class="stat"><span></span><span class="muted">${vi.ui.phuSaPreview(p.level)}</span></div>`);
+    }
+    return rows.join('');
   }
 
   /** Một dòng binh chủng ở nơi ở riêng: số lính, binh khí đã rèn, nút Luyện kèm giá. */
@@ -1191,6 +1489,8 @@ export class Hud {
       sonTinh: () => status(sonResting(state), state.son.restUntil, state.son.won),
       anDuong: () => `${status(advResting(state), state.adv.restUntil, state.adv.bien)} · ${state.adv.bien ? vi.ui.advAtSea : vi.ui.advAtDien}`,
       caoLo: () => `${status(caoLoResting(state), state.caoLo.restUntil)} · ${vi.ui.caoLoAtDien}`,
+      trungTrac: () => `${status(haiBaResting(state, 'trungTrac'), state.haiBa.trungTrac)} · ${vi.ui.haiBaDesc}`,
+      trungNhi: () => `${status(haiBaResting(state, 'trungNhi'), state.haiBa.trungNhi)} · ${vi.ui.haiBaDesc}`,
     };
     const open: Partial<Record<TuongId, string>> = { giong: 'openGiong', sonTinh: 'openSon', anDuong: 'openAdv', caoLo: 'openCaoLo' };
     const busy = state.raid.phase === 'battle';
@@ -1209,7 +1509,33 @@ export class Hud {
       </div>`;
     });
     const none = map.has(b.id) ? '' : `<p class="why">${vi.ui.noCommander}</p>`;
-    return `<h3>${vi.ui.commanderTitle}</h3><p class="muted">${vi.ui.commanderHint}</p>${none}<div class="units">${rows.join('')}</div>`;
+    return `<p class="muted">${vi.ui.commanderHint}</p>${none}<div class="units">${rows.join('')}</div>${this.nuTuongHtml(state, b)}`;
+  }
+
+  /**
+   * Nữ tướng ở các doanh trại (chương 5): mỗi trại một người; lính giữ kinh đô của trại, thuộc binh chủng của nữ
+   * tướng, được cộng thêm. Bấm "Về trại này" để nữ tướng ấy về đây (đang ở trại khác thì hai người đổi chỗ).
+   */
+  private nuTuongHtml(state: GameState, b: Building): string {
+    const list = nuTuongList(state);
+    if (!list.length) return '';
+    const map = nuPosts(state);
+    const busy = state.raid.phase === 'battle';
+    const rows = list.map((n) => {
+      const post = [...map].find(([, x]) => x === n)?.[0];
+      const here = post === b.id;
+      const where = here ? vi.nuTuong.here : post !== undefined ? vi.nuTuong.other : vi.nuTuong.none;
+      const unit = vi.units[NU_TUONG[n].unit];
+      const buttons: string[] = [];
+      if (!here) buttons.push(`<button class="btn small" data-act="assignNu" data-id="${b.id}" data-nu="${n}" ${busy ? 'disabled' : ''}>${vi.nuTuong.assign}</button>`);
+      if (post !== undefined && !here) buttons.push(`<button class="btn small ghost" data-act="selectBuilding" data-id="${post}">${vi.ui.toPost} ›</button>`);
+      return `<div class="unit-row ${here ? 'here' : ''}">
+        <span class="unit-icon">${vi.nuTuong.list[n].icon}</span>
+        <span class="unit-info"><b>${vi.nuTuong.list[n].name}</b><small>${here ? '⭐ ' : ''}${where}</small><small>${vi.nuTuong.boost(unit.icon, unit.name)}</small></span>
+        <span class="btn-col">${buttons.join('')}</span>
+      </div>`;
+    });
+    return `<h4 class="sub-head">${vi.nuTuong.barracksTitle}</h4><p class="muted">${vi.nuTuong.barracksHint}</p><div class="units">${rows.join('')}</div>`;
   }
 
   /**
@@ -1242,8 +1568,7 @@ export class Hud {
     const left = reserve(state);
     const spare = UNIT_TYPES.filter((k) => left[k] > 0).map((k) => `${vi.units[k].icon} ${left[k]}`).join(' · ') || vi.ui.reserveNone;
     const manual = guardManual(state);
-    return `<h3>🛡️ ${vi.ui.guardTitle}</h3>
-      <div class="stat"><span>${vi.ui.guardInfo(used, guardCap(state))}</span><span>${vi.ui.guardHere(armySpace(got))}</span></div>
+    return `<div class="stat"><span>${vi.ui.guardInfo(used, guardCap(state))}</span><span>${vi.ui.guardHere(armySpace(got))}</span></div>
       <p class="muted">${manual ? vi.ui.guardManualNote : vi.ui.guardAutoNote}</p>
       ${[...full].map((t) => `<p class="why">${t}</p>`).join('')}
       ${owned.length ? `<div class="units">${rows.join('')}</div>` : `<p class="muted">${vi.ui.noTroops}</p>`}
@@ -1251,8 +1576,36 @@ export class Hud {
       ${manual ? `<button class="btn ghost small" data-act="guardAuto">${vi.ui.guardAuto}</button>` : ''}`;
   }
 
-  /** Doanh trại: nơi tướng ở, giữ chỗ quân và điều binh. Mỗi binh chủng luyện ở nơi ở riêng. */
-  private barracksHtml(state: GameState, b: Building): string {
+  /**
+   * Bảng doanh trại chia thẻ cho khỏi cuộn dài: Quân (binh chủng, nơi ở, lịch giặc), Giữ kinh đô (bố trí), Tướng
+   * (tướng chỉ huy), Trại (lời tả, cấp, nâng cấp, dời, xoay: `info`). Dòng chỗ quân và nút sửa (`repair`) ở trên các thẻ.
+   */
+  private barracksHtml(state: GameState, b: Building, info: string, repair: string): string {
+    const tab = this.barracksTab;
+    const noCommander = !commanders(state).has(b.id);
+    const tabs = (
+      [
+        ['quan', vi.ui.barracksTabs.quan, ''],
+        ['giu', vi.ui.barracksTabs.giu, ''],
+        ['tuong', vi.ui.barracksTabs.tuong, noCommander ? '!' : ''],
+        // Nâng cấp được thì thẻ Trại có dấu ⬆.
+        ['trai', vi.ui.barracksTabs.trai, upgradeCostOf(b) && canUpgrade(state, b.id).ok ? '⬆' : ''],
+      ] as const
+    )
+      .map(
+        ([key, label, mark]) =>
+          `<button class="tab ${key === tab ? 'on' : ''}" data-act="barracksTab" data-tab="${key}">${label}${mark ? `<i class="tab-mark ${mark === '!' ? 'hot' : ''}">${mark}</i>` : ''}</button>`,
+      )
+      .join('');
+    const body =
+      tab === 'giu' ? this.guardHtml(state, b) : tab === 'tuong' ? this.generalsHtml(state, b) : tab === 'trai' ? info : this.troopsHtml(state);
+    return `${this.troopSpaceHtml(state)}${repair ? `<div class="actions top">${repair}</div>` : ''}
+      <div class="build-tabs barracks-tabs">${tabs}</div>
+      <div class="barracks-body">${body}</div>`;
+  }
+
+  /** Thẻ Quân của doanh trại: mỗi binh chủng một dòng (số lính, nút tới nơi ở hay dựng nơi ở), lịch đợt giặc. */
+  private troopsHtml(state: GameState): string {
     const homes = UNIT_TYPES.filter((k) => k !== 'no' || inChapter4(state) || state.troops.no > 0).map((k) => {
       const type = UNITS[k].home;
       const home = homeOf(state, k);
@@ -1265,7 +1618,8 @@ export class Hud {
         act = `<button class="btn small" data-act="chooseBuild" data-type="${type}" ${blocker ? 'disabled' : ''}>${vi.ui.buildHome(name)}<br>${costHtml(state, BUILDINGS[type].buildCost)}</button>`;
       }
       const why = home ? (home.damaged ? vi.reasons.noiOHu : '') : (Hud.placeBlocker(state, type) ?? '');
-      return `<div class="unit-row">
+      // Chưa có nơi ở: nút Dựng kèm giá dài, xuống hàng dưới tên binh chủng cho chữ khỏi bị bóp hẹp.
+      return `<div class="unit-row ${home ? '' : 'wrap'}">
         <span class="unit-icon">${vi.units[k].icon}</span>
         <span class="unit-info"><b>${vi.units[k].name}</b> × ${state.troops[k]}
           <small>${vi.ui.trainAt(name)}</small>
@@ -1280,11 +1634,11 @@ export class Hud {
       const min = raid.nextAt === null ? 0 : Math.ceil((raid.nextAt - state.clock) / 60000);
       const foe = nextFoe(state);
       if (inChapter2(state) && !floodSeason(state)) next = vi.ui.calmBeforeWedding;
-      else if (foe === 'thuyBinh') {
-        next = vi.ui.nextThuyBinh(min);
+      else if (foe === 'thuyBinh' || foe === 'thuyHan') {
+        next = foe === 'thuyBinh' ? vi.ui.nextThuyBinh(min) : vi.ui.nextThuyHan(min);
         call = vi.ui.callRaid;
-      } else if (foe === 'yeu' || foe === 'trieu') {
-        next = foe === 'yeu' ? vi.ui.nextYeu(min) : vi.ui.nextTrieu(min);
+      } else if (foe === 'yeu' || foe === 'trieu' || foe === 'han') {
+        next = foe === 'yeu' ? vi.ui.nextYeu(min) : foe === 'trieu' ? vi.ui.nextTrieu(min) : vi.ui.nextHan(min);
         call = vi.ui.callRaid;
       } else if (floodSeason(state)) {
         next = vi.ui.nextFlood(min, nextFloodLevel(state));
@@ -1295,12 +1649,7 @@ export class Hud {
         call = vi.ui.callRaid;
       }
     }
-    return `${this.troopSpaceHtml(state)}
-      <div class="stat"><span>${vi.ui.barracksCap(capOf(state, b))}</span></div>
-      ${this.generalsHtml(state, b)}
-      ${this.guardHtml(state, b)}
-      <h3>${vi.ui.homesTitle}</h3>
-      <div class="units">${homes}</div>
+    return `<div class="units">${homes}</div>
       ${next ? `<p class="muted">${next}</p>` : ''}${call ? `<button class="btn ghost small" data-act="callRaid">${call}</button>` : ''}`;
   }
 
@@ -1358,11 +1707,13 @@ export class Hud {
   showCampaign(state: GameState): void {
     this.closeSheet();
     // Mở ở chương có màn kế tiếp chưa thắng, hay chương mới nhất nếu đã thắng hết.
-    const now = chapterNow(state);
-    const chapter = (([1, 2, 3] as const).find((c) => c <= now && this.nextStage(state, c) !== null) ?? now) as Chapter;
+    const now = mapChapterNow(state);
+    const chapter = ([1, 2, 3, 4] as const).find((c) => c <= now && this.nextStage(state, c) !== null) ?? now;
     this.camp = { chapter, stage: this.nextStage(state, chapter), step: 'stage', pick: defaultPick(state) };
     this.campaignEl.hidden = false;
+    this.pop = null;
     this.refreshCampaign(state, true);
+    this.updateQuest(state);
   }
 
   /** Màn kế tiếp chưa thắng trong chương, hoặc null khi đã thắng hết. */
@@ -1376,6 +1727,7 @@ export class Hud {
     this.camp = null;
     this.campHtml = '';
     this.campaignEl.hidden = true;
+    this.updateQuest(this.getState());
   }
 
   /** Thao tác trên bản đồ chỉ đổi giao diện: chọn màn, xếp quân. */
@@ -1385,7 +1737,7 @@ export class Hud {
     const state = this.getState();
     const unit = el.dataset.unit as UnitType;
     if (act === 'campChapter') {
-      camp.chapter = id === 4 ? 4 : id === 3 ? 3 : id === 2 ? 2 : 1;
+      camp.chapter = ([1, 2, 3, 4, 5] as const).find((c) => c === id) ?? 1;
       camp.stage = this.nextStage(state, camp.chapter);
       camp.step = 'stage';
     } else if (act === 'pickStage') {
@@ -1403,6 +1755,12 @@ export class Hud {
       stepPick(state, camp.pick, unit, Number(el.dataset.delta));
     } else if (act === 'armyRow') {
       camp.pick.rows[unit] = nextRow(camp.pick.rows[unit]);
+    } else if (act === 'armyHero' && camp.stage) {
+      // Phó bản chương 2: chạm thẻ Sơn Tinh hay Gióng để chọn tướng ra trận; tướng kiệt sức thì không chọn được.
+      const hero = el.dataset.hero as HeroKind;
+      if (stageHeroCheck(state, camp.stage, hero, camp.pick.challenge).ok) camp.pick.hero = hero;
+    } else if (act === 'armyNu') {
+      pickNu(state, camp.pick, el.dataset.nu);
     }
     this.refreshCampaign(state);
   }
@@ -1411,19 +1769,19 @@ export class Hud {
     const camp = this.camp;
     if (!camp) return;
     for (const k of UNIT_TYPES) camp.pick.army[k] = Math.min(camp.pick.army[k], state.troops[k]);
-    const hint = [vi.ui.campaignHint, vi.ui.campaignHint, vi.ui.campaignHint2, vi.ui.campaignHint3, vi.ui.campaignHint4][camp.chapter];
+    const hint = [vi.ui.campaignHint, vi.ui.campaignHint, vi.ui.campaignHint2, vi.ui.campaignHint3, vi.ui.campaignHint4, vi.ui.campaignHint5][camp.chapter];
     let panel = `<p class="muted">${hint}</p>`;
     if (camp.step === 'huan') panel = huanHtml(state);
     else if (camp.stage) panel = camp.step === 'army' ? armyHtml(state, camp.pick, camp.stage, camp.pick.challenge) : stageHtml(state, camp.stage);
-    const now = chapterNow(state);
+    const now = mapChapterNow(state);
     const tabs =
       now > 1
-        ? `<div class="camp-tabs">${([1, 2, 3, 4] as const)
+        ? `<div class="camp-tabs"><span class="lb">${vi.ui.chapterTabs}</span>${([1, 2, 3, 4, 5] as const)
             .filter((c) => c <= now)
-            .map((c) => `<button class="btn small ${c === camp.chapter ? 'bronze' : 'ghost'}" data-act="campChapter" data-id="${c}">${vi.ui.chapterTab(c)}</button>`)
+            .map((c) => `<button class="btn small ${c === camp.chapter ? 'bronze' : 'ghost'}" data-act="campChapter" data-id="${c}" aria-label="${vi.ui.chapterTab(c)}">${c}</button>`)
             .join('')}</div>`
         : '';
-    const title = [vi.ui.campaignTitle, vi.ui.campaignTitle, vi.ui.campaignTitle2, vi.ui.campaignTitle3, vi.ui.campaignTitle4][camp.chapter];
+    const title = [vi.ui.campaignTitle, vi.ui.campaignTitle, vi.ui.campaignTitle2, vi.ui.campaignTitle3, vi.ui.campaignTitle4, vi.ui.campaignTitle5][camp.chapter];
     // Chip huân công: có từ khi thắng màn đầu tiên (mở thử thách đầu tiên).
     const huan = state.campaign.cleared > 0
       ? `<button class="huan-chip ${camp.step === 'huan' ? 'on' : ''}" data-act="openHuan" aria-label="${vi.ui.huanTitle}">${vi.ui.huanChip(state.thuThach.huan)}</button>`
@@ -1447,16 +1805,42 @@ export class Hud {
     const tag = b.challenge ? ` · 🎖 ${vi.ui.challengeKinds[b.challenge].name}` : '';
     const don = b.camp !== undefined ? campTier(b.camp) : null;
     this.fieldTop.querySelector('b')!.textContent = don ? `${vi.benKia.don[don].icon} ${vi.benKia.don[don].name}` : `${vi.ui.stageN(b.wave)} · ${vi.stages[b.wave - 1].name}${tag}`;
+    // Màn 40 giữ cửa rừng Cấm Khê cho dân rút về núi; màn 32 cầm chân giặc cho vua tới biển.
+    const camKhe = hold && b.camp === undefined && b.wave === CH5_LAST;
+    const holdText = camKhe ? vi.ui.holdBannerCamKhe : vi.ui.holdBanner;
     this.fieldTop.querySelector('span')!.textContent = hold
-      ? `${vi.ui.holdBanner(enemiesLeft(b), alliesLeft(b), secs)} · ${vi.ui.holdWave(wavesArrived(b), b.waveCount ?? 1)}`
+      ? `${holdText(enemiesLeft(b), alliesLeft(b), secs)} · ${vi.ui.holdWave(wavesArrived(b), b.waveCount ?? 1)}`
       : vi.ui.fieldBanner(enemiesLeft(b), alliesLeft(b), secs);
-    // Màn cầm cự: thanh "Vua tới biển", ngựa vua chạy theo thanh.
+    // Màn cầm cự: thanh "Vua tới biển" có ngựa vua, thanh "Dân rút về núi" có trâu dắt theo, chạy theo thanh.
     const bar = this.fieldTop.querySelector<HTMLElement>('.hold-bar')!;
     bar.hidden = !hold;
     if (hold) {
+      const rider = bar.querySelector<HTMLElement>('em')!;
+      const icon = camKhe ? '🐃' : '🐎';
+      if (rider.textContent !== icon) rider.textContent = icon;
       const k = `${Math.round(holdProgress(b) * 1000) / 10}%`;
       bar.querySelector<HTMLElement>('i')!.style.width = k;
       bar.querySelector<HTMLElement>('em')!.style.left = k;
+    }
+    // Hai tướng cùng ra trận (Hai Bà): mỗi bà một thanh máu, bà nào kiệt sức thì thanh mờ, có dấu nghỉ.
+    const heroHp = this.fieldTop.querySelector<HTMLElement>('.hero-hp')!;
+    const setups = heroSetups(b);
+    heroHp.hidden = setups.length < 2;
+    if (setups.length >= 2) {
+      const hpKey = `${b.id}:${setups.map((h) => h.kind).join(',')}`;
+      if (heroHp.dataset.key !== hpKey) {
+        heroHp.dataset.key = hpKey;
+        heroHp.innerHTML = setups
+          .map((h) => `<span class="hh" data-hero="${h.kind}"><em>${vi.ui.tuongIcons[h.kind]}</em><b>${vi.ui.heroNames[h.kind]}</b><i><u></u></i></span>`)
+          .join('');
+      }
+      for (const h of setups) {
+        const f = b.fighters.find((x) => x.kind === h.kind);
+        const el = heroHp.querySelector<HTMLElement>(`[data-hero="${h.kind}"]`)!;
+        el.classList.toggle('down', h.down);
+        el.querySelector<HTMLElement>('u')!.style.width = `${f && !h.down ? Math.round((100 * f.hp) / f.maxHp) : 0}%`;
+        el.querySelector('em')!.textContent = h.down ? '💤' : vi.ui.tuongIcons[h.kind];
+      }
     }
     const box = this.fieldBar.querySelector<HTMLElement>('.skills')!;
     const key = `${b.id}:${b.skills.join(',')}`;
@@ -1466,8 +1850,7 @@ export class Hud {
     }
     for (const btn of box.querySelectorAll<HTMLButtonElement>('[data-skill]')) {
       const k = btn.dataset.skill as SkillId;
-      btn.disabled = !skillReady(b, k);
-      btn.textContent = skillLabel(b, k);
+      syncSkill(btn, b, k);
       btn.classList.toggle('active', (k === 'trongTran' && b.rally > 0) || (k === 'ruaVang' && b.shield > 0) || (k === 'lenhBan' && (b.lenh ?? 0) > 0));
     }
     this.fieldBar.querySelector<HTMLButtonElement>('[data-act="retreat"]')!.disabled = !!b.outcome;
@@ -1491,8 +1874,8 @@ export class Hud {
   showStory(id: StoryId, replay = false): void {
     this.story = { id, step: 0, replay };
     const back = document.createElement('div');
-    back.className = `modal-back story-back ${id === 'hetTruyen' ? 'ending-back' : ''}`;
-    back.innerHTML = id === 'hetTruyen' ? endingHtml() : storyHtml(id, 0);
+    back.className = `modal-back story-back ${isEnding(id) ? 'ending-back' : ''}`;
+    back.innerHTML = isEnding(id) ? endingHtml(id) : storyHtml(id, 0);
     this.root.appendChild(back);
   }
 
@@ -1500,7 +1883,7 @@ export class Hud {
     const story = this.story;
     const back = this.root.querySelector('.modal-back.story-back');
     if (!story || !back) return;
-    if (story.id === 'hetTruyen' || story.replay) {
+    if (isEnding(story.id) || story.replay) {
       back.remove();
       this.story = null;
       if (!story.replay) this.onAction({ kind: 'storyDone', id: story.id });
@@ -1573,7 +1956,9 @@ export class Hud {
       title = '🌙 ' + (!r.won ? vi.ui.yeuLostTitle : broken ? vi.ui.yeuHeldTitle : vi.ui.yeuWonTitle);
     }
     else if (r.foe === 'trieu') title = r.won ? '🏹 ' + vi.ui.trieuWonTitle : '🔥 ' + vi.ui.trieuLostTitle;
+    else if (r.foe === 'han') title = r.won ? '🏹 ' + vi.ui.hanWonTitle : '🔥 ' + vi.ui.hanLostTitle;
     else if (r.foe === 'thuyBinh') title = r.won ? '🎯 ' + vi.ui.thuyBinhWonTitle : '🔥 ' + vi.ui.thuyBinhLostTitle;
+    else if (r.foe === 'thuyHan') title = r.won ? '🎯 ' + vi.ui.thuyHanWonTitle : '🔥 ' + vi.ui.thuyHanLostTitle;
     else title = r.won ? '🥁 ' + vi.ui.raidWonTitle : '🔥 ' + vi.ui.raidLostTitle;
     back.innerHTML = `<div class="modal">
       <h2>${title}</h2>
@@ -1584,6 +1969,8 @@ export class Hud {
         <div>${vi.ui.raidStolen}: ${stolen}</div>
         <div>${vi.ui.raidWrecked(r.wrecked.length)}</div>
         ${flood ? `<div>${vi.ui.floodDrowned(r.drowned.length)}</div>` : ''}
+        ${r.boi ? `<div>${vi.ui.phuSaResult(r.boi)}</div>` : ''}
+        ${r.foe === 'thuyHan' && !r.won ? `<div class="muted">⛵ ${vi.ui.shipsLeft}</div>` : ''}
       </div>
       <div class="actions">
         ${damaged ? `<button class="btn bronze" data-act="repairAll">${vi.ui.repairAll} · ${costHtml(state, cost)}</button>` : ''}
