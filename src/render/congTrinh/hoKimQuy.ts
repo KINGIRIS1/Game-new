@@ -57,12 +57,13 @@ const BASE_Y = MOUND_Y + 0.14;
 const SHRINE_ROOF: Roof = { main: TILE, dark: TILE_DARK, trim: C.gold, lac: true };
 
 /**
- * Đường bờ hồ (tọa độ x, z của móng, chạy một vòng): viền ngoài của các ô con mặt hồ trong bản vẽ, làm mượt bậc
- * thang (trung bình điểm kề nhau vài lượt) rồi bo góc (Chaikin). Đường mượt lùi vào trong ô con chừng nửa ô con.
+ * Đường bờ hồ (tọa độ x, z của móng, chạy một vòng): viền ngoài của các ô con mặt hồ (ký tự trong `cells`) trong bản
+ * vẽ, làm mượt bậc thang (trung bình điểm kề nhau vài lượt) rồi bo góc (Chaikin). Đường mượt lùi vào trong ô con chừng
+ * nửa ô con. Đền Rồng Tiên dùng lại cho hồ của mình.
  */
-export function lakeOutline(lot: Lot = HO_KIM_QUY_LOT): THREE.Vector2[] {
+export function lakeOutline(lot: Lot = HO_KIM_QUY_LOT, cells = LAKE_CELLS): THREE.Vector2[] {
   const n = lot.n;
-  const inLake = (i: number, j: number) => i >= 0 && j >= 0 && i < n && j < n && LAKE_CELLS.includes(lot.rows[j][i]);
+  const inLake = (i: number, j: number) => i >= 0 && j >= 0 && i < n && j < n && cells.includes(lot.rows[j][i]);
   // Cạnh ô con giáp ngoài hồ, đi theo chiều kim đồng hồ (nhìn từ trên, x sang phải, z xuống dưới): mặt hồ bên phải.
   const next = new Map<string, [number, number]>();
   const key = (i: number, j: number) => `${i},${j}`;
@@ -101,7 +102,7 @@ export function lakeOutline(lot: Lot = HO_KIM_QUY_LOT): THREE.Vector2[] {
 }
 
 /** Đường `pts` nới ra (`d` > 0) hay thu vào (`d` < 0) theo pháp tuyến từng điểm. */
-function offset(pts: THREE.Vector2[], d: number): THREE.Vector2[] {
+export function offset(pts: THREE.Vector2[], d: number): THREE.Vector2[] {
   // Đường chạy theo chiều kim đồng hồ trên mặt x, z (diện tích có dấu âm theo công thức thường): pháp tuyến ra ngoài
   // của đoạn (dx, dz) là (dz, −dx) khi diện tích dương, (−dz, dx) khi âm.
   let area = 0;
@@ -118,7 +119,7 @@ function offset(pts: THREE.Vector2[], d: number): THREE.Vector2[] {
 }
 
 /** Khối dẹt theo đường `pts` (x, z), dày `h`, đáy ở `y`; có `hole` thì khoét lỗ theo đường ấy (thành một vành). */
-function slab(b: ShapeBuilder, pts: THREE.Vector2[], h: number, y: number, color: number, hole?: THREE.Vector2[]): void {
+export function slab(b: ShapeBuilder, pts: THREE.Vector2[], h: number, y: number, color: number, hole?: THREE.Vector2[]): void {
   // Hình phẳng dựng trên mặt (x, −z) rồi xoay nằm xuống: chiều dày lên +y.
   const flip = (list: THREE.Vector2[]) => list.map((p) => new THREE.Vector2(p.x, -p.y));
   const shape = new THREE.Shape(flip(pts));
@@ -127,7 +128,7 @@ function slab(b: ShapeBuilder, pts: THREE.Vector2[], h: number, y: number, color
 }
 
 /** Điểm trên đường `pts` cách đều nhau chừng `step` (dùng rải đá kè, lau sậy theo bờ). */
-function along(pts: THREE.Vector2[], step: number): THREE.Vector2[] {
+export function along(pts: THREE.Vector2[], step: number): THREE.Vector2[] {
   const out: THREE.Vector2[] = [];
   let carry = 0;
   for (let i = 0; i < pts.length; i++) {
@@ -273,10 +274,10 @@ function path(p: ShapeBuilder): void {
   }
 }
 
-/** Cổng hai cột chim Lạc: cột gỗ đai đồng, xà ngang có mái nhỏ, chim Lạc dang cánh trên đầu cột. */
-function gate(m: ToonModel): void {
+/** Cổng hai cột chim Lạc ở hai ô `7` của bản vẽ: cột gỗ đai đồng, xà son, chim Lạc dang cánh trên đầu cột. */
+export function gate(m: ToonModel, lot: Lot = HO_KIM_QUY_LOT): void {
   const p = m.plain;
-  const posts = HO_KIM_QUY_LOT.groups('7');
+  const posts = lot.groups('7');
   const h = 1.15;
   for (const g of posts) {
     p.cyl(0.08, 0.1, 0.08, C.rockDark, g.x, 0.08, g.z, undefined, 8);
@@ -322,10 +323,10 @@ function reeds(p: ShapeBuilder): void {
   }
 }
 
-/** Đám sen: lá nổi trên mặt hồ, hoa nở hồng và nụ trên cuống. */
-function lotus(p: ShapeBuilder): void {
+/** Đám sen ở các ô `S` của bản vẽ: lá nổi trên mặt hồ, hoa nở hồng và nụ trên cuống. */
+export function lotus(p: ShapeBuilder, lot: Lot = HO_KIM_QUY_LOT): void {
   const rand = seeded(1945);
-  for (const S of HO_KIM_QUY_LOT.groups('S')) {
+  for (const S of lot.groups('S')) {
     const n = Math.round(S.w * S.d * 8);
     for (let i = 0; i < n; i++) {
       const x = S.x + (rand() - 0.5) * (S.w + 0.2);

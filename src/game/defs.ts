@@ -70,14 +70,26 @@ export type BuildingType =
   // Nhà thợ hồ: mỗi nhà một tốp thợ dựng, nâng công trình (`xay.ts`); nhà lên cấp thì tốp ấy làm nhanh hơn.
   | 'thoHo'
   // Bậc lên thành: lối cho cung thủ, lính nỏ lên mặt thành đất, thành Cổ Loa mà bắn xuống khi giữ kinh đô.
-  | 'bacThanh';
+  | 'bacThanh'
+  // Đền Rồng Tiên thờ Lạc Long Quân và Âu Cơ (Điện 10, chương 5): đền còn nguyên thì của từ nước, từ núi làm ra thêm.
+  | 'denRongTien';
 
 /**
  * Mốc mở khóa theo cốt truyện: sau kết chương 1, khi vào chương 2, sau kết chương 2, khi vào chương 3, khi Rùa Vàng
- * hiện lên (thắng màn 19), sau kết chương 3, khi vào chương 4, sau kết chương 4 (vua xuống biển), sau kết chương 5
- * (thắng màn 40, giữ Cấm Khê).
+ * hiện lên (thắng màn 19), sau kết chương 3, khi vào chương 4, sau kết chương 4 (vua xuống biển), khi vào chương 5,
+ * sau kết chương 5 (thắng màn 40, giữ Cấm Khê).
  */
-export type Unlock = 'ketChuong1' | 'chuong2' | 'ketChuong2' | 'chuong3' | 'ruaVang' | 'ketChuong3' | 'chuong4' | 'ketChuong4' | 'ketChuong5';
+export type Unlock =
+  | 'ketChuong1'
+  | 'chuong2'
+  | 'ketChuong2'
+  | 'chuong3'
+  | 'ruaVang'
+  | 'ketChuong3'
+  | 'chuong4'
+  | 'ketChuong4'
+  | 'chuong5'
+  | 'ketChuong5';
 
 export interface BuildingDef {
   type: BuildingType;
@@ -172,6 +184,7 @@ export const BUILD_MENU: BuildingType[] = [
   'denCoLoa',
   'denCuong',
   'denHatMon',
+  'denRongTien',
   'cauSongDa',
   'cauSongThao',
   'donBien',
@@ -926,6 +939,24 @@ export const BUILDINGS: Record<BuildingType, BuildingDef> = {
     removable: false,
     unlock: 'ketChuong5',
   },
+  // Đền Rồng Tiên thờ Lạc Long Quân và Âu Cơ, tổ tiên các vua Hùng: bọc trăm trứng nở trăm con, năm mươi con theo cha
+  // xuống biển, năm mươi con theo mẹ lên núi. Đền còn nguyên thì của từ nước, từ núi làm ra thêm (`RONG_TIEN_BONUS`).
+  // Công trình lớn 8×8 như Hồ Kim Quy, mở ở Điện 10 (chỉ có ở chương 5).
+  denRongTien: {
+    type: 'denRongTien',
+    w: 8,
+    d: 8,
+    maxLevel: 1,
+    buildCost: { gao: 7000, voOc: 7000, datDa: 8000, sat: 1800, go: 2000 },
+    upgradeCost: [{}, {}],
+    production: [{}],
+    hp: [1300],
+    limit: [1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+    minDien: 10,
+    buildable: true,
+    removable: false,
+    unlock: 'chuong5',
+  },
   // Cầu qua sông Đà nằm dọc (rộng 2 ô, vắt qua 7 ô sông), cầu qua sông Thao nằm ngang.
   cauSongDa: bridgeDef('cauSongDa', 2, 7),
   cauSongThao: bridgeDef('cauSongThao', 7, 2),
@@ -1008,6 +1039,7 @@ export const XAY_RIENG: Partial<Record<BuildingType, number[]>> = {
   hoKimQuy: [0, 15 * PHUT],
   denCuong: [0, 20 * PHUT],
   denHatMon: [0, 25 * PHUT],
+  denRongTien: [0, 30 * PHUT],
   traiGiao: [0, 30_000],
   traiCung: [0, 30_000],
   chuongVoi: [0, PHUT],
@@ -1216,6 +1248,7 @@ export const FLOOD_TOLERANCE: Partial<Record<BuildingType, number>> = {
   denCoLoa: 1,
   denCuong: 1,
   denHatMon: 1,
+  denRongTien: 1,
   // Hồ không sợ nước: miếu đứng trên gò giữa hồ.
   hoKimQuy: 99,
   ben: 99,
@@ -1282,6 +1315,13 @@ export const TEMPLE_BONUS = 0.1;
 export const KIM_QUY_WALLS = 0.3;
 /** Tường được Hồ Kim Quy thêm máu. */
 export const KIM_QUY_WALL_TYPES: BuildingType[] = ['luy', 'thanh', 'congThanh'];
+/**
+ * Đền Rồng Tiên còn nguyên: của từ nước (vỏ ốc, cá làng chài, cá biển) và của từ núi (đất đá, sắt, gỗ) làm ra thêm chừng
+ * này phần, cộng dồn với Đền Phù Đổng và phúc lành Đất. Gạo không thêm.
+ */
+export const RONG_TIEN_BONUS = 0.2;
+/** Tài nguyên được Đền Rồng Tiên cộng thêm (cá cũng được, ở `fishPerMinute`). */
+export const RONG_TIEN_RES: ResourceId[] = ['voOc', 'datDa', 'sat', 'go'];
 
 /** Sức chứa mỗi loại tài nguyên theo cấp Điện Vua Hùng, chỉ số 0 là cấp 1. Kho thóc cộng thêm. */
 export const STORAGE_CAP = [500, 1000, 2000, 4000, 8000, 14000, 22000, 32000, 44000, 60000];
@@ -2100,6 +2140,8 @@ export const QUESTS: QuestDef[] = [
   { id: 'quaMan39', goal: { kind: 'stage', stage: 39 }, reward: { voOc: 3000, datDa: 2500 } },
   { id: 'camKhe', goal: { kind: 'stage', stage: 40 }, reward: { gao: 5000, voOc: 5000 } },
   { id: 'denHatMon', goal: { kind: 'count', building: 'denHatMon', amount: 1 }, reward: { datDa: 3500, sat: 1100 } },
+  // Sau truyện chương 5: Đền Rồng Tiên (mở từ Điện 10).
+  { id: 'denRongTien', goal: { kind: 'count', building: 'denRongTien', amount: 1 }, reward: { datDa: 4500, sat: 1400 } },
 ];
 /** Nhận xong thưởng nhiệm vụ cuối chương 1 (Đền Phù Đổng) thì sang chương 2. */
 export const CH2_QUEST_START = 20;
@@ -2116,7 +2158,7 @@ export const QUEST_INSERTED_V4 = 11;
  * Công trình mới thêm sau khi đã có người chơi: lần đầu mở được thì Lạc hầu nói một câu gợi ý (một lần, ghi ở
  * `GameState.hinted`). Thêm loại vào đây không phải nâng bản lưu.
  */
-export const NEW_HINTS: BuildingType[] = ['thoHo', 'xuongMoc', 'langChai', 'congThanh', 'hoKimQuy', 'benKhoi', 'congDe', 'bacThanh'];
+export const NEW_HINTS: BuildingType[] = ['thoHo', 'xuongMoc', 'langChai', 'congThanh', 'hoKimQuy', 'benKhoi', 'congDe', 'bacThanh', 'denRongTien'];
 
 /**
  * Cá mỗi phút của một làng chài đủ người, theo cấp (chỉ số 0 là cấp 1). Cá không tích trữ: dân và lính ăn cá trước,

@@ -441,7 +441,8 @@ describe('truyện và nhiệm vụ chương 5 phần 3', () => {
       { gao: 5000, voOc: 5000 },
       { datDa: 3500, sat: 1100 },
     ]);
-    expect(QUESTS.length).toBe(at + 4);
+    // Sau Đền Hát Môn còn nhiệm vụ Đền Rồng Tiên (`denRongTien.test.ts`).
+    expect(QUESTS[at + 4].id).toBe('denRongTien');
     const s = ch5(CH5_LAST);
     s.questIndex = at;
     expect(questProgress(s)).toEqual({ have: 0, need: 1 });

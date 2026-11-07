@@ -57,6 +57,8 @@ import {
   RAID_WARNING_MS,
   REPAIR_FRACTION,
   RESOURCE_IDS,
+  RONG_TIEN_BONUS,
+  RONG_TIEN_RES,
   STARVING_RATE,
   START_DAN,
   START_RESOURCES,
@@ -633,11 +635,11 @@ export function fishOf(b: Building): number {
 
 /**
  * Cá cả kinh đô mỗi phút: mọi làng chài, bến thuyền khơi (bên kia sông mà cầu hư thì không ai sang đánh cá), cộng
- * phần của Đền Phù Đổng và phúc lành Đất như mọi sản lượng.
+ * phần của Đền Phù Đổng và phúc lành Đất như mọi sản lượng, và phần của Đền Rồng Tiên (cá là của từ nước).
  */
 export function fishPerMinute(state: GameState): number {
   const fish = state.buildings.reduce((sum, b) => sum + (cutOff(state, b) ? 0 : fishOf(b)), 0);
-  return fish * (1 + templeBonus(state) + datBonus(state));
+  return fish * (1 + templeBonus(state) + datBonus(state) + rongTienBonus(state));
 }
 
 /** Gạo cả kinh đô ăn mỗi phút: phần ăn của dân và lính trừ đi phần cá đỡ (cá thừa bỏ phí). */
@@ -760,6 +762,13 @@ export function templeBonus(state: GameState): number {
   return state.buildings.some((b) => b.type === 'denPhuDong' && !b.damaged) ? TEMPLE_BONUS : 0;
 }
 
+/**
+ * Phần cộng thêm của Đền Rồng Tiên, khi đền đã dựng và còn nguyên: chỉ cho của từ nước, từ núi (`RONG_TIEN_RES`) và cá.
+ */
+export function rongTienBonus(state: GameState): number {
+  return state.buildings.some((b) => b.type === 'denRongTien' && !b.damaged) ? RONG_TIEN_BONUS : 0;
+}
+
 /** Phần cộng thêm vào máu và sức đánh quân ta: Đền Phù Đổng và phúc lành Trời của Tết. */
 export function troopBonus(state: GameState): number {
   return templeBonus(state) + troiBonus(state);
@@ -786,7 +795,7 @@ export function outputIn(state: GameState, b: Building): Cost {
 
 /**
  * Sản lượng mỗi phút của cả kinh đô (cả bản làng bên kia sông đã về theo), chưa trừ gạo ăn và chưa tính thiếu gạo.
- * Đền Phù Đổng và phúc lành Đất cộng thêm.
+ * Đền Phù Đổng và phúc lành Đất cộng thêm mọi tài nguyên; Đền Rồng Tiên cộng thêm của từ nước, từ núi.
  */
 export function productionPerMinute(state: GameState): Resources {
   const total = villagesOutput(state);
@@ -795,7 +804,8 @@ export function productionPerMinute(state: GameState): Resources {
     for (const r of RESOURCE_IDS) total[r] += out[r] ?? 0;
   }
   const bonus = 1 + templeBonus(state) + datBonus(state);
-  for (const r of RESOURCE_IDS) total[r] *= bonus;
+  const rongTien = rongTienBonus(state);
+  for (const r of RESOURCE_IDS) total[r] *= bonus + (RONG_TIEN_RES.includes(r) ? rongTien : 0);
   return total;
 }
 
@@ -836,6 +846,7 @@ export function unlocked(state: GameState, unlock: Unlock | undefined): boolean 
   if (unlock === 'ketChuong3') return state.adv.won;
   if (unlock === 'chuong4') return inChapter4(state);
   if (unlock === 'ketChuong4') return state.adv.bien;
+  if (unlock === 'chuong5') return inChapter5(state);
   if (unlock === 'ketChuong5') return chuong5Won(state);
   return true;
 }
@@ -867,6 +878,7 @@ export const UNLOCK_REASON: Record<Unlock, FailReason> = {
   ketChuong3: 'canKetChuong3',
   chuong4: 'canChuong4',
   ketChuong4: 'canKetChuong4',
+  chuong5: 'canChuong5',
   ketChuong5: 'canKetChuong5',
 };
 
