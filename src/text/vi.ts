@@ -228,6 +228,11 @@ export const vi = {
       icon: '🪷',
       desc: 'Ao làng thả sen, có cầu ao bằng gỗ cho dân giặt giũ. Chỉ để trang trí; lũ không làm hư.',
     },
+    sanTrong: {
+      name: 'Sân trống đồng',
+      icon: '🥁',
+      desc: 'Trống đồng lớn trên bệ đá, nơi dân làng tụ hội đánh trống cầu mưa. Chỉ để trang trí.',
+    },
     hoa: {
       name: 'Khóm hoa',
       icon: '🌺',

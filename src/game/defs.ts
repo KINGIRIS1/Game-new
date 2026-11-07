@@ -39,6 +39,7 @@ export type BuildingType =
   | 'cayDa'
   | 'gieng'
   | 'ao'
+  | 'sanTrong'
   | 'hoa'
   | 'co'
   | 'cau'
@@ -133,7 +134,7 @@ export const DIEN_CHAPTER: Partial<Record<number, 2 | 3 | 4 | 5>> = { 6: 2, 7: 3
 /** Tổng số ô đường (cả bốn loại) được trải, theo cấp Điện. */
 export const ROAD_LIMIT = [60, 90, 120, 160, 200, 240, 280, 280, 295, 310];
 export const ROAD_TYPES: BuildingType[] = ['duongDat', 'duongSoi', 'duongDa', 'duongGach'];
-export const DECOR_TYPES: BuildingType[] = ['cayDa', 'gieng', 'ao', 'hoa', 'co', 'cau', 'rom'];
+export const DECOR_TYPES: BuildingType[] = ['cayDa', 'gieng', 'ao', 'sanTrong', 'hoa', 'co', 'cau', 'rom'];
 /**
  * Thẻ Công trình của bảng Xây dựng, theo thứ tự hiện. Mọi công trình dựng được mà không phải đường đi hay đồ trang trí
  * đều phải có ở đây (lầu nỏ không dựng mà ghép từ hai chòi canh).
@@ -873,6 +874,7 @@ export const BUILDINGS: Record<BuildingType, BuildingDef> = {
   cayDa: decor('cayDa', 2, { gao: 80, voOc: 60 }, [1, 1, 2, 2, 3, 3, 4, 4, 4, 4], 2),
   gieng: decor('gieng', 1, { voOc: 20, datDa: 20 }, [1, 2, 2, 3, 3, 4, 5, 5, 5, 5], 2),
   ao: decor('ao', 3, { gao: 60, voOc: 60 }, [1, 1, 1, 2, 2, 2, 3, 3, 3, 3], 2),
+  sanTrong: decor('sanTrong', 3, { voOc: 200, datDa: 150, sat: 30 }, [0, 0, 1, 1, 1, 2, 2, 2, 2, 2], 3),
   hoa: decor('hoa', 1, { voOc: 3 }, [10, 15, 20, 25, 30, 35, 40, 40, 40, 40], 1),
   co: decor('co', 1, { voOc: 1 }, [20, 30, 40, 50, 60, 70, 80, 80, 80, 80], 1),
   cau: decor('cau', 1, { gao: 10, voOc: 5 }, [4, 6, 8, 10, 12, 14, 16, 16, 16, 16], 1),

@@ -52,7 +52,16 @@ describe('định nghĩa đường đi và đồ trang trí', () => {
     }
     expect(BUILDINGS.cayDa.w).toBe(2);
     expect(BUILDINGS.ao.w).toBe(3);
+    expect(BUILDINGS.sanTrong.w).toBe(3);
     expect(isDecor('ruong')).toBe(false);
+  });
+
+  it('sân trống đồng mở ở Điện cấp 3, cấp 3 một sân, cấp 6 hai sân', () => {
+    const near = edge(3, 4);
+    expect(canPlace(city(2), 'sanTrong', near, near)).toEqual({ ok: false, reason: 'chuaDuCapDien' });
+    expect(canPlace(city(3), 'sanTrong', near, near).ok).toBe(true);
+    expect(BUILDINGS.sanTrong.limit[2]).toBe(1);
+    expect(BUILDINGS.sanTrong.limit[5]).toBe(2);
   });
 
   it('đường gạch mở ở chương 3; đường đá cần Điện cấp 3', () => {
