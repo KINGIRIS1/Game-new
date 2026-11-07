@@ -96,6 +96,15 @@ const LU_TOI = (giay) => `
  * thời gian tải trang không làm xong việc) cho tốp một dựng nhà sàn mới gần Điện, tốp hai nâng một ruộng, tốp ba đắp
  * một dải lũy, rồi cho thợ làm một lúc để thấy giàn giáo, mô hình mọc dở, cọc mốc.
  */
+/** Kinh đô vừa vào chương 3 một phút, có quân; trinh sát vừa báo đêm yêu tinh (trời tối dần trong chừng 3 giây). */
+const YEU_TINH = {
+  truoc: `M.playChapters({ s, until: (m, sec) => m.enter3 >= 0 && sec >= m.enter3 + 60 });${CO_QUAN}
+  for (const g of D.GIFT_IDS) s.son.gifts[g] = true;`,
+  sau: `s.raid.foe = 'thuy'; const r = G.callRaidNow(s); if (!r.ok) throw new Error('Không gọi giặc được: ' + r.reason);
+    if (s.raid.foe !== 'yeu') throw new Error('Đợt này không phải đêm yêu tinh: ' + s.raid.foe);`,
+  doi: 4000,
+};
+
 const XAY = `
   const Xa = await import('/src/game/xay.ts');
   s.resources = { gao: 9e4, voOc: 9e4, datDa: 9e4, sat: 9e4, go: 9e4 };
@@ -205,6 +214,23 @@ const CANH = {
     truocKhiChup: `const b = s.buildings.find((b) => b.type === 'dien'); d.camera(b.x + 9, b.z + 9, 1.25);`,
   },
   chuong5: { mo: 'Kinh đô chương 5 (Điện 8, có doanh trại), đã thắng màn 33', truoc: CHUONG5(33) },
+  'chieu-ta': { mo: 'Như kinh-do, lúc chiều tà', truoc: KINH_DO, gio: 'chieu' },
+  dem: { mo: 'Như kinh-do, giữa đêm', truoc: KINH_DO, gio: 'dem' },
+  'rang-dong': { mo: 'Như kinh-do, lúc rạng đông', truoc: KINH_DO, gio: 'rang' },
+  'dien8-dem': { mo: 'Như dien8, giữa đêm', truoc: `M.playChapters({ s, last: 8 });`, gio: 'dem' },
+  'yeu-tinh': { mo: 'Đêm yêu tinh tới kinh đô chương 3 giữa ban ngày (trời tối như đêm yêu tinh cũ)', ...YEU_TINH, gio: 'ngay' },
+  'dem-yeu': { mo: 'Như yeu-tinh, yêu tinh tới giữa đêm (vẫn như đêm yêu tinh cũ)', ...YEU_TINH, gio: 'dem' },
+  'dem-tran': {
+    mo: 'Như tran, giặc đánh kinh đô giữa đêm',
+    truoc: KINH_DO + CO_QUAN,
+    sau: `const r = G.callRaidNow(s); if (!r.ok) throw new Error('Không gọi giặc được: ' + r.reason); d.advance(D.RAID_WARNING_MS);`,
+    truocKhiChup: `
+      const f = (s.raid.battle?.fighters ?? []).filter((f) => f.hp > 0);
+      if (f.length) d.camera(f.reduce((a, b) => a + b.x, 0) / f.length, f.reduce((a, b) => a + b.z, 0) / f.length, 1.4);
+    `,
+    doi: 3000,
+    gio: 'dem',
+  },
   'pho-ban-5': {
     mo: 'Hai Bà Trưng đánh màn 36 (thành Luy Lâu, có Tô Định) ngoài bãi, chụp sau 4 giây',
     truoc: CHUONG5(35),
@@ -235,6 +261,8 @@ Tùy chọn:
   --ten <tên>             Tên ảnh (mặc định: tên cảnh)
   --ra <thư mục>          Nơi lưu ảnh (mặc định: chup/)
   --dpr <số>              Mật độ điểm ảnh (mặc định 2, như điện thoại thật)
+  --gio <buổi | số | that>  Giờ trong ngày ở kinh đô: ngay, chieu, dem, rang, hay phần của ngày (0 tới 1); that thì
+                          theo đồng hồ chơi. Mặc định cảnh nào ghim giờ nấy, không ghi thì ban ngày (ảnh cũ không đổi)
   --url <địa chỉ>         Dùng server Vite đang chạy (npm run dev) thay vì tự bật
   --giup                  Hiện hướng dẫn này
 
@@ -265,6 +293,7 @@ function docThamSo(argv) {
     else if (a === '--ra') opts.ra = next();
     else if (a === '--dpr') opts.dpr = Number(next());
     else if (a === '--url') opts.url = next();
+    else if (a === '--gio') opts.gio = next();
     else if (a.startsWith('--')) throw new Error(`Không hiểu tùy chọn ${a}`);
     else opts.canh.push(a);
   }
@@ -272,6 +301,9 @@ function docThamSo(argv) {
   for (const c of opts.canh) if (!CANH[c]) throw new Error(`Không có cảnh "${c}". Các cảnh: ${Object.keys(CANH).join(', ')}`);
   for (const k of opts.khung) if (!KHUNG[k]) throw new Error(`Không có khung "${k}". Các khung: ${Object.keys(KHUNG).join(', ')}`);
   if (opts.ten && opts.canh.length > 1) throw new Error('--ten chỉ dùng khi chụp một cảnh');
+  if (opts.gio !== undefined && !['ngay', 'chieu', 'dem', 'rang', 'that'].includes(opts.gio) && !(Number(opts.gio) >= 0 && Number(opts.gio) <= 1)) {
+    throw new Error(`--gio phải là ngay, chieu, dem, rang, that hay một số từ 0 tới 1 (nhận "${opts.gio}")`);
+  }
   return opts;
 }
 
@@ -343,6 +375,9 @@ async function chupMotCanh(browser, url, tenCanh, khung, opts) {
     await chayMa(page, `${truoc}\n${dongTruyen}\ns.lastSeen = Date.now() - ${canh.vang ?? 0}; d.advance(0);`);
     await page.reload({ waitUntil: 'load' });
     await choGame(page);
+    // Ghim giờ trong ngày trước cả màn hình vào game: người chơi mô phỏng chơi cả giờ nên đồng hồ rơi vào giờ bất kỳ.
+    const gio = opts.gio ?? canh.gio ?? 'ngay';
+    if (gio !== 'that') await page.evaluate((g) => window.__debug.gio(Number.isNaN(Number(g)) ? g : Number(g)), gio);
     if (!canh.giuManVao) await page.evaluate(() => window.__debug.enter());
     await page.waitForTimeout(800);
 
