@@ -332,9 +332,17 @@ describe('luật bố cục', () => {
       }
   });
 
-  it('chưa bật bố cục nào: mọi màn, mọi đồn vẫn là bãi phẳng', () => {
-    for (let n = 1; n <= STAGES.length; n++) expect(stageBai(n)).toBeNull();
-    for (const def of Object.values(CAMPS)) expect(baiOf(def.terrain, def.chapter)).toBeNull();
+  it('bật bố cục cho màn chương 1 và đồn bậc 1, 2, 4; màn khác, đồn bậc 3 vẫn bãi phẳng', () => {
+    for (let n = 1; n <= STAGES.length; n++) {
+      const id = stageBai(n);
+      if (STAGES[n - 1].chapter === 1) expect(baiById(id)?.terrain).toBe(STAGES[n - 1].terrain);
+      else expect(id).toBeNull();
+    }
+    for (const [tier, def] of Object.entries(CAMPS)) {
+      const id = baiOf(def.terrain, def.chapter);
+      if (tier === '3') expect(id).toBeNull();
+      else expect(id).toBe('benKia');
+    }
   });
 
   it('id lạ thì đánh trên bãi phẳng', () => {
@@ -397,6 +405,24 @@ describe('đi quanh vật cản', () => {
     }
     expect(crossed).toBeGreaterThan(0);
     expect(b.outcome).toBe('win');
+  });
+
+  it('mỗi bố cục thật: trận người chơi giỏi ở màn của nó không ai lọt vào vật cản, xong trước 90 giây; voi đi lọt tới giặc', () => {
+    const real = Object.values(BAI).filter((b) => !(b.id in MAU));
+    expect(real.length).toBeGreaterThan(0);
+    for (const bai of real) {
+      // Màn đầu tiên dùng bố cục này; bố cục của đồn thì mượn quân giặc màn 4.
+      let n = 1;
+      while (n <= STAGES.length && stageBai(n) !== bai.id) n++;
+      if (n > STAGES.length) n = 4;
+      const b = startFieldBattle(stageSetup(n, bai.id, n));
+      playOut(b, 'gioi', (x) => expectClear(x, bai));
+      expect([bai.id, b.outcome]).toEqual([bai.id, 'win']);
+      expect(b.t).toBeLessThan(FIELD.maxS);
+      const voi = startFieldBattle({ ...stageSetup(1, bai.id), army: { giao: 0, cung: 0, voi: 4, no: 0 }, hero: null, hero2: null, nuTuong: null });
+      for (let i = 0; i < 20 * 60 && !stepField(voi, 0.05); i++) expectClear(voi, bai);
+      expect([bai.id, voi.outcome]).toEqual([bai.id, 'win']);
+    }
   });
 
   it('voi lọt qua lối trống để tới giặc sau tường', () => {

@@ -415,9 +415,9 @@ export interface CampDef {
 
 export const CAMPS: Record<Tier, CampDef> = {
   1: { enemies: { giaoAn: 7, cungAn: 4, chienXa: 2 }, hpScale: 1.9, terrain: 'benKia', reward: { gao: 400, voOc: 300, datDa: 250, sat: 60 }, chapter: 1 },
-  2: { enemies: { tomBinh: 11, caPhun: 7, caSau: 3 }, hpScale: 2.95, terrain: 'benKia', reward: { gao: 1300, voOc: 900, datDa: 700, sat: 180 }, chapter: 2 },
+  2: { enemies: { tomBinh: 11, caPhun: 7, caSau: 3 }, hpScale: 2.8, terrain: 'benKia', reward: { gao: 1300, voOc: 900, datDa: 700, sat: 180 }, chapter: 2 },
   3: { enemies: { quyNui: 12, maTroi: 7, hoTinh: 3 }, hpScale: 3.05, terrain: 'thatDieu', reward: { gao: 2400, voOc: 1700, datDa: 1500, sat: 400 }, chapter: 3 },
-  4: { enemies: { linhTrieu: 14, noTrieu: 8, kyBinh: 4 }, hpScale: 2.6, terrain: 'benKia', reward: { gao: 4200, voOc: 3500, datDa: 3100, sat: 800 }, chapter: 4 },
+  4: { enemies: { linhTrieu: 14, noTrieu: 8, kyBinh: 4 }, hpScale: 2.5, terrain: 'benKia', reward: { gao: 4200, voOc: 3500, datDa: 3100, sat: 800 }, chapter: 4 },
 };
 
 /** Quân mẫu đánh đồn bậc 1 ở Điện cấp 4 (vừa số chỗ một trận ở Điện 4). Bậc 2–4 dùng quân mẫu chương 2, 3, 4 (38 chỗ). */

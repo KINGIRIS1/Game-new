@@ -72,14 +72,107 @@ export interface Bai {
 /** Vật cản và vùng chậm chỉ nằm trong dải này (theo z); hai dải dàn quân hai bên để trống. */
 export const DAI_GIUA = { from: 7, to: 14.5 };
 
-/** Mọi bố cục bãi chiến, theo id. */
-export const BAI: Record<string, Bai> = {};
+const tron = (x: number, z: number, r: number): Hinh => ({ k: 'tron', x, z, r });
+const doan = (ax: number, az: number, bx: number, bz: number, half: number, vuong?: boolean): Hinh =>
+  vuong ? { k: 'doan', ax, az, bx, bz, half, vuong } : { k: 'doan', ax, az, bx, bz, half };
+
+/**
+ * Mọi bố cục bãi chiến, theo id. Bố cục mới phải qua `kiemBai` (`baiChien.test.ts`): nằm trong dải giữa, khe giữa hai
+ * vật cản liền hay rộng ít nhất 1,6 ô, có lối rộng 2,5 ô, hàng nào cũng còn ít nhất 4 ô trống.
+ */
+export const BAI: Record<string, Bai> = {
+  // Chương 1: vật cản thưa, thấp, để quân ít của chương đầu không bị chia cắt.
+  rung: {
+    id: 'rung',
+    terrain: 'rung',
+    can: [
+      { hinh: tron(2.8, 9.2, 0.9), ve: 'tre' },
+      { hinh: tron(6.3, 12.4, 1), ve: 'tre' },
+      { hinh: tron(-0.3, 13, 1.1), ve: 'tre' },
+    ],
+    cham: [],
+  },
+  benSong: {
+    id: 'benSong',
+    terrain: 'benSong',
+    can: [
+      { hinh: doan(2.2, 11.4, 4, 12, 0.4), ve: 'thuyen' },
+      { hinh: tron(6.6, 9.4, 0.5), ve: 'chum' },
+    ],
+    cham: [{ hinh: doan(9.8, 8, 4.6, 9.8, 0.7), loai: 'nuoc' }],
+  },
+  lang: {
+    id: 'lang',
+    terrain: 'lang',
+    can: [
+      { hinh: doan(-0.8, 10.4, 1.6, 10.4, 0.9, true), ve: 'nha' },
+      { hinh: tron(6.6, 9, 0.6), ve: 'rom' },
+      { hinh: doan(5.6, 12.9, 9.6, 13.3, 0.3), ve: 'rao' },
+    ],
+    cham: [],
+  },
+  // Đồn giặc Ân (màn 4): rào cọc gãy chắn ngang, chừa hai lối; hai cụm chông.
+  don: {
+    id: 'don',
+    terrain: 'don',
+    can: [
+      { hinh: doan(-0.6, 7.4, 1.1, 7.4, 0.3), ve: 'coc' },
+      { hinh: doan(4.4, 7.4, 5.2, 7.4, 0.3), ve: 'coc' },
+      { hinh: doan(7.8, 7.4, 9.6, 7.4, 0.3), ve: 'coc' },
+      { hinh: tron(2.3, 11.6, 0.6), ve: 'coc' },
+      { hinh: tron(6.7, 12, 0.6), ve: 'coc' },
+    ],
+    cham: [],
+  },
+  // Núi (màn 8): đá sát hai mép và phía sau, giữa bãi để trống cho trận đánh trùm.
+  nui: {
+    id: 'nui',
+    terrain: 'nui',
+    can: [
+      { hinh: tron(0.3, 8.4, 1.1), ve: 'da' },
+      { hinh: tron(5.6, 8.2, 0.8), ve: 'da' },
+      { hinh: tron(9, 12, 1.1), ve: 'da' },
+      { hinh: tron(3, 13.6, 0.7), ve: 'da' },
+    ],
+    cham: [],
+  },
+  // Đồn bên kia sông (bậc 1, 2, 4): chông, xe củi đổ, bãi bùn có lau.
+  benKia: {
+    id: 'benKia',
+    terrain: 'benKia',
+    can: [
+      { hinh: tron(2.3, 8.4, 0.6), ve: 'coc' },
+      { hinh: tron(6.7, 8.6, 0.6), ve: 'coc' },
+      { hinh: doan(5.6, 12.2, 7, 12.8, 0.35), ve: 'xeCui' },
+    ],
+    cham: [{ hinh: tron(2, 12.4, 1.5), loai: 'bun', ve: 'lau' }],
+  },
+};
 
 /**
  * Nền nào dùng bố cục nào, theo chương: mỗi mục là [từ chương, id bố cục]; null là bãi phẳng. Nền chưa có mục nào
- * cũng là bãi phẳng.
+ * cũng là bãi phẳng. Màn chương 2 trở đi chưa có bố cục (bật dần theo chương).
  */
-export const BAI_THEO: Partial<Record<Terrain, readonly (readonly [Chapter, string | null])[]>> = {};
+export const BAI_THEO: Partial<Record<Terrain, readonly (readonly [Chapter, string | null])[]>> = {
+  rung: [
+    [1, 'rung'],
+    [2, null],
+  ],
+  benSong: [
+    [1, 'benSong'],
+    [2, null],
+  ],
+  lang: [
+    [1, 'lang'],
+    [2, null],
+  ],
+  don: [[1, 'don']],
+  nui: [
+    [1, 'nui'],
+    [2, null],
+  ],
+  benKia: [[1, 'benKia']],
+};
 
 /** Bố cục của nền `t` ở chương `ch` (mục cuối có chương không quá `ch`), hay null là bãi phẳng. */
 export function baiOf(t: Terrain, ch: Chapter): string | null {
@@ -263,8 +356,9 @@ export interface Cho {
 }
 
 /**
- * Bước từ chỗ cũ (ox, oz) tới chỗ mới của `p` (thân bán kính `r`): vướng vật cản thì trượt theo một trục còn đi được,
- * không được thì đứng lại chỗ cũ. Chỗ cũ đã nằm trong vật cản (bản lưu cũ, vừa hiện ra) thì đẩy ra chỗ trống gần nhất.
+ * Bước từ chỗ cũ (ox, oz) tới chỗ mới của `p` (thân bán kính `r`): vướng vật cản thì trượt dọc mép vật cản (bỏ phần
+ * bước đâm vào), không được thì trượt theo trục còn đi được (trục bước dài hơn trước), không nữa thì đứng lại chỗ cũ.
+ * Chỗ cũ đã nằm trong vật cản (bản lưu cũ, vừa hiện ra) thì đẩy ra chỗ trống gần nhất.
  */
 export function truot(bai: Bai, r: number, p: Cho, ox: number, oz: number): void {
   if (!bai.can.length) return;
@@ -273,13 +367,42 @@ export function truot(bai: Bai, r: number, p: Cho, ox: number, oz: number): void
     return;
   }
   if (diDuoc(bai, r, ox, oz, p.x, p.z)) return;
-  if (diDuoc(bai, r, ox, oz, p.x, oz)) {
-    p.z = oz;
-    return;
+  // Trượt dọc mép: bỏ phần bước đâm vào vật cản (theo pháp tuyến ở chỗ cũ), đẩy ra vừa đủ chỗ đứng. Trượt theo trục
+  // trước thì người đứng sát mép tròn mà đi dọc mép chỉ nhích được một chút theo trục kia, coi như đứng yên mãi.
+  const e = 0.01;
+  const gx = sdfCan(bai, ox + e, oz) - sdfCan(bai, ox - e, oz);
+  const gz = sdfCan(bai, ox, oz + e) - sdfCan(bai, ox, oz - e);
+  const g = len(gx, gz);
+  const mx = p.x - ox;
+  const mz = p.z - oz;
+  const into = g > 1e-9 ? (mx * gx + mz * gz) / g : 0;
+  if (into < 0) {
+    const nx = gx / g;
+    const nz = gz / g;
+    let tx = p.x - nx * into;
+    let tz = p.z - nz * into;
+    const s = sdfCan(bai, tx, tz);
+    if (s < r + 2e-3) {
+      tx += nx * (r + 2e-3 - s);
+      tz += nz * (r + 2e-3 - s);
+    }
+    tx = kep(tx, FIELD.w);
+    tz = kep(tz, FIELD.d);
+    if (diDuoc(bai, r, ox, oz, tx, tz)) {
+      p.x = tx;
+      p.z = tz;
+      return;
+    }
   }
-  if (diDuoc(bai, r, ox, oz, ox, p.z)) {
-    p.x = ox;
-    return;
+  const xFirst = Math.abs(mx) >= Math.abs(mz);
+  for (const alongX of xFirst ? [true, false] : [false, true]) {
+    const x = alongX ? p.x : ox;
+    const z = alongX ? oz : p.z;
+    if (diDuoc(bai, r, ox, oz, x, z)) {
+      p.x = x;
+      p.z = z;
+      return;
+    }
   }
   p.x = ox;
   p.z = oz;
