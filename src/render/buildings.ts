@@ -1932,6 +1932,45 @@ export const PHAI_LIFT = 0.44;
  * có khung trụ đá, xà gỗ, tời quay và mái tranh nhỏ; chồng ván phai chắn miệng cống là con riêng (`userData.phai`: nâng
  * lên bấy nhiêu khi mở), World kéo lên khi cống mở, thả xuống khi đóng.
  */
+/**
+ * Bậc lên thành: bậc đất nện lát ván gỗ leo từ mặt đất ở mép -z lên mặt thành ở mép +z, cao `rise` (mặt thành Cổ
+ * Loa, hay thành đất thấp hơn); hai bên cột gỗ, tay vịn tre chạy dọc dốc. World xoay mép +z về phía đoạn thành.
+ */
+export function makeBacThanh(rise = 1.39): THREE.Group {
+  const m = new ToonModel();
+  const p = m.plain;
+  const n = Math.max(4, Math.round(rise / 0.2));
+  const z0 = -0.46;
+  const z1 = 0.5;
+  const dz = (z1 - z0) / n;
+  const w = 0.56;
+  for (let i = 0; i < n; i++) {
+    const h = (rise * (i + 1)) / n;
+    const zc = z0 + dz * (i + 0.5);
+    p.box(w, h, dz, i % 2 ? C.earth : C.earthDark, 0, h / 2, zc);
+    p.box(w + 0.03, 0.035, dz * 0.86, i % 2 ? C.wood : C.woodLight, 0, h + 0.017, zc);
+  }
+  // Chân bậc đá kê, cột gỗ hai bên, tay vịn tre dọc dốc.
+  p.box(w + 0.1, 0.06, 0.14, C.rockDark, 0, 0.03, z0 - 0.02);
+  const lift = 0.34;
+  for (const s of [-1, 1]) {
+    const x = s * (w / 2 + 0.035);
+    const ts = [0.12, 0.55, 0.96];
+    for (const t of ts) {
+      const z = z0 + (z1 - z0) * t;
+      const base = rise * Math.min(1, t + 0.5 / n);
+      p.cyl(0.024, 0.028, lift + 0.04, C.woodDark, x, base + lift / 2, z, undefined, 5);
+    }
+    const za = z0 + (z1 - z0) * ts[0];
+    const zb = z0 + (z1 - z0) * ts[2];
+    const ya = rise * Math.min(1, ts[0] + 0.5 / n) + lift;
+    const yb = rise * Math.min(1, ts[2] + 0.5 / n) + lift;
+    const ang = Math.atan2(yb - ya, zb - za);
+    p.cyl(0.02, 0.02, Math.hypot(zb - za, yb - ya) + 0.06, C.bamboo, x, (ya + yb) / 2, (za + zb) / 2, [Math.PI / 2 - ang, 0, 0], 5);
+  }
+  return m.group();
+}
+
 export function makeCongDe(): THREE.Group {
   const m = new ToonModel();
   const p = m.plain;

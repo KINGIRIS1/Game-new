@@ -18,6 +18,8 @@ import {
   LIEN_CHAU,
   BUILDINGS,
   isBridge,
+  isWalkWall,
+  TREN_THANH,
   isDecor,
   CO_LOA_TOWER,
   CONG_THANH,
@@ -184,6 +186,10 @@ export interface Fighter {
   ship?: { ox: number; oz: number; tx: number; tz: number; delay: number };
   /** Lính ta được nữ tướng cộng thêm máu và sức đánh (đúng binh chủng của phó tướng, hay của nữ tướng ở doanh trại). */
   nu?: boolean;
+  /** Cung thủ, lính nỏ đang đứng trên mặt thành hay trên bậc lên thành (`stepClimber`). */
+  wall?: boolean;
+  /** Cung thủ, lính nỏ dưới đất đang đi tới ô bậc lên thành này để lên thành. */
+  climb?: number;
 }
 
 export interface BattleEvent {
@@ -229,6 +235,9 @@ export interface BattleEvent {
   tz?: number;
   /** Ai bắn (để vẽ mũi tên hay tia nước). */
   by?: FighterKind;
+  /** Người bắn, người trúng đứng trên mặt thành: mũi tên bay từ, tới mặt thành chứ không từ, tới mặt đất. */
+  fromWall?: boolean;
+  toWall?: boolean;
 }
 
 /** Thuyền giặc của thủy binh Triệu: chèo từ (x0, z0) vào bờ ở (tx, tz), rời đi sau `delay` giây. */
@@ -404,13 +413,13 @@ export function buildingHp(battle: Battle, b: Building): number {
 }
 
 /**
- * Công trình giặc có thể nhắm tới (không tính lũy, bẫy, đê, cống đê, thành, cổng thành, đường đi, đồ trang trí, không tính cái
- * đã hư). Cổng thành như tường: giặc chỉ phá khi đường đi qua cổng.
+ * Công trình giặc có thể nhắm tới (không tính lũy, bẫy, đê, cống đê, thành, cổng thành, bậc lên thành, đường đi, đồ
+ * trang trí, không tính cái đã hư). Cổng thành như tường: giặc chỉ phá khi đường đi qua cổng.
  */
 function isTargetable(b: Building): boolean {
   return !b.damaged && !UNTARGETED.includes(b.type) && !isDecor(b.type) && !isBridge(b.type);
 }
-const UNTARGETED: BuildingType[] = ['luy', 'bayChong', 'de', 'thanh', 'congThanh', 'congDe'];
+const UNTARGETED: BuildingType[] = ['luy', 'bayChong', 'de', 'thanh', 'congThanh', 'congDe', 'bacThanh'];
 
 /** Thành Cổ Loa và cổng thành: yêu tinh nhắm phá trước tiên. */
 const isCitadel = (b: Building) => (b.type === 'thanh' || b.type === 'congThanh') && !b.damaged;
@@ -1278,8 +1287,11 @@ function searchPath(cost: Float32Array, start: number, isGoal: (i: number) => bo
 function nearestEnemyOf(battle: Battle, f: Fighter, within = Infinity): Fighter | null {
   let best: Fighter | null = null;
   let bestD = within;
+  // Giặc đánh gần không với tới lính ta trên mặt thành.
+  const short = statsOf(f.kind).range <= TREN_THANH.melee;
   for (const o of battle.fighters) {
     if (o.side === f.side || (o.state !== 'move' && o.state !== 'fight' && o.state !== 'flee') || !reaches(f.kind, o)) continue;
+    if (short && o.wall) continue;
     const d = Math.hypot(o.x - f.x, o.z - f.z);
     if (d < bestD) {
       bestD = d;
@@ -1364,7 +1376,7 @@ function damageFighter(battle: Battle, attacker: { kind?: FighterKind; dmg: numb
 /** Một đòn của `f` vào `foe`: bắn tên nếu đánh xa, quân ta mạnh hơn khi đang có Trống trận. */
 function strike(battle: Battle, f: Fighter, foe: Fighter): void {
   const st = statsOf(f.kind);
-  if (st.range > 2) emit(battle, { kind: 'shot', x: f.x, z: f.z, tx: foe.x, tz: foe.z, by: f.kind });
+  if (st.range > 2) emit(battle, { kind: 'shot', x: f.x, z: f.z, tx: foe.x, tz: foe.z, by: f.kind, fromWall: f.wall, toWall: foe.wall });
   const mult = f.side === 'ta' ? ownMult(battle, f.kind, f.nu) * (battle.rally > 0 ? RALLY.dmg : 1) : 1;
   const dmg = st.dmg * mult;
   damageFighter(battle, { kind: f.kind, dmg }, foe);
@@ -1630,10 +1642,37 @@ function compOf(map: LandMap, x: number, z: number): number {
 /** Dò quanh giặc dưới nước chừng này ô: hơn tầm bắn xa nhất của lính ta, tướng ta khi giữ kinh đô. */
 const WATER_SCAN = 8;
 
-/** Mỗi bước trận: khoảng cách từ mỗi tên giặc dưới nước sâu tới đất gần nhất của từng vùng (dò một lần mỗi tên). */
+/**
+ * Mỗi bước trận: bản đồ đi lại, khoảng cách từ mỗi tên giặc dưới nước sâu tới đất gần nhất của từng vùng (dò một lần
+ * mỗi tên), mặt thành có bậc lên (dựng khi cần) và khoảng cách từ mỗi tên giặc tới từng dải thành.
+ */
 interface GuardCtx {
   map: LandMap;
   shore: Map<number, Float32Array>;
+  walls: () => WallMap | null;
+  cover: Map<number, number>;
+  /** Ô mặt thành đã có lính đứng hay đang đi tới (lính khác chọn ô khác cho khỏi đứng chồng). */
+  posts: () => Map<number, number>;
+}
+
+function guardCtx(state: GameState, battle: Battle): GuardCtx {
+  let walls: WallMap | null | undefined;
+  let posts: Map<number, number> | undefined;
+  return {
+    map: landMap(state, battle),
+    shore: new Map(),
+    walls: () => (walls === undefined ? (walls = wallMap(state, battle)) : walls),
+    cover: new Map(),
+    posts: () => {
+      if (posts) return posts;
+      posts = new Map();
+      for (const f of battle.fighters) {
+        if (!f.wall || f.side !== 'ta' || !isAlive(f)) continue;
+        posts.set(f.path?.length ? f.path[f.path.length - 1] : tileAt(f.x, f.z), f.id);
+      }
+      return posts;
+    },
+  };
 }
 
 /** Khoảng cách gần nhất từ giặc ở nước sâu (x, z) tới ô đi được của từng vùng, chỉ dò trong `WATER_SCAN` ô. */
@@ -1719,6 +1758,7 @@ function guardPath(map: LandMap, f: Fighter, foe: Fighter, reach: number, mine: 
  */
 function stepGuard(battle: Battle, f: Fighter, dt: number, ctx: GuardCtx): void {
   if (stunned(f, dt)) return;
+  if (TREN_THANH.units.includes(f.kind as UnitType) && stepClimber(battle, f, dt, ctx)) return;
   const st = statsOf(f.kind);
   const geo = geoOf(battle);
   const reach = st.range * geo + 0.3;
@@ -1756,6 +1796,306 @@ function stepGuard(battle: Battle, f: Fighter, dt: number, ctx: GuardCtx): void 
   }
   const next = f.path[f.pathAt];
   if (walkOnLand(map, f, (next % GRID) + 0.5, Math.floor(next / GRID) + 0.5, dt, mult, geo)) f.pathAt++;
+}
+
+// ---------- Lính lên mặt thành (trận giữ kinh đô) ----------
+
+/**
+ * Mặt thành đi được: ô thành đất, thành Cổ Loa, cổng thành còn nguyên (cổng nối liền mặt thành hai bên), và ô bậc
+ * lên thành còn nguyên dựa vào chúng. Chia theo dải liền nhau theo cạnh ô (như đếm vòng thành).
+ */
+interface WallMap {
+  key: string;
+  /** Dải của từng ô, -1 là không phải mặt thành hay bậc. */
+  comp: Int16Array;
+  /** Ô mặt thành (không tính bậc) của từng dải. */
+  tiles: number[][];
+  /** Ô bậc lên thành của từng dải: dải không có bậc thì lính dưới đất không lên được. */
+  stairs: number[][];
+  isStair: Uint8Array;
+}
+const wallMaps = new WeakMap<Battle, WallMap>();
+const SIDES = [
+  [1, 0],
+  [-1, 0],
+  [0, 1],
+  [0, -1],
+] as const;
+
+/** Mặt thành của trận, dựng lại khi có đoạn thành, cổng hay bậc bị phá. Không có bậc lên thành nào thì `null`. */
+function wallMap(state: GameState, battle: Battle): WallMap | null {
+  const walls: Building[] = [];
+  const stairs: Building[] = [];
+  let key = '';
+  for (const b of state.buildings) {
+    if (b.type === 'bacThanh') {
+      stairs.push(b);
+      key += `s${b.id}${b.damaged ? 'x' : ''}`;
+    } else if (isWalkWall(b) || b.type === 'congThanh') {
+      walls.push(b);
+      if (b.damaged) key += `d${b.id}`;
+    }
+  }
+  if (!stairs.length) return null;
+  key += `|${walls.length}|${walls.reduce((n, b) => n + b.level, 0)}`;
+  const old = wallMaps.get(battle);
+  if (old && old.key === key) return old;
+  const node = new Uint8Array(GRID * GRID);
+  for (const b of walls) if (!b.damaged) node[tileIndex(b.x, b.z)] = 1;
+  const isStair = new Uint8Array(GRID * GRID);
+  for (const b of stairs) {
+    if (b.damaged) continue;
+    const by = SIDES.some(([dx, dz]) => inGrid(b.x + dx, b.z + dz) && node[tileIndex(b.x + dx, b.z + dz)] === 1);
+    if (by) isStair[tileIndex(b.x, b.z)] = 1;
+  }
+  for (let i = 0; i < GRID * GRID; i++) if (isStair[i]) node[i] = 2;
+  const comp = new Int16Array(GRID * GRID).fill(-1);
+  const tiles: number[][] = [];
+  const steps: number[][] = [];
+  for (let i = 0; i < GRID * GRID; i++) {
+    if (!node[i] || comp[i] !== -1) continue;
+    const c = tiles.length;
+    tiles.push([]);
+    steps.push([]);
+    comp[i] = c;
+    const stack = [i];
+    while (stack.length) {
+      const t = stack.pop()!;
+      (node[t] === 2 ? steps : tiles)[c].push(t);
+      const tx = t % GRID;
+      const tz = Math.floor(t / GRID);
+      for (const [dx, dz] of SIDES) {
+        if (!inGrid(tx + dx, tz + dz)) continue;
+        const n = tileIndex(tx + dx, tz + dz);
+        // Hai bậc cạnh nhau không nối hai dải thành: phải qua mặt thành.
+        if (!node[n] || comp[n] !== -1 || (node[t] === 2 && node[n] === 2)) continue;
+        comp[n] = c;
+        stack.push(n);
+      }
+    }
+  }
+  const map = { key, comp, tiles, stairs: steps, isStair };
+  wallMaps.set(battle, map);
+  return map;
+}
+
+const tileDist = (i: number, x: number, z: number) => Math.hypot((i % GRID) + 0.5 - x, Math.floor(i / GRID) + 0.5 - z);
+
+/** Khoảng cách từ giặc `o` tới ô mặt thành gần nhất của dải `c` (dò một lần mỗi bước trận). */
+function coverOf(ctx: GuardCtx, W: WallMap, o: Fighter, c: number): number {
+  const k = o.id * 4096 + c;
+  const cached = ctx.cover.get(k);
+  if (cached !== undefined) return cached;
+  let best = Infinity;
+  for (const i of W.tiles[c]) best = Math.min(best, tileDist(i, o.x, o.z));
+  ctx.cover.set(k, best);
+  return best;
+}
+
+const foeAlive = (f: Fighter, o: Fighter) =>
+  o.side !== f.side && (o.state === 'move' || o.state === 'fight' || o.state === 'flee') && reaches(f.kind, o);
+
+/** Đường dọc mặt thành (và bậc) trong một dải, từ ô `from` tới ô gần nhất thỏa `goal`; không có thì `null`. */
+function wallPath(W: WallMap, from: number, goal: (i: number) => boolean): number[] | null {
+  const prev = new Int32Array(GRID * GRID).fill(-2);
+  prev[from] = -1;
+  const queue = [from];
+  for (let q = 0; q < queue.length; q++) {
+    const t = queue[q];
+    if (goal(t)) {
+      const path = [t];
+      for (let p = prev[t]; p !== -1; p = prev[p]) path.unshift(p);
+      return path;
+    }
+    const tx = t % GRID;
+    const tz = Math.floor(t / GRID);
+    for (const [dx, dz] of SIDES) {
+      if (!inGrid(tx + dx, tz + dz)) continue;
+      const n = tileIndex(tx + dx, tz + dz);
+      if (prev[n] !== -2 || W.comp[n] !== W.comp[from] || (W.isStair[t] && W.isStair[n])) continue;
+      prev[n] = t;
+      queue.push(n);
+    }
+  }
+  return null;
+}
+
+/** Đi theo `f.path` (chỉ số ô) từng ô một; trả về true khi đã tới ô cuối. */
+function followPath(f: Fighter, dt: number, mult: number, geo: number): boolean {
+  if (!f.path || f.pathAt >= f.path.length) return true;
+  const next = f.path[f.pathAt];
+  if (moveToward(f, (next % GRID) + 0.5, Math.floor(next / GRID) + 0.5, dt, mult, geo)) f.pathAt++;
+  return f.pathAt >= f.path.length;
+}
+
+/** Bỏ việc lên thành, đánh dưới đất như mọi lính. */
+function leaveClimb(f: Fighter): false {
+  if (f.climb !== undefined || f.wall) f.path = null;
+  f.climb = undefined;
+  f.wall = undefined;
+  return false;
+}
+
+/** Khoảng cách từ giặc `o` tới bậc gần nhất của dải `c`. */
+const stairDist = (W: WallMap, o: Fighter, c: number) => W.stairs[c].reduce((m, i) => Math.min(m, tileDist(i, o.x, o.z)), Infinity);
+
+/**
+ * Giặc `o` ở phía ngoài dải thành `c`: gần mặt thành hơn gần bậc. Bậc dựng ở mặt trong thành (phía Điện) nên giặc còn
+ * ngoài thành thì gần thành hơn, giặc đã vào trong thì gần bậc hơn.
+ */
+const outside = (ctx: GuardCtx, W: WallMap, o: Fighter, c: number) => coverOf(ctx, W, o, c) < stairDist(W, o, c);
+
+/**
+ * Cung thủ, lính nỏ khi giữ kinh đô có bậc lên thành. Giặc gần nhất còn ở ngoài thành, hay bắn tới được từ mặt thành,
+ * thì theo bậc lên thành (dọc đường có giặc trong tầm thì vừa đi vừa bắn), đi dọc mặt thành tới ô gần nhất bắn tới
+ * giặc (giặc chưa tới tầm thì tới ô gần giặc nhất mà chờ) rồi bắn xuống, xa thêm `TREN_THANH.range` ô; giặc đánh gần
+ * không với tới. Giặc đã vào trong thành, ngoài tầm bắn từ mặt thành thì theo bậc xuống. Đoạn thành dưới chân bị phá
+ * thì xuống đất ngay. Trả về false khi lính đánh dưới đất như mọi lính (`stepGuard`).
+ */
+function stepClimber(battle: Battle, f: Fighter, dt: number, ctx: GuardCtx): boolean {
+  const W = ctx.walls();
+  const here = tileAt(f.x, f.z);
+  if (!W || (f.wall && W.comp[here] === -1)) return leaveClimb(f);
+  const st = statsOf(f.kind);
+  const geo = geoOf(battle);
+  const top = (st.range + TREN_THANH.range) * geo + 0.3;
+  const mult = battle.rally > 0 ? RALLY.speed : 1;
+  if (f.wall) {
+    const mine = W.comp[here];
+    let shot: Fighter | null = null;
+    let shotD = top;
+    let near: Fighter | null = null;
+    let nearD = Infinity;
+    let any: Fighter | null = null;
+    let anyD = Infinity;
+    for (const o of battle.fighters) {
+      if (!foeAlive(f, o)) continue;
+      const d = Math.hypot(o.x - f.x, o.z - f.z);
+      if (d <= shotD) {
+        shotD = d;
+        shot = o;
+      }
+      if (d < anyD) {
+        anyD = d;
+        any = o;
+      }
+      if (d < nearD && coverOf(ctx, W, o, mine) <= top - 0.1) {
+        nearD = d;
+        near = o;
+      }
+    }
+    const posts = ctx.posts();
+    const free = (i: number) => (posts.get(i) ?? f.id) === f.id;
+    if (shot) {
+      // Có giặc trong tầm: đứng trên mặt thành ở ô chưa ai đứng thì bắn. Còn trên bậc, hay ô đã có lính khác, thì sang
+      // ô trống gần nhất còn trong tầm (hết ô trống thì bắn luôn chỗ đang đứng).
+      const foe = shot;
+      const inRange = (i: number) => !W.isStair[i] && tileDist(i, foe.x, foe.z) <= top - 0.1;
+      const onTop = !W.isStair[here];
+      let go = !onTop || !free(here);
+      if (go) {
+        const end = f.path && f.pathAt < f.path.length ? f.path[f.path.length - 1] : -1;
+        if (end < 0 || !inRange(end)) {
+          f.path = wallPath(W, here, (i) => i !== here && inRange(i) && free(i)) ?? (onTop ? null : wallPath(W, here, inRange));
+          f.pathAt = 1;
+          if (f.path?.length) posts.set(f.path[f.path.length - 1], f.id);
+        }
+        go = !!f.path && f.pathAt < f.path.length;
+      }
+      if (!go) {
+        f.path = null;
+        f.state = 'fight';
+        f.face = Math.atan2(foe.x - f.x, foe.z - f.z);
+        if (f.cd <= 0) strike(battle, f, foe);
+        return true;
+      }
+      f.state = 'move';
+      followPath(f, dt, mult, geo);
+      return true;
+    }
+    f.state = 'move';
+    f.repathIn -= dt;
+    const foe = near ?? (any && outside(ctx, W, any, mine) ? any : null);
+    if (foe) {
+      // Đi dọc mặt thành tới ô gần nhất bắn tới được giặc; giặc chưa tới tầm thì tới ô gần giặc nhất mà chờ. Ô đã có
+      // lính khác đứng (hay đang tới) thì tìm ô khác, hết ô mới đứng chung.
+      if (f.targetUnit !== foe.id || !f.path || f.repathIn <= 0) {
+        const inRange = (i: number) => !W.isStair[i] && tileDist(i, foe.x, foe.z) <= top - 0.1;
+        let post = -1;
+        if (!near) for (const i of W.tiles[mine]) if (free(i) && (post < 0 || tileDist(i, foe.x, foe.z) < tileDist(post, foe.x, foe.z))) post = i;
+        const goal = near ? inRange : (i: number) => i === post;
+        f.targetUnit = foe.id;
+        f.path = wallPath(W, here, (i) => goal(i) && free(i)) ?? wallPath(W, here, goal);
+        f.pathAt = 1;
+        f.repathIn = 1;
+        if (f.path?.length) posts.set(f.path[f.path.length - 1], f.id);
+      }
+      followPath(f, dt, mult, geo);
+      return true;
+    }
+    // Giặc đã vào trong thành, ngoài tầm bắn từ dải thành này: theo bậc xuống đất.
+    if (W.isStair[here]) return leaveClimb(f);
+    if (f.targetUnit !== -1 || !f.path) {
+      f.targetUnit = -1;
+      f.path = wallPath(W, here, (i) => W.isStair[i] === 1);
+      f.pathAt = 1;
+    }
+    followPath(f, dt, mult, geo);
+    return true;
+  }
+  // Dưới đất: giặc gần nhất còn ở ngoài một dải thành có bậc trong vùng đất mình, hay bắn tới được từ dải ấy, thì lên.
+  const land = compOf(ctx.map, f.x, f.z);
+  let foe: Fighter | null = null;
+  let foeD = Infinity;
+  for (const o of battle.fighters) {
+    if (!foeAlive(f, o)) continue;
+    const d = Math.hypot(o.x - f.x, o.z - f.z);
+    if (d < foeD) {
+      foeD = d;
+      foe = o;
+    }
+  }
+  if (!foe) return leaveClimb(f);
+  let via = -1;
+  for (let c = 0; c < W.tiles.length; c++) {
+    if (!W.stairs[c].some((i) => ctx.map.comp[i] === land)) continue;
+    if (coverOf(ctx, W, foe, c) > top - 0.1 && !outside(ctx, W, foe, c)) continue;
+    if (via < 0 || coverOf(ctx, W, foe, c) < coverOf(ctx, W, foe, via)) via = c;
+  }
+  if (via < 0) return leaveClimb(f);
+  // Tới bậc gần nhất của dải ấy; dọc đường có giặc trong tầm thì vừa đi vừa bắn.
+  let stair = f.climb ?? -1;
+  if (W.comp[stair] !== via || !W.isStair[stair]) {
+    stair = W.stairs[via]
+      .filter((i) => ctx.map.comp[i] === land)
+      .reduce((a, b) => (tileDist(a, f.x, f.z) <= tileDist(b, f.x, f.z) ? a : b));
+    f.climb = stair;
+    f.path = null;
+  }
+  f.state = 'move';
+  if (f.cd <= 0 && foeD <= st.range * geo + 0.3) {
+    f.face = Math.atan2(foe.x - f.x, foe.z - f.z);
+    strike(battle, f, foe);
+  }
+  const sx = (stair % GRID) + 0.5;
+  const sz = Math.floor(stair / GRID) + 0.5;
+  let there: boolean;
+  if (clearLine(ctx.map, f.x, f.z, sx, sz, 0)) there = walkOnLand(ctx.map, f, sx, sz, dt, mult, geo);
+  else {
+    if (!f.path) {
+      f.path = searchPath(ctx.map.cost, here, (i) => i === stair, (i) => tileDist(i, sx, sz));
+      f.pathAt = 1;
+    }
+    there = f.path ? followPath(f, dt, mult, geo) && Math.hypot(f.x - sx, f.z - sz) < 0.05 : walkOnLand(ctx.map, f, sx, sz, dt, mult, geo);
+  }
+  if (there) {
+    // Lên bậc: từ đây đi trên mặt thành.
+    f.wall = true;
+    f.climb = undefined;
+    f.path = null;
+    f.targetUnit = null;
+  }
+  return true;
 }
 
 function stepDefenses(state: GameState, battle: Battle, dt: number): void {
@@ -1915,7 +2255,7 @@ export function stepBattle(state: GameState, battle: Battle, dt: number): boolea
     f.swing = Math.max(0, f.swing - dt);
     if (f.ship) stepShip(state, battle, f, dt);
     else if (f.side === 'giac') stepEnemy(state, battle, f, dt);
-    else stepGuard(battle, f, dt, (ctx ??= { map: landMap(state, battle), shore: new Map() }));
+    else stepGuard(battle, f, dt, (ctx ??= guardCtx(state, battle)));
   }
   stepDefenses(state, battle, dt);
   return enemiesLeft(battle) === 0;

@@ -167,6 +167,7 @@ Lúc đầu mỗi cấp Điện chỉ cho phát tới một số khoảnh (lư�
 | Đền Tản Viên | 4×4 | Có sau khi kết chương 2. Lũ dâng thấp đi một bậc |
 | Thành Cổ Loa | 1×1 | Có từ chương 3. Đoạn thành đất nện cao, chắc; đắp nhiều vòng quanh Điện |
 | Cổng thành | 1×1 | Có từ chương 3, Điện 5. Cửa trong vòng tường: giặc dồn về cổng, lính trên lầu cổng bắn (xem mục Kế hoạch: cổng thành, xưởng mộc, làng chài) |
+| Bậc lên thành | 1×1 | Có từ Điện 3. Dựng sát mặt trong một đoạn thành đất hay thành Cổ Loa: khi giữ kinh đô cung thủ, lính nỏ theo bậc lên nóc thành bắn xuống (xem mục Bậc lên thành, lối đi trên nóc thành) |
 | Nhà thợ hồ | 3×3 | Thêm một tốp thợ xây; nhà lên cấp thì tốp ấy làm nhanh hơn (xem mục Thời gian xây, tốp thợ, đố sử) |
 | Hồ Kim Quy | 8×8 | Có khi Rùa Vàng hiện lên (thắng màn 19). Lũy, thành đất, thành Cổ Loa, cổng thành thêm 30% máu (xem mục Hồ Kim Quy) |
 | Đền Cổ Loa | 4×4 | Có sau khi kết chương 3. Chòi canh bắn mạnh gấp rưỡi, xa thêm 1 ô |
@@ -670,7 +671,7 @@ Chủ dự án đã chốt:
 
 - **An Dương Vương** (`makeAnDuong` trong `src/render/models.ts`): to cỡ Sơn Tinh, giáp đồng hoa văn trống, áo choàng đỏ son, mũ lông chim có vành vàng. Chưa có nỏ thì cầm rìu đồng nghi lễ; có nỏ thì cầm nỏ thần màu đồng vàng, lẫy hình vuốt rùa. Đứng chầu trong sân Điện, cột đá thề sau lưng.
 - **Rùa Vàng** (`makeRuaVang`): rùa mai vàng có hoa văn mặt trống. Từ khi diệt yêu tinh, một con Rùa Vàng nhỏ bơi trên sông phía nam kinh đô.
-- **Đoạn thành Cổ Loa** (`buildCitadel`): đất nện cao hơn thành đất của lũy, có ụ góc, hàng cọc gỗ, thỉnh thoảng một chòi canh; đoạn bị phá là đống đất sạt.
+- **Đoạn thành Cổ Loa** (`buildCitadel`): đất nện cao hơn thành đất của lũy, nóc thành làm lối đi có lan can (xem mục Bậc lên thành, lối đi trên nóc thành), thỉnh thoảng một chòi canh nhỏ dựng trên bốn cột cao; đoạn bị phá là đống đất sạt. Trước đây nóc thành có ụ góc răng cưa và cọc gỗ nhọn, nay bỏ để lính đi lại.
 - **Đền Cổ Loa** (`makeDenCoLoa` trong `src/render/buildings.ts`): đền nền đá mái cong, trước sân có tượng Rùa Vàng và cây nỏ đồng lớn trên giá.
 - **Giặc**: quỷ núi da xám xanh có sừng, cầm chày đá; ma trơi là đốm lửa xanh lơ lửng có mặt, tự sáng; hổ tinh vằn cam đen; gà trắng nghìn năm là gà trống trắng khổng lồ mào đỏ. Lính khiên Triệu áo đen viền đỏ, khiên chữ nhật; nỏ thủ Triệu cầm nỏ gỗ; kỵ binh cưỡi ngựa nâu; Triệu Đà râu bạc, giáp đen viền vàng, cưỡi ngựa đen.
 - **Đêm yêu tinh** ở kinh đô: ánh trăng xanh tím, trời tối, ma trơi lơ lửng ở bìa rừng, không mưa.
@@ -1262,7 +1263,7 @@ Giá cấp 8 khoảng gấp 2 cấp 7, sản lượng tăng khoảng 30% (cấp 
 - Tự bắn một giặc trong tầm 4 ô, sát thương 14, nghỉ 1,4 giây.
 - Ụ là một phần của đoạn thành: giặc không nhắm ụ làm đích. Đoạn thành bị phá thì ụ hư theo, sửa thành xong phải sửa ụ (30% giá). Dỡ đoạn thành thì mất ụ.
 - Đền Cổ Loa còn nguyên thì ụ cũng bắn mạnh gấp rưỡi và xa thêm 1 ô.
-- Dáng: ụ đất đắp cao trên mặt thành, mái tranh che nhỏ, một lính nỏ quỳ bắn quay mặt ra ngoài thành. Ụ hư (thành đã sửa mà ụ chưa sửa): ụ đất sạt, cột gãy, không người.
+- Dáng: bốn cột gỗ cao ở bốn góc nóc thành đỡ sàn ván, trên sàn đắp ụ đất, mái tranh che nhỏ, một lính nỏ quỳ bắn quay mặt ra ngoài thành; dưới sàn để trống cho lính đi dọc nóc thành lọt qua (chủ dự án yêu cầu, trước đây ụ đắp ngay trên mặt thành). Ụ hư (thành đã sửa mà ụ chưa sửa): cột gãy, sàn sập nghiêng trên mặt thành, không người.
 - Giao diện: thẻ **Ụ nỏ** trong bảng Xây dựng ghi số ụ đã có trên số tối đa; chọn thẻ rồi chạm từng đoạn thành. Bảng một đoạn thành có nút dựng ụ ngay trên đoạn ấy, ghi ụ đang bắn hay đang hư, và nút **Sửa ụ nỏ** (mờ khi thành còn hư). Nút "Sửa hết" sau trận sửa cả thành lẫn ụ.
 
 **Thủy binh Triệu**
@@ -2120,6 +2121,36 @@ j\i  0  1  2  3  4  5  6  7  8  9
    - **Giặc bên kia** nhắm làng gần nhất trước; còn cầu sang bờ ấy thì qua cầu tìm kho rồi Điện; không có cầu (hay cầu hư) thì chỉ phá công trình bên ấy, hết thì rút về rừng.
    - **Đồn biên** (`donBien`, 4×4, mỗi bờ một, cần Điện 5, 800 gạo, 600 vỏ ốc, 600 đất đá, 100 sắt, máu 900): rào cọc, chòi canh, hai lán lính, cờ đỏ. Bảng đồn biên chọn số lính mỗi binh chủng đóng ở đồn (không quá quân đang có, trừ phần đóng ở bờ kia). Khi giữ kinh đô, lính đóng ra trận từ đồn biên còn nguyên, lấy bớt từ phần lính giữ kinh đô của các doanh trại (không thêm quân); đồn hư thì lại ra từ doanh trại. Dời đồn biên cũng chỉ trong bờ bên kia.
    - **Quân ta** đánh giặc gần nhất mà mình đánh tới được. Sông là hào: quân ta không lội qua sông (chủ dự án chốt, trước đây quân ta đi thẳng tới giặc kể cả lội qua sông). Giặc ở bờ bên kia thì quân ta đi vòng qua cầu còn nguyên (`stepGuard`, tìm đường trên đất `landMap`). Không có cầu hay cầu hư thì quân bên này đứng lại, chỉ lính bắn xa với tới được thì bắn qua sông. Đánh thủy quái, thuyền giặc thì lội ra được một ô sông sát bờ, không xa hơn. Có đồn biên thì lính đóng đồn đã ở sẵn bờ ấy.
+
+## Bậc lên thành, lối đi trên nóc thành (chủ dự án yêu cầu, đã làm)
+
+Chủ dự án yêu cầu cầu thang lên thành để khi giặc đánh, cung thủ lên hành lang trên thành bắn xuống. Chủ dự án chọn: lính đứng được trên cả thành Cổ Loa lẫn thành đất; lên bằng một công trình riêng là bậc lên thành; cung thủ, lính nỏ tự lên; trên thành bắn xa thêm 1 ô, giặc đánh gần không với tới. Sau đó chủ dự án yêu cầu thêm: bỏ gai trên thành, thêm lan can trên nóc thành, chỗ có ụ nỏ thì ụ nỏ dựng cao hơn và lính đi xuyên qua được bên dưới. Các số còn lại tự chọn, chủ dự án có thể đổi.
+
+**Bậc lên thành** (`bacThanh`)
+
+- Một ô, có từ Điện 3 (khi lũy lên được thành đất). Giá 150 đất đá, 100 gỗ; máu 800. Tối đa 2 ở Điện 3–4, 3 ở Điện 5–6, 4 ở Điện 7–8, 5 ở Điện 9–10. Không lên cấp. Dựng mất 15 giây như công trình thường (`XAY_MS`, xem mục Thời gian xây, tốp thợ, đố sử); bậc đang dựng thì lính chưa lên được.
+- **Đặt**: sát (chung cạnh) mặt trong một đoạn thành đất (lũy cấp 2) hay thành Cổ Loa đã đắp xong, tức là ô bậc gần tâm Điện hơn đoạn thành (`stairWall` ở `game.ts`). Đoạn thành còn đang đắp dở, lũy đang lên thành đất thì chưa dựa được. Lũy tre không có mặt cho lính đứng. Dời bậc cũng phải sát mặt trong thành. Bậc ở mặt trong để lính trong thành lên được, và trận biết giặc đã vào trong hay còn ngoài thành.
+- Giặc không nhắm phá bậc (như tường), chỉ phá khi bậc chắn đường. Lũ không làm hư. Áp mẫu kinh đô: mẫu chưa có chỗ cho bậc; bậc không vướng thì đứng yên, vướng chỗ của mẫu thì bị dỡ như đoạn tường thừa (dời ra xa thành thì vô dụng).
+- Lạc hầu gợi ý một lần khi kinh đô đã có đoạn thành đất hay thành Cổ Loa.
+
+**Lính trên nóc thành** (`stepClimber` ở `battle.ts`)
+
+- Mặt thành đi được: các đoạn thành đất, thành Cổ Loa, cổng thành còn nguyên nối nhau theo cạnh ô thành từng dải (cổng nối liền mặt thành hai bên). Dải nào có bậc còn nguyên thì lính lên được. Đoạn thành, bậc bị phá thì dải ấy đứt ngay giữa trận.
+- Chỉ **cung thủ và lính nỏ** lên thành (`TREN_THANH.units`); giáo binh, voi chiến, tướng đánh dưới đất như cũ.
+- Lính dưới đất lên thành khi giặc gần nhất còn ở ngoài một dải thành có bậc trong vùng đất mình (gần mặt thành hơn gần bậc), hay đã ở trong tầm bắn từ dải ấy. Lính đi tới bậc gần nhất; dọc đường có giặc trong tầm thì vừa đi vừa bắn.
+- Trên thành, lính đi dọc nóc tới ô gần nhất bắn tới giặc; giặc chưa tới tầm thì tới ô gần giặc nhất mà chờ. Ô đã có lính khác đứng thì tìm ô khác, hết ô mới đứng chung. Lính bước hẳn lên nóc thành rồi mới bắn, không bắn khi còn trên bậc.
+- **Lợi thế**: bắn xa thêm 1 ô (`TREN_THANH.range`, như mọi tầm khi giữ kinh đô nhân 1,4). Giặc có tầm đánh không quá 2 ô (giáo, kích, đao, kỵ binh, thủy quái đánh gần) không với tới, phải phá đoạn thành dưới chân lính. Giặc bắn xa vẫn bắn được.
+- Giặc đã vào trong thành, ngoài tầm bắn từ dải thành thì lính theo bậc xuống đánh dưới đất. Đoạn thành dưới chân bị phá thì lính xuống đất ngay, đánh tiếp.
+- Người chơi mô phỏng chưa dựng bậc, các test độ khó giữ kinh đô không có bậc, nên độ khó các đợt giặc cũ không đổi. Có bậc thì giữ kinh đô dễ hơn: đó là phần thưởng cho người chơi đắp thành.
+
+**Dáng**
+
+- Bậc (`makeBacThanh` trong `src/render/buildings.ts`): bậc đất nện lát ván gỗ leo từ đất lên tới nóc đoạn thành kề bên (cao theo thành Cổ Loa hay thành đất, theo cả bậc đất), chân bậc đá kê, cột gỗ và tay vịn tre hai bên; World xoay mép cao về phía đoạn thành.
+- **Nóc thành làm lối đi** (`buildWallTops` trong `src/render/models.ts`): bỏ chông tre trên thành đất, bỏ ụ góc răng cưa và cọc nhọn trên thành Cổ Loa. Hai đoạn cùng loại kề nhau có đất nối nóc thành một lối liền; mép ngoài (không kề đoạn cùng loại) có lan can gỗ cột đầu bịt đồng, ván chân đỏ; chỗ bậc lên và cổng thành để hở lan can.
+- Chòi canh nhỏ trên thành Cổ Loa và ụ nỏ dựng trên bốn cột cao, sàn cao gần một người (`WALL_DECK`), lính đi dọc nóc thành lọt qua bên dưới.
+- Lính trên thành đứng trên nóc thành; ai đi qua bậc thì theo dốc bậc (`fighterY` ở `world.ts`). Mũi tên bay từ nóc thành, tới nóc thành khi người bắn, người trúng đứng trên thành.
+
+- Test (`bacThanh.test.ts`): chỗ đặt (mặt trong, thành đất, thành Cổ Loa, không lũy tre, dời), số tối đa, thời gian xây (đoạn thành đắp dở chưa dựa được), gợi ý của Lạc hầu; cung thủ lên thành Cổ Loa và thành đất, chỉ đứng trên nóc thành hay bậc, bắn được; không bậc thì không ai lên; giáo binh không lên, lính nỏ lên; bắn xa thêm 1 ô; giặc đánh gần không với tới, giặc bắn xa thì có; đoạn thành dưới chân bị phá thì xuống đất.
 
 ## Hồ Kim Quy (chủ dự án yêu cầu, đã làm)
 
