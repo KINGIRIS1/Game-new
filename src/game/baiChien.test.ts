@@ -2,17 +2,14 @@ import { afterAll, describe, expect, it } from 'vitest';
 import {
   BAI,
   BAI_THEO,
-  DAI_GIUA,
   NX,
   NZ,
   THAN_TO,
   baiById,
   baiOf,
   bao,
-  cellX,
-  cellZ,
-  chamAt,
   dayRa,
+  kiemBai,
   luoiDi,
   que,
   sdHinh,
@@ -66,134 +63,6 @@ Object.assign(BAI, MAU);
 afterAll(() => {
   for (const id of Object.keys(MAU)) delete BAI[id];
 });
-
-/** Chỗ dàn quân hai bên: phải trống. */
-const BANDS = [
-  { z0: 0.3, z1: 6.4 },
-  { z0: 15, z1: 21.7 },
-];
-
-/**
- * Kiểm một bố cục theo luật đã chốt (`docs/thiet-ke.md`, mục Bãi chiến có vật cản). Trả về danh sách lỗi (rỗng là
- * đúng luật).
- */
-function kiemBai(bai: Bai): string[] {
-  const loi: string[] = [];
-  const all = [...bai.can.map((c) => c.hinh), ...bai.cham.map((v) => v.hinh)];
-  for (const h of all) {
-    const b = bao(h);
-    // Hình nằm trong dải giữa (tính theo phần nằm trong bãi).
-    for (let x = -2; x <= W + 2; x += 0.1)
-      for (const z of [DAI_GIUA.from - 0.05, DAI_GIUA.to + 0.05])
-        if (sdHinh(h, x, z) < 0 && b.r > 0) {
-          loi.push(`hình chạm ra ngoài dải giữa ở (${x.toFixed(1)}, ${z})`);
-          x = Infinity;
-          break;
-        }
-  }
-  for (const c of bai.can) {
-    const h = c.hinh;
-    if ((h.k === 'tron' && h.r < 0.3) || (h.k === 'doan' && h.half < 0.3)) loi.push('vật cản mỏng hơn 0,6 ô');
-  }
-  // Dải dàn quân trống, cách vật cản ít nhất 0,6 ô, không có nước bùn.
-  for (const { z0, z1 } of BANDS)
-    for (let x = 0.3; x <= W - 0.3 + 1e-9; x += 0.1)
-      for (let z = z0; z <= z1 + 1e-9; z += 0.1) {
-        if (sdfCan(bai, x, z) < 0.6 || chamAt(bai, x, z) < 1) {
-          loi.push(`dải dàn quân bị lấn ở (${x.toFixed(1)}, ${z.toFixed(1)})`);
-          return loi;
-        }
-      }
-  // Lưới thân to, thân nhỏ: mọi ô trống liền một khối, nối hai dải dàn quân.
-  for (const r of [THAN_TO, 0.27]) {
-    const l = luoiDi(bai, r);
-    const comp = new Int32Array(NX * NZ).fill(-1);
-    let n = 0;
-    for (let c = 0; c < NX * NZ; c++) {
-      if (!l.free[c] || comp[c] >= 0) continue;
-      const stack = [c];
-      comp[c] = n;
-      while (stack.length) {
-        const a = stack.pop()!;
-        const i = a % NX;
-        const j = (a - i) / NX;
-        for (const [di, dj] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
-          const ni = i + di;
-          const nj = j + dj;
-          if (ni < 0 || nj < 0 || ni >= NX || nj >= NZ) continue;
-          const b = nj * NX + ni;
-          if (l.free[b] && comp[b] < 0) (comp[b] = n), stack.push(b);
-        }
-      }
-      n++;
-    }
-    if (n !== 1) loi.push(`lưới thân ${r} chia thành ${n} khối`);
-  }
-  // Có lối rộng 2,5 ô nối hai dải (tâm lối cách vật cản và mép bãi ít nhất 1,25 ô).
-  const wide = (c: number) => Math.min(sdfCan(bai, cellX(c), cellZ(c)), cellX(c), W - cellX(c)) >= 1.25 - 1e-9;
-  const seen = new Uint8Array(NX * NZ);
-  const stack: number[] = [];
-  for (let c = 0; c < NX * NZ; c++) if (cellZ(c) < 6 && wide(c)) (seen[c] = 1), stack.push(c);
-  let crossed = false;
-  while (stack.length && !crossed) {
-    const a = stack.pop()!;
-    if (cellZ(a) > 15) crossed = true;
-    const i = a % NX;
-    const j = (a - i) / NX;
-    for (const [di, dj] of [[1, 0], [-1, 0], [0, 1], [0, -1], [1, 1], [1, -1], [-1, 1], [-1, -1]]) {
-      const ni = i + di;
-      const nj = j + dj;
-      if (ni < 0 || nj < 0 || ni >= NX || nj >= NZ) continue;
-      const b = nj * NX + ni;
-      if (!seen[b] && wide(b)) (seen[b] = 1), stack.push(b);
-    }
-  }
-  if (!crossed) loi.push('không có lối rộng 2,5 ô nối hai dải dàn quân');
-  // Khe giữa hai vật cản, giữa vật cản với mép bãi: liền nhau hay rộng ít nhất 1,6 ô.
-  const hs = bai.can.map((c) => c.hinh);
-  const step = 0.05;
-  for (let a = 0; a < hs.length; a++) {
-    const gaps: number[] = [];
-    for (let b = a + 1; b < hs.length; b++) {
-      let g = Infinity;
-      for (let x = -1; x <= W + 1; x += step) for (let z = DAI_GIUA.from - 1; z <= DAI_GIUA.to + 1; z += step) g = Math.min(g, Math.max(0, sdHinh(hs[a], x, z)) + Math.max(0, sdHinh(hs[b], x, z)));
-      gaps.push(g);
-    }
-    // Mép bãi: khe từ vật cản tới mép trái, mép phải.
-    let left = Infinity;
-    let right = Infinity;
-    for (let z = DAI_GIUA.from; z <= DAI_GIUA.to; z += step)
-      for (let x = 0; x <= W; x += step) {
-        const s = Math.max(0, sdHinh(hs[a], x, z));
-        left = Math.min(left, s + x);
-        right = Math.min(right, s + W - x);
-      }
-    for (const g of [...gaps, left, right]) if (g > 0.05 && g < 1.6 - 0.05) loi.push(`khe hẹp ${g.toFixed(2)} ô`);
-    // Liền mép bãi thì phải chìa ra ngoài bãi ít nhất 0,5 ô.
-    if (left <= 0.05 && Math.min(...range(DAI_GIUA.from, DAI_GIUA.to, 0.1).map((z) => sdHinh(hs[a], -0.5, z))) > 0) loi.push('vật cản liền mép trái mà không chìa ra ngoài bãi');
-    if (right <= 0.05 && Math.min(...range(DAI_GIUA.from, DAI_GIUA.to, 0.1).map((z) => sdHinh(hs[a], W + 0.5, z))) > 0) loi.push('vật cản liền mép phải mà không chìa ra ngoài bãi');
-  }
-  // Hàng ngang nào cũng còn ít nhất 4 ô trống; vùng chậm không quá nửa dải giữa.
-  let slow = 0;
-  let cells = 0;
-  for (let z = DAI_GIUA.from; z <= DAI_GIUA.to; z += 0.1) {
-    let open = 0;
-    for (let x = 0.05; x < W; x += 0.1) {
-      if (sdfCan(bai, x, z) >= 0) open += 0.1;
-      if (chamAt(bai, x, z) < 1) slow++;
-      cells++;
-    }
-    if (open < 4 - 1e-6) loi.push(`hàng z ${z.toFixed(1)} chỉ còn ${open.toFixed(1)} ô trống`);
-  }
-  if (slow > cells / 2) loi.push('vùng chậm quá nửa dải giữa');
-  return [...new Set(loi)];
-}
-
-function range(a: number, b: number, s: number): number[] {
-  const out: number[] = [];
-  for (let v = a; v <= b + 1e-9; v += s) out.push(v);
-  return out;
-}
 
 /** Trận ngoài bãi màn `n` (quân mẫu của chương), trên bố cục `bai`. */
 function stageSetup(n: number, bai: string | null, id = 1): FieldSetup {
@@ -317,10 +186,11 @@ describe('luật bố cục', () => {
   });
 
   it('mọi bố cục thật đúng luật', () => {
-    for (const bai of Object.values(BAI)) {
-      if (bai.id in MAU) continue;
-      expect([bai.id, ...kiemBai(bai)]).toEqual([bai.id]);
-    }
+    const loi = Object.values(BAI)
+      .filter((bai) => !(bai.id in MAU))
+      .map((bai) => [bai.id, ...kiemBai(bai)])
+      .filter((l) => l.length > 1);
+    expect(loi).toEqual([]);
   });
 
   it('mỗi nền chỉ dùng bố cục của chính nền ấy, id đúng tên', () => {
@@ -332,17 +202,14 @@ describe('luật bố cục', () => {
       }
   });
 
-  it('bật bố cục cho màn chương 1 và đồn bậc 1, 2, 4; màn khác, đồn bậc 3 vẫn bãi phẳng', () => {
+  it('bật bố cục cho màn chương 1–3 và mọi đồn; màn chương 4, 5 vẫn bãi phẳng; rừng, bến sông, làng mỗi chương một biến thể', () => {
     for (let n = 1; n <= STAGES.length; n++) {
       const id = stageBai(n);
-      if (STAGES[n - 1].chapter === 1) expect(baiById(id)?.terrain).toBe(STAGES[n - 1].terrain);
-      else expect(id).toBeNull();
+      if (STAGES[n - 1].chapter <= 3) expect([n, baiById(id)?.terrain]).toEqual([n, STAGES[n - 1].terrain]);
+      else expect([n, id]).toEqual([n, null]);
     }
-    for (const [tier, def] of Object.entries(CAMPS)) {
-      const id = baiOf(def.terrain, def.chapter);
-      if (tier === '3') expect(id).toBeNull();
-      else expect(id).toBe('benKia');
-    }
+    for (const def of Object.values(CAMPS)) expect(baiById(baiOf(def.terrain, def.chapter))?.terrain).toBe(def.terrain);
+    for (const t of ['rung', 'benSong', 'lang'] as const) expect(new Set([1, 2, 3].map((ch) => baiOf(t, ch as 1 | 2 | 3))).size).toBe(3);
   });
 
   it('id lạ thì đánh trên bãi phẳng', () => {

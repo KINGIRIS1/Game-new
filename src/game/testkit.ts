@@ -125,7 +125,7 @@ export const FULL_ARMS: Army = { giao: 2, cung: 2, voi: 2, no: 2 };
  * - `thuong`: như người chơi thường của màn thường (bấm chậm, không Đền, chưa rèn).
  * Quân mẫu 38 chỗ (`challengeArmy`), tướng khi đã hết truyện (`lateHeroes`), trừ thử thách Không tướng.
  */
-export function fightChallenge(n: number, play: 'thuong' | 'gioi', id = 1, army = challengeArmy(n)): Battle {
+export function fightChallenge(n: number, play: 'thuong' | 'gioi', id = 1, army = challengeArmy(n), onStep?: (b: Battle) => void): Battle {
   const def = STAGES[n - 1];
   const [hero = null, hero2 = null] = challengeOf(n)!.kind === 'khongTuong' ? [] : lateHeroes(n);
   const gioi = play === 'gioi';
@@ -143,5 +143,5 @@ export function fightChallenge(n: number, play: 'thuong' | 'gioi', id = 1, army 
     bai: stageBai(n),
     ...challengeField(n),
   });
-  return playOut(b, play);
+  return playOut(b, play, onStep);
 }
