@@ -28,9 +28,9 @@ import {
   type Human,
   type HumanRig,
 } from './body';
+import { armor, bun, chestDisc, cloak, hat, helmet, khan, pauldrons, plumes, sash, skirtArmor, streamer, studs } from './nanDo';
 import { C } from './palette';
-import { RigBuilder, bakeRig, skinRig, type Act, type BoneDef, type Bones, type Poser } from './rig';
-import type { ShapeBuilder } from './shapes';
+import { RigBuilder, bakeRig, skinRig, type Act, type BoneDef, type Bones, type Poser, type RigShape } from './rig';
 import {
   CO_LENH_TOP,
   LEATHER,
@@ -134,57 +134,30 @@ function lacViet(r: HumanRig, plate: boolean, tier = 0): void {
   });
 }
 
-/** Giặc Ân: khố sẫm, áo đỏ sẫm, giáp vai đồng mặt thú, mày xếch, mũ trụ đồng có chóp lông đỏ dựng cao. */
+/** Giặc Ân: khố sẫm, áo đỏ sẫm, giáp vai đồng, mày xếch, mũ trụ đồng chóp nhọn có tua đỏ dựng cao. */
 function anSoldier(r: HumanRig): void {
   humanBody(r, { cloth: C.enemyCloth, top: C.enemyRed, belt: C.bronzeDark, armband: C.bronzeDark });
   humanHead(r, { brows: true });
-  // Tấm giáp vai (pauldrons) bằng đồng hình mặt thú thao thiết
-  const chest = r.on('chest').plain;
-  for (const s of [-1, 1]) {
-    chest.box(0.08, 0.05, 0.09, C.bronzeDark, s * 0.17, 0.55, 0, [0, 0, -s * 0.3]);
-    chest.sphere(0.03, C.bronzeLight, s * 0.18, 0.56, 0.03, [1, 1, 1], 4);
-  }
-  const p = r.on('head').plain;
-  p.sphere(0.232, C.bronze, 0, 0.84, -0.025, [1, 0.62, 1], 10);
-  p.cyl(0.236, 0.236, 0.03, C.bronzeDark, 0, 0.845, -0.025, undefined, 12);
-  p.cone(0.055, 0.18, C.bronzeDark, 0, 1.04, -0.02, undefined, 6);
-  p.box(0.03, 0.16, 0.03, C.red, 0, 1.15, -0.02);
+  pauldrons(r, { color: C.bronzeDark, trim: C.bronzeLight });
+  helmet(r, { color: C.bronze, band: C.bronzeDark, bandH: 0.03, top: { kind: 'spike', color: C.bronzeDark, h: 0.13 }, tuft: { color: C.red, len: 0.15, lean: 0.12, r: 0.026 } });
 }
 
 /** Quân Triệu: quần đen, áo dài đen hoa văn, áo trong đỏ, mũ vải đen búi tóc có trâm cài, dải buộc đỏ. */
 function trieuSoldier(r: HumanRig): void {
-  humanBody(r, { legs: C.trieuCloth, cloth: C.trieuCloth, long: true, top: C.trieuRed, sleeves: C.trieuCloth, belt: C.trieuRed });
+  humanBody(r, { legs: C.trieuCloth, cloth: C.trieuCloth, long: true, top: C.trieuRed, sleeves: C.trieuCloth, belt: C.trieuRed, collar: C.trieuCloth });
   humanHead(r, { brows: true, hairPin: C.bronze });
-  const p = r.on('head').plain;
-  p.sphere(0.225, C.trieuCloth, 0, 0.835, -0.03, [1, 0.6, 1], 10);
-  p.sphere(0.08, C.trieuCloth, 0, 0.99, -0.05, [1, 1, 1], 8);
-  p.box(0.04, 0.16, 0.02, C.trieuRed, 0.08, 0.76, -0.21, [0.2, 0, 0.2]);
-}
-
-/** Hàng lá giáp chạy ngang quanh một ống (`r0` ở đáy `y0`, `r1` ở đỉnh `y1`), mỗi hàng một vòng sẫm. */
-function lamellae(p: ShapeBuilder, color: number, r0: number, r1: number, y0: number, y1: number, rows: number[]): void {
-  for (const y of rows) {
-    const rr = r0 + ((y - y0) / (y1 - y0)) * (r1 - r0) + 0.004;
-    p.cyl(rr, rr, 0.014, color, 0, y, 0, undefined, 10);
-  }
-}
-
-/** Giáp lá che ngực quân Hán (`vest`), ba hàng lá viền sẫm (`dark`). */
-function hanVest(r: HumanRig, vest: number, dark: number): void {
-  const chest = r.on('chest').plain;
-  chest.cyl(0.155, 0.138, 0.2, vest, 0, 0.48, 0, undefined, 10);
-  lamellae(chest, dark, 0.138, 0.155, 0.38, 0.58, [0.43, 0.49, 0.55]);
+  helmet(r, { color: C.trieuCloth, cloth: true, lift: 0, puff: 0.014 });
+  bun(r, { color: C.trieuCloth, at: [0, 0.99, -0.05], size: 0.07, tie: C.trieuRed });
+  streamer(r, { from: [0.05, 0.8, -0.2], dir: [0.35, -1, -0.45], len: 0.16, width: 0.035, color: C.trieuRed });
 }
 
 /** Quân Hán: quần đỏ sẫm, áo dài đỏ son quá gối, giáp (`vest`: lá sắt hay da) che ngực, khăn đen viền đỏ, vạt khăn dựng sau gáy. */
 function hanSoldier(r: HumanRig, vest: number, dark: number): void {
-  humanBody(r, { legs: C.hanRedDark, cloth: C.hanRed, pattern: false, long: true, top: C.hanRed, sleeves: C.hanRed, belt: dark });
-  hanVest(r, vest, dark);
+  humanBody(r, { legs: C.hanRedDark, cloth: C.hanRed, pattern: false, long: true, top: C.hanRed, sleeves: C.hanRed, belt: dark, hem: C.hanRedDark });
+  armor(r, { color: vest, trim: dark, rows: 3, y0: 0.4, y1: 0.585 });
   humanHead(r, { brows: true });
-  const head = r.on('head').plain;
-  head.sphere(0.222, HAN_BLACK, 0, 0.84, -0.03, [1, 0.6, 1], 10);
-  head.cyl(0.226, 0.226, 0.03, C.hanRed, 0, 0.815, -0.03, undefined, 12);
-  head.box(0.17, 0.13, 0.06, HAN_BLACK, 0, 0.96, -0.12, [-0.3, 0, 0]);
+  helmet(r, { color: HAN_BLACK, cloth: true, lift: 0, puff: 0.014, band: C.hanRed, bandH: 0.026 });
+  streamer(r, { from: [0, 0.9, -0.17], dir: [0, 1, -0.5], len: 0.12, width: 0.15, color: HAN_BLACK });
 }
 
 /** Bao tên sau lưng, miệng bao chếch qua vai phải để tay phải rút tên. */
@@ -228,8 +201,9 @@ const SPECS: Record<SoldierKind, Spec> = {
       lacViet(r, false, tier);
       if (tier >= 1) {
         // Giáp ngực da thuộc nẹp đinh đồng; bậc 3 giáp ngực đồng có núm vàng.
-        r.on('chest').plain.box(0.25, 0.22, 0.02, tier >= 3 ? C.bronze : LEATHER, 0, 0.49, 0.11);
-        r.on('chest').plain.sphere(tier >= 3 ? 0.03 : 0.018, tier >= 3 ? C.gold : C.bronzeLight, 0, 0.49, 0.122);
+        armor(r, { color: tier >= 3 ? C.bronze : LEATHER, trim: tier >= 3 ? C.gold : C.woodDark, y0: 0.43, y1: 0.575, thick: 0.014 });
+        if (tier >= 3) chestDisc(r, { color: C.gold, r: 0.03, y: 0.5, thick: 0.014, boss: C.goldDark });
+        else studs(r, { color: C.bronzeLight, thick: 0.014, at: [[0, 0.5], [-0.05, 0.535], [0.05, 0.535], [-0.06, 0.465], [0.06, 0.465]] });
       }
       // Bậc 1 mũi tên sắt, bao tên da; bậc 2 cung sừng, bao tên đồng; bậc 3 cung bịt vàng, bao tên đồng vàng.
       r.local('handL', GRIP_L, null, (s) => bow(s, tier >= 2, tier >= 3));
@@ -252,17 +226,10 @@ const SPECS: Record<SoldierKind, Spec> = {
         wristband: C.bronze,
       });
       humanHead(r);
-      hairCap(r);
-      const head = r.on('head').plain;
-      head.sphere(0.235, C.bronze, 0, 0.84, -0.025, [1, 0.62, 1], 10);
-      head.cyl(0.238, 0.238, 0.035, C.bronzeDark, 0, 0.84, -0.025, undefined, 12);
-      // 3 chóp lông vũ biểu tượng chim thần; bậc 3 năm chóp, hai chóp ngoài lông vàng, vành mũ đồng vàng.
-      const plumes = tier >= 3 ? 2 : 1;
-      for (let i = -plumes; i <= plumes; i++) {
-        const color = i === 0 ? C.red : Math.abs(i) === 2 ? C.gold : C.cream;
-        head.box(0.05, 0.3, 0.025, color, i * 0.065, 1.04 - Math.abs(i) * 0.02, -0.06, [0, 0, -i * 0.28]);
-      }
-      if (tier >= 3) r.on('head').band.cyl(0.242, 0.242, 0.03, C.gold, 0, 0.815, -0.025, undefined, 12);
+      // Mũ đồng che thái dương; 3 chóp lông vũ biểu tượng chim thần; bậc 3 năm chóp, hai chóp ngoài lông vàng, vành mũ
+      // đồng vàng hoa văn.
+      helmet(r, { color: C.bronze, band: tier >= 3 ? C.gold : C.bronzeDark, bandH: 0.034, bandPattern: tier >= 3, cheek: 0.05, guard: C.bronze });
+      plumes(r, [C.red, C.cream, C.gold], { count: tier >= 3 ? 5 : 3, len: 0.3, spread: 0.3, y: 0.97, z: -0.05, tilt: -0.12, width: 0.065 });
       r.local('hand', GRIP_R, null, (s) => {
         crossbowParts(s, false, 0.95);
         // Bậc 2 cánh nỏ bọc sừng; bậc 3 đầu cánh bịt đồng vàng, đai vàng quấn cổ nỏ.
@@ -297,21 +264,13 @@ const SPECS: Record<SoldierKind, Spec> = {
     draw: (r) => {
       // Phó tướng Ân: giáp nặng, giáp vai lớn có gai nhọn, áo choàng chiến bào đỏ tung bay, mũ trụ chùm lông đỏ dài, đại phủ
       humanBody(r, { cloth: C.enemyCloth, top: C.enemyRed, belt: C.bronze, greaves: C.bronzeDark, wristband: C.bronze });
-      const chest = r.on('chest');
-      chest.band.cyl(0.155, 0.135, 0.22, C.enemyRed, 0, 0.48, 0, undefined, 12);
-      chest.plain.box(0.48, 0.54, 0.035, C.enemyRed, 0, 0.36, -0.17, [0.15, 0, 0]);
-      // Giáp vai lớn có gai nhọn uy hiếp
-      for (const s of [-1, 1]) {
-        chest.plain.box(0.1, 0.06, 0.11, C.bronzeDark, s * 0.18, 0.57, 0, [0, 0, -s * 0.35]);
-        chest.plain.cone(0.045, 0.24, C.bronzeLight, s * 0.2, 0.64, 0, [0, 0, -s * 0.6], 6);
-      }
-      humanHead(r, { brows: true, beard: C.hair });
-      const head = r.on('head').plain;
-      head.sphere(0.238, C.bronze, 0, 0.84, -0.02, [1, 0.65, 1], 10);
-      head.cyl(0.242, 0.242, 0.035, C.bronzeDark, 0, 0.84, -0.02, undefined, 12);
-      // Bờm lông đỏ dài ngả về sau
-      head.cone(0.1, 0.46, C.red, 0, 1.14, -0.08, [-0.3, 0, 0], 8);
-      head.box(0.05, 0.32, 0.04, C.red, 0, 1.05, -0.22, [-0.5, 0, 0]);
+      armor(r, { color: C.enemyRed, trim: C.bronze, pattern: true, y0: 0.4, y1: 0.585 });
+      cloak(r, { color: C.enemyRed, trim: C.bronzeDark, clasp: C.bronzeLight, hem: 0.12 });
+      // Giáp vai lớn có gai nhọn uy hiếp.
+      pauldrons(r, { color: C.bronzeDark, trim: C.bronzeLight, layers: 2, size: 1.1, spike: C.bronzeLight });
+      humanHead(r, { brows: true, beard: C.hair, beardLen: 0.12 });
+      // Mũ trụ đồng, bờm lông đỏ dài ngả về sau.
+      helmet(r, { color: C.bronze, band: C.bronzeDark, neck: 0.07, guard: C.bronze, guardTrim: C.bronzeDark, top: { kind: 'tube', color: C.bronzeDark, h: 0.05 }, tuft: { color: C.red, len: 0.38, lean: 0.55, r: 0.042 } });
       r.local('hand', GRIP_R, null, bigAxe);
     },
   },
@@ -347,8 +306,7 @@ const SPECS: Record<SoldierKind, Spec> = {
       humanHead(r, { brows: true });
       hairCap(r);
       headband(r, C.trieuRed);
-      const head = r.on('head').plain;
-      head.box(0.04, 0.16, 0.02, C.trieuRed, 0.08, 0.74, -0.22, [0.3, 0, 0.2]);
+      streamer(r, { from: [0.06, 0.8, -0.2], dir: [0.35, -1, -0.5], len: 0.15, width: 0.032, color: C.trieuRed });
       r.local('hand', GRIP_R, null, (s) => spear(s, 1, 1.05));
     },
   },
@@ -359,10 +317,7 @@ const SPECS: Record<SoldierKind, Spec> = {
       humanBody(r, { cloth: C.trieuCloth, top: C.trieuCloth, belt: C.trieuRed });
       humanHead(r, { brows: true });
       hairCap(r);
-      const head = r.on('head').plain;
-      head.cyl(0.31, 0.31, 0.022, C.trieuCloth, 0, 0.9, -0.02, undefined, 14);
-      head.cyl(0.315, 0.315, 0.012, C.trieuRed, 0, 0.885, -0.02, undefined, 14);
-      head.cone(0.19, 0.14, C.trieuCloth, 0, 0.98, -0.02, undefined, 10);
+      hat(r, { kind: 'wide', color: C.trieuCloth, trim: C.trieuRed, y: 0.9, r: 0.31, h: 0.15 });
       r.local('handL', GRIP_L, null, (s) => bow(s));
       r.local('hand', GRIP_R, null, (s) => arrow(s));
       backQuiver(r, C.trieuRed, false);
@@ -374,14 +329,10 @@ const SPECS: Record<SoldierKind, Spec> = {
     draw: (r) => {
       // Giáp mây đan dày nhiều tầng phủ ngực và vai, mũ mây bện đai sắt, đại rìu
       humanBody(r, { cloth: C.trieuCloth, top: RATTAN, belt: RATTAN_DARK, greaves: RATTAN_DARK });
-      const chest = r.on('chest');
-      chest.band.cyl(0.16, 0.14, 0.22, RATTAN, 0, 0.47, 0, undefined, 10);
-      for (const y of [0.4, 0.48, 0.56]) chest.plain.cyl(0.165, 0.165, 0.018, RATTAN_DARK, 0, y, 0, undefined, 10);
-      for (const sx of [-1, 1]) chest.plain.sphere(0.08, RATTAN, sx * 0.17, 0.57, 0, [1, 0.7, 1], 6);
+      armor(r, { color: RATTAN, trim: RATTAN_DARK, rows: 3, thick: 0.022, y0: 0.39, y1: 0.59 });
+      pauldrons(r, { color: RATTAN, trim: RATTAN_DARK, layers: 2, size: 1.15 });
       humanHead(r, { brows: true });
-      const head = r.on('head').plain;
-      head.sphere(0.235, RATTAN, 0, 0.84, -0.025, [1, 0.62, 1], 10);
-      head.cyl(0.24, 0.24, 0.025, RATTAN_DARK, 0, 0.84, -0.025, undefined, 12);
+      helmet(r, { color: RATTAN, band: RATTAN_DARK, bandH: 0.03, ridge: RATTAN_DARK, puff: 0.022 });
       r.local('hand', GRIP_R, null, bigAxe);
     },
   },
@@ -391,63 +342,31 @@ const SPECS: Record<SoldierKind, Spec> = {
     draw: (r) => {
       // Tướng thủy binh Triệu (trùm cửa sông): giáp đen viền vàng to bản, giáp vai hai tầng, đai đỏ chéo ngực,
       // áo choàng đỏ viền vàng, mũ trụ đen chùm lông chim đen, râu đen, đao dài.
-      humanBody(r, { legs: C.trieuCloth, cloth: ARMOR_BLACK, long: true, top: ARMOR_BLACK, sleeves: C.trieuCloth, belt: C.gold, armband: C.gold });
-      for (const [b, x] of [
-        ['legL', -0.065],
-        ['legR', 0.065],
-      ] as const) {
-        const lp = r.on(b).plain;
-        lp.cyl(0.056, 0.05, 0.12, ARMOR_BLACK, x, 0.09, 0.005, undefined, 8);
-        lp.cyl(0.058, 0.058, 0.022, C.gold, x, 0.15, 0.005, undefined, 8);
-      }
-      // Vạt giáp đùi hai bên và vạt trước, viền vàng; khóa đai vàng.
-      const hips = r.on('hips').plain;
-      for (const sx of [-1, 1]) {
-        hips.box(0.05, 0.22, 0.17, ARMOR_BLACK, sx * 0.175, 0.28, 0, [0, 0, -sx * 0.2]);
-        hips.box(0.056, 0.03, 0.18, C.gold, sx * 0.197, 0.175, 0, [0, 0, -sx * 0.2]);
-      }
-      hips.box(0.15, 0.2, 0.03, ARMOR_BLACK, 0, 0.28, 0.175, [-0.15, 0, 0]);
-      hips.box(0.156, 0.03, 0.036, C.gold, 0, 0.18, 0.19, [-0.15, 0, 0]);
-      hips.box(0.1, 0.075, 0.04, C.gold, 0, 0.405, 0.135);
-      // Giáp ngực đen nhiều lớp vảy viền vàng, rộng hơn thân lính.
-      const chest = r.on('chest');
-      chest.plain.cyl(0.178, 0.15, 0.24, ARMOR_BLACK, 0, 0.48, 0, undefined, 10);
-      for (const y of [0.44, 0.52]) chest.plain.cyl(0.174 - (0.56 - y) * 0.1, 0.174 - (0.56 - y) * 0.1, 0.012, FEATHER_BLACK, 0, y, 0, undefined, 10);
-      chest.plain.cyl(0.182, 0.182, 0.024, C.gold, 0, 0.6, 0, undefined, 10);
-      chest.plain.cyl(0.154, 0.154, 0.022, C.gold, 0, 0.365, 0, undefined, 10);
-      // Đai đỏ chéo trước ngực, từ vai phải xuống hông trái.
-      chest.plain.box(0.065, 0.34, 0.025, C.trieuRed, 0, 0.48, 0.168, [0.08, 0, -0.72]);
-      // Giáp vai hai tầng đen viền vàng.
-      for (const sx of [-1, 1]) {
-        chest.plain.sphere(0.1, ARMOR_BLACK, sx * 0.2, 0.575, 0, [1.2, 0.72, 1.1], 8);
-        chest.plain.box(0.15, 0.024, 0.17, C.gold, sx * 0.215, 0.535, 0, [0, 0, -sx * 0.35]);
-        chest.plain.sphere(0.085, ARMOR_BLACK, sx * 0.23, 0.505, 0, [1.05, 0.6, 1], 8);
-        chest.plain.box(0.13, 0.02, 0.15, C.gold, sx * 0.25, 0.47, 0, [0, 0, -sx * 0.5]);
-        chest.plain.sphere(0.024, C.gold, sx * 0.2, 0.635, 0, [1, 1, 1], 6);
-      }
-      // Áo choàng đỏ viền vàng.
-      chest.plain.box(0.52, 0.56, 0.035, C.trieuRed, 0, 0.37, -0.205, [0.18, 0, 0]);
-      chest.plain.box(0.54, 0.05, 0.04, C.gold, 0, 0.1, -0.255, [0.18, 0, 0]);
-      // Hộ uyển đen viền vàng.
-      for (const [b, sx] of [
-        ['armL', -1],
-        ['armR', 1],
-      ] as const) {
-        const ap = r.on(b).plain;
-        ap.cyl(0.046, 0.04, 0.1, ARMOR_BLACK, sx * 0.135, 0.37, 0, undefined, 8);
-        ap.cyl(0.048, 0.048, 0.02, C.gold, sx * 0.135, 0.41, 0, undefined, 8);
-      }
-      // Mặt dữ, râu đen; mũ trụ đen vành vàng, che gáy, chóp vàng, chùm lông chim đen.
-      humanHead(r, { brows: true, mustache: C.hair });
-      const head = r.on('head').plain;
-      head.cone(0.07, 0.16, C.hair, 0, 0.6, 0.15, [Math.PI + 0.3, 0, 0], 6);
-      head.sphere(0.242, ARMOR_BLACK, 0, 0.845, -0.025, [1, 0.66, 1], 10);
-      head.cyl(0.246, 0.246, 0.03, C.gold, 0, 0.83, -0.025, undefined, 12);
-      head.box(0.38, 0.13, 0.05, ARMOR_BLACK, 0, 0.75, -0.2, [0.35, 0, 0]);
-      head.box(0.39, 0.025, 0.055, C.gold, 0, 0.69, -0.22, [0.35, 0, 0]);
-      head.box(0.07, 0.07, 0.03, C.gold, 0, 0.89, 0.205, [0, 0, Math.PI / 4]);
-      head.sphere(0.035, C.gold, 0, 1.0, -0.03, [1, 1, 1], 6);
-      featherCrown(r, [FEATHER_BLACK, ARMOR_BLACK], { count: 7, len: 0.46 });
+      humanBody(r, {
+        legs: C.trieuCloth,
+        cloth: ARMOR_BLACK,
+        long: true,
+        top: ARMOR_BLACK,
+        sleeves: C.trieuCloth,
+        belt: C.gold,
+        armband: C.gold,
+        greaves: ARMOR_BLACK,
+        bracer: ARMOR_BLACK,
+        bracerTrim: C.gold,
+        hem: C.gold,
+      });
+      // Vạt giáp đùi hai bên và vạt trước, viền vàng.
+      skirtArmor(r, { color: ARMOR_BLACK, trim: C.gold, rows: 2, to: 0.2, panels: [0, Math.PI, Math.PI / 2], half: 0.42 });
+      // Giáp ngực đen nhiều lớp vảy viền vàng, đai đỏ chéo trước ngực.
+      armor(r, { color: ARMOR_BLACK, trim: C.gold, rows: 3, scales: true, thick: 0.022, y0: 0.39, y1: 0.6 });
+      sash(r, { color: C.trieuRed, side: 1, width: 0.06, thick: 0.04 });
+      // Giáp vai hai tầng đen viền vàng; áo choàng đỏ viền vàng.
+      pauldrons(r, { color: ARMOR_BLACK, trim: C.gold, layers: 2, size: 1.2 });
+      cloak(r, { color: C.trieuRed, trim: C.gold, clasp: C.gold, hem: 0.1 });
+      // Mặt dữ, ria và râu đen; mũ trụ đen vành vàng, che gáy, tấm vàng trước trán, chùm lông chim đen.
+      humanHead(r, { brows: true, mustache: C.hair, beard: C.hair, beardLen: 0.1 });
+      helmet(r, { color: ARMOR_BLACK, band: C.gold, neck: 0.1, guard: ARMOR_BLACK, guardTrim: C.gold, brow: C.gold, top: { kind: 'knob', color: C.gold } });
+      plumes(r, [FEATHER_BLACK, ARMOR_BLACK], { count: 7, len: 0.46, y: 0.98, z: -0.08 });
       r.local('hand', GRIP_R, null, longDao);
     },
   },
@@ -487,21 +406,20 @@ const SPECS: Record<SoldierKind, Spec> = {
         greaves: C.hanIronDark,
         wristband: C.hanIronDark,
       });
-      lamellae(r.on('hips').plain, C.hanIronDark, 0.19, 0.125, 0.11, 0.41, [0.17, 0.25, 0.33]);
-      hanVest(r, C.hanIron, C.hanIronDark);
-      const chest = r.on('chest').plain;
-      for (const sx of [-1, 1]) {
-        chest.sphere(0.085, C.hanIron, sx * 0.18, 0.565, 0, [1.15, 0.7, 1.05], 8);
-        chest.box(0.13, 0.02, 0.15, C.hanIronDark, sx * 0.2, 0.525, 0, [0, 0, -sx * 0.4]);
-      }
+      skirtArmor(r, { color: C.hanIron, trim: C.hanIronDark, rows: 3, to: 0.12 });
+      armor(r, { color: C.hanIron, trim: C.hanIronDark, rows: 3, y0: 0.4, y1: 0.59 });
+      pauldrons(r, { color: C.hanIron, trim: C.hanIronDark, layers: 2 });
       humanHead(r, { brows: true });
-      const head = r.on('head').plain;
-      head.sphere(0.238, C.hanIron, 0, 0.845, -0.025, [1, 0.66, 1], 10);
-      head.cyl(0.242, 0.242, 0.03, C.hanIronDark, 0, 0.83, -0.025, undefined, 12);
-      head.box(0.36, 0.14, 0.05, C.hanIron, 0, 0.74, -0.2, [0.35, 0, 0]);
-      for (const sx of [-1, 1]) head.box(0.03, 0.14, 0.1, C.hanIron, sx * 0.215, 0.73, -0.03);
-      head.cyl(0.022, 0.022, 0.06, C.hanIronDark, 0, 1.0, -0.03, undefined, 6);
-      head.cone(0.065, 0.15, C.hanRed, 0, 1.08, -0.04, [Math.PI, 0, 0], 7);
+      helmet(r, {
+        color: C.hanIron,
+        band: C.hanIronDark,
+        neck: 0.1,
+        cheek: 0.09,
+        guard: C.hanIron,
+        guardTrim: C.hanIronDark,
+        top: { kind: 'tube', color: C.hanIronDark, h: 0.05 },
+        tuft: { color: C.hanRed, len: 0.13, lean: 0.1, r: 0.03 },
+      });
       r.local('armL', [-0.21, 0.38, 0.07], null, (s) => {
         s.plain.box(0.38, 0.56, 0.03, HAN_BLACK, 0, 0, 0);
         s.plain.box(0.32, 0.5, 0.04, C.hanRed, 0, 0, 0);
@@ -517,18 +435,10 @@ const SPECS: Record<SoldierKind, Spec> = {
     style: 'spear',
     draw: (r) => {
       // Áo nâu, khố nâu, chân đất, thắt lưng vải; khăn nâu vấn hai vòng, mối buộc sau gáy; giáo tre tầm vông.
-      humanBody(r, { cloth: C.aoNau, pattern: false, top: C.aoNau, sleeves: C.aoNau, belt: C.khanNau });
-      const chest = r.on('chest').plain;
-      chest.box(0.025, 0.15, 0.012, C.khanNau, 0, 0.5, 0.115, [0.15, 0, 0]);
+      humanBody(r, { cloth: C.aoNau, pattern: false, top: C.aoNau, sleeves: C.aoNau, belt: C.khanNau, collar: C.khanNau });
       humanHead(r);
-      hairCap(r);
-      const head = r.on('head').plain;
-      // Khăn trùm kín đỉnh đầu, quấn hai lớp chéo nhau sát trán.
-      head.sphere(0.222, C.khanNau, 0, 0.86, -0.035, [1, 0.55, 1], 12);
-      head.add(new THREE.TorusGeometry(0.2, 0.032, 5, 14), C.khanNau, 0, 0.835, -0.03, [Math.PI / 2 + 0.12, 0, 0]);
-      head.add(new THREE.TorusGeometry(0.182, 0.028, 5, 14), C.aoNau, 0, 0.885, -0.04, [Math.PI / 2 - 0.12, 0, 0.06]);
-      head.sphere(0.05, C.khanNau, 0, 0.85, -0.235, [1.2, 0.9, 0.8], 6);
-      for (const s of [-1, 1]) head.box(0.035, 0.12, 0.02, C.khanNau, s * 0.035, 0.79, -0.26, [0.25, 0, s * 0.25]);
+      // Khăn trùm kín đỉnh đầu, quấn hai lớp sát trán, mối buộc sau gáy.
+      khan(r, { color: C.khanNau, roll: C.aoNau, rolls: 2, knot: true, tails: 0.12 });
       r.local('hand', GRIP_R, null, giaoTre);
     },
   },
@@ -541,40 +451,33 @@ const SPECS: Record<SoldierKind, Spec> = {
       seal: { parent: 'chest', at: TO_DINH_SEAL },
     },
     draw: (r) => {
-      // Quan phục đen dài tới chân, gấu và cổ giao lĩnh viền đỏ, tay áo rộng, đai đỏ thắt dưới bụng phệ.
-      humanBody(r, { legs: C.quanPhuc, cloth: C.quanPhuc, pattern: false, long: true, top: C.quanPhuc, sleeves: C.quanPhuc, belt: C.hanRedDark });
-      const hips = r.on('hips').plain;
-      hips.cyl(0.19, 0.21, 0.1, C.quanPhuc, 0, 0.07, 0, undefined, 12);
-      hips.cyl(0.212, 0.214, 0.025, C.hanRed, 0, 0.03, 0, undefined, 12);
-      hips.sphere(0.17, C.quanPhuc, 0, 0.37, 0.045, [1, 0.92, 1.05], 10);
-      hips.cyl(0.186, 0.186, 0.04, C.hanRed, 0, 0.39, 0.035, undefined, 12);
-      const chest = r.on('chest').plain;
-      for (const s of [-1, 1]) chest.box(0.035, 0.17, 0.014, C.hanRed, s * 0.035, 0.5, 0.118, [0.12, 0, s * 0.55]);
-      for (const [b, s] of [
-        ['armL', -1],
-        ['armR', 1],
-      ] as const) {
-        const ap = r.on(b).plain;
-        ap.cyl(0.078, 0.046, 0.15, C.quanPhuc, s * 0.135, 0.37, 0, undefined, 8);
-        ap.cyl(0.08, 0.08, 0.02, C.hanRed, s * 0.135, 0.3, 0, undefined, 8);
-      }
-      // Mặt quan: mày rậm, má phính, ria mép, râu dê.
-      humanHead(r, { brows: true, mustache: C.hair });
-      const head = r.on('head').plain;
-      for (const s of [-1, 1]) head.sphere(0.06, C.skin, s * 0.12, 0.68, 0.11, [1, 0.85, 0.8], 7);
-      head.cone(0.035, 0.16, C.hair, 0, 0.6, 0.165, [Math.PI + 0.35, 0, 0], 5);
+      // Quan phục đen dài tới chân, gấu và cổ giao lĩnh viền đỏ, tay áo rộng viền đỏ, đai đỏ thắt dưới bụng phệ.
+      humanBody(r, {
+        build: 'belly',
+        legs: C.quanPhuc,
+        cloth: C.quanPhuc,
+        pattern: false,
+        long: true,
+        top: C.quanPhuc,
+        sleeves: C.quanPhuc,
+        wideSleeves: true,
+        belt: C.hanRedDark,
+        hem: C.hanRed,
+        collar: C.hanRed,
+        cuff: C.hanRed,
+      });
+      // Mặt quan: mày rậm, ria mép, râu dê.
+      humanHead(r, { brows: true, mustache: C.hair, beard: C.hair, beardLen: 0.09 });
       hairCap(r);
-      // Mũ quan cao (xương riêng, rơi khi bỏ chạy): vành đen, mũ dựng ngả ra sau, trâm vàng ngang, dây đỏ quai mũ.
+      // Mũ quan cao (xương riêng, rơi khi bỏ chạy): mũ đen, tấm dựng ngả ra sau, ống ngang, trâm vàng, dây đỏ quai mũ.
+      helmet(r, { color: C.quanPhuc, cloth: false, lift: 0.04, puff: 0.016, band: C.quanPhuc, bandH: 0.05, bone: 'hat' });
+      streamer(r, { from: [0, 0.93, -0.13], dir: [0, 1, -0.32], len: 0.2, width: 0.16, color: C.quanPhuc, bone: 'hat' });
+      for (const s of [-1, 1]) streamer(r, { from: [s * 0.2, 0.8, 0.02], dir: [s * 0.1, -1, 0.15], len: 0.12, width: 0.014, color: C.hanRed, bone: 'hat' });
       const rig = r as unknown as RigBuilder<string>;
-      const hat = rig.on('hat').plain;
-      hat.cyl(0.226, 0.23, 0.08, C.quanPhuc, 0, 0.87, -0.03, undefined, 12);
-      hat.box(0.17, 0.25, 0.13, C.quanPhuc, 0, 1.02, -0.06, [-0.22, 0, 0]);
-      hat.cyl(0.062, 0.062, 0.17, C.quanPhuc, 0, 1.14, -0.09, [0, 0, Math.PI / 2], 8);
-      hat.cyl(0.012, 0.012, 0.36, C.gold, 0, 0.98, -0.06, [0, 0, Math.PI / 2], 5);
-      for (const s of [-1, 1]) {
-        hat.sphere(0.025, C.gold, s * 0.18, 0.98, -0.06, [1, 1, 1], 6);
-        hat.box(0.012, 0.2, 0.012, C.hanRed, s * 0.2, 0.75, 0.02);
-      }
+      const hatBone = rig.on('hat').plain;
+      hatBone.cyl(0.05, 0.05, 0.16, C.quanPhuc, 0, 1.12, -0.11, [0, 0, Math.PI / 2], 10);
+      hatBone.cyl(0.011, 0.011, 0.36, C.gold, 0, 0.99, -0.07, [0, 0, Math.PI / 2], 6);
+      for (const s of [-1, 1]) hatBone.sphere(0.024, C.gold, s * 0.18, 0.99, -0.07, [1, 1, 1], 8);
       // Ấn vàng núm rùa, dây thao đỏ, đeo trước bụng bên trái (xương riêng, ôm vào bụng khi bỏ chạy).
       rig.local('seal', TO_DINH_SEAL, null, (s) => {
         s.plain.box(0.016, 0.1, 0.012, C.hanRed, 0, 0.07, -0.01);
@@ -754,11 +657,22 @@ function poseSoldier(spec: Spec, b: Human, a: Act): void {
   spec.after?.(b as unknown as Bones<string>, a);
 }
 
-function shapeOf(kind: SoldierKind, tier: number) {
-  const spec = SPECS[kind];
-  const r = new RigBuilder<string>({ ...HUMAN, ...spec.bones }, DETAIL);
-  spec.draw(r as unknown as HumanRig, tier);
-  return r.build();
+/**
+ * Hình của mỗi loại lính, mỗi bậc dựng một lần rồi dùng chung cho mọi lính cùng loại (trận có vài chục lính). Lính
+ * bị gỡ thì hình trả khỏi GPU, lần vẽ sau three.js tự nạp lại.
+ */
+const shapes = new Map<string, RigShape<string>>();
+function shapeOf(kind: SoldierKind, tier: number): RigShape<string> {
+  const key = `${kind}:${tier}`;
+  let shape = shapes.get(key);
+  if (!shape) {
+    const spec = SPECS[kind];
+    const r = new RigBuilder<string>({ ...HUMAN, ...spec.bones }, DETAIL);
+    spec.draw(r as unknown as HumanRig, tier);
+    shape = r.build();
+    shapes.set(key, shape);
+  }
+  return shape;
 }
 
 // ---------- Người cưỡi ----------
@@ -824,15 +738,12 @@ const RIDERS: Record<RiderKind, Spec> = {
     style: 'chop',
     heavy: true,
     draw: (r) => {
-      humanBody(r, { cloth: C.enemyCloth, top: C.bronzeDark, belt: C.bronzeLight });
-      const chest = r.on('chest');
-      chest.band.cyl(0.155, 0.135, 0.2, C.bronzeDark, 0, 0.48, 0, undefined, 10);
-      chest.plain.box(0.48, 0.5, 0.035, C.enemyRed, 0, 0.36, -0.17, [0.15, 0, 0]);
-      for (const s of [-1, 1]) chest.plain.cone(0.045, 0.22, C.bronzeLight, s * 0.18, 0.6, 0, [0, 0, -s * 0.6], 5);
+      humanBody(r, { cloth: C.enemyCloth, top: C.bronzeDark, belt: C.bronzeLight, greaves: C.bronzeDark });
+      armor(r, { color: C.bronzeDark, trim: C.bronzeLight, pattern: true, y0: 0.4, y1: 0.59 });
+      cloak(r, { color: C.enemyRed, trim: C.bronzeDark, clasp: C.bronzeLight, hem: 0.14 });
+      pauldrons(r, { color: C.bronzeDark, trim: C.bronzeLight, layers: 2, size: 1.1, spike: C.bronzeLight });
       humanHead(r, { brows: true });
-      const head = r.on('head').plain;
-      head.sphere(0.238, C.bronzeLight, 0, 0.84, -0.02, [1, 0.65, 1], 10);
-      head.cone(0.09, 0.55, C.ember, 0, 1.18, -0.07, [-0.25, 0, 0], 6);
+      helmet(r, { color: C.bronzeLight, band: C.bronzeDark, neck: 0.06, guard: C.bronzeLight, guardTrim: C.bronzeDark, top: { kind: 'tube', color: C.bronzeDark, h: 0.06 }, tuft: { color: C.ember, len: 0.5, lean: 0.3, r: 0.045 } });
       r.local('hand', GRIP_R, null, bigAxe);
     },
   },
@@ -851,19 +762,15 @@ const RIDERS: Record<RiderKind, Spec> = {
   trieuDa: {
     style: 'chop',
     draw: (r) => {
-      humanBody(r, { legs: C.trieuCloth, cloth: C.ink, long: true, top: C.gold, sleeves: C.trieuCloth, belt: C.gold });
-      const chest = r.on('chest').plain;
-      chest.box(0.46, 0.5, 0.035, C.trieuRed, 0, 0.38, -0.17, [0.18, 0, 0]);
-      for (const s of [-1, 1]) chest.box(0.1, 0.06, 0.16, C.ink, s * 0.16, 0.57, 0, [0, 0, s * 0.3]);
-      humanHead(r, { beard: C.beard });
-      const head = r.on('head').plain;
-      for (const s of [-1, 1]) head.box(0.08, 0.022, 0.02, C.beard, s * 0.078, 0.8, 0.178, [0, 0, -s * 0.32]);
-      head.cyl(0.2, 0.23, 0.24, C.ink, 0, 0.92, -0.03, undefined, 10);
-      head.cyl(0.235, 0.235, 0.04, C.gold, 0, 0.82, -0.03, undefined, 10);
-      for (const s of [-1, 1]) {
-        head.box(0.34, 0.12, 0.02, C.ink, s * 0.36, 0.98, -0.13, [0, 0, s * 0.15]);
-        head.box(0.34, 0.025, 0.025, C.gold, s * 0.36, 1.04, -0.12, [0, 0, s * 0.15]);
-      }
+      humanBody(r, { legs: C.trieuCloth, cloth: C.ink, long: true, top: C.gold, sleeves: C.trieuCloth, belt: C.gold, hem: C.gold, collar: C.trieuRed });
+      armor(r, { color: C.gold, trim: C.goldDark, rows: 3, scales: true, y0: 0.4, y1: 0.59 });
+      cloak(r, { color: C.trieuRed, trim: C.gold, clasp: C.gold, hem: 0.12 });
+      pauldrons(r, { color: C.ink, trim: C.gold, size: 1.1 });
+      // Mặt già: mày bạc, râu bạc dài.
+      humanHead(r, { brows: true, browColor: C.beard, beard: C.beard, beardLen: 0.26, mustache: C.beard });
+      // Mũ đen cao hai cánh chuồn viền vàng.
+      helmet(r, { color: C.ink, lift: 0.1, puff: 0.02, band: C.gold, bandH: 0.04 });
+      for (const s of [-1, 1]) streamer(r, { from: [s * 0.16, 0.98, -0.13], dir: [s, 0.12, -0.05], len: 0.3, width: 0.12, color: C.ink });
       r.local('hand', GRIP_R, null, (s) => sword(s, 0.9, C.gold));
     },
   },
@@ -885,41 +792,27 @@ const RIDERS: Record<RiderKind, Spec> = {
         greaves: C.copperDark,
         wristband: C.copperDark,
       });
-      // Vạt giáp lá đồng phủ tới gối, giáp ngực ba hàng lá, hộ tâm đồng vàng, đai đỏ.
-      lamellae(r.on('hips').plain, C.copperDark, 0.19, 0.125, 0.11, 0.41, [0.17, 0.25, 0.33]);
-      hanVest(r, C.copper, C.copperDark);
-      const chest = r.on('chest').plain;
-      chest.cyl(0.052, 0.052, 0.016, C.gold, 0, 0.5, 0.15, [Math.PI / 2, 0, 0], 10);
-      chest.sphere(0.02, C.goldDark, 0, 0.5, 0.16, [1, 1, 0.6], 6);
-      // Giáp vai đồng hai lớp viền vàng.
-      for (const sx of [-1, 1]) {
-        chest.sphere(0.092, C.copper, sx * 0.19, 0.57, 0, [1.2, 0.7, 1.1], 8);
-        chest.box(0.14, 0.022, 0.16, C.gold, sx * 0.205, 0.53, 0, [0, 0, -sx * 0.38]);
-        chest.sphere(0.078, C.copperDark, sx * 0.22, 0.5, 0, [1.05, 0.6, 1], 8);
-      }
-      // Áo choàng đỏ son viền vàng, buông qua lưng ngựa.
-      chest.box(0.5, 0.58, 0.035, C.hanRed, 0, 0.36, -0.2, [0.2, 0, 0]);
-      chest.box(0.52, 0.045, 0.04, C.gold, 0, 0.08, -0.255, [0.2, 0, 0]);
-      for (const sx of [-1, 1]) chest.sphere(0.03, C.gold, sx * 0.16, 0.6, -0.12, [1, 1, 1], 6);
-      // Mặt lão tướng: mày bạc rậm xếch, ria bạc, râu bạc dài chẻ hai chòm; tóc mai bạc lòi dưới mũ.
-      humanHead(r, { blush: false, mustache: C.beard });
-      const head = r.on('head').plain;
-      for (const s of [-1, 1]) {
-        head.box(0.085, 0.026, 0.022, C.beard, s * 0.078, 0.805, 0.178, [0, 0, -s * 0.34]);
-        head.cone(0.055, 0.3, C.beard, s * 0.035, 0.55, 0.14, [Math.PI + 0.3, 0, s * 0.12], 6);
-        head.sphere(0.06, C.beard, s * 0.17, 0.72, -0.06, [0.6, 1.1, 1], 6);
-      }
-      head.cone(0.07, 0.2, C.beard, 0, 0.6, 0.15, [Math.PI + 0.25, 0, 0], 6);
-      // Mũ trụ đồng đỏ: chỏm tròn, vành vàng, che gáy, che má, chóp vàng cắm chùm lông đỏ cao.
-      head.sphere(0.242, C.copper, 0, 0.848, -0.025, [1, 0.66, 1], 10);
-      head.cyl(0.246, 0.246, 0.032, C.gold, 0, 0.83, -0.025, undefined, 12);
-      head.box(0.37, 0.14, 0.05, C.copper, 0, 0.74, -0.2, [0.35, 0, 0]);
-      head.box(0.38, 0.025, 0.055, C.gold, 0, 0.68, -0.22, [0.35, 0, 0]);
-      for (const sx of [-1, 1]) head.box(0.03, 0.15, 0.1, C.copperDark, sx * 0.218, 0.73, -0.02);
-      head.box(0.07, 0.07, 0.03, C.gold, 0, 0.9, 0.205, [0, 0, Math.PI / 4]);
-      head.cyl(0.026, 0.036, 0.1, C.gold, 0, 1.03, -0.03, undefined, 6);
-      head.cone(0.07, 0.34, C.hanRed, 0, 1.22, -0.08, [-0.3, 0, 0], 7);
-      for (const sx of [-1, 1]) head.cone(0.045, 0.26, C.hanRed, sx * 0.06, 1.16, -0.1, [-0.45, 0, -sx * 0.4], 6);
+      // Vạt giáp lá đồng phủ tới gối, giáp ngực ba hàng lá, hộ tâm đồng vàng.
+      skirtArmor(r, { color: C.copper, trim: C.copperDark, rows: 3, to: 0.12 });
+      armor(r, { color: C.copper, trim: C.copperDark, rows: 3, y0: 0.4, y1: 0.59 });
+      chestDisc(r, { color: C.gold, r: 0.05, y: 0.5, thick: 0.024, rim: C.goldDark, boss: C.goldDark });
+      // Giáp vai đồng hai lớp viền vàng; áo choàng đỏ son viền vàng, buông qua lưng ngựa.
+      pauldrons(r, { color: C.copper, trim: C.gold, layers: 2, size: 1.1 });
+      cloak(r, { color: C.hanRed, trim: C.gold, clasp: C.gold, hem: 0.08 });
+      // Mặt lão tướng: mày bạc rậm xếch, ria bạc, râu bạc dài chẻ hai chòm.
+      humanHead(r, { blush: false, brows: true, browColor: C.beard, mustache: C.beard, beard: C.beard, beardLen: 0.3, beardSplit: true });
+      // Mũ trụ đồng đỏ: vành vàng, che gáy, che má, tấm vàng trước trán, ống vàng cắm chùm lông đỏ cao.
+      helmet(r, {
+        color: C.copper,
+        band: C.gold,
+        neck: 0.1,
+        cheek: 0.1,
+        guard: C.copper,
+        guardTrim: C.gold,
+        brow: C.gold,
+        top: { kind: 'tube', color: C.gold, h: 0.1 },
+        tuft: { color: C.hanRed, len: 0.34, lean: 0.3, r: 0.042 },
+      });
       r.local('hand', GRIP_R, null, daiDao);
       r.local('handL', GRIP_L, null, coLenhCan);
       (r as unknown as RigBuilder<string>).local('coLenh', MA_VIEN_FLAG, null, coLenhLa);

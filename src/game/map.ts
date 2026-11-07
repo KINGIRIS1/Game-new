@@ -140,6 +140,30 @@ export function lineTiles(a: { x: number; z: number }, b: { x: number; z: number
   return out;
 }
 
+/**
+ * Viền chữ nhật khi kéo thả đắp tường từ góc `a` tới góc `b`: đi một vòng quanh chu vi bắt đầu từ `a` (dọc x tới
+ * ngang `b`, dọc z tới `b`, về ngang `a`, rồi về gần `a`), mỗi ô một lần, ô sau liền cạnh ô trước và ô cuối liền
+ * cạnh ô đầu, nên đắp đủ là một vòng kín. Hai góc cùng hàng hay cùng cột thì là dải thẳng.
+ */
+export function rectTiles(a: { x: number; z: number }, b: { x: number; z: number }): { x: number; z: number }[] {
+  if (a.x === b.x || a.z === b.z) {
+    const out: { x: number; z: number }[] = [];
+    const sx = Math.sign(b.x - a.x);
+    const sz = Math.sign(b.z - a.z);
+    const n = Math.max(Math.abs(b.x - a.x), Math.abs(b.z - a.z));
+    for (let i = 0; i <= n; i++) out.push({ x: a.x + i * sx, z: a.z + i * sz });
+    return out;
+  }
+  const sx = Math.sign(b.x - a.x);
+  const sz = Math.sign(b.z - a.z);
+  const out: { x: number; z: number }[] = [];
+  for (let x = a.x; x !== b.x; x += sx) out.push({ x, z: a.z });
+  for (let z = a.z; z !== b.z; z += sz) out.push({ x: b.x, z });
+  for (let x = b.x; x !== a.x; x -= sx) out.push({ x, z: b.z });
+  for (let z = b.z; z !== a.z; z -= sz) out.push({ x: a.x, z });
+  return out;
+}
+
 // ---------- Độ cao ô đất ----------
 
 /** Ô sông có độ cao này; ô đất từ 0 (bãi bồi ven sông) tới 3 (đồi phía rừng), đắp thêm được tới MAX_HEIGHT. */

@@ -7,12 +7,13 @@ import { initialCaoLo } from './caoLo';
 import { initialCayDa, updateCayDa, type CayDaState } from './cayDa';
 import { bridgeFit, bridgeheadCells, cutOff, farFactor, farRaidBank, fortFit, initialBenKia, landRaidSide, openBridgehead, updateBenKia, villagesOutput, type BenKiaState } from './benKia';
 import { huanTiers, initialThuThach } from './thuThach';
+import { advanceXay, initialXay, isBusy, nextXayEvent, pendingBuilding, pendingBuildings, pendingCount, pendingOf, type XayState } from './xay';
 import { inChapter4 } from './chuong4';
 import { chuong5Won, inChapter5, initialHaiBa, maVienCame } from './chuong5';
 import { advJoined, initialAdv, inChapter3, ruaVangCame, wallRings } from './coLoa';
 import { heroesFor, inChapter2, initialSon, restAfter, sonJoined } from './son';
 import { bake, datBonus, initialTet, troiBonus, updateTet, type TetState } from './tet';
-import { footprintTop, groundOf, levelFootprint, tileHeight } from './terrain';
+import { floodHits, footprintTop, groundOf, levelFootprint, tileHeight, type FloodHits } from './terrain';
 import {
   BUILDINGS,
   CA_BIEN_PER_MIN,
@@ -30,12 +31,15 @@ import {
   FIRST_FLOOD_MS,
   FIRST_LAND_MS,
   FLOOD_RECEDE_S,
+  PHU_SA_BONUS,
+  PHU_SA_TYPES,
   GIFT_IDS,
   MAX_HEIGHT,
   floodLevel,
   isBridge,
   isDecor,
   isRoad,
+  isWalkWall,
   ROAD_TYPES,
   raiseBuildingCost,
   raiseTileCost,
@@ -103,6 +107,10 @@ export interface Building {
   uNo?: 'ok' | 'hu';
   /** Công trình xoay được (`canRotateType`): đã xoay mấy nấc 90° (1–3). Không có là hướng gốc. */
   rot?: number;
+  /** Cống đê đang mở: nước lũ tràn vào sau đê (`floodHits` ở `terrain.ts`). Không có là đóng. */
+  mo?: true;
+  /** Ruộng lúa, ruộng nếp được bồi phù sa ở mùa lũ vừa rồi: làm ra thêm `PHU_SA_BONUS` tới hết mùa lũ sau. */
+  boi?: true;
 }
 
 export interface RaidResult {
@@ -116,6 +124,8 @@ export interface RaidResult {
   wrecked: number[];
   /** Công trình bị nước lũ làm hư. */
   drowned: number[];
+  /** Mùa lũ: số ruộng được bồi phù sa (nước vào qua cống đang mở). */
+  boi?: number;
   stolen: Resources;
   /** Ai đã đánh kinh đô đợt này. */
   foe: Foe;
@@ -313,9 +323,9 @@ export interface Merchant {
  * Phiên bản bản lưu hiện tại (11: kinh đô lớn; 12: khoảnh tự chọn; 13: lính nỏ, ụ nỏ; 14: Cao Lỗ, vua xuống biển;
  * 15: thử thách, huân công; 16: gỗ, tài nguyên thứ năm, và gợi ý của Lạc hầu về công trình mới; 17: cây, đá mọc trên
  * ô trống; 18: lưới nới qua sông, 76×76; 20: Điện 10×10; 21: chương 5, quân Hán; 22: Hai Bà Trưng; 23: thủy quân Hán,
- * lâu thuyền; 24: nữ tướng, thử thách màn 33–40).
+ * lâu thuyền; 24: nữ tướng, thử thách màn 33–40; 25: thời gian xây, tốp thợ, nhà thợ hồ, đố sử).
  */
-export const SAVE_VERSION = 24;
+export const SAVE_VERSION = 25;
 
 export interface GameState {
   version: typeof SAVE_VERSION;
@@ -361,6 +371,8 @@ export interface GameState {
   cayDa: CayDaState;
   /** Vùng đất bên kia sông (`benKia.ts`): khoảnh đã dò, đã mở, trinh sát đang đi, đồn đã dẹp. */
   benKia: BenKiaState;
+  /** Việc xây đang làm, tốp thợ, câu đố sử vừa hỏi (`xay.ts`). */
+  xay: XayState;
   /** Vừa nâng từ kinh đô nhỏ: kinh đô đã dựng lại theo mẫu, trả lại chừng này của. Giao diện báo một lần rồi xóa. */
   relaid?: { refund: Cost; dropped: number; dien?: boolean };
 }
@@ -371,6 +383,7 @@ export type FailReason =
   | 'datBiChiem'
   | 'ngoaiVung'
   | 'phaiSatSong'
+  | 'phaiSatThanh'
   | 'datGioiHan'
   | 'capToiDa'
   | 'khongTheXay'
@@ -461,7 +474,10 @@ export type FailReason =
   | 'daVeTheo'
   | 'chuaVeTay'
   | 'phaiBenKia'
-  | 'khongXoayDuoc';
+  | 'khongXoayDuoc'
+  | 'hetTho'
+  | 'dangXay'
+  | 'daHoiDu';
 
 export type Result<T = undefined> = { ok: true; value: T } | { ok: false; reason: FailReason };
 
@@ -536,6 +552,7 @@ export function createInitialState(now: number): GameState {
     hinted: [],
     cayDa: initialCayDa(),
     benKia: initialBenKia(),
+    xay: initialXay(),
   };
   levelFootprint(state, dien, footprintTop(state, 'dien', dien.x, dien.z));
   return state;
@@ -563,10 +580,13 @@ export function limitOf(state: GameState, type: BuildingType): number {
   return type === 'doanhTrai' ? Math.min(limit, generals(state).length) : limit;
 }
 
-/** Số chỗ đã dùng trong giới hạn `limitOf`: mỗi lầu nỏ tính là hai chòi canh; bốn loại đường chung một giới hạn. */
+/**
+ * Số chỗ đã dùng trong giới hạn `limitOf`: tính cả công trình đang dựng và đoạn tường đang đổi sang loại này; mỗi lầu
+ * nỏ tính là hai chòi canh; bốn loại đường chung một giới hạn.
+ */
 export function usedOf(state: GameState, type: BuildingType): number {
   if (isRoad(type)) return ROAD_TYPES.reduce((n, t) => n + countOf(state, t), 0);
-  return countOf(state, type) + (type === 'choiCanh' ? LAU_NO_TOWERS * countOf(state, 'lauNo') : 0);
+  return countOf(state, type) + pendingCount(state, type) + (type === 'choiCanh' ? LAU_NO_TOWERS * countOf(state, 'lauNo') : 0);
 }
 
 export function findBuilding(state: GameState, id: number): Building | undefined {
@@ -655,16 +675,18 @@ const occupancyCache = new WeakMap<GameState, { a: number; b: number; n: number;
 export function occupancy(state: GameState): Int32Array {
   let a = 0x811c9dc5;
   let h = 0x9e3779b9;
-  for (const b of state.buildings) {
+  // Công trình đang dựng mới cũng chiếm ô.
+  const all = state.xay?.viec.length ? [...state.buildings, ...pendingBuildings(state)] : state.buildings;
+  for (const b of all) {
     const v = (((b.id * 64 + (TYPE_INDEX.get(b.type) ?? 0)) * 64 + b.x) * 64 + b.z) | 0;
     a = Math.imul(a ^ v, 0x01000193);
     h = Math.imul(h ^ v ^ b.id, 0x85ebca6b) ^ (h >>> 13);
   }
-  const n = state.buildings.length;
+  const n = all.length;
   const hit = occupancyCache.get(state);
   if (hit && hit.a === a && hit.b === h && hit.n === n) return hit.grid;
   const grid = new Int32Array(GRID * GRID);
-  for (const b of state.buildings) {
+  for (const b of all) {
     const def = BUILDINGS[b.type];
     for (let dx = 0; dx < def.w; dx++) {
       for (let dz = 0; dz < def.d; dz++) grid[(b.z + dz) * GRID + (b.x + dx)] = b.id;
@@ -674,10 +696,48 @@ export function occupancy(state: GameState): Int32Array {
   return grid;
 }
 
+/** Công trình đã dựng ở ô (x, z). Công trình đang dựng mới không tính (xem `pendingAt`). */
 export function buildingAt(state: GameState, x: number, z: number): Building | undefined {
   if (!inGrid(x, z)) return undefined;
   const id = occupancy(state)[z * GRID + x];
   return id ? findBuilding(state, id) : undefined;
+}
+
+/**
+ * Đoạn thành đất hay thành Cổ Loa (`isWalkWall`) chung cạnh với ô (x, z) mà ô ấy ở mặt trong (gần tâm Điện hơn đoạn
+ * thành): bậc lên thành ở đó dựa vào đoạn này (lấy đoạn đầu tiên theo thứ tự đông, tây, nam, bắc). Bậc ở mặt trong
+ * thì lính trong thành lên được, và trận biết giặc đã vào trong hay còn ngoài thành (gần bậc hay gần mặt thành hơn).
+ * `grid` là lưới chiếm ô nếu đã có sẵn.
+ */
+export function stairWall(state: GameState, x: number, z: number, grid = occupancy(state)): Building | undefined {
+  const dien = state.buildings.find((b) => b.type === 'dien');
+  const cx = dien ? dien.x + BUILDINGS.dien.w / 2 : DIEN_HOME;
+  const cz = dien ? dien.z + BUILDINGS.dien.d / 2 : DIEN_HOME;
+  const here = Math.hypot(x + 0.5 - cx, z + 0.5 - cz);
+  for (const [dx, dz] of [
+    [1, 0],
+    [-1, 0],
+    [0, 1],
+    [0, -1],
+  ]) {
+    if (!inGrid(x + dx, z + dz)) continue;
+    const id = grid[(z + dz) * GRID + x + dx];
+    const b = id ? findBuilding(state, id) : undefined;
+    if (b && isWalkWall(b) && Math.hypot(b.x + 0.5 - cx, b.z + 0.5 - cz) > here) return b;
+  }
+  return undefined;
+}
+
+/** Công trình (đã dựng, hay đang dựng mới) có mã `id`: dùng khi tra theo lưới ô bị chiếm (`occupancy`). */
+export function occupant(state: GameState, id: number): Building | undefined {
+  return findBuilding(state, id) ?? pendingBuilding(state, id);
+}
+
+/** Công trình đang dựng mới (chưa xong) chiếm ô (x, z), nếu có. */
+export function pendingAt(state: GameState, x: number, z: number): Building | undefined {
+  if (!inGrid(x, z) || !state.xay?.viec.length) return undefined;
+  const id = occupancy(state)[z * GRID + x];
+  return id && !findBuilding(state, id) ? pendingBuilding(state, id) : undefined;
 }
 
 export function canAfford(state: GameState, cost: Cost): boolean {
@@ -705,15 +765,21 @@ export function troopBonus(state: GameState): number {
   return templeBonus(state) + troiBonus(state);
 }
 
+/** Phần cộng thêm của phù sa: ruộng lúa, ruộng nếp được bồi ở mùa lũ vừa rồi làm ra thêm `PHU_SA_BONUS`. */
+export function phuSaBonus(b: Building): number {
+  return b.boi && PHU_SA_TYPES.includes(b.type) ? PHU_SA_BONUS : 0;
+}
+
 /**
- * Sản lượng mỗi phút của công trình `b` trong kinh đô: theo người làm, cộng đặc sản đất bên kia sông, bằng 0 khi cầu
- * sang bờ ấy hư (chưa cộng đền, phúc lành).
+ * Sản lượng mỗi phút của công trình `b` trong kinh đô: theo người làm, cộng đặc sản đất bên kia sông và phù sa, bằng 0
+ * khi cầu sang bờ ấy hư (chưa cộng đền, phúc lành).
  */
 export function outputIn(state: GameState, b: Building): Cost {
   const out = outputOf(b);
-  const k = farFactor(state, b);
+  const far = farFactor(state, b);
+  if (far === 0) return {};
+  const k = far + phuSaBonus(b);
   if (k === 1) return out;
-  if (k === 0) return {};
   for (const r of RESOURCE_IDS) if (out[r]) out[r] = out[r]! * k;
   return out;
 }
@@ -775,12 +841,14 @@ export function unlocked(state: GameState, unlock: Unlock | undefined): boolean 
 }
 
 /**
- * Công trình mới Lạc hầu cần gợi ý: loại đầu tiên trong `NEW_HINTS` đã mở theo truyện và cấp Điện mà chưa gợi ý.
- * Giao diện báo rồi ghi vào `hinted` (`markHinted`).
+ * Công trình mới Lạc hầu cần gợi ý: loại đầu tiên trong `NEW_HINTS` đã mở theo truyện và cấp Điện mà chưa gợi ý
+ * (bậc lên thành thì cần có thành để dựa vào). Giao diện báo rồi ghi vào `hinted` (`markHinted`).
  */
 export function nextHint(state: GameState): BuildingType | null {
   for (const type of NEW_HINTS) {
     const def = BUILDINGS[type];
+    // Bậc lên thành chỉ gợi ý khi kinh đô đã có đoạn thành đất hay thành Cổ Loa để dựa vào.
+    if (type === 'bacThanh' && !state.buildings.some(isWalkWall)) continue;
     if (!state.hinted.includes(type) && unlocked(state, def.unlock) && dienLevel(state) >= def.minDien) return type;
   }
   return null;
@@ -804,14 +872,17 @@ export const UNLOCK_REASON: Record<Unlock, FailReason> = {
 
 /**
  * Công trình bị thay khi dựng `type` ở (x, z): thành Cổ Loa đắp đè lên lũy tre (hay thành đất) được, lũy cũ được dỡ đi;
- * cổng thành dựng thay một đoạn lũy, thành đất hay thành Cổ Loa (ụ nỏ trên đoạn thành mất theo); trải loại đường khác
- * đè lên ô đường cũ thì đổi vật liệu. Không hoàn lại giá đoạn bị thay.
+ * cổng thành dựng thay một đoạn lũy, thành đất hay thành Cổ Loa (ụ nỏ trên đoạn thành mất theo); cống đê dựng thay
+ * một đoạn đê; trải loại đường khác đè lên ô đường cũ thì đổi vật liệu. Không hoàn lại giá đoạn bị thay.
  */
-function replacedWall(state: GameState, type: BuildingType, x: number, z: number): Building | undefined {
-  if (type !== 'thanh' && type !== 'congThanh' && !isRoad(type)) return undefined;
+export function replacedWall(state: GameState, type: BuildingType, x: number, z: number): Building | undefined {
+  if (type !== 'thanh' && type !== 'congThanh' && type !== 'congDe' && !isRoad(type)) return undefined;
   const b = buildingAt(state, x, z);
+  // Đoạn đang có thợ làm (nâng cấp, đổi loại) thì không đắp đè được.
+  if (b && isBusy(state, b.id)) return undefined;
   if (type === 'thanh') return b?.type === 'luy' ? b : undefined;
   if (type === 'congThanh') return b?.type === 'luy' || b?.type === 'thanh' ? b : undefined;
+  if (type === 'congDe') return b?.type === 'de' ? b : undefined;
   return b && isRoad(b.type) && b.type !== type ? b : undefined;
 }
 
@@ -860,6 +931,7 @@ function fitsAt(state: GameState, type: BuildingType, x: number, z: number, grid
     }
   }
   if (def.nearRiver && !touchesRiver(x, z, def.w, def.d)) return 'phaiSatSong';
+  if (type === 'bacThanh' && !stairWall(state, x, z, grid)) return 'phaiSatThanh';
   return null;
 }
 
@@ -881,6 +953,7 @@ function bridgeClear(type: BuildingType, x: number, z: number, grid: Int32Array)
 export function canUpgrade(state: GameState, id: number): Result {
   const b = findBuilding(state, id);
   if (!b) return fail('khongTimThay');
+  if (isBusy(state, id)) return fail('dangXay');
   const cost = upgradeCostOf(b);
   if (!cost) return fail('capToiDa');
   // Điện lên cấp 6 khi đã vào chương 2, cấp 7 khi đã vào chương 3, cấp 8 khi đã vào chương 4, cấp 10 khi đã vào
@@ -1010,10 +1083,7 @@ export function place(state: GameState, type: BuildingType, x: number, z: number
   const over = replacedWall(state, type, x, z);
   if (over) state.buildings = state.buildings.filter((b) => b.id !== over.id);
   pay(state, BUILDINGS[type].buildCost);
-  const b: Building = { id: state.nextId++, type, x, z, level: 1, workers: 0 };
-  if (canRotateType(type)) setRot(b, rot);
-  // Dân đắp móng phẳng bằng chỗ cao nhất dưới móng.
-  levelFootprint(state, b, footprintTop(state, type, x, z));
+  const b = newBuilding(state, type, x, z, rot);
   state.buildings.push(b);
   fillWorkers(state, b);
   openBridgehead(state, b);
@@ -1021,15 +1091,87 @@ export function place(state: GameState, type: BuildingType, x: number, z: number
 }
 
 /**
- * Dựng `type` lên từng ô của dải `tiles` theo thứ tự (kéo thả trải đường). Ô nào không dựng được thì bỏ qua, dựng
- * tiếp ô sau; ô đã có đúng loại ấy thì không tính là hỏng. Trả các công trình đã dựng và lý do của ô hỏng đầu tiên.
+ * Công trình mới loại `type` ở góc móng (x, z), hướng `rot`, cấp 1, chưa người làm: cấp mã mới, dân đắp móng phẳng
+ * bằng chỗ cao nhất dưới móng. Chưa đưa vào kinh đô (`place` đưa vào ngay, `startBuild` ở `xay.ts` đưa vào khi xong).
+ */
+export function newBuilding(state: GameState, type: BuildingType, x: number, z: number, rot = 0): Building {
+  const b: Building = { id: state.nextId++, type, x, z, level: 1, workers: 0 };
+  if (canRotateType(type)) setRot(b, rot);
+  levelFootprint(state, b, footprintTop(state, type, x, z));
+  return b;
+}
+
+/** Một ô của dải kéo thả: dựng được (`ok`), đã có đúng loại ấy (`has`, không dựng thêm), hay hỏng vì `reason`. */
+export interface LineCell {
+  x: number;
+  z: number;
+  ok: boolean;
+  has?: true;
+  reason?: FailReason;
+}
+
+/**
+ * Xét dải `tiles` khi kéo thả trải đường, đắp tường: từng ô dựng được không, theo thứ tự, có cộng dồn giá và số tối
+ * đa của các ô trước trong dải (nên ô cuối dải tô đỏ khi hết của hay đủ giới hạn giữa chừng). Ô đã có đúng loại ấy
+ * thì không dựng thêm, không tính giá. Trả từng ô, số ô sẽ dựng và tổng giá.
+ */
+export function planLine(state: GameState, type: BuildingType, tiles: { x: number; z: number }[]): { cells: LineCell[]; n: number; cost: Cost } {
+  const def = BUILDINGS[type];
+  const limit = limitOf(state, type);
+  let used = usedOf(state, type);
+  const left: Resources = { ...state.resources };
+  const cost: Cost = {};
+  const seen = new Set<number>();
+  const cells: LineCell[] = [];
+  let n = 0;
+  for (const t of tiles) {
+    const key = t.z * GRID + t.x;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    // Đã có đúng loại ấy, hay đang có thợ dựng, đổi sang loại ấy: không dựng thêm.
+    const here = buildingAt(state, t.x, t.z);
+    if (here?.type === type || pendingAt(state, t.x, t.z)?.type === type || (here && pendingOf(state, here.id)?.doi === type)) {
+      cells.push({ x: t.x, z: t.z, ok: true, has: true });
+      continue;
+    }
+    const r = canPlace(state, type, t.x, t.z);
+    // Đổi vật liệu một ô đường không thêm ô nào.
+    const swap = isRoad(type) && !!replacedWall(state, type, t.x, t.z);
+    let reason: FailReason | null = r.ok ? null : r.reason;
+    if (!reason && !swap && used >= limit) reason = needsGeneral(state, type) ? 'canTuongChiHuy' : 'datGioiHan';
+    if (!reason && RESOURCE_IDS.some((id) => (def.buildCost[id] ?? 0) > left[id])) reason = 'thieuTaiNguyen';
+    if (reason) {
+      cells.push({ x: t.x, z: t.z, ok: false, reason });
+      continue;
+    }
+    if (!swap) used++;
+    for (const id of RESOURCE_IDS) {
+      const c = def.buildCost[id] ?? 0;
+      if (!c) continue;
+      left[id] -= c;
+      cost[id] = (cost[id] ?? 0) + c;
+    }
+    n++;
+    cells.push({ x: t.x, z: t.z, ok: true });
+  }
+  return { cells, n, cost };
+}
+
+/**
+ * Dựng `type` lên từng ô của dải `tiles` theo thứ tự (kéo thả trải đường, đắp tường). Ô nào không dựng được thì bỏ
+ * qua, dựng tiếp ô sau; ô đã có đúng loại ấy thì không tính là hỏng. Trả các công trình đã dựng và lý do của ô hỏng
+ * đầu tiên.
  */
 export function placeLine(state: GameState, type: BuildingType, tiles: { x: number; z: number }[]): { placed: Building[]; reason: FailReason | null } {
   const placed: Building[] = [];
   let reason: FailReason | null = null;
-  for (const t of tiles) {
-    if (buildingAt(state, t.x, t.z)?.type === type) continue;
-    const r = place(state, type, t.x, t.z);
+  for (const c of planLine(state, type, tiles).cells) {
+    if (c.has) continue;
+    if (!c.ok) {
+      reason ??= c.reason ?? null;
+      continue;
+    }
+    const r = place(state, type, c.x, c.z);
     if (r.ok) placed.push(r.value);
     else reason ??= r.reason;
   }
@@ -1049,7 +1191,8 @@ function ringFree(state: GameState, grid: Int32Array, x: number, z: number, w: n
       if (tx >= x && tx < x + w && tz >= z && tz < z + d) continue;
       if (!inGrid(tx, tz)) continue;
       const id = grid[tz * GRID + tx];
-      if (id && isSolid(findBuilding(state, id)!.type)) return false;
+      const o = id ? occupant(state, id) : undefined;
+      if (o && isSolid(o.type)) return false;
     }
   }
   return true;
@@ -1160,6 +1303,7 @@ function fitsWithout(state: GameState, b: Building, x: number, z: number, grid: 
     }
   }
   if (def.nearRiver && !touchesRiver(x, z, def.w, def.d)) return 'phaiSatSong';
+  if (b.type === 'bacThanh' && !stairWall(state, x, z, grid)) return 'phaiSatThanh';
   return null;
 }
 
@@ -1184,6 +1328,8 @@ export function move(state: GameState, id: number, x: number, z: number, rot?: n
   if (!check.ok) return check;
   const b = findBuilding(state, id)!;
   pay(state, moveCost(b));
+  // Ruộng dời sang đất mới thì mất phù sa đã bồi.
+  if (b.x !== x || b.z !== z) delete b.boi;
   b.x = x;
   b.z = z;
   if (rot !== undefined && canRotateType(b.type)) setRot(b, rot);
@@ -1224,8 +1370,11 @@ export function rotateBuilding(state: GameState, id: number, rot: number): Resul
 
 // ---------- Đắp đất, đắp nền ----------
 
-/** Lũy, bẫy, đê, thành, cổng thành là công trình một ô gắn với đất: muốn cao hơn thì đắp ô đất trước khi dựng. */
-const NO_RAISE: BuildingType[] = ['luy', 'bayChong', 'de', 'thanh', 'congThanh'];
+/**
+ * Lũy, bẫy, đê, cống đê, thành, cổng thành là công trình một ô gắn với đất: muốn cao hơn thì đắp ô đất trước khi dựng.
+ * Cầu vắt qua sông, hai đầu gác lên bờ: đắp nền thì chỉ nâng lòng sông dưới cầu, cầu lơ lửng khỏi bờ.
+ */
+const NO_RAISE: BuildingType[] = ['luy', 'bayChong', 'de', 'congDe', 'thanh', 'congThanh', 'bacThanh', 'cauSongDa', 'cauSongThao'];
 
 export function canRaiseTile(state: GameState, x: number, z: number): Result<Cost> {
   if (!inChapter2(state)) return fail('canChuong2');
@@ -1233,6 +1382,7 @@ export function canRaiseTile(state: GameState, x: number, z: number): Result<Cos
   // Ô đường hay món trang trí một ô thì đắp đất ngay dưới nó được, nó nằm trên mặt đất mới.
   const on = buildingAt(state, x, z);
   if (on && !(isDecor(on.type) && BUILDINGS[on.type].w === 1)) return fail('datBiChiem');
+  if (pendingAt(state, x, z)) return fail('datBiChiem');
   const h = tileHeight(state, x, z);
   if (h >= MAX_HEIGHT) return fail('datCaoNhat');
   if (state.raid.phase === 'battle') return fail('dangCoGiac');
@@ -1291,6 +1441,7 @@ export function remove(state: GameState, id: number): Result {
   const b = findBuilding(state, id);
   if (!b) return fail('khongTimThay');
   if (!BUILDINGS[b.type].removable) return fail('khongTheDo');
+  if (isBusy(state, id)) return fail('dangXay');
   state.buildings = state.buildings.filter((other) => other.id !== id);
   return ok(undefined);
 }
@@ -1446,6 +1597,7 @@ export function canPlaceUNo(state: GameState, x: number, z: number): Result<Buil
   const b = buildingAt(state, x, z);
   if (!b || b.type !== 'thanh') return fail('canThanh');
   if (b.uNo) return fail('daCoUNo');
+  if (isBusy(state, b.id)) return fail('dangXay');
   if (b.damaged) return fail('canThanh');
   if (uNoCount(state) >= uNoLimit(state)) return fail('datGioiHan');
   if (!canAfford(state, U_NO.cost)) return fail('thieuTaiNguyen');
@@ -1596,6 +1748,9 @@ function finishRaid(state: GameState): void {
   if (won) raid.won += 1;
   if (flood) {
     raid.floods += 1;
+    // Phù sa: ruộng được bồi ở mùa lũ này giữ tới hết mùa lũ sau; ruộng khác mất phù sa đã có.
+    const boi = settlePhuSa(state, battle.boi ?? []);
+    if (boi) raid.lastResult.boi = boi;
     // Cầu bị lũ cuốn thì phải sửa, nhưng không tính là để mất mùa lũ.
     const lost = battle.drowned.filter((id) => {
       const b = findBuilding(state, id);
@@ -1629,6 +1784,40 @@ function finishRaid(state: GameState): void {
   raid.phase = 'idle';
   raid.battle = null;
   raid.nextAt = state.clock + RAID_EVERY_MS;
+}
+
+/**
+ * Hết một mùa lũ: ruộng lúa, ruộng nếp có tên trong `ids` (được nước qua cống bồi trong trận) mà không hư thì có phù sa,
+ * ruộng khác mất phù sa. Trả về số ruộng được bồi.
+ */
+function settlePhuSa(state: GameState, ids: number[]): number {
+  let n = 0;
+  for (const b of state.buildings) {
+    if (!PHU_SA_TYPES.includes(b.type)) continue;
+    if (ids.includes(b.id) && !b.damaged) {
+      b.boi = true;
+      n++;
+    } else delete b.boi;
+  }
+  return n;
+}
+
+/** Đóng (`mo` false) hay mở cống đê. Lúc nào cũng được, kể cả giữa mùa lũ: nước sau cống theo đó mà vào hay rút. */
+export function setCong(state: GameState, id: number, mo: boolean): Result<Building> {
+  const b = findBuilding(state, id);
+  if (!b || b.type !== 'congDe') return fail('khongTimThay');
+  if (mo) b.mo = true;
+  else delete b.mo;
+  return ok(b);
+}
+
+/**
+ * Xem trước mùa lũ tới (mực `nextFloodLevel`) với các cống như đang đóng mở: ô nào ngập, ruộng nào được bồi phù sa,
+ * công trình nào sẽ hư nếu nước lên tới đỉnh (không tính thủy quái phá đê).
+ */
+export function phuSaPreview(state: GameState): FloodHits & { level: number } {
+  const level = nextFloodLevel(state);
+  return { ...floodHits(state, level), level };
 }
 
 /** Đủ lễ vật, Sơn Tinh rước Mị Nương: Thủy Tinh nổi giận, mùa lũ đầu tiên tới sau một lúc. */
@@ -1870,6 +2059,8 @@ export function tick(state: GameState, ms: number): Resources {
   if (ms <= 0) return { gao: 0, voOc: 0, datDa: 0, sat: 0, go: 0 };
   const gained = produce(state, ms, 1);
   state.clock += ms;
+  // Thợ xây sau phần sản xuất của khung này: công trình xong từ khung sau mới làm ra (sổ thu chi `kinhTe.ts` khớp).
+  advanceXay(state, ms);
   updateMerchant(state);
   updateCampaign(state, ms);
   updateRaid(state, ms);
@@ -1879,10 +2070,29 @@ export function tick(state: GameState, ms: number): Resources {
   return gained;
 }
 
-/** Tính phần sản xuất trong lúc vắng mặt, từ lastSeen tới now. Đồng hồ chơi không chạy. */
-export function applyOffline(state: GameState, now: number): { ms: number; gained: Resources } {
-  const ms = Math.min(Math.max(now - state.lastSeen, 0), OFFLINE_CAP_MS);
-  const gained = produce(state, ms, OFFLINE_RATE);
+/**
+ * Tính phần vắng mặt, từ lastSeen tới now. Đồng hồ chơi không chạy. Kinh đô sản xuất `OFFLINE_RATE` tốc độ trong
+ * `OFFLINE_CAP_MS` đầu; thợ xây tiếp đủ tốc độ suốt quãng vắng, không giới hạn. Quãng vắng chia khúc theo lúc từng
+ * phần việc xong, để công trình xong giữa chừng làm ra từ lúc xong. Trả số ms đã tính sản xuất, của làm ra và số phần
+ * việc xây đã xong.
+ */
+export function applyOffline(state: GameState, now: number): { ms: number; gained: Resources; built: number } {
+  const away = Math.max(now - state.lastSeen, 0);
+  const cap = Math.min(away, OFFLINE_CAP_MS);
+  const gained: Resources = { gao: 0, voOc: 0, datDa: 0, sat: 0, go: 0 };
+  const seq = state.xay.seq;
+  let t = 0;
+  // Mỗi vòng xong ít nhất một phần việc; chặn trên cho chắc.
+  for (let guard = 0; t < away && guard < 100_000; guard++) {
+    const dt = Math.min(away - t, nextXayEvent(state));
+    const prod = Math.max(0, Math.min(t + dt, cap) - t);
+    if (prod > 0) {
+      const g = produce(state, prod, OFFLINE_RATE);
+      for (const r of RESOURCE_IDS) gained[r] += g[r];
+    }
+    advanceXay(state, dt);
+    t += dt;
+  }
   state.lastSeen = now;
-  return { ms, gained };
+  return { ms: cap, gained, built: state.xay.seq - seq };
 }

@@ -4,6 +4,7 @@
 // mỗi khoảnh thuộc vùng của một đồn giặc, dẹp đồn thì cả vùng về tay ta. Không phụ thuộc DOM hay Three.js.
 
 import { startFieldBattle, type Battle, type RaidSide } from './battle';
+import { baiOf } from './baiChien';
 import { inChapter3 } from './coLoa';
 import { inChapter4 } from './chuong4';
 import {
@@ -34,6 +35,7 @@ import { armySpace, fieldCap } from './doanhTrai';
 import { canAfford, countOf, dienLevel, gain, pay, troopBonus, type Building, type FailReason, type GameState, type Result } from './game';
 import { heroFor, inChapter2, restAfter } from './son';
 import { huanTiers } from './thuThach';
+import { pendingBuildings } from './xay';
 import { phoTuongCheck, phoTuongOf, rememberPhoTuong } from './nuTuong';
 import { openMask } from './khoanh';
 import { FAR_FOREST, FOREST_BAND, GRID, KHOANH, RIVER_END, RIVER_START, farBankOf } from './map';
@@ -330,7 +332,8 @@ export function openBridgehead(state: GameState, b: Building): void {
 /** Ô (x, z) thuộc đầu cầu (bên này hay bên kia) của một cầu đang có. Mẫu kinh đô chừa các ô này cho lối lên cầu. */
 export function bridgeheadCells(state: GameState): Set<number> {
   const cells = new Set<number>();
-  for (const b of state.buildings) {
+  // Cầu đang dựng cũng giữ đầu cầu.
+  for (const b of [...state.buildings, ...pendingBuildings(state)]) {
     if (!isBridge(b.type)) continue;
     const ends = bridgeEnds(b.type, b.x, b.z);
     for (const [tx, tz] of [...ends.near, ...ends.far]) cells.add(tz * GRID + tx);
@@ -412,9 +415,9 @@ export interface CampDef {
 
 export const CAMPS: Record<Tier, CampDef> = {
   1: { enemies: { giaoAn: 7, cungAn: 4, chienXa: 2 }, hpScale: 1.9, terrain: 'benKia', reward: { gao: 400, voOc: 300, datDa: 250, sat: 60 }, chapter: 1 },
-  2: { enemies: { tomBinh: 11, caPhun: 7, caSau: 3 }, hpScale: 2.95, terrain: 'benKia', reward: { gao: 1300, voOc: 900, datDa: 700, sat: 180 }, chapter: 2 },
+  2: { enemies: { tomBinh: 11, caPhun: 7, caSau: 3 }, hpScale: 2.8, terrain: 'benKia', reward: { gao: 1300, voOc: 900, datDa: 700, sat: 180 }, chapter: 2 },
   3: { enemies: { quyNui: 12, maTroi: 7, hoTinh: 3 }, hpScale: 3.05, terrain: 'thatDieu', reward: { gao: 2400, voOc: 1700, datDa: 1500, sat: 400 }, chapter: 3 },
-  4: { enemies: { linhTrieu: 14, noTrieu: 8, kyBinh: 4 }, hpScale: 2.6, terrain: 'benKia', reward: { gao: 4200, voOc: 3500, datDa: 3100, sat: 800 }, chapter: 4 },
+  4: { enemies: { linhTrieu: 14, noTrieu: 8, kyBinh: 4 }, hpScale: 2.5, terrain: 'benKia', reward: { gao: 4200, voOc: 3500, datDa: 3100, sat: 800 }, chapter: 4 },
 };
 
 /** Quân mẫu đánh đồn bậc 1 ở Điện cấp 4 (vừa số chỗ một trận ở Điện 4). Bậc 2–4 dùng quân mẫu chương 2, 3, 4 (38 chỗ). */
@@ -491,6 +494,7 @@ export function startCamp(
     arms: state.arms,
     huan: huanTiers(state),
     nuTuong: phoTuongOf(state),
+    bai: baiOf(def.terrain, def.chapter),
   });
   return ok(undefined);
 }
@@ -700,6 +704,6 @@ export function fortFit(state: GameState, x: number, z: number): FailReason | nu
   const def = BUILDINGS.donBien;
   const bank = farBankOf(x, z);
   if (!bank || farBankOf(x + def.w - 1, z + def.d - 1) !== bank) return 'phaiBenKia';
-  if (state.buildings.some((b) => b.type === 'donBien' && farBankOf(b.x, b.z) === bank)) return 'datGioiHan';
+  if ([...state.buildings, ...pendingBuildings(state)].some((b) => b.type === 'donBien' && farBankOf(b.x, b.z) === bank)) return 'datGioiHan';
   return null;
 }

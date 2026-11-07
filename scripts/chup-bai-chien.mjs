@@ -5,7 +5,9 @@
 //            [--lui <hệ số>] (lùi camera xa: 0.5 là thấy gấp đôi, 3 là phóng gần gấp ba) [--moc] (vẽ đường ngựa, chỗ
 //            Rùa Vàng của Mộ Dạ) [--tien <0..1>] (màn cầm cự: thanh đã chạy tới đây) [--thang | --thua] (kết cục; thắng
 //            màn kết chương thì camera lùi theo cảnh kết) [--rong] (khung nhìn rộng của Cấm Khê) [--nhin x,z] (nhìn
-//            vào điểm này trong bãi)
+//            vào điểm này trong bãi) [--bai <id>|phang] (bố cục vật cản; mặc định bố cục của nền ở chương của màn)
+//            [--chay <giây>] (cho trận chạy thêm rồi mới chụp: lính đi vòng vật cản) [--luoi] (vẽ đè ô bị chặn đỏ,
+//            ô làm chậm xanh)
 // Nền: rung, benSong, lang, don, nui, doi, ngap, tanVien, thatDieu, coLoa, cuaSong, moDa, benKia, hatMon, luyLau,
 // langBac, camKhe. Không ghi --man thì lấy màn 25; nền camKhe nên ghi --man 40 cho có thanh cầm cự và dân rút.
 
@@ -40,6 +42,15 @@ for (let i = 0; i < argv.length; i++) {
   } else if (a === '--nhin') {
     opts.tuy.nhin = argv[++i].split(',').map(Number);
     opts.duoi += `-nhin${argv[i]}`;
+  } else if (a === '--bai') {
+    opts.tuy.bai = argv[++i];
+    opts.duoi += `-bai${argv[i]}`;
+  } else if (a === '--chay') {
+    opts.tuy.chay = Number(argv[++i]);
+    opts.duoi += `-chay${argv[i]}`;
+  } else if (a === '--luoi') {
+    opts.tuy.luoi = true;
+    opts.duoi += '-luoi';
   } else opts.nen.push(a);
 }
 if (!opts.nen.length) opts.nen = ['cuaSong', 'moDa'];

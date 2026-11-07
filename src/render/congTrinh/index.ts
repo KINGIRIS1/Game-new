@@ -3,12 +3,12 @@
 import type * as THREE from 'three';
 import { isBridge, type BuildingType } from '../../game/defs';
 import { bridgeModel, makeBanLang, makeDonBien } from '../benKia';
-import { buildingModel, footScale } from '../buildings';
+import { buildingModel, footScale, makeBacThanh } from '../buildings';
 import { BAI_DA } from './baiDa';
 import { BEN } from './ben';
 import { BEN_KHOI } from './benKhoi';
 import { BEP } from './bep';
-import type { CongTrinh } from './chung';
+import type { CongTrinh, LotOpts } from './chung';
 import { CHUONG_LON } from './chuongLon';
 import { CHUONG_VOI } from './chuongVoi';
 import { DEN_HAT_MON } from './denHatMon';
@@ -22,6 +22,7 @@ import { NHA_SAN } from './nhaSan';
 import { RUONG } from './ruong';
 import { SAN_TRONG } from './sanTrong';
 import { TRAI_CUNG } from './traiCung';
+import { THO_HO } from './thoHo';
 import { TRAI_GIAO } from './traiGiao';
 import { VUON } from './vuon';
 import { XUONG_MOC } from './xuongMoc';
@@ -47,17 +48,25 @@ export const CONG_TRINH: Partial<Record<BuildingType, CongTrinh>> = {
   benKhoi: BEN_KHOI,
   denHatMon: DEN_HAT_MON,
   sanTrong: SAN_TRONG,
+  thoHo: THO_HO,
 };
 
 /**
  * Mô hình công trình loại `type` ở cấp `level`, đặt vừa móng kinh đô lớn. Loại đã vẽ trên móng mới (`CONG_TRINH`)
  * thì dựng thẳng, không phóng. Loại còn vẽ theo móng cũ (bốn đền đầu, ruộng nếp, chòi canh, lầu nỏ,
  * đường và đồ trang trí) thì phóng theo móng và chừa viền cỏ (`footScale`). `userData.foot` ghi hệ số đã phóng.
+ * `opts`: dáng theo trạng thái (ruộng lúa, ruộng nếp đã bồi phù sa).
  */
-export function lotModel(type: BuildingType, level: number): THREE.Group {
+export function lotModel(type: BuildingType, level: number, opts: LotOpts = {}): THREE.Group {
   // Cầu vẽ đúng cỡ móng: vắt vừa lòng sông, đầu cầu chạm hai bờ.
   if (isBridge(type)) {
-    const g = bridgeModel(type, level);
+    const g = bridgeModel(type, level, opts.banks);
+    g.userData.foot = 1;
+    return g;
+  }
+  // Bậc lên thành: vẽ thẳng trên một ô, cao tới mặt đoạn thành kề bên.
+  if (type === 'bacThanh') {
+    const g = makeBacThanh(opts.rise);
     g.userData.foot = 1;
     return g;
   }
@@ -69,11 +78,11 @@ export function lotModel(type: BuildingType, level: number): THREE.Group {
   }
   const moi = CONG_TRINH[type];
   if (moi) {
-    const g = moi.make(level);
+    const g = moi.make(level, opts);
     g.userData.foot = 1;
     return g;
   }
-  const g = buildingModel(type, level);
+  const g = buildingModel(type, level, opts);
   const k = footScale(type);
   g.scale.multiplyScalar(k);
   g.userData.foot = k;

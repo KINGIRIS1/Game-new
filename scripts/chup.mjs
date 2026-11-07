@@ -54,6 +54,83 @@ const CHUONG5 = (cleared) => `M.playChapters({ s, last: 8 });${CO_QUAN}
   for (let t; (t = G.nextHint(s)); ) G.markHinted(s, t);
 `;
 
+/**
+ * Kinh đô chương 2 dựng như `phuSa.test.ts`: Điện 5, đê bao cách sông 4 ô, cống đê (đang mở) trên dải đê, sau cống trên
+ * đất bậc 1 có hai ruộng lúa, ruộng nếp, bãi đất đá, nhà sàn; mùa lũ tới dâng bậc 2.
+ */
+const PHU_SA = `
+  const Mp = await import('/src/game/map.ts');
+  const fresh = G.createInitialState(Date.now());
+  for (const k of Object.keys(s)) delete s[k];
+  Object.assign(s, fresh);
+  s.buildings.find((b) => b.type === 'dien').level = 5;
+  s.khoanh = K.squareKhoanh(K.AREA[4]);
+  s.questIndex = D.CH2_QUEST_START;
+  s.resources = { gao: 9e4, voOc: 9e4, datDa: 9e4, sat: 9e4, go: 9e4 };
+  s.dan = 60;
+  s.giong.ascended = true;
+  for (const g of D.GIFT_IDS) s.son.gifts[g] = true;
+  const must = (r) => { if (!r.ok) throw new Error(r.reason); return r.value; };
+  const DIEN = Mp.DIEN_HOME, LINE = Mp.RIVER_START - 4, EDGE = Mp.RIVER_START - K.AREA[4];
+  must(G.place(s, 'doanhTrai', EDGE + 2, EDGE + 4));
+  for (let x = EDGE; x <= LINE; x++) must(G.place(s, 'de', x, LINE));
+  for (let z = EDGE; z < LINE; z++) must(G.place(s, 'de', LINE, z));
+  const cong = must(G.place(s, 'congDe', DIEN + 2, LINE));
+  must(G.setCong(s, cong.id, true));
+  must(G.place(s, 'ruong', DIEN, LINE - 4));
+  must(G.place(s, 'ruong', DIEN + 5, LINE - 4));
+  must(G.place(s, 'baiDa', DIEN + 10, LINE - 4));
+  must(G.place(s, 'nhaSan', DIEN + 13, LINE - 4));
+  must(G.place(s, 'ruongNep', LINE - 5, DIEN + 4));
+  s.raid.floods = 2;
+  for (let t; (t = G.nextHint(s)); ) G.markHinted(s, t);
+`;
+/** Gọi lũ tới ngay; `giay` > 0 thì cho hết trinh sát báo và nước dâng chừng ấy giây (thủy quái đứng yên dưới sông). */
+const LU_TOI = (giay) => `
+  const r = G.callRaidNow(s); if (!r.ok) throw new Error('Không gọi lũ được: ' + r.reason);
+  ${giay > 0 ? `d.advance(D.RAID_WARNING_MS); for (const f of s.raid.battle.fighters) if (f.side === 'giac') f.state = 'aboard'; d.advance(${giay * 1000});` : 'd.advance(0);'}
+`;
+
+/**
+ * Ba tốp thợ đang làm (cảnh `xay`): `XAY` xong hết việc cũ, dựng sẵn hai nhà thợ hồ; `XAY_SAU` (sau khi tải lại, để
+ * thời gian tải trang không làm xong việc) cho tốp một dựng nhà sàn mới gần Điện, tốp hai nâng một ruộng, tốp ba đắp
+ * một dải lũy, rồi cho thợ làm một lúc để thấy giàn giáo, mô hình mọc dở, cọc mốc.
+ */
+const XAY = `
+  const Xa = await import('/src/game/xay.ts');
+  s.resources = { gao: 9e4, voOc: 9e4, datDa: 9e4, sat: 9e4, go: 9e4 };
+  Xa.advanceXay(s, 1e13);
+  const dien = s.buildings.find((b) => b.type === 'dien');
+  const near = { x: dien.x + 9, z: dien.z + 9 };
+  for (let i = 0; i < 2; i++) { const p = G.findSpot(s, 'thoHo', near); if (p) G.place(s, 'thoHo', p.x, p.z); }
+  for (let t; (t = G.nextHint(s)); ) G.markHinted(s, t);
+`;
+const XAY_SAU = `
+  const Xa = await import('/src/game/xay.ts');
+  const Mp = await import('/src/game/map.ts');
+  const must = (r) => { if (!r.ok) throw new Error(r.reason); return r.value; };
+  const dien = s.buildings.find((b) => b.type === 'dien');
+  const near = { x: dien.x + 9, z: dien.z + 9 };
+  const p = G.findSpot(s, 'nhaSan', near);
+  must(Xa.startBuild(s, 'nhaSan', p.x, p.z));
+  const ruong = s.buildings.filter((b) => b.type === 'ruong').sort((a, b) => Math.hypot(a.x - near.x, a.z - near.z) - Math.hypot(b.x - near.x, b.z - near.z))[0];
+  must(Xa.startUpgrade(s, ruong.id));
+  for (let z = near.z + 4; z < near.z + 12; z++) {
+    const w = Xa.startWalls(s, 'luy', Mp.lineTiles({ x: near.x - 6, z }, { x: near.x + 3, z }));
+    if (w.n >= 6) break;
+  }
+  // Trang chụp chạy chậm, đồng hồ game trôi nhanh hơn lúc chơi: kéo dài việc dựng nhà sàn, đắp lũy cho khỏi xong trước
+  // khi chụp, rồi cho mỗi việc làm được chừng 40%.
+  for (const v of s.xay.viec) {
+    if (v.o.some((o) => o.moi)) for (const o of v.o) o.ms *= 40;
+    v.lam = 0.4 * v.o.reduce((n, o) => n + o.ms, 0);
+  }
+  d.advance(0);
+`;
+
+/** Nhìn vào cống và ruộng sau cống. */
+const NHIN_CONG = `const c = s.buildings.find((b) => b.type === 'congDe'); d.camera(c.x + 4, c.z - 5, 1.1);`;
+
 const CANH = {
   'man-vao': {
     mo: 'Màn hình vào game của bản lưu chương 1 (Điện cấp 5), vắng 3 giờ',
@@ -97,6 +174,35 @@ const CANH = {
     truoc: KINH_DO + CO_QUAN,
     sau: `const r = d.march(1); if (!r.ok) throw new Error('Không đánh màn 1 được: ' + r.reason);`,
     doi: 3000,
+  },
+  'phu-sa': {
+    mo: 'Kinh đô chương 2 có đê bao, cống đê đang mở, ruộng sau cống; trinh sát vừa báo lũ bậc 2 (tô vàng, xanh)',
+    truoc: PHU_SA,
+    sau: LU_TOI(0),
+    truocKhiChup: NHIN_CONG,
+  },
+  'phu-sa-lu': {
+    mo: 'Như phu-sa, nước lũ đã dâng 12 giây (bậc 2): nước êm vào qua cống bồi ruộng',
+    truoc: PHU_SA,
+    sau: LU_TOI(12),
+    doi: 1500,
+    truocKhiChup: NHIN_CONG,
+  },
+  'phu-sa-boi': {
+    mo: 'Như phu-sa, mùa lũ vừa qua: ruộng sau cống đã có phù sa, bãi đất đá bị ngập',
+    truoc: PHU_SA + LU_TOI(12).replace('d.advance(0);', '') + `
+      for (const f of s.raid.battle.fighters) if (f.side === 'giac') f.state = 'dead';
+      s.raid.battle.killed = s.raid.battle.total;
+      d.advance(10000);
+      G.dismissRaidResult(s);
+    `,
+    truocKhiChup: NHIN_CONG,
+  },
+  xay: {
+    mo: 'Kinh đô chương 1 (Điện 5) có ba tốp thợ đang làm: dựng nhà sàn mới, nâng một ruộng, đắp một dải lũy',
+    truoc: KINH_DO + XAY,
+    sau: XAY_SAU,
+    truocKhiChup: `const b = s.buildings.find((b) => b.type === 'dien'); d.camera(b.x + 9, b.z + 9, 1.25);`,
   },
   chuong5: { mo: 'Kinh đô chương 5 (Điện 8, có doanh trại), đã thắng màn 33', truoc: CHUONG5(33) },
   'pho-ban-5': {

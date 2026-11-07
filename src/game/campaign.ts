@@ -6,6 +6,7 @@
 // Chọn lính mang theo, xếp hàng theo binh chủng, xuất quân; lính chết thì mất, thắng thì có thưởng.
 
 import { retreatField, startFieldBattle, stepField, type HeroKind } from './battle';
+import { stageBai } from './baiChien';
 import { finishCamp } from './benKia';
 import { CH4_LAST, LAY_TRAO_AT, LENH_BAN_AT, caoLoJoined, caoLoResting } from './caoLo';
 import { inChapter4 } from './chuong4';
@@ -189,6 +190,7 @@ export function startStage(
     arms: state.arms,
     huan: huanTiers(state),
     nuTuong: phoTuongOf(state),
+    bai: stageBai(n),
     ...(challenge ? challengeField(n) : {}),
   });
   return ok(undefined);

@@ -22,6 +22,8 @@ export const C = {
   hair: 0x22180f,
   soil: 0x9a7448,
   paddyWater: 0x4f8f96,
+  /** Nước ruộng đã bồi phù sa (và nước êm vào qua cống): đục đỏ nâu như nước sông Hồng mùa lũ. */
+  paddySilt: 0xc58a4e,
   rice: 0x8fae4a,
   ripe: 0xe0b440,
   leaf: [0x5f7f3a, 0x6f8f44, 0x4f6f30, 0x86a34f],
@@ -55,6 +57,9 @@ export const C = {
   mountainCloak: 0x55703a,
   flood: 0x7f8a6a,
   floodDeep: 0x6c7a5c,
+  /** Nước êm vào sau đê qua cống mở, chở phù sa. */
+  silt: 0xa07a4c,
+  siltDeep: 0x8e6a40,
   rain: 0xc8d8e0,
   storm: 0x9ea6a2,
   // Chương 3: An Dương Vương, Rùa Vàng, yêu tinh núi Thất Diệu, quân Triệu Đà.

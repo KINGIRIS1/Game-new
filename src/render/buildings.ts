@@ -1921,6 +1921,103 @@ export function makeCongThanh(level: number): THREE.Group {
   return g;
 }
 
+// ---------- Cống đê ----------
+
+/** Ván phai nâng lên bao nhiêu khi mở cống. */
+export const PHAI_LIFT = 0.44;
+
+/**
+ * Cống đê một ô, mặt trước (+z) trông ra sông, dải đê hai bên chạy dọc trục x (World xoay như cổng thành, `gateTurn`).
+ * Thân cống đá cao như kè đá cho liền với đê hai bên, lòng cống xuyên dưới mặt đê, nước chảy qua. Miệng cống phía sông
+ * có khung trụ đá, xà gỗ, tời quay và mái tranh nhỏ; chồng ván phai chắn miệng cống là con riêng (`userData.phai`: nâng
+ * lên bấy nhiêu khi mở), World kéo lên khi cống mở, thả xuống khi đóng.
+ */
+/**
+ * Bậc lên thành: bậc đất nện lát ván gỗ leo từ mặt đất ở mép -z lên mặt thành ở mép +z, cao `rise` (mặt thành Cổ
+ * Loa, hay thành đất thấp hơn); hai bên cột gỗ, tay vịn tre chạy dọc dốc. World xoay mép +z về phía đoạn thành.
+ */
+export function makeBacThanh(rise = 1.39): THREE.Group {
+  const m = new ToonModel();
+  const p = m.plain;
+  const n = Math.max(4, Math.round(rise / 0.2));
+  const z0 = -0.46;
+  const z1 = 0.5;
+  const dz = (z1 - z0) / n;
+  const w = 0.56;
+  for (let i = 0; i < n; i++) {
+    const h = (rise * (i + 1)) / n;
+    const zc = z0 + dz * (i + 0.5);
+    p.box(w, h, dz, i % 2 ? C.earth : C.earthDark, 0, h / 2, zc);
+    p.box(w + 0.03, 0.035, dz * 0.86, i % 2 ? C.wood : C.woodLight, 0, h + 0.017, zc);
+  }
+  // Chân bậc đá kê, cột gỗ hai bên, tay vịn tre dọc dốc.
+  p.box(w + 0.1, 0.06, 0.14, C.rockDark, 0, 0.03, z0 - 0.02);
+  const lift = 0.34;
+  for (const s of [-1, 1]) {
+    const x = s * (w / 2 + 0.035);
+    const ts = [0.12, 0.55, 0.96];
+    for (const t of ts) {
+      const z = z0 + (z1 - z0) * t;
+      const base = rise * Math.min(1, t + 0.5 / n);
+      p.cyl(0.024, 0.028, lift + 0.04, C.woodDark, x, base + lift / 2, z, undefined, 5);
+    }
+    const za = z0 + (z1 - z0) * ts[0];
+    const zb = z0 + (z1 - z0) * ts[2];
+    const ya = rise * Math.min(1, ts[0] + 0.5 / n) + lift;
+    const yb = rise * Math.min(1, ts[2] + 0.5 / n) + lift;
+    const ang = Math.atan2(yb - ya, zb - za);
+    p.cyl(0.02, 0.02, Math.hypot(zb - za, yb - ya) + 0.06, C.bamboo, x, (ya + yb) / 2, (za + zb) / 2, [Math.PI / 2 - ang, 0, 0], 5);
+  }
+  return m.group();
+}
+
+export function makeCongDe(): THREE.Group {
+  const m = new ToonModel();
+  const p = m.plain;
+  const half = 0.19;
+  const mouth = 0.42;
+  // Hai mố đá hai bên lòng cống: chân đá sẫm, thân đá hộc như kè đá.
+  const rand = seeded(57);
+  for (const s of [-1, 1]) {
+    const w = 0.51 - half;
+    const cx = s * (half + w / 2);
+    p.box(w, 0.3, 1.02, C.rockDark, cx, 0.15, 0);
+    p.box(w - 0.05, 0.3, 0.92, C.rock, cx - s * 0.025, 0.45, 0);
+    for (let i = 0; i < 2; i++) p.box(0.12, 0.1, 0.05, C.rockDark, cx + (i - 0.5) * 0.14, 0.2 + rand() * 0.25, 0.47 + rand() * 0.02);
+  }
+  // Đá xà bắc trên lòng cống, mặt cống phủ cỏ liền với mặt đê hai bên.
+  p.box(half * 2, 0.6 - mouth, 0.92, C.rockDark, 0, (0.6 + mouth) / 2, 0);
+  p.box(0.8, 0.14, 0.8, C.grass[0], 0, 0.67, 0);
+  // Lòng cống: đáy lát đá, nước chảy qua, trong tối.
+  p.box(half * 2, 0.06, 1.02, C.rockDark, 0, 0.03, 0);
+  p.box(half * 2, 0.04, 1.06, C.water[0], 0, 0.08, 0);
+  p.box(half * 2, mouth - 0.1, 0.86, 0x2a1d12, 0, (mouth + 0.1) / 2, 0);
+  // Khung miệng cống phía sông: hai trụ đá, xà gỗ, tời có tay quay, mái tranh nhỏ trên hai cột.
+  const fz = 0.5;
+  for (const s of [-1, 1]) {
+    p.box(0.1, 1.02, 0.12, C.rock, s * (half + 0.06), 0.51, fz);
+    p.box(0.13, 0.05, 0.15, C.rockDark, s * (half + 0.06), 1.04, fz);
+    p.cyl(0.02, 0.02, 0.24, C.bamboo, s * (half + 0.06), 1.18, fz, undefined, 5);
+  }
+  p.box(half * 2 + 0.24, 0.08, 0.1, C.woodDark, 0, 1.1, fz);
+  p.cyl(0.045, 0.045, half * 2 + 0.04, C.wood, 0, 1.19, fz, [0, 0, Math.PI / 2], 8);
+  for (const r of [0, Math.PI / 2]) p.box(0.025, 0.2, 0.025, C.woodDark, half + 0.04, 1.19, fz, [r, 0, 0]);
+  boatRoof(m, THATCH, { length: half * 2 + 0.34, width: 0.36, lift: 0.06, drop: 0.12, thickness: 0.04 }, 0, 1.42, fz);
+  const g = m.group();
+
+  // Chồng ván phai chắn miệng cống, hai nẹp đứng.
+  const v = new ToonModel(inkThin);
+  const n = 4;
+  const ph = (mouth - 0.06) / n;
+  for (let i = 0; i < n; i++) v.plain.box(half * 2 + 0.04, ph - 0.01, 0.04, i % 2 ? C.wood : C.woodLight, 0, 0.07 + ph * (i + 0.5), fz + 0.01);
+  for (const x of [-0.1, 0.1]) v.plain.box(0.04, mouth - 0.04, 0.03, C.woodDark, x, mouth / 2 + 0.03, fz + 0.045);
+  const phai = new THREE.Group();
+  phai.add(v.group());
+  phai.userData.phai = PHAI_LIFT;
+  g.add(phai);
+  return g;
+}
+
 // ---------- Bẫy chông ----------
 
 export function makeBayChong(): THREE.Group {
@@ -2582,7 +2679,7 @@ function nepBundle(p: ShapeBuilder, x: number, y: number, z: number): void {
   p.sphere(0.048, 0xd8c27a, x, y - 0.3, z, [1.15, 0.85, 0.95], 6);
 }
 
-export function makeRuongNep(level: number): THREE.Group {
+export function makeRuongNep(level: number, boi = false): THREE.Group {
   const m = new ToonModel(inkThin);
   const p = m.plain;
   const bank = 0.16 + level * 0.015;
@@ -2601,7 +2698,7 @@ export function makeRuongNep(level: number): THREE.Group {
       p.box(0.18, 0.035, 0.34, c2, s * 1.37, bank + 0.015, pos);
     }
   }
-  p.box(2.58, 0.04, 2.58, C.paddyWater, 0, 0.05, 0);
+  p.box(2.58, 0.04, 2.58, boi ? C.paddySilt : C.paddyWater, 0, 0.05, 0);
 
   // Bờ con lát đá ong chia ruộng làm hai thửa + ống bương tre thông nước giữa hai thửa + bụi cỏ bờ
   p.box(0.15, 0.11, 2.56, LATERITE, 0.0, 0.065, 0);
@@ -2919,20 +3016,21 @@ export function makeBep(level: number): THREE.Group {
  * (`congTrinh/index.ts`), không qua hàm này.
  * Dáng cũ của chúng (`makeDien`...) còn lại chỉ để `scripts/congTrinh.ts` chụp so cũ và mới; bỏ khi vẽ lại nốt.
  */
-export function buildingModel(type: BuildingType, level: number): THREE.Group {
+export function buildingModel(type: BuildingType, level: number, opts: { boi?: boolean } = {}): THREE.Group {
   if (type === 'choiCanh') return makeChoiCanh(level);
   if (type === 'bayChong') return makeBayChong();
   if (type === 'denPhuDong') return makeDenPhuDong();
   if (type === 'denTanVien') return makeDenTanVien();
   if (type === 'denCoLoa') return makeDenCoLoa();
   if (type === 'denCuong') return makeDenCuong();
-  if (type === 'ruongNep') return makeRuongNep(level);
+  if (type === 'ruongNep') return makeRuongNep(level, opts.boi);
   if (type === 'vuon') return makeVuon(level);
   if (type === 'chuongLon') return makeChuongLon(level);
   if (type === 'bep') return makeBep(level);
   if (type === 'lauNo') return makeLauNo(level);
   if (type === 'traiNo') return makeTraiNo();
   if (type === 'congThanh') return makeCongThanh(level);
+  if (type === 'congDe') return makeCongDe();
   if (isDecor(type)) return decorModel(type);
   return new THREE.Group();
 }

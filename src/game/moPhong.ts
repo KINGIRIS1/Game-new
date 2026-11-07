@@ -1,15 +1,13 @@
 // Người chơi mô phỏng: chơi từng giây theo cách hợp lý. Dùng chung cho test nhịp tiến trình (`balance.test.ts`),
 // báo cáo kinh tế (`kinhTe.ts`) và cảnh chụp thử (`scripts/chup.mjs`). Không chạy trong game thật.
 
-import { BUILDINGS, CH2_QUEST_START, CH3_QUEST_START, CH4_QUEST_START, QUESTS, type BuildingType } from './defs';
+import { BUILDINGS, CH2_QUEST_START, CH3_QUEST_START, CH4_QUEST_START, QUESTS, QUIZ_TURNS, type BuildingType } from './defs';
 import {
   acceptOffer,
   autoAssign,
   findSpot,
-  canUpgrade,
   claimQuest,
   upgradeCostOf,
-  countOf,
   createInitialState,
   dienLevel,
   fishPerMinute,
@@ -19,11 +17,12 @@ import {
   questDone,
   storageCap,
   tick,
-  upgrade,
+  usedOf,
   type GameState,
 } from './game';
 import { KHOANH_N, khoanhCost, khoanhOrigin, openKhoanh, openable } from './khoanh';
 import { KHOANH } from './map';
+import { canStartUpgrade, isBusy, startBuild, startUpgrade, thoRanh, traLoi, type CongViec } from './xay';
 
 /** Các việc người chơi mô phỏng làm. Báo cáo kinh tế dựa vào đây để ghi sổ từng khoản thu chi. */
 export type Viec = 'nhiemVu' | 'xay' | 'phatRung' | 'nangDien' | 'nangCap' | 'doiHang' | 'vaoChuong' | 'thoiGian';
@@ -31,16 +30,42 @@ export type Viec = 'nhiemVu' | 'xay' | 'phatRung' | 'nangDien' | 'nangCap' | 'do
 export type Lam = (viec: Viec, run: () => void) => void;
 const lamThang: Lam = (_, run) => run();
 
-/** Dựng ở chỗ hợp lý gần Điện nhất, ưu tiên chỗ thoáng (`findSpot`). */
+/** Dựng ngay ở chỗ hợp lý gần Điện nhất, ưu tiên chỗ thoáng (`findSpot`). Dùng cho test và cảnh chụp thử. */
 export function placeAnywhere(s: GameState, type: BuildingType): boolean {
   const spot = findSpot(s, type);
   return !!spot && place(s, type, spot.x, spot.z).ok;
 }
 
+/** Số câu đố sử người chơi mô phỏng trả lời đúng mỗi việc xây (0–3); 3 là việc nào cũng xong ngay như trước. */
+let dungMoiViec = 0;
+
+/** Người chơi trả lời câu đố sử cho việc vừa giao: đúng `dungMoiViec` câu. */
+function doSu(s: GameState, v: CongViec | null): void {
+  for (let i = 0; v && i < dungMoiViec; i++) traLoi(s, v.id, true);
+}
+
+/** Giao một tốp dựng ở chỗ hợp lý gần Điện nhất (`findSpot`). */
+function startAnywhere(s: GameState, type: BuildingType): boolean {
+  if (!thoRanh(s)) return false;
+  const spot = findSpot(s, type);
+  if (!spot) return false;
+  const r = startBuild(s, type, spot.x, spot.z);
+  if (r.ok) doSu(s, r.value);
+  return r.ok;
+}
+
+/** Giao một tốp nâng công trình `id`. */
+function tryUpgrade(s: GameState, id: number): boolean {
+  const r = startUpgrade(s, id);
+  if (r.ok) doSu(s, r.value);
+  return r.ok;
+}
+
 /** Người chơi biết dành dụm: chỉ chi cho việc khác khi vẫn còn giữ được một phần để nâng Điện. */
 function affordWithReserve(s: GameState, cost: Partial<Record<keyof GameState['resources'], number>>): boolean {
   const dien = s.buildings.find((b) => b.type === 'dien')!;
-  const next = BUILDINGS.dien.upgradeCost[dien.level + 1] ?? {};
+  // Điện đang nâng (đã trả của) thì dành cho cấp sau nữa.
+  const next = BUILDINGS.dien.upgradeCost[dien.level + (isBusy(s, dien.id) ? 2 : 1)] ?? {};
   return (Object.keys(s.resources) as (keyof GameState['resources'])[]).every(
     (r) => s.resources[r] - (cost[r] ?? 0) >= 0.6 * (next[r] ?? 0) || !(cost[r] ?? 0),
   );
@@ -94,10 +119,15 @@ function phatRung(s: GameState, type: BuildingType): boolean {
  * để phát rừng trước (trả về false); không thì đặt sát vào chỗ còn trống.
  */
 function buildRoomy(s: GameState, type: BuildingType): 'built' | 'needLand' | 'none' {
+  if (!thoRanh(s)) return 'none';
   const roomy = findSpot(s, type, undefined, true);
-  if (roomy) return place(s, type, roomy.x, roomy.z).ok ? 'built' : 'none';
+  if (roomy) {
+    const r = startBuild(s, type, roomy.x, roomy.z);
+    if (r.ok) doSu(s, r.value);
+    return r.ok ? 'built' : 'none';
+  }
   if (khoanhFor(s, type).length) return 'needLand';
-  return placeAnywhere(s, type) ? 'built' : 'none';
+  return startAnywhere(s, type) ? 'built' : 'none';
 }
 
 /**
@@ -116,7 +146,7 @@ export const LUY_COUNT = 6;
 function woodWant(s: GameState): number {
   let want = 0;
   for (const type of ECONOMY) {
-    if (wanted(s, type) && countOf(s, type) < limitOf(s, type)) want = Math.max(want, BUILDINGS[type].buildCost.go ?? 0);
+    if (wanted(s, type) && usedOf(s, type) < limitOf(s, type)) want = Math.max(want, BUILDINGS[type].buildCost.go ?? 0);
   }
   const level = dienLevel(s);
   for (const b of s.buildings) {
@@ -161,27 +191,37 @@ function wanted(s: GameState, type: BuildingType): boolean {
 }
 
 /**
- * Một giây chơi: nhận thưởng, xây cho đủ nhiệm vụ, ưu tiên nâng Điện,
- * rồi dựng và nâng công trình kinh tế, chia dân rảnh vào làm.
+ * Một giây chơi: nhận thưởng, xây cho đủ nhiệm vụ, ưu tiên nâng Điện, dựng nhà thợ hồ cho thêm tốp thợ, rồi dựng và
+ * nâng công trình kinh tế, chia dân rảnh vào làm. Mỗi việc xây cần một tốp thợ rảnh; hết tốp thì chờ. Mỗi việc giao
+ * xong thì trả lời đúng `dung` câu đố sử (mặc định 0: không đố, chờ đủ thời gian).
  */
-export function playSecond(s: GameState, lam: Lam = lamThang): void {
+export function playSecond(s: GameState, lam: Lam = lamThang, dung = 0): void {
+  dungMoiViec = dung;
   lam('nhiemVu', () => {
     while (questDone(s)) claimQuest(s);
   });
   lam('xay', () => {
-    if (countOf(s, 'luy') < LUY_COUNT) placeAnywhere(s, 'luy');
+    if (usedOf(s, 'luy') < LUY_COUNT) startAnywhere(s, 'luy');
   });
+  const dien = s.buildings.find((b) => b.type === 'dien')!;
   lam('nangDien', () => {
-    if (canUpgrade(s, 1).ok) upgrade(s, 1);
+    if (canStartUpgrade(s, dien.id).ok) tryUpgrade(s, dien.id);
+  });
+  // Nhà thợ hồ: thêm tốp thợ, dựng ngay khi còn chỗ và đủ của. Người đố đúng cả ba câu thì việc nào cũng xong ngay,
+  // không phải chờ thợ, nên không cần.
+  const needTho = dung < QUIZ_TURNS;
+  lam('xay', () => {
+    if (needTho && usedOf(s, 'thoHo') < limitOf(s, 'thoHo') && affordWithReserve(s, BUILDINGS.thoHo.buildCost)) buildRoomy(s, 'thoHo');
   });
   let cramped: BuildingType | null = null;
   lam('xay', () => {
     // Như hướng dẫn của Lạc hầu: lên Điện cấp 2 trước rồi mới mở rộng kinh tế.
     for (const type of dienLevel(s) < 2 ? ECONOMY.slice(0, 2) : ECONOMY) {
+      if (!thoRanh(s)) break;
       // Xưởng mộc thứ hai trở đi chỉ dựng khi thiếu gỗ; làng chài thôi dựng khi cá đã đủ ăn.
-      if (type === 'xuongMoc' && countOf(s, type) > 0 && !woodShort(s)) continue;
+      if (type === 'xuongMoc' && usedOf(s, type) > 0 && !woodShort(s)) continue;
       if (!wanted(s, type)) continue;
-      if (countOf(s, type) < limitOf(s, type) && affordWithReserve(s, BUILDINGS[type].buildCost) && buildRoomy(s, type) === 'needLand') cramped ??= type;
+      if (usedOf(s, type) < limitOf(s, type) && affordWithReserve(s, BUILDINGS[type].buildCost) && buildRoomy(s, type) === 'needLand') cramped ??= type;
     }
   });
   // Hết chỗ thoáng: phát rừng, giây sau dựng trên đất mới.
@@ -192,19 +232,23 @@ export function playSecond(s: GameState, lam: Lam = lamThang): void {
   lam('nangCap', () => {
     const wood = woodShort(s);
     for (const b of s.buildings) {
-      if ((b.type === 'xuongMoc' && !wood) || !wanted(s, b.type)) continue;
-      if (b.type !== 'dien' && b.type !== 'luy' && canUpgrade(s, b.id).ok && affordWithReserve(s, upgradeCostOf(b)!)) upgrade(s, b.id);
+      if (!thoRanh(s)) break;
+      if ((b.type === 'xuongMoc' && !wood) || !wanted(s, b.type) || (b.type === 'thoHo' && !needTho)) continue;
+      if (b.type !== 'dien' && b.type !== 'luy' && canStartUpgrade(s, b.id).ok && affordWithReserve(s, upgradeCostOf(b)!)) tryUpgrade(s, b.id);
     }
   });
   lam('thoiGian', () => tick(s, 1000));
 }
 
-/** Chơi từ đầu tới khi Điện đạt cấp `target`. Trả về số phút, hoặc Infinity nếu quá `maxMinutes`. */
-export function playUntilDien(target: number, maxMinutes: number): number {
+/**
+ * Chơi từ đầu tới khi Điện đạt cấp `target`. Trả về số phút, hoặc Infinity nếu quá `maxMinutes`. `dung`: số câu đố
+ * sử trả lời đúng mỗi việc xây.
+ */
+export function playUntilDien(target: number, maxMinutes: number, dung = 0): number {
   const s = createInitialState(0);
   for (let sec = 0; sec < maxMinutes * 60; sec++) {
     if (dienLevel(s) >= target) return sec / 60;
-    playSecond(s);
+    playSecond(s, lamThang, dung);
   }
   return Infinity;
 }
@@ -243,11 +287,12 @@ export const STAY_AFTER_S = 30 * 60;
  * - `s`: chơi tiếp trên state này thay vì một ván mới.
  * - `until`: dừng sớm khi trả về true, xét trước mỗi giây chơi (cảnh chụp thử dừng ở giữa chương 2).
  * - `last`: cấp Điện cuối cùng thì dừng, 7 (mặc định) tới 10.
+ * - `dung`: số câu đố sử trả lời đúng mỗi việc xây (0–3, mặc định 0).
  */
 export function playChapters(
-  opts: { lam?: Lam; s?: GameState; maxSec?: number; until?: (m: Moc, sec: number) => boolean; last?: 7 | 8 | 9 | 10 } = {},
+  opts: { lam?: Lam; s?: GameState; maxSec?: number; until?: (m: Moc, sec: number) => boolean; last?: 7 | 8 | 9 | 10; dung?: number } = {},
 ): Moc {
-  const { lam = lamThang, s = createInitialState(0), maxSec = 8 * 3600, until, last = 7 } = opts;
+  const { lam = lamThang, s = createInitialState(0), maxSec = 8 * 3600, until, last = 7, dung = 0 } = opts;
   const m: Moc = { at5: -1, enter2: -1, at6: -1, enter3: -1, at7: -1, enter4: -1, at8: -1, hetTruyen: -1, at9: -1, at10: -1 };
   for (let sec = 0; sec < maxSec; sec++) {
     if (until?.(m, sec)) return m;
@@ -300,7 +345,7 @@ export function playChapters(
       m.at10 = sec;
       return m;
     }
-    playSecond(s, lam);
+    playSecond(s, lam, dung);
   }
   return m;
 }

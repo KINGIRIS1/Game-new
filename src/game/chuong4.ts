@@ -4,6 +4,7 @@
 
 import { BUILDINGS, CH4_QUEST_START, LAU_NO_FROM_LEVEL } from './defs';
 import { canAfford, dienLevel, findBuilding, pay, type Building, type FailReason, type GameState, type Result } from './game';
+import { isBusy } from './xay';
 
 const ok = <T>(value: T): Result<T> => ({ ok: true, value });
 const fail = (reason: FailReason): Result<never> => ({ ok: false, reason });
@@ -25,6 +26,8 @@ export function canMergeTowers(state: GameState, id: number, otherId: number): R
   if (!a || !b) return fail('khongTimThay');
   if (dienLevel(state) < BUILDINGS.lauNo.minDien) return fail('chuaDuCapDien');
   if (id === otherId || !mergeable(a) || !mergeable(b)) return fail('khongGhepDuoc');
+  // Chòi đang có thợ nâng thì chờ xong mới ghép.
+  if (isBusy(state, id) || isBusy(state, otherId)) return fail('dangXay');
   if (state.raid.phase !== 'idle') return fail('dangCoGiac');
   if (!canAfford(state, mergeCost())) return fail('thieuTaiNguyen');
   return ok(undefined);

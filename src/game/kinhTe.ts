@@ -18,6 +18,7 @@ import { ECONOMY, LUY_COUNT, playChapters, playSecond, type Lam, type Moc } from
 import { inChapter4 } from './chuong4';
 import { inChapter3 } from './coLoa';
 import { inChapter2 } from './son';
+import { soTho } from './xay';
 import { vi } from '../text/vi';
 
 /** Các khoản ghi sổ. Số dương là thu vào kho, số âm là chi ra hay mất đi. */
@@ -66,6 +67,11 @@ export interface SoGiaiDoan {
   /** Thay đổi thật mỗi phút ở giây cuối giai đoạn (đã trừ ăn). */
   netCuoi: Resources;
   dienCuoi: number;
+  /** Cộng dồn mỗi giây số tốp thợ đang bận, và số tốp có (để tính tốp bận bao nhiêu phần thời gian). */
+  thoBan: number;
+  thoCo: number;
+  /** Số tốp thợ lúc cuối giai đoạn. */
+  thoCuoi: number;
 }
 
 function soMoi(s: GameState, ten: string): SoGiaiDoan {
@@ -82,6 +88,9 @@ function soMoi(s: GameState, ten: string): SoGiaiDoan {
     khoCuoi: storageCap(s),
     netCuoi: netPerMinute(s),
     dienCuoi: dienLevel(s),
+    thoBan: 0,
+    thoCo: 0,
+    thoCuoi: soTho(s).tong,
   };
 }
 
@@ -151,6 +160,10 @@ export function doKinhTe(sauDien10Phut = SAU_DIEN10_PHUT): KetQuaKinhTe {
     sg.khoCuoi = capSau;
     sg.netCuoi = netPerMinute(s);
     sg.dienCuoi = level;
+    const tho = soTho(s);
+    sg.thoBan += tho.tong - tho.ranh;
+    sg.thoCo += tho.tong;
+    sg.thoCuoi = tho.tong;
   };
 
   const moc = playChapters({ lam, s, last: 10, maxSec: 12 * 3600 });
@@ -239,6 +252,8 @@ export function inBaoCao(kq: KetQuaKinhTe, thu?: string): string {
       '',
       `Sức chứa kho lúc cuối: ${n(sg.khoCuoi)} mỗi loại.`,
       '',
+      `Tốp thợ lúc cuối: ${sg.thoCuoi}; tốp thợ bận ${so1.format((100 * sg.thoBan) / Math.max(1, sg.thoCo))}% thời gian.`,
+      '',
     );
   }
 
@@ -249,6 +264,7 @@ export function inBaoCao(kq: KetQuaKinhTe, thu?: string): string {
     `- Dựng ${LUY_COUNT} đoạn ${ten('luy').toLowerCase()}; dựng và nâng cấp: ${ECONOMY.map(ten).join(', ')}; nâng Điện.`,
     '- Tự chia dân rảnh vào làm, đổi thứ dư nhiều nhất với thuyền buôn, nhận thưởng nhiệm vụ khi nhiệm vụ đã xong.',
     '- Giữ lại 60% giá nâng Điện cấp sau trước khi chi cho việc khác.',
+    `- Mỗi việc xây cần một tốp thợ rảnh: nâng Điện trước, rồi dựng ${ten('thoHo').toLowerCase()} (thêm tốp), rồi kinh tế. Không đố sử: chờ đủ thời gian xây.`,
     '- Vào chương 2 sau Điện 5 nửa giờ, chương 3 sau Điện 6 nửa giờ, chương 4 sau Điện 7 nửa giờ. Lúc vào chương, của dành dụm coi như tiêu hết.',
     '',
     '**Mọi khoản thu chi khác đều CHƯA ĐO**, gồm: các công trình khác (doanh trại, chòi canh, bẫy chông, đê, đền, thành, ' +

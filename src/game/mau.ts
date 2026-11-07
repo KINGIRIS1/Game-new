@@ -16,6 +16,7 @@ import {
   limitOf,
   usedOf,
   moveCost,
+  newBuilding,
   pay,
   unlocked,
   uNoCount,
@@ -28,6 +29,7 @@ import {
 import { AREA, isOpen, khoanhOf } from './khoanh';
 import { DIEN_HOME, GRID, KHOANH, RIVER_START, inGrid, isNearBank, touchesRiver } from './map';
 import { bridgeheadCells } from './benKia';
+import { isBusy, startBatch, thoRanh, xayMs, type PhanViec } from './xay';
 
 /**
  * Khung dựng mẫu ở cấp Điện `level`: hình vuông neo góc sông, cạnh theo cấp Điện (`AREA`: vùng đất của cấp ấy trước
@@ -740,13 +742,21 @@ const LOCK_REASON: Record<MauId, FailReason> = { phongChau: 'khongTimThay', deBa
 
 /** Công trình một ô gắn với đất (lũy, đê, thành, bẫy): áp mẫu thì đoạn thừa bị dỡ đi, không dời. */
 const SEGMENTS: BuildingType[] = ['luy', 'de', 'thanh', 'bayChong'];
+/**
+ * Không có chỗ trong mẫu mà vướng chỗ của mẫu thì dỡ, không dời: lũy, đê, thành, bẫy, đường đi, đồ trang trí, bậc lên
+ * thành (dời ra xa thành thì vô dụng).
+ */
+const dropIfBlocked = (type: BuildingType) => SEGMENTS.includes(type) || isDecor(type) || type === 'bacThanh';
 
 export interface MauPlan {
   /** Công trình đang có sẽ dời tới chỗ mới. */
   moves: { id: number; x: number; z: number }[];
   /** Công trình sẽ dựng thêm. */
   builds: Slot[];
-  /** Đoạn lũy, đê, thành, bẫy sẽ dỡ đi (thừa so với mẫu, hay vướng chỗ của mẫu); đường đi, đồ trang trí vướng mẫu. */
+  /**
+   * Đoạn lũy, đê, thành, bẫy sẽ dỡ đi (thừa so với mẫu, hay vướng chỗ của mẫu); đường đi, đồ trang trí, bậc lên thành
+   * vướng mẫu.
+   */
   removes: number[];
   /** Tổng giá: dựng phần thiếu và phí dời. */
   cost: Cost;
@@ -820,10 +830,18 @@ export function planMau(state: GameState, id: MauId): MauPlan {
     // Lầu nỏ một ô như chòi canh, đứng vào chỗ chòi canh của mẫu và tính là hai chòi canh trong giới hạn.
     // Mẫu có chỗ dành cho lầu nỏ thì lầu nỏ xếp trước, vào đúng những chỗ ấy.
     // Công trình bên kia sông đứng yên, không vào chỗ của mẫu (vẫn tính vào số tối đa).
-    const sameSlot = (b: Building) => (b.type === type || (type === 'choiCanh' && b.type === 'lauNo')) && isNearBank(b.x, b.z);
+    // Cống đê đứng vào chỗ đê của mẫu, vẫn là cống (xếp trước các đoạn đê để khỏi bị dỡ khi thừa).
+    const sameSlot = (b: Building) =>
+      (b.type === type || (type === 'choiCanh' && b.type === 'lauNo') || (type === 'de' && b.type === 'congDe')) && isNearBank(b.x, b.z);
     const have = state.buildings
       .filter(sameSlot)
-      .sort((a, b) => Number(b.type === 'lauNo') - Number(a.type === 'lauNo') || b.level - a.level || a.id - b.id);
+      .sort(
+        (a, b) =>
+          Number(b.type === 'lauNo') - Number(a.type === 'lauNo') ||
+          Number(b.type === 'congDe') - Number(a.type === 'congDe') ||
+          b.level - a.level ||
+          a.id - b.id,
+      );
     // Công trình đã đứng đúng một chỗ trong mẫu thì giữ nguyên.
     const rest: Building[] = [];
     for (const b of have) {
@@ -867,7 +885,13 @@ export function planMau(state: GameState, id: MauId): MauPlan {
   // Công trình thừa hay không có trong mẫu: đứng yên nếu không vướng chỗ của mẫu; đoạn lũy, đê, thành, bẫy
   // thừa thì dỡ; đường đi, đồ trang trí vướng thì dỡ; công trình khác vướng thì tìm chỗ trống gần nhất.
   for (const b of state.buildings) {
-    if (b.type === 'dien' || types.includes(b.type) || (b.type === 'lauNo' && types.includes('choiCanh'))) continue;
+    if (
+      b.type === 'dien' ||
+      types.includes(b.type) ||
+      (b.type === 'lauNo' && types.includes('choiCanh')) ||
+      (b.type === 'congDe' && types.includes('de'))
+    )
+      continue;
     leftovers.push(b);
   }
   const inMau = new Set(types);
@@ -875,7 +899,7 @@ export function planMau(state: GameState, id: MauId): MauPlan {
   for (const b of leftovers) {
     if (SEGMENTS.includes(b.type) && inMau.has(b.type)) plan.removes.push(b.id);
     else if (free(b.type, b.x, b.z)) mark(b.type, b.x, b.z);
-    else if (SEGMENTS.includes(b.type) || isDecor(b.type)) plan.removes.push(b.id);
+    else if (dropIfBlocked(b.type)) plan.removes.push(b.id);
     else blocked.push(b);
   }
   for (const b of blocked) {
@@ -927,7 +951,10 @@ function nearestFree(
 export function canApplyMau(state: GameState, id: MauId): Result<MauPlan> {
   if (!mauUnlocked(state, id)) return { ok: false, reason: LOCK_REASON[id] };
   if (state.raid.phase !== 'idle') return { ok: false, reason: 'dangCoGiac' };
+  // Đang có công trình dựng dở, đoạn tường đang đổi loại: chờ xong mới xếp lại kinh đô (mẫu chưa biết các chỗ ấy).
+  if ((state.xay?.viec ?? []).some((v) => v.o.slice(v.xong).some((p) => p.moi || p.doi))) return { ok: false, reason: 'dangXay' };
   const plan = planMau(state, id);
+  if (plan.removes.some((r) => isBusy(state, r))) return { ok: false, reason: 'dangXay' };
   if (plan.stuck.length) return { ok: false, reason: 'khongDuCho' };
   if (!plan.moves.length && !plan.builds.length && !plan.removes.length && !plan.uNos.length && !plan.turnDien) return { ok: false, reason: 'daTheoMau' };
   if (!canAfford(state, plan.cost)) return { ok: false, reason: 'thieuTaiNguyen' };
@@ -964,6 +991,80 @@ export function applyMau(state: GameState, id: MauId): Result<MauPlan> {
     const wall = state.buildings.find((b) => b.type === 'thanh' && b.x === u.x && b.z === u.z);
     if (wall) wall.uNo = 'ok';
   }
+  return check;
+}
+
+/** Đoạn tường loại `old` để nguyên chỗ, đổi sang loại `type` được (thành đắp đè lũy, cổng thay tường, cống thay đê). */
+const canTurn = (type: BuildingType, old: BuildingType) =>
+  (type === 'thanh' && old === 'luy') || (type === 'congThanh' && (old === 'luy' || old === 'thanh')) || (type === 'congDe' && old === 'de');
+
+/** Áp mẫu có thời gian xây: như `canApplyMau`, thêm phải có tốp thợ rảnh khi mẫu dựng thêm. */
+export function canStartMau(state: GameState, id: MauId): Result<MauPlan> {
+  const check = canApplyMau(state, id);
+  if (!check.ok) return check;
+  if (check.value.builds.length && !thoRanh(state)) return { ok: false, reason: 'hetTho' };
+  return check;
+}
+
+/**
+ * Áp mẫu như người chơi bấm (có thời gian xây): trả của, dỡ đoạn thừa, dời công trình ngay như `applyMau`; phần dựng
+ * thêm giao cả cho một tốp thợ làm lần lượt (nhà gần Điện trước, rồi tường theo mẫu). Chỗ tường mẫu trùng đoạn tường
+ * cũ sẽ dỡ mà đổi loại tại chỗ được (thành đè lũy, cổng thay tường, cống thay đê) thì đoạn cũ đứng tới khi đắp xong, để
+ * vòng thành không hở lúc đang đắp. Ụ nỏ trên đoạn thành đang có gắn ngay; trên đoạn thành sắp đắp thì gắn khi đắp xong.
+ */
+export function startMau(state: GameState, id: MauId): Result<MauPlan> {
+  const check = canStartMau(state, id);
+  if (!check.ok) return check;
+  const plan = check.value;
+  pay(state, plan.cost);
+  const removes = new Set(plan.removes);
+  // Chỗ dựng thêm trùng đoạn tường sắp dỡ mà đổi loại tại chỗ được: giữ đoạn ấy, đổi loại khi đắp xong.
+  const turned = new Map<Slot, Building>();
+  for (const s of plan.builds) {
+    const old = state.buildings.find((b) => removes.has(b.id) && b.x === s.x && b.z === s.z && canTurn(s.type, b.type));
+    if (old) {
+      turned.set(s, old);
+      removes.delete(old.id);
+    }
+  }
+  state.buildings = state.buildings.filter((b) => !removes.has(b.id));
+  for (const m of plan.moves) {
+    const b = state.buildings.find((o) => o.id === m.id)!;
+    b.x = m.x;
+    b.z = m.z;
+  }
+  for (const m of plan.moves) {
+    const b = state.buildings.find((o) => o.id === m.id)!;
+    levelFootprint(state, b, footprintTop(state, b.type, b.x, b.z));
+  }
+  if (plan.turnDien) delete state.buildings.find((b) => b.type === 'dien')!.rot;
+  const uNoAt = new Set(plan.uNos.map((u) => u.z * GRID + u.x));
+  // Ụ nỏ trên đoạn thành đang có: gắn ngay như khi tự gắn.
+  for (const b of state.buildings) {
+    if (b.type === 'thanh' && uNoAt.delete(b.z * GRID + b.x)) b.uNo = 'ok';
+  }
+  const cx = DIEN_HOME + BUILDINGS.dien.w / 2;
+  const cz = DIEN_HOME + BUILDINGS.dien.d / 2;
+  const dist = (s: Slot) => Math.hypot(s.x + BUILDINGS[s.type].w / 2 - cx, s.z + BUILDINGS[s.type].d / 2 - cz);
+  const houses = plan.builds.filter((s) => !turned.has(s) && BUILDINGS[s.type].w > 1).sort((a, b) => dist(a) - dist(b));
+  const walls = plan.builds.filter((s) => !turned.has(s) && BUILDINGS[s.type].w === 1);
+  const o: PhanViec[] = [];
+  const item = (s: Slot, p: Omit<PhanViec, 'ms' | 'gia'>): PhanViec => {
+    const gia: Cost = { ...BUILDINGS[s.type].buildCost };
+    const it: PhanViec = { ...p, ms: xayMs(s.type, 1), gia };
+    if (s.type === 'thanh' && uNoAt.delete(s.z * GRID + s.x)) {
+      it.uNo = true;
+      for (const r of RESOURCE_IDS) if (U_NO.cost[r]) gia[r] = (gia[r] ?? 0) + U_NO.cost[r]!;
+    }
+    return it;
+  };
+  for (const s of [...houses, ...walls]) {
+    const b = newBuilding(state, s.type, s.x, s.z);
+    o.push(item(s, { id: b.id, moi: b }));
+  }
+  for (const [s, old] of turned) o.push(item(s, { id: old.id, doi: s.type }));
+  const r = startBatch(state, o);
+  if (!r.ok) return r;
   return check;
 }
 
@@ -1059,7 +1160,7 @@ export function seatInMau(state: GameState, id: MauId, list: Building[], rings =
   const homeless: Building[] = [];
   const order = [...list].sort((a, b) => BUILDINGS[b.type].w - BUILDINGS[a.type].w || b.level - a.level || a.id - b.id);
   for (const b of order) {
-    const want = b.type === 'lauNo' ? 'choiCanh' : b.type;
+    const want = b.type === 'lauNo' ? 'choiCanh' : b.type === 'congDe' ? 'de' : b.type;
     const i = slots.findIndex((s) => s.type === want && free(s.type, s.x, s.z));
     if (i >= 0) {
       const s = slots.splice(i, 1)[0];
@@ -1067,7 +1168,7 @@ export function seatInMau(state: GameState, id: MauId, list: Building[], rings =
       b.z = s.z;
       mark(b.type, b.x, b.z);
       state.buildings.push(b);
-    } else if (SEGMENTS.includes(b.type) || isDecor(b.type)) dropped.push(b);
+    } else if (dropIfBlocked(b.type)) dropped.push(b);
     else homeless.push(b);
   }
   for (const b of homeless) {

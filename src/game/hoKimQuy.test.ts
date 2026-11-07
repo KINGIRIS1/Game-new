@@ -73,6 +73,11 @@ describe('Hồ Kim Quy', () => {
 
   it('Lạc hầu gợi ý một lần khi Rùa Vàng hiện lên', () => {
     const s = ch3(YEU_LAST - 1);
+    // Nhà thợ hồ mở từ đầu nên Lạc hầu gợi ý trước (`xay.test.ts`).
+    markHinted(s, 'thoHo');
+    // Cống đê mở từ chương 2 nên Lạc hầu gợi ý cống trước (`phuSa.test.ts`).
+    expect(nextHint(s)).toBe('congDe');
+    markHinted(s, 'congDe');
     expect(nextHint(s)).toBeNull();
     s.campaign.cleared = YEU_LAST;
     expect(nextHint(s)).toBe('hoKimQuy');

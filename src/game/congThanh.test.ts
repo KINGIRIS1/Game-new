@@ -171,6 +171,8 @@ describe('cổng thành', () => {
 
   it('Lạc hầu gợi ý cổng thành khi vào chương 3 và có Điện 5', () => {
     const s = ch3(5);
+    // Nhà thợ hồ mở từ đầu nên Lạc hầu gợi ý trước (`xay.test.ts`).
+    markHinted(s, 'thoHo');
     markHinted(s, 'xuongMoc');
     markHinted(s, 'langChai');
     expect(nextHint(s)).toBe('congThanh');
