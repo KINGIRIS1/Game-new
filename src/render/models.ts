@@ -191,7 +191,7 @@ export function makeBoat(): THREE.Object3D {
 }
 
 /** Thân thuyền Lạc Việt (không người lái): dùng chung cho thuyền con và thuyền khơi phóng to. */
-function boatHull(): THREE.Group {
+export function boatHull(): THREE.Group {
   const m = new ToonModel();
   const p = m.plain;
 
@@ -588,7 +588,7 @@ function addBambooLeaf(b: ShapeBuilder, x: number, y: number, z: number, yaw: nu
  * - `lite` (bản thấp của tre rừng, xem `treeTemplates`): mỗi thân ba lóng không đốt, không cành con, lá thưa một nửa
  *   mà to hơn cho đủ khối xanh. Rút số ngẫu nhiên y như bản đủ nên các thân đứng đúng chỗ cũ.
  */
-function bambooClump(stalks: number, height: number, seed: number, mound: boolean, lite = false): THREE.Mesh {
+export function bambooClump(stalks: number, height: number, seed: number, mound: boolean, lite = false): THREE.Mesh {
   const b = new ShapeBuilder(false, true);
   const rand = seeded(seed);
   const yBase = mound ? 0.16 : 0;
@@ -741,20 +741,18 @@ function earthWall(seed: number): THREE.Mesh {
   b.box(0.9, 0.34, 0.9, C.earth, 0, 0.53, 0);
   b.box(0.8, 0.26, 0.8, C.earthDark, 0, 0.83, 0);
   b.box(0.74, 0.04, 0.74, C.grass[1], 0, 0.97, 0);
-  // Cọc gỗ gia cố sườn thành đất
+  // Cọc gỗ gia cố sườn thành đất, mỗi đoạn nghiêng lệch một chút.
   for (const s of [-1, 1]) {
     for (const x of [-0.28, 0, 0.28]) {
-      b.cyl(0.026, 0.03, 0.52, C.woodDark, x, 0.62, s * 0.42, [s * 0.08, 0, 0], 5);
+      b.cyl(0.026, 0.03, 0.52, C.woodDark, x + (rand() - 0.5) * 0.06, 0.62, s * 0.42, [s * 0.08, 0, (rand() - 0.5) * 0.12], 5);
     }
   }
-  // Hàng chông tre vót nhọn cắm trên mặt thành và chĩa ra sườn
-  for (let i = 0; i < 7; i++) {
-    const x = (rand() - 0.5) * 0.56;
-    const z = (rand() - 0.5) * 0.56;
-    b.cone(0.038, 0.42, i % 2 ? C.bamboo : 0x8cab4e, x, 1.16, z, [(rand() - 0.5) * 0.32, 0, (rand() - 0.5) * 0.32], 4);
-  }
+  // Mặt thành để trống làm lối đi (lan can ở mép ngoài dựng riêng theo dải thành, `buildWallTops`).
   return b.mesh(toon);
 }
+
+/** Mặt thành đất (lũy cấp 2) cao chừng này trên mặt đất (chỗ lính đứng, đầu bậc lên thành). */
+export const EARTH_WALL_TOP = 0.99;
 
 /** Đoạn lũy bị phá: mô đất vỡ sạt, các thân tre có đốt và cọc chông gãy đổ ngổn ngang. */
 function wallRubble(): THREE.Mesh {
@@ -947,7 +945,7 @@ export function buildWallSites(spots: { x: number; y: number; z: number; seed: n
   );
 }
 
-/** Dựng toàn bộ lũy: lũy tre là bụi tre dày đan cọc trên mô đất, thành đất là khối đất nện cắm chông, xoay ngẫu nhiên. */
+/** Dựng toàn bộ lũy: lũy tre là bụi tre dày đan cọc trên mô đất, thành đất là khối đất nện nóc trống làm lối đi, xoay ngẫu nhiên. */
 export function buildWalls(spots: WallSpot[]): THREE.Object3D {
   cachedWalls ??= [bambooClump(11, 1.85, 3, true), bambooClump(12, 1.95, 9, true), earthWall(5), earthWall(11), wallRubble()];
   return instanceTemplates(
@@ -1056,9 +1054,13 @@ export interface CitadelSpot {
   damaged: boolean;
 }
 
+/** Lính đi trên mặt thành lọt dưới sàn chòi, ụ nỏ dựng trên mặt thành: sàn cao chừng này trên mặt thành. */
+export const WALL_DECK = 0.95;
+
 /**
- * Đoạn thành Cổ Loa: đất nện ba lớp cao gần gấp rưỡi thành đất của lũy, chân rộng trọn ô, mặt thành thu nhỏ;
- * bốn góc có ụ đất, giữa có cọc gỗ. `post`: có thêm chòi canh nhỏ lợp tranh trên mặt thành.
+ * Đoạn thành Cổ Loa: đất nện ba lớp cao gần gấp rưỡi thành đất của lũy, chân rộng trọn ô, mặt thành thu nhỏ để trống
+ * làm lối đi (lan can mép ngoài dựng riêng, `buildWallTops`). `post`: có thêm chòi canh nhỏ lợp tranh dựng trên bốn
+ * cột cao, lính đi lọt bên dưới.
  */
 function citadelWall(post: boolean): THREE.Mesh {
   const b = new ShapeBuilder(false, true);
@@ -1066,13 +1068,15 @@ function citadelWall(post: boolean): THREE.Mesh {
   b.box(0.92, 0.5, 0.92, C.earth, 0, 0.75, 0);
   b.box(0.82, 0.36, 0.82, C.earthDark, 0, 1.18, 0);
   b.box(0.74, 0.04, 0.74, C.grass[1], 0, 1.37, 0);
-  for (const x of [-0.32, 0.32]) for (const z of [-0.32, 0.32]) b.box(0.16, 0.2, 0.16, C.earth, x, 1.46, z);
   if (post) {
-    for (const x of [-0.2, 0.2]) for (const z of [-0.2, 0.2]) b.cyl(0.03, 0.03, 0.55, C.woodDark, x, 1.65, z, undefined, 5);
-    b.box(0.5, 0.05, 0.5, C.wood, 0, 1.6, 0);
-    b.cone(0.42, 0.34, C.thatch, 0, 2.07, 0, undefined, 4);
-  } else {
-    for (const x of [-0.12, 0.12]) b.cone(0.04, 0.42, C.woodLight, x, 1.58, 0, undefined, 4);
+    const top = CITADEL_TOP + WALL_DECK;
+    for (const x of [-0.29, 0.29]) for (const z of [-0.29, 0.29]) b.cyl(0.03, 0.035, WALL_DECK + 0.5, C.woodDark, x, CITADEL_TOP + (WALL_DECK + 0.5) / 2, z, undefined, 5);
+    b.box(0.66, 0.05, 0.66, C.wood, 0, top, 0);
+    for (const s of [-1, 1]) {
+      b.box(0.66, 0.16, 0.03, C.woodLight, 0, top + 0.1, s * 0.31);
+      b.box(0.03, 0.16, 0.66, C.woodLight, s * 0.31, top + 0.1, 0);
+    }
+    b.cone(0.5, 0.34, C.thatch, 0, top + 0.62, 0, [0, Math.PI / 4, 0], 4);
   }
   return b.mesh(toon);
 }
@@ -1089,7 +1093,7 @@ function citadelRubble(): THREE.Mesh {
 
 let cachedCitadel: THREE.Mesh[] | null = null;
 
-/** Dựng toàn bộ thành Cổ Loa trong kinh đô. Mọi đoạn cùng hướng để ụ góc thẳng hàng thành răng cưa. */
+/** Dựng toàn bộ thành Cổ Loa trong kinh đô (nóc làm lối đi, lan can dựng riêng ở `buildWallTops`). Mọi đoạn cùng hướng. */
 export function buildCitadel(spots: CitadelSpot[]): THREE.Object3D {
   cachedCitadel ??= [citadelWall(false), citadelWall(true), citadelRubble()];
   return instanceTemplates(
@@ -1097,6 +1101,88 @@ export function buildCitadel(spots: CitadelSpot[]): THREE.Object3D {
     spots.map((s) => ({ t: s.damaged ? 2 : s.seed % 7 === 0 ? 1 : 0, x: s.x, y: s.y, z: s.z, s: 1, ry: 0 })),
     treeOutline,
   );
+}
+
+/** Một ô mặt thành còn nguyên: tọa độ ô (tx, tz), tọa độ thế giới tâm ô và mặt đất dưới chân, loại thành. */
+export interface WallTopCell {
+  tx: number;
+  tz: number;
+  x: number;
+  y: number;
+  z: number;
+  kind: 'earth' | 'citadel';
+}
+
+/** Lan can một mép nóc thành (mép +z của ô), gốc ở mặt thành: đoạn giữa có cột hai đầu, và hai đoạn nối tới mép ô. */
+function railParts(): THREE.Mesh[] {
+  const z = 0.335;
+  const rails = (x0: number, x1: number, posts: number[]) => {
+    const b = new ShapeBuilder(false, true);
+    for (const x of posts) {
+      b.cyl(0.026, 0.03, 0.34, C.woodDark, x, 0.17, z, undefined, 5);
+      b.box(0.07, 0.04, 0.07, C.bronze, x, 0.36, z);
+    }
+    const w = x1 - x0;
+    const cx = (x0 + x1) / 2;
+    b.box(w, 0.04, 0.045, C.wood, cx, 0.31, z);
+    b.box(w, 0.03, 0.035, C.woodLight, cx, 0.16, z);
+    // Ván chắn chân ở mép, sơn đỏ như lan can cung điện.
+    b.box(w, 0.06, 0.03, C.red, cx, 0.03, z + 0.005);
+    return b.mesh(toon);
+  };
+  return [rails(-0.335, 0.335, [-0.335, 0.335]), rails(0.335, 0.5, []), rails(-0.5, -0.335, [])];
+}
+
+/** Đất nối nóc hai đoạn thành kề nhau về phía +z (khe giữa hai mặt thành thu nhỏ), để lối đi trên nóc liền một dải. */
+function wallJoin(kind: 'earth' | 'citadel'): THREE.Mesh {
+  const b = new ShapeBuilder(false, true);
+  if (kind === 'citadel') {
+    b.box(0.92, 0.5, 0.12, C.earth, 0, 0.75, 0.5);
+    b.box(0.82, 0.36, 0.22, C.earthDark, 0, 1.18, 0.5);
+    b.box(0.74, 0.04, 0.3, C.grass[1], 0, 1.37, 0.5);
+  } else {
+    b.box(0.9, 0.34, 0.12, C.earth, 0, 0.53, 0.5);
+    b.box(0.8, 0.26, 0.22, C.earthDark, 0, 0.83, 0.5);
+    b.box(0.74, 0.04, 0.3, C.grass[1], 0, 0.97, 0.5);
+  }
+  return b.mesh(toon);
+}
+
+let cachedTops: THREE.Mesh[] | null = null;
+const SIDE_DIRS = [
+  [0, 1, 0],
+  [1, 0, Math.PI / 2],
+  [0, -1, Math.PI],
+  [-1, 0, -Math.PI / 2],
+] as const;
+
+/**
+ * Nóc thành đất và thành Cổ Loa làm lối đi: đất nối nóc hai đoạn cùng loại kề nhau, lan can gỗ dọc mép ngoài (mép
+ * không kề đoạn cùng loại). `passage(tx, tz)`: ô kề bên là lối lên (bậc lên thành, cổng thành) thì để hở lan can.
+ */
+export function buildWallTops(cells: WallTopCell[], passage: (tx: number, tz: number) => boolean): THREE.Object3D {
+  cachedTops ??= [...railParts(), wallJoin('earth'), wallJoin('citadel')];
+  const at = new Map(cells.map((c) => [`${c.tx},${c.tz}`, c]));
+  const joined = (c: WallTopCell, dx: number, dz: number) => at.get(`${c.tx + dx},${c.tz + dz}`)?.kind === c.kind;
+  const placements: Placement[] = [];
+  for (const c of cells) {
+    const top = c.y + (c.kind === 'citadel' ? CITADEL_TOP : EARTH_WALL_TOP);
+    for (const [dx, dz, ry] of SIDE_DIRS) {
+      if (joined(c, dx, dz)) {
+        // Mỗi khe nối dựng một lần, từ ô phía tây hay phía bắc.
+        if (dx + dz > 0) placements.push({ t: c.kind === 'citadel' ? 4 : 3, x: c.x, y: c.y, z: c.z, s: 1, ry });
+        continue;
+      }
+      if (passage(c.tx + dx, c.tz + dz)) continue;
+      placements.push({ t: 0, x: c.x, y: top, z: c.z, s: 1, ry });
+      // Hai đầu lan can nối sang ô bên cạnh khi ô ấy cùng dải (trục ngang của mép, sau khi xoay).
+      const lx = Math.round(Math.cos(ry));
+      const lz = Math.round(-Math.sin(ry));
+      if (joined(c, lx, lz)) placements.push({ t: 1, x: c.x, y: top, z: c.z, s: 1, ry });
+      if (joined(c, -lx, -lz)) placements.push({ t: 2, x: c.x, y: top, z: c.z, s: 1, ry });
+    }
+  }
+  return instanceTemplates(cachedTops, placements, treeOutline);
 }
 
 /** Cây nỏ đồng lớn đặt trên giá gỗ, như ở sân Đền Cổ Loa. Gốc ở chân giá. */
@@ -1480,21 +1566,27 @@ export const CITADEL_TOP = 1.39;
 export function makeUNo(broken = false): THREE.Group {
   const m = new ToonModel(inkThin);
   const p = m.plain;
-  p.box(0.62, 0.18, 0.62, C.earthDark, 0, 0.09, 0);
+  const h = WALL_DECK;
   if (broken) {
-    p.box(0.42, 0.12, 0.36, C.earth, -0.05, 0.2, 0.04, [0, 0.4, 0.15]);
-    p.cyl(0.025, 0.025, 0.4, C.woodDark, 0.12, 0.25, -0.1, [0, 0.6, Math.PI / 2 - 0.4], 5);
-    p.cyl(0.025, 0.025, 0.3, C.woodDark, -0.18, 0.3, 0.15, undefined, 5);
+    // Cột gãy đổ, sàn ụ sập nghiêng trên mặt thành, đất sạt; không người.
+    p.box(0.5, 0.05, 0.42, C.wood, -0.02, 0.12, 0.04, [0.35, 0.3, 0.2]);
+    p.box(0.36, 0.1, 0.3, C.earth, 0.1, 0.06, -0.1, [0, 0.4, 0.1]);
+    p.cyl(0.028, 0.028, 0.7, C.woodDark, 0.15, 0.1, -0.15, [0, 0.6, Math.PI / 2 - 0.15], 5);
+    p.cyl(0.028, 0.028, 0.5, C.woodDark, -0.25, 0.25, 0.2, undefined, 5);
     return m.group();
   }
-  p.box(0.5, 0.14, 0.5, C.earth, 0, 0.25, 0);
-  for (const x of [-0.18, 0.18]) for (const z of [-0.18, 0.18]) p.cyl(0.025, 0.025, 0.5, C.woodDark, x, 0.55, z, undefined, 5);
-  m.band.cone(0.4, 0.26, C.thatch, 0, 0.9, 0, [0, Math.PI / 4, 0], 4);
+  // Bốn cột gỗ cao đứng ở bốn góc mặt thành, chừa lối đi bên dưới; sàn ván, ụ đất đắp trên sàn, mái tranh.
+  for (const x of [-0.29, 0.29]) for (const z of [-0.29, 0.29]) p.cyl(0.032, 0.036, h + 0.62, C.woodDark, x, (h + 0.62) / 2, z, undefined, 5);
+  for (const s of [-1, 1]) p.box(0.66, 0.05, 0.05, C.wood, 0, h - 0.06, s * 0.29);
+  p.box(0.66, 0.06, 0.66, C.wood, 0, h, 0);
+  p.box(0.56, 0.14, 0.56, C.earthDark, 0, h + 0.1, 0);
+  p.box(0.46, 0.08, 0.46, C.earth, 0, h + 0.21, 0);
+  m.band.cone(0.46, 0.28, C.thatch, 0, h + 0.78, 0, [0, Math.PI / 4, 0], 4);
   const g = m.group();
   // Lính nỏ quỳ một gối nhắm ra ngoài thành (bản tĩnh của lính có xương).
   const man = bakeSoldier('no', 0, { act: 'fight', strike: 0.9 });
   man.scale.setScalar(0.5);
-  man.position.set(0, 0.32, 0.05);
+  man.position.set(0, h + 0.25, 0.05);
   g.add(man);
   return g;
 }

@@ -3,6 +3,7 @@
 
 export const ANH_DAU: Record<string, string> = {
   ao: '0a6f24a1',
+  bacThanh: 'd1d40b9c',
   baiDa: 'cace93cc',
   banLang: 'f7ab4060',
   bayChong: 'edc5323a',
@@ -44,12 +45,12 @@ export const ANH_DAU: Record<string, string> = {
   rom: '1cd29a52',
   ruong: 'ff969911',
   ruongNep: 'b5c0cb1f',
-  thanh: 'da61fb35',
+  thanh: 'e2f369d5',
   thoHo: '6f42190c',
   traiCung: 'b8be6df2',
   traiGiao: 'f0e4447f',
   traiNo: '8ae6c028',
-  uNo: '3f68ca3c',
+  uNo: 'ea5b34cb',
   vuon: '3bce8891',
   xuongMoc: '091d56a7',
 };

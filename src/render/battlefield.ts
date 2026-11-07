@@ -9,6 +9,7 @@
 
 import * as THREE from 'three';
 import { createNoise2D, type NoiseFunction2D } from 'simplex-noise';
+import { baiById, type Bai } from '../game/baiChien';
 import { holdProgress, type Battle } from '../game/battle';
 import { FIELD, RALLY_BEAT, SKILLS, type Terrain } from '../game/defs';
 import { BattleView } from './battleView';
@@ -21,11 +22,13 @@ import { buildForest, makeBoat, makeEnemyBoat, makeEnemyFlag, makeLauThuyen, mak
 import { makeNhaSan, makeRuong } from './buildings';
 import { makeBridge } from './benKia';
 import { C } from './palette';
+import { reedTemplates } from './lauSay';
 import { makeWorker, type Job } from './people';
 import type { Poser } from './rig';
 import { type Placement, ShapeBuilder, disposeModel, instanceTemplates, seeded } from './shapes';
 import { ToonModel, inkThin, outlineOf, toon } from './toon';
 import { TROI_NGAY, type BoTroi } from './troi';
+import { buildVatCan, loiAt } from './vatCan';
 
 const { smoothstep } = THREE.MathUtils;
 
@@ -148,7 +151,6 @@ const WET_SAND = 0xa89468;
 const RIVER = { deep: C.water[1], shallow: 0x6fa8a2 };
 const SEA = { deep: C.sea, mid: 0x3a88a8, shallow: 0x74bcc0 };
 /** Lau sậy: thân, lá, bông lau trắng bạc, bông sậy nâu tím. */
-const REED = { stalk: 0x8f9a4c, stalkDry: 0xa8a060, leaf: 0x6f8a3a, lau: 0xeee4cc, say: 0xa08068 };
 /** Lông ngỗng trắng và cuống lông. */
 const FEATHER = { vane: 0xfbf8ee, down: 0xffffff, quill: 0xcfc2a0 };
 /** Thành Cổ Loa: ba vòng thành bao quanh bãi, cách mép bãi chừng này ô. */
@@ -343,6 +345,8 @@ export class Battlefield {
   private readonly inner = new THREE.Group();
   private decor = new THREE.Group();
   private terrain: Terrain | null = null;
+  /** Bố cục vật cản đang dựng (`baiChien.ts`), không có là bãi phẳng. */
+  private bai: Bai | undefined;
   private drummer?: THREE.Group;
   /** Mộ Dạ (màn cầm cự): ngựa vua chở An Dương Vương và Mỵ Châu phi dọc mép bãi ra biển, theo thanh "Vua tới biển". */
   private horse?: { obj: THREE.Group; battle: number };
@@ -367,7 +371,8 @@ export class Battlefield {
     field.add(this.inner);
     this.scene.add(field);
     this.inner.add(this.decor);
-    this.view = new BattleView(this.inner, { x: 0, z: 0 }, 1.25, undefined, DRUM_AT);
+    // Lính lội qua nước nông, bùn thì chân chìm xuống (mặt bãi vẫn phẳng).
+    this.view = new BattleView(this.inner, { x: 0, z: 0 }, 1.25, (x, z) => loiAt(this.bai, x, z), DRUM_AT);
   }
 
   /** Vẽ trận đang diễn ra, và Lạc tướng đánh trống khi có Trống trận. */
@@ -575,15 +580,18 @@ export class Battlefield {
     return (this.decor.userData.relief as Relief | undefined)?.height(x, z) ?? 0;
   }
 
-  setTerrain(t: Terrain): void {
-    if (t === this.terrain) return;
+  /** Dựng nền `t` với bố cục vật cản `bai` (id ở `baiChien.ts`; null hay id lạ là bãi phẳng). */
+  setTerrain(t: Terrain, bai: string | null = null): void {
+    const layout = baiById(bai);
+    if (t === this.terrain && layout === this.bai) return;
     this.terrain = t;
+    this.bai = layout;
     this.inner.remove(this.decor);
     // Cây rừng dùng chung mẫu (InstancedMesh), chỉ bỏ hình riêng của từng cảnh.
     this.decor.traverse((o) => {
       if (o instanceof THREE.Mesh && !(o instanceof THREE.InstancedMesh)) o.geometry.dispose();
     });
-    this.decor = buildDecor(t);
+    this.decor = buildDecor(t, layout);
     this.inner.add(this.decor);
     this.drummer = this.decor.userData.drummer as THREE.Group;
     this.farBank = this.decor.userData.farBank as THREE.Object3D | undefined;
@@ -598,7 +606,7 @@ export class Battlefield {
   }
 }
 
-function buildDecor(t: Terrain): THREE.Group {
+function buildDecor(t: Terrain, bai?: Bai): THREE.Group {
   const g = new THREE.Group();
   g.name = 'decor';
   const W = FIELD.w;
@@ -862,6 +870,8 @@ function buildDecor(t: Terrain): THREE.Group {
   g.userData.relief = relief;
   g.add(relief.mesh(), relief.field());
   for (const { obj, foot } of placed) obj.position.y = relief.floor(obj.position.x, obj.position.z, foot);
+  // Vật cản giữa bãi: mảng cỏ chỗ vật cản đứng tô đúng màu đất quanh bãi.
+  if (bai) g.add(buildVatCan(bai, { fill: FIELD_COLOR[t], ground: (x, z, out) => relief.color(x, z, relief.height(x, z), out) }));
 
   if (WATERY.has(t)) {
     g.add(waterSurface(relief), ...shoreLines(relief));
@@ -2091,36 +2101,6 @@ function shoreLines(relief: Relief): THREE.Mesh[] {
   return out;
 }
 
-/** Một khóm lau sậy: thân mảnh chếch ra, lá dài, ngọn trổ bông (lau trắng bạc hay sậy nâu tím). */
-function reedTemplate(seed: number, plume: number): THREE.Mesh {
-  const b = new ShapeBuilder(false, true);
-  const rand = seeded(seed);
-  for (let i = 0; i < 8; i++) {
-    const a = rand() * Math.PI * 2;
-    const r = rand() * 0.2;
-    const h = 0.85 + rand() * 0.6;
-    const lean = 0.08 + rand() * 0.2;
-    const dx = Math.cos(a) * Math.sin(lean);
-    const dz = Math.sin(a) * Math.sin(lean);
-    const x = Math.cos(a) * r;
-    const z = Math.sin(a) * r;
-    const rot: [number, number, number] = [Math.sin(a) * lean, 0, -Math.cos(a) * lean];
-    b.cone(0.024, h, i % 3 ? REED.stalk : REED.stalkDry, x + (dx * h) / 2, (Math.cos(lean) * h) / 2, z + (dz * h) / 2, rot, 3);
-    // Bông trổ ở ngọn, chúc đầu theo chiều thân chếch.
-    const tip = h + 0.14;
-    b.cone(0.055, 0.34, plume, x + dx * tip, Math.cos(lean) * tip, z + dz * tip, [rot[0] * 2.2 + Math.PI, 0, rot[2] * 2.2], 4);
-  }
-  for (let i = 0; i < 5; i++) {
-    const a = (i / 5) * Math.PI * 2 + rand();
-    const lean = 0.5 + rand() * 0.3;
-    const len = 0.55 + rand() * 0.25;
-    const s = Math.sin(lean) * len * 0.5;
-    b.box(0.06, len, 0.012, REED.leaf, Math.cos(a) * s, Math.cos(lean) * len * 0.5, Math.sin(a) * s, [Math.sin(a) * lean, 0, -Math.cos(a) * lean]);
-  }
-  return b.mesh(toon);
-}
-
-let cachedReeds: THREE.Mesh[] | null = null;
 const thinOutline = (geo: THREE.BufferGeometry) => outlineOf(geo, inkThin);
 /** Bãi chiến và một viền quanh: lau sậy, đá, lông ngỗng không lấn vào. */
 const FIELD_RIM: Zone = { x0: -1.5, x1: FIELD.w + 1.5, z0: -1.5, z1: FIELD.d + 1.5 };
@@ -2130,7 +2110,6 @@ const FIELD_RIM: Zone = { x0: -1.5, x1: FIELD.w + 1.5, z0: -1.5, z1: FIELD.d + 1
  * mọc ở chỗ này trả về true (chừa đường mòn).
  */
 function reedBeds(relief: Relief, boats: { x: number; z: number }[], keep?: (x: number, z: number) => boolean): THREE.Object3D {
-  cachedReeds ??= [reedTemplate(3, REED.lau), reedTemplate(8, REED.say), reedTemplate(13, REED.lau)];
   const rand = seeded(57);
   const spots: Placement[] = [];
   const t = relief.terrain;
@@ -2157,7 +2136,7 @@ function reedBeds(relief: Relief, boats: { x: number; z: number }[], keep?: (x: 
       spots.push({ t: kind < 0.45 ? 0 : kind < 0.75 ? 1 : 2, x: px, y: Math.max(relief.height(px, pz), WATER_Y) - 0.03, z: pz, s, ry });
     }
   }
-  return instanceTemplates(cachedReeds, spots, thinOutline);
+  return instanceTemplates(reedTemplates(), spots, thinOutline);
 }
 
 /** Đá tảng lăn lóc ven biển dưới chân núi Mộ Dạ, xa đường ngựa của vua. */

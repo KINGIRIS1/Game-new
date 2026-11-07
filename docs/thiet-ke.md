@@ -167,6 +167,7 @@ Lúc đầu mỗi cấp Điện chỉ cho phát tới một số khoảnh (lư�
 | Đền Tản Viên | 4×4 | Có sau khi kết chương 2. Lũ dâng thấp đi một bậc |
 | Thành Cổ Loa | 1×1 | Có từ chương 3. Đoạn thành đất nện cao, chắc; đắp nhiều vòng quanh Điện |
 | Cổng thành | 1×1 | Có từ chương 3, Điện 5. Cửa trong vòng tường: giặc dồn về cổng, lính trên lầu cổng bắn (xem mục Kế hoạch: cổng thành, xưởng mộc, làng chài) |
+| Bậc lên thành | 1×1 | Có từ Điện 3. Dựng sát mặt trong một đoạn thành đất hay thành Cổ Loa: khi giữ kinh đô cung thủ, lính nỏ theo bậc lên nóc thành bắn xuống (xem mục Bậc lên thành, lối đi trên nóc thành) |
 | Nhà thợ hồ | 3×3 | Thêm một tốp thợ xây; nhà lên cấp thì tốp ấy làm nhanh hơn (xem mục Thời gian xây, tốp thợ, đố sử) |
 | Hồ Kim Quy | 8×8 | Có khi Rùa Vàng hiện lên (thắng màn 19). Lũy, thành đất, thành Cổ Loa, cổng thành thêm 30% máu (xem mục Hồ Kim Quy) |
 | Đền Cổ Loa | 4×4 | Có sau khi kết chương 3. Chòi canh bắn mạnh gấp rưỡi, xa thêm 1 ô |
@@ -338,7 +339,7 @@ Chủ dự án muốn có nhiều quân dự trữ: dựng thêm doanh trại, m
   - rừng mọc thành cụm có trảng trống, tre thành khóm riêng, thưa dần ra mép;
   - hai bên dàn ba hàng cách nhau 10 ô rồi xông vào đánh kẻ gần nhất;
   - lính đẩy nhau ra, không đứng chồng lên nhau;
-  - dải giữa bãi có vật cản theo nền, lính đi vòng (xem mục **Bãi chiến có vật cản**; đang làm, bố cục bật dần theo chương);
+  - dải giữa bãi có vật cản theo nền, lính đi vòng (xem mục **Bãi chiến có vật cản**; màn chương 1 và đồn bên kia sông đã có bố cục, chương 2–5 bật dần);
   - ngoài bãi mọi người bền gấp 1,6 lần, để trận kéo dài chừng 10–35 giây và kịp bấm Trống trận.
 - **Kết thúc trận**:
   - thắng khi diệt hết giặc;
@@ -670,7 +671,7 @@ Chủ dự án đã chốt:
 
 - **An Dương Vương** (`makeAnDuong` trong `src/render/models.ts`): to cỡ Sơn Tinh, giáp đồng hoa văn trống, áo choàng đỏ son, mũ lông chim có vành vàng. Chưa có nỏ thì cầm rìu đồng nghi lễ; có nỏ thì cầm nỏ thần màu đồng vàng, lẫy hình vuốt rùa. Đứng chầu trong sân Điện, cột đá thề sau lưng.
 - **Rùa Vàng** (`makeRuaVang`): rùa mai vàng có hoa văn mặt trống. Từ khi diệt yêu tinh, một con Rùa Vàng nhỏ bơi trên sông phía nam kinh đô.
-- **Đoạn thành Cổ Loa** (`buildCitadel`): đất nện cao hơn thành đất của lũy, có ụ góc, hàng cọc gỗ, thỉnh thoảng một chòi canh; đoạn bị phá là đống đất sạt.
+- **Đoạn thành Cổ Loa** (`buildCitadel`): đất nện cao hơn thành đất của lũy, nóc thành làm lối đi có lan can (xem mục Bậc lên thành, lối đi trên nóc thành), thỉnh thoảng một chòi canh nhỏ dựng trên bốn cột cao; đoạn bị phá là đống đất sạt. Trước đây nóc thành có ụ góc răng cưa và cọc gỗ nhọn, nay bỏ để lính đi lại.
 - **Đền Cổ Loa** (`makeDenCoLoa` trong `src/render/buildings.ts`): đền nền đá mái cong, trước sân có tượng Rùa Vàng và cây nỏ đồng lớn trên giá.
 - **Giặc**: quỷ núi da xám xanh có sừng, cầm chày đá; ma trơi là đốm lửa xanh lơ lửng có mặt, tự sáng; hổ tinh vằn cam đen; gà trắng nghìn năm là gà trống trắng khổng lồ mào đỏ. Lính khiên Triệu áo đen viền đỏ, khiên chữ nhật; nỏ thủ Triệu cầm nỏ gỗ; kỵ binh cưỡi ngựa nâu; Triệu Đà râu bạc, giáp đen viền vàng, cưỡi ngựa đen.
 - **Đêm yêu tinh** ở kinh đô: ánh trăng xanh tím, trời tối, ma trơi lơ lửng ở bìa rừng, không mưa. Đè lên giờ trong ngày (mục Ngày đêm).
@@ -1262,7 +1263,7 @@ Giá cấp 8 khoảng gấp 2 cấp 7, sản lượng tăng khoảng 30% (cấp 
 - Tự bắn một giặc trong tầm 4 ô, sát thương 14, nghỉ 1,4 giây.
 - Ụ là một phần của đoạn thành: giặc không nhắm ụ làm đích. Đoạn thành bị phá thì ụ hư theo, sửa thành xong phải sửa ụ (30% giá). Dỡ đoạn thành thì mất ụ.
 - Đền Cổ Loa còn nguyên thì ụ cũng bắn mạnh gấp rưỡi và xa thêm 1 ô.
-- Dáng: ụ đất đắp cao trên mặt thành, mái tranh che nhỏ, một lính nỏ quỳ bắn quay mặt ra ngoài thành. Ụ hư (thành đã sửa mà ụ chưa sửa): ụ đất sạt, cột gãy, không người.
+- Dáng: bốn cột gỗ cao ở bốn góc nóc thành đỡ sàn ván, trên sàn đắp ụ đất, mái tranh che nhỏ, một lính nỏ quỳ bắn quay mặt ra ngoài thành; dưới sàn để trống cho lính đi dọc nóc thành lọt qua (chủ dự án yêu cầu, trước đây ụ đắp ngay trên mặt thành). Ụ hư (thành đã sửa mà ụ chưa sửa): cột gãy, sàn sập nghiêng trên mặt thành, không người.
 - Giao diện: thẻ **Ụ nỏ** trong bảng Xây dựng ghi số ụ đã có trên số tối đa; chọn thẻ rồi chạm từng đoạn thành. Bảng một đoạn thành có nút dựng ụ ngay trên đoạn ấy, ghi ụ đang bắn hay đang hư, và nút **Sửa ụ nỏ** (mờ khi thành còn hư). Nút "Sửa hết" sau trận sửa cả thành lẫn ụ.
 
 **Thủy binh Triệu**
@@ -1398,13 +1399,13 @@ Bản đồ phó bản có thêm thẻ Chương 4, mở khi đã vào chương 4
 | Màn | Kiểu | Máu giặc | Màn | Kiểu | Máu giặc |
 |---|---|---|---|---|---|
 | 1 | Giặc dữ, thêm giặc | ×3,2 | 17 | Không tướng | ×1,7 |
-| 2 | Giáo binh + voi chiến, thêm giặc | ×3,95 | 18 | Giáo binh + voi chiến | ×3,2 |
+| 2 | Giáo binh + voi chiến, thêm giặc | ×4,15 | 18 | Giáo binh + voi chiến | ×3,2 |
 | 3 | Giặc dữ, thêm giặc | ×3,8 | 19 | Giặc dữ | ×2,8 |
 | 4 | Giặc dữ, thêm giặc | ×2,6 | 20 | Không tướng | ×1,1 |
 | 5 | Không tướng | ×3,5 | 21 | Giáo binh + cung thủ | ×3,3 |
 | 6 | Giáo binh + voi chiến | ×3,5 | 22 | Không tướng | ×0,95 |
 | 7 | Không tướng | ×2,4 | 23 | Giáo binh + voi chiến | ×2,6 |
-| 8 | Giặc dữ | ×2,2 | 24 | Giặc dữ | ×2,05 |
+| 8 | Giặc dữ | ×2,35 | 24 | Giặc dữ | ×2,05 |
 | 9 | Không tướng | ×3,15 | 25 | Không tướng | ×1,05 |
 | 10 | Giáo binh + voi chiến | ×4 | 26 | Giáo binh + lính nỏ | ×3,15 |
 | 11 | Không tướng | ×1,9 | 27 | Không tướng | ×0,85 |
@@ -1413,6 +1414,8 @@ Bản đồ phó bản có thêm thẻ Chương 4, mở khi đã vào chương 4
 | 14 | Không tướng | ×1,4 | 30 | Không tướng | ×0,95 |
 | 15 | Giáo binh + voi chiến | ×3 | 31 | Giáo binh + lính nỏ | ×3,1 |
 | 16 | Giặc dữ | ×1,8 | 32 | Giặc dữ | ×3,3 |
+
+Thử thách 2 (từ ×3,95) và 8 (từ ×2,2) nâng máu khi bãi chương 1 có vật cản (mục **Bãi chiến có vật cản**).
 
 - Giặc đông nhất ở mọi màn đều là loại cung thủ khắc (lính giáo Ân, tôm binh, quỷ núi, lính Triệu, lính thủy). Nên màn Hai binh chủng bỏ cung thủ là chính; màn 13 và 21 bỏ voi chiến cho đỡ lặp.
 - **Màn 1–4 thêm giặc** (chủ dự án chọn): màn thường ít giặc (màn 1 chỉ có 4 lính giáo Ân), quân mẫu 38 chỗ lại có Gióng hiển linh, nên nếu chỉ tăng máu thì phải tăng rất lớn (màn 1 tới ×58). Thử thách màn 1–4 có thêm giặc (`extra`), đông ngang màn 5–8; thẻ màn ghi quân giặc của thử thách:
@@ -2092,11 +2095,11 @@ j\i  0  1  2  3  4  5  6  7  8  9
    | Bậc | Quân giặc | Máu | Tướng khi đo | Quân mẫu | Thưởng (một lần) |
    |---|---|---|---|---|---|
    | 1 | 7 lính giáo, 4 cung, 2 chiến xa | ×1,9 | không tướng | 10 giáo, 6 cung, 3 voi (25 chỗ, vừa 28 chỗ một trận ở Điện 4) | 400 gạo, 300 vỏ ốc, 250 đất đá, 60 sắt |
-   | 2 | 11 tôm binh, 7 cá phun nước, 3 cá sấu | ×2,95 | Gióng hiển linh | 14 giáo, 12 cung, 4 voi | 1300 gạo, 900 vỏ ốc, 700 đất đá, 180 sắt |
+   | 2 | 11 tôm binh, 7 cá phun nước, 3 cá sấu | ×2,8 | Gióng hiển linh | 14 giáo, 12 cung, 4 voi | 1300 gạo, 900 vỏ ốc, 700 đất đá, 180 sắt |
    | 3 | 12 quỷ núi, 7 ma trơi, 3 hổ tinh | ×3,05 | Sơn Tinh hiển linh | như trên | 2400 gạo, 1700 vỏ ốc, 1500 đất đá, 400 sắt |
-   | 4 | 14 lính khiên, 8 nỏ thủ, 4 kỵ binh Triệu | ×2,6 | An Dương Vương | 11 giáo, 10 cung, 3 voi, 4 nỏ (quân mẫu chương 4) | 4200 gạo, 3500 vỏ ốc, 3100 đất đá, 800 sắt |
+   | 4 | 14 lính khiên, 8 nỏ thủ, 4 kỵ binh Triệu | ×2,5 | An Dương Vương | 11 giáo, 10 cung, 3 voi, 4 nỏ (quân mẫu chương 4) | 4200 gạo, 3500 vỏ ốc, 3100 đất đá, 800 sắt |
 
-   - Máu là mức cao nhất mà người chơi thường (bấm chậm 1,5 giây, không có Đền) vẫn thắng cả 10 hạt giống thử, đo lại trên bộ máy trận hiện tại (ra đúng như lần đo trên nhánh cũ). Ở mức ấy, không tướng hay nửa quân thì chơi giỏi cũng thua cả 10 lần (bậc 1: nửa quân thua). Test giữ chuẩn với 3 hạt giống (`benKia.test.ts`, `fightField` ở `testkit.ts`).
+   - Máu là mức cao nhất mà người chơi thường (bấm chậm 1,5 giây, không có Đền) vẫn thắng cả 10 hạt giống thử, đo lại trên bộ máy trận hiện tại (ra đúng như lần đo trên nhánh cũ). Ở mức ấy, không tướng hay nửa quân thì chơi giỏi cũng thua cả 10 lần (bậc 1: nửa quân thua). Test giữ chuẩn với 3 hạt giống (`benKia.test.ts`, `fightField` ở `testkit.ts`). Bậc 2 hạ từ ×2,95 xuống ×2,8, bậc 4 từ ×2,6 xuống ×2,5 khi bãi bờ bên kia có vật cản (mục **Bãi chiến có vật cản**).
    - Tướng ra trận như trận của chương ứng với bậc (`campHero`, `heroFor` không theo màn): bậc 4 là An Dương Vương, vua đã xuống biển thì Cao Lỗ. Đánh được khi: đã dò thấy đồn, tới đúng chương (bậc 1 cần Điện cấp 4), có doanh trại, cầu sang bờ ấy còn nguyên, không đang có giặc hay đang đánh phó bản; mang tối đa số chỗ một trận phó bản (`FIELD_CAP`). Huân công, binh khí, phúc lành cộng như phó bản.
    - **Dẹp đồn**: nhận thưởng một lần, cả vùng của đồn được dò và mở (`finishCamp`). Đồn đã dẹp thì hết. Thắng đồn không tính là thắng màn phó bản.
    - **Bảng đồn** nằm trong bảng Đất bên kia sông: quân giặc, thưởng một lần, số khoảnh sẽ về tay ta, tướng ra trận, lời báo đỏ như thẻ màn, nút ⚔️ Điều quân mở bảng xếp quân (dùng chung với phó bản).
@@ -2118,6 +2121,36 @@ j\i  0  1  2  3  4  5  6  7  8  9
    - **Giặc bên kia** nhắm làng gần nhất trước; còn cầu sang bờ ấy thì qua cầu tìm kho rồi Điện; không có cầu (hay cầu hư) thì chỉ phá công trình bên ấy, hết thì rút về rừng.
    - **Đồn biên** (`donBien`, 4×4, mỗi bờ một, cần Điện 5, 800 gạo, 600 vỏ ốc, 600 đất đá, 100 sắt, máu 900): rào cọc, chòi canh, hai lán lính, cờ đỏ. Bảng đồn biên chọn số lính mỗi binh chủng đóng ở đồn (không quá quân đang có, trừ phần đóng ở bờ kia). Khi giữ kinh đô, lính đóng ra trận từ đồn biên còn nguyên, lấy bớt từ phần lính giữ kinh đô của các doanh trại (không thêm quân); đồn hư thì lại ra từ doanh trại. Dời đồn biên cũng chỉ trong bờ bên kia.
    - **Quân ta** đánh giặc gần nhất mà mình đánh tới được. Sông là hào: quân ta không lội qua sông (chủ dự án chốt, trước đây quân ta đi thẳng tới giặc kể cả lội qua sông). Giặc ở bờ bên kia thì quân ta đi vòng qua cầu còn nguyên (`stepGuard`, tìm đường trên đất `landMap`). Không có cầu hay cầu hư thì quân bên này đứng lại, chỉ lính bắn xa với tới được thì bắn qua sông. Đánh thủy quái, thuyền giặc thì lội ra được một ô sông sát bờ, không xa hơn. Có đồn biên thì lính đóng đồn đã ở sẵn bờ ấy.
+
+## Bậc lên thành, lối đi trên nóc thành (chủ dự án yêu cầu, đã làm)
+
+Chủ dự án yêu cầu cầu thang lên thành để khi giặc đánh, cung thủ lên hành lang trên thành bắn xuống. Chủ dự án chọn: lính đứng được trên cả thành Cổ Loa lẫn thành đất; lên bằng một công trình riêng là bậc lên thành; cung thủ, lính nỏ tự lên; trên thành bắn xa thêm 1 ô, giặc đánh gần không với tới. Sau đó chủ dự án yêu cầu thêm: bỏ gai trên thành, thêm lan can trên nóc thành, chỗ có ụ nỏ thì ụ nỏ dựng cao hơn và lính đi xuyên qua được bên dưới. Các số còn lại tự chọn, chủ dự án có thể đổi.
+
+**Bậc lên thành** (`bacThanh`)
+
+- Một ô, có từ Điện 3 (khi lũy lên được thành đất). Giá 150 đất đá, 100 gỗ; máu 800. Tối đa 2 ở Điện 3–4, 3 ở Điện 5–6, 4 ở Điện 7–8, 5 ở Điện 9–10. Không lên cấp. Dựng mất 15 giây như công trình thường (`XAY_MS`, xem mục Thời gian xây, tốp thợ, đố sử); bậc đang dựng thì lính chưa lên được.
+- **Đặt**: sát (chung cạnh) mặt trong một đoạn thành đất (lũy cấp 2) hay thành Cổ Loa đã đắp xong, tức là ô bậc gần tâm Điện hơn đoạn thành (`stairWall` ở `game.ts`). Đoạn thành còn đang đắp dở, lũy đang lên thành đất thì chưa dựa được. Lũy tre không có mặt cho lính đứng. Dời bậc cũng phải sát mặt trong thành. Bậc ở mặt trong để lính trong thành lên được, và trận biết giặc đã vào trong hay còn ngoài thành.
+- Giặc không nhắm phá bậc (như tường), chỉ phá khi bậc chắn đường. Lũ không làm hư. Áp mẫu kinh đô: mẫu chưa có chỗ cho bậc; bậc không vướng thì đứng yên, vướng chỗ của mẫu thì bị dỡ như đoạn tường thừa (dời ra xa thành thì vô dụng).
+- Lạc hầu gợi ý một lần khi kinh đô đã có đoạn thành đất hay thành Cổ Loa.
+
+**Lính trên nóc thành** (`stepClimber` ở `battle.ts`)
+
+- Mặt thành đi được: các đoạn thành đất, thành Cổ Loa, cổng thành còn nguyên nối nhau theo cạnh ô thành từng dải (cổng nối liền mặt thành hai bên). Dải nào có bậc còn nguyên thì lính lên được. Đoạn thành, bậc bị phá thì dải ấy đứt ngay giữa trận.
+- Chỉ **cung thủ và lính nỏ** lên thành (`TREN_THANH.units`); giáo binh, voi chiến, tướng đánh dưới đất như cũ.
+- Lính dưới đất lên thành khi giặc gần nhất còn ở ngoài một dải thành có bậc trong vùng đất mình (gần mặt thành hơn gần bậc), hay đã ở trong tầm bắn từ dải ấy. Lính đi tới bậc gần nhất; dọc đường có giặc trong tầm thì vừa đi vừa bắn.
+- Trên thành, lính đi dọc nóc tới ô gần nhất bắn tới giặc; giặc chưa tới tầm thì tới ô gần giặc nhất mà chờ. Ô đã có lính khác đứng thì tìm ô khác, hết ô mới đứng chung. Lính bước hẳn lên nóc thành rồi mới bắn, không bắn khi còn trên bậc.
+- **Lợi thế**: bắn xa thêm 1 ô (`TREN_THANH.range`, như mọi tầm khi giữ kinh đô nhân 1,4). Giặc có tầm đánh không quá 2 ô (giáo, kích, đao, kỵ binh, thủy quái đánh gần) không với tới, phải phá đoạn thành dưới chân lính. Giặc bắn xa vẫn bắn được.
+- Giặc đã vào trong thành, ngoài tầm bắn từ dải thành thì lính theo bậc xuống đánh dưới đất. Đoạn thành dưới chân bị phá thì lính xuống đất ngay, đánh tiếp.
+- Người chơi mô phỏng chưa dựng bậc, các test độ khó giữ kinh đô không có bậc, nên độ khó các đợt giặc cũ không đổi. Có bậc thì giữ kinh đô dễ hơn: đó là phần thưởng cho người chơi đắp thành.
+
+**Dáng**
+
+- Bậc (`makeBacThanh` trong `src/render/buildings.ts`): bậc đất nện lát ván gỗ leo từ đất lên tới nóc đoạn thành kề bên (cao theo thành Cổ Loa hay thành đất, theo cả bậc đất), chân bậc đá kê, cột gỗ và tay vịn tre hai bên; World xoay mép cao về phía đoạn thành.
+- **Nóc thành làm lối đi** (`buildWallTops` trong `src/render/models.ts`): bỏ chông tre trên thành đất, bỏ ụ góc răng cưa và cọc nhọn trên thành Cổ Loa. Hai đoạn cùng loại kề nhau có đất nối nóc thành một lối liền; mép ngoài (không kề đoạn cùng loại) có lan can gỗ cột đầu bịt đồng, ván chân đỏ; chỗ bậc lên và cổng thành để hở lan can.
+- Chòi canh nhỏ trên thành Cổ Loa và ụ nỏ dựng trên bốn cột cao, sàn cao gần một người (`WALL_DECK`), lính đi dọc nóc thành lọt qua bên dưới.
+- Lính trên thành đứng trên nóc thành; ai đi qua bậc thì theo dốc bậc (`fighterY` ở `world.ts`). Mũi tên bay từ nóc thành, tới nóc thành khi người bắn, người trúng đứng trên thành.
+
+- Test (`bacThanh.test.ts`): chỗ đặt (mặt trong, thành đất, thành Cổ Loa, không lũy tre, dời), số tối đa, thời gian xây (đoạn thành đắp dở chưa dựa được), gợi ý của Lạc hầu; cung thủ lên thành Cổ Loa và thành đất, chỉ đứng trên nóc thành hay bậc, bắn được; không bậc thì không ai lên; giáo binh không lên, lính nỏ lên; bắn xa thêm 1 ô; giặc đánh gần không với tới, giặc bắn xa thì có; đoạn thành dưới chân bị phá thì xuống đất.
 
 ## Hồ Kim Quy (chủ dự án yêu cầu, đã làm)
 
@@ -2592,14 +2625,50 @@ Trước đây chương nào cũng đánh trên cùng một bãi chữ nhật ph
 - Trận biết bố cục qua `FieldSetup.bai` và `Battle.bai` (tùy chọn): xuất quân phó bản, thử thách, đánh đồn đều truyền bố cục của nền. Bản lưu cũ đang dở trận, id lạ, trận thử không truyền gì thì đánh trên bãi phẳng y như cũ. Không nâng bản lưu.
 - Mỗi phe một bản đồ khoảng cách (Dijkstra trên lưới ô 0,5 ô, 18×44 ô, vật cản phồng theo thân to nhất 0,45 ô) tới người phe kia gần nhất, dựng theo chỗ đứng mỗi 0,25 giây trận, chỉ khi có người cần đi vòng.
 - Đường thẳng tới kẻ địch thông (trong tầm đánh thì thôi xét) thì đi thẳng như bãi phẳng. Vướng thì lần theo bản đồ tối đa 6 ô, nhắm ô xa nhất còn thấy được, và cứ đi vòng 0,5 giây rồi mới xét lại. Người không bơi đang đứng trên đất khô thì đường lội nước cũng tính là vướng, để biết đường vòng có nhanh hơn không.
-- Đi xong, đẩy nhau xong, bị hất xong thì trượt dọc vật cản theo một trục, không thì đứng lại: không ai bị đẩy xuyên qua vật cản.
+- Đi xong, đẩy nhau xong, bị hất xong thì trượt dọc mép vật cản (bỏ phần bước đâm vào), không được thì trượt theo một trục, không nữa thì đứng lại: không ai bị đẩy xuyên qua vật cản.
 - Trận có vật cản nặng hơn bãi phẳng chừng 30%; bãi phẳng không tốn thêm gì.
-- `baiChien.test.ts` canh: bố cục rỗng đánh y hệt bãi phẳng; đánh lại ra y hệt; cả trận không ai lọt vào vật cản (bị đẩy, bị hất, quân gọi thêm, Tô Định bỏ chạy, nữ tướng); đám đông dồn vào tường không ai xuyên qua; voi lọt lối trống; cung thủ bắn qua tường; lội nước chậm, thủy quái không chậm; Phun lửa dừng trước đá mà lửa vẫn cháy; mở lại bản lưu giữa trận vẫn đánh trên bố cục ấy. Hàm `kiemBai` trong test kiểm mọi bố cục thật theo luật trên.
+- `baiChien.test.ts` canh: danh sách trận đã bật bố cục; mỗi bố cục thật cả trận không ai lọt vào vật cản và voi đi lọt tới giặc; bố cục rỗng đánh y hệt bãi phẳng; đánh lại ra y hệt; cả trận không ai lọt vào vật cản (bị đẩy, bị hất, quân gọi thêm, Tô Định bỏ chạy, nữ tướng); đám đông dồn vào tường không ai xuyên qua; voi lọt lối trống; cung thủ bắn qua tường; lội nước chậm, thủy quái không chậm; Phun lửa dừng trước đá mà lửa vẫn cháy; mở lại bản lưu giữa trận vẫn đánh trên bố cục ấy. Hàm `kiemBai` trong test kiểm mọi bố cục thật theo luật trên.
+
+### Bố cục chương 1 và đồn bên kia sông (đã làm ở PR 2)
+
+Tọa độ bãi: x 0–9 từ trái sang phải, z 0 là cuối bãi phía giặc, z 22 phía quân ta. `tron(x; z; r)` là hình tròn, `doan(a → b; nửa dày)` là đoạn dày. Màn chương 2 trở đi của bốn nền rừng, bến sông, làng, núi vẫn là bãi phẳng cho tới PR 3.
+
+| Bố cục | Trận | Vật cản, vùng chậm |
+|---|---|---|
+| `rung` | màn 1, 5 | ba khóm tre: `tron(2,8; 9,2; 0,9)`, `tron(6,3; 12,4; 1)`, khóm sát mép trái `tron(−0,3; 13; 1,1)` |
+| `benSong` | màn 2, 6 | lạch nước nông từ mép phải `doan(9,8; 8 → 4,6; 9,8; 0,7)`; đó cá giữa lạch `tron(6,6; 9,4; 0,5)`; thuyền mắc cạn `doan(2,2; 11,4 → 4; 12; 0,4)` |
+| `lang` | màn 3, 7 | nhà sàn sát mép trái (khối vuông `doan(−0,8; 10,4 → 1,6; 10,4; 0,9)`); đống rơm `tron(6,6; 9; 0,6)`; rào tre sát mép phải `doan(5,6; 12,9 → 9,6; 13,3; 0,3)` |
+| `don` | màn 4 | rào cọc gãy ngang z 7,4, chừa hai lối rộng 2,7 và 2 ô: `doan(−0,6 → 1,1)`, `doan(4,4 → 5,2)`, `doan(7,8 → 9,6)`, nửa dày 0,3; hai cụm chông `tron(2,3; 11,6; 0,6)`, `tron(6,7; 12; 0,6)` |
+| `nui` | màn 8 | đá sát mép trái `tron(0,3; 8,4; 1,1)`, đá `tron(5,6; 8,2; 0,8)`, đá sát mép phải `tron(9; 12; 1,1)`, đá phía sau `tron(3; 13,6; 0,7)`; giữa bãi để trống cho trận đánh trùm |
+| `benKia` | đồn bậc 1, 2, 4 | hai cụm chông `tron(2,3; 8,4; 0,6)`, `tron(6,7; 8,6; 0,6)`; xe củi đổ `doan(5,6; 12,2 → 7; 12,8; 0,35)`; bãi bùn có lau `tron(2; 12,4; 1,5)` |
+
+- **Đo độ khó** (`node scripts/do-bai.mjs`, mỗi tiêu chí 10 hạt giống, theo đúng tiêu chí các test cân bằng; `--phang` đo bãi phẳng để so): mọi màn 1–8, đồn bậc 1, 2, 4 và thử thách 1–8 đạt ít nhất 9/10, trận lâu nhất chừng 70 giây. Màn 1–8 không đổi số nào. Bốn hệ số máu đổi (đổi bố cục trước, không đủ mới đổi máu):
+
+  | Trận | Máu giặc cũ | Mới | Vì sao |
+  |---|---|---|---|
+  | Đồn bậc 2 | ×2,95 | ×2,8 | bùn, chông làm quân ta chậm lại trước thủy quái; đổi bố cục vẫn chỉ thắng 7–9/10. Ở ×2,8 thắng 19/20 |
+  | Đồn bậc 4 | ×2,6 | ×2,5 | bãi phẳng thắng 19/20, có vật cản 18/20; chuẩn đồn là thắng cả 10 hạt giống. Ở ×2,5 thắng 20/20 |
+  | Thử thách 2 | ×3,95 | ×4,15 | quân ta đi vòng thuyền, lạch nước gọn, người chơi thường thua chỉ 7/10. Ở ×4,15 thua 19/20, người chơi giỏi vẫn thắng 20/20 |
+  | Thử thách 8 | ×2,2 | ×2,35 | như trên, thua 7/10. Ở ×2,35 thua 20/20, người chơi giỏi vẫn thắng 20/20 |
+
+  Ở mọi mức mới, không tướng hay nửa quân thì vẫn thua cả 20 hạt giống.
+- **Núi (màn 8)**: bố cục đầu có đá giữa bãi làm Gióng bị vây, ngã ở 7/20 trận thắng (bãi phẳng 2/20). Dời đá ra hai mép và phía sau thì Gióng không ngã lần nào trong 20 trận, không bấm kỹ năng thì vẫn thua cả 20.
+- **Lính kẹt**: script đếm lính đang đi mà hơn 3 giây dời chưa tới 0,05 ô. Đo lần đầu thấy voi đứng sát mép tròn mà đi dọc mép thì đứng yên mãi (trượt theo trục chỉ nhích được chút ít); nay trượt dọc mép trước (`truot`), không còn ai kẹt vì vật cản. Còn vài lính kẹt vì đám đông vây trùm cuối trận, như bãi phẳng.
+
+### Hình (`src/render/vatCan.ts`, đã làm ở PR 2)
+
+- **Mảng đất dưới vật cản**: chỗ vật cản đứng là mảng cỏ đúng màu đất quanh bãi, viền sẫm như mép bãi (bãi như lõm vào quanh vật cản); mép lượn nhẹ như nét vẽ tay. Vật cản sát mép bãi thì viền hòa vào đất ngoài bãi.
+- **Nước nông**: bờ cát ướt, mặt nước, giữa sâu màu đậm hơn. **Bùn**: viền bùn khô, bùn ướt, vài vũng nước đọng; bãi bùn có lau thì vài khóm lau thấp mọc ở nửa vùng phía mép bãi.
+- **Lính lội**: chân lính chìm 0,12 ô trong nước, 0,05 ô trong bùn, chuyển mượt qua mép vùng. Mặt bãi vẫn phẳng.
+- **Dáng vật cản**: khóm tre (vài bụi tre thấp như tre rừng quanh bãi, bản nhẹ), tảng đá nằm phục có hòn nhỏ quanh chân, rào tre hai thanh ngang, rào cọc nhọn hai hàng so le có cọc đổ, cụm chông (cọc tre vót nhọn tỏa ra từ ụ đất), đống rơm có sào, đó cá đan nằm giữa nước có cọc giữ, xe củi đổ (thùng lật, bánh xe, củi lăn lóc), thuyền mắc cạn (thuyền Lạc Việt nằm nghiêng), nhà sàn cấp 2 sát mép bãi quay mặt vào giữa bãi.
+- **Nặng máy**: mọi vật cản nhỏ của một bố cục gộp một lưới màu và một viền mực; mảng đất gộp ba lưới; nhà, thuyền dựng riêng. So với bãi phẳng cùng nền: thêm 5–12 lệnh vẽ, 2–25 nghìn tam giác (bãi rừng nặng nhất, khóm tre).
+- **Cảnh dựng lại** khi nền hay bố cục đổi (`Battlefield.setTerrain(nền, bố cục)`); `World.showField` nhận bố cục của trận.
+- `battlefield.test.ts` canh: mặt bãi vẫn phẳng; mảng đất có đúng chỗ vật cản, mảng nước bùn đúng vùng chậm, chỗ trống không bị mảng đè; mô hình không lấn dải dàn quân; dáng nào trong bố cục cũng có hình; đổi bố cục thì dựng lại; chân lính chìm đúng độ sâu.
 
 ### Thứ tự làm
 
 1. **PR 1**: luật đi quanh vật cản, chưa bật bố cục nào; lối chơi không đổi (đã làm).
-2. **PR 2**: vẽ vật cản (`src/render/vatCan.ts`: mảng đất dưới vật cản, viền mực theo mép chặn, mảng nước, bùn, lính lội nước), bố cục chương 1 (rừng, bến sông, làng, đồn giặc, chân núi) và đồn bên kia sông; đo lại độ khó chương 1, đồn, thử thách 1–8.
+2. **PR 2**: vẽ vật cản, bố cục chương 1 (rừng, bến sông, làng, đồn giặc, chân núi) và đồn bên kia sông; đo lại độ khó chương 1, đồn, thử thách 1–8 (đã làm).
 3. **PR 3**: bố cục chương 2–3 (đồi sim, đồng ngập, Tản Viên, Thất Diệu, Cổ Loa, biến thể rừng, bến sông, làng); đo lại chương 2, 3, thử thách 9–24.
 4. **PR 4**: bố cục chương 4–5 (cửa sông, Mộ Dạ, Hát Môn, Luy Lâu, Lãng Bạc, Cấm Khê, làng Mê Linh); đo lại chương 4, 5, thử thách 25–40.
 
