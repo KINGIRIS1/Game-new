@@ -140,6 +140,9 @@ const XAY_SAU = `
 /** Nhìn vào cống và ruộng sau cống. */
 const NHIN_CONG = `const c = s.buildings.find((b) => b.type === 'congDe'); d.camera(c.x + 4, c.z - 5, 1.1);`;
 
+/** Đủ quân mẫu một trận (38 chỗ) để đánh thử Đấu thành. */
+const DU_QUAN = `s.troops = { giao: 14, cung: 12, voi: 4, no: 0 };`;
+
 const CANH = {
   'man-vao': {
     mo: 'Màn hình vào game của bản lưu chương 1 (Điện cấp 5), vắng 3 giờ',
@@ -177,6 +180,45 @@ const CANH = {
       if (f.length) d.camera(f.reduce((a, b) => a + b.x, 0) / f.length, f.reduce((a, b) => a + b.z, 0) / f.length, 1.4);
     `,
     doi: 3000,
+  },
+  'dau-thanh': {
+    mo: 'Bảng Đấu thành (chip 🏯 trên bản đồ phó bản), bước chọn kinh đô để đánh thử',
+    truoc: KINH_DO + CO_QUAN + DU_QUAN,
+    sau: `d.dauPanel();`,
+    doi: 800,
+  },
+  'dau-thanh-quan': {
+    mo: 'Bảng Đấu thành, bước chọn quân',
+    truoc: KINH_DO + CO_QUAN + DU_QUAN,
+    sau: `d.dauPanel(true);`,
+    doi: 800,
+  },
+  'dau-thanh-tran': {
+    mo: 'Đánh thử kinh đô máy cùng cấp Điện từ phía bắc, chụp sau 25 giây (vòng đồng dưới quân ta, đỏ son dưới quân giữ thành)',
+    truoc: KINH_DO + CO_QUAN + DU_QUAN,
+    sau: `if (!d.dauThanh(undefined, 'bac', 25)) throw new Error('Không đánh thử được');`,
+    // Quay camera về giữa quân đánh thành còn sống.
+    truocKhiChup: `
+      const f = (d.dauBattle()?.fighters ?? []).filter((f) => f.side === 'ta' && f.hp > 0);
+      if (f.length) d.camera(f.reduce((a, b) => a + b.x, 0) / f.length, f.reduce((a, b) => a + b.z, 0) / f.length, 2.6);
+    `,
+    doi: 2500,
+  },
+  'dau-thanh-giu': {
+    mo: 'Đánh thử kinh đô máy, chụp sau 25 giây ở chỗ lính giữ thành (vòng đỏ son dưới chân)',
+    truoc: KINH_DO + CO_QUAN + DU_QUAN,
+    sau: `if (!d.dauThanh(undefined, 'bac', 25)) throw new Error('Không đánh thử được');`,
+    truocKhiChup: `
+      const f = (d.dauBattle()?.fighters ?? []).filter((f) => f.side === 'giac' && f.hp > 0);
+      if (f.length) d.camera(f[0].x, f[0].z, 2.6);
+    `,
+    doi: 2500,
+  },
+  'dau-thanh-ket-qua': {
+    mo: 'Đánh thử kinh đô máy cùng cấp Điện cho hết trận: bảng kết quả',
+    truoc: KINH_DO + CO_QUAN + DU_QUAN,
+    sau: `if (!d.dauThanh(undefined, 'bac')) throw new Error('Không đánh thử được'); d.dauFinish();`,
+    doi: 2500,
   },
   'pho-ban': {
     mo: 'Đánh màn 1 ngoài bãi, chụp sau 3 giây',

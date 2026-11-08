@@ -4,7 +4,7 @@ Tài liệu này ghi lại các quyết định đã chốt với chủ dự án
 
 ## Tổng quan
 
-- Game xây dựng chiến thuật cho một người chơi, chạy trên trình duyệt và ưu tiên điện thoại. Đăng miễn phí lên GitHub Pages. Làm cho vui, không kiếm tiền.
+- Game xây dựng chiến thuật, chơi một người là chính, chạy trên trình duyệt và ưu tiên điện thoại. Đang làm phần Đấu thành trực tuyến tự chọn (xem Kế hoạch: Đấu thành). Đăng miễn phí lên GitHub Pages. Làm cho vui, không kiếm tiền.
 - Chỉ có tiếng Việt. Mọi chữ hiển thị nằm trong `src/text/vi.ts`, tách khỏi code để sau này dịch.
 - Người chơi là **Vua Hùng**, xây dựng **kinh đô Phong Châu**. Lạc hầu hướng dẫn, Lạc tướng cầm quân, Bồ chính coi làng. Từ chương 3, Vua Hùng truyền ngôi cho Thục Phán; người chơi trị vì tiếp trên cùng kinh đô với tư cách **An Dương Vương**. Chương 4 kể chuyện Mỵ Châu, Trọng Thủy; hết truyện thì người chơi vẫn trông coi kinh đô, chơi tiếp (xem Kế hoạch chương 4).
 - Học các cơ chế quen thuộc của thể loại xây dựng chiến thuật (như Clash of Clans, Rise of Kingdoms), nhưng luật chơi, nội dung và hình ảnh là của riêng game này, không sao chép game nào.
@@ -2638,6 +2638,125 @@ Chủ dự án yêu cầu thêm một công trình lớn: đền thờ Lạc Lon
   - Đền hư thì không nghiêng cả móng (hồ, núi nghiêng trông sai), chỉ bốc khói trên mái đền.
 - Test ở `denRongTien.test.ts`: móng, giới hạn, mốc mở, gợi ý, tác dụng có, không và hư đền, cộng dồn với Đền Phù Đổng, nhiệm vụ 62, lũ, mẫu kinh đô.
 
+## Kế hoạch: Đấu thành (chủ dự án đã duyệt, đang làm)
+
+Chủ dự án yêu cầu lập phương án PvP giữa các người chơi: **cử quân đánh thành người khác, cướp tài nguyên, giống các game cùng thể loại** (học cơ chế như Clash of Clans; luật chơi và hình ảnh vẫn là của riêng game này). Như các kế hoạch trước, sau khi duyệt cho chỉnh số ±20% theo test; làm xong phần nào thì ghi số cuối cùng của phần ấy.
+
+**Hiện trạng** (khảo sát code):
+- Game chỉ có một người chơi, đăng tĩnh lên GitHub Pages, không có server, không gọi mạng. Mã lưu chỉ để sao lưu và chuyển máy.
+- Mọi trận hiện nay là người chơi giữ kinh đô trước giặc máy (`raid`) hoặc đánh ngoài bãi (`field`). Trong trận giữ kinh đô, giặc là phe `giac`: tự tìm đường (`findPath` trên `costGrid`, tường và cổng tốn đường), nhắm kho rồi Điện (`chooseTarget`), phá công trình chắn lối, cướp của khi phá kho hay Điện (`LOOT_FRACTION`). Tháp, lầu nỏ, ụ nỏ, cổng thành, bẫy chông chỉ bắn phe `giac` (`stepDefenses`); lính giữ kinh đô phe `ta` ra từ doanh trại (`guardPlan`) và tìm đường tới giặc gần nhất (`stepGuard`, qua cầu chứ không lội sông).
+- Trận đánh gần như tất định: số ngẫu nhiên có hạt giống (`rng`), luật không dùng `Math.random`. Nhưng vòng chơi chạy cả bước lẻ theo khung hình (`dt = min(BATTLE_STEP, left)`), kỹ năng áp giữa hai khung hình, và có 31 chỗ dùng `Math.hypot`, ba chỗ dùng `Math.sin`, `Math.cos` để đặt lính mới sinh (kết quả có thể lệch chút ít giữa Safari và Chrome). `Fighter.face` (dùng `atan2`) chỉ để vẽ, luật không đọc.
+
+### Đã chốt
+
+1. **Có server miễn phí.** Đánh bất đồng bộ: kinh đô người kia là một bản chụp, người giữ thành không điều khiển, có thể đang tắt máy.
+2. **Cướp của thật.** Thắng thì người tấn công lấy của trong kho người giữ thành.
+3. **Tự bật Đấu thành.** Mở khi Điện đủ cấp. Người chơi bấm Tham gia (đặt tên) thì mới đánh được người khác và bị người khác đánh. Ai không bật thì vẫn chơi một mình như cũ, không cần mạng.
+4. **Mức mất vừa phải.** Mỗi trận bị lấy tối đa 20% của trong kho, trừ phần giữ an toàn. Bị đánh xong được khiên 8 giờ. Công trình và lính của người giữ thành không hư hại thật, chỉ mất của.
+5. **Đăng nhập ẩn danh** khi bấm Tham gia, không hỏi email. Muốn chuyển máy mà giữ được thành thì gắn tài khoản Google.
+
+### Đề xuất (chủ dự án duyệt nguyên)
+
+1. **Điều quân như phó bản.** Trước trận chọn quân (tối đa `FIELD_CAP` chỗ theo cấp Điện, 38 chỗ từ Điện 5) và hướng tràn vào (bìa rừng phía bắc hay phía tây). Quân tự tìm đường phá công trình như giặc hiện nay. Trong trận chỉ bấm kỹ năng tướng, Trống trận và nút Rút quân. Lính người tấn công tử trận thì mất thật, như phó bản.
+2. **Ba sao trong 3 phút.** Phá ≥50% công trình được 1 sao, phá Điện thêm 1 sao, phá hết được 3 sao; có ghi phần trăm phá hủy. Đường đi, đồ trang trí, cầu không tính.
+3. **Mở ở Điện cấp 5.**
+4. **Phần giữ an toàn**: 25% sức chứa kho (`STORAGE_CAP`) mỗi loại của. Mỗi loại cướp được tối đa 20% × (của đang có − phần giữ an toàn); lấy được bao nhiêu trong mức ấy thì tính 50% theo số kho bị phá (không có kho thì phần này tính theo phần trăm phá), 30% nếu phá Điện, 20% theo phần trăm phá hủy. Đánh người kém cấp Điện hơn mình thì mỗi cấp chênh lệch giảm một nửa. Kho người tấn công đầy thì phần thừa bỏ phí.
+5. **Chiến công** để ghép trận và xếp hạng: thắng (từ 1 sao) được 10–40 chiến công tùy chênh lệch, người giữ thành mất bấy nhiêu; 0 sao thì ngược lại. Không xuống dưới 0.
+6. **Ghép trận**: không phải mình, đã hết khiên, không có ai đang đánh, Điện chênh ±1 (thiếu người thì nới ra ±2), mình chưa đánh người ấy trong 12 giờ, chiến công gần nhau. Được bấm Tìm khác.
+7. **Đi đánh người khác thì mất khiên** của mình.
+8. **Bản chụp kinh đô** mang công trình bờ bên này, lính giữ kinh đô theo bố trí hiện tại (tính sẵn ở máy người giữ thành, vì phụ thuộc mốc truyện), tướng giữ thành, Đền, binh khí, huân công, độ cao ô đất, khoảnh đã mở, của trong kho. Bản chụp tự tải lên khi kinh đô đổi, tối đa 10 phút một lần.
+9. **Kinh đô máy** (dựng từ người chơi mô phỏng `moPhong.ts`) để đánh khi chưa đủ người chơi, không cướp của thật, chỉ được chiến công ít.
+10. Trận Đấu thành hai bên cùng là lính ta, nên **vẽ vòng dưới chân** để phân biệt: màu đồng cho bên tấn công, đỏ son cho bên giữ thành. Thế khắc giữa lính với lính theo tam giác sẵn có: giáo khắc voi, cung khắc giáo, voi khắc cung và nỏ, nỏ khắc voi.
+
+### Server
+
+- **Supabase gói miễn phí**: Postgres, phân quyền theo dòng (RLS), đăng nhập ẩn danh, gắn Google, Edge Function chạy Deno/V8 với 2 giây CPU mỗi lần gọi. Cloudflare Workers miễn phí chỉ cho 10 ms CPU, không đủ đánh lại một trận; Firebase Functions phải lên gói trả tiền.
+- Gói miễn phí tạm dừng dự án sau 7 ngày không ai vào: một workflow GitHub chạy định kỳ 3 ngày một lần gọi server để giữ máy chủ thức.
+- **Server là trọng tài.** Máy khách chỉ gửi đầu vào (quân, hướng, kỹ năng bấm ở bước nào). Server tự đánh lại trận bằng chính luật `src/game` (đóng gói thành một tệp cho Edge Function) để tính sao, của cướp, chiến công. Kết quả server là kết quả cuối. Bản game và bản luật trên server mang cùng một mã băm; lệch thì server báo người chơi cập nhật game.
+- **Bảng**: người chơi (tên, chiến công, cấp Điện, hạn khiên, khóa đang bị đánh), bản chụp kinh đô, trận đánh (hạt giống, quân, đầu vào, sao, của cướp, quân mất). Máy khách chỉ đọc trận mình đánh hay mình bị đánh; mọi lệnh ghi đi qua Edge Function. Dữ liệu quá 30 ngày tự xóa.
+- **Hai người không cùng đánh một thành**: bắt đầu trận thì khóa người giữ thành 4 phút. Thoát giữa trận thì server tự đóng trận với đầu vào đã có, nên không giữ được quân.
+- **Mở game** thì hỏi server các trận mình bị đánh: mỗi loại của trừ min(của bị cướp, của đang có), rồi mở bảng Bị đánh. Mất mạng thì chỉ báo một dòng, game vẫn chơi một mình bình thường. Thư viện mạng chỉ tải khi mở bảng Đấu thành.
+
+### Chống gian lận (vừa sức một game làm cho vui)
+
+- Của cướp và chiến công chỉ do server tính khi đánh lại trận.
+- Bản chụp phải hợp lý: số mỗi loại công trình không quá giới hạn, cấp không quá cấp Điện cho phép, không chồng nhau, đúng một Điện, quân giữ thành không quá `GUARD_CAP`, binh khí và huân công không quá bậc tối đa, của không quá sức chứa kho. Quân mang đi đánh không quá quân trong bản chụp của chính người tấn công.
+- Giới hạn số lần gọi (tìm đối thủ 30 lần một giờ, đánh 10 lần một giờ). Tên 2–16 chữ, lọc từ tục.
+- Người chơi vẫn sửa được bản lưu của chính mình; việc ấy chỉ ảnh hưởng chính họ, còn mức trần của bị cướp và khiên bảo vệ người khác.
+
+### Thứ tự làm
+
+1. **PR 0: tài liệu** (đã duyệt): mục này.
+2. **PR 1: trận đánh tất định** (đã làm), không đổi luật chơi:
+   - Trận chỉ dùng căn bậc hai và bốn phép tính: `dist` thay cả 31 chỗ `Math.hypot`, `dsin`/`dcos` (đa thức Taylor tới bậc 15, lệch dưới 1e-9) thay ba chỗ `Math.sin`, `Math.cos` khi đặt lính mới sinh. `Math.atan2` chỉ ghi hướng nhìn để vẽ nên giữ.
+   - Lưới chi phí tìm đường lưu sẵn theo trận, dựng lại khi công trình đổi (dựng, dỡ, dời, nâng cấp, bị phá, được sửa); mảng nháp của A* dùng lại; hàng đợi ưu tiên dời lỗ thay vì tráo cặp. Cùng đường đi như trước.
+   - Trận nặng (31 quân Hán đánh kinh đô Điện 8 có vòng thành, chòi canh) chạy chừng 235 ms trên Node, trước chừng 260 ms. Hồ sơ CPU: hai phần ba thời gian là A*.
+   - `tatDinh.test.ts`. Mọi test cũ giữ nguyên kết quả.
+3. **PR 2: luật Đấu thành** (đã làm) trong `src/game/` (tệp mới `dauThanh.ts`). Chỗ đổi so với kế hoạch và số cuối cùng:
+   - **Người đánh thành là phe `ta`** (kế hoạch cũ để phe `giac`), quân giữ thành là phe `giac`: kỹ năng, Trống trận, Rùa Vàng, Đền, binh khí, huân công, cách vẽ đã sẵn cho phe `ta`. Chỉ đổi các chỗ chọn đường đi theo vai: trong trận `pvp`, quân ta đi như giặc (tìm đường, phá công trình chắn lối, nhắm kho rồi Điện rồi công trình gần nhất); quân giữ thành đi như lính giữ kinh đô; chòi canh, lầu nỏ, cổng, ụ nỏ, bẫy bắn quân ta; Lệnh bắn chỉ giúp lính nỏ ta, không làm lầu nỏ bên kia bắn nhanh. Không cướp của giữa trận, không rút khi hết giờ.
+   - **Hai hệ số mới theo cấp Điện kinh đô bị đánh** (`DAU_THANH.hpMul`, `siege`; không có trong đề xuất, thêm khi đo): đo lần đầu thì tháp kinh đô máy Điện 8 bắn chừng 600 máu mỗi giây mà cả 38 chỗ quân mẫu chỉ có chừng 2.200 máu, và lính ta đánh công trình rất yếu (giáo 8, cung 7 mỗi đòn; cổng thành 3.000–6.000 máu), nên không tường nào phá nổi. Vì vậy trong trận Đấu thành mọi người bền hơn `hpMul` lần (như ngoài bãi bền hơn 1,6 lần), đòn quân đánh thành vào công trình mạnh gấp `siege` lần:
+
+     | Điện | 1–5 | 6 | 7 | 8 | 9 | 10 |
+     |---|---|---|---|---|---|---|
+     | `hpMul` | 3 | 3 | 4 | 6 | 6 | 10 |
+     | `siege` | 2 | 1 | 1 | 4 | 4 | 4 |
+
+     Số không tăng đều vì mỗi cấp kinh đô máy theo một mẫu khác (Điện 6 Đê bao không có vòng thành; Điện 7 có hai vòng thành Cổ Loa; Điện 8 thêm 16 ụ nỏ, bốn cổng).
+   - **Chuẩn cân bằng**: trận rung theo chỗ đứng ban đầu và phía tràn vào (bắc, tây cho kết quả khác nhau dù mẫu đối xứng), nên chấm theo trung bình sáu trận (ba hạt giống, hai phía), người đánh cùng cấp Điện kinh đô máy, binh khí như kinh đô máy, không Đền, bấm như người chơi thường, có tướng của cấp ấy: đủ 38 chỗ quân mẫu trung bình 1–2 sao, nửa quân dưới nửa sao. Số đo (bắc ba hạt rồi tây ba hạt):
+     - Điện 5: đủ quân 3,1,1,1,3,1 sao; nửa quân 0,0,1,1,0,0.
+     - Điện 6: đủ quân 2 sao cả sáu trận; nửa quân 0.
+     - Điện 7: đủ quân 1 sao cả sáu trận; nửa quân 0.
+     - Điện 8: đủ quân 2,1,2,2,0,1; nửa quân 0.
+     - Điện 9: đủ quân 1,1,1,1,1,2; nửa quân 0.
+     - Điện 10: đủ quân 1 sao cả sáu trận; **nửa quân vẫn hay được 1 sao** (1,1,1,0,0,1): Hai Bà hai tướng máu nhân 10 gần như không ngã, nên quân ít quân nhiều không khác mấy. Giới hạn hệ số máu của tướng thì đủ quân cũng thua hết, nên để vậy, chờ chủ dự án chơi thử.
+     `dauThanh.test.ts` canh Điện 5, 7, 8.
+   - **Kinh đô máy** (`botSnapshot`): dựng thẳng từ mẫu kinh đô của cấp ấy (Điện 5 Phong Châu, 6 Đê bao, 7 Cổ Loa, 8–10 Cổ Loa giữ sông), mọi công trình ở cấp cao nhất Điện cho, cổng thành ở chỗ cổng của mẫu từ chương 3, ụ nỏ từ Điện 8, lính giữ thành đủ `GUARD_CAP` ở doanh trại theo tỉ lệ quân mẫu, binh khí 0, 1, 2, 2, 3, 3 bậc ở Điện 5–10, không tướng, của bằng 60% sức chứa kho.
+   - **Bản chụp** (`makeSnapshot`, mã `TDVS1:`): công trình bờ bên này trừ cầu, đường, trang trí, luôn còn nguyên; lính giữ thành tính sẵn từ bố trí giữ kinh đô (bỏ phần đóng đồn biên bên kia sông; từ bản lưu 26 là danh sách giữ kinh đô của một doanh trại, nữ tướng ở trại cộng cho đúng binh chủng của mình), vào trận thì rải trong khuôn viên doanh trại, không ra từ cổng gần quân đánh như khi giữ kinh đô (thử ra ở cổng thì lính giữ thành gặp quân đánh trước khi tháp kịp đỡ: kinh đô máy Điện 5, nửa quân được trung bình 1,7 sao, quá chuẩn dưới nửa sao); tướng giữ thành (kể cả đang nghỉ) đứng trước Điện, không dùng kỹ năng. Kiểm bản chụp sửa tay (`validateSnapshot`) như đã định.
+   - **Của cướp**: theo đúng công thức đã duyệt. Quân đánh thành nhắm kho trước, nên phá được kho mà 0 sao vẫn cướp được phần kho (như thể loại).
+   - **Bản lưu không đổi**: đánh thử không lưu gì; `GameState.dauThanh` (tên, chiến công, khiên, trận bị đánh đã trừ) để PR 5 làm cùng nối mạng.
+   - Đang đánh thử thì đồng hồ giặc đứng lại (`tick(state, ms, busy)`), như khi đang đánh phó bản.
+   - **Bậc lên thành** (có sau khi làm PR 1–3): kinh đô bị đánh có bậc lên thành thì cung thủ, lính nỏ giữ thành cũng lên mặt thành bắn xuống như khi giữ kinh đô, mỗi người một ô; Trống trận của người đánh không làm họ leo nhanh. Quân đánh thành không lên mặt thành. Kinh đô máy theo mẫu kinh đô nên chưa có bậc.
+4. **PR 3: đánh thử ngoài mạng** (đã làm):
+   - Chip **🏯 Đấu thành** trên đầu bản đồ phó bản (cạnh chip huân công) mở bảng Đấu thành thay chỗ thẻ màn: bản đồ thu nhỏ kinh đô chọn đánh (bên trái hay trên), chọn kinh đô (của mình, hay kinh đô máy kém một cấp, cùng cấp, hơn một cấp Điện, từ Điện 5), của cướp được nhiều nhất, luật ba sao, hướng tràn vào (bắc, tây); bước sau chọn quân (không quá số chỗ một trận phó bản), ghi tướng đi cùng. Chưa đủ Điện 5, chưa có doanh trại, đang có giặc thì ghi lý do.
+   - Bấm Đánh: cảnh đổi sang kinh đô bị đánh (dựng từ bản chụp), camera lướt tới bìa rừng phía tràn vào. Thanh trận như ngoài bãi: tên kinh đô, phần trăm phá, sao, giây còn lại, nút kỹ năng, Trống trận, Rút quân. Lần bấm ghi theo bước, áp ở đầu bước trận kế tiếp.
+   - Vòng màu dưới chân để biết phe (hai bên cùng là lính ta): đồng nhạt cho quân đánh thành, đỏ son cho quân giữ thành.
+   - Bảng kết quả: sao, phần trăm phá, phá được Điện chưa, quân ngã, của cướp được nếu đánh thật; nút Đánh lại, Về kinh đô. Đánh thử nên **quân ngã không mất, kho không thêm gì, không tính chiến công** (đề xuất 1 "lính tử trận mất thật" áp khi đánh thật ở PR 5). Về kinh đô thì cảnh và camera về như trước trận.
+   - Trong lúc đánh: kinh tế của mình vẫn chạy, giặc không tới, chạm cảnh không chọn công trình.
+   - Chụp thử: `node scripts/chup.mjs dau-thanh`, `dau-thanh-quan`, `dau-thanh-tran`, `dau-thanh-giu`, `dau-thanh-ket-qua`; `window.__debug.dauThanh(target, side, secs)`, `dauPanel(army)`, `dauFinish()`, `dauBattle()`.
+5. **PR 4: server**: thư mục `supabase/` (bảng, phân quyền, Edge Function), đóng gói luật cho server, test đánh lại trận trên Deno so với Node, triển khai trong `deploy.yml`, workflow giữ máy chủ thức.
+6. **PR 5: nối mạng**: tham gia, tải bản chụp, tìm đối thủ, đánh, nhận của, bảng Bị đánh, trừ của khi mở game, trận đánh dở. Kiểm trận ra cùng kết quả trên WebKit (họ nhà Safari) và Node.
+7. **PR 6: thêm sau**: người giữ thành xem lại trận bị đánh, bảng xếp hạng, gắn Google và lưu game lên mây để chuyển máy.
+
+**Chủ dự án cần tự làm trước PR 4** (phiên Claude không tạo hộ được: cần tài khoản riêng, và khóa bí mật chỉ chủ dự án giữ; khóa bí mật không dán vào khung chat):
+1. **Tạo dự án**: vào supabase.com, đăng nhập bằng GitHub, New project:
+   - tên `thoi-dai-van-lang`, Region Southeast Asia (Singapore), gói Free;
+   - Generate password rồi cất mật khẩu cơ sở dữ liệu;
+   - tùy chọn bảo mật (Data API) giữ mặc định.
+2. **Đăng nhập ẩn danh**: Authentication → Sign In / Providers, bật Allow anonymous sign-ins và Allow manual linking (để sau gắn Google), Save.
+3. **Địa chỉ trang game**: Authentication → URL Configuration:
+   - Site URL `https://kingiris1.github.io/Game-new/`;
+   - Redirect URLs thêm `https://kingiris1.github.io/Game-new/**` và `http://localhost:5173/**`.
+4. **Hai thứ công khai được** (lộ ra cũng không sao nhờ RLS):
+   - Project URL `https://<mã dự án>.supabase.co`; mã dự án là đoạn sau `/project/` trên thanh địa chỉ, hay Project Settings → General → Project ID;
+   - khóa publishable (Project Settings → API Keys, bắt đầu bằng `sb_publishable_`). Dự án chỉ có khóa `anon` (tab Legacy) thì dùng khóa ấy, như nhau.
+   - Không dùng khóa secret hay `service_role` ở máy khách.
+5. **Access token** (bí mật): ảnh đại diện → Account → Access Tokens → Generate new token (tên `github-deploy`). Token chỉ hiện một lần.
+6. **Cất vào GitHub**: repo → Settings → Secrets and variables → Actions:
+   - Variables: `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY`;
+   - Secrets: `SUPABASE_ACCESS_TOKEN`, `SUPABASE_PROJECT_REF` (mã dự án), `SUPABASE_DB_PASSWORD`.
+
+Không cần làm tay: pg_cron (dọn dữ liệu quá 30 ngày) do migration của PR 4 tự bật (lỡ không bật được thì Integrations → Cron → Enable); giữ máy chủ thức do workflow của PR 4 lo. Phiên Claude chưa vào được Supabase nên PR 4 triển khai qua GitHub Actions bằng các khóa trên; muốn Claude kiểm thẳng server thì cho môi trường của repo này vào `<mã dự án>.supabase.co` và `api.supabase.com`.
+
+**Chủ dự án cần tự làm trước PR 6** (gắn Google):
+1. Google Cloud Console → tạo dự án → Google Auth Platform:
+   - Branding: tên app, email;
+   - Audience: External, rồi Publish app;
+   - chỉ xin quyền email, profile nên Google không bắt duyệt app.
+2. Clients → Create client, loại Web application:
+   - Authorized JavaScript origins `https://kingiris1.github.io`, `http://localhost:5173`;
+   - Authorized redirect URIs `https://<mã dự án>.supabase.co/auth/v1/callback` (trang Google của Supabase có sẵn dòng Callback URL để chép).
+3. Chép Client ID, Client secret vào Supabase → Authentication → Sign In / Providers → Google → Enable → Save.
+
 ## Bãi chiến có vật cản (chủ dự án chọn, đang làm)
 
 Trước đây chương nào cũng đánh trên cùng một bãi chữ nhật phẳng 9×22 ô; cảnh của 17 nền chỉ nằm ngoài mép bãi. Chủ dự án muốn vẽ lại bãi chiến từng chương và thêm chướng ngại vật. Chủ dự án đã chọn ba điều (theo đề xuất):
@@ -3039,4 +3158,5 @@ Cuối game: thay năm trại cũ (chừng 35 nghìn kể cả viền) và bốn
 19. **Một doanh trại lớn** (chủ dự án đã duyệt, đã làm cả ba PR: luật và bản lưu 26, hình doanh trại, hình bốn nơi ở; xem mục Kế hoạch cùng tên): doanh trại còn một trại 8×8 có tường bao, lầu cổng, sân tập có lính tập; mỗi tướng một doanh trong trại; quân ra trận từ cổng gần giặc; bốn nơi ở vẽ lại 4×4.
 20. **Đền Rồng Tiên** (chủ dự án yêu cầu, đã làm; xem mục cùng tên): đền 8×8 thờ Lạc Long Quân và Âu Cơ, mở ở Điện 10; của từ nước, từ núi làm ra thêm 20%; nhiệm vụ 62.
 21. **Ngày đêm** (chủ dự án chọn, đã làm; xem mục cùng tên): kinh đô có ngày, chiều tà, đêm, rạng đông, 12 phút chơi một vòng, chỉ để nhìn. PR 1 trời và cài đặt, PR 2 đèn đuốc, đèn thuyền, đom đóm.
-22. **Để sau**: nhạc nền.
+22. **Đấu thành** (chủ dự án đã duyệt; đã làm PR 1–3: trận tất định, luật, đánh thử ngoài mạng; còn server; xem Kế hoạch cùng tên): đánh thành người chơi khác, cướp của, server Supabase miễn phí.
+23. **Để sau**: nhạc nền.

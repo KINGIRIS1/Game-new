@@ -7,6 +7,9 @@
 // Chương 4: thủy binh Triệu đi thuyền từ sông tới, cập bờ thả lính lên đất rồi đánh như giặc trên bộ;
 // ụ nỏ trên thành Cổ Loa tự bắn. Cao Lỗ bắn nỏ liên châu, ra Lệnh bắn cho lính nỏ. Màn 32 là màn cầm cự: giặc
 // kéo tới nhiều đợt, giữ đủ thời gian thì thắng.
+// Đấu thành (`pvp`): người chơi đánh kinh đô người khác (bản chụp, `dauThanh.ts`). Quân người chơi vẫn là phe `ta`
+// (kỹ năng, Trống trận, Đền, binh khí như mọi trận) nhưng đi như giặc: tìm đường, phá công trình (`stepEnemy`);
+// quân giữ thành là phe `giac` đi như lính giữ kinh đô (`stepGuard`); chòi canh, lầu nỏ, bẫy bắn phe `ta`.
 
 import {
   ADV,
@@ -24,6 +27,7 @@ import {
   CO_LOA_TOWER,
   CONG_THANH,
   CONG_DE_PATH,
+  DAU_THANH,
   LAU_NO,
   ENEMIES,
   ENEMY_ROWS,
@@ -253,7 +257,7 @@ export interface Boat {
 export interface Battle {
   /** Mã riêng của trận, để phần vẽ biết đã sang trận mới. */
   id: number;
-  mode: 'raid' | 'field';
+  mode: 'raid' | 'field' | 'pvp';
   /** Trận giữ kinh đô: đợt giặc thứ mấy. Trận ngoài bãi: màn thứ mấy. */
   wave: number;
   side: RaidSide;
@@ -351,11 +355,20 @@ export interface Battle {
    */
   nuTuong?: { kind: NuTuongId; x: number; z: number };
   /**
+   * Đấu thành: phần cộng thêm của người giữ thành (Đền, binh khí, huân công) cho quân giữ thành (phe `giac`). Phần
+   * của người tấn công là `bonus`, `arms`, `huan` như mọi trận.
+   */
+  def?: { bonus: number; arms: Record<UnitType, number>; huan?: Record<HuanBranch, number> };
+  /** Đấu thành: mọi người trong trận bền hơn chừng này lần (như `FIELD.hpMul` ngoài bãi), đòn kỹ năng mạnh lên theo. */
+  hpMul?: number;
+  /** Đấu thành: đòn quân đánh thành vào công trình mạnh gấp chừng này lần (công thành). */
+  siege?: number;
+  /**
    * Trận ngoài bãi: bố cục bãi chiến có vật cản (id trong `BAI` ở `baiChien.ts`). Không có (bản lưu cũ, trận thử) hay
    * id lạ thì đánh trên bãi phẳng.
    */
   bai?: string;
-  /** Kết cục trận ngoài bãi; trận giữ kinh đô luôn để null. */
+  /** Kết cục trận ngoài bãi; trận giữ kinh đô luôn để null; Đấu thành chỉ để 'retreat' khi rút quân. */
   outcome: 'win' | 'lose' | 'retreat' | null;
 }
 
@@ -394,12 +407,42 @@ function rng(seed: number): () => number {
   };
 }
 
+/**
+ * Độ dài vectơ (dx, dz). Trận đánh chỉ dùng căn bậc hai và bốn phép tính, vì mọi trình duyệt tính ra đúng một kết
+ * quả (chuẩn IEEE làm tròn đúng); `Math.hypot`, `Math.sin`, `Math.cos` thì mỗi trình duyệt có thể lệch ở chữ số cuối,
+ * mà Đấu thành cần máy chủ đánh lại trận ra y như máy người chơi.
+ */
+export const dist = (dx: number, dz: number): number => Math.sqrt(dx * dx + dz * dz);
+
+const TWO_PI = 6.283185307179586;
+const PI = 3.141592653589793;
+const HALF_PI = 1.5707963267948966;
+/** Hệ số Taylor của sin tới bậc 15 (1/3!, 1/5!, …), sai số dưới 1e-11 trên [−π/2, π/2]. */
+const SIN_C = [
+  -0.16666666666666666, 0.008333333333333333, -0.0001984126984126984, 2.7557319223985893e-6, -2.505210838544172e-8,
+  1.6059043836821613e-10, -7.647163731819816e-13,
+];
+
+/** Sin tất định (xem `dist`): đưa góc về [−π/2, π/2] rồi tính đa thức. */
+export function dsin(a: number): number {
+  let r = a - Math.round(a / TWO_PI) * TWO_PI;
+  if (r > HALF_PI) r = PI - r;
+  else if (r < -HALF_PI) r = -PI - r;
+  const r2 = r * r;
+  let p = SIN_C[6];
+  for (let i = 5; i >= 0; i--) p = p * r2 + SIN_C[i];
+  return r + r * r2 * p;
+}
+
+/** Cos tất định (xem `dist`). */
+export const dcos = (a: number): number => dsin(a + HALF_PI);
+
 /** Khoảng cách từ điểm tới hình chữ nhật móng công trình (đơn vị ô). */
 export function rectDist(x: number, z: number, b: Building): number {
   const def = BUILDINGS[b.type];
   const dx = Math.max(b.x - x, 0, x - (b.x + def.w));
   const dz = Math.max(b.z - z, 0, z - (b.z + def.d));
-  return Math.hypot(dx, dz);
+  return dist(dx, dz);
 }
 
 /** Máu đầy của công trình trong trận: Hồ Kim Quy còn nguyên thì tường thành thêm máu. */
@@ -484,8 +527,15 @@ export function huanBonus(battle: Pick<Battle, 'huan'>, kind: FighterKind): numb
  * Hệ số máu và sức đánh của một người bên ta: Đền, phúc lành, binh khí đã rèn, huân công, nữ tướng (`nu`: lính đúng
  * binh chủng của nữ tướng). Nghĩa binh không được cộng.
  */
-const ownMult = (battle: Battle, kind: FighterKind, nu = false) =>
-  kind === 'nghiaBinh' ? 1 : 1 + battle.bonus + armsBonus(battle, kind) + huanBonus(battle, kind) + (nu ? NU_TUONG_BONUS : 0);
+const ownMult = (battle: Battle, kind: FighterKind, nu = false) => multOf(battle, kind, nu);
+
+/** Như `ownMult`, theo phần cộng thêm `mods` (của người tấn công hay người giữ thành trong Đấu thành). */
+const multOf = (mods: Pick<Battle, 'bonus' | 'arms' | 'huan'>, kind: FighterKind, nu = false) =>
+  kind === 'nghiaBinh' ? 1 : 1 + mods.bonus + armsBonus(mods, kind) + huanBonus(mods, kind) + (nu ? NU_TUONG_BONUS : 0);
+
+/** Hệ số máu và sức đánh của `f`: quân ta theo `ownMult`; quân giữ thành trong Đấu thành theo người giữ thành. */
+const sideMult = (battle: Battle, f: Fighter) =>
+  f.side === 'ta' ? ownMult(battle, f.kind, f.nu) : battle.def ? multOf(battle.def, f.kind, f.nu) : 1;
 
 /** Kỹ năng của từng tướng: kỹ năng đầu có ngay, kỹ năng sau mở giữa chương. */
 export function heroSkills(hero: HeroSetup): SkillId[] {
@@ -670,8 +720,8 @@ export function startBattle(state: GameState, wave: number, side: RaidSide, opts
     const hd = BUILDINGS.denHatMon;
     for (let i = 0; i < HAT_MON_NGHIA_BINH; i++) {
       const a = (i / HAT_MON_NGHIA_BINH) * Math.PI * 2;
-      const x = den.x + hd.w / 2 + Math.sin(a) * 0.8;
-      const z = den.z + hd.d + 0.4 + Math.cos(a) * 0.5;
+      const x = den.x + hd.w / 2 + dsin(a) * 0.8;
+      const z = den.z + hd.d + 0.4 + dcos(a) * 0.5;
       battle.fighters.push(newFighter(battle, 'ta', 'nghiaBinh', x, z, NGHIA_BINH.hp));
     }
   }
@@ -799,7 +849,7 @@ function stepShip(state: GameState, battle: Battle, f: Fighter, dt: number): voi
   const row = (tx: number, tz: number) => {
     const dx = tx - f.x;
     const dz = tz - f.z;
-    const d = Math.hypot(dx, dz);
+    const d = dist(dx, dz);
     if (d <= speed) {
       f.x = tx;
       f.z = tz;
@@ -825,7 +875,7 @@ function stepShip(state: GameState, battle: Battle, f: Fighter, dt: number): voi
   const marks: { d: number; x: number; z: number; hit: () => void }[] = [];
   for (const o of battle.fighters) {
     if (o.side !== 'ta' || !isAlive(o)) continue;
-    const d = Math.hypot(o.x - f.x, o.z - f.z);
+    const d = dist(o.x - f.x, o.z - f.z);
     if (d <= reach) marks.push({ d, x: o.x, z: o.z, hit: () => damageFighter(battle, { kind: f.kind, dmg: st.dmg }, o) });
   }
   for (const b of state.buildings) {
@@ -888,7 +938,7 @@ function stepBoats(battle: Battle, dt: number): void {
     if (!boat.landed && battle.t >= boat.delay) {
       const dx = boat.tx - boat.x;
       const dz = boat.tz - boat.z;
-      const d = Math.hypot(dx, dz);
+      const d = dist(dx, dz);
       const step = BOAT.speed * dt;
       if (d <= step) {
         boat.x = boat.tx;
@@ -938,6 +988,125 @@ function newFighter(battle: Battle, side: Side, kind: FighterKind, x: number, z:
     face: 0,
     swing: 0,
   };
+}
+
+// ---------- Đấu thành ----------
+
+/** Phần cộng thêm vào máu và sức đánh của một bên trong Đấu thành: Đền và phúc lành, binh khí, huân công. */
+export interface PvpMods {
+  bonus: number;
+  arms: Record<UnitType, number>;
+  huan?: Record<HuanBranch, number>;
+}
+
+/** Một tốp lính giữ thành ra từ công trình thứ `at` (chỉ số trong `state.buildings` của kinh đô bị đánh). */
+export interface PvpGuard {
+  at: number;
+  kind: UnitType;
+  n: number;
+  /** Được nữ tướng ở doanh trại ấy cộng thêm. */
+  nu?: boolean;
+}
+
+/** Bên giữ thành: lính giữ thành, tướng (không có kỹ năng), Đền Cổ Loa, Hồ Kim Quy. */
+export interface PvpDefense extends PvpMods {
+  /** Mọi người trong trận bền hơn chừng này lần (`Battle.hpMul`), theo cấp Điện kinh đô bị đánh. */
+  hpMul?: number;
+  /** Đòn quân đánh thành vào công trình mạnh gấp chừng này lần (`Battle.siege`), theo cấp Điện kinh đô bị đánh. */
+  siege?: number;
+  guards: PvpGuard[];
+  heroes: HeroSetup[];
+  crossbows: boolean;
+  walls: boolean;
+}
+
+/** Bên đánh thành: quân mang theo, tướng, hướng tràn vào, hạt giống số ngẫu nhiên của trận. */
+export interface PvpAttack extends PvpMods {
+  army: Record<UnitType, number>;
+  heroes: HeroSetup[];
+  side: 'bac' | 'tay';
+  seed: number;
+}
+
+/** Công trình tính điểm phá trong Đấu thành: như công trình giặc nhắm tới (không tính tường, lũy, đê, cổng, bẫy, đường, trang trí, cầu). */
+export const isScored = (b: Pick<Building, 'type'>): boolean => !UNTARGETED.includes(b.type) && !isDecor(b.type) && !isBridge(b.type);
+
+/**
+ * Trận Đấu thành trên kinh đô bị đánh `state` (bản dùng một lần, dựng từ bản chụp). Quân đánh thành (phe `ta`) ra
+ * từ dải bìa rừng phía bắc hay tây như giặc trên bộ, tướng ở giữa dải; lính giữ thành (phe `giac`) ra từ doanh trại
+ * như khi giữ kinh đô; Đền Hát Môn còn thì có nghĩa binh; tướng giữ thành đứng trước Điện.
+ */
+export function startPvp(state: GameState, defense: PvpDefense, attack: PvpAttack): Battle {
+  const battle = newBattle(state.nextBattleId++, 'pvp', 0, attack.side);
+  battle.bonus = attack.bonus;
+  battle.arms = { ...attack.arms };
+  if (attack.huan) battle.huan = { ...attack.huan };
+  battle.def = { bonus: defense.bonus, arms: { ...defense.arms }, ...(defense.huan ? { huan: { ...defense.huan } } : {}) };
+  battle.crossbows = defense.crossbows;
+  if (defense.walls) battle.walls = true;
+  battle.geo = RAID_SCALE;
+  const hpMul = defense.hpMul ?? 1;
+  battle.hpMul = hpMul;
+  battle.siege = defense.siege ?? 1;
+  const rand = rng(attack.seed);
+  const open = openStart(state);
+  const lo = Math.min(open, fromRiver(24));
+  const alongX = attack.side === 'bac';
+  const put = (along: number, depth: number) => (alongX ? { x: along, z: depth } : { x: depth, z: along });
+  for (const kind of UNIT_TYPES) {
+    for (let i = 0; i < attack.army[kind]; i++) {
+      const p = put(lo + rand() * (RIVER_START - lo - 1), spawnDepth(open, rand()));
+      battle.fighters.push(newFighter(battle, 'ta', kind, p.x, p.z, UNITS[kind].hp * hpMul * ownMult(battle, kind)));
+    }
+  }
+  attack.heroes.forEach((hero, i) => {
+    const p = put((lo + RIVER_START - 1) / 2 + (i ? 1.2 : 0), spawnDepth(open, 0.5));
+    addHero(battle, hero, p.x, p.z, hpMul);
+  });
+  const mods = battle.def;
+  const push = (kind: FighterKind, x: number, z: number, hp: number, nu = false) => {
+    const f = newFighter(battle, 'giac', kind, x, z, hp * hpMul);
+    if (nu) f.nu = true;
+    battle.fighters.push(f);
+    battle.total++;
+  };
+  // Lính giữ thành rải trong khuôn viên doanh trại (không ra từ cổng như khi giữ kinh đô: ra ở cổng gần quân đánh thì
+  // lính giữ thành gặp quân đánh trước khi tháp kịp đỡ, Đấu thành Điện 5 quá dễ).
+  for (const g of defense.guards) {
+    const home = state.buildings[g.at];
+    if (!home) continue;
+    const hd = BUILDINGS[home.type];
+    for (let i = 0; i < g.n; i++) {
+      const x = home.x + hd.w / 2 + (rand() - 0.5) * hd.w;
+      const z = home.z + hd.d / 2 + (rand() - 0.5) * hd.d;
+      push(g.kind, x, z, UNITS[g.kind].hp * multOf(mods, g.kind, !!g.nu), !!g.nu);
+    }
+  }
+  const den = state.buildings.find((b) => b.type === 'denHatMon' && !b.damaged);
+  if (den) {
+    const hd = BUILDINGS.denHatMon;
+    for (let i = 0; i < HAT_MON_NGHIA_BINH; i++) {
+      const a = (i / HAT_MON_NGHIA_BINH) * Math.PI * 2;
+      push('nghiaBinh', den.x + hd.w / 2 + dsin(a) * 0.8, den.z + hd.d + 0.4 + dcos(a) * 0.5, NGHIA_BINH.hp);
+    }
+  }
+  const dien = state.buildings.find((b) => b.type === 'dien');
+  if (dien) {
+    defense.heroes.forEach((hero, i) => {
+      const f = turnLocal(dien.rot, (i ? 1 : -1) * 1.2, BUILDINGS.dien.d / 2 + 0.6);
+      push(hero.kind, dien.x + BUILDINGS.dien.w / 2 + f.x, dien.z + BUILDINGS.dien.d / 2 + f.z, statsOf(hero.kind).hp * multOf(mods, hero.kind));
+    });
+  }
+  return battle;
+}
+
+/**
+ * Trận Đấu thành đã xong chưa: đã rút quân, hết giờ (`DAU_THANH.holdS`), quân đánh thành không còn ai, hay đã phá
+ * hết công trình tính điểm.
+ */
+export function pvpOver(state: GameState, battle: Battle): boolean {
+  if (battle.outcome === 'retreat' || battle.t >= DAU_THANH.holdS || alliesLeft(battle) === 0) return true;
+  return !state.buildings.some((b) => isScored(b) && !b.damaged);
 }
 
 export interface FieldSetup {
@@ -1170,44 +1339,60 @@ class OpenHeap {
   get size(): number {
     return this.v.length;
   }
-  private less(i: number, j: number): boolean {
-    return this.f[i] < this.f[j] || (this.f[i] === this.f[j] && this.q[i] < this.q[j]);
-  }
-  private swap(i: number, j: number): void {
-    [this.f[i], this.f[j]] = [this.f[j], this.f[i]];
-    [this.q[i], this.q[j]] = [this.q[j], this.q[i]];
-    [this.v[i], this.v[j]] = [this.v[j], this.v[i]];
-  }
+  // Dời "lỗ" thay vì tráo từng cặp: cùng thứ tự với cách tráo, nhanh hơn và không sinh rác.
   push(f: number, q: number, v: number): void {
-    this.f.push(f);
-    this.q.push(q);
-    this.v.push(v);
-    let i = this.v.length - 1;
+    const F = this.f;
+    const Q = this.q;
+    const V = this.v;
+    let i = V.length;
+    F.push(f);
+    Q.push(q);
+    V.push(v);
     while (i > 0) {
       const p = (i - 1) >> 1;
-      if (!this.less(i, p)) break;
-      this.swap(i, p);
+      if (!(f < F[p] || (f === F[p] && q < Q[p]))) break;
+      F[i] = F[p];
+      Q[i] = Q[p];
+      V[i] = V[p];
       i = p;
     }
+    F[i] = f;
+    Q[i] = q;
+    V[i] = v;
   }
   pop(): number {
-    const top = this.v[0];
-    const last = this.v.length - 1;
-    this.swap(0, last);
-    this.f.pop();
-    this.q.pop();
-    this.v.pop();
+    const F = this.f;
+    const Q = this.q;
+    const V = this.v;
+    const top = V[0];
+    const f = F.pop()!;
+    const q = Q.pop()!;
+    const v = V.pop()!;
+    const n = V.length;
+    if (!n) return top;
     let i = 0;
     for (;;) {
       const l = 2 * i + 1;
       const r = l + 1;
+      // Con nhỏ nhất (so với phần tử đang dời xuống), như `less` của cách tráo.
+      let mf = f;
+      let mq = q;
       let m = i;
-      if (l < this.v.length && this.less(l, m)) m = l;
-      if (r < this.v.length && this.less(r, m)) m = r;
+      if (l < n && (F[l] < mf || (F[l] === mf && Q[l] < mq))) {
+        m = l;
+        mf = F[l];
+        mq = Q[l];
+      }
+      if (r < n && (F[r] < mf || (F[r] === mf && Q[r] < mq))) m = r;
       if (m === i) break;
-      this.swap(i, m);
+      F[i] = F[m];
+      Q[i] = Q[m];
+      V[i] = V[m];
       i = m;
     }
+    F[i] = f;
+    Q[i] = q;
+    V[i] = v;
     return top;
   }
 }
@@ -1216,10 +1401,53 @@ class OpenHeap {
 const tileAt = (x: number, z: number) =>
   tileIndex(Math.min(GRID - 1, Math.max(0, Math.floor(x))), Math.min(GRID - 1, Math.max(0, Math.floor(z))));
 
-/** A* trên lưới 8 hướng, tới bất kỳ ô nào thuộc móng công trình đích. `swim`: bơi được qua sông. */
-export function findPath(state: GameState, fromX: number, fromZ: number, target: Building, swim = false): number[] | null {
-  const cost = costGrid(state, target.id, swim);
+/**
+ * Dấu vân của dãy công trình: đổi khi công trình được dựng, dỡ, dời, nâng cấp, bị phá hay được sửa (người chơi vẫn
+ * dựng, sửa được trong lúc giặc đánh). Dùng để biết lưới chi phí lưu sẵn còn đúng không.
+ */
+function buildingsKey(state: GameState): number {
+  let h = state.buildings.length | 0;
+  for (const b of state.buildings) {
+    h = Math.imul(h ^ b.id, 0x9e3779b1);
+    h = (h ^ (b.x * 131 + b.z * 7919 + b.level * 31 + (b.damaged ? 17 : 0) + b.type.length * 3)) | 0;
+  }
+  return h;
+}
+
+/** Lưới chi phí (không tính đích) lưu sẵn theo trận và theo `swim`. */
+const COST_CACHE = new WeakMap<Battle, { key: number; grids: (Float32Array | undefined)[] }>();
+
+function cachedCost(state: GameState, battle: Battle, swim: boolean): Float32Array {
+  const key = buildingsKey(state);
+  let entry = COST_CACHE.get(battle);
+  if (!entry || entry.key !== key) {
+    entry = { key, grids: [] };
+    COST_CACHE.set(battle, entry);
+  }
+  const slot = swim ? 1 : 0;
+  return (entry.grids[slot] ??= costGrid(state, null, swim));
+}
+
+/** Công trình này có ghi chi phí riêng lên lưới không (bẫy, đường đi, trang trí, cầu, công trình đã hư thì không). */
+const blocksPath = (b: Building) => !b.damaged && b.type !== 'bayChong' && !isDecor(b.type) && !isBridge(b.type);
+
+/**
+ * A* trên lưới 8 hướng, tới bất kỳ ô nào thuộc móng công trình đích. `swim`: bơi được qua sông. Có `battle` thì dùng
+ * lưới chi phí lưu sẵn của trận (cho đúng đường như dựng lại lưới mỗi lần), chỉ tạm đổi ô móng đích thành dễ đi.
+ */
+export function findPath(state: GameState, fromX: number, fromZ: number, target: Building, swim = false, battle?: Battle): number[] | null {
+  const cost = battle ? cachedCost(state, battle, swim) : costGrid(state, target.id, swim);
   const def = BUILDINGS[target.type];
+  // Ô móng đích đi được như đất trống (như `costGrid` khi có đích); xong thì trả lại chi phí cũ.
+  const patched: number[] = [];
+  if (battle && blocksPath(target)) {
+    for (let dx = 0; dx < def.w; dx++)
+      for (let dz = 0; dz < def.d; dz++) {
+        const i = tileIndex(target.x + dx, target.z + dz);
+        patched.push(i, cost[i]);
+        cost[i] = 1;
+      }
+  }
   const isGoal = (i: number) => {
     const x = i % GRID;
     const z = Math.floor(i / GRID);
@@ -1227,26 +1455,41 @@ export function findPath(state: GameState, fromX: number, fromZ: number, target:
   };
   const tx = target.x + def.w / 2;
   const tz = target.z + def.d / 2;
-  const h = (i: number) => Math.hypot((i % GRID) + 0.5 - tx, Math.floor(i / GRID) + 0.5 - tz);
-  return searchPath(cost, tileAt(fromX, fromZ), isGoal, h);
+  const h = (i: number) => dist((i % GRID) + 0.5 - tx, Math.floor(i / GRID) + 0.5 - tz);
+  const path = searchPath(cost, tileAt(fromX, fromZ), isGoal, h);
+  for (let k = 0; k < patched.length; k += 2) cost[patched[k]] = patched[k + 1];
+  return path;
 }
+
+// Mảng nháp của A*, dùng lại giữa các lần tìm đường. Ô có `seen` (hay `shut`) bằng số lượt hiện tại mới có g, came,
+// thứ tự (hay đã đóng) của lượt này; ô khác coi như chưa xét, khỏi phải xóa cả lưới mỗi lần.
+const S_G = new Float32Array(GRID * GRID);
+const S_CAME = new Int32Array(GRID * GRID);
+const S_SEQ = new Int32Array(GRID * GRID);
+const S_SEEN = new Uint32Array(GRID * GRID);
+const S_SHUT = new Uint32Array(GRID * GRID);
+let searchRun = 0;
 
 /** A* trên lưới 8 hướng theo bảng chi phí `cost` (Infinity là không đi được), từ ô `start` tới ô đầu tiên `isGoal`. */
 function searchPath(cost: Float32Array, start: number, isGoal: (i: number) => boolean, h: (i: number) => number): number[] | null {
-  const g = new Float32Array(GRID * GRID).fill(Infinity);
-  const came = new Int32Array(GRID * GRID).fill(-1);
-  const closed = new Uint8Array(GRID * GRID);
+  const run = (searchRun = (searchRun + 1) >>> 0 || 1);
+  const g = S_G;
+  const came = S_CAME;
+  const seen = S_SEEN;
+  const closed = S_SHUT;
   // Hàng đợi ưu tiên theo f = g + h; hòa thì ô thêm vào trước được xét trước (như cách dò tuần tự cũ).
   // Ô có g tốt hơn thì thêm lại một mục mới, mục cũ bỏ qua khi lấy ra.
-  const seqOf = new Int32Array(GRID * GRID);
+  const seqOf = S_SEQ;
   const heap = new OpenHeap();
   let seq = 0;
+  seen[start] = run;
   g[start] = 0;
+  came[start] = -1;
   seqOf[start] = seq++;
   heap.push(h(start), seqOf[start], start);
   while (heap.size) {
     const cur = heap.pop();
-    if (closed[cur]) continue;
+    if (closed[cur] === run) continue;
     if (isGoal(cur)) {
       const path = [cur];
       let c = cur;
@@ -1256,7 +1499,7 @@ function searchPath(cost: Float32Array, start: number, isGoal: (i: number) => bo
       }
       return path;
     }
-    closed[cur] = 1;
+    closed[cur] = run;
     const cx = cur % GRID;
     const cz = Math.floor(cur / GRID);
     for (let dz = -1; dz <= 1; dz++) {
@@ -1266,12 +1509,14 @@ function searchPath(cost: Float32Array, start: number, isGoal: (i: number) => bo
         const nz = cz + dz;
         if (!inGrid(nx, nz)) continue;
         const ni = tileIndex(nx, nz);
-        if (closed[ni] || cost[ni] === Infinity) continue;
+        if (closed[ni] === run || cost[ni] === Infinity) continue;
         // Không đi chéo cắt góc qua ô không đi được.
         if (dx && dz && (cost[tileIndex(cx + dx, cz)] === Infinity || cost[tileIndex(cx, cz + dz)] === Infinity)) continue;
         const ng = g[cur] + cost[ni] * (dx && dz ? Math.SQRT2 : 1);
-        if (ng < g[ni]) {
-          if (g[ni] === Infinity) seqOf[ni] = seq++;
+        const old = seen[ni] === run ? g[ni] : Infinity;
+        if (ng < old) {
+          if (old === Infinity) seqOf[ni] = seq++;
+          seen[ni] = run;
           g[ni] = ng;
           came[ni] = cur;
           heap.push(g[ni] + h(ni), seqOf[ni], ni);
@@ -1292,7 +1537,7 @@ function nearestEnemyOf(battle: Battle, f: Fighter, within = Infinity): Fighter 
   for (const o of battle.fighters) {
     if (o.side === f.side || (o.state !== 'move' && o.state !== 'fight' && o.state !== 'flee') || !reaches(f.kind, o)) continue;
     if (short && o.wall) continue;
-    const d = Math.hypot(o.x - f.x, o.z - f.z);
+    const d = dist(o.x - f.x, o.z - f.z);
     if (d < bestD) {
       bestD = d;
       best = o;
@@ -1329,7 +1574,7 @@ function chooseTarget(state: GameState, battle: Battle, f: Fighter): Building | 
 function moveToward(f: Fighter, tx: number, tz: number, dt: number, mult = 1, geo = 1): boolean {
   const dx = tx - f.x;
   const dz = tz - f.z;
-  const d = Math.hypot(dx, dz);
+  const d = dist(dx, dz);
   const step = statsOf(f.kind).speed * geo * mult * (f.slow && f.slow > 0 ? TT_WAVE.slow : 1) * dt;
   if (d > 1e-6) f.face = Math.atan2(dx, dz);
   if (d <= step) {
@@ -1354,7 +1599,7 @@ function damageFighter(battle: Battle, attacker: { kind?: FighterKind; dmg: numb
     if (target.hp <= 0 && target.state !== 'gone') {
       target.hp = 0;
       target.state = 'gone';
-      const setup = heroSetups(battle).find((h) => h.kind === target.kind);
+      const setup = target.side === 'ta' ? heroSetups(battle).find((h) => h.kind === target.kind) : undefined;
       if (setup) setup.down = true;
       emit(battle, { kind: 'exhaust', x: target.x, z: target.z });
     }
@@ -1377,18 +1622,18 @@ function damageFighter(battle: Battle, attacker: { kind?: FighterKind; dmg: numb
 function strike(battle: Battle, f: Fighter, foe: Fighter): void {
   const st = statsOf(f.kind);
   if (st.range > 2) emit(battle, { kind: 'shot', x: f.x, z: f.z, tx: foe.x, tz: foe.z, by: f.kind, fromWall: f.wall, toWall: foe.wall });
-  const mult = f.side === 'ta' ? ownMult(battle, f.kind, f.nu) * (battle.rally > 0 ? RALLY.dmg : 1) : 1;
+  const mult = sideMult(battle, f) * (f.side === 'ta' && battle.rally > 0 ? RALLY.dmg : 1);
   const dmg = st.dmg * mult;
   damageFighter(battle, { kind: f.kind, dmg }, foe);
   if (isHero(f.kind)) {
     // Đòn của tướng quét cả giặc đứng quanh.
     for (const o of battle.fighters) {
       if (o === foe || o.side === f.side || !isAlive(o) || !reaches(f.kind, o)) continue;
-      if (Math.hypot(o.x - foe.x, o.z - foe.z) <= HERO_CLEAVE.radius * geoOf(battle)) damageFighter(battle, { dmg: dmg * HERO_CLEAVE.share }, o);
+      if (dist(o.x - foe.x, o.z - foe.z) <= HERO_CLEAVE.radius * geoOf(battle)) damageFighter(battle, { dmg: dmg * HERO_CLEAVE.share }, o);
     }
   }
-  // Lệnh bắn: lính nỏ lên dây nhanh hơn.
-  f.cd = f.kind === 'no' ? st.cooldown / fireRate(battle) : st.cooldown;
+  // Lệnh bắn: lính nỏ ta lên dây nhanh hơn.
+  f.cd = f.kind === 'no' && f.side === 'ta' ? st.cooldown / fireRate(battle) : st.cooldown;
   f.swing = 0.3;
 }
 
@@ -1404,7 +1649,7 @@ function damageBuilding(state: GameState, battle: Battle, attacker: Fighter, b: 
   emit(battle, { kind: 'wreck', x: b.x + def.w / 2, z: b.z + def.d / 2 });
   const share = LOOT_FRACTION[b.type];
   // Lâu thuyền bắn từ dưới sông: phá được mà không cướp được của.
-  if (share && attacker.side === 'giac' && !attacker.ship) {
+  if (share && attacker.side === 'giac' && !attacker.ship && battle.mode !== 'pvp') {
     for (const r of RESOURCE_IDS) {
       const take = Math.floor(state.resources[r] * share);
       state.resources[r] -= take;
@@ -1448,6 +1693,10 @@ function stunned(f: Fighter, dt: number): boolean {
 function stepEnemy(state: GameState, battle: Battle, f: Fighter, dt: number): void {
   const st = statsOf(f.kind);
   const reach = st.range * geoOf(battle);
+  // Đấu thành: quân ta đánh thành được Trống trận cho đi nhanh, đánh mạnh; đòn vào công trình cũng tính Đền, binh khí.
+  const ours = f.side === 'ta';
+  const speed = ours && battle.rally > 0 ? RALLY.speed : 1;
+  const hit = ours ? st.dmg * ownMult(battle, f.kind, f.nu) * (battle.rally > 0 ? RALLY.dmg : 1) * (battle.siege ?? 1) : st.dmg;
   if (f.state === 'flee') {
     const out = exitPoint(battle, f);
     moveToward(f, out.x, out.z, dt, 1, geoOf(battle));
@@ -1471,7 +1720,8 @@ function stepEnemy(state: GameState, battle: Battle, f: Fighter, dt: number): vo
     f.path = null;
   }
   if (!target) {
-    f.state = 'flee';
+    // Hết công trình để phá: giặc rút; quân ta đánh thành thì đứng lại (trận Đấu thành tự kết thúc).
+    f.state = ours ? 'move' : 'flee';
     return;
   }
   if (rectDist(f.x, f.z, target) <= reach + 0.1) {
@@ -1480,7 +1730,7 @@ function stepEnemy(state: GameState, battle: Battle, f: Fighter, dt: number): vo
       const def = BUILDINGS[target.type];
       if (st.range > 2) emit(battle, { kind: 'shot', x: f.x, z: f.z, tx: target.x + def.w / 2, tz: target.z + def.d / 2 });
       f.face = Math.atan2(target.x + def.w / 2 - f.x, target.z + def.d / 2 - f.z);
-      damageBuilding(state, battle, f, target, st.dmg);
+      damageBuilding(state, battle, f, target, hit);
       f.cd = st.cooldown;
       f.swing = 0.3;
     }
@@ -1488,13 +1738,13 @@ function stepEnemy(state: GameState, battle: Battle, f: Fighter, dt: number): vo
   }
   f.repathIn -= dt;
   if (!f.path || f.repathIn <= 0) {
-    f.path = findPath(state, f.x, f.z, target, battle.swim && SWIMMERS.includes(f.kind as EnemyType));
+    f.path = findPath(state, f.x, f.z, target, battle.swim && SWIMMERS.includes(f.kind as EnemyType), battle);
     f.pathAt = 1;
     f.repathIn = 2;
   }
   if (!f.path || f.pathAt >= f.path.length) {
     f.state = 'move';
-    moveToward(f, target.x + BUILDINGS[target.type].w / 2, target.z + BUILDINGS[target.type].d / 2, dt, 1, geoOf(battle));
+    moveToward(f, target.x + BUILDINGS[target.type].w / 2, target.z + BUILDINGS[target.type].d / 2, dt, speed, geoOf(battle));
     return;
   }
   const next = f.path[f.pathAt];
@@ -1511,7 +1761,7 @@ function stepEnemy(state: GameState, battle: Battle, f: Fighter, dt: number): vo
       f.state = 'fight';
       f.face = Math.atan2(nx + 0.5 - f.x, nz + 0.5 - f.z);
       if (f.cd <= 0) {
-        damageBuilding(state, battle, f, blocker, st.dmg);
+        damageBuilding(state, battle, f, blocker, hit);
         f.cd = st.cooldown;
         f.swing = 0.3;
       }
@@ -1519,7 +1769,7 @@ function stepEnemy(state: GameState, battle: Battle, f: Fighter, dt: number): vo
     }
   }
   f.state = 'move';
-  if (moveToward(f, nx + 0.5, nz + 0.5, dt, 1, geoOf(battle)) && !blocker) f.pathAt++;
+  if (moveToward(f, nx + 0.5, nz + 0.5, dt, speed, geoOf(battle)) && !blocker) f.pathAt++;
 }
 
 /** Xông tới kẻ địch gần nhất rồi đánh: quân hai bên ngoài bãi (trận giữ kinh đô thì lính ta đi theo `stepGuard`). */
@@ -1531,7 +1781,7 @@ function stepChase(battle: Battle, f: Fighter, dt: number): void {
     f.state = 'move';
     return;
   }
-  const d = Math.hypot(foe.x - f.x, foe.z - f.z);
+  const d = dist(foe.x - f.x, foe.z - f.z);
   const reach = st.range * geoOf(battle) + 0.3;
   if (d <= reach) {
     f.state = 'fight';
@@ -1667,7 +1917,8 @@ function guardCtx(state: GameState, battle: Battle): GuardCtx {
       if (posts) return posts;
       posts = new Map();
       for (const f of battle.fighters) {
-        if (!f.wall || f.side !== 'ta' || !isAlive(f)) continue;
+        // Lính giữ thành: phe ta, hay phe giặc khi Đấu thành.
+        if (!f.wall || f.side !== (battle.mode === 'pvp' ? 'giac' : 'ta') || !isAlive(f)) continue;
         posts.set(f.path?.length ? f.path[f.path.length - 1] : tileAt(f.x, f.z), f.id);
       }
       return posts;
@@ -1689,7 +1940,7 @@ function shoreDist(ctx: GuardCtx, o: Fighter): Float32Array {
     for (let x = x0; x <= x1; x++) {
       const c = map.comp[tileIndex(x, z)];
       if (c === -1) continue;
-      const d = Math.hypot(Math.max(x - o.x, 0, o.x - x - 1), Math.max(z - o.z, 0, o.z - z - 1));
+      const d = dist(Math.max(x - o.x, 0, o.x - x - 1), Math.max(z - o.z, 0, o.z - z - 1));
       if (d < out[c]) out[c] = d;
     }
   ctx.shore.set(o.id, out);
@@ -1706,7 +1957,7 @@ function reachableFoeOf(battle: Battle, f: Fighter, ctx: GuardCtx, reach: number
   let bestD = Infinity;
   for (const o of battle.fighters) {
     if (o.side === f.side || (o.state !== 'move' && o.state !== 'fight' && o.state !== 'flee') || !reaches(f.kind, o)) continue;
-    const d = Math.hypot(o.x - f.x, o.z - f.z);
+    const d = dist(o.x - f.x, o.z - f.z);
     if (d >= bestD) continue;
     if (d > reach && mine !== -1) {
       const theirs = ctx.map.comp[tileAt(o.x, o.z)];
@@ -1720,7 +1971,7 @@ function reachableFoeOf(battle: Battle, f: Fighter, ctx: GuardCtx, reach: number
 
 /** Đi thẳng từ (x0, z0) tới khi cách (x1, z1) trong `reach` mà không bước vào nước sâu. */
 function clearLine(map: LandMap, x0: number, z0: number, x1: number, z1: number, reach: number): boolean {
-  const d = Math.hypot(x1 - x0, z1 - z0);
+  const d = dist(x1 - x0, z1 - z0);
   const n = Math.ceil(Math.max(0, d - reach) / 0.5);
   for (let k = 1; k <= n; k++) {
     const t = Math.min(1, (k * 0.5) / d);
@@ -1746,7 +1997,7 @@ function walkOnLand(map: LandMap, f: Fighter, tx: number, tz: number, dt: number
 
 /** Đường trên đất (qua cầu) tới chỗ đứng đánh được `foe`. */
 function guardPath(map: LandMap, f: Fighter, foe: Fighter, reach: number, mine: number): number[] | null {
-  const near = (i: number) => Math.hypot((i % GRID) + 0.5 - foe.x, Math.floor(i / GRID) + 0.5 - foe.z);
+  const near = (i: number) => dist((i % GRID) + 0.5 - foe.x, Math.floor(i / GRID) + 0.5 - foe.z);
   const foeTile = tileAt(foe.x, foe.z);
   const isGoal = (i: number) => map.comp[i] === mine && (i === foeTile || near(i) <= reach + 0.75);
   return searchPath(map.cost, tileAt(f.x, f.z), isGoal, (i) => Math.max(0, near(i) - reach - 0.75));
@@ -1768,7 +2019,7 @@ function stepGuard(battle: Battle, f: Fighter, dt: number, ctx: GuardCtx): void 
     f.path = null;
     return;
   }
-  const d = Math.hypot(foe.x - f.x, foe.z - f.z);
+  const d = dist(foe.x - f.x, foe.z - f.z);
   if (d <= reach) {
     f.state = 'fight';
     f.face = Math.atan2(foe.x - f.x, foe.z - f.z);
@@ -1776,7 +2027,7 @@ function stepGuard(battle: Battle, f: Fighter, dt: number, ctx: GuardCtx): void 
     return;
   }
   f.state = 'move';
-  const mult = battle.rally > 0 ? RALLY.speed : 1;
+  const mult = f.side === 'ta' && battle.rally > 0 ? RALLY.speed : 1;
   const { map } = ctx;
   if (clearLine(map, f.x, f.z, foe.x, foe.z, reach)) {
     f.path = null;
@@ -1879,7 +2130,7 @@ function wallMap(state: GameState, battle: Battle): WallMap | null {
   return map;
 }
 
-const tileDist = (i: number, x: number, z: number) => Math.hypot((i % GRID) + 0.5 - x, Math.floor(i / GRID) + 0.5 - z);
+const tileDist = (i: number, x: number, z: number) => dist((i % GRID) + 0.5 - x, Math.floor(i / GRID) + 0.5 - z);
 
 /** Khoảng cách từ giặc `o` tới ô mặt thành gần nhất của dải `c` (dò một lần mỗi bước trận). */
 function coverOf(ctx: GuardCtx, W: WallMap, o: Fighter, c: number): number {
@@ -1959,7 +2210,8 @@ function stepClimber(battle: Battle, f: Fighter, dt: number, ctx: GuardCtx): boo
   const st = statsOf(f.kind);
   const geo = geoOf(battle);
   const top = (st.range + TREN_THANH.range) * geo + 0.3;
-  const mult = battle.rally > 0 ? RALLY.speed : 1;
+  // Trống trận là của quân ta: Đấu thành thì không giúp lính giữ thành (phe giặc) leo nhanh.
+  const mult = f.side === 'ta' && battle.rally > 0 ? RALLY.speed : 1;
   if (f.wall) {
     const mine = W.comp[here];
     let shot: Fighter | null = null;
@@ -1970,7 +2222,7 @@ function stepClimber(battle: Battle, f: Fighter, dt: number, ctx: GuardCtx): boo
     let anyD = Infinity;
     for (const o of battle.fighters) {
       if (!foeAlive(f, o)) continue;
-      const d = Math.hypot(o.x - f.x, o.z - f.z);
+      const d = dist(o.x - f.x, o.z - f.z);
       if (d <= shotD) {
         shotD = d;
         shot = o;
@@ -2049,7 +2301,7 @@ function stepClimber(battle: Battle, f: Fighter, dt: number, ctx: GuardCtx): boo
   let foeD = Infinity;
   for (const o of battle.fighters) {
     if (!foeAlive(f, o)) continue;
-    const d = Math.hypot(o.x - f.x, o.z - f.z);
+    const d = dist(o.x - f.x, o.z - f.z);
     if (d < foeD) {
       foeD = d;
       foe = o;
@@ -2086,7 +2338,7 @@ function stepClimber(battle: Battle, f: Fighter, dt: number, ctx: GuardCtx): boo
       f.path = searchPath(ctx.map.cost, here, (i) => i === stair, (i) => tileDist(i, sx, sz));
       f.pathAt = 1;
     }
-    there = f.path ? followPath(f, dt, mult, geo) && Math.hypot(f.x - sx, f.z - sz) < 0.05 : walkOnLand(ctx.map, f, sx, sz, dt, mult, geo);
+    there = f.path ? followPath(f, dt, mult, geo) && dist(f.x - sx, f.z - sz) < 0.05 : walkOnLand(ctx.map, f, sx, sz, dt, mult, geo);
   }
   if (there) {
     // Lên bậc: từ đây đi trên mặt thành.
@@ -2099,6 +2351,9 @@ function stepClimber(battle: Battle, f: Fighter, dt: number, ctx: GuardCtx): boo
 }
 
 function stepDefenses(state: GameState, battle: Battle, dt: number): void {
+  // Công trình bắn phe đánh kinh đô: giặc, hay quân ta khi Đấu thành. Lệnh bắn là của tướng ta, không giúp thành người.
+  const foeSide: Side = battle.mode === 'pvp' ? 'ta' : 'giac';
+  const rate = battle.mode === 'pvp' ? 1 : fireRate(battle);
   for (const b of state.buildings) {
     if (b.damaged) continue;
     if (b.type === 'choiCanh') {
@@ -2109,8 +2364,8 @@ function stepDefenses(state: GameState, battle: Battle, dt: number): void {
       let best: Fighter | null = null;
       let bestD = (TOWER.range + (battle.crossbows ? CO_LOA_TOWER.range : 0)) * geoOf(battle);
       for (const o of battle.fighters) {
-        if (o.side !== 'giac' || (o.state !== 'move' && o.state !== 'fight' && o.state !== 'flee')) continue;
-        const d = Math.hypot(o.x - tower.x, o.z - tower.z);
+        if (o.side !== foeSide || (o.state !== 'move' && o.state !== 'fight' && o.state !== 'flee')) continue;
+        const d = dist(o.x - tower.x, o.z - tower.z);
         if (d < bestD) {
           bestD = d;
           best = o;
@@ -2130,8 +2385,8 @@ function stepDefenses(state: GameState, battle: Battle, dt: number): void {
       const tower = { x: b.x + 0.5, z: b.z + 0.5 };
       const range = (LAU_NO.range + (battle.crossbows ? CO_LOA_TOWER.range : 0)) * geoOf(battle);
       const targets = battle.fighters
-        .filter((o) => o.side === 'giac' && (o.state === 'move' || o.state === 'fight' || o.state === 'flee'))
-        .map((o) => ({ o, d: Math.hypot(o.x - tower.x, o.z - tower.z) }))
+        .filter((o) => o.side === foeSide && (o.state === 'move' || o.state === 'fight' || o.state === 'flee'))
+        .map((o) => ({ o, d: dist(o.x - tower.x, o.z - tower.z) }))
         .filter((t) => t.d < range)
         .sort((p, q) => p.d - q.d)
         .slice(0, LAU_NO.targets);
@@ -2140,7 +2395,7 @@ function stepDefenses(state: GameState, battle: Battle, dt: number): void {
           emit(battle, { kind: 'shot', x: tower.x, z: tower.z, tx: o.x, tz: o.z });
           damageFighter(battle, { dmg: LAU_NO.dmg[b.level - 1] * (battle.crossbows ? CO_LOA_TOWER.dmg : 1) }, o);
         }
-        battle.towerCd[b.id] = LAU_NO.cooldown / fireRate(battle);
+        battle.towerCd[b.id] = LAU_NO.cooldown / rate;
       }
     }
     if (b.type === 'congThanh') {
@@ -2151,8 +2406,8 @@ function stepDefenses(state: GameState, battle: Battle, dt: number): void {
       const gate = { x: b.x + 0.5, z: b.z + 0.5 };
       const range = (CONG_THANH.range + (battle.crossbows ? CO_LOA_TOWER.range : 0)) * geoOf(battle);
       const targets = battle.fighters
-        .filter((o) => o.side === 'giac' && (o.state === 'move' || o.state === 'fight' || o.state === 'flee'))
-        .map((o) => ({ o, d: Math.hypot(o.x - gate.x, o.z - gate.z) }))
+        .filter((o) => o.side === foeSide && (o.state === 'move' || o.state === 'fight' || o.state === 'flee'))
+        .map((o) => ({ o, d: dist(o.x - gate.x, o.z - gate.z) }))
         .filter((t) => t.d < range)
         .sort((p, q) => p.d - q.d)
         .slice(0, CONG_THANH.targets[b.level - 1] ?? 1);
@@ -2173,8 +2428,8 @@ function stepDefenses(state: GameState, battle: Battle, dt: number): void {
       let best: Fighter | null = null;
       let bestD = U_NO.range + (battle.crossbows ? CO_LOA_TOWER.range : 0);
       for (const o of battle.fighters) {
-        if (o.side !== 'giac' || (o.state !== 'move' && o.state !== 'fight' && o.state !== 'flee')) continue;
-        const d = Math.hypot(o.x - at.x, o.z - at.z);
+        if (o.side !== foeSide || (o.state !== 'move' && o.state !== 'fight' && o.state !== 'flee')) continue;
+        const d = dist(o.x - at.x, o.z - at.z);
         if (d < bestD) {
           bestD = d;
           best = o;
@@ -2183,12 +2438,12 @@ function stepDefenses(state: GameState, battle: Battle, dt: number): void {
       if (best) {
         emit(battle, { kind: 'shot', x: at.x, z: at.z, tx: best.x, tz: best.z, by: 'no' });
         damageFighter(battle, { dmg: U_NO.dmg * (battle.crossbows ? CO_LOA_TOWER.dmg : 1) }, best);
-        battle.towerCd[b.id] = U_NO.cooldown / fireRate(battle);
+        battle.towerCd[b.id] = U_NO.cooldown / rate;
       }
     }
     if (b.type === 'bayChong' && !battle.trapsUsed.includes(b.id)) {
       const victims = battle.fighters.filter(
-        (o) => o.side === 'giac' && (o.state === 'move' || o.state === 'fight') && Math.hypot(o.x - b.x - 0.5, o.z - b.z - 0.5) < 0.7,
+        (o) => o.side === foeSide && (o.state === 'move' || o.state === 'fight') && dist(o.x - b.x - 0.5, o.z - b.z - 0.5) < 0.7,
       );
       if (victims.length) {
         battle.trapsUsed.push(b.id);
@@ -2243,7 +2498,7 @@ export function stepBattle(state: GameState, battle: Battle, dt: number): boolea
   advanceClock(battle, dt);
   stepFlood(state, battle);
   stepBoats(battle, dt);
-  if (battle.t * 1000 > RAID_MAX_MS) {
+  if (battle.mode !== 'pvp' && battle.t * 1000 > RAID_MAX_MS) {
     // Quá lâu thì giặc rút; quá lâu nữa thì coi như đã rút hết.
     for (const f of battle.fighters) if (f.side === 'giac' && (f.state === 'move' || f.state === 'fight')) f.state = 'flee';
     if (battle.t * 1000 > RAID_MAX_MS + 30_000) for (const f of battle.fighters) if (f.state === 'flee') f.state = 'gone';
@@ -2254,11 +2509,11 @@ export function stepBattle(state: GameState, battle: Battle, dt: number): boolea
     f.cd -= dt;
     f.swing = Math.max(0, f.swing - dt);
     if (f.ship) stepShip(state, battle, f, dt);
-    else if (f.side === 'giac') stepEnemy(state, battle, f, dt);
+    else if (f.side === (battle.mode === 'pvp' ? 'ta' : 'giac')) stepEnemy(state, battle, f, dt);
     else stepGuard(battle, f, dt, (ctx ??= guardCtx(state, battle)));
   }
   stepDefenses(state, battle, dt);
-  return enemiesLeft(battle) === 0;
+  return battle.mode === 'pvp' ? pvpOver(state, battle) : enemiesLeft(battle) === 0;
 }
 
 /** Còn đứng trên bãi: chưa chết, chưa chạy thoát, không còn ngồi trên thuyền. */
@@ -2301,7 +2556,7 @@ function separate(battle: Battle): void {
       const min = bodyRadius(a.kind) + bodyRadius(b.kind);
       const dx = b.x - a.x;
       const dz = b.z - a.z;
-      const d = Math.hypot(dx, dz);
+      const d = dist(dx, dz);
       if (d >= min) continue;
       const nx = d > 1e-6 ? dx / d : 1;
       const nz = d > 1e-6 ? dz / d : 0;
@@ -2377,7 +2632,7 @@ function stepNuTuong(battle: Battle, dt: number): void {
   const oz = nu.z;
   const dx = tx - nu.x;
   const dz = tz - nu.z;
-  const d = Math.hypot(dx, dz);
+  const d = dist(dx, dz);
   const step = NU_SPEED * dt;
   if (d <= step) {
     nu.x = tx;
@@ -2435,7 +2690,7 @@ function stepMaVien(battle: Battle, f: Fighter, dt: number): void {
       const tz = v.tz!;
       for (const o of battle.fighters) {
         if (o.side !== 'ta' || !isAlive(o)) continue;
-        if (Math.hypot(o.x - tx, o.z - tz) <= MA_VIEN_VOLLEY.radius * g) damageFighter(battle, { kind: f.kind, dmg: MA_VIEN_VOLLEY.dmg }, o);
+        if (dist(o.x - tx, o.z - tz) <= MA_VIEN_VOLLEY.radius * g) damageFighter(battle, { kind: f.kind, dmg: MA_VIEN_VOLLEY.dmg }, o);
       }
       emit(battle, { kind: 'barrageHit', x: tx, z: tz });
       v.land = undefined;
@@ -2462,7 +2717,7 @@ function stepThuyTinh(battle: Battle, f: Fighter, dt: number): void {
   spell.summon -= dt;
   const foe = nearestEnemyOf(battle, f);
   if (spell.wave <= 0 && foe) {
-    const d = Math.hypot(foe.x - f.x, foe.z - f.z);
+    const d = dist(foe.x - f.x, foe.z - f.z);
     if (d > TT_WAVE.reach) spell.wave = 0.5;
     else {
       const dx = d > 1e-6 ? (foe.x - f.x) / d : 0;
@@ -2487,7 +2742,7 @@ function stepThuyTinh(battle: Battle, f: Fighter, dt: number): void {
     const hp = ENEMIES.tomBinh.hp * (battle.hpScale ?? 1) * FIELD.hpMul;
     for (let i = 0; i < TT_SUMMON.count; i++) {
       const a = (i / TT_SUMMON.count) * Math.PI * 2 + spell.summoned;
-      const t = newFighter(battle, 'giac', 'tomBinh', clampField(f.x + Math.sin(a) * 1.1, FIELD.w), clampField(f.z + Math.cos(a) * 1.1, FIELD.d), hp);
+      const t = newFighter(battle, 'giac', 'tomBinh', clampField(f.x + dsin(a) * 1.1, FIELD.w), clampField(f.z + dcos(a) * 1.1, FIELD.d), hp);
       placeFree(battle, t);
       battle.fighters.push(t);
       battle.total += 1;
@@ -2501,12 +2756,12 @@ function stepThuyTinh(battle: Battle, f: Fighter, dt: number): void {
 
 /** Rút quân khỏi trận ngoài bãi: lính còn sống được giữ lại, không có thưởng. */
 export function retreatField(battle: Battle): void {
-  if (battle.mode === 'field' && !battle.outcome) battle.outcome = 'retreat';
+  if ((battle.mode === 'field' || battle.mode === 'pvp') && !battle.outcome) battle.outcome = 'retreat';
 }
 
 /** Tướng đang đứng trong trận (chưa kiệt sức). */
 export function heroOf(battle: Battle): Fighter | undefined {
-  return battle.fighters.find((f) => isHero(f.kind) && isAlive(f));
+  return battle.fighters.find((f) => f.side === 'ta' && isHero(f.kind) && isAlive(f));
 }
 
 /**
@@ -2519,7 +2774,7 @@ function densest(battle: Battle, r: number, side: Side = 'giac'): Fighter | null
   for (const f of battle.fighters) {
     if (f.side !== side || !isAlive(f) || f.kind === 'lauThuyen') continue;
     let n = 0;
-    for (const o of battle.fighters) if (o.side === side && isAlive(o) && Math.hypot(o.x - f.x, o.z - f.z) <= r) n++;
+    for (const o of battle.fighters) if (o.side === side && isAlive(o) && dist(o.x - f.x, o.z - f.z) <= r) n++;
     if (n > bestN) {
       bestN = n;
       best = f;
@@ -2534,7 +2789,7 @@ const allSkillsOf = (kind: HeroKind) =>
 
 /** Tướng đang đứng trong trận làm được kỹ năng này (Hai Bà mỗi bà một kỹ năng). */
 export function skillOwner(battle: Battle, skill: SkillId): Fighter | undefined {
-  return battle.fighters.find((f) => isHero(f.kind) && isAlive(f) && allSkillsOf(f.kind).includes(skill));
+  return battle.fighters.find((f) => f.side === 'ta' && isHero(f.kind) && isAlive(f) && allSkillsOf(f.kind).includes(skill));
 }
 
 export function skillReady(battle: Battle, skill: SkillId): boolean {
@@ -2550,7 +2805,7 @@ export function useSkill(battle: Battle, skill: SkillId): boolean {
   const def = SKILLS[skill];
   battle.skillCd[skill] = def.cooldown;
   // Ngoài bãi mọi người bền hơn, nên đòn kỹ năng cũng mạnh lên tương ứng.
-  const scale = (battle.mode === 'field' ? FIELD.hpMul : 1) * (1 + battle.bonus + (battle.huan?.tuong ?? 0) * HUAN_BONUS);
+  const scale = (battle.mode === 'field' ? FIELD.hpMul : (battle.hpMul ?? 1)) * (1 + battle.bonus + (battle.huan?.tuong ?? 0) * HUAN_BONUS);
   const g = geoOf(battle);
   // Tướng làm kỹ năng (Trống trận là của Lạc tướng, không cần tướng đứng trên bãi).
   const hero = skillOwner(battle, skill)!;
@@ -2563,7 +2818,7 @@ export function useSkill(battle: Battle, skill: SkillId): boolean {
   } else if (skill === 'phunLua') {
     // Ngựa sắt phun lửa: lao về phía giặc gần nhất, đốt mọi tên giặc trong dải lửa.
     const target = nearestEnemyOf(battle, hero)!;
-    const d = Math.hypot(target.x - hero.x, target.z - hero.z) || 1;
+    const d = dist(target.x - hero.x, target.z - hero.z) || 1;
     const dx = (target.x - hero.x) / d;
     const dz = (target.z - hero.z) / d;
     for (const o of battle.fighters) {
@@ -2587,7 +2842,7 @@ export function useSkill(battle: Battle, skill: SkillId): boolean {
     // Nhổ tre quật giặc: đòn diện rộng quanh Gióng, giặc bị hất lùi ra.
     for (const o of battle.fighters) {
       if (o.side === 'ta' || !isAlive(o) || !reaches('giong', o)) continue;
-      const d = Math.hypot(o.x - hero.x, o.z - hero.z);
+      const d = dist(o.x - hero.x, o.z - hero.z);
       if (d > SMASH.radius * g) continue;
       damageFighter(battle, { kind: 'giong', dmg: SMASH.dmg * scale }, o);
       if (d > 1e-6 && isAlive(o)) {
@@ -2610,7 +2865,7 @@ export function useSkill(battle: Battle, skill: SkillId): boolean {
     const cz = at.z;
     for (const o of battle.fighters) {
       if (o.side === 'ta' || !isAlive(o)) continue;
-      if (Math.hypot(o.x - cx, o.z - cz) <= HILL.radius * g) damageFighter(battle, { kind: 'sonTinh', dmg: HILL.dmg * scale }, o);
+      if (dist(o.x - cx, o.z - cz) <= HILL.radius * g) damageFighter(battle, { kind: 'sonTinh', dmg: HILL.dmg * scale }, o);
     }
     hero.face = Math.atan2(cx - hero.x, cz - hero.z);
     hero.swing = 0.3;
@@ -2632,7 +2887,7 @@ export function useSkill(battle: Battle, skill: SkillId): boolean {
     const cz = at.z;
     for (const o of battle.fighters) {
       if (o.side === 'ta' || !isAlive(o)) continue;
-      if (Math.hypot(o.x - cx, o.z - cz) <= LIEN_CHAU.radius * g) damageFighter(battle, { kind: 'caoLo', dmg: LIEN_CHAU.dmg * scale }, o);
+      if (dist(o.x - cx, o.z - cz) <= LIEN_CHAU.radius * g) damageFighter(battle, { kind: 'caoLo', dmg: LIEN_CHAU.dmg * scale }, o);
     }
     hero.face = Math.atan2(cx - hero.x, cz - hero.z);
     hero.swing = 0.3;
@@ -2654,7 +2909,7 @@ export function useSkill(battle: Battle, skill: SkillId): boolean {
   } else if (skill === 'voiXung') {
     // Voi xung trận: voi Trưng Trắc lao thẳng về phía giặc đứng đông nhất, húc dạt giặc trên đường sang hai bên.
     const at = densest(battle, 2 * g)!;
-    const d = Math.hypot(at.x - hero.x, at.z - hero.z) || 1;
+    const d = dist(at.x - hero.x, at.z - hero.z) || 1;
     const dx = (at.x - hero.x) / d;
     const dz = (at.z - hero.z) / d;
     const len = VOI_XUNG.length * g;
@@ -2687,13 +2942,13 @@ export function useSkill(battle: Battle, skill: SkillId): boolean {
     // Hiệu triệu: nghĩa binh chạy ra quanh voi Trưng Nhị (bù cho đủ số người), quân ta quanh voi hồi máu.
     const alive = battle.fighters.filter((f) => f.kind === 'nghiaBinh' && isAlive(f)).length;
     const n = Math.max(0, HIEU_TRIEU.count - alive);
-    const hpMul = battle.mode === 'field' ? FIELD.hpMul : 1;
+    const hpMul = battle.mode === 'field' ? FIELD.hpMul : (battle.hpMul ?? 1);
     const maxX = battle.mode === 'field' ? FIELD.w : RIVER_START;
     const maxZ = battle.mode === 'field' ? FIELD.d : RIVER_START;
     for (let i = 0; i < n; i++) {
       const a = (i / Math.max(1, n)) * Math.PI * 2 + battle.t;
-      const x = clampField(hero.x + Math.sin(a) * 0.9 * g, maxX);
-      const z = clampField(hero.z + Math.cos(a) * 0.9 * g, maxZ);
+      const x = clampField(hero.x + dsin(a) * 0.9 * g, maxX);
+      const z = clampField(hero.z + dcos(a) * 0.9 * g, maxZ);
       const f = newFighter(battle, 'ta', 'nghiaBinh', x, z, NGHIA_BINH.hp * hpMul);
       f.face = hero.face;
       placeFree(battle, f);
@@ -2701,7 +2956,7 @@ export function useSkill(battle: Battle, skill: SkillId): boolean {
     }
     for (const o of battle.fighters) {
       if (o.side !== 'ta' || !isAlive(o)) continue;
-      if (Math.hypot(o.x - hero.x, o.z - hero.z) <= HIEU_TRIEU.radius * g) o.hp = Math.min(o.maxHp, o.hp + o.maxHp * HIEU_TRIEU.heal);
+      if (dist(o.x - hero.x, o.z - hero.z) <= HIEU_TRIEU.radius * g) o.hp = Math.min(o.maxHp, o.hp + o.maxHp * HIEU_TRIEU.heal);
     }
     hero.swing = 0.3;
     emit(battle, { kind: 'call', x: hero.x, z: hero.z });
@@ -2709,7 +2964,7 @@ export function useSkill(battle: Battle, skill: SkillId): boolean {
     // Dời non: đá mọc lên dưới chân mọi kẻ địch quanh Sơn Tinh, giữ chân chúng vài giây.
     for (const o of battle.fighters) {
       if (o.side === 'ta' || !isAlive(o) || !reaches('sonTinh', o)) continue;
-      if (Math.hypot(o.x - hero.x, o.z - hero.z) > ROCKS.radius * g) continue;
+      if (dist(o.x - hero.x, o.z - hero.z) > ROCKS.radius * g) continue;
       damageFighter(battle, { kind: 'sonTinh', dmg: ROCKS.dmg * scale }, o);
       if (isAlive(o)) o.stun = ROCKS.stun;
     }

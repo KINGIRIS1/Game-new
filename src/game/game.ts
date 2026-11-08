@@ -1859,16 +1859,16 @@ export function scheduleThuyHan(state: GameState): void {
 }
 
 /** Lịch giặc: báo trước, tràn vào, đánh, rồi hẹn đợt sau. Chỉ chạy theo đồng hồ chơi. */
-function updateRaid(state: GameState, ms: number): void {
+function updateRaid(state: GameState, ms: number, busy = false): void {
   const raid = state.raid;
   if (raid.phase !== 'battle') raid.water = Math.max(0, raid.water - ms / 1000 / FLOOD_RECEDE_S);
   if (raid.nextAt === null) {
     if (countOf(state, 'doanhTrai') > 0) raid.nextAt = state.clock + FIRST_RAID_MS;
     return;
   }
-  // Quân đang đánh phó bản thì giặc chưa tới: đồng hồ giặc đứng lại.
+  // Quân đang đánh phó bản (hay đang Đấu thành, `busy`) thì giặc chưa tới: đồng hồ giặc đứng lại.
   // Sang chương 2, bờ cõi yên bình tới khi Sơn Tinh rước Mị Nương làm Thủy Tinh nổi giận.
-  if (raid.phase === 'idle' && (state.campaign.battle || (inChapter2(state) && !floodSeason(state)))) {
+  if (raid.phase === 'idle' && (state.campaign.battle || busy || (inChapter2(state) && !floodSeason(state)))) {
     raid.nextAt += ms;
     return;
   }
@@ -2050,8 +2050,11 @@ function produce(state: GameState, ms: number, rate: number): Resources {
   return gained;
 }
 
-/** Thời gian trôi khi đang mở game: sản xuất, đồng hồ chơi chạy, thuyền buôn đến đi. */
-export function tick(state: GameState, ms: number): Resources {
+/**
+ * Thời gian trôi khi đang mở game: sản xuất, đồng hồ chơi chạy, thuyền buôn đến đi. `busy`: quân đang đi Đấu thành
+ * (trận không nằm trong state), đồng hồ giặc đứng lại như khi đang đánh phó bản.
+ */
+export function tick(state: GameState, ms: number, busy = false): Resources {
   if (ms <= 0) return { gao: 0, voOc: 0, datDa: 0, sat: 0, go: 0 };
   const gained = produce(state, ms, 1);
   state.clock += ms;
@@ -2059,7 +2062,7 @@ export function tick(state: GameState, ms: number): Resources {
   advanceXay(state, ms);
   updateMerchant(state);
   updateCampaign(state, ms);
-  updateRaid(state, ms);
+  updateRaid(state, ms, busy);
   updateTet(state);
   updateCayDa(state);
   updateBenKia(state);

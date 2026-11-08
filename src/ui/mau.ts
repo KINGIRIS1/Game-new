@@ -90,6 +90,40 @@ function miniMap(state: GameState, id: MauId): string {
   return url;
 }
 
+/**
+ * Bản đồ thu nhỏ của một kinh đô (bảng Đấu thành): đất đã mở, rừng mờ, sông, công trình đang có tô màu theo loại.
+ * Từ bìa đất đã mở tới sông, như bản đồ mẫu.
+ */
+export function capitalMiniMap(state: GameState): string {
+  const x0 = Math.max(0, openStart(state) - 1);
+  const key = `kd:${state.khoanh.join(',')}:${state.buildings.map((b) => `${b.type}${b.x},${b.z}`).join(';')}`;
+  let url = miniCache.get(key);
+  if (!url) {
+    const n = RIVER_START + 1 - x0;
+    const px = 4;
+    const canvas = document.createElement('canvas');
+    canvas.width = canvas.height = n * px;
+    const g = canvas.getContext('2d')!;
+    for (let z = 0; z < n; z++) {
+      for (let x = 0; x < n; x++) {
+        const tx = x + x0;
+        const tz = z + x0;
+        g.fillStyle = tx >= RIVER_START || tz >= RIVER_START ? MINI.river : isOpen(state, tx, tz) ? MINI.land : MINI.wild;
+        g.fillRect(x * px, z * px, px, px);
+      }
+    }
+    for (const b of state.buildings) {
+      if (b.x >= RIVER_START || b.z >= RIVER_START) continue;
+      const def = BUILDINGS[b.type];
+      g.fillStyle = TILE[b.type] ?? '#8a7a5a';
+      g.fillRect((b.x - x0) * px, (b.z - x0) * px, def.w * px, def.d * px);
+    }
+    url = canvas.toDataURL();
+    miniCache.set(key, url);
+  }
+  return url;
+}
+
 /** Số khoảnh rừng chưa phát mà mẫu ở cấp Điện hiện tại có chỗ đặt công trình trong đó. */
 function wildKhoanh(state: GameState, id: MauId): number {
   const wild = new Set<number>();
