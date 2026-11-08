@@ -5,14 +5,15 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createServer } from 'vite';
 
-const GIUP = `Đo độ khó các trận ngoài bãi có bố cục (màn chương 1, đồn bên kia sông, thử thách chương 1),
+const GIUP = `Đo độ khó các trận ngoài bãi có bố cục (màn, thử thách chương 1–3, đồn bên kia sông),
 theo đúng tiêu chí các test cân bằng, mỗi tiêu chí nhiều hạt giống. In bảng Markdown.
 
-  node scripts/do-bai.mjs [m1 m2 … d1 d2 d4 t1 …] [--hat <số>] [--phang] [--thu "<mã>"]
+  node scripts/do-bai.mjs [c1 c2 c3 m1 … d1 … t1 …] [--hat <số>] [--phang] [--thu "<mã>"]
 
-  m1…m8       Chỉ đo màn này (mặc định: mọi màn chương 1, đồn bậc 1, 2, 4, thử thách 1–8)
-  d1 d2 d4    Chỉ đo đồn bậc này
-  t1…t8       Chỉ đo thử thách màn này
+  c1 c2 c3    Đo cả chương này (mặc định: cả ba chương)
+  m1…m24      Chỉ đo màn này
+  d1…d4       Chỉ đo đồn bậc này
+  t1…t24      Chỉ đo thử thách màn này
   --hat <số>  Số hạt giống mỗi tiêu chí (mặc định 10)
   --phang     Đo trên bãi phẳng (bỏ mọi bố cục) để có mức gốc
   --thu "<mã>" Đổi tạm số trước khi đo: D là defs.ts, B là baiChien.ts, K là benKia.ts. Ví dụ
@@ -28,7 +29,7 @@ for (let i = 0; i < argv.length; i++) {
   else if (a === '--hat') opts.seeds = Number(argv[++i]);
   else if (a === '--phang') opts.phang = true;
   else if (a === '--thu') opts.thu = argv[++i];
-  else if (/^[mdt]\d+$/.test(a)) opts.cac.push(a);
+  else if (/^[mdtc]\d+$/.test(a)) opts.cac.push(a);
   else {
     console.error(`Không hiểu tham số ${a}. Xem --giup.`);
     process.exit(1);

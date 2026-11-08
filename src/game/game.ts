@@ -57,6 +57,8 @@ import {
   RAID_WARNING_MS,
   REPAIR_FRACTION,
   RESOURCE_IDS,
+  RONG_TIEN_BONUS,
+  RONG_TIEN_RES,
   STARVING_RATE,
   START_DAN,
   START_RESOURCES,
@@ -79,11 +81,10 @@ import {
   type HuanBranch,
   type Row,
   type NuTuongId,
-  type TuongId,
   type Unlock,
   type UnitType,
 } from './defs';
-import { capOf, generals } from './doanhTrai';
+import { capOf } from './doanhTrai';
 import { START_KHOANH, isOpen, openMask, openStart } from './khoanh';
 import { DIEN_HOME, GRID, baseHeights, farBankOf, inGrid, isNearBank, touchesRiver } from './map';
 
@@ -97,11 +98,7 @@ export interface Building {
   workers: number;
   /** Bị giặc phá: không làm ra gì, không chắn đường, cần sửa. */
   damaged?: boolean;
-  /** Doanh trại: tướng chỉ huy người chơi đã giao. Chưa giao thì tướng rảnh tự nhận (`commanders` ở `doanhTrai.ts`). */
-  tuong?: TuongId;
-  /** Doanh trại: nữ tướng người chơi đã giao về đây (chương 5). Chưa giao thì nữ tướng rảnh tự về (`nuPosts`). */
-  nuTuong?: NuTuongId;
-  /** Doanh trại: số lính mỗi binh chủng người chơi bố trí giữ kinh đô ở đây. Chưa doanh trại nào có thì bố trí tự động. */
+  /** Doanh trại: số lính mỗi binh chủng người chơi bố trí giữ kinh đô. Chưa có thì bố trí tự động. */
   guard?: Record<UnitType, number>;
   /** Đoạn thành Cổ Loa có ụ nỏ trên mặt thành: còn tốt, hay đã hư theo thành (phải sửa riêng). */
   uNo?: 'ok' | 'hu';
@@ -325,7 +322,7 @@ export interface Merchant {
  * ô trống; 18: lưới nới qua sông, 76×76; 20: Điện 10×10; 21: chương 5, quân Hán; 22: Hai Bà Trưng; 23: thủy quân Hán,
  * lâu thuyền; 24: nữ tướng, thử thách màn 33–40; 25: thời gian xây, tốp thợ, nhà thợ hồ, đố sử).
  */
-export const SAVE_VERSION = 25;
+export const SAVE_VERSION = 26;
 
 export interface GameState {
   version: typeof SAVE_VERSION;
@@ -374,7 +371,7 @@ export interface GameState {
   /** Việc xây đang làm, tốp thợ, câu đố sử vừa hỏi (`xay.ts`). */
   xay: XayState;
   /** Vừa nâng từ kinh đô nhỏ: kinh đô đã dựng lại theo mẫu, trả lại chừng này của. Giao diện báo một lần rồi xóa. */
-  relaid?: { refund: Cost; dropped: number; dien?: boolean };
+  relaid?: { refund: Cost; dropped: number; dien?: boolean; trai?: boolean };
 }
 
 export type FailReason =
@@ -439,13 +436,9 @@ export type FailReason =
   | 'khongGhepDuoc'
   | 'canNoiO'
   | 'noiOHu'
-  | 'canTuongChiHuy'
   | 'tuongChuaCo'
-  | 'daChiHuy'
-  | 'nuDaO'
   | 'quaChoPhoBan'
   | 'quaChoGiuThanh'
-  | 'traiDay'
   | 'khongPhaiTrangTri'
   | 'khoanhDaMo'
   | 'khoanhChuaSat'
@@ -575,9 +568,7 @@ export function countOf(state: GameState, type: BuildingType): number {
 }
 
 export function limitOf(state: GameState, type: BuildingType): number {
-  const limit = BUILDINGS[type].limit[dienLevel(state) - 1];
-  // Mỗi doanh trại một tướng chỉ huy: có bao nhiêu tướng thì dựng được bấy nhiêu doanh trại.
-  return type === 'doanhTrai' ? Math.min(limit, generals(state).length) : limit;
+  return BUILDINGS[type].limit[dienLevel(state) - 1];
 }
 
 /**
@@ -633,11 +624,11 @@ export function fishOf(b: Building): number {
 
 /**
  * Cá cả kinh đô mỗi phút: mọi làng chài, bến thuyền khơi (bên kia sông mà cầu hư thì không ai sang đánh cá), cộng
- * phần của Đền Phù Đổng và phúc lành Đất như mọi sản lượng.
+ * phần của Đền Phù Đổng và phúc lành Đất như mọi sản lượng, và phần của Đền Rồng Tiên (cá là của từ nước).
  */
 export function fishPerMinute(state: GameState): number {
   const fish = state.buildings.reduce((sum, b) => sum + (cutOff(state, b) ? 0 : fishOf(b)), 0);
-  return fish * (1 + templeBonus(state) + datBonus(state));
+  return fish * (1 + templeBonus(state) + datBonus(state) + rongTienBonus(state));
 }
 
 /** Gạo cả kinh đô ăn mỗi phút: phần ăn của dân và lính trừ đi phần cá đỡ (cá thừa bỏ phí). */
@@ -654,7 +645,7 @@ export function troopSpace(state: GameState): number {
   return UNIT_TYPES.reduce((n, k) => n + state.troops[k] * UNITS[k].space, 0);
 }
 
-/** Tổng chỗ quân của mọi doanh trại có tướng chỉ huy. */
+/** Tổng chỗ quân: chỗ của doanh trại (mỗi tướng một doanh). */
 export function troopCap(state: GameState): number {
   let cap = 0;
   for (const b of state.buildings) if (b.type === 'doanhTrai') cap += capOf(state, b);
@@ -760,6 +751,13 @@ export function templeBonus(state: GameState): number {
   return state.buildings.some((b) => b.type === 'denPhuDong' && !b.damaged) ? TEMPLE_BONUS : 0;
 }
 
+/**
+ * Phần cộng thêm của Đền Rồng Tiên, khi đền đã dựng và còn nguyên: chỉ cho của từ nước, từ núi (`RONG_TIEN_RES`) và cá.
+ */
+export function rongTienBonus(state: GameState): number {
+  return state.buildings.some((b) => b.type === 'denRongTien' && !b.damaged) ? RONG_TIEN_BONUS : 0;
+}
+
 /** Phần cộng thêm vào máu và sức đánh quân ta: Đền Phù Đổng và phúc lành Trời của Tết. */
 export function troopBonus(state: GameState): number {
   return templeBonus(state) + troiBonus(state);
@@ -786,7 +784,7 @@ export function outputIn(state: GameState, b: Building): Cost {
 
 /**
  * Sản lượng mỗi phút của cả kinh đô (cả bản làng bên kia sông đã về theo), chưa trừ gạo ăn và chưa tính thiếu gạo.
- * Đền Phù Đổng và phúc lành Đất cộng thêm.
+ * Đền Phù Đổng và phúc lành Đất cộng thêm mọi tài nguyên; Đền Rồng Tiên cộng thêm của từ nước, từ núi.
  */
 export function productionPerMinute(state: GameState): Resources {
   const total = villagesOutput(state);
@@ -795,7 +793,8 @@ export function productionPerMinute(state: GameState): Resources {
     for (const r of RESOURCE_IDS) total[r] += out[r] ?? 0;
   }
   const bonus = 1 + templeBonus(state) + datBonus(state);
-  for (const r of RESOURCE_IDS) total[r] *= bonus;
+  const rongTien = rongTienBonus(state);
+  for (const r of RESOURCE_IDS) total[r] *= bonus + (RONG_TIEN_RES.includes(r) ? rongTien : 0);
   return total;
 }
 
@@ -836,6 +835,7 @@ export function unlocked(state: GameState, unlock: Unlock | undefined): boolean 
   if (unlock === 'ketChuong3') return state.adv.won;
   if (unlock === 'chuong4') return inChapter4(state);
   if (unlock === 'ketChuong4') return state.adv.bien;
+  if (unlock === 'chuong5') return inChapter5(state);
   if (unlock === 'ketChuong5') return chuong5Won(state);
   return true;
 }
@@ -867,6 +867,7 @@ export const UNLOCK_REASON: Record<Unlock, FailReason> = {
   ketChuong3: 'canKetChuong3',
   chuong4: 'canChuong4',
   ketChuong4: 'canKetChuong4',
+  chuong5: 'canChuong5',
   ketChuong5: 'canKetChuong5',
 };
 
@@ -894,16 +895,11 @@ export function canPlace(state: GameState, type: BuildingType, x: number, z: num
   if (def.barracksLevel && barracksLevel(state) < def.barracksLevel) return fail('canDoanhTrai');
   // Đổi vật liệu một ô đường không thêm ô nào.
   const swap = isRoad(type) && !!replacedWall(state, type, x, z);
-  if (!swap && usedOf(state, type) >= limitOf(state, type)) return fail(needsGeneral(state, type) ? 'canTuongChiHuy' : 'datGioiHan');
+  if (!swap && usedOf(state, type) >= limitOf(state, type)) return fail('datGioiHan');
   const why = fitsAt(state, type, x, z, occupancy(state));
   if (why) return fail(why);
   if (!canAfford(state, def.buildCost)) return fail('thieuTaiNguyen');
   return ok(undefined);
-}
-
-/** Hết chỗ dựng doanh trại vì thiếu tướng chỉ huy (cấp Điện vẫn cho dựng thêm). */
-export function needsGeneral(state: GameState, type: BuildingType): boolean {
-  return type === 'doanhTrai' && limitOf(state, type) < BUILDINGS.doanhTrai.limit[dienLevel(state) - 1];
 }
 
 /**
@@ -1138,7 +1134,7 @@ export function planLine(state: GameState, type: BuildingType, tiles: { x: numbe
     // Đổi vật liệu một ô đường không thêm ô nào.
     const swap = isRoad(type) && !!replacedWall(state, type, t.x, t.z);
     let reason: FailReason | null = r.ok ? null : r.reason;
-    if (!reason && !swap && used >= limit) reason = needsGeneral(state, type) ? 'canTuongChiHuy' : 'datGioiHan';
+    if (!reason && !swap && used >= limit) reason = 'datGioiHan';
     if (!reason && RESOURCE_IDS.some((id) => (def.buildCost[id] ?? 0) > left[id])) reason = 'thieuTaiNguyen';
     if (reason) {
       cells.push({ x: t.x, z: t.z, ok: false, reason });

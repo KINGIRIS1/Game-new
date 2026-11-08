@@ -34,8 +34,8 @@ describe('mô hình vừa móng kinh đô lớn', () => {
     const { BUILDINGS } = await import('../game/defs');
     const { CONG_TRINH, lotModel } = await import('./congTrinh/index');
     for (const [type, ct] of Object.entries(CONG_TRINH) as [keyof typeof BUILDINGS, NonNullable<(typeof CONG_TRINH)[keyof typeof BUILDINGS]>][]) {
+      expect(BUILDINGS[type].w, type).toBe(BUILDINGS[type].d);
       expect(ct.tiles, type).toBe(BUILDINGS[type].w);
-      expect(ct.tiles, type).toBe(BUILDINGS[type].d);
       expect(lotModel(type, 1).scale.x, type).toBe(1);
     }
   });
@@ -54,14 +54,14 @@ describe('mô hình vừa móng kinh đô lớn', () => {
 
   it('công trình nhiều ô còn vẽ theo móng cũ: phóng theo móng mới và chừa viền cỏ', async () => {
     const { BUILDINGS } = await import('../game/defs');
-    const { footScale } = await import('./buildings');
+    const { footScale, oldFoot } = await import('./buildings');
     const { CONG_TRINH } = await import('./congTrinh/index');
     for (const type of Object.keys(BUILDINGS) as (keyof typeof BUILDINGS)[]) {
       const w = BUILDINGS[type].w;
       if (w <= 1 || CONG_TRINH[type]) continue;
       const k = footScale(type);
       expect(k, type).toBeGreaterThan(1);
-      expect(k, type).toBeLessThan(w / (w - 1));
+      expect(k, type).toBeLessThan(w / oldFoot(type));
     }
   });
 

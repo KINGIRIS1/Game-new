@@ -4,6 +4,7 @@
 import { describe, expect, it } from 'vitest';
 import { startBattle } from './battle';
 import { BUILDINGS, type BuildingType } from './defs';
+import { GATE_IN } from './doanhTrai';
 import { canRotateType, createInitialState, findBuilding, move, place, rotOf, rotateBuilding, type Building, type GameState } from './game';
 import { rotAngle, turnLocal } from './map';
 import { deserialize, serialize } from './save';
@@ -101,12 +102,13 @@ describe('xoay công trình', () => {
     expect(turnLocal(1, 0, 1)).toEqual({ x: 1, z: -0 });
   });
 
-  it('tướng ra trận từ mặt trước doanh trại, theo hướng đã xoay', () => {
+  it('tướng ra trận từ cổng trước doanh trại (cấp 1–2 chỉ có cổng trước), theo hướng đã xoay', () => {
     const s = city();
     const a = placeOk(s, 'doanhTrai', edge(5, 6), edge(5, 6));
     const def = BUILDINGS.doanhTrai;
     const cx = a.x + def.w / 2;
     const cz = a.z + def.d / 2;
+    const front = def.d / 2 - GATE_IN;
     const hero = { kind: 'giong' as const, bamboo: false, glow: false, non: false };
     const spawn = () => {
       const g = startBattle(s, 1, 'bac', { hero }).fighters.find((f) => f.kind === 'giong')!;
@@ -114,13 +116,13 @@ describe('xoay công trình', () => {
     };
     let g = spawn();
     expect(g.x).toBeCloseTo(0);
-    expect(g.z).toBeCloseTo(def.d / 2);
+    expect(g.z).toBeCloseTo(front);
     rotateBuilding(s, a.id, 1);
     g = spawn();
-    expect(g.x).toBeCloseTo(def.d / 2);
+    expect(g.x).toBeCloseTo(front);
     expect(g.z).toBeCloseTo(0);
     rotateBuilding(s, a.id, 3);
     g = spawn();
-    expect(g.x).toBeCloseTo(-def.d / 2);
+    expect(g.x).toBeCloseTo(-front);
   });
 });

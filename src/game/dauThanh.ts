@@ -49,7 +49,7 @@ import {
   type SkillId,
   type UnitType,
 } from './defs';
-import { armySpace, barracksList, fieldCap, fitArmy, guardPlan, type Army } from './doanhTrai';
+import { armySpace, barracksOf, fieldCap, fitArmy, guardPlan, type Army } from './doanhTrai';
 import {
   BATTLE_STEP,
   createInitialState,
@@ -66,7 +66,7 @@ import {
 import { chapterOf } from './manVao';
 import { GRID, baseHeights, farBankOf, inGrid } from './map';
 import { frameKhoanh, mauSlots, type MauId } from './mau';
-import { nuBoosts, nuPosts } from './nuTuong';
+import { nuForUnit } from './nuTuong';
 import { fromBase64, toBase64 } from './save';
 import { heroesFor } from './son';
 import { huanTiers } from './thuThach';
@@ -121,17 +121,17 @@ function defendHeroes(state: GameState): HeroSetup[] {
 /** Chụp kinh đô của người chơi. */
 export function makeSnapshot(state: GameState): Snapshot {
   const keep = state.buildings.filter(snapped);
+  // Lính giữ thành là lính bố trí giữ kinh đô của doanh trại (một trại từ bản lưu 26); nữ tướng ở trại lo binh
+  // chủng nào thì lính binh chủng ấy được cộng.
   const plan = guardPlan(state);
-  const nus = nuPosts(state);
+  const barracks = barracksOf(state);
+  const at = barracks ? keep.indexOf(barracks) : -1;
   const guards: PvpGuard[] = [];
-  for (const barracks of barracksList(state)) {
-    const at = keep.indexOf(barracks);
-    const army = plan.get(barracks.id);
-    if (at < 0 || !army) continue;
+  if (at >= 0) {
     for (const kind of UNIT_TYPES) {
-      if (army[kind] <= 0) continue;
-      const g: PvpGuard = { at, kind, n: army[kind] };
-      if (nuBoosts(nus.get(barracks.id), kind)) g.nu = true;
+      if (plan[kind] <= 0) continue;
+      const g: PvpGuard = { at, kind, n: plan[kind] };
+      if (nuForUnit(state, kind)) g.nu = true;
       guards.push(g);
     }
   }
@@ -518,7 +518,7 @@ export type PvpFail = 'canDien5' | 'canDoanhTrai' | 'dangCoGiac' | 'dangDanhPhoB
 /** Đánh thử Đấu thành được không: từ Điện 5, có doanh trại, không có giặc tới hay đang đánh phó bản. */
 export function canPractice(state: GameState): PvpFail | null {
   if (dienLevel(state) < DAU_THANH.unlockDien) return 'canDien5';
-  if (!barracksList(state).length) return 'canDoanhTrai';
+  if (!barracksOf(state)) return 'canDoanhTrai';
   if (state.raid.phase !== 'idle') return 'dangCoGiac';
   if (state.campaign.battle) return 'dangDanhPhoBan';
   return null;

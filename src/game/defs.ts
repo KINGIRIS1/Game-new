@@ -70,14 +70,26 @@ export type BuildingType =
   // Nhà thợ hồ: mỗi nhà một tốp thợ dựng, nâng công trình (`xay.ts`); nhà lên cấp thì tốp ấy làm nhanh hơn.
   | 'thoHo'
   // Bậc lên thành: lối cho cung thủ, lính nỏ lên mặt thành đất, thành Cổ Loa mà bắn xuống khi giữ kinh đô.
-  | 'bacThanh';
+  | 'bacThanh'
+  // Đền Rồng Tiên thờ Lạc Long Quân và Âu Cơ (Điện 10, chương 5): đền còn nguyên thì của từ nước, từ núi làm ra thêm.
+  | 'denRongTien';
 
 /**
  * Mốc mở khóa theo cốt truyện: sau kết chương 1, khi vào chương 2, sau kết chương 2, khi vào chương 3, khi Rùa Vàng
- * hiện lên (thắng màn 19), sau kết chương 3, khi vào chương 4, sau kết chương 4 (vua xuống biển), sau kết chương 5
- * (thắng màn 40, giữ Cấm Khê).
+ * hiện lên (thắng màn 19), sau kết chương 3, khi vào chương 4, sau kết chương 4 (vua xuống biển), khi vào chương 5,
+ * sau kết chương 5 (thắng màn 40, giữ Cấm Khê).
  */
-export type Unlock = 'ketChuong1' | 'chuong2' | 'ketChuong2' | 'chuong3' | 'ruaVang' | 'ketChuong3' | 'chuong4' | 'ketChuong4' | 'ketChuong5';
+export type Unlock =
+  | 'ketChuong1'
+  | 'chuong2'
+  | 'ketChuong2'
+  | 'chuong3'
+  | 'ruaVang'
+  | 'ketChuong3'
+  | 'chuong4'
+  | 'ketChuong4'
+  | 'chuong5'
+  | 'ketChuong5';
 
 export interface BuildingDef {
   type: BuildingType;
@@ -172,6 +184,7 @@ export const BUILD_MENU: BuildingType[] = [
   'denCoLoa',
   'denCuong',
   'denHatMon',
+  'denRongTien',
   'cauSongDa',
   'cauSongThao',
   'donBien',
@@ -556,8 +569,8 @@ export const BUILDINGS: Record<BuildingType, BuildingDef> = {
   },
   doanhTrai: {
     type: 'doanhTrai',
-    w: 4,
-    d: 4,
+    w: 8,
+    d: 8,
     maxLevel: 5,
     buildCost: { gao: 80, voOc: 60, datDa: 60 },
     upgradeCost: [
@@ -569,10 +582,11 @@ export const BUILDINGS: Record<BuildingType, BuildingDef> = {
       { gao: 1000, voOc: 800, datDa: 1000, sat: 240 },
     ],
     production: [{}, {}, {}, {}, {}],
+    // Chỗ quân mỗi doanh theo cấp; cả trại giữ chừng ấy nhân số tướng đã về (`capOf`, `DOANH_MAX` ở `doanhTrai.ts`).
     troopCap: [8, 14, 20, 28, 38],
-    hp: [400, 460, 520, 600, 700],
-    // Mỗi doanh trại cần một tướng chỉ huy, nên số doanh trại còn tùy số tướng đã có (`limitOf`, `doanhTrai.ts`).
-    limit: [0, 5, 5, 5, 5, 5, 5, 5, 5, 5],
+    hp: [800, 920, 1040, 1200, 1400],
+    // Một đại doanh cho cả kinh đô.
+    limit: [0, 1, 1, 1, 1, 1, 1, 1, 1, 1],
     minDien: 2,
     buildable: true,
     removable: false,
@@ -820,8 +834,8 @@ export const BUILDINGS: Record<BuildingType, BuildingDef> = {
   // Doanh trại là nơi các tướng ở, giữ tổng số chỗ quân và lo điều binh.
   traiGiao: {
     type: 'traiGiao',
-    w: 3,
-    d: 3,
+    w: 4,
+    d: 4,
     maxLevel: 1,
     buildCost: { gao: 40, voOc: 30, datDa: 30 },
     upgradeCost: [{}, {}],
@@ -835,8 +849,8 @@ export const BUILDINGS: Record<BuildingType, BuildingDef> = {
   },
   traiCung: {
     type: 'traiCung',
-    w: 3,
-    d: 3,
+    w: 4,
+    d: 4,
     maxLevel: 1,
     buildCost: { gao: 60, voOc: 50, datDa: 50, sat: 10 },
     upgradeCost: [{}, {}],
@@ -850,8 +864,8 @@ export const BUILDINGS: Record<BuildingType, BuildingDef> = {
   },
   chuongVoi: {
     type: 'chuongVoi',
-    w: 3,
-    d: 3,
+    w: 4,
+    d: 4,
     maxLevel: 1,
     buildCost: { gao: 120, voOc: 80, datDa: 100, sat: 20 },
     upgradeCost: [{}, {}],
@@ -880,8 +894,8 @@ export const BUILDINGS: Record<BuildingType, BuildingDef> = {
   // Lính nỏ (chương 4) cũng có nơi ở riêng: Cao Lỗ tâu vua cho dân luyện nỏ.
   traiNo: {
     type: 'traiNo',
-    w: 3,
-    d: 3,
+    w: 4,
+    d: 4,
     maxLevel: 1,
     buildCost: { gao: 600, voOc: 500, datDa: 500, sat: 120 },
     upgradeCost: [{}, {}],
@@ -925,6 +939,24 @@ export const BUILDINGS: Record<BuildingType, BuildingDef> = {
     buildable: true,
     removable: false,
     unlock: 'ketChuong5',
+  },
+  // Đền Rồng Tiên thờ Lạc Long Quân và Âu Cơ, tổ tiên các vua Hùng: bọc trăm trứng nở trăm con, năm mươi con theo cha
+  // xuống biển, năm mươi con theo mẹ lên núi. Đền còn nguyên thì của từ nước, từ núi làm ra thêm (`RONG_TIEN_BONUS`).
+  // Công trình lớn 8×8 như Hồ Kim Quy, mở ở Điện 10 (chỉ có ở chương 5).
+  denRongTien: {
+    type: 'denRongTien',
+    w: 8,
+    d: 8,
+    maxLevel: 1,
+    buildCost: { gao: 7000, voOc: 7000, datDa: 8000, sat: 1800, go: 2000 },
+    upgradeCost: [{}, {}],
+    production: [{}],
+    hp: [1300],
+    limit: [1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+    minDien: 10,
+    buildable: true,
+    removable: false,
+    unlock: 'chuong5',
   },
   // Cầu qua sông Đà nằm dọc (rộng 2 ô, vắt qua 7 ô sông), cầu qua sông Thao nằm ngang.
   cauSongDa: bridgeDef('cauSongDa', 2, 7),
@@ -998,7 +1030,7 @@ const PHUT = 60_000;
  */
 export const XAY_MS = [0, 15_000, 30_000, PHUT, 2 * PHUT, 4 * PHUT, 8 * PHUT, 15 * PHUT, 30 * PHUT, 50 * PHUT, 80 * PHUT];
 /** Hệ số thời gian của từng loại so với `XAY_MS` (không có là 1). */
-export const XAY_HE_SO: Partial<Record<BuildingType, number>> = { choiCanh: 0.5, kho: 0.8, doanhTrai: 1.2, thoHo: 0.6 };
+export const XAY_HE_SO: Partial<Record<BuildingType, number>> = { choiCanh: 0.5, kho: 0.8, doanhTrai: 2, thoHo: 0.6 };
 /** Thời gian dựng, nâng của các loại có bảng riêng (ms, chỉ số là cấp đích như `XAY_MS`). */
 export const XAY_RIENG: Partial<Record<BuildingType, number[]>> = {
   dien: [0, 0, PHUT, 3 * PHUT, 6 * PHUT, 12 * PHUT, 25 * PHUT, 45 * PHUT, 75 * PHUT, 120 * PHUT, 180 * PHUT],
@@ -1008,6 +1040,7 @@ export const XAY_RIENG: Partial<Record<BuildingType, number[]>> = {
   hoKimQuy: [0, 15 * PHUT],
   denCuong: [0, 20 * PHUT],
   denHatMon: [0, 25 * PHUT],
+  denRongTien: [0, 30 * PHUT],
   traiGiao: [0, 30_000],
   traiCung: [0, 30_000],
   chuongVoi: [0, PHUT],
@@ -1111,20 +1144,22 @@ export const U_NO = {
 export const isDecor = (type: BuildingType): boolean => BUILDINGS[type].decor !== undefined;
 export const isRoad = (type: BuildingType): boolean => BUILDINGS[type].decor === 'duong';
 
-// ---------- Doanh trại, tướng chỉ huy, bố trí quân ----------
+// ---------- Doanh trại, tướng, bố trí quân ----------
 
 /**
- * Tướng chỉ huy doanh trại, mỗi doanh trại một tướng: Lạc tướng có từ đầu; Thánh Gióng khi thành tráng sĩ, Sơn Tinh khi
- * rước Mị Nương, An Dương Vương khi có nỏ thần, Cao Lỗ khi thắng màn 25 (về trời, về núi, xuống biển rồi vẫn chỉ huy).
- * Doanh trại có tướng mới giữ chỗ quân.
+ * Tướng ở doanh trại, mỗi tướng một doanh trong trại: Lạc tướng có từ đầu; Thánh Gióng khi thành tráng sĩ, Sơn Tinh khi
+ * rước Mị Nương, An Dương Vương khi có nỏ thần, Cao Lỗ khi thắng màn 25, Hai Bà khi vào chương 5 (về trời, về núi,
+ * xuống biển rồi vẫn tính). Mỗi doanh thêm chỗ quân theo cấp trại, tối đa `DOANH_MAX` doanh.
  */
 export type TuongId = 'lacTuong' | 'giong' | 'sonTinh' | 'anDuong' | 'caoLo' | 'trungTrac' | 'trungNhi';
 export const TUONG_IDS: TuongId[] = ['lacTuong', 'giong', 'sonTinh', 'anDuong', 'caoLo', 'trungTrac', 'trungNhi'];
+/** Số doanh tối đa trong doanh trại (bằng năm trại của thời mỗi tướng một trại): chỗ quân không quá 5 × 38. */
+export const DOANH_MAX = 5;
 
 /**
  * Bốn nữ tướng của Hai Bà Trưng (chương 5 PR 4), theo về khi thắng màn `stage` lần đầu, mỗi người lo một binh chủng
- * `unit`. Ở phó bản đi theo làm phó tướng (đứng cầm cờ sau hàng hậu, không đánh); ở kinh đô giao cho một doanh
- * trại. Binh chủng của nữ tướng được thêm `NU_TUONG_BONUS` máu và sức đánh.
+ * `unit`. Ở phó bản đi theo làm phó tướng (đứng cầm cờ sau hàng hậu, không đánh); ở kinh đô cả bốn ở doanh trại.
+ * Binh chủng của nữ tướng được thêm `NU_TUONG_BONUS` máu và sức đánh.
  */
 export type NuTuongId = 'leChan' | 'thanhThien' | 'batNan' | 'phungThiChinh';
 export const NU_TUONG_IDS: NuTuongId[] = ['leChan', 'thanhThien', 'batNan', 'phungThiChinh'];
@@ -1136,8 +1171,8 @@ export const NU_TUONG: Record<NuTuongId, { stage: number; unit: UnitType }> = {
 };
 export const NU_TUONG_BONUS = 0.12;
 /**
- * Số chỗ quân tối đa mang ra một trận phó bản, theo cấp Điện (chỉ số 0 là cấp 1): bằng sức chứa doanh trại cao nhất
- * dựng được ở cấp Điện ấy, không quá 38, để nhiều doanh trại không làm phó bản dễ đi.
+ * Số chỗ quân tối đa mang ra một trận phó bản, theo cấp Điện (chỉ số 0 là cấp 1): bằng sức chứa một doanh ở cấp
+ * doanh trại cao nhất dựng được ở cấp Điện ấy, không quá 38, để nhiều doanh không làm phó bản dễ đi.
  */
 export const FIELD_CAP = [0, 14, 20, 28, 38, 38, 38, 38, 38, 38];
 /**
@@ -1216,6 +1251,7 @@ export const FLOOD_TOLERANCE: Partial<Record<BuildingType, number>> = {
   denCoLoa: 1,
   denCuong: 1,
   denHatMon: 1,
+  denRongTien: 1,
   // Hồ không sợ nước: miếu đứng trên gò giữa hồ.
   hoKimQuy: 99,
   ben: 99,
@@ -1282,6 +1318,13 @@ export const TEMPLE_BONUS = 0.1;
 export const KIM_QUY_WALLS = 0.3;
 /** Tường được Hồ Kim Quy thêm máu. */
 export const KIM_QUY_WALL_TYPES: BuildingType[] = ['luy', 'thanh', 'congThanh'];
+/**
+ * Đền Rồng Tiên còn nguyên: của từ nước (vỏ ốc, cá làng chài, cá biển) và của từ núi (đất đá, sắt, gỗ) làm ra thêm chừng
+ * này phần, cộng dồn với Đền Phù Đổng và phúc lành Đất. Gạo không thêm.
+ */
+export const RONG_TIEN_BONUS = 0.2;
+/** Tài nguyên được Đền Rồng Tiên cộng thêm (cá cũng được, ở `fishPerMinute`). */
+export const RONG_TIEN_RES: ResourceId[] = ['voOc', 'datDa', 'sat', 'go'];
 
 /** Sức chứa mỗi loại tài nguyên theo cấp Điện Vua Hùng, chỉ số 0 là cấp 1. Kho thóc cộng thêm. */
 export const STORAGE_CAP = [500, 1000, 2000, 4000, 8000, 14000, 22000, 32000, 44000, 60000];
@@ -1824,7 +1867,7 @@ export const STAGES: StageDef[] = [
   { chapter: 2, minDien: 5, needsGiong: false, needsSon: true, enemies: { tomBinh: 12, caPhun: 7, caSau: 3, thuongLuong: 1 }, hpScale: 2.1, reward: { gao: 1800, voOc: 1200, datDa: 1000, sat: 260 }, terrain: 'ngap' },
   { chapter: 2, minDien: 5, needsGiong: false, needsSon: true, enemies: { tomBinh: 14, caPhun: 8, caSau: 4 }, hpScale: 2.1, reward: { gao: 2000, voOc: 1300, datDa: 1100, sat: 280 }, terrain: 'lang' },
   { chapter: 2, minDien: 5, needsGiong: false, needsSon: true, enemies: { tomBinh: 14, caPhun: 8, caSau: 4 }, hpScale: 2.1, reward: { gao: 2200, voOc: 1500, datDa: 1200, sat: 300 }, terrain: 'benSong' },
-  { chapter: 2, minDien: 5, needsGiong: false, needsSon: true, enemies: { tomBinh: 14, caPhun: 9, caSau: 4 }, hpScale: 2.5, reward: { gao: 2500, voOc: 1700, datDa: 1400, sat: 350 }, terrain: 'nui' },
+  { chapter: 2, minDien: 5, needsGiong: false, needsSon: true, enemies: { tomBinh: 14, caPhun: 9, caSau: 4 }, hpScale: 2.4, reward: { gao: 2500, voOc: 1700, datDa: 1400, sat: 350 }, terrain: 'nui' },
   { chapter: 2, minDien: 5, needsGiong: false, needsSon: true, sonOnly: true, enemies: { tomBinh: 12, caPhun: 8, caSau: 3, thuyTinh: 1 }, hpScale: 1.8, reward: { gao: 3000, voOc: 2000, datDa: 2000, sat: 500 }, terrain: 'tanVien' },
   { chapter: 3, minDien: 5, needsGiong: false, enemies: { quyNui: 12, maTroi: 7, hoTinh: 3 }, hpScale: 2.6, reward: { gao: 2600, voOc: 1800, datDa: 1600, sat: 400 }, terrain: 'thatDieu' },
   { chapter: 3, minDien: 5, needsGiong: false, enemies: { quyNui: 13, maTroi: 8, hoTinh: 4 }, hpScale: 2.4, reward: { gao: 2800, voOc: 2000, datDa: 1800, sat: 450 }, terrain: 'rung' },
@@ -2102,6 +2145,8 @@ export const QUESTS: QuestDef[] = [
   { id: 'quaMan39', goal: { kind: 'stage', stage: 39 }, reward: { voOc: 3000, datDa: 2500 } },
   { id: 'camKhe', goal: { kind: 'stage', stage: 40 }, reward: { gao: 5000, voOc: 5000 } },
   { id: 'denHatMon', goal: { kind: 'count', building: 'denHatMon', amount: 1 }, reward: { datDa: 3500, sat: 1100 } },
+  // Sau truyện chương 5: Đền Rồng Tiên (mở từ Điện 10).
+  { id: 'denRongTien', goal: { kind: 'count', building: 'denRongTien', amount: 1 }, reward: { datDa: 4500, sat: 1400 } },
 ];
 /** Nhận xong thưởng nhiệm vụ cuối chương 1 (Đền Phù Đổng) thì sang chương 2. */
 export const CH2_QUEST_START = 20;
@@ -2118,7 +2163,7 @@ export const QUEST_INSERTED_V4 = 11;
  * Công trình mới thêm sau khi đã có người chơi: lần đầu mở được thì Lạc hầu nói một câu gợi ý (một lần, ghi ở
  * `GameState.hinted`). Thêm loại vào đây không phải nâng bản lưu.
  */
-export const NEW_HINTS: BuildingType[] = ['thoHo', 'xuongMoc', 'langChai', 'congThanh', 'hoKimQuy', 'benKhoi', 'congDe', 'bacThanh'];
+export const NEW_HINTS: BuildingType[] = ['thoHo', 'xuongMoc', 'langChai', 'congThanh', 'hoKimQuy', 'benKhoi', 'congDe', 'bacThanh', 'denRongTien'];
 
 /**
  * Cá mỗi phút của một làng chài đủ người, theo cấp (chỉ số 0 là cấp 1). Cá không tích trữ: dân và lính ăn cá trước,
