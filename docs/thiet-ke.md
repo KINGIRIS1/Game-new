@@ -345,7 +345,7 @@ Chủ dự án muốn có nhiều quân dự trữ: dựng thêm doanh trại, m
   - rừng mọc thành cụm có trảng trống, tre thành khóm riêng, thưa dần ra mép;
   - hai bên dàn ba hàng cách nhau 10 ô rồi xông vào đánh kẻ gần nhất;
   - lính đẩy nhau ra, không đứng chồng lên nhau;
-  - dải giữa bãi có vật cản theo nền, lính đi vòng (xem mục **Bãi chiến có vật cản**; màn chương 1 và đồn bên kia sông đã có bố cục, chương 2–5 bật dần);
+  - dải giữa bãi có vật cản theo nền, lính đi vòng (xem mục **Bãi chiến có vật cản**; màn chương 1–3 và đồn bên kia sông đã có bố cục, chương 4–5 bật dần);
   - ngoài bãi mọi người bền gấp 1,6 lần, để trận kéo dài chừng 10–35 giây và kịp bấm Trống trận.
 - **Kết thúc trận**:
   - thắng khi diệt hết giặc;
@@ -565,13 +565,13 @@ Vòng khắc chế của quân ta giữ nguyên: giáo binh thắng quân nặng
   | 12 | Bạch Hạc ngập nước | 12 tôm, 7 cá phun, 3 cá sấu, thuồng luồng | ×2,1 | cần Sơn Tinh |
   | 13 | Làng chìm trong lũ | 14 tôm, 8 cá phun, 4 cá sấu | ×2,1 | cần Sơn Tinh |
   | 14 | Sông Đà cuồn cuộn | 14 tôm, 8 cá phun, 4 cá sấu | ×2,1 | cần Sơn Tinh, mở Dời non |
-  | 15 | Chân núi Tản | 14 tôm, 9 cá phun, 4 cá sấu | ×2,5 | cần Sơn Tinh |
+  | 15 | Chân núi Tản | 14 tôm, 9 cá phun, 4 cá sấu | ×2,4 | cần Sơn Tinh |
   | 16 | Đỉnh Tản Viên | 12 tôm, 8 cá phun, 3 cá sấu, Thủy Tinh | ×1,8 | chỉ Sơn Tinh; Thủy Tinh có hai phép |
 
   - Mọi màn cần Điện cấp 5. Thưởng lần đầu từ 1200 gạo, 800 vỏ ốc, 600 đất đá, 150 sắt (màn 9) tới 3000 gạo, 2000 vỏ ốc, 2000 đất đá, 500 sắt (màn 16). Đánh lại được 30%.
   - Máu của màn 9–11 cao hơn màn 12–16 vì màn 9–11 có Gióng hiển linh hai kỹ năng, còn màn 12–14 Sơn Tinh mới có một kỹ năng.
   - "Cần Sơn Tinh" nghĩa là phải rước Mị Nương rồi mới mở màn. Ở màn 12–15 người chơi chọn Gióng hiển linh đánh thay được; Sơn Tinh kiệt sức thì Gióng tự ra thay, cả hai kiệt sức thì phải chờ. **Màn 16 chỉ Sơn Tinh ra trận** ("Chỉ Sơn Tinh mới địch nổi Thủy Tinh", `sonOnly`), vì cảnh kết chương là núi Tản Viên dâng dưới chân Sơn Tinh.
-  - Máu giặc các màn 9–24 được đặt lại theo chuẩn cân bằng mới (xem mục **Chuẩn cân bằng phó bản**).
+  - Máu giặc các màn 9–24 được đặt lại theo chuẩn cân bằng mới (xem mục **Chuẩn cân bằng phó bản**). Màn 15 hạ từ ×2,5 xuống ×2,4 khi bãi có vật cản (mục **Bãi chiến có vật cản**).
 - Bãi chiến mới:
   - **đồi sim**: đồi lượn cao, mảng hoa sim tím;
   - **đồng ngập**: bãi chiến là một gò nổi giữa biển nước lũ, nhà sàn chìm nửa, thuyền trôi giữa đồng, chỗ đất chìm thì không có cây;
@@ -2666,11 +2666,11 @@ Trước đây chương nào cũng đánh trên cùng một bãi chữ nhật ph
 - Đường thẳng tới kẻ địch thông (trong tầm đánh thì thôi xét) thì đi thẳng như bãi phẳng. Vướng thì lần theo bản đồ tối đa 6 ô, nhắm ô xa nhất còn thấy được, và cứ đi vòng 0,5 giây rồi mới xét lại. Người không bơi đang đứng trên đất khô thì đường lội nước cũng tính là vướng, để biết đường vòng có nhanh hơn không.
 - Đi xong, đẩy nhau xong, bị hất xong thì trượt dọc mép vật cản (bỏ phần bước đâm vào), không được thì trượt theo một trục, không nữa thì đứng lại: không ai bị đẩy xuyên qua vật cản.
 - Trận có vật cản nặng hơn bãi phẳng chừng 30%; bãi phẳng không tốn thêm gì.
-- `baiChien.test.ts` canh: danh sách trận đã bật bố cục; mỗi bố cục thật cả trận không ai lọt vào vật cản và voi đi lọt tới giặc; bố cục rỗng đánh y hệt bãi phẳng; đánh lại ra y hệt; cả trận không ai lọt vào vật cản (bị đẩy, bị hất, quân gọi thêm, Tô Định bỏ chạy, nữ tướng); đám đông dồn vào tường không ai xuyên qua; voi lọt lối trống; cung thủ bắn qua tường; lội nước chậm, thủy quái không chậm; Phun lửa dừng trước đá mà lửa vẫn cháy; mở lại bản lưu giữa trận vẫn đánh trên bố cục ấy. Hàm `kiemBai` trong test kiểm mọi bố cục thật theo luật trên.
+- `baiChien.test.ts` canh: danh sách trận đã bật bố cục; mỗi bố cục thật cả trận không ai lọt vào vật cản và voi đi lọt tới giặc; bố cục rỗng đánh y hệt bãi phẳng; đánh lại ra y hệt; cả trận không ai lọt vào vật cản (bị đẩy, bị hất, quân gọi thêm, Tô Định bỏ chạy, nữ tướng); đám đông dồn vào tường không ai xuyên qua; voi lọt lối trống; cung thủ bắn qua tường; lội nước chậm, thủy quái không chậm; Phun lửa dừng trước đá mà lửa vẫn cháy; mở lại bản lưu giữa trận vẫn đánh trên bố cục ấy. Hàm `kiemBai` (`baiChien.ts`) kiểm mọi bố cục thật theo luật trên.
 
 ### Bố cục chương 1 và đồn bên kia sông (đã làm ở PR 2)
 
-Tọa độ bãi: x 0–9 từ trái sang phải, z 0 là cuối bãi phía giặc, z 22 phía quân ta. `tron(x; z; r)` là hình tròn, `doan(a → b; nửa dày)` là đoạn dày. Màn chương 2 trở đi của bốn nền rừng, bến sông, làng, núi vẫn là bãi phẳng cho tới PR 3.
+Tọa độ bãi: x 0–9 từ trái sang phải, z 0 là cuối bãi phía giặc, z 22 phía quân ta. `tron(x; z; r)` là hình tròn, `doan(a → b; nửa dày)` là đoạn dày. Màn chương 2, 3 của bốn nền rừng, bến sông, làng, núi có bố cục riêng (mục sau).
 
 | Bố cục | Trận | Vật cản, vùng chậm |
 |---|---|---|
@@ -2694,12 +2694,55 @@ Tọa độ bãi: x 0–9 từ trái sang phải, z 0 là cuối bãi phía gi�
 - **Núi (màn 8)**: bố cục đầu có đá giữa bãi làm Gióng bị vây, ngã ở 7/20 trận thắng (bãi phẳng 2/20). Dời đá ra hai mép và phía sau thì Gióng không ngã lần nào trong 20 trận, không bấm kỹ năng thì vẫn thua cả 20.
 - **Lính kẹt**: script đếm lính đang đi mà hơn 3 giây dời chưa tới 0,05 ô. Đo lần đầu thấy voi đứng sát mép tròn mà đi dọc mép thì đứng yên mãi (trượt theo trục chỉ nhích được chút ít); nay trượt dọc mép trước (`truot`), không còn ai kẹt vì vật cản. Còn vài lính kẹt vì đám đông vây trùm cuối trận, như bãi phẳng.
 
-### Hình (`src/render/vatCan.ts`, đã làm ở PR 2)
+### Bố cục chương 2–3 (đã làm ở PR 3)
+
+Chương 2 giặc là thủy quái, bơi trong nước như đi thường, nên vũng nước, lạch nước có lợi cho giặc. Chương 3 có yêu tinh núi Thất Diệu rồi quân Triệu. Rừng, bến sông, làng mỗi chương một biến thể; núi chương 2, 3 dùng chung `nui2`. Đồn bậc 3 (nền Thất Diệu) dùng bố cục `thatDieu`. Màn chương 4, 5 vẫn bãi phẳng tới PR 4.
+
+| Bố cục | Trận | Vật cản, vùng chậm |
+|---|---|---|
+| `doi` | màn 9 | ba bụi sim `tron(2,4; 8,8; 0,8)`, `tron(6,6; 10,2; 0,75)`, `tron(3,4; 13; 0,7)`; đá sát mép phải `tron(9,5; 13,4; 1)` |
+| `benSong2` | màn 10, 14 | lạch nước từ mép trái `doan(−0,8; 9 → 4; 10,6; 0,7)`; thuyền mắc cạn `doan(5,2; 12,6 → 7; 12; 0,4)`; đó cá sát mép trái `tron(−0,1; 13,2; 0,7)` |
+| `rung2` | màn 11 | khóm tre `tron(6,5; 8,8; 0,9)`; khúc gỗ đổ `doan(1,9; 11,4 → 4,2; 12,4; 0,3)`; khóm tre sát mép phải `tron(9,6; 13,4; 1)`; ao sen sát mép trái `tron(0,6; 8,4; 0,9)` |
+| `ngap` | màn 12 | khúc gỗ trôi dạt `doan(6,2; 8,4 → 7; 8,9; 0,32)`; đá sát mép trái `tron(0; 13,2; 1)`; vũng lũ từ mép trái `doan(−0,6; 9,6 → 2,6; 10,6; 0,85)`; ao sen `tron(7,3; 12,8; 1,2)`; giữa bãi trống cho trận đánh thuồng luồng |
+| `lang2` | màn 13 | nhà sàn sát mép phải (khối vuông `doan(7,4; 9 → 9,8; 9; 0,9)`); giếng `tron(2,6; 10; 0,55)`; rào tre sát mép trái `doan(−0,6; 12,8 → 3,4; 13,2; 0,3)`; ao sen `tron(6,2; 12,6; 1)` |
+| `nui2` | màn 15, 22 | chỉ đá sát hai mép: `tron(0,3; 8,4; 1,1)`, `tron(9; 12; 1,1)` |
+| `tanVien` | màn 16 | đá nhọn sát hai mép `tron(0,2; 9; 1,1)`, `tron(8,9; 10,6; 1)`; đá phía sau `tron(2,4; 13,6; 0,6)`; giữa bãi trống cho trận đánh Thủy Tinh |
+| `thatDieu` | màn 17, 19, đồn bậc 3 | cây chết `tron(2,6; 9; 0,7)`, `tron(6,7; 12,6; 0,6)`; đá nhọn sát hai mép `tron(9,2; 8,6; 1)`, `tron(−0,2; 12,8; 1,1)`; vũng bùn bên trái `tron(2,2; 11,8; 0,8)` |
+| `rung3` | màn 18, 20 | khóm tre sát hai mép `tron(−0,1; 9,2; 1,1)`, `tron(9,4; 13; 1)`; đá `tron(5,6; 9,6; 0,55)`; cây chết `tron(3; 13,2; 0,6)` |
+| `benSong3` | màn 21 | thuyền mắc cạn `doan(2; 8,6 → 3,8; 9,2; 0,4)`; khúc gỗ sát mép phải `doan(7,6; 8,2 → 9,8; 8,6; 0,3)`; lạch nước từ mép phải `doan(9,8; 10,8 → 5,2; 12,8; 0,75)` |
+| `lang3` | màn 23 | nhà sàn cháy sát mép trái (khối vuông `doan(−0,8; 9 → 1,6; 9; 0,9)`); đống rơm `tron(6,2; 10; 0,55)`; rào tre sát mép phải `doan(6,2; 13 → 9,6; 12,6; 0,3)`; giếng `tron(2,1; 13,2; 0,5)` |
+| `coLoa` | màn 24 | hai đoạn lũy đất chắn ngang z 8,2, chừa cửa giữa rộng chừng 4 ô: `doan(−0,8 → 2)`, `doan(7 → 9,8)`, nửa dày 0,45; giếng `tron(2,2; 12,4; 0,55)`; đống gỗ dựng thành sát mép phải `doan(7,2; 12,8 → 9,8; 13,2; 0,35)` |
+
+- **Đo độ khó** (`node scripts/do-bai.mjs c2 c3 d3 --hat 20`, 20 hạt giống mỗi tiêu chí): mọi tiêu chí của màn 9–24, đồn bậc 3 và thử thách 9–24 đạt 20/20, trừ hai màn vốn sát chuẩn ngay trên bãi phẳng:
+
+  | Tiêu chí | Có vật cản | Bãi phẳng |
+  |---|---|---|
+  | Màn 15: Gióng thay Sơn Tinh, chơi giỏi thắng | 17/20 | 15/20 (máu ×2,5) |
+  | Màn 15: Gióng thay Sơn Tinh, chơi thường thua | 18/20 | 20/20 (máu ×2,5) |
+  | Màn 16: có tướng, chơi thường thắng | 17/20 | 18/20 |
+  | Màn 16: Gióng thay Sơn Tinh, chơi giỏi thua | 18/20 | 15/20 |
+
+  Test (3 hạt giống) qua hết. Trận lâu nhất chừng 83 giây (màn 24). Trận thắng không có lính nào kẹt cạnh vật cản. Còn vài lính kẹt cạnh vật cản ở trận thua (nửa quân, không tướng, người chơi thường ở thử thách): lính bị đám đông giặc vây ép vào vật cản. Bãi phẳng cũng có lính kẹt vì đám đông như thế (màn 18 nửa quân: 38 lính trên bãi phẳng, 62 có vật cản, trong 20 trận).
+- **Chỉnh bố cục**: bố cục đầu làm lệch vài màn nên đã dời vật cản, đo lại tới khi bằng bãi phẳng:
+  - màn 16 người chơi thường chỉ thắng 6/10 vì đá giữa bãi chắn Sơn Tinh; dời đá sang trái thì thắng 10/10;
+  - màn 19 thắng 5/10, đồn bậc 3 thắng 7/10 vì vũng bùn giữa bãi làm quân ta sa lầy trước gà trắng; dời bùn sang trái thì thắng 10/10;
+  - màn 14 thắng 8/10; dời thuyền thì thắng 20/20;
+  - màn 11, 12, 20, 23 thắng 18–19/20 (bãi phẳng 20/20); dời ao sen rừng ra mép trái, thu ngắn khúc gỗ đồng ngập và dời sang phải, thu nhỏ đá rừng chương 3 và đống rơm làng chương 3 thì thắng 20/20;
+  - khúc gỗ đồng ngập từng thử nằm sát mép phải: thuồng luồng đứng lọt vào góc giữa khúc gỗ và mép bãi, voi ta đứng chờ sau đám đông (thử thách 12: 10 lính kẹt cạnh vật cản trong 20 trận). Khúc gỗ ngắn chừa khe 1,7 ô với mép bãi thì hết kẹt.
+- **Núi chương 2, 3** (`nui2`): bố cục núi chương 1 (bốn tảng đá) làm màn 22 người chơi thường chỉ thắng 14/20 (bãi phẳng 19/20). Chỉ giữ hai tảng sát mép thì thắng 20/20.
+- **Màn 15**: màn này vốn sát chuẩn. Trên bãi phẳng, Gióng đánh thay Sơn Tinh và người chơi giỏi chỉ thắng 15/20. Có vật cản thì tiêu chí ấy chập chờn ở 3 hạt giống của test. Hạ máu giặc từ ×2,5 xuống ×2,4 thì:
+  - Gióng, người chơi giỏi thắng 17/20;
+  - Gióng, người chơi thường vẫn thua 18/20;
+  - mọi tiêu chí khác của màn 15 đạt 20/20.
+
+  ×2,3 thì Gióng, người chơi thường chỉ thua 15/20, nên giữ ×2,4. Đây là hệ số máu duy nhất đổi ở PR 3.
+
+### Hình (`src/render/vatCan.ts`, đã làm ở PR 2, thêm dáng ở PR 3)
 
 - **Mảng đất dưới vật cản**: chỗ vật cản đứng là mảng cỏ đúng màu đất quanh bãi, viền sẫm như mép bãi (bãi như lõm vào quanh vật cản); mép lượn nhẹ như nét vẽ tay. Vật cản sát mép bãi thì viền hòa vào đất ngoài bãi.
 - **Nước nông**: bờ cát ướt, mặt nước, giữa sâu màu đậm hơn. **Bùn**: viền bùn khô, bùn ướt, vài vũng nước đọng; bãi bùn có lau thì vài khóm lau thấp mọc ở nửa vùng phía mép bãi.
 - **Lính lội**: chân lính chìm 0,12 ô trong nước, 0,05 ô trong bùn, chuyển mượt qua mép vùng. Mặt bãi vẫn phẳng.
-- **Dáng vật cản**: khóm tre (vài bụi tre thấp như tre rừng quanh bãi, bản nhẹ), tảng đá nằm phục có hòn nhỏ quanh chân, rào tre hai thanh ngang, rào cọc nhọn hai hàng so le có cọc đổ, cụm chông (cọc tre vót nhọn tỏa ra từ ụ đất), đống rơm có sào, đó cá đan nằm giữa nước có cọc giữ, xe củi đổ (thùng lật, bánh xe, củi lăn lóc), thuyền mắc cạn (thuyền Lạc Việt nằm nghiêng), nhà sàn cấp 2 sát mép bãi quay mặt vào giữa bãi.
+- **Dáng vật cản**: khóm tre (vài bụi tre thấp như tre rừng quanh bãi, bản nhẹ), tảng đá nằm phục có hòn nhỏ quanh chân, rào tre hai thanh ngang, rào cọc nhọn hai hàng so le có cọc đổ, cụm chông (cọc tre vót nhọn tỏa ra từ ụ đất), đống rơm có sào, đó cá đan nằm giữa nước có cọc giữ, xe củi đổ (thùng lật, bánh xe, củi lăn lóc), thuyền mắc cạn (thuyền Lạc Việt nằm nghiêng), nhà sàn cấp 2 sát mép bãi quay mặt vào giữa bãi. PR 3 thêm: khúc gỗ đổ (khúc nhỏ gác trên, cành gãy), giếng làng (thành đá ong, cần vọt tre có gàu, chum nước), bụi sim lốm đốm hoa tím, đá nhọn sắc cạnh chụm lại, cây chết cong queo trơ cành, lũy đất hai bậc có ụ và cờ đỏ ở đầu phía giữa bãi, nhà sàn cháy (cột cháy gãy, sàn sập, nửa mái sém, kèo trơ, tro, than hồng, khói bốc), sen nổi trên ao (đám lá, búp, hoa).
 - **Nặng máy**: mọi vật cản nhỏ của một bố cục gộp một lưới màu và một viền mực; mảng đất gộp ba lưới; nhà, thuyền dựng riêng. So với bãi phẳng cùng nền: thêm 5–12 lệnh vẽ, 2–25 nghìn tam giác (bãi rừng nặng nhất, khóm tre).
 - **Cảnh dựng lại** khi nền hay bố cục đổi (`Battlefield.setTerrain(nền, bố cục)`); `World.showField` nhận bố cục của trận.
 - `battlefield.test.ts` canh: mặt bãi vẫn phẳng; mảng đất có đúng chỗ vật cản, mảng nước bùn đúng vùng chậm, chỗ trống không bị mảng đè; mô hình không lấn dải dàn quân; dáng nào trong bố cục cũng có hình; đổi bố cục thì dựng lại; chân lính chìm đúng độ sâu.
@@ -2708,7 +2751,7 @@ Tọa độ bãi: x 0–9 từ trái sang phải, z 0 là cuối bãi phía gi�
 
 1. **PR 1**: luật đi quanh vật cản, chưa bật bố cục nào; lối chơi không đổi (đã làm).
 2. **PR 2**: vẽ vật cản, bố cục chương 1 (rừng, bến sông, làng, đồn giặc, chân núi) và đồn bên kia sông; đo lại độ khó chương 1, đồn, thử thách 1–8 (đã làm).
-3. **PR 3**: bố cục chương 2–3 (đồi sim, đồng ngập, Tản Viên, Thất Diệu, Cổ Loa, biến thể rừng, bến sông, làng); đo lại chương 2, 3, thử thách 9–24.
+3. **PR 3**: bố cục chương 2–3 (đồi sim, đồng ngập, Tản Viên, Thất Diệu, Cổ Loa, biến thể rừng, bến sông, làng, núi) và đồn bậc 3; đo lại chương 2, 3, thử thách 9–24 (đã làm).
 4. **PR 4**: bố cục chương 4–5 (cửa sông, Mộ Dạ, Hát Môn, Luy Lâu, Lãng Bạc, Cấm Khê, làng Mê Linh); đo lại chương 4, 5, thử thách 25–40.
 
 Mỗi PR chỉnh bố cục trước, rồi mới chỉnh máu giặc (`hpScale`) nếu lệch chuẩn cân bằng, và ghi số cuối vào tài liệu này.
