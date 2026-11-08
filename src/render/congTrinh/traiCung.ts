@@ -1,31 +1,25 @@
-// Trại cung 3×3: nơi ở của cung thủ. Lán một mái góc sau bên phải, trường bắn chạy ngang hết móng: cung thủ đứng
-// bên phải bắn sang hai bia rơm ở mép trái. Rào cọc vót nhọn như doanh trại. Dựng một lần, mái tranh.
-// Bản vẽ ở docs/bo-cuc-cong-trinh.md.
+// Trại cung 4×4 (bản lưu 26): nơi ở của cung thủ, cùng kiểu khuôn viên với doanh trại: rào cọc vót nhọn, lầu cổng
+// giữa mặt trước, lán một mái ở góc sau bên trái, trường bắn chạy ngang sân: hai cung thủ đứng sau vạch bắn bên phải bắn
+// sang hai bia rơm ở mép trái. Dựng một lần, mái tranh. Bản vẽ ở docs/bo-cuc-cong-trinh.md.
 
 import * as THREE from 'three';
 import { archeryTarget, banner } from '../buildings';
 import { Lot } from '../lot';
 import { C } from '../palette';
-import { bakeSoldier } from '../soldier';
 import { ToonModel } from '../toon';
-import { type CongTrinh, yard } from './chung';
-import { LINH, RAO, raoCocNhon } from './traiGiao';
+import type { CongTrinh, LotOpts } from './chung';
+import { gopLinh, khuonVien, noiOSpots, quiver } from './trai';
 
-export const TRAI_CUNG_LOT = new Lot(3, [
-  'rf.LLL',
-  '...LLL',
-  'B..LLL',
-  '.....c',
-  'b....c',
-  '..,,..',
+export const TRAI_CUNG_LOT = new Lot(4, [
+  'LLLLL.f.',
+  'LLLLL...',
+  '.r......',
+  'B....vc.',
+  '.....v..',
+  'b....vc.',
+  '...,,...',
+  '...CC...',
 ]);
-
-/** Bao tên đan dựng đứng, mấy mũi tên thò lên. */
-function quiver(p: ToonModel['plain'], x: number, z: number, y = 0.05): void {
-  p.cyl(0.055, 0.048, 0.32, C.earthDark, x, y + 0.16, z, undefined, 7);
-  p.cyl(0.058, 0.058, 0.04, C.red, x, y + 0.26, z, undefined, 7);
-  for (const d of [-0.022, 0.022]) p.cyl(0.007, 0.007, 0.2, C.woodLight, x + d, y + 0.4, z + d * 0.5, undefined, 3);
-}
 
 /** Lán một mái: cột sau cao tựa vách phên, cột trước thấp, mái tranh dốc ra trước; giá cung, bao tên dưới mái. */
 function lanMotMai(m: ToonModel, x: number, z0: number, z1: number, w: number): void {
@@ -62,47 +56,49 @@ function boRom(p: ToonModel['plain'], x: number, y: number, z: number): void {
   p.cyl(0.104, 0.104, 0.05, C.thatchDark, x, y, z, [0, 0, Math.PI / 2], 6);
 }
 
-export function makeTraiCung(): THREE.Group {
+/** `tier`: bậc binh khí đã rèn của cung thủ (mũi tên sắt, bao tên da, cung sừng). */
+export function makeTraiCung(tier = 0): THREE.Group {
   const m = new ToonModel();
   const p = m.plain;
   const L = TRAI_CUNG_LOT;
-  yard(m, 3);
-  raoCocNhon(m, RAO, 1.0);
-  const path = L.zone(',');
-  p.box(0.8, 0.03, 0.62, C.earth, path.x, 0.055, path.z - 0.06);
+  khuonVien(m);
 
-  // Lán một mái góc sau bên phải, rộng hơn lán cũ chừng 20% theo chiều sâu.
+  // Lán một mái góc sau bên trái, dài hơn lán 3×3 chừng 70%.
   const Lz = L.zone('L');
-  lanMotMai(m, Lz.x - 0.02, -1.28, -0.28, 1.36);
+  lanMotMai(m, Lz.x - 0.05, -1.85, -0.75, 2.3);
 
-  // Trường bắn: hai bia rơm ở mép trái quay mặt sang phải; vạch bắn là khúc gỗ nằm trước chỗ cung thủ đứng.
+  // Trường bắn: sân đất nện chạy ngang, hai bia rơm ở mép trái quay mặt sang phải, vạch bắn là khúc gỗ nằm dọc trước
+  // chỗ cung thủ đứng, bao tên bên cạnh; mấy mũi tên trượt găm xuống đất quanh bia.
+  p.box(3.6, 0.02, 1.8, C.earth, 0, 0.06, 0.25);
   const B = L.zone('B');
   const b = L.zone('b');
-  archeryTarget(m, B.x + 0.05, B.z, Math.PI / 2);
-  archeryTarget(m, b.x + 0.05, b.z, Math.PI / 2);
-  // Mấy mũi tên trượt găm xuống đất quanh bia.
-  for (const [x, z, a] of [[-0.95, 0.35, 0.5], [-0.8, 1.05, -0.4], [-1.05, -0.62, 0.3], [-0.85, 0.1, -0.6]] as const) {
+  archeryTarget(m, B.x + 0.1, B.z, Math.PI / 2);
+  archeryTarget(m, b.x + 0.1, b.z, Math.PI / 2);
+  for (const [x, z, a] of [[-1.3, 0.3, 0.5], [-1.15, 1.1, -0.4], [-1.45, -0.7, 0.3], [-1.2, 0.05, -0.6], [-1.35, 0.6, 0.2]] as const) {
     p.cyl(0.008, 0.008, 0.3, C.woodLight, x, 0.15, z, [a * 0.6, 0, 0.7], 3);
   }
-  const c = L.zone('c');
-  p.cyl(0.05, 0.05, c.d + 0.1, C.wood, c.x - 0.45, 0.1, c.z, [Math.PI / 2, 0, 0], 6);
-  quiver(p, c.x + 0.05, c.z - 0.55);
+  const v = L.zone('v');
+  p.cyl(0.05, 0.05, v.d + 0.2, C.wood, v.x, 0.1, v.z, [Math.PI / 2, 0, 0], 6);
+  const c = L.cells('c');
+  quiver(p, c[0].x + 0.4, (c[0].z + c[1].z) / 2);
 
-  // Góc sau bên trái: cờ đỏ cao và đống rơm làm bia.
+  // Góc sau bên phải: cờ đỏ cao; trước lán, đống bó rơm làm bia.
   const f = L.zone('f');
-  banner(m, f.x + 0.02, f.z - 0.05, 2.0, C.red);
+  banner(m, f.x, f.z, 2.2, C.red);
   const r = L.zone('r');
-  boRom(p, r.x + 0.12, 0.15, r.z);
-  boRom(p, r.x + 0.12, 0.15, r.z + 0.2);
-  boRom(p, r.x + 0.15, 0.32, r.z + 0.1);
+  boRom(p, r.x, 0.15, r.z);
+  boRom(p, r.x, 0.15, r.z + 0.2);
+  boRom(p, r.x + 0.03, 0.32, r.z + 0.1);
 
   const out = m.group();
-  const cung = bakeSoldier('cung', 0, { act: 'fight' });
-  cung.scale.setScalar(LINH);
-  cung.position.set(c.x - 0.1, 0.05, c.z + 0.05);
-  cung.rotation.y = -Math.PI / 2;
-  out.add(cung);
+  // Hai cung thủ quay sang bia: một người giương cung, một người vừa buông dây.
+  out.add(
+    gopLinh([
+      { kind: 'cung', tier, x: c[0].x, z: c[0].z, ry: -Math.PI / 2, act: { act: 'fight' } },
+      { kind: 'cung', tier, x: c[1].x, z: c[1].z, ry: -Math.PI / 2 - 0.08, act: { act: 'fight', strike: 0.35 } },
+    ]),
+  );
   return out;
 }
 
-export const TRAI_CUNG: CongTrinh = { tiles: 3, make: () => makeTraiCung(), spots: () => [], view: { half: 2.6, lookY: 0.9, px: 72 } };
+export const TRAI_CUNG: CongTrinh = { tiles: 4, make: (_l: number, o: LotOpts = {}) => makeTraiCung(o.tier), spots: noiOSpots, view: { half: 3.3, lookY: 0.9, px: 64 } };

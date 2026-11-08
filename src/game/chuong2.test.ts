@@ -2,7 +2,6 @@ import { describe, expect, it } from 'vitest';
 import { heroOf, skillReady, startBattle, startFieldBattle, stepField, useSkill, type HeroSetup } from './battle';
 import { canStartStage, stageHero, stageHeroes, startStage } from './campaign';
 import {
-  BUILDINGS,
   CH2_QUEST_START,
   DEFAULT_ROWS,
   ENEMIES,
@@ -40,6 +39,7 @@ import { HALF_ARMY, SAMPLE_ARMY, SEEDS, fightStage } from './testkit';
 import { canOffer, heroFor, offerGift, sonJoined } from './son';
 import { markStory, pendingStory } from './story';
 import { drowns, floodMap, groundOf, tileHeight } from './terrain';
+import { gateToward, gates } from './doanhTrai';
 import { bank, edge, setDien } from './testmap';
 
 type Army = Record<UnitType, number>;
@@ -59,7 +59,7 @@ function ch2(): GameState {
   if (!barracks.ok) throw new Error(barracks.reason);
   barracks.value.level = 5;
   // Chương 1 kết thúc bằng việc dựng Đền Phù Đổng.
-  if (!place(s, 'denPhuDong', edge(5, 11), edge(5, 6)).ok) throw new Error('dựng đền thử thất bại');
+  if (!place(s, 'denPhuDong', edge(5, 15), edge(5, 6)).ok) throw new Error('dựng đền thử thất bại');
   s.troops = { ...ARMY };
   return s;
 }
@@ -266,11 +266,14 @@ describe('mùa lũ ở kinh đô', () => {
     expect(battle.swim).toBe(true);
     expect(battle.floodTo).toBe(1);
     expect(battle.hero?.kind).toBe('sonTinh');
-    // Tướng ra từ sân trước doanh trại.
+    // Tướng ra từ cổng doanh trại gần giặc nhất (tâm các toán thủy quái lúc trận mở).
     const barracks = s.buildings.find((b) => b.type === 'doanhTrai')!;
     const son = battle.fighters.find((f) => f.kind === 'sonTinh')!;
-    expect(son.x).toBeCloseTo(barracks.x + BUILDINGS.doanhTrai.w / 2, 1);
-    expect(son.z).toBeCloseTo(barracks.z + BUILDINGS.doanhTrai.d, 1);
+    const foes = battle.fighters.filter((f) => f.side === 'giac');
+    const gate = gateToward(barracks, { x: foes.reduce((n, f) => n + f.x, 0) / foes.length, z: foes.reduce((n, f) => n + f.z, 0) / foes.length });
+    expect(gates(barracks)).toHaveLength(4);
+    expect(son.x).toBeCloseTo(gate.x, 1);
+    expect(son.z).toBeCloseTo(gate.z, 1);
     for (const f of battle.fighters.filter((f) => f.side === 'giac')) expect(Math.max(f.x, f.z)).toBeGreaterThan(RIVER_START);
     tick(s, 3000);
     expect(s.raid.water).toBeGreaterThan(0.3);
@@ -310,14 +313,15 @@ describe('mùa lũ ở kinh đô', () => {
     for (let x = lo; x <= line; x++) place(s, 'de', x, line);
     for (let z = lo; z < line; z++) place(s, 'de', line, z);
     const R = RIVER_START;
-    for (const [x, z] of [[R - 27, R - 7], [R - 21, R - 7], [R - 14, R - 7], [R - 8, R - 7], [R - 7, R - 17]]) place(s, 'choiCanh', x, z);
+    for (const [x, z] of [[R - 21, R - 7], [R - 14, R - 7], [R - 8, R - 7], [R - 7, R - 17], [R - 7, R - 24]]) place(s, 'choiCanh', x, z);
     // Đê liền dải giữ khô cả vùng trong đê khi nước dâng tới bậc 3.
     const sealed = floodMap(s, 3);
     for (let z = lo; z < line; z++) for (let x = lo; x < line; x++) expect(sealed[z * GRID + x]).toBe(0);
-    // Sơn Tinh ở doanh trại và ra trận cùng quân từ đó: doanh trại trong đê, gần phía sông như mẫu Đê bao.
-    // Doanh trại xa sông (góc rừng) thì quân và tướng tới chậm, thủy quái kịp phá đê.
+    // Sơn Tinh ở doanh trại và ra trận cùng quân từ cổng gần giặc: doanh trại trong đê, sát sông phía tây nam Điện
+    // (giữa Điện và góc sông không đủ chỗ cho trại 8×8). Doanh trại xa sông (góc rừng, hay phía bắc Điện) thì quân và
+    // tướng tới chậm, thủy quái kịp phá đê.
     const barracks = s.buildings.find((b) => b.type === 'doanhTrai')!;
-    expect(move(s, barracks.id, R - 10, R - 11).ok).toBe(true);
+    expect(move(s, barracks.id, R - 30, R - 12).ok).toBe(true);
     s.raid.floods = 4;
     callRaidNow(s);
     tick(s, RAID_WARNING_MS);

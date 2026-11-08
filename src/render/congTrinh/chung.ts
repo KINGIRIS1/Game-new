@@ -5,6 +5,7 @@
 // Gốc tọa độ là tâm móng, mặt trước hướng +z, đơn vị là ô đất.
 
 import * as THREE from 'three';
+import type { TuongId } from '../../game/defs';
 import type { BridgeBanks } from '../benKia';
 import type { Job } from '../people';
 import { C } from '../palette';
@@ -89,7 +90,18 @@ export interface LotOpts {
   banks?: BridgeBanks;
   /** Bậc lên thành: cao chừng này từ chân bậc lên tới mặt đoạn thành kề bên. Bỏ trống là cao như thành Cổ Loa. */
   rise?: number;
+  /** Doanh trại: tướng của từng doanh theo thứ tự (mỗi doanh một nhà dài, cờ màu tướng). Bỏ trống là một doanh mỗi cấp. */
+  doanh?: TuongId[];
+  /** Doanh trại: lính đứng tập trong sân (binh chủng, bậc binh khí), theo thứ tự chỗ đứng. Bỏ trống là lính mẫu. */
+  linh?: { kind: LinhTap; tier: number }[];
+  /** Doanh trại: đã có lính nỏ (chương 4), giá binh khí có thêm nỏ. */
+  no?: boolean;
+  /** Nơi ở của binh chủng: bậc binh khí đã rèn, lính (voi) đứng tập cầm đúng binh khí ấy. */
+  tier?: number;
 }
+
+/** Binh chủng đứng tập trong sân doanh trại (voi chiến ở chuồng voi). */
+export type LinhTap = 'giao' | 'cung' | 'no';
 
 export interface CongTrinh {
   /** Cạnh móng (ô). */

@@ -136,6 +136,16 @@ export const BAI: Record<string, Bai> = {
     ],
     cham: [],
   },
+  // Núi chương 2, 3 (màn 15, 22): chỉ đá sát hai mép, giữa bãi trống cho đông quân đánh trùm.
+  nui2: {
+    id: 'nui2',
+    terrain: 'nui',
+    can: [
+      { hinh: tron(0.3, 8.4, 1.1), ve: 'da' },
+      { hinh: tron(9, 12, 1.1), ve: 'da' },
+    ],
+    cham: [],
+  },
   // Đồn bên kia sông (bậc 1, 2, 4): chông, xe củi đổ, bãi bùn có lau.
   benKia: {
     id: 'benKia',
@@ -147,29 +157,168 @@ export const BAI: Record<string, Bai> = {
     ],
     cham: [{ hinh: tron(2, 12.4, 1.5), loai: 'bun', ve: 'lau' }],
   },
+
+  // Chương 2: thủy quái của Thủy Tinh bơi trong nước như đi thường, nên vũng nước, lạch nước có lợi cho giặc.
+  rung2: {
+    id: 'rung2',
+    terrain: 'rung',
+    can: [
+      { hinh: tron(6.5, 8.8, 0.9), ve: 'tre' },
+      { hinh: doan(1.9, 11.4, 4.2, 12.4, 0.3), ve: 'go' },
+      { hinh: tron(9.6, 13.4, 1), ve: 'tre' },
+    ],
+    cham: [{ hinh: tron(0.6, 8.4, 0.9), loai: 'nuoc', ve: 'sen' }],
+  },
+  benSong2: {
+    id: 'benSong2',
+    terrain: 'benSong',
+    can: [
+      { hinh: doan(5.2, 12.6, 7, 12, 0.4), ve: 'thuyen' },
+      { hinh: tron(-0.1, 13.2, 0.7), ve: 'chum' },
+    ],
+    cham: [{ hinh: doan(-0.8, 9, 4, 10.6, 0.7), loai: 'nuoc' }],
+  },
+  lang2: {
+    id: 'lang2',
+    terrain: 'lang',
+    can: [
+      { hinh: doan(7.4, 9, 9.8, 9, 0.9, true), ve: 'nha' },
+      { hinh: tron(2.6, 10, 0.55), ve: 'gieng' },
+      { hinh: doan(-0.6, 12.8, 3.4, 13.2, 0.3), ve: 'rao' },
+    ],
+    cham: [{ hinh: tron(6.2, 12.6, 1), loai: 'nuoc', ve: 'sen' }],
+  },
+  // Đồi sim (màn 9): bụi sim thấp, tảng đá sát mép phải.
+  doi: {
+    id: 'doi',
+    terrain: 'doi',
+    can: [
+      { hinh: tron(2.4, 8.8, 0.8), ve: 'sim' },
+      { hinh: tron(6.6, 10.2, 0.75), ve: 'sim' },
+      { hinh: tron(3.4, 13, 0.7), ve: 'sim' },
+      { hinh: tron(9.5, 13.4, 1), ve: 'da' },
+    ],
+    cham: [],
+  },
+  // Đồng ngập (màn 12): hai vũng nước lũ, khúc gỗ trôi dạt; giữa bãi để trống cho trận đánh thuồng luồng.
+  ngap: {
+    id: 'ngap',
+    terrain: 'ngap',
+    can: [
+      { hinh: doan(6.2, 8.4, 7, 8.9, 0.32), ve: 'go' },
+      { hinh: tron(0, 13.2, 1), ve: 'da' },
+    ],
+    cham: [
+      { hinh: doan(-0.6, 9.6, 2.6, 10.6, 0.85), loai: 'nuoc' },
+      { hinh: tron(7.3, 12.8, 1.2), loai: 'nuoc', ve: 'sen' },
+    ],
+  },
+  // Đỉnh Tản Viên (màn 16): đá nhọn sát hai mép, một hòn phía sau bên trái; giữa bãi để trống cho trận đánh Thủy Tinh.
+  tanVien: {
+    id: 'tanVien',
+    terrain: 'tanVien',
+    can: [
+      { hinh: tron(0.2, 9, 1.1), ve: 'daNhon' },
+      { hinh: tron(8.9, 10.6, 1), ve: 'daNhon' },
+      { hinh: tron(2.4, 13.6, 0.6), ve: 'da' },
+    ],
+    cham: [],
+  },
+
+  // Chương 3: yêu tinh núi Thất Diệu, rồi quân Triệu.
+  rung3: {
+    id: 'rung3',
+    terrain: 'rung',
+    can: [
+      { hinh: tron(-0.1, 9.2, 1.1), ve: 'tre' },
+      { hinh: tron(5.6, 9.6, 0.55), ve: 'da' },
+      { hinh: tron(9.4, 13, 1), ve: 'tre' },
+      { hinh: tron(3, 13.2, 0.6), ve: 'cayChet' },
+    ],
+    cham: [],
+  },
+  benSong3: {
+    id: 'benSong3',
+    terrain: 'benSong',
+    can: [
+      { hinh: doan(2, 8.6, 3.8, 9.2, 0.4), ve: 'thuyen' },
+      { hinh: doan(7.6, 8.2, 9.8, 8.6, 0.3), ve: 'go' },
+    ],
+    cham: [{ hinh: doan(9.8, 10.8, 5.2, 12.8, 0.75), loai: 'nuoc' }],
+  },
+  lang3: {
+    id: 'lang3',
+    terrain: 'lang',
+    can: [
+      { hinh: doan(-0.8, 9, 1.6, 9, 0.9, true), ve: 'nhaChay' },
+      { hinh: tron(6.2, 10, 0.55), ve: 'rom' },
+      { hinh: doan(6.2, 13, 9.6, 12.6, 0.3), ve: 'rao' },
+      { hinh: tron(2.1, 13.2, 0.5), ve: 'gieng' },
+    ],
+    cham: [],
+  },
+  // Núi Thất Diệu (màn 17, 19, đồn bậc 3): cây chết, đá nhọn sát hai mép, vũng bùn bên trái (bùn giữa bãi làm quân ta
+  // sa lầy trước gà trắng).
+  thatDieu: {
+    id: 'thatDieu',
+    terrain: 'thatDieu',
+    can: [
+      { hinh: tron(2.6, 9, 0.7), ve: 'cayChet' },
+      { hinh: tron(9.2, 8.6, 1), ve: 'daNhon' },
+      { hinh: tron(6.7, 12.6, 0.6), ve: 'cayChet' },
+      { hinh: tron(-0.2, 12.8, 1.1), ve: 'daNhon' },
+    ],
+    cham: [{ hinh: tron(2.2, 11.8, 0.8), loai: 'bun' }],
+  },
+  // Cổ Loa (màn 24): hai đoạn lũy đất chắn ngang, chừa cửa giữa; giếng, đống gỗ dựng thành.
+  coLoa: {
+    id: 'coLoa',
+    terrain: 'coLoa',
+    can: [
+      { hinh: doan(-0.8, 8.2, 2, 8.2, 0.45), ve: 'luy' },
+      { hinh: doan(7, 8.2, 9.8, 8.2, 0.45), ve: 'luy' },
+      { hinh: tron(2.2, 12.4, 0.55), ve: 'gieng' },
+      { hinh: doan(7.2, 12.8, 9.8, 13.2, 0.35), ve: 'go' },
+    ],
+    cham: [],
+  },
 };
 
 /**
  * Nền nào dùng bố cục nào, theo chương: mỗi mục là [từ chương, id bố cục]; null là bãi phẳng. Nền chưa có mục nào
- * cũng là bãi phẳng. Màn chương 2 trở đi chưa có bố cục (bật dần theo chương).
+ * cũng là bãi phẳng. Màn chương 4 trở đi chưa có bố cục (bật dần theo chương).
  */
 export const BAI_THEO: Partial<Record<Terrain, readonly (readonly [Chapter, string | null])[]>> = {
   rung: [
     [1, 'rung'],
-    [2, null],
+    [2, 'rung2'],
+    [3, 'rung3'],
+    [4, null],
   ],
   benSong: [
     [1, 'benSong'],
-    [2, null],
+    [2, 'benSong2'],
+    [3, 'benSong3'],
+    [4, null],
   ],
   lang: [
     [1, 'lang'],
-    [2, null],
+    [2, 'lang2'],
+    [3, 'lang3'],
+    [4, null],
   ],
   don: [[1, 'don']],
   nui: [
     [1, 'nui'],
-    [2, null],
+    [2, 'nui2'],
+  ],
+  doi: [[2, 'doi']],
+  ngap: [[2, 'ngap']],
+  tanVien: [[2, 'tanVien']],
+  thatDieu: [[3, 'thatDieu']],
+  coLoa: [
+    [3, 'coLoa'],
+    [4, null],
   ],
   benKia: [[1, 'benKia']],
 };
@@ -760,4 +909,137 @@ export function huongTheo(
   // Đã tới ô nguồn (kẻ địch ở ngay ô này hay ô kề): đi thẳng tới kẻ địch.
   if (path.length === 1 && field[c] === 0) return { x: tx, z: tz, vong: true };
   return { x: cellX(c), z: cellZ(c), vong: true };
+}
+
+// ---------- Luật bố cục ----------
+
+/** Chỗ dàn quân hai bên: phải trống. */
+const BANDS = [
+  { z0: 0.3, z1: 6.4 },
+  { z0: 15, z1: 21.7 },
+];
+
+/**
+ * Kiểm một bố cục theo luật đã chốt (`docs/thiet-ke.md`, mục Bãi chiến có vật cản): nằm trong dải giữa, dải dàn quân
+ * trống, vật cản dày ít nhất 0,6 ô, ô trống liền một khối, có lối rộng 2,5 ô, khe ≥ 1,6 ô, vật cản sát mép chìa ra
+ * ngoài bãi, hàng nào cũng trống ≥ 4 ô, vùng chậm không quá nửa dải giữa. Trả về danh sách lỗi (rỗng là đúng luật).
+ * Test và công cụ dựng bố cục dùng; trận không gọi.
+ */
+export function kiemBai(bai: Bai): string[] {
+  const W = FIELD.w;
+  const loi: string[] = [];
+  const all = [...bai.can.map((c) => c.hinh), ...bai.cham.map((v) => v.hinh)];
+  for (const h of all) {
+    const b = bao(h);
+    // Hình nằm trong dải giữa (tính theo phần nằm trong bãi).
+    for (let x = -2; x <= W + 2; x += 0.1)
+      for (const z of [DAI_GIUA.from - 0.05, DAI_GIUA.to + 0.05])
+        if (sdHinh(h, x, z) < 0 && b.r > 0) {
+          loi.push(`hình chạm ra ngoài dải giữa ở (${x.toFixed(1)}, ${z})`);
+          x = Infinity;
+          break;
+        }
+  }
+  for (const c of bai.can) {
+    const h = c.hinh;
+    if ((h.k === 'tron' && h.r < 0.3) || (h.k === 'doan' && h.half < 0.3)) loi.push('vật cản mỏng hơn 0,6 ô');
+  }
+  // Dải dàn quân trống, cách vật cản ít nhất 0,6 ô, không có nước bùn.
+  for (const { z0, z1 } of BANDS)
+    for (let x = 0.3; x <= W - 0.3 + 1e-9; x += 0.1)
+      for (let z = z0; z <= z1 + 1e-9; z += 0.1) {
+        if (sdfCan(bai, x, z) < 0.6 || chamAt(bai, x, z) < 1) {
+          loi.push(`dải dàn quân bị lấn ở (${x.toFixed(1)}, ${z.toFixed(1)})`);
+          return loi;
+        }
+      }
+  // Lưới thân to, thân nhỏ: mọi ô trống liền một khối, nối hai dải dàn quân.
+  for (const r of [THAN_TO, 0.27]) {
+    const l = luoiDi(bai, r);
+    const comp = new Int32Array(NX * NZ).fill(-1);
+    let n = 0;
+    for (let c = 0; c < NX * NZ; c++) {
+      if (!l.free[c] || comp[c] >= 0) continue;
+      const stack = [c];
+      comp[c] = n;
+      while (stack.length) {
+        const a = stack.pop()!;
+        const i = a % NX;
+        const j = (a - i) / NX;
+        for (const [di, dj] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+          const ni = i + di;
+          const nj = j + dj;
+          if (ni < 0 || nj < 0 || ni >= NX || nj >= NZ) continue;
+          const b = nj * NX + ni;
+          if (l.free[b] && comp[b] < 0) (comp[b] = n), stack.push(b);
+        }
+      }
+      n++;
+    }
+    if (n !== 1) loi.push(`lưới thân ${r} chia thành ${n} khối`);
+  }
+  // Có lối rộng 2,5 ô nối hai dải (tâm lối cách vật cản và mép bãi ít nhất 1,25 ô).
+  const wide = (c: number) => Math.min(sdfCan(bai, cellX(c), cellZ(c)), cellX(c), W - cellX(c)) >= 1.25 - 1e-9;
+  const seen = new Uint8Array(NX * NZ);
+  const stack: number[] = [];
+  for (let c = 0; c < NX * NZ; c++) if (cellZ(c) < 6 && wide(c)) (seen[c] = 1), stack.push(c);
+  let crossed = false;
+  while (stack.length && !crossed) {
+    const a = stack.pop()!;
+    if (cellZ(a) > 15) crossed = true;
+    const i = a % NX;
+    const j = (a - i) / NX;
+    for (const [di, dj] of [[1, 0], [-1, 0], [0, 1], [0, -1], [1, 1], [1, -1], [-1, 1], [-1, -1]]) {
+      const ni = i + di;
+      const nj = j + dj;
+      if (ni < 0 || nj < 0 || ni >= NX || nj >= NZ) continue;
+      const b = nj * NX + ni;
+      if (!seen[b] && wide(b)) (seen[b] = 1), stack.push(b);
+    }
+  }
+  if (!crossed) loi.push('không có lối rộng 2,5 ô nối hai dải dàn quân');
+  // Khe giữa hai vật cản, giữa vật cản với mép bãi: liền nhau hay rộng ít nhất 1,6 ô.
+  const hs = bai.can.map((c) => c.hinh);
+  const step = 0.05;
+  for (let a = 0; a < hs.length; a++) {
+    const gaps: number[] = [];
+    for (let b = a + 1; b < hs.length; b++) {
+      let g = Infinity;
+      for (let x = -1; x <= W + 1; x += step) for (let z = DAI_GIUA.from - 1; z <= DAI_GIUA.to + 1; z += step) g = Math.min(g, Math.max(0, sdHinh(hs[a], x, z)) + Math.max(0, sdHinh(hs[b], x, z)));
+      gaps.push(g);
+    }
+    // Mép bãi: khe từ vật cản tới mép trái, mép phải.
+    let left = Infinity;
+    let right = Infinity;
+    for (let z = DAI_GIUA.from; z <= DAI_GIUA.to; z += step)
+      for (let x = 0; x <= W; x += step) {
+        const s = Math.max(0, sdHinh(hs[a], x, z));
+        left = Math.min(left, s + x);
+        right = Math.min(right, s + W - x);
+      }
+    for (const g of [...gaps, left, right]) if (g > 0.05 && g < 1.6 - 0.05) loi.push(`khe hẹp ${g.toFixed(2)} ô`);
+    // Liền mép bãi thì phải chìa ra ngoài bãi ít nhất 0,5 ô.
+    if (left <= 0.05 && Math.min(...range(DAI_GIUA.from, DAI_GIUA.to, 0.1).map((z) => sdHinh(hs[a], -0.5, z))) > 0) loi.push('vật cản liền mép trái mà không chìa ra ngoài bãi');
+    if (right <= 0.05 && Math.min(...range(DAI_GIUA.from, DAI_GIUA.to, 0.1).map((z) => sdHinh(hs[a], W + 0.5, z))) > 0) loi.push('vật cản liền mép phải mà không chìa ra ngoài bãi');
+  }
+  // Hàng ngang nào cũng còn ít nhất 4 ô trống; vùng chậm không quá nửa dải giữa.
+  let slow = 0;
+  let cells = 0;
+  for (let z = DAI_GIUA.from; z <= DAI_GIUA.to; z += 0.1) {
+    let open = 0;
+    for (let x = 0.05; x < W; x += 0.1) {
+      if (sdfCan(bai, x, z) >= 0) open += 0.1;
+      if (chamAt(bai, x, z) < 1) slow++;
+      cells++;
+    }
+    if (open < 4 - 1e-6) loi.push(`hàng z ${z.toFixed(1)} chỉ còn ${open.toFixed(1)} ô trống`);
+  }
+  if (slow > cells / 2) loi.push('vùng chậm quá nửa dải giữa');
+  return [...new Set(loi)];
+}
+
+function range(a: number, b: number, s: number): number[] {
+  const out: number[] = [];
+  for (let v = a; v <= b + 1e-9; v += s) out.push(v);
+  return out;
 }

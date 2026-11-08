@@ -5,8 +5,8 @@ import { play, setMuted, stopRally, unlockAudio } from './audio/sfx';
 import { useSkill, type HeroKind } from './game/battle';
 import { leaveBattlefield, retreat, startStage, unitAllowed } from './game/campaign';
 import { forgeArms } from './game/binhKhi';
-import { assignCommander, autoGuard, setGuard } from './game/doanhTrai';
-import { assignNu, markNuHinted, nextNuHint } from './game/nuTuong';
+import { autoGuard, setGuard } from './game/doanhTrai';
+import { markNuHinted, nextNuHint } from './game/nuTuong';
 import { forgeNoThan, inChapter3, wallRings } from './game/coLoa';
 import { offer } from './game/tet';
 import { startMau } from './game/mau';
@@ -1226,24 +1226,6 @@ async function start(): Promise<void> {
         return;
       }
 
-      case 'assignTuong': {
-        const r = assignCommander(state, a.id, a.tuong);
-        if (!r.ok) return fail(r.reason);
-        play('claim');
-        hud.toast(vi.ui.commandAssigned(vi.ui.tuongNames[a.tuong]));
-        commit();
-        return;
-      }
-
-      case 'assignNu': {
-        const r = assignNu(state, a.id, a.nu);
-        if (!r.ok) return fail(r.reason);
-        play('claim');
-        hud.toast(vi.nuTuong.assigned(vi.nuTuong.list[a.nu].name));
-        commit();
-        return;
-      }
-
       case 'garrisonDelta': {
         const b = findBuilding(state, a.id);
         const bank = b ? farBankOf(b.x, b.z) : null;
@@ -1256,7 +1238,7 @@ async function start(): Promise<void> {
       }
 
       case 'guardDelta': {
-        const r = setGuard(state, a.id, a.unit, a.delta);
+        const r = setGuard(state, a.unit, a.delta);
         if (!r.ok) return fail(r.reason);
         play('tap');
         commit();
@@ -1423,7 +1405,7 @@ async function start(): Promise<void> {
       .filter(([, n]) => n > 0)
       .map(([r, n]) => `${fmt(n)} ${vi.resources[r].icon}`)
       .join(', ');
-    const text = state.relaid.dien ? vi.ui.relaidDien(refund) : vi.ui.relaid(refund);
+    const text = state.relaid.trai ? vi.ui.relaidTrai(refund) : state.relaid.dien ? vi.ui.relaidDien(refund) : vi.ui.relaid(refund);
     delete state.relaid;
     hud.toast(text);
   };

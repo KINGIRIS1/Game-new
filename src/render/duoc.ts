@@ -13,6 +13,7 @@ import { BEP_LOT } from './congTrinh/bep';
 import { CHUONG_LON_LOT } from './congTrinh/chuongLon';
 import { CHUONG_VOI_LOT } from './congTrinh/chuongVoi';
 import { DEN_HAT_MON_LOT } from './congTrinh/denHatMon';
+import { DEN_RONG_TIEN_LOT } from './congTrinh/denRongTien';
 import { DOANH_TRAI_LOT } from './congTrinh/doanhTrai';
 import { HO_KIM_QUY_LOT } from './congTrinh/hoKimQuy';
 import { KHO_LOT } from './congTrinh/kho';
@@ -22,6 +23,7 @@ import { NHA_SAN_LOT } from './congTrinh/nhaSan';
 import { THO_HO_LOT } from './congTrinh/thoHo';
 import { TRAI_CUNG_LOT } from './congTrinh/traiCung';
 import { TRAI_GIAO_LOT } from './congTrinh/traiGiao';
+import { TRAI_NO_LOT } from './congTrinh/traiNo';
 import { XUONG_MOC_LOT } from './congTrinh/xuongMoc';
 import { C } from './palette';
 import { ShapeBuilder } from './shapes';
@@ -56,6 +58,7 @@ export const DUOC_LOTS: Partial<Record<BuildingType, Lot>> = {
   chuongLon: CHUONG_LON_LOT,
   chuongVoi: CHUONG_VOI_LOT,
   denHatMon: DEN_HAT_MON_LOT,
+  denRongTien: DEN_RONG_TIEN_LOT,
   doanhTrai: DOANH_TRAI_LOT,
   hoKimQuy: HO_KIM_QUY_LOT,
   kho: KHO_LOT,
@@ -65,6 +68,7 @@ export const DUOC_LOTS: Partial<Record<BuildingType, Lot>> = {
   thoHo: THO_HO_LOT,
   traiCung: TRAI_CUNG_LOT,
   traiGiao: TRAI_GIAO_LOT,
+  traiNo: TRAI_NO_LOT,
   xuongMoc: XUONG_MOC_LOT,
 };
 
@@ -103,7 +107,7 @@ function oGan(lot: Lot, ch: string, x: number, z: number, used: Set<number>): { 
 /**
  * Chỗ cắm đuốc trong móng công trình loại `type`, tọa độ móng: gốc ở tâm móng, mặt trước là +z, đơn vị ô (như
  * `Lot`), chưa xoay. Phần lớn công trình: hai cây gần hai góc trước (công trình có bản vẽ ô con thì cắm vào ô trống gần
- * góc nhất). Bến, làng chài, bến khơi quay mặt trước ra sông nên cắm gần hai góc sau, phía bờ. Điện: bốn cây hai bên
+ * góc nhất; doanh trại thêm hai cây hai bên cổng trước). Bến, làng chài, bến khơi quay mặt trước ra sông nên cắm gần hai góc sau, phía bờ. Điện: bốn cây hai bên
  * lối đá giữa sân chầu và hai cây hai bên cổng. Chòi canh, lầu nỏ, cổng thành móng một ô: một, hai cây sát mặt trước.
  */
 export function duocCho(type: BuildingType): { x: number; z: number }[] {
@@ -123,8 +127,18 @@ export function duocCho(type: BuildingType): { x: number; z: number }[] {
   const lot = DUOC_LOTS[type];
   if (!lot) return goc;
   const used = new Set<number>();
-  return goc.map((g) => oTrongGan(lot, g.x, g.z, used)).filter((c): c is { x: number; z: number } => c !== null);
+  // Cổng có lầu (doanh trại): thêm hai cây hai bên cổng trước, cắm vào ô trống sát cổng.
+  const cong = (CONG_TRUOC[type] ?? []).map((g) => oGan(lot, '.', g.x, g.z, used)).filter((c): c is { x: number; z: number } => c !== null);
+  return [...cong, ...goc.map((g) => oTrongGan(lot, g.x, g.z, used)).filter((c): c is { x: number; z: number } => c !== null)];
 }
+
+/** Hai bên cổng trước (tọa độ móng): doanh trại 8×8 rộng, góc trước bên trái kín, nên cắm thêm đuốc ở cổng. */
+const CONG_TRUOC: Partial<Record<BuildingType, { x: number; z: number }[]>> = {
+  doanhTrai: [
+    { x: -0.75, z: 3.25 },
+    { x: 0.75, z: 3.25 },
+  ],
+};
 
 // ---------- Hình và chất liệu dùng chung ----------
 
