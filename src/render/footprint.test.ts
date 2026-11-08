@@ -10,10 +10,10 @@ const ctx = new Proxy({}, { get: (_t, k) => (k === 'canvas' ? {} : () => ({ addC
 vi.stubGlobal('document', { createElement: () => ({ width: 0, height: 0, getContext: () => ctx }) });
 
 /**
- * Móng đã nới ở bản lưu 26 (một doanh trại lớn), bản vẽ cũ tạm phóng cho vừa móng mới tới khi vẽ lại: doanh trại 8×8
- * (PR 2), ba nơi ở 4×4 (PR 3).
+ * Móng đã nới ở bản lưu 26 (một doanh trại lớn), bản vẽ cũ tạm phóng cho vừa móng mới tới khi vẽ lại: ba nơi ở 4×4
+ * (PR 3). Doanh trại 8×8 đã vẽ lại.
  */
-const CHO_VE_LAI: string[] = ['doanhTrai', 'traiGiao', 'traiCung', 'chuongVoi'];
+const CHO_VE_LAI: string[] = ['traiGiao', 'traiCung', 'chuongVoi'];
 
 /** Số ô mô hình được tràn ra ngoài móng mỗi phía. Bến có cầu tàu chìa xuống sông; chòi canh, lầu nỏ có mái chìa; cây đa cổ thụ tán xòe rộng. */
 const ALLOW: Record<string, number> = { ben: Infinity, langChai: Infinity, benKhoi: Infinity, choiCanh: 0.8, lauNo: 0.8, cayDa: 0.95 };

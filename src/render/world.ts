@@ -7,7 +7,8 @@ import { raidSpawnBand, type Battle, type RaidSide } from '../game/battle';
 import { caoLoAtDien } from '../game/caoLo';
 import { HAI_BA_KINDS, haiBaJoined, type HaiBaKind } from '../game/chuong5';
 import { advLook, inChapter3, ruaVangCame, type AdvLook } from '../game/coLoa';
-import { gateToward, generals, heroPost } from '../game/doanhTrai';
+import { inChapter4 } from '../game/chuong4';
+import { doanhCount, gateToward, generals, heroPost } from '../game/doanhTrai';
 import { nuTuongList } from '../game/nuTuong';
 import { dienLevel, occupancy, stairWall, upcomingBoats, type Building, type GameState } from '../game/game';
 import { giongLook, type GiongLook } from '../game/giong';
@@ -23,10 +24,10 @@ import { Battlefield, CAM_KHE } from './battlefield';
 import { BattleView } from './battleView';
 import { IsoCamera, type CamBounds } from './camera';
 import { DOOR_OPEN, banhChung, banhGiay } from './buildings';
-import { PERSON_SCALE } from './congTrinh/chung';
+import { PERSON_SCALE, type LinhTap, type LotOpts } from './congTrinh/chung';
 import { BEP_TET_SEAT } from './congTrinh/bep';
 import { DIEN_LOT, bannerHeight, courtSlot } from './congTrinh/dien';
-import { doanhTraiHeroSpot } from './congTrinh/doanhTrai';
+import { doanhTraiHeroSpot, linhTapCount } from './congTrinh/doanhTrai';
 import type { Swim } from './congTrinh/hoKimQuy';
 import { CONG_TRINH, lotModel } from './congTrinh/index';
 import { makeRuaVang } from './beasts';
@@ -127,6 +128,8 @@ export type Resolution = keyof typeof RESOLUTIONS;
  * cao thì bản thấp gần như y bản đủ, mà thu nhỏ thì thấy gần trọn rừng cả nghìn cây. Phóng to quá thì hiện bản đủ.
  */
 const LITE_ZOOM = 1;
+/** Nhịp lính tập trong sân doanh trại: số lần đổi tư thế mỗi giây. */
+const DRILL_BEAT = 1.4;
 
 /** Đất, nước và ô lưới dùng chất liệu Lambert đơn giản, công trình và cây mới dùng tô màu hoạt hình. */
 const groundMaterial = new THREE.MeshLambertMaterial({ vertexColors: true });
@@ -281,6 +284,8 @@ interface BuildingView {
   boi: boolean;
   /** Cầu: mặt bờ hai đầu đang vẽ (`bankKey`); bờ đắp cao thêm thì dựng lại cho đầu cầu gác đúng mặt bờ. */
   banks: string;
+  /** Doanh trại: các doanh, lính tập, giá nỏ đang vẽ (`campKey`); tướng về thêm, lính đổi thì dựng lại. */
+  camp: string;
   people: WorkerView[];
   popAge: number;
   baseScale: number;
@@ -324,11 +329,35 @@ const WORKED: BuildingType[] = ['ruong', 'ben', 'baiDa', 'loRen', 'xuongMoc', 'l
 /** Số người hiện ra: công trình cần người làm thì đúng số người đang làm, còn lại cố định theo cấp. */
 function peopleCount(b: Building, spots: number): number {
   if (WORKED.includes(b.type)) return Math.min(b.workers, spots);
-  if (b.type === 'nhaSan' || b.type === 'doanhTrai') return Math.min(b.level >= 2 ? 2 : 1, spots);
+  if (b.type === 'nhaSan') return Math.min(b.level >= 2 ? 2 : 1, spots);
+  // Doanh trại: mỗi lầu cổng một lính gác (cấp 1 một người trong cổng tre).
+  if (b.type === 'doanhTrai') return spots;
   // Nhà thợ hồ: thợ đóng gạch, thợ cả, thêm người nhào đất, nện tường theo cấp.
   if (b.type === 'thoHo') return Math.min(b.level >= 3 ? 4 : b.level >= 2 ? 3 : 2, spots);
   return Math.min(1, spots);
 }
+
+/** Binh chủng đứng tập trong sân doanh trại, theo thứ tự đứng (giáo binh hàng giữa trước). */
+const LINH_TAP: LinhTap[] = ['giao', 'cung', 'no'];
+
+/**
+ * Doanh trại cấp `level` vẽ theo state: tướng của từng doanh, lính đứng tập (đúng số chỗ theo cấp, không quá số lính
+ * đang có, chia theo tỉ lệ binh chủng đã luyện, phần dư lớn nhất được thêm), giá nỏ khi đã sang chương 4.
+ */
+function campOpts(state: GameState, level: number): LotOpts {
+  const have = LINH_TAP.map((k) => Math.max(0, state.troops[k] ?? 0));
+  const total = have.reduce((a, b) => a + b, 0);
+  const n = Math.min(linhTapCount(level), total);
+  const share = have.map((h) => (total ? (h * n) / total : 0));
+  const cnt = share.map(Math.floor);
+  const order = LINH_TAP.map((_, j) => j).sort((a, b) => share[b] - cnt[b] - (share[a] - cnt[a]));
+  for (let k = 0; cnt.reduce((a, b) => a + b, 0) < n; k++) cnt[order[k % order.length]]++;
+  const linh = LINH_TAP.flatMap((kind, j) => Array.from({ length: cnt[j] }, () => ({ kind, tier: state.arms[kind] ?? 0 })));
+  return { doanh: generals(state).slice(0, doanhCount(state)), linh, no: inChapter4(state) };
+}
+
+/** Khóa so dáng doanh trại đang vẽ với state (`campOpts`). */
+const campKey = (o: LotOpts): string => `${o.doanh?.join(',')}|${o.linh?.map((l) => l.kind + l.tier).join(',')}|${o.no ? 1 : 0}`;
 
 /** Đoạn tường mà cổng thành, cống đê nối vào: cổng, cống xoay theo những đoạn này. */
 const GATE_WALLS: BuildingType[] = ['luy', 'de', 'thanh', 'congThanh', 'congDe'];
@@ -466,6 +495,8 @@ export class World {
   private readonly views = new Map<number, BuildingView>();
   /** Có giặc (trinh sát đã báo hay đang đánh): cửa cổng thành đóng lại; lúc yên thì mở. */
   private gatesShut = false;
+  /** Đang có trận giữ kinh đô: lính tập trong sân doanh trại đã ra trận, sân để trống. */
+  private drillOut = false;
   /** Thuyền trên sông: thuyền xuôi sông Thao (`home` là 'z') tới ngã ba thì rẽ sang sông Đà. */
   private readonly boats: { obj: THREE.Object3D; axis: 'x' | 'z'; home: 'x' | 'z'; speed: number; pos: number }[] = [];
   private readonly rippleState: { axis: 'x' | 'z'; pos: number; lane: number; len: number }[] = [];
@@ -1002,6 +1033,7 @@ export class World {
 
     const alive = new Set<number>();
     this.gatesShut = state.raid.phase !== 'idle';
+    this.drillOut = state.raid.phase === 'battle';
     let wallTiles: Set<number> | null = null;
     // Công trình đang dựng mới chưa vào `state.buildings` nhưng đã chiếm chỗ: vẽ mô hình mọc dần trong giàn giáo.
     const pend = pendingBuildings(state);
@@ -1012,7 +1044,9 @@ export class World {
       const v = this.views.get(b.id);
       const dung = dungIds.has(b.id);
       const banks = isBridge(b.type) ? bankKey(this.bridgeBanks(b.type, b.x, b.z)) : b.type === 'bacThanh' ? this.stairOf(b).key : '';
-      if (!v || v.type !== b.type || v.level !== b.level || v.damaged !== !!b.damaged || v.workers !== b.workers || v.x !== b.x || v.z !== b.z || v.rot !== (b.rot ?? 0) || v.boi !== !!b.boi || v.banks !== banks || v.dung !== dung) this.createView(b, dung);
+      // Giữa trận lính chết không dựng lại doanh trại (đỡ giật hình); hết trận mới vẽ theo số lính còn.
+      const camp = b.type !== 'doanhTrai' ? '' : v && state.raid.phase === 'battle' ? v.camp : campKey(campOpts(state, b.level));
+      if (!v || v.type !== b.type || v.level !== b.level || v.damaged !== !!b.damaged || v.workers !== b.workers || v.x !== b.x || v.z !== b.z || v.rot !== (b.rot ?? 0) || v.boi !== !!b.boi || v.banks !== banks || v.camp !== camp || v.dung !== dung) this.createView(b, dung);
       else if (!banks && v.ground !== this.heights[b.z * GRID + b.x]) {
         v.ground = this.heights[b.z * GRID + b.x];
         v.group.position.y = topY(v.ground);
@@ -1585,7 +1619,8 @@ export class World {
     const def = BUILDINGS[b.type];
     const banks = isBridge(b.type) ? this.bridgeBanks(b.type, b.x, b.z) : undefined;
     const stair = b.type === 'bacThanh' ? this.stairOf(b) : undefined;
-    const group = this.makeBuilding(b.type, b.level, !!b.boi, banks, stair?.rise);
+    const camp = b.type === 'doanhTrai' && this.state ? campOpts(this.state, b.level) : {};
+    const group = this.makeBuilding(b.type, b.level, !!b.boi, banks, stair?.rise, camp);
     // Bến, làng chài quay mặt trước ra sông: sông phía đông thì xoay một góc vuông. Công trình người chơi đã xoay thì
     // quay theo hướng ấy (người làm, thuyền neo là con của mô hình nên quay theo). Bậc lên thành quay mép cao về
     // phía đoạn thành.
@@ -1660,7 +1695,7 @@ export class World {
       group.add(smoke);
     }
     this.buildingsRoot.add(group);
-    this.views.set(b.id, { group, type: b.type, level: b.level, damaged: !!b.damaged, workers: b.workers, x: b.x, z: b.z, rot: b.rot ?? 0, ground, boi: !!b.boi, banks: stair?.key ?? bankKey(banks), people, popAge: 0, baseScale: group.scale.x, dung });
+    this.views.set(b.id, { group, type: b.type, level: b.level, damaged: !!b.damaged, workers: b.workers, x: b.x, z: b.z, rot: b.rot ?? 0, ground, boi: !!b.boi, banks: stair?.key ?? bankKey(banks), camp: b.type === 'doanhTrai' ? campKey(camp) : '', people, popAge: 0, baseScale: group.scale.x, dung });
     if (dung) this.growView(this.views.get(b.id)!);
   }
 
@@ -1743,8 +1778,8 @@ export class World {
    * Mô hình công trình đặt vừa móng (`lotModel`): vẽ trên móng mới, hay dáng cũ phóng theo móng. `boi`: ruộng có phù
    * sa. `banks`: cầu, mặt bờ hai đầu.
    */
-  private makeBuilding(type: BuildingType, level: number, boi = false, banks?: BridgeBanks, rise?: number): THREE.Group {
-    return lotModel(type, level, { boi, banks, rise });
+  private makeBuilding(type: BuildingType, level: number, boi = false, banks?: BridgeBanks, rise?: number, camp: LotOpts = {}): THREE.Group {
+    return lotModel(type, level, { boi, banks, rise, ...camp });
   }
 
   /**
@@ -2306,12 +2341,15 @@ export class World {
     return b ? this.postSpot(b, tuong) : null;
   }
 
-  /** Chỗ tướng `tuong` đứng trong sân doanh trại `b` (mỗi tướng một chỗ cố định, đã xoay theo trại). */
-  private postSpot(b: Building, tuong: TuongId): { x: number; y: number; z: number } {
+  /**
+   * Chỗ tướng `tuong` đứng trên đài tướng doanh trại `b` (mỗi tướng một chỗ cố định, đã xoay theo trại), nhìn ra sân
+   * tập. Cấp 1 chưa có đài thì đứng trên sân.
+   */
+  private postSpot(b: Building, tuong: TuongId): Required<HeroSpot> {
     const def = BUILDINGS.doanhTrai;
-    const c = doanhTraiHeroSpot(tuong);
+    const c = doanhTraiHeroSpot(tuong, b.level);
     const at = turnLocal(b.rot, c.x, c.z);
-    return { x: wx(b.x) + def.w / 2 + at.x, y: this.groundY(b.x, b.z) + 0.08, z: wz(b.z) + def.d / 2 + at.z };
+    return { x: wx(b.x) + def.w / 2 + at.x, y: this.groundY(b.x, b.z) + 0.05 + c.y, z: wz(b.z) + def.d / 2 + at.z, ry: c.ry + rotAngle(b.rot) };
   }
 
   /**
@@ -2452,7 +2490,7 @@ export class World {
   /** Chỗ bà `kind` ở kinh đô: trong sân doanh trại (cưỡi voi), chưa có doanh trại thì đứng chầu trong sân Điện. */
   private haiBaSpot(state: GameState, kind: HaiBaKind, dien: Building | undefined): Required<HeroSpot> & { onFoot: boolean } | null {
     const post = heroPost(state);
-    if (post) return { ...this.postSpot(post, kind), ry: 0.4 + rotAngle(post.rot), onFoot: false };
+    if (post) return { ...this.postSpot(post, kind), onFoot: false };
     return dien ? { ...this.courtSpot(dien, kind), onFoot: true } : null;
   }
 
@@ -3044,6 +3082,9 @@ export class World {
     }
 
     for (const site of this.sites.values()) for (const w of site.people) this.animateWorker(w, t);
+    // Lính tập trong sân doanh trại đổi tư thế theo nhịp hô "một, hai"; thu nhỏ (`LITE_ZOOM`) thì đứng yên; có trận giữ
+    // kinh đô thì đã ra trận (−1: không nhóm nào hiện). Đồng hồ cảnh có lúc âm (chụp thử tua giờ) nên lấy số dư dương.
+    const beat = this.drillOut ? -1 : this.view.zoom < LITE_ZOOM ? 0 : ((Math.floor(t * DRILL_BEAT) % 2) + 2) % 2;
     for (const v of this.views.values()) {
       for (const w of v.people) this.animateWorker(w, t);
       if (v.dung) this.growView(v);
@@ -3060,6 +3101,7 @@ export class World {
         if (child.userData.dock !== undefined) child.position.y = (child.userData.dock as number) + Math.sin(t * 1.6 + v.group.id) * 0.03;
         if (child.userData.fishing) this.rowFishingBoat(child, t);
         if (child.userData.swim) this.swimTurtle(child, t + v.group.id);
+        if (child.userData.drill !== undefined) child.visible = child.userData.drill === beat;
         if (child.userData.flame) child.scale.y = 0.75 + 0.35 * Math.abs(Math.sin(t * 9 + child.id));
         if (child.userData.spin) child.rotation.x = t * (child.userData.spin as number);
         if (child.userData.door) {

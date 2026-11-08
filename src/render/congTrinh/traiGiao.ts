@@ -95,7 +95,7 @@ function leuChuA(m: ToonModel, x: number, z: number, length: number, width: numb
 }
 
 /** Giá giáo dựng dọc trục x: hai cột, xà ngang, giáo dựa xà ngả về sau, mũi đồng lớn (cỡ như dáng cũ). */
-function giaGiao(m: ToonModel, x: number, z: number, w: number, count: number): void {
+export function giaGiao(m: ToonModel, x: number, z: number, w: number, count: number): void {
   const p = m.plain;
   for (const s of [-1, 1]) p.cyl(0.033, 0.038, 0.9, C.woodDark, x + (s * w) / 2, 0.45, z - 0.09, undefined, 6);
   p.box(w + 0.08, 0.06, 0.06, C.woodDark, x, 0.86, z - 0.09);
@@ -111,7 +111,7 @@ function giaGiao(m: ToonModel, x: number, z: number, w: number, count: number): 
  * Cọc rơm tập đâm (cỡ như `strawDummy` cũ): cọc gỗ, bó rơm làm thân hạ thấp ngang tầm mũi giáo của lính đứng thế thủ,
  * thanh ngang làm vai, nắm rơm làm đầu.
  */
-function cocRom(p: ToonModel['plain'], x: number, z: number): void {
+export function cocRom(p: ToonModel['plain'], x: number, z: number): void {
   p.cyl(0.026, 0.026, 0.68, C.woodDark, x, 0.39, z, undefined, 5);
   p.cyl(0.11, 0.11, 0.31, C.thatch, x, 0.42, z, undefined, 7);
   p.box(0.043, 0.043, 0.34, C.woodDark, x, 0.62, z);

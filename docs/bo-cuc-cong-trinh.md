@@ -245,9 +245,41 @@ V V V . . .
 - `6` cấp 6, cót thóc lớn trên vòng đá (cấp 7: cót cao, thêm đai tre).
 - Người giữ kho đi qua lại trên dải sân giữa vựa phụ và sân phơi.
 
-### Doanh trại: 3×3 → 4×4
+### Doanh trại: 3×3 → 4×4 → 8×8
 
-Nhà dài để trống không vách chạy suốt phía sau, sân tập rộng ở giữa cho tướng đứng, chòi trống sau bên phải, đài tướng trước bên phải.
+Từ bản lưu 26 chỉ còn một doanh trại (đại doanh), móng 8×8 (chủ dự án yêu cầu; xem mục Kế hoạch: một doanh trại lớn trong `docs/thiet-ke.md`). Lấy bố cục của hình mẫu chủ dự án gửi (khuôn viên vuông có tường bao, lầu cổng, sân tập rộng có lính tập), giữ nét Đông Sơn. Nhà dài cao xếp dọc tường sau và tường trái, phải; phía trước chỉ có phần thấp cho khỏi che lính tập và tướng.
+
+```
+# # # # # # # C C # # # # # # #
+# H H H H H . C C . I I I I I #
+# H H H H H . , , . I I I I I #
+# J J . D D D D D D D D . L L #
+# J J . D D D D D D D D . L L #
+# J J . D D D D D D D D . L L #
+# J J . D D D D D D D D . L L #
+C C . . . . . , , . . . . . C C
+C C . . s . s , , s . s . . C C
+# K K . . . . , , . . . . o . #
+# K K . s . s , , s . s . o . #
+# K K . . . . , , . . . . o . #
+# K K . s . s , , s . s . . . #
+# T T . . . . , , . . . b . b #
+# T T g g f . C C . . . . . . #
+# # # # # # # C C # # # # # # #
+```
+
+- `#` cấp 1, rào cọc vót nhọn quanh móng (như ba nơi ở); cấp 3 tường đất nện thấp chân kè đá, đỉnh có mái tranh nhỏ hai mái.
+- `C` cấp 1, cổng tre giữa mặt trước: hai cột đầu vót, xà ngang, vải đỏ. Cấp 2 thành lầu cổng: bốn cột chân, giằng chéo, sàn lầu lan can đỏ, chòi mái tranh cong, cờ đuôi nheo đỏ. Cấp 3 thêm lầu cổng sau, trái, phải. Chỗ cổng khớp `gates` (`src/game/doanhTrai.ts`): lính, tướng giữ kinh đô ra từ cổng gần giặc.
+- `H I J K L` nhà dài để trống không vách, mái thẳng, sàn ván thấp, chiếu ngủ, chăn cuộn; mỗi doanh một nhà theo thứ tự doanh, có khi có tướng thứ ấy (không theo cấp). Góc nhà nhìn ra sân cắm cờ hiệu màu tướng.
+- `D` cấp 2, đài tướng: nền đất đắp kè đá, sàn ván có mạch, chiếu cói viền đỏ mỗi chỗ tướng, lan can đỏ, bậc đá giữa, lọng đỏ giữa mép sau. Tướng ở trại đứng trên đài nhìn ra sân: Trưng Trắc (voi), Gióng (ngựa sắt), Sơn Tinh, Trưng Nhị (voi), từ trái qua phải.
+- `s` cấp 1, lính tập: cấp 1 bốn người hàng giữa, mỗi cấp thêm hai, cấp 5 mười hai. Theo tỉ lệ binh chủng đã luyện, đổi hai tư thế theo nhịp.
+- `,` cấp 1, lối từ cổng sau tới nhà dài và từ cổng trước tới bậc đài (cấp 4 lát đá có mạch). Sân tập đất nện sẫm hơn sân, cấp 4 kẻ ô vạch vôi.
+- `g` cấp 1, giá giáo đồng (chương 4 thêm giá nỏ). `f` cấp 4, cột cờ lớn chân kè đá, cờ đỏ viền vàng.
+- `o` cấp 3, ba cọc rơm tập đâm. `b` cấp 3, hai bia rơm tròn.
+- `T` cấp 5, chòi trống trận: chân cột cao, sàn lan can đỏ, trống đồng, mái tranh nhọn, thang tre quay ra sân.
+- Lính gác: cấp 1 một người trong cổng tre; có lầu cổng thì mỗi lầu một người đứng trên sàn lầu.
+
+Bản 4×4 trước bản lưu 26 (nay không dùng):
 
 ```
 H H H H H H H H
@@ -259,17 +291,6 @@ h h . . . . 2 2
 g . . . . . 2 2
 . . . , , . . .
 ```
-
-- `H` cấp 1, nhà dài để trống không vách, mái thẳng; sàn ván thấp, chiếu ngủ, chăn cuộn.
-- `X` cấp 1, chỗ tướng đứng giữa sân tập (đất nện sẫm hơn sân).
-- `g` cấp 1, giá giáo đồng chạy dọc mép trái.
-- `,` cấp 1, cổng trại: hai cột, xà ngang, vải đỏ, cờ đuôi nheo.
-- `2` cấp 2, đài tướng: nền đất đắp, sàn ván, chiếu cói, lan can đỏ, lọng đỏ.
-- `h` cấp 4, nhà dài thứ hai quay dọc bên trái.
-- `5` cấp 5, chòi trống trận có mái nhọn, thang tre.
-- Đài tướng và chòi trống đổi chỗ so với bản đầu: chòi trống cao đứng trước tướng thì che tướng (camera nhìn từ trước bên phải), nên chòi lùi về sau cạnh nhà dài, đài tướng thấp ra trước.
-- Cấp 3: rào cọc vót nhọn hai bên và mặt trước (phía sau đã có nhà dài), chừa cổng giữa mặt trước. Trại giáo, trại cung, chuồng voi dựng sát doanh trại dùng cùng kiểu rào.
-- Hai lính gác: trong cổng bên trái, và giữa chòi trống với đài tướng; không ai đứng trước tướng.
 
 ### Trại giáo: 2×2 → 3×3
 
