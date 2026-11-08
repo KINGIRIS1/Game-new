@@ -2777,7 +2777,8 @@ Trước đây chương nào cũng đánh trên cùng một bãi chữ nhật ph
 - **Tên, kỹ năng**: tên và kỹ năng vùng (Bốc đồi, Dời non, Nỏ thần, Liên châu, Lệnh nỏ, Rùa Vàng) bay qua vật cản, trận không tính tầm nhìn. Ai đánh gần mà tầm từ 1,2 ô trở lên (tướng, trùm) đâm qua được rào mỏng.
 - **Đẩy, lướt, gọi thêm quân**: Phun lửa, Nhổ tre, Voi xung trận, sóng Thủy Tinh dời người tới mép vật cản thì dừng; dải lửa Phun lửa vẫn cháy đủ dài. Quân gọi thêm (tôm binh, nghĩa binh) hiện ở chỗ trống gần nhất. Tô Định bỏ chạy thì đi vòng vật cản về cuối bãi.
 - **Vẻ ngoài**: mặt bãi vẫn phẳng, sáng một màu cho dễ nhìn lính. Vật cản thấp, dưới chừng 1,3 ô; nhà, ruộng ngô chỉ sát mép bãi, để camera nghiêng 45° không che lính.
-- **Điểm mặc định** (chủ dự án đổi được): thủy quái bơi trong nước như đi thường; ma trơi không bay qua vật cản; chưa ghi tên địa hình lên thẻ màn, chưa có lời gợi ý của Lạc hầu.
+- **Điểm mặc định** (chủ dự án đổi được): thủy quái bơi trong nước như đi thường; ma trơi không bay qua vật cản.
+- **Thẻ màn, thẻ đồn** (chủ dự án cho làm sau PR 4): hàng **Địa hình** kể các vật cản của bãi (mỗi dáng một lần, như "Ruộng ngô, khóm lau, thuyền mắc cạn; nước nông (lội chậm)"; `baiHtml` ở `ui/campaign.ts`, tên dáng ở `vi.ui.baiChien`). Tới khi đánh trận ngoài bãi có vật cản đầu tiên, thẻ còn kèm lời Lạc hầu: quân ta tự đi vòng qua chỗ trống, lội nước, lội bùn thì chậm, tên, nỏ vẫn bắn qua vật cản (`baiHintHtml`; đánh rồi thì ghi `baiChien` vào `hinted`, `needsBaiHint`, `markBaiHinted` ở `campaign.ts`). Lời nhắc nằm trong thẻ chứ không là dòng báo giữa trận, để khỏi che chỗ hai bên giáp nhau. Không đổi bản lưu.
 
 ### Đi quanh vật cản (`src/game/baiChien.ts`, đã làm ở PR 1)
 

@@ -4,7 +4,7 @@ import './style.css';
 import { play, setMuted, stopRally, unlockAudio } from './audio/sfx';
 import { skillReady, useSkill, type HeroKind } from './game/battle';
 import { attackFrom, beginPvp, canPractice, lootPvp, pushInput, scorePvp, stepPvp, validateArmy, type PvpRun } from './game/dauThanh';
-import { leaveBattlefield, retreat, startStage, unitAllowed } from './game/campaign';
+import { leaveBattlefield, markBaiHinted, needsBaiHint, retreat, startStage, unitAllowed } from './game/campaign';
 import { forgeArms } from './game/binhKhi';
 import { autoGuard, fieldCap, fitArmy, setGuard } from './game/doanhTrai';
 import { markNuHinted, nextNuHint } from './game/nuTuong';
@@ -253,6 +253,11 @@ async function start(): Promise<void> {
     hud.toast(vi.nuTuong.hint[nu], false, 8000);
   };
 
+  /** Trận ngoài bãi đầu tiên có vật cản: thẻ màn, thẻ đồn thôi kèm lời Lạc hầu nhắc về vật cản. */
+  const seenBai = () => {
+    if (needsBaiHint(state)) markBaiHinted(state);
+  };
+
   /** Cây dại, tảng đá đầu tiên mọc: Lạc hầu gợi ý một lần cách dọn. */
   const showCayDaHint = () => {
     if (!state.cayDa.list.length || state.hinted.includes('cayDa')) return;
@@ -298,6 +303,7 @@ async function start(): Promise<void> {
     showHint();
     showNuHint();
     showCayDaHint();
+    seenBai();
     save();
     world.sync(scene());
     refreshFloodPreview();

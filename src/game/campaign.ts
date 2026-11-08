@@ -6,7 +6,7 @@
 // Chọn lính mang theo, xếp hàng theo binh chủng, xuất quân; lính chết thì mất, thắng thì có thưởng.
 
 import { retreatField, startFieldBattle, stepField, type HeroKind } from './battle';
-import { stageBai } from './baiChien';
+import { baiById, stageBai } from './baiChien';
 import { finishCamp } from './benKia';
 import { CH4_LAST, LAY_TRAO_AT, LENH_BAN_AT, caoLoJoined, caoLoResting } from './caoLo';
 import { inChapter4 } from './chuong4';
@@ -288,4 +288,21 @@ export function leaveBattlefield(state: GameState): void {
   if (battle && !battle.outcome) return;
   state.campaign.battle = null;
   state.campaign.lastResult = null;
+}
+
+// ---------- Lạc hầu nhắc bãi có vật cản ----------
+
+/**
+ * Khóa trong `hinted`: đã đánh trận ngoài bãi có vật cản đầu tiên. Tới lúc ấy thẻ màn, thẻ đồn có bãi vật cản kèm lời
+ * Lạc hầu nhắc (quân đi vòng, lội chậm, tên bắn qua); đánh rồi thì thôi nhắc.
+ */
+export const BAI_HINT = 'baiChien';
+
+/** Đang đánh ngoài bãi có vật cản (phó bản, thử thách hay đồn giặc) mà chưa ghi là đã đánh trận như thế. */
+export function needsBaiHint(s: GameState): boolean {
+  return !!baiById(s.campaign.battle?.bai) && !s.hinted.includes(BAI_HINT);
+}
+
+export function markBaiHinted(s: GameState): void {
+  if (!s.hinted.includes(BAI_HINT)) s.hinted = [...s.hinted, BAI_HINT];
 }

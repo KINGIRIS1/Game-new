@@ -3,9 +3,10 @@
 // thẻ màn (kèm khung thử thách), bảng xếp quân (màn thường hay thử thách), bảng Huân công và bảng kết quả trận.
 // Chỉ dựng chuỗi HTML; Hud lo việc gắn vào trang và bắt sự kiện.
 
+import { baiById, stageBai, type Bai } from '../game/baiChien';
 import { heroSkills, type HeroKind, type HeroSetup } from '../game/battle';
 import { CAMPS, campHero, campTier } from '../game/benKia';
-import { CH2_LAST, canStartStage, chapterStages, stageDef, stageHero, stageHeroCheck, stageHeroList, stageHeroes, stageOpen, stageReward, unitAllowed } from '../game/campaign';
+import { BAI_HINT, CH2_LAST, canStartStage, chapterStages, stageDef, stageHero, stageHeroCheck, stageHeroList, stageHeroes, stageOpen, stageReward, unitAllowed } from '../game/campaign';
 import { CH5_LAST, HAI_BA_KINDS, haiBaJoined, haiBaResting, isHaiBa } from '../game/chuong5';
 import { CH4_LAST } from '../game/caoLo';
 import { CH3_LAST } from '../game/coLoa';
@@ -294,6 +295,8 @@ export function stageHtml(state: GameState, n: number): string {
     <h3>${vi.ui.stageN(n)} · ${esc(text.name)} ${hasBoss(n) ? `<span class="tag">👹 ${vi.ui.stageBoss}</span>` : ''}</h3>
     <p class="intro">${esc(text.intro)}</p>
     <div class="stat"><span>${vi.ui.enemyArmy}</span><b>${enemyList(n)}</b></div>
+    ${baiHtml(baiById(stageBai(n)))}
+    ${baiHintHtml(state, baiById(stageBai(n)))}
     ${holdNote(n)}
     <div class="stat"><span>${first ? vi.ui.firstReward : vi.ui.replayReward}</span>${costHtml(null, stageReward(state, n))}</div>
     ${gift && !state.son.gifts[gift] ? `<div class="stat"><span>${vi.ui.giftWon}</span><b>${vi.gifts[gift].icon} ${esc(vi.gifts[gift].name)}</b></div>` : ''}
@@ -305,6 +308,24 @@ export function stageHtml(state: GameState, n: number): string {
     </div>
     ${challengeHtml(state, n)}
   </div>`;
+}
+
+/**
+ * Hàng Địa hình: vật cản trên bãi (mỗi dáng một lần, theo thứ tự trong bố cục), rồi vùng nước, bùn làm chậm. Bãi
+ * phẳng (chưa có bố cục) ghi bãi trống.
+ */
+export function baiHtml(bai: Bai | undefined): string {
+  const t = vi.ui.baiChien;
+  const can = [...new Set(bai?.can.map((c) => t.can[c.ve]) ?? [])];
+  const cham = [...new Set(bai?.cham.map((v) => t.cham[v.loai]) ?? [])];
+  const parts = [can.join(', '), cham.length ? `${cham.join(', ')} (${t.chamNote})` : ''].filter(Boolean);
+  const text = parts.length ? parts.join('; ') : t.flat;
+  return `<div class="stat"><span>${t.label}</span><b>${esc(text.charAt(0).toUpperCase() + text.slice(1))}</b></div>`;
+}
+
+/** Lời Lạc hầu nhắc về vật cản, kèm thẻ màn, thẻ đồn có vật cản cho tới khi đánh trận có vật cản đầu tiên. */
+export function baiHintHtml(state: GameState, bai: Bai | undefined): string {
+  return bai && !state.hinted.includes(BAI_HINT) ? `<p class="loi-lac-hau">${esc(vi.ui.baiChien.hint)}</p>` : '';
 }
 
 /** Luật thử thách màn `n`: kiểu, binh chủng được mang (Hai binh chủng). */
