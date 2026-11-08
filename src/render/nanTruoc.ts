@@ -61,6 +61,10 @@ const makeWorker = () =>
 
 /** Worker mở sẵn lúc tải trang (`moSanWorker`), chờ việc. */
 let san: Worker | null = null;
+/** Số việc đã giao worker mà chưa xong (đo lag chờ về 0 rồi mới đo, khỏi bị worker giành máy). */
+let conNan = 0;
+
+export const nanConLai = (): number => conNan;
 
 /**
  * Mở sẵn worker ngay khi tải trang, trước khi đọc kho và dựng cảnh: worker cần luồng chính rảnh một chút mới khởi động
@@ -101,12 +105,21 @@ export function nanTruoc(jobs: readonly Job[]): void {
     return;
   }
   const w = worker;
+  let con = todo.length;
+  conNan += con;
+  const het = () => {
+    conNan -= con;
+    con = 0;
+    w.terminate();
+  };
   w.onmessage = (e: MessageEvent<JobDone | null>) => {
-    if (!e.data) return w.terminate();
+    if (!e.data) return het();
+    con--;
+    conNan--;
     addFigures(e.data.figs);
     ghiViec(e.data.job, e.data.keys);
     luuSau();
   };
-  w.onerror = () => w.terminate();
+  w.onerror = het;
   w.postMessage(todo);
 }

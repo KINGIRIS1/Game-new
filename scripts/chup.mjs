@@ -2,6 +2,7 @@
 // Chụp thử game ở khổ điện thoại bằng Playwright, để nhìn tận mắt mỗi thay đổi ở src/render/ và src/ui/.
 // Script tự bật Vite, mở game, dựng cảnh qua window.__debug và các module luật chơi, rồi lưu ảnh vào chup/.
 // Cách dùng: node scripts/chup.mjs --giup
+// Cảnh và cách dựng cảnh (`CANH`, `dungCanh`) dùng chung với scripts/do-lag.mjs.
 
 import { createRequire } from 'node:module';
 import { mkdir } from 'node:fs/promises';
@@ -12,7 +13,7 @@ const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const require = createRequire(import.meta.url);
 
 /** Khổ màn hình (điểm CSS). Game làm cho điện thoại cầm dọc trước tiên. */
-const KHUNG = {
+export const KHUNG = {
   doc: { width: 390, height: 844 },
   /** Màn ngoài Samsung Galaxy Z Fold5 (máy thử chính): dài, hẹp. */
   fold: { width: 344, height: 882 },
@@ -143,7 +144,7 @@ const NHIN_CONG = `const c = s.buildings.find((b) => b.type === 'congDe'); d.cam
 /** Đủ quân mẫu một trận (38 chỗ) để đánh thử Đấu thành. */
 const DU_QUAN = `s.troops = { giao: 14, cung: 12, voi: 4, no: 0 };`;
 
-const CANH = {
+export const CANH = {
   'man-vao': {
     mo: 'Màn hình vào game của bản lưu chương 1 (Điện cấp 5), vắng 3 giờ',
     truoc: KINH_DO,
@@ -349,7 +350,7 @@ function docThamSo(argv) {
   return opts;
 }
 
-function napPlaywright() {
+export function napPlaywright() {
   for (const name of ['playwright', '@playwright/test']) {
     try {
       return require(name);
@@ -362,7 +363,7 @@ function napPlaywright() {
 }
 
 /** Chạy một đoạn mã trong trang với các biến d, s, G, M, D, C, S, X, K, B. */
-async function chayMa(page, ma) {
+export async function chayMa(page, ma) {
   if (!ma.trim()) return;
   await page.evaluate(async (ma) => {
     const urls = ['/src/game/game.ts', '/src/game/moPhong.ts', '/src/game/defs.ts', '/src/game/campaign.ts', '/src/game/story.ts', '/src/game/mau.ts', '/src/game/khoanh.ts', '/src/game/benKia.ts'];
@@ -373,7 +374,7 @@ async function chayMa(page, ma) {
   }, ma);
 }
 
-async function choGame(page) {
+export async function choGame(page) {
   await page.waitForFunction(() => window.__debug || document.querySelector('.fatal'), null, { timeout: 30000 });
   const fatal = await page.locator('.fatal').count();
   if (fatal) throw new Error(`Game không chạy được: ${await page.locator('.fatal').innerText()}`);
@@ -392,8 +393,57 @@ async function cham(page, dich) {
   await page.touchscreen.tap(p.x, p.y);
 }
 
-async function chupMotCanh(browser, url, tenCanh, khung, opts) {
+/**
+ * Dựng cảnh `tenCanh` trên `page`: mở game, chạy `truoc` (cảnh và `opts.truoc`), tải lại, ghim giờ, bấm qua màn hình vào
+ * game, chạy `sau`, đặt camera, chạm, bấm, chờ rồi chạy `truocKhiChup`. `moc.sauTaiLai`, `moc.sauKhiVao` chạy ngay sau
+ * khi tải lại và ngay sau khi vào game (đo lag bật làm chậm CPU, bắt đầu ghi khung ở đó).
+ */
+export async function dungCanh(page, url, tenCanh, opts, moc = {}) {
   const canh = CANH[tenCanh];
+  await page.goto(url, { waitUntil: 'load' });
+  await choGame(page);
+
+  // Dựng state, đánh dấu các đoạn truyện đã xem (trừ cảnh muốn xem truyện), lưu rồi tải lại cho giao diện sạch.
+  const truoc = [canh.truoc, opts.truoc ?? ''].join('\n');
+  const dongTruyen = canh.giuTruyen ? '' : 'for (let id; (id = S.pendingStory(s)); ) S.markStory(s, id);';
+  await chayMa(page, `${truoc}\n${dongTruyen}\ns.lastSeen = Date.now() - ${canh.vang ?? 0}; d.advance(0);`);
+  await page.reload({ waitUntil: 'load' });
+  await choGame(page);
+  await moc.sauTaiLai?.();
+  // Ghim giờ trong ngày trước cả màn hình vào game: người chơi mô phỏng chơi cả giờ nên đồng hồ rơi vào giờ bất kỳ.
+  const gio = opts.gio ?? canh.gio ?? 'ngay';
+  if (gio !== 'that') await page.evaluate((g) => window.__debug.gio(Number.isNaN(Number(g)) ? g : Number(g)), gio);
+  if (!canh.giuManVao) await page.evaluate(() => window.__debug.enter());
+  await moc.sauKhiVao?.();
+  await page.waitForTimeout(800);
+
+  await chayMa(page, [canh.sau ?? '', opts.sau ?? ''].join('\n'));
+  if (opts.cam) await page.evaluate(([x, z, zoom]) => window.__debug.camera(x, z, zoom), opts.cam);
+  if (opts.cham) {
+    await page.waitForTimeout(300);
+    await cham(page, opts.cham);
+  }
+  if (opts.bam) await page.locator(opts.bam).first().click({ timeout: 5000 });
+  await page.waitForTimeout(opts.doi ?? canh.doi ?? 1200);
+  if (canh.truocKhiChup && !opts.cam) {
+    await chayMa(page, canh.truocKhiChup);
+    await page.waitForTimeout(300);
+  }
+}
+
+/**
+ * Bật Vite ở cổng 5199 (hay dùng `url` của server đang chạy). Trả địa chỉ game và hàm tắt server. Tắt HMR: sửa code
+ * lúc đang chụp, đang đo thì trang không tự tải lại giữa chừng.
+ */
+export async function batVite(url) {
+  if (url) return { url, tat: async () => {} };
+  const { createServer } = await import('vite');
+  const server = await createServer({ root: ROOT, logLevel: 'error', server: { host: '127.0.0.1', port: 5199, hmr: false } });
+  await server.listen();
+  return { url: server.resolvedUrls.local[0], tat: () => server.close() };
+}
+
+async function chupMotCanh(browser, url, tenCanh, khung, opts) {
   const ctx = await browser.newContext({
     viewport: KHUNG[khung],
     deviceScaleFactor: opts.dpr,
@@ -408,34 +458,7 @@ async function chupMotCanh(browser, url, tenCanh, khung, opts) {
     if (m.type() === 'error') loi.push(`console.error: ${m.text()}`);
   });
   try {
-    await page.goto(url, { waitUntil: 'load' });
-    await choGame(page);
-
-    // Dựng state, đánh dấu các đoạn truyện đã xem (trừ cảnh muốn xem truyện), lưu rồi tải lại cho giao diện sạch.
-    const truoc = [canh.truoc, opts.truoc ?? ''].join('\n');
-    const dongTruyen = canh.giuTruyen ? '' : 'for (let id; (id = S.pendingStory(s)); ) S.markStory(s, id);';
-    await chayMa(page, `${truoc}\n${dongTruyen}\ns.lastSeen = Date.now() - ${canh.vang ?? 0}; d.advance(0);`);
-    await page.reload({ waitUntil: 'load' });
-    await choGame(page);
-    // Ghim giờ trong ngày trước cả màn hình vào game: người chơi mô phỏng chơi cả giờ nên đồng hồ rơi vào giờ bất kỳ.
-    const gio = opts.gio ?? canh.gio ?? 'ngay';
-    if (gio !== 'that') await page.evaluate((g) => window.__debug.gio(Number.isNaN(Number(g)) ? g : Number(g)), gio);
-    if (!canh.giuManVao) await page.evaluate(() => window.__debug.enter());
-    await page.waitForTimeout(800);
-
-    await chayMa(page, [canh.sau ?? '', opts.sau ?? ''].join('\n'));
-    if (opts.cam) await page.evaluate(([x, z, zoom]) => window.__debug.camera(x, z, zoom), opts.cam);
-    if (opts.cham) {
-      await page.waitForTimeout(300);
-      await cham(page, opts.cham);
-    }
-    if (opts.bam) await page.locator(opts.bam).first().click({ timeout: 5000 });
-    await page.waitForTimeout(opts.doi ?? canh.doi ?? 1200);
-    if (canh.truocKhiChup && !opts.cam) {
-      await chayMa(page, canh.truocKhiChup);
-      await page.waitForTimeout(300);
-    }
-
+    await dungCanh(page, url, tenCanh, opts);
     const file = path.join(opts.ra, `${opts.ten ?? tenCanh}-${khung}.png`);
     await page.screenshot({ path: file });
     const info = await page.evaluate(() => window.__debug.renderInfo());
@@ -463,14 +486,7 @@ async function main() {
   await mkdir(opts.ra, { recursive: true });
 
   const { chromium } = napPlaywright();
-  let server = null;
-  let url = opts.url;
-  if (!url) {
-    const { createServer } = await import('vite');
-    server = await createServer({ root: ROOT, logLevel: 'error', server: { host: '127.0.0.1', port: 5199 } });
-    await server.listen();
-    url = server.resolvedUrls.local[0];
-  }
+  const { url, tat } = await batVite(opts.url);
 
   const browser = await chromium.launch();
   let coLoi = false;
@@ -490,12 +506,15 @@ async function main() {
     }
   } finally {
     await browser.close();
-    await server?.close();
+    await tat();
   }
   if (coLoi) process.exitCode = 1;
 }
 
-main().catch((e) => {
-  console.error(e);
-  process.exit(1);
-});
+// Chạy thẳng script này thì chụp; do-lag.mjs nạp vào chỉ để lấy cảnh.
+if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+  main().catch((e) => {
+    console.error(e);
+    process.exit(1);
+  });
+}
