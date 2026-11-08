@@ -317,3 +317,87 @@ export function seaIndex(state: Pick<GameState, 'buildings'>, b: Pick<Building, 
 export function boatsAt(state: Pick<GameState, 'buildings'>, id: QuanDaoId): Building[] {
   return state.buildings.filter((b) => b.type === 'benKhoi' && seaRoute(b, seaIndex(state, b)).quanDao === id);
 }
+
+/** Ô (x, z) là đất của đảo chính quần đảo `q` (không kể đảo nhỏ). */
+export function onDaoChinh(q: QuanDao, x: number, z: number): boolean {
+  const g = daoGoc(q);
+  const i = Math.floor(x - g.x);
+  const j = Math.floor(z - g.z);
+  return i >= 0 && j >= 0 && i < DAO_CHINH && j < DAO_CHINH && daoData(q).land[j * DAO_CHINH + i] === 1;
+}
+
+const daoBenCache = new Map<QuanDaoId, { x: number; z: number }>();
+
+/**
+ * Bến ván của đồn đảo quần đảo `q` (ô): chỗ thuyền chiến cập, cách bờ đảo chính một ô về phía thuyền từ đất liền ra
+ * tới (đường từ chỗ thuyền vào ngư trường thẳng về tâm đảo).
+ */
+export function daoBen(q: QuanDao): { x: number; z: number } {
+  const hit = daoBenCache.get(q.id);
+  if (hit) return hit;
+  const ring = seaRoute({ x: 0, z: RIVER_START - 3, type: 'benKhoi' }, QUAN_DAO.indexOf(q)).path.at(-1)!;
+  const dx = q.x - ring.x;
+  const dz = q.z - ring.z;
+  const len = Math.hypot(dx, dz);
+  let t = 0;
+  while (t < len && !onDaoChinh(q, ring.x + (dx / len) * t, ring.z + (dz / len) * t)) t += 0.1;
+  const back = Math.max(0, t - 1);
+  const at = { x: ring.x + (dx / len) * back, z: ring.z + (dz / len) * back };
+  daoBenCache.set(q.id, at);
+  return at;
+}
+
+/** Đường thuyền chiến của bến thuyền khơi `b` (bến thứ `index`): đường thuyền khơi ra tới ngư trường, rồi vào bến ván đồn. */
+export function warRoute(b: Pick<Building, 'x' | 'z' | 'type'>, index = 0): { quanDao: QuanDaoId; path: { x: number; z: number }[] } {
+  const r = seaRoute(b, index);
+  return { quanDao: r.quanDao, path: [...r.path, daoBen(quanDao(r.quanDao))] };
+}
+
+/** Dài một đường (ô). */
+export function pathLength(path: readonly { x: number; z: number }[]): number {
+  let n = 0;
+  for (let i = 1; i < path.length; i++) n += Math.hypot(path[i].x - path[i - 1].x, path[i].z - path[i - 1].z);
+  return n;
+}
+
+/** Đồn đảo vuông chừng này ô mỗi cạnh, đứng trên đảo chính (`donDaoGoc`). */
+export const DON_DAO_W = 8;
+
+const donCache = new Map<QuanDaoId, { i: number; j: number }>();
+
+/**
+ * Chỗ đồn đảo trên đảo chính quần đảo `q`: góc tây bắc (cột `i`, hàng `j` của đảo chính) của khoảnh `DON_DAO_W` ô
+ * vuông nằm trọn trên đất cách bờ từ hai ô trở vào, gần bến ván (`daoBen`) nhất. Hình vẽ để trống cây đá ở đó và
+ * san bằng (gò giữa đảo nếu lấn vào thì hạ xuống).
+ */
+export function donDaoGoc(q: QuanDao): { i: number; j: number } {
+  const hit = donCache.get(q.id);
+  if (hit) return hit;
+  const n = DAO_CHINH;
+  const bo = new Int16Array(n * n).fill(-1);
+  for (const o of daoChinh(q)) bo[o.j * n + o.i] = o.bo;
+  const g = daoGoc(q);
+  const dock = daoBen(q);
+  let best = { i: (n - DON_DAO_W) / 2, j: (n - DON_DAO_W) / 2 };
+  let bestD = Infinity;
+  for (let j = 0; j + DON_DAO_W <= n; j++) {
+    for (let i = 0; i + DON_DAO_W <= n; i++) {
+      let fits = true;
+      for (let b = 0; b < DON_DAO_W && fits; b++) for (let a = 0; a < DON_DAO_W && fits; a++) if (bo[(j + b) * n + i + a] < 2) fits = false;
+      if (!fits) continue;
+      const d = Math.hypot(g.x + i + DON_DAO_W / 2 - dock.x, g.z + j + DON_DAO_W / 2 - dock.z);
+      if (d < bestD) {
+        bestD = d;
+        best = { i, j };
+      }
+    }
+  }
+  donCache.set(q.id, best);
+  return best;
+}
+
+/** Ô (cột `i`, hàng `j` của đảo chính) nằm trong chỗ đồn đảo. */
+export function inDonDao(q: QuanDao, i: number, j: number): boolean {
+  const o = donDaoGoc(q);
+  return i >= o.i && j >= o.j && i < o.i + DON_DAO_W && j < o.j + DON_DAO_W;
+}

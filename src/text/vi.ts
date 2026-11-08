@@ -404,6 +404,11 @@ export const vi = {
     hetTho: 'Các tốp thợ đều bận',
     dangXay: 'Công trình đang có thợ làm',
     daHoiDu: 'Việc này đã hỏi đủ câu đố',
+    canBenKhoi: 'Cần một bến thuyền khơi đánh cá ở quần đảo này',
+    canBenKhoi3: 'Bến thuyền khơi của quần đảo này phải lên cấp 3',
+    daCoThuyen: 'Bến này đã có thuyền chiến',
+    canThuyenChien: 'Cần đóng thuyền chiến ở bến thuyền khơi trước',
+    canDonDao: 'Cần dựng đồn đảo trước',
   } satisfies Record<FailReason, string>,
 
   quests: {
@@ -472,8 +477,12 @@ export const vi = {
     denHatMon: 'Dân lập đền thờ Hai Bà ở cửa sông Hát. Xin dựng Đền Hát Môn: đền còn nguyên thì mỗi trận giữ kinh đô có nghĩa binh ra đánh giặc.',
     denRongTien:
       'Uống nước nhớ nguồn. Xin dựng Đền Rồng Tiên thờ Lạc Long Quân và Âu Cơ: đền còn nguyên thì của từ sông biển, từ núi rừng làm ra thêm hai phần mười.',
+    thuyenChien: 'Ngư dân đã ra tới Hoàng Sa, Trường Sa. Xin nâng bến thuyền khơi lên cấp 3 và đóng một thuyền chiến để chở quân ra đảo.',
+    donHoangSa: 'Xin dựng đồn Hoàng Sa giữa đảo chính. Thợ đi thuyền chiến ra dựng; đồn có quân đóng thì giữ được biển.',
+    donTruongSa: 'Trường Sa xa hơn, nhiều đảo nhỏ. Xin đóng thuyền chiến ở bến thuyền khơi thứ hai và dựng đồn Trường Sa.',
+    donDao3: 'Xin nâng một đồn đảo lên cấp 3: tường đá san hô, lầu canh, đóng được nhiều quân hơn, giữ biển chắc hơn.',
     allDone:
-      'Hai Bà đã hiển linh giữ đất, dân lập đền thờ ở Hát Môn. Thủy quân Hán, quân Hán và mùa lũ vẫn thay phiên đánh kinh đô. Chuyện các nữ tướng của Hai Bà sẽ kể ở bản sau.',
+      'Hai Bà đã hiển linh giữ đất, dân lập đền thờ ở Hát Môn; ngoài khơi Hoàng Sa, Trường Sa đã có đồn giữ biển. Thủy quân Hán, quân Hán và mùa lũ vẫn thay phiên đánh kinh đô.',
   } as Record<string, string>,
 
   units: {
@@ -1078,8 +1087,49 @@ export const vi = {
     boats: 'Thuyền khơi đánh cá ở đây',
     noBoats: 'Chưa có thuyền khơi nào ra đây. Dựng bến thuyền khơi (Điện 8) ven sông.',
     noBoatsYet: 'Mây mù còn phủ kín biển. Lên Điện cấp 8 thì mây tan: dựng bến thuyền khơi để thuyền lớn ra khơi.',
-    garrisonLater: 'Mai sau, Điện cấp 10 sẽ điều quân ra đóng giữ đảo.',
     seeIsland: 'Ra xem đảo',
+    // Đóng đảo (Điện 10).
+    donName: (id: QuanDaoId) => `Đồn ${id === 'hoangSa' ? 'Hoàng Sa' : 'Trường Sa'}`,
+    don: 'Đồn đảo',
+    donNone: 'Chưa dựng',
+    donDesc: 'Đồn đứng giữa đảo chính, có bến ván cho thuyền chiến cập. Lính đóng ở đồn giữ ngư trường, đốt lửa hiệu báo giặc biển, chặn đánh thuyền giặc ngoài khơi.',
+    donBuild: 'Dựng đồn',
+    donUp: (n: number) => `Nâng lên cấp ${n}`,
+    donMax: 'Đồn đã ở cấp cao nhất.',
+    donCho: 'Chỗ quân đóng tối đa',
+    donNeedDien: 'Điện cấp 10 mới điều quân ra đóng đảo.',
+    donNeedBen: 'Cần một bến thuyền khơi đánh cá ở quần đảo này, nâng lên cấp 3, rồi đóng thuyền chiến ở bến ấy.',
+    donNeedThuyen: 'Đóng thuyền chiến ở bến thuyền khơi của quần đảo này (bảng bến) để chở thợ và quân ra đảo.',
+    donDone: (name: string, n: number) => (n > 1 ? `${name} đã lên cấp ${n}` : `Đã dựng xong ${name}`),
+    thuyen: 'Thuyền chiến',
+    thuyenJob: 'Đóng thuyền chiến',
+    thuyenStarted: (time: string) => `Thợ bắt đầu đóng thuyền chiến · xong sau ${time}`,
+    thuyenDone: (dao: string) => `Đã đóng xong thuyền chiến chở quân ra ${dao}`,
+    thuyenBtn: 'Đóng thuyền chiến',
+    thuyenFor: (dao: string) => `Thuyền chiến chở quân ra ${dao}`,
+    thuyenNeed: 'Bến thuyền khơi cấp 3 (Điện 10) đóng được thuyền chiến chở quân ra đồn đảo.',
+    thuyenHas: 'Đã có',
+    thuyenDock: 'Neo ở bến',
+    thuyenOut: (n: number) => `Đang chở ${n} lính ra đảo`,
+    thuyenBack: (n: number) => (n ? `Đang chở ${n} lính về bến` : 'Đang về bến'),
+    thuyenTicker: (dao: string, n: number, s: number) => `⛵ Thuyền chiến chở ${n} lính ra ${dao}, còn ${s} giây`,
+    thuyenTickerBack: (dao: string, n: number, s: number) => `⛵ Thuyền chiến từ ${dao} chở ${n} lính về, còn ${s} giây`,
+    linhTitle: 'Lính đóng đảo',
+    linhHint: (used: number, max: number, per: number) =>
+      `Chỗ quân ${used}/${max}. Thuyền chiến chở mỗi chuyến ${per} chỗ quân. Lính ở đảo không giữ kinh đô, không ra phó bản, vẫn ăn gạo.`,
+    linhHere: (onDao: number, boat: number) => (boat ? `Ở đảo ${onDao} · trên thuyền ${boat}` : `Ở đảo ${onDao}`),
+    linhNone: 'Kinh đô chưa có lính để đóng đảo.',
+    giuTitle: 'Giữ biển',
+    giuOff: (n: number) => `Đóng từ ${n} chỗ quân trở lên thì đồn giữ được biển.`,
+    giuNguTruong: (p: number) => `Ngư trường yên: thuyền khơi ở đây làm ra thêm ${p}% vỏ ốc và cá`,
+    giuLuaHieu: (m: number) => `Lửa hiệu: thủy quân Hán được báo trước ${m} phút`,
+    giuChan: (p: number) => `Chặn đánh ngoài khơi: lâu thuyền vào tới sông mất ${p}% máu`,
+    luaHieuNote: (names: string, p: number) => `🔥 ${names} đốt lửa hiệu báo sớm; quân đảo chặn đánh, lâu thuyền giặc đã mất ${p}% máu.`,
+    hint: {
+      mo: '📜 Lạc hầu: Tâu bệ hạ, thuyền khơi đã ra tới Hoàng Sa, Trường Sa. Xin đóng thuyền chiến ở bến thuyền khơi, đưa thợ ra dựng đồn và đưa quân ra giữ đảo: đồn có quân thì ngư trường yên, giặc biển tới là lửa hiệu báo về.',
+      maVien:
+        '📜 Lạc hầu: Tâu bệ hạ, Mã Viện đem lâu thuyền theo đường biển xuống. Quân ở đồn đảo đốt lửa hiệu báo sớm, ra chặn đánh ngoài khơi: lâu thuyền vào tới sông đã sứt mẻ. Xin đóng đủ quân ở đảo.',
+    },
   },
 
   /** Màn hình vào game: hiện mỗi lần mở game, trên cảnh kinh đô trôi chậm phía sau. */

@@ -1,7 +1,8 @@
 // Người chơi mô phỏng: chơi từng giây theo cách hợp lý. Dùng chung cho test nhịp tiến trình (`balance.test.ts`),
 // báo cáo kinh tế (`kinhTe.ts`) và cảnh chụp thử (`scripts/chup.mjs`). Không chạy trong game thật.
 
-import { BUILDINGS, CH2_QUEST_START, CH3_QUEST_START, CH4_QUEST_START, QUESTS, QUIZ_TURNS, type BuildingType } from './defs';
+import { BUILDINGS, CH2_QUEST_START, CH3_QUEST_START, CH4_QUEST_START, DON_DAO, QUESTS, QUIZ_TURNS, THUYEN_CHIEN, type BuildingType } from './defs';
+import { DAO_IDS, benOf, canDon, canThuyen, donCost } from './dao';
 import {
   acceptOffer,
   autoAssign,
@@ -22,10 +23,10 @@ import {
 } from './game';
 import { KHOANH_N, khoanhCost, khoanhOrigin, openKhoanh, openable } from './khoanh';
 import { KHOANH } from './map';
-import { canStartUpgrade, isBusy, startBuild, startUpgrade, thoRanh, traLoi, type CongViec } from './xay';
+import { canStartUpgrade, isBusy, startBuild, startDon, startThuyen, startUpgrade, thoRanh, traLoi, type CongViec } from './xay';
 
 /** Các việc người chơi mô phỏng làm. Báo cáo kinh tế dựa vào đây để ghi sổ từng khoản thu chi. */
-export type Viec = 'nhiemVu' | 'xay' | 'phatRung' | 'nangDien' | 'nangCap' | 'doiHang' | 'vaoChuong' | 'thoiGian';
+export type Viec = 'nhiemVu' | 'xay' | 'phatRung' | 'nangDien' | 'nangCap' | 'dongDao' | 'doiHang' | 'vaoChuong' | 'thoiGian';
 /** Bọc một việc: mặc định chỉ làm việc đó. Báo cáo kinh tế bọc thêm phần ghi tài nguyên trước và sau. */
 export type Lam = (viec: Viec, run: () => void) => void;
 const lamThang: Lam = (_, run) => run();
@@ -229,6 +230,22 @@ export function playSecond(s: GameState, lam: Lam = lamThang, dung = 0): void {
   autoAssign(s);
   trimFishers(s);
   lam('doiHang', () => tradeSurplus(s));
+  // Điện 10: nâng bến thuyền khơi của quần đảo lên cấp 3, đóng thuyền chiến, dựng và nâng đồn đảo (không luyện quân
+  // nên không đóng lính).
+  lam('dongDao', () => {
+    if (dienLevel(s) < DON_DAO.minDien) return;
+    for (const id of DAO_IDS) {
+      if (!thoRanh(s)) break;
+      const ben = benOf(s, id);
+      if (!ben) continue;
+      if (ben.level < DON_DAO.benCap) {
+        if (canStartUpgrade(s, ben.id).ok) tryUpgrade(s, ben.id);
+        continue;
+      }
+      const r = canThuyen(s, id).ok && affordWithReserve(s, THUYEN_CHIEN.cost) ? startThuyen(s, id) : canDon(s, id).ok && affordWithReserve(s, donCost(s, id)!) ? startDon(s, id) : null;
+      if (r?.ok) doSu(s, r.value);
+    }
+  });
   lam('nangCap', () => {
     const wood = woodShort(s);
     for (const b of s.buildings) {

@@ -5,7 +5,7 @@
 // Tọa độ thế giới: ô (x, z) ở (x − half, z − half) như world.ts (`half` là HALF ở đó).
 
 import * as THREE from 'three';
-import { BAI_CAT, DAO_CHINH, QUAN_DAO, bienDiem, bienDo, daoChinh, daoGoc, onIsland, type QuanDao, type QuanDaoId } from '../game/bien';
+import { BAI_CAT, DAO_CHINH, DON_DAO_W, QUAN_DAO, bienDiem, bienDo, daoChinh, daoGoc, donDaoGoc, inDonDao, onIsland, type QuanDao, type QuanDaoId } from '../game/bien';
 import { RIVER_END, RIVER_START } from '../game/map';
 import { vi } from '../text/vi';
 import { makeDolphin, makeWhale } from './caBien';
@@ -308,6 +308,13 @@ function hillNoise(seed: number): (i: number, j: number) => number {
  * Đảo chính 20 × 20 ô, đất theo ô như kinh đô: viền bãi cát sát nước, cát lẫn cỏ, đất cỏ bậc 1, gò bậc 2, đỉnh đá bậc 3
  * giữa đảo. Dừa mọc ven bờ nghiêng ra biển, cây phong ba và dừa trong đảo, đá rải bãi cát.
  */
+/** Chỗ đứng của đồn đảo quần đảo `q` (tọa độ thế giới): giữa khoảnh đồn, trên mặt đất bằng của khoảnh ấy. */
+export function donDaoSpot(q: QuanDao, half: number): THREE.Vector3 {
+  const g = daoGoc(q);
+  const o = donDaoGoc(q);
+  return new THREE.Vector3(g.x + o.i + DON_DAO_W / 2 - half, DAO_TOP[2], g.z + o.j + DON_DAO_W / 2 - half);
+}
+
 function mainIsland(q: QuanDao, half: number, land: ShapeBuilder, m: ToonModel): void {
   const g = daoGoc(q);
   const rand = seeded(q.seed);
@@ -321,10 +328,14 @@ function mainIsland(q: QuanDao, half: number, land: ShapeBuilder, m: ToonModel):
     let level = o.bo === 0 ? 0 : o.bo === 1 ? 1 : 2;
     if (o.bo >= 4 && hill(o.i, o.j) > 0.52) level = 3;
     if (o.bo >= 7 && hill(o.i, o.j) > 0.62) level = 4;
+    // Chỗ đồn đảo (`donDaoGoc`): đất bằng, không cây đá.
+    const yard = inDonDao(q, o.i, o.j);
+    if (yard) level = 2;
     const top = DAO_TOP[level];
     const shade = (o.i * 7 + o.j * 13) % 3;
     const color = level === 0 ? C.beachWet : level === 1 ? C.beach : level >= 3 ? HILL[level - 3] : o.bo === 2 ? 0xbcb36e : C.grass[shade];
     land.box(1, top - bottom, 1, color, x, (top + bottom) / 2, z);
+    if (yard) continue;
     const r = rand();
     const y = top;
     if (level === 0) {

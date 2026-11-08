@@ -7,6 +7,7 @@ import { initialCaoLo } from './caoLo';
 import { initialCayDa, updateCayDa, type CayDaState } from './cayDa';
 import { bridgeFit, bridgeheadCells, cutOff, farFactor, farRaidBank, fortFit, initialBenKia, landRaidSide, openBridgehead, updateBenKia, villagesOutput, type BenKiaState } from './benKia';
 import { huanTiers, initialThuThach } from './thuThach';
+import { advanceDao, chanThuyen, daoArmy, donOf, initialDao, luaHieu, nguTruongBonus, type DaoState } from './dao';
 import { advanceXay, initialXay, isBusy, nextXayEvent, pendingBuilding, pendingBuildings, pendingCount, pendingOf, type XayState } from './xay';
 import { inChapter4 } from './chuong4';
 import { chuong5Won, inChapter5, initialHaiBa, maVienCame } from './chuong5';
@@ -55,6 +56,7 @@ import {
   QUESTS,
   RAID_EVERY_MS,
   RAID_WARNING_MS,
+  DON_DAO,
   REPAIR_FRACTION,
   RESOURCE_IDS,
   RONG_TIEN_BONUS,
@@ -320,9 +322,10 @@ export interface Merchant {
  * Phiên bản bản lưu hiện tại (11: kinh đô lớn; 12: khoảnh tự chọn; 13: lính nỏ, ụ nỏ; 14: Cao Lỗ, vua xuống biển;
  * 15: thử thách, huân công; 16: gỗ, tài nguyên thứ năm, và gợi ý của Lạc hầu về công trình mới; 17: cây, đá mọc trên
  * ô trống; 18: lưới nới qua sông, 76×76; 20: Điện 10×10; 21: chương 5, quân Hán; 22: Hai Bà Trưng; 23: thủy quân Hán,
- * lâu thuyền; 24: nữ tướng, thử thách màn 33–40; 25: thời gian xây, tốp thợ, nhà thợ hồ, đố sử).
+ * lâu thuyền; 24: nữ tướng, thử thách màn 33–40; 25: thời gian xây, tốp thợ, nhà thợ hồ, đố sử; 26: một doanh trại
+ * lớn; 27: đóng đảo).
  */
-export const SAVE_VERSION = 26;
+export const SAVE_VERSION = 27;
 
 export interface GameState {
   version: typeof SAVE_VERSION;
@@ -370,6 +373,8 @@ export interface GameState {
   benKia: BenKiaState;
   /** Việc xây đang làm, tốp thợ, câu đố sử vừa hỏi (`xay.ts`). */
   xay: XayState;
+  /** Đóng đảo (`dao.ts`): đồn đảo, thuyền chiến, lính đóng ở Hoàng Sa, Trường Sa. */
+  dao: DaoState;
   /** Vừa nâng từ kinh đô nhỏ: kinh đô đã dựng lại theo mẫu, trả lại chừng này của. Giao diện báo một lần rồi xóa. */
   relaid?: { refund: Cost; dropped: number; dien?: boolean; trai?: boolean };
 }
@@ -470,7 +475,12 @@ export type FailReason =
   | 'khongXoayDuoc'
   | 'hetTho'
   | 'dangXay'
-  | 'daHoiDu';
+  | 'daHoiDu'
+  | 'canBenKhoi'
+  | 'canBenKhoi3'
+  | 'daCoThuyen'
+  | 'canThuyenChien'
+  | 'canDonDao';
 
 export type Result<T = undefined> = { ok: true; value: T } | { ok: false; reason: FailReason };
 
@@ -546,6 +556,7 @@ export function createInitialState(now: number): GameState {
     cayDa: initialCayDa(),
     benKia: initialBenKia(),
     xay: initialXay(),
+    dao: initialDao(),
   };
   levelFootprint(state, dien, footprintTop(state, 'dien', dien.x, dien.z));
   return state;
@@ -607,7 +618,9 @@ export function freeDan(state: GameState): number {
 /** Phần ăn mỗi phút của cả kinh đô (dân và lính), tính bằng gạo, chưa trừ phần cá đỡ. */
 export function foodPerMinute(state: GameState): number {
   let total = state.dan * GAO_PER_DAN;
-  for (const k of UNIT_TYPES) total += state.troops[k] * UNITS[k].upkeep;
+  // Lính đóng đảo (và đang trên thuyền chiến) vẫn ăn gạo kinh đô gửi ra.
+  const away = state.dao ? daoArmy(state) : null;
+  for (const k of UNIT_TYPES) total += (state.troops[k] + (away?.[k] ?? 0)) * UNITS[k].upkeep;
   return total;
 }
 
@@ -627,7 +640,7 @@ export function fishOf(b: Building): number {
  * phần của Đền Phù Đổng và phúc lành Đất như mọi sản lượng, và phần của Đền Rồng Tiên (cá là của từ nước).
  */
 export function fishPerMinute(state: GameState): number {
-  const fish = state.buildings.reduce((sum, b) => sum + (cutOff(state, b) ? 0 : fishOf(b)), 0);
+  const fish = state.buildings.reduce((sum, b) => sum + (cutOff(state, b) ? 0 : fishOf(b) * (1 + nguTruongBonus(state, b))), 0);
   return fish * (1 + templeBonus(state) + datBonus(state) + rongTienBonus(state));
 }
 
@@ -776,7 +789,7 @@ export function outputIn(state: GameState, b: Building): Cost {
   const out = outputOf(b);
   const far = farFactor(state, b);
   if (far === 0) return {};
-  const k = far + phuSaBonus(b);
+  const k = far + phuSaBonus(b) + nguTruongBonus(state, b);
   if (k === 1) return out;
   for (const r of RESOURCE_IDS) if (out[r]) out[r] = out[r]! * k;
   return out;
@@ -1035,6 +1048,12 @@ export function questProgress(state: GameState): { have: number; need: number } 
     const lv = goal.level;
     have = state.buildings.filter((b) => b.type !== 'dien' && b.level >= lv).length;
     need = goal.amount;
+  } else if (goal.kind === 'thuyenChien') {
+    have = (['hoangSa', 'truongSa'] as const).filter((id) => donOf(state, id).thuyen).length;
+    need = goal.amount;
+  } else if (goal.kind === 'donDao') {
+    have = goal.dao ? donOf(state, goal.dao).cap : Math.max(donOf(state, 'hoangSa').cap, donOf(state, 'truongSa').cap);
+    need = goal.level;
   } else {
     have = dienLevel(state);
     need = goal.level;
@@ -1887,7 +1906,8 @@ function updateRaid(state: GameState, ms: number, busy = false): void {
         : byBoat
           ? far ? (far === 'nam' ? 'namXa' : 'dongXa') : roll ? 'nam' : 'dong'
           : landRaidSide(state, raid.wave, roll);
-    raid.startsAt = state.clock + RAID_WARNING_MS;
+    // Đồn đảo giữ biển đốt lửa hiệu: thủy quân Hán được báo sớm.
+    raid.startsAt = state.clock + (raid.foe === 'thuyHan' && luaHieu(state) ? DON_DAO.baoSom : RAID_WARNING_MS);
   }
   if (raid.phase === 'warning' && state.clock >= raid.startsAt) {
     raid.phase = 'battle';
@@ -1915,6 +1935,7 @@ function updateRaid(state: GameState, ms: number, busy = false): void {
       crossbows: hasCoLoa(state),
       walls: hasKimQuy(state),
       fewerBoats: hasCuong(state),
+      chan: foe === 'thuyHan' ? chanThuyen(state) : 0,
       arms: state.arms,
       huan: huanTiers(state),
     });
@@ -2060,6 +2081,7 @@ export function tick(state: GameState, ms: number, busy = false): Resources {
   state.clock += ms;
   // Thợ xây sau phần sản xuất của khung này: công trình xong từ khung sau mới làm ra (sổ thu chi `kinhTe.ts` khớp).
   advanceXay(state, ms);
+  advanceDao(state, ms, busy);
   updateMerchant(state);
   updateCampaign(state, ms);
   updateRaid(state, ms, busy);
@@ -2092,6 +2114,8 @@ export function applyOffline(state: GameState, now: number): { ms: number; gaine
     advanceXay(state, dt);
     t += dt;
   }
+  // Thuyền chiến chạy tiếp suốt quãng vắng, đủ chuyến.
+  advanceDao(state, away);
   state.lastSeen = now;
   return { ms: cap, gained, built: state.xay.seq - seq };
 }

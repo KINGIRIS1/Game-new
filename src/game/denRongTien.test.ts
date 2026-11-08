@@ -122,7 +122,7 @@ describe('Đền Rồng Tiên', () => {
 
   it('nhiệm vụ 62: dựng Đền Rồng Tiên, nối sau nhiệm vụ Đền Hát Môn; người đã xong hết nhiệm vụ cũng nhận được', () => {
     const at = QUESTS.findIndex((q) => q.id === 'denRongTien');
-    expect(at).toBe(QUESTS.length - 1);
+    expect(at).toBe(62);
     expect(QUESTS[at - 1].id).toBe('denHatMon');
     expect(QUESTS[at].reward).toEqual({ datDa: 4500, sat: 1400 });
     const s = ch5();

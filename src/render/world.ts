@@ -15,7 +15,8 @@ import { giongLook, type GiongLook } from '../game/giong';
 import { KHOANH_N, khoanhOf, khoanhOrigin, openMask, openStart, openable } from '../game/khoanh';
 import { FAR_PLOTS, benKiaOpen, bridgeEnds, bridgeTo, plotAt, plotOf, plotOrigin, poiAt, poiPlots, type Dat } from '../game/benKia';
 import { DIEN_HOME, FAR_FOREST, FOREST_BAND, GRID, KHOANH, RIVER_END, RIVER_START, baseHeights, farBankOf, inGrid, isNearBank, isRiver, riverDistance, riverFacing, rotAngle, turnLocal } from '../game/map';
-import { BAI_CAT, BIEN_DIEN, CUA_BIEN, QUAN_DAO, RIVER_MID, benDock, bienDo, isSea, riverOf, seaIndex, seaRoute, type QuanDaoId, type SeaRoute } from '../game/bien';
+import { BAI_CAT, BIEN_DIEN, CUA_BIEN, QUAN_DAO, RIVER_MID, benDock, bienDo, isSea, quanDao, riverOf, seaIndex, seaRoute, warRoute, type QuanDaoId, type SeaRoute } from '../game/bien';
+import { DAO_IDS, benOf, tripMs } from '../game/dao';
 import { sonLook, type SonLook } from '../game/son';
 import { floodHits } from '../game/terrain';
 import { tetOpen } from '../game/tet';
@@ -35,8 +36,8 @@ import { makeRuaVang } from './beasts';
 import { buildDecor, disposeDecor, isBatchedDecor, type DecorSpot } from './decor';
 import { buildWild, disposeWild, wildSpots } from './oTrong';
 import { buildCayDaBatch, disposeCayDaBatch, makeCayDa, type CayDaPlace } from './cayDa';
-import { bridgeDeckY, cloudPuffs, poiMarker, type BridgeBanks } from './benKia';
-import { SHORE_LAND, SeaLife, animateSea, buildSea, buildSeaMist, islandAt, shoreCap } from './bien';
+import { bridgeDeckY, cloudPuffs, makeDonBien, poiMarker, type BridgeBanks } from './benKia';
+import { SHORE_LAND, SeaLife, animateSea, buildSea, buildSeaMist, donDaoSpot, islandAt, shoreCap } from './bien';
 import { makeSoldier } from './soldier';
 import { makeAnDuong, makeCaoLo, makeGiong, makeLacTuong, makeNuTuong, makeSonTinh, makeTrungNhi, makeTrungTrac } from './heroes';
 
@@ -400,6 +401,19 @@ function gateTurn(state: GameState, b: { x: number; z: number }, walls: Set<numb
  * Thuyền khơi của một bến thuyền khơi: đường đi (ô) và lịch một chuyến. Chuyến lặp mãi theo đồng hồ cảnh: neo ở bến,
  * xuôi sông ra biển, đánh cá một vòng quanh quần đảo, về bến. Chỉ để nhìn: cá và vỏ ốc tính đều mỗi phút (`game.ts`).
  */
+/**
+ * Thuyền chiến đang chở quân (`dao.ts`): đường từ bến thuyền khơi ra bến ván đồn đảo (thế giới), quãng cộng dồn, một
+ * lượt dài bao lâu (ms), còn bao lâu (ms, đếm lùi theo khung hình, mỗi lần đồng bộ lấy lại từ state), đang về hay đi.
+ */
+interface WarBoat {
+  obj: THREE.Group;
+  pts: THREE.Vector2[];
+  acc: number[];
+  total: number;
+  left: number;
+  ve: boolean;
+}
+
 interface SeaBoat {
   obj: THREE.Group;
   key: string;
@@ -592,6 +606,9 @@ export class World {
   private readonly seaLife: SeaLife;
   /** Thuyền khơi của từng bến thuyền khơi: neo trước bến, xuôi sông ra biển đánh cá quanh đảo rồi về. */
   private readonly seaBoats = new Map<number, SeaBoat>();
+  /** Đồn đảo (hình tạm: đồn biên phóng to) theo cấp, và thuyền chiến đang chở quân. */
+  private readonly daoForts = new Map<QuanDaoId, { obj: THREE.Group; key: string }>();
+  private readonly warBoats = new Map<QuanDaoId, WarBoat>();
   /** Đoàn thuyền thủy binh Triệu, thủy quân Hán (cả lâu thuyền) từ biển kéo vào trong lúc trinh sát báo (`upcomingBoats`), dựng lại theo đợt. */
   private fleet: { key: string; boats: FleetBoat[] } | null = null;
   /**
@@ -1101,6 +1118,7 @@ export class World {
 
     this.syncMerchant(state);
     this.syncSeaBoats(state);
+    this.syncDao(state);
     this.syncFleet(state);
     this.syncSeaMist(dienLevel(state) < BIEN_DIEN);
     this.syncGiong(state);
@@ -1593,6 +1611,88 @@ export class World {
       disposeModel(boat.obj);
       this.seaBoats.delete(id);
     }
+  }
+
+  /**
+   * Đồn đảo và thuyền chiến theo state (`dao.ts`): đồn dựng lại khi đổi cấp; thuyền hiện khi đang chở quân, lấy lại
+   * chỗ trên đường từ thời gian còn lại của chuyến. Gọi mỗi lần đồng bộ cảnh và đều đặn lúc chơi (chuyến mới bắt đầu
+   * trong `tick`, không qua thao tác nào). Hình tạm: đồn biên phóng to, thuyền khơi ba buồm.
+   */
+  syncDao(state: GameState): void {
+    for (const id of DAO_IDS) {
+      const d = state.dao[id];
+      const key = d.cap > 0 ? String(d.cap) : '';
+      const old = this.daoForts.get(id);
+      if ((old?.key ?? '') !== key) {
+        if (old) {
+          this.scene.remove(old.obj);
+          disposeModel(old.obj);
+          this.daoForts.delete(id);
+        }
+        if (key) {
+          const obj = makeDonBien();
+          const at = donDaoSpot(quanDao(id), HALF);
+          obj.position.copy(at);
+          obj.scale.setScalar(1.8);
+          // Cổng đồn quay về phía tây bắc, về phía bến ván và đất liền.
+          obj.rotation.y = Math.PI * 1.25;
+          this.scene.add(obj);
+          this.daoForts.set(id, { obj, key });
+        }
+      }
+      const ben = benOf(state, id);
+      const c = d.chuyen;
+      const boat = this.warBoats.get(id);
+      if (!c || !ben) {
+        if (boat) {
+          this.scene.remove(boat.obj);
+          disposeModel(boat.obj);
+          this.warBoats.delete(id);
+        }
+        continue;
+      }
+      if (boat) {
+        boat.left = c.con;
+        boat.ve = c.ve;
+        continue;
+      }
+      const pts = warRoute(ben, seaIndex(state, ben)).path.map((p) => new THREE.Vector2(wx(p.x), wz(p.z)));
+      const acc = [0];
+      for (let i = 1; i < pts.length; i++) acc.push(acc[i - 1] + pts[i].distanceTo(pts[i - 1]));
+      const obj = makeThuyenKhoi(3);
+      obj.rotation.order = 'YXZ';
+      obj.scale.setScalar(SEA_BOAT_SCALE);
+      this.scene.add(obj);
+      this.warBoats.set(id, { obj, pts, acc, total: Math.max(1, tripMs(state, id)), left: c.con, ve: c.ve });
+    }
+  }
+
+  /** Thuyền chiến chạy theo thời gian còn lại của chuyến: đi thì từ bến ra đảo, về thì ngược lại. */
+  private moveWarBoat(b: WarBoat, t: number, dt: number): void {
+    b.left = Math.max(0, b.left - dt * 1000);
+    const len = b.acc[b.acc.length - 1];
+    const f = 1 - b.left / b.total;
+    const at = (d: number): THREE.Vector2 => {
+      const e = Math.min(len, Math.max(0, d));
+      let i = 1;
+      while (i < b.acc.length - 1 && b.acc[i] < e) i++;
+      const u = (e - b.acc[i - 1]) / Math.max(1e-6, b.acc[i] - b.acc[i - 1]);
+      return b.pts[i - 1].clone().lerp(b.pts[i], Math.min(1, Math.max(0, u)));
+    };
+    const d = (b.ve ? 1 - f : f) * len;
+    const p = at(d);
+    const o = b.obj;
+    o.position.x = p.x;
+    o.position.z = p.y;
+    const dir = b.ve ? -1 : 1;
+    const ahead = at(d + 0.9 * dir);
+    const behind = at(d - 0.9 * dir);
+    if (ahead.distanceToSquared(behind) > 1e-6) o.rotation.y = Math.atan2(-(ahead.y - behind.y), ahead.x - behind.x);
+    const swell = isSea(p.x + HALF, p.y + HALF) ? 1 : 0.35;
+    o.position.y = WATER_Y - 0.02 + Math.sin(t * 1.3) * 0.05 * swell;
+    o.rotation.x = Math.sin(t * 0.9) * 0.05 * swell;
+    o.rotation.z = Math.sin(t * 1.1) * 0.04 * swell;
+    (o.userData.pose as Poser | undefined)?.({ act: 'walk', phase: t * 2.4, time: t });
   }
 
   /**
@@ -3231,6 +3331,7 @@ export class World {
       if (!this.seaMist) this.seaLife.update(t, dt, this.view.target);
       this.updateSeaMist(dt);
       for (const boat of this.seaBoats.values()) this.moveSeaBoat(boat, t);
+      for (const boat of this.warBoats.values()) this.moveWarBoat(boat, t, dt);
       this.moveFleet(t);
     }
 
