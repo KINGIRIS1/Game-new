@@ -96,7 +96,7 @@ export const vi = {
     doanhTrai: {
       name: 'Doanh trại',
       icon: '⛺',
-      desc: 'Nơi các tướng ở và điều binh. Mỗi doanh trại một tướng chỉ huy: có thêm tướng thì dựng thêm doanh trại, nuôi thêm quân dự trữ. Cấp càng cao càng giữ nhiều quân và cho dựng thêm nơi ở riêng của binh chủng mới: cấp 1 trại giáo, cấp 2 trại cung, cấp 3 chuồng voi.',
+      desc: 'Đại doanh của cả kinh đô: nơi các tướng ở, lính tập và điều binh. Mỗi tướng về thêm một doanh, nuôi thêm quân dự trữ. Giặc tới thì quân ra từ cổng gần giặc. Cấp càng cao càng giữ nhiều quân và cho dựng thêm nơi ở riêng của binh chủng mới: cấp 1 trại giáo, cấp 2 trại cung, cấp 3 chuồng voi.',
     },
     choiCanh: {
       name: 'Chòi canh',
@@ -369,13 +369,9 @@ export const vi = {
     huanToiDa: 'Nhánh này đã đủ 4 bậc',
     thieuHuanCong: 'Chưa đủ huân công',
     khongGhepDuoc: 'Chỉ ghép được hai chòi canh cấp 8 còn nguyên',
-    canTuongChiHuy: 'Mỗi doanh trại cần một tướng chỉ huy. Chưa có tướng rảnh',
     tuongChuaCo: 'Tướng này chưa về với kinh đô',
-    daChiHuy: 'Tướng này đang chỉ huy doanh trại này rồi',
-    nuDaO: 'Nữ tướng này đang ở doanh trại này rồi',
     quaChoPhoBan: 'Mang quá số chỗ cho một trận phó bản',
     quaChoGiuThanh: 'Đã đủ chỗ giữ kinh đô theo cấp Điện',
-    traiDay: 'Doanh trại này đã đủ chỗ, hãy nâng cấp',
     khongPhaiTrangTri: 'Chỉ dọn được đường đi và đồ trang trí',
     khoanhDaMo: 'Khoảnh này đã phát rồi',
     khoanhChuaSat: 'Chỉ phát được khoảnh rừng sát đất đã mở',
@@ -473,7 +469,7 @@ export const vi = {
     no: { name: 'Lính nỏ', icon: '🎯', desc: 'Nỏ lớn bắn xa, chậm mà đau, chiếm 2 chỗ. Mạnh gấp đôi khi bắn quân nặng và tướng giặc.' },
   } satisfies Record<UnitType, { name: string; icon: string; desc: string }>,
 
-  /** Bốn nữ tướng của Hai Bà Trưng (chương 5 PR 4): phó tướng ở phó bản, mỗi người ở một doanh trại. */
+  /** Bốn nữ tướng của Hai Bà Trưng (chương 5 PR 4): phó tướng ở phó bản, cả bốn ở doanh trại. */
   nuTuong: {
     list: {
       leChan: { name: 'Lê Chân', icon: '⚓' },
@@ -486,22 +482,17 @@ export const vi = {
     boost: (icon: string, unit: string) => `${icon} ${unit} +12%`,
     noUnit: (icon: string, unit: string) => `${icon} ${unit} +12% (không mang theo)`,
     barracksTitle: 'Nữ tướng ở trại',
-    barracksHint: 'Mỗi trại một nữ tướng. Lính giữ kinh đô của trại, thuộc binh chủng của bà, được thêm 12% máu và sức đánh.',
-    here: 'ở trại này',
-    other: 'ở trại khác',
-    none: 'chưa ở trại nào',
-    assign: 'Về trại này',
-    assigned: (name: string) => `${name} đã về doanh trại này`,
+    barracksHint: 'Cả bốn nữ tướng ở doanh trại. Lính giữ kinh đô thuộc binh chủng của bà được thêm 12% máu và sức đánh.',
     /** Lạc hầu báo một lần khi mỗi nữ tướng theo về. */
     hint: {
       leChan:
-        '📜 Lạc hầu: Tâu bệ hạ, nữ tướng Lê Chân ở trang An Biên ven biển đã về theo Hai Bà, lo lính nỏ. Ra trận xin chọn bà làm phó tướng ở bảng xếp quân, ở kinh đô thì giao bà về một doanh trại.',
+        '📜 Lạc hầu: Tâu bệ hạ, nữ tướng Lê Chân ở trang An Biên ven biển đã về theo Hai Bà, lo lính nỏ. Ra trận xin chọn bà làm phó tướng ở bảng xếp quân; ở kinh đô bà ở doanh trại, lính giữ kinh đô cùng binh chủng được bà cộng sức.',
       thanhThien:
-        '📜 Lạc hầu: Tâu bệ hạ, nữ tướng Thánh Thiên đã về theo Hai Bà, lo cung thủ. Ra trận xin chọn bà làm phó tướng ở bảng xếp quân, ở kinh đô thì giao bà về một doanh trại.',
+        '📜 Lạc hầu: Tâu bệ hạ, nữ tướng Thánh Thiên đã về theo Hai Bà, lo cung thủ. Ra trận xin chọn bà làm phó tướng ở bảng xếp quân; ở kinh đô bà ở doanh trại, lính giữ kinh đô cùng binh chủng được bà cộng sức.',
       batNan:
-        '📜 Lạc hầu: Tâu bệ hạ, nữ tướng Bát Nàn đã về theo Hai Bà, lo giáo binh. Ra trận xin chọn bà làm phó tướng ở bảng xếp quân, ở kinh đô thì giao bà về một doanh trại.',
+        '📜 Lạc hầu: Tâu bệ hạ, nữ tướng Bát Nàn đã về theo Hai Bà, lo giáo binh. Ra trận xin chọn bà làm phó tướng ở bảng xếp quân; ở kinh đô bà ở doanh trại, lính giữ kinh đô cùng binh chủng được bà cộng sức.',
       phungThiChinh:
-        '📜 Lạc hầu: Tâu bệ hạ, nữ tướng Phùng Thị Chính địu con vẫn cầm gươm theo Hai Bà, lo voi chiến. Ra trận xin chọn bà làm phó tướng ở bảng xếp quân, ở kinh đô thì giao bà về một doanh trại.',
+        '📜 Lạc hầu: Tâu bệ hạ, nữ tướng Phùng Thị Chính địu con vẫn cầm gươm theo Hai Bà, lo voi chiến. Ra trận xin chọn bà làm phó tướng ở bảng xếp quân; ở kinh đô bà ở doanh trại, lính giữ kinh đô cùng binh chủng được bà cộng sức.',
     } satisfies Record<NuTuongId, string>,
   },
 
@@ -871,7 +862,7 @@ export const vi = {
         { who: 'ke', text: 'Quân ta bắt được một tên cướp sông. Tra hỏi mãi, nó mới khai mình là người phương Bắc.' },
         { who: 'caoLo', text: 'Tâu bệ hạ, cướp sông chính là thủy binh Triệu đội lốt, sang dò thế Âu Lạc. Xin cho thần cầm quân đi dẹp.' },
         { who: 'anDuong', text: 'Triệu Đà đã kết thông gia với ta, chắc chỉ là bọn cướp vặt. Nhưng khanh cứ đi dẹp cho yên bờ sông.' },
-        { who: 'lacHau', text: 'Tâu bệ hạ, từ nay Cao Lỗ cùng ra trận, nỏ liên châu một lần bắn ra nhiều mũi. Cao Lỗ cũng chỉ huy được một doanh trại.' },
+        { who: 'lacHau', text: 'Tâu bệ hạ, từ nay Cao Lỗ cùng ra trận, nỏ liên châu một lần bắn ra nhiều mũi. Doanh trại có thêm một doanh cho Cao Lỗ.' },
       ],
     },
     layNo: {
@@ -924,7 +915,7 @@ export const vi = {
         { who: 'ke', text: 'Trưng Trắc lấy Thi Sách, con Lạc tướng Chu Diên. Hai nhà ngầm lo việc lớn.' },
         { who: 'trungTrac', text: 'Dân ta khổ đã lâu. Em ơi, ta luyện voi, rèn giáo, chờ ngày đuổi giặc.' },
         { who: 'trungNhi', text: 'Chị cưỡi voi đi trước, em giương cung theo sau. Voi Mê Linh không chịu thua ngựa Hán.' },
-        { who: 'lacHau', text: 'Tâu hai Bà, từ nay hai Bà cùng ra trận, mỗi bà một voi, mỗi bà chỉ huy được một doanh trại. Trưng Trắc có Voi xung trận.' },
+        { who: 'lacHau', text: 'Tâu hai Bà, từ nay hai Bà cùng ra trận, mỗi bà một voi, ở doanh trại cùng các tướng. Trưng Trắc có Voi xung trận.' },
         { who: 'lacHau', text: 'Quân Hán sẽ tới đánh kinh đô, xen với mùa lũ. Điện lên được cấp 10, bản đồ phó bản có thêm chương 5.' },
       ],
     },
@@ -1272,6 +1263,8 @@ export const vi = {
     mauKhoanh: (n: number) => `Mẫu còn ${n} khoảnh chưa phát: chỗ trong rừng sẽ bỏ qua.`,
     relaid: (refund: string) =>
       `Kinh đô đã dựng lại rộng hơn theo mẫu, nhà cửa giữ nguyên cấp và người làm.${refund ? ` Hoàn lại: ${refund}.` : ''}`,
+    relaidTrai: (refund: string) =>
+      `Các doanh trại đã nhập làm một đại doanh 8×8, mỗi tướng một doanh; nơi ở của binh chủng nới ra 4×4. Công trình vướng đã dời sang chỗ trống gần nhất, giữ nguyên cấp.${refund ? ` Hoàn lại: ${refund}.` : ''}`,
     relaidDien: (refund: string) =>
       `Điện Vua Hùng đã mở rộng thành 10×10 ô, có sân chầu. Công trình vướng đã dời sang chỗ trống gần nhất, giữ nguyên cấp.${refund ? ` Hoàn lại: ${refund}.` : ''}`,
     /** Lạc hầu gợi ý một lần khi mở công trình mới (`NEW_HINTS`). */
@@ -1330,25 +1323,20 @@ export const vi = {
     get: 'Nhận',
     troops: 'Quân',
     troopSpace: (used: number, cap: number) => `Quân trong doanh trại: ${used}/${cap} chỗ`,
-    troopSpaceAll: (used: number, cap: number, n: number) =>
-      n > 1 ? `Quân trong ${n} doanh trại: ${used}/${cap} chỗ` : `Quân trong doanh trại: ${used}/${cap} chỗ`,
-    barracksCap: (cap: number) => `Doanh trại này giữ ${cap} chỗ`,
+    troopSpaceAll: (used: number, cap: number, doanh: number) =>
+      doanh > 1 ? `Quân trong doanh trại (${doanh} doanh): ${used}/${cap} chỗ` : `Quân trong doanh trại: ${used}/${cap} chỗ`,
+    barracksCap: (cap: number, per: number, doanh: number) => `Doanh trại giữ ${cap} chỗ: ${doanh} doanh, mỗi doanh ${per} chỗ`,
     /** Bốn thẻ của bảng doanh trại. */
     barracksTabs: { quan: 'Quân', giu: 'Giữ kinh đô', tuong: 'Tướng', trai: 'Trại' },
-    commanderHint: 'Mỗi doanh trại một tướng chỉ huy, có tướng mới giữ chỗ quân. Có thêm tướng thì dựng thêm doanh trại. Giữ kinh đô, tướng ra trận từ trại mình chỉ huy.',
-    commandsHere: 'chỉ huy doanh trại này',
-    commandsOther: 'chỉ huy doanh trại khác',
-    commandsNone: 'chưa chỉ huy doanh trại nào',
-    noCommander: 'Doanh trại này chưa có tướng chỉ huy nên chưa giữ chỗ quân.',
-    assignHere: 'Giao trại này',
-    toPost: 'Tới trại',
-    commandAssigned: (name: string) => `${name} chỉ huy doanh trại này`,
+    generalsHint: 'Mỗi tướng đã về là một doanh trong trại, thêm chỗ quân theo cấp trại (tối đa 5 doanh). Giữ kinh đô, tướng ra trận cùng quân từ cổng trại gần giặc.',
+    doanhOf: (i: number) => `doanh thứ ${i}`,
+    doanhNone: 'ở trại, ngoài năm doanh (không thêm chỗ)',
     tuongNames: { lacTuong: 'Lạc tướng', giong: 'Thánh Gióng', sonTinh: 'Sơn Tinh', anDuong: 'An Dương Vương', caoLo: 'Cao Lỗ', trungTrac: 'Trưng Trắc', trungNhi: 'Trưng Nhị' } satisfies Record<TuongId, string>,
     tuongIcons: { lacTuong: '🥁', giong: '🐎', sonTinh: '⛰️', anDuong: '🏹', caoLo: '🎯', trungTrac: '🐘', trungNhi: '🚩' } satisfies Record<TuongId, string>,
     guardInfo: (used: number, cap: number) => `Giữ kinh đô: ${used}/${cap} chỗ (theo cấp Điện)`,
-    guardAutoNote: 'Đang bố trí tự động: mọi lính giữ kinh đô cho tới đủ chỗ, chia đều các doanh trại. Bấm − + để tự bố trí.',
-    guardManualNote: 'Lính bố trí ở trại nào thì ra trận từ trại ấy. Lính chết được quân dự trữ bù vào.',
-    guardHere: (n: number) => `Ở trại này ${n}`,
+    guardAutoNote: 'Đang bố trí tự động: mọi lính giữ kinh đô cho tới đủ chỗ, giữ tỉ lệ binh chủng. Bấm − + để tự bố trí.',
+    guardManualNote: 'Lính chết được quân dự trữ bù vào.',
+    guardGate: 'Giặc tới thì lính ra từ cổng trại gần giặc nhất (từ cấp 3 trại có bốn cổng).',
     guardShort: (n: number) => `thiếu ${n}`,
     guardAuto: 'Bố trí tự động',
     reserveLine: (list: string) => `Quân dự trữ (không ra giữ kinh đô): ${list}`,
@@ -1365,7 +1353,7 @@ export const vi = {
     advAtDien: 'ngự ở Điện',
     advAtSea: 'đã xuống biển, hiển linh',
     caoLoAtDien: 'đứng trước Điện',
-    haiBaDesc: 'không chỉ huy trại nào thì giữ kinh đô từ trước Điện',
+    haiBaDesc: 'cưỡi voi trên đài tướng',
     trainAt: (name: string) => `Ở và luyện tại ${name.toLowerCase()}`,
     buildHome: (name: string) => `Dựng ${name.toLowerCase()}`,
     needBarracks: (lv: number) => (lv <= 1 ? 'Cần doanh trại' : `Cần doanh trại cấp ${lv}`),

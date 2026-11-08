@@ -6,10 +6,10 @@ import { describe, expect, it } from 'vitest';
 import { startBattle, stepField, type Battle } from './battle';
 import { startStage } from './campaign';
 import { CH5_LAST, MA_VIEN_AT } from './chuong5';
-import { BUILDINGS, CH5_QUEST_START, DEFAULT_ROWS, GIFT_IDS, NU_TUONG, NU_TUONG_BONUS, NU_TUONG_IDS, type NuTuongId } from './defs';
-import { barracksList, guardPlan } from './doanhTrai';
+import { CH5_QUEST_START, DEFAULT_ROWS, GIFT_IDS, NU_TUONG, NU_TUONG_BONUS, NU_TUONG_IDS, UNITS } from './defs';
+import { guardPlan } from './doanhTrai';
 import { createInitialState, place, type GameState } from './game';
-import { assignNu, canAssignNu, markNuHinted, nextNuHint, nuJoined, nuOf, nuPostOf, nuPosts, nuTuongList, phoTuongOf } from './nuTuong';
+import { markNuHinted, nextNuHint, nuAtCamp, nuForUnit, nuJoined, nuTuongList, phoTuongOf } from './nuTuong';
 import { SAVE_VERSION, deserialize, serialize } from './save';
 import { markStory } from './story';
 import { SAMPLE_ARMY4 } from './testkit';
@@ -37,14 +37,6 @@ function ch5(cleared = 34): GameState {
     markStory(s, id);
   }
   return s;
-}
-
-/** Thêm một doanh trại cấp 5 cạnh doanh trại đầu. */
-function secondBarracks(s: GameState) {
-  const r = place(s, 'doanhTrai', DIEN_END + 2 + BUILDINGS.doanhTrai.w, DIEN_END + 1);
-  if (!r.ok) throw new Error(r.reason);
-  r.value.level = 5;
-  return r.value;
 }
 
 const ours = (b: Battle, kind: string) => b.fighters.filter((f) => f.side === 'ta' && f.kind === kind);
@@ -151,59 +143,38 @@ describe('phó tướng ở phó bản', () => {
 });
 
 describe('nữ tướng ở doanh trại khi giữ kinh đô', () => {
-  it('nữ tướng rảnh về doanh trại theo thứ tự dựng; giao lại thì hai người đổi chỗ', () => {
-    const s = ch5(35);
-    const [a] = barracksList(s);
-    const b = secondBarracks(s);
-    expect([...nuPosts(s)]).toEqual([
-      [a.id, 'leChan'],
-      [b.id, 'thanhThien'],
-    ]);
-    expect(canAssignNu(s, a.id, 'leChan')).toEqual({ ok: false, reason: 'nuDaO' });
-    expect(canAssignNu(s, a.id, 'batNan')).toEqual({ ok: false, reason: 'tuongChuaCo' });
-    expect(assignNu(s, a.id, 'thanhThien')).toEqual({ ok: true, value: 'thanhThien' });
-    expect(nuOf(s, a)).toBe('thanhThien');
-    expect(nuOf(s, b)).toBe('leChan');
-    expect([a.nuTuong, b.nuTuong]).toEqual(['thanhThien', 'leChan']);
-    // Người mới theo về chưa có trại trống thì chưa ở đâu.
-    s.campaign.cleared = 37;
-    expect(nuPostOf(s, 'batNan')).toBeUndefined();
-    expect(assignNu(s, b.id, 'batNan').ok).toBe(true);
-    expect(nuPostOf(s, 'leChan')).toBeUndefined();
-    expect(nuOf(s, b)).toBe('batNan');
+  it('mọi nữ tướng đã theo về đều ở doanh trại; chưa có doanh trại thì chưa ở đâu', () => {
+    const s = ch5(37);
+    expect(nuAtCamp(s)).toEqual(['leChan', 'thanhThien', 'batNan']);
+    expect(nuForUnit(s, 'no')).toBe('leChan');
+    expect(nuForUnit(s, 'giao')).toBe('batNan');
+    expect(nuForUnit(s, 'voi')).toBe(null);
+    s.buildings = s.buildings.filter((b) => b.type !== 'doanhTrai');
+    expect(nuAtCamp(s)).toEqual([]);
+    expect(nuForUnit(s, 'no')).toBe(null);
   });
 
-  it('lính giữ kinh đô của trại có nữ tướng, đúng binh chủng của người ấy, thêm 12% máu; trại khác như cũ', () => {
+  it('mọi lính giữ kinh đô đúng binh chủng của nữ tướng được thêm 12% máu; binh chủng khác như cũ', () => {
     const s = ch5(34);
-    const [a] = barracksList(s);
-    const b = secondBarracks(s);
-    expect(nuOf(s, a)).toBe('leChan');
     const plan = guardPlan(s);
-    expect(plan.get(a.id)!.no).toBeGreaterThan(0);
-    expect(plan.get(b.id)!.no).toBeGreaterThan(0);
+    expect(plan.no).toBeGreaterThan(0);
     const battle = startBattle(s, 1, 'bac');
-    const inside = (f: { x: number; z: number }, h: typeof a) => f.x >= h.x && f.x <= h.x + BUILDINGS.doanhTrai.w && f.z >= h.z && f.z <= h.z + BUILDINGS.doanhTrai.d;
     const no = ours(battle, 'no');
-    const boosted = no.filter((f) => f.nu);
-    expect(boosted.length).toBe(plan.get(a.id)!.no);
-    expect(boosted.every((f) => inside(f, a))).toBe(true);
-    const plain = no.filter((f) => !f.nu);
-    expect(plain.length).toBe(plan.get(b.id)!.no);
-    expect(boosted[0].maxHp / plain[0].maxHp).toBeCloseTo(1 + NU_TUONG_BONUS, 5);
-    expect(ours(battle, 'giao').some((f) => f.nu)).toBe(false);
+    expect(no.length).toBe(plan.no);
+    expect(no.every((f) => f.nu)).toBe(true);
+    const giao = ours(battle, 'giao');
+    expect(giao.some((f) => f.nu)).toBe(false);
+    expect(no[0].maxHp / UNITS.no.hp).toBeCloseTo(giao[0].maxHp / UNITS.giao.hp * (1 + NU_TUONG_BONUS), 5);
   });
 });
 
 describe('bản lưu 24', () => {
-  it('lưu rồi đọc lại giữ nữ tướng ở doanh trại và phó tướng đã chọn', () => {
+  it('lưu rồi đọc lại giữ phó tướng đã chọn', () => {
     const s = ch5(MA_VIEN_AT + 2);
-    const [a] = barracksList(s);
-    assignNu(s, a.id, 'phungThiChinh');
     s.campaign.phoTuong = 'batNan';
     const back = deserialize(serialize(s))!;
     expect(back.version).toBe(SAVE_VERSION);
     expect(SAVE_VERSION).toBeGreaterThanOrEqual(24);
-    expect(back.buildings.find((b) => b.id === a.id)!.nuTuong).toBe('phungThiChinh');
     expect(back.campaign.phoTuong).toBe('batNan');
     expect(nuJoined(back, 'phungThiChinh')).toBe(true);
   });
@@ -217,13 +188,9 @@ describe('bản lưu 24', () => {
     expect(phoTuongOf(back)).toBe(null);
   });
 
-  it('nữ tướng lạ, hay nữ tướng ở công trình không phải doanh trại thì không nạp', () => {
+  it('phó tướng lạ thì không nạp', () => {
     const s = ch5(34);
-    for (const bad of [
-      (r: any) => (r.campaign.phoTuong = 'trungTrac'),
-      (r: any) => (r.buildings.find((b: any) => b.type === 'doanhTrai').nuTuong = 'abc'),
-      (r: any) => (r.buildings.find((b: any) => b.type === 'dien').nuTuong = 'leChan' as NuTuongId),
-    ]) {
+    for (const bad of [(r: any) => (r.campaign.phoTuong = 'trungTrac'), (r: any) => (r.campaign.phoTuong = 'abc')]) {
       const raw = JSON.parse(serialize(s));
       bad(raw);
       expect(deserialize(JSON.stringify(raw))).toBeUndefined();

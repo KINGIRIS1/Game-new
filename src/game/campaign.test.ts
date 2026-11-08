@@ -13,7 +13,7 @@ function capital(): GameState {
   const s = createInitialState(0);
   setDien(s, 3);
   s.resources = { gao: 3000, voOc: 3000, datDa: 3000, sat: 1000, go: 1000 };
-  const barracks = place(s, 'doanhTrai', DIEN - 6, DIEN_END + 2);
+  const barracks = place(s, 'doanhTrai', DIEN - 10, DIEN_END + 2);
   if (!barracks.ok) throw new Error('dựng doanh trại thử thất bại');
   barracks.value.level = 3;
   // Mỗi binh chủng luyện ở nơi ở riêng.
