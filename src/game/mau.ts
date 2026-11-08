@@ -109,18 +109,10 @@ const OFF_ZONE = 100;
  */
 const storyDien = () => STAGES[CH1_LAST - 1].minDien;
 
-/**
- * Số doanh trại mẫu chừa chỗ ở từng cấp Điện (chỉ số 0 là cấp 1): mỗi tướng thường đã có ở cấp ấy một trại.
- * Lạc tướng từ Điện 2; Gióng thành tráng sĩ khi rèn xong giáp sắt ở lò rèn cấp 3; Sơn Tinh ở chương 2 (Điện 6);
- * An Dương Vương ở chương 3 (Điện 7); Cao Lỗ ở chương 4 (Điện 8).
- */
-export const MAU_BARRACKS = [0, 1, 2, 2, 2, 3, 4, 5, 5, 5];
-
-/** Số chỗ mẫu chừa cho loại `type` ở cấp Điện `level`: đúng số tối đa theo cấp Điện (doanh trại: theo số tướng). */
+/** Số chỗ mẫu chừa cho loại `type` ở cấp Điện `level`: đúng số tối đa theo cấp Điện. */
 function wantOf(type: BuildingType, level: number): number {
   const def = BUILDINGS[type];
   if (def.unlock && level < storyDien()) return 0;
-  if (type === 'doanhTrai') return Math.min(MAU_BARRACKS[level - 1] ?? 0, def.limit[level - 1] ?? 0);
   return def.limit[level - 1] ?? 0;
 }
 
@@ -650,12 +642,12 @@ const RECIPES: Record<MauId, Recipe> = {
       ['bep', inRings(2, byDien)],
       ['loRen', inRings(1, byDien)],
       [['vuon', 'chuongLon'], inRings(1, byKitchen)],
+      ['ruongNep', inRings(0, row(1, byRiver))],
       [['denPhuDong', 'denTanVien'], inRings(0, row(1, byBarracks))],
       ['hoKimQuy', inRings(0, byHill)],
       ['traiGiao', inRings(0, row(2, byBarracks))],
       [['traiCung', 'chuongVoi'], inRings(0, row(2, byBarracks))],
       ['ruong', inRings(0, row(1, byRiver))],
-      ['ruongNep', inRings(0, row(1, byRiver))],
       ['baiDa', inRings(0, row(2, byHill))],
       ['xuongMoc', inRings(0, row(2, byHill))],
     ],

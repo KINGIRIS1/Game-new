@@ -107,7 +107,7 @@ describe('Hồ Kim Quy', () => {
 
   it('giữ kinh đô: hồ còn nguyên thì trận có phúc của thần, hồ hư thì thôi', () => {
     const s = ch3();
-    expect(place(s, 'doanhTrai', DIEN + 6, DIEN - 6).ok).toBe(true);
+    expect(place(s, 'doanhTrai', DIEN + 6, DIEN - 10).ok).toBe(true);
     const r = place(s, 'hoKimQuy', LAKE(), LAKE());
     if (!r.ok) throw new Error(r.reason);
     expect(hasKimQuy(s)).toBe(true);

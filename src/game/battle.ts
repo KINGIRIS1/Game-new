@@ -93,8 +93,8 @@ import {
   type UnitType,
   RAID_SCALE,
 } from './defs';
-import { barracksList, guardPlan, heroPost } from './doanhTrai';
-import { nuBoosts, nuPosts } from './nuTuong';
+import { gateToward, guardPlan, heroPost } from './doanhTrai';
+import { nuBoosts, nuForUnit } from './nuTuong';
 import type { Building, GameState } from './game';
 import { openStart } from './khoanh';
 import { FAR_FOREST, FOREST_BAND, GRID, RIVER_DIVE, RIVER_END, RIVER_START, farBankOf, inGrid, isRiver, turnLocal } from './map';
@@ -624,44 +624,46 @@ export function startBattle(state: GameState, wave: number, side: RaidSide, opts
     }
   }
   if (!flood && !far) battle.exitAt = Math.max(exitAt, -0.5);
-  // Lính người chơi bố trí giữ kinh đô ra trận từ doanh trại của mình; lính dự trữ ở lại. Lính đóng ở đồn biên còn
-  // nguyên ra trận từ đồn ấy, bớt đi từ phần giữ kinh đô của các doanh trại (không thêm quân).
-  const def = BUILDINGS.doanhTrai;
+  // Lính người chơi bố trí giữ kinh đô ra trận từ cổng doanh trại gần giặc nhất (tâm các toán giặc lúc trận mở); lính
+  // dự trữ ở lại. Lính đóng ở đồn biên còn nguyên ra trận từ đồn ấy, bớt đi từ phần giữ kinh đô (không thêm quân).
   const plan = guardPlan(state);
-  // Lính của doanh trại có nữ tướng cùng binh chủng thì được nữ tướng cộng thêm.
-  const nus = nuPosts(state);
-  const spawnAt = (home: Building, kind: UnitType, n: number) => {
+  const barracks = heroPost(state);
+  const foes = battle.fighters.filter((f) => f.side === 'giac');
+  const foeAt = foes.length
+    ? { x: foes.reduce((n, f) => n + f.x, 0) / foes.length, z: foes.reduce((n, f) => n + f.z, 0) / foes.length }
+    : { x: 0, z: 0 };
+  const gate = barracks ? gateToward(barracks, foeAt) : null;
+  const spawnAt = (home: Building, kind: UnitType, n: number, boost: boolean) => {
     const hd = BUILDINGS[home.type];
-    const nu = nuBoosts(nus.get(home.id), kind);
+    const nu = boost && !!nuForUnit(state, kind);
     for (let i = 0; i < n; i++) {
-      const x = home.x + hd.w / 2 + (rand() - 0.5) * hd.w;
-      const z = home.z + hd.d / 2 + (rand() - 0.5) * hd.d;
+      let x: number;
+      let z: number;
+      if (gate && home === barracks) {
+        // Dàn trong cổng: dọc theo tường (vuông góc với hướng ra), lùi vào sân một chút, rồi kéo ra qua cổng.
+        const a = (rand() - 0.5) * 2.4;
+        const b = rand() * 1.2;
+        x = gate.x + a * Math.abs(gate.out.z) - b * gate.out.x;
+        z = gate.z + a * Math.abs(gate.out.x) - b * gate.out.z;
+      } else {
+        x = home.x + hd.w / 2 + (rand() - 0.5) * hd.w;
+        z = home.z + hd.d / 2 + (rand() - 0.5) * hd.d;
+      }
       const f = newFighter(battle, 'ta', kind, x, z, UNITS[kind].hp * ownMult(battle, kind, nu));
       if (nu) f.nu = true;
       battle.fighters.push(f);
     }
   };
-  const guarding = zeroArmy();
-  for (const g of plan.values()) for (const k of UNIT_TYPES) guarding[k] += g[k];
   const posted = zeroArmy();
   for (const { fort, army } of garrisonPosts(state)) {
     for (const kind of UNIT_TYPES) {
-      const n = Math.min(army[kind], guarding[kind] - posted[kind]);
+      const n = Math.min(army[kind], plan[kind] - posted[kind]);
       if (n <= 0) continue;
-      spawnAt(fort, kind, n);
+      spawnAt(fort, kind, n, false);
       posted[kind] += n;
     }
   }
-  for (const barracks of barracksList(state)) {
-    const guard = plan.get(barracks.id);
-    if (!guard) continue;
-    for (const kind of UNIT_TYPES) {
-      // Phần đã ra từ đồn biên thì bớt dần ở các doanh trại.
-      const n = Math.max(0, guard[kind] - posted[kind]);
-      posted[kind] = Math.max(0, posted[kind] - guard[kind]);
-      spawnAt(barracks, kind, n);
-    }
-  }
+  if (barracks) for (const kind of UNIT_TYPES) spawnAt(barracks, kind, Math.max(0, plan[kind] - posted[kind]), true);
   // Đền Hát Môn còn nguyên: nghĩa binh từ sân đền ra đánh giặc (ngã thì không mất lính thật).
   const den = state.buildings.find((b) => b.type === 'denHatMon' && !b.damaged);
   if (den) {
@@ -673,16 +675,14 @@ export function startBattle(state: GameState, wave: number, side: RaidSide, opts
       battle.fighters.push(newFighter(battle, 'ta', 'nghiaBinh', x, z, NGHIA_BINH.hp));
     }
   }
-  // Tướng ra trận từ sân doanh trại mình chỉ huy (không chỉ huy trại nào thì từ trại của Lạc tướng; Hai Bà thì từ
-  // trước Điện, mỗi bà một bên lối vào). Chưa có doanh trại thì ra từ trước Điện.
+  // Tướng ra trận cùng quân từ cổng doanh trại gần giặc (hai tướng thì mỗi người một bên cổng). Chưa có doanh trại
+  // thì ra từ trước Điện.
   const dien = state.buildings.find((b) => b.type === 'dien');
   for (const [hero, i] of [[opts.hero, 0], [opts.hero2, 1]] as const) {
     if (!hero) continue;
-    const post = heroPost(state, hero.kind, !HAI_BA.includes(hero.kind));
-    if (post) {
-      // Mặt trước doanh trại (đã xoay thì theo hướng xoay).
-      const f = turnLocal(post.rot, 0, def.d / 2);
-      addHero(battle, hero, post.x + def.w / 2 + f.x, post.z + def.d / 2 + f.z, 1);
+    if (gate) {
+      const side = opts.hero && opts.hero2 ? (i ? 0.9 : -0.9) : 0;
+      addHero(battle, hero, gate.x + side * Math.abs(gate.out.z), gate.z + side * Math.abs(gate.out.x), 1);
     } else if (dien) {
       // Trước sân Điện (đã xoay thì theo hướng xoay); Hai Bà mỗi bà một bên lối vào.
       const side = HAI_BA.includes(hero.kind) ? (hero.kind === 'trungTrac' ? -1.2 : 1.2) : i * 1.2;

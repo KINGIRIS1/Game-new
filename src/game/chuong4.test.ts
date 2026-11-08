@@ -53,7 +53,8 @@ function ch4(): GameState {
   s.son.won = true;
   s.adv = { no: true, restUntil: 0, kimQuy: true, won: true, layTrao: false, bien: false };
   s.campaign.cleared = 24;
-  const barracks = place(s, 'doanhTrai', DIEN_END + 1, DIEN_END + 1);
+  // Doanh trại 8×8 tây nam Điện, trong dải thành ven sông (giữa Điện và góc sông không đủ chỗ).
+  const barracks = place(s, 'doanhTrai', DIEN - 10, DIEN_END - 3);
   if (!barracks.ok) throw new Error(barracks.reason);
   barracks.value.level = 5;
   for (const [type, x] of [['denPhuDong', edge(8, 1)], ['denTanVien', edge(8, 6)], ['denCoLoa', edge(8, 11)]] as const) {

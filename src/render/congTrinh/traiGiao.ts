@@ -1,66 +1,25 @@
-// Trại giáo 3×3: nơi ở của giáo binh. Hai lều chữ A song song phía sau, giá giáo bên phải, sân tập cọc rơm phía trước,
-// rào cọc vót nhọn quanh móng như doanh trại. Dựng một lần, mái tranh. Bản vẽ ở docs/bo-cuc-cong-trinh.md.
+// Trại giáo 4×4 (bản lưu 26): nơi ở của giáo binh, cùng kiểu khuôn viên với doanh trại: rào cọc vót nhọn, lầu cổng
+// giữa mặt trước, lều lính mái chữ A lớn ở góc sau bên trái, giá giáo góc sau bên phải, sân tập hai cọc rơm có hai giáo
+// binh đâm thử. Dựng một lần, mái tranh. Bản vẽ ở docs/bo-cuc-cong-trinh.md.
 
 import * as THREE from 'three';
 import { banner } from '../buildings';
 import { Lot } from '../lot';
 import { C } from '../palette';
-import { bakeSoldier } from '../soldier';
 import { ToonModel } from '../toon';
-import { type CongTrinh, yard } from './chung';
+import type { CongTrinh, LotOpts } from './chung';
+import { LINH, cocRom, giaGiao, gopLinh, khuonVien, noiOSpots } from './trai';
 
-export const TRAI_GIAO_LOT = new Lot(3, [
-  'AAAAgg',
-  'AAAAgg',
-  'aaaa..',
-  'aaaa..',
-  '.o..o.',
-  '..,,..',
+export const TRAI_GIAO_LOT = new Lot(4, [
+  'AAAAA.gg',
+  'AAAAA.gg',
+  'AAAAA...',
+  '....s.o.',
+  '........',
+  '....s.o.',
+  '...,,...',
+  '...CC...',
 ]);
-
-/** Lính trong nơi ở giữ cỡ như dáng cũ (0,72 lần, cả mô hình cũ thu 0,95). */
-export const LINH = 0.72 * 0.95;
-
-/** Nửa cạnh đường rào trên móng 3×3: cọc đứng sát mép móng mà không chìa ra ngoài. */
-export const RAO = 1.43;
-
-/**
- * Rào cọc vót nhọn quanh mép móng (nửa cạnh `half`), cùng kiểu rào doanh trại (cọc cao 0,62, cách 0,3, hai đai
- * buộc ngang), để ba nơi ở dựng sát doanh trại nhìn ra một cụm quân; chừa cổng rộng `gate` giữa mặt trước, hai cọc cổng
- * to, cao hơn buộc vải đỏ. `step`: khoảng cách cọc; `h`: cao cọc; `rails`: độ cao các đai (chuồng voi dùng cọc thưa,
- * cao hơn và hai thanh rào ngang cao hơn).
- */
-export function raoCocNhon(m: ToonModel, half: number, gate: number, o: { step?: number; h?: number; r?: number; rails?: number[]; railColor?: number } = {}): void {
-  const p = m.plain;
-  const step = o.step ?? 0.3;
-  const h = o.h ?? 0.62;
-  const r = o.r ?? 0.05;
-  const rails = o.rails ?? [0.16, 0.36];
-  const n = Math.round((2 * half) / step);
-  const at = (i: number) => -half + (i * 2 * half) / n;
-  const stakes: [number, number][] = [];
-  for (let i = 0; i <= n; i++) stakes.push([at(i), -half]);
-  for (let i = 1; i <= n; i++) stakes.push([-half, at(i)], [half, at(i)]);
-  for (let i = 1; i < n; i++) if (Math.abs(at(i)) > gate / 2 + step * 0.4) stakes.push([at(i), half]);
-  for (const [x, z] of stakes) p.cone(r, h, C.wood, x, h / 2 + 0.02, z, undefined, 4);
-  const railC = o.railColor ?? C.woodDark;
-  const side = half - gate / 2;
-  for (const y of rails) {
-    p.box(2 * half, 0.04, 0.04, railC, 0, y, -half);
-    for (const s of [-1, 1]) {
-      p.box(0.04, 0.04, 2 * half, railC, s * half, y, 0);
-      p.box(side, 0.04, 0.04, railC, s * (gate / 2 + side / 2), y, half);
-    }
-  }
-  // Hai cọc cổng to, cao hơn, buộc vải đỏ.
-  for (const s of [-1, 1]) {
-    const x = (s * gate) / 2;
-    const gh = h * 1.3;
-    p.cyl(r * 1.05, r * 1.2, gh - 0.14, C.woodDark, x, (gh - 0.14) / 2 + 0.02, half, undefined, 6);
-    p.cone(r * 1.05, 0.16, C.woodDark, x, gh - 0.04, half, undefined, 6);
-    m.band.box(0.13, 0.12, 0.13, C.red, x, gh - 0.3, half);
-  }
-}
 
 /**
  * Lều lính mái chữ A, nóc chạy dọc trục x (dáng `aFrameHut` cũ quay ngang): mái tranh chạm đất trước và sau,
@@ -94,68 +53,42 @@ function leuChuA(m: ToonModel, x: number, z: number, length: number, width: numb
   p.box(length * 0.7, 0.02, width * 0.45, C.cream, x + 0.05, 0.1, z);
 }
 
-/** Giá giáo dựng dọc trục x: hai cột, xà ngang, giáo dựa xà ngả về sau, mũi đồng lớn (cỡ như dáng cũ). */
-function giaGiao(m: ToonModel, x: number, z: number, w: number, count: number): void {
-  const p = m.plain;
-  for (const s of [-1, 1]) p.cyl(0.033, 0.038, 0.9, C.woodDark, x + (s * w) / 2, 0.45, z - 0.09, undefined, 6);
-  p.box(w + 0.08, 0.06, 0.06, C.woodDark, x, 0.86, z - 0.09);
-  const tilt = 0.18;
-  for (let i = 0; i < count; i++) {
-    const sx = x - w / 2 + 0.08 + (i * (w - 0.16)) / (count - 1);
-    p.cyl(0.015, 0.015, 1.19, C.woodDark, sx, 0.59, z, [-tilt, 0, 0], 5);
-    p.cone(0.048, 0.19, C.bronze, sx, 0.59 + 0.69 * Math.cos(tilt), z - 0.69 * Math.sin(tilt), [-tilt, 0, 0], 4);
-  }
-}
-
-/**
- * Cọc rơm tập đâm (cỡ như `strawDummy` cũ): cọc gỗ, bó rơm làm thân hạ thấp ngang tầm mũi giáo của lính đứng thế thủ,
- * thanh ngang làm vai, nắm rơm làm đầu.
- */
-function cocRom(p: ToonModel['plain'], x: number, z: number): void {
-  p.cyl(0.026, 0.026, 0.68, C.woodDark, x, 0.39, z, undefined, 5);
-  p.cyl(0.11, 0.11, 0.31, C.thatch, x, 0.42, z, undefined, 7);
-  p.box(0.043, 0.043, 0.34, C.woodDark, x, 0.62, z);
-  p.cyl(0.055, 0.065, 0.12, C.thatch, x, 0.73, z, undefined, 5);
-}
-
 /** Mũi giáo của giáo binh thế thủ (`strike` 0,05), đã nhân cỡ lính: lệch sang tay phải `x`, chĩa tới `z`. */
 const MUI_GIAO = { x: 0.21 * LINH, z: 1.383 * LINH };
+/** Giáo binh đâm gần như dọc trục x (ngang khung nhìn nên thấy rõ cây giáo). */
+const DAM_RY = 1.35;
 
-export function makeTraiGiao(): THREE.Group {
+/** `tier`: bậc binh khí đã rèn của giáo binh (đầu giáo sắt, tua đỏ, khiên viền sắt). */
+export function makeTraiGiao(tier = 0): THREE.Group {
   const m = new ToonModel();
   const p = m.plain;
   const L = TRAI_GIAO_LOT;
-  yard(m, 3);
-  raoCocNhon(m, RAO, 1.0);
-  const path = L.zone(',');
-  p.box(0.8, 0.03, 0.62, C.earth, path.x, 0.055, path.z - 0.06);
+  khuonVien(m);
 
-  // Lều lính lớn phía sau, lều thứ hai thấp hơn ở trước; to hơn lều cũ chừng 20%.
+  // Lều lính lớn góc sau bên trái, to hơn lều 3×3 chừng 30%; cờ đỏ cắm sau hồi trái, bay cao trên nóc.
   const A = L.zone('A');
-  leuChuA(m, A.x + 0.05, A.z + 0.1, 1.6, 0.92, 1.18);
-  const a = L.zone('a');
-  leuChuA(m, a.x + 0.05, a.z + 0.06, 1.5, 0.86, 1.02);
-  // Cờ đỏ cắm sau đầu hồi lều lớn, bay cao trên nóc.
-  banner(m, A.x - A.w / 2 + 0.17, A.z - 0.3, 2.1, C.red);
+  leuChuA(m, A.x - 0.05, A.z + 0.05, 2.1, 1.2, 1.4);
+  banner(m, A.x - A.w / 2 + 0.22, A.z - 0.5, 2.4, C.red);
 
   const g = L.zone('g');
-  giaGiao(m, g.x - 0.02, g.z + 0.08, 0.8, 5);
+  giaGiao(m, g.x, g.z + 0.1, 0.8, 5);
 
-  // Sân tập: hai cọc rơm; một giáo binh đâm thử vào cọc bên phải.
-  const [o1, o2] = L.cells('o');
-  cocRom(p, o1.x, o1.z);
-  cocRom(p, o2.x, o2.z);
+  // Sân tập đất nện: hai cọc rơm, mỗi cọc một giáo binh đâm (một người thế thủ, một người đâm tới).
+  const o = L.cells('o');
+  p.box(2.0, 0.02, 1.9, C.earth, 0.75, 0.06, 0.25);
+  for (const c of o) cocRom(p, c.x, c.z);
   const out = m.group();
-  const giao = bakeSoldier('giao', 0, { act: 'fight', strike: 0.05 });
-  giao.scale.setScalar(LINH);
-  // Đâm gần như dọc trục x (ngang khung nhìn nên thấy rõ cây giáo); đặt lính sao cho mũi giáo cắm vào giữa bó rơm.
-  const ry = 1.35;
-  const sx = o2.x - (MUI_GIAO.x * Math.cos(ry) + MUI_GIAO.z * Math.sin(ry));
-  const sz = o2.z - (-MUI_GIAO.x * Math.sin(ry) + MUI_GIAO.z * Math.cos(ry));
-  giao.position.set(sx, 0.05, sz);
-  giao.rotation.y = ry;
-  out.add(giao);
+  const at = (c: { x: number; z: number }) => ({
+    x: c.x - (MUI_GIAO.x * Math.cos(DAM_RY) + MUI_GIAO.z * Math.sin(DAM_RY)),
+    z: c.z - (-MUI_GIAO.x * Math.sin(DAM_RY) + MUI_GIAO.z * Math.cos(DAM_RY)),
+  });
+  out.add(
+    gopLinh([
+      { kind: 'giao', tier, ...at(o[0]), ry: DAM_RY, act: { act: 'fight', strike: 0.05 } },
+      { kind: 'giao', tier, ...at(o[1]), ry: DAM_RY, act: { act: 'fight', strike: 0.3 } },
+    ]),
+  );
   return out;
 }
 
-export const TRAI_GIAO: CongTrinh = { tiles: 3, make: () => makeTraiGiao(), spots: () => [], view: { half: 2.6, lookY: 0.9, px: 72 } };
+export const TRAI_GIAO: CongTrinh = { tiles: 4, make: (_l: number, o: LotOpts = {}) => makeTraiGiao(o.tier), spots: noiOSpots, view: { half: 3.3, lookY: 0.9, px: 64 } };

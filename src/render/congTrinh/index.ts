@@ -1,7 +1,7 @@
 // Mọi công trình vẽ trên móng mới, theo loại, và mô hình đặt vừa móng của mọi loại công trình (`lotModel`).
 
 import type * as THREE from 'three';
-import { isBridge, type BuildingType } from '../../game/defs';
+import { BUILDINGS, isBridge, type BuildingType } from '../../game/defs';
 import { bridgeModel, makeBanLang, makeDonBien } from '../benKia';
 import { buildingModel, footScale, makeBacThanh } from '../buildings';
 import { BAI_DA } from './baiDa';
@@ -24,6 +24,7 @@ import { RUONG } from './ruong';
 import { TRAI_CUNG } from './traiCung';
 import { THO_HO } from './thoHo';
 import { TRAI_GIAO } from './traiGiao';
+import { TRAI_NO } from './traiNo';
 import { VUON } from './vuon';
 import { XUONG_MOC } from './xuongMoc';
 
@@ -39,6 +40,7 @@ export const CONG_TRINH: Partial<Record<BuildingType, CongTrinh>> = {
   traiGiao: TRAI_GIAO,
   traiCung: TRAI_CUNG,
   chuongVoi: CHUONG_VOI,
+  traiNo: TRAI_NO,
   vuon: VUON,
   chuongLon: CHUONG_LON,
   bep: BEP,
@@ -55,7 +57,7 @@ export const CONG_TRINH: Partial<Record<BuildingType, CongTrinh>> = {
  * Mô hình công trình loại `type` ở cấp `level`, đặt vừa móng kinh đô lớn. Loại đã vẽ trên móng mới (`CONG_TRINH`)
  * thì dựng thẳng, không phóng. Loại còn vẽ theo móng cũ (bốn đền đầu, ruộng nếp, chòi canh, lầu nỏ,
  * đường và đồ trang trí) thì phóng theo móng và chừa viền cỏ (`footScale`). `userData.foot` ghi hệ số đã phóng.
- * `opts`: dáng theo trạng thái (ruộng lúa, ruộng nếp đã bồi phù sa).
+ * `opts`: dáng theo trạng thái (ruộng lúa, ruộng nếp đã bồi phù sa; doanh trại; bậc binh khí của nơi ở).
  */
 export function lotModel(type: BuildingType, level: number, opts: LotOpts = {}): THREE.Group {
   // Cầu vẽ đúng cỡ móng: vắt vừa lòng sông, đầu cầu chạm hai bờ.
@@ -79,7 +81,10 @@ export function lotModel(type: BuildingType, level: number, opts: LotOpts = {}):
   const moi = CONG_TRINH[type];
   if (moi) {
     const g = moi.make(level, opts);
-    g.userData.foot = 1;
+    // Móng đã nới mà bản vẽ chưa vẽ lại thì tạm phóng bản vẽ cũ cho vừa móng mới (hiện mọi loại đã vẽ đúng móng).
+    const k = BUILDINGS[type].w / moi.tiles;
+    if (k !== 1) g.scale.multiplyScalar(k);
+    g.userData.foot = k;
     return g;
   }
   const g = buildingModel(type, level, opts);

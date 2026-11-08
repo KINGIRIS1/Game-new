@@ -21,7 +21,6 @@ import {
   RESOURCE_IDS,
   ROWS,
   STAGES,
-  TUONG_IDS,
   NU_TUONG_IDS,
   UNIT_TYPES,
   isBridge,
@@ -29,7 +28,6 @@ import {
   type BuildingType,
   type NuTuongId,
   type ResourceId,
-  type TuongId,
 } from './defs';
 import { initialCaoLo } from './caoLo';
 import { initialBenKia, isBenKiaState, noGarrison } from './benKia';
@@ -45,7 +43,7 @@ import { initialThuThach } from './thuThach';
 import { initialXay } from './xay';
 import { footprintTop, levelFootprint } from './terrain';
 import { AREA, KHOANH_N, START_KHOANH, V11_AREA, squareKhoanh } from './khoanh';
-import { growDien, isLegacyLayout, legacyBaseHeights, levelLegacyFootprints, relayLegacy } from './xepLai';
+import { gopDoanhTrai, growDien, isLegacyLayout, legacyBaseHeights, levelLegacyFootprints, relayLegacy } from './xepLai';
 
 export { SAVE_VERSION };
 
@@ -103,6 +101,8 @@ function migrate(raw: unknown): unknown {
   // Kinh đô nhỏ (trước phiên bản 11) dựng lại theo mẫu với Điện 10×10 ngay ở bước 10 → 11; từ phiên bản 11 tới 19
   // Điện còn 5×5, tới bước 19 → 20 mới nới móng.
   const grow = isObj(v) && isNum(v.version) && v.version >= 11 && v.version < 20;
+  // Kinh đô nhỏ dựng lại theo mẫu ở bước 10 → 11 đã theo móng bây giờ: tới bước 25 → 26 không nới móng nữa.
+  const relaid = isObj(v) && isNum(v.version) && v.version < 11;
   if (isObj(v) && v.version === 1 && Array.isArray(v.buildings)) v = migrate1to2(v);
   if (isObj(v) && v.version === 2) v = migrate2to3(v);
   if (isObj(v) && v.version === 3) v = migrate3to4(v);
@@ -135,6 +135,7 @@ function migrate(raw: unknown): unknown {
   if (isObj(v) && v.version === 22) v = migrate22to23(v);
   if (isObj(v) && v.version === 23) v = migrate23to24(v);
   if (isObj(v) && v.version === 24) v = migrate24to25(v);
+  if (isObj(v) && v.version === 25) v = migrate25to26(v, !relaid);
   return v;
 }
 
@@ -492,6 +493,20 @@ function migrate24to25(s: Raw): Raw {
   return s;
 }
 
+/**
+ * Phiên bản 25 → 26 (một doanh trại lớn): các doanh trại nhập làm một đại doanh 8×8, bốn nơi ở nới ra 4×4, công
+ * trình vướng dời đi, trại thừa và phần bị dỡ hoàn của (`gopDoanhTrai`). `grow`: còn móng cũ (không phải kinh đô nhỏ
+ * vừa dựng lại theo mẫu).
+ */
+function migrate25to26(s: Raw, grow: boolean): Raw {
+  s.version = 26;
+  const xay = s.xay;
+  if (isValidBuildings(s.buildings) && Array.isArray(s.heights) && Array.isArray(s.khoanh) && isObj(s.resources) && isObj(s.cayDa) && isObj(xay) && Array.isArray(xay.viec)) {
+    gopDoanhTrai(s as unknown as GameState, grow);
+  }
+  return s;
+}
+
 const isBanh = (v: unknown, test: (x: unknown) => boolean): boolean => isObj(v) && test(v.chung) && test(v.giay);
 const isBool = (x: unknown) => typeof x === 'boolean';
 
@@ -513,8 +528,6 @@ function isValidBuilding(b: unknown): boolean {
     b.type in BUILDINGS &&
     b.level >= 1 &&
     b.level <= BUILDINGS[b.type as BuildingType].maxLevel &&
-    (b.tuong === undefined || TUONG_IDS.includes(b.tuong as TuongId)) &&
-    (b.nuTuong === undefined || (b.type === 'doanhTrai' && NU_TUONG_IDS.includes(b.nuTuong as NuTuongId))) &&
     (b.guard === undefined || (isObj(b.guard) && UNIT_TYPES.every((k) => isNum((b.guard as Raw)[k]) && ((b.guard as Raw)[k] as number) >= 0))) &&
     (b.uNo === undefined || ((b.uNo === 'ok' || b.uNo === 'hu') && b.type === 'thanh')) &&
     (b.rot === undefined || [0, 1, 2, 3].includes(b.rot as number)) &&
