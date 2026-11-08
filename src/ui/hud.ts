@@ -7,6 +7,8 @@ import {
   BUILDINGS,
   CA_BIEN_PER_MIN,
   CA_PER_MIN,
+  DON_DAO,
+  THUYEN_CHIEN,
   BUILD_MENU,
   CONG_THANH,
   LAU_NO,
@@ -110,7 +112,7 @@ import { tetOpen, tetStarted, type Banh } from '../game/tet';
 import type { Resolution } from '../render/world';
 import { formatClock, formatDuration, formatXay, vi } from '../text/vi';
 import { canStartUpgrade, conLai, isBusy, pendingBuilding, planWallUpgrade, soTho, thoRanh, thoRanhSau, viecOf, wallComponent, xayMs } from '../game/xay';
-import { XayLabels, fillXay, jobHtml, jobName, pendingHtml, quizHtml, realMs, thoHtml, type QuizResult } from './xay';
+import { XayLabels, fillXay, hetThoHtml, jobHtml, jobName, pendingHtml, quizHtml, realMs, thoHtml, type QuizResult } from './xay';
 import { armyHtml, defaultPick, huanHtml, mapHtml, nextRow, pickNu, stageHtml, stageResultHtml, stepPick, type ArmyPick, type MapChapter } from './campaign';
 import { armsHtml } from './binhKhi';
 import { advHtml, caoLoHtml } from './coLoa';
@@ -122,6 +124,7 @@ import { khoanhHtml } from './khoanh';
 import { benKiaHtml } from './benKia';
 import { campTier, cutOff, dacSanOf, plotAt, villageOutput } from '../game/benKia';
 import { seaIndex, seaRoute, type QuanDaoId } from '../game/bien';
+import { buildingThuyen, canThuyen, daoGiuBien, chanThuyen } from '../game/dao';
 import { quanDaoHtml } from './bien';
 import { farBankOf } from '../game/map';
 import { mauItems } from './mau';
@@ -155,10 +158,6 @@ function hetThoText(state: GameState): string {
   return Number.isFinite(ms) ? vi.ui.hetThoSau(formatClock(ms)) : vi.reasons.hetTho;
 }
 
-/** Như `hetThoText` nhưng cho bảng: số giờ đếm ngược thay tại chỗ (`fillXay`), bảng khỏi phải dựng lại mỗi giây. */
-function hetThoHtml(state: GameState): string {
-  return Number.isFinite(thoRanhSau(state)) ? vi.ui.hetThoSau('<b data-ranh></b>') : vi.reasons.hetTho;
-}
 
 /** Lý do chưa tới mốc truyện mở công trình này, rỗng khi đã mở. */
 function unlockWhy(state: GameState, type: BuildingType): string {
@@ -232,6 +231,11 @@ export type HudAction =
   | { kind: 'train'; unit: UnitType }
   | { kind: 'guardDelta'; unit: UnitType; delta: 1 | -1 }
   | { kind: 'garrisonDelta'; id: number; unit: UnitType; delta: 1 | -1 }
+  /** Đóng đảo: đóng thuyền chiến ở bến thuyền khơi, dựng hay nâng đồn đảo, thêm bớt lính đóng, mở bảng quần đảo. */
+  | { kind: 'buildThuyen'; dao: QuanDaoId }
+  | { kind: 'buildDon'; dao: QuanDaoId }
+  | { kind: 'daoLinh'; dao: QuanDaoId; unit: UnitType; delta: 1 | -1 }
+  | { kind: 'openQuanDao'; dao: QuanDaoId }
   | { kind: 'guardAuto' }
   | { kind: 'repair'; id: number }
   | { kind: 'repairAll' }
@@ -559,6 +563,14 @@ export class Hud {
         return this.onAction({ kind: 'phatRung', id });
       case 'seeIsland':
         return this.onAction({ kind: 'seeIsland', id: el.dataset.dao as QuanDaoId });
+      case 'buildThuyen':
+        return this.onAction({ kind: 'buildThuyen', dao: el.dataset.dao as QuanDaoId });
+      case 'buildDon':
+        return this.onAction({ kind: 'buildDon', dao: el.dataset.dao as QuanDaoId });
+      case 'daoLinh':
+        return this.onAction({ kind: 'daoLinh', dao: el.dataset.dao as QuanDaoId, unit: el.dataset.unit as UnitType, delta: Number(el.dataset.delta) < 0 ? -1 : 1 });
+      case 'openQuanDao':
+        return this.onAction({ kind: 'openQuanDao', dao: el.dataset.dao as QuanDaoId });
       case 'trinhSat':
         return this.onAction({ kind: 'trinhSat', id });
       case 'ketThan':
@@ -732,6 +744,9 @@ export class Hud {
                     ? `⛵ ${vi.ui.thuyHanWarning(sideName, secs)}`
                     : `⚠️ ${vi.ui.raidWarning(sideName, secs)}`;
         list.push({ id: 'giac', text, tone: 'bad', act: 'lookRaid', label: vi.ui.raidLook });
+        // Đồn đảo giữ biển đã đốt lửa hiệu, chặn đánh lâu thuyền ngoài khơi.
+        const giu = raid.foe === 'thuyHan' ? daoGiuBien(state) : [];
+        if (giu.length) list.push({ id: 'luaHieu', text: vi.bien.luaHieuNote(giu.map((d) => vi.bien.donName(d)).join(', '), Math.round(chanThuyen(state) * 100)), tone: 'info' });
       }
     }
     if (raid.phase === 'battle' && raid.battle) {
@@ -764,6 +779,15 @@ export class Hud {
     if (visit) {
       const secs = Math.max(0, Math.ceil((visit.leavesAt - state.clock) / 1000));
       list.push({ id: 'thuyen', text: `⛵ ${vi.ui.merchantHere(secs)}`, tone: 'info', act: 'openMerchant', label: vi.ui.merchantOpen });
+    }
+    // Thuyền chiến đang chở quân ra đảo hay về bến.
+    for (const id of ['hoangSa', 'truongSa'] as const) {
+      const c = state.dao[id].chuyen;
+      if (!c) continue;
+      const n = UNIT_TYPES.reduce((sum, k) => sum + c.cho[k], 0);
+      const secs = Math.max(0, Math.ceil(c.con / 1000));
+      const name = vi.bien.quanDao[id].name;
+      list.push({ id: `thuyenChien:${id}`, text: c.ve ? vi.bien.thuyenTickerBack(name, n, secs) : vi.bien.thuyenTicker(name, n, secs), tone: 'info' });
     }
     if (state.benKia.scouts.length) {
       const secs = Math.max(0, Math.ceil((Math.min(...state.benKia.scouts.map((sc) => sc.at)) - state.clock) / 1000));
@@ -1055,6 +1079,26 @@ export class Hud {
   /** Thẻ đang xem trong bảng doanh trại; nhớ cho lần mở sau. */
   private barracksTab: BarracksTab = 'quan';
 
+  /**
+   * Mục thuyền chiến trong bảng bến thuyền khơi (Điện 10): đã có thì chở quân ra quần đảo nào (nút mở bảng quần đảo),
+   * chưa có thì nút đóng (bến cấp 3), đang đóng thì khối việc ở đầu bảng.
+   */
+  private thuyenHtml(state: GameState, b: Building, dao: QuanDaoId): string {
+    if (dienLevel(state) < DON_DAO.minDien) return '';
+    const head = `<h3>⛵ ${vi.bien.thuyen}</h3>`;
+    const open = `<button class="btn ghost" data-act="openQuanDao" data-dao="${dao}">🏯 ${vi.bien.donName(dao)}</button>`;
+    if (state.dao[dao].thuyen) return `${head}<p class="muted">${vi.bien.thuyenFor(vi.bien.quanDao[dao].name)}</p><div class="actions">${open}</div>`;
+    if (buildingThuyen(state, dao)) return '';
+    if (b.level < DON_DAO.benCap) return `${head}<p class="muted">${vi.bien.thuyenNeed}</p>`;
+    const check = canThuyen(state, dao);
+    const free = !!thoRanh(state);
+    const time = ` · ${vi.ui.xayTime(formatXay(realMs(state, THUYEN_CHIEN.xayMs)))}`;
+    const why = !check.ok ? vi.reasons[check.reason] : !free ? hetThoHtml(state) : '';
+    return `${head}<p class="muted">${vi.bien.thuyenFor(vi.bien.quanDao[dao].name)}</p>
+      <div class="actions"><button class="btn" data-act="buildThuyen" data-dao="${dao}" ${check.ok && free ? '' : 'disabled'}>⛵ ${vi.bien.thuyenBtn} · ${costHtml(state, THUYEN_CHIEN.cost)}${time}</button></div>
+      ${why ? `<div class="why">${why}</div>` : ''}`;
+  }
+
   /** Mục lính đóng ở đồn biên: mỗi binh chủng một hàng, bớt, thêm (không quá quân đang có, trừ phần đóng ở bờ kia). */
   private garrisonHtml(state: GameState, b: Building): string {
     const bank = farBankOf(b.x, b.z);
@@ -1187,7 +1231,7 @@ export class Hud {
       body = khoanhHtml(state, this.sheet.id);
     } else if (this.sheet.kind === 'quanDao') {
       title = `${vi.bien.icon} ${vi.bien.quanDao[this.sheet.id].name}`;
-      body = quanDaoHtml(state, this.sheet.id);
+      body = quanDaoHtml(state, this.sheet.id, this.cancelArmed, thoRanh(state) ? '' : hetThoHtml(state));
     } else if (this.sheet.kind === 'benKia') {
       title = `🌄 ${vi.benKia.title}`;
       if (this.donPick) for (const k of UNIT_TYPES) this.donPick.army[k] = Math.min(this.donPick.army[k], state.troops[k]);
@@ -1368,6 +1412,7 @@ export class Hud {
       const ground = seaRoute(b, seaIndex(state, b)).quanDao;
       rows.push(`<div class="stat"><span>${vi.ui.seaGround}</span><span>${vi.bien.icon} ${vi.bien.quanDao[ground].name}</span></div>`);
       rows.push(`<div class="actions"><button class="btn bronze" data-act="seeIsland" data-dao="${ground}">${vi.bien.icon} ${vi.bien.seeIsland}</button></div>`);
+      rows.push(this.thuyenHtml(state, b, ground));
     }
     if (b.type === 'donBien') rows.push(this.garrisonHtml(state, b));
     if (b.type === 'banLang') {

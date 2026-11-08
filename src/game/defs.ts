@@ -1,5 +1,7 @@
 // Mọi con số cân bằng game nằm ở đây để dễ tinh chỉnh bằng test.
 
+import type { QuanDaoId } from './bien';
+
 export const RESOURCE_IDS = ['gao', 'voOc', 'datDa', 'sat', 'go'] as const;
 export type ResourceId = (typeof RESOURCE_IDS)[number];
 export type Resources = Record<ResourceId, number>;
@@ -2080,7 +2082,11 @@ export type QuestGoal =
   /** Đánh chìm được `amount` lâu thuyền Hán ở kinh đô (cộng dồn qua mọi đợt). */
   | { kind: 'lauSunk'; amount: number }
   /** Có ít nhất `amount` công trình (không kể Điện) ở cấp `level` trở lên. */
-  | { kind: 'buildingLevel'; level: number; amount: number };
+  | { kind: 'buildingLevel'; level: number; amount: number }
+  /** Đã đóng ít nhất `amount` thuyền chiến (đóng đảo). */
+  | { kind: 'thuyenChien'; amount: number }
+  /** Đồn đảo của quần đảo `dao` (không ghi thì đồn nào cũng được) đã lên cấp `level`. */
+  | { kind: 'donDao'; dao?: QuanDaoId; level: number };
 
 export interface QuestDef {
   id: string;
@@ -2159,6 +2165,11 @@ export const QUESTS: QuestDef[] = [
   { id: 'denHatMon', goal: { kind: 'count', building: 'denHatMon', amount: 1 }, reward: { datDa: 3500, sat: 1100 } },
   // Sau truyện chương 5: Đền Rồng Tiên (mở từ Điện 10).
   { id: 'denRongTien', goal: { kind: 'count', building: 'denRongTien', amount: 1 }, reward: { datDa: 4500, sat: 1400 } },
+  // Điện 10 điều quân ra đóng đảo (`dao.ts`).
+  { id: 'thuyenChien', goal: { kind: 'thuyenChien', amount: 1 }, reward: { gao: 4000, go: 3000 } },
+  { id: 'donHoangSa', goal: { kind: 'donDao', dao: 'hoangSa', level: 1 }, reward: { voOc: 5000, sat: 1500 } },
+  { id: 'donTruongSa', goal: { kind: 'donDao', dao: 'truongSa', level: 1 }, reward: { datDa: 5000, go: 3000 } },
+  { id: 'donDao3', goal: { kind: 'donDao', level: 3 }, reward: { gao: 8000, sat: 2500 } },
 ];
 /** Nhận xong thưởng nhiệm vụ cuối chương 1 (Đền Phù Đổng) thì sang chương 2. */
 export const CH2_QUEST_START = 20;
@@ -2185,6 +2196,46 @@ export const CA_PER_MIN = [6, 10, 15, 22, 30, 40, 52, 68, 83, 101];
 
 /** Cá biển mỗi phút của một bến thuyền khơi đủ người, theo cấp. Đỡ gạo ăn như cá làng chài, thừa thì bỏ phí. */
 export const CA_BIEN_PER_MIN = [50, 70, 90];
+
+/**
+ * Đóng đảo (Điện 10, `dao.ts`): mỗi quần đảo một đồn đảo ba cấp giữa đảo chính.
+ * - `minDien`: cấp Điện mở; còn cần bến thuyền khơi cấp `benCap` đánh cá ở quần đảo ấy và thuyền chiến của bến.
+ * - `cost[i]`: giá dựng (cấp 1) hay nâng lên cấp `i + 1`; `xayMs[i]`: công xây tới cấp ấy (ms ở tốc độ 1).
+ * - `cho[i]`: chỗ quân lính đóng tối đa (voi chiến 3 chỗ, lính nỏ 2); `hp[i]`: máu đồn.
+ * - `them[i]`: lính đóng được thêm máu và sức đánh khi giữ đảo.
+ * - Đồn còn nguyên có từ `giuCho` chỗ quân đóng trở lên thì giữ biển: thuyền khơi đánh cá ở đó làm ra thêm
+ *   `nguTruong[i]` vỏ ốc và cá; đợt thủy quân Hán đánh kinh đô báo trước `baoSom` ms; mỗi lâu thuyền vào tới sông đã
+ *   mất `chan[i]` máu (các đồn cộng lại, tối đa `chanMax`).
+ */
+export const DON_DAO = {
+  minDien: 10,
+  benCap: 3,
+  cost: [
+    { gao: 12000, voOc: 10000, datDa: 10000, go: 6000, sat: 2000 },
+    { gao: 18000, voOc: 15000, datDa: 15000, go: 9000, sat: 3000 },
+    { gao: 26000, voOc: 22000, datDa: 22000, go: 13000, sat: 4500 },
+  ] as Cost[],
+  xayMs: [30 * 60_000, 60 * 60_000, 90 * 60_000],
+  cho: [12, 20, 30],
+  hp: [1500, 2100, 2800],
+  them: [0, 0.1, 0.2],
+  giuCho: 6,
+  nguTruong: [0.1, 0.2, 0.3],
+  baoSom: 2 * 60_000,
+  chan: [0.1, 0.15, 0.2],
+  chanMax: 0.4,
+};
+
+/**
+ * Thuyền chiến: mỗi bến thuyền khơi cấp 3 đóng được một chiếc, chở quân ra đồn đảo của quần đảo bến ấy đánh cá.
+ * Mỗi chuyến chở tối đa `cho` chỗ quân, đi `toc` ô mỗi giây theo đường thuyền khơi rồi cập bến ván của đồn.
+ */
+export const THUYEN_CHIEN = {
+  cost: { gao: 4000, go: 6000, sat: 1500 } as Cost,
+  xayMs: 20 * 60_000,
+  cho: 10,
+  toc: 2.2,
+};
 
 /**
  * Đấu thành: đánh kinh đô người chơi khác (bản chụp), cướp của.

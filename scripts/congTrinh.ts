@@ -26,6 +26,8 @@ import {
 } from '../src/render/buildings';
 import type { Dock, LotSpot } from '../src/render/congTrinh/chung';
 import { CONG_TRINH, lotModel } from '../src/render/congTrinh/index';
+import { CAU_NUOC, makeDonDao } from '../src/render/congTrinh/donDao';
+import { makeThuyenChien } from '../src/render/thuyenChien';
 import { addSunLights } from '../src/render/lights';
 import { makeBoat, makeSailBoat, makeTradeBoat } from '../src/render/models';
 import { C } from '../src/render/palette';
@@ -371,6 +373,73 @@ export function chupCanh(levels: number[], px = 32): Shot[] {
   renderer.dispose();
   renderer.domElement.remove();
   return out;
+}
+
+/** Ảnh có nhãn, xếp theo hàng (đồn đảo, thuyền chiến: không thuộc `BUILDINGS`). */
+export interface AnhNhan {
+  nhan: string;
+  src: string;
+}
+
+/**
+ * Đồn đảo (ba cấp, mỗi cấp nhìn từ trước và nhìn như trong game: cổng quay về bắc, camera từ đông nam) trên nền cát có
+ * biển trước cổng cho cầu ván; thuyền chiến trống đồng (neo, chở đủ sáu lính, đang chèo).
+ */
+export function chupRieng(loai: string): AnhNhan[][] {
+  const renderer = makeRenderer();
+  const rows: AnhNhan[][] = [];
+  if (loai === 'donDao') {
+    const half = 6.4;
+    const px = 52;
+    const h = Math.round(2 * half * px);
+    const w = Math.round(h * 1.15);
+    const truoc: AnhNhan[] = [];
+    const sau: AnhNhan[] = [];
+    for (const cap of [1, 2, 3]) {
+      for (const [ry, list] of [[0, truoc], [Math.PI, sau]] as const) {
+        const scene = newScene(18);
+        const g = new THREE.Group();
+        const sand = new THREE.Mesh(new THREE.BoxGeometry(14, 0.3, 13), new THREE.MeshLambertMaterial({ color: 0xd9c391 }));
+        sand.position.set(0, -0.15, -0.5);
+        sand.receiveShadow = true;
+        const sea = new THREE.Mesh(new THREE.BoxGeometry(14, 0.05, 4), new THREE.MeshLambertMaterial({ color: C.sea }));
+        sea.position.set(0, CAU_NUOC - 0.025, 8);
+        g.add(sand, sea);
+        const lit = cap === 2;
+        g.add(makeDonDao(cap, { gac: cap * 2, tierGiao: cap - 1, tierCung: cap - 1, lit, cau: { len: 3.2, mat: [0, 0, 0, 0, null, null, null] } }));
+        g.rotation.y = ry;
+        scene.add(g);
+        list.push({ nhan: `Cấp ${cap}${lit ? ', lửa hiệu cháy' : ''}: ${ry ? 'như trong game (cổng quay về bắc)' : 'nhìn từ trước'}`, src: render(renderer, scene, w, h, half, new THREE.Vector3(0, 0.8, 0)) });
+      }
+    }
+    rows.push(truoc, sau);
+  } else if (loai === 'thuyenChien') {
+    const half = 2.2;
+    const px = 110;
+    const h = Math.round(2 * half * px);
+    const w = Math.round(h * 1.5);
+    const row: AnhNhan[] = [];
+    const cases: [string, Parameters<typeof makeThuyenChien>[0], number, boolean][] = [
+      ['Neo ở bến, chưa chở ai', [], 0, false],
+      ['Chở sáu lính (giáo, cung, nỏ), đang chèo', [{ kind: 'giao', tier: 2 }, { kind: 'cung', tier: 1 }, { kind: 'no', tier: 0 }, { kind: 'giao', tier: 2 }, { kind: 'cung', tier: 1 }, { kind: 'giao', tier: 2 }], 0.3, true],
+      ['Đang chèo, thế khác', [{ kind: 'giao', tier: 0 }, { kind: 'cung', tier: 0 }], 0.75, true],
+    ];
+    for (const [nhan, cho, t, moving] of cases) {
+      const scene = newScene(8);
+      const sea = new THREE.Mesh(new THREE.BoxGeometry(10, 0.05, 6), new THREE.MeshLambertMaterial({ color: C.sea }));
+      sea.position.set(0, -0.03, 0);
+      scene.add(sea);
+      const boat = makeThuyenChien(cho);
+      boat.rotation.y = 0.35;
+      (boat.userData.row as (t: number, m: boolean) => void)(t, moving);
+      scene.add(boat);
+      row.push({ nhan, src: render(renderer, scene, w, h, half, new THREE.Vector3(0, 0.5, 0)) });
+    }
+    rows.push(row);
+  } else throw new Error(`Không có ${loai}`);
+  renderer.dispose();
+  renderer.domElement.remove();
+  return rows;
 }
 
 export const LOAI = Object.fromEntries(

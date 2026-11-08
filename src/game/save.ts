@@ -32,6 +32,7 @@ import {
 import { initialCaoLo } from './caoLo';
 import { initialBenKia, isBenKiaState, noGarrison } from './benKia';
 import { initialCayDa, isCayDaState } from './cayDa';
+import { DAO_IDS, initialDao, isDaoState } from './dao';
 import { initialAdv } from './coLoa';
 import { inChapter4 } from './chuong4';
 import { inChapter5, initialHaiBa, maVienCame } from './chuong5';
@@ -136,6 +137,7 @@ function migrate(raw: unknown): unknown {
   if (isObj(v) && v.version === 23) v = migrate23to24(v);
   if (isObj(v) && v.version === 24) v = migrate24to25(v);
   if (isObj(v) && v.version === 25) v = migrate25to26(v, !relaid);
+  if (isObj(v) && v.version === 26) v = migrate26to27(v);
   return v;
 }
 
@@ -507,6 +509,13 @@ function migrate25to26(s: Raw, grow: boolean): Raw {
   return s;
 }
 
+/** Phiên bản 26 → 27 (đóng đảo): chưa có đồn đảo, thuyền chiến, lính đóng nào. */
+function migrate26to27(s: Raw): Raw {
+  s.version = 27;
+  s.dao = initialDao();
+  return s;
+}
+
 const isBanh = (v: unknown, test: (x: unknown) => boolean): boolean => isObj(v) && test(v.chung) && test(v.giay);
 const isBool = (x: unknown) => typeof x === 'boolean';
 
@@ -553,7 +562,9 @@ function isXayState(v: unknown): boolean {
       if (p.len !== undefined && p.len !== true) return false;
       if (p.uNo !== undefined && p.uNo !== true) return false;
       if (p.doi !== undefined && !(typeof p.doi === 'string' && p.doi in BUILDINGS)) return false;
-      if (p.moi === undefined) return p.len === true || p.doi !== undefined;
+      if (p.dao !== undefined && !DAO_IDS.includes(p.dao as never)) return false;
+      if (p.thuyen !== undefined && !DAO_IDS.includes(p.thuyen as never)) return false;
+      if (p.moi === undefined) return p.len === true || p.doi !== undefined || p.dao !== undefined || p.thuyen !== undefined;
       const b = p.moi as Raw;
       return isValidBuilding(b) && b.id === p.id && b.level === 1 && buildingsInGrid([b as unknown as GameState['buildings'][number]]);
     });
@@ -568,7 +579,7 @@ function cleanXay(state: GameState): void {
   const ids = new Set(state.buildings.map((b) => b.id));
   for (const j of state.xay.viec) {
     const done = j.o.slice(0, j.xong);
-    const rest = j.o.slice(j.xong).filter((p) => p.moi || ids.has(p.id));
+    const rest = j.o.slice(j.xong).filter((p) => p.moi || p.dao || ids.has(p.id));
     j.o = [...done, ...rest];
   }
   state.xay.viec = state.xay.viec.filter((j) => j.xong < j.o.length);
@@ -593,6 +604,7 @@ function isGameState(v: unknown): v is GameState {
   if (!isCayDaState(v.cayDa)) return false;
   if (!isBenKiaState(v.benKia)) return false;
   if (!isXayState(v.xay)) return false;
+  if (!isDaoState(v.dao)) return false;
   const son = v.son;
   if (!isObj(son) || !isObj(son.gifts) || !isNum(son.restUntil) || typeof son.non !== 'boolean' || typeof son.won !== 'boolean') return false;
   if (!GIFT_IDS.every((k) => typeof (son.gifts as Raw)[k] === 'boolean')) return false;

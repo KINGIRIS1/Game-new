@@ -11,8 +11,12 @@ import { markNuHinted, nextNuHint } from './game/nuTuong';
 import { forgeNoThan, inChapter3, wallRings } from './game/coLoa';
 import { offer } from './game/tet';
 import { startMau } from './game/mau';
-import { advanceXay, askQuiz, canStartBuild, cancelJob, conLai, startBuild, startUpgrade, startWallUpgrade, startWalls, thoRanh, thoRanhSau, traLoi, viecOf, xayMs, type CongViec } from './game/xay';
-import { CAU_DO_IDS } from './text/cauDo';
+import { advanceXay, askQuiz, canStartBuild, cancelJob, conLai, startBuild, startDon, startThuyen, startUpgrade, startWallUpgrade, startWalls, thoRanh, thoRanhSau, traLoi, viecOf, xayMs, type CongViec } from './game/xay';
+import { markDaoHinted, nextDaoHint, setDaoLinh } from './game/dao';
+import { CAU_DO, CAU_DO_IDS } from './text/cauDo';
+
+/** Câu đố sử thời kỳ Biển đảo, hỏi trước khi thợ đóng thuyền chiến, xây đồn đảo. */
+const CAU_BIEN_DAO = CAU_DO.filter((c) => c.ky === 'bienDao').map((c) => c.id);
 import { jobDoneText } from './ui/xay';
 import { inChapter4, mergeTowers } from './game/chuong4';
 import { feedGiong, forgeGear } from './game/giong';
@@ -253,6 +257,14 @@ async function start(): Promise<void> {
     hud.toast(vi.nuTuong.hint[nu], false, 8000);
   };
 
+  /** Đóng đảo: Lạc hầu gợi ý một lần khi có bến thuyền khơi cấp 3, một lần khi Mã Viện sang mà đã có đồn đảo. */
+  const showDaoHint = () => {
+    const k = nextDaoHint(state);
+    if (!k) return;
+    markDaoHinted(state, k);
+    hud.toast(vi.bien.hint[k], false, 8000);
+  };
+
   /** Trận ngoài bãi đầu tiên có vật cản: thẻ màn, thẻ đồn thôi kèm lời Lạc hầu nhắc về vật cản. */
   const seenBai = () => {
     if (needsBaiHint(state)) markBaiHinted(state);
@@ -302,6 +314,7 @@ async function start(): Promise<void> {
   const commit = () => {
     showHint();
     showNuHint();
+    showDaoHint();
     showCayDaHint();
     seenBai();
     save();
@@ -1034,7 +1047,10 @@ async function start(): Promise<void> {
 
       case 'askQuiz': {
         // Lạc hầu đố sử: hỏi câu đang dở, hay bốc câu mới (ghi vào việc ngay để mở lại vẫn là câu ấy).
-        const r = askQuiz(state, a.id, CAU_DO_IDS);
+        // Đóng thuyền chiến, xây đồn đảo: bốc câu thời kỳ Biển đảo trước, hết câu mới bốc thời kỳ khác.
+        const job = viecOf(state).find((j) => j.id === a.id);
+        const bien = job?.o.some((p) => p.dao || p.thuyen) ? CAU_BIEN_DAO.filter((c) => !state.xay.daHoi.includes(c)) : [];
+        const r = askQuiz(state, a.id, bien.length ? bien : CAU_DO_IDS);
         if (!r.ok) {
           hud.closeQuiz();
           return fail(r.reason);
@@ -1311,6 +1327,40 @@ async function start(): Promise<void> {
         // Đóng bảng cho thấy trọn biển, lướt camera ra quần đảo thuyền bến này đánh cá.
         select(null);
         world.panToIsland(a.id);
+        return;
+
+      case 'buildThuyen': {
+        const r = startThuyen(state, a.dao);
+        if (!r.ok) return fail(r.reason);
+        play('place');
+        hud.toast(vi.bien.thuyenStarted(formatClock(conLai(state, r.value))));
+        commit();
+        return;
+      }
+
+      case 'buildDon': {
+        const cap = state.dao[a.dao].cap;
+        const r = startDon(state, a.dao);
+        if (!r.ok) return fail(r.reason);
+        play('place');
+        const time = formatClock(conLai(state, r.value));
+        hud.toast(cap ? vi.ui.nangStarted(vi.bien.donName(a.dao), cap + 1, time) : vi.ui.xayStarted(vi.bien.donName(a.dao), time));
+        commit();
+        return;
+      }
+
+      case 'daoLinh': {
+        const r = setDaoLinh(state, a.dao, a.unit, state.dao[a.dao].muon[a.unit] + a.delta);
+        if (!r.ok) return fail(r.reason);
+        play('tap');
+        commit();
+        return;
+      }
+
+      case 'openQuanDao':
+        play('tap');
+        select(null);
+        hud.showQuanDao(state, a.dao);
         return;
 
       case 'openBarracks': {
@@ -1685,6 +1735,8 @@ async function start(): Promise<void> {
         world.sync(scene());
       }
       watchXay();
+      // Thuyền chiến đi chuyến mới, tới đảo, về bến ngay trong `tick`: vẽ theo.
+      world.syncDao(state);
       refreshUi();
       watchStory();
       prewarm();

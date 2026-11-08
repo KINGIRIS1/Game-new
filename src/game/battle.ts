@@ -599,6 +599,8 @@ export interface BattleOpts {
   walls?: boolean;
   /** Đền Cuông còn nguyên: thủy binh tới ít thuyền hơn. */
   fewerBoats?: boolean;
+  /** Quân đồn đảo đã chặn đánh ngoài khơi: mỗi lâu thuyền vào tới sông đã mất chừng này phần máu (`dao.ts`). */
+  chan?: number;
   /** Bậc binh khí đã rèn của từng binh chủng. */
   arms?: Record<UnitType, number>;
   /** Bậc huân công của từng nhánh. */
@@ -653,6 +655,7 @@ export function startBattle(state: GameState, wave: number, side: RaidSide, opts
     boardBoats(battle, crew, scale, side, lo, rand, opts.fewerBoats ?? false);
     for (const ship of shipLayout(ships, side, lo, rand)) {
       const f = newFighter(battle, 'giac', 'lauThuyen', ship.ox, ship.oz, ENEMIES.lauThuyen.hp * scale);
+      if (opts.chan) f.hp = f.maxHp * (1 - opts.chan);
       f.ship = ship;
       f.face = shipFace(side);
       battle.fighters.push(f);

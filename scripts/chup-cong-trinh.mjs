@@ -3,7 +3,8 @@
 // cùng móng, cùng tỉ lệ ô đất, có người đứng để so cỡ.
 // Danh sách ở scripts/congTrinh.ts. Ảnh vào chup/cong-trinh-<loại>.png, cảnh cỡ thật vào chup/cong-trinh-canh.png.
 // Cách dùng: node scripts/chup-cong-trinh.mjs [loại ...|canh] [--cap 8,9,10]   (loại: dien, ruong, ben, nhaSan, baiDa, loRen, kho,
-// doanhTrai, traiGiao, traiCung, chuongVoi, vuon, chuongLon, bep; không ghi gì thì chụp dien, nhaSan và canh)
+// doanhTrai, traiGiao, traiCung, chuongVoi, vuon, chuongLon, bep; donDao, thuyenChien: đồn đảo, thuyền chiến trống đồng;
+// không ghi gì thì chụp dien, nhaSan và canh)
 // Loại còn vẽ theo móng cũ (denPhuDong, denTanVien, denCoLoa, denCuong, ruongNep...) thì chụp mô hình game dựng
 // (phóng theo móng), nhìn từ trước và từ sau.
 
@@ -39,7 +40,12 @@ try {
   await mkdir(path.join(ROOT, 'chup'), { recursive: true });
   for (const m of muc) {
     let html;
-    if (m === 'canh') {
+    if (m === 'donDao' || m === 'thuyenChien') {
+      const rows = await page.evaluate(async (m) => (await import('/scripts/congTrinh.ts')).chupRieng(m), m);
+      const tieu = m === 'donDao' ? 'Đồn đảo 8×8 trên nền cát, biển trước cổng cho cầu ván' : 'Thuyền chiến trống đồng';
+      html = `<body style="${css}"><div style="font-size:20px;margin-bottom:8px">${tieu}</div>
+        ${rows.map((r) => `<div style="display:flex;gap:10px;margin-bottom:10px">${r.map((a) => cell(a.src, a.nhan)).join('')}</div>`).join('')}</body>`;
+    } else if (m === 'canh') {
       const anh = await page.evaluate(async () => (await import('/scripts/congTrinh.ts')).chupCanh([1, 5, 8]));
       html = `<body style="${css}"><div style="font-size:20px;margin-bottom:8px">Cỡ thật: Điện giữa ba nhà sàn, như lúc chưa phóng to trên điện thoại</div>
         ${anh.map((a) => `<div style="display:flex;gap:12px;margin-bottom:12px">${cell(a.cu, `Dáng cũ phóng theo móng, cấp ${a.cap}`)}${cell(a.moi, `Vẽ lại trên móng, cấp ${a.cap}`)}</div>`).join('')}</body>`;

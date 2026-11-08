@@ -788,6 +788,45 @@ L . d B . L
 - `,` bậc đá lên bệ ở mặt trước.
 - Đã vẽ (`src/render/congTrinh/sanTrong.ts`).
 
+## Đồn đảo: 8×8 (Điện 10, đã vẽ)
+
+Bản vẽ đi kèm mục **Kế hoạch: Điện 10 điều quân ra đóng đảo** trong `docs/thiet-ke.md`. Đồn đứng trên đảo chính Hoàng Sa, Trường Sa (ngoài lưới kinh đô, không vào `state.buildings`), trên khoảnh 8 × 8 ô đã san bằng (`donDaoGoc`). Cổng (mặt trước) quay về phía thuyền từ đất liền tới (`donDaoHuong`); cả hai đồn đều quay cổng về phía bắc, nên camera mặc định nhìn từ sau bên trái của bản vẽ: phần cao đứng phía trước (lầu canh, chòi lửa hiệu, cột cờ), phần thấp phía sau (giếng, miếu, kho). Ba cấp; mái cấp 1 tranh, cấp 2 tranh viền đỏ, cấp 3 ngói viền đồng vàng.
+
+```
+# # # # # # # # # # # # # # # #
+# g g . . . . . . . . . M M M #
+# g g . . . . . . . . . M M M #
+# . . . . . . . . . . . M M M #
+# K K . . . . . . . . . . . . #
+# K K . H H H H H H H H . . . #
+# K K . H H H H H H H H . . . #
+# . . . H H H H H H H H . . . #
+# . . . H H H H H H H H . . . #
+# . b . . . . . . . . . . . . #
+# . b . . . . , , . . F F . . #
+# . . . . . . , , . . F F . . #
+# T T . . . . , , . . . . L L #
+# T T . . . . , , . . . . L L #
+# . . . . . . , , . . . . . . #
+# # # # # # # C C # # # # # # #
+```
+
+- Sân cát san hô trắng ngà; `,` lối cát nện từ cổng vào.
+- `#` cấp 1 rào cọc vót nhọn (như doanh trại); cấp 2 thêm kè đá san hô thấp ôm chân rào; cấp 3 tường đá san hô: chân kè đá sẫm, khối đá xếp so le có mạch, đá mũ và lỗ châu mai trên đỉnh.
+- `C` cấp 1, 2 cổng tre; cấp 3 lầu cổng mái ngói. Hai đuốc cột tre hai bên cổng.
+- `H` cấp 1, nhà sàn lính mái thuyền dài, thang gỗ lên sàn, giá giáo dựa vách.
+- `K` cấp 1, góc kho: chum nước mưa có nắp (đảo xa không có suối), đống củi, dừa khô.
+- `F` cấp 1, cột cờ: chân kè đá san hô, cờ đỏ viền vàng.
+- `T` lửa hiệu: cấp 1 bếp đá kê đống củi chụm; từ cấp 2 chòi lửa hiệu bốn chân tre cao, sàn ván, chậu đồng đầy củi, thang tre. Đồn giữ biển lúc thủy quân Hán sắp tới (lửa hiệu báo sớm) thì lửa bùng, khói đen bốc cao.
+- `g` cấp 2, giếng: thành đá san hô tròn, cần vọt tre có đá đối trọng, gàu.
+- `L` cấp 3, lầu canh: bốn cột chân kê đá, giằng chéo, sàn cao lan can đỏ, mái chóp, trống đồng nhỏ treo trên sàn, thang gỗ lên từ trong sân.
+- `b` cấp 3, bia đá trên lưng rùa đá, đầu bia tròn, mặt bia khắc hàng chữ.
+- `M` cấp 3, miếu thờ cá Ông: nền đá san hô hai bậc, gian miếu cửa son, vòm xương sườn cá voi trước cửa, bát hương đồng.
+- Cầu ván (cấp 1, ngoài móng): chạy thẳng từ cổng ra bến ván (`daoBen`), phẳng ngang sân tới hết đất bậc 2 rồi dốc dần xuống gần mặt nước; cọc hai bên chôn xuống đất hay xuống nước, lan can dây; đầu cầu nới rộng, cột neo bọc đồng, đuốc. Ô dưới cầu không có cây đá (`inDaoLoi`).
+- Lính gác (giáo binh, cung thủ cầm đúng bậc binh khí đã rèn): cứ năm chỗ quân đang đóng một người, tối đa sáu (`donGac`): hai người trong cổng, một bên cột cờ, một bên lửa hiệu, một trên sàn lầu canh (cấp 3; cấp dưới đứng chỗ lầu canh), một trước nhà sàn.
+- Ban đêm đuốc, lửa hiệu có quầng sáng (`syncDuoc`). Đồn hư bốc khói thêm ở PR 3.
+- Đã vẽ (`src/render/congTrinh/donDao.ts`).
+
 ## Cấp 9, 10 (chủ dự án đã duyệt, đã vẽ)
 
 Móng đã kín ở cấp 8, nên cấp 9, 10 không thêm ô con mới: mỗi loại đổi một phần sẵn có, đứng trong khối chữ của phần ấy. Mái theo cấp ghi ở mục Phong cách trong `docs/thiet-ke.md` (cấp 9 dải đồng hoa văn dưới diềm, cấp 10 chim Lạc hai đầu nóc).
