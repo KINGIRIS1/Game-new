@@ -757,7 +757,7 @@ describe('phòng thủ hai bờ', () => {
     expect(joinVillage(s, lang).ok).toBe(true);
     const kho = place(s, 'kho', 40, 28);
     if (!kho.ok) throw new Error(kho.reason);
-    const dt = place(s, 'doanhTrai', 26, 40);
+    const dt = place(s, 'doanhTrai', 22, 40);
     if (!dt.ok) throw new Error(dt.reason);
     return { s, lang };
   }
@@ -849,7 +849,7 @@ describe('phòng thủ hai bờ', () => {
   it('mùa lũ: lính ta lội ra ô sông sát bờ đánh thủy quái, không lội xa hơn', () => {
     const s = rich(6);
     s.raid.nextAt = null;
-    const dt = place(s, 'doanhTrai', 26, 40);
+    const dt = place(s, 'doanhTrai', 22, 40);
     if (!dt.ok) throw new Error(dt.reason);
     s.troops = { giao: 12, cung: 6, voi: 0, no: 0 };
     const b = startBattle(s, 6, 'nam', { flood: { n: 3, level: 1 } });

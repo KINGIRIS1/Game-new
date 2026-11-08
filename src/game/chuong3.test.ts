@@ -46,7 +46,7 @@ function ch3(): GameState {
   const barracks = place(s, 'doanhTrai', edge(5, 1), edge(5, 1));
   if (!barracks.ok) throw new Error(barracks.reason);
   barracks.value.level = 5;
-  for (const [type, x] of [['denPhuDong', edge(5, 6)], ['denTanVien', edge(5, 11)]] as const) if (!place(s, type, x, edge(5, 1)).ok) throw new Error(`dựng ${type} thử thất bại`);
+  for (const [type, x] of [['denPhuDong', edge(5, 10)], ['denTanVien', edge(5, 15)]] as const) if (!place(s, type, x, edge(5, 1)).ok) throw new Error(`dựng ${type} thử thất bại`);
   s.troops = { ...ARMY };
   return s;
 }
@@ -343,7 +343,7 @@ describe('An Dương Vương', () => {
 
   it('Đền Cổ Loa: chòi canh bắn mạnh hơn và xa hơn', () => {
     const s = ch3();
-    const at = edge(5, 8);
+    const at = edge(5, 9);
     const tower = place(s, 'choiCanh', at, at);
     if (!tower.ok) throw new Error(tower.reason);
     s.troops = { giao: 0, cung: 0, voi: 0, no: 0 };

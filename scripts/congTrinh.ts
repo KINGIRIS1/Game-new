@@ -21,6 +21,7 @@ import {
   makeRuong,
   makeTraiCung,
   makeTraiGiao,
+  makeTraiNo as makeTraiNoCu,
   makeVuon,
 } from '../src/render/buildings';
 import type { Dock, LotSpot } from '../src/render/congTrinh/chung';
@@ -99,6 +100,7 @@ const CU: Partial<Record<BuildingType, { make: (level: number) => THREE.Group; s
   traiGiao: { make: () => makeTraiGiao(), spots: [] },
   traiCung: { make: () => makeTraiCung(), spots: [] },
   chuongVoi: { make: () => makeChuongVoi(), spots: [] },
+  traiNo: { make: () => makeTraiNoCu(), spots: [] },
   vuon: {
     make: makeVuon,
     spots: [
@@ -127,7 +129,8 @@ const CU: Partial<Record<BuildingType, { make: (level: number) => THREE.Group; s
 function peopleCount(type: BuildingType, level: number, spots: number): number {
   const work = BUILDINGS[type].workers;
   if (work) return Math.min(work[Math.min(level, work.length) - 1], spots);
-  if (type === 'nhaSan' || type === 'doanhTrai' || type === 'dien') return Math.min(level >= 2 ? 2 : 1, spots);
+  if (type === 'doanhTrai') return spots;
+  if (type === 'nhaSan' || type === 'dien') return Math.min(level >= 2 ? 2 : 1, spots);
   return Math.min(1, spots);
 }
 

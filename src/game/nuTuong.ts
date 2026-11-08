@@ -1,12 +1,12 @@
 // Bốn nữ tướng của Hai Bà Trưng (chương 5 PR 4): Lê Chân, Thánh Thiên, Bát Nàn, Phùng Thị Chính theo về khi thắng
 // màn 34, 35, 37, 39 lần đầu, mỗi người lo một binh chủng (`NU_TUONG` ở `defs.ts`). Ở phó bản một nữ tướng đi theo
-// làm phó tướng: đứng cầm cờ sau hàng hậu, không đánh, giặc không nhắm (`Battle.nuTuong`). Ở kinh đô mỗi nữ tướng ở
-// một doanh trại. Binh chủng của nữ tướng được thêm `NU_TUONG_BONUS` máu và sức đánh (`battle.ts`).
+// làm phó tướng: đứng cầm cờ sau hàng hậu, không đánh, giặc không nhắm (`Battle.nuTuong`). Ở kinh đô cả bốn ở doanh
+// trại. Binh chủng của nữ tướng được thêm `NU_TUONG_BONUS` máu và sức đánh (`battle.ts`).
 
 import type { FighterKind } from './battle';
 import { NU_TUONG, NU_TUONG_IDS, type NuTuongId } from './defs';
-import { barracksList } from './doanhTrai';
-import type { Building, FailReason, GameState, Result } from './game';
+import { barracksOf } from './doanhTrai';
+import type { FailReason, GameState, Result } from './game';
 
 const ok = <T>(value: T): Result<T> => ({ ok: true, value });
 const fail = (reason: FailReason): Result<never> => ({ ok: false, reason });
@@ -20,64 +20,13 @@ export const nuTuongList = (s: GameState): NuTuongId[] => NU_TUONG_IDS.filter((i
 /** Lính loại `kind` có được nữ tướng `id` cộng thêm không (đúng binh chủng của nữ tướng). */
 export const nuBoosts = (id: NuTuongId | null | undefined, kind: FighterKind): boolean => !!id && NU_TUONG[id].unit === kind;
 
-// ---------- Ở kinh đô: mỗi doanh trại một nữ tướng ----------
+// ---------- Ở kinh đô: cả bốn nữ tướng ở doanh trại ----------
 
-/**
- * Nữ tướng ở từng doanh trại (theo mã công trình), như tướng chỉ huy: nữ tướng người chơi đã giao giữ nguyên; doanh
- * trại chưa có thì nữ tướng rảnh về theo thứ tự dựng. Ít doanh trại hơn nữ tướng thì có người chưa ở trại nào.
- */
-export function nuPosts(s: GameState): Map<number, NuTuongId> {
-  const list = barracksList(s);
-  const map = new Map<number, NuTuongId>();
-  const used = new Set<NuTuongId>();
-  for (const b of list) {
-    if (b.nuTuong && nuJoined(s, b.nuTuong) && !used.has(b.nuTuong)) {
-      map.set(b.id, b.nuTuong);
-      used.add(b.nuTuong);
-    }
-  }
-  const free = nuTuongList(s).filter((id) => !used.has(id));
-  for (const b of list) if (!map.has(b.id) && free.length) map.set(b.id, free.shift()!);
-  return map;
-}
+/** Các nữ tướng đang ở doanh trại: mọi nữ tướng đã theo về, khi kinh đô đã có doanh trại. */
+export const nuAtCamp = (s: GameState): NuTuongId[] => (barracksOf(s) ? nuTuongList(s) : []);
 
-/** Nữ tướng ở doanh trại `b`, nếu có. */
-export const nuOf = (s: GameState, b: Building): NuTuongId | null => (b.type === 'doanhTrai' ? (nuPosts(s).get(b.id) ?? null) : null);
-
-/** Doanh trại nữ tướng `id` đang ở, nếu có. */
-export function nuPostOf(s: GameState, id: NuTuongId): Building | undefined {
-  for (const [bid, n] of nuPosts(s)) if (n === id) return s.buildings.find((b) => b.id === bid);
-  return undefined;
-}
-
-/** Kiểm tra giao nữ tướng `id` về doanh trại `barracks` được không. */
-export function canAssignNu(s: GameState, barracks: number, id: NuTuongId): Result {
-  const b = s.buildings.find((x) => x.id === barracks);
-  if (!b || b.type !== 'doanhTrai') return fail('khongTimThay');
-  if (!nuJoined(s, id)) return fail('tuongChuaCo');
-  if (nuOf(s, b) === id) return fail('nuDaO');
-  if (s.raid.phase === 'battle') return fail('dangCoGiac');
-  return ok(undefined);
-}
-
-/**
- * Giao nữ tướng `id` về doanh trại `barracks`. Nữ tướng ấy đang ở trại khác thì hai nữ tướng đổi chỗ cho nhau. Mọi
- * doanh trại ghi lại nữ tướng đang ở để thứ tự không tự đổi về sau.
- */
-export function assignNu(s: GameState, barracks: number, id: NuTuongId): Result<NuTuongId> {
-  const check = canAssignNu(s, barracks, id);
-  if (!check.ok) return check;
-  const map = nuPosts(s);
-  const prev = map.get(barracks);
-  for (const [other, n] of map) if (n === id) prev ? map.set(other, prev) : map.delete(other);
-  map.set(barracks, id);
-  for (const b of barracksList(s)) {
-    const n = map.get(b.id);
-    if (n) b.nuTuong = n;
-    else delete b.nuTuong;
-  }
-  return ok(id);
-}
+/** Nữ tướng ở doanh trại lo binh chủng `kind`, nếu có: lính giữ kinh đô đúng binh chủng ấy được cộng. */
+export const nuForUnit = (s: GameState, kind: FighterKind): NuTuongId | null => nuAtCamp(s).find((id) => nuBoosts(id, kind)) ?? null;
 
 // ---------- Ở phó bản: phó tướng ----------
 

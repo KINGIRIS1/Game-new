@@ -1,13 +1,15 @@
-// Doanh trại: nơi các tướng ở và điều binh. Mỗi doanh trại một tướng chỉ huy, có tướng mới giữ chỗ quân, nên càng
-// nhiều tướng càng nhiều doanh trại, càng nhiều quân dự trữ. Ra phó bản mang tối đa `FIELD_CAP` chỗ. Giữ kinh đô thì
-// người chơi tự bố trí lính ở từng doanh trại (cả kinh đô tối đa `GUARD_CAP` chỗ); chưa bố trí thì tự động.
+// Doanh trại (đại doanh): một trại cho cả kinh đô, nơi các tướng ở và điều binh. Mỗi tướng đã về là một doanh trong
+// trại, thêm chỗ quân theo cấp trại, tối đa `DOANH_MAX` doanh. Ra phó bản mang tối đa `FIELD_CAP` chỗ. Giữ kinh đô
+// thì người chơi tự bố trí số lính mỗi binh chủng (cả kinh đô tối đa `GUARD_CAP` chỗ); chưa bố trí thì tự động.
+// Lính và tướng giữ kinh đô ra từ cổng trại gần giặc nhất (`gates`, `gateToward`).
 
 import { caoLoJoined } from './caoLo';
 import { inChapter5 } from './chuong5';
 import { advJoined } from './coLoa';
-import { BUILDINGS, FIELD_CAP, GUARD_CAP, TUONG_IDS, UNITS, UNIT_TYPES, type TuongId, type UnitType } from './defs';
+import { BUILDINGS, DOANH_MAX, FIELD_CAP, GUARD_CAP, TUONG_IDS, UNITS, UNIT_TYPES, type TuongId, type UnitType } from './defs';
 import { dienLevel, type Building, type FailReason, type GameState, type Result } from './game';
 import { giongReady } from './giong';
+import { turnLocal } from './map';
 import { sonJoined } from './son';
 
 export type Army = Record<UnitType, number>;
@@ -19,11 +21,11 @@ const zero = (): Army => ({ giao: 0, cung: 0, voi: 0, no: 0 });
 /** Số chỗ một đạo quân chiếm (voi chiến chiếm nhiều chỗ). */
 export const armySpace = (army: Army): number => UNIT_TYPES.reduce((n, k) => n + (army[k] ?? 0) * UNITS[k].space, 0);
 
-// ---------- Tướng chỉ huy ----------
+// ---------- Tướng và doanh ----------
 
 /**
- * Tướng đã về với kinh đô, giao chỉ huy doanh trại được. Gióng về trời, Sơn Tinh về núi, An Dương Vương xuống biển
- * rồi vẫn chỉ huy (hiển linh).
+ * Tướng đã về với kinh đô, ở doanh trại. Gióng về trời, Sơn Tinh về núi, An Dương Vương xuống biển rồi vẫn tính
+ * (hiển linh).
  */
 export function tuongJoined(s: GameState, id: TuongId): boolean {
   if (id === 'giong') return giongReady(s);
@@ -34,80 +36,54 @@ export function tuongJoined(s: GameState, id: TuongId): boolean {
   return true;
 }
 
-/** Các tướng đã có, theo thứ tự Lạc tướng, Gióng, Sơn Tinh, An Dương Vương, Cao Lỗ. */
+/** Các tướng đã có, theo thứ tự Lạc tướng, Gióng, Sơn Tinh, An Dương Vương, Cao Lỗ, Trưng Trắc, Trưng Nhị. */
 export const generals = (s: GameState): TuongId[] => TUONG_IDS.filter((t) => tuongJoined(s, t));
 
-/** Các doanh trại theo thứ tự dựng. */
-export const barracksList = (s: GameState): Building[] => s.buildings.filter((b) => b.type === 'doanhTrai').sort((a, b) => a.id - b.id);
+/** Doanh trại của kinh đô (chỉ dựng được một), nếu đã có. */
+export const barracksOf = (s: GameState): Building | undefined => s.buildings.find((b) => b.type === 'doanhTrai');
 
-/**
- * Tướng chỉ huy từng doanh trại (theo mã công trình). Tướng người chơi đã giao giữ nguyên; doanh trại chưa giao thì
- * tướng rảnh nhận theo thứ tự dựng. Thiếu tướng thì doanh trại ấy không có ai chỉ huy.
- */
-export function commanders(s: GameState): Map<number, TuongId> {
-  const list = barracksList(s);
-  const map = new Map<number, TuongId>();
-  const used = new Set<TuongId>();
-  for (const b of list) {
-    if (b.tuong && tuongJoined(s, b.tuong) && !used.has(b.tuong)) {
-      map.set(b.id, b.tuong);
-      used.add(b.tuong);
-    }
-  }
-  const free = generals(s).filter((t) => !used.has(t));
-  for (const b of list) if (!map.has(b.id) && free.length) map.set(b.id, free.shift()!);
-  return map;
-}
+/** Số doanh trong trại: mỗi tướng đã về một doanh, tối đa `DOANH_MAX`. */
+export const doanhCount = (s: GameState): number => Math.min(generals(s).length, DOANH_MAX);
 
-export const commanderOf = (s: GameState, b: Building): TuongId | null => commanders(s).get(b.id) ?? null;
-
-/** Doanh trại tướng này chỉ huy, nếu có. */
-export function postOf(s: GameState, tuong: TuongId): Building | undefined {
-  for (const [id, t] of commanders(s)) if (t === tuong) return s.buildings.find((b) => b.id === id);
-  return undefined;
-}
-
-/** Chỗ quân doanh trại này giữ: theo cấp, khi có tướng chỉ huy. */
+/** Chỗ quân doanh trại này giữ: chỗ mỗi doanh theo cấp trại nhân số doanh. */
 export function capOf(s: GameState, b: Building): number {
-  if (b.type !== 'doanhTrai' || !commanderOf(s, b)) return 0;
-  return BUILDINGS.doanhTrai.troopCap![b.level - 1] ?? 0;
+  if (b.type !== 'doanhTrai') return 0;
+  return (BUILDINGS.doanhTrai.troopCap![b.level - 1] ?? 0) * doanhCount(s);
 }
 
-/** Kiểm tra giao tướng `tuong` chỉ huy doanh trại `id` được không. */
-export function canAssign(s: GameState, id: number, tuong: TuongId): Result {
-  const b = s.buildings.find((x) => x.id === id);
-  if (!b || b.type !== 'doanhTrai') return fail('khongTimThay');
-  if (!tuongJoined(s, tuong)) return fail('tuongChuaCo');
-  if (commanderOf(s, b) === tuong) return fail('daChiHuy');
-  if (s.raid.phase === 'battle') return fail('dangCoGiac');
-  return ok(undefined);
-}
+/** Doanh trại tướng ra trận cùng quân khi giữ kinh đô. Chưa có doanh trại thì tướng ra từ trước Điện. */
+export const heroPost = (s: GameState): Building | undefined => barracksOf(s);
 
-/**
- * Giao tướng chỉ huy doanh trại `id`. Tướng ấy đang chỉ huy doanh trại khác thì hai tướng đổi chỗ cho nhau, để không
- * doanh trại nào mất tướng. Mọi doanh trại ghi lại tướng đang chỉ huy để thứ tự không tự đổi về sau.
- */
-export function assignCommander(s: GameState, id: number, tuong: TuongId): Result<TuongId> {
-  const check = canAssign(s, id, tuong);
-  if (!check.ok) return check;
-  const map = commanders(s);
-  const prev = map.get(id);
-  for (const [other, t] of map) if (t === tuong) prev ? map.set(other, prev) : map.delete(other);
-  map.set(id, tuong);
-  for (const b of barracksList(s)) {
-    const t = map.get(b.id);
-    if (t) b.tuong = t;
-    else delete b.tuong;
-  }
-  return ok(tuong);
-}
+// ---------- Cổng trại ----------
+
+/** Cấp doanh trại có đủ bốn lầu cổng; dưới cấp này chỉ có cổng trước. */
+export const GATES_LEVEL = 3;
+/** Chỗ cổng lùi vào trong mép móng chừng này ô. */
+export const GATE_IN = 0.4;
 
 /**
- * Doanh trại tướng ra trận cùng quân khi giữ kinh đô: trại tướng ấy chỉ huy, không thì trại của Lạc tướng
- * (`fallback`; Hai Bà không chỉ huy trại nào thì ra từ trước Điện, nên không lấy trại khác).
+ * Chỗ ngay trong từng cổng của doanh trại `b` (tọa độ ô liên tục), theo hướng xoay: cổng trước, rồi (từ cấp
+ * `GATES_LEVEL`) cổng sau, trái, phải. `out` là hướng ra ngoài của cổng (vector đơn vị theo trục). Lấy chỗ trong cổng
+ * (còn trên móng trại) cho khỏi rơi xuống sông hay vào công trình bên cạnh khi trại sát sông, sát nhà khác.
  */
-export function heroPost(s: GameState, tuong: TuongId, fallback = true): Building | undefined {
-  return postOf(s, tuong) ?? (fallback ? (postOf(s, 'lacTuong') ?? barracksList(s)[0]) : undefined);
+export function gates(b: Building): { x: number; z: number; out: { x: number; z: number } }[] {
+  const def = BUILDINGS[b.type];
+  const cx = b.x + def.w / 2;
+  const cz = b.z + def.d / 2;
+  const sides: [number, number][] = b.level >= GATES_LEVEL ? [[0, 1], [0, -1], [-1, 0], [1, 0]] : [[0, 1]];
+  return sides.map(([sx, sz]) => {
+    const out = turnLocal(b.rot, sx, sz);
+    const at = turnLocal(b.rot, sx * (def.w / 2 - GATE_IN), sz * (def.d / 2 - GATE_IN));
+    return { x: cx + at.x, z: cz + at.z, out };
+  });
+}
+
+/** Cổng gần điểm `to` nhất (giặc tới, cầu cần qua). */
+export function gateToward(b: Building, to: { x: number; z: number }): { x: number; z: number; out: { x: number; z: number } } {
+  const list = gates(b);
+  let best = list[0];
+  for (const g of list) if (Math.hypot(g.x - to.x, g.z - to.z) < Math.hypot(best.x - to.x, best.z - to.z) - 1e-9) best = g;
+  return best;
 }
 
 // ---------- Giới hạn quân ra trận ----------
@@ -135,117 +111,66 @@ export function fitArmy(troops: Army, cap: number): Army {
 
 // ---------- Bố trí giữ kinh đô ----------
 
-/** Người chơi đã tự bố trí (ít nhất một doanh trại có bố trí). Chưa thì bố trí tự động. */
-export const guardManual = (s: GameState): boolean => barracksList(s).some((b) => !!b.guard);
+/** Người chơi đã tự bố trí. Chưa thì bố trí tự động. */
+export const guardManual = (s: GameState): boolean => !!barracksOf(s)?.guard;
 
-/**
- * Bố trí tự động: mọi lính giữ kinh đô cho tới đủ chỗ, giữ tỉ lệ binh chủng; chia ra các doanh trại theo sức chứa,
- * mỗi trại có đủ các binh chủng.
- */
-function autoPlan(s: GameState): Map<number, Army> {
-  const plan = new Map<number, Army>();
-  const list = barracksList(s);
-  if (!list.length) return plan;
-  const army = fitArmy(s.troops, guardCap(s));
-  const caps = list.map((b) => capOf(s, b));
-  const weight = caps.some((c) => c > 0) ? caps : list.map(() => 1);
-  const load = list.map(() => 0);
-  for (const b of list) plan.set(b.id, zero());
-  // Xếp lính các binh chủng xen nhau rồi cho từng người vào trại còn vơi nhất (so với sức chứa).
-  const queue: { k: UnitType; at: number }[] = [];
-  for (const k of UNIT_TYPES) for (let i = 0; i < army[k]; i++) queue.push({ k, at: (i + 0.5) / army[k] });
-  queue.sort((a, b) => a.at - b.at || UNIT_TYPES.indexOf(a.k) - UNIT_TYPES.indexOf(b.k));
-  for (const { k } of queue) {
-    const space = UNITS[k].space;
-    let best = -1;
-    for (let i = 0; i < list.length; i++) {
-      if (!weight[i]) continue;
-      if (best < 0 || (load[i] + space) / weight[i] < (load[best] + space) / weight[best] - 1e-9) best = i;
-    }
-    load[best] += space;
-    plan.get(list[best].id)![k] += 1;
-  }
-  return plan;
-}
-
-/** Số lính người chơi muốn bố trí ở từng doanh trại (bố trí tự động thì chính là phần tự động). */
-export function guardTargets(s: GameState): Map<number, Army> {
-  if (!guardManual(s)) return autoPlan(s);
-  const out = new Map<number, Army>();
-  for (const b of barracksList(s)) out.set(b.id, { ...zero(), ...b.guard });
-  return out;
+/** Số lính người chơi muốn bố trí giữ kinh đô (bố trí tự động: mọi lính tới đủ chỗ, giữ tỉ lệ binh chủng). */
+export function guardTargets(s: GameState): Army {
+  const b = barracksOf(s);
+  if (!b) return zero();
+  if (!b.guard) return fitArmy(s.troops, guardCap(s));
+  return { ...zero(), ...b.guard };
 }
 
 /**
- * Lính thật sự ra giữ kinh đô ở từng doanh trại. Tự bố trí thì lấy theo bố trí, thiếu lính (đã chết, chưa luyện bù)
- * thì doanh trại dựng trước được lính trước; lính chết được quân dự trữ bù vào ngay. Không quá số chỗ giữ kinh đô.
+ * Lính thật sự ra giữ kinh đô. Tự bố trí thì lấy theo bố trí, thiếu lính (đã chết, chưa luyện bù) thì chỉ ra số còn;
+ * lính chết được quân dự trữ bù vào ngay. Không quá số chỗ giữ kinh đô. Chưa có doanh trại thì không ai ra.
  */
-export function guardPlan(s: GameState): Map<number, Army> {
-  if (!guardManual(s)) return autoPlan(s);
-  const left = { ...s.troops };
+export function guardPlan(s: GameState): Army {
+  const b = barracksOf(s);
+  if (!b) return zero();
+  if (!b.guard) return fitArmy(s.troops, guardCap(s));
   let room = guardCap(s);
-  const plan = new Map<number, Army>();
-  for (const b of barracksList(s)) {
-    const want = b.guard ?? zero();
-    const got = zero();
-    for (const k of UNIT_TYPES) {
-      const n = Math.max(0, Math.min(want[k] ?? 0, left[k], Math.floor(room / UNITS[k].space)));
-      got[k] = n;
-      left[k] -= n;
-      room -= n * UNITS[k].space;
-    }
-    plan.set(b.id, got);
+  const got = zero();
+  for (const k of UNIT_TYPES) {
+    const n = Math.max(0, Math.min(b.guard[k] ?? 0, s.troops[k], Math.floor(room / UNITS[k].space)));
+    got[k] = n;
+    room -= n * UNITS[k].space;
   }
-  return plan;
-}
-
-/** Tổng lính giữ kinh đô (cả kinh đô). */
-export function guardTotal(s: GameState, plan = guardPlan(s)): Army {
-  const out = zero();
-  for (const g of plan.values()) for (const k of UNIT_TYPES) out[k] += g[k];
-  return out;
+  return got;
 }
 
 /** Quân dự trữ: lính không bố trí giữ kinh đô. */
 export function reserve(s: GameState): Army {
-  const used = guardTotal(s);
+  const used = guardPlan(s);
   const out = zero();
   for (const k of UNIT_TYPES) out[k] = Math.max(0, s.troops[k] - used[k]);
   return out;
 }
 
-/** Kiểm tra thêm (`delta` = 1) hay bớt (`delta` = −1) một lính binh chủng `kind` giữ kinh đô ở doanh trại `id`. */
-export function canGuard(s: GameState, id: number, kind: UnitType, delta: 1 | -1): Result {
-  const b = s.buildings.find((x) => x.id === id);
-  if (!b || b.type !== 'doanhTrai') return fail('khongTimThay');
+/** Kiểm tra thêm (`delta` = 1) hay bớt (`delta` = −1) một lính binh chủng `kind` giữ kinh đô. */
+export function canGuard(s: GameState, kind: UnitType, delta: 1 | -1): Result {
+  if (!barracksOf(s)) return fail('canDoanhTrai');
   if (s.raid.phase === 'battle') return fail('dangCoGiac');
-  const targets = guardTargets(s);
-  const here = targets.get(id) ?? zero();
+  const here = guardTargets(s);
   if (delta < 0) return here[kind] > 0 ? ok(undefined) : fail('khongDuQuan');
-  let total = 0;
-  let wanted = 0;
-  for (const g of targets.values()) {
-    total += armySpace(g);
-    wanted += g[kind];
-  }
-  if (wanted >= s.troops[kind]) return fail('khongDuQuan');
-  if (armySpace(here) + UNITS[kind].space > capOf(s, b)) return fail('traiDay');
-  if (total + UNITS[kind].space > guardCap(s)) return fail('quaChoGiuThanh');
+  if (here[kind] >= s.troops[kind]) return fail('khongDuQuan');
+  if (armySpace(here) + UNITS[kind].space > guardCap(s)) return fail('quaChoGiuThanh');
   return ok(undefined);
 }
 
-/** Thêm hay bớt một lính giữ kinh đô ở doanh trại `id`. Đang bố trí tự động thì giữ nguyên bố trí ấy rồi mới đổi. */
-export function setGuard(s: GameState, id: number, kind: UnitType, delta: 1 | -1): Result<number> {
-  const check = canGuard(s, id, kind, delta);
+/** Thêm hay bớt một lính giữ kinh đô. Đang bố trí tự động thì giữ nguyên bố trí ấy rồi mới đổi. */
+export function setGuard(s: GameState, kind: UnitType, delta: 1 | -1): Result<number> {
+  const check = canGuard(s, kind, delta);
   if (!check.ok) return check;
-  const targets = guardTargets(s);
-  for (const b of barracksList(s)) b.guard = { ...(targets.get(b.id) ?? zero()) };
-  const b = s.buildings.find((x) => x.id === id)!;
-  b.guard![kind] += delta;
-  return ok(b.guard![kind]);
+  const b = barracksOf(s)!;
+  b.guard = guardTargets(s);
+  b.guard[kind] += delta;
+  return ok(b.guard[kind]);
 }
 
 /** Bỏ bố trí riêng, quay về bố trí tự động. */
 export function autoGuard(s: GameState): void {
-  for (const b of barracksList(s)) delete b.guard;
+  const b = barracksOf(s);
+  if (b) delete b.guard;
 }
