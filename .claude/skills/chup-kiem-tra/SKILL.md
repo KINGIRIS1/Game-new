@@ -43,5 +43,6 @@ node scripts/chup.mjs pho-ban --sau "d.skill('trongTran')"
 
 - `--truoc` chạy xong thì script tự đánh dấu các đoạn truyện đang chờ là đã xem, lưu state rồi tải lại trang. Giao diện vì thế đúng như người chơi vừa mở game. Cảnh `truyen` giữ lại đoạn truyện.
 - `d.advance(ms)` cho thời gian trôi rồi lưu và vẽ lại. `d.advance(0)` chỉ lưu và vẽ lại.
+- Kinh đô có ngày đêm theo đồng hồ chơi; script ghim ban ngày cho mọi cảnh không ghi giờ, nên ảnh mới so được với ảnh cũ. Sửa hình thì chụp thêm ban đêm bằng `--gio dem` (hay `chieu`, `rang`) để chắc vẫn đọc rõ.
 - Sau mỗi ảnh có số lệnh vẽ và tam giác. So hai số này trước và sau khi sửa model để biết cảnh nặng thêm bao nhiêu trên điện thoại.
 - Script tự bật Vite ở cổng 5199. Nếu đang chạy `npm run dev` thì truyền `--url http://localhost:5173/` để khỏi bật lại.

@@ -229,6 +229,11 @@ export const vi = {
       icon: '🪷',
       desc: 'Ao làng thả sen, có cầu ao bằng gỗ cho dân giặt giũ. Chỉ để trang trí; lũ không làm hư.',
     },
+    sanTrong: {
+      name: 'Sân trống đồng',
+      icon: '🥁',
+      desc: 'Trống đồng lớn trên bệ đá, nơi dân làng tụ hội đánh trống cầu mưa. Chỉ để trang trí.',
+    },
     hoa: {
       name: 'Khóm hoa',
       icon: '🌺',
@@ -1436,6 +1441,10 @@ export const vi = {
     sound: 'Âm thanh',
     resolution: 'Độ nét',
     resolutionHint: 'Độ nét thấp thì máy mát hơn và đỡ tốn pin. Lựa chọn này chỉ lưu trên máy này.',
+    ngayDem: 'Ngày đêm',
+    ngayDemOn: 'Bật',
+    ngayDemOff: 'Luôn ban ngày',
+    ngayDemHint: 'Kinh đô có sáng, chiều tà, đêm trăng, rạng đông, 12 phút chơi một ngày. Chỉ để nhìn, không đổi gì trong game. Lựa chọn này chỉ lưu trên máy này.',
     on: 'Bật',
     off: 'Tắt',
     backupTitle: 'Sao lưu, chuyển máy',

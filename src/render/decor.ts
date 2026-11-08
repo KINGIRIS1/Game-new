@@ -48,7 +48,7 @@ export interface DecorSpot {
   open?: [boolean, boolean, boolean, boolean];
 }
 
-/** Đường và đồ trang trí một ô vẽ theo lô; cây đa, ao làng mỗi cái một mô hình. */
+/** Đường và đồ trang trí một ô vẽ theo lô; cây đa, ao làng, sân trống đồng mỗi cái một mô hình. */
 export function isBatchedDecor(type: BuildingType): boolean {
   return isDecor(type) && BUILDINGS[type].w === 1;
 }
