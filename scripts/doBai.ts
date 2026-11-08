@@ -89,7 +89,7 @@ function stageSetup(n: number, army: Army, id: number, hero: HeroSetup | null = 
 
 function tieuChi(cac: string[]): TieuChi[] {
   const out: TieuChi[] = [];
-  // `c1`, `c2`, `c3`: mọi màn, thử thách, đồn của chương ấy (đồn bậc 1, 2, 4 tính vào chương 1, bậc 3 vào chương 3).
+  // `c1`…`c5`: mọi màn, thử thách, đồn của chương ấy (đồn bậc 1, 2, 4 tính vào chương 1, bậc 3 vào chương 3).
   const chuong = (k: string) => {
     const n = Number(k.slice(1));
     if (k[0] === 'd') return n === 3 ? 3 : 1;
@@ -131,6 +131,23 @@ function tieuChi(cac: string[]): TieuChi[] {
     if (n === 16) out.push({ tran: ten, ten: 'Gióng thay Sơn Tinh, chơi giỏi thua', muon: 'lose', danh: (id) => fightStage(n, SAMPLE_ARMY, GIONG, 'gioi', id, undefined, on) });
     if (n === 16 || n === 24) out.push({ tran: ten, ten: 'không bấm kỹ năng thua', muon: 'lose', danh: (id) => fightStage(n, SAMPLE_ARMY, h, 'khongBam', id, undefined, on) });
   }
+  // Chương 4 (`caoLo.test.ts`): màn 25 An Dương Vương, từ màn 26 Cao Lỗ (Lệnh bắn sau màn 30). Chương 5 (`chuong5.test.ts`,
+  // `maVien.test.ts`): Hai Bà, Trưng Nhị có Hiệu triệu sau màn 33. Quân mẫu chương 4 có lính nỏ.
+  const cao = (n: number): HeroSetup =>
+    n === 25 ? { kind: 'anDuong', bamboo: false, glow: false, non: false, kimQuy: true } : { kind: 'caoLo', bamboo: false, glow: false, non: false, lenhBan: n > 30 };
+  const haiBa = (n: number): HeroSetup[] => [
+    { kind: 'trungTrac', bamboo: false, glow: false, non: false },
+    { kind: 'trungNhi', bamboo: false, glow: false, non: false, hieuTrieu: n > 33 },
+  ];
+  for (let n = 25; n <= STAGES.length; n++) {
+    if (!want(`m${n}`)) continue;
+    const h = n <= 32 ? cao(n) : haiBa(n);
+    const ten = `màn ${n}`;
+    out.push({ tran: ten, ten: 'có tướng, chơi thường thắng', muon: 'win', danh: (id) => fightStage(n, SAMPLE_ARMY4, h, 'thuong', id, undefined, on) });
+    out.push({ tran: ten, ten: 'không tướng, chơi giỏi thua', muon: 'lose', danh: (id) => fightStage(n, SAMPLE_ARMY4, null, 'gioi', id, undefined, on) });
+    out.push({ tran: ten, ten: 'nửa quân, chơi giỏi thua', muon: 'lose', danh: (id) => fightStage(n, HALF_ARMY4, h, 'gioi', id, undefined, on) });
+    if ([28, 32, 36, 39, 40].includes(n)) out.push({ tran: ten, ten: 'không bấm kỹ năng thua', muon: 'lose', danh: (id) => fightStage(n, SAMPLE_ARMY4, h, 'khongBam', id, undefined, on) });
+  }
   const camp = (tier: 1 | 2 | 3 | 4, army: Army, hero: HeroSetup | null, play: 'thuong' | 'gioi', id: number) => {
     const def = CAMPS[tier];
     const b = startFieldBattle({ id, stage: 0, enemies: def.enemies, hpScale: def.hpScale, army, rows: DEFAULT_ROWS, hero, bonus: play === 'thuong' ? 0 : TEMPLE_BONUS, bai: baiOf(def.terrain, def.chapter) });
@@ -153,7 +170,7 @@ function tieuChi(cac: string[]): TieuChi[] {
     out.push({ tran: `đồn ${tier}`, ten: 'không tướng, chơi giỏi thua', muon: 'lose', danh: (id) => camp(tier, army, null, 'gioi', id) });
     out.push({ tran: `đồn ${tier}`, ten: 'nửa quân, chơi giỏi thua', muon: 'lose', danh: (id) => camp(tier, halfA, hero, 'gioi', id) });
   }
-  for (let n = 1; n <= 24; n++) {
+  for (let n = 1; n <= CHALLENGES.length; n++) {
     if (!want(`t${n}`)) continue;
     const kind = CHALLENGES[n - 1].kind;
     out.push({ tran: `thử thách ${n}`, ten: `${kind}: chơi giỏi thắng`, muon: 'win', danh: (id) => fightChallenge(n, 'gioi', id, undefined, on) });
@@ -173,7 +190,7 @@ function tieuChi(cac: string[]): TieuChi[] {
 }
 
 /**
- * Đo các tiêu chí `cac` (rỗng là tất cả: `m1`…`m24` màn, `d1`…`d4` đồn, `t1`…`t24` thử thách, `c1`…`c3` cả chương)
+ * Đo các tiêu chí `cac` (rỗng là tất cả: `m1`…`m40` màn, `d1`…`d4` đồn, `t1`…`t40` thử thách, `c1`…`c5` cả chương)
  * với `seeds` hạt giống. `phang`: bỏ mọi bố cục, đo trên bãi phẳng để có mức gốc.
  */
 export function doBai(opts: { cac?: string[]; seeds?: number; phang?: boolean }): Dong[] {
@@ -191,7 +208,8 @@ export function doBai(opts: { cac?: string[]; seeds?: number; phang?: boolean })
       for (let id = 1; id <= n; id++) {
         const b = c.danh(id);
         const outcome = b.outcome ?? 'lose';
-        if (outcome === c.muon && (c.muon === 'lose' || b.t < FIELD.maxS)) dat++;
+        // Màn cầm cự thắng khi giữ đủ giờ, có khi quá thời hạn trận thường.
+        if (outcome === c.muon && (c.muon === 'lose' || b.holdS !== undefined || b.t < FIELD.maxS)) dat++;
         ts.push(b.t);
         const k = b as Battle & { _ket?: number; _ketCan?: number };
         ket += k._ket ?? 0;

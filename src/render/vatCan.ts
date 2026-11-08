@@ -1,6 +1,7 @@
 // Vật cản giữa bãi chiến phó bản (`src/game/baiChien.ts`): mảng cỏ chỗ vật cản đứng (mặt bãi lõm vào, viền sẫm như
 // mép bãi), mặt nước nông có sen, bãi bùn có lau, và mô hình từng dáng (khóm tre, đá, đá nhọn, rào tre, rào cọc, cụm
-// chông, đống rơm, thuyền mắc cạn, đó cá, xe củi đổ, khúc gỗ, giếng, bụi sim, cây chết, lũy đất, nhà sàn, nhà cháy). Hình đọc cùng bố cục với luật đi, nên lính đi vòng đúng chỗ thấy vật cản.
+// chông, đống rơm, thuyền mắc cạn, đó cá, xe củi đổ, khúc gỗ, giếng, bụi sim, cây chết, lũy đất, nhà sàn, nhà cháy, ruộng
+// ngô, khóm lau, đoạn thành đất nện vỡ). Hình đọc cùng bố cục với luật đi, nên lính đi vòng đúng chỗ thấy vật cản.
 // Tọa độ theo bãi như `Relief.field()` ở `battlefield.ts`: x từ 0 tới `FIELD.w`, z 0 là cuối bãi phía giặc.
 
 import * as THREE from 'three';
@@ -8,7 +9,7 @@ import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { sdHinh, type Bai, type DangCan, type Hinh, type VatCan, type VungCham } from '../game/baiChien';
 import { FIELD } from '../game/defs';
 import { makeNhaSan } from './buildings';
-import { reedTemplates } from './lauSay';
+import { cornTemplates, reedTemplates } from './lauSay';
 import { bambooClump, boatHull } from './models';
 import { C } from './palette';
 import { ShapeBuilder, instanceTemplates, seeded, type Placement } from './shapes';
@@ -541,8 +542,112 @@ const nhaChay: Ve = (p, h, rand) => {
   puffs.forEach(([x, y, s], i) => p.sphere(s, CHAY.khoi[i % 2], x, y, 0.05 * i, [1.2, 0.9, 1], 9));
 };
 
+/** Chép hình mẫu `tpl` (khóm lau, khúc ngô dựng sẵn) vào chỗ (x, y, z) trong khung vẽ của `p`, xoay `ry`, phóng `s`. */
+function chepMau(p: ShapeBuilder, them: THREE.BufferGeometry[], tpl: THREE.Mesh, x: number, y: number, z: number, ry: number, s: number): void {
+  const m = new THREE.Matrix4().compose(new THREE.Vector3(x, y, z), new THREE.Quaternion().setFromAxisAngle(TRUC_Y, ry), new THREE.Vector3(s, s, s));
+  const geo = tpl.geometry.clone();
+  geo.applyMatrix4(m.premultiply(p.frame!));
+  them.push(geo);
+}
+
+/**
+ * Ruộng ngô (khối vuông, sát mép bãi): nền đất ruộng, luống đất vun dọc ruộng, khúc ngô trồng thẳng hàng trên luống
+ * (cùng mẫu với bãi ngô quanh bãi, thấp hơn), bờ cỏ quanh ruộng.
+ */
+const ngo: Ve = (p, h, rand, them) => {
+  const { half, r } = khung(p, h);
+  const tpl = cornTemplates();
+  p.box(half * 2 + 0.1, 0.06, r * 2 + 0.1, C.earthDark, 0, 0.03, 0);
+  const rows = Math.max(2, Math.round((r * 2 - 0.5) / 0.5) + 1);
+  const dz = rows > 1 ? (r * 2 - 0.6) / (rows - 1) : 0;
+  for (let k = 0; k < rows; k++) {
+    const z = -r + 0.3 + dz * k;
+    p.box(half * 2 - 0.12, 0.08, 0.26, k % 2 ? C.earth : 0xb38a58, 0, 0.08, z);
+    for (let x = -half + 0.32; x <= half - 0.3 + 1e-6; x += 0.7) {
+      const ry = (rand() - 0.5) * 0.25 + (rand() < 0.5 ? Math.PI : 0);
+      chepMau(p, them, tpl[Math.floor(rand() * tpl.length)], x + (rand() - 0.5) * 0.08, 0.1, z + (rand() - 0.5) * 0.05, ry, 0.72 + rand() * 0.1);
+    }
+  }
+  // Bờ cỏ chạy quanh ruộng.
+  for (let x = -half; x <= half + 1e-6; x += 0.55) for (const sz of [-1, 1]) p.sphere(0.13, C.leaf[(Math.round(x * 4) + 4) % 4], x + rand() * 0.2, 0.04, sz * (r + 0.04), [1.4, 0.45, 1], 6);
+};
+
+/** Khóm lau sậy: mấy khóm lau, sậy mọc dày thành đám (cùng mẫu với lau sậy bờ sông, thấp hơn), chân có cỏ nước. */
+const lau: Ve = (p, h, rand, them) => {
+  const { half, r } = khung(p, h);
+  const tpl = reedTemplates();
+  const spots: [number, number][] = [];
+  for (let x = -half; x <= half + 1e-6; x += Math.max(0.5, half)) {
+    spots.push([x, 0]);
+    const n = r < 0.7 ? 5 : 7;
+    for (let i = 0; i < n; i++) {
+      const a = (i / n) * Math.PI * 2 + rand() * 0.5;
+      const d = r * (0.5 + rand() * 0.12);
+      spots.push([x + Math.cos(a) * d, Math.sin(a) * d]);
+    }
+    if (half <= 0) break;
+  }
+  for (const [x, z] of spots) chepMau(p, them, tpl[Math.floor(rand() * tpl.length)], x, 0.02, z, rand() * Math.PI * 2, 0.62 + rand() * 0.12);
+  for (let i = 0; i < 6; i++) {
+    const a = (i / 6) * Math.PI * 2 + rand() * 0.4;
+    p.sphere(r * 0.22, i % 2 ? 0x5f7a34 : C.leaf[2], Math.cos(a) * r * 0.78, 0.04, Math.sin(a) * r * 0.78, [1.3, 0.4, 1], 6);
+  }
+};
+
+/** Màu thành Luy Lâu: ba màu lớp đất nện, đất sẫm mặt thành, cờ đen viền đỏ của quân Hán. */
+const THANH = { dat: [C.earth, 0xb38a58, 0x9c7446], co: 0x1f1d22 };
+
+/**
+ * Đoạn thành đất nện vỡ (như thành Luy Lâu sau lưng giặc): từng lớp ván khuôn, chân choãi; khúc còn nguyên có lối đi
+ * và lỗ châu mai mép quay về phía quân ta, khúc sụt thấp lởm chởm; đất vỡ đổ quanh chân, cờ đen gãy cắm trên thành.
+ */
+const thanh: Ve = (p, h, rand) => {
+  const { half, r } = khung(p, h);
+  const len = half * 2 + r;
+  const n = Math.max(3, Math.round(len / 0.85));
+  const step = len / n;
+  const LH = 0.16;
+  // Khúc thứ hai từ đầu phía giữa bãi sụt thấp (thành vỡ), mấy khúc còn lại còn nguyên.
+  const giua = h.k === 'doan' && Math.abs(h.bx - FIELD.w / 2) < Math.abs(h.ax - FIELD.w / 2) ? 1 : -1;
+  const vo = giua > 0 ? n - 2 : 1;
+  let flag = -1;
+  for (let i = 0; i < n; i++) {
+    const x = -len / 2 + step * (i + 0.5);
+    const broken = i === vo || (i === (giua > 0 ? n - 1 : 0) && rand() < 0.5);
+    const layers = broken ? 3 + Math.floor(rand() * 2) : 7;
+    for (let k = 0; k < layers; k++) {
+      const tk = r * 1.9 * (1 - (0.28 * k) / 6);
+      p.box(step * 1.01, LH, tk, THANH.dat[(k + i) % 3], x, (k + 0.5) * LH, 0);
+    }
+    const top = layers * LH;
+    if (broken) {
+      // Mặt vỡ lởm chởm, đất đá đổ ra trước chân.
+      for (let j = 0; j < 3; j++) p.box(0.26, 0.14 + rand() * 0.12, 0.3, THANH.dat[j % 3], x + (rand() - 0.5) * step * 0.7, top + 0.04, (rand() - 0.5) * r * 1.2, [rand() * 0.4, rand() * 2, rand() * 0.4]);
+      for (let j = 0; j < 4; j++) p.box(0.22 + rand() * 0.12, 0.14, 0.2, j % 2 ? C.earthDark : THANH.dat[1], x + (rand() - 0.5) * step, 0.06, (rand() < 0.5 ? -1 : 1) * (r * 0.95 + rand() * 0.3), [rand() * 0.5, rand() * 3, rand() * 0.5]);
+      continue;
+    }
+    // Lối đi trên thành, tường chắn có lỗ châu mai mép về phía quân ta (+z).
+    const w = r * 1.9 * 0.72;
+    p.box(step, 0.04, w, C.earthDark, x, top + 0.02, 0);
+    p.box(step, 0.12, 0.14, THANH.dat[0], x, top + 0.08, w / 2 - 0.07);
+    p.box(0.28, 0.16, 0.14, THANH.dat[1], x + (rand() - 0.5) * 0.1, top + 0.22, w / 2 - 0.07);
+    // Cờ cắm trên khúc còn nguyên gần giữa bãi nhất.
+    if (flag < 0 || giua > 0) flag = i;
+  }
+  // Đầu đoạn thành lở: đất vụn.
+  for (const s of [-1, 1]) for (let i = 0; i < 2; i++) p.box(0.32, 0.22, 0.32, i ? THANH.dat[2] : C.earthDark, s * (len / 2 + 0.1 + i * 0.12), 0.1, (rand() - 0.5) * r, [0.3, rand() * 2, 0.2]);
+  // Cờ đen viền đỏ, cán cắm nghiêng.
+  if (flag >= 0) {
+    const fx = -len / 2 + step * (flag + 0.5);
+    const y0 = 7 * LH;
+    p.cyl(0.025, 0.03, 0.62, C.woodDark, fx, y0 + 0.28, -0.08, [0, 0, 0.35], 5);
+    p.box(0.34, 0.24, 0.02, THANH.co, fx - 0.25, y0 + 0.44, -0.08, [0, 0, 0.35]);
+    p.box(0.34, 0.035, 0.025, C.hanRed, fx - 0.29, y0 + 0.32, -0.08, [0, 0, 0.35]);
+  }
+};
+
 /** Mỗi dáng vật cản nhỏ vẽ thế nào (gộp chung một lưới). */
-export const VE: Partial<Record<DangCan, Ve>> = { tre, da, daNhon, rao, coc, rom, chum, xeCui, go, gieng, sim, cayChet, luy, nhaChay };
+export const VE: Partial<Record<DangCan, Ve>> = { tre, da, daNhon, rao, coc, rom, chum, xeCui, go, gieng, sim, cayChet, luy, nhaChay, ngo, lau, thanh };
 
 /** Màu sen: lá, hoa, cánh nhạt. */
 const SEN = { leaf: [0x4f7f34, 0x5f9040, 0x46722e], flower: 0xf0a0b8, light: 0xf8d0dc };

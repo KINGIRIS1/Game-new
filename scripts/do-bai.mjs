@@ -5,15 +5,15 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createServer } from 'vite';
 
-const GIUP = `Đo độ khó các trận ngoài bãi có bố cục (màn, thử thách chương 1–3, đồn bên kia sông),
+const GIUP = `Đo độ khó các trận ngoài bãi có bố cục (màn, thử thách chương 1–5, đồn bên kia sông),
 theo đúng tiêu chí các test cân bằng, mỗi tiêu chí nhiều hạt giống. In bảng Markdown.
 
-  node scripts/do-bai.mjs [c1 c2 c3 m1 … d1 … t1 …] [--hat <số>] [--phang] [--thu "<mã>"]
+  node scripts/do-bai.mjs [c1 … c5 m1 … d1 … t1 …] [--hat <số>] [--phang] [--thu "<mã>"]
 
-  c1 c2 c3    Đo cả chương này (mặc định: cả ba chương)
-  m1…m24      Chỉ đo màn này
+  c1 … c5     Đo cả chương này (mặc định: cả năm chương)
+  m1…m40      Chỉ đo màn này
   d1…d4       Chỉ đo đồn bậc này
-  t1…t24      Chỉ đo thử thách màn này
+  t1…t40      Chỉ đo thử thách màn này
   --hat <số>  Số hạt giống mỗi tiêu chí (mặc định 10)
   --phang     Đo trên bãi phẳng (bỏ mọi bố cục) để có mức gốc
   --thu "<mã>" Đổi tạm số trước khi đo: D là defs.ts, B là baiChien.ts, K là benKia.ts. Ví dụ

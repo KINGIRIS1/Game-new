@@ -1892,12 +1892,12 @@ export const STAGES: StageDef[] = [
   // Chương 4: màn 25–28 dẹp thủy binh Triệu đội lốt cướp sông (trùm tướng thủy binh ở cửa sông), màn 29–31 chặn
   // quân Triệu Đà trước thành Cổ Loa, màn 32 hộ giá vua ra biển Mộ Dạ (cầm cự 90 giây).
   { chapter: 4, minDien: 5, needsGiong: false, needsAdv: true, enemies: { linhThuy: 13, cungThuyen: 8, linhRiu: 4 }, hpScale: 2.3, reward: { gao: 5500, voOc: 4500, datDa: 4000, sat: 1000 }, terrain: 'benSong' },
-  { chapter: 4, minDien: 5, needsGiong: false, needsCaoLo: true, enemies: { linhThuy: 14, cungThuyen: 8, linhRiu: 4 }, hpScale: 2.2, reward: { gao: 6000, voOc: 5000, datDa: 4400, sat: 1100 }, terrain: 'benSong' },
+  { chapter: 4, minDien: 5, needsGiong: false, needsCaoLo: true, enemies: { linhThuy: 14, cungThuyen: 8, linhRiu: 4 }, hpScale: 2.3, reward: { gao: 6000, voOc: 5000, datDa: 4400, sat: 1100 }, terrain: 'benSong' },
   { chapter: 4, minDien: 5, needsGiong: false, needsCaoLo: true, enemies: { linhThuy: 14, cungThuyen: 9, linhRiu: 5 }, hpScale: 2.0, reward: { gao: 6500, voOc: 5400, datDa: 4800, sat: 1200 }, terrain: 'lang' },
   { chapter: 4, minDien: 5, needsGiong: false, needsCaoLo: true, enemies: { linhThuy: 13, cungThuyen: 8, linhRiu: 4, tuongThuy: 1 }, hpScale: 2.0, reward: { gao: 7200, voOc: 6000, datDa: 5200, sat: 1300 }, terrain: 'cuaSong' },
   { chapter: 4, minDien: 5, needsGiong: false, needsCaoLo: true, enemies: { linhTrieu: 7, linhThuy: 7, noTrieu: 5, cungThuyen: 4, kyBinh: 3, linhRiu: 2 }, hpScale: 2.1, reward: { gao: 7600, voOc: 6300, datDa: 5500, sat: 1350 }, terrain: 'lang' },
   { chapter: 4, minDien: 5, needsGiong: false, needsCaoLo: true, enemies: { linhTrieu: 7, linhThuy: 7, noTrieu: 5, cungThuyen: 5, kyBinh: 2, linhRiu: 2 }, hpScale: 2.1, reward: { gao: 8000, voOc: 6600, datDa: 5800, sat: 1400 }, terrain: 'rung' },
-  { chapter: 4, minDien: 5, needsGiong: false, needsCaoLo: true, enemies: { linhTrieu: 8, linhThuy: 7, noTrieu: 5, cungThuyen: 4, kyBinh: 2, linhRiu: 2 }, hpScale: 2.2, reward: { gao: 8500, voOc: 7000, datDa: 6200, sat: 1500 }, terrain: 'coLoa' },
+  { chapter: 4, minDien: 5, needsGiong: false, needsCaoLo: true, enemies: { linhTrieu: 8, linhThuy: 7, noTrieu: 5, cungThuyen: 4, kyBinh: 2, linhRiu: 2 }, hpScale: 2.5, reward: { gao: 8500, voOc: 7000, datDa: 6200, sat: 1500 }, terrain: 'coLoa' },
   {
     chapter: 4,
     minDien: 5,
@@ -1917,7 +1917,7 @@ export const STAGES: StageDef[] = [
   { chapter: 5, minDien: 5, needsGiong: false, enemies: { linhHan: 13, noHan: 8, giapHan: 4 }, hpScale: 1.8, reward: { gao: 9500, voOc: 8000, datDa: 7000, sat: 1700 }, terrain: 'lang' },
   { chapter: 5, minDien: 5, needsGiong: false, enemies: { linhHan: 13, noHan: 8, giapHan: 4 }, hpScale: 2.0, reward: { gao: 10000, voOc: 8400, datDa: 7300, sat: 1800 }, terrain: 'hatMon' },
   { chapter: 5, minDien: 5, needsGiong: false, enemies: { linhHan: 12, noHan: 9, giapHan: 4 }, hpScale: 2.0, reward: { gao: 10500, voOc: 8800, datDa: 7700, sat: 1900 }, terrain: 'coLoa' },
-  { chapter: 5, minDien: 5, needsGiong: false, enemies: { linhHan: 12, noHan: 8, giapHan: 4, toDinh: 1 }, hpScale: 1.85, reward: { gao: 11500, voOc: 9500, datDa: 8300, sat: 2000 }, terrain: 'luyLau' },
+  { chapter: 5, minDien: 5, needsGiong: false, enemies: { linhHan: 12, noHan: 8, giapHan: 4, toDinh: 1 }, hpScale: 1.8, reward: { gao: 11500, voOc: 9500, datDa: 8300, sat: 2000 }, terrain: 'luyLau' },
   // Màn 37–40: Mã Viện sang. Màn 39 là Mã Viện ở hồ Lãng Bạc, màn 40 giữ cửa rừng Cấm Khê cho dân rút về núi
   // (cầm cự 100 giây, Mã Viện tới ở đợt cuối).
   { chapter: 5, minDien: 5, needsGiong: false, enemies: { linhHan: 13, noHan: 8, giapHan: 4 }, hpScale: 2.1, reward: { gao: 12000, voOc: 10000, datDa: 8700, sat: 2100 }, terrain: 'cuaSong' },

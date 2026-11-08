@@ -21,7 +21,7 @@ import {
 } from './baiChien';
 import { isHero, skillReady, startFieldBattle, stepField, useSkill, type Battle, type Fighter, type FieldSetup } from './battle';
 import { CAMPS } from './benKia';
-import { BAI_CHAM, DEFAULT_ROWS, FIELD, STAGES, SWIMMERS, UNITS, type EnemyType, type Terrain } from './defs';
+import { BAI_CHAM, DEFAULT_ROWS, FIELD, STAGES, SWIMMERS, UNITS, type Chapter, type EnemyType, type Terrain } from './defs';
 import { SAMPLE_ARMY, SAMPLE_ARMY4, lateHeroes, playOut } from './testkit';
 
 const W = FIELD.w;
@@ -202,14 +202,14 @@ describe('luật bố cục', () => {
       }
   });
 
-  it('bật bố cục cho màn chương 1–3 và mọi đồn; màn chương 4, 5 vẫn bãi phẳng; rừng, bến sông, làng mỗi chương một biến thể', () => {
-    for (let n = 1; n <= STAGES.length; n++) {
-      const id = stageBai(n);
-      if (STAGES[n - 1].chapter <= 3) expect([n, baiById(id)?.terrain]).toEqual([n, STAGES[n - 1].terrain]);
-      else expect([n, id]).toEqual([n, null]);
-    }
+  it('bật bố cục cho mọi màn và mọi đồn; rừng, bến sông, làng mỗi chương một biến thể', () => {
+    for (let n = 1; n <= STAGES.length; n++) expect([n, baiById(stageBai(n))?.terrain]).toEqual([n, STAGES[n - 1].terrain]);
     for (const def of Object.values(CAMPS)) expect(baiById(baiOf(def.terrain, def.chapter))?.terrain).toBe(def.terrain);
-    for (const t of ['rung', 'benSong', 'lang'] as const) expect(new Set([1, 2, 3].map((ch) => baiOf(t, ch as 1 | 2 | 3))).size).toBe(3);
+    // Rừng, bến sông có màn tới chương 4; làng tới chương 5.
+    const variants = (t: Terrain, last: Chapter) => new Set(Array.from({ length: last }, (_, i) => baiOf(t, (i + 1) as Chapter))).size;
+    expect(variants('rung', 4)).toBe(4);
+    expect(variants('benSong', 4)).toBe(4);
+    expect(variants('lang', 5)).toBe(5);
   });
 
   it('id lạ thì đánh trên bãi phẳng', () => {
@@ -274,7 +274,7 @@ describe('đi quanh vật cản', () => {
     expect(b.outcome).toBe('win');
   });
 
-  it('mỗi bố cục thật: trận người chơi giỏi ở màn của nó không ai lọt vào vật cản, xong trước 90 giây; voi đi lọt tới giặc', () => {
+  it('mỗi bố cục thật: trận người chơi giỏi ở màn của nó không ai lọt vào vật cản, thắng trước 90 giây (màn cầm cự: giữ đủ giờ); voi đi lọt tới giặc', () => {
     const real = Object.values(BAI).filter((b) => !(b.id in MAU));
     expect(real.length).toBeGreaterThan(0);
     for (const bai of real) {
@@ -285,7 +285,7 @@ describe('đi quanh vật cản', () => {
       const b = startFieldBattle(stageSetup(n, bai.id, n));
       playOut(b, 'gioi', (x) => expectClear(x, bai));
       expect([bai.id, b.outcome]).toEqual([bai.id, 'win']);
-      expect(b.t).toBeLessThan(FIELD.maxS);
+      expect(b.t).toBeLessThan((STAGES[n - 1].holdS ?? FIELD.maxS - 0.1) + 0.1);
       const voi = startFieldBattle({ ...stageSetup(1, bai.id), army: { giao: 0, cung: 0, voi: 4, no: 0 }, hero: null, hero2: null, nuTuong: null });
       for (let i = 0; i < 20 * 60 && !stepField(voi, 0.05); i++) expectClear(voi, bai);
       expect([bai.id, voi.outcome]).toEqual([bai.id, 'win']);
