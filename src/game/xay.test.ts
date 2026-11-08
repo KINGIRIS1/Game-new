@@ -29,6 +29,7 @@ import {
   place,
   productionPerMinute,
   remove,
+  SAVE_VERSION,
   storageCap,
   tick,
   usedOf,
@@ -401,7 +402,7 @@ describe('bản lưu 25', () => {
     raw.version = 24;
     delete raw.xay;
     const back = deserialize(JSON.stringify(raw))!;
-    expect(back.version).toBe(25);
+    expect(back.version).toBe(SAVE_VERSION);
     expect(back.xay).toEqual({ viec: [], nextId: 1, daHoi: [], seq: 0 });
   });
 

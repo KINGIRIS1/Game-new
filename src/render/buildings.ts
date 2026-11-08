@@ -25,10 +25,14 @@ import { ToonModel, inkThin, outlineOf, toon } from './toon';
  */
 const FILL: Partial<Record<BuildingType, number>> = { ruong: 0.95, ruongNep: 0.95, ben: 0.92 };
 const SINGLE: Partial<Record<BuildingType, number>> = { choiCanh: 1.15, lauNo: 1.12, congThanh: 1.12 };
+/** Móng cũ của loại đã nới móng hơn một ô mà chưa vẽ lại: trại nỏ vẽ cho móng 2×2, nay móng 4×4. */
+const OLD_W: Partial<Record<BuildingType, number>> = { traiNo: 2 };
+/** Cạnh móng mô hình cũ của loại `type` (thường nhỏ hơn móng bây giờ một ô). */
+export const oldFoot = (type: BuildingType): number => OLD_W[type] ?? BUILDINGS[type].w - 1;
 export function footScale(type: BuildingType): number {
   const w = BUILDINGS[type].w;
   if (w <= 1) return SINGLE[type] ?? 1;
-  return (w / (w - 1)) * (FILL[type] ?? 0.88);
+  return (w / oldFoot(type)) * (FILL[type] ?? 0.88);
 }
 
 /** Cấp dùng để tính độ dày (bờ ruộng, đống đá...): cấp 6, 7, 8 giữ như cấp 5. */

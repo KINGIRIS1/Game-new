@@ -556,8 +556,8 @@ export const BUILDINGS: Record<BuildingType, BuildingDef> = {
   },
   doanhTrai: {
     type: 'doanhTrai',
-    w: 4,
-    d: 4,
+    w: 8,
+    d: 8,
     maxLevel: 5,
     buildCost: { gao: 80, voOc: 60, datDa: 60 },
     upgradeCost: [
@@ -569,10 +569,11 @@ export const BUILDINGS: Record<BuildingType, BuildingDef> = {
       { gao: 1000, voOc: 800, datDa: 1000, sat: 240 },
     ],
     production: [{}, {}, {}, {}, {}],
+    // Chỗ quân mỗi doanh theo cấp; cả trại giữ chừng ấy nhân số tướng đã về (`capOf`, `DOANH_MAX` ở `doanhTrai.ts`).
     troopCap: [8, 14, 20, 28, 38],
-    hp: [400, 460, 520, 600, 700],
-    // Mỗi doanh trại cần một tướng chỉ huy, nên số doanh trại còn tùy số tướng đã có (`limitOf`, `doanhTrai.ts`).
-    limit: [0, 5, 5, 5, 5, 5, 5, 5, 5, 5],
+    hp: [800, 920, 1040, 1200, 1400],
+    // Một đại doanh cho cả kinh đô.
+    limit: [0, 1, 1, 1, 1, 1, 1, 1, 1, 1],
     minDien: 2,
     buildable: true,
     removable: false,
@@ -820,8 +821,8 @@ export const BUILDINGS: Record<BuildingType, BuildingDef> = {
   // Doanh trại là nơi các tướng ở, giữ tổng số chỗ quân và lo điều binh.
   traiGiao: {
     type: 'traiGiao',
-    w: 3,
-    d: 3,
+    w: 4,
+    d: 4,
     maxLevel: 1,
     buildCost: { gao: 40, voOc: 30, datDa: 30 },
     upgradeCost: [{}, {}],
@@ -835,8 +836,8 @@ export const BUILDINGS: Record<BuildingType, BuildingDef> = {
   },
   traiCung: {
     type: 'traiCung',
-    w: 3,
-    d: 3,
+    w: 4,
+    d: 4,
     maxLevel: 1,
     buildCost: { gao: 60, voOc: 50, datDa: 50, sat: 10 },
     upgradeCost: [{}, {}],
@@ -850,8 +851,8 @@ export const BUILDINGS: Record<BuildingType, BuildingDef> = {
   },
   chuongVoi: {
     type: 'chuongVoi',
-    w: 3,
-    d: 3,
+    w: 4,
+    d: 4,
     maxLevel: 1,
     buildCost: { gao: 120, voOc: 80, datDa: 100, sat: 20 },
     upgradeCost: [{}, {}],
@@ -880,8 +881,8 @@ export const BUILDINGS: Record<BuildingType, BuildingDef> = {
   // Lính nỏ (chương 4) cũng có nơi ở riêng: Cao Lỗ tâu vua cho dân luyện nỏ.
   traiNo: {
     type: 'traiNo',
-    w: 3,
-    d: 3,
+    w: 4,
+    d: 4,
     maxLevel: 1,
     buildCost: { gao: 600, voOc: 500, datDa: 500, sat: 120 },
     upgradeCost: [{}, {}],
@@ -998,7 +999,7 @@ const PHUT = 60_000;
  */
 export const XAY_MS = [0, 15_000, 30_000, PHUT, 2 * PHUT, 4 * PHUT, 8 * PHUT, 15 * PHUT, 30 * PHUT, 50 * PHUT, 80 * PHUT];
 /** Hệ số thời gian của từng loại so với `XAY_MS` (không có là 1). */
-export const XAY_HE_SO: Partial<Record<BuildingType, number>> = { choiCanh: 0.5, kho: 0.8, doanhTrai: 1.2, thoHo: 0.6 };
+export const XAY_HE_SO: Partial<Record<BuildingType, number>> = { choiCanh: 0.5, kho: 0.8, doanhTrai: 2, thoHo: 0.6 };
 /** Thời gian dựng, nâng của các loại có bảng riêng (ms, chỉ số là cấp đích như `XAY_MS`). */
 export const XAY_RIENG: Partial<Record<BuildingType, number[]>> = {
   dien: [0, 0, PHUT, 3 * PHUT, 6 * PHUT, 12 * PHUT, 25 * PHUT, 45 * PHUT, 75 * PHUT, 120 * PHUT, 180 * PHUT],
@@ -1111,20 +1112,22 @@ export const U_NO = {
 export const isDecor = (type: BuildingType): boolean => BUILDINGS[type].decor !== undefined;
 export const isRoad = (type: BuildingType): boolean => BUILDINGS[type].decor === 'duong';
 
-// ---------- Doanh trại, tướng chỉ huy, bố trí quân ----------
+// ---------- Doanh trại, tướng, bố trí quân ----------
 
 /**
- * Tướng chỉ huy doanh trại, mỗi doanh trại một tướng: Lạc tướng có từ đầu; Thánh Gióng khi thành tráng sĩ, Sơn Tinh khi
- * rước Mị Nương, An Dương Vương khi có nỏ thần, Cao Lỗ khi thắng màn 25 (về trời, về núi, xuống biển rồi vẫn chỉ huy).
- * Doanh trại có tướng mới giữ chỗ quân.
+ * Tướng ở doanh trại, mỗi tướng một doanh trong trại: Lạc tướng có từ đầu; Thánh Gióng khi thành tráng sĩ, Sơn Tinh khi
+ * rước Mị Nương, An Dương Vương khi có nỏ thần, Cao Lỗ khi thắng màn 25, Hai Bà khi vào chương 5 (về trời, về núi,
+ * xuống biển rồi vẫn tính). Mỗi doanh thêm chỗ quân theo cấp trại, tối đa `DOANH_MAX` doanh.
  */
 export type TuongId = 'lacTuong' | 'giong' | 'sonTinh' | 'anDuong' | 'caoLo' | 'trungTrac' | 'trungNhi';
 export const TUONG_IDS: TuongId[] = ['lacTuong', 'giong', 'sonTinh', 'anDuong', 'caoLo', 'trungTrac', 'trungNhi'];
+/** Số doanh tối đa trong doanh trại (bằng năm trại của thời mỗi tướng một trại): chỗ quân không quá 5 × 38. */
+export const DOANH_MAX = 5;
 
 /**
  * Bốn nữ tướng của Hai Bà Trưng (chương 5 PR 4), theo về khi thắng màn `stage` lần đầu, mỗi người lo một binh chủng
- * `unit`. Ở phó bản đi theo làm phó tướng (đứng cầm cờ sau hàng hậu, không đánh); ở kinh đô giao cho một doanh
- * trại. Binh chủng của nữ tướng được thêm `NU_TUONG_BONUS` máu và sức đánh.
+ * `unit`. Ở phó bản đi theo làm phó tướng (đứng cầm cờ sau hàng hậu, không đánh); ở kinh đô cả bốn ở doanh trại.
+ * Binh chủng của nữ tướng được thêm `NU_TUONG_BONUS` máu và sức đánh.
  */
 export type NuTuongId = 'leChan' | 'thanhThien' | 'batNan' | 'phungThiChinh';
 export const NU_TUONG_IDS: NuTuongId[] = ['leChan', 'thanhThien', 'batNan', 'phungThiChinh'];
@@ -1136,8 +1139,8 @@ export const NU_TUONG: Record<NuTuongId, { stage: number; unit: UnitType }> = {
 };
 export const NU_TUONG_BONUS = 0.12;
 /**
- * Số chỗ quân tối đa mang ra một trận phó bản, theo cấp Điện (chỉ số 0 là cấp 1): bằng sức chứa doanh trại cao nhất
- * dựng được ở cấp Điện ấy, không quá 38, để nhiều doanh trại không làm phó bản dễ đi.
+ * Số chỗ quân tối đa mang ra một trận phó bản, theo cấp Điện (chỉ số 0 là cấp 1): bằng sức chứa một doanh ở cấp
+ * doanh trại cao nhất dựng được ở cấp Điện ấy, không quá 38, để nhiều doanh không làm phó bản dễ đi.
  */
 export const FIELD_CAP = [0, 14, 20, 28, 38, 38, 38, 38, 38, 38];
 /**

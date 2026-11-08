@@ -22,7 +22,7 @@ import { DIEN, DIEN_END, edge, setDien } from './testmap';
 const T0 = 1_000_000;
 
 /** Chỗ dựng nơi ở thêm (trại cung, chuồng voi) và một ô trống trong vùng Điện cấp 2. */
-const CUNG = { x: DIEN_END - 1, z: DIEN_END + 2 };
+const CUNG = { x: DIEN_END - 2, z: DIEN_END + 2 };
 const VOI = { x: DIEN_END + 2, z: DIEN - 2 };
 const FREE = edge(2, 1);
 
@@ -33,7 +33,7 @@ function capital(): GameState {
   s.resources = { gao: 900, voOc: 900, datDa: 900, sat: 400, go: 400 };
   s.dan = 30;
   // Doanh trại, trại giáo phía tây nam Điện, kho phía đông nam: giặc từ phía bắc phải qua Điện mới tới kho.
-  const barracks = place(s, 'doanhTrai', DIEN - 6, DIEN_END + 2);
+  const barracks = place(s, 'doanhTrai', DIEN - 10, DIEN_END + 2);
   const kho = place(s, 'kho', DIEN_END + 2, DIEN_END + 2);
   const traiGiao = place(s, 'traiGiao', DIEN - 1, DIEN_END + 2);
   if (!barracks.ok || !kho.ok || !traiGiao.ok) throw new Error('dựng kinh đô thử thất bại');

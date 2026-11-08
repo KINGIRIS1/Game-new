@@ -29,7 +29,7 @@ import {
   hanForces,
   hanHpScale,
 } from './defs';
-import { assignCommander, barracksList } from './doanhTrai';
+import { barracksOf, gateToward } from './doanhTrai';
 import { callRaidNow, canUpgrade, claimQuest, createInitialState, nextFoe, place, questProgress, tick, upgrade, type GameState } from './game';
 import { chapterOf } from './manVao';
 import { SAVE_VERSION, deserialize, serialize } from './save';
@@ -357,22 +357,28 @@ describe('Hai Bà Trưng', () => {
     expect(b.fighters.find((f) => f.kind === 'trungNhi')!.hp).toBeGreaterThan(0);
   });
 
-  it('giữ kinh đô: bà nào chỉ huy doanh trại thì ra từ trại ấy, bà chưa chỉ huy trại nào thì đứng trước Điện', () => {
+  it('giữ kinh đô: Hai Bà ra từ cổng doanh trại gần giặc, mỗi bà một bên cổng; chưa có doanh trại thì đứng trước Điện', () => {
     const s = ch5();
     s.raid.foe = 'thuy';
-    const trai = barracksList(s)[0];
-    expect(assignCommander(s, trai.id, 'trungNhi').ok).toBe(true);
+    const trai = barracksOf(s)!;
     expect(callRaidNow(s).ok).toBe(true);
     tick(s, RAID_WARNING_MS);
     const b = s.raid.battle!;
     const at = (k: string) => b.fighters.find((f) => f.kind === k)!;
-    const dien = s.buildings.find((x) => x.type === 'dien')!;
-    // Trưng Nhị ra từ mặt trước doanh trại, Trưng Trắc đứng trước Điện.
-    expect(Math.hypot(at('trungNhi').x - (trai.x + 2), at('trungNhi').z - (trai.z + 4))).toBeLessThan(3);
-    // Trước sân Điện (Điện chưa xoay): ngay ngoài mặt trước móng, bên trái lối giữa.
-    expect(Math.abs(at('trungTrac').z - (dien.z + BUILDINGS.dien.d))).toBeLessThan(1.5);
-    expect(at('trungTrac').x).toBeLessThan(dien.x + BUILDINGS.dien.w / 2);
+    const foes = b.fighters.filter((f) => f.side === 'giac');
+    const gate = gateToward(trai, { x: foes.reduce((n, f) => n + f.x, 0) / foes.length, z: foes.reduce((n, f) => n + f.z, 0) / foes.length });
+    for (const k of ['trungTrac', 'trungNhi']) expect(Math.hypot(at(k).x - gate.x, at(k).z - gate.z), k).toBeLessThan(1);
     expect(Math.hypot(at('trungTrac').x - at('trungNhi').x, at('trungTrac').z - at('trungNhi').z)).toBeGreaterThan(1);
+    // Chưa có doanh trại: Hai Bà đứng trước sân Điện (Điện chưa xoay), ngay ngoài mặt trước móng, mỗi bà một bên lối giữa.
+    s.raid.phase = 'idle';
+    s.raid.battle = null;
+    s.buildings = s.buildings.filter((x) => x.type !== 'doanhTrai');
+    const c = startBattle(s, 1, 'nam', { flood: { n: 1, level: 1 }, hero: b.hero!, hero2: b.hero2! });
+    const atC = (k: string) => c.fighters.find((f) => f.kind === k)!;
+    const dien = s.buildings.find((x) => x.type === 'dien')!;
+    expect(Math.abs(atC('trungTrac').z - (dien.z + BUILDINGS.dien.d))).toBeLessThan(1.5);
+    expect(atC('trungTrac').x).toBeLessThan(dien.x + BUILDINGS.dien.w / 2);
+    expect(atC('trungNhi').x).toBeGreaterThan(dien.x + BUILDINGS.dien.w / 2);
   });
 });
 

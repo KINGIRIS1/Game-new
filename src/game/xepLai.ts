@@ -7,9 +7,10 @@ import { pruneCayDa } from './cayDa';
 import { inChapter3 } from './coLoa';
 import { roomFor, type Building, type GameState } from './game';
 import { khoanhOf } from './khoanh';
-import { DIEN_HOME, FOREST_BAND, RIVER_START, baseHeights } from './map';
+import { DIEN_HOME, FOREST_BAND, RIVER_START, baseHeights, farBankOf, turnLocal } from './map';
 import { seatInMau, type MauId } from './mau';
 import { inChapter2 } from './son';
+import { cancelJob } from './xay';
 import { footprintTop, levelFootprint } from './terrain';
 
 /** Kinh đô nhỏ trước phiên bản 11. */
@@ -275,4 +276,130 @@ export function growDien(state: GameState): void {
   for (const r of RESOURCE_IDS) if (refund[r]) state.resources[r] += refund[r]!;
   pruneCayDa(state);
   if (hit.length) state.relaid = { refund, dropped, dien: true };
+}
+
+// ---------- Một doanh trại lớn (bản lưu 26) ----------
+
+/** Móng trước bản lưu 26 của các loại đã nới: doanh trại 4×4 thành 8×8, bốn nơi ở 3×3 thành 4×4. */
+export const OLD_MONG: Partial<Record<BuildingType, number>> = { doanhTrai: 4, traiGiao: 3, traiCung: 3, chuongVoi: 3, traiNo: 3 };
+
+/**
+ * Bản lưu cũ có nhiều doanh trại (mỗi tướng một trại) nhập làm một: giữ trại cấp cao nhất (bằng cấp thì trại dựng
+ * trước), các trại khác dỡ, hoàn đủ của đã bỏ ra; bố trí giữ kinh đô của mọi trại cộng lại; bỏ tướng, nữ tướng đã
+ * giao (nay mọi tướng ở chung một trại). Rồi doanh trại và bốn nơi ở nới móng tại chỗ, giữ mép trước, nới về phía sau
+ * và hai bên (`OLD_MONG` → móng mới), như Điện nới móng: móng mới đè khoảnh chưa mở thì mở luôn, công trình vướng dời
+ * sang chỗ trống gần nhất, tường, đường, đồ trang trí vướng thì dỡ, hoàn của. Móng mới đè lên Điện, hay công trình ở
+ * bên kia sông, thì dời cả công trình sang chỗ trống gần nhất. Việc xây đang dở có dính tới các loại này thì hủy, hoàn
+ * của phần chưa xong. Có doanh trại hay nơi ở thì ghi vào `state.relaid` để báo một lần (đã có lời báo dựng lại
+ * kinh đô nhỏ thì cộng vào đó). `grow`: các công trình còn móng cũ; kinh đô nhỏ vừa dựng lại theo mẫu thì đã theo móng
+ * mới, chỉ nhập trại.
+ */
+export function gopDoanhTrai(state: GameState, grow = true): void {
+  const grown = (t: BuildingType) => OLD_MONG[t] !== undefined;
+  const refund: Cost = {};
+  let dropped = 0;
+  // Việc xây đang dở dính tới các loại nới móng: hủy cả việc (công trình chờ dựng còn theo móng cũ).
+  const byId = new Map(state.buildings.map((b) => [b.id, b]));
+  for (const v of [...state.xay.viec]) {
+    const touch = v.o.slice(v.xong).some((p) => grown(p.moi?.type ?? byId.get(p.id)?.type ?? 'dien'));
+    if (!touch) continue;
+    const r = cancelJob(state, v.id);
+    if (r.ok) addCost(refund, r.value);
+  }
+  const camps = state.buildings.filter((b) => b.type === 'doanhTrai').sort((a, b) => b.level - a.level || a.id - b.id);
+  const keep = camps[0];
+  if (keep) {
+    if (camps.some((b) => b.guard)) {
+      const sum: Record<string, number> = {};
+      for (const b of camps) for (const [k, n] of Object.entries(b.guard ?? {})) sum[k] = (sum[k] ?? 0) + n;
+      keep.guard = { giao: sum.giao ?? 0, cung: sum.cung ?? 0, voi: sum.voi ?? 0, no: sum.no ?? 0 };
+    }
+    for (const b of camps.slice(1)) {
+      addCost(refund, investedCost(b));
+      dropped++;
+    }
+    state.buildings = state.buildings.filter((b) => !camps.includes(b) || b === keep);
+  }
+  for (const b of state.buildings) {
+    delete (b as unknown as Raw).tuong;
+    delete (b as unknown as Raw).nuTuong;
+  }
+  const list = state.buildings.filter((b) => grow && grown(b.type)).sort((a, b) => Number(b.type === 'doanhTrai') - Number(a.type === 'doanhTrai') || a.id - b.id);
+  if (!list.length && !dropped && !RESOURCE_IDS.some((r) => refund[r])) return;
+  const done = new Set<Building>();
+  const dien = state.buildings.find((b) => b.type === 'dien');
+  for (const b of list) {
+    if (done.has(b)) continue;
+    done.add(b);
+    const def = BUILDINGS[b.type];
+    const old = OLD_MONG[b.type]!;
+    // Móng mới trên mô hình (gốc ở tâm móng cũ): mép trước (+z) giữ nguyên, nới về sau và hai bên.
+    const g = Math.floor((def.w - old) / 2);
+    const xs = [-old / 2 - g, -old / 2 - g + def.w];
+    const zs = [old / 2 - def.d, old / 2];
+    let minX = Infinity;
+    let minZ = Infinity;
+    for (const lx of xs) {
+      for (const lz of zs) {
+        const p = turnLocal(b.rot, lx, lz);
+        minX = Math.min(minX, p.x);
+        minZ = Math.min(minZ, p.z);
+      }
+    }
+    const clamp = (v: number) => Math.min(Math.max(Math.round(v), FOREST_BAND), RIVER_START - def.w);
+    const x = clamp(b.x + old / 2 + minX);
+    const z = clamp(b.z + old / 2 + minZ);
+    const over = (o: Building, ox: number, oz: number) => {
+      const w = BUILDINGS[o.type];
+      return o.x < ox + def.w && o.x + w.w > ox && o.z < oz + def.d && o.z + w.d > oz;
+    };
+    state.buildings = state.buildings.filter((o) => o !== b);
+    if (farBankOf(b.x, b.z) || (dien && over(dien, x, z))) {
+      // Bên kia sông hay đè lên Điện: dời cả công trình sang chỗ trống gần nhất.
+      const spot = roomFor(state, b.type, { x: b.x + old / 2, z: b.z + old / 2 });
+      if (!spot) {
+        addCost(refund, investedCost(b));
+        dropped++;
+        continue;
+      }
+      b.x = spot.x;
+      b.z = spot.z;
+      state.buildings.push(b);
+      levelFootprint(state, b, footprintTop(state, b.type, b.x, b.z));
+      continue;
+    }
+    b.x = x;
+    b.z = z;
+    const open = new Set(state.khoanh);
+    for (let dx = 0; dx < def.w; dx++) for (let dz = 0; dz < def.d; dz++) open.add(khoanhOf(x + dx, z + dz));
+    open.delete(-1);
+    if (open.size !== state.khoanh.length) state.khoanh = [...open].sort((p, q) => p - q);
+    const hit = state.buildings.filter((o) => over(o, x, z));
+    state.buildings = state.buildings.filter((o) => !hit.includes(o));
+    state.buildings.push(b);
+    levelFootprint(state, b, footprintTop(state, b.type, b.x, b.z));
+    const order = [...hit].sort((p, q) => BUILDINGS[q.type].w - BUILDINGS[p.type].w || q.level - p.level || p.id - q.id);
+    for (const o of order) {
+      // Công trình vướng đặt lại theo móng bây giờ, nên nơi ở bị dời thì không nới thêm lần nữa.
+      done.add(o);
+      const spot = WALL_TYPES.includes(o.type) || isDecor(o.type) ? null : roomFor(state, o.type);
+      if (!spot) {
+        addCost(refund, investedCost(o));
+        if (o.uNo) addCost(refund, U_NO.cost);
+        dropped++;
+        continue;
+      }
+      o.x = spot.x;
+      o.z = spot.z;
+      state.buildings.push(o);
+      levelFootprint(state, o, footprintTop(state, o.type, o.x, o.z));
+    }
+  }
+  for (const r of RESOURCE_IDS) if (refund[r]) state.resources[r] += refund[r]!;
+  pruneCayDa(state);
+  const prev = state.relaid;
+  if (prev) {
+    addCost(prev.refund, refund);
+    prev.dropped += dropped;
+  } else state.relaid = { refund, dropped, trai: true };
 }

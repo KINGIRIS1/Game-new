@@ -4,6 +4,7 @@
 // phía trước tướng chỉ có phần thấp (đài tướng, rào) để không che tướng.
 
 import type * as THREE from 'three';
+import { BUILDINGS, type TuongId } from '../../game/defs';
 import { coneRoof, drum, parasol, roofFor } from '../buildings';
 import { Lot } from '../lot';
 import { C } from '../palette';
@@ -24,6 +25,19 @@ export const DOANH_TRAI_LOT = new Lot(4, [
 
 /** Chỗ tướng đứng giữa sân tập (tâm khối X, tọa độ móng): sân để trống quanh đó cho tướng to. */
 export const DOANH_TRAI_HERO = { x: DOANH_TRAI_LOT.zone('X').x, z: DOANH_TRAI_LOT.zone('X').z };
+
+/** Tướng ở doanh trại, theo thứ tự chỗ đứng (các tướng khác đứng chầu trong sân Điện). */
+const AT_CAMP: TuongId[] = ['giong', 'sonTinh', 'trungTrac', 'trungNhi'];
+
+/**
+ * Chỗ tướng `tuong` đứng trong sân doanh trại, tọa độ trên móng 8×8 (gốc ở tâm móng): mỗi tướng một chỗ cố định
+ * thành hàng ngang qua tâm sân. Tạm theo bản vẽ 4×4 phóng gấp đôi cho tới khi vẽ lại doanh trại 8×8.
+ */
+export function doanhTraiHeroSpot(tuong: TuongId): { x: number; z: number } {
+  const k = BUILDINGS.doanhTrai.w / DOANH_TRAI_LOT.tiles;
+  const i = Math.max(0, AT_CAMP.indexOf(tuong));
+  return { x: DOANH_TRAI_HERO.x * k + (i - 1.5) * 1.4, z: DOANH_TRAI_HERO.z * k };
+}
 
 /** Hai lính gác, mỗi người một cột x − z, không đứng trước tướng: một trong cổng trại bên trái, một giữa chòi trống và đài tướng. */
 export function doanhTraiSpots(): LotSpot[] {

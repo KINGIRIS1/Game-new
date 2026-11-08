@@ -7,7 +7,7 @@ import { raidSpawnBand, type Battle, type RaidSide } from '../game/battle';
 import { caoLoAtDien } from '../game/caoLo';
 import { HAI_BA_KINDS, haiBaJoined, type HaiBaKind } from '../game/chuong5';
 import { advLook, inChapter3, ruaVangCame, type AdvLook } from '../game/coLoa';
-import { generals, heroPost } from '../game/doanhTrai';
+import { gateToward, generals, heroPost } from '../game/doanhTrai';
 import { nuTuongList } from '../game/nuTuong';
 import { dienLevel, occupancy, stairWall, upcomingBoats, type Building, type GameState } from '../game/game';
 import { giongLook, type GiongLook } from '../game/giong';
@@ -26,7 +26,7 @@ import { DOOR_OPEN, banhChung, banhGiay } from './buildings';
 import { PERSON_SCALE } from './congTrinh/chung';
 import { BEP_TET_SEAT } from './congTrinh/bep';
 import { DIEN_LOT, bannerHeight, courtSlot } from './congTrinh/dien';
-import { DOANH_TRAI_HERO } from './congTrinh/doanhTrai';
+import { doanhTraiHeroSpot } from './congTrinh/doanhTrai';
 import type { Swim } from './congTrinh/hoKimQuy';
 import { CONG_TRINH, lotModel } from './congTrinh/index';
 import { makeRuaVang } from './beasts';
@@ -1610,7 +1610,8 @@ export class World {
     const spots: Spot[] = moi ? moi.spots(b.level) : (SPOTS[b.type] ?? []);
     const n = b.damaged || dung ? 0 : b.type === 'dien' ? spots.length : peopleCount(b, spots.length);
     const spread = moi ? 1 : ((group.userData.spread as number | undefined) ?? 1);
-    const personScale = moi ? PERSON_SCALE : (0.85 * spread) / ((group.userData.foot as number | undefined) ?? 1);
+    const foot = (group.userData.foot as number | undefined) ?? 1;
+    const personScale = moi ? PERSON_SCALE / foot : (0.85 * spread) / foot;
     for (let i = 0; i < n; i++) {
       const spot = { ...spots[i], x: spots[i].x * spread, z: spots[i].z * spread };
       const obj = makeWorker(spot.job);
@@ -2170,15 +2171,16 @@ export class World {
     const barracks = state.buildings.find((b) => b.type === 'doanhTrai');
     const bridge = bridgeTo(state, plotOf(plot).bank);
     if (!barracks || !bridge || !isBridge(bridge.type)) return;
-    const def = BUILDINGS.doanhTrai;
     const ends = bridgeEnds(bridge.type, bridge.x, bridge.z);
     const mid = (cells: [number, number][]) => ({
       x: cells.reduce((a, c) => a + c[0], 0) / cells.length + 0.5,
       z: cells.reduce((a, c) => a + c[1], 0) / cells.length + 0.5,
     });
     const o = plotOrigin(plot);
-    const gate = turnLocal(barracks.rot, 0, def.d / 2 + 0.5);
-    const pts = [{ x: barracks.x + def.w / 2 + gate.x, z: barracks.z + def.d / 2 + gate.z }, mid(ends.near), mid(ends.far), { x: o.x + 2.5, z: o.z + 2.5 }];
+    // Ra từ cổng trại gần đầu cầu nhất.
+    const near = mid(ends.near);
+    const gate = gateToward(barracks, near);
+    const pts = [{ x: gate.x, z: gate.z }, near, mid(ends.far), { x: o.x + 2.5, z: o.z + 2.5 }];
     const kinds = (['giao', 'cung', 'no', 'voi'] as const).filter((k) => (army[k] ?? 0) > 0);
     const total = kinds.reduce((n, k) => n + army[k], 0);
     const figs: THREE.Object3D[] = [];
@@ -2298,16 +2300,17 @@ export class World {
     return { x: at.x, y: this.groundY(dien.x, dien.z) + 0.05, z: at.z, ry: c.ry + rotAngle(dien.rot) };
   }
 
-  /** Chỗ tướng đứng giữa sân doanh trại tướng ấy chỉ huy (không chỉ huy trại nào thì trại của Lạc tướng). Chưa có doanh trại thì null. */
+  /** Chỗ tướng đứng trong sân doanh trại. Chưa có doanh trại thì null. */
   private barracksSpot(state: GameState, tuong: TuongId): HeroSpot | null {
-    const b = heroPost(state, tuong);
-    return b ? this.postSpot(b) : null;
+    const b = heroPost(state);
+    return b ? this.postSpot(b, tuong) : null;
   }
 
-  /** Chỗ tướng đứng giữa sân doanh trại `b` (đài tướng, đã xoay theo trại). */
-  private postSpot(b: Building): { x: number; y: number; z: number } {
+  /** Chỗ tướng `tuong` đứng trong sân doanh trại `b` (mỗi tướng một chỗ cố định, đã xoay theo trại). */
+  private postSpot(b: Building, tuong: TuongId): { x: number; y: number; z: number } {
     const def = BUILDINGS.doanhTrai;
-    const at = turnLocal(b.rot, DOANH_TRAI_HERO.x, DOANH_TRAI_HERO.z);
+    const c = doanhTraiHeroSpot(tuong);
+    const at = turnLocal(b.rot, c.x, c.z);
     return { x: wx(b.x) + def.w / 2 + at.x, y: this.groundY(b.x, b.z) + 0.08, z: wz(b.z) + def.d / 2 + at.z };
   }
 
@@ -2446,10 +2449,10 @@ export class World {
     }
   }
 
-  /** Chỗ bà `kind` ở kinh đô: giữa sân doanh trại bà chỉ huy (cưỡi voi), hay đứng chầu trong sân Điện. */
+  /** Chỗ bà `kind` ở kinh đô: trong sân doanh trại (cưỡi voi), chưa có doanh trại thì đứng chầu trong sân Điện. */
   private haiBaSpot(state: GameState, kind: HaiBaKind, dien: Building | undefined): Required<HeroSpot> & { onFoot: boolean } | null {
-    const post = heroPost(state, kind, false);
-    if (post) return { ...this.postSpot(post), ry: 0.4 + rotAngle(post.rot), onFoot: false };
+    const post = heroPost(state);
+    if (post) return { ...this.postSpot(post, kind), ry: 0.4 + rotAngle(post.rot), onFoot: false };
     return dien ? { ...this.courtSpot(dien, kind), onFoot: true } : null;
   }
 

@@ -1,7 +1,7 @@
 // Mọi công trình vẽ trên móng mới, theo loại, và mô hình đặt vừa móng của mọi loại công trình (`lotModel`).
 
 import type * as THREE from 'three';
-import { isBridge, type BuildingType } from '../../game/defs';
+import { BUILDINGS, isBridge, type BuildingType } from '../../game/defs';
 import { bridgeModel, makeBanLang, makeDonBien } from '../benKia';
 import { buildingModel, footScale, makeBacThanh } from '../buildings';
 import { BAI_DA } from './baiDa';
@@ -77,7 +77,10 @@ export function lotModel(type: BuildingType, level: number, opts: LotOpts = {}):
   const moi = CONG_TRINH[type];
   if (moi) {
     const g = moi.make(level, opts);
-    g.userData.foot = 1;
+    // Móng đã nới mà bản vẽ chưa vẽ lại (doanh trại 8×8, nơi ở 4×4): tạm phóng bản vẽ cũ cho vừa móng mới.
+    const k = BUILDINGS[type].w / moi.tiles;
+    if (k !== 1) g.scale.multiplyScalar(k);
+    g.userData.foot = k;
     return g;
   }
   const g = buildingModel(type, level, opts);
