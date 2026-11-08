@@ -2798,6 +2798,7 @@ Phương án bỏ: ngày đêm có luật (ruộng làm nhiều ban ngày, làng
   - phần lớn công trình: hai cây gần hai góc trước, cắm vào ô trống (`.`) gần góc nhất của bản vẽ ô con; góc kín cả thì cắm ở mép lối đi (xưởng mộc, lò rèn, nhà thợ hồ);
   - bến, làng chài, bến khơi: phía bờ (quay mặt ra sông);
   - Điện: bốn cây hai bên lối đá giữa sân chầu, hai cây hai bên cổng;
+  - doanh trại 8×8: hai cây hai bên cổng trước, thêm một cây ở góc trước bên phải (góc trái kín nhà dài, chòi trống);
   - chòi canh, lầu nỏ: một cây; cổng thành: hai cây;
   - không cắm ở ruộng, ruộng nếp, vườn (có đom đóm), lũy, đê, cống, thành, bẫy, cầu, đường, đồ trang trí; công trình hư, đang xây thì không thắp.
 - Lửa sẵn có (lò rèn, lò nung, bãi đá) thêm quầng sáng. Thuyền trên sông, thuyền neo ở bến, thuyền buôn, thuyền khơi mang đèn.
