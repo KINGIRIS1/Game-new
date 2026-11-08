@@ -245,9 +245,41 @@ V V V . . .
 - `6` cấp 6, cót thóc lớn trên vòng đá (cấp 7: cót cao, thêm đai tre).
 - Người giữ kho đi qua lại trên dải sân giữa vựa phụ và sân phơi.
 
-### Doanh trại: 3×3 → 4×4
+### Doanh trại: 3×3 → 4×4 → 8×8
 
-Nhà dài để trống không vách chạy suốt phía sau, sân tập rộng ở giữa cho tướng đứng, chòi trống sau bên phải, đài tướng trước bên phải.
+Từ bản lưu 26 chỉ còn một doanh trại (đại doanh), móng 8×8 (chủ dự án yêu cầu; xem mục Kế hoạch: một doanh trại lớn trong `docs/thiet-ke.md`). Lấy bố cục của hình mẫu chủ dự án gửi (khuôn viên vuông có tường bao, lầu cổng, sân tập rộng có lính tập), giữ nét Đông Sơn. Nhà dài cao xếp dọc tường sau và tường trái, phải; phía trước chỉ có phần thấp cho khỏi che lính tập và tướng.
+
+```
+# # # # # # # C C # # # # # # #
+# H H H H H . C C . I I I I I #
+# H H H H H . , , . I I I I I #
+# J J . D D D D D D D D . L L #
+# J J . D D D D D D D D . L L #
+# J J . D D D D D D D D . L L #
+# J J . D D D D D D D D . L L #
+C C . . . . . , , . . . . . C C
+C C . . s . s , , s . s . . C C
+# K K . . . . , , . . . . o . #
+# K K . s . s , , s . s . o . #
+# K K . . . . , , . . . . o . #
+# K K . s . s , , s . s . . . #
+# T T . . . . , , . . . b . b #
+# T T g g f . C C . . . . . . #
+# # # # # # # C C # # # # # # #
+```
+
+- `#` cấp 1, rào cọc vót nhọn quanh móng (như bốn nơi ở); cấp 3 tường đất nện thấp chân kè đá, đỉnh có mái tranh nhỏ hai mái.
+- `C` cấp 1, cổng tre giữa mặt trước: hai cột đầu vót, xà ngang, vải đỏ. Cấp 2 thành lầu cổng: bốn cột chân, giằng chéo, sàn lầu lan can đỏ, chòi mái tranh cong, cờ đuôi nheo đỏ. Cấp 3 thêm lầu cổng sau, trái, phải. Chỗ cổng khớp `gates` (`src/game/doanhTrai.ts`): lính, tướng giữ kinh đô ra từ cổng gần giặc.
+- `H I J K L` nhà dài để trống không vách, mái thẳng, sàn ván thấp, chiếu ngủ, chăn cuộn; mỗi doanh một nhà theo thứ tự doanh, có khi có tướng thứ ấy (không theo cấp). Góc nhà nhìn ra sân cắm cờ hiệu màu tướng.
+- `D` cấp 2, đài tướng: nền đất đắp kè đá, sàn ván có mạch, chiếu cói viền đỏ mỗi chỗ tướng, lan can đỏ, bậc đá giữa, lọng đỏ giữa mép sau. Tướng ở trại đứng trên đài nhìn ra sân: Trưng Trắc (voi), Gióng (ngựa sắt), Sơn Tinh, Trưng Nhị (voi), từ trái qua phải.
+- `s` cấp 1, lính tập: cấp 1 bốn người hàng giữa, mỗi cấp thêm hai, cấp 5 mười hai. Theo tỉ lệ binh chủng đã luyện, đổi hai tư thế theo nhịp.
+- `,` cấp 1, lối từ cổng sau tới nhà dài và từ cổng trước tới bậc đài (cấp 4 lát đá có mạch). Sân tập đất nện sẫm hơn sân, cấp 4 kẻ ô vạch vôi.
+- `g` cấp 1, giá giáo đồng (chương 4 thêm giá nỏ). `f` cấp 4, cột cờ lớn chân kè đá, cờ đỏ viền vàng.
+- `o` cấp 3, ba cọc rơm tập đâm. `b` cấp 3, hai bia rơm tròn.
+- `T` cấp 5, chòi trống trận: chân cột cao, sàn lan can đỏ, trống đồng, mái tranh nhọn, thang tre quay ra sân.
+- Lính gác: cấp 1 một người trong cổng tre; có lầu cổng thì mỗi lầu một người đứng trên sàn lầu.
+
+Bản 4×4 trước bản lưu 26 (nay không dùng):
 
 ```
 H H H H H H H H
@@ -260,20 +292,34 @@ g . . . . . 2 2
 . . . , , . . .
 ```
 
-- `H` cấp 1, nhà dài để trống không vách, mái thẳng; sàn ván thấp, chiếu ngủ, chăn cuộn.
-- `X` cấp 1, chỗ tướng đứng giữa sân tập (đất nện sẫm hơn sân).
-- `g` cấp 1, giá giáo đồng chạy dọc mép trái.
-- `,` cấp 1, cổng trại: hai cột, xà ngang, vải đỏ, cờ đuôi nheo.
-- `2` cấp 2, đài tướng: nền đất đắp, sàn ván, chiếu cói, lan can đỏ, lọng đỏ.
-- `h` cấp 4, nhà dài thứ hai quay dọc bên trái.
-- `5` cấp 5, chòi trống trận có mái nhọn, thang tre.
-- Đài tướng và chòi trống đổi chỗ so với bản đầu: chòi trống cao đứng trước tướng thì che tướng (camera nhìn từ trước bên phải), nên chòi lùi về sau cạnh nhà dài, đài tướng thấp ra trước.
-- Cấp 3: rào cọc vót nhọn hai bên và mặt trước (phía sau đã có nhà dài), chừa cổng giữa mặt trước. Trại giáo, trại cung, chuồng voi dựng sát doanh trại dùng cùng kiểu rào.
-- Hai lính gác: trong cổng bên trái, và giữa chòi trống với đài tướng; không ai đứng trước tướng.
+Bốn nơi ở của binh chủng (bản lưu 26) cùng kiểu khuôn viên với doanh trại, vẽ chung ở `src/render/congTrinh/trai.ts` (`khuonVien`):
+- `#` rào cọc vót nhọn quanh mép móng (chuồng voi cọc thưa, cao, có hai thanh ngang);
+- `C` lầu cổng mái tranh giữa mặt trước, như lầu cổng doanh trại cấp 2 thu còn 85%, có một lính gác đứng trên sàn lầu;
+- `,` lối đất từ cổng vào sân.
 
-### Trại giáo: 2×2 → 3×3
+Mỗi nơi ở một nhà lính ở góc sau bên trái, sân tập ở giữa. Lính tập, voi cầm binh khí, mặc giáp đúng bậc đã rèn của binh chủng ấy (`LotOpts.tier`), gộp một lưới mỗi chất liệu (`gopHinh`). Nơi ở không đổi dáng theo cấp (một cấp). Người, thú cùng cỡ lính tập ở doanh trại.
 
-Hai lều chữ A song song phía sau, giá giáo bên phải, sân tập phía trước có hai cọc rơm.
+### Trại giáo: 2×2 → 3×3 → 4×4
+
+Một lều lính lớn, giá giáo, sân tập hai cọc rơm, mỗi cọc một giáo binh đâm.
+
+```
+A A A A A . g g
+A A A A A . g g
+A A A A A . . .
+. . . . s . o .
+. . . . . . . .
+. . . . s . o .
+. . . , , . . .
+. . . C C . . .
+```
+
+- `A` lều lính mái chữ A, nóc chạy ngang, mái tranh chạm đất trước và sau; hồi trái đan phên, hồi phải để ngỏ thấy chiếu ngủ; cột tre bắt chéo hai đầu nóc. To hơn lều 3×3 chừng 30% (hai lều cũ gộp một). Cờ đỏ cắm sau hồi trái, bay cao trên nóc.
+- `g` giá giáo năm cây, mũi đồng lớn.
+- `o` cọc rơm có thanh ngang làm vai, nắm rơm làm đầu, trên sân đất nện.
+- `s` giáo binh đâm cọc rơm, mũi giáo chạm cọc: người trên thế thủ, người dưới đâm tới.
+
+Bản 3×3 trước bản lưu 26:
 
 ```
 A A A A g g
@@ -284,16 +330,28 @@ a a a a . .
 . . , , . .
 ```
 
-- `A` lều lính mái chữ A, nóc chạy ngang, mái tranh chạm đất trước và sau; hồi trái đan phên, hồi phải để ngỏ thấy chiếu ngủ; cột tre bắt chéo hai đầu nóc. Cờ đỏ cắm sau hồi trái, bay cao trên nóc.
-- `g` giá giáo, mũi đồng lớn.
-- `a` lều chữ A thứ hai, thấp hơn (mới).
-- `o` cọc rơm có thanh ngang làm vai, nắm rơm làm đầu; giáo binh đứng thế thủ đâm giáo vào cọc bên phải.
-- `,` lối vào.
-- Rào cọc vót nhọn quanh mép móng như doanh trại, chừa cổng giữa mặt trước; hai cọc cổng to buộc vải đỏ. Lều to hơn lều cũ chừng 20%.
+### Trại cung: 2×2 → 3×3 → 4×4
 
-### Trại cung: 2×2 → 3×3
+Lán một mái góc sau bên trái, trường bắn chạy ngang sân: hai cung thủ đứng sau vạch bắn bên phải bắn sang hai bia ở mép trái.
 
-Lán một mái góc sau bên phải, trường bắn chạy ngang hết móng: cung thủ đứng bên phải bắn sang hai bia ở mép trái.
+```
+L L L L L . f .
+L L L L L . . .
+. r . . . . . .
+B . . . . v c .
+. . . . . v . .
+b . . . . v c .
+. . . , , . . .
+. . . C C . . .
+```
+
+- `L` lán một mái tựa vách phên sau, mái tranh dốc ra trước; giá cung đứng và bao tên dưới mép mái trước. Dài hơn lán 3×3 chừng 70%.
+- `B b` hai bia rơm tròn quay mặt sang phải; mấy mũi tên trượt găm xuống đất quanh bia.
+- `v` vạch bắn: khúc gỗ nằm dọc; `c` cung thủ đứng sau vạch, một người giương cung, một người vừa buông dây; bao tên bên cạnh.
+- `r` đống bó rơm làm bia. `f` cờ đỏ cao.
+- Sân đất nện chạy ngang từ bia tới chỗ cung thủ.
+
+Bản 3×3 trước bản lưu 26:
 
 ```
 r f . L L L
@@ -304,18 +362,27 @@ b . . . . c
 . . , , . .
 ```
 
-- `L` lán một mái tựa vách phên sau, mái tranh dốc ra trước; giá cung đứng và bao tên đặt ngay dưới mép mái trước (vách sau khuất dưới mái). Cao hơn lán cũ chừng 30%, sâu gấp rưỡi, hẹp lại cho vừa khối `L`.
-- `B` bia rơm tròn ở xa (mới).
-- `c` chỗ cung thủ đứng bắn, khúc gỗ nằm làm vạch bắn trước mặt, bao tên bên cạnh.
-- `b` bia rơm tròn ở gần. Mấy mũi tên trượt găm xuống đất quanh hai bia.
-- `,` lối vào.
-- `r` đống bó rơm làm bia (mới).
-- `f` cờ đỏ cao (mới).
-- Rào cọc vót nhọn quanh mép móng như trại giáo, chừa cổng giữa mặt trước.
+### Chuồng voi: 2×2 → 3×3 → 4×4
 
-### Chuồng voi: 2×2 → 3×3
+Mái chóp bốn mặt trên cột gỗ lớn ở góc sau bên trái, một voi nghỉ dưới mái; sân voi rộng, một voi ra sân ăn cỏ.
 
-Mái chóp bốn mặt trên cột gỗ lớn ở góc sau, sân voi rộng có rào gỗ, máng nước và đống cỏ phía trước.
+```
+M M M M M . m m
+M M M M M . m m
+M M M M M . c .
+. . . . . . . .
+. . . . . . . .
+w w . . . . y y
+w w . , , . y y
+. . . C C . . .
+```
+
+- `M` mái chóp bốn mặt trên bốn cột lớn đai đồng, chóp đồng, rơm lót nền, vách phên thấp phía sau; cột cao đủ cho voi có người cưỡi đứng lọt. Một voi đứng ngang dưới mái.
+- `c` cọc buộc voi đai đồng, cuộn thừng quấn quanh.
+- `w` máng nước gỗ kê trên hai khúc gỗ. `y` đống cỏ. `m` đống thân chuối cắt khúc, đầu cắt quay ra trước; cờ đỏ cạnh đó.
+- Sân voi đất nện; một voi (có người cưỡi) đứng giữa sân, quay về đống cỏ. Hai voi gộp một lưới, có bóng.
+
+Bản 3×3 trước bản lưu 26:
 
 ```
 M M M M m m
@@ -326,13 +393,27 @@ w w . . y y
 . . , , y y
 ```
 
-- `M` mái chóp bốn mặt trên bốn cột lớn đai đồng, chóp đồng, rơm lót nền. Mái rộng hơn mái cũ chừng 35% theo bề ngang, 15% theo bề sâu, cao hơn chừng 30%; cột cao đủ cho voi có người cưỡi đứng lọt.
-- `c` cọc buộc voi đai đồng, cuộn thừng quấn quanh.
-- `w` máng nước gỗ kê trên hai khúc gỗ.
-- `y` đống cỏ cao, nhô lên trên thanh rào.
-- `,` cổng sân voi.
-- `m` đống thân chuối cắt khúc cho voi ăn, đầu cắt quay ra trước (mới).
-- Rào cọc vót nhọn thưa, cao hơn rào trại giáo, có hai thanh gỗ ngang, chạy quanh mép móng, chừa cổng trước; hai cọc cổng to buộc vải đỏ. Voi (có người cưỡi) đứng giữa sân, quay về đống cỏ.
+### Trại nỏ: 2×2 → 4×4
+
+Chương 4. Lán mái ngói đỏ cam như ngói thành Cổ Loa, trường bắn ngang sân có bia gỗ, ụ đất tập lên dây.
+
+```
+N N N N N . f .
+N N N N N . . .
+. . . . . . k .
+B . . . . s . .
+. . . . . . . .
+. . . . . u u .
+. . . , , u u .
+. . . C C . . .
+```
+
+- `N` lán sáu cột, sàn đất nện, mái thuyền lợp ngói; dưới mái dọc vách sau là giá gác bốn cây nỏ, báng chúc xuống, cánh nỏ ngang.
+- `B` bia gỗ vuông trên hai cột, mặt vẽ vòng tròn đỏ trắng quay sang phải, mấy mũi tên nỏ găm vào.
+- `s` lính nỏ quỳ một gối nhắm bia; hòm tên nỏ cạnh đó.
+- `k` nỏ lớn lẫy đồng trên giá (dáng giá nỏ, thu 55%), chĩa ra trước.
+- `u` ụ đất tập lên dây: nền đắp viền đá thấp, mặt đất nện; một lính nỏ đứng trên ụ lên dây, quay ra sân.
+- `f` cờ đỏ cao. Sân đất nện chạy ngang từ bia tới chỗ lính quỳ.
 
 ### Đền Phù Đổng: 3×3 → 4×4
 
@@ -645,6 +726,46 @@ V V . D D . V V
 - `B` bụi tre góc sau bên phải.
 - Thầy cúng (Lạc hầu) đứng khấn bên trái lư hương, quay vào đền; chỗ thứ hai là người dâng lễ bên đàn tế.
 - Đã vẽ (`src/render/congTrinh/denHatMon.ts`). Đã đổi khi vẽ: bỏ hai cờ đứng hai bên thềm (đâm vào diềm mái, lẫn với cờ đàn tế), thay bằng phướn đỏ, vàng trên đàn tế.
+
+## Đền Rồng Tiên: 8×8 (chủ dự án yêu cầu, đã vẽ)
+
+Bản vẽ đi kèm mục **Đền Rồng Tiên** trong `docs/thiet-ke.md`. Một cấp, chưa có dáng cũ. Móng 8×8 vẽ thành 16×16 ký tự. Một đền, hai nửa: đền chính lùi về sau giữa móng; nửa trái là hồ có rồng (cha xuống biển), nửa phải là núi có chim tiên (mẹ lên núi). Camera nhìn từ góc dưới bên phải, nên núi cao đứng sau bên phải, nửa trước bên phải chỉ có hoa cỏ thấp.
+
+```
+B B ~ ~ . H H H H H H . M M M M
+B B ~ ~ . H H H H H H . M M M M
+~ R R ~ . H H H H H H . M P P M
+~ R R ~ . H H H H H H . M P P M
+~ R R ~ . N N N N N N . M M M M
+~ R R ~ . N N N N N N . . M M M
+~ R R ~ Q Q . . . . A A . . M M
+S S ~ ~ Q Q . . . . A A . . h h
+S S ~ . . . . L L . . . . h h h
+~ ~ ~ . . . . . . . . . . h h .
+~ ~ . . . . . O O . . . . . . .
+. . . . . . . O O . . . . . . .
+. F . . . . . , , . . . . . F .
+D D . . . 7 . , , . 7 . . . D D
+D D . . . 7 . , , . 7 . . . D D
+. . . . . . . , , . . . . . . .
+```
+
+- `H` đền chính: mười cột son trên chân đá, vách gỗ dải hoa văn, cửa giữa có mặt trống đồng trên trán, hai ô cửa sổ song gỗ, xà son; mái cong hai tầng lợp ngói viền đồng vàng, tầng trên trên gác lửng có hàng ô cửa, chim Lạc đồng hai đầu nóc.
+- `N` thềm: nền đá hai bậc phủ cả `H` và `N`, ba bậc đá lên giữa thềm, hai lan can đá có đầu rồng xanh ở chân.
+- `Q` tượng Lạc Long Quân trên bệ đá hai bậc, bên hồ: mũ đồng vành vàng có hai sừng rồng và chùm lông chim, áo dài xanh biển, giáp vảy rồng xanh lục, hộ tâm mặt trống đồng, áo choàng xanh rêu viền bọt sóng, râu đen, gươm đồng dựng trước vai (`bakeLacLongQuan` ở `heroes.ts`).
+- `A` tượng Âu Cơ trên bệ đá hai bậc, bên núi: áo hồng phấn, váy dài trắng ngà, áo choàng lông chim trắng, tóc dài búi cài trâm, mũ lông chim hai tầng trắng hồng vành vàng, hai tay chắp trước ngực (`bakeAuCo`). Hai tượng hơi chếch vào lối giữa.
+- `L` lư hương đồng ba chân trên trụ đá trước thềm.
+- `O` bọc trăm trứng: bệ đá tròn, chậu đá hoa sen hai vòng cánh, trứng trắng ngà chất bốn tầng thành ụ.
+- `,` lối vào; sân lát đá hai màu từ thềm tới hết bọc trứng, ngang từ bệ tượng này sang bệ tượng kia; lối đá từ sân ra cổng.
+- `7` cổng hai cột chim Lạc như cổng Hồ Kim Quy.
+- `~` mặt hồ, bờ kè đá theo ô con `~ R S` (`lakeOutline` của Hồ Kim Quy, chọn ký tự mặt hồ); `S` đám sen.
+- `R` rồng xanh: mình uốn ba khúc nhô khỏi mặt nước, thuôn dần ra đuôi vút lên ở sau, bụng vàng nhạt, vây đỏ trên sống lưng, hai chân trước vuốt vàng; đầu ngẩng nhìn ra trước, sừng vàng, bờm đỏ, râu dài, ngọc sáng trước miệng; vòng gợn sóng chỗ mình rồng chạm nước.
+- `M` ba ngọn núi đá đa diện, sườn rừng xanh, cây thông nhỏ trên sườn trước, mây trắng từng cụm vờn quanh; `P` ngọn cao nhất, chim tiên trắng dang cánh đậu trên đỉnh (mỏ dài vàng, mào đỏ, đầu cánh và lông đuôi giữa vàng).
+- `h` chân núi: khóm hoa dại hồng, trắng, vàng trên bụi lá thấp, đá núi lăn xuống.
+- `D` trống đồng trên giá gỗ thấp; `F` cờ xanh nước (trái, bên hồ), cờ vàng núi (phải, bên núi).
+- `B` bụi tre góc sau bên trái.
+- Thầy cúng (Lạc hầu) đứng khấn bên trái lư hương, quay vào đền; chỗ thứ hai là người dâng lễ bên bọc trứng.
+- Đã vẽ (`src/render/congTrinh/denRongTien.ts`).
 
 ## Sân trống đồng: 3×3 (đồ trang trí, đã vẽ)
 
