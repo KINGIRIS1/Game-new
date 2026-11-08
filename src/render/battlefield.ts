@@ -22,7 +22,7 @@ import { buildForest, makeBoat, makeEnemyBoat, makeEnemyFlag, makeLauThuyen, mak
 import { makeNhaSan, makeRuong } from './buildings';
 import { makeBridge } from './benKia';
 import { C } from './palette';
-import { reedTemplates } from './lauSay';
+import { cornTemplates, reedTemplates } from './lauSay';
 import { makeWorker, type Job } from './people';
 import type { Poser } from './rig';
 import { type Placement, ShapeBuilder, disposeModel, instanceTemplates, seeded } from './shapes';
@@ -1394,61 +1394,12 @@ function thungChai(): THREE.Group {
   return m.group();
 }
 
-/**
- * Một khúc luống ngô: ba cây thẳng hàng theo trục x, lá to chĩa ra hai bên luống rồi rủ xuống, cờ ngô vàng khô
- * trên ngọn, bắp ngô bẹ xanh nhú hạt vàng có râu nâu.
- */
-function cornTemplate(seed: number): THREE.Mesh {
-  const b = new ShapeBuilder(false, true);
-  const rand = seeded(seed);
-  for (let i = 0; i < 3; i++) {
-    const x = (i - 1) * 0.24 + (rand() - 0.5) * 0.05;
-    const z = (rand() - 0.5) * 0.08;
-    const h = 1.1 + rand() * 0.3;
-    b.cyl(0.02, 0.034, h, 0x6f8f38, x, h / 2, z, undefined, 4);
-    for (let k = 0; k < 4; k++) {
-      // Lá mọc so le hai bên luống: đoạn gốc vươn chếch lên, đoạn ngọn rủ xuống.
-      const side = k % 2 ? 1 : -1;
-      const a = Math.PI / 2 + (side > 0 ? 0 : Math.PI) + (rand() - 0.5) * 0.7;
-      const y = h * (0.24 + k * 0.18);
-      const color = k % 2 ? C.corn : 0x9cb85a;
-      const ca = Math.cos(a);
-      const sa = Math.sin(a);
-      const l1 = 0.28 + rand() * 0.08;
-      const t1 = 0.75;
-      b.box(0.11, l1, 0.014, color, x + ca * Math.sin(t1) * l1 * 0.5, y + Math.cos(t1) * l1 * 0.5, z + sa * Math.sin(t1) * l1 * 0.5, [sa * t1, 0, -ca * t1]);
-      const tx = x + ca * Math.sin(t1) * l1;
-      const tyy = y + Math.cos(t1) * l1;
-      const tz = z + sa * Math.sin(t1) * l1;
-      const l2 = 0.26 + rand() * 0.08;
-      const t2 = 1.85;
-      b.box(0.09, l2, 0.012, color, tx + ca * Math.sin(t2) * l2 * 0.5, tyy + Math.cos(t2) * l2 * 0.5, tz + sa * Math.sin(t2) * l2 * 0.5, [sa * t2, 0, -ca * t2]);
-    }
-    // Cờ ngô: chùm nhánh vàng khô xòe trên ngọn.
-    b.cone(0.018, 0.24, C.cornDry, x, h + 0.12, z, undefined, 3);
-    for (let k = 0; k < 4; k++) {
-      const a = (k / 4) * Math.PI * 2 + rand();
-      b.cone(0.014, 0.2, C.cornDry, x + Math.cos(a) * 0.05, h + 0.06, z + Math.sin(a) * 0.05, [Math.sin(a) * 0.7, 0, -Math.cos(a) * 0.7], 3);
-    }
-    if (i !== 1) continue;
-    // Bắp ngô chếch ra một bên thân cây giữa.
-    const ey = h * (0.42 + rand() * 0.1);
-    const es = rand() < 0.5 ? 1 : -1;
-    b.add(new THREE.SphereGeometry(0.06, 5, 3), 0xbcc46a, x, ey, z + es * 0.06, [es * 0.45, 0, 0], [1, 2.3, 1]);
-    b.add(new THREE.SphereGeometry(0.045, 5, 3), C.ripe, x, ey + 0.06, z + es * 0.1, [es * 0.45, 0, 0], [1, 1.6, 1]);
-    b.cone(0.022, 0.09, 0x8a4a2a, x, ey + 0.16, z + es * 0.13, [es * 0.6, 0, 0], 3);
-  }
-  return b.mesh(toon);
-}
-
-let cachedCorn: THREE.Mesh[] | null = null;
 
 /**
  * Bãi ngô Hát Môn trên bãi bồi ven sông: luống ngô thẳng hàng phía trên dải lau sậy sát nước, có quãng bỏ trống;
  * không lấn bãi chiến, đàn tế, chỗ Lạc tướng đánh trống.
  */
 function cornField(relief: Relief): THREE.Object3D {
-  cachedCorn ??= [cornTemplate(5), cornTemplate(19), cornTemplate(41)];
   const rand = seeded(67);
   const spots: Placement[] = [];
   const keepOut: Zone[] = [
@@ -1472,7 +1423,7 @@ function cornField(relief: Relief): THREE.Object3D {
       spots.push({ t: kind < 0.4 ? 0 : kind < 0.75 ? 1 : 2, x: px, y: relief.height(px, pz) - 0.02, z: pz, s, ry });
     }
   }
-  return instanceTemplates(cachedCorn, spots, thinOutline);
+  return instanceTemplates(cornTemplates(), spots, thinOutline);
 }
 
 /** Cờ đen viền đỏ của quân Hán trên thành: cột, lá cờ bay về +x. */

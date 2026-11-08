@@ -345,7 +345,7 @@ Chủ dự án muốn có nhiều quân dự trữ: dựng thêm doanh trại, m
   - rừng mọc thành cụm có trảng trống, tre thành khóm riêng, thưa dần ra mép;
   - hai bên dàn ba hàng cách nhau 10 ô rồi xông vào đánh kẻ gần nhất;
   - lính đẩy nhau ra, không đứng chồng lên nhau;
-  - dải giữa bãi có vật cản theo nền, lính đi vòng (xem mục **Bãi chiến có vật cản**; màn chương 1–3 và đồn bên kia sông đã có bố cục, chương 4–5 bật dần);
+  - dải giữa bãi có vật cản theo nền, lính đi vòng (xem mục **Bãi chiến có vật cản**; mọi màn và đồn bên kia sông đã có bố cục);
   - ngoài bãi mọi người bền gấp 1,6 lần, để trận kéo dài chừng 10–35 giây và kịp bấm Trống trận.
 - **Kết thúc trận**:
   - thắng khi diệt hết giặc;
@@ -1331,16 +1331,16 @@ Bản đồ phó bản có thêm thẻ Chương 4, mở khi đã vào chương 4
 | Màn | Tên | Quân giặc | Máu | Tướng | Thưởng lần đầu |
 |---|---|---|---|---|---|
 | 25 | Bến sông Cổ Loa | 13 lính thủy, 8 cung thuyền, 4 lính rìu | ×2,3 | An Dương Vương | 5500 gạo, 4500 vỏ ốc, 4000 đất đá, 1000 sắt |
-| 26 | Bãi ven sông | 14 lính thủy, 8 cung thuyền, 4 lính rìu | ×2,2 | cần Cao Lỗ | 6000, 5000, 4400, 1100 |
+| 26 | Bãi ven sông | 14 lính thủy, 8 cung thuyền, 4 lính rìu | ×2,3 | cần Cao Lỗ | 6000, 5000, 4400, 1100 |
 | 27 | Làng chài | 14 lính thủy, 9 cung thuyền, 5 lính rìu | ×2,0 | cần Cao Lỗ | 6500, 5400, 4800, 1200 |
 | 28 | Cửa sông, trùm **tướng thủy binh Triệu** | 13 lính thủy, 8 cung thuyền, 4 lính rìu, tướng thủy binh | ×2,0 | cần Cao Lỗ | 7200, 6000, 5200, 1300 |
 | 29 | Đồng trước Cổ Loa | 7 lính khiên, 7 lính thủy, 5 nỏ thủ Triệu, 4 cung thuyền, 3 kỵ binh, 2 lính rìu | ×2,1 | cần Cao Lỗ | 7600, 6300, 5500, 1350 |
 | 30 | Rừng biên Cổ Loa | 7 lính khiên, 7 lính thủy, 5 nỏ thủ Triệu, 5 cung thuyền, 2 kỵ binh, 2 lính rìu | ×2,1 | cần Cao Lỗ, mở Lệnh bắn | 8000, 6600, 5800, 1400 |
-| 31 | Cổng Cổ Loa: giữ cổng cho vua rút | 8 lính khiên, 7 lính thủy, 5 nỏ thủ Triệu, 4 cung thuyền, 2 kỵ binh, 2 lính rìu | ×2,2 | cần Cao Lỗ | 8500, 7000, 6200, 1500 |
+| 31 | Cổng Cổ Loa: giữ cổng cho vua rút | 8 lính khiên, 7 lính thủy, 5 nỏ thủ Triệu, 4 cung thuyền, 2 kỵ binh, 2 lính rìu | ×2,5 | cần Cao Lỗ | 8500, 7000, 6200, 1500 |
 | 32 | Đường ra biển Mộ Dạ: hộ giá | 3 đợt (xem dưới), Triệu Đà ở đợt cuối | ×3,0 | cần Cao Lỗ | 9000, 7500, 6500, 1600 |
 
 - Mọi màn cần Điện cấp 5 như chương 2, 3. Mỗi màn tối đa 28 giặc, cộng quân mẫu và tướng không quá 60 người trên bãi. Đánh lại được 30%.
-- Máu giặc đo bằng test theo Chuẩn cân bằng phó bản (mức khởi đầu ước ×2,0–2,2): lấy mức cao nhất mà người chơi thường thắng cả 10 hạt giống thử, còn không tướng hay nửa quân (6 giáo, 5 cung, 1 voi, 2 lính nỏ) chơi giỏi vẫn thua. Màn 32 cầm cự nên giặc khỏe hơn hẳn (×3,0): chỉ cần giữ đủ 90 giây. Tướng thủy binh (màn 28) và Triệu Đà (màn 32) không bấm kỹ năng thì thua.
+- Máu giặc đo bằng test theo Chuẩn cân bằng phó bản (mức khởi đầu ước ×2,0–2,2): lấy mức cao nhất mà người chơi thường thắng cả 10 hạt giống thử, còn không tướng hay nửa quân (6 giáo, 5 cung, 1 voi, 2 lính nỏ) chơi giỏi vẫn thua. Màn 32 cầm cự nên giặc khỏe hơn hẳn (×3,0): chỉ cần giữ đủ 90 giây. Tướng thủy binh (màn 28) và Triệu Đà (màn 32) không bấm kỹ năng thì thua. Màn 26 (từ ×2,2) và 31 (từ ×2,2) nâng máu khi bãi chương 4 có vật cản (mục **Bãi chiến có vật cản**).
 - **Quân mẫu chương 4**: 11 giáo, 10 cung, 3 voi, 4 lính nỏ, đúng 38 chỗ.
 - Cao Lỗ đang kiệt sức thì màn 26–32 khóa, có dòng báo như với các tướng khác.
 - **Màn 32 là cầm cự**:
@@ -2420,7 +2420,7 @@ Bản đồ phó bản có thêm thẻ Chương 5, mở khi vào chương 5. B�
   - **Lãng Bạc** (màn 38, 39): một bên là đầm hồ rộng có lau sậy, gò đất giữa bãi, lâu thuyền Hán đậu xa trên hồ (chỉ là cảnh). **Đã làm (PR 3)**: gò đất đặt bên phải, ngang giữa bãi, chân gò ngoài mép bãi, vì lính đứng ở độ cao 0 nên gò trong bãi làm lính lún; lâu thuyền là `makeLauThuyen` (`LANG_BAC` ở `battlefield.ts`);
   - **Cấm Khê** (màn 40): khe núi, suối chảy dọc bãi, rừng rậm hai bên, đường mòn cho dân rút vào núi. **Đã làm (PR 3)**: sông Hát sau lưng quân ta (`CAM_KHE` ở `battlefield.ts`); chín người dân (gánh, gùi, đội thúng, dắt hai con trâu, lính gác đi cuối) đi theo thanh `holdProgress` (`syncRetreat`); thắng màn 40 thì camera lùi xa nhìn về sông, hai bà quay nhìn về sông (`BattleView.winLook`);
   - màn 33 dùng bãi làng, 35 bãi thành Cổ Loa, 37 bãi cửa sông.
-- **Số cuối PR 2 (đã làm, màn 33–36)**: quân giặc và thưởng như bảng. Máu giặc đo theo chuẩn: màn 33 ×1,8, màn 34 ×2,0, màn 35 ×2,0, màn 36 ×1,85 (`STAGES` ở `defs.ts`). Màn 33 thấp hơn ước chừng một phần năm vì Trưng Nhị chưa có Hiệu triệu. Màn 36 không bấm kỹ năng thì thua. Tô Định bỏ chạy theo `TO_DINH_FLEE` (còn 30% máu, nhanh gấp rưỡi), chạy tới cuối bãi thì ra khỏi bãi (`gone`) và tính như đã hạ. `chuong5.test.ts` canh độ khó từng màn với 10 hạt giống.
+- **Số cuối PR 2 (đã làm, màn 33–36)**: quân giặc và thưởng như bảng. Máu giặc đo theo chuẩn: màn 33 ×1,8, màn 34 ×2,0, màn 35 ×2,0, màn 36 ×1,85 (`STAGES` ở `defs.ts`; màn 36 hạ còn ×1,8 khi bãi có vật cản, mục **Bãi chiến có vật cản**). Màn 33 thấp hơn ước chừng một phần năm vì Trưng Nhị chưa có Hiệu triệu. Màn 36 không bấm kỹ năng thì thua. Tô Định bỏ chạy theo `TO_DINH_FLEE` (còn 30% máu, nhanh gấp rưỡi), chạy tới cuối bãi thì ra khỏi bãi (`gone`) và tính như đã hạ. `chuong5.test.ts` canh độ khó từng màn với 10 hạt giống.
   - Bãi: màn 33 bãi làng, 34 bãi Hát Môn (`hatMon`), 35 bãi thành Cổ Loa, 36 bãi Luy Lâu (`luyLau`) ở `battlefield.ts`.
   - Bản đồ phó bản (`src/ui/campaign.ts`): `NODES[5]`, cảnh `SCENERY[5]` (sông Hát, Cổ Loa, Luy Lâu, Hợp Phố, Lãng Bạc, Cấm Khê), điểm xuất quân Mê Linh. Thẻ chọn chương đổi thành chữ "Chương" kèm năm nút số cho vừa khổ điện thoại hẹp.
   - Thử thách màn 33–36 chưa có (PR 4): `CHALLENGES` vẫn 32, `huanReward` của màn chưa có thử thách là 0.
@@ -2757,7 +2757,7 @@ Không cần làm tay: pg_cron (dọn dữ liệu quá 30 ngày) do migration c�
    - Authorized redirect URIs `https://<mã dự án>.supabase.co/auth/v1/callback` (trang Google của Supabase có sẵn dòng Callback URL để chép).
 3. Chép Client ID, Client secret vào Supabase → Authentication → Sign In / Providers → Google → Enable → Save.
 
-## Bãi chiến có vật cản (chủ dự án chọn, đang làm)
+## Bãi chiến có vật cản (chủ dự án chọn, đã làm)
 
 Trước đây chương nào cũng đánh trên cùng một bãi chữ nhật phẳng 9×22 ô; cảnh của 17 nền chỉ nằm ngoài mép bãi. Chủ dự án muốn vẽ lại bãi chiến từng chương và thêm chướng ngại vật. Chủ dự án đã chọn ba điều (theo đề xuất):
 
@@ -2817,7 +2817,7 @@ Tọa độ bãi: x 0–9 từ trái sang phải, z 0 là cuối bãi phía gi�
 
 ### Bố cục chương 2–3 (đã làm ở PR 3)
 
-Chương 2 giặc là thủy quái, bơi trong nước như đi thường, nên vũng nước, lạch nước có lợi cho giặc. Chương 3 có yêu tinh núi Thất Diệu rồi quân Triệu. Rừng, bến sông, làng mỗi chương một biến thể; núi chương 2, 3 dùng chung `nui2`. Đồn bậc 3 (nền Thất Diệu) dùng bố cục `thatDieu`. Màn chương 4, 5 vẫn bãi phẳng tới PR 4.
+Chương 2 giặc là thủy quái, bơi trong nước như đi thường, nên vũng nước, lạch nước có lợi cho giặc. Chương 3 có yêu tinh núi Thất Diệu rồi quân Triệu. Rừng, bến sông, làng mỗi chương một biến thể; núi chương 2, 3 dùng chung `nui2`. Đồn bậc 3 (nền Thất Diệu) dùng bố cục `thatDieu`. Màn chương 4, 5 có bố cục từ PR 4 (mục sau).
 
 | Bố cục | Trận | Vật cản, vùng chậm |
 |---|---|---|
@@ -2858,13 +2858,49 @@ Chương 2 giặc là thủy quái, bơi trong nước như đi thường, nên 
 
   ×2,3 thì Gióng, người chơi thường chỉ thua 15/20, nên giữ ×2,4. Đây là hệ số máu duy nhất đổi ở PR 3.
 
-### Hình (`src/render/vatCan.ts`, đã làm ở PR 2, thêm dáng ở PR 3)
+### Bố cục chương 4–5 (đã làm ở PR 4)
+
+Chương 4 quân ta có nhiều quân bắn xa (4 lính nỏ, Cao Lỗ bắn nỏ), giặc là thủy binh Triệu rồi quân Triệu Đà. Chỗ thắt (vật cản hai mép cùng hàng, rào dài) làm giặc dồn qua khe trước mũi nỏ, nên nửa quân cũng thắng; vật cản chương này so le, sát mép. Chương 5 Hai Bà cưỡi voi; vật cản giữa bãi, trước hàng giặc làm voi vướng, nên chỉ đặt sát mép. Rừng, bến sông thêm biến thể chương 4; làng thêm biến thể chương 4 và chương 5 (làng Mê Linh). Cổ Loa chương 4, 5 dùng lại bố cục chương 3.
+
+| Bố cục | Trận | Vật cản, vùng chậm |
+|---|---|---|
+| `benSong4` | màn 25, 26 | thuyền mắc cạn `doan(5,2; 9,2 → 6,8; 8,6; 0,4)`; khúc gỗ sát mép trái `doan(−0,8; 12,4 → 1,8; 12,9; 0,3)`; lạch nước từ mép phải `doan(9,8; 12 → 5,8; 13,2; 0,7)`, đó cá giữa lạch `tron(6,4; 12,6; 0,5)` |
+| `lang4` | màn 27, 29 | nhà sàn sát mép phải (khối vuông `doan(7,4; 12,4 → 9,8; 12,4; 0,9)`); xe củi đổ sát mép phải `doan(7,6; 8,4 → 9,6; 9; 0,35)`; đống rơm `tron(2,4; 8,8; 0,55)`; giếng `tron(2,2; 12,8; 0,5)` |
+| `cuaSong` | màn 28, 37 | khúc gỗ trôi dạt sát mép trái `doan(−0,8; 8,6 → 1,6; 9,2; 0,3)`; bãi bùn có lau `tron(8,4; 9; 1,2)`; cụm chông `tron(2,6; 12,6; 0,55)`; thuyền mắc cạn sát mép phải `doan(7,4; 12,4 → 9,6; 13; 0,4)` |
+| `rung4` | màn 30 | khóm tre sát hai mép `tron(9,4; 8,6; 1)`, `tron(−0,2; 12,4; 1,1)`; đá `tron(3,6; 9,2; 0,6)` |
+| `coLoa` | màn 31, 35 | như màn 24 (mục trước) |
+| `moDa` | màn 32 (cầm cự) | đá dưới chân núi sát mép trái `tron(−0,1; 8,8; 1,1)`; vũng nước triều `tron(6; 8,4; 0,9)`; đá nhọn sát mép phải `tron(9,1; 12,2; 1)` |
+| `lang5` | màn 33 (làng Mê Linh) | ruộng ngô sát mép phải (khối vuông `doan(7,4; 9 → 9,8; 9; 0,8)`); giếng `tron(3; 9; 0,5)`; nhà sàn sát mép trái (khối vuông `doan(−0,8; 12,6 → 1,6; 12,6; 0,9)`); đống rơm `tron(6,2; 12,8; 0,55)` |
+| `hatMon` | màn 34 | thuyền mắc cạn sát mép trái `doan(−0,6; 8,4 → 1,6; 9; 0,4)`; khóm lau sát mép phải `tron(9,2; 8,8; 0,8)`; ao sen sát mép trái `tron(0,2; 12,8; 1,1)`; ruộng ngô bãi bồi sát mép phải (khối vuông `doan(7,2; 12,4 → 9,8; 12,4; 0,8)`) |
+| `luyLau` | màn 36 | đoạn thành đất nện vỡ sát mép trái `doan(−0,8; 8,2 → 2,6; 8,2; 0,45)`; xe củi đổ sát mép trái `doan(−0,6; 12,8 → 1,4; 13,4; 0,35)`; đá `tron(6,8; 12,6; 0,55)` |
+| `langBac` | màn 38, 39 | ao sen sát mép trái `tron(0,3; 9; 1,2)`; khóm lau sát mép phải `tron(9,3; 8,4; 0,8)`; khóm lau `tron(2,6; 12,6; 0,65)`; đầm bùn có lau từ mép phải `doan(9,8; 12 → 6,6; 13; 0,7)` |
+| `camKhe` | màn 40 (cầm cự) | suối nông chảy dọc vách phải `doan(9,8; 8,2 → 7,4; 11,6; 0,6)` (nối dòng suối ngoài bãi); đá sát mép trái `tron(−0,1; 8,6; 1,1)`; đá `tron(2,8; 13,2; 0,55)`; đá nhọn sát mép phải `tron(9,3; 13,4; 0,9)` |
+
+- **Đo độ khó** (`node scripts/do-bai.mjs c4 c5 --hat 20`; script thêm màn 25–40, thử thách 25–40 và `c4`, `c5`; màn cầm cự thắng khi giữ đủ giờ): cả 85 tiêu chí của màn 25–40 và thử thách 25–40 đạt 20/20. Trên bãi phẳng có 9 tiêu chí dưới 20/20 (thấp nhất: màn 40 người chơi thường thắng 16/20, màn 30 nửa quân thua 16/20). Trận lâu nhất ngoài hai màn cầm cự chừng 50 giây (màn 36). Trận thắng không lính nào kẹt cạnh vật cản, trừ màn 32: cầm cự 90 giây, đám đông dồn quanh đá (56 lần kẹt trong 20 trận; bãi phẳng cũng kẹt vì đám đông như thế).
+- **Chỉnh bố cục**: bố cục đầu làm lệch nhiều màn, đã bỏ hay dời vật cản rồi đo lại:
+  - màn 27 nửa quân thua chỉ 3/20, thử thách 29 người chơi thường thua 7/20: rào tre dài sát mép trái phía sau làm giặc dồn qua khe; bỏ rào, thay bằng giếng thì 20/20;
+  - Lãng Bạc: khóm lau giữa phía trước làm màn 39 người chơi thường chỉ thắng 17/20; dời ra mép phải thì 20/20;
+  - cửa sông: thuyền mắc cạn giữa bên trái phía trước làm màn 37 thắng 18/20; dời thuyền ra mép phải phía sau, khúc gỗ lên trước thì 20/20;
+  - Cấm Khê: suối chảy ngang cả khe thì màn 40 thắng 15/20 (bãi phẳng 16/20); suối chảy dọc vách phải, giặc phải lội khi vòng sang mép phải, thì 20/20;
+  - Hát Môn, Mộ Dạ: thuyền giữa bên trái, đá giữa phía sau làm màn 34, 32 thắng 19/20; dời thuyền ra mép, bỏ đá giữa thì 20/20;
+  - rừng chương 4: khúc gỗ phía sau giữa bãi làm màn 30 nửa quân thua 17/20 (bãi phẳng 16/20); bỏ khúc gỗ thì 20/20.
+- **Máu giặc**: ba màn vẫn lệch dù đã thử bốn, năm bố cục khác, nên đổi hệ số máu:
+
+  | Màn | Máu giặc cũ | Mới | Vì sao |
+  |---|---|---|---|
+  | 26 | ×2,2 | ×2,3 | bố cục nào cũng làm nửa quân thắng một phần (nửa quân thua 1–15/20). Ở ×2,3 đạt 20/20; ×2,4 người chơi thường thắng 19/20 |
+  | 31 | ×2,2 | ×2,5 | Cổ Loa: mọi bố cục thử (bố cục chương 3, một lũy, lũy phía sau) nửa quân thua 0–14/20. ×2,3 nửa quân thua 17/20; ×2,4–2,6 đạt 20/20; ×2,8 người chơi thường thắng 4/20 nên lấy ×2,5 ở giữa. Cao Lỗ ngã giữa trận nhiều hơn (13/20 trận thắng; bãi phẳng ×2,2: 6/20) |
+  | 36 | ×1,85 | ×1,8 | Luy Lâu: mọi bố cục thử thắng 12–19/20 (bãi phẳng 19/20, hạt giống 3 của test thua). Ở ×1,8 thắng 20/20, không bấm kỹ năng, không tướng, nửa quân vẫn thua 20/20 |
+
+  Thử thách 25–40 không đổi số nào.
+
+### Hình (`src/render/vatCan.ts`, đã làm ở PR 2, thêm dáng ở PR 3, 4)
 
 - **Mảng đất dưới vật cản**: chỗ vật cản đứng là mảng cỏ đúng màu đất quanh bãi, viền sẫm như mép bãi (bãi như lõm vào quanh vật cản); mép lượn nhẹ như nét vẽ tay. Vật cản sát mép bãi thì viền hòa vào đất ngoài bãi.
 - **Nước nông**: bờ cát ướt, mặt nước, giữa sâu màu đậm hơn. **Bùn**: viền bùn khô, bùn ướt, vài vũng nước đọng; bãi bùn có lau thì vài khóm lau thấp mọc ở nửa vùng phía mép bãi.
 - **Lính lội**: chân lính chìm 0,12 ô trong nước, 0,05 ô trong bùn, chuyển mượt qua mép vùng. Mặt bãi vẫn phẳng.
-- **Dáng vật cản**: khóm tre (vài bụi tre thấp như tre rừng quanh bãi, bản nhẹ), tảng đá nằm phục có hòn nhỏ quanh chân, rào tre hai thanh ngang, rào cọc nhọn hai hàng so le có cọc đổ, cụm chông (cọc tre vót nhọn tỏa ra từ ụ đất), đống rơm có sào, đó cá đan nằm giữa nước có cọc giữ, xe củi đổ (thùng lật, bánh xe, củi lăn lóc), thuyền mắc cạn (thuyền Lạc Việt nằm nghiêng), nhà sàn cấp 2 sát mép bãi quay mặt vào giữa bãi. PR 3 thêm: khúc gỗ đổ (khúc nhỏ gác trên, cành gãy), giếng làng (thành đá ong, cần vọt tre có gàu, chum nước), bụi sim lốm đốm hoa tím, đá nhọn sắc cạnh chụm lại, cây chết cong queo trơ cành, lũy đất hai bậc có ụ và cờ đỏ ở đầu phía giữa bãi, nhà sàn cháy (cột cháy gãy, sàn sập, nửa mái sém, kèo trơ, tro, than hồng, khói bốc), sen nổi trên ao (đám lá, búp, hoa).
-- **Nặng máy**: mọi vật cản nhỏ của một bố cục gộp một lưới màu và một viền mực; mảng đất gộp ba lưới; nhà, thuyền dựng riêng. So với bãi phẳng cùng nền: thêm 5–12 lệnh vẽ, 2–25 nghìn tam giác (bãi rừng nặng nhất, khóm tre).
+- **Dáng vật cản**: khóm tre (vài bụi tre thấp như tre rừng quanh bãi, bản nhẹ), tảng đá nằm phục có hòn nhỏ quanh chân, rào tre hai thanh ngang, rào cọc nhọn hai hàng so le có cọc đổ, cụm chông (cọc tre vót nhọn tỏa ra từ ụ đất), đống rơm có sào, đó cá đan nằm giữa nước có cọc giữ, xe củi đổ (thùng lật, bánh xe, củi lăn lóc), thuyền mắc cạn (thuyền Lạc Việt nằm nghiêng), nhà sàn cấp 2 sát mép bãi quay mặt vào giữa bãi. PR 3 thêm: khúc gỗ đổ (khúc nhỏ gác trên, cành gãy), giếng làng (thành đá ong, cần vọt tre có gàu, chum nước), bụi sim lốm đốm hoa tím, đá nhọn sắc cạnh chụm lại, cây chết cong queo trơ cành, lũy đất hai bậc có ụ và cờ đỏ ở đầu phía giữa bãi, nhà sàn cháy (cột cháy gãy, sàn sập, nửa mái sém, kèo trơ, tro, than hồng, khói bốc), sen nổi trên ao (đám lá, búp, hoa). PR 4 thêm: ruộng ngô (nền đất ruộng, luống vun, khúc ngô cùng mẫu bãi ngô quanh bãi Hát Môn mà thấp hơn, bờ cỏ; mẫu ngô chuyển sang `lauSay.ts` dùng chung), khóm lau (khóm lau sậy cùng mẫu bờ sông mà thấp hơn, chân có cỏ nước), đoạn thành đất nện vỡ (lớp đất nện như thành Luy Lâu; khúc còn nguyên có lối đi và lỗ châu mai quay về phía quân ta, khúc sụt lởm chởm, đất vỡ đổ quanh chân; cờ đen viền đỏ cắm nghiêng trên khúc gần giữa bãi).
+- **Nặng máy**: mọi vật cản nhỏ của một bố cục gộp một lưới màu và một viền mực; mảng đất gộp ba lưới; nhà, thuyền dựng riêng. So với bãi phẳng cùng nền: thêm 5–15 lệnh vẽ, 2–28 nghìn tam giác (nặng nhất là bãi rừng vì khóm tre, và Hát Môn vì ruộng ngô, khóm lau).
 - **Cảnh dựng lại** khi nền hay bố cục đổi (`Battlefield.setTerrain(nền, bố cục)`); `World.showField` nhận bố cục của trận.
 - `battlefield.test.ts` canh: mặt bãi vẫn phẳng; mảng đất có đúng chỗ vật cản, mảng nước bùn đúng vùng chậm, chỗ trống không bị mảng đè; mô hình không lấn dải dàn quân; dáng nào trong bố cục cũng có hình; đổi bố cục thì dựng lại; chân lính chìm đúng độ sâu.
 
@@ -2873,7 +2909,7 @@ Chương 2 giặc là thủy quái, bơi trong nước như đi thường, nên 
 1. **PR 1**: luật đi quanh vật cản, chưa bật bố cục nào; lối chơi không đổi (đã làm).
 2. **PR 2**: vẽ vật cản, bố cục chương 1 (rừng, bến sông, làng, đồn giặc, chân núi) và đồn bên kia sông; đo lại độ khó chương 1, đồn, thử thách 1–8 (đã làm).
 3. **PR 3**: bố cục chương 2–3 (đồi sim, đồng ngập, Tản Viên, Thất Diệu, Cổ Loa, biến thể rừng, bến sông, làng, núi) và đồn bậc 3; đo lại chương 2, 3, thử thách 9–24 (đã làm).
-4. **PR 4**: bố cục chương 4–5 (cửa sông, Mộ Dạ, Hát Môn, Luy Lâu, Lãng Bạc, Cấm Khê, làng Mê Linh); đo lại chương 4, 5, thử thách 25–40.
+4. **PR 4**: bố cục chương 4–5 (cửa sông, Mộ Dạ, Hát Môn, Luy Lâu, Lãng Bạc, Cấm Khê, làng Mê Linh, biến thể rừng, bến sông, làng chương 4); đo lại chương 4, 5, thử thách 25–40 (đã làm).
 
 Mỗi PR chỉnh bố cục trước, rồi mới chỉnh máu giặc (`hpScale`) nếu lệch chuẩn cân bằng, và ghi số cuối vào tài liệu này.
 

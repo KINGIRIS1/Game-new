@@ -282,30 +282,147 @@ export const BAI: Record<string, Bai> = {
     ],
     cham: [],
   },
+
+  // Chương 4: quân Triệu, thủy binh Triệu ở cửa sông, Triệu Đà đuổi vua ra biển. Quân ta nhiều quân bắn xa (có lính nỏ,
+  // Cao Lỗ), nên chỗ thắt (vật cản hai mép cùng hàng, rào dài) làm giặc dồn cục trước mũi nỏ, nửa quân cũng thắng.
+  // Vật cản chương này so le, sát mép.
+  benSong4: {
+    id: 'benSong4',
+    terrain: 'benSong',
+    can: [
+      { hinh: doan(5.2, 9.2, 6.8, 8.6, 0.4), ve: 'thuyen' },
+      { hinh: doan(-0.8, 12.4, 1.8, 12.9, 0.3), ve: 'go' },
+      { hinh: tron(6.4, 12.6, 0.5), ve: 'chum' },
+    ],
+    cham: [{ hinh: doan(9.8, 12, 5.8, 13.2, 0.7), loai: 'nuoc' }],
+  },
+  lang4: {
+    id: 'lang4',
+    terrain: 'lang',
+    can: [
+      { hinh: doan(7.4, 12.4, 9.8, 12.4, 0.9, true), ve: 'nha' },
+      { hinh: tron(2.4, 8.8, 0.55), ve: 'rom' },
+      { hinh: doan(7.6, 8.4, 9.6, 9, 0.35), ve: 'xeCui' },
+      { hinh: tron(2.2, 12.8, 0.5), ve: 'gieng' },
+    ],
+    cham: [],
+  },
+  rung4: {
+    id: 'rung4',
+    terrain: 'rung',
+    can: [
+      { hinh: tron(9.4, 8.6, 1), ve: 'tre' },
+      { hinh: tron(3.6, 9.2, 0.6), ve: 'da' },
+      { hinh: tron(-0.2, 12.4, 1.1), ve: 'tre' },
+    ],
+    cham: [],
+  },
+  // Cửa sông (màn 28, 37): bãi bồi bùn có lau sát mép phải, khúc gỗ trôi dạt sát mép trái, cọc cắm bãi, thuyền mắc cạn.
+  cuaSong: {
+    id: 'cuaSong',
+    terrain: 'cuaSong',
+    can: [
+      { hinh: doan(-0.8, 8.6, 1.6, 9.2, 0.3), ve: 'go' },
+      { hinh: tron(2.6, 12.6, 0.55), ve: 'coc' },
+      { hinh: doan(7.4, 12.4, 9.6, 13, 0.4), ve: 'thuyen' },
+    ],
+    cham: [{ hinh: tron(8.4, 9, 1.2), loai: 'bun', ve: 'lau' }],
+  },
+  // Mộ Dạ (màn 32, cầm cự): đá dưới chân núi bên trái, đá nhọn sát mép phải, vũng nước triều.
+  moDa: {
+    id: 'moDa',
+    terrain: 'moDa',
+    can: [
+      { hinh: tron(-0.1, 8.8, 1.1), ve: 'da' },
+      { hinh: tron(9.1, 12.2, 1), ve: 'daNhon' },
+    ],
+    cham: [{ hinh: tron(6, 8.4, 0.9), loai: 'nuoc' }],
+  },
+
+  // Chương 5: quân Hán, Tô Định, Mã Viện. Hai Bà cưỡi voi: vật cản giữa bãi làm voi vướng, nên chỉ đặt sát mép.
+  // Làng Mê Linh (màn 33): nhà sàn sát mép trái, ruộng ngô sát mép phải, giếng, đống rơm.
+  lang5: {
+    id: 'lang5',
+    terrain: 'lang',
+    can: [
+      { hinh: doan(-0.8, 12.6, 1.6, 12.6, 0.9, true), ve: 'nha' },
+      { hinh: doan(7.4, 9, 9.8, 9, 0.8, true), ve: 'ngo' },
+      { hinh: tron(3, 9, 0.5), ve: 'gieng' },
+      { hinh: tron(6.2, 12.8, 0.55), ve: 'rom' },
+    ],
+    cham: [],
+  },
+  // Hát Môn (màn 34): ruộng ngô bãi bồi, khóm lau sát mép phải; thuyền mắc cạn, ao sen sát mép trái.
+  hatMon: {
+    id: 'hatMon',
+    terrain: 'hatMon',
+    can: [
+      { hinh: doan(7.2, 12.4, 9.8, 12.4, 0.8, true), ve: 'ngo' },
+      { hinh: tron(9.2, 8.8, 0.8), ve: 'lau' },
+      { hinh: doan(-0.6, 8.4, 1.6, 9, 0.4), ve: 'thuyen' },
+    ],
+    cham: [{ hinh: tron(0.2, 12.8, 1.1), loai: 'nuoc', ve: 'sen' }],
+  },
+  // Thành Luy Lâu (màn 36): đoạn tường thành đất nện vỡ sát mép trái, xe củi đổ, đá.
+  luyLau: {
+    id: 'luyLau',
+    terrain: 'luyLau',
+    can: [
+      { hinh: doan(-0.8, 8.2, 2.6, 8.2, 0.45), ve: 'thanh' },
+      { hinh: tron(6.8, 12.6, 0.55), ve: 'da' },
+      { hinh: doan(-0.6, 12.8, 1.4, 13.4, 0.35), ve: 'xeCui' },
+    ],
+    cham: [],
+  },
+  // Hồ Lãng Bạc (màn 38, 39): ao sen sát mép trái, đầm bùn có lau sát mép phải, hai khóm lau.
+  langBac: {
+    id: 'langBac',
+    terrain: 'langBac',
+    can: [
+      { hinh: tron(9.3, 8.4, 0.8), ve: 'lau' },
+      { hinh: tron(2.6, 12.6, 0.65), ve: 'lau' },
+    ],
+    cham: [
+      { hinh: tron(0.3, 9, 1.2), loai: 'nuoc', ve: 'sen' },
+      { hinh: doan(9.8, 12, 6.6, 13, 0.7), loai: 'bun', ve: 'lau' },
+    ],
+  },
+  // Cấm Khê (màn 40, cầm cự): suối chảy dọc vách phải, đá lăn dưới chân hai vách.
+  camKhe: {
+    id: 'camKhe',
+    terrain: 'camKhe',
+    can: [
+      { hinh: tron(-0.1, 8.6, 1.1), ve: 'da' },
+      { hinh: tron(2.8, 13.2, 0.55), ve: 'da' },
+      { hinh: tron(9.3, 13.4, 0.9), ve: 'daNhon' },
+    ],
+    cham: [{ hinh: doan(9.8, 8.2, 7.4, 11.6, 0.6), loai: 'nuoc' }],
+  },
 };
 
 /**
  * Nền nào dùng bố cục nào, theo chương: mỗi mục là [từ chương, id bố cục]; null là bãi phẳng. Nền chưa có mục nào
- * cũng là bãi phẳng. Màn chương 4 trở đi chưa có bố cục (bật dần theo chương).
+ * cũng là bãi phẳng.
  */
 export const BAI_THEO: Partial<Record<Terrain, readonly (readonly [Chapter, string | null])[]>> = {
   rung: [
     [1, 'rung'],
     [2, 'rung2'],
     [3, 'rung3'],
-    [4, null],
+    [4, 'rung4'],
   ],
   benSong: [
     [1, 'benSong'],
     [2, 'benSong2'],
     [3, 'benSong3'],
-    [4, null],
+    [4, 'benSong4'],
   ],
   lang: [
     [1, 'lang'],
     [2, 'lang2'],
     [3, 'lang3'],
-    [4, null],
+    [4, 'lang4'],
+    [5, 'lang5'],
   ],
   don: [[1, 'don']],
   nui: [
@@ -316,10 +433,13 @@ export const BAI_THEO: Partial<Record<Terrain, readonly (readonly [Chapter, stri
   ngap: [[2, 'ngap']],
   tanVien: [[2, 'tanVien']],
   thatDieu: [[3, 'thatDieu']],
-  coLoa: [
-    [3, 'coLoa'],
-    [4, null],
-  ],
+  coLoa: [[3, 'coLoa']],
+  cuaSong: [[4, 'cuaSong']],
+  moDa: [[4, 'moDa']],
+  hatMon: [[5, 'hatMon']],
+  luyLau: [[5, 'luyLau']],
+  langBac: [[5, 'langBac']],
+  camKhe: [[5, 'camKhe']],
   benKia: [[1, 'benKia']],
 };
 
