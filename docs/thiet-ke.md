@@ -2958,7 +2958,7 @@ Phương án bỏ: ngày đêm có luật (ruộng làm nhiều ban ngày, làng
   - doanh trại 8×8: hai cây hai bên cổng trước, thêm một cây ở góc trước bên phải (góc trái kín nhà dài, chòi trống);
   - chòi canh, lầu nỏ: một cây; cổng thành: hai cây;
   - không cắm ở ruộng, ruộng nếp, vườn (có đom đóm), lũy, đê, cống, thành, bẫy, cầu, đường, đồ trang trí; công trình hư, đang xây thì không thắp.
-- Lửa sẵn có (lò rèn, lò nung, bãi đá) thêm quầng sáng. Thuyền trên sông, thuyền neo ở bến, thuyền buôn, thuyền khơi mang đèn.
+- Lửa sẵn có (lò rèn, lò nung, bãi đá, hai bát lửa của sân trống đồng) thêm quầng sáng; bát lửa đặt cao nên vũng sáng nằm trên mặt sân dưới bát (`userData.flameDat`). Thuyền trên sông, thuyền neo ở bến, thuyền buôn, thuyền khơi mang đèn.
 - Đom đóm xanh vàng bay quanh ruộng, vườn gần chỗ camera nhìn, lúc đêm khuya, trời không mưa.
 - Đèn theo giờ, không theo đêm yêu tinh: yêu tinh tới giữa ban ngày thì không thắp, trông như đêm yêu tinh cũ.
 - Không dùng đèn thật: thêm đèn thì mọi chất liệu phải dựng lại và nặng thêm. Quầng, vũng là tấm cộng màu, thắp, lập lòe trong shader. Lớp đuốc nằm ngoài mô hình công trình nên ảnh công trình không đổi.
@@ -2978,7 +2978,7 @@ Phương án bỏ: ngày đêm có luật (ruộng làm nhiều ban ngày, làng
 - `window.__debug.gio(buổi | phần của ngày | null)` ghim giờ, `__debug.troi()` cho trời lúc này. `scripts/chup.mjs --gio`; mặc định ghim ban ngày nên ảnh chụp cũ không đổi. Cảnh `chieu-ta`, `dem`, `rang-dong`, `dien8-dem`, `yeu-tinh`, `dem-yeu`, `dem-tran`.
 - Không nâng bản lưu: giờ suy từ `state.clock`.
 
-## Kế hoạch: một doanh trại lớn, trại lính vẽ lại thành sân tập có tường bao (chủ dự án đã duyệt, đang làm)
+## Kế hoạch: một doanh trại lớn, trại lính vẽ lại thành sân tập có tường bao (chủ dự án đã duyệt, đã làm)
 
 Chủ dự án gửi một hình mẫu và yêu cầu: vẽ lại các trại lính theo kiểu trong hình, to hơn; doanh trại không còn nhiều trại (mỗi tướng một trại) mà chỉ còn **một doanh trại, to hơn**. Hình mẫu là một khuôn viên vuông: tường bao thấp, lầu cổng mái chóp ở giữa các mặt, sân tập rộng lát ô vuông, mấy chục lính đứng tập rải thành hàng, giá gỗ và cọc tập, cột cờ đỏ, nhà dài dọc tường sau, đường lát chạy quanh khuôn viên.
 
