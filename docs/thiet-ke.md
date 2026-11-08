@@ -2674,6 +2674,141 @@ Tọa độ bãi: x 0–9 từ trái sang phải, z 0 là cuối bãi phía gi�
 
 Mỗi PR chỉnh bố cục trước, rồi mới chỉnh máu giặc (`hpScale`) nếu lệch chuẩn cân bằng, và ghi số cuối vào tài liệu này.
 
+## Kế hoạch: một doanh trại lớn, trại lính vẽ lại thành sân tập có tường bao (đề xuất, chờ chủ dự án duyệt)
+
+Chủ dự án gửi một hình mẫu và yêu cầu: vẽ lại các trại lính theo kiểu trong hình, to hơn; doanh trại không còn nhiều trại (mỗi tướng một trại) mà chỉ còn **một doanh trại, to hơn**. Hình mẫu là một khuôn viên vuông: tường bao thấp, lầu cổng mái chóp ở giữa các mặt, sân tập rộng lát ô vuông, mấy chục lính đứng tập rải thành hàng, giá gỗ và cọc tập, cột cờ đỏ, nhà dài dọc tường sau, đường lát chạy quanh khuôn viên.
+
+**Lấy bố cục, không lấy kiến trúc.** Hình mẫu là cung điện phương Bắc (mái ngói xanh, cột đỏ). Game giữ nét Đông Sơn: nhà sàn mái cong hình thuyền, mái theo cấp (`roofFor`), rào tre, tường đất nện, cờ đỏ, trống đồng, hoa văn. Thứ lấy từ hình là cách xếp: tường bao có lầu cổng, sân tập rộng ở giữa, lính tập thành hàng, nhà lính dọc tường.
+
+**Hiện trạng** (khảo sát code):
+- Doanh trại móng 4×4, cấp 1–5, mỗi trại giữ 8, 14, 20, 28, 38 chỗ quân. Mỗi trại cần một tướng chỉ huy, tối đa 5 trại (`limitOf`, `commanders`, `capOf` ở `doanhTrai.ts`), nhiều nhất 190 chỗ. Mẫu kinh đô chừa 1–5 trại theo cấp Điện (`MAU_BARRACKS`).
+- Mỗi trại có bố trí giữ kinh đô riêng (`Building.guard`, `guardPlan`); lính ra trận từ trại mình (`startBattle`), tướng ra từ trại mình chỉ huy (`heroPost`). Quân hành quân tới đồn bên kia sông đi từ trại đầu (`startMarch`).
+- Mỗi trại một nữ tướng (`nuPosts`, `Building.nuTuong`); lính giữ kinh đô của trại ấy, đúng binh chủng của nữ tướng, được thêm 12%.
+- **Độ khó trận không phụ thuộc số trại**: phó bản mang tối đa `FIELD_CAP` (38 chỗ), giữ kinh đô tối đa `GUARD_CAP` (14 tới 68 chỗ theo cấp Điện). Số trại chỉ quyết định số quân dự trữ.
+- Bốn nơi ở (trại giáo, trại cung, chuồng voi, trại nỏ) móng 3×3, một cấp, mỗi loại một cái. Trại nỏ vẫn là dáng cũ phóng theo móng.
+- Hình: doanh trại cấp 5 khoảng 3,5 nghìn tam giác (chưa kể viền mực, viền gấp đôi số này); mỗi nơi ở 5,7–9,1 nghìn; Hồ Kim Quy 8×8 59 nghìn; Điện cấp 10 43 nghìn. Ở kinh đô Điện 8, mỗi khung hình chừng 4,5 triệu tam giác, công trình chiếm 79%.
+- Bản lưu đang ở phiên bản 25. PR #78 (Đền Rồng Tiên 8×8) đang mở; PR nào gộp sau thì lấy số bản lưu kế tiếp.
+
+### Sáu điều cần chốt
+
+1. **Chỗ quân của một trại.** Đề xuất (A): **mỗi tướng một doanh trong trại**. Chỗ quân bằng sức chứa theo cấp (8–38) nhân số tướng đã về, tối đa 5 doanh, tức 190 chỗ như năm trại bây giờ. Mỗi doanh có một nhà dài và cờ hiệu của tướng ấy, nên tướng về thì trại đông thêm. Tổng chỗ quân giữ y như cũ, không đổi cân bằng, không thêm giá. Phương án khác:
+   - (B) chỗ quân chỉ theo cấp trại: doanh trại lên tới cấp 10 theo Điện, cấp 6–10 tăng dần tới 190 chỗ. Phải thêm năm bậc giá nâng, đo lại kinh tế.
+2. **Cỡ móng doanh trại.** Đề xuất (A): **8×8, giữ nguyên từ cấp 1**. Bằng Hồ Kim Quy, nhỏ hơn Điện 10×10, bằng diện tích bốn trại 4×4 cũ. Cấp thấp sân còn thưa, lên cấp thì lấp dần như các công trình khác. Phải kiểm đất đầu game (25 khoảnh) vẫn đủ chỗ ở Điện 2 bằng mẫu Phong Châu. Phương án khác:
+   - (B) 6×6;
+   - (C) 10×10, bằng Điện;
+   - (D) lớn dần: 6×6 ở cấp 1–2, 8×8 từ cấp 3. Phải có chỗ trống mới nâng được, như Điện nới móng; rắc rối hơn nhiều.
+3. **Bốn nơi ở của binh chủng.** Đề xuất (A): **giữ riêng, vẽ lại cùng kiểu, móng 3×3 → 4×4**. Mỗi nơi ở có rào hay tường thấp, một lầu cổng, sân tập với 2–3 lính tập đúng binh chủng. Trại nỏ lần đầu vẽ trên móng. Phương án khác:
+   - (B) giữ 3×3 và dáng cũ, chỉ đổi doanh trại;
+   - (C) gộp bốn nơi ở vào doanh trại thành bốn khu mở theo cấp trại, luyện quân ngay trong bảng doanh trại, bỏ công trình nơi ở. Cách này đổi quyết định "mỗi binh chủng luyện ở nơi ở riêng"; bản lưu cũ được hoàn của nơi ở.
+4. **Lính, tướng giữ kinh đô ra từ đâu.** Đề xuất (A): **ra từ cổng gần giặc nhất**. Từ cấp 3 trại có bốn lầu cổng ở giữa bốn mặt. Mỗi trận, lính và tướng ra từ cổng gần chỗ giặc xuất phát nhất: giặc trên bộ thì cổng nhìn về dải giặc, thủy quái, thuyền thì cổng nhìn ra sông gần nhất, giặc bờ bên kia thì cổng về phía cầu. Cấp 1–2 chỉ có cổng trước. Cách này thay cho việc đặt nhiều trại ở nhiều chỗ; đồn biên giữ nguyên. Bố trí giữ kinh đô còn một danh sách (số lính mỗi binh chủng), không chia theo trại. Phương án khác:
+   - (B) lính ra từ cổng trước như bây giờ, bố trí cũng còn một danh sách.
+5. **Tướng và nữ tướng ở trại.** Đề xuất (A):
+   - tướng đang ở doanh trại (Gióng tráng sĩ, Sơn Tinh đã rước dâu, Hai Bà cưỡi voi) đứng thành hàng trên đài tướng dài phía sau sân, nhìn ra sân tập; bỏ nút **Giao trại này**;
+   - bốn nữ tướng cùng về trại, mỗi người cộng 12% cho mọi lính giữ kinh đô đúng binh chủng của mình. Bây giờ chỉ lính của trại có nữ tướng ấy được cộng. Người chơi tự bố trí đã dồn được cả binh chủng về đúng trại, nên chỉ người để bố trí tự động là thấy quân mạnh lên.
+
+   Phương án khác: (B) như A nhưng hạ phần cộng xuống 8%.
+6. **Giá, máu, thời gian xây.** Đề xuất:
+   - giữ giá dựng và giá nâng. Một trại thay tới năm trại nên người chơi đỡ tốn; đo lại kinh tế (skill `ra-kinh-te`), dư nhiều thì tăng giá nâng;
+   - máu gấp đôi: 800, 920, 1.040, 1.200, 1.400 (móng gấp bốn, chỉ còn một trại);
+   - hệ số thời gian xây (`XAY_HE_SO`) 1,2 → 2;
+   - đo lại các test giữ kinh đô rồi ghi số cuối.
+
+### Luật (theo đề xuất)
+
+- **Một doanh trại**: `limit` của doanh trại là 1 ở mọi cấp từ Điện 2. Bỏ `needsGeneral` và lời "Mỗi doanh trại cần một tướng chỉ huy".
+- **Chỗ quân**: `troopCap` = sức chứa theo cấp × min(số tướng, 5).
+- **`doanhTrai.ts`**: bỏ `commanders`, `canAssign`, `assignCommander`, `postOf`. `heroPost` trả trại duy nhất. Bố trí giữ kinh đô vẫn ở `Building.guard` của trại ấy. `guardPlan` còn một phần, bỏ chia trại trong `autoPlan`.
+- **Nữ tướng**: mọi nữ tướng đã về đều ở trại; `nuPosts`, `assignNu` và trường `Building.nuTuong` bỏ.
+- **Cổng**: `gates(trại)` cho chỗ các cổng theo cấp và hướng xoay; `gateFor(trại, hướng giặc)` chọn cổng. `startBattle` cho lính, tướng hiện ở trước cổng, không hiện giữa sân như bây giờ (tường bao chắn trên hình, lính không đi xuyên tường). `startMarch` đi từ cổng gần cầu.
+- **Mẫu kinh đô**: bốn mẫu có một chỗ 8×8 cho doanh trại ở mọi cấp từ Điện 2, bốn nơi ở 4×4 quanh đó; bỏ `MAU_BARRACKS`.
+- **Bản lưu 26**:
+  - giữ trại cấp cao nhất (hòa thì trại dựng trước). Trại nới móng 4×4 → 8×8 về phía sau và hai bên, giữ mép trước, như Điện nới móng (`growDien`): móng mới đè khoảnh chưa mở thì mở luôn; công trình vướng dời sang chỗ trống gần nhất (`roomFor`); lũy, đê, thành, đường, đồ trang trí vướng thì dỡ, hoàn của;
+  - các trại khác dỡ, hoàn đủ của đã bỏ (giá dựng và giá nâng);
+  - bố trí giữ kinh đô của mọi trại cộng lại, vẫn không quá `GUARD_CAP`; bỏ `tuong`, `nuTuong`;
+  - nơi ở nới 3×3 → 4×4 cùng cách ấy;
+  - báo một lần (`relaid`): "Các doanh trại đã nhập làm một đại doanh; của dỡ trại đã hoàn lại."
+- **Test**:
+  - viết lại `doanhTrai.test.ts`; sửa `nuTuong.test.ts`, `chuong5.test.ts` (giao tướng), `sapxep.test.ts` (`MAU_BARRACKS`), `xoay.test.ts`, `battle.test.ts`, `benKia.test.ts` (ra từ cổng, hành quân);
+  - `save.test.ts`: nâng bản lưu 25 có ba trại, có nữ tướng, có bố trí tay;
+  - mọi test đặt doanh trại, nơi ở ở chỗ cố định (`campaign`, `chuong2`–`chuong5`, `caoLo`, `bacThanh`, `phuSa`, `hoKimQuy`, `congThanh`, `giong`, `thuThach`, `maVien`) phải kiểm lại chỗ vừa móng mới, đặt theo mốc ở `testmap.ts`.
+
+### Hình (theo đề xuất)
+
+**Bản vẽ doanh trại 8×8** (16×16 ô con, cách đọc như `docs/bo-cuc-cong-trinh.md`; bản nháp, duyệt rồi mới chép sang đó):
+
+```
+# # # # # # # C C # # # # # # #
+# H H H H H . C C . I I I I I #
+# H H H H H . , , . I I I I I #
+# J J . D D D D D D D D . L L #
+# J J . D D D D D D D D . L L #
+# J J . . . . . . . . . . L L #
+# J J . s . s . s . s . . L L #
+C C . . . . . . . . . . . . C C
+C C . . s . s . s . s . . . C C
+# K K . . . . . . . . . . o . #
+# K K . s . s . s . s . . o . #
+# K K . . . . . . . . . . o . #
+# T T . . . . . . . . . b . b #
+# T T g g . f , , . . . . . . #
+# . . . . . . C C . . . . . . #
+# # # # # # # C C # # # # # # #
+```
+
+- `#` tường bao: cấp 1–2 rào cọc tre vót nhọn như bây giờ; từ cấp 3 tường đất nện thấp, đỉnh tường có mái tranh nhỏ như trong hình.
+- `C` cổng: cấp 1 chỉ cổng trước, cổng tre có cờ đuôi nheo; cấp 2 cổng trước thành lầu cổng (chòi tre mái tranh cong trên cổng); cấp 3 thêm lầu cổng sau, trái, phải. Mỗi lầu cổng có một lính gác.
+- `H I J K L` nhà dài để trống không vách của năm doanh. Mỗi nhà hiện khi có tướng thứ ấy, không theo cấp; trước mỗi nhà một cờ hiệu màu của tướng. Nhà cao xếp dọc tường sau và tường trái, vì camera nhìn từ trước bên phải.
+- `D` cấp 2, đài tướng dài 4 ô: nền đất đắp, sàn ván, chiếu cói, lọng đỏ. Tướng đứng thành hàng trên đài; voi Hai Bà đứng ở hai đầu.
+- `s` lính tập: cấp 1 bốn người (hàng giữa), mỗi cấp thêm hai, cấp 5 mười hai người. Theo tỉ lệ binh chủng đã luyện, không quá số lính đang có. Giáo binh đâm giáo, cung thủ giương cung, lính nỏ lên dây.
+- `o` cấp 3, cọc rơm tập đâm. `b` cấp 3, bia rơm tròn.
+- `g` giá binh khí: giáo đồng, cung, nỏ (nỏ từ chương 4).
+- `,` lối từ cổng vào sân. `f` cấp 4, cột cờ lớn.
+- Cấp 4 sân kẻ ô bằng vạch vôi như sân lát trong hình. Cấp 5 có `T`, chòi trống trận với trống đồng; chòi đứng góc trước bên trái, không che đài tướng.
+
+**Lính tập nhẹ máy.** Mỗi tư thế tập dựng một bản tĩnh (`bakeRig`), cả hàng gộp một lưới. Hai tư thế đổi nhau theo nhịp như hô "một, hai", cả sân chỉ 2–4 lệnh vẽ. Thu nhỏ dưới `LITE_ZOOM` thì đứng yên.
+
+**Nơi ở 4×4** (8×8 ô con; bản vẽ làm sau khi chốt điều 3). Cùng kiểu với doanh trại: rào hay tường thấp quanh mép, lầu cổng giữa mặt trước, một nhà lính ở góc sau bên trái, sân tập ở giữa. Đồ tập theo binh chủng:
+- trại giáo: hai cọc rơm, giá giáo;
+- trại cung: hai bia ở xa, vạch bắn;
+- chuồng voi: mái chóp lớn, cọc buộc voi, máng nước, đống cỏ;
+- trại nỏ: giá nỏ, bia gỗ, ụ tập lên dây.
+
+**Ngân sách tam giác**:
+- doanh trại 8×8 không quá 30 nghìn tam giác màu (60 nghìn kể cả viền), chưa kể lính tập;
+- 12 lính tập không quá 40 nghìn kể cả viền;
+- mỗi nơi ở 4×4 không quá 12 nghìn màu.
+
+Cuối game: thay năm trại cũ (chừng 35 nghìn kể cả viền) và bốn nơi ở (chừng 60 nghìn) bằng chừng 200 nghìn. Kể cả bóng là thêm chừng 150 nghìn mỗi khung, chưa tới 4% khung Điện 8. Đo lại bằng script đo tam giác theo nhóm cảnh khi làm.
+
+**Phải làm theo** khi đổi hình:
+- `congTrinh/doanhTrai.ts` vẽ lại; nơi ở vẽ lại trong các tệp riêng;
+- chỗ tướng: `DOANH_TRAI_HERO` thành nhiều chỗ; `postSpot`, `haiBaSpot`, `barracksSpot` ở `world.ts`;
+- chạy `node scripts/anh-cong-trinh.mjs`; `footprint.test.ts`;
+- chụp kiểm tra cấp 1, 3, 5 và cảnh có năm doanh.
+
+### Giao diện
+
+- **Bảng doanh trại** giữ bốn thẻ:
+  - **Quân** như cũ;
+  - **Giữ kinh đô**: một danh sách − + mỗi binh chủng, nút Bố trí tự động, số quân dự trữ;
+  - **Tướng**: các tướng ở trại (mỗi tướng một doanh, số chỗ doanh ấy thêm vào) và nữ tướng ở trại; không còn nút giao;
+  - **Trại**: cấp, dời, xoay, nâng cấp, cổng nào có lầu.
+- **Bảng Xây dựng**: doanh trại một cái. Lời tả: "Đại doanh: tướng ở, lính tập, quân ra trận từ cổng gần giặc".
+- **Lạc hầu**: bản lưu cũ đã gộp trại thì báo một lần (xem bản lưu 26).
+
+### Không làm
+
+- Không đổi `FIELD_CAP`, `GUARD_CAP`, quân mẫu các màn, độ khó phó bản.
+- Không tự trải đường quanh trại như trong hình: người chơi tự trải (đường đi đã có).
+- Không lấy mái ngói xanh, cột đỏ kiểu cung điện phương Bắc.
+
+### Thứ tự làm
+
+1. **PR này**: kế hoạch, chờ chủ dự án chốt sáu điều.
+2. **PR 1, luật và bản lưu 26**: một trại, chỗ quân theo số tướng, bố trí một danh sách, cổng ra trận, nữ tướng, móng mới của trại và nơi ở, mẫu kinh đô, giao diện, test. Hình tạm: dáng cũ phóng theo móng mới (`footScale`).
+3. **PR 2, hình doanh trại 8×8**: bản vẽ vào `docs/bo-cuc-cong-trinh.md`, tường, lầu cổng, đài tướng, nhà dài theo doanh, lính tập, ảnh công trình, chụp kiểm tra.
+4. **PR 3, hình bốn nơi ở 4×4** (nếu chọn 3A).
+
 ## Nhịp chơi và lưu game
 
 - Nhịp chơi lai: mỗi lần mở game là một phiên ra quyết định ngắn.
@@ -2721,4 +2856,5 @@ Mỗi PR chỉnh bố cục trước, rồi mới chỉnh máu giặc (`hpScale`
     **Điện Vua Hùng 10×10** (chủ dự án yêu cầu, đã làm; xem mục cùng tên): dời, xoay được; sân chầu có Vua Hùng ngồi ngai vàng, 14 chỗ tướng đứng chầu; bản lưu v20.
 17. **Chương 5: Hai Bà Trưng** (chủ dự án đã duyệt, đã làm cả bốn PR; xem Kế hoạch chương 5): mỗi bà cưỡi một voi ra trận với Voi xung trận và Hiệu triệu gọi nghĩa binh, quân Hán và lâu thuyền đánh kinh đô, phó bản màn 33–40 với Tô Định và Mã Viện, Đền Hát Môn, nữ tướng, thử thách màn 33–40.
 18. **Phù sa: cống đê** (chủ dự án chọn, đã làm; xem mục cùng tên): mở cống cho lũ vào ruộng, ruộng được bồi phù sa làm ra thêm 40% tới hết mùa lũ sau; nước vào qua cống vẫn làm hư nhà cửa.
-19. **Để sau**: nhạc nền.
+19. **Một doanh trại lớn** (đề xuất, chờ chủ dự án duyệt; xem mục Kế hoạch cùng tên): doanh trại còn một trại 8×8 có tường bao, lầu cổng, sân tập có lính tập; mỗi tướng một doanh trong trại; quân ra trận từ cổng gần giặc; bốn nơi ở vẽ lại 4×4.
+20. **Để sau**: nhạc nền.
