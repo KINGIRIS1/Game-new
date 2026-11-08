@@ -1,8 +1,8 @@
 // Cảnh 3D của kinh đô: địa hình bậc thang, rừng, sông, công trình, lũy tre, đê, thành Cổ Loa, nước lũ, mưa,
-// đêm yêu tinh, cảnh Tết (cây nêu, dây cờ, mâm bánh, người gói bánh) và các hiệu ứng khi đặt công trình.
+// trời ngày đêm (`troi.ts`), đêm yêu tinh, cảnh Tết (cây nêu, dây cờ, mâm bánh, người gói bánh) và các hiệu ứng khi đặt công trình.
 
 import * as THREE from 'three';
-import { BUILDINGS, FIELD, NU_TUONG_IDS, UNITS, XAY_O_MS, isBridge, isRoad, type BuildingType, type NuTuongId, type Terrain, type TuongId, type UnitType } from '../game/defs';
+import { BUILDINGS, FIELD, NGAY_MS, NU_TUONG_IDS, UNITS, XAY_O_MS, isBridge, isRoad, type BuildingType, type NuTuongId, type Terrain, type TuongId, type UnitType } from '../game/defs';
 import { raidSpawnBand, type Battle, type RaidSide } from '../game/battle';
 import { caoLoAtDien } from '../game/caoLo';
 import { HAI_BA_KINDS, haiBaJoined, type HaiBaKind } from '../game/chuong5';
@@ -19,6 +19,7 @@ import { BAI_CAT, BIEN_DIEN, CUA_BIEN, QUAN_DAO, RIVER_MID, benDock, bienDo, isS
 import { sonLook, type SonLook } from '../game/son';
 import { floodHits } from '../game/terrain';
 import { tetOpen } from '../game/tet';
+import { gioBuoi, troiLuc, type Buoi, type TroiLuc } from '../game/ngayDem';
 import { isBusy, itemProgress, pendingBuildings, pendingOf } from '../game/xay';
 import { Battlefield, CAM_KHE } from './battlefield';
 import { BattleView } from './battleView';
@@ -76,6 +77,8 @@ import { NEN_MARGIN, NenDat, RAMP } from './nenDat';
 import type { Poser } from './rig';
 import { ShapeBuilder, disposeInstances, disposeModel, seeded } from './shapes';
 import { ToonModel, inkThin, outlineOf, toon } from './toon';
+import { SANG_NGAY, TroiMau, apMauToi, doSang, phaThoiTiet, phaTroi, toiTheoTroi } from './troi';
+import { DuocLayer, QuangDong, duocCho, type DuocSpot } from './duoc';
 
 /**
  * Ô (HALF, HALF) nằm ở gốc tọa độ cảnh. Giữ như tâm lưới 55×55 cũ (khi sông còn ở mép lưới) để camera, ánh nắng,
@@ -108,13 +111,11 @@ export function waterSurface(level: number): number {
   return WATER_Y + Math.max(level, 0) * (one - WATER_Y);
 }
 
-/** Ánh trăng, trời và đất trong đêm yêu tinh. */
-const NIGHT_MOON = new THREE.Color(0x9fb4ff);
-const NIGHT_SKY = new THREE.Color(0x5a6aa8);
-const NIGHT_GROUND = new THREE.Color(0x2a2a48);
-
 /** Mật độ rừng: thưa để công trình nổi bật, không rối mắt. */
 const FOREST_DENSITY = 0.3;
+
+/** Trời thuần ban ngày (tắt ngày đêm trong Cài đặt). */
+const BAN_NGAY: TroiLuc = { ngay: 1, chieu: 0, dem: 0, rang: 0 };
 
 /**
  * Độ nét: số điểm ảnh vẽ cho mỗi điểm CSS, không vượt quá màn hình thật.
@@ -138,6 +139,12 @@ const groundMaterial = new THREE.MeshLambertMaterial({ vertexColors: true });
 const DAT_TINT: Record<Dat, number> = { phuSa: 0x6e5034, nuiDa: 0x8d887c, moSat: 0x9a4a2a };
 
 /** Đặc sản đất của ô (x, z) bên kia sông, nếu có. */
+/** Số giả ngẫu nhiên 0..1 cố định theo `n` (đuốc thắp so le). */
+function hash01(n: number): number {
+  const x = Math.sin(n * 127.1 + 311.7) * 43758.5453;
+  return x - Math.floor(x);
+}
+
 function datAt(x: number, z: number): Dat | null {
   const id = plotAt(x, z);
   const poi = id === null ? undefined : poiAt(id);
@@ -454,6 +461,16 @@ export class World {
   /** Đêm yêu tinh: trời tối xanh, ma trơi lơ lửng ở bìa rừng. */
   private night = 0;
   private nightGoal = 0;
+  /** Ngày đêm theo đồng hồ chơi (`troiLuc`); tắt trong Cài đặt thì luôn ban ngày; `gioGhim` ghim giờ để chụp thử. */
+  private ngayDem = true;
+  private ngayDemMix = 1;
+  private gioGhim: number | null = null;
+  private readonly troiNen = new TroiMau();
+  private readonly troi = new TroiMau();
+  /** Độ tối lúc này (0 ban ngày, 1 ban đêm hay đêm yêu tinh). */
+  private toi = 0;
+  /** Độ tối theo giờ (không tính đêm yêu tinh, để đêm yêu tinh ban ngày trông như cũ), cho đèn đuốc. */
+  private toiGio = 0;
   private readonly wisps = new THREE.Group();
   private readonly lights: SunLights;
   private state?: GameState;
@@ -555,6 +572,12 @@ export class World {
   private dikeKey = '';
   private citadelKey = '';
   private decorKey = '';
+  /** Đèn đuốc ban đêm (`duoc.ts`): đuốc cắm ở công trình, đèn thuyền, đom đóm quanh ruộng. */
+  private readonly duoc = new DuocLayer();
+  private duocKey = '';
+  private readonly denThuyen = new QuangDong(64, 0xffb45a, 0.42, 0.5, 0.9);
+  private readonly domDom = new QuangDong(72, 0xd6ff70, 0.1, 0.55, 1.2);
+  private readonly denTmp = new THREE.Vector3();
   private time = 0;
   private res: Resolution = 'medium';
   /** Máy vẽ được nhiều hình trong một lệnh (WEBGL_multi_draw): rừng gộp một lô, chỉ vẽ cây thấy được (`batchTemplates`). */
@@ -628,7 +651,7 @@ export class World {
     this.scene.add(this.linePick.mesh);
     this.rain = new THREE.InstancedMesh(
       new THREE.BoxGeometry(0.025, 0.55, 0.025),
-      new THREE.MeshBasicMaterial({ color: C.rain, transparent: true, opacity: 0.55, depthWrite: false }),
+      toiTheoTroi(new THREE.MeshBasicMaterial({ color: C.rain, transparent: true, opacity: 0.55, depthWrite: false })),
       420,
     );
     this.rain.frustumCulled = false;
@@ -638,6 +661,7 @@ export class World {
     this.addBoats();
     this.initRipples();
     this.initWisps();
+    this.scene.add(this.duoc.group, this.denThuyen.mesh, this.domDom.mesh);
 
     this.footprint = new THREE.Mesh(
       new THREE.PlaneGeometry(1, 1).rotateX(-Math.PI / 2),
@@ -925,6 +949,7 @@ export class World {
     this.dikeKey = '#';
     this.citadelKey = '#';
     this.decorKey = '#';
+    this.duocKey = '#';
     this.wildDirty = true;
     for (const o of this.cayDaGrowing.values()) this.scene.remove(o);
     this.cayDaGrowing.clear();
@@ -1160,6 +1185,37 @@ export class World {
     this.syncFarForest(state);
     this.syncFog(state);
     this.syncPois(state);
+    this.syncDuoc();
+  }
+
+  /**
+   * Chỗ đuốc theo công trình đang vẽ (`duocCho`, đổi ra cảnh theo chỗ và hướng xoay của mô hình) và quầng sáng cho lửa
+   * sẵn có trong mô hình (`userData.flame`). Công trình hư, đang xây thì không thắp. Chỉ dựng lại khi công trình đổi.
+   */
+  private syncDuoc(): void {
+    const views = [...this.views.entries()].filter(([, v]) => !v.damaged && !v.dung);
+    const key = views.map(([id, v]) => `${id}:${v.type}:${v.level}:${v.x}:${v.z}:${v.group.rotation.y.toFixed(2)}:${v.group.position.y.toFixed(2)}`).join(',');
+    if (key === this.duocKey) return;
+    this.duocKey = key;
+    const spots: DuocSpot[] = [];
+    const p = new THREE.Vector3();
+    for (const [id, v] of views) {
+      const g = v.group;
+      const cos = Math.cos(g.rotation.y);
+      const sin = Math.sin(g.rotation.y);
+      duocCho(v.type).forEach((c, i) => {
+        // Xoay quanh trục đứng như `Object3D.rotation.y`.
+        spots.push({ x: g.position.x + c.x * cos + c.z * sin, y: g.position.y, z: g.position.z - c.x * sin + c.z * cos, kind: 'cot', seed: hash01(id * 7 + i) });
+      });
+      g.updateWorldMatrix(true, true);
+      let i = 0;
+      g.traverse((o) => {
+        if (!o.userData.flame) return;
+        o.getWorldPosition(p);
+        spots.push({ x: p.x, y: p.y, z: p.z, kind: 'lua', seed: hash01(id * 13 + i++) });
+      });
+    }
+    this.duoc.set(spots);
   }
 
   /**
@@ -1601,6 +1657,26 @@ export class World {
   /** Đặt đồng hồ cảnh (giây), cho ảnh chụp thử: thuyền khơi, cá voi, cá heo chạy theo đồng hồ này. */
   seekTime(t: number): void {
     this.time = t;
+  }
+
+  /** Bật, tắt ngày đêm (Cài đặt, lưu riêng từng máy). Tắt thì trời luôn ban ngày; đổi thì trời chuyển dần. */
+  setNgayDem(on: boolean, snap = false): void {
+    this.ngayDem = on;
+    if (snap) this.ngayDemMix = on ? 1 : 0;
+  }
+
+  get ngayDemOn(): boolean {
+    return this.ngayDem;
+  }
+
+  /** Ghim giờ trong ngày để chụp thử: tên buổi, phần của ngày (0 tới 1), hay `null` để theo lại đồng hồ chơi. */
+  setGio(g: Buoi | number | null): void {
+    this.gioGhim = g === null ? null : typeof g === 'number' ? (((g % 1) + 1) % 1) * NGAY_MS : gioBuoi(g);
+  }
+
+  /** Trời lúc này, cho `window.__debug.troi()`. */
+  troiInfo(): { luc: TroiLuc; toi: number; ghim: number | null; bat: boolean; mix: number } {
+    return { luc: this.troiLucNay(), toi: this.toi, ghim: this.gioGhim, bat: this.ngayDem, mix: this.ngayDemMix };
   }
 
   /** Cho cá voi hay đàn cá heo nổi lên ngay gần chỗ camera nhìn (ảnh chụp thử). */
@@ -3131,7 +3207,11 @@ export class World {
             const k = (t * 0.35 + (puff.userData.phase as number)) % 1;
             puff.position.set(Math.sin(k * 6 + puff.id) * 0.2, k * 1.6, Math.cos(k * 5) * 0.15);
             puff.scale.setScalar(0.6 + k * 1.2);
-            ((puff as THREE.Mesh).material as THREE.MeshBasicMaterial).opacity = 0.5 * (1 - k);
+            const mat = (puff as THREE.Mesh).material as THREE.MeshBasicMaterial;
+            mat.opacity = 0.5 * (1 - k);
+            // Khói không nhận đèn: tối theo trời, không thì sáng trắng giữa đêm.
+            const goc = (mat.userData.mauGoc ??= mat.color.clone()) as THREE.Color;
+            mat.color.copy(goc).multiply(this.troi.unlit);
           }
         }
       }
@@ -3206,6 +3286,7 @@ export class World {
     }
 
     this.updateStorm(dt);
+    this.updateDen(t);
     this.updateFog(dt);
     this.updateScouts(t);
     this.updateMarch(dt, t);
@@ -3267,6 +3348,51 @@ export class World {
     this.renderer.render(this.inField && this.field ? this.field.scene : this.scene, this.view.camera);
   }
 
+  /**
+   * Đèn đuốc theo độ tối (`toiGio`, tính ở `updateStorm`): đuốc ở công trình thắp dần từ lúc chiều tà, thuyền mang đèn,
+   * đom đóm bay quanh ruộng gần chỗ camera nhìn lúc đêm khuya, trời không mưa.
+   */
+  private updateDen(t: number): void {
+    const sang = THREE.MathUtils.smoothstep(this.toiGio, 0.15, 0.45);
+    this.duoc.update(sang, t);
+    this.denThuyen.begin(sang, t);
+    if (sang > 0.001) {
+      const p = this.denTmp;
+      const lamp = (o: THREE.Object3D, lift: number) => {
+        o.getWorldPosition(p);
+        this.denThuyen.add(p.x, p.y + lift, p.z);
+      };
+      for (const b of this.boats) lamp(b.obj, 0.4);
+      if (this.merchantBoat) lamp(this.merchantBoat, 0.55);
+      for (const b of this.seaBoats.values()) lamp(b.obj, 0.55);
+      for (const v of this.views.values()) for (const c of v.group.children) if (c.userData.dock !== undefined) lamp(c, 0.4);
+    }
+    this.denThuyen.end();
+
+    const khuya = THREE.MathUtils.smoothstep(this.toiGio, 0.7, 1) * (1 - Math.min(1, this.storm * 10));
+    this.domDom.begin(khuya, t);
+    if (khuya > 0.001) {
+      const c = this.view.target;
+      let k = 0;
+      for (const v of this.views.values()) {
+        if (v.type !== 'ruong' && v.type !== 'ruongNep' && v.type !== 'vuon') continue;
+        const g = v.group.position;
+        if (Math.abs(g.x - c.x) > 18 || Math.abs(g.z - c.z) > 18) continue;
+        const r = BUILDINGS[v.type].w / 2;
+        for (let i = 0; i < 4; i++, k++) {
+          const ph = k * 2.399;
+          this.domDom.add(
+            g.x + Math.sin(t * 0.31 + ph) * r * 0.9,
+            g.y + 0.45 + Math.sin(t * 0.9 + ph * 1.7) * 0.2,
+            g.z + Math.cos(t * 0.27 + ph * 1.3) * r * 0.9,
+            0.6 + 0.4 * Math.max(0, Math.sin(t * 2.3 + ph * 3.1)),
+          );
+        }
+      }
+    }
+    this.domDom.end();
+  }
+
   /** Đêm yêu tinh: ma trơi bập bềnh, sáng mờ dần theo trời tối. Màu trời và đèn tính chung ở `updateStorm`. */
   private updateNight(dt: number): void {
     this.night += (this.nightGoal - this.night) * Math.min(1, dt * 1.2);
@@ -3283,21 +3409,43 @@ export class World {
   }
 
   /**
-   * Trời tối sầm và mưa xối xả khi Thủy Tinh hô mưa gọi gió, tạnh dần khi nước rút.
-   * Đêm yêu tinh thì trời tối xanh, không mưa.
+   * Trọng số bốn buổi lúc này: theo đồng hồ chơi, hay giờ ghim khi chụp thử. Tắt ngày đêm thì luôn ban ngày (lúc vừa
+   * bật, tắt thì pha dần theo `ngayDemMix`).
+   */
+  private troiLucNay(): TroiLuc {
+    const m = this.ngayDemMix;
+    if (m <= 0) return BAN_NGAY;
+    const w = troiLuc(this.gioGhim ?? this.state?.clock ?? 0);
+    if (m >= 1) return w;
+    return { ngay: w.ngay * m + (1 - m), chieu: w.chieu * m, dem: w.dem * m, rang: w.rang * m };
+  }
+
+  /**
+   * Trời theo giờ trong ngày (`troi.ts`), rồi trời tối sầm và mưa xối xả khi Thủy Tinh hô mưa gọi gió, tạnh dần khi
+   * nước rút. Đêm yêu tinh thì trời tối xanh, không mưa, dù đang giờ nào.
    */
   private updateStorm(dt: number): void {
     this.storm += (this.stormGoal - this.storm) * Math.min(1, dt * 1.5);
+    const mixGoal = this.ngayDem ? 1 : 0;
+    this.ngayDemMix += Math.max(-dt / 1.5, Math.min(dt / 1.5, mixGoal - this.ngayDemMix));
     const k = this.storm;
     const n = this.night;
-    const sky = (this.scene.background as THREE.Color).setHex(C.sky).lerp(new THREE.Color(C.storm), k * 0.85).lerp(new THREE.Color(C.night), n * 0.85);
-    (this.scene.fog as THREE.Fog).color.copy(sky);
-    this.lights.sun.intensity = 2.6 * (1 - 0.45 * k) * (1 - 0.6 * n);
-    this.lights.hemi.intensity = 0.9 * (1 - 0.2 * k) * (1 - 0.25 * n);
-    // Đêm: nắng thành ánh trăng xanh nhạt, trời và đất hắt ánh xanh tím.
-    this.lights.sun.color.setHex(0xfff0d8).lerp(NIGHT_MOON, n * 0.8);
-    this.lights.hemi.color.setHex(0xfff3dc).lerp(NIGHT_SKY, n * 0.85);
-    this.lights.hemi.groundColor.setHex(0x6d6a45).lerp(NIGHT_GROUND, n * 0.85);
+    const w = this.troiLucNay();
+    const tr = phaThoiTiet(phaTroi(w, this.troiNen), k, n, this.troi);
+    (this.scene.background as THREE.Color).copy(tr.sky);
+    (this.scene.fog as THREE.Fog).color.copy(tr.sky);
+    this.lights.sun.intensity = tr.sun;
+    this.lights.hemi.intensity = tr.hemi;
+    this.lights.sun.color.copy(tr.sunColor);
+    this.lights.hemi.color.copy(tr.hemiSky);
+    this.lights.hemi.groundColor.copy(tr.hemiGround);
+    this.lights.sun.shadow.intensity = tr.shadow;
+    apMauToi(tr.unlit);
+    // Ô báo ngập, khoảnh đang chọn, dải tường đang kéo là chỉ dẫn: ban đêm bù sáng cho dễ thấy (ban ngày giữ đúng 1).
+    const bu = Math.min(2.5, SANG_NGAY / doSang(this.troiNen));
+    for (const m of [this.floodPreview, this.chunkPick, this.linePick]) (m.mesh.material as THREE.MeshLambertMaterial).color.setScalar(bu);
+    this.toiGio = w.dem + 0.5 * (w.chieu + w.rang);
+    this.toi = Math.max(this.toiGio, n);
     this.rain.visible = !this.inField && k > 0.05;
     if (!this.rain.visible) return;
     const m = new THREE.Matrix4();

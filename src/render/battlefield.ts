@@ -27,6 +27,7 @@ import { makeWorker, type Job } from './people';
 import type { Poser } from './rig';
 import { type Placement, ShapeBuilder, disposeModel, instanceTemplates, seeded } from './shapes';
 import { ToonModel, inkThin, outlineOf, toon } from './toon';
+import { TROI_NGAY, type BoTroi } from './troi';
 import { buildVatCan, loiAt } from './vatCan';
 
 const { smoothstep } = THREE.MathUtils;
@@ -139,10 +140,10 @@ const TREE_DENSITY: Record<Terrain, number> = {
   camKhe: 0.85,
 };
 /** Trời và đèn theo nền: núi Thất Diệu là đêm tím, còn lại là ngày. */
-const SKY: Partial<Record<Terrain, { sky: number; sun: number; hemi: number; sunColor: number; hemiSky: number; hemiGround: number }>> = {
+const SKY: Partial<Record<Terrain, BoTroi>> = {
   thatDieu: { sky: 0x4a4868, sun: 1.6, hemi: 0.85, sunColor: 0xc4ccff, hemiSky: 0x8a86c4, hemiGround: 0x3a3448 },
 };
-const DAY = { sky: C.sky, sun: 2.6, hemi: 0.9, sunColor: 0xfff0d8, hemiSky: 0xfff3dc, hemiGround: 0x6d6a45 };
+const DAY = TROI_NGAY;
 /** Bãi cát ven sông, ven biển và cát ướt sát mép nước. */
 const SAND = 0xd0bc88;
 const WET_SAND = 0xa89468;

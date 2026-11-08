@@ -22,6 +22,7 @@ import { footprintTop } from './game/terrain';
 import { BUILDINGS, QUIZ_TURNS, RESOURCE_IDS, STAGES, UNIT_TYPES, U_NO, isBridge, isDecor, isRoad, type BuildingType, type Cost, type NuTuongId, type ResourceId, type Row, type SkillId, type UnitType } from './game/defs';
 import { CAMPS, benKiaOpen, bridgeSnap, campHero, campTier, canStartCamp, joinVillage, plotAt, poiAt, sendScout, setGarrison, startCamp } from './game/benKia';
 import type { QuanDaoId } from './game/bien';
+import type { Buoi } from './game/ngayDem';
 import { fmt } from './ui/format';
 import {
   canAfford,
@@ -111,6 +112,8 @@ const GAP_AS_OFFLINE_MS = 5_000;
 const AUTOSAVE_MS = 10_000;
 /** Độ nét lưu riêng trên từng máy, không đi theo mã lưu: máy mạnh máy yếu tự chọn. */
 const RESOLUTION_KEY = 'thoi-dai-van-lang/resolution';
+/** Ngày đêm bật hay tắt (luôn ban ngày), lưu riêng trên từng máy như độ nét. */
+const NGAY_DEM_KEY = 'thoi-dai-van-lang/ngay-dem';
 /** Cách kéo đắp tường lần trước (dải thẳng hay khung chữ nhật), lưu riêng trên từng máy. */
 const WALL_SHAPE_KEY = 'thoi-dai-van-lang/wall-shape';
 
@@ -144,6 +147,22 @@ function saveResolution(r: Resolution): void {
     localStorage.setItem(RESOLUTION_KEY, r);
   } catch {
     // Không lưu được thì lần sau dùng lại mức mặc định.
+  }
+}
+
+function loadNgayDem(): boolean {
+  try {
+    return localStorage.getItem(NGAY_DEM_KEY) !== 'tat';
+  } catch {
+    return true;
+  }
+}
+
+function saveNgayDem(on: boolean): void {
+  try {
+    localStorage.setItem(NGAY_DEM_KEY, on ? 'bat' : 'tat');
+  } catch {
+    // Không lưu được thì lần sau ngày đêm bật như mặc định.
   }
 }
 
@@ -192,6 +211,7 @@ async function start(): Promise<void> {
     return;
   }
   world.setResolution(loadResolution());
+  world.setNgayDem(loadNgayDem(), true);
 
   let mode: Mode = { kind: 'view', selected: null };
   let saveWarned = false;
@@ -1066,7 +1086,7 @@ async function start(): Promise<void> {
       case 'openSettings':
         if (mode.kind !== 'view') exitMode();
         select(null);
-        hud.showSettings(state, world.resolution);
+        hud.showSettings(state, world.resolution, world.ngayDemOn);
         return;
 
       case 'toggleMute':
@@ -1074,13 +1094,19 @@ async function start(): Promise<void> {
         setMuted(state.settings.muted);
         if (state.settings.muted) stopRally();
         save();
-        hud.showSettings(state, world.resolution);
+        hud.showSettings(state, world.resolution, world.ngayDemOn);
         return;
 
       case 'setResolution':
         world.setResolution(a.resolution);
         saveResolution(a.resolution);
-        hud.showSettings(state, a.resolution);
+        hud.showSettings(state, a.resolution, world.ngayDemOn);
+        return;
+
+      case 'setNgayDem':
+        world.setNgayDem(a.on);
+        saveNgayDem(a.on);
+        hud.showSettings(state, world.resolution, a.on);
         return;
 
       case 'copyCode': {
@@ -1650,6 +1676,13 @@ async function start(): Promise<void> {
     quanDao: (id: QuanDaoId) => hud.showQuanDao(state, id),
     /** Đặt đồng hồ cảnh (giây): thuyền khơi, cá voi, cá heo theo đồng hồ này, để chụp thử thuyền đang ở biển. */
     seaTime: (t: number) => world.seekTime(t),
+    /**
+     * Ghim giờ trong ngày ở kinh đô để chụp thử: 'ngay', 'chieu', 'dem', 'rang', hay phần của ngày (0 tới 1); `null`
+     * thì theo lại đồng hồ chơi.
+     */
+    gio: (g: Buoi | number | null) => world.setGio(g),
+    /** Trời lúc này: trọng số bốn buổi, độ tối, giờ đang ghim, ngày đêm có bật không. */
+    troi: () => world.troiInfo(),
     /** Cho cá voi (`whale`) hay đàn cá heo (`dolphins`) nổi lên ngay gần chỗ camera nhìn. */
     seaLife: (kind: 'whale' | 'dolphins') => world.showSeaLife(kind),
     khoNan: () => khoNanTk(),
