@@ -1581,6 +1581,74 @@ export function bakeVuaHung(): THREE.Group {
   });
 }
 
+// ---------- Lạc Long Quân và Âu Cơ (tượng ở Đền Rồng Tiên) ----------
+
+/** Cỡ hai tượng tổ: bằng Vua Hùng. */
+const K_TO = 1.45;
+/** Áo choàng xanh rêu biển của Lạc Long Quân; áo hồng phấn, áo choàng lông chim trắng của Âu Cơ. */
+const SEA_MOSS = 0x3f7a5c;
+const AU_CO_PINK = 0xf2b8c0;
+const FEATHER_WHITE = 0xf6f1e6;
+
+/**
+ * Lạc Long Quân, giống rồng ở biển: áo dài xanh biển viền vàng, giáp vảy rồng xanh lục, hộ tâm mặt trống đồng, áo
+ * choàng xanh rêu viền bọt sóng, mũ đồng vành vàng có hai sừng rồng và chùm lông chim, râu đen, gươm đồng.
+ */
+function drawLacLongQuan(h: HumanRig): void {
+  humanBody(h, { cloth: C.sea, long: true, pattern: true, top: C.serpent, sleeves: C.sea, belt: C.gold, armband: C.gold, collar: C.gold, hem: C.gold });
+  buckle(h, { color: C.gold, gem: C.ghost });
+  armor(h, { color: C.serpent, trim: C.gold, rows: 3, scales: true, y0: 0.395, y1: 0.6 });
+  chestDisc(h, { color: C.gold, drum: true, r: 0.06, thick: 0.02 });
+  cloak(h, { color: SEA_MOSS, trim: C.foam, clasp: C.gold, hem: 0.12 });
+  pauldrons(h, { color: C.serpent, trim: C.gold, size: 1.0 });
+  humanHead(h, { brows: true, mustache: C.hair, beard: C.hair, beardLen: 0.2 });
+  hairCap(h);
+  helmet(h, { color: C.bronze, rim: 0.81, band: C.gold, bandH: 0.04, gem: C.ghost, horns: { color: C.gold, len: 0.16, r: 0.028 } });
+  plumes(h, [C.sea, C.gold, C.cream], { count: 7, len: 0.38, spread: 0.24, y: 0.97, z: -0.06 });
+  h.local('hand', GRIP_R, null, guomDong);
+}
+
+/**
+ * Âu Cơ, giống tiên ở núi: áo hồng phấn, váy dài trắng ngà hoa văn, kiềng vàng, áo choàng lông chim trắng viền vàng;
+ * tóc dài xõa lưng, búi cài trâm, mũ lông chim cao hai tầng trắng hồng vành vàng.
+ */
+function drawAuCo(h: HumanRig): void {
+  humanBody(h, { legs: C.cream, cloth: C.cream, long: true, pattern: true, top: AU_CO_PINK, sleeves: AU_CO_PINK, belt: C.gold, armband: C.gold, collar: C.gold });
+  necklace(h, { color: C.gold, r: 0.068, y: 0.578, tilt: 0.25 });
+  cloak(h, { color: FEATHER_WHITE, trim: C.gold, hem: 0.1, flare: 0.08 });
+  drawWomanFace(h);
+  hairDown(h, { color: C.hair, to: 0.4, width: 0.17, locks: 0.17 });
+  bun(h, { color: C.hair, at: [0, 0.84, -0.245], size: 0.085, pin: { color: C.gold, len: 0.28, tilt: 0.25, ends: C.red } });
+  featherCrown(h, [FEATHER_WHITE, AU_CO_PINK, C.gold], { count: 9, len: 0.5, spread: 0.24, bronzeRim: true, rim: C.gold, tier2: true });
+}
+
+/** Tượng Lạc Long Quân bản tĩnh cho Đền Rồng Tiên: đứng thẳng, gươm đồng dựng trước vai phải. */
+export function bakeLacLongQuan(): THREE.Group {
+  const r = new RigBuilder({ ...BASE, ...bigHuman('base', [0, 0, 0], K_TO) });
+  drawBig(r, [0, 0, 0], K_TO, drawLacLongQuan);
+  return bakeRig(r.build(), (bones) => {
+    const b = bones as unknown as Human;
+    beginPose(b, 0);
+    b.armR.rotation.set(-0.35, 0, 0.18);
+    b.hand.rotation.set(0.35, 0, -0.1);
+    b.armL.rotation.set(-0.1, 0, -0.18);
+    gripHands(b, ARM * K_TO);
+  });
+}
+
+/** Tượng Âu Cơ bản tĩnh cho Đền Rồng Tiên: đứng thẳng, hai tay chắp trước ngực. */
+export function bakeAuCo(): THREE.Group {
+  const r = new RigBuilder({ ...BASE, ...bigHuman('base', [0, 0, 0], K_TO) });
+  drawBig(r, [0, 0, 0], K_TO, drawAuCo);
+  return bakeRig(r.build(), (bones) => {
+    const b = bones as unknown as Human;
+    beginPose(b, 0);
+    b.armL.rotation.set(-1.15, 0, 0.42);
+    b.armR.rotation.set(-1.15, 0, -0.42);
+    gripHands(b, ARM * K_TO);
+  });
+}
+
 // ---------- Bốn nữ tướng của Hai Bà ----------
 
 /** Cỡ thân nữ tướng: nhỏ hơn Hai Bà đứng chầu (`K_LAC` 1,3) một chút, cho thấy là phó tướng. */

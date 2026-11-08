@@ -12,6 +12,7 @@ import type { CongTrinh, LotOpts } from './chung';
 import { CHUONG_LON } from './chuongLon';
 import { CHUONG_VOI } from './chuongVoi';
 import { DEN_HAT_MON } from './denHatMon';
+import { DEN_RONG_TIEN } from './denRongTien';
 import { DIEN } from './dien';
 import { DOANH_TRAI } from './doanhTrai';
 import { HO_KIM_QUY } from './hoKimQuy';
@@ -48,6 +49,7 @@ export const CONG_TRINH: Partial<Record<BuildingType, CongTrinh>> = {
   hoKimQuy: HO_KIM_QUY,
   benKhoi: BEN_KHOI,
   denHatMon: DEN_HAT_MON,
+  denRongTien: DEN_RONG_TIEN,
   thoHo: THO_HO,
 };
 

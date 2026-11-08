@@ -263,6 +263,11 @@ export const vi = {
       icon: '🐘',
       desc: 'Đền thờ Hai Bà Trưng ở cửa sông Hát, nơi Hai Bà tế cờ khởi nghĩa. Đền còn nguyên thì mỗi trận giữ kinh đô có 6 nghĩa binh từ đền ra đánh giặc. Chỉ dựng được sau khi giữ Cấm Khê (màn 40).',
     },
+    denRongTien: {
+      name: 'Đền Rồng Tiên',
+      icon: '🐉',
+      desc: 'Đền thờ Lạc Long Quân và Âu Cơ, tổ tiên các vua Hùng. Bọc trăm trứng nở trăm con: năm mươi con theo cha xuống biển, năm mươi con theo mẹ lên núi. Đền còn nguyên thì vỏ ốc, cá, đất đá, sắt, gỗ làm ra thêm 20%. Cần Điện cấp 10.',
+    },
     cauSongDa: {
       name: 'Cầu sông Đà',
       icon: '🌉',
@@ -458,6 +463,8 @@ export const vi = {
     quaMan39: 'Mã Viện đóng quân ở hồ Lãng Bạc. Xin Hai Bà đem quân ra đánh lớn (màn 39).',
     camKhe: 'Quân Hán quá đông. Xin giữ cửa rừng Cấm Khê cho dân rút về núi (màn 40).',
     denHatMon: 'Dân lập đền thờ Hai Bà ở cửa sông Hát. Xin dựng Đền Hát Môn: đền còn nguyên thì mỗi trận giữ kinh đô có nghĩa binh ra đánh giặc.',
+    denRongTien:
+      'Uống nước nhớ nguồn. Xin dựng Đền Rồng Tiên thờ Lạc Long Quân và Âu Cơ: đền còn nguyên thì của từ sông biển, từ núi rừng làm ra thêm hai phần mười.',
     allDone:
       'Hai Bà đã hiển linh giữ đất, dân lập đền thờ ở Hát Môn. Thủy quân Hán, quân Hán và mùa lũ vẫn thay phiên đánh kinh đô. Chuyện các nữ tướng của Hai Bà sẽ kể ở bản sau.',
   } as Record<string, string>,
@@ -1285,6 +1292,8 @@ export const vi = {
         '📜 Lạc hầu: Tâu bệ hạ, dựng nhà, nâng nhà đều phải chờ thợ làm. Điện có sẵn một tốp thợ; xin dựng nhà thợ hồ để có thêm tốp, nhiều việc làm cùng lúc. Việc lâu thì bệ hạ hỏi thần mấy câu sử nước nhà, đáp đúng thì thợ hăng hái làm mau.',
       hoKimQuy:
         '📜 Lạc hầu: Tâu bệ hạ, thần Kim Quy đã hiện lên. Xin đào hồ lớn cho thần trú ngụ: hồ còn thì thần giữ cho lũy, thành, cổng thành chắc thêm ba phần.',
+      denRongTien:
+        '📜 Lạc hầu: Tâu bệ hạ, kinh đô nay đã rộng lớn. Xin lập đền thờ Lạc Long Quân và Âu Cơ, tổ tiên nước ta: cha dẫn năm mươi con xuống biển, mẹ dẫn năm mươi con lên núi. Đền còn thì sông biển, núi rừng cho thêm của: vỏ ốc, cá, đất đá, sắt, gỗ.',
     } as Partial<Record<BuildingType, string>>,
     /** Cây dại, tảng đá mọc trên ô trống: Lạc hầu gợi ý một lần khi cái đầu tiên mọc; chạm vào thì dọn. */
     cayDaHint:

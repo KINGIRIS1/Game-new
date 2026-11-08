@@ -669,6 +669,7 @@ const RECIPES: Record<MauId, Recipe> = {
       [['vuon', 'chuongLon'], inRings(1, byKitchen)],
       // Ở Điện 5 hồ choán mất chỗ ruộng nếp: mẫu chừa chỗ hồ từ Điện 6.
       ['hoKimQuy', inRings(0, byAxis), 6],
+      ['denRongTien', inRings(0, byAxis), 10],
       [['denPhuDong', 'denTanVien'], inRings(0, row(1, byBarracks))],
       ['denCuong', inRings(0, row(1, byAxis))],
       // Đền Hát Môn (chương 5) cạnh Đền Cuông, cùng hàng ngoài vòng ngoài. Vào chương 5 thì đã có Điện 9; dưới

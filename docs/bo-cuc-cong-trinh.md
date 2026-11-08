@@ -727,6 +727,46 @@ V V . D D . V V
 - Thầy cúng (Lạc hầu) đứng khấn bên trái lư hương, quay vào đền; chỗ thứ hai là người dâng lễ bên đàn tế.
 - Đã vẽ (`src/render/congTrinh/denHatMon.ts`). Đã đổi khi vẽ: bỏ hai cờ đứng hai bên thềm (đâm vào diềm mái, lẫn với cờ đàn tế), thay bằng phướn đỏ, vàng trên đàn tế.
 
+## Đền Rồng Tiên: 8×8 (chủ dự án yêu cầu, đã vẽ)
+
+Bản vẽ đi kèm mục **Đền Rồng Tiên** trong `docs/thiet-ke.md`. Một cấp, chưa có dáng cũ. Móng 8×8 vẽ thành 16×16 ký tự. Một đền, hai nửa: đền chính lùi về sau giữa móng; nửa trái là hồ có rồng (cha xuống biển), nửa phải là núi có chim tiên (mẹ lên núi). Camera nhìn từ góc dưới bên phải, nên núi cao đứng sau bên phải, nửa trước bên phải chỉ có hoa cỏ thấp.
+
+```
+B B ~ ~ . H H H H H H . M M M M
+B B ~ ~ . H H H H H H . M M M M
+~ R R ~ . H H H H H H . M P P M
+~ R R ~ . H H H H H H . M P P M
+~ R R ~ . N N N N N N . M M M M
+~ R R ~ . N N N N N N . . M M M
+~ R R ~ Q Q . . . . A A . . M M
+S S ~ ~ Q Q . . . . A A . . h h
+S S ~ . . . . L L . . . . h h h
+~ ~ ~ . . . . . . . . . . h h .
+~ ~ . . . . . O O . . . . . . .
+. . . . . . . O O . . . . . . .
+. F . . . . . , , . . . . . F .
+D D . . . 7 . , , . 7 . . . D D
+D D . . . 7 . , , . 7 . . . D D
+. . . . . . . , , . . . . . . .
+```
+
+- `H` đền chính: mười cột son trên chân đá, vách gỗ dải hoa văn, cửa giữa có mặt trống đồng trên trán, hai ô cửa sổ song gỗ, xà son; mái cong hai tầng lợp ngói viền đồng vàng, tầng trên trên gác lửng có hàng ô cửa, chim Lạc đồng hai đầu nóc.
+- `N` thềm: nền đá hai bậc phủ cả `H` và `N`, ba bậc đá lên giữa thềm, hai lan can đá có đầu rồng xanh ở chân.
+- `Q` tượng Lạc Long Quân trên bệ đá hai bậc, bên hồ: mũ đồng vành vàng có hai sừng rồng và chùm lông chim, áo dài xanh biển, giáp vảy rồng xanh lục, hộ tâm mặt trống đồng, áo choàng xanh rêu viền bọt sóng, râu đen, gươm đồng dựng trước vai (`bakeLacLongQuan` ở `heroes.ts`).
+- `A` tượng Âu Cơ trên bệ đá hai bậc, bên núi: áo hồng phấn, váy dài trắng ngà, áo choàng lông chim trắng, tóc dài búi cài trâm, mũ lông chim hai tầng trắng hồng vành vàng, hai tay chắp trước ngực (`bakeAuCo`). Hai tượng hơi chếch vào lối giữa.
+- `L` lư hương đồng ba chân trên trụ đá trước thềm.
+- `O` bọc trăm trứng: bệ đá tròn, chậu đá hoa sen hai vòng cánh, trứng trắng ngà chất bốn tầng thành ụ.
+- `,` lối vào; sân lát đá hai màu từ thềm tới hết bọc trứng, ngang từ bệ tượng này sang bệ tượng kia; lối đá từ sân ra cổng.
+- `7` cổng hai cột chim Lạc như cổng Hồ Kim Quy.
+- `~` mặt hồ, bờ kè đá theo ô con `~ R S` (`lakeOutline` của Hồ Kim Quy, chọn ký tự mặt hồ); `S` đám sen.
+- `R` rồng xanh: mình uốn ba khúc nhô khỏi mặt nước, thuôn dần ra đuôi vút lên ở sau, bụng vàng nhạt, vây đỏ trên sống lưng, hai chân trước vuốt vàng; đầu ngẩng nhìn ra trước, sừng vàng, bờm đỏ, râu dài, ngọc sáng trước miệng; vòng gợn sóng chỗ mình rồng chạm nước.
+- `M` ba ngọn núi đá đa diện, sườn rừng xanh, cây thông nhỏ trên sườn trước, mây trắng từng cụm vờn quanh; `P` ngọn cao nhất, chim tiên trắng dang cánh đậu trên đỉnh (mỏ dài vàng, mào đỏ, đầu cánh và lông đuôi giữa vàng).
+- `h` chân núi: khóm hoa dại hồng, trắng, vàng trên bụi lá thấp, đá núi lăn xuống.
+- `D` trống đồng trên giá gỗ thấp; `F` cờ xanh nước (trái, bên hồ), cờ vàng núi (phải, bên núi).
+- `B` bụi tre góc sau bên trái.
+- Thầy cúng (Lạc hầu) đứng khấn bên trái lư hương, quay vào đền; chỗ thứ hai là người dâng lễ bên bọc trứng.
+- Đã vẽ (`src/render/congTrinh/denRongTien.ts`).
+
 ## Cấp 9, 10 (chủ dự án đã duyệt, đã vẽ)
 
 Móng đã kín ở cấp 8, nên cấp 9, 10 không thêm ô con mới: mỗi loại đổi một phần sẵn có, đứng trong khối chữ của phần ấy. Mái theo cấp ghi ở mục Phong cách trong `docs/thiet-ke.md` (cấp 9 dải đồng hoa văn dưới diềm, cấp 10 chim Lạc hai đầu nóc).
