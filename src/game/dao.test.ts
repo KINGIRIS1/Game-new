@@ -4,7 +4,7 @@
 // nhiệm vụ 63–66; Lạc hầu gợi ý; bản lưu 26 lên 27.
 
 import { describe, expect, it } from 'vitest';
-import { QUAN_DAO, daoBen, onDaoChinh, onIsland, quanDao, warRoute, isWater } from './bien';
+import { DON_DAO_W, QUAN_DAO, daoBen, daoGoc, daoVao, donDaoCong, donDaoGoc, donDaoHuong, inDaoLoi, inDonDao, onDaoChinh, onIsland, quanDao, warRoute, isWater } from './bien';
 import { CH5_QUEST_START, DON_DAO, ENEMIES, GIFT_IDS, QUESTS, THUYEN_CHIEN, UNITS, type UnitType } from './defs';
 import { MA_VIEN_AT } from './chuong5';
 import {
@@ -106,6 +106,52 @@ describe('Đường thuyền chiến, bến ván đồn đảo', () => {
     expect(hs).toBeLessThan(60_000);
     expect(ts).toBeGreaterThan(hs);
     expect(warRoute(benOf(s, 'truongSa')!, 1).quanDao).toBe('truongSa');
+  });
+
+  it('cổng đồn quay về phía thuyền tới, bến ván thẳng trước cổng, cầu ván chạy trên đất ngoài khoảnh đồn', () => {
+    for (const q of QUAN_DAO) {
+      const h = donDaoHuong(q);
+      expect(Math.abs(h.x) + Math.abs(h.z), q.id).toBe(1);
+      const c = donDaoCong(q);
+      const b = daoBen(q);
+      // Bến ván thẳng trước cổng, cách cổng vài ô.
+      expect((b.x - c.x) * h.z - (b.z - c.z) * h.x, q.id).toBeCloseTo(0, 6);
+      const far = (b.x - c.x) * h.x + (b.z - c.z) * h.z;
+      expect(far, q.id).toBeGreaterThan(1.5);
+      expect(far, q.id).toBeLessThan(7);
+      // Ô dưới cầu ván không lẫn vào khoảnh đồn, và có ô dưới cầu.
+      const o = donDaoGoc(q);
+      let loi = 0;
+      for (let j = 0; j < 20; j++) {
+        for (let i = 0; i < 20; i++) {
+          if (!inDaoLoi(q, i, j)) continue;
+          loi++;
+          expect(inDonDao(q, i, j), `${q.id} ${i},${j}`).toBe(false);
+        }
+      }
+      expect(loi, q.id).toBeGreaterThan(0);
+      // Cổng ở giữa một cạnh khoảnh đồn.
+      const g = daoGoc(q);
+      const cx = g.x + o.i + DON_DAO_W / 2;
+      const cz = g.z + o.j + DON_DAO_W / 2;
+      expect(Math.hypot(c.x - cx, c.z - cz), q.id).toBeCloseTo(DON_DAO_W / 2, 6);
+    }
+  });
+
+  it('thuyền chiến từ ngư trường rẽ ra trước bến ván rồi vào bến, không đi qua đảo nào', () => {
+    for (const [k, q] of QUAN_DAO.entries()) {
+      const path = warRoute({ x: 0, z: 49, type: 'benKhoi' }, k).path;
+      expect(path.at(-2), q.id).toEqual(daoVao(q));
+      for (let n = path.length - 3; n < path.length - 1; n++) {
+        const a = path[n];
+        const b = path[n + 1];
+        for (let t = 0; t <= 1; t += 0.01) {
+          const x = a.x + (b.x - a.x) * t;
+          const z = a.z + (b.z - a.z) * t;
+          expect(onIsland(x, z), `${q.id} đoạn ${n} ${x.toFixed(1)},${z.toFixed(1)}`).toBe(null);
+        }
+      }
+    }
   });
 });
 

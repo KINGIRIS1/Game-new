@@ -2313,14 +2313,14 @@ Như các kế hoạch trước, chỉ học cơ chế của game cùng thể lo
 | 3 | đồn cấp 2 | 26000 gạo, 22000 vỏ ốc, 22000 đất đá, 13000 gỗ, 4500 sắt | 90 phút | 30 | 2800 | 20% |
 
 - Mỗi quần đảo một đồn. Tên gọi: **đồn Hoàng Sa**, **đồn Trường Sa**.
-- **Chỗ đồn** (`donDaoGoc` ở `bien.ts`): khoảnh 8 × 8 ô nằm trọn trên đất đảo chính cách bờ từ hai ô trở vào, gần bến ván nhất. Hình đảo để trống cây đá và san bằng khoảnh ấy (gò giữa đảo lấn vào thì hạ xuống), cả khi chưa dựng đồn.
+- **Chỗ đồn** (`donDaoGoc` ở `bien.ts`): khoảnh 8 × 8 ô nằm trọn trên đất đảo chính cách bờ từ hai ô trở vào, gần chỗ thuyền từ đất liền ra tới ngư trường nhất. Cổng ở giữa cạnh quay về phía ấy (`donDaoHuong`, `donDaoCong`; cả hai đồn quay cổng về phía bắc). **Bến ván** (`daoBen`) thẳng trước cổng, cách bờ chừng một ô; cầu ván chạy thẳng từ cổng ra bến. Hình đảo để trống cây đá và san bằng khoảnh ấy (gò giữa đảo lấn vào thì hạ xuống), cả khi chưa dựng đồn; ô dưới cầu ván cũng không có cây đá (`inDaoLoi`).
 - Dựng và nâng đồn là một việc xây như mọi việc, giao cho tốp thợ rảnh (`xay.ts`). Hủy thì hoàn của phần chưa xong. Đố sử bớt thời gian như mọi việc.
 - Hai đảo lên cấp 3 thì tốn tổng cộng 112 nghìn gạo, 94 nghìn vỏ ốc, 94 nghìn đất đá, 56 nghìn gỗ, 19 nghìn sắt, bằng chừng một tới hai tiếng phần tràn kho sau Điện 10. Gỗ chặn nhất: ngoài gỗ dồn kho còn cần chừng một tiếng rưỡi gỗ làm ra (kể cả hai thuyền chiến).
 
 ### Thuyền chiến
 
 - Mỗi bến thuyền khơi cấp 3 đóng được một **thuyền chiến**: 4000 gạo, 6000 gỗ, 1500 sắt, xây 20 phút. Bến đầu chở quân ra Hoàng Sa, bến thứ hai ra Trường Sa, đúng ngư trường của bến.
-- Mỗi chuyến chở tối đa **10 chỗ quân** (voi chiến 3 chỗ, lính nỏ 2), đi theo đường thuyền khơi (`warRoute`: đường `seaRoute` tới ngư trường rồi thẳng vào bến ván đồn, `daoBen`), cập bến ván, đổ quân rồi về. Thuyền đi 2,2 ô mỗi giây như thuyền khơi trên cảnh: một lượt ra Hoàng Sa chừng 35–45 giây, ra Trường Sa chừng một phút (tùy chỗ bến).
+- Mỗi chuyến chở tối đa **10 chỗ quân** (voi chiến 3 chỗ, lính nỏ 2), đi theo đường thuyền khơi (`warRoute`: đường `seaRoute` tới ngư trường, rẽ ra khơi trước bến ván, `daoVao`, chọn chỗ cho đường không đi qua đảo nhỏ nào, rồi vào bến ván đồn, `daoBen`), cập bến ván, đổ quân rồi về. Thuyền đi 2,2 ô mỗi giây như thuyền khơi trên cảnh: một lượt ra Hoàng Sa chừng 35–45 giây, ra Trường Sa chừng một phút (tùy chỗ bến).
 - Chuyến tính bằng thời gian còn lại (`DonDao.chuyen.con`), nên vẫn chạy khi có giặc, khi có lũ, và lúc vắng thuyền chạy tiếp đủ chuyến (`advanceDao` trong `tick` và `applyOffline`). Đang có trận (giữ kinh đô, phó bản, Đấu thành) thì thuyền neo ở bến không rời đi, cho lính đang đánh khỏi rời kinh đô giữa trận; chuyến đang đi vẫn chạy.
 - Thuyền chiến không đánh nhau trên biển (không có trận thủy chiến) và không có máu. Bến hư thì thuyền nằm neo, lính trên đảo ở lại đảo.
 
@@ -2368,13 +2368,14 @@ Như các kế hoạch trước, chỉ học cơ chế của game cùng thể lo
 
 ### Hình
 
-- **Đồn đảo** vẽ trên đảo chính (`congTrinh/donDao.ts`, bản vẽ ô con ở `docs/bo-cuc-cong-trinh.md`). Móng 8×8 ở giữa đảo, cổng quay về phía kinh đô (tây bắc).
-  - Cấp 1: rào cọc, nhà sàn lính, cột cờ, cầu ván ra chỗ thuyền chiến neo.
+- **Đồn đảo** vẽ trên đảo chính (`congTrinh/donDao.ts`, bản vẽ ô con ở `docs/bo-cuc-cong-trinh.md`; đã vẽ ở PR 2). Móng 8×8 trên khoảnh đồn, cổng quay về phía thuyền từ đất liền tới (cả hai đồn quay về phía bắc), cầu ván chạy thẳng từ cổng ra bến ván.
+  - Cấp 1: rào cọc, cổng tre, nhà sàn lính, cột cờ, góc kho (chum nước mưa, củi, dừa), bếp đá lửa hiệu, cầu ván ra chỗ thuyền chiến cập.
   - Cấp 2 thêm chòi lửa hiệu, giếng nước, kè đá san hô quanh rào.
-  - Cấp 3 thay rào bằng tường đá san hô, thêm lầu canh mái ngói, bia đá, miếu thờ cá Ông.
+  - Cấp 3 thay rào bằng tường đá san hô, cổng thành lầu cổng, thêm lầu canh, bia đá trên lưng rùa, miếu thờ cá Ông.
+  - Mái cấp 1 tranh, cấp 2 tranh viền đỏ, cấp 3 ngói viền đồng vàng.
 
-  Lính gác là bản tĩnh (`makeFighter`), đứng theo số lính đóng, tối đa vài người cho nhẹ máy. Có giặc áp sát thì lửa hiệu cháy. Ban đêm đuốc và lửa hiệu có quầng sáng (`duoc.ts`). Đồn hư thì bốc khói.
-- **Thuyền chiến trống đồng** (`makeThuyenChien` ở `models.ts`), theo hình thuyền trên trống đồng Ngọc Lũ: thân dài cong, mũi và đuôi vút cao hình đầu chim, hàng mái chèo, cờ. Trên sạp có chiến binh đội mũ lông chim cầm giáo, rìu, và một người đánh trống đồng. Lúc chở quân, số lính đứng trên sạp theo số đang chở.
+  Lính gác là bản tĩnh (`bakeSoldier`, gộp một lưới), cầm binh khí đúng bậc đã rèn, cứ năm chỗ quân đang đóng một người, tối đa sáu (`donGac`). Đồn giữ biển lúc thủy quân Hán sắp tới hay đang đánh kinh đô (lửa hiệu báo sớm) thì lửa hiệu bùng, khói đen bốc cao; PR 3 thêm lửa hiệu cháy khi giặc áp sát đảo. Ban đêm đuốc cổng, đuốc đầu cầu và lửa hiệu có quầng sáng (`duoc.ts`, World `syncDuoc`). Đồn hư thì bốc khói (PR 3).
+- **Thuyền chiến trống đồng** (`makeThuyenChien` ở `thuyenChien.ts`; đã vẽ ở PR 2), theo hình thuyền trên trống đồng Ngọc Lũ: thân dài cong hình lưỡi liềm, mũi và đuôi vút cao, mũi là đầu chim Lạc, đuôi là chùm lông đuôi chim, dải hoa văn đồng dọc mạn, mắt thuyền, chèo lái lớn, hàng mái chèo hai bên (bốn thế chèo đổi theo nhịp khi chạy), cờ đuôi nheo mũi và cờ lớn đuôi. Trên sạp có chiến binh đội mũ lông chim cầm giáo đứng mũi, một người đánh trống đồng (nện dùi khi thuyền chạy), người lái ở đuôi. Lúc chở quân, lính đứng trên sạp theo số đang chở (tối đa sáu người; voi chiến không lên sạp, giáo binh đứng thay). Rảnh thì neo cạnh bến thuyền khơi, xa bờ hơn thuyền khơi một quãng, mũi xuôi dòng; tới đảo thì mũi vừa chạm đầu cầu ván.
 - **Bãi chiến nền `dao`**: bãi cát trắng, dừa, phong ba. Sau lưng giặc là sóng vỗ và thuyền Hán đậu ngoài; sau lưng quân ta là đồn đảo. Bố cục vật cản `dao` (khóm phong ba, tảng đá san hô, xác thuyền) theo luật bãi chiến (`kiemBai`).
 
 ### Lạc hầu, nhiệm vụ, đố sử
@@ -2398,8 +2399,8 @@ Như các kế hoạch trước, chỉ học cơ chế của game cùng thể lo
 
 ### Thứ tự làm
 
-1. **PR 1 luật** (đã làm): `dao.ts`, bản lưu 27, thuyền chiến, đồn đảo ba cấp, chở quân, lính đóng, ba lợi ích giữ biển; bảng quần đảo, bảng bến, dòng tin; Lạc hầu gợi ý (cả lúc Mã Viện sang); đố sử Biển đảo; nhiệm vụ 63–66; người chơi mô phỏng, sổ kinh tế. Đồn và thuyền vẽ tạm: đồn biên phóng to 1,8 lần đứng ở chỗ đồn, thuyền khơi ba buồm chạy theo chuyến (`syncDao`, `moveWarBoat` ở `world.ts`).
-2. **PR 2 hình**: đồn đảo ba cấp, thuyền chiến trống đồng, chuyến chở quân, lính gác, lửa hiệu, đèn ban đêm.
+1. **PR 1 luật** (đã làm): `dao.ts`, bản lưu 27, thuyền chiến, đồn đảo ba cấp, chở quân, lính đóng, ba lợi ích giữ biển; bảng quần đảo, bảng bến, dòng tin; Lạc hầu gợi ý (cả lúc Mã Viện sang); đố sử Biển đảo; nhiệm vụ 63–66; người chơi mô phỏng, sổ kinh tế. Đồn và thuyền vẽ tạm (đồn biên phóng to, thuyền khơi ba buồm), PR 2 thay bằng hình thật.
+2. **PR 2 hình** (đã làm): đồn đảo ba cấp, cầu ván, thuyền chiến trống đồng, chuyến chở quân, lính gác, lửa hiệu, đèn ban đêm; cổng đồn và bến ván thẳng hàng, thuyền rẽ vào bến không qua đảo nhỏ (`daoVao`).
 3. **PR 3 giặc đánh đảo**: lịch các đợt, trận cầm cự tự đánh, nền và bố cục `dao`, xem lại trận, độ khó theo chuẩn, Lê Chân đốc thủy quân, nhiệm vụ 67.
 
 ## Kế hoạch chương 5: Hai Bà Trưng (chủ dự án đã duyệt)
