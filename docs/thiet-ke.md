@@ -645,7 +645,7 @@ Chủ dự án đã chốt:
   - Từ khi vào chương 3 tới khi thắng màn 19: giặc trên bộ là **đêm yêu tinh**. Đợt đầu tới 3 phút sau khi vào chương 3.
   - Sau màn 19, chưa có nỏ thần: chỉ có lũ.
   - Từ khi có nỏ thần: giặc trên bộ là **quân Triệu Đà**, đợt đầu tới 3 phút sau khi chế xong nỏ.
-- **Đêm yêu tinh** thứ n: `9 + n` quỷ núi (tối đa 18), `4 + n` ma trơi (tối đa 12), `2 + ⌊n/2⌋` hổ tinh (tối đa 6), máu ×(1,6 + 0,12 × (n − 1)). Yêu tinh tới từ bìa rừng, **nhắm phá đoạn thành Cổ Loa gần nhất trước tiên**; hết thành mới tới kho rồi Điện. Trời tối như đêm.
+- **Đêm yêu tinh** thứ n: `9 + n` quỷ núi (tối đa 18), `4 + n` ma trơi (tối đa 12), `2 + ⌊n/2⌋` hổ tinh (tối đa 6), máu ×(1,6 + 0,12 × (n − 1)). Yêu tinh tới từ bìa rừng, **nhắm phá đoạn thành Cổ Loa gần nhất trước tiên**; hết thành mới tới kho rồi Điện. Trời tối như đêm, tới giờ nào cũng vậy (tối hơn đêm thường, xem mục Ngày đêm).
 - **Quân Triệu** đợt thứ n: `10 + n` lính khiên (tối đa 18), `5 + n` nỏ thủ (tối đa 12), `2 + ⌊(n + 1)/2⌋` kỵ binh (tối đa 7), máu ×(1,9 + 0,12 × (n − 1)). Tới từ bìa rừng, nhắm kho rồi Điện như giặc Ân.
 - Tướng: đêm yêu tinh và quân Triệu có An Dương Vương (chưa có thì Sơn Tinh hiển linh, rồi Gióng); mùa lũ vẫn có Sơn Tinh.
 - Nút "Nghênh chiến ngay" ở doanh trại gọi đợt kế tiếp tới sớm, dù là giặc hay lũ.
@@ -680,7 +680,7 @@ Chủ dự án đã chốt:
 - **Đoạn thành Cổ Loa** (`buildCitadel`): đất nện cao hơn thành đất của lũy, nóc thành làm lối đi có lan can (xem mục Bậc lên thành, lối đi trên nóc thành), thỉnh thoảng một chòi canh nhỏ dựng trên bốn cột cao; đoạn bị phá là đống đất sạt. Trước đây nóc thành có ụ góc răng cưa và cọc gỗ nhọn, nay bỏ để lính đi lại.
 - **Đền Cổ Loa** (`makeDenCoLoa` trong `src/render/buildings.ts`): đền nền đá mái cong, trước sân có tượng Rùa Vàng và cây nỏ đồng lớn trên giá.
 - **Giặc**: quỷ núi da xám xanh có sừng, cầm chày đá; ma trơi là đốm lửa xanh lơ lửng có mặt, tự sáng; hổ tinh vằn cam đen; gà trắng nghìn năm là gà trống trắng khổng lồ mào đỏ. Lính khiên Triệu áo đen viền đỏ, khiên chữ nhật; nỏ thủ Triệu cầm nỏ gỗ; kỵ binh cưỡi ngựa nâu; Triệu Đà râu bạc, giáp đen viền vàng, cưỡi ngựa đen.
-- **Đêm yêu tinh** ở kinh đô: ánh trăng xanh tím, trời tối, ma trơi lơ lửng ở bìa rừng, không mưa.
+- **Đêm yêu tinh** ở kinh đô: ánh trăng xanh tím, trời tối, ma trơi lơ lửng ở bìa rừng, không mưa. Đè lên giờ trong ngày (mục Ngày đêm).
 - **Trong trận**: An Dương Vương bắn tên vàng, ma trơi bắn cầu lửa xanh, nỏ thủ Triệu bắn tên sẫm. Nỏ thần: một mũi tên vàng vút lên rồi mưa tên rơi xuống từng tên giặc, lóe sáng chỗ trúng. Rùa Vàng: rùa lớn trồi lên cạnh An Dương Vương rồi lặn; dưới chân lính ta có vòng lục giác như mai rùa khi đang được che chở. Kết chương: Rùa Vàng khổng lồ trồi lên nâng An Dương Vương, nỏ chĩa lên trời.
 - **Bãi chiến núi Thất Diệu**: đất tím, bảy mỏm núi nhọn, cây chết, ma trơi, trời đêm. **Bãi chiến thành Cổ Loa**: ba vòng thành đất bao quanh bãi, mỗi vòng chừa cửa ở một góc như xoáy ốc, vòng trong bị phá một mảng phía giặc tràn vào, có hào nước và cờ đỏ. Không đặt thành hẳn sau lưng quân ta vì như thế nằm ngoài khung hình và che Lạc tướng đánh trống.
 
@@ -2758,6 +2758,71 @@ Chương 2 giặc là thủy quái, bơi trong nước như đi thường, nên 
 
 Mỗi PR chỉnh bố cục trước, rồi mới chỉnh máu giặc (`hpScale`) nếu lệch chuẩn cân bằng, và ghi số cuối vào tài liệu này.
 
+## Ngày đêm (chủ dự án chọn, đã làm)
+
+Trước đây kinh đô lúc nào cũng là ban ngày; "đêm" duy nhất là lúc đêm yêu tinh tới. Chủ dự án muốn kinh đô có ngày đêm cho sống động. Chủ dự án đã chốt bốn điều (theo đề xuất):
+
+1. **Chỉ để nhìn.** Sản lượng, giặc, trận, thợ xây không đổi theo giờ. Không đụng cân bằng, không nâng bản lưu.
+2. **Theo đồng hồ chơi** (`state.clock`, như lịch giặc, Tết): chỉ chạy khi mở game, đứng yên lúc vắng. Mở lại game thì trời tiếp đúng giờ lúc rời đi.
+3. **Một ngày 12 phút chơi.**
+4. **Dân vẫn làm ban đêm** (khớp luật hiện đúng số người đang làm), công trình thắp đuốc.
+
+Phương án bỏ: ngày đêm có luật (ruộng làm nhiều ban ngày, làng chài đánh cá đêm; hay giặc đêm làm quân ta bắn kém xa); theo giờ thật trên điện thoại (ai hay chơi buổi tối sẽ gần như luôn thấy đêm).
+
+### Giờ trong ngày (`src/game/ngayDem.ts`, đã làm ở PR 1)
+
+- Đồng hồ chơi 0 là sáng sớm, nên ván mới thấy ban ngày trước:
+
+  | Buổi | Giây trong ngày | Dài |
+  |---|---|---|
+  | Ngày | 0–450 | 7,5 phút |
+  | Chiều tà | 450–510 | 1 phút |
+  | Đêm | 510–660 | 2,5 phút |
+  | Rạng đông | 660–720 | 1 phút |
+
+- Chiều tà là ngày nhạt dần sang chiều (nửa đầu) rồi chiều sang đêm (nửa sau); rạng đông ngược lại. Trời đổi mượt, không giật.
+- Không luật nào đọc giờ. Bản lưu cũ có đồng hồ lớn nên mở bản cập nhật có thể gặp ngay chiều tà hay đêm (chừng một phần ba thời gian chơi là tối hay nửa tối).
+
+### Trời (`src/render/troi.ts`, đã làm ở PR 1)
+
+- Mỗi buổi một bộ màu trời (cũng là màu sương), nắng, đèn bán cầu, độ đậm bóng đổ. **Ban ngày đúng y số cũ**, nên cảnh ban ngày trông như trước; test so từng số.
+- Chiều tà nắng vàng cam; rạng đông hồng tím nhạt; đêm ánh trăng xanh nhạt, lấy trời đêm núi Thất Diệu làm gốc, bớt tím, bóng đổ nhạt đi. Đêm thường vẫn đọc rõ công trình, lính trên điện thoại, và **sáng hơn đêm yêu tinh**.
+- **Hướng nắng giữ nguyên** cả ngày (bóng đổ, dải sáng trên mái đã duyệt theo hướng này; đổi hướng thì bóng rung). Chỉ đổi màu và độ sáng.
+- **Đêm yêu tinh đè lên giờ**: tới lúc nào cũng tối như đêm yêu tinh cũ. Mưa giông ban đêm thì trời giông tối theo trời đêm, không sáng xám lên.
+- Vật không nhận đèn mà mang màu ban ngày (khói, bọt sóng, bụi nước cá voi, mây mù trên biển, mưa) tối theo trời. Lửa, đèn, ma trơi giữ sáng. Ô báo ngập, khoảnh đang chọn, dải tường đang kéo được bù sáng ban đêm cho dễ thấy.
+- Lửa sẵn có (lò rèn, lò nung, đèn Điện) tự sáng nên nổi lên ban đêm.
+- Bãi chiến phó bản, đánh đồn có trời riêng, không theo giờ kinh đô. Trận giữ kinh đô thì theo giờ (đồng hồ vẫn chạy trong trận). Màn hình vào game giữ giờ của bản lưu.
+
+### Đèn đuốc (`src/render/duoc.ts`, đã làm ở PR 2)
+
+- Công trình thắp đuốc từ chiều tà, tắt lúc rạng đông, so le từng cây: người ta cắm cán đuốc tre (cán mọc lên từ đất), lửa bén, quầng sáng ấm, vũng sáng trên đất dưới chân đuốc. Ban ngày không có gì mới.
+- Chỗ cắm:
+  - phần lớn công trình: hai cây gần hai góc trước, cắm vào ô trống (`.`) gần góc nhất của bản vẽ ô con; góc kín cả thì cắm ở mép lối đi (xưởng mộc, lò rèn, nhà thợ hồ);
+  - bến, làng chài, bến khơi: phía bờ (quay mặt ra sông);
+  - Điện: bốn cây hai bên lối đá giữa sân chầu, hai cây hai bên cổng;
+  - doanh trại 8×8: hai cây hai bên cổng trước, thêm một cây ở góc trước bên phải (góc trái kín nhà dài, chòi trống);
+  - chòi canh, lầu nỏ: một cây; cổng thành: hai cây;
+  - không cắm ở ruộng, ruộng nếp, vườn (có đom đóm), lũy, đê, cống, thành, bẫy, cầu, đường, đồ trang trí; công trình hư, đang xây thì không thắp.
+- Lửa sẵn có (lò rèn, lò nung, bãi đá) thêm quầng sáng. Thuyền trên sông, thuyền neo ở bến, thuyền buôn, thuyền khơi mang đèn.
+- Đom đóm xanh vàng bay quanh ruộng, vườn gần chỗ camera nhìn, lúc đêm khuya, trời không mưa.
+- Đèn theo giờ, không theo đêm yêu tinh: yêu tinh tới giữa ban ngày thì không thắp, trông như đêm yêu tinh cũ.
+- Không dùng đèn thật: thêm đèn thì mọi chất liệu phải dựng lại và nặng thêm. Quầng, vũng là tấm cộng màu, thắp, lập lòe trong shader. Lớp đuốc nằm ngoài mô hình công trình nên ảnh công trình không đổi.
+- Độ nặng (Điện 8, khổ điện thoại): ban ngày không thêm gì; ban đêm thêm 7 lệnh vẽ (1133 → 1140) và chừng 9,5 nghìn tam giác.
+- Để sau: đuốc trên thành Cổ Loa, hai đầu cầu.
+
+### Giao diện
+
+- Cài đặt có dòng **Ngày đêm: Bật / Luôn ban ngày**, lưu riêng từng máy như Độ nét. Đổi thì trời chuyển dần trong chừng 1,5 giây.
+- Không thêm đồng hồ lên dải trên hay dòng tin: giờ không đổi luật nên không cần báo, và 🌙 đã dùng cho tin yêu tinh.
+
+### Code
+
+- `defs.ts`: `NGAY_MS`, `BUOI_MS`. `ngayDem.ts`: `buoiLuc`, `troiLuc` (trọng số bốn buổi), `doToi`, `gioBuoi`. `ngayDem.test.ts` canh.
+- `troi.ts`: `TROI_BUOI`, `phaTroi`, `phaThoiTiet` (pha mưa giông, đêm yêu tinh), `toiTheoTroi`; `World.updateStorm` gán vào cảnh mỗi khung. `troi.test.ts` canh ban ngày y số cũ, đêm yêu tinh y cũ ở mọi giờ, đêm thường tối mà sáng hơn đêm yêu tinh.
+- `duoc.ts`: `duocCho` (chỗ cắm trong móng, theo bản vẽ ô con `DUOC_LOTS`), `DuocLayer` (cán, lửa, quầng, vũng, mỗi thứ một lô bản sao; World dựng lại ở `syncDuoc` khi công trình đổi), `QuangDong` (đèn thuyền, đom đóm, đặt lại mỗi khung ở `World.updateDen`). `duoc.test.ts` canh đuốc nằm trong móng, trên ô trống hay mép lối đi, công trình thắp đuốc nào cũng có đuốc.
+- `window.__debug.gio(buổi | phần của ngày | null)` ghim giờ, `__debug.troi()` cho trời lúc này. `scripts/chup.mjs --gio`; mặc định ghim ban ngày nên ảnh chụp cũ không đổi. Cảnh `chieu-ta`, `dem`, `rang-dong`, `dien8-dem`, `yeu-tinh`, `dem-yeu`, `dem-tran`.
+- Không nâng bản lưu: giờ suy từ `state.clock`.
+
 ## Kế hoạch: một doanh trại lớn, trại lính vẽ lại thành sân tập có tường bao (chủ dự án đã duyệt, đang làm)
 
 Chủ dự án gửi một hình mẫu và yêu cầu: vẽ lại các trại lính theo kiểu trong hình, to hơn; doanh trại không còn nhiều trại (mỗi tướng một trại) mà chỉ còn **một doanh trại, to hơn**. Hình mẫu là một khuôn viên vuông: tường bao thấp, lầu cổng mái chóp ở giữa các mặt, sân tập rộng lát ô vuông, mấy chục lính đứng tập rải thành hàng, giá gỗ và cọc tập, cột cờ đỏ, nhà dài dọc tường sau, đường lát chạy quanh khuôn viên.
@@ -2928,7 +2993,7 @@ Cuối game: thay năm trại cũ (chừng 35 nghìn kể cả viền) và bốn
 
 - Nhịp chơi lai: mỗi lần mở game là một phiên ra quyết định ngắn.
 - Khi tắt máy, kinh đô sản xuất với **50% tốc độ**, cộng dồn tối đa **8 giờ**. Giặc chờ đến khi người chơi mở game mới tấn công.
-- Game không dùng năm hay mùa. Nhịp được tạo bởi các đợt giặc.
+- Game không dùng năm hay mùa. Nhịp được tạo bởi các đợt giặc. Kinh đô có ngày đêm 12 phút chơi một vòng, chỉ để nhìn, không đổi luật (xem mục Ngày đêm).
 - Tự lưu sau mọi thao tác vào `localStorage`. Có nút **Xuất mã lưu** và **Nhập mã lưu** để sao lưu hoặc chuyển máy.
 
 ## Hướng dẫn của Lạc hầu
@@ -2973,4 +3038,5 @@ Cuối game: thay năm trại cũ (chừng 35 nghìn kể cả viền) và bốn
 18. **Phù sa: cống đê** (chủ dự án chọn, đã làm; xem mục cùng tên): mở cống cho lũ vào ruộng, ruộng được bồi phù sa làm ra thêm 40% tới hết mùa lũ sau; nước vào qua cống vẫn làm hư nhà cửa.
 19. **Một doanh trại lớn** (chủ dự án đã duyệt, đã làm cả ba PR: luật và bản lưu 26, hình doanh trại, hình bốn nơi ở; xem mục Kế hoạch cùng tên): doanh trại còn một trại 8×8 có tường bao, lầu cổng, sân tập có lính tập; mỗi tướng một doanh trong trại; quân ra trận từ cổng gần giặc; bốn nơi ở vẽ lại 4×4.
 20. **Đền Rồng Tiên** (chủ dự án yêu cầu, đã làm; xem mục cùng tên): đền 8×8 thờ Lạc Long Quân và Âu Cơ, mở ở Điện 10; của từ nước, từ núi làm ra thêm 20%; nhiệm vụ 62.
-21. **Để sau**: nhạc nền.
+21. **Ngày đêm** (chủ dự án chọn, đã làm; xem mục cùng tên): kinh đô có ngày, chiều tà, đêm, rạng đông, 12 phút chơi một vòng, chỉ để nhìn. PR 1 trời và cài đặt, PR 2 đèn đuốc, đèn thuyền, đom đóm.
+22. **Để sau**: nhạc nền.
