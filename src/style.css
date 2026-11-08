@@ -2263,6 +2263,17 @@ textarea {
   background: rgba(184, 134, 47, 0.08);
 }
 
+/* Lời Lạc hầu nhắc trên thẻ màn, thẻ đồn (vật cản trên bãi, tới trận có vật cản đầu tiên). */
+.loi-lac-hau {
+  margin: 6px 0;
+  padding: 6px 10px;
+  border-left: 3px solid var(--bronze);
+  border-radius: 6px;
+  background: rgba(184, 134, 47, 0.08);
+  color: var(--ink-soft);
+  font-size: 13px;
+}
+
 /* Dòng luật thử thách. */
 .stage-card .rule {
   margin: 4px 0;

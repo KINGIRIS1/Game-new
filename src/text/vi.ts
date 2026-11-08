@@ -4,6 +4,7 @@ import type { HeroKind } from '../game/battle';
 import type { AdvLook } from '../game/coLoa';
 import type { BuildingType, CayDaKind, ChallengeKind, Chapter, EnemyType, GearId, GiftId, NuTuongId, ResourceId, Row, SkillId, TuongId, UnitType } from '../game/defs';
 import type { FailReason, StoryId } from '../game/game';
+import type { DangCan, LoaiCham } from '../game/baiChien';
 import type { Bank, Dat, Nghe, Tier } from '../game/benKia';
 import type { QuanDaoId } from '../game/bien';
 import type { PvpFail } from '../game/dauThanh';
@@ -1344,6 +1345,38 @@ export const vi = {
       denRongTien:
         '📜 Lạc hầu: Tâu bệ hạ, kinh đô nay đã rộng lớn. Xin lập đền thờ Lạc Long Quân và Âu Cơ, tổ tiên nước ta: cha dẫn năm mươi con xuống biển, mẹ dẫn năm mươi con lên núi. Đền còn thì sông biển, núi rừng cho thêm của: vỏ ốc, cá, đất đá, sắt, gỗ.',
     } as Partial<Record<BuildingType, string>>,
+    /** Bãi chiến có vật cản (`baiChien.ts`): hàng Địa hình trên thẻ màn, thẻ đồn; lời Lạc hầu nhắc tới trận đầu có vật cản. */
+    baiChien: {
+      label: 'Địa hình',
+      /** Tên từng dáng vật cản (`DangCan`). */
+      can: {
+        tre: 'khóm tre',
+        da: 'tảng đá',
+        daNhon: 'đá nhọn',
+        nha: 'nhà sàn',
+        nhaChay: 'nhà cháy',
+        leu: 'lều trại',
+        rao: 'rào tre',
+        luy: 'lũy đất',
+        thanh: 'thành đổ',
+        thuyen: 'thuyền mắc cạn',
+        rom: 'đống rơm',
+        sim: 'bụi sim',
+        lau: 'khóm lau',
+        ngo: 'ruộng ngô',
+        cayChet: 'cây chết',
+        go: 'khúc gỗ',
+        chum: 'đó cá',
+        coc: 'chông',
+        gieng: 'giếng',
+        xeCui: 'xe củi đổ',
+      } as Record<DangCan, string>,
+      /** Vùng chậm (`LoaiCham`): lội qua thì đi chậm. */
+      cham: { nuoc: 'nước nông', bun: 'bùn' } as Record<LoaiCham, string>,
+      chamNote: 'lội chậm',
+      flat: 'bãi trống, không vật cản',
+      hint: '📜 Lạc hầu: Tâu bệ hạ, bãi này có đá, tre, nhà cửa chắn lối: quân ta tự đi vòng qua chỗ trống. Lội nước, lội bùn thì chậm lại. Tên, nỏ vẫn bắn qua vật cản.',
+    },
     /** Cây dại, tảng đá mọc trên ô trống: Lạc hầu gợi ý một lần khi cái đầu tiên mọc; chạm vào thì dọn. */
     cayDaHint:
       '📜 Lạc hầu: Tâu bệ hạ, đất trống lâu ngày mọc bụi cây dại, lại có tảng đá lăn về. Bệ hạ chạm vào để dân dọn: cây cho chút gạo, đá cho chút đất đá.',

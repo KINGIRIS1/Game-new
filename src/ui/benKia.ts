@@ -2,11 +2,12 @@
 // chưa, điểm lạ, vùng đồn giặc nào đang giữ, nút Sai trinh sát kèm giá hay lý do chưa sai được. Chỉ dựng chuỗi HTML;
 // Hud lo việc gắn vào trang và bắt sự kiện.
 
+import { baiById, baiOf } from '../game/baiChien';
 import { CAMPS, campHero, campOf, campTier, canJoinVillage, canScout, canStartCamp, hasCamp, plotHeld, plotOf, poiAt, regionOf, treasureReward, villageOutput, type Poi, type Tier } from '../game/benKia';
 import { SCOUT_COST, SCOUT_MS, VILLAGE_GIFT } from '../game/defs';
 import type { GameState } from '../game/game';
 import { vi } from '../text/vi';
-import { armyHtml, enemyList, heroNote, warningsFor, type ArmyPick } from './campaign';
+import { armyHtml, baiHintHtml, baiHtml, enemyList, heroNote, warningsFor, type ArmyPick } from './campaign';
 import { costHtml, esc } from './format';
 
 /** Tên và biểu tượng của một điểm lạ. */
@@ -22,6 +23,8 @@ function campHtml(state: GameState, id: number, tier: Tier): string {
   const def = CAMPS[tier];
   const check = canStartCamp(state, id);
   return `<div class="stat"><span>${vi.ui.enemyArmy}</span><b>${enemyList(0, def.enemies)}</b></div>
+    ${baiHtml(baiById(baiOf(def.terrain, def.chapter)))}
+    ${baiHintHtml(state, baiById(baiOf(def.terrain, def.chapter)))}
     <div class="stat"><span>${vi.benKia.campReward}</span><span>${costHtml(null, def.reward)}</span></div>
     <p class="muted">${vi.benKia.campRegion(regionOf(id).length)}</p>
     ${heroNote(campHero(state, id))}

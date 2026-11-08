@@ -21,6 +21,8 @@ import {
 } from './baiChien';
 import { isHero, skillReady, startFieldBattle, stepField, useSkill, type Battle, type Fighter, type FieldSetup } from './battle';
 import { CAMPS } from './benKia';
+import { BAI_HINT, markBaiHinted, needsBaiHint } from './campaign';
+import { createInitialState } from './game';
 import { BAI_CHAM, DEFAULT_ROWS, FIELD, STAGES, SWIMMERS, UNITS, type Chapter, type EnemyType, type Terrain } from './defs';
 import { SAMPLE_ARMY, SAMPLE_ARMY4, lateHeroes, playOut } from './testkit';
 
@@ -210,6 +212,20 @@ describe('luật bố cục', () => {
     expect(variants('rung', 4)).toBe(4);
     expect(variants('benSong', 4)).toBe(4);
     expect(variants('lang', 5)).toBe(5);
+  });
+
+  it('Lạc hầu nhắc vật cản một lần, ở trận ngoài bãi đầu tiên có vật cản', () => {
+    const s = createInitialState(0);
+    expect(needsBaiHint(s)).toBe(false);
+    // Trận trên bãi phẳng (bản lưu cũ, trận thử) không nhắc.
+    s.campaign.battle = startFieldBattle(stageSetup(1, null));
+    expect(needsBaiHint(s)).toBe(false);
+    s.campaign.battle = startFieldBattle(stageSetup(1, stageBai(1)));
+    expect(needsBaiHint(s)).toBe(true);
+    markBaiHinted(s);
+    markBaiHinted(s);
+    expect(s.hinted.filter((h) => h === BAI_HINT)).toEqual([BAI_HINT]);
+    expect(needsBaiHint(s)).toBe(false);
   });
 
   it('id lạ thì đánh trên bãi phẳng', () => {
