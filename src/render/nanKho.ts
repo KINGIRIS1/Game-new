@@ -168,6 +168,6 @@ async function luu(): Promise<void> {
 }
 
 /** Số liệu kho cho chụp thử (`window.__debug.khoNan()`). */
-export function khoNanTk(): typeof tk & { conTrongKho: number; dangCo: number; luuDem: number; dangLuu: boolean; henLuu: boolean; moKho: boolean; viecDaBiet: number; nanLan: number; nanMs: number } {
-  return { ...tk, cuMB: Math.round(tk.cuMB * 10) / 10, moiMB: Math.round(tk.moiMB * 10) / 10, conTrongKho: kept.size, dangCo: figureCount(), luuDem, dangLuu, henLuu: !!hen, moKho: !!db, viecDaBiet: Object.keys(viec).length, nanLan: sculptStats.lan, nanMs: Math.round(sculptStats.ms) };
+export function khoNanTk(): typeof tk & { conTrongKho: number; dangCo: number; luuDem: number; dangLuu: boolean; henLuu: boolean; moKho: boolean; viecDaBiet: number; nanLan: number; nanMs: number; nanTen: string[] } {
+  return { ...tk, cuMB: Math.round(tk.cuMB * 10) / 10, moiMB: Math.round(tk.moiMB * 10) / 10, conTrongKho: kept.size, dangCo: figureCount(), luuDem, dangLuu, henLuu: !!hen, moKho: !!db, viecDaBiet: Object.keys(viec).length, nanLan: sculptStats.lan, nanMs: Math.round(sculptStats.ms), nanTen: [...sculptStats.ten] };
 }

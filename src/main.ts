@@ -82,7 +82,8 @@ import { HALF, RESOLUTIONS, World, type Resolution } from './render/world';
 import { formatClock, formatXay, vi } from './text/vi';
 import { Hud, buildingName, type HudAction, type WallShape } from './ui/hud';
 import { khoNanTk, luuSau, moKhoNan } from './render/nanKho';
-import { KHO_PHIEN_BAN, moSanWorker, nanTruoc, prewarmJobs } from './render/nanTruoc';
+import { DoLag, luatMoiGiay, tomLag, uoc60 } from './render/doLag';
+import { KHO_PHIEN_BAN, moSanWorker, nanConLai, nanTruoc, prewarmJobs } from './render/nanTruoc';
 import { ManVao } from './ui/manVao';
 import { preloadThumbs } from './ui/xayDung';
 import { dauResultHtml, targetSnapshot } from './ui/dauThanh';
@@ -1618,6 +1619,9 @@ async function start(): Promise<void> {
   let lastCayKey = '';
   let lastKnown = state.benKia.known.length;
   let lastSave = prev;
+  const lag = new DoLag();
+  /** Hệ số thời gian chơi (`window.__debug.tocDo`): đo lag ở máy vẽ chậm cho trận trôi chậm lại để kịp đo. */
+  let tocDo = 1;
   const frame = (now: number) => {
     const dt = Math.min((now - prev) / 1000, 0.1);
     prev = now;
@@ -1628,6 +1632,7 @@ async function start(): Promise<void> {
       requestAnimationFrame(frame);
       return;
     }
+    lag.dau(now);
 
     const wall = Date.now();
     const gap = wall - state.lastSeen;
@@ -1638,11 +1643,12 @@ async function start(): Promise<void> {
       watchXay(true);
     } else {
       // Đang Đấu thành: kinh tế vẫn chạy, đồng hồ giặc đứng lại.
-      tick(state, gap, !!pvp);
+      tick(state, gap * tocDo, !!pvp);
+      lag.troi(gap * tocDo);
       state.lastSeen = wall;
     }
     // Trận Đấu thành chạy theo khung hình (đã chặn 0,1 giây), chỉ trọn bước; ẩn tab thì trận dừng.
-    if (pvp) stepPvp(pvp.run, dt * 1000);
+    if (pvp) stepPvp(pvp.run, dt * 1000 * tocDo);
 
     if (marching && now >= marching.at) {
       // Hành quân xong: sang bãi chiến đánh đồn.
@@ -1653,14 +1659,17 @@ async function start(): Promise<void> {
       if (!r.ok) fail(r.reason);
       commit();
     }
+    lag.cat('luat');
     world.updateFlood(scene());
     world.updateBattle(pvp ? pvp.run.battle : state.raid.battle, dt);
     watchCampaign();
     world.updateField(state.campaign.battle, dt);
     world.update(dt);
+    lag.cat('canh');
     hud.xayLabels.update(state, (x, z, lift) => (world.inField ? null : world.screenAt(x, z, lift)));
     watchRaid();
     watchPvp(now);
+    lag.cat('khac');
     if (now - lastUi > 250) {
       lastUi = now;
       // Trong trận, công trình có thể bị phá bất cứ lúc nào: vẽ lại cảnh theo state (Đấu thành: kinh đô bị đánh).
@@ -1683,11 +1692,13 @@ async function start(): Promise<void> {
       watchStory();
       prewarm();
       luuSau();
+      lag.cat('nhip');
     }
     if (now - lastSave > AUTOSAVE_MS) {
       lastSave = now;
       save();
     }
+    lag.xong(world.renderer.info.render);
     requestAnimationFrame(frame);
   };
   requestAnimationFrame(frame);
@@ -1794,6 +1805,29 @@ async function start(): Promise<void> {
     /** Cho cá voi (`whale`) hay đàn cá heo (`dolphins`) nổi lên ngay gần chỗ camera nhìn. */
     seaLife: (kind: 'whale' | 'dolphins') => world.showSeaLife(kind),
     khoNan: () => khoNanTk(),
+    /** Số việc nặn sẵn đã giao worker mà chưa xong. */
+    nanCon: () => nanConLai(),
+    /**
+     * Đo lag (`scripts/do-lag.mjs`): `lag(true)` bắt đầu ghi từng khung; `lag()` cho số khung đã ghi; `lag(false)` thôi
+     * ghi, trả tóm tắt các khung đã ghi (`tomLag`), luật chơi mỗi giây chơi (`luatMoiGiay`), JS ước mỗi khung ở 60 khung
+     * mỗi giây (`uoc60`) cùng số hình, ảnh, chương trình shader trên GPU.
+     */
+    lag: (bat?: boolean) => {
+      if (bat === undefined) return lag.soKhung;
+      if (bat) {
+        lag.bat();
+        return null;
+      }
+      const info = world.renderer.info;
+      const tom = tomLag(lag.tat());
+      return { ...tom, luatGiay: luatMoiGiay(tom), uoc60: uoc60(tom), hinh: info.memory.geometries, anh: info.memory.textures, shader: info.programs?.length ?? 0 };
+    },
+    /** Cho thời gian chơi trôi chậm (hay nhanh) `k` lần mỗi khung; 1 là như thường. */
+    tocDo: (k: number) => {
+      tocDo = k;
+    },
+    /** Chỗ camera đang nhìn (ô) và độ phóng. */
+    view: () => ({ x: world.view.target.x + HALF, z: world.view.target.z + HALF, zoom: world.view.zoom }),
         skill: (k: SkillId) => {
       const battle = state.campaign.battle ?? state.raid.battle;
       return !!battle && useSkill(battle, k);
