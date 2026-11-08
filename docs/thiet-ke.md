@@ -2777,11 +2777,13 @@ C C . . s . s , , s . s . . C C
 
 **Lính tập nhẹ máy.** Mỗi tư thế dựng một bản tĩnh (`bakeSoldier`), cả sân mỗi tư thế gộp một lưới mỗi chất liệu (4 lệnh vẽ), không đổ bóng; World cho hai nhóm hiện thay nhau theo nhịp (`userData.drill`, `DRILL_BEAT` 1,4 lần mỗi giây). Thu nhỏ dưới `LITE_ZOOM` thì đứng yên. Lính tập dùng đúng hình lính ra trận (cùng độ chi tiết, cùng bậc binh khí), đã nặn sẵn và có trong kho, nên không phải nặn thêm. Có trận giữ kinh đô thì lính tập đã ra trận, sân để trống (cũng đỡ nặng máy lúc trận); lính chết giữa trận thì doanh trại không dựng lại (đỡ giật hình), hết trận mới vẽ theo số lính còn.
 
-**Nơi ở 4×4** (8×8 ô con; bản vẽ làm ở PR 3). Cùng kiểu với doanh trại: rào hay tường thấp quanh mép, lầu cổng giữa mặt trước, một nhà lính ở góc sau bên trái, sân tập ở giữa. Đồ tập theo binh chủng:
-- trại giáo: hai cọc rơm, giá giáo;
-- trại cung: hai bia ở xa, vạch bắn;
-- chuồng voi: mái chóp lớn, cọc buộc voi, máng nước, đống cỏ;
-- trại nỏ: giá nỏ, bia gỗ, ụ tập lên dây.
+**Nơi ở 4×4** (8×8 ô con; đã vẽ ở PR 3, bản vẽ ở `docs/bo-cuc-cong-trinh.md`). Cùng kiểu với doanh trại: rào cọc vót nhọn quanh mép, lầu cổng giữa mặt trước có lính gác, một nhà lính ở góc sau bên trái, sân tập ở giữa. Đồ tập theo binh chủng:
+- trại giáo: lều chữ A lớn, giá giáo, hai cọc rơm, hai giáo binh đâm cọc;
+- trại cung: lán một mái, hai bia rơm ở mép trái, vạch bắn, hai cung thủ bắn sang bia;
+- chuồng voi: mái chóp lớn, cọc buộc voi, máng nước, đống cỏ, thân chuối; một voi nghỉ dưới mái, một voi ra sân;
+- trại nỏ: lán mái ngói có giá treo nỏ, nỏ lớn trên giá, bia gỗ, ụ tập lên dây; một lính nỏ quỳ nhắm bia, một lính đứng trên ụ lên dây.
+
+Lính, voi cầm binh khí, mặc giáp đúng bậc đã rèn của binh chủng ấy (`LotOpts.tier`; World dựng lại khi rèn bậc mới), cùng cỡ lính tập ở doanh trại, gộp một lưới mỗi chất liệu (`gopHinh` ở `congTrinh/trai.ts`): lính không đổ bóng như lính tập, voi có bóng. Phần chung (rào, lầu cổng, lối, gộp hình) ở `congTrinh/trai.ts`, doanh trại dùng chung.
 
 **Ngân sách tam giác**:
 - doanh trại 8×8 không quá 30 nghìn tam giác màu (60 nghìn kể cả viền), chưa kể lính tập;
@@ -2801,8 +2803,19 @@ Cuối game: thay năm trại cũ (chừng 35 nghìn kể cả viền) và bốn
 - Trại trong ngân sách. Lính tập vượt: mỗi lính chừng 8 nghìn tam giác kể cả viền (hình lính ra trận). Nặn riêng bản thô cho lính tập chỉ bớt chừng một phần ba (độ chi tiết 0,3 vẫn còn 5–6 nghìn, vì đầu và đồ đeo không giảm theo), lại phải nặn thêm hình mới lúc chơi, nên giữ hình lính ra trận.
 - Lính tập không đổ bóng. Mười hai lính thêm chừng 100 nghìn tam giác mỗi khung, chừng 2% khung Điện 8 (4,5 triệu). Nếu máy yếu thì bớt số lính tập mỗi cấp.
 
+**Đo được ở PR 3** (tam giác màu, chưa kể viền; viền gấp đôi số này):
+
+| Nơi ở | Nhà, rào, đồ tập | Lính, voi | Cả nơi ở | Dáng cũ |
+|---|---|---|---|---|
+| Trại giáo | 2,2 nghìn | 9,0 nghìn (2 lính) | 11,2 nghìn | 5,0 nghìn |
+| Trại cung | 3,1 nghìn | 7,7 nghìn (2 lính) | 10,8 nghìn | 4,8 nghìn |
+| Chuồng voi | 2,7 nghìn | 15,2 nghìn (2 voi) | 17,9 nghìn | 8,2 nghìn |
+| Trại nỏ | 3,1 nghìn | 10,3 nghìn (2 lính, nỏ lớn) | 13,4 nghìn | 5,9 nghìn |
+
+- Phần nhà trong ngân sách 12 nghìn. Lính, voi là hình ra trận như lính tập nên nặng hơn; bốn nơi ở thêm chừng 30 nghìn tam giác màu (60 nghìn kể cả viền) so với dáng cũ, chừng 1,3% khung Điện 8.
+
 **Phải làm theo** khi đổi hình:
-- `congTrinh/doanhTrai.ts` vẽ lại (đã làm); nơi ở vẽ lại trong các tệp riêng (PR 3);
+- `congTrinh/doanhTrai.ts` vẽ lại (đã làm); nơi ở vẽ lại trong các tệp riêng `traiGiao.ts`, `traiCung.ts`, `chuongVoi.ts`, `traiNo.ts` (đã làm), phần chung ở `trai.ts`;
 - chỗ tướng: `DOANH_TRAI_HERO` thành nhiều chỗ (`doanhTraiHeroSpot`); `postSpot`, `haiBaSpot`, `barracksSpot` ở `world.ts` (đã làm);
 - World vẽ doanh trại theo state (`campOpts` ở `world.ts`: các doanh, lính tập, giá nỏ; đổi thì dựng lại, `BuildingView.camp`);
 - chạy `node scripts/anh-cong-trinh.mjs`; `footprint.test.ts`;
@@ -2829,7 +2842,7 @@ Cuối game: thay năm trại cũ (chừng 35 nghìn kể cả viền) và bốn
 
 1. **PR 1 (#82), kế hoạch, luật và bản lưu 26** (đã làm): một trại, chỗ quân theo số tướng, bố trí một danh sách, cổng ra trận, nữ tướng, móng mới của trại và nơi ở, mẫu kinh đô, giao diện, test. Hình tạm: dáng cũ phóng theo móng mới (`footScale`).
 2. **PR 2, hình doanh trại 8×8** (đã làm, cùng PR #82): bản vẽ vào `docs/bo-cuc-cong-trinh.md`, tường, lầu cổng, đài tướng, nhà dài theo doanh, lính tập, ảnh công trình, chụp kiểm tra.
-3. **PR 3, hình bốn nơi ở 4×4**.
+3. **PR 3, hình bốn nơi ở 4×4** (đã làm, cùng PR #82): bản vẽ vào `docs/bo-cuc-cong-trinh.md`, khuôn viên chung với doanh trại, lính, voi theo bậc binh khí, trại nỏ lần đầu vẽ trên móng, ảnh công trình, chụp kiểm tra.
 
 ## Nhịp chơi và lưu game
 
@@ -2878,5 +2891,5 @@ Cuối game: thay năm trại cũ (chừng 35 nghìn kể cả viền) và bốn
     **Điện Vua Hùng 10×10** (chủ dự án yêu cầu, đã làm; xem mục cùng tên): dời, xoay được; sân chầu có Vua Hùng ngồi ngai vàng, 14 chỗ tướng đứng chầu; bản lưu v20.
 17. **Chương 5: Hai Bà Trưng** (chủ dự án đã duyệt, đã làm cả bốn PR; xem Kế hoạch chương 5): mỗi bà cưỡi một voi ra trận với Voi xung trận và Hiệu triệu gọi nghĩa binh, quân Hán và lâu thuyền đánh kinh đô, phó bản màn 33–40 với Tô Định và Mã Viện, Đền Hát Môn, nữ tướng, thử thách màn 33–40.
 18. **Phù sa: cống đê** (chủ dự án chọn, đã làm; xem mục cùng tên): mở cống cho lũ vào ruộng, ruộng được bồi phù sa làm ra thêm 40% tới hết mùa lũ sau; nước vào qua cống vẫn làm hư nhà cửa.
-19. **Một doanh trại lớn** (chủ dự án đã duyệt, đang làm: luật, bản lưu 26 và hình doanh trại đã làm, còn vẽ lại bốn nơi ở; xem mục Kế hoạch cùng tên): doanh trại còn một trại 8×8 có tường bao, lầu cổng, sân tập có lính tập; mỗi tướng một doanh trong trại; quân ra trận từ cổng gần giặc; bốn nơi ở vẽ lại 4×4.
+19. **Một doanh trại lớn** (chủ dự án đã duyệt, đã làm cả ba PR: luật và bản lưu 26, hình doanh trại, hình bốn nơi ở; xem mục Kế hoạch cùng tên): doanh trại còn một trại 8×8 có tường bao, lầu cổng, sân tập có lính tập; mỗi tướng một doanh trong trại; quân ra trận từ cổng gần giặc; bốn nơi ở vẽ lại 4×4.
 20. **Để sau**: nhạc nền.

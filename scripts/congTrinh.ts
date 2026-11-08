@@ -21,6 +21,7 @@ import {
   makeRuong,
   makeTraiCung,
   makeTraiGiao,
+  makeTraiNo as makeTraiNoCu,
   makeVuon,
 } from '../src/render/buildings';
 import type { Dock, LotSpot } from '../src/render/congTrinh/chung';
@@ -99,6 +100,7 @@ const CU: Partial<Record<BuildingType, { make: (level: number) => THREE.Group; s
   traiGiao: { make: () => makeTraiGiao(), spots: [] },
   traiCung: { make: () => makeTraiCung(), spots: [] },
   chuongVoi: { make: () => makeChuongVoi(), spots: [] },
+  traiNo: { make: () => makeTraiNoCu(), spots: [] },
   vuon: {
     make: makeVuon,
     spots: [

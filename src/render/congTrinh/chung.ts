@@ -96,6 +96,8 @@ export interface LotOpts {
   linh?: { kind: LinhTap; tier: number }[];
   /** Doanh trại: đã có lính nỏ (chương 4), giá binh khí có thêm nỏ. */
   no?: boolean;
+  /** Nơi ở của binh chủng: bậc binh khí đã rèn, lính (voi) đứng tập cầm đúng binh khí ấy. */
+  tier?: number;
 }
 
 /** Binh chủng đứng tập trong sân doanh trại (voi chiến ở chuồng voi). */

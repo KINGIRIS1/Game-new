@@ -2,7 +2,7 @@
 // đêm yêu tinh, cảnh Tết (cây nêu, dây cờ, mâm bánh, người gói bánh) và các hiệu ứng khi đặt công trình.
 
 import * as THREE from 'three';
-import { BUILDINGS, FIELD, NU_TUONG_IDS, XAY_O_MS, isBridge, isRoad, type BuildingType, type NuTuongId, type Terrain, type TuongId } from '../game/defs';
+import { BUILDINGS, FIELD, NU_TUONG_IDS, UNITS, XAY_O_MS, isBridge, isRoad, type BuildingType, type NuTuongId, type Terrain, type TuongId, type UnitType } from '../game/defs';
 import { raidSpawnBand, type Battle, type RaidSide } from '../game/battle';
 import { caoLoAtDien } from '../game/caoLo';
 import { HAI_BA_KINDS, haiBaJoined, type HaiBaKind } from '../game/chuong5';
@@ -284,7 +284,7 @@ interface BuildingView {
   boi: boolean;
   /** Cầu: mặt bờ hai đầu đang vẽ (`bankKey`); bờ đắp cao thêm thì dựng lại cho đầu cầu gác đúng mặt bờ. */
   banks: string;
-  /** Doanh trại: các doanh, lính tập, giá nỏ đang vẽ (`campKey`); tướng về thêm, lính đổi thì dựng lại. */
+  /** Doanh trại: các doanh, lính tập, giá nỏ; nơi ở: bậc binh khí đang vẽ (`campKey`). Đổi thì dựng lại. */
   camp: string;
   people: WorkerView[];
   popAge: number;
@@ -343,8 +343,12 @@ const LINH_TAP: LinhTap[] = ['giao', 'cung', 'no'];
 /**
  * Doanh trại cấp `level` vẽ theo state: tướng của từng doanh, lính đứng tập (đúng số chỗ theo cấp, không quá số lính
  * đang có, chia theo tỉ lệ binh chủng đã luyện, phần dư lớn nhất được thêm), giá nỏ khi đã sang chương 4.
+ * Nơi ở của binh chủng vẽ lính tập, voi theo bậc binh khí đã rèn của binh chủng ấy. Loại khác không theo state.
  */
-function campOpts(state: GameState, level: number): LotOpts {
+function campOpts(state: GameState, type: BuildingType, level: number): LotOpts | undefined {
+  const unit = HOME_UNIT[type];
+  if (unit) return { tier: state.arms[unit] ?? 0 };
+  if (type !== 'doanhTrai') return undefined;
   const have = LINH_TAP.map((k) => Math.max(0, state.troops[k] ?? 0));
   const total = have.reduce((a, b) => a + b, 0);
   const n = Math.min(linhTapCount(level), total);
@@ -356,8 +360,11 @@ function campOpts(state: GameState, level: number): LotOpts {
   return { doanh: generals(state).slice(0, doanhCount(state)), linh, no: inChapter4(state) };
 }
 
-/** Khóa so dáng doanh trại đang vẽ với state (`campOpts`). */
-const campKey = (o: LotOpts): string => `${o.doanh?.join(',')}|${o.linh?.map((l) => l.kind + l.tier).join(',')}|${o.no ? 1 : 0}`;
+/** Binh chủng ở mỗi nơi ở (`UNITS[k].home`). */
+const HOME_UNIT: Partial<Record<BuildingType, UnitType>> = Object.fromEntries((Object.keys(UNITS) as UnitType[]).map((k) => [UNITS[k].home, k]));
+
+/** Khóa so dáng doanh trại, nơi ở đang vẽ với state (`campOpts`); loại không theo state thì rỗng. */
+const campKey = (o: LotOpts | undefined): string => (o ? `${o.doanh?.join(',')}|${o.linh?.map((l) => l.kind + l.tier).join(',')}|${o.no ? 1 : 0}|${o.tier ?? ''}` : '');
 
 /** Đoạn tường mà cổng thành, cống đê nối vào: cổng, cống xoay theo những đoạn này. */
 const GATE_WALLS: BuildingType[] = ['luy', 'de', 'thanh', 'congThanh', 'congDe'];
@@ -1045,7 +1052,7 @@ export class World {
       const dung = dungIds.has(b.id);
       const banks = isBridge(b.type) ? bankKey(this.bridgeBanks(b.type, b.x, b.z)) : b.type === 'bacThanh' ? this.stairOf(b).key : '';
       // Giữa trận lính chết không dựng lại doanh trại (đỡ giật hình); hết trận mới vẽ theo số lính còn.
-      const camp = b.type !== 'doanhTrai' ? '' : v && state.raid.phase === 'battle' ? v.camp : campKey(campOpts(state, b.level));
+      const camp = v && state.raid.phase === 'battle' ? v.camp : campKey(campOpts(state, b.type, b.level));
       if (!v || v.type !== b.type || v.level !== b.level || v.damaged !== !!b.damaged || v.workers !== b.workers || v.x !== b.x || v.z !== b.z || v.rot !== (b.rot ?? 0) || v.boi !== !!b.boi || v.banks !== banks || v.camp !== camp || v.dung !== dung) this.createView(b, dung);
       else if (!banks && v.ground !== this.heights[b.z * GRID + b.x]) {
         v.ground = this.heights[b.z * GRID + b.x];
@@ -1619,8 +1626,8 @@ export class World {
     const def = BUILDINGS[b.type];
     const banks = isBridge(b.type) ? this.bridgeBanks(b.type, b.x, b.z) : undefined;
     const stair = b.type === 'bacThanh' ? this.stairOf(b) : undefined;
-    const camp = b.type === 'doanhTrai' && this.state ? campOpts(this.state, b.level) : {};
-    const group = this.makeBuilding(b.type, b.level, !!b.boi, banks, stair?.rise, camp);
+    const campO = this.state ? campOpts(this.state, b.type, b.level) : undefined;
+    const group = this.makeBuilding(b.type, b.level, !!b.boi, banks, stair?.rise, campO);
     // Bến, làng chài quay mặt trước ra sông: sông phía đông thì xoay một góc vuông. Công trình người chơi đã xoay thì
     // quay theo hướng ấy (người làm, thuyền neo là con của mô hình nên quay theo). Bậc lên thành quay mép cao về
     // phía đoạn thành.
@@ -1695,7 +1702,7 @@ export class World {
       group.add(smoke);
     }
     this.buildingsRoot.add(group);
-    this.views.set(b.id, { group, type: b.type, level: b.level, damaged: !!b.damaged, workers: b.workers, x: b.x, z: b.z, rot: b.rot ?? 0, ground, boi: !!b.boi, banks: stair?.key ?? bankKey(banks), camp: b.type === 'doanhTrai' ? campKey(camp) : '', people, popAge: 0, baseScale: group.scale.x, dung });
+    this.views.set(b.id, { group, type: b.type, level: b.level, damaged: !!b.damaged, workers: b.workers, x: b.x, z: b.z, rot: b.rot ?? 0, ground, boi: !!b.boi, banks: stair?.key ?? bankKey(banks), camp: campKey(campO), people, popAge: 0, baseScale: group.scale.x, dung });
     if (dung) this.growView(this.views.get(b.id)!);
   }
 

@@ -9,12 +9,6 @@ import * as THREE from 'three';
 const ctx = new Proxy({}, { get: (_t, k) => (k === 'canvas' ? {} : () => ({ addColorStop() {} })), set: () => true });
 vi.stubGlobal('document', { createElement: () => ({ width: 0, height: 0, getContext: () => ctx }) });
 
-/**
- * Móng đã nới ở bản lưu 26 (một doanh trại lớn), bản vẽ cũ tạm phóng cho vừa móng mới tới khi vẽ lại: ba nơi ở 4×4
- * (PR 3). Doanh trại 8×8 đã vẽ lại.
- */
-const CHO_VE_LAI: string[] = ['traiGiao', 'traiCung', 'chuongVoi'];
-
 /** Số ô mô hình được tràn ra ngoài móng mỗi phía. Bến có cầu tàu chìa xuống sông; chòi canh, lầu nỏ có mái chìa; cây đa cổ thụ tán xòe rộng. */
 const ALLOW: Record<string, number> = { ben: Infinity, langChai: Infinity, benKhoi: Infinity, choiCanh: 0.8, lauNo: 0.8, cayDa: 0.95 };
 
@@ -41,12 +35,6 @@ describe('mô hình vừa móng kinh đô lớn', () => {
     const { CONG_TRINH, lotModel } = await import('./congTrinh/index');
     for (const [type, ct] of Object.entries(CONG_TRINH) as [keyof typeof BUILDINGS, NonNullable<(typeof CONG_TRINH)[keyof typeof BUILDINGS]>][]) {
       expect(BUILDINGS[type].w, type).toBe(BUILDINGS[type].d);
-      if (CHO_VE_LAI.includes(type)) {
-        // Móng đã nới, bản vẽ cũ tạm phóng cho vừa móng mới tới khi vẽ lại.
-        expect(ct.tiles, type).toBeLessThan(BUILDINGS[type].w);
-        expect(lotModel(type, 1).scale.x, type).toBe(BUILDINGS[type].w / ct.tiles);
-        continue;
-      }
       expect(ct.tiles, type).toBe(BUILDINGS[type].w);
       expect(lotModel(type, 1).scale.x, type).toBe(1);
     }

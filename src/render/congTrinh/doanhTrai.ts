@@ -4,18 +4,16 @@
 // có phần thấp (tường, giá binh khí, bia) cho khỏi che lính tập và tướng.
 
 import * as THREE from 'three';
-import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { DOANH_MAX, TUONG_IDS, type TuongId } from '../../game/defs';
 import { GATES_LEVEL } from '../../game/doanhTrai';
-import { archeryTarget, banner, boatRoof, coneRoof, drum, parasol, roofFor, type Roof } from '../buildings';
+import { archeryTarget, banner, coneRoof, drum, parasol, roofFor, type Roof } from '../buildings';
 import { Lot } from '../lot';
 import { C } from '../palette';
 import type { Act } from '../rig';
 import { saddleRoof } from '../shapes';
-import { bakeSoldier } from '../soldier';
 import { ToonModel } from '../toon';
 import { type CongTrinh, type LinhTap, type LotOpts, type LotSpot, YARD, yard } from './chung';
-import { LINH, cocRom, giaGiao, raoCocNhon } from './traiGiao';
+import { GATE_HALF, LAU_Y, cocRom, congTre, giaGiao, gopLinh, inFrame, lauCong, raoCocNhon } from './trai';
 
 export const DOANH_TRAI_LOT = new Lot(8, [
   '#######CC#######',
@@ -38,10 +36,6 @@ export const DOANH_TRAI_LOT = new Lot(8, [
 
 /** Tường bao, rào đứng ở chừng này ô tính từ tâm móng (lùi vào trong mép móng cho mái tường khỏi chìa ra). */
 const WALL = 3.8;
-/** Nửa bề rộng cửa cổng. */
-const GATE_HALF = 0.5;
-/** Mặt sàn lầu cổng. */
-const LAU_Y = 1.1;
 /** Mặt đài tướng. */
 export const DAI_TOP = 0.3;
 
@@ -99,16 +93,6 @@ export function doanhTraiSpots(level: number): LotSpot[] {
   return out;
 }
 
-/** Vẽ trong khung riêng ở (x, z) xoay `ry`, rồi trả khung cũ. */
-function inFrame(m: ToonModel, x: number, z: number, ry: number, draw: () => void): void {
-  const f = new THREE.Matrix4().compose(new THREE.Vector3(x, 0, z), new THREE.Quaternion().setFromEuler(new THREE.Euler(0, ry, 0)), new THREE.Vector3(1, 1, 1));
-  const keep = [m.plain.frame, m.band.frame, m.drum.frame] as const;
-  m.plain.frame = f;
-  m.band.frame = f;
-  m.drum.frame = f;
-  draw();
-  [m.plain.frame, m.band.frame, m.drum.frame] = keep;
-}
 
 /**
  * Nhà dài để trống không vách, mái thẳng: hàng cột, sàn ván thấp, chiếu ngủ và chăn cuộn của lính.
@@ -144,46 +128,7 @@ function nhaDai(m: ToonModel, cx: number, cz: number, length: number, depth: num
 /** Tọa độ (x, z) và độ cao y thành bộ ba cho ShapeBuilder. */
 const pos = ([x, z]: [number, number], y: number): [number, number, number] => [x, y, z];
 
-/**
- * Cổng tre (cấp 1, trong khung cổng: gốc giữa cổng trên đường rào, +z ra ngoài): hai cột đầu vót, xà ngang, vải đỏ,
- * cờ đuôi nheo đỏ trên đầu cột.
- */
-function congTre(m: ToonModel): void {
-  const p = m.plain;
-  for (const sx of [-1, 1]) {
-    p.cyl(0.06, 0.07, 1.6, C.woodDark, sx * GATE_HALF, 0.8, 0, undefined, 6);
-    p.cone(0.075, 0.16, C.wood, sx * GATE_HALF, 1.68, 0, undefined, 6);
-    m.band.box(0.03, 0.34, 0.22, C.red, sx * GATE_HALF, 1.46, -0.14);
-  }
-  p.box(1.16, 0.09, 0.12, C.wood, 0, 1.45, 0);
-  m.band.box(0.6, 0.22, 0.04, C.red, 0, 1.28, 0.05);
-}
 
-/**
- * Lầu cổng (trong khung cổng): bốn cột chân đứng hai bên cửa, sàn lầu có lan can đỏ, chòi tre mái tranh cong, cờ đuôi
- * nheo đỏ cắm góc lầu.
- */
-function lauCong(m: ToonModel, roof: Roof): void {
-  const p = m.plain;
-  for (const x of [-GATE_HALF, GATE_HALF]) {
-    for (const z of [-0.22, 0.22]) p.cyl(0.055, 0.065, LAU_Y, C.woodDark, x, LAU_Y / 2, z, undefined, 6);
-    // Giằng chéo hai cột mỗi bên cửa.
-    p.box(0.04, 0.04, 0.5, C.wood, x, 0.5, 0, [0.9, 0, 0]);
-  }
-  for (const z of [-0.22, 0.22]) p.box(2 * GATE_HALF + 0.14, 0.08, 0.08, C.wood, 0, LAU_Y - 0.12, z);
-  p.box(1.34, 0.07, 0.66, C.wood, 0, LAU_Y, 0);
-  for (const s of [-1, 1]) {
-    m.band.box(1.34, 0.12, 0.04, C.red, 0, LAU_Y + 0.1, s * 0.31);
-    m.band.box(0.04, 0.12, 0.66, C.red, s * 0.65, LAU_Y + 0.1, 0);
-  }
-  for (const x of [-0.58, 0.58]) for (const z of [-0.27, 0.27]) p.cyl(0.026, 0.026, 0.52, C.woodDark, x, LAU_Y + 0.27, z, undefined, 5);
-  boatRoof(m, roof, { length: 1.55, width: 0.92, lift: 0.22, drop: 0.92 * 0.4, thickness: 0.07 }, 0, LAU_Y + 0.88, 0);
-  // Cờ đuôi nheo trên cột tre cắm góc lầu, bay cao hơn nóc.
-  const fx = -0.62;
-  p.cyl(0.018, 0.018, 1.25, C.bamboo, fx, LAU_Y + 0.62, 0.26, undefined, 4);
-  m.band.box(0.36, 0.2, 0.025, C.red, fx + 0.19, LAU_Y + 1.1, 0.26);
-  m.band.box(0.18, 0.1, 0.025, C.red, fx + 0.42, LAU_Y + 1.06, 0.26, [0, 0, -0.35]);
-}
 
 /**
  * Tường đất nện thấp chạy dọc một mặt (trong khung mặt ấy: gốc giữa mặt, tường chạy theo x), chừa cửa giữa nếu `gate`;
@@ -274,39 +219,11 @@ const NHIP: Record<LinhTap, [Act, Act]> = {
 const TAP_RY = 0.45;
 
 /**
- * Cả hàng lính tập ở tư thế `nhip` gộp thành một lưới mỗi chất liệu (mỗi tư thế 2–4 lệnh vẽ, không đổ bóng). Lưới
- * gộp tính theo cỡ gốc của lính rồi thu cả nhóm lại `LINH`, để viền mực mảnh như lính đứng riêng.
- * `userData.drill`: World cho hai nhóm hiện thay nhau theo nhịp.
+ * Cả sân lính tập ở tư thế `nhip` gộp lại (`gopLinh`, mỗi tư thế 2–4 lệnh vẽ). `userData.drill`: World cho hai nhóm hiện
+ * thay nhau theo nhịp.
  */
 function hangLinh(list: { kind: LinhTap; tier: number; x: number; z: number }[], nhip: 0 | 1): THREE.Group {
-  const buckets = new Map<string, { mat: THREE.Material; geos: THREE.BufferGeometry[] }>();
-  const mtx = new THREE.Matrix4();
-  const turn = new THREE.Quaternion().setFromEuler(new THREE.Euler(0, TAP_RY, 0));
-  const one = new THREE.Vector3(1, 1, 1);
-  for (const s of list) {
-    const g = bakeSoldier(s.kind, s.tier, NHIP[s.kind][nhip]);
-    mtx.compose(new THREE.Vector3(s.x / LINH, 0.05 / LINH, s.z / LINH), turn, one);
-    for (const c of g.children) {
-      const mesh = c as THREE.Mesh;
-      if (!mesh.isMesh) continue;
-      const geo = mesh.geometry.applyMatrix4(mtx);
-      const mat = mesh.material as THREE.Material;
-      const key = `${mat.uuid}|${Object.keys(geo.attributes).sort().join(',')}|${!!geo.index}`;
-      const b = buckets.get(key) ?? { mat, geos: [] };
-      b.geos.push(geo);
-      buckets.set(key, b);
-    }
-  }
-  const out = new THREE.Group();
-  for (const b of buckets.values()) {
-    const merged = mergeGeometries(b.geos, false);
-    for (const g of b.geos) g.dispose();
-    if (!merged) continue;
-    const mesh = new THREE.Mesh(merged, b.mat);
-    mesh.receiveShadow = true;
-    out.add(mesh);
-  }
-  out.scale.setScalar(LINH);
+  const out = gopLinh(list.map((s) => ({ ...s, ry: TAP_RY, act: NHIP[s.kind][nhip] })));
   out.userData.drill = nhip;
   // Lúc đầu chỉ hiện nhịp "một" (bóng mờ lúc đặt, ảnh công trình); World cho hai nhịp đổi nhau.
   out.visible = nhip === 0;
