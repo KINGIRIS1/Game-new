@@ -1212,7 +1212,10 @@ export class World {
       g.traverse((o) => {
         if (!o.userData.flame) return;
         o.getWorldPosition(p);
-        spots.push({ x: p.x, y: p.y, z: p.z, kind: 'lua', seed: hash01(id * 13 + i++) });
+        const spot: DuocSpot = { x: p.x, y: p.y, z: p.z, kind: 'lua', seed: hash01(id * 13 + i++) };
+        // Bát lửa đặt cao: vũng sáng nằm trên mặt đất dưới bát.
+        if (typeof o.userData.flameDat === 'number') spot.dat = o.parent!.localToWorld(p.set(o.position.x, o.userData.flameDat, o.position.z)).y;
+        spots.push(spot);
       });
     }
     this.duoc.set(spots);
