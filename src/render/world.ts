@@ -131,6 +131,11 @@ export type Resolution = keyof typeof RESOLUTIONS;
 const LITE_ZOOM = 1;
 /** Nhịp lính tập trong sân doanh trại: số lần đổi tư thế mỗi giây. */
 const DRILL_BEAT = 1.4;
+/**
+ * Bán kính quả cầu bao một người dân (đơn vị thế giới, tâm cao chừng nửa người), để xét dân có trong khung nhìn không
+ * (`workerInView`). Người cao chừng 0,9; cầu rộng dư cho cuốc giơ quá đầu, đồ gánh, người đi mang hàng.
+ */
+const WORKER_RADIUS = 1.2;
 
 /** Đất, nước và ô lưới dùng chất liệu Lambert đơn giản, công trình và cây mới dùng tô màu hoạt hình. */
 const groundMaterial = new THREE.MeshLambertMaterial({ vertexColors: true });
@@ -517,6 +522,10 @@ export class World {
   private readonly ripples = new InstancedBoxes(RIPPLES);
   private readonly buildingsRoot = new THREE.Group();
   private readonly views = new Map<number, BuildingView>();
+  /** Khung nhìn của camera, lấy lại mỗi khung để chỉ dân trong tầm nhìn mới hiện và cử động (`workerInView`). */
+  private readonly viewFrustum = new THREE.Frustum();
+  private readonly frustumMat = new THREE.Matrix4();
+  private readonly workerBall = new THREE.Sphere(new THREE.Vector3(), WORKER_RADIUS);
   /** Có giặc (trinh sát đã báo hay đang đánh): cửa cổng thành đóng lại; lúc yên thì mở. */
   private gatesShut = false;
   /** Đang có trận giữ kinh đô: lính tập trong sân doanh trại đã ra trận, sân để trống. */
@@ -2891,6 +2900,20 @@ export class World {
   }
 
   /** Động tác theo nghề (people.ts): cúi bổ cuốc, bổ đá, quai búa, đi qua đi lại mang hàng, đứng gác nhìn quanh. */
+  /**
+   * Dân `w` đứng trên công trình (hay giàn giáo) `group` có trong khung nhìn khung này thì hiện, trả true; ngoài khung
+   * thì ẩn. `group` là con trực tiếp của `buildingsRoot` (không dời, không xoay) nên ma trận của nó là ma trận thế giới,
+   * và đã `updateMatrix` trước khi gọi (công trình vừa dựng chưa qua lần vẽ nào, đang nảy hay mọc thì cỡ đổi mỗi khung).
+   */
+  private workerInView(w: WorkerView, group: THREE.Object3D): boolean {
+    const ball = this.workerBall;
+    ball.center.copy(w.obj.position).applyMatrix4(group.matrix);
+    ball.center.y += WORKER_RADIUS / 2;
+    const seen = this.viewFrustum.intersectsSphere(ball);
+    w.obj.visible = seen;
+    return seen;
+  }
+
   private animateWorker(w: WorkerView, t: number): void {
     const { obj, spot, phase } = w;
     const pose = obj.userData.pose as Poser | undefined;
@@ -3172,12 +3195,21 @@ export class World {
       if (this.view.target.distanceTo(this.panGoal) < 0.01 || (dt > 0 && this.view.target.distanceTo(before) < 1e-4)) this.panGoal = null;
     }
 
-    for (const site of this.sites.values()) for (const w of site.people) this.animateWorker(w, t);
+    // Dân ngoài khung nhìn thì ẩn, khỏi vẽ và khỏi tính tư thế. Nhân vật có xương không tự cắt theo khung nhìn
+    // (`frustumCulled = false` ở `rig.ts`), nên không xét ở đây thì cả trăm dân kinh đô đều vẽ mỗi khung.
+    const cam = this.view.camera;
+    cam.updateMatrixWorld();
+    this.viewFrustum.setFromProjectionMatrix(this.frustumMat.multiplyMatrices(cam.projectionMatrix, cam.matrixWorldInverse));
+    for (const site of this.sites.values()) {
+      site.group.updateMatrix();
+      for (const w of site.people) if (this.workerInView(w, site.group)) this.animateWorker(w, t);
+    }
     // Lính tập trong sân doanh trại đổi tư thế theo nhịp hô "một, hai"; thu nhỏ (`LITE_ZOOM`) thì đứng yên; có trận giữ
     // kinh đô thì đã ra trận (−1: không nhóm nào hiện). Đồng hồ cảnh có lúc âm (chụp thử tua giờ) nên lấy số dư dương.
     const beat = this.drillOut ? -1 : this.view.zoom < LITE_ZOOM ? 0 : ((Math.floor(t * DRILL_BEAT) % 2) + 2) % 2;
     for (const v of this.views.values()) {
-      for (const w of v.people) this.animateWorker(w, t);
+      if (v.people.length) v.group.updateMatrix();
+      for (const w of v.people) if (this.workerInView(w, v.group)) this.animateWorker(w, t);
       if (v.dung) this.growView(v);
       if (v.popAge > 0) {
         v.popAge += dt;
