@@ -407,6 +407,28 @@ export function makeWorker(job: Job, sitting = false, shadow = false): THREE.Gro
   return group;
 }
 
+/**
+ * Một người trong đoàn dân rút về núi ở Cấm Khê (màn 40, `syncRetreat` ở battlefield.ts): dân theo nghề (`ganh`: gánh
+ * đòn gánh; `dat`: dắt con trâu đi ngay sau bằng dây thừng), hay trâu.
+ */
+export type DanRut = { job: Job; ganh?: boolean; dat?: boolean } | 'trau';
+
+/** Đoàn dân rút, từ người đi đầu; lính gác đi cuối đoàn. Worker nặn sẵn dáng của đoàn (nanSan.ts). */
+export const DAN_RUT: readonly DanRut[] = [
+  { job: 'thoXe', ganh: true },
+  { job: 'phuNu' },
+  { job: 'nong', dat: true },
+  'trau',
+  { job: 'giuKho' },
+  { job: 'phuNu' },
+  { job: 'thoXe', ganh: true },
+  { job: 'buon' },
+  { job: 'nong', dat: true },
+  'trau',
+  { job: 'phuNu' },
+  { job: 'linhGac' },
+];
+
 /** Người lái đò: khố đỏ hoa văn, hình xăm sóng nước, mũ lông chim 5 nhánh, mái chèo gỗ lớn chạm khắc. */
 export function makeRower(): THREE.Group {
   const r = new RigBuilder(HUMAN, DETAIL);

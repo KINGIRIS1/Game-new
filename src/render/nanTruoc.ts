@@ -2,10 +2,10 @@
 // đứng lại. Lúc mở game, một worker nặn sẵn các nhân vật của chương đang chơi, gửi về cho nanNguoi.ts dùng lại.
 
 import type { FighterKind } from '../game/battle';
-import { NU_TUONG, STAGES, UNITS, type NuTuongId, type UnitType } from '../game/defs';
+import { NU_TUONG, STAGES, UNITS, stageEnemies, type NuTuongId, type UnitType } from '../game/defs';
 import { demViec, ghiViec, luuSau, viecCan } from './nanKho';
 import { addFigures, hasFigure } from './nanNguoi';
-import type { Job, JobDone } from './nanSan';
+import type { CanhId, Job, JobDone } from './nanSan';
 import workerUrl from './nanSan.worker.ts?worker&url';
 
 /**
@@ -16,10 +16,14 @@ export const KHO_PHIEN_BAN: string | null = import.meta.env.DEV ? null : `1|${wo
 
 /** Tướng theo chương. */
 const HEROES: Record<number, FighterKind[]> = { 1: ['giong'], 2: ['sonTinh'], 3: ['anDuong'], 4: ['caoLo'], 5: ['trungTrac', 'trungNhi'] };
+/** Cảnh màn cầm cự theo chương: Mộ Dạ (màn 32), Cấm Khê (màn 40). */
+const HOLD_SCENES: Record<number, CanhId[]> = { 4: ['moDa'], 5: ['camKhe'] };
 
 /**
- * Việc nặn sẵn theo thứ tự cần trước: quân ta (đúng bậc binh khí), giặc và tướng của chương đang chơi, rồi giặc các
- * chương trước (vẫn đánh kinh đô: lũ, đêm yêu tinh, quân Triệu), cá ngoài biển khi Điện đã ra tới biển.
+ * Việc nặn sẵn theo thứ tự cần trước: quân ta (đúng bậc binh khí), giặc (cả các đợt kéo tới sau) và tướng của chương
+ * đang chơi, nhân vật cảnh mọi bãi chiến (người đánh trống, người lái đò), cảnh màn cầm cự của chương, rồi giặc, tướng
+ * và cảnh màn cầm cự các chương trước (vẫn đánh kinh đô: lũ, đêm yêu tinh, quân Triệu; phó bản cũ đánh lại được), cá
+ * ngoài biển khi Điện đã ra tới biển.
  */
 export function prewarmJobs(chapter: number, arms: Record<UnitType, number>, sea: boolean): Job[] {
   const jobs: Job[] = [];
@@ -32,12 +36,14 @@ export function prewarmJobs(chapter: number, arms: Record<UnitType, number>, sea
   };
   for (const u of Object.keys(UNITS) as UnitType[]) if (u !== 'no' || chapter >= 4) add(['danh', u, arms[u] ?? 0]);
   for (let ch = chapter; ch >= 1; ch--) {
-    for (const st of STAGES) if (st.chapter === ch) for (const k of Object.keys(st.enemies) as FighterKind[]) add(['danh', k, 0]);
+    for (const st of STAGES) if (st.chapter === ch) for (const k of Object.keys(stageEnemies(st)) as FighterKind[]) add(['danh', k, 0]);
     for (const h of HEROES[ch] ?? []) add(['danh', h, 0]);
     if (ch === 5) {
       add(['danh', 'nghiaBinh', 0]);
       for (const id of Object.keys(NU_TUONG) as NuTuongId[]) add(['nu', id]);
     }
+    if (ch === chapter) add(['canh', 'baiChien']);
+    for (const c of HOLD_SCENES[ch] ?? []) add(['canh', c]);
   }
   if (sea) {
     add(['ca', 'whale']);
