@@ -6,7 +6,7 @@ import type { FighterKind } from '../game/battle';
 import { beginPose, fallPose, gripHands, lerp, stance, strikeCurve, walkCycle, type Human, type HumanBone } from './body';
 import { monsterBody, serpentBody } from './nanQuai';
 import { C } from './palette';
-import { RigBuilder, bakeRig, resetBones, skinRig, type Act, type BoneDef, type Bones, type Poser } from './rig';
+import { RigBuilder, bakeRig, resetBones, shapeFor, skinRig, type Act, type BoneDef, type Bones, type Poser } from './rig';
 
 type Defs = Record<string, BoneDef<string>>;
 type Rig = RigBuilder<string>;
@@ -369,7 +369,7 @@ function shapeOf(spec: Spec) {
 /** Thủy quái, yêu tinh có xương cho trận đánh: `userData.pose(a)` mỗi khung hình. */
 export function makeMonster(kind: MonsterKind): THREE.Group {
   const spec = SPECS[kind];
-  const { group, bones } = skinRig(shapeOf(spec));
+  const { group, bones } = skinRig(shapeFor(`quai:${kind}`, () => shapeOf(spec)));
   const pose: Poser = (a) => spec.pose(bones, a);
   pose({ act: 'stand' });
   group.userData.pose = pose;
