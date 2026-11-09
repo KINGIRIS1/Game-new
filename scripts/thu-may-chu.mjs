@@ -30,13 +30,18 @@ process.on('uncaughtException', (e) => {
   process.exit(1);
 });
 
+/** Mỗi lần gọi chờ lâu nhất chừng này (Edge Function gói miễn phí tự dừng sau 150 giây). */
+const CHO_MS = 60_000;
+
 let token = '';
 async function goi(body) {
+  const t = performance.now();
   const res = await fetch(`${URL_}/functions/v1/dau-thanh`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', apikey: KEY, ...(token ? { Authorization: `Bearer ${token}` } : {}) },
     body: JSON.stringify({ luat: luat.LUAT_MA, ...body }),
-  });
+    signal: AbortSignal.timeout(CHO_MS),
+  }).catch((e) => fail(`${body.hanh}: không gọi được máy chủ sau ${Math.round(performance.now() - t)} ms (${e.message})`));
   const text = await res.text();
   let json;
   try {
@@ -58,6 +63,7 @@ const auth = await fetch(`${URL_}/auth/v1/signup`, {
   method: 'POST',
   headers: { 'Content-Type': 'application/json', apikey: KEY },
   body: JSON.stringify({ data: {} }),
+  signal: AbortSignal.timeout(CHO_MS),
 });
 const session = await auth.json().catch(() => ({}));
 if (!auth.ok || !session.access_token) fail(`đăng nhập ẩn danh: ${auth.status} ${JSON.stringify(session)} (đã bật Allow anonymous sign-ins chưa?)`);
