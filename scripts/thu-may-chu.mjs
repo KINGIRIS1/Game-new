@@ -9,6 +9,7 @@ import { LUAT_FILE, ghiLuat } from './luat.mjs';
 
 const URL_ = (process.env.SUPABASE_URL ?? '').replace(/\/+$/, '');
 const KEY = process.env.SUPABASE_PUBLISHABLE_KEY ?? '';
+const REGION = process.env.SUPABASE_REGION ?? 'ap-southeast-1';
 if (!URL_ || !KEY) {
   console.error('Thiếu SUPABASE_URL hay SUPABASE_PUBLISHABLE_KEY (GitHub: Settings → Secrets and variables → Actions → Variables).');
   process.exit(1);
@@ -38,7 +39,8 @@ async function goi(body) {
   const t = performance.now();
   const res = await fetch(`${URL_}/functions/v1/dau-thanh`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json', apikey: KEY, ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+    // Chạy hàm ở Singapore, cạnh cơ sở dữ liệu (Region lúc tạo dự án); máy khách PR 5 cũng gửi header này.
+    headers: { 'Content-Type': 'application/json', apikey: KEY, 'x-region': REGION, ...(token ? { Authorization: `Bearer ${token}` } : {}) },
     body: JSON.stringify({ luat: luat.LUAT_MA, ...body }),
     signal: AbortSignal.timeout(CHO_MS),
   }).catch((e) => fail(`${body.hanh}: không gọi được máy chủ sau ${Math.round(performance.now() - t)} ms (${e.message})`));

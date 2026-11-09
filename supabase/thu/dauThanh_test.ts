@@ -42,9 +42,10 @@ Deno.test({
     try {
       await sql.unsafe('drop schema if exists public cascade; create schema public; drop schema if exists auth cascade;');
       await sql.unsafe(await Deno.readTextFile(new URL('./giaSupabase.sql', import.meta.url)));
-      for await (const f of Deno.readDir(new URL('../migrations/', import.meta.url))) {
-        await sql.unsafe(await Deno.readTextFile(new URL(`../migrations/${f.name}`, import.meta.url)));
-      }
+      // Migration chạy theo thứ tự tên (mốc thời gian), như `supabase db push`.
+      const files = [];
+      for await (const f of Deno.readDir(new URL('../migrations/', import.meta.url))) if (f.name.endsWith('.sql')) files.push(f.name);
+      for (const name of files.sort()) await sql.unsafe(await Deno.readTextFile(new URL(`../migrations/${name}`, import.meta.url)));
       await sql`insert into auth.users (id) values (${A}), (${B}), (${C}), (${D})`;
 
       let now = Date.UTC(2026, 10, 9, 12);
@@ -127,6 +128,12 @@ Deno.test({
       ok(botStart.ok, `B đánh kinh đô máy: ${JSON.stringify(botStart)}`);
       const botDone = await goi(B, { hanh: 'xong', tran: botStart.tran, bam: [{ s: 0, k: 'rut' }] });
       eq([botDone.ketQua.cuop, botDone.ketQua.chienCong.def, botDone.toi.khienDen !== null], [{ gao: 0, voOc: 0, datDa: 0, sat: 0, go: 0 }, 0, true]);
+
+      // Trận mà máy chủ đã thử đóng hỏng 2 lần (bị ngắt vì quá CPU): lần sau đóng như rút quân ngay.
+      const stuck = await goi(B, { hanh: 'danh', doiThu: 'may', quan: QUAN5, huong: 'tay' });
+      await sql`update public.tran set lan_dong = 2 where id = ${stuck.tran}`;
+      const rescued = await goi(B, { hanh: 'xong', tran: stuck.tran, bam });
+      eq([rescued.ketQua.hong, rescued.ketQua.buoc, rescued.ketQua.sao, rescued.ketQua.bam], [true, 1, 0, 1]);
 
       // Giới hạn lượt gọi: tìm 30 lần một giờ.
       for (let i = 0; i < CAU_HINH.findPerH; i++) ok((await goi(C, { hanh: 'tim' })).ok, `C tìm lần ${i + 1}`);

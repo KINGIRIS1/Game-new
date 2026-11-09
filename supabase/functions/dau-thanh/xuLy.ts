@@ -49,6 +49,8 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 /** Thân yêu cầu dài nhất nhận (bản chụp tối đa 64 nghìn ký tự, cộng phần khác). */
 const MAX_BODY = 80_000;
 const GIO = 3_600_000;
+/** Đóng một trận hỏng quá chừng này lần (hàm bị ngắt vì quá giới hạn CPU) thì đóng như người đánh rút quân ngay. */
+const LAN_DONG_MAX = 2;
 const NGAY = 24 * GIO;
 
 /** Người gọi theo JWT: hỏi Supabase Auth (chạy được với mọi kiểu khóa ký JWT, cả khóa publishable lẫn anon). */
@@ -149,8 +151,12 @@ export function taoXuLy(env: MoiTruong): (req: Request) => Promise<Response> {
   /**
    * Đánh lại trận rồi ghi kết quả: chiến công hai bên, khiên người giữ thành, mở khóa. Hai lần đóng cùng một trận thì
    * chỉ lần đầu được ghi; lần sau trả kết quả đã ghi. `bam` là các lần bấm người đánh gửi lên (trận bỏ dở thì rỗng).
+   * Đã thử đóng quá `LAN_DONG_MAX` lần mà chưa xong (hàm bị ngắt giữa lúc đánh lại) thì đóng như rút quân ở bước đầu.
    */
-  async function dongTran(t: TranRow, bam: unknown, now: number): Promise<KetQua & { ms: number }> {
+  async function dongTran(t: TranRow, bam: unknown, now: number): Promise<KetQua & { ms: number; hong?: true }> {
+    const [{ lan }] = await sql<{ lan: number }[]>`update public.tran set lan_dong = lan_dong + 1 where id = ${t.id} returning lan_dong as lan`;
+    const hong = lan > LAN_DONG_MAX;
+    if (hong) bam = [{ s: 0, k: 'rut' }];
     const ids = [t.nguoi_danh, t.nguoi_giu].filter((x): x is string => !!x);
     const cups = new Map((await sql<{ id: string; chien_cong: number }[]>`select id, chien_cong from public.nguoi_choi where id = any(${sql.array(ids)}::uuid[])`).map((r) => [r.id, r.chien_cong]));
     const t0 = performance.now();
@@ -160,7 +166,7 @@ export function taoXuLy(env: MoiTruong): (req: Request) => Promise<Response> {
       defTrophies: (t.nguoi_giu && cups.get(t.nguoi_giu)) || 0,
       bot: t.may,
     });
-    const ket = { ...kq, ms: Math.round(performance.now() - t0) };
+    const ket = { ...kq, ms: Math.round(performance.now() - t0), ...(hong ? { hong: true as const } : {}) };
     const saved = Array.isArray(bam) ? bam.slice(0, 600) : [];
     const wrote = await sql.begin(async (tx) => {
       const done = await tx`
