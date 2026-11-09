@@ -375,6 +375,11 @@ export class Battlefield {
     this.view = new BattleView(this.inner, { x: 0, z: 0 }, 1.25, (x, z) => loiAt(this.bai, x, z), DRUM_AT);
   }
 
+  /** Bật, tắt bóng đổ của nắng trên bãi chiến (Cài đặt Bóng đổ, `World.setBongDo`). */
+  setShadows(on: boolean): void {
+    this.lights.sun.castShadow = on;
+  }
+
   /** Vẽ trận đang diễn ra, và Lạc tướng đánh trống khi có Trống trận. */
   update(battle: Battle | null, dt: number): void {
     this.view.winLook = this.terrain === 'camKhe' ? CAM_KHE.river : undefined;

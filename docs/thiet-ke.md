@@ -75,6 +75,7 @@ Tài liệu này ghi lại các quyết định đã chốt với chủ dự án
 - Máy thử chính là **Samsung Galaxy Z Fold5**. Màn hình ngoài (dài, hẹp) dùng bảng trượt lên từ dưới. Màn hình trong (gần vuông) dùng bảng bên cạnh.
 - Mục tiêu 60 khung hình/giây trên Fold5, ít nhất 30 trên máy Android tầm trung đời cũ. Bãi chiến tối đa khoảng 40–60 lính.
 - Độ nét (pixel ratio) mặc định 1,5, không vượt quá màn hình thật, đặt lại mỗi lần đổi cỡ màn hình (mở hay gập Fold5). Cài đặt có 3 mức: Tiết kiệm (1), Vừa (1,5), Nét (2). Lựa chọn lưu riêng trên từng máy, không đi theo mã lưu.
+- **Bóng đổ** (bảng Cài đặt, dưới dòng Ngày đêm): Bật (mặc định) / Tắt, lưu riêng từng máy như Độ nét. Tắt thì nắng thôi đổ bóng ở kinh đô lẫn bãi chiến, bỏ hẳn lượt vẽ bóng mỗi khung, cho máy yếu (chủ dự án chọn sau khi đo). Kinh đô Điện 5: 494 → 389 lệnh vẽ, 2,39 → 1,93 triệu tam giác; Điện 8: 910 → 715 lệnh vẽ, 3,39 → 2,68 triệu. Nhà cửa, cây, lính không còn bóng dưới chân nhưng vẫn đọc rõ.
 - **Sao lưu, chuyển máy** (bảng Cài đặt). Game tự lưu trên trình duyệt. Muốn sang máy khác thì dùng một trong hai cách:
   - **tệp lưu**: bấm Tải về, hoặc Gửi qua bảng chia sẻ của điện thoại (Zalo, Messenger, Drive). Máy kia bấm Chọn tệp ở dòng Mở tệp lưu. Nút Gửi chỉ hiện trên máy chia sẻ được tệp. Tệp lưu là tệp `.txt` chứa đúng mã lưu, tên theo ngày giờ (`thoi-dai-van-lang-2026-11-01-1430.txt`);
   - **mã lưu**: chép rồi dán vào ô Nhập mã lưu.
@@ -113,6 +114,7 @@ Lúc đầu mỗi cấp Điện chỉ cho phát tới một số khoảnh (lư�
 - **Chạm** vào rừng chưa phát thì mở bảng **Khoảnh rừng**: khoảnh tô vàng; bảng ghi số khoảnh đã mở trên 100, giá, giá khoảnh sau (nấc kế tiếp), nút Phát rừng, hay lý do chưa phát được (chưa sát đất, đang có giặc, thiếu của). Khoảnh ven sông có ghi chú: dựng được bến nhưng mùa lũ dễ ngập.
 - **Hình ảnh**: rừng thưa dần ở bìa đất đã mở; khoảnh phát được (sát đất đã mở) thì cây thưa hơn và có **cọc mốc** tre buộc vải đỏ ở bốn góc.
 - **Rừng nhẹ máy**: rừng có cả nghìn cây nên là phần nặng nhất của cảnh. Mật độ rừng 0,3 (trước 0,7), cây gỗ vẽ ở độ chi tiết 0,5, bụi tre rừng 5–6 thân (trước 9–10), lá tre 3 mặt. Cảnh kinh đô Điện 5 chừng 4 triệu tam giác (trước 10,7 triệu). Lũy tre giữ đủ thân.
+- **Ruộng nhẹ máy**: mỗi ruộng lúa, ruộng nếp có cả trăm khóm lúa nên là công trình nặng nhất. Giữ nguyên số khóm, số lá, số hạt, chỉ bớt mặt: hạt thóc là chóp đôi năm cạnh nhọn hai đầu (10 mặt, trước là cầu 20 mặt; nới to hơn một chút cho bông vẫn mẩy), cuống bông ba cạnh, lá và cuống hở hai đầu, mô bùn dưới gốc chóp đôi. Hạt to nhất chừng 3 điểm ảnh khi phóng to hết cỡ nên nhìn gần như y cũ. Ruộng lúa từ cấp 3 chừng 126 → 71 nghìn tam giác (cả viền mực), ruộng nếp 101 → 60 nghìn; kinh đô Điện 8: 3,94 → 3,39 triệu tam giác.
 - Bảng Điện ghi "Khoảnh đất đã mở n/100". Lên cấp Điện không tự mở đất, chỉ báo Điện lên cấp như thường.
 - Rừng chưa phát giặc vẫn đi qua được; lũ không loang vào rừng chưa phát. Giặc trên bộ xuất phát ngoài mọi ô đã mở (dải giặc tính từ ô nhỏ nhất đã mở, `openStart`).
 - Mẫu kinh đô: chỗ của mẫu nằm trong rừng chưa phát thì bỏ qua; bảng mẫu ghi mẫu còn mấy khoảnh chưa phát.

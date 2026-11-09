@@ -541,6 +541,8 @@ export class World {
   private readonly raidView = new BattleView(this.scene, { x: -HALF, z: -HALF }, 1, (x, z, wet, wall) => this.fighterY(x, z, wet, wall));
   /** Bãi chiến phó bản, dựng khi cần lần đầu. */
   private field?: Battlefield;
+  /** Nắng có đổ bóng không (Cài đặt Bóng đổ, `setBongDo`). */
+  private bongDo = true;
   /** Đang xem bãi chiến: chỗ camera nhìn kinh đô trước đó, để trả về sau trận. */
   private cityCam: { target: THREE.Vector3; zoom: number; bounds: CamBounds; facing: number } | null = null;
   private readonly warning: THREE.Mesh;
@@ -1669,6 +1671,21 @@ export class World {
   /** Đặt đồng hồ cảnh (giây), cho ảnh chụp thử: thuyền khơi, cá voi, cá heo chạy theo đồng hồ này. */
   seekTime(t: number): void {
     this.time = t;
+  }
+
+  /**
+   * Bật, tắt bóng đổ (Cài đặt, lưu riêng từng máy). Tắt thì nắng thôi đổ bóng ở kinh đô lẫn bãi chiến, bỏ hẳn lượt vẽ
+   * bóng mỗi khung cho máy yếu. Đổi `castShadow` của đèn nắng (không đổi `shadowMap.enabled`): three.js thấy đèn đổi
+   * thì tự dựng lại shader của mọi chất liệu nhận đèn.
+   */
+  setBongDo(on: boolean): void {
+    this.bongDo = on;
+    this.lights.sun.castShadow = on;
+    this.field?.setShadows(on);
+  }
+
+  get bongDoOn(): boolean {
+    return this.bongDo;
   }
 
   /** Bật, tắt ngày đêm (Cài đặt, lưu riêng từng máy). Tắt thì trời luôn ban ngày; đổi thì trời chuyển dần. */
@@ -3011,7 +3028,10 @@ export class World {
   showField(terrain: Terrain | null, bai: string | null = null): void {
     const v = this.view;
     if (terrain) {
-      this.field ??= new Battlefield();
+      if (!this.field) {
+        this.field = new Battlefield();
+        this.field.setShadows(this.bongDo);
+      }
       this.field.setTerrain(terrain, bai);
       if (!this.cityCam) this.cityCam = { target: v.target.clone(), zoom: v.zoom, bounds: { ...v.bounds }, facing: v.facing };
       this.panGoal = null;

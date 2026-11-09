@@ -218,6 +218,7 @@ export type HudAction =
   | { kind: 'toggleMute' }
   | { kind: 'setResolution'; resolution: Resolution }
   | { kind: 'setNgayDem'; on: boolean }
+  | { kind: 'setBongDo'; on: boolean }
   | { kind: 'copyCode' }
   | { kind: 'saveFile' }
   | { kind: 'shareFile' }
@@ -276,7 +277,7 @@ type BarracksTab = 'quan' | 'giu' | 'tuong' | 'trai';
 type Sheet =
   | { kind: 'build' }
   | { kind: 'building'; id: number }
-  | { kind: 'settings'; resolution: Resolution; ngayDem: boolean }
+  | { kind: 'settings'; resolution: Resolution; ngayDem: boolean; bongDo: boolean }
   | { kind: 'merchant' }
   | { kind: 'giong' }
   | { kind: 'son' }
@@ -586,6 +587,8 @@ export class Hud {
         return this.onAction({ kind: 'setResolution', resolution: el.dataset.resolution as Resolution });
       case 'setNgayDem':
         return this.onAction({ kind: 'setNgayDem', on: el.dataset.on === '1' });
+      case 'setBongDo':
+        return this.onAction({ kind: 'setBongDo', on: el.dataset.on === '1' });
       case 'storyNext':
         return this.storyNext();
       case 'campChapter':
@@ -1110,8 +1113,8 @@ export class Hud {
     this.refreshSheet(state);
   }
 
-  showSettings(state: GameState, resolution: Resolution, ngayDem: boolean): void {
-    this.sheet = { kind: 'settings', resolution, ngayDem };
+  showSettings(state: GameState, resolution: Resolution, ngayDem: boolean, bongDo: boolean): void {
+    this.sheet = { kind: 'settings', resolution, ngayDem, bongDo };
     this.refreshSheet(state, true);
   }
 
@@ -1197,7 +1200,7 @@ export class Hud {
       body = tetHtml(state);
     } else {
       title = `⚙️ ${vi.ui.settings}`;
-      body = this.settingsHtml(state, this.sheet.resolution, this.sheet.ngayDem);
+      body = this.settingsHtml(state, this.sheet.resolution, this.sheet.ngayDem, this.sheet.bongDo);
     }
     const html = `<div class="sheet-head"><h2>${title}</h2><button class="close" data-act="closeSheet" aria-label="${vi.ui.close}">✕</button></div>
       <div class="sheet-body">${body}</div>`;
@@ -1784,12 +1787,15 @@ export class Hud {
     return `<p class="muted">${vi.ui.merchantHint} (${secs}s)</p><div class="offers">${rows}</div>`;
   }
 
-  private settingsHtml(state: GameState, resolution: Resolution, ngayDem: boolean): string {
+  private settingsHtml(state: GameState, resolution: Resolution, ngayDem: boolean, bongDo: boolean): string {
     const levels = (Object.keys(vi.resolutions) as Resolution[])
       .map((r) => `<button class="btn small ${r === resolution ? 'bronze' : 'ghost'}" data-act="setResolution" data-resolution="${r}">${vi.resolutions[r]}</button>`)
       .join('');
     const ngayDemBtns = ([true, false] as const)
       .map((on) => `<button class="btn small ${on === ngayDem ? 'bronze' : 'ghost'}" data-act="setNgayDem" data-on="${on ? 1 : 0}">${on ? vi.ui.ngayDemOn : vi.ui.ngayDemOff}</button>`)
+      .join('');
+    const bongBtns = ([true, false] as const)
+      .map((on) => `<button class="btn small ${on === bongDo ? 'bronze' : 'ghost'}" data-act="setBongDo" data-on="${on ? 1 : 0}">${on ? vi.ui.bongDoOn : vi.ui.bongDoOff}</button>`)
       .join('');
     return `
       <div class="setting-row"><span>${vi.ui.sound}</span>
@@ -1798,6 +1804,8 @@ export class Hud {
       <p class="muted">${vi.ui.resolutionHint}</p>
       <div class="setting-row"><span>${vi.ui.ngayDem}</span><div class="choices">${ngayDemBtns}</div></div>
       <p class="muted">${vi.ui.ngayDemHint}</p>
+      <div class="setting-row"><span>${vi.ui.bongDo}</span><div class="choices">${bongBtns}</div></div>
+      <p class="muted">${vi.ui.bongDoHint}</p>
       <h3 class="setting-title">${vi.ui.backupTitle}</h3>
       <div class="setting-row"><span>${vi.ui.saveFile}</span><div class="choices">
         <button class="btn small ghost" data-act="saveFile">💾 ${vi.ui.download}</button>
