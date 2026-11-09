@@ -503,12 +503,13 @@ const LEAF_BLADE_CACHE = new Map<string, THREE.BufferGeometry>();
 
 /**
  * Phiến lá lúa có sống gân giữa mọc trực tiếp từ gốc nước (`t = 0`) vươn lên và uốn cong tự nhiên ở ngọn (`t = 1`).
+ * Hở hai đầu (gốc chìm trong bùn, ngọn nhọn chỉ một chấm) cho bớt mặt: mỗi ruộng có cả trăm khóm lúa.
  */
 function curvedLeafBladeGeo(wBase: number, h: number, bendOut: number, bendDrop: number): THREE.BufferGeometry {
   const key = `${wBase.toFixed(3)}_${h.toFixed(3)}_${bendOut.toFixed(3)}_${bendDrop.toFixed(3)}`;
   let cached = LEAF_BLADE_CACHE.get(key);
   if (!cached) {
-    const geo = new THREE.CylinderGeometry(wBase * 0.1, wBase, 1, 3, 4);
+    const geo = new THREE.CylinderGeometry(wBase * 0.1, wBase, 1, 3, 4, true);
     const pos = geo.attributes.position;
     for (let i = 0; i < pos.count; i++) {
       const vx = pos.getX(i);
@@ -553,14 +554,20 @@ function stemCurvePoint(
   return { cz, cy, dz, dy, ny: -dz / len, nz: dy / len };
 }
 
-const UNIT_GRAIN_GEO = new THREE.SphereGeometry(1, 5, 3).toNonIndexed();
+/**
+ * Hạt thóc: chóp đôi năm cạnh, nhọn hai đầu như hạt thóc thật, 10 mặt. Hạt to nhất chừng 3 điểm ảnh khi phóng to hết
+ * cỡ, nên cầu nhiều mặt hơn nhìn không khác mà mỗi ruộng nặng thêm cả chục nghìn tam giác. Chóp đôi gọn hơn cầu cùng
+ * bán kính, nên nới ra một chút cho bông lúa vẫn mẩy như cũ.
+ */
+const UNIT_GRAIN_GEO = new THREE.SphereGeometry(1, 5, 2).scale(1.15, 1.12, 1.15).toNonIndexed();
 const PANICLE_CACHE = new Map<string, { stem: THREE.BufferGeometry; g1: THREE.BufferGeometry; g2: THREE.BufferGeometry }>();
 
 function getPanicleGeos(stemH: number, span: number, drop: number, grainR: number) {
   const key = `${stemH.toFixed(3)}_${span.toFixed(3)}_${drop.toFixed(3)}_${grainR.toFixed(3)}`;
   let cached = PANICLE_CACHE.get(key);
   if (!cached) {
-    const stemGeo = new THREE.CylinderGeometry(0.013, 0.019, 1, 4, 5);
+    // Cuống mảnh chừng một điểm ảnh: ba cạnh, hở hai đầu (gốc trong bùn, ngọn khuất trong hạt).
+    const stemGeo = new THREE.CylinderGeometry(0.013, 0.019, 1, 3, 5, true);
     const sPos = stemGeo.attributes.position;
     for (let i = 0; i < sPos.count; i++) {
       const vx = sPos.getX(i);
@@ -656,8 +663,8 @@ export function riceClump(p: ShapeBuilder, x: number, z: number, h: number, lv: 
   const grainColAlt = new THREE.Color(0xb6ca40).lerp(new THREE.Color(C.gold), Math.min(1, maturity * 1.35)).getHex();
   const y0 = 0.055;
 
-  // Mô đất bùn nhỏ dưới chân khóm mạ
-  p.sphere(0.056, C.soil, x, y0, z, [1.35, 0.36, 1.35], 5);
+  // Mô đất bùn nhỏ dưới chân khóm mạ: chỉ nhô khỏi mặt nước một chút nên dựng chóp đôi ít mặt.
+  p.add(new THREE.SphereGeometry(0.056, 5, 2), C.soil, x, y0, z, [0, 0, 0], [1.35, 0.36, 1.35]);
 
   // 1. Tầng lá mạ dưới (3 lá): mọc từ gốc, uốn cong hình vòm rủ mũi lá xuống xung quanh gốc
   for (let i = 0; i < 3; i++) {
@@ -2623,7 +2630,7 @@ export const LAT = 0xd8c48a;
  */
 export function nepClump(p: ShapeBuilder, x: number, z: number, h: number, seedAngle = 0): void {
   const y0 = 0.055;
-  p.sphere(0.056, C.soil, x, y0, z, [1.35, 0.36, 1.35], 6);
+  p.add(new THREE.SphereGeometry(0.056, 6, 2), C.soil, x, y0, z, [0, 0, 0], [1.35, 0.36, 1.35]);
 
   // 1. Tầng lá mạ dưới (4 lá): mọc từ gốc, uốn vòm rủ xuống xung quanh gốc
   for (let i = 0; i < 4; i++) {

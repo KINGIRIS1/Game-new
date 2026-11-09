@@ -116,6 +116,8 @@ const AUTOSAVE_MS = 10_000;
 const RESOLUTION_KEY = 'thoi-dai-van-lang/resolution';
 /** Ngày đêm bật hay tắt (luôn ban ngày), lưu riêng trên từng máy như độ nét. */
 const NGAY_DEM_KEY = 'thoi-dai-van-lang/ngay-dem';
+/** Bóng đổ bật hay tắt (máy yếu tắt cho nhẹ), lưu riêng trên từng máy như độ nét. */
+const BONG_DO_KEY = 'thoi-dai-van-lang/bong-do';
 /** Cách kéo đắp tường lần trước (dải thẳng hay khung chữ nhật), lưu riêng trên từng máy. */
 const WALL_SHAPE_KEY = 'thoi-dai-van-lang/wall-shape';
 
@@ -157,6 +159,22 @@ function loadNgayDem(): boolean {
     return localStorage.getItem(NGAY_DEM_KEY) !== 'tat';
   } catch {
     return true;
+  }
+}
+
+function loadBongDo(): boolean {
+  try {
+    return localStorage.getItem(BONG_DO_KEY) !== 'tat';
+  } catch {
+    return true;
+  }
+}
+
+function saveBongDo(on: boolean): void {
+  try {
+    localStorage.setItem(BONG_DO_KEY, on ? 'bat' : 'tat');
+  } catch {
+    // Không lưu được thì lần sau bóng đổ bật như mặc định.
   }
 }
 
@@ -214,6 +232,7 @@ async function start(): Promise<void> {
   }
   world.setResolution(loadResolution());
   world.setNgayDem(loadNgayDem(), true);
+  world.setBongDo(loadBongDo());
 
   let mode: Mode = { kind: 'view', selected: null };
   let saveWarned = false;
@@ -1104,7 +1123,7 @@ async function start(): Promise<void> {
       case 'openSettings':
         if (mode.kind !== 'view') exitMode();
         select(null);
-        hud.showSettings(state, world.resolution, world.ngayDemOn);
+        hud.showSettings(state, world.resolution, world.ngayDemOn, world.bongDoOn);
         return;
 
       case 'toggleMute':
@@ -1112,19 +1131,25 @@ async function start(): Promise<void> {
         setMuted(state.settings.muted);
         if (state.settings.muted) stopRally();
         save();
-        hud.showSettings(state, world.resolution, world.ngayDemOn);
+        hud.showSettings(state, world.resolution, world.ngayDemOn, world.bongDoOn);
         return;
 
       case 'setResolution':
         world.setResolution(a.resolution);
         saveResolution(a.resolution);
-        hud.showSettings(state, a.resolution, world.ngayDemOn);
+        hud.showSettings(state, a.resolution, world.ngayDemOn, world.bongDoOn);
         return;
 
       case 'setNgayDem':
         world.setNgayDem(a.on);
         saveNgayDem(a.on);
-        hud.showSettings(state, world.resolution, a.on);
+        hud.showSettings(state, world.resolution, a.on, world.bongDoOn);
+        return;
+
+      case 'setBongDo':
+        world.setBongDo(a.on);
+        saveBongDo(a.on);
+        hud.showSettings(state, world.resolution, world.ngayDemOn, a.on);
         return;
 
       case 'copyCode': {
