@@ -531,7 +531,7 @@ export class Battlefield {
       let obj: THREE.Group;
       if (spec === 'trau') obj = makeTrau();
       else {
-        obj = makeWorker(spec.job);
+        obj = makeWorker(spec.job, false, true);
         obj.scale.setScalar(VILLAGER_SCALE);
         // Đòn gánh tì vai phải: con của xương ngực, cao ngang vai (ngực ở 0,4, vai ở chừng 0,6 so với chân).
         if (spec.ganh) {
