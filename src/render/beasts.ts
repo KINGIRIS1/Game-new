@@ -12,7 +12,7 @@ import { armor, bun, chestDisc, diadem, hairDown, necklace, pauldrons } from './
 import { clayPiece, figure, type Piece } from './nanNguoi';
 import { elephantBody, elephantDrape, horseBody, horseDrape, roosterBody, tigerBody, turtleBody, turtleDrum } from './nanThu';
 import { C } from './palette';
-import { RigBuilder, bakeRig, moveBones, resetBones, skinRig, type Act, type BoneDef, type Bones, type Poser, type RigSlot, type RigSlots } from './rig';
+import { RigBuilder, bakeRig, moveBones, resetBones, shapeFor, skinRig, type Act, type BoneDef, type Bones, type Poser, type RigSlot, type RigSlots } from './rig';
 import { drawRider, poseRider, riderBones, riderHasSkill, type RiderKind } from './soldier';
 import { IRON, IRON_DARK, coLac } from './weapons';
 
@@ -270,6 +270,8 @@ export interface VoiTranMood {
 
 /** Người cưỡi voi trận: xương thêm, hình vẽ, và tư thế (gọi trước voi, trả về voi làm gì thêm). */
 export interface VoiTranRider {
+  /** Khóa dáng (voi, đệm và người cưỡi luôn như nhau theo khóa): dựng một lần, các trận sau dùng lại. */
+  key?: string;
   defs: Defs;
   draw(r: Rig): void;
   pose(b: B, a: Act): VoiTranMood;
@@ -444,11 +446,14 @@ function poseVoiTran(b: B, a: Act, m: VoiTranMood): void {
  * `userData.pose(a)` đặt tư thế cả người lẫn voi; ngã thì lăn nghiêng.
  */
 export function makeVoiTran(look: VoiTranLook, rider?: VoiTranRider): THREE.Group {
-  // Có người cưỡi thì là tướng: đủ chi tiết như các tướng khác.
-  const r = new RigBuilder({ ...VOI_TRAN, ...rider?.defs }, rider ? 1 : DETAIL);
-  drawVoiTran(r, look);
-  rider?.draw(r);
-  const { group, bones } = skinRig(r.build());
+  const build = () => {
+    // Có người cưỡi thì là tướng: đủ chi tiết như các tướng khác.
+    const r = new RigBuilder({ ...VOI_TRAN, ...rider?.defs }, rider ? 1 : DETAIL);
+    drawVoiTran(r, look);
+    rider?.draw(r);
+    return r.build();
+  };
+  const { group, bones } = skinRig(rider?.key ? shapeFor(`voiTran:${rider.key}`, build) : build());
   const pose: Poser = (a) => {
     resetBones(bones);
     const mood = rider ? rider.pose(bones, a) : {};
@@ -632,8 +637,8 @@ function shapeOf(spec: Spec, tier: number) {
   return r.build();
 }
 
-function rigged(spec: Spec, tier: number): THREE.Group {
-  const { group, bones } = skinRig(shapeOf(spec, tier));
+function rigged(key: string, spec: Spec, tier: number): THREE.Group {
+  const { group, bones } = skinRig(shapeFor(`thu:${key}:${tier}`, () => shapeOf(spec, tier)));
   const pose: Poser = (a) => spec.pose(bones, a);
   pose({ act: 'stand' });
   group.userData.pose = pose;
@@ -644,7 +649,7 @@ function rigged(spec: Spec, tier: number): THREE.Group {
 
 /** Thú có xương cho trận đánh. `tier`: bậc giáp voi đã rèn. */
 export function makeBeast(kind: BeastKind, tier = 0): THREE.Group {
-  return rigged(SPECS[kind], tier);
+  return rigged(kind, SPECS[kind], tier);
 }
 
 /** Thú bản tĩnh ở một tư thế, cho công trình. */

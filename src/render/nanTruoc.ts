@@ -52,6 +52,22 @@ export function prewarmJobs(chapter: number, arms: Record<UnitType, number>, sea
   return jobs;
 }
 
+/**
+ * Nhân vật của một trận ngoài bãi sắp đánh (chương `chapter`, giặc `enemies`, phó tướng có thể chọn `nu`), để dựng sẵn
+ * dáng ngay ở luồng chính lúc người chơi đang xếp quân (`World.prepareField`): quân ta đúng bậc binh khí, giặc, tướng
+ * của chương, nghĩa binh (Hiệu triệu gọi ra giữa trận) và nữ tướng. Dáng nặn thì worker đã nặn sẵn; việc này dựng cả
+ * nhân vật một lần để giữ sẵn dáng và viền mực (`shapeFor` ở rig.ts, soldier.ts).
+ */
+export function fieldJobs(chapter: number, arms: Record<UnitType, number>, enemies: readonly FighterKind[], nu: readonly NuTuongId[]): Job[] {
+  const jobs: Job[] = [];
+  for (const u of Object.keys(UNITS) as UnitType[]) if (u !== 'no' || chapter >= 4) jobs.push(['danh', u, arms[u] ?? 0]);
+  for (const h of HEROES[chapter] ?? []) jobs.push(['danh', h, 0]);
+  for (const k of enemies) jobs.push(['danh', k, 0]);
+  if (chapter === 5) jobs.push(['danh', 'nghiaBinh', 0]);
+  for (const id of nu) jobs.push(['nu', id]);
+  return jobs;
+}
+
 /** Việc đã giao cho worker (kể cả đang làm), để lần gọi sau chỉ giao việc mới. */
 const given = new Set<string>();
 

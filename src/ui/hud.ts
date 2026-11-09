@@ -207,6 +207,9 @@ export type HudAction =
   | { kind: 'trinhSat'; id: number }
   | { kind: 'ketThan'; id: number }
   | { kind: 'marchCamp'; plot: number; army: Record<UnitType, number>; rows: Record<UnitType, Row>; nu: NuTuongId | null }
+  /** Đang xếp quân đánh màn `stage` hay đồn ở khoảnh `plot`: dựng sẵn bãi chiến lúc rảnh cho lúc xuất quân khỏi giật. */
+  | { kind: 'prepareField'; stage: number; plot?: undefined }
+  | { kind: 'prepareField'; plot: number; stage?: undefined }
   | { kind: 'offerBanh'; banh: Banh }
   | { kind: 'confirmPlace' }
   | { kind: 'cancelPlace' }
@@ -566,7 +569,8 @@ export class Hud {
         return this.onAction({ kind: 'ketThan', id });
       case 'donPrepare':
         this.donPick = { ...defaultPick(this.getState()), don: id };
-        return this.refreshSheet(this.getState());
+        this.refreshSheet(this.getState());
+        return this.onAction({ kind: 'prepareField', plot: id });
       case 'donBack':
         this.donPick = null;
         return this.refreshSheet(this.getState());
@@ -1875,6 +1879,7 @@ export class Hud {
       if (!camp.stage) return;
       camp.step = 'army';
       camp.pick = defaultPick(state, camp.stage, act === 'prepareChallenge');
+      this.onAction({ kind: 'prepareField', stage: camp.stage });
     } else if (act === 'openHuan') {
       camp.step = camp.step === 'huan' ? 'stage' : 'huan';
     } else if (act === 'backToStage') {

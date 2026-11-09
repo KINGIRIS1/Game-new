@@ -4,8 +4,8 @@
 // Viền mực cũng là SkinnedMesh dùng chung bộ xương, nên chạy theo động tác.
 
 import * as THREE from 'three';
-import { mergeGeometries, mergeVertices } from 'three/addons/utils/BufferGeometryUtils.js';
-import { ShapeBuilder } from './shapes';
+import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
+import { ShapeBuilder, weld } from './shapes';
 import { glowMaterial, inkThin, outlineOf, toon, toonBand, toonDrum } from './toon';
 
 type V3 = [number, number, number];
@@ -260,10 +260,42 @@ function skinnedOutline(geos: THREE.BufferGeometry[]): THREE.BufferGeometry {
     for (const a of ['position', 'skinIndex', 'skinWeight']) g.setAttribute(a, src.getAttribute(a).clone());
     return g;
   });
-  const merged = mergeVertices(mergeGeometries(parts, false) ?? new THREE.BufferGeometry(), 1e-3);
+  const merged = weld(mergeGeometries(parts, false) ?? new THREE.BufferGeometry(), 1e-3);
   for (const g of parts) g.dispose();
   merged.computeVertexNormals();
   return merged;
+}
+
+const SHAPES = new Map<string, RigShape<string>>();
+
+/**
+ * Dáng đã dựng theo khóa `key` (dựng bằng `build` lần đầu): các bản của cùng một nhân vật (thú, quái cả đàn; tướng,
+ * người đánh trống mỗi trận) dùng chung hình và viền mực, khỏi dựng và gộp đỉnh lại mỗi con. Lính đi bộ giữ dáng riêng
+ * ở soldier.ts. Bản bị gỡ thì hình trả khỏi GPU, lần vẽ sau three.js tự nạp lại.
+ */
+export function shapeFor<B extends string>(key: string, build: () => RigShape<B>): RigShape<B> {
+  let shape = SHAPES.get(key) as RigShape<B> | undefined;
+  if (!shape) {
+    shape = build();
+    SHAPES.set(key, shape as RigShape<string>);
+  }
+  return shape;
+}
+
+/** Khối cầu bao nới thêm chừng này lần, cho tay, vũ khí vung ra khỏi tư thế gốc. */
+const SPHERE_ROOM = 1.3;
+
+/**
+ * Khối cầu bao của SkinnedMesh theo tư thế gốc, nới thêm `SPHERE_ROOM`. three.js cần khối cầu của SkinnedMesh để xếp
+ * thứ tự vẽ (cả khi không cắt theo khung nhìn) và để bấm chọn; để trống thì lần vẽ đầu nó tự tính bằng cách đưa từng
+ * đỉnh qua xương, mỗi nhân vật mới tốn cả chục mili giây. Khối cầu của hình tính một lần, các bản dùng chung hình
+ * chép lại.
+ */
+function restSphere(geo: THREE.BufferGeometry): THREE.Sphere {
+  if (!geo.boundingSphere) geo.computeBoundingSphere();
+  const s = geo.boundingSphere!.clone();
+  s.radius *= SPHERE_ROOM;
+  return s;
 }
 
 /** Nhân vật có xương, sẵn sàng làm động tác: xoay `bones` mỗi khung hình. Nhóm trả về cũng giữ `userData.bones`. */
@@ -281,6 +313,7 @@ export function skinRig<B extends string>(shape: RigShape<B>, ink = inkThin): { 
     mesh.receiveShadow = shadow;
     // Vũ khí vung xa khỏi khối bao lúc dựng, nên không cắt theo khung nhìn.
     mesh.frustumCulled = false;
+    mesh.boundingSphere = restSphere(geo);
     group.add(mesh);
   };
   for (const p of shape.parts) add(p.geo, p.mat, true);

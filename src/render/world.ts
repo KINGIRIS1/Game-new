@@ -22,6 +22,7 @@ import { tetOpen } from '../game/tet';
 import { gioBuoi, troiLuc, type Buoi, type TroiLuc } from '../game/ngayDem';
 import { isBusy, itemProgress, pendingBuildings, pendingOf } from '../game/xay';
 import { Battlefield, CAM_KHE } from './battlefield';
+import { runJob, type Job as ViecNan } from './nanSan';
 import { BattleView } from './battleView';
 import { IsoCamera, type CamBounds } from './camera';
 import { DOOR_OPEN, banhChung, banhGiay } from './buildings';
@@ -431,6 +432,9 @@ interface FleetBoat {
 }
 const SEA_SPEED = 2.2;
 const SEA_FISH_SPEED = 1.5;
+
+/** Dựng sẵn bãi chiến (`World.prepareField`): còn ít hơn chừng này mili giây rảnh thì để việc sau sang lần rảnh sau. */
+const PREP_SLACK_MS = 8;
 
 export class World {
   readonly renderer: THREE.WebGLRenderer;
@@ -3024,15 +3028,74 @@ export class World {
     return this.cityCam !== null;
   }
 
+  /** Bãi chiến (dựng lần đầu khi cần). */
+  private battlefield(): Battlefield {
+    if (!this.field) {
+      this.field = new Battlefield();
+      this.field.setShadows(this.bongDo);
+    }
+    return this.field;
+  }
+
+  /** Hủy các việc dựng sẵn bãi chiến còn chờ lúc rảnh (`prepareField`). */
+  private fieldPrep: (() => void) | null = null;
+
+  /**
+   * Dựng sẵn bãi chiến nền `terrain`, bố cục `bai` khi người chơi đang xếp quân, mỗi lần trình duyệt rảnh một việc (bảng
+   * xếp quân đã hiện): cảnh bãi chiến trước (lợi nhất; rồi gửi dịch sẵn shader của bãi chiến), rồi từng nhân vật trong
+   * `jobs` (`fieldJobs` ở nanTruoc.ts) để giữ sẵn dáng. Lúc xuất quân `showField` thấy đúng nền, bố cục đã dựng thì khỏi
+   * dựng lại, lính dựng từ dáng có sẵn, nên khung vào trận nhẹ đi. Đang ở bãi chiến thì thôi; xuất quân trước khi xong
+   * thì bỏ phần còn lại.
+   */
+  prepareField(terrain: Terrain, bai: string | null, jobs: readonly ViecNan[] = []): void {
+    this.fieldPrep?.();
+    this.fieldPrep = null;
+    if (this.inField) return;
+    const tasks: (() => void)[] = [
+      () => {
+        const field = this.battlefield();
+        field.setTerrain(terrain, bai);
+        this.renderer.compileAsync(field.scene, this.view.camera).catch(() => undefined);
+      },
+      ...jobs.map((j) => () => runJob(j)),
+    ];
+    let cancel = () => {};
+    // Lúc rảnh thì làm liền nhiều việc khi còn thời gian rảnh; gọi vì quá hạn (máy bận) thì mỗi lần một việc.
+    const next = (deadline?: IdleDeadline) => {
+      do {
+        const task = tasks.shift();
+        if (!task || this.inField) {
+          this.fieldPrep = null;
+          return;
+        }
+        try {
+          task();
+        } catch {
+          // Nhân vật nào hỏng ở đây thì lúc vào trận dựng như cũ.
+        }
+      } while (deadline && !deadline.didTimeout && deadline.timeRemaining() > PREP_SLACK_MS);
+      later();
+    };
+    const later = () => {
+      if (typeof requestIdleCallback === 'function') {
+        const id = requestIdleCallback(next, { timeout: 600 });
+        cancel = () => cancelIdleCallback(id);
+      } else {
+        const id = setTimeout(next, 60);
+        cancel = () => clearTimeout(id);
+      }
+    };
+    later();
+    this.fieldPrep = () => cancel();
+  }
+
   /** Sang bãi chiến với nền `terrain` và bố cục vật cản `bai` (`baiChien.ts`), hoặc về lại kinh đô khi `terrain` là null. */
   showField(terrain: Terrain | null, bai: string | null = null): void {
     const v = this.view;
     if (terrain) {
-      if (!this.field) {
-        this.field = new Battlefield();
-        this.field.setShadows(this.bongDo);
-      }
-      this.field.setTerrain(terrain, bai);
+      this.fieldPrep?.();
+      this.fieldPrep = null;
+      this.battlefield().setTerrain(terrain, bai);
       if (!this.cityCam) this.cityCam = { target: v.target.clone(), zoom: v.zoom, bounds: { ...v.bounds }, facing: v.facing };
       this.panGoal = null;
       // Bãi chiến vẽ cho hướng nhìn mặc định: quân ta ở dưới, giặc ở trên.

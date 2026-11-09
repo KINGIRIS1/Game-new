@@ -54,7 +54,7 @@ import {
 import { clayPiece, figure, prim, rigid, segs, type Piece } from './nanNguoi';
 import { horseBody, horseDrape, type HorseShape } from './nanThu';
 import { C } from './palette';
-import { RigBuilder, bakeRig, moveBones, skinRig, type Act, type BoneDef, type Bones, type Poser } from './rig';
+import { RigBuilder, bakeRig, moveBones, shapeFor, skinRig, type Act, type BoneDef, type Bones, type Poser } from './rig';
 import { ToonModel, inkThin } from './toon';
 import {
   CO_NU,
@@ -575,28 +575,45 @@ function poseTeen(b: B, a: Act): void {
  */
 export function makeGiong(look: GiongLook, opts: { bamboo?: boolean; glow?: boolean; onFoot?: boolean } = {}): THREE.Group {
   if (look === 'be') {
-    const r = new RigBuilder(CHILD);
-    drawChild(r);
-    const { group, bones } = skinRig(r.build());
+    const { group, bones } = skinRig(
+      shapeFor('giong:be', () => {
+        const r = new RigBuilder(CHILD);
+        drawChild(r);
+        return r.build();
+      }),
+    );
     return finish(group, (a) => poseChild(bones, a));
   }
   if (look === 'thieuNien') {
-    const r = new RigBuilder({ ...BASE, ...bigHuman('base', [0, 0, 0], K_TEEN) });
-    drawTeen(r);
-    const { group, bones } = skinRig(r.build());
+    const { group, bones } = skinRig(
+      shapeFor('giong:thieuNien', () => {
+        const r = new RigBuilder({ ...BASE, ...bigHuman('base', [0, 0, 0], K_TEEN) });
+        drawTeen(r);
+        return r.build();
+      }),
+    );
     return finish(group, (a) => poseTeen(bones, a));
   }
+  const bamboo = opts.bamboo ?? false;
   if (opts.onFoot) {
-    const r = new RigBuilder({ ...BASE, ...bigHuman('base', [0, 0, 0], K_GIONG) });
-    drawBig(r, [0, 0, 0], K_GIONG, (h) => drawGiongRider(h, opts.bamboo ?? false));
-    const { group, bones } = skinRig(r.build());
+    const { group, bones } = skinRig(
+      shapeFor(`giong:dung:${bamboo}`, () => {
+        const r = new RigBuilder({ ...BASE, ...bigHuman('base', [0, 0, 0], K_GIONG) });
+        drawBig(r, [0, 0, 0], K_GIONG, (h) => drawGiongRider(h, bamboo));
+        return r.build();
+      }),
+    );
     if (opts.glow) addHalo(group, 1.5, -0.38);
     return finish(group, (a) => poseGiongStand(bones as unknown as Human, a));
   }
-  const r = new RigBuilder({ ...BASE, ...IRON_HORSE, ...bigHuman('qBody', GIONG_AT, K_GIONG) });
-  drawIronHorse(r);
-  drawBig(r, GIONG_AT, K_GIONG, (h) => drawGiongRider(h, opts.bamboo ?? false));
-  const { group, bones } = skinRig(r.build());
+  const { group, bones } = skinRig(
+    shapeFor(`giong:ngua:${bamboo}`, () => {
+      const r = new RigBuilder({ ...BASE, ...IRON_HORSE, ...bigHuman('qBody', GIONG_AT, K_GIONG) });
+      drawIronHorse(r);
+      drawBig(r, GIONG_AT, K_GIONG, (h) => drawGiongRider(h, bamboo));
+      return r.build();
+    }),
+  );
   // Luồng lửa phun nhiều tầng từ mõm ngựa sắt, gắn vào đầu ngựa để theo đầu ngựa gật.
   const flames: THREE.Mesh[] = [];
   const flameRoot = new THREE.Group();
@@ -755,9 +772,13 @@ function drawSonAll(r: Rig, rock: boolean): void {
  */
 export function makeSonTinh(opts: { rock?: boolean; glow?: boolean } = {}): THREE.Group {
   const rock = opts.rock ?? false;
-  const r = new RigBuilder(sonDefs(rock));
-  drawSonAll(r, rock);
-  const { group, bones } = skinRig(r.build());
+  const { group, bones } = skinRig(
+    shapeFor(`sonTinh:${rock}`, () => {
+      const r = new RigBuilder(sonDefs(rock));
+      drawSonAll(r, rock);
+      return r.build();
+    }),
+  );
   if (opts.glow) addHalo(group, (rock ? 0.32 : 0) + 1.5, -0.38);
   return finish(group, (a) => poseSon(bones as unknown as Human, a));
 }
@@ -883,9 +904,13 @@ const THUY_DEFS = (): Defs => ({ ...BASE, ...bigHuman('base', THUY_AT, K_THUY) }
 
 /** Thủy Tinh có xương, cho trận đánh. */
 export function makeThuyTinh(): THREE.Group {
-  const r = new RigBuilder(THUY_DEFS());
-  drawThuy(r);
-  const { group, bones } = skinRig(r.build());
+  const { group, bones } = skinRig(
+    shapeFor('thuyTinh', () => {
+      const r = new RigBuilder(THUY_DEFS());
+      drawThuy(r);
+      return r.build();
+    }),
+  );
   return finish(group, (a) => poseThuy(bones as unknown as Human, a));
 }
 
@@ -1015,9 +1040,13 @@ function poseAdv(b: Human, a: Act, crossbow: boolean): void {
  */
 export function makeAnDuong(opts: { crossbow?: boolean; glow?: boolean } = {}): THREE.Group {
   const crossbow = opts.crossbow ?? false;
-  const r = new RigBuilder({ ...BASE, ...bigHuman('base', [0, 0, 0], K_ADV) });
-  drawBig(r, [0, 0, 0], K_ADV, (h) => drawAdv(h, crossbow));
-  const { group, bones } = skinRig(r.build());
+  const { group, bones } = skinRig(
+    shapeFor(`anDuong:${crossbow}`, () => {
+      const r = new RigBuilder({ ...BASE, ...bigHuman('base', [0, 0, 0], K_ADV) });
+      drawBig(r, [0, 0, 0], K_ADV, (h) => drawAdv(h, crossbow));
+      return r.build();
+    }),
+  );
   if (opts.glow) addHalo(group, 1.6, -0.4);
   return finish(group, (a) => poseAdv(bones as unknown as Human, a, crossbow));
 }
@@ -1162,9 +1191,13 @@ function caoLoDefs(): Defs {
 
 /** Cao Lỗ cầm nỏ liên châu. `glow`: hiển linh, có hào quang. */
 export function makeCaoLo(opts: { glow?: boolean } = {}): THREE.Group {
-  const r = new RigBuilder(caoLoDefs());
-  drawBig(r, [0, 0, 0], K_CAO, drawCaoLo);
-  const { group, bones } = skinRig(r.build());
+  const { group, bones } = skinRig(
+    shapeFor('caoLo', () => {
+      const r = new RigBuilder(caoLoDefs());
+      drawBig(r, [0, 0, 0], K_CAO, drawCaoLo);
+      return r.build();
+    }),
+  );
   if (opts.glow) addHalo(group, 1.5, -0.38);
   return finish(group, (a) => poseCaoLo(bones, a));
 }
@@ -1380,6 +1413,7 @@ export function makeTrungTrac(opts: { glow?: boolean; onFoot?: boolean } = {}): 
   const group = makeVoiTran(
     { pad: C.red, trim: C.gold, drum: true, parasol: C.trungRed },
     {
+      key: 'trungTrac',
       defs: bigHuman('qBody', SEAT_BA, K_BA),
       draw: (r) => drawBig(r, SEAT_BA, K_BA, drawTrungTrac),
       pose: poseTrungTrac,
@@ -1398,6 +1432,7 @@ export function makeTrungNhi(opts: { glow?: boolean; onFoot?: boolean } = {}): T
   const group = makeVoiTran(
     { pad: C.trungYellow, trim: C.red, parasol: C.trungYellow, flag: K_BA },
     {
+      key: 'trungNhi',
       defs: { ...bigHuman('qBody', SEAT_BA, K_BA), flagGrip: { parent: 'chest', at: onSeat(GRIP_R) } },
       draw: (r) => {
         drawBig(r, SEAT_BA, K_BA, drawTrungNhi);
@@ -1415,9 +1450,13 @@ export function makeTrungNhi(opts: { glow?: boolean; onFoot?: boolean } = {}): T
  * cung dựng bên trái, tay phải buông cầm tên; thở nhẹ.
  */
 function standingBa(draw: (h: HumanRig) => void, kind: 'trungTrac' | 'trungNhi', glow = false): THREE.Group {
-  const r = new RigBuilder({ ...BASE, ...bigHuman('base', [0, 0, 0], K_LAC) });
-  drawBig(r, [0, 0, 0], K_LAC, draw);
-  const { group, bones } = skinRig(r.build());
+  const { group, bones } = skinRig(
+    shapeFor(`${kind}:dung`, () => {
+      const r = new RigBuilder({ ...BASE, ...bigHuman('base', [0, 0, 0], K_LAC) });
+      drawBig(r, [0, 0, 0], K_LAC, draw);
+      return r.build();
+    }),
+  );
   const b = bones as unknown as Human;
   finish(group, (a) => {
     const t = a.time ?? 0;
@@ -1450,33 +1489,36 @@ const DRUM_Z = 0.56;
  * `userData.face` là mặt trống (có bốn tượng cóc ở vành), để phần vẽ trận làm mặt trống rung.
  */
 export function makeDrummer(): THREE.Group {
-  const r = new RigBuilder({ ...BASE, ...bigHuman('base', [0, 0, 0], 1.05) });
-  const p = r.on('base');
-  p.band.cyl(0.38, 0.33, 0.32, C.bronze, 0, 0.26, DRUM_Z, undefined, 18);
-  p.plain.cyl(0.395, 0.395, 0.05, C.bronzeDark, 0, 0.41, DRUM_Z, undefined, 18);
-  for (let i = 0; i < 4; i++) {
-    const a = (i / 4) * Math.PI * 2 + Math.PI / 4;
-    p.plain.cyl(0.03, 0.04, 0.12, C.bronzeDark, Math.cos(a) * 0.28, 0.06, DRUM_Z + Math.sin(a) * 0.28, undefined, 5);
-  }
-  drawBig(r, [0, 0, 0], 1.05, (h) => {
-    humanBody(h, { cloth: C.red, top: C.bronze, armband: C.bronze });
-    cloak(h, { color: C.red, hem: 0.17 });
-    pauldrons(h, { color: C.bronze, size: 0.85 });
-    humanHead(h, { brows: true });
-    hairCap(h);
-    headband(h, C.red);
-    featherCrown(h, [C.red, C.cream], { len: 0.44 });
-    for (const [b, at] of [
-      ['hand', GRIP_R],
-      ['handL', GRIP_L],
-    ] as const) {
-      h.local(b, at, null, (s) => {
-        s.plain.cyl(0.022, 0.026, 0.42, C.woodDark, 0, 0.24, 0, undefined, 5);
-        s.plain.sphere(0.055, C.red, 0, 0.46, 0, [1, 1, 1], 8);
-      });
+  const shape = shapeFor('trongDong', () => {
+    const r = new RigBuilder({ ...BASE, ...bigHuman('base', [0, 0, 0], 1.05) });
+    const p = r.on('base');
+    p.band.cyl(0.38, 0.33, 0.32, C.bronze, 0, 0.26, DRUM_Z, undefined, 18);
+    p.plain.cyl(0.395, 0.395, 0.05, C.bronzeDark, 0, 0.41, DRUM_Z, undefined, 18);
+    for (let i = 0; i < 4; i++) {
+      const a = (i / 4) * Math.PI * 2 + Math.PI / 4;
+      p.plain.cyl(0.03, 0.04, 0.12, C.bronzeDark, Math.cos(a) * 0.28, 0.06, DRUM_Z + Math.sin(a) * 0.28, undefined, 5);
     }
+    drawBig(r, [0, 0, 0], 1.05, (h) => {
+      humanBody(h, { cloth: C.red, top: C.bronze, armband: C.bronze });
+      cloak(h, { color: C.red, hem: 0.17 });
+      pauldrons(h, { color: C.bronze, size: 0.85 });
+      humanHead(h, { brows: true });
+      hairCap(h);
+      headband(h, C.red);
+      featherCrown(h, [C.red, C.cream], { len: 0.44 });
+      for (const [b, at] of [
+        ['hand', GRIP_R],
+        ['handL', GRIP_L],
+      ] as const) {
+        h.local(b, at, null, (s) => {
+          s.plain.cyl(0.022, 0.026, 0.42, C.woodDark, 0, 0.24, 0, undefined, 5);
+          s.plain.sphere(0.055, C.red, 0, 0.46, 0, [1, 1, 1], 8);
+        });
+      }
+    });
+    return r.build();
   });
-  const { group, bones } = skinRig(r.build());
+  const { group, bones } = skinRig(shape);
   const h = bones as unknown as Human;
   const beat = (left: number, right: number) => {
     beginPose(h, 0);
@@ -1534,9 +1576,13 @@ function poseLacTuong(b: Human, a: Act): void {
 
 /** Lạc tướng đứng chầu trong sân Điện (ở bãi chiến thì là người đánh trống, `makeDrummer`). */
 export function makeLacTuong(): THREE.Group {
-  const r = new RigBuilder({ ...BASE, ...bigHuman('base', [0, 0, 0], K_LAC) });
-  drawBig(r, [0, 0, 0], K_LAC, drawLacTuong);
-  const { group, bones } = skinRig(r.build());
+  const { group, bones } = skinRig(
+    shapeFor('lacTuong', () => {
+      const r = new RigBuilder({ ...BASE, ...bigHuman('base', [0, 0, 0], K_LAC) });
+      drawBig(r, [0, 0, 0], K_LAC, drawLacTuong);
+      return r.build();
+    }),
+  );
   return finish(group, (a) => poseLacTuong(bones as unknown as Human, a));
 }
 
@@ -1858,15 +1904,18 @@ export function makeNuTuong(kind: NuTuongId, opts: { glow?: boolean } = {}): THR
   const extra: Defs = {};
   NU_FLAG.forEach((name, i) => (extra[name] = { parent: i ? NU_FLAG[i - 1] : 'handL', at: nuFlagAt(i) }));
   if (kind === 'phungThiChinh') extra.nuBe = { parent: 'chest', at: NU_BABY };
-  const r = new RigBuilder({ ...BASE, ...bigHuman('base', [0, 0, 0], K_NU), ...(moveBones(extra, 'base', [0, 0, 0], K_NU) as Defs) });
-  drawBig(r, [0, 0, 0], K_NU, (h) => {
-    drawBaBody(h, look.cloth, look.trim, { belt: C.bronze, armband: C.bronze, ...look.body });
-    drawNuHead(h, look.feathers);
-    h.local('handL', GRIP_L, null, (s) => coNuCan(s, look.trim));
-    NU_FLAG.forEach((name, i) => r.local(name, nuFlagAt(i), null, (s) => coNuLa(s, i, look.cloth, look.trim)));
-    look.gear(h, r);
+  const shape = shapeFor(`nu:${kind}`, () => {
+    const r = new RigBuilder({ ...BASE, ...bigHuman('base', [0, 0, 0], K_NU), ...(moveBones(extra, 'base', [0, 0, 0], K_NU) as Defs) });
+    drawBig(r, [0, 0, 0], K_NU, (h) => {
+      drawBaBody(h, look.cloth, look.trim, { belt: C.bronze, armband: C.bronze, ...look.body });
+      drawNuHead(h, look.feathers);
+      h.local('handL', GRIP_L, null, (s) => coNuCan(s, look.trim));
+      NU_FLAG.forEach((name, i) => r.local(name, nuFlagAt(i), null, (s) => coNuLa(s, i, look.cloth, look.trim)));
+      look.gear(h, r);
+    });
+    return r.build();
   });
-  const { group, bones } = skinRig(r.build());
+  const { group, bones } = skinRig(shape);
   if (opts.glow) addHalo(group, 1.35, -0.45);
   return finish(group, (a) => poseNu(bones, a, look));
 }
