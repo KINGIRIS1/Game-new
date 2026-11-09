@@ -1,0 +1,13 @@
+# Supabase CLI cho máy chủ Đấu thành (docs/thiet-ke.md, Kế hoạch: Đấu thành, mục Server).
+# Chỉ dùng để triển khai từ GitHub Actions (.github/workflows/deploy.yml): `supabase link`, `db push --remote`,
+# `functions deploy`. Tệp này không ghi cài đặt đăng nhập: đăng nhập ẩn danh, địa chỉ trang game đặt ở trang Supabase.
+# Đừng chạy `supabase config push`, kẻo đè cài đặt trên trang bằng giá trị mặc định.
+project_id = "thoi-dai-van-lang"
+
+[db]
+major_version = 17
+
+# Edge Function tự xác thực người gọi (`nguoiDungTuSupabase` ở functions/dau-thanh/xuLy.ts), để ping giữ máy chủ
+# thức không cần khóa, và để chạy được cả với khóa publishable mới lẫn khóa anon cũ.
+[functions.dau-thanh]
+verify_jwt = false

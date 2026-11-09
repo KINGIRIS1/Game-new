@@ -2727,12 +2727,24 @@ Chủ dự án yêu cầu lập phương án PvP giữa các người chơi: **c
    - Bảng kết quả: sao, phần trăm phá, phá được Điện chưa, quân ngã, của cướp được nếu đánh thật; nút Đánh lại, Về kinh đô. Đánh thử nên **quân ngã không mất, kho không thêm gì, không tính chiến công** (đề xuất 1 "lính tử trận mất thật" áp khi đánh thật ở PR 5). Về kinh đô thì cảnh và camera về như trước trận.
    - Trong lúc đánh: kinh tế của mình vẫn chạy, giặc không tới, chạm cảnh không chọn công trình.
    - Chụp thử: `node scripts/chup.mjs dau-thanh`, `dau-thanh-quan`, `dau-thanh-tran`, `dau-thanh-giu`, `dau-thanh-ket-qua`; `window.__debug.dauThanh(target, side, secs)`, `dauPanel(army)`, `dauFinish()`, `dauBattle()`.
-5. **PR 4: server**: thư mục `supabase/` (bảng, phân quyền, Edge Function), đóng gói luật cho server, test đánh lại trận trên Deno so với Node, triển khai trong `deploy.yml`, workflow giữ máy chủ thức.
+5. **PR 4: server** (đã làm). Chỗ đổi so với kế hoạch và số cuối cùng:
+   - **Luật cho server** ở `src/game/mayChu.ts`: các hàm thuần, vào ra đều là JSON, bản chụp đi dưới dạng mã `TDVS1:` (`kiemTen`, `nhanBanChup`, `kinhDoMay`, `quanDanh`, `danhLai`, `chonDoiThu`; `mayChu.test.ts` canh). `node scripts/luat.mjs` đóng gói tệp ấy cùng mọi luật nó dùng (chỉ `src/game/` và `fflate`, chừng 210 KB) bằng rolldown của Vite thành `supabase/functions/dau-thanh/luat.js` (không vào git, kiểu viết tay ở `luat.d.ts`). Mã băm luật `LUAT_MA` là băm của phần đóng gói; PR 5 cho `vite.config.ts` gọi cùng hàm `dongGoiLuat` để bản game mang cùng mã.
+   - **Bản chụp thêm `troops`** (quân người chơi có, không doanh trại thì 0): máy chủ kiểm quân mang đi đánh không quá chừng này. `validateSnapshot` kiểm thêm lính giữ thành không nhiều hơn quân có, quân không quá sức chứa doanh trại nhân `DOANH_MAX`. Bản chụp vẫn `v: 1` vì chưa lưu ở đâu.
+   - **Quân đánh thành máy chủ dựng** (`quanDanh`): quân người chơi chọn (không quá `troops`, không quá `FIELD_CAP`), hướng, hạt giống máy chủ bốc; tướng, Đền, binh khí, huân công lấy từ bản chụp của chính người đánh (tướng như tướng giữ thành, kể cả đang nghỉ). Máy khách đánh bằng đúng quân máy chủ trả về.
+   - **Kinh đô máy** (đề xuất 9): khi không ai hợp ghép trận thì gặp kinh đô máy cùng cấp Điện (`kinhDoMay`, như `botSnapshot`). Không cướp của thật, chiến công được hay mất `trophyBase × botTrophy` = 5, không mất khiên, không khóa ai.
+   - **Edge Function `dau-thanh`** (`supabase/functions/dau-thanh/`): một hàm, máy khách gửi POST JSON `{ hanh, luat }` với `hanh` là `ping` (không cần đăng nhập; dọn dữ liệu cũ), `thamGia`, `banChup`, `toi` (hồ sơ, 50 trận bị đánh, 20 trận đã đánh), `tim`, `danh`, `xong`, `roi` (rời Đấu thành). Mã luật lệch thì trả `capNhat`. Hàm kết nối thẳng Postgres (`SUPABASE_DB_URL`, postgres.js 3.4.9) nên mọi lệnh ghi không qua RLS; người gọi xác thực bằng cách hỏi Supabase Auth (`/auth/v1/user`), nên `verify_jwt = false` và chạy được với cả khóa publishable lẫn khóa `anon`.
+   - **Bảng** (`supabase/migrations/`): `nguoi_choi` (tên, chiến công, cấp Điện, hạn khiên, hạn khóa), `ban_chup`, `tran` (bản chụp kinh đô bị đánh, quân, lần bấm, kết quả), `luot_goi`. RLS: máy khách đăng nhập đọc được tên, chiến công mọi người và trận mình đánh hay bị đánh, không đọc được bản chụp; không ghi được gì. `don_dau_thanh()` xóa trận, bản chụp quá `keepDays` 30 ngày; pg_cron gọi mỗi ngày (migration tự bật), ping cũng gọi.
+   - **Số ở `DAU_THANH`**: khóa người giữ thành `lockS` 240 giây, khiên `shieldH` 8 giờ, không đánh lại cùng người `rematchH` 12 giờ, ghép trận Điện chênh `matchDien` 1 (thiếu thì `matchDienWide` 2), chọn ngẫu nhiên trong `matchPick` 5 người chiến công gần nhất, mỗi giờ tìm `findPerH` 30 lần, đánh `attackPerH` 10 lần, tải bản chụp `snapPerH` 30 lần, tên `nameMin`–`nameMax` 2–16 chữ.
+   - **Tên**: chữ cái có dấu, chữ số, khoảng trắng và `_ . - '`; lọc từ tục viết có dấu, viết tắt (`dm`, `vcl`…) và vài từ ghép (`kiemTen`). Chữ không dấu trùng mặt chữ thường ("các", "lớn") không bắt.
+   - **Trận bỏ dở**: mỗi người một trận đang đánh. Quá giờ khóa mà chưa gửi `xong` thì máy chủ đóng trận với không lần bấm nào (không rút được quân), lúc người đánh bắt đầu trận mới hay lúc người giữ thành mở `toi` (mỗi lần một trận). Gửi `xong` hai lần thì lần sau trả kết quả đã ghi.
+   - **Đo**: Node và Deno đánh sáu trận cố định trên kinh đô máy Điện 5–10 ra y hệt từng chữ số (`node scripts/doi-chieu-deno.mjs`). Trận nặng nhất (Điện 10 hay Điện 7, đủ 3 phút, có tướng, bấm kỹ năng) đánh lại chừng 0,8–1,3 giây CPU, dưới giới hạn 2 giây mỗi lần gọi của Edge Function; máy chủ trả số mili giây trong `ketQua.ms`.
+   - **Test**: `supabase/thu/dauThanh_test.ts` (Deno) chạy migration trên Postgres thường (giả phần Supabase có sẵn ở `giaSupabase.sql`) rồi đi hết các lệnh: tên, bản chụp sai, ghép trận, khóa, khiên, không đánh lại, trận bỏ dở, giới hạn lượt, kinh đô máy, RLS, rời.
+   - **Triển khai** (`.github/workflows/deploy.yml`): job `build` chạy thêm đối chiếu Node và Deno, kiểm kiểu và test Edge Function trên Postgres 17; job `server` (đẩy lên `main`, hay bấm Run workflow) dùng Supabase CLI 2.122.0 đẩy migration, triển khai Edge Function rồi thử máy chủ thật (`node scripts/thu-may-chu.mjs`: ping đúng mã luật, đăng nhập ẩn danh, đánh hai trận nặng với kinh đô máy, so kết quả với tự đánh lại, rời). Job đăng GitHub Pages giờ chỉ chạy ở `main`. `.github/workflows/giu-may-chu.yml` gọi máy chủ 3 ngày một lần.
 6. **PR 5: nối mạng**: tham gia, tải bản chụp, tìm đối thủ, đánh, nhận của, bảng Bị đánh, trừ của khi mở game, trận đánh dở. Kiểm trận ra cùng kết quả trên WebKit (họ nhà Safari) và Node.
 7. **PR 6: thêm sau**: người giữ thành xem lại trận bị đánh, bảng xếp hạng, gắn Google và lưu game lên mây để chuyển máy.
 
 **Chủ dự án cần tự làm trước PR 4** (phiên Claude không tạo hộ được: cần tài khoản riêng, và khóa bí mật chỉ chủ dự án giữ; khóa bí mật không dán vào khung chat):
-1. **Tạo dự án**: vào supabase.com, đăng nhập bằng GitHub, New project:
+1. **Tạo dự án**: vào supabase.com, đăng nhập (tài khoản GitHub nào cũng được, không cần trùng tài khoản chủ repo; nên mời thêm một email khác vào tổ chức trên Supabase để khỏi mất quyền nếu mất tài khoản ấy), New project:
    - tên `thoi-dai-van-lang`, Region Southeast Asia (Singapore), gói Free;
    - Generate password rồi cất mật khẩu cơ sở dữ liệu;
    - tùy chọn bảo mật (Data API) giữ mặc định.
@@ -2744,7 +2756,10 @@ Chủ dự án yêu cầu lập phương án PvP giữa các người chơi: **c
    - Project URL `https://<mã dự án>.supabase.co`; mã dự án là đoạn sau `/project/` trên thanh địa chỉ, hay Project Settings → General → Project ID;
    - khóa publishable (Project Settings → API Keys, bắt đầu bằng `sb_publishable_`). Dự án chỉ có khóa `anon` (tab Legacy) thì dùng khóa ấy, như nhau.
    - Không dùng khóa secret hay `service_role` ở máy khách.
-5. **Access token** (bí mật): ảnh đại diện → Account → Access Tokens → Generate new token (tên `github-deploy`). Token chỉ hiện một lần.
+5. **Access token** (bí mật), tạo bằng chính tài khoản Supabase giữ dự án: ảnh đại diện → Account → Access Tokens → Generate new token (tên `github-deploy`). Token chỉ hiện một lần. Supabase giờ bắt chọn quyền cho token (sửa quyền sau khi tạo không được, phải tạo token mới):
+   - Resource access: Project, chọn đúng dự án;
+   - Expiration: lâu nhất 1 năm (Custom), hết hạn thì tạo token mới và thay Secret `SUPABASE_ACCESS_TOKEN`;
+   - Permissions: Project Settings, Connection Pooling, Production Branches, Projects (account-wide) mức Read; Edge Functions mức Read-write; còn lại No access (đẩy migration đăng nhập thẳng bằng mật khẩu cơ sở dữ liệu nên không cần Database, Migrations).
 6. **Cất vào GitHub**: repo → Settings → Secrets and variables → Actions:
    - Variables: `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY`;
    - Secrets: `SUPABASE_ACCESS_TOKEN`, `SUPABASE_PROJECT_REF` (mã dự án), `SUPABASE_DB_PASSWORD`.
@@ -3199,5 +3214,5 @@ Cuối game: thay năm trại cũ (chừng 35 nghìn kể cả viền) và bốn
 19. **Một doanh trại lớn** (chủ dự án đã duyệt, đã làm cả ba PR: luật và bản lưu 26, hình doanh trại, hình bốn nơi ở; xem mục Kế hoạch cùng tên): doanh trại còn một trại 8×8 có tường bao, lầu cổng, sân tập có lính tập; mỗi tướng một doanh trong trại; quân ra trận từ cổng gần giặc; bốn nơi ở vẽ lại 4×4.
 20. **Đền Rồng Tiên** (chủ dự án yêu cầu, đã làm; xem mục cùng tên): đền 8×8 thờ Lạc Long Quân và Âu Cơ, mở ở Điện 10; của từ nước, từ núi làm ra thêm 20%; nhiệm vụ 62.
 21. **Ngày đêm** (chủ dự án chọn, đã làm; xem mục cùng tên): kinh đô có ngày, chiều tà, đêm, rạng đông, 12 phút chơi một vòng, chỉ để nhìn. PR 1 trời và cài đặt, PR 2 đèn đuốc, đèn thuyền, đom đóm.
-22. **Đấu thành** (chủ dự án đã duyệt; đã làm PR 1–3: trận tất định, luật, đánh thử ngoài mạng; còn server; xem Kế hoạch cùng tên): đánh thành người chơi khác, cướp của, server Supabase miễn phí.
+22. **Đấu thành** (chủ dự án đã duyệt; đã làm PR 1–4: trận tất định, luật, đánh thử ngoài mạng, server; còn nối mạng; xem Kế hoạch cùng tên): đánh thành người chơi khác, cướp của, server Supabase miễn phí.
 23. **Để sau**: nhạc nền.

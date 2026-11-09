@@ -29,6 +29,7 @@ import {
   CH5_QUEST_START,
   DAU_THANH,
   DIEN_CHAPTER,
+  DOANH_MAX,
   GUARD_CAP,
   HUAN_BRANCHES,
   HUAN_COST,
@@ -97,6 +98,11 @@ export interface Snapshot {
   cap: number;
   /** Lính giữ thành, theo chỉ số công trình trong `buildings`. */
   guards: PvpGuard[];
+  /**
+   * Quân của người chơi (giữ kinh đô và dự trữ). Máy chủ dùng khi chính người này đi đánh thành: quân mang đi không
+   * quá chừng này. Không có doanh trại thì không mang quân nào.
+   */
+  troops: Record<UnitType, number>;
   /** Tướng giữ thành (đứng trước Điện, không dùng kỹ năng). */
   heroes: HeroSetup[];
   bonus: number;
@@ -157,6 +163,7 @@ export function makeSnapshot(state: GameState): Snapshot {
     resources: { ...state.resources },
     cap: storageCap(state),
     guards,
+    troops: barracks ? { ...state.troops } : { giao: 0, cung: 0, voi: 0, no: 0 },
     heroes: defendHeroes(state),
     bonus: troopBonus(state),
     arms: { ...state.arms },
@@ -246,6 +253,7 @@ function isSnapshotShape(v: unknown): v is Snapshot {
     if (!isObj(g) || !isInt(g.at, 0, 1999) || !UNIT_TYPES.includes(g.kind as UnitType) || !isInt(g.n, 0, 999)) return false;
     if (g.nu !== undefined && g.nu !== true) return false;
   }
+  if (!isRecordOf(v.troops, UNIT_TYPES, (x) => isInt(x, 0, 9999))) return false;
   if (!Array.isArray(v.heroes) || v.heroes.length > 2 || !v.heroes.every((h) => isObj(h) && HERO_KINDS.includes(h.kind as HeroKind))) return false;
   if (!isNum(v.bonus, 0, 1) || typeof v.crossbows !== 'boolean' || typeof v.walls !== 'boolean') return false;
   return isRecordOf(v.arms, UNIT_TYPES, (x) => isInt(x, 0, 9)) && isRecordOf(v.huan, HUAN_BRANCHES, (x) => isInt(x, 0, 9));
@@ -281,11 +289,17 @@ export function validateSnapshot(snap: Snapshot): string | null {
   if ((count.get('choiCanh') ?? 0) + LAU_NO_TOWERS * (count.get('lauNo') ?? 0) > (BUILDINGS.choiCanh.limit[lv] ?? 0)) return 'quá số chòi canh';
   if (snap.buildings.filter((b) => b.uNo).length > (U_NO.limit[lv] ?? 0)) return 'quá số ụ nỏ';
   let space = 0;
+  const guarded = { giao: 0, cung: 0, voi: 0, no: 0 };
   for (const g of snap.guards) {
     if (snap.buildings[g.at]?.type !== 'doanhTrai') return 'lính giữ thành không ở doanh trại';
     space += g.n * UNITS[g.kind].space;
+    guarded[g.kind] += g.n;
   }
   if (space > (GUARD_CAP[lv] ?? 0)) return 'quá số lính giữ thành';
+  if (UNIT_TYPES.some((k) => guarded[k] > snap.troops[k])) return 'lính giữ thành nhiều hơn quân đang có';
+  // Sức chứa doanh trại nhân số doanh nhiều nhất (`capOf`): bản chụp không biết bao nhiêu tướng đã về.
+  const room = snap.buildings.reduce((n, b) => n + (b.type === 'doanhTrai' ? (BUILDINGS.doanhTrai.troopCap![b.level - 1] ?? 0) * DOANH_MAX : 0), 0);
+  if (armySpace(snap.troops) > room) return 'quá sức chứa doanh trại';
   if (UNIT_TYPES.some((k) => snap.arms[k] > ARMS.length)) return 'binh khí quá bậc';
   if (HUAN_BRANCHES.some((k) => snap.huan[k] > HUAN_COST.length)) return 'huân công quá bậc';
   if (snap.bonus > TEMPLE_BONUS + TET_TROI_BONUS + 1e-9) return 'Đền cộng quá mức';
@@ -365,6 +379,7 @@ export function botSnapshot(dien: number): Snapshot {
     resources: { gao: 0, voOc: 0, datDa: 0, sat: 0, go: 0 },
     cap: 0,
     guards,
+    troops: { ...army },
     heroes: [],
     bonus: has('denPhuDong') ? TEMPLE_BONUS : 0,
     arms: { giao: arms, cung: arms, voi: arms, no: arms },
