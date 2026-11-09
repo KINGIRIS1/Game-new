@@ -21,5 +21,5 @@ jobs:
         run: |
           curl -fsS --retry 3 -X POST "${URL%/}/functions/v1/dau-thanh" -H "apikey: $KEY" -H 'Content-Type: application/json' -d '{"hanh":"ping"}'
           echo
-          curl -fsS --retry 3 "${URL%/}/rest/v1/nguoi_choi?select=id&limit=1" -H "apikey: $KEY"
-          echo
+          # Data API chỉ để có thêm lượt truy cập: lỗi cũng không sao.
+          curl -sS --retry 3 -o /dev/null -w 'Data API: %{http_code}\n' "${URL%/}/rest/v1/nguoi_choi?select=id&limit=1" -H "apikey: $KEY" || true

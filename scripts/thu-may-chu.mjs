@@ -98,6 +98,19 @@ try {
   const me = await goi({ hanh: 'toi' });
   if (me.daDanh.length !== 2 || me.daDanh.some((t) => !t.xong)) fail(`toi: ${JSON.stringify(me.daDanh)}`);
   console.log(`Hồ sơ: ${me.toi.ten}, ${me.toi.chienCong} chiến công, ${me.daDanh.length} trận.`);
+
+  // Đọc qua Data API theo RLS: thấy trận của mình, không thấy bản chụp.
+  const rest = async (path) => {
+    const res = await fetch(`${URL_}/rest/v1/${path}`, { headers: { apikey: KEY, Authorization: `Bearer ${token}` }, signal: AbortSignal.timeout(CHO_MS) });
+    return { status: res.status, body: await res.json().catch(() => null) };
+  };
+  const tran = await rest('tran?select=id,ten_danh&limit=50');
+  if (tran.status !== 200 || !Array.isArray(tran.body)) fail(`Data API đọc trận: ${tran.status} ${JSON.stringify(tran.body)}`);
+  const ids = new Set(me.daDanh.map((t) => t.id));
+  if (tran.body.length !== ids.size || tran.body.some((t) => !ids.has(t.id))) fail(`Data API cho thấy trận không phải của mình: ${JSON.stringify(tran.body)}`);
+  const snap = await rest('ban_chup?select=ma&limit=1');
+  if (snap.status === 200 && Array.isArray(snap.body) && snap.body.length) fail('Data API cho đọc bản chụp');
+  console.log(`Data API: thấy ${tran.body.length} trận của mình, bản chụp bị chặn (${snap.status}).`);
 } finally {
   // 4. Rời Đấu thành để người chơi thật không gặp người thử.
   await goi({ hanh: 'roi' });
