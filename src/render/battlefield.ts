@@ -23,7 +23,7 @@ import { makeNhaSan, makeRuong } from './buildings';
 import { makeBridge } from './benKia';
 import { C } from './palette';
 import { cornTemplates, reedTemplates } from './lauSay';
-import { makeWorker, type Job } from './people';
+import { DAN_RUT as RETREAT, makeWorker, type DanRut as Walker } from './people';
 import type { Poser } from './rig';
 import { type Placement, ShapeBuilder, disposeModel, instanceTemplates, seeded } from './shapes';
 import { ToonModel, inkThin, outlineOf, toon } from './toon';
@@ -297,25 +297,6 @@ const DRUMMER = { x: FIELD.w / 2 + 0.3, z: FIELD.d + 2 };
 /** Mặt trống: nơi sóng trống tỏa ra (tọa độ trận). */
 const DRUM_AT = { x: DRUMMER.x - 0.56, z: DRUMMER.z };
 
-/**
- * Đoàn dân rút về núi ở Cấm Khê, từ người đi đầu: dân theo nghề (`ganh`: gánh đòn gánh; `dat`: dắt con trâu đi ngay
- * sau bằng dây thừng), hay trâu. Lính gác đi cuối đoàn.
- */
-type Walker = { job: Job; ganh?: boolean; dat?: boolean } | 'trau';
-const RETREAT: Walker[] = [
-  { job: 'thoXe', ganh: true },
-  { job: 'phuNu' },
-  { job: 'nong', dat: true },
-  'trau',
-  { job: 'giuKho' },
-  { job: 'phuNu' },
-  { job: 'thoXe', ganh: true },
-  { job: 'buon' },
-  { job: 'nong', dat: true },
-  'trau',
-  { job: 'phuNu' },
-  { job: 'linhGac' },
-];
 /** Người cách người trên đường mòn chừng này ô; quanh trâu thì xa hơn. */
 const WALK_GAP = 1.0;
 const BUFFALO_GAP = 1.35;
