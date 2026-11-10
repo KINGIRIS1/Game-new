@@ -1636,6 +1636,74 @@ textarea {
   flex-wrap: wrap;
 }
 
+/* Thẻ Đấu thật / Đánh thử trên đầu bảng Đấu thành. */
+.dau-modes {
+  display: flex;
+  gap: 8px;
+  margin: 2px 0 8px;
+}
+
+.dau-ten-label {
+  display: block;
+  margin: 8px 0 4px;
+  font-weight: 700;
+  font-size: 14px;
+}
+
+.dau-ten {
+  display: block;
+  width: 100%;
+  margin-top: 4px;
+  padding: 9px 11px;
+  border: 1.5px solid var(--line);
+  border-radius: 10px;
+  background: #fffaf0;
+  color: var(--ink);
+  font: inherit;
+  font-size: 16px;
+}
+
+.dau-ten:focus {
+  outline: 2px solid var(--bronze);
+  outline-offset: 1px;
+}
+
+.dau-busy {
+  font-weight: 700;
+}
+
+/* Trận gần đây, bảng Bị đánh: mỗi trận một dòng tên, dưới là sao, chiến công, của mất. */
+.dau-lich {
+  list-style: none;
+  margin: 4px 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.dau-lich li {
+  display: flex;
+  flex-direction: column;
+  padding: 6px 9px;
+  border-radius: 10px;
+  background: var(--paper-2);
+}
+
+.dau-lich small {
+  opacity: 0.85;
+}
+
+.dau-leave {
+  margin-top: 10px;
+  flex-wrap: wrap;
+}
+
+.dau-attacked {
+  max-height: 80vh;
+  overflow-y: auto;
+}
+
 .dau-result .dau-stars {
   font-size: 34px;
   letter-spacing: 4px;

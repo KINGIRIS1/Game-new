@@ -18,6 +18,16 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
+    # Postgres cho test máy chủ Đấu thành (supabase/thu/).
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres" --health-interval 5s --health-timeout 5s --health-retries 10
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -26,15 +36,73 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm test
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+      - name: Máy chủ Đấu thành (Node và Deno đánh trận y hệt, Edge Function trên Postgres)
+        env:
+          DAU_THANH_DB_URL: postgres://postgres:postgres@localhost:5432/postgres
+        run: |
+          node scripts/doi-chieu-deno.mjs
+          deno check --config supabase/functions/dau-thanh/deno.json supabase/functions/dau-thanh/index.ts
+          deno test --config supabase/functions/dau-thanh/deno.json --allow-env --allow-net --allow-read supabase/thu/
+      - name: Trận trên WebKit (Safari) ra y hệt Node
+        run: |
+          npm i --no-save playwright@1.63.0
+          npx playwright install --with-deps webkit
+          node scripts/doi-chieu-trinh-duyet.mjs webkit
+      # Bản game gọi máy chủ Đấu thành ở địa chỉ này, bằng khóa publishable (công khai được). Chưa có biến thì chỉ đánh thử.
       - run: npm run build
+        env:
+          VITE_SUPABASE_URL: ${{ vars.SUPABASE_URL }}
+          VITE_SUPABASE_KEY: ${{ vars.SUPABASE_PUBLISHABLE_KEY }}
       - uses: actions/upload-pages-artifact@v3
         if: github.event_name != 'pull_request'
         with:
           path: dist
 
-  deploy:
-    if: github.event_name != 'pull_request'
+  # Máy chủ Đấu thành (Supabase, docs/thiet-ke.md mục Đấu thành): đẩy migration, Edge Function, rồi thử máy chủ thật.
+  # Chạy khi đẩy lên main, hay bấm Run workflow (chạy ở nhánh nào thì đưa code nhánh ấy lên máy chủ thật).
+  # Khóa ở Settings → Secrets and variables → Actions; chưa có biến SUPABASE_URL thì bỏ qua.
+  server:
+    if: (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && vars.SUPABASE_URL != ''
     needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    concurrency:
+      group: may-chu
+      cancel-in-progress: false
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      SUPABASE_PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
+      SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - uses: supabase/setup-cli@v1
+        with:
+          version: 2.122.0
+      - name: Đóng gói luật
+        run: node scripts/luat.mjs
+      - name: Đẩy migration
+        run: supabase db push --project-ref "$SUPABASE_PROJECT_REF" --password "$SUPABASE_DB_PASSWORD" --skip-vault --yes
+      - name: Triển khai Edge Function
+        run: supabase functions deploy dau-thanh --project-ref "$SUPABASE_PROJECT_REF" --use-api --no-verify-jwt --yes
+      - name: Thử máy chủ thật
+        env:
+          SUPABASE_URL: ${{ vars.SUPABASE_URL }}
+          SUPABASE_PUBLISHABLE_KEY: ${{ vars.SUPABASE_PUBLISHABLE_KEY }}
+        run: node scripts/thu-may-chu.mjs
+
+  # Đăng game sau khi máy chủ đã lên bản luật mới (bản game và máy chủ cùng mã luật). Máy chủ hỏng hay bỏ qua thì vẫn
+  # đăng: chơi một mình không cần máy chủ, Đấu thật báo người chơi tải lại trang khi mã luật lệch.
+  deploy:
+    if: ${{ !cancelled() && needs.build.result == 'success' && github.event_name != 'pull_request' && github.ref == 'refs/heads/main' }}
+    needs: [build, server]
     runs-on: ubuntu-latest
     environment:
       name: github-pages

@@ -1,0 +1,25 @@
+name: Giữ máy chủ Đấu thành thức
+
+# Supabase gói miễn phí tạm dừng dự án sau 7 ngày không ai vào, nên 3 ngày gọi máy chủ một lần: Edge Function
+# (ping còn dọn dữ liệu cũ) và Data API. GitHub tắt lịch chạy của repo 60 ngày không có commit nào.
+on:
+  schedule:
+    - cron: '41 5 */3 * *'
+  workflow_dispatch:
+
+permissions: {}
+
+jobs:
+  ping:
+    if: vars.SUPABASE_URL != ''
+    runs-on: ubuntu-latest
+    steps:
+      - name: Gọi Edge Function và Data API
+        env:
+          URL: ${{ vars.SUPABASE_URL }}
+          KEY: ${{ vars.SUPABASE_PUBLISHABLE_KEY }}
+        run: |
+          curl -fsS --retry 3 -X POST "${URL%/}/functions/v1/dau-thanh" -H "apikey: $KEY" -H 'Content-Type: application/json' -d '{"hanh":"ping"}'
+          echo
+          # Data API chỉ để có thêm lượt truy cập: lỗi cũng không sao.
+          curl -sS --retry 3 -o /dev/null -w 'Data API: %{http_code}\n' "${URL%/}/rest/v1/nguoi_choi?select=id&limit=1" -H "apikey: $KEY" || true

@@ -2218,4 +2218,25 @@ export const DAU_THANH = {
   botStock: 0.6,
   hpMul: [3, 3, 3, 3, 3, 3, 4, 6, 6, 10],
   siege: [2, 2, 2, 2, 2, 1, 1, 4, 4, 4],
+  /** Đánh kinh đô máy (khi chưa đủ người chơi): chiến công được hay mất nhân chừng này, không cướp của thật. */
+  botTrophy: 0.2,
+  /** Bắt đầu trận thì khóa người giữ thành chừng này giây (trận 3 phút và lúc vào trận). */
+  lockS: 240,
+  /** Bị đánh xong được khiên chừng này giờ. */
+  shieldH: 8,
+  /** Đã đánh ai thì chừng này giờ sau mới ghép lại người ấy. */
+  rematchH: 12,
+  /** Ghép trận: Điện chênh không quá `matchDien`, thiếu người thì nới ra `matchDienWide`; chọn ngẫu nhiên trong `matchPick` người chiến công gần nhất. */
+  matchDien: 1,
+  matchDienWide: 2,
+  matchPick: 5,
+  /** Lượt gọi máy chủ mỗi giờ: tìm đối thủ, đánh, tải bản chụp. */
+  findPerH: 30,
+  attackPerH: 10,
+  snapPerH: 30,
+  /** Tên người chơi: số chữ ít nhất, nhiều nhất. */
+  nameMin: 2,
+  nameMax: 16,
+  /** Trận và bản chụp quá chừng này ngày thì máy chủ xóa. */
+  keepDays: 30,
 };
