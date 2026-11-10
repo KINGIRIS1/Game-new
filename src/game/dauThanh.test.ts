@@ -26,9 +26,11 @@ import {
   type PvpRun,
   type Snapshot,
 } from './dauThanh';
-import { createInitialState, place, tick } from './game';
+import { createInitialState, dienLevel, place, storageCap, tick, type Building } from './game';
+import { playChapters } from './moPhong';
+import { nhanBanChup } from './mayChu';
 import { HALF_ARMY, HALF_ARMY4, REACTION_S, SAMPLE_ARMY, SAMPLE_ARMY4, SEEDS } from './testkit';
-import { RIVER_START } from './map';
+import { GRID, RIVER_START, farBankOf, isRiver } from './map';
 import { DIEN, edge, setDien } from './testmap';
 
 /** Tướng của người đánh thành ở cấp Điện `dien`: Gióng có Nhổ tre ở Điện 5, Sơn Tinh ở Điện 6, An Dương Vương ở Điện 7, Cao Lỗ từ Điện 8. */
@@ -95,6 +97,49 @@ describe('bản chụp kinh đô', () => {
     );
     expect(def.resources).toEqual(s.resources);
   });
+
+  it('của vượt sức chứa (thưởng, hoàn của, dỡ kho) chỉ chụp tới sức chứa; kho bên kia sông không tính: máy chủ vẫn nhận', () => {
+    const s = capital();
+    const cap = storageCap(s);
+    s.resources = { gao: cap * 3, voOc: cap + 1, datDa: cap, sat: 12.5, go: 0 };
+    let snap = makeSnapshot(s);
+    expect(validateSnapshot(snap)).toBeNull();
+    expect(snap.resources).toEqual({ gao: cap, voOc: cap, datDa: cap, sat: 12.5, go: 0 });
+    expect(nhanBanChup(encodeSnapshot(snap))).not.toHaveProperty('loi');
+    // Kho bên kia sông: không vào bản chụp, sức chứa trong bản chụp không tính kho ấy.
+    let far = -1;
+    for (let i = 0; i < GRID * GRID && far < 0; i++) if (farBankOf(i % GRID, Math.floor(i / GRID)) !== null && !isRiver(i % GRID, Math.floor(i / GRID))) far = i;
+    s.buildings.push({ id: s.nextId++, type: 'kho', x: far % GRID, z: Math.floor(far / GRID), level: 5, workers: 0 } as Building);
+    expect(storageCap(s)).toBeGreaterThan(cap);
+    s.resources.gao = storageCap(s);
+    snap = makeSnapshot(s);
+    expect([snap.cap, snap.resources.gao]).toEqual([cap, cap]);
+    expect(validateSnapshot(snap)).toBeNull();
+  });
+
+  it('người chơi mô phỏng từ Điện 5 tới Điện 10: bản chụp lúc nào cũng hợp luật, kể cả khi của vượt sức chứa', () => {
+    const s = createInitialState(0);
+    const loi = new Set<string>();
+    let lan = 0;
+    playChapters({
+      s,
+      last: 10,
+      maxSec: 20 * 3600,
+      until: (_m, sec) => {
+        if (sec % 300 !== 0 || dienLevel(s) < DAU_THANH.unlockDien) return false;
+        lan++;
+        const over = { ...s, resources: { gao: s.resources.gao * 3 + 1e5, voOc: s.resources.voOc * 3, datDa: 1e6, sat: 1e6, go: 1e6 } };
+        for (const st of [s, over]) {
+          const why = validateSnapshot(makeSnapshot(st));
+          if (why) loi.add(`Điện ${dienLevel(s)}: ${why}`);
+        }
+        return false;
+      },
+    });
+    expect(dienLevel(s)).toBe(10);
+    expect(lan).toBeGreaterThan(50);
+    expect([...loi]).toEqual([]);
+  }, 120_000);
 
   it('bản chụp sửa tay bị từ chối: thừa công trình, cấp vượt Điện, chồng ô, quá lính giữ thành, quá binh khí, của quá kho', () => {
     const good = botSnapshot(6);

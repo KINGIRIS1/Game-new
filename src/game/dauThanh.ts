@@ -146,6 +146,12 @@ export function makeSnapshot(state: GameState): Snapshot {
   for (let i = 0; i < GRID * GRID; i++) {
     if (state.heights[i] !== base[i] && farBankOf(i % GRID, Math.floor(i / GRID)) === null) heights.push(i, state.heights[i]);
   }
+  // Sức chứa tính theo công trình bờ bên này, đúng như máy chủ tính lại từ bản chụp (kho bên kia sông không chụp).
+  // Của trong kho được phép vượt sức chứa (thưởng nhiệm vụ, hoàn của khi hủy việc xây, dỡ kho): chỉ chụp tới sức
+  // chứa, phần vượt không ai cướp được.
+  const cap = storageCap({ ...state, buildings: keep });
+  const resources = { gao: 0, voOc: 0, datDa: 0, sat: 0, go: 0 };
+  for (const r of RESOURCE_IDS) resources[r] = Math.max(0, Math.min(cap, state.resources[r]));
   return {
     v: 1,
     dien: dienLevel(state),
@@ -160,8 +166,8 @@ export function makeSnapshot(state: GameState): Snapshot {
     })),
     heights,
     khoanh: [...state.khoanh],
-    resources: { ...state.resources },
-    cap: storageCap(state),
+    resources,
+    cap,
     guards,
     troops: barracks ? { ...state.troops } : { giao: 0, cung: 0, voi: 0, no: 0 },
     heroes: defendHeroes(state),
