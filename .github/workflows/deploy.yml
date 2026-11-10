@@ -46,7 +46,16 @@ jobs:
           node scripts/doi-chieu-deno.mjs
           deno check --config supabase/functions/dau-thanh/deno.json supabase/functions/dau-thanh/index.ts
           deno test --config supabase/functions/dau-thanh/deno.json --allow-env --allow-net --allow-read supabase/thu/
+      - name: Trận trên WebKit (Safari) ra y hệt Node
+        run: |
+          npm i --no-save playwright@1.63.0
+          npx playwright install --with-deps webkit
+          node scripts/doi-chieu-trinh-duyet.mjs webkit
+      # Bản game gọi máy chủ Đấu thành ở địa chỉ này, bằng khóa publishable (công khai được). Chưa có biến thì chỉ đánh thử.
       - run: npm run build
+        env:
+          VITE_SUPABASE_URL: ${{ vars.SUPABASE_URL }}
+          VITE_SUPABASE_KEY: ${{ vars.SUPABASE_PUBLISHABLE_KEY }}
       - uses: actions/upload-pages-artifact@v3
         if: github.event_name != 'pull_request'
         with:
@@ -89,9 +98,11 @@ jobs:
           SUPABASE_PUBLISHABLE_KEY: ${{ vars.SUPABASE_PUBLISHABLE_KEY }}
         run: node scripts/thu-may-chu.mjs
 
+  # Đăng game sau khi máy chủ đã lên bản luật mới (bản game và máy chủ cùng mã luật). Máy chủ hỏng hay bỏ qua thì vẫn
+  # đăng: chơi một mình không cần máy chủ, Đấu thật báo người chơi tải lại trang khi mã luật lệch.
   deploy:
-    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
-    needs: build
+    if: ${{ !cancelled() && needs.build.result == 'success' && github.event_name != 'pull_request' && github.ref == 'refs/heads/main' }}
+    needs: [build, server]
     runs-on: ubuntu-latest
     environment:
       name: github-pages

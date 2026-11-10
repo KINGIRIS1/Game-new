@@ -265,7 +265,17 @@ export type HudAction =
   /** Đấu thành: đánh thử kinh đô `target` (0 là kinh đô của mình, số khác là kinh đô máy Điện ấy). */
   | { kind: 'dauThanh'; target: DauTarget; side: 'bac' | 'tay'; army: Record<UnitType, number> }
   | { kind: 'dauHome' }
-  | { kind: 'dauAgain' };
+  | { kind: 'dauAgain' }
+  // Đấu thật (gọi máy chủ ở main.ts): tham gia, tìm đối thủ, đánh, gửi lại kết quả, đánh tiếp, rời, tải lại trang.
+  | { kind: 'dauJoin'; ten: string }
+  | { kind: 'dauFind' }
+  | { kind: 'dauThat'; side: 'bac' | 'tay'; army: Record<UnitType, number> }
+  | { kind: 'dauRetry' }
+  | { kind: 'dauMore' }
+  | { kind: 'dauLeave' }
+  | { kind: 'dauReload' }
+  | { kind: 'dauAttackedOk' }
+  | { kind: 'dauOpened' };
 
 export type HudMode = 'view' | 'place' | 'move' | 'paint' | 'merge';
 /** Kéo thả đắp tường: dải thẳng hay viền chữ nhật. */
@@ -437,6 +447,14 @@ export class Hud {
     this.toasts = root.querySelector('.toasts')!;
     root.addEventListener('click', this.onClick);
     root.addEventListener('change', this.onChange);
+    // Tên gõ ở bảng Đấu thật: nhớ lại để bảng dựng lại không mất chữ; Enter thì tham gia.
+    this.campaignEl.addEventListener('input', (e) => {
+      const el = e.target as HTMLElement;
+      if (el instanceof HTMLInputElement && el.classList.contains('dau-ten') && this.camp?.dau) this.camp.dau.that.ten = el.value;
+    });
+    this.campaignEl.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && (e.target as HTMLElement).classList.contains('dau-ten')) this.campaignEl.querySelector<HTMLElement>('[data-act=dauJoin]')?.click();
+    });
     // Chạm ra ngoài ô bật lên (kể cả xuống cảnh 3D) thì đóng ô ấy.
     document.addEventListener('pointerdown', (e) => {
       if (!this.pop) return;
@@ -602,6 +620,7 @@ export class Hud {
       case 'armyHero':
       case 'armyNu':
       case 'openDau':
+      case 'dauMode':
       case 'dauTarget':
       case 'dauSide':
       case 'dauNext':
@@ -620,7 +639,25 @@ export class Hud {
       case 'dauAttack': {
         const dau = this.camp?.dau;
         if (!dau) return;
+        if (dau.mode === 'that') return this.onAction({ kind: 'dauThat', side: dau.side, army: { ...dau.army } });
         return this.onAction({ kind: 'dauThanh', target: dau.target, side: dau.side, army: { ...dau.army } });
+      }
+      case 'dauJoin': {
+        const dau = this.camp?.dau;
+        if (!dau) return;
+        dau.that.ten = this.campaignEl.querySelector<HTMLInputElement>('.dau-ten')?.value ?? dau.that.ten;
+        return this.onAction({ kind: 'dauJoin', ten: dau.that.ten });
+      }
+      case 'dauLeave': {
+        // Bấm hai lần mới rời (xóa tên, chiến công, bản chụp khỏi máy chủ).
+        const dau = this.camp?.dau;
+        if (!dau) return;
+        if (!dau.that.roiHoi) {
+          dau.that.roiHoi = true;
+          return this.refreshCampaign(this.getState(), true);
+        }
+        dau.that.roiHoi = false;
+        return this.onAction({ kind: 'dauLeave' });
       }
       case 'openFile': {
         const input = this.sheetEl.querySelector<HTMLInputElement>('#save-file');
@@ -1892,6 +1929,11 @@ export class Hud {
     } else if (act === 'openDau') {
       camp.step = camp.step === 'dau' ? 'stage' : 'dau';
       camp.dau ??= newDauView(state);
+    } else if (camp.dau && act === 'dauMode') {
+      camp.dau.mode = el.dataset.mode === 'thu' ? 'thu' : 'that';
+      camp.dau.step = 'target';
+      camp.dau.that.loi = null;
+      camp.dau.that.roiHoi = false;
     } else if (camp.dau && act === 'dauTarget') {
       Object.assign(camp.dau, pickTarget(state, id));
     } else if (camp.dau && act === 'dauSide') {
@@ -1904,15 +1946,24 @@ export class Hud {
       stepDauArmy(state, camp.dau, unit, Number(el.dataset.delta));
     }
     this.refreshCampaign(state);
+    // Vừa mở thẻ Đấu thật: main.ts hỏi máy chủ hồ sơ, trận gần đây.
+    if ((act === 'openDau' || act === 'dauMode') && camp.step === 'dau' && camp.dau?.mode === 'that') this.onAction({ kind: 'dauOpened' });
   }
 
-  /** Mở thẳng bảng Đấu thành (nút Đánh lại sau trận), ở bước chọn kinh đô hay bước chọn quân. */
-  showDau(state: GameState, step: DauView['step'] = 'target'): void {
+  /** Mở thẳng bảng Đấu thành (nút Đánh lại, Đánh tiếp sau trận), ở thẻ và bước chọn. */
+  showDau(state: GameState, step: DauView['step'] = 'target', mode?: DauView['mode']): DauView {
     this.showCampaign(state);
     const camp = this.camp!;
     camp.step = 'dau';
-    camp.dau = { ...newDauView(state), step };
+    const view = newDauView(state);
+    camp.dau = { ...view, step, mode: mode ?? view.mode };
     this.refreshCampaign(state, true);
+    return camp.dau;
+  }
+
+  /** Bảng Đấu thành đang mở (để main.ts ghi kết quả máy chủ vào), hay null. */
+  dauView(): DauView | null {
+    return this.camp?.step === 'dau' ? (this.camp.dau ?? null) : null;
   }
 
   refreshCampaign(state: GameState, force = false): void {
@@ -1941,14 +1992,20 @@ export class Hud {
       : '';
     // Chip Đấu thành: đánh thử kinh đô người khác (bảng ghi lý do khi chưa đánh được).
     const dau = `<button class="huan-chip dau-chip ${camp.step === 'dau' ? 'on' : ''}" data-act="openDau" aria-label="${vi.dauThanh.title}">${vi.dauThanh.chip}</button>`;
-    const map = camp.step === 'dau' && camp.dau ? dauMapHtml(camp.dau) : mapHtml(state, camp.stage, camp.chapter);
+    const map = camp.step === 'dau' && camp.dau ? dauMapHtml(state, camp.dau) : mapHtml(state, camp.stage, camp.chapter);
     const head = camp.step === 'dau' ? `🏯 ${vi.dauThanh.title}` : `⚔️ ${title}`;
     const html = `<div class="camp-head"><h2>${head}</h2>${camp.step === 'dau' ? '' : tabs}${huan}${dau}
         <button class="close" data-act="closeCampaign" aria-label="${vi.ui.close}">✕</button></div>
       <div class="camp-main"><div class="camp-map">${map}</div><div class="camp-panel">${panel}</div></div>`;
     if (html !== this.campHtml || force) {
       this.campHtml = html;
+      const typing = document.activeElement instanceof HTMLInputElement && document.activeElement.classList.contains('dau-ten');
       this.campaignEl.innerHTML = html;
+      const ten = this.campaignEl.querySelector<HTMLInputElement>('.dau-ten');
+      if (ten && camp.dau) {
+        ten.value = camp.dau.that.ten;
+        if (typing) ten.focus();
+      }
     }
   }
 
@@ -2037,6 +2094,19 @@ export class Hud {
 
   closeDauResult(): void {
     this.root.querySelector('.modal-back.dau')?.remove();
+  }
+
+  /** Bảng Bị đánh (kinh đô bị người khác đánh khi vắng, trận đánh dở vừa nhận kết quả). */
+  showDauAttacked(html: string): void {
+    this.closeDauAttacked();
+    const back = document.createElement('div');
+    back.className = 'modal-back stage dau-bi';
+    back.innerHTML = html;
+    this.root.appendChild(back);
+  }
+
+  closeDauAttacked(): void {
+    this.root.querySelector('.modal-back.dau-bi')?.remove();
   }
 
   // ---------- Truyện ----------

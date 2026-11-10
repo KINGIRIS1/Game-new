@@ -8,7 +8,7 @@
 // cơ sở dữ liệu thật.
 
 import postgres from 'npm:postgres@3.4.9';
-import { CAU_HINH, LUAT_MA, danhLai, kinhDoMay, type QuanDanh } from '../functions/dau-thanh/luat.js';
+import { CAU_HINH, LUAT_MA, danhLai, kinhDoMay, truCua, type QuanDanh } from '../functions/dau-thanh/luat.js';
 import { taoXuLy } from '../functions/dau-thanh/xuLy.ts';
 
 const DB = Deno.env.get('DAU_THANH_DB_URL');
@@ -66,6 +66,7 @@ Deno.test({
       eq((await goi(A, { hanh: 'bay' })).loi, 'saiLenh');
       const opt = await xuLy(new Request('http://thu/dau-thanh', { method: 'OPTIONS' }));
       eq([opt.status, opt.headers.get('access-control-allow-origin')], [200, '*']);
+      ok(opt.headers.get('access-control-allow-headers')?.includes('x-region'), 'trình duyệt gửi được header x-region');
 
       // Tham gia: tên và bản chụp phải hợp lệ.
       eq(await goi(A, { hanh: 'thamGia', ten: 'Đụ má', banChup: kinhDoMay(5).ma }), { status: 400, ok: false, loi: 'ten', chiTiet: 'tuc' });
@@ -105,6 +106,10 @@ Deno.test({
       eq([a1.daDanh.length, a1.daDanh[0].id, a1.daDanh[0].xong], [1, start.tran, true]);
       const b1 = await goi(B, { hanh: 'toi' });
       eq([b1.toi.chienCong, b1.toi.khienDen, b1.biDanh[0].tenDanh, b1.biDanh[0].ketQua.cuop], [Math.max(0, mine.chienCong.def), now + CAU_HINH.shieldH * 3_600_000, 'Lạc Long', mine.cuop]);
+      // Kho trong bản chụp của B trừ đi của bị cướp.
+      ok(Object.values(mine.cuop).some((n) => n > 0), `A cướp được của: ${JSON.stringify(mine.cuop)}`);
+      const [snapB] = await sql`select ma from public.ban_chup where nguoi = ${B}`;
+      eq(snapB.ma, truCua(kinhDoMay(6).ma, mine.cuop), 'bản chụp B đã trừ của bị cướp');
 
       // Khiên 8 giờ, không đánh lại cùng người trong 12 giờ.
       eq((await goi(D, { hanh: 'danh', doiThu: B, quan: QUAN5, huong: 'bac' })).loi, 'coKhien');
@@ -117,15 +122,19 @@ Deno.test({
       // Trận bỏ dở: quá giờ khóa thì người giữ thành mở game là đóng trận, không lần bấm nào.
       const left = await goi(D, { hanh: 'danh', doiThu: B, quan: QUAN5, huong: 'bac' });
       ok(left.ok, 'D đánh B');
+      eq(left.banChup, truCua(kinhDoMay(6).ma, mine.cuop), 'D đánh bản chụp B đã trừ của');
       now += (CAU_HINH.lockS + 1) * 1000;
       const b2 = await goi(B, { hanh: 'toi' });
       eq([b2.biDanh[0].id, b2.biDanh[0].xong, b2.biDanh[0].ketQua.bam], [left.tran, true, 0]);
       const [row] = await sql`select bam from public.tran where id = ${left.tran}`;
       eq(row.bam, []);
 
-      // Kinh đô máy: không mất khiên, không cướp của thật.
-      const botStart = await goi(B, { hanh: 'danh', doiThu: 'may', quan: QUAN5, huong: 'bac' });
+      // Kinh đô máy: không mất khiên, không cướp của thật. Gửi kèm bản chụp mới (B lên Điện 7) thì gặp kinh đô máy
+      // Điện 7; bản chụp sai thì từ chối.
+      eq((await goi(B, { hanh: 'danh', doiThu: 'may', quan: QUAN5, huong: 'bac', banChup: 'TDVS1:hỏng' })).loi, 'banChup');
+      const botStart = await goi(B, { hanh: 'danh', doiThu: 'may', quan: QUAN5, huong: 'bac', banChup: kinhDoMay(7).ma });
       ok(botStart.ok, `B đánh kinh đô máy: ${JSON.stringify(botStart)}`);
+      eq([botStart.banChup, (await goi(B, { hanh: 'toi' })).toi.dien], [kinhDoMay(7).ma, 7]);
       const botDone = await goi(B, { hanh: 'xong', tran: botStart.tran, bam: [{ s: 0, k: 'rut' }] });
       eq([botDone.ketQua.cuop, botDone.ketQua.chienCong.def, botDone.toi.khienDen !== null], [{ gao: 0, voOc: 0, datDa: 0, sat: 0, go: 0 }, 0, true]);
 

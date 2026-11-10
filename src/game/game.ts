@@ -1,6 +1,7 @@
 // Luật chơi: trạng thái, truy vấn, thao tác và dòng thời gian.
 // Không phụ thuộc DOM hay Three.js để test được bằng Vitest.
 
+import type { DauThanhState } from './dauThat';
 import { plannedBoats, startBattle, stepBattle, type Battle, type RaidSide } from './battle';
 import { updateCampaign } from './campaign';
 import { initialCaoLo } from './caoLo';
@@ -372,6 +373,8 @@ export interface GameState {
   xay: XayState;
   /** Vừa nâng từ kinh đô nhỏ: kinh đô đã dựng lại theo mẫu, trả lại chừng này của. Giao diện báo một lần rồi xóa. */
   relaid?: { refund: Cost; dropped: number; dien?: boolean; trai?: boolean };
+  /** Đấu thành trực tuyến (`dauThat.ts`): chỉ có khi đã bấm Tham gia. Trường tùy chọn nên không lên phiên bản lưu. */
+  dauThanh?: DauThanhState;
 }
 
 export type FailReason =

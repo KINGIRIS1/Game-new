@@ -12,6 +12,7 @@ import {
   decodeSnapshot,
   encodeSnapshot,
   lootPvp,
+  PVP_MAX_INPUTS,
   scorePvp,
   simulatePvp,
   trophyDelta,
@@ -96,6 +97,21 @@ export function kinhDoMay(dien: number): { ma: string; dien: number } {
   return hit;
 }
 
+/**
+ * Bản chụp người giữ thành sau khi bị cướp: kho trong bản chụp trừ đi của bị cướp (không xuống dưới 0), để người đánh
+ * sau không cướp lại phần đã mất khi người giữ thành chưa mở game tải bản chụp mới. Mã hỏng thì trả nguyên mã.
+ */
+export function truCua(ma: string, cuop: unknown): string {
+  const snap = decodeSnapshot(ma);
+  if (!snap) return ma;
+  const c = (cuop && typeof cuop === 'object' ? cuop : {}) as Record<string, unknown>;
+  for (const r of RESOURCE_IDS) {
+    const n = c[r];
+    if (typeof n === 'number' && Number.isFinite(n) && n > 0) snap.resources[r] = Math.max(0, snap.resources[r] - Math.floor(n));
+  }
+  return encodeSnapshot(snap);
+}
+
 /** Đọc mã bản chụp đã lưu ở máy chủ (đã kiểm khi nhận). */
 function docMa(ma: string): Snapshot {
   const snap = decodeSnapshot(ma);
@@ -138,15 +154,13 @@ export function quanDanh(atkMa: string, army: unknown, side: unknown, seed: numb
   };
 }
 
-/** Số lần bấm nhiều nhất một trận nhận (mỗi giây chừng ba lần bấm). */
-const MAX_INPUTS = 600;
 const MAX_STEP = 10_000;
 
 /** Lọc các lần bấm máy khách gửi: đúng dạng, đúng kỹ năng, bước tăng dần không quá giới hạn. */
 function locDauVao(raw: unknown): PvpInput[] {
   if (!Array.isArray(raw)) return [];
   const out: PvpInput[] = [];
-  for (const i of raw.slice(0, MAX_INPUTS)) {
+  for (const i of raw.slice(0, PVP_MAX_INPUTS)) {
     if (!i || typeof i !== 'object') continue;
     const { s, k } = i as Record<string, unknown>;
     if (!Number.isInteger(s) || (s as number) < 0 || (s as number) > MAX_STEP) continue;

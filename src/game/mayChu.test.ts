@@ -17,7 +17,7 @@ import {
 import { skillReady } from './battle';
 import { createInitialState, place } from './game';
 import * as mayChu from './mayChu';
-import { chonDoiThu, danhLai, kiemTen, kinhDoMay, nhanBanChup, quanDanh } from './mayChu';
+import { chonDoiThu, danhLai, kiemTen, kinhDoMay, nhanBanChup, quanDanh, truCua } from './mayChu';
 import luatDts from '../../supabase/functions/dau-thanh/luat.d.ts?raw';
 import { edge, setDien } from './testmap';
 
@@ -84,6 +84,17 @@ describe('bản chụp ở máy chủ', () => {
     const snap = decodeSnapshot(kinhDoMay(8).ma)!;
     expect(validateSnapshot(snap)).toBeNull();
     expect(snap.troops).toEqual(botSnapshot(8).troops);
+  });
+
+  it('bị cướp thì kho trong bản chụp trừ đi của bị cướp, không xuống dưới 0; còn lại giữ nguyên', () => {
+    const ma = kinhDoMay(6).ma;
+    const before = decodeSnapshot(ma)!;
+    const after = decodeSnapshot(truCua(ma, { gao: 1000.7, voOc: 1e9, datDa: -5, sat: 'x', go: 0 }))!;
+    expect(after.resources).toEqual({ gao: before.resources.gao - 1000, voOc: 0, datDa: before.resources.datDa, sat: before.resources.sat, go: before.resources.go });
+    expect({ ...after, resources: before.resources }).toEqual(before);
+    expect(validateSnapshot(after)).toBeNull();
+    expect(truCua('TDVS1:hỏng', { gao: 1 })).toBe('TDVS1:hỏng');
+    expect(decodeSnapshot(truCua(ma, null))).toEqual(before);
   });
 });
 

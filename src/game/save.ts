@@ -6,6 +6,7 @@
 // trống, 18 nới lưới qua sông (76×76, bên kia sông). Bản lưu còn ở kinh đô nhỏ (trước phiên bản 11) được dựng lại thành
 // kinh đô lớn theo mẫu (`xepLai.ts`).
 
+import { isDauThanhState } from './dauThat';
 import { deflateSync, inflateSync } from 'fflate';
 import {
   ARMS,
@@ -70,6 +71,8 @@ export function deserialize(json: string): GameState | undefined {
   }
   const upgraded = migrate(raw);
   if (!isGameState(upgraded)) return undefined;
+  // Đấu thành trực tuyến sai dạng thì bỏ (coi như chưa tham gia), không bỏ cả bản lưu.
+  if (upgraded.dauThanh !== undefined && !isDauThanhState(upgraded.dauThanh)) delete upgraded.dauThanh;
   lowerRiverBed(upgraded);
   cleanXay(upgraded);
   return upgraded;

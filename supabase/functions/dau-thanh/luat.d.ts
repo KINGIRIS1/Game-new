@@ -21,6 +21,7 @@ export declare function kiemTen(raw: unknown): { ten: string } | { loi: TenLoi }
 
 export declare function nhanBanChup(ma: unknown): { ma: string; dien: number } | { loi: string };
 export declare function kinhDoMay(dien: number): { ma: string; dien: number };
+export declare function truCua(ma: string, cuop: unknown): string;
 
 /** Quân đánh thành máy chủ dựng (JSON, lưu ở cột `tran.quan`). */
 export type QuanDanh = {

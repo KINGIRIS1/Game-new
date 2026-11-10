@@ -433,9 +433,12 @@ export function beginPvp(snap: Snapshot, attack: PvpAttack): PvpRun {
   return { snap, attack, def, battle, inputs: [], step: 0, acc: 0, done: false };
 }
 
+/** Số lần bấm nhiều nhất một trận (máy chủ bỏ phần thừa, nên máy khách cũng không ghi quá). */
+export const PVP_MAX_INPUTS = 600;
+
 /** Ghi một lần bấm: áp ở đầu bước kế tiếp. */
 export function pushInput(run: PvpRun, k: PvpInput['k']): void {
-  if (!run.done) run.inputs.push({ s: run.step, k });
+  if (!run.done && run.inputs.length < PVP_MAX_INPUTS) run.inputs.push({ s: run.step, k });
 }
 
 /** Chạy đúng một bước: áp các lần bấm của bước này rồi chạy trận thêm `BATTLE_STEP`. */

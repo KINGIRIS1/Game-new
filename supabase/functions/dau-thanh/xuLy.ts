@@ -5,15 +5,19 @@
 //   banChup { banChup }          tải bản chụp kinh đô mới
 //   toi                          hồ sơ, trận mình bị đánh, trận mình đánh
 //   tim { bo? }                  tìm đối thủ (bỏ qua các id trong `bo`); không ai thì kinh đô máy
-//   danh { doiThu, quan, huong } bắt đầu trận: khóa người giữ thành, mình mất khiên; trả quân máy chủ dựng
-//   xong { tran, bam }           gửi các lần bấm: máy chủ đánh lại, ghi kết quả, chiến công, khiên
+//   danh { doiThu, quan, huong, banChup? }
+//                                bắt đầu trận (kèm bản chụp mới của mình, để quân có là quân lúc này): khóa người
+//                                giữ thành, mình mất khiên; trả quân máy chủ dựng
+//   xong { tran, bam }           gửi các lần bấm: máy chủ đánh lại, ghi kết quả, chiến công, khiên; trừ của bị cướp
+//                                khỏi kho trong bản chụp người giữ thành
 //   roi                          rời Đấu thành (xóa người chơi và bản chụp)
 // Kết quả trận chỉ do máy chủ tính (`danhLai` trong luat.js, đóng gói từ src/game/mayChu.ts).
 
 import postgres from 'npm:postgres@3.4.9';
-import { CAU_HINH, LUAT_MA, chonDoiThu, danhLai, kiemTen, kinhDoMay, nhanBanChup, quanDanh, type KetQua, type QuanDanh } from './luat.js';
+import { CAU_HINH, LUAT_MA, chonDoiThu, danhLai, kiemTen, kinhDoMay, nhanBanChup, quanDanh, truCua, type KetQua, type QuanDanh } from './luat.js';
 
 type Sql = postgres.Sql;
+type Tx = postgres.TransactionSql;
 
 export interface MoiTruong {
   sql: Sql;
@@ -38,7 +42,8 @@ class Loi extends Error {
 
 const CORS = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  // x-region: máy khách xin chạy hàm ở vùng có cơ sở dữ liệu (Singapore).
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-region',
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
 };
 
@@ -181,6 +186,11 @@ export function taoXuLy(env: MoiTruong): (req: Request) => Promise<Response> {
           update public.nguoi_choi set chien_cong = greatest(0, chien_cong + ${ket.chienCong.def}),
             khien_den = ${luc(now + CAU_HINH.shieldH * GIO)}, khoa_den = null
           where id = ${t.nguoi_giu}`;
+        // Kho trong bản chụp mới nhất trừ đi của bị cướp (giữ `luc`: vẫn là lúc người giữ thành tải lên).
+        if (Object.values(ket.cuop).some((n) => n > 0)) {
+          const [b] = await tx<{ ma: string }[]>`select ma from public.ban_chup where nguoi = ${t.nguoi_giu} for update`;
+          if (b) await tx`update public.ban_chup set ma = ${truCua(b.ma, ket.cuop)} where nguoi = ${t.nguoi_giu}`;
+        }
       }
       return true;
     });
@@ -198,6 +208,22 @@ export function taoXuLy(env: MoiTruong): (req: Request) => Promise<Response> {
     if (t) await dongTran(t, [], now);
   }
 
+  /** Ghi bản chụp mới của người chơi (đã kiểm) và cấp Điện theo bản chụp ấy. */
+  async function luuBanChup(tx: Tx, me: string, snap: { ma: string; dien: number }, now: number) {
+    await tx`
+      insert into public.ban_chup (nguoi, ma, dien, luc) values (${me}, ${snap.ma}, ${snap.dien}, ${luc(now)})
+      on conflict (nguoi) do update set ma = excluded.ma, dien = excluded.dien, luc = excluded.luc`;
+    await tx`update public.nguoi_choi set dien = ${snap.dien}, goi_luc = ${luc(now)} where id = ${me}`;
+  }
+
+  /** Nhận bản chụp người chơi gửi lên: kiểm luật, đếm lượt tải. */
+  async function nhan(me: string, ma: unknown, now: number) {
+    const snap = nhanBanChup(ma);
+    if ('loi' in snap) throw new Loi('banChup', 400, snap.loi);
+    await demLuot(me, 'banChup', CAU_HINH.snapPerH, now);
+    return snap;
+  }
+
   // ---------- Lệnh ----------
 
   async function ping() {
@@ -209,31 +235,20 @@ export function taoXuLy(env: MoiTruong): (req: Request) => Promise<Response> {
   async function thamGia(me: string, body: Record<string, unknown>, now: number) {
     const ten = kiemTen(body.ten);
     if ('loi' in ten) throw new Loi('ten', 400, ten.loi);
-    const snap = nhanBanChup(body.banChup);
-    if ('loi' in snap) throw new Loi('banChup', 400, snap.loi);
-    await demLuot(me, 'banChup', CAU_HINH.snapPerH, now);
+    const snap = await nhan(me, body.banChup, now);
     await sql.begin(async (tx) => {
       await tx`
         insert into public.nguoi_choi (id, ten, dien, tao_luc, goi_luc) values (${me}, ${ten.ten}, ${snap.dien}, ${luc(now)}, ${luc(now)})
         on conflict (id) do update set ten = excluded.ten, dien = excluded.dien, goi_luc = excluded.goi_luc`;
-      await tx`
-        insert into public.ban_chup (nguoi, ma, dien, luc) values (${me}, ${snap.ma}, ${snap.dien}, ${luc(now)})
-        on conflict (nguoi) do update set ma = excluded.ma, dien = excluded.dien, luc = excluded.luc`;
+      await luuBanChup(tx, me, snap, now);
     });
     return { ok: true, toi: hoSo((await nguoi(me))!, now) };
   }
 
   async function taiBanChup(me: string, body: Record<string, unknown>, now: number) {
     await canNguoi(me);
-    const snap = nhanBanChup(body.banChup);
-    if ('loi' in snap) throw new Loi('banChup', 400, snap.loi);
-    await demLuot(me, 'banChup', CAU_HINH.snapPerH, now);
-    await sql.begin(async (tx) => {
-      await tx`
-        insert into public.ban_chup (nguoi, ma, dien, luc) values (${me}, ${snap.ma}, ${snap.dien}, ${luc(now)})
-        on conflict (nguoi) do update set ma = excluded.ma, dien = excluded.dien, luc = excluded.luc`;
-      await tx`update public.nguoi_choi set dien = ${snap.dien}, goi_luc = ${luc(now)} where id = ${me}`;
-    });
+    const snap = await nhan(me, body.banChup, now);
+    await sql.begin((tx) => luuBanChup(tx, me, snap, now));
     return { ok: true };
   }
 
@@ -277,7 +292,6 @@ export function taoXuLy(env: MoiTruong): (req: Request) => Promise<Response> {
 
   async function danh(me: string, body: Record<string, unknown>, now: number) {
     const p = await canNguoi(me);
-    const myMa = await banChupCua(me);
     // Mỗi người một trận đang đánh; trận cũ bỏ dở quá giờ khóa thì đóng trước.
     const [open] = await sql<TranRow[]>`select * from public.tran where nguoi_danh = ${me} and trang_thai = 'dang' order by bat_dau limit 1`;
     if (open) {
@@ -285,6 +299,14 @@ export function taoXuLy(env: MoiTruong): (req: Request) => Promise<Response> {
       await dongTran(open, [], now);
     }
     await demLuot(me, 'danh', CAU_HINH.attackPerH, now);
+    // Bản chụp mới gửi kèm (quân có lúc này, cấp Điện lúc này); không gửi thì dùng bản chụp đã tải.
+    let myMa: string;
+    if (body.banChup !== undefined) {
+      const snap = await nhan(me, body.banChup, now);
+      await sql.begin((tx) => luuBanChup(tx, me, snap, now));
+      myMa = snap.ma;
+      p.dien = snap.dien;
+    } else myMa = await banChupCua(me);
     const q = quanDanh(myMa, body.quan, body.huong, Math.floor(ngauNhien() * 2 ** 31));
     if ('loi' in q) throw new Loi('quan', 400, q.loi);
     const het = now + CAU_HINH.lockS * 1000;
