@@ -1414,29 +1414,98 @@ function buildingsKey(state: GameState): number {
   return h;
 }
 
-/** Lưới chi phí (không tính đích) lưu sẵn theo trận và theo `swim`. */
-const COST_CACHE = new WeakMap<Battle, { key: number; grids: (Float32Array | undefined)[] }>();
+/**
+ * Lưới chi phí (không tính đích) lưu sẵn theo trận và theo `swim`, kèm các đường đã tìm trên lưới ấy (`paths`, khóa
+ * là đích và ô xuất phát): dãy công trình chưa đổi thì cùng ô, cùng đích ra đúng đường cũ, khỏi tìm lại (lính đứng
+ * phá một đoạn thành cứ 2 giây tìm đường lại một lần).
+ */
+interface CostEntry {
+  key: number;
+  grids: (Float32Array | undefined)[];
+  paths: (Map<number, number[] | null> | undefined)[];
+}
+const COST_CACHE = new WeakMap<Battle, CostEntry>();
 
-function cachedCost(state: GameState, battle: Battle, swim: boolean): Float32Array {
+function costEntry(state: GameState, battle: Battle): CostEntry {
   const key = buildingsKey(state);
   let entry = COST_CACHE.get(battle);
   if (!entry || entry.key !== key) {
-    entry = { key, grids: [] };
+    entry = { key, grids: [], paths: [] };
     COST_CACHE.set(battle, entry);
   }
-  const slot = swim ? 1 : 0;
-  return (entry.grids[slot] ??= costGrid(state, null, swim));
+  return entry;
 }
 
 /** Công trình này có ghi chi phí riêng lên lưới không (bẫy, đường đi, trang trí, cầu, công trình đã hư thì không). */
 const blocksPath = (b: Building) => !b.damaged && b.type !== 'bayChong' && !isDecor(b.type) && !isBridge(b.type);
 
 /**
+ * Mục lục công trình cho `stepEnemy`: chỗ của công trình trong dãy theo id, và công trình chắn đường ở từng ô. Không
+ * có thì mỗi lính mỗi bước dò cả dãy công trình hai lần (tìm đích, tìm vật chắn ở ô sắp bước tới): trận Đấu thành
+ * nặng mất quá nửa thời gian vào đó, mà máy chủ đánh lại chỉ có 2 giây CPU. Mục lục chỉ ghi chỗ trong dãy, không ghi
+ * hư hay chưa (lúc tra mới xét), nên công trình bị phá giữa bước vẫn đúng. `tile`: -1 là ô không có vật chắn, -2 là
+ * ô có hơn một công trình đè lên (hiếm; khi ấy dò cả dãy như cũ cho đúng thứ tự).
+ */
+interface BuildingIndex {
+  key: number;
+  at: Map<number, number>;
+  tile: Int16Array;
+}
+const INDEX_CACHE = new WeakMap<Battle, BuildingIndex>();
+
+/** Mục lục công trình của trận, dựng lại khi dãy công trình đổi. Gọi một lần mỗi bước (dãy không đổi giữa bước). */
+function buildingIndex(state: GameState, battle: Battle): BuildingIndex {
+  const key = buildingsKey(state);
+  let idx = INDEX_CACHE.get(battle);
+  if (idx && idx.key === key) return idx;
+  idx = { key, at: new Map(), tile: new Int16Array(GRID * GRID).fill(-1) };
+  for (let n = 0; n < state.buildings.length; n++) {
+    const b = state.buildings[n];
+    if (!idx.at.has(b.id)) idx.at.set(b.id, n);
+    if (b.type === 'bayChong' || isDecor(b.type) || isBridge(b.type)) continue;
+    const def = BUILDINGS[b.type];
+    for (let dx = 0; dx < def.w; dx++)
+      for (let dz = 0; dz < def.d; dz++) {
+        if (!inGrid(b.x + dx, b.z + dz)) continue;
+        const i = tileIndex(b.x + dx, b.z + dz);
+        idx.tile[i] = idx.tile[i] === -1 ? n : -2;
+      }
+  }
+  INDEX_CACHE.set(battle, idx);
+  return idx;
+}
+
+/** Công trình còn nguyên chắn ở ô `tile` (không kể đích `target`, bẫy, đường đi, trang trí, cầu). */
+function blockerAt(state: GameState, idx: BuildingIndex, tile: number, target: Building): Building | undefined {
+  const n = idx.tile[tile];
+  if (n === -1) return undefined;
+  if (n >= 0) {
+    const b = state.buildings[n];
+    return b.damaged || b.id === target.id ? undefined : b;
+  }
+  const nx = tile % GRID;
+  const nz = Math.floor(tile / GRID);
+  return state.buildings.find((b) => {
+    if (b.damaged || b.id === target.id || b.type === 'bayChong' || isDecor(b.type) || isBridge(b.type)) return false;
+    const def = BUILDINGS[b.type];
+    return nx >= b.x && nx < b.x + def.w && nz >= b.z && nz < b.z + def.d;
+  });
+}
+
+/**
  * A* trên lưới 8 hướng, tới bất kỳ ô nào thuộc móng công trình đích. `swim`: bơi được qua sông. Có `battle` thì dùng
  * lưới chi phí lưu sẵn của trận (cho đúng đường như dựng lại lưới mỗi lần), chỉ tạm đổi ô móng đích thành dễ đi.
  */
 export function findPath(state: GameState, fromX: number, fromZ: number, target: Building, swim = false, battle?: Battle): number[] | null {
-  const cost = battle ? cachedCost(state, battle, swim) : costGrid(state, target.id, swim);
+  const slot = swim ? 1 : 0;
+  const entry = battle ? costEntry(state, battle) : null;
+  const start = tileAt(fromX, fromZ);
+  // Đường trả về dùng chung giữa các lính: chỉ đọc, không sửa.
+  const memo = entry ? (entry.paths[slot] ??= new Map()) : null;
+  const memoKey = target.id * (GRID * GRID) + start;
+  const known = memo?.get(memoKey);
+  if (known !== undefined) return known;
+  const cost = entry ? (entry.grids[slot] ??= costGrid(state, null, swim)) : costGrid(state, target.id, swim);
   const def = BUILDINGS[target.type];
   // Ô móng đích đi được như đất trống (như `costGrid` khi có đích); xong thì trả lại chi phí cũ.
   const patched: number[] = [];
@@ -1456,8 +1525,9 @@ export function findPath(state: GameState, fromX: number, fromZ: number, target:
   const tx = target.x + def.w / 2;
   const tz = target.z + def.d / 2;
   const h = (i: number) => dist((i % GRID) + 0.5 - tx, Math.floor(i / GRID) + 0.5 - tz);
-  const path = searchPath(cost, tileAt(fromX, fromZ), isGoal, h);
+  const path = searchPath(cost, start, isGoal, h);
   for (let k = 0; k < patched.length; k += 2) cost[patched[k]] = patched[k + 1];
+  memo?.set(memoKey, path);
   return path;
 }
 
@@ -1690,7 +1760,7 @@ function stunned(f: Fighter, dt: number): boolean {
   return true;
 }
 
-function stepEnemy(state: GameState, battle: Battle, f: Fighter, dt: number): void {
+function stepEnemy(state: GameState, battle: Battle, f: Fighter, dt: number, idx: BuildingIndex): void {
   const st = statsOf(f.kind);
   const reach = st.range * geoOf(battle);
   // Đấu thành: quân ta đánh thành được Trống trận cho đi nhanh, đánh mạnh; đòn vào công trình cũng tính Đền, binh khí.
@@ -1713,7 +1783,8 @@ function stepEnemy(state: GameState, battle: Battle, f: Fighter, dt: number): vo
     return;
   }
   // Nhắm kho, rồi tới Điện, rồi công trình gần nhất.
-  let target = f.targetBuilding !== null ? state.buildings.find((b) => b.id === f.targetBuilding) : undefined;
+  const at = f.targetBuilding !== null ? idx.at.get(f.targetBuilding) : undefined;
+  let target = at !== undefined ? state.buildings[at] : undefined;
   if (!target || !targetableIn(battle, target)) {
     target = chooseTarget(state, battle, f) ?? undefined;
     f.targetBuilding = target ? target.id : null;
@@ -1751,11 +1822,7 @@ function stepEnemy(state: GameState, battle: Battle, f: Fighter, dt: number): vo
   const nx = next % GRID;
   const nz = Math.floor(next / GRID);
   // Ô tiếp theo có lũy hay công trình chắn đường: phá nó trước.
-  const blocker = state.buildings.find((b) => {
-    if (b.damaged || b.id === target!.id || b.type === 'bayChong' || isDecor(b.type) || isBridge(b.type)) return false;
-    const def = BUILDINGS[b.type];
-    return nx >= b.x && nx < b.x + def.w && nz >= b.z && nz < b.z + def.d;
-  });
+  const blocker = blockerAt(state, idx, next, target);
   if (blocker) {
     if (rectDist(f.x, f.z, blocker) <= reach + 0.15) {
       f.state = 'fight';
@@ -2504,12 +2571,13 @@ export function stepBattle(state: GameState, battle: Battle, dt: number): boolea
     if (battle.t * 1000 > RAID_MAX_MS + 30_000) for (const f of battle.fighters) if (f.state === 'flee') f.state = 'gone';
   }
   let ctx: GuardCtx | null = null;
+  let idx: BuildingIndex | null = null;
   for (const f of battle.fighters) {
     if (f.state === 'dead' || f.state === 'gone' || f.state === 'aboard') continue;
     f.cd -= dt;
     f.swing = Math.max(0, f.swing - dt);
     if (f.ship) stepShip(state, battle, f, dt);
-    else if (f.side === (battle.mode === 'pvp' ? 'ta' : 'giac')) stepEnemy(state, battle, f, dt);
+    else if (f.side === (battle.mode === 'pvp' ? 'ta' : 'giac')) stepEnemy(state, battle, f, dt, (idx ??= buildingIndex(state, battle)));
     else stepGuard(battle, f, dt, (ctx ??= guardCtx(state, battle)));
   }
   stepDefenses(state, battle, dt);

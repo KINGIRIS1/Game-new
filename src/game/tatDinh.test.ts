@@ -1,12 +1,13 @@
 // Canh trận đánh tất định (Đấu thành PR 1): cùng một trận chạy lại ra y hệt, sin, cos tự tính sát với của trình
 // duyệt, lưới chi phí tìm đường lưu sẵn cho cùng đường đi như dựng lại, và một trận nặng chạy đủ nhanh để máy chủ đánh
-// lại được (Edge Function cho chừng 2 giây CPU).
+// lại được (Edge Function cho chừng 2 giây CPU, tính dồn cả các lần gọi trước của cùng một máy chạy hàm).
 
 import { describe, expect, it } from 'vitest';
 import { dcos, dsin, findPath, startBattle, stepBattle, type Battle } from './battle';
 import { CH3_QUEST_START } from './defs';
 import { createInitialState, place, type GameState } from './game';
 import { RIVER_START } from './map';
+import { bamThu, banChupThu, danhLai, quanDanh } from './mayChu';
 import { DIEN, edge, setDien } from './testmap';
 
 /** Kinh đô Điện 8 có vòng thành, chòi canh, doanh trại đủ quân giữ: trận giữ kinh đô nặng nhất có thể dựng gọn. */
@@ -57,7 +58,13 @@ describe('trận đánh tất định', () => {
     const s = capital();
     const from = [[1.5, 1.5], [1.5, DIEN + 2.5], [DIEN + 2.5, 1.5]];
     const check = (b?: Battle) => {
-      for (const t of s.buildings) for (const [x, z] of from) expect(findPath(s, x, z, t, false, b)).toEqual(findPath(s, x, z, t));
+      for (const t of s.buildings)
+        for (const [x, z] of from) {
+          const path = findPath(s, x, z, t, false, b);
+          expect(path).toEqual(findPath(s, x, z, t));
+          // Hỏi lại cùng ô, cùng đích khi dãy công trình chưa đổi: trả đúng đường đã tìm, không tìm lại.
+          expect(findPath(s, x, z, t, false, b)).toBe(path);
+        }
     };
     const b = startBattle(s, 1, 'bac', { hero: null });
     check(b);
@@ -76,6 +83,25 @@ describe('trận đánh tất định', () => {
     const { ms, battle } = [run('bac', 8), run('bac', 8)].reduce((a, b) => (b.ms < a.ms ? b : a));
     expect(battle.total).toBeGreaterThan(30);
     console.log(`trận nặng: ${battle.total} giặc, ${battle.t.toFixed(1)} giây trận, ${ms.toFixed(0)} ms`);
+    expect(ms).toBeLessThan(700);
+  }, 30000);
+
+  it('máy chủ đánh lại trận Đấu thành nặng nhất trong các trận thử dưới 700 ms', () => {
+    // Kinh đô máy Điện 7, tràn vào từ phía tây, đủ 3 phút: trước khi có mục lục công trình và đường lưu sẵn mất hơn
+    // 1,2 giây (ở đây chừng 0,2 giây), máy chủ thật có lần hết CPU (`WORKER_RESOURCE_LIMIT`). Lấy lần nhanh nhất trong
+    // hai lần sau khi ấm máy; ngưỡng rộng vì máy CI chạy nhiều tệp test cùng lúc chậm gấp hai, ba lần.
+    const thu = banChupThu(7);
+    const q = quanDanh(thu.ma, thu.quan, 'tay', 12345);
+    if (!('quan' in q)) throw new Error(q.loi);
+    const once = () => {
+      const t0 = performance.now();
+      const ket = danhLai(thu.ma, q.quan, bamThu(), { atkDien: 7, atkTrophies: 0, defTrophies: 0, bot: true });
+      return { ket, ms: performance.now() - t0 };
+    };
+    once();
+    const { ket, ms } = [once(), once()].reduce((a, b) => (b.ms < a.ms ? b : a));
+    expect(ket.buoc).toBe(3600);
+    console.log(`đánh lại Điện 7: ${ket.sao} sao, ${ket.buoc} bước, ${ms.toFixed(0)} ms`);
     expect(ms).toBeLessThan(700);
   }, 30000);
 });
