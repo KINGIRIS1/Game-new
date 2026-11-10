@@ -11,6 +11,12 @@
 //   xong { tran, bam }           gửi các lần bấm: máy chủ đánh lại, ghi kết quả, chiến công, khiên; trừ của bị cướp
 //                                khỏi kho trong bản chụp người giữ thành
 //   roi                          rời Đấu thành (xóa người chơi và bản chụp)
+//   xepHang                      bảng xếp hạng: những người chiến công cao nhất, hạng của mình (PR 6)
+//   xemLai { tran }              bản chụp, quân, các lần bấm của một trận mình đánh hay bị đánh, để máy khách đánh
+//                                lại cho người chơi xem; chỉ khi trận đóng bằng đúng bản luật đang chạy
+//   luuMay { ma, dien, goc, de? } lưu game lên mây (người đã gắn Google); `goc` là số bản máy này biết, lệch thì máy
+//                                khác đã lưu bản mới hơn (`de`: ghi đè)
+//   taiMay { chiXem? }           bản lưu trên mây của mình (`chiXem`: chỉ số bản, lúc lưu, cấp Điện)
 // Kết quả trận chỉ do máy chủ tính (`danhLai` trong luat.js, đóng gói từ src/game/mayChu.ts).
 
 import postgres from 'npm:postgres@3.4.9';
@@ -19,10 +25,16 @@ import { CAU_HINH, LUAT_MA, chonDoiThu, danhLai, kiemTen, kinhDoMay, nhanBanChup
 type Sql = postgres.Sql;
 type Tx = postgres.TransactionSql;
 
+/** Người gọi: id người dùng Supabase, và còn là người dùng ẩn danh hay đã gắn Google. */
+export interface NguoiGoi {
+  id: string;
+  anDanh: boolean;
+}
+
 export interface MoiTruong {
   sql: Sql;
-  /** Id người dùng Supabase của người gọi (từ JWT trong `Authorization`), hay null nếu không đăng nhập. */
-  nguoiDung: (req: Request) => Promise<string | null>;
+  /** Người dùng Supabase của người gọi (từ JWT trong `Authorization`), hay null nếu không đăng nhập. */
+  nguoiDung: (req: Request) => Promise<NguoiGoi | null>;
   /** Đồng hồ (mili giây); test cho chạy nhanh. */
   bayGio?: () => number;
   /** Số ngẫu nhiên trong [0, 1): hạt giống trận, chọn đối thủ. */
@@ -51,8 +63,11 @@ const tra = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), { status, headers: { ...CORS, 'Content-Type': 'application/json; charset=utf-8' } });
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-/** Thân yêu cầu dài nhất nhận (bản chụp tối đa 64 nghìn ký tự, cộng phần khác). */
+/** Thân yêu cầu dài nhất nhận (bản chụp tối đa 64 nghìn ký tự, cộng phần khác); riêng `luuMay` mang cả mã lưu. */
 const MAX_BODY = 80_000;
+const MAX_BODY_LUU = CAU_HINH.saveMax + 2_000;
+/** Mã lưu game (`toCode` ở src/game/save.ts): tiền tố rồi base64. */
+const MA_LUU = /^TDVL2:[A-Za-z0-9+/=]+$/;
 const GIO = 3_600_000;
 /** Đóng một trận hỏng quá chừng này lần (hàm bị ngắt vì quá giới hạn CPU) thì đóng như người đánh rút quân ngay. */
 const LAN_DONG_MAX = 2;
@@ -60,7 +75,7 @@ const NGAY = 24 * GIO;
 
 /** Người gọi theo JWT: hỏi Supabase Auth (chạy được với mọi kiểu khóa ký JWT, cả khóa publishable lẫn anon). */
 export function nguoiDungTuSupabase(url: string, anonKey?: string) {
-  return async (req: Request): Promise<string | null> => {
+  return async (req: Request): Promise<NguoiGoi | null> => {
     const token = (req.headers.get('authorization') ?? '').replace(/^Bearer\s+/i, '');
     if (token.split('.').length !== 3) return null;
     const res = await fetch(`${url}/auth/v1/user`, {
@@ -68,7 +83,8 @@ export function nguoiDungTuSupabase(url: string, anonKey?: string) {
     });
     if (!res.ok) return null;
     const user = await res.json().catch(() => null);
-    return typeof user?.id === 'string' && UUID.test(user.id) ? user.id : null;
+    // Chỉ khi Supabase nói rõ không còn ẩn danh (đã gắn Google) mới coi là đã gắn.
+    return typeof user?.id === 'string' && UUID.test(user.id) ? { id: user.id, anDanh: user.is_anonymous !== false } : null;
   };
 }
 
@@ -93,7 +109,10 @@ interface TranRow {
   ban_chup: string;
   quan: QuanDanh;
   trang_thai: 'dang' | 'xong';
+  bam: unknown;
   ket_qua: (KetQua & { ms: number }) | null;
+  /** Mã luật đã đánh lại trận (trận đóng trước PR 6 thì không có). */
+  luat: string | null;
   bat_dau: Date;
   xong_luc: Date | null;
 }
@@ -141,6 +160,8 @@ export function taoXuLy(env: MoiTruong): (req: Request) => Promise<Response> {
     batDau: t.bat_dau.getTime(),
     xong: t.trang_thai === 'xong',
     ketQua: t.ket_qua,
+    // Xem lại được: trận đã đóng bằng đúng bản luật đang chạy (luật đổi thì cùng lần bấm ra trận khác).
+    xemLai: t.trang_thai === 'xong' && t.luat === LUAT_MA,
   });
 
   /** Không quá `max` lần mỗi giờ cho mỗi loại lệnh. */
@@ -175,7 +196,7 @@ export function taoXuLy(env: MoiTruong): (req: Request) => Promise<Response> {
     const saved = Array.isArray(bam) ? bam.slice(0, 600) : [];
     const wrote = await sql.begin(async (tx) => {
       const done = await tx`
-        update public.tran set trang_thai = 'xong', bam = ${tx.json(saved)}, ket_qua = ${tx.json(ket)}, xong_luc = ${luc(now)}
+        update public.tran set trang_thai = 'xong', bam = ${tx.json(saved)}, ket_qua = ${tx.json(ket)}, xong_luc = ${luc(now)}, luat = ${LUAT_MA}
         where id = ${t.id} and trang_thai = 'dang' returning id`;
       if (!done.length) return false;
       if (t.nguoi_danh) {
@@ -361,6 +382,72 @@ export function taoXuLy(env: MoiTruong): (req: Request) => Promise<Response> {
     return { ok: true };
   }
 
+  // ---------- PR 6: bảng xếp hạng, xem lại trận, lưu game lên mây ----------
+
+  /** Những người chiến công cao nhất (ngang nhau thì ai tham gia trước đứng trước), hạng của mình, tổng số người. */
+  async function xepHang(me: string, now: number) {
+    await canNguoi(me);
+    await demLuot(me, 'xepHang', CAU_HINH.rankPerH, now);
+    const top = await sql<{ id: string; ten: string; chien_cong: number; dien: number }[]>`
+      select id, ten, chien_cong, dien from public.nguoi_choi order by chien_cong desc, tao_luc, id limit ${CAU_HINH.rankTop}`;
+    const [{ hang, tong }] = await sql<{ hang: number; tong: number }[]>`
+      select
+        (select count(*)::int from public.nguoi_choi) as tong,
+        (select count(*)::int + 1 from public.nguoi_choi n, public.nguoi_choi m
+          where m.id = ${me} and (n.chien_cong > m.chien_cong or (n.chien_cong = m.chien_cong and (n.tao_luc, n.id) < (m.tao_luc, m.id)))) as hang`;
+    return {
+      ok: true,
+      bang: top.map((r, i) => ({ hang: i + 1, ten: r.ten, chienCong: r.chien_cong, dien: r.dien, ...(r.id === me ? { toi: true } : {}) })),
+      hang,
+      tong,
+    };
+  }
+
+  /** Dữ liệu để đánh lại một trận đã xong cho người trong cuộc xem: bản chụp kinh đô bị đánh, quân, các lần bấm. */
+  async function xemLai(me: string, body: Record<string, unknown>, now: number) {
+    const id = body.tran;
+    if (typeof id !== 'string' || !UUID.test(id)) throw new Loi('khongCoTran', 404);
+    const [t] = await sql<TranRow[]>`select * from public.tran where id = ${id} and (nguoi_danh = ${me} or nguoi_giu = ${me})`;
+    if (!t) throw new Loi('khongCoTran', 404);
+    if (t.trang_thai !== 'xong') throw new Loi('chuaXong', 409);
+    if (t.luat !== LUAT_MA) throw new Loi('banCu', 409);
+    await demLuot(me, 'xemLai', CAU_HINH.replayPerH, now);
+    return { ok: true, tran: tomTran(t), vai: t.nguoi_danh === me ? 'danh' : 'giu', banChup: t.ban_chup, quan: t.quan, bam: Array.isArray(t.bam) ? t.bam : [] };
+  }
+
+  /**
+   * Lưu game lên mây. Chỉ người đã gắn Google (người ẩn danh không đăng nhập lại được ở máy khác, lưu cũng vô ích).
+   * Máy chủ không đọc mã lưu, chỉ kiểm dạng và cỡ: đây là bản lưu của chính người chơi, máy tải về tự kiểm.
+   */
+  async function luuMay(nguoiGoi: NguoiGoi, body: Record<string, unknown>, now: number) {
+    const me = nguoiGoi.id;
+    if (nguoiGoi.anDanh) throw new Loi('canGoogle', 403);
+    const ma = body.ma;
+    if (typeof ma !== 'string' || ma.length > CAU_HINH.saveMax || !MA_LUU.test(ma)) throw new Loi('maLuu', 400);
+    const dien = Number.isInteger(body.dien) ? Math.min(10, Math.max(1, body.dien as number)) : 1;
+    await demLuot(me, 'luuMay', CAU_HINH.savePerH, now);
+    const ban = await sql.begin(async (tx) => {
+      const [cu] = await tx<{ ban: number }[]>`select ban from public.luu_may where nguoi = ${me} for update`;
+      // Máy khác đã lưu bản mới hơn bản máy này biết: không ghi đè khi chưa hỏi người chơi.
+      if (cu && cu.ban !== body.goc && body.de !== true) throw new Loi('lechMay', 409);
+      const next = (cu?.ban ?? 0) + 1;
+      await tx`
+        insert into public.luu_may (nguoi, ma, ban, dien, luc) values (${me}, ${ma}, ${next}, ${dien}, ${luc(now)})
+        on conflict (nguoi) do update set ma = excluded.ma, ban = excluded.ban, dien = excluded.dien, luc = excluded.luc`;
+      return next;
+    });
+    return { ok: true, ban, luc: now };
+  }
+
+  async function taiMay(me: string, body: Record<string, unknown>, now: number) {
+    // Xem thử (bảng hỏi mỗi lần mở) đếm riêng với tải cả mã lưu về, để mở bảng nhiều không chặn mất lượt tải.
+    if (body.chiXem === true) await demLuot(me, 'xemMay', CAU_HINH.rankPerH, now);
+    else await demLuot(me, 'taiMay', CAU_HINH.savePerH, now);
+    const [r] = await sql<{ ma: string; ban: number; dien: number; luc: Date }[]>`select ma, ban, dien, luc from public.luu_may where nguoi = ${me}`;
+    if (!r) return { ok: true, may: null };
+    return { ok: true, may: { ban: r.ban, dien: r.dien, luc: r.luc.getTime(), ...(body.chiXem === true ? {} : { ma: r.ma }) } };
+  }
+
   // ---------- Vào ----------
 
   return async (req: Request): Promise<Response> => {
@@ -369,9 +456,10 @@ export function taoXuLy(env: MoiTruong): (req: Request) => Promise<Response> {
     let body: Record<string, unknown>;
     try {
       const text = await req.text();
-      if (text.length > MAX_BODY) throw new Loi('daiQua', 413);
+      if (text.length > MAX_BODY_LUU) throw new Loi('daiQua', 413);
       const raw = JSON.parse(text);
       if (!raw || typeof raw !== 'object' || Array.isArray(raw)) throw new Loi('saiDang');
+      if (text.length > MAX_BODY && raw.hanh !== 'luuMay') throw new Loi('daiQua', 413);
       body = raw;
     } catch (e) {
       return e instanceof Loi ? tra({ ok: false, loi: e.ma }, e.status) : tra({ ok: false, loi: 'saiDang' }, 400);
@@ -379,8 +467,9 @@ export function taoXuLy(env: MoiTruong): (req: Request) => Promise<Response> {
     try {
       if (body.hanh === 'ping') return tra(await ping());
       if (body.luat !== LUAT_MA) throw new Loi('capNhat', 409, LUAT_MA);
-      const me = await env.nguoiDung(req);
-      if (!me) throw new Loi('chuaDangNhap', 401);
+      const nguoiGoi = await env.nguoiDung(req);
+      if (!nguoiGoi) throw new Loi('chuaDangNhap', 401);
+      const me = nguoiGoi.id;
       const now = bayGio();
       switch (body.hanh) {
         case 'thamGia':
@@ -397,6 +486,14 @@ export function taoXuLy(env: MoiTruong): (req: Request) => Promise<Response> {
           return tra(await xong(me, body, now));
         case 'roi':
           return tra(await roi(me));
+        case 'xepHang':
+          return tra(await xepHang(me, now));
+        case 'xemLai':
+          return tra(await xemLai(me, body, now));
+        case 'luuMay':
+          return tra(await luuMay(nguoiGoi, body, now));
+        case 'taiMay':
+          return tra(await taiMay(me, body, now));
       }
       throw new Loi('saiLenh');
     } catch (e) {

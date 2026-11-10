@@ -14,6 +14,11 @@ export declare const CAU_HINH: {
   readonly attackPerH: number;
   readonly snapPerH: number;
   readonly keepDays: number;
+  readonly rankTop: number;
+  readonly rankPerH: number;
+  readonly replayPerH: number;
+  readonly savePerH: number;
+  readonly saveMax: number;
 };
 
 export type TenLoi = 'ngan' | 'dai' | 'kyTu' | 'tuc';

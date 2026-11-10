@@ -1684,10 +1684,68 @@ textarea {
 
 .dau-lich li {
   display: flex;
-  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
   padding: 6px 9px;
   border-radius: 10px;
   background: var(--paper-2);
+}
+
+.dau-lich li > span {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.dau-replay {
+  flex: none;
+  white-space: nowrap;
+}
+
+/* Bảng xếp hạng Đấu thành: hạng, tên, chiến công và cấp Điện; dòng của mình viền đồng. */
+.dau-hang {
+  list-style: none;
+  margin: 6px 0;
+  padding: 0 2px 2px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-height: 46vh;
+  overflow-y: auto;
+}
+
+.dau-hang li {
+  display: grid;
+  grid-template-columns: 2.2em 1fr auto;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 9px;
+  border-radius: 10px;
+  background: var(--paper-2);
+}
+
+.dau-hang li i {
+  font-style: normal;
+  font-weight: 700;
+  text-align: right;
+  opacity: 0.8;
+}
+
+.dau-hang li b {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dau-hang li.me {
+  outline: 2px solid var(--bronze);
+  outline-offset: -2px;
+}
+
+.dau-account {
+  margin-top: 10px;
 }
 
 .dau-lich small {
@@ -2087,6 +2145,12 @@ textarea {
   flex-wrap: wrap;
   justify-content: center;
   gap: 8px;
+}
+
+/* Xem lại trận Đấu thành: ẩn hàng kỹ năng, hiện nút tốc độ. */
+.fieldbar .skills[hidden],
+.fieldbar .btn[hidden] {
+  display: none;
 }
 
 .fieldbar .btn {

@@ -47,7 +47,7 @@ import {
 import { armySpace, canGuard, capOf, doanhCount, generals, guardCap, guardManual, guardPlan, guardTargets, reserve } from '../game/doanhTrai';
 import { nuTuongList } from '../game/nuTuong';
 import { scorePvp } from '../game/dauThanh';
-import { dauHtml, dauMapHtml, newDauView, pickTarget, stepDauArmy, type DauTarget, type DauView } from './dauThanh';
+import { cloudSettingsHtml, dauHtml, dauMapHtml, newDauView, pickTarget, stepDauArmy, type DauTarget, type DauView } from './dauThanh';
 import {
   barracksLevel,
   canAfford,
@@ -275,7 +275,16 @@ export type HudAction =
   | { kind: 'dauLeave' }
   | { kind: 'dauReload' }
   | { kind: 'dauAttackedOk' }
-  | { kind: 'dauOpened' };
+  | { kind: 'dauOpened' }
+  | { kind: 'dauRank' }
+  | { kind: 'dauReplay'; tran: string }
+  | { kind: 'dauSpeed' }
+  | { kind: 'dauGoogle' }
+  | { kind: 'dauGoogleIn' }
+  | { kind: 'dauSave'; de: boolean }
+  | { kind: 'dauLoad' }
+  | { kind: 'mayGoogleIn' }
+  | { kind: 'mayLoad' };
 
 export type HudMode = 'view' | 'place' | 'move' | 'paint' | 'merge';
 /** Kéo thả đắp tường: dải thẳng hay viền chữ nhật. */
@@ -346,6 +355,8 @@ export interface HudPvp {
   battle: Battle;
   def: GameState;
   name: string;
+  /** Đang xem lại một trận (PR 6): tên hai bên, tốc độ xem. Không bấm được kỹ năng, nút rút quân thành nút thoát. */
+  xem?: { atk: string; def: string; speed: number };
 }
 
 function prodHtml(prod: Cost): string {
@@ -425,6 +436,7 @@ export class Hud {
       <footer class="fieldbar">
         <button class="btn ghost small" data-act="retreat" title="${vi.ui.retreat}">🏳️</button>
         <span class="skills"></span>
+        <button class="btn small bronze" data-act="dauSpeed" title="${vi.dauThanh.replaySpeedTitle}" hidden></button>
       </footer>
       <div class="xay-labels"></div>
       <aside class="sheet" aria-live="polite"></aside>
@@ -647,6 +659,37 @@ export class Hud {
         if (!dau) return;
         dau.that.ten = this.campaignEl.querySelector<HTMLInputElement>('.dau-ten')?.value ?? dau.that.ten;
         return this.onAction({ kind: 'dauJoin', ten: dau.that.ten });
+      }
+      case 'dauRank': {
+        const dau = this.camp?.dau;
+        if (!dau) return;
+        dau.step = 'rank';
+        dau.that.loi = null;
+        this.refreshCampaign(this.getState(), true);
+        return this.onAction({ kind: 'dauRank' });
+      }
+      case 'dauReplay':
+        return this.onAction({ kind: 'dauReplay', tran: el.dataset.tran ?? '' });
+      case 'dauSave':
+        return this.onAction({ kind: 'dauSave', de: el.dataset.de === '1' });
+      case 'mayLoad':
+        // Bảng Cài đặt: bấm hai lần mới tải bản trên mây về.
+        if (!this.mayArmed) {
+          this.mayArmed = true;
+          return this.refreshMaySettings(this.getState());
+        }
+        this.mayArmed = false;
+        return this.onAction({ kind: 'mayLoad' });
+      case 'dauLoad': {
+        // Bấm hai lần mới tải về (bản lưu đang có ở máy này bị thay).
+        const dau = this.camp?.dau;
+        if (!dau) return;
+        if (!dau.that.taiHoi) {
+          dau.that.taiHoi = true;
+          return this.refreshCampaign(this.getState(), true);
+        }
+        dau.that.taiHoi = false;
+        return this.onAction({ kind: 'dauLoad' });
       }
       case 'dauLeave': {
         // Bấm hai lần mới rời (xóa tên, chiến công, bản chụp khỏi máy chủ).
@@ -1084,6 +1127,8 @@ export class Hud {
   mauArmed: MauId | null = null;
   /** Việc xây vừa bấm Hủy lần đầu (chờ bấm lần nữa cho chắc). */
   private cancelArmed: number | null = null;
+  /** Đã bấm Tải bản trên mây về một lần ở bảng Cài đặt (bấm lần nữa mới thay bản lưu ở máy này). */
+  private mayArmed = false;
   /** Loại bảng đang vẽ trên màn hình, để giữ chỗ cuộn khi vẽ lại cùng bảng. */
   private sheetKindShown = '';
   /** Nhóm đang xem trong bảng Xây dựng; nhớ cho lần mở sau. */
@@ -1152,6 +1197,7 @@ export class Hud {
 
   showSettings(state: GameState, resolution: Resolution, ngayDem: boolean, bongDo: boolean): void {
     this.sheet = { kind: 'settings', resolution, ngayDem, bongDo };
+    this.mayArmed = false;
     this.refreshSheet(state, true);
   }
 
@@ -1181,6 +1227,16 @@ export class Hud {
   }
 
   /** Vẽ lại bảng đang mở. Bỏ qua nếu nội dung không đổi để không làm mất lần chạm của người chơi. */
+  /**
+   * Dựng lại riêng mục Bản lưu trên mây của bảng Cài đặt (máy chủ vừa trả lời, hay vừa bấm Tải về lần đầu); phần còn
+   * lại của bảng giữ nguyên, kể cả mã lưu đang dán dở.
+   */
+  refreshMaySettings(state: GameState): void {
+    if (this.sheet?.kind !== 'settings') return;
+    const el = this.sheetEl.querySelector<HTMLElement>('.may-settings');
+    if (el) el.innerHTML = cloudSettingsHtml(state, this.mayArmed);
+  }
+
   refreshSheet(state: GameState, force = false): void {
     if (!this.sheet) return;
     if (this.sheet.kind === 'settings' && !force) return;
@@ -1859,6 +1915,7 @@ export class Hud {
       <p class="muted">${vi.ui.importHint}</p>
       <textarea id="import-box" placeholder="TDVL2:..."></textarea>
       <button class="btn small ghost" data-act="importCode">📥 ${vi.ui.importSave}</button>
+      <div class="may-settings">${cloudSettingsHtml(state, this.mayArmed)}</div>
       <div class="actions"><button class="btn ghost" data-act="reset">🔄 ${vi.ui.reset}</button></div>
       <p class="muted" style="text-align:center;margin-top:14px">${vi.gameTitle} · bản thử 0.5</p>`;
   }
@@ -1934,6 +1991,7 @@ export class Hud {
       camp.dau.step = 'target';
       camp.dau.that.loi = null;
       camp.dau.that.roiHoi = false;
+      camp.dau.that.taiHoi = false;
     } else if (camp.dau && act === 'dauTarget') {
       Object.assign(camp.dau, pickTarget(state, id));
     } else if (camp.dau && act === 'dauSide') {
@@ -1942,6 +2000,7 @@ export class Hud {
       camp.dau.step = 'army';
     } else if (camp.dau && act === 'dauBack') {
       camp.dau.step = 'target';
+      camp.dau.that.loi = null;
     } else if (camp.dau && act === 'dauDelta') {
       stepDauArmy(state, camp.dau, unit, Number(el.dataset.delta));
     }
@@ -2017,7 +2076,8 @@ export class Hud {
     if (this.pvp) {
       // Đấu thành: tên kinh đô bị đánh; phần trăm phá, sao, giây còn lại.
       const score = scorePvp(this.pvp.def);
-      this.fieldTop.querySelector('b')!.textContent = vi.dauThanh.banner(this.pvp.name);
+      const xem = this.pvp.xem;
+      this.fieldTop.querySelector('b')!.textContent = xem ? vi.dauThanh.replayBanner(xem.atk, xem.def) : vi.dauThanh.banner(this.pvp.name);
       this.fieldTop.querySelector('span')!.textContent = vi.dauThanh.status(Math.floor(score.pct * 100), score.stars, Math.max(0, Math.ceil(DAU_THANH.holdS - b.t)));
       this.fieldTop.querySelector<HTMLElement>('.hold-bar')!.hidden = true;
     }
@@ -2065,6 +2125,18 @@ export class Hud {
       }
     }
     const box = this.fieldBar.querySelector<HTMLElement>('.skills')!;
+    // Xem lại trận Đấu thành: không có nút kỹ năng (các lần bấm đã ghi tự áp), có nút đổi tốc độ, nút cờ là nút thoát.
+    const xem = this.pvp?.xem;
+    box.hidden = !!xem;
+    const speed = this.fieldBar.querySelector<HTMLButtonElement>('[data-act="dauSpeed"]')!;
+    speed.hidden = !xem;
+    if (xem) speed.textContent = vi.dauThanh.replaySpeed(xem.speed);
+    const flag = this.fieldBar.querySelector<HTMLButtonElement>('[data-act="retreat"]')!;
+    const flagText = xem ? '✕' : '🏳️';
+    if (flag.textContent !== flagText) {
+      flag.textContent = flagText;
+      flag.title = xem ? vi.dauThanh.replayExit : vi.ui.retreat;
+    }
     const key = `${b.id}:${b.skills.join(',')}`;
     if (key !== this.skillKey) {
       this.skillKey = key;
@@ -2075,7 +2147,7 @@ export class Hud {
       syncSkill(btn, b, k);
       btn.classList.toggle('active', (k === 'trongTran' && b.rally > 0) || (k === 'ruaVang' && b.shield > 0) || (k === 'lenhBan' && (b.lenh ?? 0) > 0));
     }
-    this.fieldBar.querySelector<HTMLButtonElement>('[data-act="retreat"]')!.disabled = !!b.outcome;
+    flag.disabled = !!b.outcome && !xem;
   }
 
   /** Đang đánh Đấu thành (hay đã xong, null): thanh trận dùng trận này. */

@@ -418,6 +418,8 @@ export interface PvpRun {
   /** Thời gian dồn lại chưa đủ một bước (giây). */
   acc: number;
   done: boolean;
+  /** Trận xem lại (PR 6): các lần bấm đã có sẵn, không ghi thêm. */
+  replay?: true;
 }
 
 /** Quân đánh thành của người chơi: quân chọn, tướng, Đền, binh khí, huân công như phó bản. */
@@ -444,7 +446,27 @@ export const PVP_MAX_INPUTS = 600;
 
 /** Ghi một lần bấm: áp ở đầu bước kế tiếp. */
 export function pushInput(run: PvpRun, k: PvpInput['k']): void {
-  if (!run.done && run.inputs.length < PVP_MAX_INPUTS) run.inputs.push({ s: run.step, k });
+  if (!run.done && !run.replay && run.inputs.length < PVP_MAX_INPUTS) run.inputs.push({ s: run.step, k });
+}
+
+/** Bước lớn nhất một lần bấm được ghi (trận dài nhất chừng 3600 bước). */
+const INPUT_MAX_STEP = 10_000;
+
+/**
+ * Lọc các lần bấm nhận từ ngoài (máy khách gửi lên máy chủ, hay máy chủ trả về để xem lại): đúng dạng, đúng kỹ năng,
+ * bước không quá giới hạn, không quá `PVP_MAX_INPUTS` lần. Máy chủ đánh lại và máy khách xem lại cùng lọc như nhau.
+ */
+export function cleanInputs(raw: unknown): PvpInput[] {
+  if (!Array.isArray(raw)) return [];
+  const out: PvpInput[] = [];
+  for (const i of raw.slice(0, PVP_MAX_INPUTS)) {
+    if (!i || typeof i !== 'object') continue;
+    const { s, k } = i as Record<string, unknown>;
+    if (!Number.isInteger(s) || (s as number) < 0 || (s as number) > INPUT_MAX_STEP) continue;
+    if (k !== 'rut' && !(SKILL_IDS as unknown[]).includes(k)) continue;
+    out.push({ s: s as number, k: k as PvpInput['k'] });
+  }
+  return out;
 }
 
 /** Chạy đúng một bước: áp các lần bấm của bước này rồi chạy trận thêm `BATTLE_STEP`. */
@@ -476,6 +498,17 @@ export function simulatePvp(snap: Snapshot, attack: PvpAttack, inputs: PvpInput[
   const run = beginPvp(snap, attack);
   run.inputs = inputs.map((i) => ({ ...i })).filter((i) => i.k === 'rut' || SKILL_IDS.includes(i.k));
   while (!run.done && run.step < MAX_STEPS) stepOnce(run);
+  return run;
+}
+
+/**
+ * Trận xem lại (PR 6): cùng bản chụp, quân đánh thành và các lần bấm đã ghi như `simulatePvp`, nhưng chạy theo thời
+ * gian thật bằng `stepPvp` để người chơi nhìn; tới bước nào thì lần bấm của bước ấy tự áp. Ra y hệt trận gốc.
+ */
+export function replayPvp(snap: Snapshot, attack: PvpAttack, inputs: unknown): PvpRun {
+  const run = beginPvp(snap, attack);
+  run.inputs = cleanInputs(inputs);
+  run.replay = true;
   return run;
 }
 

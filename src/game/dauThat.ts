@@ -2,9 +2,11 @@
 // luật áp kết quả máy chủ vào kinh đô của mình. Không gọi mạng (việc ấy ở src/mang/); chỉ đọc dữ liệu máy chủ trả.
 // Kết quả trận là của máy chủ: người đánh mất quân ngã, được của cướp (kho đầy thì bỏ phí); người giữ thành mất
 // min(của bị cướp, của đang có). Mỗi trận chỉ áp một lần (nhớ id trận đã áp).
+// PR 6: dữ liệu bảng xếp hạng, bản lưu trên mây, và dựng trận xem lại từ dữ liệu máy chủ trả.
 
+import { type PvpAttack } from './battle';
 import { RESOURCE_IDS, UNIT_TYPES, type Resources, type UnitType } from './defs';
-import { type PvpInput } from './dauThanh';
+import { decodeSnapshot, replayPvp, type PvpInput, type PvpRun } from './dauThanh';
 import { gain, type GameState } from './game';
 import { type KetQua } from './mayChu';
 
@@ -42,6 +44,56 @@ export interface TranTom {
   batDau: number;
   xong: boolean;
   ketQua: KetQuaMay | null;
+  /** Xem lại được: trận đã đóng bằng đúng bản luật máy chủ đang chạy (PR 6). */
+  xemLai?: boolean;
+}
+
+/** Một dòng bảng xếp hạng; `toi` là dòng của mình. */
+export interface HangRow {
+  hang: number;
+  ten: string;
+  chienCong: number;
+  dien: number;
+  toi?: true;
+}
+
+/** Bảng xếp hạng máy chủ trả: những người đứng đầu, hạng của mình, tổng số người chơi. */
+export interface XepHang {
+  bang: HangRow[];
+  hang: number;
+  tong: number;
+}
+
+/** Dữ liệu một trận để xem lại: bản chụp kinh đô bị đánh, quân đánh thành, các lần bấm. */
+export interface XemLaiTra {
+  tran: TranTom;
+  /** Mình là người đánh hay người giữ thành trong trận này. */
+  vai: 'danh' | 'giu';
+  banChup: string;
+  quan: PvpAttack;
+  bam: unknown;
+}
+
+/** Bản lưu trên mây (không kèm mã lưu): số bản, cấp Điện lúc lưu, lúc lưu (giờ máy chủ). */
+export interface MayTom {
+  ban: number;
+  dien: number;
+  luc: number;
+}
+
+/**
+ * Dựng trận xem lại từ dữ liệu máy chủ trả (`xemLai`): cùng bản chụp, quân và lần bấm máy chủ đã đánh lại, nên chạy
+ * theo thời gian thật ra đúng trận ấy. Bản chụp hay quân hỏng thì null.
+ */
+export function chayXemLai(d: XemLaiTra): PvpRun | null {
+  const snap = decodeSnapshot(d.banChup);
+  const q = d.quan as Partial<PvpAttack> | null;
+  if (!snap || !q || typeof q !== 'object' || !q.army || (q.side !== 'bac' && q.side !== 'tay')) return null;
+  try {
+    return replayPvp(snap, d.quan, d.bam);
+  } catch {
+    return null;
+  }
 }
 
 /** Hồ sơ của mình máy chủ trả. */

@@ -1,8 +1,9 @@
 // Thử máy chủ Đấu thành thật sau khi triển khai (job `server` của .github/workflows/deploy.yml): ping (mã luật phải
 // khớp bản vừa đóng gói), trình duyệt gọi được (CORS, kể cả header x-region), đăng nhập ẩn danh, tham gia, đánh kinh
 // đô máy hai trận nặng (Điện 7 và 10, có tướng, bấm kỹ năng), so kết quả máy chủ với tự đánh lại ở đây; người thử thứ
-// hai tham gia để người thứ nhất đánh (đường trận giữa hai người chơi: khóa, khiên, cướp của, trừ kho bản chụp), rồi
-// cả hai rời Đấu thành. Mỗi lần chạy để lại hai người dùng ẩn danh trong Supabase Auth.
+// hai tham gia để người thứ nhất đánh (đường trận giữa hai người chơi: khóa, khiên, cướp của, trừ kho bản chụp); PR 6:
+// bảng xếp hạng, người giữ thành xem lại trận (đánh lại từ dữ liệu máy chủ trả phải ra đúng kết quả đã ghi), lưu mây
+// từ chối người ẩn danh; rồi cả hai rời Đấu thành. Mỗi lần chạy để lại hai người dùng ẩn danh trong Supabase Auth.
 //
 //   SUPABASE_URL=https://<mã dự án>.supabase.co SUPABASE_PUBLISHABLE_KEY=sb_publishable_... node scripts/thu-may-chu.mjs
 
@@ -37,7 +38,8 @@ process.on('uncaughtException', (e) => {
 const CHO_MS = 60_000;
 
 let token = '';
-async function goi(body, as = token) {
+/** Gọi một lệnh. `mongLoi`: lệnh này phải bị từ chối, trả cả mã HTTP và thân trả lời thay vì dừng. */
+async function goi(body, as = token, mongLoi = false) {
   const t = performance.now();
   const res = await fetch(`${URL_}/functions/v1/dau-thanh`, {
     method: 'POST',
@@ -53,6 +55,7 @@ async function goi(body, as = token) {
   } catch {
     fail(`${body.hanh}: máy chủ trả ${res.status} không phải JSON: ${text.slice(0, 300)}`);
   }
+  if (mongLoi) return { status: res.status, ...json };
   if (!json.ok) fail(`${body.hanh}: ${res.status} ${JSON.stringify(json)}`);
   return json;
 }
@@ -139,6 +142,21 @@ try {
   const me = await goi({ hanh: 'toi' });
   if (me.daDanh.length !== 3 || me.daDanh.some((t) => !t.xong)) fail(`toi: ${JSON.stringify(me.daDanh)}`);
   console.log(`Hồ sơ: ${me.toi.ten}, ${me.toi.chienCong} chiến công, ${me.daDanh.length} trận.`);
+
+  // PR 6. Bảng xếp hạng: có mình, hạng khớp chỗ đứng. Xem lại: B lấy dữ liệu trận vừa bị đánh, đánh lại ở đây ra
+  // đúng kết quả máy chủ đã ghi. Lưu mây: người ẩn danh bị từ chối, chưa có bản lưu nào.
+  const rank = await goi({ hanh: 'xepHang' });
+  const meRow = rank.bang.find((x) => x.toi);
+  if (!meRow || meRow.hang !== rank.hang || meRow.chienCong !== me.toi.chienCong || rank.tong < 2) fail(`xepHang: ${JSON.stringify({ meRow, hang: rank.hang, tong: rank.tong })}`);
+  const re = await goi({ hanh: 'xemLai', tran: pvp.tran }, tokenB);
+  if (!re.tran.xemLai || re.banChup !== pvp.banChup) fail(`xemLai: ${JSON.stringify(re.tran)}`);
+  const again = luat.danhLai(re.banChup, re.quan, re.bam, { atkDien: 7, atkTrophies: mA.toi.chienCong, defTrophies: 0, bot: false });
+  if (JSON.stringify(canon(again)) !== JSON.stringify(canon(ketB))) fail(`xem lại: đánh lại ${JSON.stringify(again)} khác kết quả đã ghi ${JSON.stringify(ketB)}`);
+  const luu = await goi({ hanh: 'luuMay', ma: 'TDVL2:QUJD', dien: 7, goc: 0 }, token, true);
+  if (luu.status !== 403 || luu.loi !== 'canGoogle') fail(`luuMay của người ẩn danh phải bị từ chối: ${JSON.stringify(luu)}`);
+  const tai = await goi({ hanh: 'taiMay', chiXem: true });
+  if (tai.may !== null) fail(`taiMay: ${JSON.stringify(tai)}`);
+  console.log(`Xếp hạng: hạng ${rank.hang}/${rank.tong}. Xem lại: B đánh lại trận bị đánh ra đúng kết quả. Lưu mây: từ chối người ẩn danh.`);
 
   // Đọc qua Data API theo RLS: thấy trận của mình, không thấy bản chụp.
   const rest = async (path) => {

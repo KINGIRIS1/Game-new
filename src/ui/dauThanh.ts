@@ -2,16 +2,18 @@
 // - Đấu thật (có máy chủ): tham gia (đặt tên), hồ sơ, tìm đối thủ, chọn hướng và quân rồi đánh; trận gần đây; rời.
 // - Đánh thử: chọn kinh đô của mình hay kinh đô máy, hướng tràn vào, quân mang theo; quân ngã không mất.
 // Bảng kết quả sau trận, bảng Bị đánh khi mở game. Gọi máy chủ ở main.ts (src/mang/), bảng này chỉ dựng HTML.
+// PR 6: bảng xếp hạng, nút Xem lại ở trận gần đây và bảng Bị đánh, bảng kết quả sau khi xem lại, khối Tài khoản
+// (gắn Google, lưu game lên mây, đăng nhập Google ở máy mới rồi tải bản lưu về).
 
 import { isScored } from '../game/battle';
 import { BUILDINGS, DAU_THANH, RESOURCE_IDS, UNITS, UNIT_TYPES, type Resources, type UnitType } from '../game/defs';
 import { armySpace, fieldCap, fitArmy, type Army } from '../game/doanhTrai';
 import { botSnapshot, canPractice, decodeSnapshot, defenderState, lootCap, makeSnapshot, validateArmy, type PvpScore, type Snapshot } from '../game/dauThanh';
-import { type BiDanh, type DaNhan, type KetQuaMay, type TranTom } from '../game/dauThat';
+import { type BiDanh, type DaNhan, type KetQuaMay, type MayTom, type TranTom, type XepHang } from '../game/dauThat';
 import { dienLevel, type GameState } from '../game/game';
 import { chapterOf } from '../game/manVao';
 import { heroesFor } from '../game/son';
-import { coMayChu, uidMay } from '../mang/cauHinh';
+import { coMayChu, taiKhoanMay, uidMay } from '../mang/cauHinh';
 import { vi } from '../text/vi';
 import { esc, fmt } from './format';
 import { capitalMiniMap } from './mau';
@@ -44,7 +46,28 @@ export interface DauThat {
   lich: DauLich[];
   /** Đã bấm Rời một lần (bấm lần nữa mới rời). */
   roiHoi: boolean;
+  /** Bảng xếp hạng máy chủ vừa trả (bước `rank`). */
+  hang: XepHang | null;
+  /** Đã bấm Tải bản trên mây về một lần (bấm lần nữa mới thay bản lưu ở máy này). */
+  taiHoi: boolean;
 }
+
+/**
+ * Tài khoản và bản lưu trên mây (PR 6), giữ qua các lần mở bảng: máy chủ có bật đăng nhập Google không (null: chưa
+ * hỏi), bản lưu trên mây của người đang đăng nhập (undefined: chưa hỏi, null: chưa có), máy khác đã lưu bản mới hơn
+ * (`lech`: chờ người chơi chọn tải về hay ghi đè), lúc hỏi máy chủ gần nhất.
+ */
+export const dauTaiKhoan: { coGoogle: boolean | null; may: MayTom | null | undefined; lech: boolean; hoiLuc: number; loiGoogle: string | null } = {
+  coGoogle: null,
+  may: undefined,
+  lech: false,
+  hoiLuc: 0,
+  // Lỗi lần qua trang Google vừa rồi (mã Supabase Auth trả), để khối Tài khoản còn ghi sau khi dòng báo đã tắt.
+  loiGoogle: null,
+};
+
+/** Chữ cho lỗi lần qua trang Google vừa rồi. */
+export const googleError = (ma: string): string => vi.dauThanh.googleErr[ma] ?? vi.dauThanh.googleErr.khac;
 
 export interface DauLich {
   atk: boolean;
@@ -58,7 +81,8 @@ export const lichOf = (biDanh: TranTom[], daDanh: TranTom[]): DauLich[] =>
 /** Bảng Đấu thành đang mở: thẻ, kinh đô chọn đánh thử (và bản chụp của nó), hướng tràn vào, quân mang theo, bước. */
 export interface DauView {
   mode: 'that' | 'thu';
-  step: 'target' | 'army';
+  /** `rank`: bảng xếp hạng (thẻ Đấu thật). */
+  step: 'target' | 'army' | 'rank';
   target: DauTarget;
   snap: Snapshot;
   /** Bản đồ thu nhỏ của kinh đô chọn đánh thử (ảnh dựng một lần mỗi lần chọn). */
@@ -103,7 +127,7 @@ export function newDauView(state: GameState): DauView {
     step: 'target',
     side: 'bac',
     army: fitArmy({ ...state.troops }, fieldCap(state)),
-    that: { busy: null, loi: null, ten: state.dauThanh?.ten ?? '', foe: null, bo: [], lich: [], roiHoi: false },
+    that: { busy: null, loi: null, ten: state.dauThanh?.ten ?? '', foe: null, bo: [], lich: [], roiHoi: false, hang: null, taiHoi: false },
     ...pickTarget(state, target),
   };
 }
@@ -180,13 +204,107 @@ const sidesHtml = (view: DauView): string =>
     .map((s) => `<button class="btn small ${s === view.side ? 'bronze' : 'ghost'}" data-act="dauSide" data-side="${s}">${vi.dauThanh.sides[s]}</button>`)
     .join(' ');
 
+/** Nút Xem lại của một trận (chỉ khi máy chủ còn đánh lại được trận ấy bằng bản luật đang chạy). */
+const replayBtn = (t: TranTom, off = ''): string =>
+  t.xemLai ? `<button class="btn small ghost dau-replay" data-act="dauReplay" data-tran="${esc(t.id)}" ${off}>${vi.dauThanh.replay}</button>` : '';
+
 /** Một dòng trận gần đây. */
-function lichRow({ atk, t }: DauLich): string {
+function lichRow({ atk, t }: DauLich, off: string): string {
   const who = atk ? vi.dauThanh.histAtk(t.may ? vi.dauThanh.histBot : esc(t.tenGiu)) : vi.dauThanh.histDef(esc(t.tenDanh));
   const k = t.ketQua;
   const score = t.xong && k ? vi.dauThanh.histScore(k.sao, Math.floor(k.pct * 100)) : vi.dauThanh.histOpen;
   const cups = t.xong && k ? ` · ${vi.dauThanh.attackedCups(atk ? k.chienCong.atk : k.chienCong.def)}` : '';
-  return `<li><b>${who}</b><small>${score}${cups}</small></li>`;
+  return `<li><span><b>${who}</b><small>${score}${cups}</small></span>${replayBtn(t, off)}</li>`;
+}
+
+/** Giờ, ngày của một mốc thời gian máy chủ (lúc lưu lên mây). */
+const lucHtml = (ms: number): string => {
+  const d = new Date(ms);
+  const p = (n: number) => String(n).padStart(2, '0');
+  return `${p(d.getHours())}:${p(d.getMinutes())} ngày ${d.getDate()}/${d.getMonth() + 1}`;
+};
+
+/** Dòng bản lưu trên mây (chưa hỏi máy chủ thì không ghi gì). */
+const cloudLine = (): string => {
+  const m = dauTaiKhoan.may;
+  return m === undefined ? '' : `<p class="muted">${m ? vi.dauThanh.cloudAt(m.dien, lucHtml(m.luc)) : vi.dauThanh.cloudNone}</p>`;
+};
+
+/** Nút tải bản lưu trên mây về máy này (bấm hai lần). */
+const loadBtn = (t: DauThat, off: string): string =>
+  `${t.taiHoi ? `<p class="why">${vi.dauThanh.cloudLoadConfirm}</p>` : ''}<button class="btn small ${t.taiHoi ? '' : 'ghost'}" data-act="dauLoad" ${off}>${vi.dauThanh.cloudLoad}</button>`;
+
+/**
+ * Khối Tài khoản của thẻ Đấu thật. Đã tham gia: gắn Google, rồi lưu lên mây (máy khác lưu bản mới hơn thì chọn tải về
+ * hay ghi đè). Chưa tham gia: đăng nhập Google để lấy lại kinh đô đã chơi ở máy khác. Máy chủ chưa bật Google thì
+ * không hiện gì.
+ */
+function accountHtml(t: DauThat, joined: boolean, off: string): string {
+  const tk = taiKhoanMay();
+  const a = dauTaiKhoan;
+  if (joined) {
+    if (!tk?.google) {
+      if (!a.coGoogle) return '';
+      const loi = a.loiGoogle ? `<p class="why">${esc(googleError(a.loiGoogle))}</p>` : '';
+      return `<div class="hero-pick dau-account"><h4>${vi.dauThanh.accountTitle}</h4><p class="muted">${vi.dauThanh.googleIntro}</p>${loi}
+        <div class="actions"><button class="btn small" data-act="dauGoogle" ${off}>${vi.dauThanh.googleLink}</button></div></div>`;
+    }
+    const body = a.lech
+      ? `<p class="why">${vi.dauThanh.cloudDiff}</p>${cloudLine()}
+        <div class="actions">${loadBtn(t, off)}<button class="btn small ghost" data-act="dauSave" data-de="1" ${off}>${vi.dauThanh.cloudOverwrite}</button></div>`
+      : `${cloudLine()}<p class="muted">${vi.dauThanh.cloudAuto}</p>
+        <div class="actions"><button class="btn small" data-act="dauSave" ${off}>${vi.dauThanh.cloudSave}</button></div>`;
+    return `<div class="hero-pick dau-account"><h4>${vi.dauThanh.accountTitle}</h4><p class="muted">${esc(vi.dauThanh.googleLinked(tk.email))}</p>${body}</div>`;
+  }
+  if (tk?.google) {
+    const has = a.may ? `${cloudLine()}<div class="actions">${loadBtn(t, off)}</div>` : a.may === null ? `<p class="muted">${vi.dauThanh.googleInNone}</p>` : '';
+    return `<div class="hero-pick dau-account"><h4>${vi.dauThanh.accountTitle}</h4><p class="muted">${esc(vi.dauThanh.googleInAs(tk.email))}</p>${has}</div>`;
+  }
+  if (!a.coGoogle) return '';
+  return `<div class="hero-pick dau-account"><h4>${vi.dauThanh.googleInTitle}</h4><p class="muted">${vi.dauThanh.googleInIntro}</p>
+    <div class="actions"><button class="btn small ghost" data-act="dauGoogleIn" ${off}>${vi.dauThanh.googleIn}</button></div></div>`;
+}
+
+/**
+ * Mục Bản lưu trên mây ở bảng Cài đặt, cho máy chưa tham gia Đấu thành ở đây: game mới chưa có doanh trại thì chưa mở
+ * được bảng Đấu thành, vẫn phải đăng nhập Google và tải bản lưu về được. Đã tham gia ở máy này thì mọi thứ ở bảng Đấu
+ * thành; máy chủ chưa bật Google thì không hiện gì. `armed`: đã bấm Tải về một lần.
+ */
+export function cloudSettingsHtml(state: GameState, armed: boolean): string {
+  if (!coMayChu() || dauJoined(state)) return '';
+  const tk = taiKhoanMay();
+  const a = dauTaiKhoan;
+  let body: string;
+  if (tk?.google) {
+    const load = `${armed ? `<p class="why">${vi.dauThanh.cloudLoadConfirm}</p>` : ''}<button class="btn small ${armed ? '' : 'ghost'}" data-act="mayLoad">${vi.dauThanh.cloudLoad}</button>`;
+    body = `<p class="muted">${esc(vi.dauThanh.googleInAs(tk.email))}</p>${a.may ? `${cloudLine()}${load}` : a.may === null ? `<p class="muted">${vi.dauThanh.googleInNone}</p>` : ''}`;
+  } else if (a.coGoogle) {
+    body = `<p class="muted">${vi.dauThanh.googleInIntro}</p><button class="btn small ghost" data-act="mayGoogleIn">${vi.dauThanh.googleIn}</button>`;
+  } else return '';
+  return `<h3 class="setting-title">${vi.dauThanh.cloudSettingsTitle}</h3>${body}`;
+}
+
+/** Bảng xếp hạng (bước `rank` của thẻ Đấu thật). */
+function rankHtml(view: DauView): string {
+  const t = view.that;
+  const busy = t.busy ? `<p class="muted dau-busy">⏳ ${vi.dauThanh.busy[t.busy]}</p>` : '';
+  const err = t.loi ? `<p class="why">${esc(dauError(t.loi))}</p>` : '';
+  const h = t.hang;
+  const rows = h
+    ? h.bang
+        .map(
+          (r) =>
+            `<li class="${r.toi ? 'me' : ''}"><i>${r.hang}</i><b>${esc(r.ten)}${r.toi ? ` <small>${vi.dauThanh.rankYou}</small>` : ''}</b><small>${vi.dauThanh.rankRow(r.chienCong, r.dien)}</small></li>`,
+        )
+        .join('')
+    : '';
+  const body = h
+    ? `<p class="muted">${vi.dauThanh.rankNote(h.bang.length, h.tong)}</p>
+      <div class="stat"><span>${vi.dauThanh.rankMe(h.hang, h.tong)}</span></div>
+      <ol class="dau-hang">${rows}</ol>`
+    : '';
+  return `<div class="stage-card dau"><h3>${vi.dauThanh.rankTitle}</h3>${busy}${err}${body}
+    <div class="actions"><button class="btn ghost" data-act="dauBack">${vi.ui.back}</button></div></div>`;
 }
 
 /** Thẻ Đấu thật. */
@@ -208,7 +326,8 @@ function thatHtml(state: GameState, view: DauView): string {
         <input class="dau-ten" type="text" maxlength="16" autocomplete="nickname" enterkeyhint="go" placeholder="${vi.dauThanh.namePlaceholder}" value="${esc(state.dauThanh?.ten ?? '')}">
       </label>
       ${why ? `<p class="why">${why}</p>` : ''}
-      <div class="actions"><button class="btn" data-act="dauJoin" ${off || (why ? 'disabled' : '')}>${vi.dauThanh.join}</button></div>`;
+      <div class="actions"><button class="btn" data-act="dauJoin" ${off || (why ? 'disabled' : '')}>${vi.dauThanh.join}</button></div>
+      ${accountHtml(t, false, off)}`;
   }
   const d = state.dauThanh!;
   const left = d.khienDen ? d.khienDen - Date.now() : 0;
@@ -216,7 +335,7 @@ function thatHtml(state: GameState, view: DauView): string {
   const prof = `<div class="stat"><span><b>${esc(d.ten)}</b></span><b>${vi.dauThanh.profile(d.chienCong)}</b></div><p class="muted">${shield}</p>`;
   const cant = canPractice(state);
   const lich = t.lich.length
-    ? `<div class="hero-pick"><h4>${vi.dauThanh.historyTitle}</h4><ul class="dau-lich">${t.lich.slice(0, 6).map(lichRow).join('')}</ul></div>`
+    ? `<div class="hero-pick"><h4>${vi.dauThanh.historyTitle}</h4><ul class="dau-lich">${t.lich.slice(0, 6).map((l) => lichRow(l, off)).join('')}</ul></div>`
     : '';
   const leave = `<div class="actions dau-leave">${t.roiHoi ? `<p class="why">${vi.dauThanh.leaveConfirm}</p>` : ''}<button class="btn small ghost" data-act="dauLeave" ${off}>${vi.dauThanh.leave}</button></div>`;
   const foe = t.foe;
@@ -224,8 +343,11 @@ function thatHtml(state: GameState, view: DauView): string {
     return `${prof}${busy}${err}
       <p class="rule">⭐ ${vi.dauThanh.rules}</p>
       ${cant ? `<p class="why">${vi.dauThanh.reasons[cant]}</p>` : ''}
-      <div class="actions"><button class="btn" data-act="dauFind" ${off || (cant ? 'disabled' : '')}>${vi.dauThanh.find}</button></div>
-      ${lich}${leave}`;
+      <div class="actions">
+        <button class="btn ghost" data-act="dauRank" ${off}>${vi.dauThanh.rankBtn}</button>
+        <button class="btn" data-act="dauFind" ${off || (cant ? 'disabled' : '')}>${vi.dauThanh.find}</button>
+      </div>
+      ${lich}${accountHtml(t, true, off)}${leave}`;
   }
   return `${prof}${busy}${err}
     <div class="hero-pick"><h4>${vi.dauThanh.foeTitle}</h4>
@@ -246,7 +368,8 @@ function thatHtml(state: GameState, view: DauView): string {
 /** Bảng bên phải (hay dưới) bản đồ. */
 export function dauHtml(state: GameState, view: DauView): string {
   const that = view.mode === 'that' && coMayChu();
-  if (view.step === 'target') {
+  if (that && view.step === 'rank') return rankHtml(view);
+  if (view.step !== 'army') {
     if (that) return `<div class="stage-card dau"><h3>${vi.dauThanh.chip}</h3>${modeTabs(view)}${thatHtml(state, view)}</div>`;
     const why = canPractice(state);
     const opts = dauTargets(state)
@@ -366,17 +489,17 @@ export function dauAttackedHtml(state: GameState, biDanh: BiDanh[], cu: { tran: 
     .map(({ tran: t, mat }) => {
       const k = t.ketQua!;
       const lost = RESOURCE_IDS.some((r) => mat[r] > 0) ? `${vi.dauThanh.attackedLost}: ${resHtml(mat)}` : vi.dauThanh.attackedNone;
-      return `<li><b>${vi.dauThanh.attackedRow(esc(t.tenDanh), t.dienDanh)}</b>
+      return `<li><span><b>${vi.dauThanh.attackedRow(esc(t.tenDanh), t.dienDanh)}</b>
         <small>${vi.dauThanh.histScore(k.sao, Math.floor(k.pct * 100))} · ${vi.dauThanh.attackedCups(k.chienCong.def)}</small>
-        <small>${lost}</small></li>`;
+        <small>${lost}</small></span>${replayBtn(t)}</li>`;
     })
     .join('');
   const old = cu
     .map(({ tran: t, nhan }) => {
       const k = t.ketQua!;
-      return `<li><b>${vi.dauThanh.recoveredRow(t.may ? vi.dauThanh.histBot : esc(t.tenGiu))}</b>
+      return `<li><span><b>${vi.dauThanh.recoveredRow(t.may ? vi.dauThanh.histBot : esc(t.tenGiu))}</b>
         <small>${vi.dauThanh.histScore(k.sao, Math.floor(k.pct * 100))} · ${vi.dauThanh.attackedCups(k.chienCong.atk)}</small>
-        <small>${vi.dauThanh.resultFallenReal}: ${armyLine(nhan.mat)} · ${vi.dauThanh.recoveredGot}: ${resHtml(nhan.duoc)}</small></li>`;
+        <small>${vi.dauThanh.resultFallenReal}: ${armyLine(nhan.mat)} · ${vi.dauThanh.recoveredGot}: ${resHtml(nhan.duoc)}</small></span></li>`;
     })
     .join('');
   const left = state.dauThanh?.khienDen ? state.dauThanh.khienDen - Date.now() : 0;
@@ -385,5 +508,35 @@ export function dauAttackedHtml(state: GameState, biDanh: BiDanh[], cu: { tran: 
     ${left > 0 && rows ? `<p class="muted">${vi.dauThanh.attackedShield(vi.dauThanh.hm(left))}</p>` : ''}
     ${old ? `<h3>${vi.dauThanh.recoveredTitle}</h3><ul class="dau-lich">${old}</ul>` : ''}
     <div class="actions"><button class="btn bronze" data-act="dauAttackedOk">${vi.dauThanh.ok}</button></div>
+  </div>`;
+}
+
+/** Tên hai bên của một trận xem lại, theo vai của mình: người đánh và kinh đô bị đánh. */
+export function replayNames(t: TranTom, vai: 'danh' | 'giu'): { atk: string; def: string } {
+  return {
+    atk: vai === 'danh' ? vi.dauThanh.replayMe : t.tenDanh,
+    def: vai === 'giu' ? vi.dauThanh.replayMine : t.may || !t.tenGiu ? vi.dauThanh.foeBot(t.dienGiu) : t.tenGiu,
+  };
+}
+
+/** Bảng sau khi xem lại hết một trận: kết quả máy chủ đã ghi (sao, phần trăm, của cướp, chiến công của mình). */
+export function dauReplayResultHtml(t: TranTom, vai: 'danh' | 'giu'): string {
+  const k = t.ketQua!;
+  const n = replayNames(t, vai);
+  return `<div class="modal dau-result">
+    <h2>${vi.dauThanh.replayDone}</h2>
+    <p class="muted">${esc(vi.dauThanh.replayBanner(n.atk, n.def))}</p>
+    <div class="dau-stars">${'⭐'.repeat(k.sao)}${'☆'.repeat(3 - k.sao)}</div>
+    <div class="result-rows">
+      <div>${vi.dauThanh.resultPct(Math.floor(k.pct * 100))}</div>
+      <div>${k.dien ? vi.dauThanh.resultDien : vi.dauThanh.resultNoDien}</div>
+      <div>${vi.dauThanh.resultFallenReal}: ${armyLine(k.mat)}</div>
+      <div>${vai === 'giu' ? vi.dauThanh.replayLootDef : vi.dauThanh.replayLootAtk}: ${t.may ? vi.dauThanh.resultBot : resHtml(k.cuop)}</div>
+      <div>🏅 ${vi.dauThanh.resultCups(vai === 'giu' ? k.chienCong.def : k.chienCong.atk)}</div>
+    </div>
+    <div class="actions">
+      <button class="btn ghost" data-act="dauReplay" data-tran="${esc(t.id)}">${vi.dauThanh.replayAgain}</button>
+      <button class="btn bronze" data-act="dauHome">${vi.dauThanh.home}</button>
+    </div>
   </div>`;
 }

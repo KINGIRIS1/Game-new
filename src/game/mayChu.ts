@@ -9,10 +9,10 @@ import { DAU_THANH, FIELD_CAP, RESOURCE_IDS, SKILL_IDS, UNIT_TYPES, type Resourc
 import { armySpace, type Army } from './doanhTrai';
 import {
   botSnapshot,
+  cleanInputs,
   decodeSnapshot,
   encodeSnapshot,
   lootPvp,
-  PVP_MAX_INPUTS,
   scorePvp,
   simulatePvp,
   trophyDelta,
@@ -33,6 +33,11 @@ export const CAU_HINH = {
   attackPerH: DAU_THANH.attackPerH,
   snapPerH: DAU_THANH.snapPerH,
   keepDays: DAU_THANH.keepDays,
+  rankTop: DAU_THANH.rankTop,
+  rankPerH: DAU_THANH.rankPerH,
+  replayPerH: DAU_THANH.replayPerH,
+  savePerH: DAU_THANH.savePerH,
+  saveMax: DAU_THANH.saveMax,
 } as const;
 
 // ---------- Tên người chơi ----------
@@ -154,22 +159,6 @@ export function quanDanh(atkMa: string, army: unknown, side: unknown, seed: numb
   };
 }
 
-const MAX_STEP = 10_000;
-
-/** Lọc các lần bấm máy khách gửi: đúng dạng, đúng kỹ năng, bước tăng dần không quá giới hạn. */
-function locDauVao(raw: unknown): PvpInput[] {
-  if (!Array.isArray(raw)) return [];
-  const out: PvpInput[] = [];
-  for (const i of raw.slice(0, PVP_MAX_INPUTS)) {
-    if (!i || typeof i !== 'object') continue;
-    const { s, k } = i as Record<string, unknown>;
-    if (!Number.isInteger(s) || (s as number) < 0 || (s as number) > MAX_STEP) continue;
-    if (k !== 'rut' && !(SKILL_IDS as unknown[]).includes(k)) continue;
-    out.push({ s: s as number, k: k as PvpInput['k'] });
-  }
-  return out;
-}
-
 export interface KetQua {
   sao: number;
   /** Phần công trình tính điểm đã phá (0–1). */
@@ -199,7 +188,7 @@ export function danhLai(
   opts: { atkDien: number; atkTrophies: number; defTrophies: number; bot: boolean },
 ): KetQua {
   const def = docMa(defMa);
-  const bam = locDauVao(inputs);
+  const bam = cleanInputs(inputs);
   const run = simulatePvp(def, quan, bam);
   const score = scorePvp(run.def);
   let cuop = lootPvp(def, score, opts.atkDien);
