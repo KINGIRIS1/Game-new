@@ -48,8 +48,8 @@ export interface DauThat {
   roiHoi: boolean;
   /** Bảng xếp hạng máy chủ vừa trả (bước `rank`). */
   hang: XepHang | null;
-  /** Đã bấm Tải bản trên mây về một lần (bấm lần nữa mới thay bản lưu ở máy này). */
-  taiHoi: boolean;
+  /** Khối Tài khoản: việc đang chờ bấm lần hai (tải bản trên mây về, ghi đè bản trên mây). */
+  hoi: TkHoi;
 }
 
 /**
@@ -127,7 +127,7 @@ export function newDauView(state: GameState): DauView {
     step: 'target',
     side: 'bac',
     army: fitArmy({ ...state.troops }, fieldCap(state)),
-    that: { busy: null, loi: null, ten: state.dauThanh?.ten ?? '', foe: null, bo: [], lich: [], roiHoi: false, hang: null, taiHoi: false },
+    that: { busy: null, loi: null, ten: state.dauThanh?.ten ?? '', foe: null, bo: [], lich: [], roiHoi: false, hang: null, hoi: null },
     ...pickTarget(state, target),
   };
 }
@@ -218,7 +218,7 @@ function lichRow({ atk, t }: DauLich, off: string): string {
 }
 
 /** Giờ, ngày của một mốc thời gian máy chủ (lúc lưu lên mây). */
-const lucHtml = (ms: number): string => {
+export const lucText = (ms: number): string => {
   const d = new Date(ms);
   const p = (n: number) => String(n).padStart(2, '0');
   return `${p(d.getHours())}:${p(d.getMinutes())} ngày ${d.getDate()}/${d.getMonth() + 1}`;
@@ -227,61 +227,60 @@ const lucHtml = (ms: number): string => {
 /** Dòng bản lưu trên mây (chưa hỏi máy chủ thì không ghi gì). */
 const cloudLine = (): string => {
   const m = dauTaiKhoan.may;
-  return m === undefined ? '' : `<p class="muted">${m ? vi.dauThanh.cloudAt(m.dien, lucHtml(m.luc)) : vi.dauThanh.cloudNone}</p>`;
+  return m === undefined ? '' : `<p class="muted">${m ? vi.dauThanh.cloudAt(m.dien, lucText(m.luc)) : vi.dauThanh.cloudNone}</p>`;
 };
 
-/** Nút tải bản lưu trên mây về máy này (bấm hai lần). */
-const loadBtn = (t: DauThat, off: string): string =>
-  `${t.taiHoi ? `<p class="why">${vi.dauThanh.cloudLoadConfirm}</p>` : ''}<button class="btn small ${t.taiHoi ? '' : 'ghost'}" data-act="dauLoad" ${off}>${vi.dauThanh.cloudLoad}</button>`;
+/** Việc đang chờ bấm lần hai trong khối tài khoản: tải bản trên mây về (`tai`), hay ghi đè bản trên mây (`de`). */
+export type TkHoi = 'tai' | 'de' | null;
 
 /**
- * Khối Tài khoản của thẻ Đấu thật. Đã tham gia: gắn Google, rồi lưu lên mây (máy khác lưu bản mới hơn thì chọn tải về
- * hay ghi đè). Chưa tham gia: đăng nhập Google để lấy lại kinh đô đã chơi ở máy khác. Máy chủ chưa bật Google thì
- * không hiện gì.
+ * Thân khối tài khoản Google, dùng chung cho thẻ Đấu thật (lệnh `dau…`) và bảng Cài đặt (lệnh `may…`).
+ * - Chưa gắn Google: nút Gắn Google. Đã tham gia Đấu thành ở máy này thì gắn vào người dùng đang có (giữ tên, chiến
+ *   công); chưa thì đăng nhập Google (tài khoản mới thì lập, đã gắn ở máy khác thì lấy lại).
+ * - Đã gắn: bản lưu trên mây và nút Lưu lên mây; bản trên mây khác bản ở máy này thì chọn tải về hay ghi đè, cả hai
+ *   bấm hai lần.
+ * Máy chủ chưa bật Google mà máy này cũng chưa đăng nhập Google thì null.
  */
-function accountHtml(t: DauThat, joined: boolean, off: string): string {
+function taiKhoanBody(state: GameState, act: 'dau' | 'may', hoi: TkHoi, off: string): string | null {
   const tk = taiKhoanMay();
   const a = dauTaiKhoan;
-  if (joined) {
-    if (!tk?.google) {
-      if (!a.coGoogle) return '';
-      const loi = a.loiGoogle ? `<p class="why">${esc(googleError(a.loiGoogle))}</p>` : '';
-      return `<div class="hero-pick dau-account"><h4>${vi.dauThanh.accountTitle}</h4><p class="muted">${vi.dauThanh.googleIntro}</p>${loi}
-        <div class="actions"><button class="btn small" data-act="dauGoogle" ${off}>${vi.dauThanh.googleLink}</button></div></div>`;
-    }
-    const body = a.lech
-      ? `<p class="why">${vi.dauThanh.cloudDiff}</p>${cloudLine()}
-        <div class="actions">${loadBtn(t, off)}<button class="btn small ghost" data-act="dauSave" data-de="1" ${off}>${vi.dauThanh.cloudOverwrite}</button></div>`
-      : `${cloudLine()}<p class="muted">${vi.dauThanh.cloudAuto}</p>
-        <div class="actions"><button class="btn small" data-act="dauSave" ${off}>${vi.dauThanh.cloudSave}</button></div>`;
-    return `<div class="hero-pick dau-account"><h4>${vi.dauThanh.accountTitle}</h4><p class="muted">${esc(vi.dauThanh.googleLinked(tk.email))}</p>${body}</div>`;
+  const d = vi.dauThanh;
+  if (!tk?.google) {
+    if (!a.coGoogle) return null;
+    const loi = a.loiGoogle ? `<p class="why">${esc(googleError(a.loiGoogle))}</p>` : '';
+    // Tài khoản Google ấy đã có kinh đô khác: cho đăng nhập thẳng vào đó.
+    const khac = a.loiGoogle === 'identity_already_exists' ? `<button class="btn small ghost" data-act="${act}GoogleIn" ${off}>${d.googleOther}</button>` : '';
+    return `<p class="muted">${dauJoined(state) ? d.googleIntro : d.googleIntroNew}</p>${loi}
+      <div class="actions"><button class="btn small" data-act="${act}Google" ${off}>${d.googleLink}</button>${khac}</div>`;
   }
-  if (tk?.google) {
-    const has = a.may ? `${cloudLine()}<div class="actions">${loadBtn(t, off)}</div>` : a.may === null ? `<p class="muted">${vi.dauThanh.googleInNone}</p>` : '';
-    return `<div class="hero-pick dau-account"><h4>${vi.dauThanh.accountTitle}</h4><p class="muted">${esc(vi.dauThanh.googleInAs(tk.email))}</p>${has}</div>`;
+  const linked = `<p class="muted">${esc(d.googleLinked(tk.email))}</p>`;
+  if (!a.lech) {
+    return `${linked}${cloudLine()}<p class="muted">${d.cloudAuto}</p>
+      <div class="actions"><button class="btn small" data-act="${act}Save" ${off}>${d.cloudSave}</button></div>`;
   }
-  if (!a.coGoogle) return '';
-  return `<div class="hero-pick dau-account"><h4>${vi.dauThanh.googleInTitle}</h4><p class="muted">${vi.dauThanh.googleInIntro}</p>
-    <div class="actions"><button class="btn small ghost" data-act="dauGoogleIn" ${off}>${vi.dauThanh.googleIn}</button></div></div>`;
+  const confirm = hoi ? `<p class="why">${hoi === 'tai' ? d.cloudLoadConfirm : d.cloudOverwriteConfirm}</p>` : '';
+  return `${linked}<p class="why">${d.cloudDiff}</p>${cloudLine()}${confirm}
+    <div class="actions"><button class="btn small ${hoi === 'tai' ? '' : 'ghost'}" data-act="${act}Load" ${off}>${d.cloudLoad}</button>
+      <button class="btn small ${hoi === 'de' ? '' : 'ghost'}" data-act="${act}Save" data-de="1" ${off}>${d.cloudOverwrite}</button></div>`;
+}
+
+/** Khối Tài khoản của thẻ Đấu thật. */
+function accountHtml(state: GameState, t: DauThat, off: string): string {
+  const body = taiKhoanBody(state, 'dau', t.hoi, off);
+  return body === null ? '' : `<div class="hero-pick dau-account"><h4>${vi.dauThanh.accountTitle}</h4>${body}</div>`;
 }
 
 /**
- * Mục Bản lưu trên mây ở bảng Cài đặt, cho máy chưa tham gia Đấu thành ở đây: game mới chưa có doanh trại thì chưa mở
- * được bảng Đấu thành, vẫn phải đăng nhập Google và tải bản lưu về được. Đã tham gia ở máy này thì mọi thứ ở bảng Đấu
- * thành; máy chủ chưa bật Google thì không hiện gì. `armed`: đã bấm Tải về một lần.
+ * Mục Tài khoản Google ở bảng Cài đặt: người chơi ngay từ màn hình vào game gắn Google ở đây, kể cả khi chưa tham gia
+ * Đấu thành (game mới chưa có doanh trại thì chưa mở được bảng Đấu thành). Đã gắn thì có thêm nút đăng xuất ở máy này.
+ * Máy chủ chưa bật Google thì không hiện gì. `hoi`: việc đang chờ bấm lần hai.
  */
-export function cloudSettingsHtml(state: GameState, armed: boolean): string {
-  if (!coMayChu() || dauJoined(state)) return '';
-  const tk = taiKhoanMay();
-  const a = dauTaiKhoan;
-  let body: string;
-  if (tk?.google) {
-    const load = `${armed ? `<p class="why">${vi.dauThanh.cloudLoadConfirm}</p>` : ''}<button class="btn small ${armed ? '' : 'ghost'}" data-act="mayLoad">${vi.dauThanh.cloudLoad}</button>`;
-    body = `<p class="muted">${esc(vi.dauThanh.googleInAs(tk.email))}</p>${a.may ? `${cloudLine()}${load}` : a.may === null ? `<p class="muted">${vi.dauThanh.googleInNone}</p>` : ''}`;
-  } else if (a.coGoogle) {
-    body = `<p class="muted">${vi.dauThanh.googleInIntro}</p><button class="btn small ghost" data-act="mayGoogleIn">${vi.dauThanh.googleIn}</button>`;
-  } else return '';
-  return `<h3 class="setting-title">${vi.dauThanh.cloudSettingsTitle}</h3>${body}`;
+export function cloudSettingsHtml(state: GameState, hoi: TkHoi): string {
+  if (!coMayChu()) return '';
+  const body = taiKhoanBody(state, 'may', hoi, '');
+  if (body === null) return '';
+  const out = taiKhoanMay()?.google ? `<div class="actions"><button class="btn small ghost" data-act="mayOut">${vi.dauThanh.googleOut}</button></div>` : '';
+  return `<h3 class="setting-title">${vi.dauThanh.cloudSettingsTitle}</h3>${body}${out}`;
 }
 
 /** Bảng xếp hạng (bước `rank` của thẻ Đấu thật). */
@@ -327,7 +326,7 @@ function thatHtml(state: GameState, view: DauView): string {
       </label>
       ${why ? `<p class="why">${why}</p>` : ''}
       <div class="actions"><button class="btn" data-act="dauJoin" ${off || (why ? 'disabled' : '')}>${vi.dauThanh.join}</button></div>
-      ${accountHtml(t, false, off)}`;
+      ${accountHtml(state, t, off)}`;
   }
   const d = state.dauThanh!;
   const left = d.khienDen ? d.khienDen - Date.now() : 0;
@@ -347,7 +346,7 @@ function thatHtml(state: GameState, view: DauView): string {
         <button class="btn ghost" data-act="dauRank" ${off}>${vi.dauThanh.rankBtn}</button>
         <button class="btn" data-act="dauFind" ${off || (cant ? 'disabled' : '')}>${vi.dauThanh.find}</button>
       </div>
-      ${lich}${accountHtml(t, true, off)}${leave}`;
+      ${lich}${accountHtml(state, t, off)}${leave}`;
   }
   return `${prof}${busy}${err}
     <div class="hero-pick"><h4>${vi.dauThanh.foeTitle}</h4>

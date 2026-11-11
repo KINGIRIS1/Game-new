@@ -4,7 +4,7 @@ import './style.css';
 import { play, setMuted, stopRally, unlockAudio } from './audio/sfx';
 import { skillReady, useSkill, type HeroKind } from './game/battle';
 import { attackFrom, beginPvp, canPractice, decodeSnapshot, encodeSnapshot, lootPvp, makeSnapshot, pushInput, scorePvp, stepPvp, validateArmy, type PvpRun } from './game/dauThanh';
-import { chayXemLai, newDauThanh, nhanKetQua, nhanTranCu, setHoSo, truBiDanh, type BiDanh, type DaNhan, type KetQuaMay, type TranTom } from './game/dauThat';
+import { chayXemLai, newDauThanh, nhanKetQua, nhanTranCu, setHoSo, truBiDanh, type BiDanh, type DaNhan, type KetQuaMay, type MayTom, type TranTom } from './game/dauThat';
 import { kiemTen } from './game/mayChu';
 import { coMayChu, ghiMayBiet, mayBiet, nhanGoogle, taiKhoanMay, uidMay, type GoogleVe } from './mang/cauHinh';
 import { leaveBattlefield, markBaiHinted, needsBaiHint, retreat, startStage, unitAllowed } from './game/campaign';
@@ -100,6 +100,7 @@ import {
   googleError,
   foeOf,
   lichOf,
+  lucText,
   replayNames,
   targetSnapshot,
   type DauView,
@@ -225,9 +226,31 @@ function saveNgayDem(on: boolean): void {
 /** Chờ trình duyệt vẽ xong một khung, để màn hình vào game kịp hiện trước khi dựng cảnh 3D (việc nặng, chạy liền một mạch). */
 const nextPaint = () => new Promise<void>((done) => requestAnimationFrame(() => setTimeout(done, 0)));
 
+/**
+ * Hỏi máy chủ cho khối tài khoản: đã bật đăng nhập Google chưa, và bản lưu trên mây của người đang đăng nhập Google ở
+ * máy này (không kèm mã lưu; chưa đăng nhập Google thì `undefined`). `hong`: chưa hỏi được bản lưu trên mây.
+ */
+async function hoiMay(): Promise<{ coGoogle: boolean; may: MayTom | null | undefined; hong: boolean }> {
+  const m = await import('./mang/mayChu');
+  const google = !!taiKhoanMay()?.google;
+  const [coGoogle, may] = await Promise.all([
+    m.coGoogle(),
+    google
+      ? m.taiMay(true).then(
+          (r) => r.may,
+          () => undefined,
+        )
+      : undefined,
+  ]);
+  return { coGoogle, may, hong: google && may === undefined };
+}
+
 async function start(): Promise<void> {
-  // Vừa từ trang Google về (gắn Google hay đăng nhập ở máy mới): cất phiên trước khi game đọc phiên ở máy này.
+  // Vừa từ trang Google về (gắn Google hay đăng nhập): cất phiên trước khi game đọc phiên ở máy này.
   const googleVe = nhanGoogle();
+  // Hỏi máy chủ về tài khoản ngay từ đầu, song song với lúc dựng cảnh, cho màn hình vào game có sẵn câu trả lời.
+  const hoiSom = coMayChu() ? hoiMay() : null;
+  hoiSom?.catch(() => undefined);
   const canvas = document.querySelector<HTMLCanvasElement>('#scene')!;
   const hudRoot = document.querySelector<HTMLElement>('#hud')!;
 
@@ -249,6 +272,8 @@ async function start(): Promise<void> {
   // Màn hình vào game hiện ngay; nút Chơi tiếp chỉ bấm được khi cảnh đã dựng xong (`manVao.ready`).
   const manVao = new ManVao(document.body, state.settings.muted, {
     enter: () => enter(),
+    google: (khac) => void googleTuManVao(khac),
+    load: () => void taiTuManVao(),
     mute: () => {
       state.settings.muted = !state.settings.muted;
       setMuted(state.settings.muted);
@@ -492,6 +517,12 @@ async function start(): Promise<void> {
   /** Bảng Đấu thành đang mở thì dựng lại (sau mỗi lần máy chủ trả lời). */
   const refreshDau = () => hud.dauView() && hud.refreshCampaign(state, true);
 
+  /** Lỗi một việc gọi máy chủ từ bảng Cài đặt: báo một dòng. */
+  const mayLoi = (e: unknown) => {
+    play('error');
+    hud.toast(dauError(loiOf(e)), true);
+  };
+
   /** Chạy một việc gọi máy chủ từ bảng Đấu thành: khóa nút, hiện chữ chờ, ghi lỗi vào bảng. */
   const dauBusy = async (view: DauView, busy: NonNullable<DauView['that']['busy']>, job: () => Promise<void>) => {
     if (view.that.busy) return;
@@ -614,24 +645,112 @@ async function start(): Promise<void> {
 
   const tk = dauTaiKhoan;
 
+  /** Bản lưu trên mây có khác bản máy này biết không: máy khác đã lưu sau, máy này vừa đăng nhập, hay vừa đổi bản lưu. */
+  const xetLech = () => {
+    const acc = taiKhoanMay();
+    tk.lech = !!acc?.google && !!tk.may && mayBiet(acc.uid)?.ban !== tk.may.ban;
+  };
+
+  /** Màn hình vào game, khối tài khoản: việc đang làm, dòng báo, lỗi lần gọi máy chủ vừa rồi. */
+  const mv: { ban: 'google' | 'tai' | null; bao: string | null; loi: string | null } = { ban: null, bao: null, loi: null };
+
+  /** Khối tài khoản của màn hình vào game theo lúc này (máy chủ chưa bật Google và máy chưa đăng nhập thì không hiện). */
+  const veManVao = () => {
+    if (!manVao.open) return;
+    const acc = taiKhoanMay();
+    if (!acc?.google && !tk.coGoogle) return manVao.setTk(null);
+    const lech = acc?.google && tk.lech && tk.may ? { dien: tk.may.dien, luc: lucText(tk.may.luc) } : null;
+    const cloud = !acc?.google || lech ? null : tk.may ? vi.dauThanh.cloudAt(tk.may.dien, lucText(tk.may.luc)) : tk.may === null ? vi.manVao.cloudNone : null;
+    manVao.setTk({
+      google: acc?.google ? { email: acc.email } : null,
+      lech,
+      bao: mv.bao ?? cloud,
+      loi: mv.loi ?? (tk.loiGoogle ? googleError(tk.loiGoogle) : null),
+      khac: tk.loiGoogle === 'identity_already_exists',
+      ban: mv.ban,
+    });
+  };
+
+  /** Vẽ lại mọi chỗ hiện tài khoản: bảng Đấu thành, mục Tài khoản Google của Cài đặt, màn hình vào game. */
+  const veTaiKhoan = () => {
+    refreshDau();
+    hud.refreshMaySettings(state);
+    veManVao();
+  };
+
   /**
-   * Hỏi máy chủ có bật đăng nhập Google không và bản lưu trên mây của người đang đăng nhập Google (không kèm mã lưu),
-   * cho khối Tài khoản của bảng Đấu thành. Không quá một lần mỗi phút, trừ khi `force`.
+   * Hỏi máy chủ có bật đăng nhập Google không và bản lưu trên mây của người đang đăng nhập Google (`hoiMay`), cho màn
+   * hình vào game, mục Tài khoản Google của Cài đặt và khối Tài khoản của bảng Đấu thành. Không quá một lần mỗi phút,
+   * trừ khi `force`. `som`: câu hỏi đã gửi từ lúc mở trang.
    */
-  const hoiTaiKhoan = async (force = false): Promise<void> => {
+  const hoiTaiKhoan = async (force = false, som?: ReturnType<typeof hoiMay>): Promise<void> => {
     if (!coMayChu() || (!force && Date.now() - tk.hoiLuc < 60_000)) return;
     tk.hoiLuc = Date.now();
     try {
-      const m = await mang();
-      tk.coGoogle = await m.coGoogle();
-      if (taiKhoanMay()?.google) tk.may = (await m.taiMay(true)).may;
+      const r = await (som ?? hoiMay());
+      tk.coGoogle = r.coGoogle;
+      if (r.may !== undefined) tk.may = r.may;
+      // Chưa hỏi được bản lưu trên mây: lần sau hỏi lại ngay.
+      if (r.hong) tk.hoiLuc = 0;
+      xetLech();
     } catch {
       // Chưa hỏi được: lần mở bảng sau hỏi lại.
       tk.hoiLuc = 0;
     }
-    refreshDau();
-    // Bảng Cài đặt đang mở thì mục Bản lưu trên mây hiện theo.
-    hud.refreshMaySettings(state);
+    veTaiKhoan();
+  };
+
+  /**
+   * Sang trang Google (màn hình vào game, Cài đặt, bảng Đấu thành). Đã tham gia Đấu thành ở máy này bằng người dùng ẩn
+   * danh thì gắn Google vào chính người dùng ấy (giữ tên, chiến công). Còn lại (máy mới, chưa tham gia) thì đăng nhập:
+   * tài khoản Google chưa có người dùng thì Supabase lập mới. `khac`: đăng nhập thẳng vào tài khoản Google đã có kinh
+   * đô khác, bỏ người dùng ẩn danh ở máy này.
+   */
+  const diGoogle = async (khac = false): Promise<void> => {
+    // Sắp rời trang: lưu game trước, về lại thì trang tải lại từ bản lưu.
+    save();
+    const m = await mang();
+    if (!khac && dauJoined(state) && !taiKhoanMay()?.google) await m.ganGoogle();
+    else m.vaoGoogle();
+  };
+
+  /** Màn hình vào game: bấm Đăng nhập Google. */
+  const googleTuManVao = async (khac: boolean): Promise<void> => {
+    if (mv.ban) return;
+    mv.ban = 'google';
+    mv.loi = null;
+    veManVao();
+    try {
+      await diGoogle(khac);
+      // Trang đang chuyển sang Google. Lỡ không chuyển (người chơi bấm quay lại) thì vài giây sau nút bấm lại được.
+      setTimeout(() => {
+        mv.ban = null;
+        veManVao();
+      }, 4000);
+    } catch (e) {
+      mv.ban = null;
+      mv.loi = dauError(loiOf(e));
+      veManVao();
+    }
+  };
+
+  /** Màn hình vào game: tải bản lưu trên mây về máy này, thẻ tóm tắt và kinh đô phía sau đổi theo. */
+  const taiTuManVao = async (): Promise<void> => {
+    if (mv.ban) return;
+    mv.ban = 'tai';
+    mv.loi = null;
+    mv.bao = null;
+    veManVao();
+    try {
+      await taiTuMay();
+      mv.bao = vi.manVao.cloudLoaded;
+      manVao.update(tomTat(state, Date.now()));
+    } catch (e) {
+      mv.loi = dauError(loiOf(e));
+    } finally {
+      mv.ban = null;
+      veManVao();
+    }
   };
 
   /** Tải bản lưu trên mây của người đang đăng nhập Google về máy này, thay bản lưu đang có. */
@@ -646,16 +765,19 @@ async function start(): Promise<void> {
     ghiMayBiet({ uid: acc.uid, ban: r.may.ban, luc: r.may.luc });
     tk.may = { ban: r.may.ban, dien: r.may.dien, luc: r.may.luc };
     tk.lech = false;
-    applyLoaded(loaded, vi.dauThanh.cloudLoaded);
-    // Bản lưu vừa tải là của người đang đăng nhập: hỏi máy chủ các trận từ lúc lưu, tải bản chụp.
+    applyLoaded(loaded, vi.dauThanh.cloudLoaded, true);
+    veTaiKhoan();
+    // Bản lưu vừa tải là của người đang đăng nhập: hỏi máy chủ các trận từ lúc lưu, tải bản chụp (còn ở màn hình vào
+    // game thì để lúc vào game hỏi).
+    if (!entered) return;
     snapAt = 0;
     void dongBo({ quiet: true });
   };
 
   /**
-   * Lưu game lên mây: chỉ khi đã gắn Google và bản lưu ở máy này đúng là của người ấy (đã tham gia Đấu thành bằng chính
-   * người dùng đang đăng nhập; máy mới vừa đăng nhập Google mà chưa tải bản lưu về thì không lưu đè). Máy khác đã lưu
-   * bản mới hơn thì dừng, chờ người chơi chọn tải về hay ghi đè (`de`). `quiet`: lần lưu tự động, lỗi không báo.
+   * Lưu game lên mây: chỉ khi máy này đã đăng nhập Google. Bản trên mây khác bản máy này biết (máy khác đã lưu sau, máy
+   * này vừa đăng nhập vào tài khoản đã có bản lưu, vừa chơi lại từ đầu hay nhập mã lưu) thì dừng, chờ người chơi chọn
+   * tải về hay ghi đè (`de`); máy chủ cũng từ chối theo số bản. `quiet`: lần lưu tự động, lỗi không báo.
    */
   const luuLenMay = (opts: { de?: boolean; quiet?: boolean } = {}): Promise<void> => {
     // Lần lượt từng lần lưu: hai lần chạy chồng nhau (vừa gắn Google xong và lần đồng bộ lúc mở game) sẽ cùng gửi một
@@ -667,7 +789,7 @@ async function start(): Promise<void> {
   let luuHang: Promise<void> = Promise.resolve();
   const luuMotLan = async (opts: { de?: boolean; quiet?: boolean }): Promise<void> => {
     const acc = taiKhoanMay();
-    if (!coMayChu() || !acc?.google || !dauJoined(state) || (tk.lech && !opts.de)) return;
+    if (!coMayChu() || !acc?.google || (tk.lech && !opts.de)) return;
     const m = await mang();
     try {
       const dien = dienLevel(state);
@@ -683,30 +805,30 @@ async function start(): Promise<void> {
       }
       tk.lech = true;
       tk.may = (await m.taiMay(true).catch(() => null))?.may ?? tk.may;
-      if (opts.quiet) hud.toast(vi.dauThanh.cloudDiffToast, true);
+      if (opts.quiet && entered) hud.toast(vi.dauThanh.cloudDiffToast, true);
+    } finally {
+      veTaiKhoan();
     }
   };
 
-  /** Google vừa trả người chơi về trang game: báo kết quả; gắn xong thì lưu lên mây, máy mới thì mở bảng Đấu thành. */
+  /**
+   * Việc với máy chủ lúc vào game và mười phút một lần. Đã tham gia Đấu thành: đồng bộ (trận bị đánh, bản chụp, rồi lưu
+   * lên mây nếu đã gắn Google). Chưa tham gia mà đã gắn Google: chỉ lưu lên mây.
+   */
+  const dinhKy = (): Promise<void> => (dauJoined(state) ? dongBo() : luuLenMay({ quiet: true }));
+
+  /**
+   * Google vừa trả người chơi về trang game (gọi khi màn hình vào game đã có câu trả lời của máy chủ): kết quả hiện ở
+   * khối tài khoản của màn hình ấy, lỗi thì còn ghi ở Cài đặt và bảng Đấu thành. Tài khoản chưa có bản lưu trên mây thì
+   * lưu ngay bản ở máy này lên; có bản khác thì người chơi chọn tải về (ngay ở màn hình vào game) hay ghi đè (Cài đặt).
+   */
   const sauGoogle = async (ve: GoogleVe): Promise<void> => {
-    if ('loi' in ve) {
-      // Dòng báo hiện lâu hơn thường lệ (vừa tải lại trang, dễ lỡ), và khối Tài khoản của bảng Đấu thành còn ghi lại.
-      play('error');
-      tk.loiGoogle = ve.loi;
-      hud.toast(googleError(ve.loi), true, 9000);
-      void hoiTaiKhoan(true);
-      return;
+    if ('loi' in ve) tk.loiGoogle = ve.loi;
+    else if (tk.may === null) {
+      await luuLenMay({ quiet: true });
+      if (!tk.lech && mayBiet(taiKhoanMay()?.uid ?? null)) mv.bao = vi.manVao.cloudSaved;
     }
-    play('claim');
-    if (ve.kieu === 'gan') {
-      hud.toast(vi.dauThanh.googleDone(ve.email));
-      await luuLenMay().catch(() => undefined);
-      refreshDau();
-      return;
-    }
-    hud.toast(vi.dauThanh.googleInDone(ve.email));
-    await hoiTaiKhoan(true);
-    hud.showDau(state, 'target', 'that');
+    veTaiKhoan();
   };
 
   /** Quân đang hành quân qua cầu tới đồn giặc: chừng ba giây rồi mới sang bãi chiến. */
@@ -937,10 +1059,21 @@ async function start(): Promise<void> {
 
   // ---------- Thao tác từ giao diện ----------
 
-  /** Thay bản lưu đang chơi bằng bản vừa đọc được (mã lưu, tệp lưu, bản lưu trên mây). */
-  function applyLoaded(loaded: GameState, toast: string): void {
+  /** Bản lưu ở máy này vừa đổi hẳn (chơi lại từ đầu, nhập mã lưu): quên số bản trên mây máy này biết. */
+  function quenMay(): void {
+    ghiMayBiet(null);
+    xetLech();
+    hud.refreshMaySettings(state);
+  }
+
+  /**
+   * Thay bản lưu đang chơi bằng bản vừa đọc được (mã lưu, tệp lưu, bản lưu trên mây `tuMay`). Bản không phải từ mây thì
+   * máy này coi như chưa biết bản trên mây: lần lưu lên mây sau phải hỏi người chơi, không lặng lẽ ghi đè.
+   */
+  function applyLoaded(loaded: GameState, toast: string, tuMay = false): void {
     state = loaded;
     state.lastSeen = Date.now();
+    if (!tuMay) quenMay();
     showRelaid();
     setMuted(state.settings.muted);
     world.resetAll();
@@ -1422,8 +1555,8 @@ async function start(): Promise<void> {
         if (mode.kind !== 'view') exitMode();
         select(null);
         hud.showSettings(state, world.resolution, world.ngayDemOn, world.bongDoOn);
-        // Mục Bản lưu trên mây: hỏi máy chủ có bật Google không (máy chưa tham gia Đấu thành mới cần).
-        if (!dauJoined(state)) void hoiTaiKhoan();
+        // Mục Tài khoản Google: hỏi máy chủ có bật Google không, bản lưu trên mây ra sao.
+        void hoiTaiKhoan();
         return;
 
       case 'toggleMute':
@@ -1509,6 +1642,7 @@ async function start(): Promise<void> {
       case 'reset':
         if (!window.confirm(vi.ui.resetConfirm)) return;
         state = createInitialState(Date.now());
+        quenMay();
         setMuted(false);
         world.resetAll();
         hud.closeSheet();
@@ -1820,13 +1954,7 @@ async function start(): Promise<void> {
         const view = hud.dauView();
         if (!view) return;
         play('tap');
-        void dauBusy(view, 'google', async () => {
-          // Sắp rời trang sang Google: lưu game trước, về lại thì trang tải lại từ bản lưu.
-          save();
-          const m = await mang();
-          if (a.kind === 'dauGoogle') await m.ganGoogle();
-          else m.vaoGoogle();
-        });
+        void dauBusy(view, 'google', () => diGoogle(a.kind === 'dauGoogleIn'));
         return;
       }
 
@@ -1850,25 +1978,40 @@ async function start(): Promise<void> {
         return;
       }
 
-      // Bảng Cài đặt, mục Bản lưu trên mây (máy mới chưa mở được bảng Đấu thành).
+      // Bảng Cài đặt, mục Tài khoản Google (người chơi ngay từ màn hình vào game gắn Google ở đây).
+      case 'mayGoogle':
       case 'mayGoogleIn':
         play('tap');
-        save();
-        void mang()
-          .then((m) => m.vaoGoogle())
-          .catch((e) => {
-            play('error');
-            hud.toast(dauError(loiOf(e)), true);
-          });
+        void diGoogle(a.kind === 'mayGoogleIn').catch(mayLoi);
+        return;
+
+      case 'maySave':
+        play('tap');
+        void luuLenMay({ de: a.de }).catch(mayLoi);
         return;
 
       case 'mayLoad':
         if (pvp) return;
         play('tap');
-        void taiTuMay().catch((e) => {
-          play('error');
-          hud.toast(dauError(loiOf(e)), true);
-        });
+        void taiTuMay().catch(mayLoi);
+        return;
+
+      case 'mayOut':
+        // Đăng xuất Google ở máy này: bản lưu ở máy và trên mây vẫn còn; Đấu thành ở máy này về lại lúc chưa tham gia.
+        if (pvp) return;
+        play('tap');
+        void mang()
+          .then(async (m) => {
+            await m.dangXuat();
+            tk.may = undefined;
+            tk.lech = false;
+            tk.loiGoogle = null;
+            tk.hoiLuc = 0;
+            hud.toast(vi.dauThanh.googleOutDone);
+            refreshUi();
+            veTaiKhoan();
+          })
+          .catch(mayLoi);
         return;
 
       case 'dauJoin': {
@@ -2031,12 +2174,12 @@ async function start(): Promise<void> {
     showOfflineIfLong(offline.ms, offline.gained, offline.built);
     if (state.raid.lastResult) hud.showRaidResult(state, state.raid.lastResult);
     preloadThumbs();
-    // Đã tham gia Đấu thành: hỏi máy chủ các trận bị đánh lúc vắng, tải bản chụp; rồi mười phút một lần.
-    void dongBo();
+    // Đã tham gia Đấu thành: hỏi máy chủ các trận bị đánh lúc vắng, tải bản chụp; đã gắn Google: lưu game lên mây.
+    // Rồi mười phút một lần.
+    void dinhKy();
     setInterval(() => {
-      if (document.visibilityState === 'visible') void dongBo();
+      if (document.visibilityState === 'visible') void dinhKy();
     }, SNAP_MS);
-    if (googleVe) void sauGoogle(googleVe);
   };
 
   /** Vào trận Đấu thành (đánh thử hay đánh thật): cảnh đổi sang kinh đô bị đánh, camera lướt tới phía tràn vào. */
@@ -2280,7 +2423,13 @@ async function start(): Promise<void> {
     requestAnimationFrame(frame);
   };
   requestAnimationFrame(frame);
+  // Chờ máy chủ trả lời về tài khoản (hỏi từ lúc mở trang, song song với dựng cảnh) rồi mới mở màn hình vào game, để
+  // khối tài khoản không hiện ra muộn làm xô nút dưới ngón tay. Quá 1,2 giây thì thôi chờ, khối ấy hiện ra sau.
+  const hoiDau = hoiSom ? hoiTaiKhoan(true, hoiSom) : Promise.resolve();
+  await Promise.race([hoiDau, new Promise((done) => setTimeout(done, 1200))]);
   manVao.ready(tomTat(state, Date.now()));
+  veManVao();
+  if (googleVe) void hoiDau.then(() => sauGoogle(googleVe));
 
   // Cho phép kiểm thử tự động đọc trạng thái và tìm vị trí ô trên màn hình.
   (window as unknown as { __debug?: object }).__debug = {

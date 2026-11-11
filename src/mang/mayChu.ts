@@ -2,8 +2,8 @@
 // Function `dau-thanh`. Chỉ nạp khi cần (mở bảng Đấu thành, hay mở game khi đã tham gia): `import('../mang/mayChu')`.
 // Không dùng thư viện Supabase: chỉ cần hai đường Auth (đăng ký ẩn danh, làm mới phiên) và một đường hàm.
 // Phiên đăng nhập cất ở localStorage của máy này, không vào bản lưu (mã lưu chép sang máy khác thì máy ấy chưa tham gia).
-// PR 6: gắn Google vào người dùng ẩn danh, đăng nhập Google ở máy mới (đi qua trang Google rồi Supabase trả về trang
-// game, `nhanGoogle` ở cauHinh.ts cất phiên), bảng xếp hạng, xem lại trận, lưu và tải bản lưu trên mây.
+// PR 6: gắn Google vào người dùng ẩn danh, đăng nhập Google (đi qua trang Google rồi Supabase trả về trang game,
+// `nhanGoogle` ở cauHinh.ts cất phiên), đăng xuất ở máy này, bảng xếp hạng, xem lại trận, lưu và tải bản lưu trên mây.
 
 import type { PvpInput } from '../game/dauThanh';
 import type { HoSo, KetQuaMay, MayTom, TranTom, XemLaiTra, XepHang } from '../game/dauThat';
@@ -228,8 +228,22 @@ export async function ganGoogle(): Promise<void> {
   location.assign(json.url);
 }
 
-/** Đăng nhập Google ở máy mới: chuyển sang trang Google; về thì máy này là người dùng đã gắn Google ấy. */
+/**
+ * Đăng nhập Google khi máy này chưa có người chơi Đấu thành nào để giữ (máy mới, người chơi chưa tham gia): chuyển
+ * sang trang Google; về thì máy này là người dùng của tài khoản Google ấy (chưa có thì Supabase lập mới).
+ */
 export function vaoGoogle(): void {
   datCho('vao');
   location.assign(`${URL_}/auth/v1/authorize?provider=google&redirect_to=${encodeURIComponent(trangGame())}`);
+}
+
+/**
+ * Đăng xuất ở máy này: báo Supabase thu phiên của riêng máy này (không được cũng thôi), rồi bỏ phiên đã cất. Bản lưu
+ * ở máy và trên mây không đổi; đăng nhập Google lại là có lại.
+ */
+export async function dangXuat(): Promise<void> {
+  const p = phienNay();
+  ghiPhien(null);
+  if (!p) return;
+  await fetchJson('/auth/v1/logout?scope=local', { method: 'POST', headers: { apikey: KEY, Authorization: `Bearer ${p.access}` } }).catch(() => undefined);
 }

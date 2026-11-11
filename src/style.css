@@ -2651,8 +2651,56 @@ body.man-vao-on #hud > * {
   letter-spacing: 0.02em;
 }
 
-.man-vao.ready .mv-play:not(:disabled) {
+.man-vao.ready .mv-play.bronze:not(:disabled) {
   animation: mv-goi 2.4s ease-in-out 1s infinite;
+}
+
+/* Tài khoản Google: nút đăng nhập và lời nhắc dưới nút vào game; bản trên mây khác bản ở máy này thì lên trên nút. */
+.mv-tk-slot:empty {
+  display: none;
+}
+
+.mv-tk {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 6px;
+  text-align: center;
+}
+
+.mv-tk-slot[data-cho='tren'] .mv-tk {
+  padding: 10px 12px;
+  border-radius: 14px;
+  background: rgba(247, 236, 212, 0.95);
+  border: 1.5px solid var(--bronze);
+  box-shadow: var(--shadow);
+}
+
+.mv-google {
+  padding: 10px 14px;
+  font-size: 15px;
+  border-radius: 14px;
+}
+
+.mv-note,
+.mv-as,
+.mv-why {
+  margin: 0;
+  font-size: 12.5px;
+  line-height: 1.35;
+  text-wrap: balance;
+  color: var(--ink-soft);
+}
+
+.mv-as {
+  color: var(--ink);
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.mv-why {
+  color: var(--red-dark);
+  font-weight: 600;
 }
 
 @keyframes mv-goi {
@@ -2696,7 +2744,7 @@ body.man-vao-on #hud > * {
   .mv-chim,
   .mv-logo,
   .mv-card,
-  .man-vao.ready .mv-play:not(:disabled) {
+  .man-vao.ready .mv-play.bronze:not(:disabled) {
     animation: none;
   }
 }

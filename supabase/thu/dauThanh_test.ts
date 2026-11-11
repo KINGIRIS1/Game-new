@@ -30,6 +30,8 @@ const A = '00000000-0000-4000-8000-00000000000a';
 const B = '00000000-0000-4000-8000-00000000000b';
 const C = '00000000-0000-4000-8000-00000000000c';
 const D = '00000000-0000-4000-8000-00000000000d';
+/** Người đăng nhập Google từ màn hình vào game, chưa tham gia Đấu thành. */
+const E = '00000000-0000-4000-8000-00000000000e';
 const QUAN5 = { giao: 14, cung: 12, voi: 4 };
 
 Deno.test({
@@ -46,7 +48,7 @@ Deno.test({
       const files = [];
       for await (const f of Deno.readDir(new URL('../migrations/', import.meta.url))) if (f.name.endsWith('.sql')) files.push(f.name);
       for (const name of files.sort()) await sql.unsafe(await Deno.readTextFile(new URL(`../migrations/${name}`, import.meta.url)));
-      await sql`insert into auth.users (id) values (${A}), (${B}), (${C}), (${D})`;
+      await sql`insert into auth.users (id) values (${A}), (${B}), (${C}), (${D}), (${E})`;
 
       let now = Date.UTC(2026, 10, 9, 12);
       const r = 0.1;
@@ -221,6 +223,14 @@ Deno.test({
       eq((await goi(A, { hanh: 'luuMay', ma: 'TDVL2:' + 'A'.repeat(CAU_HINH.saveMax + 3000), dien: 5, goc: 3 }, LUAT_MA, true)).status, 413);
       eq(await goi(A, { hanh: 'toi', rac: 'A'.repeat(90_000) }), { status: 413, ok: false, loi: 'daiQua' });
       ok((await goi(A, { hanh: 'luuMay', ma: 'TDVL2:' + 'A'.repeat(CAU_HINH.saveMax - 6), dien: 5, goc: 3 }, LUAT_MA, true)).ok, 'mã lưu vừa giới hạn thì nhận');
+      // Người đăng nhập Google ngay từ màn hình vào game, chưa tham gia Đấu thành: vẫn lưu và tải bản lưu trên mây được,
+      // sau đó tham gia Đấu thành bằng chính người dùng ấy.
+      eq(await goi(E, { hanh: 'taiMay', chiXem: true }, LUAT_MA, true), { status: 200, ok: true, may: null });
+      eq(await goi(E, { hanh: 'luuMay', ma: MA, dien: 2, goc: 0 }, LUAT_MA, true), { status: 200, ok: true, ban: 1, luc: now });
+      eq((await goi(E, { hanh: 'taiMay' }, LUAT_MA, true)).may, { ban: 1, dien: 2, luc: now, ma: MA });
+      eq((await goi(E, { hanh: 'toi' }, LUAT_MA, true)).loi, 'chuaThamGia');
+      eq((await goi(E, { hanh: 'thamGia', ten: 'Tiên Dung', banChup: kinhDoMay(5).ma }, LUAT_MA, true)).toi.ten, 'Tiên Dung');
+      eq((await goi(E, { hanh: 'luuMay', ma: MA, dien: 5, goc: 1 }, LUAT_MA, true)).ban, 2);
       let deniedSave = false;
       await sql
         .begin(async (tx) => {

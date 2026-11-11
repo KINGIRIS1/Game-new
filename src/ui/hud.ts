@@ -47,7 +47,7 @@ import {
 import { armySpace, canGuard, capOf, doanhCount, generals, guardCap, guardManual, guardPlan, guardTargets, reserve } from '../game/doanhTrai';
 import { nuTuongList } from '../game/nuTuong';
 import { scorePvp } from '../game/dauThanh';
-import { cloudSettingsHtml, dauHtml, dauMapHtml, newDauView, pickTarget, stepDauArmy, type DauTarget, type DauView } from './dauThanh';
+import { cloudSettingsHtml, dauHtml, dauMapHtml, newDauView, pickTarget, stepDauArmy, type DauTarget, type DauView, type TkHoi } from './dauThanh';
 import {
   barracksLevel,
   canAfford,
@@ -283,8 +283,12 @@ export type HudAction =
   | { kind: 'dauGoogleIn' }
   | { kind: 'dauSave'; de: boolean }
   | { kind: 'dauLoad' }
+  // Bảng Cài đặt, mục Tài khoản Google: gắn, đăng nhập tài khoản đã có kinh đô khác, lưu lên mây, tải về, đăng xuất.
+  | { kind: 'mayGoogle' }
   | { kind: 'mayGoogleIn' }
-  | { kind: 'mayLoad' };
+  | { kind: 'maySave'; de: boolean }
+  | { kind: 'mayLoad' }
+  | { kind: 'mayOut' };
 
 export type HudMode = 'view' | 'place' | 'move' | 'paint' | 'merge';
 /** Kéo thả đắp tường: dải thẳng hay viền chữ nhật. */
@@ -671,25 +675,30 @@ export class Hud {
       case 'dauReplay':
         return this.onAction({ kind: 'dauReplay', tran: el.dataset.tran ?? '' });
       case 'dauSave':
-        return this.onAction({ kind: 'dauSave', de: el.dataset.de === '1' });
-      case 'mayLoad':
-        // Bảng Cài đặt: bấm hai lần mới tải bản trên mây về.
-        if (!this.mayArmed) {
-          this.mayArmed = true;
-          return this.refreshMaySettings(this.getState());
-        }
-        this.mayArmed = false;
-        return this.onAction({ kind: 'mayLoad' });
       case 'dauLoad': {
-        // Bấm hai lần mới tải về (bản lưu đang có ở máy này bị thay).
+        // Tải bản trên mây về (bản lưu ở máy này bị thay) và ghi đè bản trên mây: bấm hai lần. Lưu thường thì một lần.
         const dau = this.camp?.dau;
         if (!dau) return;
-        if (!dau.that.taiHoi) {
-          dau.that.taiHoi = true;
+        const de = act === 'dauSave' && el.dataset.de === '1';
+        const can: TkHoi = act === 'dauLoad' ? 'tai' : de ? 'de' : null;
+        if (can && dau.that.hoi !== can) {
+          dau.that.hoi = can;
           return this.refreshCampaign(this.getState(), true);
         }
-        dau.that.taiHoi = false;
-        return this.onAction({ kind: 'dauLoad' });
+        dau.that.hoi = null;
+        return this.onAction(act === 'dauLoad' ? { kind: 'dauLoad' } : { kind: 'dauSave', de });
+      }
+      case 'maySave':
+      case 'mayLoad': {
+        // Bảng Cài đặt: như trên.
+        const de = act === 'maySave' && el.dataset.de === '1';
+        const can: TkHoi = act === 'mayLoad' ? 'tai' : de ? 'de' : null;
+        if (can && this.mayHoi !== can) {
+          this.mayHoi = can;
+          return this.refreshMaySettings(this.getState());
+        }
+        this.mayHoi = null;
+        return this.onAction(act === 'mayLoad' ? { kind: 'mayLoad' } : { kind: 'maySave', de });
       }
       case 'dauLeave': {
         // Bấm hai lần mới rời (xóa tên, chiến công, bản chụp khỏi máy chủ).
@@ -1128,7 +1137,8 @@ export class Hud {
   /** Việc xây vừa bấm Hủy lần đầu (chờ bấm lần nữa cho chắc). */
   private cancelArmed: number | null = null;
   /** Đã bấm Tải bản trên mây về một lần ở bảng Cài đặt (bấm lần nữa mới thay bản lưu ở máy này). */
-  private mayArmed = false;
+  /** Bảng Cài đặt, mục Tài khoản Google: việc đang chờ bấm lần hai. */
+  private mayHoi: TkHoi = null;
   /** Loại bảng đang vẽ trên màn hình, để giữ chỗ cuộn khi vẽ lại cùng bảng. */
   private sheetKindShown = '';
   /** Nhóm đang xem trong bảng Xây dựng; nhớ cho lần mở sau. */
@@ -1197,7 +1207,7 @@ export class Hud {
 
   showSettings(state: GameState, resolution: Resolution, ngayDem: boolean, bongDo: boolean): void {
     this.sheet = { kind: 'settings', resolution, ngayDem, bongDo };
-    this.mayArmed = false;
+    this.mayHoi = null;
     this.refreshSheet(state, true);
   }
 
@@ -1228,13 +1238,13 @@ export class Hud {
 
   /** Vẽ lại bảng đang mở. Bỏ qua nếu nội dung không đổi để không làm mất lần chạm của người chơi. */
   /**
-   * Dựng lại riêng mục Bản lưu trên mây của bảng Cài đặt (máy chủ vừa trả lời, hay vừa bấm Tải về lần đầu); phần còn
-   * lại của bảng giữ nguyên, kể cả mã lưu đang dán dở.
+   * Dựng lại riêng mục Tài khoản Google của bảng Cài đặt (máy chủ vừa trả lời, hay vừa bấm lần đầu một nút phải bấm
+   * hai lần); phần còn lại của bảng giữ nguyên, kể cả mã lưu đang dán dở.
    */
   refreshMaySettings(state: GameState): void {
     if (this.sheet?.kind !== 'settings') return;
     const el = this.sheetEl.querySelector<HTMLElement>('.may-settings');
-    if (el) el.innerHTML = cloudSettingsHtml(state, this.mayArmed);
+    if (el) el.innerHTML = cloudSettingsHtml(state, this.mayHoi);
   }
 
   refreshSheet(state: GameState, force = false): void {
@@ -1899,6 +1909,7 @@ export class Hud {
       <p class="muted">${vi.ui.ngayDemHint}</p>
       <div class="setting-row"><span>${vi.ui.bongDo}</span><div class="choices">${bongBtns}</div></div>
       <p class="muted">${vi.ui.bongDoHint}</p>
+      <div class="may-settings">${cloudSettingsHtml(state, this.mayHoi)}</div>
       <h3 class="setting-title">${vi.ui.backupTitle}</h3>
       <div class="setting-row"><span>${vi.ui.saveFile}</span><div class="choices">
         <button class="btn small ghost" data-act="saveFile">💾 ${vi.ui.download}</button>
@@ -1915,7 +1926,6 @@ export class Hud {
       <p class="muted">${vi.ui.importHint}</p>
       <textarea id="import-box" placeholder="TDVL2:..."></textarea>
       <button class="btn small ghost" data-act="importCode">📥 ${vi.ui.importSave}</button>
-      <div class="may-settings">${cloudSettingsHtml(state, this.mayArmed)}</div>
       <div class="actions"><button class="btn ghost" data-act="reset">🔄 ${vi.ui.reset}</button></div>
       <p class="muted" style="text-align:center;margin-top:14px">${vi.gameTitle} · bản thử 0.5</p>`;
   }
@@ -1991,7 +2001,7 @@ export class Hud {
       camp.dau.step = 'target';
       camp.dau.that.loi = null;
       camp.dau.that.roiHoi = false;
-      camp.dau.that.taiHoi = false;
+      camp.dau.that.hoi = null;
     } else if (camp.dau && act === 'dauTarget') {
       Object.assign(camp.dau, pickTarget(state, id));
     } else if (camp.dau && act === 'dauSide') {
