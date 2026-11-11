@@ -2,11 +2,13 @@
 // Function `dau-thanh`. Chỉ nạp khi cần (mở bảng Đấu thành, hay mở game khi đã tham gia): `import('../mang/mayChu')`.
 // Không dùng thư viện Supabase: chỉ cần hai đường Auth (đăng ký ẩn danh, làm mới phiên) và một đường hàm.
 // Phiên đăng nhập cất ở localStorage của máy này, không vào bản lưu (mã lưu chép sang máy khác thì máy ấy chưa tham gia).
+// PR 6: gắn Google vào người dùng ẩn danh, đăng nhập Google (đi qua trang Google rồi Supabase trả về trang game,
+// `nhanGoogle` ở cauHinh.ts cất phiên), đăng xuất ở máy này, bảng xếp hạng, xem lại trận, lưu và tải bản lưu trên mây.
 
 import type { PvpInput } from '../game/dauThanh';
-import type { HoSo, KetQuaMay, TranTom } from '../game/dauThat';
+import type { HoSo, KetQuaMay, MayTom, TranTom, XemLaiTra, XepHang } from '../game/dauThat';
 import type { PvpAttack } from '../game/battle';
-import { PHIEN_KEY, SUPABASE_KEY as KEY, SUPABASE_URL as URL_, coMayChu } from './cauHinh';
+import { PHIEN_KEY, SUPABASE_KEY as KEY, SUPABASE_URL as URL_, coMayChu, datGoogleCho, docPhien, phienTuToken, type Phien } from './cauHinh';
 
 export { coMayChu };
 /** Chạy hàm ở vùng có cơ sở dữ liệu (Singapore): mỗi truy vấn khỏi vòng qua nửa vòng trái đất. */
@@ -26,23 +28,6 @@ export class LoiMay extends Error {
     readonly chiTiet?: string,
   ) {
     super(ma);
-  }
-}
-
-interface Phien {
-  access: string;
-  refresh: string;
-  /** Hết hạn lúc này (ms, giờ máy). */
-  het: number;
-  uid: string;
-}
-
-function docPhien(): Phien | null {
-  try {
-    const p = JSON.parse(localStorage.getItem(PHIEN_KEY) ?? 'null');
-    return p && typeof p.access === 'string' && typeof p.refresh === 'string' && typeof p.uid === 'string' && typeof p.het === 'number' ? p : null;
-  } catch {
-    return null;
   }
 }
 
@@ -70,12 +55,22 @@ async function fetchJson(path: string, init: RequestInit): Promise<{ status: num
   return { status: res.status, json: json && typeof json === 'object' ? json : null };
 }
 
-/** Phiên Auth trả về (đăng ký hay làm mới). */
+/** Phiên Auth trả về (đăng ký hay làm mới): người dùng, đã gắn Google chưa, email. */
 function phienTu(json: Record<string, unknown> | null): Phien | null {
-  const user = json?.user as { id?: unknown } | undefined;
+  const user = json?.user as { id?: unknown; is_anonymous?: unknown; email?: unknown } | undefined;
   if (!json || typeof json.access_token !== 'string' || typeof json.refresh_token !== 'string' || typeof user?.id !== 'string') return null;
   const giay = typeof json.expires_in === 'number' ? json.expires_in : 3600;
-  return { access: json.access_token, refresh: json.refresh_token, het: Date.now() + giay * 1000, uid: user.id };
+  // Thân JWT đọc được thì theo JWT (như lúc Google trả về); không thì theo phần `user` của câu trả lời.
+  return (
+    phienTuToken(json.access_token, json.refresh_token, giay, Date.now()) ?? {
+      access: json.access_token,
+      refresh: json.refresh_token,
+      het: Date.now() + giay * 1000,
+      uid: user.id,
+      google: user.is_anonymous === false,
+      email: typeof user.email === 'string' && user.email ? user.email : null,
+    }
+  );
 }
 
 /** Đăng nhập ẩn danh (Supabase: Allow anonymous sign-ins). */
@@ -177,3 +172,78 @@ export const danh = (doiThu: string, quan: Record<string, number>, huong: 'bac' 
 export const xong = (tran: string, bam: PvpInput[]) => goi<{ ketQua: KetQuaMay; toi?: HoSo }>({ hanh: 'xong', tran, bam });
 
 export const roi = () => goi<{ ok: true }>({ hanh: 'roi' });
+
+// ---------- PR 6: bảng xếp hạng, xem lại trận, lưu game lên mây ----------
+
+export const xepHang = () => goi<XepHang>({ hanh: 'xepHang' });
+
+export const xemLai = (tran: string) => goi<XemLaiTra>({ hanh: 'xemLai', tran });
+
+/** Lưu mã lưu lên mây. `goc`: số bản máy này biết (0 nếu chưa biết); `de`: ghi đè dù máy khác đã lưu bản mới hơn. */
+export const luuMay = (ma: string, dien: number, goc: number, de = false) =>
+  goi<{ ban: number; luc: number }>({ hanh: 'luuMay', ma, dien, goc, ...(de ? { de: true } : {}) });
+
+/** Bản lưu trên mây của mình (`chiXem`: không kèm mã lưu), hay null nếu chưa có. */
+export const taiMay = (chiXem = false) => goi<{ may: (MayTom & { ma?: string }) | null }>({ hanh: 'taiMay', ...(chiXem ? { chiXem: true } : {}) });
+
+// ---------- PR 6: Google ----------
+
+/** Địa chỉ trang game để Supabase Auth trả người chơi về (phải nằm trong Redirect URLs của dự án Supabase). */
+const trangGame = () => location.origin + location.pathname;
+
+let googleBat: Promise<boolean> | null = null;
+
+/** Máy chủ đã bật đăng nhập Google chưa (Supabase → Authentication → Providers). Hỏi một lần mỗi lần mở trang. */
+export function coGoogle(): Promise<boolean> {
+  if (!coMayChu()) return Promise.resolve(false);
+  return (googleBat ??= fetchJson('/auth/v1/settings', { headers: { apikey: KEY } })
+    .then(({ json }) => (json?.external as { google?: unknown } | undefined)?.google === true)
+    .catch(() => {
+      googleBat = null;
+      return false;
+    }));
+}
+
+function datCho(kieu: 'gan' | 'vao'): void {
+  try {
+    datGoogleCho(kieu, Date.now());
+  } catch {
+    throw new LoiMay('luuPhien');
+  }
+}
+
+/**
+ * Gắn Google vào người dùng đang đăng nhập ở máy này (Supabase: Allow manual linking): xin địa chỉ trang Google rồi
+ * chuyển trang. Xong thì Supabase trả về trang game kèm phiên mới của cùng người dùng (`nhanGoogle` ở cauHinh.ts).
+ */
+export async function ganGoogle(): Promise<void> {
+  const p = await phien(false);
+  if (!p) throw new LoiMay('chuaDangNhap', 401);
+  const { status, json } = await fetchJson(
+    `/auth/v1/user/identities/authorize?provider=google&redirect_to=${encodeURIComponent(trangGame())}&skip_http_redirect=true`,
+    { headers: { apikey: KEY, Authorization: `Bearer ${p.access}` } },
+  );
+  if (typeof json?.url !== 'string') throw new LoiMay(status === 401 || status === 403 ? 'chuaDangNhap' : 'googleChuaBat', status);
+  datCho('gan');
+  location.assign(json.url);
+}
+
+/**
+ * Đăng nhập Google khi máy này chưa có người chơi Đấu thành nào để giữ (máy mới, người chơi chưa tham gia): chuyển
+ * sang trang Google; về thì máy này là người dùng của tài khoản Google ấy (chưa có thì Supabase lập mới).
+ */
+export function vaoGoogle(): void {
+  datCho('vao');
+  location.assign(`${URL_}/auth/v1/authorize?provider=google&redirect_to=${encodeURIComponent(trangGame())}`);
+}
+
+/**
+ * Đăng xuất ở máy này: báo Supabase thu phiên của riêng máy này (không được cũng thôi), rồi bỏ phiên đã cất. Bản lưu
+ * ở máy và trên mây không đổi; đăng nhập Google lại là có lại.
+ */
+export async function dangXuat(): Promise<void> {
+  const p = phienNay();
+  ghiPhien(null);
+  if (!p) return;
+  await fetchJson('/auth/v1/logout?scope=local', { method: 'POST', headers: { apikey: KEY, Authorization: `Bearer ${p.access}` } }).catch(() => undefined);
+}

@@ -2239,4 +2239,12 @@ export const DAU_THANH = {
   nameMax: 16,
   /** Trận và bản chụp quá chừng này ngày thì máy chủ xóa. */
   keepDays: 30,
+  /** Bảng xếp hạng: máy chủ trả chừng này người đứng đầu (PR 6). */
+  rankTop: 50,
+  /** Lượt gọi máy chủ mỗi giờ: xem bảng xếp hạng, xem lại trận, lưu (hay tải) bản lưu trên mây. */
+  rankPerH: 60,
+  replayPerH: 60,
+  savePerH: 30,
+  /** Bản lưu trên mây dài nhất (số ký tự của mã lưu; người chơi mô phỏng ở Điện 10 chừng 3,3 nghìn, để dư nhiều). */
+  saveMax: 200_000,
 };

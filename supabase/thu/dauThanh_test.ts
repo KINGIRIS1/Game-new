@@ -30,10 +30,12 @@ const A = '00000000-0000-4000-8000-00000000000a';
 const B = '00000000-0000-4000-8000-00000000000b';
 const C = '00000000-0000-4000-8000-00000000000c';
 const D = '00000000-0000-4000-8000-00000000000d';
+/** Người đăng nhập Google từ màn hình vào game, chưa tham gia Đấu thành. */
+const E = '00000000-0000-4000-8000-00000000000e';
 const QUAN5 = { giao: 14, cung: 12, voi: 4 };
 
 Deno.test({
-  name: 'Đấu thành: tham gia, tìm, đánh, xong, khiên, khóa, trận bỏ dở, giới hạn lượt, kinh đô máy, rời',
+  name: 'Đấu thành: tham gia, tìm, đánh, xong, khiên, khóa, trận bỏ dở, giới hạn lượt, kinh đô máy, xếp hạng, xem lại, lưu mây, rời',
   ignore: !DB,
   sanitizeResources: false,
   sanitizeOps: false,
@@ -46,15 +48,19 @@ Deno.test({
       const files = [];
       for await (const f of Deno.readDir(new URL('../migrations/', import.meta.url))) if (f.name.endsWith('.sql')) files.push(f.name);
       for (const name of files.sort()) await sql.unsafe(await Deno.readTextFile(new URL(`../migrations/${name}`, import.meta.url)));
-      await sql`insert into auth.users (id) values (${A}), (${B}), (${C}), (${D})`;
+      await sql`insert into auth.users (id) values (${A}), (${B}), (${C}), (${D}), (${E})`;
 
       let now = Date.UTC(2026, 10, 9, 12);
       const r = 0.1;
-      const xuLy = taoXuLy({ sql, nguoiDung: async (req) => req.headers.get('x-thu'), bayGio: () => now, ngauNhien: () => r });
-      const goi = async (who: string | null, body: Record<string, unknown>, luat = LUAT_MA) => {
-        const res = await xuLy(
-          new Request('http://thu/dau-thanh', { method: 'POST', headers: who ? { 'x-thu': who } : {}, body: JSON.stringify({ luat, ...body }) }),
-        );
+      // Người gọi lấy từ header `x-thu`; có `x-google` thì coi như đã gắn Google (không còn ẩn danh).
+      const nguoiDung = (req: Request) => {
+        const id = req.headers.get('x-thu');
+        return Promise.resolve(id ? { id, anDanh: req.headers.get('x-google') !== '1' } : null);
+      };
+      const xuLy = taoXuLy({ sql, nguoiDung, bayGio: () => now, ngauNhien: () => r });
+      const goi = async (who: string | null, body: Record<string, unknown>, luat = LUAT_MA, google = false) => {
+        const headers: Record<string, string> = who ? { 'x-thu': who, ...(google ? { 'x-google': '1' } : {}) } : {};
+        const res = await xuLy(new Request('http://thu/dau-thanh', { method: 'POST', headers, body: JSON.stringify({ luat, ...body }) }));
         return { status: res.status, ...(await res.json()) };
       };
 
@@ -166,8 +172,77 @@ Deno.test({
         .catch(() => (denied = true));
       ok(denied, 'máy khách không đọc được bản chụp');
 
-      // Rời Đấu thành: xóa người chơi, bản chụp; trận cũ vẫn còn tên.
+      // ---------- PR 6 ----------
+      // Bảng xếp hạng: chiến công cao trước, đủ bốn người, đánh dấu đúng mình, hạng khớp chỗ đứng trong bảng.
+      const rank = await goi(A, { hanh: 'xepHang' });
+      const cups = rank.bang.map((x: { chienCong: number }) => x.chienCong);
+      eq([rank.tong, rank.bang.length, cups], [4, 4, [...cups].sort((x, y) => y - x)]);
+      const meRow = rank.bang.find((x: { toi?: boolean }) => x.toi);
+      eq([meRow.ten, meRow.hang, meRow.chienCong], ['Lạc Long', rank.hang, Math.max(0, mine.chienCong.atk)]);
+      eq(rank.bang.map((x: { hang: number }) => x.hang), [1, 2, 3, 4]);
+      ok(!JSON.stringify(rank).includes(B), 'bảng xếp hạng không lộ id người khác');
+      const [{ top }] = await sql`select ten as top from public.nguoi_choi order by chien_cong desc, tao_luc, id limit 1`;
+      eq(rank.bang[0].ten, top);
+
+      // Xem lại trận: người đánh và người giữ thành lấy được bản chụp, quân, các lần bấm; đánh lại ra đúng kết quả đã
+      // ghi. Người ngoài không lấy được; trận chưa xong, trận đóng bằng bản luật khác thì không xem lại được.
+      for (const who of [A, B]) {
+        const re = await goi(who, { hanh: 'xemLai', tran: start.tran });
+        eq([re.ok, re.vai, re.banChup, re.quan, re.bam, re.tran.id, re.tran.xemLai], [true, who === A ? 'danh' : 'giu', kinhDoMay(6).ma, quan, bam, start.tran, true], `xem lại (${who})`);
+        const { ms: _ms, ...kq } = re.tran.ketQua;
+        eq(danhLai(re.banChup, re.quan, re.bam, { atkDien: 5, atkTrophies: 0, defTrophies: 0, bot: false }), kq, 'đánh lại từ dữ liệu xem lại');
+      }
+      eq((await goi(C, { hanh: 'xemLai', tran: start.tran })).loi, 'khongCoTran');
+      eq((await goi(A, { hanh: 'xemLai', tran: 'x' })).loi, 'khongCoTran');
+      const dang = await goi(C, { hanh: 'danh', doiThu: 'may', quan: { giao: 5 }, huong: 'bac' });
+      ok(dang.ok, `C đánh kinh đô máy: ${JSON.stringify(dang)}`);
+      eq((await goi(C, { hanh: 'xemLai', tran: dang.tran })).loi, 'chuaXong');
+      await sql`update public.tran set luat = 'cu' where id = ${left.tran}`;
+      eq((await goi(B, { hanh: 'xemLai', tran: left.tran })).loi, 'banCu');
+      const b3 = (await goi(B, { hanh: 'toi' })) as { biDanh: { id: string; xemLai: boolean }[] };
+      eq(b3.biDanh.map((t) => [t.id, t.xemLai]), [[left.tran, false], [start.tran, true]]);
+
+      // Lưu game lên mây: chỉ người đã gắn Google; mã phải đúng dạng mã lưu; máy khác lưu bản mới hơn thì báo lệch.
+      const MA = 'TDVL2:' + 'QUJD'.repeat(50);
+      eq(await goi(A, { hanh: 'luuMay', ma: MA, dien: 5, goc: 0 }), { status: 403, ok: false, loi: 'canGoogle' });
+      eq(await goi(A, { hanh: 'taiMay' }, LUAT_MA, true), { status: 200, ok: true, may: null });
+      eq((await goi(A, { hanh: 'luuMay', ma: 'TDVS1:abc', dien: 5, goc: 0 }, LUAT_MA, true)).loi, 'maLuu');
+      eq((await goi(A, { hanh: 'luuMay', ma: 'TDVL2:<script>', dien: 5, goc: 0 }, LUAT_MA, true)).loi, 'maLuu');
+      eq(await goi(A, { hanh: 'luuMay', ma: MA, dien: 5, goc: 0 }, LUAT_MA, true), { status: 200, ok: true, ban: 1, luc: now });
+      now += 60_000;
+      eq(await goi(A, { hanh: 'luuMay', ma: MA + 'QUJD', dien: 6, goc: 1 }, LUAT_MA, true), { status: 200, ok: true, ban: 2, luc: now });
+      // Máy thứ hai còn giữ số bản 1: không ghi đè; xem thử thấy bản 2; chọn ghi đè thì được.
+      eq(await goi(A, { hanh: 'luuMay', ma: MA, dien: 5, goc: 1 }, LUAT_MA, true), { status: 409, ok: false, loi: 'lechMay' });
+      eq(await goi(A, { hanh: 'taiMay', chiXem: true }, LUAT_MA, true), { status: 200, ok: true, may: { ban: 2, dien: 6, luc: now } });
+      eq((await goi(A, { hanh: 'taiMay' }, LUAT_MA, true)).may.ma, MA + 'QUJD');
+      eq((await goi(A, { hanh: 'luuMay', ma: MA, dien: 99, goc: 1, de: true }, LUAT_MA, true)).ban, 3);
+      eq((await goi(A, { hanh: 'taiMay' })).may, { ban: 3, dien: 10, luc: now, ma: MA }, 'tải về không cần còn gắn Google');
+      eq(await goi(B, { hanh: 'taiMay' }, LUAT_MA, true), { status: 200, ok: true, may: null });
+      // Mã lưu dài quá giới hạn, thân yêu cầu dài quá; lệnh khác vẫn chỉ nhận thân ngắn.
+      eq((await goi(A, { hanh: 'luuMay', ma: 'TDVL2:' + 'A'.repeat(CAU_HINH.saveMax), dien: 5, goc: 3 }, LUAT_MA, true)).loi, 'maLuu');
+      eq((await goi(A, { hanh: 'luuMay', ma: 'TDVL2:' + 'A'.repeat(CAU_HINH.saveMax + 3000), dien: 5, goc: 3 }, LUAT_MA, true)).status, 413);
+      eq(await goi(A, { hanh: 'toi', rac: 'A'.repeat(90_000) }), { status: 413, ok: false, loi: 'daiQua' });
+      ok((await goi(A, { hanh: 'luuMay', ma: 'TDVL2:' + 'A'.repeat(CAU_HINH.saveMax - 6), dien: 5, goc: 3 }, LUAT_MA, true)).ok, 'mã lưu vừa giới hạn thì nhận');
+      // Người đăng nhập Google ngay từ màn hình vào game, chưa tham gia Đấu thành: vẫn lưu và tải bản lưu trên mây được,
+      // sau đó tham gia Đấu thành bằng chính người dùng ấy.
+      eq(await goi(E, { hanh: 'taiMay', chiXem: true }, LUAT_MA, true), { status: 200, ok: true, may: null });
+      eq(await goi(E, { hanh: 'luuMay', ma: MA, dien: 2, goc: 0 }, LUAT_MA, true), { status: 200, ok: true, ban: 1, luc: now });
+      eq((await goi(E, { hanh: 'taiMay' }, LUAT_MA, true)).may, { ban: 1, dien: 2, luc: now, ma: MA });
+      eq((await goi(E, { hanh: 'toi' }, LUAT_MA, true)).loi, 'chuaThamGia');
+      eq((await goi(E, { hanh: 'thamGia', ten: 'Tiên Dung', banChup: kinhDoMay(5).ma }, LUAT_MA, true)).toi.ten, 'Tiên Dung');
+      eq((await goi(E, { hanh: 'luuMay', ma: MA, dien: 5, goc: 1 }, LUAT_MA, true)).ban, 2);
+      let deniedSave = false;
+      await sql
+        .begin(async (tx) => {
+          await tx`set local role authenticated`;
+          await tx`select * from public.luu_may`;
+        })
+        .catch(() => (deniedSave = true));
+      ok(deniedSave, 'máy khách không đọc được bản lưu trên mây qua Data API');
+
+      // Rời Đấu thành: xóa người chơi, bản chụp; trận cũ vẫn còn tên; bản lưu trên mây vẫn còn.
       eq(await goi(A, { hanh: 'roi' }), { status: 200, ok: true });
+      eq((await goi(A, { hanh: 'taiMay', chiXem: true })).may.ban, 4);
       eq((await goi(A, { hanh: 'toi' })).loi, 'chuaThamGia');
       const [{ n }] = await sql`select count(*)::int as n from public.ban_chup where nguoi = ${A}`;
       eq(n, 0);

@@ -10,6 +10,7 @@ import {
   beginPvp,
   botSnapshot,
   canPractice,
+  cleanInputs,
   decodeSnapshot,
   defenderState,
   encodeSnapshot,
@@ -17,6 +18,8 @@ import {
   lootPvp,
   makeSnapshot,
   pushInput,
+  PVP_MAX_INPUTS,
+  replayPvp,
   scorePvp,
   simulatePvp,
   stepPvp,
@@ -180,6 +183,28 @@ describe('trận Đấu thành', () => {
     expect(live.inputs.length).toBeGreaterThan(0);
     expect(JSON.stringify(replay.battle)).toBe(JSON.stringify(live.battle));
     expect(JSON.stringify(replay.def.buildings)).toBe(JSON.stringify(live.def.buildings));
+  }, 30000);
+
+  it('xem lại (PR 6): chạy theo khung hình với các lần bấm đã ghi ra y hệt trận gốc, không ghi thêm lần bấm', () => {
+    const snap = botSnapshot(5);
+    const attack = attackAt(snap, SAMPLE_ARMY, 11);
+    const live = fight(snap, attack);
+    const saved = JSON.parse(JSON.stringify(live.inputs));
+    // Máy chủ trả các lần bấm kèm rác người đánh gửi lên: lọc như lúc đánh lại.
+    const replay = replayPvp(snap, attack, [...saved, null, 'x', { s: -1, k: 'trongTran' }, { s: 5, k: 'bay' }, { s: 1.5, k: 'rut' }]);
+    expect(replay.inputs).toEqual(saved);
+    let frames = 0;
+    // Khung hình lẻ, lúc nhanh gấp bốn: vẫn chỉ chạy trọn bước.
+    while (!stepPvp(replay, frames++ % 3 ? 1000 / 60 : 4000 / 60)) {
+      pushInput(replay, 'trongTran');
+      if (frames > 200_000) throw new Error('trận xem lại không xong');
+    }
+    expect(replay.inputs).toEqual(saved);
+    expect(replay.step).toBe(live.step);
+    expect(JSON.stringify(replay.battle)).toBe(JSON.stringify(live.battle));
+    expect(JSON.stringify(replay.def.buildings)).toBe(JSON.stringify(live.def.buildings));
+    expect(cleanInputs('x')).toEqual([]);
+    expect(cleanInputs(Array.from({ length: PVP_MAX_INPUTS + 50 }, (_, s) => ({ s, k: 'rut' }))).length).toBe(PVP_MAX_INPUTS);
   }, 30000);
 
   it('tháp bắn quân ta, lính giữ thành đánh quân ta, quân ta phá công trình; không cướp của trong trận', () => {

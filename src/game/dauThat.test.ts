@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { NHO_TRU, isDauThanhState, newDauThanh, nhanKetQua, nhanTranCu, truBiDanh, type KetQuaMay, type TranTom } from './dauThat';
+import { scorePvp, stepPvp } from './dauThanh';
+import { NHO_TRU, chayXemLai, isDauThanhState, newDauThanh, nhanKetQua, nhanTranCu, truBiDanh, type KetQuaMay, type TranTom } from './dauThat';
+import { bamThu, banChupThu, danhLai, kinhDoMay, quanDanh } from './mayChu';
 import { createInitialState, storageCap } from './game';
 import { deserialize, serialize } from './save';
 
@@ -104,5 +106,34 @@ describe('Đấu thành thật: áp kết quả máy chủ', () => {
     expect(back.dauThanh).toBeUndefined();
     expect(isDauThanhState({ ...s.dauThanh, khienDen: 'mai' })).toBe(false);
     expect(deserialize(serialize(createInitialState(0)))!.dauThanh).toBeUndefined();
+  });
+});
+
+describe('Đấu thành thật: xem lại trận (PR 6)', () => {
+  it('dựng trận từ dữ liệu máy chủ trả, chạy theo khung hình ra đúng kết quả máy chủ đã ghi', () => {
+    const thu = banChupThu(5);
+    const def = kinhDoMay(5).ma;
+    const q = quanDanh(thu.ma, thu.quan, 'tay', 4321);
+    if (!('quan' in q)) throw new Error(q.loi);
+    const bam = bamThu();
+    const kq = danhLai(def, q.quan, bam, { atkDien: 5, atkTrophies: 0, defTrophies: 0, bot: false });
+    const t = tran('x', 1, { ketQua: { ...kq, ms: 100 }, xemLai: true });
+    // Qua JSON như máy chủ trả.
+    const run = chayXemLai(JSON.parse(JSON.stringify({ tran: t, vai: 'giu', banChup: def, quan: q.quan, bam })))!;
+    expect(run.replay).toBe(true);
+    while (!stepPvp(run, 50)) if (run.step > 10_000) throw new Error('không xong');
+    const score = scorePvp(run.def);
+    expect([score.stars, score.pct, run.step, run.battle.lost]).toEqual([kq.sao, kq.pct, kq.buoc, kq.mat]);
+  }, 30000);
+
+  it('bản chụp hay quân hỏng thì không dựng trận', () => {
+    const thu = banChupThu(5);
+    const q = quanDanh(thu.ma, thu.quan, 'bac', 1);
+    if (!('quan' in q)) throw new Error(q.loi);
+    const t = tran('y', 1);
+    expect(chayXemLai({ tran: t, vai: 'danh', banChup: 'TDVS1:hỏng', quan: q.quan, bam: [] })).toBeNull();
+    expect(chayXemLai({ tran: t, vai: 'danh', banChup: thu.ma, quan: null as never, bam: [] })).toBeNull();
+    expect(chayXemLai({ tran: t, vai: 'danh', banChup: thu.ma, quan: { ...q.quan, side: 'nam' as never }, bam: [] })).toBeNull();
+    expect(chayXemLai({ tran: t, vai: 'danh', banChup: thu.ma, quan: q.quan, bam: 'rác' })?.inputs).toEqual([]);
   });
 });
