@@ -18,6 +18,8 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
+    # Bình thường chừng 3 phút. Có giới hạn để một bước treo không giữ cả lần chạy tới 6 giờ.
+    timeout-minutes: 25
     # Postgres cho test máy chủ Đấu thành (supabase/thu/).
     services:
       postgres:
@@ -46,11 +48,24 @@ jobs:
           node scripts/doi-chieu-deno.mjs
           deno check --config supabase/functions/dau-thanh/deno.json supabase/functions/dau-thanh/index.ts
           deno test --config supabase/functions/dau-thanh/deno.json --allow-env --allow-net --allow-read supabase/thu/
-      - name: Trận trên WebKit (Safari) ra y hệt Node
+      # WebKit cần thư viện hệ thống cài bằng apt. Khi máy CI không tới được máy chủ gói Ubuntu, apt chờ từng gói và
+      # bước này treo hàng giờ, nên giới hạn 6 phút. Trên PR, không cài được là hỏng: chưa thử trên WebKit thì chưa gộp.
+      # Khi đẩy lên main hay Run workflow thì chỉ cảnh báo rồi đi tiếp: mã đã qua bước này ở PR, lỗi mạng của máy CI
+      # không được chặn việc đăng game. Cài được mà trận lệch thì ở đâu cũng hỏng.
+      - name: Cài WebKit
+        id: webkit
+        timeout-minutes: 8
+        continue-on-error: ${{ github.event_name != 'pull_request' }}
         run: |
           npm i --no-save playwright@1.63.0
-          npx playwright install --with-deps webkit
-          node scripts/doi-chieu-trinh-duyet.mjs webkit
+          timeout 6m npx playwright install --with-deps webkit
+      - name: Trận trên WebKit (Safari) ra y hệt Node
+        if: steps.webkit.outcome == 'success'
+        timeout-minutes: 5
+        run: node scripts/doi-chieu-trinh-duyet.mjs webkit
+      - name: Báo chưa thử được trên WebKit
+        if: steps.webkit.outcome != 'success'
+        run: echo "::warning title=Chưa thử được trên WebKit::Không cài được WebKit trên máy CI nên lần chạy này bỏ qua bước so trận trên WebKit. Mã này đã qua bước ấy ở PR."
       # Bản game gọi máy chủ Đấu thành ở địa chỉ này, bằng khóa publishable (công khai được). Chưa có biến thì chỉ đánh thử.
       - run: npm run build
         env:
