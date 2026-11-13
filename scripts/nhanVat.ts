@@ -188,8 +188,8 @@ export const NHOM: Record<string, Entry[]> = {
   tuong: [
     { ten: 'Gióng lên ba', tao: () => makeGiong('be'), co: 0.7 },
     { ten: 'Gióng thiếu niên', tao: () => makeGiong('thieuNien'), co: 0.9 },
-    { ten: 'Tráng sĩ Gióng (roi sắt)', tao: () => makeGiong('trangSi'), co: 1.6, cach: 1.4 },
-    { ten: 'Tráng sĩ Gióng (tre, hiển linh)', tao: () => makeGiong('trangSi', { bamboo: true, glow: true }), co: 1.8, cach: 1.4 },
+    { ten: 'Tráng sĩ Gióng (roi sắt)', tao: () => makeGiong('trangSi'), co: 1.9, cach: 1.7 },
+    { ten: 'Tráng sĩ Gióng (tre, hiển linh)', tao: () => makeGiong('trangSi', { bamboo: true, glow: true }), co: 2.1, cach: 1.7 },
     { ten: 'Sơn Tinh', tao: () => makeSonTinh(), co: 1.3, cach: 1.1 },
     { ten: 'Sơn Tinh trên mỏm đá', tao: () => makeSonTinh({ rock: true }), co: 1.4, cach: 1.3 },
     { ten: 'Thủy Tinh', tao: () => makeThuyTinh(), co: 1.3, cach: 1.2 },
@@ -201,7 +201,7 @@ export const NHOM: Record<string, Entry[]> = {
     { ten: 'Trưng Nhị', tao: () => makeTrungNhi(), co: 2.3, cach: 2.1 },
     { ten: 'Trưng Trắc (hiển linh)', tao: () => makeTrungTrac({ glow: true }), co: 2.3, cach: 2.1 },
     { ten: 'Lạc tướng đứng chầu (sân Điện)', tao: () => makeLacTuong(), co: 1.25, cach: 1.1 },
-    { ten: 'Gióng đứng chầu (sân Điện, hiển linh)', tao: () => makeGiong('trangSi', { bamboo: true, glow: true, onFoot: true }), co: 1.4, cach: 1.1 },
+    { ten: 'Gióng đứng chầu (sân Điện, hiển linh)', tao: () => makeGiong('trangSi', { bamboo: true, glow: true, onFoot: true }), co: 1.6, cach: 1.25 },
     { ten: 'Lê Chân (nỏ sau lưng, kiếm ngắn)', tao: () => makeNuTuong('leChan'), co: 1.9, cach: 1.15, cao: 300, cot: NU_COT },
     { ten: 'Thánh Thiên (cung, bao tên sau lưng)', tao: () => makeNuTuong('thanhThien'), co: 1.9, cach: 1.15, cao: 300, cot: NU_COT },
     { ten: 'Bát Nàn (giáo)', tao: () => makeNuTuong('batNan'), co: 1.9, cach: 1.15, cao: 300, cot: NU_COT },
@@ -233,7 +233,7 @@ export const NHOM: Record<string, Entry[]> = {
     },
   ],
   ky_nang: [
-    { ten: 'Kỹ năng (cột: 0, 0,1 … 1)', tao: () => makeGiong('trangSi'), co: 1.6, cach: 1.4 },
+    { ten: 'Kỹ năng (cột: 0, 0,1 … 1)', tao: () => makeGiong('trangSi'), co: 1.9, cach: 1.7 },
     { ten: 'Sơn Tinh dời non', tao: () => makeSonTinh(), co: 1.3, cach: 1.1 },
     { ten: 'Thủy Tinh hô mưa', tao: () => makeThuyTinh(), co: 1.3, cach: 1.2 },
     { ten: 'An Dương Vương nỏ thần', tao: () => makeAnDuong({ crossbow: true }), co: 1.3, cach: 1.1 },

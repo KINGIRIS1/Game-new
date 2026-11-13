@@ -39,6 +39,8 @@ export interface HorseShape {
   head: V3;
   tail: V3;
   girth: number;
+  /** Chân to hơn bao nhiêu lần so với chân theo `girth` (mặc định 1; ngựa sắt chân to). */
+  leg?: number;
 }
 
 export const HORSE_SHAPE: HorseShape = { y: 0.78, legX: 0.14, legZ: 0.32, neck: [0, 0.86, 0.34], head: [0, 1.24, 0.66], tail: [0, 0.9, -0.42], girth: 1 };
@@ -70,7 +72,7 @@ function horsePieces(s: HorseShape, o: HorseLook, detail: number): Piece[] {
     ['qBR', s.legX, -s.legZ, false],
   ];
   for (const [b, x, z, front] of legs) {
-    const k = g;
+    const k = g * (s.leg ?? 1);
     if (front) {
       clay.add(b, cone([x, y - 0.02, z + 0.03], [x, 0.36, z + 0.015], 0.085 * k, 0.05 * k), { k: 0.05 });
       clay.add(b, ellipsoid([x, 0.345, z + 0.02], [0.048 * k, 0.045, 0.05 * k]), { k: 0.02 });
