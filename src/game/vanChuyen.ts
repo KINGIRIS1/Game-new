@@ -306,6 +306,11 @@ export function markGanhHinted(state: GameState): void {
   if (!state.hinted.includes(GANH_HINT)) state.hinted = [...state.hinted, GANH_HINT];
 }
 
+/** Chi phí bước vào ô `i` (z * GRID + x) khi gánh hàng: 1 là ô đất trống, đường đi, cầu nửa ô, Infinity là không qua. */
+export function chiPhiO(state: GameState, i: number): number {
+  return info(state).cost[i] ?? Infinity;
+}
+
 /** Bản đồ khoảng cách tới nơi nhận (cho phần vẽ, tô vùng). Null khi chưa có bếp. */
 export function truongKho(state: GameState, dich: DichGanh): TruongGanh | null {
   const g = info(state);

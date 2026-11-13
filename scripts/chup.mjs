@@ -143,6 +143,45 @@ const NHIN_CONG = `const c = s.buildings.find((b) => b.type === 'congDe'); d.cam
 /** Đủ quân mẫu một trận (38 chỗ) để đánh thử Đấu thành. */
 const DU_QUAN = `s.troops = { giao: 14, cung: 12, voi: 4, no: 0 };`;
 
+/**
+ * Dời ruộng đầu tiên ra chỗ xa nơi nhận nhất mà hệ số gánh còn trên 70% (mở thêm đất cho có chỗ), rồi trải đường đất
+ * nửa tuyến gánh phía nơi nhận.
+ */
+const RUONG_XA = `s.khoanh = K.squareKhoanh(K.AREA[6]);
+const r = s.buildings.find((b) => b.type === 'ruong');
+let best = null, bk = 2;
+for (let z = 10; z < 52; z++) for (let x = 10; x < 52; x++) {
+  if (!G.canMove(s, r.id, x, z).ok) continue;
+  const ox = r.x, oz = r.z; r.x = x; r.z = z;
+  const k = G.outputIn(s, r).gao / G.outputOf(r).gao;
+  r.x = ox; r.z = oz;
+  if (k < bk && k > 0.7) { bk = k; best = { x, z }; }
+}
+r.x = best.x; r.z = best.z;
+const V = await import('/src/game/vanChuyen.ts');
+const t = V.duongGanh(s, r).tuyen;
+for (const i of t.slice(Math.floor(t.length / 2))) G.placeLine(s, 'duongDat', [{ x: i % 76, z: Math.floor(i / 76) }]);`;
+
+/**
+ * Nhìn gần người đang gánh thóc của ruộng đã dời (`RUONG_XA`): tua đồng hồ cảnh (`seaTime`) tới lúc người ấy gánh
+ * hàng ở quãng giữa đường (cách hai đầu tuyến từ 5 ô), rồi đặt camera vào chỗ người ấy.
+ */
+const NHIN_GANH = `const V = await import('/src/game/vanChuyen.ts');
+const r = s.buildings.filter((b) => b.type === 'ruong').sort((a, b) => V.heSoGanh(s, a) - V.heSoGanh(s, b))[0];
+const t = V.duongGanh(s, r).tuyen;
+const o = (i) => ({ x: (i % 76) + 0.5, z: Math.floor(i / 76) + 0.5 });
+const [a, b] = [o(t[0]), o(t[t.length - 1])];
+const frame = () => new Promise((ok) => requestAnimationFrame(() => requestAnimationFrame(ok)));
+let p = null;
+for (let k = 0; k < 240 && !p; k++) {
+  d.seaTime(k * 0.5);
+  await frame();
+  const q = d.ganh().find((g) => g.id === r.id)?.ra.find((x) => x.mang && !x.dung);
+  if (q && Math.hypot(q.x - a.x, q.z - a.z) > 5 && Math.hypot(q.x - b.x, q.z - b.z) > 5) p = q;
+}
+if (!p) throw new Error('Không thấy người gánh của ruộng xa ở giữa đường');
+d.camera(p.x, p.z, 3);`;
+
 const CANH = {
   'man-vao': {
     mo: 'Màn hình vào game của bản lưu chương 1 (Điện cấp 5), vắng 3 giờ',
@@ -155,6 +194,12 @@ const CANH = {
   dau: { mo: 'Vừa vào game, đã đóng đoạn truyện mở đầu', truoc: '' },
   truyen: { mo: 'Vừa vào game, đang hiện đoạn truyện mở đầu', truoc: '', giuTruyen: true },
   'kinh-do': { mo: 'Kinh đô chương 1 lúc vừa lên Điện cấp 5 (người chơi mô phỏng chơi chừng một giờ)', truoc: KINH_DO },
+  'ganh-hang': {
+    mo: 'Như kinh-do, một ruộng dời ra bìa đất xa kho, nửa đường về có trải đường đất: dân thay phiên gánh thóc về (nhìn giữa tuyến)',
+    truoc: `${KINH_DO}\n${RUONG_XA}`,
+    sau: NHIN_GANH,
+    doi: 600,
+  },
   chuong2: {
     mo: 'Kinh đô chương 2, mười phút sau khi vào chương',
     truoc: `M.playChapters({ s, until: (m, sec) => m.enter2 >= 0 && sec >= m.enter2 + 600 });`,

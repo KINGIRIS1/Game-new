@@ -233,12 +233,13 @@ V V V 4 4 4
 V V V 4 4 4
 V V V . . .
 . T . s s s
-6 6 . s s s
+6 6 b s s s
 6 6 , s s s
 ```
 
 - `V` cấp 1, vựa tròn trên cột, mái nón, đứng trên nền đất đắp kè đá (cấp 5: vựa to, chóp đồng).
 - `,` cấp 1, lối vào ba phiến đá kê.
+- `b` cấp 1, chỗ nhận hàng sát lối vào: hai bao thóc, một thúng vun đầy; dân gánh hàng về kho đổ lại đây (xem mục Dân gánh hàng về kho ở `docs/thiet-ke.md`).
 - `T` cấp 2, thang tre dựa sàn vựa, thúng thóc (cấp 3: thêm thúng).
 - `s` cấp 3, sân phơi thóc: thóc trải, luống cào, cào gỗ, đống thóc, nia (mới; cấp 7: lát gạch).
 - `4` cấp 4, vựa phụ (cấp 8: kho sàn dài mái cong, chim đồng).

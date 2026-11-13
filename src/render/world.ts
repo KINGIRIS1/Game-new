@@ -72,13 +72,19 @@ import {
   type WallSpot,
 } from './models';
 import { makeWorker, type Job } from './people';
+import { HANG_OF, chuyenGanh, duongNguoi, tuyenGanh, viTri, type DuongNguoi, type Hang, type TuyenGanh, type ViTri } from './ganhHang';
+import { ganhLen, tayGanh } from './doGanh';
+import type { Human } from './body';
+import type { Lot } from './lot';
+import { RUONG_LOT } from './congTrinh/ruong';
+import { VUON_LOT } from './congTrinh/vuon';
 import { C } from './palette';
 import { NEN_MARGIN, NenDat, RAMP } from './nenDat';
 import type { Poser } from './rig';
 import { ShapeBuilder, disposeInstances, disposeModel, seeded } from './shapes';
 import { ToonModel, inkThin, outlineOf, toon } from './toon';
 import { SANG_NGAY, TroiMau, apMauToi, doSang, phaThoiTiet, phaTroi, toiTheoTroi } from './troi';
-import { DuocLayer, QuangDong, duocCho, type DuocSpot } from './duoc';
+import { DUOC_LOTS, DuocLayer, QuangDong, duocCho, type DuocSpot } from './duoc';
 
 /**
  * Ô (HALF, HALF) nằm ở gốc tọa độ cảnh. Giữ như tâm lưới 55×55 cũ (khi sông còn ở mép lưới) để camera, ánh nắng,
@@ -277,6 +283,27 @@ interface WorkerView {
   obj: THREE.Group;
   spot: Spot;
   phase: number;
+  /** Đang đi gánh hàng: người đã ra khỏi mô hình công trình, đứng thẳng trong cảnh (`updateGanh`). */
+  out?: boolean;
+  /** Cỡ người trong mô hình công trình, để trả lại khi về. */
+  home?: number;
+}
+
+/** Người làm đang đi gánh: đường riêng của người ấy và đồ gánh trên vai. */
+interface GanhRa {
+  path: DuongNguoi;
+  load: THREE.Group;
+  /** Chỗ khung vừa rồi (cho `ganhInfo`). */
+  at?: ViTri;
+}
+
+/** Tuyến gánh của một công trình đang vẽ (`syncGanh`) và những người đang đi. */
+interface GanhView {
+  key: string;
+  tuyen: TuyenGanh;
+  seed: number;
+  hang: Hang;
+  ra: Map<WorkerView, GanhRa>;
 }
 
 interface BuildingView {
@@ -303,6 +330,8 @@ interface BuildingView {
   baseScale: number;
   /** Công trình đang dựng mới (chưa vào kinh đô): mô hình mọc dần theo tiến độ (`update`). */
   dung: boolean;
+  /** Người làm thay phiên gánh hàng về nơi nhận (`syncGanh`, `updateGanh`). */
+  ganh?: GanhView;
 }
 
 /** Giàn giáo quanh công trình đang dựng hay đang nâng cấp, có vài thợ làm. */
@@ -334,6 +363,9 @@ const NEU_H = 4.2;
 /** Hai Bà trên voi trận ở sân doanh trại: voi to hơn người đứng (Cao Lỗ 0,9) mà vẫn vừa sân trại. */
 const HAI_BA_SCALE = 0.65;
 const KHANH = 0xa8502e;
+
+/** Bản vẽ ô con của công trình gánh hàng và nơi nhận: người gánh ra, vào đúng lối đi (`loiRa` ở ganhHang.ts). */
+const GANH_LOTS: Partial<Record<BuildingType, Lot>> = { ...DUOC_LOTS, ruong: RUONG_LOT, vuon: VUON_LOT, dien: DIEN_LOT };
 
 /** Công trình cần người làm: hiện đúng số người đang làm. */
 const WORKED: BuildingType[] = ['ruong', 'ben', 'baiDa', 'loRen', 'xuongMoc', 'langChai', 'benKhoi', 'ruongNep', 'vuon', 'chuongLon', 'bep'];
@@ -528,6 +560,9 @@ export class World {
   private readonly workerBall = new THREE.Sphere(new THREE.Vector3(), WORKER_RADIUS);
   /** Có giặc (trinh sát đã báo hay đang đánh): cửa cổng thành đóng lại; lúc yên thì mở. */
   private gatesShut = false;
+  /** Đang có trận trên kinh đô (giữ kinh đô, Đấu thành): dân thôi gánh hàng, về chỗ làm. */
+  private cityFight = false;
+  private readonly ganhTmp = new THREE.Vector3();
   /** Đang có trận giữ kinh đô: lính tập trong sân doanh trại đã ra trận, sân để trống. */
   private drillOut = false;
   /** Thuyền trên sông: thuyền xuôi sông Thao (`home` là 'z') tới ngã ba thì rẽ sang sông Đà. */
@@ -1109,6 +1144,7 @@ export class World {
       }
     }
     this.syncSites(state, pend);
+    this.syncGanh(state);
 
     this.syncMerchant(state);
     this.syncSeaBoats(state);
@@ -1721,6 +1757,7 @@ export class World {
 
   /** Gỡ mô hình một công trình (dựng lại vì đổi cấp, đổi dân, hư; hay đã dỡ): trả hình và khung xương người làm. */
   private dropView(v: BuildingView): void {
+    this.veHetGanh(v, true);
     this.buildingsRoot.remove(v.group);
     disposeModel(v.group);
   }
@@ -2918,6 +2955,115 @@ export class World {
 
   /** Động tác theo nghề (people.ts): cúi bổ cuốc, bổ đá, quai búa, đi qua đi lại mang hàng, đứng gác nhìn quanh. */
   /**
+   * Tuyến gánh của từng công trình đang vẽ theo luật (`tuyenGanh`). Tuyến đổi (dựng, dỡ, dời công trình, trải đường,
+   * kho hư) thì người đang đi về chỗ làm rồi đi lại theo tuyến mới.
+   */
+  private syncGanh(state: GameState): void {
+    const byId = new Map(state.buildings.map((b) => [b.id, b]));
+    for (const [id, v] of this.views) {
+      const b = v.dung || v.damaged || !v.people.length || !HANG_OF[v.type] ? undefined : byId.get(id);
+      const tuyen = b ? tuyenGanh(state, b, GANH_LOTS) : null;
+      const key = tuyen ? `${tuyen.noi}:${tuyen.D.toFixed(2)}:${tuyen.pts.map((p) => `${p.x.toFixed(2)},${p.z.toFixed(2)}`).join(';')}` : '';
+      if ((v.ganh?.key ?? '') === key) continue;
+      this.veHetGanh(v, false);
+      v.ganh = tuyen ? { key, tuyen, seed: hash01(id * 31 + 7), hang: HANG_OF[v.type]!, ra: new Map() } : undefined;
+    }
+  }
+
+  /** Số liệu dân gánh hàng cho `window.__debug.ganh()`: mỗi công trình có tuyến, giây một chiều, người đang đi và ở đâu. */
+  ganhInfo(): { id: number; type: BuildingType; D: number; n: number; ra: { x: number; z: number; mang: boolean; dung: boolean; visible: boolean }[] }[] {
+    const out = [];
+    for (const [id, v] of this.views) {
+      if (!v.ganh) continue;
+      const ra = [...v.ganh.ra.entries()].map(([w, r]) => ({ x: w.obj.position.x + HALF, z: w.obj.position.z + HALF, mang: !!r.at?.mang, dung: !!r.at?.dung, visible: w.obj.visible }));
+      out.push({ id, type: v.type, D: v.ganh.tuyen.D, n: v.people.length, ra });
+    }
+    return out;
+  }
+
+  /** Mọi người đang đi gánh của công trình `v` về chỗ làm; `drop`: công trình sắp gỡ, gỡ luôn người đang ở ngoài. */
+  private veHetGanh(v: BuildingView, drop: boolean): void {
+    const g = v.ganh;
+    if (!g) return;
+    for (const w of [...g.ra.keys()]) {
+      if (!drop) {
+        this.veNha(v, w);
+        continue;
+      }
+      // Người ở ngoài không còn là con của mô hình công trình: gỡ riêng (cả đòn gánh trên vai).
+      this.scene.remove(w.obj);
+      disposeModel(w.obj);
+      w.out = false;
+    }
+    g.ra.clear();
+  }
+
+  /** Người làm `w` rời chỗ đứng, ra cảnh đi gánh: cùng chỗ, cùng cỡ như đang đứng trong mô hình, đòn gánh lên vai. */
+  private raDuong(v: BuildingView, g: GanhView, w: WorkerView): GanhRa {
+    const p = w.obj.getWorldPosition(this.ganhTmp);
+    const path = duongNguoi(g.tuyen, { x: p.x + HALF, z: p.z + HALF });
+    w.home = w.obj.scale.x;
+    const scale = w.obj.scale.x * v.group.scale.x;
+    v.group.remove(w.obj);
+    this.scene.add(w.obj);
+    w.obj.scale.setScalar(scale);
+    w.out = true;
+    const out = { path, load: ganhLen(w.obj.userData.bones as Human, g.hang) };
+    g.ra.set(w, out);
+    return out;
+  }
+
+  /** Người đi gánh về lại chỗ đứng làm trong mô hình công trình, bỏ đòn gánh. */
+  private veNha(v: BuildingView, w: WorkerView): void {
+    const out = v.ganh?.ra.get(w);
+    if (out) {
+      out.load.parent?.remove(out.load);
+      disposeModel(out.load);
+      v.ganh!.ra.delete(w);
+    }
+    this.scene.remove(w.obj);
+    v.group.add(w.obj);
+    w.obj.position.set(w.spot.x, w.spot.y, w.spot.z);
+    w.obj.rotation.y = w.spot.ry;
+    w.obj.scale.setScalar(w.home ?? w.obj.scale.x);
+    w.obj.visible = true;
+    w.out = false;
+  }
+
+  /**
+   * Dân gánh hàng mỗi khung theo lịch thay phiên (`chuyenGanh`): ai tới lượt thì rời chỗ làm đi theo tuyến, gánh hàng
+   * tới nơi nhận, đứng đổ hàng, đi tay không về. Có trận trên kinh đô, giặc sắp tới hay đang xem bãi chiến thì mọi người
+   * ở chỗ làm. Người ở ngoài cảnh tự cắt theo khung nhìn như người đứng trên công trình.
+   */
+  private updateGanh(t: number): void {
+    const stop = this.cityFight || this.gatesShut || this.inField;
+    const ball = this.workerBall;
+    for (const v of this.views.values()) {
+      const g = v.ganh;
+      if (!g) continue;
+      const want = new Map<WorkerView, number>();
+      if (!stop) for (const r of chuyenGanh(v.people.length, g.tuyen.D, t, g.seed)) want.set(v.people[r.who], r.s);
+      for (const w of [...g.ra.keys()]) if (!want.has(w)) this.veNha(v, w);
+      for (const [w, s] of want) {
+        const out = g.ra.get(w) ?? this.raDuong(v, g, w);
+        const at = viTri(out.path, s, g.tuyen.D);
+        out.at = at;
+        const o = w.obj;
+        o.position.set(wx(at.x), this.walkY(at.x, at.z), wz(at.z));
+        o.rotation.y = at.ry;
+        out.load.visible = at.mang;
+        ball.center.copy(o.position);
+        ball.center.y += WORKER_RADIUS / 2;
+        o.visible = this.viewFrustum.intersectsSphere(ball);
+        if (!o.visible) continue;
+        // Đứng đổ hàng thì đứng yên giữ đòn; đi thì bước theo quãng đường đã đi cho chân khỏi trượt.
+        (o.userData.pose as Poser | undefined)?.({ act: 'walk', phase: at.dung ? 0 : at.quang * 11, stride: at.dung ? 0 : 0.42, time: t + w.phase });
+        if (at.mang) tayGanh(o.userData.bones as Human, g.hang);
+      }
+    }
+  }
+
+  /**
    * Dân `w` đứng trên công trình (hay giàn giáo) `group` có trong khung nhìn khung này thì hiện, trả true; ngoài khung
    * thì ẩn. `group` là con trực tiếp của `buildingsRoot` (không dời, không xoay) nên ma trận của nó là ma trận thế giới,
    * và đã `updateMatrix` trước khi gọi (công trình vừa dựng chưa qua lần vẽ nào, đang nảy hay mọc thì cỡ đổi mỗi khung).
@@ -3017,6 +3163,7 @@ export class World {
 
   /** Vẽ lính hai bên của trận giữ kinh đô; null khi không có trận. */
   updateBattle(battle: Battle | null, dt: number): void {
+    this.cityFight = !!battle;
     this.raidView.update(battle, dt);
   }
 
@@ -3229,7 +3376,7 @@ export class World {
     const beat = this.drillOut ? -1 : this.view.zoom < LITE_ZOOM ? 0 : ((Math.floor(t * DRILL_BEAT) % 2) + 2) % 2;
     for (const v of this.views.values()) {
       if (v.people.length) v.group.updateMatrix();
-      for (const w of v.people) if (this.workerInView(w, v.group)) this.animateWorker(w, t);
+      for (const w of v.people) if (!w.out && this.workerInView(w, v.group)) this.animateWorker(w, t);
       if (v.dung) this.growView(v);
       if (v.popAge > 0) {
         v.popAge += dt;
@@ -3271,6 +3418,8 @@ export class World {
         }
       }
     }
+
+    this.updateGanh(t);
 
     if (this.merchantBoat) {
       this.merchantBoat.position.y = WATER_Y - 0.02 + Math.sin(t * 1.2) * 0.04;

@@ -3210,7 +3210,7 @@ Cuối game: thay năm trại cũ (chừng 35 nghìn kể cả viền) và bốn
 2. **PR 2, hình doanh trại 8×8** (đã làm, cùng PR #82): bản vẽ vào `docs/bo-cuc-cong-trinh.md`, tường, lầu cổng, đài tướng, nhà dài theo doanh, lính tập, ảnh công trình, chụp kiểm tra.
 3. **PR 3, hình bốn nơi ở 4×4** (đã làm, cùng PR #82): bản vẽ vào `docs/bo-cuc-cong-trinh.md`, khuôn viên chung với doanh trại, lính, voi theo bậc binh khí, trại nỏ lần đầu vẽ trên móng, ảnh công trình, chụp kiểm tra.
 
-## Dân gánh hàng về kho (chủ dự án chọn, đang làm)
+## Dân gánh hàng về kho (chủ dự án chọn, đã làm PR 1, 2)
 
 Chủ dự án muốn người dân đem vật liệu, nông sản về kho hoặc tới nơi sản xuất. Trước đây của làm ra cộng thẳng vào kho mỗi phút, dân chỉ đứng làm tại công trình, đường đi chỉ để nhìn.
 
@@ -3222,7 +3222,7 @@ Chủ dự án muốn người dân đem vật liệu, nông sản về kho ho�
 4. **Mức vừa**: gần đủ 100% như trước, xa dần thì giảm, thấp nhất 50%. Phương án bỏ: nhẹ (thấp nhất 75%), nặng (không sàn, không lối thì không được gì).
 5. **Ưu tiên đường đã trải**: dân tìm đường né công trình, sông; ô có đường đi nhanh gấp đôi. Phương án bỏ: chỉ né vật cản; chỉ đi trên đường.
 6. **Người gánh là người làm của chính công trình** (chủ dự án hỏi: dân rời ruộng thì ruộng trống): số người đứng làm cộng số người đang đi gánh luôn bằng số dân đã giao. Từ 2 người trở lên thì thay phiên, công trình không bao giờ trống; 1 người thì làm một lúc rồi gánh đi, công trình trống trong lúc ấy.
-7. **Công trình không vẽ lại cả dáng** (chủ dự án hỏi): chỉ thêm chỗ nhận hàng ở kho, đống hàng chờ gánh cạnh lối ra công trình sản xuất, khe lối phía đất ở bến, làng chài, bến khơi (PR 2).
+7. **Công trình không vẽ lại cả dáng** (chủ dự án hỏi): chỉ thêm chỗ nhận hàng ở kho (PR 2). Bến, làng chài, bến khơi vốn có khe sân ở hàng sau phía bờ, người gánh ra lối ấy nên không phải sửa. Đống hàng chờ gánh ở công trình sản xuất thì thôi: các công trình ấy vốn đã bày hàng (đá xẻ, ván gỗ, thúng cá, bó lúa), lại có người gánh đi lại.
 
 ### Luật (`src/game/vanChuyen.ts`, số ở `GANH` trong `defs.ts`)
 
@@ -3247,10 +3247,21 @@ Người chơi mô phỏng xếp gọn quanh Điện, trung bình hệ số gán
 - Thanh đặt, dời công trình: "🧺 Gánh về: X%" của chỗ đang đặt (`ganhPreview`).
 - Lạc hầu báo một lần khi lần đầu có công trình đang có người làm mà làm ra chưa đủ vì xa (`needsGanhHint`, khóa `ganh` trong `hinted`).
 
+### Hình: dân gánh hàng trên đường (`src/render/ganhHang.ts`, `doGanh.ts`; PR 2)
+
+- **Không có người mới**: người đi gánh là một trong số người đang làm, rời chỗ đứng ra đường rồi về lại đúng chỗ ấy. Số người đứng làm cộng số người đang đi luôn bằng số người hiện ở công trình. Vì không thêm người nên không cần trần số người gánh trên màn hình; người ngoài khung nhìn thì ẩn như dân đứng ở công trình.
+- **Lịch thay phiên** (`chuyenGanh`): một người làm thì làm 14 giây (`LAM_S`) rồi gánh đi, công trình trống trong lúc ấy. Từ hai người thì thay phiên, mỗi lúc một người đi, người trước về 3 giây (`NGHI_S`) người kế mới đi; từ 6 người (`HAI_LUOT`) thì hai người so le nửa nhịp. Công trình có từ hai người không bao giờ trống. Mỗi công trình lệch nhịp theo mã, cho người gánh khỏi đi cùng lúc.
+- **Tuyến** (`tuyenGanh`): ra từ lối của công trình (ô con lối đi `,` hay sân trống `.` ở viền bản vẽ ô con gần đường nhất; bến, làng chài ra khe sân hàng sau phía bờ), đi đúng các ô của luật (`duongGanh`), vào lối của nơi nhận (kho, Điện có bản vẽ ô con). Mỗi ô tốn thời gian theo chi phí ô của luật: 1,1 giây một ô đất (`GIAY_MOI_O`), ô đường đi, cầu nhanh gấp đôi. Công trình sát ngay nơi nhận thì không ai phải đi.
+- **Một chuyến** (`viTri`): đi từ chỗ đứng làm ra lối, gánh hàng tới nơi nhận, đứng đổ hàng chừng 1,6 giây (`DO_HANG_S`), rồi đi tay không về. Bước chân theo quãng đã đi cho khỏi trượt; độ cao theo mặt đất, mặt cầu.
+- **Đồ gánh theo hàng** (`HANG_OF`, `doGanh.ts`): đòn gánh tre hai thúng tì vai phải, trong thúng là thóc (ruộng lúa, ruộng nếp), vỏ ốc (bến), đá (bãi đất đá), thỏi sắt (lò rèn), cá (làng chài, bến khơi), lá dong (vườn), thịt (chuồng lợn); xưởng mộc vác bó gỗ trên vai trái. Đòn gánh của đoàn dân rút ở Cấm Khê dùng chung hàm này (thóc và rau), dáng y như cũ. Đồ gánh không đổ bóng, như dân.
+- **Khi nào thôi gánh**: có trận trên kinh đô (giữ kinh đô, Đấu thành), giặc sắp tới, hay đang xem bãi chiến thì mọi người về chỗ làm. Ban đêm vẫn gánh (như điều đã chốt ở mục Ngày đêm: dân vẫn làm ban đêm).
+- **Kho thóc** có chỗ nhận hàng sát lối vào (`b` trong bản vẽ ô con ở `docs/bo-cuc-cong-trinh.md`): hai bao thóc, một thúng vun đầy.
+- Test `src/render/ganhHang.test.ts`; cảnh chụp `node scripts/chup.mjs ganh-hang` (một ruộng dời ra xa, nửa đường có đường đất, tua đồng hồ cảnh tới lúc người gánh ở giữa đường); `window.__debug.ganh()` cho công trình nào có tuyến, ai đang đi, ở đâu.
+
 ### Thứ tự làm
 
-1. **PR 1, luật và số liệu** (đang làm): `vanChuyen.ts`, nối vào sản lượng, cá, nguyên liệu Tết; bảng công trình, thanh đặt, Lạc hầu; test `vanChuyen.test.ts`.
-2. **PR 2, dân gánh hàng đi trên đường**: người làm rời chỗ đứng gánh hàng theo đúng tuyến của luật (`duongGanh`), đồ gánh theo loại hàng, thêm chỗ nhận hàng ở kho và đống hàng chờ gánh ở công trình; chụp kiểm tra.
+1. **PR 1, luật và số liệu** (đã làm): `vanChuyen.ts`, nối vào sản lượng, cá, nguyên liệu Tết; bảng công trình, thanh đặt, Lạc hầu; test `vanChuyen.test.ts`.
+2. **PR 2, dân gánh hàng đi trên đường** (đã làm, cùng PR với PR 1 vì PR 1 chưa gộp): người làm rời chỗ đứng gánh hàng theo đúng tuyến của luật, đồ gánh theo loại hàng, chỗ nhận hàng ở kho; chụp kiểm tra.
 3. **PR 3, tới nơi sản xuất và tiện ích**: thợ vác vật liệu tới công trình đang xây, người gùi nguyên liệu tới bếp (chỉ để nhìn); tô vùng đủ 100% quanh nơi nhận khi đặt công trình.
 
 ## Nhịp chơi và lưu game
@@ -3304,5 +3315,5 @@ Người chơi mô phỏng xếp gọn quanh Điện, trung bình hệ số gán
 20. **Đền Rồng Tiên** (chủ dự án yêu cầu, đã làm; xem mục cùng tên): đền 8×8 thờ Lạc Long Quân và Âu Cơ, mở ở Điện 10; của từ nước, từ núi làm ra thêm 20%; nhiệm vụ 62.
 21. **Ngày đêm** (chủ dự án chọn, đã làm; xem mục cùng tên): kinh đô có ngày, chiều tà, đêm, rạng đông, 12 phút chơi một vòng, chỉ để nhìn. PR 1 trời và cài đặt, PR 2 đèn đuốc, đèn thuyền, đom đóm.
 22. **Đấu thành** (chủ dự án đã duyệt; đã làm PR 1–6: trận tất định, luật, đánh thử ngoài mạng, server, nối mạng; xem lại trận, bảng xếp hạng, gắn Google và lưu mây; xem Kế hoạch cùng tên): đánh thành người chơi khác, cướp của, server Supabase miễn phí.
-23. **Dân gánh hàng về kho** (chủ dự án chọn, đang làm; xem mục cùng tên): công trình xa nơi nhận làm ra ít hơn, thấp nhất 50%; đường đi cho dân đi nhanh gấp đôi. PR 1 luật, PR 2 dân gánh trên đường, PR 3 tới nơi sản xuất.
+23. **Dân gánh hàng về kho** (chủ dự án chọn, đã làm PR 1, 2; xem mục cùng tên): công trình xa nơi nhận làm ra ít hơn, thấp nhất 50%; đường đi cho dân đi nhanh gấp đôi. PR 1 luật, PR 2 dân gánh trên đường, PR 3 tới nơi sản xuất.
 24. **Để sau**: nhạc nền.

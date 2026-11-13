@@ -2448,6 +2448,8 @@ async function start(): Promise<void> {
     enter: () => enter(),
     tileToScreen: (x: number, z: number) => world.tileToScreen(x, z),
     renderInfo: () => ({ ...world.renderer.info.render }),
+    /** Dân gánh hàng: công trình nào có tuyến, ai đang đi, ở ô nào (ganhHang.ts). */
+    ganh: () => world.ganhInfo(),
     rotate: (dir: 1 | -1) => world.rotateView(dir),
     camera: (x: number, z: number, zoom: number) => {
       // Đặt camera tay thì thôi lướt về chỗ cũ (máy chụp chạy chậm, lướt chưa xong sẽ kéo camera đi mất).
