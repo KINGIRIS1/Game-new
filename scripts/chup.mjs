@@ -41,6 +41,18 @@ const CO_QUAN = `
   s.troops = { giao: Math.floor(cho / 2), cung: Math.floor(cho / 3), voi: 0, no: 0 };
 `;
 const KINH_DO = `M.playChapters({ s, until: (m) => m.at5 >= 0 });`;
+/**
+ * Áp mẫu kinh đô `id` cho kinh đô giàu của: cho thợ xong hết việc đang làm, phát đủ khoảnh của khung mẫu, áp mẫu (dựng
+ * xong ngay), nâng doanh trại rồi áp lại cho đủ nơi ở của các binh chủng.
+ */
+const AP_MAU = (id) => `d.xongHet();
+  s.resources = { gao: 1e6, voOc: 1e6, datDa: 1e6, sat: 1e6, go: 1e6 };
+  s.khoanh = [...new Set([...s.khoanh, ...X.frameKhoanh(G.dienLevel(s))])].sort((a, b) => a - b);
+  for (let i = 0; i < 2; i++) {
+    const r = X.applyMau(s, '${id}');
+    if (!r.ok && r.reason !== 'daTheoMau') throw new Error(r.reason);
+    for (const b of s.buildings) if (b.type === 'doanhTrai') b.level = Math.max(b.level, 3);
+  }`;
 /** Kinh đô Điện 8 vừa sang chương 5 (đã thắng tới màn `cleared`), có doanh trại và quân, đã xem hết truyện tới lúc ấy. */
 const CHUONG5 = (cleared) => `M.playChapters({ s, last: 8 });${CO_QUAN}
   for (const b of s.buildings) if (b.type === 'doanhTrai') b.level = D.BUILDINGS.doanhTrai.maxLevel;
@@ -161,13 +173,15 @@ const CANH = {
   },
   chuong3: { mo: 'Kinh đô chương 3 lúc lên Điện cấp 7', truoc: `M.playChapters({ s });` },
   dien8: { mo: 'Kinh đô chương 4 lúc lên Điện cấp 8', truoc: `M.playChapters({ s, last: 8 });` },
-  'mau-phong-chau': {
-    mo: 'Kinh đô chương 1, Điện cấp 5, đã áp mẫu Phong Châu',
-    truoc: `${KINH_DO}\ns.resources = { gao: 1e6, voOc: 1e6, datDa: 1e6, sat: 1e6, go: 1e6 }; s.khoanh = [...new Set([...s.khoanh, ...X.frameKhoanh(G.dienLevel(s))])].sort((a, b) => a - b); const r = X.applyMau(s, 'phongChau'); if (!r.ok) throw new Error(r.reason);`,
+  'mau-phong-chau': { mo: 'Kinh đô chương 1, Điện cấp 5, đã áp mẫu Phong Châu', truoc: `${KINH_DO}\n${AP_MAU('phongChau')}` },
+  'mau-de-bao': {
+    mo: 'Kinh đô chương 2, Điện cấp 6, đã áp mẫu Đê bao',
+    truoc: `M.playChapters({ s, until: (m) => m.at6 >= 0 });\n${AP_MAU('deBao')}`,
   },
-  'mau-co-loa': {
-    mo: 'Kinh đô chương 3, Điện cấp 7, đã áp mẫu Cổ Loa',
-    truoc: `M.playChapters({ s });\ns.resources = { gao: 1e6, voOc: 1e6, datDa: 1e6, sat: 1e6, go: 1e6 }; s.khoanh = [...new Set([...s.khoanh, ...X.frameKhoanh(G.dienLevel(s))])].sort((a, b) => a - b); const r = X.applyMau(s, 'coLoa'); if (!r.ok) throw new Error(r.reason);`,
+  'mau-co-loa': { mo: 'Kinh đô chương 3, Điện cấp 7, đã áp mẫu Cổ Loa', truoc: `M.playChapters({ s });\n${AP_MAU('coLoa')}` },
+  'mau-co-loa-song': {
+    mo: 'Kinh đô chương 4, Điện cấp 8, đã áp mẫu Cổ Loa giữ sông',
+    truoc: `M.playChapters({ s, last: 8 });\n${AP_MAU('coLoaSong')}`,
   },
   tran: {
     mo: 'Giặc đánh kinh đô chương 1, chụp sau 4 giây giao chiến',
