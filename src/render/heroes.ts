@@ -16,7 +16,6 @@ import {
   featherCrown,
   gripHands,
   hairCap,
-  headband,
   hide,
   humanBody,
   humanHead,
@@ -104,6 +103,9 @@ const BAMBOO_LIGHT = 0xe8c96b;
 const BAMBOO_NODE = 0x926b22;
 const IRON_LIGHT = 0x9aa9bc;
 const FLAME_CORE = 0xfff0a8;
+
+/** Dáng chung của miện lá (chủ dự án chốt ở mẫu Vua Hùng): lá nhỏ, ít xòe, nửa mặt trời trống đồng mọc trên vành. */
+const MIEN = { fan: 0.28, around: 0.36, discHalf: true, discV: 0.045 } as const;
 
 /** Hào quang Phù Đổng Thiên Vương: vòng nhật nguyệt kép có 8 nan hoa và 16 tia như mặt trời trống đồng. Tâm ở gốc, mặt hướng +z. */
 function halo(): THREE.Group {
@@ -407,7 +409,7 @@ function drawGiongRider(r: HumanRig, bamboo: boolean): void {
   hairCap(r);
   helmet(r, { color: IRON, band: C.bronze, bandH: 0.05, bandPattern: true, ridge: C.gold, neck: 0.14, cheek: 0.1, guard: IRON, guardTrim: C.gold, gem: C.red });
   // Miện lá sắt khảm đỏ son, nan vàng, dựng trên vành mũ.
-  mien(r, { color: IRON, inlay: C.red, bar: C.gold, disc: C.gold, discRim: C.bronzeDark, curls: C.gold, puff: 0.03 });
+  mien(r, { ...MIEN, color: IRON, inlay: C.red, bar: C.gold, disc: C.gold, discRim: C.bronzeDark, curls: C.gold, puff: 0.03, h: 0.28, w: 0.085, y: 0.835, discR: 0.095 });
   r.local('hand', GRIP_R, null, (s) => giongWeapon(s, bamboo));
 }
 
@@ -728,10 +730,11 @@ function drawSon(h: HumanRig): void {
   // Khuôn mặt uy nghi có râu ngắn, vành miện đồng khảm ngọc núi, hai sừng vàng, miện lá đồng khảm xanh rừng
   humanHead(h, { brows: true, mustache: C.hair, beard: C.hair, beardLen: 0.1 });
   hairCap(h);
-  diadem(h, { color: C.bronze, pattern: true, y: 0.804, h: 0.052, edge: C.gold, gem: JADE, glow: true, horns: { color: C.gold, len: 0.085, r: 0.02, out: 1.3 } });
-  // Búi tóc buộc dây ngọc; miện lá đồng khảm xanh rừng, nan ngọc.
+  diadem(h, { color: IRON_DARK, y: 0.8, h: 0.026, puff: 0.014 });
+  diadem(h, { color: C.bronze, pattern: true, y: 0.824, h: 0.06, puff: 0.01, edge: C.gold, gem: JADE, glow: true, horns: { color: C.gold, len: 0.085, r: 0.02, out: 1.3 } });
+  // Búi tóc buộc dây ngọc; vòng sắt, vành đồng; miện lá đồng khảm xanh rừng, nan ngọc.
   bun(h, { color: C.hair, at: [0, 0.985, -0.03], size: 0.085, tie: JADE });
-  mien(h, { color: C.bronzeLight, inlay: C.leaf[2], bar: JADE, disc: C.gold, discRim: C.bronzeDark });
+  mien(h, { ...MIEN, color: C.bronzeLight, inlay: C.leaf[2], bar: JADE, disc: C.gold, discRim: C.bronzeDark, h: 0.28, w: 0.085, y: 0.87, discR: 0.095 });
   h.local('hand', GRIP_R, null, sonStaff);
 }
 
@@ -992,10 +995,10 @@ function drawAdv(h: HumanRig, crossbow: boolean): void {
   // miện lá vàng khảm đỏ son có mặt trời trống đồng.
   humanHead(h, { brows: true, mustache: C.hair, beard: C.hair, beardLen: 0.12 });
   hairCap(h);
-  // Miện lá vàng khảm đỏ son của vua Âu Lạc: chỏm đồng sẫm núm vàng, có chóp bậc và tai xoắn.
-  helmet(h, { color: C.bronzeDark, rim: 0.81, top: { kind: 'knob', color: C.gold, h: 0.06 } });
-  diadem(h, { color: C.gold, pattern: true, y: 0.806, h: 0.06, puff: 0.022, rim: C.goldDark, gem: C.red });
-  mien(h, { color: C.gold, inlay: C.red, bar: C.ember, disc: C.gold, discRim: C.goldDark, finial: C.gold, curls: C.gold, h: 0.37, puff: 0.03 });
+  // Miện lá vàng khảm đỏ son của vua Âu Lạc: để lộ tóc, vòng sắt, vành vàng, có chóp bậc và tai xoắn.
+  diadem(h, { color: IRON_DARK, y: 0.8, h: 0.03, puff: 0.014 });
+  diadem(h, { color: C.gold, pattern: true, y: 0.828, h: 0.07, puff: 0.01, edge: C.goldDark, gem: C.red });
+  mien(h, { ...MIEN, color: C.gold, inlay: C.red, bar: C.ember, disc: C.gold, discRim: C.goldDark, finial: C.gold, curls: C.gold, h: 0.3, w: 0.085, y: 0.885, discR: 0.1 });
 
   if (crossbow) {
     // Bao đựng tên thần Liên Châu đeo chéo sau lưng (bằng đồng mạ vàng, cắm 5 mũi tên đồng lửa)
@@ -1118,13 +1121,14 @@ function drawCaoLo(h: HumanRig): void {
     }
   });
 
-  // Mặt cương nghị: mày xếch, râu mép và chòm râu đen; tóc búi cài trâm đồng, dải đồng buộc trán, miện lá đồng của tướng.
+  // Mặt cương nghị: mày xếch, râu mép và chòm râu đen; tóc búi cài trâm đồng, vòng sắt và vành đồng quanh trán, miện lá đồng của tướng.
   humanHead(h, { brows: true, mustache: C.hair, beard: C.hair, beardLen: 0.17 });
   hairCap(h);
-  headband(h, C.bronze, 0.035);
+  diadem(h, { color: IRON_DARK, y: 0.8, h: 0.026, puff: 0.014 });
+  diadem(h, { color: C.bronze, pattern: true, y: 0.824, h: 0.043, puff: 0.01 });
   bun(h, { color: C.hair, at: [0, 0.985, -0.01], size: 0.08, tie: C.bronze, pin: { color: C.bronzeLight, len: 0.26, tilt: 0.15 } });
   // Miện lá đồng của tướng: thấp hơn miện vua, không chóp.
-  mien(h, { color: C.bronze, inlay: C.bronzeDark, bar: C.bronzeLight, disc: C.gold, discRim: C.bronzeDark, curls: C.bronze, h: 0.3, y: 0.83 });
+  mien(h, { ...MIEN, color: C.bronze, inlay: C.bronzeDark, bar: C.bronzeLight, disc: C.gold, discRim: C.bronzeDark, curls: C.bronze, h: 0.25, w: 0.08, y: 0.852, discR: 0.085 });
 
   // Tù và sừng trâu đeo hông trái (giấu đi lúc cầm lên thổi), và tù và cầm tay trái (chỉ hiện lúc thổi).
   (h as unknown as Rig).local('tuVa', CAO_HORN, [0.15, Math.PI + 0.35, 0], (s) => {
@@ -1509,9 +1513,10 @@ export function makeDrummer(): THREE.Group {
     pauldrons(h, { color: C.bronze, size: 0.85 });
     humanHead(h, { brows: true });
     hairCap(h);
-    headband(h, C.red);
+    diadem(h, { color: IRON_DARK, y: 0.8, h: 0.024, puff: 0.014 });
+    diadem(h, { color: C.red, y: 0.822, h: 0.036, puff: 0.01 });
     bun(h, { color: C.hair, at: [0, 0.98, -0.03], size: 0.075, tie: C.red });
-    mien(h, { color: C.bronze, inlay: C.red, bar: C.bronzeLight, count: 3, disc: C.gold, h: 0.28, y: 0.83 });
+    mien(h, { ...MIEN, color: C.bronze, inlay: C.red, bar: C.bronzeLight, count: 3, disc: C.gold, discRim: C.bronzeDark, h: 0.22, w: 0.08, y: 0.843, discR: 0.08 });
     for (const [b, at] of [
       ['hand', GRIP_R],
       ['handL', GRIP_L],
@@ -1563,9 +1568,10 @@ function drawLacTuong(h: HumanRig): void {
   pauldrons(h, { color: C.bronze, size: 0.85 });
   humanHead(h, { brows: true, mustache: C.hair });
   hairCap(h);
-  headband(h, C.red);
+  diadem(h, { color: IRON_DARK, y: 0.8, h: 0.024, puff: 0.014 });
+  diadem(h, { color: C.red, y: 0.822, h: 0.036, puff: 0.01 });
   bun(h, { color: C.hair, at: [0, 0.98, -0.03], size: 0.075, tie: C.red });
-  mien(h, { color: C.bronze, inlay: C.red, bar: C.bronzeLight, count: 3, disc: C.gold, h: 0.28, y: 0.83 });
+  mien(h, { ...MIEN, color: C.bronze, inlay: C.red, bar: C.bronzeLight, count: 3, disc: C.gold, discRim: C.bronzeDark, h: 0.22, w: 0.08, y: 0.843, discR: 0.08 });
   h.local('hand', GRIP_R, null, (s) => spear(s, 1, 1.45));
   h.local('armL', [-0.2, 0.39, 0.06], null, (s) => drumShield(s, false, 0.17));
 }
@@ -1593,9 +1599,9 @@ export const VUA_SEAT = (HUMAN.legL.at[1] - 0.045) * K_VUA;
 
 /**
  * Vua Hùng: hoàng bào đỏ son dài dệt hoa văn trống đồng, áo vàng nghệ, đai vàng, gương đồng hộ tâm, áo choàng đỏ sau
- * lưng, râu bạc, miện lá vàng năm lá có mặt trời trống đồng trước trán, chóp bậc, tai xoắn, chỏm đỏ.
+ * lưng, râu bạc, để lộ tóc, miện lá vàng năm lá có vòng sắt, nửa mặt trời trống đồng trước trán, chóp bậc, tai xoắn.
  */
-function drawVuaHung(h: HumanRig, mau = 0): void {
+function drawVuaHung(h: HumanRig): void {
   humanBody(h, { cloth: C.red, long: true, pattern: true, top: C.ripe, sleeves: C.ripe, belt: C.gold, armband: C.gold, drumPlate: true, collar: C.red, hem: C.gold });
   buckle(h, { color: C.gold, gem: C.red });
   // Vạt lễ phục ngắn (vua ngồi, đùi nằm ngang trước bụng).
@@ -1606,41 +1612,17 @@ function drawVuaHung(h: HumanRig, mau = 0): void {
   necklace(h, { color: C.bronzeLight, r: 0.1, y: 0.57, z: 0.06, tilt: 0.5, thick: 0.012, half: true });
   humanHead(h, { brows: true, browColor: C.beard, mustache: C.beard, beard: C.beard, beardLen: 0.22 });
   hairCap(h);
-  vuaMien(h, mau);
+  // Miện lá vàng của Vua Hùng (chủ dự án chốt): để lộ tóc, vòng sắt dưới cùng, vành vàng cao có hoa văn, hồng ngọc,
+  // nửa mặt trời trống đồng mọc trên vành, năm lá nhỏ ít xòe lòng khảm đồng sẫm, chóp bậc, tai xoắn.
+  diadem(h, { color: IRON_DARK, y: 0.8, h: 0.03, puff: 0.014 });
+  diadem(h, { color: C.gold, pattern: true, y: 0.828, h: 0.075, puff: 0.01, edge: C.goldDark, gem: C.red });
+  mien(h, { ...MIEN, color: C.gold, inlay: C.bronzeDark, bar: C.gold, disc: C.gold, discRim: C.goldDark, finial: C.gold, curls: C.gold, h: 0.32, w: 0.088, y: 0.89, discR: 0.105 });
 }
 
-/** Số mẫu miện Vua Hùng đang chờ chủ dự án duyệt (chọn xong thì bỏ các mẫu kia). */
-export const MAU_MIEN_VUA = 3;
-
-/**
- * Miện lá vàng của Vua Hùng, ba mẫu chờ duyệt. Cả ba: chỏm đỏ núm vàng, vòng sắt dưới cùng, vành vàng hoa văn, nửa
- * mặt trời trống đồng mọc trên vành, năm lá nhỏ ít xòe, chóp bậc, tai xoắn.
- * - Mẫu 0: lá thấp, gần đứng thẳng, lòng lá vàng sẫm nan ngà; vòng sắt mảnh.
- * - Mẫu 1: lá cao hơn, hơi xòe, lòng lá đỏ son nan vàng; vòng sắt to viền vàng, vành vàng hẹp.
- * - Mẫu 2: sát ảnh mẫu nhất: vành vàng cao, nửa mặt trời to, lá xòe vừa, lòng lá đồng sẫm nan vàng.
- */
-function vuaMien(h: HumanRig, mau: number): void {
-  helmet(h, { color: C.red, rim: 0.81, top: { kind: 'knob', color: C.gold, h: 0.06 } });
-  const leaf = { color: C.gold, disc: C.gold, discRim: C.goldDark, discHalf: true, finial: C.gold, curls: C.gold, puff: 0.03 };
-  if (mau === 1) {
-    diadem(h, { color: IRON_DARK, y: 0.8, h: 0.05, puff: 0.024, rim: C.gold, edge: C.gold });
-    diadem(h, { color: C.gold, pattern: true, y: 0.85, h: 0.036, puff: 0.022, gem: C.red });
-    mien(h, { ...leaf, inlay: C.red, bar: C.ember, h: 0.3, w: 0.082, fan: 0.24, around: 0.33, y: 0.875, discR: 0.085, discV: 0.045 });
-  } else if (mau === 2) {
-    diadem(h, { color: IRON_DARK, y: 0.8, h: 0.03, puff: 0.026 });
-    diadem(h, { color: C.gold, pattern: true, y: 0.828, h: 0.075, puff: 0.022, edge: C.goldDark, gem: C.red });
-    mien(h, { ...leaf, inlay: C.bronzeDark, bar: C.gold, h: 0.32, w: 0.088, fan: 0.28, around: 0.36, y: 0.89, discR: 0.105, discV: 0.045 });
-  } else {
-    diadem(h, { color: IRON_DARK, y: 0.802, h: 0.024, puff: 0.026 });
-    diadem(h, { color: C.gold, pattern: true, y: 0.824, h: 0.056, puff: 0.022, edge: C.goldDark, gem: C.red });
-    mien(h, { ...leaf, inlay: C.goldDark, bar: C.cream, h: 0.26, w: 0.08, fan: 0.16, around: 0.3, y: 0.868, discR: 0.08, discV: 0.045 });
-  }
-}
-
-/** Vua Hùng ngồi ngai vàng, bản tĩnh (ngồi yên) để đặt vào mô hình Điện (`mau`: mẫu miện đang chờ duyệt): lưng thẳng, đùi gần nằm ngang, hai tay đặt trên gối. */
-export function bakeVuaHung(mau = 0): THREE.Group {
+/** Vua Hùng ngồi ngai vàng, bản tĩnh (ngồi yên) để đặt vào mô hình Điện: lưng thẳng, đùi gần nằm ngang, hai tay đặt trên gối. */
+export function bakeVuaHung(): THREE.Group {
   const r = new RigBuilder({ ...BASE, ...bigHuman('base', [0, 0, 0], K_VUA) });
-  drawBig(r, [0, 0, 0], K_VUA, (h) => drawVuaHung(h, mau));
+  drawBig(r, [0, 0, 0], K_VUA, drawVuaHung);
   return bakeRig(r.build(), (bones) => {
     const b = bones as unknown as Human;
     beginPose(b, 0);
