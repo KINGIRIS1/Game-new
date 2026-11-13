@@ -1550,6 +1550,18 @@ export const vi = {
       '📜 Lạc hầu: Tâu bệ hạ, đất trống lâu ngày mọc bụi cây dại, lại có tảng đá lăn về. Bệ hạ chạm vào để dân dọn: cây cho chút gạo, đá cho chút đất đá.',
     cayDaCleared: { cay: 'Đã dọn bụi cây dại', da: 'Đã dọn tảng đá' } as Record<CayDaKind, string>,
     cayDaFull: 'kho đã đầy, không cất thêm được',
+    /** Dân gánh hàng về kho (`vanChuyen.ts`): bảng công trình và thanh đặt công trình. */
+    ganh: { kho: 'Gánh về kho', bep: 'Gánh tới bếp, kho' },
+    ganhValue: (o: number, pct: number) => `${o} ô · ${pct}%`,
+    ganhNoWay: (pct: number) => `không có lối · ${pct}%`,
+    ganhFar: {
+      kho: 'Xa kho nên dân mất công đi lại, làm ra ít hơn. Trải đường đi (đi nhanh gấp đôi) hay dựng kho thóc gần đây.',
+      bep: 'Xa bếp và kho nên dân mất công đi lại, nguyên liệu tới bếp ít hơn. Trải đường đi, hay dựng gần bếp, gần kho hơn.',
+    },
+    ganhNoWayWhy: 'Không có lối tới nơi nhận hàng: bị móng công trình, sông hay rừng chưa phát chắn. Chừa lối đi hay mở cổng.',
+    ganhPlace: (pct: number) => `🧺 Gánh về: ${pct}%`,
+    ganhHint:
+      '📜 Lạc hầu: Tâu bệ hạ, dân phải gánh của làm ra về Điện hay kho thóc. Công trình ở xa thì dân mất công đi lại, làm ra ít hơn. Bệ hạ trải đường đi cho dân đi nhanh, hay dựng thêm kho thóc gần đó.',
     /** Bảng làng chài. */
     fishHere: 'Cá làng này',
     fishAll: 'Cá cả kinh đô',

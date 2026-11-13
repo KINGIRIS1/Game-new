@@ -51,7 +51,10 @@ function put(s: GameState, type: BuildingType, x: number, z: number, level = 1):
   const dien = s.buildings[0].level;
   setDien(s, 7);
   const r = place(s, type, x, z);
+  // Giữ đất Điện 7 đã mở: dân gánh nguyên liệu tới bếp phải đi trên đất đã phát (`vanChuyen.ts`).
+  const open = s.khoanh;
   setDien(s, dien);
+  s.khoanh = open;
   if (!r.ok) throw new Error(`${type}: ${r.reason}`);
   r.value.level = level;
   r.value.workers = slotsOf(r.value);

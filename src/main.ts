@@ -13,6 +13,7 @@ import { autoGuard, fieldCap, fitArmy, setGuard } from './game/doanhTrai';
 import { markNuHinted, nextNuHint } from './game/nuTuong';
 import { forgeNoThan, inChapter3, wallRings } from './game/coLoa';
 import { offer } from './game/tet';
+import { ganhPreview, markGanhHinted, needsGanhHint } from './game/vanChuyen';
 import { startMau } from './game/mau';
 import { advanceXay, askQuiz, canStartBuild, cancelJob, conLai, startBuild, startUpgrade, startWallUpgrade, startWalls, thoRanh, thoRanhSau, traLoi, viecOf, xayMs, type CongViec } from './game/xay';
 import { CAU_DO_IDS } from './text/cauDo';
@@ -347,6 +348,13 @@ async function start(): Promise<void> {
     hud.toast(vi.ui.cayDaHint, false, 8000);
   };
 
+  /** Lần đầu có công trình làm ra chưa đủ vì xa kho: Lạc hầu gợi ý một lần việc gánh hàng, trải đường. */
+  const showGanhHint = () => {
+    if (!needsGanhHint(state)) return;
+    markGanhHinted(state);
+    hud.toast(vi.ui.ganhHint, false, 8000);
+  };
+
   /** Chạm vào cây dại, tảng đá ở (x, z): dân dọn, được chút gạo hay đất đá. */
   const clearGrowth = (x: number, z: number) => {
     const r = clearCayDa(state, x, z);
@@ -385,6 +393,7 @@ async function start(): Promise<void> {
     showHint();
     showNuHint();
     showCayDaHint();
+    showGanhHint();
     seenBai();
     save();
     world.sync(scene());
@@ -426,7 +435,8 @@ async function start(): Promise<void> {
         ? canMove(state, mode.moving, mode.x, mode.z)
         : canStartBuild(state, mode.type, mode.x, mode.z);
     world.setGhost(mode.type, mode.x, mode.z, check.ok, footprintTop(state, mode.type, mode.x, mode.z), mode.rot);
-    hud.setPlaceValid(check.ok, check.ok ? undefined : vi.reasons[check.reason]);
+    const ganh = check.ok ? ganhPreview(state, mode.type, mode.x, mode.z, mode.moving) : null;
+    hud.setPlaceValid(check.ok, check.ok ? undefined : vi.reasons[check.reason], ganh === null ? undefined : vi.ui.ganhPlace(Math.round(ganh * 100)));
   };
 
   /**

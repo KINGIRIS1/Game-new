@@ -1292,6 +1292,18 @@ export const FLOOD_RECEDE_S = 8;
 /** Mùa lũ đầu tiên tới sau đám cưới chừng này thời gian chơi. */
 export const FIRST_FLOOD_MS = 3 * 60_000;
 
+/**
+ * Dân gánh hàng về kho (`vanChuyen.ts`, `docs/thiet-ke.md` mục Dân gánh hàng về kho). Quãng đường tính bằng ô đất trống:
+ * - `gan`: trong chừng này ô thì đủ sản lượng.
+ * - `k`: xa hơn thì hệ số là (k + gan) / (k + quãng đường).
+ * - `san`: hệ số không dưới mức này (kể cả khi không có lối tới kho).
+ * - `duong`: ô có đường đi, ô cầu tốn chừng này phần một ô đất.
+ * - `tuong`: vượt một ô lũy, thành tốn chừng này ô (đi vòng qua cổng thì đỡ).
+ */
+export const GANH = { gan: 14, k: 12, san: 0.5, duong: 0.5, tuong: 1 };
+/** Nguyên liệu Tết gánh tới bếp gói bánh, không về kho. */
+export const GANH_BEP: BuildingType[] = ['ruongNep', 'vuon', 'chuongLon'];
+
 /** Mực lũ (bậc) của mùa lũ thứ `n`. Đền Tản Viên còn nguyên thì lũ dâng thấp đi một bậc. */
 export function floodLevel(n: number, temple: boolean): number {
   const level = n <= 2 ? 1 : n <= 4 ? 2 : 3;
