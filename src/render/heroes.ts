@@ -13,7 +13,6 @@ import {
   HUMAN,
   beginPose,
   fallPose,
-  featherCrown,
   gripHands,
   hairCap,
   hide,
@@ -106,6 +105,33 @@ const FLAME_CORE = 0xfff0a8;
 
 /** Dáng chung của miện lá (chủ dự án chốt ở mẫu Vua Hùng): lá nhỏ, ít xòe, nửa mặt trời trống đồng mọc trên vành. */
 const MIEN = { fan: 0.28, around: 0.36, discHalf: true, discV: 0.045 } as const;
+
+/**
+ * Búp lá của nữ tướng, Hai Bà và Âu Cơ (chủ dự án đưa ảnh mẫu): vòng sắt, vành hoa văn có ngọc, diềm răng cưa trên
+ * vành, rồi một búp lá hẹp cao chụm trước trán, lòng lá màu `inlay` có sống dọc. `rank` 2 (Hai Bà, Âu Cơ): vàng, bảy
+ * lá, chóp bậc; 1 (nữ tướng): đồng, năm lá.
+ */
+function bupLa(h: HumanRig, inlay: number, rank: 1 | 2): void {
+  const metal = rank === 2 ? C.gold : C.bronze;
+  const dark = rank === 2 ? C.goldDark : C.bronzeDark;
+  diadem(h, { color: IRON_DARK, y: 0.8, h: 0.022, puff: 0.014 });
+  diadem(h, { color: metal, pattern: true, y: 0.82, h: 0.045, puff: 0.01, edge: dark, gem: inlay, spikes: { color: metal, n: 14, h: rank === 2 ? 0.06 : 0.05, low: 0.036 } });
+  mien(h, {
+    color: metal,
+    inlay,
+    bar: rank === 2 ? C.gold : C.bronzeLight,
+    count: rank === 2 ? 7 : 5,
+    h: rank === 2 ? 0.44 : 0.36,
+    w: 0.052,
+    y: 0.86,
+    fan: 0.1,
+    around: 0.13,
+    drop: 0.15,
+    flare: 1.25,
+    rib: true,
+    finial: rank === 2 ? metal : undefined,
+  });
+}
 
 /** Hào quang Phù Đổng Thiên Vương: vòng nhật nguyệt kép có 8 nan hoa và 16 tia như mặt trời trống đồng. Tâm ở gốc, mặt hướng +z. */
 function halo(): THREE.Group {
@@ -1244,13 +1270,13 @@ function drawWomanFace(h: HumanRig): void {
 
 /**
  * Đầu Hai Bà: mặt nữ má hồng, mày cong mảnh, môi son, hoa tai vàng; tóc dài xõa lưng, tóc mai, búi sau gáy cài trâm
- * vàng; mũ lông chim cao hai tầng vành vàng kiểu Đông Sơn.
+ * vàng; búp lá vàng bảy lá có chóp bậc, lòng lá màu `inlay` (`bupLa`).
  */
-function drawBaHead(h: HumanRig, feathers: readonly number[]): void {
+function drawBaHead(h: HumanRig, inlay: number): void {
   drawWomanFace(h);
   hairDown(h, { color: C.hair, to: 0.44, width: 0.17, locks: 0.17 });
   bun(h, { color: C.hair, at: [0, 0.84, -0.245], size: 0.085, pin: { color: C.gold, len: 0.28, tilt: 0.25, ends: C.red } });
-  featherCrown(h, feathers, { count: 7, len: 0.48, spread: 0.22, bronzeRim: true, rim: C.gold, tier2: true });
+  bupLa(h, inlay, 2);
 }
 
 /** Trưng Trắc: áo đỏ thắm, giáp ngực đồng hoa văn có hộ tâm mặt trống đồng, giáp vai đồng nhỏ, gươm đồng. */
@@ -1259,14 +1285,14 @@ function drawTrungTrac(h: HumanRig): void {
   armor(h, { color: C.bronze, trim: C.gold, pattern: true, y0: 0.392, y1: 0.59, thick: 0.012 });
   chestDisc(h, { color: C.gold, drum: true, r: 0.058, thick: 0.016 });
   pauldrons(h, { color: C.bronzeLight, trim: C.gold, size: 0.9 });
-  drawBaHead(h, [C.red, C.gold, C.cream]);
+  drawBaHead(h, C.trungRed);
   h.local('hand', GRIP_R, null, guomDong);
 }
 
 /** Trưng Nhị: áo vàng cổ viền đỏ, dây đeo đỏ bắt chéo, bao tên đồng sau lưng, cung sừng bịt vàng, tên đồng. */
 function drawTrungNhi(h: HumanRig): void {
   drawBaBody(h, C.trungYellow, C.red, { crossStrap: C.red });
-  drawBaHead(h, [C.red, C.cream, C.gold]);
+  drawBaHead(h, C.red);
   h.local('chest', [0.06, 0.55, -0.15], [-0.3, 0, -0.35], (s) => quiver(s, C.bronze, { iron: false }));
   h.local('handL', GRIP_L, null, (s) => bow(s, true, true));
   h.local('hand', GRIP_R, null, (s) => arrow(s));
@@ -1599,7 +1625,7 @@ export const VUA_SEAT = (HUMAN.legL.at[1] - 0.045) * K_VUA;
 
 /**
  * Vua Hùng: hoàng bào đỏ son dài dệt hoa văn trống đồng, áo vàng nghệ, đai vàng, gương đồng hộ tâm, áo choàng đỏ sau
- * lưng, râu bạc, để lộ tóc, miện lá vàng năm lá có vòng sắt, nửa mặt trời trống đồng trước trán, chóp bậc, tai xoắn.
+ * lưng, râu tóc bạc, để lộ tóc, miện lá vàng năm lá có vòng sắt, nửa mặt trời trống đồng trước trán, chóp bậc, tai xoắn.
  */
 function drawVuaHung(h: HumanRig): void {
   humanBody(h, { cloth: C.red, long: true, pattern: true, top: C.ripe, sleeves: C.ripe, belt: C.gold, armband: C.gold, drumPlate: true, collar: C.red, hem: C.gold });
@@ -1611,7 +1637,7 @@ function drawVuaHung(h: HumanRig): void {
   pauldrons(h, { color: C.ripe, trim: C.red, size: 1.1 });
   necklace(h, { color: C.bronzeLight, r: 0.1, y: 0.57, z: 0.06, tilt: 0.5, thick: 0.012, half: true });
   humanHead(h, { brows: true, browColor: C.beard, mustache: C.beard, beard: C.beard, beardLen: 0.22 });
-  hairCap(h);
+  hairCap(h, C.beard);
   // Miện lá vàng của Vua Hùng (chủ dự án chốt): để lộ tóc, vòng sắt dưới cùng, vành vàng cao có hoa văn, hồng ngọc,
   // nửa mặt trời trống đồng mọc trên vành, năm lá nhỏ ít xòe lòng khảm đồng sẫm, chóp bậc, tai xoắn.
   diadem(h, { color: IRON_DARK, y: 0.8, h: 0.03, puff: 0.014 });
@@ -1665,7 +1691,7 @@ function drawLacLongQuan(h: HumanRig): void {
 
 /**
  * Âu Cơ, giống tiên ở núi: áo hồng phấn, váy dài trắng ngà hoa văn, kiềng vàng, áo choàng lông chim trắng viền vàng;
- * tóc dài xõa lưng, búi cài trâm, mũ lông chim cao hai tầng trắng hồng vành vàng.
+ * tóc dài xõa lưng, búi cài trâm, búp lá vàng bảy lá lòng hồng phấn.
  */
 function drawAuCo(h: HumanRig): void {
   humanBody(h, { legs: C.cream, cloth: C.cream, long: true, pattern: true, top: AU_CO_PINK, sleeves: AU_CO_PINK, belt: C.gold, armband: C.gold, collar: C.gold });
@@ -1674,7 +1700,7 @@ function drawAuCo(h: HumanRig): void {
   drawWomanFace(h);
   hairDown(h, { color: C.hair, to: 0.4, width: 0.17, locks: 0.17 });
   bun(h, { color: C.hair, at: [0, 0.84, -0.245], size: 0.085, pin: { color: C.gold, len: 0.28, tilt: 0.25, ends: C.red } });
-  featherCrown(h, [FEATHER_WHITE, AU_CO_PINK, C.gold], { count: 9, len: 0.5, spread: 0.24, bronzeRim: true, rim: C.gold, tier2: true });
+  bupLa(h, AU_CO_PINK, 2);
 }
 
 /** Tượng Lạc Long Quân bản tĩnh cho Đền Rồng Tiên: đứng thẳng, gươm đồng dựng trước vai phải. */
@@ -1718,12 +1744,10 @@ const NU_BABY: V3 = [0.19, 0.64, -0.2];
 const NU_POINT = 0.75;
 
 interface NuLook {
-  /** Áo dài, quần cùng màu; lá cờ cùng màu áo. */
+  /** Áo dài, quần cùng màu; lá cờ và lòng búp lá trên đầu cùng màu áo. */
   cloth: number;
   /** Viền cổ áo, viền và tua cờ. */
   trim: number;
-  /** Lông chim trên mũ (lông giữa là màu đầu). */
-  feathers: readonly number[];
   /** Thêm cho thân: giáp, dây đeo, bao cổ tay. */
   body?: Partial<BodyLook>;
   /** Đồ đeo sau lưng và vũ khí tay phải. */
@@ -1744,13 +1768,13 @@ function tilted(rot: V3, tilt: number): V3 {
 
 /**
  * Đầu nữ tướng: mặt nữ như Hai Bà; tóc búi cao sau gáy cài trâm vàng, tóc mai ngắn (không xõa lưng như Hai Bà, chừa
- * chỗ đeo nỏ, cung, địu con); mũ lông chim một tầng vành đồng (Hai Bà hai tầng vành vàng).
+ * chỗ đeo nỏ, cung, địu con); búp lá đồng năm lá, lòng lá màu áo (Hai Bà bảy lá vàng có chóp).
  */
-function drawNuHead(h: HumanRig, feathers: readonly number[]): void {
+function drawNuHead(h: HumanRig, inlay: number): void {
   drawWomanFace(h);
   hairDown(h, { color: C.hair, to: 0.63, width: 0.15, locks: 0.12 });
   bun(h, { color: C.hair, at: [0, 0.9, -0.2], size: 0.09, pin: { color: C.gold, len: 0.24, tilt: 0.25 } });
-  featherCrown(h, feathers, { count: 5, len: 0.4, spread: 0.26, bronzeRim: true });
+  bupLa(h, inlay, 1);
 }
 
 /**
@@ -1789,7 +1813,6 @@ const NU_LOOK: Record<NuTuongId, NuLook> = {
   leChan: {
     cloth: C.nuLam,
     trim: C.cream,
-    feathers: [C.cream, C.nuLamLight, C.red],
     body: { plate: C.bronzeLight, crossStrap: LEATHER },
     gear: (h) => {
       // Báng nằm ngang lưng, đầu nỏ sang phải; cánh nỏ dựng đứng ngoài vai phải cho nhìn trước, nhìn sau đều thấy.
@@ -1803,7 +1826,6 @@ const NU_LOOK: Record<NuTuongId, NuLook> = {
   thanhThien: {
     cloth: C.nuLuc,
     trim: C.gold,
-    feathers: [C.gold, C.cream, C.red],
     body: { crossStrap: LEATHER, wristband: LEATHER },
     gear: (h, r) => {
       h.local('chest', [0.1, 0.52, -0.16], [-0.3, 0, -0.35], (s) => quiver(s, LEATHER, { iron: false }));
@@ -1817,7 +1839,6 @@ const NU_LOOK: Record<NuTuongId, NuLook> = {
   batNan: {
     cloth: C.nuTim,
     trim: C.gold,
-    feathers: [C.red, C.nuTimLight, C.cream],
     body: { drumPlate: true },
     gear: (h) => {
       pauldrons(h, { color: C.bronzeLight, size: 0.88 });
@@ -1830,7 +1851,6 @@ const NU_LOOK: Record<NuTuongId, NuLook> = {
   phungThiChinh: {
     cloth: C.nuHong,
     trim: C.cream,
-    feathers: [C.red, C.nuHongLight, C.cream],
     body: { crossStrap: C.diuCham },
     gear: (h) => {
       drawDiuCon(h);
@@ -1903,8 +1923,8 @@ function poseNu(bones: B, a: Act, look: NuLook): void {
 }
 
 /**
- * Nữ tướng của Hai Bà (`kind`): đứng, không cưỡi thú, cỡ thân 1,22 (đỉnh đầu 1,17, đỉnh mũ lông chim 1,55; Hai Bà đứng
- * chầu 1,74), mặt trước hướng +z, gốc ở giữa hai bàn chân. Mỗi người một màu áo, lá cờ cùng màu cầm tay trái: chóp cờ
+ * Nữ tướng của Hai Bà (`kind`): đứng, không cưỡi thú, cỡ thân 1,22 (đỉnh đầu 1,17, đỉnh búp lá 1,49; Hai Bà đứng
+ * chầu 1,8), mặt trước hướng +z, gốc ở giữa hai bàn chân. Mỗi người một màu áo, lá cờ cùng màu cầm tay trái: chóp cờ
  * cao 2,57 lúc đứng, 2,84 lúc phất cờ (cờ phất ra tới 1,9 bên trái), 3,06 lúc giơ cờ thắng trận. `userData.pose` đặt
  * tư thế (xem `poseNu`). `glow`: hiển linh, có hào quang sau đầu.
  */
@@ -1916,7 +1936,7 @@ export function makeNuTuong(kind: NuTuongId, opts: { glow?: boolean } = {}): THR
   const r = new RigBuilder({ ...BASE, ...bigHuman('base', [0, 0, 0], K_NU), ...(moveBones(extra, 'base', [0, 0, 0], K_NU) as Defs) });
   drawBig(r, [0, 0, 0], K_NU, (h) => {
     drawBaBody(h, look.cloth, look.trim, { belt: C.bronze, armband: C.bronze, ...look.body });
-    drawNuHead(h, look.feathers);
+    drawNuHead(h, look.cloth);
     h.local('handL', GRIP_L, null, (s) => coNuCan(s, look.trim));
     NU_FLAG.forEach((name, i) => r.local(name, nuFlagAt(i), null, (s) => coNuLa(s, i, look.cloth, look.trim)));
     look.gear(h, r);

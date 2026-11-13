@@ -859,8 +859,13 @@ export interface MienOpts {
   color: number;
   inlay: number;
   bar?: number;
-  /** Số lá: 5 (vua, tướng) hay 3 (lạc tướng). Lá giữa cao `h`, chân lá rộng `w`. */
-  count?: 3 | 5;
+  /** Số lá: 5 (vua, tướng), 3 (lạc tướng) hay 7 (búp lá cao của nữ tướng). Lá giữa cao `h`, chân lá rộng `w`. */
+  count?: 3 | 5 | 7;
+  /** Mỗi lá bên thấp hơn lá kề trong bao nhiêu phần chiều cao (mặc định 0,2); đầu lá rộng gấp mấy chân lá (mặc định 1,42). */
+  drop?: number;
+  flare?: number;
+  /** Lòng lá chỉ có sống dọc, không nan ngang (búp lá của nữ tướng). */
+  rib?: boolean;
   h?: number;
   w?: number;
   /** Chân lá ở độ cao `y`, cách mặt tóc (hay mũ) `puff`. */
@@ -885,7 +890,8 @@ export interface MienOpts {
 /**
  * Miện lá: quạt lá kim loại dựng trên vành miện, ôm vòng trước trán như lông chim cách điệu trên mặt trống đồng. Lá
  * giữa cao nhất, chóp nhọn; các lá bên thấp dần, xòe ra, vát chéo; lòng lá khảm sẫm có nan ngang. Trước trán là mặt
- * trời trống đồng, hai bên thái dương có tai xoắn. Vành miện vẽ riêng bằng `diadem` (hay vành mũ trụ).
+ * trời trống đồng, hai bên thái dương có tai xoắn. Vành miện vẽ riêng bằng `diadem` (hay vành mũ trụ). Nữ tướng đội
+ * búp lá: bảy lá hẹp, cao, gần như đứng thẳng, chụm trước trán, lòng lá có sống dọc.
  */
 export function mien(r: HumanRig, o: MienOpts): void {
   figure(r, keyOf(r, 'mien', o), (detail) => mienPieces(o, detail));
@@ -934,9 +940,9 @@ function mienPieces(o: MienOpts, detail: number): Piece[] {
     const nn = new THREE.Vector3().crossVectors(w, d).normalize();
     const m = new THREE.Matrix4().makeBasis(w, d, nn).setPosition(base);
     if (i === 0) front = m;
-    const h = H * (1 - 0.2 * k) + 0.03;
+    const h = H * (1 - (o.drop ?? 0.2) * k) + 0.03;
     const w0 = W * (k ? 0.9 : 1);
-    const w1 = w0 * 1.42;
+    const w1 = w0 * (o.flare ?? 1.42);
     const hs = h * (k ? 0.8 : 0.84);
     // Lá bên vát chéo: đỉnh lệch về phía lá giữa, vai ngoài thấp hơn.
     const tip = k ? -Math.sign(i) * w1 * 0.34 : 0;
@@ -954,13 +960,13 @@ function mienPieces(o: MienOpts, detail: number): Piece[] {
     const cv = h * 0.5;
     solid(m, pts.map(([u, v]) => [cu + (u - cu) * 0.66, cv + (v - cv) * 0.7] as [number, number]), thick + 0.007, o.inlay);
     // Nan ngang trong lòng lá; lá giữa thêm sống dọc.
-    const bars = k ? 3 : 4;
+    const bars = o.rib ? 0 : k ? 3 : 4;
     for (let b = 0; b < bars; b++) {
       const v = h * (0.3 + (0.42 * b) / (bars - 1));
       const wb = (w0 + ((w1 - w0) * v) / hs) * 0.56;
       box(m, wb, h * 0.045, thick + 0.013, cu * (v / h), v, o.bar ?? o.color);
     }
-    if (!k) box(m, w0 * 0.14, h * 0.5, thick + 0.013, 0, h * 0.5, o.bar ?? o.color);
+    if (!k || o.rib) box(m, w0 * (o.rib ? 0.2 : 0.14), h * 0.5, thick + 0.013, cu * 0.5, h * 0.5, o.bar ?? o.color);
     // Chóp ba bậc trên đỉnh lá giữa.
     if (!k && o.finial !== undefined) {
       box(m, w0 * 0.62, h * 0.075, thick, 0, h * 0.99, o.finial);
