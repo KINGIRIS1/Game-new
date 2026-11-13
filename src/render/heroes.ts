@@ -52,6 +52,7 @@ import {
   yem,
 } from './nanDo';
 import { clayPiece, figure, prim, rigid, segs, type Piece } from './nanNguoi';
+import { addChimLac, addRong, type RongLook } from './hoThan';
 import { horseBody, horseDrape, type HorseShape } from './nanThu';
 import { C } from './palette';
 import { RigBuilder, bakeRig, moveBones, skinRig, type Act, type BoneDef, type Bones, type Poser } from './rig';
@@ -132,6 +133,14 @@ function bupLa(h: HumanRig, inlay: number, rank: 1 | 2): void {
     finial: rank === 2 ? metal : undefined,
   });
 }
+
+/** Rồng hộ thân của từng tướng nam: lưng, bụng, vây lửa, sừng và móng. */
+const RONG = {
+  giong: { body: IRON, belly: C.bronzeLight, fin: C.fire, horn: C.gold },
+  son: { body: 0x3f8f5e, belly: C.cream, fin: 0x5fd89a, horn: C.gold },
+  adv: { body: C.gold, belly: C.cream, fin: C.red, horn: C.bronzeDark },
+  caoLo: { body: C.bronze, belly: C.bronzeLight, fin: C.red, horn: C.bronzeDark },
+} satisfies Record<string, RongLook>;
 
 /** Hào quang Phù Đổng Thiên Vương: vòng nhật nguyệt kép có 8 nan hoa và 16 tia như mặt trời trống đồng. Tâm ở gốc, mặt hướng +z. */
 function halo(): THREE.Group {
@@ -659,7 +668,7 @@ export function makeGiong(look: GiongLook, opts: { bamboo?: boolean; glow?: bool
     drawBig(r, [0, 0, 0], K_GIONG, (h) => drawGiongRider(h, opts.bamboo ?? false));
     const { group, bones } = skinRig(r.build());
     if (opts.glow) addHalo(group, 1.72, -0.44);
-    return finish(group, (a) => poseGiongStand(bones as unknown as Human, a));
+    return addRong(finish(group, (a) => poseGiongStand(bones as unknown as Human, a)), RONG.giong, { k: K_GIONG });
   }
   const r = new RigBuilder({ ...BASE, ...ironHorse(K_HORSE), ...bigHuman('qBody', GIONG_AT, K_GIONG) });
   drawIronHorse(r, K_HORSE);
@@ -684,13 +693,15 @@ export function makeGiong(look: GiongLook, opts: { bamboo?: boolean; glow?: bool
     flames.push(flame);
   }
   if (opts.glow) addHalo(group, 2.5, -0.44);
-  return finish(group, (a) => {
+  finish(group, (a) => {
     poseGiongRider(bones as unknown as Human, a);
     const e = a.act === 'fight' && a.strike !== undefined ? Math.sin(Math.PI * a.strike) : 0;
     poseIronHorse(bones, a, e);
     const t = a.time ?? 0;
     flames.forEach((f, i) => f.scale.set(1, 0.78 + 0.42 * Math.abs(Math.sin(t * 10 + i * 1.1)), 1));
   });
+  // Cưỡi ngựa thì rồng cuốn từ thắt lưng lên.
+  return addRong(group, RONG.giong, { k: K_GIONG, at: GIONG_AT, from: 0.34, turns: 1.4 });
 }
 
 // ---------- Sơn Tinh ----------
@@ -830,7 +841,7 @@ export function makeSonTinh(opts: { rock?: boolean; glow?: boolean } = {}): THRE
   drawSonAll(r, rock);
   const { group, bones } = skinRig(r.build());
   if (opts.glow) addHalo(group, (rock ? 0.32 : 0) + 1.5, -0.38);
-  return finish(group, (a) => poseSon(bones as unknown as Human, a));
+  return addRong(finish(group, (a) => poseSon(bones as unknown as Human, a)), RONG.son, { k: K_SON, at: [0, rock ? 0.32 : 0, 0] });
 }
 
 /** Tượng Sơn Tinh bản tĩnh, cho Đền Tản Viên. */
@@ -1092,7 +1103,7 @@ export function makeAnDuong(opts: { crossbow?: boolean; glow?: boolean } = {}): 
   drawBig(r, [0, 0, 0], K_ADV, (h) => drawAdv(h, crossbow));
   const { group, bones } = skinRig(r.build());
   if (opts.glow) addHalo(group, 1.6, -0.4);
-  return finish(group, (a) => poseAdv(bones as unknown as Human, a, crossbow));
+  return addRong(finish(group, (a) => poseAdv(bones as unknown as Human, a, crossbow)), RONG.adv, { k: K_ADV });
 }
 
 // ---------- Cao Lỗ ----------
@@ -1241,7 +1252,7 @@ export function makeCaoLo(opts: { glow?: boolean } = {}): THREE.Group {
   drawBig(r, [0, 0, 0], K_CAO, drawCaoLo);
   const { group, bones } = skinRig(r.build());
   if (opts.glow) addHalo(group, 1.5, -0.38);
-  return finish(group, (a) => poseCaoLo(bones, a));
+  return addRong(finish(group, (a) => poseCaoLo(bones, a)), RONG.caoLo, { k: K_CAO });
 }
 
 // ---------- Hai Bà Trưng ----------
@@ -1461,7 +1472,7 @@ export function makeTrungTrac(opts: { glow?: boolean; onFoot?: boolean } = {}): 
     },
   );
   if (opts.glow) addHalo(group, ...HALO_BA);
-  return group;
+  return addChimLac(group, C.trungRed, { k: K_BA, at: SEAT_BA });
 }
 
 /**
@@ -1482,7 +1493,7 @@ export function makeTrungNhi(opts: { glow?: boolean; onFoot?: boolean } = {}): T
     },
   );
   if (opts.glow) addHalo(group, ...HALO_BA);
-  return group;
+  return addChimLac(group, C.red, { k: K_BA, at: SEAT_BA });
 }
 
 /**
@@ -1509,7 +1520,7 @@ function standingBa(draw: (h: HumanRig) => void, kind: 'trungTrac' | 'trungNhi',
     gripHands(b, ARM * K_LAC);
   });
   if (glow) addHalo(group, 1.5, -0.38);
-  return group;
+  return addChimLac(group, kind === 'trungTrac' ? C.trungRed : C.red, { k: K_LAC });
 }
 
 // ---------- Lạc tướng đánh trống trận ----------
@@ -1943,5 +1954,5 @@ export function makeNuTuong(kind: NuTuongId, opts: { glow?: boolean } = {}): THR
   });
   const { group, bones } = skinRig(r.build());
   if (opts.glow) addHalo(group, 1.35, -0.45);
-  return finish(group, (a) => poseNu(bones, a, look));
+  return addChimLac(finish(group, (a) => poseNu(bones, a, look)), look.cloth, { k: K_NU });
 }
