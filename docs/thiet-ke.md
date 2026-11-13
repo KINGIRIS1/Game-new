@@ -18,6 +18,8 @@ Tài liệu này ghi lại các quyết định đã chốt với chủ dự án
   - **hoa văn trống đồng** (vòng tròn tiếp tuyến, răng cưa, mặt trống có sao và chim bay) vẽ bằng canvas, đắp lên mái, tường, trống;
   - nhà sàn **mái hình thuyền cong vút** có chim đồng đậu hai đầu nóc;
   - người chibi đầu to, **đội mũ lông chim** như hình người trên mặt trống đồng;
+  - **Miện lá** của Vua Hùng và các tướng nam (chủ dự án đưa ảnh mẫu: miện vàng có quạt lá cách điệu, rồi chốt mẫu 3 trong ba mẫu miện Vua Hùng; `mien` ở `nanDo.ts`, dáng chung `MIEN` ở `heroes.ts`): thay mũ lông chim bằng quạt lá kim loại dựng trên vành miện, ôm vòng trước trán. Dưới cùng là **vòng sắt**, trên đó là vành miện có hoa văn. Lá nhỏ, ít xòe: lá giữa cao nhất, chóp nhọn; lá bên thấp dần, vát chéo; lòng lá khảm sẫm có nan ngang (lá giữa thêm sống dọc). Trước trán chỉ **nửa mặt trời trống đồng** mọc trên vành. Vua có chóp ba bậc trên lá giữa và tai xoắn hai bên thái dương. **Không có chỏm mũ, để lộ tóc** (tướng thì búi tóc). Mỗi người một chất: Vua Hùng vàng ròng, lòng lá đồng sẫm, vành vàng cao, tóc bạc như râu; An Dương Vương vàng khảm đỏ son; Sơn Tinh đồng khảm xanh rừng, nan ngọc, giữ hai sừng vàng; Cao Lỗ đồng, thấp hơn, không chóp; Gióng sắt khảm đỏ son, nan vàng, dựng trên mũ sắt (Gióng giữ mũ sắt); Lạc tướng (đứng chầu, đánh trống) ba lá đồng khảm đỏ, vành đỏ. Lính, dân, Thủy Tinh và tượng Lạc Long Quân vẫn mũ lông chim;
+  - **Búp lá** của Hai Bà, bốn nữ tướng và tượng Âu Cơ (chủ dự án đưa ảnh mẫu thứ hai; `bupLa` ở `heroes.ts`, cũng dựng bằng `mien`): vòng sắt, vành hoa văn có ngọc, diềm răng cưa trên vành, rồi một búp lá hẹp, cao, gần đứng thẳng, chụm trước trán, lá giữa cao nhất, lòng lá có sống dọc. Hai Bà và Âu Cơ: vàng, bảy lá, có chóp bậc (Trưng Trắc lòng đỏ thắm, Trưng Nhị lòng đỏ son, Âu Cơ lòng hồng phấn). Nữ tướng: đồng, năm lá, lòng lá màu áo từng người. Tóc giữ như cũ (xõa, búi cài trâm);
   - **mỗi loại công trình một dáng riêng**, để không loại nào trông như bản to nhỏ của loại khác:
     - Điện Vua Hùng là nhà sàn mái thuyền lớn;
     - nhà sàn có mái tròn hình mai rùa, kiểu nhà thứ hai trên trống đồng;
@@ -399,8 +401,8 @@ Chủ dự án muốn có nhiều quân dự trữ: dựng thêm doanh trại, m
   - "Phù Đổng Thiên Vương": thắng màn 8 lần đầu.
 - **Gióng ở kinh đô**: đứng chầu trong sân Điện, đổi dáng theo mốc gạo: cậu bé lên ba ngồi bệt trên chiếu, thiếu niên đứng ôm bát cơm đầy cạnh chồng bát đã ăn (từ mốc 2), tráng sĩ cưỡi ngựa sắt. Thành tráng sĩ thì về ở doanh trại (xem mục Doanh trại và nơi ở riêng); chưa có doanh trại thì xuống ngựa đứng chầu trong sân Điện; bay về trời rồi thì hiển linh đứng chầu trong sân, cầm tre, có hào quang. Chạm vào Gióng, vào Gióng trong thẻ Tướng trên dock, hoặc nút trong bảng Điện, bảng lò rèn, để mở bảng Gióng.
 - **Dáng Gióng** (`makeGiong` trong `src/render/models.ts`): to hơn hẳn lính thường để nhận ra ngay.
-  - Tráng sĩ mặc giáp sắt viền đồng, đội mũ sắt có chùm lông chim như người trên trống đồng, khoác áo choàng đỏ ngắn vắt bay ra sau, giơ cao roi sắt (hay cây tre khi roi đã gãy).
-  - Ngựa sắt màu thép xanh, có móng, vòng cổ và tấm trán bằng đồng; mắt, bờm, đuôi và lửa phun từ mõm tự sáng, không bị bóng đổ làm tối.
+  - Tráng sĩ (thiết kế lại, bỏ nét lính La Mã của bản cũ: mũ vòm, áo choàng đỏ, gai vai): trai làng tay trần, chân trần, mặt trẻ có má hồng; giáp sắt lá vảy viền vàng, hộ tâm mặt trống đồng; khố đỏ hoa văn, đai lưng đỏ buông hai dải sau lưng; mũ sắt vành đồng hoa văn có che gáy, trên vành dựng miện lá sắt khảm đỏ son, nan vàng (xem Miện lá ở mục Phong cách); giơ cao roi sắt bảy đốt (hay cây tre khi roi đã gãy). Người cỡ 1,5 (bản cũ 1,3).
+  - Ngựa sắt to hơn ngựa thường (cỡ 1,22, ngực nở, chân to): thân sắt nung sẫm, khe lò lửa hai bên sườn; giáp sắt sáng viền vàng che vai và mông, ống chân bọc sắt, móng đồng; ngực đeo mặt trống đồng; mặt nạ đồng vàng có mặt trời trống đồng trên trán; tấm phủ yên đỏ hoa văn. Bờm, đuôi, lửa sau cổ chân là lưỡi lửa hình giọt; mắt, bờm, đuôi và lửa phun từ mõm tự sáng, không bị bóng đổ làm tối. Tượng ngựa sắt ở Đền Phù Đổng cùng dáng, giữ cỡ 1.
 - **Góp gạo theo 5 mốc**: 80, 150, 250, 400, 600 gạo.
 - **Rèn đồ sắt ở lò rèn**:
 
@@ -552,7 +554,7 @@ Vòng khắc chế của quân ta giữ nguyên: giáo binh thắng quân nặng
   - **Bốc đồi**: nhấc một quả đồi có cây ném xuống chỗ giặc đứng đông nhất, giặc trong 2,2 ô mất 70 máu. Hồi 16 giây. Đồi rơi trong 0,45 giây, bụi đất tung lên, rồi lún dần;
   - **Dời non**: có từ khi thắng màn 14. Đá mọc lên dưới chân mọi kẻ địch trong 4 ô quanh Sơn Tinh: mất 30 máu và bị giữ chân 3 giây (đứng yên, không đánh). Hồi 22 giây;
   - ngoài bãi, sát thương kỹ năng nhân 1,6 lần như của Gióng.
-- **Dáng Sơn Tinh** (`makeSonTinh` trong `src/render/models.ts`): to hơn lính thường, giáp đồng hoa văn trống, áo choàng kết lá rừng, vai đắp đá núi, mũ lông chim xen lông xanh lá, tay cầm gậy thần đầu đồng ôm hòn đá thiêng.
+- **Dáng Sơn Tinh** (`makeSonTinh` trong `src/render/models.ts`): to hơn lính thường, giáp đồng hoa văn trống, áo choàng kết lá rừng, vai đắp đá núi, búi tóc buộc dây ngọc, miện lá đồng khảm xanh rừng có nan ngọc, tay cầm gậy thần đầu đồng ôm hòn đá thiêng.
 - **Kết chương 2**: thắng màn 16 thì núi Tản Viên dâng cao dưới chân Sơn Tinh ngay trên bãi chiến, bảng kết quả hiện sau đó.
   - Mở **Đền Tản Viên** (4×4, dựng một lần, 1500 gạo, 1500 vỏ ốc, 1500 đất đá, 400 sắt): nền đá ba bậc, ba ngọn núi Ba Vì sau lưng, tượng Sơn Tinh trước sân. Đền còn nguyên thì lũ dâng thấp đi một bậc.
   - Từ đó Sơn Tinh về núi, không đứng ở kinh đô nữa, nhưng **hiển linh** (có hào quang) vẫn ra trận mỗi mùa lũ và ở phó bản chương 2. Mùa lũ vẫn tới.
@@ -679,7 +681,7 @@ Chủ dự án đã chốt:
 
 ### Hình ảnh chương 3
 
-- **An Dương Vương** (`makeAnDuong` trong `src/render/models.ts`): to cỡ Sơn Tinh, giáp đồng hoa văn trống, áo choàng đỏ son, mũ lông chim có vành vàng. Chưa có nỏ thì cầm rìu đồng nghi lễ; có nỏ thì cầm nỏ thần màu đồng vàng, lẫy hình vuốt rùa. Đứng chầu trong sân Điện, cột đá thề sau lưng.
+- **An Dương Vương** (`makeAnDuong` trong `src/render/models.ts`): to cỡ Sơn Tinh, giáp đồng hoa văn trống, áo choàng đỏ son, miện lá vàng khảm đỏ son có chóp bậc và tai xoắn, để lộ tóc. Chưa có nỏ thì cầm rìu đồng nghi lễ; có nỏ thì cầm nỏ thần màu đồng vàng, lẫy hình vuốt rùa. Đứng chầu trong sân Điện, cột đá thề sau lưng.
 - **Rùa Vàng** (`makeRuaVang`): rùa mai vàng có hoa văn mặt trống. Từ khi diệt yêu tinh, một con Rùa Vàng nhỏ bơi trên sông phía nam kinh đô.
 - **Đoạn thành Cổ Loa** (`buildCitadel`): đất nện cao hơn thành đất của lũy, nóc thành làm lối đi có lan can (xem mục Bậc lên thành, lối đi trên nóc thành), thỉnh thoảng một chòi canh nhỏ dựng trên bốn cột cao; đoạn bị phá là đống đất sạt. Trước đây nóc thành có ụ góc răng cưa và cọc gỗ nhọn, nay bỏ để lính đi lại.
 - **Đền Cổ Loa** (`makeDenCoLoa` trong `src/render/buildings.ts`): đền nền đá mái cong, trước sân có tượng Rùa Vàng và cây nỏ đồng lớn trên giá.
@@ -1325,7 +1327,7 @@ Số dưới đây là số cuối cùng. Luật ở `src/game/caoLo.ts` (mốc 
   - ngoài bãi, sát thương kỹ năng nhân 1,6 như các tướng khác.
 - Cân bằng: mạnh xấp xỉ An Dương Vương, đo bằng test. Với số ban đầu (600 máu, 18 sát thương; Nỏ liên châu 75 máu, 2,5 ô, hồi 16 giây) Cao Lỗ yếu hơn hẳn: cùng màn 24, người chơi thường có An Dương Vương chịu được máu giặc ×2,0, có Cao Lỗ chỉ ×1,2, kém cả Sơn Tinh hiển linh (×1,5). Nên tăng như trên (giống lần tăng Nỏ thần ở chương 3): màn 24 Cao Lỗ chịu được ×2,0, màn 26 ×2,2 (An Dương Vương ×2,3). Chủ dự án đã duyệt số đã tăng.
 - Giữ kinh đô (thủy binh, quân Triệu ở chương 4): An Dương Vương tới khi xuống biển, rồi Cao Lỗ. Cao Lỗ chỉ huy được một doanh trại như các tướng khác (xem mục Nhiều doanh trại).
-- Dáng (`makeCaoLo` trong `src/render/heroes.ts`, nhỏ hơn An Dương Vương một chút): tóc búi, râu đen, giáp da khảm đồng, đeo bao tên đồng, cầm nỏ liên châu có hộp tên trên thân (`repeatingCrossbow` ở `weapons.ts`), tù và đeo bên hông. Nỏ liên châu: ngẩng nỏ chếch lên trời bắn liền năm phát, rồi loạt tên đồng rơi xuống vùng trúng, vòng sóng đồng loang ra. Lệnh bắn: tay trái đưa tù và lên môi thổi (`Act.horn`), vòng sóng đỏ loang ra, dưới chân lính nỏ có hình thoi đỏ đồng nhấp nháy trong lúc có lệnh. Thắng trận thì giơ nỏ quá đầu. Đứng chầu trong sân Điện, sau An Dương Vương (chỗ riêng, vua xuống biển cũng không đổi).
+- Dáng (`makeCaoLo` trong `src/render/heroes.ts`, nhỏ hơn An Dương Vương một chút): tóc búi, râu đen, miện lá đồng của tướng (thấp hơn miện vua, không chóp), giáp da khảm đồng, đeo bao tên đồng, cầm nỏ liên châu có hộp tên trên thân (`repeatingCrossbow` ở `weapons.ts`), tù và đeo bên hông. Nỏ liên châu: ngẩng nỏ chếch lên trời bắn liền năm phát, rồi loạt tên đồng rơi xuống vùng trúng, vòng sóng đồng loang ra. Lệnh bắn: tay trái đưa tù và lên môi thổi (`Act.horn`), vòng sóng đỏ loang ra, dưới chân lính nỏ có hình thoi đỏ đồng nhấp nháy trong lúc có lệnh. Thắng trận thì giơ nỏ quá đầu. Đứng chầu trong sân Điện, sau An Dương Vương (chỗ riêng, vua xuống biển cũng không đổi).
 - **Tướng thủy binh Triệu** (`makeSoldier('tuongThuy')`): giáp lá đen viền vàng, giáp vai hai tầng, dải lụa đỏ chéo ngực, áo choàng đỏ, mũ đen viền vàng có chùm lông chim đen, râu đen, đao dài lưỡi trăng khuyết giơ cao bổ xuống; to hơn lính của hắn.
 
 **Phó bản chương 4: đường ra biển**
@@ -2336,8 +2338,8 @@ Chủ dự án chọn mỗi bà cưỡi một voi: Trưng Trắc và Trưng Nh�
 - Ở kinh đô (sửa khi gộp Điện Vua Hùng 10×10, theo chốt của chủ dự án: tướng đứng trong sân không cưỡi thú): bà chưa chỉ huy doanh trại nào thì xuống voi, đứng chầu trong sân Điện ở cột ngoài hàng hai, ngang Sơn Tinh và An Dương Vương: Trưng Trắc bên trái (ô 4), Trưng Nhị bên phải (ô 7) (`courtSlot`; ô 0 và 3 ngang ngai sát đôi voi đá góc sau sân nên người đứng đó lẫn vào voi; dáng đứng `makeTrungTrac({ onFoot })`, `makeTrungNhi({ onFoot })`). Bà chỉ huy doanh trại thì cưỡi voi trận đứng ở đài tướng trong sân trại ấy. Ra trận giữ kinh đô thì vẫn cưỡi voi, ra từ trước sân Điện (theo hướng Điện xoay), mỗi bà một bên lối vào, hay từ trại mình chỉ huy.
 - Sau Hết truyện chương 5: hai bà hiển linh, vẫn giữ kinh đô và ra trận màn 33–40. Khác An Dương Vương (thôi giữ kinh đô khi xuống biển), vì chương 5 không còn tướng nào thay.
 - **Dáng** (`makeTrungTrac`, `makeTrungNhi` ở `heroes.ts`, có xương, chung một voi trận `makeVoiTran` ở `beasts.ts`): voi lớn hơn voi chiến thường một phần ba, ngà bọc đồng, bành voi có lọng.
-  - Trưng Trắc: voi đệm đỏ có mặt trống đồng, lọng đỏ; áo đỏ thắm, giáp ngực đồng, mũ lông chim cao kiểu Đông Sơn, cầm gươm đồng. Voi xung trận: voi giơ vòi rống, lao tới, bụi tung theo đường.
-  - Trưng Nhị: voi đệm vàng, lọng vàng, cờ đỏ hình chim Lạc cắm sau bành; áo vàng, mũ lông chim, cầm cung. Hiệu triệu: rút cờ phất, tiếng trống, nghĩa binh chạy ra từ hai bên, vòng sáng xanh loang dưới chân quân ta được hồi máu.
+  - Trưng Trắc: voi đệm đỏ có mặt trống đồng, lọng đỏ; áo đỏ thắm, giáp ngực đồng, búp lá vàng lòng đỏ thắm (xem Búp lá ở mục Phong cách), cầm gươm đồng. Voi xung trận: voi giơ vòi rống, lao tới, bụi tung theo đường.
+  - Trưng Nhị: voi đệm vàng, lọng vàng, cờ đỏ hình chim Lạc cắm sau bành; áo vàng, búp lá vàng lòng đỏ son, cầm cung. Hiệu triệu: rút cờ phất, tiếng trống, nghĩa binh chạy ra từ hai bên, vòng sáng xanh loang dưới chân quân ta được hồi máu.
   - Thắng trận: Trưng Trắc giơ gươm, Trưng Nhị phất cờ, hai voi giơ vòi.
 - **Nghĩa binh** (`soldier.ts`): áo nâu, khăn vấn, chân đất, không giáp, cầm giáo tre hay gậy tầm vông.
 - **Hình đã làm (PR 2)**:
@@ -2457,7 +2459,7 @@ Bản đồ phó bản có thêm thẻ Chương 5, mở khi vào chương 5. B�
 - **Giữ kinh đô**: giao mỗi nữ tướng cho một doanh trại, mỗi trại một nữ tướng (thẻ Tướng chỉ huy trong bảng doanh trại). Lính giữ kinh đô của trại ấy, thuộc binh chủng của nữ tướng, được thêm 12%.
 - Chuẩn cân bằng của mọi màn và mọi thử thách tính không có nữ tướng, như huân công.
 - Mỗi nữ tướng theo về thì Lạc hầu báo hai câu ngắn (như gợi ý công trình mới), không thêm đoạn truyện.
-- Dáng: bốn nữ tướng có xương, mỗi người một màu áo, mũ lông chim, cầm cờ. Lê Chân đeo nỏ, Thánh Thiên đeo cung, Bát Nàn cầm giáo, Phùng Thị Chính địu con sau lưng, cầm gươm.
+- Dáng: bốn nữ tướng có xương, mỗi người một màu áo, búp lá đồng lòng màu áo, cầm cờ. Lê Chân đeo nỏ, Thánh Thiên đeo cung, Bát Nàn cầm giáo, Phùng Thị Chính địu con sau lưng, cầm gươm.
 
 **Thử thách màn 33–40 và huân công bậc 4**
 
@@ -2486,7 +2488,7 @@ Bản đồ phó bản có thêm thẻ Chương 5, mở khi vào chương 5. B�
 - **Lạc hầu báo** một lần mỗi người (`nextNuHint`, ghi `nu:<tên>` vào `hinted`), hai câu: nữ tướng đã về, lo binh chủng nào; chọn làm phó tướng ở bảng xếp quân hay giao về một doanh trại.
 - **Ở sân Điện**: bốn nữ tướng đứng chầu hàng sau Hai Bà (chỗ `t` số 8, 11, 9, 13: Lê Chân sau Trưng Trắc, Thánh Thiên sau Trưng Nhị, Bát Nàn sau Sơn Tinh, Phùng Thị Chính sau Cao Lỗ), kể cả khi đang ở doanh trại.
 - Biểu tượng: Lê Chân ⚓, Thánh Thiên 🪶, Bát Nàn 🛡️, Phùng Thị Chính 👶.
-- **Dáng** (`makeNuTuong` ở `render/heroes.ts`): cỡ thân 1,22 (Hai Bà đứng chầu 1,3), tóc búi cao cài trâm vàng, mũ lông chim một tầng vành đồng (Hai Bà hai tầng vành vàng), đai và vòng tay đồng; tay trái cầm cờ cán dài cùng màu áo, giữa cờ có mặt trời trống đồng, cuối cờ xẻ đuôi nheo. Đứng thì cờ bay; đi vẫn dựng cờ; giữa trận thì phất cờ hô quân (giơ cờ quá đầu, tay phải chĩa vũ khí về trước); thắng thì giơ cờ và vũ khí lên trời.
+- **Dáng** (`makeNuTuong` ở `render/heroes.ts`): cỡ thân 1,22 (Hai Bà đứng chầu 1,3), tóc búi cao cài trâm vàng, búp lá đồng năm lá lòng màu áo (Hai Bà bảy lá vàng có chóp), đai và vòng tay đồng; tay trái cầm cờ cán dài cùng màu áo, giữa cờ có mặt trời trống đồng, cuối cờ xẻ đuôi nheo. Đứng thì cờ bay; đi vẫn dựng cờ; giữa trận thì phất cờ hô quân (giơ cờ quá đầu, tay phải chĩa vũ khí về trước); thắng thì giơ cờ và vũ khí lên trời.
 
   | Nữ tướng | Áo | Đồ riêng |
   |---|---|---|
@@ -2560,10 +2562,10 @@ Chủ dự án yêu cầu: Điện to 10×10 hoặc hơn; sân có Vua Hùng ng�
 ### Hình (`src/render/congTrinh/dien.ts`, bản vẽ ở `docs/bo-cuc-cong-trinh.md`)
 - **Khối cung điện** (nhà chính, nền, thềm rồng đá, đôi đỉnh đồng, hai chái, cột chim Lạc, các tầng mái, trống đồng trên nóc) giữ dáng Điện 5×5 đã duyệt, phóng 1,5 lần, lùi về nửa sau móng. Mỗi cấp vẫn thêm phần như cũ.
 - **Sân chầu** nửa trước: bệ ngai ở đầu sân trước thềm (cấp 1–3 ụ đất trải chiếu; cấp 4 bệ đá ba bậc trải thảm đỏ; cấp 6 viền vàng; cấp 9 mặt bậc chạm hoa văn), lối đá từ bệ ra cổng, cổng Nghi Môn phóng 1,3 lần (cấp 10 cổng thành), rào quanh móng từ cấp 4.
-- **Vua Hùng ngồi ngai vàng** ở mọi cấp (bản tĩnh `bakeVuaHung` ở `heroes.ts`): hoàng bào đỏ dệt hoa văn trống đồng, áo vàng nghệ, râu bạc, mũ lông chim hai tầng vành vàng. Ngai son thếp vàng, tựa cao gắn mặt trời trống đồng như hào quang sau đầu vua, tay ngai đầu chim; cấp 3 có lọng (cấp 6 lọng vàng), cấp 5 đôi quạt lông chim, cấp 7 chim Lạc trên tựa ngai. Ngai luôn là Vua Hùng, kể cả chương 3, 4 và các chương sau.
+- **Vua Hùng ngồi ngai vàng** ở mọi cấp (bản tĩnh `bakeVuaHung` ở `heroes.ts`): hoàng bào đỏ dệt hoa văn trống đồng, áo vàng nghệ, râu tóc bạc, để lộ tóc, miện lá vàng năm lá (vòng sắt, vành vàng cao, nửa mặt trời trống đồng trước trán, chóp bậc, tai xoắn). Ngai son thếp vàng, tựa cao gắn mặt trời trống đồng như hào quang sau đầu vua, tay ngai đầu chim; cấp 3 có lọng (cấp 6 lọng vàng), cấp 5 đôi quạt lông chim, cấp 7 chim Lạc trên tựa ngai. Ngai luôn là Vua Hùng, kể cả chương 3, 4 và các chương sau.
 - **Tướng đứng chầu** hai bên lối giữa (`courtSlot`; world.ts dựng): mỗi bên hai cột, cột trong cách lối giữa 2,25 ô, cột ngoài 3,25 ô; các hàng cách nhau 1 ô từ ngang ngai ra cổng; cột trong bốn hàng, cột ngoài ba hàng; tất cả 14 chỗ. Lạc tướng (trái) và Gióng (phải) hai bên ngai, sau là Sơn Tinh (trái), An Dương Vương (phải, cột đá thề sau lưng), Cao Lỗ sau An Dương Vương. Còn 9 chỗ cho tướng các chương sau. Hai Bà Trưng (chương 5) đứng cột ngoài hàng hai (chỗ 4, 7), không đứng ngang ngai (chỗ 0, 3) như dự tính, vì chỗ ấy sát đôi voi đá góc sau sân, người đứng đó lẫn vào voi. Đã thử đủ 14 người đứng, không ai đè ai.
   - Tướng đứng trong sân **không cưỡi thú**: Gióng tráng sĩ xuống ngựa (`makeGiong(..., { onFoot })`).
-  - Ai đứng: Lạc tướng luôn có (dáng đứng chầu `makeLacTuong`: giáo, khiên mặt trống). Gióng lúc nhỏ, Sơn Tinh cầu hôn, An Dương Vương, Cao Lỗ đứng như trong truyện; Gióng tráng sĩ, Sơn Tinh đã rước dâu ở doanh trại (chưa có doanh trại thì đứng trong sân). Tướng đã về trời, về núi, xuống biển mà vẫn chỉ huy thì hiển linh đứng chầu, có hào quang (Gióng cầm tre). Chạm tướng mở bảng tướng ấy.
+  - Ai đứng: Lạc tướng luôn có (dáng đứng chầu `makeLacTuong`: giáo, khiên mặt trống, miện ba lá đồng). Gióng lúc nhỏ, Sơn Tinh cầu hôn, An Dương Vương, Cao Lỗ đứng như trong truyện; Gióng tráng sĩ, Sơn Tinh đã rước dâu ở doanh trại (chưa có doanh trại thì đứng trong sân). Tướng đã về trời, về núi, xuống biển mà vẫn chỉ huy thì hiển linh đứng chầu, có hào quang (Gióng cầm tre). Chạm tướng mở bảng tướng ấy.
   - Tướng có xương, đứng thở nhẹ mỗi người một nhịp.
 - Cờ hai bên sân đứng ở sau, cạnh đôi voi đá (cấp 5; cấp 8 yên gấm vàng); trống đồng trên giá cạnh hai lầu trống ở hai góc trước (cấp 6). Lạc hầu và lính gác đứng hai bên lối trong cổng. Ngày Tết cây nêu đứng góc trước bên trái, dây cờ căng tới hai cột cờ, mâm bánh bày trước bệ ngai.
 - Điện xoay thì cả sân xoay theo: tướng, cột đá thề, cảnh Tết, người trinh sát ra từ cổng.
@@ -2635,7 +2637,7 @@ Chủ dự án yêu cầu thêm một công trình lớn: đền thờ Lạc Lon
   - Đền chính lùi về sau giữa móng, mái cong hai tầng lợp ngói viền đồng, chim Lạc hai đầu nóc; lan can đá có đầu rồng ở bậc lên thềm.
   - Trước thềm, mỗi bên một tượng trên bệ đá (`bakeLacLongQuan`, `bakeAuCo` ở `heroes.ts`):
     - Lạc Long Quân bên hồ: mũ sừng rồng, giáp vảy rồng xanh, gươm đồng.
-    - Âu Cơ bên núi: áo hồng, áo choàng lông chim trắng, mũ lông chim, chắp tay.
+    - Âu Cơ bên núi: áo hồng, áo choàng lông chim trắng, búp lá vàng lòng hồng phấn, chắp tay.
   - Lư hương đồng trước thềm; bọc trăm trứng bằng đá trong chậu hoa sen giữa sân.
   - Nửa trái là hồ có rồng xanh uốn ba khúc nhô khỏi mặt nước, đầu ngẩng giỡn ngọc; nửa phải là ba ngọn núi, chim tiên trắng dang cánh trên đỉnh cao nhất, mây vờn, hoa dại chân núi.
   - Lối đá ra cổng hai cột chim Lạc; cờ xanh nước bên hồ, cờ vàng núi bên núi; hai trống đồng.

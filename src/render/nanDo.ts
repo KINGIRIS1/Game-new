@@ -852,6 +852,179 @@ export function diadem(r: HumanRig, o: DiademOpts): void {
   });
 }
 
+// ---------- Miện lá ----------
+
+export interface MienOpts {
+  /** Màu lá miện, màu lòng lá khảm sẫm, màu nan ngang trong lòng lá (mặc định như lá). */
+  color: number;
+  inlay: number;
+  bar?: number;
+  /** Số lá: 5 (vua, tướng), 3 (lạc tướng) hay 7 (búp lá cao của nữ tướng). Lá giữa cao `h`, chân lá rộng `w`. */
+  count?: 3 | 5 | 7;
+  /** Mỗi lá bên thấp hơn lá kề trong bao nhiêu phần chiều cao (mặc định 0,2); đầu lá rộng gấp mấy chân lá (mặc định 1,42). */
+  drop?: number;
+  flare?: number;
+  /** Lòng lá chỉ có sống dọc, không nan ngang (búp lá của nữ tướng). */
+  rib?: boolean;
+  h?: number;
+  w?: number;
+  /** Chân lá ở độ cao `y`, cách mặt tóc (hay mũ) `puff`. */
+  y?: number;
+  puff?: number;
+  /** Lá xòe sang bên bao nhiêu (radian mỗi lá, mặc định 0,4); chân các lá cách nhau quanh trán (radian, mặc định 0,4). */
+  fan?: number;
+  around?: number;
+  /** Mặt trời trống đồng trước trán (màu) và vành quanh nó. */
+  disc?: number;
+  discRim?: number;
+  /** Chỉ nửa trên của mặt trời (mặt trời mọc trên vành miện); bán kính; tâm cao hơn chân lá bao nhiêu. */
+  discHalf?: boolean;
+  discR?: number;
+  discV?: number;
+  /** Chóp ba bậc trên đỉnh lá giữa (màu). */
+  finial?: number;
+  /** Tai xoắn hai bên thái dương (màu). */
+  curls?: number;
+}
+
+/**
+ * Miện lá: quạt lá kim loại dựng trên vành miện, ôm vòng trước trán như lông chim cách điệu trên mặt trống đồng. Lá
+ * giữa cao nhất, chóp nhọn; các lá bên thấp dần, xòe ra, vát chéo; lòng lá khảm sẫm có nan ngang. Trước trán là mặt
+ * trời trống đồng, hai bên thái dương có tai xoắn. Vành miện vẽ riêng bằng `diadem` (hay vành mũ trụ). Nữ tướng đội
+ * búp lá: bảy lá hẹp, cao, gần như đứng thẳng, chụm trước trán, lòng lá có sống dọc.
+ */
+export function mien(r: HumanRig, o: MienOpts): void {
+  figure(r, keyOf(r, 'mien', o), (detail) => mienPieces(o, detail));
+}
+
+function mienPieces(o: MienOpts, detail: number): Piece[] {
+  const puff = o.puff ?? 0.012;
+  const head = headBase(true).f;
+  const shell: Sdf = (x, y, z) => head(x, y, z) - puff;
+  const y0 = o.y ?? 0.85;
+  const H = o.h ?? 0.36;
+  const W = o.w ?? 0.105;
+  const half = ((o.count ?? 5) - 1) / 2;
+  const thick = 0.02;
+  const LEAN = 0.16;
+  const out: Piece[] = [];
+  const up = new THREE.Vector3(0, 1, 0);
+  /** Khối dày `depth` từ đường viền (u, v) trong khung lá: u theo bề ngang, v theo chiều cao, bề dày chia đôi hai mặt. */
+  const solid = (m: THREE.Matrix4, pts: [number, number][], depth: number, color: number) => {
+    const sh = new THREE.Shape(pts.map(([u, v]) => new THREE.Vector2(u, v)));
+    const g = new THREE.ExtrudeGeometry(sh, { depth, bevelEnabled: false });
+    g.translate(0, 0, -depth / 2);
+    g.applyMatrix4(m);
+    out.push(prim(g, color, 'head'));
+  };
+  const box = (m: THREE.Matrix4, w: number, h: number, depth: number, u: number, v: number, color: number) => {
+    const g = new THREE.BoxGeometry(w, h, depth);
+    g.translate(u, v, 0);
+    g.applyMatrix4(m);
+    out.push(prim(g, color, 'head'));
+  };
+  let front: THREE.Matrix4 | null = null;
+  for (let i = -half; i <= half; i++) {
+    const k = Math.abs(i);
+    // Chân lá bám quanh trán; lá bên lùi vào sau lá giữa.
+    const phi = i * (o.around ?? 0.4);
+    const n = new THREE.Vector3(Math.sin(phi), 0, Math.cos(phi));
+    const p = hit(shell, [n.x * 0.6, y0, -0.02 + n.z * 0.6], [-n.x, 0, -n.z]) ?? [n.x * 0.22, y0, -0.02 + n.z * 0.22];
+    const base = new THREE.Vector3(...p).addScaledVector(n, 0.03 - 0.012 * k).addScaledVector(up, -0.03);
+    // Lá xòe sang bên theo `fan`, cả quạt ngả nhẹ ra sau.
+    const fan = i * (o.fan ?? 0.4);
+    const t = new THREE.Vector3(Math.cos(phi), 0, -Math.sin(phi));
+    const d = up.clone().multiplyScalar(Math.cos(fan)).addScaledVector(t, Math.sin(fan));
+    d.applyAxisAngle(new THREE.Vector3(1, 0, 0), -LEAN).normalize();
+    const w = t.clone().addScaledVector(d, -t.dot(d)).normalize();
+    const nn = new THREE.Vector3().crossVectors(w, d).normalize();
+    const m = new THREE.Matrix4().makeBasis(w, d, nn).setPosition(base);
+    if (i === 0) front = m;
+    const h = H * (1 - (o.drop ?? 0.2) * k) + 0.03;
+    const w0 = W * (k ? 0.9 : 1);
+    const w1 = w0 * (o.flare ?? 1.42);
+    const hs = h * (k ? 0.8 : 0.84);
+    // Lá bên vát chéo: đỉnh lệch về phía lá giữa, vai ngoài thấp hơn.
+    const tip = k ? -Math.sign(i) * w1 * 0.34 : 0;
+    const drop = k ? Math.sign(i) : 0;
+    const pts: [number, number][] = [
+      [-w0 / 2, 0],
+      [w0 / 2, 0],
+      [w1 / 2, hs - (drop > 0 ? h * 0.1 : 0)],
+      [tip, h],
+      [-w1 / 2, hs - (drop < 0 ? h * 0.1 : 0)],
+    ];
+    solid(m, pts, thick, o.color);
+    // Lòng lá khảm sẫm (thu vào quanh tâm lá), nổi cả hai mặt.
+    const cu = tip * 0.25;
+    const cv = h * 0.5;
+    solid(m, pts.map(([u, v]) => [cu + (u - cu) * 0.66, cv + (v - cv) * 0.7] as [number, number]), thick + 0.007, o.inlay);
+    // Nan ngang trong lòng lá; lá giữa thêm sống dọc.
+    const bars = o.rib ? 0 : k ? 3 : 4;
+    for (let b = 0; b < bars; b++) {
+      const v = h * (0.3 + (0.42 * b) / (bars - 1));
+      const wb = (w0 + ((w1 - w0) * v) / hs) * 0.56;
+      box(m, wb, h * 0.045, thick + 0.013, cu * (v / h), v, o.bar ?? o.color);
+    }
+    if (!k || o.rib) box(m, w0 * (o.rib ? 0.2 : 0.14), h * 0.5, thick + 0.013, cu * 0.5, h * 0.5, o.bar ?? o.color);
+    // Chóp ba bậc trên đỉnh lá giữa.
+    if (!k && o.finial !== undefined) {
+      box(m, w0 * 0.62, h * 0.075, thick, 0, h * 0.99, o.finial);
+      box(m, w0 * 0.42, h * 0.075, thick, 0, h * 1.06, o.finial);
+      box(m, w0 * 0.2, h * 0.1, thick, 0, h * 1.14, o.finial);
+    }
+  }
+  // Mặt trời trống đồng trước trán, tựa vào chân lá giữa.
+  if (o.disc !== undefined && front) {
+    const rad = o.discR ?? W * 0.78;
+    const halfDisc = !!o.discHalf;
+    const at = new THREE.Vector3(0, o.discV ?? 0.06 + rad * 0.8, thick / 2 + 0.014).applyMatrix4(front);
+    const q = new THREE.Quaternion().setFromRotationMatrix(front);
+    // Nửa mặt trời: chỉ nửa vòng trên, cạnh bằng nằm trên vành miện.
+    const seg = segs(20, detail, 12);
+    const g0 = halfDisc ? new THREE.CylinderGeometry(rad, rad, 0.014, seg / 2, 1, false, Math.PI / 2, Math.PI) : new THREE.CylinderGeometry(rad, rad, 0.014, seg);
+    g0.rotateX(Math.PI / 2);
+    const g = g0.toNonIndexed();
+    g0.dispose();
+    g.applyQuaternion(q);
+    g.translate(at.x, at.y, at.z);
+    paintGeometry(g, o.disc);
+    out.push(rigid(g, 'head', 'drum'));
+    if (o.discRim !== undefined) {
+      const ring = new THREE.TorusGeometry(rad + 0.004, 0.011, 6, halfDisc ? seg / 2 : seg, halfDisc ? Math.PI : Math.PI * 2);
+      ring.applyQuaternion(q);
+      ring.translate(at.x, at.y, at.z);
+      out.push(prim(ring, o.discRim, 'head'));
+      if (halfDisc) {
+        // Thanh chân mặt trời bịt cạnh bằng.
+        const bar = new THREE.BoxGeometry(rad * 2 + 0.03, 0.02, 0.024);
+        bar.applyQuaternion(q);
+        bar.translate(at.x, at.y, at.z);
+        out.push(prim(bar, o.discRim, 'head'));
+      }
+    }
+  }
+  // Tai xoắn hai bên thái dương: hai thanh ngang chồng nhau, đầu cuộn tròn.
+  if (o.curls !== undefined) {
+    for (const s of [-1, 1]) {
+      const p = hit(shell, [s * 0.6, y0 - 0.025, 0.02], [-s, 0, 0]) ?? [s * 0.22, y0 - 0.025, 0.02];
+      for (const [dy, len] of [
+        [0, 0.075],
+        [0.028, 0.05],
+      ]) {
+        const g = new THREE.BoxGeometry(len, 0.018, 0.022);
+        g.rotateZ(s * 0.22);
+        g.translate(p[0] + s * len * 0.45, p[1] + dy + len * 0.1, p[2]);
+        out.push(prim(g, o.curls, 'head'));
+      }
+      const curl = new THREE.TorusGeometry(0.026, 0.01, 6, segs(12, detail, 8));
+      curl.translate(p[0] + s * 0.092, p[1] + 0.036, p[2]);
+      out.push(prim(curl, o.curls, 'head'));
+    }
+  }
+  return out;
+}
+
 /** Kiềng (vòng cổ) tròn quanh cổ, hơi chúc ra trước. */
 export function necklace(r: HumanRig, o: { color: number; r?: number; y?: number; z?: number; tilt?: number; thick?: number; half?: boolean }): void {
   figure(r, keyOf(r, 'necklace', o), (detail) => {
