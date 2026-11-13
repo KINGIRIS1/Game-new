@@ -866,9 +866,16 @@ export interface MienOpts {
   /** Chân lá ở độ cao `y`, cách mặt tóc (hay mũ) `puff`. */
   y?: number;
   puff?: number;
+  /** Lá xòe sang bên bao nhiêu (radian mỗi lá, mặc định 0,4); chân các lá cách nhau quanh trán (radian, mặc định 0,4). */
+  fan?: number;
+  around?: number;
   /** Mặt trời trống đồng trước trán (màu) và vành quanh nó. */
   disc?: number;
   discRim?: number;
+  /** Chỉ nửa trên của mặt trời (mặt trời mọc trên vành miện); bán kính; tâm cao hơn chân lá bao nhiêu. */
+  discHalf?: boolean;
+  discR?: number;
+  discV?: number;
   /** Chóp ba bậc trên đỉnh lá giữa (màu). */
   finial?: number;
   /** Tai xoắn hai bên thái dương (màu). */
@@ -914,12 +921,12 @@ function mienPieces(o: MienOpts, detail: number): Piece[] {
   for (let i = -half; i <= half; i++) {
     const k = Math.abs(i);
     // Chân lá bám quanh trán; lá bên lùi vào sau lá giữa.
-    const phi = i * 0.4;
+    const phi = i * (o.around ?? 0.4);
     const n = new THREE.Vector3(Math.sin(phi), 0, Math.cos(phi));
     const p = hit(shell, [n.x * 0.6, y0, -0.02 + n.z * 0.6], [-n.x, 0, -n.z]) ?? [n.x * 0.22, y0, -0.02 + n.z * 0.22];
     const base = new THREE.Vector3(...p).addScaledVector(n, 0.03 - 0.012 * k).addScaledVector(up, -0.03);
     // Lá xòe sang bên theo `fan`, cả quạt ngả nhẹ ra sau.
-    const fan = i * 0.4;
+    const fan = i * (o.fan ?? 0.4);
     const t = new THREE.Vector3(Math.cos(phi), 0, -Math.sin(phi));
     const d = up.clone().multiplyScalar(Math.cos(fan)).addScaledVector(t, Math.sin(fan));
     d.applyAxisAngle(new THREE.Vector3(1, 0, 0), -LEAN).normalize();
@@ -963,10 +970,13 @@ function mienPieces(o: MienOpts, detail: number): Piece[] {
   }
   // Mặt trời trống đồng trước trán, tựa vào chân lá giữa.
   if (o.disc !== undefined && front) {
-    const rad = W * 0.78;
-    const at = new THREE.Vector3(0, 0.06 + rad * 0.8, thick / 2 + 0.014).applyMatrix4(front);
+    const rad = o.discR ?? W * 0.78;
+    const halfDisc = !!o.discHalf;
+    const at = new THREE.Vector3(0, o.discV ?? 0.06 + rad * 0.8, thick / 2 + 0.014).applyMatrix4(front);
     const q = new THREE.Quaternion().setFromRotationMatrix(front);
-    const g0 = new THREE.CylinderGeometry(rad, rad, 0.014, segs(20, detail, 12));
+    // Nửa mặt trời: chỉ nửa vòng trên, cạnh bằng nằm trên vành miện.
+    const seg = segs(20, detail, 12);
+    const g0 = halfDisc ? new THREE.CylinderGeometry(rad, rad, 0.014, seg / 2, 1, false, Math.PI / 2, Math.PI) : new THREE.CylinderGeometry(rad, rad, 0.014, seg);
     g0.rotateX(Math.PI / 2);
     const g = g0.toNonIndexed();
     g0.dispose();
@@ -975,10 +985,17 @@ function mienPieces(o: MienOpts, detail: number): Piece[] {
     paintGeometry(g, o.disc);
     out.push(rigid(g, 'head', 'drum'));
     if (o.discRim !== undefined) {
-      const ring = new THREE.TorusGeometry(rad + 0.004, 0.011, 6, segs(20, detail, 12));
+      const ring = new THREE.TorusGeometry(rad + 0.004, 0.011, 6, halfDisc ? seg / 2 : seg, halfDisc ? Math.PI : Math.PI * 2);
       ring.applyQuaternion(q);
       ring.translate(at.x, at.y, at.z);
       out.push(prim(ring, o.discRim, 'head'));
+      if (halfDisc) {
+        // Thanh chân mặt trời bịt cạnh bằng.
+        const bar = new THREE.BoxGeometry(rad * 2 + 0.03, 0.02, 0.024);
+        bar.applyQuaternion(q);
+        bar.translate(at.x, at.y, at.z);
+        out.push(prim(bar, o.discRim, 'head'));
+      }
     }
   }
   // Tai xoắn hai bên thái dương: hai thanh ngang chồng nhau, đầu cuộn tròn.

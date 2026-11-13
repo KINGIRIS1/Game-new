@@ -1595,7 +1595,7 @@ export const VUA_SEAT = (HUMAN.legL.at[1] - 0.045) * K_VUA;
  * Vua Hùng: hoàng bào đỏ son dài dệt hoa văn trống đồng, áo vàng nghệ, đai vàng, gương đồng hộ tâm, áo choàng đỏ sau
  * lưng, râu bạc, miện lá vàng năm lá có mặt trời trống đồng trước trán, chóp bậc, tai xoắn, chỏm đỏ.
  */
-function drawVuaHung(h: HumanRig): void {
+function drawVuaHung(h: HumanRig, mau = 0): void {
   humanBody(h, { cloth: C.red, long: true, pattern: true, top: C.ripe, sleeves: C.ripe, belt: C.gold, armband: C.gold, drumPlate: true, collar: C.red, hem: C.gold });
   buckle(h, { color: C.gold, gem: C.red });
   // Vạt lễ phục ngắn (vua ngồi, đùi nằm ngang trước bụng).
@@ -1606,16 +1606,41 @@ function drawVuaHung(h: HumanRig): void {
   necklace(h, { color: C.bronzeLight, r: 0.1, y: 0.57, z: 0.06, tilt: 0.5, thick: 0.012, half: true });
   humanHead(h, { brows: true, browColor: C.beard, mustache: C.beard, beard: C.beard, beardLen: 0.22 });
   hairCap(h);
-  // Miện lá vàng của Vua Hùng: chỏm đỏ núm vàng, vành vàng hoa văn, hồng ngọc dưới mặt trời trống đồng, năm lá khảm, chóp bậc, tai xoắn.
-  helmet(h, { color: C.red, rim: 0.81, top: { kind: 'knob', color: C.gold, h: 0.06 } });
-  diadem(h, { color: C.gold, pattern: true, y: 0.806, h: 0.062, puff: 0.022, rim: C.goldDark, edge: C.goldDark, gem: C.red });
-  mien(h, { color: C.gold, inlay: C.goldDark, bar: C.cream, disc: C.gold, discRim: C.goldDark, finial: C.gold, curls: C.gold, h: 0.4, w: 0.11, puff: 0.03 });
+  vuaMien(h, mau);
 }
 
-/** Vua Hùng ngồi ngai vàng, bản tĩnh (ngồi yên) để đặt vào mô hình Điện: lưng thẳng, đùi gần nằm ngang, hai tay đặt trên gối. */
-export function bakeVuaHung(): THREE.Group {
+/** Số mẫu miện Vua Hùng đang chờ chủ dự án duyệt (chọn xong thì bỏ các mẫu kia). */
+export const MAU_MIEN_VUA = 3;
+
+/**
+ * Miện lá vàng của Vua Hùng, ba mẫu chờ duyệt. Cả ba: chỏm đỏ núm vàng, vòng sắt dưới cùng, vành vàng hoa văn, nửa
+ * mặt trời trống đồng mọc trên vành, năm lá nhỏ ít xòe, chóp bậc, tai xoắn.
+ * - Mẫu 0: lá thấp, gần đứng thẳng, lòng lá vàng sẫm nan ngà; vòng sắt mảnh.
+ * - Mẫu 1: lá cao hơn, hơi xòe, lòng lá đỏ son nan vàng; vòng sắt to viền vàng, vành vàng hẹp.
+ * - Mẫu 2: sát ảnh mẫu nhất: vành vàng cao, nửa mặt trời to, lá xòe vừa, lòng lá đồng sẫm nan vàng.
+ */
+function vuaMien(h: HumanRig, mau: number): void {
+  helmet(h, { color: C.red, rim: 0.81, top: { kind: 'knob', color: C.gold, h: 0.06 } });
+  const leaf = { color: C.gold, disc: C.gold, discRim: C.goldDark, discHalf: true, finial: C.gold, curls: C.gold, puff: 0.03 };
+  if (mau === 1) {
+    diadem(h, { color: IRON_DARK, y: 0.8, h: 0.05, puff: 0.024, rim: C.gold, edge: C.gold });
+    diadem(h, { color: C.gold, pattern: true, y: 0.85, h: 0.036, puff: 0.022, gem: C.red });
+    mien(h, { ...leaf, inlay: C.red, bar: C.ember, h: 0.3, w: 0.082, fan: 0.24, around: 0.33, y: 0.875, discR: 0.085, discV: 0.045 });
+  } else if (mau === 2) {
+    diadem(h, { color: IRON_DARK, y: 0.8, h: 0.03, puff: 0.026 });
+    diadem(h, { color: C.gold, pattern: true, y: 0.828, h: 0.075, puff: 0.022, edge: C.goldDark, gem: C.red });
+    mien(h, { ...leaf, inlay: C.bronzeDark, bar: C.gold, h: 0.32, w: 0.088, fan: 0.28, around: 0.36, y: 0.89, discR: 0.105, discV: 0.045 });
+  } else {
+    diadem(h, { color: IRON_DARK, y: 0.802, h: 0.024, puff: 0.026 });
+    diadem(h, { color: C.gold, pattern: true, y: 0.824, h: 0.056, puff: 0.022, edge: C.goldDark, gem: C.red });
+    mien(h, { ...leaf, inlay: C.goldDark, bar: C.cream, h: 0.26, w: 0.08, fan: 0.16, around: 0.3, y: 0.868, discR: 0.08, discV: 0.045 });
+  }
+}
+
+/** Vua Hùng ngồi ngai vàng, bản tĩnh (ngồi yên) để đặt vào mô hình Điện (`mau`: mẫu miện đang chờ duyệt): lưng thẳng, đùi gần nằm ngang, hai tay đặt trên gối. */
+export function bakeVuaHung(mau = 0): THREE.Group {
   const r = new RigBuilder({ ...BASE, ...bigHuman('base', [0, 0, 0], K_VUA) });
-  drawBig(r, [0, 0, 0], K_VUA, drawVuaHung);
+  drawBig(r, [0, 0, 0], K_VUA, (h) => drawVuaHung(h, mau));
   return bakeRig(r.build(), (bones) => {
     const b = bones as unknown as Human;
     beginPose(b, 0);
