@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import { wallRings } from './coLoa';
 import { CH1_LAST } from './campaign';
-import { BUILDINGS, CH2_QUEST_START, CH3_QUEST_START, CH4_QUEST_START, GIFT_IDS, MOVE_FRACTION, STAGES, U_NO, type BuildingType } from './defs';
+import { BUILDINGS, CH2_QUEST_START, CH3_QUEST_START, CH4_QUEST_START, GIFT_IDS, MOVE_FRACTION, ROAD_LIMIT, STAGES, U_NO, isRoad, type BuildingType } from './defs';
 import { canMove, createInitialState, dienLevel, limitOf, move, moveCost, occupancy, place, rotOf, rotateBuilding, uNoCount, usedOf, type GameState } from './game';
-import { applyMau, canApplyMau, inFrame, mauFrom, mauSlots, mauUnlocked, planMau, MAU_IDS, type MauId } from './mau';
+import { applyMau, canApplyMau, inFrame, mauFrom, mauRoadNeed, mauSlots, mauUnlocked, planMau, startMau, MAU_IDS, MAU_ROAD, type MauId } from './mau';
 import { isOpen, khoanhOf } from './khoanh';
 import { DIEN_HOME, GRID, RIVER_END, RIVER_START, touchesRiver } from './map';
 import { DIEN_END, bank, edge, setDien } from './testmap';
@@ -128,14 +128,14 @@ describe('mẫu kinh đô', () => {
 
   it('ở mọi cấp Điện mẫu mở được, mỗi loại trong mẫu đủ chỗ cho số tối đa (kể cả đền, Hội Tết, ba nơi ở)', () => {
     for (const id of MAU_IDS) {
-      const types = [...new Set(mauSlots(id, 8).map((x) => x.type))].filter((t) => t !== 'dien' && !SEGMENT_TYPES.includes(t));
-      expect(types).toEqual(expect.arrayContaining(['doanhTrai', 'traiGiao', 'traiCung', 'chuongVoi', 'ruongNep', 'vuon', 'chuongLon', 'bep', 'denPhuDong']));
+      const types = [...new Set(mauSlots(id, 8).map((x) => x.type))].filter((t) => t !== 'dien' && !isRoad(t) && !SEGMENT_TYPES.includes(t));
+      expect(types).toEqual(expect.arrayContaining(['doanhTrai', 'traiGiao', 'traiCung', 'chuongVoi', 'ruongNep', 'vuon', 'chuongLon', 'bep', 'denPhuDong', 'thoHo']));
       for (const dien of levelsOf(id)) {
         const s = city(dien, chapterFor(id, dien));
         const slots = mauSlots(id, dien);
         for (const t of types) {
           // Đền, Hội Tết mở sau kết chương 1, mà màn cuối chương 1 cần Điện 5: dưới Điện 5 mẫu không chừa chỗ.
-          // Hồ Kim Quy (8×8): mẫu Cổ Loa giữ sông chỉ chừa chỗ từ Điện 6 (`mauFrom`).
+          // Hồ Kim Quy (8×8) ở hai mẫu Cổ Loa, xưởng mộc ở mẫu Cổ Loa giữ sông: chỉ chừa chỗ từ Điện 6 (`mauFrom`).
           const want = (BUILDINGS[t].unlock && dien < STAGES[CH1_LAST - 1].minDien) || dien < mauFrom(id, t) ? 0 : limitOf(s, t);
           expect(slots.filter((x) => x.type === t).length, `${id} Điện ${dien}: ${t}`).toBe(want);
         }
@@ -189,6 +189,110 @@ describe('mẫu kinh đô', () => {
         }
       }
     }
+  });
+
+  it('mẫu trải đường: đúng vật liệu của mẫu, không quá giới hạn đường, mạng đường liền một mối về Điện, công trình nhiều ô nào cũng giáp đường', () => {
+    expect(MAU_ROAD).toEqual({ phongChau: 'duongDat', deBao: 'duongSoi', coLoa: 'duongDa', coLoaSong: 'duongGach' });
+    for (const id of MAU_IDS) {
+      for (const dien of levelsOf(id)) {
+        const note = `${id} Điện ${dien}`;
+        const slots = mauSlots(id, dien);
+        const roads = slots.filter((x) => isRoad(x.type));
+        expect(roads.length, note).toBeGreaterThan(0);
+        expect(roads.every((x) => x.type === MAU_ROAD[id]), note).toBe(true);
+        // Mẫu không cần nhiều đường hơn giới hạn của cấp Điện ấy: không ô nào bị cắt.
+        expect(mauRoadNeed(id, dien), note).toBeLessThanOrEqual(ROAD_LIMIT[dien - 1]);
+        expect(roads.length, note).toBe(mauRoadNeed(id, dien));
+        const road = new Uint8Array(GRID * GRID);
+        const wall = new Uint8Array(GRID * GRID);
+        for (const x of slots) {
+          if (isRoad(x.type)) road[x.z * GRID + x.x] = 1;
+          else if (x.type === 'luy' || x.type === 'thanh' || x.type === 'de') wall[x.z * GRID + x.x] = 1;
+        }
+        // Đi từ đường trước mặt Điện, qua ô đường (và chỗ cổng trên lũy, thành) thì tới mọi ô đường.
+        const seen = new Uint8Array(GRID * GRID);
+        const queue = [DIEN_END * GRID + DIEN_END];
+        expect(road[queue[0]], note).toBe(1);
+        seen[queue[0]] = 1;
+        for (let q = 0; q < queue.length; q++) {
+          for (const n of [queue[q] - 1, queue[q] + 1, queue[q] - GRID, queue[q] + GRID]) {
+            if (seen[n] || (!road[n] && !wall[n])) continue;
+            seen[n] = 1;
+            queue.push(n);
+          }
+        }
+        expect(roads.filter((x) => !seen[x.z * GRID + x.x]), note).toEqual([]);
+        // Bến, làng chài, bến thuyền khơi ngoài đê thì lối là sông.
+        for (const x of slots) {
+          const def = BUILDINGS[x.type];
+          if (def.w === 1 || x.type === 'dien' || def.nearRiver) continue;
+          let front = false;
+          for (let k = 0; k < def.w; k++) {
+            for (const [tx, tz] of [[x.x + k, x.z - 1], [x.x + k, x.z + def.d], [x.x - 1, x.z + k], [x.x + def.w, x.z + k]]) if (road[tz * GRID + tx]) front = true;
+          }
+          expect(front, `${note}: ${x.type} ${x.x},${x.z}`).toBe(true);
+        }
+      }
+    }
+  });
+
+  it('áp mẫu: đường đang có đúng ô thì giữ, lệch ô thì dời vào chỗ đường của mẫu (giữ vật liệu), ô còn thiếu trải bằng đường của mẫu', () => {
+    const s = city(5);
+    const slots = mauSlots('phongChau', 5);
+    const onMau = (x: number, z: number) => slots.some((o) => isRoad(o.type) && o.x === x && o.z === z);
+    // Một ô đường đá nằm sẵn đúng ô đường của mẫu; ba ô đường sỏi nằm lệch ngoài mẫu.
+    const kept = place(s, 'duongDa', DIEN_END, DIEN_END);
+    if (!kept.ok) throw new Error(kept.reason);
+    const strays: number[] = [];
+    for (let x = edge(5, 3); strays.length < 3; x++) {
+      if (onMau(x, edge(5, 3))) continue;
+      const r = place(s, 'duongSoi', x, edge(5, 3));
+      if (!r.ok) throw new Error(r.reason);
+      strays.push(r.value.id);
+    }
+    const plan = planMau(s, 'phongChau');
+    expect(plan.moves.filter((m) => strays.includes(m.id)).length).toBe(3);
+    expect(plan.moves.some((m) => m.id === kept.value.id)).toBe(false);
+    expect(plan.builds.filter((x) => isRoad(x.type)).every((x) => x.type === 'duongDat')).toBe(true);
+    const before = { ...s.resources };
+    expect(applyMau(s, 'phongChau').ok).toBe(true);
+    for (const r of ['gao', 'voOc', 'datDa', 'sat', 'go'] as const) expect(s.resources[r]).toBeCloseTo(before[r] - (plan.cost[r] ?? 0), 5);
+    const roads = s.buildings.filter((b) => isRoad(b.type));
+    // Đủ số ô đường mẫu cần, ô nào cũng nằm trên ô đường của mẫu.
+    expect(roads.length).toBe(mauRoadNeed('phongChau', 5));
+    expect(roads.every((b) => onMau(b.x, b.z))).toBe(true);
+    expect(roads.find((b) => b.id === kept.value.id)).toMatchObject({ type: 'duongDa', x: DIEN_END, z: DIEN_END });
+    expect(roads.filter((b) => strays.includes(b.id)).every((b) => b.type === 'duongSoi')).toBe(true);
+    expect(roads.filter((b) => b.type === 'duongDat').length).toBe(roads.length - 4);
+    expect(usedOf(s, 'duongDat')).toBeLessThanOrEqual(limitOf(s, 'duongDat'));
+    expect(canApplyMau(s, 'phongChau')).toEqual({ ok: false, reason: 'daTheoMau' });
+  });
+
+  it('đường đã đầy giới hạn ở chỗ khác: áp mẫu dời bớt vào mẫu, không trải quá giới hạn; mẫu giao cho thợ thì đường có ngay', () => {
+    const s = city(2);
+    const slots = mauSlots('phongChau', 2);
+    const cells = new Set(slots.filter((o) => o.type !== 'dien').flatMap((o) => Array.from({ length: BUILDINGS[o.type].w ** 2 }, (_, i) => (o.z + Math.floor(i / BUILDINGS[o.type].w)) * GRID + o.x + (i % BUILDINGS[o.type].w))));
+    // Trải kín giới hạn đường ở Điện 2 bằng đường sỏi trên các ô mẫu để trống.
+    let laid = 0;
+    for (let z = edge(2, 2); z < RIVER_START && laid < ROAD_LIMIT[1]; z++) {
+      for (let x = edge(2, 2); x < RIVER_START && laid < ROAD_LIMIT[1]; x++) {
+        if (cells.has(z * GRID + x) || !place(s, 'duongSoi', x, z).ok) continue;
+        laid++;
+      }
+    }
+    expect(laid).toBe(ROAD_LIMIT[1]);
+    const need = mauRoadNeed('phongChau', 2);
+    const res = startMau(s, 'phongChau');
+    expect(res.ok).toBe(true);
+    // Không dựng thêm ô đường nào (đã đầy giới hạn): đường sỏi dời vào đủ các ô đường của mẫu, phần dư đứng yên.
+    if (res.ok) expect(res.value.builds.some((x) => isRoad(x.type))).toBe(false);
+    const roads = s.buildings.filter((b) => isRoad(b.type));
+    expect(roads.length).toBe(ROAD_LIMIT[1]);
+    expect(roads.every((b) => b.type === 'duongSoi')).toBe(true);
+    expect(roads.filter((b) => slots.some((o) => isRoad(o.type) && o.x === b.x && o.z === b.z)).length).toBe(need);
+    // Công trình dựng thêm thì còn chờ thợ, chưa vào kinh đô; không ô đường nào nằm dưới móng sắp dựng.
+    expect(s.buildings.some((b) => b.type === 'ruong')).toBe(false);
+    for (const b of roads) expect(cells.has(b.z * GRID + b.x) && !slots.some((o) => isRoad(o.type) && o.x === b.x && o.z === b.z), `${b.x},${b.z}`).toBe(false);
   });
 
   it('mỗi chương mở một mẫu', () => {
@@ -332,10 +436,10 @@ describe('mẫu kinh đô', () => {
       outer = west;
     }
     expect(outer).toBeLessThan(Math.min(...mauSlots('coLoa', 5).filter((x) => x.type === 'thanh').map((x) => x.x)));
-    // Vòng trong chỉ có Điện và sân.
+    // Vòng trong chỉ có Điện và đường quanh Điện.
     const slots = mauSlots('coLoa', 8);
     const inner = Math.max(...slots.filter((x) => x.type === 'thanh' && x.z < DIEN_HOME && x.x > DIEN_HOME).map((x) => x.z));
-    for (const x of slots) if (x.type !== 'dien' && x.type !== 'thanh') expect(x.x > inner && x.z > inner && x.x < DIEN_END + 2 && x.z < DIEN_END + 2, `${x.type} ${x.x},${x.z}`).toBe(false);
+    for (const x of slots) if (x.type !== 'dien' && x.type !== 'thanh' && !isRoad(x.type)) expect(x.x > inner && x.z > inner && x.x < DIEN_END + 2 && x.z < DIEN_END + 2, `${x.type} ${x.x},${x.z}`).toBe(false);
   });
 
   it('mẫu Cổ Loa giữ sông: ba vòng thành và đê bao giữ lũ bậc 3; 16 ụ nỏ trên vòng ngoài chia đều bốn mặt; lầu nỏ vào chỗ dành riêng; có trại nỏ, Đền Cuông', () => {

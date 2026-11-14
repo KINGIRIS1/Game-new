@@ -78,9 +78,9 @@ describe('định nghĩa đường đi và đồ trang trí', () => {
 describe('trải đường', () => {
   it('bốn loại đường chung một giới hạn số ô theo cấp Điện', () => {
     const s = city(2);
-    // Trải xen kẽ đất và sỏi, mỗi hàng 12 ô, tới khi đầy giới hạn ở Điện cấp 2.
+    // Trải xen kẽ đất và sỏi, mỗi hàng 20 ô, tới khi đầy giới hạn ở Điện cấp 2.
     for (let i = 0; i < ROAD_LIMIT[1]; i++) {
-      const r = place(s, i % 2 ? 'duongSoi' : 'duongDat', edge(2, 1 + (i % 12)), edge(2, 1 + Math.floor(i / 12)));
+      const r = place(s, i % 2 ? 'duongSoi' : 'duongDat', edge(2, 1 + (i % 20)), edge(2, 1 + Math.floor(i / 20)));
       if (!r.ok) throw new Error(r.reason);
     }
     expect(countOf(s, 'duongSoi')).toBe(ROAD_LIMIT[1] / 2);

@@ -956,34 +956,44 @@ Chủ dự án đã chọn qua bốn câu hỏi: Thủy Tinh có cả hai phép 
 
   | Mẫu | Mở khi | Nét chính |
   |---|---|---|
-  | Kinh đô Phong Châu | từ đầu | bến và ruộng dọc hai bờ sông; trục từ Điện về góc rừng có đền Phù Đổng, doanh trại (giữa Điện và góc rừng), trại giáo, hai bên doanh trại là trại cung, chuồng voi, lò rèn; nhà sàn, kho, bếp quanh Điện; bãi đá trên đồi sát lũy; lũy tre liền một hàng ngay trong bìa rừng cả mặt bắc và mặt tây, bẫy chông ở hàng ngoài lũy, chòi canh ngay trong lũy |
-  | Đê bao chống lũ | vào chương 2 | đê liền dải dọc hai bờ sông, cách sông 3 ô, chạy suốt tới bìa đất; bến ngoài đê; chòi canh sát đê trong; doanh trại ở góc đê gần ngã ba sông (kịp ra chặn thủy quái từ cả hai bờ), ba nơi ở quanh đó; đền trên trục về góc rừng; ruộng, ruộng nếp dọc đê; bẫy chông ở bìa rừng |
-  | Thành Cổ Loa | vào chương 3 | ba vòng thành kín quanh Điện; vòng trong chỉ có Điện và sân; nhà sàn, kho, bếp giữa vòng trong và vòng giữa; lò rèn, vườn, chuồng lợn, đền Cổ Loa giữa vòng giữa và vòng ngoài; ngoài vòng ngoài một dãy 4×4 (doanh trại ở góc rừng, đền Phù Đổng, đền Tản Viên, ruộng, ruộng nếp) và một dãy 3×3 (ba nơi ở, bãi đá); từ bản lưu 26 doanh trại 8×8, nơi ở 4×4 vẫn xếp theo các dãy ấy, mẫu tự giãn; đê bao ngoài cùng như mẫu Đê bao |
-  | Cổ Loa giữ sông | vào chương 4 | như mẫu Thành Cổ Loa; thêm 16 ụ nỏ trên vòng ngoài chia đều bốn mặt, ba chỗ dành cho lầu nỏ (hai ở phía sông, một ở góc bắc tây), trại nỏ sát doanh trại, Đền Cuông ngoài vòng ngoài (xem mục PR 3 chương 4) |
+  | Kinh đô Phong Châu | từ đầu | đường đất nện; phố kẻ ô quanh Điện, hai trục từ giữa Điện ra cổng lũy (bắc, tây) và ra đường ven sông (nam, đông); nhà sàn, kho, bếp, vườn, chuồng lợn, nhà thợ hồ xếp dãy dọc phố từ Điện ra; đền Phù Đổng và doanh trại trên đường chéo về góc rừng, trại giáo, trại cung, chuồng voi, lò rèn quanh doanh trại; ruộng dọc đường ven sông trước mặt Điện, bến sát sông; bãi đá, xưởng mộc ngoài cùng phía rừng; lũy tre liền một hàng ngay trong bìa rừng cả mặt bắc và mặt tây, bẫy chông ở hàng ngoài lũy, chòi canh ngay trong lũy |
+  | Đê bao chống lũ | vào chương 2 | đường rải sỏi; đê liền dải dọc hai bờ sông, cách sông 3 ô, chạy suốt tới bìa đất; bến ngoài đê; đường chân đê sát mặt trong đê, chòi canh cạnh đường ấy; đền Tản Viên ở góc ngã ba sông; ruộng, ruộng nếp dọc đường chân đê; đền Phù Đổng, doanh trại trên đường chéo về góc rừng, các nơi ở quanh doanh trại; nhà dân, kho dọc phố gần Điện; bẫy chông ở bìa rừng |
+  | Thành Cổ Loa | vào chương 3 | đường lát đá; ba vòng thành kín quanh Điện; vòng trong chỉ có Điện và đường quanh Điện; kho, nhà sàn, nhà thợ hồ, bếp giữa vòng trong và vòng giữa; vườn, chuồng lợn, lò rèn giữa vòng giữa và vòng ngoài; ngoài vòng ngoài: các đền sát chân thành hai bên trục cổng, doanh trại ở góc rừng trên đường chéo, các nơi ở quanh đó, ruộng dọc đường chân đê và các phố ngoài, Hồ Kim Quy (từ Điện 6), bãi đá, xưởng mộc sát bìa rừng; đê bao ngoài cùng như mẫu Đê bao |
+  | Cổ Loa giữ sông | vào chương 4 | như mẫu Thành Cổ Loa, đường lát gạch; thêm 16 ụ nỏ trên vòng ngoài chia đều bốn mặt, ba chỗ dành cho lầu nỏ (hai ở phía sông, một ở góc bắc tây), trại nỏ cạnh doanh trại, Đền Cuông sát chân thành ngoài (xem mục PR 3 chương 4) |
+
+- **Thiết kế lại có đường** (chủ dự án yêu cầu: "thiết kế lại các mẫu kinh đô, có trải thêm đường kết nối các công trình"; cách làm và các con số dưới đây là tự chọn, chờ chủ dự án duyệt): mẫu dựng một **khung đường** trước rồi chia lô dọc phố, thay cho cách chấm điểm từng chỗ trên đất trống.
+  - Khung đường: đường quanh Điện sát bốn mặt móng (hàng, cột 31 và 42); hai trục giữa Điện (hàng, cột 37) ra cổng lũy, cổng thành và ra đường ven sông; phía rừng cứ 5 ô một phố vòng chữ L (dãy lô sâu 4 ô giữa hai phố); đường ven sông (Phong Châu ở hàng 48 ngay sau dải bến; Đê bao, Cổ Loa ở hàng 47 là đường chân đê). Cổ Loa: phố chạy trong từng khu giữa hai vòng thành.
+  - Chia lô: mỗi phố ngang nửa bắc có hai dãy lô hai bên; từng loại công trình vào dãy lô của khu mình, xếp từng cặp đối xứng qua đường chéo. Phần còn thiếu xếp theo điểm như trước, ba lượt: chỉ nhận chỗ giáp đường và rời nhà khác; rồi bỏ phố chưa dùng, xếp vào đất trống; hết đất thì dựng đè lên phố. Cuối cùng mở ngõ cho công trình chưa giáp đường và bỏ đoạn đường không ai dùng.
+  - **Mọi công trình nhiều ô giáp đường ở ít nhất một mặt** (bến, làng chài, bến thuyền khơi ngoài đê thì lối là sông), và mạng đường liền một mối về đường quanh Điện (qua chỗ cổng trên lũy, thành).
+  - Đất rộng thì hai công trình cách nhau một ô; đất chật (Phong Châu Điện 3, hai mẫu Cổ Loa ở Điện 5–6) thì nhà xếp liền dãy dọc phố.
+  - Vật liệu đường theo mẫu (`MAU_ROAD`): Phong Châu đường đất nện, Đê bao đường rải sỏi, Cổ Loa đường lát đá, Cổ Loa giữ sông đường lát gạch. Số ô đường mẫu cần (`mauRoadNeed`), Điện 1–10: Phong Châu 55, 103, 129, 149, 223, 280, 285, 307, 330, 347; Đê bao (từ Điện 5) 222, 255, 281, 290, 293, 301; Cổ Loa 160, 205, 176, 258, 258, 258; Cổ Loa giữ sông 165, 204, 180, 258, 258, 251. Giới hạn đường nới theo đó (mục Đường đi).
+  - Mẫu nào cũng có chỗ cho nhà thợ hồ (trước không có).
+  - Doanh trại Phong Châu: Điện 2–3 đất phía rừng còn hẹp nên đứng ở góc ngã ba sông; Điện 4 sát góc Điện; từ Điện 5 đứng giữa Điện và góc rừng, sau đền Phù Đổng.
 
 - **Mẫu giãn theo đất** (chủ dự án yêu cầu sau khi có kinh đô lớn): mẫu không vẽ cứng một lần mà dựng lại cho từng cấp Điện, vừa trọn vùng đất đã khai phá ở cấp ấy.
 - **Mẫu và khoảnh tự chọn** (chủ dự án chọn khi gộp khoảnh tự chọn): đất mở theo khoảnh người chơi chọn nên có hình bất kỳ, còn mẫu vẫn dựng trên **khung vuông** neo góc sông theo cấp Điện (cạnh 25, 30, 30, 35, 40, 45, 45, 50, rồi 50; `frameStart`, `inFrame` ở `mau.ts`; trước bản lưu 20 là 20, 25, 25, 30, 35, 40, 40, 45: Điện 10×10 choán chỗ nên khung nới 5 ô, `AREA` ở `khoanh.ts`). Lúc áp mẫu, chỗ nào của mẫu rơi vào khoảnh rừng chưa phát thì bỏ qua (công trình ấy tìm chỗ trống gần nhất như công trình không có chỗ trong mẫu); bản đồ thu nhỏ tô mờ những chỗ ấy và bảng mẫu ghi số khoảnh mẫu còn trong rừng. Khoảnh đã phát ngoài khung thì mẫu không dùng tới.
   - Lũy, đê, bẫy, chòi canh chạy theo bìa đất: nâng Điện, đất rộng ra thì áp lại mẫu, lũy và bẫy dời ra bìa mới, đê nối dài tới bìa mới.
   - Số đoạn theo cấp Điện (từ bản lưu 20, khung nới 5 ô): lũy Phong Châu 47, 57, 57, 67, 77, 87, 87, 97, 97, 97; đê 73 ở Điện 5, 83 ở Điện 6–7, 93 ở Điện 8–10. (Trước đó lũy 37, 47, 47, 57, 67, 77, 77, 87; đê 63, 73, 83.)
-  - Vòng thành Cổ Loa: phía sông ba vòng đứng sát nhau giữa sân Điện và đê; phía rừng vòng trong cách Điện 2 ô, vòng giữa cách vòng trong 3 ô (vừa một dãy nhà 3×3), vòng ngoài chừa ngoài nó 9 ô (bẫy, một dãy 4×4, một dãy 3×3) rồi nới ra theo đất. Thành 204 đoạn ở Điện 5–6, 240 ở Điện 7–8, 248 ở Điện 9, 260 ở Điện 10, trong số tối đa (trước bản lưu 20: 180, 200, 220).
-  - Mỗi cấp mẫu có đúng số chỗ tối đa của mỗi loại ở cấp ấy. Doanh trại một chỗ từ Điện 2 (từ bản lưu 26; trước đó mỗi tướng một trại, `MAU_BARRACKS`). Đền và bốn công trình Hội Tết chỉ có chỗ từ Điện 5, vì chỉ dựng được sau kết chương 1, mà màn cuối chương 1 cần Điện 5. Mẫu Đê bao, Cổ Loa mở theo truyện nên chỉ dùng từ Điện 5; ở cấp thấp hơn mẫu vẫn dựng được nhưng không bảo đảm đủ chỗ.
+  - Vòng thành Cổ Loa (từ bản thiết kế lại có đường): phía sông ba vòng đứng sát nhau giữa đường quanh Điện và đê (hàng 43, 44, 45); phía rừng vòng trong sát đường quanh Điện (hàng 30), vòng giữa cách vòng trong 4 ô (hàng 25: một phố và một dãy nhà 3×3), vòng ngoài cách vòng giữa 7 ô (hàng 17) khi đất và số đoạn thành cho phép, không thì đứng sát vòng giữa (hàng 24, ở Điện 5–6). Thành 212 đoạn ở Điện 5–6, 240 ở Điện 7–10, trong số tối đa. (Trước đó: vòng trong cách Điện 2 ô, vòng giữa cách vòng trong 3 ô; thành 204, 240, 248, 260 đoạn.)
+  - Mỗi cấp mẫu có đúng số chỗ tối đa của mỗi loại ở cấp ấy. Doanh trại một chỗ từ Điện 2 (từ bản lưu 26; trước đó mỗi tướng một trại, `MAU_BARRACKS`). Đền và bốn công trình Hội Tết chỉ có chỗ từ Điện 5, vì chỉ dựng được sau kết chương 1, mà màn cuối chương 1 cần Điện 5. Mẫu Đê bao, Cổ Loa mở theo truyện nên chỉ dùng từ Điện 5; ở cấp thấp hơn mẫu vẫn dựng được nhưng không bảo đảm đủ chỗ. Hai mẫu Cổ Loa chừa chỗ Hồ Kim Quy từ Điện 6, mẫu Cổ Loa giữ sông chừa chỗ xưởng mộc từ Điện 6 (đất Điện 5 có ba vòng thành và đường thì hết chỗ; trong game hai mẫu này chỉ mở khi Điện đã cao hơn).
 - Cách xếp:
   - Mẫu đối xứng qua đường chéo từ góc rừng tới ngã ba sông, cũng là trục màn hình lúc mới mở game, nên nhìn cân hai bên. Mỗi loại xếp từng cặp đối xứng; số lẻ thì cái còn lại đứng trên đường chéo.
-  - Mỗi loại một cách chấm chỗ: gần Điện, dọc sông, trên đồi sát bìa rừng, quanh doanh trại, trên trục chéo; Cổ Loa thêm khu theo số vòng thành bao quanh.
-  - Giữa các công trình nhiều ô chừa lối đi một ô; sát tường được. Đất chật quá (Cổ Loa ở Điện 5) thì một vài khối đứng sát nhau.
-  - Trước Điện (phía nam) và bên phải Điện (phía đông) chừa sân 2 ô. Trước kia để cây nêu, mâm bánh và tướng đứng; nay những thứ ấy ở trong sân chầu của Điện, sân 2 ô giữ làm lối ra.
+  - Từng khu một dãy lô dọc phố (xem Thiết kế lại có đường); phần còn thiếu thì mỗi loại một cách chấm chỗ: gần Điện, dọc sông, trên đồi sát bìa rừng, quanh doanh trại, trên trục chéo; Cổ Loa thêm khu theo số vòng thành bao quanh.
+  - Giữa các công trình nhiều ô chừa lối đi một ô; sát tường được. Đất chật quá thì nhà xếp liền dãy.
+  - Sân 2 ô trước Điện và bên phải Điện (có từ trước) nay là đường quanh Điện.
 - Vòng thành Cổ Loa trong mẫu là vòng kín quanh Điện, không chạm sông: thành không chặn nước như đê, nên vòng nào cắt ngang dải đê để chạm sông sẽ làm nước lọt vào.
 - **Áp mẫu**:
   - mỗi công trình đang có dời vào chỗ cùng loại gần nhất trong mẫu; cái nào đã đứng đúng chỗ thì giữ nguyên;
   - chỗ còn trống trong mẫu thì dựng thêm, tới số tối đa theo cấp Điện hiện tại, nếu loại ấy đã mở;
   - mẫu dùng là mẫu của cấp Điện hiện tại, nên mọi chỗ đều trong vùng đã khai phá;
   - đoạn lũy, đê, thành, bẫy thừa so với mẫu, hay vướng chỗ của mẫu, thì dỡ đi, không trả lại của;
-  - công trình không có chỗ trong mẫu mà vướng thì tìm chỗ trống gần nhất;
+  - công trình không có chỗ trong mẫu mà vướng thì tìm chỗ trống gần nhất, tránh các ô đường của mẫu nếu được;
+  - **đường**: ô đường đang có ở bờ bên này (vật liệu gì cũng được) nằm đúng ô đường của mẫu thì giữ; ô đường khác dời vào ô đường còn trống gần nhất của mẫu, giữ vật liệu, mất 10% giá như dời công trình; mẫu hết ô trống thì ô đường thừa đứng yên, vướng thì dỡ; ô đường của mẫu còn trống thì trải mới bằng vật liệu của mẫu, gần Điện trước, tới giới hạn đường của cấp Điện. Đường trải xong ngay, không qua tốp thợ. Công trình ngoài mẫu đang đứng trên ô đường của mẫu thì đứng yên, đường bỏ ô ấy;
   - không còn chỗ nào thì không áp được.
 - Giá áp mẫu bằng giá dựng phần thêm cộng 10% giá dựng mỗi công trình phải dời. Phải đủ tài nguyên mới áp được. Đang có giặc thì không áp được.
 - Mẫu kinh đô là thẻ thứ tư trong bảng Xây dựng, bày như công trình (chủ dự án yêu cầu tách khỏi thẻ Công trình): ảnh lớn là bản đồ thu nhỏ của mẫu đang chọn, dưới là lưới bốn bản đồ nhỏ để chọn (mẫu chưa mở thì xám, ghi chương mở). Mẫu đang chọn có:
-  - bản đồ thu nhỏ của mẫu ở cấp Điện hiện tại, vẽ từ bìa đất tới sông; rừng chưa phát vẽ mờ ở mép;
-  - số công trình sẽ dời, dựng thêm, dỡ đi;
+  - bản đồ thu nhỏ của mẫu ở cấp Điện hiện tại, vẽ từ bìa đất tới sông, có cả đường (màu theo vật liệu); rừng chưa phát vẽ mờ ở mép;
+  - số công trình sẽ dời, dựng thêm, số ô đường sẽ trải (ô trải mới và ô đường dời vào mẫu), số đoạn dỡ đi;
   - tổng giá;
   - nút Áp mẫu. Bấm hai lần mới áp, cho khỏi lỡ tay;
   - lời tả mẫu, số khoảnh rừng chưa phát mà mẫu có chỗ trong đó.
@@ -996,7 +1006,8 @@ Chủ dự án đã chọn qua bốn câu hỏi: Thủy Tinh có cả hai phép 
   - mẫu Đê bao và Cổ Loa giữ được lũ bậc 3 ở Điện 5–8;
   - mẫu Cổ Loa cho đủ 3 vòng thành ở Điện 5–8, vòng ngoài không co lại khi đất rộng ra;
   - nâng Điện rồi áp lại: lũy ra bìa mới, công trình giữ cấp;
-  - đổi từ mẫu Phong Châu sang Cổ Loa vẫn xếp được.
+  - đổi từ mẫu Phong Châu sang Cổ Loa vẫn xếp được;
+  - đường của mẫu: đúng vật liệu, không quá giới hạn đường, mạng đường liền về Điện, công trình nhiều ô nào cũng giáp đường; áp mẫu giữ ô đường đúng chỗ, dời ô lệch, trải ô thiếu; đường đã đầy giới hạn thì không trải thêm.
 
 ## Đường đi và đồ trang trí (chủ dự án yêu cầu, đã làm)
 
@@ -1019,7 +1030,7 @@ Bảng Xây dựng bày theo kiểu trưng bày (chủ dự án chọn trong ba 
 | Đường lát đá | 🐚 2, 🪨 6 | Điện cấp 3 |
 | Đường lát gạch (gạch nung cùng lò với ngói Cổ Loa) | 🐚 6, 🪨 8 | vào chương 3 |
 
-- Bốn loại chung một giới hạn số ô theo cấp Điện: 60, 90, 120, 160, 200, 240, 280, 280 (`ROAD_LIMIT`).
+- Bốn loại chung một giới hạn số ô theo cấp Điện 1–10: 80, 120, 150, 180, 250, 300, 320, 320, 340, 360 (`ROAD_LIMIT`). Nới khi mẫu kinh đô có đường (trước là 60, 90, 120, 160, 200, 240, 280, 280, 295, 310), cho mẫu nào ở cấp nào cũng trải đủ đường nối mọi công trình.
 - Trải loại khác đè lên ô đường cũ thì đổi vật liệu, trả giá loại mới, không thêm ô (đầy giới hạn vẫn đổi được).
 - Ô đường lát kín ô nên các ô liền nhau thành một lối. Mép ô không giáp ô cùng loại thì có viền: bờ đất có cỏ, viền sỏi to, bó vỉa đá, gạch dựng.
 
@@ -2181,7 +2192,7 @@ Chủ dự án yêu cầu một công trình lớn tên Hồ Kim Quy, nơi thầ
 - Không sợ nước lũ (miếu đứng trên gò giữa hồ).
 - Trận giữ kinh đô ghi hồ còn nguyên lúc trận bắt đầu (`Battle.walls`, `hasKimQuy` ở `game.ts`); máu đầy của tường tính ở `maxHpOf` (`battle.ts`). Bản lưu giữ phiên bản 19: trận cũ không có cờ ấy thì coi như không có hồ.
 - Lạc hầu gợi ý một lần khi mở (`NEW_HINTS`).
-- **Mẫu kinh đô**: mẫu Cổ Loa chừa chỗ hồ ngoài vòng thành ngoài ở mọi cấp Điện; mẫu Cổ Loa giữ sông chừa chỗ từ Điện 6 (Điện 5 không đủ đất, hồ choán chỗ ruộng nếp; `Job` có thêm cấp Điện bắt đầu chừa chỗ, `mauFrom`). Mẫu Phong Châu, Đê bao không có chỗ hồ: áp hai mẫu ấy thì hồ đứng yên nếu không vướng, vướng thì dời ra chỗ trống gần nhất, không còn chỗ thì báo không đủ chỗ như mọi công trình (phát thêm rừng là được).
+- **Mẫu kinh đô**: mẫu Cổ Loa và mẫu Cổ Loa giữ sông chừa chỗ hồ ngoài vòng thành ngoài từ Điện 6 (Điện 5 không đủ đất; mẫu Cổ Loa trước chừa ở mọi cấp, đổi khi thiết kế lại mẫu có đường; `Job` có thêm cấp Điện bắt đầu chừa chỗ, `mauFrom`). Mẫu Phong Châu, Đê bao không có chỗ hồ: áp hai mẫu ấy thì hồ đứng yên nếu không vướng, vướng thì dời ra chỗ trống gần nhất, không còn chỗ thì báo không đủ chỗ như mọi công trình (phát thêm rừng là được).
 - Người chơi mô phỏng không dựng hồ, nên nhịp lên Điện và sổ thu chi giữ nguyên.
 - **Dáng** (`src/render/congTrinh/hoKimQuy.ts`, bản vẽ ở `docs/bo-cuc-cong-trinh.md`): hồ bờ kè đá, sen nở ven bờ, lau sậy bờ sau; gò giữa hồ, miếu thờ thần mái thuyền lợp ngói viền đồng vàng, chim Lạc hai đầu nóc, đỉnh đồng ba chân trước cửa; cầu gỗ son cong vồng ra bờ trước; lối đá ra cổng hai cột chim Lạc; hai trống đồng trên giá, cờ đỏ cờ vàng; cây đa cổ thụ góc sau trái, bụi tre góc sau phải. Một thầy cúng đứng khấn trước miếu. **Rùa Vàng bơi** vòng quanh gò, có lúc lặn nửa mai; có hồ thì Rùa Vàng thôi bơi trên sông. Hồ hư thì miếu bốc khói, Rùa Vàng lặn mất (mặt hồ không nghiêng như công trình khác).
 - Test ở `hoKimQuy.test.ts`: móng, giới hạn, mốc mở, gợi ý, máu tường có và không có hồ, cờ của trận giữ kinh đô, yêu tinh phá thành chậm hơn, lũ, mẫu kinh đô.
@@ -2704,17 +2715,20 @@ Chủ dự án yêu cầu lập phương án PvP giữa các người chơi: **c
 
      | Điện | 1–5 | 6 | 7 | 8 | 9 | 10 |
      |---|---|---|---|---|---|---|
-     | `hpMul` | 3 | 3 | 4 | 6 | 6 | 10 |
+     | `hpMul` | 2 | 3 | 4 | 6 | 6 | 10 |
      | `siege` | 2 | 1 | 1 | 4 | 4 | 4 |
+
+     `hpMul` ở Điện 5 hạ từ 3 xuống 2 khi thiết kế lại mẫu kinh đô có đường (tự chọn, chờ chủ dự án duyệt): mẫu Phong Châu mới xếp nhà thành dãy dọc phố, quân đánh vào tới Điện nhanh hơn, kinh đô máy Điện 5 dễ vỡ hơn (đo 18 trận: đủ quân trung bình 2,2 sao, nửa quân 0,9 sao; mẫu cũ 1,7 và 0,5). Người bớt bền thì chòi canh đỡ được nhiều hơn: với hệ số 2, 18 trận ra 1,8 và 0,3 sao.
 
      Số không tăng đều vì mỗi cấp kinh đô máy theo một mẫu khác (Điện 6 Đê bao không có vòng thành; Điện 7 có hai vòng thành Cổ Loa; Điện 8 thêm 16 ụ nỏ, bốn cổng).
    - **Chuẩn cân bằng**: trận rung theo chỗ đứng ban đầu và phía tràn vào (bắc, tây cho kết quả khác nhau dù mẫu đối xứng), nên chấm theo trung bình sáu trận (ba hạt giống, hai phía), người đánh cùng cấp Điện kinh đô máy, binh khí như kinh đô máy, không Đền, bấm như người chơi thường, có tướng của cấp ấy: đủ 38 chỗ quân mẫu trung bình 1–2 sao, nửa quân dưới nửa sao. Số đo (bắc ba hạt rồi tây ba hạt):
-     - Điện 5: đủ quân 3,1,1,1,3,1 sao; nửa quân 0,0,1,1,0,0.
-     - Điện 6: đủ quân 2 sao cả sáu trận; nửa quân 0.
-     - Điện 7: đủ quân 1 sao cả sáu trận; nửa quân 0.
-     - Điện 8: đủ quân 2,1,2,2,0,1; nửa quân 0.
-     - Điện 9: đủ quân 1,1,1,1,1,2; nửa quân 0.
-     - Điện 10: đủ quân 1 sao cả sáu trận; **nửa quân vẫn hay được 1 sao** (1,1,1,0,0,1): Hai Bà hai tướng máu nhân 10 gần như không ngã, nên quân ít quân nhiều không khác mấy. Giới hạn hệ số máu của tướng thì đủ quân cũng thua hết, nên để vậy, chờ chủ dự án chơi thử.
+     - Điện 5: đủ quân 1,1,3,1,1,1 sao; nửa quân 1,0,0,0,0,0.
+     - Điện 6: đủ quân 2 sao cả sáu trận; nửa quân 1,0,1,1,1,1 (quá chuẩn; mẫu cũ đo lại ngay trước khi đổi đã là 3,2,2,3,3,3 và 2,2,1,2,2,2, lệch từ một thay đổi trước đó; chưa chỉnh, test không canh cấp này).
+     - Điện 7: đủ quân 2 sao cả sáu trận; nửa quân 0,1,0,0,1,0.
+     - Điện 8: đủ quân 2,2,2,1,2,2; nửa quân 0.
+     - Điện 9: đủ quân 2,1,1,1,1,2; nửa quân 0.
+     - Điện 10: đủ quân 2,2,3,2,2,2; nửa quân 0,0,1,0,0,0.
+     Số trên đo lại với mẫu kinh đô có đường (kinh đô máy dựng từ mẫu nên bố cục đổi theo; đường không vào bản chụp). Số cũ: Điện 5 đủ quân 3,1,1,1,3,1, nửa quân 0,0,1,1,0,0; Điện 6 đủ quân 2, nửa quân 0; Điện 7 đủ quân 1, nửa quân 0; Điện 8 đủ quân 2,1,2,2,0,1; Điện 9 đủ quân 1,1,1,1,1,2; Điện 10 đủ quân 1, nửa quân 1,1,1,0,0,1.
      `dauThanh.test.ts` canh Điện 5, 7, 8.
    - **Kinh đô máy** (`botSnapshot`): dựng thẳng từ mẫu kinh đô của cấp ấy (Điện 5 Phong Châu, 6 Đê bao, 7 Cổ Loa, 8–10 Cổ Loa giữ sông), mọi công trình ở cấp cao nhất Điện cho, cổng thành ở chỗ cổng của mẫu từ chương 3, ụ nỏ từ Điện 8, lính giữ thành đủ `GUARD_CAP` ở doanh trại theo tỉ lệ quân mẫu, binh khí 0, 1, 2, 2, 3, 3 bậc ở Điện 5–10, không tướng, của bằng 60% sức chứa kho.
    - **Bản chụp** (`makeSnapshot`, mã `TDVS1:`): công trình bờ bên này trừ cầu, đường, trang trí, luôn còn nguyên; lính giữ thành tính sẵn từ bố trí giữ kinh đô (bỏ phần đóng đồn biên bên kia sông; từ bản lưu 26 là danh sách giữ kinh đô của một doanh trại, nữ tướng ở trại cộng cho đúng binh chủng của mình), vào trận thì rải trong khuôn viên doanh trại, không ra từ cổng gần quân đánh như khi giữ kinh đô (thử ra ở cổng thì lính giữ thành gặp quân đánh trước khi tháp kịp đỡ: kinh đô máy Điện 5, nửa quân được trung bình 1,7 sao, quá chuẩn dưới nửa sao); tướng giữ thành (kể cả đang nghỉ) đứng trước Điện, không dùng kỹ năng. Kiểm bản chụp sửa tay (`validateSnapshot`) như đã định.

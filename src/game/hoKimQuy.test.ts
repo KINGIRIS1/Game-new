@@ -136,9 +136,9 @@ describe('Hồ Kim Quy', () => {
     expect(floodToleranceOf('hoKimQuy')).toBeGreaterThanOrEqual(99);
   });
 
-  it('mẫu Cổ Loa chừa chỗ hồ ngoài vòng thành ngoài từ Điện 5, mẫu Cổ Loa giữ sông từ Điện 6; áp mẫu thì dựng hồ khi đã mở', () => {
+  it('mẫu Cổ Loa, mẫu Cổ Loa giữ sông chừa chỗ hồ ngoài vòng thành ngoài từ Điện 6; áp mẫu thì dựng hồ khi đã mở', () => {
     const lakes = (id: 'phongChau' | 'deBao' | 'coLoa' | 'coLoaSong') => [5, 6, 7, 8, 9, 10].map((l) => mauSlots(id, l).filter((x) => x.type === 'hoKimQuy').length);
-    expect(lakes('coLoa')).toEqual([1, 1, 1, 1, 1, 1]);
+    expect(lakes('coLoa')).toEqual([0, 1, 1, 1, 1, 1]);
     expect(lakes('coLoaSong')).toEqual([0, 1, 1, 1, 1, 1]);
     expect(lakes('phongChau')).toEqual([0, 0, 0, 0, 0, 0]);
     const before = ch3(YEU_LAST - 1);

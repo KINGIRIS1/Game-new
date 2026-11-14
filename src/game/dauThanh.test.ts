@@ -4,7 +4,7 @@
 
 import { describe, expect, it } from 'vitest';
 import { skillReady, type HeroSetup, type PvpAttack } from './battle';
-import { BUILDINGS, DAU_THANH, GUARD_CAP, SKILL_IDS, UNITS, type SkillId } from './defs';
+import { BUILDINGS, DAU_THANH, GUARD_CAP, SKILL_IDS, UNITS, isDecor, type SkillId } from './defs';
 import { armySpace, type Army } from './doanhTrai';
 import {
   beginPvp,
@@ -170,6 +170,8 @@ describe('bản chụp kinh đô', () => {
       expect(space, `Điện ${dien}`).toBeGreaterThan(GUARD_CAP[dien - 1] - 3);
       expect(snap.buildings.some((b) => b.type === 'choiCanh'), `Điện ${dien}`).toBe(true);
       expect(snap.buildings.some((b) => b.type === 'kho'), `Điện ${dien}`).toBe(true);
+      // Đường của mẫu kinh đô chỉ để nhìn: bản chụp không ghi.
+      expect(snap.buildings.some((b) => isDecor(b.type)), `Điện ${dien}`).toBe(false);
     }
   });
 });

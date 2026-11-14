@@ -144,7 +144,7 @@ export const MOVE_FRACTION = 0.1;
 export const DIEN_CHAPTER: Partial<Record<number, 2 | 3 | 4 | 5>> = { 6: 2, 7: 3, 8: 4, 10: 5 };
 
 /** Tổng số ô đường (cả bốn loại) được trải, theo cấp Điện. */
-export const ROAD_LIMIT = [60, 90, 120, 160, 200, 240, 280, 280, 295, 310];
+export const ROAD_LIMIT = [80, 120, 150, 180, 250, 300, 320, 320, 340, 360];
 export const ROAD_TYPES: BuildingType[] = ['duongDat', 'duongSoi', 'duongDa', 'duongGach'];
 export const DECOR_TYPES: BuildingType[] = ['cayDa', 'gieng', 'ao', 'sanTrong', 'hoa', 'co', 'cau', 'rom'];
 /**
@@ -2216,7 +2216,7 @@ export const DAU_THANH = {
   trophyMin: 10,
   trophyMax: 40,
   botStock: 0.6,
-  hpMul: [3, 3, 3, 3, 3, 3, 4, 6, 6, 10],
+  hpMul: [2, 2, 2, 2, 2, 3, 4, 6, 6, 10],
   siege: [2, 2, 2, 2, 2, 1, 1, 4, 4, 4],
   /** Đánh kinh đô máy (khi chưa đủ người chơi): chiến công được hay mất nhân chừng này, không cướp của thật. */
   botTrophy: 0.2,

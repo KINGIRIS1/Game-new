@@ -351,6 +351,8 @@ export function botSnapshot(dien: number): Snapshot {
   let gates = 0;
   let uNo = 0;
   for (const slot of mauSlots(botMau(dien), dien)) {
+    // Đường của mẫu chỉ để nhìn: bản chụp không ghi đường, đồ trang trí.
+    if (isDecor(slot.type)) continue;
     let type = slot.type;
     if (slot.cong && chapter >= 3 && gates < (BUILDINGS.congThanh.limit[lv] ?? 0)) {
       type = 'congThanh';
