@@ -8,6 +8,8 @@ import { initialCaoLo } from './caoLo';
 import { initialCayDa, updateCayDa, type CayDaState } from './cayDa';
 import { bridgeFit, bridgeheadCells, cutOff, farFactor, farRaidBank, fortFit, initialBenKia, landRaidSide, openBridgehead, updateBenKia, villagesOutput, type BenKiaState } from './benKia';
 import { huanTiers, initialThuThach } from './thuThach';
+import { initialTrangBi, roiDo, type RoiDo, type TrangBiState } from './trangBi';
+import { chapterOf } from './manVao';
 import { advanceXay, initialXay, isBusy, nextXayEvent, pendingBuilding, pendingBuildings, pendingCount, pendingOf, type XayState } from './xay';
 import { inChapter4 } from './chuong4';
 import { chuong5Won, inChapter5, initialHaiBa, maVienCame } from './chuong5';
@@ -128,6 +130,8 @@ export interface RaidResult {
   stolen: Resources;
   /** Ai đã đánh kinh đô đợt này. */
   foe: Foe;
+  /** Món đồ rơi ra sau trận thắng (`trangBi.ts`). */
+  do?: RoiDo;
 }
 
 export type { Foe };
@@ -187,6 +191,8 @@ export interface StageResult {
   challenge?: { kind: ChallengeKind; huan: number };
   /** Trận đánh đồn giặc bên kia sông (khoảnh có đồn), `stage` khi ấy là 0. */
   camp?: number;
+  /** Món đồ rơi ra sau trận thắng (`trangBi.ts`). */
+  do?: RoiDo;
 }
 
 export interface CampaignState {
@@ -322,9 +328,10 @@ export interface Merchant {
  * Phiên bản bản lưu hiện tại (11: kinh đô lớn; 12: khoảnh tự chọn; 13: lính nỏ, ụ nỏ; 14: Cao Lỗ, vua xuống biển;
  * 15: thử thách, huân công; 16: gỗ, tài nguyên thứ năm, và gợi ý của Lạc hầu về công trình mới; 17: cây, đá mọc trên
  * ô trống; 18: lưới nới qua sông, 76×76; 20: Điện 10×10; 21: chương 5, quân Hán; 22: Hai Bà Trưng; 23: thủy quân Hán,
- * lâu thuyền; 24: nữ tướng, thử thách màn 33–40; 25: thời gian xây, tốp thợ, nhà thợ hồ, đố sử).
+ * lâu thuyền; 24: nữ tướng, thử thách màn 33–40; 25: thời gian xây, tốp thợ, nhà thợ hồ, đố sử; 26: một doanh trại lớn;
+ * 27: trang bị tướng).
  */
-export const SAVE_VERSION = 26;
+export const SAVE_VERSION = 27;
 
 export interface GameState {
   version: typeof SAVE_VERSION;
@@ -372,6 +379,8 @@ export interface GameState {
   benKia: BenKiaState;
   /** Việc xây đang làm, tốp thợ, câu đố sử vừa hỏi (`xay.ts`). */
   xay: XayState;
+  /** Kho đồ của các tướng (`trangBi.ts`). */
+  trangBi: TrangBiState;
   /** Vừa nâng từ kinh đô nhỏ: kinh đô đã dựng lại theo mẫu, trả lại chừng này của. Giao diện báo một lần rồi xóa. */
   relaid?: { refund: Cost; dropped: number; dien?: boolean; trai?: boolean };
   /** Đấu thành trực tuyến (`dauThat.ts`): chỉ có khi đã bấm Tham gia. Trường tùy chọn nên không lên phiên bản lưu. */
@@ -474,7 +483,11 @@ export type FailReason =
   | 'khongXoayDuoc'
   | 'hetTho'
   | 'dangXay'
-  | 'daHoiDu';
+  | 'daHoiDu'
+  | 'khongCoDo'
+  | 'doDaKhoa'
+  | 'doDangMac'
+  | 'canLoRenNguyen';
 
 export type Result<T = undefined> = { ok: true; value: T } | { ok: false; reason: FailReason };
 
@@ -550,6 +563,7 @@ export function createInitialState(now: number): GameState {
     cayDa: initialCayDa(),
     benKia: initialBenKia(),
     xay: initialXay(),
+    trangBi: initialTrangBi(),
   };
   levelFootprint(state, dien, footprintTop(state, 'dien', dien.x, dien.z));
   return state;
@@ -1753,7 +1767,12 @@ function finishRaid(state: GameState): void {
     drowned: [...battle.drowned],
     stolen: { ...battle.stolen },
   };
-  if (won) raid.won += 1;
+  if (won) {
+    raid.won += 1;
+    // Giữ được kinh đô thì có khi rơi đồ cho tướng (`trangBi.ts`), cấp đồ theo chương đang chơi.
+    const roi = roiDo(state, 'giu', chapterOf(state));
+    if (roi) raid.lastResult.do = roi;
+  }
   if (flood) {
     raid.floods += 1;
     // Phù sa: ruộng được bồi ở mùa lũ này giữ tới hết mùa lũ sau; ruộng khác mất phù sa đã có.

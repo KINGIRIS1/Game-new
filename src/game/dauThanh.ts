@@ -121,7 +121,14 @@ const QUEST_OF: Record<Chapter, number> = { 1: 0, 2: CH2_QUEST_START, 3: CH3_QUE
 /** Tướng giữ thành: như tướng ra trận giữ kinh đô ở chương hiện tại, kể cả tướng đang nghỉ (bản chụp dùng lâu). */
 function defendHeroes(state: GameState): HeroSetup[] {
   const rested = { ...state, clock: Number.MAX_SAFE_INTEGER };
-  return heroesFor(rested, chapterOf(state)).map((h) => ({ ...h }));
+  return heroesFor(rested, chapterOf(state)).map(boDo);
+}
+
+/** Đấu thành chưa tính trang bị (máy chủ chưa kiểm đồ): tướng vào Đấu thành bỏ phần đồ đang mặc. */
+function boDo(h: HeroSetup): HeroSetup {
+  const out = { ...h };
+  delete out.trangBi;
+  return out;
 }
 
 /** Chụp kinh đô của người chơi. */
@@ -426,7 +433,7 @@ export interface PvpRun {
 export function attackFrom(state: GameState, army: Army, side: 'bac' | 'tay', seed: number): PvpAttack {
   return {
     army: { ...army },
-    heroes: heroesFor(state, chapterOf(state)),
+    heroes: heroesFor(state, chapterOf(state)).map(boDo),
     side,
     seed,
     bonus: troopBonus(state),
