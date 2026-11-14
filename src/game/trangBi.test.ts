@@ -11,6 +11,7 @@ import {
   BO_HAI,
   CAP_DO_GIA,
   CHI_SO_TRAN,
+  CUONG_HOA_GIA,
   CUONG_HOA_TRAN,
   DEFAULT_ROWS,
   FIELD,
@@ -178,15 +179,16 @@ describe('mặc, tháo, cường hóa, phân giải', () => {
     const s = base();
     const m = them(s, { pham: 2, cap: 3, o: 'giap', chinh: 'mau', phu: [{ k: 'danh', nac: 2 }] });
     const goc = chinhOf(m);
-    expect(giaCuongHoa(m)).toEqual({ gao: 200 * 4, datDa: 120 * 4, sat: 30 * 4 });
+    const g = CUONG_HOA_GIA;
+    expect(giaCuongHoa(m)).toEqual({ gao: g.gao * 4, datDa: g.voOcDatDa * 4, sat: g.sat * 4 });
     const gao = s.resources.gao;
     for (let n = 1; n <= CUONG_HOA_TRAN[2]; n++) expect(cuongHoa(s, m.id)).toEqual({ ok: true, value: n });
     expect(chinhOf(m)).toBeCloseTo(goc * 1.6, 9);
-    expect(s.resources.gao).toBe(gao - 200 * 4 * 21);
+    expect(s.resources.gao).toBe(gao - g.gao * 4 * 21);
     expect(canCuongHoa(s, m.id)).toEqual({ ok: false, reason: 'capToiDa' });
     const v = them(s, { pham: 4, cuong: 5 });
-    expect(giaCuongHoa(v)!.go).toBe(50 * 6 * CAP_DO_GIA[1]);
-    expect(giaCuongHoa(v)!.voOc).toBe(120 * 6);
+    expect(giaCuongHoa(v)!.go).toBe(g.go * 6 * CAP_DO_GIA[1]);
+    expect(giaCuongHoa(v)!.voOc).toBe(g.voOcDatDa * 6);
     s.buildings.find((b) => b.type === 'loRen')!.damaged = true;
     expect(canCuongHoa(s, v.id)).toEqual({ ok: false, reason: 'canLoRenNguyen' });
     s.buildings.find((b) => b.type === 'loRen')!.damaged = false;
@@ -197,7 +199,7 @@ describe('mặc, tháo, cường hóa, phân giải', () => {
   it('phân giải ra sắt, cộng lại nửa sắt đã cường hóa; món khóa, món đang mặc không phân giải được', () => {
     const s = base();
     const a = them(s, { pham: 3, cap: 2, cuong: 2 });
-    expect(satPhanGiai(a)).toBe(PHAN_GIAI_SAT[3] * 2 + 0.5 * (30 * 2 * 1 + 30 * 2 * 2));
+    expect(satPhanGiai(a)).toBe(PHAN_GIAI_SAT[3] * 2 + 0.5 * (CUONG_HOA_GIA.sat * 2 * 1 + CUONG_HOA_GIA.sat * 2 * 2));
     expect(khoaDo(s, a.id)).toEqual({ ok: true, value: true });
     expect(phanGiai(s, a.id)).toEqual({ ok: false, reason: 'doDaKhoa' });
     expect(khoaDo(s, a.id)).toEqual({ ok: true, value: false });

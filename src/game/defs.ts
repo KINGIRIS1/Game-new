@@ -2304,8 +2304,12 @@ export const CAP_DO_HE = [0, 1, 1.3, 1.6, 1.9, 2.2];
 export const CUONG_HOA_NAC = 0.1;
 /** Nấc cường hóa cao nhất theo phẩm. */
 export const CUONG_HOA_TRAN = [0, 4, 6, 8, 10];
-/** Giá nấc thứ n: gạo, vỏ ốc (vũ khí, phục sức) hay đất đá (giáp, bảo vật), sắt nhân n; gỗ từ nấc `goTu`. */
-export const CUONG_HOA_GIA = { gao: 200, voOcDatDa: 120, sat: 30, go: 50, goTu: 6 };
+/**
+ * Giá nấc thứ n: gạo, vỏ ốc (vũ khí, phục sức) hay đất đá (giáp, bảo vật), sắt nhân n; gỗ từ nấc `goTu`. Đo bằng
+ * `node scripts/kinh-te.mjs`: bốn món một tướng lên +10 ở cấp đồ 5 hết chừng 3 giờ của dư sau Điện 10 (sắt, gỗ dồn
+ * lại chừng 13, 14 nghìn mỗi giờ; gạo tràn chừng 120 nghìn mỗi giờ).
+ */
+export const CUONG_HOA_GIA = { gao: 150, voOcDatDa: 120, sat: 18, go: 25, goTu: 6 };
 /** Giá cường hóa, sắt phân giải nhân theo cấp đồ. */
 export const CAP_DO_GIA = [0, 1, 2, 4, 7, 10];
 /** Phân giải một món ra chừng này sắt (theo phẩm, nhân `CAP_DO_GIA`), cộng lại `PHAN_GIAI_HOAN` sắt đã cường hóa. */

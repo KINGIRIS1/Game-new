@@ -3373,7 +3373,7 @@ Mỗi lần rơi tối đa một món:
 ### Cường hóa, phân giải, lắp tháo
 
 - **Cường hóa** ở lò rèn còn nguyên, xong ngay. Từ +1 tới trần theo phẩm: Thường +4, Tốt +6, Quý +8, Huyền thoại +10. Mỗi nấc +10% chỉ số chính (+10 là gấp đôi); chỉ số phụ không đổi.
-- Giá nấc thứ n (dự kiến): gạo 200n, vỏ ốc (vũ khí, phục sức) hay đất đá (giáp, bảo vật) 120n, sắt 30n, gỗ 50n từ +6; nhân hệ số cấp đồ 1, 2, 4, 7, 10. Chốt bằng skill `ra-kinh-te`, mục tiêu bốn món một tướng lên +10 ở cấp đồ 5 hết chừng 2–3 giờ của dư sau Điện 10.
+- Giá nấc thứ n (đã chốt ở PR 1, `CUONG_HOA_GIA`): gạo 150n, vỏ ốc (vũ khí, phục sức) hay đất đá (giáp, bảo vật) 120n, sắt 18n, gỗ 25n từ +6; nhân hệ số cấp đồ 1, 2, 4, 7, 10. Đo bằng `node scripts/kinh-te.mjs`: sau Điện 10 mỗi giờ gạo tràn kho chừng 123 nghìn, vỏ ốc 69 nghìn, đất đá 27 nghìn (còn 62 nghìn đang tiêu cho nâng cấp), sắt dồn thêm chừng 13 nghìn, gỗ 14 nghìn. Bốn món một tướng lên +10 ở cấp đồ 5 hết 330 nghìn gạo, 132 nghìn vỏ ốc, 132 nghìn đất đá, 40 nghìn sắt, 40 nghìn gỗ: chừng 3 giờ của dư (giá dự kiến ban đầu 200n, 30n sắt, 50n gỗ thì mất 5–6 giờ vì sắt, gỗ).
 - **Phân giải** ra sắt theo phẩm và cấp đồ, cộng lại 50% sắt đã tốn cường hóa. Có nút phân giải hàng loạt món Thường, Tốt chưa khóa, chưa mặc.
 - **Lắp tháo**: mặc món đang ở tướng khác thì món ấy tự tháo khỏi tướng kia. Mỗi tướng một món mỗi ô.
 
