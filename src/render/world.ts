@@ -10,7 +10,7 @@ import { advLook, inChapter3, ruaVangCame, type AdvLook } from '../game/coLoa';
 import { inChapter4 } from '../game/chuong4';
 import { doanhCount, gateToward, generals, heroPost } from '../game/doanhTrai';
 import { nuTuongList } from '../game/nuTuong';
-import { dienLevel, occupancy, stairWall, upcomingBoats, type Building, type GameState } from '../game/game';
+import { dienLevel, occupancy, stairWall, upcomingBoats, upgradeCostOf, type Building, type GameState } from '../game/game';
 import { giongLook, type GiongLook } from '../game/giong';
 import { KHOANH_N, khoanhOf, khoanhOrigin, openMask, openStart, openable } from '../game/khoanh';
 import { FAR_PLOTS, benKiaOpen, bridgeEnds, bridgeTo, plotAt, plotOf, plotOrigin, poiAt, poiPlots, type Dat } from '../game/benKia';
@@ -72,7 +72,7 @@ import {
   type WallSpot,
 } from './models';
 import { makeWorker, type Job } from './people';
-import { HANG_OF, chuyenGanh, duongNguoi, tuyenGanh, viTri, type DuongNguoi, type Hang, type TuyenGanh, type ViTri } from './ganhHang';
+import { HANG_OF, chuyenGanh, coHang, duongNguoi, tuyenGanh, tuyenXay, vatLieu, viTri, viecBep, type ChieuGanh, type DuongNguoi, type Hang, type TuyenGanh, type ViTri } from './ganhHang';
 import { ganhLen, tayGanh } from './doGanh';
 import type { Human } from './body';
 import type { Lot } from './lot';
@@ -297,13 +297,43 @@ interface GanhRa {
   at?: ViTri;
 }
 
-/** Tuyến gánh của một công trình đang vẽ (`syncGanh`) và những người đang đi. */
+/** Tuyến gánh của một công trình (hay giàn giáo) đang vẽ (`syncGanh`) và những người đang đi. */
 interface GanhView {
   key: string;
   tuyen: TuyenGanh;
   seed: number;
   hang: Hang;
+  /** Mang hàng lượt đi (`di`) hay lượt về (`ve`: thợ vác vật liệu, người bếp gùi nguyên liệu). */
+  chieu: ChieuGanh;
   ra: Map<WorkerView, GanhRa>;
+}
+
+/** Số liệu người đi gánh của một chỗ (`World.ganhInfo`). */
+interface GanhInfo {
+  id: number;
+  type: BuildingType | 'xay';
+  hang: Hang;
+  chieu: ChieuGanh;
+  D: number;
+  n: number;
+  /** Hai đầu tuyến: lối ra của chỗ ấy và lối vào nơi nhận (tọa độ lưới). */
+  a: { x: number; z: number };
+  b: { x: number; z: number };
+  ra: { x: number; z: number; mang: boolean; dung: boolean; coHang: boolean; visible: boolean }[];
+}
+
+/** Việc gánh mới của một chỗ: tuyến, hàng, chiều. */
+interface ViecGanh {
+  tuyen: TuyenGanh;
+  hang: Hang;
+  chieu: ChieuGanh;
+}
+
+/** Chỗ có người đi gánh: công trình, hay giàn giáo quanh công trình đang xây. */
+interface ChoGanh {
+  group: THREE.Group;
+  people: WorkerView[];
+  ganh?: GanhView;
 }
 
 interface BuildingView {
@@ -340,6 +370,8 @@ interface SiteView {
   /** Chỗ và cỡ móng đang vẽ: đổi thì dựng lại. */
   key: string;
   people: WorkerView[];
+  /** Hai thợ thay phiên vác vật liệu từ kho, Điện gần nhất về (`syncGanh`). */
+  ganh?: GanhView;
 }
 
 /** Loại tường vẽ theo lô (lũy, đê, thành): đang đắp thì vẽ cọc mốc trên ô, không dựng giàn giáo. */
@@ -1153,7 +1185,7 @@ export class World {
       }
     }
     this.syncSites(state, pend);
-    this.syncGanh(state);
+    this.syncGanh(state, pend);
 
     this.syncMerchant(state);
     this.syncSeaBoats(state);
@@ -1888,6 +1920,7 @@ export class World {
   }
 
   private dropSite(site: SiteView): void {
+    this.veHetGanh(site, true);
     this.buildingsRoot.remove(site.group);
     disposeModel(site.group);
   }
@@ -2982,34 +3015,65 @@ export class World {
 
   /** Động tác theo nghề (people.ts): cúi bổ cuốc, bổ đá, quai búa, đi qua đi lại mang hàng, đứng gác nhìn quanh. */
   /**
-   * Tuyến gánh của từng công trình đang vẽ theo luật (`tuyenGanh`). Tuyến đổi (dựng, dỡ, dời công trình, trải đường,
-   * kho hư) thì người đang đi về chỗ làm rồi đi lại theo tuyến mới.
+   * Tuyến gánh của từng công trình đang vẽ theo luật (`tuyenGanh`), việc của người bếp (`viecBep`: gùi nguyên liệu từ
+   * kho, mùa Tết đội mâm bánh lên Điện) và thợ vác vật liệu ở giàn giáo (`tuyenXay`). Tuyến đổi (dựng, dỡ, dời công
+   * trình, trải đường, kho hư, Tết mở) thì người đang đi về chỗ làm rồi đi lại theo tuyến mới.
    */
-  private syncGanh(state: GameState): void {
+  private syncGanh(state: GameState, pend: Building[]): void {
     const byId = new Map(state.buildings.map((b) => [b.id, b]));
     for (const [id, v] of this.views) {
-      const b = v.dung || v.damaged || !v.people.length || !HANG_OF[v.type] ? undefined : byId.get(id);
-      const tuyen = b ? tuyenGanh(state, b, GANH_LOTS) : null;
-      const key = tuyen ? `${tuyen.noi}:${tuyen.D.toFixed(2)}:${tuyen.pts.map((p) => `${p.x.toFixed(2)},${p.z.toFixed(2)}`).join(';')}` : '';
-      if ((v.ganh?.key ?? '') === key) continue;
-      this.veHetGanh(v, false);
-      v.ganh = tuyen ? { key, tuyen, seed: hash01(id * 31 + 7), hang: HANG_OF[v.type]!, ra: new Map() } : undefined;
+      const b = v.dung || v.damaged || !v.people.length ? undefined : byId.get(id);
+      let viec: ViecGanh | null = null;
+      if (b?.type === 'bep') viec = viecBep(state, b, GANH_LOTS);
+      else if (b && HANG_OF[b.type]) {
+        const tuyen = tuyenGanh(state, b, GANH_LOTS);
+        viec = tuyen && { tuyen, hang: HANG_OF[b.type]!, chieu: 'di' };
+      }
+      this.datGanh(v, id, viec);
+    }
+    // Giàn giáo: công trình đang dựng mới (giá dựng) hay đang nâng (giá cấp tới).
+    const moi = new Map(pend.map((b) => [b.id, b]));
+    for (const [id, site] of this.sites) {
+      const b = moi.get(id) ?? byId.get(id);
+      const tuyen = b && site.people.length ? tuyenXay(state, b, GANH_LOTS) : null;
+      const cost = b ? (moi.has(id) ? BUILDINGS[b.type].buildCost : upgradeCostOf(b)) : undefined;
+      this.datGanh(site, id, tuyen && { tuyen, hang: vatLieu(cost), chieu: 've' });
     }
   }
 
-  /** Số liệu dân gánh hàng cho `window.__debug.ganh()`: mỗi công trình có tuyến, giây một chiều, người đang đi và ở đâu. */
-  ganhInfo(): { id: number; type: BuildingType; D: number; n: number; ra: { x: number; z: number; mang: boolean; dung: boolean; visible: boolean }[] }[] {
-    const out = [];
-    for (const [id, v] of this.views) {
-      if (!v.ganh) continue;
-      const ra = [...v.ganh.ra.entries()].map(([w, r]) => ({ x: w.obj.position.x + HALF, z: w.obj.position.z + HALF, mang: !!r.at?.mang, dung: !!r.at?.dung, visible: w.obj.visible }));
-      out.push({ id, type: v.type, D: v.ganh.tuyen.D, n: v.people.length, ra });
-    }
+  /** Giao việc gánh `viec` cho chỗ `v` (mã `id`); việc đổi thì người đang đi về chỗ làm trước. */
+  private datGanh(v: ChoGanh, id: number, viec: ViecGanh | null): void {
+    const t = viec?.tuyen;
+    const key = t && viec ? `${viec.hang}:${viec.chieu}:${t.noi}:${t.D.toFixed(2)}:${t.pts.map((p) => `${p.x.toFixed(2)},${p.z.toFixed(2)}`).join(';')}` : '';
+    if ((v.ganh?.key ?? '') === key) return;
+    this.veHetGanh(v, false);
+    v.ganh = t && viec ? { key, tuyen: t, seed: hash01(id * 31 + 7), hang: viec.hang, chieu: viec.chieu, ra: new Map() } : undefined;
+  }
+
+  /** Số liệu người đi gánh cho `window.__debug.ganh()`: mỗi chỗ có tuyến (công trình, giàn giáo `xay`), ai đang đi, ở đâu. */
+  ganhInfo(): GanhInfo[] {
+    const out: GanhInfo[] = [];
+    const one = (id: number, type: BuildingType | 'xay', v: ChoGanh) => {
+      const g = v.ganh;
+      if (!g) return;
+      const ra = [...g.ra.entries()].map(([w, r]) => ({
+        x: w.obj.position.x + HALF,
+        z: w.obj.position.z + HALF,
+        mang: !!r.at?.mang,
+        dung: !!r.at?.dung,
+        coHang: !!r.at && coHang(g.chieu, r.at),
+        visible: w.obj.visible,
+      }));
+      const pts = g.tuyen.pts;
+      out.push({ id, type, hang: g.hang, chieu: g.chieu, D: g.tuyen.D, n: v.people.length, a: pts[0], b: pts[pts.length - 1], ra });
+    };
+    for (const [id, v] of this.views) one(id, v.type, v);
+    for (const [id, v] of this.sites) one(id, 'xay', v);
     return out;
   }
 
-  /** Mọi người đang đi gánh của công trình `v` về chỗ làm; `drop`: công trình sắp gỡ, gỡ luôn người đang ở ngoài. */
-  private veHetGanh(v: BuildingView, drop: boolean): void {
+  /** Mọi người đang đi gánh của chỗ `v` về chỗ làm; `drop`: chỗ ấy sắp gỡ, gỡ luôn người đang ở ngoài. */
+  private veHetGanh(v: ChoGanh, drop: boolean): void {
     const g = v.ganh;
     if (!g) return;
     for (const w of [...g.ra.keys()]) {
@@ -3017,7 +3081,7 @@ export class World {
         this.veNha(v, w);
         continue;
       }
-      // Người ở ngoài không còn là con của mô hình công trình: gỡ riêng (cả đòn gánh trên vai).
+      // Người ở ngoài không còn là con của mô hình công trình: gỡ riêng (cả đồ gánh trên người).
       this.scene.remove(w.obj);
       disposeModel(w.obj);
       w.out = false;
@@ -3025,8 +3089,8 @@ export class World {
     g.ra.clear();
   }
 
-  /** Người làm `w` rời chỗ đứng, ra cảnh đi gánh: cùng chỗ, cùng cỡ như đang đứng trong mô hình, đòn gánh lên vai. */
-  private raDuong(v: BuildingView, g: GanhView, w: WorkerView): GanhRa {
+  /** Người làm `w` rời chỗ đứng, ra cảnh đi gánh: cùng chỗ, cùng cỡ như đang đứng trong mô hình, đồ gánh lên người. */
+  private raDuong(v: ChoGanh, g: GanhView, w: WorkerView): GanhRa {
     const p = w.obj.getWorldPosition(this.ganhTmp);
     const path = duongNguoi(g.tuyen, { x: p.x + HALF, z: p.z + HALF });
     w.home = w.obj.scale.x;
@@ -3040,8 +3104,8 @@ export class World {
     return out;
   }
 
-  /** Người đi gánh về lại chỗ đứng làm trong mô hình công trình, bỏ đòn gánh. */
-  private veNha(v: BuildingView, w: WorkerView): void {
+  /** Người đi gánh về lại chỗ đứng làm trong mô hình công trình (hay giàn giáo), bỏ đồ gánh. */
+  private veNha(v: ChoGanh, w: WorkerView): void {
     const out = v.ganh?.ra.get(w);
     if (out) {
       out.load.parent?.remove(out.load);
@@ -3059,34 +3123,39 @@ export class World {
 
   /**
    * Dân gánh hàng mỗi khung theo lịch thay phiên (`chuyenGanh`): ai tới lượt thì rời chỗ làm đi theo tuyến, gánh hàng
-   * tới nơi nhận, đứng đổ hàng, đi tay không về. Có trận trên kinh đô, giặc sắp tới hay đang xem bãi chiến thì mọi người
-   * ở chỗ làm. Người ở ngoài cảnh tự cắt theo khung nhìn như người đứng trên công trình.
+   * tới nơi nhận, đứng đổ hàng, đi tay không về (thợ vác vật liệu, người bếp gùi nguyên liệu thì ngược lại: đi tay
+   * không, lấy hàng rồi mang về). Có trận trên kinh đô, giặc sắp tới hay đang xem bãi chiến thì mọi người ở chỗ làm.
+   * Người ở ngoài cảnh tự cắt theo khung nhìn như người đứng trên công trình.
    */
   private updateGanh(t: number): void {
     const stop = this.cityFight || this.gatesShut || this.inField;
+    for (const v of this.views.values()) this.buocGanh(v, t, stop);
+    for (const v of this.sites.values()) this.buocGanh(v, t, stop);
+  }
+
+  private buocGanh(v: ChoGanh, t: number, stop: boolean): void {
+    const g = v.ganh;
+    if (!g) return;
     const ball = this.workerBall;
-    for (const v of this.views.values()) {
-      const g = v.ganh;
-      if (!g) continue;
-      const want = new Map<WorkerView, number>();
-      if (!stop) for (const r of chuyenGanh(v.people.length, g.tuyen.D, t, g.seed)) want.set(v.people[r.who], r.s);
-      for (const w of [...g.ra.keys()]) if (!want.has(w)) this.veNha(v, w);
-      for (const [w, s] of want) {
-        const out = g.ra.get(w) ?? this.raDuong(v, g, w);
-        const at = viTri(out.path, s, g.tuyen.D);
-        out.at = at;
-        const o = w.obj;
-        o.position.set(wx(at.x), this.walkY(at.x, at.z), wz(at.z));
-        o.rotation.y = at.ry;
-        out.load.visible = at.mang;
-        ball.center.copy(o.position);
-        ball.center.y += WORKER_RADIUS / 2;
-        o.visible = this.viewFrustum.intersectsSphere(ball);
-        if (!o.visible) continue;
-        // Đứng đổ hàng thì đứng yên giữ đòn; đi thì bước theo quãng đường đã đi cho chân khỏi trượt.
-        (o.userData.pose as Poser | undefined)?.({ act: 'walk', phase: at.dung ? 0 : at.quang * 11, stride: at.dung ? 0 : 0.42, time: t + w.phase });
-        if (at.mang) tayGanh(o.userData.bones as Human, g.hang);
-      }
+    const want = new Map<WorkerView, number>();
+    if (!stop) for (const r of chuyenGanh(v.people.length, g.tuyen.D, t, g.seed)) want.set(v.people[r.who], r.s);
+    for (const w of [...g.ra.keys()]) if (!want.has(w)) this.veNha(v, w);
+    for (const [w, s] of want) {
+      const out = g.ra.get(w) ?? this.raDuong(v, g, w);
+      const at = viTri(out.path, s, g.tuyen.D);
+      out.at = at;
+      const o = w.obj;
+      o.position.set(wx(at.x), this.walkY(at.x, at.z), wz(at.z));
+      o.rotation.y = at.ry;
+      const co = coHang(g.chieu, at);
+      out.load.visible = co;
+      ball.center.copy(o.position);
+      ball.center.y += WORKER_RADIUS / 2;
+      o.visible = this.viewFrustum.intersectsSphere(ball);
+      if (!o.visible) continue;
+      // Đứng đổ hàng, lấy hàng thì đứng yên; đi thì bước theo quãng đường đã đi cho chân khỏi trượt.
+      (o.userData.pose as Poser | undefined)?.({ act: 'walk', phase: at.dung ? 0 : at.quang * 11, stride: at.dung ? 0 : 0.42, time: t + w.phase });
+      if (co) tayGanh(o.userData.bones as Human, g.hang);
     }
   }
 
@@ -3396,7 +3465,7 @@ export class World {
     this.viewFrustum.setFromProjectionMatrix(this.frustumMat.multiplyMatrices(cam.projectionMatrix, cam.matrixWorldInverse));
     for (const site of this.sites.values()) {
       site.group.updateMatrix();
-      for (const w of site.people) if (this.workerInView(w, site.group)) this.animateWorker(w, t);
+      for (const w of site.people) if (!w.out && this.workerInView(w, site.group)) this.animateWorker(w, t);
     }
     // Lính tập trong sân doanh trại đổi tư thế theo nhịp hô "một, hai"; thu nhỏ (`LITE_ZOOM`) thì đứng yên; có trận giữ
     // kinh đô thì đã ra trận (−1: không nhóm nào hiện). Đồng hồ cảnh có lúc âm (chụp thử tua giờ) nên lấy số dư dương.

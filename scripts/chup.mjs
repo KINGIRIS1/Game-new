@@ -182,6 +182,72 @@ for (let k = 0; k < 240 && !p; k++) {
 if (!p) throw new Error('Không thấy người gánh của ruộng xa ở giữa đường');
 d.camera(p.x, p.z, 3);`;
 
+/**
+ * Tua đồng hồ cảnh (`seaTime`) qua hai phút, tìm lúc có người đang mang hàng ở xa hai đầu tuyến nhất của chỗ thỏa
+ * `chon` (biểu thức trên mỗi mục `d.ganh()`, tên `g`), tua về lúc ấy rồi đặt camera vào người ấy (độ phóng `zoom`).
+ */
+const NHIN_DI = (chon, zoom = 3) => `const frame = () => new Promise((ok) => requestAnimationFrame(() => requestAnimationFrame(ok)));
+const tim = () => {
+  let best = null;
+  for (const g of d.ganh()) {
+    if (!(${chon})) continue;
+    for (const x of g.ra) {
+      if (!x.coHang || x.dung) continue;
+      const m = Math.min(Math.hypot(x.x - g.a.x, x.z - g.a.z), Math.hypot(x.x - g.b.x, x.z - g.b.z));
+      if (!best || m > best.m) best = { ...x, m };
+    }
+  }
+  return best;
+};
+let p = null, at = 0;
+for (let k = 0; k < 240; k++) {
+  d.seaTime(k * 0.5);
+  await frame();
+  const q = tim();
+  if (q && (!p || q.m > p.m)) { p = q; at = k * 0.5; }
+}
+if (!p) throw new Error('Không thấy người mang hàng: ' + JSON.stringify(d.ganh().filter((g) => ${chon}).map((g) => ({ id: g.id, hang: g.hang, D: g.D, n: g.n }))));
+d.seaTime(at);
+await frame();
+p = tim() ?? p;
+d.camera(p.x, p.z, ${zoom});`;
+
+/** Mở thêm đất, dựng nhà sàn mới ở chỗ xa Điện, kho chừng 16–26 ô (kéo dài việc dựng cho khỏi xong trước khi chụp). */
+const NHA_XA = `s.khoanh = K.squareKhoanh(K.AREA[6]);
+s.resources = { gao: 9e5, voOc: 9e5, datDa: 9e5, sat: 9e5, go: 9e5 };
+const Xa = await import('/src/game/xay.ts');
+Xa.advanceXay(s, 1e13);
+const V = await import('/src/game/vanChuyen.ts');
+let best = null, bd = 0;
+for (let z = 4; z < 52; z++) for (let x = 4; x < 52; x++) {
+  if (!Xa.canStartBuild(s, 'nhaSan', x, z).ok) continue;
+  const g = V.duongTu(s, { type: 'nhaSan', x, z }, 'kho');
+  if (g && g.d > bd && g.d < 26) { bd = g.d; best = { x, z }; }
+}
+const r = Xa.startBuild(s, 'nhaSan', best.x, best.z);
+if (!r.ok) throw new Error(r.reason);
+for (const v of s.xay.viec) for (const o of v.o) o.ms *= 400;`;
+
+/**
+ * Mở thêm đất, coi như đã kết chương 1 (có Hội Tết), dựng bếp gói bánh xa Điện chừng 12–22 ô và ruộng nếp, vườn đậu lá
+ * dong, chuồng lợn gần Điện (nguyên liệu gánh về Điện, kho), đủ người làm.
+ */
+const BEP_XA = `s.khoanh = K.squareKhoanh(K.AREA[6]);
+s.giong.ascended = true;
+s.resources = { gao: 9e5, voOc: 9e5, datDa: 9e5, sat: 9e5, go: 9e5 };
+s.dan += 40;
+const V = await import('/src/game/vanChuyen.ts');
+const dien = s.buildings.find((b) => b.type === 'dien');
+let best = null, bd = 0;
+for (let z = 4; z < 52; z++) for (let x = 4; x < 52; x++) {
+  if (!G.canPlace(s, 'bep', x, z).ok) continue;
+  const g = V.duongTu(s, { type: 'bep', x, z }, 'dien');
+  if (g && g.d > bd && g.d < 22) { bd = g.d; best = { x, z }; }
+}
+const put = (t, x, z) => { const r = G.place(s, t, x, z); if (!r.ok) throw new Error(t + ': ' + r.reason); r.value.workers = G.slotsOf(r.value); return r.value; };
+put('bep', best.x, best.z);
+for (const t of ['ruongNep', 'vuon', 'chuongLon']) { const p = G.findSpot(s, t, { x: dien.x + 5, z: dien.z + 5 }); put(t, p.x, p.z); }`;
+
 /** Nhìn về phía ruộng xa nhất (`RUONG_XA`) rồi bấm Xây kho thóc: bóng kho hiện gần đó, tô vùng gánh hàng đủ 100%. */
 const VUNG_KHO = `const V = await import('/src/game/vanChuyen.ts');
 const r = s.buildings.filter((b) => b.type === 'ruong').sort((a, b) => V.heSoGanh(s, a) - V.heSoGanh(s, b))[0];
@@ -216,6 +282,24 @@ const CANH = {
     mo: 'Như kinh-do, chạm chọn kho thóc: vùng riêng của kho tô xanh, phần còn lại của vùng gánh đủ 100% tô nhạt',
     truoc: KINH_DO,
     sau: `d.select(s.buildings.find((b) => b.type === 'kho').id);`,
+  },
+  'vac-lieu': {
+    mo: 'Như kinh-do, dựng nhà sàn mới ở xa Điện, kho: hai thợ giàn giáo thay phiên vác bó tre từ kho về (nhìn giữa tuyến)',
+    truoc: `${KINH_DO}\n${NHA_XA}`,
+    sau: NHIN_DI(`g.type === 'xay'`, 2.2),
+    doi: 600,
+  },
+  'bep-gui': {
+    mo: 'Như kinh-do, đã kết chương 1, bếp ở xa, nguyên liệu Tết gánh về Điện: người bếp gùi nguyên liệu từ Điện về (nhìn giữa tuyến)',
+    truoc: `${KINH_DO}\n${BEP_XA}`,
+    sau: NHIN_DI(`g.hang === 'gui'`, 2.2),
+    doi: 600,
+  },
+  'tet-mam': {
+    mo: 'Như bep-gui, Tết đang mở, gác bếp có bánh: người bếp đội mâm bánh lên Điện (nhìn giữa tuyến)',
+    truoc: `${KINH_DO}\n${BEP_XA}\ns.tet.nextAt = s.clock + 1e9; s.tet.openUntil = s.clock + 1e9; s.tet.banh = { chung: 12, giay: 12 };`,
+    sau: NHIN_DI(`g.hang === 'mam'`, 2.2),
+    doi: 600,
   },
   chuong2: {
     mo: 'Kinh đô chương 2, mười phút sau khi vào chương',

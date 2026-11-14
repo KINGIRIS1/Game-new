@@ -1,14 +1,17 @@
 // Canh dân gánh hàng (ganhHang.ts): người đi gánh là người làm của chính công trình, thay phiên nên từ hai người trở
 // lên công trình không bao giờ trống; tuyến vẽ đi đúng các ô của luật, không xuyên móng công trình nào, ra vào đúng lối;
-// đi trên đường nhanh hơn; chỗ đứng theo giờ đi rồi về đúng chỗ cũ.
+// đi trên đường nhanh hơn; chỗ đứng theo giờ đi rồi về đúng chỗ cũ. Thợ vác vật liệu từ kho tới công trình đang xây,
+// đúng thứ công trình cần; người bếp gùi nguyên liệu từ kho khi nguyên liệu Tết gánh về kho, mùa Tết đội mâm bánh lên
+// Điện; chiều về mới có hàng.
 
 import { beforeAll, describe, expect, it, vi } from 'vitest';
 import { BUILDINGS } from '../game/defs';
 import { createInitialState, occupancy, place, slotsOf, type Building, type GameState } from '../game/game';
 import { GRID } from '../game/map';
 import { DIEN, edge, setDien, size } from '../game/testmap';
-import { duongGanh } from '../game/vanChuyen';
-import { DO_HANG_S, HAI_LUOT, LAM_S, chuyenGanh, duongNguoi, loiRa, tuyenGanh, viTri, type TuyenGanh } from './ganhHang';
+import { duongGanh, duongTu } from '../game/vanChuyen';
+import { pendingBuildings, startBuild } from '../game/xay';
+import { DO_HANG_S, HAI_LUOT, LAM_S, chuyenGanh, coHang, duongNguoi, loiRa, tuyenGanh, tuyenXay, vatLieu, viTri, viecBep, type TuyenGanh } from './ganhHang';
 import type { Lot } from './lot';
 
 // Bản vẽ ô con nằm trong tệp mô hình, mà phần vẽ tạo canvas khi nạp module: giả lập `document` như `duoc.test.ts`.
@@ -18,12 +21,14 @@ vi.stubGlobal('document', { createElement: () => ({ width: 0, height: 0, getCont
 let LOTS: Partial<Record<keyof typeof BUILDINGS, Lot>> = {};
 let RUONG_LOT: Lot;
 let BEN_LOT: Lot;
+let BEP_LOT: Lot;
 beforeAll(async () => {
   RUONG_LOT = (await import('./congTrinh/ruong')).RUONG_LOT;
   BEN_LOT = (await import('./congTrinh/ben')).BEN_LOT;
   const { KHO_LOT } = await import('./congTrinh/kho');
   const { DIEN_LOT } = await import('./congTrinh/dien');
-  LOTS = { ruong: RUONG_LOT, kho: KHO_LOT, ben: BEN_LOT, dien: DIEN_LOT };
+  BEP_LOT = (await import('./congTrinh/bep')).BEP_LOT;
+  LOTS = { ruong: RUONG_LOT, kho: KHO_LOT, ben: BEN_LOT, dien: DIEN_LOT, bep: BEP_LOT };
 });
 
 function capital(): GameState {
@@ -175,5 +180,89 @@ describe('tuyến gánh', () => {
       expect(q).toBeGreaterThanOrEqual(last - 1e-9);
       last = q;
     }
+  });
+});
+
+/** Điểm `p` nằm trong móng công trình `b`. */
+function trongMong(p: { x: number; z: number }, b: Building): boolean {
+  const def = BUILDINGS[b.type];
+  return p.x > b.x && p.x < b.x + def.w && p.z > b.z && p.z < b.z + def.d;
+}
+
+describe('thợ vác vật liệu, người bếp', () => {
+  it('vật liệu là thứ nhiều nhất trong gỗ, đất đá, sắt của giá; không có thì bó tre', () => {
+    expect(vatLieu({ go: 50, datDa: 20 })).toBe('go');
+    expect(vatLieu({ gao: 100, datDa: 30, sat: 10 })).toBe('da');
+    expect(vatLieu({ voOc: 40, sat: 10 })).toBe('sat');
+    expect(vatLieu({ gao: 10, voOc: 5 })).toBe('tre');
+    expect(vatLieu(undefined)).toBe('tre');
+  });
+
+  it('công trình đang dựng ở xa: thợ đi đúng ô của luật tới Điện, không xuyên móng; nâng kho, sát nơi nhận thì không đi', () => {
+    const s = capital();
+    expect(startBuild(s, 'nhaSan', LO, LO).ok).toBe(true);
+    const site = pendingBuildings(s).find((b) => b.type === 'nhaSan')!;
+    const t = tuyenXay(s, site, LOTS)!;
+    const g = duongTu(s, site, 'kho')!;
+    expect(t.pts.slice(1, -1).map(oOf)).toEqual(g.tuyen);
+    const occ = occupancy(s);
+    for (const i of g.tuyen) expect(occ[i]).toBe(0);
+    expect(trongMong(t.pts[0], site)).toBe(true);
+    expect(trongMong(t.pts[t.pts.length - 1], s.buildings[0])).toBe(true);
+    const kho = put(s, 'kho', DIEN - size('kho'), ROW);
+    expect(tuyenXay(s, kho, LOTS)).toBe(null);
+    const near = put(s, 'nhaSan', DIEN, DIEN - size('nhaSan'));
+    expect(tuyenXay(s, near, LOTS)).toBe(null);
+  });
+
+  it('chiều về: đi tay không tới nơi nhận, lấy hàng rồi mới mang về; chiều đi thì ngược lại', () => {
+    const s = capital();
+    expect(startBuild(s, 'nhaSan', LO, LO).ok).toBe(true);
+    const t = tuyenXay(s, pendingBuildings(s)[0], LOTS)!;
+    const p = duongNguoi(t, t.pts[0]);
+    for (let k = 0; k < 100; k++) {
+      const sec = (k / 100) * 2 * t.D;
+      const at = viTri(p, sec, t.D);
+      expect(coHang('ve', at)).toBe(sec >= t.D);
+      expect(coHang('di', at)).toBe(sec < t.D);
+    }
+  });
+
+  it('người bếp: nguyên liệu Tết gánh về Điện thì gùi từ Điện về; gánh thẳng tới bếp thì ở nhà; Tết mở có bánh thì đội mâm lên Điện', () => {
+    const s = capital();
+    s.giong.ascended = true;
+    const bep = put(s, 'bep', LO, ROW);
+    expect(viecBep(s, bep, LOTS)).toBe(null);
+    // Ruộng nếp sát Điện: nếp gánh về Điện, bếp ở xa phải gùi về.
+    const nep = put(s, 'ruongNep', DIEN - size('ruongNep') - 1, DIEN);
+    expect(duongGanh(s, nep)!.noi).toBe(s.buildings[0].id);
+    const gui = viecBep(s, bep, LOTS)!;
+    expect(gui.hang).toBe('gui');
+    expect(gui.chieu).toBe('ve');
+    expect(gui.tuyen.noi).toBe(s.buildings[0].id);
+    expect(trongMong(gui.tuyen.pts[0], bep)).toBe(true);
+    // Không ai làm ở ruộng nếp thì thôi.
+    nep.workers = 0;
+    expect(viecBep(s, bep, LOTS)).toBe(null);
+    nep.workers = slotsOf(nep);
+    // Dời ruộng nếp sát bếp: nếp gánh thẳng tới bếp.
+    nep.x = LO + size('bep') + 1;
+    nep.z = ROW;
+    expect(duongGanh(s, nep)!.noi).toBe(bep.id);
+    expect(viecBep(s, bep, LOTS)).toBe(null);
+    // Tết mở, có bánh: đội mâm bánh lên Điện.
+    s.tet.openUntil = s.clock + 60_000;
+    s.tet.banh.chung = 4;
+    const mam = viecBep(s, bep, LOTS)!;
+    expect(mam.hang).toBe('mam');
+    expect(mam.chieu).toBe('di');
+    expect(mam.tuyen.noi).toBe(s.buildings[0].id);
+    expect(trongMong(mam.tuyen.pts[mam.tuyen.pts.length - 1], s.buildings[0])).toBe(true);
+    // Hết bánh, chưa dâng: không có gì để đội.
+    s.tet.banh.chung = 0.5;
+    expect(viecBep(s, bep, LOTS)).toBe(null);
+    bep.damaged = true;
+    s.tet.banh.chung = 4;
+    expect(viecBep(s, bep, LOTS)).toBe(null);
   });
 });

@@ -1,16 +1,21 @@
-// Đồ gánh của dân: đòn gánh tre hai đầu hai thúng (thóc, rau, vỏ ốc, đá, sắt, cá, lá dong, thịt) và bó gỗ vác vai.
-// Gắn vào xương ngực của người (`makeWorker`), nên đi theo dáng người. Dùng cho dân gánh hàng về kho (world.ts,
+// Đồ gánh của dân: đòn gánh tre hai đầu hai thúng (thóc, rau, vỏ ốc, đá, sắt, cá, lá dong, thịt), bó gỗ, bó tre vác
+// vai, nguyên liệu Tết vun trên miệng gùi, mâm bánh đội đầu. Gắn vào xương ngực hay xương đầu của người
+// (`makeWorker`), nên đi theo dáng người. Dùng cho dân gánh hàng về kho, thợ vác vật liệu, người bếp (world.ts,
 // ganhHang.ts) và đoàn dân rút ở Cấm Khê (battlefield.ts).
 
 import * as THREE from 'three';
 import { gripHands, type Human } from './body';
+import { banhChung, banhGiay } from './buildings';
 import { rod } from './congTrinh/chung';
 import type { Hang } from './ganhHang';
 import { C } from './palette';
 import { ToonModel, inkThin } from './toon';
 
+/** Hàng gánh đòn hai thúng. */
+type Thung = Exclude<Hang, 'go' | 'tre' | 'gui' | 'mam'>;
+
 /** Màu hàng vun trên miệng thúng. */
-const MAU: Record<Exclude<Hang, 'go'>, number> = {
+const MAU: Record<Thung, number> = {
   thoc: 0xd9bf78,
   rau: C.leaf[3],
   oc: 0xeee0c8,
@@ -22,7 +27,7 @@ const MAU: Record<Exclude<Hang, 'go'>, number> = {
 };
 
 /** Hàng trong thúng ở đầu đòn `z`: vun tròn, thêm đá cục, thỏi sắt, đuôi cá, lá dong cho dễ nhận. */
-function hangTrongThung(m: ToonModel, hang: Exclude<Hang, 'go'>, z: number): void {
+function hangTrongThung(m: ToonModel, hang: Thung, z: number): void {
   const p = m.plain;
   p.sphere(0.1, MAU[hang], 0, -0.33, z, [1, 0.55, 1], 7);
   if (hang === 'da') {
@@ -41,7 +46,7 @@ function hangTrongThung(m: ToonModel, hang: Exclude<Hang, 'go'>, z: number): voi
  * Đòn gánh tre dài dọc trục z, hai quang dây, hai thúng: `hang` ở cả hai đầu, hay cặp hàng hai đầu. Gốc ở giữa đòn;
  * gắn vào xương ngực ở `GANH_AT` cho đòn tì vai phải.
  */
-export function donGanh(hang: Exclude<Hang, 'go'> | [Exclude<Hang, 'go'>, Exclude<Hang, 'go'>]): THREE.Group {
+export function donGanh(hang: Thung | [Thung, Thung]): THREE.Group {
   const [a, b] = Array.isArray(hang) ? hang : [hang, hang];
   const m = new ToonModel(inkThin);
   const p = m.plain;
@@ -80,20 +85,92 @@ export function boGo(): THREE.Group {
 
 export const VAC_AT = new THREE.Vector3(-0.15, 0.28, -0.02);
 
-/** Đồ gánh của hàng `hang`, gắn sẵn vào xương ngực của người `bones`. */
+/** Bó ba cây tre dài có đốt, buộc lạt hai chỗ, vác trên vai trái dọc trục z (thợ vác vật liệu). Gắn ở `VAC_AT`. */
+export function boTre(): THREE.Group {
+  const m = new ToonModel(inkThin);
+  const p = m.plain;
+  const L = 1.15;
+  for (const [dx, dy, dz] of [
+    [-0.03, 0, 0.04],
+    [0.03, 0, -0.03],
+    [0, 0.05, 0.08],
+  ]) {
+    p.cyl(0.026, 0.026, L, C.bamboo, dx, dy, dz, [Math.PI / 2, 0, 0], 6);
+    for (const z of [-0.36, 0, 0.36]) p.cyl(0.03, 0.03, 0.02, C.thatchDark, dx, dy, dz + z, [Math.PI / 2, 0, 0], 6);
+  }
+  for (const z of [-0.22, 0.22]) p.cyl(0.075, 0.075, 0.025, C.woodDark, 0, 0.02, z, [Math.PI / 2, 0, 0], 8);
+  return m.group();
+}
+
+/**
+ * Nguyên liệu Tết vun trên miệng gùi sau lưng người bếp (gùi có sẵn trên dáng `phuNu` đứng): nếp trắng ngà, bó lá dong
+ * dựng, miếng thịt. Gắn xương ngực ở `GUI_AT`.
+ */
+export function guiDay(): THREE.Group {
+  const m = new ToonModel(inkThin);
+  const p = m.plain;
+  p.sphere(0.12, 0xeee3c4, 0, 0, 0, [1, 0.45, 1], 8);
+  for (const [x, z, a] of [
+    [-0.05, 0.02, -0.25],
+    [0.0, -0.04, 0.05],
+    [0.05, 0.02, 0.3],
+  ]) {
+    p.box(0.07, 0.2, 0.012, 0x3d6828, x, 0.08, z, [0.15, a, a * 0.6]);
+  }
+  p.box(0.08, 0.05, 0.06, 0xc77d68, 0.06, 0.03, -0.05, [0, 0.4, 0.2]);
+  return m.group();
+}
+
+/** Chỗ gắn nguyên liệu trên xương ngực: ngay miệng gùi sau lưng. */
+export const GUI_AT = new THREE.Vector3(0, 0.32, -0.22);
+
+/** Mâm gỗ tròn đội đầu, bày bánh chưng, bánh giầy (mùa Tết đem lên Điện). Gắn xương đầu ở `MAM_AT`. */
+export function mamDoi(): THREE.Group {
+  const m = new ToonModel(inkThin);
+  const p = m.plain;
+  p.cyl(0.2, 0.17, 0.035, C.woodDark, 0, 0, 0, undefined, 14);
+  p.add(new THREE.TorusGeometry(0.195, 0.012, 4, 16), C.bronze, 0, 0.02, 0, [Math.PI / 2, 0, 0]);
+  banhChung(p, -0.07, 0.018, 0.02, 0.8);
+  banhChung(p, 0.03, 0.018, -0.08, 0.8, 0.3);
+  banhGiay(p, 0.08, 0.018, 0.06, 0.9);
+  banhGiay(p, -0.02, 0.018, 0.1, 0.8);
+  return m.group();
+}
+
+/** Chỗ gắn mâm trên xương đầu: đỉnh đầu. */
+export const MAM_AT = new THREE.Vector3(0, 0.44, 0);
+
+/** Đồ gánh của hàng `hang`, gắn sẵn vào xương của người `bones` (mâm trên đầu, còn lại ở ngực). */
 export function ganhLen(bones: Human, hang: Hang): THREE.Group {
-  const load = hang === 'go' ? boGo() : donGanh(hang);
-  load.position.copy(hang === 'go' ? VAC_AT : GANH_AT);
+  let load: THREE.Group;
+  if (hang === 'go' || hang === 'tre') {
+    load = hang === 'go' ? boGo() : boTre();
+    load.position.copy(VAC_AT);
+  } else if (hang === 'gui') {
+    load = guiDay();
+    load.position.copy(GUI_AT);
+  } else if (hang === 'mam') {
+    load = mamDoi();
+    load.position.copy(MAM_AT);
+  } else {
+    load = donGanh(hang);
+    load.position.copy(GANH_AT);
+  }
   load.userData.hang = hang;
   // Dân không đổ bóng cho nhẹ máy (`makeWorker`): đồ gánh trên vai cũng vậy.
   load.traverse((o) => (o.castShadow = false));
-  bones.chest.add(load);
+  (hang === 'mam' ? bones.head : bones.chest).add(load);
   return load;
 }
 
-/** Tay giữ đồ gánh, đặt sau tư thế đi: tay phải vịn đòn trên vai, hay tay trái giữ bó gỗ trên vai. */
+/**
+ * Tay giữ đồ gánh, đặt sau tư thế đi: tay phải vịn đòn trên vai, tay trái giữ bó gỗ, bó tre trên vai, tay phải đỡ mâm
+ * trên đầu. Gùi thì không đổi: dáng người bếp vốn nắm quai gùi.
+ */
 export function tayGanh(bones: Human, hang: Hang): void {
-  if (hang === 'go') bones.armL.rotation.set(0, 0, -2.6);
+  if (hang === 'gui') return;
+  if (hang === 'go' || hang === 'tre') bones.armL.rotation.set(0, 0, -2.6);
+  else if (hang === 'mam') bones.armR.rotation.set(0, 0, 2.75);
   else bones.armR.rotation.set(-1.75, 0, 0.3);
   gripHands(bones);
 }

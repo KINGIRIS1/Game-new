@@ -12,7 +12,7 @@ import { forgeArms } from './game/binhKhi';
 import { autoGuard, fieldCap, fitArmy, setGuard } from './game/doanhTrai';
 import { markNuHinted, nextNuHint } from './game/nuTuong';
 import { forgeNoThan, inChapter3, wallRings } from './game/coLoa';
-import { offer } from './game/tet';
+import { offer, tetOpen } from './game/tet';
 import { ganhPreview, markGanhHinted, needsGanhHint, vungGanh } from './game/vanChuyen';
 import { startMau } from './game/mau';
 import { advanceXay, askQuiz, canStartBuild, cancelJob, conLai, startBuild, startUpgrade, startWallUpgrade, startWalls, thoRanh, thoRanhSau, traLoi, viecOf, xayMs, type CongViec } from './game/xay';
@@ -2377,6 +2377,8 @@ async function start(): Promise<void> {
   let prev = performance.now();
   let lastUi = 0;
   let lastCayKey = '';
+  /** Tết đang mở (lần xét trước): mở, đóng thì vẽ lại cảnh Tết và việc người bếp. */
+  let lastTet = false;
   let lastKnown = state.benKia.known.length;
   let lastSave = prev;
   const frame = (now: number) => {
@@ -2432,6 +2434,11 @@ async function start(): Promise<void> {
         lastCayKey = cayKey;
         world.sync(scene());
         showCayDaHint();
+      }
+      // Tết mở, đóng: cảnh Tết trước Điện và việc của người bếp (đội mâm bánh lên Điện) đổi ngay, không chờ thao tác sau.
+      if (tetOpen(state) !== lastTet) {
+        lastTet = !lastTet;
+        world.sync(scene());
       }
       // Trinh sát về tới nơi: đất bên kia hiện ra thêm.
       if (state.benKia.known.length !== lastKnown) {

@@ -4,14 +4,25 @@
 // đang đi luôn bằng số người làm. Tệp này chỉ tính tuyến, lịch và chỗ đứng (không dùng Three.js); world.ts đưa người ra
 // đường và vẽ.
 
-import { BUILDINGS, type BuildingType } from '../game/defs';
+import { BUILDINGS, GANH_BEP, type BuildingType, type Cost } from '../game/defs';
 import type { Building, GameState } from '../game/game';
 import { GRID, riverFacing, rotAngle } from '../game/map';
-import { chiPhiO, duongGanh, ganhType } from '../game/vanChuyen';
+import { tetOpen } from '../game/tet';
+import { chiPhiO, duongGanh, duongTu, ganhType, type DuongGanh } from '../game/vanChuyen';
 import { CELL, type Lot } from './lot';
 
-/** Hàng gánh trên đòn hay vác trên vai, theo công trình. */
-export type Hang = 'thoc' | 'rau' | 'oc' | 'da' | 'sat' | 'ca' | 'la' | 'thit' | 'go';
+/**
+ * Hàng gánh trên đòn, vác trên vai, gùi sau lưng hay đội trên đầu: của công trình làm ra (thóc… gỗ), vật liệu thợ vác
+ * tới công trình đang xây (gỗ, đá, sắt, bó tre `tre`), nguyên liệu Tết người bếp gùi từ kho về (`gui`), mâm bánh mùa
+ * Tết đội lên Điện (`mam`).
+ */
+export type Hang = 'thoc' | 'rau' | 'oc' | 'da' | 'sat' | 'ca' | 'la' | 'thit' | 'go' | 'tre' | 'gui' | 'mam';
+
+/**
+ * Chiều mang hàng: `di` gánh hàng tới nơi nhận rồi đi tay không về (của làm ra, mâm bánh); `ve` đi tay không tới nơi
+ * nhận, lấy hàng rồi mang về (thợ vác vật liệu, người bếp gùi nguyên liệu).
+ */
+export type ChieuGanh = 'di' | 've';
 
 /** Công trình làm ra gì thì gánh nấy: gỗ vác vai, còn lại gánh đòn hai thúng. */
 export const HANG_OF: Partial<Record<BuildingType, Hang>> = {
@@ -116,13 +127,19 @@ export function loiRa(b: Pick<Building, 'type' | 'x' | 'z' | 'rot'>, toi: Diem, 
  */
 export function tuyenGanh(state: GameState, b: Building, lots: Partial<Record<BuildingType, Lot>> = {}): TuyenGanh | null {
   if (!ganhType(b.type) || !HANG_OF[b.type]) return null;
-  const g = duongGanh(state, b);
+  return tuyenTheo(state, b, duongGanh(state, b), lots[b.type], lots);
+}
+
+/**
+ * Dựng tuyến vẽ từ đường `g` của luật: ra từ lối của `b` (bản vẽ `lot`; không có thì mép móng gần đường nhất), qua
+ * các ô của luật, vào lối của nơi nhận (kho, Điện có bản vẽ ô con), đứng ngay trong mép móng.
+ */
+function tuyenTheo(state: GameState, b: Pick<Building, 'type' | 'x' | 'z' | 'rot'>, g: DuongGanh | null, lot: Lot | undefined, lots: Partial<Record<BuildingType, Lot>>): TuyenGanh | null {
   if (!g || !Number.isFinite(g.d) || !g.noi || !g.tuyen.length) return null;
   const noi = state.buildings.find((o) => o.id === g.noi);
   if (!noi) return null;
   const tiles = g.tuyen.map(tam);
-  // Ra từ lối của công trình, vào lối của nơi nhận (kho, Điện có bản vẽ ô con), đứng ngay trong mép móng.
-  const pts: Diem[] = [loiRa(b, tiles[0], lots[b.type]), ...tiles, loiRa(noi, tiles[tiles.length - 1], lots[noi.type])];
+  const pts: Diem[] = [loiRa(b, tiles[0], lot), ...tiles, loiRa(noi, tiles[tiles.length - 1], lots[noi.type])];
   const giay: number[] = [];
   for (let k = 0; k + 1 < pts.length; k++) {
     const len = Math.hypot(pts[k + 1].x - pts[k].x, pts[k + 1].z - pts[k].z);
@@ -132,6 +149,59 @@ export function tuyenGanh(state: GameState, b: Building, lots: Partial<Record<Bu
   }
   const di = giay.reduce((a, c) => a + c, 0);
   return { pts, giay, D: di + LEAD_O * GIAY_MOI_O + DO_HANG_S / 2, noi: g.noi };
+}
+
+/** Vật liệu thợ vác tới công trình đang xây theo giá phần việc: thứ nhiều nhất trong gỗ, đất đá, sắt; không có thì tre. */
+export function vatLieu(cost: Cost | undefined): Hang {
+  const c = cost ?? {};
+  const list: [Hang, number][] = [
+    ['go', c.go ?? 0],
+    ['da', c.datDa ?? 0],
+    ['sat', c.sat ?? 0],
+  ];
+  const [hang, n] = list.reduce((a, b) => (b[1] > a[1] ? b : a));
+  return n > 0 ? hang : 'tre';
+}
+
+/**
+ * Tuyến thợ vác vật liệu của công trình đang dựng hay đang nâng `b` (giàn giáo): từ mép móng gần đường nhất (giàn giáo
+ * không có bản vẽ ô con) tới kho, Điện gần nhất. Null khi không có lối, sát ngay nơi nhận, hay chính `b` là nơi nhận
+ * (nâng kho, nâng Điện: vật liệu có sẵn ngay đó).
+ */
+export function tuyenXay(state: GameState, b: Building, lots: Partial<Record<BuildingType, Lot>> = {}): TuyenGanh | null {
+  return tuyenTheo(state, b, duongTu(state, b, 'kho'), undefined, lots);
+}
+
+/** Việc gánh của người bếp: tuyến, hàng, chiều. */
+export interface ViecBep {
+  tuyen: TuyenGanh;
+  hang: Hang;
+  chieu: ChieuGanh;
+}
+
+/**
+ * Việc của người bếp gói bánh `bep`:
+ * - Tết đang mở và có bánh (hay đã dâng): đội mâm bánh lên Điện (`mam`, chiều `di`).
+ * - Không thì, khi có ruộng nếp, vườn đậu lá dong, chuồng lợn đang có người làm mà gánh nguyên liệu về kho, Điện (nơi
+ *   ấy gần hơn bếp): gùi không tới kho, Điện gần bếp nhất lấy nguyên liệu về (`gui`, chiều `ve`).
+ * - Còn lại: không đi đâu.
+ */
+export function viecBep(state: GameState, bep: Building, lots: Partial<Record<BuildingType, Lot>> = {}): ViecBep | null {
+  if (bep.type !== 'bep' || bep.damaged) return null;
+  const tet = state.tet;
+  if (tetOpen(state) && (tet.banh.chung >= 1 || tet.banh.giay >= 1 || tet.offered.chung || tet.offered.giay)) {
+    const tuyen = tuyenTheo(state, bep, duongTu(state, bep, 'dien'), lots.bep, lots);
+    return tuyen ? { tuyen, hang: 'mam', chieu: 'di' } : null;
+  }
+  const veKho = state.buildings.some((b) => {
+    if (!GANH_BEP.includes(b.type) || b.damaged || b.workers <= 0) return false;
+    const g = duongGanh(state, b);
+    const noi = g?.noi ? state.buildings.find((o) => o.id === g.noi) : undefined;
+    return !!noi && noi.type !== 'bep';
+  });
+  if (!veKho) return null;
+  const tuyen = tuyenTheo(state, bep, duongTu(state, bep, 'kho'), lots.bep, lots);
+  return tuyen ? { tuyen, hang: 'gui', chieu: 've' } : null;
 }
 
 /** Đường riêng của một người: từ chỗ đứng làm `spot` ra lối rồi theo tuyến. */
@@ -191,6 +261,11 @@ export interface ViTri {
   mang: boolean;
   /** Đứng đổ hàng ở nơi nhận. */
   dung: boolean;
+}
+
+/** Lúc người đi ở chỗ `at` có đang mang hàng không: chiều `di` mang lượt đi, chiều `ve` mang từ lúc tới nơi nhận. */
+export function coHang(chieu: ChieuGanh, at: Pick<ViTri, 'mang'>): boolean {
+  return chieu === 'di' ? at.mang : !at.mang;
 }
 
 /** Điểm trên đường `p` sau `sec` giây đi theo chiều xuôi. */

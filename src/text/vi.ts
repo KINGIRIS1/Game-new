@@ -1937,8 +1937,14 @@ export const vi = {
         lock: 'Mở khi vào chương 4: Mỵ Châu, Trọng Thủy.',
       },
     },
-    mauPlan: (moves: number, builds: number, removes: number, uNos = 0) =>
-      [moves ? `Dời ${moves} công trình` : '', builds ? `dựng thêm ${builds}` : '', uNos ? `dựng ${uNos} ụ nỏ` : '', removes ? `dỡ ${removes} đoạn thừa` : '']
+    mauPlan: (moves: number, builds: number, removes: number, uNos = 0, duong = 0) =>
+      [
+        moves ? `Dời ${moves} công trình` : '',
+        builds ? `dựng thêm ${builds}` : '',
+        uNos ? `dựng ${uNos} ụ nỏ` : '',
+        removes ? `dỡ ${removes} đoạn thừa` : '',
+        duong ? `trải ${duong} ô đường gánh hàng` : '',
+      ]
         .filter(Boolean)
         .join(', ') || 'Đã xếp đúng theo mẫu',
     mauApply: '🗺️ Áp mẫu',
