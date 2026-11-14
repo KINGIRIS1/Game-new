@@ -10,6 +10,7 @@ import { advJoined, advSetup } from './coLoa';
 import { ADV_REST_MS, CAO_LO_REST_MS, CH2_QUEST_START, GIFTS, GIFT_IDS, GIONG_REST_MS, SON_REST_MS, STAGES, type Chapter, type GiftId } from './defs';
 import { canAfford, pay, scheduleFirstFlood, type FailReason, type GameState, type Result, type SonState } from './game';
 import { giongReady, heroSetup } from './giong';
+import { ganDo } from './trangBi';
 
 const ok = <T>(value: T): Result<T> => ({ ok: true, value });
 const fail = (reason: FailReason): Result<never> => ({ ok: false, reason });
@@ -65,9 +66,14 @@ export function heroFor(s: GameState, chapter: Chapter, stage?: number, pick?: H
 /**
  * Các tướng ra trận (một, hay hai với Hai Bà). Chương 5: Hai Bà cùng ra, bà nào kiệt sức thì bà kia ra một mình; cả
  * hai kiệt sức thì như `heroFor` của chương trước (Cao Lỗ, Sơn Tinh, Gióng). Phó bản chương 5 cần ít nhất một bà
- * (`canStartStage`).
+ * (`canStartStage`). Tướng mang theo chỉ số đồ đang mặc lúc vào trận (`ganDo`).
  */
 export function heroesFor(s: GameState, chapter: Chapter, stage?: number, pick?: HeroKind | null): HeroSetup[] {
+  return chonTuong(s, chapter, stage, pick).map((h) => ganDo(s, h));
+}
+
+/** Các tướng ra trận, chưa gắn chỉ số đồ (`ganDo`). */
+function chonTuong(s: GameState, chapter: Chapter, stage?: number, pick?: HeroKind | null): HeroSetup[] {
   if (chapter === 5) {
     const ba = haiBaSetups(s);
     if (ba.length) return ba;

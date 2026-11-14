@@ -3292,6 +3292,167 @@ Người chơi mô phỏng xếp gọn quanh Điện, trung bình hệ số gán
 2. **PR 2, dân gánh hàng đi trên đường** (đã làm, cùng PR với PR 1 vì PR 1 chưa gộp): người làm rời chỗ đứng gánh hàng theo đúng tuyến của luật, đồ gánh theo loại hàng, chỗ nhận hàng ở kho; chụp kiểm tra.
 3. **PR 3, tới nơi sản xuất và tiện ích** (đã làm): thợ vác vật liệu tới công trình đang xây, người bếp gùi nguyên liệu từ kho, mùa Tết đội mâm bánh lên Điện (chỉ để nhìn); tô vùng đủ 100% khi đặt công trình và khi chọn kho, Điện, bếp; áp mẫu kinh đô trải sẵn đường gánh hàng.
 
+## Kế hoạch: trang bị rơi ngẫu nhiên và sáu chỉ số tướng (chủ dự án đã duyệt)
+
+Chủ dự án yêu cầu: thêm bộ trang bị riêng cho các tướng và hệ thống chỉ số tướng đi kèm. Như các kế hoạch trước, được chỉnh số ±20% theo test; làm xong phần nào thì ghi số cuối cùng của phần ấy.
+
+**Hiện trạng** (khảo sát code):
+- Sáu tướng đánh trên bãi (`HeroKind`): Gióng, Sơn Tinh, An Dương Vương, Cao Lỗ, Trưng Trắc, Trưng Nhị. Lạc tướng không đứng trên bãi, chỉ có Trống trận. Chỉ số cố định ở `defs.ts` (`GIONG`, `SON`, `ADV`, `CAO_LO`, `TRUNG_TRAC`, `TRUNG_NHI`).
+- Tướng mạnh lên chỉ nhờ phần cộng chung, tướng nào cũng như nhau: Đền và phúc lành (`Battle.bonus`), nhánh tướng của huân công (4% mỗi bậc, tối đa 16%). Đòn kỹ năng nhân chung một hệ số (`scale` ở `useSkill`). Binh khí (`ARMS`) chỉ cho lính.
+- Đồ sắt của Gióng (`GEAR`) là mốc truyện để thành tráng sĩ, không cộng chỉ số.
+- Hai Bà chưa có bảng, chỉ có dòng trong ô Tướng ở dock.
+- Hình kỹ năng đọc thẳng hằng số (`FIRE.length`, `HILL.radius`, `ROCKS.radius`, `LIEN_CHAU.radius`, `HIEU_TRIEU.count` ở `battleView.ts`).
+- Luật không dùng `Math.random`: mọi số ngẫu nhiên lặp lại được theo bộ đếm (`cayDa.seq`, `merchant.seq`…).
+- Thưởng phó bản: thắng lần đầu đủ thưởng, đánh lại được 30% (`REPLAY_SHARE`), không giới hạn lượt. Thử thách chỉ cho huân công lần đầu. Đồn đánh một lần. Giữ kinh đô không có thưởng.
+- Sau Điện 10, gạo, vỏ ốc, đất đá tràn kho; sắt, gỗ dồn lại vì không còn chỗ tiêu.
+
+### Đã chốt (chủ dự án chọn)
+
+- **Đồ rơi ngẫu nhiên**, có kho đồ, lắp tháo giữa các tướng (không chọn bộ cố định rèn ★1–★5 của đề xuất đầu).
+- **Bộ riêng, ai mặc cũng được**: mỗi tướng một bộ mang tên truyền thuyết; món nào cũng mặc được cho tướng nào, nhưng hiệu ứng bộ chỉ có khi đúng tướng của bộ mặc.
+- **Sáu chỉ số**: ❤️ Máu, ⚔️ Sức đánh, ⚡ Tốc đánh, ✨ Uy lực kỹ năng, 🛡️ Giáp, ⏱ Hồi kỹ năng.
+- **Không có cấp tướng.**
+- **Rơi ở cả bốn loại trận**: phó bản (kể cả đánh lại), thử thách, đánh đồn, giữ kinh đô.
+- **Cường hóa bằng tài nguyên**; đồ thừa phân giải ra sắt.
+- **Mở khi Gióng về** (code: khi có tướng đầu tiên về, chơi thường là Gióng thành tráng sĩ); phẩm và chỉ số cao hơn mở dần theo chương.
+- **Đấu thành có tính trang bị**, làm ở PR riêng vì đổi luật máy chủ.
+- Không đổi dáng tướng (giữ quyết định không thêm đồ rối mắt quanh tướng, PR #96, #97); tướng mặc đủ bốn món bộ mình thì vũ khí ánh lên. Lạc tướng chưa có đồ.
+
+### Món đồ
+
+Mỗi tướng bốn ô:
+
+| Ô | Chỉ số chính |
+|---|---|
+| Vũ khí | ⚔️ Sức đánh |
+| Giáp | ❤️ Máu hoặc 🛡️ Giáp (rút ngẫu nhiên) |
+| Phục sức (thú cưỡi, áo, miện) | ⚡ Tốc đánh hoặc ⏱ Hồi kỹ năng |
+| Bảo vật | ✨ Uy lực kỹ năng |
+
+Sáu bộ, tên món theo ô:
+
+| Bộ | Của tướng | Vũ khí | Giáp | Phục sức | Bảo vật |
+|---|---|---|---|---|---|
+| Phù Đổng | Gióng | Roi sắt | Giáp sắt | Ngựa sắt | Tre đằng ngà |
+| Tản Viên | Sơn Tinh | Gậy thần | Giáp đồng hoa văn | Áo choàng lá rừng | Đá thiêng Tản Viên |
+| Cổ Loa | An Dương Vương | Nỏ thần | Giáp đồng | Miện vàng | Sừng tê bảy tấc |
+| Cao Lỗ | Cao Lỗ | Nỏ liên châu | Giáp da khảm đồng | Bao tên đồng | Tù và |
+| Trưng Trắc | Trưng Trắc | Gươm đồng | Giáp ngực đồng | Voi trận đệm đỏ | Ấn Trưng Vương |
+| Trưng Nhị | Trưng Nhị | Cung sừng | Áo giáp vàng | Voi trận đệm vàng | Cờ chim Lạc |
+
+Một món gồm: ô, bộ, **phẩm** (Thường, Tốt, Quý, Huyền thoại; khung xám, xanh lá, tím, vàng), **cấp đồ** (chương nơi rơi, 1–5), chỉ số chính, 0/1/2/3 chỉ số phụ theo phẩm (rút ngẫu nhiên, không trùng nhau và không trùng chỉ số chính), mức cường hóa, khóa (khỏi lỡ tay phân giải), tướng đang mặc. Code đặt tên `trangBi`, `Mon` cho khỏi lẫn với `GEAR` của Gióng.
+
+Giá trị (dự kiến):
+- Chỉ số chính ở +0, cấp đồ 1: Thường 2%, Tốt 3%, Quý 4%, Huyền thoại 5%.
+- Hệ số theo chỉ số: Máu, Sức đánh, Uy lực ×1; Giáp, Tốc đánh ×0,6; Hồi kỹ năng ×0,5.
+- Hệ số cấp đồ (chương 1–5): 1; 1,3; 1,6; 1,9; 2,2.
+- Chỉ số phụ: 1–2% (rút theo 5 nấc) × hệ số theo chỉ số × hệ số cấp đồ.
+- Ví dụ: vũ khí Huyền thoại chương 5 +10 cho chừng +22% Sức đánh. Để so: huân công tối đa +16% máu, sức đánh, kỹ năng.
+- Trần tổng mỗi tướng: Giáp 40%, Hồi kỹ năng 30%, Tốc đánh 50%.
+
+### Rơi đồ
+
+Mỗi lần rơi tối đa một món:
+
+| Nguồn | Có rơi | Thường | Tốt | Quý | Huyền thoại |
+|---|---|---|---|---|---|
+| Phó bản thắng lần đầu | 100% | 0 | 60 | 30 | 10 |
+| Phó bản đánh lại | 60% | 55 | 30 | 12 | 3 |
+| Thử thách thắng lần đầu | 100% | 0 | 0 | 70 | 30 |
+| Thử thách đánh lại | 80% | 20 | 45 | 27 | 8 |
+| Dẹp đồn (một lần) | 100% | 0 | 0 | 60 | 40 |
+| Giữ kinh đô thắng | 35% | 55 | 30 | 12 | 3 |
+
+- Phẩm tối đa theo chương của trận: chương 1 Tốt, chương 2 Quý, chương 3 trở đi Huyền thoại. Rút cao quá thì hạ xuống trần.
+- Cấp đồ: phó bản, thử thách theo chương của màn; đồn theo chương của bậc đồn (`CAMPS[bậc].chapter`); giữ kinh đô theo chương đang chơi.
+- Bộ rơi ra: phó bản, thử thách rơi bộ của chương màn ấy (chương 1 Phù Đổng, 2 Tản Viên, 3 Cổ Loa, 4 Cao Lỗ, 5 Trưng Trắc hoặc Trưng Nhị), để người chơi cày đúng bộ mình cần; giữ kinh đô, đồn rơi bộ của một tướng đã về.
+- Số ngẫu nhiên lặp lại được theo bộ đếm `trangBi.seq`, chỉ tăng khi rút đồ, nên tải lại bản lưu không rút lại được món khác. Luật vẫn không dùng `Math.random`.
+- Chưa có tướng nào về (chơi thường: Gióng chưa thành tráng sĩ) thì không rơi, không tốn lần rút.
+- Kho đồ tối đa 80 món, kể cả món đang mặc. Kho đầy thì món mới tự phân giải ra sắt, có báo.
+
+### Đo sức mạnh (PR 1)
+
+Người chơi thường (bấm chậm, không Đền, quân mẫu 38 chỗ, tướng như khi đã hết truyện) thắng được ít nhất 2 trong 3 hạt giống khi máu giặc gấp tới mấy lần màn gốc; đo từng nấc 0,1, trần đo ×2,6. Bộ mẫu: bốn món bộ của chính tướng, cấp đồ theo chương của màn, chỉ số phụ nấc giữa. "Bộ cao nhất +10" là phẩm cao nhất của chương (chương 1 Tốt, chương 2 Quý, từ chương 3 Huyền thoại) ở +10, nên ở chương 1, 2 cao hơn trần cường hóa thật một chút.
+
+| Màn | Không đồ | Huân công tướng tối đa | Bộ Quý +8 | Bộ cao nhất +10 |
+|---|---|---|---|---|
+| 4 | ×2,6 | ×2,6 | ×2,6 | ×2,6 |
+| 8 | ×1,5 | ×1,6 | ×1,5 | ×1,5 |
+| 12 | ×1,5 | ×1,6 | ×1,8 | ×1,8 |
+| 16 | ×1,0 | ×1,1 | ×1,1 | ×1,2 |
+| 20 | ×1,4 | ×1,6 | ×1,8 | ×1,9 |
+| 24 | ×1,0 | ×1,2 | ×1,3 | ×1,4 |
+| 28 | ×1,0 | ×1,1 | ×1,3 | ×1,3 |
+| 32 | ×1,0 | ×1,2 | ×1,2 | ×1,3 |
+| 36 | ×1,1 | ×1,2 | ×1,5 | ×1,5 |
+| 40 | ×1,0 | ×1,2 | ×1,4 | ×1,6 |
+
+- Đủ bộ tốt thì người chơi thường chịu được giặc khỏe hơn chừng 20–60% từ chương 2 trở đi, hơn huân công tướng tối đa (10–20%), nhưng chưa tới mức bỏ qua quân. Đồ chương 1 còn yếu (2–3% mỗi chỉ số), Gióng mặc đủ bộ chương 1 chưa khác rõ.
+- Chuẩn độ khó mọi màn, mọi thử thách vẫn tính không có đồ, nên các test cân bằng không đổi.
+
+### Cường hóa, phân giải, lắp tháo
+
+- **Cường hóa** ở lò rèn còn nguyên, xong ngay. Từ +1 tới trần theo phẩm: Thường +4, Tốt +6, Quý +8, Huyền thoại +10. Mỗi nấc +10% chỉ số chính (+10 là gấp đôi); chỉ số phụ không đổi.
+- Giá nấc thứ n (đã chốt ở PR 1, `CUONG_HOA_GIA`): gạo 150n, vỏ ốc (vũ khí, phục sức) hay đất đá (giáp, bảo vật) 120n, sắt 18n, gỗ 25n từ +6; nhân hệ số cấp đồ 1, 2, 4, 7, 10. Đo bằng `node scripts/kinh-te.mjs`: sau Điện 10 mỗi giờ gạo tràn kho chừng 123 nghìn, vỏ ốc 69 nghìn, đất đá 27 nghìn (còn 62 nghìn đang tiêu cho nâng cấp), sắt dồn thêm chừng 13 nghìn, gỗ 14 nghìn. Bốn món một tướng lên +10 ở cấp đồ 5 hết 330 nghìn gạo, 132 nghìn vỏ ốc, 132 nghìn đất đá, 40 nghìn sắt, 40 nghìn gỗ: chừng 3 giờ của dư (giá dự kiến ban đầu 200n, 30n sắt, 50n gỗ thì mất 5–6 giờ vì sắt, gỗ).
+- **Phân giải** ra sắt theo phẩm và cấp đồ, cộng lại 50% sắt đã tốn cường hóa. Có nút phân giải hàng loạt món Thường, Tốt chưa khóa, chưa mặc.
+- **Lắp tháo**: mặc món đang ở tướng khác thì món ấy tự tháo khỏi tướng kia. Mỗi tướng một món mỗi ô.
+
+### Chỉ số tướng
+
+- **Máu, Sức đánh**: gốc × (1 + Đền và phúc lành + huân công tướng + phần đồ).
+- **Tốc đánh**: nghỉ giữa hai đòn = gốc ÷ (1 + Tốc).
+- **Uy lực kỹ năng**: đòn kỹ năng nhân hệ số của chính tướng làm kỹ năng: (1 + Đền và phúc lành + huân công tướng + phần đồ). Hai Bà mỗi bà một hệ số.
+- **Giáp**: sát thương nhận × (1 − Giáp), nhân cùng khiên Rùa Vàng.
+- **Hồi kỹ năng**: thời gian hồi × (1 − Hồi).
+- **Lực chiến**: một con số tóm tắt, chỉ để xem, luật không đọc; công thức chốt ở PR 1.
+- Tầm và tốc chạy không đổi. Ngoài bãi vẫn nhân `FIELD.hpMul`. Thử thách Không tướng thì đồ không có tác dụng. Tướng hiển linh vẫn mang đồ.
+
+### Hiệu ứng bộ (chỉ khi đúng tướng của bộ mặc)
+
+| Bộ | 2 món | 4 món |
+|---|---|---|
+| Phù Đổng | +10% Sức đánh | Phun lửa dài 7 → 9 ô; Nhổ tre vòng 2,5 → 3 ô |
+| Tản Viên | +10% Máu | Bốc đồi vùng 2,2 → 2,8 ô; Dời non giữ chân 3 → 4 giây |
+| Cổ Loa | +10% Uy lực kỹ năng | Nỏ thần 80 → 100; Rùa Vàng hồi 30% → 40% máu |
+| Cao Lỗ | +8% Tốc đánh | Nỏ liên châu vùng 3,5 → 4,2 ô; Lệnh bắn 6 → 8 giây |
+| Trưng Trắc | +8% Giáp | Voi xung trận dài 5 → 6,5 ô, choáng 1,5 → 2,2 giây |
+| Trưng Nhị | +8% Hồi kỹ năng | Hiệu triệu 5 → 6 nghĩa binh, hồi 15% → 20% máu |
+
+Kỹ năng chưa mở (Nhổ tre trước màn 6, Hiệu triệu trước màn 33…) thì hiệu ứng chờ tới khi mở.
+
+### Giao diện
+
+- **Bảng tướng** mới, mở từ ô Tướng ở dock (Hai Bà lần đầu có bảng), thẻ Tướng ở doanh trại và bảng xếp quân. Trên cùng là hàng thẻ chọn tướng đã về.
+  - Thẻ **Trang bị**: bốn ô (ảnh theo ô, khung màu phẩm, +cường hóa) và dòng hiệu ứng bộ (đang có, hay còn thiếu mấy món). Chạm một ô thì hiện lưới món hợp ô, chia trang như bảng Xây dựng, xếp theo Lực chiến. Chọn một món thì so với món đang mặc (▲▼ từng chỉ số), có nút Mặc, Tháo, Cường hóa (nút mờ ghi lý do), Khóa, Phân giải.
+  - Thẻ **Chỉ số**: sáu chỉ số kèm phần của từng nguồn, Lực chiến, kỹ năng kèm số của kỹ năng.
+- **Kho đồ**: lọc theo ô, bộ, phẩm; phân giải hàng loạt; số món trên trần.
+- Báo rơi đồ: dòng trong bảng kết quả phó bản, dòng tin sau trận giữ kinh đô; thẻ màn ghi bộ nào rơi ở đây và phẩm tối đa.
+- Lạc hầu báo một lần khi rơi món đầu tiên.
+
+### Code
+
+- `defs.ts`: ô, bộ, phẩm, bảng rơi theo nguồn, hệ số, trần, giá cường hóa, hiệu ứng bộ. Tên món, lời tả ở `vi.ts`.
+- `trangBi.ts` mới: rút món (`roiDo`), mặc, tháo, cường hóa, phân giải, khóa; chỉ số tổng của tướng (`chiSoTuong`, dùng chung cho bảng tướng và trận), hiệu ứng bộ, Lực chiến.
+- `GameState.trangBi`: kho món, bộ đếm rút, mã món kế tiếp; mỗi món ghi tướng đang mặc. Bản lưu 27 (PR #86 cũng giữ số 27: bên nào gộp sau thì lấy số kế tiếp); bản lưu cũ có kho rỗng.
+- `HeroSetup` thêm chỉ số đồ đã tính sẵn: bản sao lúc vào trận, nên mặc đồ giữa trận không đổi trận đang đánh. `heroFor`, `heroesFor` điền sẵn, nên mọi trận nhận cùng một chỗ.
+- `battle.ts`: `addHero` nhân máu; đòn thường của tướng nhân sức đánh và chia thời gian nghỉ; `damageFighter` nhân (1 − Giáp) khi mục tiêu là tướng; `useSkill` lấy hệ số và thời gian hồi của chính tướng làm kỹ năng; số kỹ năng qua một hàm theo tướng thay cho hằng số; sự kiện kỹ năng mang bán kính, độ dài, số nghĩa binh để `battleView.ts` vẽ đúng. Chỉ thêm phép nhân, chia nên vẫn tất định.
+- Rơi đồ ở `finishStage` (thắng màn, thắng thử thách), `finishCamp`, `finishRaid` (thắng là hạ hết giặc, không mất của); kết quả trận mang món rơi.
+- Đấu thành trước PR riêng: bản chụp và quân đi đánh bỏ phần đồ của tướng. PR Đấu thành: bản chụp mang món đang mặc; `validateSnapshot` kiểm từng món (ô không trùng, cấp đồ không quá chương của bản chụp, phẩm trong trần chương, chỉ số trong khoảng rút, cường hóa trong trần phẩm); máy chủ tự tính chỉ số từ món, không tin số gửi lên; sửa `mayChu.ts`, `luat.d.ts`, trận đối chiếu `doiChieu`.
+- Người chơi mô phỏng không mặc đồ. Đồ vẫn rơi khi giữ kinh đô, kho đầy thì tự phân giải ra sắt; sổ kinh tế có dòng phân giải đồ. Nhịp lên Điện và chuẩn mọi màn, mọi thử thách tính không có đồ, như huân công và nữ tướng.
+
+### Test
+
+- `trangBi.test.ts`: cùng bộ đếm ra cùng món; tỉ lệ phẩm theo nguồn và trần chương; bộ rơi theo chương và theo tướng đã về; không rơi trước khi Gióng về; mặc, tháo, chuyển tướng; cường hóa (trần, giá, lò rèn hư, thiếu của); phân giải, khóa, kho đầy; chỉ số tổng, các trần, hiệu ứng bộ chỉ khi đúng tướng; trận nhận đúng máu, sát thương, thời gian nghỉ, giáp, hồi, uy lực (Hai Bà mỗi bà một hệ số); hiệu ứng bốn món đổi số kỹ năng và sự kiện mang số; mặc đồ giữa trận không đổi trận; nâng bản lưu 26; bản chụp Đấu thành chưa mang đồ.
+- Đo sức mạnh để ghi vào tài liệu: tướng mặc bộ mẫu (Quý +8, Huyền thoại +10) ở vài màn mỗi chương, so với không đồ và với huân công tối đa.
+- Chụp kiểm tra bảng tướng, kho đồ, bảng kết quả có món rơi.
+
+### Thứ tự làm
+
+1. **PR 0** (#100): tài liệu.
+2. **PR 1** (đã làm, cùng PR #100 vì PR 0 chưa gộp): luật, rơi đồ, bản lưu 27, trận, bảng tướng và kho đồ (ảnh tạm theo ô, khung màu phẩm), test, đo sức mạnh, chốt giá cường hóa. Đấu thành chưa tính đồ.
+3. **PR 2**: Đấu thành tính đồ (bản chụp, máy chủ).
+4. **PR 3**: hình: 24 ảnh món đồ vẽ sẵn (6 bộ × 4 ô), vũ khí ánh lên khi tướng mặc đủ bốn món bộ mình; chụp kiểm tra.
+
 ## Nhịp chơi và lưu game
 
 - Nhịp chơi lai: mỗi lần mở game là một phiên ra quyết định ngắn.
@@ -3344,4 +3505,5 @@ Người chơi mô phỏng xếp gọn quanh Điện, trung bình hệ số gán
 21. **Ngày đêm** (chủ dự án chọn, đã làm; xem mục cùng tên): kinh đô có ngày, chiều tà, đêm, rạng đông, 12 phút chơi một vòng, chỉ để nhìn. PR 1 trời và cài đặt, PR 2 đèn đuốc, đèn thuyền, đom đóm.
 22. **Đấu thành** (chủ dự án đã duyệt; đã làm PR 1–6: trận tất định, luật, đánh thử ngoài mạng, server, nối mạng; xem lại trận, bảng xếp hạng, gắn Google và lưu mây; xem Kế hoạch cùng tên): đánh thành người chơi khác, cướp của, server Supabase miễn phí.
 23. **Dân gánh hàng về kho** (chủ dự án chọn, đã làm PR 1, 2; xem mục cùng tên): công trình xa nơi nhận làm ra ít hơn, thấp nhất 50%; đường đi cho dân đi nhanh gấp đôi. PR 1 luật, PR 2 dân gánh trên đường, PR 3 tới nơi sản xuất.
-24. **Để sau**: nhạc nền.
+24. **Trang bị rơi ngẫu nhiên và sáu chỉ số tướng** (chủ dự án đã duyệt; xem Kế hoạch cùng tên): đồ rơi ở phó bản, thử thách, đồn, giữ kinh đô; mỗi tướng một bộ mang tên truyền thuyết, ai mặc cũng được, hiệu ứng bộ khi đúng tướng mặc; sáu chỉ số và Lực chiến; cường hóa bằng tài nguyên, phân giải ra sắt; bảng tướng và kho đồ mới. PR 1 luật và bảng, PR 2 Đấu thành, PR 3 hình.
+25. **Để sau**: nhạc nền.

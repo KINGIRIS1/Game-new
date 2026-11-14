@@ -18,6 +18,7 @@ import { giftOfStage, heroFor, heroesFor, restingHero } from '../game/son';
 import { challengeEnemies, challengeOf, challengeOpen, challengeWon, huanNextCost, huanReward } from '../game/thuThach';
 import { vi } from '../text/vi';
 import { costHtml, esc } from './format';
+import { roiHtml, roiNoteHtml } from './trangBi';
 
 /** Lựa chọn trên bảng xếp quân: số lính mang theo, hàng đứng của từng binh chủng, tướng ra trận. */
 export interface ArmyPick {
@@ -300,6 +301,7 @@ export function stageHtml(state: GameState, n: number): string {
     ${holdNote(n)}
     <div class="stat"><span>${first ? vi.ui.firstReward : vi.ui.replayReward}</span>${costHtml(null, stageReward(state, n))}</div>
     ${gift && !state.son.gifts[gift] ? `<div class="stat"><span>${vi.ui.giftWon}</span><b>${vi.gifts[gift].icon} ${esc(vi.gifts[gift].name)}</b></div>` : ''}
+    ${roiNoteHtml(state, stageDef(n)!.chapter, first)}
     ${heroNote(heroesFor(state, stageDef(n)!.chapter, n))}
     ${battleWarnings(state, n)}
     <div class="actions">
@@ -540,6 +542,7 @@ export function stageResultHtml(r: StageResult): string {
       ${won && !r.challenge ? `<div>${don ? vi.benKia.campReward : r.first ? vi.ui.firstReward : vi.ui.replayReward}: ${costHtml(null, r.reward)}</div>` : ''}
       ${won && r.challenge ? `<div>${r.challenge.huan ? vi.ui.huanGot(r.challenge.huan) : vi.ui.huanAgain}</div>` : ''}
       ${r.gift ? `<div>${vi.ui.giftWon}: ${vi.gifts[r.gift].icon} ${esc(vi.gifts[r.gift].name)}</div>` : ''}
+      ${roiHtml(r.do)}
     </div>
     <div class="actions">
       ${don ? '' : `<button class="btn ghost" data-act="fieldToMap">${vi.ui.toMap}</button>`}

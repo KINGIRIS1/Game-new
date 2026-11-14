@@ -18,6 +18,7 @@ import {
 import { dienLevel, gain, occupancy, type GameState, type Result } from './game';
 import { khoanhOrigin, openMask } from './khoanh';
 import { GRID, KHOANH, RIVER_START } from './map';
+import { roll } from './ngauNhien';
 
 /** Một cây hay tảng đá trên ô (x, z); `v` là dáng (hình vẽ). */
 export interface CayDa {
@@ -37,17 +38,6 @@ export interface CayDaState {
 
 export function initialCayDa(clock = 0): CayDaState {
   return { list: [], nextAt: clock + CAY_DA_FIRST_MS, seq: 0 };
-}
-
-/** Số ngẫu nhiên 0..1 lặp lại được theo lần gieo `seq` và lượt bốc `i` (trộn kiểu murmur3 cho đều). */
-function roll(seq: number, i: number): number {
-  let h = (Math.imul(seq + 1, 0x9e3779b1) ^ Math.imul(i + 1, 0x632be5ab)) >>> 0;
-  h ^= h >>> 16;
-  h = Math.imul(h, 0x85ebca6b);
-  h ^= h >>> 13;
-  h = Math.imul(h, 0xc2b2ae35);
-  h ^= h >>> 16;
-  return (h >>> 0) / 4294967296;
 }
 
 export function cayDaAt(state: GameState, x: number, z: number): CayDa | undefined {

@@ -3,7 +3,7 @@
 
 import * as THREE from 'three';
 import { heroSetups, type Battle, type Fighter, type FighterKind } from '../game/battle';
-import { FIRE, HIEU_TRIEU, HILL, LIEN_CHAU, MA_VIEN_VOLLEY, RALLY_BEAT, ROCKS, SKILLS, SWIMMERS, TT_WAVE, type NuTuongId, type UnitType } from '../game/defs';
+import { FIRE, HIEU_TRIEU, HILL, LIEN_CHAU, MA_VIEN_VOLLEY, RALLY_BEAT, ROCKS, SKILLS, SMASH, SWIMMERS, TT_WAVE, type NuTuongId, type UnitType } from '../game/defs';
 import { isBeast, makeBeast, makeRuaVang } from './beasts';
 import { isMonster, makeMonster } from './monsters';
 import { makeAnDuong, makeCaoLo, makeGiong, makeNuTuong, makeSonTinh, makeThuyTinh, makeTrungNhi, makeTrungTrac } from './heroes';
@@ -1123,7 +1123,8 @@ export class BattleView {
    * Nỏ liên châu: Cao Lỗ ngẩng nỏ bắn một loạt tên đồng vút lên, rồi tên rơi lả tả xuống khắp vùng trúng quanh
    * (tx, tz), bụi đất tung lên chỗ tên cắm.
    */
-  private lienChau(battle: Battle, seq: number, x: number, z: number, tx: number, tz: number): void {
+  /** `radius`: bán kính vùng tên rơi của luật (đủ bốn món bộ Cao Lỗ thì rộng hơn); không có là số gốc. */
+  private lienChau(battle: Battle, seq: number, x: number, z: number, tx: number, tz: number, radius = LIEN_CHAU.radius): void {
     const { x: ox, z: oz } = this.offset;
     const hero = battle.fighters.find((f) => f.kind === 'caoLo');
     const view = hero && this.fighters.get(hero.id);
@@ -1139,7 +1140,7 @@ export class BattleView {
       this.root.add(up);
       this.arrows.push({ mesh: up, from, to: top, age: 0, dur: RAIN_RISE, arc: 0 });
     }
-    const r = LIEN_CHAU.radius * this.geo;
+    const r = radius * this.geo;
     for (let i = 0; i < RAIN_ARROWS; i++) {
       const a = rand() * Math.PI * 2;
       const d = Math.sqrt(rand()) * r;
@@ -1192,7 +1193,8 @@ export class BattleView {
    * Hiệu triệu: Trưng Nhị rút cờ phất, vòng sáng xanh loang dưới chân quân ta được hồi máu, bụi tung ở chỗ từng
    * nghĩa binh chạy ra.
    */
-  private hieuTrieu(battle: Battle, x: number, z: number): void {
+  /** `count`: số nghĩa binh tối đa của luật (đủ bốn món bộ Trưng Nhị thì nhiều hơn). */
+  private hieuTrieu(battle: Battle, x: number, z: number, count = HIEU_TRIEU.count): void {
     const { x: ox, z: oz } = this.offset;
     const hero = battle.fighters.find((f) => f.kind === 'trungNhi');
     const view = hero && this.fighters.get(hero.id);
@@ -1204,7 +1206,7 @@ export class BattleView {
     this.rings.push({ mesh, age: 0, size: HIEU_TRIEU.radius * this.geo });
     const fresh = battle.fighters
       .filter((f) => f.kind === 'nghiaBinh' && f.state !== 'dead' && f.state !== 'gone' && !this.fighters.has(f.id))
-      .slice(0, HIEU_TRIEU.count);
+      .slice(0, count);
     fresh.forEach((f, i) => this.addPuff(f.x + ox, this.heightAt(f.x, f.z) + 0.2, f.z + oz, C.earth, 0.3 + i * 0.05, 0.7, 1.4));
   }
 
@@ -1376,7 +1378,7 @@ export class BattleView {
         this.arrows.push({ mesh, from, to, age: 0, dur: Math.max(0.12, from.distanceTo(to) / (fast ? 18 : 12)), arc: fast ? 0.25 : 0.6, flash: e.by === 'anDuong' });
       }
       if (e.kind === 'volley') this.volley(battle, e.seq, e.x, e.z);
-      if (e.kind === 'rain' && e.tx !== undefined && e.tz !== undefined) this.lienChau(battle, e.seq, e.x, e.z, e.tx, e.tz);
+      if (e.kind === 'rain' && e.tx !== undefined && e.tz !== undefined) this.lienChau(battle, e.seq, e.x, e.z, e.tx, e.tz, e.r);
       if (e.kind === 'order') this.lenhBan(battle, e.x, e.z);
       if (e.kind === 'barrage' && e.tx !== undefined && e.tz !== undefined) this.lenhNo(battle, e.seq, e.x, e.z, e.tx, e.tz);
       if (e.kind === 'barrageHit') {
@@ -1413,7 +1415,8 @@ export class BattleView {
       }
       if (e.kind === 'hill' && e.tx !== undefined && e.tz !== undefined) {
         const group = hillModel();
-        group.scale.multiplyScalar(this.geo);
+        // Đồi to theo vùng đánh của luật (đủ bốn món bộ Tản Viên thì rộng hơn); bụi lúc rơi theo cỡ đồi.
+        group.scale.multiplyScalar((this.geo * (e.r ?? HILL.radius)) / HILL.radius);
         group.position.set(e.tx + ox, this.heightAt(e.tx, e.tz) + 7, e.tz + oz);
         group.rotation.y = e.seq;
         this.root.add(group);
@@ -1434,9 +1437,9 @@ export class BattleView {
         this.root.add(mesh);
         this.rings.push({ mesh, age: 0 });
       }
-      if (e.kind === 'fire' && e.tx !== undefined && e.tz !== undefined) this.breatheFire(battle, e.seq, e.x, e.z, e.tx, e.tz);
+      if (e.kind === 'fire' && e.tx !== undefined && e.tz !== undefined) this.breatheFire(battle, e.seq, e.x, e.z, e.tx, e.tz, e.len);
       if (e.kind === 'smash') {
-        const r = 1.6;
+        const r = (1.6 * (e.r ?? SMASH.radius)) / SMASH.radius;
         for (let i = 0; i < 8; i++) {
           const a = (i / 8) * Math.PI * 2;
           this.addPuff(e.x + Math.cos(a) * r + ox, this.heightAt(e.x, e.z) + 0.2, e.z + Math.sin(a) * r + oz, C.earth, 0.05, 0.7, 1.6);
@@ -1444,7 +1447,7 @@ export class BattleView {
       }
       if (e.kind === 'exhaust') this.addPuff(e.x + ox, this.heightAt(e.x, e.z) + 0.6, e.z + oz, C.smoke, 0, 1.2, 3);
       if (e.kind === 'charge' && e.tx !== undefined && e.tz !== undefined) this.voiXung(battle, e.x, e.z, e.tx, e.tz);
-      if (e.kind === 'call') this.hieuTrieu(battle, e.x, e.z);
+      if (e.kind === 'call') this.hieuTrieu(battle, e.x, e.z, e.n);
       if (e.kind === 'escape') {
         // Tô Định chạy thoát khỏi bãi: bụi tung ở mép bãi phía giặc.
         for (let i = 0; i < 6; i++) this.addPuff(e.x + (i - 2.5) * 0.35 + ox, this.heightAt(e.x, e.z) + 0.25, e.z + oz, C.earth, i * 0.05, 0.9, 1.8);
@@ -1457,7 +1460,8 @@ export class BattleView {
    * Phun lửa: Gióng phi từ (x, z) tới (tx, tz), lửa phun từ mõm ngựa suốt lúc phi, để lại vệt đất cháy
    * dài đúng dải bị đốt, và giặc trong dải bốc cháy. Luật trận đã đặt Gióng ở chỗ mới; phần vẽ cho phi tới đó.
    */
-  private breatheFire(battle: Battle, seq: number, x: number, z: number, tx: number, tz: number): void {
+  /** `length`: độ dài dải lửa của luật (đủ bốn món bộ Phù Đổng thì dài hơn). */
+  private breatheFire(battle: Battle, seq: number, x: number, z: number, tx: number, tz: number, length = FIRE.length): void {
     const { x: ox, z: oz } = this.offset;
     const hero = battle.fighters.find((f) => f.kind === 'giong');
     const view = hero && this.fighters.get(hero.id);
@@ -1490,7 +1494,7 @@ export class BattleView {
     group.position.set(x + ox, 0.05, z + oz);
     group.rotation.y = face;
     group.scale.set(this.geo, 1, this.geo);
-    const steps = Math.ceil(FIRE.length / 0.55);
+    const steps = Math.ceil(length / 0.55);
     const blobs = new THREE.InstancedMesh(scorchGeo, mat, steps);
     for (let i = 0; i < steps; i++) {
       tmpPos.set((rand() - 0.5) * 0.5, 0, 0.2 + i * 0.55);
@@ -1498,7 +1502,7 @@ export class BattleView {
       blobs.setMatrixAt(i, tmpMatrix.compose(tmpPos, noTurn, tmpScale));
     }
     blobs.renderOrder = 1;
-    const spots = Array.from({ length: EMBERS }, () => ({ x: (rand() - 0.5) * FIRE.width * 0.8, z: rand() * FIRE.length, phase: rand() * Math.PI * 2 }));
+    const spots = Array.from({ length: EMBERS }, () => ({ x: (rand() - 0.5) * FIRE.width * 0.8, z: rand() * length, phase: rand() * Math.PI * 2 }));
     const embers = new THREE.InstancedMesh(emberGeo, flameMats[1], EMBERS);
     group.add(blobs, embers);
     this.root.add(group);
@@ -1510,7 +1514,7 @@ export class BattleView {
       const along = (f.x - x) * dx + (f.z - z) * dz;
       const across = Math.abs((f.x - x) * dz - (f.z - z) * dx);
       const target = this.fighters.get(f.id);
-      if (!target || along < -0.3 || along > FIRE.length * this.geo || across > (FIRE.width * this.geo) / 2) continue;
+      if (!target || along < -0.3 || along > length * this.geo || across > (FIRE.width * this.geo) / 2) continue;
       const fire = new THREE.Group();
       for (const shape of burnShapes) {
         const t = tongue(shape);
