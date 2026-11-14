@@ -487,6 +487,8 @@ export class World {
   private readonly chunkPick = new InstancedBoxes(KHOANH * KHOANH);
   /** Dải ô đang kéo thả khi trải đường: xanh ô trải được, đỏ ô không. */
   private readonly linePick = new InstancedBoxes(GRID);
+  /** Vùng gánh hàng đủ 100% khi đặt công trình, chọn kho (`setGanhZone`). */
+  private readonly ganhZone = new InstancedBoxes(GRID * GRID);
   private chunkPicked = -1;
   private floodKey = '';
   private riverWater?: THREE.Object3D;
@@ -695,6 +697,13 @@ export class World {
     this.linePick.mesh.receiveShadow = false;
     this.linePick.mesh.renderOrder = 2;
     this.scene.add(this.linePick.mesh);
+    const zoneMat = this.ganhZone.mesh.material as THREE.MeshLambertMaterial;
+    zoneMat.transparent = true;
+    zoneMat.opacity = 0.42;
+    zoneMat.depthWrite = false;
+    this.ganhZone.mesh.receiveShadow = false;
+    this.ganhZone.mesh.renderOrder = 2;
+    this.scene.add(this.ganhZone.mesh);
     this.rain = new THREE.InstancedMesh(
       new THREE.BoxGeometry(0.025, 0.55, 0.025),
       toiTheoTroi(new THREE.MeshBasicMaterial({ color: C.rain, transparent: true, opacity: 0.55, depthWrite: false })),
@@ -1467,6 +1476,24 @@ export class World {
       }
     }
     this.floodPreview.end();
+  }
+
+  /**
+   * Tô vùng gánh hàng đủ 100% (`vungGanh` ở game/vanChuyen.ts): ô 1 là vùng có sẵn, ô 2 là vùng của nơi đang đặt hay
+   * đang chọn (màu sáng hơn). Null thì thôi tô.
+   */
+  setGanhZone(vung: Uint8Array | null): void {
+    this.ganhZone.begin();
+    if (vung) {
+      for (let i = 0; i < vung.length; i++) {
+        const v = vung[i];
+        if (!v) continue;
+        const x = i % GRID;
+        const z = (i - x) / GRID;
+        this.ganhZone.add(0.96, 0.03, 0.96, v === 2 ? C.ganhVungMoi : C.ganhVung, wx(x) + 0.5, this.groundY(x, z) + 0.035, wz(z) + 0.5);
+      }
+    }
+    this.ganhZone.end();
   }
 
   /** Thuyền buôn lớn neo cạnh bến đầu tiên trong lúc đang đậu. */
@@ -3647,7 +3674,7 @@ export class World {
     apMauToi(tr.unlit);
     // Ô báo ngập, khoảnh đang chọn, dải tường đang kéo là chỉ dẫn: ban đêm bù sáng cho dễ thấy (ban ngày giữ đúng 1).
     const bu = Math.min(2.5, SANG_NGAY / doSang(this.troiNen));
-    for (const m of [this.floodPreview, this.chunkPick, this.linePick]) (m.mesh.material as THREE.MeshLambertMaterial).color.setScalar(bu);
+    for (const m of [this.floodPreview, this.chunkPick, this.linePick, this.ganhZone]) (m.mesh.material as THREE.MeshLambertMaterial).color.setScalar(bu);
     this.toiGio = w.dem + 0.5 * (w.chieu + w.rang);
     this.toi = Math.max(this.toiGio, n);
     this.rain.visible = !this.inField && k > 0.05;

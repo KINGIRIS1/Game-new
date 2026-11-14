@@ -12,6 +12,7 @@ import {
   fishPerMinute,
   move,
   netPerMinute,
+  occupancy,
   newBuilding,
   outputIn,
   outputOf,
@@ -26,7 +27,9 @@ import { MAU_IDS, mauSlots } from './mau';
 import { serialize } from './save';
 import { bakeRates } from './tet';
 import { DIEN, bank, edge, setDien, size } from './testmap';
-import { duongGanh, ganhPreview, ganhType, heSoGanh, heSoTheo, markGanhHinted, needsGanhHint } from './vanChuyen';
+import { GRID, inGrid } from './map';
+import { chiPhiO, duongGanh, duongTu, ganhPreview, ganhType, heSoGanh, heSoTheo, markGanhHinted, needsGanhHint, vungGanh } from './vanChuyen';
+import { pendingBuildings, startBuild } from './xay';
 
 /** Kinh đô Điện 5, đã qua kết chương 1 (có Hội Tết), giàu của, nhiều dân. */
 function capital(): GameState {
@@ -170,6 +173,114 @@ describe('nguyên liệu Tết, cá', () => {
     const k = heSoGanh(s, lang);
     expect(k).toBeLessThan(1);
     expect(fishPerMinute(s)).toBeCloseTo(fishOf(lang) * k);
+  });
+});
+
+/** Ô (z * GRID + x) dưới móng và quanh viền móng công trình loại `type` đặt ở (x, z). */
+function moVaVien(type: BuildingType, x: number, z: number): { mong: number[]; vien: number[] } {
+  const def = BUILDINGS[type];
+  const mong: number[] = [];
+  const vien: number[] = [];
+  for (let zz = z - 1; zz <= z + def.d; zz++) {
+    for (let xx = x - 1; xx <= x + def.w; xx++) {
+      if (!inGrid(xx, zz)) continue;
+      const inside = xx >= x && xx < x + def.w && zz >= z && zz < z + def.d;
+      (inside ? mong : vien).push(zz * GRID + xx);
+    }
+  }
+  return { mong, vien };
+}
+
+describe('tuyến từ móng bất kỳ, vùng đủ sản lượng', () => {
+  it('công trình đang dựng ở xa có tuyến về kho không xuyên móng nào; nâng kho thì không phải đi; có tuyến riêng tới Điện', () => {
+    const s = capital();
+    const kho = put(s, 'kho', DIEN - size('kho') - 1, ROW);
+    expect(startBuild(s, 'nhaSan', LO, LO).ok).toBe(true);
+    const site = pendingBuildings(s).find((b) => b.type === 'nhaSan')!;
+    const g = duongTu(s, site, 'kho')!;
+    expect(g.tuyen.length).toBeGreaterThan(5);
+    const occ = occupancy(s);
+    for (const i of g.tuyen) expect(occ[i]).toBe(0);
+    // Kho là nơi nhận: nâng kho thì vật liệu có sẵn ngay đó.
+    expect(duongTu(s, kho, 'kho')).toBe(null);
+    // Bếp ở bìa xa: tới kho gần nhất, hay riêng tới Điện.
+    const bep = put(s, 'bep', LO, ROW);
+    const tet = duongTu(s, bep, 'dien')!;
+    expect(tet.noi).toBe(s.buildings[0].id);
+    expect(duongTu(s, bep, 'kho')!.noi).toBe(kho.id);
+  });
+
+  it('móng đè lên hay chạm vùng tô thì gánh đủ; báo đủ thì móng chạm vùng tô hay chạm nơi nhận', () => {
+    const s = capital();
+    put(s, 'kho', LO + 4, LO + 4);
+    const vung = vungGanh(s, { type: 'ruong' })!;
+    expect(vung.some((v) => v === 1)).toBe(true);
+    expect(vung.some((v) => v === 2)).toBe(false);
+    const occ = occupancy(s);
+    const nhan = new Set(s.buildings.filter((b) => b.type === 'dien' || b.type === 'kho').map((b) => b.id));
+    let du = 0;
+    let thieu = 0;
+    for (let z = 0; z < GRID; z++) {
+      for (let x = 0; x < GRID; x++) {
+        const { mong, vien } = moVaVien('ruong', x, z);
+        if (mong.length < size('ruong') ** 2 || mong.some((i) => chiPhiO(s, i) === Infinity)) continue;
+        const k = ganhPreview(s, 'ruong', x, z)!;
+        const cham = [...mong, ...vien].some((i) => vung[i] > 0);
+        if (cham) expect(k, `${x},${z}`).toBe(1);
+        if (k === 1) expect(cham || vien.some((i) => nhan.has(occ[i])), `${x},${z}`).toBe(true);
+        if (k === 1) du++;
+        else thieu++;
+      }
+    }
+    expect(du).toBeGreaterThan(0);
+    expect(thieu).toBeGreaterThan(0);
+  });
+
+  it('đặt kho: phần kho mới phủ thêm tô riêng, đúng bằng vùng sau khi dựng; dời kho thì vùng quanh chỗ cũ mất', () => {
+    const s = capital();
+    const truoc = vungGanh(s, { type: 'ruong' })!;
+    const x = LO + 2;
+    const z = LO + 2;
+    const bong = vungGanh(s, { type: 'kho', x, z })!;
+    let them = 0;
+    for (let i = 0; i < bong.length; i++) {
+      if (bong[i] === 2) {
+        them++;
+        expect(truoc[i]).toBe(0);
+      } else expect(bong[i]).toBe(truoc[i]);
+    }
+    expect(them).toBeGreaterThan(20);
+    // Chỗ đặt chưa hợp lệ: chỉ vùng có sẵn.
+    expect([...vungGanh(s, { type: 'kho' })!]).toEqual([...truoc]);
+    const kho = put(s, 'kho', x, z);
+    const sau = vungGanh(s, { type: 'ruong' })!;
+    for (let i = 0; i < sau.length; i++) expect(sau[i], `ô ${i % GRID},${Math.floor(i / GRID)}`).toBe(bong[i] ? 1 : 0);
+    // Đang dời kho: móng cũ bỏ ra, vùng quanh chỗ cũ không còn.
+    const doi = vungGanh(s, { type: 'kho', skip: kho.id })!;
+    const sat = (z - 1) * GRID + x;
+    expect(sau[sat]).toBe(1);
+    expect(doi[sat]).toBe(0);
+  });
+
+  it('chạm chọn kho, Điện, bếp: vùng riêng của nơi ấy; kho hư, công trình khác không tô; nguyên liệu Tết chưa có bếp không tô', () => {
+    const s = capital();
+    const kho = put(s, 'kho', LO + 2, LO + 2);
+    const chon = vungGanh(s, { id: kho.id })!;
+    // Sát kho là vùng riêng; sát Điện mà xa kho là phần còn lại của vùng.
+    expect(chon[(kho.z - 1) * GRID + kho.x]).toBe(2);
+    expect(chon[(DIEN - 1) * GRID + DIEN + 4]).toBe(1);
+    const dien = vungGanh(s, { id: s.buildings[0].id })!;
+    expect(dien[(kho.z - 1) * GRID + kho.x]).toBe(1);
+    expect(dien[(DIEN - 1) * GRID + DIEN + 4]).toBe(2);
+    kho.damaged = true;
+    expect(vungGanh(s, { id: kho.id })).toBe(null);
+    expect(vungGanh(s, { type: 'ruongNep', x: LO, z: LO })).toBe(null);
+    expect(vungGanh(s, { type: 'nhaSan', x: LO, z: LO })).toBe(null);
+    const nha = put(s, 'nhaSan', LO, ROW);
+    expect(vungGanh(s, { id: nha.id })).toBe(null);
+    const bep = put(s, 'bep', LO, ROW + 6);
+    expect(vungGanh(s, { type: 'ruongNep' })!.some((v) => v === 1)).toBe(true);
+    expect(vungGanh(s, { id: bep.id })![(bep.z - 1) * GRID + bep.x]).toBe(2);
   });
 });
 

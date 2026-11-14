@@ -182,6 +182,13 @@ for (let k = 0; k < 240 && !p; k++) {
 if (!p) throw new Error('Không thấy người gánh của ruộng xa ở giữa đường');
 d.camera(p.x, p.z, 3);`;
 
+/** Nhìn về phía ruộng xa nhất (`RUONG_XA`) rồi bấm Xây kho thóc: bóng kho hiện gần đó, tô vùng gánh hàng đủ 100%. */
+const VUNG_KHO = `const V = await import('/src/game/vanChuyen.ts');
+const r = s.buildings.filter((b) => b.type === 'ruong').sort((a, b) => V.heSoGanh(s, a) - V.heSoGanh(s, b))[0];
+d.camera(r.x + 3, r.z + 1, 0.9);
+await new Promise((ok) => requestAnimationFrame(() => requestAnimationFrame(ok)));
+d.build('kho');`;
+
 const CANH = {
   'man-vao': {
     mo: 'Màn hình vào game của bản lưu chương 1 (Điện cấp 5), vắng 3 giờ',
@@ -199,6 +206,16 @@ const CANH = {
     truoc: `${KINH_DO}\n${RUONG_XA}`,
     sau: NHIN_GANH,
     doi: 600,
+  },
+  'ganh-vung': {
+    mo: 'Như ganh-hang (một ruộng ở xa kho), đang đặt kho thóc gần ruộng ấy: vùng gánh đủ 100% có sẵn tô nhạt, phần kho mới phủ thêm tô xanh',
+    truoc: `${KINH_DO}\n${RUONG_XA}`,
+    sau: VUNG_KHO,
+  },
+  'ganh-vung-chon': {
+    mo: 'Như kinh-do, chạm chọn kho thóc: vùng riêng của kho tô xanh, phần còn lại của vùng gánh đủ 100% tô nhạt',
+    truoc: KINH_DO,
+    sau: `d.select(s.buildings.find((b) => b.type === 'kho').id);`,
   },
   chuong2: {
     mo: 'Kinh đô chương 2, mười phút sau khi vào chương',

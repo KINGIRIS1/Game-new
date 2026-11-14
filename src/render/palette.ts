@@ -59,6 +59,9 @@ export const C = {
   floodDeep: 0x6c7a5c,
   /** Nước êm vào sau đê qua cống mở, chở phù sa. */
   silt: 0xa07a4c,
+  /** Tô vùng gánh hàng đủ 100%: vùng có sẵn, và vùng của nơi đang đặt, đang chọn. */
+  ganhVung: 0xeef0a8,
+  ganhVungMoi: 0x8ee05a,
   siltDeep: 0x8e6a40,
   rain: 0xc8d8e0,
   storm: 0x9ea6a2,

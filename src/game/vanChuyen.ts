@@ -17,6 +17,8 @@ import { pendingBuildings } from './xay';
 
 /** Nơi nhận hàng: kho (Điện, kho thóc), hay bếp gói bánh cùng kho (nguyên liệu Tết). */
 export type DichGanh = 'kho' | 'bep';
+/** Đích của một tuyến: nơi nhận hàng, hay riêng Điện (mùa Tết đội mâm bánh lên Điện). */
+export type DichTuyen = DichGanh | 'dien';
 
 /** Bản đồ khoảng cách tới nơi nhận gần nhất. */
 export interface TruongGanh {
@@ -45,6 +47,8 @@ interface GanhInfo {
   cost: Float32Array;
   kho: TruongGanh;
   bep: TruongGanh | null;
+  /** Trường chỉ tới Điện, tính khi cần (undefined: chưa tính). */
+  dien?: TruongGanh | null;
   heSo: Map<number, number>;
 }
 
@@ -163,9 +167,10 @@ class Heap {
 
 /**
  * Dijkstra nhiều nguồn trên lưới 8 hướng (không cắt góc qua ô không đi được), từ mọi ô của các nơi nhận. Ô của nơi
- * nhận có chi phí 0 và chỉ là chỗ xuất phát.
+ * nhận có chi phí 0 và chỉ là chỗ xuất phát. `tran`: chỉ loang tới chi phí ấy (ô xa hơn để Infinity), cho vùng của
+ * một nơi nhận.
  */
-function truong(cost: Float32Array, nguon: Building[]): TruongGanh {
+function truong(cost: Float32Array, nguon: Pick<Building, 'id' | 'type' | 'x' | 'z'>[], tran = Infinity): TruongGanh {
   const N = GRID * GRID;
   const xa = new Float32Array(N).fill(Infinity);
   const ve = new Int32Array(N).fill(-1);
@@ -201,7 +206,7 @@ function truong(cost: Float32Array, nguon: Building[]): TruongGanh {
         if (dx && dz && (!pass(cx + dx, cz) || !pass(cx, cz + dz))) continue;
         const ni = nz * GRID + nx;
         const ng = g + cost[ni] * (dx && dz ? Math.SQRT2 : 1);
-        if (ng < xa[ni]) {
+        if (ng < xa[ni] && ng <= tran) {
           xa[ni] = ng;
           ve[ni] = cur;
           noi[ni] = noi[cur];
@@ -317,11 +322,8 @@ export function truongKho(state: GameState, dich: DichGanh): TruongGanh | null {
   return dich === 'bep' ? g.bep : g.kho;
 }
 
-/** Đường gánh của công trình `b`: quãng đường, hệ số, nơi nhận và các ô trên đường. */
-export function duongGanh(state: GameState, b: Pick<Building, 'id' | 'type' | 'x' | 'z'>): DuongGanh | null {
-  if (!ganhType(b.type)) return null;
-  const t = truongKho(state, dichOf(b.type));
-  if (!t) return null;
+/** Dò tuyến theo trường `t` từ ô sát móng `b` gần nơi nhận nhất về tới sát nơi nhận. */
+function doTuyen(t: TruongGanh, b: Pick<Building, 'type' | 'x' | 'z'>): DuongGanh {
   const i = oGanNhat(t, b);
   if (i < 0) return { d: Infinity, heSo: GANH.san, noi: 0, tuyen: [] };
   const tuyen: number[] = [];
@@ -332,19 +334,114 @@ export function duongGanh(state: GameState, b: Pick<Building, 'id' | 'type' | 'x
   return { d: t.xa[i], heSo: heSoTheo(t.xa[i]), noi: t.noi[i], tuyen };
 }
 
+/** Đường gánh của công trình `b`: quãng đường, hệ số, nơi nhận và các ô trên đường. */
+export function duongGanh(state: GameState, b: Pick<Building, 'id' | 'type' | 'x' | 'z'>): DuongGanh | null {
+  if (!ganhType(b.type)) return null;
+  const t = truongKho(state, dichOf(b.type));
+  return t ? doTuyen(t, b) : null;
+}
+
+/** Trường chỉ tới Điện (null khi không có Điện), tính một lần cho mỗi lần dựng lưới. */
+function truongDien(g: GanhInfo, state: GameState): TruongGanh | null {
+  if (g.dien === undefined) {
+    const dien = state.buildings.find((b) => b.type === 'dien');
+    g.dien = dien ? truong(g.cost, [dien]) : null;
+  }
+  return g.dien;
+}
+
+/**
+ * Tuyến từ móng bất kỳ `foot` (công trình đang dựng, đang nâng, bếp) tới nơi nhận gần nhất của `dich`, không xét loại
+ * công trình có gánh hàng không: thợ vác vật liệu từ kho tới công trình đang xây, người bếp gùi nguyên liệu từ kho,
+ * đội mâm bánh lên Điện. Null khi chưa có nơi nhận, không có lối, hay nơi nhận gần nhất chính là `foot` (nâng kho).
+ */
+export function duongTu(state: GameState, foot: Pick<Building, 'type' | 'x' | 'z'> & { id?: number }, dich: DichTuyen): DuongGanh | null {
+  const g = info(state);
+  const t = dich === 'dien' ? truongDien(g, state) : dich === 'bep' ? g.bep : g.kho;
+  if (!t) return null;
+  const r = doTuyen(t, foot);
+  if (!r.noi || r.noi === foot.id) return null;
+  return r;
+}
+
+/**
+ * Kinh đô y như `state` nhưng bỏ công trình `skip` (đang dời): móng cũ không chắn đường. Ghi nhớ một mục, cho bóng
+ * công trình nhích từng ô khi dời khỏi phải dựng lại lưới mỗi lần.
+ */
+let boNho: { state: GameState; key: number; n: number; mask: Uint8Array; skip: number; s: GameState } | null = null;
+function stateBo(state: GameState, skip: number): GameState {
+  const { key, n } = dauVet(state);
+  const mask = openMask(state);
+  const m = boNho;
+  if (m && m.state === state && m.key === key && m.n === n && m.mask === mask && m.skip === skip) return m.s;
+  const s = { ...state, buildings: state.buildings.filter((b) => b.id !== skip) } as GameState;
+  boNho = { state, key, n, mask, skip, s };
+  return s;
+}
+
 /**
  * Hệ số gánh nếu đặt (hay dời) công trình loại `type` tới (x, z): đo trên lưới hiện có, coi như móng chưa chắn gì
  * (công trình đang dời thì bỏ móng cũ ra trước, `skip`). Null với loại không gánh hàng hay nguyên liệu Tết chưa có bếp.
  */
 export function ganhPreview(state: GameState, type: BuildingType, x: number, z: number, skip?: number): number | null {
   if (!ganhType(type)) return null;
-  let t = truongKho(state, dichOf(type));
+  const t = truongKho(skip !== undefined ? stateBo(state, skip) : state, dichOf(type));
   if (!t) return null;
-  if (skip !== undefined) {
-    const s = { ...state, buildings: state.buildings.filter((b) => b.id !== skip) } as GameState;
-    t = truongKho(s, dichOf(type));
-    if (!t) return null;
-  }
   const i = oGanNhat(t, { type, x, z });
   return heSoTheo(i < 0 ? Infinity : t.xa[i]);
+}
+
+/** Loại công trình là nơi nhận hàng (Điện, kho thóc, bếp gói bánh). */
+export function nhanType(type: BuildingType): boolean {
+  return type === 'dien' || type === 'kho' || type === 'bep';
+}
+
+/**
+ * Hỏi vùng đủ sản lượng: đang đặt, dời công trình loại `type` (chỗ `x`, `z` bỏ trống khi chỗ chưa đặt được; `skip`:
+ * công trình đang dời), hay đang chọn công trình `id`.
+ */
+export type VungHoi = { type: BuildingType; x?: number; z?: number; skip?: number } | { id: number };
+
+/**
+ * Vùng gánh hàng đủ 100% để tô trên đất (mỗi ô: 0 không tô, 1 vùng có sẵn, 2 vùng của nơi đang đặt hay đang chọn).
+ * Chỉ tô ô đi qua được, trong `GANH.gan` của nơi nhận. Móng công trình đè lên hay chạm ô tô thì gánh đủ (khớp
+ * `ganhPreview`: dò từ ô trong móng theo đường về luôn ra một ô viền gần nơi nhận hơn).
+ * - Đặt, dời công trình có người gánh hàng: vùng của nơi nhận nó gánh về (1). Nguyên liệu Tết chưa có bếp: null.
+ * - Đặt, dời kho, bếp, Điện: vùng có sẵn (1), phần nơi mới phủ thêm (2).
+ * - Chọn kho, Điện, bếp còn nguyên: vùng riêng của nơi ấy (2), phần còn lại của vùng (1). Kho hư, loại khác: null.
+ */
+export function vungGanh(state: GameState, hoi: VungHoi): Uint8Array | null {
+  if ('id' in hoi) {
+    const b = state.buildings.find((o) => o.id === hoi.id);
+    if (!b || b.damaged || !nhanType(b.type)) return null;
+    const g = info(state);
+    const t = b.type === 'bep' ? g.bep : g.kho;
+    return t ? toVung(g.cost, t, truong(g.cost, [b], GANH.gan), false) : null;
+  }
+  const s = hoi.skip !== undefined ? stateBo(state, hoi.skip) : state;
+  const g = info(s);
+  if (ganhType(hoi.type)) {
+    const t = dichOf(hoi.type) === 'bep' ? g.bep : g.kho;
+    return t ? toVung(g.cost, t, null, true) : null;
+  }
+  if (!nhanType(hoi.type)) return null;
+  // Bếp đầu tiên: nguyên liệu Tết gánh về kho hay bếp mới, nên vùng có sẵn là vùng của kho.
+  const base = hoi.type === 'bep' ? (g.bep ?? g.kho) : g.kho;
+  if (hoi.x === undefined || hoi.z === undefined) return toVung(g.cost, base, null, true);
+  const moi = truong(g.cost, [{ id: -1, type: hoi.type, x: hoi.x, z: hoi.z }], GANH.gan);
+  return toVung(g.cost, base, moi, true);
+}
+
+/** Gộp trường có sẵn `base` và vùng riêng `rieng` thành mặt nạ tô; `them`: chỉ tô phần riêng chưa thuộc vùng có sẵn. */
+function toVung(cost: Float32Array, base: TruongGanh, rieng: TruongGanh | null, them: boolean): Uint8Array {
+  const out = new Uint8Array(GRID * GRID);
+  for (let i = 0; i < out.length; i++) {
+    if (cost[i] === Infinity) continue;
+    const co = base.xa[i] <= GANH.gan;
+    // Ô dưới móng nơi mới (chi phí 0) do mô hình bóng che, không tô.
+    const r = !!rieng && rieng.xa[i] > 0 && rieng.xa[i] <= GANH.gan;
+    if (r && (!them || !co)) out[i] = 2;
+    else if (co) out[i] = 1;
+  }
+  return out;
 }

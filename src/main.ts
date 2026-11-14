@@ -13,7 +13,7 @@ import { autoGuard, fieldCap, fitArmy, setGuard } from './game/doanhTrai';
 import { markNuHinted, nextNuHint } from './game/nuTuong';
 import { forgeNoThan, inChapter3, wallRings } from './game/coLoa';
 import { offer } from './game/tet';
-import { ganhPreview, markGanhHinted, needsGanhHint } from './game/vanChuyen';
+import { ganhPreview, markGanhHinted, needsGanhHint, vungGanh } from './game/vanChuyen';
 import { startMau } from './game/mau';
 import { advanceXay, askQuiz, canStartBuild, cancelJob, conLai, startBuild, startUpgrade, startWallUpgrade, startWalls, thoRanh, thoRanhSau, traLoi, viecOf, xayMs, type CongViec } from './game/xay';
 import { CAU_DO_IDS } from './text/cauDo';
@@ -389,6 +389,9 @@ async function start(): Promise<void> {
   };
 
   /** Gọi sau mọi thao tác: lưu, vẽ lại cảnh và giao diện. */
+  /** Bóng công trình đang ở chỗ đặt được: vùng gánh hàng tô cả phần nơi nhận mới phủ thêm. */
+  let zoneAt = false;
+
   const commit = () => {
     showHint();
     showNuHint();
@@ -398,6 +401,7 @@ async function start(): Promise<void> {
     save();
     world.sync(scene());
     refreshFloodPreview();
+    refreshGanhZone();
     refreshUi();
   };
 
@@ -437,7 +441,20 @@ async function start(): Promise<void> {
     world.setGhost(mode.type, mode.x, mode.z, check.ok, footprintTop(state, mode.type, mode.x, mode.z), mode.rot);
     const ganh = check.ok ? ganhPreview(state, mode.type, mode.x, mode.z, mode.moving) : null;
     hud.setPlaceValid(check.ok, check.ok ? undefined : vi.reasons[check.reason], ganh === null ? undefined : vi.ui.ganhPlace(Math.round(ganh * 100)));
+    zoneAt = check.ok;
+    refreshGanhZone();
   };
+
+  /**
+   * Tô vùng gánh hàng đủ 100% (`vungGanh`): khi đặt, dời công trình có người gánh hàng hay nơi nhận (kho, bếp, Điện),
+   * và khi chọn kho, Điện, bếp.
+   */
+  function refreshGanhZone(): void {
+    let vung: Uint8Array | null = null;
+    if (mode.kind === 'place') vung = vungGanh(state, zoneAt ? { type: mode.type, x: mode.x, z: mode.z, skip: mode.moving } : { type: mode.type, skip: mode.moving });
+    else if (mode.kind === 'view' && mode.selected !== null) vung = vungGanh(state, { id: mode.selected });
+    world.setGanhZone(vung);
+  }
 
   /**
    * Tô vùng sẽ ngập ở mùa lũ tới (xanh là nước tràn, vàng là nước vào qua cống mở): khi đắp đê, đắp đất, đặt cống,
@@ -468,6 +485,7 @@ async function start(): Promise<void> {
     world.showGrid(false);
     hud.setMode('view');
     refreshFloodPreview();
+    refreshGanhZone();
   };
 
   const select = (id: number | null) => {
@@ -484,6 +502,7 @@ async function start(): Promise<void> {
       hud.closeSheet();
     }
     refreshFloodPreview();
+    refreshGanhZone();
   };
 
   /**
