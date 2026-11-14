@@ -31,7 +31,8 @@ export declare function truCua(ma: string, cuop: unknown): string;
 /** Quân đánh thành máy chủ dựng (JSON, lưu ở cột `tran.quan`). */
 export type QuanDanh = {
   army: Record<string, number>;
-  heroes: Record<string, string | boolean>[];
+  /** Tướng; `trangBi` là số đồ máy chủ tính từ món trong bản chụp người đánh. */
+  heroes: Record<string, unknown>[];
   side: 'bac' | 'tay';
   seed: number;
   bonus: number;

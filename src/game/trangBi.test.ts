@@ -1,10 +1,10 @@
 // Canh trang bị tướng (docs/thiet-ke.md mục Kế hoạch: trang bị rơi ngẫu nhiên và sáu chỉ số tướng): rút đồ lặp lại
 // được, tỉ lệ phẩm theo nơi rơi và trần chương, bộ rơi theo chương, kho đầy, mặc tháo, cường hóa, phân giải; chỉ số
 // tổng và hiệu ứng bộ; trận nhận đúng máu, sát thương, tốc đánh, giáp, hồi, uy lực, hiệu ứng bốn món; rơi đồ sau
-// trận; bản lưu 26 lên 27; Đấu thành chưa tính đồ.
+// trận; bản lưu 26 lên 27; Đấu thành tính đồ: bản chụp mang món, máy chủ kiểm món và tự tính số đồ.
 
 import { describe, expect, it } from 'vitest';
-import { doTa, isHero, startFieldBattle, stepField, useSkill, type Battle, type HeroSetup } from './battle';
+import { doTa, isHero, startFieldBattle, stepBattle, stepField, useSkill, type Battle, type HeroSetup } from './battle';
 import { startStage, updateCampaign } from './campaign';
 import {
   BO_BON,
@@ -33,7 +33,8 @@ import {
   type NguonDo,
   type PhamDo,
 } from './defs';
-import { attackFrom, makeSnapshot } from './dauThanh';
+import { attackFrom, beginPvp, defenderState, defenseOf, encodeSnapshot, makeSnapshot, validateSnapshot, type MonChup } from './dauThanh';
+import { nhanBanChup, quanDanh } from './mayChu';
 import { createInitialState, place, tick, train, type GameState } from './game';
 import { roll } from './ngauNhien';
 import { SAVE_VERSION, deserialize, serialize } from './save';
@@ -498,13 +499,105 @@ describe('bản lưu và Đấu thành', () => {
     expect(isTrangBiState(st([{ ...ok, id: 9 }]))).toBe(false);
   });
 
-  it('Đấu thành chưa tính đồ: bản chụp và quân đi đánh không mang đồ của tướng', () => {
+});
+
+describe('Đấu thành tính đồ', () => {
+  /** Gióng mặc vũ khí Tốt và giáp Tốt chương 1 (đúng trần chương 1). */
+  function giongMacDo(): GameState {
     const s = base();
-    const m = them(s);
-    macDo(s, m.id, 'giong');
-    expect(heroesFor(s, 1)[0].trangBi).toBeDefined();
-    for (const h of makeSnapshot(s).heroes) expect(h.trangBi).toBeUndefined();
-    for (const h of attackFrom(s, { giao: 1, cung: 0, voi: 0, no: 0 }, 'bac', 1).heroes) expect(h.trangBi).toBeUndefined();
+    const vu = them(s, { pham: 2, phu: [{ k: 'mau', nac: 2 }], cuong: 5 });
+    const giap = them(s, { o: 'giap', chinh: 'giap', pham: 2, phu: [{ k: 'danh', nac: 4 }], cuong: 2 });
+    macDo(s, vu.id, 'giong');
+    macDo(s, giap.id, 'giong');
+    them(s, { o: 'baoVat', chinh: 'uy', pham: 1, phu: [] });
+    return s;
+  }
+  const ARMY = { giao: 4, cung: 2, voi: 0, no: 0 };
+
+  it('bản chụp mang món tướng giữ thành đang mặc, không mang số đồ; hợp luật', () => {
+    const s = giongMacDo();
+    const snap = makeSnapshot(s);
+    expect(validateSnapshot(snap)).toBeNull();
+    for (const h of snap.heroes) expect(h.trangBi).toBeUndefined();
+    expect(snap.mon).toHaveLength(2);
+    expect(snap.mon!.every((m) => m.tuong === 'giong' && !('id' in m))).toBe(true);
+    // Giữ thành và đánh thử: số đồ như khi vào trận ở phó bản.
+    expect(defenseOf(snap).heroes[0].trangBi).toEqual(doCua(s, 'giong'));
+    expect(attackFrom(s, ARMY, 'bac', 1).heroes[0].trangBi).toEqual(doCua(s, 'giong'));
+    // Không mặc gì thì bản chụp không có phần đồ.
+    expect(makeSnapshot(base()).mon).toBeUndefined();
+  });
+
+  it('máy chủ tự tính số đồ từ món, không tin số gửi lên', () => {
+    const s = giongMacDo();
+    const snap = makeSnapshot(s);
+    const nhan = nhanBanChup(encodeSnapshot(snap));
+    expect(nhan).toHaveProperty('ma');
+    // Quân đánh thành lấy quân trong bản chụp đã lưu ở máy chủ (cho sẵn quân để khỏi dựng doanh trại).
+    const q = quanDanh(encodeSnapshot({ ...snap, troops: { ...ARMY } }), ARMY, 'bac', 7);
+    expect('quan' in q && q.quan.heroes[0].trangBi).toEqual(doCua(s, 'giong'));
+    // Bản chụp sửa tay: tướng mang sẵn số đồ thì không nhận; lọt vào thì máy chủ vẫn bỏ số ấy, tính lại từ món.
+    const gian = { ...snap, heroes: snap.heroes.map((h) => ({ ...h, trangBi: DO({ danh: 5, mau: 5 }) })) };
+    expect(validateSnapshot(gian)).toBe('tướng mang sẵn số đồ');
+    expect('loi' in nhanBanChup(encodeSnapshot(gian))).toBe(true);
+    const q2 = quanDanh(encodeSnapshot({ ...gian, troops: { ...ARMY } }), ARMY, 'bac', 7);
+    expect('quan' in q2 && q2.quan.heroes[0].trangBi).toEqual(doCua(s, 'giong'));
+    expect(defenseOf(gian).heroes[0].trangBi).toEqual(doCua(s, 'giong'));
+    expect(defenseOf({ ...gian, mon: undefined }).heroes[0].trangBi).toBeUndefined();
+  });
+
+  it('kiểm món trong bản chụp: tướng, ô, cấp đồ, phẩm, bộ, chỉ số, cường hóa', () => {
+    const snap = makeSnapshot(giongMacDo());
+    const m0 = snap.mon![0];
+    const thu = (m: Partial<MonChup>) => validateSnapshot({ ...snap, mon: [{ ...m0, ...m }, ...snap.mon!.slice(1)] });
+    expect(thu({})).toBeNull();
+    expect(thu({ tuong: 'caoLo' })).toMatch(/không có trong bản chụp/);
+    expect(thu({ o: 'giap', chinh: 'giap' })).toMatch(/hai món/);
+    expect(thu({ cap: 2 })).toMatch(/quá chương/);
+    expect(thu({ pham: 3, phu: [{ k: 'mau', nac: 2 }, { k: 'toc', nac: 1 }] })).toMatch(/quá trần chương/);
+    expect(thu({ bo: 'tanVien' })).toMatch(/chưa rơi/);
+    expect(thu({ cuong: 7 })).toBe('sai dạng');
+    expect(thu({ phu: [{ k: 'mau', nac: 9 }] })).toBe('sai dạng');
+    expect(thu({ chinh: 'uy' })).toBe('sai dạng');
+    expect(validateSnapshot({ ...snap, mon: Array(9).fill(m0) })).toBe('sai dạng');
+  });
+
+  it('trận Đấu thành: tướng giữ thành mặc đồ bền hơn, chịu đòn nhẹ hơn; tướng đánh thành mặc đồ khỏe hơn', () => {
+    const s = giongMacDo();
+    const snap = makeSnapshot(s);
+    const tran = (mon: MonChup[] | undefined, atkDo: boolean) => {
+      const atk = attackFrom(s, ARMY, 'bac', 3);
+      if (!atkDo) delete atk.heroes[0].trangBi;
+      return beginPvp({ ...snap, mon }, atk).battle;
+    };
+    const d = doCua(s, 'giong')!;
+    const giu = (b: Battle) => b.fighters.find((f) => f.side === 'giac' && f.kind === 'giong')!;
+    const danh = (b: Battle) => b.fighters.find((f) => f.side === 'ta' && f.kind === 'giong')!;
+    const co = tran(snap.mon, true);
+    const khong = tran(undefined, false);
+    expect(co.def!.do!.giong).toEqual(d);
+    expect(khong.def!.do).toBeUndefined();
+    const mult = 1 + co.def!.bonus;
+    expect(giu(co).maxHp / giu(khong).maxHp).toBeCloseTo((mult + d.mau) / mult, 9);
+    expect(danh(co).maxHp).toBeGreaterThan(danh(khong).maxHp);
+    // Giáp: cùng một đòn của tướng đánh thành không mặc đồ, tướng giữ thành mặc đồ mất ít máu hơn.
+    const giap = tran(snap.mon, false);
+    const tran0 = tran(undefined, false);
+    const hpTruoc = giu(giap).hp;
+    const hpTruoc2 = giu(tran0).hp;
+    for (const b of [giap, tran0]) {
+      const a = danh(b);
+      a.cd = 0;
+      const t = giu(b);
+      a.x = t.x;
+      a.z = t.z + 0.5;
+    }
+    stepBattle(defenderState(snap), giap, 0.05);
+    stepBattle(defenderState(snap), tran0, 0.05);
+    const mat = hpTruoc - giu(giap).hp;
+    const mat2 = hpTruoc2 - giu(tran0).hp;
+    expect(mat2).toBeGreaterThan(0);
+    expect(mat / mat2).toBeCloseTo(1 - d.giap, 6);
   });
 });
 

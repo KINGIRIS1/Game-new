@@ -22,6 +22,7 @@ import {
 } from './battle';
 import {
   ARMS,
+  BO_CHUONG,
   BUILDINGS,
   CH2_QUEST_START,
   CH3_QUEST_START,
@@ -34,6 +35,7 @@ import {
   HUAN_BRANCHES,
   HUAN_COST,
   LAU_NO_TOWERS,
+  PHAM_TRAN,
   RESOURCE_IDS,
   SKILL_IDS,
   TEMPLE_BONUS,
@@ -71,6 +73,7 @@ import { nuForUnit } from './nuTuong';
 import { fromBase64, toBase64 } from './save';
 import { heroesFor } from './son';
 import { huanTiers } from './thuThach';
+import { hopLeMon, monDangMac, tinhDo, type Mon } from './trangBi';
 
 // ---------- Bản chụp kinh đô ----------
 
@@ -103,13 +106,42 @@ export interface Snapshot {
    * quá chừng này. Không có doanh trại thì không mang quân nào.
    */
   troops: Record<UnitType, number>;
-  /** Tướng giữ thành (đứng trước Điện, không dùng kỹ năng). */
+  /**
+   * Tướng giữ thành (đứng trước Điện, không dùng kỹ năng). Không mang số đồ (`HeroSetup.trangBi`): số đồ tính lại từ
+   * `mon` (`tuongCoDo`), không tin số gửi lên.
+   */
   heroes: HeroSetup[];
+  /**
+   * Món đồ các tướng trong `heroes` đang mặc (không có mã món, khóa). Người chơi này giữ thành hay đi đánh thì tướng
+   * mang đồ này. Không mặc gì thì không có.
+   */
+  mon?: MonChup[];
   bonus: number;
   arms: Record<UnitType, number>;
   huan: Record<HuanBranch, number>;
   crossbows: boolean;
   walls: boolean;
+}
+
+/** Một món đồ trong bản chụp: món tướng `tuong` đang mặc. */
+export type MonChup = Omit<Mon, 'id' | 'khoa' | 'tuong'> & { tuong: HeroKind };
+
+/** Số món nhiều nhất trong bản chụp: hai tướng, mỗi tướng bốn ô. */
+const MON_CHUP_MAX = 8;
+
+/** Chương của bộ đồ (phó bản chương ấy rơi bộ này; tướng của bộ về ở chương ấy). */
+const chuongBo = (bo: Mon['bo']): Chapter => ([1, 2, 3, 4, 5] as Chapter[]).find((c) => BO_CHUONG[c].includes(bo)) ?? 5;
+
+/**
+ * Tướng kèm số đồ tính từ các món đang mặc trong bản chụp (`tinhDo`, cùng hàm máy khách dùng khi vào trận). Bỏ mọi
+ * số đồ đã có sẵn trong `heroes`: máy chủ không tin số gửi lên.
+ */
+export function tuongCoDo(heroes: readonly HeroSetup[], mon: readonly MonChup[] = []): HeroSetup[] {
+  return heroes.map((h) => {
+    const out = boDo(h);
+    const worn = mon.filter((m) => m.tuong === h.kind).map((m, i) => ({ ...m, id: i + 1 }));
+    return worn.length ? { ...out, trangBi: tinhDo(h.kind, worn) } : out;
+  });
 }
 
 /** Công trình đưa vào bản chụp: bờ bên này, không phải đường đi, trang trí hay cầu. */
@@ -118,13 +150,23 @@ const snapped = (b: Pick<Building, 'type' | 'x' | 'z'>) => !isDecor(b.type) && !
 /** Nhiệm vụ đầu của từng chương (để kinh đô dựng lại ở đúng chương). */
 const QUEST_OF: Record<Chapter, number> = { 1: 0, 2: CH2_QUEST_START, 3: CH3_QUEST_START, 4: CH4_QUEST_START, 5: CH5_QUEST_START };
 
-/** Tướng giữ thành: như tướng ra trận giữ kinh đô ở chương hiện tại, kể cả tướng đang nghỉ (bản chụp dùng lâu). */
+/**
+ * Tướng giữ thành: như tướng ra trận giữ kinh đô ở chương hiện tại, kể cả tướng đang nghỉ (bản chụp dùng lâu). Bỏ số
+ * đồ: bản chụp mang món (`mon`), số đồ tính lại từ món.
+ */
 function defendHeroes(state: GameState): HeroSetup[] {
   const rested = { ...state, clock: Number.MAX_SAFE_INTEGER };
   return heroesFor(rested, chapterOf(state)).map(boDo);
 }
 
-/** Đấu thành chưa tính trang bị (máy chủ chưa kiểm đồ): tướng vào Đấu thành bỏ phần đồ đang mặc. */
+/** Món các tướng `heroes` đang mặc, đưa vào bản chụp. */
+function monChup(state: GameState, heroes: HeroSetup[]): MonChup[] {
+  return heroes.flatMap((h) =>
+    monDangMac(state, h.kind).map((m) => ({ o: m.o, bo: m.bo, pham: m.pham, cap: m.cap, chinh: m.chinh, phu: m.phu.map((p) => ({ ...p })), cuong: m.cuong, tuong: h.kind })),
+  );
+}
+
+/** Tướng bỏ phần số đồ (`HeroSetup.trangBi`). */
 function boDo(h: HeroSetup): HeroSetup {
   const out = { ...h };
   delete out.trangBi;
@@ -159,6 +201,8 @@ export function makeSnapshot(state: GameState): Snapshot {
   const cap = storageCap({ ...state, buildings: keep });
   const resources = { gao: 0, voOc: 0, datDa: 0, sat: 0, go: 0 };
   for (const r of RESOURCE_IDS) resources[r] = Math.max(0, Math.min(cap, state.resources[r]));
+  const heroes = defendHeroes(state);
+  const mon = monChup(state, heroes);
   return {
     v: 1,
     dien: dienLevel(state),
@@ -177,7 +221,8 @@ export function makeSnapshot(state: GameState): Snapshot {
     cap,
     guards,
     troops: barracks ? { ...state.troops } : { giao: 0, cung: 0, voi: 0, no: 0 },
-    heroes: defendHeroes(state),
+    heroes,
+    ...(mon.length ? { mon } : {}),
     bonus: troopBonus(state),
     arms: { ...state.arms },
     huan: huanTiers(state) as Record<HuanBranch, number>,
@@ -212,7 +257,7 @@ export function defenseOf(snap: Snapshot): PvpDefense {
     hpMul: DAU_THANH.hpMul[snap.dien - 1],
     siege: DAU_THANH.siege[snap.dien - 1],
     guards: snap.guards.map((g) => ({ ...g })),
-    heroes: snap.heroes.map((h) => ({ ...h })),
+    heroes: tuongCoDo(snap.heroes, snap.mon),
     bonus: snap.bonus,
     arms: { ...snap.arms },
     huan: { ...snap.huan },
@@ -268,6 +313,10 @@ function isSnapshotShape(v: unknown): v is Snapshot {
   }
   if (!isRecordOf(v.troops, UNIT_TYPES, (x) => isInt(x, 0, 9999))) return false;
   if (!Array.isArray(v.heroes) || v.heroes.length > 2 || !v.heroes.every((h) => isObj(h) && HERO_KINDS.includes(h.kind as HeroKind))) return false;
+  if (v.mon !== undefined) {
+    if (!Array.isArray(v.mon) || v.mon.length > MON_CHUP_MAX) return false;
+    if (!v.mon.every((m) => hopLeMon(m) && HERO_KINDS.includes((m as Record<string, unknown>).tuong as HeroKind))) return false;
+  }
   if (!isNum(v.bonus, 0, 1) || typeof v.crossbows !== 'boolean' || typeof v.walls !== 'boolean') return false;
   return isRecordOf(v.arms, UNIT_TYPES, (x) => isInt(x, 0, 9)) && isRecordOf(v.huan, HUAN_BRANCHES, (x) => isInt(x, 0, 9));
 }
@@ -318,8 +367,30 @@ export function validateSnapshot(snap: Snapshot): string | null {
   if (snap.bonus > TEMPLE_BONUS + TET_TROI_BONUS + 1e-9) return 'Đền cộng quá mức';
   if (snap.crossbows && !count.get('denCoLoa')) return 'không có Đền Cổ Loa';
   if (snap.walls && !count.get('hoKimQuy')) return 'không có Hồ Kim Quy';
+  const monLoi = kiemMon(snap);
+  if (monLoi) return monLoi;
   const cap = storageCap(defenderState(snap));
   if (snap.cap > cap + 1e-9 || RESOURCE_IDS.some((r) => snap.resources[r] > cap + 1e-9)) return 'của quá sức chứa kho';
+  return null;
+}
+
+/**
+ * Món đồ trong bản chụp có hợp luật không: món của tướng có trong bản chụp, mỗi tướng một món mỗi ô, cấp đồ không
+ * quá chương của bản chụp, phẩm không quá trần chương nơi rơi, bộ đã rơi được ở chương ấy (chỉ số, nấc rút, cường
+ * hóa đã kiểm ở `hopLeMon`). Tướng không mang sẵn số đồ.
+ */
+function kiemMon(snap: Snapshot): string | null {
+  if (snap.heroes.some((h) => h.trangBi !== undefined)) return 'tướng mang sẵn số đồ';
+  const seen = new Set<string>();
+  for (const m of snap.mon ?? []) {
+    if (!snap.heroes.some((h) => h.kind === m.tuong)) return `đồ của tướng ${m.tuong} không có trong bản chụp`;
+    const key = `${m.tuong}:${m.o}`;
+    if (seen.has(key)) return `tướng ${m.tuong} mặc hai món ô ${m.o}`;
+    seen.add(key);
+    if (m.cap > snap.chapter) return `đồ cấp ${m.cap} quá chương ${snap.chapter}`;
+    if (m.pham > PHAM_TRAN[m.cap]) return `đồ phẩm ${m.pham} quá trần chương ${m.cap}`;
+    if (chuongBo(m.bo) > snap.chapter) return `bộ ${m.bo} chưa rơi ở chương ${snap.chapter}`;
+  }
   return null;
 }
 
@@ -429,11 +500,11 @@ export interface PvpRun {
   replay?: true;
 }
 
-/** Quân đánh thành của người chơi: quân chọn, tướng, Đền, binh khí, huân công như phó bản. */
+/** Quân đánh thành của người chơi (đánh thử): quân chọn, tướng kèm đồ đang mặc, Đền, binh khí, huân công như phó bản. */
 export function attackFrom(state: GameState, army: Army, side: 'bac' | 'tay', seed: number): PvpAttack {
   return {
     army: { ...army },
-    heroes: heroesFor(state, chapterOf(state)).map(boDo),
+    heroes: heroesFor(state, chapterOf(state)),
     side,
     seed,
     bonus: troopBonus(state),

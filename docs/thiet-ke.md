@@ -3437,12 +3437,17 @@ Kỹ năng chưa mở (Nhổ tre trước màn 6, Hiệu triệu trước màn 3
 - `HeroSetup` thêm chỉ số đồ đã tính sẵn: bản sao lúc vào trận, nên mặc đồ giữa trận không đổi trận đang đánh. `heroFor`, `heroesFor` điền sẵn, nên mọi trận nhận cùng một chỗ.
 - `battle.ts`: `addHero` nhân máu; đòn thường của tướng nhân sức đánh và chia thời gian nghỉ; `damageFighter` nhân (1 − Giáp) khi mục tiêu là tướng; `useSkill` lấy hệ số và thời gian hồi của chính tướng làm kỹ năng; số kỹ năng qua một hàm theo tướng thay cho hằng số; sự kiện kỹ năng mang bán kính, độ dài, số nghĩa binh để `battleView.ts` vẽ đúng. Chỉ thêm phép nhân, chia nên vẫn tất định.
 - Rơi đồ ở `finishStage` (thắng màn, thắng thử thách), `finishCamp`, `finishRaid` (thắng là hạ hết giặc, không mất của); kết quả trận mang món rơi.
-- Đấu thành trước PR riêng: bản chụp và quân đi đánh bỏ phần đồ của tướng. PR Đấu thành: bản chụp mang món đang mặc; `validateSnapshot` kiểm từng món (ô không trùng, cấp đồ không quá chương của bản chụp, phẩm trong trần chương, chỉ số trong khoảng rút, cường hóa trong trần phẩm); máy chủ tự tính chỉ số từ món, không tin số gửi lên; sửa `mayChu.ts`, `luat.d.ts`, trận đối chiếu `doiChieu`.
+- Đấu thành (PR 2, đã làm):
+  - Bản chụp mang các món tướng giữ thành đang mặc (`Snapshot.mon`, kiểu `MonChup`: món không có mã, khóa; không mặc gì thì không có trường này, nên bản chụp cũ vẫn đọc được, vẫn `v: 1`). Tướng trong bản chụp không mang số đồ.
+  - `validateSnapshot` kiểm từng món: đúng dạng, chỉ số, nấc rút, cường hóa trong trần phẩm (`hopLeMon`, chung với kiểm bản lưu); tối đa 8 món; món của tướng có trong bản chụp, mỗi tướng một món mỗi ô; cấp đồ không quá chương của bản chụp; phẩm không quá trần chương nơi rơi (`PHAM_TRAN`); bộ đã rơi được ở chương ấy (bộ Tản Viên từ chương 2…). Tướng mang sẵn số đồ thì không nhận.
+  - Số đồ tính lại từ món bằng chính `tinhDo` máy khách dùng khi vào trận (`tuongCoDo` ở `dauThanh.ts`), bỏ mọi số đồ có sẵn: bên giữ thành ở `defenseOf`, bên đánh thành ở `quanDanh` (máy chủ dựng từ bản chụp người đánh, lưu vào `tran.quan`, máy khách đánh bằng đúng quân ấy). Đánh thử thì `attackFrom` lấy đồ đang mặc như phó bản.
+  - Trận: tướng giữ thành mặc đồ (phe `giac`, không dùng kỹ năng) được máu, sức đánh, tốc đánh, giáp (`Battle.def.do`, `doCuaNguoi` ở `battle.ts`); uy lực, hồi kỹ năng, hiệu ứng bốn món chỉ có ý nghĩa với tướng đánh thành vì tướng giữ thành không dùng kỹ năng.
+  - Trận đối chiếu `doiChieu` có đồ ở Điện chẵn (hai bên), để so cả phần đồ giữa Node, Deno và trình duyệt.
 - Người chơi mô phỏng không mặc đồ. Đồ vẫn rơi khi giữ kinh đô, kho đầy thì tự phân giải ra sắt; sổ kinh tế có dòng phân giải đồ. Nhịp lên Điện và chuẩn mọi màn, mọi thử thách tính không có đồ, như huân công và nữ tướng.
 
 ### Test
 
-- `trangBi.test.ts`: cùng bộ đếm ra cùng món; tỉ lệ phẩm theo nguồn và trần chương; bộ rơi theo chương và theo tướng đã về; không rơi trước khi Gióng về; mặc, tháo, chuyển tướng; cường hóa (trần, giá, lò rèn hư, thiếu của); phân giải, khóa, kho đầy; chỉ số tổng, các trần, hiệu ứng bộ chỉ khi đúng tướng; trận nhận đúng máu, sát thương, thời gian nghỉ, giáp, hồi, uy lực (Hai Bà mỗi bà một hệ số); hiệu ứng bốn món đổi số kỹ năng và sự kiện mang số; mặc đồ giữa trận không đổi trận; nâng bản lưu 26; bản chụp Đấu thành chưa mang đồ.
+- `trangBi.test.ts`: cùng bộ đếm ra cùng món; tỉ lệ phẩm theo nguồn và trần chương; bộ rơi theo chương và theo tướng đã về; không rơi trước khi Gióng về; mặc, tháo, chuyển tướng; cường hóa (trần, giá, lò rèn hư, thiếu của); phân giải, khóa, kho đầy; chỉ số tổng, các trần, hiệu ứng bộ chỉ khi đúng tướng; trận nhận đúng máu, sát thương, thời gian nghỉ, giáp, hồi, uy lực (Hai Bà mỗi bà một hệ số); hiệu ứng bốn món đổi số kỹ năng và sự kiện mang số; mặc đồ giữa trận không đổi trận; nâng bản lưu 26; Đấu thành: bản chụp mang món và hợp luật, máy chủ kiểm từng món, bỏ số đồ gửi lên và tính lại, tướng giữ thành mặc đồ bền hơn và chịu đòn nhẹ đúng phần giáp.
 - Đo sức mạnh để ghi vào tài liệu: tướng mặc bộ mẫu (Quý +8, Huyền thoại +10) ở vài màn mỗi chương, so với không đồ và với huân công tối đa.
 - Chụp kiểm tra bảng tướng, kho đồ, bảng kết quả có món rơi.
 
@@ -3450,7 +3455,7 @@ Kỹ năng chưa mở (Nhổ tre trước màn 6, Hiệu triệu trước màn 3
 
 1. **PR 0** (#100): tài liệu.
 2. **PR 1** (đã làm, cùng PR #100 vì PR 0 chưa gộp): luật, rơi đồ, bản lưu 27, trận, bảng tướng và kho đồ (ảnh tạm theo ô, khung màu phẩm), test, đo sức mạnh, chốt giá cường hóa. Đấu thành chưa tính đồ.
-3. **PR 2**: Đấu thành tính đồ (bản chụp, máy chủ).
+3. **PR 2** (đã làm): Đấu thành tính đồ (bản chụp, máy chủ).
 4. **PR 3**: hình: 24 ảnh món đồ vẽ sẵn (6 bộ × 4 ô), vũ khí ánh lên khi tướng mặc đủ bốn món bộ mình; chụp kiểm tra.
 
 ## Nhịp chơi và lưu game

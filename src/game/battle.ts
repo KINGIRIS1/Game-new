@@ -369,7 +369,13 @@ export interface Battle {
    * Đấu thành: phần cộng thêm của người giữ thành (Đền, binh khí, huân công) cho quân giữ thành (phe `giac`). Phần
    * của người tấn công là `bonus`, `arms`, `huan` như mọi trận.
    */
-  def?: { bonus: number; arms: Record<UnitType, number>; huan?: Record<HuanBranch, number> };
+  def?: {
+    bonus: number;
+    arms: Record<UnitType, number>;
+    huan?: Record<HuanBranch, number>;
+    /** Phần cộng của đồ tướng giữ thành đang mặc (máy chủ tính lại từ món trong bản chụp, `tuongCoDo` ở `dauThanh.ts`). */
+    do?: Partial<Record<HeroKind, ChiSoDo>>;
+  };
   /** Đấu thành: mọi người trong trận bền hơn chừng này lần (như `FIELD.hpMul` ngoài bãi), đòn kỹ năng mạnh lên theo. */
   hpMul?: number;
   /** Đấu thành: đòn quân đánh thành vào công trình mạnh gấp chừng này lần (công thành). */
@@ -570,6 +576,15 @@ export function heroSetups(battle: Pick<Battle, 'hero' | 'hero2'>): (HeroSetup &
 export function doTa(battle: Pick<Battle, 'hero' | 'hero2'>, kind: FighterKind): ChiSoDo | undefined {
   if (battle.hero?.kind === kind) return battle.hero.trangBi;
   return battle.hero2?.kind === kind ? battle.hero2.trangBi : undefined;
+}
+
+/**
+ * Phần cộng của đồ người `f` đang mặc: tướng ta theo `doTa`; tướng giữ thành trong Đấu thành theo `Battle.def.do`.
+ * Lính, giặc thường không có.
+ */
+function doCuaNguoi(battle: Battle, f: Pick<Fighter, 'side' | 'kind'>): ChiSoDo | undefined {
+  if (f.side === 'ta') return doTa(battle, f.kind);
+  return isHero(f.kind) ? battle.def?.do?.[f.kind as HeroKind] : undefined;
 }
 
 /** Cho tướng vào trận ở (x, z) và mở các kỹ năng của tướng. Đã có một tướng thì đây là tướng thứ hai. */
@@ -1059,6 +1074,9 @@ export function startPvp(state: GameState, defense: PvpDefense, attack: PvpAttac
   battle.arms = { ...attack.arms };
   if (attack.huan) battle.huan = { ...attack.huan };
   battle.def = { bonus: defense.bonus, arms: { ...defense.arms }, ...(defense.huan ? { huan: { ...defense.huan } } : {}) };
+  const doGiu: Partial<Record<HeroKind, ChiSoDo>> = {};
+  for (const h of defense.heroes) if (h.trangBi) doGiu[h.kind] = { ...h.trangBi };
+  if (Object.keys(doGiu).length) battle.def.do = doGiu;
   battle.crossbows = defense.crossbows;
   if (defense.walls) battle.walls = true;
   battle.geo = RAID_SCALE;
@@ -1111,7 +1129,7 @@ export function startPvp(state: GameState, defense: PvpDefense, attack: PvpAttac
   if (dien) {
     defense.heroes.forEach((hero, i) => {
       const f = turnLocal(dien.rot, (i ? 1 : -1) * 1.2, BUILDINGS.dien.d / 2 + 0.6);
-      push(hero.kind, dien.x + BUILDINGS.dien.w / 2 + f.x, dien.z + BUILDINGS.dien.d / 2 + f.z, statsOf(hero.kind).hp * multOf(mods, hero.kind));
+      push(hero.kind, dien.x + BUILDINGS.dien.w / 2 + f.x, dien.z + BUILDINGS.dien.d / 2 + f.z, statsOf(hero.kind).hp * (multOf(mods, hero.kind) + (hero.trangBi?.mau ?? 0)));
     });
   }
   return battle;
@@ -1680,8 +1698,8 @@ function damageFighter(battle: Battle, attacker: { kind?: FighterKind; dmg: numb
   // Rùa Vàng che chở: quân ta chỉ chịu một phần sát thương. Thử thách Giặc dữ: giặc đánh đau hơn.
   const shield = target.side === 'ta' && battle.shield > 0 ? KIM_QUY.reduce : 1;
   const fury = target.side === 'ta' ? (battle.fury ?? 1) : 1;
-  // Giáp của tướng ta (đồ đang mặc): chịu ít sát thương hơn.
-  const armor = target.side === 'ta' ? 1 - (doTa(battle, target.kind)?.giap ?? 0) : 1;
+  // Giáp của tướng (đồ đang mặc; tướng ta, hay tướng giữ thành trong Đấu thành): chịu ít sát thương hơn.
+  const armor = 1 - (doCuaNguoi(battle, target)?.giap ?? 0);
   target.hp -= attacker.dmg * bonus * shield * fury * armor;
   if (isHero(target.kind)) {
     // Tướng không chết: hết sức thì rút khỏi trận, nghỉ một lúc.
@@ -1711,8 +1729,9 @@ function damageFighter(battle: Battle, attacker: { kind?: FighterKind; dmg: numb
 function strike(battle: Battle, f: Fighter, foe: Fighter): void {
   const st = statsOf(f.kind);
   if (st.range > 2) emit(battle, { kind: 'shot', x: f.x, z: f.z, tx: foe.x, tz: foe.z, by: f.kind, fromWall: f.wall, toWall: foe.wall });
-  // Tướng ta mặc đồ: đánh mạnh hơn (Sức đánh), nghỉ giữa hai đòn ngắn hơn (Tốc đánh).
-  const own = f.side === 'ta' ? doTa(battle, f.kind) : undefined;
+  // Tướng mặc đồ (tướng ta, hay tướng giữ thành trong Đấu thành): đánh mạnh hơn (Sức đánh), nghỉ giữa hai đòn ngắn
+  // hơn (Tốc đánh).
+  const own = doCuaNguoi(battle, f);
   const mult = (sideMult(battle, f) + (own?.danh ?? 0)) * (f.side === 'ta' && battle.rally > 0 ? RALLY.dmg : 1);
   const dmg = st.dmg * mult;
   damageFighter(battle, { kind: f.kind, dmg }, foe);

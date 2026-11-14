@@ -16,7 +16,9 @@ import {
   scorePvp,
   simulatePvp,
   trophyDelta,
+  tuongCoDo,
   validateSnapshot,
+  type MonChup,
   type PvpInput,
   type Snapshot,
 } from './dauThanh';
@@ -129,7 +131,7 @@ function docMa(ma: string): Snapshot {
 /**
  * Quân đánh thành, máy chủ dựng khi bắt đầu trận. Quân chọn không quá quân trong bản chụp của chính người đánh, không
  * quá số chỗ một trận theo cấp Điện (`FIELD_CAP`); tướng, Đền, binh khí, huân công lấy từ bản chụp ấy (tướng như
- * tướng giữ thành trong bản chụp, kể cả đang nghỉ). Máy khách đánh bằng đúng quân này để đánh lại ra y hệt.
+ * tướng giữ thành trong bản chụp, kể cả đang nghỉ; số đồ máy chủ tự tính từ món đang mặc trong bản chụp, `tuongCoDo`). Máy khách đánh bằng đúng quân này để đánh lại ra y hệt.
  */
 export function quanDanh(atkMa: string, army: unknown, side: unknown, seed: number): { quan: PvpAttack } | { loi: string } {
   const atk = docMa(atkMa);
@@ -149,7 +151,7 @@ export function quanDanh(atkMa: string, army: unknown, side: unknown, seed: numb
   return {
     quan: {
       army: chon,
-      heroes: atk.heroes.map((h) => ({ ...h })),
+      heroes: tuongCoDo(atk.heroes, atk.mon),
       side,
       seed: seed >>> 0,
       bonus: atk.bonus,
@@ -262,6 +264,14 @@ function tuongThu(dien: number): PvpAttack['heroes'] {
   return [{ kind: 'caoLo', bamboo: false, glow: false, non: false, lenhBan: true }];
 }
 
+/** Đồ của trận đối chiếu: bốn ô, đủ sáu chỉ số, có cường hóa. */
+const DO_THU: Omit<MonChup, 'tuong'>[] = [
+  { o: 'vuKhi', bo: 'phuDong', pham: 4, cap: 3, chinh: 'danh', phu: [{ k: 'toc', nac: 3 }, { k: 'mau', nac: 1 }, { k: 'giap', nac: 5 }], cuong: 7 },
+  { o: 'giap', bo: 'phuDong', pham: 3, cap: 3, chinh: 'giap', phu: [{ k: 'hoi', nac: 2 }, { k: 'uy', nac: 4 }], cuong: 4 },
+  { o: 'phucSuc', bo: 'coLoa', pham: 2, cap: 2, chinh: 'toc', phu: [{ k: 'danh', nac: 5 }], cuong: 6 },
+  { o: 'baoVat', bo: 'phuDong', pham: 4, cap: 3, chinh: 'uy', phu: [{ k: 'hoi', nac: 1 }, { k: 'mau', nac: 2 }, { k: 'danh', nac: 3 }], cuong: 10 },
+];
+
 /** Quân mẫu một trận (38 chỗ; có lính nỏ từ Điện 8). */
 const quanMau = (dien: number): Army => (dien >= 8 ? { giao: 11, cung: 10, voi: 3, no: 4 } : { giao: 14, cung: 12, voi: 4, no: 0 });
 
@@ -291,7 +301,14 @@ export function doiChieu(): string[] {
   const out: string[] = [];
   for (let dien = 5; dien <= 10; dien++) {
     const def = botSnapshot(dien);
-    const quan: PvpAttack = { army: quanMau(dien), heroes: tuongThu(dien), side: dien % 2 ? 'bac' : 'tay', seed: 1000 + dien, bonus: 0, arms: { ...def.arms } };
+    // Điện chẵn: hai bên tướng mặc đồ (tướng giữ thành là Gióng đứng trước Điện), để so cả phần đồ của trận.
+    const coDo = dien % 2 === 0;
+    if (coDo) {
+      def.heroes = [{ kind: 'giong', bamboo: true, glow: true, non: false }];
+      def.mon = DO_THU.map((m) => ({ ...m, tuong: 'giong' as const }));
+    }
+    const heroes = coDo ? tuongCoDo(tuongThu(dien), tuongThu(dien).flatMap((h) => DO_THU.map((m) => ({ ...m, tuong: h.kind })))) : tuongThu(dien);
+    const quan: PvpAttack = { army: quanMau(dien), heroes, side: dien % 2 ? 'bac' : 'tay', seed: 1000 + dien, bonus: 0, arms: { ...def.arms } };
     const run = simulatePvp(def, quan, bamThu());
     const score = scorePvp(run.def);
     const people = run.battle.fighters.map((f) => [f.kind, f.side, f.state, f.x, f.z, f.hp]);
