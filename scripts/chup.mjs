@@ -183,7 +183,7 @@ if (!p) throw new Error('Không thấy người gánh của ruộng xa ở giữ
 d.camera(p.x, p.z, 3);`;
 
 /**
- * Tua đồng hồ cảnh (`seaTime`) qua hai phút, tìm lúc có người đang mang hàng ở xa hai đầu tuyến nhất của chỗ thỏa
+ * Tua đồng hồ cảnh (`seaTime`) qua 80 giây, tìm lúc có người đang mang hàng ở xa hai đầu tuyến nhất của chỗ thỏa
  * `chon` (biểu thức trên mỗi mục `d.ganh()`, tên `g`), tua về lúc ấy rồi đặt camera vào người ấy (độ phóng `zoom`).
  */
 const NHIN_DI = (chon, zoom = 3) => `const frame = () => new Promise((ok) => requestAnimationFrame(() => requestAnimationFrame(ok)));
@@ -200,11 +200,11 @@ const tim = () => {
   return best;
 };
 let p = null, at = 0;
-for (let k = 0; k < 240; k++) {
-  d.seaTime(k * 0.5);
+for (let k = 0; k < 100; k++) {
+  d.seaTime(k * 0.8);
   await frame();
   const q = tim();
-  if (q && (!p || q.m > p.m)) { p = q; at = k * 0.5; }
+  if (q && (!p || q.m > p.m)) { p = q; at = k * 0.8; }
 }
 if (!p) throw new Error('Không thấy người mang hàng: ' + JSON.stringify(d.ganh().filter((g) => ${chon}).map((g) => ({ id: g.id, hang: g.hang, D: g.D, n: g.n }))));
 d.seaTime(at);
