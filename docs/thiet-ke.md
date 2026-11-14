@@ -3422,11 +3422,19 @@ Kỹ năng chưa mở (Nhổ tre trước màn 6, Hiệu triệu trước màn 3
 
 ### Giao diện
 
-- **Bảng tướng** mới, mở từ ô Tướng ở dock (Hai Bà lần đầu có bảng), thẻ Tướng ở doanh trại và bảng xếp quân. Trên cùng là hàng thẻ chọn tướng đã về.
-  - Thẻ **Trang bị**: bốn ô (ảnh theo ô, khung màu phẩm, +cường hóa) và dòng hiệu ứng bộ (đang có, hay còn thiếu mấy món). Chạm một ô thì hiện lưới món hợp ô, chia trang như bảng Xây dựng, xếp theo Lực chiến. Chọn một món thì so với món đang mặc (▲▼ từng chỉ số), có nút Mặc, Tháo, Cường hóa (nút mờ ghi lý do), Khóa, Phân giải.
+- **Bảng tướng** kiểu túi đồ game nhập vai (chủ dự án chọn: hình tướng mặc đúng đồ đang đeo, món đồ là mô hình 3D chụp sẵn thành ảnh, một ảnh mỗi món, giữ bốn ô; **đã làm**). Mở từ ô Tướng ở dock (Hai Bà lần đầu có bảng), thẻ Tướng ở doanh trại và nút Trang bị ở bảng từng tướng. Bảng cao như bảng Xây dựng, vẽ lại thì giữ chỗ đã cuộn.
+  - Trên cùng là hàng chip tướng đã về: ảnh bán thân tròn (đầu, vai, đồ trên đầu đang đội), tên, Lực chiến.
+  - Hai thẻ: **Túi đồ** (gộp thẻ Trang bị và Kho đồ cũ) và **Chỉ số**.
+  - **Khung hình nhân**: nền đồng có mặt trời trống đồng mờ, viền kép. Giữa là hình tướng mặc đúng các món đang đeo; bên trái ô Vũ khí, Phục sức; bên phải ô Giáp, Bảo vật; dưới là bảng tên và Lực chiến. Ô có đồ hiện ảnh món trong khung màu phẩm kèm +cường hóa; ô trống vẽ hình bóng nét mực (gươm, áo giáp, miện lá, ngọc), không dùng biểu tượng chữ. Chạm một ô thì túi lọc theo ô ấy và chọn sẵn món đang mặc; chạm lần nữa thì bỏ lọc.
+  - Dưới khung là dòng hiệu ứng bộ, rồi **túi đồ**: số món trên trần, chip lọc (Tất cả và bốn ô, vẽ hình bóng), lưới ô đồ nền tối chia trang (15 món một trang), mỗi ô một ảnh món, viền và nền theo phẩm, +cường hóa, dấu tướng đang mặc, khóa. Lọc một ô thì xếp theo Lực chiến khi mặc (món đang mặc đứng đầu); Tất cả thì theo phẩm, chương, cường hóa. Chọn một món thì thẻ món hiện dưới lưới (bảng tự cuộn tới): ảnh lớn, phẩm, bộ của ai, chỉ số, so Lực chiến, các nút Mặc, Tháo, Khóa, Phân giải (bấm hai lần), Cường hóa. Cuối túi là phân giải hàng loạt.
+  - **Phẩm**: Thường viền xám, Tốt viền xanh lá có quầng nhạt, Quý viền tím có quầng tím, Huyền thoại viền vàng có quầng vàng và vệt sáng lướt qua (tắt khi máy đặt giảm chuyển động).
   - Thẻ **Chỉ số**: sáu chỉ số kèm phần của từng nguồn, Lực chiến, kỹ năng kèm số của kỹ năng.
-- **Kho đồ**: lọc theo ô, bộ, phẩm; phân giải hàng loạt; số món trên trần.
-- Báo rơi đồ: dòng trong bảng kết quả phó bản, dòng tin sau trận giữ kinh đô; thẻ màn ghi bộ nào rơi ở đây và phẩm tối đa.
+- **Ảnh món** (`render/doTuong.ts`, `render/anhDo.ts`): 24 món dựng bằng code theo nét Đông Sơn, phần lớn bằng chính hàm vẽ đồ của tướng mang bộ ấy, nên món trong túi giống đúng đồ tướng mang ra trận. Dựng mới: sừng tê bảy tấc (ngà sẫm dần ra ngọn, bịt vàng, dây thao đỏ), ấn Trưng Vương (ấn vàng hai tầng hoa văn trống đồng, núm chim Lạc, dây thao đỏ), áo giáp vàng (giáp vảy vàng viền đỏ), áo choàng lá rừng (áo choàng màu rừng già phủ lá ở vai, lưng). Giáp, áo choàng treo trên giá gỗ; miện vàng đặt trên gối đỏ; voi trận không lọng cho thấy đệm. Ảnh vuông 256 điểm, nền trong, vẽ sẵn ra `public/anh-do/` bằng `node scripts/anh-do.mjs`; phẩm không vẽ vào ảnh mà do khung.
+- **Hình tướng mặc đồ** (`render/hinhTuong.ts`): chỉ để nhìn trong bảng, ra trận tướng vẫn dáng cũ.
+  - Món cầm tay, giáp, đồ trên đầu, đồ sau lưng thay phần cùng chỗ của tướng (`ThayDo` ở `heroes.ts`: vũ khí, giáp, mũ miện hay búp lá, áo choàng hay bao tên); thú cưỡi đứng sau lưng chếch sang phải, nhỏ hơn thật cho tướng vẫn là chính; bảo vật lơ lửng bên vai trái trong quầng sáng vàng; cờ chim Lạc, khóm tre đằng ngà cắm đất sau bên trái.
+  - Tư thế đứng như tướng chầu sân Điện, theo thế cầm vũ khí: roi, gậy dựng bên phải; gươm trước vai; nỏ cầm ngang hông phải chĩa chếch ra trước (không che giáp); cung tay trái, tên tay phải.
+  - Vẽ bằng renderer của cảnh vào khung vẽ riêng rồi đọc ra ảnh, không mở thêm khung WebGL; nhớ theo tướng và món từng ô (chừng 40 ảnh). Đổi món thì vẽ lại chừng 0,1–0,2 giây; lần đầu gặp món mới phải nặn nên lâu hơn, bảng hiện "Đang vẽ…" rồi thay ảnh.
+- Báo rơi đồ: dòng trong bảng kết quả phó bản và giữ kinh đô có ảnh nhỏ món vừa rơi trong khung phẩm; thẻ màn ghi bộ nào rơi ở đây và phẩm tối đa.
 - Lạc hầu báo một lần khi rơi món đầu tiên.
 
 ### Code
@@ -3444,14 +3452,15 @@ Kỹ năng chưa mở (Nhổ tre trước màn 6, Hiệu triệu trước màn 3
 
 - `trangBi.test.ts`: cùng bộ đếm ra cùng món; tỉ lệ phẩm theo nguồn và trần chương; bộ rơi theo chương và theo tướng đã về; không rơi trước khi Gióng về; mặc, tháo, chuyển tướng; cường hóa (trần, giá, lò rèn hư, thiếu của); phân giải, khóa, kho đầy; chỉ số tổng, các trần, hiệu ứng bộ chỉ khi đúng tướng; trận nhận đúng máu, sát thương, thời gian nghỉ, giáp, hồi, uy lực (Hai Bà mỗi bà một hệ số); hiệu ứng bốn món đổi số kỹ năng và sự kiện mang số; mặc đồ giữa trận không đổi trận; nâng bản lưu 26; bản chụp Đấu thành chưa mang đồ.
 - Đo sức mạnh để ghi vào tài liệu: tướng mặc bộ mẫu (Quý +8, Huyền thoại +10) ở vài màn mỗi chương, so với không đồ và với huân công tối đa.
-- Chụp kiểm tra bảng tướng, kho đồ, bảng kết quả có món rơi.
+- `anhDo.test.ts`: đủ 24 ảnh món, dấu vân tay mô hình khớp ảnh (đổi dáng món thì chạy `node scripts/anh-do.mjs`). `hinhTuong.test.ts`: mọi món mặc được lên tướng nam và nữ, tướng vẫn đứng ở gốc, thú cưỡi sau lưng, bảo vật bên vai không đè thân, cờ và tre cắm đất; mặc đồ bộ khác thì hình đổi. Dáng sáu tướng ở trận giữ y như cũ khi tách phần mặc (đã so dấu hình học trước và sau; `anhCongTrinh.test.ts` canh các tượng tướng ở đền).
+- Chụp kiểm tra bảng tướng (khổ dọc, Fold, ngang), thẻ món, thẻ Chỉ số, bảng kết quả có món rơi.
 
 ### Thứ tự làm
 
 1. **PR 0** (#100): tài liệu.
 2. **PR 1** (đã làm, cùng PR #100 vì PR 0 chưa gộp): luật, rơi đồ, bản lưu 27, trận, bảng tướng và kho đồ (ảnh tạm theo ô, khung màu phẩm), test, đo sức mạnh, chốt giá cường hóa. Đấu thành chưa tính đồ.
 3. **PR 2**: Đấu thành tính đồ (bản chụp, máy chủ).
-4. **PR 3**: hình: 24 ảnh món đồ vẽ sẵn (6 bộ × 4 ô), vũ khí ánh lên khi tướng mặc đủ bốn món bộ mình; chụp kiểm tra.
+4. **PR 3** (đã làm, cùng PR #100): túi đồ kiểu game nhập vai: 24 ảnh món đồ vẽ sẵn (6 bộ × 4 ô), hình tướng mặc đúng đồ đang đeo, khung hình nhân, túi đồ lưới ảnh khung màu phẩm (xem Giao diện). Chưa làm: vũ khí ánh lên khi tướng mặc đủ bốn món bộ mình.
 
 ## Nhịp chơi và lưu game
 
@@ -3505,5 +3514,5 @@ Kỹ năng chưa mở (Nhổ tre trước màn 6, Hiệu triệu trước màn 3
 21. **Ngày đêm** (chủ dự án chọn, đã làm; xem mục cùng tên): kinh đô có ngày, chiều tà, đêm, rạng đông, 12 phút chơi một vòng, chỉ để nhìn. PR 1 trời và cài đặt, PR 2 đèn đuốc, đèn thuyền, đom đóm.
 22. **Đấu thành** (chủ dự án đã duyệt; đã làm PR 1–6: trận tất định, luật, đánh thử ngoài mạng, server, nối mạng; xem lại trận, bảng xếp hạng, gắn Google và lưu mây; xem Kế hoạch cùng tên): đánh thành người chơi khác, cướp của, server Supabase miễn phí.
 23. **Dân gánh hàng về kho** (chủ dự án chọn, đã làm PR 1, 2; xem mục cùng tên): công trình xa nơi nhận làm ra ít hơn, thấp nhất 50%; đường đi cho dân đi nhanh gấp đôi. PR 1 luật, PR 2 dân gánh trên đường, PR 3 tới nơi sản xuất.
-24. **Trang bị rơi ngẫu nhiên và sáu chỉ số tướng** (chủ dự án đã duyệt; xem Kế hoạch cùng tên): đồ rơi ở phó bản, thử thách, đồn, giữ kinh đô; mỗi tướng một bộ mang tên truyền thuyết, ai mặc cũng được, hiệu ứng bộ khi đúng tướng mặc; sáu chỉ số và Lực chiến; cường hóa bằng tài nguyên, phân giải ra sắt; bảng tướng và kho đồ mới. PR 1 luật và bảng, PR 2 Đấu thành, PR 3 hình.
+24. **Trang bị rơi ngẫu nhiên và sáu chỉ số tướng** (chủ dự án đã duyệt; xem Kế hoạch cùng tên): đồ rơi ở phó bản, thử thách, đồn, giữ kinh đô; mỗi tướng một bộ mang tên truyền thuyết, ai mặc cũng được, hiệu ứng bộ khi đúng tướng mặc; sáu chỉ số và Lực chiến; cường hóa bằng tài nguyên, phân giải ra sắt; bảng tướng kiểu túi đồ game nhập vai (hình tướng mặc đồ, ảnh món vẽ sẵn). PR 1 luật và bảng, PR 2 Đấu thành, PR 3 hình (đã làm cùng PR 1).
 25. **Để sau**: nhạc nền.

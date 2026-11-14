@@ -9,8 +9,9 @@ import { kiemTen } from './game/mayChu';
 import { coMayChu, ghiMayBiet, mayBiet, nhanGoogle, taiKhoanMay, uidMay, type GoogleVe } from './mang/cauHinh';
 import { leaveBattlefield, markBaiHinted, needsBaiHint, retreat, startStage, unitAllowed } from './game/campaign';
 import { forgeArms } from './game/binhKhi';
-import { cuongHoa, khoaDo, macDo, phanGiai, phanGiaiLoat, thaoDo } from './game/trangBi';
-import { monTen } from './ui/trangBi';
+import { cuongHoa, khoaDo, macDo, monO, phanGiai, phanGiaiLoat, thaoDo } from './game/trangBi';
+import { HinhTuong, type MacTuong } from './render/hinhTuong';
+import { monTen, preloadMon } from './ui/trangBi';
 import { autoGuard, fieldCap, fitArmy, setGuard } from './game/doanhTrai';
 import { markNuHinted, nextNuHint } from './game/nuTuong';
 import { forgeNoThan, inChapter3, wallRings } from './game/coLoa';
@@ -26,7 +27,7 @@ import { inChapter2, offerGift } from './game/son';
 import { buyHuan } from './game/thuThach';
 import { markStory, pendingStory } from './game/story';
 import { footprintTop } from './game/terrain';
-import { BUILDINGS, QUIZ_TURNS, RESOURCE_IDS, STAGES, UNIT_TYPES, U_NO, isBridge, isDecor, isRoad, type BuildingType, type Cost, type NuTuongId, type ResourceId, type Row, type SkillId, type UnitType } from './game/defs';
+import { BUILDINGS, O_DO, QUIZ_TURNS, RESOURCE_IDS, STAGES, UNIT_TYPES, U_NO, isBridge, isDecor, isRoad, type BuildingType, type Cost, type NuTuongId, type ResourceId, type Row, type SkillId, type UnitType } from './game/defs';
 import { CAMPS, benKiaOpen, bridgeSnap, campHero, campTier, canStartCamp, joinVillage, plotAt, poiAt, sendScout, setGarrison, startCamp } from './game/benKia';
 import type { QuanDaoId } from './game/bien';
 import type { Buoi } from './game/ngayDem';
@@ -304,6 +305,18 @@ async function start(): Promise<void> {
   let saveWarned = false;
 
   const hud = new Hud(hudRoot, handle, () => state);
+  // Hình tướng mặc đồ, ảnh bán thân cho bảng tướng: vẽ lúc cần bằng renderer của cảnh, xong thì dựng lại bảng.
+  const hinhTuong = new HinhTuong(world.renderer);
+  hinhTuong.onReady = () => hud.refreshTuong(state);
+  const macOf = (hero: HeroKind): MacTuong => {
+    const mac: MacTuong = {};
+    for (const o of O_DO) {
+      const m = monO(state, hero, o);
+      if (m) mac[o] = `${m.bo}-${m.o}`;
+    }
+    return mac;
+  };
+  hud.anhTuong = { hinh: (hero) => hinhTuong.get(hero, macOf(hero)), ban: (hero) => hinhTuong.ban(hero, macOf(hero)) };
 
   const save = () => {
     if (!saveToStorage(localStorage, state) && !saveWarned) {
@@ -2279,6 +2292,7 @@ async function start(): Promise<void> {
     showOfflineIfLong(offline.ms, offline.gained, offline.built);
     if (state.raid.lastResult) hud.showRaidResult(state, state.raid.lastResult);
     preloadThumbs();
+    preloadMon();
     // Đã tham gia Đấu thành: hỏi máy chủ các trận bị đánh lúc vắng, tải bản chụp; đã gắn Google: lưu game lên mây.
     // Rồi mười phút một lần.
     void dinhKy();

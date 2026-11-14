@@ -1007,7 +1007,7 @@ export const vi = {
   /** Trang bị tướng (`trangBi.ts`, bảng tướng ở `ui/trangBi.ts`). */
   trangBi: {
     title: 'Tướng',
-    tabs: { do: 'Trang bị', chiSo: 'Chỉ số', kho: 'Kho đồ' },
+    tabs: { do: 'Túi đồ', chiSo: 'Chỉ số' },
     o: {
       vuKhi: { icon: '🗡️', name: 'Vũ khí' },
       giap: { icon: '🛡️', name: 'Giáp' },
@@ -1049,7 +1049,9 @@ export const vi = {
     chuaMo: 'Trang bị mở khi Gióng thành tráng sĩ: từ đó thắng trận thì có khi rơi đồ cho tướng.',
     nguon: 'Đồ rơi khi thắng phó bản (kể cả đánh lại), thử thách, dẹp đồn, giữ kinh đô.',
     oTrong: 'Chưa mặc',
-    chonO: 'Chạm một ô để chọn đồ cho ô ấy.',
+    tui: 'Túi đồ',
+    chamMon: 'Chạm một món để xem; chạm một ô bên hình tướng để xem đồ hợp ô ấy.',
+    dangVe: 'Đang vẽ…',
     khongCoMon: 'Chưa có món nào hợp ô này.',
     khoRong: 'Kho đồ còn trống.',
     khoCount: (n: number, max: number) => `${n}/${max} món`,
