@@ -66,7 +66,7 @@ import {
   dienLevel,
   dienNeededFor,
   findBuilding,
-  fishOf,
+  fishIn,
   fishPerMinute,
   floodSeason,
   foodPerMinute,
@@ -107,6 +107,7 @@ import { KHOANH_N } from '../game/khoanh';
 import { inChapter2, sonJoined, sonLook, sonResting, giftCount } from '../game/son';
 import { floodToleranceOf, groundOf, hasOpenCong } from '../game/terrain';
 import { tetOpen, tetStarted, type Banh } from '../game/tet';
+import { dichOf, duongGanh } from '../game/vanChuyen';
 import type { Resolution } from '../render/world';
 import { formatClock, formatDuration, formatXay, vi } from '../text/vi';
 import { canStartUpgrade, conLai, isBusy, pendingBuilding, planWallUpgrade, soTho, thoRanh, thoRanhSau, viecOf, wallComponent, xayMs } from '../game/xay';
@@ -1051,10 +1052,11 @@ export class Hud {
   }
 
   /** Bật/tắt nút Đặt và đổi dòng gợi ý thành lý do khi chỗ này không đặt được. */
-  setPlaceValid(valid: boolean, reason?: string): void {
+  /** `extra`: thêm vào sau dòng gợi ý khi đặt được (phần gánh về kho của chỗ này). */
+  setPlaceValid(valid: boolean, reason?: string, extra?: string): void {
     const btn = this.bottombar.querySelector<HTMLButtonElement>('[data-act="confirmPlace"]');
     if (btn) btn.disabled = !valid;
-    if (btn) this.hint.textContent = valid || !reason ? this.placeHint() : reason;
+    if (btn) this.hint.textContent = valid || !reason ? (extra ? `${extra} · ${this.placeHint()}` : this.placeHint()) : reason;
   }
 
   /** Công trình đang đặt, dời có xoay được không (thanh dưới có nút ↻ Xoay). */
@@ -1464,17 +1466,18 @@ export class Hud {
     }
     const fishRate = (n: number) => `🐟 ${fmt(n)}${vi.ui.perMinute}`;
     if (b.type === 'langChai') {
-      rows.push(`<div class="stat"><span>${vi.ui.fishHere}</span><span>${fishRate(fishOf(b))}</span></div>`);
+      rows.push(`<div class="stat"><span>${vi.ui.fishHere}</span><span>${fishRate(fishIn(state, b))}</span></div>`);
       if (b.level < def.maxLevel) rows.push(`<div class="stat"><span>${vi.ui.nextLevel}</span><span>${fishRate(CA_PER_MIN[b.level])}</span></div>`);
     }
     if (b.type === 'benKhoi') {
       // Cá biển của bến này, và thuyền ra ngư trường quanh quần đảo nào (bến chẵn Hoàng Sa, bến lẻ Trường Sa).
-      rows.push(`<div class="stat"><span>${vi.ui.seaFishHere}</span><span>${fishRate(fishOf(b))}</span></div>`);
+      rows.push(`<div class="stat"><span>${vi.ui.seaFishHere}</span><span>${fishRate(fishIn(state, b))}</span></div>`);
       if (b.level < def.maxLevel) rows.push(`<div class="stat"><span>${vi.ui.nextLevel}</span><span>${fishRate(CA_BIEN_PER_MIN[b.level])}</span></div>`);
       const ground = seaRoute(b, seaIndex(state, b)).quanDao;
       rows.push(`<div class="stat"><span>${vi.ui.seaGround}</span><span>${vi.bien.icon} ${vi.bien.quanDao[ground].name}</span></div>`);
       rows.push(`<div class="actions"><button class="btn bronze" data-act="seeIsland" data-dao="${ground}">${vi.bien.icon} ${vi.bien.seeIsland}</button></div>`);
     }
+    rows.push(...ganhRows(state, b));
     if (b.type === 'donBien') rows.push(this.garrisonHtml(state, b));
     if (b.type === 'banLang') {
       const id = plotAt(b.x, b.z);
@@ -2332,4 +2335,20 @@ export class Hud {
     if (xayMs(type, 1) > 0 && !thoRanh(state)) return hetThoText(state);
     return null;
   }
+}
+
+/**
+ * Dòng "Gánh về kho" của bảng công trình có người làm: quãng đường, phần làm ra còn lại; xa thì kèm lời khuyên.
+ * Công trình bên kia sông mà cầu hư thì đã có dòng báo riêng.
+ */
+function ganhRows(state: GameState, b: Building): string[] {
+  const g = duongGanh(state, b);
+  if (!g || cutOff(state, b)) return [];
+  const dich = dichOf(b.type);
+  const pct = Math.round(g.heSo * 100);
+  const value = Number.isFinite(g.d) ? vi.ui.ganhValue(Math.round(g.d), pct) : vi.ui.ganhNoWay(pct);
+  const rows = [`<div class="stat"><span>${vi.ui.ganh[dich]}</span><span class="${g.heSo < 1 ? 'warn' : ''}">🧺 ${value}</span></div>`];
+  if (!Number.isFinite(g.d)) rows.push(`<p class="why warn">${vi.ui.ganhNoWayWhy}</p>`);
+  else if (g.heSo < 1) rows.push(`<p class="muted">${vi.ui.ganhFar[dich]}</p>`);
+  return rows;
 }

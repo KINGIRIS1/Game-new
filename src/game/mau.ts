@@ -4,7 +4,7 @@
 // phần mẫu có mà mình chưa có (trong giới hạn theo cấp Điện). Phải đủ tài nguyên để dựng phần thiếu và trả phí
 // dời thì mới áp được.
 
-import { BUILDINGS, STAGES, U_NO, isDecor, type BuildingType, type Cost, RESOURCE_IDS } from './defs';
+import { BUILDINGS, GANH, STAGES, U_NO, isDecor, type BuildingType, type Cost, RESOURCE_IDS } from './defs';
 import { CH1_LAST } from './campaign';
 import { inChapter4 } from './chuong4';
 import { inChapter3 } from './coLoa';
@@ -17,6 +17,7 @@ import {
   usedOf,
   moveCost,
   newBuilding,
+  occupancy,
   pay,
   unlocked,
   uNoCount,
@@ -55,6 +56,7 @@ export function inFrame(x: number, z: number, level: number): boolean {
 }
 import { inChapter2 } from './son';
 import { footprintTop, levelFootprint } from './terrain';
+import { duongGanh, ganhType, heSoGanh } from './vanChuyen';
 
 export type MauId = 'phongChau' | 'deBao' | 'coLoa' | 'coLoaSong';
 export const MAU_IDS: MauId[] = ['phongChau', 'deBao', 'coLoa', 'coLoaSong'];
@@ -759,6 +761,11 @@ export interface MauPlan {
   uNos: { x: number; z: number }[];
   /** Điện đang xoay: áp mẫu quay Điện về hướng của mẫu (mặt trước ra sông). */
   turnDien: boolean;
+  /**
+   * Ô sẽ trải đường đất nối công trình làm ra hàng ở xa với kho, Điện (`traiDuong`), cho người gánh đi nhanh. Đường xong
+   * ngay như khi tự trải, không vào việc của tốp thợ.
+   */
+  duong: { x: number; z: number }[];
 }
 
 const addCost = (a: Cost, b: Cost) => {
@@ -796,7 +803,7 @@ export function planMau(state: GameState, id: MauId): MauPlan {
   };
   mark('dien', DIEN_HOME, DIEN_HOME);
 
-  const plan: MauPlan = { moves: [], builds: [], removes: [], cost: {}, stuck: [], uNos: [], turnDien: !!dien.rot };
+  const plan: MauPlan = { moves: [], builds: [], removes: [], cost: {}, stuck: [], uNos: [], turnDien: !!dien.rot, duong: [] };
   if (dien.x !== DIEN_HOME || dien.z !== DIEN_HOME) {
     plan.moves.push({ id: dien.id, x: DIEN_HOME, z: DIEN_HOME });
     addCost(plan.cost, moveCost(dien));
@@ -921,7 +928,86 @@ export function planMau(state: GameState, id: MauId): MauPlan {
       room--;
     }
   }
+  if (!plan.stuck.length) {
+    plan.duong = traiDuong(state, plan);
+    for (let i = 0; i < plan.duong.length; i++) addCost(plan.cost, BUILDINGS[DUONG_MAU].buildCost);
+  }
   return plan;
+}
+
+/** Loại đường mẫu trải: đường đất, rẻ nhất, mở từ Điện 1. */
+const DUONG_MAU: BuildingType = 'duongDat';
+/** Trải đường mấy lượt (lượt sau tính trên kinh đô đã có đường lượt trước, vì có đường thì người gánh đổi lối). */
+const DUONG_LUOT = 4;
+/** Ghi nhớ đường đã tính theo dấu vết kinh đô và kế hoạch (bảng Mẫu kinh đô gọi `planMau` cho mọi mẫu mỗi lần dựng). */
+const duongNho = new Map<string, { x: number; z: number }[]>();
+
+/**
+ * Đường mẫu sẽ trải (dân gánh hàng, `docs/thiet-ke.md` mục Dân gánh hàng về kho): dựng kinh đô giả sau khi áp mẫu (dỡ,
+ * dời, dựng thêm như `plan`), lấy tuyến gánh của mọi công trình làm ra hàng chưa đủ 100% vì xa (`duongGanh`, xa nhất
+ * trước), trải đường đất lên ô trống của tuyến từ phía nơi nhận ra (khúc gần kho, Điện các tuyến dùng chung) vừa đủ
+ * cho quãng đường về trong `GANH.gan`, không quá giới hạn đường theo cấp Điện. Lặp vài lượt vì có đường thì người gánh
+ * đổi lối, để áp mẫu lần hai không còn gì phải trải.
+ */
+function traiDuong(state: GameState, plan: MauPlan): { x: number; z: number }[] {
+  const def = BUILDINGS[DUONG_MAU];
+  if (!def.buildable || !unlocked(state, def.unlock) || dienLevel(state) < def.minDien) return [];
+  let room = limitOf(state, DUONG_MAU) - usedOf(state, DUONG_MAU);
+  if (room <= 0) return [];
+  const removed = new Set(plan.removes);
+  const moved = new Map(plan.moves.map((m) => [m.id, m]));
+  const buildings: Building[] = [];
+  for (const b of state.buildings) {
+    if (removed.has(b.id)) continue;
+    const m = moved.get(b.id);
+    buildings.push(m ? { ...b, x: m.x, z: m.z } : b);
+  }
+  let id = -1;
+  for (const s of plan.builds) buildings.push({ id: id--, type: s.type, x: s.x, z: s.z, level: 1, workers: 1 });
+  const key = `${dienLevel(state)}:${room}:${state.khoanh.join(',')}:${buildings.map((b) => `${b.type}${b.x},${b.z}${b.damaged ? 'h' : ''}`).join(';')}`;
+  const hit = duongNho.get(key);
+  if (hit) return hit;
+  const out: { x: number; z: number }[] = [];
+  for (let luot = 0; luot < DUONG_LUOT && room > 0; luot++) {
+    const sim = { ...state, buildings: [...buildings] } as GameState;
+    const occ = occupancy(sim);
+    const thieu = sim.buildings
+      .filter((b) => ganhType(b.type) && heSoGanh(sim, b) < 1)
+      .map((b) => ({ b, g: duongGanh(sim, b)! }))
+      .filter(({ g }) => g && Number.isFinite(g.d))
+      .sort((a, b) => b.g.d - a.g.d || a.b.id - b.b.id);
+    const chon = new Set<number>();
+    for (const { g } of thieu) {
+      // Mỗi ô đường bớt nửa bước; trải từ phía nơi nhận ra (khúc gần kho, Điện nhiều tuyến dùng chung) tới khi đủ gần.
+      let need = g.d - GANH.gan;
+      for (let k = g.tuyen.length - 1; k >= 0 && need > 0; k--) {
+        const i = g.tuyen[k];
+        const prev = k > 0 ? g.tuyen[k - 1] : -1;
+        const buoc = prev >= 0 && prev % GRID !== i % GRID && Math.floor(prev / GRID) !== Math.floor(i / GRID) ? Math.SQRT2 : 1;
+        if (chon.has(i)) need -= buoc / 2;
+        else if (!occ[i] && isOpen(state, i % GRID, Math.floor(i / GRID)) && chon.size < room) {
+          chon.add(i);
+          need -= buoc / 2;
+        }
+      }
+    }
+    if (!chon.size) break;
+    for (const i of chon) {
+      const x = i % GRID;
+      const z = (i - x) / GRID;
+      out.push({ x, z });
+      buildings.push({ id: id--, type: DUONG_MAU, x, z, level: 1, workers: 0 });
+    }
+    room -= chon.size;
+  }
+  if (duongNho.size > 16) duongNho.clear();
+  duongNho.set(key, out);
+  return out;
+}
+
+/** Trải các ô đường của kế hoạch áp mẫu (của đã trả cùng kế hoạch). */
+function layDuong(state: GameState, plan: MauPlan): void {
+  for (const d of plan.duong) state.buildings.push(newBuilding(state, DUONG_MAU, d.x, d.z));
 }
 
 /** Chỗ trống gần công trình `b` nhất (theo khoảng cách ô) mà vẫn trong vùng và không vướng mẫu. */
@@ -949,7 +1035,7 @@ export function canApplyMau(state: GameState, id: MauId): Result<MauPlan> {
   const plan = planMau(state, id);
   if (plan.removes.some((r) => isBusy(state, r))) return { ok: false, reason: 'dangXay' };
   if (plan.stuck.length) return { ok: false, reason: 'khongDuCho' };
-  if (!plan.moves.length && !plan.builds.length && !plan.removes.length && !plan.uNos.length && !plan.turnDien) return { ok: false, reason: 'daTheoMau' };
+  if (!plan.moves.length && !plan.builds.length && !plan.removes.length && !plan.uNos.length && !plan.turnDien && !plan.duong.length) return { ok: false, reason: 'daTheoMau' };
   if (!canAfford(state, plan.cost)) return { ok: false, reason: 'thieuTaiNguyen' };
   return { ok: true, value: plan };
 }
@@ -984,6 +1070,7 @@ export function applyMau(state: GameState, id: MauId): Result<MauPlan> {
     const wall = state.buildings.find((b) => b.type === 'thanh' && b.x === u.x && b.z === u.z);
     if (wall) wall.uNo = 'ok';
   }
+  layDuong(state, plan);
   return check;
 }
 
@@ -1056,6 +1143,8 @@ export function startMau(state: GameState, id: MauId): Result<MauPlan> {
     o.push(item(s, { id: b.id, moi: b }));
   }
   for (const [s, old] of turned) o.push(item(s, { id: old.id, doi: s.type }));
+  // Đường xong ngay như khi tự trải (chỗ đường không vướng chỗ dựng thêm nào, kể cả đang chờ thợ).
+  layDuong(state, plan);
   const r = startBatch(state, o);
   if (!r.ok) return r;
   return check;

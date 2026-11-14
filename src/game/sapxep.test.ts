@@ -1,13 +1,14 @@
 import { describe, expect, it } from 'vitest';
 import { wallRings } from './coLoa';
 import { CH1_LAST } from './campaign';
-import { BUILDINGS, CH2_QUEST_START, CH3_QUEST_START, CH4_QUEST_START, GIFT_IDS, MOVE_FRACTION, STAGES, U_NO, type BuildingType } from './defs';
+import { BUILDINGS, CH2_QUEST_START, CH3_QUEST_START, CH4_QUEST_START, GIFT_IDS, MOVE_FRACTION, ROAD_LIMIT, STAGES, U_NO, isRoad, type BuildingType } from './defs';
 import { canMove, createInitialState, dienLevel, limitOf, move, moveCost, occupancy, place, rotOf, rotateBuilding, uNoCount, usedOf, type GameState } from './game';
 import { applyMau, canApplyMau, inFrame, mauFrom, mauSlots, mauUnlocked, planMau, MAU_IDS, type MauId } from './mau';
 import { isOpen, khoanhOf } from './khoanh';
 import { DIEN_HOME, GRID, RIVER_END, RIVER_START, touchesRiver } from './map';
 import { DIEN_END, bank, edge, setDien } from './testmap';
 import { floodMap } from './terrain';
+import { ganhType, heSoGanh } from './vanChuyen';
 
 /** Kinh đô giàu của, đã qua kết chương 1, ở chương `chapter`, Điện cấp `dien`. */
 function city(dien: number, chapter: 1 | 2 | 3 | 4 = 1): GameState {
@@ -219,8 +220,12 @@ describe('mẫu kinh đô', () => {
     const slots = mauSlots('phongChau', 5);
     expect(slots.some((x) => x.type === 'ruong' && x.x === r1.value.x && x.z === r1.value.z)).toBe(true);
     expect(r1.value).toMatchObject({ level: 5, workers: 4 });
-    // Mọi công trình đứng đúng chỗ mẫu, không chồng nhau, số mỗi loại không quá giới hạn.
-    for (const b of s.buildings) expect(slots.some((x) => x.type === b.type && x.x === b.x && x.z === b.z), `${b.type} ${b.x},${b.z}`).toBe(true);
+    // Mọi công trình đứng đúng chỗ mẫu (trừ đường gánh hàng mẫu trải thêm), không chồng nhau, số mỗi loại không quá
+    // giới hạn.
+    for (const b of s.buildings) {
+      if (!isRoad(b.type)) expect(slots.some((x) => x.type === b.type && x.x === b.x && x.z === b.z), `${b.type} ${b.x},${b.z}`).toBe(true);
+    }
+    expect(s.buildings.filter((b) => isRoad(b.type)).map((b) => ({ x: b.x, z: b.z }))).toEqual(plan.duong);
     const grid = occupancy(s);
     let cells = 0;
     for (const b of s.buildings) cells += BUILDINGS[b.type].w * BUILDINGS[b.type].d;
@@ -229,6 +234,43 @@ describe('mẫu kinh đô', () => {
     expect(s.buildings.filter((b) => b.type === 'ruong').length).toBe(limitOf(s, 'ruong'));
     // Áp lần nữa thì không còn gì để làm.
     expect(canApplyMau(s, 'phongChau')).toEqual({ ok: false, reason: 'daTheoMau' });
+  });
+
+  it('áp mẫu trải đường đất nối công trình làm ra hàng ở xa với kho, Điện: không công trình nào kém đi, trong giới hạn đường, áp lần hai không còn gì', () => {
+    const cases: [MauId, 1 | 2 | 3 | 4, number][] = [
+      ['phongChau', 1, 3],
+      ['phongChau', 1, 5],
+      ['deBao', 2, 6],
+      ['coLoa', 3, 7],
+      ['coLoaSong', 4, 8],
+      ['coLoaSong', 4, 10],
+    ];
+    let trai = 0;
+    for (const [id, chapter, dien] of cases) {
+      const s = withGenerals(city(dien, chapter));
+      const plan = planMau(s, id);
+      expect(applyMau(s, id).ok, `${id} Điện ${dien}`).toBe(true);
+      const roads = s.buildings.filter((b) => isRoad(b.type));
+      expect(roads.length).toBe(plan.duong.length);
+      expect(roads.length).toBeLessThanOrEqual(ROAD_LIMIT[dien - 1]);
+      for (const b of roads) expect(isOpen(s, b.x, b.z)).toBe(true);
+      trai += roads.length;
+      // So với cùng kinh đô ấy mà không có đường: không công trình nào kém đi.
+      const bare = { ...s, buildings: s.buildings.filter((b) => !isRoad(b.type)) } as GameState;
+      const list = s.buildings.filter((b) => ganhType(b.type));
+      let sum = 0;
+      let sumBare = 0;
+      for (const b of list) {
+        const k = heSoGanh(s, b);
+        const k0 = heSoGanh(bare, b);
+        expect(k, `${id} Điện ${dien} ${b.type} ${b.x},${b.z}`).toBeGreaterThanOrEqual(k0 - 1e-9);
+        sum += k;
+        sumBare += k0;
+      }
+      if (roads.length) expect(sum).toBeGreaterThan(sumBare);
+      expect(canApplyMau(s, id), `${id} Điện ${dien} lần hai`).toEqual({ ok: false, reason: 'daTheoMau' });
+    }
+    expect(trai).toBeGreaterThan(0);
   });
 
   it('áp mẫu đưa Điện đã dời, đã xoay về chỗ của mẫu, mặt trước quay ra sông; dời Điện không tốn của', () => {

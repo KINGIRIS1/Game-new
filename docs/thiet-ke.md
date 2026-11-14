@@ -179,7 +179,7 @@ Lúc đầu mỗi cấp Điện chỉ cho phát tới một số khoảnh (lư�
 | Hồ Kim Quy | 8×8 | Có khi Rùa Vàng hiện lên (thắng màn 19). Lũy, thành đất, thành Cổ Loa, cổng thành thêm 30% máu (xem mục Hồ Kim Quy) |
 | Đền Cổ Loa | 4×4 | Có sau khi kết chương 3. Chòi canh bắn mạnh gấp rưỡi, xa thêm 1 ô |
 | Đền Rồng Tiên | 8×8 | Thờ Lạc Long Quân và Âu Cơ. Có ở chương 5, Điện cấp 10. Vỏ ốc, cá, đất đá, sắt, gỗ làm ra thêm 20% (xem mục Đền Rồng Tiên) |
-| Đường đi, đồ trang trí | 1×1 tới 3×3 | Chỉ để nhìn (xem mục Đường đi và đồ trang trí) |
+| Đường đi, đồ trang trí | 1×1 tới 3×3 | Để nhìn; đường đi còn cho dân gánh hàng đi nhanh gấp đôi (xem mục Đường đi và đồ trang trí, mục Dân gánh hàng về kho) |
 
 Giá đắp nền tính theo lõi móng (bỏ viền cỏ một ô), nên giữ như trước khi móng to ra.
 
@@ -1041,12 +1041,12 @@ Bảng Xây dựng bày theo kiểu trưng bày (chủ dự án chọn trong ba 
 - Sân trống đồng (chủ dự án chọn) đặt như cây đa, ao làng, vẽ thẳng trên móng 3×3 (`src/render/congTrinh/sanTrong.ts`, bản vẽ ở `docs/bo-cuc-cong-trinh.md`). Giá và mốc mở là tự chọn, chủ dự án có thể đổi. Điện 9, 10 giữ hai sân.
 
 **Luật chung** của đường và đồ trang trí (`isDecor` ở `defs.ts`):
-- Chỉ để nhìn, không cho thêm tài nguyên hay sức mạnh gì.
+- Để nhìn, không cho thêm tài nguyên hay sức mạnh gì. Riêng đường đi: dân gánh hàng về kho đi trên đường nhanh gấp đôi (xem mục Dân gánh hàng về kho).
 - Giặc không nhắm phá, đi thẳng qua như đất trống. Lũ ngập tới đâu cũng không làm hư.
 - Chiếm ô như công trình: nhà không dựng đè lên được, phải dọn đi trước. Nhà đứng cạnh đồ trang trí vẫn tính là chỗ thoáng khi gợi ý chỗ dựng.
 - Dời được như công trình (10% giá dựng). Dọn đi không hoàn của, như dỡ lũy: bấm Dọn đi trong bảng của món ấy, hoặc dùng thẻ **Dọn trang trí** (🧹) trong nhóm Trang trí rồi chạm từng ô.
 - Từ chương 2, đắp đất được ngay dưới ô đường hay món một ô (món nằm trên mặt đất mới); cây đa, ao làng thì đắp nền như công trình.
-- Áp mẫu kinh đô: món vướng chỗ của mẫu thì dỡ đi (tính vào số dỡ đi), món không vướng thì giữ nguyên chỗ.
+- Áp mẫu kinh đô: món vướng chỗ của mẫu thì dỡ đi (tính vào số dỡ đi), món không vướng thì giữ nguyên chỗ. Mẫu còn trải thêm đường đất nối công trình làm ra hàng ở xa với kho, Điện (mục Dân gánh hàng về kho, Mẫu kinh đô trải sẵn đường).
 - Bản lưu không đổi phiên bản: chỉ thêm loại công trình mới.
 - Vẽ theo lô cho nhẹ máy: đường và món một ô dù nhiều tới hàng trăm vẫn chỉ vài lệnh vẽ (`src/render/decor.ts`).
 - Test: `trangTri.test.ts`.
@@ -1093,7 +1093,7 @@ Trước đây mọi công trình dựng và nâng cấp xong ngay khi đủ c�
 - Công trình **đang nâng** vẫn làm việc ở cấp cũ, xong thì lên cấp. Không nâng chồng, không dỡ, không ghép lầu nỏ, không gắn ụ nỏ khi đang có việc. Điện đang nâng thì mọi giới hạn vẫn theo cấp cũ tới khi xong.
 - Dời, xoay, sửa công trình đang nâng vẫn được. Dỡ thì phải hủy việc trước.
 - Giữ **xong ngay**: đường đi, đồ trang trí, sửa chữa, đắp đất, đắp nền, dời, xoay, ghép lầu nỏ, gắn ụ nỏ, nhà làng bản làng.
-- Áp mẫu kinh đô: dời ngay như cũ; phần dựng thêm giao cả cho một tốp, làm lần lượt (nhà gần Điện trước, rồi tường, rồi các đoạn đổi loại). Đoạn tường mẫu dỡ đi mà trùng chỗ tường mới thì giữ lại tới khi đắp xong, để khỏi hở thành.
+- Áp mẫu kinh đô: dời ngay như cũ; phần dựng thêm giao cả cho một tốp, làm lần lượt (nhà gần Điện trước, rồi tường, rồi các đoạn đổi loại). Đoạn tường mẫu dỡ đi mà trùng chỗ tường mới thì giữ lại tới khi đắp xong, để khỏi hở thành. Đường gánh hàng mẫu trải thêm xong ngay, không cần tốp.
 
 ### Nhà thợ hồ
 
@@ -2193,7 +2193,7 @@ Chủ dự án yêu cầu: "Thêm biển, thuyền đánh cá cỡ lớn lên lv
 **Đã chốt** (chủ dự án chọn cả ba phương án khuyên dùng):
 1. **Biển ngoài lưới, sau bờ đông**: sông Đà đổ ra cửa biển ngay sau mép đông của lưới. Biển, bãi cát và hai quần đảo vẽ ngoài lưới; lưới kinh đô giữ 76×76, không nâng bản lưu. (Sau đổi: bờ biển chéo ở đông nam, cửa biển ở góc đông nam trong lưới; xem Bố trí lại bản đồ.) Phương án bỏ: nới lưới sang đông (biển thật trong lưới, chạm mọi phần), bản đồ Biển Đông riêng (không thấy từ kinh đô).
 2. **Thuyền đánh cá cỡ lớn là công trình mới**: **bến thuyền khơi**, dựng sát sông như bến, làng chài, mở ở Điện 8. Phương án bỏ: làng chài từ cấp 8 có thuyền ra biển (không có công trình riêng).
-3. **Thuyền mang về cá biển và vỏ ốc**, đều mỗi phút như mọi công trình. Cá đỡ gạo ăn như cá làng chài; vỏ ốc vào kho (vỏ ốc tiền thời Văn Lang vốn là ốc biển). Lý do: sổ kinh tế cho thấy từ chương 2 cá làng chài đã đỡ hết gạo ăn của người chơi mô phỏng, thêm cá thuần thì gần như vô ích. Phương án bỏ: chuyến khơi theo đợt mang một mẻ lớn; chỉ cá.
+3. **Thuyền mang về cá biển và vỏ ốc**, đều mỗi phút như mọi công trình. Cá đỡ gạo ăn như cá làng chài; vỏ ốc vào kho (vỏ ốc tiền thời Văn Lang vốn là ốc biển). Lý do: sổ kinh tế cho thấy từ chương 2 cá làng chài đã đỡ hết gạo ăn của người chơi mô phỏng, thêm cá thuần thì gần như vô ích. Phương án bỏ: chuyến khơi theo đợt mang một mẻ lớn; chỉ cá. (Sau thêm: cá, vỏ ốc cũng phải gánh từ bến về kho, xa thì mất phần như mọi công trình; xem mục Dân gánh hàng về kho.)
 
 ### Bố trí lại bản đồ (chủ dự án chọn phương án C, đã làm)
 
@@ -3210,6 +3210,88 @@ Cuối game: thay năm trại cũ (chừng 35 nghìn kể cả viền) và bốn
 2. **PR 2, hình doanh trại 8×8** (đã làm, cùng PR #82): bản vẽ vào `docs/bo-cuc-cong-trinh.md`, tường, lầu cổng, đài tướng, nhà dài theo doanh, lính tập, ảnh công trình, chụp kiểm tra.
 3. **PR 3, hình bốn nơi ở 4×4** (đã làm, cùng PR #82): bản vẽ vào `docs/bo-cuc-cong-trinh.md`, khuôn viên chung với doanh trại, lính, voi theo bậc binh khí, trại nỏ lần đầu vẽ trên móng, ảnh công trình, chụp kiểm tra.
 
+## Dân gánh hàng về kho (chủ dự án chọn, đã làm PR 1, 2, 3)
+
+Chủ dự án muốn người dân đem vật liệu, nông sản về kho hoặc tới nơi sản xuất. Trước đây của làm ra cộng thẳng vào kho mỗi phút, dân chỉ đứng làm tại công trình, đường đi chỉ để nhìn.
+
+### Đã chốt (chủ dự án chọn)
+
+1. **Luật vận chuyển thật**: công trình xa nơi nhận hàng thì làm ra ít hơn. Phương án bỏ: chỉ để nhìn; có thưởng nhẹ khi nối đường.
+2. **Người làm tự gánh**: chính dân đang làm ở công trình thay nhau gánh hàng đi rồi quay về, không thêm đội gánh hay dân rảnh phải quản lý. Phương án bỏ: kho có đội gánh theo cấp; dân rảnh đi gánh.
+3. **Đều mỗi phút, theo quãng đường**: kho vẫn tăng đều như cũ, mỗi công trình nhân thêm hệ số gánh theo đường đi tới nơi nhận gần nhất. Không có hàng nằm dọc đường, **bản lưu không đổi**, lúc vắng tính y như lúc chơi. Phương án bỏ: hàng dồn ở sân công trình, mỗi chuyến gánh tới kho mới nhảy số (phải lưu hàng tồn, lúc vắng tính xấp xỉ).
+4. **Mức vừa**: gần đủ 100% như trước, xa dần thì giảm, thấp nhất 50%. Phương án bỏ: nhẹ (thấp nhất 75%), nặng (không sàn, không lối thì không được gì).
+5. **Ưu tiên đường đã trải**: dân tìm đường né công trình, sông; ô có đường đi nhanh gấp đôi. Phương án bỏ: chỉ né vật cản; chỉ đi trên đường.
+6. **Người gánh là người làm của chính công trình** (chủ dự án hỏi: dân rời ruộng thì ruộng trống): số người đứng làm cộng số người đang đi gánh luôn bằng số dân đã giao. Từ 2 người trở lên thì thay phiên, công trình không bao giờ trống; 1 người thì làm một lúc rồi gánh đi, công trình trống trong lúc ấy.
+7. **Công trình không vẽ lại cả dáng** (chủ dự án hỏi): chỉ thêm chỗ nhận hàng ở kho (PR 2). Bến, làng chài, bến khơi vốn có khe sân ở hàng sau phía bờ, người gánh ra lối ấy nên không phải sửa. Đống hàng chờ gánh ở công trình sản xuất thì thôi: các công trình ấy vốn đã bày hàng (đá xẻ, ván gỗ, thúng cá, bó lúa), lại có người gánh đi lại.
+8. **Thợ vác vật liệu là hai thợ giàn giáo thay phiên** (PR 3): một thợ đi tay không tới kho, Điện gần nhất, vác về đúng thứ công trình cần; giàn giáo lúc nào cũng còn một thợ. Chỉ để nhìn (của đã trả lúc bắt đầu xây). Phương án bỏ: thêm một thợ riêng mỗi việc.
+9. **Tô vùng gánh đủ 100% một màu** (PR 3): vùng có sẵn một màu, phần nơi nhận mới phủ thêm (hay vùng của nơi đang chọn) màu sáng hơn; thanh dưới vẫn ghi % chính xác. Phương án bỏ: ba nấc màu (100%, 75–99%, dưới 75%).
+10. **Làm thêm** (chủ dự án chọn cả ba, PR 3): mùa Tết người bếp đội mâm bánh lên Điện; áp mẫu kinh đô trải sẵn đường; chạm chọn kho, Điện (và bếp) cũng tô vùng.
+
+### Luật (`src/game/vanChuyen.ts`, số ở `GANH` trong `defs.ts`)
+
+- **Nơi nhận**: Điện và mọi kho thóc còn nguyên (kho hư, kho đang dựng không nhận). Nguyên liệu Tết (nếp, đậu lá dong, thịt lợn) gánh tới bếp gói bánh còn nguyên hay về kho cho bếp lấy, nơi nào gần thì về đó (`GANH_BEP`); chưa có bếp thì chưa mất gì.
+- **Ai gánh**: mọi công trình có chỗ làm, trừ bếp (bánh để ở gác bếp). Điện tự làm ra, bản làng bên kia sông, thuyền buôn, thưởng không gánh.
+- **Quãng đường**: chi phí đường đi ngắn nhất (8 hướng, không cắt góc) từ ô sát móng công trình tới ô của nơi nhận gần nhất:
+  - ô đất trống, đồ trang trí, đê, cổng thành, cống đê, bẫy, bậc lên thành, công trình đang hư: 1;
+  - ô đường đi (bốn loại như nhau), ô cầu còn nguyên: **0,5**;
+  - lũy, thành đất, thành Cổ Loa: **1** (dân trèo qua lũy được; lúc đầu định 8 thì mẫu kinh đô có vòng lũy kín trước chương 3 mất tới 40%, nên hạ xuống);
+  - không đi qua: sông, rừng chưa phát, móng công trình khác (kể cả đang dựng), cầu hư.
+- **Hệ số gánh**: trong **14 ô** thì 1; xa hơn thì (12 + 14) / (12 + quãng đường), không dưới **0,5**. Tức 14 ô đất (hay 28 ô đường) còn 100%, 20 ô còn 81%, 30 ô còn 62%, từ 40 ô trở lên còn 50%. Không có lối (bị vây kín không chừa chỗ) cũng 50%. (Định 12 ô; đo bốn mẫu kinh đô thì nâng 14 để mẫu nào cũng trung bình từ 88% trở lên.)
+- **Áp vào**: gạo, vỏ ốc, đất đá, sắt, gỗ của công trình (`outputIn`), cá làng chài và cá biển (`fishIn`, `fishPerMinute`), nguyên liệu Tết (`bakeRates`). Nhân thêm vào sau đặc sản đất, phù sa; đền, phúc lành cộng như cũ. Công trình bên kia sông mà cầu hư thì vẫn 0 như cũ.
+- Quãng đường tính lại khi công trình, đường đi, đất đã mở, công trình hư đổi (ghi nhớ theo dấu vết danh sách công trình).
+
+### Nhịp (đo bằng `node scripts/kinh-te.mjs`)
+
+Người chơi mô phỏng xếp gọn quanh Điện, trung bình hệ số gánh 99,5%: mốc lên Điện 2–10 y như trước (7,4; 25,2; 49,6; 82,4 phút… Điện 10 ở 587,5 phút). Mẫu kinh đô không đổi chỗ kho (thử cho mẫu đặt kho ra gần công trình xa thì lệch cân bằng Đấu thành với kinh đô máy, nên bỏ); trung bình mỗi cấp Điện: Phong Châu 89–100%, Đê bao 97–100%, Cổ Loa, Cổ Loa giữ sông 98–100%. Kinh đô người chơi trải rộng thì trải đường, dựng thêm kho gần cụm công trình xa.
+
+### Giao diện
+
+- Bảng công trình có người làm: dòng "Gánh về kho: N ô · X%" (nguyên liệu Tết: "Gánh tới bếp, kho"); dưới 100% thì kèm lời khuyên trải đường, dựng kho gần; không có lối thì báo lý do.
+- Thanh đặt, dời công trình: "🧺 Gánh về: X%" của chỗ đang đặt (`ganhPreview`).
+- Lạc hầu báo một lần khi lần đầu có công trình đang có người làm mà làm ra chưa đủ vì xa (`needsGanhHint`, khóa `ganh` trong `hinted`).
+
+### Hình: dân gánh hàng trên đường (`src/render/ganhHang.ts`, `doGanh.ts`; PR 2)
+
+- **Không có người mới**: người đi gánh là một trong số người đang làm, rời chỗ đứng ra đường rồi về lại đúng chỗ ấy. Số người đứng làm cộng số người đang đi luôn bằng số người hiện ở công trình. Vì không thêm người nên không cần trần số người gánh trên màn hình; người ngoài khung nhìn thì ẩn như dân đứng ở công trình.
+- **Lịch thay phiên** (`chuyenGanh`): một người làm thì làm 14 giây (`LAM_S`) rồi gánh đi, công trình trống trong lúc ấy. Từ hai người thì thay phiên, mỗi lúc một người đi, người trước về 3 giây (`NGHI_S`) người kế mới đi; từ 6 người (`HAI_LUOT`) thì hai người so le nửa nhịp. Công trình có từ hai người không bao giờ trống. Mỗi công trình lệch nhịp theo mã, cho người gánh khỏi đi cùng lúc.
+- **Tuyến** (`tuyenGanh`): ra từ lối của công trình (ô con lối đi `,` hay sân trống `.` ở viền bản vẽ ô con gần đường nhất; bến, làng chài ra khe sân hàng sau phía bờ), đi đúng các ô của luật (`duongGanh`), vào lối của nơi nhận (kho, Điện có bản vẽ ô con). Mỗi ô tốn thời gian theo chi phí ô của luật: 1,1 giây một ô đất (`GIAY_MOI_O`), ô đường đi, cầu nhanh gấp đôi. Công trình sát ngay nơi nhận thì không ai phải đi.
+- **Một chuyến** (`viTri`): đi từ chỗ đứng làm ra lối, gánh hàng tới nơi nhận, đứng đổ hàng chừng 1,6 giây (`DO_HANG_S`), rồi đi tay không về. Bước chân theo quãng đã đi cho khỏi trượt; độ cao theo mặt đất, mặt cầu.
+- **Đồ gánh theo hàng** (`HANG_OF`, `doGanh.ts`): đòn gánh tre hai thúng tì vai phải, trong thúng là thóc (ruộng lúa, ruộng nếp), vỏ ốc (bến), đá (bãi đất đá), thỏi sắt (lò rèn), cá (làng chài, bến khơi), lá dong (vườn), thịt (chuồng lợn); xưởng mộc vác bó gỗ trên vai trái. Đòn gánh của đoàn dân rút ở Cấm Khê dùng chung hàm này (thóc và rau), dáng y như cũ. Đồ gánh không đổ bóng, như dân.
+- **Khi nào thôi gánh**: có trận trên kinh đô (giữ kinh đô, Đấu thành), giặc sắp tới, hay đang xem bãi chiến thì mọi người về chỗ làm. Ban đêm vẫn gánh (như điều đã chốt ở mục Ngày đêm: dân vẫn làm ban đêm).
+- **Kho thóc** có chỗ nhận hàng sát lối vào (`b` trong bản vẽ ô con ở `docs/bo-cuc-cong-trinh.md`): hai bao thóc, một thúng vun đầy.
+- Test `src/render/ganhHang.test.ts`; cảnh chụp `node scripts/chup.mjs ganh-hang` (một ruộng dời ra xa, nửa đường có đường đất, tua đồng hồ cảnh tới lúc người gánh ở giữa đường); `window.__debug.ganh()` cho công trình nào có tuyến, ai đang đi, ở đâu.
+
+### Tới nơi sản xuất (PR 3, chỉ để nhìn; `src/render/ganhHang.ts`, `doGanh.ts`)
+
+- **Hai chiều mang hàng** (`ChieuGanh`): `di` gánh hàng tới nơi nhận rồi đi tay không về (của làm ra, mâm bánh); `ve` đi tay không tới nơi nhận, lấy hàng rồi mang về (thợ vác vật liệu, người bếp gùi nguyên liệu). Đứng ở nơi nhận thì nửa sau mới có hàng (`coHang`). Lịch thay phiên, chỗ đứng theo giờ như PR 2.
+- **Thợ vác vật liệu** (`tuyenXay`): công trình đang dựng mới hay đang nâng có giàn giáo hai thợ; hai thợ thay phiên đi từ mép móng (giàn giáo không có bản vẽ ô con) theo tuyến luật tới kho, Điện gần nhất (`duongTu` ở `vanChuyen.ts`), vác về đúng thứ công trình cần (`vatLieu`): thứ nhiều nhất trong gỗ, đất đá, sắt của giá dựng hay giá cấp tới; không có thì bó tre. Nâng kho, nâng Điện (vật liệu có sẵn ngay đó) và công trình sát nơi nhận thì không ai đi. Tường (lũy, đê, thành, bẫy) không có thợ đứng nên không vác (mỗi ô xong trong vài giây).
+- **Người bếp** (`viecBep`):
+  - Ruộng nếp, vườn đậu lá dong, chuồng lợn đang có người làm mà nguyên liệu gánh về kho, Điện (nơi ấy gần hơn bếp): người bếp đi tay không tới kho, Điện gần bếp nhất, gùi nguyên liệu về (nếp, lá dong, miếng thịt vun trên miệng gùi sau lưng; gùi có sẵn trên dáng người bếp).
+  - Tết đang mở và gác bếp có bánh (hay đã dâng): người bếp đội mâm gỗ có bánh chưng, bánh giầy lên Điện (tuyến riêng tới Điện), tay phải đỡ mâm, rồi đi tay không về. Tết mở, đóng thì cảnh vẽ lại ngay (cảnh Tết trước Điện cũng hiện đúng lúc).
+- **Đồ mang mới** (`doGanh.ts`): bó tre ba cây có đốt vác vai trái (`boTre`), nguyên liệu trên miệng gùi (`guiDay`), mâm bánh đội đầu (`mamDoi`, dùng `banhChung`, `banhGiay` của bếp).
+- Cảnh chụp `vac-lieu`, `bep-gui`, `tet-mam`; `window.__debug.ganh()` kể cả giàn giáo (`type: 'xay'`), hàng, chiều, hai đầu tuyến.
+
+### Tô vùng gánh đủ 100% (PR 3; `vungGanh` ở `vanChuyen.ts`, `World.setGanhZone`)
+
+- **Đặt, dời công trình có người gánh hàng**: tô màu kem vùng mà móng đè lên hay chạm vào thì gánh đủ 100% (nguyên liệu Tết: vùng của bếp và kho; chưa có bếp thì không tô vì đâu cũng đủ). Khớp với số % ở thanh dưới (`ganhPreview`).
+- **Đặt, dời kho, bếp, Điện**: vùng có sẵn màu kem; phần nơi mới phủ thêm màu xanh (chỉ khi chỗ đang đặt hợp lệ).
+- **Chạm chọn kho, Điện, bếp còn nguyên**: vùng riêng của nơi ấy màu xanh, phần còn lại của vùng màu kem. Kho hư không tô.
+- Ô tô là ô đi qua được, trong 14 ô (`GANH.gan`) của nơi nhận. Vùng một nơi nhận tính bằng Dijkstra có ngưỡng; lưới bỏ công trình đang dời được ghi nhớ, nên bóng công trình nhích từng ô không phải dựng lại lưới.
+- Cảnh chụp `ganh-vung` (đang đặt kho), `ganh-vung-chon` (chọn kho).
+
+### Mẫu kinh đô trải sẵn đường (PR 3; `traiDuong` ở `mau.ts`)
+
+- Áp mẫu thì trải thêm đường đất (`duongDat`, 2 vỏ ốc một ô) nối công trình làm ra hàng ở xa với kho, Điện: dựng kinh đô giả sau khi áp mẫu, lấy tuyến gánh của mọi công trình chưa đủ 100% (xa nhất trước), trải lên ô trống của tuyến từ phía nơi nhận ra (khúc gần kho, Điện các tuyến dùng chung) vừa đủ cho quãng đường về trong 14 ô; lặp tối đa 4 lượt vì có đường thì người gánh đổi lối. Không quá giới hạn đường theo cấp Điện (trừ đường đã có).
+- Đường xong ngay như khi tự trải, không vào việc của tốp thợ; mẫu chỉ còn việc trải đường thì không cần tốp rảnh. Bảng Mẫu kinh đô ghi "trải N ô đường gánh hàng"; bản đồ thu nhỏ kinh đô có màu ô đường.
+- Chỉ ở kế hoạch áp mẫu (`planMau`), không ở chỗ của mẫu (`mauSlots`): kinh đô máy Đấu thành dựng từ `mauSlots` không đổi; trận bỏ qua đường, bản chụp không chụp đường, nên Đấu thành không đổi.
+- Đo (`sapxep.test.ts` canh không công trình nào kém đi, áp lần hai không còn gì): Phong Châu Điện 6–10 trung bình 93% → 99–100%, trải 79–162 ô; Đê bao, Cổ Loa, Cổ Loa giữ sông trải 1–48 ô, trung bình lên 99,7–100%. Phong Châu Điện 8 còn công trình thấp nhất 82% (xa quá 28 ô đường).
+
+### Thứ tự làm
+
+1. **PR 1, luật và số liệu** (đã làm): `vanChuyen.ts`, nối vào sản lượng, cá, nguyên liệu Tết; bảng công trình, thanh đặt, Lạc hầu; test `vanChuyen.test.ts`.
+2. **PR 2, dân gánh hàng đi trên đường** (đã làm, cùng PR với PR 1 vì PR 1 chưa gộp): người làm rời chỗ đứng gánh hàng theo đúng tuyến của luật, đồ gánh theo loại hàng, chỗ nhận hàng ở kho; chụp kiểm tra.
+3. **PR 3, tới nơi sản xuất và tiện ích** (đã làm): thợ vác vật liệu tới công trình đang xây, người bếp gùi nguyên liệu từ kho, mùa Tết đội mâm bánh lên Điện (chỉ để nhìn); tô vùng đủ 100% khi đặt công trình và khi chọn kho, Điện, bếp; áp mẫu kinh đô trải sẵn đường gánh hàng.
+
 ## Nhịp chơi và lưu game
 
 - Nhịp chơi lai: mỗi lần mở game là một phiên ra quyết định ngắn.
@@ -3261,4 +3343,5 @@ Cuối game: thay năm trại cũ (chừng 35 nghìn kể cả viền) và bốn
 20. **Đền Rồng Tiên** (chủ dự án yêu cầu, đã làm; xem mục cùng tên): đền 8×8 thờ Lạc Long Quân và Âu Cơ, mở ở Điện 10; của từ nước, từ núi làm ra thêm 20%; nhiệm vụ 62.
 21. **Ngày đêm** (chủ dự án chọn, đã làm; xem mục cùng tên): kinh đô có ngày, chiều tà, đêm, rạng đông, 12 phút chơi một vòng, chỉ để nhìn. PR 1 trời và cài đặt, PR 2 đèn đuốc, đèn thuyền, đom đóm.
 22. **Đấu thành** (chủ dự án đã duyệt; đã làm PR 1–6: trận tất định, luật, đánh thử ngoài mạng, server, nối mạng; xem lại trận, bảng xếp hạng, gắn Google và lưu mây; xem Kế hoạch cùng tên): đánh thành người chơi khác, cướp của, server Supabase miễn phí.
-23. **Để sau**: nhạc nền.
+23. **Dân gánh hàng về kho** (chủ dự án chọn, đã làm PR 1, 2; xem mục cùng tên): công trình xa nơi nhận làm ra ít hơn, thấp nhất 50%; đường đi cho dân đi nhanh gấp đôi. PR 1 luật, PR 2 dân gánh trên đường, PR 3 tới nơi sản xuất.
+24. **Để sau**: nhạc nền.

@@ -37,7 +37,7 @@ export const ANH_DAU: Record<string, string> = {
   gieng: 'b4686b36',
   hoKimQuy: '0d3040a0',
   hoa: '790edd20',
-  kho: '7ccc85ee',
+  kho: 'd9d99a8e',
   langChai: '5f0a8dce',
   lauNo: '25511665',
   loRen: 'ba6e6a77',

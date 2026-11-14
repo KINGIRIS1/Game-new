@@ -18,6 +18,10 @@ const MINI = { land: '#b9c47e', wild: '#93a165', river: '#3f7f9a' };
 /** Màu ô trên bản đồ thu nhỏ theo loại công trình. */
 const TILE: Partial<Record<BuildingType, string>> = {
   dien: '#b0392b',
+  duongDat: '#d2b783',
+  duongSoi: '#cfc6ad',
+  duongDa: '#aaa49a',
+  duongGach: '#b5654a',
   ruong: '#c9b04a',
   ruongNep: '#e4d7a0',
   ben: '#3f7f9a',
@@ -155,7 +159,7 @@ export function mauItems(state: GameState, armed: MauId | null): { items: BuildI
     const time = ms > 0 ? ` · ${vi.ui.xayTime(formatXay(realMs(state, ms)))}` : '';
     return {
       ...base,
-      meta: vi.ui.mauPlan(plan.moves.length, plan.builds.length, plan.removes.length, plan.uNos.length) + time,
+      meta: vi.ui.mauPlan(plan.moves.length, plan.builds.length, plan.removes.length, plan.uNos.length, plan.duong.length) + time,
       cost: Object.keys(plan.cost).length ? costHtml(state, plan.cost) : '',
       why: check.ok ? '' : vi.reasons[check.reason],
       go: armed === id ? vi.ui.mauConfirm : vi.ui.mauApply,

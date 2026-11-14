@@ -87,6 +87,7 @@ import {
 } from './defs';
 import { capOf } from './doanhTrai';
 import { START_KHOANH, isOpen, openMask, openStart } from './khoanh';
+import { heSoGanh, heSoMap } from './vanChuyen';
 import { DIEN_HOME, GRID, baseHeights, farBankOf, inGrid, isNearBank, touchesRiver } from './map';
 
 export interface Building {
@@ -630,8 +631,14 @@ export function fishOf(b: Building): number {
  * phần của Đền Phù Đổng và phúc lành Đất như mọi sản lượng, và phần của Đền Rồng Tiên (cá là của từ nước).
  */
 export function fishPerMinute(state: GameState): number {
-  const fish = state.buildings.reduce((sum, b) => sum + (cutOff(state, b) ? 0 : fishOf(b)), 0);
+  const ganh = heSoMap(state);
+  const fish = state.buildings.reduce((sum, b) => sum + (cutOff(state, b) ? 0 : fishOf(b) * ganh(b)), 0);
   return fish * (1 + templeBonus(state) + datBonus(state) + rongTienBonus(state));
+}
+
+/** Cá công trình `b` đánh được mỗi phút sau phần mất vì quãng đường gánh về kho (chưa cộng đền, phúc lành). */
+export function fishIn(state: GameState, b: Building): number {
+  return cutOff(state, b) ? 0 : fishOf(b) * heSoGanh(state, b);
 }
 
 /** Gạo cả kinh đô ăn mỗi phút: phần ăn của dân và lính trừ đi phần cá đỡ (cá thừa bỏ phí). */
@@ -772,14 +779,15 @@ export function phuSaBonus(b: Building): number {
 }
 
 /**
- * Sản lượng mỗi phút của công trình `b` trong kinh đô: theo người làm, cộng đặc sản đất bên kia sông và phù sa, bằng 0
- * khi cầu sang bờ ấy hư (chưa cộng đền, phúc lành).
+ * Sản lượng mỗi phút của công trình `b` trong kinh đô: theo người làm, cộng đặc sản đất bên kia sông và phù sa, nhân
+ * hệ số gánh về kho (`heSoGanh`), bằng 0 khi cầu sang bờ ấy hư (chưa cộng đền, phúc lành). `ganh`: hệ số gánh đã tính
+ * sẵn (cả kinh đô tính một lần ở `productionPerMinute`).
  */
-export function outputIn(state: GameState, b: Building): Cost {
+export function outputIn(state: GameState, b: Building, ganh = heSoGanh(state, b)): Cost {
   const out = outputOf(b);
   const far = farFactor(state, b);
   if (far === 0) return {};
-  const k = far + phuSaBonus(b);
+  const k = (far + phuSaBonus(b)) * ganh;
   if (k === 1) return out;
   for (const r of RESOURCE_IDS) if (out[r]) out[r] = out[r]! * k;
   return out;
@@ -791,8 +799,9 @@ export function outputIn(state: GameState, b: Building): Cost {
  */
 export function productionPerMinute(state: GameState): Resources {
   const total = villagesOutput(state);
+  const ganh = heSoMap(state);
   for (const b of state.buildings) {
-    const out = outputIn(state, b);
+    const out = outputIn(state, b, ganh(b));
     for (const r of RESOURCE_IDS) total[r] += out[r] ?? 0;
   }
   const bonus = 1 + templeBonus(state) + datBonus(state);

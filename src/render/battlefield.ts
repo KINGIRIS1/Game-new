@@ -15,7 +15,6 @@ import { FIELD, RALLY_BEAT, SKILLS, type Terrain } from '../game/defs';
 import { BattleView } from './battleView';
 import { makeRoyalHorse, makeRuaVang } from './beasts';
 import { gripHands, type Human } from './body';
-import { rod } from './congTrinh/chung';
 import { addSunLights, type SunLights } from './lights';
 import { STICK_POSE, makeDrummer } from './heroes';
 import { buildForest, makeBoat, makeEnemyBoat, makeEnemyFlag, makeLauThuyen, makeMountain, makeTent, setForestLite, type TreeSpot } from './models';
@@ -24,6 +23,7 @@ import { makeBridge } from './benKia';
 import { C } from './palette';
 import { cornTemplates, reedTemplates } from './lauSay';
 import { DAN_RUT as RETREAT, makeWorker, type DanRut as Walker } from './people';
+import { GANH_AT, donGanh } from './doGanh';
 import type { Poser } from './rig';
 import { type Placement, ShapeBuilder, disposeModel, instanceTemplates, seeded } from './shapes';
 import { ToonModel, inkThin, outlineOf, toon } from './toon';
@@ -521,8 +521,8 @@ export class Battlefield {
         obj.scale.setScalar(VILLAGER_SCALE);
         // Đòn gánh tì vai phải: con của xương ngực, cao ngang vai (ngực ở 0,4, vai ở chừng 0,6 so với chân).
         if (spec.ganh) {
-          const pole = donGanh();
-          pole.position.set(0.12, 0.2, 0);
+          const pole = donGanh(['thoc', 'rau']);
+          pole.position.copy(GANH_AT);
           (obj.userData.bones as Human).chest.add(pole);
         }
       }
@@ -1767,27 +1767,6 @@ function makeTrau(): THREE.Group {
     torso.position.y = stride * 0.04 * Math.abs(Math.cos(phase));
   };
   return g;
-}
-
-/**
- * Đòn gánh tre gác vai (gốc ở chỗ đòn tì lên vai), nằm dọc người theo trục z; hai đầu quang dây treo thúng tre, một
- * thúng thóc, một thúng rau.
- */
-function donGanh(): THREE.Group {
-  const m = new ToonModel(inkThin);
-  const p = m.plain;
-  p.cyl(0.016, 0.016, 1.04, C.bamboo, 0, 0, 0, [Math.PI / 2, 0, 0], 5);
-  for (const [s, load] of [
-    [1, 0xd9bf78],
-    [-1, C.leaf[3]],
-  ] as const) {
-    const z = s * 0.46;
-    for (const a of [0, Math.PI / 2, Math.PI, Math.PI * 1.5]) rod(p, [0, 0, z], [Math.cos(a) * 0.1, -0.33, z + Math.sin(a) * 0.1], 0.005, C.woodDark, 3);
-    p.cyl(0.12, 0.09, 0.14, C.thatch, 0, -0.41, z, undefined, 8);
-    p.cyl(0.125, 0.125, 0.02, C.thatchDark, 0, -0.34, z, undefined, 8);
-    p.sphere(0.1, load, 0, -0.33, z, [1, 0.55, 1], 7);
-  }
-  return m.group();
 }
 
 /** Dây thừng dắt trâu: trụ mảnh cao 1 từ gốc lên, kéo dãn mỗi khung cho nối tay người tới mũi trâu. */

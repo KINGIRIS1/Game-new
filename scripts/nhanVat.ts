@@ -20,7 +20,10 @@ import {
   makeTrungTrac,
 } from '../src/render/heroes';
 import { makeMonster } from '../src/render/monsters';
-import { makeRower, makeWorker } from '../src/render/people';
+import { makeRower, makeWorker, type Job } from '../src/render/people';
+import { ganhLen, tayGanh } from '../src/render/doGanh';
+import type { Hang } from '../src/render/ganhHang';
+import type { Human } from '../src/render/body';
 import { makeEnemyBoat, makeLauThuyen } from '../src/render/models';
 import { makeSoldier } from '../src/render/soldier';
 
@@ -137,6 +140,27 @@ function motHang(tao: (() => THREE.Group)[], gap: number, xoay = 0): () => THREE
     return g;
   };
 }
+
+/** Người làm đi gánh hàng (dân gánh hàng về kho, thợ vác vật liệu, người bếp): đồ mang gắn xương, tay giữ đồ sau tư thế. */
+function ganhNguoi(job: Job, hang: Hang): THREE.Group {
+  const g = makeWorker(job);
+  const bones = g.userData.bones as Human;
+  ganhLen(bones, hang);
+  const pose = g.userData.pose as Poser;
+  g.userData.pose = (a: Act) => {
+    pose(a);
+    tayGanh(bones, hang);
+  };
+  return g;
+}
+
+/** Nhóm `ganh`: đứng đổ hàng, rồi bước đi. */
+const GANH: [string, Act][] = [
+  ['Đứng', { act: 'walk', phase: 0, stride: 0 }],
+  ['Đi (bước trái)', { act: 'walk', phase: -Math.PI / 2, stride: 0.42 }],
+  ['Đi (giữa bước)', { act: 'walk', phase: 0, stride: 0.42 }],
+  ['Đi (bước phải)', { act: 'walk', phase: Math.PI / 2, stride: 0.42 }],
+];
 
 export const NHOM: Record<string, Entry[]> = {
   linh: [
@@ -270,6 +294,15 @@ export const NHOM: Record<string, Entry[]> = {
     { ten: 'Lạc hầu', tao: () => makeWorker('lacHau') },
     { ten: 'Lính gác', tao: () => makeWorker('linhGac') },
     { ten: 'Người lái đò', tao: () => makeRower() },
+  ],
+  ganh: [
+    { ten: 'Nông dân gánh thóc', tao: () => ganhNguoi('nong', 'thoc'), cot: GANH },
+    { ten: 'Thợ đá gánh đá', tao: () => ganhNguoi('thoDa', 'da'), cot: GANH },
+    { ten: 'Thợ mộc vác bó gỗ', tao: () => ganhNguoi('thoMoc', 'go'), cot: GANH },
+    { ten: 'Thợ vác bó tre (công trình đang xây)', tao: () => ganhNguoi('thoMoc', 'tre'), cot: GANH },
+    { ten: 'Thợ đá vác sắt (công trình đang xây)', tao: () => ganhNguoi('thoDa', 'sat'), cot: GANH },
+    { ten: 'Người bếp gùi nguyên liệu Tết', tao: () => ganhNguoi('phuNu', 'gui'), cot: GANH },
+    { ten: 'Người bếp đội mâm bánh', tao: () => ganhNguoi('phuNu', 'mam'), cot: GANH },
   ],
 };
 
