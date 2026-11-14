@@ -3292,6 +3292,170 @@ Người chơi mô phỏng xếp gọn quanh Điện, trung bình hệ số gán
 2. **PR 2, dân gánh hàng đi trên đường** (đã làm, cùng PR với PR 1 vì PR 1 chưa gộp): người làm rời chỗ đứng gánh hàng theo đúng tuyến của luật, đồ gánh theo loại hàng, chỗ nhận hàng ở kho; chụp kiểm tra.
 3. **PR 3, tới nơi sản xuất và tiện ích** (đã làm): thợ vác vật liệu tới công trình đang xây, người bếp gùi nguyên liệu từ kho, mùa Tết đội mâm bánh lên Điện (chỉ để nhìn); tô vùng đủ 100% khi đặt công trình và khi chọn kho, Điện, bếp; áp mẫu kinh đô trải sẵn đường gánh hàng.
 
+## Kế hoạch: trang bị riêng và chỉ số tướng (đề xuất, chờ chủ dự án duyệt)
+
+Chủ dự án yêu cầu: lên kế hoạch thêm bộ trang bị riêng cho các tướng và hệ thống chỉ số tướng đi kèm. Như các kế hoạch trước, sau khi duyệt cho chỉnh số ±20% theo test; làm xong phần nào thì ghi số cuối cùng của phần ấy.
+
+**Hiện trạng** (khảo sát code):
+- Sáu tướng đánh trên bãi (`HeroKind`): Gióng, Sơn Tinh, An Dương Vương, Cao Lỗ, Trưng Trắc, Trưng Nhị. Lạc tướng không đứng trên bãi, chỉ có Trống trận. Chỉ số cố định ở `defs.ts` (`GIONG`, `SON`, `ADV`, `CAO_LO`, `TRUNG_TRAC`, `TRUNG_NHI`): máu, sát thương, tầm, tốc chạy, nghỉ giữa hai đòn.
+- Tướng mạnh lên chỉ nhờ phần cộng chung, tướng nào cũng như nhau: Đền và phúc lành (`Battle.bonus`), nhánh tướng của huân công (4% mỗi bậc, tối đa 16% máu, sức đánh, kỹ năng). Đòn kỹ năng nhân chung một hệ số (`scale` ở `useSkill`). Binh khí (`ARMS`) chỉ cho lính.
+- Đồ sắt của Gióng (`GEAR`: ngựa sắt, roi sắt, giáp sắt) là mốc truyện để thành tráng sĩ, không cộng chỉ số.
+- Gióng, Sơn Tinh, An Dương Vương, Cao Lỗ có bảng riêng (truyện, kỹ năng). Hai Bà chưa có bảng, chỉ có dòng trong ô Tướng ở dock.
+- Hình kỹ năng đọc thẳng hằng số (`FIRE.length`, `HILL.radius`, `ROCKS.radius`, `LIEN_CHAU.radius`, `HIEU_TRIEU.count` ở `battleView.ts`). Muốn số kỹ năng đổi theo từng tướng thì sự kiện trận phải mang số theo.
+- Đấu thành: bản chụp mang `heroes`, `bonus`, `arms`, `huan`; máy chủ kiểm bản chụp và đánh lại trận bằng luật đóng gói (`mayChu.ts`, mã `LUAT_MA`).
+- Kinh tế (`node scripts/kinh-te.mjs`; người chơi mô phỏng, chưa tính thưởng phó bản):
+  - chương 1 sắt eo hẹp, cả chương làm ra chừng 1.900 sắt;
+  - gạo tràn kho 31% ở chương 3, 48% ở chương 4;
+  - sau Điện 10, mỗi giờ tràn kho chừng 110 nghìn gạo, 55–80 nghìn vỏ ốc, 20–55 nghìn đất đá;
+  - sắt (chừng 12,5 nghìn mỗi giờ) và gỗ (chừng 16,5 nghìn mỗi giờ) dồn lại vì không còn chỗ tiêu.
+
+### Chín điều cần chốt
+
+Đề xuất là phương án (A). Các phương án khác để chủ dự án chọn.
+
+1. **Kiểu trang bị.**
+   - (A) Mỗi tướng một bộ cố định bốn món theo truyền thuyết. Không rơi đồ, không kho đồ, không tháo lắp; chỉ rèn nâng bậc từng món, ★1 tới ★5. Bậc 0 là món tướng đang mang trong truyện, chưa cộng gì.
+   - (B) Đồ rơi ngẫu nhiên khi thắng phó bản, có kho đồ, lắp tháo giữa các tướng, chỉ số phụ ngẫu nhiên (kiểu nhặt đồ của game nhập vai). Nhiều việc hơn hẳn: kho đồ, bảng lắp tháo trên điện thoại, cân bằng theo may rủi.
+   - (C) Như A, sau này thêm khảm ngọc vào món đồ.
+2. **Chỉ số tướng.**
+   - (A) Bốn chỉ số nâng được: ❤️ Máu, ⚔️ Sức đánh, ⚡ Tốc đánh (nghỉ giữa hai đòn ngắn lại), ✨ Uy lực kỹ năng. Tầm và tốc chạy giữ nguyên, vì đổi hai số này là đổi đội hình và đường đi. Thêm **Lực chiến**: một con số tóm tắt, chỉ để xem, luật không đọc.
+   - (B) Như A, thêm 🛡️ Giáp (chịu ít sát thương hơn) và ⏱ Hồi kỹ năng.
+   - (C) Chỉ Máu và Sức đánh, như huân công.
+3. **Cấp tướng.**
+   - (A) Không có cấp tướng: chỉ số = gốc, cộng Đền, phúc lành, huân công và trang bị.
+   - (B) Có cấp tướng 1–20, lên bằng kinh nghiệm sau mỗi trận (phó bản, giữ kinh đô), mỗi cấp thêm 2% máu và sức đánh. Làm ở PR riêng, sau trang bị.
+   - (C) Tu luyện: nâng cấp tướng bằng tài nguyên.
+4. **Lấy đồ ở đâu.**
+   - (A) Rèn ở lò rèn còn nguyên, đủ cấp, xong ngay như binh khí. Bậc mở theo cấp lò rèn: ★1 lò rèn 5, ★2 lò rèn 6, ★3 lò rèn 7, ★4 lò rèn 8, ★5 lò rèn 10. Giá dồn phần lớn vào gạo, vỏ ốc, đất đá (những loại tràn kho), sắt vừa phải, gỗ từ ★4.
+   - (B) Như A, nhưng rèn tốn thời gian: lò rèn làm một món một lúc.
+   - (C) Bảo vật dâng lễ ở đền của tướng thay vì rèn (Gióng ở Đền Phù Đổng…). Cao Lỗ không có đền riêng nên lệch.
+5. **Mở từ lúc nào.**
+   - (A) Tướng nào đã về (Gióng thành tráng sĩ, Sơn Tinh rước Mị Nương…) thì mở bộ đồ của tướng ấy. ★1 cần lò rèn 5, nên sớm nhất là cuối chương 1. Phó bản dễ hơn cho người chịu bỏ của, như huân công.
+   - (B) Chỉ mở sau Hết truyện chương 4 (Điện 9): trang bị là việc chơi về sau.
+6. **Hiệu ứng bộ.**
+   - (A) Đủ 4 món ★3 thì kỹ năng đầu mạnh hơn; đủ 4 món ★5 thì kỹ năng thứ hai mạnh hơn. Mỗi tướng một kiểu (bảng ở mục Bộ trang bị).
+   - (B) Không có hiệu ứng bộ, chỉ cộng chỉ số.
+7. **Đấu thành.**
+   - (A) Trang bị có tác dụng cả trong Đấu thành, như binh khí và huân công. Bản chụp mang bậc trang bị; máy chủ kiểm không quá bậc mà cấp Điện cho phép. Vì đổi luật máy chủ nên làm ở PR riêng; trước PR ấy Đấu thành chưa tính trang bị.
+   - (B) Đấu thành không tính trang bị: hai bên dùng chỉ số gốc.
+8. **Hình.** Linh vật hộ thân quanh tướng đã bỏ vì rối mắt (PR #96, #97), nên giữ tướng gọn.
+   - (A) Không đổi dáng tướng. Đủ bộ ★5 thì vũ khí ánh lên: một lớp sáng riêng gắn vào xương tay, không nặn lại dáng, không thêm việc nặn sẵn. Bảng tướng có ảnh từng món vẽ sẵn.
+   - (B) Không đổi gì trên tướng, chỉ có ảnh ở bảng.
+   - (C) Mỗi bậc đổi màu đồ (đồng, sắt sáng, vàng). Màu nằm trong hình nặn, nên mỗi bậc phải nặn thêm dáng, kho nặn nặng thêm. Không khuyên.
+9. **Lạc tướng.**
+   - (A) Chưa làm: Lạc tướng không đứng trên bãi.
+   - (B) Thêm bộ trống đồng cho Lạc tướng (dùi, trống, cờ, áo), làm Trống trận dài hơn, mạnh hơn. Có tác dụng ở mọi trận.
+
+### Chỉ số (theo đề xuất A)
+
+- **Máu, Sức đánh**: gốc × (1 + Đền và phúc lành + huân công tướng + phần trang bị).
+- **Tốc đánh**: nghỉ giữa hai đòn = gốc ÷ (1 + phần trang bị).
+- **Uy lực kỹ năng**: đòn kỹ năng nhân hệ số của chính tướng làm kỹ năng: (1 + Đền và phúc lành + huân công tướng + phần trang bị). Bây giờ mọi tướng chung một hệ số; tách ra từng tướng thì Hai Bà mỗi bà một hệ số.
+- **Lực chiến** (chỉ để xem): tính từ máu, sát thương mỗi giây và uy lực kỹ năng; công thức chốt ở PR 1. Hiện ở bảng tướng và thẻ tướng ở bảng xếp quân.
+- Ngoài bãi vẫn nhân `FIELD.hpMul` như cũ. Kiệt sức, thời gian nghỉ không đổi. Thử thách Không tướng thì trang bị không có tác dụng. Tướng hiển linh vẫn mang trang bị.
+
+### Bộ trang bị (theo đề xuất A)
+
+Mỗi tướng bốn món, mỗi món nâng một chỉ số:
+
+| Món | Chỉ số | Mỗi bậc | Đủ ★5 |
+|---|---|---|---|
+| Vũ khí | ⚔️ Sức đánh | +5% | +25% |
+| Giáp | ❤️ Máu | +5% | +25% |
+| Thú cưỡi, phục sức | ⚡ Tốc đánh | +3% | +15% |
+| Bảo vật | ✨ Uy lực kỹ năng | +5% | +25% |
+
+Để so: nhánh tướng của huân công tối đa +16% máu, sức đánh, kỹ năng cho mọi tướng.
+
+Tên món (tạm, chủ dự án sửa):
+
+| Tướng | Vũ khí | Giáp | Thú cưỡi, phục sức | Bảo vật |
+|---|---|---|---|---|
+| Gióng | Roi sắt | Giáp sắt | Ngựa sắt | Tre đằng ngà |
+| Sơn Tinh | Gậy thần | Giáp đồng hoa văn | Áo choàng lá rừng | Đá thiêng Tản Viên |
+| An Dương Vương | Nỏ thần | Giáp đồng | Miện vàng | Sừng tê bảy tấc |
+| Cao Lỗ | Nỏ liên châu | Giáp da khảm đồng | Bao tên đồng | Tù và |
+| Trưng Trắc | Gươm đồng | Giáp ngực đồng | Voi trận đệm đỏ | Ấn Trưng Vương |
+| Trưng Nhị | Cung sừng | Áo giáp vàng | Voi trận đệm vàng | Cờ chim Lạc |
+
+- Ba món đầu của Gióng là đồ sắt đã rèn trong truyện (`GEAR`), giờ tôi luyện tiếp lên ★1–★5. Code đặt tên `trangBi` cho khỏi lẫn với `GEAR`.
+
+Hiệu ứng bộ (đề xuất 6A):
+
+| Tướng | Đủ 4 món ★3 | Đủ 4 món ★5 |
+|---|---|---|
+| Gióng | Phun lửa dài 7 → 9 ô | Nhổ tre vòng 2,5 → 3 ô |
+| Sơn Tinh | Bốc đồi vùng 2,2 → 2,8 ô | Dời non giữ chân 3 → 4 giây |
+| An Dương Vương | Nỏ thần 80 → 100 máu | Rùa Vàng hồi 30% → 40% máu |
+| Cao Lỗ | Nỏ liên châu vùng 3,5 → 4,2 ô | Lệnh bắn 6 → 8 giây |
+| Trưng Trắc | Voi xung trận dài 5 → 6,5 ô | Voi xung trận choáng 1,5 → 2,2 giây |
+| Trưng Nhị | Hiệu triệu 5 → 6 nghĩa binh | Hiệu triệu hồi 15% → 20% máu |
+
+Trưng Trắc, Trưng Nhị chỉ có một kỹ năng nên cả hai mức đều vào kỹ năng ấy. Kỹ năng chưa mở (Nhổ tre trước màn 6, Hiệu triệu trước màn 33) thì hiệu ứng chờ tới khi mở.
+
+### Rèn và giá (dự kiến)
+
+Giá một món, mỗi bậc:
+
+| Bậc | Cần lò rèn | Sắt | Gạo | Vỏ ốc hay đất đá | Gỗ |
+|---|---|---|---|---|---|
+| ★1 | 5 | 100 | 600 | 400 | – |
+| ★2 | 6 | 250 | 2.000 | 1.200 | – |
+| ★3 | 7 | 600 | 6.000 | 3.000 | – |
+| ★4 | 8 | 1.200 | 15.000 | 8.000 | 1.000 |
+| ★5 | 10 | 2.500 | 30.000 | 20.000 | 3.000 |
+
+- Vũ khí, thú cưỡi và phục sức trả vỏ ốc; giáp, bảo vật trả đất đá.
+- Một tướng rèn đủ bộ từ ★1 tới ★5 hết chừng 18,6 nghìn sắt, 214 nghìn gạo, 130 nghìn vỏ ốc và đất đá, 16 nghìn gỗ. Riêng bậc ★5 cả bộ hết chừng một giờ dư thừa sau Điện 10. Dồn hết cả sáu tướng sau Điện 10 thì chừng 10–12 giờ chơi (chưa tính thưởng phó bản); rèn dần ★1–★4 trong các chương thì ít hơn.
+- ★1 cả bộ của Gióng (400 sắt) bằng chừng 8 phút sắt cuối chương 1. Đây là lựa chọn đánh đổi với nâng công trình, không bắt buộc.
+- Số cuối đo bằng skill `ra-kinh-te` ở PR 1.
+
+### Giao diện
+
+- **Bảng tướng** mới, mở từ ô Tướng ở dock, từ nút Trang bị trong bảng Gióng, Sơn Tinh, An Dương Vương, Cao Lỗ, và từ thẻ tướng ở bảng xếp quân. Hai Bà lần đầu có bảng.
+  - Trên cùng là hàng thẻ chọn tướng (các tướng đã về).
+  - Thẻ **Chỉ số**: bốn chỉ số tổng, kèm phần của từng nguồn (gốc, Đền và phúc lành, huân công, trang bị); tầm, tốc chạy; Lực chiến; kỹ năng và số của kỹ năng, kể cả hiệu ứng bộ.
+  - Thẻ **Trang bị**: bốn ô món đồ (ảnh, tên, ★, phần đang cộng). Chạm một ô thì hiện lời tả, bậc sau thêm gì, giá, nút Rèn. Nút mờ và ghi lý do khi lò rèn chưa đủ cấp, lò rèn hư hay thiếu của. Dưới là dòng hiệu ứng bộ: đã có, hay còn thiếu mấy món.
+  - Thẻ tướng có dấu ⬆ khi rèn được.
+- Bảng lò rèn có nút tới bảng tướng.
+- Lạc hầu báo một lần khi lò rèn lên cấp 5 mà đã có tướng (`NEW_HINTS`). Không thêm nhiệm vụ.
+
+### Code
+
+- `defs.ts`: bốn ô (`O_TRANG_BI`), phần cộng mỗi bậc theo ô, giá và cấp lò rèn mỗi bậc (`TRANG_BI_BAC`), hiệu ứng bộ (`BO_TRANG_BI`). Tên, lời tả món đồ ở `vi.ts`.
+- `trangBi.ts` mới: bậc từng món (`bacOf`), `canRen`, `ren`, chỉ số tổng của tướng (`chiSoTuong`, dùng chung cho bảng tướng và trận), mức hiệu ứng bộ (`boOf`), `lucChien`.
+- `HeroSetup` thêm phần trang bị: bản sao lúc vào trận, như `huanTiers`, để rèn giữa trận không đổi trận đang đánh. `heroFor`, `heroesFor` điền sẵn, nên mọi trận (phó bản, thử thách, đánh đồn, giữ kinh đô) nhận cùng một chỗ.
+- `battle.ts`:
+  - `addHero` nhân máu;
+  - đòn thường của tướng nhân sức đánh (`ownMult`, `multOf`) và chia thời gian nghỉ (tốc đánh);
+  - `useSkill` lấy hệ số kỹ năng của chính tướng làm kỹ năng;
+  - số kỹ năng qua một hàm theo tướng thay cho hằng số, để thêm hiệu ứng bộ;
+  - sự kiện kỹ năng mang bán kính, độ dài, để `battleView.ts` vẽ đúng vùng.
+- Tất định: chỉ thêm phép nhân, chia; `tatDinh.test.ts` giữ nguyên.
+- Bản lưu: thêm `trangBi` (bậc từng món của từng tướng), lấy số phiên bản kế tiếp lúc gộp (PR #86 đang giữ số 27). Bản lưu cũ: mọi món bậc 0.
+- Đấu thành (PR riêng, nếu chọn 7A): `Snapshot` mang bậc trang bị; `validateSnapshot` kiểm bậc không quá bậc lò rèn mà cấp Điện cho phép; tướng giữ thành và tướng đi đánh đều mang trang bị; sửa `mayChu.ts`, `luat.d.ts`, trận đối chiếu `doiChieu`. Bản chụp cũ không có trang bị thì tính bậc 0.
+- Người chơi mô phỏng không rèn trang bị, nên nhịp lên Điện và các test cân bằng không đổi. Chuẩn mọi màn, mọi thử thách tính không có trang bị, như huân công và nữ tướng.
+
+### Test
+
+- `trangBi.test.ts`:
+  - rèn, giá, khóa theo cấp lò rèn và lò rèn hư, tướng chưa về không rèn được;
+  - chỉ số tổng, hiệu ứng bộ;
+  - trận nhận đúng máu, sát thương, thời gian nghỉ, uy lực và số kỹ năng;
+  - rèn giữa trận không đổi trận đang đánh;
+  - nâng bản lưu cũ.
+- Đo sức mạnh để ghi vào tài liệu: đủ bộ ★3, ★5 thì người chơi thường chịu được máu giặc tới bao nhiêu ở vài màn mỗi chương, so với không trang bị và với huân công tối đa.
+- `kinhTe`: người chơi mô phỏng có thêm lựa chọn rèn trang bị sau Điện 10, để đo bao lâu thì đủ bộ (nhịp chính không đổi).
+- Chụp kiểm tra bảng tướng và vũ khí ánh lên khi đủ bộ ★5.
+
+### Thứ tự làm
+
+1. **PR 0** (PR này): tài liệu, chờ chủ dự án duyệt chín điều trên.
+2. **PR 1**: luật, bản lưu, bảng tướng (chỉ số, trang bị), test. Đấu thành chưa tính trang bị.
+3. **PR 2**: Đấu thành tính trang bị (bản chụp, máy chủ), nếu chọn 7A.
+4. **PR 3**: hình: ảnh món đồ ở bảng, vũ khí ánh lên khi đủ bộ ★5; chụp kiểm tra.
+5. Nếu chọn cấp tướng (3B, 3C) hay bộ đồ Lạc tướng (9B) thì làm ở PR sau cùng.
+
 ## Nhịp chơi và lưu game
 
 - Nhịp chơi lai: mỗi lần mở game là một phiên ra quyết định ngắn.
@@ -3344,4 +3508,5 @@ Người chơi mô phỏng xếp gọn quanh Điện, trung bình hệ số gán
 21. **Ngày đêm** (chủ dự án chọn, đã làm; xem mục cùng tên): kinh đô có ngày, chiều tà, đêm, rạng đông, 12 phút chơi một vòng, chỉ để nhìn. PR 1 trời và cài đặt, PR 2 đèn đuốc, đèn thuyền, đom đóm.
 22. **Đấu thành** (chủ dự án đã duyệt; đã làm PR 1–6: trận tất định, luật, đánh thử ngoài mạng, server, nối mạng; xem lại trận, bảng xếp hạng, gắn Google và lưu mây; xem Kế hoạch cùng tên): đánh thành người chơi khác, cướp của, server Supabase miễn phí.
 23. **Dân gánh hàng về kho** (chủ dự án chọn, đã làm PR 1, 2; xem mục cùng tên): công trình xa nơi nhận làm ra ít hơn, thấp nhất 50%; đường đi cho dân đi nhanh gấp đôi. PR 1 luật, PR 2 dân gánh trên đường, PR 3 tới nơi sản xuất.
-24. **Để sau**: nhạc nền.
+24. **Trang bị riêng và chỉ số tướng** (đề xuất, chờ chủ dự án duyệt; xem Kế hoạch cùng tên): mỗi tướng bốn món đồ theo truyền thuyết, rèn ở lò rèn từ ★1 tới ★5, bốn chỉ số tướng và Lực chiến, hiệu ứng bộ cho kỹ năng, bảng tướng mới.
+25. **Để sau**: nhạc nền.
