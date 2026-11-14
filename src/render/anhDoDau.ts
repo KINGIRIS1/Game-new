@@ -1,0 +1,29 @@
+// Tệp sinh bởi scripts/anh-do.mjs, đừng sửa tay. Dấu vân tay mô hình của từng ảnh món trong public/anh-do/:
+// game dùng làm ?v= cho trình duyệt tải ảnh mới khi ảnh đổi; anhDo.test.ts so với mô hình hiện tại.
+
+export const ANH_DO_DAU: Record<string, string> = {
+  'caoLo-baoVat': '41b0d7e7',
+  'caoLo-giap': 'a9d6b189',
+  'caoLo-phucSuc': '9a0e6b55',
+  'caoLo-vuKhi': '7f23ae73',
+  'coLoa-baoVat': 'ad4f497a',
+  'coLoa-giap': 'efe20541',
+  'coLoa-phucSuc': '9d254856',
+  'coLoa-vuKhi': 'b9bebcf5',
+  'phuDong-baoVat': '0a7f7cb6',
+  'phuDong-giap': '7cb747bb',
+  'phuDong-phucSuc': 'eaef3bb7',
+  'phuDong-vuKhi': 'dbfab5cc',
+  'tanVien-baoVat': 'bce82f02',
+  'tanVien-giap': 'd4eaebbd',
+  'tanVien-phucSuc': '827bd29d',
+  'tanVien-vuKhi': '9a9f6191',
+  'trungNhi-baoVat': '51b58c2a',
+  'trungNhi-giap': 'f3bfff83',
+  'trungNhi-phucSuc': '6d7a5520',
+  'trungNhi-vuKhi': '62464e51',
+  'trungTrac-baoVat': '79728fde',
+  'trungTrac-giap': '728a1b7a',
+  'trungTrac-phucSuc': 'df4d48dd',
+  'trungTrac-vuKhi': '2baeb675',
+};

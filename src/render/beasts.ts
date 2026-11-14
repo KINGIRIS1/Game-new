@@ -249,8 +249,8 @@ export interface VoiTranLook {
   trim: number;
   /** Mặt trống đồng hai bên đệm. */
   drum?: boolean;
-  /** Tán lọng. */
-  parasol: number;
+  /** Tán lọng; bỏ trống là không có lọng (ảnh món đồ voi trận: để thấy đệm). */
+  parasol?: number;
   /** Cờ chim Lạc cắm sau bành: cỡ cờ (bằng cỡ người cưỡi); bỏ trống là không có cờ. */
   flag?: number;
 }
@@ -355,6 +355,7 @@ function drawVoiTran(r: Rig, look: VoiTranLook): void {
       r.on(b).band.cyl(0.125, 0.13, 0.07, C.bronze, x, 0.14, z, undefined, 10);
     }
     // Lọng hai tầng cắm sau thành sau: cán gỗ kẹp đồng, tán dưới viền, tán trên, chóp vàng, tua rủ quanh vành.
+    if (look.parasol === undefined) return;
     const [px, py, pz] = PARASOL_FOOT;
     p.cyl(0.022, 0.022, PARASOL_TOP - py, C.woodDark, px, (py + PARASOL_TOP) / 2, pz, undefined, 6);
     p.cyl(0.036, 0.036, 0.1, C.bronze, px, 1.25, pz, undefined, 6);
@@ -437,6 +438,13 @@ function poseVoiTran(b: B, a: Act, m: VoiTranMood): void {
     b.qFL.rotation.x = -1.0 * rear;
     b.qFR.rotation.x = -0.7 * rear;
   }
+}
+
+/** Voi trận bản tĩnh không người cưỡi, đứng yên: ảnh món đồ voi trận, và voi đứng sau tướng ở hình tướng mặc đồ. */
+export function bakeVoiTran(look: VoiTranLook): THREE.Group {
+  const r = new RigBuilder(VOI_TRAN);
+  drawVoiTran(r, look);
+  return bakeRig(r.build(), (b) => poseVoiTran(b, { act: 'stand' }, {}));
 }
 
 /**
