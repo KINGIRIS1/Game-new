@@ -1898,35 +1898,41 @@ export const vi = {
     huanOnUnit: (n: number) => `Huân công bậc ${n}`,
     challengesWon: 'Thử thách đã thắng',
     rotate: 'Xoay cảnh 90°',
-    mauHint: 'Mỗi chương mở một mẫu. Mẫu giãn theo cấp Điện: nâng Điện thì mẫu rộng ra, áp lại để lũy, đê, thành ra tới bìa mới và công trình mới có chỗ. Chỗ của mẫu nằm trong khoảnh rừng chưa phát thì bỏ qua: phát thêm rừng rồi áp lại. Áp mẫu thì mọi công trình được dời vào chỗ trong mẫu (mỗi cái mất 10% giá dựng), phần mẫu có mà mình chưa có được dựng thêm (trong giới hạn theo cấp Điện), đoạn lũy, đê, thành, bẫy thừa bị dỡ. Phải đủ tài nguyên mới áp được.',
+    mauHint: 'Mỗi chương mở một mẫu. Mẫu giãn theo cấp Điện: nâng Điện thì mẫu rộng ra, áp lại để lũy, đê, thành ra tới bìa mới và công trình mới có chỗ. Chỗ của mẫu nằm trong khoảnh rừng chưa phát thì bỏ qua: phát thêm rừng rồi áp lại. Áp mẫu thì mọi công trình được dời vào chỗ trong mẫu (mỗi cái mất 10% giá dựng), phần mẫu có mà mình chưa có được dựng thêm (trong giới hạn theo cấp Điện), đoạn lũy, đê, thành, bẫy thừa bị dỡ. Mẫu trải đường nối mọi công trình về Điện: đường đang có được dời vào chỗ đường của mẫu, ô còn thiếu trải thêm bằng loại đường của mẫu, tới giới hạn đường của cấp Điện. Phải đủ tài nguyên mới áp được.',
     mau: {
       phongChau: {
         icon: '🏯',
         name: 'Kinh đô Phong Châu',
-        desc: 'Bến và ruộng dọc sông; đền, doanh trại, trại giáo trên trục từ Điện về góc rừng; nhà sàn, kho quanh Điện; bãi đá trên đồi; lũy tre bao hai mặt rừng, bẫy chông trước lũy.',
+        desc: 'Phố đất nện kẻ ô quanh Điện, hai trục từ Điện ra cổng lũy và ra bến. Nhà sàn, kho dọc phố gần Điện; đền, doanh trại trên trục về góc rừng; ruộng dọc đường ven sông, bến sát sông; lũy tre, bẫy chông bao hai mặt rừng.',
         lock: '',
       },
       deBao: {
         icon: '🌊',
         name: 'Đê bao chống lũ',
-        desc: 'Đê liền dải dọc hai bờ sông tới bìa đất, bến nằm ngoài đê, chòi canh sát đê; doanh trại ở góc đê gần ngã ba sông; ruộng, đền và ruộng nếp trong đê.',
+        desc: 'Đê liền dải dọc hai bờ sông, bến ngoài đê, chòi canh sát đê. Đường sỏi dọc chân đê, phố kẻ ô quanh Điện; đền Tản Viên ở góc ngã ba sông; ruộng dọc chân đê; đền Phù Đổng, doanh trại trên trục về góc rừng.',
         lock: 'Mở khi vào chương 2: Sơn Tinh, Thủy Tinh.',
       },
       coLoa: {
         icon: '🐚',
         name: 'Thành Cổ Loa',
-        desc: 'Ba vòng thành kín quanh Điện, vòng ngoài nới ra theo đất; nhà sàn, kho, lò rèn, bếp giữa các vòng; ruộng, đền, doanh trại ngoài vòng ngoài; đê bao ngoài cùng.',
+        desc: 'Ba vòng thành kín quanh Điện, đường lát đá từ Điện qua cổng thành ra ngoài. Kho, nhà sàn, bếp, lò rèn giữa các vòng; đền sát cổng, doanh trại, ruộng ngoài vòng ngoài; đê bao ngoài cùng.',
         lock: 'Mở khi vào chương 3: An Dương Vương.',
       },
       coLoaSong: {
         icon: '🎯',
         name: 'Cổ Loa giữ sông',
-        desc: 'Ba vòng thành và đê bao như mẫu Cổ Loa; ụ nỏ trên vòng thành ngoài ở phía bắc, phía tây và phía sông; hai lầu nỏ ở phía sông, một ở góc bắc tây; trại nỏ cạnh doanh trại; Đền Cuông phía bắc ngoài vòng ngoài.',
+        desc: 'Ba vòng thành, đê bao, phố xá như mẫu Cổ Loa, đường lát gạch; ụ nỏ trên vòng thành ngoài; hai lầu nỏ phía sông, một ở góc bắc tây; trại nỏ cạnh doanh trại; Đền Cuông sát cổng thành ngoài.',
         lock: 'Mở khi vào chương 4: Mỵ Châu, Trọng Thủy.',
       },
     },
-    mauPlan: (moves: number, builds: number, removes: number, uNos = 0) =>
-      [moves ? `Dời ${moves} công trình` : '', builds ? `dựng thêm ${builds}` : '', uNos ? `dựng ${uNos} ụ nỏ` : '', removes ? `dỡ ${removes} đoạn thừa` : '']
+    mauPlan: (moves: number, builds: number, removes: number, uNos = 0, roads = 0) =>
+      [
+        moves ? `Dời ${moves} công trình` : '',
+        builds ? `dựng thêm ${builds}` : '',
+        roads ? `trải ${roads} ô đường` : '',
+        uNos ? `dựng ${uNos} ụ nỏ` : '',
+        removes ? `dỡ ${removes} đoạn thừa` : '',
+      ]
         .filter(Boolean)
         .join(', ') || 'Đã xếp đúng theo mẫu',
     mauApply: '🗺️ Áp mẫu',

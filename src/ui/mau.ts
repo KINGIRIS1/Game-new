@@ -1,7 +1,7 @@
 // Thẻ Mẫu kinh đô trong bảng Xây dựng: mỗi mẫu một mục (bản đồ thu nhỏ làm ảnh, số công trình sẽ dời, dựng thêm,
 // dỡ đi, tổng giá, nút áp mẫu bấm hai lần cho chắc), bày như công trình (`xayDung.ts`).
 
-import { BUILDINGS, type BuildingType } from '../game/defs';
+import { BUILDINGS, isRoad, type BuildingType } from '../game/defs';
 import { dienLevel, unlocked, type GameState } from '../game/game';
 import { canStartMau, frameStart, mauSlots, mauUnlocked, planMau, MAU_IDS, type MauId } from '../game/mau';
 import { xayMs } from '../game/xay';
@@ -47,6 +47,13 @@ const TILE: Partial<Record<BuildingType, string>> = {
   vuon: '#4f9a42',
   chuongLon: '#3a3330',
   bep: '#c45a2a',
+  thoHo: '#b88a5a',
+  denCuong: '#7a8fb0',
+  denHatMon: '#b04a6a',
+  duongDat: '#d9c08a',
+  duongSoi: '#d8d2c0',
+  duongDa: '#a39f96',
+  duongGach: '#c97f5c',
 };
 
 const miniCache = new Map<string, string>();
@@ -150,12 +157,17 @@ export function mauItems(state: GameState, armed: MauId | null): { items: BuildI
     const plan = planMau(state, id);
     const check = canStartMau(state, id);
     const wild = wildKhoanh(state, id);
-    // Phần dựng thêm giao cả cho một tốp, làm lần lượt.
-    const ms = plan.builds.reduce((n, s) => n + xayMs(s.type, 1), 0);
+    // Phần dựng thêm giao cả cho một tốp, làm lần lượt; đường trải xong ngay, không tính giờ.
+    const built = plan.builds.filter((s) => !isRoad(s.type));
+    const ms = built.reduce((n, s) => n + xayMs(s.type, 1), 0);
+    // Đường: ô trải mới và ô đường đang có dời vào chỗ đường của mẫu, gộp một con số.
+    const roadIds = new Set(state.buildings.filter((b) => isRoad(b.type)).map((b) => b.id));
+    const roadMoves = plan.moves.filter((m) => roadIds.has(m.id)).length;
+    const roads = plan.builds.length - built.length + roadMoves;
     const time = ms > 0 ? ` · ${vi.ui.xayTime(formatXay(realMs(state, ms)))}` : '';
     return {
       ...base,
-      meta: vi.ui.mauPlan(plan.moves.length, plan.builds.length, plan.removes.length, plan.uNos.length) + time,
+      meta: vi.ui.mauPlan(plan.moves.length - roadMoves, built.length, plan.removes.length, plan.uNos.length, roads) + time,
       cost: Object.keys(plan.cost).length ? costHtml(state, plan.cost) : '',
       why: check.ok ? '' : vi.reasons[check.reason],
       go: armed === id ? vi.ui.mauConfirm : vi.ui.mauApply,
