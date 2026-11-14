@@ -415,7 +415,8 @@ export const BUILDINGS: Record<BuildingType, BuildingDef> = {
     upgradeCost: [{}, {}, { datDa: 1200, go: 1000, sat: 250 }, { datDa: 2500, go: 2000, sat: 500 }],
     production: [{}, {}, {}],
     hp: [3000, 4500, 6000],
-    limit: [0, 0, 0, 0, 2, 2, 2, 4, 4, 4],
+    // Bốn cổng từ Điện 5: mẫu Cổ Loa mở cổng ở cả vòng ngoài lẫn vòng giữa cho dân gánh hàng qua (tường chắn hẳn).
+    limit: [0, 0, 0, 0, 4, 4, 4, 4, 4, 4],
     minDien: 5,
     levelMinDien: [0, 0, 7, 8],
     buildable: true,
@@ -1298,9 +1299,9 @@ export const FIRST_FLOOD_MS = 3 * 60_000;
  * - `k`: xa hơn thì hệ số là (k + gan) / (k + quãng đường).
  * - `san`: hệ số không dưới mức này (kể cả khi không có lối tới kho).
  * - `duong`: ô có đường đi, ô cầu tốn chừng này phần một ô đất.
- * - `tuong`: vượt một ô lũy, thành tốn chừng này ô (đi vòng qua cổng thì đỡ).
+ * Lũy, thành còn nguyên chắn hẳn: dân chỉ qua cổng thành, chỗ hở hay đoạn đã hư.
  */
-export const GANH = { gan: 14, k: 12, san: 0.5, duong: 0.5, tuong: 1 };
+export const GANH = { gan: 14, k: 12, san: 0.5, duong: 0.5 };
 /** Nguyên liệu Tết gánh tới bếp gói bánh, không về kho. */
 export const GANH_BEP: BuildingType[] = ['ruongNep', 'vuon', 'chuongLon'];
 
@@ -2229,7 +2230,8 @@ export const DAU_THANH = {
   trophyMax: 40,
   botStock: 0.6,
   hpMul: [3, 3, 3, 3, 3, 3, 4, 6, 6, 10],
-  siege: [2, 2, 2, 2, 2, 1, 1, 4, 4, 4],
+  // Điện 7 (kinh đô Cổ Loa) ×2,2: mẫu có 4 cổng (cả vòng giữa), quân đánh tìm đường qua cổng chắc mà kẹt lâu ở cổng.
+  siege: [2, 2, 2, 2, 2, 1, 2.2, 4, 4, 4],
   /** Đánh kinh đô máy (khi chưa đủ người chơi): chiến công được hay mất nhân chừng này, không cướp của thật. */
   botTrophy: 0.2,
   /** Bắt đầu trận thì khóa người giữ thành chừng này giây (trận 3 phút và lúc vào trận). */

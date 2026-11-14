@@ -66,10 +66,9 @@ describe('Điện và công trình cấp 8', () => {
   it('bảy loại công trình lên được cấp 8 khi Điện đã cấp 8; số tối đa giữ như Điện 7', () => {
     const eight: BuildingType[] = ['ruong', 'ben', 'nhaSan', 'baiDa', 'loRen', 'kho', 'choiCanh'];
     for (const t of eight) expect(BUILDINGS[t].maxLevel, t).toBeGreaterThanOrEqual(8);
-    // Lầu nỏ chỉ có từ Điện 8 (ghép từ chòi canh); cổng thành 2 cái ở Điện 5–7, 4 cái ở Điện 8 (thêm hai cổng trên
-    // vòng thành giữa của mẫu Cổ Loa); bến thuyền khơi mở ở Điện 8 (biển Đông); nhà thợ hồ thứ tư ở Điện 8 (thêm
-    // một tốp thợ cho việc xây cấp 8 lâu); còn lại giữ như Điện 7.
-    const newAt8: BuildingType[] = ['lauNo', 'congThanh', 'benKhoi', 'thoHo'];
+    // Lầu nỏ chỉ có từ Điện 8 (ghép từ chòi canh); bến thuyền khơi mở ở Điện 8 (biển Đông); nhà thợ hồ thứ tư ở
+    // Điện 8 (thêm một tốp thợ cho việc xây cấp 8 lâu); còn lại giữ như Điện 7.
+    const newAt8: BuildingType[] = ['lauNo', 'benKhoi', 'thoHo'];
     for (const def of Object.values(BUILDINGS)) if (!newAt8.includes(def.type)) expect(def.limit[7], def.type).toBe(def.limit[6]);
     const s = capital8();
     setDien(s, 7);

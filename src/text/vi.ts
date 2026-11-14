@@ -1558,7 +1558,8 @@ export const vi = {
       kho: 'Xa kho nên dân mất công đi lại, làm ra ít hơn. Trải đường đi (đi nhanh gấp đôi) hay dựng kho thóc gần đây.',
       bep: 'Xa bếp và kho nên dân mất công đi lại, nguyên liệu tới bếp ít hơn. Trải đường đi, hay dựng gần bếp, gần kho hơn.',
     },
-    ganhNoWayWhy: 'Không có lối tới nơi nhận hàng: bị móng công trình, sông hay rừng chưa phát chắn. Chừa lối đi hay mở cổng.',
+    ganhNoWayWhy:
+      'Không có lối tới nơi nhận hàng: bị tường, móng công trình, sông hay rừng chưa phát chắn. Dân không trèo qua lũy, thành: chừa khe trong tường, dựng cổng thành (từ chương 3) hay dựng kho ngay bên này tường.',
     ganhPlace: (pct: number) => `🧺 Gánh về: ${pct}%`,
     ganhHint:
       '📜 Lạc hầu: Tâu bệ hạ, dân phải gánh của làm ra về Điện hay kho thóc. Công trình ở xa thì dân mất công đi lại, làm ra ít hơn. Bệ hạ trải đường đi cho dân đi nhanh, hay dựng thêm kho thóc gần đó.',

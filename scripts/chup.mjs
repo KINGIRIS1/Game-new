@@ -315,6 +315,42 @@ const CANH = {
     mo: 'Kinh đô chương 3, Điện cấp 7, đã áp mẫu Cổ Loa',
     truoc: `M.playChapters({ s });\ns.resources = { gao: 1e6, voOc: 1e6, datDa: 1e6, sat: 1e6, go: 1e6 }; (await import('/src/game/xay.ts')).advanceXay(s, 1e13); s.khoanh = [...new Set([...s.khoanh, ...X.frameKhoanh(G.dienLevel(s))])].sort((a, b) => a - b); const r = X.applyMau(s, 'coLoa'); if (!r.ok) throw new Error(r.reason);`,
   },
+  'ganh-cong': {
+    mo: 'Như mau-co-loa, nhìn vào một cổng thành có tuyến gánh hàng đi qua: dân gánh qua cổng, không trèo qua tường',
+    truoc: `M.playChapters({ s });\ns.resources = { gao: 1e6, voOc: 1e6, datDa: 1e6, sat: 1e6, go: 1e6 }; (await import('/src/game/xay.ts')).advanceXay(s, 1e13); s.khoanh = [...new Set([...s.khoanh, ...X.frameKhoanh(G.dienLevel(s))])].sort((a, b) => a - b); const r = X.applyMau(s, 'coLoa'); if (!r.ok) throw new Error(r.reason);\nfor (const b of s.buildings) if (G.slotsOf(b) > 0) b.workers = G.slotsOf(b); s.dan += 200;`,
+    sau: `const V = await import('/src/game/vanChuyen.ts');
+const { GRID } = await import('/src/game/map.ts');
+const gates = s.buildings.filter((b) => b.type === 'congThanh');
+let pick = null;
+for (const b of s.buildings) {
+  const g = V.duongGanh(s, b);
+  if (!g || !g.tuyen.length || !b.workers) continue;
+  const gt = gates.find((c) => g.tuyen.includes(c.z * GRID + c.x));
+  if (gt && (!pick || g.d > pick.d)) pick = { id: b.id, gt, d: g.d };
+}
+if (!pick) throw new Error('Không có tuyến gánh nào qua cổng');
+const frame = () => new Promise((ok) => requestAnimationFrame(() => requestAnimationFrame(ok)));
+const cx = pick.gt.x + 0.5, cz = pick.gt.z + 0.5;
+let best = Infinity, at = 0;
+for (let k = 0; k < 150; k++) {
+  d.seaTime(k * 0.45);
+  await frame();
+  for (const g of d.ganh()) {
+    if (g.id !== pick.id) continue;
+    for (const x of g.ra) {
+      if (x.dung || !x.coHang) continue;
+      // Người vừa qua cổng vào phía trong (phía camera): mái lầu cổng không che.
+      const m = Math.abs(Math.hypot(x.x - cx, x.z - cz) - 1.2) + (x.x + x.z > cx + cz ? 0 : 5);
+      if (m < best) { best = m; at = k * 0.45; }
+    }
+  }
+}
+if (best > 1) throw new Error('Không thấy người gánh vừa qua cổng: ' + best.toFixed(1));
+d.seaTime(at);
+await frame();
+d.camera(cx, cz, 2.6);`,
+    doi: 600,
+  },
   tran: {
     mo: 'Giặc đánh kinh đô chương 1, chụp sau 4 giây giao chiến',
     truoc: KINH_DO + CO_QUAN,
