@@ -286,19 +286,19 @@ const CANH = {
   'vac-lieu': {
     mo: 'Như kinh-do, dựng nhà sàn mới ở xa Điện, kho: hai thợ giàn giáo thay phiên vác bó tre từ kho về (nhìn giữa tuyến)',
     truoc: `${KINH_DO}\n${NHA_XA}`,
-    sau: NHIN_DI(`g.type === 'xay'`, 2.2),
+    sau: NHIN_DI(`g.type === 'xay'`, 3.4),
     doi: 600,
   },
   'bep-gui': {
     mo: 'Như kinh-do, đã kết chương 1, bếp ở xa, nguyên liệu Tết gánh về Điện: người bếp gùi nguyên liệu từ Điện về (nhìn giữa tuyến)',
     truoc: `${KINH_DO}\n${BEP_XA}`,
-    sau: NHIN_DI(`g.hang === 'gui'`, 2.2),
+    sau: NHIN_DI(`g.hang === 'gui'`, 3.4),
     doi: 600,
   },
   'tet-mam': {
     mo: 'Như bep-gui, Tết đang mở, gác bếp có bánh: người bếp đội mâm bánh lên Điện (nhìn giữa tuyến)',
     truoc: `${KINH_DO}\n${BEP_XA}\ns.tet.nextAt = s.clock + 1e9; s.tet.openUntil = s.clock + 1e9; s.tet.banh = { chung: 12, giay: 12 };`,
-    sau: NHIN_DI(`g.hang === 'mam'`, 2.2),
+    sau: NHIN_DI(`g.hang === 'mam'`, 3.4),
     doi: 600,
   },
   chuong2: {
