@@ -958,7 +958,7 @@ Chủ dự án đã chọn qua bốn câu hỏi: Thủy Tinh có cả hai phép 
   |---|---|---|
   | Kinh đô Phong Châu | từ đầu | bến và ruộng dọc hai bờ sông; trục từ Điện về góc rừng có đền Phù Đổng, doanh trại (giữa Điện và góc rừng), trại giáo, hai bên doanh trại là trại cung, chuồng voi, lò rèn; nhà sàn, kho, bếp quanh Điện; bãi đá trên đồi sát lũy; lũy tre liền một hàng ngay trong bìa rừng cả mặt bắc và mặt tây, bẫy chông ở hàng ngoài lũy, chòi canh ngay trong lũy |
   | Đê bao chống lũ | vào chương 2 | đê liền dải dọc hai bờ sông, cách sông 3 ô, chạy suốt tới bìa đất; bến ngoài đê; chòi canh sát đê trong; doanh trại ở góc đê gần ngã ba sông (kịp ra chặn thủy quái từ cả hai bờ), ba nơi ở quanh đó; đền trên trục về góc rừng; ruộng, ruộng nếp dọc đê; bẫy chông ở bìa rừng |
-  | Thành Cổ Loa | vào chương 3 | ba vòng thành kín quanh Điện; vòng trong chỉ có Điện và sân; nhà sàn, kho, bếp giữa vòng trong và vòng giữa; lò rèn, vườn, chuồng lợn, đền Cổ Loa giữa vòng giữa và vòng ngoài; ngoài vòng ngoài một dãy 4×4 (doanh trại ở góc rừng, đền Phù Đổng, đền Tản Viên, ruộng, ruộng nếp) và một dãy 3×3 (ba nơi ở, bãi đá); từ bản lưu 26 doanh trại 8×8, nơi ở 4×4 vẫn xếp theo các dãy ấy, mẫu tự giãn; đê bao ngoài cùng như mẫu Đê bao |
+  | Thành Cổ Loa | vào chương 3 | ba vòng thành kín quanh Điện; vòng trong chỉ có Điện và sân; nhà sàn, kho, bếp giữa vòng trong và vòng giữa; lò rèn, vườn, chuồng lợn, đền Cổ Loa giữa vòng giữa và vòng ngoài; ngoài vòng ngoài một dãy 4×4 (doanh trại ở góc rừng, đền Phù Đổng, đền Tản Viên, ruộng, ruộng nếp) và một dãy 3×3 (ba nơi ở, bãi đá); một cặp kho ngoài vòng ngoài gần bến (từ Điện 5); từ bản lưu 26 doanh trại 8×8, nơi ở 4×4 vẫn xếp theo các dãy ấy, mẫu tự giãn; đê bao ngoài cùng như mẫu Đê bao |
   | Cổ Loa giữ sông | vào chương 4 | như mẫu Thành Cổ Loa; thêm 16 ụ nỏ trên vòng ngoài chia đều bốn mặt, ba chỗ dành cho lầu nỏ (hai ở phía sông, một ở góc bắc tây), trại nỏ sát doanh trại, Đền Cuông ngoài vòng ngoài (xem mục PR 3 chương 4) |
 
 - **Mẫu giãn theo đất** (chủ dự án yêu cầu sau khi có kinh đô lớn): mẫu không vẽ cứng một lần mà dựng lại cho từng cấp Điện, vừa trọn vùng đất đã khai phá ở cấp ấy.
@@ -973,6 +973,7 @@ Chủ dự án đã chọn qua bốn câu hỏi: Thủy Tinh có cả hai phép 
   - Giữa các công trình nhiều ô chừa lối đi một ô; sát tường được. Đất chật quá (Cổ Loa ở Điện 5) thì một vài khối đứng sát nhau.
   - Trước Điện (phía nam) và bên phải Điện (phía đông) chừa sân 2 ô. Trước kia để cây nêu, mâm bánh và tướng đứng; nay những thứ ấy ở trong sân chầu của Điện, sân 2 ô giữ làm lối ra.
 - Vòng thành Cổ Loa trong mẫu là vòng kín quanh Điện, không chạm sông: thành không chặn nước như đê, nên vòng nào cắt ngang dải đê để chạm sông sẽ làm nước lọt vào.
+- **Lối gánh hàng qua cổng** (mẫu Cổ Loa, Cổ Loa giữ sông; tường chắn hẳn dân gánh hàng, mục Dân gánh hàng về kho): hành lang giữa hai vòng thành vừa một dãy nhà 3×3, nhà xếp nối nhau thì nhà giữa kẹt trong hốc. Nên lúc xếp chỗ, mẫu xét lối gánh trên bản nháp (`LoiGanh` ở `mau.ts`): công trình làm ra hàng không có lối tới Điện, kho (bếp với nguyên liệu Tết) thì thà đứng sát nhà khác; công trình nào cũng tránh đè lên lối của công trình làm ra hàng đã xếp. Cặp kho ngoài vòng ngoài xếp trước, gần bến: bến, ruộng ngoài thành khỏi đi vòng tới cổng. Mẫu Phong Châu, Đê bao xếp như cũ (lũy Phong Châu chạy dọc bìa khung, mọi chỗ của mẫu ở trong).
 - **Áp mẫu**:
   - mỗi công trình đang có dời vào chỗ cùng loại gần nhất trong mẫu; cái nào đã đứng đúng chỗ thì giữ nguyên;
   - chỗ còn trống trong mẫu thì dựng thêm, tới số tối đa theo cấp Điện hiện tại, nếu loại ấy đã mở;
@@ -1738,14 +1739,16 @@ Móng 1×1, 3 cấp, cần Điện 5, có từ chương 3 (cùng thành Cổ Loa
 | 2 | Điện 7 | 1200 đất đá, 1000 gỗ, 250 sắt | 4500 | sát thương 26 |
 | 3 | Điện 8 | 2500 đất đá, 2000 gỗ, 500 sắt | 6000 | sát thương 32, mỗi phát bắn 2 giặc |
 
-- Số tối đa: 2 ở Điện 5–7, 4 ở Điện 8.
+- Số tối đa: 4 từ Điện 5 (trước là 2 ở Điện 5–7, 4 từ Điện 8; nâng khi tường chắn hẳn dân gánh hàng, để mẫu Cổ Loa có cổng cả vòng giữa: mục Dân gánh hàng về kho, điều đã chốt 11).
+- **Dân gánh hàng** chỉ qua tường ở cổng (hay chỗ hở, đoạn đã hư): lũy, thành còn nguyên chắn hẳn.
 - **Đặt**: trên ô trống, hoặc chạm vào một đoạn lũy, thành đất, thành Cổ Loa để thay đoạn ấy (như thành Cổ Loa thay lũy). Không đặt được trên đê, vì cổng không chặn nước lũ.
 - **Hút giặc**: khi tìm đường, giặc tính ô cổng dễ qua hơn tường (giá ô 8, so với lũy tre 12, thành đất 30, thành Cổ Loa 45). Nên giặc chịu đi vòng chừng 35 ô tới cổng thay vì phá thành. Tới cổng thì phải phá cổng mới qua. Người chơi bày chòi canh, lầu nỏ, bẫy chông quanh cổng thành chỗ đón đánh.
 - **Lính trên lầu cổng** tự bắn giặc trong tầm 4,5 ô, nghỉ 1,2 giây giữa hai phát. Như mọi tầm bắn khi giữ kinh đô, tầm nhân 1,4. Đền Cổ Loa còn nguyên thì bắn mạnh gấp rưỡi và xa thêm 1 ô, như chòi canh.
 - Cổng tính là thành khi đếm vòng thành Cổ Loa, nên đặt cổng trong vòng thành không làm hở vòng. Yêu tinh nhắm phá cổng như phá thành. Cổng hư thì giặc đi qua được, sửa như mọi công trình.
 - **Mẫu kinh đô**:
   - Phong Châu: một cổng giữa cạnh lũy phía bắc, một cổng giữa cạnh phía tây, đối xứng qua đường chéo;
-  - Cổ Loa và Cổ Loa giữ sông: hai cổng trên vòng thành ngoài, phía bắc và phía tây; Điện 8 thêm hai cổng trên vòng giữa;
+  - Cổ Loa và Cổ Loa giữ sông: hai cổng trên vòng thành ngoài, phía bắc và phía tây, hai cổng trên vòng giữa thẳng hàng (trước bản này vòng giữa chỉ có cổng từ Điện 8);
+  - mẫu chừa trống ô ngay trước và ngay sau mỗi chỗ cổng, công trình không đứng chắn cổng;
   - Đê bao không có chỗ cho cổng. Áp mẫu này thì cổng đứng yên; vướng chỗ của mẫu thì dời ra chỗ trống gần nhất, như trại nỏ với các mẫu cũ.
 - **Dáng**:
 
@@ -2705,14 +2708,14 @@ Chủ dự án yêu cầu lập phương án PvP giữa các người chơi: **c
      | Điện | 1–5 | 6 | 7 | 8 | 9 | 10 |
      |---|---|---|---|---|---|---|
      | `hpMul` | 3 | 3 | 4 | 6 | 6 | 10 |
-     | `siege` | 2 | 1 | 1 | 4 | 4 | 4 |
+     | `siege` | 2 | 1 | 2,2 | 4 | 4 | 4 |
 
-     Số không tăng đều vì mỗi cấp kinh đô máy theo một mẫu khác (Điện 6 Đê bao không có vòng thành; Điện 7 có hai vòng thành Cổ Loa; Điện 8 thêm 16 ụ nỏ, bốn cổng).
+     Số không tăng đều vì mỗi cấp kinh đô máy theo một mẫu khác (Điện 6 Đê bao không có vòng thành; Điện 7 có ba vòng thành Cổ Loa; Điện 8 thêm 16 ụ nỏ). `siege` Điện 7 từ 1 lên 2,2 khi tường chắn hẳn dân gánh hàng (chủ dự án chọn): mẫu Cổ Loa có bốn cổng từ Điện 5 (cả vòng giữa) và cặp kho ngoài vòng ngoài, quân đánh tìm đường qua cổng mà kẹt lâu ở cổng, đủ quân còn 0 sao; ×2,2 thì đủ quân 1,33 sao, nửa quân 0 (trước đó 1,17 và 0,33).
    - **Chuẩn cân bằng**: trận rung theo chỗ đứng ban đầu và phía tràn vào (bắc, tây cho kết quả khác nhau dù mẫu đối xứng), nên chấm theo trung bình sáu trận (ba hạt giống, hai phía), người đánh cùng cấp Điện kinh đô máy, binh khí như kinh đô máy, không Đền, bấm như người chơi thường, có tướng của cấp ấy: đủ 38 chỗ quân mẫu trung bình 1–2 sao, nửa quân dưới nửa sao. Số đo (bắc ba hạt rồi tây ba hạt):
      - Điện 5: đủ quân 3,1,1,1,3,1 sao; nửa quân 0,0,1,1,0,0.
      - Điện 6: đủ quân 2 sao cả sáu trận; nửa quân 0.
-     - Điện 7: đủ quân 1 sao cả sáu trận; nửa quân 0.
-     - Điện 8: đủ quân 2,1,2,2,0,1; nửa quân 0.
+     - Điện 7: đủ quân 1,2,2,1,1,1 sao; nửa quân 0 (đo lại khi kinh đô Cổ Loa có bốn cổng, `siege` 2,2; lần đo đầu 1 sao cả sáu trận).
+     - Điện 8: đủ quân 1,2,1,2,1,2; nửa quân 0 (đo lại cùng lúc; lần đo đầu 2,1,2,2,0,1).
      - Điện 9: đủ quân 1,1,1,1,1,2; nửa quân 0.
      - Điện 10: đủ quân 1 sao cả sáu trận; **nửa quân vẫn hay được 1 sao** (1,1,1,0,0,1): Hai Bà hai tướng máu nhân 10 gần như không ngã, nên quân ít quân nhiều không khác mấy. Giới hạn hệ số máu của tướng thì đủ quân cũng thua hết, nên để vậy, chờ chủ dự án chơi thử.
      `dauThanh.test.ts` canh Điện 5, 7, 8.
@@ -3226,23 +3229,23 @@ Chủ dự án muốn người dân đem vật liệu, nông sản về kho ho�
 8. **Thợ vác vật liệu là hai thợ giàn giáo thay phiên** (PR 3): một thợ đi tay không tới kho, Điện gần nhất, vác về đúng thứ công trình cần; giàn giáo lúc nào cũng còn một thợ. Chỉ để nhìn (của đã trả lúc bắt đầu xây). Phương án bỏ: thêm một thợ riêng mỗi việc.
 9. **Tô vùng gánh đủ 100% một màu** (PR 3): vùng có sẵn một màu, phần nơi nhận mới phủ thêm (hay vùng của nơi đang chọn) màu sáng hơn; thanh dưới vẫn ghi % chính xác. Phương án bỏ: ba nấc màu (100%, 75–99%, dưới 75%).
 10. **Làm thêm** (chủ dự án chọn cả ba, PR 3): mùa Tết người bếp đội mâm bánh lên Điện; áp mẫu kinh đô trải sẵn đường; chạm chọn kho, Điện (và bếp) cũng tô vùng.
+11. **Tường chắn hẳn, chỉ qua cổng** (chủ dự án báo "dân gánh đang đi xuyên tường thành", sau PR 3): lũy tre, thành đất, thành Cổ Loa còn nguyên chắn dân gánh như móng công trình; dân chỉ qua cổng thành, chỗ hở trong tường hay đoạn đã hư. Kinh đô vây kín mà không có cổng thì công trình ngoài tường ở mức sàn 50% (chủ dự án chấp nhận cân bằng đổi nhiều). Lũy tre chắn như thành (chủ dự án chọn). Mẫu Cổ Loa chừa lối theo cả hai cách (chủ dự án chọn): cổng thành tối đa 4 từ Điện 5 (trước là 2 ở Điện 5–7) để vòng giữa cũng có cổng, và một cặp kho ngoài vòng ngoài gần bến cho bến, ruộng (kho ngoài thành dễ bị giặc phá, cướp hơn). Đấu thành: kinh đô máy Điện 7 (mẫu Cổ Loa) có bốn cổng thì quân đánh kẹt ở cổng, nên đòn công thành ở Điện 7 nâng từ ×1 lên ×2,2 (chủ dự án chọn; mục Đấu thành). Phương án bỏ: trèo qua tốn 1 ô (bản PR 1, nhìn như đi xuyên tường); trèo qua tốn thêm ô; lũy tre trèo qua được, thành thì không; chỉ thêm cổng vòng giữa (bến phía sông vẫn đi vòng xa, còn chừng 55%); chỉ thêm kho ngoài thành; kinh đô máy Điện 7 giữ hai cổng (nửa quân lại được 0,83 sao, quá dễ); để nguyên số, hạ mức canh Đấu thành.
 
 ### Luật (`src/game/vanChuyen.ts`, số ở `GANH` trong `defs.ts`)
 
 - **Nơi nhận**: Điện và mọi kho thóc còn nguyên (kho hư, kho đang dựng không nhận). Nguyên liệu Tết (nếp, đậu lá dong, thịt lợn) gánh tới bếp gói bánh còn nguyên hay về kho cho bếp lấy, nơi nào gần thì về đó (`GANH_BEP`); chưa có bếp thì chưa mất gì.
 - **Ai gánh**: mọi công trình có chỗ làm, trừ bếp (bánh để ở gác bếp). Điện tự làm ra, bản làng bên kia sông, thuyền buôn, thưởng không gánh.
 - **Quãng đường**: chi phí đường đi ngắn nhất (8 hướng, không cắt góc) từ ô sát móng công trình tới ô của nơi nhận gần nhất:
-  - ô đất trống, đồ trang trí, đê, cổng thành, cống đê, bẫy, bậc lên thành, công trình đang hư: 1;
+  - ô đất trống, đồ trang trí, đê, cổng thành, cống đê, bẫy, bậc lên thành, công trình đang hư (kể cả đoạn lũy, thành đã hư): 1;
   - ô đường đi (bốn loại như nhau), ô cầu còn nguyên: **0,5**;
-  - lũy, thành đất, thành Cổ Loa: **1** (dân trèo qua lũy được; lúc đầu định 8 thì mẫu kinh đô có vòng lũy kín trước chương 3 mất tới 40%, nên hạ xuống);
-  - không đi qua: sông, rừng chưa phát, móng công trình khác (kể cả đang dựng), cầu hư.
+  - không đi qua: lũy tre, thành đất, thành Cổ Loa còn nguyên (điều đã chốt 11; PR 1 cho trèo qua tốn 1 ô), sông, rừng chưa phát, móng công trình khác (kể cả đang dựng), cầu hư. Thành đang đắp đè lũy, cổng đang dựng thay đoạn tường thì đoạn cũ vẫn chắn tới khi xong.
 - **Hệ số gánh**: trong **14 ô** thì 1; xa hơn thì (12 + 14) / (12 + quãng đường), không dưới **0,5**. Tức 14 ô đất (hay 28 ô đường) còn 100%, 20 ô còn 81%, 30 ô còn 62%, từ 40 ô trở lên còn 50%. Không có lối (bị vây kín không chừa chỗ) cũng 50%. (Định 12 ô; đo bốn mẫu kinh đô thì nâng 14 để mẫu nào cũng trung bình từ 88% trở lên.)
 - **Áp vào**: gạo, vỏ ốc, đất đá, sắt, gỗ của công trình (`outputIn`), cá làng chài và cá biển (`fishIn`, `fishPerMinute`), nguyên liệu Tết (`bakeRates`). Nhân thêm vào sau đặc sản đất, phù sa; đền, phúc lành cộng như cũ. Công trình bên kia sông mà cầu hư thì vẫn 0 như cũ.
 - Quãng đường tính lại khi công trình, đường đi, đất đã mở, công trình hư đổi (ghi nhớ theo dấu vết danh sách công trình).
 
 ### Nhịp (đo bằng `node scripts/kinh-te.mjs`)
 
-Người chơi mô phỏng xếp gọn quanh Điện, trung bình hệ số gánh 99,5%: mốc lên Điện 2–10 y như trước (7,4; 25,2; 49,6; 82,4 phút… Điện 10 ở 587,5 phút). Mẫu kinh đô không đổi chỗ kho (thử cho mẫu đặt kho ra gần công trình xa thì lệch cân bằng Đấu thành với kinh đô máy, nên bỏ); trung bình mỗi cấp Điện: Phong Châu 89–100%, Đê bao 97–100%, Cổ Loa, Cổ Loa giữ sông 98–100%. Kinh đô người chơi trải rộng thì trải đường, dựng thêm kho gần cụm công trình xa.
+Người chơi mô phỏng xếp gọn quanh Điện, trung bình hệ số gánh 99,5%: mốc lên Điện 2–10 y như trước (7,4; 25,2; 49,6; 82,4 phút… Điện 10 ở 587,5 phút); tường chắn hẳn (điều đã chốt 11) cũng không đổi, vì lũy của người chơi mô phỏng rải từng ô. Trung bình mỗi cấp Điện của mẫu kinh đô (chưa tính đường mẫu trải thêm): Phong Châu 89–100%, Đê bao 97–100% (tường chắn không đổi gì: lũy Phong Châu chạy dọc bìa khung, Đê bao không có tường); Cổ Loa Điện 5–10: 97,8; 99,4; 94,4; 91,1; 91,1; 89,9%; Cổ Loa giữ sông 98,9; 99,9; 91,2; 93,1; 95,0; 92,6% (dân trèo qua tường thì 98–100%; tường chắn mà mẫu không chừa lối thì chỉ còn 54–62%). Còn thấp là bến, làng chài, bến khơi phía sông xa cặp kho ngoài thành (56–87%); áp mẫu thì đường mẫu trải thêm kéo gần lại. Thử cho mẫu đặt kho ra gần công trình xa lúc làm PR 1 thì lệch cân bằng Đấu thành với kinh đô máy, nên bỏ; nay mẫu Cổ Loa có cặp kho ngoài thành thì đo lại Đấu thành, nâng `siege` Điện 7 (mục Đấu thành). Kinh đô người chơi trải rộng thì trải đường, dựng thêm kho gần cụm công trình xa; vây tường kín thì chừa khe, dựng cổng hay dựng kho bên ngoài.
 
 ### Giao diện
 

@@ -5,9 +5,10 @@
  * Xa nơi nhận thì mất công đi lại, công trình làm ra ít hơn (`heSoGanh`). Của vẫn vào kho đều mỗi phút như cũ, không
  * có hàng nằm dọc đường, nên bản lưu không thêm gì và lúc vắng tính y như lúc chơi.
  *
- * Quãng đường đo bằng ô đất trống: ô có đường đi, ô cầu còn nguyên rẻ hơn (`GANH.duong`), vượt lũy, thành tốn
- * `GANH.tuong` ô, cổng thành, cống đê, đê, bẫy, đồ trang trí và công trình đang hư đi qua như đất; sông, rừng chưa phát
- * và móng công trình khác không đi qua được. Phần vẽ người gánh dùng chung tuyến ở đây (`duongGanh`).
+ * Quãng đường đo bằng ô đất trống: ô có đường đi, ô cầu còn nguyên rẻ hơn (`GANH.duong`); cổng thành, cống đê, đê,
+ * bẫy, bậc lên thành, đồ trang trí và công trình đang hư đi qua như đất; lũy, thành còn nguyên chắn hẳn như móng công
+ * trình (dân không trèo qua, chỉ qua cổng thành hay chỗ hở); sông, rừng chưa phát cũng không đi qua được. Phần vẽ người
+ * gánh dùng chung tuyến ở đây (`duongGanh`).
  */
 import { BUILDINGS, GANH, GANH_BEP, isBridge, isDecor, type BuildingType } from './defs';
 import type { Building, GameState } from './game';
@@ -78,9 +79,6 @@ function tileCost(b: Pick<Building, 'type' | 'damaged'>): number {
   if (isDecor(b.type)) return BUILDINGS[b.type].decor === 'duong' ? GANH.duong : 1;
   if (b.damaged) return 1;
   switch (b.type) {
-    case 'luy':
-    case 'thanh':
-      return GANH.tuong;
     case 'congThanh':
     case 'congDe':
     case 'de':

@@ -131,9 +131,48 @@ describe('hệ số gánh theo quãng đường', () => {
     const gap = ring.find((b) => b.x === LO + 2 + w && b.z === ROW + 1)!;
     s.buildings = s.buildings.filter((b) => b.id !== gap.id);
     expect(heSoGanh(s, far)).toBeGreaterThan(GANH.san);
-    // Lũy không chắn hẳn: dân trèo qua, tốn thêm quãng đường.
-    for (const b of ring) b.type = 'luy';
-    expect(Number.isFinite(duongGanh(s, far)!.d)).toBe(true);
+    expect(duongGanh(s, far)!.tuyen).toContain(gap.z * GRID + gap.x);
+  });
+
+  it('lũy, thành chắn hẳn như móng: dân không trèo qua, chỉ qua cổng thành, chỗ hở hay đoạn đã hư; đê, bẫy đi qua được', () => {
+    const s = capital();
+    const far = put(s, 'ruong', LO + 2, ROW);
+    const w = size('ruong');
+    const ring: Building[] = [];
+    for (let z = ROW - 1; z <= ROW + w; z++) {
+      for (let x = LO + 1; x <= LO + 2 + w; x++) {
+        if (x === LO + 1 || x === LO + 2 + w || z === ROW - 1 || z === ROW + w) ring.push(push(s, 'luy', x, z));
+      }
+    }
+    const sealed = () => {
+      const g = duongGanh(s, far)!;
+      return g.d === Infinity && g.heSo === GANH.san && heSoGanh(s, far) === GANH.san;
+    };
+    // Lũy tre, thành đất (lũy cấp 2), thành Cổ Loa: vòng kín thì ở mức sàn.
+    expect(sealed()).toBe(true);
+    for (const b of ring) b.level = 2;
+    expect(sealed()).toBe(true);
+    for (const b of ring) Object.assign(b, { type: 'thanh', level: 1 });
+    expect(sealed()).toBe(true);
+    // Đê, bẫy chông không chắn.
+    for (const b of ring) b.type = 'de';
+    expect(sealed()).toBe(false);
+    for (const b of ring) b.type = 'bayChong';
+    expect(sealed()).toBe(false);
+    // Một đoạn thành hư: đi qua chỗ vỡ.
+    for (const b of ring) b.type = 'thanh';
+    const gate = ring.find((b) => b.x === LO + 2 + w && b.z === ROW + 1)!;
+    gate.damaged = true;
+    expect(sealed()).toBe(false);
+    gate.damaged = false;
+    expect(sealed()).toBe(true);
+    // Thay một đoạn bằng cổng thành: đi qua cổng, không qua ô tường nào.
+    gate.type = 'congThanh';
+    expect(sealed()).toBe(false);
+    const tuyen = duongGanh(s, far)!.tuyen;
+    expect(tuyen).toContain(gate.z * GRID + gate.x);
+    const walls = new Set(ring.filter((b) => b.type === 'thanh').map((b) => b.z * GRID + b.x));
+    expect(tuyen.some((i) => walls.has(i))).toBe(false);
   });
 
   it('Điện, kho, nhà sàn không gánh hàng; chỗ định đặt cho biết trước hệ số', () => {
@@ -303,14 +342,52 @@ describe('dòng thời gian, mẫu, Lạc hầu, bản lưu', () => {
 
   it('bốn mẫu kinh đô ít mất vì đường xa: mỗi cấp Điện trung bình từ 88% trở lên', () => {
     for (const id of MAU_IDS) {
-      for (let dien = 1; dien <= 10; dien++) {
+      // Mẫu Cổ Loa mở ở chương 3 (từ Điện 5), lúc ấy đã có cổng thành: chỗ cổng của mẫu là cổng, tới số tối đa.
+      const coLoa = id === 'coLoa' || id === 'coLoaSong';
+      for (let dien = coLoa ? BUILDINGS.congThanh.minDien : 1; dien <= 10; dien++) {
         const s = createInitialState(0);
         setDien(s, dien);
-        s.buildings = mauSlots(id, dien).map((x, i): Building => ({ id: i + 1, type: x.type, x: x.x, z: x.z, level: 1, workers: 1 }));
+        let gates = coLoa ? BUILDINGS.congThanh.limit[dien - 1] : 0;
+        s.buildings = mauSlots(id, dien).map(
+          (x, i): Building => ({ id: i + 1, type: x.cong && gates-- > 0 ? 'congThanh' : x.type, x: x.x, z: x.z, level: 1, workers: 1 }),
+        );
         const list = s.buildings.filter((b) => ganhType(b.type) && BUILDINGS[b.type].workers);
         if (!list.length) continue;
         const mean = list.reduce((n, b) => n + heSoGanh(s, b), 0) / list.length;
         expect(mean, `${id} Điện ${dien}`).toBeGreaterThanOrEqual(0.88);
+      }
+    }
+  });
+
+  it('mẫu Cổ Loa: cổng không bị công trình chắn, có cặp kho ngoài vòng ngoài; công trình trong thành có lối qua cổng', () => {
+    for (const id of ['coLoa', 'coLoaSong'] as const) {
+      for (let dien = BUILDINGS.congThanh.minDien; dien <= 10; dien++) {
+        const s = createInitialState(0);
+        setDien(s, dien);
+        let gates = BUILDINGS.congThanh.limit[dien - 1];
+        s.buildings = mauSlots(id, dien).map(
+          (x, i): Building => ({ id: i + 1, type: x.cong && gates-- > 0 ? 'congThanh' : x.type, x: x.x, z: x.z, level: 1, workers: 1 }),
+        );
+        const occ = occupancy(s);
+        // Ô ngay trước, ngay sau mỗi cổng (theo hướng xuyên tường) không có công trình nhiều ô (vòng thành đứng sát
+        // nhau thì là cổng, đoạn thành vòng kề).
+        const byId = new Map(s.buildings.map((b) => [b.id, b]));
+        for (const g of s.buildings.filter((b) => b.type === 'congThanh')) {
+          const across = occ[g.z * GRID + g.x - 1] && occ[g.z * GRID + g.x + 1] ? [GRID, -GRID] : [1, -1];
+          for (const d of across) {
+            const o = byId.get(occ[g.z * GRID + g.x + d]);
+            expect(o ? BUILDINGS[o.type].w : 0, `${id} Điện ${dien} cổng ${g.x},${g.z}`).toBeLessThanOrEqual(1);
+          }
+        }
+        // Từ Điện có hai vòng thành tách nhau (Điện 7), một cặp kho ngoài vòng ngoài; công trình trong thành có lối.
+        if (dien < 7) continue;
+        const thanh = s.buildings.filter((b) => b.type === 'thanh' || b.type === 'congThanh');
+        const lo = Math.min(...thanh.map((b) => b.x));
+        const outside = s.buildings.filter((b) => b.type === 'kho' && (b.x < lo || b.z < lo));
+        expect(outside.length, `${id} Điện ${dien}`).toBe(2);
+        for (const b of s.buildings.filter((o) => ganhType(o.type) && o.x > lo && o.z > lo)) {
+          expect(Number.isFinite(duongGanh(s, b)!.d), `${id} Điện ${dien} ${b.type} ${b.x},${b.z}`).toBe(true);
+        }
       }
     }
   });
