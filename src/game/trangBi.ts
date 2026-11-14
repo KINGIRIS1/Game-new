@@ -400,9 +400,13 @@ const isObj = (v: unknown): v is Record<string, unknown> => typeof v === 'object
 const isInt = (v: unknown, lo: number, hi: number): v is number => Number.isInteger(v) && (v as number) >= lo && (v as number) <= hi;
 const HERO_KINDS: HeroKind[] = ['giong', 'sonTinh', 'anDuong', 'caoLo', 'trungTrac', 'trungNhi'];
 
-/** Một món đồ đúng dạng và đúng luật (phẩm, cấp đồ, chỉ số, nấc rút, nấc cường hóa trong khoảng). */
-export function isMon(v: unknown): v is Mon {
-  if (!isObj(v) || !isInt(v.id, 1, Number.MAX_SAFE_INTEGER)) return false;
+/**
+ * Phần chung của một món (ô, bộ, phẩm, cấp đồ, chỉ số chính, chỉ số phụ, cường hóa) đúng dạng và đúng luật: phẩm,
+ * cấp đồ, chỉ số, nấc rút, nấc cường hóa trong khoảng. Dùng cho món trong bản lưu (`isMon`) và món trong bản chụp Đấu
+ * thành (`validateSnapshot` ở `dauThanh.ts`).
+ */
+export function hopLeMon(v: unknown): v is Omit<Mon, 'id' | 'khoa' | 'tuong'> {
+  if (!isObj(v)) return false;
   if (!O_DO.includes(v.o as ODo) || !BO_DO.includes(v.bo as BoDo)) return false;
   if (!isInt(v.pham, 1, 4) || !isInt(v.cap, 1, 5)) return false;
   if (!O_CHINH[v.o as ODo].includes(v.chinh as ChiSo)) return false;
@@ -412,9 +416,16 @@ export function isMon(v: unknown): v is Mon {
     if (!isObj(p) || !CHI_SO.includes(p.k as ChiSo) || seen.has(p.k) || !isInt(p.nac, 1, PHU_NAC_MAX)) return false;
     seen.add(p.k);
   }
-  if (!isInt(v.cuong, 0, CUONG_HOA_TRAN[v.pham as number])) return false;
-  if (v.khoa !== undefined && v.khoa !== true) return false;
-  return v.tuong === undefined || HERO_KINDS.includes(v.tuong as HeroKind);
+  return isInt(v.cuong, 0, CUONG_HOA_TRAN[v.pham as number]);
+}
+
+/** Một món đồ trong kho đúng dạng và đúng luật. */
+export function isMon(v: unknown): v is Mon {
+  if (!hopLeMon(v)) return false;
+  const m = v as Record<string, unknown>;
+  if (!isInt(m.id, 1, Number.MAX_SAFE_INTEGER)) return false;
+  if (m.khoa !== undefined && m.khoa !== true) return false;
+  return m.tuong === undefined || HERO_KINDS.includes(m.tuong as HeroKind);
 }
 
 /** Phần trang bị của bản lưu: món đúng luật, mã không trùng, mỗi tướng một món mỗi ô. */
