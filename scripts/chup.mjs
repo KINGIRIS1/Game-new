@@ -332,22 +332,23 @@ if (!pick) throw new Error('Không có tuyến gánh nào qua cổng');
 const frame = () => new Promise((ok) => requestAnimationFrame(() => requestAnimationFrame(ok)));
 const cx = pick.gt.x + 0.5, cz = pick.gt.z + 0.5;
 let best = Infinity, at = 0;
-for (let k = 0; k < 140; k++) {
-  d.seaTime(k * 0.6);
+for (let k = 0; k < 150; k++) {
+  d.seaTime(k * 0.45);
   await frame();
   for (const g of d.ganh()) {
     if (g.id !== pick.id) continue;
     for (const x of g.ra) {
       if (x.dung || !x.coHang) continue;
-      const m = Math.hypot(x.x - cx, x.z - cz);
-      if (m < best) { best = m; at = k * 0.6; }
+      // Người vừa qua cổng vào phía trong (phía camera): mái lầu cổng không che.
+      const m = Math.abs(Math.hypot(x.x - cx, x.z - cz) - 1.2) + (x.x + x.z > cx + cz ? 0 : 5);
+      if (m < best) { best = m; at = k * 0.45; }
     }
   }
 }
-if (best > 3) throw new Error('Không thấy người gánh gần cổng: ' + best.toFixed(1));
+if (best > 1) throw new Error('Không thấy người gánh vừa qua cổng: ' + best.toFixed(1));
 d.seaTime(at);
 await frame();
-d.camera(cx, cz, 3.2);`,
+d.camera(cx, cz, 2.6);`,
     doi: 600,
   },
   tran: {
