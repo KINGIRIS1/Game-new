@@ -3370,6 +3370,26 @@ Mỗi lần rơi tối đa một món:
 - Chưa có tướng nào về (chơi thường: Gióng chưa thành tráng sĩ) thì không rơi, không tốn lần rút.
 - Kho đồ tối đa 80 món, kể cả món đang mặc. Kho đầy thì món mới tự phân giải ra sắt, có báo.
 
+### Đo sức mạnh (PR 1)
+
+Người chơi thường (bấm chậm, không Đền, quân mẫu 38 chỗ, tướng như khi đã hết truyện) thắng được ít nhất 2 trong 3 hạt giống khi máu giặc gấp tới mấy lần màn gốc; đo từng nấc 0,1, trần đo ×2,6. Bộ mẫu: bốn món bộ của chính tướng, cấp đồ theo chương của màn, chỉ số phụ nấc giữa. "Bộ cao nhất +10" là phẩm cao nhất của chương (chương 1 Tốt, chương 2 Quý, từ chương 3 Huyền thoại) ở +10, nên ở chương 1, 2 cao hơn trần cường hóa thật một chút.
+
+| Màn | Không đồ | Huân công tướng tối đa | Bộ Quý +8 | Bộ cao nhất +10 |
+|---|---|---|---|---|
+| 4 | ×2,6 | ×2,6 | ×2,6 | ×2,6 |
+| 8 | ×1,5 | ×1,6 | ×1,5 | ×1,5 |
+| 12 | ×1,5 | ×1,6 | ×1,8 | ×1,8 |
+| 16 | ×1,0 | ×1,1 | ×1,1 | ×1,2 |
+| 20 | ×1,4 | ×1,6 | ×1,8 | ×1,9 |
+| 24 | ×1,0 | ×1,2 | ×1,3 | ×1,4 |
+| 28 | ×1,0 | ×1,1 | ×1,3 | ×1,3 |
+| 32 | ×1,0 | ×1,2 | ×1,2 | ×1,3 |
+| 36 | ×1,1 | ×1,2 | ×1,5 | ×1,5 |
+| 40 | ×1,0 | ×1,2 | ×1,4 | ×1,6 |
+
+- Đủ bộ tốt thì người chơi thường chịu được giặc khỏe hơn chừng 20–60% từ chương 2 trở đi, hơn huân công tướng tối đa (10–20%), nhưng chưa tới mức bỏ qua quân. Đồ chương 1 còn yếu (2–3% mỗi chỉ số), Gióng mặc đủ bộ chương 1 chưa khác rõ.
+- Chuẩn độ khó mọi màn, mọi thử thách vẫn tính không có đồ, nên các test cân bằng không đổi.
+
 ### Cường hóa, phân giải, lắp tháo
 
 - **Cường hóa** ở lò rèn còn nguyên, xong ngay. Từ +1 tới trần theo phẩm: Thường +4, Tốt +6, Quý +8, Huyền thoại +10. Mỗi nấc +10% chỉ số chính (+10 là gấp đôi); chỉ số phụ không đổi.
@@ -3429,7 +3449,7 @@ Kỹ năng chưa mở (Nhổ tre trước màn 6, Hiệu triệu trước màn 3
 ### Thứ tự làm
 
 1. **PR 0** (#100): tài liệu.
-2. **PR 1**: luật, rơi đồ, bản lưu 27, trận, bảng tướng và kho đồ (ảnh tạm theo ô, khung màu phẩm), test. Đấu thành chưa tính đồ.
+2. **PR 1** (đã làm, cùng PR #100 vì PR 0 chưa gộp): luật, rơi đồ, bản lưu 27, trận, bảng tướng và kho đồ (ảnh tạm theo ô, khung màu phẩm), test, đo sức mạnh, chốt giá cường hóa. Đấu thành chưa tính đồ.
 3. **PR 2**: Đấu thành tính đồ (bản chụp, máy chủ).
 4. **PR 3**: hình: 24 ảnh món đồ vẽ sẵn (6 bộ × 4 ô), vũ khí ánh lên khi tướng mặc đủ bốn món bộ mình; chụp kiểm tra.
 
