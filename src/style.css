@@ -3033,3 +3033,175 @@ body.man-vao-on #hud > * {
     margin-bottom: 8px;
   }
 }
+
+/* ---------- Bảng tướng: trang bị, chỉ số, kho đồ (ui/trangBi.ts) ---------- */
+/* Màu phẩm: Thường xám, Tốt xanh lá, Quý tím, Huyền thoại vàng. */
+.pham-1 { --pham: #8d8577; --pham-bg: #f3efe6; }
+.pham-2 { --pham: #4f8a2c; --pham-bg: #eef6e4; }
+.pham-3 { --pham: #7a4fa8; --pham-bg: #f3ebfa; }
+.pham-4 { --pham: #c9900f; --pham-bg: #fff4d6; }
+.pham-txt-1 { color: #6f685c; }
+.pham-txt-2 { color: #3f7322; }
+.pham-txt-3 { color: #6a3f98; }
+.pham-txt-4 { color: #a8760a; }
+
+.do-heroes {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  padding-bottom: 2px;
+  scrollbar-width: none;
+}
+
+.do-hero {
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 64px;
+  padding: 6px 4px;
+  border-radius: 12px;
+  border: 1.5px solid var(--line);
+  background: #fffaf0;
+  color: var(--ink);
+  font: inherit;
+}
+
+.do-hero .ic { font-size: 20px; }
+.do-hero .nm { font-size: 11px; font-weight: 600; white-space: nowrap; }
+.do-hero small { font-size: 10px; color: var(--ink-soft); }
+.do-hero.on { border-color: var(--bronze); background: #f6e2b4; }
+
+.do-body { margin-top: 10px; }
+
+.do-slots {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.do-slot {
+  display: grid;
+  grid-template-columns: 32px 1fr;
+  grid-template-rows: auto auto;
+  align-items: center;
+  column-gap: 6px;
+  padding: 8px;
+  border-radius: 12px;
+  border: 2px solid var(--pham, var(--line));
+  background: var(--pham-bg, #fffaf0);
+  color: var(--ink);
+  font: inherit;
+  text-align: left;
+}
+
+.do-slot.empty { border-style: dashed; opacity: 0.85; }
+.do-slot.on { box-shadow: 0 0 0 2px var(--bronze); }
+.do-slot .ic { grid-row: span 2; font-size: 24px; text-align: center; }
+.do-slot .nm { font-size: 12px; font-weight: 700; line-height: 1.2; }
+.do-slot small { font-size: 11px; color: var(--ink-soft); }
+
+.do-bo {
+  margin: 10px 0;
+  padding: 8px;
+  border-radius: 12px;
+  background: #fffaf0;
+  border: 1.5px solid var(--line);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.do-bo .on { color: var(--green); font-weight: 600; }
+.do-bo .off { color: var(--ink-soft); }
+
+.do-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, 54px);
+  justify-content: start;
+  gap: 6px;
+  margin: 8px 0;
+}
+
+.do-tile {
+  position: relative;
+  aspect-ratio: 1;
+  border-radius: 10px;
+  border: 2px solid var(--pham);
+  background: var(--pham-bg);
+  font: inherit;
+  padding: 0;
+}
+
+.do-tile .ic { font-size: 22px; }
+.do-tile.on { box-shadow: 0 0 0 2px var(--ink); }
+.do-tile i {
+  position: absolute;
+  font-style: normal;
+  font-size: 10px;
+  line-height: 1;
+}
+.do-tile .cuong { right: 3px; bottom: 3px; font-weight: 700; color: var(--ink); }
+.do-tile .who { left: 2px; top: 2px; font-size: 12px; }
+.do-tile .lock { right: 2px; top: 2px; }
+
+.do-detail {
+  padding: 10px;
+  border-radius: 12px;
+  border: 2px solid var(--pham);
+  background: var(--pham-bg);
+}
+
+.do-head { display: flex; gap: 10px; align-items: center; }
+.do-head h3 { margin: 0; font-size: 15px; }
+.do-head p { margin: 2px 0 0; font-size: 12px; }
+.do-big {
+  flex: 0 0 48px;
+  height: 48px;
+  display: grid;
+  place-items: center;
+  font-size: 28px;
+  border-radius: 12px;
+  border: 2px solid var(--pham);
+  background: #fffaf0;
+}
+
+.do-stats { margin: 8px 0 4px; }
+.do-stat {
+  display: flex;
+  justify-content: space-between;
+  font-size: 13px;
+  padding: 2px 0;
+}
+.do-stat.main { font-weight: 700; font-size: 14px; border-bottom: 1px dashed var(--line); padding-bottom: 4px; margin-bottom: 2px; }
+
+.do-compare { margin: 4px 0; font-size: 12px; }
+.do-compare .up { color: var(--green); }
+.do-compare .down { color: var(--red); }
+
+.do-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+  margin-top: 6px;
+}
+
+.do-actions small { font-size: 11px; }
+
+.do-lc {
+  text-align: center;
+  font-size: 14px;
+  margin-bottom: 8px;
+}
+.do-lc b { font-size: 22px; color: var(--bronze-dark); margin-left: 4px; }
+
+.do-loc { margin: 6px 0; }
+.do-loc .tab { flex: 1 1 auto; padding: 6px 4px; }
+
+.btn.red {
+  background: var(--red);
+  border-color: var(--red-dark);
+  color: #fff8e8;
+}
+
+.hero-row.gear { border-top: 1px dashed var(--line); margin-top: 4px; }

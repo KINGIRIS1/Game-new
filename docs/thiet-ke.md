@@ -3314,7 +3314,7 @@ Chủ dự án yêu cầu: thêm bộ trang bị riêng cho các tướng và h�
 - **Không có cấp tướng.**
 - **Rơi ở cả bốn loại trận**: phó bản (kể cả đánh lại), thử thách, đánh đồn, giữ kinh đô.
 - **Cường hóa bằng tài nguyên**; đồ thừa phân giải ra sắt.
-- **Mở khi Gióng về**; phẩm và chỉ số cao hơn mở dần theo chương.
+- **Mở khi Gióng về** (code: khi có tướng đầu tiên về, chơi thường là Gióng thành tráng sĩ); phẩm và chỉ số cao hơn mở dần theo chương.
 - **Đấu thành có tính trang bị**, làm ở PR riêng vì đổi luật máy chủ.
 - Không đổi dáng tướng (giữ quyết định không thêm đồ rối mắt quanh tướng, PR #96, #97); tướng mặc đủ bốn món bộ mình thì vũ khí ánh lên. Lạc tướng chưa có đồ.
 
@@ -3367,7 +3367,7 @@ Mỗi lần rơi tối đa một món:
 - Cấp đồ: phó bản, thử thách theo chương của màn; đồn theo chương của bậc đồn (`CAMPS[bậc].chapter`); giữ kinh đô theo chương đang chơi.
 - Bộ rơi ra: phó bản, thử thách rơi bộ của chương màn ấy (chương 1 Phù Đổng, 2 Tản Viên, 3 Cổ Loa, 4 Cao Lỗ, 5 Trưng Trắc hoặc Trưng Nhị), để người chơi cày đúng bộ mình cần; giữ kinh đô, đồn rơi bộ của một tướng đã về.
 - Số ngẫu nhiên lặp lại được theo bộ đếm `trangBi.seq`, chỉ tăng khi rút đồ, nên tải lại bản lưu không rút lại được món khác. Luật vẫn không dùng `Math.random`.
-- Gióng chưa về (`giongReady`) thì không rơi.
+- Chưa có tướng nào về (chơi thường: Gióng chưa thành tráng sĩ) thì không rơi, không tốn lần rút.
 - Kho đồ tối đa 80 món, kể cả món đang mặc. Kho đầy thì món mới tự phân giải ra sắt, có báo.
 
 ### Cường hóa, phân giải, lắp tháo

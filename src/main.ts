@@ -9,6 +9,8 @@ import { kiemTen } from './game/mayChu';
 import { coMayChu, ghiMayBiet, mayBiet, nhanGoogle, taiKhoanMay, uidMay, type GoogleVe } from './mang/cauHinh';
 import { leaveBattlefield, markBaiHinted, needsBaiHint, retreat, startStage, unitAllowed } from './game/campaign';
 import { forgeArms } from './game/binhKhi';
+import { cuongHoa, khoaDo, macDo, phanGiai, phanGiaiLoat, thaoDo } from './game/trangBi';
+import { monTen } from './ui/trangBi';
 import { autoGuard, fieldCap, fitArmy, setGuard } from './game/doanhTrai';
 import { markNuHinted, nextNuHint } from './game/nuTuong';
 import { forgeNoThan, inChapter3, wallRings } from './game/coLoa';
@@ -348,6 +350,13 @@ async function start(): Promise<void> {
     hud.toast(vi.ui.cayDaHint, false, 8000);
   };
 
+  /** Lần đầu có món đồ: Lạc hầu gợi ý một lần việc mặc đồ cho tướng. */
+  const showDoHint = () => {
+    if (!state.trangBi.kho.length || state.hinted.includes('trangBi')) return;
+    state.hinted = [...state.hinted, 'trangBi'];
+    hud.toast(vi.trangBi.hint, false, 8000);
+  };
+
   /** Lần đầu có công trình làm ra chưa đủ vì xa kho: Lạc hầu gợi ý một lần việc gánh hàng, trải đường. */
   const showGanhHint = () => {
     if (!needsGanhHint(state)) return;
@@ -396,6 +405,7 @@ async function start(): Promise<void> {
     showHint();
     showNuHint();
     showCayDaHint();
+    showDoHint();
     showGanhHint();
     seenBai();
     save();
@@ -1410,6 +1420,72 @@ async function start(): Promise<void> {
         play('tap');
         hud.showCaoLo(state);
         return;
+
+      case 'openTuong':
+        if (mode.kind !== 'view') exitMode();
+        select(null);
+        play('tap');
+        hud.showTuong(state, a.hero);
+        return;
+
+      case 'macDo': {
+        const m = state.trangBi.kho.find((x) => x.id === a.id);
+        const r = macDo(state, a.id, a.hero);
+        if (!r.ok || !m) return fail(r.ok ? 'khongCoDo' : r.reason);
+        play('tap');
+        hud.toast(vi.trangBi.macToast(monTen(m), vi.ui.heroNames[a.hero]));
+        hud.tuongChanged(state);
+        commit();
+        return;
+      }
+
+      case 'thaoDo': {
+        const m = state.trangBi.kho.find((x) => x.id === a.id);
+        const r = thaoDo(state, a.id);
+        if (!r.ok || !m) return fail(r.ok ? 'khongCoDo' : r.reason);
+        play('tap');
+        hud.toast(vi.trangBi.thaoToast(monTen(m)));
+        hud.tuongChanged(state);
+        commit();
+        return;
+      }
+
+      case 'cuongHoa': {
+        const m = state.trangBi.kho.find((x) => x.id === a.id);
+        const r = cuongHoa(state, a.id);
+        if (!r.ok || !m) return fail(r.ok ? 'khongCoDo' : r.reason);
+        play('upgrade');
+        hud.toast(vi.trangBi.cuongToast(monTen(m), r.value));
+        commit();
+        return;
+      }
+
+      case 'khoaDo': {
+        const r = khoaDo(state, a.id);
+        if (!r.ok) return fail(r.reason);
+        play('tap');
+        commit();
+        return;
+      }
+
+      case 'phanGiai': {
+        const r = phanGiai(state, a.id);
+        if (!r.ok) return fail(r.reason);
+        play('upgrade');
+        hud.toast(vi.trangBi.phanGiaiToast(`${vi.resources.sat.icon} ${r.value}`));
+        hud.tuongChanged(state);
+        commit();
+        return;
+      }
+
+      case 'phanGiaiLoat': {
+        const r = phanGiaiLoat(state, 2);
+        play('upgrade');
+        hud.toast(vi.trangBi.loatToast(r.n, `${vi.resources.sat.icon} ${r.sat}`));
+        hud.tuongChanged(state);
+        commit();
+        return;
+      }
 
       case 'openEnding':
         if (hud.storyOpen || hud.modalOpen) return;
@@ -2541,6 +2617,8 @@ async function start(): Promise<void> {
     select: (id: number | null) => select(id),
     /** Chọn công trình trong bảng Xây dựng như bấm nút Xây (đặt, trải, đắp tường). */
     build: (type: BuildingType) => handle({ kind: 'chooseBuild', type }),
+    /** Mở bảng tướng (trang bị, chỉ số, kho đồ) của tướng `hero`, như bấm nút Trang bị. */
+    tuong: (hero?: HeroKind) => handle({ kind: 'openTuong', hero }),
     /** Mở bảng Đất bên kia sông của khoảnh bên kia `id`, như khi chạm vào đất ấy. */
     benKia: (id: number) => {
       select(null);

@@ -45,7 +45,7 @@ import {
 } from './defs';
 import { tuongJoined } from './doanhTrai';
 import { canAfford, gain, pay, troopBonus, type FailReason, type GameState, type Result } from './game';
-import { forgeLevel, giongReady } from './giong';
+import { forgeLevel } from './giong';
 import { roll } from './ngauNhien';
 
 const ok = <T>(value: T): Result<T> => ({ ok: true, value });
@@ -226,8 +226,8 @@ export interface RoiDo {
   sat?: number;
 }
 
-/** Đồ đã mở chưa: Gióng đã về (thành tráng sĩ) thì trận thắng mới rơi đồ. */
-export const doMo = (s: GameState): boolean => giongReady(s);
+/** Đồ đã mở chưa: có tướng đầu tiên về với kinh đô (chơi thường là Gióng thành tráng sĩ) thì trận thắng mới rơi đồ. */
+export const doMo = (s: GameState): boolean => BO_DO.some((b) => tuongJoined(s, BO_CUA[b]));
 
 /** Bộ rơi ra ở nơi `nguon`: phó bản, thử thách theo chương của màn; đồn, giữ kinh đô theo các tướng đã về. */
 export function boRoi(s: GameState, nguon: NguonDo, chuong: Chapter): BoDo[] {
