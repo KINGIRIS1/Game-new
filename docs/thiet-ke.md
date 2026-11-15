@@ -3455,7 +3455,7 @@ Chủ dự án yêu cầu: thêm bộ trang bị riêng cho các tướng và h�
 - **Đồ rơi ngẫu nhiên**, có kho đồ, lắp tháo giữa các tướng (không chọn bộ cố định rèn ★1–★5 của đề xuất đầu).
 - **Bộ riêng, ai mặc cũng được**: mỗi tướng một bộ mang tên truyền thuyết; món nào cũng mặc được cho tướng nào, nhưng hiệu ứng bộ chỉ có khi đúng tướng của bộ mặc.
 - **Sáu chỉ số**: ❤️ Máu, ⚔️ Sức đánh, ⚡ Tốc đánh, ✨ Uy lực kỹ năng, 🛡️ Giáp, ⏱ Hồi kỹ năng.
-- **Không có cấp tướng.**
+- **Không có cấp tướng.** Sau này chủ dự án thêm cấp chung cho mọi tướng, chỉ có tác dụng trong dã ngoại (xem Kế hoạch: dã ngoại); các trận khác vẫn không có cấp.
 - **Rơi ở cả bốn loại trận**: phó bản (kể cả đánh lại), thử thách, đánh đồn, giữ kinh đô.
 - **Cường hóa bằng tài nguyên**; đồ thừa phân giải ra sắt.
 - **Mở khi Gióng về** (code: khi có tướng đầu tiên về, chơi thường là Gióng thành tráng sĩ); phẩm và chỉ số cao hơn mở dần theo chương.
@@ -3618,6 +3618,89 @@ Kỹ năng chưa mở (Nhổ tre trước màn 6, Hiệu triệu trước màn 3
 3. **PR 2** (đã làm, cùng PR #100): Đấu thành tính đồ (bản chụp mang món, máy chủ kiểm món và tự tính chỉ số, tướng giữ thành mặc đồ; xem Code). Gộp chung vì PR #100 cho trận đọc chỉ số đồ của tướng mà máy chủ chưa kiểm phần ấy trong bản chụp: gộp PR #100 trước thì bản chụp sửa tay ghi sẵn số đồ cho tướng sẽ được máy chủ nhận.
 4. **PR 3** (đã làm, cùng PR #100): túi đồ kiểu game nhập vai: 24 ảnh món đồ vẽ sẵn (6 bộ × 4 ô), hình tướng mặc đúng đồ đang đeo, khung hình nhân, túi đồ lưới ảnh khung màu phẩm (xem Giao diện); vũ khí ánh lên khi tướng mặc đủ bốn món bộ mình.
 
+## Kế hoạch: dã ngoại, cấp chung của tướng, treo máy (chủ dự án yêu cầu, chờ duyệt)
+
+Chủ dự án yêu cầu: thêm map dã ngoại để đánh quái kiếm thêm tài nguyên và trang bị, giống các game cày cuốc; một mốc kinh nghiệm, cấp dùng chung cho mọi tướng; người chơi tự chọn tướng đi dã ngoại; có treo máy lúc tắt game. Như các kế hoạch trước, được chỉnh số ±20% theo test; làm xong phần nào thì ghi số cuối cùng của phần ấy.
+
+**Hiện trạng** (khảo sát code):
+- Không có cấp tướng (mục trang bị đã chốt). Tướng mạnh thêm chỉ nhờ đồ (`trangBi.ts`) và nhánh tướng của huân công.
+- Trận chứa tối đa hai tướng (`Battle.hero`, `hero2`; `heroSetups`, `addHero` ở `battle.ts`); ngoài bãi mọi tướng đứng chung một chỗ giữa bãi.
+- Người chơi chỉ chọn tướng ở phó bản chương 2 (Sơn Tinh hay Gióng, `stageHeroes`); còn lại tướng theo chương (`heroesFor` ở `son.ts`).
+- Lúc vắng (`applyOffline`) chỉ có sản xuất 50% tối đa 8 giờ, việc xây, chuyến thuyền đảo (`advanceDao`). Chưa có cách tính kết quả trận mà không đánh; đánh trọn một trận ngoài bãi mất 0,1–0,7 giây CPU, không đánh lại được cả 8 giờ vắng.
+
+### Đã chốt (chủ dự án chọn)
+
+- **Cấp chung chỉ có tác dụng trong dã ngoại.** Phó bản, thử thách, đồn, giữ kinh đô, Đấu thành không đổi, nên chuẩn cân bằng và máy chủ giữ nguyên.
+- **Tối đa 3 tướng** mỗi trận dã ngoại; trận đổi sang danh sách tướng cho sau này nới lên 4 dễ.
+- **Chỉ tướng đi**, không mang lính.
+- **Treo máy tích tối đa 8 giờ, không khóa tướng**: tướng đang treo vẫn ra phó bản, giữ kinh đô được.
+
+### Map
+
+- Mở khi có tướng đầu tiên về (như trang bị, `doMo`).
+- Năm vùng theo chương, vùng nào mở khi đã vào chương ấy; mỗi vùng 10 tầng, qua tầng trước mới mở tầng sau.
+
+| Vùng | Nền bãi (`Terrain`, bố cục `baiOf`) | Quái (dáng, chỉ số `ENEMIES` có sẵn) |
+|---|---|---|
+| 1. Rừng Phong Châu | `rung` | giặc Ân, hổ tinh |
+| 2. Đầm Tản Viên | `ngap`, `tanVien` | tôm binh, cá phun nước, cá sấu, thuồng luồng |
+| 3. Đồi Thất Diệu | `thatDieu` | quỷ núi, ma trơi, gà trắng |
+| 4. Cửa sông | `cuaSong` | lính Triệu, thủy binh |
+| 5. Rừng Mê Linh | `langBac`, `camKhe` | quân Hán |
+
+- Mỗi tầng một trận ngoài bãi ba đợt quái (`waves`, `arriveWaves` có sẵn). Tầng 10 có thủ lĩnh (dáng thủ lĩnh có sẵn: đại tướng Ân, Thủy Tinh, Triệu Đà…), máu dày hơn.
+- Máu quái (`hpScale`) tăng theo vùng và tầng, đi cùng cấp chung tăng lên.
+
+### Trận dã ngoại
+
+- Chỉ tướng, không lính, không nữ tướng, không huân công, không phúc lành Đền. Tướng mặc đồ như mọi trận (`ganDo`).
+- Tướng đã về thì chọn được, tối đa 3; Hai Bà tính là hai tướng. Ba tướng dàn ngang bãi.
+- Không xét kiệt sức: tướng đang nghỉ ở phó bản vẫn đi dã ngoại; ngã trong dã ngoại thì chỉ rời trận ấy, không phải nghỉ.
+- Nút **Tự dùng kỹ năng**: kỹ năng hồi xong, có quái trong tầm thì tướng tự dùng (luật tất định).
+- Thắng tầng: kinh nghiệm, của theo vùng (gạo, vỏ ốc, đất đá, sắt, gỗ), một lần rút đồ (nguồn mới `daTang`: thắng lần đầu chắc rơi, đánh lại 50%). Thua không mất gì.
+
+### Cấp chung
+
+- Một cấp và một thanh kinh nghiệm cho mọi tướng (`GameState.daNgoai`: `cap`, `exp`). Trần cấp 50; kinh nghiệm lên cấp sau chừng `100 × cấp^1,5`, chốt khi đo nhịp.
+- Mỗi cấp **+3% máu và sức đánh** cho mọi tướng, chỉ trong trận dã ngoại (cộng lúc dựng trận dã ngoại, không cộng vào `HeroSetup` dùng chung).
+- Kinh nghiệm từ thắng tầng và rương treo máy.
+
+### Treo máy
+
+- Chọn một tầng đã qua và đội tối đa 3 tướng, bấm **Treo máy**. Rương tích theo đồng hồ thật (`lastSeen`): lúc chơi hay lúc tắt game như nhau. Rương đầy sau 8 giờ thì ngừng, bấm **Nhận** mới tích tiếp.
+- Mỗi phút = phần thưởng gốc của tầng × hiệu suất. Hiệu suất = Lực chiến đội (`lucChien` × hệ số cấp chung) so với Lực chiến khuyên dùng của tầng, kẹp 50–100%. Tính bằng công thức, không đánh trận.
+- Cứ 20 phút tích được một lần rút đồ (nguồn mới `daTreo`, phẩm như giữ kinh đô); rút lúc bấm Nhận theo `trangBi.seq`, tải lại bản lưu không ra món khác; kho đầy thì tự phân giải ra sắt.
+- Đổi đội, đổi tầng thì nhận rương cũ trước. Phần tài nguyên giữ vừa phải cho khỏi phá nhịp kinh đô (rà bằng `node scripts/kinh-te.mjs`); người chơi mô phỏng không đi dã ngoại nên nhịp lên Điện không đổi.
+
+### Giao diện, hình
+
+- Chip 🌿 Dã ngoại cạnh 🎖 Huân công, 🏯 Đấu thành trên bản đồ phó bản. Bản đồ: thẻ vùng là nút số như thẻ chương, mỗi vùng 10 nút tầng; tầng đã qua có dấu, tầng đang treo có dấu treo.
+- Bảng tầng: quái, thủ lĩnh, thưởng, Lực chiến khuyên dùng; chọn tướng bằng chip ảnh bán thân; Lực chiến đội và hiệu suất treo; nút Đánh, Treo máy, công tắc Tự dùng kỹ năng.
+- Rương treo: thanh giờ đã tích trên 8 giờ, của, kinh nghiệm, số lần rút đồ, nút Nhận; đồ rơi hiện như bảng kết quả trận (`roiHtml`).
+- Thanh cấp chung ở bảng dã ngoại và dải mỏng dưới hàng chip tướng của bảng tướng.
+- Trong trận: ba thanh máu tướng, tối đa sáu nút kỹ năng xếp hai hàng ở khổ dọc, nút Tự dùng kỹ năng. Bãi dùng nền có sẵn của vùng.
+- Lúc trở lại game, bảng "Bệ hạ đã trở lại" thêm dòng rương dã ngoại đã tích. Lạc hầu báo một lần khi dã ngoại mở.
+
+### Code
+
+- `battle.ts`: `Battle.heroThem?` cho tướng thứ ba trở đi (trường tùy chọn: trận cũ, Đấu thành ra y hệt); `heroSetups` trả cả ba; chỗ đứng dàn ngang khi trên hai tướng; `FieldSetup.daNgoai`, `tuDung`.
+- `son.ts`: tách phần dựng `HeroSetup` theo loại tướng khỏi phần kiểm kiệt sức (`tuongSetup(s, kind)`).
+- `daNgoai.ts` mới: mở vùng, tầng; đánh tầng (`startDaNgoai`, `finishDaNgoai`); kinh nghiệm, cấp; treo máy, tích rương (gọi trong `tick` và `applyOffline`), nhận rương. Số ở `defs.ts` (`DA_VUNG`, `DA_CAP`, `DA_TREO`, `ROI_DO.daTang`, `daTreo`), chữ ở `vi.ts` mục `daNgoai`.
+- Bản lưu 29 (`migrate28to29`; đóng đảo PR 3 gộp trước thì lấy số sau).
+- Giao diện ở `src/ui/daNgoai.ts`; cảnh chụp `da-ngoai`, `da-ngoai-tran`, `da-ngoai-ruong`, `man-vao-ruong`; nặn sẵn quái, tướng của dã ngoại (`nanTruoc`).
+
+### Test
+
+- Trận 3 tướng: ba thanh máu, ba bộ kỹ năng, tự dùng kỹ năng tất định; `tatDinh.test.ts` và đối chiếu Node, Deno, Chromium ra y như cũ.
+- `daNgoai.test.ts`: mốc mở; cấp chỉ cộng trong dã ngoại (phó bản cùng đội ra y như cũ); lên cấp, trần cấp; rương tích đúng giờ, dừng ở 8 giờ, tích lúc vắng bằng lúc chơi; rút đồ lặp lại được, kho đầy thì phân giải; không khóa, không làm tướng kiệt sức; nâng bản lưu 28; độ khó từng vùng (đội đúng chương, đúng cấp khuyên dùng thắng tầng 1; tầng 10 cần đồ và cấp).
+
+### Thứ tự làm
+
+1. **PR 0**: tài liệu (PR nháp, chờ chủ dự án duyệt).
+2. **PR 1**: trận nhiều tướng, tự dùng kỹ năng.
+3. **PR 2**: luật dã ngoại, cấp chung, treo máy, bản lưu 29, test.
+4. **PR 3**: giao diện, hình, chụp kiểm tra.
+
 ## Nhịp chơi và lưu game
 
 - Nhịp chơi lai: mỗi lần mở game là một phiên ra quyết định ngắn.
@@ -3672,4 +3755,5 @@ Kỹ năng chưa mở (Nhổ tre trước màn 6, Hiệu triệu trước màn 3
 23. **Dân gánh hàng về kho** (chủ dự án chọn, đã làm PR 1, 2; xem mục cùng tên): công trình xa nơi nhận làm ra ít hơn, thấp nhất 50%; đường đi cho dân đi nhanh gấp đôi. PR 1 luật, PR 2 dân gánh trên đường, PR 3 tới nơi sản xuất.
 24. **Trang bị rơi ngẫu nhiên và sáu chỉ số tướng** (chủ dự án đã duyệt; xem Kế hoạch cùng tên): đồ rơi ở phó bản, thử thách, đồn, giữ kinh đô; mỗi tướng một bộ mang tên truyền thuyết, ai mặc cũng được, hiệu ứng bộ khi đúng tướng mặc; sáu chỉ số và Lực chiến; cường hóa bằng tài nguyên, phân giải ra sắt; bảng tướng kiểu túi đồ game nhập vai (hình tướng mặc đồ, ảnh món vẽ sẵn), mặc đủ bộ mình thì vũ khí ánh lên; Đấu thành tính đồ (máy chủ kiểm món, tự tính chỉ số). PR 1 luật và bảng, PR 2 Đấu thành, PR 3 hình (đã làm cả ba, cùng PR #100).
 25. **Điện 10 điều quân ra đóng đảo** (chủ dự án đã duyệt; đã làm PR 1, 2: luật, giao diện, hình đồn đảo và thuyền chiến; còn PR 3; xem Kế hoạch cùng tên): thuyền chiến đóng ở bến thuyền khơi cấp 3 chở quân ra đồn Hoàng Sa, đồn Trường Sa; đảo có quân giữ thì ngư trường làm ra thêm, báo sớm và chặn đánh thủy quân Hán; giặc Hán đánh đảo, quân đảo tự đánh, xem lại được.
-26. **Để sau**: nhạc nền.
+26. **Dã ngoại** (chủ dự án yêu cầu, chờ duyệt; xem Kế hoạch cùng tên): map năm vùng theo chương, mỗi vùng 10 tầng đánh quái lấy của và đồ; tự chọn tối đa 3 tướng, chỉ tướng đi; cấp chung cho mọi tướng chỉ có tác dụng trong dã ngoại; treo máy tích rương tối đa 8 giờ, không khóa tướng.
+27. **Để sau**: nhạc nền.
