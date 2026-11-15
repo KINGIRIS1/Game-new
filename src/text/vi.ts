@@ -1118,7 +1118,6 @@ export const vi = {
     loatToast: (n: number, sat: string) => `Phân giải ${n} món, được ${sat}`,
     hint: 'Tướng vừa được một món đồ! Mở ô Tướng 🎖️ để mặc đồ cho tướng; cường hóa đồ ở lò rèn.',
     open: '⚜️ Trang bị',
-    moBang: 'Trang bị tướng',
   },
 
   benKia: {
