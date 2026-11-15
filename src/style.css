@@ -3665,3 +3665,13 @@ body.man-vao-on #hud > * {
 
 /* Cuối bảng tướng: lối sang bảng truyện của từng tướng. */
 .do-links { margin-top: 10px; border-top: 1px dashed var(--line); padding-top: 4px; }
+
+/* Đồ rơi lúc vắng: gộp món giống nhau, mỗi ô một món kèm số lượng. */
+.do-gom { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; margin: 6px 0; max-height: 40vh; overflow-y: auto; }
+.do-gom-o { display: flex; flex-direction: column; align-items: center; width: 64px; gap: 2px; }
+.do-gom-o .do-mini { position: relative; flex: 0 0 48px; width: 48px; height: 48px; }
+.do-gom-o small { font-size: 11px; line-height: 1.15; text-align: center; font-weight: 600; }
+.do-sl {
+  position: absolute; right: -4px; bottom: -4px; padding: 0 4px; border-radius: 8px;
+  background: var(--ink, #2b2118); color: #fff8e8; font-size: 11px; font-style: normal; font-weight: 700; line-height: 16px;
+}

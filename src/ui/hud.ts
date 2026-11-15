@@ -119,7 +119,7 @@ import { armsHtml } from './binhKhi';
 import { advHtml, caoLoHtml } from './coLoa';
 import { buildingName, costHtml, esc, fmt, fmtShort } from './format';
 import { endingHtml, giongHtml, isEnding, storyHtml } from './giong';
-import { newTuongUi, roiHtml, tuongHtml, tuongMo, type AnhTuong, type TuongTab, type TuongUi } from './trangBi';
+import { gomRoiHtml, newTuongUi, roiHtml, tuongHtml, tuongMo, type AnhTuong, type TuongTab, type TuongUi } from './trangBi';
 import { doMo, monO } from '../game/trangBi';
 import { bossCho, canLen, daMo, type DaThuong } from '../game/daNgoai';
 import { tuongDau } from '../game/daNgoaiTran';
@@ -2573,7 +2573,7 @@ export class Hud {
       <div>${vi.ui.offlineBody(formatDuration(ms))}</div>
       <div class="gains">${gains}</div>
       ${built ? `<div>${vi.ui.offlineBuilt(built)}</div>` : ''}
-      ${da?.giet ? `<div class="da-off">${vi.daNgoai.offline(da.giet, Math.round(da.exp))}${da.len ? ` ${vi.daNgoai.offlineLen(cap)}` : ''}${da.mon.length ? ` ${vi.daNgoai.offlineMon(da.mon.length)}` : ''}</div>${da.mon.map((m) => roiHtml({ mon: m })).join('')}` : ''}
+      ${da?.giet ? `<div class="da-off">${vi.daNgoai.offline(da.giet, Math.round(da.exp))}${da.len ? ` ${vi.daNgoai.offlineLen(cap)}` : ''}${da.mon.length ? ` ${vi.daNgoai.offlineMon(da.mon.length)}` : ''}</div>${gomRoiHtml(da.mon)}` : ''}
       <button class="btn bronze">${vi.ui.ok}</button></div>`;
     back.querySelector('button')!.addEventListener('click', () => back.remove());
     this.root.appendChild(back);
