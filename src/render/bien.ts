@@ -5,7 +5,7 @@
 // Tọa độ thế giới: ô (x, z) ở (x − half, z − half) như world.ts (`half` là HALF ở đó).
 
 import * as THREE from 'three';
-import { BAI_CAT, DAO_CHINH, QUAN_DAO, bienDiem, bienDo, daoChinh, daoGoc, onIsland, type QuanDao, type QuanDaoId } from '../game/bien';
+import { BAI_CAT, DAO_CHINH, DON_DAO_W, QUAN_DAO, bienDiem, bienDo, daoChinh, daoGoc, donDaoGoc, inDaoLoi, inDonDao, onIsland, type QuanDao, type QuanDaoId } from '../game/bien';
 import { RIVER_END, RIVER_START } from '../game/map';
 import { vi } from '../text/vi';
 import { makeDolphin, makeWhale } from './caBien';
@@ -304,6 +304,48 @@ function hillNoise(seed: number): (i: number, j: number) => number {
   };
 }
 
+/** Mặt khoảnh đồn đảo (thế giới): bậc 2 của đảo chính. */
+export const DON_DAO_Y = DAO_TOP[2];
+
+const levelCache = new Map<QuanDaoId, Int8Array>();
+
+/**
+ * Bậc từng ô đảo chính (hàng `j` × `DAO_CHINH` + cột `i`; −1 là nước): bãi cát sát nước bậc 0, cát bậc 1, đất cỏ bậc 2,
+ * gò, đỉnh đồi bậc 3, 4 theo nhiễu. Chỗ đồn đảo san bằng bậc 2.
+ */
+function daoLevels(q: QuanDao): Int8Array {
+  const hit = levelCache.get(q.id);
+  if (hit) return hit;
+  const hill = hillNoise(q.seed);
+  const out = new Int8Array(DAO_CHINH * DAO_CHINH).fill(-1);
+  for (const o of daoChinh(q)) {
+    let level = o.bo === 0 ? 0 : o.bo === 1 ? 1 : 2;
+    if (o.bo >= 4 && hill(o.i, o.j) > 0.52) level = 3;
+    if (o.bo >= 7 && hill(o.i, o.j) > 0.62) level = 4;
+    if (inDonDao(q, o.i, o.j)) level = 2;
+    out[o.j * DAO_CHINH + o.i] = level;
+  }
+  levelCache.set(q.id, out);
+  return out;
+}
+
+/** Mặt đất đảo chính quần đảo `q` ở điểm (x, z) theo ô của game (thế giới y); ngoài đất đảo chính là null. */
+export function daoMatY(q: QuanDao, x: number, z: number): number | null {
+  const g = daoGoc(q);
+  const i = Math.floor(x - g.x);
+  const j = Math.floor(z - g.z);
+  if (i < 0 || j < 0 || i >= DAO_CHINH || j >= DAO_CHINH) return null;
+  const level = daoLevels(q)[j * DAO_CHINH + i];
+  return level < 0 ? null : DAO_TOP[level];
+}
+
+/** Chỗ đứng của đồn đảo quần đảo `q` (tọa độ thế giới): giữa khoảnh đồn, trên mặt đất bằng của khoảnh ấy. */
+export function donDaoSpot(q: QuanDao, half: number): THREE.Vector3 {
+  const g = daoGoc(q);
+  const o = donDaoGoc(q);
+  return new THREE.Vector3(g.x + o.i + DON_DAO_W / 2 - half, DON_DAO_Y, g.z + o.j + DON_DAO_W / 2 - half);
+}
+
 /**
  * Đảo chính 20 × 20 ô, đất theo ô như kinh đô: viền bãi cát sát nước, cát lẫn cỏ, đất cỏ bậc 1, gò bậc 2, đỉnh đá bậc 3
  * giữa đảo. Dừa mọc ven bờ nghiêng ra biển, cây phong ba và dừa trong đảo, đá rải bãi cát.
@@ -311,20 +353,22 @@ function hillNoise(seed: number): (i: number, j: number) => number {
 function mainIsland(q: QuanDao, half: number, land: ShapeBuilder, m: ToonModel): void {
   const g = daoGoc(q);
   const rand = seeded(q.seed);
-  const hill = hillNoise(q.seed);
+  const levels = daoLevels(q);
   const cx = q.x - half;
   const cz = q.z - half;
   const bottom = WATER_Y - 0.6;
   for (const o of daoChinh(q)) {
     const x = g.x + o.i + 0.5 - half;
     const z = g.z + o.j + 0.5 - half;
-    let level = o.bo === 0 ? 0 : o.bo === 1 ? 1 : 2;
-    if (o.bo >= 4 && hill(o.i, o.j) > 0.52) level = 3;
-    if (o.bo >= 7 && hill(o.i, o.j) > 0.62) level = 4;
+    const level = levels[o.j * DAO_CHINH + o.i];
+    // Chỗ đồn đảo (`donDaoGoc`) và dưới cầu ván ra bến (`inDaoLoi`): không cây đá.
+    const yard = inDonDao(q, o.i, o.j);
+    const clear = yard || inDaoLoi(q, o.i, o.j);
     const top = DAO_TOP[level];
     const shade = (o.i * 7 + o.j * 13) % 3;
     const color = level === 0 ? C.beachWet : level === 1 ? C.beach : level >= 3 ? HILL[level - 3] : o.bo === 2 ? 0xbcb36e : C.grass[shade];
     land.box(1, top - bottom, 1, color, x, (top + bottom) / 2, z);
+    if (clear) continue;
     const r = rand();
     const y = top;
     if (level === 0) {

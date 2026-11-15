@@ -7,6 +7,8 @@
 // (`lam`, ms ở tốc độ 1), cộng theo thời gian trôi nhân tốc độ tốp, cả lúc mở game lẫn lúc vắng (`applyOffline`).
 
 import { openBridgehead } from './benKia';
+import type { QuanDaoId } from './bien';
+import { benOf, canDon, canThuyen, daoJobId, donCost, donMs, finishDon, finishThuyen } from './dao';
 import {
   BUILDINGS,
   DA_HOI_NHO,
@@ -14,6 +16,7 @@ import {
   RESOURCE_IDS,
   THO_DIEN_TOC,
   THO_TOC,
+  THUYEN_CHIEN,
   XAY_HE_SO,
   XAY_MS,
   XAY_O_MS,
@@ -53,6 +56,10 @@ export interface PhanViec {
   doi?: BuildingType;
   /** Xong thì gắn ụ nỏ lên đoạn thành (áp mẫu kinh đô). */
   uNo?: true;
+  /** Dựng hay nâng một cấp đồn đảo của quần đảo này (`dao.ts`); `id` là mã việc đồn đảo (`daoJobId`, số âm). */
+  dao?: QuanDaoId;
+  /** Đóng thuyền chiến cho quần đảo này ở bến thuyền khơi `id` (`dao.ts`). */
+  thuyen?: QuanDaoId;
   /** Công của phần việc: ms ở tốc độ 1. */
   ms: number;
   /** Của đã trả cho phần việc này, hoàn lại khi hủy lúc chưa xong. */
@@ -258,7 +265,9 @@ const EPS = 1e-6;
 
 /** Đưa phần việc vừa xong vào kinh đô. */
 function finishItem(state: GameState, p: PhanViec): void {
-  if (p.moi) {
+  if (p.dao) finishDon(state, p.dao);
+  else if (p.thuyen) finishThuyen(state, p.thuyen);
+  else if (p.moi) {
     const b = p.moi;
     state.buildings.push(b);
     fillWorkers(state, b);
@@ -495,6 +504,29 @@ export function startBatch(state: GameState, o: PhanViec[]): Result<CongViec | n
   const tho = thoRanh(state);
   if (!tho) return failR('hetTho');
   return okR(newJob(state, tho.id, o));
+}
+
+/** Giao một tốp đóng thuyền chiến cho quần đảo `id` ở bến thuyền khơi của quần đảo ấy: trả của ngay. */
+export function startThuyen(state: GameState, id: QuanDaoId): Result<CongViec> {
+  const check = canThuyen(state, id);
+  if (!check.ok) return check;
+  const tho = thoRanh(state);
+  if (!tho) return failR('hetTho');
+  const gia = { ...THUYEN_CHIEN.cost };
+  pay(state, gia);
+  return okR(newJob(state, tho.id, [{ id: benOf(state, id)!.id, thuyen: id, ms: THUYEN_CHIEN.xayMs, gia }]));
+}
+
+/** Giao một tốp dựng (hay nâng một cấp) đồn đảo quần đảo `id`: trả của ngay, đồn lên cấp khi xong. */
+export function startDon(state: GameState, id: QuanDaoId): Result<CongViec> {
+  const check = canDon(state, id);
+  if (!check.ok) return check;
+  const tho = thoRanh(state);
+  if (!tho) return failR('hetTho');
+  const gia = { ...donCost(state, id)! };
+  const ms = donMs(state, id);
+  pay(state, gia);
+  return okR(newJob(state, tho.id, [{ id: daoJobId(id), dao: id, ms, gia }]));
 }
 
 // ---------- Hủy việc ----------
