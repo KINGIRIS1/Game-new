@@ -2850,6 +2850,8 @@ async function start(): Promise<void> {
     state: () => state,
     /** Bấm qua màn hình vào game, như người chơi bấm Chơi tiếp. */
     enter: () => enter(),
+    /** Hiện bảng chào lúc vào lại game với phần thưởng dã ngoại `da` (để chụp thử). */
+    offline: (ms: number, da?: DaThuong) => hud.showOffline(ms, { gao: 0, voOc: 0, datDa: 0, sat: 0, go: 0 }, 0, da, state.daNgoai.cap),
     tileToScreen: (x: number, z: number) => world.tileToScreen(x, z),
     renderInfo: () => ({ ...world.renderer.info.render }),
     /** Dân gánh hàng: công trình nào có tuyến, ai đang đi, ở ô nào (ganhHang.ts). */

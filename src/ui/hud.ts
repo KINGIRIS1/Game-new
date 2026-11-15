@@ -119,7 +119,7 @@ import { armsHtml } from './binhKhi';
 import { advHtml, caoLoHtml } from './coLoa';
 import { buildingName, costHtml, esc, fmt, fmtShort } from './format';
 import { endingHtml, giongHtml, isEnding, storyHtml } from './giong';
-import { newTuongUi, roiHtml, tuongHtml, tuongMo, type AnhTuong, type TuongTab, type TuongUi } from './trangBi';
+import { gomRoiHtml, newTuongUi, roiHtml, tuongHtml, tuongMo, type AnhTuong, type TuongTab, type TuongUi } from './trangBi';
 import { doMo, monO } from '../game/trangBi';
 import { bossCho, canLen, daMo, type DaThuong } from '../game/daNgoai';
 import { tuongDau } from '../game/daNgoaiTran';
@@ -634,6 +634,12 @@ export class Hud {
         // Chạm lại thẻ đang sáng thì đóng bảng.
         if (this.sheet?.kind === 'build') return this.onAction({ kind: 'closeSheet' });
         return this.onAction({ kind: 'openBuild' });
+      case 'tabTuong': {
+        const st = this.getState();
+        if (!doMo(st)) return this.setPop(this.pop === 'heroes' ? null : 'heroes');
+        if (this.sheet?.kind === 'tuong') return this.onAction({ kind: 'closeSheet' });
+        return this.onAction({ kind: 'openTuong' });
+      }
       case 'openBarracks':
         if (this.barracksOpen(this.getState())) return this.onAction({ kind: 'closeSheet' });
         return this.onAction({ kind: 'openBarracks' });
@@ -1110,7 +1116,8 @@ export class Hud {
       tab({ act: 'openBarracks', icon: '⚔️', label: vi.ui.tabArmy, on: this.barracksOpen(state), off: !cap, badge: cap ? `${troopSpace(state)}/${cap}` : '', title: cap ? vi.ui.troopSpace(troopSpace(state), cap) : '' }) +
       tab({ act: 'openCampaign', icon: '🗺️', label: vi.ui.campaign, on: this.camp !== null, off: countOf(state, 'doanhTrai') === 0 }) +
       tab({ act: 'openBuild', icon: '🔨', label: vi.ui.build, on: this.sheet?.kind === 'build', main: true }) +
-      tab({ act: 'togglePop', pop: 'heroes', icon: '🎖️', label: vi.ui.tabHeroes, on: this.pop === 'heroes', off: !heroes.length, badge: heroes.some((h) => h.mark === '⚔️') ? '⚔️' : '', hot: true }) +
+      // Trang bị đã mở thì thẻ Tướng mở thẳng bảng tướng (trang bị, chỉ số); chưa mở thì danh sách tướng bật lên trên dock.
+      tab({ act: 'tabTuong', icon: '🎖️', label: vi.ui.tabHeroes, on: this.pop === 'heroes' || this.sheet?.kind === 'tuong', off: !heroes.length && !doMo(state), badge: heroes.some((h) => h.mark === '⚔️') ? '⚔️' : '', hot: true }) +
       tab({ act: 'togglePop', pop: 'quest', icon: '📜', label: vi.ui.lacHau, on: this.pop === 'quest', badge: done ? '!' : progress ? `${progress.have}/${progress.need}` : '', hot: done }) +
       `<button class="icon-btn rotate" data-act="rotateView" aria-label="${vi.ui.rotate}" title="${vi.ui.rotate}">⟳</button>`;
     if (dock !== this.dockHtml) {
@@ -1134,14 +1141,13 @@ export class Hud {
           </div></div>`;
       }
     } else if (this.pop === 'heroes') {
-      // Trang bị đã mở thì cuối danh sách có nút mở bảng tướng (trang bị, chỉ số, kho đồ).
-      const gear = doMo(state) ? `<button class="hero-row gear" data-act="openTuong"><span class="ic">⚜️</span><b>${vi.trangBi.moBang}</b><span class="mark">${state.trangBi.kho.length}</span></button>` : '';
+      // Chỉ hiện khi trang bị chưa mở (đã mở thì thẻ Tướng mở thẳng bảng tướng).
       pop = `<div class="pop-card"><h4>🎖️ ${vi.ui.tabHeroes}</h4>${heroes
         .map((h) => {
           const inner = `<span class="ic">${h.icon}</span><b>${h.name}</b><span class="mark">${h.mark}</span>`;
           return h.act ? `<button class="hero-row" data-act="${h.act}" ${h.hero ? `data-hero="${h.hero}"` : ''}>${inner}</button>` : `<div class="hero-row">${inner}</div>`;
         })
-        .join('')}${gear}</div>`;
+        .join('')}</div>`;
     }
     if (pop !== this.popHtml) {
       this.popHtml = pop;
@@ -1293,6 +1299,13 @@ export class Hud {
   tuongChanged(state: GameState): void {
     this.tuongUi.armed = null;
     if (this.tuongUi.mon !== null && !state.trangBi.kho.some((m) => m.id === this.tuongUi.mon)) this.tuongUi.mon = null;
+  }
+
+  /** Cuối bảng tướng: nút mở bảng truyện của từng tướng (Gióng, Sơn Tinh, An Dương Vương, Cao Lỗ), vì thẻ Tướng ở dock mở thẳng bảng tướng. */
+  private truyenLinks(state: GameState): string {
+    const list = this.heroes(state).filter((h) => h.act !== 'openTuong');
+    if (!list.length) return '';
+    return `<div class="do-links">${list.map((h) => `<button class="hero-row" data-act="${h.act}"><span class="ic">${h.icon}</span><b>${h.name}</b><span class="mark">${h.mark}</span></button>`).join('')}</div>`;
   }
 
   /** Nút mở bảng tướng ở cuối bảng của một tướng (khi trang bị đã mở). */
@@ -1485,7 +1498,7 @@ export class Hud {
       body = caoLoHtml(state) + this.tuongBtn(state, 'caoLo');
     } else if (this.sheet.kind === 'tuong') {
       title = `⚜️ ${vi.trangBi.title}`;
-      body = tuongHtml(state, this.tuongUi, this.anhTuong);
+      body = tuongHtml(state, this.tuongUi, this.anhTuong) + this.truyenLinks(state);
     } else if (this.sheet.kind === 'khoanh') {
       // Đã phát xong thì đóng bảng.
       if (state.khoanh.includes(this.sheet.id)) return this.closeSheet();
@@ -2560,7 +2573,7 @@ export class Hud {
       <div>${vi.ui.offlineBody(formatDuration(ms))}</div>
       <div class="gains">${gains}</div>
       ${built ? `<div>${vi.ui.offlineBuilt(built)}</div>` : ''}
-      ${da?.giet ? `<div class="da-off">${vi.daNgoai.offline(da.giet, Math.round(da.exp))}${da.len ? ` ${vi.daNgoai.offlineLen(cap)}` : ''}${da.mon.length ? ` ${vi.daNgoai.offlineMon(da.mon.length)}` : ''}</div>${da.mon.map((m) => roiHtml({ mon: m })).join('')}` : ''}
+      ${da?.giet ? `<div class="da-off">${vi.daNgoai.offline(da.giet, Math.round(da.exp))}${da.len ? ` ${vi.daNgoai.offlineLen(cap)}` : ''}${da.mon.length ? ` ${vi.daNgoai.offlineMon(da.mon.length)}` : ''}</div>${gomRoiHtml(da.mon)}` : ''}
       <button class="btn bronze">${vi.ui.ok}</button></div>`;
     back.querySelector('button')!.addEventListener('click', () => back.remove());
     this.root.appendChild(back);

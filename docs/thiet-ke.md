@@ -399,7 +399,7 @@ Chủ dự án muốn có nhiều quân dự trữ: dựng thêm doanh trại, m
   - "Vươn vai thành tráng sĩ": Gióng thành tráng sĩ;
   - "Roi sắt gãy": thắng màn 6 lần đầu;
   - "Phù Đổng Thiên Vương": thắng màn 8 lần đầu.
-- **Gióng ở kinh đô**: đứng chầu trong sân Điện, đổi dáng theo mốc gạo: cậu bé lên ba ngồi bệt trên chiếu, thiếu niên đứng ôm bát cơm đầy cạnh chồng bát đã ăn (từ mốc 2), tráng sĩ cưỡi ngựa sắt. Thành tráng sĩ thì về ở doanh trại (xem mục Doanh trại và nơi ở riêng); chưa có doanh trại thì xuống ngựa đứng chầu trong sân Điện; bay về trời rồi thì hiển linh đứng chầu trong sân, cầm tre, có hào quang. Chạm vào Gióng, vào Gióng trong thẻ Tướng trên dock, hoặc nút trong bảng Điện, bảng lò rèn, để mở bảng Gióng.
+- **Gióng ở kinh đô**: đứng chầu trong sân Điện, đổi dáng theo mốc gạo: cậu bé lên ba ngồi bệt trên chiếu, thiếu niên đứng ôm bát cơm đầy cạnh chồng bát đã ăn (từ mốc 2), tráng sĩ cưỡi ngựa sắt. Thành tráng sĩ thì về ở doanh trại (xem mục Doanh trại và nơi ở riêng); chưa có doanh trại thì xuống ngựa đứng chầu trong sân Điện; bay về trời rồi thì hiển linh đứng chầu trong sân, cầm tre, có hào quang. Chạm vào Gióng, vào Gióng trong thẻ Tướng trên dock (cuối bảng tướng khi trang bị đã mở), hoặc nút trong bảng Điện, bảng lò rèn, để mở bảng Gióng.
 - **Dáng Gióng** (`makeGiong` trong `src/render/models.ts`): to hơn hẳn lính thường để nhận ra ngay.
   - Tráng sĩ (thiết kế lại, bỏ nét lính La Mã của bản cũ: mũ vòm, áo choàng đỏ, gai vai): trai làng tay trần, chân trần, mặt trẻ có má hồng; giáp sắt lá vảy viền vàng, hộ tâm mặt trống đồng; khố đỏ hoa văn, đai lưng đỏ buông hai dải sau lưng; mũ sắt vành đồng hoa văn có che gáy, trên vành dựng miện lá sắt khảm đỏ son, nan vàng (xem Miện lá ở mục Phong cách); giơ cao roi sắt bảy đốt (hay cây tre khi roi đã gãy). Người cỡ 1,5 (bản cũ 1,3).
   - Ngựa sắt to hơn ngựa thường (cỡ 1,22, ngực nở, chân to): thân sắt nung sẫm, khe lò lửa hai bên sườn; giáp sắt sáng viền vàng che vai và mông, ống chân bọc sắt, móng đồng; ngực đeo mặt trống đồng; mặt nạ đồng vàng có mặt trời trống đồng trên trán; tấm phủ yên đỏ hoa văn. Bờm, đuôi, lửa sau cổ chân là lưỡi lửa hình giọt; mắt, bờm, đuôi và lửa phun từ mõm tự sáng, không bị bóng đổ làm tối. Tượng ngựa sắt ở Đền Phù Đổng cùng dáng, giữ cỡ 1.
@@ -535,7 +535,7 @@ Vòng khắc chế của quân ta giữ nguyên: giáo binh thắng quân nặng
 
 ### Lễ vật và Sơn Tinh
 
-- Chạm vào Sơn Tinh (lúc cầu hôn đứng trên mỏm đá trong sân Điện, rước Mị Nương rồi thì ở doanh trại, về núi rồi thì hiển linh đứng chầu trong sân Điện), vào Sơn Tinh trong thẻ Tướng trên dock, hoặc nút trong bảng Điện, bảng doanh trại, để mở bảng Sơn Tinh.
+- Chạm vào Sơn Tinh (lúc cầu hôn đứng trên mỏm đá trong sân Điện, rước Mị Nương rồi thì ở doanh trại, về núi rồi thì hiển linh đứng chầu trong sân Điện), vào Sơn Tinh trong thẻ Tướng trên dock (cuối bảng tướng khi trang bị đã mở), hoặc nút trong bảng Điện, bảng doanh trại, để mở bảng Sơn Tinh.
 
   | Lễ vật | Lấy ở đâu |
   |---|---|
@@ -659,7 +659,7 @@ Chủ dự án đã chốt:
 
 ### An Dương Vương và nỏ thần
 
-- Chạm vào An Dương Vương đứng chầu trong sân Điện, vào An Dương Vương trong thẻ Tướng trên dock, hoặc nút trong bảng Điện, để mở bảng An Dương Vương: số vòng thành, ba bước để có nỏ thần, nút chế nỏ, kỹ năng.
+- Chạm vào An Dương Vương đứng chầu trong sân Điện, vào An Dương Vương trong thẻ Tướng trên dock (cuối bảng tướng khi trang bị đã mở), hoặc nút trong bảng Điện, để mở bảng An Dương Vương: số vòng thành, ba bước để có nỏ thần, nút chế nỏ, kỹ năng.
 - **Chế nỏ thần** (Cao Lỗ lấy vuốt Rùa Vàng làm lẫy) cần:
   - đã diệt yêu tinh (thắng màn 19);
   - thành Cổ Loa đủ **3 vòng** quanh Điện lúc chế;
@@ -732,7 +732,7 @@ Chủ dự án đã chốt:
 - **Báo trước khi xuất quân** (thẻ màn và bảng xếp quân), bằng dòng đỏ:
   - tướng lẽ ra ra trận đang kiệt sức: còn bao nhiêu giây, và ai ra thay hay trận này không có tướng. Vẫn cho xuất quân;
   - Đền Phù Đổng đang hư: quân ta mất 10% máu và sức đánh.
-- Trong thẻ Tướng trên dock, tướng nghỉ thì ghi 💤, kể cả khi Gióng đã về trời hay Sơn Tinh đã về núi (lúc khỏe thì tướng đã đi không còn trong danh sách).
+- Trong thẻ Tướng trên dock (trang bị đã mở thì ở cuối bảng tướng), tướng nghỉ thì ghi 💤, kể cả khi Gióng đã về trời hay Sơn Tinh đã về núi (lúc khỏe thì tướng đã đi không còn trong danh sách).
 
 ## Kế hoạch: kinh đô lớn tiếp và Hội Tết (đã chốt, đã làm)
 
@@ -3576,7 +3576,7 @@ Kỹ năng chưa mở (Nhổ tre trước màn 6, Hiệu triệu trước màn 3
 
 ### Giao diện
 
-- **Bảng tướng** kiểu túi đồ game nhập vai (chủ dự án chọn: hình tướng mặc đúng đồ đang đeo, món đồ là mô hình 3D chụp sẵn thành ảnh, một ảnh mỗi món, giữ bốn ô; **đã làm**). Mở từ ô Tướng ở dock (Hai Bà lần đầu có bảng), thẻ Tướng ở doanh trại và nút Trang bị ở bảng từng tướng. Bảng cao như bảng Xây dựng, vẽ lại thì giữ chỗ đã cuộn.
+- **Bảng tướng** kiểu túi đồ game nhập vai (chủ dự án chọn: hình tướng mặc đúng đồ đang đeo, món đồ là mô hình 3D chụp sẵn thành ảnh, một ảnh mỗi món, giữ bốn ô; **đã làm**). Mở từ ô Tướng ở dock: trang bị đã mở thì chạm ô Tướng vào thẳng bảng tướng (chạm lần nữa thì đóng), cuối bảng có nút sang bảng truyện của Gióng, Sơn Tinh, An Dương Vương, Cao Lỗ kèm dấu ⚔️/💤; trang bị chưa mở thì vẫn bật danh sách tướng trên dock (Hai Bà lần đầu có bảng), thẻ Tướng ở doanh trại và nút Trang bị ở bảng từng tướng. Bảng cao như bảng Xây dựng, vẽ lại thì giữ chỗ đã cuộn.
   - Trên cùng là hàng chip tướng đã về: ảnh bán thân tròn (đầu, vai, đồ trên đầu đang đội), tên, Lực chiến.
   - Hai thẻ: **Túi đồ** (gộp thẻ Trang bị và Kho đồ cũ) và **Chỉ số**.
   - **Khung hình nhân**: nền đồng có mặt trời trống đồng mờ, viền kép. Giữa là hình tướng mặc đúng các món đang đeo; bên trái ô Vũ khí, Phục sức; bên phải ô Giáp, Bảo vật; dưới là bảng tên và Lực chiến. Ô có đồ hiện ảnh món trong khung màu phẩm kèm +cường hóa; ô trống vẽ hình bóng nét mực (gươm, áo giáp, miện lá, ngọc), không dùng biểu tượng chữ. Chạm một ô thì túi lọc theo ô ấy và chọn sẵn món đang mặc; chạm lần nữa thì bỏ lọc.
@@ -3660,7 +3660,7 @@ Chủ dự án yêu cầu: thêm dã ngoại để đánh quái kiếm thêm tà
 - Tướng hồi 4% máu mỗi giây khi 4 giây không bị đánh; ngã thì 3 giây yên mới đứng dậy với nửa máu; cả đội ngã thì 3 giây sau về trại đủ máu (`DA_TUONG`). Tự đánh dừng nghỉ khi máu đội dưới 40% mà không có quái đuổi, hồi tới 90% mới đánh tiếp (Tự đánh không ngừng thì tướng không bao giờ hồi máu). Kỹ năng vùng chỉ tính quái quanh tướng 9 ô.
 - Treo máy: số quái hạ mỗi phút = `12 × min(1, max(0,1; √(sức đội / 40)))`, sức đội là (sát thương mỗi giây × máu) của đội chia cho của một con quái khu (`tiSuc`, `nhipTreo`, `DA_TREO`); boss không tính. Test canh treo ra trong khoảng ×0,5–1,3 so với đánh thật cùng khu.
 - Ở kinh đô chọn map ra được (như đi xe ngựa tới trại): chỉ map đã tới bằng cổng và đủ cấp (`chonMap`).
-- Giao diện: chip 🌿 Dã ngoại trên bản đồ phó bản mở bảng (cấp chung, chọn đội, năm map có giờ boss, treo máy, Ra dã ngoại hay Xem đội, Gọi đội về, Tự đánh); nửa trái là bản đồ map (khu có số, trại, cổng, khu boss mờ khi boss chưa mọc). Trên map: thanh trên ghi map, khu và cấp quái khu, cấp và thanh kinh nghiệm, máu từng tướng; bản đồ nhỏ góc phải có chấm đội và giờ boss; chữ nổi kinh nghiệm, lên cấp, đồ rơi; nút 🏯 xem kinh đô (đội ở lại treo máy), nút Tự đánh, nút kỹ năng. Kéo cảnh thì camera thôi bám đội, chạm đất hay bật Tự đánh thì bám lại. Đang xem map thì giặc không tới kinh đô (như Đấu thành). Bảng "Bệ hạ đã trở lại" thêm dòng dã ngoại và các món rơi; Lạc hầu báo một lần khi dã ngoại mở.
+- Giao diện: chip 🌿 Dã ngoại trên bản đồ phó bản mở bảng (cấp chung, chọn đội, năm map có giờ boss, treo máy, Ra dã ngoại hay Xem đội, Gọi đội về, Tự đánh); nửa trái là bản đồ map (khu có số, trại, cổng, khu boss mờ khi boss chưa mọc). Trên map: thanh trên ghi map, khu và cấp quái khu, cấp và thanh kinh nghiệm, máu từng tướng; bản đồ nhỏ góc phải có chấm đội và giờ boss; chữ nổi kinh nghiệm, lên cấp, đồ rơi; nút 🏯 xem kinh đô (đội ở lại treo máy), nút Tự đánh, nút kỹ năng. Kéo cảnh thì camera thôi bám đội, chạm đất hay bật Tự đánh thì bám lại. Đang xem map thì giặc không tới kinh đô (như Đấu thành). Bảng "Bệ hạ đã trở lại" thêm dòng dã ngoại và các món rơi (gộp món cùng tên, cùng phẩm, cùng cấp thành một ô ảnh kèm số lượng ×n, phẩm cao trước, không kể từng món; `gomRoiHtml` ở `ui/trangBi.ts`); Lạc hầu báo một lần khi dã ngoại mở.
 
 ### Năm map
 

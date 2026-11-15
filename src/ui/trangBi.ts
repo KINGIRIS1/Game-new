@@ -368,6 +368,28 @@ export function roiHtml(r: { mon: Mon; sat?: number } | undefined): string {
   return `<div class="do-roi"><span class="do-mini do-frame pham-${m.pham}">${monImg(m)}</span><span>${vi.trangBi.roi}: ${name}${r.sat ? ` · ${vi.trangBi.tuPhanGiai(`${vi.resources.sat.icon} ${r.sat}`)}` : ''}</span></div>`;
 }
 
+/**
+ * Nhiều món rơi một lúc (treo máy dã ngoại lúc vắng): gộp món cùng tên, cùng phẩm, cùng cấp làm một ô kèm số lượng,
+ * phẩm cao trước, thay vì kể từng món.
+ */
+export function gomRoiHtml(mons: Mon[]): string {
+  if (!mons.length) return '';
+  const nhom = new Map<string, { m: Mon; n: number }>();
+  for (const m of mons) {
+    const k = `${m.bo}-${m.o}-${m.pham}-${m.cap}`;
+    const g = nhom.get(k);
+    if (g) g.n++;
+    else nhom.set(k, { m, n: 1 });
+  }
+  const list = [...nhom.values()].sort((a, b) => b.m.pham - a.m.pham || b.n - a.n || monTen(a.m).localeCompare(monTen(b.m), 'vi'));
+  return `<div class="do-gom">${list
+    .map(
+      ({ m, n }) =>
+        `<div class="do-gom-o" title="${esc(`${monTen(m)} (${vi.trangBi.pham[m.pham]}, ${vi.trangBi.capNho(m.cap)})`)}"><span class="do-mini do-frame pham-${m.pham}">${monImg(m)}${n > 1 ? `<i class="do-sl">×${n}</i>` : ''}</span><small class="pham-txt-${m.pham}">${esc(monTen(m))}</small></div>`,
+    )
+    .join('')}</div>`;
+}
+
 /** Tướng đầu tiên nên mở bảng: tướng được chọn nếu đã về, không thì tướng đầu đã về. */
 export function tuongMo(s: GameState, hero?: HeroKind): HeroKind {
   const list = tuongDo(s);
