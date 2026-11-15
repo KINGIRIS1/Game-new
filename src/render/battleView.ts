@@ -699,7 +699,7 @@ export class BattleView {
         continue;
       }
       if (f.kind === 'sonTinh') {
-        for (const c of obj.children) if (c.userData.halo) c.rotation.z = this.time * 0.6;
+        spinHalo(obj, this.time);
         if (battle.sonWin && battle.outcome === 'win') {
           // Thủy Tinh rút quân: núi Tản Viên dâng cao dưới chân Sơn Tinh.
           view.rise += dt;
@@ -716,7 +716,7 @@ export class BattleView {
         }
       }
       if (f.kind === 'anDuong') {
-        for (const c of obj.children) if (c.userData.halo) c.rotation.z = this.time * 0.6;
+        spinHalo(obj, this.time);
         if (battle.advWin && battle.outcome === 'win') {
           // Triệu Đà thua chạy: Rùa Vàng khổng lồ trồi lên, nâng An Dương Vương lên cao, nỏ thần chĩa lên trời.
           view.rise += dt;
@@ -745,7 +745,7 @@ export class BattleView {
         view.lift = (view.lift ?? 0) + (goal - (view.lift ?? 0)) * Math.min(1, dt * 14);
       }
       if (f.kind === 'caoLo') {
-        for (const c of obj.children) if (c.userData.halo) c.rotation.z = this.time * 0.6;
+        spinHalo(obj, this.time);
         // Nỏ liên châu và tù và Lệnh bắn: tư thế chạy theo thời gian còn lại (0 → 1).
         view.volley = Math.max(0, view.volley - dt);
         view.lift = view.volley > 0 ? 1 - view.volley / VOLLEY_AIM : undefined;
@@ -758,7 +758,7 @@ export class BattleView {
         }
       }
       if (f.kind === 'giong') {
-        for (const c of obj.children) if (c.userData.halo) c.rotation.z = this.time * 0.6;
+        spinHalo(obj, this.time);
         if (battle.ascend && battle.outcome === 'win') {
           // Phá xong giặc, Gióng cưỡi ngựa phi bay lên trời.
           view.rise += dt;
@@ -785,7 +785,7 @@ export class BattleView {
         }
       }
       if (isHaiBa(f.kind)) {
-        for (const c of obj.children) if (c.userData.halo) c.rotation.z = this.time * 0.6;
+        spinHalo(obj, this.time);
         if (battle.outcome === 'win') {
           // Thắng trận: Trưng Trắc giơ gươm, Trưng Nhị phất cờ, hai voi giơ vòi. Thắng màn 40 thì hai bà quay nhìn về
           // phía sông Hát.
@@ -1753,4 +1753,9 @@ export class BattleView {
       }
     }
   }
+}
+
+/** Xoay hào quang của tướng hiển linh theo tốc độ riêng mỗi kiểu (`userData.halo`, rad/giây; 0 thì đứng yên). */
+function spinHalo(obj: THREE.Object3D, time: number): void {
+  for (const c of obj.children) if (typeof c.userData.halo === 'number' && c.userData.halo) c.rotation.z = time * c.userData.halo;
 }

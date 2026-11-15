@@ -226,6 +226,17 @@ export const NHOM: Record<string, Entry[]> = {
     { ten: 'Quỷ núi', tao: () => makeMonster('quyNui'), co: 1.0, cach: 0.9 },
     { ten: 'Ma trơi', tao: () => makeMonster('maTroi') },
   ],
+  hao: [
+    { ten: 'Phù Đổng Thiên Vương: mặt trời lửa', tao: () => makeGiong('trangSi', { bamboo: true, glow: true, onFoot: true }), co: 1.6, cach: 1.25 },
+    { ten: 'Sơn Tinh: núi mây', tao: () => makeSonTinh({ glow: true }), co: 1.4, cach: 1.2 },
+    { ten: 'An Dương Vương: mai Rùa Vàng', tao: () => makeAnDuong({ crossbow: true, glow: true }), co: 1.4, cach: 1.2 },
+    { ten: 'Cao Lỗ: vòng tên nỏ', tao: () => makeCaoLo({ glow: true }), co: 1.4, cach: 1.2 },
+    { ten: 'Trưng Trắc: trống đồng đỏ', tao: () => makeTrungTrac({ glow: true, onFoot: true }), co: 1.6, cach: 1.25 },
+    { ten: 'Trưng Nhị: trống đồng vàng', tao: () => makeTrungNhi({ glow: true, onFoot: true }), co: 1.6, cach: 1.25 },
+    { ten: 'Trưng Trắc cưỡi voi (hiển linh)', tao: () => makeTrungTrac({ glow: true }), co: 2.3, cach: 2.1 },
+    { ten: 'Lê Chân: búp lá', tao: () => makeNuTuong('leChan', { glow: true }), co: 1.75, cach: 1.15, cot: NU_COT.slice(0, 1) },
+    { ten: 'Bát Nàn: búp lá', tao: () => makeNuTuong('batNan', { glow: true }), co: 1.75, cach: 1.15, cot: NU_COT.slice(0, 1) },
+  ],
   tuong: [
     { ten: 'Gióng lên ba', tao: () => makeGiong('be'), co: 0.7 },
     { ten: 'Gióng thiếu niên', tao: () => makeGiong('thieuNien'), co: 0.9 },

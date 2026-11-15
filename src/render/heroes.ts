@@ -148,40 +148,166 @@ function bupLa(h: HumanRig, inlay: number, rank: 1 | 2): void {
   });
 }
 
-/** Hào quang Phù Đổng Thiên Vương: vòng nhật nguyệt kép có 8 nan hoa và 16 tia như mặt trời trống đồng. Tâm ở gốc, mặt hướng +z. */
-function halo(): THREE.Group {
-  const m = new ToonModel(inkThin);
+/**
+ * Kiểu hào quang của tướng hiển linh, mỗi tướng một kiểu hợp truyện:
+ * - `lua`: Phù Đổng Thiên Vương, mặt trời lửa: vòng nhật nguyệt kép, 8 nan hoa, tia nắng xen lưỡi lửa uốn.
+ * - `nui`: Sơn Tinh, vòng ngọc bích có dãy núi xanh chóp tuyết ở nửa trên và mây trắng cuộn ở nửa dưới; đứng yên.
+ * - `kimQuy`: An Dương Vương, vòng mai Rùa Vàng: mười hai vảy lục giác vàng xen màu, sáu mũi nỏ thần chĩa ra.
+ * - `no`: Cao Lỗ, vòng đồng có mười hai mũi tên nỏ liên châu chĩa ra, xoay nhanh.
+ * - `trongDo`, `trongVang`: Hai Bà, mặt trống đồng (sao nhiều cánh, vòng tia) có bốn chim Lạc bay vòng; Trưng Trắc đỏ, Trưng Nhị vàng.
+ * - `la`: nữ tướng, vòng búp lá theo màu áo (`mau`), nhỏ hơn.
+ * Tâm ở gốc, mặt hướng +z. `userData.halo` là tốc độ xoay (rad/giây); 0 thì không xoay.
+ */
+export type KieuHao = 'lua' | 'nui' | 'kimQuy' | 'no' | 'trongDo' | 'trongVang' | 'la';
+
+const HAO_XOAY: Record<KieuHao, number> = { lua: 0.6, nui: 0, kimQuy: 0.25, no: 1.1, trongDo: 0.4, trongVang: 0.4, la: 0.35 };
+
+/** Đặt một khối dẹt (dày theo z) trên vòng bán kính `r`, góc `a`, đầu nhọn chĩa ra ngoài. */
+function quanh(b: ToonModel['glow'], geo: THREE.BufferGeometry, color: number, r: number, a: number, flat = 0.35, scale: [number, number] = [1, 1]): void {
+  b.add(geo, color, Math.cos(a) * r, Math.sin(a) * r, 0, [0, 0, a - Math.PI / 2], [scale[0], scale[1], flat]);
+}
+
+function haoLua(m: ToonModel): void {
   m.glow.add(new THREE.TorusGeometry(0.46, 0.036, 8, 40), C.ember, 0, 0, 0);
   m.glow.add(new THREE.TorusGeometry(0.33, 0.022, 6, 32), C.fire, 0, 0, 0);
   for (let i = 0; i < 8; i++) {
     const a = (i / 8) * Math.PI * 2;
     m.glow.box(0.024, 0.13, 0.02, C.ember, Math.cos(a) * 0.395, Math.sin(a) * 0.395, 0, [0, 0, a - Math.PI / 2]);
   }
-  const rays = 16;
-  for (let i = 0; i < rays; i++) {
-    const a = (i / rays) * Math.PI * 2;
-    const major = i % 2 === 0;
-    const len = major ? 0.24 : 0.14;
-    const r0 = 0.47 + len * 0.46;
-    m.glow.cone(
-      major ? 0.044 : 0.03,
-      len,
-      major ? C.ember : C.fire,
-      Math.cos(a) * r0,
-      Math.sin(a) * r0,
-      0,
-      [0, 0, a - Math.PI / 2],
-      4,
-    );
+  for (let i = 0; i < 16; i++) {
+    const a = (i / 16) * Math.PI * 2;
+    if (i % 2 === 0) {
+      // Tia nắng thẳng.
+      quanh(m.glow, new THREE.ConeGeometry(0.044, 0.24, 4), C.ember, 0.58, a, 1);
+    } else {
+      // Lưỡi lửa: thân phình, chóp uốn theo chiều xoay, lõi vàng.
+      const g = new THREE.SphereGeometry(0.06, 8, 6);
+      quanh(m.glow, g, C.fire, 0.55, a, 0.4, [0.9, 1.7]);
+      quanh(m.glow, new THREE.ConeGeometry(0.04, 0.12, 5), C.fire, 0.66, a + 0.06, 0.5);
+      quanh(m.glow, new THREE.SphereGeometry(0.03, 6, 5), C.ember, 0.54, a, 0.5, [1, 1.6]);
+    }
   }
+}
+
+function haoNui(m: ToonModel): void {
+  m.glow.add(new THREE.TorusGeometry(0.44, 0.032, 8, 40), C.haoNgoc, 0, 0, 0);
+  m.glow.add(new THREE.TorusGeometry(0.34, 0.016, 6, 32), C.haoNui, 0, 0, 0);
+  // Dãy núi nửa trên: đỉnh giữa cao nhất, thấp dần hai bên, chóp tuyết.
+  const peaks = 7;
+  for (let i = 0; i < peaks; i++) {
+    const a = Math.PI * (0.14 + (0.72 * i) / (peaks - 1));
+    const t = 1 - Math.abs(i - (peaks - 1) / 2) / ((peaks - 1) / 2);
+    const h = 0.2 + 0.16 * t;
+    const r0 = 0.44 + h * 0.42;
+    quanh(m.glow, new THREE.ConeGeometry(0.1 + 0.03 * t, h, 4), i % 2 ? C.haoNui : C.haoNgoc, r0, a, 0.3);
+    quanh(m.glow, new THREE.ConeGeometry(0.045 + 0.014 * t, h * 0.34, 4), C.haoTuyet, r0 + h * 0.36, a, 0.36);
+  }
+  // Mây cuộn nửa dưới: mỗi cụm ba cuộn tròn dẹt.
+  for (let i = 0; i < 4; i++) {
+    const a = Math.PI * (1.18 + 0.21 * i);
+    for (const [da, dr, k] of [[-0.09, 0.02, 0.8], [0, 0.06, 1], [0.09, 0.02, 0.8]] as const) {
+      const r = 0.5 + dr;
+      m.glow.add(new THREE.SphereGeometry(0.07 * k, 8, 6), C.haoTuyet, Math.cos(a + da) * r, Math.sin(a + da) * r, 0.01, [0, 0, 0], [1.3, 1, 0.35]);
+    }
+  }
+}
+
+function haoKimQuy(m: ToonModel): void {
+  m.glow.add(new THREE.TorusGeometry(0.56, 0.02, 6, 48), C.ember, 0, 0, 0);
+  m.glow.add(new THREE.TorusGeometry(0.33, 0.02, 6, 32), C.haoVang, 0, 0, 0);
+  // Mười hai vảy mai rùa lục giác, hai màu xen nhau, mỗi vảy có vảy nhỏ sáng ở giữa.
+  for (let i = 0; i < 12; i++) {
+    const a = (i / 12) * Math.PI * 2;
+    const x = Math.cos(a) * 0.445;
+    const y = Math.sin(a) * 0.445;
+    m.glow.add(new THREE.CylinderGeometry(0.095, 0.095, 0.03, 6), i % 2 ? C.haoVang : C.haoVangSam, x, y, 0, [Math.PI / 2, 0, a]);
+    m.glow.add(new THREE.CylinderGeometry(0.045, 0.045, 0.035, 6), C.ember, x, y, 0.005, [Math.PI / 2, 0, a]);
+  }
+  // Sáu mũi nỏ thần chĩa ra giữa các vảy.
+  for (let i = 0; i < 6; i++) {
+    const a = ((i + 0.25) / 6) * Math.PI * 2;
+    quanh(m.glow, new THREE.ConeGeometry(0.05, 0.18, 4), C.ember, 0.66, a, 0.4);
+  }
+}
+
+function haoNo(m: ToonModel): void {
+  m.glow.add(new THREE.TorusGeometry(0.4, 0.034, 8, 40), C.haoDong, 0, 0, 0);
+  m.glow.add(new THREE.TorusGeometry(0.3, 0.016, 6, 32), C.ember, 0, 0, 0);
+  // Mười hai mũi tên nỏ: cán đồng, mũi vàng, đuôi lông hai cánh.
+  for (let i = 0; i < 12; i++) {
+    const a = (i / 12) * Math.PI * 2;
+    const sau = i % 2 ? 0.04 : 0;
+    quanh(m.glow, new THREE.BoxGeometry(0.018, 0.26, 0.018), C.haoDong, 0.5 + sau, a, 1);
+    quanh(m.glow, new THREE.ConeGeometry(0.04, 0.1, 4), C.ember, 0.68 + sau, a, 0.5);
+    for (const s of [-1, 1]) {
+      const b = a + s * 0.05;
+      m.glow.box(0.012, 0.06, 0.012, C.fire, Math.cos(b) * (0.39 + sau), Math.sin(b) * (0.39 + sau), 0, [0, 0, a - Math.PI / 2 - s * 0.5]);
+    }
+  }
+}
+
+function haoTrong(m: ToonModel, vong: number, chim: number): void {
+  // Vành trống: hai vòng, giữa là dải tia ngắn như hoa văn răng lược.
+  m.glow.add(new THREE.TorusGeometry(0.5, 0.03, 8, 44), vong, 0, 0, 0);
+  m.glow.add(new THREE.TorusGeometry(0.4, 0.018, 6, 40), C.ember, 0, 0, 0);
+  for (let i = 0; i < 28; i++) {
+    const a = (i / 28) * Math.PI * 2;
+    m.glow.box(0.012, 0.06, 0.014, vong, Math.cos(a) * 0.45, Math.sin(a) * 0.45, 0, [0, 0, a - Math.PI / 2]);
+  }
+  // Sao giữa mặt trống mười bốn cánh, lộ quanh đầu.
+  m.glow.add(new THREE.TorusGeometry(0.28, 0.014, 6, 32), vong, 0, 0, 0);
+  for (let i = 0; i < 14; i++) quanh(m.glow, new THREE.ConeGeometry(0.03, 0.1, 4), C.ember, 0.33, (i / 14) * Math.PI * 2, 0.5);
+  // Bốn chim Lạc bay vòng ngược chiều kim đồng hồ (theo chiều xoay): mỏ dài, cánh xòe, đuôi.
+  for (let i = 0; i < 4; i++) {
+    const a = (i / 4) * Math.PI * 2 + Math.PI / 4;
+    const r = 0.64;
+    const h = a + Math.PI / 2;
+    const cx = Math.cos(a) * r;
+    const cy = Math.sin(a) * r;
+    const fx = Math.cos(h);
+    const fy = Math.sin(h);
+    m.glow.add(new THREE.SphereGeometry(0.05, 8, 6), chim, cx, cy, 0.01, [0, 0, h], [1.9, 0.75, 0.45]);
+    m.glow.add(new THREE.ConeGeometry(0.018, 0.13, 4), chim, cx + fx * 0.14, cy + fy * 0.14, 0.01, [0, 0, h - Math.PI / 2], [1, 1, 0.5]);
+    m.glow.add(new THREE.SphereGeometry(0.03, 6, 5), chim, cx + fx * 0.07 + Math.cos(a) * 0.03, cy + fy * 0.07 + Math.sin(a) * 0.03, 0.01, [0, 0, 0], [1, 1, 0.5]);
+    // Hai cánh xòe hai bên thân (một cánh ra ngoài vòng, một cánh vào trong), chếch về sau.
+    for (const s of [-1, 1]) {
+      const wx = cx + Math.cos(a) * 0.07 * s - fx * 0.02;
+      const wy = cy + Math.sin(a) * 0.07 * s - fy * 0.02;
+      m.glow.box(0.05, 0.13, 0.014, C.ember, wx, wy, 0.012, [0, 0, a - Math.PI / 2 - s * 0.6]);
+    }
+    m.glow.add(new THREE.ConeGeometry(0.035, 0.1, 4), chim, cx - fx * 0.11, cy - fy * 0.11, 0.01, [0, 0, h + Math.PI / 2], [1, 1, 0.4]);
+  }
+}
+
+function haoLa(m: ToonModel, mau: number): void {
+  const nhat = new THREE.Color(mau).lerp(new THREE.Color(0xffffff), 0.35).getHex();
+  m.glow.add(new THREE.TorusGeometry(0.34, 0.022, 6, 36), C.ember, 0, 0, 0);
+  for (let i = 0; i < 10; i++) {
+    const a = (i / 10) * Math.PI * 2;
+    quanh(m.glow, new THREE.SphereGeometry(0.075, 8, 6), nhat, 0.45, a, 0.35, [0.6, 1.6]);
+    quanh(m.glow, new THREE.ConeGeometry(0.03, 0.09, 4), C.ember, 0.6, a, 0.4);
+    quanh(m.glow, new THREE.SphereGeometry(0.03, 6, 5), C.ember, 0.42, a, 0.4, [0.6, 1.5]);
+  }
+}
+
+function halo(kieu: KieuHao, mau = 0): THREE.Group {
+  const m = new ToonModel(inkThin);
+  if (kieu === 'lua') haoLua(m);
+  else if (kieu === 'nui') haoNui(m);
+  else if (kieu === 'kimQuy') haoKimQuy(m);
+  else if (kieu === 'no') haoNo(m);
+  else if (kieu === 'trongDo') haoTrong(m, C.haoDo, C.ember);
+  else if (kieu === 'trongVang') haoTrong(m, C.ember, C.haoDo);
+  else haoLa(m, mau);
   const g = m.group();
-  g.userData.halo = true;
+  g.userData.halo = HAO_XOAY[kieu];
+  g.userData.haoKieu = kieu;
   return g;
 }
 
-/** Gắn hào quang sau lưng (phần vẽ trận xoay nó). */
-function addHalo(g: THREE.Group, y: number, z: number): void {
-  const ring = halo();
+/** Gắn hào quang kiểu `kieu` sau lưng (phần vẽ trận xoay nó theo `userData.halo`). `mau`: màu áo cho kiểu `la`. */
+function addHalo(g: THREE.Group, kieu: KieuHao, y: number, z: number, mau = 0): void {
+  const ring = halo(kieu, mau);
   ring.position.set(0, y, z);
   g.add(ring);
 }
@@ -685,7 +811,7 @@ export function makeGiong(look: GiongLook, opts: { bamboo?: boolean; glow?: bool
     drawBig(r, [0, 0, 0], K_GIONG, (h) => drawGiongRider(h, opts.bamboo ?? false));
     const shape = r.build();
     const { group, bones } = skinRig(shape);
-    if (opts.glow) addHalo(group, 1.72, -0.44);
+    if (opts.glow) addHalo(group, 'lua', 1.72, -0.44);
     return anhNeu(finish(group, (a) => poseGiongStand(bones as unknown as Human, a)), shape, 'giong', opts.anh);
   }
   const r = new RigBuilder({ ...BASE, ...ironHorse(K_HORSE), ...bigHuman('qBody', GIONG_AT, K_GIONG) });
@@ -712,7 +838,7 @@ export function makeGiong(look: GiongLook, opts: { bamboo?: boolean; glow?: bool
     flameRoot.add(flame);
     flames.push(flame);
   }
-  if (opts.glow) addHalo(group, 2.5, -0.44);
+  if (opts.glow) addHalo(group, 'lua', 2.5, -0.44);
   const out = finish(group, (a) => {
     poseGiongRider(bones as unknown as Human, a);
     const e = a.act === 'fight' && a.strike !== undefined ? Math.sin(Math.PI * a.strike) : 0;
@@ -867,7 +993,7 @@ export function makeSonTinh(opts: { rock?: boolean; glow?: boolean; anh?: boolea
   drawSonAll(r, rock);
   const shape = r.build();
   const { group, bones } = skinRig(shape);
-  if (opts.glow) addHalo(group, (rock ? 0.32 : 0) + 1.5, -0.38);
+  if (opts.glow) addHalo(group, 'nui', (rock ? 0.32 : 0) + 1.5, -0.38);
   return anhNeu(finish(group, (a) => poseSon(bones as unknown as Human, a)), shape, 'sonTinh', opts.anh);
 }
 
@@ -1135,7 +1261,7 @@ export function makeAnDuong(opts: { crossbow?: boolean; glow?: boolean; anh?: bo
   drawBig(r, [0, 0, 0], K_ADV, (h) => drawAdv(h, crossbow));
   const shape = r.build();
   const { group, bones } = skinRig(shape);
-  if (opts.glow) addHalo(group, 1.6, -0.4);
+  if (opts.glow) addHalo(group, 'kimQuy', 1.6, -0.4);
   return anhNeu(finish(group, (a) => poseAdv(bones as unknown as Human, a, crossbow)), shape, 'anDuong', opts.anh);
 }
 
@@ -1299,7 +1425,7 @@ export function makeCaoLo(opts: { glow?: boolean; anh?: boolean } = {}): THREE.G
   drawBig(r, [0, 0, 0], K_CAO, drawCaoLo);
   const shape = r.build();
   const { group, bones } = skinRig(shape);
-  if (opts.glow) addHalo(group, 1.5, -0.38);
+  if (opts.glow) addHalo(group, 'no', 1.5, -0.38);
   return anhNeu(finish(group, (a) => poseCaoLo(bones, a)), shape, 'caoLo', opts.anh);
 }
 
@@ -1526,7 +1652,7 @@ export function makeTrungTrac(opts: { glow?: boolean; onFoot?: boolean; anh?: bo
       ...(opts.anh ? { anh: (g: THREE.Group, shape: RigShape<string>) => batAnh(g, shape, 'trungTrac') } : {}),
     },
   );
-  if (opts.glow) addHalo(group, ...HALO_BA);
+  if (opts.glow) addHalo(group, 'trongDo', ...HALO_BA);
   return group;
 }
 
@@ -1548,7 +1674,7 @@ export function makeTrungNhi(opts: { glow?: boolean; onFoot?: boolean; anh?: boo
       ...(opts.anh ? { anh: (g: THREE.Group, shape: RigShape<string>) => batAnh(g, shape, 'trungNhi') } : {}),
     },
   );
-  if (opts.glow) addHalo(group, ...HALO_BA);
+  if (opts.glow) addHalo(group, 'trongVang', ...HALO_BA);
   return group;
 }
 
@@ -1577,7 +1703,7 @@ function standingBa(draw: (h: HumanRig) => void, kind: 'trungTrac' | 'trungNhi',
     }
     gripHands(b, ARM * K_LAC);
   });
-  if (glow) addHalo(group, 1.5, -0.38);
+  if (glow) addHalo(group, kind === 'trungTrac' ? 'trongDo' : 'trongVang', 1.5, -0.38);
   return anhNeu(group, shape, kind, anh);
 }
 
@@ -2011,7 +2137,7 @@ export function makeNuTuong(kind: NuTuongId, opts: { glow?: boolean } = {}): THR
     look.gear(h, r);
   });
   const { group, bones } = skinRig(r.build());
-  if (opts.glow) addHalo(group, 1.35, -0.45);
+  if (opts.glow) addHalo(group, 'la', 1.35, -0.45, look.cloth);
   return finish(group, (a) => poseNu(bones, a, look));
 }
 
