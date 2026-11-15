@@ -2,7 +2,7 @@
 
 import type { HeroKind } from '../game/battle';
 import type { AdvLook } from '../game/coLoa';
-import type { BoDo, BuildingType, CayDaKind, ChallengeKind, Chapter, ChiSo, ODo, EnemyType, GearId, GiftId, NuTuongId, ResourceId, Row, SkillId, TuongId, UnitType } from '../game/defs';
+import type { BoDo, BuildingType, CayDaKind, ChallengeKind, Chapter, ChiSo, DaMapId, ODo, EnemyType, GearId, GiftId, NuTuongId, ResourceId, Row, SkillId, TuongId, UnitType } from '../game/defs';
 import type { FailReason, StoryId } from '../game/game';
 import type { DangCan, LoaiCham } from '../game/baiChien';
 import type { Bank, Dat, Nghe, Tier } from '../game/benKia';
@@ -1284,6 +1284,67 @@ export const vi = {
     cloudLoaded: 'Đã tải bản lưu trên mây về máy này.',
     cloudSaved: 'Kinh đô ở máy này đã lưu lên mây.',
     cloudNone: 'Tài khoản này chưa có bản lưu trên mây. Vào chơi thì kinh đô ở máy này được lưu lên.',
+  },
+
+  /** Dã ngoại: năm map mở đánh quái lên cấp chung (`game/daNgoai.ts`, `ui/daNgoai.ts`). */
+  daNgoai: {
+    chip: '🌿 Dã ngoại',
+    title: 'Dã ngoại',
+    intro: 'Dẫn tối đa ba tướng ra năm map mở đánh quái: được kinh nghiệm, của và đồ. Cấp chung dùng cho mọi tướng, chỉ có tác dụng ở dã ngoại.',
+    locked: 'Dã ngoại mở khi có tướng đầu tiên về.',
+    hint: '📜 Lạc hầu: Tâu bệ hạ, đã có tướng về, có thể dẫn tướng ra dã ngoại đánh quái lấy kinh nghiệm, của và đồ. Mở bản đồ phó bản, chạm chip 🌿 Dã ngoại.',
+    maps: {
+      1: 'Rừng Phong Châu',
+      2: 'Đầm Tản Viên',
+      3: 'Đồi Thất Diệu',
+      4: 'Cửa sông',
+      5: 'Rừng Mê Linh',
+    } satisfies Record<DaMapId, string>,
+    cap: (n: number) => `Cấp ${n}`,
+    expBar: (cur: number, need: number) => (Number.isFinite(need) ? `${cur}/${need} kinh nghiệm` : 'Cấp tối đa'),
+    capNote: (pct: number) => `Mọi tướng +${pct}% máu, sức đánh ở dã ngoại`,
+    doiTitle: 'Đội (tối đa 3 tướng)',
+    doiNote: 'Tướng đang nghỉ ở phó bản vẫn đi được; ngã ở dã ngoại không phải nghỉ.',
+    mapsTitle: 'Năm map',
+    mapCap: (lo: number, hi: number) => `Quái cấp ${lo}–${hi}`,
+    mapCong: (n: number) => `🔒 Cổng mở ở cấp ${n}`,
+    mapHere: 'Đội đang ở đây',
+    bossCo: (name: string) => `👑 ${name}: đang có`,
+    bossCho: (name: string, t: string) => `👑 ${name}: mọc lại sau ${t}`,
+    treoTitle: 'Treo máy',
+    treoOn: (khu: number, n: number) => `Đội đang treo ở khu ${khu}: chừng ${n} con mỗi phút, cả khi tắt game (tối đa 8 giờ).`,
+    treoOff: 'Đội đứng trong một khu quái, Tự đánh bật thì treo máy được khi về xem kinh đô, cả khi tắt game (tối đa 8 giờ).',
+    treoNone: 'Đội đang ở kinh đô.',
+    vao: '🌿 Ra dã ngoại',
+    xem: '🌿 Xem đội',
+    ve: '🏯 Gọi đội về',
+    note: 'Chạm đất để đi, chạm quái để đánh, chạm cổng để sang map kề. Boss phải tự đánh: Tự đánh và treo máy không nhắm boss. Cả đội ngã thì về trại, không mất gì.',
+    // Trên map
+    banner: (map: string, khu: string) => `🌿 ${map} · ${khu}`,
+    khu: (n: number, lo: number, hi: number) => `Khu ${n} · cấp ${lo}–${hi}`,
+    khuBoss: 'Khu boss',
+    trai: 'Trại',
+    duong: 'Đường đi',
+    tuDanh: '⚔️ Tự đánh',
+    tuDanhTitle: 'Tự tìm quái trong khu đang đứng, tự dùng kỹ năng',
+    nghi: '💤 Nghỉ hồi sức',
+    veXem: '🏯',
+    veXemTitle: 'Xem kinh đô (đội ở lại, vẫn treo máy)',
+    bossLabel: 'Boss',
+    expFloat: (n: number) => `+${n} KN`,
+    lenCap: (n: number) => `⭐ Lên cấp ${n}!`,
+    monFloat: (name: string) => `🎁 ${name}`,
+    satFloat: (n: number) => `⛓️ +${n} sắt (kho đồ đầy)`,
+    toCong: (map: string) => `Sang ${map}`,
+    toKinhDo: 'Về kinh đô',
+    chuaDuCap: (n: number) => `Cổng chưa mở: cần cấp ${n}.`,
+    caDoiNga: 'Cả đội ngã: về trại hồi sức.',
+    bossHa: (name: string) => `Đã hạ ${name}! Mọc lại sau 30 phút.`,
+    // Báo lúc trở lại
+    offline: (giet: number, exp: number) => `🌿 Đội dã ngoại hạ ${giet} con, được ${exp} kinh nghiệm.`,
+    offlineLen: (cap: number) => `⭐ Cấp chung lên ${cap}.`,
+    offlineMon: (n: number) => `🎁 Rơi ${n} món đồ.`,
+    capTuong: (cap: number) => `🌿 Cấp chung ${cap}`,
   },
 
   /**

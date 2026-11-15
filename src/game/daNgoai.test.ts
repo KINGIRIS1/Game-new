@@ -23,6 +23,7 @@ import {
   bossCo,
   canLen,
   capNhatDa,
+  chonMap,
   chuongRoi,
   congExp,
   dangTreo,
@@ -204,6 +205,19 @@ describe('trận trên map', () => {
     expect(quaCong(s, 1).ok).toBe(true);
     expect(quaCong(s, 0)).toEqual({ ok: true, value: 'kinhDo' });
     expect(s.daNgoai.dangO).toBe(false);
+  });
+
+  it('ở kinh đô chọn map ra: chỉ map đã tới, đủ cấp cổng; đổi map thì về trại map mới', () => {
+    const s = base();
+    expect(chonMap(s, 2).ok).toBe(false);
+    s.daNgoai.xa = 2;
+    expect(chonMap(s, 2)).toEqual({ ok: false, reason: 'daChuaDuCap' });
+    s.daNgoai.cap = DA_MAP[2].cong;
+    s.daNgoai.cho = { x: 30, z: 30 };
+    expect(chonMap(s, 2).ok).toBe(true);
+    expect(s.daNgoai.map).toBe(2);
+    expect(s.daNgoai.cho).toBeNull();
+    expect(chonMap(s, 3).ok).toBe(false);
   });
 });
 

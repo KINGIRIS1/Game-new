@@ -2,7 +2,10 @@
 
 import './style.css';
 import { play, setMuted, stopRally, unlockAudio } from './audio/sfx';
-import { skillReady, useSkill, type HeroKind } from './game/battle';
+import { skillReady, useSkill, type Battle, type HeroKind } from './game/battle';
+import { canLen, capNhatDa, chonMap, daMo, datDoi, doiNay, moMap, quaCong, tichTreo, vaoDa, veKinhDo, type DaThuong } from './game/daNgoai';
+import { chamMap, datTuDanh, stepDa, tuongDau } from './game/daNgoaiTran';
+import { boCuc } from './game/daNgoaiMap';
 import { attackFrom, beginPvp, canPractice, decodeSnapshot, encodeSnapshot, lootPvp, makeSnapshot, pushInput, scorePvp, stepPvp, validateArmy, type PvpRun } from './game/dauThanh';
 import { chayXemLai, newDauThanh, nhanKetQua, nhanTranCu, setHoSo, truBiDanh, type BiDanh, type DaNhan, type KetQuaMay, type MayTom, type TranTom } from './game/dauThat';
 import { kiemTen } from './game/mayChu';
@@ -31,7 +34,7 @@ import { inChapter2, offerGift } from './game/son';
 import { buyHuan } from './game/thuThach';
 import { markStory, pendingStory } from './game/story';
 import { footprintTop } from './game/terrain';
-import { BUILDINGS, O_DO, QUIZ_TURNS, RESOURCE_IDS, STAGES, UNIT_TYPES, U_NO, isBridge, isDecor, isRoad, type BuildingType, type Cost, type NuTuongId, type ResourceId, type Row, type SkillId, type UnitType } from './game/defs';
+import { BUILDINGS, DA_MAP, O_DO, QUIZ_TURNS, RESOURCE_IDS, STAGES, UNIT_TYPES, U_NO, isBridge, isDecor, isRoad, type BuildingType, type Cost, type DaMapId, type NuTuongId, type ResourceId, type Row, type SkillId, type UnitType } from './game/defs';
 import { CAMPS, benKiaOpen, bridgeSnap, campHero, campTier, canStartCamp, joinVillage, plotAt, poiAt, sendScout, setGarrison, startCamp } from './game/benKia';
 import type { QuanDaoId } from './game/bien';
 import type { Buoi } from './game/ngayDem';
@@ -382,6 +385,13 @@ async function start(): Promise<void> {
     hud.toast(vi.trangBi.hint, false, 8000);
   };
 
+  /** Dã ngoại vừa mở (có tướng đầu tiên về): Lạc hầu báo một lần chỗ vào (chip 🌿 ở bản đồ phó bản). */
+  const showDaHint = () => {
+    if (!daMo(state) || state.hinted.includes('daNgoai')) return;
+    state.hinted = [...state.hinted, 'daNgoai'];
+    hud.toast(vi.daNgoai.hint, false, 8000);
+  };
+
   /** Lần đầu có công trình làm ra chưa đủ vì xa kho: Lạc hầu gợi ý một lần việc gánh hàng, trải đường. */
   const showGanhHint = () => {
     if (!needsGanhHint(state)) return;
@@ -432,6 +442,7 @@ async function start(): Promise<void> {
     showDaoHint();
     showCayDaHint();
     showDoHint();
+    showDaHint();
     showGanhHint();
     seenBai();
     save();
@@ -451,8 +462,8 @@ async function start(): Promise<void> {
       .map((r) => `${vi.resources[r].icon} +${cost[r]}`)
       .join('  ');
 
-  const showOfflineIfLong = (ms: number, gained: ReturnType<typeof applyOffline>['gained'], built = 0) => {
-    if (ms >= OFFLINE_NOTICE_MS && (built > 0 || RESOURCE_IDS.some((r) => gained[r] >= 1))) hud.showOffline(ms, gained, built);
+  const showOfflineIfLong = (ms: number, gained: ReturnType<typeof applyOffline>['gained'], built = 0, da?: DaThuong) => {
+    if (ms >= OFFLINE_NOTICE_MS && (built > 0 || !!da?.giet || RESOURCE_IDS.some((r) => gained[r] >= 1))) hud.showOffline(ms, gained, built, da, state.daNgoai.cap);
   };
 
   // ---------- Chế độ đặt công trình ----------
@@ -900,7 +911,113 @@ async function start(): Promise<void> {
   let marching: { plot: number; army: Record<UnitType, number>; rows: Record<UnitType, Row>; nu: NuTuongId | null; at: number } | null = null;
   const MARCH_MS = 3200;
 
+  // ---------- Dã ngoại ----------
+
+  /** Trận trên map dã ngoại đang xem (không nằm trong state: mở map thì dựng lại); null là đang ở kinh đô. */
+  let daB: Battle | null = null;
+  /** Thời gian chưa chạy của trận dã ngoại: trận chạy từng bước cố định `DA_DT`. */
+  let daAcc = 0;
+  const DA_DT = 0.05;
+
+  /** Ra map dã ngoại (hay xem lại đội đang treo máy): dựng trận ở chỗ đội đứng. */
+  const moDa = () => {
+    const r = vaoDa(state);
+    if (!r.ok) return fail(r.reason);
+    if (mode.kind !== 'view') exitMode();
+    select(null);
+    hud.closeCampaign();
+    hud.closeSheet();
+    hienDa();
+    play('tap');
+    save();
+  };
+  const hienDa = () => {
+    // Camera còn đang lướt từ màn hình vào game về kinh đô thì thôi, để camera map đứng ngay chỗ đội.
+    drift.done = true;
+    daB = moMap(state);
+    daAcc = 0;
+    world.showDaNgoai(state.daNgoai.map, tuongDau(daB) ?? null);
+    hud.setDa(daB);
+  };
+  /** Thôi xem map: về xem kinh đô (đội ở lại treo máy), hay gọi đội về luôn (`goiVe`). */
+  const roiDa = (goiVe: boolean) => {
+    if (daB) capNhatDa(state, daB);
+    daB = null;
+    world.showDaNgoai(null);
+    hud.setDa(null);
+    if (goiVe) veKinhDo(state);
+    commit();
+  };
+  /** Chữ nổi ở điểm (x, z) trên map. */
+  const daNoi = (text: string, x: number, z: number, tone: 'exp' | 'len' | 'mon', lift = 1.8) => {
+    const p = world.daScreenAt(x, z, lift);
+    if (p) hud.daFloat(text, p.x, p.y, tone);
+  };
+  /** Chạy trận dã ngoại theo khung hình: tính thưởng, chữ nổi, lên cấp, đồ rơi, cả đội ngã, qua cổng. */
+  const stepDaNgoai = (dt: number) => {
+    if (!daB) return;
+    daAcc += dt;
+    while (daB && daAcc >= DA_DT) {
+      daAcc -= DA_DT;
+      const da = daB.da!;
+      const ngaTruoc = da.nga;
+      stepDa(daB, DA_DT);
+      const giet = da.giet.map((g) => ({ ...g }));
+      const r = capNhatDa(state, daB);
+      const th = r.thuong;
+      if (th.giet) {
+        const g = giet[giet.length - 1];
+        daNoi(vi.daNgoai.expFloat(Math.round(th.exp)), g.x, g.z, 'exp');
+        for (const b of giet) if (b.boss) {
+          play('claim');
+          hud.toast(vi.daNgoai.bossHa(vi.enemies[b.kind]));
+        }
+      }
+      const lead = tuongDau(daB);
+      if (th.len && lead) {
+        play('upgrade');
+        daNoi(vi.daNgoai.lenCap(state.daNgoai.cap), lead.x, lead.z, 'len', 2.6);
+        hud.toast(vi.daNgoai.lenCap(state.daNgoai.cap));
+      }
+      for (const m of th.mon) {
+        play('claim');
+        const g = giet[giet.length - 1];
+        daNoi(vi.daNgoai.monFloat(monTen(m)), g?.x ?? lead?.x ?? 0, g?.z ?? lead?.z ?? 0, 'mon', 2.4);
+        hud.toast(`${vi.trangBi.roi}: ${monTen(m)}`);
+      }
+      if (th.satDo && lead) daNoi(vi.daNgoai.satFloat(th.satDo), lead.x, lead.z, 'mon', 2.4);
+      if (th.len || th.mon.length || th.boss) save();
+      if (ngaTruoc === null && da.nga !== null) hud.toast(vi.daNgoai.caDoiNga, true);
+      if (r.chuaDuCap) {
+        play('error');
+        hud.toast(vi.daNgoai.chuaDuCap(r.chuaDuCap), true);
+      }
+      if (r.sang !== null) {
+        const q = quaCong(state, r.sang);
+        if (!q.ok) fail(q.reason);
+        else if (q.value === 'kinhDo') {
+          hud.toast(vi.daNgoai.toKinhDo);
+          roiDa(false);
+        } else {
+          hud.toast(vi.daNgoai.toCong(vi.daNgoai.maps[q.value]));
+          hienDa();
+          save();
+        }
+      }
+    }
+  };
+
   world.view.onTap = (cx, cy) => {
+    // Map dã ngoại: chạm đất để đi, chạm quái để đánh, chạm cổng để sang map kề.
+    if (world.inDa) {
+      const p = daB ? world.pickDa(cx, cy) : null;
+      if (!daB || !p) return;
+      if (chamMap(daB, p.x, p.z)) {
+        play('tap');
+        world.followDa();
+      }
+      return;
+    }
     // Trên bãi chiến chỉ xem, không chọn gì; đang hành quân, đang Đấu thành cũng vậy.
     if (world.inField || marching || pvp) return;
     const hero: string | null = mode.kind === 'view' ? world.pickHero(cx, cy) : null;
@@ -1987,10 +2104,61 @@ async function start(): Promise<void> {
           navigator.vibrate?.(a.skill === 'trongTran' ? 30 : 60);
           return;
         }
+        if (daB) {
+          // Map dã ngoại: trận không nằm trong state, không phải vẽ lại kinh đô.
+          if (!useSkill(daB, a.skill)) return;
+          play('claim');
+          navigator.vibrate?.(60);
+          return;
+        }
         const battle = state.campaign.battle ?? (state.raid.phase === 'battle' ? state.raid.battle : null);
         if (!battle || !useSkill(battle, a.skill)) return;
         play(a.skill === 'trongTran' ? 'trongTran' : 'claim');
         navigator.vibrate?.(a.skill === 'trongTran' ? 30 : 60);
+        commit();
+        return;
+      }
+
+      case 'daDoi': {
+        // Chạm chip tướng: thêm vào đội hay bỏ ra (đội còn ít nhất một tướng).
+        const doi = doiNay(state);
+        const next = doi.includes(a.hero) ? doi.filter((k) => k !== a.hero) : [...doi, a.hero];
+        if (!next.length) return;
+        const r = datDoi(state, next);
+        if (!r.ok) return fail(r.reason);
+        play('tap');
+        commit();
+        return;
+      }
+
+      case 'daMap': {
+        const r = chonMap(state, a.map);
+        if (!r.ok) return fail(r.reason);
+        play('tap');
+        commit();
+        return;
+      }
+
+      case 'daVao':
+        moDa();
+        return;
+
+      case 'daVe':
+        veKinhDo(state);
+        play('tap');
+        commit();
+        return;
+
+      case 'daTuDanh': {
+        const on = !(daB?.da?.tuDanh ?? state.daNgoai.tuDanh);
+        state.daNgoai.tuDanh = on;
+        play('tap');
+        if (daB) {
+          datTuDanh(daB, on);
+          hud.updateField(state);
+          if (on) world.followDa();
+          return;
+        }
         commit();
         return;
       }
@@ -2026,6 +2194,12 @@ async function start(): Promise<void> {
         return;
 
       case 'retreat':
+        if (daB) {
+          // Map dã ngoại: nút cờ là nút xem kinh đô, đội ở lại treo máy.
+          play('tap');
+          roiDa(false);
+          return;
+        }
         if (pvp?.xem) {
           // Đang xem lại: nút cờ là nút thoát.
           handle({ kind: 'dauHome' });
@@ -2339,7 +2513,7 @@ async function start(): Promise<void> {
     showHint();
     commit();
     watchXay(true);
-    showOfflineIfLong(offline.ms, offline.gained, offline.built);
+    showOfflineIfLong(offline.ms, offline.gained, offline.built, offline.da);
     if (state.raid.lastResult) hud.showRaidResult(state, state.raid.lastResult);
     preloadThumbs();
     preloadMon();
@@ -2463,7 +2637,7 @@ async function start(): Promise<void> {
       hud.closeCampaign();
       const don = battle.camp !== undefined ? campTier(battle.camp) : null;
       world.showField(don ? CAMPS[don].terrain : STAGES[battle.wave - 1].terrain, battle.bai ?? null);
-    } else if (!battle && world.inField) {
+    } else if (!battle && world.inField && !world.inDa) {
       world.showField(null);
       hud.closeStageResult();
     }
@@ -2536,12 +2710,14 @@ async function start(): Promise<void> {
     const gap = wall - state.lastSeen;
     if (gap > GAP_AS_OFFLINE_MS) {
       const off = applyOffline(state, wall);
-      showOfflineIfLong(off.ms, off.gained, off.built);
+      showOfflineIfLong(off.ms, off.gained, off.built, off.da);
       commit();
       watchXay(true);
     } else {
-      // Đang Đấu thành: kinh tế vẫn chạy, đồng hồ giặc đứng lại.
-      tick(state, gap, !!pvp);
+      // Đang Đấu thành, đang xem map dã ngoại: kinh tế vẫn chạy, đồng hồ giặc đứng lại.
+      tick(state, gap, !!pvp || !!daB);
+      // Đội ở dã ngoại mà không xem map: treo máy (lúc tắt game thì `applyOffline` tính).
+      if (!daB) tichTreo(state, gap);
       state.lastSeen = wall;
     }
     // Trận Đấu thành chạy theo khung hình (đã chặn 0,1 giây), chỉ trọn bước; ẩn tab thì trận dừng.
@@ -2560,6 +2736,8 @@ async function start(): Promise<void> {
     world.updateBattle(pvp ? pvp.run.battle : state.raid.battle, dt);
     watchCampaign();
     world.updateField(state.campaign.battle, dt);
+    stepDaNgoai(dt);
+    world.updateDa(daB, dt);
     world.update(dt);
     hud.xayLabels.update(state, (x, z, lift) => (world.inField ? null : world.screenAt(x, z, lift)));
     watchRaid();
@@ -2712,6 +2890,26 @@ async function start(): Promise<void> {
     },
     /** Mở bảng quần đảo `id` như khi chạm vào đảo. */
     quanDao: (id: QuanDaoId) => hud.showQuanDao(state, id),
+    /**
+     * Ra map dã ngoại `map`, đội đứng ở mép khu `khu` (−1 là trại), cấp chung `cap` (bỏ trống thì cấp đầu của khu):
+     * chụp thử map. Trả trận để đọc.
+     */
+    daNgoai: (map: DaMapId = 1, khu = 0, cap?: number) => {
+      const d = state.daNgoai;
+      d.cap = cap ?? DA_MAP[map].cap[0] + Math.max(0, khu) * 2;
+      d.exp = Math.round(canLen(d.cap) * 0.4);
+      d.xa = Math.max(d.xa, map);
+      d.map = map;
+      const bc = boCuc(map);
+      const k = khu >= 0 ? bc.khu[khu] : null;
+      d.cho = k ? { x: k.x + (bc.trai.x - k.x) * (k.r * 0.5) / Math.hypot(bc.trai.x - k.x, bc.trai.z - k.z), z: k.z + (bc.trai.z - k.z) * (k.r * 0.5) / Math.hypot(bc.trai.x - k.x, bc.trai.z - k.z) } : null;
+      moDa();
+      return daB;
+    },
+    /** Điểm màn hình của điểm (x, z) trên map dã ngoại đang xem (để kiểm hướng bản đồ nhỏ). */
+    daManHinh: (x: number, z: number) => world.daScreenAt(x, z, 0),
+    /** Rời map dã ngoại (về xem kinh đô, đội ở lại). */
+    daRoi: () => roiDa(false),
     /** Đặt đồng hồ cảnh (giây): thuyền khơi, cá voi, cá heo theo đồng hồ này, để chụp thử thuyền đang ở biển. */
     seaTime: (t: number) => world.seekTime(t),
     /**

@@ -24,6 +24,10 @@ import { tetOpen } from '../game/tet';
 import { gioBuoi, troiLuc, type Buoi, type TroiLuc } from '../game/ngayDem';
 import { isBusy, itemProgress, pendingBuildings, pendingOf } from '../game/xay';
 import { Battlefield, CAM_KHE } from './battlefield';
+import { DaNgoaiCanh } from './daNgoai';
+import type { DaMapId } from '../game/defs';
+import type { Diem } from '../game/daNgoaiMap';
+import { tuongDau } from '../game/daNgoaiTran';
 import { BattleView } from './battleView';
 import { IsoCamera, type CamBounds } from './camera';
 import { DOOR_OPEN, banhChung, banhGiay } from './buildings';
@@ -656,6 +660,8 @@ export class World {
   private readonly raidView = new BattleView(this.scene, { x: -HALF, z: -HALF }, 1, (x, z, wet, wall) => this.fighterY(x, z, wet, wall));
   /** Bãi chiến phó bản, dựng khi cần lần đầu. */
   private field?: Battlefield;
+  /** Map dã ngoại đang xem (`showDaNgoai`). */
+  private da?: DaNgoaiCanh;
   /** Nắng có đổ bóng không (Cài đặt Bóng đổ, `setBongDo`). */
   private bongDo = true;
   /** Đang xem bãi chiến: chỗ camera nhìn kinh đô trước đó, để trả về sau trận. */
@@ -741,6 +747,8 @@ export class World {
     this.view = new IsoCamera(canvas);
     this.view.onUserMove = () => {
       this.panGoal = null;
+      // Map dã ngoại: người chơi tự kéo cảnh thì camera thôi bám đội (chạm đất, bật Tự đánh thì bám lại).
+      this.daFollow = false;
     };
     this.view.target.set(wx(DIEN_HOME) + BUILDINGS.dien.w / 2, 0, wz(DIEN_HOME) + BUILDINGS.dien.d / 2);
 
@@ -1064,7 +1072,7 @@ export class World {
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, RESOLUTIONS[this.res]));
     this.renderer.setSize(w, h, false);
     this.view.setSize(w, h);
-    if (this.inField) this.fitField();
+    if (this.inField && !this.da) this.fitField();
   }
 
   /** Xóa mọi thứ đã vẽ theo state cũ, dùng khi nạp mã lưu hoặc chơi lại. */
@@ -1966,6 +1974,7 @@ export class World {
     this.bongDo = on;
     this.lights.sun.castShadow = on;
     this.field?.setShadows(on);
+    this.da?.setShadows(on);
   }
 
   get bongDoOn(): boolean {
@@ -3504,10 +3513,90 @@ export class World {
     v.zoomToFit(FIELD.w + 1.5, FIELD.d * 0.62 + 3);
   }
 
+  /** Đang xem map dã ngoại. */
+  get inDa(): boolean {
+    return !!this.da;
+  }
+
+  /**
+   * Sang map dã ngoại `map` (dựng cảnh, đổi map thì dựng lại), hay về lại kinh đô khi `map` là null. Camera nhìn gần
+   * quanh đội, kéo được khắp map.
+   */
+  showDaNgoai(map: DaMapId | null, tuongDauCho?: Diem | null): void {
+    const v = this.view;
+    if (map) {
+      if (this.da?.map !== map) {
+        this.da?.dispose();
+        this.da = new DaNgoaiCanh(map);
+        this.da.setShadows(this.bongDo);
+      }
+      if (!this.cityCam) this.cityCam = { target: v.target.clone(), zoom: v.zoom, bounds: { ...v.bounds }, facing: v.facing };
+      this.panGoal = null;
+      v.setFacing(0);
+      // Map 80×80 xoay 45° quanh tâm: camera chỉ kéo tới chừng mép map.
+      v.bounds = { min: -46, max: 46 };
+      v.zoom = 1.1;
+      // Hiện ra ngay chỗ đội đứng, không trôi từ kinh đô tới.
+      const lead = tuongDauCho;
+      if (lead) v.target.copy(this.da.toScene(lead.x, lead.z));
+      v.apply();
+      this.daFollow = true;
+      return;
+    }
+    if (this.da) {
+      this.da.dispose();
+      this.da = undefined;
+    }
+    if (!this.cityCam) return;
+    v.bounds = this.cityCam.bounds;
+    v.target.copy(this.cityCam.target);
+    v.zoom = this.cityCam.zoom;
+    v.setFacing(this.cityCam.facing);
+    this.cityCam = null;
+  }
+
+  /** Camera đi theo đội (chạm đất, tự đánh); kéo cảnh (`onUserMove`) thì thôi theo tới khi `followDa`. */
+  private daFollow = true;
+  followDa(): void {
+    this.daFollow = true;
+  }
+
+  /** Vẽ trận trên map dã ngoại; camera trôi theo tướng đầu. */
+  updateDa(battle: Battle | null, dt: number): void {
+    const da = this.da;
+    if (!da) return;
+    const v = this.view;
+    const lead = battle ? tuongDau(battle) : undefined;
+    if (lead && this.daFollow) {
+      const p = da.toScene(lead.x, lead.z);
+      const k = Math.min(1, dt * 3);
+      v.target.x += (p.x - v.target.x) * k;
+      v.target.z += (p.z - v.target.z) * k;
+      v.apply();
+    }
+    da.update(battle, dt, v.target, v.zoom);
+  }
+
+  /** Điểm trên map dã ngoại ở chỗ chạm, hay null. */
+  pickDa(clientX: number, clientY: number): Diem | null {
+    if (!this.da) return null;
+    const p = this.view.groundPoint(clientX, clientY);
+    return p ? this.da.fromScene(p) : null;
+  }
+
+  /** Điểm màn hình (px) của điểm (x, z) trên map dã ngoại, để giao diện đặt chữ nổi. */
+  daScreenAt(x: number, z: number, lift = 1.6): { x: number; y: number } | null {
+    if (!this.da) return null;
+    const p = this.da.toScene(x, z).setY(lift).project(this.view.camera);
+    if (p.z > 1) return null;
+    const r = this.renderer.domElement.getBoundingClientRect();
+    return { x: r.left + ((p.x + 1) / 2) * r.width, y: r.top + ((1 - p.y) / 2) * r.height };
+  }
+
   /** Vẽ trận ngoài bãi đang diễn ra. Cảnh kết chương có điểm nhìn riêng (Rùa Vàng ở biển) thì camera lướt tới đó. */
   updateField(battle: Battle | null, dt: number): void {
     this.field?.update(battle, dt);
-    const focus = this.inField ? this.field?.focus() : null;
+    const focus = this.inField && !this.da ? this.field?.focus() : null;
     if (!focus) return;
     const v = this.view;
     v.bounds = { min: -30, max: 30 };
@@ -3831,7 +3920,7 @@ export class World {
       (this.selection.material as THREE.LineBasicMaterial).opacity = 0.6 + Math.sin(t * 5) * 0.4;
     }
 
-    this.renderer.render(this.inField && this.field ? this.field.scene : this.scene, this.view.camera);
+    this.renderer.render(this.da ? this.da.scene : this.inField && this.field ? this.field.scene : this.scene, this.view.camera);
   }
 
   /**

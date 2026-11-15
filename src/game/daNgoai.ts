@@ -169,6 +169,22 @@ export function vaoDa(s: GameState): Result<void> {
   return ok(undefined);
 }
 
+/**
+ * Ở kinh đô chọn map đội ra (như đi xe ngựa tới trại): chỉ map đã tới (`xa`) và đủ cấp cổng. Đổi map thì đội hiện ra
+ * ở trại map mới, thôi treo máy tới khi đứng vào một khu quái.
+ */
+export function chonMap(s: GameState, id: number): Result<void> {
+  const d = s.daNgoai;
+  if (!DA_MAP_IDS.includes(id as DaMapId) || id > d.xa) return fail('daDoiSai');
+  if (d.cap < DA_MAP[id as DaMapId].cong) return fail('daChuaDuCap');
+  if (d.map !== id) {
+    d.map = id as DaMapId;
+    d.cho = null;
+    d.tichMs = 0;
+  }
+  return ok(undefined);
+}
+
 /** Về kinh đô: đội rời map, thôi treo máy. */
 export function veKinhDo(s: GameState): void {
   s.daNgoai.dangO = false;

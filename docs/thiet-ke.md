@@ -3618,7 +3618,7 @@ Kỹ năng chưa mở (Nhổ tre trước màn 6, Hiệu triệu trước màn 3
 3. **PR 2** (đã làm, cùng PR #100): Đấu thành tính đồ (bản chụp mang món, máy chủ kiểm món và tự tính chỉ số, tướng giữ thành mặc đồ; xem Code). Gộp chung vì PR #100 cho trận đọc chỉ số đồ của tướng mà máy chủ chưa kiểm phần ấy trong bản chụp: gộp PR #100 trước thì bản chụp sửa tay ghi sẵn số đồ cho tướng sẽ được máy chủ nhận.
 4. **PR 3** (đã làm, cùng PR #100): túi đồ kiểu game nhập vai: 24 ảnh món đồ vẽ sẵn (6 bộ × 4 ô), hình tướng mặc đúng đồ đang đeo, khung hình nhân, túi đồ lưới ảnh khung màu phẩm (xem Giao diện); vũ khí ánh lên khi tướng mặc đủ bốn món bộ mình.
 
-## Kế hoạch: dã ngoại, cấp chung của tướng, treo máy (chủ dự án yêu cầu, chờ duyệt)
+## Kế hoạch: dã ngoại, cấp chung của tướng, treo máy (chủ dự án yêu cầu, đã làm)
 
 Chủ dự án yêu cầu: thêm dã ngoại để đánh quái kiếm thêm tài nguyên và trang bị, cày cấp kiểu Võ Lâm 2 (map mở, quái mọc theo khu, đánh quái lên cấp), không phải phó bản, không chia tầng; năm map theo vùng, có cổng đi thông từ map này sang map kia; mỗi map ít nhất năm loại quái phân theo cấp từng khu, có boss người chơi tự đánh; một mốc kinh nghiệm, cấp dùng chung cho mọi tướng; người chơi tự chọn tướng đi; có treo máy lúc tắt game. Như các kế hoạch trước, được chỉnh số ±20% theo test; làm xong phần nào thì ghi số cuối cùng của phần ấy.
 
@@ -3640,6 +3640,17 @@ Chủ dự án yêu cầu: thêm dã ngoại để đánh quái kiếm thêm tà
 - **Cấp chung chỉ có tác dụng trong dã ngoại.** Phó bản, thử thách, đồn, giữ kinh đô, Đấu thành không đổi, nên chuẩn cân bằng và máy chủ giữ nguyên.
 - **Tối đa 3 tướng, chỉ tướng đi**, không mang lính.
 - **Treo máy tối đa 8 giờ, không khóa tướng**: tướng đang ở dã ngoại vẫn ra phó bản, giữ kinh đô được.
+
+### Đã làm (số cuối, sau khi đo bằng test)
+
+- Map 80×80 (`DA_KHUNG`); quái mỗi khu 8, 8, 8, 7, 6 con, hệ số khu 1; 1; 1,1; 1,25; 1,5 (`DA_KHU`). Quái gốc máu 150, sức đánh 7, mỗi cấp quái thêm 10% máu, 8% sức đánh (`DA_QUAI`); tầm phát hiện 3 ô, đuổi xa quá 6 ô thì về, chết 20 giây sau mọc lại.
+- Boss: máu ×14, sức đánh ×2,2, kinh nghiệm ×40, cấp cao nhất map cộng 2; chắc rơi đồ (`daBoss`, phẩm 3–4); hạ xong 30 phút chơi sau mới mọc lại (`DA_BOSS_MS`).
+- Cấp chung: trần 50; kinh nghiệm lên cấp sau `100 × cấp^1,8` (cấp 10 chừng một giờ, cấp 50 nhiều ngày); mỗi cấp +3% máu và sức đánh trên map; quái thấp hơn cấp chung quá 5 cấp thì mỗi cấp bớt 15% kinh nghiệm, còn ít nhất 10% (`DA_CAP`).
+- Đồ rơi quái thường 2% mỗi con (`daQuai`), chương rơi là chương của map nhưng không vượt chương đang chơi (`chuongRoi`).
+- Tướng hồi 4% máu mỗi giây khi 4 giây không bị đánh; ngã thì 3 giây yên mới đứng dậy với nửa máu; cả đội ngã thì 3 giây sau về trại đủ máu (`DA_TUONG`). Tự đánh dừng nghỉ khi máu đội dưới 40% mà không có quái đuổi, hồi tới 90% mới đánh tiếp (Tự đánh không ngừng thì tướng không bao giờ hồi máu). Kỹ năng vùng chỉ tính quái quanh tướng 9 ô.
+- Treo máy: số quái hạ mỗi phút = `12 × min(1, max(0,1; √(sức đội / 40)))`, sức đội là (sát thương mỗi giây × máu) của đội chia cho của một con quái khu (`tiSuc`, `nhipTreo`, `DA_TREO`); boss không tính. Test canh treo ra trong khoảng ×0,5–1,3 so với đánh thật cùng khu.
+- Ở kinh đô chọn map ra được (như đi xe ngựa tới trại): chỉ map đã tới bằng cổng và đủ cấp (`chonMap`).
+- Giao diện: chip 🌿 Dã ngoại trên bản đồ phó bản mở bảng (cấp chung, chọn đội, năm map có giờ boss, treo máy, Ra dã ngoại hay Xem đội, Gọi đội về, Tự đánh); nửa trái là bản đồ map (khu có số, trại, cổng, khu boss mờ khi boss chưa mọc). Trên map: thanh trên ghi map, khu và cấp quái khu, cấp và thanh kinh nghiệm, máu từng tướng; bản đồ nhỏ góc phải có chấm đội và giờ boss; chữ nổi kinh nghiệm, lên cấp, đồ rơi; nút 🏯 xem kinh đô (đội ở lại treo máy), nút Tự đánh, nút kỹ năng. Kéo cảnh thì camera thôi bám đội, chạm đất hay bật Tự đánh thì bám lại. Đang xem map thì giặc không tới kinh đô (như Đấu thành). Bảng "Bệ hạ đã trở lại" thêm dòng dã ngoại và các món rơi; Lạc hầu báo một lần khi dã ngoại mở.
 
 ### Năm map
 
@@ -3768,5 +3779,5 @@ Mỗi map chừng 80×80 ô, có trại (điểm hồi sinh, chỗ vào từ kin
 23. **Dân gánh hàng về kho** (chủ dự án chọn, đã làm PR 1, 2; xem mục cùng tên): công trình xa nơi nhận làm ra ít hơn, thấp nhất 50%; đường đi cho dân đi nhanh gấp đôi. PR 1 luật, PR 2 dân gánh trên đường, PR 3 tới nơi sản xuất.
 24. **Trang bị rơi ngẫu nhiên và sáu chỉ số tướng** (chủ dự án đã duyệt; xem Kế hoạch cùng tên): đồ rơi ở phó bản, thử thách, đồn, giữ kinh đô; mỗi tướng một bộ mang tên truyền thuyết, ai mặc cũng được, hiệu ứng bộ khi đúng tướng mặc; sáu chỉ số và Lực chiến; cường hóa bằng tài nguyên, phân giải ra sắt; bảng tướng kiểu túi đồ game nhập vai (hình tướng mặc đồ, ảnh món vẽ sẵn), mặc đủ bộ mình thì vũ khí ánh lên; Đấu thành tính đồ (máy chủ kiểm món, tự tính chỉ số). PR 1 luật và bảng, PR 2 Đấu thành, PR 3 hình (đã làm cả ba, cùng PR #100).
 25. **Điện 10 điều quân ra đóng đảo** (chủ dự án đã duyệt; đã làm PR 1, 2: luật, giao diện, hình đồn đảo và thuyền chiến; còn PR 3; xem Kế hoạch cùng tên): thuyền chiến đóng ở bến thuyền khơi cấp 3 chở quân ra đồn Hoàng Sa, đồn Trường Sa; đảo có quân giữ thì ngư trường làm ra thêm, báo sớm và chặn đánh thủy quân Hán; giặc Hán đánh đảo, quân đảo tự đánh, xem lại được.
-26. **Dã ngoại** (chủ dự án yêu cầu, chờ duyệt; xem Kế hoạch cùng tên): năm map mở kiểu Võ Lâm 2 nối nhau bằng cổng mở theo cấp, mỗi map năm khu quái phân theo cấp và một boss tự đánh; chạm để đi, nút Tự đánh; tự chọn tối đa 3 tướng, chỉ tướng đi; cấp chung cho mọi tướng chỉ có tác dụng trong dã ngoại; treo máy tối đa 8 giờ, không khóa tướng.
+26. **Dã ngoại** (chủ dự án yêu cầu, đã làm; xem Kế hoạch cùng tên): năm map mở kiểu Võ Lâm 2 nối nhau bằng cổng mở theo cấp, mỗi map năm khu quái phân theo cấp và một boss tự đánh; chạm để đi, nút Tự đánh; tự chọn tối đa 3 tướng, chỉ tướng đi; cấp chung cho mọi tướng chỉ có tác dụng trong dã ngoại; treo máy tối đa 8 giờ, không khóa tướng.
 27. **Để sau**: nhạc nền.
