@@ -19,6 +19,8 @@ import { addSunLights, type SunLights } from './lights';
 import { STICK_POSE, makeDrummer } from './heroes';
 import { buildForest, makeBoat, makeEnemyBoat, makeEnemyFlag, makeLauThuyen, makeMountain, makeTent, setForestLite, type TreeSpot } from './models';
 import { makeNhaSan, makeRuong } from './buildings';
+import { makeDonDao } from './congTrinh/donDao';
+import { palm, phongBa } from './bien';
 import { makeBridge } from './benKia';
 import { C } from './palette';
 import { cornTemplates, reedTemplates } from './lauSay';
@@ -37,7 +39,7 @@ const groundMaterial = new THREE.MeshLambertMaterial({ vertexColors: true });
 /** Đất có đồi tô phẳng từng mặt tam giác, ra dáng low-poly như các mô hình khác. */
 const reliefMaterial = new THREE.MeshLambertMaterial({ vertexColors: true, flatShading: true });
 
-const TERRAINS: Terrain[] = ['rung', 'benSong', 'lang', 'don', 'nui', 'doi', 'ngap', 'tanVien', 'thatDieu', 'coLoa', 'cuaSong', 'moDa', 'benKia', 'hatMon', 'luyLau', 'langBac', 'camKhe'];
+const TERRAINS: Terrain[] = ['rung', 'benSong', 'lang', 'don', 'nui', 'doi', 'ngap', 'tanVien', 'thatDieu', 'coLoa', 'cuaSong', 'moDa', 'benKia', 'hatMon', 'luyLau', 'langBac', 'camKhe', 'dao'];
 const OUTSIDE: Record<Terrain, number> = {
   rung: C.grassLocked[0],
   benSong: C.grassLocked[1],
@@ -56,6 +58,7 @@ const OUTSIDE: Record<Terrain, number> = {
   luyLau: 0x939556,
   langBac: C.grassLocked[1],
   camKhe: 0x6a7a42,
+  dao: 0xdcca92,
 };
 const FIELD_COLOR: Record<Terrain, number> = {
   rung: C.grass[0],
@@ -75,6 +78,7 @@ const FIELD_COLOR: Record<Terrain, number> = {
   luyLau: 0xb9a678,
   langBac: 0xb6ae78,
   camKhe: 0xa9a26c,
+  dao: 0xeadcae,
 };
 /** Màu các mảng loang trên đất: cỏ rậm, cỏ úa, đất trống, đá; đồi sim nở hoa tím. */
 const PATCH: Record<Terrain, number> = {
@@ -95,6 +99,7 @@ const PATCH: Record<Terrain, number> = {
   luyLau: C.earth,
   langBac: 0x8d9656,
   camKhe: 0x5a6a36,
+  dao: 0xd2bd86,
 };
 /** Đồng ngập lũ và đỉnh Tản Viên: nước lũ phủ chỗ trũng quanh bãi, ở độ cao này. */
 const FLOOD_Y = -0.3;
@@ -119,6 +124,7 @@ const HILLS: Record<Terrain, { height: number; freq: number }> = {
   luyLau: { height: 1.2, freq: 0.05 },
   langBac: { height: 1.0, freq: 0.05 },
   camKhe: { height: 1.4, freq: 0.08 },
+  dao: { height: 0.7, freq: 0.05 },
 };
 const TREE_DENSITY: Record<Terrain, number> = {
   rung: 0.8,
@@ -138,6 +144,8 @@ const TREE_DENSITY: Record<Terrain, number> = {
   luyLau: 0.3,
   langBac: 0.4,
   camKhe: 0.85,
+  // Đảo: không có rừng; dừa, phong ba dựng riêng (`islandTrees`).
+  dao: 0,
 };
 /** Trời và đèn theo nền: núi Thất Diệu là đêm tím, còn lại là ngày. */
 const SKY: Partial<Record<Terrain, BoTroi>> = {
@@ -294,6 +302,17 @@ const CAM_KHE_PEAKS: [number, number, number, number, number][] = [
  * nhìn từ camera thấy rõ cả hai tay cầm dùi lẫn mặt trống.
  */
 const DRUMMER = { x: FIELD.w / 2 + 0.3, z: FIELD.d + 2 };
+/** Đảo: mép biển sau lưng giặc (z), đồn đảo sau lưng quân ta (tâm móng, z). */
+const DAO_SHORE = -4.2;
+const DAO_DON_Z = FIELD.d + 9;
+/** Đảo: thuyền chở quân Hán neo mũi vào bãi [x, lùi ra khỏi bờ, hướng]; lâu thuyền đậu ngoài khơi. */
+const DAO_BOATS: [number, number, number][] = [
+  [0.6, 0.2, 0.25],
+  [3.4, 0.6, -0.1],
+  [6.8, 0.1, 0.15],
+  [9.4, 0.7, -0.3],
+];
+const DAO_SHIP = { x: FIELD.w / 2 + 2, z: -15, ry: Math.PI / 2 + 0.2 };
 /** Mặt trống: nơi sóng trống tỏa ra (tọa độ trận). */
 const DRUM_AT = { x: DRUMMER.x - 0.56, z: DRUMMER.z };
 
@@ -318,7 +337,7 @@ interface Retreat {
 /** Một vùng không trồng cây (để chỗ cho sông, nhà, lều, núi). Đất trong vùng được san phẳng, trừ khi giữ đồi. */
 type Zone = { x0: number; x1: number; z0: number; z1: number; hills?: boolean };
 /** Nền có mặt nước (sông, biển, hào): `Relief.wet` cho khoảng cách tới mép nước. */
-const WATERY = new Set<Terrain>(['cuaSong', 'moDa', 'benKia', 'hatMon', 'luyLau', 'langBac', 'camKhe']);
+const WATERY = new Set<Terrain>(['cuaSong', 'moDa', 'benKia', 'hatMon', 'luyLau', 'langBac', 'camKhe', 'dao']);
 
 export class Battlefield {
   readonly scene = new THREE.Scene();
@@ -328,6 +347,8 @@ export class Battlefield {
   private terrain: Terrain | null = null;
   /** Bố cục vật cản đang dựng (`baiChien.ts`), không có là bãi phẳng. */
   private bai: Bai | undefined;
+  /** Cấp đồn đảo dựng sau lưng quân ta ở nền đảo. */
+  private donCap = 2;
   private drummer?: THREE.Group;
   /** Mộ Dạ (màn cầm cự): ngựa vua chở An Dương Vương và Mỵ Châu phi dọc mép bãi ra biển, theo thanh "Vua tới biển". */
   private horse?: { obj: THREE.Group; battle: number };
@@ -566,18 +587,22 @@ export class Battlefield {
     return (this.decor.userData.relief as Relief | undefined)?.height(x, z) ?? 0;
   }
 
-  /** Dựng nền `t` với bố cục vật cản `bai` (id ở `baiChien.ts`; null hay id lạ là bãi phẳng). */
-  setTerrain(t: Terrain, bai: string | null = null): void {
+  /**
+   * Dựng nền `t` với bố cục vật cản `bai` (id ở `baiChien.ts`; null hay id lạ là bãi phẳng). Nền đảo dựng đồn đảo cấp
+   * `donCap` sau lưng quân ta.
+   */
+  setTerrain(t: Terrain, bai: string | null = null, donCap = 2): void {
     const layout = baiById(bai);
-    if (t === this.terrain && layout === this.bai) return;
+    if (t === this.terrain && layout === this.bai && (t !== 'dao' || donCap === this.donCap)) return;
     this.terrain = t;
     this.bai = layout;
+    this.donCap = donCap;
     this.inner.remove(this.decor);
     // Cây rừng dùng chung mẫu (InstancedMesh), chỉ bỏ hình riêng của từng cảnh.
     this.decor.traverse((o) => {
       if (o instanceof THREE.Mesh && !(o instanceof THREE.InstancedMesh)) o.geometry.dispose();
     });
-    this.decor = buildDecor(t, layout);
+    this.decor = buildDecor(t, layout, donCap);
     this.inner.add(this.decor);
     this.drummer = this.decor.userData.drummer as THREE.Group;
     this.farBank = this.decor.userData.farBank as THREE.Object3D | undefined;
@@ -592,7 +617,7 @@ export class Battlefield {
   }
 }
 
-function buildDecor(t: Terrain, bai?: Bai): THREE.Group {
+function buildDecor(t: Terrain, bai?: Bai, donCap = 2): THREE.Group {
   const g = new THREE.Group();
   g.name = 'decor';
   const W = FIELD.w;
@@ -797,6 +822,13 @@ function buildDecor(t: Terrain, bai?: Bai): THREE.Group {
     for (const [x, z] of [[W / 2 - 1.1, -2.3], [W / 2 + 1.1, -2.3]]) place(makeEnemyFlag(2.8), x, z, Math.PI / 2);
   }
 
+  if (t === 'dao') {
+    // Đồn đảo sau lưng quân ta, cổng quay ra bãi (mô hình quay cổng về +z). Biển sau lưng giặc, có thuyền Hán đậu.
+    // Không lính gác: lính đóng đảo đã ra cả bãi, và dáng lính gác theo bậc binh khí khác sẽ phải nặn ở luồng chính.
+    place(makeDonDao(Math.max(1, Math.min(3, donCap))), W / 2, DAO_DON_Z, Math.PI, 4);
+    zones.push({ x0: W / 2 - 5, x1: W / 2 + 5, z0: DAO_DON_Z - 5, z1: DAO_DON_Z + 5 });
+  }
+
   if (t === 'moDa') {
     // Núi Mộ Dạ bên trái bãi, một ngọn chìa ra biển; đường ngựa của vua dọc mép phải để trống.
     MO_DA_PEAKS.forEach(([x, z, r, h, color], i) => place(makeMountain(r, h, color), x, z, i * 1.3, r * 0.8));
@@ -904,6 +936,24 @@ function buildDecor(t: Terrain, bai?: Bai): THREE.Group {
       g.add(reedBeds(relief, [...boats, ...clear]), cornField(relief));
     } else if (t === 'moDa') {
       g.add(beachRocks(relief), feathers(relief));
+    } else if (t === 'dao') {
+      // Thuyền chở quân Hán neo mũi vào bãi sau lưng giặc, lâu thuyền đậu ngoài khơi; dừa, phong ba trên đảo.
+      for (const [x, back, ry] of DAO_BOATS) {
+        let z = -2;
+        while (relief.wet(x, z) < 0 && z > -14) z -= 0.1;
+        const boat = makeEnemyBoat('han');
+        boat.userData.boat = true;
+        boat.scale.setScalar(1.3);
+        boat.position.set(x, WATER_Y - 0.08, z - 1.1 - back);
+        boat.rotation.y = ry;
+        g.add(boat);
+      }
+      const ship = makeLauThuyen();
+      ship.userData.boat = true;
+      ship.position.set(DAO_SHIP.x, WATER_Y - 0.1, DAO_SHIP.z);
+      ship.rotation.y = DAO_SHIP.ry;
+      g.add(ship);
+      g.add(islandTrees(relief), beachRocks(relief));
     } else if (t === 'langBac') {
       // Lâu thuyền Hán đậu xa trên hồ sau lưng giặc; lau sậy dày dọc bờ đầm, sen nổi ven bờ.
       // Lâu thuyền thân dọc trục z (mũi +z): xoay thêm 90° cho thân nằm dọc trục x của bãi.
@@ -1127,6 +1177,13 @@ class Relief {
       const stream = STREAM_HALF + 0.12 * this.shore(z * 0.2, 3) - polyDistance(CAM_KHE_STREAM, x, z);
       return smoothMax(river, stream, 0.8);
     }
+    if (this.t === 'dao') {
+      // Đảo: biển sau lưng giặc (z nhỏ) vòng ra hai bên, bờ hai bên lùi dần về phía quân ta (đảo phình ra sau lưng
+      // quân ta, nơi có đồn).
+      const top = DAO_SHORE + 0.5 * this.shore(x * 0.15, 0) + 0.25 * this.shore(x * 0.4, 2);
+      const half = W / 2 + 6 + 0.35 * Math.max(0, z) + 0.6 * this.shore(z * 0.13, 5);
+      return smoothMax(top - z, Math.abs(x - W / 2) - half, 1.2);
+    }
     if (this.t === 'moDa') {
       // Biển ở phía xa (z nhỏ) và bên phải. Bờ xa chìa ra quanh chân núi bên trái; bờ phải lùi dần về phía quân ta.
       // Bờ lượn nhiều ở xa, gần như thẳng ở góc cuối đường ngựa (đầu đường luôn là cát, góc ngoài luôn là biển).
@@ -1173,7 +1230,7 @@ class Relief {
     if (WATERY.has(this.t)) {
       const d = this.wet(x, z);
       // Hào thành đào dốc, bờ đứng hơn bờ sông; bờ suối khe núi dốc đứng, vách núi chỉ thoải ngay sát nước.
-      const slope = this.t === 'moDa' ? [-0.7, 1.3] : this.t === 'luyLau' ? [-0.4, 0.85] : this.t === 'camKhe' ? [-0.6, 0.9] : this.t === 'langBac' ? [-1.2, 1.4] : [-1.6, 1.4];
+      const slope = this.t === 'moDa' || this.t === 'dao' ? [-0.7, 1.3] : this.t === 'luyLau' ? [-0.4, 0.85] : this.t === 'camKhe' ? [-0.6, 0.9] : this.t === 'langBac' ? [-1.2, 1.4] : [-1.6, 1.4];
       const flat = this.t === 'camKhe' ? [-1.8, -0.5] : [-4, -1.2];
       h = THREE.MathUtils.lerp(h * (1 - smoothstep(d, flat[0], flat[1])), SEABED, smoothstep(d, slope[0], slope[1]));
     }
@@ -1971,7 +2028,7 @@ function waterSurface(relief: Relief): THREE.Mesh {
   const colors = new Float32Array(pos.count * 3);
   const c = new THREE.Color();
   const tint = new THREE.Color();
-  const sea = relief.terrain === 'moDa';
+  const sea = relief.terrain === 'moDa' || relief.terrain === 'dao';
   for (let i = 0; i < pos.count; i++) {
     const x = pos.getX(i);
     const z = pos.getZ(i);
@@ -2001,7 +2058,7 @@ function waterSurface(relief: Relief): THREE.Mesh {
  * như hoa văn sóng nước trên trống đồng. Sông thì lằn gợn nhạt hơn, thưa hơn.
  */
 function shoreLines(relief: Relief): THREE.Mesh[] {
-  const sea = relief.terrain === 'moDa';
+  const sea = relief.terrain === 'moDa' || relief.terrain === 'dao';
   const { xs, zs } = landGrid(-28, FIELD.w + 28, -30, FIELD.d + 14);
   const foam = contour((x, z) => relief.height(x, z), WATER_Y, xs, zs).map((c) => c.seg);
   const out = [ribbon(foam, sea ? 0.16 : 0.11, WATER_Y + 0.012, sea ? C.foam : C.ripple, (x, z) => relief.wet(x, z))];
@@ -2073,6 +2130,34 @@ function beachRocks(relief: Relief): THREE.Group {
   const mesh = b.mesh(toon);
   g.add(mesh, outlineOf(mesh.geometry, inkThin));
   return g;
+}
+
+/**
+ * Đảo: dừa ven bờ ngả ra biển, phong ba thấp mọc thành khóm trong đảo; chừa bãi chiến, chỗ Lạc tướng đánh trống, đồn
+ * đảo và mép nước.
+ */
+function islandTrees(relief: Relief): THREE.Object3D {
+  const m = new ToonModel(inkThin);
+  const rand = seeded(97);
+  const W = FIELD.w;
+  const fort = { x0: W / 2 - 5, x1: W / 2 + 5, z0: DAO_DON_Z - 5, z1: DAO_DON_Z + 5 };
+  const drum = { x0: DRUMMER.x - 2, x1: DRUMMER.x + 2, z0: DRUMMER.z - 1, z1: DRUMMER.z + 2 };
+  for (let x = -16; x <= W + 16; x += 1.5) {
+    for (let z = -8; z <= FIELD.d + 18; z += 1.5) {
+      const px = x + (rand() - 0.5) * 1.1;
+      const pz = z + (rand() - 0.5) * 1.1;
+      const roll = rand();
+      const seed = Math.floor(rand() * 1e6);
+      const d = relief.wet(px, pz);
+      if (d > -0.9 || signedDistance(FIELD_RIM, px, pz) < 0.8 || signedDistance(fort, px, pz) < 0.5 || signedDistance(drum, px, pz) < 0) continue;
+      const y = relief.height(px, pz);
+      // Dừa mọc sát bờ (ngả ra biển), phong ba mọc thành khóm xa bờ hơn.
+      if (d > -4.5) {
+        if (roll < 0.32) palm(m, px, y, pz, 1.7 + rand() * 0.7, 0.4 + rand() * 0.35, seed, Math.atan2(pz - FIELD.d / 2 - 4, px - W / 2));
+      } else if (roll < 0.45 * relief.grove(px, pz) + 0.08) phongBa(m, px, y, pz, 1.3 + rand() * 0.5, seed);
+    }
+  }
+  return m.group();
 }
 
 /** Một chiếc lông ngỗng nằm trên cát: phiến lông dẹt thon, gốc lông tơ xù, cuống lông; `curl` làm phiến hơi cong lên. */

@@ -128,8 +128,8 @@ import { khoanhHtml } from './khoanh';
 import { benKiaHtml } from './benKia';
 import { campTier, cutOff, dacSanOf, plotAt, villageOutput } from '../game/benKia';
 import { seaIndex, seaRoute, type QuanDaoId } from '../game/bien';
-import { buildingThuyen, canThuyen, daoGiuBien, chanThuyen } from '../game/dao';
-import { quanDaoHtml } from './bien';
+import { baoDao, buildingThuyen, canThuyen, daoGiuBien, chanThuyen } from '../game/dao';
+import { fillDao, quanDaoHtml } from './bien';
 import { farBankOf } from '../game/map';
 import { mauItems } from './mau';
 import { goLabel, pageCount, pageOf, pickOf, thumbUrl, xayDungHtml, type BuildItem } from './xayDung';
@@ -137,6 +137,8 @@ import type { MauId } from '../game/mau';
 
 /** Dòng báo thường hiện chừng này mili giây. */
 const TOAST_MS = 2600;
+/** Tin trận đảo vừa đánh hiện trên dòng tin chừng này (ms chơi) sau trận. */
+const DAO_TIN_MS = 90_000;
 const SHOWN_RESOURCES: ResourceId[] = ['gao', 'voOc', 'datDa', 'sat'];
 /** Tài nguyên hiện trên thanh trên: gỗ chỉ hiện từ khi mở xưởng mộc (Điện 2), hay khi đã có gỗ. */
 function shownResources(state: GameState): ResourceId[] {
@@ -249,6 +251,9 @@ export type HudAction =
   | { kind: 'buildDon'; dao: QuanDaoId }
   | { kind: 'daoLinh'; dao: QuanDaoId; unit: UnitType; delta: 1 | -1 }
   | { kind: 'openQuanDao'; dao: QuanDaoId }
+  /** Giặc đánh đảo: sửa đồn hư, xem lại trận gần nhất của đảo. */
+  | { kind: 'suaDon'; dao: QuanDaoId }
+  | { kind: 'xemDao'; dao: QuanDaoId }
   | { kind: 'guardAuto' }
   | { kind: 'repair'; id: number }
   | { kind: 'repairAll' }
@@ -380,6 +385,14 @@ export interface HudPvp {
   xem?: { atk: string; def: string; speed: number };
 }
 
+/** Đang xem lại trận giặc đánh đảo (trận dựng lại từ trận đã ghi, không nằm trong state): quần đảo, đợt, tốc độ xem. */
+export interface HudXemDao {
+  battle: Battle;
+  dao: QuanDaoId;
+  dot: number;
+  speed: number;
+}
+
 function prodHtml(prod: Cost): string {
   const parts = RESOURCE_IDS.filter((r) => (prod[r] ?? 0) > 0).map((r) => `${vi.resources[r].icon} ${fmt(prod[r]!)}${vi.ui.perMinute}`);
   return parts.join(' · ') || '—';
@@ -434,6 +447,7 @@ export class Hud {
   private skillKey = '';
   /** Trận Đấu thành đang đánh, để thanh trận và nút kỹ năng dùng thay cho trận phó bản. */
   private pvp: HudPvp | null = null;
+  private xemDao: HudXemDao | null = null;
 
   constructor(
     root: HTMLElement,
@@ -670,6 +684,10 @@ export class Hud {
         return this.onAction({ kind: 'daoLinh', dao: el.dataset.dao as QuanDaoId, unit: el.dataset.unit as UnitType, delta: Number(el.dataset.delta) < 0 ? -1 : 1 });
       case 'openQuanDao':
         return this.onAction({ kind: 'openQuanDao', dao: el.dataset.dao as QuanDaoId });
+      case 'suaDon':
+        return this.onAction({ kind: 'suaDon', dao: el.dataset.dao as QuanDaoId });
+      case 'xemDao':
+        return this.onAction({ kind: 'xemDao', dao: el.dataset.dao as QuanDaoId });
       case 'trinhSat':
         return this.onAction({ kind: 'trinhSat', id });
       case 'ketThan':
@@ -873,7 +891,7 @@ export class Hud {
   // ---------- Dòng tin trên dock: giặc, đói, Tết, thuyền buôn, trinh sát ----------
 
   /** Các tin đang có, tin gấp (giặc, đói) trước. */
-  private alerts(state: GameState): { id: string; text: string; tone: 'bad' | 'tet' | 'info'; act?: string; label?: string }[] {
+  private alerts(state: GameState): { id: string; text: string; tone: 'bad' | 'tet' | 'info'; act?: string; label?: string; dao?: QuanDaoId }[] {
     const list: ReturnType<Hud['alerts']> = [];
     const raid = state.raid;
     const sideName = { bac: vi.ui.sideBac, tay: vi.ui.sideTay, nam: vi.ui.sideNam, dong: vi.ui.sideDong, namXa: vi.ui.sideNamXa, dongXa: vi.ui.sideDongXa }[raid.side];
@@ -945,6 +963,18 @@ export class Hud {
       const name = vi.bien.quanDao[id].name;
       list.push({ id: `thuyenChien:${id}`, text: c.ve ? vi.bien.thuyenTickerBack(name, n, secs) : vi.bien.thuyenTicker(name, n, secs), tone: 'info' });
     }
+    // Giặc áp sát đảo; trận đảo vừa đánh (hiện một lúc sau trận).
+    for (const id of ['hoangSa', 'truongSa'] as const) {
+      const con = baoDao(state, id);
+      const name = vi.bien.quanDao[id].name;
+      if (con !== null) list.push({ id: `giacDao:${id}`, text: vi.bien.tickerApSat(name, Math.ceil(con / 1000)), tone: 'bad', act: 'openQuanDao', label: vi.bien.tickerXem, dao: id });
+      const t = state.dao[id].tran;
+      if (t && state.clock - t.at < DAO_TIN_MS) {
+        const mat = UNIT_TYPES.reduce((n, k) => n + t.mat[k], 0);
+        const text = t.thang ? vi.bien.tickerThang(vi.bien.donName(id), mat) : vi.bien.tickerThua(vi.bien.donName(id));
+        list.push({ id: `tranDao:${id}:${t.dot}`, text, tone: t.thang ? 'info' : 'bad', act: 'xemDao', label: vi.bien.xemLai, dao: id });
+      }
+    }
     if (state.benKia.scouts.length) {
       const secs = Math.max(0, Math.ceil((Math.min(...state.benKia.scouts.map((sc) => sc.at)) - state.clock) / 1000));
       list.push({ id: 'trinhSat', text: vi.ui.scoutAway(secs), tone: 'info' });
@@ -969,12 +999,12 @@ export class Hud {
     }
     const i = list.length ? this.alertIndex % list.length : 0;
     const a = list[i];
-    const key = a ? `${a.id}|${a.act ?? ''}|${a.label ?? ''}|${a.tone}|${i}/${list.length}` : '';
+    const key = a ? `${a.id}|${a.act ?? ''}|${a.label ?? ''}|${a.tone}|${a.dao ?? ''}|${i}/${list.length}` : '';
     if (key !== this.tickerKey) {
       this.tickerKey = key;
       this.ticker.innerHTML = a
         ? `<div class="ticker-item ${a.tone}"><span class="tx"></span>
-          ${a.act ? `<button class="btn small ${a.tone === 'bad' ? 'light' : 'bronze'}" data-act="${a.act}">${a.label}</button>` : ''}
+          ${a.act ? `<button class="btn small ${a.tone === 'bad' ? 'light' : 'bronze'}" data-act="${a.act}"${a.dao ? ` data-dao="${a.dao}"` : ''}>${a.label}</button>` : ''}
           ${list.length > 1 ? `<button class="next" data-act="nextAlert" aria-label="${vi.ui.nextAlert}">${i + 1}/${list.length} ›</button>` : ''}</div>`
         : '';
     }
@@ -1463,6 +1493,7 @@ export class Hud {
       this.sheetKindShown = this.sheet.kind;
     }
     fillXay(this.sheetEl, state);
+    fillDao(this.sheetEl, state);
     const opening = !this.sheetEl.classList.contains('open');
     this.sheetEl.classList.toggle('build', this.sheet.kind === 'build');
     this.sheetEl.classList.toggle('tall', this.sheet.kind === 'build' || this.sheet.kind === 'tuong' || this.barracksOpen(state));
@@ -2226,7 +2257,8 @@ export class Hud {
 
   /** Thanh trên và nút dưới khi đang đánh ngoài bãi. Nút kỹ năng chỉ đổi chữ tại chỗ để không nuốt lần chạm. */
   updateField(state: GameState): void {
-    const b = this.pvp?.battle ?? state.campaign.battle;
+    const dao = this.pvp ? null : this.xemDao;
+    const b = this.pvp?.battle ?? dao?.battle ?? state.campaign.battle;
     this.root.classList.toggle('in-field', !!b);
     if (!b) return;
     if (this.pvp) {
@@ -2241,10 +2273,15 @@ export class Hud {
     const secs = Math.max(0, Math.ceil((hold ? b.holdS! : FIELD.maxS) - b.t));
     const tag = b.challenge ? ` · 🎖 ${vi.ui.challengeKinds[b.challenge].name}` : '';
     const don = b.camp !== undefined ? campTier(b.camp) : null;
-    if (!this.pvp) this.fieldTop.querySelector('b')!.textContent = don ? `${vi.benKia.don[don].icon} ${vi.benKia.don[don].name}` : `${vi.ui.stageN(b.wave)} · ${vi.stages[b.wave - 1].name}${tag}`;
-    // Màn 40 giữ cửa rừng Cấm Khê cho dân rút về núi; màn 32 cầm chân giặc cho vua tới biển.
-    const camKhe = hold && b.camp === undefined && b.wave === CH5_LAST;
-    const holdText = camKhe ? vi.ui.holdBannerCamKhe : vi.ui.holdBanner;
+    if (!this.pvp)
+      this.fieldTop.querySelector('b')!.textContent = dao
+        ? vi.bien.xemBanner(vi.bien.donName(dao.dao), dao.dot)
+        : don
+          ? `${vi.benKia.don[don].icon} ${vi.benKia.don[don].name}`
+          : `${vi.ui.stageN(b.wave)} · ${vi.stages[b.wave - 1].name}${tag}`;
+    // Màn 40 giữ cửa rừng Cấm Khê cho dân rút về núi; màn 32 cầm chân giặc cho vua tới biển; trận đảo giữ đồn.
+    const camKhe = hold && !dao && b.camp === undefined && b.wave === CH5_LAST;
+    const holdText = dao ? vi.bien.holdBannerDao : camKhe ? vi.ui.holdBannerCamKhe : vi.ui.holdBanner;
     if (!this.pvp)
       this.fieldTop.querySelector('span')!.textContent = hold
         ? `${holdText(enemiesLeft(b), alliesLeft(b), secs)} · ${vi.ui.holdWave(wavesArrived(b), b.waveCount ?? 1)}`
@@ -2254,7 +2291,7 @@ export class Hud {
     bar.hidden = !hold;
     if (hold) {
       const rider = bar.querySelector<HTMLElement>('em')!;
-      const icon = camKhe ? '🐃' : '🐎';
+      const icon = dao ? '🏯' : camKhe ? '🐃' : '🐎';
       if (rider.textContent !== icon) rider.textContent = icon;
       const k = `${Math.round(holdProgress(b) * 1000) / 10}%`;
       bar.querySelector<HTMLElement>('i')!.style.width = k;
@@ -2281,8 +2318,9 @@ export class Hud {
       }
     }
     const box = this.fieldBar.querySelector<HTMLElement>('.skills')!;
-    // Xem lại trận Đấu thành: không có nút kỹ năng (các lần bấm đã ghi tự áp), có nút đổi tốc độ, nút cờ là nút thoát.
-    const xem = this.pvp?.xem;
+    // Xem lại trận Đấu thành, trận đảo: không có nút kỹ năng (các lần bấm đã ghi tự áp), có nút đổi tốc độ, nút cờ là
+    // nút thoát.
+    const xem = this.pvp?.xem ?? dao;
     box.hidden = !!xem;
     const speed = this.fieldBar.querySelector<HTMLButtonElement>('[data-act="dauSpeed"]')!;
     speed.hidden = !xem;
@@ -2304,6 +2342,12 @@ export class Hud {
       btn.classList.toggle('active', (k === 'trongTran' && b.rally > 0) || (k === 'ruaVang' && b.shield > 0) || (k === 'lenhBan' && (b.lenh ?? 0) > 0));
     }
     flag.disabled = !!b.outcome && !xem;
+  }
+
+  /** Đang xem lại trận đảo (hay đã thôi, null): thanh trận dùng trận này. */
+  setXemDao(x: HudXemDao | null): void {
+    this.xemDao = x;
+    this.updateField(this.getState());
   }
 
   /** Đang đánh Đấu thành (hay đã xong, null): thanh trận dùng trận này. */

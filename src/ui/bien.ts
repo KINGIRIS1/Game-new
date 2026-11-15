@@ -1,13 +1,14 @@
 // Bảng quần đảo ngoài biển Đông: chạm vào đảo thì hiện tên, lời tả, số đảo, thuyền khơi nào đánh cá ở đây; từ Điện 10
-// thêm đồn đảo (dựng, nâng), thuyền chiến, lính đóng và phần giữ biển (`dao.ts`). Chỉ dựng chuỗi HTML; Hud lo việc gắn
-// vào trang và bắt sự kiện.
+// thêm đồn đảo (dựng, nâng), thuyền chiến, lính đóng, phần giữ biển và phần giặc đánh đảo (đếm ngược đợt sau, sửa đồn
+// hư, trận gần nhất có nút Xem lại; `dao.ts`). Chỉ dựng chuỗi HTML; Hud lo việc gắn vào trang và bắt sự kiện.
 
 import { BIEN_DIEN, DAO_CHINH, boatsAt, quanDao, type QuanDaoId } from '../game/bien';
-import { DON_DAO, THUYEN_CHIEN, UNIT_TYPES, UNITS } from '../game/defs';
+import { DAO_GIAC, DON_DAO, THUYEN_CHIEN, UNIT_TYPES, UNITS } from '../game/defs';
 import { armySpace } from '../game/doanhTrai';
-import { benOf, buildingDon, canDon, daoJobId, donCho, donCost, donMs, giuBien, outbound } from '../game/dao';
-import { dienLevel, fishIn, type GameState } from '../game/game';
-import { formatXay, vi } from '../text/vi';
+import { benOf, buildingDon, canDon, daoJobId, donCho, donCost, donMs, giacToi, giuBien, outbound, suaDonCost } from '../game/dao';
+import { maVienCame } from '../game/chuong5';
+import { canAfford, dienLevel, fishIn, type GameState } from '../game/game';
+import { formatClock, formatXay, vi } from '../text/vi';
 import { costHtml, fmt } from './format';
 import { jobHtml, realMs } from './xay';
 
@@ -54,7 +55,7 @@ function donHtml(state: GameState, id: QuanDaoId, armed: number | null, hetTho: 
       else if (!free) out.push(`<div class="why">${hetTho}</div>`);
     }
   }
-  if (d.cap) out.push(boatHtml(state, id), linhHtml(state, id), giuHtml(state, id));
+  if (d.cap) out.push(boatHtml(state, id), linhHtml(state, id), giuHtml(state, id), giacHtml(state, id));
   return out.join('');
 }
 
@@ -99,4 +100,44 @@ function giuHtml(state: GameState, id: QuanDaoId): string {
       <li>${vi.bien.giuLuaHieu(DON_DAO.baoSom / 60_000)}</li>
       <li>${vi.bien.giuChan(pct(DON_DAO.chan[cap - 1]))}</li>
     </ul>`;
+}
+
+/**
+ * Giặc đánh đảo: đảo còn yên (chưa có Mã Viện), đồn hư (nút Sửa), đếm ngược tới đợt sau (thay tại chỗ: `fillDao`), trận
+ * gần nhất (thắng hay thua, lính mất, của được, nút Xem lại trận).
+ */
+function giacHtml(state: GameState, id: QuanDaoId): string {
+  const d = state.dao[id];
+  const out = [`<h3>⚔️ ${vi.bien.giacTitle}</h3>`];
+  if (!maVienCame(state)) return out.concat(`<p class="muted">${vi.bien.giacYen}</p>`).join('');
+  if (d.hu) {
+    const cost = suaDonCost(state, id);
+    out.push(`<p class="why">${vi.bien.huNote}</p>`);
+    out.push(`<div class="actions"><button class="btn" data-act="suaDon" data-dao="${id}" ${canAfford(state, cost) ? '' : 'disabled'}>🔧 ${vi.bien.suaBtn} · ${costHtml(state, cost)}</button></div>`);
+  } else if (!giacToi(state, id)) out.push(`<p class="muted">${vi.bien.giacKhongLinh}</p>`);
+  else {
+    out.push(`<p class="muted">${vi.bien.giacHint(DAO_GIAC.holdS)}</p>`);
+    out.push(`<div class="stat"><span>${vi.bien.giacSau}</span><span data-dao-sau="${id}"></span></div>`);
+  }
+  if (d.dot) out.push(`<div class="stat"><span>${vi.bien.giacDot(d.dot)}</span><span>🏆 ${d.thang}</span></div>`);
+  const t = d.tran;
+  if (t) {
+    const mat = UNIT_TYPES.reduce((n, k) => n + t.mat[k], 0);
+    out.push(`<h3>📜 ${vi.bien.tranTitle(t.dot)}</h3>`);
+    out.push(`<div class="stat"><span>${t.thang ? `🏆 ${vi.bien.tranThang}` : `💥 ${vi.bien.tranThua}`}</span><span>${vi.bien.tranMat(mat)}</span></div>`);
+    if (t.thang) out.push(`<div class="stat"><span>${vi.bien.tranCua}</span><span>${costHtml(state, t.cua)}</span></div>`);
+    out.push(`<div class="actions"><button class="btn bronze" data-act="xemDao" data-dao="${id}">🎬 ${vi.bien.xemLai}</button></div>`);
+  }
+  return out.join('');
+}
+
+/**
+ * Đếm ngược tới đợt giặc đảo sau, thay tại chỗ. Chuỗi HTML của bảng để trống chỗ này: có số đổi mỗi giây thì
+ * bảng dựng lại mỗi khung và cuộn về đầu.
+ */
+export function fillDao(root: HTMLElement, state: GameState): void {
+  for (const el of root.querySelectorAll<HTMLElement>('[data-dao-sau]')) {
+    const sau = state.dao[el.dataset.daoSau as QuanDaoId]?.sau;
+    if (sau !== null && sau !== undefined) el.textContent = formatClock(Math.max(0, sau - state.clock));
+  }
 }

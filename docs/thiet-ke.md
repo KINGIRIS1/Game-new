@@ -2335,7 +2335,7 @@ Như các kế hoạch trước, chỉ học cơ chế của game cùng thể lo
 - Lính đóng lấy từ quân trong doanh trại, không quá chỗ quân tối đa của đồn. Người chơi chỉnh số muốn đóng từng binh chủng ở bảng quần đảo (`muon`, `setDaoLinh`), như ở đồn biên. Đổi số thì thuyền chiến tự chạy đủ chuyến để chở ra hay chở về.
 - Lính ra đảo rời khỏi quân ở kinh đô (`state.troops`), về tới bến thì vào lại. Nên lính đang ở đảo hay trên thuyền không giữ kinh đô, không ra phó bản, không đi đánh đồn, mà bố trí giữ kinh đô, phó bản, Đấu thành không phải đổi gì. Lính ở đảo không chiếm chỗ doanh trại: doanh trại luyện thêm được.
 - Lính đóng và lính trên thuyền vẫn ăn gạo như mọi lính (`daoArmy` cộng vào `foodPerMinute`).
-- **Lê Chân đốc thủy quân** (làm ở PR 3, cùng trận giữ đảo): đã theo về (thắng màn 34) thì lính đóng đảo mọi binh chủng được cộng `NU_TUONG_BONUS` (12%) máu và sức đánh khi giữ đảo. Lính nỏ đã có phần cộng của bà thì không cộng hai lần. Bà vẫn ở doanh trại kinh đô, như các nữ tướng ở kinh đô vẫn cộng cho lính giữ kinh đô.
+- **Lê Chân đốc thủy quân** (đã làm ở PR 3, cùng trận giữ đảo; `FieldSetup.nuMoi` đánh dấu mọi lính ta như được nữ tướng cộng): đã theo về (thắng màn 34) thì lính đóng đảo mọi binh chủng được cộng `NU_TUONG_BONUS` (12%) máu và sức đánh khi giữ đảo. Lính nỏ đã có phần cộng của bà thì không cộng hai lần. Bà vẫn ở doanh trại kinh đô, như các nữ tướng ở kinh đô vẫn cộng cho lính giữ kinh đô.
 
 ### Đảo giữ biển
 
@@ -2356,6 +2356,14 @@ Như các kế hoạch trước, chỉ học cơ chế của game cùng thể lo
 - **Quân giặc** tính theo số đợt đã tới đảo ấy (`daoForces(n)`, máu `daoHpScale(n)`), có trần như mọi đợt giặc. Chuẩn đo bằng test (hạt giống 1, 2, 3):
   - đồn cấp 1 đủ 12 lính quân mẫu chương 5 thì thắng đợt 1–3, có 6 lính thì thua đợt 3;
   - đồn cấp 3 đủ 30 lính thì thắng đợt trần, có 15 lính thì thua.
+- **Đã làm** (PR 3, bản lưu 29; `advanceGiacDao`, `danhDao`, `setupDao`, `suaDon` ở `dao.ts`, số ở `DAO_GIAC`, `daoForces`, `daoHpScale`, `daoCua` ở `defs.ts`). Số cuối cùng, đạt cả bốn chuẩn trên:
+  - Lịch: đợt đầu 10 phút, rồi 40 phút một đợt, hai đảo so le ít nhất 15 phút, báo trước 3 phút. Thua thì đồn hư, sửa bằng 30% giá dựng cấp hiện tại (`suaDonCost`); sửa xong thì thuyền chở lính ra lại, lính tới đảo thì đếm 10 phút tới đợt sau.
+  - Quân giặc đợt n (k = n, trần 6; h = nửa k làm tròn xuống): mở trận 3 + h lính kích, 1 giáp sĩ; giây 20 thêm 2 + h lính kích, h nỏ thủ; giây 40 thêm 1 + h lính kích, (k − 1)/3 giáp sĩ làm tròn xuống. Máu giặc 55% ở đợt 1, thêm 5% mỗi đợt, trần 80% ở đợt 6. Đợt đầu chỉ một lớp giáp sĩ đầu trận nên 6 lính vẫn thắng, tới đợt 3 thì thua.
+  - Quân ta được cộng máu và sức đánh 0%, 10%, 20% theo cấp đồn (`DON_DAO.them`), Lê Chân 12%, binh khí đã rèn; không huân công, đền, phúc lành.
+- **Ba điều tài liệu bỏ ngỏ, chọn theo lệ cũ**:
+  - Của trên thuyền giặc khi thắng: 1500 + 500k gỗ, 500 + 150k sắt (đợt 1: 2000 gỗ, 650 sắt; trần 4500 gỗ, 1400 sắt), vào kho có trần như mọi của.
+  - Binh khí đã rèn: lính đảo có tính, vì vẫn là lính ấy.
+  - Trang bị: trận đảo không rơi đồ, vì không có tướng.
 
 ### Giao diện
 
@@ -2365,12 +2373,13 @@ Như các kế hoạch trước, chỉ học cơ chế của game cùng thể lo
   - Thuyền chiến: neo ở bến, đang chở bao nhiêu lính ra đảo hay về bến (số giây chỉ ở dòng tin, bảng khỏi dựng lại mỗi giây).
   - Lính đóng: mỗi binh chủng một hàng −/+ như đồn biên, số ở đảo và trên thuyền; dòng chỗ quân đã đặt trên tối đa.
   - Giữ biển: ba lợi ích đang có, hay cần đóng thêm bao nhiêu chỗ quân.
-  - PR 3 thêm: đếm ngược tới đợt giặc sau, trận gần nhất (thắng hay thua, lính mất, nút Xem lại trận).
+  - PR 3 thêm (đã làm): phần Giặc đánh đảo: Mã Viện chưa sang thì "đảo yên"; đồn hư thì báo và nút Sửa đồn (giá); không lính thì nhắc; còn lại đếm ngược tới đợt giặc kế (thay tại chỗ, `fillDao`), số đợt đã gặp và số đợt giữ được, trận gần nhất (thắng hay thua, lính mất, của được, nút Xem lại trận).
 
   Bỏ dòng "Mai sau, Điện cấp 10 sẽ điều quân ra đóng giữ đảo."
 - **Bảng bến thuyền khơi** (từ Điện 10): mục Thuyền chiến: bến chưa cấp 3 thì nhắc; đủ cấp thì nút Đóng thuyền chiến (giá, thời gian); đã có thì ghi chở quân ra quần đảo nào, nút mở bảng đồn.
 - **Bảng Thợ hồ**: việc đồn đảo bấm Xem thì mở bảng quần đảo. Nhãn ⏳ đếm giờ nổi trên giữa đảo chính.
-- **Dòng tin**: thuyền chiến chở bao nhiêu lính ra đảo hay về, đếm ngược; lửa hiệu lúc báo thủy quân Hán. PR 3 thêm giặc áp sát đảo, kết quả trận đảo.
+- **Dòng tin**: thuyền chiến chở bao nhiêu lính ra đảo hay về, đếm ngược; lửa hiệu lúc báo thủy quân Hán. PR 3 thêm (đã làm) giặc áp sát đảo (đếm ngược, nút mở bảng quần đảo) và kết quả trận đảo trong 90 giây sau trận (nút Xem lại).
+- **Xem lại trận** (PR 3, đã làm): trận dựng lại từ `TranDao` trên bãi chiến nền `dao`, thanh trên ghi "Giữ đồn thêm … giây", không nút kỹ năng, nút tốc độ ×1, ×2, ×4 và ✕ thoát như xem lại Đấu thành. Lúc xem, luật chơi đứng như lúc Đấu thành; đang có trận khác thì không mở được.
 
 ### Hình
 
@@ -2380,9 +2389,9 @@ Như các kế hoạch trước, chỉ học cơ chế của game cùng thể lo
   - Cấp 3 thay rào bằng tường đá san hô, cổng thành lầu cổng, thêm lầu canh, bia đá trên lưng rùa, miếu thờ cá Ông.
   - Mái cấp 1 tranh, cấp 2 tranh viền đỏ, cấp 3 ngói viền đồng vàng.
 
-  Lính gác là bản tĩnh (`bakeSoldier`, gộp một lưới), cầm binh khí đúng bậc đã rèn, cứ năm chỗ quân đang đóng một người, tối đa sáu (`donGac`). Đồn giữ biển lúc thủy quân Hán sắp tới hay đang đánh kinh đô (lửa hiệu báo sớm) thì lửa hiệu bùng, khói đen bốc cao; PR 3 thêm lửa hiệu cháy khi giặc áp sát đảo. Ban đêm đuốc cổng, đuốc đầu cầu và lửa hiệu có quầng sáng (`duoc.ts`, World `syncDuoc`). Đồn hư thì bốc khói (PR 3).
+  Lính gác là bản tĩnh (`bakeSoldier`, gộp một lưới), cầm binh khí đúng bậc đã rèn, cứ năm chỗ quân đang đóng một người, tối đa sáu (`donGac`). Đồn giữ biển lúc thủy quân Hán sắp tới hay đang đánh kinh đô (lửa hiệu báo sớm) thì lửa hiệu bùng, khói đen bốc cao; PR 3 thêm lửa hiệu cháy khi giặc áp sát đảo. Ban đêm đuốc cổng, đuốc đầu cầu và lửa hiệu có quầng sáng (`duoc.ts`, World `syncDuoc`). Đồn hư thì không đốt lửa hiệu, bốc ba cột khói sẫm (màu `C.smokeDao`, sẫm hơn khói công trình hư cho nổi trên nền cát) (PR 3, đã làm).
 - **Thuyền chiến trống đồng** (`makeThuyenChien` ở `thuyenChien.ts`; đã vẽ ở PR 2), theo hình thuyền trên trống đồng Ngọc Lũ: thân dài cong hình lưỡi liềm, mũi và đuôi vút cao, mũi là đầu chim Lạc, đuôi là chùm lông đuôi chim, dải hoa văn đồng dọc mạn, mắt thuyền, chèo lái lớn, hàng mái chèo hai bên (bốn thế chèo đổi theo nhịp khi chạy), cờ đuôi nheo mũi và cờ lớn đuôi. Trên sạp có chiến binh đội mũ lông chim cầm giáo đứng mũi, một người đánh trống đồng (nện dùi khi thuyền chạy), người lái ở đuôi. Lúc chở quân, lính đứng trên sạp theo số đang chở (tối đa sáu người; voi chiến không lên sạp, giáo binh đứng thay). Rảnh thì neo cạnh bến thuyền khơi, xa bờ hơn thuyền khơi một quãng, mũi xuôi dòng; tới đảo thì mũi vừa chạm đầu cầu ván.
-- **Bãi chiến nền `dao`**: bãi cát trắng, dừa, phong ba. Sau lưng giặc là sóng vỗ và thuyền Hán đậu ngoài; sau lưng quân ta là đồn đảo. Bố cục vật cản `dao` (khóm phong ba, tảng đá san hô, xác thuyền) theo luật bãi chiến (`kiemBai`).
+- **Bãi chiến nền `dao`** (PR 3, đã làm): bãi cát trắng, dừa ngả ra biển gần bờ, phong ba trong đảo, đá ven bờ. Sau lưng giặc là sóng vỗ, bốn thuyền Hán và một lâu thuyền đậu ngoài; sau lưng quân ta là đồn đảo đúng cấp đồn (không lính gác, vì lính đóng đã ra cả bãi). Bố cục vật cản `dao` (khóm phong ba, hai tảng đá san hô, xác thuyền, một vũng nước nông) theo luật bãi chiến (`kiemBai`; `BAI_THEO.dao` chương 5).
 
 ### Lạc hầu, nhiệm vụ, đố sử
 
@@ -2392,9 +2401,9 @@ Như các kế hoạch trước, chỉ học cơ chế của game cùng thể lo
 
 ### Bản lưu, code
 
-- **Bản lưu 28** (PR 1; bản lưu 27 là trang bị tướng, gộp trước): thêm `state.dao`, mỗi quần đảo một mục `DonDao`: cấp đồn (0 là chưa dựng), đã có thuyền chiến chưa, lính ở đảo (`linh`), lính muốn đóng (`muon`), chuyến thuyền đang đi (`chuyen`: chở bao nhiêu, đi hay về, còn bao lâu). Bản lưu 27 lên 28 chưa có gì ngoài đảo. PR 3 thêm đồn hư, số đợt giặc đã tới, giờ đợt sau, trận gần nhất (hạt giống, quân hai bên, kết quả, đủ để xem lại).
+- **Bản lưu 28** (PR 1; bản lưu 27 là trang bị tướng, gộp trước): thêm `state.dao`, mỗi quần đảo một mục `DonDao`: cấp đồn (0 là chưa dựng), đã có thuyền chiến chưa, lính ở đảo (`linh`), lính muốn đóng (`muon`), chuyến thuyền đang đi (`chuyen`: chở bao nhiêu, đi hay về, còn bao lâu). Bản lưu 27 lên 28 chưa có gì ngoài đảo. **Bản lưu 29** (PR 3) thêm đồn hư (`hu`), số đợt giặc đã tới (`dot`), số đợt giữ được (`thang`), giờ đợt sau (`sau`, `null` là chưa có lịch), trận gần nhất (`tran`: đợt, cấp đồn, lính lúc vào trận, bậc binh khí, Lê Chân, kết quả, lính mất, của được, giờ đánh; hạt giống suy từ đợt và quần đảo, đủ để xem lại).
 - Đồn đảo, thuyền chiến không vào `state.buildings`: đảo ở ngoài lưới, nên lưới chiếm ô, lũ, giặc kinh đô, mẫu kinh đô đều không đụng tới. Việc xây đồn, đóng thuyền là phần việc mới của `xay.ts` (`PhanViec.dao`, mã việc âm `daoJobId`; `PhanViec.thuyen` gắn vào bến thuyền khơi), `startDon`, `startThuyen`; hủy hoàn của như mọi việc.
-- **Luật** ở tệp mới `src/game/dao.ts`. `dao.test.ts` canh đường thuyền, đóng thuyền, dựng nâng đồn, chở quân theo chuyến (cả lúc vắng, không rời bến giữa trận), lính đóng vẫn ăn, ba lợi ích giữ biển, nhiệm vụ, Lạc hầu, bản lưu 27 lên 28; PR 3 thêm lịch giặc và độ khó các đợt theo chuẩn.
+- **Luật** ở tệp mới `src/game/dao.ts`. `dao.test.ts` canh đường thuyền, đóng thuyền, dựng nâng đồn, chở quân theo chuyến (cả lúc vắng, không rời bến giữa trận), lính đóng vẫn ăn, ba lợi ích giữ biển, nhiệm vụ, Lạc hầu, bản lưu 27 lên 28; PR 3 thêm lịch giặc (đứng khi có trận, lúc vắng không có, so le hai đảo), thắng thua, sửa đồn, xem lại ra y hệt, Lê Chân, nhiệm vụ 67, bản lưu 28 lên 29 và độ khó các đợt theo chuẩn.
 - **Người chơi mô phỏng** từ Điện 10 nâng bến thuyền khơi của từng quần đảo lên cấp 3, đóng thuyền chiến, dựng và nâng đồn đảo (không luyện quân nên không đóng lính), để sổ kinh tế đo được chỗ tiêu mới (khoản "Đóng đảo"). Nhịp lên Điện ở `balance.test.ts` không đổi, vì đảo tới sau Điện 10.
 - **Sổ kinh tế đo được** (`node scripts/kinh-te.mjs --sau-dien10 240`): giờ đầu sau Điện 10 nâng hai bến lên cấp 3 và đóng thuyền chiến thứ nhất; hết giờ thứ hai hai đồn lên cấp 2; giờ thứ ba, thứ tư mỗi giờ một đồn lên cấp 3. Gỗ là thứ chặn (kho gỗ còn 5–8 nghìn). Phần tràn kho giờ thứ hai giảm còn 39% gạo, 37% vỏ ốc, 17% đất đá (trước khi có đảo: 81%, 65%, 64%); đảo xong thì tràn kho lại như trước.
 
@@ -2407,7 +2416,7 @@ Như các kế hoạch trước, chỉ học cơ chế của game cùng thể lo
 
 1. **PR 1 luật** (đã làm): `dao.ts`, bản lưu 28, thuyền chiến, đồn đảo ba cấp, chở quân, lính đóng, ba lợi ích giữ biển; bảng quần đảo, bảng bến, dòng tin; Lạc hầu gợi ý (cả lúc Mã Viện sang); đố sử Biển đảo; nhiệm vụ 63–66; người chơi mô phỏng, sổ kinh tế. Đồn và thuyền vẽ tạm (đồn biên phóng to, thuyền khơi ba buồm), PR 2 thay bằng hình thật.
 2. **PR 2 hình** (đã làm): đồn đảo ba cấp, cầu ván, thuyền chiến trống đồng, chuyến chở quân, lính gác, lửa hiệu, đèn ban đêm; cổng đồn và bến ván thẳng hàng, thuyền rẽ vào bến không qua đảo nhỏ (`daoVao`).
-3. **PR 3 giặc đánh đảo**: lịch các đợt, trận cầm cự tự đánh, nền và bố cục `dao`, xem lại trận, độ khó theo chuẩn, Lê Chân đốc thủy quân, nhiệm vụ 67.
+3. **PR 3 giặc đánh đảo** (đã làm): lịch các đợt, trận cầm cự tự đánh, nền và bố cục `dao`, xem lại trận, độ khó theo chuẩn, Lê Chân đốc thủy quân, nhiệm vụ 67.
 
 ## Kế hoạch chương 5: Hai Bà Trưng (chủ dự án đã duyệt)
 
@@ -2662,6 +2671,7 @@ Theo phương án A ở điều 1: hai nhiệm vụ sẵn có số 52, 53 thành
 | 61 | Dựng Đền Hát Môn | 3500 đất đá, 1100 sắt | 3 |
 | 62 | Dựng Đền Rồng Tiên (thêm sau, xem mục Đền Rồng Tiên) | 4500 đất đá, 1400 sắt | |
 | 63–66 | Đóng thuyền chiến, dựng đồn Hoàng Sa, dựng đồn Trường Sa, một đồn đảo cấp 3 (thêm sau, xem Kế hoạch: Điện 10 điều quân ra đóng đảo) | xem mục ấy | |
+| 67 | Giữ đảo qua một đợt giặc (thêm sau, cùng mục ấy) | 5000 gỗ, 2000 sắt | |
 
 Thưởng khoảng gấp rưỡi nhiệm vụ chương 4.
 
@@ -3671,5 +3681,5 @@ Kỹ năng chưa mở (Nhổ tre trước màn 6, Hiệu triệu trước màn 3
 22. **Đấu thành** (chủ dự án đã duyệt; đã làm PR 1–6: trận tất định, luật, đánh thử ngoài mạng, server, nối mạng; xem lại trận, bảng xếp hạng, gắn Google và lưu mây; xem Kế hoạch cùng tên): đánh thành người chơi khác, cướp của, server Supabase miễn phí.
 23. **Dân gánh hàng về kho** (chủ dự án chọn, đã làm PR 1, 2; xem mục cùng tên): công trình xa nơi nhận làm ra ít hơn, thấp nhất 50%; đường đi cho dân đi nhanh gấp đôi. PR 1 luật, PR 2 dân gánh trên đường, PR 3 tới nơi sản xuất.
 24. **Trang bị rơi ngẫu nhiên và sáu chỉ số tướng** (chủ dự án đã duyệt; xem Kế hoạch cùng tên): đồ rơi ở phó bản, thử thách, đồn, giữ kinh đô; mỗi tướng một bộ mang tên truyền thuyết, ai mặc cũng được, hiệu ứng bộ khi đúng tướng mặc; sáu chỉ số và Lực chiến; cường hóa bằng tài nguyên, phân giải ra sắt; bảng tướng kiểu túi đồ game nhập vai (hình tướng mặc đồ, ảnh món vẽ sẵn), mặc đủ bộ mình thì vũ khí ánh lên; Đấu thành tính đồ (máy chủ kiểm món, tự tính chỉ số). PR 1 luật và bảng, PR 2 Đấu thành, PR 3 hình (đã làm cả ba, cùng PR #100).
-25. **Điện 10 điều quân ra đóng đảo** (chủ dự án đã duyệt; đã làm PR 1, 2: luật, giao diện, hình đồn đảo và thuyền chiến; còn PR 3; xem Kế hoạch cùng tên): thuyền chiến đóng ở bến thuyền khơi cấp 3 chở quân ra đồn Hoàng Sa, đồn Trường Sa; đảo có quân giữ thì ngư trường làm ra thêm, báo sớm và chặn đánh thủy quân Hán; giặc Hán đánh đảo, quân đảo tự đánh, xem lại được.
+25. **Điện 10 điều quân ra đóng đảo** (chủ dự án đã duyệt; đã làm PR 1–3: luật, giao diện, hình đồn đảo và thuyền chiến, giặc đánh đảo; xem Kế hoạch cùng tên): thuyền chiến đóng ở bến thuyền khơi cấp 3 chở quân ra đồn Hoàng Sa, đồn Trường Sa; đảo có quân giữ thì ngư trường làm ra thêm, báo sớm và chặn đánh thủy quân Hán; giặc Hán đánh đảo, quân đảo tự đánh, xem lại được.
 26. **Để sau**: nhạc nền.

@@ -1,20 +1,28 @@
 // Canh đóng đảo (Điện 10, `dao.ts`): thuyền chiến đóng ở bến thuyền khơi cấp 3, bến nào chở quân ra quần đảo bến ấy
 // đánh cá; đồn đảo ba cấp dựng bằng tốp thợ; lính đóng rời kinh đô theo từng chuyến thuyền (lúc vắng thuyền vẫn chạy),
 // vẫn ăn gạo; đồn giữ biển thì ngư trường làm ra thêm, thủy quân Hán được báo sớm, lâu thuyền vào tới sông đã sứt máu;
-// nhiệm vụ 63–66; Lạc hầu gợi ý; bản lưu 26 lên 27.
+// nhiệm vụ 63–66; Lạc hầu gợi ý. Giặc đánh đảo (PR 3): lịch các đợt (đứng khi có trận, không có lúc vắng, hai đảo so
+// le), trận cầm cự tự đánh, xem lại ra y hệt, đồn hư và sửa, Lê Chân đốc thủy quân, độ khó theo chuẩn, nhiệm vụ 67;
+// bản lưu 28, 29.
 
 import { describe, expect, it } from 'vitest';
 import { DON_DAO_W, QUAN_DAO, daoBen, daoGoc, daoVao, donDaoCong, donDaoGoc, donDaoHuong, inDaoLoi, inDonDao, onDaoChinh, onIsland, quanDao, warRoute, isWater } from './bien';
-import { CH5_QUEST_START, DON_DAO, ENEMIES, GIFT_IDS, QUESTS, THUYEN_CHIEN, UNITS, type UnitType } from './defs';
+import { CH5_QUEST_START, DAO_GIAC, DON_DAO, ENEMIES, GIFT_IDS, NU_TUONG_BONUS, QUESTS, THUYEN_CHIEN, UNITS, UNIT_TYPES, daoCua, type UnitType } from './defs';
+import { startFieldBattle } from './battle';
 import { MA_VIEN_AT } from './chuong5';
 import {
+  baoDao,
   benOf,
   canDon,
   canThuyen,
   chanThuyen,
+  chayTranDao,
   daoArmy,
   daoJobId,
   giuBien,
+  setupDao,
+  suaDon,
+  suaDonCost,
   luaHieu,
   markDaoHinted,
   nextDaoHint,
@@ -422,21 +430,22 @@ describe('Nhiệm vụ, Lạc hầu, bản lưu', () => {
     expect(nextDaoHint(s)).toBe(null);
   });
 
-  it('bản lưu 28 giữ đồn, thuyền, lính đóng, chuyến đang đi và việc xây đồn; bản lưu 27 lên 28 chưa có gì ngoài đảo', () => {
+  it('bản lưu 29 giữ đồn, thuyền, lính đóng, chuyến đang đi và việc xây đồn; bản lưu 27 lên 29 chưa có gì ngoài đảo', () => {
     const s = withFort(1);
     setDaoLinh(s, 'hoangSa', 'giao', 12);
     startDon(s, 'hoangSa');
     const back = deserialize(serialize(s))!;
     expect(back.version).toBe(SAVE_VERSION);
-    expect(SAVE_VERSION).toBe(28);
+    expect(SAVE_VERSION).toBe(29);
     expect(back.dao).toEqual(s.dao);
     expect(jobOf(back, daoJobId('hoangSa'))?.o[0].dao).toBe('hoangSa');
     const old = JSON.parse(serialize(createInitialState(0)));
     old.version = 27;
     delete old.dao;
     const up = deserialize(JSON.stringify(old))!;
-    expect(up.version).toBe(28);
-    expect(up.dao.hoangSa).toEqual({ cap: 0, thuyen: false, linh: { giao: 0, cung: 0, voi: 0, no: 0 }, muon: { giao: 0, cung: 0, voi: 0, no: 0 }, chuyen: null });
+    expect(up.version).toBe(SAVE_VERSION);
+    const giac = { hu: false, dot: 0, thang: 0, sau: null, tran: null };
+    expect(up.dao.hoangSa).toEqual({ cap: 0, thuyen: false, linh: { giao: 0, cung: 0, voi: 0, no: 0 }, muon: { giao: 0, cung: 0, voi: 0, no: 0 }, chuyen: null, ...giac });
     const bad = JSON.parse(serialize(s));
     bad.dao.hoangSa.cap = 9;
     expect(deserialize(JSON.stringify(bad))).toBe(undefined);
@@ -445,5 +454,196 @@ describe('Nhiệm vụ, Lạc hầu, bản lưu', () => {
   it('bến ván và đường đi không đụng tới lưới kinh đô', () => {
     for (const q of QUAN_DAO) expect(daoBen(q).x + daoBen(q).z).toBeGreaterThan(RIVER_START * 2);
     expect(quanDao('hoangSa').x).toBeGreaterThan(76);
+  });
+});
+
+// ---------- Giặc đánh đảo (PR 3) ----------
+
+const Z = { giao: 0, cung: 0, voi: 0, no: 0 };
+/** Quân mẫu chương 5 thu nhỏ theo chỗ đồn: 12, 6, 30, 15 chỗ quân. */
+const A12 = { giao: 4, cung: 3, voi: 1, no: 1 };
+const A6 = { giao: 2, cung: 2, voi: 0, no: 1 };
+const A30 = { giao: 9, cung: 8, voi: 3, no: 2 };
+const A15 = { giao: 6, cung: 4, voi: 1, no: 1 };
+
+/** Kinh đô có đồn Hoàng Sa cấp `cap`, lính `linh` đã ở đảo; giặc kinh đô không tới (để đo riêng giặc đảo). */
+function island(cap: number, linh: typeof A12, maVien = true): GameState {
+  const s = withFort(cap, Z);
+  s.dao.hoangSa.linh = { ...linh };
+  s.dao.hoangSa.muon = { ...linh };
+  s.raid.nextAt = Number.MAX_SAFE_INTEGER;
+  if (maVien) {
+    s.questIndex = CH5_QUEST_START;
+    s.campaign.cleared = MA_VIEN_AT;
+  }
+  return s;
+}
+
+/** Cho thời gian chơi trôi từng phút tới khi đảo Hoàng Sa gặp đợt giặc thứ `dot`. */
+function toiDot(s: GameState, dot: number): void {
+  for (let i = 0; i < 300 && s.dao.hoangSa.dot < dot; i++) tick(s, 60_000);
+  expect(s.dao.hoangSa.dot).toBe(dot);
+}
+
+describe('Giặc đánh đảo: lịch các đợt', () => {
+  it('chưa có Mã Viện thì đảo yên; có rồi thì đợt đầu sau 10 phút, báo trước 3 phút, rồi 40 phút một đợt', () => {
+    const s = island(1, A12, false);
+    tick(s, 30 * 60_000);
+    expect(s.dao.hoangSa.sau).toBe(null);
+    s.questIndex = CH5_QUEST_START;
+    s.campaign.cleared = MA_VIEN_AT;
+    tick(s, 1000);
+    expect(s.dao.hoangSa.sau! - s.clock).toBe(DAO_GIAC.dauMs);
+    expect(baoDao(s, 'hoangSa')).toBe(null);
+    tick(s, DAO_GIAC.dauMs - DAO_GIAC.baoMs);
+    expect(baoDao(s, 'hoangSa')).toBe(DAO_GIAC.baoMs);
+    tick(s, DAO_GIAC.baoMs);
+    expect(s.dao.hoangSa.dot).toBe(1);
+    expect(s.dao.hoangSa.tran!.at).toBe(s.clock);
+    expect(s.dao.hoangSa.sau! - s.clock).toBe(DAO_GIAC.cachMs);
+  });
+
+  it('đồng hồ giặc đảo đứng khi đang có trận; lúc vắng không có giặc; đảo không lính thì không có lịch', () => {
+    const s = island(1, A12);
+    tick(s, 1000);
+    const con = s.dao.hoangSa.sau! - s.clock;
+    tick(s, 5 * 60_000, true);
+    expect(s.dao.hoangSa.sau! - s.clock).toBe(con);
+    s.raid.phase = 'battle';
+    tick(s, 60_000);
+    s.raid.phase = 'idle';
+    expect(s.dao.hoangSa.sau! - s.clock).toBe(con);
+    applyOffline(s, 5 * 3600_000);
+    expect(s.dao.hoangSa.dot).toBe(0);
+    expect(s.dao.hoangSa.sau! - s.clock).toBe(con);
+    s.dao.hoangSa.linh = { ...Z };
+    tick(s, 1000);
+    expect(s.dao.hoangSa.sau).toBe(null);
+  });
+
+  it('hai đảo có quân thì các đợt so le ít nhất 15 phút', () => {
+    const s = island(1, A12);
+    s.dao.truongSa = { ...s.dao.truongSa, cap: 1, thuyen: true, linh: { ...A12 }, muon: { ...A12 } };
+    for (let i = 0; i < 180; i++) {
+      tick(s, 60_000);
+      const [a, b] = [s.dao.hoangSa.sau, s.dao.truongSa.sau];
+      if (a !== null && b !== null) expect(Math.abs(a - b)).toBeGreaterThanOrEqual(DAO_GIAC.soLeMs);
+    }
+    expect(s.dao.hoangSa.dot + s.dao.truongSa.dot).toBeGreaterThanOrEqual(6);
+  });
+});
+
+describe('Giặc đánh đảo: trận và kết quả', () => {
+  it('giữ được đảo: lính tử trận mất hẳn, được gỗ sắt trên thuyền giặc; xem lại ra y hệt', () => {
+    const s = island(1, A12);
+    s.resources.go = 0;
+    s.resources.sat = 0;
+    toiDot(s, 1);
+    const d = s.dao.hoangSa;
+    const t = d.tran!;
+    expect(t.thang).toBe(true);
+    expect(d.thang).toBe(1);
+    expect(d.hu).toBe(false);
+    for (const k of UNIT_TYPES) expect(d.linh[k]).toBe(A12[k] - t.mat[k]);
+    expect(t.cua).toEqual(daoCua(1));
+    expect(s.resources.go).toBeGreaterThanOrEqual(daoCua(1).go!);
+    expect(s.resources.sat).toBeGreaterThanOrEqual(daoCua(1).sat!);
+    // Xem lại: dựng từ trận đã ghi thì ra y hệt.
+    const b = chayTranDao(setupDao('hoangSa', t));
+    expect(b.outcome).toBe('win');
+    for (const k of UNIT_TYPES) expect(b.lost[k]).toBe(t.mat[k]);
+    expect(b.dao).toBe('hoangSa');
+    expect(b.holdS).toBe(DAO_GIAC.holdS);
+  });
+
+  it('thua thì đồn hư: không giữ biển, không chở lính, không có giặc; sửa tốn 30% giá đồn', () => {
+    const s = island(1, A6);
+    toiDot(s, 1);
+    const d = s.dao.hoangSa;
+    expect(d.tran!.thang).toBe(false);
+    expect(d.hu).toBe(true);
+    expect(armySpace(d.linh)).toBe(0);
+    expect(d.tran!.mat).toEqual(A6);
+    expect(d.sau).toBe(null);
+    // Đồn hư: không giữ biển dù có lính, không chở lính ra, không nâng cấp.
+    s.troops = { ...A12 };
+    d.muon = { ...A12 };
+    tick(s, 60_000);
+    expect(d.chuyen).toBe(null);
+    d.linh = { ...A12 };
+    expect(giuBien(s, 'hoangSa')).toBe(0);
+    expect(canDon(s, 'hoangSa')).toEqual({ ok: false, reason: 'donDaoHu' });
+    tick(s, 60 * 60_000);
+    expect(d.dot).toBe(1);
+    // Sửa: 30% giá dựng đồn cấp 1.
+    const cost = suaDonCost(s, 'hoangSa');
+    expect(cost.gao).toBe(Math.round((DON_DAO.cost[0].gao! * 0.3) / 5) * 5);
+    const gao = s.resources.gao;
+    expect(suaDon(s, 'hoangSa').ok).toBe(true);
+    expect(s.resources.gao).toBe(gao - cost.gao!);
+    expect(d.hu).toBe(false);
+    expect(giuBien(s, 'hoangSa')).toBe(1);
+    expect(suaDon(s, 'hoangSa')).toEqual({ ok: false, reason: 'khongHuHong' });
+    tick(s, 1000);
+    expect(d.sau).not.toBe(null);
+  });
+
+  it('Lê Chân đốc thủy quân: lính đảo mọi binh chủng được cộng, lính nỏ không cộng hai lần, không cầm cờ trên bãi', () => {
+    const base = { dot: 1, cap: 1, linh: { giao: 1, cung: 1, voi: 1, no: 1 }, arms: Z };
+    const khong = startFieldBattle(setupDao('hoangSa', { ...base, leChan: false }));
+    const co = startFieldBattle(setupDao('hoangSa', { ...base, leChan: true }));
+    for (const k of UNIT_TYPES) {
+      const hp = (b: typeof co) => b.fighters.find((f) => f.side === 'ta' && f.kind === k)!.maxHp;
+      expect(hp(co) / hp(khong), k).toBeCloseTo(1 + NU_TUONG_BONUS, 6);
+    }
+    expect(co.fighters.filter((f) => f.side === 'ta').every((f) => f.nu)).toBe(true);
+    expect(co.nuTuong).toBeUndefined();
+    // Đồn cấp 3 cộng thêm 20% máu.
+    const cap3 = startFieldBattle(setupDao('hoangSa', { ...base, cap: 3, leChan: false }));
+    const giao = (b: typeof co) => b.fighters.find((f) => f.side === 'ta' && f.kind === 'giao')!.maxHp;
+    expect(giao(cap3) / giao(khong)).toBeCloseTo(1 + DON_DAO.them[2], 6);
+  });
+
+  it('độ khó theo chuẩn (hạt giống 1, 2, 3, quân mẫu chương 5, không binh khí, không Lê Chân)', () => {
+    const danh = (cap: number, linh: typeof A12, dot: number) =>
+      [1, 2, 3].map((seed) => {
+        const setup = setupDao('hoangSa', { dot, cap, linh, arms: Z, leChan: false });
+        setup.id = seed;
+        return chayTranDao(setup).outcome;
+      });
+    for (const dot of [1, 2, 3]) expect(danh(1, A12, dot), `cấp 1, 12 lính, đợt ${dot}`).toEqual(['win', 'win', 'win']);
+    expect(danh(1, A6, 3), 'cấp 1, 6 lính, đợt 3').toEqual(['lose', 'lose', 'lose']);
+    expect(danh(3, A30, DAO_GIAC.tran), 'cấp 3, 30 lính, đợt trần').toEqual(['win', 'win', 'win']);
+    expect(danh(3, A15, DAO_GIAC.tran), 'cấp 3, 15 lính, đợt trần').toEqual(['lose', 'lose', 'lose']);
+    expect(armySpace(A12)).toBe(12);
+    expect(armySpace(A6)).toBe(6);
+    expect(armySpace(A30)).toBe(30);
+    expect(armySpace(A15)).toBe(15);
+  });
+
+  it('nhiệm vụ 67: giữ đảo qua một đợt giặc', () => {
+    expect(QUESTS.findIndex((q) => q.id === 'giuDao')).toBe(67);
+    const s = island(1, A12);
+    s.questIndex = 67;
+    expect(questProgress(s)).toEqual({ have: 0, need: 1 });
+    toiDot(s, 1);
+    expect(questProgress(s)).toEqual({ have: 1, need: 1 });
+  });
+
+  it('bản lưu giữ trận gần nhất; trận ghi sai dạng thì bản lưu hỏng', () => {
+    const s = island(1, A12);
+    toiDot(s, 1);
+    const back = deserialize(serialize(s))!;
+    expect(back.dao).toEqual(s.dao);
+    const bad = JSON.parse(serialize(s));
+    bad.dao.hoangSa.tran.cap = 0;
+    expect(deserialize(JSON.stringify(bad))).toBe(undefined);
+    const old = JSON.parse(serialize(s));
+    old.version = 28;
+    for (const id of ['hoangSa', 'truongSa']) for (const k of ['hu', 'dot', 'thang', 'sau', 'tran']) delete old.dao[id][k];
+    const up = deserialize(JSON.stringify(old))!;
+    expect(up.dao.hoangSa.linh).toEqual(s.dao.hoangSa.linh);
+    expect(up.dao.hoangSa.dot).toBe(0);
+    expect(up.dao.hoangSa.tran).toBe(null);
   });
 });
