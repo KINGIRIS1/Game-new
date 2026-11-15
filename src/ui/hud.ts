@@ -235,6 +235,7 @@ export type HudAction =
   | { kind: 'upgrade'; id: number }
   | { kind: 'removeWall'; id: number }
   | { kind: 'toggleCong'; id: number }
+  | { kind: 'toggleCua'; id: number }
   | { kind: 'claimQuest' }
   | { kind: 'openSettings' }
   | { kind: 'toggleMute' }
@@ -659,6 +660,7 @@ export class Hud {
       case 'upgrade':
       case 'removeWall':
       case 'toggleCong':
+      case 'toggleCua':
       case 'raiseBuilding':
       case 'startMove':
       case 'startMerge':
@@ -1810,6 +1812,11 @@ export class Hud {
       const can = !b.damaged && canAfford(state, rc) && state.raid.phase !== 'battle';
       actions.push(`<button class="btn bronze" data-act="repairUNo" data-id="${b.id}" ${can ? '' : 'disabled'}>🎯 ${vi.ui.repairUNo} · ${costHtml(state, rc)}</button>`);
       if (b.damaged) actions.push(`<div class="why">${vi.ui.uNoBroken}</div>`);
+    }
+    // Cửa nhỏ trên thành: dân gánh hàng đi qua vòng thành (dân không trèo tường); trổ, bít lúc nào cũng được.
+    if (b.type === 'thanh') {
+      actions.push(`<button class="btn" data-act="toggleCua" data-id="${b.id}">${b.cua ? vi.ui.cuaClose : vi.ui.cuaOpen}</button>`);
+      actions.push(`<div class="muted">${vi.ui.cuaDesc}</div>`);
     }
     if (b.type === 'thanh' && !b.uNo && inChapter4(state)) {
       const check = canPlaceUNo(state, b.x, b.z);

@@ -568,6 +568,7 @@ function isValidBuilding(b: unknown): boolean {
     b.level <= BUILDINGS[b.type as BuildingType].maxLevel &&
     (b.guard === undefined || (isObj(b.guard) && UNIT_TYPES.every((k) => isNum((b.guard as Raw)[k]) && ((b.guard as Raw)[k] as number) >= 0))) &&
     (b.uNo === undefined || ((b.uNo === 'ok' || b.uNo === 'hu') && b.type === 'thanh')) &&
+    (b.cua === undefined || (b.cua === true && b.type === 'thanh')) &&
     (b.rot === undefined || [0, 1, 2, 3].includes(b.rot as number)) &&
     (b.mo === undefined || (b.mo === true && b.type === 'congDe')) &&
     (b.boi === undefined || (b.boi === true && PHU_SA_TYPES.includes(b.type as BuildingType)))
@@ -590,6 +591,7 @@ function isXayState(v: unknown): boolean {
       if (!Object.entries(p.gia).every(([r, n]) => RESOURCE_IDS.includes(r as ResourceId) && isNum(n) && n >= 0)) return false;
       if (p.len !== undefined && p.len !== true) return false;
       if (p.uNo !== undefined && p.uNo !== true) return false;
+      if (p.cua !== undefined && p.cua !== true) return false;
       if (p.doi !== undefined && !(typeof p.doi === 'string' && p.doi in BUILDINGS)) return false;
       if (p.dao !== undefined && !DAO_IDS.includes(p.dao as never)) return false;
       if (p.thuyen !== undefined && !DAO_IDS.includes(p.thuyen as never)) return false;

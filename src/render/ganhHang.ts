@@ -307,9 +307,9 @@ export function viTri(p: DuongNguoi, s: number, D: number): ViTri {
 export const TREO = 0.35;
 
 /**
- * Độ cao người đi bộ (người gánh, quân hành quân) tại (x, z) khi có lũy, thành, đê: không có cổng gần thì dân trèo qua
- * tường (`GANH.tuong`), nên tới gần ô tường thì leo dần lên mặt tường, qua rồi xuống, không đi lọt qua mô hình.
- * `ground`: độ cao mặt đất ở chỗ ấy; `tops`: mặt trên mỗi ô tường theo chỉ số ô (z * GRID + x), độ cao tuyệt đối.
+ * Độ cao người đi bộ (người gánh, quân hành quân) tại (x, z) khi đi qua đê hay đoạn lũy, thành đã đổ (dân không leo
+ * tường còn nguyên: luật không cho đi qua): tới gần thì leo dần lên mặt đê, đống đất vỡ, qua rồi xuống, không đi lọt qua
+ * mô hình. `ground`: độ cao mặt đất ở chỗ ấy; `tops`: mặt trên mỗi ô theo chỉ số ô (z * GRID + x), độ cao tuyệt đối.
  */
 export function treoQua(x: number, z: number, ground: number, tops: ReadonlyMap<number, number>): number {
   if (!tops.size) return ground;

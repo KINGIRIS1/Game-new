@@ -75,6 +75,11 @@ export interface Slot {
    * thì vẫn là tường, vòng tường không hở.
    */
   cong?: boolean;
+  /**
+   * Đoạn thành có cửa nhỏ (`Building.cua`, mẫu Cổ Loa): dân gánh hàng không trèo tường, đi qua vòng thành ở đây. Đã mở
+   * cổng ở chỗ này thì cổng thay cửa.
+   */
+  cua?: boolean;
 }
 
 // ---------- Dựng mẫu theo vùng đất ----------
@@ -403,6 +408,8 @@ function towersAlong(d: Draft, at: number, from: number, to: number, odd = at): 
 
 /** Cột (và hàng) giữa Điện: trục cổng thành, đối xứng qua đường chéo. */
 const GATE_AXIS = DIEN_HOME + Math.floor(BUILDINGS.dien.w / 2);
+/** Ngoài cửa trên trục Điện, mỗi mặt vòng thành Cổ Loa còn chừng này cửa nhỏ rải đều (`ringDoors`). */
+const CUA_SPREAD = 2;
 
 /**
  * Lũy tre bao hai mặt rừng (bắc và tây), bẫy chông ở hàng ngoài lũy, chòi canh và lối đi ngay trong lũy. Từ cấp Điện
@@ -442,6 +449,37 @@ function ringGates(d: Draft): void {
       north.cong = true;
       west.cong = true;
       break;
+    }
+  }
+}
+
+/**
+ * Cửa nhỏ trên mọi vòng thành Cổ Loa cho dân gánh hàng (dân không trèo tường): mỗi mặt (bắc, tây phía rừng; nam, đông
+ * phía sông) một cửa gần trục Điện và `CUA_SPREAD` cửa rải đều theo vòng ngoài, các vòng dùng chung chỗ cửa cho thẳng
+ * hàng (mặt phía sông ba vòng sát nhau thành tường dày), từng cặp đối xứng qua đường chéo. Chỗ cổng thành không cần cửa.
+ */
+function ringDoors(d: Draft): void {
+  if (!d.rings.length) return;
+  const outer = d.rings[d.rings.length - 1];
+  const marks = [GATE_AXIS, ...spread(CUA_SPREAD, outer.a + 1, outer.b - 1)];
+  for (const { a, b } of d.rings) {
+    const xs: number[] = [];
+    for (let x = a + 1; x < b; x++) xs.push(x);
+    for (const side of [a, b]) {
+      for (const t of marks) {
+        if (t <= a || t >= b) continue;
+        // Đã có cổng hay cửa gần đây (vòng trong nhỏ, nhiều chỗ dồn về một đoạn) thì thôi.
+        const near = (x: number) => [slotAt(d, x, side), slotAt(d, side, x)].some((s) => s?.cong || s?.cua);
+        if (xs.some((x) => Math.abs(x - t) <= 1 && near(x))) continue;
+        const pick = [...xs].sort((p, q) => Math.abs(p - t) - Math.abs(q - t) || p - q).find((x) => {
+          const one = slotAt(d, x, side);
+          const two = slotAt(d, side, x);
+          return one?.type === 'thanh' && two?.type === 'thanh';
+        });
+        if (pick === undefined) continue;
+        slotAt(d, pick, side)!.cua = true;
+        slotAt(d, side, pick)!.cua = true;
+      }
     }
   }
 }
@@ -498,7 +536,10 @@ function coLoaWalls(d: Draft, towers = true, gates = true): void {
   const inner = d.rings[0];
   d.mark(inner.a + 1, inner.a + 1, inner.b - 1, inner.b - 1, KEEP);
   deBao(d, towers);
-  if (gates) ringGates(d);
+  if (gates) {
+    ringGates(d);
+    ringDoors(d);
+  }
 }
 
 /** Chỗ trong mẫu ở ô (x, z), nếu có. */
@@ -528,8 +569,9 @@ function coLoaSongWalls(d: Draft): void {
     mark(p, outer.b);
     mark(outer.b, p);
   }
-  // Cổng thành chừa sau ụ nỏ, né các đoạn có ụ.
+  // Cổng thành chừa sau ụ nỏ, né các đoạn có ụ; cửa nhỏ sau cổng (ụ nỏ dựng trên cửa được).
   ringGates(d);
+  ringDoors(d);
   const lo = d.lo;
   const want = wantOf('choiCanh', d.level);
   const lau: [number, number, boolean][] = [
@@ -759,6 +801,8 @@ export interface MauPlan {
   stuck: number[];
   /** Ụ nỏ sẽ dựng thêm trên đoạn thành ở các ô này (mẫu Cổ Loa giữ sông), trong giới hạn theo cấp Điện. */
   uNos: { x: number; z: number }[];
+  /** Cửa nhỏ sẽ trổ trên đoạn thành ở các ô này (mẫu Cổ Loa, `Slot.cua`); không tốn của. */
+  cuas: { x: number; z: number }[];
   /** Điện đang xoay: áp mẫu quay Điện về hướng của mẫu (mặt trước ra sông). */
   turnDien: boolean;
   /**
@@ -803,7 +847,7 @@ export function planMau(state: GameState, id: MauId): MauPlan {
   };
   mark('dien', DIEN_HOME, DIEN_HOME);
 
-  const plan: MauPlan = { moves: [], builds: [], removes: [], cost: {}, stuck: [], uNos: [], turnDien: !!dien.rot, duong: [] };
+  const plan: MauPlan = { moves: [], builds: [], removes: [], cost: {}, stuck: [], uNos: [], cuas: [], turnDien: !!dien.rot, duong: [] };
   if (dien.x !== DIEN_HOME || dien.z !== DIEN_HOME) {
     plan.moves.push({ id: dien.id, x: DIEN_HOME, z: DIEN_HOME });
     addCost(plan.cost, moveCost(dien));
@@ -928,6 +972,17 @@ export function planMau(state: GameState, id: MauId): MauPlan {
       room--;
     }
   }
+  // Cửa nhỏ trên các đoạn thành mẫu đánh dấu (không ở chỗ sẽ thành cổng): trổ khi đoạn thành ấy có hay sắp dựng.
+  {
+    const removed = new Set(plan.removes);
+    for (const s of slots) {
+      if (!s.cua || s.type !== 'thanh') continue;
+      const wall = state.buildings.find((b) => b.type === 'thanh' && b.x === s.x && b.z === s.z && !removed.has(b.id));
+      const built = plan.builds.some((x) => x.type === 'thanh' && x.x === s.x && x.z === s.z);
+      if (wall ? wall.cua : !built) continue;
+      plan.cuas.push({ x: s.x, z: s.z });
+    }
+  }
   if (!plan.stuck.length) {
     plan.duong = traiDuong(state, plan);
     for (let i = 0; i < plan.duong.length; i++) addCost(plan.cost, BUILDINGS[DUONG_MAU].buildCost);
@@ -956,15 +1011,22 @@ function traiDuong(state: GameState, plan: MauPlan): { x: number; z: number }[] 
   if (room <= 0) return [];
   const removed = new Set(plan.removes);
   const moved = new Map(plan.moves.map((m) => [m.id, m]));
+  // Cửa nhỏ mẫu sẽ trổ: dân gánh đi qua đó, như sau khi áp mẫu.
+  const cua = new Set(plan.cuas.map((c) => c.z * GRID + c.x));
   const buildings: Building[] = [];
   for (const b of state.buildings) {
     if (removed.has(b.id)) continue;
     const m = moved.get(b.id);
-    buildings.push(m ? { ...b, x: m.x, z: m.z } : b);
+    const o = m ? { ...b, x: m.x, z: m.z } : b;
+    buildings.push(o.type === 'thanh' && cua.has(o.z * GRID + o.x) ? { ...o, cua: true } : o);
   }
   let id = -1;
-  for (const s of plan.builds) buildings.push({ id: id--, type: s.type, x: s.x, z: s.z, level: 1, workers: 1 });
-  const key = `${dienLevel(state)}:${room}:${state.khoanh.join(',')}:${buildings.map((b) => `${b.type}${b.x},${b.z}${b.damaged ? 'h' : ''}`).join(';')}`;
+  for (const s of plan.builds) {
+    const o: Building = { id: id--, type: s.type, x: s.x, z: s.z, level: 1, workers: 1 };
+    if (s.type === 'thanh' && cua.has(s.z * GRID + s.x)) o.cua = true;
+    buildings.push(o);
+  }
+  const key = `${dienLevel(state)}:${room}:${state.khoanh.join(',')}:${buildings.map((b) => `${b.type}${b.x},${b.z}${b.damaged ? 'h' : ''}${b.cua ? 'c' : ''}`).join(';')}`;
   const hit = duongNho.get(key);
   if (hit) return hit;
   const out: { x: number; z: number }[] = [];
@@ -1035,7 +1097,7 @@ export function canApplyMau(state: GameState, id: MauId): Result<MauPlan> {
   const plan = planMau(state, id);
   if (plan.removes.some((r) => isBusy(state, r))) return { ok: false, reason: 'dangXay' };
   if (plan.stuck.length) return { ok: false, reason: 'khongDuCho' };
-  if (!plan.moves.length && !plan.builds.length && !plan.removes.length && !plan.uNos.length && !plan.turnDien && !plan.duong.length) return { ok: false, reason: 'daTheoMau' };
+  if (!plan.moves.length && !plan.builds.length && !plan.removes.length && !plan.uNos.length && !plan.cuas.length && !plan.turnDien && !plan.duong.length) return { ok: false, reason: 'daTheoMau' };
   if (!canAfford(state, plan.cost)) return { ok: false, reason: 'thieuTaiNguyen' };
   return { ok: true, value: plan };
 }
@@ -1069,6 +1131,10 @@ export function applyMau(state: GameState, id: MauId): Result<MauPlan> {
   for (const u of plan.uNos) {
     const wall = state.buildings.find((b) => b.type === 'thanh' && b.x === u.x && b.z === u.z);
     if (wall) wall.uNo = 'ok';
+  }
+  for (const c of plan.cuas) {
+    const wall = state.buildings.find((b) => b.type === 'thanh' && b.x === c.x && b.z === c.z);
+    if (wall) wall.cua = true;
   }
   layDuong(state, plan);
   return check;
@@ -1120,8 +1186,10 @@ export function startMau(state: GameState, id: MauId): Result<MauPlan> {
   if (plan.turnDien) delete state.buildings.find((b) => b.type === 'dien')!.rot;
   const uNoAt = new Set(plan.uNos.map((u) => u.z * GRID + u.x));
   // Ụ nỏ trên đoạn thành đang có: gắn ngay như khi tự gắn.
+  const cuaAt = new Set(plan.cuas.map((c) => c.z * GRID + c.x));
   for (const b of state.buildings) {
     if (b.type === 'thanh' && uNoAt.delete(b.z * GRID + b.x)) b.uNo = 'ok';
+    if (b.type === 'thanh' && cuaAt.delete(b.z * GRID + b.x)) b.cua = true;
   }
   const cx = DIEN_HOME + BUILDINGS.dien.w / 2;
   const cz = DIEN_HOME + BUILDINGS.dien.d / 2;
@@ -1132,6 +1200,7 @@ export function startMau(state: GameState, id: MauId): Result<MauPlan> {
   const item = (s: Slot, p: Omit<PhanViec, 'ms' | 'gia'>): PhanViec => {
     const gia: Cost = { ...BUILDINGS[s.type].buildCost };
     const it: PhanViec = { ...p, ms: xayMs(s.type, 1), gia };
+    if (s.type === 'thanh' && cuaAt.delete(s.z * GRID + s.x)) it.cua = true;
     if (s.type === 'thanh' && uNoAt.delete(s.z * GRID + s.x)) {
       it.uNo = true;
       for (const r of RESOURCE_IDS) if (U_NO.cost[r]) gia[r] = (gia[r] ?? 0) + U_NO.cost[r]!;

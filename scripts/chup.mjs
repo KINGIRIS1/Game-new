@@ -199,7 +199,8 @@ d.camera(p.x, p.z, 3);`;
 
 /**
  * Đắp đoạn tường `type` cấp `level` dài 25 ô chắn ngang tuyến gánh của ruộng xa nhất (`RUONG_XA`), ở một phần ba tuyến
- * tính từ ruộng. `cong`: thêm cổng thành cách chỗ tuyến cắt tường 2 ô (dân đi vòng qua cổng); không thì dân trèo qua.
+ * tính từ ruộng. `cong`: 'cong' dựng cổng thành, 'cua' trổ cửa nhỏ trên thành, cách chỗ tuyến cắt tường 2 ô (dân không
+ * leo tường, đi vòng qua đó).
  */
 const TUONG_CHAN = (type, level, cong) => `const VT = await import('/src/game/vanChuyen.ts');
 const rt = s.buildings.filter((b) => b.type === 'ruong').sort((a, b) => VT.heSoGanh(s, a) - VT.heSoGanh(s, b))[0];
@@ -210,30 +211,32 @@ const doc = Math.abs((tt[k3 + 1] % 76) - cx) > 0;
 s.resources = { ...s.resources, gao: 9e5, voOc: 9e5, datDa: 9e5, sat: 9e5 };
 for (let k = -12; k <= 12; k++) {
   const res = G.place(s, 'luy', doc ? cx : cx + k, doc ? cz + k : cz);
-  if (res.ok) { res.value.type = k === 2 && ${!!cong} ? 'congThanh' : '${type}'; res.value.level = k === 2 && ${!!cong} ? 1 : ${level}; }
+  if (!res.ok) continue;
+  res.value.type = k === 2 && '${cong}' === 'cong' ? 'congThanh' : '${type}';
+  res.value.level = k === 2 && '${cong}' === 'cong' ? 1 : ${level};
+  if (k === 2 && '${cong}' === 'cua') res.value.cua = true;
 }`;
 
 /**
- * Tua đồng hồ cảnh tới lúc người gánh của ruộng xa ở trên ô tường hay vừa qua ô cổng của `TUONG_CHAN` (`o`: 'cong' hay
- * 'tuong'), đặt camera vào đó.
+ * Tua đồng hồ cảnh tới lúc người gánh của ruộng xa vừa qua ô cổng hay ở cửa nhỏ của `TUONG_CHAN` (`o`: 'cong', 'cua'),
+ * đặt camera vào đó.
  */
 const NHIN_TUONG = (o) => `const VT = await import('/src/game/vanChuyen.ts');
 const rt = s.buildings.filter((b) => b.type === 'ruong').sort((a, b) => VT.heSoGanh(s, a) - VT.heSoGanh(s, b))[0];
 const tt = VT.duongGanh(s, rt).tuyen;
-const loai = '${o}' === 'cong' ? ['congThanh'] : ['thanh', 'luy'];
-const w = s.buildings.filter((b) => loai.includes(b.type)).find((b) => tt.includes(b.z * 76 + b.x));
-if (!w) throw new Error('Tuyến gánh không qua ' + loai.join(', '));
+const w = s.buildings.filter((b) => ('${o}' === 'cong' ? b.type === 'congThanh' : b.cua)).find((b) => tt.includes(b.z * 76 + b.x));
+if (!w) throw new Error('Tuyến gánh không qua ${o}');
 const frame = () => new Promise((ok) => requestAnimationFrame(() => requestAnimationFrame(ok)));
 let p = null;
 for (let k = 0; k < 600 && !p; k++) {
   d.seaTime(k * 0.2);
   await frame();
-  // Ở cổng thì chụp lúc người vừa ra khỏi vòm cổng (dưới vòm bị mái che).
-  const [lo, hi] = '${o}' === 'cong' ? [0.9, 1.3] : [0, 0.3];
+  // Chụp lúc người vừa ra khỏi cổng, cửa (trong lối thì bị tường, mái che).
+  const [lo, hi] = [0.9, 1.3];
   p = d.ganh().find((g) => g.id === rt.id)?.ra.find((x) => { const m = Math.hypot(x.x - w.x - 0.5, x.z - w.z - 0.5); return m >= lo && m < hi; });
 }
 if (!p) throw new Error('Không thấy người gánh ở chỗ tường');
-d.camera(w.x + 0.5, w.z + 0.5, 3.4);`;
+d.camera(w.x + 0.5, w.z + 0.5, '${o}' === 'cua' ? 4.5 : 3.4);`;
 
 /**
  * Tua đồng hồ cảnh (`seaTime`) qua 80 giây, tìm lúc có người đang mang hàng ở xa hai đầu tuyến nhất của chỗ thỏa
@@ -327,21 +330,15 @@ const CANH = {
     doi: 600,
   },
   'ganh-cong': {
-    mo: 'Như ganh-hang, có đoạn thành Cổ Loa chắn ngang tuyến gánh, cổng thành cách 2 ô: người gánh đi vòng qua cổng',
-    truoc: `${KINH_DO}\n${RUONG_XA}\n${TUONG_CHAN('thanh', 1, true)}`,
+    mo: 'Như ganh-hang, có đoạn thành Cổ Loa dài chắn ngang tuyến gánh, cổng thành cách 2 ô: dân không leo tường, người gánh đi vòng qua cổng',
+    truoc: `${KINH_DO}\n${RUONG_XA}\n${TUONG_CHAN('thanh', 1, 'cong')}`,
     sau: NHIN_TUONG('cong'),
     doi: 600,
   },
-  'ganh-thanh': {
-    mo: 'Như ganh-cong nhưng không có cổng: người gánh trèo lên mặt thành rồi xuống, không đi xuyên tường',
-    truoc: `${KINH_DO}\n${RUONG_XA}\n${TUONG_CHAN('thanh', 1, false)}`,
-    sau: NHIN_TUONG('tuong'),
-    doi: 600,
-  },
-  'ganh-luy': {
-    mo: 'Như ganh-thanh, đoạn chắn là lũy tre cấp 1: người gánh bước qua thanh tre trên, không đi xuyên lũy',
-    truoc: `${KINH_DO}\n${RUONG_XA}\n${TUONG_CHAN('luy', 1, false)}`,
-    sau: NHIN_TUONG('tuong'),
+  'ganh-cua': {
+    mo: 'Như ganh-cong, chỗ cổng là cửa nhỏ trổ trên thành Cổ Loa: người gánh đi qua lối cửa',
+    truoc: `${KINH_DO}\n${RUONG_XA}\n${TUONG_CHAN('thanh', 1, 'cua')}`,
+    sau: NHIN_TUONG('cua'),
     doi: 600,
   },
   'ganh-vung': {

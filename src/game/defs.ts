@@ -1300,9 +1300,8 @@ export const FIRST_FLOOD_MS = 3 * 60_000;
  * - `k`: xa hơn thì hệ số là (k + gan) / (k + quãng đường).
  * - `san`: hệ số không dưới mức này (kể cả khi không có lối tới kho).
  * - `duong`: ô có đường đi, ô cầu tốn chừng này phần một ô đất.
- * - `tuong`: vượt một ô lũy, thành tốn chừng này ô (đi vòng qua cổng thì đỡ).
  */
-export const GANH = { gan: 14, k: 12, san: 0.5, duong: 0.5, tuong: 4 };
+export const GANH = { gan: 14, k: 12, san: 0.5, duong: 0.5 };
 /** Nguyên liệu Tết gánh tới bếp gói bánh, không về kho. */
 export const GANH_BEP: BuildingType[] = ['ruongNep', 'vuon', 'chuongLon'];
 

@@ -1052,7 +1052,13 @@ export interface CitadelSpot {
   z: number;
   seed: number;
   damaged: boolean;
+  /** Có cửa nhỏ (`Building.cua`): góc xoay quanh trục đứng cho lối cửa xuyên qua đoạn thành (`gateTurn`). */
+  door?: number;
 }
+
+/** Cửa nhỏ trên thành Cổ Loa: lối rộng chừng này, cao chừng này trên mặt đất (người gánh đi lọt). */
+export const CUA_RONG = 0.46;
+export const CUA_CAO = 0.84;
 
 /** Lính đi trên mặt thành lọt dưới sàn chòi, ụ nỏ dựng trên mặt thành: sàn cao chừng này trên mặt thành. */
 export const WALL_DECK = 0.95;
@@ -1081,6 +1087,43 @@ function citadelWall(post: boolean): THREE.Mesh {
   return b.mesh(toon);
 }
 
+/**
+ * Đoạn thành Cổ Loa có cửa nhỏ: ba lớp đất nện như `citadelWall` nhưng chừa lối cửa xuyên thành theo trục z (rộng
+ * `CUA_RONG`, cao `CUA_CAO`), xà gỗ đỡ đất trên lối, khung cột hai mặt, hai cánh cửa gỗ mở áp vào vách lối, nền lối
+ * nện đất. Không có lính, không có lầu: chỉ cho dân đi qua.
+ */
+function citadelDoor(): THREE.Mesh {
+  const b = new ShapeBuilder(false, true);
+  const half = CUA_RONG / 2;
+  // Mỗi lớp: rộng w, từ y0 tới y1, màu c. Phần dưới đỉnh lối chia hai bên lối, phần trên liền.
+  const layer = (w: number, y0: number, y1: number, c: number) => {
+    const lo = Math.min(y1, CUA_CAO);
+    if (lo > y0) {
+      const side = w / 2 - half;
+      for (const s of [-1, 1]) b.box(side, lo - y0, w, c, s * (half + side / 2), (y0 + lo) / 2, 0);
+    }
+    const hi = Math.max(y0, CUA_CAO);
+    if (y1 > hi) b.box(w, y1 - hi, w, c, 0, (hi + y1) / 2, 0);
+  };
+  layer(1.02, 0, 0.5, C.earthDark);
+  layer(0.92, 0.5, 1.0, C.earth);
+  layer(0.82, 1.0, 1.36, C.earthDark);
+  b.box(0.74, 0.04, 0.74, C.grass[1], 0, 1.37, 0);
+  // Nền lối nện đất, xà gỗ đỡ đất trên lối (thò ra hai mặt), khung cột hai mặt.
+  b.box(CUA_RONG, 0.02, 1.02, C.soil, 0, 0.01, 0);
+  for (const s of [-1, 1]) {
+    const z = s * 0.49;
+    b.box(CUA_RONG + 0.16, 0.08, 0.08, C.woodDark, 0, CUA_CAO + 0.04, z);
+    for (const x of [-1, 1]) b.box(0.06, CUA_CAO, 0.06, C.wood, x * (half + 0.01), CUA_CAO / 2, z);
+    // Cánh cửa ván mở vào trong, áp vào vách lối.
+    for (const x of [-1, 1]) {
+      b.box(0.03, CUA_CAO - 0.1, half, C.woodLight, x * (half - 0.02), (CUA_CAO - 0.1) / 2 + 0.02, s * (0.49 - half / 2 - 0.04));
+      b.box(0.035, 0.04, half, C.woodDark, x * (half - 0.02), CUA_CAO * 0.62, s * (0.49 - half / 2 - 0.04));
+    }
+  }
+  return b.mesh(toon);
+}
+
 /** Đoạn thành bị phá: đống đất sạt thấp, vài tảng đất lăn ra. */
 function citadelRubble(): THREE.Mesh {
   const b = new ShapeBuilder(false, true);
@@ -1093,12 +1136,12 @@ function citadelRubble(): THREE.Mesh {
 
 let cachedCitadel: THREE.Mesh[] | null = null;
 
-/** Dựng toàn bộ thành Cổ Loa trong kinh đô (nóc làm lối đi, lan can dựng riêng ở `buildWallTops`). Mọi đoạn cùng hướng. */
+/** Dựng toàn bộ thành Cổ Loa trong kinh đô (nóc làm lối đi, lan can dựng riêng ở `buildWallTops`). Mọi đoạn cùng hướng, trừ đoạn có cửa nhỏ xoay theo lối cửa. */
 export function buildCitadel(spots: CitadelSpot[]): THREE.Object3D {
-  cachedCitadel ??= [citadelWall(false), citadelWall(true), citadelRubble()];
+  cachedCitadel ??= [citadelWall(false), citadelWall(true), citadelRubble(), citadelDoor()];
   return instanceTemplates(
     cachedCitadel,
-    spots.map((s) => ({ t: s.damaged ? 2 : s.seed % 7 === 0 ? 1 : 0, x: s.x, y: s.y, z: s.z, s: 1, ry: 0 })),
+    spots.map((s) => ({ t: s.damaged ? 2 : s.door !== undefined ? 3 : s.seed % 7 === 0 ? 1 : 0, x: s.x, y: s.y, z: s.z, s: 1, ry: s.damaged ? 0 : (s.door ?? 0) })),
     treeOutline,
   );
 }

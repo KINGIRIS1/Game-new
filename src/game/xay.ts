@@ -56,6 +56,8 @@ export interface PhanViec {
   doi?: BuildingType;
   /** Xong thì gắn ụ nỏ lên đoạn thành (áp mẫu kinh đô). */
   uNo?: true;
+  /** Xong thì trổ cửa nhỏ trên đoạn thành (áp mẫu kinh đô, `Building.cua`). */
+  cua?: true;
   /** Dựng hay nâng một cấp đồn đảo của quần đảo này (`dao.ts`); `id` là mã việc đồn đảo (`daoJobId`, số âm). */
   dao?: QuanDaoId;
   /** Đóng thuyền chiến cho quần đảo này ở bến thuyền khơi `id` (`dao.ts`). */
@@ -281,15 +283,17 @@ function finishItem(state: GameState, p: PhanViec): void {
       b.type = p.doi;
       b.level = 1;
       delete b.uNo;
+      delete b.cua;
       delete b.mo;
       delete b.damaged;
       // Đoạn tường mới: máu đầy như vừa dựng, không mang máu đoạn cũ.
       if (state.raid.battle) delete state.raid.battle.hp[b.id];
     }
   }
-  if (p.uNo) {
+  if (p.uNo || p.cua) {
     const b = findBuilding(state, p.id);
-    if (b?.type === 'thanh') b.uNo = 'ok';
+    if (b?.type === 'thanh' && p.uNo) b.uNo = 'ok';
+    if (b?.type === 'thanh' && p.cua) b.cua = true;
   }
   state.xay.seq++;
 }

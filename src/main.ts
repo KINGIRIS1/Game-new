@@ -44,6 +44,7 @@ import {
   canAfford,
   dienLevel,
   placeUNo,
+  setCua,
   repairUNo,
   uNoCount,
   uNoLimit,
@@ -1794,6 +1795,16 @@ async function start(): Promise<void> {
         if (!r.ok) return fail(r.reason);
         play('tap');
         hud.toast(r.value.mo ? vi.ui.congIsOpen : vi.ui.congIsShut);
+        commit();
+        return;
+      }
+
+      case 'toggleCua': {
+        const b = findBuilding(state, a.id);
+        const r = setCua(state, a.id, !b?.cua);
+        if (!r.ok) return fail(r.reason);
+        play('tap');
+        hud.toast(r.value.cua ? vi.ui.cuaIsOpen : vi.ui.cuaIsShut);
         commit();
         return;
       }

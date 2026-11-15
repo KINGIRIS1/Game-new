@@ -109,6 +109,11 @@ export interface Building {
   guard?: Record<UnitType, number>;
   /** Đoạn thành Cổ Loa có ụ nỏ trên mặt thành: còn tốt, hay đã hư theo thành (phải sửa riêng). */
   uNo?: 'ok' | 'hu';
+  /**
+   * Đoạn thành Cổ Loa có cửa nhỏ (`setCua`): dân gánh hàng đi qua được (dân không trèo tường), không có lính bắn. Trong
+   * trận vẫn là đoạn thành y như cũ.
+   */
+  cua?: true;
   /** Công trình xoay được (`canRotateType`): đã xoay mấy nấc 90° (1–3). Không có là hướng gốc. */
   rot?: number;
   /** Cống đê đang mở: nước lũ tràn vào sau đê (`floodHits` ở `terrain.ts`). Không có là đóng. */
@@ -1665,6 +1670,18 @@ export function placeUNo(state: GameState, x: number, z: number): Result<Buildin
   pay(state, U_NO.cost);
   check.value.uNo = 'ok';
   return check;
+}
+
+/**
+ * Trổ (`on`) hay bít cửa nhỏ trên đoạn thành Cổ Loa `id`: cho dân gánh hàng đi qua vòng thành (dân không trèo tường).
+ * Không tốn của, xong ngay; trong trận đoạn thành vẫn như cũ.
+ */
+export function setCua(state: GameState, id: number, on: boolean): Result<Building> {
+  const b = state.buildings.find((o) => o.id === id);
+  if (!b || b.type !== 'thanh') return fail('canThanh');
+  if (on) b.cua = true;
+  else delete b.cua;
+  return ok(b);
 }
 
 /** Giá sửa một ụ nỏ hư: một phần giá dựng, như mọi công trình. */

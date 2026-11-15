@@ -5,9 +5,10 @@
  * Xa nơi nhận thì mất công đi lại, công trình làm ra ít hơn (`heSoGanh`). Của vẫn vào kho đều mỗi phút như cũ, không
  * có hàng nằm dọc đường, nên bản lưu không thêm gì và lúc vắng tính y như lúc chơi.
  *
- * Quãng đường đo bằng ô đất trống: ô có đường đi, ô cầu còn nguyên rẻ hơn (`GANH.duong`), trèo qua lũy, thành tốn
- * `GANH.tuong` ô (nên có cổng gần thì dân đi vòng qua cổng), cổng thành, cống đê, đê, bẫy, đồ trang trí và công trình đang hư đi qua như đất; sông, rừng chưa phát
- * và móng công trình khác không đi qua được. Phần vẽ người gánh dùng chung tuyến ở đây (`duongGanh`).
+ * Quãng đường đo bằng ô đất trống: ô có đường đi, ô cầu còn nguyên rẻ hơn (`GANH.duong`); cổng thành, cống đê, đê,
+ * bẫy, đồ trang trí và công trình đang hư đi qua như đất; sông, rừng chưa phát, lũy, thành còn nguyên (dân không trèo
+ * tường, chỉ qua cổng thành hay cửa nhỏ trên thành `Building.cua`) và móng công trình khác không đi qua được. Phần vẽ người gánh dùng chung tuyến ở đây
+ * (`duongGanh`).
  */
 import { BUILDINGS, GANH, GANH_BEP, isBridge, isDecor, type BuildingType } from './defs';
 import type { Building, GameState } from './game';
@@ -73,14 +74,11 @@ export function heSoTheo(d: number): number {
 }
 
 /** Chi phí bước vào ô của công trình `b` (Infinity: không đi qua). */
-function tileCost(b: Pick<Building, 'type' | 'damaged'>): number {
+function tileCost(b: Pick<Building, 'type' | 'damaged' | 'cua'>): number {
   if (isBridge(b.type)) return b.damaged ? Infinity : GANH.duong;
   if (isDecor(b.type)) return BUILDINGS[b.type].decor === 'duong' ? GANH.duong : 1;
-  if (b.damaged) return 1;
+  if (b.damaged || b.cua) return 1;
   switch (b.type) {
-    case 'luy':
-    case 'thanh':
-      return GANH.tuong;
     case 'congThanh':
     case 'congDe':
     case 'de':
@@ -245,11 +243,11 @@ function dauVet(state: GameState): { key: number; n: number } {
   };
   const one = (b: Building, extra: number) => {
     mix(b.id);
-    mix((((TYPE_INDEX.get(b.type) ?? 0) * 128 + b.x) * 128 + b.z) * 4 + extra);
+    mix((((TYPE_INDEX.get(b.type) ?? 0) * 128 + b.x) * 128 + b.z) * 8 + extra);
   };
-  for (const b of state.buildings) one(b, b.damaged ? 1 : 0);
+  for (const b of state.buildings) one(b, (b.damaged ? 1 : 0) + (b.cua ? 2 : 0));
   const pend = state.xay?.viec.length ? pendingBuildings(state) : [];
-  for (const b of pend) one(b, 2);
+  for (const b of pend) one(b, 4);
   return { key: h, n: state.buildings.length * 1000 + pend.length };
 }
 

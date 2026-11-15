@@ -14,12 +14,15 @@ import {
   markHinted,
   nextHint,
   place,
+  setCua,
   type Building,
   type GameState,
 } from './game';
 import { GRID, RIVER_START } from './map';
 import { MAU_IDS, applyMau, mauSlots } from './mau';
 import { DIEN, DIEN_END, edge, setDien } from './testmap';
+import { deserialize, serialize } from './save';
+import { duongGanh, ganhType } from './vanChuyen';
 
 /** Kinh đô đã vào chương 3, Điện `level`, của nhiều. */
 function ch3(level = 5): GameState {
@@ -269,5 +272,46 @@ describe('mẫu kinh đô có cổng thành', () => {
     expect(marks.some((m) => m.z === axis)).toBe(true);
     expect(DIEN_END).toBeGreaterThan(axis);
     expect(edge(5)).toBeLessThan(axis);
+  });
+});
+
+describe('cửa nhỏ trên thành Cổ Loa (dân gánh hàng không trèo tường)', () => {
+  it('mẫu Cổ Loa có cửa nhỏ trên mọi vòng thành, cả mặt phía rừng lẫn phía sông; áp mẫu thì trổ cửa, công trình nào cũng có lối gánh', () => {
+    for (const id of ['coLoa', 'coLoaSong'] as const) {
+      const slots = mauSlots(id, 7);
+      const walls = slots.filter((x) => x.type === 'thanh');
+      const doors = walls.filter((x) => x.cua);
+      expect(doors.length, id).toBeGreaterThanOrEqual(12);
+      for (const d of doors) {
+        expect(d.cong).toBeFalsy();
+        // Từng cặp đối xứng qua đường chéo.
+        expect(doors.some((o) => o.x === d.z && o.z === d.x)).toBe(true);
+      }
+    }
+    const s = ch3(7);
+    expect(applyMau(s, 'coLoa').ok).toBe(true);
+    const marks = mauSlots('coLoa', 7).filter((x) => x.cua);
+    for (const m of marks) expect(s.buildings.some((b) => b.type === 'thanh' && b.cua && b.x === m.x && b.z === m.z)).toBe(true);
+    for (const b of s.buildings.filter((o) => ganhType(o.type))) expect(Number.isFinite(duongGanh(s, b)!.d), `${b.type} ${b.x},${b.z}`).toBe(true);
+    // Trong trận đoạn có cửa vẫn là thành: vòng thành không hở.
+    expect(wallRings(s)).toBeGreaterThanOrEqual(3);
+  });
+
+  it('trổ, bít cửa chỉ trên thành; lưu rồi nạp lại giữ cửa; giá trị sai thì không nạp', () => {
+    const s = ch3(7);
+    expect(applyMau(s, 'coLoa').ok).toBe(true);
+    const wall = s.buildings.find((b) => b.type === 'thanh' && !b.cua)!;
+    const kho = s.buildings.find((b) => b.type === 'kho')!;
+    expect(setCua(s, wall.id, true).ok).toBe(true);
+    expect(setCua(s, kho.id, true).ok).toBe(false);
+    const back = deserialize(serialize(s))!;
+    expect(back.buildings.find((b) => b.id === wall.id)?.cua).toBe(true);
+    const bad = (id: number, value: unknown) => {
+      const raw = JSON.parse(serialize(s));
+      raw.buildings.find((b: { id: number }) => b.id === id).cua = value;
+      return deserialize(JSON.stringify(raw));
+    };
+    expect(bad(wall.id, 1)).toBeUndefined();
+    expect(bad(kho.id, true)).toBeUndefined();
   });
 });

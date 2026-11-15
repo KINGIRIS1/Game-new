@@ -547,15 +547,15 @@ const SEA_SPEED = 2.2;
 const SEA_FISH_SPEED = 1.5;
 
 /**
- * Người đi bộ trèo qua đoạn tường này cao chừng nào trên mặt đất (0: không trèo). Thành Cổ Loa, thành đất: lên mặt
- * thành; lũy tre: bước qua thanh tre trên; đê, kè đá: lên mặt đê; đoạn đổ: bước qua đống đất vỡ.
+ * Người đi bộ bước qua ô này cao chừng nào trên mặt đất (0: không). Đê, kè đá: lên mặt đê; lũy, thành đã đổ: bước qua
+ * đống đất vỡ. Lũy, thành còn nguyên thì dân không đi qua (luật gánh hàng), không cần.
  */
 function climbHeight(b: Building): number {
   switch (b.type) {
     case 'thanh':
-      return b.damaged ? 0.25 : CITADEL_TOP;
+      return b.damaged ? 0.25 : 0;
     case 'luy':
-      return b.damaged ? 0.2 : b.level >= 2 ? EARTH_WALL_TOP : 0.8;
+      return b.damaged ? 0.2 : 0;
     case 'de':
       return b.damaged ? 0.2 : b.level >= 2 ? 0.78 : 0.54;
     default:
@@ -1327,7 +1327,10 @@ export class World {
     }
 
     const citadel = state.buildings.filter((b) => b.type === 'thanh');
-    const ckey = citadel.map((b) => `${b.id}:${b.x}:${b.z}:${b.damaged ? 1 : 0}:${b.uNo ?? ''}:${this.heights[b.z * GRID + b.x]}`).join(',');
+    // Đoạn có cửa nhỏ xoay theo tường kề bên, nên khóa có cả tường quanh đó (tường đổi thì lối cửa có thể đổi hướng).
+    const doorWalls = citadel.some((b) => b.cua) ? new Set(state.buildings.filter((w) => GATE_WALLS.includes(w.type)).map((w) => w.z * GRID + w.x)) : null;
+    const doorTurn = (b: Building) => (doorWalls && b.cua ? gateTurn(state, b, doorWalls) : undefined);
+    const ckey = citadel.map((b) => `${b.id}:${b.x}:${b.z}:${b.damaged ? 1 : 0}:${b.uNo ?? ''}:${doorTurn(b) ?? ''}:${this.heights[b.z * GRID + b.x]}`).join(',');
     if (ckey !== this.citadelKey) {
       this.citadelKey = ckey;
       if (this.citadel) {
@@ -1340,6 +1343,7 @@ export class World {
         z: wz(c.z) + 0.5,
         seed: c.x * 31 + c.z * 17,
         damaged: !!c.damaged,
+        door: doorTurn(c),
       }));
       this.citadel = buildCitadel(spots);
       // Ụ nỏ trên mặt các đoạn thành còn nguyên; ụ hư thì chỉ còn ụ đất sạt, không người.
