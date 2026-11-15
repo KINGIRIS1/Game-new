@@ -262,3 +262,89 @@ export function monsterBody(r: Rig, kind: keyof typeof MAKERS): void {
 export function serpentBody(r: Rig, body: readonly (readonly [number, number, number, number])[]): void {
   figure(r as unknown as HumanRig, 'quai:thuongLuong', (d) => serpentPieces(body, d));
 }
+
+// ---------- Rắn hổ mang chúa ----------
+
+/**
+ * Rắn hổ mang chúa: mình dài màu ô liu sẫm có khoang vàng nhạt, nửa trước dựng đứng, cổ bạnh mang rộng dẹt (mặt trước
+ * mang vàng nhạt có hoa văn mực), đầu nhỏ, mắt vàng. Nặn theo các khúc `body` như thuồng luồng.
+ */
+function cobraPieces(body: readonly (readonly [number, number, number, number])[], detail: number): Piece[] {
+  const clay = new Clay(C.cobra);
+  const pts = body.map(([x, y, z]) => [x, y, z] as V3);
+  const rs = body.map((b) => b[3]);
+  const tip: V3 = [pts[0][0] + 0.3, 0.06, pts[0][2] - 0.2];
+  clay.add('s0', cone(tip, pts[0], 0.015, rs[0]), { k: 0.03 });
+  for (let i = 0; i < pts.length - 1; i++) clay.add(`s${i}`, cone(pts[i], pts[i + 1], rs[i] * 0.95, rs[i + 1] * 0.95), { k: 0.05 });
+  const last = pts[pts.length - 1];
+  // Mang bạnh: khối dẹt rộng quanh cổ, ngay dưới đầu.
+  const hood: V3 = add3(last, [0, 0.12, 0.02]);
+  const hoodSdf: Sdf = (x, y, z) => ellipsoid(hood, [0.2, 0.22, 0.2])(x, y, hood[2] + (z - hood[2]) / 0.3) * 0.3;
+  clay.add('head', hoodSdf, { k: 0.04 });
+  const h: V3 = add3(last, [0, 0.32, 0.1]);
+  clay.add('head', ellipsoid(h, [0.085, 0.065, 0.11]), { k: 0.04 });
+  clay.add('head', ellipsoid(add3(h, [0, -0.015, 0.09]), [0.065, 0.045, 0.07]), { k: 0.03 });
+  const f = clay.dist;
+  const paints: Paint[] = [];
+  body.forEach(([x, y, z], i) => paints.push(clay.layer(`s${i}`, sphere([x, y, z], rs[i] * 1.05), C.cobraBand)));
+  body.forEach(([x, y, z, rr], i) => {
+    if (i % 2) return;
+    paints.push(clay.layer(`s${i}`, (px, py, pz) => Math.max(Math.abs(py - y) - rr * 0.18, Math.hypot(px - x, pz - z) - rr * 1.2), C.cobra));
+  });
+  paints.push(clay.layer('head', (x, y, z) => Math.max(hoodSdf(x, y, z) - 0.01, hood[2] + 0.01 - z), C.cobraBand));
+  // Hoa văn mực trên mặt trước mang: hai vệt cong và một chấm giữa.
+  for (const s of [-1, 1]) paints.push(clay.layer('head', (x, y, z) => Math.max(Math.abs(Math.hypot(x - s * 0.08, y - hood[1]) - 0.06) - 0.012, hood[2] + 0.02 - z), C.ink, 2));
+  for (const s of [-1, 1]) paints.push(...eye(clay, 'head', f, add3(h, [s * 0.06, 0.03, 0.06]), [s * 0.6, 0.3, 0.7], 0.022, C.gold));
+  return [build(clay, [-0.5, -0.01, -1.3], [0.7, 1.45, 0.6], 0.012, 2000, detail, paints)];
+}
+
+export function cobraBody(r: Rig, body: readonly (readonly [number, number, number, number])[]): void {
+  figure(r as unknown as HumanRig, 'quai:ranHo', (d) => cobraPieces(body, d));
+}
+
+// ---------- Cua đá ----------
+
+/**
+ * Cua đá: mai rộng dẹt nâu đá, mép mai có răng cưa, hai càng to (một càng to hơn) đầu càng sẫm, tám chân nhọn, hai mắt
+ * trên cuống. Xương: thân `qBody`, hai càng `clawL`, `clawR`, chân hai bên `legL`, `legR`.
+ */
+function crabPieces(detail: number): Piece[] {
+  const clay = new Clay(C.crab);
+  clay.add('qBody', flatY(ellipsoid([0, 0.38, 0], [0.42, 0.3, 0.32]), 0.38, 0.45), { k: 0 });
+  for (let i = 0; i < 5; i++) for (const s of [-1, 1]) clay.add('qBody', sphere([s * (0.16 + i * 0.05), 0.42, 0.26 - i * 0.02], 0.035), { k: 0.02 });
+  for (const s of [-1, 1]) {
+    clay.add('qBody', cone([s * 0.07, 0.46, 0.24], [s * 0.09, 0.58, 0.3], 0.02, 0.018), { k: 0.01 });
+    clay.add('qBody', sphere([s * 0.09, 0.6, 0.31], 0.035), { k: 0.01 });
+  }
+  for (const [b, s, big] of [
+    ['clawL', -1, 1],
+    ['clawR', 1, 1.25],
+  ] as [string, number, number][]) {
+    clay.add(b, cone([s * 0.3, 0.36, 0.2], [s * 0.42, 0.42, 0.42], 0.05, 0.06 * big), { k: 0.03, apart: b });
+    clay.add(b, ellipsoid([s * 0.45, 0.45, 0.55], [0.09 * big, 0.08 * big, 0.13 * big]), { k: 0.03, apart: b });
+    clay.add(b, cone([s * 0.45, 0.47, 0.62], [s * 0.43, 0.5, 0.78], 0.04 * big, 0.01), { k: 0.01, apart: b });
+    clay.add(b, cone([s * 0.47, 0.41, 0.62], [s * 0.47, 0.4, 0.74], 0.035 * big, 0.01), { k: 0.01, apart: b });
+  }
+  for (const [b, s] of [
+    ['legL', -1],
+    ['legR', 1],
+  ] as [string, number][]) {
+    for (let i = 0; i < 4; i++) {
+      const z = 0.12 - i * 0.12;
+      const knee: V3 = [s * 0.55, 0.42, z - 0.02];
+      clay.add(b, cone([s * 0.3, 0.36, z], knee, 0.035, 0.03), { k: 0.015, apart: b });
+      clay.add(b, cone(knee, [s * 0.66, 0.02, z - 0.06], 0.028, 0.008), { k: 0.015, apart: b });
+    }
+  }
+  const f = clay.dist;
+  const paints: Paint[] = [];
+  paints.push(clay.layer('qBody', (x, y, z) => Math.max(0.36 - y, Math.hypot(x / 0.36, z / 0.26) - 1), C.crabDark));
+  for (const b of ['clawL', 'clawR']) paints.push(clay.layer(b, (_x, _y, z) => 0.6 - z, C.crabDark));
+  for (const s of [-1, 1]) paints.push(clay.layer('qBody', sphere([s * 0.09, 0.6, 0.31], 0.038), C.ink, 2));
+  void f;
+  return [build(clay, [-0.8, -0.01, -0.45], [0.8, 0.7, 0.9], 0.012, 2200, detail, paints)];
+}
+
+export function crabBody(r: Rig): void {
+  figure(r as unknown as HumanRig, 'quai:cuaDa', crabPieces);
+}
