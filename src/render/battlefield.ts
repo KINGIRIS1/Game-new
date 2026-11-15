@@ -824,7 +824,8 @@ function buildDecor(t: Terrain, bai?: Bai, donCap = 2): THREE.Group {
 
   if (t === 'dao') {
     // Đồn đảo sau lưng quân ta, cổng quay ra bãi (mô hình quay cổng về +z). Biển sau lưng giặc, có thuyền Hán đậu.
-    place(makeDonDao(Math.max(1, Math.min(3, donCap)), { gac: 2 }), W / 2, DAO_DON_Z, Math.PI, 4);
+    // Không lính gác: lính đóng đảo đã ra cả bãi, và dáng lính gác theo bậc binh khí khác sẽ phải nặn ở luồng chính.
+    place(makeDonDao(Math.max(1, Math.min(3, donCap))), W / 2, DAO_DON_Z, Math.PI, 4);
     zones.push({ x0: W / 2 - 5, x1: W / 2 + 5, z0: DAO_DON_Z - 5, z1: DAO_DON_Z + 5 });
   }
 
