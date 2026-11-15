@@ -42,6 +42,7 @@ import { initialSon } from './son';
 import { initialTet } from './tet';
 import { initialThuThach } from './thuThach';
 import { initialXay } from './xay';
+import { initialTrangBi, isTrangBiState } from './trangBi';
 import { footprintTop, levelFootprint } from './terrain';
 import { AREA, KHOANH_N, START_KHOANH, V11_AREA, squareKhoanh } from './khoanh';
 import { gopDoanhTrai, growDien, isLegacyLayout, legacyBaseHeights, levelLegacyFootprints, relayLegacy } from './xepLai';
@@ -139,6 +140,7 @@ function migrate(raw: unknown): unknown {
   if (isObj(v) && v.version === 23) v = migrate23to24(v);
   if (isObj(v) && v.version === 24) v = migrate24to25(v);
   if (isObj(v) && v.version === 25) v = migrate25to26(v, !relaid);
+  if (isObj(v) && v.version === 26) v = migrate26to27(v);
   return v;
 }
 
@@ -510,6 +512,13 @@ function migrate25to26(s: Raw, grow: boolean): Raw {
   return s;
 }
 
+/** Phiên bản 26 → 27: trang bị tướng, kho đồ rỗng. */
+function migrate26to27(s: Raw): Raw {
+  s.version = 27;
+  s.trangBi = initialTrangBi();
+  return s;
+}
+
 const isBanh = (v: unknown, test: (x: unknown) => boolean): boolean => isObj(v) && test(v.chung) && test(v.giay);
 const isBool = (x: unknown) => typeof x === 'boolean';
 
@@ -596,6 +605,7 @@ function isGameState(v: unknown): v is GameState {
   if (!isCayDaState(v.cayDa)) return false;
   if (!isBenKiaState(v.benKia)) return false;
   if (!isXayState(v.xay)) return false;
+  if (!isTrangBiState(v.trangBi)) return false;
   const son = v.son;
   if (!isObj(son) || !isObj(son.gifts) || !isNum(son.restUntil) || typeof son.non !== 'boolean' || typeof son.won !== 'boolean') return false;
   if (!GIFT_IDS.every((k) => typeof (son.gifts as Raw)[k] === 'boolean')) return false;

@@ -34,6 +34,7 @@ import {
   HUAN_BRANCHES,
   HUAN_COST,
   LAU_NO_TOWERS,
+  O_DO,
   RESOURCE_IDS,
   SKILL_IDS,
   TEMPLE_BONUS,
@@ -71,6 +72,7 @@ import { nuForUnit } from './nuTuong';
 import { fromBase64, toBase64 } from './save';
 import { heroesFor } from './son';
 import { huanTiers } from './thuThach';
+import { chupMon, kiemMon, monDangMac, tinhDo, type MonGoc } from './trangBi';
 
 // ---------- Bản chụp kinh đô ----------
 
@@ -103,8 +105,13 @@ export interface Snapshot {
    * quá chừng này. Không có doanh trại thì không mang quân nào.
    */
   troops: Record<UnitType, number>;
-  /** Tướng giữ thành (đứng trước Điện, không dùng kỹ năng). */
+  /** Tướng giữ thành (đứng trước Điện, không dùng kỹ năng). Không mang chỉ số đồ: xem `trangBi`. */
   heroes: HeroSetup[];
+  /**
+   * Món tướng giữ thành đang mặc. Máy chủ kiểm từng món (`kiemMon`) rồi tự tính chỉ số đồ (`tuongChup`), không tin số
+   * gửi lên. Bản chụp cũ không có trường này: tướng không đồ.
+   */
+  trangBi?: Partial<Record<HeroKind, MonGoc[]>>;
   bonus: number;
   arms: Record<UnitType, number>;
   huan: Record<HuanBranch, number>;
@@ -118,10 +125,37 @@ const snapped = (b: Pick<Building, 'type' | 'x' | 'z'>) => !isDecor(b.type) && !
 /** Nhiệm vụ đầu của từng chương (để kinh đô dựng lại ở đúng chương). */
 const QUEST_OF: Record<Chapter, number> = { 1: 0, 2: CH2_QUEST_START, 3: CH3_QUEST_START, 4: CH4_QUEST_START, 5: CH5_QUEST_START };
 
-/** Tướng giữ thành: như tướng ra trận giữ kinh đô ở chương hiện tại, kể cả tướng đang nghỉ (bản chụp dùng lâu). */
+/**
+ * Tướng giữ thành: như tướng ra trận giữ kinh đô ở chương hiện tại, kể cả tướng đang nghỉ (bản chụp dùng lâu). Bỏ
+ * phần chỉ số đồ: bản chụp mang món đang mặc thay cho số (`Snapshot.trangBi`).
+ */
 function defendHeroes(state: GameState): HeroSetup[] {
   const rested = { ...state, clock: Number.MAX_SAFE_INTEGER };
-  return heroesFor(rested, chapterOf(state)).map((h) => ({ ...h }));
+  return heroesFor(rested, chapterOf(state)).map((h) => ganDoChup(h, undefined));
+}
+
+/**
+ * Tướng vào trận Đấu thành: bỏ phần chỉ số đồ có sẵn (không tin số gửi lên), tính lại từ món `mon` (`tinhDo`). Không
+ * món nào thì tướng không đồ.
+ */
+export function ganDoChup(h: HeroSetup, mon: readonly MonGoc[] | undefined): HeroSetup {
+  const out = { ...h };
+  delete out.trangBi;
+  if (mon?.length) out.trangBi = tinhDo(h.kind, mon);
+  return out;
+}
+
+/** Tướng của bản chụp, gắn đồ tính lại từ món trong bản chụp: tướng giữ thành, hay tướng đi đánh của người đánh. */
+export const tuongChup = (snap: Snapshot): HeroSetup[] => snap.heroes.map((h) => ganDoChup(h, snap.trangBi?.[h.kind]));
+
+/** Món đang mặc của các tướng `heroes` (chỉ tướng có mặc), để đưa vào bản chụp. */
+function monChup(state: GameState, heroes: HeroSetup[]): Snapshot['trangBi'] {
+  const out: Partial<Record<HeroKind, MonGoc[]>> = {};
+  for (const h of heroes) {
+    const worn = monDangMac(state, h.kind);
+    if (worn.length) out[h.kind] = worn.map(chupMon);
+  }
+  return Object.keys(out).length ? out : undefined;
 }
 
 /** Chụp kinh đô của người chơi. */
@@ -152,6 +186,8 @@ export function makeSnapshot(state: GameState): Snapshot {
   const cap = storageCap({ ...state, buildings: keep });
   const resources = { gao: 0, voOc: 0, datDa: 0, sat: 0, go: 0 };
   for (const r of RESOURCE_IDS) resources[r] = Math.max(0, Math.min(cap, state.resources[r]));
+  const heroes = defendHeroes(state);
+  const trangBi = monChup(state, heroes);
   return {
     v: 1,
     dien: dienLevel(state),
@@ -170,7 +206,8 @@ export function makeSnapshot(state: GameState): Snapshot {
     cap,
     guards,
     troops: barracks ? { ...state.troops } : { giao: 0, cung: 0, voi: 0, no: 0 },
-    heroes: defendHeroes(state),
+    heroes,
+    ...(trangBi ? { trangBi } : {}),
     bonus: troopBonus(state),
     arms: { ...state.arms },
     huan: huanTiers(state) as Record<HuanBranch, number>,
@@ -205,7 +242,7 @@ export function defenseOf(snap: Snapshot): PvpDefense {
     hpMul: DAU_THANH.hpMul[snap.dien - 1],
     siege: DAU_THANH.siege[snap.dien - 1],
     guards: snap.guards.map((g) => ({ ...g })),
-    heroes: snap.heroes.map((h) => ({ ...h })),
+    heroes: tuongChup(snap),
     bonus: snap.bonus,
     arms: { ...snap.arms },
     huan: { ...snap.huan },
@@ -261,13 +298,39 @@ function isSnapshotShape(v: unknown): v is Snapshot {
   }
   if (!isRecordOf(v.troops, UNIT_TYPES, (x) => isInt(x, 0, 9999))) return false;
   if (!Array.isArray(v.heroes) || v.heroes.length > 2 || !v.heroes.every((h) => isObj(h) && HERO_KINDS.includes(h.kind as HeroKind))) return false;
+  if (v.trangBi !== undefined) {
+    // Bảng món theo tướng, mỗi tướng tối đa bốn món (từng món kiểm ở `validateSnapshot`).
+    if (!isObj(v.trangBi)) return false;
+    for (const [kind, list] of Object.entries(v.trangBi)) {
+      if (!HERO_KINDS.includes(kind as HeroKind) || !Array.isArray(list) || list.length > O_DO.length || !list.every(isObj)) return false;
+    }
+  }
   if (!isNum(v.bonus, 0, 1) || typeof v.crossbows !== 'boolean' || typeof v.walls !== 'boolean') return false;
   return isRecordOf(v.arms, UNIT_TYPES, (x) => isInt(x, 0, 9)) && isRecordOf(v.huan, HUAN_BRANCHES, (x) => isInt(x, 0, 9));
 }
 
 /**
+ * Đồ của tướng trong bản chụp hợp luật không: tướng không mang sẵn chỉ số đồ, tướng có món phải là tướng giữ thành,
+ * mỗi ô một món, từng món có thể là món rơi thật tới chương của bản chụp (`kiemMon`).
+ */
+function kiemDoChup(snap: Snapshot): string | null {
+  if (snap.heroes.some((h) => 'trangBi' in h)) return 'tướng mang sẵn chỉ số đồ';
+  for (const [kind, list] of Object.entries(snap.trangBi ?? {}) as [HeroKind, MonGoc[]][]) {
+    if (!snap.heroes.some((h) => h.kind === kind)) return `${kind} không giữ thành mà có đồ`;
+    const o = new Set<string>();
+    for (const m of list) {
+      const why = kiemMon(m, snap.chapter);
+      if (why) return `${kind}: ${why}`;
+      if (o.has(m.o)) return `${kind}: hai món cùng ô ${m.o}`;
+      o.add(m.o);
+    }
+  }
+  return null;
+}
+
+/**
  * Bản chụp có hợp luật không (chống bản chụp sửa tay): số công trình mỗi loại, cấp so với cấp Điện, chỗ đặt không
- * chồng nhau, đúng một Điện, ụ nỏ, lính giữ thành, binh khí, huân công, Đền, của so với sức chứa kho.
+ * chồng nhau, đúng một Điện, ụ nỏ, lính giữ thành, binh khí, huân công, Đền, đồ của tướng, của so với sức chứa kho.
  * Trả về lý do sai đầu tiên (để test và nhật ký), hay null nếu hợp luật.
  */
 export function validateSnapshot(snap: Snapshot): string | null {
@@ -311,6 +374,8 @@ export function validateSnapshot(snap: Snapshot): string | null {
   if (snap.bonus > TEMPLE_BONUS + TET_TROI_BONUS + 1e-9) return 'Đền cộng quá mức';
   if (snap.crossbows && !count.get('denCoLoa')) return 'không có Đền Cổ Loa';
   if (snap.walls && !count.get('hoKimQuy')) return 'không có Hồ Kim Quy';
+  const doLoi = kiemDoChup(snap);
+  if (doLoi) return doLoi;
   const cap = storageCap(defenderState(snap));
   if (snap.cap > cap + 1e-9 || RESOURCE_IDS.some((r) => snap.resources[r] > cap + 1e-9)) return 'của quá sức chứa kho';
   return null;
@@ -422,7 +487,7 @@ export interface PvpRun {
   replay?: true;
 }
 
-/** Quân đánh thành của người chơi: quân chọn, tướng, Đền, binh khí, huân công như phó bản. */
+/** Quân đánh thành của người chơi: quân chọn, tướng (mặc đồ đang mặc), Đền, binh khí, huân công như phó bản. */
 export function attackFrom(state: GameState, army: Army, side: 'bac' | 'tay', seed: number): PvpAttack {
   return {
     army: { ...army },

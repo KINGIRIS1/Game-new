@@ -28,10 +28,13 @@ export declare function nhanBanChup(ma: unknown): { ma: string; dien: number } |
 export declare function kinhDoMay(dien: number): { ma: string; dien: number };
 export declare function truCua(ma: string, cuop: unknown): string;
 
-/** Quân đánh thành máy chủ dựng (JSON, lưu ở cột `tran.quan`). */
+/**
+ * Quân đánh thành máy chủ dựng (JSON, lưu ở cột `tran.quan`). Tướng mặc đồ có `trangBi`: chỉ số đồ máy chủ tính lại từ
+ * món trong bản chụp người đánh.
+ */
 export type QuanDanh = {
   army: Record<string, number>;
-  heroes: Record<string, string | boolean>[];
+  heroes: { kind: string; trangBi?: Record<string, number | boolean>; [k: string]: string | boolean | Record<string, number | boolean> | undefined }[];
   side: 'bac' | 'tay';
   seed: number;
   bonus: number;

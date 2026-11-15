@@ -2260,3 +2260,102 @@ export const DAU_THANH = {
   /** Bản lưu trên mây dài nhất (số ký tự của mã lưu; người chơi mô phỏng ở Điện 10 chừng 3,3 nghìn, để dư nhiều). */
   saveMax: 200_000,
 };
+
+// ---------- Trang bị tướng (`trangBi.ts`; docs/thiet-ke.md mục Kế hoạch: trang bị rơi ngẫu nhiên) ----------
+
+/** Bốn ô đồ của mỗi tướng. */
+export type ODo = 'vuKhi' | 'giap' | 'phucSuc' | 'baoVat';
+export const O_DO: ODo[] = ['vuKhi', 'giap', 'phucSuc', 'baoVat'];
+/** Sáu bộ, mỗi tướng một bộ. */
+export type BoDo = 'phuDong' | 'tanVien' | 'coLoa' | 'caoLo' | 'trungTrac' | 'trungNhi';
+export const BO_DO: BoDo[] = ['phuDong', 'tanVien', 'coLoa', 'caoLo', 'trungTrac', 'trungNhi'];
+/** Sáu chỉ số tướng: máu, sức đánh, tốc đánh, uy lực kỹ năng, giáp, hồi kỹ năng. */
+export type ChiSo = 'mau' | 'danh' | 'toc' | 'uy' | 'giap' | 'hoi';
+export const CHI_SO: ChiSo[] = ['mau', 'danh', 'toc', 'uy', 'giap', 'hoi'];
+/** Phẩm: 1 Thường, 2 Tốt, 3 Quý, 4 Huyền thoại. Số chỉ số phụ là phẩm − 1. */
+export type PhamDo = 1 | 2 | 3 | 4;
+export const PHAM_DO: PhamDo[] = [1, 2, 3, 4];
+
+/** Tướng của từng bộ: hiệu ứng bộ chỉ có khi đúng tướng này mặc. */
+export const BO_CUA: Record<BoDo, Exclude<TuongId, 'lacTuong'>> = {
+  phuDong: 'giong',
+  tanVien: 'sonTinh',
+  coLoa: 'anDuong',
+  caoLo: 'caoLo',
+  trungTrac: 'trungTrac',
+  trungNhi: 'trungNhi',
+};
+/** Phó bản, thử thách rơi bộ của chương màn ấy (chương 5: một trong hai bộ của Hai Bà). */
+export const BO_CHUONG: Record<Chapter, BoDo[]> = { 1: ['phuDong'], 2: ['tanVien'], 3: ['coLoa'], 4: ['caoLo'], 5: ['trungTrac', 'trungNhi'] };
+/** Chỉ số chính rút được của từng ô. */
+export const O_CHINH: Record<ODo, ChiSo[]> = { vuKhi: ['danh'], giap: ['mau', 'giap'], phucSuc: ['toc', 'hoi'], baoVat: ['uy'] };
+
+/** Hệ số theo chỉ số: giáp, tốc đánh, hồi kỹ năng mạnh hơn mỗi phần trăm nên được ít hơn. */
+export const CHI_SO_HE: Record<ChiSo, number> = { mau: 1, danh: 1, toc: 0.6, uy: 1, giap: 0.6, hoi: 0.5 };
+/** Chỉ số chính ở +0, cấp đồ 1, theo phẩm (chỉ số 0 không dùng). */
+export const PHAM_CHINH = [0, 0.02, 0.03, 0.04, 0.05];
+/** Chỉ số phụ: nấc 1 tới 5 là 1% tới 2%, nhân hệ số theo chỉ số và theo cấp đồ. */
+export const PHU_THAP = 0.01;
+export const PHU_NAC = 0.0025;
+export const PHU_NAC_MAX = 5;
+/** Hệ số chỉ số theo cấp đồ (chương nơi rơi, 1–5; chỉ số 0 không dùng). */
+export const CAP_DO_HE = [0, 1, 1.3, 1.6, 1.9, 2.2];
+/** Mỗi nấc cường hóa thêm chừng này phần chỉ số chính. */
+export const CUONG_HOA_NAC = 0.1;
+/** Nấc cường hóa cao nhất theo phẩm. */
+export const CUONG_HOA_TRAN = [0, 4, 6, 8, 10];
+/**
+ * Giá nấc thứ n: gạo, vỏ ốc (vũ khí, phục sức) hay đất đá (giáp, bảo vật), sắt nhân n; gỗ từ nấc `goTu`. Đo bằng
+ * `node scripts/kinh-te.mjs`: bốn món một tướng lên +10 ở cấp đồ 5 hết chừng 3 giờ của dư sau Điện 10 (sắt, gỗ dồn
+ * lại chừng 13, 14 nghìn mỗi giờ; gạo tràn chừng 120 nghìn mỗi giờ).
+ */
+export const CUONG_HOA_GIA = { gao: 150, voOcDatDa: 120, sat: 18, go: 25, goTu: 6 };
+/** Giá cường hóa, sắt phân giải nhân theo cấp đồ. */
+export const CAP_DO_GIA = [0, 1, 2, 4, 7, 10];
+/** Phân giải một món ra chừng này sắt (theo phẩm, nhân `CAP_DO_GIA`), cộng lại `PHAN_GIAI_HOAN` sắt đã cường hóa. */
+export const PHAN_GIAI_SAT = [0, 10, 25, 60, 150];
+export const PHAN_GIAI_HOAN = 0.5;
+/** Trần tổng mỗi tướng (cả đồ và hiệu ứng bộ). */
+export const CHI_SO_TRAN: Partial<Record<ChiSo, number>> = { toc: 0.5, giap: 0.4, hoi: 0.3 };
+/** Kho đồ chứa nhiều nhất chừng này món, kể cả món đang mặc. */
+export const KHO_DO_MAX = 80;
+
+/** Nơi rơi đồ. */
+export type NguonDo = 'manDau' | 'manLai' | 'thuDau' | 'thuLai' | 'don' | 'giu';
+/** Xác suất có rơi và tỉ lệ bốn phẩm (Thường, Tốt, Quý, Huyền thoại) theo nơi rơi. */
+export const ROI_DO: Record<NguonDo, { p: number; w: [number, number, number, number] }> = {
+  manDau: { p: 1, w: [0, 60, 30, 10] },
+  manLai: { p: 0.6, w: [55, 30, 12, 3] },
+  thuDau: { p: 1, w: [0, 0, 70, 30] },
+  thuLai: { p: 0.8, w: [20, 45, 27, 8] },
+  don: { p: 1, w: [0, 0, 60, 40] },
+  giu: { p: 0.35, w: [55, 30, 12, 3] },
+};
+/** Phẩm cao nhất rơi ở trận mỗi chương: chương 1 Tốt, chương 2 Quý, từ chương 3 Huyền thoại. */
+export const PHAM_TRAN: Record<Chapter, PhamDo> = { 1: 2, 2: 3, 3: 4, 4: 4, 5: 4 };
+
+/** Hiệu ứng hai món: đúng tướng của bộ mặc từ hai món của bộ mình thì cộng thêm chỉ số này. */
+export const BO_HAI: Record<BoDo, { k: ChiSo; v: number }> = {
+  phuDong: { k: 'danh', v: 0.1 },
+  tanVien: { k: 'mau', v: 0.1 },
+  coLoa: { k: 'uy', v: 0.1 },
+  caoLo: { k: 'toc', v: 0.08 },
+  trungTrac: { k: 'giap', v: 0.08 },
+  trungNhi: { k: 'hoi', v: 0.08 },
+};
+/**
+ * Hiệu ứng bốn món: đúng tướng của bộ mặc đủ bốn món bộ mình thì kỹ năng mạnh hơn (số thay cho số gốc của kỹ năng ở
+ * `FIRE`, `SMASH`, `HILL`, `ROCKS`, `NO_THAN`, `KIM_QUY`, `LIEN_CHAU`, `SKILLS.lenhBan`, `VOI_XUNG`, `HIEU_TRIEU`).
+ */
+export const BO_BON = {
+  phunLua: { length: 9 },
+  nhoTre: { radius: 3 },
+  bocDoi: { radius: 2.8 },
+  doiNon: { stun: 4 },
+  noThan: { dmg: 100 },
+  ruaVang: { heal: 0.4 },
+  lienChau: { radius: 4.2 },
+  lenhBan: { duration: 8 },
+  voiXung: { length: 6.5, stun: 2.2 },
+  hieuTrieu: { count: 6, heal: 0.2 },
+};

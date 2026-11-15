@@ -12,7 +12,7 @@ import { armor, bun, chestDisc, diadem, hairDown, necklace, pauldrons } from './
 import { clayPiece, figure, type Piece } from './nanNguoi';
 import { elephantBody, elephantDrape, horseBody, horseDrape, roosterBody, tigerBody, turtleBody, turtleDrum } from './nanThu';
 import { C } from './palette';
-import { RigBuilder, bakeRig, moveBones, resetBones, skinRig, type Act, type BoneDef, type Bones, type Poser, type RigSlot, type RigSlots } from './rig';
+import { RigBuilder, bakeRig, moveBones, resetBones, skinRig, type Act, type BoneDef, type Bones, type Poser, type RigShape, type RigSlot, type RigSlots } from './rig';
 import { drawRider, poseRider, riderBones, riderHasSkill, type RiderKind } from './soldier';
 import { IRON, IRON_DARK, coLac } from './weapons';
 
@@ -249,8 +249,8 @@ export interface VoiTranLook {
   trim: number;
   /** Mặt trống đồng hai bên đệm. */
   drum?: boolean;
-  /** Tán lọng. */
-  parasol: number;
+  /** Tán lọng; bỏ trống là không có lọng (ảnh món đồ voi trận: để thấy đệm). */
+  parasol?: number;
   /** Cờ chim Lạc cắm sau bành: cỡ cờ (bằng cỡ người cưỡi); bỏ trống là không có cờ. */
   flag?: number;
 }
@@ -273,6 +273,8 @@ export interface VoiTranRider {
   defs: Defs;
   draw(r: Rig): void;
   pose(b: B, a: Act): VoiTranMood;
+  /** Ghi riêng phần vũ khí của người cưỡi (`RigBuilder.vuKhi`), rồi dựng lớp vỏ sáng khi đã xong tư thế (`anhVuKhi.ts`). */
+  anh?(group: THREE.Group, shape: RigShape<string>): void;
 }
 
 /**
@@ -355,6 +357,7 @@ function drawVoiTran(r: Rig, look: VoiTranLook): void {
       r.on(b).band.cyl(0.125, 0.13, 0.07, C.bronze, x, 0.14, z, undefined, 10);
     }
     // Lọng hai tầng cắm sau thành sau: cán gỗ kẹp đồng, tán dưới viền, tán trên, chóp vàng, tua rủ quanh vành.
+    if (look.parasol === undefined) return;
     const [px, py, pz] = PARASOL_FOOT;
     p.cyl(0.022, 0.022, PARASOL_TOP - py, C.woodDark, px, (py + PARASOL_TOP) / 2, pz, undefined, 6);
     p.cyl(0.036, 0.036, 0.1, C.bronze, px, 1.25, pz, undefined, 6);
@@ -439,6 +442,13 @@ function poseVoiTran(b: B, a: Act, m: VoiTranMood): void {
   }
 }
 
+/** Voi trận bản tĩnh không người cưỡi, đứng yên: ảnh món đồ voi trận, và voi đứng sau tướng ở hình tướng mặc đồ. */
+export function bakeVoiTran(look: VoiTranLook): THREE.Group {
+  const r = new RigBuilder(VOI_TRAN);
+  drawVoiTran(r, look);
+  return bakeRig(r.build(), (b) => poseVoiTran(b, { act: 'stand' }, {}));
+}
+
 /**
  * Voi trận của Hai Bà (`look`: màu đệm, lọng, trống đồng, cờ) có người cưỡi (`rider`, heroes.ts) hay không.
  * `userData.pose(a)` đặt tư thế cả người lẫn voi; ngã thì lăn nghiêng.
@@ -446,9 +456,11 @@ function poseVoiTran(b: B, a: Act, m: VoiTranMood): void {
 export function makeVoiTran(look: VoiTranLook, rider?: VoiTranRider): THREE.Group {
   // Có người cưỡi thì là tướng: đủ chi tiết như các tướng khác.
   const r = new RigBuilder({ ...VOI_TRAN, ...rider?.defs }, rider ? 1 : DETAIL);
+  r.ghiAnh = !!rider?.anh;
   drawVoiTran(r, look);
   rider?.draw(r);
-  const { group, bones } = skinRig(r.build());
+  const shape = r.build();
+  const { group, bones } = skinRig(shape);
   const pose: Poser = (a) => {
     resetBones(bones);
     const mood = rider ? rider.pose(bones, a) : {};
@@ -457,6 +469,7 @@ export function makeVoiTran(look: VoiTranLook, rider?: VoiTranRider): THREE.Grou
   pose({ act: 'stand' });
   group.userData.pose = pose;
   group.userData.fall = 'side';
+  rider?.anh?.(group, shape as RigShape<string>);
   return group;
 }
 

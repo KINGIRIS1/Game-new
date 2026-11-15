@@ -3033,3 +3033,322 @@ body.man-vao-on #hud > * {
     margin-bottom: 8px;
   }
 }
+
+/* ---------- Bảng tướng kiểu túi đồ game nhập vai (ui/trangBi.ts) ---------- */
+/* Màu phẩm: Thường xám, Tốt xanh lá, Quý tím, Huyền thoại vàng. `--pham` viền, `--pham-a` lòng sáng, `--pham-b` mép
+   sẫm của nền ô đồ; `--pham-bg` nền thẻ món. */
+.pham-1 { --pham: #9a9184; --pham-a: #6e655c; --pham-b: #2f2924; --pham-bg: #f3efe6; --pham-glow: transparent; }
+.pham-2 { --pham: #66b23a; --pham-a: #3f7a2a; --pham-b: #182a12; --pham-bg: #eef6e4; --pham-glow: rgba(102, 178, 58, 0.45); }
+.pham-3 { --pham: #a874dc; --pham-a: #643d93; --pham-b: #22122f; --pham-bg: #f3ebfa; --pham-glow: rgba(168, 116, 220, 0.6); }
+.pham-4 { --pham: #f0b52a; --pham-a: #a8700f; --pham-b: #3a2405; --pham-bg: #fff4d6; --pham-glow: rgba(240, 181, 42, 0.75); }
+.pham-txt-1 { color: #6f685c; }
+.pham-txt-2 { color: #3f7322; }
+.pham-txt-3 { color: #6a3f98; }
+.pham-txt-4 { color: #a8760a; }
+
+/* Ô đồ: nền tối loang theo phẩm, viền màu phẩm, quầng sáng phẩm Tốt trở lên; Huyền thoại có vệt sáng lướt qua. */
+.do-frame {
+  position: relative;
+  overflow: hidden;
+  border: 2px solid var(--pham, #8a6420);
+  border-radius: 10px;
+  background: radial-gradient(circle at 50% 42%, var(--pham-a, #6b5236) 0%, var(--pham-b, #2a1d10) 78%);
+  box-shadow: 0 0 6px var(--pham-glow, transparent), inset 0 0 0 1px rgba(255, 240, 200, 0.12);
+}
+.do-frame img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  pointer-events: none;
+}
+.do-frame.pham-4::after {
+  content: '';
+  position: absolute;
+  inset: -40%;
+  background: linear-gradient(115deg, transparent 42%, rgba(255, 246, 210, 0.55) 50%, transparent 58%);
+  transform: translateX(-70%);
+  animation: do-sang 3.2s ease-in-out infinite;
+  pointer-events: none;
+}
+@keyframes do-sang {
+  0%, 55% { transform: translateX(-70%); }
+  100% { transform: translateX(70%); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .do-frame.pham-4::after { animation: none; opacity: 0; }
+}
+
+/* Hàng tướng: ảnh bán thân tròn, tên, Lực chiến. */
+.do-heroes {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  padding-bottom: 2px;
+  scrollbar-width: none;
+}
+.do-hero {
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 62px;
+  padding: 5px 4px 4px;
+  border-radius: 12px;
+  border: 1.5px solid var(--line);
+  background: #fffaf0;
+  color: var(--ink);
+  font: inherit;
+}
+.do-ban {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: 2px solid var(--bronze);
+  background: radial-gradient(circle at 50% 40%, #f6d68a, #8a6420);
+  object-fit: cover;
+}
+.do-ban.ic { display: grid; place-items: center; font-size: 20px; }
+.do-hero .nm { font-size: 11px; font-weight: 600; white-space: nowrap; margin-top: 2px; }
+.do-hero small { font-size: 10px; color: var(--ink-soft); }
+.do-hero.on { border-color: var(--bronze); background: #f6e2b4; }
+.do-hero.on .do-ban { border-color: var(--red); box-shadow: 0 0 0 2px #f6e2b4, 0 0 0 4px var(--bronze); }
+
+.do-body { margin-top: 10px; }
+
+/* Khung hình nhân: nền đồng có mặt trời trống đồng, hình tướng giữa, hai cột ô trang bị, bảng tên dưới. */
+.do-doll {
+  position: relative;
+  display: grid;
+  grid-template-columns: 70px minmax(0, 1fr) 70px;
+  align-items: center;
+  gap: 4px;
+  padding: 10px 8px 8px;
+  border-radius: 16px;
+  border: 3px double #8a6420;
+  background: radial-gradient(ellipse at 50% 40%, #f3d48c 0%, #c89a4a 34%, #7a5427 70%, #3e2a12 100%);
+  overflow: hidden;
+  box-shadow: inset 0 0 24px rgba(40, 24, 8, 0.55);
+}
+.do-sun {
+  position: absolute;
+  left: 50%;
+  top: 44%;
+  width: 92%;
+  max-width: 330px;
+  transform: translate(-50%, -50%);
+  fill: rgba(255, 236, 170, 0.32);
+  stroke: rgba(110, 72, 24, 0.45);
+  stroke-width: 0.6;
+  pointer-events: none;
+}
+.do-sun .r { fill: none; stroke: rgba(110, 72, 24, 0.4); stroke-width: 0.8; }
+.do-sun .d { stroke-dasharray: 1.6 1.4; }
+.do-col {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  align-items: center;
+}
+.do-mid { position: relative; display: grid; place-items: center; min-height: 180px; }
+.do-fig {
+  display: block;
+  width: 100%;
+  max-width: 168px;
+  aspect-ratio: 3 / 4;
+  object-fit: contain;
+  filter: drop-shadow(0 6px 6px rgba(30, 16, 4, 0.45));
+}
+.do-fig.wait { display: grid; place-items: center; color: rgba(255, 246, 220, 0.85); font-size: 12px; }
+.do-fig.wait span { animation: do-cho 1.2s ease-in-out infinite alternate; }
+@keyframes do-cho { from { opacity: 0.35; } to { opacity: 1; } }
+.do-slot {
+  width: 62px;
+  height: 62px;
+  padding: 0;
+  font: inherit;
+  color: #fff5dc;
+}
+.do-slot.empty {
+  --pham: #b48a45;
+  border-style: dashed;
+  background: radial-gradient(circle at 50% 42%, rgba(80, 52, 20, 0.55), rgba(40, 24, 8, 0.75));
+}
+.do-slot.on { outline: 3px solid #fff1c4; outline-offset: 1px; }
+.do-slot .nm {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  padding: 1px 0;
+  font-size: 9.5px;
+  font-weight: 700;
+  line-height: 1.15;
+  background: rgba(30, 18, 6, 0.6);
+  color: #fff1cf;
+}
+.do-slot img { width: 100%; height: 100%; padding: 2px 2px 10px; }
+.do-sil {
+  width: 70%;
+  height: 70%;
+  margin-bottom: 8px;
+  fill: none;
+  stroke: rgba(255, 228, 170, 0.55);
+  stroke-width: 3;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.do-sil.sm { width: 20px; height: 20px; margin: 0; stroke: currentColor; stroke-width: 4.5; }
+.do-plate {
+  position: relative;
+  grid-column: 1 / -1;
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-top: 4px;
+  padding: 4px 10px;
+  border-radius: 10px;
+  background: rgba(40, 24, 8, 0.62);
+  color: #fff1cf;
+  font-size: 13px;
+  font-weight: 700;
+}
+.do-plate b { font-size: 18px; color: #ffd76a; margin-left: 4px; }
+
+.do-bo {
+  margin: 10px 0;
+  padding: 8px;
+  border-radius: 12px;
+  background: #fffaf0;
+  border: 1.5px solid var(--line);
+  font-size: 12px;
+  line-height: 1.5;
+}
+.do-bo .on { color: var(--green); font-weight: 600; }
+.do-bo .off { color: var(--ink-soft); }
+
+/* Túi đồ: đầu túi, chip lọc theo ô, lưới ô đồ. */
+.do-tui-head { display: flex; justify-content: space-between; align-items: baseline; font-size: 14px; }
+.do-tui-head .muted { font-size: 12px; }
+.do-chips { display: flex; gap: 6px; margin: 6px 0 2px; }
+.do-chip {
+  flex: 1 1 0;
+  display: grid;
+  place-items: center;
+  height: 34px;
+  border-radius: 10px;
+  border: 1.5px solid var(--line);
+  background: #fffaf0;
+  color: var(--ink-soft);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+}
+.do-chip.on { border-color: var(--bronze); background: #6b4a22; color: #fff1cf; }
+
+.do-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(54px, 1fr));
+  gap: 6px;
+  margin: 8px 0;
+  padding: 6px;
+  border-radius: 12px;
+  background: #4a3418;
+  box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.45);
+}
+.do-tile {
+  position: relative;
+  overflow: hidden;
+  aspect-ratio: 1;
+  padding: 0;
+  border: 2px solid var(--pham);
+  border-radius: 9px;
+  background: radial-gradient(circle at 50% 42%, var(--pham-a) 0%, var(--pham-b) 78%);
+  box-shadow: 0 0 5px var(--pham-glow), inset 0 0 0 1px rgba(255, 240, 200, 0.12);
+  font: inherit;
+}
+.do-tile img { display: block; width: 100%; height: 100%; object-fit: contain; pointer-events: none; }
+.do-tile.pham-4::after {
+  content: '';
+  position: absolute;
+  inset: -40%;
+  background: linear-gradient(115deg, transparent 42%, rgba(255, 246, 210, 0.5) 50%, transparent 58%);
+  animation: do-sang 3.2s ease-in-out infinite;
+  pointer-events: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  .do-tile.pham-4::after { animation: none; opacity: 0; }
+}
+.do-tile.on { outline: 3px solid #fff1c4; outline-offset: -1px; }
+.do-tile i, .do-slot i {
+  position: absolute;
+  z-index: 1;
+  font-style: normal;
+  font-size: 10px;
+  line-height: 1;
+}
+.do-tile .cuong, .do-slot .cuong {
+  right: 3px;
+  bottom: 3px;
+  padding: 1px 3px;
+  border-radius: 6px;
+  background: rgba(20, 12, 4, 0.7);
+  color: #ffe08a;
+  font-weight: 800;
+}
+.do-slot .cuong { bottom: 14px; }
+.do-tile .who { left: 2px; top: 2px; font-size: 12px; }
+.do-tile .lock { right: 2px; top: 2px; }
+
+.do-detail {
+  padding: 10px;
+  border-radius: 12px;
+  border: 2px solid var(--pham);
+  background: var(--pham-bg);
+}
+.do-head { display: flex; gap: 10px; align-items: center; }
+.do-head h3 { margin: 0; font-size: 15px; }
+.do-head p { margin: 2px 0 0; font-size: 12px; }
+.do-big { flex: 0 0 84px; height: 84px; }
+
+.do-stats { margin: 8px 0 4px; }
+.do-stat {
+  display: flex;
+  justify-content: space-between;
+  font-size: 13px;
+  padding: 2px 0;
+}
+.do-stat.main { font-weight: 700; font-size: 14px; border-bottom: 1px dashed var(--line); padding-bottom: 4px; margin-bottom: 2px; }
+
+.do-compare { margin: 4px 0; font-size: 12px; }
+.do-compare .up { color: var(--green); }
+.do-compare .down { color: var(--red); }
+
+.do-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+  margin-top: 6px;
+}
+.do-actions small { font-size: 11px; }
+
+.do-lc {
+  text-align: center;
+  font-size: 14px;
+  margin-bottom: 8px;
+}
+.do-lc b { font-size: 22px; color: var(--bronze-dark); margin-left: 4px; }
+
+/* Dòng rơi đồ ở bảng kết quả trận: ảnh nhỏ món vừa rơi. */
+.do-roi { display: flex; align-items: center; gap: 8px; margin: 4px 0; }
+.do-mini { flex: 0 0 40px; width: 40px; height: 40px; border-radius: 8px; }
+
+.btn.red {
+  background: var(--red);
+  border-color: var(--red-dark);
+  color: #fff8e8;
+}
+
+.hero-row.gear { border-top: 1px dashed var(--line); margin-top: 4px; }

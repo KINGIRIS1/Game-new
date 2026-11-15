@@ -4,6 +4,7 @@
 // bằng `place` + `moveBones`.
 
 import * as THREE from 'three';
+import type { HeroKind } from '../game/battle';
 import type { NuTuongId } from '../game/defs';
 import type { GiongLook } from '../game/giong';
 import { makeVoiTran, quadFall, quadWalk, voiTranSeat, type VoiTranMood } from './beasts';
@@ -54,7 +55,8 @@ import {
 import { clayPiece, figure, prim, rigid, segs, type Piece } from './nanNguoi';
 import { horseBody, horseDrape, type HorseShape } from './nanThu';
 import { C } from './palette';
-import { RigBuilder, bakeRig, moveBones, skinRig, type Act, type BoneDef, type Bones, type Poser } from './rig';
+import { bakeAnh, batAnh } from './anhVuKhi';
+import { RigBuilder, bakeRig, moveBones, skinRig, type Act, type BoneDef, type Bones, type Poser, type RigShape } from './rig';
 import { ToonModel, inkThin } from './toon';
 import {
   CO_NU,
@@ -104,7 +106,20 @@ const IRON_LIGHT = 0x9aa9bc;
 const FLAME_CORE = 0xfff0a8;
 
 /** Dáng chung của miện lá (chủ dự án chốt ở mẫu Vua Hùng): lá nhỏ, ít xòe, nửa mặt trời trống đồng mọc trên vành. */
-const MIEN = { fan: 0.28, around: 0.36, discHalf: true, discV: 0.045 } as const;
+export const MIEN = { fan: 0.28, around: 0.36, discHalf: true, discV: 0.045 } as const;
+
+/**
+ * Phần của tướng bị món trang bị thay khi vẽ hình tướng mặc đồ (hinhTuong.ts): vũ khí cầm tay (`tay`), giáp (`than`),
+ * đồ trên đầu (`dau`: mũ, miện, búp lá; giữ tóc), đồ sau lưng (`lung`: áo choàng, bao tên). `hinh`: vẽ cho hình tướng,
+ * bỏ đồ chỉ hiện lúc làm động tác (tù và cầm tay của Cao Lỗ). Không truyền thì vẽ y như cũ.
+ */
+export interface ThayDo {
+  tay?: boolean;
+  than?: boolean;
+  dau?: boolean;
+  lung?: boolean;
+  hinh?: boolean;
+}
 
 /**
  * Búp lá của nữ tướng, Hai Bà và Âu Cơ (chủ dự án đưa ảnh mẫu): vòng sắt, vành hoa văn có ngọc, diềm răng cưa trên
@@ -174,6 +189,12 @@ function addHalo(g: THREE.Group, y: number, z: number): void {
 function finish(group: THREE.Group, pose: Poser): THREE.Group {
   pose({ act: 'stand' });
   group.userData.pose = pose;
+  return group;
+}
+
+/** Tướng mặc đủ bốn món bộ mình (`anh`): vũ khí ánh lên (`anhVuKhi.ts`). Gọi sau `finish`. */
+function anhNeu<B extends string>(group: THREE.Group, shape: RigShape<B>, kind: HeroKind, anh?: boolean): THREE.Group {
+  if (anh) batAnh(group, shape as RigShape<string>, kind);
   return group;
 }
 
@@ -349,7 +370,7 @@ const K_GIONG = 1.5;
 const GIONG_AT: V3 = [0, 1.1, -0.03];
 
 /** Roi sắt 7 đốt trúc (hay khóm 3 thân tre đằng ngà nguyên gốc rễ khi roi đã gãy), dựng từ chỗ tay nắm. */
-function giongWeapon(s: Parts, bamboo: boolean): void {
+export function giongWeapon(s: Parts, bamboo: boolean): void {
   const p = s.plain;
   if (bamboo) {
     p.sphere(0.072, BAMBOO_NODE, 0, -0.06, 0, [1.15, 0.85, 1.15], 8);
@@ -412,7 +433,7 @@ function giongWeapon(s: Parts, bamboo: boolean): void {
  * đai lưng đỏ buông hai dải sau lưng; mũ sắt vành đồng hoa văn có che gáy, trên vành dựng miện lá sắt khảm đỏ son,
  * mặt trời trống đồng trước trán.
  */
-function drawGiongRider(r: HumanRig, bamboo: boolean): void {
+function drawGiongRider(r: HumanRig, bamboo: boolean, thay: ThayDo = {}): void {
   humanBody(r, {
     cloth: C.red,
     pattern: true,
@@ -425,18 +446,22 @@ function drawGiongRider(r: HumanRig, bamboo: boolean): void {
     wristband: C.bronze,
   });
   buckle(r, { color: C.gold, gem: C.red });
-  skirtArmor(r, { color: IRON, trim: C.gold, rows: 2, to: 0.24, panels: [0, Math.PI], half: 0.5 });
-  armor(r, { color: IRON, trim: C.gold, rows: 3, scales: true, y0: 0.395, y1: 0.6 });
-  chestDisc(r, { color: C.gold, drum: true, r: 0.078, rim: C.bronze, thick: 0.024 });
-  pauldrons(r, { color: IRON, trim: C.gold, layers: 1, size: 1.05 });
+  if (!thay.than) {
+    skirtArmor(r, { color: IRON, trim: C.gold, rows: 2, to: 0.24, panels: [0, Math.PI], half: 0.5 });
+    armor(r, { color: IRON, trim: C.gold, rows: 3, scales: true, y0: 0.395, y1: 0.6 });
+    chestDisc(r, { color: C.gold, drum: true, r: 0.078, rim: C.bronze, thick: 0.024 });
+    pauldrons(r, { color: IRON, trim: C.gold, layers: 1, size: 1.05 });
+  }
   // Hai dải đai lưng đỏ buông sau lưng.
   for (const s of [-1, 1]) streamer(r, { from: [s * 0.03, 0.42, -0.12], dir: [s * 0.3, -1, -0.3], len: 0.22, width: 0.055, color: C.red, bone: 'hips' });
   humanHead(r, { brows: true, blush: true });
   hairCap(r);
-  helmet(r, { color: IRON, band: C.bronze, bandH: 0.05, bandPattern: true, ridge: C.gold, neck: 0.14, cheek: 0.1, guard: IRON, guardTrim: C.gold, gem: C.red });
-  // Miện lá sắt khảm đỏ son, nan vàng, dựng trên vành mũ.
-  mien(r, { ...MIEN, color: IRON, inlay: C.red, bar: C.gold, disc: C.gold, discRim: C.bronzeDark, curls: C.gold, puff: 0.03, h: 0.28, w: 0.085, y: 0.835, discR: 0.095 });
-  r.local('hand', GRIP_R, null, (s) => giongWeapon(s, bamboo));
+  if (!thay.dau) {
+    helmet(r, { color: IRON, band: C.bronze, bandH: 0.05, bandPattern: true, ridge: C.gold, neck: 0.14, cheek: 0.1, guard: IRON, guardTrim: C.gold, gem: C.red });
+    // Miện lá sắt khảm đỏ son, nan vàng, dựng trên vành mũ.
+    mien(r, { ...MIEN, color: IRON, inlay: C.red, bar: C.gold, disc: C.gold, discRim: C.bronzeDark, curls: C.gold, puff: 0.03, h: 0.28, w: 0.085, y: 0.835, discR: 0.095 });
+  }
+  if (!thay.tay) r.vuKhi(() => r.local('hand', GRIP_R, null, (s) => giongWeapon(s, bamboo)));
 }
 
 /** Gióng cưỡi ngựa: giơ cao roi, quật xuống, quét tre một vòng (kỹ năng), ngã. */
@@ -641,7 +666,7 @@ function poseTeen(b: B, a: Act): void {
  * roi sắt (hay cây tre khi roi đã gãy), lửa phun ra từ mõm ngựa. `glow`: Phù Đổng Thiên Vương hiển linh, có hào quang.
  * `onFoot`: tráng sĩ xuống ngựa, đứng chầu trong sân Điện (tướng đứng trong sân không cưỡi thú).
  */
-export function makeGiong(look: GiongLook, opts: { bamboo?: boolean; glow?: boolean; onFoot?: boolean } = {}): THREE.Group {
+export function makeGiong(look: GiongLook, opts: { bamboo?: boolean; glow?: boolean; onFoot?: boolean; anh?: boolean } = {}): THREE.Group {
   if (look === 'be') {
     const r = new RigBuilder(CHILD);
     drawChild(r);
@@ -656,15 +681,19 @@ export function makeGiong(look: GiongLook, opts: { bamboo?: boolean; glow?: bool
   }
   if (opts.onFoot) {
     const r = new RigBuilder({ ...BASE, ...bigHuman('base', [0, 0, 0], K_GIONG) });
+    r.ghiAnh = !!opts.anh;
     drawBig(r, [0, 0, 0], K_GIONG, (h) => drawGiongRider(h, opts.bamboo ?? false));
-    const { group, bones } = skinRig(r.build());
+    const shape = r.build();
+    const { group, bones } = skinRig(shape);
     if (opts.glow) addHalo(group, 1.72, -0.44);
-    return finish(group, (a) => poseGiongStand(bones as unknown as Human, a));
+    return anhNeu(finish(group, (a) => poseGiongStand(bones as unknown as Human, a)), shape, 'giong', opts.anh);
   }
   const r = new RigBuilder({ ...BASE, ...ironHorse(K_HORSE), ...bigHuman('qBody', GIONG_AT, K_GIONG) });
+  r.ghiAnh = !!opts.anh;
   drawIronHorse(r, K_HORSE);
   drawBig(r, GIONG_AT, K_GIONG, (h) => drawGiongRider(h, opts.bamboo ?? false));
-  const { group, bones } = skinRig(r.build());
+  const shape = r.build();
+  const { group, bones } = skinRig(shape);
   // Luồng lửa phun nhiều tầng từ mõm ngựa sắt, gắn vào đầu ngựa để theo đầu ngựa gật.
   const flames: THREE.Mesh[] = [];
   const flameRoot = new THREE.Group();
@@ -684,13 +713,14 @@ export function makeGiong(look: GiongLook, opts: { bamboo?: boolean; glow?: bool
     flames.push(flame);
   }
   if (opts.glow) addHalo(group, 2.5, -0.44);
-  return finish(group, (a) => {
+  const out = finish(group, (a) => {
     poseGiongRider(bones as unknown as Human, a);
     const e = a.act === 'fight' && a.strike !== undefined ? Math.sin(Math.PI * a.strike) : 0;
     poseIronHorse(bones, a, e);
     const t = a.time ?? 0;
     flames.forEach((f, i) => f.scale.set(1, 0.78 + 0.42 * Math.abs(Math.sin(t * 10 + i * 1.1)), 1));
   });
+  return anhNeu(out, shape, 'giong', opts.anh);
 }
 
 // ---------- Sơn Tinh ----------
@@ -699,7 +729,7 @@ const K_SON = 1.45;
 const JADE = 0x5fd89a;
 
 /** Quyền trượng Sơn Thần: cán gỗ cổ thụ bịt đồng, bệ đồng nâng khối đá thiêng 3 đỉnh núi Tản Viên có mạch ngọc sáng và lá rừng. */
-function sonStaff(s: Parts): void {
+export function sonStaff(s: Parts): void {
   const p = s.plain;
   // Đốc gậy bịt đồng
   p.cyl(0.032, 0.024, 0.1, C.bronzeDark, 0, -0.22, 0, undefined, 7);
@@ -727,7 +757,7 @@ function sonStaff(s: Parts): void {
 }
 
 /** Sơn Tinh, chúa vùng non cao: giáp đồng chạm trống đồng, vai đắp đá núi Ba Vì, váy thổ cẩm và lá rừng, mũ Sơn Vương. */
-function drawSon(h: HumanRig): void {
+function drawSon(h: HumanRig, thay: ThayDo = {}): void {
   humanBody(h, {
     cloth: C.mountainCloak,
     pattern: true,
@@ -744,24 +774,30 @@ function drawSon(h: HumanRig): void {
   // Đai lưng Sơn Vương khảm ngọc xanh, váy lá rừng, phiến đá che hông.
   buckle(h, { color: C.gold, gem: JADE, glow: true });
   leafSkirt(h, { colors: C.leaf, n: 10, to: 0.21 });
-  skirtArmor(h, { color: C.rockDark, trim: C.gold, rows: 1, to: 0.23, panels: [0, Math.PI], half: 0.45 });
+  if (!thay.than) skirtArmor(h, { color: C.rockDark, trim: C.gold, rows: 1, to: 0.23, panels: [0, Math.PI], half: 0.45 });
   // Giáp ngực Đông Sơn, hộ tâm mặt trống đồng, áo choàng rừng già viền đồng.
-  armor(h, { color: C.bronze, trim: C.gold, pattern: true, y0: 0.395, y1: 0.6 });
-  chestDisc(h, { color: C.gold, drum: true, r: 0.072, rim: C.bronzeDark, thick: 0.02 });
-  cloak(h, { color: C.mountainCloak, trim: C.bronze, clasp: C.gold, hem: 0.14 });
+  if (!thay.than) {
+    armor(h, { color: C.bronze, trim: C.gold, pattern: true, y0: 0.395, y1: 0.6 });
+    chestDisc(h, { color: C.gold, drum: true, r: 0.072, rim: C.bronzeDark, thick: 0.02 });
+  }
+  if (!thay.lung) cloak(h, { color: C.mountainCloak, trim: C.bronze, clasp: C.gold, hem: 0.14 });
   // Giáp vai đá núi Ba Vì: lớp giáp viền vàng, trên đắp khối đá có chóp và mầm cây.
-  pauldrons(h, { color: C.rockDark, trim: C.gold, size: 1.05 });
-  shoulderRocks(h, { color: C.rock, dark: C.rockDark, sprout: C.leaf[1], size: 1.05 });
+  if (!thay.than) {
+    pauldrons(h, { color: C.rockDark, trim: C.gold, size: 1.05 });
+    shoulderRocks(h, { color: C.rock, dark: C.rockDark, sprout: C.leaf[1], size: 1.05 });
+  }
 
   // Khuôn mặt uy nghi có râu ngắn, vành miện đồng khảm ngọc núi, hai sừng vàng, miện lá đồng khảm xanh rừng
   humanHead(h, { brows: true, mustache: C.hair, beard: C.hair, beardLen: 0.1 });
   hairCap(h);
-  diadem(h, { color: IRON_DARK, y: 0.8, h: 0.026, puff: 0.014 });
-  diadem(h, { color: C.bronze, pattern: true, y: 0.824, h: 0.06, puff: 0.01, edge: C.gold, gem: JADE, glow: true, horns: { color: C.gold, len: 0.085, r: 0.02, out: 1.3 } });
+  if (!thay.dau) {
+    diadem(h, { color: IRON_DARK, y: 0.8, h: 0.026, puff: 0.014 });
+    diadem(h, { color: C.bronze, pattern: true, y: 0.824, h: 0.06, puff: 0.01, edge: C.gold, gem: JADE, glow: true, horns: { color: C.gold, len: 0.085, r: 0.02, out: 1.3 } });
+  }
   // Búi tóc buộc dây ngọc; vòng sắt, vành đồng; miện lá đồng khảm xanh rừng, nan ngọc.
   bun(h, { color: C.hair, at: [0, 0.985, -0.03], size: 0.085, tie: JADE });
-  mien(h, { ...MIEN, color: C.bronzeLight, inlay: C.leaf[2], bar: JADE, disc: C.gold, discRim: C.bronzeDark, h: 0.28, w: 0.085, y: 0.87, discR: 0.095 });
-  h.local('hand', GRIP_R, null, sonStaff);
+  if (!thay.dau) mien(h, { ...MIEN, color: C.bronzeLight, inlay: C.leaf[2], bar: JADE, disc: C.gold, discRim: C.bronzeDark, h: 0.28, w: 0.085, y: 0.87, discR: 0.095 });
+  if (!thay.tay) h.vuKhi(() => h.local('hand', GRIP_R, null, sonStaff));
 }
 
 /** Sơn Tinh chống gậy; đi; vung gậy bổ; dời non (giơ gậy quá đầu, dộng xuống đất); thắng thì giơ cao gậy. */
@@ -824,13 +860,15 @@ function drawSonAll(r: Rig, rock: boolean): void {
 /**
  * Sơn Tinh. `rock`: đứng trên mỏm đá (khi đứng chờ ở kinh đô). `glow`: hiển linh, có hào quang.
  */
-export function makeSonTinh(opts: { rock?: boolean; glow?: boolean } = {}): THREE.Group {
+export function makeSonTinh(opts: { rock?: boolean; glow?: boolean; anh?: boolean } = {}): THREE.Group {
   const rock = opts.rock ?? false;
   const r = new RigBuilder(sonDefs(rock));
+  r.ghiAnh = !!opts.anh;
   drawSonAll(r, rock);
-  const { group, bones } = skinRig(r.build());
+  const shape = r.build();
+  const { group, bones } = skinRig(shape);
   if (opts.glow) addHalo(group, (rock ? 0.32 : 0) + 1.5, -0.38);
-  return finish(group, (a) => poseSon(bones as unknown as Human, a));
+  return anhNeu(finish(group, (a) => poseSon(bones as unknown as Human, a)), shape, 'sonTinh', opts.anh);
 }
 
 /** Tượng Sơn Tinh bản tĩnh, cho Đền Tản Viên. */
@@ -991,7 +1029,7 @@ function royalAxe(s: Parts): void {
 }
 
 /** An Dương Vương: hoàng bào đỏ son, giáp đồng vàng chạm mặt trống đồng, giáp vai Kim Quy, miện lá vàng khảm đỏ son của vua Âu Lạc. */
-function drawAdv(h: HumanRig, crossbow: boolean): void {
+function drawAdv(h: HumanRig, crossbow: boolean, thay: ThayDo = {}): void {
   humanBody(h, {
     legs: C.bronzeDark,
     cloth: C.red,
@@ -1010,25 +1048,29 @@ function drawAdv(h: HumanRig, crossbow: boolean): void {
   // Đai vàng đế vương, vạt lễ phục thêu hoa văn trước bụng, phiến giáp đùi mạ vàng.
   buckle(h, { color: C.gold, gem: C.red });
   apron(h, { color: C.gold, to: 0.13, half: 0.38, pattern: true, trim: C.goldDark });
-  skirtArmor(h, { color: C.bronze, trim: C.gold, rows: 2, to: 0.2, panels: [0, Math.PI], half: 0.5 });
   // Giáp ngực hoàng gia, gương hộ tâm mặt trống đồng vàng ròng, giáp vai hai tầng, đại hồng bào viền vàng.
-  armor(h, { color: C.bronze, trim: C.gold, pattern: true, y0: 0.395, y1: 0.6 });
-  chestDisc(h, { color: C.gold, drum: true, r: 0.078, rim: C.goldDark, thick: 0.02 });
-  pauldrons(h, { color: C.bronzeLight, trim: C.gold, layers: 2, size: 1.15, spike: C.gold });
-  cloak(h, { color: C.red, trim: C.gold, clasp: C.gold, hem: 0.1 });
+  if (!thay.than) {
+    skirtArmor(h, { color: C.bronze, trim: C.gold, rows: 2, to: 0.2, panels: [0, Math.PI], half: 0.5 });
+    armor(h, { color: C.bronze, trim: C.gold, pattern: true, y0: 0.395, y1: 0.6 });
+    chestDisc(h, { color: C.gold, drum: true, r: 0.078, rim: C.goldDark, thick: 0.02 });
+    pauldrons(h, { color: C.bronzeLight, trim: C.gold, layers: 2, size: 1.15, spike: C.gold });
+  }
+  if (!thay.lung) cloak(h, { color: C.red, trim: C.gold, clasp: C.gold, hem: 0.1 });
 
   // Khuôn mặt đế vương (râu mép + chòm râu cằm), vành miện vàng Âu Lạc chạm hoa văn trống đồng, hồng ngọc giữa trán,
   // miện lá vàng khảm đỏ son có mặt trời trống đồng.
   humanHead(h, { brows: true, mustache: C.hair, beard: C.hair, beardLen: 0.12 });
   hairCap(h);
   // Miện lá vàng khảm đỏ son của vua Âu Lạc: để lộ tóc, vòng sắt, vành vàng, có chóp bậc và tai xoắn.
-  diadem(h, { color: IRON_DARK, y: 0.8, h: 0.03, puff: 0.014 });
-  diadem(h, { color: C.gold, pattern: true, y: 0.828, h: 0.07, puff: 0.01, edge: C.goldDark, gem: C.red });
-  mien(h, { ...MIEN, color: C.gold, inlay: C.red, bar: C.ember, disc: C.gold, discRim: C.goldDark, finial: C.gold, curls: C.gold, h: 0.3, w: 0.085, y: 0.885, discR: 0.1 });
+  if (!thay.dau) {
+    diadem(h, { color: IRON_DARK, y: 0.8, h: 0.03, puff: 0.014 });
+    diadem(h, { color: C.gold, pattern: true, y: 0.828, h: 0.07, puff: 0.01, edge: C.goldDark, gem: C.red });
+    mien(h, { ...MIEN, color: C.gold, inlay: C.red, bar: C.ember, disc: C.gold, discRim: C.goldDark, finial: C.gold, curls: C.gold, h: 0.3, w: 0.085, y: 0.885, discR: 0.1 });
+  }
 
   if (crossbow) {
     // Bao đựng tên thần Liên Châu đeo chéo sau lưng (bằng đồng mạ vàng, cắm 5 mũi tên đồng lửa)
-    h.local('chest', [0.13, 0.52, -0.17], [0.18, 0, -0.38], (s) => {
+    if (!thay.lung) h.local('chest', [0.13, 0.52, -0.17], [0.18, 0, -0.38], (s) => {
       s.band.cyl(0.058, 0.048, 0.36, C.gold, 0, 0, 0, undefined, 8);
       s.plain.cyl(0.064, 0.064, 0.036, C.bronzeDark, 0, 0.17, 0, undefined, 8);
       s.plain.cyl(0.054, 0.054, 0.03, C.bronzeDark, 0, -0.17, 0, undefined, 8);
@@ -1043,8 +1085,8 @@ function drawAdv(h: HumanRig, crossbow: boolean): void {
         s.glow.cone(0.024, 0.075, C.fire, dx, 0.35, dz, undefined, 4);
       }
     });
-    h.local('hand', GRIP_R, null, (s) => crossbowParts(s, true, 1.15 / K_ADV));
-  } else h.local('hand', GRIP_R, null, royalAxe);
+    if (!thay.tay) h.vuKhi(() => h.local('hand', GRIP_R, null, (s) => crossbowParts(s, true, 1.15 / K_ADV)));
+  } else if (!thay.tay) h.vuKhi(() => h.local('hand', GRIP_R, null, royalAxe));
 }
 
 /**
@@ -1086,13 +1128,15 @@ function poseAdv(b: Human, a: Act, crossbow: boolean): void {
 /**
  * An Dương Vương. `crossbow`: cầm nỏ thần đồng vàng; không thì cầm rìu đồng nghi lễ. `glow`: hiển linh, có hào quang.
  */
-export function makeAnDuong(opts: { crossbow?: boolean; glow?: boolean } = {}): THREE.Group {
+export function makeAnDuong(opts: { crossbow?: boolean; glow?: boolean; anh?: boolean } = {}): THREE.Group {
   const crossbow = opts.crossbow ?? false;
   const r = new RigBuilder({ ...BASE, ...bigHuman('base', [0, 0, 0], K_ADV) });
+  r.ghiAnh = !!opts.anh;
   drawBig(r, [0, 0, 0], K_ADV, (h) => drawAdv(h, crossbow));
-  const { group, bones } = skinRig(r.build());
+  const shape = r.build();
+  const { group, bones } = skinRig(shape);
   if (opts.glow) addHalo(group, 1.6, -0.4);
-  return finish(group, (a) => poseAdv(bones as unknown as Human, a, crossbow));
+  return anhNeu(finish(group, (a) => poseAdv(bones as unknown as Human, a, crossbow)), shape, 'anDuong', opts.anh);
 }
 
 // ---------- Cao Lỗ ----------
@@ -1103,11 +1147,33 @@ const LEATHER_DARK = 0x5e3a20;
 /** Tù và đeo bên hông trái (xương riêng để giấu khi đã cầm lên tay). */
 const CAO_HORN: V3 = [-0.18, 0.32, 0.08];
 
+/** Chỗ đeo bao tên đồng của Cao Lỗ (gốc và góc xoay, tọa độ thân người): chéo sau lưng, miệng bao qua vai phải. */
+export const CAO_QUIVER: [V3, V3] = [
+  [0.12, 0.5, -0.17],
+  [0.2, 0, -0.4],
+];
+
+/** Bao tên đồng của Cao Lỗ: ống đồng hoa văn, hai đai đồng sẫm, ba mũi tên đuôi lông đỏ nhô khỏi miệng. Gốc giữa bao. */
+export function baoTenDong(s: Parts): void {
+  s.band.cyl(0.058, 0.05, 0.38, C.bronze, 0, 0, 0, undefined, 8);
+  s.plain.cyl(0.064, 0.064, 0.034, C.bronzeDark, 0, 0.18, 0, undefined, 8);
+  s.plain.cyl(0.056, 0.056, 0.03, C.bronzeDark, 0, -0.18, 0, undefined, 8);
+  for (const [dx, dz] of [
+    [-0.022, -0.012],
+    [0.022, -0.012],
+    [0, 0.02],
+  ] as const) {
+    s.plain.cyl(0.008, 0.008, 0.12, C.woodLight, dx, 0.24, dz, undefined, 4);
+    s.plain.box(0.006, 0.07, 0.04, C.red, dx, 0.28, dz);
+    s.plain.box(0.04, 0.07, 0.006, C.red, dx, 0.28, dz);
+  }
+}
+
 /**
  * Cao Lỗ, tướng giỏi chế nỏ: tóc búi cài trâm đồng, râu đen, giáp da khảm đồng có hộ tâm mặt trống đồng, váy chàm
  * hoa văn, miện lá đồng của tướng, bao tên đồng sau lưng, tù và sừng trâu đeo hông, tay phải cầm nỏ liên châu.
  */
-function drawCaoLo(h: HumanRig): void {
+function drawCaoLo(h: HumanRig, thay: ThayDo = {}): void {
   humanBody(h, {
     cloth: C.indigo,
     pattern: true,
@@ -1122,47 +1188,38 @@ function drawCaoLo(h: HumanRig): void {
   });
   // Khóa đai đồng, hai vạt giáp da che hông.
   buckle(h, { color: C.bronze, gem: C.bronzeLight });
-  skirtArmor(h, { color: LEATHER, trim: LEATHER_DARK, rows: 2, to: 0.22, panels: [0, Math.PI], half: 0.45 });
-  // Giáp da viền đồng, hộ tâm mặt trống đồng, hai hàng đinh đồng khảm quanh ngực, giáp vai da viền đồng.
-  armor(h, { color: LEATHER, trim: C.bronze, y0: 0.39, y1: 0.6 });
-  chestDisc(h, { color: C.gold, drum: true, r: 0.066, rim: C.bronzeDark, thick: 0.02 });
-  const row = (y: number, xs: number[]): [number, number][] => xs.map((x) => [x, y]);
-  studs(h, { color: C.bronzeLight, at: [...row(0.44, [-0.12, -0.085, 0.085, 0.12]), ...row(0.54, [-0.12, -0.09, 0.09, 0.12])], thick: 0.02 });
-  studs(h, { color: C.bronzeLight, at: [...row(0.44, [-0.07, 0, 0.07]), ...row(0.54, [-0.07, 0, 0.07])], back: true, thick: 0.02 });
-  pauldrons(h, { color: LEATHER, trim: C.bronze, size: 1.05 });
+  if (!thay.than) {
+    skirtArmor(h, { color: LEATHER, trim: LEATHER_DARK, rows: 2, to: 0.22, panels: [0, Math.PI], half: 0.45 });
+    // Giáp da viền đồng, hộ tâm mặt trống đồng, hai hàng đinh đồng khảm quanh ngực, giáp vai da viền đồng.
+    armor(h, { color: LEATHER, trim: C.bronze, y0: 0.39, y1: 0.6 });
+    chestDisc(h, { color: C.gold, drum: true, r: 0.066, rim: C.bronzeDark, thick: 0.02 });
+    const row = (y: number, xs: number[]): [number, number][] => xs.map((x) => [x, y]);
+    studs(h, { color: C.bronzeLight, at: [...row(0.44, [-0.12, -0.085, 0.085, 0.12]), ...row(0.54, [-0.12, -0.09, 0.09, 0.12])], thick: 0.02 });
+    studs(h, { color: C.bronzeLight, at: [...row(0.44, [-0.07, 0, 0.07]), ...row(0.54, [-0.07, 0, 0.07])], back: true, thick: 0.02 });
+    pauldrons(h, { color: LEATHER, trim: C.bronze, size: 1.05 });
+  }
 
   // Bao tên đồng đeo chéo sau lưng, miệng bao qua vai phải, đuôi tên lông đỏ.
-  h.local('chest', [0.12, 0.5, -0.17], [0.2, 0, -0.4], (s) => {
-    s.band.cyl(0.058, 0.05, 0.38, C.bronze, 0, 0, 0, undefined, 8);
-    s.plain.cyl(0.064, 0.064, 0.034, C.bronzeDark, 0, 0.18, 0, undefined, 8);
-    s.plain.cyl(0.056, 0.056, 0.03, C.bronzeDark, 0, -0.18, 0, undefined, 8);
-    for (const [dx, dz] of [
-      [-0.022, -0.012],
-      [0.022, -0.012],
-      [0, 0.02],
-    ] as const) {
-      s.plain.cyl(0.008, 0.008, 0.12, C.woodLight, dx, 0.24, dz, undefined, 4);
-      s.plain.box(0.006, 0.07, 0.04, C.red, dx, 0.28, dz);
-      s.plain.box(0.04, 0.07, 0.006, C.red, dx, 0.28, dz);
-    }
-  });
+  if (!thay.lung) h.local('chest', CAO_QUIVER[0], CAO_QUIVER[1], baoTenDong);
 
   // Mặt cương nghị: mày xếch, râu mép và chòm râu đen; tóc búi cài trâm đồng, vòng sắt và vành đồng quanh trán, miện lá đồng của tướng.
   humanHead(h, { brows: true, mustache: C.hair, beard: C.hair, beardLen: 0.17 });
   hairCap(h);
-  diadem(h, { color: IRON_DARK, y: 0.8, h: 0.026, puff: 0.014 });
-  diadem(h, { color: C.bronze, pattern: true, y: 0.824, h: 0.043, puff: 0.01 });
+  if (!thay.dau) {
+    diadem(h, { color: IRON_DARK, y: 0.8, h: 0.026, puff: 0.014 });
+    diadem(h, { color: C.bronze, pattern: true, y: 0.824, h: 0.043, puff: 0.01 });
+  }
   bun(h, { color: C.hair, at: [0, 0.985, -0.01], size: 0.08, tie: C.bronze, pin: { color: C.bronzeLight, len: 0.26, tilt: 0.15 } });
   // Miện lá đồng của tướng: thấp hơn miện vua, không chóp.
-  mien(h, { ...MIEN, color: C.bronze, inlay: C.bronzeDark, bar: C.bronzeLight, disc: C.gold, discRim: C.bronzeDark, curls: C.bronze, h: 0.25, w: 0.08, y: 0.852, discR: 0.085 });
+  if (!thay.dau) mien(h, { ...MIEN, color: C.bronze, inlay: C.bronzeDark, bar: C.bronzeLight, disc: C.gold, discRim: C.bronzeDark, curls: C.bronze, h: 0.25, w: 0.08, y: 0.852, discR: 0.085 });
 
   // Tù và sừng trâu đeo hông trái (giấu đi lúc cầm lên thổi), và tù và cầm tay trái (chỉ hiện lúc thổi).
   (h as unknown as Rig).local('tuVa', CAO_HORN, [0.15, Math.PI + 0.35, 0], (s) => {
     hornTrumpet(s, 0.95);
     s.plain.box(0.012, 0.09, 0.012, LEATHER_DARK, 0, 0.05, 0.02);
   });
-  h.local('handL', GRIP_L, null, (s) => hornTrumpet(s, 1.0));
-  h.local('hand', GRIP_R, null, (s) => repeatingCrossbow(s, 1.05 / K_CAO));
+  if (!thay.hinh) h.local('handL', GRIP_L, null, (s) => hornTrumpet(s, 1.0));
+  if (!thay.tay) h.vuKhi(() => h.local('hand', GRIP_R, null, (s) => repeatingCrossbow(s, 1.05 / K_CAO)));
 }
 
 /** Năm lần bật dây của nỏ liên châu trong kỹ năng (tiến trình). */
@@ -1236,12 +1293,14 @@ function caoLoDefs(): Defs {
 }
 
 /** Cao Lỗ cầm nỏ liên châu. `glow`: hiển linh, có hào quang. */
-export function makeCaoLo(opts: { glow?: boolean } = {}): THREE.Group {
+export function makeCaoLo(opts: { glow?: boolean; anh?: boolean } = {}): THREE.Group {
   const r = new RigBuilder(caoLoDefs());
+  r.ghiAnh = !!opts.anh;
   drawBig(r, [0, 0, 0], K_CAO, drawCaoLo);
-  const { group, bones } = skinRig(r.build());
+  const shape = r.build();
+  const { group, bones } = skinRig(shape);
   if (opts.glow) addHalo(group, 1.5, -0.38);
-  return finish(group, (a) => poseCaoLo(bones, a));
+  return anhNeu(finish(group, (a) => poseCaoLo(bones, a)), shape, 'caoLo', opts.anh);
 }
 
 // ---------- Hai Bà Trưng ----------
@@ -1272,30 +1331,36 @@ function drawWomanFace(h: HumanRig): void {
  * Đầu Hai Bà: mặt nữ má hồng, mày cong mảnh, môi son, hoa tai vàng; tóc dài xõa lưng, tóc mai, búi sau gáy cài trâm
  * vàng; búp lá vàng bảy lá có chóp bậc, lòng lá màu `inlay` (`bupLa`).
  */
-function drawBaHead(h: HumanRig, inlay: number): void {
+function drawBaHead(h: HumanRig, inlay: number, crown = true): void {
   drawWomanFace(h);
   hairDown(h, { color: C.hair, to: 0.44, width: 0.17, locks: 0.17 });
   bun(h, { color: C.hair, at: [0, 0.84, -0.245], size: 0.085, pin: { color: C.gold, len: 0.28, tilt: 0.25, ends: C.red } });
-  bupLa(h, inlay, 2);
+  if (crown) bupLa(h, inlay, 2);
 }
 
 /** Trưng Trắc: áo đỏ thắm, giáp ngực đồng hoa văn có hộ tâm mặt trống đồng, giáp vai đồng nhỏ, gươm đồng. */
-function drawTrungTrac(h: HumanRig): void {
+function drawTrungTrac(h: HumanRig, thay: ThayDo = {}): void {
   drawBaBody(h, C.trungRed, C.gold);
-  armor(h, { color: C.bronze, trim: C.gold, pattern: true, y0: 0.392, y1: 0.59, thick: 0.012 });
-  chestDisc(h, { color: C.gold, drum: true, r: 0.058, thick: 0.016 });
-  pauldrons(h, { color: C.bronzeLight, trim: C.gold, size: 0.9 });
-  drawBaHead(h, C.trungRed);
-  h.local('hand', GRIP_R, null, guomDong);
+  if (!thay.than) {
+    armor(h, { color: C.bronze, trim: C.gold, pattern: true, y0: 0.392, y1: 0.59, thick: 0.012 });
+    chestDisc(h, { color: C.gold, drum: true, r: 0.058, thick: 0.016 });
+    pauldrons(h, { color: C.bronzeLight, trim: C.gold, size: 0.9 });
+  }
+  drawBaHead(h, C.trungRed, !thay.dau);
+  if (!thay.tay) h.vuKhi(() => h.local('hand', GRIP_R, null, guomDong));
 }
 
 /** Trưng Nhị: áo vàng cổ viền đỏ, dây đeo đỏ bắt chéo, bao tên đồng sau lưng, cung sừng bịt vàng, tên đồng. */
-function drawTrungNhi(h: HumanRig): void {
+function drawTrungNhi(h: HumanRig, thay: ThayDo = {}): void {
   drawBaBody(h, C.trungYellow, C.red, { crossStrap: C.red });
-  drawBaHead(h, C.red);
-  h.local('chest', [0.06, 0.55, -0.15], [-0.3, 0, -0.35], (s) => quiver(s, C.bronze, { iron: false }));
-  h.local('handL', GRIP_L, null, (s) => bow(s, true, true));
-  h.local('hand', GRIP_R, null, (s) => arrow(s));
+  drawBaHead(h, C.red, !thay.dau);
+  if (!thay.lung) h.local('chest', [0.06, 0.55, -0.15], [-0.3, 0, -0.35], (s) => quiver(s, C.bronze, { iron: false }));
+  if (!thay.tay) {
+    h.vuKhi(() => {
+      h.local('handL', GRIP_L, null, (s) => bow(s, true, true));
+      h.local('hand', GRIP_R, null, (s) => arrow(s));
+    });
+  }
 }
 
 /** Ngồi bành: hông giữ trên nệm, hai chân duỗi ra trước, hơi dạng. Gọi sau khi đặt tay. */
@@ -1450,14 +1515,15 @@ function poseTrungNhi(bones: B, a: Act): VoiTranMood {
  * Trưng Trắc cưỡi voi trận đệm đỏ có mặt trống đồng, lọng đỏ. `glow`: hiển linh, có hào quang. `onFoot`: xuống voi,
  * đứng chầu trong sân Điện (tướng đứng trong sân không cưỡi thú).
  */
-export function makeTrungTrac(opts: { glow?: boolean; onFoot?: boolean } = {}): THREE.Group {
-  if (opts.onFoot) return standingBa(drawTrungTrac, 'trungTrac', opts.glow);
+export function makeTrungTrac(opts: { glow?: boolean; onFoot?: boolean; anh?: boolean } = {}): THREE.Group {
+  if (opts.onFoot) return standingBa(drawTrungTrac, 'trungTrac', opts.glow, opts.anh);
   const group = makeVoiTran(
     { pad: C.red, trim: C.gold, drum: true, parasol: C.trungRed },
     {
       defs: bigHuman('qBody', SEAT_BA, K_BA),
       draw: (r) => drawBig(r, SEAT_BA, K_BA, drawTrungTrac),
       pose: poseTrungTrac,
+      ...(opts.anh ? { anh: (g: THREE.Group, shape: RigShape<string>) => batAnh(g, shape, 'trungTrac') } : {}),
     },
   );
   if (opts.glow) addHalo(group, ...HALO_BA);
@@ -1468,8 +1534,8 @@ export function makeTrungTrac(opts: { glow?: boolean; onFoot?: boolean } = {}): 
  * Trưng Nhị cưỡi voi trận đệm vàng, lọng vàng, cờ đỏ chim Lạc cắm sau bành. `glow`: hiển linh, có hào quang.
  * `onFoot`: xuống voi, đứng chầu trong sân Điện.
  */
-export function makeTrungNhi(opts: { glow?: boolean; onFoot?: boolean } = {}): THREE.Group {
-  if (opts.onFoot) return standingBa(drawTrungNhi, 'trungNhi', opts.glow);
+export function makeTrungNhi(opts: { glow?: boolean; onFoot?: boolean; anh?: boolean } = {}): THREE.Group {
+  if (opts.onFoot) return standingBa(drawTrungNhi, 'trungNhi', opts.glow, opts.anh);
   const group = makeVoiTran(
     { pad: C.trungYellow, trim: C.red, parasol: C.trungYellow, flag: K_BA },
     {
@@ -1479,6 +1545,7 @@ export function makeTrungNhi(opts: { glow?: boolean; onFoot?: boolean } = {}): T
         r.place(SEAT_BA, K_BA, () => r.local('flagGrip', GRIP_R, null, coLac));
       },
       pose: poseTrungNhi,
+      ...(opts.anh ? { anh: (g: THREE.Group, shape: RigShape<string>) => batAnh(g, shape, 'trungNhi') } : {}),
     },
   );
   if (opts.glow) addHalo(group, ...HALO_BA);
@@ -1489,10 +1556,12 @@ export function makeTrungNhi(opts: { glow?: boolean; onFoot?: boolean } = {}): T
  * Hai Bà đứng chầu trong sân Điện, cùng cỡ Lạc tướng đứng chầu: Trưng Trắc dựng gươm trước vai phải, Trưng Nhị cầm
  * cung dựng bên trái, tay phải buông cầm tên; thở nhẹ.
  */
-function standingBa(draw: (h: HumanRig) => void, kind: 'trungTrac' | 'trungNhi', glow = false): THREE.Group {
+function standingBa(draw: (h: HumanRig) => void, kind: 'trungTrac' | 'trungNhi', glow = false, anh = false): THREE.Group {
   const r = new RigBuilder({ ...BASE, ...bigHuman('base', [0, 0, 0], K_LAC) });
+  r.ghiAnh = anh;
   drawBig(r, [0, 0, 0], K_LAC, draw);
-  const { group, bones } = skinRig(r.build());
+  const shape = r.build();
+  const { group, bones } = skinRig(shape);
   const b = bones as unknown as Human;
   finish(group, (a) => {
     const t = a.time ?? 0;
@@ -1509,7 +1578,7 @@ function standingBa(draw: (h: HumanRig) => void, kind: 'trungTrac' | 'trungNhi',
     gripHands(b, ARM * K_LAC);
   });
   if (glow) addHalo(group, 1.5, -0.38);
-  return group;
+  return anhNeu(group, shape, kind, anh);
 }
 
 // ---------- Lạc tướng đánh trống trận ----------
@@ -1945,3 +2014,68 @@ export function makeNuTuong(kind: NuTuongId, opts: { glow?: boolean } = {}): THR
   if (opts.glow) addHalo(group, 1.35, -0.45);
   return finish(group, (a) => poseNu(bones, a, look));
 }
+
+// ---------- Hình tướng mặc đồ ----------
+
+/** Thế cầm vũ khí ở hình tướng: dựng đứng bên phải (roi, gậy), gươm trước vai, nỏ ngang thắt lưng, cung tay trái. */
+export type TheCamTuong = 'dung' | 'kiem' | 'no' | 'cung';
+
+/** Thế cầm vũ khí của chính tướng (khi chưa mặc vũ khí khác). */
+export const CAM_GOC: Record<HeroKind, TheCamTuong> = { giong: 'dung', sonTinh: 'dung', anDuong: 'no', caoLo: 'no', trungTrac: 'kiem', trungNhi: 'cung' };
+
+/** Cỡ thân người từng tướng khi đứng (Hai Bà đứng cùng cỡ Lạc tướng như ở sân Điện). */
+const K_DUNG: Record<HeroKind, number> = { giong: K_GIONG, sonTinh: K_SON, anDuong: K_ADV, caoLo: K_CAO, trungTrac: K_LAC, trungNhi: K_LAC };
+
+/** Tư thế đứng chân dung theo thế cầm vũ khí, như các tướng đứng chầu trong sân Điện. */
+function poseChanDung(b: Human, cam: TheCamTuong, k: number): void {
+  beginPose(b, 0);
+  if (cam === 'dung') {
+    b.armR.rotation.set(-0.2, 0, 0.2);
+    b.hand.rotation.set(0.12, 0, -0.12);
+    b.armL.rotation.set(-0.3, 0, -0.26);
+  } else if (cam === 'kiem') {
+    b.armR.rotation.set(-0.35, 0, 0.18);
+    b.hand.rotation.set(0.35, 0, -0.1);
+    b.armL.rotation.set(-0.1, 0, -0.18);
+  } else if (cam === 'no') {
+    // Nỏ cầm ngang hông phải, mũi chĩa chếch ra trước bên phải, hơi chúc xuống: thấy rõ cả nỏ mà không che giáp.
+    b.armR.rotation.set(-0.3, 0, 0.1);
+    b.armL.rotation.set(-0.25, 0, -0.22);
+    b.hand.rotation.set(0.35, 0.85, 0);
+  } else {
+    b.armL.rotation.set(-0.35, 0, -0.25);
+    b.handL.rotation.set(0.35, 0, 0.1);
+    b.armR.rotation.set(-0.05, 0, 0.2);
+  }
+  gripHands(b, ARM * k);
+}
+
+/**
+ * Tướng đứng bản tĩnh cho hình tướng mặc đồ (hinhTuong.ts): vẽ tướng như ở trận (Gióng tráng sĩ cầm roi sắt, An Dương
+ * Vương cầm nỏ thần), bỏ các phần bị món đồ thay (`thay`), vẽ thêm món đồ mặc (`them`, tọa độ thân người, `k` là cỡ
+ * thân), rồi đặt tư thế theo thế cầm vũ khí `cam`.
+ */
+export function bakeTuongDung(kind: HeroKind, thay: ThayDo, cam: TheCamTuong, them: (h: HumanRig, k: number) => void, anh = false): THREE.Group {
+  const k = K_DUNG[kind];
+  const r = new RigBuilder(kind === 'caoLo' ? caoLoDefs() : { ...BASE, ...bigHuman('base', [0, 0, 0], k) });
+  r.ghiAnh = anh;
+  const t: ThayDo = { ...thay, hinh: true };
+  drawBig(r, [0, 0, 0], k, (h) => {
+    if (kind === 'giong') drawGiongRider(h, false, t);
+    else if (kind === 'sonTinh') drawSon(h, t);
+    else if (kind === 'anDuong') drawAdv(h, true, t);
+    else if (kind === 'caoLo') drawCaoLo(h, t);
+    else if (kind === 'trungTrac') drawTrungTrac(h, t);
+    else drawTrungNhi(h, t);
+    them(h, k);
+  });
+  const shape = r.build();
+  const pose = (b: Bones<string>) => poseChanDung(b as unknown as Human, cam, k);
+  const out = bakeRig(shape, pose);
+  const sang = anh ? bakeAnh(shape as RigShape<string>, pose, kind) : null;
+  if (sang) out.add(sang);
+  return out;
+}
+
+/** Cỡ thân tướng `kind` khi đứng ở hình tướng. */
+export const kDung = (kind: HeroKind): number => K_DUNG[kind];

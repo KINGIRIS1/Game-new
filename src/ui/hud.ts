@@ -117,6 +117,9 @@ import { armsHtml } from './binhKhi';
 import { advHtml, caoLoHtml } from './coLoa';
 import { buildingName, costHtml, esc, fmt, fmtShort } from './format';
 import { endingHtml, giongHtml, isEnding, storyHtml } from './giong';
+import { newTuongUi, roiHtml, tuongHtml, tuongMo, type AnhTuong, type TuongTab, type TuongUi } from './trangBi';
+import { doMo, monO } from '../game/trangBi';
+import type { ODo } from '../game/defs';
 import { sonHtml } from './son';
 import { blessingHtml, tetHtml } from './tet';
 import { khoanhHtml } from './khoanh';
@@ -189,6 +192,14 @@ export type HudAction =
   | { kind: 'offerGift'; gift: GiftId }
   | { kind: 'openAdv' }
   | { kind: 'openCaoLo' }
+  /** Bảng tướng: trang bị, chỉ số, kho đồ (`ui/trangBi.ts`). */
+  | { kind: 'openTuong'; hero?: HeroKind }
+  | { kind: 'macDo'; id: number; hero: HeroKind }
+  | { kind: 'thaoDo'; id: number }
+  | { kind: 'cuongHoa'; id: number }
+  | { kind: 'khoaDo'; id: number }
+  | { kind: 'phanGiai'; id: number }
+  | { kind: 'phanGiaiLoat' }
   /** Mở lại màn hình Hết truyện từ bảng Lạc hầu. */
   | { kind: 'openEnding' }
   | { kind: 'forgeNoThan' }
@@ -307,6 +318,7 @@ type Sheet =
   | { kind: 'son' }
   | { kind: 'adv' }
   | { kind: 'caoLo' }
+  | { kind: 'tuong' }
   | { kind: 'tet' }
   | { kind: 'khoanh'; id: number }
   | { kind: 'benKia'; id: number }
@@ -520,6 +532,57 @@ export class Hud {
         this.refreshSheet(this.getState());
         this.sheetEl.querySelector('.sheet-body')?.scrollTo(0, 0);
         return;
+      case 'tuongHero':
+        this.tuongUi = { ...newTuongUi(el.dataset.hero as HeroKind), tab: this.tuongUi.tab };
+        return this.refreshSheet(this.getState());
+      case 'tuongTab':
+        this.tuongUi = { ...this.tuongUi, tab: el.dataset.tab as TuongTab, mon: null, page: 0, armed: null };
+        this.refreshSheet(this.getState());
+        this.sheetEl.querySelector('.sheet-body')?.scrollTo(0, 0);
+        return;
+      case 'tuongO': {
+        // Chạm ô trên khung hình nhân: túi lọc theo ô ấy, chọn sẵn món đang mặc (chạm lần nữa thì bỏ lọc).
+        const o = el.dataset.o as ODo;
+        const off = this.tuongUi.o === o;
+        const worn = off ? null : (monO(this.getState(), this.tuongUi.hero, o)?.id ?? null);
+        this.tuongUi = { ...this.tuongUi, o: off ? null : o, mon: worn, page: 0, armed: null };
+        return this.refreshSheet(this.getState());
+      }
+      case 'khoLoc': {
+        const o = el.dataset.o === 'all' ? null : (el.dataset.o as ODo);
+        this.tuongUi = { ...this.tuongUi, o, mon: null, page: 0, armed: null };
+        return this.refreshSheet(this.getState());
+      }
+      case 'pickMon':
+        this.tuongUi = { ...this.tuongUi, mon: id, armed: null };
+        this.refreshSheet(this.getState());
+        // Thẻ món nằm dưới lưới: cuộn cho thấy thẻ vừa chọn.
+        this.sheetEl.querySelector('.do-detail')?.scrollIntoView({ block: 'nearest' });
+        return;
+      case 'doPage':
+        this.tuongUi = { ...this.tuongUi, page: Number(el.dataset.page) };
+        return this.refreshSheet(this.getState());
+      case 'openTuong':
+        return this.onAction({ kind: 'openTuong', hero: (el.dataset.hero as HeroKind | undefined) || undefined });
+      case 'macDo':
+        return this.onAction({ kind: 'macDo', id, hero: el.dataset.hero as HeroKind });
+      case 'thaoDo':
+      case 'cuongHoa':
+      case 'khoaDo':
+        return this.onAction({ kind: act, id });
+      case 'phanGiai':
+        // Phân giải: bấm lần đầu chỉ hỏi lại, bấm lần nữa mới phân giải.
+        if (this.tuongUi.armed !== 'mon') {
+          this.tuongUi = { ...this.tuongUi, mon: id, armed: 'mon' };
+          return this.refreshSheet(this.getState());
+        }
+        return this.onAction({ kind: 'phanGiai', id });
+      case 'phanGiaiLoat':
+        if (this.tuongUi.armed !== 'loat') {
+          this.tuongUi = { ...this.tuongUi, armed: 'loat' };
+          return this.refreshSheet(this.getState());
+        }
+        return this.onAction({ kind: 'phanGiaiLoat' });
       case 'togglePop': {
         const p = el.dataset.pop as NonNullable<typeof this.pop>;
         return this.setPop(this.pop === p ? null : p);
@@ -916,7 +979,7 @@ export class Hud {
   }
 
   /** Các tướng đang có ở kinh đô (hay đang nghỉ dù đã đi), với dấu: đang góp đủ chưa, sẵn sàng ⚔️ hay nghỉ 💤. */
-  private heroes(state: GameState): { act: string; icon: string; name: string; mark: string }[] {
+  private heroes(state: GameState): { act: string; hero?: HeroKind; icon: string; name: string; mark: string }[] {
     const list: ReturnType<Hud['heroes']> = [];
     const look = giongLook(state);
     if (look) {
@@ -943,9 +1006,9 @@ export class Hud {
     }
     // Cao Lỗ cầm quân từ màn 25.
     if (caoLoJoined(state)) list.push({ act: 'openCaoLo', icon: '🎯', name: vi.ui.caoLo, mark: caoLoResting(state) ? '💤' : '⚔️' });
-    // Hai Bà Trưng từ chương 5: chưa có bảng riêng, chỉ báo bà nào sẵn sàng, bà nào đang nghỉ.
+    // Hai Bà Trưng từ chương 5: bảng của hai bà là bảng tướng (trang bị, chỉ số); báo bà nào sẵn sàng, bà nào đang nghỉ.
     if (haiBaJoined(state)) {
-      for (const k of HAI_BA_KINDS) list.push({ act: '', icon: vi.ui.tuongIcons[k], name: vi.ui.heroNames[k], mark: haiBaResting(state, k) ? '💤' : '⚔️' });
+      for (const k of HAI_BA_KINDS) list.push({ act: 'openTuong', hero: k, icon: vi.ui.tuongIcons[k], name: vi.ui.heroNames[k], mark: haiBaResting(state, k) ? '💤' : '⚔️' });
     }
     return list;
   }
@@ -989,12 +1052,14 @@ export class Hud {
           </div></div>`;
       }
     } else if (this.pop === 'heroes') {
+      // Trang bị đã mở thì cuối danh sách có nút mở bảng tướng (trang bị, chỉ số, kho đồ).
+      const gear = doMo(state) ? `<button class="hero-row gear" data-act="openTuong"><span class="ic">⚜️</span><b>${vi.trangBi.moBang}</b><span class="mark">${state.trangBi.kho.length}</span></button>` : '';
       pop = `<div class="pop-card"><h4>🎖️ ${vi.ui.tabHeroes}</h4>${heroes
         .map((h) => {
           const inner = `<span class="ic">${h.icon}</span><b>${h.name}</b><span class="mark">${h.mark}</span>`;
-          return h.act ? `<button class="hero-row" data-act="${h.act}">${inner}</button>` : `<div class="hero-row">${inner}</div>`;
+          return h.act ? `<button class="hero-row" data-act="${h.act}" ${h.hero ? `data-hero="${h.hero}"` : ''}>${inner}</button>` : `<div class="hero-row">${inner}</div>`;
         })
-        .join('')}</div>`;
+        .join('')}${gear}</div>`;
     }
     if (pop !== this.popHtml) {
       this.popHtml = pop;
@@ -1134,6 +1199,25 @@ export class Hud {
     this.refreshSheet(state);
   }
 
+  /** Bảng tướng của tướng `hero` (không ghi thì tướng đang xem lần trước, hay tướng đầu đã về). */
+  showTuong(state: GameState, hero?: HeroKind): void {
+    const kind = tuongMo(state, hero ?? this.tuongUi.hero);
+    if (this.sheet?.kind !== 'tuong' || kind !== this.tuongUi.hero) this.tuongUi = { ...newTuongUi(kind), tab: this.tuongUi.tab };
+    this.sheet = { kind: 'tuong' };
+    this.refreshSheet(state);
+  }
+
+  /** Bảng tướng vừa đổi món (mặc, tháo, phân giải): bỏ dấu chờ phân giải; món vừa mất thì bỏ chọn. */
+  tuongChanged(state: GameState): void {
+    this.tuongUi.armed = null;
+    if (this.tuongUi.mon !== null && !state.trangBi.kho.some((m) => m.id === this.tuongUi.mon)) this.tuongUi.mon = null;
+  }
+
+  /** Nút mở bảng tướng ở cuối bảng của một tướng (khi trang bị đã mở). */
+  private tuongBtn(state: GameState, hero: HeroKind): string {
+    return doMo(state) ? `<div class="actions"><button class="btn bronze" data-act="openTuong" data-hero="${hero}">${vi.trangBi.open}</button></div>` : '';
+  }
+
   /** Mẫu vừa bấm Áp lần đầu (chờ bấm lần nữa cho chắc). */
   mauArmed: MauId | null = null;
   /** Việc xây vừa bấm Hủy lần đầu (chờ bấm lần nữa cho chắc). */
@@ -1151,6 +1235,15 @@ export class Hud {
   private buildPage: number | null = null;
   /** Thẻ đang xem trong bảng doanh trại; nhớ cho lần mở sau. */
   private barracksTab: BarracksTab = 'quan';
+  /** Chỗ đang xem trong bảng tướng. */
+  private tuongUi: TuongUi = newTuongUi('giong');
+  /** Ảnh tướng vẽ lúc chơi cho bảng tướng (main.ts gắn vào khi đã có cảnh 3D). */
+  anhTuong: AnhTuong | null = null;
+
+  /** Bảng tướng đang mở thì dựng lại (ảnh tướng vừa vẽ xong). */
+  refreshTuong(state: GameState): void {
+    if (this.sheet?.kind === 'tuong') this.refreshSheet(state);
+  }
 
   /** Mục lính đóng ở đồn biên: mỗi binh chủng một hàng, bớt, thêm (không quá quân đang có, trừ phần đóng ở bờ kia). */
   private garrisonHtml(state: GameState, b: Building): string {
@@ -1278,16 +1371,19 @@ export class Hud {
       body = this.merchantHtml(state);
     } else if (this.sheet.kind === 'giong') {
       title = `🐎 ${vi.ui.giong}`;
-      body = giongHtml(state);
+      body = giongHtml(state) + (giongReady(state) ? this.tuongBtn(state, 'giong') : '');
     } else if (this.sheet.kind === 'son') {
       title = `⛰️ ${vi.ui.son}`;
-      body = sonHtml(state);
+      body = sonHtml(state) + (sonJoined(state) ? this.tuongBtn(state, 'sonTinh') : '');
     } else if (this.sheet.kind === 'adv') {
       title = `🏹 ${vi.ui.adv}`;
-      body = advHtml(state);
+      body = advHtml(state) + (advJoined(state) ? this.tuongBtn(state, 'anDuong') : '');
     } else if (this.sheet.kind === 'caoLo') {
       title = `🎯 ${vi.ui.caoLo}`;
-      body = caoLoHtml(state);
+      body = caoLoHtml(state) + this.tuongBtn(state, 'caoLo');
+    } else if (this.sheet.kind === 'tuong') {
+      title = `⚜️ ${vi.trangBi.title}`;
+      body = tuongHtml(state, this.tuongUi, this.anhTuong);
     } else if (this.sheet.kind === 'khoanh') {
       // Đã phát xong thì đóng bảng.
       if (state.khoanh.includes(this.sheet.id)) return this.closeSheet();
@@ -1310,10 +1406,11 @@ export class Hud {
     const html = `<div class="sheet-head"><h2>${title}</h2><button class="close" data-act="closeSheet" aria-label="${vi.ui.close}">✕</button></div>
       <div class="sheet-body">${body}</div>`;
     if (html !== this.sheetHtml || force) {
-      // Bảng Xây dựng vẽ lại (đổi mục chọn, đủ tiền...) thì giữ chỗ đã cuộn.
+      // Bảng Xây dựng vẽ lại (đổi mục chọn, đủ tiền...), bảng tướng vẽ lại (chọn món, mặc đồ, hình tướng vừa vẽ xong)
+      // thì giữ chỗ đã cuộn.
       const body = this.sheetEl.querySelector('.sheet-body');
       const top = body?.scrollTop ?? 0;
-      const same = this.sheet.kind === 'build' && this.sheetKindShown === 'build';
+      const same = (this.sheet.kind === 'build' || this.sheet.kind === 'tuong') && this.sheetKindShown === this.sheet.kind;
       this.sheetHtml = html;
       this.sheetEl.innerHTML = html;
       if (same) {
@@ -1324,7 +1421,7 @@ export class Hud {
     fillXay(this.sheetEl, state);
     const opening = !this.sheetEl.classList.contains('open');
     this.sheetEl.classList.toggle('build', this.sheet.kind === 'build');
-    this.sheetEl.classList.toggle('tall', this.sheet.kind === 'build' || this.barracksOpen(state));
+    this.sheetEl.classList.toggle('tall', this.sheet.kind === 'build' || this.sheet.kind === 'tuong' || this.barracksOpen(state));
     this.sheetEl.classList.add('open');
     this.root.classList.add('sheet-open');
     // Thẻ Lạc hầu, danh sách tướng nằm đúng chỗ bảng: mở bảng thì đóng chúng.
@@ -1741,7 +1838,8 @@ export class Hud {
     const open: Partial<Record<TuongId, string>> = { giong: 'openGiong', sonTinh: 'openSon', anDuong: 'openAdv', caoLo: 'openCaoLo' };
     const rows = generals(state).map((t, i) => {
       const where = i < DOANH_MAX ? vi.ui.doanhOf(i + 1) : vi.ui.doanhNone;
-      const button = open[t] ? `<span class="btn-col"><button class="btn small bronze" data-act="${open[t]}">${vi.ui.heroOpen}</button></span>` : '';
+      const gear = t !== 'lacTuong' && doMo(state) ? `<button class="btn small" data-act="openTuong" data-hero="${t}">${vi.trangBi.open}</button>` : '';
+      const button = open[t] || gear ? `<span class="btn-col">${open[t] ? `<button class="btn small bronze" data-act="${open[t]}">${vi.ui.heroOpen}</button>` : ''}${gear}</span>` : '';
       return `<div class="unit-row">
         <span class="unit-icon">${vi.ui.tuongIcons[t]}</span>
         <span class="unit-info"><b>${vi.ui.tuongNames[t]}</b><small>${where}</small><small>${info[t]()}</small></span>
@@ -2309,6 +2407,7 @@ export class Hud {
         <div>${vi.ui.raidWrecked(r.wrecked.length)}</div>
         ${flood ? `<div>${vi.ui.floodDrowned(r.drowned.length)}</div>` : ''}
         ${r.boi ? `<div>${vi.ui.phuSaResult(r.boi)}</div>` : ''}
+        ${roiHtml(r.do)}
         ${r.foe === 'thuyHan' && !r.won ? `<div class="muted">⛵ ${vi.ui.shipsLeft}</div>` : ''}
       </div>
       <div class="actions">
