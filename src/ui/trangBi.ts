@@ -26,6 +26,7 @@ import {
 } from '../game/trangBi';
 import { ANH_DO_DAU } from '../render/anhDoDau';
 import { vi } from '../text/vi';
+import { capBarHtml } from './daNgoai';
 import { costHtml, esc } from './format';
 import { pageCount } from './xayDung';
 
@@ -344,7 +345,8 @@ export function tuongHtml(s: GameState, ui: TuongUi, anh: AnhTuong | null = null
     .map((k) => `<button class="tab ${k === ui.tab ? 'on' : ''}" data-act="tuongTab" data-tab="${k}">${t.tabs[k]}${k === 'do' ? `<i class="tab-mark">${s.trangBi.kho.length}</i>` : ''}</button>`)
     .join('');
   const body = ui.tab === 'chiSo' ? chiSoTab(s, ui.hero) : doTab(s, ui, anh);
-  return `<div class="do-heroes">${chips}</div>
+  // Cấp chung dã ngoại (chỉ có tác dụng ở dã ngoại): dải mỏng dưới hàng chip tướng.
+  return `<div class="do-heroes">${chips}</div>${capBarHtml(s)}
     <div class="build-tabs barracks-tabs">${tabs}</div>
     <div class="do-body">${body}</div>`;
 }

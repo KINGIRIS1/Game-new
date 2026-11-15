@@ -171,6 +171,10 @@ const SCALE: Partial<Record<FighterKind, number>> = {
   caoLo: 1.05,
   tuongThuy: 1,
   hoTinh: 0.75,
+  lonRung: 0.75,
+  baoGam: 0.72,
+  ranHo: 0.85,
+  cuaDa: 0.8,
   gaTrang: 1.05,
   kyBinh: 0.75,
   trieuDa: 0.85,
@@ -611,6 +615,20 @@ export class BattleView {
 
   private syncFighters(battle: Battle, dt: number): void {
     const { x: ox, z: oz } = this.offset;
+    // Người đã bị dọn khỏi trận (quái dã ngoại chết lâu, `daNgoaiTran.ts`): gỡ hình.
+    if (this.fighters.size > battle.fighters.length || battle.da) {
+      const ids = new Set(battle.fighters.map((f) => f.id));
+      for (const [id, view] of this.fighters) {
+        if (ids.has(id)) continue;
+        this.root.remove(view.obj);
+        if (view.peak) this.root.remove(view.peak);
+        view.obj.traverse((o) => {
+          if (o instanceof THREE.SkinnedMesh) o.skeleton.dispose();
+          if (o instanceof THREE.Mesh) o.geometry.dispose();
+        });
+        this.fighters.delete(id);
+      }
+    }
     const hasRocks = heroSetups(battle).some((h) => h.kind === 'sonTinh');
     for (const f of battle.fighters) {
       let view = this.fighters.get(f.id);

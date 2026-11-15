@@ -106,9 +106,10 @@ describe('rút đồ', () => {
   });
 
   it('tỉ lệ có rơi và tỉ lệ phẩm theo nơi rơi; phẩm không quá trần của chương', () => {
-    const N = 20000;
     for (const nguon of Object.keys(ROI_DO) as NguonDo[]) {
       const def = ROI_DO[nguon];
+      // Nguồn ít rơi (quái dã ngoại) rút nhiều lần hơn cho đủ món mà đếm tỉ lệ phẩm.
+      const N = Math.max(20000, Math.ceil(10000 / def.p));
       const dem = [0, 0, 0, 0];
       let roi = 0;
       for (let seq = 0; seq < N; seq++) {

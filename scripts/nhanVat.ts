@@ -211,6 +211,13 @@ export const NHOM: Record<string, Entry[]> = {
     { ten: 'Rùa Vàng', tao: () => makeRuaVang(), co: 0.9, cach: 1.7 },
     { ten: 'Ngựa vua (An Dương Vương, Mỵ Châu)', tao: () => makeRoyalHorse(), co: 1.5, cach: 1.6 },
   ],
+  // Quái dã ngoại (map dã ngoại): node scripts/chup-nhan-vat.mjs daNgoai
+  daNgoai: [
+    { ten: 'Lợn rừng', tao: () => makeBeast('lonRung'), co: 0.8, cach: 1.2 },
+    { ten: 'Báo gấm', tao: () => makeBeast('baoGam'), co: 1.0, cach: 1.3 },
+    { ten: 'Rắn hổ mang chúa', tao: () => makeMonster('ranHo'), co: 1.0, cach: 1.1 },
+    { ten: 'Cua đá', tao: () => makeMonster('cuaDa'), co: 0.9, cach: 1.3 },
+  ],
   quai: [
     { ten: 'Tôm binh', tao: () => makeMonster('tomBinh'), co: 0.9 },
     { ten: 'Cá phun nước', tao: () => makeMonster('caPhun') },

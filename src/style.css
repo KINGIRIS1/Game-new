@@ -59,7 +59,9 @@ body {
 #hud > .ticker,
 #hud > .raid-skills,
 #hud > .dock-pop,
-#hud > .xay-labels {
+#hud > .xay-labels,
+#hud > .da-floats,
+#hud > .da-mini {
   pointer-events: none;
 }
 
@@ -3352,3 +3354,312 @@ body.man-vao-on #hud > * {
 }
 
 .hero-row.gear { border-top: 1px dashed var(--line); margin-top: 4px; }
+
+/* ---------- Dã ngoại (ui/daNgoai.ts) ---------- */
+
+/* Chip Dã ngoại: cạnh chip huân công, nền xanh lá. */
+.da-chip {
+  margin-left: 6px;
+  background: linear-gradient(180deg, #6fa046, var(--green));
+  border-color: #345c1c;
+  box-shadow: 0 2px 0 #345c1c;
+}
+
+/* Dải cấp chung: cấp, thanh kinh nghiệm, phần cộng (bảng dã ngoại, bảng tướng). */
+.da-cap {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: center;
+  gap: 2px 8px;
+  margin: 6px 0;
+  padding: 5px 9px;
+  border-radius: 10px;
+  background: var(--paper-2);
+  border: 1px solid var(--line);
+  font-size: 13px;
+}
+.da-cap b {
+  color: var(--bronze-dark);
+  white-space: nowrap;
+}
+.da-cap small {
+  grid-column: 1 / -1;
+  color: var(--ink-soft);
+  font-size: 11.5px;
+}
+.da-exp {
+  height: 9px;
+  border-radius: 5px;
+  background: var(--paper);
+  border: 1px solid var(--bronze);
+  overflow: hidden;
+}
+.da-exp i {
+  display: block;
+  height: 100%;
+  background: linear-gradient(90deg, #d9a84a, #f2d27a);
+}
+
+/* Thanh kinh nghiệm trên map: thanh cầm cự đổi màu vàng. */
+.hold-bar.exp i {
+  background: linear-gradient(90deg, #d9a84a, #f2d27a);
+}
+
+.da-heroes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.da-hero {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 70px;
+  padding: 5px 6px;
+  border-radius: 10px;
+  border: 1.5px solid var(--line);
+  background: var(--paper);
+  color: var(--ink);
+  font-size: 12px;
+}
+.da-hero em {
+  font-style: normal;
+  font-size: 20px;
+}
+.da-hero small {
+  color: var(--ink-soft);
+}
+.da-hero.on {
+  border-color: var(--green);
+  background: #e3efcf;
+  box-shadow: 0 0 0 1.5px var(--green) inset;
+}
+.da-hero:disabled {
+  opacity: 0.45;
+}
+
+.da-btns {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 8px 0;
+}
+
+.da-maps {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+.da-mapi {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 1px;
+  padding: 6px 10px;
+  border-radius: 10px;
+  border: 1px solid var(--line);
+  background: var(--paper);
+  color: var(--ink);
+  text-align: left;
+  font-size: 13px;
+}
+.da-mapi small {
+  color: var(--ink-soft);
+  font-size: 11.5px;
+  font-weight: 400;
+}
+.da-mapi.on {
+  border-color: var(--green);
+  background: #e3efcf;
+}
+.da-mapi:disabled {
+  opacity: 0.5;
+}
+
+/* Bản đồ map ở nửa trái bảng, và bản đồ nhỏ góc màn hình khi đang trên map. */
+.da-map {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  height: 100%;
+  padding: 6px;
+}
+.da-map h3 {
+  margin: 2px 0 4px;
+}
+.da-map .da-map-svg {
+  width: min(100%, 340px);
+  height: auto;
+}
+.da-map-svg .mbg {
+  stroke: #3a2a1a;
+  stroke-width: 0.8;
+}
+.da-map-svg .ml {
+  fill: none;
+  stroke: #e6d3a3;
+  stroke-width: 2.4;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  opacity: 0.8;
+}
+.da-map-svg .mk {
+  fill: rgba(176, 57, 43, 0.18);
+  stroke: rgba(140, 42, 31, 0.7);
+  stroke-width: 0.6;
+}
+.da-map-svg .mb {
+  fill: rgba(60, 40, 30, 0.25);
+  stroke: #6b5440;
+  stroke-width: 0.6;
+  stroke-dasharray: 1.5 1.2;
+}
+.da-map-svg .mb.co {
+  fill: rgba(176, 57, 43, 0.4);
+  stroke: var(--red-dark);
+  stroke-dasharray: none;
+}
+.da-map-svg .mc {
+  fill: #8fc3c9;
+  stroke: #2e5b63;
+  stroke-width: 0.6;
+}
+.da-map-svg .mc.khoa {
+  fill: #9a9a9a;
+}
+.da-map-svg .mtr {
+  fill: #f2d27a;
+  stroke: var(--bronze-dark);
+  stroke-width: 0.6;
+}
+.da-map-svg .mt {
+  font-size: 4.4px;
+  font-weight: 800;
+  text-anchor: middle;
+  fill: #fffaf0;
+  paint-order: stroke;
+  stroke: rgba(58, 42, 26, 0.7);
+  stroke-width: 0.7;
+}
+.da-map-svg .da-me {
+  fill: #fff;
+  stroke: var(--green);
+  stroke-width: 1.2;
+}
+
+.da-mini {
+  display: none;
+}
+#hud.in-da .da-mini {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  position: absolute;
+  right: 8px;
+  top: calc(var(--band-h) + 112px);
+  z-index: 2;
+  width: 104px;
+  padding: 3px;
+  border-radius: 12px;
+  background: rgba(247, 236, 212, 0.85);
+  border: 1.5px solid var(--bronze);
+  box-shadow: var(--shadow);
+  pointer-events: none;
+}
+#hud.in-da .da-mini svg {
+  width: 98px;
+  height: 98px;
+}
+#hud.in-da .da-mini small {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--ink);
+}
+.da-mini[hidden] {
+  display: none !important;
+}
+
+/* Chữ nổi trên map: kinh nghiệm, lên cấp, đồ rơi. */
+.da-floats {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 3;
+}
+.da-float {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  white-space: nowrap;
+  font-weight: 800;
+  font-size: 14px;
+  color: #f7e08a;
+  text-shadow: 0 1px 0 #3a2a1a, 0 0 3px #3a2a1a;
+  animation: da-noi 1.1s ease-out forwards;
+}
+.da-float.len {
+  font-size: 19px;
+  color: #ffe58a;
+  animation-duration: 2.2s;
+}
+.da-float.mon {
+  font-size: 15px;
+  color: #b9f0ff;
+  animation-duration: 2.2s;
+}
+@keyframes da-noi {
+  0% {
+    opacity: 0;
+    margin-top: 6px;
+  }
+  15% {
+    opacity: 1;
+  }
+  80% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    margin-top: -42px;
+  }
+}
+
+.modal .da-off {
+  margin-top: 6px;
+  font-weight: 600;
+}
+
+/* Trên map dã ngoại: hàng đầu nút xem kinh đô và Tự đánh, dưới là nút kỹ năng ba tướng (nhỏ hơn cho gọn). */
+#hud.in-da .fieldbar [data-act='daTuDanh'] {
+  order: -1;
+}
+#hud.in-da .fieldbar [data-act='retreat'] {
+  order: -2;
+}
+#hud.in-da .fieldbar .skills {
+  flex-basis: 100%;
+  gap: 6px;
+}
+#hud.in-da .fieldbar .skills .btn {
+  font-size: 13.5px;
+  padding: 8px 11px;
+}
+/* Hàng đầu: tên bảng và nút ✕; hàng hai các chip (Huân công, Dã ngoại, Đấu thành); hàng ba thẻ chương. */
+.camp-chips {
+  order: 2;
+  flex-basis: 100%;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.camp-chips .dau-chip,
+.camp-chips .da-chip {
+  margin-left: 0;
+}
+.camp-head h2 {
+  order: -2;
+  flex: 1 1 60%;
+}
+.camp-head .close {
+  order: -1;
+  margin-left: auto;
+}

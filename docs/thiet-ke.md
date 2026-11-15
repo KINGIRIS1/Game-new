@@ -3465,7 +3465,7 @@ Chủ dự án yêu cầu: thêm bộ trang bị riêng cho các tướng và h�
 - **Đồ rơi ngẫu nhiên**, có kho đồ, lắp tháo giữa các tướng (không chọn bộ cố định rèn ★1–★5 của đề xuất đầu).
 - **Bộ riêng, ai mặc cũng được**: mỗi tướng một bộ mang tên truyền thuyết; món nào cũng mặc được cho tướng nào, nhưng hiệu ứng bộ chỉ có khi đúng tướng của bộ mặc.
 - **Sáu chỉ số**: ❤️ Máu, ⚔️ Sức đánh, ⚡ Tốc đánh, ✨ Uy lực kỹ năng, 🛡️ Giáp, ⏱ Hồi kỹ năng.
-- **Không có cấp tướng.**
+- **Không có cấp tướng.** Sau này chủ dự án thêm cấp chung cho mọi tướng, chỉ có tác dụng trong dã ngoại (xem Kế hoạch: dã ngoại); các trận khác vẫn không có cấp.
 - **Rơi ở cả bốn loại trận**: phó bản (kể cả đánh lại), thử thách, đánh đồn, giữ kinh đô.
 - **Cường hóa bằng tài nguyên**; đồ thừa phân giải ra sắt.
 - **Mở khi Gióng về** (code: khi có tướng đầu tiên về, chơi thường là Gióng thành tráng sĩ); phẩm và chỉ số cao hơn mở dần theo chương.
@@ -3628,6 +3628,113 @@ Kỹ năng chưa mở (Nhổ tre trước màn 6, Hiệu triệu trước màn 3
 3. **PR 2** (đã làm, cùng PR #100): Đấu thành tính đồ (bản chụp mang món, máy chủ kiểm món và tự tính chỉ số, tướng giữ thành mặc đồ; xem Code). Gộp chung vì PR #100 cho trận đọc chỉ số đồ của tướng mà máy chủ chưa kiểm phần ấy trong bản chụp: gộp PR #100 trước thì bản chụp sửa tay ghi sẵn số đồ cho tướng sẽ được máy chủ nhận.
 4. **PR 3** (đã làm, cùng PR #100): túi đồ kiểu game nhập vai: 24 ảnh món đồ vẽ sẵn (6 bộ × 4 ô), hình tướng mặc đúng đồ đang đeo, khung hình nhân, túi đồ lưới ảnh khung màu phẩm (xem Giao diện); vũ khí ánh lên khi tướng mặc đủ bốn món bộ mình.
 
+## Kế hoạch: dã ngoại, cấp chung của tướng, treo máy (chủ dự án yêu cầu, đã làm)
+
+Chủ dự án yêu cầu: thêm dã ngoại để đánh quái kiếm thêm tài nguyên và trang bị, cày cấp kiểu Võ Lâm 2 (map mở, quái mọc theo khu, đánh quái lên cấp), không phải phó bản, không chia tầng; năm map theo vùng, có cổng đi thông từ map này sang map kia; mỗi map ít nhất năm loại quái phân theo cấp từng khu, có boss người chơi tự đánh; một mốc kinh nghiệm, cấp dùng chung cho mọi tướng; người chơi tự chọn tướng đi; có treo máy lúc tắt game. Như các kế hoạch trước, được chỉnh số ±20% theo test; làm xong phần nào thì ghi số cuối cùng của phần ấy.
+
+**Hiện trạng** (khảo sát code):
+- Không có cấp tướng (mục trang bị đã chốt). Tướng mạnh thêm chỉ nhờ đồ (`trangBi.ts`) và nhánh tướng của huân công.
+- Trận có ba chế độ (`raid`, `field`, `pvp` ở `battle.ts`), đều đánh tới khi một bên hết; chứa tối đa hai tướng (`Battle.hero`, `hero2`; `heroSetups`, `addHero`). Bãi ngoài là hình chữ nhật cố định; đi quanh vật cản có sẵn (`baiChien.ts`: `Nav`, `banDo`, `sdfCan`).
+- Người chơi chỉ chọn tướng ở phó bản chương 2 (`stageHeroes`); còn lại tướng theo chương (`heroesFor` ở `son.ts`).
+- Lúc vắng (`applyOffline`) chỉ có sản xuất 50% tối đa 8 giờ, việc xây, chuyến thuyền đảo. Đánh trọn một trận mất 0,1–0,7 giây CPU, không đánh lại được cả 8 giờ vắng.
+- Máy chủ Đấu thành từ chối món có cấp đồ vượt chương của bản chụp (`kiemMon`).
+
+### Đã chốt (chủ dự án chọn)
+
+- **Map mở kiểu Võ Lâm 2**: năm map theo vùng, quái mọc lại theo khu, cổng nối map kề nhau; không phó bản, không tầng.
+- **Mỗi map ít nhất năm loại quái**, phân theo cấp từng khu, và **một boss**.
+- **Chạm để đi, nút Tự đánh**: chạm chỗ nào đội đi tới đó; bật Tự đánh thì đội tự tìm quái gần nhất trong khu đang đứng, đánh, tự dùng kỹ năng.
+- **Bị hạ thì về điểm hồi sinh, không mất gì**: tướng ngã nằm chờ, cả đội ngã thì về điểm hồi sinh gần nhất của map, không mất kinh nghiệm, không mất đồ.
+- **Cổng sang map sau mở theo cấp chung.**
+- **Boss mọc lại theo giờ, phải tự đánh**: Tự đánh không nhắm boss, treo máy không tính boss.
+- **Cấp chung chỉ có tác dụng trong dã ngoại.** Phó bản, thử thách, đồn, giữ kinh đô, Đấu thành không đổi, nên chuẩn cân bằng và máy chủ giữ nguyên.
+- **Tối đa 3 tướng, chỉ tướng đi**, không mang lính.
+- **Treo máy tối đa 8 giờ, không khóa tướng**: tướng đang ở dã ngoại vẫn ra phó bản, giữ kinh đô được.
+
+### Đã làm (số cuối, sau khi đo bằng test)
+
+- Map 80×80 (`DA_KHUNG`); quái mỗi khu 8, 8, 8, 7, 6 con, hệ số khu 1; 1; 1,1; 1,25; 1,5 (`DA_KHU`). Quái gốc máu 150, sức đánh 7, mỗi cấp quái thêm 10% máu, 8% sức đánh (`DA_QUAI`); tầm phát hiện 3 ô, đuổi xa quá 6 ô thì về, chết 20 giây sau mọc lại.
+- Boss: máu ×14, sức đánh ×2,2, kinh nghiệm ×40, cấp cao nhất map cộng 2; chắc rơi đồ (`daBoss`, phẩm 3–4); hạ xong 30 phút chơi sau mới mọc lại (`DA_BOSS_MS`).
+- Cấp chung: trần 50; kinh nghiệm lên cấp sau `100 × cấp^1,8` (cấp 10 chừng một giờ, cấp 50 nhiều ngày); mỗi cấp +3% máu và sức đánh trên map; quái thấp hơn cấp chung quá 5 cấp thì mỗi cấp bớt 15% kinh nghiệm, còn ít nhất 10% (`DA_CAP`).
+- Đồ rơi quái thường 2% mỗi con (`daQuai`), chương rơi là chương của map nhưng không vượt chương đang chơi (`chuongRoi`).
+- Tướng hồi 4% máu mỗi giây khi 4 giây không bị đánh; ngã thì 3 giây yên mới đứng dậy với nửa máu; cả đội ngã thì 3 giây sau về trại đủ máu (`DA_TUONG`). Tự đánh dừng nghỉ khi máu đội dưới 40% mà không có quái đuổi, hồi tới 90% mới đánh tiếp (Tự đánh không ngừng thì tướng không bao giờ hồi máu). Kỹ năng vùng chỉ tính quái quanh tướng 9 ô.
+- Treo máy: số quái hạ mỗi phút = `12 × min(1, max(0,1; √(sức đội / 40)))`, sức đội là (sát thương mỗi giây × máu) của đội chia cho của một con quái khu (`tiSuc`, `nhipTreo`, `DA_TREO`); boss không tính. Test canh treo ra trong khoảng ×0,5–1,3 so với đánh thật cùng khu.
+- Ở kinh đô chọn map ra được (như đi xe ngựa tới trại): chỉ map đã tới bằng cổng và đủ cấp (`chonMap`).
+- Giao diện: chip 🌿 Dã ngoại trên bản đồ phó bản mở bảng (cấp chung, chọn đội, năm map có giờ boss, treo máy, Ra dã ngoại hay Xem đội, Gọi đội về, Tự đánh); nửa trái là bản đồ map (khu có số, trại, cổng, khu boss mờ khi boss chưa mọc). Trên map: thanh trên ghi map, khu và cấp quái khu, cấp và thanh kinh nghiệm, máu từng tướng; bản đồ nhỏ góc phải có chấm đội và giờ boss; chữ nổi kinh nghiệm, lên cấp, đồ rơi; nút 🏯 xem kinh đô (đội ở lại treo máy), nút Tự đánh, nút kỹ năng. Kéo cảnh thì camera thôi bám đội, chạm đất hay bật Tự đánh thì bám lại. Đang xem map thì giặc không tới kinh đô (như Đấu thành). Bảng "Bệ hạ đã trở lại" thêm dòng dã ngoại và các món rơi; Lạc hầu báo một lần khi dã ngoại mở.
+
+### Năm map
+
+Mỗi map chừng 80×80 ô, có trại (điểm hồi sinh, chỗ vào từ kinh đô hay từ cổng), năm khu quái và một khu boss. Khu gần cổng vào yếu, càng đi sâu càng mạnh; khu boss ở cuối map. Cổng ở mép map nối sang map trước, map sau; map 1 có lối về kinh đô.
+
+| Map | Cấp | Cổng vào cần | Nền | Quái theo khu (yếu → mạnh) | Boss |
+|---|---|---|---|---|---|
+| 1. Rừng Phong Châu | 1–10 | | rừng (`rung`) | lợn rừng (mới), giáo Ân, cung Ân, chiến xa, phó tướng Ân | đại tướng Ân |
+| 2. Đầm Tản Viên | 11–20 | cấp 10 | đầm lầy, chân núi (`ngap`, `tanVien`) | tôm binh, cá phun nước, ma trơi, cá sấu, thuồng luồng | Thủy Tinh |
+| 3. Đồi Thất Diệu | 21–30 | cấp 20 | đồi Cổ Loa (`thatDieu`) | quỷ núi, hổ tinh, lính Triệu, nỏ Triệu, kỵ binh Triệu | gà trắng nghìn năm |
+| 4. Cửa sông | 31–40 | cấp 30 | bãi bồi cửa sông (`cuaSong`) | cua đá (mới), lính thủy, cung thuyền, lính rìu giáp mây, tướng thủy binh | Triệu Đà |
+| 5. Rừng Mê Linh | 41–50 | cấp 40 | rừng, đầm hồ (`langBac`, `camKhe`) | báo gấm (mới), rắn hổ mang chúa (mới), lính kích Hán, nỏ thủ Hán, giáp sĩ Hán | Mã Viện |
+
+- Mỗi khu một loại quái chính, cấp quái trong khoảng hai cấp của khu (map 1: khu 1 cấp 1–2, …, khu 5 cấp 9–10); boss cấp cao nhất của map, cộng 2.
+- Quái dùng dáng và chỉ số gốc có sẵn (`ENEMIES`), nhân theo cấp quái. Bốn quái mới dựng bằng code như thú, quái có sẵn (`nanThu.ts`, `nanQuai.ts`): lợn rừng, cua đá, báo gấm, rắn hổ mang chúa.
+- Quái đứng rải trong khu, tầm phát hiện ngắn, đuổi ra khỏi khu một đoạn thì quay về chỗ cũ và hồi máu. Chết thì 20 giây sau mọc lại ở chỗ mọc. Mỗi map tối đa chừng 60 con.
+
+### Đội và trận trên map
+
+- Tướng đã về thì chọn được, tối đa 3; Hai Bà tính là hai tướng. Tướng mặc đồ như mọi trận (`ganDo`). Đổi đội ở trại.
+- Đội đi theo tướng đầu, hai tướng sau theo hai bên. Chạm đất thì đi tới; chạm quái thì đánh con ấy. Tự đánh tìm quái gần nhất trong khu đang đứng, không nhắm boss.
+- Kỹ năng: nút cho từng tướng như trận ngoài bãi; Tự đánh bật thì kỹ năng hồi xong, có quái trong tầm thì tướng tự dùng.
+- Tướng tự hồi máu chậm khi không đánh; ngã thì nằm chờ, hết trận đánh quanh đó thì đứng dậy với nửa máu. Cả đội ngã thì về trại của map, không mất gì.
+- Không xét kiệt sức: tướng đang nghỉ ở phó bản vẫn đi dã ngoại; ngã ở dã ngoại không phải nghỉ.
+
+### Cấp chung, kinh nghiệm
+
+- Một cấp và một thanh kinh nghiệm cho mọi tướng (`GameState.daNgoai`: `cap`, `exp`). Trần cấp 50 (năm map mỗi map mười cấp). Kinh nghiệm lên cấp sau chừng `100 × cấp^1,5`, chốt khi đo nhịp.
+- Mỗi cấp **+3% máu và sức đánh** cho mọi tướng, chỉ trên map dã ngoại.
+- Kinh nghiệm mỗi con theo cấp quái. Quái thấp hơn cấp chung quá 5 cấp thì kinh nghiệm giảm dần tới 10%, như Võ Lâm, để người chơi đi sâu dần.
+
+### Của và đồ rơi
+
+- Quái thường: của nhỏ theo map (gạo, vỏ ốc, đất đá, sắt, gỗ), lâu lâu rơi đồ (nguồn mới `daQuai`, chừng 2% mỗi con, phẩm như giữ kinh đô).
+- Boss: chắc rơi một món phẩm cao (nguồn mới `daBoss`, như dẹp đồn), nhiều của, nhiều kinh nghiệm. Hạ xong 30 phút chơi sau mới mọc lại.
+- Cấp đồ theo map nhưng **không vượt chương đang chơi**, phẩm cũng theo trần chương (`PHAM_TRAN`), để đồ dã ngoại luôn hợp luật máy chủ Đấu thành.
+- Số ngẫu nhiên theo `trangBi.seq` như mọi chỗ rơi đồ; kho đầy thì tự phân giải ra sắt.
+
+### Treo máy
+
+- Không xem map dã ngoại (đang ở kinh đô, hay tắt game) mà đội đang ở một khu quái với Tự đánh bật thì tính treo máy ở khu ấy, tối đa 8 giờ.
+- Tính bằng công thức, không đánh trận: số quái hạ mỗi phút theo Lực chiến đội (`lucChien` × hệ số cấp chung) so với Lực chiến quái khu, kẹp trong một khoảng; ra kinh nghiệm, của, số lần rút đồ. Boss không tính.
+- Mở lại map thì đội đứng đúng chỗ cũ; lúc trở lại game, bảng "Bệ hạ đã trở lại" thêm dòng dã ngoại (cấp lên, của, đồ).
+- Phần của giữ vừa phải cho khỏi phá nhịp kinh đô (rà bằng `node scripts/kinh-te.mjs`); người chơi mô phỏng không đi dã ngoại nên nhịp lên Điện không đổi.
+
+### Giao diện, hình
+
+- Lối vào: chip 🌿 Dã ngoại cạnh 🎖 Huân công, 🏯 Đấu thành trên bản đồ phó bản; bảng chọn đội rồi vào trại map đang đứng.
+- Trên map: thanh cấp và kinh nghiệm, tên map, khu và cấp quái khu; bản đồ nhỏ góc trên (khu, cổng, trại, boss còn hay đang chờ mọc); máu ba tướng; nút kỹ năng từng tướng, nút Tự đánh, nút Về kinh đô.
+- Cổng: chạm cổng thì sang map kề, chưa đủ cấp thì báo cấp cần.
+- Cảnh 3D mới cho map mở (`src/render/daNgoai/`): đất, rừng, nước, vật cản dùng lại dáng của bãi chiến và rừng kinh đô; camera đi theo đội; nhân vật vẽ bằng `battleView.ts` như trận; quái ngoài khung nhìn không vẽ.
+- Thanh cấp chung cũng hiện dưới hàng chip tướng của bảng tướng. Lạc hầu báo một lần khi dã ngoại mở.
+
+### Code
+
+- `battle.ts`: chế độ trận mới `daNgoai` (map lớn, không hết trận, quái mọc lại, tầm phát hiện, quay về chỗ); `Battle.heroThem?` cho tướng thứ ba (trường tùy chọn: trận cũ, Đấu thành ra y hệt); `heroSetups` trả cả ba; tự đánh, tự dùng kỹ năng. Đi quanh vật cản dùng `Nav` của `baiChien.ts` trên lưới map.
+- `son.ts`: tách phần dựng `HeroSetup` theo loại tướng khỏi phần kiểm kiệt sức (`tuongSetup(s, kind)`).
+- `daNgoai.ts` mới: bố cục năm map (trại, khu, cổng, boss), cấp quái, kinh nghiệm, cấp, rơi của và đồ, boss mọc lại theo đồng hồ chơi, cổng theo cấp, treo máy (gọi trong `tick` và `applyOffline`). Số ở `defs.ts` (`DA_MAP`, `DA_CAP`, `DA_TREO`, `ROI_DO.daQuai`, `daBoss`), chữ ở `vi.ts` mục `daNgoai`.
+- Bản lưu 30 (`migrate29to30`; đóng đảo PR 3 gộp trước, lấy bản lưu 29): cấp, kinh nghiệm, map và chỗ đứng, đội, Tự đánh, giờ boss mọc lại. Quái không lưu, mở map thì mọc đủ.
+
+### Test
+
+- Trận cũ (`tatDinh.test.ts`, đối chiếu Node, Deno, Chromium) ra y như cũ.
+- `daNgoai.test.ts`: cổng theo cấp; quái mọc lại, quay về chỗ; tự đánh chỉ đánh trong khu, không nhắm boss; cả đội ngã thì về trại, không mất gì; cấp chỉ cộng trên map; lên cấp, trần cấp, kinh nghiệm giảm khi quái thấp cấp; cấp đồ không vượt chương; boss chờ 30 phút; treo máy dừng ở 8 giờ, ra gần bằng đánh thật cùng khu (so trung bình nhiều phút đánh thật); không khóa, không làm tướng kiệt sức; nâng bản lưu 29 lên 30.
+- Nhịp: đội đúng chương, đồ vừa phải tới cấp 10 trong chừng một giờ, cấp 50 sau nhiều ngày; đội đúng cấp khu hạ được quái khu, boss cần đánh tay.
+
+### Thứ tự làm
+
+1. **PR 0**: tài liệu (PR nháp, chờ chủ dự án duyệt).
+2. **PR 1**: luật map mở: chế độ `daNgoai`, đội 3 tướng, quái mọc lại, tự đánh, cổng, trại.
+3. **PR 2**: cấp chung, kinh nghiệm, của và đồ rơi, boss, treo máy, bản lưu 29.
+4. **PR 3**: cảnh 3D năm map, giao diện, chụp kiểm tra.
+5. **PR 4**: bốn quái mới (lợn rừng, cua đá, báo gấm, rắn hổ mang chúa).
+
 ## Nhịp chơi và lưu game
 
 - Nhịp chơi lai: mỗi lần mở game là một phiên ra quyết định ngắn.
@@ -3682,4 +3789,5 @@ Kỹ năng chưa mở (Nhổ tre trước màn 6, Hiệu triệu trước màn 3
 23. **Dân gánh hàng về kho** (chủ dự án chọn, đã làm PR 1, 2; xem mục cùng tên): công trình xa nơi nhận làm ra ít hơn, thấp nhất 50%; đường đi cho dân đi nhanh gấp đôi. PR 1 luật, PR 2 dân gánh trên đường, PR 3 tới nơi sản xuất.
 24. **Trang bị rơi ngẫu nhiên và sáu chỉ số tướng** (chủ dự án đã duyệt; xem Kế hoạch cùng tên): đồ rơi ở phó bản, thử thách, đồn, giữ kinh đô; mỗi tướng một bộ mang tên truyền thuyết, ai mặc cũng được, hiệu ứng bộ khi đúng tướng mặc; sáu chỉ số và Lực chiến; cường hóa bằng tài nguyên, phân giải ra sắt; bảng tướng kiểu túi đồ game nhập vai (hình tướng mặc đồ, ảnh món vẽ sẵn), mặc đủ bộ mình thì vũ khí ánh lên; Đấu thành tính đồ (máy chủ kiểm món, tự tính chỉ số). PR 1 luật và bảng, PR 2 Đấu thành, PR 3 hình (đã làm cả ba, cùng PR #100).
 25. **Điện 10 điều quân ra đóng đảo** (chủ dự án đã duyệt; đã làm PR 1–3: luật, giao diện, hình đồn đảo và thuyền chiến, giặc đánh đảo; xem Kế hoạch cùng tên): thuyền chiến đóng ở bến thuyền khơi cấp 3 chở quân ra đồn Hoàng Sa, đồn Trường Sa; đảo có quân giữ thì ngư trường làm ra thêm, báo sớm và chặn đánh thủy quân Hán; giặc Hán đánh đảo, quân đảo tự đánh, xem lại được.
-26. **Để sau**: nhạc nền.
+26. **Dã ngoại** (chủ dự án yêu cầu, đã làm; xem Kế hoạch cùng tên): năm map mở kiểu Võ Lâm 2 nối nhau bằng cổng mở theo cấp, mỗi map năm khu quái phân theo cấp và một boss tự đánh; chạm để đi, nút Tự đánh; tự chọn tối đa 3 tướng, chỉ tướng đi; cấp chung cho mọi tướng chỉ có tác dụng trong dã ngoại; treo máy tối đa 8 giờ, không khóa tướng.
+27. **Để sau**: nhạc nền.

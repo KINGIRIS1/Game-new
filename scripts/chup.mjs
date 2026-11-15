@@ -434,6 +434,29 @@ const CANH = {
     doi: 3000,
     gio: 'dem',
   },
+  'da-ngoai': {
+    mo: 'Chương 5 (đã thắng màn 35): bảng Dã ngoại ở bản đồ phó bản (cấp chung, đội, năm map, treo máy)',
+    truoc: `${CHUONG5(35)}\ns.daNgoai.cap = 12; s.daNgoai.exp = 900; s.daNgoai.xa = 2; s.daNgoai.doi = ['trungTrac', 'trungNhi', 'caoLo'];`,
+    sau: `document.querySelector('[data-act=openCampaign]').click(); document.querySelector('[data-act=openDaNgoai]').click();`,
+  },
+  'da-ngoai-tran': {
+    mo: 'Như da-ngoai, đội ba tướng ra map 1 (Rừng Phong Châu) đứng ở mép khu 2, Tự đánh, chụp sau 6 giây',
+    truoc: `${CHUONG5(35)}\ns.daNgoai.doi = ['trungTrac', 'trungNhi', 'caoLo'];`,
+    sau: `d.daNgoai(1, 1);`,
+    doi: 6000,
+  },
+  'da-ngoai-5': {
+    mo: 'Như da-ngoai-tran, ở map 5 (Rừng Mê Linh) khu 1 (báo gấm), chụp sau 6 giây',
+    truoc: `${CHUONG5(35)}\ns.daNgoai.doi = ['trungTrac', 'trungNhi', 'caoLo'];`,
+    sau: `d.daNgoai(5, 0);`,
+    doi: 6000,
+  },
+  'da-ngoai-boss': {
+    mo: 'Như da-ngoai-tran, map 3 (Đồi Thất Diệu, đêm), đội đứng sát khu boss (gà trắng), chụp sau 3 giây',
+    truoc: `${CHUONG5(35)}\ns.daNgoai.doi = ['trungTrac', 'trungNhi', 'caoLo'];`,
+    sau: `d.daNgoai(3, 4, 30);`,
+    doi: 3000,
+  },
   'pho-ban-5': {
     mo: 'Hai Bà Trưng đánh màn 36 (thành Luy Lâu, có Tô Định) ngoài bãi, chụp sau 4 giây',
     truoc: CHUONG5(35),

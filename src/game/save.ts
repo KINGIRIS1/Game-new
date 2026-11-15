@@ -34,6 +34,7 @@ import { initialCaoLo } from './caoLo';
 import { initialBenKia, isBenKiaState, noGarrison } from './benKia';
 import { initialCayDa, isCayDaState } from './cayDa';
 import { DAO_IDS, giacMoi, initialDao, isDaoState } from './dao';
+import { initialDaNgoai, isDaNgoaiState } from './daNgoai';
 import { initialAdv } from './coLoa';
 import { inChapter4 } from './chuong4';
 import { inChapter5, initialHaiBa, maVienCame } from './chuong5';
@@ -144,6 +145,7 @@ function migrate(raw: unknown): unknown {
   if (isObj(v) && v.version === 26) v = migrate26to27(v);
   if (isObj(v) && v.version === 27) v = migrate27to28(v);
   if (isObj(v) && v.version === 28) v = migrate28to29(v);
+  if (isObj(v) && v.version === 29) v = migrate29to30(v);
   return v;
 }
 
@@ -536,6 +538,13 @@ function migrate28to29(s: Raw): Raw {
   return s;
 }
 
+/** Phiên bản 29 → 30 (dã ngoại): cấp chung 1, đội chưa ra dã ngoại. */
+function migrate29to30(s: Raw): Raw {
+  s.version = 30;
+  s.daNgoai = initialDaNgoai();
+  return s;
+}
+
 const isBanh = (v: unknown, test: (x: unknown) => boolean): boolean => isObj(v) && test(v.chung) && test(v.giay);
 const isBool = (x: unknown) => typeof x === 'boolean';
 
@@ -626,6 +635,7 @@ function isGameState(v: unknown): v is GameState {
   if (!isXayState(v.xay)) return false;
   if (!isTrangBiState(v.trangBi)) return false;
   if (!isDaoState(v.dao)) return false;
+  if (!isDaNgoaiState(v.daNgoai)) return false;
   const son = v.son;
   if (!isObj(son) || !isObj(son.gifts) || !isNum(son.restUntil) || typeof son.non !== 'boolean' || typeof son.won !== 'boolean') return false;
   if (!GIFT_IDS.every((k) => typeof (son.gifts as Raw)[k] === 'boolean')) return false;

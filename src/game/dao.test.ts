@@ -436,7 +436,7 @@ describe('Nhiệm vụ, Lạc hầu, bản lưu', () => {
     startDon(s, 'hoangSa');
     const back = deserialize(serialize(s))!;
     expect(back.version).toBe(SAVE_VERSION);
-    expect(SAVE_VERSION).toBe(29);
+    expect(SAVE_VERSION).toBeGreaterThanOrEqual(29);
     expect(back.dao).toEqual(s.dao);
     expect(jobOf(back, daoJobId('hoangSa'))?.o[0].dao).toBe('hoangSa');
     const old = JSON.parse(serialize(createInitialState(0)));
