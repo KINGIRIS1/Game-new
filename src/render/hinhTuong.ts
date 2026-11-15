@@ -74,16 +74,16 @@ export function hinhTuongModel(hero: HeroKind, mac: MacTuong): THREE.Group {
   for (const v of ve) {
     if (v.cho === 'thu') {
       // Thú cưỡi đứng sau lưng tướng, chếch sang phải, nhỏ hơn thật cho tướng vẫn là chính.
-      const g = vuaKhung(v.rieng(), 1.2 * k);
-      g.position.set(0.36 * k, 0, -0.8 * k);
+      const g = vuaKhung(v.rieng(), 1.05 * k);
+      g.position.set(0.2 * k, 0, -0.75 * k);
       g.rotation.y = 0.5;
       root.add(g);
     } else if (v.cho === 'bay') {
       const g = vuaKhung(v.rieng(), 0.34 * k);
       g.rotation.y = 0.35;
-      g.position.set(-0.44 * k, 0.6 * k, 0.12 * k);
-      const q = quang(0.25 * k);
-      q.position.set(-0.44 * k, 0.77 * k, 0.02 * k);
+      g.position.set(-0.4 * k, 0.6 * k, 0.12 * k);
+      const q = quang(0.22 * k);
+      q.position.set(-0.4 * k, 0.77 * k, 0.02 * k);
       root.add(q, g);
     } else if (v.cho === 'dat') {
       // Cờ, khóm tre cắm đất phía sau bên trái, cao ngang tướng.
@@ -94,6 +94,42 @@ export function hinhTuongModel(hero: HeroKind, mac: MacTuong): THREE.Group {
     }
   }
   return root;
+}
+
+/** Hướng từ mô hình tới chỗ nhìn. */
+const HUONG = new THREE.Vector3(Math.cos(EL) * Math.sin(AZ), Math.sin(EL), Math.cos(EL) * Math.cos(AZ));
+/** Hai trục ngang, dọc của ảnh trong cảnh. */
+const NGANG = new THREE.Vector3(0, 1, 0).cross(HUONG).normalize();
+const DOC = HUONG.clone().cross(NGANG).normalize();
+
+/** Chỗ một điểm trên ảnh (đơn vị cảnh), gốc tọa độ chiếu vào (0, 0). */
+export function chieuDiem(p: THREE.Vector3): { x: number; y: number } {
+  return { x: p.dot(NGANG), y: p.dot(DOC) };
+}
+
+/** Khung chiếu của cả mô hình trên ảnh (đơn vị cảnh, gốc tọa độ chiếu vào (0, 0)). */
+export function chieuHinh(root: THREE.Object3D): { x0: number; x1: number; y0: number; y1: number } {
+  root.updateMatrixWorld(true);
+  const p = new THREE.Vector3();
+  let x0 = Infinity;
+  let x1 = -Infinity;
+  let y0 = Infinity;
+  let y1 = -Infinity;
+  root.traverse((o) => {
+    const m = o as THREE.Mesh;
+    const pos = m.geometry?.getAttribute('position');
+    if (!pos) return;
+    for (let i = 0; i < pos.count; i++) {
+      p.fromBufferAttribute(pos, i).applyMatrix4(m.matrixWorld);
+      const x = p.dot(NGANG);
+      const y = p.dot(DOC);
+      x0 = Math.min(x0, x);
+      x1 = Math.max(x1, x);
+      y0 = Math.min(y0, y);
+      y1 = Math.max(y1, y);
+    }
+  });
+  return { x0, x1, y0, y1 };
 }
 
 /** Bảng đổi một nửa số thực (dạng 16 bit) tuyến tính ra một byte sRGB. */
@@ -129,38 +165,23 @@ export function veHinh(renderer: THREE.WebGLRenderer, root: THREE.Object3D, w = 
   sun.position.copy(center).add(new THREE.Vector3(-6, 14, 16));
   sun.target.position.copy(center);
 
-  const dir = new THREE.Vector3(Math.cos(EL) * Math.sin(AZ), Math.sin(EL), Math.cos(EL) * Math.cos(AZ));
   const cam = new THREE.OrthographicCamera(-1, 1, 1, -1, 0.1, 400);
-  cam.position.copy(center).addScaledVector(dir, 100);
+  cam.position.copy(center).addScaledVector(HUONG, 100);
   cam.lookAt(center);
   cam.updateMatrixWorld(true);
-  const inv = cam.matrixWorldInverse;
-  const p = new THREE.Vector3();
-  let x0 = Infinity;
-  let x1 = -Infinity;
-  let y0 = Infinity;
-  let y1 = -Infinity;
-  root.traverse((o) => {
-    const m = o as THREE.Mesh;
-    const pos = m.geometry?.getAttribute('position');
-    if (!pos) return;
-    for (let i = 0; i < pos.count; i++) {
-      p.fromBufferAttribute(pos, i).applyMatrix4(m.matrixWorld).applyMatrix4(inv);
-      x0 = Math.min(x0, p.x);
-      x1 = Math.max(x1, p.x);
-      y0 = Math.min(y0, p.y);
-      y1 = Math.max(y1, p.y);
-    }
-  });
+  // Chiếu song song: tọa độ trên ảnh là chiếu quanh gốc cộng chỗ của gốc.
+  const goc = new THREE.Vector3().applyMatrix4(cam.matrixWorldInverse);
+  const { x0, x1, y0, y1 } = chieuHinh(root);
   const aspect = w / h;
   let halfY = Math.max((y1 - y0) / 2, (x1 - x0) / 2 / aspect) * 1.08;
-  let cx = (x0 + x1) / 2;
-  let cy = (y0 + y1) / 2;
+  let cx = goc.x + (x0 + x1) / 2;
+  let cy = goc.y + (y0 + y1) / 2;
   if (khung) {
-    // Khung cố định quanh một điểm (ảnh bán thân: quanh đầu tướng), không ôm cả mô hình.
-    p.set(0, khung.y, 0).applyMatrix4(inv);
-    cx = p.x;
-    cy = p.y;
+    // Khung cố định quanh một điểm (ảnh bán thân: quanh đầu tướng; hình đứng: cả người và đồ đi kèm), không ôm cả mô
+    // hình, để mọi tướng hiện cùng một cỡ dù cầm vũ khí dài hay có thú cưỡi.
+    const c = chieuDiem(new THREE.Vector3(khung.x ?? 0, khung.y, 0));
+    cx = goc.x + c.x;
+    cy = goc.y + c.y;
     halfY = khung.half;
   }
   cam.left = cx - halfY * aspect;
@@ -221,10 +242,20 @@ export function veHinh(renderer: THREE.WebGLRenderer, root: THREE.Object3D, w = 
   return canvas.toDataURL('image/png');
 }
 
-/** Khung cố định cho `veHinh`: tâm ở độ cao `y` trên trục tướng, nửa bề cao `half`. */
+/** Khung cố định cho `veHinh`: tâm ở độ cao `y` (lệch ngang `x`) trên trục tướng, nửa bề cao `half`. */
 export interface Khung {
+  x?: number;
   y: number;
   half: number;
+}
+
+/**
+ * Khung hình đứng: theo cỡ dáng `kDung` của tướng, giống nhau cho mọi tướng và mọi món, nên người tướng nào cũng cao
+ * bằng nhau trong khung hình nhân. Đủ chỗ cho tre, gậy cao, thú cưỡi sau lưng, bảo vật bên vai (`hinhTuong.test.ts`).
+ */
+export function khungDung(hero: HeroKind): Khung {
+  const k = kDung(hero);
+  return { x: 0.05 * k, y: 0.79 * k, half: 0.92 * k };
 }
 
 /** Khổ ảnh bán thân (vuông) trên chip tướng. */
@@ -260,7 +291,7 @@ export class HinhTuong {
 
   /** Hình đứng mặc đồ cho khung hình nhân (vẽ trước ảnh bán thân). */
   get(hero: HeroKind, mac: MacTuong): string | null {
-    return this.take(`hinh|${hinhKey(hero, mac)}`, () => veHinh(this.renderer, hinhTuongModel(hero, mac)), true);
+    return this.take(`hinh|${hinhKey(hero, mac)}`, () => veHinh(this.renderer, hinhTuongModel(hero, mac), HINH_W, HINH_H, khungDung(hero)), true);
   }
 
   /** Ảnh bán thân cho chip tướng. */
