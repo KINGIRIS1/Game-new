@@ -11,6 +11,7 @@ import { huanTiers, initialThuThach } from './thuThach';
 import { initialTrangBi, roiDo, type RoiDo, type TrangBiState } from './trangBi';
 import { chapterOf } from './manVao';
 import { advanceDao, chanThuyen, daoArmy, donOf, initialDao, luaHieu, nguTruongBonus, type DaoState } from './dao';
+import { initialDaNgoai, treoVang, type DaNgoaiState, type DaThuong } from './daNgoai';
 import { advanceXay, initialXay, isBusy, nextXayEvent, pendingBuilding, pendingBuildings, pendingCount, pendingOf, type XayState } from './xay';
 import { inChapter4 } from './chuong4';
 import { chuong5Won, inChapter5, initialHaiBa, maVienCame } from './chuong5';
@@ -331,9 +332,9 @@ export interface Merchant {
  * 15: thử thách, huân công; 16: gỗ, tài nguyên thứ năm, và gợi ý của Lạc hầu về công trình mới; 17: cây, đá mọc trên
  * ô trống; 18: lưới nới qua sông, 76×76; 20: Điện 10×10; 21: chương 5, quân Hán; 22: Hai Bà Trưng; 23: thủy quân Hán,
  * lâu thuyền; 24: nữ tướng, thử thách màn 33–40; 25: thời gian xây, tốp thợ, nhà thợ hồ, đố sử; 26: một doanh trại lớn;
- * 27: trang bị tướng; 28: đóng đảo).
+ * 27: trang bị tướng; 28: đóng đảo; 29: dã ngoại, cấp chung của tướng).
  */
-export const SAVE_VERSION = 28;
+export const SAVE_VERSION = 29;
 
 export interface GameState {
   version: typeof SAVE_VERSION;
@@ -385,6 +386,8 @@ export interface GameState {
   trangBi: TrangBiState;
   /** Đóng đảo (`dao.ts`): đồn đảo, thuyền chiến, lính đóng ở Hoàng Sa, Trường Sa. */
   dao: DaoState;
+  /** Dã ngoại (`daNgoai.ts`): cấp chung của tướng, map và chỗ đội đứng, đội, boss mọc lại, treo máy. */
+  daNgoai: DaNgoaiState;
   /** Vừa nâng từ kinh đô nhỏ: kinh đô đã dựng lại theo mẫu, trả lại chừng này của. Giao diện báo một lần rồi xóa. */
   relaid?: { refund: Cost; dropped: number; dien?: boolean; trai?: boolean };
   /** Đấu thành trực tuyến (`dauThat.ts`): chỉ có khi đã bấm Tham gia. Trường tùy chọn nên không lên phiên bản lưu. */
@@ -487,6 +490,9 @@ export type FailReason =
   | 'khongXoayDuoc'
   | 'hetTho'
   | 'dangXay'
+  | 'daChuaMo'
+  | 'daDoiSai'
+  | 'daChuaDuCap'
   | 'daHoiDu'
   | 'khongCoDo'
   | 'doDaKhoa'
@@ -574,6 +580,7 @@ export function createInitialState(now: number): GameState {
     xay: initialXay(),
     trangBi: initialTrangBi(),
     dao: initialDao(),
+    daNgoai: initialDaNgoai(),
   };
   levelFootprint(state, dien, footprintTop(state, 'dien', dien.x, dien.z));
   return state;
@@ -2130,7 +2137,7 @@ export function tick(state: GameState, ms: number, busy = false): Resources {
  * phần việc xong, để công trình xong giữa chừng làm ra từ lúc xong. Trả số ms đã tính sản xuất, của làm ra và số phần
  * việc xây đã xong.
  */
-export function applyOffline(state: GameState, now: number): { ms: number; gained: Resources; built: number } {
+export function applyOffline(state: GameState, now: number): { ms: number; gained: Resources; built: number; da: DaThuong } {
   const away = Math.max(now - state.lastSeen, 0);
   const cap = Math.min(away, OFFLINE_CAP_MS);
   const gained: Resources = { gao: 0, voOc: 0, datDa: 0, sat: 0, go: 0 };
@@ -2149,6 +2156,8 @@ export function applyOffline(state: GameState, now: number): { ms: number; gaine
   }
   // Thuyền chiến chạy tiếp suốt quãng vắng, đủ chuyến.
   advanceDao(state, away);
+  // Đội ở dã ngoại đánh quái tiếp (treo máy), tối đa `DA_TREO.tran`.
+  const da = treoVang(state, away);
   state.lastSeen = now;
-  return { ms: cap, gained, built: state.xay.seq - seq };
+  return { ms: cap, gained, built: state.xay.seq - seq, da };
 }

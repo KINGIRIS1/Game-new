@@ -414,6 +414,9 @@ export const vi = {
     daCoThuyen: 'Bến này đã có thuyền chiến',
     canThuyenChien: 'Cần đóng thuyền chiến ở bến thuyền khơi trước',
     canDonDao: 'Cần dựng đồn đảo trước',
+    daChuaMo: 'Dã ngoại mở khi có tướng đầu tiên về với kinh đô',
+    daDoiSai: 'Chọn từ một tới ba tướng đã về',
+    daChuaDuCap: 'Chưa đủ cấp để qua cổng',
   } satisfies Record<FailReason, string>,
 
   quests: {
@@ -553,6 +556,10 @@ export const vi = {
     toDinh: 'thái thú Tô Định',
     maVien: 'Phục Ba tướng quân Mã Viện',
     lauThuyen: 'lâu thuyền Hán',
+    lonRung: 'lợn rừng',
+    cuaDa: 'cua đá',
+    baoGam: 'báo gấm',
+    ranHo: 'rắn hổ mang chúa',
   } satisfies Record<EnemyType, string>,
 
   enemyIcons: {
@@ -584,6 +591,10 @@ export const vi = {
     toDinh: '🏮',
     maVien: '🏇',
     lauThuyen: '🚢',
+    lonRung: '🐗',
+    cuaDa: '🦀',
+    baoGam: '🐆',
+    ranHo: '🐍',
   } satisfies Record<EnemyType, string>,
 
   /** Tên và lời dẫn từng màn phó bản, theo thứ tự trong STAGES. */

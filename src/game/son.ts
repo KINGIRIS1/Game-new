@@ -5,7 +5,7 @@
 
 import { heroSetups, type Battle, type HeroKind, type HeroSetup } from './battle';
 import { CAO_LO_AT, caoLoJoined, caoLoSetup } from './caoLo';
-import { HAI_BA_KINDS, haiBaJoined, haiBaSetups, isHaiBa, restHaiBa } from './chuong5';
+import { HAI_BA_KINDS, chuong5Won, haiBaJoined, haiBaSetups, hieuTrieuOpen, isHaiBa, restHaiBa } from './chuong5';
 import { advJoined, advSetup } from './coLoa';
 import { ADV_REST_MS, CAO_LO_REST_MS, CH2_QUEST_START, GIFTS, GIFT_IDS, GIONG_REST_MS, SON_REST_MS, STAGES, type Chapter, type GiftId } from './defs';
 import { canAfford, pay, scheduleFirstFlood, type FailReason, type GameState, type Result, type SonState } from './game';
@@ -166,4 +166,23 @@ export type SonLook = 'cauHon' | 'trangSi';
 export function sonLook(s: GameState): SonLook | null {
   if (!inChapter2(s) || s.son.won) return null;
   return sonJoined(s) ? 'trangSi' : 'cauHon';
+}
+
+/**
+ * Tướng `kind` ra trận ở dã ngoại (`daNgoai.ts`): như khi ra phó bản nhưng không xét kiệt sức (dã ngoại không khóa
+ * tướng, không làm tướng phải nghỉ). Chưa về với kinh đô thì null. Mang chỉ số đồ đang mặc (`ganDo`).
+ */
+export function tuongSetup(s: GameState, kind: HeroKind): HeroSetup | null {
+  const h = tuongGoc(s, kind);
+  return h ? ganDo(s, h) : null;
+}
+
+function tuongGoc(s: GameState, kind: HeroKind): HeroSetup | null {
+  if (kind === 'giong') return giongReady(s) ? { kind, bamboo: s.giong.whipBroken, glow: s.giong.ascended, non: false } : null;
+  if (kind === 'sonTinh') return sonJoined(s) ? { kind, bamboo: false, glow: s.son.won, non: s.son.non } : null;
+  if (kind === 'anDuong') return advJoined(s) ? { kind, bamboo: false, glow: s.adv.bien, non: false, kimQuy: s.adv.kimQuy } : null;
+  if (kind === 'caoLo') return caoLoJoined(s) ? { kind, bamboo: false, glow: false, non: false, lenhBan: s.caoLo.lenhBan } : null;
+  if (!haiBaJoined(s)) return null;
+  // Hai Bà: như khi ra phó bản (hiển linh sau truyện; Trưng Nhị có Hiệu triệu khi đã mở).
+  return { kind, bamboo: false, glow: chuong5Won(s), non: false, ...(kind === 'trungNhi' ? { hieuTrieu: hieuTrieuOpen(s) } : {}) };
 }

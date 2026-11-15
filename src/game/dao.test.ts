@@ -428,14 +428,14 @@ describe('Nhiệm vụ, Lạc hầu, bản lưu', () => {
     startDon(s, 'hoangSa');
     const back = deserialize(serialize(s))!;
     expect(back.version).toBe(SAVE_VERSION);
-    expect(SAVE_VERSION).toBe(28);
+    expect(SAVE_VERSION).toBeGreaterThanOrEqual(28);
     expect(back.dao).toEqual(s.dao);
     expect(jobOf(back, daoJobId('hoangSa'))?.o[0].dao).toBe('hoangSa');
     const old = JSON.parse(serialize(createInitialState(0)));
     old.version = 27;
     delete old.dao;
     const up = deserialize(JSON.stringify(old))!;
-    expect(up.version).toBe(28);
+    expect(up.version).toBe(SAVE_VERSION);
     expect(up.dao.hoangSa).toEqual({ cap: 0, thuyen: false, linh: { giao: 0, cung: 0, voi: 0, no: 0 }, muon: { giao: 0, cung: 0, voi: 0, no: 0 }, chuyen: null });
     const bad = JSON.parse(serialize(s));
     bad.dao.hoangSa.cap = 9;
