@@ -5,8 +5,8 @@
  * Xa nơi nhận thì mất công đi lại, công trình làm ra ít hơn (`heSoGanh`). Của vẫn vào kho đều mỗi phút như cũ, không
  * có hàng nằm dọc đường, nên bản lưu không thêm gì và lúc vắng tính y như lúc chơi.
  *
- * Quãng đường đo bằng ô đất trống: ô có đường đi, ô cầu còn nguyên rẻ hơn (`GANH.duong`), vượt lũy, thành tốn
- * `GANH.tuong` ô, cổng thành, cống đê, đê, bẫy, đồ trang trí và công trình đang hư đi qua như đất; sông, rừng chưa phát
+ * Quãng đường đo bằng ô đất trống: ô có đường đi, ô cầu còn nguyên rẻ hơn (`GANH.duong`), trèo qua lũy, thành tốn
+ * `GANH.tuong` ô (nên có cổng gần thì dân đi vòng qua cổng), cổng thành, cống đê, đê, bẫy, đồ trang trí và công trình đang hư đi qua như đất; sông, rừng chưa phát
  * và móng công trình khác không đi qua được. Phần vẽ người gánh dùng chung tuyến ở đây (`duongGanh`).
  */
 import { BUILDINGS, GANH, GANH_BEP, isBridge, isDecor, type BuildingType } from './defs';

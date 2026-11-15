@@ -3389,7 +3389,7 @@ Chủ dự án muốn người dân đem vật liệu, nông sản về kho ho�
 - **Quãng đường**: chi phí đường đi ngắn nhất (8 hướng, không cắt góc) từ ô sát móng công trình tới ô của nơi nhận gần nhất:
   - ô đất trống, đồ trang trí, đê, cổng thành, cống đê, bẫy, bậc lên thành, công trình đang hư: 1;
   - ô đường đi (bốn loại như nhau), ô cầu còn nguyên: **0,5**;
-  - lũy, thành đất, thành Cổ Loa: **1** (dân trèo qua lũy được; lúc đầu định 8 thì mẫu kinh đô có vòng lũy kín trước chương 3 mất tới 40%, nên hạ xuống);
+  - lũy, thành đất, thành Cổ Loa: **4** (dân trèo qua tường được nhưng tốn công, nên có cổng thành chỉ phải đi vòng thêm tới 3 ô thì dân đi qua cổng; không có cổng thì vẫn trèo. Lúc đầu định 8 thì mẫu kinh đô có vòng lũy kín trước chương 3 mất tới 40%, nên hạ xuống 1; chủ dự án thấy dân đi xuyên tường thành nên nâng lên 4, chọn: có cổng thì qua cổng, không có thì trèo; đo 6 thì mẫu Cổ Loa mất tới 24% lúc chưa có cổng, nên chọn 4);
   - không đi qua: sông, rừng chưa phát, móng công trình khác (kể cả đang dựng), cầu hư.
 - **Hệ số gánh**: trong **14 ô** thì 1; xa hơn thì (12 + 14) / (12 + quãng đường), không dưới **0,5**. Tức 14 ô đất (hay 28 ô đường) còn 100%, 20 ô còn 81%, 30 ô còn 62%, từ 40 ô trở lên còn 50%. Không có lối (bị vây kín không chừa chỗ) cũng 50%. (Định 12 ô; đo bốn mẫu kinh đô thì nâng 14 để mẫu nào cũng trung bình từ 88% trở lên.)
 - **Áp vào**: gạo, vỏ ốc, đất đá, sắt, gỗ của công trình (`outputIn`), cá làng chài và cá biển (`fishIn`, `fishPerMinute`), nguyên liệu Tết (`bakeRates`). Nhân thêm vào sau đặc sản đất, phù sa; đền, phúc lành cộng như cũ. Công trình bên kia sông mà cầu hư thì vẫn 0 như cũ.
@@ -3397,7 +3397,7 @@ Chủ dự án muốn người dân đem vật liệu, nông sản về kho ho�
 
 ### Nhịp (đo bằng `node scripts/kinh-te.mjs`)
 
-Người chơi mô phỏng xếp gọn quanh Điện, trung bình hệ số gánh 99,5%: mốc lên Điện 2–10 y như trước (7,4; 25,2; 49,6; 82,4 phút… Điện 10 ở 587,5 phút). Mẫu kinh đô không đổi chỗ kho (thử cho mẫu đặt kho ra gần công trình xa thì lệch cân bằng Đấu thành với kinh đô máy, nên bỏ); trung bình mỗi cấp Điện: Phong Châu 89–100%, Đê bao 97–100%, Cổ Loa, Cổ Loa giữ sông 98–100%. Kinh đô người chơi trải rộng thì trải đường, dựng thêm kho gần cụm công trình xa.
+Người chơi mô phỏng xếp gọn quanh Điện, trung bình hệ số gánh 99,5%: mốc lên Điện 2–10 y như trước (7,4; 25,2; 49,6; 82,4 phút… Điện 10 ở 587,5 phút). Mẫu kinh đô không đổi chỗ kho (thử cho mẫu đặt kho ra gần công trình xa thì lệch cân bằng Đấu thành với kinh đô máy, nên bỏ); trung bình mỗi cấp Điện: Phong Châu 89–100%, Đê bao 97–100%, Cổ Loa, Cổ Loa giữ sông 93–99% (chưa có cổng thì dân trèo vòng thành, tốn công). Kinh đô người chơi trải rộng thì trải đường, dựng thêm kho gần cụm công trình xa.
 
 ### Giao diện
 
@@ -3410,6 +3410,7 @@ Người chơi mô phỏng xếp gọn quanh Điện, trung bình hệ số gán
 - **Không có người mới**: người đi gánh là một trong số người đang làm, rời chỗ đứng ra đường rồi về lại đúng chỗ ấy. Số người đứng làm cộng số người đang đi luôn bằng số người hiện ở công trình. Vì không thêm người nên không cần trần số người gánh trên màn hình; người ngoài khung nhìn thì ẩn như dân đứng ở công trình.
 - **Lịch thay phiên** (`chuyenGanh`): một người làm thì làm 14 giây (`LAM_S`) rồi gánh đi, công trình trống trong lúc ấy. Từ hai người thì thay phiên, mỗi lúc một người đi, người trước về 3 giây (`NGHI_S`) người kế mới đi; từ 6 người (`HAI_LUOT`) thì hai người so le nửa nhịp. Công trình có từ hai người không bao giờ trống. Mỗi công trình lệch nhịp theo mã, cho người gánh khỏi đi cùng lúc.
 - **Tuyến** (`tuyenGanh`): ra từ lối của công trình (ô con lối đi `,` hay sân trống `.` ở viền bản vẽ ô con gần đường nhất; bến, làng chài ra khe sân hàng sau phía bờ), đi đúng các ô của luật (`duongGanh`), vào lối của nơi nhận (kho, Điện có bản vẽ ô con). Mỗi ô tốn thời gian theo chi phí ô của luật: 1,1 giây một ô đất (`GIAY_MOI_O`), ô đường đi, cầu nhanh gấp đôi. Công trình sát ngay nơi nhận thì không ai phải đi.
+- **Trèo tường**: tuyến vẫn qua ô lũy, thành, đê (không có cổng gần) thì người đi bộ leo dần lên mặt tường từ chừng 0,35 ô trước mép, đi trên mặt tường, qua rồi xuống (`treoQua`, World `walkY`; quân hành quân qua cầu tới đồn cũng vậy): thành Cổ Loa, thành đất lên mặt thành, lũy tre bước qua thanh tre trên, đê lên mặt đê; bậc lên thành đi theo dốc bậc. Không còn đi lọt qua mô hình tường.
 - **Một chuyến** (`viTri`): đi từ chỗ đứng làm ra lối, gánh hàng tới nơi nhận, đứng đổ hàng chừng 1,6 giây (`DO_HANG_S`), rồi đi tay không về. Bước chân theo quãng đã đi cho khỏi trượt; độ cao theo mặt đất, mặt cầu.
 - **Đồ gánh theo hàng** (`HANG_OF`, `doGanh.ts`): đòn gánh tre hai thúng tì vai phải, trong thúng là thóc (ruộng lúa, ruộng nếp), vỏ ốc (bến), đá (bãi đất đá), thỏi sắt (lò rèn), cá (làng chài, bến khơi), lá dong (vườn), thịt (chuồng lợn); xưởng mộc vác bó gỗ trên vai trái. Đòn gánh của đoàn dân rút ở Cấm Khê dùng chung hàm này (thóc và rau), dáng y như cũ. Đồ gánh không đổ bóng, như dân.
 - **Khi nào thôi gánh**: có trận trên kinh đô (giữ kinh đô, Đấu thành), giặc sắp tới, hay đang xem bãi chiến thì mọi người về chỗ làm. Ban đêm vẫn gánh (như điều đã chốt ở mục Ngày đêm: dân vẫn làm ban đêm).

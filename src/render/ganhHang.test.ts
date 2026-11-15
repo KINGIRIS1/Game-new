@@ -11,7 +11,7 @@ import { GRID } from '../game/map';
 import { DIEN, edge, setDien, size } from '../game/testmap';
 import { duongGanh, duongTu } from '../game/vanChuyen';
 import { pendingBuildings, startBuild } from '../game/xay';
-import { DO_HANG_S, HAI_LUOT, LAM_S, chuyenGanh, coHang, duongNguoi, loiRa, tuyenGanh, tuyenXay, vatLieu, viTri, viecBep, type TuyenGanh } from './ganhHang';
+import { DO_HANG_S, HAI_LUOT, LAM_S, chuyenGanh, coHang, duongNguoi, loiRa, tuyenGanh, tuyenXay, treoQua, TREO, vatLieu, viTri, viecBep, type TuyenGanh } from './ganhHang';
 import type { Lot } from './lot';
 
 // Bản vẽ ô con nằm trong tệp mô hình, mà phần vẽ tạo canvas khi nạp module: giả lập `document` như `duoc.test.ts`.
@@ -264,5 +264,22 @@ describe('thợ vác vật liệu, người bếp', () => {
     bep.damaged = true;
     s.tet.banh.chung = 4;
     expect(viecBep(s, bep, LOTS)).toBe(null);
+  });
+});
+
+describe('trèo qua tường', () => {
+  const tops = new Map([[10 * GRID + 10, 1.5]]);
+  it('đi ngang qua ô tường thì leo lên mặt tường rồi xuống, không lọt qua', () => {
+    const ys: number[] = [];
+    for (let x = 8; x <= 13; x += 0.05) ys.push(treoQua(x, 10.5, 0.2, tops));
+    expect(Math.max(...ys)).toBeCloseTo(1.5);
+    expect(ys[0]).toBe(0.2);
+    expect(ys[ys.length - 1]).toBe(0.2);
+    expect(treoQua(10, 10.5, 0.2, tops)).toBeCloseTo(0.85);
+    for (let i = 1; i < ys.length; i++) expect(Math.abs(ys[i] - ys[i - 1])).toBeLessThan(0.25);
+  });
+  it('xa tường thì đi trên mặt đất', () => {
+    expect(treoQua(10 - TREO - 0.01, 10.5, 0.2, tops)).toBe(0.2);
+    expect(treoQua(5, 5, 0.3, new Map())).toBe(0.3);
   });
 });

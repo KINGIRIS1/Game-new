@@ -80,7 +80,7 @@ import {
   type WallSpot,
 } from './models';
 import { makeWorker, type Job } from './people';
-import { HANG_OF, chuyenGanh, coHang, duongNguoi, tuyenGanh, tuyenXay, vatLieu, viTri, viecBep, type ChieuGanh, type DuongNguoi, type Hang, type TuyenGanh, type ViTri } from './ganhHang';
+import { HANG_OF, chuyenGanh, treoQua, coHang, duongNguoi, tuyenGanh, tuyenXay, vatLieu, viTri, viecBep, type ChieuGanh, type DuongNguoi, type Hang, type TuyenGanh, type ViTri } from './ganhHang';
 import { ganhLen, tayGanh } from './doGanh';
 import type { Human } from './body';
 import type { Lot } from './lot';
@@ -546,6 +546,23 @@ interface FleetBoat {
 const SEA_SPEED = 2.2;
 const SEA_FISH_SPEED = 1.5;
 
+/**
+ * Người đi bộ trèo qua đoạn tường này cao chừng nào trên mặt đất (0: không trèo). Thành Cổ Loa, thành đất: lên mặt
+ * thành; lũy tre: bước qua thanh tre trên; đê, kè đá: lên mặt đê; đoạn đổ: bước qua đống đất vỡ.
+ */
+function climbHeight(b: Building): number {
+  switch (b.type) {
+    case 'thanh':
+      return b.damaged ? 0.25 : CITADEL_TOP;
+    case 'luy':
+      return b.damaged ? 0.2 : b.level >= 2 ? EARTH_WALL_TOP : 0.8;
+    case 'de':
+      return b.damaged ? 0.2 : b.level >= 2 ? 0.78 : 0.54;
+    default:
+      return 0;
+  }
+}
+
 /** Khói xám bốc lên từ công trình hư (vòng khói chạy ở vòng vẽ: `puffSmoke`). */
 function khoiHu(color: number = C.smoke): THREE.Group {
   const smoke = new THREE.Group();
@@ -709,6 +726,8 @@ export class World {
   private wallTops = new Map<number, number>();
   /** Bậc lên thành còn nguyên theo ô: chân bậc, độ cao leo lên, góc mép cao (`stairOf`), để lính đi qua theo dốc. */
   private stairRamps = new Map<number, { base: number; rise: number; turn: number }>();
+  /** Mặt trên các ô lũy, thành, đê theo ô, cho người đi bộ trèo qua (`walkY`, `treoQua`). */
+  private climbTops = new Map<number, number>();
   /** Giàn giáo các công trình đang có thợ làm, theo id công trình. */
   private sites = new Map<number, SiteView>();
   /** Lô cọc mốc trên các ô tường đang đắp dở, đang nâng, đang đổi loại. */
@@ -2258,7 +2277,10 @@ export class World {
   private syncWallWalk(state: GameState): void {
     this.wallTops.clear();
     this.stairRamps.clear();
+    this.climbTops.clear();
     for (const b of state.buildings) {
+      const climb = climbHeight(b);
+      if (climb > 0) this.climbTops.set(b.z * GRID + b.x, this.groundY(b.x, b.z) + climb);
       if (b.damaged) continue;
       const i = b.z * GRID + b.x;
       if (b.type === 'thanh' || b.type === 'congThanh') this.wallTops.set(i, this.groundY(b.x, b.z) + CITADEL_TOP);
@@ -2670,10 +2692,19 @@ export class World {
   }
 
   /** Mặt đất dưới chân người đi tại (x, z) theo ô; trên cầu thì đứng trên mặt cầu. */
+  /** Chỗ người đi bộ trên kinh đô (người gánh, quân hành quân): mặt cầu, mặt sông, dốc bậc lên thành, hay trèo qua lũy, thành, đê. */
   private walkY(x: number, z: number): number {
     const deck = this.bridgeWalkY(x, z);
     if (deck !== null) return deck;
-    return isRiver(Math.floor(x), Math.floor(z)) ? 0.12 : this.surfaceY(x, z);
+    const tx = Math.floor(x);
+    const tz = Math.floor(z);
+    if (isRiver(tx, tz)) return 0.12;
+    const ramp = this.stairRamps.get(tz * GRID + tx);
+    if (ramp) {
+      const u = (x - tx - 0.5) * Math.sin(ramp.turn) + (z - tz - 0.5) * Math.cos(ramp.turn);
+      return ramp.base + ramp.rise * Math.min(1, Math.max(0, (u + 0.46) / 0.96));
+    }
+    return treoQua(x, z, this.surfaceY(x, z), this.climbTops);
   }
 
   private updateMarch(dt: number, t: number): void {

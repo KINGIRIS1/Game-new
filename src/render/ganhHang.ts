@@ -302,3 +302,32 @@ export function viTri(p: DuongNguoi, s: number, D: number): ViTri {
   const at = theoGiay(p, p.di * (1 - u));
   return { x: at.x, z: at.z, ry: at.ry + Math.PI, quang: end.quang * 2 - at.quang, mang: false, dung: false };
 }
+
+/** Người đi bộ trèo lên mép lũy, thành, đê từ chừng này ô trước mép (và tới mặt trên chừng này ô sau mép). */
+export const TREO = 0.35;
+
+/**
+ * Độ cao người đi bộ (người gánh, quân hành quân) tại (x, z) khi có lũy, thành, đê: không có cổng gần thì dân trèo qua
+ * tường (`GANH.tuong`), nên tới gần ô tường thì leo dần lên mặt tường, qua rồi xuống, không đi lọt qua mô hình.
+ * `ground`: độ cao mặt đất ở chỗ ấy; `tops`: mặt trên mỗi ô tường theo chỉ số ô (z * GRID + x), độ cao tuyệt đối.
+ */
+export function treoQua(x: number, z: number, ground: number, tops: ReadonlyMap<number, number>): number {
+  if (!tops.size) return ground;
+  const tx = Math.floor(x);
+  const tz = Math.floor(z);
+  let y = ground;
+  for (let oz = tz - 1; oz <= tz + 1; oz++) {
+    for (let ox = tx - 1; ox <= tx + 1; ox++) {
+      if (ox < 0 || oz < 0 || ox >= GRID || oz >= GRID) continue;
+      const top = tops.get(oz * GRID + ox);
+      if (top === undefined || top <= y) continue;
+      // Khoảng cách có dấu tới mép ô (âm: trong ô).
+      const qx = Math.abs(x - ox - 0.5) - 0.5;
+      const qz = Math.abs(z - oz - 0.5) - 0.5;
+      const s = qx > 0 || qz > 0 ? Math.hypot(Math.max(qx, 0), Math.max(qz, 0)) : Math.max(qx, qz);
+      const u = Math.min(1, Math.max(0, (TREO - s) / (2 * TREO)));
+      y = Math.max(y, ground + (top - ground) * u * u * (3 - 2 * u));
+    }
+  }
+  return y;
+}

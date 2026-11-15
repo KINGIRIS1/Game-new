@@ -136,6 +136,28 @@ describe('hệ số gánh theo quãng đường', () => {
     expect(Number.isFinite(duongGanh(s, far)!.d)).toBe(true);
   });
 
+  it('tường bao kín: có cổng thành gần thì dân đi qua cổng; không có cổng thì trèo qua tường', () => {
+    const s = capital();
+    const far = put(s, 'ruong', LO + 2, ROW);
+    const w = size('ruong');
+    const ring: Building[] = [];
+    for (let z = ROW - 1; z <= ROW + w; z++) {
+      for (let x = LO + 1; x <= LO + 2 + w; x++) {
+        if (x === LO + 1 || x === LO + 2 + w || z === ROW - 1 || z === ROW + w) ring.push(push(s, 'thanh', x, z));
+      }
+    }
+    const at = (b: Building) => b.z * GRID + b.x;
+    const climb = duongGanh(s, far)!;
+    expect(climb.tuyen.some((i) => ring.some((b) => at(b) === i))).toBe(true);
+    // Cổng ở góc mặt đông xa nhất so với chỗ trèo ngắn nhất: vẫn đi vòng qua cổng.
+    const gate = ring.find((b) => b.x === LO + 2 + w && b.z === ROW + w - 1)!;
+    gate.type = 'congThanh';
+    const g = duongGanh(s, far)!;
+    expect(g.tuyen).toContain(at(gate));
+    expect(g.tuyen.some((i) => ring.some((b) => b !== gate && at(b) === i))).toBe(false);
+    expect(g.d).toBeLessThan(climb.d);
+  });
+
   it('Điện, kho, nhà sàn không gánh hàng; chỗ định đặt cho biết trước hệ số', () => {
     const s = capital();
     expect(ganhType('dien')).toBe(false);

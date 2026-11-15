@@ -1302,7 +1302,7 @@ export const FIRST_FLOOD_MS = 3 * 60_000;
  * - `duong`: ô có đường đi, ô cầu tốn chừng này phần một ô đất.
  * - `tuong`: vượt một ô lũy, thành tốn chừng này ô (đi vòng qua cổng thì đỡ).
  */
-export const GANH = { gan: 14, k: 12, san: 0.5, duong: 0.5, tuong: 1 };
+export const GANH = { gan: 14, k: 12, san: 0.5, duong: 0.5, tuong: 4 };
 /** Nguyên liệu Tết gánh tới bếp gói bánh, không về kho. */
 export const GANH_BEP: BuildingType[] = ['ruongNep', 'vuon', 'chuongLon'];
 
