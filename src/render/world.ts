@@ -16,7 +16,7 @@ import { KHOANH_N, khoanhOf, khoanhOrigin, openMask, openStart, openable } from 
 import { FAR_PLOTS, benKiaOpen, bridgeEnds, bridgeTo, plotAt, plotOf, plotOrigin, poiAt, poiPlots, type Dat } from '../game/benKia';
 import { DIEN_HOME, FAR_FOREST, FOREST_BAND, GRID, KHOANH, RIVER_END, RIVER_START, baseHeights, farBankOf, inGrid, isNearBank, isRiver, riverDistance, riverFacing, rotAngle, turnLocal } from '../game/map';
 import { BAI_CAT, BIEN_DIEN, CUA_BIEN, QUAN_DAO, RIVER_MID, benDock, bienDo, daoBen, donDaoCong, donDaoHuong, isSea, quanDao, riverOf, seaIndex, seaRoute, warRoute, type QuanDao, type QuanDaoId, type SeaRoute } from '../game/bien';
-import { DAO_IDS, benOf, giuBien, tripMs } from '../game/dao';
+import { DAO_IDS, baoDao, benOf, giuBien, tripMs } from '../game/dao';
 import { armySpace } from '../game/doanhTrai';
 import { sonLook, type SonLook } from '../game/son';
 import { floodHits } from '../game/terrain';
@@ -541,6 +541,19 @@ interface FleetBoat {
 }
 const SEA_SPEED = 2.2;
 const SEA_FISH_SPEED = 1.5;
+
+/** Khói xám bốc lên từ công trình hư (vòng khói chạy ở vòng vẽ: `puffSmoke`). */
+function khoiHu(): THREE.Group {
+  const smoke = new THREE.Group();
+  smoke.userData.smoke = true;
+  const mat = new THREE.MeshBasicMaterial({ color: C.smoke, transparent: true, opacity: 0.5, depthWrite: false });
+  for (let i = 0; i < 4; i++) {
+    const puff = new THREE.Mesh(new THREE.SphereGeometry(0.22, 7, 5), mat);
+    puff.userData.phase = i / 4;
+    smoke.add(puff);
+  }
+  return smoke;
+}
 
 export class World {
   readonly renderer: THREE.WebGLRenderer;
@@ -1767,8 +1780,9 @@ export class World {
   }
 
   /**
-   * Đồn đảo và thuyền chiến theo state (`dao.ts`). Đồn dựng lại khi đổi cấp, đổi số lính gác, bậc binh khí hay lửa hiệu
-   * cháy, tắt (đồn giữ biển lúc thủy quân Hán sắp tới). Thuyền neo cạnh bến thuyền khơi khi rảnh, chạy theo chuyến khi
+   * Đồn đảo và thuyền chiến theo state (`dao.ts`). Đồn dựng lại khi đổi cấp, đổi số lính gác, bậc binh khí, lửa hiệu
+   * cháy, tắt (đồn giữ biển lúc thủy quân Hán sắp tới, hay giặc áp sát đảo: `baoDao`) hay đồn hư (bốc khói, không đốt
+   * lửa hiệu). Thuyền neo cạnh bến thuyền khơi khi rảnh, chạy theo chuyến khi
    * chở quân (chỗ trên đường lấy lại từ thời gian còn lại), dựng lại khi lính đang chở đổi. Gọi mỗi lần đồng bộ cảnh và
    * đều đặn lúc chơi (chuyến mới bắt đầu trong `tick`, không qua thao tác nào).
    */
@@ -1779,8 +1793,8 @@ export class World {
       const d = state.dao[id];
       const q = quanDao(id);
       const gac = donGac(armySpace(d.linh));
-      const lit = thuyHan && giuBien(state, id) > 0;
-      const key = d.cap > 0 ? `${d.cap}:${gac}:${state.arms.giao}:${state.arms.cung}:${lit ? 1 : 0}` : '';
+      const lit = !d.hu && ((thuyHan && giuBien(state, id) > 0) || baoDao(state, id) !== null);
+      const key = d.cap > 0 ? `${d.cap}:${gac}:${state.arms.giao}:${state.arms.cung}:${lit ? 1 : 0}:${d.hu ? 1 : 0}` : '';
       const old = this.daoForts.get(id);
       if ((old?.key ?? '') !== key) {
         forts = true;
@@ -1791,6 +1805,13 @@ export class World {
         }
         if (key) {
           const obj = makeDonDao(d.cap, { gac, tierGiao: state.arms.giao, tierCung: state.arms.cung, lit, cau: cauVanOf(q) });
+          if (d.hu) {
+            // Đồn hư: khói xám bốc lên giữa sân đồn, như công trình hư trong kinh đô.
+            const smoke = khoiHu();
+            smoke.position.y = 1.4;
+            smoke.scale.setScalar(1.8);
+            obj.add(smoke);
+          }
           obj.position.copy(donDaoSpot(q, HALF));
           // Cổng (mặt trước +z) quay về bến ván.
           const h = donDaoHuong(q);
@@ -2080,14 +2101,7 @@ export class World {
         group.rotation.z = 0.12;
         group.scale.y *= 0.85;
       }
-      const smoke = new THREE.Group();
-      smoke.userData.smoke = true;
-      const mat = new THREE.MeshBasicMaterial({ color: C.smoke, transparent: true, opacity: 0.5, depthWrite: false });
-      for (let i = 0; i < 4; i++) {
-        const puff = new THREE.Mesh(new THREE.SphereGeometry(0.22, 7, 5), mat);
-        puff.userData.phase = i / 4;
-        smoke.add(puff);
-      }
+      const smoke = khoiHu();
       smoke.position.y = 1.2;
       // Đền Rồng Tiên: khói bốc trên nóc đền chính (lùi về sau móng), cuộn to hợp với đền lớn.
       if (b.type === 'denRongTien') {

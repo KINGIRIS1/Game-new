@@ -211,7 +211,7 @@ export function buildSea(half: number): THREE.Group {
 }
 
 /** Cây dừa trên đảo: thân cong vươn ra, tàu lá xòe, chùm quả. */
-function palm(m: ToonModel, x: number, y: number, z: number, h: number, lean: number, seed: number, toward?: number): void {
+export function palm(m: ToonModel, x: number, y: number, z: number, h: number, lean: number, seed: number, toward?: number): void {
   const p = m.plain;
   const rand = seeded(seed);
   const spin = rand() * Math.PI * 2;
@@ -268,7 +268,7 @@ function squircleRing(half: number, w: number): THREE.BufferGeometry {
 }
 
 /** Cây phong ba trên đảo: thân thấp ngả theo gió, tán lá dày xanh thẫm. */
-function phongBa(m: ToonModel, x: number, y: number, z: number, s: number, seed: number): void {
+export function phongBa(m: ToonModel, x: number, y: number, z: number, s: number, seed: number): void {
   const p = m.plain;
   const rand = seeded(seed);
   const lean = (rand() - 0.5) * 0.5;

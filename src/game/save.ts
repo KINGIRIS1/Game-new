@@ -33,7 +33,7 @@ import {
 import { initialCaoLo } from './caoLo';
 import { initialBenKia, isBenKiaState, noGarrison } from './benKia';
 import { initialCayDa, isCayDaState } from './cayDa';
-import { DAO_IDS, initialDao, isDaoState } from './dao';
+import { DAO_IDS, giacMoi, initialDao, isDaoState } from './dao';
 import { initialAdv } from './coLoa';
 import { inChapter4 } from './chuong4';
 import { inChapter5, initialHaiBa, maVienCame } from './chuong5';
@@ -143,6 +143,7 @@ function migrate(raw: unknown): unknown {
   if (isObj(v) && v.version === 25) v = migrate25to26(v, !relaid);
   if (isObj(v) && v.version === 26) v = migrate26to27(v);
   if (isObj(v) && v.version === 27) v = migrate27to28(v);
+  if (isObj(v) && v.version === 28) v = migrate28to29(v);
   return v;
 }
 
@@ -525,6 +526,13 @@ function migrate26to27(s: Raw): Raw {
 function migrate27to28(s: Raw): Raw {
   s.version = 28;
   s.dao = initialDao();
+  return s;
+}
+
+/** Phiên bản 28 → 29 (giặc đánh đảo): mỗi đồn đảo chưa có đợt giặc nào, chưa hư. */
+function migrate28to29(s: Raw): Raw {
+  s.version = 29;
+  if (isObj(s.dao)) for (const id of DAO_IDS) if (isObj((s.dao as Raw)[id])) Object.assign((s.dao as Raw)[id] as Raw, giacMoi());
   return s;
 }
 

@@ -414,6 +414,7 @@ export const vi = {
     daCoThuyen: 'Bến này đã có thuyền chiến',
     canThuyenChien: 'Cần đóng thuyền chiến ở bến thuyền khơi trước',
     canDonDao: 'Cần dựng đồn đảo trước',
+    donDaoHu: 'Đồn đảo đang hư, phải sửa trước',
   } satisfies Record<FailReason, string>,
 
   quests: {
@@ -486,6 +487,7 @@ export const vi = {
     donHoangSa: 'Xin dựng đồn Hoàng Sa giữa đảo chính. Thợ đi thuyền chiến ra dựng; đồn có quân đóng thì giữ được biển.',
     donTruongSa: 'Trường Sa xa hơn, nhiều đảo nhỏ. Xin đóng thuyền chiến ở bến thuyền khơi thứ hai và dựng đồn Trường Sa.',
     donDao3: 'Xin nâng một đồn đảo lên cấp 3: tường đá san hô, lầu canh, đóng được nhiều quân hơn, giữ biển chắc hơn.',
+    giuDao: 'Mã Viện cho thủy quân theo đường biển đánh đảo. Xin đóng đủ quân ở đồn đảo, giữ đảo qua một đợt giặc.',
     allDone:
       'Hai Bà đã hiển linh giữ đất, dân lập đền thờ ở Hát Môn; ngoài khơi Hoàng Sa, Trường Sa đã có đồn giữ biển. Thủy quân Hán, quân Hán và mùa lũ vẫn thay phiên đánh kinh đô.',
   } as Record<string, string>,
