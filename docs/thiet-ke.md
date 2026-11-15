@@ -3315,8 +3315,8 @@ Chủ dự án yêu cầu: thêm bộ trang bị riêng cho các tướng và h�
 - **Rơi ở cả bốn loại trận**: phó bản (kể cả đánh lại), thử thách, đánh đồn, giữ kinh đô.
 - **Cường hóa bằng tài nguyên**; đồ thừa phân giải ra sắt.
 - **Mở khi Gióng về** (code: khi có tướng đầu tiên về, chơi thường là Gióng thành tráng sĩ); phẩm và chỉ số cao hơn mở dần theo chương.
-- **Đấu thành có tính trang bị**, làm ở PR riêng vì đổi luật máy chủ.
-- Không đổi dáng tướng (giữ quyết định không thêm đồ rối mắt quanh tướng, PR #96, #97); tướng mặc đủ bốn món bộ mình thì vũ khí ánh lên. Lạc tướng chưa có đồ.
+- **Đấu thành có tính trang bị**, định làm ở PR riêng vì đổi luật máy chủ. Khi làm thì gộp chung PR #100 (xem Thứ tự làm, PR 2): PR #100 cho trận đọc chỉ số đồ của tướng, mà máy chủ chưa kiểm phần ấy trong bản chụp, nên gộp PR #100 trước là mở lỗ hổng.
+- Không đổi dáng tướng (giữ quyết định không thêm đồ rối mắt quanh tướng, PR #96, #97); tướng mặc đủ bốn món bộ mình thì vũ khí ánh lên (**đã làm**, xem Giao diện). Lạc tướng chưa có đồ.
 
 ### Món đồ
 
@@ -3434,6 +3434,11 @@ Kỹ năng chưa mở (Nhổ tre trước màn 6, Hiệu triệu trước màn 3
   - Món cầm tay, giáp, đồ trên đầu, đồ sau lưng thay phần cùng chỗ của tướng (`ThayDo` ở `heroes.ts`: vũ khí, giáp, mũ miện hay búp lá, áo choàng hay bao tên); thú cưỡi đứng sau lưng chếch sang phải, nhỏ hơn thật cho tướng vẫn là chính; bảo vật lơ lửng bên vai trái trong quầng sáng vàng; cờ chim Lạc, khóm tre đằng ngà cắm đất sau bên trái.
   - Tư thế đứng như tướng chầu sân Điện, theo thế cầm vũ khí: roi, gậy dựng bên phải; gươm trước vai; nỏ cầm ngang hông phải chĩa chếch ra trước (không che giáp); cung tay trái, tên tay phải.
   - Vẽ bằng renderer của cảnh vào khung vẽ riêng rồi đọc ra ảnh, không mở thêm khung WebGL; nhớ theo tướng và món từng ô (chừng 40 ảnh). Đổi món thì vẽ lại chừng 0,1–0,2 giây; lần đầu gặp món mới phải nặn nên lâu hơn, bảng hiện "Đang vẽ…" rồi thay ảnh.
+- **Vũ khí ánh lên** khi tướng mặc đủ bốn món bộ mình (`render/anhVuKhi.ts`; **đã làm**):
+  - Lớp vỏ sáng ôm theo vũ khí: phần vẽ vũ khí của tướng (`RigBuilder.vuKhi`) vẽ thêm một lượt, nở ra theo pháp tuyến, cộng sáng, gắn chung khung xương nên theo vũ khí vung, bắn. Lớp trong làm vũ khí sáng lên, lớp ngoài là quầng. Màu theo bộ: lửa cam Phù Đổng, ngọc lục Tản Viên, vàng Cổ Loa, đồng Cao Lỗ, đỏ son Trưng Trắc, vàng Trưng Nhị.
+  - Vài đốm sáng bốn cánh lấp lánh so le trên vũ khí, phía xa tay cầm.
+  - Ở mọi trận (giữ kinh đô, phó bản, thử thách, đồn, Đấu thành, cả tướng giữ thành): vỏ chập chờn theo nhịp thở, ngã thì tắt. Ở hình tướng trong túi đồ: bản tĩnh.
+  - Tướng không đủ bộ trông y như cũ (đã so dấu hình học sáu tướng trước và sau). Hai Bà ngồi dưới lọng nên nhìn từ trên xuống chỉ thấy rõ khi vung gươm, giương cung.
 - Báo rơi đồ: dòng trong bảng kết quả phó bản và giữ kinh đô có ảnh nhỏ món vừa rơi trong khung phẩm; thẻ màn ghi bộ nào rơi ở đây và phẩm tối đa.
 - Lạc hầu báo một lần khi rơi món đầu tiên.
 
@@ -3443,24 +3448,31 @@ Kỹ năng chưa mở (Nhổ tre trước màn 6, Hiệu triệu trước màn 3
 - `trangBi.ts` mới: rút món (`roiDo`), mặc, tháo, cường hóa, phân giải, khóa; chỉ số tổng của tướng (`chiSoTuong`, dùng chung cho bảng tướng và trận), hiệu ứng bộ, Lực chiến.
 - `GameState.trangBi`: kho món, bộ đếm rút, mã món kế tiếp; mỗi món ghi tướng đang mặc. Bản lưu 27 (PR #86 cũng giữ số 27: bên nào gộp sau thì lấy số kế tiếp); bản lưu cũ có kho rỗng.
 - `HeroSetup` thêm chỉ số đồ đã tính sẵn: bản sao lúc vào trận, nên mặc đồ giữa trận không đổi trận đang đánh. `heroFor`, `heroesFor` điền sẵn, nên mọi trận nhận cùng một chỗ.
-- `battle.ts`: `addHero` nhân máu; đòn thường của tướng nhân sức đánh và chia thời gian nghỉ; `damageFighter` nhân (1 − Giáp) khi mục tiêu là tướng; `useSkill` lấy hệ số và thời gian hồi của chính tướng làm kỹ năng; số kỹ năng qua một hàm theo tướng thay cho hằng số; sự kiện kỹ năng mang bán kính, độ dài, số nghĩa binh để `battleView.ts` vẽ đúng. Chỉ thêm phép nhân, chia nên vẫn tất định.
+- `battle.ts`: `addHero` nhân máu; đòn thường của tướng nhân sức đánh và chia thời gian nghỉ; `damageFighter` nhân (1 − Giáp) khi mục tiêu là tướng (sức đánh, tốc đánh, giáp đọc theo người, `Fighter.trangBi`, nên dùng được cho tướng giữ thành trong Đấu thành); `useSkill` lấy hệ số và thời gian hồi của chính tướng làm kỹ năng; số kỹ năng qua một hàm theo tướng thay cho hằng số; sự kiện kỹ năng mang bán kính, độ dài, số nghĩa binh để `battleView.ts` vẽ đúng. Chỉ thêm phép nhân, chia nên vẫn tất định.
 - Rơi đồ ở `finishStage` (thắng màn, thắng thử thách), `finishCamp`, `finishRaid` (thắng là hạ hết giặc, không mất của); kết quả trận mang món rơi.
-- Đấu thành trước PR riêng: bản chụp và quân đi đánh bỏ phần đồ của tướng. PR Đấu thành: bản chụp mang món đang mặc; `validateSnapshot` kiểm từng món (ô không trùng, cấp đồ không quá chương của bản chụp, phẩm trong trần chương, chỉ số trong khoảng rút, cường hóa trong trần phẩm); máy chủ tự tính chỉ số từ món, không tin số gửi lên; sửa `mayChu.ts`, `luat.d.ts`, trận đối chiếu `doiChieu`.
+- **Đấu thành tính đồ** (PR 2, đã làm):
+  - Bản chụp mang món đang mặc của tướng giữ thành (`Snapshot.trangBi`: mỗi tướng tối đa bốn món, mỗi món chỉ còn phần làm nên chỉ số, `MonGoc`); tướng trong bản chụp không mang số đồ. Bản chụp vẫn `v: 1`: bản chụp cũ không có trường này thì tướng không đồ.
+  - Máy chủ kiểm (`validateSnapshot`, `kiemMon` ở `trangBi.ts`): tướng không mang sẵn số đồ; tướng có món phải là tướng giữ thành; mỗi ô một món; cấp đồ không quá chương của bản chụp; bộ đã rơi được tới chương ấy (đồn chương thấp vẫn rơi bộ của tướng chương sau, nên không so bộ với cấp đồ); phẩm không quá trần của cấp đồ; chỉ số chính đúng ô; số chỉ số phụ đúng phẩm, không trùng, nấc trong khoảng rút; cường hóa không quá trần của phẩm. Mã lại bản chụp thì món chỉ giữ phần làm nên chỉ số.
+  - Máy chủ tự tính chỉ số từ món (`tuongChup`, `ganDoChup`), cả tướng giữ thành (`defenseOf`) lẫn tướng đi đánh (`quanDanh`), bỏ số có sẵn, không tin số gửi lên. Bản chụp sửa tay mạnh nhất cũng chỉ bằng bộ đồ hợp luật mạnh nhất.
+  - Tướng giữ thành mặc đồ: máu cộng như tướng ra trận; sức đánh, tốc đánh, giáp theo đồ; không dùng kỹ năng nên uy lực, hồi kỹ năng không có tác dụng.
+  - Đánh thử dùng tướng mặc đồ như phó bản. `doiChieu` có tướng mặc đồ từ Điện 7 (Điện 10 cả hai bên), `banChupThu` mang bộ đồ hợp luật để thử máy chủ thật.
 - Người chơi mô phỏng không mặc đồ. Đồ vẫn rơi khi giữ kinh đô, kho đầy thì tự phân giải ra sắt; sổ kinh tế có dòng phân giải đồ. Nhịp lên Điện và chuẩn mọi màn, mọi thử thách tính không có đồ, như huân công và nữ tướng.
 
 ### Test
 
-- `trangBi.test.ts`: cùng bộ đếm ra cùng món; tỉ lệ phẩm theo nguồn và trần chương; bộ rơi theo chương và theo tướng đã về; không rơi trước khi Gióng về; mặc, tháo, chuyển tướng; cường hóa (trần, giá, lò rèn hư, thiếu của); phân giải, khóa, kho đầy; chỉ số tổng, các trần, hiệu ứng bộ chỉ khi đúng tướng; trận nhận đúng máu, sát thương, thời gian nghỉ, giáp, hồi, uy lực (Hai Bà mỗi bà một hệ số); hiệu ứng bốn món đổi số kỹ năng và sự kiện mang số; mặc đồ giữa trận không đổi trận; nâng bản lưu 26; bản chụp Đấu thành chưa mang đồ.
+- `trangBi.test.ts`: cùng bộ đếm ra cùng món; tỉ lệ phẩm theo nguồn và trần chương; bộ rơi theo chương và theo tướng đã về; không rơi trước khi Gióng về; mặc, tháo, chuyển tướng; cường hóa (trần, giá, lò rèn hư, thiếu của); phân giải, khóa, kho đầy; chỉ số tổng, các trần, hiệu ứng bộ chỉ khi đúng tướng; trận nhận đúng máu, sát thương, thời gian nghỉ, giáp, hồi, uy lực (Hai Bà mỗi bà một hệ số); hiệu ứng bốn món đổi số kỹ năng và sự kiện mang số; mặc đồ giữa trận không đổi trận; nâng bản lưu 26; món của bản chụp Đấu thành (`kiemMon`: mọi món rút được và cường hóa tới trần đều hợp luật, quá chương thì không), bản chụp mang món không mang số.
+- `dauThanh.test.ts`, `mayChu.test.ts`: món rút thật hợp luật, máy chủ nhận và mã lại gọn; món sửa tay bị từ chối, mỗi luật một ca; chỉ số đồ tính lại từ món, bỏ số giả; tướng giữ thành mặc đồ thêm máu; quân đánh mang đúng chỉ số đồ; đánh lại trận có tướng mặc đồ cả hai bên ra y như máy khách. Test Edge Function (Deno, Postgres): bản chụp có món được nhận, quân đánh mang hiệu ứng bốn món. Trận đối chiếu chạy ra y hệt trên Node, Deno, Chromium.
+- `anhVuKhi.test.ts`: sáu tướng có `anh` thì có hai lớp vỏ chung khung xương, mọi đỉnh gắn vào xương tay cầm, có đốm lấp lánh, ngã thì tắt; không có `anh` thì thân tướng y như cũ; hình tướng ở túi đồ chỉ ánh khi đủ bốn món bộ mình.
 - Đo sức mạnh để ghi vào tài liệu: tướng mặc bộ mẫu (Quý +8, Huyền thoại +10) ở vài màn mỗi chương, so với không đồ và với huân công tối đa.
 - `anhDo.test.ts`: đủ 24 ảnh món, dấu vân tay mô hình khớp ảnh (đổi dáng món thì chạy `node scripts/anh-do.mjs`). `hinhTuong.test.ts`: mọi món mặc được lên tướng nam và nữ, tướng vẫn đứng ở gốc, thú cưỡi sau lưng, bảo vật bên vai không đè thân, cờ và tre cắm đất; mặc đồ bộ khác thì hình đổi. Dáng sáu tướng ở trận giữ y như cũ khi tách phần mặc (đã so dấu hình học trước và sau; `anhCongTrinh.test.ts` canh các tượng tướng ở đền).
-- Chụp kiểm tra bảng tướng (khổ dọc, Fold, ngang), thẻ món, thẻ Chỉ số, bảng kết quả có món rơi.
+- Chụp kiểm tra bảng tướng (khổ dọc, Fold, ngang), thẻ món, thẻ Chỉ số, bảng kết quả có món rơi; vũ khí ánh lên của sáu tướng (`node scripts/chup-nhan-vat.mjs anh`), hình tướng đủ bộ ở túi đồ, trận Hai Bà đủ bộ.
 
 ### Thứ tự làm
 
 1. **PR 0** (#100): tài liệu.
-2. **PR 1** (đã làm, cùng PR #100 vì PR 0 chưa gộp): luật, rơi đồ, bản lưu 27, trận, bảng tướng và kho đồ (ảnh tạm theo ô, khung màu phẩm), test, đo sức mạnh, chốt giá cường hóa. Đấu thành chưa tính đồ.
-3. **PR 2**: Đấu thành tính đồ (bản chụp, máy chủ).
-4. **PR 3** (đã làm, cùng PR #100): túi đồ kiểu game nhập vai: 24 ảnh món đồ vẽ sẵn (6 bộ × 4 ô), hình tướng mặc đúng đồ đang đeo, khung hình nhân, túi đồ lưới ảnh khung màu phẩm (xem Giao diện). Chưa làm: vũ khí ánh lên khi tướng mặc đủ bốn món bộ mình.
+2. **PR 1** (đã làm, cùng PR #100 vì PR 0 chưa gộp): luật, rơi đồ, bản lưu 27, trận, bảng tướng và kho đồ (ảnh tạm theo ô, khung màu phẩm), test, đo sức mạnh, chốt giá cường hóa.
+3. **PR 2** (đã làm, cùng PR #100): Đấu thành tính đồ (bản chụp mang món, máy chủ kiểm món và tự tính chỉ số, tướng giữ thành mặc đồ; xem Code). Gộp chung vì PR #100 cho trận đọc chỉ số đồ của tướng mà máy chủ chưa kiểm phần ấy trong bản chụp: gộp PR #100 trước thì bản chụp sửa tay ghi sẵn số đồ cho tướng sẽ được máy chủ nhận.
+4. **PR 3** (đã làm, cùng PR #100): túi đồ kiểu game nhập vai: 24 ảnh món đồ vẽ sẵn (6 bộ × 4 ô), hình tướng mặc đúng đồ đang đeo, khung hình nhân, túi đồ lưới ảnh khung màu phẩm (xem Giao diện); vũ khí ánh lên khi tướng mặc đủ bốn món bộ mình.
 
 ## Nhịp chơi và lưu game
 
@@ -3514,5 +3526,5 @@ Kỹ năng chưa mở (Nhổ tre trước màn 6, Hiệu triệu trước màn 3
 21. **Ngày đêm** (chủ dự án chọn, đã làm; xem mục cùng tên): kinh đô có ngày, chiều tà, đêm, rạng đông, 12 phút chơi một vòng, chỉ để nhìn. PR 1 trời và cài đặt, PR 2 đèn đuốc, đèn thuyền, đom đóm.
 22. **Đấu thành** (chủ dự án đã duyệt; đã làm PR 1–6: trận tất định, luật, đánh thử ngoài mạng, server, nối mạng; xem lại trận, bảng xếp hạng, gắn Google và lưu mây; xem Kế hoạch cùng tên): đánh thành người chơi khác, cướp của, server Supabase miễn phí.
 23. **Dân gánh hàng về kho** (chủ dự án chọn, đã làm PR 1, 2; xem mục cùng tên): công trình xa nơi nhận làm ra ít hơn, thấp nhất 50%; đường đi cho dân đi nhanh gấp đôi. PR 1 luật, PR 2 dân gánh trên đường, PR 3 tới nơi sản xuất.
-24. **Trang bị rơi ngẫu nhiên và sáu chỉ số tướng** (chủ dự án đã duyệt; xem Kế hoạch cùng tên): đồ rơi ở phó bản, thử thách, đồn, giữ kinh đô; mỗi tướng một bộ mang tên truyền thuyết, ai mặc cũng được, hiệu ứng bộ khi đúng tướng mặc; sáu chỉ số và Lực chiến; cường hóa bằng tài nguyên, phân giải ra sắt; bảng tướng kiểu túi đồ game nhập vai (hình tướng mặc đồ, ảnh món vẽ sẵn). PR 1 luật và bảng, PR 2 Đấu thành, PR 3 hình (đã làm cùng PR 1).
+24. **Trang bị rơi ngẫu nhiên và sáu chỉ số tướng** (chủ dự án đã duyệt; xem Kế hoạch cùng tên): đồ rơi ở phó bản, thử thách, đồn, giữ kinh đô; mỗi tướng một bộ mang tên truyền thuyết, ai mặc cũng được, hiệu ứng bộ khi đúng tướng mặc; sáu chỉ số và Lực chiến; cường hóa bằng tài nguyên, phân giải ra sắt; bảng tướng kiểu túi đồ game nhập vai (hình tướng mặc đồ, ảnh món vẽ sẵn), mặc đủ bộ mình thì vũ khí ánh lên; Đấu thành tính đồ (máy chủ kiểm món, tự tính chỉ số). PR 1 luật và bảng, PR 2 Đấu thành, PR 3 hình (đã làm cả ba, cùng PR #100).
 25. **Để sau**: nhạc nền.
