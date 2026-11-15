@@ -68,4 +68,27 @@ describe('hình tướng mặc đồ', () => {
       }
     }
   }, 120000);
+
+  it('khung hình đứng theo cỡ dáng tướng, giống nhau mọi món, ôm vừa mọi món mặc', async () => {
+    const { MON_IDS } = await import('./doTuong');
+    const { HINH_H, HINH_W, chieuDiem, chieuHinh, hinhTuongModel, khungDung } = await import('./hinhTuong');
+    const { kDung } = await import('./heroes');
+    const aspect = HINH_W / HINH_H;
+    for (const hero of HERO_KINDS) {
+      const k = kDung(hero);
+      const kh = khungDung(hero);
+      // Cùng một tỉ lệ với cỡ dáng: tướng nào cũng cao bằng nhau trong khung.
+      expect(kh.half / k).toBeCloseTo(khungDung('caoLo').half / kDung('caoLo'), 6);
+      const c = chieuDiem(new THREE.Vector3(kh.x ?? 0, kh.y, 0));
+      for (const id of [null, ...MON_IDS]) {
+        const mac = id ? { [id.split('-')[1]]: id } : {};
+        const b = chieuHinh(hinhTuongModel(hero, mac));
+        const ten = `${hero} ${id ?? 'trần'}`;
+        expect(b.x0, ten).toBeGreaterThan(c.x - kh.half * aspect);
+        expect(b.x1, ten).toBeLessThan(c.x + kh.half * aspect);
+        expect(b.y0, ten).toBeGreaterThan(c.y - kh.half);
+        expect(b.y1, ten).toBeLessThan(c.y + kh.half);
+      }
+    }
+  }, 300000);
 });
