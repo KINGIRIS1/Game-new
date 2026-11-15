@@ -20,6 +20,7 @@ import * as mayChu from './mayChu';
 import { chonDoiThu, danhLai, kiemTen, kinhDoMay, nhanBanChup, quanDanh, truCua } from './mayChu';
 import luatDts from '../../supabase/functions/dau-thanh/luat.d.ts?raw';
 import { edge, setDien } from './testmap';
+import { tinhDo } from './trangBi';
 
 /** Kinh đô Điện 5 có doanh trại, quân (như test Đấu thành). */
 function capital() {
@@ -129,6 +130,44 @@ describe('trận ở máy chủ', () => {
     expect(res.cuop).toEqual(lootPvp(decodeSnapshot(def)!, score, 5));
     expect(res.chienCong).toEqual(trophyDelta(100, 120, score.stars));
     for (const k of ['giao', 'cung', 'voi', 'no'] as const) expect(res.mat[k]).toBeLessThanOrEqual(r.quan.army[k]);
+  });
+
+  it('tướng mặc đồ: máy chủ kiểm món, tự tính chỉ số; số đồ ghi sẵn trong bản chụp thì từ chối', () => {
+    for (let dien = 5; dien <= 10; dien++) {
+      const thu = mayChu.banChupThu(dien);
+      const snap = decodeSnapshot(thu.ma)!;
+      expect(validateSnapshot(snap), `Điện ${dien}`).toBeNull();
+      expect(nhanBanChup(thu.ma), `Điện ${dien}`).toEqual({ ma: thu.ma, dien });
+      const r = quanDanh(thu.ma, thu.quan, 'bac', 1);
+      if (!('quan' in r)) throw new Error(r.loi);
+      // Chỉ số đồ của tướng đi đánh là `tinhDo` của món trong bản chụp người đánh; Điện 5, 6 không mặc gì.
+      expect(r.quan.heroes.map((h) => h.trangBi)).toEqual(snap.heroes.map((h) => (snap.trangBi?.[h.kind] ? tinhDo(h.kind, snap.trangBi[h.kind]!) : undefined)));
+      expect(r.quan.heroes.some((h) => h.trangBi)).toBe(dien >= 7);
+    }
+    // Hai Bà ở Điện 10 mặc đủ bộ mình: kỹ năng mạnh hơn.
+    const q10 = quanDanh(mayChu.banChupThu(10).ma, { giao: 10 }, 'bac', 1);
+    if (!('quan' in q10)) throw new Error(q10.loi);
+    expect(q10.quan.heroes.map((h) => h.trangBi?.bo4)).toEqual([true, true]);
+    // Bản chụp sửa tay ghi sẵn số đồ cho tướng: máy chủ không nhận.
+    const hack = decodeSnapshot(mayChu.banChupThu(7).ma)!;
+    hack.heroes[0].trangBi = { mau: 1000, danh: 1000, toc: 0.5, uy: 10, giap: 0.4, hoi: 0.3 };
+    expect(nhanBanChup(encodeSnapshot(hack))).toEqual({ loi: 'tướng mang sẵn chỉ số đồ' });
+    // Bản chụp lỡ có số giả (lưu trước khi máy chủ kiểm): quân đánh vẫn tính lại từ món, bỏ số giả.
+    const r = quanDanh(encodeSnapshot(hack), { giao: 10 }, 'bac', 1);
+    if (!('quan' in r)) throw new Error(r.loi);
+    expect(r.quan.heroes[0].trangBi).toEqual(tinhDo(hack.heroes[0].kind, hack.trangBi![hack.heroes[0].kind]!));
+  });
+
+  it('đánh lại trận có tướng mặc đồ cả hai bên ra đúng như máy khách', () => {
+    const thu = mayChu.banChupThu(10);
+    const r = quanDanh(thu.ma, thu.quan, 'tay', 7);
+    if (!('quan' in r)) throw new Error(r.loi);
+    const live = beginPvp(decodeSnapshot(thu.ma)!, r.quan);
+    expect(live.battle.fighters.filter((f) => f.trangBi).map((f) => f.side)).toEqual(['ta', 'ta', 'giac', 'giac']);
+    while (!stepPvp(live, 1000 / 60)) for (const k of SKILL_IDS) if (live.battle.t > 3 && skillReady(live.battle, k)) pushInput(live, k);
+    const res = danhLai(thu.ma, JSON.parse(JSON.stringify(r.quan)), JSON.parse(JSON.stringify(live.inputs)), { atkDien: 10, atkTrophies: 0, defTrophies: 0, bot: false });
+    const score = scorePvp(live.def);
+    expect([res.sao, res.pct, res.buoc, res.mat]).toEqual([score.stars, score.pct, live.step, live.battle.lost]);
   });
 
   it('lần bấm sai dạng bị bỏ; rút quân ngay thì trận xong ở bước đầu, không mất ai', () => {

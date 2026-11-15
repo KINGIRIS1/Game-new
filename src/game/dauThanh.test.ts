@@ -1,10 +1,11 @@
-// Canh Đấu thành (PR 2, chưa có máy chủ): bản chụp kinh đô và mã bản chụp, kiểm bản chụp sửa tay, kinh đô máy, trận
+// Canh Đấu thành (PR 2, chưa có máy chủ): bản chụp kinh đô và mã bản chụp, kiểm bản chụp sửa tay (cả món đồ của tướng:
+// máy chủ kiểm món, tự tính chỉ số, tướng giữ thành mặc đồ), kinh đô máy, trận
 // Đấu thành (quân ta đánh thành, lính giữ thành, tháp bắn quân ta), tất định và đánh lại từ đầu vào ghi sẵn, sao,
 // của cướp, chiến công, và cân bằng: cùng cấp Điện, đủ quân mẫu thì được 1–2 sao, nửa quân thì 0 sao.
 
 import { describe, expect, it } from 'vitest';
-import { skillReady, type HeroSetup, type PvpAttack } from './battle';
-import { BUILDINGS, DAU_THANH, GUARD_CAP, SKILL_IDS, UNITS, type SkillId } from './defs';
+import { isHero, skillReady, type HeroKind, type HeroSetup, type PvpAttack } from './battle';
+import { BUILDINGS, CUONG_HOA_TRAN, DAU_THANH, GUARD_CAP, SKILL_IDS, UNITS, type BoDo, type Chapter, type SkillId } from './defs';
 import { armySpace, type Army } from './doanhTrai';
 import {
   beginPvp,
@@ -13,7 +14,9 @@ import {
   cleanInputs,
   decodeSnapshot,
   defenderState,
+  defenseOf,
   encodeSnapshot,
+  ganDoChup,
   lootCap,
   lootPvp,
   makeSnapshot,
@@ -24,6 +27,7 @@ import {
   simulatePvp,
   stepPvp,
   trophyDelta,
+  tuongChup,
   validateArmy,
   validateSnapshot,
   type PvpRun,
@@ -35,6 +39,7 @@ import { nhanBanChup } from './mayChu';
 import { HALF_ARMY, HALF_ARMY4, REACTION_S, SAMPLE_ARMY, SAMPLE_ARMY4, SEEDS } from './testkit';
 import { GRID, RIVER_START, farBankOf, isRiver } from './map';
 import { DIEN, edge, setDien } from './testmap';
+import { HERO_STATS, rutMon, tinhDo, type MonGoc } from './trangBi';
 
 /** Tướng của người đánh thành ở cấp Điện `dien`: Gióng có Nhổ tre ở Điện 5, Sơn Tinh ở Điện 6, An Dương Vương ở Điện 7, Cao Lỗ từ Điện 8. */
 function heroAt(dien: number): HeroSetup[] {
@@ -171,6 +176,108 @@ describe('bản chụp kinh đô', () => {
       expect(snap.buildings.some((b) => b.type === 'choiCanh'), `Điện ${dien}`).toBe(true);
       expect(snap.buildings.some((b) => b.type === 'kho'), `Điện ${dien}`).toBe(true);
     }
+  });
+});
+
+describe('đồ của tướng trong Đấu thành', () => {
+  const HAI_BA: HeroSetup[] = [
+    { kind: 'trungTrac', bamboo: false, glow: false, non: false },
+    { kind: 'trungNhi', bamboo: false, glow: false, non: false, hieuTrieu: true },
+  ];
+
+  /** Bốn món bộ `bo` rút thật ở thử thách chương 5 (mỗi ô một món), cường hóa tới trần của phẩm. */
+  function monThat(bo: BoDo, from = 0): MonGoc[] {
+    const out = new Map<string, MonGoc>();
+    for (let seq = from; out.size < 4; seq++) {
+      // Từ phẩm Quý (hai chỉ số phụ trở lên) để thử được luật chỉ số phụ, trần phẩm.
+      const m = rutMon(seq, 'thuDau', 5, [bo]);
+      if (m && m.pham >= 3 && !out.has(m.o)) out.set(m.o, { ...m, cuong: CUONG_HOA_TRAN[m.pham] });
+    }
+    return [...out.values()];
+  }
+
+  /** Kinh đô máy Điện 10, Hai Bà giữ thành mặc đủ bộ mình. */
+  function coDo(): Snapshot {
+    const snap = botSnapshot(10);
+    snap.heroes = HAI_BA.map((h) => ({ ...h }));
+    snap.trangBi = { trungTrac: monThat('trungTrac'), trungNhi: monThat('trungNhi', 50) };
+    return snap;
+  }
+
+  it('món rút thật hợp luật; máy chủ nhận, mã lại chỉ giữ phần làm nên chỉ số', () => {
+    const snap = coDo();
+    expect(validateSnapshot(snap)).toBeNull();
+    const extra = JSON.parse(JSON.stringify(snap)) as Snapshot;
+    Object.assign(extra.trangBi!.trungTrac![0], { id: 7, tuong: 'trungTrac', khoa: true });
+    const got = nhanBanChup(encodeSnapshot(extra));
+    if ('loi' in got) throw new Error(got.loi);
+    expect(decodeSnapshot(got.ma)!.trangBi).toEqual(snap.trangBi);
+  });
+
+  it('món sửa tay bị từ chối', () => {
+    const good = coDo();
+    const bad = (edit: (s: Snapshot) => void) => {
+      const s: Snapshot = JSON.parse(JSON.stringify(good));
+      edit(s);
+      return validateSnapshot(s);
+    };
+    const mon = (s: Snapshot, i = 0) => s.trangBi!.trungTrac![i];
+    const giap = (s: Snapshot) => s.trangBi!.trungTrac!.find((m) => m.o === 'giap')!;
+    // Tướng mang sẵn số đồ (không qua món).
+    expect(bad((s) => (s.heroes[0].trangBi = { mau: 50, danh: 50, toc: 0, uy: 0, giap: 0, hoi: 0 }))).toMatch(/chỉ số đồ/);
+    // Món của tướng không giữ thành.
+    expect(bad((s) => (s.trangBi!.giong = monThat('phuDong')))).toMatch(/không giữ thành/);
+    // Hai món một ô, quá bốn món.
+    expect(bad((s) => (s.trangBi!.trungTrac![1] = { ...mon(s, 0) }))).toMatch(/cùng ô/);
+    expect(bad((s) => s.trangBi!.trungTrac!.push({ ...mon(s) }))).toBe('sai dạng');
+    // Cấp đồ quá chương của bản chụp; bộ chương sau ở chương trước.
+    expect(bad((s) => ((s.chapter = 4), (s.trangBi = { trungTrac: monThat('trungTrac').map((m) => ({ ...m, cap: 4 })) })))).toMatch(/bộ trungTrac chưa rơi/);
+    expect(bad((s) => (s.chapter = 4))).toMatch(/cấp 5 quá chương 4/);
+    expect(bad((s) => (mon(s).cap = 6 as Chapter))).toMatch(/sai dạng/);
+    // Phẩm quá trần của cấp đồ (chương 1 tới Tốt), chỉ số chính sai ô, chỉ số phụ thừa, trùng, nấc quá.
+    expect(bad((s) => Object.assign(mon(s), { cap: 1 }))).toMatch(/phẩm/);
+    expect(bad((s) => (mon(s).chinh = mon(s).o === 'vuKhi' ? 'mau' : 'danh'))).toMatch(/chỉ số chính/);
+    expect(bad((s) => mon(s).phu.push({ k: 'uy', nac: 1 }))).not.toBeNull();
+    expect(bad((s) => (giap(s).phu[1] = { ...giap(s).phu[0] }))).toMatch(/trùng/);
+    expect(bad((s) => (mon(s).phu[0].nac = 99))).toMatch(/phụ sai/);
+    expect(bad((s) => (mon(s).phu[0].k = mon(s).chinh))).toMatch(/trùng/);
+    // Cường hóa quá trần, số lạ.
+    expect(bad((s) => (mon(s).cuong += 1))).toMatch(/cường hóa/);
+    expect(bad((s) => (mon(s).cuong = 1.5))).toMatch(/sai dạng/);
+    expect(bad((s) => ((mon(s) as unknown as Record<string, unknown>).o = 'nhan'))).toMatch(/sai dạng/);
+  });
+
+  it('chỉ số đồ tính lại từ món, không tin số ghi sẵn', () => {
+    const snap = coDo();
+    const want = snap.heroes.map((h) => tinhDo(h.kind, snap.trangBi![h.kind]!));
+    expect(want.every((d) => d.bo4)).toBe(true);
+    expect(defenseOf(snap).heroes.map((h) => h.trangBi)).toEqual(want);
+    expect(tuongChup(snap).map((h) => h.trangBi)).toEqual(want);
+    // Bản chụp lỡ ghi số giả (đã lưu từ trước khi kiểm): bỏ số giả, tính lại; không món thì không đồ.
+    const fake = { mau: 99, danh: 99, toc: 0, uy: 0, giap: 0.99, hoi: 0 };
+    snap.heroes[0].trangBi = fake;
+    snap.heroes[1].trangBi = fake;
+    delete snap.trangBi!.trungNhi;
+    const got = defenseOf(snap).heroes;
+    expect(got[0].trangBi).toEqual(want[0]);
+    expect(got[1]).not.toHaveProperty('trangBi');
+    expect(ganDoChup(snap.heroes[1], undefined)).not.toHaveProperty('trangBi');
+  });
+
+  it('tướng giữ thành mặc đồ: thêm máu; sức đánh, tốc đánh, giáp theo đồ của chính người ấy (`Fighter.trangBi`)', () => {
+    const attack = attackAt(botSnapshot(10), SAMPLE_ARMY4, 3);
+    const tuong = (snap: Snapshot) => beginPvp(snap, attack).battle.fighters.filter((f) => f.side === 'giac' && isHero(f.kind));
+    const khong = coDo();
+    delete khong.trangBi;
+    const co = tuong(coDo());
+    const tran = tuong(khong);
+    expect(co.map((f) => f.kind)).toEqual(['trungTrac', 'trungNhi']);
+    co.forEach((f, i) => {
+      const kind = f.kind as HeroKind;
+      expect(f.trangBi).toEqual(tinhDo(kind, coDo().trangBi![kind]!));
+      expect(f.maxHp - tran[i].maxHp).toBeCloseTo(HERO_STATS[kind].hp * f.trangBi!.mau * DAU_THANH.hpMul[9], 6);
+      expect(tran[i].trangBi).toBeUndefined();
+    });
   });
 });
 

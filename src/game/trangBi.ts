@@ -81,6 +81,23 @@ export interface TrangBiState {
 
 export const initialTrangBi = (): TrangBiState => ({ kho: [], seq: 0, nextId: 1 });
 
+/**
+ * Món đồ chỉ còn phần làm nên chỉ số: không mã, không khóa, không tướng mặc. Bản chụp Đấu thành mang món dưới dạng
+ * này (`chupMon`), máy chủ kiểm (`kiemMon`) rồi tự tính chỉ số (`tinhDo`).
+ */
+export type MonGoc = Pick<Mon, 'o' | 'bo' | 'pham' | 'cap' | 'chinh' | 'phu' | 'cuong'>;
+
+/** Chép phần làm nên chỉ số của món (bỏ trường khác, chép sâu chỉ số phụ). */
+export const chupMon = (m: MonGoc): MonGoc => ({
+  o: m.o,
+  bo: m.bo,
+  pham: m.pham,
+  cap: m.cap,
+  chinh: m.chinh,
+  phu: m.phu.map((p) => ({ k: p.k, nac: p.nac })),
+  cuong: m.cuong,
+});
+
 /** Phần cộng thêm của đồ một tướng đang mặc (đã cộng hiệu ứng hai món, đã chặn trần); `bo4`: đủ bốn món bộ mình. */
 export type ChiSoDo = Record<ChiSo, number> & { bo4?: true };
 
@@ -99,14 +116,14 @@ const khongDo = (): ChiSoDo => ({ mau: 0, danh: 0, toc: 0, uy: 0, giap: 0, hoi: 
 // ---------- Chỉ số của món ----------
 
 /** Chỉ số chính của món (phần cộng thêm, 0,05 là 5%). */
-export const chinhOf = (m: Mon): number => PHAM_CHINH[m.pham] * CHI_SO_HE[m.chinh] * CAP_DO_HE[m.cap] * (1 + CUONG_HOA_NAC * m.cuong);
+export const chinhOf = (m: MonGoc): number => PHAM_CHINH[m.pham] * CHI_SO_HE[m.chinh] * CAP_DO_HE[m.cap] * (1 + CUONG_HOA_NAC * m.cuong);
 
 /** Một chỉ số phụ của món. */
 export const phuOf = (m: Pick<Mon, 'cap'>, p: { k: ChiSo; nac: number }): number =>
   (PHU_THAP + PHU_NAC * (p.nac - 1)) * CHI_SO_HE[p.k] * CAP_DO_HE[m.cap];
 
 /** Mọi chỉ số món này cộng thêm. */
-export function chiSoMon(m: Mon): Record<ChiSo, number> {
+export function chiSoMon(m: MonGoc): Record<ChiSo, number> {
   const out = khongDo();
   out[m.chinh] += chinhOf(m);
   for (const p of m.phu) out[p.k] += phuOf(m, p);
@@ -128,10 +145,10 @@ export const monDangMac = (s: GameState, kind: HeroKind): Mon[] => s.trangBi.kho
 export const monO = (s: GameState, kind: HeroKind, o: ODo): Mon | undefined => s.trangBi.kho.find((m) => m.tuong === kind && m.o === o);
 
 /** Số món của bộ mình tướng `kind` đang mặc trong `worn`. */
-export const boDem = (kind: HeroKind, worn: Mon[]): number => worn.filter((m) => BO_CUA[m.bo] === kind).length;
+export const boDem = (kind: HeroKind, worn: readonly MonGoc[]): number => worn.filter((m) => BO_CUA[m.bo] === kind).length;
 
 /** Phần cộng của bộ đồ `worn` trên tướng `kind`: cộng mọi món, hiệu ứng hai món (đúng tướng của bộ), chặn trần. */
-export function tinhDo(kind: HeroKind, worn: Mon[]): ChiSoDo {
+export function tinhDo(kind: HeroKind, worn: readonly MonGoc[]): ChiSoDo {
   const out = khongDo();
   for (const m of worn) {
     const c = chiSoMon(m);
@@ -415,6 +432,35 @@ export function isMon(v: unknown): v is Mon {
   if (!isInt(v.cuong, 0, CUONG_HOA_TRAN[v.pham as number])) return false;
   if (v.khoa !== undefined && v.khoa !== true) return false;
   return v.tuong === undefined || HERO_KINDS.includes(v.tuong as HeroKind);
+}
+
+/** Chương đầu tiên rơi ra bộ `bo` (chương của tướng mang bộ). */
+const chuongBo = (bo: BoDo): Chapter => ([1, 2, 3, 4, 5] as Chapter[]).find((c) => BO_CHUONG[c].includes(bo)) ?? 5;
+
+/**
+ * Món trong bản chụp Đấu thành có thể là món rơi thật ở kinh đô đang ở chương `chuong` không (chống bản chụp sửa tay),
+ * xét đúng như `rutMon` rút món và `cuongHoa` cường hóa: đúng dạng; cấp đồ không quá chương; bộ đã rơi được tới chương
+ * ấy (đồn chương thấp vẫn rơi bộ của tướng chương sau, nên không so bộ với cấp đồ); phẩm không quá trần của cấp đồ;
+ * chỉ số chính đúng ô; số chỉ số phụ đúng phẩm, không trùng nhau, không trùng chỉ số chính, nấc trong khoảng rút;
+ * cường hóa không quá trần của phẩm. Trả về lý do sai đầu tiên, hay null nếu hợp luật.
+ */
+export function kiemMon(v: unknown, chuong: Chapter): string | null {
+  if (!isObj(v) || !O_DO.includes(v.o as ODo) || !BO_DO.includes(v.bo as BoDo) || !isInt(v.pham, 1, 4) || !isInt(v.cap, 1, 5)) return 'món sai dạng';
+  if (!CHI_SO.includes(v.chinh as ChiSo) || !Array.isArray(v.phu) || !isInt(v.cuong, 0, 99)) return 'món sai dạng';
+  const m = v as unknown as MonGoc;
+  if (m.cap > chuong) return `món cấp ${m.cap} quá chương ${chuong}`;
+  if (chuongBo(m.bo) > chuong) return `bộ ${m.bo} chưa rơi ở chương ${chuong}`;
+  if (m.pham > PHAM_TRAN[m.cap]) return `phẩm ${m.pham} quá trần của cấp đồ ${m.cap}`;
+  if (!O_CHINH[m.o].includes(m.chinh)) return `ô ${m.o} không có chỉ số chính ${m.chinh}`;
+  if (m.phu.length !== m.pham - 1) return 'số chỉ số phụ không khớp phẩm';
+  const seen = new Set<unknown>([m.chinh]);
+  for (const p of m.phu as unknown[]) {
+    if (!isObj(p) || !CHI_SO.includes(p.k as ChiSo) || !isInt(p.nac, 1, PHU_NAC_MAX)) return 'chỉ số phụ sai';
+    if (seen.has(p.k)) return 'chỉ số phụ trùng';
+    seen.add(p.k);
+  }
+  if (m.cuong > CUONG_HOA_TRAN[m.pham]) return `cường hóa +${m.cuong} quá trần của phẩm`;
+  return null;
 }
 
 /** Phần trang bị của bản lưu: món đúng luật, mã không trùng, mỗi tướng một món mỗi ô. */

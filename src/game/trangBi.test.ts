@@ -1,13 +1,15 @@
 // Canh trang bị tướng (docs/thiet-ke.md mục Kế hoạch: trang bị rơi ngẫu nhiên và sáu chỉ số tướng): rút đồ lặp lại
 // được, tỉ lệ phẩm theo nơi rơi và trần chương, bộ rơi theo chương, kho đầy, mặc tháo, cường hóa, phân giải; chỉ số
 // tổng và hiệu ứng bộ; trận nhận đúng máu, sát thương, tốc đánh, giáp, hồi, uy lực, hiệu ứng bốn món; rơi đồ sau
-// trận; bản lưu 26 lên 27; Đấu thành chưa tính đồ.
+// trận; bản lưu 26 lên 27; món của bản chụp Đấu thành (`kiemMon`, `chupMon`).
 
 import { describe, expect, it } from 'vitest';
 import { doTa, isHero, startFieldBattle, stepField, useSkill, type Battle, type HeroSetup } from './battle';
 import { startStage, updateCampaign } from './campaign';
 import {
   BO_BON,
+  BO_CHUONG,
+  BO_DO,
   BO_HAI,
   CAP_DO_GIA,
   CHI_SO_TRAN,
@@ -44,12 +46,14 @@ import {
   boRoi,
   canCuongHoa,
   chinhOf,
+  chupMon,
   chiSoTuong,
   cuongHoa,
   doCua,
   giaCuongHoa,
   isTrangBiState,
   khoaDo,
+  kiemMon,
   lucChienVoi,
   macDo,
   phanGiai,
@@ -122,6 +126,30 @@ describe('rút đồ', () => {
       for (let seq = 0; seq < 5000; seq++) max = Math.max(max, rutMon(seq, 'don', chuong, ['phuDong'])?.pham ?? 0);
       expect(max).toBe(PHAM_TRAN[chuong]);
     }
+  });
+
+  it('kiểm món của bản chụp Đấu thành: mọi món rút được, cường hóa tới trần, đều hợp luật; quá chương thì không', () => {
+    const CH = [1, 2, 3, 4, 5] as const;
+    let n = 0;
+    for (const nguon of Object.keys(ROI_DO) as NguonDo[]) {
+      for (const chuong of CH) {
+        // Đồn, giữ kinh đô rơi bộ của các tướng đã về: bộ chương nào cũng được, miễn không quá chương đang ở.
+        const bo = BO_DO.filter((b) => CH.find((c) => BO_CHUONG[c].includes(b))! <= chuong);
+        for (let seq = 0; seq < 400; seq++) {
+          const m = rutMon(seq, nguon, chuong, bo);
+          if (!m) continue;
+          n++;
+          expect(kiemMon(m, chuong), JSON.stringify(m)).toBeNull();
+          expect(kiemMon({ ...m, cuong: CUONG_HOA_TRAN[m.pham] }, chuong)).toBeNull();
+          expect(kiemMon({ ...m, cuong: CUONG_HOA_TRAN[m.pham] + 1 }, chuong)).not.toBeNull();
+          if (chuong > 1) expect(kiemMon(m, (chuong - 1) as 1 | 2 | 3 | 4)).not.toBeNull();
+        }
+      }
+    }
+    expect(n).toBeGreaterThan(1000);
+    // Món chép bằng `chupMon` cho cùng chỉ số với món trong kho.
+    const m = { ...rutMon(7, 'thuDau', 5, ['trungNhi'])!, id: 3, tuong: 'trungNhi' as const, khoa: true as const };
+    expect(tinhDo('trungNhi', [chupMon(m)])).toEqual(tinhDo('trungNhi', [m]));
   });
 
   it('chưa có Gióng thì không rơi, không tốn lần rút', () => {
@@ -498,13 +526,21 @@ describe('bản lưu và Đấu thành', () => {
     expect(isTrangBiState(st([{ ...ok, id: 9 }]))).toBe(false);
   });
 
-  it('Đấu thành chưa tính đồ: bản chụp và quân đi đánh không mang đồ của tướng', () => {
+  it('Đấu thành tính đồ: bản chụp mang món đang mặc (không mang số), quân đánh thử mang đồ', () => {
     const s = base();
-    const m = them(s);
+    const m = them(s, { pham: 2, phu: [{ k: 'mau', nac: 1 }] });
     macDo(s, m.id, 'giong');
-    expect(heroesFor(s, 1)[0].trangBi).toBeDefined();
-    for (const h of makeSnapshot(s).heroes) expect(h.trangBi).toBeUndefined();
-    for (const h of attackFrom(s, { giao: 1, cung: 0, voi: 0, no: 0 }, 'bac', 1).heroes) expect(h.trangBi).toBeUndefined();
+    const d = doCua(s, 'giong');
+    expect(heroesFor(s, 1)[0].trangBi).toEqual(d);
+    const snap = makeSnapshot(s);
+    for (const h of snap.heroes) expect(h).not.toHaveProperty('trangBi');
+    expect(snap.trangBi).toEqual({ giong: [chupMon(m)] });
+    expect(snap.trangBi!.giong![0]).not.toHaveProperty('id');
+    expect(snap.trangBi!.giong![0]).not.toHaveProperty('tuong');
+    expect(attackFrom(s, { giao: 1, cung: 0, voi: 0, no: 0 }, 'bac', 1).heroes[0].trangBi).toEqual(d);
+    // Không mặc gì thì bản chụp không có trường đồ (như bản chụp cũ).
+    thaoDo(s, m.id);
+    expect(makeSnapshot(s)).not.toHaveProperty('trangBi');
   });
 });
 

@@ -122,9 +122,9 @@ try {
     );
     if (!same) fail(`kết quả máy chủ ${JSON.stringify(ketQua)} khác tự đánh lại ${JSON.stringify(mine)}`);
   }
-  // Trận giữa hai người thử: B giữ kinh đô máy Điện 7 (có của trong kho); A gửi kèm bản chụp Điện 7 (cùng cấp với B)
-  // rồi đánh B theo id, đủ 3 phút.
-  await goi({ hanh: 'thamGia', ten: 'Máy thử hai', banChup: luat.kinhDoMay(7).ma }, tokenB);
+  // Trận giữa hai người thử: B giữ kinh đô máy Điện 7 (có của trong kho, An Dương Vương mặc đồ giữ thành: máy chủ
+  // kiểm món, tự tính chỉ số); A gửi kèm bản chụp Điện 7 (cùng cấp với B) rồi đánh B theo id, đủ 3 phút.
+  await goi({ hanh: 'thamGia', ten: 'Máy thử hai', banChup: luat.banChupThu(7).ma }, tokenB);
   const mA = await goi({ hanh: 'toi' });
   const thuA = luat.banChupThu(7);
   const pvp = await goi({ hanh: 'danh', doiThu: idB, quan: thuA.quan, huong: 'bac', banChup: thuA.ma });

@@ -4,7 +4,7 @@
 // JSON, bản chụp đi dưới dạng mã `TDVS1:` nên máy chủ không cần biết bên trong bản chụp có gì.
 // Máy khách cũng dùng được (kiểm tên trước khi gửi, dựng trận từ quân máy chủ trả về).
 
-import { type PvpAttack } from './battle';
+import { type HeroKind, type PvpAttack } from './battle';
 import { DAU_THANH, FIELD_CAP, RESOURCE_IDS, SKILL_IDS, UNIT_TYPES, type Resources, type UnitType } from './defs';
 import { armySpace, type Army } from './doanhTrai';
 import {
@@ -12,14 +12,18 @@ import {
   cleanInputs,
   decodeSnapshot,
   encodeSnapshot,
+  ganDoChup,
   lootPvp,
   scorePvp,
   simulatePvp,
   trophyDelta,
+  tuongChup,
   validateSnapshot,
   type PvpInput,
   type Snapshot,
 } from './dauThanh';
+import { BO_CUA, BO_DO, CHI_SO, CUONG_HOA_TRAN, O_CHINH, O_DO, PHAM_TRAN, PHU_NAC_MAX, type BoDo, type Chapter } from './defs';
+import { chupMon, type MonGoc } from './trangBi';
 
 /** Số liệu máy chủ dùng (khóa, khiên, giới hạn lượt gọi, ghép trận, giữ dữ liệu). */
 export const CAU_HINH = {
@@ -85,7 +89,8 @@ export function nhanBanChup(ma: unknown): { ma: string; dien: number } | { loi: 
   const why = validateSnapshot(snap);
   if (why) return { loi: why };
   if (snap.dien < DAU_THANH.unlockDien) return { loi: `Điện cấp ${snap.dien} chưa mở Đấu thành` };
-  // Mã lại từ bản đã đọc: bỏ khoảng trắng, trường lạ.
+  // Mã lại từ bản đã đọc: bỏ khoảng trắng; món đồ chỉ giữ phần làm nên chỉ số.
+  if (snap.trangBi) for (const k of Object.keys(snap.trangBi) as HeroKind[]) snap.trangBi[k] = snap.trangBi[k]!.map(chupMon);
   return { ma: encodeSnapshot(snap), dien: snap.dien };
 }
 
@@ -129,7 +134,8 @@ function docMa(ma: string): Snapshot {
 /**
  * Quân đánh thành, máy chủ dựng khi bắt đầu trận. Quân chọn không quá quân trong bản chụp của chính người đánh, không
  * quá số chỗ một trận theo cấp Điện (`FIELD_CAP`); tướng, Đền, binh khí, huân công lấy từ bản chụp ấy (tướng như
- * tướng giữ thành trong bản chụp, kể cả đang nghỉ). Máy khách đánh bằng đúng quân này để đánh lại ra y hệt.
+ * tướng giữ thành trong bản chụp, kể cả đang nghỉ; đồ tính lại từ món trong bản chụp, `tuongChup`). Máy khách đánh
+ * bằng đúng quân này để đánh lại ra y hệt.
  */
 export function quanDanh(atkMa: string, army: unknown, side: unknown, seed: number): { quan: PvpAttack } | { loi: string } {
   const atk = docMa(atkMa);
@@ -149,7 +155,7 @@ export function quanDanh(atkMa: string, army: unknown, side: unknown, seed: numb
   return {
     quan: {
       army: chon,
-      heroes: atk.heroes.map((h) => ({ ...h })),
+      heroes: tuongChup(atk),
       side,
       seed: seed >>> 0,
       bonus: atk.bonus,
@@ -265,13 +271,44 @@ function tuongThu(dien: number): PvpAttack['heroes'] {
 /** Quân mẫu một trận (38 chỗ; có lính nỏ từ Điện 8). */
 const quanMau = (dien: number): Army => (dien >= 8 ? { giao: 11, cung: 10, voi: 3, no: 4 } : { giao: 14, cung: 12, voi: 4, no: 0 });
 
+/** Bộ của tướng `kind`. */
+const boCua = (kind: HeroKind): BoDo => BO_DO.find((b) => BO_CUA[b] === kind)!;
+
 /**
- * Bản chụp để thử máy chủ thật (scripts/thu-may-chu.mjs): kinh đô máy Điện `dien` kèm tướng của cấp ấy, để người
- * thử đánh trận nặng như người chơi thật. Hợp luật như bản chụp người chơi.
+ * Bốn món bộ `bo` cấp đồ `chuong` hợp luật, gần mạnh nhất có thể (phẩm trần của chương, nấc rút cao, cường hóa trần
+ * của phẩm), cho trận thử: số giống món người chơi thật mặc nhất.
+ */
+function boThu(bo: BoDo, chuong: Chapter): MonGoc[] {
+  const pham = PHAM_TRAN[chuong];
+  return O_DO.map((o) => {
+    const chinh = O_CHINH[o][0];
+    const phu = CHI_SO.filter((k) => k !== chinh)
+      .slice(0, pham - 1)
+      .map((k, i) => ({ k, nac: PHU_NAC_MAX - (i % 2) }));
+    return { o, bo, pham, cap: chuong, chinh, phu, cuong: CUONG_HOA_TRAN[pham] };
+  });
+}
+
+/**
+ * Đồ của tướng thử ở Điện `dien`: mỗi tướng mặc đủ bộ mình (đủ bốn món, kỹ năng mạnh hơn); Điện 9 Cao Lỗ mặc bộ Cổ
+ * Loa (bộ người khác, không có hiệu ứng bộ). Điện 5, 6 không mặc gì như người chơi chưa có đồ.
+ */
+function doThu(dien: number, chuong: Chapter): Partial<Record<HeroKind, MonGoc[]>> {
+  const out: Partial<Record<HeroKind, MonGoc[]>> = {};
+  if (dien < 7) return out;
+  for (const h of tuongThu(dien)) out[h.kind] = boThu(dien === 9 ? 'coLoa' : boCua(h.kind), chuong);
+  return out;
+}
+
+/**
+ * Bản chụp để thử máy chủ thật (scripts/thu-may-chu.mjs): kinh đô máy Điện `dien` kèm tướng của cấp ấy (từ Điện 7 có
+ * mặc đồ), để người thử đánh trận nặng như người chơi thật, và máy chủ kiểm món đồ. Hợp luật như bản chụp người chơi.
  */
 export function banChupThu(dien: number): { ma: string; quan: Army } {
   const snap = botSnapshot(dien);
   snap.heroes = tuongThu(dien);
+  const trangBi = doThu(dien, snap.chapter);
+  if (Object.keys(trangBi).length) snap.trangBi = trangBi;
   return { ma: encodeSnapshot(snap), quan: quanMau(dien) };
 }
 
@@ -284,14 +321,21 @@ export function bamThu(): PvpInput[] {
 
 /**
  * Đánh vài trận cố định trên kinh đô máy Điện 5–10 (có tướng, bấm kỹ năng theo lịch) và ghi dấu trạng thái cuối:
- * chỗ đứng, máu từng người, máu từng công trình. Chạy trên Node, Deno (Edge Function) hay trình duyệt phải ra y
- * hệt (`scripts/doi-chieu-deno.mjs`).
+ * chỗ đứng, máu từng người, máu từng công trình. Từ Điện 7 tướng đi đánh mặc đồ (`doThu`); Điện 10 kinh đô bị đánh
+ * cũng có Hai Bà mặc đồ giữ thành. Chạy trên Node, Deno (Edge Function) hay trình duyệt phải ra y hệt
+ * (`scripts/doi-chieu-deno.mjs`).
  */
 export function doiChieu(): string[] {
   const out: string[] = [];
   for (let dien = 5; dien <= 10; dien++) {
     const def = botSnapshot(dien);
-    const quan: PvpAttack = { army: quanMau(dien), heroes: tuongThu(dien), side: dien % 2 ? 'bac' : 'tay', seed: 1000 + dien, bonus: 0, arms: { ...def.arms } };
+    const trangBi = doThu(dien, def.chapter);
+    if (dien === 10) {
+      def.heroes = tuongThu(dien);
+      def.trangBi = trangBi;
+    }
+    const heroes = tuongThu(dien).map((h) => ganDoChup(h, trangBi[h.kind]));
+    const quan: PvpAttack = { army: quanMau(dien), heroes, side: dien % 2 ? 'bac' : 'tay', seed: 1000 + dien, bonus: 0, arms: { ...def.arms } };
     const run = simulatePvp(def, quan, bamThu());
     const score = scorePvp(run.def);
     const people = run.battle.fighters.map((f) => [f.kind, f.side, f.state, f.x, f.z, f.hp]);

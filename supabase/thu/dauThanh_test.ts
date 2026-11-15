@@ -8,7 +8,7 @@
 // cơ sở dữ liệu thật.
 
 import postgres from 'npm:postgres@3.4.9';
-import { CAU_HINH, LUAT_MA, danhLai, kinhDoMay, truCua, type QuanDanh } from '../functions/dau-thanh/luat.js';
+import { CAU_HINH, LUAT_MA, banChupThu, danhLai, kinhDoMay, truCua, type QuanDanh } from '../functions/dau-thanh/luat.js';
 import { taoXuLy } from '../functions/dau-thanh/xuLy.ts';
 
 const DB = Deno.env.get('DAU_THANH_DB_URL');
@@ -239,6 +239,19 @@ Deno.test({
         })
         .catch(() => (deniedSave = true));
       ok(deniedSave, 'máy khách không đọc được bản lưu trên mây qua Data API');
+
+      // Tướng mặc đồ: bản chụp có món hợp luật thì nhận; quân đánh mang chỉ số đồ máy chủ tự tính từ món (Hai Bà mặc đủ
+      // bộ mình ở Điện 10: có hiệu ứng bốn món).
+      const thu10 = banChupThu(10);
+      eq(await goi(E, { hanh: 'banChup', banChup: thu10.ma }, LUAT_MA, true), { status: 200, ok: true });
+      const doDanh = await goi(E, { hanh: 'danh', doiThu: 'may', quan: thu10.quan, huong: 'bac' }, LUAT_MA, true);
+      eq(
+        (doDanh.quan as QuanDanh).heroes.map((h) => [h.kind, (h.trangBi as Record<string, unknown> | undefined)?.bo4]),
+        [
+          ['trungTrac', true],
+          ['trungNhi', true],
+        ],
+      );
 
       // Rời Đấu thành: xóa người chơi, bản chụp; trận cũ vẫn còn tên; bản lưu trên mây vẫn còn.
       eq(await goi(A, { hanh: 'roi' }), { status: 200, ok: true });

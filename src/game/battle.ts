@@ -194,6 +194,11 @@ export interface Fighter {
   ship?: { ox: number; oz: number; tx: number; tz: number; delay: number };
   /** Lính ta được nữ tướng cộng thêm máu và sức đánh (đúng binh chủng của phó tướng, hay của nữ tướng ở doanh trại). */
   nu?: boolean;
+  /**
+   * Tướng mặc đồ (`HeroSetup.trangBi`, gán lúc vào trận): sức đánh, tốc đánh ở `strike`, giáp ở `damageFighter`. Tướng
+   * cả hai phe: quân ta, và tướng giữ thành trong Đấu thành.
+   */
+  trangBi?: ChiSoDo;
   /** Cung thủ, lính nỏ đang đứng trên mặt thành hay trên bậc lên thành (`stepClimber`). */
   wall?: boolean;
   /** Cung thủ, lính nỏ dưới đất đang đi tới ô bậc lên thành này để lên thành. */
@@ -578,6 +583,7 @@ function addHero(battle: Battle, hero: HeroSetup, x: number, z: number, hpMul: n
   else battle.hero = { ...hero, down: false };
   battle.skills.push(...heroSkills(hero));
   const f = newFighter(battle, 'ta', hero.kind, x, z, statsOf(hero.kind).hp * hpMul * (ownMult(battle, hero.kind) + (hero.trangBi?.mau ?? 0)));
+  if (hero.trangBi) f.trangBi = hero.trangBi;
   const nav = navOf(battle);
   if (nav) dayRa(nav.bai, bodyRadius(hero.kind), f);
   battle.fighters.push(f);
@@ -1086,6 +1092,7 @@ export function startPvp(state: GameState, defense: PvpDefense, attack: PvpAttac
     if (nu) f.nu = true;
     battle.fighters.push(f);
     battle.total++;
+    return f;
   };
   // Lính giữ thành rải trong khuôn viên doanh trại (không ra từ cổng như khi giữ kinh đô: ra ở cổng gần quân đánh thì
   // lính giữ thành gặp quân đánh trước khi tháp kịp đỡ, Đấu thành Điện 5 quá dễ).
@@ -1109,9 +1116,13 @@ export function startPvp(state: GameState, defense: PvpDefense, attack: PvpAttac
   }
   const dien = state.buildings.find((b) => b.type === 'dien');
   if (dien) {
+    // Tướng giữ thành mặc đồ (đồ máy chủ tính lại từ món trong bản chụp): máu cộng như `addHero`, sức đánh, tốc đánh,
+    // giáp theo `Fighter.trangBi`.
     defense.heroes.forEach((hero, i) => {
-      const f = turnLocal(dien.rot, (i ? 1 : -1) * 1.2, BUILDINGS.dien.d / 2 + 0.6);
-      push(hero.kind, dien.x + BUILDINGS.dien.w / 2 + f.x, dien.z + BUILDINGS.dien.d / 2 + f.z, statsOf(hero.kind).hp * multOf(mods, hero.kind));
+      const at = turnLocal(dien.rot, (i ? 1 : -1) * 1.2, BUILDINGS.dien.d / 2 + 0.6);
+      const hp = statsOf(hero.kind).hp * (multOf(mods, hero.kind) + (hero.trangBi?.mau ?? 0));
+      const f = push(hero.kind, dien.x + BUILDINGS.dien.w / 2 + at.x, dien.z + BUILDINGS.dien.d / 2 + at.z, hp);
+      if (hero.trangBi) f.trangBi = hero.trangBi;
     });
   }
   return battle;
@@ -1680,8 +1691,8 @@ function damageFighter(battle: Battle, attacker: { kind?: FighterKind; dmg: numb
   // Rùa Vàng che chở: quân ta chỉ chịu một phần sát thương. Thử thách Giặc dữ: giặc đánh đau hơn.
   const shield = target.side === 'ta' && battle.shield > 0 ? KIM_QUY.reduce : 1;
   const fury = target.side === 'ta' ? (battle.fury ?? 1) : 1;
-  // Giáp của tướng ta (đồ đang mặc): chịu ít sát thương hơn.
-  const armor = target.side === 'ta' ? 1 - (doTa(battle, target.kind)?.giap ?? 0) : 1;
+  // Giáp của tướng mặc đồ (quân ta, hay tướng giữ thành trong Đấu thành): chịu ít sát thương hơn.
+  const armor = 1 - (target.trangBi?.giap ?? 0);
   target.hp -= attacker.dmg * bonus * shield * fury * armor;
   if (isHero(target.kind)) {
     // Tướng không chết: hết sức thì rút khỏi trận, nghỉ một lúc.
@@ -1711,8 +1722,8 @@ function damageFighter(battle: Battle, attacker: { kind?: FighterKind; dmg: numb
 function strike(battle: Battle, f: Fighter, foe: Fighter): void {
   const st = statsOf(f.kind);
   if (st.range > 2) emit(battle, { kind: 'shot', x: f.x, z: f.z, tx: foe.x, tz: foe.z, by: f.kind, fromWall: f.wall, toWall: foe.wall });
-  // Tướng ta mặc đồ: đánh mạnh hơn (Sức đánh), nghỉ giữa hai đòn ngắn hơn (Tốc đánh).
-  const own = f.side === 'ta' ? doTa(battle, f.kind) : undefined;
+  // Tướng mặc đồ: đánh mạnh hơn (Sức đánh), nghỉ giữa hai đòn ngắn hơn (Tốc đánh).
+  const own = f.trangBi;
   const mult = (sideMult(battle, f) + (own?.danh ?? 0)) * (f.side === 'ta' && battle.rally > 0 ? RALLY.dmg : 1);
   const dmg = st.dmg * mult;
   damageFighter(battle, { kind: f.kind, dmg }, foe);
