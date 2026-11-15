@@ -1,12 +1,14 @@
 // Hình tướng mặc đồ cho túi đồ: tướng đứng mặc đúng các món đang đeo (vũ khí cầm tay, giáp, miện, áo choàng, bao tên
 // thay phần cùng chỗ của tướng), thú cưỡi đứng sau, bảo vật lơ lửng bên vai có quầng sáng, cờ và khóm tre cắm đất bên
-// cạnh. Chỉ để nhìn trong bảng: ra trận tướng vẫn dáng cũ.
+// cạnh. Mặc đủ bốn món bộ mình thì vũ khí ánh lên (`anhVuKhi.ts`, như ở trận). Chỉ để nhìn trong bảng: ra trận tướng
+// vẫn dáng cũ.
 // Vẽ một lần bằng renderer của cảnh (không mở thêm khung WebGL) vào khung vẽ riêng, đọc ra ảnh, nhớ theo tướng và món.
 
 import * as THREE from 'three';
 import type { HeroKind } from '../game/battle';
-import { O_DO, type ODo } from '../game/defs';
+import { BO_CUA, BO_DO, O_DO, type ODo } from '../game/defs';
 import { MON_VE, type MonId } from './doTuong';
+import type { HumanRig } from './body';
 import { CAM_GOC, bakeTuongDung, kDung, type ThayDo } from './heroes';
 import { addSunLights } from './lights';
 import { disposeModel } from './shapes';
@@ -48,6 +50,12 @@ function quang(r: number): THREE.Group {
   return g;
 }
 
+/** Tướng `hero` mặc đủ bốn món bộ mình (như `ChiSoDo.bo4` của luật). */
+export function duBo(hero: HeroKind, mac: MacTuong): boolean {
+  const bo = BO_DO.find((b) => BO_CUA[b] === hero);
+  return !!bo && O_DO.every((o) => mac[o] === `${bo}-${o}`);
+}
+
 /**
  * Mô hình hình tướng `hero` mặc `mac`. Tướng đứng ở gốc, mặt hướng +z. Thú cưỡi đứng sau lưng chếch sang phải, bảo vật
  * lơ lửng bên vai trái (phía −x), cờ và tre cắm đất phía sau bên trái.
@@ -58,7 +66,10 @@ export function hinhTuongModel(hero: HeroKind, mac: MacTuong): THREE.Group {
   for (const v of ve) if (v.cho === 'tay' || v.cho === 'than' || v.cho === 'dau' || v.cho === 'lung') thay[v.cho] = true;
   const cam = ve.find((v) => v.cho === 'tay')?.cam ?? CAM_GOC[hero];
   const root = new THREE.Group();
-  root.add(bakeTuongDung(hero, thay, cam, (h, k) => ve.forEach((v) => v.mac?.(h, k))));
+  // Đủ bộ mình: món cầm tay vẽ trong `vuKhi` để có lớp vỏ sáng.
+  const du = duBo(hero, mac);
+  const them = (h: HumanRig, k: number) => ve.forEach((v) => (du && v.cho === 'tay' ? h.vuKhi(() => v.mac?.(h, k)) : v.mac?.(h, k)));
+  root.add(bakeTuongDung(hero, thay, cam, them, du));
   const k = kDung(hero);
   for (const v of ve) {
     if (v.cho === 'thu') {

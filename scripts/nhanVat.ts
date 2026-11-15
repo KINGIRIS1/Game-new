@@ -122,6 +122,16 @@ const NU_COT: [string, Act][] = [
 ];
 const NU_IDS: NuTuongId[] = ['leChan', 'thanhThien', 'batNan', 'phungThiChinh'];
 
+/** Vũ khí ánh lên (tướng mặc đủ bốn món bộ mình): vỏ sáng chập chờn, đốm lấp lánh theo `time`; đánh; ngã thì tắt. */
+const ANH_COT: [string, Act][] = [
+  ['Đứng (t=0)', { act: 'stand', time: 0 }],
+  ['Đứng (t=0,5)', { act: 'stand', time: 0.5 }],
+  ['Đứng (t=1,1)', { act: 'stand', time: 1.1 }],
+  ['Thủ', { act: 'fight', time: 1.6 }],
+  ['Đòn tới', { act: 'fight', strike: 0.3, time: 2.1 }],
+  ['Ngã', { act: 'dead', fall: 0.6 }],
+];
+
 /**
  * Một hàng nhân vật đứng cạnh nhau cách `gap`, thẳng hàng ngang ảnh (với hướng chụp mặc định −0,6, xoay thêm `xoay`
  * như trường `xoay` của mục). Tư thế của hàng đặt cho từng người.
@@ -303,6 +313,14 @@ export const NHOM: Record<string, Entry[]> = {
     { ten: 'Thợ đá vác sắt (công trình đang xây)', tao: () => ganhNguoi('thoDa', 'sat'), cot: GANH },
     { ten: 'Người bếp gùi nguyên liệu Tết', tao: () => ganhNguoi('phuNu', 'gui'), cot: GANH },
     { ten: 'Người bếp đội mâm bánh', tao: () => ganhNguoi('phuNu', 'mam'), cot: GANH },
+  ],
+  anh: [
+    { ten: 'Tráng sĩ Gióng (roi sắt, đủ bộ Phù Đổng)', tao: () => makeGiong('trangSi', { anh: true }), co: 1.9, cach: 1.7, cot: ANH_COT },
+    { ten: 'Sơn Tinh (đủ bộ Tản Viên)', tao: () => makeSonTinh({ anh: true }), co: 1.3, cach: 1.1, cot: ANH_COT },
+    { ten: 'An Dương Vương (đủ bộ Cổ Loa)', tao: () => makeAnDuong({ crossbow: true, anh: true }), co: 1.3, cach: 1.1, cot: ANH_COT },
+    { ten: 'Cao Lỗ (đủ bộ Cao Lỗ)', tao: () => makeCaoLo({ anh: true }), co: 1.25, cach: 1.1, cot: ANH_COT },
+    { ten: 'Trưng Trắc (đủ bộ Trưng Trắc)', tao: () => makeTrungTrac({ anh: true }), co: 2.3, cach: 2.1, cot: ANH_COT },
+    { ten: 'Trưng Nhị (đủ bộ Trưng Nhị)', tao: () => makeTrungNhi({ anh: true }), co: 2.3, cach: 2.1, cot: ANH_COT },
   ],
 };
 

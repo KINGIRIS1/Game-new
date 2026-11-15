@@ -624,19 +624,21 @@ export class BattleView {
       if (!view) {
         if (f.state === 'dead') continue;
         const glow = heroSetups(battle).find((h) => h.kind === f.kind)?.glow;
+        // Tướng mặc đủ bốn món bộ mình (cả tướng giữ thành trong Đấu thành): vũ khí ánh lên.
+        const anh = !!f.trangBi?.bo4;
         const obj =
           f.kind === 'trungTrac'
-            ? makeTrungTrac({ glow })
+            ? makeTrungTrac({ glow, anh })
             : f.kind === 'trungNhi'
-              ? makeTrungNhi({ glow })
+              ? makeTrungNhi({ glow, anh })
               : f.kind === 'giong'
-            ? makeGiong('trangSi', { bamboo: battle.hero?.bamboo, glow: battle.hero?.glow })
+            ? makeGiong('trangSi', { bamboo: battle.hero?.bamboo, glow: battle.hero?.glow, anh })
             : f.kind === 'sonTinh'
-              ? makeSonTinh({ glow: battle.hero?.glow })
+              ? makeSonTinh({ glow: battle.hero?.glow, anh })
               : f.kind === 'anDuong'
-                ? makeAnDuong({ crossbow: true, glow: battle.hero?.glow })
+                ? makeAnDuong({ crossbow: true, glow: battle.hero?.glow, anh })
                 : f.kind === 'caoLo'
-                  ? makeCaoLo({ glow: battle.hero?.glow })
+                  ? makeCaoLo({ glow: battle.hero?.glow, anh })
                   : f.kind === 'thuyTinh'
                   ? makeThuyTinh()
                   : isSoldier(f.kind)

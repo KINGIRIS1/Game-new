@@ -12,7 +12,7 @@ import { armor, bun, chestDisc, diadem, hairDown, necklace, pauldrons } from './
 import { clayPiece, figure, type Piece } from './nanNguoi';
 import { elephantBody, elephantDrape, horseBody, horseDrape, roosterBody, tigerBody, turtleBody, turtleDrum } from './nanThu';
 import { C } from './palette';
-import { RigBuilder, bakeRig, moveBones, resetBones, skinRig, type Act, type BoneDef, type Bones, type Poser, type RigSlot, type RigSlots } from './rig';
+import { RigBuilder, bakeRig, moveBones, resetBones, skinRig, type Act, type BoneDef, type Bones, type Poser, type RigShape, type RigSlot, type RigSlots } from './rig';
 import { drawRider, poseRider, riderBones, riderHasSkill, type RiderKind } from './soldier';
 import { IRON, IRON_DARK, coLac } from './weapons';
 
@@ -273,6 +273,8 @@ export interface VoiTranRider {
   defs: Defs;
   draw(r: Rig): void;
   pose(b: B, a: Act): VoiTranMood;
+  /** Ghi riêng phần vũ khí của người cưỡi (`RigBuilder.vuKhi`), rồi dựng lớp vỏ sáng khi đã xong tư thế (`anhVuKhi.ts`). */
+  anh?(group: THREE.Group, shape: RigShape<string>): void;
 }
 
 /**
@@ -454,9 +456,11 @@ export function bakeVoiTran(look: VoiTranLook): THREE.Group {
 export function makeVoiTran(look: VoiTranLook, rider?: VoiTranRider): THREE.Group {
   // Có người cưỡi thì là tướng: đủ chi tiết như các tướng khác.
   const r = new RigBuilder({ ...VOI_TRAN, ...rider?.defs }, rider ? 1 : DETAIL);
+  r.ghiAnh = !!rider?.anh;
   drawVoiTran(r, look);
   rider?.draw(r);
-  const { group, bones } = skinRig(r.build());
+  const shape = r.build();
+  const { group, bones } = skinRig(shape);
   const pose: Poser = (a) => {
     resetBones(bones);
     const mood = rider ? rider.pose(bones, a) : {};
@@ -465,6 +469,7 @@ export function makeVoiTran(look: VoiTranLook, rider?: VoiTranRider): THREE.Grou
   pose({ act: 'stand' });
   group.userData.pose = pose;
   group.userData.fall = 'side';
+  rider?.anh?.(group, shape as RigShape<string>);
   return group;
 }
 
