@@ -33,7 +33,7 @@ import {
 import { initialCaoLo } from './caoLo';
 import { initialBenKia, isBenKiaState, noGarrison } from './benKia';
 import { initialCayDa, isCayDaState } from './cayDa';
-import { DAO_IDS, initialDao, isDaoState } from './dao';
+import { DAO_IDS, giacMoi, initialDao, isDaoState } from './dao';
 import { initialDaNgoai, isDaNgoaiState } from './daNgoai';
 import { initialAdv } from './coLoa';
 import { inChapter4 } from './chuong4';
@@ -145,6 +145,7 @@ function migrate(raw: unknown): unknown {
   if (isObj(v) && v.version === 26) v = migrate26to27(v);
   if (isObj(v) && v.version === 27) v = migrate27to28(v);
   if (isObj(v) && v.version === 28) v = migrate28to29(v);
+  if (isObj(v) && v.version === 29) v = migrate29to30(v);
   return v;
 }
 
@@ -530,9 +531,16 @@ function migrate27to28(s: Raw): Raw {
   return s;
 }
 
-/** Phiên bản 28 → 29 (dã ngoại): cấp chung 1, đội chưa ra dã ngoại. */
+/** Phiên bản 28 → 29 (giặc đánh đảo): mỗi đồn đảo chưa có đợt giặc nào, chưa hư. */
 function migrate28to29(s: Raw): Raw {
   s.version = 29;
+  if (isObj(s.dao)) for (const id of DAO_IDS) if (isObj((s.dao as Raw)[id])) Object.assign((s.dao as Raw)[id] as Raw, giacMoi());
+  return s;
+}
+
+/** Phiên bản 29 → 30 (dã ngoại): cấp chung 1, đội chưa ra dã ngoại. */
+function migrate29to30(s: Raw): Raw {
+  s.version = 30;
   s.daNgoai = initialDaNgoai();
   return s;
 }

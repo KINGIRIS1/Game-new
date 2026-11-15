@@ -109,6 +109,7 @@ import { bridgeUp, farSideBank, garrisonPosts } from './benKia';
 import { floodHits } from './terrain';
 import type { ChiSoDo } from './trangBi';
 import type { DaNha, DaTran } from './daNgoaiTran';
+import type { QuanDaoId } from './bien';
 import { baiById, capNhatNav, chamAt, dayRa, huongTheo, kep, que, taoNav, truot, type Nav, type Toi } from './baiChien';
 
 export type Side = 'ta' | 'giac';
@@ -355,6 +356,8 @@ export interface Battle {
   /** Trận thử thách phó bản: kiểu thử thách. */
   /** Trận ngoài bãi đánh đồn giặc bên kia sông (khoảnh có đồn) thay cho một màn phó bản; `wave` khi ấy là 0. */
   camp?: number;
+  /** Trận giặc Hán đánh đồn đảo của quần đảo này (`dao.ts`, tự đánh, xem lại được); `wave` khi ấy là 0. */
+  dao?: QuanDaoId;
   challenge?: ChallengeKind;
   /** Thử thách Giặc dữ: sát thương giặc gây cho quân ta nhân chừng này. */
   fury?: number;
@@ -1179,6 +1182,13 @@ export interface FieldSetup {
   fury?: number;
   /** Nữ tướng đi theo làm phó tướng: binh chủng của người ấy được cộng thêm. */
   nuTuong?: NuTuongId | null;
+  /** Trận đảo: giặc Hán đánh đồn đảo của quần đảo này (`dao.ts`). */
+  dao?: QuanDaoId;
+  /**
+   * Lê Chân đốc thủy quân giữ đảo: mọi binh chủng của ta được cộng như binh chủng của nữ tướng (`NU_TUONG_BONUS`), bà
+   * không ra bãi cầm cờ.
+   */
+  nuMoi?: boolean;
   /** Bố cục bãi chiến có vật cản (`stageBai`, `baiOf` ở `baiChien.ts`); bỏ trống là bãi phẳng. */
   bai?: string | null;
 }
@@ -1201,6 +1211,7 @@ export function startFieldBattle(setup: FieldSetup): Battle {
   if (setup.huan) battle.huan = { ...setup.huan };
   if (setup.challenge) battle.challenge = setup.challenge;
   if (setup.camp !== undefined) battle.camp = setup.camp;
+  if (setup.dao) battle.dao = setup.dao;
   if (setup.fury) battle.fury = setup.fury;
   if (baiById(setup.bai)) battle.bai = setup.bai!;
   const rand = rng(setup.id * 7919 + setup.stage);
@@ -1210,7 +1221,9 @@ export function startFieldBattle(setup: FieldSetup): Battle {
   for (const k of Object.keys(setup.enemies) as EnemyType[]) for (let i = 0; i < (setup.enemies[k] ?? 0); i++) theirs[ENEMY_ROWS[k]].push(k);
   const front = (FIELD.d - FIELD.gap) / 2;
   const nu = setup.nuTuong ?? null;
-  deploy(battle, 'ta', ours, FIELD.d - front, 1, rand, (k) => UNITS[k as UnitType].hp * FIELD.hpMul * ownMult(battle, k, nuBoosts(nu, k)));
+  const moi = !!setup.nuMoi;
+  deploy(battle, 'ta', ours, FIELD.d - front, 1, rand, (k) => UNITS[k as UnitType].hp * FIELD.hpMul * ownMult(battle, k, moi || nuBoosts(nu, k)));
+  if (moi) for (const f of battle.fighters) f.nu = true;
   if (nu) {
     for (const f of battle.fighters) if (nuBoosts(nu, f.kind)) f.nu = true;
     battle.nuTuong = { kind: nu, x: FIELD.w / 2, z: nuRestZ(battle) };

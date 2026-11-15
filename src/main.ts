@@ -2,7 +2,7 @@
 
 import './style.css';
 import { play, setMuted, stopRally, unlockAudio } from './audio/sfx';
-import { skillReady, useSkill, type Battle, type HeroKind } from './game/battle';
+import { skillReady, startFieldBattle, stepField, useSkill, type Battle, type HeroKind } from './game/battle';
 import { canLen, capNhatDa, chonMap, daMo, datDoi, doiNay, moMap, quaCong, tichTreo, vaoDa, veKinhDo, type DaThuong } from './game/daNgoai';
 import { chamMap, datTuDanh, stepDa, tuongDau } from './game/daNgoaiTran';
 import { boCuc } from './game/daNgoaiMap';
@@ -22,7 +22,7 @@ import { offer, tetOpen } from './game/tet';
 import { ganhPreview, markGanhHinted, needsGanhHint, vungGanh } from './game/vanChuyen';
 import { startMau } from './game/mau';
 import { advanceXay, askQuiz, canStartBuild, cancelJob, conLai, startBuild, startDon, startThuyen, startUpgrade, startWallUpgrade, startWalls, thoRanh, thoRanhSau, traLoi, viecOf, xayMs, type CongViec } from './game/xay';
-import { markDaoHinted, nextDaoHint, setDaoLinh } from './game/dao';
+import { danhDao, markDaoHinted, nextDaoHint, setDaoLinh, setupDao, suaDon } from './game/dao';
 import { CAU_DO, CAU_DO_IDS } from './text/cauDo';
 
 /** Câu đố sử thời kỳ Biển đảo, hỏi trước khi thợ đóng thuyền chiến, xây đồn đảo. */
@@ -40,6 +40,7 @@ import type { QuanDaoId } from './game/bien';
 import type { Buoi } from './game/ngayDem';
 import { fmt } from './ui/format';
 import {
+  BATTLE_STEP,
   canAfford,
   dienLevel,
   placeUNo,
@@ -94,7 +95,7 @@ import { chapterOf, tomTat } from './game/manVao';
 import { TitleDrift } from './render/camera';
 import { HALF, RESOLUTIONS, World, type Resolution } from './render/world';
 import { formatClock, formatXay, vi } from './text/vi';
-import { Hud, buildingName, type HudAction, type WallShape } from './ui/hud';
+import { Hud, buildingName, type HudAction, type HudXemDao, type WallShape } from './ui/hud';
 import { khoNanTk, luuSau, moKhoNan } from './render/nanKho';
 import { KHO_PHIEN_BAN, moSanWorker, nanTruoc, prewarmJobs } from './render/nanTruoc';
 import { ManVao } from './ui/manVao';
@@ -566,6 +567,19 @@ async function start(): Promise<void> {
     /** Đang xem lại một trận đã xong (PR 6): trận, vai của mình, tốc độ xem, có mở từ bảng Đấu thành không. */
     xem?: DauXem;
   } | null = null;
+  /**
+   * Đang xem lại trận giặc đánh đảo (trận dựng lại từ trận đã ghi, không nằm trong state): chạy theo khung hình ở tốc độ
+   * xem, trọn bước `BATTLE_STEP` (`du`: phần lẻ chưa đủ một bước).
+   */
+  let xemDao: (HudXemDao & { du: number }) | null = null;
+  /** Thôi xem lại trận đảo: về kinh đô. */
+  const thoiXemDao = () => {
+    if (!xemDao) return;
+    xemDao = null;
+    hud.setXemDao(null);
+    world.showField(null);
+    refreshUi();
+  };
   /** Cảnh đang vẽ: kinh đô bị đánh khi đang Đấu thành, không thì kinh đô của mình. */
   function scene(): GameState {
     return pvp?.run.def ?? state;
@@ -2050,6 +2064,34 @@ async function start(): Promise<void> {
         hud.showQuanDao(state, a.dao);
         return;
 
+      case 'suaDon': {
+        const r = suaDon(state, a.dao);
+        if (!r.ok) return fail(r.reason);
+        play('place');
+        hud.toast(vi.bien.suaDone(vi.bien.donName(a.dao)));
+        commit();
+        return;
+      }
+
+      case 'xemDao': {
+        const t = state.dao[a.dao].tran;
+        if (!t) return;
+        if (pvp || xemDao || marching || world.inField || state.campaign.battle || state.raid.phase !== 'idle') {
+          hud.toast(vi.bien.xemBusy, true);
+          return;
+        }
+        play('tap');
+        if (mode.kind !== 'view') exitMode();
+        select(null);
+        hud.closeSheet();
+        hud.closeCampaign();
+        const setup = setupDao(a.dao, t);
+        xemDao = { battle: startFieldBattle(setup), dao: a.dao, dot: t.dot, speed: 1, du: 0 };
+        world.showField('dao', setup.bai ?? null, t.cap);
+        hud.setXemDao(xemDao);
+        return;
+      }
+
       case 'openBarracks': {
         const barracks = state.buildings.find((b) => b.type === 'doanhTrai');
         if (barracks) {
@@ -2200,6 +2242,11 @@ async function start(): Promise<void> {
           roiDa(false);
           return;
         }
+        if (xemDao) {
+          play('tap');
+          thoiXemDao();
+          return;
+        }
         if (pvp?.xem) {
           // Đang xem lại: nút cờ là nút thoát.
           handle({ kind: 'dauHome' });
@@ -2285,6 +2332,12 @@ async function start(): Promise<void> {
       }
 
       case 'dauSpeed':
+        if (xemDao) {
+          xemDao.speed = xemDao.speed === 1 ? 2 : xemDao.speed === 2 ? 4 : 1;
+          play('tap');
+          hud.setXemDao(xemDao);
+          return;
+        }
         if (!pvp?.xem) return;
         pvp.xem.speed = pvp.xem.speed === 1 ? 2 : pvp.xem.speed === 2 ? 4 : 1;
         play('tap');
@@ -2637,7 +2690,7 @@ async function start(): Promise<void> {
       hud.closeCampaign();
       const don = battle.camp !== undefined ? campTier(battle.camp) : null;
       world.showField(don ? CAMPS[don].terrain : STAGES[battle.wave - 1].terrain, battle.bai ?? null);
-    } else if (!battle && world.inField && !world.inDa) {
+    } else if (!battle && world.inField && !world.inDa && !xemDao) {
       world.showField(null);
       hud.closeStageResult();
     }
@@ -2714,11 +2767,16 @@ async function start(): Promise<void> {
       commit();
       watchXay(true);
     } else {
-      // Đang Đấu thành, đang xem map dã ngoại: kinh tế vẫn chạy, đồng hồ giặc đứng lại.
-      tick(state, gap, !!pvp || !!daB);
+      // Đang Đấu thành, xem lại trận đảo, xem map dã ngoại: kinh tế vẫn chạy, đồng hồ giặc đứng lại.
+      tick(state, gap, !!pvp || !!xemDao || !!daB);
       // Đội ở dã ngoại mà không xem map: treo máy (lúc tắt game thì `applyOffline` tính).
       if (!daB) tichTreo(state, gap);
       state.lastSeen = wall;
+    }
+    // Xem lại trận đảo: chạy theo khung hình ở tốc độ xem, trọn bước như lúc trận tự đánh.
+    if (xemDao && !xemDao.battle.outcome) {
+      xemDao.du += dt * xemDao.speed;
+      while (xemDao.du >= BATTLE_STEP && !stepField(xemDao.battle, BATTLE_STEP)) xemDao.du -= BATTLE_STEP;
     }
     // Trận Đấu thành chạy theo khung hình (đã chặn 0,1 giây), chỉ trọn bước; ẩn tab thì trận dừng.
     if (pvp) stepPvp(pvp.run, dt * 1000 * (pvp.xem?.speed ?? 1));
@@ -2735,7 +2793,7 @@ async function start(): Promise<void> {
     world.updateFlood(scene());
     world.updateBattle(pvp ? pvp.run.battle : state.raid.battle, dt);
     watchCampaign();
-    world.updateField(state.campaign.battle, dt);
+    world.updateField(xemDao?.battle ?? state.campaign.battle, dt);
     stepDaNgoai(dt);
     world.updateDa(daB, dt);
     world.update(dt);
@@ -2910,6 +2968,14 @@ async function start(): Promise<void> {
     daManHinh: (x: number, z: number) => world.daScreenAt(x, z, 0),
     /** Rời map dã ngoại (về xem kinh đô, đội ở lại). */
     daRoi: () => roiDa(false),
+    /** Giặc đánh đảo `id` ngay (đánh trọn trận như khi tới giờ), để chụp thử bảng, dòng tin, xem lại trận. */
+    daoTran: (id: QuanDaoId) => {
+      const t = danhDao(state, id);
+      commit();
+      return t;
+    },
+    /** Xem lại trận gần nhất của đảo `id` như bấm nút Xem lại trận. */
+    xemDao: (id: QuanDaoId) => handle({ kind: 'xemDao', dao: id }),
     /** Đặt đồng hồ cảnh (giây): thuyền khơi, cá voi, cá heo theo đồng hồ này, để chụp thử thuyền đang ở biển. */
     seaTime: (t: number) => world.seekTime(t),
     /**

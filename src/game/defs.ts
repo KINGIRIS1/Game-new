@@ -1850,7 +1850,7 @@ export const FIELD = { w: 9, d: 22, gap: 10, hpMul: 1.6, maxS: 90 };
  */
 export const BAI_CHAM = { nuoc: 0.6, bun: 0.75 };
 
-export type Terrain = 'rung' | 'benSong' | 'lang' | 'don' | 'nui' | 'doi' | 'ngap' | 'tanVien' | 'thatDieu' | 'coLoa' | 'cuaSong' | 'moDa' | 'benKia' | 'hatMon' | 'luyLau' | 'langBac' | 'camKhe';
+export type Terrain = 'rung' | 'benSong' | 'lang' | 'don' | 'nui' | 'doi' | 'ngap' | 'tanVien' | 'thatDieu' | 'coLoa' | 'cuaSong' | 'moDa' | 'benKia' | 'hatMon' | 'luyLau' | 'langBac' | 'camKhe' | 'dao';
 
 export type Chapter = 1 | 2 | 3 | 4 | 5;
 
@@ -2114,7 +2114,9 @@ export type QuestGoal =
   /** Đã đóng ít nhất `amount` thuyền chiến (đóng đảo). */
   | { kind: 'thuyenChien'; amount: number }
   /** Đồn đảo của quần đảo `dao` (không ghi thì đồn nào cũng được) đã lên cấp `level`. */
-  | { kind: 'donDao'; dao?: QuanDaoId; level: number };
+  | { kind: 'donDao'; dao?: QuanDaoId; level: number }
+  /** Quân đảo đã giữ được `amount` đợt giặc Hán đánh đảo (cộng hai đồn). */
+  | { kind: 'giuDao'; amount: number };
 
 export interface QuestDef {
   id: string;
@@ -2198,6 +2200,7 @@ export const QUESTS: QuestDef[] = [
   { id: 'donHoangSa', goal: { kind: 'donDao', dao: 'hoangSa', level: 1 }, reward: { voOc: 5000, sat: 1500 } },
   { id: 'donTruongSa', goal: { kind: 'donDao', dao: 'truongSa', level: 1 }, reward: { datDa: 5000, go: 3000 } },
   { id: 'donDao3', goal: { kind: 'donDao', level: 3 }, reward: { gao: 8000, sat: 2500 } },
+  { id: 'giuDao', goal: { kind: 'giuDao', amount: 1 }, reward: { go: 5000, sat: 2000 } },
 ];
 /** Nhận xong thưởng nhiệm vụ cuối chương 1 (Đền Phù Đổng) thì sang chương 2. */
 export const CH2_QUEST_START = 20;
@@ -2253,6 +2256,42 @@ export const DON_DAO = {
   chan: [0.1, 0.15, 0.2],
   chanMax: 0.4,
 };
+
+/**
+ * Giặc Hán đánh đảo (từ khi Mã Viện sang): mỗi đồn có quân đóng gặp đợt đầu `dauMs` sau khi có quân (hay sau khi Mã
+ * Viện sang), rồi cứ `cachMs` một đợt; hai đảo so le ít nhất `soLeMs`; báo trước `baoMs`. Trận cầm cự `holdS` giây,
+ * giặc đổ bộ thêm các lớp ở giây `lop`. Quân giặc tính theo số đợt đã tới đảo ấy, tới đợt `tran` thì thôi tăng
+ * (`daoForces`, `daoHpScale`). Giữ được đảo thì được của trên thuyền giặc (`daoCua`).
+ */
+export const DAO_GIAC = {
+  dauMs: 10 * 60_000,
+  cachMs: 40 * 60_000,
+  soLeMs: 15 * 60_000,
+  baoMs: 3 * 60_000,
+  holdS: 60,
+  lop: [20, 40],
+  tran: 6,
+};
+
+/** Giặc Hán đợt thứ `n` đánh một đảo: lớp đổ bộ đầu và hai lớp sau (nỏ thủ từ đợt 2). */
+export function daoForces(n: number): { enemies: Partial<Record<EnemyType, number>>; waves: StageWave[] } {
+  const k = Math.min(Math.max(1, n), DAO_GIAC.tran);
+  const h = Math.floor(k / 2);
+  return {
+    enemies: { linhHan: 3 + h, giapHan: 1 },
+    waves: [
+      { at: DAO_GIAC.lop[0], enemies: { linhHan: 2 + h, noHan: h } },
+      { at: DAO_GIAC.lop[1], enemies: { linhHan: 1 + h, giapHan: Math.floor((k - 1) / 3) } },
+    ],
+  };
+}
+export const daoHpScale = (n: number) => 0.55 + 0.05 * (Math.min(Math.max(1, n), DAO_GIAC.tran) - 1);
+
+/** Của trên thuyền giặc khi giữ được đảo ở đợt thứ `n` (tăng theo đợt, tới đợt `DAO_GIAC.tran` thì thôi). */
+export function daoCua(n: number): Cost {
+  const k = Math.min(Math.max(1, n), DAO_GIAC.tran);
+  return { go: 1500 + 500 * k, sat: 500 + 150 * k };
+}
 
 /**
  * Thuyền chiến: mỗi bến thuyền khơi cấp 3 đóng được một chiếc, chở quân ra đồn đảo của quần đảo bến ấy đánh cá.

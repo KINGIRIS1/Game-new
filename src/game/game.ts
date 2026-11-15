@@ -10,7 +10,7 @@ import { bridgeFit, bridgeheadCells, cutOff, farFactor, farRaidBank, fortFit, in
 import { huanTiers, initialThuThach } from './thuThach';
 import { initialTrangBi, roiDo, type RoiDo, type TrangBiState } from './trangBi';
 import { chapterOf } from './manVao';
-import { advanceDao, chanThuyen, daoArmy, donOf, initialDao, luaHieu, nguTruongBonus, type DaoState } from './dao';
+import { advanceDao, advanceGiacDao, chanThuyen, daoArmy, daoGiuDuoc, donOf, initialDao, luaHieu, nguTruongBonus, type DaoState } from './dao';
 import { initialDaNgoai, treoVang, type DaNgoaiState, type DaThuong } from './daNgoai';
 import { advanceXay, initialXay, isBusy, nextXayEvent, pendingBuilding, pendingBuildings, pendingCount, pendingOf, type XayState } from './xay';
 import { inChapter4 } from './chuong4';
@@ -332,9 +332,9 @@ export interface Merchant {
  * 15: thử thách, huân công; 16: gỗ, tài nguyên thứ năm, và gợi ý của Lạc hầu về công trình mới; 17: cây, đá mọc trên
  * ô trống; 18: lưới nới qua sông, 76×76; 20: Điện 10×10; 21: chương 5, quân Hán; 22: Hai Bà Trưng; 23: thủy quân Hán,
  * lâu thuyền; 24: nữ tướng, thử thách màn 33–40; 25: thời gian xây, tốp thợ, nhà thợ hồ, đố sử; 26: một doanh trại lớn;
- * 27: trang bị tướng; 28: đóng đảo; 29: dã ngoại, cấp chung của tướng).
+ * 27: trang bị tướng; 28: đóng đảo; 29: giặc đánh đảo; 30: dã ngoại, cấp chung của tướng).
  */
-export const SAVE_VERSION = 29;
+export const SAVE_VERSION = 30;
 
 export interface GameState {
   version: typeof SAVE_VERSION;
@@ -502,7 +502,8 @@ export type FailReason =
   | 'canBenKhoi3'
   | 'daCoThuyen'
   | 'canThuyenChien'
-  | 'canDonDao';
+  | 'canDonDao'
+  | 'donDaoHu';
 
 export type Result<T = undefined> = { ok: true; value: T } | { ok: false; reason: FailReason };
 
@@ -1089,6 +1090,9 @@ export function questProgress(state: GameState): { have: number; need: number } 
   } else if (goal.kind === 'donDao') {
     have = goal.dao ? donOf(state, goal.dao).cap : Math.max(donOf(state, 'hoangSa').cap, donOf(state, 'truongSa').cap);
     need = goal.level;
+  } else if (goal.kind === 'giuDao') {
+    have = daoGiuDuoc(state);
+    need = goal.amount;
   } else {
     have = dienLevel(state);
     need = goal.level;
@@ -2122,6 +2126,8 @@ export function tick(state: GameState, ms: number, busy = false): Resources {
   // Thợ xây sau phần sản xuất của khung này: công trình xong từ khung sau mới làm ra (sổ thu chi `kinhTe.ts` khớp).
   advanceXay(state, ms);
   advanceDao(state, ms, busy);
+  // Giặc đánh đảo: chỉ lúc chơi (`applyOffline` không gọi), đồng hồ đứng khi đang có trận.
+  advanceGiacDao(state, ms, busy);
   updateMerchant(state);
   updateCampaign(state, ms);
   updateRaid(state, ms, busy);

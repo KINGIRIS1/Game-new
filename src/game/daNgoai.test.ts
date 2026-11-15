@@ -2,7 +2,7 @@
 // đội ba tướng, tự đánh chỉ đánh trong khu và không nhắm boss, quái đuổi xa thì quay về hồi máu, mọc lại; cả đội ngã
 // thì về trại; cổng theo cấp; cấp chung chỉ cộng trên map; kinh nghiệm, trần cấp, giảm khi quái thấp cấp; đồ rơi không
 // vượt chương đang chơi; boss chờ 30 phút; treo máy dừng ở 8 giờ, ra gần bằng đánh thật; không khóa, không làm tướng
-// kiệt sức; nâng bản lưu 28 lên 29.
+// kiệt sức; nâng bản lưu 29 lên 30.
 
 import { describe, expect, it } from 'vitest';
 import { heroSetups, isHero, startFieldBattle, type Battle, type HeroKind } from './battle';
@@ -378,7 +378,7 @@ describe('không khóa tướng, bản lưu', () => {
     expect(s.giong.restUntil).toBe(0);
   });
 
-  it('bản lưu 28 lên 29: cấp 1, chưa ra dã ngoại; bản lưu 29 giữ cấp, chỗ đứng, đội, giờ boss', () => {
+  it('bản lưu 29 lên 30: cấp 1, chưa ra dã ngoại; bản lưu 30 giữ cấp, chỗ đứng, đội, giờ boss', () => {
     const s = base(true);
     s.daNgoai.cap = 12;
     s.daNgoai.exp = 345;
@@ -392,7 +392,7 @@ describe('không khóa tướng, bản lưu', () => {
     expect(back.daNgoai).toEqual(s.daNgoai);
     expect(isDaNgoaiState(back.daNgoai)).toBe(true);
     const old = JSON.parse(serialize(createInitialState(0)));
-    old.version = 28;
+    old.version = 29;
     delete old.daNgoai;
     const up = deserialize(JSON.stringify(old))!;
     expect(up.version).toBe(SAVE_VERSION);

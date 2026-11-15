@@ -417,6 +417,7 @@ export const vi = {
     daChuaMo: 'Dã ngoại mở khi có tướng đầu tiên về với kinh đô',
     daDoiSai: 'Chọn từ một tới ba tướng đã về',
     daChuaDuCap: 'Chưa đủ cấp để qua cổng',
+    donDaoHu: 'Đồn đảo đang hư, phải sửa trước',
   } satisfies Record<FailReason, string>,
 
   quests: {
@@ -489,6 +490,7 @@ export const vi = {
     donHoangSa: 'Xin dựng đồn Hoàng Sa giữa đảo chính. Thợ đi thuyền chiến ra dựng; đồn có quân đóng thì giữ được biển.',
     donTruongSa: 'Trường Sa xa hơn, nhiều đảo nhỏ. Xin đóng thuyền chiến ở bến thuyền khơi thứ hai và dựng đồn Trường Sa.',
     donDao3: 'Xin nâng một đồn đảo lên cấp 3: tường đá san hô, lầu canh, đóng được nhiều quân hơn, giữ biển chắc hơn.',
+    giuDao: 'Mã Viện cho thủy quân theo đường biển đánh đảo. Xin đóng đủ quân ở đồn đảo, giữ đảo qua một đợt giặc.',
     allDone:
       'Hai Bà đã hiển linh giữ đất, dân lập đền thờ ở Hát Môn; ngoài khơi Hoàng Sa, Trường Sa đã có đồn giữ biển. Thủy quân Hán, quân Hán và mùa lũ vẫn thay phiên đánh kinh đô.',
   } as Record<string, string>,
@@ -1236,6 +1238,31 @@ export const vi = {
     giuLuaHieu: (m: number) => `Lửa hiệu: thủy quân Hán được báo trước ${m} phút`,
     giuChan: (p: number) => `Chặn đánh ngoài khơi: lâu thuyền vào tới sông mất ${p}% máu`,
     luaHieuNote: (names: string, p: number) => `🔥 ${names} đốt lửa hiệu báo sớm; quân đảo chặn đánh, lâu thuyền giặc đã mất ${p}% máu.`,
+    // Giặc đánh đảo (PR 3).
+    giacTitle: 'Giặc đánh đảo',
+    giacYen: 'Đảo còn yên. Khi Mã Viện sang (thắng màn 37), thủy quân Hán lâu lâu theo đường biển đánh đảo có quân đóng.',
+    giacKhongLinh: 'Đảo chưa có lính đóng nên giặc không tới. Có lính rồi thì 10 phút sau đợt giặc đầu tới.',
+    giacSau: 'Đợt giặc kế tới sau',
+    /** Thanh trên bãi khi xem lại trận đảo. */
+    holdBannerDao: (left: number, ours: number, s: number) => `Giữ đồn thêm ${s} giây · còn ${left} giặc · quân ta ${ours}`,
+    giacDot: (n: number) => `Đã gặp ${n} đợt giặc`,
+    giacHint: (s: number) => `Trận tự đánh khi giặc tới: lính đóng đảo cầm cự ${s} giây, không có tướng. Thua thì đồn hư.`,
+    huNote: 'Đồn đã hư: không giữ biển, không chở thêm lính ra, giặc không tới cho tới khi sửa.',
+    suaBtn: 'Sửa đồn',
+    suaDone: (name: string) => `Đã sửa xong ${name}`,
+    tranTitle: (n: number) => `Trận gần nhất · đợt ${n}`,
+    tranThang: 'Giữ được đảo',
+    tranThua: 'Đồn thất thủ',
+    tranMat: (n: number) => (n ? `Lính tử trận: ${n}` : 'Không mất lính nào'),
+    tranCua: 'Của trên thuyền giặc',
+    xemLai: 'Xem lại trận',
+    xemBanner: (don: string, n: number) => `🏝️ ${don} · đợt ${n} · xem lại`,
+    xemStatus: (left: number, ours: number, secs: number) => `Giặc ${left} · quân ta ${ours} · còn ${secs} giây`,
+    xemBusy: 'Đang có trận, xem lại sau.',
+    tickerApSat: (dao: string, s: number) => `⛵ Thuyền giặc Hán áp sát ${dao}, còn ${s} giây`,
+    tickerThang: (don: string, mat: number) => `🏝️ ${don} giữ được đảo${mat ? `, mất ${mat} lính` : ''}`,
+    tickerThua: (don: string) => `🏝️ ${don} thất thủ, đồn đã hư`,
+    tickerXem: 'Xem',
     hint: {
       mo: '📜 Lạc hầu: Tâu bệ hạ, thuyền khơi đã ra tới Hoàng Sa, Trường Sa. Xin đóng thuyền chiến ở bến thuyền khơi, đưa thợ ra dựng đồn và đưa quân ra giữ đảo: đồn có quân thì ngư trường yên, giặc biển tới là lửa hiệu báo về.',
       maVien:

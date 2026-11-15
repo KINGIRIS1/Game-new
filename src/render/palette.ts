@@ -42,6 +42,8 @@ export const C = {
   elephant: 0x8f8a86,
   horse: 0x7a5232,
   smoke: 0x5f5a55,
+  /** Khói đồn đảo hư: sẫm hơn `smoke` cho nổi trên nền cát trắng. */
+  smokeDao: 0x2e2a27,
   arrow: 0x3a2a1a,
   // Chương 2: Sơn Tinh, Thủy Tinh và thủy quái.
   shrimp: 0xd8673a,

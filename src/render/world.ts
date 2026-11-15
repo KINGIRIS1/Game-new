@@ -16,7 +16,7 @@ import { KHOANH_N, khoanhOf, khoanhOrigin, openMask, openStart, openable } from 
 import { FAR_PLOTS, benKiaOpen, bridgeEnds, bridgeTo, plotAt, plotOf, plotOrigin, poiAt, poiPlots, type Dat } from '../game/benKia';
 import { DIEN_HOME, FAR_FOREST, FOREST_BAND, GRID, KHOANH, RIVER_END, RIVER_START, baseHeights, farBankOf, inGrid, isNearBank, isRiver, riverDistance, riverFacing, rotAngle, turnLocal } from '../game/map';
 import { BAI_CAT, BIEN_DIEN, CUA_BIEN, QUAN_DAO, RIVER_MID, benDock, bienDo, daoBen, donDaoCong, donDaoHuong, isSea, quanDao, riverOf, seaIndex, seaRoute, warRoute, type QuanDao, type QuanDaoId, type SeaRoute } from '../game/bien';
-import { DAO_IDS, benOf, giuBien, tripMs } from '../game/dao';
+import { DAO_IDS, baoDao, benOf, giuBien, tripMs } from '../game/dao';
 import { armySpace } from '../game/doanhTrai';
 import { sonLook, type SonLook } from '../game/son';
 import { floodHits } from '../game/terrain';
@@ -545,6 +545,19 @@ interface FleetBoat {
 }
 const SEA_SPEED = 2.2;
 const SEA_FISH_SPEED = 1.5;
+
+/** Khói xám bốc lên từ công trình hư (vòng khói chạy ở vòng vẽ: `puffSmoke`). */
+function khoiHu(color: number = C.smoke): THREE.Group {
+  const smoke = new THREE.Group();
+  smoke.userData.smoke = true;
+  const mat = new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.5, depthWrite: false });
+  for (let i = 0; i < 4; i++) {
+    const puff = new THREE.Mesh(new THREE.SphereGeometry(0.22, 7, 5), mat);
+    puff.userData.phase = i / 4;
+    smoke.add(puff);
+  }
+  return smoke;
+}
 
 export class World {
   readonly renderer: THREE.WebGLRenderer;
@@ -1775,8 +1788,9 @@ export class World {
   }
 
   /**
-   * Đồn đảo và thuyền chiến theo state (`dao.ts`). Đồn dựng lại khi đổi cấp, đổi số lính gác, bậc binh khí hay lửa hiệu
-   * cháy, tắt (đồn giữ biển lúc thủy quân Hán sắp tới). Thuyền neo cạnh bến thuyền khơi khi rảnh, chạy theo chuyến khi
+   * Đồn đảo và thuyền chiến theo state (`dao.ts`). Đồn dựng lại khi đổi cấp, đổi số lính gác, bậc binh khí, lửa hiệu
+   * cháy, tắt (đồn giữ biển lúc thủy quân Hán sắp tới, hay giặc áp sát đảo: `baoDao`) hay đồn hư (bốc khói, không đốt
+   * lửa hiệu). Thuyền neo cạnh bến thuyền khơi khi rảnh, chạy theo chuyến khi
    * chở quân (chỗ trên đường lấy lại từ thời gian còn lại), dựng lại khi lính đang chở đổi. Gọi mỗi lần đồng bộ cảnh và
    * đều đặn lúc chơi (chuyến mới bắt đầu trong `tick`, không qua thao tác nào).
    */
@@ -1787,8 +1801,8 @@ export class World {
       const d = state.dao[id];
       const q = quanDao(id);
       const gac = donGac(armySpace(d.linh));
-      const lit = thuyHan && giuBien(state, id) > 0;
-      const key = d.cap > 0 ? `${d.cap}:${gac}:${state.arms.giao}:${state.arms.cung}:${lit ? 1 : 0}` : '';
+      const lit = !d.hu && ((thuyHan && giuBien(state, id) > 0) || baoDao(state, id) !== null);
+      const key = d.cap > 0 ? `${d.cap}:${gac}:${state.arms.giao}:${state.arms.cung}:${lit ? 1 : 0}:${d.hu ? 1 : 0}` : '';
       const old = this.daoForts.get(id);
       if ((old?.key ?? '') !== key) {
         forts = true;
@@ -1799,6 +1813,17 @@ export class World {
         }
         if (key) {
           const obj = makeDonDao(d.cap, { gac, tierGiao: state.arms.giao, tierCung: state.arms.cung, lit, cau: cauVanOf(q) });
+          if (d.hu) {
+            // Đồn hư: ba cột khói xám bốc lên trong sân đồn, như công trình hư trong kinh đô
+            // (đồn rộng nên khói to hơn, đứng so le cho thấy được từ mọi hướng camera).
+            for (const [x, z, k] of [[-1.6, 1.2, 2.6], [1.8, -0.8, 2.2], [0.4, 2.6, 1.8]]) {
+              // Khói sẫm hơn khói công trình hư: nền cát trắng làm khói xám nhạt chìm mất.
+              const smoke = khoiHu(C.smokeDao);
+              smoke.position.set(x, 0.6, z);
+              smoke.scale.setScalar(k);
+              obj.add(smoke);
+            }
+          }
           obj.position.copy(donDaoSpot(q, HALF));
           // Cổng (mặt trước +z) quay về bến ván.
           const h = donDaoHuong(q);
@@ -1851,7 +1876,9 @@ export class World {
   /** Cụm khói (`userData.smoke`) bốc lên, tan dần; khói không nhận đèn nên tối theo trời, không thì sáng trắng giữa đêm. */
   private puffSmoke(group: THREE.Object3D, t: number): void {
     for (const puff of group.children) {
-      const k = (t * 0.35 + (puff.userData.phase as number)) % 1;
+      // Lấy phần lẻ dương: đồng hồ cảnh có lúc âm (ảnh chụp thử), `%` của số âm ra âm thì khói chui xuống đất.
+      const x = t * 0.35 + (puff.userData.phase as number);
+      const k = x - Math.floor(x);
       puff.position.set(Math.sin(k * 6 + puff.id) * 0.2, k * 1.6, Math.cos(k * 5) * 0.15);
       puff.scale.setScalar(0.6 + k * 1.2);
       const mat = (puff as THREE.Mesh).material as THREE.MeshBasicMaterial;
@@ -2089,14 +2116,7 @@ export class World {
         group.rotation.z = 0.12;
         group.scale.y *= 0.85;
       }
-      const smoke = new THREE.Group();
-      smoke.userData.smoke = true;
-      const mat = new THREE.MeshBasicMaterial({ color: C.smoke, transparent: true, opacity: 0.5, depthWrite: false });
-      for (let i = 0; i < 4; i++) {
-        const puff = new THREE.Mesh(new THREE.SphereGeometry(0.22, 7, 5), mat);
-        puff.userData.phase = i / 4;
-        smoke.add(puff);
-      }
+      const smoke = khoiHu();
       smoke.position.y = 1.2;
       // Đền Rồng Tiên: khói bốc trên nóc đền chính (lùi về sau móng), cuộn to hợp với đền lớn.
       if (b.type === 'denRongTien') {
@@ -3465,15 +3485,18 @@ export class World {
     return this.cityCam !== null;
   }
 
-  /** Sang bãi chiến với nền `terrain` và bố cục vật cản `bai` (`baiChien.ts`), hoặc về lại kinh đô khi `terrain` là null. */
-  showField(terrain: Terrain | null, bai: string | null = null): void {
+  /**
+   * Sang bãi chiến với nền `terrain` và bố cục vật cản `bai` (`baiChien.ts`), hoặc về lại kinh đô khi `terrain` là null.
+   * Nền đảo dựng đồn đảo cấp `donCap` sau lưng quân ta.
+   */
+  showField(terrain: Terrain | null, bai: string | null = null, donCap?: number): void {
     const v = this.view;
     if (terrain) {
       if (!this.field) {
         this.field = new Battlefield();
         this.field.setShadows(this.bongDo);
       }
-      this.field.setTerrain(terrain, bai);
+      this.field.setTerrain(terrain, bai, donCap);
       if (!this.cityCam) this.cityCam = { target: v.target.clone(), zoom: v.zoom, bounds: { ...v.bounds }, facing: v.facing };
       this.panGoal = null;
       // Bãi chiến vẽ cho hướng nhìn mặc định: quân ta ở dưới, giặc ở trên.

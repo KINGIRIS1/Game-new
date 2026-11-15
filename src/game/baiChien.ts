@@ -45,7 +45,9 @@ export type DangCan =
   | 'chum'
   | 'coc'
   | 'gieng'
-  | 'xeCui';
+  | 'xeCui'
+  | 'phongBa'
+  | 'sanHo';
 
 export interface VatCan {
   hinh: Hinh;
@@ -338,6 +340,19 @@ export const BAI: Record<string, Bai> = {
     ],
     cham: [{ hinh: tron(6, 8.4, 0.9), loai: 'nuoc' }],
   },
+  // Đảo (giặc Hán đánh đồn đảo, cầm cự, quân đảo tự đánh): khóm phong ba và tảng đá san hô sát mép trái, xác thuyền
+  // dạt và đá san hô sát mép phải, vũng nước triều giữa bãi cát.
+  dao: {
+    id: 'dao',
+    terrain: 'dao',
+    can: [
+      { hinh: tron(-0.1, 8.6, 1.05), ve: 'phongBa' },
+      { hinh: tron(0.1, 13.4, 0.75), ve: 'sanHo' },
+      { hinh: doan(7.7, 8.2, 9.7, 8.8, 0.4), ve: 'thuyen' },
+      { hinh: tron(9.1, 12.2, 0.95), ve: 'sanHo' },
+    ],
+    cham: [{ hinh: tron(5.4, 10.8, 0.9), loai: 'nuoc' }],
+  },
 
   // Chương 5: quân Hán, Tô Định, Mã Viện. Hai Bà cưỡi voi: vật cản giữa bãi làm voi vướng, nên chỉ đặt sát mép.
   // Làng Mê Linh (màn 33): nhà sàn sát mép trái, ruộng ngô sát mép phải, giếng, đống rơm.
@@ -440,6 +455,7 @@ export const BAI_THEO: Partial<Record<Terrain, readonly (readonly [Chapter, stri
   luyLau: [[5, 'luyLau']],
   langBac: [[5, 'langBac']],
   camKhe: [[5, 'camKhe']],
+  dao: [[5, 'dao']],
   benKia: [[1, 'benKia']],
 };
 

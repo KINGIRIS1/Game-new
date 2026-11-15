@@ -66,7 +66,7 @@ beforeAll(async () => {
     const { lateHeroes } = await import('../game/testkit');
     const { startFieldBattle } = await import('../game/battle');
     const { Battlefield } = await import('./battlefield');
-    const list: { ten: string; chapter: number; terrain: Terrain; setup: FieldSetup }[] = [];
+    const list: { ten: string; chapter: number; terrain: Terrain; setup: FieldSetup; donCap?: number }[] = [];
     const army = (ch: number) => ({ giao: 1, cung: 1, voi: 1, no: ch >= 4 ? 1 : 0 });
     STAGES.forEach((def, i) => {
       const n = i + 1;
@@ -80,12 +80,21 @@ beforeAll(async () => {
       const setup = { id: 100 + Number(tier), stage: 0, enemies: camp.enemies, hpScale: 1, army: army(camp.chapter), rows: DEFAULT_ROWS, hero, arms: ARMS, camp: 1, bai: baiOf(camp.terrain, camp.chapter) };
       list.push({ ten: `đồn bậc ${tier}`, chapter: camp.chapter, terrain: camp.terrain, setup });
     }
+    // Trận giặc Hán đánh đảo (chương 5, đợt trần): không tướng, mọi lớp giặc ra cùng lúc, đồn đảo cấp 3 sau lưng quân ta.
+    {
+      const { DAO_GIAC, daoForces } = await import('../game/defs');
+      const f = daoForces(DAO_GIAC.tran);
+      const enemies: Record<string, number> = { ...f.enemies };
+      for (const w of f.waves) for (const [k, n] of Object.entries(w.enemies)) enemies[k] = (enemies[k] ?? 0) + (n ?? 0);
+      const setup = { id: 1006, stage: 0, enemies, holdS: DAO_GIAC.holdS, hpScale: 1, army: army(5), rows: DEFAULT_ROWS, hero: null, arms: ARMS, nuMoi: true, dao: 'hoangSa' as const, bai: baiOf('dao', 5) };
+      list.push({ ten: 'trận đảo', chapter: 5, terrain: 'dao', setup: setup as FieldSetup, donCap: 3 });
+    }
     list.sort((a, b) => a.chapter - b.chapter);
     for (const t of list) {
       const b = startFieldBattle(t.setup);
       takeTouched();
       const bf = new Battlefield();
-      bf.setTerrain(t.terrain, t.setup.bai);
+      bf.setTerrain(t.terrain, t.setup.bai, t.donCap);
       bf.update(b, 0.05);
       b.outcome = 'win';
       b.seaWin = true;
@@ -115,7 +124,7 @@ describe('nặn sẵn đủ dáng lúc vào trận ngoài bãi', () => {
     for (let ch = 1; ch < 5; ch++) expect(jobIds(ch).filter((id) => !het.has(id)), `chương ${ch}`).toEqual([]);
   });
 
-  it('mọi màn phó bản, mọi bậc đồn: quân ta, giặc (cả các đợt sau), tướng, cảnh bãi chiến đều có trong việc nặn sẵn của chương', () => {
+  it('mọi màn phó bản, mọi bậc đồn, trận đảo: quân ta, giặc (cả các đợt sau), tướng, cảnh bãi chiến đều có trong việc nặn sẵn của chương', () => {
     const tong = tran.flatMap((t) => t.can);
     expect(tong.length).toBeGreaterThan(100);
     // Lạc tướng đánh trống đồng sau hàng quân ta, có ở mọi bãi chiến.

@@ -6,11 +6,17 @@
 // Lính ra đảo rời khỏi `state.troops` (không giữ kinh đô, không ra phó bản), về tới bến thì vào lại. Người chơi đặt số
 // lính muốn đóng (`muon`); thuyền tự chạy đủ chuyến, mỗi chuyến chở tối đa `THUYEN_CHIEN.cho` chỗ quân. Chuyến tính
 // bằng thời gian còn lại nên lúc vắng thuyền vẫn chạy (`advanceDao` trong `tick` và `applyOffline`).
+//
+// Giặc đánh đảo (PR 3): từ khi Mã Viện sang, đồn có quân đóng lâu lâu gặp một đợt thủy quân Hán (`advanceGiacDao`
+// trong `tick`, không chạy lúc vắng). Trận cầm cự ngoài bãi tự đánh trọn ngay khi giặc tới (`danhDao`); trận ghi đủ
+// thứ để dựng lại y hệt (`TranDao`, `setupDao`) cho người chơi xem lại. Thua thì đồn hư (`suaDon`).
 
 import { QUAN_DAO, pathLength, seaIndex, warRoute, type QuanDaoId } from './bien';
-import { DON_DAO, THUYEN_CHIEN, UNITS, UNIT_TYPES, type Cost, type UnitType } from './defs';
+import { DAO_GIAC, DEFAULT_ROWS, DON_DAO, REPAIR_FRACTION, RESOURCE_IDS, THUYEN_CHIEN, UNITS, UNIT_TYPES, daoCua, daoForces, daoHpScale, type Cost, type UnitType } from './defs';
 import { armySpace, type Army } from './doanhTrai';
-import { canAfford, dienLevel, type Building, type FailReason, type GameState, type Result } from './game';
+import { BATTLE_STEP, canAfford, dienLevel, gain, pay, type Building, type FailReason, type GameState, type Result } from './game';
+import { startFieldBattle, stepField, type Battle, type FieldSetup } from './battle';
+import { baiOf } from './baiChien';
 import { maVienCame } from './chuong5';
 import { nuJoined } from './nuTuong';
 import { viecOf } from './xay';
@@ -20,6 +26,22 @@ export interface ChuyenThuyen {
   cho: Army;
   ve: boolean;
   con: number;
+}
+
+/**
+ * Một trận giặc Hán đánh đảo: đủ để dựng lại trận y hệt (đợt, cấp đồn, lính, binh khí, Lê Chân) và kết quả (thắng hay
+ * thua, lính mất, của được). `at`: đồng hồ chơi lúc đánh.
+ */
+export interface TranDao {
+  dot: number;
+  cap: number;
+  linh: Army;
+  arms: Army;
+  leChan: boolean;
+  thang: boolean;
+  mat: Army;
+  cua: Cost;
+  at: number;
 }
 
 /** Đồn đảo của một quần đảo. */
@@ -34,6 +56,16 @@ export interface DonDao {
   muon: Army;
   /** Chuyến thuyền đang đi, hay không có (thuyền neo ở bến). */
   chuyen: ChuyenThuyen | null;
+  /** Đồn hư (thua giặc): không giữ biển, không chở thêm lính ra, không có giặc tới tới khi sửa. */
+  hu: boolean;
+  /** Số đợt giặc đã tới đảo này. */
+  dot: number;
+  /** Số đợt quân đảo giữ được. */
+  thang: number;
+  /** Đồng hồ chơi lúc đợt giặc sau tới; null là chưa có lịch (chưa có Mã Viện, chưa có quân, đồn hư). */
+  sau: number | null;
+  /** Trận gần nhất. */
+  tran: TranDao | null;
 }
 
 export type DaoState = Record<QuanDaoId, DonDao>;
@@ -43,7 +75,12 @@ export const DAO_IDS: readonly QuanDaoId[] = QUAN_DAO.map((q) => q.id);
 const zero = (): Army => ({ giao: 0, cung: 0, voi: 0, no: 0 });
 
 function newDon(): DonDao {
-  return { cap: 0, thuyen: false, linh: zero(), muon: zero(), chuyen: null };
+  return { cap: 0, thuyen: false, linh: zero(), muon: zero(), chuyen: null, ...giacMoi() };
+}
+
+/** Phần giặc đảo của một đồn lúc chưa có đợt nào (bản lưu 28 lên 29 cũng thêm đúng phần này). */
+export function giacMoi(): Pick<DonDao, 'hu' | 'dot' | 'thang' | 'sau' | 'tran'> {
+  return { hu: false, dot: 0, thang: 0, sau: null, tran: null };
 }
 
 export function initialDao(): DaoState {
@@ -53,6 +90,13 @@ export function initialDao(): DaoState {
 const isNum = (v: unknown): v is number => typeof v === 'number' && Number.isFinite(v);
 const isObj = (v: unknown): v is Record<string, unknown> => typeof v === 'object' && v !== null && !Array.isArray(v);
 const isArmy = (v: unknown): boolean => isObj(v) && UNIT_TYPES.every((k) => isNum(v[k]) && (v[k] as number) >= 0);
+const isCost = (v: unknown): boolean => isObj(v) && Object.entries(v).every(([k, n]) => (RESOURCE_IDS as readonly string[]).includes(k) && isNum(n) && n >= 0);
+
+function isTranDao(t: unknown): boolean {
+  if (!isObj(t)) return false;
+  if (!isNum(t.dot) || t.dot < 1 || !isNum(t.cap) || t.cap < 1 || t.cap > DON_DAO.cho.length || !isNum(t.at)) return false;
+  return isArmy(t.linh) && isArmy(t.arms) && isArmy(t.mat) && isCost(t.cua) && typeof t.leChan === 'boolean' && typeof t.thang === 'boolean';
+}
 
 /** Trạng thái đóng đảo đọc từ bản lưu hợp lệ. */
 export function isDaoState(v: unknown): v is DaoState {
@@ -61,6 +105,9 @@ export function isDaoState(v: unknown): v is DaoState {
     const d = v[id];
     if (!isObj(d) || !isNum(d.cap) || d.cap < 0 || d.cap > DON_DAO.cho.length || typeof d.thuyen !== 'boolean') return false;
     if (!isArmy(d.linh) || !isArmy(d.muon)) return false;
+    if (typeof d.hu !== 'boolean' || !isNum(d.dot) || d.dot < 0 || !isNum(d.thang) || d.thang < 0 || d.thang > d.dot) return false;
+    if (d.sau !== null && !isNum(d.sau)) return false;
+    if (d.tran !== null && !isTranDao(d.tran)) return false;
     const c = d.chuyen;
     return c === null || (isObj(c) && isArmy(c.cho) && typeof c.ve === 'boolean' && isNum(c.con) && c.con >= 0);
   });
@@ -124,6 +171,7 @@ export const donMs = (state: GameState, id: QuanDaoId): number => DON_DAO.xayMs[
  */
 export function canDon(state: GameState, id: QuanDaoId): Result {
   if (dienLevel(state) < DON_DAO.minDien) return fail('chuaDuCapDien');
+  if (state.dao[id].hu) return fail('donDaoHu');
   const cost = donCost(state, id);
   if (!cost) return fail('capToiDa');
   if (!state.dao[id].thuyen) return fail('canThuyenChien');
@@ -208,7 +256,7 @@ export function tripMs(state: GameState, id: QuanDaoId): number {
  */
 function dispatch(state: GameState, id: QuanDaoId, busy = false): void {
   const d = state.dao[id];
-  if (d.chuyen || !d.thuyen || d.cap < 1) return;
+  if (d.chuyen || !d.thuyen || d.cap < 1 || d.hu) return;
   if (busy || state.raid.phase === 'battle' || state.campaign.battle) return;
   const ben = benOf(state, id);
   if (!ben || ben.damaged) return;
@@ -268,7 +316,7 @@ export function advanceDao(state: GameState, ms: number, busy = false): void {
 /** Cấp đồn đảo `id` đang giữ biển (đồn còn nguyên, đủ `DON_DAO.giuCho` chỗ quân đóng), không thì 0. */
 export function giuBien(state: GameState, id: QuanDaoId): number {
   const d = state.dao[id];
-  if (d.cap < 1 || armySpace(d.linh) < DON_DAO.giuCho) return 0;
+  if (d.cap < 1 || d.hu || armySpace(d.linh) < DON_DAO.giuCho) return 0;
   return d.cap;
 }
 
@@ -300,6 +348,139 @@ export const daoGiuBien = (state: GameState): QuanDaoId[] => (state.dao ? DAO_ID
 
 /** Lê Chân đã theo về: lính đóng đảo mọi binh chủng được cộng như binh chủng của nữ tướng. */
 export const leChanDoc = (state: GameState): boolean => nuJoined(state, 'leChan');
+
+// ---------- Giặc đánh đảo ----------
+
+/** Đảo `id` có giặc tới không: Mã Viện đã sang, đồn còn nguyên và có lính trên đảo. */
+export function giacToi(state: GameState, id: QuanDaoId): boolean {
+  const d = state.dao[id];
+  return maVienCame(state) && d.cap >= 1 && !d.hu && armySpace(d.linh) > 0;
+}
+
+/** Đồng hồ giặc đảo đứng: đang có trận (phó bản, giữ kinh đô, Đấu thành hay đang xem lại trận đảo: `busy`). */
+const dungGiac = (state: GameState, busy: boolean): boolean => busy || !!state.campaign.battle || state.raid.phase === 'battle';
+
+/** Đợt sau của đảo `id` cách đợt đã định của đảo kia ít nhất `DAO_GIAC.soLeMs`: gần quá thì lùi lại. */
+function soLe(state: GameState, id: QuanDaoId): void {
+  const d = state.dao[id];
+  for (const o of DAO_IDS) {
+    const other = state.dao[o].sau;
+    if (o === id || other === null || d.sau === null) continue;
+    if (Math.abs(d.sau - other) < DAO_GIAC.soLeMs) d.sau = other + DAO_GIAC.soLeMs;
+  }
+}
+
+/**
+ * Thời gian chơi trôi `ms` (chỉ lúc chơi; lúc vắng không có giặc đánh đảo): đảo có giặc tới mà chưa có lịch thì đợt
+ * đầu tới sau `DAO_GIAC.dauMs`; đang có trận thì đồng hồ giặc đảo đứng; tới giờ thì đánh trọn trận (`danhDao`).
+ */
+export function advanceGiacDao(state: GameState, ms: number, busy = false): void {
+  const dung = dungGiac(state, busy);
+  for (const id of DAO_IDS) {
+    const d = state.dao[id];
+    if (!giacToi(state, id)) {
+      d.sau = null;
+      continue;
+    }
+    if (d.sau === null) {
+      d.sau = state.clock + DAO_GIAC.dauMs;
+      soLe(state, id);
+    }
+    if (dung) d.sau += ms;
+    else if (state.clock >= d.sau) danhDao(state, id);
+  }
+}
+
+/** Giặc sắp tới đảo `id`: còn không quá `DAO_GIAC.baoMs` (đếm ngược ở dòng tin, bảng quần đảo; lửa hiệu cháy). */
+export function baoDao(state: GameState, id: QuanDaoId): number | null {
+  const d = state.dao[id];
+  if (d.sau === null || !giacToi(state, id)) return null;
+  const con = d.sau - state.clock;
+  return con <= DAO_GIAC.baoMs ? Math.max(0, con) : null;
+}
+
+/** Mã trận của một trận đảo (hạt giống): theo quần đảo và đợt. */
+const tranId = (id: QuanDaoId, dot: number): number => (DAO_IDS.indexOf(id) + 1) * 1000 + dot;
+
+/**
+ * Trận đảo `id` dựng từ `t` (đợt, cấp đồn, lính, binh khí, Lê Chân): cầm cự `DAO_GIAC.holdS` giây trên nền `dao`,
+ * không có tướng, lính được cộng theo cấp đồn (`DON_DAO.them`), không huân công. Cùng `t` thì trận ra y hệt.
+ */
+export function setupDao(id: QuanDaoId, t: Pick<TranDao, 'dot' | 'cap' | 'linh' | 'arms' | 'leChan'>): FieldSetup {
+  const f = daoForces(t.dot);
+  return {
+    id: tranId(id, t.dot),
+    stage: 0,
+    enemies: f.enemies,
+    waves: f.waves,
+    holdS: DAO_GIAC.holdS,
+    hpScale: daoHpScale(t.dot),
+    army: { ...t.linh },
+    rows: DEFAULT_ROWS,
+    hero: null,
+    bonus: DON_DAO.them[t.cap - 1] ?? 0,
+    arms: { ...t.arms },
+    nuMoi: t.leChan,
+    dao: id,
+    bai: baiOf('dao', 5),
+  };
+}
+
+/** Dựng trận đảo từ `setup` rồi cho chạy trọn (tất định, bước `BATTLE_STEP` như mọi trận). */
+export function chayTranDao(setup: FieldSetup): Battle {
+  const b = startFieldBattle(setup);
+  while (!stepField(b, BATTLE_STEP));
+  return b;
+}
+
+/**
+ * Giặc tới đảo `id`: đánh trọn trận cầm cự với lính đang đóng. Lính tử trận mất hẳn. Giữ được thì được của trên thuyền
+ * giặc (`daoCua`); thua thì đồn hư. Đợt sau tới sau `DAO_GIAC.cachMs` nếu đảo còn có giặc tới. Trả trận vừa đánh.
+ */
+export function danhDao(state: GameState, id: QuanDaoId): TranDao {
+  const d = state.dao[id];
+  const dot = d.dot + 1;
+  const t: TranDao = { dot, cap: d.cap, linh: { ...d.linh }, arms: { ...state.arms }, leChan: leChanDoc(state), thang: false, mat: zero(), cua: {}, at: state.clock };
+  const b = chayTranDao(setupDao(id, t));
+  t.thang = b.outcome === 'win';
+  for (const k of UNIT_TYPES) {
+    t.mat[k] = t.thang ? Math.min(d.linh[k], b.lost[k]) : d.linh[k];
+    d.linh[k] -= t.mat[k];
+  }
+  if (t.thang) {
+    t.cua = daoCua(dot);
+    gain(state, t.cua);
+    d.thang += 1;
+  } else d.hu = true;
+  d.dot = dot;
+  d.tran = t;
+  d.sau = giacToi(state, id) ? state.clock + DAO_GIAC.cachMs : null;
+  soLe(state, id);
+  return t;
+}
+
+/** Giá sửa đồn đảo `id` đã hư: `REPAIR_FRACTION` giá dựng hay nâng lên cấp đang có, như mọi công trình. */
+export function suaDonCost(state: GameState, id: QuanDaoId): Cost {
+  const base = DON_DAO.cost[state.dao[id].cap - 1] ?? {};
+  const cost: Cost = {};
+  for (const r of RESOURCE_IDS) if (base[r]) cost[r] = Math.max(5, Math.round((base[r]! * REPAIR_FRACTION) / 5) * 5);
+  return cost;
+}
+
+/** Sửa đồn đảo `id` đã hư: trả của, đồn còn nguyên lại; thuyền chở tiếp lính ra cho đủ số muốn đóng. */
+export function suaDon(state: GameState, id: QuanDaoId): Result<undefined> {
+  const d = state.dao[id];
+  if (!d.hu) return fail('khongHuHong');
+  const cost = suaDonCost(state, id);
+  if (!canAfford(state, cost)) return fail('thieuTaiNguyen');
+  pay(state, cost);
+  d.hu = false;
+  dispatch(state, id);
+  return ok(undefined);
+}
+
+/** Số đợt giặc quân hai đảo đã giữ được (nhiệm vụ 67). */
+export const daoGiuDuoc = (state: GameState): number => (state.dao ? DAO_IDS.reduce((n, id) => n + state.dao[id].thang, 0) : 0);
 
 /** Đảo `id` mở chưa: Điện 10 và có bến thuyền khơi đánh cá ở quần đảo ấy. */
 export function daoMo(state: GameState, id: QuanDaoId): boolean {
