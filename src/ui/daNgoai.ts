@@ -31,7 +31,7 @@ export function capBarHtml(s: GameState): string {
 const bossTen = (map: DaMapId) => vi.enemies[DA_MAP[map].boss];
 
 /** Màu nền bản đồ nhỏ theo nền map. */
-const NEN: Record<DaMapId, string> = { 1: '#7f9b55', 2: '#7d9a7a', 3: '#5f6c74', 4: '#b4a57a', 5: '#6f8b5a', 6: '#6a7d5c', 7: '#7c8a62' };
+const NEN: Record<DaMapId, string> = { 1: '#7f9b55', 2: '#7d9a7a', 3: '#5f6c74', 4: '#b4a57a', 5: '#6f8b5a', 6: '#6a7d5c', 7: '#7c8a62', 8: '#7a7650' };
 
 /**
  * Bản đồ nhỏ của map (SVG theo ô map, xoay cho khớp hướng camera): lối đi, năm khu có số, trại, cổng, khu boss (mờ

@@ -732,8 +732,8 @@ function poseRooster(b: B, a: Act): void {
 
 // ---------- Thú và người cưỡi trong trận ----------
 
-export type BeastKind = 'voi' | 'chienXa' | 'daiTuong' | 'kyBinh' | 'trieuDa' | 'maVien' | 'lucDan' | 'tranBaTien' | 'hoTinh' | 'gaTrang' | 'lonRung' | 'baoGam' | 'gauNgua' | 'voiRung' | 'trauRung';
-const KINDS: readonly FighterKind[] = ['voi', 'chienXa', 'daiTuong', 'kyBinh', 'trieuDa', 'maVien', 'lucDan', 'tranBaTien', 'hoTinh', 'gaTrang', 'lonRung', 'baoGam', 'gauNgua', 'voiRung', 'trauRung'];
+export type BeastKind = 'voi' | 'chienXa' | 'daiTuong' | 'kyBinh' | 'trieuDa' | 'maVien' | 'lucDan' | 'tranBaTien' | 'duongTuHuc' | 'hoTinh' | 'gaTrang' | 'lonRung' | 'baoGam' | 'gauNgua' | 'voiRung' | 'trauRung';
+const KINDS: readonly FighterKind[] = ['voi', 'chienXa', 'daiTuong', 'kyBinh', 'trieuDa', 'maVien', 'lucDan', 'tranBaTien', 'duongTuHuc', 'hoTinh', 'gaTrang', 'lonRung', 'baoGam', 'gauNgua', 'voiRung', 'trauRung'];
 export const isBeast = (k: FighterKind): k is BeastKind => KINDS.includes(k);
 
 interface Spec {
@@ -807,6 +807,19 @@ const SPECS: Record<BeastKind, Spec> = {
     (r) => {
       drawHorse(r, C.horse, C.luong);
       r.on('qHead').plain.box(0.08, 0.2, 0.3, C.bronze, 0, 1.33, 0.72, [0.35, 0, 0]);
+    },
+    poseHorse,
+  ),
+  // Dương Tư Húc cưỡi ngựa xám bờm đen, yên lục, tấm che trán sắt.
+  duongTuHuc: riderSpec(
+    HORSE,
+    'qBody',
+    [0, 0.92, -0.08],
+    'duongTuHuc',
+    'ride',
+    (r) => {
+      drawHorse(r, C.horseGrey, C.duongQuan);
+      r.on('qHead').plain.box(0.08, 0.2, 0.3, C.hanIron, 0, 1.33, 0.72, [0.35, 0, 0]);
     },
     poseHorse,
   ),

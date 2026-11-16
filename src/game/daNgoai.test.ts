@@ -412,7 +412,7 @@ describe('không khóa tướng, bản lưu', () => {
     old.daNgoai.boss = old.daNgoai.boss.slice(0, 5);
     const up = deserialize(JSON.stringify(old))!;
     expect(up.version).toBe(SAVE_VERSION);
-    expect(up.daNgoai.boss).toEqual([0, 0, 7777, 0, 0, 0, 0]);
+    expect(up.daNgoai.boss).toEqual([0, 0, 7777, 0, 0, 0, 0, 0]);
     expect(isDaNgoaiState(up.daNgoai)).toBe(true);
   });
 
@@ -424,16 +424,42 @@ describe('không khóa tướng, bản lưu', () => {
     old.daNgoai.boss = old.daNgoai.boss.slice(0, 6);
     const up = deserialize(JSON.stringify(old))!;
     expect(up.version).toBe(SAVE_VERSION);
-    expect(up.daNgoai.boss).toEqual([0, 0, 0, 0, 0, 4242, 0]);
+    expect(up.daNgoai.boss).toEqual([0, 0, 0, 0, 0, 4242, 0, 0]);
     expect(isDaNgoaiState(up.daNgoai)).toBe(true);
   });
 
-  it('map 7: cổng cần cấp 60, là map cuối, đồ boss phẩm theo bossRoi, cấp đồ 5', () => {
+  it('bản lưu 32 lên 33: thêm giờ boss cho map 8, giữ giờ boss cũ', () => {
+    const s = base(true);
+    s.daNgoai.boss[6] = 5151;
+    const old = JSON.parse(serialize(s));
+    old.version = 32;
+    old.daNgoai.boss = old.daNgoai.boss.slice(0, 7);
+    const up = deserialize(JSON.stringify(old))!;
+    expect(up.version).toBe(SAVE_VERSION);
+    expect(up.daNgoai.boss).toEqual([0, 0, 0, 0, 0, 0, 5151, 0]);
+    expect(isDaNgoaiState(up.daNgoai)).toBe(true);
+  });
+
+  it('map 8: cổng cần cấp 70, là map cuối, trần cấp 80, đồ boss Huyền thoại chừng 80%, cấp đồ 5', () => {
+    const def = DA_MAP[8];
+    expect(def.cong).toBe(70);
+    expect(DA_MAP_CUOI).toBe(8);
+    expect(DA_CAP.tran).toBe(80);
+    expect(boCuc(7).congSau).not.toBeNull();
+    let cao = 0;
+    const n = 4000;
+    for (let seq = 0; seq < n; seq++) {
+      const m = rutMon(seq, 'daBoss', 5, ['caoLo'], def.bossRoi)!;
+      expect(m.cap).toBe(5);
+      if (m.pham === 4) cao++;
+    }
+    expect(cao / n).toBeGreaterThan(0.75);
+    expect(cao / n).toBeLessThan(0.85);
+  });
+
+  it('map 7: cổng cần cấp 60, đồ boss phẩm theo bossRoi, cấp đồ 5', () => {
     const def = DA_MAP[7];
     expect(def.cong).toBe(60);
-    expect(DA_MAP_CUOI).toBe(7);
-    expect(DA_CAP.tran).toBe(70);
-    expect(boCuc(6).congSau).not.toBeNull();
     let cao = 0;
     const n = 4000;
     for (let seq = 0; seq < n; seq++) {

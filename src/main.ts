@@ -393,14 +393,13 @@ async function start(): Promise<void> {
       state.hinted = [...state.hinted, 'daNgoai'];
       hud.toast(vi.daNgoai.hint, false, 8000);
     } else {
-      // Đủ cấp sang map mới (Núi Nưa, Đầm Dạ Trạch): báo một lần mỗi map.
-      for (const id of DA_MAP_IDS) {
-        const loi = vi.daNgoai.hintMap[id];
-        const key = `daNgoai${id}`;
-        if (!loi || state.daNgoai.cap < DA_MAP[id].cong || state.hinted.includes(key)) continue;
-        state.hinted = [...state.hinted, key];
-        hud.toast(loi, false, 9000);
-        break;
+      // Đủ cấp sang map mới (Núi Nưa, Đầm Dạ Trạch, Núi Vệ): báo một lần map cao nhất vừa đủ cấp; các map thấp hơn
+      // coi như đã báo (lên cấp nhanh thì khỏi báo map đã qua).
+      const moi = DA_MAP_IDS.filter((id) => vi.daNgoai.hintMap[id] && state.daNgoai.cap >= DA_MAP[id].cong);
+      const cao = moi[moi.length - 1];
+      if (cao && !state.hinted.includes(`daNgoai${cao}`)) {
+        state.hinted = [...state.hinted, ...moi.map((id) => `daNgoai${id}`).filter((k) => !state.hinted.includes(k))];
+        hud.toast(vi.daNgoai.hintMap[cao]!, false, 9000);
       }
     }
   };

@@ -78,7 +78,10 @@ export type SoldierKind =
   | 'giapNgo'
   | 'linhLuong'
   | 'noLuong'
-  | 'giapLuong';
+  | 'giapLuong'
+  | 'linhDuong'
+  | 'noDuong'
+  | 'giapDuong';
 const KINDS: readonly FighterKind[] = [
   'giao',
   'cung',
@@ -103,6 +106,9 @@ const KINDS: readonly FighterKind[] = [
   'linhLuong',
   'noLuong',
   'giapLuong',
+  'linhDuong',
+  'noDuong',
+  'giapDuong',
 ];
 
 /** Giáp mây đan của lính rìu Triệu. */
@@ -170,6 +176,21 @@ function luongSoldier(r: HumanRig): void {
   helmet(r, { color: C.trieuCloth, cloth: true, lift: 0, puff: 0.014 });
   bun(r, { color: C.trieuCloth, at: [0, 0.99, -0.05], size: 0.07, tie: C.luong });
   streamer(r, { from: [0.05, 0.8, -0.2], dir: [0.35, -1, -0.45], len: 0.16, width: 0.035, color: C.luongDark });
+}
+
+/**
+ * Quân Đường (map dã ngoại Núi Vệ): áo dài lục sẫm, quần sẫm, giáp sắt ngực có hai hộ tâm tròn sáng, mũ sắt tròn vành
+ * lục, vạt khăn lục sau gáy.
+ */
+function duongSoldier(r: HumanRig, giap: boolean): void {
+  humanBody(r, { legs: C.duongQuanDark, cloth: C.duongQuan, pattern: false, long: true, top: C.duongQuan, sleeves: C.duongQuan, belt: C.duongQuanDark, hem: C.duongQuanDark });
+  if (giap) {
+    armor(r, { color: C.hanIron, trim: C.duongQuanDark, rows: 3, y0: 0.4, y1: 0.585 });
+    for (const s of [-1, 1]) chestDisc(r, { color: C.hanIron, r: 0.035, y: 0.52, x: s * 0.07, thick: 0.018, rim: C.bronzeLight });
+  }
+  humanHead(r, { brows: true });
+  helmet(r, { color: C.hanIron, band: C.duongQuan, bandH: 0.026, neck: 0.06, top: { kind: 'knob', color: C.bronzeLight } });
+  streamer(r, { from: [0, 0.9, -0.17], dir: [0, 1, -0.5], len: 0.1, width: 0.12, color: C.duongQuanDark });
 }
 
 /** Quân Hán: quần đỏ sẫm, áo dài đỏ son quá gối, giáp (`vest`: lá sắt hay da) che ngực, khăn đen viền đỏ, vạt khăn dựng sau gáy. */
@@ -398,6 +419,67 @@ const SPECS: Record<SoldierKind, Spec> = {
       helmet(r, { color: ARMOR_BLACK, band: C.gold, neck: 0.1, guard: ARMOR_BLACK, guardTrim: C.gold, brow: C.gold, top: { kind: 'knob', color: C.gold } });
       plumes(r, [FEATHER_BLACK, ARMOR_BLACK], { count: 7, len: 0.46, y: 0.98, z: -0.08 });
       r.local('hand', GRIP_R, null, longDao);
+    },
+  },
+  // Quân Đường ở map dã ngoại Núi Vệ: lính giáo, nỏ thủ, giáp sĩ.
+  linhDuong: {
+    style: 'spear',
+    draw: (r) => {
+      // Lính giáo: giáp sắt hai hộ tâm, mâu dài có tua lục.
+      duongSoldier(r, true);
+      r.local('hand', GRIP_R, null, (s) => {
+        spear(s, 2, 1.5);
+        s.plain.cone(0.045, 0.12, C.duongQuan, 0, 1.12, 0, [Math.PI, 0, 0], 7);
+      });
+    },
+  },
+  noDuong: {
+    style: 'crossbow',
+    draw: (r) => {
+      // Nỏ thủ: áo lục không giáp, nỏ lớn, bao tên lục sẫm.
+      duongSoldier(r, false);
+      r.local('hand', GRIP_R, null, (s) => crossbowParts(s, false, 0.92));
+      backQuiver(r, C.duongQuanDark, true);
+    },
+  },
+  giapDuong: {
+    style: 'chop',
+    shield: true,
+    short: true,
+    draw: (r) => {
+      // Giáp sĩ: giáp lá sắt phủ tới gối, hộ tâm sáng, giáp vai, mũ sắt chóp tua lục; khiên tròn sơn lục viền sắt; đao vòng.
+      humanBody(r, {
+        legs: C.duongQuanDark,
+        cloth: C.hanIron,
+        pattern: false,
+        long: true,
+        top: C.hanIron,
+        sleeves: C.duongQuan,
+        belt: C.duongQuanDark,
+        greaves: C.hanIronDark,
+        wristband: C.hanIronDark,
+      });
+      skirtArmor(r, { color: C.hanIron, trim: C.duongQuanDark, rows: 3, to: 0.12 });
+      armor(r, { color: C.hanIron, trim: C.duongQuanDark, rows: 3, y0: 0.4, y1: 0.59 });
+      chestDisc(r, { color: C.bronzeLight, r: 0.045, y: 0.51, thick: 0.02, rim: C.hanIronDark });
+      pauldrons(r, { color: C.hanIron, trim: C.duongQuanDark, layers: 2 });
+      humanHead(r, { brows: true });
+      helmet(r, {
+        color: C.hanIron,
+        band: C.duongQuanDark,
+        neck: 0.1,
+        cheek: 0.09,
+        guard: C.hanIron,
+        guardTrim: C.duongQuanDark,
+        top: { kind: 'tube', color: C.duongQuanDark, h: 0.05 },
+        tuft: { color: C.duongQuan, len: 0.13, lean: 0.1, r: 0.03 },
+      });
+      r.local('armL', [-0.21, 0.38, 0.07], null, (s) => {
+        s.plain.cyl(0.24, 0.24, 0.035, C.hanIronDark, 0, 0, 0, [Math.PI / 2, 0, 0], 14);
+        s.plain.cyl(0.21, 0.21, 0.045, C.duongQuan, 0, 0, 0, [Math.PI / 2, 0, 0], 14);
+        s.plain.sphere(0.055, C.bronzeLight, 0, 0, 0.03, [1, 1, 0.6], 8);
+      });
+      r.local('hand', GRIP_R, null, daoVong);
     },
   },
   // Quân Lương ở map dã ngoại Đầm Dạ Trạch: lính khiên, nỏ thủ, giáp sĩ.
@@ -838,7 +920,7 @@ function shapeOf(kind: SoldierKind, tier: number): RigShape<string> {
 // ---------- Người cưỡi ----------
 
 /** Người cưỡi voi, cưỡi ngựa hay đứng trên chiến xa. Khung xương người dời lên lưng thú (beasts.ts). */
-export type RiderKind = 'lacTuong' | 'anXa' | 'daiTuong' | 'kyBinh' | 'trieuDa' | 'maVien' | 'lucDan' | 'tranBaTien';
+export type RiderKind = 'lacTuong' | 'anXa' | 'daiTuong' | 'kyBinh' | 'trieuDa' | 'maVien' | 'lucDan' | 'tranBaTien' | 'duongTuHuc';
 
 /** Chỗ buộc lá cờ lệnh của Mã Viện trên cán (tư thế gốc: tay trái buông, cán dựng đứng từ chỗ tay nắm). */
 const MA_VIEN_FLAG: [number, number, number] = [GRIP_L[0], GRIP_L[1] + CO_LENH_TOP, GRIP_L[2]];
@@ -1054,6 +1136,42 @@ const RIDERS: Record<RiderKind, Spec> = {
         tuft: { color: C.ink, len: 0.34, lean: 0.3, r: 0.042 },
       });
       r.local('hand', GRIP_R, null, daiDao);
+    },
+  },
+  // Tướng Đường Dương Tư Húc (map dã ngoại Núi Vệ): giáp sắt sáng hai hộ tâm đồng, áo lục, áo choàng đỏ sẫm viền
+  // vàng, râu dài, mũ trụ sắt cánh che tai, chùm lông đỏ; kích dài.
+  duongTuHuc: {
+    style: 'spear',
+    draw: (r) => {
+      humanBody(r, {
+        legs: C.duongQuanDark,
+        cloth: C.hanIron,
+        pattern: false,
+        long: true,
+        top: C.hanIron,
+        sleeves: C.duongQuan,
+        belt: C.gold,
+        greaves: C.hanIronDark,
+        wristband: C.gold,
+      });
+      skirtArmor(r, { color: C.hanIron, trim: C.gold, rows: 3, to: 0.12 });
+      armor(r, { color: C.hanIron, trim: C.gold, rows: 3, scales: true, y0: 0.4, y1: 0.59 });
+      for (const s of [-1, 1]) chestDisc(r, { color: C.bronzeLight, r: 0.042, y: 0.52, x: s * 0.075, thick: 0.022, rim: C.goldDark });
+      pauldrons(r, { color: C.hanIron, trim: C.gold, layers: 2, size: 1.1 });
+      cloak(r, { color: C.hanRedDark, trim: C.gold, clasp: C.gold, hem: 0.08 });
+      humanHead(r, { brows: true, mustache: C.hair, beard: C.hair, beardLen: 0.22 });
+      helmet(r, {
+        color: C.hanIron,
+        band: C.gold,
+        neck: 0.1,
+        cheek: 0.1,
+        guard: C.hanIron,
+        guardTrim: C.gold,
+        brow: C.gold,
+        top: { kind: 'tube', color: C.gold, h: 0.1 },
+        tuft: { color: C.hanRed, len: 0.32, lean: 0.3, r: 0.042 },
+      });
+      r.local('hand', GRIP_R, null, kich);
     },
   },
 };

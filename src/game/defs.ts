@@ -1473,7 +1473,12 @@ export type EnemyType =
   | 'tranBaTien'
   // Thú đầm Dạ Trạch (map dã ngoại 7): trăn gấm, trâu rừng.
   | 'tranGam'
-  | 'trauRung';
+  | 'trauRung'
+  // Quân Đường và tướng Đường Dương Tư Húc ở map dã ngoại Núi Vệ (thời Mai Thúc Loan).
+  | 'linhDuong'
+  | 'noDuong'
+  | 'giapDuong'
+  | 'duongTuHuc';
 export const UNIT_TYPES: UnitType[] = ['giao', 'cung', 'voi', 'no'];
 
 export interface FighterStats {
@@ -1500,7 +1505,7 @@ export interface UnitDef extends FighterStats {
 }
 
 /** Quân nặng của giặc: giáo binh và lính nỏ khắc chế. */
-const HEAVY: EnemyType[] = ['chienXa', 'caSau', 'hoTinh', 'kyBinh', 'linhRiu', 'giapHan', 'giapNgo', 'voiRung', 'giapLuong', 'trauRung'];
+const HEAVY: EnemyType[] = ['chienXa', 'caSau', 'hoTinh', 'kyBinh', 'linhRiu', 'giapHan', 'giapNgo', 'voiRung', 'giapLuong', 'trauRung', 'giapDuong'];
 
 /**
  * Quân ta: giáo binh thắng quân nặng (chiến xa, cá sấu, hổ tinh, kỵ binh, lính rìu, giáp sĩ Hán), cung thủ thắng
@@ -1512,15 +1517,15 @@ const HEAVY: EnemyType[] = ['chienXa', 'caSau', 'hoTinh', 'kyBinh', 'linhRiu', '
  */
 export const UNITS: Record<UnitType, UnitDef> = {
   giao: { hp: 60, dmg: 8, range: 0.8, speed: 1.6, cooldown: 1.0, strongVs: [...HEAVY, 'voi'], cost: { gao: 20, voOc: 8 }, home: 'traiGiao', space: 1, upkeep: 0.6 },
-  cung: { hp: 40, dmg: 7, range: 3.8, speed: 1.5, cooldown: 1.2, strongVs: ['giaoAn', 'tomBinh', 'quyNui', 'linhTrieu', 'linhThuy', 'linhHan', 'linhNgo', 'linhLuong', 'giao'], cost: { gao: 25, voOc: 8, sat: 4 }, home: 'traiCung', space: 1, upkeep: 0.6 },
-  voi: { hp: 200, dmg: 15, range: 0.9, speed: 1.1, cooldown: 1.5, strongVs: ['cungAn', 'caPhun', 'maTroi', 'noTrieu', 'cungThuyen', 'noHan', 'noNgo', 'noLuong', 'cung', 'no'], cost: { gao: 60, voOc: 20, sat: 12 }, home: 'chuongVoi', space: 3, upkeep: 1.5 },
+  cung: { hp: 40, dmg: 7, range: 3.8, speed: 1.5, cooldown: 1.2, strongVs: ['giaoAn', 'tomBinh', 'quyNui', 'linhTrieu', 'linhThuy', 'linhHan', 'linhNgo', 'linhLuong', 'linhDuong', 'giao'], cost: { gao: 25, voOc: 8, sat: 4 }, home: 'traiCung', space: 1, upkeep: 0.6 },
+  voi: { hp: 200, dmg: 15, range: 0.9, speed: 1.1, cooldown: 1.5, strongVs: ['cungAn', 'caPhun', 'maTroi', 'noTrieu', 'cungThuyen', 'noHan', 'noNgo', 'noLuong', 'noDuong', 'cung', 'no'], cost: { gao: 60, voOc: 20, sat: 12 }, home: 'chuongVoi', space: 3, upkeep: 1.5 },
   no: {
     hp: 50,
     dmg: 26,
     range: 4.5,
     speed: 1.3,
     cooldown: 2.4,
-    strongVs: [...HEAVY, 'phoTuong', 'daiTuong', 'thuongLuong', 'thuyTinh', 'gaTrang', 'trieuDa', 'tuongThuy', 'toDinh', 'maVien', 'lucDan', 'tranBaTien', 'voi'],
+    strongVs: [...HEAVY, 'phoTuong', 'daiTuong', 'thuongLuong', 'thuyTinh', 'gaTrang', 'trieuDa', 'tuongThuy', 'toDinh', 'maVien', 'lucDan', 'tranBaTien', 'duongTuHuc', 'voi'],
     cost: { gao: 50, voOc: 15, sat: 10 },
     home: 'traiNo',
     space: 2,
@@ -1590,6 +1595,11 @@ export const ENEMIES: Record<EnemyType, FighterStats> = {
   tranBaTien: { hp: 2000, dmg: 36, range: 1.3, speed: 1.4, cooldown: 1.2 },
   tranGam: { hp: 100, dmg: 13, range: 1.4, speed: 1.3, cooldown: 1.2 },
   trauRung: { hp: 160, dmg: 15, range: 1.0, speed: 1.1, cooldown: 1.4 },
+  // Quân Đường (map dã ngoại Núi Vệ): dáng đánh như quân Hán; Dương Tư Húc cưỡi ngựa cầm kích, như Lục Dận.
+  linhDuong: { hp: 105, dmg: 13, range: 1.0, speed: 1.4, cooldown: 1.0 },
+  noDuong: { hp: 60, dmg: 13, range: 4.2, speed: 1.3, cooldown: 1.5 },
+  giapDuong: { hp: 330, dmg: 26, range: 0.9, speed: 1.5, cooldown: 1.4, strongVs: ['cung'] },
+  duongTuHuc: { hp: 2000, dmg: 36, range: 1.4, speed: 1.4, cooldown: 1.2 },
 };
 
 /**
@@ -1597,7 +1607,7 @@ export const ENEMIES: Record<EnemyType, FighterStats> = {
  * gà trắng nghìn năm ở đỉnh Thất Diệu, Triệu Đà dưới chân thành Cổ Loa (và trên đường ra biển), tướng thủy binh
  * Triệu ở cửa sông.
  */
-export const BOSSES: EnemyType[] = ['phoTuong', 'daiTuong', 'thuongLuong', 'thuyTinh', 'gaTrang', 'trieuDa', 'tuongThuy', 'toDinh', 'maVien', 'lucDan', 'tranBaTien'];
+export const BOSSES: EnemyType[] = ['phoTuong', 'daiTuong', 'thuongLuong', 'thuyTinh', 'gaTrang', 'trieuDa', 'tuongThuy', 'toDinh', 'maVien', 'lucDan', 'tranBaTien', 'duongTuHuc'];
 /** Thủy quái bơi được dưới sông và chỗ nước ngập. */
 export const SWIMMERS: EnemyType[] = ['tomBinh', 'caPhun', 'caSau', 'thuongLuong', 'thuyTinh'];
 
@@ -1881,6 +1891,10 @@ export const ENEMY_ROWS: Record<EnemyType, Row> = {
   tranBaTien: 'hau',
   tranGam: 'tien',
   trauRung: 'trung',
+  linhDuong: 'tien',
+  giapDuong: 'trung',
+  noDuong: 'hau',
+  duongTuHuc: 'hau',
 };
 
 /**
@@ -2518,8 +2532,8 @@ export const BO_BON = {
 
 // ---------- Dã ngoại (`daNgoai.ts`, `daNgoaiMap.ts`, `daNgoaiTran.ts`; docs/thiet-ke.md mục Kế hoạch: dã ngoại) ----------
 
-export type DaMapId = 1 | 2 | 3 | 4 | 5 | 6 | 7;
-export const DA_MAP_IDS: DaMapId[] = [1, 2, 3, 4, 5, 6, 7];
+export type DaMapId = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8;
+export const DA_MAP_IDS: DaMapId[] = [1, 2, 3, 4, 5, 6, 7, 8];
 /** Map cuối: không có cổng sang map sau. */
 export const DA_MAP_CUOI: DaMapId = DA_MAP_IDS[DA_MAP_IDS.length - 1];
 
@@ -2630,6 +2644,20 @@ export const DA_MAP: Record<DaMapId, DaMapDef> = {
     lat: false,
     bossRoi: [0, 0, 30, 70],
   },
+  // Núi Vệ đất Hoan Châu, nơi Mai Thúc Loan dấy binh đánh giặc Đường. Đồ rơi vẫn cấp đồ chương 5.
+  8: {
+    chuong: 5,
+    cap: [71, 80],
+    cong: 70,
+    terrain: 'doi',
+    // Khu 1, 2 tạm dùng báo gấm, hổ tinh tới khi có sói đỏ, tê giác.
+    quai: ['baoGam', 'hoTinh', 'linhDuong', 'noDuong', 'giapDuong'],
+    boss: 'duongTuHuc',
+    can: { cay: 5, da: 3, tre: 2, sim: 2, cayChet: 1 },
+    thuong: { gao: 22, voOc: 14, datDa: 11, sat: 5, go: 5 },
+    lat: true,
+    bossRoi: [0, 0, 20, 80],
+  },
 };
 
 /** Cỡ map dã ngoại (ô), số quái mỗi khu, quái ở khu thứ năm (mạnh nhất) ít hơn nhưng bền hơn. */
@@ -2660,7 +2688,7 @@ export const DA_QUAI = {
  * `len × cấp^mu`; mỗi cấp thêm `moiCap` máu và sức đánh. Quái thấp hơn cấp chung quá `thap` cấp thì kinh nghiệm giảm
  * mỗi cấp `giam`, thấp nhất `san`.
  */
-export const DA_CAP = { tran: 70, len: 100, mu: 1.8, moiCap: 0.03, thap: 5, giam: 0.15, san: 0.1 };
+export const DA_CAP = { tran: 80, len: 100, mu: 1.8, moiCap: 0.03, thap: 5, giam: 0.15, san: 0.1 };
 
 /** Boss hạ xong thì chừng này thời gian chơi sau mới mọc lại. */
 export const DA_BOSS_MS = 30 * 60_000;
