@@ -12,7 +12,7 @@ export const ANH_DO_DAU: Record<string, string> = {
   'coLoa-vuKhi': 'b9bebcf5',
   'nuiNua-baoVat': '4e7c2628',
   'nuiNua-giap': '3cfd5925',
-  'nuiNua-phucSuc': '6996b84b',
+  'nuiNua-phucSuc': '71df23ba',
   'nuiNua-vuKhi': 'd4669ea9',
   'phuDong-baoVat': '0a7f7cb6',
   'phuDong-giap': '7cb747bb',

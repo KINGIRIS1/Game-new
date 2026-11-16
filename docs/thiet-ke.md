@@ -3934,7 +3934,7 @@ Kỹ năng (dự kiến):
 ### Thứ tự làm (đề xuất: mỗi tướng một lát cắt chạy được)
 
 1. **PR 0**: tài liệu này (PR nháp, chờ duyệt).
-2. **PR 1** (đã làm): phần chung (tướng về khi hạ boss, chọn đội, đứng chầu, không lên bản lưu) và trọn Bà Triệu: luật (`TUONG_DA_IDS`, `TUONG_DA_MAP`, `BA_TRIEU`, `CA_KINH` ở `defs.ts`; `tuongDa.ts`), Chém cá kình (`useSkill` ở `battle.ts`, tầm tự dùng ở `daNgoaiTran.ts`), đoạn truyện `baTrieu`, dáng (`makeBaTrieu`, `VOI_TRANG`, `giapVayDong` ở `heroes.ts`; voi trận nhận màu da và một ngà: `VoiTranLook.skin`, `motNga`), vẽ kỹ năng (`chemCaKinh` ở `battleView.ts`), bộ Núi Nưa (4 món, ảnh, `guomNuiNua`, `tramVang`), `tuongMoi.test.ts`, nhóm chụp `node scripts/chup-nhan-vat.mjs tuongDa`, cảnh chụp `ba-trieu`, `ba-trieu-tui`, `ba-trieu-dien`, `ba-trieu-truyen`.
+2. **PR 1** (đã làm): phần chung (tướng về khi hạ boss, chọn đội, đứng chầu, không lên bản lưu) và trọn Bà Triệu: luật (`TUONG_DA_IDS`, `TUONG_DA_MAP`, `BA_TRIEU`, `CA_KINH` ở `defs.ts`; `tuongDa.ts`), Chém cá kình (`useSkill` ở `battle.ts`, tầm tự dùng ở `daNgoaiTran.ts`), đoạn truyện `baTrieu`, dáng (`makeBaTrieu`, `VOI_TRANG`, `giapVayDong` ở `heroes.ts`; voi trận nhận màu da và một ngà mọc giữa trán thay hai ngà: `VoiTranLook.skin`, `motNga`), vẽ kỹ năng (`chemCaKinh` ở `battleView.ts`), bộ Núi Nưa (4 món, ảnh, `guomNuiNua`, `tramVang`), `tuongMoi.test.ts`, nhóm chụp `node scripts/chup-nhan-vat.mjs tuongDa`, cảnh chụp `ba-trieu`, `ba-trieu-tui`, `ba-trieu-dien`, `ba-trieu-truyen`.
 3. **PR 2**: Triệu Quang Phục và bộ Dạ Trạch.
 4. **PR 3**: Mai Thúc Loan và bộ Vạn An.
 5. **PR 4**: Ngô Quyền và bộ Bạch Đằng.
