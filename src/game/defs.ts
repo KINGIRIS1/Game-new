@@ -1159,7 +1159,16 @@ export const isRoad = (type: BuildingType): boolean => BUILDINGS[type].decor ===
  * rước Mị Nương, An Dương Vương khi có nỏ thần, Cao Lỗ khi thắng màn 25, Hai Bà khi vào chương 5 (về trời, về núi,
  * xuống biển rồi vẫn tính). Mỗi doanh thêm chỗ quân theo cấp trại, tối đa `DOANH_MAX` doanh.
  */
-export type TuongId = 'lacTuong' | 'giong' | 'sonTinh' | 'anDuong' | 'caoLo' | 'trungTrac' | 'trungNhi';
+export type TuongId = 'lacTuong' | 'giong' | 'sonTinh' | 'anDuong' | 'caoLo' | 'trungTrac' | 'trungNhi' | TuongDaId;
+/**
+ * Tướng của dã ngoại (`docs/thiet-ke.md` mục Kế hoạch: năm tướng mới): về khi hạ boss map của mình lần đầu, chỉ đánh ở
+ * dã ngoại; không nhận doanh, không ra phó bản, thử thách, đồn, giữ kinh đô, Đấu thành.
+ */
+export type TuongDaId = 'baTrieu';
+export const TUONG_DA_IDS: TuongDaId[] = ['baTrieu'];
+/** Map dã ngoại mà hạ boss lần đầu thì tướng ấy về. */
+export const TUONG_DA_MAP: Record<TuongDaId, number> = { baTrieu: 6 };
+/** Các tướng của truyện (mỗi tướng một doanh trong doanh trại); tướng dã ngoại ở `TUONG_DA_IDS`. */
 export const TUONG_IDS: TuongId[] = ['lacTuong', 'giong', 'sonTinh', 'anDuong', 'caoLo', 'trungTrac', 'trungNhi'];
 /** Số doanh tối đa trong doanh trại (bằng năm trại của thời mỗi tướng một trại): chỗ quân không quá 5 × 38. */
 export const DOANH_MAX = 5;
@@ -1747,6 +1756,16 @@ export const VOI_XUNG = { dmg: 90, length: 5, width: 1.6, push: 1, stun: 1.5 };
  * gọi lại thì bù chỗ người đã ngã); quân ta trong `radius` ô quanh voi hồi `heal` phần máu.
  */
 export const HIEU_TRIEU = { count: 5, radius: 3, heal: 0.15 };
+
+// ---------- Tướng dã ngoại ----------
+
+/** Bà Triệu cưỡi voi trắng một ngà, đánh gần, đứng hàng đầu (map 6 Núi Nưa). */
+export const BA_TRIEU: FighterStats = { hp: 680, dmg: 23, range: 1.2, speed: 1.7, cooldown: 1.0 };
+/**
+ * Chém cá kình (Bà Triệu): voi lao tới kẻ địch nhiều máu nhất trong `tam` ô (không có thì kẻ gần nhất), Bà chém một
+ * nhát `dmg`, kẻ ấy choáng `stun` giây (0 là không choáng).
+ */
+export const CA_KINH = { dmg: 260, tam: 6, stun: 0 };
 /**
  * Nghĩa binh: không luyện, không chiếm chỗ doanh trại, không ăn gạo, không chết thật. Không được cộng binh khí, huân
  * công, Đền; không thuộc vòng khắc chế.
@@ -2177,8 +2196,8 @@ export const HUAN_COST = [3, 5, 8, 8];
 export const HUAN_BONUS = 0.04;
 
 /** Kỹ năng bấm tay trong trận: Trống trận của Lạc tướng, hai kỹ năng của mỗi tướng Gióng, Sơn Tinh, An Dương Vương, Cao Lỗ. */
-export type SkillId = 'trongTran' | 'phunLua' | 'nhoTre' | 'bocDoi' | 'doiNon' | 'noThan' | 'ruaVang' | 'lienChau' | 'lenhBan' | 'voiXung' | 'hieuTrieu';
-export const SKILL_IDS: SkillId[] = ['trongTran', 'phunLua', 'nhoTre', 'bocDoi', 'doiNon', 'noThan', 'ruaVang', 'lienChau', 'lenhBan', 'voiXung', 'hieuTrieu'];
+export type SkillId = 'trongTran' | 'phunLua' | 'nhoTre' | 'bocDoi' | 'doiNon' | 'noThan' | 'ruaVang' | 'lienChau' | 'lenhBan' | 'voiXung' | 'hieuTrieu' | 'chemCaKinh';
+export const SKILL_IDS: SkillId[] = ['trongTran', 'phunLua', 'nhoTre', 'bocDoi', 'doiNon', 'noThan', 'ruaVang', 'lienChau', 'lenhBan', 'voiXung', 'hieuTrieu', 'chemCaKinh'];
 export const SKILLS: Record<SkillId, { cooldown: number; duration: number }> = {
   trongTran: { cooldown: 20, duration: 6 },
   phunLua: { cooldown: 15, duration: 0 },
@@ -2191,6 +2210,7 @@ export const SKILLS: Record<SkillId, { cooldown: number; duration: number }> = {
   lenhBan: { cooldown: 22, duration: 6 },
   voiXung: { cooldown: 12, duration: 0 },
   hieuTrieu: { cooldown: 25, duration: 0 },
+  chemCaKinh: { cooldown: 14, duration: 0 },
 };
 /** Trống trận thúc quân: quân ta đánh mạnh hơn và chạy nhanh hơn trong một lúc. */
 export const RALLY = { dmg: 1.5, speed: 1.3 };
@@ -2482,9 +2502,11 @@ export const DAU_THANH = {
 /** Bốn ô đồ của mỗi tướng. */
 export type ODo = 'vuKhi' | 'giap' | 'phucSuc' | 'baoVat';
 export const O_DO: ODo[] = ['vuKhi', 'giap', 'phucSuc', 'baoVat'];
-/** Sáu bộ, mỗi tướng một bộ. */
-export type BoDo = 'phuDong' | 'tanVien' | 'coLoa' | 'caoLo' | 'trungTrac' | 'trungNhi';
-export const BO_DO: BoDo[] = ['phuDong', 'tanVien', 'coLoa', 'caoLo', 'trungTrac', 'trungNhi'];
+/** Mỗi tướng một bộ: sáu bộ của tướng truyện, rồi bộ của tướng dã ngoại (`BO_DA`). */
+export type BoDo = 'phuDong' | 'tanVien' | 'coLoa' | 'caoLo' | 'trungTrac' | 'trungNhi' | 'nuiNua';
+export const BO_DO: BoDo[] = ['phuDong', 'tanVien', 'coLoa', 'caoLo', 'trungTrac', 'trungNhi', 'nuiNua'];
+/** Bộ của tướng dã ngoại: chỉ rơi ở map của tướng ấy (khi tướng đã về), không rơi ở phó bản, đồn, giữ kinh đô. */
+export const BO_DA: BoDo[] = ['nuiNua'];
 /** Sáu chỉ số tướng: máu, sức đánh, tốc đánh, uy lực kỹ năng, giáp, hồi kỹ năng. */
 export type ChiSo = 'mau' | 'danh' | 'toc' | 'uy' | 'giap' | 'hoi';
 export const CHI_SO: ChiSo[] = ['mau', 'danh', 'toc', 'uy', 'giap', 'hoi'];
@@ -2500,6 +2522,7 @@ export const BO_CUA: Record<BoDo, Exclude<TuongId, 'lacTuong'>> = {
   caoLo: 'caoLo',
   trungTrac: 'trungTrac',
   trungNhi: 'trungNhi',
+  nuiNua: 'baTrieu',
 };
 /** Phó bản, thử thách rơi bộ của chương màn ấy (chương 5: một trong hai bộ của Hai Bà). */
 export const BO_CHUONG: Record<Chapter, BoDo[]> = { 1: ['phuDong'], 2: ['tanVien'], 3: ['coLoa'], 4: ['caoLo'], 5: ['trungTrac', 'trungNhi'] };
@@ -2561,6 +2584,7 @@ export const BO_HAI: Record<BoDo, { k: ChiSo; v: number }> = {
   caoLo: { k: 'toc', v: 0.08 },
   trungTrac: { k: 'giap', v: 0.08 },
   trungNhi: { k: 'hoi', v: 0.08 },
+  nuiNua: { k: 'mau', v: 0.1 },
 };
 /**
  * Hiệu ứng bốn món: đúng tướng của bộ mặc đủ bốn món bộ mình thì kỹ năng mạnh hơn (số thay cho số gốc của kỹ năng ở
@@ -2577,6 +2601,7 @@ export const BO_BON = {
   lenhBan: { duration: 8 },
   voiXung: { length: 6.5, stun: 2.2 },
   hieuTrieu: { count: 6, heal: 0.2 },
+  chemCaKinh: { dmg: 330, stun: 1 },
 };
 
 // ---------- Dã ngoại (`daNgoai.ts`, `daNgoaiMap.ts`, `daNgoaiTran.ts`; docs/thiet-ke.md mục Kế hoạch: dã ngoại) ----------

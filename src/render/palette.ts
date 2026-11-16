@@ -182,6 +182,10 @@ export const C = {
   trungRed: 0xbc1f2e,
   trungYellow: 0xe9b43a,
   trungYellowDark: 0xb98420,
+  // Tướng dã ngoại: Bà Triệu áo xanh ngọc núi Nưa, voi trắng một ngà.
+  baTrieu: 0x1f6e63,
+  baTrieuDark: 0x154d45,
+  voiTrang: 0xe4ddcf,
   aoNau: 0x7a5434,
   khanNau: 0x4d3423,
   quanPhuc: 0x25222a,

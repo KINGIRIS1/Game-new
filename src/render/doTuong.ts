@@ -10,12 +10,12 @@ import * as THREE from 'three';
 import { BO_DO, O_DO, type BoDo, type ODo } from '../game/defs';
 import { bakeVoiTran } from './beasts';
 import { GRIP_L, GRIP_R, HUMAN, type HumanRig } from './body';
-import { CAO_QUIVER, MIEN, baoTenDong, bakeIronHorse, giongWeapon, sonStaff, type TheCamTuong } from './heroes';
+import { CAO_QUIVER, MIEN, VOI_TRANG, baoTenDong, bakeIronHorse, giapVayDong, giongWeapon, sonStaff, type TheCamTuong } from './heroes';
 import { armor, chestDisc, cloak, diadem, mien, pauldrons, shoulderRocks, skirtArmor, studs } from './nanDo';
 import { C } from './palette';
 import { RigBuilder, bakeRig } from './rig';
 import { ToonModel, inkThin } from './toon';
-import { IRON, IRON_DARK, LEATHER, arrow, bow, coLac, crossbowParts, guomDong, hornTrumpet, repeatingCrossbow, type Parts } from './weapons';
+import { IRON, IRON_DARK, LEATHER, arrow, bow, coLac, crossbowParts, guomDong, guomNuiNua, hornTrumpet, repeatingCrossbow, type Parts } from './weapons';
 
 export type MonId = `${BoDo}-${ODo}`;
 export const monId = (bo: BoDo, o: ODo): MonId => `${bo}-${o}`;
@@ -88,6 +88,28 @@ export function sungTe(m: Parts): void {
   p.sphere(0.016, C.red, 0, 0.065, -0.06, [1, 1, 1], 6);
   p.cone(0.02, 0.11, C.red, 0.01, 0.0, -0.075, [Math.PI + 0.25, 0, 0.1], 6);
   p.cone(0.016, 0.09, C.red, -0.012, 0.01, -0.07, [Math.PI + 0.1, 0, -0.12], 6);
+}
+
+/**
+ * Trâm vàng Bà Triệu cài búi tóc: thân trâm vàng thon dài, đầu trâm chim Lạc dang cánh khảm ngọc xanh, hai chuỗi hạt
+ * đỏ buông dưới cánh. Gốc ở mũi trâm, đầu trâm hướng +y.
+ */
+export function tramVang(m: Parts): void {
+  const p = m.plain;
+  p.cone(0.012, 0.42, C.gold, 0, 0.21, 0, [Math.PI, 0, 0], 6);
+  p.cyl(0.014, 0.014, 0.03, C.goldDark, 0, 0.43, 0, undefined, 6);
+  // Đầu trâm: chim Lạc dang cánh, mỏ dài, mào, ngọc xanh giữa ngực.
+  const y = 0.49;
+  p.sphere(0.04, C.gold, 0, y, 0, [0.8, 1.1, 0.7], 8);
+  p.sphere(0.022, C.gold, 0, y + 0.06, 0.01, [1, 1, 1], 7);
+  p.cone(0.008, 0.08, C.goldDark, 0, y + 0.06, 0.06, [Math.PI / 2 + 0.2, 0, 0], 5);
+  p.cone(0.008, 0.04, C.goldDark, 0, y + 0.095, -0.005, [-0.4, 0, 0], 5);
+  for (const sd of [-1, 1]) {
+    m.band.box(0.11, 0.035, 0.012, C.gold, sd * 0.07, y + 0.01, 0, [0, 0, sd * 0.45]);
+    p.box(0.06, 0.02, 0.01, C.goldDark, sd * 0.12, y + 0.04, 0, [0, 0, sd * 0.7]);
+    for (let i = 0; i < 3; i++) p.sphere(0.011, C.red, sd * 0.1, y - 0.03 - i * 0.03, 0, [1, 1, 1], 5);
+  }
+  p.sphere(0.018, C.baTrieu, 0, y, 0.03, [1, 1, 0.6], 7);
 }
 
 /**
@@ -378,6 +400,12 @@ export const MON_VE: Record<MonId, VeMon> = {
   'trungNhi-giap': { cho: 'than', mac: aoGiapVang, rieng: tren(aoGiapVang, true), xoay: [0, 0.45, 0] },
   'trungNhi-phucSuc': { cho: 'thu', rieng: () => bakeVoiTran({ pad: C.trungYellow, trim: C.red }), xoay: [0, 1.25, 0] },
   'trungNhi-baoVat': { cho: 'dat', rieng: toon(coLac), xoay: [0, 1.45, -0.12] },
+
+  // Bộ Núi Nưa (Bà Triệu, tướng dã ngoại map 6).
+  'nuiNua-vuKhi': { cho: 'tay', cam: 'kiem', mac: tayPhai(guomNuiNua), rieng: toon(guomNuiNua), xoay: [0, 1.2, -Math.PI / 4] },
+  'nuiNua-giap': { cho: 'than', mac: giapVayDong, rieng: tren(giapVayDong, true), xoay: [0, 0.45, 0] },
+  'nuiNua-phucSuc': { cho: 'thu', rieng: () => bakeVoiTran(VOI_TRANG), xoay: [0, 1.25, 0] },
+  'nuiNua-baoVat': { cho: 'bay', rieng: toon(tramVang), xoay: [0.5, 0.4, -0.9] },
 };
 
 /** Mô hình đứng riêng của món, đặt theo góc chụp ảnh (`xoay`). */

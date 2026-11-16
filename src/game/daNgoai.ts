@@ -7,6 +7,8 @@
 
 import { HERO_KINDS, statsOf, type Battle, type HeroKind } from './battle';
 import {
+  BO_CUA,
+  BO_DO,
   DA_BOSS_MS,
   DA_CAP,
   DA_KHU,
@@ -19,6 +21,9 @@ import {
   FIELD,
   HERO_CLEAVE,
   RESOURCE_IDS,
+  TUONG_DA_IDS,
+  TUONG_DA_MAP,
+  type BoDo,
   type Chapter,
   type Cost,
   type DaMapId,
@@ -30,6 +35,7 @@ import { gain, type FailReason, type GameState, type Result } from './game';
 import { chapterOf } from './manVao';
 import { roll } from './ngauNhien';
 import { tuongSetup } from './son';
+import { tuongDaVe } from './tuongDa';
 import { doCua, doMo, roiDo, type Mon } from './trangBi';
 
 const ok = <T>(value: T): Result<T> => ({ ok: true, value });
@@ -117,6 +123,13 @@ export interface DaThuong {
 const thuongRong = (): DaThuong => ({ giet: 0, boss: 0, exp: 0, len: 0, cua: { gao: 0, voOc: 0, datDa: 0, sat: 0, go: 0 }, mon: [], satDo: 0 });
 
 /** Thưởng một con quái vừa hạ ở map `map`: kinh nghiệm, của, đồ (boss chắc rơi). Cộng vào `out`. */
+/** Map của tướng dã ngoại đã về thì quái, boss map ấy rơi bộ của tướng ấy; còn lại theo chương như cũ. */
+function boMap(s: GameState, map: DaMapId): BoDo[] | undefined {
+  const id = TUONG_DA_IDS.find((t) => TUONG_DA_MAP[t] === map);
+  if (!id || !tuongDaVe(s, id)) return undefined;
+  return BO_DO.filter((b) => BO_CUA[b] === id);
+}
+
 function thuongMot(s: GameState, map: DaMapId, g: Pick<DaGiet, 'cap' | 'khu' | 'boss'>, out: DaThuong): void {
   const exp = expQuai(g.cap, g.khu, s.daNgoai.cap);
   out.exp += exp;
@@ -130,7 +143,7 @@ function thuongMot(s: GameState, map: DaMapId, g: Pick<DaGiet, 'cap' | 'khu' | '
     out.cua[r] += n;
   }
   gain(s, cua);
-  const roi = roiDo(s, g.boss ? 'daBoss' : 'daQuai', chuongRoi(s, map), g.boss ? DA_MAP[map].bossRoi : undefined);
+  const roi = roiDo(s, g.boss ? 'daBoss' : 'daQuai', chuongRoi(s, map), g.boss ? DA_MAP[map].bossRoi : undefined, boMap(s, map));
   if (roi) {
     if (roi.sat) out.satDo += roi.sat;
     else out.mon.push(roi.mon);

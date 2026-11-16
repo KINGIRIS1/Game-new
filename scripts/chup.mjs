@@ -57,6 +57,8 @@ const DAO_GIAC = `M.playChapters({ s, last: 10 }); for (let i = 0; i < 5 * 3600;
   for (let n; (n = Nu.nextNuHint(s)); ) Nu.markNuHinted(s, n);
 `;
 
+/** Bà Triệu đã về: boss map 6 đã bị hạ một lần (giờ mọc lại đã qua). */
+const BA_TRIEU = `s.daNgoai.boss[5] = 1; s.hinted.push('daNgoai6', 'daNgoai7', 'daNgoai8', 'daNgoai9', 'daNgoai10');`;
 const CHUONG5 = (cleared) => `M.playChapters({ s, last: 8 });${CO_QUAN}
   for (const b of s.buildings) if (b.type === 'doanhTrai') b.level = D.BUILDINGS.doanhTrai.maxLevel;
   const cho5 = G.troopCap(s);
@@ -498,6 +500,28 @@ d.camera(cx, cz, 2.6);`,
     truoc: `${CHUONG5(35)}\ns.daNgoai.doi = ['trungTrac', 'trungNhi', 'caoLo'];\ns.hinted.push('daNgoai6', 'daNgoai7', 'daNgoai8', 'daNgoai9', 'daNgoai10');`,
     sau: `d.daNgoai(6, 4, 60);`,
     doi: 3000,
+  },
+  'ba-trieu': {
+    mo: 'Bà Triệu đã về (đã hạ Lục Dận), đội Bà Triệu, Hai Bà ra map 6 khu 3, sau 4 giây bấm Chém cá kình, chụp lúc voi lao',
+    truoc: `${CHUONG5(35)}\n${BA_TRIEU}\ns.daNgoai.doi = ['baTrieu', 'trungTrac', 'trungNhi'];`,
+    sau: `d.daNgoai(6, 2); await new Promise((r) => setTimeout(r, 4000)); d.skill('chemCaKinh');`,
+    doi: 600,
+  },
+  'ba-trieu-tui': {
+    mo: 'Bà Triệu đã về, mặc đủ bộ Núi Nưa: bảng tướng, thẻ Túi đồ của Bà Triệu',
+    truoc: `${CHUONG5(35)}\n${BA_TRIEU}\nconst T = await import('/src/game/trangBi.ts'); const co = new Set(); for (let q = 0; co.size < 4; q++) { const m = T.rutMon(q, 'daBoss', 5, ['nuiNua'], [0, 0, 0, 100]); if (co.has(m.o)) continue; co.add(m.o); s.trangBi.kho.push({ ...m, cuong: 6, id: s.trangBi.nextId++, tuong: 'baTrieu' }); }`,
+    sau: `d.tuong('baTrieu');`,
+  },
+  'ba-trieu-truyen': {
+    mo: 'Vừa hạ Lục Dận lần đầu: đoạn truyện Bà Triệu về, thẻ thứ ba (lời Bà Triệu)',
+    truoc: `${CHUONG5(35)}\n${BA_TRIEU}\nfor (let id = S.pendingStory(s); id && id !== 'baTrieu'; id = S.pendingStory(s)) S.markStory(s, id);`,
+    giuTruyen: true,
+    sau: `document.querySelector('[data-act=storyNext]').click(); document.querySelector('[data-act=storyNext]').click();`,
+  },
+  'ba-trieu-dien': {
+    mo: 'Kinh đô chương 5, Bà Triệu đã về: nhìn sân chầu Điện, Bà Triệu đứng hàng gần cổng bên trái',
+    truoc: `${CHUONG5(35)}\n${BA_TRIEU}`,
+    sau: `const b = s.buildings.find((x) => x.type === 'dien'); const { courtSlot } = await import('/src/render/congTrinh/dien.ts'); const c = courtSlot('baTrieu'); const R = await import('/src/game/map.ts'); const t = R.turnLocal(b.rot, c.x, c.z); d.camera(b.x + 5 + t.x, b.z + 5 + t.z, 4.2);`,
   },
   'da-ngoai-7': {
     mo: 'Như da-ngoai-tran, ở map 7 (Đầm Dạ Trạch) khu 3 (lính khiên Lương), chụp sau 6 giây',

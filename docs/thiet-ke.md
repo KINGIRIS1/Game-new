@@ -3845,6 +3845,109 @@ Phòng tuyến sông Như Nguyệt, nơi Lý Thường Kiệt đắp lũy tre ch
 4. **PR 3**: cảnh 3D năm map, giao diện, chụp kiểm tra.
 5. **PR 4**: bốn quái mới (lợn rừng, cua đá, báo gấm, rắn hổ mang chúa).
 
+## Kế hoạch: năm tướng mới của dã ngoại (chủ dự án đã duyệt, đang làm: xong Bà Triệu)
+
+Chủ dự án yêu cầu: lên kế hoạch làm năm tướng mới. Đề xuất lấy đúng năm người anh hùng mà map 6–10 của dã ngoại đã nhắc tới (Lạc hầu đã dẫn lời từng người), mỗi map một tướng. Như các kế hoạch trước, được chỉnh số ±20% theo test; làm xong phần nào thì ghi số cuối cùng của phần ấy.
+
+**Hiện trạng** (khảo sát code):
+- Sáu tướng đánh trên bãi (`HeroKind` ở `battle.ts`), bảy tướng trong `TuongId` (`defs.ts`, kể cả Lạc tướng). Tướng ra trận theo chương (`heroFor`, `heroesFor` ở `son.ts`); chuẩn độ khó mọi màn, thử thách đo với đúng tướng của chương.
+- Dã ngoại chọn đội tối đa 3 tướng đã về (`datDoi`); cấp chung chỉ cộng trên map. Map 6–10 có boss (Lục Dận, Trần Bá Tiên, Dương Tư Húc, Lưu Hoằng Tháo, Quách Quỳ), đồ rơi cấp đồ 5; giờ boss mọc lại ở `daNgoai.boss`.
+- Trang bị: sáu bộ, mỗi bộ bốn món (`BO_CUA`, `BO_CHUONG`, `BO_HAI`, `BO_BON`); 24 ảnh món, hình tướng mặc đồ, vũ khí ánh lên. Máy chủ Đấu thành kiểm bộ theo chương (`kiemMon`).
+- Doanh trại đã đủ `DOANH_MAX` = 5 doanh ở chương 5, nên tướng mới không thêm chỗ quân.
+- Sân chầu Điện có 14 chỗ đứng (`COURT_SLOT` ở `congTrinh/dien.ts`), đã dùng 11 (bảy tướng, bốn nữ tướng), còn 3 chỗ.
+
+### Năm tướng (đề xuất)
+
+| Map | Tướng | Về khi | Dáng | Vai | Kỹ năng |
+|---|---|---|---|---|---|
+| 6. Núi Nưa | Bà Triệu (`baTrieu`) | hạ Lục Dận lần đầu | cưỡi voi trắng một ngà, áo giáp vàng, đi guốc ngà, cài trâm, cầm gươm | đánh gần, đứng hàng đầu | **Chém cá kình**: một nhát chém kẻ địch nhiều máu nhất trong 6 ô |
+| 7. Đầm Dạ Trạch | Triệu Quang Phục (`trieuQuangPhuc`) | hạ Trần Bá Tiên lần đầu | mũ đâu mâu cài móng rồng, áo lau sậy, cầm giáo | đánh gần, nhanh | **Ngày ẩn đêm ra**: cả đội lặn vào đầm vài giây, giặc mất dấu; ra thì đòn đầu mạnh gấp bội |
+| 8. Núi Vệ | Mai Thúc Loan (`maiThucLoan`) | hạ Dương Tư Húc lần đầu | da đen sạm, vạm vỡ, áo bào đen, đại đao | đỡ đòn, máu dày | **Hắc Đế dấy binh**: hô quân, cả đội thêm sức đánh một lúc, giặc quanh mình xúm vào đánh mình |
+| 9. Bạch Đằng | Ngô Quyền (`ngoQuyen`) | hạ Lưu Hoằng Tháo lần đầu | giáp sắt, khăn đỏ, giáo dài | đánh gần tầm xa hơn (giáo dài) | **Cọc Bạch Đằng**: cắm bãi cọc ở chỗ giặc đông nhất, giặc trong bãi đi chậm và mất máu từng giây; thuyền mất gấp đôi |
+| 10. Sông Như Nguyệt | Lý Thường Kiệt (`lyThuongKiet`) | hạ Quách Quỳ lần đầu | giáp trụ, áo choàng đỏ, cầm kiếm, đeo cuộn thơ | đánh gần, giữ đội | **Nam quốc sơn hà**: ngâm thơ, quân ta quanh mình hồi máu, giặc quanh mình nao núng (giảm sức đánh) |
+
+- **Đã chốt** (chủ dự án chọn): Đầm Dạ Trạch là Triệu Quang Phục (người đánh ở Dạ Trạch, Lạc hầu đã nhắc); Lý Nam Đế (Lý Bí, vua nước Vạn Xuân) không thành tướng mà có mặt trong đoạn truyện Triệu Quang Phục về: Lý Nam Đế thua Trần Bá Tiên, lui về động Khuất Lạo, trao binh quyền cho Triệu Quang Phục; Triệu Quang Phục đưa quân vào đầm Dạ Trạch, Chử Đồng Tử hiện về trao móng rồng. Lý Nam Đế chỉ có ảnh trong hộp thoại truyện, không có khung xương, không đánh trận.
+- Năm kỹ năng chọn cho khác sáu kỹ năng sẵn có: chưa có kỹ năng nhắm một kẻ (Chém cá kình), ẩn (Ngày ẩn đêm ra), tăng sức đánh cả đội và kéo giặc (Hắc Đế dấy binh), vùng làm chậm có sát thương theo giây (Cọc Bạch Đằng), làm yếu giặc (Nam quốc sơn hà).
+- Hạ boss lần đầu thì đoạn truyện ngắn (hộp thoại như khi Hai Bà về, `story.ts`) rồi tướng về; Lạc hầu báo một lần.
+
+### Chỉ số (dự kiến)
+
+| Tướng | Máu | Sức đánh | Tầm | Tốc chạy | Nghỉ giữa hai đòn |
+|---|---|---|---|---|---|
+| Bà Triệu | 680 | 23 | 1,2 | 1,7 | 1,0 |
+| Triệu Quang Phục | 560 | 21 | 1,1 | 2,3 | 0,8 |
+| Mai Thúc Loan | 820 | 19 | 1,1 | 1,8 | 1,1 |
+| Ngô Quyền | 640 | 21 | 1,8 | 1,9 | 1,0 |
+| Lý Thường Kiệt | 600 | 20 | 1,2 | 1,9 | 1,0 |
+
+Để so: Gióng 500/22, Cao Lỗ 700/20, Trưng Trắc 650/20.
+
+Kỹ năng (dự kiến):
+- **Chém cá kình**: 260 sát thương vào kẻ nhiều máu nhất trong 6 ô (boss nhận đủ), hồi 14 giây.
+- **Ngày ẩn đêm ra**: cả đội ẩn 4 giây (giặc không nhắm, quái đang đuổi quay về), đòn thường đầu tiên của mỗi tướng sau khi hiện ra ×2,5; hồi 18 giây.
+- **Hắc Đế dấy binh**: cả đội +30% sức đánh trong 8 giây; giặc trong 3 ô quanh Mai Thúc Loan nhắm vào ông; hồi 16 giây.
+- **Cọc Bạch Đằng**: bãi cọc bán kính 2,5 ô trong 6 giây, giặc trong bãi chậm còn 50%, mất 25 máu mỗi giây (thuyền, lâu thuyền 50); hồi 14 giây.
+- **Nam quốc sơn hà**: quân ta trong 6 ô hồi 20% máu; giặc trong 6 ô giảm 30% sức đánh trong 6 giây; hồi 18 giây.
+
+### Đánh ở đâu (chờ chủ dự án chọn)
+
+- **Đề xuất: chỉ ở dã ngoại.** Chọn vào đội dã ngoại như tướng cũ; không ra phó bản, thử thách, đồn, giữ kinh đô, Đấu thành. Lý do: phó bản, thử thách đo độ khó theo đúng tướng của chương (`heroesFor`, các test cân bằng); thêm tướng vào đó là phải đo lại cả 40 màn, 40 thử thách. Dã ngoại là chỗ năm người này đã có truyện.
+- Cách khác: (b) cho chọn thêm ở phó bản đánh lại và thử thách đã thắng (không ảnh hưởng chuẩn lần đầu, nhưng phải chặn khỏi phá thưởng thử thách); (c) để dành mỗi người một chương 6–10 về sau, giờ chỉ làm dáng và đồ.
+- Ở kinh đô: đứng chầu trong sân Điện; không nhận doanh (doanh trại đã đủ 5 doanh), không kiệt sức (dã ngoại không xét kiệt sức). Sân có 14 chỗ, đã dùng 11, nên đủ 16 thì phải nới sân thêm 2 chỗ (sửa `DIEN_LOT` và bản vẽ ở `docs/bo-cuc-cong-trinh.md`); làm khi tới tướng thứ tư. **Đã làm (PR 1)**: Bà Triệu đứng chỗ 3 (ngoài cùng hàng ngai bên phải, cạnh voi đá); chụp thử thì chỗ 12 sát cổng bị mái cổng che, chỗ 0 bị Sơn Tinh trên mỏm đá che. Còn chỗ 0, 12.
+
+### Trang bị: năm bộ mới (20 món)
+
+| Bộ | Của tướng | Vũ khí | Giáp | Phục sức | Bảo vật | 2 món | 4 món |
+|---|---|---|---|---|---|---|---|
+| Núi Nưa | Bà Triệu | Gươm Núi Nưa | Áo giáp vảy đồng | Voi trắng một ngà | Trâm vàng | +10% Máu | Chém cá kình 260 → 330, thêm choáng 1 giây |
+| Dạ Trạch | Triệu Quang Phục | Giáo Dạ Trạch | Áo lau sậy | Thuyền độc mộc | Móng rồng | +8% Tốc đánh | ẩn 4 → 5 giây, đòn đầu ×2,5 → ×3 |
+| Vạn An | Mai Thúc Loan | Đại đao | Giáp da trâu | Áo bào đen | Ấn Hắc Đế | +8% Giáp | +30% → +40% sức đánh, 8 → 10 giây |
+| Bạch Đằng | Ngô Quyền | Giáo dài | Giáp sắt | Ngựa chiến | Cọc lim bịt sắt | +10% Uy lực kỹ năng | bãi cọc 2,5 → 3,2 ô, 6 → 8 giây |
+| Như Nguyệt | Lý Thường Kiệt | Kiếm | Giáp trụ | Áo choàng đỏ | Cuộn thơ thần | +8% Hồi kỹ năng | hồi 20% → 25% máu, giặc giảm 30% → 40% |
+
+- Bộ của tướng nào chỉ rơi khi tướng ấy đã về: quái và boss map của tướng ấy rơi bộ ấy (nguồn `daQuai`, `daBoss`); giữ kinh đô, đồn vẫn chỉ rơi bộ của các tướng truyện đã về như cũ, phó bản, thử thách theo chương như cũ (bộ tướng dã ngoại ở `BO_DA`, `boRoi`, `roiDo(..., bo)` ở `trangBi.ts`). Cấp đồ 5, phẩm theo trần chương như mọi đồ dã ngoại.
+- Ai mặc cũng được như sáu bộ cũ, nên món bộ mới có thể nằm trên tướng giữ thành trong bản chụp Đấu thành: máy chủ phải nhận năm bộ mới ở cấp đồ 5 (`kiemMon`, `luat.js`; mã luật đổi thì máy khách cũ được báo cập nhật).
+- 20 ảnh món vẽ sẵn (`doTuong.ts`, `node scripts/anh-do.mjs`), hình tướng mặc đồ, vũ khí ánh lên khi đủ bộ (màu: trắng ngà Núi Nưa, xanh đầm Dạ Trạch, đen ánh tím Vạn An, xanh biển Bạch Đằng, đỏ son Như Nguyệt).
+
+### Hình
+
+- Năm tướng có khung xương ở `heroes.ts` (đứng, đi, đánh, ngã, kỹ năng, thắng), nặn bằng `nanNguoi.ts`, `nanDo.ts`; nặn sẵn trong worker (`nanSan.ts`) khi có tướng ấy về. Đầu tướng nam đội miện lá `mien` như các tướng nam; Bà Triệu đội búp lá `bupLa` như Hai Bà, cài trâm.
+- Voi trắng một ngà: đất nặn voi trận (`nanThu.ts`) đổi màu trắng ngà, bỏ một ngà, bành không lọng. Ngựa chiến Ngô Quyền dùng ngựa có sẵn đổi màu.
+- Kỹ năng vẽ ở `battleView.ts`: đường chém sáng (Chém cá kình), sương đầm phủ đội (Ngày ẩn đêm ra; tướng ẩn thì mờ đi), cờ đen phất và vòng sáng quanh đội (Hắc Đế dấy binh), cụm cọc mọc lên rồi thụt xuống (dùng `cocBachDang` của map 9), chữ thơ bay và vòng đỏ (Nam quốc sơn hà).
+- Hình tướng đứng chầu, ảnh bán thân ở bảng tướng như các tướng khác. Nhóm chụp `node scripts/chup-nhan-vat.mjs tuong` thêm năm người.
+
+### Bản lưu, code
+
+- **Không lên bản lưu** (đã làm ở PR 1, thay cho bản lưu 36 dự kiến): giờ boss mọc lại `daNgoai.boss` lúc đầu là 0 và hạ boss thì hẹn sau đồng hồ chơi, không bao giờ về lại 0, nên `boss[map − 1] > 0` là đã hạ ít nhất một lần (`tuongDaVe` ở `tuongDa.ts`). Bản lưu cũ đã hạ boss map 6 thì tải lên là có Bà Triệu, đoạn truyện kể một lần.
+- Đấu thành: tướng giữ thành trong bản chụp chỉ được là tướng truyện (`HERO_TRUYEN` ở `battle.ts`, `isSnapshotShape` ở `dauThanh.ts`); món bộ mới thì ai mặc cũng được nên máy chủ nhận (`kiemMon`: bộ không có chương riêng tính là chương 5).
+- `TuongId`, `HeroKind`, `HERO_KINDS` thêm năm tướng; chỉ số, kỹ năng ở `defs.ts`; chữ ở `vi.ts`. Tướng đã về tính ở luật (`tuongVe` hay tương tự), dùng cho bảng tướng, chọn đội dã ngoại, rơi đồ.
+- `battle.ts`: năm kỹ năng chỉ thêm nhánh mới, trận cũ ra y hệt (`tatDinh.test.ts`, đối chiếu Node, Deno, Chromium). Ẩn, tăng sức đánh, làm yếu giặc là hiệu ứng có hạn giờ trên `Fighter`.
+- Treo máy (`tiSuc`) tính sát thương của kỹ năng mới theo cùng cách các kỹ năng cũ.
+
+### Test
+
+- `tuongMoi.test.ts`: hạ boss map lần đầu thì đúng tướng về, chỉ một lần; chọn được vào đội; không ra phó bản, thử thách, đồn, giữ kinh đô (nếu chọn đề xuất); từng kỹ năng làm đúng số (nhắm kẻ nhiều máu nhất, ẩn thì giặc thôi nhắm, tăng sức đánh hết giờ thì thôi, bãi cọc làm chậm và trừ máu, ngâm thơ hồi máu và giảm sức đánh); hiệu ứng bộ chỉ khi đúng tướng; nâng bản lưu 35 lên 36.
+- `daNgoai.test.ts`: đội có tướng mới đúng cấp khu hạ được quái khu map 6–10, treo máy vẫn trong khoảng ×0,5–1,3 so với đánh thật.
+- `trangBi.test.ts`, `dauThanh.test.ts`, `mayChu.test.ts`: món năm bộ mới rút thật hợp luật, máy chủ nhận; `anhDo.test.ts` đủ 44 ảnh món; `anhVuKhi.test.ts`, `hinhTuong.test.ts` thêm năm tướng.
+- Chụp kiểm tra: năm tướng mọi tư thế, kỹ năng trên map, sân chầu 16 chỗ, bảng tướng, túi đồ.
+
+### Thứ tự làm (đề xuất: mỗi tướng một lát cắt chạy được)
+
+1. **PR 0**: tài liệu này (PR nháp, chờ duyệt).
+2. **PR 1** (đã làm): phần chung (tướng về khi hạ boss, chọn đội, đứng chầu, không lên bản lưu) và trọn Bà Triệu: luật (`TUONG_DA_IDS`, `TUONG_DA_MAP`, `BA_TRIEU`, `CA_KINH` ở `defs.ts`; `tuongDa.ts`), Chém cá kình (`useSkill` ở `battle.ts`, tầm tự dùng ở `daNgoaiTran.ts`), đoạn truyện `baTrieu`, dáng (`makeBaTrieu`, `VOI_TRANG`, `giapVayDong` ở `heroes.ts`; voi trận nhận màu da và một ngà mọc giữa trán thay hai ngà: `VoiTranLook.skin`, `motNga`), vẽ kỹ năng (`chemCaKinh` ở `battleView.ts`), bộ Núi Nưa (4 món, ảnh, `guomNuiNua`, `tramVang`), `tuongMoi.test.ts`, nhóm chụp `node scripts/chup-nhan-vat.mjs tuongDa`, cảnh chụp `ba-trieu`, `ba-trieu-tui`, `ba-trieu-dien`, `ba-trieu-truyen`.
+3. **PR 2**: Triệu Quang Phục và bộ Dạ Trạch.
+4. **PR 3**: Mai Thúc Loan và bộ Vạn An.
+5. **PR 4**: Ngô Quyền và bộ Bạch Đằng.
+6. **PR 5**: Lý Thường Kiệt và bộ Như Nguyệt.
+
+### Đã chốt (chủ dự án duyệt nguyên đề xuất)
+
+1. Năm người như bảng; Dạ Trạch: Triệu Quang Phục là tướng, Lý Nam Đế có mặt trong đoạn truyện.
+2. Tướng mới chỉ đánh ở dã ngoại.
+3. Về khi hạ boss map lần đầu.
+4. Năm kỹ năng, chỉ số, năm bộ đồ và tên món như trên.
+5. Làm mỗi tướng một PR, Bà Triệu trước.
+
 ## Nhịp chơi và lưu game
 
 - Nhịp chơi lai: mỗi lần mở game là một phiên ra quyết định ngắn.

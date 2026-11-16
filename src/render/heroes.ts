@@ -7,7 +7,7 @@ import * as THREE from 'three';
 import type { HeroKind } from '../game/battle';
 import type { NuTuongId } from '../game/defs';
 import type { GiongLook } from '../game/giong';
-import { makeVoiTran, quadFall, quadWalk, voiTranSeat, type VoiTranMood } from './beasts';
+import { makeVoiTran, quadFall, quadWalk, voiTranSeat, type VoiTranLook, type VoiTranMood } from './beasts';
 import {
   GRIP_L,
   GRIP_R,
@@ -72,6 +72,7 @@ import {
   doanKiem,
   drumShield,
   guomDong,
+  guomNuiNua,
   hornTrumpet,
   quiver,
   repeatingCrossbow,
@@ -1682,7 +1683,7 @@ export function makeTrungNhi(opts: { glow?: boolean; onFoot?: boolean; anh?: boo
  * Hai Bà đứng chầu trong sân Điện, cùng cỡ Lạc tướng đứng chầu: Trưng Trắc dựng gươm trước vai phải, Trưng Nhị cầm
  * cung dựng bên trái, tay phải buông cầm tên; thở nhẹ.
  */
-function standingBa(draw: (h: HumanRig) => void, kind: 'trungTrac' | 'trungNhi', glow = false, anh = false): THREE.Group {
+function standingBa(draw: (h: HumanRig) => void, kind: 'trungTrac' | 'trungNhi' | 'baTrieu', glow = false, anh = false): THREE.Group {
   const r = new RigBuilder({ ...BASE, ...bigHuman('base', [0, 0, 0], K_LAC) });
   r.ghiAnh = anh;
   drawBig(r, [0, 0, 0], K_LAC, draw);
@@ -1692,7 +1693,7 @@ function standingBa(draw: (h: HumanRig) => void, kind: 'trungTrac' | 'trungNhi',
   finish(group, (a) => {
     const t = a.time ?? 0;
     beginPose(b, t);
-    if (kind === 'trungTrac') {
+    if (kind !== 'trungNhi') {
       b.armR.rotation.set(-0.35, 0, 0.18);
       b.hand.rotation.set(0.35 + 0.02 * Math.sin(t * 1.3), 0, -0.1);
       b.armL.rotation.set(-0.1, 0, -0.18);
@@ -1705,6 +1706,68 @@ function standingBa(draw: (h: HumanRig) => void, kind: 'trungTrac' | 'trungNhi',
   });
   if (glow) addHalo(group, kind === 'trungTrac' ? 'trongDo' : 'trongVang', 1.5, -0.38);
   return anhNeu(group, shape, kind, anh);
+}
+
+// ---------- Bà Triệu (tướng dã ngoại, map 6 Núi Nưa) ----------
+
+/** Voi trắng một ngà của Bà Triệu: da trắng ngà, đệm đỏ viền vàng, không lọng. */
+export const VOI_TRANG: VoiTranLook = { pad: C.red, trim: C.gold, skin: C.voiTrang, motNga: true };
+
+/** Áo giáp vảy đồng của Bà Triệu: giáp lá đồng bốn hàng vảy viền vàng, váy giáp đồng, giáp vai đồng viền vàng. */
+export function giapVayDong(h: HumanRig): void {
+  skirtArmor(h, { color: C.bronze, trim: C.gold, rows: 2, to: 0.23, panels: [0, Math.PI], half: 0.45 });
+  armor(h, { color: C.bronze, trim: C.gold, rows: 4, scales: true, y0: 0.392, y1: 0.59, thick: 0.014 });
+  pauldrons(h, { color: C.bronzeLight, trim: C.gold, size: 0.95 });
+}
+
+/**
+ * Bà Triệu: áo xanh ngọc núi Nưa cổ viền vàng, áo giáp vảy đồng, tóc xõa, búi cài trâm vàng, búp lá vàng lòng xanh
+ * ngọc, gươm Núi Nưa lưỡi sắt.
+ */
+function drawBaTrieu(h: HumanRig, thay: ThayDo = {}): void {
+  drawBaBody(h, C.baTrieu, C.gold);
+  if (!thay.than) giapVayDong(h);
+  drawBaHead(h, C.baTrieu, !thay.dau);
+  if (!thay.tay) h.vuKhi(() => h.local('hand', GRIP_R, null, guomNuiNua));
+}
+
+/**
+ * Bà Triệu: nghỉ, đi, đánh, ngã, thắng như Trưng Trắc (gươm). `skill` (Chém cá kình): voi rống, bà giơ gươm quá đầu;
+ * voi lao tới kẻ bị chém; bà chém một nhát mạnh xuống trước mặt, voi dậm chân theo; rồi về nghỉ.
+ */
+function poseBaTrieu(bones: B, a: Act): VoiTranMood {
+  if (a.skill === undefined) return poseTrungTrac(bones, a);
+  const b = bones as unknown as Human;
+  beginPose(b, a.time);
+  const k = a.skill;
+  const up = smooth(k, 0, 0.12) * (1 - smooth(k, 0.6, 0.7));
+  const run = smooth(k, 0.1, 0.2) * (1 - smooth(k, 0.58, 0.7));
+  const slash = smooth(k, 0.62, 0.74) * (1 - smooth(k, 0.86, 1));
+  const mood: VoiTranMood = {
+    strike: slash,
+    trumpet: smooth(k, 0, 0.08) * (1 - smooth(k, 0.18, 0.28)),
+    charge: run,
+    chargePhase: k * 24,
+  };
+  b.chest.rotation.set(lerp(-0.1 * up, 0.4, slash), lerp(0.2 * up, -0.2, slash), 0);
+  b.head.rotation.set(lerp(-0.15 * up, -0.25, slash), -b.chest.rotation.y, 0);
+  b.armR.rotation.set(lerp(lerp(-0.55, -2.8, up), -0.95, slash), 0, lerp(lerp(0.25, 0.2, up), 0.05, slash));
+  b.hand.rotation.set(lerp(lerp(0.15, -0.7, up), 1.75, slash), 0, lerp(-0.15, 0, Math.max(up, slash)));
+  b.armL.rotation.set(lerp(lerp(-0.6, -0.9, up), -0.3, slash), 0, lerp(-0.15, -0.4, Math.max(up, slash)));
+  sitBa(b);
+  gripHands(b, ARM * K_BA);
+  return mood;
+}
+
+/** Bà Triệu cưỡi voi trắng một ngà. `onFoot`: xuống voi, đứng chầu trong sân Điện, dựng gươm trước vai như Trưng Trắc. */
+export function makeBaTrieu(opts: { onFoot?: boolean; anh?: boolean } = {}): THREE.Group {
+  if (opts.onFoot) return standingBa(drawBaTrieu, 'baTrieu', false, opts.anh);
+  return makeVoiTran(VOI_TRANG, {
+    defs: bigHuman('qBody', SEAT_BA, K_BA),
+    draw: (r) => drawBig(r, SEAT_BA, K_BA, drawBaTrieu),
+    pose: poseBaTrieu,
+    ...(opts.anh ? { anh: (g: THREE.Group, shape: RigShape<string>) => batAnh(g, shape, 'baTrieu') } : {}),
+  });
 }
 
 // ---------- Lạc tướng đánh trống trận ----------
@@ -2147,10 +2210,10 @@ export function makeNuTuong(kind: NuTuongId, opts: { glow?: boolean } = {}): THR
 export type TheCamTuong = 'dung' | 'kiem' | 'no' | 'cung';
 
 /** Thế cầm vũ khí của chính tướng (khi chưa mặc vũ khí khác). */
-export const CAM_GOC: Record<HeroKind, TheCamTuong> = { giong: 'dung', sonTinh: 'dung', anDuong: 'no', caoLo: 'no', trungTrac: 'kiem', trungNhi: 'cung' };
+export const CAM_GOC: Record<HeroKind, TheCamTuong> = { giong: 'dung', sonTinh: 'dung', anDuong: 'no', caoLo: 'no', trungTrac: 'kiem', trungNhi: 'cung', baTrieu: 'kiem' };
 
 /** Cỡ thân người từng tướng khi đứng (Hai Bà đứng cùng cỡ Lạc tướng như ở sân Điện). */
-const K_DUNG: Record<HeroKind, number> = { giong: K_GIONG, sonTinh: K_SON, anDuong: K_ADV, caoLo: K_CAO, trungTrac: K_LAC, trungNhi: K_LAC };
+const K_DUNG: Record<HeroKind, number> = { giong: K_GIONG, sonTinh: K_SON, anDuong: K_ADV, caoLo: K_CAO, trungTrac: K_LAC, trungNhi: K_LAC, baTrieu: K_LAC };
 
 /** Tư thế đứng chân dung theo thế cầm vũ khí, như các tướng đứng chầu trong sân Điện. */
 function poseChanDung(b: Human, cam: TheCamTuong, k: number): void {
@@ -2192,6 +2255,7 @@ export function bakeTuongDung(kind: HeroKind, thay: ThayDo, cam: TheCamTuong, th
     else if (kind === 'anDuong') drawAdv(h, true, t);
     else if (kind === 'caoLo') drawCaoLo(h, t);
     else if (kind === 'trungTrac') drawTrungTrac(h, t);
+    else if (kind === 'baTrieu') drawBaTrieu(h, t);
     else drawTrungNhi(h, t);
     them(h, k);
   });

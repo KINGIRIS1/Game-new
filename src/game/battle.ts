@@ -64,6 +64,8 @@ import {
   TRAP_DMG,
   TRUNG_NHI,
   TRUNG_TRAC,
+  BA_TRIEU,
+  CA_KINH,
   TT_SUMMON,
   TT_WAVE,
   UNITS,
@@ -122,10 +124,12 @@ export type RaidSide = 'bac' | 'tay' | 'nam' | 'dong' | 'namXa' | 'dongXa';
  * Tướng ra trận cùng quân ta: Thánh Gióng, Sơn Tinh, An Dương Vương, Cao Lỗ, hay Hai Bà Trưng (chương 5). Mỗi trận một
  * tướng, riêng Hai Bà: mỗi bà một voi, cùng ra một trận.
  */
-export type HeroKind = 'giong' | 'sonTinh' | 'anDuong' | 'caoLo' | 'trungTrac' | 'trungNhi';
+export type HeroKind = 'giong' | 'sonTinh' | 'anDuong' | 'caoLo' | 'trungTrac' | 'trungNhi' | 'baTrieu';
 /** Lính thường, giặc, tướng, hoặc nghĩa binh (Hiệu triệu của Trưng Nhị gọi ra). */
 export type FighterKind = UnitType | EnemyType | HeroKind | 'nghiaBinh';
-export const HERO_KINDS: HeroKind[] = ['giong', 'sonTinh', 'anDuong', 'caoLo', 'trungTrac', 'trungNhi'];
+export const HERO_KINDS: HeroKind[] = ['giong', 'sonTinh', 'anDuong', 'caoLo', 'trungTrac', 'trungNhi', 'baTrieu'];
+/** Tướng của truyện: ra phó bản, giữ kinh đô, giữ thành trong Đấu thành (tướng dã ngoại chỉ đánh ở dã ngoại). */
+export const HERO_TRUYEN: HeroKind[] = ['giong', 'sonTinh', 'anDuong', 'caoLo', 'trungTrac', 'trungNhi'];
 export const isHero = (k: FighterKind): k is HeroKind => (HERO_KINDS as FighterKind[]).includes(k);
 /** Hai Bà Trưng: hai tướng cùng ra một trận. */
 export const HAI_BA: HeroKind[] = ['trungTrac', 'trungNhi'];
@@ -249,7 +253,9 @@ export interface BattleEvent {
     /** Lệnh nỏ: loạt tên rơi xuống quanh (x, z). */
     | 'barrageHit'
     /** Lâu thuyền bị đánh chìm ở (x, z). */
-    | 'sink';
+    | 'sink'
+    /** Chém cá kình: voi Bà Triệu lao từ (x, z) tới (tx, tz), Bà chém kẻ đứng ở đó. */
+    | 'chem';
   x: number;
   z: number;
   tx?: number;
@@ -415,6 +421,8 @@ export const statsOf = (k: FighterKind): FighterStats =>
             ? TRUNG_TRAC
             : k === 'trungNhi'
               ? TRUNG_NHI
+              : k === 'baTrieu'
+                ? BA_TRIEU
               : k === 'nghiaBinh'
                 ? NGHIA_BINH
                 : k in UNITS
@@ -577,6 +585,7 @@ export function heroSkills(hero: HeroSetup): SkillId[] {
   if (hero.kind === 'caoLo') return hero.lenhBan ? ['lienChau', 'lenhBan'] : ['lienChau'];
   if (hero.kind === 'trungTrac') return ['voiXung'];
   if (hero.kind === 'trungNhi') return hero.hieuTrieu ? ['hieuTrieu'] : [];
+  if (hero.kind === 'baTrieu') return ['chemCaKinh'];
   return hero.bamboo ? ['phunLua', 'nhoTre'] : ['phunLua'];
 }
 
@@ -2670,6 +2679,7 @@ const BIG: FighterKind[] = [
   'trieuDa',
   'trungTrac',
   'trungNhi',
+  'baTrieu',
   'toDinh',
 ];
 const BIG_SET = new Set<FighterKind>(BIG);
@@ -3109,6 +3119,32 @@ export function useSkill(battle: Battle, skill: SkillId): boolean {
     }
     hero.swing = 0.3;
     emit(battle, { kind: 'call', x: hero.x, z: hero.z, ...(bo4 ? { n: count } : {}) });
+  } else if (skill === 'chemCaKinh') {
+    // Chém cá kình: voi Bà Triệu lao tới kẻ địch nhiều máu nhất quanh mình, Bà chém một nhát thật mạnh.
+    const tam = CA_KINH.tam * g;
+    let foe: Fighter | null = null;
+    for (const o of battle.fighters) {
+      if (o.side === 'ta' || !isAlive(o) || o.state === 'dead' || !reaches('baTrieu', o)) continue;
+      if (dist(o.x - hero.x, o.z - hero.z) > tam) continue;
+      if (!foe || o.hp > foe.hp) foe = o;
+    }
+    foe ??= nearestEnemyOf(battle, hero);
+    if (foe) {
+      const d = dist(foe.x - hero.x, foe.z - hero.z) || 1;
+      const dx = (foe.x - hero.x) / d;
+      const dz = (foe.z - hero.z) / d;
+      const fromX = hero.x;
+      const fromZ = hero.z;
+      // Voi dừng trước mặt kẻ bị chém, không lao quá.
+      const lao = Math.max(0, d - (bodyRadius('baTrieu') + bodyRadius(foe.kind)));
+      pushTo(battle, hero, clampField(hero.x + dx * lao, khungW(battle)), clampField(hero.z + dz * lao, khungD(battle)));
+      hero.face = Math.atan2(dx, dz);
+      damageFighter(battle, { kind: 'baTrieu', dmg: (bo4 ? BO_BON.chemCaKinh.dmg : CA_KINH.dmg) * scale }, foe);
+      const stun = bo4 ? BO_BON.chemCaKinh.stun : CA_KINH.stun;
+      if (stun && isAlive(foe)) foe.stun = Math.max(foe.stun ?? 0, stun);
+      emit(battle, { kind: 'chem', x: fromX, z: fromZ, tx: foe.x, tz: foe.z });
+    }
+    hero.swing = 0.3;
   } else {
     // Dời non: đá mọc lên dưới chân mọi kẻ địch quanh Sơn Tinh, giữ chân chúng vài giây.
     for (const o of battle.fighters) {

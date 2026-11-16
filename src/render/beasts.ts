@@ -151,10 +151,10 @@ const ELEPHANT: Defs = {
  * bành gỗ quây quanh chỗ ngồi và lọng đỏ; bậc 3 giáp trán đồng vàng có núm mặt trời, chuông đồng đeo cổ, lọng hai
  * tầng có chóp vàng.
  */
-function drawElephant(r: Rig, tier: number, look: { pad?: number | null; tusks?: boolean } = {}): void {
+function drawElephant(r: Rig, tier: number, look: { pad?: number | null; tusks?: boolean; skin?: number } = {}): void {
   const body = r.on('qBody');
   const p = body.plain;
-  elephantBody(r, { skin: C.elephant });
+  elephantBody(r, { skin: look.skin ?? C.elephant });
   // Voi trận (`makeVoiTran`) tự vẽ đệm và ngà riêng.
   if (look.pad !== null) elephantDrape(r, { color: look.pad ?? C.red, z0: -0.4, z1: 0.32, half: 1.0, pattern: true });
   const head = r.on('qHead').plain;
@@ -253,6 +253,10 @@ export interface VoiTranLook {
   parasol?: number;
   /** Cờ chim Lạc cắm sau bành: cỡ cờ (bằng cỡ người cưỡi); bỏ trống là không có cờ. */
   flag?: number;
+  /** Màu da voi (voi trắng của Bà Triệu); bỏ trống là da voi thường. */
+  skin?: number;
+  /** Một ngà mọc giữa trán (thay cho hai ngà hai bên), như voi trắng một ngà của Bà Triệu. */
+  motNga?: boolean;
 }
 
 /** Voi làm gì thêm, do người cưỡi định theo động tác của mình (kỹ năng, thắng trận). Mỗi số 0..1. */
@@ -284,7 +288,7 @@ export interface VoiTranRider {
  */
 function drawVoiTran(r: Rig, look: VoiTranLook): void {
   r.place([0, 0, 0], K_VOI_TRAN, () => {
-    drawElephant(r, 0, { pad: null, tusks: false });
+    drawElephant(r, 0, { pad: null, tusks: false, ...(look.skin !== undefined ? { skin: look.skin } : {}) });
     const body = r.on('qBody');
     const p = body.plain;
     // Đệm vòm trùm lưng như tấm phủ ngựa vua, viền và tua quanh mép.
@@ -331,9 +335,21 @@ function drawVoiTran(r: Rig, look: VoiTranLook): void {
       p.sphere(0.034, C.bronzeLight, x, 1.09 + h, z, [1, 1, 1], 6);
     }
     p.box(0.42, 0.05, 0.5, look.trim, 0, CUSHION_TOP - 0.025, -0.08);
-    // Ngà dài bọc đồng: khâu đồng ở gốc, dải đồng hoa văn, vòng đồng, mũi bịt đồng nhọn.
-    for (const s of [-1, 1]) {
-      r.local('qHead', [s * 0.115, 0.6, 0.6], [1.3, 0, -s * 0.12], (t) => {
+    // Ngà dài bọc đồng: khâu đồng ở gốc, dải đồng hoa văn, vòng đồng, mũi bịt đồng nhọn. Voi một ngà (voi trắng của
+    // Bà Triệu): một ngà mọc giữa trán, xuyên giữa giáp trán, chĩa ra trước hơi vểnh lên.
+    const nga: [V3, V3][] = look.motNga
+      ? [[[0, 1.0, 0.74], [1.12, 0, 0]]]
+      : [-1, 1].map((s): [V3, V3] => [[s * 0.115, 0.6, 0.6], [1.3, 0, -s * 0.12]]);
+    for (const [at, rot] of nga) {
+      r.local('qHead', at, rot, (t) => {
+        if (look.motNga) {
+          // Ngà giữa trán: một khối ngà trắng thon dài lộ gần hết, khâu đồng viền vàng ở gốc, mũi bịt vàng nhỏ.
+          t.plain.cone(0.058, 0.62, C.cream, 0, 0.31, 0, undefined, 8);
+          t.plain.cyl(0.066, 0.068, 0.07, C.bronze, 0, 0.03, 0, undefined, 8);
+          t.band.cyl(0.06, 0.062, 0.03, C.gold, 0, 0.075, 0, undefined, 8);
+          t.plain.cone(0.014, 0.07, C.gold, 0, 0.6, 0, undefined, 6);
+          return;
+        }
         t.plain.cone(0.05, 0.5, C.cream, 0, 0.25, 0, undefined, 7);
         t.plain.cyl(0.06, 0.062, 0.09, C.bronze, 0, 0.045, 0, undefined, 8);
         t.band.cyl(0.042, 0.05, 0.1, C.bronze, 0, 0.16, 0, undefined, 8);
@@ -345,7 +361,8 @@ function drawVoiTran(r: Rig, look: VoiTranLook): void {
     const head = r.on('qHead');
     head.band.box(0.3, 0.26, 0.05, C.bronze, 0, 1.02, 0.7, [-0.35, 0, 0]);
     head.plain.box(0.32, 0.035, 0.06, C.gold, 0, 1.15, 0.66, [-0.35, 0, 0]);
-    head.plain.sphere(0.05, C.gold, 0, 1.03, 0.725, [1, 1, 0.55], 8);
+    // Voi một ngà: ngà giữa trán thay cho núm vàng.
+    if (!look.motNga) head.plain.sphere(0.05, C.gold, 0, 1.03, 0.725, [1, 1, 0.55], 8);
     head.plain.cone(0.05, 0.2, C.red, 0, 1.24, 0.6, [-0.25, 0, 0], 6);
     // Vòng đồng cổ chân.
     for (const [b, x, z] of [

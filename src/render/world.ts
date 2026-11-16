@@ -2,13 +2,13 @@
 // trời ngày đêm (`troi.ts`), đêm yêu tinh, cảnh Tết (cây nêu, dây cờ, mâm bánh, người gói bánh) và các hiệu ứng khi đặt công trình.
 
 import * as THREE from 'three';
-import { BUILDINGS, FIELD, NGAY_MS, NU_TUONG_IDS, UNITS, UNIT_TYPES, XAY_O_MS, isBridge, isRoad, type BuildingType, type NuTuongId, type Terrain, type TuongId, type UnitType } from '../game/defs';
+import { BUILDINGS, FIELD, NGAY_MS, NU_TUONG_IDS, TUONG_DA_IDS, UNITS, UNIT_TYPES, XAY_O_MS, isBridge, isRoad, type BuildingType, type NuTuongId, type Terrain, type TuongId, type UnitType } from '../game/defs';
 import { raidSpawnBand, type Battle, type RaidSide } from '../game/battle';
 import { caoLoAtDien } from '../game/caoLo';
 import { HAI_BA_KINDS, haiBaJoined, type HaiBaKind } from '../game/chuong5';
 import { advLook, inChapter3, ruaVangCame, type AdvLook } from '../game/coLoa';
 import { inChapter4 } from '../game/chuong4';
-import { doanhCount, gateToward, generals, heroPost } from '../game/doanhTrai';
+import { doanhCount, gateToward, generals, heroPost, tuongJoined } from '../game/doanhTrai';
 import { nuTuongList } from '../game/nuTuong';
 import { dienLevel, occupancy, stairWall, upcomingBoats, upgradeCostOf, type Building, type GameState } from '../game/game';
 import { giongLook, type GiongLook } from '../game/giong';
@@ -46,7 +46,7 @@ import { DON_DAO_Y, SHORE_LAND, SeaLife, animateSea, buildSea, buildSeaMist, dao
 import { CAU_STEP, donGac, makeDonDao } from './congTrinh/donDao';
 import { makeThuyenChien, type LinhCho } from './thuyenChien';
 import { makeSoldier } from './soldier';
-import { makeAnDuong, makeCaoLo, makeGiong, makeLacTuong, makeNuTuong, makeSonTinh, makeTrungNhi, makeTrungTrac } from './heroes';
+import { makeAnDuong, makeBaTrieu, makeCaoLo, makeGiong, makeLacTuong, makeNuTuong, makeSonTinh, makeTrungNhi, makeTrungTrac } from './heroes';
 
 /** Người đứng chầu là nữ tướng (chương 5), không phải tướng chỉ huy. */
 const isNuTuong = (t: TuongId | NuTuongId): t is NuTuongId => (NU_TUONG_IDS as string[]).includes(t);
@@ -2937,6 +2937,8 @@ export class World {
     if (dien) {
       // Nữ tướng đã theo về đứng chầu hàng sau Hai Bà, kể cả khi đang ở doanh trại.
       for (const n of nuTuongList(state)) want.set(n, this.courtSpot(dien, n));
+      // Tướng dã ngoại đã về đứng chầu trong sân.
+      for (const t of TUONG_DA_IDS) if (tuongJoined(state, t)) want.set(t, this.courtSpot(dien, t));
       for (const t of generals(state)) {
         const ghost =
           (t === 'giong' && !giongLook(state)) ||
@@ -2965,7 +2967,9 @@ export class World {
               ? makeAnDuong({ crossbow: true, glow: true })
               : t === 'caoLo'
                 ? makeCaoLo({ glow: true })
-                : makeLacTuong();
+                : t === 'baTrieu'
+                  ? makeBaTrieu({ onFoot: true })
+                  : makeLacTuong();
       obj.scale.setScalar(t === 'sonTinh' ? 0.95 : 0.9);
       obj.position.set(spot.x, spot.y, spot.z);
       obj.rotation.y = spot.ry;

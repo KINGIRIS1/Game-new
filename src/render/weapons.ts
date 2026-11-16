@@ -11,6 +11,8 @@ export type Parts = Pick<ToonModel, 'plain' | 'band' | 'drum' | 'glow'>;
 /** Sắt ánh thép xanh cho sáng hơn bóng đổ; viền và đồ trang sức bằng đồng như đồ Đông Sơn. */
 export const IRON = 0x7b8a9c;
 export const IRON_DARK = 0x4d5868;
+/** Gờ sống sáng của lưỡi sắt. */
+const IRON_LIGHT = 0x9aa9bc;
 /** Da thuộc làm bao tên. */
 export const LEATHER = 0x8a5a33;
 /** Sừng làm cung (cung sừng): vàng ngà. */
@@ -424,6 +426,23 @@ export function guomDong(s: Parts): void {
   p.cyl(0.02, 0.022, 0.12, C.red, 0, -0.01, 0, undefined, 6);
   p.sphere(0.034, C.gold, 0, -0.085, 0, [1, 1, 1], 7);
   p.cone(0.03, 0.12, C.red, 0, -0.15, 0, [Math.PI, 0, 0], 6);
+}
+
+/**
+ * Gươm Núi Nưa của Bà Triệu: lưỡi sắt thẳng dài 0,72 có gờ sống sáng, mũi nhọn; chắn tay vàng hai cánh vểnh như cánh
+ * chim, chuôi quấn dây xanh ngọc, đốc tròn vàng, tua đỏ buông ở đốc. Lưỡi sắc hướng +z.
+ */
+export function guomNuiNua(s: Parts): void {
+  const p = s.plain;
+  const len = 0.72;
+  p.box(0.02, len * 0.85, 0.06, IRON, 0, 0.08 + len * 0.425, 0);
+  p.cone(0.03, len * 0.16, IRON, 0, 0.08 + len * 0.93, 0, undefined, 4);
+  p.box(0.024, len * 0.9, 0.012, IRON_LIGHT, 0, 0.08 + len * 0.45, 0);
+  s.band.box(0.03, 0.08, 0.07, C.gold, 0, 0.12, 0);
+  for (const sd of [-1, 1]) p.box(0.09, 0.03, 0.05, C.gold, sd * 0.05, 0.075, 0, [0, 0, sd * 0.35]);
+  p.cyl(0.02, 0.022, 0.13, C.baTrieu, 0, -0.01, 0, undefined, 6);
+  p.sphere(0.034, C.gold, 0, -0.09, 0, [1, 1, 1], 7);
+  p.cone(0.03, 0.12, C.red, 0, -0.155, 0, [Math.PI, 0, 0], 6);
 }
 
 /**

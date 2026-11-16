@@ -9,6 +9,7 @@ import { makeBeast, makeRoyalHorse, makeRuaVang } from '../src/render/beasts';
 import type { NuTuongId } from '../src/game/defs';
 import {
   makeAnDuong,
+  makeBaTrieu,
   makeCaoLo,
   makeDrummer,
   makeGiong,
@@ -123,6 +124,9 @@ const NU_COT: [string, Act][] = [
 const NU_IDS: NuTuongId[] = ['leChan', 'thanhThien', 'batNan', 'phungThiChinh'];
 
 /** Vũ khí ánh lên (tướng mặc đủ bốn món bộ mình): vỏ sáng chập chờn, đốm lấp lánh theo `time`; đánh; ngã thì tắt. */
+/** Cột kỹ năng của tướng dã ngoại (như nhóm `ky_nang`). */
+const CHEM_COT: [string, Act][] = [0, 0.1, 0.2, 0.35, 0.5, 0.65, 0.72, 0.85, 1].map((k) => [`${k}`, { act: 'fight', skill: k, time: k }]);
+
 const ANH_COT: [string, Act][] = [
   ['Đứng (t=0)', { act: 'stand', time: 0 }],
   ['Đứng (t=0,5)', { act: 'stand', time: 0.5 }],
@@ -361,6 +365,13 @@ export const NHOM: Record<string, Entry[]> = {
     { ten: 'Thợ đá vác sắt (công trình đang xây)', tao: () => ganhNguoi('thoDa', 'sat'), cot: GANH },
     { ten: 'Người bếp gùi nguyên liệu Tết', tao: () => ganhNguoi('phuNu', 'gui'), cot: GANH },
     { ten: 'Người bếp đội mâm bánh', tao: () => ganhNguoi('phuNu', 'mam'), cot: GANH },
+  ],
+  tuongDa: [
+    { ten: 'Bà Triệu cưỡi voi trắng một ngà', tao: () => makeBaTrieu(), co: 2.3, cach: 2.1 },
+    { ten: 'Bà Triệu chém cá kình', tao: () => makeBaTrieu(), co: 2.4, cach: 2.1, cot: CHEM_COT },
+    { ten: 'Bà Triệu thắng trận', tao: theoCot(() => makeBaTrieu(), 'win'), co: 2.4, cach: 2.1, cot: CHEM_COT },
+    { ten: 'Bà Triệu đứng chầu (sân Điện)', tao: () => makeBaTrieu({ onFoot: true }), co: 1.6, cach: 1.25 },
+    { ten: 'Bà Triệu (đủ bộ Núi Nưa)', tao: () => makeBaTrieu({ anh: true }), co: 2.3, cach: 2.1, cot: ANH_COT },
   ],
   anh: [
     { ten: 'Tráng sĩ Gióng (roi sắt, đủ bộ Phù Đổng)', tao: () => makeGiong('trangSi', { anh: true }), co: 1.9, cach: 1.7, cot: ANH_COT },
