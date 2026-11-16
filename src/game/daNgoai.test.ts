@@ -12,6 +12,7 @@ import {
   DA_CAP,
   DA_KHU,
   DA_MAP,
+  DA_MAP_CUOI,
   DA_MAP_IDS,
   DA_TREO,
   DEFAULT_ROWS,
@@ -45,7 +46,7 @@ import { applyOffline, createInitialState, type GameState } from './game';
 import { SAVE_VERSION, deserialize, serialize } from './save';
 import { heroesFor } from './son';
 import { SAMPLE_ARMY } from './testkit';
-import { kiemMon } from './trangBi';
+import { kiemMon, rutMon } from './trangBi';
 
 const DT = 0.05;
 
@@ -87,7 +88,7 @@ describe('bố cục năm map', () => {
       expect(bc.khu).toHaveLength(5);
       expect(new Set(def.quai).size).toBe(5);
       expect(def.quai).not.toContain(def.boss);
-      expect(bc.congSau === null).toBe(id === 5);
+      expect(bc.congSau === null).toBe(id === DA_MAP_CUOI);
       expect(def.cong).toBe(id === 1 ? 0 : def.cap[0] - 1);
       expect(capKhu(id, 4)[1]).toBe(def.cap[1]);
     }
@@ -401,6 +402,37 @@ describe('không khóa tướng, bản lưu', () => {
     const bad = JSON.parse(serialize(s));
     bad.daNgoai.doi = ['giong', 'giong', 'giong', 'giong'];
     expect(deserialize(JSON.stringify(bad))).toBeFalsy();
+  });
+
+  it('bản lưu 30 lên 31: thêm giờ boss cho map 6, giữ giờ boss cũ', () => {
+    const s = base(true);
+    s.daNgoai.boss[2] = 7777;
+    const old = JSON.parse(serialize(s));
+    old.version = 30;
+    old.daNgoai.boss = old.daNgoai.boss.slice(0, 5);
+    const up = deserialize(JSON.stringify(old))!;
+    expect(up.version).toBe(SAVE_VERSION);
+    expect(up.daNgoai.boss).toEqual([0, 0, 7777, 0, 0, 0]);
+    expect(isDaNgoaiState(up.daNgoai)).toBe(true);
+  });
+
+  it('map 6: cổng cần cấp 50, đồ rơi không vượt chương 5, boss rơi phẩm theo bossRoi', () => {
+    const def = DA_MAP[6];
+    expect(def.cong).toBe(50);
+    expect(DA_CAP.tran).toBe(60);
+    expect(def.chuong).toBe(5);
+    let cao = 0;
+    let n = 0;
+    for (let seq = 0; seq < 4000; seq++) {
+      const m = rutMon(seq, 'daBoss', 5, ['trungTrac'], def.bossRoi)!;
+      expect(m.cap).toBe(5);
+      expect(m.pham).toBeGreaterThanOrEqual(3);
+      if (m.pham === 4) cao++;
+      n++;
+    }
+    // Boss map 6: Huyền thoại chừng 60% (boss các map khác 40%).
+    expect(cao / n).toBeGreaterThan(0.55);
+    expect(cao / n).toBeLessThan(0.65);
   });
 
   it('khu đội đứng tính rộng thêm 3 ô quanh khu', () => {

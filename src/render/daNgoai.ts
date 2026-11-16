@@ -36,6 +36,8 @@ const MAU: Record<DaMapId, MauMap> = {
   3: { co: 0x6e7a5a, co2: 0x626e52, duong: 0x8c7c68, khu: 0x7a7060, ngoai: 0x4c5640, troi: DEM },
   4: { co: 0xc9b886, co2: 0xa4ac66, duong: 0xb59c70, khu: 0xbfa878, ngoai: 0x8e9c5a, troi: { ...TROI_NGAY, sky: 0xe6ecdc } },
   5: { co: 0x5f9042, co2: 0x52823a, duong: 0xa48c5c, khu: 0x7c8a4c, ngoai: 0x3e6a30, troi: TROI_NGAY },
+  // Núi Nưa: cỏ núi xanh sẫm, đường mòn đất đỏ, trời núi mờ sương.
+  6: { co: 0x6a8a4a, co2: 0x5c7c42, duong: 0xa8724e, khu: 0x8a7656, ngoai: 0x445e34, troi: { ...TROI_NGAY, sky: 0xcfd8d8 } },
 };
 
 /** Map rộng thêm chừng này ô mỗi phía: rừng viền che mép map. */

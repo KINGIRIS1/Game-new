@@ -60,7 +60,7 @@ export interface DaNgoaiState {
 }
 
 export function initialDaNgoai(): DaNgoaiState {
-  return { cap: 1, exp: 0, map: 1, cho: null, dangO: false, doi: [], tuDanh: true, boss: [0, 0, 0, 0, 0], xa: 1, tichMs: 0, du: 0, giet: 0, bossGiet: 0 };
+  return { cap: 1, exp: 0, map: 1, cho: null, dangO: false, doi: [], tuDanh: true, boss: DA_MAP_IDS.map(() => 0), xa: 1, tichMs: 0, du: 0, giet: 0, bossGiet: 0 };
 }
 
 /** Dã ngoại mở khi có tướng đầu tiên về (như trang bị). */
@@ -130,7 +130,7 @@ function thuongMot(s: GameState, map: DaMapId, g: Pick<DaGiet, 'cap' | 'khu' | '
     out.cua[r] += n;
   }
   gain(s, cua);
-  const roi = roiDo(s, g.boss ? 'daBoss' : 'daQuai', chuongRoi(s, map));
+  const roi = roiDo(s, g.boss ? 'daBoss' : 'daQuai', chuongRoi(s, map), g.boss ? DA_MAP[map].bossRoi : undefined);
   if (roi) {
     if (roi.sat) out.satDo += roi.sat;
     else out.mon.push(roi.mon);

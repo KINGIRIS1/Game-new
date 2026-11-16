@@ -72,7 +72,10 @@ export type SoldierKind =
   | 'noHan'
   | 'giapHan'
   | 'nghiaBinh'
-  | 'toDinh';
+  | 'toDinh'
+  | 'linhNgo'
+  | 'noNgo'
+  | 'giapNgo';
 const KINDS: readonly FighterKind[] = [
   'giao',
   'cung',
@@ -91,6 +94,9 @@ const KINDS: readonly FighterKind[] = [
   'giapHan',
   'nghiaBinh',
   'toDinh',
+  'linhNgo',
+  'noNgo',
+  'giapNgo',
 ];
 
 /** Giáp mây đan của lính rìu Triệu. */
@@ -158,6 +164,15 @@ function hanSoldier(r: HumanRig, vest: number, dark: number): void {
   humanHead(r, { brows: true });
   helmet(r, { color: HAN_BLACK, cloth: true, lift: 0, puff: 0.014, band: C.hanRed, bandH: 0.026 });
   streamer(r, { from: [0, 0.9, -0.17], dir: [0, 1, -0.5], len: 0.12, width: 0.15, color: HAN_BLACK });
+}
+
+/** Lính Ngô (map dã ngoại Núi Nưa): dáng như lính Hán nhưng áo xanh chàm, khăn đen, dải khăn xanh. */
+function ngoSoldier(r: HumanRig, vest: number, dark: number): void {
+  humanBody(r, { legs: C.ngoDark, cloth: C.ngo, pattern: false, long: true, top: C.ngo, sleeves: C.ngo, belt: dark, hem: C.ngoDark });
+  armor(r, { color: vest, trim: dark, rows: 3, y0: 0.4, y1: 0.585 });
+  humanHead(r, { brows: true });
+  helmet(r, { color: HAN_BLACK, cloth: true, lift: 0, puff: 0.014, band: C.ngo, bandH: 0.026 });
+  streamer(r, { from: [0, 0.9, -0.17], dir: [0, 1, -0.5], len: 0.12, width: 0.15, color: C.ngoDark });
 }
 
 /** Bao tên sau lưng, miệng bao chếch qua vai phải để tay phải rút tên. */
@@ -368,6 +383,68 @@ const SPECS: Record<SoldierKind, Spec> = {
       helmet(r, { color: ARMOR_BLACK, band: C.gold, neck: 0.1, guard: ARMOR_BLACK, guardTrim: C.gold, brow: C.gold, top: { kind: 'knob', color: C.gold } });
       plumes(r, [FEATHER_BLACK, ARMOR_BLACK], { count: 7, len: 0.46, y: 0.98, z: -0.08 });
       r.local('hand', GRIP_R, null, longDao);
+    },
+  },
+  // Quân Ngô ở map dã ngoại Núi Nưa: lính giáo, nỏ thủ, giáp sĩ.
+  linhNgo: {
+    style: 'spear',
+    draw: (r) => {
+      // Lính giáo: giáp da, giáo sắt dài có cờ đuôi nheo xanh.
+      ngoSoldier(r, LEATHER, C.woodDark);
+      r.local('hand', GRIP_R, null, (s) => {
+        spear(s, 1, 1.45);
+        s.plain.box(0.02, 0.12, 0.2, C.ngo, 0, 0.95, -0.1);
+      });
+    },
+  },
+  noNgo: {
+    style: 'crossbow',
+    draw: (r) => {
+      // Nỏ thủ: giáp lá sắt, nỏ lớn; bao tên xanh sẫm sau lưng.
+      ngoSoldier(r, C.hanIron, C.hanIronDark);
+      r.local('hand', GRIP_R, null, (s) => crossbowParts(s, false, 0.92));
+      backQuiver(r, C.ngoDark, true);
+    },
+  },
+  giapNgo: {
+    style: 'chop',
+    shield: true,
+    short: true,
+    draw: (r) => {
+      // Giáp sĩ: giáp lá sắt phủ tới gối, giáp vai, mũ sắt chóp tua xanh; khiên chữ nhật sơn xanh viền đen; đao vòng.
+      humanBody(r, {
+        legs: C.ngoDark,
+        cloth: C.hanIron,
+        pattern: false,
+        long: true,
+        top: C.hanIron,
+        sleeves: C.ngo,
+        belt: C.ngoDark,
+        greaves: C.hanIronDark,
+        wristband: C.hanIronDark,
+      });
+      skirtArmor(r, { color: C.hanIron, trim: C.ngoDark, rows: 3, to: 0.12 });
+      armor(r, { color: C.hanIron, trim: C.ngoDark, rows: 3, y0: 0.4, y1: 0.59 });
+      pauldrons(r, { color: C.hanIron, trim: C.ngoDark, layers: 2 });
+      humanHead(r, { brows: true });
+      helmet(r, {
+        color: C.hanIron,
+        band: C.ngoDark,
+        neck: 0.1,
+        cheek: 0.09,
+        guard: C.hanIron,
+        guardTrim: C.ngoDark,
+        top: { kind: 'tube', color: C.ngoDark, h: 0.05 },
+        tuft: { color: C.ngo, len: 0.13, lean: 0.1, r: 0.03 },
+      });
+      r.local('armL', [-0.21, 0.38, 0.07], null, (s) => {
+        s.plain.box(0.38, 0.56, 0.03, HAN_BLACK, 0, 0, 0);
+        s.plain.box(0.32, 0.5, 0.04, C.ngo, 0, 0, 0);
+        s.plain.box(0.32, 0.03, 0.046, HAN_BLACK, 0, 0.12, 0);
+        s.plain.box(0.32, 0.03, 0.046, HAN_BLACK, 0, -0.12, 0);
+        s.plain.sphere(0.055, C.gold, 0, 0, 0.03, [1, 1, 0.6], 8);
+      });
+      r.local('hand', GRIP_R, null, daoVong);
     },
   },
   // Chương 5: quân Hán áo đỏ son.
@@ -678,7 +755,7 @@ function shapeOf(kind: SoldierKind, tier: number): RigShape<string> {
 // ---------- Người cưỡi ----------
 
 /** Người cưỡi voi, cưỡi ngựa hay đứng trên chiến xa. Khung xương người dời lên lưng thú (beasts.ts). */
-export type RiderKind = 'lacTuong' | 'anXa' | 'daiTuong' | 'kyBinh' | 'trieuDa' | 'maVien';
+export type RiderKind = 'lacTuong' | 'anXa' | 'daiTuong' | 'kyBinh' | 'trieuDa' | 'maVien' | 'lucDan';
 
 /** Chỗ buộc lá cờ lệnh của Mã Viện trên cán (tư thế gốc: tay trái buông, cán dựng đứng từ chỗ tay nắm). */
 const MA_VIEN_FLAG: [number, number, number] = [GRIP_L[0], GRIP_L[1] + CO_LENH_TOP, GRIP_L[2]];
@@ -818,6 +895,46 @@ const RIDERS: Record<RiderKind, Spec> = {
       (r as unknown as RigBuilder<string>).local('coLenh', MA_VIEN_FLAG, null, coLenhLa);
     },
     after: poseMaVien,
+  },
+  // Tướng Ngô Lục Dận (map dã ngoại Núi Nưa): tướng trẻ, giáp lá sắt viền vàng, áo xanh chàm, áo choàng xanh sẫm,
+  // hộ tâm vàng, mũ trụ sắt chùm lông xanh cao; thương dài cờ đuôi nheo.
+  lucDan: {
+    style: 'spear',
+    draw: (r) => {
+      humanBody(r, {
+        legs: C.ngoDark,
+        cloth: C.hanIron,
+        pattern: false,
+        long: true,
+        top: C.hanIron,
+        sleeves: C.ngo,
+        belt: C.gold,
+        greaves: C.hanIronDark,
+        wristband: C.gold,
+      });
+      skirtArmor(r, { color: C.hanIron, trim: C.gold, rows: 3, to: 0.12 });
+      armor(r, { color: C.hanIron, trim: C.gold, rows: 3, scales: true, y0: 0.4, y1: 0.59 });
+      chestDisc(r, { color: C.gold, r: 0.05, y: 0.5, thick: 0.024, rim: C.goldDark, boss: C.goldDark });
+      pauldrons(r, { color: C.hanIron, trim: C.gold, layers: 2, size: 1.1 });
+      cloak(r, { color: C.ngoDark, trim: C.gold, clasp: C.gold, hem: 0.08 });
+      // Mặt tướng trẻ: mày rậm, ria mỏng.
+      humanHead(r, { brows: true, mustache: C.hair });
+      helmet(r, {
+        color: C.hanIron,
+        band: C.gold,
+        neck: 0.1,
+        cheek: 0.1,
+        guard: C.hanIron,
+        guardTrim: C.gold,
+        brow: C.gold,
+        top: { kind: 'tube', color: C.gold, h: 0.1 },
+        tuft: { color: C.ngo, len: 0.34, lean: 0.3, r: 0.042 },
+      });
+      r.local('hand', GRIP_R, null, (s) => {
+        spear(s, 2, 1.6);
+        s.plain.box(0.02, 0.14, 0.24, C.ngo, 0, 1.1, -0.12);
+      });
+    },
   },
 };
 

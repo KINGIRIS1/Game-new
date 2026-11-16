@@ -5,7 +5,7 @@
 // Tọa độ theo ô: x, z từ 0 tới `DA_KHUNG.w`, `DA_KHUNG.d`. Vật cản là hình tròn, đặt cách nhau đủ rộng để người đi
 // trượt dọc mép mà qua; đi xa thì tìm đường trên lưới ô 1 (`timDuong`).
 
-import { DA_KHUNG, DA_MAP, type DaCan, type DaMapId } from './defs';
+import { DA_KHUNG, DA_MAP, DA_MAP_CUOI, type DaCan, type DaMapId } from './defs';
 
 export interface Diem {
   x: number;
@@ -109,7 +109,7 @@ function dung(id: DaMapId): DaBoCuc {
   const khu = MAU.khu.map(lat);
   const boss = lat(MAU.boss);
   const congTruoc = lat(MAU.congTruoc);
-  const congSau = id < 5 ? lat(MAU.congSau) : null;
+  const congSau = id < DA_MAP_CUOI ? lat(MAU.congSau) : null;
   const loi: Diem[] = [congTruoc, trai, ...khu, boss, ...(congSau ? [congSau] : [])];
   const rand = hat(id * 104729 + 17);
   const kinds = Object.entries(def.can) as [DaCan, number][];

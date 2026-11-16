@@ -1457,7 +1457,12 @@ export type EnemyType =
   | 'lonRung'
   | 'cuaDa'
   | 'baoGam'
-  | 'ranHo';
+  | 'ranHo'
+  // Quân Ngô và tướng Ngô Lục Dận ở map dã ngoại Núi Nưa (đất Cửu Chân, thời Bà Triệu).
+  | 'linhNgo'
+  | 'noNgo'
+  | 'giapNgo'
+  | 'lucDan';
 export const UNIT_TYPES: UnitType[] = ['giao', 'cung', 'voi', 'no'];
 
 export interface FighterStats {
@@ -1484,7 +1489,7 @@ export interface UnitDef extends FighterStats {
 }
 
 /** Quân nặng của giặc: giáo binh và lính nỏ khắc chế. */
-const HEAVY: EnemyType[] = ['chienXa', 'caSau', 'hoTinh', 'kyBinh', 'linhRiu', 'giapHan'];
+const HEAVY: EnemyType[] = ['chienXa', 'caSau', 'hoTinh', 'kyBinh', 'linhRiu', 'giapHan', 'giapNgo'];
 
 /**
  * Quân ta: giáo binh thắng quân nặng (chiến xa, cá sấu, hổ tinh, kỵ binh, lính rìu, giáp sĩ Hán), cung thủ thắng
@@ -1496,15 +1501,15 @@ const HEAVY: EnemyType[] = ['chienXa', 'caSau', 'hoTinh', 'kyBinh', 'linhRiu', '
  */
 export const UNITS: Record<UnitType, UnitDef> = {
   giao: { hp: 60, dmg: 8, range: 0.8, speed: 1.6, cooldown: 1.0, strongVs: [...HEAVY, 'voi'], cost: { gao: 20, voOc: 8 }, home: 'traiGiao', space: 1, upkeep: 0.6 },
-  cung: { hp: 40, dmg: 7, range: 3.8, speed: 1.5, cooldown: 1.2, strongVs: ['giaoAn', 'tomBinh', 'quyNui', 'linhTrieu', 'linhThuy', 'linhHan', 'giao'], cost: { gao: 25, voOc: 8, sat: 4 }, home: 'traiCung', space: 1, upkeep: 0.6 },
-  voi: { hp: 200, dmg: 15, range: 0.9, speed: 1.1, cooldown: 1.5, strongVs: ['cungAn', 'caPhun', 'maTroi', 'noTrieu', 'cungThuyen', 'noHan', 'cung', 'no'], cost: { gao: 60, voOc: 20, sat: 12 }, home: 'chuongVoi', space: 3, upkeep: 1.5 },
+  cung: { hp: 40, dmg: 7, range: 3.8, speed: 1.5, cooldown: 1.2, strongVs: ['giaoAn', 'tomBinh', 'quyNui', 'linhTrieu', 'linhThuy', 'linhHan', 'linhNgo', 'giao'], cost: { gao: 25, voOc: 8, sat: 4 }, home: 'traiCung', space: 1, upkeep: 0.6 },
+  voi: { hp: 200, dmg: 15, range: 0.9, speed: 1.1, cooldown: 1.5, strongVs: ['cungAn', 'caPhun', 'maTroi', 'noTrieu', 'cungThuyen', 'noHan', 'noNgo', 'cung', 'no'], cost: { gao: 60, voOc: 20, sat: 12 }, home: 'chuongVoi', space: 3, upkeep: 1.5 },
   no: {
     hp: 50,
     dmg: 26,
     range: 4.5,
     speed: 1.3,
     cooldown: 2.4,
-    strongVs: [...HEAVY, 'phoTuong', 'daiTuong', 'thuongLuong', 'thuyTinh', 'gaTrang', 'trieuDa', 'tuongThuy', 'toDinh', 'maVien', 'voi'],
+    strongVs: [...HEAVY, 'phoTuong', 'daiTuong', 'thuongLuong', 'thuyTinh', 'gaTrang', 'trieuDa', 'tuongThuy', 'toDinh', 'maVien', 'lucDan', 'voi'],
     cost: { gao: 50, voOc: 15, sat: 10 },
     home: 'traiNo',
     space: 2,
@@ -1560,6 +1565,11 @@ export const ENEMIES: Record<EnemyType, FighterStats> = {
   cuaDa: { hp: 110, dmg: 11, range: 0.8, speed: 1.1, cooldown: 1.2 },
   baoGam: { hp: 100, dmg: 13, range: 0.9, speed: 2.2, cooldown: 0.9 },
   ranHo: { hp: 95, dmg: 12, range: 1.6, speed: 1.4, cooldown: 1.2 },
+  // Quân Ngô (map dã ngoại Núi Nưa): dáng đánh như quân Hán; Lục Dận cưỡi ngựa cầm thương dài, như Mã Viện.
+  linhNgo: { hp: 105, dmg: 13, range: 1.0, speed: 1.4, cooldown: 1.0 },
+  noNgo: { hp: 60, dmg: 13, range: 4.2, speed: 1.3, cooldown: 1.5 },
+  giapNgo: { hp: 330, dmg: 26, range: 0.9, speed: 1.5, cooldown: 1.4, strongVs: ['cung'] },
+  lucDan: { hp: 2000, dmg: 36, range: 1.4, speed: 1.4, cooldown: 1.2 },
 };
 
 /**
@@ -1567,7 +1577,7 @@ export const ENEMIES: Record<EnemyType, FighterStats> = {
  * gà trắng nghìn năm ở đỉnh Thất Diệu, Triệu Đà dưới chân thành Cổ Loa (và trên đường ra biển), tướng thủy binh
  * Triệu ở cửa sông.
  */
-export const BOSSES: EnemyType[] = ['phoTuong', 'daiTuong', 'thuongLuong', 'thuyTinh', 'gaTrang', 'trieuDa', 'tuongThuy', 'toDinh', 'maVien'];
+export const BOSSES: EnemyType[] = ['phoTuong', 'daiTuong', 'thuongLuong', 'thuyTinh', 'gaTrang', 'trieuDa', 'tuongThuy', 'toDinh', 'maVien', 'lucDan'];
 /** Thủy quái bơi được dưới sông và chỗ nước ngập. */
 export const SWIMMERS: EnemyType[] = ['tomBinh', 'caPhun', 'caSau', 'thuongLuong', 'thuyTinh'];
 
@@ -1839,6 +1849,10 @@ export const ENEMY_ROWS: Record<EnemyType, Row> = {
   cuaDa: 'tien',
   baoGam: 'trung',
   ranHo: 'trung',
+  linhNgo: 'tien',
+  giapNgo: 'trung',
+  noNgo: 'hau',
+  lucDan: 'hau',
 };
 
 /**
@@ -2476,8 +2490,10 @@ export const BO_BON = {
 
 // ---------- Dã ngoại (`daNgoai.ts`, `daNgoaiMap.ts`, `daNgoaiTran.ts`; docs/thiet-ke.md mục Kế hoạch: dã ngoại) ----------
 
-export type DaMapId = 1 | 2 | 3 | 4 | 5;
-export const DA_MAP_IDS: DaMapId[] = [1, 2, 3, 4, 5];
+export type DaMapId = 1 | 2 | 3 | 4 | 5 | 6;
+export const DA_MAP_IDS: DaMapId[] = [1, 2, 3, 4, 5, 6];
+/** Map cuối: không có cổng sang map sau. */
+export const DA_MAP_CUOI: DaMapId = DA_MAP_IDS[DA_MAP_IDS.length - 1];
 
 /** Dáng vật cản trên map dã ngoại: cây rừng (vẽ như rừng kinh đô), khóm tre, đá, bụi sim, cây chết, khúc gỗ, lau. */
 export type DaCan = 'cay' | 'tre' | 'da' | 'daNhon' | 'sim' | 'cayChet' | 'go' | 'lau' | 'ao';
@@ -2500,6 +2516,8 @@ export interface DaMapDef {
   thuong: Cost;
   /** Lật bố cục mẫu theo chiều ngang. */
   lat: boolean;
+  /** Tỉ lệ bốn phẩm đồ boss rơi, thay `ROI_DO.daBoss` (map chưa có chương riêng thì boss rơi phẩm cao hơn). */
+  bossRoi?: [number, number, number, number];
 }
 
 export const DA_MAP: Record<DaMapId, DaMapDef> = {
@@ -2558,6 +2576,20 @@ export const DA_MAP: Record<DaMapId, DaMapDef> = {
     thuong: { gao: 12, voOc: 8, datDa: 5, sat: 2, go: 2 },
     lat: false,
   },
+  // Núi Nưa đất Cửu Chân, thời Bà Triệu. Chưa có chương 6 nên đồ rơi vẫn cấp đồ chương 5, boss rơi phẩm cao hơn.
+  6: {
+    chuong: 5,
+    cap: [51, 60],
+    cong: 50,
+    terrain: 'nui',
+    // Khu 1, 2 tạm dùng hổ tinh, báo gấm tới khi có gấu ngựa, voi rừng.
+    quai: ['hoTinh', 'baoGam', 'linhNgo', 'noNgo', 'giapNgo'],
+    boss: 'lucDan',
+    can: { cay: 5, da: 3, daNhon: 3, tre: 2, sim: 1 },
+    thuong: { gao: 15, voOc: 10, datDa: 7, sat: 3, go: 3 },
+    lat: true,
+    bossRoi: [0, 0, 40, 60],
+  },
 };
 
 /** Cỡ map dã ngoại (ô), số quái mỗi khu, quái ở khu thứ năm (mạnh nhất) ít hơn nhưng bền hơn. */
@@ -2588,7 +2620,7 @@ export const DA_QUAI = {
  * `len × cấp^mu`; mỗi cấp thêm `moiCap` máu và sức đánh. Quái thấp hơn cấp chung quá `thap` cấp thì kinh nghiệm giảm
  * mỗi cấp `giam`, thấp nhất `san`.
  */
-export const DA_CAP = { tran: 50, len: 100, mu: 1.8, moiCap: 0.03, thap: 5, giam: 0.15, san: 0.1 };
+export const DA_CAP = { tran: 60, len: 100, mu: 1.8, moiCap: 0.03, thap: 5, giam: 0.15, san: 0.1 };
 
 /** Boss hạ xong thì chừng này thời gian chơi sau mới mọc lại. */
 export const DA_BOSS_MS = 30 * 60_000;

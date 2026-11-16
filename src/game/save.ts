@@ -19,6 +19,7 @@ import {
   QUEST_INSERTED_V4,
   QUIZ_TURNS,
   PHU_SA_TYPES,
+  DA_MAP_IDS,
   RESOURCE_IDS,
   ROWS,
   STAGES,
@@ -146,6 +147,7 @@ function migrate(raw: unknown): unknown {
   if (isObj(v) && v.version === 27) v = migrate27to28(v);
   if (isObj(v) && v.version === 28) v = migrate28to29(v);
   if (isObj(v) && v.version === 29) v = migrate29to30(v);
+  if (isObj(v) && v.version === 30) v = migrate30to31(v);
   return v;
 }
 
@@ -542,6 +544,14 @@ function migrate28to29(s: Raw): Raw {
 function migrate29to30(s: Raw): Raw {
   s.version = 30;
   s.daNgoai = initialDaNgoai();
+  return s;
+}
+
+/** Phiên bản 30 → 31 (map dã ngoại 6, Núi Nưa): thêm giờ boss mọc lại cho map mới. */
+function migrate30to31(s: Raw): Raw {
+  s.version = 31;
+  const d = s.daNgoai;
+  if (isObj(d) && Array.isArray(d.boss)) while (d.boss.length < DA_MAP_IDS.length) d.boss.push(0);
   return s;
 }
 

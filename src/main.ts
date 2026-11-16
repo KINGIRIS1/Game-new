@@ -34,7 +34,7 @@ import { inChapter2, offerGift } from './game/son';
 import { buyHuan } from './game/thuThach';
 import { markStory, pendingStory } from './game/story';
 import { footprintTop } from './game/terrain';
-import { BUILDINGS, DA_MAP, O_DO, QUIZ_TURNS, RESOURCE_IDS, STAGES, UNIT_TYPES, U_NO, isBridge, isDecor, isRoad, type BuildingType, type Cost, type DaMapId, type NuTuongId, type ResourceId, type Row, type SkillId, type UnitType } from './game/defs';
+import { BUILDINGS, DA_MAP, DA_MAP_CUOI, O_DO, QUIZ_TURNS, RESOURCE_IDS, STAGES, UNIT_TYPES, U_NO, isBridge, isDecor, isRoad, type BuildingType, type Cost, type DaMapId, type NuTuongId, type ResourceId, type Row, type SkillId, type UnitType } from './game/defs';
 import { CAMPS, benKiaOpen, bridgeSnap, campHero, campTier, canStartCamp, joinVillage, plotAt, poiAt, sendScout, setGarrison, startCamp } from './game/benKia';
 import type { QuanDaoId } from './game/bien';
 import type { Buoi } from './game/ngayDem';
@@ -388,9 +388,15 @@ async function start(): Promise<void> {
 
   /** Dã ngoại vừa mở (có tướng đầu tiên về): Lạc hầu báo một lần chỗ vào (chip 🌿 ở bản đồ phó bản). */
   const showDaHint = () => {
-    if (!daMo(state) || state.hinted.includes('daNgoai')) return;
-    state.hinted = [...state.hinted, 'daNgoai'];
-    hud.toast(vi.daNgoai.hint, false, 8000);
+    if (!daMo(state)) return;
+    if (!state.hinted.includes('daNgoai')) {
+      state.hinted = [...state.hinted, 'daNgoai'];
+      hud.toast(vi.daNgoai.hint, false, 8000);
+    } else if (state.daNgoai.cap >= DA_MAP[DA_MAP_CUOI].cong && !state.hinted.includes('daNgoai6')) {
+      // Đủ cấp sang map cuối (Núi Nưa): báo một lần.
+      state.hinted = [...state.hinted, 'daNgoai6'];
+      hud.toast(vi.daNgoai.hint6, false, 9000);
+    }
   };
 
   /** Lần đầu có công trình làm ra chưa đủ vì xa kho: Lạc hầu gợi ý một lần việc gánh hàng, trải đường. */
