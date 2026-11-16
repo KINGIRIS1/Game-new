@@ -999,7 +999,7 @@ Chủ dự án đã chọn qua bốn câu hỏi: Thủy Tinh có cả hai phép 
   - nâng Điện rồi áp lại: lũy ra bìa mới, công trình giữ cấp;
   - đổi từ mẫu Phong Châu sang Cổ Loa vẫn xếp được.
 
-### Mẫu kinh đô: khung đường, xếp đủ theo cấp (chủ dự án yêu cầu; khung từng mẫu và giới hạn đường chờ duyệt)
+### Mẫu kinh đô: khung đường, xếp đủ theo cấp (chủ dự án yêu cầu; chủ dự án đã duyệt khung từng mẫu và giới hạn đường)
 
 Chủ dự án yêu cầu: bố trí lại các mẫu cho hợp lý; đường vuông góc, không đặt đường xéo; công trình nào cũng bắt buộc có đường nối; không cần cân bằng sản lượng (chỉ nhắc khi người chơi đặt công trình); mẫu theo từng cấp, tính xem đặt đủ mọi công trình của cấp ấy thì đất cấp ấy có đủ không, không đủ thì đề xuất nới.
 
@@ -1032,8 +1032,8 @@ Chủ dự án yêu cầu: bố trí lại các mẫu cho hợp lý; đường v
 | Cổ Loa giữ sông cần | | | | | **45** | 45 | **50** | 50 | 50 | 50 |
 
 - Đủ đất ở mọi cấp, trừ ba chỗ in đậm: **Cổ Loa Điện 5 cần 45** (khung cũ 40), **Cổ Loa giữ sông Điện 5 cần 45** (40) và **Điện 7 cần 50** (45). Cổ Loa tốn đất vì ba vòng thành và nhà 8×8 phải ở ngoài vòng ngoài.
-- Đề xuất (đã làm, chờ duyệt): khung dựng mẫu theo từng mẫu (`MAU_KHUNG` ở `mau.ts`), giữ khung cũ ở mọi chỗ đủ, nới đúng ba chỗ trên. Đất trong game không khóa theo cấp (phát khoảnh nào cũng được), nên nới khung chỉ có nghĩa là mẫu cần phát thêm khoảnh rừng: chỗ của mẫu trong rừng chưa phát thì bỏ qua như trước, bảng mẫu ghi số khoảnh còn thiếu. Lưới bên này sông tối đa 50 ô, mẫu nào cũng vừa ở Điện 10.
-- Số đường của mẫu nhiều đường nhất ở mỗi cấp: 80, 121, 122, 196, 308, 317, 427, 427, 435, 433 ô. Giới hạn đường cũ thiếu từ Điện 4, nên **nới `ROAD_LIMIT`** (chờ duyệt) lên 90, 130, 140, 220, 320, 330, 470, 470, 480, 480 (dư chừng một phần mười cho đường tự trải). Đường đất 2 vỏ ốc một ô, nên trải đủ đường mẫu Điện 10 chừng 900 vỏ ốc.
+- Đề xuất (chủ dự án đã duyệt): khung dựng mẫu theo từng mẫu (`MAU_KHUNG` ở `mau.ts`), giữ khung cũ ở mọi chỗ đủ, nới đúng ba chỗ trên. Đất trong game không khóa theo cấp (phát khoảnh nào cũng được), nên nới khung chỉ có nghĩa là mẫu cần phát thêm khoảnh rừng: chỗ của mẫu trong rừng chưa phát thì bỏ qua như trước, bảng mẫu ghi số khoảnh còn thiếu. Lưới bên này sông tối đa 50 ô, mẫu nào cũng vừa ở Điện 10.
+- Số đường của mẫu nhiều đường nhất ở mỗi cấp: 80, 121, 122, 196, 308, 317, 427, 427, 435, 433 ô. Giới hạn đường cũ thiếu từ Điện 4, nên **nới `ROAD_LIMIT`** (chủ dự án đã duyệt) lên 90, 130, 140, 220, 320, 330, 470, 470, 480, 480 (dư chừng một phần mười cho đường tự trải). Đường đất 2 vỏ ốc một ô, nên trải đủ đường mẫu Điện 10 chừng 900 vỏ ốc.
 - **Đấu thành**: kinh đô máy dựng từ mẫu nên đổi theo; đo lại cân bằng (Điện 5, 7, 8) vẫn đạt chuẩn, không đổi số của Đấu thành. Trận đo tốc độ máy chủ (`tatDinh.test.ts`) đổi hạt giống để trận vẫn đủ 3 phút.
 - Test (`sapxep.test.ts`): mọi mẫu, mọi cấp: công trình nhiều ô giáp đường, đường nối về Điện, kho qua cổng, qua đê; không có hai ô đường chéo góc mà không có ô đường chung cạnh; không ô đường lẻ; không đè chỗ; trong giới hạn đường. Áp mẫu trải đủ đường mẫu trên đất đã mở, giữ đường đang có, áp lần hai không còn gì. `vanChuyen.test.ts`: có đường mẫu thì công trình làm ra hàng nào cũng có lối gánh, không kém hơn khi không có đường; nhắc chưa giáp đường.
 
