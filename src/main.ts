@@ -19,7 +19,7 @@ import { autoGuard, fieldCap, fitArmy, setGuard } from './game/doanhTrai';
 import { markNuHinted, nextNuHint } from './game/nuTuong';
 import { forgeNoThan, inChapter3, wallRings } from './game/coLoa';
 import { offer, tetOpen } from './game/tet';
-import { ganhPreview, markGanhHinted, needsGanhHint, vungGanh } from './game/vanChuyen';
+import { ganhPreview, giapDuong, markGanhHinted, needsGanhHint, vungGanh } from './game/vanChuyen';
 import { startMau } from './game/mau';
 import { advanceXay, askQuiz, canStartBuild, cancelJob, conLai, startBuild, startDon, startThuyen, startUpgrade, startWallUpgrade, startWalls, thoRanh, thoRanhSau, traLoi, viecOf, xayMs, type CongViec } from './game/xay';
 import { danhDao, markDaoHinted, nextDaoHint, setDaoLinh, setupDao, suaDon } from './game/dao';
@@ -488,7 +488,11 @@ async function start(): Promise<void> {
         : canStartBuild(state, mode.type, mode.x, mode.z);
     world.setGhost(mode.type, mode.x, mode.z, check.ok, footprintTop(state, mode.type, mode.x, mode.z), mode.rot);
     const ganh = check.ok ? ganhPreview(state, mode.type, mode.x, mode.z, mode.moving) : null;
-    hud.setPlaceValid(check.ok, check.ok ? undefined : vi.reasons[check.reason], ganh === null ? undefined : vi.ui.ganhPlace(Math.round(ganh * 100)));
+    // Nhắc khi đặt (không chặn): gánh về được bao nhiêu phần, và công trình chưa giáp đường.
+    const notes: string[] = [];
+    if (ganh !== null) notes.push(vi.ui.ganhPlace(Math.round(ganh * 100)));
+    if (check.ok && giapDuong(state, mode.type, mode.x, mode.z) === false) notes.push(vi.ui.noRoad);
+    hud.setPlaceValid(check.ok, check.ok ? undefined : vi.reasons[check.reason], notes.length ? notes.join(' · ') : undefined);
     zoneAt = check.ok;
     refreshGanhZone();
   };

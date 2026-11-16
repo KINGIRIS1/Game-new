@@ -23,12 +23,12 @@ import {
   type Building,
   type GameState,
 } from './game';
-import { MAU_IDS, mauSlots } from './mau';
+import { MAU_IDS, frameKhoanh, mauDuong, mauSlots } from './mau';
 import { serialize } from './save';
 import { bakeRates } from './tet';
 import { DIEN, bank, edge, setDien, size } from './testmap';
 import { GRID, inGrid } from './map';
-import { chiPhiO, duongGanh, duongTu, ganhPreview, ganhType, heSoGanh, heSoTheo, markGanhHinted, needsGanhHint, vungGanh } from './vanChuyen';
+import { chiPhiO, duongGanh, duongTu, ganhPreview, ganhType, giapDuong, heSoGanh, heSoTheo, markGanhHinted, needsGanhHint, vungGanh } from './vanChuyen';
 import { pendingBuildings, startBuild } from './xay';
 
 /** Kinh đô Điện 5, đã qua kết chương 1 (có Hội Tết), giàu của, nhiều dân. */
@@ -340,21 +340,45 @@ describe('dòng thời gian, mẫu, Lạc hầu, bản lưu', () => {
     expect(productionPerMinute(s).datDa).toBeGreaterThan(0);
   });
 
-  it('bốn mẫu kinh đô ít mất vì đường xa: mỗi cấp Điện trung bình từ 88% trở lên', () => {
+  it('nhắc khi đặt: công trình nhiều ô giáp đường khi có ô đường sát cạnh móng (không tính chéo góc); một ô, đường thì không xét', () => {
+    const s = capital();
+    const x = LO + 2;
+    const z = LO + 2;
+    expect(giapDuong(s, 'nhaSan', x, z)).toBe(false);
+    push(s, 'duongDat', x - 1, z - 1);
+    expect(giapDuong(s, 'nhaSan', x, z)).toBe(false);
+    push(s, 'duongDat', x + size('nhaSan'), z + 1);
+    expect(giapDuong(s, 'nhaSan', x, z)).toBe(true);
+    expect(giapDuong(s, 'choiCanh', x, z)).toBeNull();
+    expect(giapDuong(s, 'duongDat', x, z)).toBeNull();
+    // Bến ngoài đê: ô đê có đường ngay sau cũng là lối.
+    const bx = DIEN;
+    push(s, 'de', bx, bank('ben') - 1);
+    expect(giapDuong(s, 'ben', bx, bank('ben'))).toBe(false);
+    push(s, 'duongDat', bx, bank('ben') - 2);
+    expect(giapDuong(s, 'ben', bx, bank('ben'))).toBe(true);
+  });
+
+  it('bốn mẫu kinh đô có đường của mẫu: công trình làm ra hàng nào cũng có lối gánh về kho, Điện, và có đường thì không kém hơn không có', () => {
+    // Mẫu không canh sản lượng (chủ dự án chọn: chỉ nhắc khi đặt công trình), chỉ canh có lối và đường không làm hại.
     for (const id of MAU_IDS) {
       // Mẫu Cổ Loa mở ở chương 3 (từ Điện 5), lúc ấy đã có cổng thành: chỗ cổng của mẫu là cổng, tới số tối đa.
       const coLoa = id === 'coLoa' || id === 'coLoaSong';
       for (let dien = coLoa ? BUILDINGS.congThanh.minDien : 1; dien <= 10; dien++) {
         const s = createInitialState(0);
         setDien(s, dien);
+        s.khoanh = frameKhoanh(dien, id);
         let gates = coLoa ? BUILDINGS.congThanh.limit[dien - 1] : 0;
         s.buildings = mauSlots(id, dien).map(
           (x, i): Building => ({ id: i + 1, type: x.cong && gates-- > 0 ? 'congThanh' : x.type, x: x.x, z: x.z, level: 1, workers: 1 }),
         );
-        const list = s.buildings.filter((b) => ganhType(b.type) && BUILDINGS[b.type].workers);
-        if (!list.length) continue;
-        const mean = list.reduce((n, b) => n + heSoGanh(s, b), 0) / list.length;
-        expect(mean, `${id} Điện ${dien}`).toBeGreaterThanOrEqual(0.88);
+        const bare = { ...s, buildings: [...s.buildings] } as GameState;
+        let id2 = s.buildings.length + 1;
+        for (const r of mauDuong(id, dien)) s.buildings.push({ id: id2++, type: 'duongDat', x: r.x, z: r.z, level: 1, workers: 0 });
+        for (const b of s.buildings.filter((o) => ganhType(o.type) && BUILDINGS[o.type].workers)) {
+          expect(Number.isFinite(duongGanh(s, b)!.d), `${id} Điện ${dien} ${b.type} ${b.x},${b.z}`).toBe(true);
+          expect(heSoGanh(s, b), `${id} Điện ${dien} ${b.type} ${b.x},${b.z}`).toBeGreaterThanOrEqual(heSoGanh(bare, b) - 1e-9);
+        }
       }
     }
   });

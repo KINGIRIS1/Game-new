@@ -446,7 +446,7 @@ export function botSnapshot(dien: number): Snapshot {
     chapter,
     buildings,
     heights: [],
-    khoanh: frameKhoanh(dien),
+    khoanh: frameKhoanh(dien, botMau(dien)),
     resources: { gao: 0, voOc: 0, datDa: 0, sat: 0, go: 0 },
     cap: 0,
     guards,

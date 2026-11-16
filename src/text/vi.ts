@@ -1808,6 +1808,8 @@ export const vi = {
     ganhNoWayWhy:
       'Không có lối tới nơi nhận hàng: bị tường, móng công trình, sông hay rừng chưa phát chắn. Dân không trèo qua lũy, thành: chừa khe trong tường, dựng cổng thành (từ chương 3) hay dựng kho ngay bên này tường.',
     ganhPlace: (pct: number) => `🧺 Gánh về: ${pct}%`,
+    /** Thanh đặt công trình: công trình nhiều ô chưa giáp ô đường nào. */
+    noRoad: '🛤️ Chưa giáp đường',
     ganhHint:
       '📜 Lạc hầu: Tâu bệ hạ, dân phải gánh của làm ra về Điện hay kho thóc. Công trình ở xa thì dân mất công đi lại, làm ra ít hơn. Bệ hạ trải đường đi cho dân đi nhanh, hay dựng thêm kho thóc gần đó.',
     /** Bảng làng chài. */

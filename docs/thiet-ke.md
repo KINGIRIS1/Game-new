@@ -962,7 +962,7 @@ Chủ dự án đã chọn qua bốn câu hỏi: Thủy Tinh có cả hai phép 
   | Cổ Loa giữ sông | vào chương 4 | như mẫu Thành Cổ Loa; thêm 16 ụ nỏ trên vòng ngoài chia đều bốn mặt, ba chỗ dành cho lầu nỏ (hai ở phía sông, một ở góc bắc tây), trại nỏ sát doanh trại, Đền Cuông ngoài vòng ngoài (xem mục PR 3 chương 4) |
 
 - **Mẫu giãn theo đất** (chủ dự án yêu cầu sau khi có kinh đô lớn): mẫu không vẽ cứng một lần mà dựng lại cho từng cấp Điện, vừa trọn vùng đất đã khai phá ở cấp ấy.
-- **Mẫu và khoảnh tự chọn** (chủ dự án chọn khi gộp khoảnh tự chọn): đất mở theo khoảnh người chơi chọn nên có hình bất kỳ, còn mẫu vẫn dựng trên **khung vuông** neo góc sông theo cấp Điện (cạnh 25, 30, 30, 35, 40, 45, 45, 50, rồi 50; `frameStart`, `inFrame` ở `mau.ts`; trước bản lưu 20 là 20, 25, 25, 30, 35, 40, 40, 45: Điện 10×10 choán chỗ nên khung nới 5 ô, `AREA` ở `khoanh.ts`). Lúc áp mẫu, chỗ nào của mẫu rơi vào khoảnh rừng chưa phát thì bỏ qua (công trình ấy tìm chỗ trống gần nhất như công trình không có chỗ trong mẫu); bản đồ thu nhỏ tô mờ những chỗ ấy và bảng mẫu ghi số khoảnh mẫu còn trong rừng. Khoảnh đã phát ngoài khung thì mẫu không dùng tới.
+- **Mẫu và khoảnh tự chọn** (chủ dự án chọn khi gộp khoảnh tự chọn): đất mở theo khoảnh người chơi chọn nên có hình bất kỳ, còn mẫu vẫn dựng trên **khung vuông** neo góc sông theo cấp Điện (cạnh 25, 30, 30, 35, 40, 45, 45, 50, rồi 50; từ khi có khung đường thì theo từng mẫu, `MAU_KHUNG`: Cổ Loa Điện 5 là 45, Cổ Loa giữ sông Điện 5 là 45, Điện 7 là 50, xem mục Mẫu kinh đô: khung đường; `frameStart`, `inFrame` ở `mau.ts`; trước bản lưu 20 là 20, 25, 25, 30, 35, 40, 40, 45: Điện 10×10 choán chỗ nên khung nới 5 ô, `AREA` ở `khoanh.ts`). Lúc áp mẫu, chỗ nào của mẫu rơi vào khoảnh rừng chưa phát thì bỏ qua (công trình ấy tìm chỗ trống gần nhất như công trình không có chỗ trong mẫu); bản đồ thu nhỏ tô mờ những chỗ ấy và bảng mẫu ghi số khoảnh mẫu còn trong rừng. Khoảnh đã phát ngoài khung thì mẫu không dùng tới.
   - Lũy, đê, bẫy, chòi canh chạy theo bìa đất: nâng Điện, đất rộng ra thì áp lại mẫu, lũy và bẫy dời ra bìa mới, đê nối dài tới bìa mới.
   - Số đoạn theo cấp Điện (từ bản lưu 20, khung nới 5 ô): lũy Phong Châu 47, 57, 57, 67, 77, 87, 87, 97, 97, 97; đê 73 ở Điện 5, 83 ở Điện 6–7, 93 ở Điện 8–10. (Trước đó lũy 37, 47, 47, 57, 67, 77, 77, 87; đê 63, 73, 83.)
   - Vòng thành Cổ Loa: phía sông ba vòng đứng sát nhau giữa sân Điện và đê; phía rừng vòng trong cách Điện 2 ô, vòng giữa cách vòng trong 3 ô (vừa một dãy nhà 3×3), vòng ngoài chừa ngoài nó 9 ô (bẫy, một dãy 4×4, một dãy 3×3) rồi nới ra theo đất. Thành 204 đoạn ở Điện 5–6, 240 ở Điện 7–8, 248 ở Điện 9, 260 ở Điện 10, trong số tối đa (trước bản lưu 20: 180, 200, 220).
@@ -970,7 +970,7 @@ Chủ dự án đã chọn qua bốn câu hỏi: Thủy Tinh có cả hai phép 
 - Cách xếp:
   - Mẫu đối xứng qua đường chéo từ góc rừng tới ngã ba sông, cũng là trục màn hình lúc mới mở game, nên nhìn cân hai bên. Mỗi loại xếp từng cặp đối xứng; số lẻ thì cái còn lại đứng trên đường chéo.
   - Mỗi loại một cách chấm chỗ: gần Điện, dọc sông, trên đồi sát bìa rừng, quanh doanh trại, trên trục chéo; Cổ Loa thêm khu theo số vòng thành bao quanh.
-  - Giữa các công trình nhiều ô chừa lối đi một ô; sát tường được. Đất chật quá (Cổ Loa ở Điện 5) thì một vài khối đứng sát nhau.
+  - (Đã thay bằng khung đường, xem mục Mẫu kinh đô: khung đường.) Trước đây giữa các công trình nhiều ô chừa lối đi một ô; sát tường được.
   - Trước Điện (phía nam) và bên phải Điện (phía đông) chừa sân 2 ô. Trước kia để cây nêu, mâm bánh và tướng đứng; nay những thứ ấy ở trong sân chầu của Điện, sân 2 ô giữ làm lối ra.
 - Vòng thành Cổ Loa trong mẫu là vòng kín quanh Điện, không chạm sông: thành không chặn nước như đê, nên vòng nào cắt ngang dải đê để chạm sông sẽ làm nước lọt vào.
 - **Lối gánh hàng qua cổng** (mẫu Cổ Loa, Cổ Loa giữ sông; tường chắn hẳn dân gánh hàng, mục Dân gánh hàng về kho): hành lang giữa hai vòng thành vừa một dãy nhà 3×3, nhà xếp nối nhau thì nhà giữa kẹt trong hốc. Nên lúc xếp chỗ, mẫu xét lối gánh trên bản nháp (`LoiGanh` ở `mau.ts`): công trình làm ra hàng không có lối tới Điện, kho (bếp với nguyên liệu Tết) thì thà đứng sát nhà khác; công trình nào cũng tránh đè lên lối của công trình làm ra hàng đã xếp. Cặp kho ngoài vòng ngoài xếp trước, gần bến: bến, ruộng ngoài thành khỏi đi vòng tới cổng. Mẫu Phong Châu, Đê bao xếp như cũ (lũy Phong Châu chạy dọc bìa khung, mọi chỗ của mẫu ở trong).
@@ -999,6 +999,44 @@ Chủ dự án đã chọn qua bốn câu hỏi: Thủy Tinh có cả hai phép 
   - nâng Điện rồi áp lại: lũy ra bìa mới, công trình giữ cấp;
   - đổi từ mẫu Phong Châu sang Cổ Loa vẫn xếp được.
 
+### Mẫu kinh đô: khung đường, xếp đủ theo cấp (chủ dự án yêu cầu; khung từng mẫu và giới hạn đường chờ duyệt)
+
+Chủ dự án yêu cầu: bố trí lại các mẫu cho hợp lý; đường vuông góc, không đặt đường xéo; công trình nào cũng bắt buộc có đường nối; không cần cân bằng sản lượng (chỉ nhắc khi người chơi đặt công trình); mẫu theo từng cấp, tính xem đặt đủ mọi công trình của cấp ấy thì đất cấp ấy có đủ không, không đủ thì đề xuất nới.
+
+**Cách dựng** (`src/game/mau.ts`, thay cách chấm chỗ cũ có lối đi một ô):
+- Dựng **khung đường trước**, mọi đường là đoạn thẳng theo hàng hay cột:
+  - đường quanh Điện (vòng vuông sát bốn mặt Điện), nối dài bốn mặt ra tới sông (Phong Châu) hay tới đường chân đê;
+  - các **phố chữ L** ôm Điện phía rừng: mỗi phố một hàng và một cột, đối xứng qua đường chéo, chạy ra tới sông hay đường chân đê. Giữa hai phố là một **dải lô** sâu tới 8 ô: nhà sâu 3–4 ô xếp sát mép phố hai bên, nhà 8×8 (doanh trại, Hồ Kim Quy, Đền Rồng Tiên) giáp cả hai phố;
+  - Phong Châu: phố ngay trong lũy, hai trục giữa Điện ra cổng lũy. Đê bao, Cổ Loa: đường chân đê ngay trong đê (người gánh từ bến ngoài đê qua đê vào đường này), phố bìa rừng ngay trong hàng bẫy;
+  - Cổ Loa: trong mỗi khu giữa hai vòng thành một phố (khu dày 5 ô: một dãy nhà và một phố; 9 ô: hai dãy nhà, phố giữa), đoạn trục nối cổng với phố trong khu; ngoài vòng ngoài một phố sát chân thành (cổng ngoài mở ra phố này). Cổng ở trục giữa Điện trên vòng ngoài và vòng giữa (ụ nỏ né cổng).
+- Rồi **xếp công trình**: chỗ nào cũng phải giáp đường ở ít nhất một ô cạnh móng (bến, làng chài ngoài đê: giáp đê có đường ngay sau). Nhà xếp khít thành dãy (thưởng điểm mỗi ô viền đã có nhà, đường, tường). Vẫn chấm chỗ theo khu như cũ (gần Điện, dọc sông, trên đồi, quanh doanh trại, trên trục chéo, số vòng thành); vẫn xếp từng cặp đối xứng qua đường chéo.
+- **Kho rải ra** quanh Điện, cách nhau chừng 14 ô trở lên (người gánh khắp nơi có kho gần; giặc phá một kho xong phải đi xa mới tới kho sau). Đo Đấu thành: kho xếp sát nhau thì nửa quân phá liền mạch kho rồi Điện.
+- Chòi canh xếp sau cùng vào kẽ trống gần chỗ định (trong lũy, trong đê, bìa rừng), không ra ngoài lũy. Bẫy chông ở hàng ngoài cùng như cũ.
+- **Tỉa đường**: bỏ ô đường cụt không ai dùng, bỏ đoạn đường thẳng (từ 3 ô) giữa hai ngã ba mà hai bên không có nhà, không có tường, nếu mọi công trình vẫn nối về Điện, kho. Đường chỉ bị cắt ở ngã ba hay đầu mút nên vẫn thẳng.
+- Mỗi mẫu thử vài cách chia dải lô (dải 8 ô từ phía Điện ra trước: lõi kinh đô dày, dải mỏng ra phía rừng; rồi từ phía rừng vào, chia đều, ít phố nhất) và (Cổ Loa) vài cỡ vòng thành trong số đoạn thành tối đa; lấy cách đầu tiên xếp đủ mọi công trình.
+- Cổ Loa Điện 5–6 (220, 230 đoạn thành) không đủ đoạn thành cho vòng trong chừa đường quanh Điện: vòng trong ôm sát Điện, Điện không có đường (vòng trong không có cổng như cũ). Từ Điện 7 vòng trong chừa đường quanh Điện.
+- Đường của mẫu (`mauDuong`) để riêng, không ở `mauSlots`: kinh đô máy Đấu thành không có đường (trận bỏ qua đường).
+
+**Áp mẫu**: trải đường đất (2 vỏ ốc một ô) lên ô đường của mẫu còn trống trên đất đã mở, xong ngay, gần Điện trước, tới giới hạn đường; ô đường đang có (loại nào cũng được) nằm đúng đường mẫu thì giữ; công trình không có chỗ trong mẫu không được đứng đè lên đường mẫu (vướng thì dời, đồ trang trí vướng thì dỡ). Bản đồ thu nhỏ của thẻ Mẫu kinh đô vẽ cả đường.
+
+**Không cân bằng sản lượng trong mẫu**: bỏ test "mẫu trung bình từ 88%". Lúc người chơi đặt, dời công trình, thanh dưới nhắc "🧺 Gánh về: N%" như cũ, thêm "🛤️ Chưa giáp đường" khi công trình nhiều ô chưa có ô đường nào sát cạnh móng (`giapDuong` ở `vanChuyen.ts`; chỉ nhắc, không chặn).
+
+**Đất từng cấp có đủ không** (đo bằng `veMau(id, cấp, cạnh)`: xếp đủ số tối đa mỗi loại ở cấp ấy, mọi công trình giáp đường). Cạnh khung nhỏ nhất xếp đủ, so với khung cũ (`AREA`: 25, 30, 30, 35, 40, 45, 45, 50, 50, 50):
+
+| Cấp Điện | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 |
+|---|---|---|---|---|---|---|---|---|---|---|
+| Khung cũ | 25 | 30 | 30 | 35 | 40 | 45 | 45 | 50 | 50 | 50 |
+| Phong Châu cần | 25 | 30 | 30 | 30 | 40 | 40 | 40 | 40 | 40 | 40 |
+| Đê bao cần | | | | | 35 | 40 | 40 | 40 | 40 | 45 |
+| Cổ Loa cần | | | | | **45** | 45 | 45 | 45 | 50 | 50 |
+| Cổ Loa giữ sông cần | | | | | **45** | 45 | **50** | 50 | 50 | 50 |
+
+- Đủ đất ở mọi cấp, trừ ba chỗ in đậm: **Cổ Loa Điện 5 cần 45** (khung cũ 40), **Cổ Loa giữ sông Điện 5 cần 45** (40) và **Điện 7 cần 50** (45). Cổ Loa tốn đất vì ba vòng thành và nhà 8×8 phải ở ngoài vòng ngoài.
+- Đề xuất (đã làm, chờ duyệt): khung dựng mẫu theo từng mẫu (`MAU_KHUNG` ở `mau.ts`), giữ khung cũ ở mọi chỗ đủ, nới đúng ba chỗ trên. Đất trong game không khóa theo cấp (phát khoảnh nào cũng được), nên nới khung chỉ có nghĩa là mẫu cần phát thêm khoảnh rừng: chỗ của mẫu trong rừng chưa phát thì bỏ qua như trước, bảng mẫu ghi số khoảnh còn thiếu. Lưới bên này sông tối đa 50 ô, mẫu nào cũng vừa ở Điện 10.
+- Số đường của mẫu nhiều đường nhất ở mỗi cấp: 80, 121, 122, 196, 308, 317, 427, 427, 435, 433 ô. Giới hạn đường cũ thiếu từ Điện 4, nên **nới `ROAD_LIMIT`** (chờ duyệt) lên 90, 130, 140, 220, 320, 330, 470, 470, 480, 480 (dư chừng một phần mười cho đường tự trải). Đường đất 2 vỏ ốc một ô, nên trải đủ đường mẫu Điện 10 chừng 900 vỏ ốc.
+- **Đấu thành**: kinh đô máy dựng từ mẫu nên đổi theo; đo lại cân bằng (Điện 5, 7, 8) vẫn đạt chuẩn, không đổi số của Đấu thành. Trận đo tốc độ máy chủ (`tatDinh.test.ts`) đổi hạt giống để trận vẫn đủ 3 phút.
+- Test (`sapxep.test.ts`): mọi mẫu, mọi cấp: công trình nhiều ô giáp đường, đường nối về Điện, kho qua cổng, qua đê; không có hai ô đường chéo góc mà không có ô đường chung cạnh; không ô đường lẻ; không đè chỗ; trong giới hạn đường. Áp mẫu trải đủ đường mẫu trên đất đã mở, giữ đường đang có, áp lần hai không còn gì. `vanChuyen.test.ts`: có đường mẫu thì công trình làm ra hàng nào cũng có lối gánh, không kém hơn khi không có đường; nhắc chưa giáp đường.
+
 ## Đường đi và đồ trang trí (chủ dự án yêu cầu, đã làm)
 
 Chủ dự án muốn thêm vật liệu trải đường (đất, đá...) và đồ trang trí (cây đa, giếng nước, ao làng, hoa, cỏ...) vào phần xây dựng. Các con số và luật dưới đây là tự chọn, chủ dự án có thể đổi.
@@ -1020,7 +1058,7 @@ Bảng Xây dựng bày theo kiểu trưng bày (chủ dự án chọn trong ba 
 | Đường lát đá | 🐚 2, 🪨 6 | Điện cấp 3 |
 | Đường lát gạch (gạch nung cùng lò với ngói Cổ Loa) | 🐚 6, 🪨 8 | vào chương 3 |
 
-- Bốn loại chung một giới hạn số ô theo cấp Điện: 60, 90, 120, 160, 200, 240, 280, 280 (`ROAD_LIMIT`).
+- Bốn loại chung một giới hạn số ô theo cấp Điện (`ROAD_LIMIT`): 90, 130, 140, 220, 320, 330, 470, 470, 480, 480 (từ khi mẫu kinh đô có khung đường, xem mục Mẫu kinh đô: khung đường; trước đó 60, 90, 120, 160, 200, 240, 280, 280, 295, 310).
 - Trải loại khác đè lên ô đường cũ thì đổi vật liệu, trả giá loại mới, không thêm ô (đầy giới hạn vẫn đổi được).
 - Ô đường lát kín ô nên các ô liền nhau thành một lối. Mép ô không giáp ô cùng loại thì có viền: bờ đất có cỏ, viền sỏi to, bó vỉa đá, gạch dựng.
 
@@ -1047,7 +1085,7 @@ Bảng Xây dựng bày theo kiểu trưng bày (chủ dự án chọn trong ba 
 - Chiếm ô như công trình: nhà không dựng đè lên được, phải dọn đi trước. Nhà đứng cạnh đồ trang trí vẫn tính là chỗ thoáng khi gợi ý chỗ dựng.
 - Dời được như công trình (10% giá dựng). Dọn đi không hoàn của, như dỡ lũy: bấm Dọn đi trong bảng của món ấy, hoặc dùng thẻ **Dọn trang trí** (🧹) trong nhóm Trang trí rồi chạm từng ô.
 - Từ chương 2, đắp đất được ngay dưới ô đường hay món một ô (món nằm trên mặt đất mới); cây đa, ao làng thì đắp nền như công trình.
-- Áp mẫu kinh đô: món vướng chỗ của mẫu thì dỡ đi (tính vào số dỡ đi), món không vướng thì giữ nguyên chỗ. Mẫu còn trải thêm đường đất nối công trình làm ra hàng ở xa với kho, Điện (mục Dân gánh hàng về kho, Mẫu kinh đô trải sẵn đường).
+- Áp mẫu kinh đô: món vướng chỗ của mẫu thì dỡ đi (tính vào số dỡ đi), món không vướng thì giữ nguyên chỗ. Mẫu còn trải đường đất theo khung đường của mẫu (mục Mẫu kinh đô: khung đường).
 - Bản lưu không đổi phiên bản: chỉ thêm loại công trình mới.
 - Vẽ theo lô cho nhẹ máy: đường và món một ô dù nhiều tới hàng trăm vẫn chỉ vài lệnh vẽ (`src/render/decor.ts`).
 - Test: `trangTri.test.ts`.
@@ -3438,6 +3476,8 @@ Người chơi mô phỏng xếp gọn quanh Điện, trung bình hệ số gán
 - Cảnh chụp `ganh-vung` (đang đặt kho), `ganh-vung-chon` (chọn kho).
 
 ### Mẫu kinh đô trải sẵn đường (PR 3; `traiDuong` ở `mau.ts`)
+
+> Đã thay bằng khung đường của mẫu (mục Mẫu kinh đô: khung đường): áp mẫu trải đúng đường của mẫu, không dò theo tuyến gánh nữa. Phần dưới giữ để biết lịch sử.
 
 - Áp mẫu thì trải thêm đường đất (`duongDat`, 2 vỏ ốc một ô) nối công trình làm ra hàng ở xa với kho, Điện: dựng kinh đô giả sau khi áp mẫu, lấy tuyến gánh của mọi công trình chưa đủ 100% (xa nhất trước), trải lên ô trống của tuyến từ phía nơi nhận ra (khúc gần kho, Điện các tuyến dùng chung) vừa đủ cho quãng đường về trong 14 ô; lặp tối đa 4 lượt vì có đường thì người gánh đổi lối. Không quá giới hạn đường theo cấp Điện (trừ đường đã có).
 - Đường xong ngay như khi tự trải, không vào việc của tốp thợ; mẫu chỉ còn việc trải đường thì không cần tốp rảnh. Bảng Mẫu kinh đô ghi "trải N ô đường gánh hàng"; bản đồ thu nhỏ kinh đô có màu ô đường.
