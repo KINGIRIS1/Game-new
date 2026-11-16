@@ -158,6 +158,11 @@ const SCALE: Partial<Record<FighterKind, number>> = {
   // Lâu thuyền dựng đúng cỡ ô kinh đô (dài chừng 4 ô); Mã Viện trên ngựa nhỉnh hơn Triệu Đà.
   lauThuyen: 1,
   maVien: 0.9,
+  lucDan: 0.9,
+  tranBaTien: 0.9,
+  duongTuHuc: 0.9,
+  hoangThao: 0.9,
+  quachQuy: 0.9,
   voi: 0.75,
   chienXa: 0.75,
   phoTuong: 1,
@@ -173,6 +178,16 @@ const SCALE: Partial<Record<FighterKind, number>> = {
   hoTinh: 0.75,
   lonRung: 0.75,
   baoGam: 0.72,
+  gauNgua: 0.78,
+  voiRung: 0.75,
+  trauRung: 0.78,
+  soiDo: 0.8,
+  teGiac: 0.8,
+  raiCa: 0.8,
+  ruaBien: 0.7,
+  naiRung: 0.8,
+  boTot: 0.8,
+  tranGam: 0.9,
   ranHo: 0.85,
   cuaDa: 0.8,
   gaTrang: 1.05,
@@ -1385,7 +1400,7 @@ export class BattleView {
                 ? new THREE.Mesh(boltGeo, goldMat)
                 : e.by === 'caoLo'
                   ? new THREE.Mesh(bronzeBoltGeo, bronzeBoltMat)
-                  : e.by === 'noTrieu' || e.by === 'noHan'
+                  : e.by === 'noTrieu' || e.by === 'noHan' || e.by === 'noNgo' || e.by === 'noLuong' || e.by === 'noDuong' || e.by === 'noTong'
                   ? new THREE.Mesh(darkBoltGeo, darkBoltMat)
                   : new THREE.Mesh(arrowGeo, arrowMat);
         // Lâu thuyền bắn từ các tầng lầu, cao hơn lính trên bờ.
@@ -1394,7 +1409,7 @@ export class BattleView {
         const to = new THREE.Vector3(e.tx + ox, this.heightAt(e.tx, e.tz, false, e.toWall) + 0.5, e.tz + oz);
         mesh.position.copy(from);
         this.root.add(mesh);
-        const fast = e.by === 'anDuong' || e.by === 'caoLo' || e.by === 'noTrieu' || e.by === 'noHan' || e.by === 'no';
+        const fast = e.by === 'anDuong' || e.by === 'caoLo' || e.by === 'noTrieu' || e.by === 'noHan' || e.by === 'noNgo' || e.by === 'noLuong' || e.by === 'noDuong' || e.by === 'noTong' || e.by === 'no';
         this.arrows.push({ mesh, from, to, age: 0, dur: Math.max(0.12, from.distanceTo(to) / (fast ? 18 : 12)), arc: fast ? 0.25 : 0.6, flash: e.by === 'anDuong' });
       }
       if (e.kind === 'volley') this.volley(battle, e.seq, e.x, e.z);

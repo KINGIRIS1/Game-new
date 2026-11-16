@@ -103,6 +103,53 @@ export const C = {
   hanRedDark: 0x8e2a1c,
   hanIron: 0x8a9096,
   hanIronDark: 0x5a6066,
+  // Quân Ngô (map dã ngoại Núi Nưa): áo xanh chàm, khác quân Hán đỏ son.
+  ngo: 0x2f5c7e,
+  ngoDark: 0x1d3a54,
+  // Thú rừng Núi Nưa: gấu ngựa lông đen mõm nâu nhạt, voi rừng da xám nâu.
+  // Quân Lương (map dã ngoại Đầm Dạ Trạch): áo vàng đất, giáp da nâu sẫm.
+  luong: 0xb98a3c,
+  luongDark: 0x6e4a24,
+  // Quân Đường (map dã ngoại Núi Vệ): áo lục sẫm, giáp sắt sáng có hộ tâm.
+  duongQuan: 0x3e6a4c,
+  duongQuanDark: 0x24402e,
+  // Thủy quân Nam Hán (map dã ngoại Bạch Đằng): áo tím than, viền đỏ sẫm.
+  namHan: 0x4b3a5e,
+  namHanDark: 0x2b2036,
+  namHanRed: 0x8c2f2f,
+  // Quân Tống (map dã ngoại sông Như Nguyệt): áo xám tro, giáp da đen, khăn đỏ thẫm; ngựa hồng của Quách Quỳ.
+  tong: 0x8a8d90,
+  tongDark: 0x2e2f33,
+  tongRed: 0x9e2a24,
+  horseRed: 0x9a4a2a,
+  // Thú bờ sông Như Nguyệt: nai lông nâu vàng gạc màu sừng, bò tót đen nâu chân trắng trán xám.
+  deer: 0xa0703e,
+  deerAntler: 0xc9b48a,
+  gaur: 0x2f2420,
+  gaurSock: 0xe6dcc2,
+  gaurBrow: 0x8a7f6c,
+  // Thú bãi bồi Bạch Đằng: rái cá lông nâu bóng, rùa biển mai nâu ô liu da xám xanh.
+  otter: 0x6e4a2c,
+  otterDark: 0x3c2716,
+  seaTurtle: 0x8a7c42,
+  seaTurtleDark: 0x352c14,
+  seaTurtleSkin: 0x87958a,
+  // Ngựa xám đốm của Dương Tư Húc.
+  horseGrey: 0x8e8a84,
+  // Thú rừng Núi Vệ: sói đỏ lông đỏ gạch, tê giác da xám nâu.
+  dhole: 0xb4552a,
+  dholeDark: 0x6a2e16,
+  rhino: 0x7d7670,
+  rhinoDark: 0x5c5650,
+  // Thú đầm Dạ Trạch: trăn gấm vàng nâu hoa nâu sẫm; trâu rừng đen xám, sừng màu ngà xám.
+  python: 0xb08a4a,
+  pythonSpot: 0x5a3e22,
+  buffalo: 0x403d3e,
+  buffaloMuzzle: 0x6a6462,
+  buffaloHorn: 0xcfc6b0,
+  bear: 0x2b2725,
+  bearMuzzle: 0xc89a6c,
+  voiRung: 0x857a6e,
   // Khăn, cờ đen quân Hán; mái ngói đen và thân gỗ nâu sẫm của lâu thuyền, thuyền Hán; giáp đồng đỏ và ngựa trắng
   // của Mã Viện.
   hanBlack: 0x2e2a28,

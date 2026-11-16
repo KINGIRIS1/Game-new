@@ -3,7 +3,7 @@
 // cấp chung ở bảng tướng.
 
 import type { Battle } from '../game/battle';
-import { DA_MAP, DA_MAP_IDS, DA_TUONG, type DaMapId } from '../game/defs';
+import { DA_MAP, DA_MAP_CUOI, DA_MAP_IDS, DA_TUONG, type DaMapId } from '../game/defs';
 import { bossCho, canLen, daMo, dangTreo, doiNay, khuDangDung, nhipTreo, tuongCo } from '../game/daNgoai';
 import { boCuc, khuTai } from '../game/daNgoaiMap';
 import { capBonus, capKhu, tuongDau } from '../game/daNgoaiTran';
@@ -31,7 +31,7 @@ export function capBarHtml(s: GameState): string {
 const bossTen = (map: DaMapId) => vi.enemies[DA_MAP[map].boss];
 
 /** Màu nền bản đồ nhỏ theo nền map. */
-const NEN: Record<DaMapId, string> = { 1: '#7f9b55', 2: '#7d9a7a', 3: '#5f6c74', 4: '#b4a57a', 5: '#6f8b5a' };
+const NEN: Record<DaMapId, string> = { 1: '#7f9b55', 2: '#7d9a7a', 3: '#5f6c74', 4: '#b4a57a', 5: '#6f8b5a', 6: '#6a7d5c', 7: '#7c8a62', 8: '#7a7650', 9: '#76806a', 10: '#77965a' };
 
 /**
  * Bản đồ nhỏ của map (SVG theo ô map, xoay cho khớp hướng camera): lối đi, năm khu có số, trại, cổng, khu boss (mờ
@@ -47,7 +47,7 @@ export function miniSvg(s: GameState, map: DaMapId, me: boolean): string {
   const co = bossCho(s, map) === 0;
   const boss = `<circle cx="${bc.boss.x}" cy="${bc.boss.z}" r="${bc.boss.r}" class="mb ${co ? 'co' : ''}"/><text x="${bc.boss.x}" y="${bc.boss.z + 2.6}" class="mt">👑</text>`;
   const cong = (p: { x: number; z: number }, cls: string) => `<rect x="${p.x - 2.2}" y="${p.z - 2.2}" width="4.4" height="4.4" class="mc ${cls}" transform="rotate(45 ${p.x} ${p.z})"/>`;
-  const congSau = bc.congSau ? cong(bc.congSau, map < 5 && s.daNgoai.cap < DA_MAP[(map + 1) as DaMapId].cong ? 'khoa' : '') : '';
+  const congSau = bc.congSau ? cong(bc.congSau, map < DA_MAP_CUOI && s.daNgoai.cap < DA_MAP[(map + 1) as DaMapId].cong ? 'khoa' : '') : '';
   const trai = `<circle cx="${bc.trai.x}" cy="${bc.trai.z}" r="2.6" class="mtr"/><text x="${bc.trai.x}" y="${bc.trai.z + 2}" class="mt">⛺</text>`;
   const dot = me ? `<circle class="da-me" cx="${s.daNgoai.cho?.x ?? bc.trai.x}" cy="${s.daNgoai.cho?.z ?? bc.trai.z}" r="2.4"/>` : '';
   // Camera map nhìn thẳng theo trục: x sang phải, z xuống dưới màn hình, như trục SVG (không phải xoay).

@@ -454,11 +454,12 @@ function armorSurface(r: HumanRig, thick: number): Sdf {
 }
 
 /** Hộ tâm tròn giữa ngực (gương đồng, mặt trống đồng), có vành và núm, nằm trên giáp dày `thick` (0 là trên da). */
-export function chestDisc(r: HumanRig, o: { color: number; r?: number; y?: number; rim?: number; drum?: boolean; boss?: number; glow?: boolean; thick?: number }): void {
+export function chestDisc(r: HumanRig, o: { color: number; r?: number; y?: number; x?: number; rim?: number; drum?: boolean; boss?: number; glow?: boolean; thick?: number }): void {
   figure(r, keyOf(r, 'disc', o, true), (detail) => {
     const f = armorSurface(r, (o.thick ?? 0.016) + 0.004);
     const y = o.y ?? 0.495;
-    const c = hit(f, [0, y, 0.5], [0, 0, -1]) ?? [0, y, 0.13];
+    const x = o.x ?? 0;
+    const c = hit(f, [x, y, 0.5], [0, 0, -1]) ?? [x, y, 0.13];
     const rad = o.r ?? 0.062;
     const seg = segs(20, detail, 12);
     const out: Piece[] = [rigid(decal(f, c, { r: rad, lift: 0.01, seg, rings: detail >= 1 ? 2 : 1 }, o.color), 'chest', o.drum ? 'drum' : 'plain')];

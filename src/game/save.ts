@@ -19,6 +19,7 @@ import {
   QUEST_INSERTED_V4,
   QUIZ_TURNS,
   PHU_SA_TYPES,
+  DA_MAP_IDS,
   RESOURCE_IDS,
   ROWS,
   STAGES,
@@ -146,6 +147,11 @@ function migrate(raw: unknown): unknown {
   if (isObj(v) && v.version === 27) v = migrate27to28(v);
   if (isObj(v) && v.version === 28) v = migrate28to29(v);
   if (isObj(v) && v.version === 29) v = migrate29to30(v);
+  if (isObj(v) && v.version === 30) v = migrate30to31(v);
+  if (isObj(v) && v.version === 31) v = migrate31to32(v);
+  if (isObj(v) && v.version === 32) v = migrate32to33(v);
+  if (isObj(v) && v.version === 33) v = migrate33to34(v);
+  if (isObj(v) && v.version === 34) v = migrate34to35(v);
   return v;
 }
 
@@ -542,6 +548,47 @@ function migrate28to29(s: Raw): Raw {
 function migrate29to30(s: Raw): Raw {
   s.version = 30;
   s.daNgoai = initialDaNgoai();
+  return s;
+}
+
+/** Thêm giờ boss mọc lại (0: đang có) cho các map dã ngoại mới. */
+function themBossDa(s: Raw): void {
+  const d = s.daNgoai;
+  if (isObj(d) && Array.isArray(d.boss)) while (d.boss.length < DA_MAP_IDS.length) d.boss.push(0);
+}
+
+/** Phiên bản 30 → 31 (map dã ngoại 6, Núi Nưa): thêm giờ boss mọc lại cho map mới. */
+function migrate30to31(s: Raw): Raw {
+  s.version = 31;
+  themBossDa(s);
+  return s;
+}
+
+/** Phiên bản 31 → 32 (map dã ngoại 7, Đầm Dạ Trạch): thêm giờ boss mọc lại cho map mới. */
+function migrate31to32(s: Raw): Raw {
+  s.version = 32;
+  themBossDa(s);
+  return s;
+}
+
+/** Phiên bản 32 → 33 (map dã ngoại 8, Núi Vệ): thêm giờ boss mọc lại cho map mới. */
+function migrate32to33(s: Raw): Raw {
+  s.version = 33;
+  themBossDa(s);
+  return s;
+}
+
+/** Phiên bản 33 → 34 (map dã ngoại 9, Bạch Đằng): thêm giờ boss mọc lại cho map mới. */
+function migrate33to34(s: Raw): Raw {
+  s.version = 34;
+  themBossDa(s);
+  return s;
+}
+
+/** Phiên bản 34 → 35 (map dã ngoại 10, sông Như Nguyệt): thêm giờ boss mọc lại cho map mới. */
+function migrate34to35(s: Raw): Raw {
+  s.version = 35;
+  themBossDa(s);
   return s;
 }
 

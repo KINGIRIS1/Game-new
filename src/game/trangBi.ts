@@ -268,12 +268,15 @@ function chonTheo(w: readonly number[], r: number): number {
 
 const pick = <T>(list: readonly T[], r: number): T => list[Math.min(list.length - 1, Math.floor(r * list.length))];
 
-/** Rút một món ở lần rút `seq` (chưa gán mã, chưa vào kho). Null khi lần này không rơi. */
-export function rutMon(seq: number, nguon: NguonDo, chuong: Chapter, bo: BoDo[]): Omit<Mon, 'id'> | null {
+/**
+ * Rút một món ở lần rút `seq` (chưa gán mã, chưa vào kho). Null khi lần này không rơi. `w` thay tỉ lệ phẩm của nơi rơi
+ * (boss map dã ngoại chưa có chương riêng: `DaMapDef.bossRoi`).
+ */
+export function rutMon(seq: number, nguon: NguonDo, chuong: Chapter, bo: BoDo[], w?: readonly number[]): Omit<Mon, 'id'> | null {
   const r = (i: number) => roll(seq, i);
   const def = ROI_DO[nguon];
   if (r(0) >= def.p) return null;
-  const pham = Math.min(chonTheo(def.w, r(1)) + 1, PHAM_TRAN[chuong]) as PhamDo;
+  const pham = Math.min(chonTheo(w ?? def.w, r(1)) + 1, PHAM_TRAN[chuong]) as PhamDo;
   const o = pick(O_DO, r(2));
   const chinh = pick(O_CHINH[o], r(3));
   const pool = CHI_SO.filter((k) => k !== chinh);
@@ -289,10 +292,10 @@ export function rutMon(seq: number, nguon: NguonDo, chuong: Chapter, bo: BoDo[])
  * Sau một trận thắng ở nơi `nguon` (trận của chương `chuong`): rút đồ. Đồ chưa mở thì không rút. Kho đầy thì món
  * mới tự phân giải ra sắt. Trả về món rơi (null khi không rơi).
  */
-export function roiDo(s: GameState, nguon: NguonDo, chuong: Chapter): RoiDo | null {
+export function roiDo(s: GameState, nguon: NguonDo, chuong: Chapter, w?: readonly number[]): RoiDo | null {
   if (!doMo(s)) return null;
   const seq = s.trangBi.seq++;
-  const rut = rutMon(seq, nguon, chuong, boRoi(s, nguon, chuong));
+  const rut = rutMon(seq, nguon, chuong, boRoi(s, nguon, chuong), w);
   if (!rut) return null;
   if (s.trangBi.kho.length >= KHO_DO_MAX) {
     const mon: Mon = { ...rut, id: 0 };

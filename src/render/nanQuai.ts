@@ -302,6 +302,48 @@ export function cobraBody(r: Rig, body: readonly (readonly [number, number, numb
   figure(r as unknown as HumanRig, 'quai:ranHo', (d) => cobraPieces(body, d));
 }
 
+// ---------- Trăn gấm ----------
+
+/**
+ * Trăn gấm: mình to, dài, bò sát đất thành hình chữ S, da vàng nâu có hoa gấm nâu sẫm viền mực dọc lưng, bụng kem, đầu
+ * dẹt hình nêm ngóc lên một chút, mắt vàng. Nặn theo các khúc `body` như thuồng luồng.
+ */
+function pythonPieces(body: readonly (readonly [number, number, number, number])[], detail: number): Piece[] {
+  const clay = new Clay(C.python);
+  const pts = body.map(([x, y, z]) => [x, y, z] as V3);
+  const rs = body.map((b) => b[3]);
+  const tip: V3 = [pts[0][0] + 0.15, 0.04, pts[0][2] - 0.3];
+  clay.add('s0', cone(tip, pts[0], 0.015, rs[0]), { k: 0.03 });
+  for (let i = 0; i < pts.length - 1; i++) clay.add(`s${i}`, cone(pts[i], pts[i + 1], rs[i] * 0.95, rs[i + 1] * 0.95), { k: 0.05 });
+  const last = pts[pts.length - 1];
+  const h: V3 = add3(last, [0, 0.04, 0.16]);
+  clay.add('head', cone(last, h, rs[rs.length - 1] * 0.9, 0.07), { k: 0.04 });
+  clay.add('head', ellipsoid(h, [0.09, 0.055, 0.12]), { k: 0.04 });
+  clay.add('head', ellipsoid(add3(h, [0, -0.01, 0.1]), [0.065, 0.04, 0.07]), { k: 0.03 });
+  const f = clay.dist;
+  const paints: Paint[] = [];
+  body.forEach(([x, y, z, rr], i) => paints.push(clay.layer(`s${i}`, ellipsoid([x, y - rr * 0.7, z], [rr * 0.85, rr * 0.45, rr * 1.4]), C.cream)));
+  // Hoa gấm: đốm nâu sẫm viền mực dọc lưng, xen hai bên sườn.
+  for (let i = 0; i < pts.length - 1; i++) {
+    for (const t of [0.25, 0.75]) {
+      const a = pts[i];
+      const b = pts[i + 1];
+      const c: V3 = [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, a[2] + (b[2] - a[2]) * t];
+      const r = (rs[i] + (rs[i + 1] - rs[i]) * t) * 0.55;
+      const side = t < 0.5 ? 1 : -1;
+      const p = hit(f, [c[0] + side * 0.25, c[1] + 0.35, c[2]], [-side * 0.5, -1, 0]) ?? c;
+      paints.push(clay.layer(`s${i}`, sphere(p, r), C.ink, 2), clay.layer(`s${i}`, sphere(p, r * 0.75), C.pythonSpot, 2));
+    }
+  }
+  paints.push(clay.layer('head', (x, y, z) => Math.max(Math.abs(x - h[0]) - 0.025, h[1] + 0.02 - y, h[2] - 0.08 - z), C.pythonSpot));
+  for (const s of [-1, 1]) paints.push(...eye(clay, 'head', f, add3(h, [s * 0.065, 0.02, 0.06]), [s * 0.6, 0.3, 0.7], 0.018, C.gold));
+  return [build(clay, [-0.6, -0.01, -1.15], [0.6, 0.5, 1.0], 0.011, 2000, detail, paints)];
+}
+
+export function pythonBody(r: Rig, body: readonly (readonly [number, number, number, number])[]): void {
+  figure(r as unknown as HumanRig, 'quai:tranGam', (d) => pythonPieces(body, d));
+}
+
 // ---------- Cua đá ----------
 
 /**

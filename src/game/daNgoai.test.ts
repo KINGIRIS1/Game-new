@@ -12,6 +12,7 @@ import {
   DA_CAP,
   DA_KHU,
   DA_MAP,
+  DA_MAP_CUOI,
   DA_MAP_IDS,
   DA_TREO,
   DEFAULT_ROWS,
@@ -45,7 +46,7 @@ import { applyOffline, createInitialState, type GameState } from './game';
 import { SAVE_VERSION, deserialize, serialize } from './save';
 import { heroesFor } from './son';
 import { SAMPLE_ARMY } from './testkit';
-import { kiemMon } from './trangBi';
+import { kiemMon, rutMon } from './trangBi';
 
 const DT = 0.05;
 
@@ -87,7 +88,7 @@ describe('bố cục năm map', () => {
       expect(bc.khu).toHaveLength(5);
       expect(new Set(def.quai).size).toBe(5);
       expect(def.quai).not.toContain(def.boss);
-      expect(bc.congSau === null).toBe(id === 5);
+      expect(bc.congSau === null).toBe(id === DA_MAP_CUOI);
       expect(def.cong).toBe(id === 1 ? 0 : def.cap[0] - 1);
       expect(capKhu(id, 4)[1]).toBe(def.cap[1]);
     }
@@ -401,6 +402,143 @@ describe('không khóa tướng, bản lưu', () => {
     const bad = JSON.parse(serialize(s));
     bad.daNgoai.doi = ['giong', 'giong', 'giong', 'giong'];
     expect(deserialize(JSON.stringify(bad))).toBeFalsy();
+  });
+
+  it('bản lưu 30 lên 31: thêm giờ boss cho map 6, giữ giờ boss cũ', () => {
+    const s = base(true);
+    s.daNgoai.boss[2] = 7777;
+    const old = JSON.parse(serialize(s));
+    old.version = 30;
+    old.daNgoai.boss = old.daNgoai.boss.slice(0, 5);
+    const up = deserialize(JSON.stringify(old))!;
+    expect(up.version).toBe(SAVE_VERSION);
+    expect(up.daNgoai.boss).toEqual([0, 0, 7777, 0, 0, 0, 0, 0, 0, 0]);
+    expect(isDaNgoaiState(up.daNgoai)).toBe(true);
+  });
+
+  it('bản lưu 31 lên 32: thêm giờ boss cho map 7, giữ giờ boss cũ', () => {
+    const s = base(true);
+    s.daNgoai.boss[5] = 4242;
+    const old = JSON.parse(serialize(s));
+    old.version = 31;
+    old.daNgoai.boss = old.daNgoai.boss.slice(0, 6);
+    const up = deserialize(JSON.stringify(old))!;
+    expect(up.version).toBe(SAVE_VERSION);
+    expect(up.daNgoai.boss).toEqual([0, 0, 0, 0, 0, 4242, 0, 0, 0, 0]);
+    expect(isDaNgoaiState(up.daNgoai)).toBe(true);
+  });
+
+  it('bản lưu 32 lên 33: thêm giờ boss cho map 8, giữ giờ boss cũ', () => {
+    const s = base(true);
+    s.daNgoai.boss[6] = 5151;
+    const old = JSON.parse(serialize(s));
+    old.version = 32;
+    old.daNgoai.boss = old.daNgoai.boss.slice(0, 7);
+    const up = deserialize(JSON.stringify(old))!;
+    expect(up.version).toBe(SAVE_VERSION);
+    expect(up.daNgoai.boss).toEqual([0, 0, 0, 0, 0, 0, 5151, 0, 0, 0]);
+    expect(isDaNgoaiState(up.daNgoai)).toBe(true);
+  });
+
+  it('bản lưu 33 lên 34: thêm giờ boss cho map 9, giữ giờ boss cũ', () => {
+    const s = base(true);
+    s.daNgoai.boss[7] = 6262;
+    const old = JSON.parse(serialize(s));
+    old.version = 33;
+    old.daNgoai.boss = old.daNgoai.boss.slice(0, 8);
+    const up = deserialize(JSON.stringify(old))!;
+    expect(up.version).toBe(SAVE_VERSION);
+    expect(up.daNgoai.boss).toEqual([0, 0, 0, 0, 0, 0, 0, 6262, 0, 0]);
+    expect(isDaNgoaiState(up.daNgoai)).toBe(true);
+  });
+
+  it('bản lưu 34 lên 35: thêm giờ boss cho map 10, giữ giờ boss cũ', () => {
+    const s = base(true);
+    s.daNgoai.boss[8] = 7373;
+    const old = JSON.parse(serialize(s));
+    old.version = 34;
+    old.daNgoai.boss = old.daNgoai.boss.slice(0, 9);
+    const up = deserialize(JSON.stringify(old))!;
+    expect(up.version).toBe(SAVE_VERSION);
+    expect(up.daNgoai.boss).toEqual([0, 0, 0, 0, 0, 0, 0, 0, 7373, 0]);
+    expect(isDaNgoaiState(up.daNgoai)).toBe(true);
+  });
+
+  it('map 10: cổng cần cấp 90, là map cuối, trần cấp 100, boss luôn rơi Huyền thoại cấp đồ 5', () => {
+    const def = DA_MAP[10];
+    expect(def.cong).toBe(90);
+    expect(DA_MAP_CUOI).toBe(10);
+    expect(DA_CAP.tran).toBe(100);
+    expect(boCuc(9).congSau).not.toBeNull();
+    expect(boCuc(10).congSau).toBeNull();
+    for (let seq = 0; seq < 2000; seq++) {
+      const m = rutMon(seq, 'daBoss', 5, ['trungTrac'], def.bossRoi)!;
+      expect(m.cap).toBe(5);
+      expect(m.pham).toBe(4);
+    }
+  });
+
+  it('map 9: cổng cần cấp 80, có cọc gỗ, đồ boss Huyền thoại chừng 90%, cấp đồ 5', () => {
+    const def = DA_MAP[9];
+    expect(def.cong).toBe(80);
+    expect(boCuc(9).can.some((c) => c.ve === 'coc')).toBe(true);
+    let cao = 0;
+    const n = 4000;
+    for (let seq = 0; seq < n; seq++) {
+      const m = rutMon(seq, 'daBoss', 5, ['caoLo'], def.bossRoi)!;
+      expect(m.cap).toBe(5);
+      if (m.pham === 4) cao++;
+    }
+    expect(cao / n).toBeGreaterThan(0.86);
+    expect(cao / n).toBeLessThan(0.94);
+  });
+
+  it('map 8: cổng cần cấp 70, đồ boss Huyền thoại chừng 80%, cấp đồ 5', () => {
+    const def = DA_MAP[8];
+    expect(def.cong).toBe(70);
+    expect(boCuc(7).congSau).not.toBeNull();
+    let cao = 0;
+    const n = 4000;
+    for (let seq = 0; seq < n; seq++) {
+      const m = rutMon(seq, 'daBoss', 5, ['caoLo'], def.bossRoi)!;
+      expect(m.cap).toBe(5);
+      if (m.pham === 4) cao++;
+    }
+    expect(cao / n).toBeGreaterThan(0.75);
+    expect(cao / n).toBeLessThan(0.85);
+  });
+
+  it('map 7: cổng cần cấp 60, đồ boss phẩm theo bossRoi, cấp đồ 5', () => {
+    const def = DA_MAP[7];
+    expect(def.cong).toBe(60);
+    let cao = 0;
+    const n = 4000;
+    for (let seq = 0; seq < n; seq++) {
+      const m = rutMon(seq, 'daBoss', 5, ['trungNhi'], def.bossRoi)!;
+      expect(m.cap).toBe(5);
+      if (m.pham === 4) cao++;
+    }
+    // Boss map 7: Huyền thoại chừng 70%.
+    expect(cao / n).toBeGreaterThan(0.65);
+    expect(cao / n).toBeLessThan(0.75);
+  });
+
+  it('map 6: cổng cần cấp 50, đồ rơi không vượt chương 5, boss rơi phẩm theo bossRoi', () => {
+    const def = DA_MAP[6];
+    expect(def.cong).toBe(50);
+    expect(def.chuong).toBe(5);
+    let cao = 0;
+    let n = 0;
+    for (let seq = 0; seq < 4000; seq++) {
+      const m = rutMon(seq, 'daBoss', 5, ['trungTrac'], def.bossRoi)!;
+      expect(m.cap).toBe(5);
+      expect(m.pham).toBeGreaterThanOrEqual(3);
+      if (m.pham === 4) cao++;
+      n++;
+    }
+    // Boss map 6: Huyền thoại chừng 60% (boss các map khác 40%).
+    expect(cao / n).toBeGreaterThan(0.55);
+    expect(cao / n).toBeLessThan(0.65);
   });
 
   it('khu đội đứng tính rộng thêm 3 ô quanh khu', () => {
