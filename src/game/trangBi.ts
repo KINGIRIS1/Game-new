@@ -7,6 +7,7 @@ import {
   ADV,
   BO_CHUONG,
   BO_CUA,
+  BO_DA,
   BO_DO,
   BO_HAI,
   CAO_LO,
@@ -34,6 +35,7 @@ import {
   SON,
   TRUNG_NHI,
   TRUNG_TRAC,
+  BA_TRIEU,
   type BoDo,
   type Chapter,
   type ChiSo,
@@ -109,6 +111,7 @@ export const HERO_STATS: Record<HeroKind, FighterStats> = {
   caoLo: CAO_LO,
   trungTrac: TRUNG_TRAC,
   trungNhi: TRUNG_NHI,
+  baTrieu: BA_TRIEU,
 };
 
 const khongDo = (): ChiSoDo => ({ mau: 0, danh: 0, toc: 0, uy: 0, giap: 0, hoi: 0 });
@@ -246,10 +249,13 @@ export interface RoiDo {
 /** Đồ đã mở chưa: có tướng đầu tiên về với kinh đô (chơi thường là Gióng thành tráng sĩ) thì trận thắng mới rơi đồ. */
 export const doMo = (s: GameState): boolean => BO_DO.some((b) => tuongJoined(s, BO_CUA[b]));
 
-/** Bộ rơi ra ở nơi `nguon`: phó bản, thử thách theo chương của màn; đồn, giữ kinh đô theo các tướng đã về. */
+/**
+ * Bộ rơi ra ở nơi `nguon`: phó bản, thử thách, dã ngoại theo chương của màn hay map; đồn, giữ kinh đô theo các tướng
+ * truyện đã về (bộ của tướng dã ngoại chỉ rơi ở map của tướng ấy: `roiDo(..., bo)`).
+ */
 export function boRoi(s: GameState, nguon: NguonDo, chuong: Chapter): BoDo[] {
   if (nguon === 'don' || nguon === 'giu') {
-    const joined = BO_DO.filter((b) => tuongJoined(s, BO_CUA[b]));
+    const joined = BO_DO.filter((b) => !BO_DA.includes(b) && tuongJoined(s, BO_CUA[b]));
     return joined.length ? joined : BO_CHUONG[chuong];
   }
   return BO_CHUONG[chuong];
@@ -292,10 +298,10 @@ export function rutMon(seq: number, nguon: NguonDo, chuong: Chapter, bo: BoDo[],
  * Sau một trận thắng ở nơi `nguon` (trận của chương `chuong`): rút đồ. Đồ chưa mở thì không rút. Kho đầy thì món
  * mới tự phân giải ra sắt. Trả về món rơi (null khi không rơi).
  */
-export function roiDo(s: GameState, nguon: NguonDo, chuong: Chapter, w?: readonly number[]): RoiDo | null {
+export function roiDo(s: GameState, nguon: NguonDo, chuong: Chapter, w?: readonly number[], bo?: BoDo[]): RoiDo | null {
   if (!doMo(s)) return null;
   const seq = s.trangBi.seq++;
-  const rut = rutMon(seq, nguon, chuong, boRoi(s, nguon, chuong), w);
+  const rut = rutMon(seq, nguon, chuong, bo ?? boRoi(s, nguon, chuong), w);
   if (!rut) return null;
   if (s.trangBi.kho.length >= KHO_DO_MAX) {
     const mon: Mon = { ...rut, id: 0 };
@@ -418,7 +424,7 @@ export function thaoDo(s: GameState, id: number): Result {
 
 const isObj = (v: unknown): v is Record<string, unknown> => typeof v === 'object' && v !== null && !Array.isArray(v);
 const isInt = (v: unknown, lo: number, hi: number): v is number => Number.isInteger(v) && (v as number) >= lo && (v as number) <= hi;
-const HERO_KINDS: HeroKind[] = ['giong', 'sonTinh', 'anDuong', 'caoLo', 'trungTrac', 'trungNhi'];
+const HERO_KINDS: HeroKind[] = ['giong', 'sonTinh', 'anDuong', 'caoLo', 'trungTrac', 'trungNhi', 'baTrieu'];
 
 /** Một món đồ đúng dạng và đúng luật (phẩm, cấp đồ, chỉ số, nấc rút, nấc cường hóa trong khoảng). */
 export function isMon(v: unknown): v is Mon {

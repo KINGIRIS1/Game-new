@@ -3845,7 +3845,7 @@ Phòng tuyến sông Như Nguyệt, nơi Lý Thường Kiệt đắp lũy tre ch
 4. **PR 3**: cảnh 3D năm map, giao diện, chụp kiểm tra.
 5. **PR 4**: bốn quái mới (lợn rừng, cua đá, báo gấm, rắn hổ mang chúa).
 
-## Kế hoạch: năm tướng mới của dã ngoại (chủ dự án yêu cầu, chờ duyệt)
+## Kế hoạch: năm tướng mới của dã ngoại (chủ dự án đã duyệt, đang làm: xong Bà Triệu)
 
 Chủ dự án yêu cầu: lên kế hoạch làm năm tướng mới. Đề xuất lấy đúng năm người anh hùng mà map 6–10 của dã ngoại đã nhắc tới (Lạc hầu đã dẫn lời từng người), mỗi map một tướng. Như các kế hoạch trước, được chỉnh số ±20% theo test; làm xong phần nào thì ghi số cuối cùng của phần ấy.
 
@@ -3893,7 +3893,7 @@ Kỹ năng (dự kiến):
 
 - **Đề xuất: chỉ ở dã ngoại.** Chọn vào đội dã ngoại như tướng cũ; không ra phó bản, thử thách, đồn, giữ kinh đô, Đấu thành. Lý do: phó bản, thử thách đo độ khó theo đúng tướng của chương (`heroesFor`, các test cân bằng); thêm tướng vào đó là phải đo lại cả 40 màn, 40 thử thách. Dã ngoại là chỗ năm người này đã có truyện.
 - Cách khác: (b) cho chọn thêm ở phó bản đánh lại và thử thách đã thắng (không ảnh hưởng chuẩn lần đầu, nhưng phải chặn khỏi phá thưởng thử thách); (c) để dành mỗi người một chương 6–10 về sau, giờ chỉ làm dáng và đồ.
-- Ở kinh đô: đứng chầu trong sân Điện (cần nới sân thêm 2 chỗ: 11 + 5 = 16 > 14, sửa `DIEN_LOT` và bản vẽ ở `docs/bo-cuc-cong-trinh.md`); không nhận doanh (doanh trại đã đủ 5 doanh), không kiệt sức (dã ngoại không xét kiệt sức).
+- Ở kinh đô: đứng chầu trong sân Điện; không nhận doanh (doanh trại đã đủ 5 doanh), không kiệt sức (dã ngoại không xét kiệt sức). Sân có 14 chỗ, đã dùng 11, nên đủ 16 thì phải nới sân thêm 2 chỗ (sửa `DIEN_LOT` và bản vẽ ở `docs/bo-cuc-cong-trinh.md`); làm khi tới tướng thứ tư. **Đã làm (PR 1)**: Bà Triệu đứng chỗ 3 (ngoài cùng hàng ngai bên phải, cạnh voi đá); chụp thử thì chỗ 12 sát cổng bị mái cổng che, chỗ 0 bị Sơn Tinh trên mỏm đá che. Còn chỗ 0, 12.
 
 ### Trang bị: năm bộ mới (20 món)
 
@@ -3905,7 +3905,7 @@ Kỹ năng (dự kiến):
 | Bạch Đằng | Ngô Quyền | Giáo dài | Giáp sắt | Ngựa chiến | Cọc lim bịt sắt | +10% Uy lực kỹ năng | bãi cọc 2,5 → 3,2 ô, 6 → 8 giây |
 | Như Nguyệt | Lý Thường Kiệt | Kiếm | Giáp trụ | Áo choàng đỏ | Cuộn thơ thần | +8% Hồi kỹ năng | hồi 20% → 25% máu, giặc giảm 30% → 40% |
 
-- Bộ của tướng nào chỉ rơi khi tướng ấy đã về: quái và boss map của tướng ấy rơi bộ ấy (nguồn `daQuai`, `daBoss`); giữ kinh đô, đồn rơi bộ của một tướng đã về như cũ. Cấp đồ 5, phẩm theo trần chương như mọi đồ dã ngoại.
+- Bộ của tướng nào chỉ rơi khi tướng ấy đã về: quái và boss map của tướng ấy rơi bộ ấy (nguồn `daQuai`, `daBoss`); giữ kinh đô, đồn vẫn chỉ rơi bộ của các tướng truyện đã về như cũ, phó bản, thử thách theo chương như cũ (bộ tướng dã ngoại ở `BO_DA`, `boRoi`, `roiDo(..., bo)` ở `trangBi.ts`). Cấp đồ 5, phẩm theo trần chương như mọi đồ dã ngoại.
 - Ai mặc cũng được như sáu bộ cũ, nên món bộ mới có thể nằm trên tướng giữ thành trong bản chụp Đấu thành: máy chủ phải nhận năm bộ mới ở cấp đồ 5 (`kiemMon`, `luat.js`; mã luật đổi thì máy khách cũ được báo cập nhật).
 - 20 ảnh món vẽ sẵn (`doTuong.ts`, `node scripts/anh-do.mjs`), hình tướng mặc đồ, vũ khí ánh lên khi đủ bộ (màu: trắng ngà Núi Nưa, xanh đầm Dạ Trạch, đen ánh tím Vạn An, xanh biển Bạch Đằng, đỏ son Như Nguyệt).
 
@@ -3918,7 +3918,8 @@ Kỹ năng (dự kiến):
 
 ### Bản lưu, code
 
-- Bản lưu 36: `daNgoai.haBoss` (map nào đã hạ boss ít nhất một lần). Nâng bản lưu 35: map 6–10 nào có giờ boss chờ (`daNgoai.boss[...]` khác 0) thì coi như đã hạ, tướng của map ấy về luôn (kiểm lại lúc làm: giờ boss lúc đầu có phải 0 không).
+- **Không lên bản lưu** (đã làm ở PR 1, thay cho bản lưu 36 dự kiến): giờ boss mọc lại `daNgoai.boss` lúc đầu là 0 và hạ boss thì hẹn sau đồng hồ chơi, không bao giờ về lại 0, nên `boss[map − 1] > 0` là đã hạ ít nhất một lần (`tuongDaVe` ở `tuongDa.ts`). Bản lưu cũ đã hạ boss map 6 thì tải lên là có Bà Triệu, đoạn truyện kể một lần.
+- Đấu thành: tướng giữ thành trong bản chụp chỉ được là tướng truyện (`HERO_TRUYEN` ở `battle.ts`, `isSnapshotShape` ở `dauThanh.ts`); món bộ mới thì ai mặc cũng được nên máy chủ nhận (`kiemMon`: bộ không có chương riêng tính là chương 5).
 - `TuongId`, `HeroKind`, `HERO_KINDS` thêm năm tướng; chỉ số, kỹ năng ở `defs.ts`; chữ ở `vi.ts`. Tướng đã về tính ở luật (`tuongVe` hay tương tự), dùng cho bảng tướng, chọn đội dã ngoại, rơi đồ.
 - `battle.ts`: năm kỹ năng chỉ thêm nhánh mới, trận cũ ra y hệt (`tatDinh.test.ts`, đối chiếu Node, Deno, Chromium). Ẩn, tăng sức đánh, làm yếu giặc là hiệu ứng có hạn giờ trên `Fighter`.
 - Treo máy (`tiSuc`) tính sát thương của kỹ năng mới theo cùng cách các kỹ năng cũ.
@@ -3933,18 +3934,18 @@ Kỹ năng (dự kiến):
 ### Thứ tự làm (đề xuất: mỗi tướng một lát cắt chạy được)
 
 1. **PR 0**: tài liệu này (PR nháp, chờ duyệt).
-2. **PR 1**: phần chung (bản lưu 36, tướng về khi hạ boss, chọn đội, sân chầu nới 16 chỗ) và trọn Bà Triệu: luật, kỹ năng, dáng, voi trắng, bộ Núi Nưa (4 món, ảnh, máy chủ nhận bộ mới).
+2. **PR 1** (đã làm): phần chung (tướng về khi hạ boss, chọn đội, đứng chầu, không lên bản lưu) và trọn Bà Triệu: luật (`TUONG_DA_IDS`, `TUONG_DA_MAP`, `BA_TRIEU`, `CA_KINH` ở `defs.ts`; `tuongDa.ts`), Chém cá kình (`useSkill` ở `battle.ts`, tầm tự dùng ở `daNgoaiTran.ts`), đoạn truyện `baTrieu`, dáng (`makeBaTrieu`, `VOI_TRANG`, `giapVayDong` ở `heroes.ts`; voi trận nhận màu da và một ngà: `VoiTranLook.skin`, `motNga`), vẽ kỹ năng (`chemCaKinh` ở `battleView.ts`), bộ Núi Nưa (4 món, ảnh, `guomNuiNua`, `tramVang`), `tuongMoi.test.ts`, nhóm chụp `node scripts/chup-nhan-vat.mjs tuongDa`, cảnh chụp `ba-trieu`, `ba-trieu-tui`, `ba-trieu-dien`, `ba-trieu-truyen`.
 3. **PR 2**: Triệu Quang Phục và bộ Dạ Trạch.
 4. **PR 3**: Mai Thúc Loan và bộ Vạn An.
 5. **PR 4**: Ngô Quyền và bộ Bạch Đằng.
 6. **PR 5**: Lý Thường Kiệt và bộ Như Nguyệt.
 
-### Chờ chủ dự án duyệt
+### Đã chốt (chủ dự án duyệt nguyên đề xuất)
 
-1. Năm người như bảng (đã chốt Dạ Trạch: Triệu Quang Phục là tướng, Lý Nam Đế có mặt trong đoạn truyện).
-2. Tướng mới chỉ đánh ở dã ngoại (đề xuất), hay thêm (b), (c).
+1. Năm người như bảng; Dạ Trạch: Triệu Quang Phục là tướng, Lý Nam Đế có mặt trong đoạn truyện.
+2. Tướng mới chỉ đánh ở dã ngoại.
 3. Về khi hạ boss map lần đầu.
-4. Năm kỹ năng, chỉ số, năm bộ đồ và tên món.
+4. Năm kỹ năng, chỉ số, năm bộ đồ và tên món như trên.
 5. Làm mỗi tướng một PR, Bà Triệu trước.
 
 ## Nhịp chơi và lưu game

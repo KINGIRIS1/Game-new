@@ -19,6 +19,7 @@ async function dung(kind: HeroKind, anh: boolean): Promise<THREE.Group> {
   if (kind === 'anDuong') return h.makeAnDuong({ crossbow: true, anh });
   if (kind === 'caoLo') return h.makeCaoLo({ anh });
   if (kind === 'trungTrac') return h.makeTrungTrac({ anh });
+  if (kind === 'baTrieu') return h.makeBaTrieu({ anh });
   return h.makeTrungNhi({ anh });
 }
 
@@ -30,7 +31,7 @@ const doms = (g: THREE.Object3D) => {
 };
 
 describe('vũ khí ánh lên', () => {
-  it('sáu tướng: hai lớp vỏ sáng chung khung xương, chỉ quanh vũ khí, có đốm lấp lánh; ngã thì tắt', async () => {
+  it('mọi tướng: hai lớp vỏ sáng chung khung xương, chỉ quanh vũ khí, có đốm lấp lánh; ngã thì tắt', async () => {
     for (const kind of HERO_KINDS) {
       const g = await dung(kind, true);
       const body = g.children.find((c): c is THREE.SkinnedMesh => (c as THREE.SkinnedMesh).isSkinnedMesh && !c.userData.anh)!;

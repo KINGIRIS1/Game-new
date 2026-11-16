@@ -4,6 +4,7 @@
 // người chơi chọn Sơn Tinh hay Gióng hiển linh ở bảng xếp quân (`stageHeroes` ở campaign.ts).
 
 import { heroSetups, type Battle, type HeroKind, type HeroSetup } from './battle';
+import { tuongDaVe } from './tuongDa';
 import { CAO_LO_AT, caoLoJoined, caoLoSetup } from './caoLo';
 import { HAI_BA_KINDS, chuong5Won, haiBaJoined, haiBaSetups, hieuTrieuOpen, isHaiBa, restHaiBa } from './chuong5';
 import { advJoined, advSetup } from './coLoa';
@@ -182,6 +183,8 @@ function tuongGoc(s: GameState, kind: HeroKind): HeroSetup | null {
   if (kind === 'sonTinh') return sonJoined(s) ? { kind, bamboo: false, glow: s.son.won, non: s.son.non } : null;
   if (kind === 'anDuong') return advJoined(s) ? { kind, bamboo: false, glow: s.adv.bien, non: false, kimQuy: s.adv.kimQuy } : null;
   if (kind === 'caoLo') return caoLoJoined(s) ? { kind, bamboo: false, glow: false, non: false, lenhBan: s.caoLo.lenhBan } : null;
+  // Tướng dã ngoại: về khi hạ boss map của mình lần đầu.
+  if (kind === 'baTrieu') return tuongDaVe(s, kind) ? { kind, bamboo: false, glow: false, non: false } : null;
   if (!haiBaJoined(s)) return null;
   // Hai Bà: như khi ra phó bản (hiển linh sau truyện; Trưng Nhị có Hiệu triệu khi đã mở).
   return { kind, bamboo: false, glow: chuong5Won(s), non: false, ...(kind === 'trungNhi' ? { hieuTrieu: hieuTrieuOpen(s) } : {}) };

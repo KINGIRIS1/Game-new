@@ -7,7 +7,7 @@
 
 import { deflateSync, inflateSync } from 'fflate';
 import {
-  HERO_KINDS,
+  HERO_TRUYEN,
   isScored,
   retreatField,
   startPvp,
@@ -297,12 +297,12 @@ function isSnapshotShape(v: unknown): v is Snapshot {
     if (g.nu !== undefined && g.nu !== true) return false;
   }
   if (!isRecordOf(v.troops, UNIT_TYPES, (x) => isInt(x, 0, 9999))) return false;
-  if (!Array.isArray(v.heroes) || v.heroes.length > 2 || !v.heroes.every((h) => isObj(h) && HERO_KINDS.includes(h.kind as HeroKind))) return false;
+  if (!Array.isArray(v.heroes) || v.heroes.length > 2 || !v.heroes.every((h) => isObj(h) && HERO_TRUYEN.includes(h.kind as HeroKind))) return false;
   if (v.trangBi !== undefined) {
     // Bảng món theo tướng, mỗi tướng tối đa bốn món (từng món kiểm ở `validateSnapshot`).
     if (!isObj(v.trangBi)) return false;
     for (const [kind, list] of Object.entries(v.trangBi)) {
-      if (!HERO_KINDS.includes(kind as HeroKind) || !Array.isArray(list) || list.length > O_DO.length || !list.every(isObj)) return false;
+      if (!HERO_TRUYEN.includes(kind as HeroKind) || !Array.isArray(list) || list.length > O_DO.length || !list.every(isObj)) return false;
     }
   }
   if (!isNum(v.bonus, 0, 1) || typeof v.crossbows !== 'boolean' || typeof v.walls !== 'boolean') return false;

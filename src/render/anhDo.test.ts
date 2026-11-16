@@ -8,11 +8,11 @@ const ctx = new Proxy({}, { get: (_t, k) => (k === 'canvas' ? {} : () => ({ addC
 vi.stubGlobal('document', { createElement: () => ({ width: 0, height: 0, getContext: () => ctx }) });
 
 describe('ảnh món trang bị vẽ sẵn', () => {
-  it('đủ 24 món, mỗi món có ảnh vẽ từ đúng mô hình hiện tại (lệch thì chạy node scripts/anh-do.mjs)', async () => {
+  it('đủ 28 món, mỗi món có ảnh vẽ từ đúng mô hình hiện tại (lệch thì chạy node scripts/anh-do.mjs)', async () => {
     const { MON_IDS } = await import('./doTuong');
     const { monHash } = await import('./anhDo');
     const { ANH_DO_DAU } = await import('./anhDoDau');
-    expect(MON_IDS).toHaveLength(24);
+    expect(MON_IDS).toHaveLength(28);
     const files = Object.keys(import.meta.glob('../../public/anh-do/*.webp'));
     const missing = MON_IDS.filter((k) => !files.includes(`../../public/anh-do/${k}.webp`));
     expect(missing, 'thiếu ảnh').toEqual([]);

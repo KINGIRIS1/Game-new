@@ -309,7 +309,9 @@ export type StoryId =
   | 'langBac'
   | 'songHat'
   /** Màn hình Hết truyện sau đoạn cuối chương 5. */
-  | 'hetTruyen5';
+  | 'hetTruyen5'
+  /** Hạ Lục Dận ở map 6 lần đầu: Bà Triệu về. */
+  | 'baTrieu';
 
 /** Một lời mời đổi hàng của thuyền buôn: đưa `give`, nhận `get`. */
 export interface Offer {

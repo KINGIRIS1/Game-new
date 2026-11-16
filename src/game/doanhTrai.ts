@@ -6,6 +6,7 @@
 import { caoLoJoined } from './caoLo';
 import { inChapter5 } from './chuong5';
 import { advJoined } from './coLoa';
+import { tuongDaVe } from './tuongDa';
 import { BUILDINGS, DOANH_MAX, FIELD_CAP, GUARD_CAP, TUONG_IDS, UNITS, UNIT_TYPES, type TuongId, type UnitType } from './defs';
 import { dienLevel, type Building, type FailReason, type GameState, type Result } from './game';
 import { giongReady } from './giong';
@@ -33,6 +34,7 @@ export function tuongJoined(s: GameState, id: TuongId): boolean {
   if (id === 'anDuong') return advJoined(s);
   if (id === 'caoLo') return caoLoJoined(s);
   if (id === 'trungTrac' || id === 'trungNhi') return inChapter5(s);
+  if (id === 'baTrieu') return tuongDaVe(s, id);
   return true;
 }
 

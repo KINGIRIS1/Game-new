@@ -151,10 +151,10 @@ const ELEPHANT: Defs = {
  * bành gỗ quây quanh chỗ ngồi và lọng đỏ; bậc 3 giáp trán đồng vàng có núm mặt trời, chuông đồng đeo cổ, lọng hai
  * tầng có chóp vàng.
  */
-function drawElephant(r: Rig, tier: number, look: { pad?: number | null; tusks?: boolean } = {}): void {
+function drawElephant(r: Rig, tier: number, look: { pad?: number | null; tusks?: boolean; skin?: number } = {}): void {
   const body = r.on('qBody');
   const p = body.plain;
-  elephantBody(r, { skin: C.elephant });
+  elephantBody(r, { skin: look.skin ?? C.elephant });
   // Voi trận (`makeVoiTran`) tự vẽ đệm và ngà riêng.
   if (look.pad !== null) elephantDrape(r, { color: look.pad ?? C.red, z0: -0.4, z1: 0.32, half: 1.0, pattern: true });
   const head = r.on('qHead').plain;
@@ -253,6 +253,10 @@ export interface VoiTranLook {
   parasol?: number;
   /** Cờ chim Lạc cắm sau bành: cỡ cờ (bằng cỡ người cưỡi); bỏ trống là không có cờ. */
   flag?: number;
+  /** Màu da voi (voi trắng của Bà Triệu); bỏ trống là da voi thường. */
+  skin?: number;
+  /** Chỉ một ngà (bên phải), như voi trắng một ngà của Bà Triệu. */
+  motNga?: boolean;
 }
 
 /** Voi làm gì thêm, do người cưỡi định theo động tác của mình (kỹ năng, thắng trận). Mỗi số 0..1. */
@@ -284,7 +288,7 @@ export interface VoiTranRider {
  */
 function drawVoiTran(r: Rig, look: VoiTranLook): void {
   r.place([0, 0, 0], K_VOI_TRAN, () => {
-    drawElephant(r, 0, { pad: null, tusks: false });
+    drawElephant(r, 0, { pad: null, tusks: false, ...(look.skin !== undefined ? { skin: look.skin } : {}) });
     const body = r.on('qBody');
     const p = body.plain;
     // Đệm vòm trùm lưng như tấm phủ ngựa vua, viền và tua quanh mép.
@@ -332,7 +336,7 @@ function drawVoiTran(r: Rig, look: VoiTranLook): void {
     }
     p.box(0.42, 0.05, 0.5, look.trim, 0, CUSHION_TOP - 0.025, -0.08);
     // Ngà dài bọc đồng: khâu đồng ở gốc, dải đồng hoa văn, vòng đồng, mũi bịt đồng nhọn.
-    for (const s of [-1, 1]) {
+    for (const s of look.motNga ? [1] : [-1, 1]) {
       r.local('qHead', [s * 0.115, 0.6, 0.6], [1.3, 0, -s * 0.12], (t) => {
         t.plain.cone(0.05, 0.5, C.cream, 0, 0.25, 0, undefined, 7);
         t.plain.cyl(0.06, 0.062, 0.09, C.bronze, 0, 0.045, 0, undefined, 8);

@@ -10,6 +10,7 @@ import { advJoined, inChapter3, ruaVangCame } from './coLoa';
 import type { GameState, StoryId } from './game';
 import { giongAppeared, giongReady } from './giong';
 import { inChapter2, sonJoined } from './son';
+import { tuongDaVe } from './tuongDa';
 
 const STORY_ORDER: StoryId[] = [
   'mo',
@@ -41,6 +42,7 @@ const STORY_ORDER: StoryId[] = [
   'langBac',
   'songHat',
   'hetTruyen5',
+  'baTrieu',
 ];
 const STORY_WHEN: Record<StoryId, (s: GameState) => boolean> = {
   mo: () => true,
@@ -85,6 +87,8 @@ const STORY_WHEN: Record<StoryId, (s: GameState) => boolean> = {
   // Thắng màn 40: giữ Cấm Khê cho dân rút về núi, Hai Bà gieo mình xuống sông Hát. Sau đó là màn hình Hết truyện mới.
   songHat: chuong5Won,
   hetTruyen5: chuong5Won,
+  // Hạ boss map 6 dã ngoại lần đầu: Bà Triệu về theo đội dã ngoại.
+  baTrieu: (s) => tuongDaVe(s, 'baTrieu'),
 };
 
 /** Đoạn truyện đến lúc kể mà người chơi chưa xem, theo đúng thứ tự. */

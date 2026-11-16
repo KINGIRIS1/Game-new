@@ -14,8 +14,8 @@ import workerUrl from './nanSan.worker.ts?worker&url';
  */
 export const KHO_PHIEN_BAN: string | null = import.meta.env.DEV ? null : `1|${workerUrl.split('/').pop()}`;
 
-/** Tướng theo chương. */
-const HEROES: Record<number, FighterKind[]> = { 1: ['giong'], 2: ['sonTinh'], 3: ['anDuong'], 4: ['caoLo'], 5: ['trungTrac', 'trungNhi'] };
+/** Tướng theo chương (Bà Triệu đánh ở dã ngoại map 6, cấp đồ của map là chương 5). */
+const HEROES: Record<number, FighterKind[]> = { 1: ['giong'], 2: ['sonTinh'], 3: ['anDuong'], 4: ['caoLo'], 5: ['trungTrac', 'trungNhi', 'baTrieu'] };
 /** Cảnh màn cầm cự theo chương: Mộ Dạ (màn 32), Cấm Khê (màn 40). */
 const HOLD_SCENES: Record<number, CanhId[]> = { 4: ['moDa'], 5: ['camKhe'] };
 
