@@ -10,9 +10,9 @@ import { HUMAN, beginPose, featherCrown, hairCap, headband, humanBody, humanHead
 import { Clay, ellipsoid } from './nan';
 import { armor, bun, chestDisc, diadem, hairDown, necklace, pauldrons } from './nanDo';
 import { clayPiece, figure, type Piece } from './nanNguoi';
-import { elephantBody, elephantDrape, horseBody, horseDrape, roosterBody, tigerBody, turtleBody, turtleDrum } from './nanThu';
+import { boarBody, elephantBody, elephantDrape, horseBody, horseDrape, leopardBody, roosterBody, tigerBody, turtleBody, turtleDrum } from './nanThu';
 import { C } from './palette';
-import { RigBuilder, bakeRig, moveBones, resetBones, skinRig, type Act, type BoneDef, type Bones, type Poser, type RigSlot, type RigSlots } from './rig';
+import { RigBuilder, bakeRig, moveBones, resetBones, skinRig, type Act, type BoneDef, type Bones, type Poser, type RigShape, type RigSlot, type RigSlots } from './rig';
 import { drawRider, poseRider, riderBones, riderHasSkill, type RiderKind } from './soldier';
 import { IRON, IRON_DARK, coLac } from './weapons';
 
@@ -249,8 +249,8 @@ export interface VoiTranLook {
   trim: number;
   /** Mặt trống đồng hai bên đệm. */
   drum?: boolean;
-  /** Tán lọng. */
-  parasol: number;
+  /** Tán lọng; bỏ trống là không có lọng (ảnh món đồ voi trận: để thấy đệm). */
+  parasol?: number;
   /** Cờ chim Lạc cắm sau bành: cỡ cờ (bằng cỡ người cưỡi); bỏ trống là không có cờ. */
   flag?: number;
 }
@@ -273,6 +273,8 @@ export interface VoiTranRider {
   defs: Defs;
   draw(r: Rig): void;
   pose(b: B, a: Act): VoiTranMood;
+  /** Ghi riêng phần vũ khí của người cưỡi (`RigBuilder.vuKhi`), rồi dựng lớp vỏ sáng khi đã xong tư thế (`anhVuKhi.ts`). */
+  anh?(group: THREE.Group, shape: RigShape<string>): void;
 }
 
 /**
@@ -355,6 +357,7 @@ function drawVoiTran(r: Rig, look: VoiTranLook): void {
       r.on(b).band.cyl(0.125, 0.13, 0.07, C.bronze, x, 0.14, z, undefined, 10);
     }
     // Lọng hai tầng cắm sau thành sau: cán gỗ kẹp đồng, tán dưới viền, tán trên, chóp vàng, tua rủ quanh vành.
+    if (look.parasol === undefined) return;
     const [px, py, pz] = PARASOL_FOOT;
     p.cyl(0.022, 0.022, PARASOL_TOP - py, C.woodDark, px, (py + PARASOL_TOP) / 2, pz, undefined, 6);
     p.cyl(0.036, 0.036, 0.1, C.bronze, px, 1.25, pz, undefined, 6);
@@ -439,6 +442,13 @@ function poseVoiTran(b: B, a: Act, m: VoiTranMood): void {
   }
 }
 
+/** Voi trận bản tĩnh không người cưỡi, đứng yên: ảnh món đồ voi trận, và voi đứng sau tướng ở hình tướng mặc đồ. */
+export function bakeVoiTran(look: VoiTranLook): THREE.Group {
+  const r = new RigBuilder(VOI_TRAN);
+  drawVoiTran(r, look);
+  return bakeRig(r.build(), (b) => poseVoiTran(b, { act: 'stand' }, {}));
+}
+
 /**
  * Voi trận của Hai Bà (`look`: màu đệm, lọng, trống đồng, cờ) có người cưỡi (`rider`, heroes.ts) hay không.
  * `userData.pose(a)` đặt tư thế cả người lẫn voi; ngã thì lăn nghiêng.
@@ -446,9 +456,11 @@ function poseVoiTran(b: B, a: Act, m: VoiTranMood): void {
 export function makeVoiTran(look: VoiTranLook, rider?: VoiTranRider): THREE.Group {
   // Có người cưỡi thì là tướng: đủ chi tiết như các tướng khác.
   const r = new RigBuilder({ ...VOI_TRAN, ...rider?.defs }, rider ? 1 : DETAIL);
+  r.ghiAnh = !!rider?.anh;
   drawVoiTran(r, look);
   rider?.draw(r);
-  const { group, bones } = skinRig(r.build());
+  const shape = r.build();
+  const { group, bones } = skinRig(shape);
   const pose: Poser = (a) => {
     resetBones(bones);
     const mood = rider ? rider.pose(bones, a) : {};
@@ -457,6 +469,7 @@ export function makeVoiTran(look: VoiTranLook, rider?: VoiTranRider): THREE.Grou
   pose({ act: 'stand' });
   group.userData.pose = pose;
   group.userData.fall = 'side';
+  rider?.anh?.(group, shape as RigShape<string>);
   return group;
 }
 
@@ -478,6 +491,50 @@ function drawTiger(r: Rig): void {
   tigerBody(r);
   const h = r.on('qHead').plain;
   for (const sd of [-1, 1]) h.cone(0.03, 0.12, C.cream, sd * 0.05, 0.78, 0.87, [Math.PI, 0, 0], 4);
+}
+
+// ---------- Lợn rừng (quái dã ngoại) ----------
+
+/** Khung lợn rừng: cùng tên xương với hổ (dùng chung bước đi bốn chân), thấp hơn, chân ngắn. */
+const BOAR: Defs = {
+  qBody: { parent: 'base', at: [0, 0.5, 0] },
+  qFL: { parent: 'qBody', at: [-0.14, 0.4, 0.26] },
+  qFR: { parent: 'qBody', at: [0.14, 0.4, 0.26] },
+  qBL: { parent: 'qBody', at: [-0.14, 0.4, -0.26] },
+  qBR: { parent: 'qBody', at: [0.14, 0.4, -0.26] },
+  qHead: { parent: 'qBody', at: [0, 0.58, 0.44] },
+  qTail: { parent: 'qBody', at: [0, 0.56, -0.42] },
+  qTail2: { parent: 'qTail', at: [0, 0.42, -0.56] },
+};
+
+/** Lợn rừng nặn liền khối, thêm đôi nanh trắng cong lên hai bên mõm. */
+function drawBoar(r: Rig): void {
+  boarBody(r);
+  const h = r.on('qHead').plain;
+  for (const sd of [-1, 1]) h.cone(0.022, 0.16, C.cream, sd * 0.08, 0.47, 0.8, [-0.9, 0, sd * 0.35], 5);
+}
+
+/** Lợn rừng đi lúp xúp, húc thì cúi đầu lao tới hất nanh lên. */
+function poseBoar(b: B, a: Act): void {
+  resetBones(b);
+  const t = a.time ?? 0;
+  if (a.act === 'walk') {
+    const ph = a.phase ?? 0;
+    quadWalk(b, ph * 1.2, (a.stride ?? 0.5) * 0.7, 0.35);
+    b.qBody.position.y += 0.02 * Math.abs(Math.sin(ph * 1.2));
+    b.qTail.rotation.y = 0.4 * Math.sin(ph * 2);
+  } else if (a.act === 'fight') {
+    const e = strikeCurve(a.strike, 0.25, 0.45);
+    b.qBody.position.z += 0.15 * e;
+    b.qBody.rotation.x = 0.12 * (1 - e) - 0.1 * e;
+    b.qHead.rotation.x = 0.35 * (1 - e) - 0.4 * e;
+    b.qFL.rotation.x = b.qFR.rotation.x = -0.4 * e;
+  } else if (a.act === 'dead') {
+    quadFall(b, a.fall ?? 1);
+  } else {
+    b.qHead.rotation.x = 0.1 + 0.08 * Math.sin(t * 2.2);
+    b.qTail.rotation.y = 0.3 * Math.sin(t * 3);
+  }
 }
 
 /** Hổ rình (thấp người, đuôi quất), vồ (chồm lên, hai chân trước vươn tới, cắn), đi lừ đừ. */
@@ -567,8 +624,8 @@ function poseRooster(b: B, a: Act): void {
 
 // ---------- Thú và người cưỡi trong trận ----------
 
-export type BeastKind = 'voi' | 'chienXa' | 'daiTuong' | 'kyBinh' | 'trieuDa' | 'maVien' | 'hoTinh' | 'gaTrang';
-const KINDS: readonly FighterKind[] = ['voi', 'chienXa', 'daiTuong', 'kyBinh', 'trieuDa', 'maVien', 'hoTinh', 'gaTrang'];
+export type BeastKind = 'voi' | 'chienXa' | 'daiTuong' | 'kyBinh' | 'trieuDa' | 'maVien' | 'hoTinh' | 'gaTrang' | 'lonRung' | 'baoGam';
+const KINDS: readonly FighterKind[] = ['voi', 'chienXa', 'daiTuong', 'kyBinh', 'trieuDa', 'maVien', 'hoTinh', 'gaTrang', 'lonRung', 'baoGam'];
 export const isBeast = (k: FighterKind): k is BeastKind => KINDS.includes(k);
 
 interface Spec {
@@ -620,6 +677,8 @@ const SPECS: Record<BeastKind, Spec> = {
   ),
   maVien: riderSpec(HORSE, 'qBody', [0, 0.92, -0.08], 'maVien', 'ride', drawWhiteHorse, poseHorse),
   hoTinh: { defs: { ...BASE, ...TIGER }, draw: drawTiger, pose: poseTiger },
+  baoGam: { defs: { ...BASE, ...TIGER }, draw: leopardBody, pose: poseTiger },
+  lonRung: { defs: { ...BASE, ...BOAR }, draw: drawBoar, pose: poseBoar },
   gaTrang: { defs: { ...BASE, ...ROOSTER }, draw: drawRooster, pose: poseRooster },
 };
 

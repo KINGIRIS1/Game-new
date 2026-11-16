@@ -13,12 +13,13 @@ import { inChapter4 } from './chuong4';
 import { CH5_LAST, MA_VIEN_AT, haiBaSetups, inChapter5 } from './chuong5';
 import { CH3_LAST, KIM_QUY_AT, advJoined, advResting, inChapter3 } from './coLoa';
 import { armySpace, fieldCap } from './doanhTrai';
-import { REPLAY_SHARE, RESOURCE_IDS, STAGES, UNIT_TYPES, type Chapter, type Cost, type NuTuongId, type Row, type StageDef, type UnitType } from './defs';
+import { REPLAY_SHARE, RESOURCE_IDS, STAGES, UNIT_TYPES, type Chapter, type Cost, type NguonDo, type NuTuongId, type Row, type StageDef, type UnitType } from './defs';
 import { BATTLE_STEP, countOf, dienLevel, gain, scheduleThuyHan, troopBonus, type FailReason, type GameState, type Result, type StageResult } from './game';
 import { giongReady, giongResting } from './giong';
 import { heroesFor, inChapter2, restAfter, sonJoined, sonOnly, sonResting, winGift } from './son';
 import { challengeField, challengeOf, challengeOpen, huanTiers, winChallenge } from './thuThach';
 import { phoTuongCheck, phoTuongOf, rememberPhoTuong } from './nuTuong';
+import { roiDo } from './trangBi';
 
 /** Thắng màn này lần đầu thì roi sắt gãy. */
 export const WHIP_BREAKS_AT = 6;
@@ -253,6 +254,10 @@ function finishStage(state: GameState): void {
   // Chương 5: thắng màn 37 thì biết Mã Viện sang, thủy quân Hán kéo tới đánh kinh đô; giữ được Cấm Khê thì kết chương.
   if (first && battle.wave === MA_VIEN_AT) scheduleThuyHan(state);
   if (first && battle.wave === CH5_LAST) battle.hatWin = true;
+  // Thắng thì có khi rơi đồ cho tướng (`trangBi.ts`): thắng lần đầu chắc rơi, đánh lại có khi rơi; cấp đồ, bộ theo
+  // chương của màn.
+  const nguon: NguonDo = challenge ? (huan > 0 ? 'thuDau' : 'thuLai') : first ? 'manDau' : 'manLai';
+  const roi = won ? roiDo(state, nguon, stageDef(battle.wave)!.chapter) : null;
   const result: StageResult = {
     stage: battle.wave,
     outcome,
@@ -263,6 +268,7 @@ function finishStage(state: GameState): void {
     reward,
     ...(gift ? { gift } : {}),
     ...(challenge ? { challenge: { kind: challenge, huan } } : {}),
+    ...(roi ? { do: roi } : {}),
   };
   state.campaign.lastResult = result;
 }

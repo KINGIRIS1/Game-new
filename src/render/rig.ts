@@ -34,6 +34,11 @@ export interface RigShape<B extends string> {
   parts: { geo: THREE.BufferGeometry; mat: THREE.Material }[];
   /** Viền mực đã dựng (gộp mọi chất liệu), giữ lại khi một hình dùng cho nhiều nhân vật. */
   outline?: THREE.BufferGeometry;
+  /**
+   * Riêng phần vũ khí (vẽ trong `RigBuilder.vuKhi` khi bật `ghiAnh`), một hình gộp mang chỉ số xương: để dựng lớp vỏ
+   * sáng khi tướng mặc đủ bộ mình (`anhVuKhi.ts`). Không bật thì không có.
+   */
+  anh?: THREE.BufferGeometry;
 }
 
 export type Bones<B extends string> = Record<B, THREE.Bone>;
@@ -78,6 +83,11 @@ export class RigBuilder<B extends string> {
   private base: THREE.Matrix4 | null = null;
   /** Việc dựng hoãn tới `build`, mỗi việc nhớ khung `place` lúc hoãn. */
   private readonly later: (() => void)[] = [];
+  /** Bật thì phần vẽ trong `vuKhi` được vẽ thêm một lượt vào `anh` (xem `RigShape.anh`). */
+  ghiAnh = false;
+  private dangGhi = false;
+  /** Khối của phần vũ khí theo xương, mọi chất liệu vẽ trơn (không hoa văn). */
+  private readonly anhSlots = new Map<B, RigSlots>();
   /** `detail`: độ chi tiết của mọi khối (xem `ShapeBuilder.detail`). */
   constructor(
     private readonly defs: Record<B, BoneDef<B>>,
@@ -169,6 +179,28 @@ export class RigBuilder<B extends string> {
     for (const k of SLOTS) s[k].frame = frame;
     draw(s);
     for (const k of SLOTS) s[k].frame = this.base;
+    if (!this.dangGhi) return;
+    // Vẽ thêm một lượt vào phần vũ khí, cùng xương, cùng khung.
+    let a = this.anhSlots.get(b);
+    if (!a) {
+      a = { plain: new ShapeBuilder(), band: new ShapeBuilder(), drum: new ShapeBuilder(), glow: new ShapeBuilder() };
+      for (const k of SLOTS) a[k].detail = this.detail;
+      this.anhSlots.set(b, a);
+    }
+    for (const k of SLOTS) a[k].frame = frame;
+    draw(a);
+    for (const k of SLOTS) a[k].frame = null;
+  }
+
+  /**
+   * Phần vẽ vũ khí: các `local` gọi trong `draw` vẽ như thường; bật `ghiAnh` thì được vẽ thêm vào `RigShape.anh`. Không
+   * bật thì y như gọi thẳng `draw`.
+   */
+  vuKhi(draw: () => void): void {
+    const prev = this.dangGhi;
+    this.dangGhi = this.ghiAnh;
+    draw();
+    this.dangGhi = prev;
   }
 
   build(): RigShape<B> {
@@ -181,17 +213,7 @@ export class RigBuilder<B extends string> {
       names.forEach((b, i) => {
         const s = this.slots.get(b);
         if (!s || s[k].empty) return;
-        const g = s[k].geometry();
-        const n = g.getAttribute('position').count;
-        const index = new Uint16Array(n * 4);
-        const weight = new Float32Array(n * 4);
-        for (let v = 0; v < n; v++) {
-          index[v * 4] = i;
-          weight[v * 4] = 1;
-        }
-        g.setAttribute('skinIndex', new THREE.Uint16BufferAttribute(index, 4));
-        g.setAttribute('skinWeight', new THREE.Float32BufferAttribute(weight, 4));
-        geos.push(g);
+        geos.push(onBone(s[k].geometry(), i));
       });
       geos.push(...this.skins[k]);
       this.skins[k] = [];
@@ -200,8 +222,34 @@ export class RigBuilder<B extends string> {
       for (const g of geos) g.dispose();
       if (geo) parts.push({ geo, mat: MATERIAL[k] });
     }
-    return { defs: this.defs, names, parts };
+    const anh: THREE.BufferGeometry[] = [];
+    names.forEach((b, i) => {
+      const s = this.anhSlots.get(b);
+      if (s) for (const k of SLOTS) if (!s[k].empty) anh.push(onBone(s[k].geometry(), i));
+    });
+    this.anhSlots.clear();
+    const shape: RigShape<B> = { defs: this.defs, names, parts };
+    if (anh.length) {
+      const geo = mergeGeometries(anh, false);
+      for (const g of anh) g.dispose();
+      if (geo) shape.anh = geo;
+    }
+    return shape;
   }
+}
+
+/** Mọi đỉnh của `g` gắn cứng vào xương thứ `i`. */
+function onBone(g: THREE.BufferGeometry, i: number): THREE.BufferGeometry {
+  const n = g.getAttribute('position').count;
+  const index = new Uint16Array(n * 4);
+  const weight = new Float32Array(n * 4);
+  for (let v = 0; v < n; v++) {
+    index[v * 4] = i;
+    weight[v * 4] = 1;
+  }
+  g.setAttribute('skinIndex', new THREE.Uint16BufferAttribute(index, 4));
+  g.setAttribute('skinWeight', new THREE.Float32BufferAttribute(weight, 4));
+  return g;
 }
 
 function makeBones<B extends string>(shape: RigShape<B>): { root: THREE.Bone; bones: Bones<B>; list: THREE.Bone[] } {
@@ -290,8 +338,8 @@ export function skinRig<B extends string>(shape: RigShape<B>, ink = inkThin): { 
   return { group, bones };
 }
 
-/** Bản tĩnh (không xương) ở tư thế `pose`, cho chỗ nhân vật đứng yên như trong công trình. */
-export function bakeRig<B extends string>(shape: RigShape<B>, pose?: (bones: Bones<B>) => void, ink = inkThin): THREE.Group {
+/** Bản tĩnh (không xương) ở tư thế `pose`, cho chỗ nhân vật đứng yên như trong công trình. `ink` null: không viền mực. */
+export function bakeRig<B extends string>(shape: RigShape<B>, pose?: (bones: Bones<B>) => void, ink: typeof inkThin | null = inkThin): THREE.Group {
   const { root, bones, list } = makeBones(shape);
   root.updateMatrixWorld(true);
   const inverse = list.map((b) => b.matrixWorld.clone().invert());
@@ -329,7 +377,8 @@ export function bakeRig<B extends string>(shape: RigShape<B>, pose?: (bones: Bon
     const mesh = new THREE.Mesh(g, part.mat);
     mesh.castShadow = true;
     mesh.receiveShadow = true;
-    out.add(mesh, outlineOf(g, ink));
+    out.add(mesh);
+    if (ink) out.add(outlineOf(g, ink));
   }
   return out;
 }

@@ -2,7 +2,7 @@
 // trời ngày đêm (`troi.ts`), đêm yêu tinh, cảnh Tết (cây nêu, dây cờ, mâm bánh, người gói bánh) và các hiệu ứng khi đặt công trình.
 
 import * as THREE from 'three';
-import { BUILDINGS, FIELD, NGAY_MS, NU_TUONG_IDS, UNITS, XAY_O_MS, isBridge, isRoad, type BuildingType, type NuTuongId, type Terrain, type TuongId, type UnitType } from '../game/defs';
+import { BUILDINGS, FIELD, NGAY_MS, NU_TUONG_IDS, UNITS, UNIT_TYPES, XAY_O_MS, isBridge, isRoad, type BuildingType, type NuTuongId, type Terrain, type TuongId, type UnitType } from '../game/defs';
 import { raidSpawnBand, type Battle, type RaidSide } from '../game/battle';
 import { caoLoAtDien } from '../game/caoLo';
 import { HAI_BA_KINDS, haiBaJoined, type HaiBaKind } from '../game/chuong5';
@@ -15,13 +15,19 @@ import { giongLook, type GiongLook } from '../game/giong';
 import { KHOANH_N, khoanhOf, khoanhOrigin, openMask, openStart, openable } from '../game/khoanh';
 import { FAR_PLOTS, benKiaOpen, bridgeEnds, bridgeTo, plotAt, plotOf, plotOrigin, poiAt, poiPlots, type Dat } from '../game/benKia';
 import { DIEN_HOME, FAR_FOREST, FOREST_BAND, GRID, KHOANH, RIVER_END, RIVER_START, baseHeights, farBankOf, inGrid, isNearBank, isRiver, riverDistance, riverFacing, rotAngle, turnLocal } from '../game/map';
-import { BAI_CAT, BIEN_DIEN, CUA_BIEN, QUAN_DAO, RIVER_MID, benDock, bienDo, isSea, riverOf, seaIndex, seaRoute, type QuanDaoId, type SeaRoute } from '../game/bien';
+import { BAI_CAT, BIEN_DIEN, CUA_BIEN, QUAN_DAO, RIVER_MID, benDock, bienDo, daoBen, donDaoCong, donDaoHuong, isSea, quanDao, riverOf, seaIndex, seaRoute, warRoute, type QuanDao, type QuanDaoId, type SeaRoute } from '../game/bien';
+import { DAO_IDS, baoDao, benOf, giuBien, tripMs } from '../game/dao';
+import { armySpace } from '../game/doanhTrai';
 import { sonLook, type SonLook } from '../game/son';
 import { floodHits } from '../game/terrain';
 import { tetOpen } from '../game/tet';
 import { gioBuoi, troiLuc, type Buoi, type TroiLuc } from '../game/ngayDem';
 import { isBusy, itemProgress, pendingBuildings, pendingOf } from '../game/xay';
 import { Battlefield, CAM_KHE } from './battlefield';
+import { DaNgoaiCanh } from './daNgoai';
+import type { DaMapId } from '../game/defs';
+import type { Diem } from '../game/daNgoaiMap';
+import { tuongDau } from '../game/daNgoaiTran';
 import { BattleView } from './battleView';
 import { IsoCamera, type CamBounds } from './camera';
 import { DOOR_OPEN, banhChung, banhGiay } from './buildings';
@@ -36,7 +42,9 @@ import { buildDecor, disposeDecor, isBatchedDecor, type DecorSpot } from './deco
 import { buildWild, disposeWild, wildSpots } from './oTrong';
 import { buildCayDaBatch, disposeCayDaBatch, makeCayDa, type CayDaPlace } from './cayDa';
 import { bridgeDeckY, cloudPuffs, poiMarker, type BridgeBanks } from './benKia';
-import { SHORE_LAND, SeaLife, animateSea, buildSea, buildSeaMist, islandAt, shoreCap } from './bien';
+import { DON_DAO_Y, SHORE_LAND, SeaLife, animateSea, buildSea, buildSeaMist, daoMatY, donDaoSpot, islandAt, shoreCap } from './bien';
+import { CAU_STEP, donGac, makeDonDao } from './congTrinh/donDao';
+import { makeThuyenChien, type LinhCho } from './thuyenChien';
 import { makeSoldier } from './soldier';
 import { makeAnDuong, makeCaoLo, makeGiong, makeLacTuong, makeNuTuong, makeSonTinh, makeTrungNhi, makeTrungTrac } from './heroes';
 
@@ -469,6 +477,27 @@ function gateTurn(state: GameState, b: { x: number; z: number }, walls: Set<numb
  * Thuyền khơi của một bến thuyền khơi: đường đi (ô) và lịch một chuyến. Chuyến lặp mãi theo đồng hồ cảnh: neo ở bến,
  * xuôi sông ra biển, đánh cá một vòng quanh quần đảo, về bến. Chỉ để nhìn: cá và vỏ ốc tính đều mỗi phút (`game.ts`).
  */
+/**
+ * Thuyền chiến của một bến thuyền khơi (`dao.ts`): đường từ chỗ neo cạnh bến ra tới đầu cầu ván đồn đảo (thế giới),
+ * quãng cộng dồn, một lượt dài bao lâu (ms), còn bao lâu (ms, đếm lùi theo khung hình, mỗi lần đồng bộ lấy lại từ
+ * state), đang về hay đi.
+ */
+interface WarBoat {
+  obj: THREE.Group;
+  /** Đổi bến hay đổi lính đang chở thì dựng lại. */
+  key: string;
+  pts: THREE.Vector2[];
+  acc: number[];
+  total: number;
+  left: number;
+  ve: boolean;
+  /** Đang chạy chuyến; không thì neo cạnh bến thuyền khơi, mũi xuôi dòng (`dockHeading`). */
+  trip: boolean;
+  dockHeading: number;
+  /** Hướng mũi lúc này: xoay dần về hướng đi cho khỏi giật khi rời bến. */
+  heading: number;
+}
+
 interface SeaBoat {
   obj: THREE.Group;
   key: string;
@@ -484,6 +513,27 @@ interface SeaBoat {
 
 /** Thuyền khơi: neo ở bến chừng này giây, chạy chừng này ô mỗi giây, kéo lưới chậm hơn khi đánh cá quanh đảo. */
 const SEA_DOCK_S = 24;
+/** Thuyền chiến dừng cách đầu cầu ván đồn đảo chừng này ô (thế giới): mũi thuyền vừa chạm đầu cầu. */
+const WAR_BOAT_BOW = 2.1;
+/** Thuyền chiến neo xa bờ hơn chỗ thuyền khơi neo chừng này ô: mái chèo khỏi chạm thuyền khơi. */
+const WAR_BOAT_NEO = 2;
+
+/**
+ * Cầu ván từ cổng đồn đảo quần đảo `q` ra bến ván: dài bao nhiêu ô, mặt đất dưới cầu từng quãng `CAU_STEP` so với mặt
+ * sân đồn (null là nước), để mô hình đồn dựng cọc cầu chạm đất và mặt cầu không lẫn vào bờ.
+ */
+function cauVanOf(q: QuanDao): { len: number; mat: (number | null)[] } {
+  const c = donDaoCong(q);
+  const b = daoBen(q);
+  const h = donDaoHuong(q);
+  const len = Math.hypot(b.x - c.x, b.z - c.z);
+  const mat: (number | null)[] = [];
+  for (let t = CAU_STEP / 2; t < len + CAU_STEP / 2; t += CAU_STEP) {
+    const y = daoMatY(q, c.x + h.x * t, c.z + h.z * t);
+    mat.push(y === null ? null : y - DON_DAO_Y);
+  }
+  return { len, mat };
+}
 /** Đoàn thuyền thủy binh Triệu từ biển kéo vào đi chừng này ô mỗi giây (60 giây báo đủ đi từ khơi tới đầu sông xa nhất). */
 const FLEET_SPEED = 2;
 /** Một thuyền trong đoàn thủy binh đang tới: đường từ khơi tới chỗ hiện ra (tọa độ thế giới), dài bao nhiêu. */
@@ -495,6 +545,19 @@ interface FleetBoat {
 }
 const SEA_SPEED = 2.2;
 const SEA_FISH_SPEED = 1.5;
+
+/** Khói xám bốc lên từ công trình hư (vòng khói chạy ở vòng vẽ: `puffSmoke`). */
+function khoiHu(color: number = C.smoke): THREE.Group {
+  const smoke = new THREE.Group();
+  smoke.userData.smoke = true;
+  const mat = new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.5, depthWrite: false });
+  for (let i = 0; i < 4; i++) {
+    const puff = new THREE.Mesh(new THREE.SphereGeometry(0.22, 7, 5), mat);
+    puff.userData.phase = i / 4;
+    smoke.add(puff);
+  }
+  return smoke;
+}
 
 export class World {
   readonly renderer: THREE.WebGLRenderer;
@@ -610,6 +673,8 @@ export class World {
   private readonly raidView = new BattleView(this.scene, { x: -HALF, z: -HALF }, 1, (x, z, wet, wall) => this.fighterY(x, z, wet, wall));
   /** Bãi chiến phó bản, dựng khi cần lần đầu. */
   private field?: Battlefield;
+  /** Map dã ngoại đang xem (`showDaNgoai`). */
+  private da?: DaNgoaiCanh;
   /** Nắng có đổ bóng không (Cài đặt Bóng đổ, `setBongDo`). */
   private bongDo = true;
   /** Đang xem bãi chiến: chỗ camera nhìn kinh đô trước đó, để trả về sau trận. */
@@ -672,6 +737,9 @@ export class World {
   private readonly seaLife: SeaLife;
   /** Thuyền khơi của từng bến thuyền khơi: neo trước bến, xuôi sông ra biển đánh cá quanh đảo rồi về. */
   private readonly seaBoats = new Map<number, SeaBoat>();
+  /** Đồn đảo (hình tạm: đồn biên phóng to) theo cấp, và thuyền chiến đang chở quân. */
+  private readonly daoForts = new Map<QuanDaoId, { obj: THREE.Group; key: string }>();
+  private readonly warBoats = new Map<QuanDaoId, WarBoat>();
   /** Đoàn thuyền thủy binh Triệu, thủy quân Hán (cả lâu thuyền) từ biển kéo vào trong lúc trinh sát báo (`upcomingBoats`), dựng lại theo đợt. */
   private fleet: { key: string; boats: FleetBoat[] } | null = null;
   /**
@@ -692,6 +760,8 @@ export class World {
     this.view = new IsoCamera(canvas);
     this.view.onUserMove = () => {
       this.panGoal = null;
+      // Map dã ngoại: người chơi tự kéo cảnh thì camera thôi bám đội (chạm đất, bật Tự đánh thì bám lại).
+      this.daFollow = false;
     };
     this.view.target.set(wx(DIEN_HOME) + BUILDINGS.dien.w / 2, 0, wz(DIEN_HOME) + BUILDINGS.dien.d / 2);
 
@@ -1015,7 +1085,7 @@ export class World {
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, RESOLUTIONS[this.res]));
     this.renderer.setSize(w, h, false);
     this.view.setSize(w, h);
-    if (this.inField) this.fitField();
+    if (this.inField && !this.da) this.fitField();
   }
 
   /** Xóa mọi thứ đã vẽ theo state cũ, dùng khi nạp mã lưu hoặc chơi lại. */
@@ -1189,6 +1259,7 @@ export class World {
 
     this.syncMerchant(state);
     this.syncSeaBoats(state);
+    this.syncDao(state);
     this.syncFleet(state);
     this.syncSeaMist(dienLevel(state) < BIEN_DIEN);
     this.syncGiong(state);
@@ -1282,7 +1353,10 @@ export class World {
    */
   private syncDuoc(): void {
     const views = [...this.views.entries()].filter(([, v]) => !v.damaged && !v.dung);
-    const key = views.map(([id, v]) => `${id}:${v.type}:${v.level}:${v.x}:${v.z}:${v.group.rotation.y.toFixed(2)}:${v.group.position.y.toFixed(2)}`).join(',');
+    const forts = [...this.daoForts.entries()];
+    const key =
+      views.map(([id, v]) => `${id}:${v.type}:${v.level}:${v.x}:${v.z}:${v.group.rotation.y.toFixed(2)}:${v.group.position.y.toFixed(2)}`).join(',') +
+      `|${forts.map(([id, f]) => `${id}:${f.key}`).join(',')}`;
     if (key === this.duocKey) return;
     this.duocKey = key;
     const spots: DuocSpot[] = [];
@@ -1306,6 +1380,18 @@ export class World {
         spots.push(spot);
       });
     }
+    // Đuốc cổng, đuốc đầu cầu ván, lửa hiệu đồn đảo (ngoài lưới, không qua `views`).
+    forts.forEach(([id, f], n) => {
+      f.obj.updateWorldMatrix(true, true);
+      let i = 0;
+      for (const o of f.obj.children) {
+        if (!o.userData.flame) continue;
+        o.getWorldPosition(p);
+        const spot: DuocSpot = { x: p.x, y: p.y, z: p.z, kind: 'lua', seed: hash01(9000 + n * 101 + id.length * 7 + i++) };
+        if (typeof o.userData.flameDat === 'number') spot.dat = f.obj.localToWorld(p.set(o.position.x, o.userData.flameDat, o.position.z)).y;
+        spots.push(spot);
+      }
+    });
     this.duoc.set(spots);
   }
 
@@ -1702,6 +1788,144 @@ export class World {
   }
 
   /**
+   * Đồn đảo và thuyền chiến theo state (`dao.ts`). Đồn dựng lại khi đổi cấp, đổi số lính gác, bậc binh khí, lửa hiệu
+   * cháy, tắt (đồn giữ biển lúc thủy quân Hán sắp tới, hay giặc áp sát đảo: `baoDao`) hay đồn hư (bốc khói, không đốt
+   * lửa hiệu). Thuyền neo cạnh bến thuyền khơi khi rảnh, chạy theo chuyến khi
+   * chở quân (chỗ trên đường lấy lại từ thời gian còn lại), dựng lại khi lính đang chở đổi. Gọi mỗi lần đồng bộ cảnh và
+   * đều đặn lúc chơi (chuyến mới bắt đầu trong `tick`, không qua thao tác nào).
+   */
+  syncDao(state: GameState): void {
+    const thuyHan = state.raid.foe === 'thuyHan' && state.raid.phase !== 'idle';
+    let forts = false;
+    for (const id of DAO_IDS) {
+      const d = state.dao[id];
+      const q = quanDao(id);
+      const gac = donGac(armySpace(d.linh));
+      const lit = !d.hu && ((thuyHan && giuBien(state, id) > 0) || baoDao(state, id) !== null);
+      const key = d.cap > 0 ? `${d.cap}:${gac}:${state.arms.giao}:${state.arms.cung}:${lit ? 1 : 0}:${d.hu ? 1 : 0}` : '';
+      const old = this.daoForts.get(id);
+      if ((old?.key ?? '') !== key) {
+        forts = true;
+        if (old) {
+          this.scene.remove(old.obj);
+          disposeModel(old.obj);
+          this.daoForts.delete(id);
+        }
+        if (key) {
+          const obj = makeDonDao(d.cap, { gac, tierGiao: state.arms.giao, tierCung: state.arms.cung, lit, cau: cauVanOf(q) });
+          if (d.hu) {
+            // Đồn hư: ba cột khói xám bốc lên trong sân đồn, như công trình hư trong kinh đô
+            // (đồn rộng nên khói to hơn, đứng so le cho thấy được từ mọi hướng camera).
+            for (const [x, z, k] of [[-1.6, 1.2, 2.6], [1.8, -0.8, 2.2], [0.4, 2.6, 1.8]]) {
+              // Khói sẫm hơn khói công trình hư: nền cát trắng làm khói xám nhạt chìm mất.
+              const smoke = khoiHu(C.smokeDao);
+              smoke.position.set(x, 0.6, z);
+              smoke.scale.setScalar(k);
+              obj.add(smoke);
+            }
+          }
+          obj.position.copy(donDaoSpot(q, HALF));
+          // Cổng (mặt trước +z) quay về bến ván.
+          const h = donDaoHuong(q);
+          obj.rotation.y = Math.atan2(h.x, h.z);
+          this.scene.add(obj);
+          this.daoForts.set(id, { obj, key });
+        }
+      }
+      const ben = benOf(state, id);
+      const c = d.chuyen;
+      const cho: LinhCho[] = [];
+      if (c) for (const k of UNIT_TYPES) for (let i = 0; i < c.cho[k] && cho.length < 6; i++) cho.push({ kind: k === 'voi' ? 'giao' : k, tier: state.arms[k === 'voi' ? 'giao' : k] });
+      const bkey = d.thuyen && ben ? `${ben.id}:${ben.x}:${ben.z}:${cho.map((l) => l.kind + l.tier).join(',')}` : '';
+      let boat = this.warBoats.get(id);
+      if ((boat?.key ?? '') !== bkey) {
+        if (boat) {
+          this.scene.remove(boat.obj);
+          disposeModel(boat.obj);
+          this.warBoats.delete(id);
+        }
+        boat = undefined;
+        if (ben && bkey) {
+          const pts = warRoute(ben, seaIndex(state, ben)).path.map((p) => new THREE.Vector2(wx(p.x), wz(p.z)));
+          // Neo ngoài thuyền khơi, xa bờ hơn một quãng; về tới đảo thì mũi vừa chạm đầu cầu ván.
+          pts[0] = pts[0].clone().lerp(pts[1], Math.min(0.8, WAR_BOAT_NEO / Math.max(0.01, pts[0].distanceTo(pts[1]))));
+          const n = pts.length;
+          const last = pts[n - 2].distanceTo(pts[n - 1]);
+          pts[n - 1] = pts[n - 1].clone().lerp(pts[n - 2], Math.min(last - 0.1, WAR_BOAT_BOW) / last);
+          const acc = [0];
+          for (let i = 1; i < pts.length; i++) acc.push(acc[i - 1] + pts[i].distanceTo(pts[i - 1]));
+          const obj = makeThuyenChien(cho);
+          obj.rotation.order = 'YXZ';
+          obj.scale.setScalar(SEA_BOAT_SCALE);
+          this.scene.add(obj);
+          const dockHeading = riverOf(ben) === 'thao' ? -Math.PI / 2 : 0;
+          boat = { obj, key: bkey, pts, acc, total: 1, left: 0, ve: false, trip: false, dockHeading, heading: dockHeading };
+          this.warBoats.set(id, boat);
+        }
+      }
+      if (boat) {
+        boat.trip = !!c;
+        boat.total = Math.max(1, tripMs(state, id));
+        boat.left = c ? c.con : 0;
+        boat.ve = c ? c.ve : false;
+      }
+    }
+    if (forts) this.syncDuoc();
+  }
+
+  /** Cụm khói (`userData.smoke`) bốc lên, tan dần; khói không nhận đèn nên tối theo trời, không thì sáng trắng giữa đêm. */
+  private puffSmoke(group: THREE.Object3D, t: number): void {
+    for (const puff of group.children) {
+      // Lấy phần lẻ dương: đồng hồ cảnh có lúc âm (ảnh chụp thử), `%` của số âm ra âm thì khói chui xuống đất.
+      const x = t * 0.35 + (puff.userData.phase as number);
+      const k = x - Math.floor(x);
+      puff.position.set(Math.sin(k * 6 + puff.id) * 0.2, k * 1.6, Math.cos(k * 5) * 0.15);
+      puff.scale.setScalar(0.6 + k * 1.2);
+      const mat = (puff as THREE.Mesh).material as THREE.MeshBasicMaterial;
+      mat.opacity = 0.5 * (1 - k);
+      const goc = (mat.userData.mauGoc ??= mat.color.clone()) as THREE.Color;
+      mat.color.copy(goc).multiply(this.troi.unlit);
+    }
+  }
+
+  /** Thuyền chiến chạy theo thời gian còn lại của chuyến: đi thì từ bến ra đảo, về thì ngược lại; rảnh thì neo ở bến. */
+  private moveWarBoat(b: WarBoat, t: number, dt: number): void {
+    const o = b.obj;
+    let p = b.pts[0];
+    let goal = b.dockHeading;
+    if (b.trip) {
+      b.left = Math.max(0, b.left - dt * 1000);
+      const len = b.acc[b.acc.length - 1];
+      const f = 1 - b.left / b.total;
+      const at = (d: number): THREE.Vector2 => {
+        const e = Math.min(len, Math.max(0, d));
+        let i = 1;
+        while (i < b.acc.length - 1 && b.acc[i] < e) i++;
+        const u = (e - b.acc[i - 1]) / Math.max(1e-6, b.acc[i] - b.acc[i - 1]);
+        return b.pts[i - 1].clone().lerp(b.pts[i], Math.min(1, Math.max(0, u)));
+      };
+      const d = (b.ve ? 1 - f : f) * len;
+      p = at(d);
+      const dir = b.ve ? -1 : 1;
+      const ahead = at(d + 0.9 * dir);
+      const behind = at(d - 0.9 * dir);
+      if (ahead.distanceToSquared(behind) > 1e-6) goal = Math.atan2(-(ahead.y - behind.y), ahead.x - behind.x);
+      else goal = b.heading;
+    }
+    let turn = goal - b.heading;
+    turn = Math.atan2(Math.sin(turn), Math.cos(turn));
+    b.heading += turn * (1 - Math.exp(-dt * 2.5));
+    o.position.x = p.x;
+    o.position.z = p.y;
+    o.rotation.y = b.heading;
+    const swell = isSea(p.x + HALF, p.y + HALF) ? 1 : 0.35;
+    o.position.y = WATER_Y - 0.02 + Math.sin(t * 1.3) * 0.05 * swell;
+    o.rotation.x = Math.sin(t * 0.9) * 0.05 * swell;
+    o.rotation.z = Math.sin(t * 1.1) * 0.04 * swell;
+    (o.userData.row as ((t: number, moving: boolean) => void) | undefined)?.(t, b.trip && b.left > 0);
+  }
+
+  /**
    * Thuyền khơi ở đâu lúc `t`: một chuyến gồm neo ở bến, xuôi sông qua cửa biển ra ngư trường, kéo lưới một vòng quanh
    * quần đảo, rồi đi ngược đường cũ về bến. Mũi thuyền theo hướng đi (nhìn trước, sau một quãng ngắn cho mượt khi rẽ).
    */
@@ -1777,6 +2001,7 @@ export class World {
     this.bongDo = on;
     this.lights.sun.castShadow = on;
     this.field?.setShadows(on);
+    this.da?.setShadows(on);
   }
 
   get bongDoOn(): boolean {
@@ -1891,14 +2116,7 @@ export class World {
         group.rotation.z = 0.12;
         group.scale.y *= 0.85;
       }
-      const smoke = new THREE.Group();
-      smoke.userData.smoke = true;
-      const mat = new THREE.MeshBasicMaterial({ color: C.smoke, transparent: true, opacity: 0.5, depthWrite: false });
-      for (let i = 0; i < 4; i++) {
-        const puff = new THREE.Mesh(new THREE.SphereGeometry(0.22, 7, 5), mat);
-        puff.userData.phase = i / 4;
-        smoke.add(puff);
-      }
+      const smoke = khoiHu();
       smoke.position.y = 1.2;
       // Đền Rồng Tiên: khói bốc trên nóc đền chính (lùi về sau móng), cuộn to hợp với đền lớn.
       if (b.type === 'denRongTien') {
@@ -3031,12 +3249,12 @@ export class World {
       }
       this.datGanh(v, id, viec);
     }
-    // Giàn giáo: công trình đang dựng mới (giá dựng) hay đang nâng (giá cấp tới).
+    // Giàn giáo: vật liệu theo giá đã trả cho phần việc (dựng mới, nâng cấp, hay đóng thuyền chiến ở bến thuyền khơi).
     const moi = new Map(pend.map((b) => [b.id, b]));
     for (const [id, site] of this.sites) {
       const b = moi.get(id) ?? byId.get(id);
       const tuyen = b && site.people.length ? tuyenXay(state, b, GANH_LOTS) : null;
-      const cost = b ? (moi.has(id) ? BUILDINGS[b.type].buildCost : upgradeCostOf(b)) : undefined;
+      const cost = b ? (pendingOf(state, id)?.gia ?? (moi.has(id) ? BUILDINGS[b.type].buildCost : upgradeCostOf(b))) : undefined;
       this.datGanh(site, id, tuyen && { tuyen, hang: vatLieu(cost), chieu: 've' });
     }
   }
@@ -3267,15 +3485,18 @@ export class World {
     return this.cityCam !== null;
   }
 
-  /** Sang bãi chiến với nền `terrain` và bố cục vật cản `bai` (`baiChien.ts`), hoặc về lại kinh đô khi `terrain` là null. */
-  showField(terrain: Terrain | null, bai: string | null = null): void {
+  /**
+   * Sang bãi chiến với nền `terrain` và bố cục vật cản `bai` (`baiChien.ts`), hoặc về lại kinh đô khi `terrain` là null.
+   * Nền đảo dựng đồn đảo cấp `donCap` sau lưng quân ta.
+   */
+  showField(terrain: Terrain | null, bai: string | null = null, donCap?: number): void {
     const v = this.view;
     if (terrain) {
       if (!this.field) {
         this.field = new Battlefield();
         this.field.setShadows(this.bongDo);
       }
-      this.field.setTerrain(terrain, bai);
+      this.field.setTerrain(terrain, bai, donCap);
       if (!this.cityCam) this.cityCam = { target: v.target.clone(), zoom: v.zoom, bounds: { ...v.bounds }, facing: v.facing };
       this.panGoal = null;
       // Bãi chiến vẽ cho hướng nhìn mặc định: quân ta ở dưới, giặc ở trên.
@@ -3315,10 +3536,90 @@ export class World {
     v.zoomToFit(FIELD.w + 1.5, FIELD.d * 0.62 + 3);
   }
 
+  /** Đang xem map dã ngoại. */
+  get inDa(): boolean {
+    return !!this.da;
+  }
+
+  /**
+   * Sang map dã ngoại `map` (dựng cảnh, đổi map thì dựng lại), hay về lại kinh đô khi `map` là null. Camera nhìn gần
+   * quanh đội, kéo được khắp map.
+   */
+  showDaNgoai(map: DaMapId | null, tuongDauCho?: Diem | null): void {
+    const v = this.view;
+    if (map) {
+      if (this.da?.map !== map) {
+        this.da?.dispose();
+        this.da = new DaNgoaiCanh(map);
+        this.da.setShadows(this.bongDo);
+      }
+      if (!this.cityCam) this.cityCam = { target: v.target.clone(), zoom: v.zoom, bounds: { ...v.bounds }, facing: v.facing };
+      this.panGoal = null;
+      v.setFacing(0);
+      // Map 80×80 xoay 45° quanh tâm: camera chỉ kéo tới chừng mép map.
+      v.bounds = { min: -46, max: 46 };
+      v.zoom = 1.1;
+      // Hiện ra ngay chỗ đội đứng, không trôi từ kinh đô tới.
+      const lead = tuongDauCho;
+      if (lead) v.target.copy(this.da.toScene(lead.x, lead.z));
+      v.apply();
+      this.daFollow = true;
+      return;
+    }
+    if (this.da) {
+      this.da.dispose();
+      this.da = undefined;
+    }
+    if (!this.cityCam) return;
+    v.bounds = this.cityCam.bounds;
+    v.target.copy(this.cityCam.target);
+    v.zoom = this.cityCam.zoom;
+    v.setFacing(this.cityCam.facing);
+    this.cityCam = null;
+  }
+
+  /** Camera đi theo đội (chạm đất, tự đánh); kéo cảnh (`onUserMove`) thì thôi theo tới khi `followDa`. */
+  private daFollow = true;
+  followDa(): void {
+    this.daFollow = true;
+  }
+
+  /** Vẽ trận trên map dã ngoại; camera trôi theo tướng đầu. */
+  updateDa(battle: Battle | null, dt: number): void {
+    const da = this.da;
+    if (!da) return;
+    const v = this.view;
+    const lead = battle ? tuongDau(battle) : undefined;
+    if (lead && this.daFollow) {
+      const p = da.toScene(lead.x, lead.z);
+      const k = Math.min(1, dt * 3);
+      v.target.x += (p.x - v.target.x) * k;
+      v.target.z += (p.z - v.target.z) * k;
+      v.apply();
+    }
+    da.update(battle, dt, v.target, v.zoom);
+  }
+
+  /** Điểm trên map dã ngoại ở chỗ chạm, hay null. */
+  pickDa(clientX: number, clientY: number): Diem | null {
+    if (!this.da) return null;
+    const p = this.view.groundPoint(clientX, clientY);
+    return p ? this.da.fromScene(p) : null;
+  }
+
+  /** Điểm màn hình (px) của điểm (x, z) trên map dã ngoại, để giao diện đặt chữ nổi. */
+  daScreenAt(x: number, z: number, lift = 1.6): { x: number; y: number } | null {
+    if (!this.da) return null;
+    const p = this.da.toScene(x, z).setY(lift).project(this.view.camera);
+    if (p.z > 1) return null;
+    const r = this.renderer.domElement.getBoundingClientRect();
+    return { x: r.left + ((p.x + 1) / 2) * r.width, y: r.top + ((1 - p.y) / 2) * r.height };
+  }
+
   /** Vẽ trận ngoài bãi đang diễn ra. Cảnh kết chương có điểm nhìn riêng (Rùa Vàng ở biển) thì camera lướt tới đó. */
   updateField(battle: Battle | null, dt: number): void {
     this.field?.update(battle, dt);
-    const focus = this.inField ? this.field?.focus() : null;
+    const focus = this.inField && !this.da ? this.field?.focus() : null;
     if (!focus) return;
     const v = this.view;
     v.bounds = { min: -30, max: 30 };
@@ -3500,18 +3801,7 @@ export class World {
           const goal = v.group.userData.mo ? (child.userData.phai as number) : 0;
           child.position.y += (goal - child.position.y) * (1 - Math.exp(-dt * 2.5));
         }
-        if (child.userData.smoke) {
-          for (const puff of child.children) {
-            const k = (t * 0.35 + (puff.userData.phase as number)) % 1;
-            puff.position.set(Math.sin(k * 6 + puff.id) * 0.2, k * 1.6, Math.cos(k * 5) * 0.15);
-            puff.scale.setScalar(0.6 + k * 1.2);
-            const mat = (puff as THREE.Mesh).material as THREE.MeshBasicMaterial;
-            mat.opacity = 0.5 * (1 - k);
-            // Khói không nhận đèn: tối theo trời, không thì sáng trắng giữa đêm.
-            const goc = (mat.userData.mauGoc ??= mat.color.clone()) as THREE.Color;
-            mat.color.copy(goc).multiply(this.troi.unlit);
-          }
-        }
+        if (child.userData.smoke) this.puffSmoke(child, t);
       }
     }
 
@@ -3528,6 +3818,14 @@ export class World {
       if (!this.seaMist) this.seaLife.update(t, dt, this.view.target);
       this.updateSeaMist(dt);
       for (const boat of this.seaBoats.values()) this.moveSeaBoat(boat, t);
+      for (const boat of this.warBoats.values()) this.moveWarBoat(boat, t, dt);
+      // Đuốc, lửa hiệu đồn đảo lập lòe, khói lửa hiệu bốc lên.
+      for (const f of this.daoForts.values()) {
+        for (const child of f.obj.children) {
+          if (child.userData.flame) child.scale.y = 0.75 + 0.35 * Math.abs(Math.sin(t * 9 + child.id));
+          if (child.userData.smoke) this.puffSmoke(child, t);
+        }
+      }
       this.moveFleet(t);
     }
 
@@ -3645,7 +3943,7 @@ export class World {
       (this.selection.material as THREE.LineBasicMaterial).opacity = 0.6 + Math.sin(t * 5) * 0.4;
     }
 
-    this.renderer.render(this.inField && this.field ? this.field.scene : this.scene, this.view.camera);
+    this.renderer.render(this.da ? this.da.scene : this.inField && this.field ? this.field.scene : this.scene, this.view.camera);
   }
 
   /**

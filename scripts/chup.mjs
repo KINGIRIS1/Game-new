@@ -42,6 +42,21 @@ const CO_QUAN = `
 `;
 const KINH_DO = `M.playChapters({ s, until: (m) => m.at5 >= 0 });`;
 /** Kinh đô Điện 8 vừa sang chương 5 (đã thắng tới màn `cleared`), có doanh trại và quân, đã xem hết truyện tới lúc ấy. */
+/**
+ * Điện 10 sau truyện (người chơi mô phỏng chơi thêm 5 giờ: hai đồn đảo lên cấp, có thuyền chiến), chương 5 đã thắng
+ * màn 37 (Mã Viện sang), đồn Hoàng Sa có 30 chỗ quân đóng; giặc kinh đô không tới để khỏi che cảnh.
+ */
+const DAO_GIAC = `M.playChapters({ s, last: 10 }); for (let i = 0; i < 5 * 3600; i++) M.playSecond(s);
+  s.questIndex = Math.max(s.questIndex, D.CH5_QUEST_START); s.campaign.cleared = Math.max(s.campaign.cleared, 37);
+  s.dao.hoangSa.linh = { giao: 9, cung: 8, voi: 3, no: 2 }; s.dao.hoangSa.muon = { ...s.dao.hoangSa.linh };
+  s.raid.nextAt = Number.MAX_SAFE_INTEGER; s.raid.phase = 'idle'; s.raid.battle = null;
+  for (let id; (id = S.pendingStory(s)); ) S.markStory(s, id);
+  for (let t; (t = G.nextHint(s)); ) G.markHinted(s, t);
+  s.hinted = [...s.hinted, 'dao:mo', 'dao:maVien'];
+  const Nu = await import('/src/game/nuTuong.ts');
+  for (let n; (n = Nu.nextNuHint(s)); ) Nu.markNuHinted(s, n);
+`;
+
 const CHUONG5 = (cleared) => `M.playChapters({ s, last: 8 });${CO_QUAN}
   for (const b of s.buildings) if (b.type === 'doanhTrai') b.level = D.BUILDINGS.doanhTrai.maxLevel;
   const cho5 = G.troopCap(s);
@@ -455,11 +470,55 @@ d.camera(cx, cz, 2.6);`,
     doi: 3000,
     gio: 'dem',
   },
+  'da-ngoai': {
+    mo: 'Chương 5 (đã thắng màn 35): bảng Dã ngoại ở bản đồ phó bản (cấp chung, đội, năm map, treo máy)',
+    truoc: `${CHUONG5(35)}\ns.daNgoai.cap = 12; s.daNgoai.exp = 900; s.daNgoai.xa = 2; s.daNgoai.doi = ['trungTrac', 'trungNhi', 'caoLo'];`,
+    sau: `document.querySelector('[data-act=openCampaign]').click(); document.querySelector('[data-act=openDaNgoai]').click();`,
+  },
+  'da-ngoai-tran': {
+    mo: 'Như da-ngoai, đội ba tướng ra map 1 (Rừng Phong Châu) đứng ở mép khu 2, Tự đánh, chụp sau 6 giây',
+    truoc: `${CHUONG5(35)}\ns.daNgoai.doi = ['trungTrac', 'trungNhi', 'caoLo'];`,
+    sau: `d.daNgoai(1, 1);`,
+    doi: 6000,
+  },
+  'da-ngoai-5': {
+    mo: 'Như da-ngoai-tran, ở map 5 (Rừng Mê Linh) khu 1 (báo gấm), chụp sau 6 giây',
+    truoc: `${CHUONG5(35)}\ns.daNgoai.doi = ['trungTrac', 'trungNhi', 'caoLo'];`,
+    sau: `d.daNgoai(5, 0);`,
+    doi: 6000,
+  },
+  'da-ngoai-boss': {
+    mo: 'Như da-ngoai-tran, map 3 (Đồi Thất Diệu, đêm), đội đứng sát khu boss (gà trắng), chụp sau 3 giây',
+    truoc: `${CHUONG5(35)}\ns.daNgoai.doi = ['trungTrac', 'trungNhi', 'caoLo'];`,
+    sau: `d.daNgoai(3, 4, 30);`,
+    doi: 3000,
+  },
   'pho-ban-5': {
     mo: 'Hai Bà Trưng đánh màn 36 (thành Luy Lâu, có Tô Định) ngoài bãi, chụp sau 4 giây',
     truoc: CHUONG5(35),
     sau: `const r = d.march(36); if (!r.ok) throw new Error('Không đánh màn 36 được: ' + r.reason);`,
     doi: 4000,
+  },
+  'dao-bang': {
+    mo: 'Điện 10, Mã Viện đã sang, đồn Hoàng Sa có quân, vừa giữ được một đợt giặc: bảng quần đảo, phần Giặc đánh đảo',
+    truoc: DAO_GIAC,
+    sau: `d.daoTran('hoangSa'); d.quanDao('hoangSa'); const cuon = setInterval(() => document.querySelector('.sheet-body')?.scrollTo(0, 99999), 200); setTimeout(() => clearInterval(cuon), 6000);`,
+  },
+  'dao-tran': {
+    mo: 'Như dao-bang, đang xem lại trận giặc đánh đảo Hoàng Sa (chụp sau 8 giây)',
+    truoc: DAO_GIAC,
+    sau: `d.daoTran('hoangSa'); d.xemDao('hoangSa');`,
+    doi: 8000,
+  },
+  'dao-bao': {
+    mo: 'Như dao-bang, thuyền giặc Hán áp sát đảo Hoàng Sa (còn 2 phút): dòng tin, lửa hiệu đồn cháy',
+    truoc: `${DAO_GIAC} s.dao.hoangSa.sau = s.clock + 120_000;`,
+    sau: `d.camera(100, 70, 1.3);`,
+  },
+  'dao-hu': {
+    mo: 'Như dao-bang, đồn Hoàng Sa thất thủ: đồn hư bốc khói, dòng tin báo, bảng quần đảo có nút Sửa đồn',
+    truoc: `${DAO_GIAC} s.dao.hoangSa.linh = { giao: 2, cung: 0, voi: 0, no: 0 };`,
+    sau: `d.daoTran('hoangSa'); d.camera(100, 70, 1.3);`,
   },
 };
 

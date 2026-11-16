@@ -1,5 +1,7 @@
 // Mọi con số cân bằng game nằm ở đây để dễ tinh chỉnh bằng test.
 
+import type { QuanDaoId } from './bien';
+
 export const RESOURCE_IDS = ['gao', 'voOc', 'datDa', 'sat', 'go'] as const;
 export type ResourceId = (typeof RESOURCE_IDS)[number];
 export type Resources = Record<ResourceId, number>;
@@ -1446,7 +1448,13 @@ export type EnemyType =
   | 'giapHan'
   | 'toDinh'
   | 'maVien'
-  | 'lauThuyen';
+  | 'lauThuyen'
+  // Quái dã ngoại (chỉ ở map dã ngoại, `daNgoai.ts`): lợn rừng Phong Châu, cua đá cửa sông, báo gấm, rắn hổ mang chúa
+  // rừng Mê Linh.
+  | 'lonRung'
+  | 'cuaDa'
+  | 'baoGam'
+  | 'ranHo';
 export const UNIT_TYPES: UnitType[] = ['giao', 'cung', 'voi', 'no'];
 
 export interface FighterStats {
@@ -1543,6 +1551,12 @@ export const ENEMIES: Record<EnemyType, FighterStats> = {
   // công trình phòng thủ bắn tới. Bắn xa hơn cung thủ, nên cung thủ đứng bờ sông hay ngã trước khi thuyền chìm:
   // máu, sát thương thấp hơn đề xuất (1800, 18) cho đợt đầu vừa sức quân mẫu (`chuong5.test.ts`).
   lauThuyen: { hp: 900, dmg: 12, range: 5, speed: 0.6, cooldown: 2 },
+  // Quái dã ngoại: máu, sức đánh ở map dã ngoại tính theo cấp quái (`DA_QUAI`), số ở đây chỉ là dáng đánh (tầm, tốc
+  // chạy, nghỉ giữa hai đòn) và tỉ lệ so với lính giặc thường.
+  lonRung: { hp: 80, dmg: 9, range: 0.8, speed: 1.6, cooldown: 1.1 },
+  cuaDa: { hp: 110, dmg: 11, range: 0.8, speed: 1.1, cooldown: 1.2 },
+  baoGam: { hp: 100, dmg: 13, range: 0.9, speed: 2.2, cooldown: 0.9 },
+  ranHo: { hp: 95, dmg: 12, range: 1.6, speed: 1.4, cooldown: 1.2 },
 };
 
 /**
@@ -1818,6 +1832,10 @@ export const ENEMY_ROWS: Record<EnemyType, Row> = {
   toDinh: 'hau',
   maVien: 'hau',
   lauThuyen: 'hau',
+  lonRung: 'tien',
+  cuaDa: 'tien',
+  baoGam: 'trung',
+  ranHo: 'trung',
 };
 
 /**
@@ -1833,7 +1851,7 @@ export const FIELD = { w: 9, d: 22, gap: 10, hpMul: 1.6, maxS: 90 };
  */
 export const BAI_CHAM = { nuoc: 0.6, bun: 0.75 };
 
-export type Terrain = 'rung' | 'benSong' | 'lang' | 'don' | 'nui' | 'doi' | 'ngap' | 'tanVien' | 'thatDieu' | 'coLoa' | 'cuaSong' | 'moDa' | 'benKia' | 'hatMon' | 'luyLau' | 'langBac' | 'camKhe';
+export type Terrain = 'rung' | 'benSong' | 'lang' | 'don' | 'nui' | 'doi' | 'ngap' | 'tanVien' | 'thatDieu' | 'coLoa' | 'cuaSong' | 'moDa' | 'benKia' | 'hatMon' | 'luyLau' | 'langBac' | 'camKhe' | 'dao';
 
 export type Chapter = 1 | 2 | 3 | 4 | 5;
 
@@ -2093,7 +2111,13 @@ export type QuestGoal =
   /** Đánh chìm được `amount` lâu thuyền Hán ở kinh đô (cộng dồn qua mọi đợt). */
   | { kind: 'lauSunk'; amount: number }
   /** Có ít nhất `amount` công trình (không kể Điện) ở cấp `level` trở lên. */
-  | { kind: 'buildingLevel'; level: number; amount: number };
+  | { kind: 'buildingLevel'; level: number; amount: number }
+  /** Đã đóng ít nhất `amount` thuyền chiến (đóng đảo). */
+  | { kind: 'thuyenChien'; amount: number }
+  /** Đồn đảo của quần đảo `dao` (không ghi thì đồn nào cũng được) đã lên cấp `level`. */
+  | { kind: 'donDao'; dao?: QuanDaoId; level: number }
+  /** Quân đảo đã giữ được `amount` đợt giặc Hán đánh đảo (cộng hai đồn). */
+  | { kind: 'giuDao'; amount: number };
 
 export interface QuestDef {
   id: string;
@@ -2172,6 +2196,12 @@ export const QUESTS: QuestDef[] = [
   { id: 'denHatMon', goal: { kind: 'count', building: 'denHatMon', amount: 1 }, reward: { datDa: 3500, sat: 1100 } },
   // Sau truyện chương 5: Đền Rồng Tiên (mở từ Điện 10).
   { id: 'denRongTien', goal: { kind: 'count', building: 'denRongTien', amount: 1 }, reward: { datDa: 4500, sat: 1400 } },
+  // Điện 10 điều quân ra đóng đảo (`dao.ts`).
+  { id: 'thuyenChien', goal: { kind: 'thuyenChien', amount: 1 }, reward: { gao: 4000, go: 3000 } },
+  { id: 'donHoangSa', goal: { kind: 'donDao', dao: 'hoangSa', level: 1 }, reward: { voOc: 5000, sat: 1500 } },
+  { id: 'donTruongSa', goal: { kind: 'donDao', dao: 'truongSa', level: 1 }, reward: { datDa: 5000, go: 3000 } },
+  { id: 'donDao3', goal: { kind: 'donDao', level: 3 }, reward: { gao: 8000, sat: 2500 } },
+  { id: 'giuDao', goal: { kind: 'giuDao', amount: 1 }, reward: { go: 5000, sat: 2000 } },
 ];
 /** Nhận xong thưởng nhiệm vụ cuối chương 1 (Đền Phù Đổng) thì sang chương 2. */
 export const CH2_QUEST_START = 20;
@@ -2198,6 +2228,82 @@ export const CA_PER_MIN = [6, 10, 15, 22, 30, 40, 52, 68, 83, 101];
 
 /** Cá biển mỗi phút của một bến thuyền khơi đủ người, theo cấp. Đỡ gạo ăn như cá làng chài, thừa thì bỏ phí. */
 export const CA_BIEN_PER_MIN = [50, 70, 90];
+
+/**
+ * Đóng đảo (Điện 10, `dao.ts`): mỗi quần đảo một đồn đảo ba cấp giữa đảo chính.
+ * - `minDien`: cấp Điện mở; còn cần bến thuyền khơi cấp `benCap` đánh cá ở quần đảo ấy và thuyền chiến của bến.
+ * - `cost[i]`: giá dựng (cấp 1) hay nâng lên cấp `i + 1`; `xayMs[i]`: công xây tới cấp ấy (ms ở tốc độ 1).
+ * - `cho[i]`: chỗ quân lính đóng tối đa (voi chiến 3 chỗ, lính nỏ 2); `hp[i]`: máu đồn.
+ * - `them[i]`: lính đóng được thêm máu và sức đánh khi giữ đảo.
+ * - Đồn còn nguyên có từ `giuCho` chỗ quân đóng trở lên thì giữ biển: thuyền khơi đánh cá ở đó làm ra thêm
+ *   `nguTruong[i]` vỏ ốc và cá; đợt thủy quân Hán đánh kinh đô báo trước `baoSom` ms; mỗi lâu thuyền vào tới sông đã
+ *   mất `chan[i]` máu (các đồn cộng lại, tối đa `chanMax`).
+ */
+export const DON_DAO = {
+  minDien: 10,
+  benCap: 3,
+  cost: [
+    { gao: 12000, voOc: 10000, datDa: 10000, go: 6000, sat: 2000 },
+    { gao: 18000, voOc: 15000, datDa: 15000, go: 9000, sat: 3000 },
+    { gao: 26000, voOc: 22000, datDa: 22000, go: 13000, sat: 4500 },
+  ] as Cost[],
+  xayMs: [30 * 60_000, 60 * 60_000, 90 * 60_000],
+  cho: [12, 20, 30],
+  hp: [1500, 2100, 2800],
+  them: [0, 0.1, 0.2],
+  giuCho: 6,
+  nguTruong: [0.1, 0.2, 0.3],
+  baoSom: 2 * 60_000,
+  chan: [0.1, 0.15, 0.2],
+  chanMax: 0.4,
+};
+
+/**
+ * Giặc Hán đánh đảo (từ khi Mã Viện sang): mỗi đồn có quân đóng gặp đợt đầu `dauMs` sau khi có quân (hay sau khi Mã
+ * Viện sang), rồi cứ `cachMs` một đợt; hai đảo so le ít nhất `soLeMs`; báo trước `baoMs`. Trận cầm cự `holdS` giây,
+ * giặc đổ bộ thêm các lớp ở giây `lop`. Quân giặc tính theo số đợt đã tới đảo ấy, tới đợt `tran` thì thôi tăng
+ * (`daoForces`, `daoHpScale`). Giữ được đảo thì được của trên thuyền giặc (`daoCua`).
+ */
+export const DAO_GIAC = {
+  dauMs: 10 * 60_000,
+  cachMs: 40 * 60_000,
+  soLeMs: 15 * 60_000,
+  baoMs: 3 * 60_000,
+  holdS: 60,
+  lop: [20, 40],
+  tran: 6,
+};
+
+/** Giặc Hán đợt thứ `n` đánh một đảo: lớp đổ bộ đầu và hai lớp sau (nỏ thủ từ đợt 2). */
+export function daoForces(n: number): { enemies: Partial<Record<EnemyType, number>>; waves: StageWave[] } {
+  const k = Math.min(Math.max(1, n), DAO_GIAC.tran);
+  const h = Math.floor(k / 2);
+  return {
+    enemies: { linhHan: 3 + h, giapHan: 1 },
+    waves: [
+      { at: DAO_GIAC.lop[0], enemies: { linhHan: 2 + h, noHan: h } },
+      { at: DAO_GIAC.lop[1], enemies: { linhHan: 1 + h, giapHan: Math.floor((k - 1) / 3) } },
+    ],
+  };
+}
+export const daoHpScale = (n: number) => 0.55 + 0.05 * (Math.min(Math.max(1, n), DAO_GIAC.tran) - 1);
+
+/** Của trên thuyền giặc khi giữ được đảo ở đợt thứ `n` (tăng theo đợt, tới đợt `DAO_GIAC.tran` thì thôi). */
+export function daoCua(n: number): Cost {
+  const k = Math.min(Math.max(1, n), DAO_GIAC.tran);
+  return { go: 1500 + 500 * k, sat: 500 + 150 * k };
+}
+
+/**
+ * Thuyền chiến: mỗi bến thuyền khơi cấp 3 đóng được một chiếc, chở quân ra đồn đảo của quần đảo bến ấy đánh cá.
+ * Mỗi chuyến chở tối đa `cho` chỗ quân, đi `toc` ô mỗi giây theo đường thuyền khơi rồi cập bến ván của đồn.
+ */
+export const THUYEN_CHIEN = {
+  cost: { gao: 4000, go: 6000, sat: 1500 } as Cost,
+  xayMs: 20 * 60_000,
+  cho: 10,
+  toc: 2.2,
+};
 
 /**
  * Đấu thành: đánh kinh đô người chơi khác (bản chụp), cướp của.
@@ -2262,3 +2368,238 @@ export const DAU_THANH = {
   /** Bản lưu trên mây dài nhất (số ký tự của mã lưu; người chơi mô phỏng ở Điện 10 chừng 3,3 nghìn, để dư nhiều). */
   saveMax: 200_000,
 };
+
+// ---------- Trang bị tướng (`trangBi.ts`; docs/thiet-ke.md mục Kế hoạch: trang bị rơi ngẫu nhiên) ----------
+
+/** Bốn ô đồ của mỗi tướng. */
+export type ODo = 'vuKhi' | 'giap' | 'phucSuc' | 'baoVat';
+export const O_DO: ODo[] = ['vuKhi', 'giap', 'phucSuc', 'baoVat'];
+/** Sáu bộ, mỗi tướng một bộ. */
+export type BoDo = 'phuDong' | 'tanVien' | 'coLoa' | 'caoLo' | 'trungTrac' | 'trungNhi';
+export const BO_DO: BoDo[] = ['phuDong', 'tanVien', 'coLoa', 'caoLo', 'trungTrac', 'trungNhi'];
+/** Sáu chỉ số tướng: máu, sức đánh, tốc đánh, uy lực kỹ năng, giáp, hồi kỹ năng. */
+export type ChiSo = 'mau' | 'danh' | 'toc' | 'uy' | 'giap' | 'hoi';
+export const CHI_SO: ChiSo[] = ['mau', 'danh', 'toc', 'uy', 'giap', 'hoi'];
+/** Phẩm: 1 Thường, 2 Tốt, 3 Quý, 4 Huyền thoại. Số chỉ số phụ là phẩm − 1. */
+export type PhamDo = 1 | 2 | 3 | 4;
+export const PHAM_DO: PhamDo[] = [1, 2, 3, 4];
+
+/** Tướng của từng bộ: hiệu ứng bộ chỉ có khi đúng tướng này mặc. */
+export const BO_CUA: Record<BoDo, Exclude<TuongId, 'lacTuong'>> = {
+  phuDong: 'giong',
+  tanVien: 'sonTinh',
+  coLoa: 'anDuong',
+  caoLo: 'caoLo',
+  trungTrac: 'trungTrac',
+  trungNhi: 'trungNhi',
+};
+/** Phó bản, thử thách rơi bộ của chương màn ấy (chương 5: một trong hai bộ của Hai Bà). */
+export const BO_CHUONG: Record<Chapter, BoDo[]> = { 1: ['phuDong'], 2: ['tanVien'], 3: ['coLoa'], 4: ['caoLo'], 5: ['trungTrac', 'trungNhi'] };
+/** Chỉ số chính rút được của từng ô. */
+export const O_CHINH: Record<ODo, ChiSo[]> = { vuKhi: ['danh'], giap: ['mau', 'giap'], phucSuc: ['toc', 'hoi'], baoVat: ['uy'] };
+
+/** Hệ số theo chỉ số: giáp, tốc đánh, hồi kỹ năng mạnh hơn mỗi phần trăm nên được ít hơn. */
+export const CHI_SO_HE: Record<ChiSo, number> = { mau: 1, danh: 1, toc: 0.6, uy: 1, giap: 0.6, hoi: 0.5 };
+/** Chỉ số chính ở +0, cấp đồ 1, theo phẩm (chỉ số 0 không dùng). */
+export const PHAM_CHINH = [0, 0.02, 0.03, 0.04, 0.05];
+/** Chỉ số phụ: nấc 1 tới 5 là 1% tới 2%, nhân hệ số theo chỉ số và theo cấp đồ. */
+export const PHU_THAP = 0.01;
+export const PHU_NAC = 0.0025;
+export const PHU_NAC_MAX = 5;
+/** Hệ số chỉ số theo cấp đồ (chương nơi rơi, 1–5; chỉ số 0 không dùng). */
+export const CAP_DO_HE = [0, 1, 1.3, 1.6, 1.9, 2.2];
+/** Mỗi nấc cường hóa thêm chừng này phần chỉ số chính. */
+export const CUONG_HOA_NAC = 0.1;
+/** Nấc cường hóa cao nhất theo phẩm. */
+export const CUONG_HOA_TRAN = [0, 4, 6, 8, 10];
+/**
+ * Giá nấc thứ n: gạo, vỏ ốc (vũ khí, phục sức) hay đất đá (giáp, bảo vật), sắt nhân n; gỗ từ nấc `goTu`. Đo bằng
+ * `node scripts/kinh-te.mjs`: bốn món một tướng lên +10 ở cấp đồ 5 hết chừng 3 giờ của dư sau Điện 10 (sắt, gỗ dồn
+ * lại chừng 13, 14 nghìn mỗi giờ; gạo tràn chừng 120 nghìn mỗi giờ).
+ */
+export const CUONG_HOA_GIA = { gao: 150, voOcDatDa: 120, sat: 18, go: 25, goTu: 6 };
+/** Giá cường hóa, sắt phân giải nhân theo cấp đồ. */
+export const CAP_DO_GIA = [0, 1, 2, 4, 7, 10];
+/** Phân giải một món ra chừng này sắt (theo phẩm, nhân `CAP_DO_GIA`), cộng lại `PHAN_GIAI_HOAN` sắt đã cường hóa. */
+export const PHAN_GIAI_SAT = [0, 10, 25, 60, 150];
+export const PHAN_GIAI_HOAN = 0.5;
+/** Trần tổng mỗi tướng (cả đồ và hiệu ứng bộ). */
+export const CHI_SO_TRAN: Partial<Record<ChiSo, number>> = { toc: 0.5, giap: 0.4, hoi: 0.3 };
+/** Kho đồ chứa nhiều nhất chừng này món, kể cả món đang mặc. */
+export const KHO_DO_MAX = 80;
+
+/** Nơi rơi đồ. */
+export type NguonDo = 'manDau' | 'manLai' | 'thuDau' | 'thuLai' | 'don' | 'giu' | 'daQuai' | 'daBoss';
+/** Xác suất có rơi và tỉ lệ bốn phẩm (Thường, Tốt, Quý, Huyền thoại) theo nơi rơi. */
+export const ROI_DO: Record<NguonDo, { p: number; w: [number, number, number, number] }> = {
+  manDau: { p: 1, w: [0, 60, 30, 10] },
+  manLai: { p: 0.6, w: [55, 30, 12, 3] },
+  thuDau: { p: 1, w: [0, 0, 70, 30] },
+  thuLai: { p: 0.8, w: [20, 45, 27, 8] },
+  don: { p: 1, w: [0, 0, 60, 40] },
+  giu: { p: 0.35, w: [55, 30, 12, 3] },
+  // Dã ngoại: quái thường lâu lâu rơi, boss chắc rơi phẩm cao.
+  daQuai: { p: 0.02, w: [55, 30, 12, 3] },
+  daBoss: { p: 1, w: [0, 0, 60, 40] },
+};
+/** Phẩm cao nhất rơi ở trận mỗi chương: chương 1 Tốt, chương 2 Quý, từ chương 3 Huyền thoại. */
+export const PHAM_TRAN: Record<Chapter, PhamDo> = { 1: 2, 2: 3, 3: 4, 4: 4, 5: 4 };
+
+/** Hiệu ứng hai món: đúng tướng của bộ mặc từ hai món của bộ mình thì cộng thêm chỉ số này. */
+export const BO_HAI: Record<BoDo, { k: ChiSo; v: number }> = {
+  phuDong: { k: 'danh', v: 0.1 },
+  tanVien: { k: 'mau', v: 0.1 },
+  coLoa: { k: 'uy', v: 0.1 },
+  caoLo: { k: 'toc', v: 0.08 },
+  trungTrac: { k: 'giap', v: 0.08 },
+  trungNhi: { k: 'hoi', v: 0.08 },
+};
+/**
+ * Hiệu ứng bốn món: đúng tướng của bộ mặc đủ bốn món bộ mình thì kỹ năng mạnh hơn (số thay cho số gốc của kỹ năng ở
+ * `FIRE`, `SMASH`, `HILL`, `ROCKS`, `NO_THAN`, `KIM_QUY`, `LIEN_CHAU`, `SKILLS.lenhBan`, `VOI_XUNG`, `HIEU_TRIEU`).
+ */
+export const BO_BON = {
+  phunLua: { length: 9 },
+  nhoTre: { radius: 3 },
+  bocDoi: { radius: 2.8 },
+  doiNon: { stun: 4 },
+  noThan: { dmg: 100 },
+  ruaVang: { heal: 0.4 },
+  lienChau: { radius: 4.2 },
+  lenhBan: { duration: 8 },
+  voiXung: { length: 6.5, stun: 2.2 },
+  hieuTrieu: { count: 6, heal: 0.2 },
+};
+
+// ---------- Dã ngoại (`daNgoai.ts`, `daNgoaiMap.ts`, `daNgoaiTran.ts`; docs/thiet-ke.md mục Kế hoạch: dã ngoại) ----------
+
+export type DaMapId = 1 | 2 | 3 | 4 | 5;
+export const DA_MAP_IDS: DaMapId[] = [1, 2, 3, 4, 5];
+
+/** Dáng vật cản trên map dã ngoại: cây rừng (vẽ như rừng kinh đô), khóm tre, đá, bụi sim, cây chết, khúc gỗ, lau. */
+export type DaCan = 'cay' | 'tre' | 'da' | 'daNhon' | 'sim' | 'cayChet' | 'go' | 'lau' | 'ao';
+
+export interface DaMapDef {
+  /** Chương của map: đồ rơi lấy cấp đồ, bộ theo chương này nhưng không vượt chương đang chơi. */
+  chuong: Chapter;
+  /** Khoảng cấp quái của map. */
+  cap: [number, number];
+  /** Cấp chung cần có để qua cổng vào map này. */
+  cong: number;
+  /** Nền bãi (màu đất, trời) dùng lại của bãi chiến. */
+  terrain: Terrain;
+  /** Năm khu quái, yếu tới mạnh: mỗi khu một loại quái chính. */
+  quai: [EnemyType, EnemyType, EnemyType, EnemyType, EnemyType];
+  boss: EnemyType;
+  /** Vật cản rải trên map, theo tỉ lệ. */
+  can: Partial<Record<DaCan, number>>;
+  /** Của mỗi con quái thường hạ được. */
+  thuong: Cost;
+  /** Lật bố cục mẫu theo chiều ngang. */
+  lat: boolean;
+}
+
+export const DA_MAP: Record<DaMapId, DaMapDef> = {
+  1: {
+    chuong: 1,
+    cap: [1, 10],
+    cong: 0,
+    terrain: 'rung',
+    quai: ['lonRung', 'giaoAn', 'cungAn', 'chienXa', 'phoTuong'],
+    boss: 'daiTuong',
+    can: { cay: 6, tre: 3, da: 2, sim: 2 },
+    thuong: { gao: 3, voOc: 2 },
+    lat: false,
+  },
+  2: {
+    chuong: 2,
+    cap: [11, 20],
+    cong: 10,
+    terrain: 'ngap',
+    quai: ['tomBinh', 'caPhun', 'maTroi', 'caSau', 'thuongLuong'],
+    boss: 'thuyTinh',
+    can: { ao: 4, lau: 4, tre: 2, da: 2, cay: 2 },
+    thuong: { gao: 5, voOc: 3, datDa: 2 },
+    lat: true,
+  },
+  3: {
+    chuong: 3,
+    cap: [21, 30],
+    cong: 20,
+    terrain: 'thatDieu',
+    quai: ['quyNui', 'hoTinh', 'linhTrieu', 'noTrieu', 'kyBinh'],
+    boss: 'gaTrang',
+    can: { daNhon: 4, da: 3, cayChet: 3, cay: 2 },
+    thuong: { gao: 7, voOc: 4, datDa: 3, sat: 1 },
+    lat: false,
+  },
+  4: {
+    chuong: 4,
+    cap: [31, 40],
+    cong: 30,
+    terrain: 'cuaSong',
+    quai: ['cuaDa', 'linhThuy', 'cungThuyen', 'linhRiu', 'tuongThuy'],
+    boss: 'trieuDa',
+    can: { ao: 3, go: 3, lau: 3, da: 3 },
+    thuong: { gao: 9, voOc: 6, datDa: 4, sat: 1, go: 1 },
+    lat: true,
+  },
+  5: {
+    chuong: 5,
+    cap: [41, 50],
+    cong: 40,
+    terrain: 'langBac',
+    quai: ['baoGam', 'ranHo', 'linhHan', 'noHan', 'giapHan'],
+    boss: 'maVien',
+    can: { cay: 5, tre: 3, ao: 2, lau: 2, sim: 2 },
+    thuong: { gao: 12, voOc: 8, datDa: 5, sat: 2, go: 2 },
+    lat: false,
+  },
+};
+
+/** Cỡ map dã ngoại (ô), số quái mỗi khu, quái ở khu thứ năm (mạnh nhất) ít hơn nhưng bền hơn. */
+export const DA_KHUNG = { w: 80, d: 80 };
+export const DA_KHU = { n: [8, 8, 8, 7, 6], he: [1, 1, 1.1, 1.25, 1.5] };
+
+/**
+ * Quái theo cấp `L`: máu `hp × (1 + hpLen × (L − 1))`, sức đánh `dmg × (1 + dmgLen × (L − 1))`, nhân hệ số khu
+ * (`DA_KHU.he`; boss `boss`). Tầm phát hiện, đuổi xa khỏi chỗ mọc chừng `xich` ô thì quay về, chết thì `moc` giây sau
+ * mọc lại. Kinh nghiệm mỗi con `exp × (1 + expLen × (L − 1))` nhân hệ số khu.
+ */
+export const DA_QUAI = {
+  hp: 150,
+  hpLen: 0.1,
+  dmg: 7,
+  dmgLen: 0.08,
+  boss: { hp: 14, dmg: 2.2, exp: 40, cap: 2 },
+  phat: 3,
+  phatBoss: 4.5,
+  xich: 6,
+  moc: 20,
+  exp: 10,
+  expLen: 0.16,
+};
+
+/**
+ * Cấp chung của mọi tướng (chỉ có tác dụng trên map dã ngoại): trần `tran`; kinh nghiệm lên cấp sau
+ * `len × cấp^mu`; mỗi cấp thêm `moiCap` máu và sức đánh. Quái thấp hơn cấp chung quá `thap` cấp thì kinh nghiệm giảm
+ * mỗi cấp `giam`, thấp nhất `san`.
+ */
+export const DA_CAP = { tran: 50, len: 100, mu: 1.8, moiCap: 0.03, thap: 5, giam: 0.15, san: 0.1 };
+
+/** Boss hạ xong thì chừng này thời gian chơi sau mới mọc lại. */
+export const DA_BOSS_MS = 30 * 60_000;
+
+/**
+ * Treo máy (không xem map mà đội đang đứng trong một khu quái, Tự đánh bật): số quái hạ mỗi phút tính bằng công thức
+ * (`nhipTreo`): `goc` con mỗi phút khi sức đội (sát thương mỗi giây × máu) gấp `moc` lần sức một con quái khu; yếu hơn
+ * thì chậm theo căn bậc hai, chậm nhất `san` phần. Lúc tắt game tính tối đa `tran` ms.
+ */
+export const DA_TREO = { goc: 12, moc: 40, san: 0.1, tran: 8 * 3_600_000 };
+
+/**
+ * Tướng trên map: hồi `hoi` phần máu mỗi giây khi `yen` giây không bị đánh; ngã thì `day` giây không bị đuổi mới đứng
+ * dậy; kỹ năng chỉ trúng quái trong `tam` ô quanh tướng; đội tối đa `max` tướng. Tự đánh: máu cả đội dưới `nghi[0]`
+ * mà không có quái đuổi thì dừng nghỉ, hồi tới `nghi[1]` mới đánh tiếp.
+ */
+export const DA_TUONG = { hoi: 0.04, yen: 4, day: 3, tam: 9, max: 3, nghi: [0.4, 0.9] as const };

@@ -132,9 +132,13 @@ export function thumbScene(kind: ThumbKind): THREE.Group {
  * công trình thì dấu đổi.
  */
 export function thumbHash(kind: ThumbKind): string {
-  const root = thumbScene(kind);
+  return sceneHash(thumbScene(kind), THUMB_VERSION);
+}
+
+/** Dấu vân tay của một cảnh (`thumbHash`, ảnh món đồ ở anhDo.ts): `version` là số phiên bản cách dựng cảnh. */
+export function sceneHash(root: THREE.Object3D, version: number): string {
   root.updateMatrixWorld(true);
-  let h = 0x811c9dc5 ^ THUMB_VERSION;
+  let h = 0x811c9dc5 ^ version;
   const mix = (n: number) => {
     h ^= n & 0xffff;
     h = Math.imul(h, 0x01000193);

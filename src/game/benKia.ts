@@ -39,6 +39,7 @@ import { pendingBuildings } from './xay';
 import { phoTuongCheck, phoTuongOf, rememberPhoTuong } from './nuTuong';
 import { openMask } from './khoanh';
 import { FAR_FOREST, FOREST_BAND, GRID, KHOANH, RIVER_END, RIVER_START, farBankOf } from './map';
+import { roiDo } from './trangBi';
 
 const ok = <T>(value: T): Result<T> => ({ ok: true, value });
 const fail = (reason: FailReason): Result<never> => ({ ok: false, reason });
@@ -517,6 +518,8 @@ export function finishCamp(state: GameState, battle: Battle): void {
     for (const r of RESOURCE_IDS) if (dug[r]) reward[r] = (reward[r] ?? 0) + dug[r]!;
   }
   restAfter(state, battle);
+  // Dẹp đồn chắc rơi một món đồ cho tướng (`trangBi.ts`), cấp đồ theo chương của bậc đồn.
+  const roi = won ? roiDo(state, 'don', CAMPS[campTier(id)!].chapter) : null;
   state.campaign.lastResult = {
     stage: 0,
     camp: id,
@@ -526,6 +529,7 @@ export function finishCamp(state: GameState, battle: Battle): void {
     total: battle.total,
     lost: { ...battle.lost },
     reward,
+    ...(roi ? { do: roi } : {}),
   };
 }
 

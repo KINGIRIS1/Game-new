@@ -1,6 +1,7 @@
 // Giao diện thời gian xây: tên việc, khối tiến độ trong bảng công trình, bảng Thợ hồ, và đếm ngược thay tại chỗ
 // (`fillXay`) để bảng không phải dựng lại mỗi giây.
 
+import { quanDao } from '../game/bien';
 import { BUILDINGS, QUIZ_TURNS } from '../game/defs';
 import { findBuilding, type Building, type GameState } from '../game/game';
 import {
@@ -29,6 +30,8 @@ function partBuilding(state: GameState, p: PhanViec): Building | undefined {
 
 /** Tên một phần việc: công trình sẽ có khi xong. */
 function partName(state: GameState, p: PhanViec): string {
+  if (p.dao) return `${vi.bien.donName(p.dao)} ${vi.ui.levelShort(state.dao[p.dao].cap + 1)}`;
+  if (p.thuyen) return vi.bien.thuyen;
   const b = partBuilding(state, p);
   if (p.doi) return vi.buildings[p.doi].name;
   if (!b) return '';
@@ -38,6 +41,8 @@ function partName(state: GameState, p: PhanViec): string {
 
 /** Loại công trình của phần việc khi xong. */
 function partType(state: GameState, p: PhanViec): string {
+  if (p.dao) return 'donDao';
+  if (p.thuyen) return 'thuyenChien';
   return p.doi ?? partBuilding(state, p)?.type ?? '';
 }
 
@@ -53,6 +58,8 @@ export function jobName(state: GameState, v: CongViec): string {
 export function jobDoneText(state: GameState, v: CongViec): string {
   if (v.o.length === 1) {
     const p = v.o[0];
+    if (p.dao) return vi.bien.donDone(vi.bien.donName(p.dao), state.dao[p.dao].cap);
+    if (p.thuyen) return vi.bien.thuyenDone(vi.bien.quanDao[p.thuyen].name);
     const b = findBuilding(state, p.id);
     if (p.len && b) return b.type === 'dien' ? vi.ui.dienUp(b.level) : vi.ui.nangDone(buildingName(b), b.level);
     return vi.ui.xayDone(b ? buildingName(b) : partName(state, p));
@@ -81,7 +88,11 @@ export function jobHtml(state: GameState, id: number, armed: number | null): str
   if (!v) return '';
   const p = v.o.find((o, i) => i >= v.xong && o.id === id)!;
   const b = partBuilding(state, p);
-  const title = p.moi ? vi.ui.xayDung : p.doi ? vi.ui.xayDoi(vi.buildings[p.doi].name) : vi.ui.xayNang((b?.level ?? 0) + 1);
+  const title = p.dao
+    ? state.dao[p.dao].cap ? vi.ui.xayNang(state.dao[p.dao].cap + 1) : vi.ui.xayDung
+    : p.thuyen
+      ? vi.bien.thuyenJob
+      : p.moi ? vi.ui.xayDung : p.doi ? vi.ui.xayDoi(vi.buildings[p.doi].name) : vi.ui.xayNang((b?.level ?? 0) + 1);
   const parts = v.o.length > 1 ? ` · ${vi.ui.xayParts(v.xong, v.o.length)}` : '';
   return `<div class="xay-job">
       <div class="xay-head"><b>🔨 ${title}</b><span>${vi.ui.xayLeft} <b data-con="${v.id}" data-item="${id}"></b></span></div>
@@ -89,6 +100,11 @@ export function jobHtml(state: GameState, id: number, armed: number | null): str
       <div class="muted">${vi.ui.xayThoLabel}: ${thoName(state, v.tho)}${parts}</div>
       <div class="btn-pair">${quizButton(v)}${cancelButton(v, armed)}</div>
     </div>`;
+}
+
+/** Hết tốp thợ rảnh, cho bảng: số giờ tới lúc có tốp rảnh thay tại chỗ (`fillXay`), bảng khỏi dựng lại mỗi giây. */
+export function hetThoHtml(state: GameState): string {
+  return Number.isFinite(thoRanhSau(state)) ? vi.ui.hetThoSau('<b data-ranh></b>') : vi.reasons.hetTho;
 }
 
 /** Nút đố sử của việc `v`: còn mấy lượt, hay đang có câu chờ trả lời. */
@@ -116,12 +132,14 @@ export function thoHtml(state: GameState, armed: number | null): string {
     const speed = t.toc !== 1 ? ` · ${vi.ui.thoSpeed(t.toc)}` : '';
     const head = `<div class="xay-head"><b>${thoName(state, t.id)}</b><span class="muted">${speed.slice(3)}</span></div>`;
     if (!v) return `<div class="xay-job idle">${head}<div class="muted">${vi.ui.thoIdle}</div></div>`;
-    const target = v.o[Math.min(v.xong, v.o.length - 1)].id;
+    const part = v.o[Math.min(v.xong, v.o.length - 1)];
     const parts = v.o.length > 1 ? ` · ${vi.ui.xayParts(v.xong, v.o.length)}` : '';
+    // Đồn đảo không phải công trình trong lưới: Xem thì mở bảng quần đảo.
+    const go = part.dao ? `data-act="openQuanDao" data-dao="${part.dao}"` : `data-act="selectBuilding" data-id="${part.id}"`;
     return `<div class="xay-job">${head}
         <div class="xay-head"><span>${jobName(state, v)}${parts}</span><span>${vi.ui.xayLeft} <b data-con="${v.id}"></b></span></div>
         <div class="xay-bar"><i data-bar="${v.id}"></i></div>
-        <div class="btn-pair"><button class="btn small" data-act="selectBuilding" data-id="${target}">${vi.ui.thoGo}</button>${quizButton(v)}${cancelButton(v, armed)}</div>
+        <div class="btn-pair"><button class="btn small" ${go}>${vi.ui.thoGo}</button>${quizButton(v)}${cancelButton(v, armed)}</div>
       </div>`;
   });
   return `<div class="info"><div class="stat"><span>${vi.ui.thoCount(ranh, tong)}</span><span></span></div>
@@ -177,11 +195,18 @@ export class XayLabels {
     for (const v of viecOf(state)) {
       const p = v.o[Math.min(v.xong, v.o.length - 1)];
       const b = partBuilding(state, p);
-      if (!b) continue;
-      const def = BUILDINGS[b.type];
-      // Cao hơn đỉnh giàn giáo một chút; ô tường thì ngay trên mặt tường.
-      const lift = def.w > 1 ? Math.min(1.1 + 0.28 * Math.max(def.w, def.d), 3.4) + 0.5 : 1.3;
-      const at = project(b.x + def.w / 2, b.z + def.d / 2, lift);
+      let at: { x: number; y: number } | null;
+      if (p.dao) {
+        // Đồn đảo: nhãn trên giữa đảo chính.
+        const q = quanDao(p.dao);
+        at = project(q.x, q.z, 3.6);
+      } else {
+        if (!b) continue;
+        const def = BUILDINGS[b.type];
+        // Cao hơn đỉnh giàn giáo một chút; ô tường thì ngay trên mặt tường.
+        const lift = def.w > 1 ? Math.min(1.1 + 0.28 * Math.max(def.w, def.d), 3.4) + 0.5 : 1.3;
+        at = project(b.x + def.w / 2, b.z + def.d / 2, lift);
+      }
       let el = this.els.get(v.id);
       if (!el) {
         el = document.createElement('div');
