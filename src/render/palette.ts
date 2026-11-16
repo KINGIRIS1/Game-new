@@ -117,6 +117,12 @@ export const C = {
   namHan: 0x4b3a5e,
   namHanDark: 0x2b2036,
   namHanRed: 0x8c2f2f,
+  // Thú bãi bồi Bạch Đằng: rái cá lông nâu bóng, rùa biển mai nâu ô liu da xám xanh.
+  otter: 0x6e4a2c,
+  otterDark: 0x3c2716,
+  seaTurtle: 0x8a7c42,
+  seaTurtleDark: 0x352c14,
+  seaTurtleSkin: 0x87958a,
   // Ngựa xám đốm của Dương Tư Húc.
   horseGrey: 0x8e8a84,
   // Thú rừng Núi Vệ: sói đỏ lông đỏ gạch, tê giác da xám nâu.

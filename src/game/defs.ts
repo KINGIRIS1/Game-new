@@ -1486,7 +1486,10 @@ export type EnemyType =
   | 'linhNamHan'
   | 'cungNamHan'
   | 'riuNamHan'
-  | 'hoangThao';
+  | 'hoangThao'
+  // Thú bãi bồi Bạch Đằng (map dã ngoại 9): rái cá, rùa biển.
+  | 'raiCa'
+  | 'ruaBien';
 export const UNIT_TYPES: UnitType[] = ['giao', 'cung', 'voi', 'no'];
 
 export interface FighterStats {
@@ -1513,7 +1516,7 @@ export interface UnitDef extends FighterStats {
 }
 
 /** Quân nặng của giặc: giáo binh và lính nỏ khắc chế. */
-const HEAVY: EnemyType[] = ['chienXa', 'caSau', 'hoTinh', 'kyBinh', 'linhRiu', 'giapHan', 'giapNgo', 'voiRung', 'giapLuong', 'trauRung', 'giapDuong', 'teGiac', 'riuNamHan'];
+const HEAVY: EnemyType[] = ['chienXa', 'caSau', 'hoTinh', 'kyBinh', 'linhRiu', 'giapHan', 'giapNgo', 'voiRung', 'giapLuong', 'trauRung', 'giapDuong', 'teGiac', 'riuNamHan', 'ruaBien'];
 
 /**
  * Quân ta: giáo binh thắng quân nặng (chiến xa, cá sấu, hổ tinh, kỵ binh, lính rìu, giáp sĩ Hán), cung thủ thắng
@@ -1615,6 +1618,8 @@ export const ENEMIES: Record<EnemyType, FighterStats> = {
   cungNamHan: { hp: 60, dmg: 13, range: 4.2, speed: 1.3, cooldown: 1.5 },
   riuNamHan: { hp: 330, dmg: 26, range: 0.9, speed: 1.5, cooldown: 1.4, strongVs: ['cung'] },
   hoangThao: { hp: 2000, dmg: 36, range: 1.4, speed: 1.4, cooldown: 1.2 },
+  raiCa: { hp: 80, dmg: 12, range: 0.8, speed: 2.4, cooldown: 0.8 },
+  ruaBien: { hp: 210, dmg: 18, range: 1.0, speed: 1.0, cooldown: 1.6 },
 };
 
 /**
@@ -1916,6 +1921,8 @@ export const ENEMY_ROWS: Record<EnemyType, Row> = {
   riuNamHan: 'trung',
   cungNamHan: 'hau',
   hoangThao: 'hau',
+  raiCa: 'tien',
+  ruaBien: 'trung',
 };
 
 /**
@@ -2684,7 +2691,7 @@ export const DA_MAP: Record<DaMapId, DaMapDef> = {
     cap: [81, 90],
     cong: 80,
     terrain: 'cuaSong',
-    quai: ['soiDo', 'teGiac', 'linhNamHan', 'cungNamHan', 'riuNamHan'],
+    quai: ['raiCa', 'ruaBien', 'linhNamHan', 'cungNamHan', 'riuNamHan'],
     boss: 'hoangThao',
     can: { coc: 5, lau: 4, ao: 3, go: 2, da: 1 },
     thuong: { gao: 26, voOc: 17, datDa: 13, sat: 6, go: 6 },

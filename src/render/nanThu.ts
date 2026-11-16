@@ -625,6 +625,46 @@ export function dholeBody(r: Rig): void {
   figure(r as unknown as HumanRig, 'soiDo', dholePieces);
 }
 
+// ---------- Rái cá ----------
+
+/**
+ * Rái cá: mình dài thấp uốn như con chồn, lông nâu bóng, má, cằm, cổ họng màu kem, đầu tròn dẹt mõm ngắn, tai nhỏ, chân
+ * ngắn bàn sẫm, đuôi to gốc thuôn dần. Nặn theo khung `OTTER` (beasts.ts; cùng tên xương với sói đỏ).
+ */
+function otterPieces(detail: number): Piece[] {
+  const clay = new Clay(C.otter);
+  clay.add('qBody', ellipsoid([0, 0.32, -0.04], [0.13, 0.12, 0.36]), { k: 0 });
+  clay.add('qBody', ellipsoid([0, 0.34, 0.2], [0.12, 0.12, 0.15]), { k: 0.08 });
+  for (const [b, x, z] of [
+    ['qFL', -0.09, 0.22],
+    ['qFR', 0.09, 0.22],
+    ['qBL', -0.09, -0.26],
+    ['qBR', 0.09, -0.26],
+  ] as [string, number, number][]) {
+    clay.add(b, cone([x, 0.28, z], [x, 0.05, z + 0.02], 0.05, 0.035), { k: 0.04 });
+    clay.add(b, ellipsoid([x, 0.03, z + 0.035], [0.045, 0.028, 0.06]), { k: 0.02 });
+  }
+  clay.add('qHead', ellipsoid([0, 0.4, 0.4], [0.1, 0.085, 0.11]), { k: 0.06 });
+  clay.add('qHead', ellipsoid([0, 0.37, 0.5], [0.075, 0.055, 0.065]), { k: 0.04 });
+  for (const s of [-1, 1]) clay.add('qHead', sphere([s * 0.075, 0.46, 0.36], 0.024), { k: 0.015 });
+  clay.add('qTail', cone([0, 0.31, -0.36], [0, 0.22, -0.56], 0.08, 0.052), { k: 0.04 });
+  clay.add('qTail2', cone([0, 0.22, -0.56], [0, 0.13, -0.78], 0.052, 0.012), { k: 0.03 });
+  const f = clay.dist;
+  const paints: Paint[] = [];
+  // Má, cằm, cổ họng kem; mũi đen; bàn chân sẫm.
+  paints.push(clay.layer('qHead', ellipsoid([0, 0.35, 0.48], [0.11, 0.05, 0.12]), C.cream));
+  paints.push(clay.layer('qBody', ellipsoid([0, 0.3, 0.3], [0.085, 0.08, 0.09]), C.cream));
+  paints.push(clay.layer('qHead', sphere([0, 0.385, 0.565], 0.022), C.ink));
+  for (const b of ['qFL', 'qFR', 'qBL', 'qBR']) paints.push(clay.layer(b, (_x, y) => y - 0.07, C.otterDark));
+  paints.push(clay.layer('qTail2', (_x, _y, z) => z + 0.66, C.otterDark));
+  for (const s of [-1, 1]) paints.push(...eyePaints(clay, 'qHead', f, [s * 0.06, 0.425, 0.48], [s * 0.6, 0.15, 0.8], 0.016));
+  return [clayPiece(clay.build({ kind: 'nets', min: [-0.2, -0.01, -0.84], max: [0.2, 0.56, 0.62], cell: 0.01 / detail, target: Math.round(1600 * detail) }, paints))];
+}
+
+export function otterBody(r: Rig): void {
+  figure(r as unknown as HumanRig, 'raiCa', otterPieces);
+}
+
 // ---------- Tê giác ----------
 
 /**

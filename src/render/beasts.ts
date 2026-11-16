@@ -10,7 +10,7 @@ import { HUMAN, beginPose, featherCrown, hairCap, headband, humanBody, humanHead
 import { Clay, ellipsoid } from './nan';
 import { armor, bun, chestDisc, diadem, hairDown, necklace, pauldrons } from './nanDo';
 import { clayPiece, figure, type Piece } from './nanNguoi';
-import { bearBody, boarBody, buffaloBody, dholeBody, rhinoBody, elephantBody, elephantDrape, horseBody, horseDrape, leopardBody, roosterBody, tigerBody, turtleBody, turtleDrum } from './nanThu';
+import { bearBody, boarBody, buffaloBody, dholeBody, otterBody, rhinoBody, elephantBody, elephantDrape, horseBody, horseDrape, leopardBody, roosterBody, tigerBody, turtleBody, turtleDrum } from './nanThu';
 import { C } from './palette';
 import { RigBuilder, bakeRig, moveBones, resetBones, skinRig, type Act, type BoneDef, type Bones, type Poser, type RigShape, type RigSlot, type RigSlots } from './rig';
 import { drawRider, poseRider, riderBones, riderHasSkill, type RiderKind } from './soldier';
@@ -659,6 +659,18 @@ const DHOLE: Defs = {
   qTail2: { parent: 'qTail', at: [0, 0.42, -0.52] },
 };
 
+/** Khung rái cá: cùng tên xương với sói đỏ (dùng chung tư thế vồ), thấp, mình dài, đuôi to. */
+const OTTER: Defs = {
+  qBody: { parent: 'base', at: [0, 0.32, 0] },
+  qFL: { parent: 'qBody', at: [-0.09, 0.27, 0.22] },
+  qFR: { parent: 'qBody', at: [0.09, 0.27, 0.22] },
+  qBL: { parent: 'qBody', at: [-0.09, 0.27, -0.26] },
+  qBR: { parent: 'qBody', at: [0.09, 0.27, -0.26] },
+  qHead: { parent: 'qBody', at: [0, 0.38, 0.32] },
+  qTail: { parent: 'qBody', at: [0, 0.31, -0.36] },
+  qTail2: { parent: 'qTail', at: [0, 0.22, -0.56] },
+};
+
 /** Khung tê giác: cùng tên xương với trâu rừng (dùng chung tư thế húc), thấp hơn, đầu cúi. */
 const RHINO: Defs = {
   qBody: { parent: 'base', at: [0, 0.56, 0] },
@@ -758,9 +770,22 @@ function poseRooster(b: B, a: Act): void {
 
 // ---------- Thú và người cưỡi trong trận ----------
 
-export type BeastKind = 'voi' | 'chienXa' | 'daiTuong' | 'kyBinh' | 'trieuDa' | 'maVien' | 'lucDan' | 'tranBaTien' | 'duongTuHuc' | 'hoangThao' | 'hoTinh' | 'gaTrang' | 'lonRung' | 'baoGam' | 'gauNgua' | 'voiRung' | 'trauRung' | 'soiDo' | 'teGiac';
-const KINDS: readonly FighterKind[] = ['voi', 'chienXa', 'daiTuong', 'kyBinh', 'trieuDa', 'maVien', 'lucDan', 'tranBaTien', 'duongTuHuc', 'hoangThao', 'hoTinh', 'gaTrang', 'lonRung', 'baoGam', 'gauNgua', 'voiRung', 'trauRung', 'soiDo', 'teGiac'];
+export type BeastKind = 'voi' | 'chienXa' | 'daiTuong' | 'kyBinh' | 'trieuDa' | 'maVien' | 'lucDan' | 'tranBaTien' | 'duongTuHuc' | 'hoangThao' | 'hoTinh' | 'gaTrang' | 'lonRung' | 'baoGam' | 'gauNgua' | 'voiRung' | 'trauRung' | 'soiDo' | 'teGiac' | 'raiCa' | 'ruaBien';
+const KINDS: readonly FighterKind[] = ['voi', 'chienXa', 'daiTuong', 'kyBinh', 'trieuDa', 'maVien', 'lucDan', 'tranBaTien', 'duongTuHuc', 'hoangThao', 'hoTinh', 'gaTrang', 'lonRung', 'baoGam', 'gauNgua', 'voiRung', 'trauRung', 'soiDo', 'teGiac', 'raiCa', 'ruaBien'];
 export const isBeast = (k: FighterKind): k is BeastKind => KINDS.includes(k);
+
+/** Khung rùa: Rùa Vàng và rùa biển. Gốc ở đáy mai, đầu hướng +z. */
+const TURTLE: Defs = {
+  ...BASE,
+  qBody: { parent: 'base', at: [0, 0.05, 0] },
+  qNeck: { parent: 'qBody', at: [0, 0.25, 0.62] },
+  qHead: { parent: 'qNeck', at: [0, 0.58, 0.95] },
+  qFL: { parent: 'qBody', at: [-0.55, 0.06, 0.45] },
+  qFR: { parent: 'qBody', at: [0.55, 0.06, 0.45] },
+  qBL: { parent: 'qBody', at: [-0.5, 0.05, -0.45] },
+  qBR: { parent: 'qBody', at: [0.5, 0.05, -0.45] },
+  qTail: { parent: 'qBody', at: [0, 0.06, -0.66] },
+};
 
 interface Spec {
   defs: Defs;
@@ -870,6 +895,8 @@ const SPECS: Record<BeastKind, Spec> = {
   trauRung: { defs: { ...BASE, ...BUFFALO }, draw: buffaloBody, pose: poseBuffalo },
   soiDo: { defs: { ...BASE, ...DHOLE }, draw: dholeBody, pose: poseTiger },
   teGiac: { defs: { ...BASE, ...RHINO }, draw: rhinoBody, pose: poseBuffalo },
+  raiCa: { defs: { ...BASE, ...OTTER }, draw: otterBody, pose: poseTiger },
+  ruaBien: { defs: TURTLE, draw: drawRuaBien, pose: poseRuaBien },
   gaTrang: { defs: { ...BASE, ...ROOSTER }, draw: drawRooster, pose: poseRooster },
 };
 
@@ -905,17 +932,6 @@ export function bakeBeast(kind: BeastKind, tier = 0, a: Act = { act: 'stand' }):
 
 // ---------- Rùa Vàng ----------
 
-const TURTLE: Defs = {
-  ...BASE,
-  qBody: { parent: 'base', at: [0, 0.05, 0] },
-  qNeck: { parent: 'qBody', at: [0, 0.25, 0.62] },
-  qHead: { parent: 'qNeck', at: [0, 0.58, 0.95] },
-  qFL: { parent: 'qBody', at: [-0.55, 0.06, 0.45] },
-  qFR: { parent: 'qBody', at: [0.55, 0.06, 0.45] },
-  qBL: { parent: 'qBody', at: [-0.5, 0.05, -0.45] },
-  qBR: { parent: 'qBody', at: [0.5, 0.05, -0.45] },
-  qTail: { parent: 'qBody', at: [0, 0.06, -0.66] },
-};
 
 /**
  * Rùa Vàng (Thần Kim Quy — sứ Thanh Giang): mai vàng ròng chạm mặt trống đồng Đông Sơn & lục giác linh quy,
@@ -1018,6 +1034,59 @@ function poseTurtle(b: B, a: Act): void {
   b.qNeck.rotation.x = 0.08 * Math.sin(ph * 2);
   b.qHead.rotation.x = -0.06 * Math.sin(ph * 2);
   b.qTail.rotation.y = 0.18 * amp * Math.sin(ph * 2);
+}
+
+/**
+ * Rùa biển (quái bãi bồi Bạch Đằng): khung và đất nặn của Rùa Vàng (`turtleBody`) đổi màu mai nâu ô liu rãnh sẫm, da
+ * xám xanh, không mặt trống, không hào quang.
+ */
+function drawRuaBien(r: Rig): void {
+  turtleBody(r, { shell: C.seaTurtle, groove: C.seaTurtleDark, skin: C.seaTurtleSkin, cap: C.seaTurtleSkin, beak: C.seaTurtleDark });
+}
+
+/** Rùa biển bò chèo bốn chân trên bãi, đánh thì vươn cổ đớp, ngã thì chân rũ, cổ gục (thân lăn nghiêng như mọi thú). */
+function poseRuaBien(b: B, a: Act): void {
+  resetBones(b);
+  const t = a.time ?? 0;
+  if (a.act === 'walk') {
+    const ph = (a.phase ?? 0) * 0.7;
+    for (const [k, s, d] of [
+      ['qFL', -1, 0],
+      ['qFR', 1, Math.PI],
+      ['qBL', -1, Math.PI],
+      ['qBR', 1, 0],
+    ] as const) {
+      b[k].rotation.y = s * 0.45 * Math.sin(ph + d);
+      b[k].rotation.z = -s * 0.12 * Math.max(0, Math.cos(ph + d));
+    }
+    b.qBody.rotation.z = 0.04 * Math.sin(ph);
+    b.qBody.position.y += 0.02 * Math.abs(Math.sin(ph));
+    b.qNeck.rotation.y = 0.08 * Math.sin(ph);
+    b.qTail.rotation.y = 0.15 * Math.sin(ph);
+  } else if (a.act === 'fight') {
+    const e = strikeCurve(a.strike, 0.3, 0.4);
+    b.qBody.position.z += 0.08 * e;
+    b.qBody.rotation.x = -0.08 * e;
+    b.qNeck.rotation.x = 0.4 * e - 0.15 * (1 - e);
+    b.qHead.rotation.x = -0.25 * e;
+    b.qFL.rotation.z = 0.3 * e;
+    b.qFR.rotation.z = -0.3 * e;
+  } else if (a.act === 'dead') {
+    const f = a.fall ?? 1;
+    b.qNeck.rotation.x = 0.5 * f;
+    b.qHead.rotation.x = 0.3 * f;
+    for (const [k, s] of [
+      ['qFL', -1],
+      ['qFR', 1],
+      ['qBL', -1],
+      ['qBR', 1],
+    ] as const) b[k].rotation.z = s * 0.25 * f;
+  } else {
+    b.qNeck.rotation.x = 0.05 * Math.sin(t * 0.8);
+    b.qHead.rotation.y = 0.2 * Math.sin(t * 0.5);
+    b.qFL.rotation.y = -0.12 * Math.sin(t * 1.2);
+    b.qFR.rotation.y = 0.12 * Math.sin(t * 1.2);
+  }
 }
 
 /** Rùa Vàng có xương: `userData.pose` cho bơi (đi) hay nằm chèo nhẹ (đứng). */

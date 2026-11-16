@@ -237,6 +237,8 @@ export const NHOM: Record<string, Entry[]> = {
     { ten: 'Trăn gấm', tao: () => makeMonster('tranGam'), co: 1.0, cach: 1.3 },
     { ten: 'Sói đỏ', tao: () => makeBeast('soiDo'), co: 0.8, cach: 1.1 },
     { ten: 'Tê giác', tao: () => makeBeast('teGiac'), co: 1.1, cach: 1.4 },
+    { ten: 'Rái cá', tao: () => makeBeast('raiCa'), co: 0.7, cach: 1.0 },
+    { ten: 'Rùa biển', tao: () => makeBeast('ruaBien'), co: 0.9, cach: 1.8 },
     { ten: 'Rắn hổ mang chúa', tao: () => makeMonster('ranHo'), co: 1.0, cach: 1.1 },
     { ten: 'Cua đá', tao: () => makeMonster('cuaDa'), co: 0.9, cach: 1.3 },
   ],
