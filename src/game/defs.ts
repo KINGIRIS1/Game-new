@@ -1478,7 +1478,10 @@ export type EnemyType =
   | 'linhDuong'
   | 'noDuong'
   | 'giapDuong'
-  | 'duongTuHuc';
+  | 'duongTuHuc'
+  // Thú rừng Núi Vệ (map dã ngoại 8): sói đỏ, tê giác.
+  | 'soiDo'
+  | 'teGiac';
 export const UNIT_TYPES: UnitType[] = ['giao', 'cung', 'voi', 'no'];
 
 export interface FighterStats {
@@ -1505,7 +1508,7 @@ export interface UnitDef extends FighterStats {
 }
 
 /** Quân nặng của giặc: giáo binh và lính nỏ khắc chế. */
-const HEAVY: EnemyType[] = ['chienXa', 'caSau', 'hoTinh', 'kyBinh', 'linhRiu', 'giapHan', 'giapNgo', 'voiRung', 'giapLuong', 'trauRung', 'giapDuong'];
+const HEAVY: EnemyType[] = ['chienXa', 'caSau', 'hoTinh', 'kyBinh', 'linhRiu', 'giapHan', 'giapNgo', 'voiRung', 'giapLuong', 'trauRung', 'giapDuong', 'teGiac'];
 
 /**
  * Quân ta: giáo binh thắng quân nặng (chiến xa, cá sấu, hổ tinh, kỵ binh, lính rìu, giáp sĩ Hán), cung thủ thắng
@@ -1600,6 +1603,8 @@ export const ENEMIES: Record<EnemyType, FighterStats> = {
   noDuong: { hp: 60, dmg: 13, range: 4.2, speed: 1.3, cooldown: 1.5 },
   giapDuong: { hp: 330, dmg: 26, range: 0.9, speed: 1.5, cooldown: 1.4, strongVs: ['cung'] },
   duongTuHuc: { hp: 2000, dmg: 36, range: 1.4, speed: 1.4, cooldown: 1.2 },
+  soiDo: { hp: 85, dmg: 12, range: 0.8, speed: 2.3, cooldown: 0.8 },
+  teGiac: { hp: 190, dmg: 17, range: 1.0, speed: 1.2, cooldown: 1.5 },
 };
 
 /**
@@ -1895,6 +1900,8 @@ export const ENEMY_ROWS: Record<EnemyType, Row> = {
   giapDuong: 'trung',
   noDuong: 'hau',
   duongTuHuc: 'hau',
+  soiDo: 'tien',
+  teGiac: 'trung',
 };
 
 /**
@@ -2650,8 +2657,7 @@ export const DA_MAP: Record<DaMapId, DaMapDef> = {
     cap: [71, 80],
     cong: 70,
     terrain: 'doi',
-    // Khu 1, 2 tạm dùng báo gấm, hổ tinh tới khi có sói đỏ, tê giác.
-    quai: ['baoGam', 'hoTinh', 'linhDuong', 'noDuong', 'giapDuong'],
+    quai: ['soiDo', 'teGiac', 'linhDuong', 'noDuong', 'giapDuong'],
     boss: 'duongTuHuc',
     can: { cay: 5, da: 3, tre: 2, sim: 2, cayChet: 1 },
     thuong: { gao: 22, voOc: 14, datDa: 11, sat: 5, go: 5 },

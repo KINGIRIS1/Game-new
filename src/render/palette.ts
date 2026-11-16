@@ -115,6 +115,11 @@ export const C = {
   duongQuanDark: 0x24402e,
   // Ngựa xám đốm của Dương Tư Húc.
   horseGrey: 0x8e8a84,
+  // Thú rừng Núi Vệ: sói đỏ lông đỏ gạch, tê giác da xám nâu.
+  dhole: 0xb4552a,
+  dholeDark: 0x6a2e16,
+  rhino: 0x7d7670,
+  rhinoDark: 0x5c5650,
   // Thú đầm Dạ Trạch: trăn gấm vàng nâu hoa nâu sẫm; trâu rừng đen xám, sừng màu ngà xám.
   python: 0xb08a4a,
   pythonSpot: 0x5a3e22,

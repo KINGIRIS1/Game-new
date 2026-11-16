@@ -3699,14 +3699,14 @@ Chủ dự án yêu cầu: thêm dã ngoại để đánh quái kiếm thêm tà
 
 - Map 80×80 (`DA_KHUNG`); quái mỗi khu 8, 8, 8, 7, 6 con, hệ số khu 1; 1; 1,1; 1,25; 1,5 (`DA_KHU`). Quái gốc máu 150, sức đánh 7, mỗi cấp quái thêm 10% máu, 8% sức đánh (`DA_QUAI`); tầm phát hiện 3 ô, đuổi xa quá 6 ô thì về, chết 20 giây sau mọc lại.
 - Boss: máu ×14, sức đánh ×2,2, kinh nghiệm ×40, cấp cao nhất map cộng 2; chắc rơi đồ (`daBoss`, phẩm 3–4); hạ xong 30 phút chơi sau mới mọc lại (`DA_BOSS_MS`).
-- Cấp chung: trần 70 (50 khi chỉ có năm map; lên 60 khi thêm map 6, 70 khi thêm map 7); kinh nghiệm lên cấp sau `100 × cấp^1,8` (cấp 10 chừng một giờ, cấp 50 nhiều ngày); mỗi cấp +3% máu và sức đánh trên map; quái thấp hơn cấp chung quá 5 cấp thì mỗi cấp bớt 15% kinh nghiệm, còn ít nhất 10% (`DA_CAP`).
+- Cấp chung: trần 80 (50 khi chỉ có năm map; lên 60 khi thêm map 6, 70 khi thêm map 7, 80 khi thêm map 8); kinh nghiệm lên cấp sau `100 × cấp^1,8` (cấp 10 chừng một giờ, cấp 50 nhiều ngày); mỗi cấp +3% máu và sức đánh trên map; quái thấp hơn cấp chung quá 5 cấp thì mỗi cấp bớt 15% kinh nghiệm, còn ít nhất 10% (`DA_CAP`).
 - Đồ rơi quái thường 2% mỗi con (`daQuai`), chương rơi là chương của map nhưng không vượt chương đang chơi (`chuongRoi`).
 - Tướng hồi 4% máu mỗi giây khi 4 giây không bị đánh; ngã thì 3 giây yên mới đứng dậy với nửa máu; cả đội ngã thì 3 giây sau về trại đủ máu (`DA_TUONG`). Tự đánh dừng nghỉ khi máu đội dưới 40% mà không có quái đuổi, hồi tới 90% mới đánh tiếp (Tự đánh không ngừng thì tướng không bao giờ hồi máu). Kỹ năng vùng chỉ tính quái quanh tướng 9 ô.
 - Treo máy: số quái hạ mỗi phút = `12 × min(1, max(0,1; √(sức đội / 40)))`, sức đội là (sát thương mỗi giây × máu) của đội chia cho của một con quái khu (`tiSuc`, `nhipTreo`, `DA_TREO`); boss không tính. Test canh treo ra trong khoảng ×0,5–1,3 so với đánh thật cùng khu.
 - Ở kinh đô chọn map ra được (như đi xe ngựa tới trại): chỉ map đã tới bằng cổng và đủ cấp (`chonMap`).
 - Giao diện: chip 🌿 Dã ngoại trên bản đồ phó bản mở bảng (cấp chung, chọn đội, năm map có giờ boss, treo máy, Ra dã ngoại hay Xem đội, Gọi đội về, Tự đánh); nửa trái là bản đồ map (khu có số, trại, cổng, khu boss mờ khi boss chưa mọc). Trên map: thanh trên ghi map, khu và cấp quái khu, cấp và thanh kinh nghiệm, máu từng tướng; bản đồ nhỏ góc phải có chấm đội và giờ boss; chữ nổi kinh nghiệm, lên cấp, đồ rơi; nút 🏯 xem kinh đô (đội ở lại treo máy), nút Tự đánh, nút kỹ năng. Kéo cảnh thì camera thôi bám đội, chạm đất hay bật Tự đánh thì bám lại. Đang xem map thì giặc không tới kinh đô (như Đấu thành). Bảng "Bệ hạ đã trở lại" thêm dòng dã ngoại và các món rơi (gộp món cùng tên, cùng phẩm, cùng cấp thành một ô ảnh kèm số lượng ×n, phẩm cao trước, không kể từng món; `gomRoiHtml` ở `ui/trangBi.ts`); Lạc hầu báo một lần khi dã ngoại mở.
 
-### Bảy map
+### Tám map
 
 Mỗi map chừng 80×80 ô, có trại (điểm hồi sinh, chỗ vào từ kinh đô hay từ cổng), năm khu quái và một khu boss. Khu gần cổng vào yếu, càng đi sâu càng mạnh; khu boss ở cuối map. Cổng ở mép map nối sang map trước, map sau; map 1 có lối về kinh đô.
 
@@ -3719,6 +3719,7 @@ Mỗi map chừng 80×80 ô, có trại (điểm hồi sinh, chỗ vào từ kin
 | 5. Rừng Mê Linh | 41–50 | cấp 40 | rừng, đầm hồ (`langBac`, `camKhe`) | báo gấm (mới), rắn hổ mang chúa (mới), lính kích Hán, nỏ thủ Hán, giáp sĩ Hán | Mã Viện |
 | 6. Núi Nưa | 51–60 | cấp 50 | núi rừng (`nui`) | gấu ngựa (mới), voi rừng (mới), lính giáo Ngô, nỏ thủ Ngô, giáp sĩ Ngô | tướng Ngô Lục Dận |
 | 7. Đầm Dạ Trạch | 61–70 | cấp 60 | đầm lầy (`ngap`) | trăn gấm (mới), trâu rừng (mới), lính khiên Lương, nỏ thủ Lương, giáp sĩ Lương | tướng Lương Trần Bá Tiên |
+| 8. Núi Vệ | 71–80 | cấp 70 | đồi (`doi`) | sói đỏ (mới), tê giác (mới), lính giáo Đường, nỏ thủ Đường, giáp sĩ Đường | tướng Đường Dương Tư Húc |
 
 - Mỗi khu một loại quái chính, cấp quái trong khoảng hai cấp của khu (map 1: khu 1 cấp 1–2, …, khu 5 cấp 9–10); boss cấp cao nhất của map, cộng 2.
 - Quái dùng dáng và chỉ số gốc có sẵn (`ENEMIES`), nhân theo cấp quái. Bốn quái mới dựng bằng code như thú, quái có sẵn (`nanThu.ts`, `nanQuai.ts`): lợn rừng, cua đá, báo gấm, rắn hổ mang chúa.
@@ -3741,12 +3742,24 @@ Mỗi map chừng 80×80 ô, có trại (điểm hồi sinh, chỗ vào từ kin
 Đầm lầy nơi Triệu Quang Phục ngày ẩn đêm ra đánh giặc Lương (thế kỷ 6, nối tiếp thời Bà Triệu). Nối sau Núi Nưa.
 
 - **Đã chốt**: chủ đề Đầm Dạ Trạch, giặc Lương; như map 6: hai thú mới (trăn gấm, trâu rừng), ba lính giặc đổi màu từ lính có sẵn, một boss mới (tướng Lương Trần Bá Tiên); làm chung PR với map 6.
-- Cấp quái 61–70, cổng cần cấp 60, trần cấp chung 70; map cuối (`DA_MAP_CUOI` = 7).
+- Cấp quái 61–70, cổng cần cấp 60, trần cấp chung 70 (thêm map 8 thì lên 80).
 - Đồ rơi: chương của map là 5; boss rơi Quý 30%, Huyền thoại 70% (`bossRoi`).
 - Của mỗi con: gạo 18, vỏ ốc 12, đất đá 9, sắt 4, gỗ 4. Vật cản: ao, lau, tre, khúc gỗ, cây chết. Nền `ngap`, màu cảnh riêng (`MAU[7]` ở `render/daNgoai.ts`), không lật bố cục.
 - Quân Lương (`linhLuong` khiên kiếm, `noLuong`, `giapLuong`) dáng quân Triệu, áo vàng đất (`C.luong`, `C.luongDark`); chỉ số như quân Hán. Trần Bá Tiên cưỡi ngựa nâu, giáp sắt viền vàng, áo choàng vàng đất, chùm lông đen, đại đao; chỉ số như Lục Dận, không kỹ năng riêng.
 - Trăn gấm (`tranGam`, khu 1): mình to bò chữ S sát đất, da vàng nâu hoa nâu sẫm, đầu nêm (`pythonBody` ở `nanQuai.ts`, `PYTHON`, `posePython` ở `monsters.ts`); chỉ số dáng máu 100, sức đánh 13, tầm 1,4. Trâu rừng (`trauRung`, khu 2): đen xám, sừng lưỡi liềm màu ngà, cúi đầu húc (`buffaloBody` ở `nanThu.ts`, `BUFFALO`, `poseBuffalo` ở `beasts.ts`); máu 160, sức đánh 15, đi chậm.
 - Lạc hầu báo một lần khi cấp chung tới 60 (`hinted` `daNgoai7`), nhắc Triệu Quang Phục.
+
+### Map 8: Núi Vệ (chủ dự án yêu cầu "làm tiếp map 8", đã chốt)
+
+Núi Vệ ở Hoan Châu, nơi Mai Thúc Loan (Mai Hắc Đế) dấy binh đánh giặc Đường (năm 722). Nối sau Đầm Dạ Trạch.
+
+- **Đã chốt**: chủ đề Núi Vệ – Mai Thúc Loan, giặc Đường; như map 6, 7: hai thú mới (sói đỏ, tê giác), ba lính giặc đổi màu, một boss mới (tướng Đường Dương Tư Húc); làm chung PR với map 6, 7.
+- Cấp quái 71–80, cổng cần cấp 70, trần cấp chung 80; map cuối (`DA_MAP_CUOI` = 8).
+- Đồ rơi: chương của map là 5; boss rơi Quý 20%, Huyền thoại 80% (`bossRoi`).
+- Của mỗi con: gạo 22, vỏ ốc 14, đất đá 11, sắt 5, gỗ 5. Vật cản: cây, đá, tre, sim, cây chết. Nền `doi`, màu cảnh riêng (`MAU[8]`), bản đồ lật ngang.
+- Quân Đường (`linhDuong`, `noDuong`, `giapDuong` khiên tròn) áo xanh lục (`C.duongQuan`, `C.duongQuanDark`); chỉ số như quân Hán. Dương Tư Húc cưỡi ngựa xám, giáp sắt, kích; chỉ số như Lục Dận, không kỹ năng riêng.
+- Sói đỏ (`soiDo`, khu 1): lông đỏ gạch, bụng kem, chóp đuôi đen, đi theo đàn (`dholeBody` ở `nanThu.ts`, `DHOLE`, đánh như hổ tinh); máu 85, sức đánh 12, nhanh. Tê giác (`teGiac`, khu 2): da xám dày, hai sừng màu ngà, cúi đầu húc như trâu rừng (`rhinoBody` ở `nanThu.ts`, `RHINO`); máu 190, sức đánh 17, đi chậm.
+- Lạc hầu báo một lần khi cấp chung tới 70 (`hinted` `daNgoai8`), nhắc Mai Hắc Đế. Lời báo chỉ nói map cao nhất vừa đủ cấp; các map thấp hơn coi như đã báo.
 
 ### Đội và trận trên map
 
@@ -3789,7 +3802,7 @@ Mỗi map chừng 80×80 ô, có trại (điểm hồi sinh, chỗ vào từ kin
 - `battle.ts`: chế độ trận mới `daNgoai` (map lớn, không hết trận, quái mọc lại, tầm phát hiện, quay về chỗ); `Battle.heroThem?` cho tướng thứ ba (trường tùy chọn: trận cũ, Đấu thành ra y hệt); `heroSetups` trả cả ba; tự đánh, tự dùng kỹ năng. Đi quanh vật cản dùng `Nav` của `baiChien.ts` trên lưới map.
 - `son.ts`: tách phần dựng `HeroSetup` theo loại tướng khỏi phần kiểm kiệt sức (`tuongSetup(s, kind)`).
 - `daNgoai.ts` mới: bố cục năm map (trại, khu, cổng, boss), cấp quái, kinh nghiệm, cấp, rơi của và đồ, boss mọc lại theo đồng hồ chơi, cổng theo cấp, treo máy (gọi trong `tick` và `applyOffline`). Số ở `defs.ts` (`DA_MAP`, `DA_CAP`, `DA_TREO`, `ROI_DO.daQuai`, `daBoss`), chữ ở `vi.ts` mục `daNgoai`.
-- Bản lưu 31 (`migrate30to31`), 32 (`migrate31to32`): thêm giờ boss mọc lại cho map 6, map 7 (`themBossDa`).
+- Bản lưu 31 (`migrate30to31`), 32 (`migrate31to32`), 33 (`migrate32to33`): thêm giờ boss mọc lại cho map 6, 7, 8 (`themBossDa`).
 - Bản lưu 30 (`migrate29to30`; đóng đảo PR 3 gộp trước, lấy bản lưu 29): cấp, kinh nghiệm, map và chỗ đứng, đội, Tự đánh, giờ boss mọc lại. Quái không lưu, mở map thì mọc đủ.
 
 ### Test
@@ -3860,5 +3873,5 @@ Mỗi map chừng 80×80 ô, có trại (điểm hồi sinh, chỗ vào từ kin
 23. **Dân gánh hàng về kho** (chủ dự án chọn, đã làm PR 1, 2; xem mục cùng tên): công trình xa nơi nhận làm ra ít hơn, thấp nhất 50%; đường đi cho dân đi nhanh gấp đôi. PR 1 luật, PR 2 dân gánh trên đường, PR 3 tới nơi sản xuất.
 24. **Trang bị rơi ngẫu nhiên và sáu chỉ số tướng** (chủ dự án đã duyệt; xem Kế hoạch cùng tên): đồ rơi ở phó bản, thử thách, đồn, giữ kinh đô; mỗi tướng một bộ mang tên truyền thuyết, ai mặc cũng được, hiệu ứng bộ khi đúng tướng mặc; sáu chỉ số và Lực chiến; cường hóa bằng tài nguyên, phân giải ra sắt; bảng tướng kiểu túi đồ game nhập vai (hình tướng mặc đồ, ảnh món vẽ sẵn), mặc đủ bộ mình thì vũ khí ánh lên; Đấu thành tính đồ (máy chủ kiểm món, tự tính chỉ số). PR 1 luật và bảng, PR 2 Đấu thành, PR 3 hình (đã làm cả ba, cùng PR #100).
 25. **Điện 10 điều quân ra đóng đảo** (chủ dự án đã duyệt; đã làm PR 1–3: luật, giao diện, hình đồn đảo và thuyền chiến, giặc đánh đảo; xem Kế hoạch cùng tên): thuyền chiến đóng ở bến thuyền khơi cấp 3 chở quân ra đồn Hoàng Sa, đồn Trường Sa; đảo có quân giữ thì ngư trường làm ra thêm, báo sớm và chặn đánh thủy quân Hán; giặc Hán đánh đảo, quân đảo tự đánh, xem lại được.
-26. **Dã ngoại** (chủ dự án yêu cầu, đã làm; xem Kế hoạch cùng tên): bảy map (map 6 Núi Nưa, map 7 Đầm Dạ Trạch thêm sau) mở kiểu Võ Lâm 2 nối nhau bằng cổng mở theo cấp, mỗi map năm khu quái phân theo cấp và một boss tự đánh; chạm để đi, nút Tự đánh; tự chọn tối đa 3 tướng, chỉ tướng đi; cấp chung cho mọi tướng chỉ có tác dụng trong dã ngoại; treo máy tối đa 8 giờ, không khóa tướng.
+26. **Dã ngoại** (chủ dự án yêu cầu, đã làm; xem Kế hoạch cùng tên): tám map (map 6 Núi Nưa, map 7 Đầm Dạ Trạch, map 8 Núi Vệ thêm sau) mở kiểu Võ Lâm 2 nối nhau bằng cổng mở theo cấp, mỗi map năm khu quái phân theo cấp và một boss tự đánh; chạm để đi, nút Tự đánh; tự chọn tối đa 3 tướng, chỉ tướng đi; cấp chung cho mọi tướng chỉ có tác dụng trong dã ngoại; treo máy tối đa 8 giờ, không khóa tướng.
 27. **Để sau**: nhạc nền.
