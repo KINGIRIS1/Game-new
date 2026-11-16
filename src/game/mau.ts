@@ -56,7 +56,7 @@ export function inFrame(x: number, z: number, level: number): boolean {
 }
 import { inChapter2 } from './son';
 import { footprintTop, levelFootprint } from './terrain';
-import { duongGanh, ganhType, heSoGanh } from './vanChuyen';
+import { dichOf, duongGanh, ganhType, heSoGanh, type DichGanh } from './vanChuyen';
 
 export type MauId = 'phongChau' | 'deBao' | 'coLoa' | 'coLoaSong';
 export const MAU_IDS: MauId[] = ['phongChau', 'deBao', 'coLoa', 'coLoaSong'];
@@ -132,8 +132,12 @@ class Draft {
   readonly solid = new Uint8Array(GRID * GRID);
   /** Ô có công trình một ô (lũy, đê, thành, chòi canh, bẫy). */
   readonly wall = new Uint8Array(GRID * GRID);
+  /** Chỗ (số thứ tự trong `slots`, cộng 1) đứng trên ô; 0 là ô không có công trình. */
+  readonly owner = new Int16Array(GRID * GRID);
   readonly slots: Slot[] = [];
   rings: Ring[] = [];
+  /** Xếp chỗ có xét lối gánh hàng (`LoiGanh`): mẫu có vòng thành kín. */
+  reach = false;
 
   constructor(readonly level: number) {
     this.lo = frameStart(level);
@@ -156,11 +160,25 @@ class Draft {
       for (let dx = 0; dx < w; dx++) {
         const i = (z + dz) * GRID + x + dx;
         this.cell[i] = USED;
+        this.owner[i] = this.slots.length + 1;
         if (w > 1) this.solid[i] = 1;
         else this.wall[i] = 1;
       }
     }
     this.slots.push({ type, x, z });
+  }
+
+  /**
+   * Dân gánh hàng đi qua ô `i` được không, theo luật gánh (`vanChuyen.ts`): đê, bẫy, chỗ cổng thành đi qua được;
+   * lũy, thành, móng công trình khác và ô ngoài khung mẫu thì không.
+   */
+  passable(i: number): boolean {
+    const o = this.owner[i];
+    if (o) {
+      const s = this.slots[o - 1];
+      return s.type === 'de' || s.type === 'bayChong' || !!s.cong;
+    }
+    return this.cell[i] !== USED;
   }
 
   /** Đặt công trình một ô nếu ô còn trống. */
@@ -294,14 +312,117 @@ function footAt(d: Draft, x: number, z: number, w: number): Foot {
   };
 }
 
+/**
+ * Phạt điểm chỗ dựng đè lên lối gánh hàng của công trình làm ra hàng đã xếp (mẫu có vòng thành kín, `Draft.reach`).
+ * Tường chắn hẳn dân gánh, hành lang giữa hai vòng thành vừa một dãy nhà, nên xếp không xét lối thì có nhà kẹt trong hốc.
+ */
+const CUT = 150;
+/** Công trình làm ra hàng mà không có lối tới nơi nhận thì làm ra một nửa: thà đứng sát nhà khác (`PACKED`) còn hơn. */
+const NO_WAY = 1500;
+const STEP4 = [
+  [1, 0],
+  [-1, 0],
+  [0, 1],
+  [0, -1],
+];
+
+/** Bản đồ lối gánh trên bản nháp lúc đang xếp: khoảng cách tới nơi nhận, và các ô trên lối của công trình đã xếp. */
+class LoiGanh {
+  private readonly dist: Record<DichGanh, Int32Array>;
+  /** Ô trên lối gánh của một công trình làm ra hàng đã xếp: công trình sau không đè lên. */
+  private readonly life = new Uint8Array(GRID * GRID);
+
+  constructor(private readonly d: Draft) {
+    const kho: number[] = [];
+    const bep: number[] = [];
+    for (const s of d.slots) {
+      if (s.type !== 'dien' && s.type !== 'kho' && s.type !== 'bep') continue;
+      const w = BUILDINGS[s.type].w;
+      for (let dz = 0; dz < w; dz++) {
+        for (let dx = 0; dx < w; dx++) {
+          const i = (s.z + dz) * GRID + s.x + dx;
+          bep.push(i);
+          if (s.type !== 'bep') kho.push(i);
+        }
+      }
+    }
+    const k = this.bfs(kho);
+    const b = this.bfs(bep);
+    this.dist = { kho: k.dist, bep: b.dist };
+    const par = { kho: k.par, bep: b.par };
+    for (const s of d.slots) {
+      if (!ganhType(s.type)) continue;
+      const dich = dichOf(s.type);
+      let at = this.nearest(dich, s.type, s.x, s.z);
+      for (let guard = 0; at >= 0 && this.dist[dich][at] > 0 && guard < GRID * GRID; guard++) {
+        this.life[at] = 1;
+        at = par[dich][at];
+      }
+    }
+  }
+
+  private bfs(seeds: number[]): { dist: Int32Array; par: Int32Array } {
+    const dist = new Int32Array(GRID * GRID).fill(-1);
+    const par = new Int32Array(GRID * GRID).fill(-1);
+    const q = new Int32Array(GRID * GRID);
+    let h = 0;
+    let t = 0;
+    for (const i of seeds) {
+      if (dist[i] >= 0) continue;
+      dist[i] = 0;
+      q[t++] = i;
+    }
+    while (h < t) {
+      const i = q[h++];
+      const x = i % GRID;
+      const z = (i - x) / GRID;
+      for (const [dx, dz] of STEP4) {
+        if (!inGrid(x + dx, z + dz)) continue;
+        const j = (z + dz) * GRID + x + dx;
+        if (dist[j] >= 0 || !this.d.passable(j)) continue;
+        dist[j] = dist[i] + 1;
+        par[j] = i;
+        q[t++] = j;
+      }
+    }
+    return { dist, par };
+  }
+
+  /** Ô sát móng (x, z) gần nơi nhận nhất, như `vienMong` của luật gánh (-1: không có lối). */
+  private nearest(dich: DichGanh, type: BuildingType, x: number, z: number): number {
+    const w = BUILDINGS[type].w;
+    const dist = this.dist[dich];
+    let best = -1;
+    for (let tz = z - 1; tz <= z + w; tz++) {
+      for (let tx = x - 1; tx <= x + w; tx++) {
+        if ((tx >= x && tx < x + w && tz >= z && tz < z + w) || !inGrid(tx, tz)) continue;
+        const i = tz * GRID + tx;
+        if (dist[i] >= 0 && (best < 0 || dist[i] < dist[best])) best = i;
+      }
+    }
+    return best;
+  }
+
+  /** Phạt điểm nếu dựng `type` ở (x, z). */
+  penalty(type: BuildingType, x: number, z: number): number {
+    const w = BUILDINGS[type].w;
+    let p = 0;
+    for (let dz = 0; dz < w && !p; dz++) for (let dx = 0; dx < w; dx++) if (this.life[(z + dz) * GRID + x + dx]) p = CUT;
+    if (ganhType(type) && this.nearest(dichOf(type), type, x, z) < 0) p += NO_WAY;
+    return p;
+  }
+}
+
 /** Xếp một công trình `type` vào chỗ điểm thấp nhất, ưu tiên chỗ trên đường chéo. Hết chỗ thì trả về false. */
 function placeSingle(d: Draft, type: BuildingType, score: Score): boolean {
   const w = BUILDINGS[type].w;
+  const loi = d.reach ? new LoiGanh(d) : null;
   let best: { x: number; z: number } | null = null;
   let bestScore = Infinity;
   for (let z = d.lo; z + w - 1 <= LAST; z++) {
     for (let x = d.lo; x + w - 1 <= LAST; x++) {
-      const p = d.penalty(type, x, z);
+      let p = d.penalty(type, x, z);
+      if (p >= 0 && loi) p += loi.penalty(type, x, z);
       if (p < 0 || p - snugMax(w) >= bestScore) continue;
       const base = p + (x === z ? 0 : ASYM) + score(footAt(d, x, z, w), d);
       if (base - snugMax(w) >= bestScore) continue;
@@ -323,13 +444,16 @@ function placeSingle(d: Draft, type: BuildingType, score: Score): boolean {
  */
 function placePair(d: Draft, a: BuildingType, b: BuildingType, score: Score): boolean {
   const w = BUILDINGS[a].w;
+  const loi = d.reach ? new LoiGanh(d) : null;
   let best: { x: number; z: number } | null = null;
   let bestScore = Infinity;
   for (let z = d.lo; z + w - 1 <= LAST; z++) {
     for (let x = z + w; x + w - 1 <= LAST; x++) {
-      const pa = d.penalty(a, x, z);
+      let pa = d.penalty(a, x, z);
+      if (pa >= 0 && loi) pa += loi.penalty(a, x, z);
       if (pa < 0 || pa - snugMax(w) >= bestScore) continue;
-      const pb = d.penalty(b, z, x);
+      let pb = d.penalty(b, z, x);
+      if (pb >= 0 && loi) pb += loi.penalty(b, z, x);
       if (pb < 0) continue;
       // Hai móng sát nhau qua đường chéo thì không còn lối đi.
       const p = Math.max(pa, pb, x - z === w ? PACKED : 0);
@@ -352,12 +476,15 @@ function placePair(d: Draft, a: BuildingType, b: BuildingType, score: Score): bo
  * Một việc xếp: một loại, hay hai loại cùng cỡ đứng đối xứng nhau qua đường chéo; và cách chấm chỗ.
  * Xếp từng cặp đối xứng, số lẻ thì cái còn lại đứng trên đường chéo (hết chỗ đối xứng thì đứng lệch).
  * Số thứ ba (nếu có): mẫu chỉ chừa chỗ cho việc này từ cấp Điện ấy (đất cấp thấp không đủ chỗ).
+ * Số thứ tư (nếu có): việc này xếp tối đa chừng ấy cái mỗi loại, số còn lại để việc sau xếp chỗ khác.
  */
-type Job = [BuildingType | [BuildingType, BuildingType], Score, number?];
+type Job = [BuildingType | [BuildingType, BuildingType], Score, number?, number?];
 
-function placeJob(d: Draft, [what, score, from = 0]: Job): void {
+function placeJob(d: Draft, [what, score, from = 0, max = Infinity]: Job): void {
   const [a, b] = Array.isArray(what) ? what : [what, what];
-  const left = (t: BuildingType) => (d.level < from ? 0 : wantOf(t, d.level)) - d.count(t);
+  const had = new Map([a, b].map((t) => [t, d.count(t)]));
+  const left = (t: BuildingType) =>
+    (d.level < from ? 0 : Math.min(wantOf(t, d.level), had.get(t)! + max)) - d.count(t);
   for (;;) {
     const pair = a === b ? left(a) >= 2 : left(a) >= 1 && left(b) >= 1;
     if (!pair || !placePair(d, a, b, score)) break;
@@ -418,7 +545,19 @@ function luyTre(d: Draft): void {
   d.mark(lo + 2, lo + 2, lo + 2, LAST, KEEP);
   if (wantOf('congThanh', d.level) > 0) {
     for (const s of [slotAt(d, GATE_AXIS, lo + 1), slotAt(d, lo + 1, GATE_AXIS)]) if (s?.type === 'luy') s.cong = true;
+    keepGate(d, GATE_AXIS, lo + 1);
   }
+}
+
+/**
+ * Chừa ô ngay trước và ngay sau cặp cổng ở (x, at) mặt bắc và (at, x) mặt tây: dân gánh hàng chỉ qua tường ở cổng
+ * (tường chắn hẳn), công trình đứng sát cổng thì cổng thành vô dụng.
+ */
+function keepGate(d: Draft, x: number, at: number): void {
+  d.mark(x, at - 1, x, at - 1, KEEP);
+  d.mark(x, at + 1, x, at + 1, KEEP);
+  d.mark(at - 1, x, at - 1, x, KEEP);
+  d.mark(at + 1, x, at + 1, x, KEEP);
 }
 
 /**
@@ -441,6 +580,7 @@ function ringGates(d: Draft): void {
       if (north?.type !== 'thanh' || west?.type !== 'thanh' || north.uNo || west.uNo) continue;
       north.cong = true;
       west.cong = true;
+      keepGate(d, x, a);
       break;
     }
   }
@@ -551,6 +691,8 @@ function coLoaSongWalls(d: Draft): void {
 interface Recipe {
   walls: (d: Draft) => void;
   jobs: Job[];
+  /** Vòng thành kín: xếp chỗ có xét lối gánh hàng qua cổng (`LoiGanh`). */
+  reach?: boolean;
 }
 
 /** Gần sông (trong đê nếu có đê), gần Điện trước. */
@@ -569,6 +711,8 @@ const byBank: Score = (f) => f.diag * 4 + f.river * 2;
 const byBarracks: Score = (f, d) => near(d, 'doanhTrai', f);
 /** Quanh bếp gói bánh. */
 const byKitchen: Score = (f, d) => near(d, 'bep', f);
+/** Gần các bến: kho ngoài thành Cổ Loa cho bến, ruộng khỏi đi vòng tới cổng (tường chắn hẳn dân gánh hàng). */
+const byBen: Score = (f, d) => near(d, 'ben', f);
 /** Phạt điểm mỗi ô lệch khỏi dãy mẫu muốn (`row`). */
 const ROW = 6;
 /** Cổ Loa: dãy ngoài vòng ngoài, `k` ô tính từ bìa rừng (bỏ hàng bẫy): 1 là dãy 4×4 sát hàng bẫy, 2 là dãy 3×3 sát vòng ngoài. */
@@ -633,10 +777,13 @@ const RECIPES: Record<MauId, Recipe> = {
   // vòng; ruộng, đền, doanh trại, Hồ Kim Quy ngoài vòng ngoài; đê bao ngoài cùng.
   coLoa: {
     walls: coLoaWalls,
+    reach: true,
     jobs: [
       ['ben', byDien],
       ['langChai', byDien],
       ['benKhoi', byDien],
+      // Một cặp kho ngoài vòng ngoài, gần bến: bến, ruộng ngoài thành khỏi đi vòng tới cổng (tường chắn dân gánh).
+      ['kho', inRings(0, byBen), 5, 2],
       ['doanhTrai', inRings(0, row(1, byAxis))],
       ['denCoLoa', inRings(1, byAxis)],
       ['nhaSan', inRings(2, byDien)],
@@ -658,10 +805,13 @@ const RECIPES: Record<MauId, Recipe> = {
   // doanh trại, Đền Cuông và Đền Hát Môn phía bắc ngoài vòng ngoài, Hồ Kim Quy trên đường chéo về góc rừng.
   coLoaSong: {
     walls: coLoaSongWalls,
+    reach: true,
     jobs: [
       ['ben', byDien],
       ['langChai', byDien],
       ['benKhoi', byDien],
+      // Một cặp kho ngoài vòng ngoài, gần bến: bến, ruộng ngoài thành khỏi đi vòng tới cổng (tường chắn dân gánh).
+      ['kho', inRings(0, byBen), 5, 2],
       ['doanhTrai', inRings(0, row(1, byAxis))],
       ['denCoLoa', inRings(1, byAxis)],
       ['nhaSan', inRings(2, byDien)],
@@ -698,6 +848,7 @@ function keepYard(d: Draft): void {
 function draw(id: MauId, level: number): Slot[] {
   const recipe = RECIPES[id];
   const d = new Draft(level);
+  d.reach = !!recipe.reach;
   d.put('dien', DIEN_HOME, DIEN_HOME);
   recipe.walls(d);
   keepYard(d);

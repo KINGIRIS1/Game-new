@@ -46,7 +46,7 @@ function gate(s: GameState, x: number, z: number, level = 1): Building {
 }
 
 describe('cổng thành', () => {
-  it('mở ở chương 3 từ Điện 5; tối đa 2 ở Điện 5–7, 4 ở Điện 8; cấp 2 cần Điện 7, cấp 3 cần Điện 8', () => {
+  it('mở ở chương 3 từ Điện 5; tối đa 4 (đủ cổng vòng ngoài, vòng giữa của mẫu Cổ Loa); cấp 2 cần Điện 7, cấp 3 cần Điện 8', () => {
     const s = ch3(5);
     s.questIndex = 0;
     expect(canPlace(s, 'congThanh', DIEN, DIEN - 4)).toEqual({ ok: false, reason: 'canChuong3' });
@@ -55,7 +55,7 @@ describe('cổng thành', () => {
       setDien(s, level);
       return limitOf(s, 'congThanh');
     });
-    expect(limits).toEqual([0, 0, 0, 0, 2, 2, 2, 4]);
+    expect(limits).toEqual([0, 0, 0, 0, 4, 4, 4, 4]);
     setDien(s, 5);
     const g = gate(s, DIEN, DIEN - 4);
     expect(canUpgrade(s, g.id).ok).toBe(false);
@@ -218,12 +218,12 @@ describe('độ khó khi có cổng', () => {
 });
 
 describe('mẫu kinh đô có cổng thành', () => {
-  it('chỗ cổng: Phong Châu hai cổng trên lũy; Cổ Loa, Cổ Loa giữ sông hai cổng trên vòng ngoài, Điện 8 thêm hai trên vòng giữa; Đê bao không có', () => {
+  it('chỗ cổng: Phong Châu hai cổng trên lũy; Cổ Loa, Cổ Loa giữ sông hai cổng trên vòng ngoài, hai trên vòng giữa; Đê bao không có', () => {
     const want: Record<string, number[]> = {
       phongChau: [0, 0, 0, 0, 2, 2, 2, 2],
       deBao: [0, 0, 0, 0, 0, 0, 0, 0],
-      coLoa: [0, 0, 0, 0, 2, 2, 2, 4],
-      coLoaSong: [0, 0, 0, 0, 2, 2, 2, 4],
+      coLoa: [0, 0, 0, 0, 4, 4, 4, 4],
+      coLoaSong: [0, 0, 0, 0, 4, 4, 4, 4],
     };
     for (const id of MAU_IDS) {
       for (let level = 1; level <= 8; level++) {
@@ -244,7 +244,7 @@ describe('mẫu kinh đô có cổng thành', () => {
     const r = applyMau(s, 'coLoa');
     expect(r.ok).toBe(true);
     const gates = s.buildings.filter((b) => b.type === 'congThanh');
-    expect(gates).toHaveLength(2);
+    expect(gates).toHaveLength(4);
     expect(wallRings(s)).toBeGreaterThanOrEqual(3);
     // Mỗi cổng đứng đúng một chỗ có cờ cổng của mẫu.
     const marks = mauSlots('coLoa', 7).filter((x) => x.cong);
