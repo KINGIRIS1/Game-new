@@ -3866,7 +3866,7 @@ Chủ dự án yêu cầu: lên kế hoạch làm năm tướng mới. Đề xu�
 | 9. Bạch Đằng | Ngô Quyền (`ngoQuyen`) | hạ Lưu Hoằng Tháo lần đầu | giáp sắt, khăn đỏ, giáo dài | đánh gần tầm xa hơn (giáo dài) | **Cọc Bạch Đằng**: cắm bãi cọc ở chỗ giặc đông nhất, giặc trong bãi đi chậm và mất máu từng giây; thuyền mất gấp đôi |
 | 10. Sông Như Nguyệt | Lý Thường Kiệt (`lyThuongKiet`) | hạ Quách Quỳ lần đầu | giáp trụ, áo choàng đỏ, cầm kiếm, đeo cuộn thơ | đánh gần, giữ đội | **Nam quốc sơn hà**: ngâm thơ, quân ta quanh mình hồi máu, giặc quanh mình nao núng (giảm sức đánh) |
 
-- Đầm Dạ Trạch chọn Triệu Quang Phục (người đánh ở Dạ Trạch, Lạc hầu đã nhắc), không chọn Lý Nam Đế.
+- **Đã chốt** (chủ dự án chọn): Đầm Dạ Trạch là Triệu Quang Phục (người đánh ở Dạ Trạch, Lạc hầu đã nhắc); Lý Nam Đế (Lý Bí, vua nước Vạn Xuân) không thành tướng mà có mặt trong đoạn truyện Triệu Quang Phục về: Lý Nam Đế thua Trần Bá Tiên, lui về động Khuất Lạo, trao binh quyền cho Triệu Quang Phục; Triệu Quang Phục đưa quân vào đầm Dạ Trạch, Chử Đồng Tử hiện về trao móng rồng. Lý Nam Đế chỉ có ảnh trong hộp thoại truyện, không có khung xương, không đánh trận.
 - Năm kỹ năng chọn cho khác sáu kỹ năng sẵn có: chưa có kỹ năng nhắm một kẻ (Chém cá kình), ẩn (Ngày ẩn đêm ra), tăng sức đánh cả đội và kéo giặc (Hắc Đế dấy binh), vùng làm chậm có sát thương theo giây (Cọc Bạch Đằng), làm yếu giặc (Nam quốc sơn hà).
 - Hạ boss lần đầu thì đoạn truyện ngắn (hộp thoại như khi Hai Bà về, `story.ts`) rồi tướng về; Lạc hầu báo một lần.
 
@@ -3941,7 +3941,7 @@ Kỹ năng (dự kiến):
 
 ### Chờ chủ dự án duyệt
 
-1. Năm người như bảng (Dạ Trạch là Triệu Quang Phục).
+1. Năm người như bảng (đã chốt Dạ Trạch: Triệu Quang Phục là tướng, Lý Nam Đế có mặt trong đoạn truyện).
 2. Tướng mới chỉ đánh ở dã ngoại (đề xuất), hay thêm (b), (c).
 3. Về khi hạ boss map lần đầu.
 4. Năm kỹ năng, chỉ số, năm bộ đồ và tên món.
