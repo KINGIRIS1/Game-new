@@ -88,8 +88,12 @@ jobs:
           version: 2.122.0
       - name: Đóng gói luật
         run: node scripts/luat.mjs
+      # Máy chạy GitHub không có IPv6, còn địa chỉ cơ sở dữ liệu gọi thẳng chỉ có IPv6: `link` trước để CLI lấy
+      # đường qua pooler (IPv4), rồi `db push` theo dự án đã link.
+      - name: Nối dự án
+        run: supabase link --project-ref "$SUPABASE_PROJECT_REF" --password "$SUPABASE_DB_PASSWORD"
       - name: Đẩy migration
-        run: supabase db push --project-ref "$SUPABASE_PROJECT_REF" --password "$SUPABASE_DB_PASSWORD" --skip-vault --yes
+        run: supabase db push --password "$SUPABASE_DB_PASSWORD" --skip-vault --yes
       - name: Triển khai Edge Function
         run: supabase functions deploy dau-thanh --project-ref "$SUPABASE_PROJECT_REF" --use-api --no-verify-jwt --yes
       - name: Thử máy chủ thật
