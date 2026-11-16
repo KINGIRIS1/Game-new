@@ -162,6 +162,7 @@ const SCALE: Partial<Record<FighterKind, number>> = {
   tranBaTien: 0.9,
   duongTuHuc: 0.9,
   hoangThao: 0.9,
+  quachQuy: 0.9,
   voi: 0.75,
   chienXa: 0.75,
   phoTuong: 1,
@@ -1397,7 +1398,7 @@ export class BattleView {
                 ? new THREE.Mesh(boltGeo, goldMat)
                 : e.by === 'caoLo'
                   ? new THREE.Mesh(bronzeBoltGeo, bronzeBoltMat)
-                  : e.by === 'noTrieu' || e.by === 'noHan' || e.by === 'noNgo' || e.by === 'noLuong' || e.by === 'noDuong'
+                  : e.by === 'noTrieu' || e.by === 'noHan' || e.by === 'noNgo' || e.by === 'noLuong' || e.by === 'noDuong' || e.by === 'noTong'
                   ? new THREE.Mesh(darkBoltGeo, darkBoltMat)
                   : new THREE.Mesh(arrowGeo, arrowMat);
         // Lâu thuyền bắn từ các tầng lầu, cao hơn lính trên bờ.
@@ -1406,7 +1407,7 @@ export class BattleView {
         const to = new THREE.Vector3(e.tx + ox, this.heightAt(e.tx, e.tz, false, e.toWall) + 0.5, e.tz + oz);
         mesh.position.copy(from);
         this.root.add(mesh);
-        const fast = e.by === 'anDuong' || e.by === 'caoLo' || e.by === 'noTrieu' || e.by === 'noHan' || e.by === 'noNgo' || e.by === 'noLuong' || e.by === 'noDuong' || e.by === 'no';
+        const fast = e.by === 'anDuong' || e.by === 'caoLo' || e.by === 'noTrieu' || e.by === 'noHan' || e.by === 'noNgo' || e.by === 'noLuong' || e.by === 'noDuong' || e.by === 'noTong' || e.by === 'no';
         this.arrows.push({ mesh, from, to, age: 0, dur: Math.max(0.12, from.distanceTo(to) / (fast ? 18 : 12)), arc: fast ? 0.25 : 0.6, flash: e.by === 'anDuong' });
       }
       if (e.kind === 'volley') this.volley(battle, e.seq, e.x, e.z);

@@ -151,6 +151,7 @@ function migrate(raw: unknown): unknown {
   if (isObj(v) && v.version === 31) v = migrate31to32(v);
   if (isObj(v) && v.version === 32) v = migrate32to33(v);
   if (isObj(v) && v.version === 33) v = migrate33to34(v);
+  if (isObj(v) && v.version === 34) v = migrate34to35(v);
   return v;
 }
 
@@ -580,6 +581,13 @@ function migrate32to33(s: Raw): Raw {
 /** Phiên bản 33 → 34 (map dã ngoại 9, Bạch Đằng): thêm giờ boss mọc lại cho map mới. */
 function migrate33to34(s: Raw): Raw {
   s.version = 34;
+  themBossDa(s);
+  return s;
+}
+
+/** Phiên bản 34 → 35 (map dã ngoại 10, sông Như Nguyệt): thêm giờ boss mọc lại cho map mới. */
+function migrate34to35(s: Raw): Raw {
+  s.version = 35;
   themBossDa(s);
   return s;
 }

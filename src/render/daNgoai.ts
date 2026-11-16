@@ -44,6 +44,8 @@ const MAU: Record<DaMapId, MauMap> = {
   8: { co: 0x7f9446, co2: 0x72873e, duong: 0xa65a3a, khu: 0x93684a, ngoai: 0x52683a, troi: { ...TROI_NGAY, sky: 0xe4dcc8 } },
   // Bạch Đằng: cỏ mặn xanh xám, bãi bùn xám nâu, trời sương biển.
   9: { co: 0x8f9a6a, co2: 0x7f8c62, duong: 0x8e8270, khu: 0x8a8068, ngoai: 0x5e6e50, troi: { ...TROI_NGAY, sky: 0xd4dee0 } },
+  // Sông Như Nguyệt: cỏ bờ sông xanh tươi, đường đất phù sa vàng nâu, trời trong.
+  10: { co: 0x7fa34e, co2: 0x719646, duong: 0xb39462, khu: 0x9e8a5c, ngoai: 0x557a38, troi: TROI_NGAY },
 };
 
 /** Map rộng thêm chừng này ô mỗi phía: rừng viền che mép map. */

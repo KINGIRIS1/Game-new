@@ -412,7 +412,7 @@ describe('không khóa tướng, bản lưu', () => {
     old.daNgoai.boss = old.daNgoai.boss.slice(0, 5);
     const up = deserialize(JSON.stringify(old))!;
     expect(up.version).toBe(SAVE_VERSION);
-    expect(up.daNgoai.boss).toEqual([0, 0, 7777, 0, 0, 0, 0, 0, 0]);
+    expect(up.daNgoai.boss).toEqual([0, 0, 7777, 0, 0, 0, 0, 0, 0, 0]);
     expect(isDaNgoaiState(up.daNgoai)).toBe(true);
   });
 
@@ -424,7 +424,7 @@ describe('không khóa tướng, bản lưu', () => {
     old.daNgoai.boss = old.daNgoai.boss.slice(0, 6);
     const up = deserialize(JSON.stringify(old))!;
     expect(up.version).toBe(SAVE_VERSION);
-    expect(up.daNgoai.boss).toEqual([0, 0, 0, 0, 0, 4242, 0, 0, 0]);
+    expect(up.daNgoai.boss).toEqual([0, 0, 0, 0, 0, 4242, 0, 0, 0, 0]);
     expect(isDaNgoaiState(up.daNgoai)).toBe(true);
   });
 
@@ -436,7 +436,7 @@ describe('không khóa tướng, bản lưu', () => {
     old.daNgoai.boss = old.daNgoai.boss.slice(0, 7);
     const up = deserialize(JSON.stringify(old))!;
     expect(up.version).toBe(SAVE_VERSION);
-    expect(up.daNgoai.boss).toEqual([0, 0, 0, 0, 0, 0, 5151, 0, 0]);
+    expect(up.daNgoai.boss).toEqual([0, 0, 0, 0, 0, 0, 5151, 0, 0, 0]);
     expect(isDaNgoaiState(up.daNgoai)).toBe(true);
   });
 
@@ -448,17 +448,39 @@ describe('không khóa tướng, bản lưu', () => {
     old.daNgoai.boss = old.daNgoai.boss.slice(0, 8);
     const up = deserialize(JSON.stringify(old))!;
     expect(up.version).toBe(SAVE_VERSION);
-    expect(up.daNgoai.boss).toEqual([0, 0, 0, 0, 0, 0, 0, 6262, 0]);
+    expect(up.daNgoai.boss).toEqual([0, 0, 0, 0, 0, 0, 0, 6262, 0, 0]);
     expect(isDaNgoaiState(up.daNgoai)).toBe(true);
   });
 
-  it('map 9: cổng cần cấp 80, là map cuối, trần cấp 90, có cọc gỗ, đồ boss Huyền thoại chừng 90%, cấp đồ 5', () => {
+  it('bản lưu 34 lên 35: thêm giờ boss cho map 10, giữ giờ boss cũ', () => {
+    const s = base(true);
+    s.daNgoai.boss[8] = 7373;
+    const old = JSON.parse(serialize(s));
+    old.version = 34;
+    old.daNgoai.boss = old.daNgoai.boss.slice(0, 9);
+    const up = deserialize(JSON.stringify(old))!;
+    expect(up.version).toBe(SAVE_VERSION);
+    expect(up.daNgoai.boss).toEqual([0, 0, 0, 0, 0, 0, 0, 0, 7373, 0]);
+    expect(isDaNgoaiState(up.daNgoai)).toBe(true);
+  });
+
+  it('map 10: cổng cần cấp 90, là map cuối, trần cấp 100, boss luôn rơi Huyền thoại cấp đồ 5', () => {
+    const def = DA_MAP[10];
+    expect(def.cong).toBe(90);
+    expect(DA_MAP_CUOI).toBe(10);
+    expect(DA_CAP.tran).toBe(100);
+    expect(boCuc(9).congSau).not.toBeNull();
+    expect(boCuc(10).congSau).toBeNull();
+    for (let seq = 0; seq < 2000; seq++) {
+      const m = rutMon(seq, 'daBoss', 5, ['trungTrac'], def.bossRoi)!;
+      expect(m.cap).toBe(5);
+      expect(m.pham).toBe(4);
+    }
+  });
+
+  it('map 9: cổng cần cấp 80, có cọc gỗ, đồ boss Huyền thoại chừng 90%, cấp đồ 5', () => {
     const def = DA_MAP[9];
     expect(def.cong).toBe(80);
-    expect(DA_MAP_CUOI).toBe(9);
-    expect(DA_CAP.tran).toBe(90);
-    expect(boCuc(8).congSau).not.toBeNull();
-    expect(boCuc(9).congSau).toBeNull();
     expect(boCuc(9).can.some((c) => c.ve === 'coc')).toBe(true);
     let cao = 0;
     const n = 4000;

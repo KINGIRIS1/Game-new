@@ -117,6 +117,11 @@ export const C = {
   namHan: 0x4b3a5e,
   namHanDark: 0x2b2036,
   namHanRed: 0x8c2f2f,
+  // Quân Tống (map dã ngoại sông Như Nguyệt): áo xám tro, giáp da đen, khăn đỏ thẫm; ngựa hồng của Quách Quỳ.
+  tong: 0x8a8d90,
+  tongDark: 0x2e2f33,
+  tongRed: 0x9e2a24,
+  horseRed: 0x9a4a2a,
   // Thú bãi bồi Bạch Đằng: rái cá lông nâu bóng, rùa biển mai nâu ô liu da xám xanh.
   otter: 0x6e4a2c,
   otterDark: 0x3c2716,
