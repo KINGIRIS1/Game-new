@@ -72,6 +72,7 @@ import {
   doanKiem,
   drumShield,
   guomDong,
+  giaoDaTrach,
   guomNuiNua,
   hornTrumpet,
   quiver,
@@ -1770,6 +1771,143 @@ export function makeBaTrieu(opts: { onFoot?: boolean; anh?: boolean } = {}): THR
   });
 }
 
+// ---------- Triệu Quang Phục (tướng dã ngoại, map 7 Đầm Dạ Trạch) ----------
+
+/** Cỡ thân Triệu Quang Phục: cao ngang Cao Lỗ, đi bộ. */
+const K_TQP = 1.35;
+
+/**
+ * Móng rồng Chử Đồng Tử trao cho Triệu Quang Phục: cổ móng vàng vảy, ba ngón vàng xòe ra, vuốt ngà cong về trước, một
+ * cựa sau. Gốc ở giữa cổ móng, ngón hướng +y, vuốt cong về +z; `co` là cổ móng dài thêm xuống dưới.
+ */
+export function mongRong(m: Parts, k = 1, co = 0): void {
+  const p = m.plain;
+  // Bảo vật: cổ móng dài thêm `co`, vảy vàng sẫm từng khoanh.
+  if (co > 0) {
+    p.cyl(0.036 * k, 0.03 * k, co * k, C.gold, 0, -co * k * 0.5, 0, undefined, 8);
+    for (let y = 0.03; y < co; y += 0.035) p.cyl(0.038 * k, 0.038 * k, 0.01 * k, C.goldDark, 0, -y * k, 0, undefined, 8);
+  }
+  m.band.cyl(0.034 * k, 0.04 * k, 0.05 * k, C.gold, 0, 0.025 * k, 0, undefined, 8);
+  p.cyl(0.043 * k, 0.043 * k, 0.014 * k, C.goldDark, 0, 0, 0, undefined, 8);
+  p.sphere(0.046 * k, C.gold, 0, 0.075 * k, 0.005 * k, [1, 0.75, 0.85], 8);
+  for (const i of [-1, 0, 1]) {
+    const a = i * 0.62;
+    const sx = Math.sin(a);
+    const cy = Math.cos(a);
+    // Hai đốt ngón vàng thon dài xòe ra, gập dần về trước; vuốt ngà nhọn cong hẳn về trước.
+    p.cyl(0.013 * k, 0.018 * k, 0.09 * k, C.gold, sx * 0.075 * k, 0.08 * k + cy * 0.05 * k, 0.01 * k, [0.2, 0, -a], 6);
+    p.sphere(0.015 * k, C.goldDark, sx * 0.115 * k, 0.08 * k + cy * 0.095 * k, 0.02 * k, [1, 1, 1], 6);
+    p.cyl(0.01 * k, 0.014 * k, 0.07 * k, C.gold, sx * 0.135 * k, 0.08 * k + cy * 0.125 * k, 0.045 * k, [0.75, 0, -a], 6);
+    p.cone(0.012 * k, 0.1 * k, C.cream, sx * 0.15 * k, 0.08 * k + cy * 0.14 * k, 0.1 * k, [1.45, 0, -a], 6);
+  }
+  // Cựa sau.
+  p.cone(0.012 * k, 0.06 * k, C.cream, 0, 0.07 * k, -0.06 * k, [-1.9, 0, 0], 6);
+}
+
+/**
+ * Áo lau sậy của Triệu Quang Phục: giáp đan lau sậy vàng úa bốn hàng viền xanh đầm, váy giáp lau ba hàng, giáp vai lau;
+ * áo tơi lau sậy khoác sau lưng tới gối.
+ */
+export function aoLauSay(h: HumanRig): void {
+  skirtArmor(h, { color: C.lauSay, trim: C.lauSayDark, rows: 3, to: 0.2, panels: [0, Math.PI], half: 0.5 });
+  armor(h, { color: C.lauSay, trim: C.tqpDark, rows: 4, scales: true, y0: 0.39, y1: 0.6, thick: 0.014 });
+  pauldrons(h, { color: C.lauSay, trim: C.lauSayDark, size: 1 });
+  cloak(h, { color: C.lauSay, trim: C.lauSayDark, hem: 0.2, flare: 0.1 });
+}
+
+/** Mũ đâu mâu: mũ trụ đồng vành hoa văn, sống mũ, che gáy; móng rồng cài trước trán. */
+function dauMau(h: HumanRig): void {
+  helmet(h, { color: C.bronzeDark, rim: 0.83, lift: 0.07, puff: 0.01, band: C.tqpDark, bandH: 0.035, bandPattern: true, ridge: C.gold, neck: 0.08, guard: C.bronzeDark, guardTrim: C.gold, top: { kind: 'spike', color: C.gold, h: 0.12 } });
+  h.local('head', [0, 0.95, 0.14], [-0.2, 0, 0], (s) => mongRong(s, 1.3));
+}
+
+/**
+ * Triệu Quang Phục: áo xanh đầm Dạ Trạch, áo lau sậy, râu ngắn, mũ đâu mâu cài móng rồng, giáo Dạ Trạch.
+ */
+function drawTrieuQuangPhuc(h: HumanRig, thay: ThayDo = {}): void {
+  humanBody(h, {
+    cloth: C.tqp,
+    pattern: true,
+    flaps: true,
+    top: C.tqpDark,
+    belt: C.lauSayDark,
+    armband: C.bronze,
+    greaves: C.lauSayDark,
+    greavesTrim: C.tqpDark,
+    bracer: C.lauSayDark,
+    bracerTrim: C.bronze,
+  });
+  buckle(h, { color: C.bronze, gem: C.tqp });
+  if (!thay.than) aoLauSay(h);
+  humanHead(h, { brows: true, mustache: C.hair, beard: C.hair, beardLen: 0.1 });
+  hairCap(h);
+  if (!thay.dau) dauMau(h);
+  // Hình tướng ở túi đồ: giáo ngắn hơn cho vừa khung.
+  if (!thay.tay) h.vuKhi(() => h.local('hand', GRIP_R, null, (s) => giaoDaTrach(s, thay.hinh ? 1.2 : 1.5)));
+}
+
+/**
+ * Triệu Quang Phục: nghỉ thì giáo dựng bên phải; đi thì giáo ngả về trước; đánh thì lao người đâm giáo nằm ngang.
+ * `skill` (Ngày ẩn đêm ra): khom người, tay trái phẩy ra hiệu cả đội lặn xuống, giáo hạ ngang thấp; rồi đứng dậy.
+ * `win`: giơ giáo lên trời.
+ */
+function poseTrieuQuangPhuc(b: Human, a: Act): void {
+  beginPose(b, a.time);
+  const t = a.time ?? 0;
+  if (a.act === 'walk') walkCycle(b, a.phase ?? 0, (a.stride ?? 0.5) * 0.85);
+  const sw = a.act === 'walk' ? Math.sin(a.phase ?? 0) : 0;
+  b.armL.rotation.set(-0.2 - 0.25 * sw, 0, -0.22);
+  if (a.act === 'walk') {
+    b.armR.rotation.x = -0.15 + 0.2 * sw;
+    b.hand.rotation.set(0.35, 0, -0.06);
+  } else b.hand.rotation.set(0.06 + 0.02 * Math.sin(t * 1.3), 0, -0.06);
+  if (a.act === 'dead') {
+    fallPose(b, a.fall ?? 1);
+    b.hand.rotation.x = -0.9;
+  } else if (a.skill !== undefined) {
+    const k = a.skill;
+    const low = smooth(k, 0, 0.25) * (1 - smooth(k, 0.8, 1));
+    const wave = Math.sin(Math.PI * smooth(k, 0.1, 0.55));
+    stance(b, lerp(0, 0.7, low), lerp(0, 0.65, low));
+    b.hips.position.y -= 0.1 * low;
+    b.chest.rotation.set(0.5 * low, 0.15 * low, 0);
+    b.head.rotation.set(-0.25 * low, -0.15 * low, 0);
+    // Tay trái phẩy từ trên xuống ra hiệu lặn; giáo hạ ngang tầm gối.
+    b.armL.rotation.set(lerp(-0.2, -1.2 - 0.9 * wave, low), 0, lerp(-0.22, -0.5, low));
+    b.armR.rotation.set(lerp(0, -0.55, low), 0, 0.15);
+    b.hand.rotation.set(lerp(0.06, 1.45, low), 0, -0.06);
+  } else if (a.win !== undefined) {
+    const w = a.win;
+    b.armR.rotation.set(lerp(0, -2.9, w), 0, lerp(0.2, 0.3, w));
+    b.hand.rotation.set(lerp(0.06, -0.15, w), 0, 0);
+    b.armL.rotation.set(lerp(-0.2, -2.5, w), 0, lerp(-0.22, -0.5, w));
+    b.chest.rotation.x = -0.1 * w;
+  } else if (a.act === 'fight') {
+    // Thế thủ: chân trái trước, giáo kẹp ngang hông chĩa tới. Đâm: lao người tới, duỗi thẳng tay, giáo nằm ngang.
+    const e = strikeCurve(a.strike);
+    stance(b, lerp(0.3, 0.55, e), lerp(0.28, 0.45, e));
+    b.hips.position.z += 0.06 * e;
+    b.hips.rotation.y = lerp(0.15, -0.1, e);
+    b.chest.rotation.set(lerp(0.12, 0.32, e), lerp(0.3, -0.3, e), 0);
+    const face = -b.chest.rotation.y - b.hips.rotation.y;
+    b.head.rotation.set(lerp(-0.1, -0.28, e), face, 0);
+    b.armR.rotation.set(lerp(-0.4, -1.35, e), 0, lerp(0.18, 0.05, e));
+    b.armL.rotation.set(lerp(-0.95, -0.6, e), 0, lerp(-0.1, -0.3, e));
+    b.hand.rotation.set(lerp(1.35, 1.57, e), face, 0);
+  }
+  gripHands(b, ARM * K_TQP);
+}
+
+/** Triệu Quang Phục đi bộ cầm giáo Dạ Trạch (ở sân Điện cũng đứng chầu như thế). */
+export function makeTrieuQuangPhuc(opts: { anh?: boolean } = {}): THREE.Group {
+  const r = new RigBuilder({ ...BASE, ...bigHuman('base', [0, 0, 0], K_TQP) });
+  r.ghiAnh = !!opts.anh;
+  drawBig(r, [0, 0, 0], K_TQP, drawTrieuQuangPhuc);
+  const shape = r.build();
+  const { group, bones } = skinRig(shape);
+  return anhNeu(finish(group, (a) => poseTrieuQuangPhuc(bones as unknown as Human, a)), shape, 'trieuQuangPhuc', opts.anh);
+}
+
 // ---------- Lạc tướng đánh trống trận ----------
 
 /** Dùi trống lúc nghỉ, lúc giơ cao lấy đà, và lúc nện xuống mặt trống (góc chúc xuống, radian). */
@@ -2210,10 +2348,10 @@ export function makeNuTuong(kind: NuTuongId, opts: { glow?: boolean } = {}): THR
 export type TheCamTuong = 'dung' | 'kiem' | 'no' | 'cung';
 
 /** Thế cầm vũ khí của chính tướng (khi chưa mặc vũ khí khác). */
-export const CAM_GOC: Record<HeroKind, TheCamTuong> = { giong: 'dung', sonTinh: 'dung', anDuong: 'no', caoLo: 'no', trungTrac: 'kiem', trungNhi: 'cung', baTrieu: 'kiem' };
+export const CAM_GOC: Record<HeroKind, TheCamTuong> = { giong: 'dung', sonTinh: 'dung', anDuong: 'no', caoLo: 'no', trungTrac: 'kiem', trungNhi: 'cung', baTrieu: 'kiem', trieuQuangPhuc: 'dung' };
 
 /** Cỡ thân người từng tướng khi đứng (Hai Bà đứng cùng cỡ Lạc tướng như ở sân Điện). */
-const K_DUNG: Record<HeroKind, number> = { giong: K_GIONG, sonTinh: K_SON, anDuong: K_ADV, caoLo: K_CAO, trungTrac: K_LAC, trungNhi: K_LAC, baTrieu: K_LAC };
+const K_DUNG: Record<HeroKind, number> = { giong: K_GIONG, sonTinh: K_SON, anDuong: K_ADV, caoLo: K_CAO, trungTrac: K_LAC, trungNhi: K_LAC, baTrieu: K_LAC, trieuQuangPhuc: K_TQP };
 
 /** Tư thế đứng chân dung theo thế cầm vũ khí, như các tướng đứng chầu trong sân Điện. */
 function poseChanDung(b: Human, cam: TheCamTuong, k: number): void {
@@ -2256,6 +2394,7 @@ export function bakeTuongDung(kind: HeroKind, thay: ThayDo, cam: TheCamTuong, th
     else if (kind === 'caoLo') drawCaoLo(h, t);
     else if (kind === 'trungTrac') drawTrungTrac(h, t);
     else if (kind === 'baTrieu') drawBaTrieu(h, t);
+    else if (kind === 'trieuQuangPhuc') drawTrieuQuangPhuc(h, t);
     else drawTrungNhi(h, t);
     them(h, k);
   });

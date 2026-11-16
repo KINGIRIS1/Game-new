@@ -3845,7 +3845,7 @@ Phòng tuyến sông Như Nguyệt, nơi Lý Thường Kiệt đắp lũy tre ch
 4. **PR 3**: cảnh 3D năm map, giao diện, chụp kiểm tra.
 5. **PR 4**: bốn quái mới (lợn rừng, cua đá, báo gấm, rắn hổ mang chúa).
 
-## Kế hoạch: năm tướng mới của dã ngoại (chủ dự án đã duyệt, đang làm: xong Bà Triệu)
+## Kế hoạch: năm tướng mới của dã ngoại (chủ dự án đã duyệt, đang làm: xong Bà Triệu, Triệu Quang Phục)
 
 Chủ dự án yêu cầu: lên kế hoạch làm năm tướng mới. Đề xuất lấy đúng năm người anh hùng mà map 6–10 của dã ngoại đã nhắc tới (Lạc hầu đã dẫn lời từng người), mỗi map một tướng. Như các kế hoạch trước, được chỉnh số ±20% theo test; làm xong phần nào thì ghi số cuối cùng của phần ấy.
 
@@ -3884,7 +3884,7 @@ Chủ dự án yêu cầu: lên kế hoạch làm năm tướng mới. Đề xu�
 
 Kỹ năng (dự kiến):
 - **Chém cá kình**: 260 sát thương vào kẻ nhiều máu nhất trong 6 ô (boss nhận đủ), hồi 14 giây.
-- **Ngày ẩn đêm ra**: cả đội ẩn 4 giây (giặc không nhắm, quái đang đuổi quay về), đòn thường đầu tiên của mỗi tướng sau khi hiện ra ×2,5; hồi 18 giây.
+- **Ngày ẩn đêm ra**: cả đội ẩn 4 giây (giặc không nhắm, quái đang đuổi mất dấu), đòn thường đầu tiên của mỗi tướng sau khi hiện ra ×2,5; hồi 18 giây. **Đã làm (PR 2)**: quái mất dấu thì đứng lại tại chỗ chứ không quay về chỗ mọc, vì về tới chỗ mọc là hồi đầy máu, Tự đánh dùng kỹ năng khi đánh dở sẽ làm quái hồi máu; hết ẩn thì quái đã bị đánh đuổi lại. Đang ẩn vẫn đánh được, đòn đánh lúc ẩn như thường; đòn ×2,5 là đòn đầu tiên sau khi hết ẩn (`NGAY_AN`, `Fighter.an`, `Fighter.phuc` ở `battle.ts`; `dangAn` ở `daNgoaiTran.ts`).
 - **Hắc Đế dấy binh**: cả đội +30% sức đánh trong 8 giây; giặc trong 3 ô quanh Mai Thúc Loan nhắm vào ông; hồi 16 giây.
 - **Cọc Bạch Đằng**: bãi cọc bán kính 2,5 ô trong 6 giây, giặc trong bãi chậm còn 50%, mất 25 máu mỗi giây (thuyền, lâu thuyền 50); hồi 14 giây.
 - **Nam quốc sơn hà**: quân ta trong 6 ô hồi 20% máu; giặc trong 6 ô giảm 30% sức đánh trong 6 giây; hồi 18 giây.
@@ -3893,7 +3893,7 @@ Kỹ năng (dự kiến):
 
 - **Đề xuất: chỉ ở dã ngoại.** Chọn vào đội dã ngoại như tướng cũ; không ra phó bản, thử thách, đồn, giữ kinh đô, Đấu thành. Lý do: phó bản, thử thách đo độ khó theo đúng tướng của chương (`heroesFor`, các test cân bằng); thêm tướng vào đó là phải đo lại cả 40 màn, 40 thử thách. Dã ngoại là chỗ năm người này đã có truyện.
 - Cách khác: (b) cho chọn thêm ở phó bản đánh lại và thử thách đã thắng (không ảnh hưởng chuẩn lần đầu, nhưng phải chặn khỏi phá thưởng thử thách); (c) để dành mỗi người một chương 6–10 về sau, giờ chỉ làm dáng và đồ.
-- Ở kinh đô: đứng chầu trong sân Điện; không nhận doanh (doanh trại đã đủ 5 doanh), không kiệt sức (dã ngoại không xét kiệt sức). Sân có 14 chỗ, đã dùng 11, nên đủ 16 thì phải nới sân thêm 2 chỗ (sửa `DIEN_LOT` và bản vẽ ở `docs/bo-cuc-cong-trinh.md`); làm khi tới tướng thứ tư. **Đã làm (PR 1)**: Bà Triệu đứng chỗ 3 (ngoài cùng hàng ngai bên phải, cạnh voi đá); chụp thử thì chỗ 12 sát cổng bị mái cổng che, chỗ 0 bị Sơn Tinh trên mỏm đá che. Còn chỗ 0, 12.
+- Ở kinh đô: đứng chầu trong sân Điện; không nhận doanh (doanh trại đã đủ 5 doanh), không kiệt sức (dã ngoại không xét kiệt sức). Sân có 14 chỗ, đã dùng 11, nên đủ 16 thì phải nới sân thêm 2 chỗ (sửa `DIEN_LOT` và bản vẽ ở `docs/bo-cuc-cong-trinh.md`); làm khi tới tướng thứ tư. **Đã làm (PR 1)**: Bà Triệu đứng chỗ 3 (ngoài cùng hàng ngai bên phải, cạnh voi đá); chụp thử thì chỗ 12 sát cổng bị mái cổng che, chỗ 0 bị Sơn Tinh trên mỏm đá che. **PR 2**: Triệu Quang Phục đứng chỗ 0. Còn chỗ 12 (sát cổng, bị mái cổng che): tướng thứ ba của dã ngoại trở đi phải nới sân.
 
 ### Trang bị: năm bộ mới (20 món)
 
@@ -3935,7 +3935,7 @@ Kỹ năng (dự kiến):
 
 1. **PR 0**: tài liệu này (PR nháp, chờ duyệt).
 2. **PR 1** (đã làm): phần chung (tướng về khi hạ boss, chọn đội, đứng chầu, không lên bản lưu) và trọn Bà Triệu: luật (`TUONG_DA_IDS`, `TUONG_DA_MAP`, `BA_TRIEU`, `CA_KINH` ở `defs.ts`; `tuongDa.ts`), Chém cá kình (`useSkill` ở `battle.ts`, tầm tự dùng ở `daNgoaiTran.ts`), đoạn truyện `baTrieu`, dáng (`makeBaTrieu`, `VOI_TRANG`, `giapVayDong` ở `heroes.ts`; voi trận nhận màu da và một ngà mọc giữa trán thay hai ngà: `VoiTranLook.skin`, `motNga`), vẽ kỹ năng (`chemCaKinh` ở `battleView.ts`), bộ Núi Nưa (4 món, ảnh, `guomNuiNua`, `tramVang`), `tuongMoi.test.ts`, nhóm chụp `node scripts/chup-nhan-vat.mjs tuongDa`, cảnh chụp `ba-trieu`, `ba-trieu-tui`, `ba-trieu-dien`, `ba-trieu-truyen`.
-3. **PR 2**: Triệu Quang Phục và bộ Dạ Trạch.
+3. **PR 2** (đã làm): Triệu Quang Phục và bộ Dạ Trạch: `TRIEU_QUANG_PHUC`, `NGAY_AN` ở `defs.ts`; nhánh `ngayAn` của `useSkill`, đòn gấp bội ở `strike` (`battle.ts`); quái không thấy người đang ẩn (`taGan`, `buocQuai` ở `daNgoaiTran.ts`), Tự đánh dùng khi có quái trong 4 ô; đoạn truyện `trieuQuangPhuc` (Lý Nam Đế trao binh quyền, người nói `lyNamDe` chỉ có biểu tượng trong hộp thoại); dáng `makeTrieuQuangPhuc` (đi bộ, mũ đâu mâu đồng sẫm cài móng rồng `mongRong`, áo lau sậy `aoLauSay`, giáo Dạ Trạch `giaoDaTrach`), sương đầm và lau sậy phủ người đang ẩn (`syncSuong`, `ngayAn` ở `battleView.ts`); bộ Dạ Trạch (4 món, ảnh; `thuyenDocMoc`); đứng chầu chỗ 0 sân Điện; chụp `node scripts/chup-nhan-vat.mjs tuongDa`, cảnh `tqp`, `tqp-tui`, `tqp-truyen`, `tqp-dien`. Các chỗ trước viết riêng cho Bà Triệu nay chung cho mọi tướng dã ngoại (`laTuongDa` ở `tuongDa.ts`).
 4. **PR 3**: Mai Thúc Loan và bộ Vạn An.
 5. **PR 4**: Ngô Quyền và bộ Bạch Đằng.
 6. **PR 5**: Lý Thường Kiệt và bộ Như Nguyệt.

@@ -266,7 +266,7 @@ export function datTuDanh(b: Battle, on: boolean): void {
 // ---------- Bước trận ----------
 
 /** Tầm tự dùng kỹ năng: có quái trong chừng này ô quanh tướng làm kỹ năng. */
-const TAM_KY: Partial<Record<SkillId, number>> = { phunLua: 5, nhoTre: 2.5, bocDoi: 7, doiNon: 3, noThan: 7, lienChau: 8, voiXung: 5, hieuTrieu: 5, chemCaKinh: 6 };
+const TAM_KY: Partial<Record<SkillId, number>> = { phunLua: 5, nhoTre: 2.5, bocDoi: 7, doiNon: 3, noThan: 7, lienChau: 8, voiXung: 5, hieuTrieu: 5, chemCaKinh: 6, ngayAn: 4 };
 
 /** Chạy trận dã ngoại thêm `dt` giây (không có thắng thua). */
 export function stepDa(b: Battle, dt: number): void {
@@ -279,6 +279,7 @@ export function stepDa(b: Battle, dt: number): void {
     f.cd -= dt;
     f.swing = Math.max(0, f.swing - dt);
     if (f.slow) f.slow = Math.max(0, f.slow - dt);
+    if (f.an) f.an = Math.max(0, f.an - dt);
   }
   hoiSinh(b, bc);
   const heroes = tuongCon(b);
@@ -449,12 +450,15 @@ function buocQuan(b: Battle, bc: DaBoCuc, f: Fighter, dt: number, lead: Fighter 
   } else f.state = 'fight';
 }
 
-/** Người bên ta gần `f` nhất còn đánh được, trong chừng `r` ô. */
+/** Người bên ta đang lặn trong đầm (Ngày ẩn đêm ra): quái không thấy. */
+const dangAn = (o: Fighter) => (o.an ?? 0) > 0;
+
+/** Người bên ta gần `f` nhất còn đánh được, không đang ẩn, trong chừng `r` ô. */
 function taGan(b: Battle, f: Fighter, r: number): Fighter | null {
   let best: Fighter | null = null;
   let bestD = r;
   for (const o of b.fighters) {
-    if (o.side !== 'ta' || !isAlive(o) || o.state === 'dead') continue;
+    if (o.side !== 'ta' || !isAlive(o) || o.state === 'dead' || dangAn(o)) continue;
     const d = dist(o.x - f.x, o.z - f.z);
     if (d < bestD) {
       bestD = d;
@@ -496,9 +500,16 @@ function buocQuai(b: Battle, bc: DaBoCuc, f: Fighter, dt: number): void {
     nha.duoi = null;
     return;
   }
-  let foe = b.fighters.find((o) => o.id === nha.duoi && o.side === 'ta' && isAlive(o) && o.state !== 'dead');
+  let foe = b.fighters.find((o) => o.id === nha.duoi && o.side === 'ta' && isAlive(o) && o.state !== 'dead' && !dangAn(o));
   if (!foe) {
     const ai = taGan(b, f, phat * 2);
+    // Cả đội lặn vào đầm: quái mất dấu, đứng lại tại chỗ (không về chỗ mọc hồi máu); hết ẩn thì đuổi lại.
+    if (!ai && b.fighters.some((o) => o.side === 'ta' && isAlive(o) && dangAn(o))) {
+      nha.trang = 'cho';
+      nha.duoi = null;
+      f.state = 'move';
+      return;
+    }
     if (!ai) {
       nha.trang = 've';
       nha.duoi = null;

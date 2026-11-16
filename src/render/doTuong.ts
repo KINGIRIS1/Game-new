@@ -1,4 +1,4 @@
-// 24 món trang bị của sáu bộ tướng (trangBi.ts), dựng bằng code theo nét Đông Sơn như mọi đồ trong game. Mỗi món có:
+// Món trang bị của các bộ tướng (trangBi.ts), dựng bằng code theo nét Đông Sơn như mọi đồ trong game. Mỗi món có:
 // - `rieng`: mô hình đứng riêng: ảnh món vẽ sẵn (anhDo.ts) dùng mô hình này; thú cưỡi, bảo vật cũng dùng nó trong hình
 //   tướng mặc đồ (hinhTuong.ts);
 // - `mac`: cách mặc lên thân người (tọa độ thân người thường `HUMAN` như mọi đồ mặc ở nanDo.ts): vũ khí cầm tay, giáp
@@ -10,12 +10,12 @@ import * as THREE from 'three';
 import { BO_DO, O_DO, type BoDo, type ODo } from '../game/defs';
 import { bakeVoiTran } from './beasts';
 import { GRIP_L, GRIP_R, HUMAN, type HumanRig } from './body';
-import { CAO_QUIVER, MIEN, VOI_TRANG, baoTenDong, bakeIronHorse, giapVayDong, giongWeapon, sonStaff, type TheCamTuong } from './heroes';
+import { CAO_QUIVER, MIEN, VOI_TRANG, aoLauSay, baoTenDong, bakeIronHorse, giapVayDong, giongWeapon, mongRong, sonStaff, type TheCamTuong } from './heroes';
 import { armor, chestDisc, cloak, diadem, mien, pauldrons, shoulderRocks, skirtArmor, studs } from './nanDo';
 import { C } from './palette';
 import { RigBuilder, bakeRig } from './rig';
 import { ToonModel, inkThin } from './toon';
-import { IRON, IRON_DARK, LEATHER, arrow, bow, coLac, crossbowParts, guomDong, guomNuiNua, hornTrumpet, repeatingCrossbow, type Parts } from './weapons';
+import { IRON, IRON_DARK, LEATHER, arrow, bow, coLac, crossbowParts, giaoDaTrach, guomDong, guomNuiNua, hornTrumpet, repeatingCrossbow, type Parts } from './weapons';
 
 export type MonId = `${BoDo}-${ODo}`;
 export const monId = (bo: BoDo, o: ODo): MonId => `${bo}-${o}`;
@@ -88,6 +88,27 @@ export function sungTe(m: Parts): void {
   p.sphere(0.016, C.red, 0, 0.065, -0.06, [1, 1, 1], 6);
   p.cone(0.02, 0.11, C.red, 0.01, 0.0, -0.075, [Math.PI + 0.25, 0, 0.1], 6);
   p.cone(0.016, 0.09, C.red, -0.012, 0.01, -0.07, [Math.PI + 0.1, 0, -0.12], 6);
+}
+
+/**
+ * Thuyền độc mộc của Triệu Quang Phục: thân khoét từ một khúc gỗ, hai đầu thon, mũi vểnh, lòng thuyền sẫm, mép gỗ sáng; mũi
+ * chạm đầu chim Lạc, một mái chèo gác ngang, bó lau sậy dưới lòng. Đáy ở y = 0, mũi hướng +z.
+ */
+export function thuyenDocMoc(m: Parts): void {
+  const p = m.plain;
+  const L = 1.5;
+  p.sphere(0.2, GO_GIA, 0, 0.13, 0, [1, 0.65, L / 0.4], 12);
+  p.box(0.26, 0.03, L * 0.7, 0x3a2616, 0, 0.255, 0);
+  for (const sd of [-1, 1]) p.box(0.03, 0.03, L * 0.72, 0x9a6b3e, sd * 0.14, 0.26, 0);
+  // Mũi vểnh, đầu chim Lạc mỏ dài.
+  p.cone(0.06, 0.28, GO_GIA, 0, 0.3, L / 2 - 0.05, [-0.9, 0, 0], 6);
+  p.sphere(0.05, 0x9a6b3e, 0, 0.42, L / 2 + 0.06, [1, 1, 1.2], 7);
+  p.cone(0.016, 0.14, C.goldDark, 0, 0.43, L / 2 + 0.16, [Math.PI / 2, 0, 0], 5);
+  // Mái chèo gác ngang, bó lau sậy.
+  p.box(0.7, 0.025, 0.025, C.woodLight, 0.08, 0.3, -0.1, [0, 0.35, 0]);
+  p.box(0.06, 0.012, 0.2, C.woodLight, 0.42, 0.3, -0.23, [0, 0.35, 0]);
+  for (let i = 0; i < 5; i++) p.cyl(0.012, 0.012, 0.7, C.lauSay, -0.06 + i * 0.025, 0.28, 0.2, [Math.PI / 2, 0, 0.05 * (i - 2)], 4);
+  p.cyl(0.03, 0.03, 0.02, C.tqp, 0, 0.28, 0.2, [Math.PI / 2, 0, 0], 6);
 }
 
 /**
@@ -308,6 +329,17 @@ function tren(draw: (h: HumanRig) => void, stand: boolean): () => THREE.Group {
   };
 }
 
+/** Mô hình `rieng` xoay quanh trục đứng một góc. */
+function quay(rieng: () => THREE.Group, y: number): () => THREE.Group {
+  return () => {
+    const g = rieng();
+    g.rotation.y = y;
+    const root = new THREE.Group();
+    root.add(g);
+    return root;
+  };
+}
+
 /** Cầm tay phải (thân người cỡ `k`), dựng như vũ khí của tướng (`r.local('hand', GRIP_R, …)`). */
 function tayPhai(draw: (s: Parts, k: number) => void): (h: HumanRig, k: number) => void {
   return (h, k) => h.local('hand', GRIP_R, null, (s) => draw(s, k));
@@ -406,6 +438,14 @@ export const MON_VE: Record<MonId, VeMon> = {
   'nuiNua-giap': { cho: 'than', mac: giapVayDong, rieng: tren(giapVayDong, true), xoay: [0, 0.45, 0] },
   'nuiNua-phucSuc': { cho: 'thu', rieng: () => bakeVoiTran(VOI_TRANG), xoay: [0, 1.25, 0] },
   'nuiNua-baoVat': { cho: 'bay', rieng: toon(tramVang), xoay: [0.5, 0.4, -0.9] },
+
+  // Bộ Dạ Trạch (Triệu Quang Phục, tướng dã ngoại map 7).
+  // Giáo cầm ở hình tướng ngắn hơn chút cho vừa khung tướng cao (Gióng).
+  'daTrach-vuKhi': { cho: 'tay', cam: 'dung', mac: tayPhai((s) => giaoDaTrach(s, 1.2)), rieng: toon((m) => giaoDaTrach(m)), xoay: [0, 0, -Math.PI / 4] },
+  'daTrach-giap': { cho: 'than', mac: aoLauSay, rieng: tren(aoLauSay, true), xoay: [0, 0.45, 0] },
+  'daTrach-phucSuc': { cho: 'thu', rieng: toon(thuyenDocMoc), xoay: [0.35, 0.95, 0] },
+  // Móng rồng xòe ngón theo chiều trước sau cho gọn bên vai ở hình tướng.
+  'daTrach-baoVat': { cho: 'bay', rieng: quay(toon((m) => mongRong(m, 2, 0.12)), Math.PI / 2), xoay: [0.2, 0.6 - Math.PI / 2, 0] },
 };
 
 /** Mô hình đứng riêng của món, đặt theo góc chụp ảnh (`xoay`). */

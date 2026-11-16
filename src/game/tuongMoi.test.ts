@@ -1,13 +1,15 @@
-// Canh tướng dã ngoại (docs/thiet-ke.md mục Kế hoạch: năm tướng mới), PR 1 là Bà Triệu: về khi hạ boss map 6 lần
+// Canh tướng dã ngoại (docs/thiet-ke.md mục Kế hoạch: năm tướng mới). PR 1 là Bà Triệu: về khi hạ boss map 6 lần
 // đầu (một lần, kể cả bản lưu cũ đã hạ boss), chọn được vào đội dã ngoại, chỉ đánh ở dã ngoại (không doanh, không ra
 // phó bản, không giữ thành trong Đấu thành), đứng chầu trong sân; Chém cá kình nhắm kẻ nhiều máu nhất, đủ bốn món bộ
-// Núi Nưa thì mạnh hơn và choáng; bộ Núi Nưa chỉ rơi ở map 6 khi Bà đã về, máy chủ nhận ở chương 5.
+// Núi Nưa thì mạnh hơn và choáng; bộ Núi Nưa chỉ rơi ở map 6 khi Bà đã về, máy chủ nhận ở chương 5. PR 2 là Triệu
+// Quang Phục (map 7): Ngày ẩn đêm ra cho cả đội ẩn, quái mất dấu, hết ẩn thì đòn đầu mạnh gấp bội; bộ Dạ Trạch.
 
 import { describe, expect, it } from 'vitest';
-import { HERO_KINDS, isAlive, useSkill, type Battle } from './battle';
-import { BO_DO, CA_KINH, DA_BOSS_MS, DOANH_MAX, GIFT_IDS, ROI_DO, type BoDo, type Chapter } from './defs';
+import { HERO_KINDS, isAlive, strike, useSkill, type Battle } from './battle';
+import { BO_DO, CA_KINH, DA_BOSS_MS, DOANH_MAX, GIFT_IDS, NGAY_AN, ROI_DO, type BoDo, type Chapter } from './defs';
 import { capNhatDa, datDoi, moMap, tuongCo } from './daNgoai';
 import { boCuc } from './daNgoaiMap';
+import { stepDa } from './daNgoaiTran';
 import { doanhCount, generals, tuongJoined } from './doanhTrai';
 import { makeSnapshot, validateSnapshot } from './dauThanh';
 import { createInitialState, type GameState } from './game';
@@ -187,5 +189,175 @@ describe('bộ Núi Nưa', () => {
 
   it('mọi tướng mặc được đồ, Bà Triệu có trong danh sách tướng', () => {
     expect(HERO_KINDS).toContain('baTrieu');
+  });
+});
+
+// ---------- PR 2: Triệu Quang Phục (map 7 Đầm Dạ Trạch) ----------
+
+/** Hạ boss map 7 như trận thật báo về. */
+function haBoss7(s: GameState): void {
+  s.daNgoai.map = 7;
+  s.daNgoai.cap = 70;
+  datDoi(s, ['giong']);
+  const b = moMap(s);
+  b.da!.giet.push({ kind: 'tranBaTien', cap: 72, khu: -1, boss: true, x: 0, z: 0 });
+  capNhatDa(s, b);
+}
+
+/** Map 7, đội Triệu Quang Phục và Gióng, đứng giữa khu `k`. */
+function tranTqp(s: GameState, k = 0): Battle {
+  s.daNgoai.map = 7;
+  s.daNgoai.tuDanh = false;
+  const kh = boCuc(7).khu[k];
+  s.daNgoai.cho = { x: kh.x, z: kh.z };
+  expect(datDoi(s, ['trieuQuangPhuc', 'giong']).ok).toBe(true);
+  return moMap(s);
+}
+
+/** Chạy trận dã ngoại `giay` giây theo bước thật. */
+function chay(b: Battle, giay: number): void {
+  for (let t = 0; t < giay; t += 0.05) stepDa(b, 0.05);
+}
+
+describe('Triệu Quang Phục về khi hạ boss map 7', () => {
+  it('chưa hạ Trần Bá Tiên thì chưa về; hạ map 6 không kéo theo; hạ map 7 thì về, kể truyện một lần', () => {
+    const s = base();
+    haBoss6(s);
+    expect(tuongJoined(s, 'trieuQuangPhuc')).toBe(false);
+    expect(datDoi(s, ['trieuQuangPhuc']).ok).toBe(false);
+    haBoss7(s);
+    expect(tuongJoined(s, 'trieuQuangPhuc')).toBe(true);
+    expect(tuongCo(s)).toContain('trieuQuangPhuc');
+    for (let id = pendingStory(s); id && id !== 'trieuQuangPhuc'; id = pendingStory(s)) markStory(s, id);
+    expect(pendingStory(s)).toBe('trieuQuangPhuc');
+    markStory(s, 'trieuQuangPhuc');
+    expect(pendingStory(s)).toBeNull();
+    s.clock += DA_BOSS_MS;
+    haBoss7(s);
+    expect(pendingStory(s)).toBeNull();
+  });
+
+  it('chỉ đánh ở dã ngoại: không doanh, không phó bản, không giữ thành', () => {
+    const s = base();
+    haBoss7(s);
+    expect(generals(s)).not.toContain('trieuQuangPhuc');
+    for (const ch of CHUONG) expect(heroesFor(s, ch).map((h) => h.kind)).not.toContain('trieuQuangPhuc');
+    const sua = { ...makeSnapshot(s), heroes: [{ kind: 'trieuQuangPhuc' as const, bamboo: false, glow: false, non: false }] };
+    expect(validateSnapshot(sua)).not.toBeNull();
+  });
+});
+
+describe('Ngày ẩn đêm ra', () => {
+  /** Trận map 7 có quái đang đuổi đội (đã đánh nhau một lúc). */
+  function dangDanh() {
+    const s = base();
+    haBoss7(s);
+    const b = tranTqp(s);
+    b.da!.tuDanh = true;
+    for (const f of b.fighters) if (f.side === 'ta') f.hp = f.maxHp = 1e6;
+    // Chưa cho Tự đánh dùng kỹ năng: để quái kịp đuổi đội.
+    b.skillCd.ngayAn = 999;
+    chay(b, 6);
+    b.skillCd.ngayAn = 0;
+    const duoi = b.fighters.filter((f) => f.side === 'giac' && isAlive(f) && f.nha?.trang === 'duoi');
+    expect(duoi.length).toBeGreaterThan(0);
+    return { s, b, duoi };
+  }
+
+  it('cả đội ẩn: quái đang đuổi mất dấu, đứng lại (không về chỗ mọc), không đánh trúng ai; hết ẩn thì đuổi lại', () => {
+    const { b, duoi } = dangDanh();
+    b.da!.tuDanh = false;
+    b.da!.muc = null;
+    expect(useSkill(b, 'ngayAn')).toBe(true);
+    const ta = b.fighters.filter((f) => f.side === 'ta' && isAlive(f));
+    for (const f of ta) expect(f.an).toBe(NGAY_AN.an);
+    expect(b.events.some((e) => e.kind === 'an')).toBe(true);
+    // Đội đứng yên tại chỗ (không Tự đánh): ẩn chừng ba giây, không ai mất máu (yên thì còn hồi máu).
+    for (const f of ta) f.cd = 99;
+    for (let t = 0; t < 3.5; t += 0.05) {
+      const mau = ta.map((f) => f.hp);
+      stepDa(b, 0.05);
+      ta.forEach((f, i) => expect(f.hp).toBeGreaterThanOrEqual(mau[i]));
+    }
+    for (const q of duoi) if (isAlive(q)) expect(q.nha?.trang).toBe('cho');
+    // Hết ẩn: quái đã bị đánh thấy đội thì đuổi lại.
+    chay(b, 1);
+    for (const f of ta) expect(f.an ?? 0).toBe(0);
+    expect(duoi.some((q) => isAlive(q) && q.nha?.trang === 'duoi')).toBe(true);
+    expect(useSkill(b, 'ngayAn')).toBe(false);
+  });
+
+  it('hết ẩn thì đòn thường đầu tiên mạnh gấp 2,5 (đủ bộ Dạ Trạch: ẩn 5 giây, gấp 3), đòn sau như thường', () => {
+    const danh = (bo4: boolean) => {
+      const s = base();
+      haBoss7(s);
+      const b = tranTqp(s);
+      const tqp = b.fighters.find((f) => f.kind === 'trieuQuangPhuc')!;
+      if (bo4) b.hero!.trangBi = { ...tinhDo('trieuQuangPhuc', []), bo4: true };
+      const foe = b.fighters.find((f) => f.side === 'giac' && isAlive(f))!;
+      foe.hp = foe.maxHp = 1e6;
+      const don = () => {
+        const truoc = foe.hp;
+        strike(b, tqp, foe);
+        return truoc - foe.hp;
+      };
+      const thuong = don();
+      useSkill(b, 'ngayAn');
+      const an = tqp.an!;
+      // Đang ẩn: đánh như thường, chưa dùng đòn mạnh.
+      const trongAn = don();
+      tqp.an = 0;
+      const dau = don();
+      const sau = don();
+      return { thuong, trongAn, dau, sau, an };
+    };
+    const t = danh(false);
+    expect(t.an).toBe(4);
+    expect(t.trongAn).toBeCloseTo(t.thuong, 6);
+    expect(t.dau / t.thuong).toBeCloseTo(2.5, 6);
+    expect(t.sau).toBeCloseTo(t.thuong, 6);
+    const d = danh(true);
+    expect(d.an).toBe(5);
+    expect(d.dau / d.thuong).toBeCloseTo(3, 6);
+  });
+
+  it('Tự đánh tự dùng Ngày ẩn đêm ra khi có quái gần, vẫn hạ được quái', () => {
+    const { b } = dangDanh();
+    const giet = b.da!.giet.length;
+    chay(b, 30);
+    expect(b.skillCd.ngayAn ?? 0).toBeGreaterThan(0);
+    expect(b.da!.giet.length).toBeGreaterThan(giet);
+  });
+});
+
+describe('bộ Dạ Trạch', () => {
+  it('chỉ rơi ở map 7 sau khi Triệu Quang Phục về; map 6 vẫn rơi Núi Nưa', () => {
+    const s = base();
+    haBoss6(s);
+    const rut = (map: 6 | 7) => {
+      const bo = new Set<BoDo>();
+      s.trangBi.kho.length = 0;
+      s.daNgoai.map = map;
+      datDoi(s, ['giong']);
+      for (let i = 0; i < 200; i++) {
+        const b = moMap(s);
+        b.da!.giet.push({ kind: 'trauRung', cap: 65, khu: 0, boss: false, x: 0, z: 0 });
+        capNhatDa(s, b);
+      }
+      for (const m of s.trangBi.kho) bo.add(m.bo);
+      return bo;
+    };
+    expect(rut(7).has('daTrach')).toBe(false);
+    haBoss7(s);
+    expect([...rut(7)]).toEqual(['daTrach']);
+    expect([...rut(6)]).toEqual(['nuiNua']);
+    for (const ch of CHUONG) expect(boRoi(s, 'giu', ch)).not.toContain('daTrach');
+  });
+
+  it('máy chủ nhận ở chương 5; hai món thêm tốc đánh, chỉ khi Triệu Quang Phục mặc', () => {
+    const m = rutMon(3, 'daBoss', 5, ['daTrach'], [0, 0, 0, 100])!;
+    expect(kiemMon(m, 5)).toBeNull();
+    const hai = (['vuKhi', 'giap'] as const).map((o) => ({ ...m, o, chinh: o === 'vuKhi' ? 'danh' : 'mau' }) as typeof m);
+    expect(tinhDo('trieuQuangPhuc', hai).toc - tinhDo('giong', hai).toc).toBeCloseTo(0.08, 6);
   });
 });

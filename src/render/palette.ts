@@ -186,6 +186,12 @@ export const C = {
   baTrieu: 0x1f6e63,
   baTrieuDark: 0x154d45,
   voiTrang: 0xe4ddcf,
+  // Triệu Quang Phục: áo xanh đầm Dạ Trạch, áo lau sậy vàng úa, sương đầm khi cả đội ẩn.
+  tqp: 0x2f5b46,
+  tqpDark: 0x1f3d30,
+  lauSay: 0xc9b77a,
+  lauSayDark: 0x8f7c4c,
+  suongDam: 0xb9cdbb,
   aoNau: 0x7a5434,
   khanNau: 0x4d3423,
   quanPhuc: 0x25222a,

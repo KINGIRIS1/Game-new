@@ -311,7 +311,9 @@ export type StoryId =
   /** Màn hình Hết truyện sau đoạn cuối chương 5. */
   | 'hetTruyen5'
   /** Hạ Lục Dận ở map 6 lần đầu: Bà Triệu về. */
-  | 'baTrieu';
+  | 'baTrieu'
+  /** Hạ Trần Bá Tiên ở map 7 lần đầu: Triệu Quang Phục về (Lý Nam Đế trao binh quyền). */
+  | 'trieuQuangPhuc';
 
 /** Một lời mời đổi hàng của thuyền buôn: đưa `give`, nhận `get`. */
 export interface Offer {

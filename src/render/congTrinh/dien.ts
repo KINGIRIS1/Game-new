@@ -67,9 +67,8 @@ export const bannerHeight = (level: number) => (level >= 6 ? 3.2 : 2.9);
  * (phải); Cao Lỗ sau An Dương Vương. Hai Bà Trưng đứng cột ngoài hàng hai (Trưng Trắc 4, Trưng Nhị 7), ngang Sơn Tinh
  * và An Dương Vương: chỗ 0 và 3 sát đôi voi đá góc sau sân (cấp 5) nên người đứng đó lẫn vào voi. Bốn nữ tướng đứng
  * hàng sau Hai Bà: Lê Chân sau Trưng Trắc (8), Thánh Thiên sau Trưng Nhị (11), Bát Nàn sau Sơn Tinh (9), Phùng Thị
- * Chính sau Cao Lỗ (13). Bà Triệu (tướng dã ngoại) đứng chỗ 3, ngoài cùng hàng ngai cạnh voi đá (người cưỡi voi trắng);
- * chỗ 12 sát cổng bị mái cổng che, chỗ 0 bị Sơn Tinh trên mỏm đá che khi nhìn từ góc mặc định. Tướng đứng trong sân không
- * cưỡi thú.
+ * Chính sau Cao Lỗ (13). Tướng dã ngoại đứng hai đầu hàng ngai, cạnh voi đá: Bà Triệu chỗ 3 (người cưỡi voi trắng),
+ * Triệu Quang Phục chỗ 0. Chỗ 12 sát cổng bị mái cổng che. Tướng đứng trong sân không cưỡi thú.
  */
 const COURT_SLOT: Record<TuongId | NuTuongId, number> = {
   lacTuong: 1,
@@ -84,6 +83,7 @@ const COURT_SLOT: Record<TuongId | NuTuongId, number> = {
   batNan: 9,
   phungThiChinh: 13,
   baTrieu: 3,
+  trieuQuangPhuc: 0,
 };
 
 /** Chỗ tướng `t` đứng chầu (tọa độ móng Điện) và hướng mặt: quay vào lối giữa, chếch ra phía cổng cho dễ thấy mặt. */

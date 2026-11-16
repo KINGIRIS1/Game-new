@@ -46,7 +46,7 @@ import { DON_DAO_Y, SHORE_LAND, SeaLife, animateSea, buildSea, buildSeaMist, dao
 import { CAU_STEP, donGac, makeDonDao } from './congTrinh/donDao';
 import { makeThuyenChien, type LinhCho } from './thuyenChien';
 import { makeSoldier } from './soldier';
-import { makeAnDuong, makeBaTrieu, makeCaoLo, makeGiong, makeLacTuong, makeNuTuong, makeSonTinh, makeTrungNhi, makeTrungTrac } from './heroes';
+import { makeAnDuong, makeBaTrieu, makeCaoLo, makeTrieuQuangPhuc, makeGiong, makeLacTuong, makeNuTuong, makeSonTinh, makeTrungNhi, makeTrungTrac } from './heroes';
 
 /** Người đứng chầu là nữ tướng (chương 5), không phải tướng chỉ huy. */
 const isNuTuong = (t: TuongId | NuTuongId): t is NuTuongId => (NU_TUONG_IDS as string[]).includes(t);
@@ -2969,7 +2969,9 @@ export class World {
                 ? makeCaoLo({ glow: true })
                 : t === 'baTrieu'
                   ? makeBaTrieu({ onFoot: true })
-                  : makeLacTuong();
+                  : t === 'trieuQuangPhuc'
+                    ? makeTrieuQuangPhuc()
+                    : makeLacTuong();
       obj.scale.setScalar(t === 'sonTinh' ? 0.95 : 0.9);
       obj.position.set(spot.x, spot.y, spot.z);
       obj.rotation.y = spot.ry;

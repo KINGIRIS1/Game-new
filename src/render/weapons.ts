@@ -429,6 +429,23 @@ export function guomDong(s: Parts): void {
 }
 
 /**
+ * Giáo Dạ Trạch của Triệu Quang Phục: cán tre sẫm có đốt, quấn lau sậy chỗ tay nắm; họng đồng, mũi sắt hình lá dài có
+ * gờ sống sáng; tua xanh đầm buông ở cổ giáo. Gốc ở chỗ tay nắm, mũi hướng +y.
+ */
+export function giaoDaTrach(s: Parts, len = 1.5): void {
+  const p = s.plain;
+  const top = len - 0.3;
+  p.cyl(0.019, 0.019, len, C.woodDark, 0, len / 2 - 0.3, 0, undefined, 6);
+  for (const y of [-0.2, 0.32, 0.72]) p.cyl(0.023, 0.023, 0.02, C.lauSayDark, 0, y, 0, undefined, 6);
+  p.cyl(0.025, 0.025, 0.16, C.lauSay, 0, 0.02, 0, undefined, 6);
+  p.cyl(0.025, 0.021, 0.08, C.bronzeDark, 0, top + 0.03, 0, undefined, 6);
+  s.band.cyl(0.028, 0.028, 0.035, C.bronze, 0, top + 0.015, 0, undefined, 8);
+  p.sphere(0.07, IRON, 0, top + 0.25, 0, [1, 3.2, 0.3], 8);
+  p.box(0.012, 0.36, 0.036, IRON_LIGHT, 0, top + 0.25, 0);
+  p.cone(0.05, 0.14, C.tqp, 0, top - 0.04, 0, [Math.PI, 0, 0], 8);
+}
+
+/**
  * Gươm Núi Nưa của Bà Triệu: lưỡi sắt thẳng dài 0,72 có gờ sống sáng, mũi nhọn; chắn tay vàng hai cánh vểnh như cánh
  * chim, chuôi quấn dây xanh ngọc, đốc tròn vàng, tua đỏ buông ở đốc. Lưỡi sắc hướng +z.
  */
