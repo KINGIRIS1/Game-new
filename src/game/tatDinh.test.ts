@@ -91,7 +91,7 @@ describe('trận đánh tất định', () => {
     // 1,2 giây (ở đây chừng 0,2 giây), máy chủ thật có lần hết CPU (`WORKER_RESOURCE_LIMIT`). Lấy lần nhanh nhất trong
     // hai lần sau khi ấm máy; ngưỡng rộng vì máy CI chạy nhiều tệp test cùng lúc chậm gấp hai, ba lần.
     const thu = banChupThu(7);
-    const q = quanDanh(thu.ma, thu.quan, 'tay', 12345);
+    const q = quanDanh(thu.ma, thu.quan, 'tay', 1);
     if (!('quan' in q)) throw new Error(q.loi);
     const once = () => {
       const t0 = performance.now();

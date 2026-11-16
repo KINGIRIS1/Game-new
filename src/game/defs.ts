@@ -145,8 +145,11 @@ export const MOVE_FRACTION = 0.1;
  */
 export const DIEN_CHAPTER: Partial<Record<number, 2 | 3 | 4 | 5>> = { 6: 2, 7: 3, 8: 4, 10: 5 };
 
-/** Tổng số ô đường (cả bốn loại) được trải, theo cấp Điện. */
-export const ROAD_LIMIT = [60, 90, 120, 160, 200, 240, 280, 280, 295, 310];
+/**
+ * Tổng số ô đường (cả bốn loại) được trải, theo cấp Điện: đủ cho đường của mẫu kinh đô nhiều đường nhất ở cấp ấy
+ * (`mauDuong` ở `mau.ts`, mọi công trình giáp đường), dư chừng một phần mười cho đường tự trải.
+ */
+export const ROAD_LIMIT = [90, 130, 140, 220, 320, 330, 470, 470, 480, 480];
 export const ROAD_TYPES: BuildingType[] = ['duongDat', 'duongSoi', 'duongDa', 'duongGach'];
 export const DECOR_TYPES: BuildingType[] = ['cayDa', 'gieng', 'ao', 'sanTrong', 'hoa', 'co', 'cau', 'rom'];
 /**

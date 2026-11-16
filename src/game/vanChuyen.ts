@@ -10,8 +10,8 @@
  * trình (dân không trèo qua, chỉ qua cổng thành hay chỗ hở); sông, rừng chưa phát cũng không đi qua được. Phần vẽ người
  * gánh dùng chung tuyến ở đây (`duongGanh`).
  */
-import { BUILDINGS, GANH, GANH_BEP, isBridge, isDecor, type BuildingType } from './defs';
-import type { Building, GameState } from './game';
+import { BUILDINGS, GANH, GANH_BEP, isBridge, isDecor, isRoad, type BuildingType } from './defs';
+import { occupancy, type Building, type GameState } from './game';
 import { openMask } from './khoanh';
 import { GRID, inGrid, isRiver } from './map';
 import { pendingBuildings } from './xay';
@@ -387,6 +387,31 @@ export function ganhPreview(state: GameState, type: BuildingType, x: number, z: 
   if (!t) return null;
   const i = oGanNhat(t, { type, x, z });
   return heSoTheo(i < 0 ? Infinity : t.xa[i]);
+}
+
+/**
+ * Công trình nhiều ô loại `type` đặt ở (x, z) có giáp đường không: một ô sát cạnh móng (không tính góc chéo) là ô đường;
+ * loại phải sát sông (bến, làng chài ngoài đê) thì ô đê có đường ngay sau cũng tính. Null với công trình một ô, đường đi,
+ * đồ trang trí. Chỉ để nhắc lúc đặt (mẫu kinh đô cho mọi công trình giáp đường), không phải luật.
+ */
+export function giapDuong(state: GameState, type: BuildingType, x: number, z: number): boolean | null {
+  const def = BUILDINGS[type];
+  if (def.w === 1 || isDecor(type) || isBridge(type)) return null;
+  const occ = occupancy(state);
+  const byId = new Map(state.buildings.map((b) => [b.id, b]));
+  const at = (cx: number, cz: number) => (inGrid(cx, cz) ? byId.get(occ[cz * GRID + cx]) : undefined);
+  const road = (cx: number, cz: number) => {
+    const b = at(cx, cz);
+    return !!b && isRoad(b.type);
+  };
+  const rim: [number, number][] = [];
+  for (let k = 0; k < def.w; k++) rim.push([x + k, z - 1], [x + k, z + def.d]);
+  for (let k = 0; k < def.d; k++) rim.push([x - 1, z + k], [x + def.w, z + k]);
+  return rim.some(([cx, cz]) => {
+    if (road(cx, cz)) return true;
+    const t = at(cx, cz)?.type;
+    return !!def.nearRiver && (t === 'de' || t === 'congDe') && (road(cx + 1, cz) || road(cx - 1, cz) || road(cx, cz + 1) || road(cx, cz - 1));
+  });
 }
 
 /** Loại công trình là nơi nhận hàng (Điện, kho thóc, bếp gói bánh). */
