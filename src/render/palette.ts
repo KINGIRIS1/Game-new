@@ -106,6 +106,10 @@ export const C = {
   // Quân Ngô (map dã ngoại Núi Nưa): áo xanh chàm, khác quân Hán đỏ son.
   ngo: 0x2f5c7e,
   ngoDark: 0x1d3a54,
+  // Thú rừng Núi Nưa: gấu ngựa lông đen mõm nâu nhạt, voi rừng da xám nâu.
+  bear: 0x2b2725,
+  bearMuzzle: 0xc89a6c,
+  voiRung: 0x857a6e,
   // Khăn, cờ đen quân Hán; mái ngói đen và thân gỗ nâu sẫm của lâu thuyền, thuyền Hán; giáp đồng đỏ và ngựa trắng
   // của Mã Viện.
   hanBlack: 0x2e2a28,

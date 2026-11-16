@@ -566,6 +566,8 @@ export const vi = {
     noNgo: 'nỏ thủ Ngô',
     giapNgo: 'giáp sĩ Ngô',
     lucDan: 'tướng Ngô Lục Dận',
+    gauNgua: 'gấu ngựa',
+    voiRung: 'voi rừng',
   } satisfies Record<EnemyType, string>,
 
   enemyIcons: {
@@ -605,6 +607,8 @@ export const vi = {
     noNgo: '🎯',
     giapNgo: '🛡️',
     lucDan: '🐴',
+    gauNgua: '🐻',
+    voiRung: '🐘',
   } satisfies Record<EnemyType, string>,
 
   /** Tên và lời dẫn từng màn phó bản, theo thứ tự trong STAGES. */

@@ -3733,7 +3733,7 @@ Mỗi map chừng 80×80 ô, có trại (điểm hồi sinh, chỗ vào từ kin
 - Của mỗi con: gạo 15, vỏ ốc 10, đất đá 7, sắt 3, gỗ 3. Vật cản: cây, đá, đá nhọn, tre, sim. Nền `nui`, bản đồ lật ngang.
 - Quân Ngô (`linhNgo`, `noNgo`, `giapNgo`) dáng đánh, chỉ số như quân Hán, áo xanh chàm (`C.ngo`, `C.ngoDark`) cho khác quân Hán đỏ son. Lục Dận cưỡi ngựa đen, giáp sắt viền vàng, thương dài, chỉ số như Mã Viện, không có kỹ năng riêng.
 - Lạc hầu báo một lần khi cấp chung tới 50 (`hinted` `daNgoai6`), dẫn lời Bà Triệu.
-- PR 1 (luật, quân Ngô, Lục Dận, cảnh): khu 1, 2 tạm dùng hổ tinh, báo gấm. PR 2: gấu ngựa, voi rừng dựng bằng code (`nanThu.ts`, `beasts.ts`) thay vào.
+- Gấu ngựa (`gauNgua`, khu 1): lông đen, yếm trắng chữ V dưới cằm, mõm nâu nhạt, tai tròn; đánh thì chồm lên hai chân sau rồi vả xuống (`bearBody` ở `nanThu.ts`, `BEAR`, `poseBear` ở `beasts.ts`). Voi rừng (`voiRung`, khu 2): thân voi nặn sẵn da xám nâu, không đệm, không bành, ngà dài; đánh như voi chiến (`drawVoiRung`). Chỉ số dáng: gấu máu 110, sức đánh 13; voi máu 150, sức đánh 14, đi chậm.
 
 ### Đội và trận trên map
 

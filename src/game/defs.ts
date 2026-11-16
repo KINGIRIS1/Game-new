@@ -1462,7 +1462,10 @@ export type EnemyType =
   | 'linhNgo'
   | 'noNgo'
   | 'giapNgo'
-  | 'lucDan';
+  | 'lucDan'
+  // Thú rừng Núi Nưa (map dã ngoại 6): gấu ngựa, voi rừng.
+  | 'gauNgua'
+  | 'voiRung';
 export const UNIT_TYPES: UnitType[] = ['giao', 'cung', 'voi', 'no'];
 
 export interface FighterStats {
@@ -1489,7 +1492,7 @@ export interface UnitDef extends FighterStats {
 }
 
 /** Quân nặng của giặc: giáo binh và lính nỏ khắc chế. */
-const HEAVY: EnemyType[] = ['chienXa', 'caSau', 'hoTinh', 'kyBinh', 'linhRiu', 'giapHan', 'giapNgo'];
+const HEAVY: EnemyType[] = ['chienXa', 'caSau', 'hoTinh', 'kyBinh', 'linhRiu', 'giapHan', 'giapNgo', 'voiRung'];
 
 /**
  * Quân ta: giáo binh thắng quân nặng (chiến xa, cá sấu, hổ tinh, kỵ binh, lính rìu, giáp sĩ Hán), cung thủ thắng
@@ -1570,6 +1573,8 @@ export const ENEMIES: Record<EnemyType, FighterStats> = {
   noNgo: { hp: 60, dmg: 13, range: 4.2, speed: 1.3, cooldown: 1.5 },
   giapNgo: { hp: 330, dmg: 26, range: 0.9, speed: 1.5, cooldown: 1.4, strongVs: ['cung'] },
   lucDan: { hp: 2000, dmg: 36, range: 1.4, speed: 1.4, cooldown: 1.2 },
+  gauNgua: { hp: 110, dmg: 13, range: 0.9, speed: 1.5, cooldown: 1.1 },
+  voiRung: { hp: 150, dmg: 14, range: 1.0, speed: 1.0, cooldown: 1.5 },
 };
 
 /**
@@ -1853,6 +1858,8 @@ export const ENEMY_ROWS: Record<EnemyType, Row> = {
   giapNgo: 'trung',
   noNgo: 'hau',
   lucDan: 'hau',
+  gauNgua: 'tien',
+  voiRung: 'trung',
 };
 
 /**
@@ -2582,8 +2589,7 @@ export const DA_MAP: Record<DaMapId, DaMapDef> = {
     cap: [51, 60],
     cong: 50,
     terrain: 'nui',
-    // Khu 1, 2 tạm dùng hổ tinh, báo gấm tới khi có gấu ngựa, voi rừng.
-    quai: ['hoTinh', 'baoGam', 'linhNgo', 'noNgo', 'giapNgo'],
+    quai: ['gauNgua', 'voiRung', 'linhNgo', 'noNgo', 'giapNgo'],
     boss: 'lucDan',
     can: { cay: 5, da: 3, daNhon: 3, tre: 2, sim: 1 },
     thuong: { gao: 15, voOc: 10, datDa: 7, sat: 3, go: 3 },

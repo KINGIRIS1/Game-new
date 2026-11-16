@@ -480,6 +480,58 @@ export function boarBody(r: Rig): void {
   figure(r as unknown as HumanRig, 'lonRung', boarPieces);
 }
 
+// ---------- Gấu ngựa ----------
+
+/**
+ * Gấu ngựa: lông đen, thân bầu vai u, chân cột to, đầu tròn có bờm cổ, tai tròn, mõm ngắn nâu nhạt, yếm trắng hình
+ * chữ V trước ngực. Nặn theo khung `BEAR` (beasts.ts; cùng tên xương với lợn rừng). Móng vẽ riêng ở beasts.ts.
+ */
+function bearPieces(detail: number): Piece[] {
+  const clay = new Clay(C.bear);
+  clay.add('qBody', ellipsoid([0, 0.56, -0.02], [0.27, 0.27, 0.42]), { k: 0 });
+  clay.add('qBody', ellipsoid([0, 0.64, 0.2], [0.28, 0.29, 0.24]), { k: 0.1 });
+  clay.add('qBody', ellipsoid([0, 0.55, -0.3], [0.26, 0.26, 0.2]), { k: 0.1 });
+  for (const [b, x, front] of [
+    ['qFL', -0.15, true],
+    ['qFR', 0.15, true],
+    ['qBL', -0.15, false],
+    ['qBR', 0.15, false],
+  ] as [string, number, boolean][]) {
+    if (front) {
+      clay.add(b, cone([x, 0.5, 0.26], [x, 0.08, 0.3], 0.1, 0.085), { k: 0.05 });
+      clay.add(b, ellipsoid([x, 0.05, 0.34], [0.09, 0.05, 0.1]), { k: 0.03 });
+    } else {
+      clay.add(b, ellipsoid([x * 1.05, 0.46, -0.28], [0.11, 0.17, 0.15]), { k: 0.06 });
+      clay.add(b, cone([x, 0.4, -0.3], [x, 0.08, -0.26], 0.09, 0.08), { k: 0.04 });
+      clay.add(b, ellipsoid([x, 0.05, -0.22], [0.085, 0.05, 0.1]), { k: 0.03 });
+    }
+  }
+  // Bờm cổ xù, đầu tròn, mõm ngắn, mũi, hai tai tròn.
+  clay.add('qHead', ellipsoid([0, 0.7, 0.42], [0.25, 0.23, 0.13]), { k: 0.08 });
+  clay.add('qHead', ellipsoid([0, 0.74, 0.54], [0.19, 0.18, 0.17]), { k: 0.06 });
+  clay.add('qHead', cone([0, 0.7, 0.62], [0, 0.66, 0.78], 0.1, 0.07), { k: 0.05 });
+  clay.add('qHead', ellipsoid([0, 0.665, 0.8], [0.045, 0.032, 0.025]), { k: 0.02 });
+  for (const s of [-1, 1]) clay.add('qHead', ellipsoid([s * 0.15, 0.9, 0.5], [0.065, 0.065, 0.04]), { k: 0.03 });
+  clay.add('qTail', sphere([0, 0.6, -0.48], 0.045), { k: 0.02 });
+  const f = clay.dist;
+  const paints: Paint[] = [];
+  // Yếm trắng chữ V trước ngực, vắt lên cả bờm cổ cho nhìn từ trên cao vẫn thấy.
+  const yem: Sdf = (x, y, z) => Math.max(Math.abs(y - (0.56 + 0.6 * Math.abs(x))) - 0.036, Math.abs(x) - 0.2, 0.3 - z);
+  paints.push(clay.layer('qBody', yem, C.cream), clay.layer('qHead', yem, C.cream));
+  paints.push(clay.layer('qHead', ellipsoid([0, 0.68, 0.74], [0.115, 0.09, 0.1]), C.bearMuzzle));
+  paints.push(clay.layer('qHead', ellipsoid([0, 0.67, 0.81], [0.05, 0.036, 0.03]), C.ink));
+  for (const s of [-1, 1]) {
+    paints.push(clay.layer('qHead', ellipsoid([s * 0.16, 0.9, 0.53], [0.035, 0.04, 0.03]), C.bearMuzzle));
+    const p = hit(f, [s * 0.085, 0.79, 1.1], [0, 0, -1]) ?? [s * 0.085, 0.79, 0.68];
+    paints.push(clay.layer('qHead', sphere(p, 0.024), C.ink, 2), clay.layer('qHead', sphere(add3(p, [s * 0.006, 0.008, 0.004]), 0.008), C.cream, 2));
+  }
+  return [clayPiece(clay.build({ kind: 'nets', min: [-0.36, -0.01, -0.56], max: [0.36, 1.0, 0.86], cell: 0.013 / detail, target: Math.round(2200 * detail) }, paints))];
+}
+
+export function bearBody(r: Rig): void {
+  figure(r as unknown as HumanRig, 'gauNgua', bearPieces);
+}
+
 // ---------- Gà trắng ----------
 
 /** Gà trống trắng khổng lồ nặn theo khung `ROOSTER`: ức phồng, cổ cao, đầu mào đỏ, cánh, đuôi lông cong, chân vàng. */
