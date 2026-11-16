@@ -10,7 +10,7 @@ import { HUMAN, beginPose, featherCrown, hairCap, headband, humanBody, humanHead
 import { Clay, ellipsoid } from './nan';
 import { armor, bun, chestDisc, diadem, hairDown, necklace, pauldrons } from './nanDo';
 import { clayPiece, figure, type Piece } from './nanNguoi';
-import { bearBody, boarBody, elephantBody, elephantDrape, horseBody, horseDrape, leopardBody, roosterBody, tigerBody, turtleBody, turtleDrum } from './nanThu';
+import { bearBody, boarBody, buffaloBody, elephantBody, elephantDrape, horseBody, horseDrape, leopardBody, roosterBody, tigerBody, turtleBody, turtleDrum } from './nanThu';
 import { C } from './palette';
 import { RigBuilder, bakeRig, moveBones, resetBones, skinRig, type Act, type BoneDef, type Bones, type Poser, type RigShape, type RigSlot, type RigSlots } from './rig';
 import { drawRider, poseRider, riderBones, riderHasSkill, type RiderKind } from './soldier';
@@ -608,6 +608,43 @@ function poseVoiRung(b: B, a: Act): void {
   poseElephant(b, a, a.act === 'fight' ? strikeCurve(a.strike, 0.3, 0.5) : 0);
 }
 
+// ---------- Trâu rừng (quái dã ngoại Đầm Dạ Trạch) ----------
+
+/** Khung trâu rừng: cùng tên xương với lợn rừng, to và cao hơn. */
+const BUFFALO: Defs = {
+  qBody: { parent: 'base', at: [0, 0.6, 0] },
+  qFL: { parent: 'qBody', at: [-0.17, 0.54, 0.3] },
+  qFR: { parent: 'qBody', at: [0.17, 0.54, 0.3] },
+  qBL: { parent: 'qBody', at: [-0.17, 0.54, -0.32] },
+  qBR: { parent: 'qBody', at: [0.17, 0.54, -0.32] },
+  qHead: { parent: 'qBody', at: [0, 0.68, 0.46] },
+  qTail: { parent: 'qBody', at: [0, 0.72, -0.5] },
+  qTail2: { parent: 'qTail', at: [0, 0.36, -0.58] },
+};
+
+/** Trâu đi chậm rãi, đầu gật theo bước; đánh thì cúi đầu chĩa sừng húc tới rồi hất lên; đứng thì phẩy đuôi. */
+function poseBuffalo(b: B, a: Act): void {
+  resetBones(b);
+  const t = a.time ?? 0;
+  if (a.act === 'walk') {
+    const ph = (a.phase ?? 0) * 0.75;
+    quadWalk(b, ph, (a.stride ?? 0.5) * 0.55, 0.5);
+    b.qHead.rotation.x = 0.06 * Math.sin(ph * 2);
+    b.qTail.rotation.z = 0.25 * Math.sin(ph);
+  } else if (a.act === 'fight') {
+    const e = strikeCurve(a.strike, 0.3, 0.5);
+    b.qBody.position.z += 0.18 * e;
+    b.qBody.rotation.x = 0.1 * (1 - e) - 0.06 * e;
+    b.qHead.rotation.x = 0.45 * (1 - e) - 0.35 * e;
+    b.qFL.rotation.x = b.qFR.rotation.x = -0.3 * e;
+  } else if (a.act === 'dead') {
+    quadFall(b, a.fall ?? 1);
+  } else {
+    b.qHead.rotation.x = 0.05 + 0.05 * Math.sin(t * 1.2);
+    b.qTail.rotation.z = 0.3 * Math.sin(t * 2.4);
+  }
+}
+
 /** Hổ rình (thấp người, đuôi quất), vồ (chồm lên, hai chân trước vươn tới, cắn), đi lừ đừ. */
 function poseTiger(b: B, a: Act): void {
   resetBones(b);
@@ -695,8 +732,8 @@ function poseRooster(b: B, a: Act): void {
 
 // ---------- Thú và người cưỡi trong trận ----------
 
-export type BeastKind = 'voi' | 'chienXa' | 'daiTuong' | 'kyBinh' | 'trieuDa' | 'maVien' | 'lucDan' | 'tranBaTien' | 'hoTinh' | 'gaTrang' | 'lonRung' | 'baoGam' | 'gauNgua' | 'voiRung';
-const KINDS: readonly FighterKind[] = ['voi', 'chienXa', 'daiTuong', 'kyBinh', 'trieuDa', 'maVien', 'lucDan', 'tranBaTien', 'hoTinh', 'gaTrang', 'lonRung', 'baoGam', 'gauNgua', 'voiRung'];
+export type BeastKind = 'voi' | 'chienXa' | 'daiTuong' | 'kyBinh' | 'trieuDa' | 'maVien' | 'lucDan' | 'tranBaTien' | 'hoTinh' | 'gaTrang' | 'lonRung' | 'baoGam' | 'gauNgua' | 'voiRung' | 'trauRung';
+const KINDS: readonly FighterKind[] = ['voi', 'chienXa', 'daiTuong', 'kyBinh', 'trieuDa', 'maVien', 'lucDan', 'tranBaTien', 'hoTinh', 'gaTrang', 'lonRung', 'baoGam', 'gauNgua', 'voiRung', 'trauRung'];
 export const isBeast = (k: FighterKind): k is BeastKind => KINDS.includes(k);
 
 interface Spec {
@@ -778,6 +815,7 @@ const SPECS: Record<BeastKind, Spec> = {
   lonRung: { defs: { ...BASE, ...BOAR }, draw: drawBoar, pose: poseBoar },
   gauNgua: { defs: { ...BASE, ...BEAR }, draw: drawBear, pose: poseBear },
   voiRung: { defs: { ...BASE, ...ELEPHANT }, draw: drawVoiRung, pose: poseVoiRung },
+  trauRung: { defs: { ...BASE, ...BUFFALO }, draw: buffaloBody, pose: poseBuffalo },
   gaTrang: { defs: { ...BASE, ...ROOSTER }, draw: drawRooster, pose: poseRooster },
 };
 

@@ -110,6 +110,12 @@ export const C = {
   // Quân Lương (map dã ngoại Đầm Dạ Trạch): áo vàng đất, giáp da nâu sẫm.
   luong: 0xb98a3c,
   luongDark: 0x6e4a24,
+  // Thú đầm Dạ Trạch: trăn gấm vàng nâu hoa nâu sẫm; trâu rừng đen xám, sừng màu ngà xám.
+  python: 0xb08a4a,
+  pythonSpot: 0x5a3e22,
+  buffalo: 0x403d3e,
+  buffaloMuzzle: 0x6a6462,
+  buffaloHorn: 0xcfc6b0,
   bear: 0x2b2725,
   bearMuzzle: 0xc89a6c,
   voiRung: 0x857a6e,

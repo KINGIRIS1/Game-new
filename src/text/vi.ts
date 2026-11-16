@@ -572,6 +572,8 @@ export const vi = {
     noLuong: 'nỏ thủ Lương',
     giapLuong: 'giáp sĩ Lương',
     tranBaTien: 'tướng Lương Trần Bá Tiên',
+    tranGam: 'trăn gấm',
+    trauRung: 'trâu rừng',
   } satisfies Record<EnemyType, string>,
 
   enemyIcons: {
@@ -617,6 +619,8 @@ export const vi = {
     noLuong: '🎯',
     giapLuong: '🪖',
     tranBaTien: '🏇',
+    tranGam: '🐍',
+    trauRung: '🐃',
   } satisfies Record<EnemyType, string>,
 
   /** Tên và lời dẫn từng màn phó bản, theo thứ tự trong STAGES. */

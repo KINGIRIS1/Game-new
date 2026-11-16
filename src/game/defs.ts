@@ -1470,7 +1470,10 @@ export type EnemyType =
   | 'linhLuong'
   | 'noLuong'
   | 'giapLuong'
-  | 'tranBaTien';
+  | 'tranBaTien'
+  // Thú đầm Dạ Trạch (map dã ngoại 7): trăn gấm, trâu rừng.
+  | 'tranGam'
+  | 'trauRung';
 export const UNIT_TYPES: UnitType[] = ['giao', 'cung', 'voi', 'no'];
 
 export interface FighterStats {
@@ -1497,7 +1500,7 @@ export interface UnitDef extends FighterStats {
 }
 
 /** Quân nặng của giặc: giáo binh và lính nỏ khắc chế. */
-const HEAVY: EnemyType[] = ['chienXa', 'caSau', 'hoTinh', 'kyBinh', 'linhRiu', 'giapHan', 'giapNgo', 'voiRung', 'giapLuong'];
+const HEAVY: EnemyType[] = ['chienXa', 'caSau', 'hoTinh', 'kyBinh', 'linhRiu', 'giapHan', 'giapNgo', 'voiRung', 'giapLuong', 'trauRung'];
 
 /**
  * Quân ta: giáo binh thắng quân nặng (chiến xa, cá sấu, hổ tinh, kỵ binh, lính rìu, giáp sĩ Hán), cung thủ thắng
@@ -1585,6 +1588,8 @@ export const ENEMIES: Record<EnemyType, FighterStats> = {
   noLuong: { hp: 60, dmg: 13, range: 4.2, speed: 1.3, cooldown: 1.5 },
   giapLuong: { hp: 330, dmg: 26, range: 0.9, speed: 1.5, cooldown: 1.4, strongVs: ['cung'] },
   tranBaTien: { hp: 2000, dmg: 36, range: 1.3, speed: 1.4, cooldown: 1.2 },
+  tranGam: { hp: 100, dmg: 13, range: 1.4, speed: 1.3, cooldown: 1.2 },
+  trauRung: { hp: 160, dmg: 15, range: 1.0, speed: 1.1, cooldown: 1.4 },
 };
 
 /**
@@ -1874,6 +1879,8 @@ export const ENEMY_ROWS: Record<EnemyType, Row> = {
   giapLuong: 'trung',
   noLuong: 'hau',
   tranBaTien: 'hau',
+  tranGam: 'tien',
+  trauRung: 'trung',
 };
 
 /**
@@ -2616,8 +2623,7 @@ export const DA_MAP: Record<DaMapId, DaMapDef> = {
     cap: [61, 70],
     cong: 60,
     terrain: 'ngap',
-    // Khu 1, 2 tạm dùng cá sấu, thuồng luồng tới khi có trăn gấm, trâu rừng.
-    quai: ['caSau', 'thuongLuong', 'linhLuong', 'noLuong', 'giapLuong'],
+    quai: ['tranGam', 'trauRung', 'linhLuong', 'noLuong', 'giapLuong'],
     boss: 'tranBaTien',
     can: { ao: 5, lau: 5, tre: 2, go: 2, cayChet: 1 },
     thuong: { gao: 18, voOc: 12, datDa: 9, sat: 4, go: 4 },

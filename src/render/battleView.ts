@@ -177,6 +177,8 @@ const SCALE: Partial<Record<FighterKind, number>> = {
   baoGam: 0.72,
   gauNgua: 0.78,
   voiRung: 0.75,
+  trauRung: 0.78,
+  tranGam: 0.9,
   ranHo: 0.85,
   cuaDa: 0.8,
   gaTrang: 1.05,

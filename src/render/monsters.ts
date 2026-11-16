@@ -4,7 +4,7 @@
 import * as THREE from 'three';
 import type { FighterKind } from '../game/battle';
 import { beginPose, fallPose, gripHands, lerp, stance, strikeCurve, walkCycle, type Human, type HumanBone } from './body';
-import { cobraBody, crabBody, monsterBody, serpentBody } from './nanQuai';
+import { cobraBody, crabBody, monsterBody, pythonBody, serpentBody } from './nanQuai';
 import { C } from './palette';
 import { RigBuilder, bakeRig, resetBones, skinRig, type Act, type BoneDef, type Bones, type Poser } from './rig';
 
@@ -244,6 +244,50 @@ function drawCobra(r: Rig): void {
   r.on('head').plain.cone(0.008, 0.12, C.red, 0, 1.15, 0.36, [Math.PI / 2, 0, 0], 3);
 }
 
+// ---------- Trăn gấm (quái dã ngoại Đầm Dạ Trạch) ----------
+
+/** Các khúc mình trăn: bò sát đất thành hình chữ S, cổ ngóc lên một chút. */
+const PYTHON_BODY: [number, number, number, number][] = [
+  [0.25, 0.09, -0.75, 0.08],
+  [-0.15, 0.11, -0.55, 0.11],
+  [-0.25, 0.12, -0.15, 0.13],
+  [0.1, 0.13, 0.05, 0.13],
+  [0.15, 0.16, 0.35, 0.11],
+  [0, 0.24, 0.55, 0.09],
+];
+const PYTHON: Defs = {
+  ...BASE,
+  ...Object.fromEntries(PYTHON_BODY.map(([x, y, z], i) => [`s${i}`, { parent: i ? `s${i - 1}` : 'base', at: [x, y, z] as [number, number, number] }])),
+  head: { parent: 's5', at: [0, 0.28, 0.7] },
+};
+
+function drawPython(r: Rig): void {
+  pythonBody(r, PYTHON_BODY);
+  // Lưỡi chẻ đỏ thè ra trước miệng.
+  r.on('head').plain.cone(0.008, 0.1, C.red, 0, 0.27, 0.92, [Math.PI / 2, 0, 0], 3);
+}
+
+/** Trăn trườn uốn mình sát đất; đánh thì rụt cổ lấy đà rồi lao đầu tới đớp; ngã thì nằm duỗi. */
+function posePython(b: B, a: Act): void {
+  resetBones(b);
+  const t = a.time ?? 0;
+  const walk = a.act === 'walk';
+  const ph = walk ? (a.phase ?? 0) * 0.7 : t * 0.9;
+  for (let i = 0; i < 6; i++) b[`s${i}`].rotation.y = (walk ? 0.2 : 0.04) * Math.sin(ph - i * 0.9);
+  if (a.act === 'fight') {
+    const e = strikeCurve(a.strike, 0.2, 0.4);
+    b.s4.rotation.x = lerp(-0.35, 0.15, e);
+    b.s5.rotation.x = lerp(-0.4, 0.2, e);
+    b.s4.position.z += 0.12 * e;
+    b.head.rotation.x = lerp(0.2, 0.05, e);
+  } else if (a.act === 'dead') {
+    const f = a.fall ?? 1;
+    for (let i = 0; i < 6; i++) b[`s${i}`].rotation.y *= 1 - f;
+  } else {
+    b.s5.rotation.x = -0.12 - 0.05 * Math.sin(t * 1.3);
+  }
+}
+
 /** Rắn hổ mang lắc lư nửa mình dựng đứng; mổ thì vươn cổ lao xuống trước; đi thì trườn uốn khúc. */
 function poseCobra(b: B, a: Act): void {
   resetBones(b);
@@ -417,8 +461,8 @@ function poseGhost(b: B, a: Act): void {
 
 // ---------- Trong trận ----------
 
-export type MonsterKind = 'tomBinh' | 'caPhun' | 'caSau' | 'thuongLuong' | 'quyNui' | 'maTroi' | 'ranHo' | 'cuaDa';
-const KINDS: readonly FighterKind[] = ['tomBinh', 'caPhun', 'caSau', 'thuongLuong', 'quyNui', 'maTroi', 'ranHo', 'cuaDa'];
+export type MonsterKind = 'tomBinh' | 'caPhun' | 'caSau' | 'thuongLuong' | 'quyNui' | 'maTroi' | 'ranHo' | 'cuaDa' | 'tranGam';
+const KINDS: readonly FighterKind[] = ['tomBinh', 'caPhun', 'caSau', 'thuongLuong', 'quyNui', 'maTroi', 'ranHo', 'cuaDa', 'tranGam'];
 export const isMonster = (k: FighterKind): k is MonsterKind => KINDS.includes(k);
 
 interface Spec {
@@ -442,6 +486,7 @@ const SPECS: Record<MonsterKind, Spec> = {
   maTroi: { defs: GHOST, draw: drawGhost, pose: poseGhost, fall: 'none' },
   ranHo: { defs: COBRA, draw: drawCobra, pose: poseCobra, fall: 'side' },
   cuaDa: { defs: CRAB, draw: drawCrab, pose: poseCrab, fall: 'none' },
+  tranGam: { defs: PYTHON, draw: drawPython, pose: posePython, fall: 'none' },
 };
 
 /** Quái đông trên màn hình (mùa lũ, đêm yêu tinh): bớt độ chi tiết như lính. */
