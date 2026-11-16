@@ -107,6 +107,9 @@ export const C = {
   ngo: 0x2f5c7e,
   ngoDark: 0x1d3a54,
   // Thú rừng Núi Nưa: gấu ngựa lông đen mõm nâu nhạt, voi rừng da xám nâu.
+  // Quân Lương (map dã ngoại Đầm Dạ Trạch): áo vàng đất, giáp da nâu sẫm.
+  luong: 0xb98a3c,
+  luongDark: 0x6e4a24,
   bear: 0x2b2725,
   bearMuzzle: 0xc89a6c,
   voiRung: 0x857a6e,

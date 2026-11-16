@@ -148,6 +148,7 @@ function migrate(raw: unknown): unknown {
   if (isObj(v) && v.version === 28) v = migrate28to29(v);
   if (isObj(v) && v.version === 29) v = migrate29to30(v);
   if (isObj(v) && v.version === 30) v = migrate30to31(v);
+  if (isObj(v) && v.version === 31) v = migrate31to32(v);
   return v;
 }
 
@@ -547,11 +548,23 @@ function migrate29to30(s: Raw): Raw {
   return s;
 }
 
+/** Thêm giờ boss mọc lại (0: đang có) cho các map dã ngoại mới. */
+function themBossDa(s: Raw): void {
+  const d = s.daNgoai;
+  if (isObj(d) && Array.isArray(d.boss)) while (d.boss.length < DA_MAP_IDS.length) d.boss.push(0);
+}
+
 /** Phiên bản 30 → 31 (map dã ngoại 6, Núi Nưa): thêm giờ boss mọc lại cho map mới. */
 function migrate30to31(s: Raw): Raw {
   s.version = 31;
-  const d = s.daNgoai;
-  if (isObj(d) && Array.isArray(d.boss)) while (d.boss.length < DA_MAP_IDS.length) d.boss.push(0);
+  themBossDa(s);
+  return s;
+}
+
+/** Phiên bản 31 → 32 (map dã ngoại 7, Đầm Dạ Trạch): thêm giờ boss mọc lại cho map mới. */
+function migrate31to32(s: Raw): Raw {
+  s.version = 32;
+  themBossDa(s);
   return s;
 }
 

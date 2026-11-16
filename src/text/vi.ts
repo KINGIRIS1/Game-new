@@ -568,6 +568,10 @@ export const vi = {
     lucDan: 'tướng Ngô Lục Dận',
     gauNgua: 'gấu ngựa',
     voiRung: 'voi rừng',
+    linhLuong: 'lính khiên Lương',
+    noLuong: 'nỏ thủ Lương',
+    giapLuong: 'giáp sĩ Lương',
+    tranBaTien: 'tướng Lương Trần Bá Tiên',
   } satisfies Record<EnemyType, string>,
 
   enemyIcons: {
@@ -609,6 +613,10 @@ export const vi = {
     lucDan: '🐴',
     gauNgua: '🐻',
     voiRung: '🐘',
+    linhLuong: '🛡️',
+    noLuong: '🎯',
+    giapLuong: '🪖',
+    tranBaTien: '🏇',
   } satisfies Record<EnemyType, string>,
 
   /** Tên và lời dẫn từng màn phó bản, theo thứ tự trong STAGES. */
@@ -1324,11 +1332,11 @@ export const vi = {
     cloudNone: 'Tài khoản này chưa có bản lưu trên mây. Vào chơi thì kinh đô ở máy này được lưu lên.',
   },
 
-  /** Dã ngoại: sáu map mở đánh quái lên cấp chung (`game/daNgoai.ts`, `ui/daNgoai.ts`). */
+  /** Dã ngoại: bảy map mở đánh quái lên cấp chung (`game/daNgoai.ts`, `ui/daNgoai.ts`). */
   daNgoai: {
     chip: '🌿 Dã ngoại',
     title: 'Dã ngoại',
-    intro: 'Dẫn tối đa ba tướng ra sáu map mở đánh quái: được kinh nghiệm, của và đồ. Cấp chung dùng cho mọi tướng, chỉ có tác dụng ở dã ngoại.',
+    intro: 'Dẫn tối đa ba tướng ra bảy map mở đánh quái: được kinh nghiệm, của và đồ. Cấp chung dùng cho mọi tướng, chỉ có tác dụng ở dã ngoại.',
     locked: 'Dã ngoại mở khi có tướng đầu tiên về.',
     hint: '📜 Lạc hầu: Tâu bệ hạ, đã có tướng về, có thể dẫn tướng ra dã ngoại đánh quái lấy kinh nghiệm, của và đồ. Mở bản đồ phó bản, chạm chip 🌿 Dã ngoại.',
     maps: {
@@ -1338,15 +1346,19 @@ export const vi = {
       4: 'Cửa sông',
       5: 'Rừng Mê Linh',
       6: 'Núi Nưa',
+      7: 'Đầm Dạ Trạch',
     } satisfies Record<DaMapId, string>,
-    hint6:
-      '📜 Lạc hầu: Tâu bệ hạ, các tướng đã đủ sức qua cổng cuối Rừng Mê Linh, vào Núi Nưa đất Cửu Chân, nơi quân Ngô đóng đồn. Dân trong núi còn truyền lời một người con gái: "Tôi muốn cưỡi cơn gió mạnh, đạp luồng sóng dữ, chém cá kình ở biển Đông…"',
+    /** Lạc hầu báo một lần khi cấp chung đủ sang map mới. */
+    hintMap: {
+      6: '📜 Lạc hầu: Tâu bệ hạ, các tướng đã đủ sức qua cổng cuối Rừng Mê Linh, vào Núi Nưa đất Cửu Chân, nơi quân Ngô đóng đồn. Dân trong núi còn truyền lời một người con gái: "Tôi muốn cưỡi cơn gió mạnh, đạp luồng sóng dữ, chém cá kình ở biển Đông…"',
+      7: '📜 Lạc hầu: Tâu bệ hạ, qua khỏi Núi Nưa là Đầm Dạ Trạch mênh mông lau sậy. Xưa Triệu Quang Phục đem quân vào đầm, ngày ẩn đêm ra đánh, giặc Lương không sao tìm được. Nay tướng Lương Trần Bá Tiên lại đóng quân bên đầm.',
+    } as Partial<Record<DaMapId, string>>,
     cap: (n: number) => `Cấp ${n}`,
     expBar: (cur: number, need: number) => (Number.isFinite(need) ? `${cur}/${need} kinh nghiệm` : 'Cấp tối đa'),
     capNote: (pct: number) => `Mọi tướng +${pct}% máu, sức đánh ở dã ngoại`,
     doiTitle: 'Đội (tối đa 3 tướng)',
     doiNote: 'Tướng đang nghỉ ở phó bản vẫn đi được; ngã ở dã ngoại không phải nghỉ.',
-    mapsTitle: 'Sáu map',
+    mapsTitle: 'Bảy map',
     mapCap: (lo: number, hi: number) => `Quái cấp ${lo}–${hi}`,
     mapCong: (n: number) => `🔒 Cổng mở ở cấp ${n}`,
     mapHere: 'Đội đang ở đây',

@@ -499,6 +499,18 @@ d.camera(cx, cz, 2.6);`,
     sau: `d.daNgoai(6, 4, 60);`,
     doi: 3000,
   },
+  'da-ngoai-7': {
+    mo: 'Như da-ngoai-tran, ở map 7 (Đầm Dạ Trạch) khu 3 (lính khiên Lương), chụp sau 6 giây',
+    truoc: `${CHUONG5(35)}\ns.daNgoai.doi = ['trungTrac', 'trungNhi', 'caoLo'];`,
+    sau: `d.daNgoai(7, 2);`,
+    doi: 6000,
+  },
+  'da-ngoai-7-boss': {
+    mo: 'Như da-ngoai-boss, map 7 (Đầm Dạ Trạch), đội đứng sát khu boss (Trần Bá Tiên), chụp sau 3 giây',
+    truoc: `${CHUONG5(35)}\ns.daNgoai.doi = ['trungTrac', 'trungNhi', 'caoLo'];`,
+    sau: `d.daNgoai(7, 4, 70);`,
+    doi: 3000,
+  },
   'da-ngoai-boss': {
     mo: 'Như da-ngoai-tran, map 3 (Đồi Thất Diệu, đêm), đội đứng sát khu boss (gà trắng), chụp sau 3 giây',
     truoc: `${CHUONG5(35)}\ns.daNgoai.doi = ['trungTrac', 'trungNhi', 'caoLo'];`,
