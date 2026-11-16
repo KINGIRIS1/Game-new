@@ -113,6 +113,10 @@ export const C = {
   // Quân Đường (map dã ngoại Núi Vệ): áo lục sẫm, giáp sắt sáng có hộ tâm.
   duongQuan: 0x3e6a4c,
   duongQuanDark: 0x24402e,
+  // Thủy quân Nam Hán (map dã ngoại Bạch Đằng): áo tím than, viền đỏ sẫm.
+  namHan: 0x4b3a5e,
+  namHanDark: 0x2b2036,
+  namHanRed: 0x8c2f2f,
   // Ngựa xám đốm của Dương Tư Húc.
   horseGrey: 0x8e8a84,
   // Thú rừng Núi Vệ: sói đỏ lông đỏ gạch, tê giác da xám nâu.

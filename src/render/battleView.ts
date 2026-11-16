@@ -161,6 +161,7 @@ const SCALE: Partial<Record<FighterKind, number>> = {
   lucDan: 0.9,
   tranBaTien: 0.9,
   duongTuHuc: 0.9,
+  hoangThao: 0.9,
   voi: 0.75,
   chienXa: 0.75,
   phoTuong: 1,

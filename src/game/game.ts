@@ -334,7 +334,7 @@ export interface Merchant {
  * lâu thuyền; 24: nữ tướng, thử thách màn 33–40; 25: thời gian xây, tốp thợ, nhà thợ hồ, đố sử; 26: một doanh trại lớn;
  * 27: trang bị tướng; 28: đóng đảo; 29: giặc đánh đảo; 30: dã ngoại, cấp chung của tướng).
  */
-export const SAVE_VERSION = 33;
+export const SAVE_VERSION = 34;
 
 export interface GameState {
   version: typeof SAVE_VERSION;

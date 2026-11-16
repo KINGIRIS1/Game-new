@@ -84,6 +84,7 @@ const CO: Record<DaCan, [number, number]> = {
   go: [0.45, 0.2],
   lau: [0.6, 0.5],
   ao: [1.4, 1.2],
+  coc: [0.45, 0.2],
 };
 
 /** Lối đi chừa trống mỗi bên đường mòn chừng này ô; vật cản cách nhau ít nhất `KHE` ô. */

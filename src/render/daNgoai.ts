@@ -1,6 +1,6 @@
 // Cảnh map dã ngoại (docs/thiet-ke.md mục Kế hoạch: dã ngoại): nền đất theo vùng, đường mòn nối trại, các khu và cổng,
 // vật cản đúng chỗ của luật (`daNgoaiMap.ts`: cây rừng vẽ như rừng kinh đô, khóm tre, đá, bụi sim, cây chết, lau vẽ
-// bằng hàm vẽ vật cản của bãi chiến `VE`, ao nước), rừng viền quanh map, trại có lều tranh và cột cờ, cổng sang map kề
+// bằng hàm vẽ vật cản của bãi chiến `VE`, ao nước, cụm cọc Bạch Đằng `cocBachDang`), rừng viền quanh map, trại có lều tranh và cột cờ, cổng sang map kề
 // có vòng sáng xoay, vòng đá quanh khu boss. Đội và quái vẽ bằng `BattleView` như mọi trận.
 //
 // Map xoay 45° như bãi chiến (camera nhìn chéo); `toScene`, `fromScene` đổi tọa độ map và tọa độ cảnh.
@@ -42,6 +42,8 @@ const MAU: Record<DaMapId, MauMap> = {
   7: { co: 0x8a9c5a, co2: 0x7a8e52, duong: 0x8a7a62, khu: 0x857c5e, ngoai: 0x5a7044, troi: { ...TROI_NGAY, sky: 0xd6dcd0 } },
   // Núi Vệ: cỏ đồi xanh vàng, đường đất đỏ bazan, trời chiều nắng.
   8: { co: 0x7f9446, co2: 0x72873e, duong: 0xa65a3a, khu: 0x93684a, ngoai: 0x52683a, troi: { ...TROI_NGAY, sky: 0xe4dcc8 } },
+  // Bạch Đằng: cỏ mặn xanh xám, bãi bùn xám nâu, trời sương biển.
+  9: { co: 0x8f9a6a, co2: 0x7f8c62, duong: 0x8e8270, khu: 0x8a8068, ngoai: 0x5e6e50, troi: { ...TROI_NGAY, sky: 0xd4dee0 } },
 };
 
 /** Map rộng thêm chừng này ô mỗi phía: rừng viền che mép map. */
@@ -197,6 +199,34 @@ function vongDa(at: Diem & { r: number }): THREE.Group {
 }
 
 /** Vật cản nhỏ (tre, đá, sim, cây chết, gỗ, lau) gộp một lưới bằng hàm vẽ của bãi chiến; cây rừng, ao vẽ riêng. */
+/**
+ * Cụm cọc Bạch Đằng (map 9): năm tới bảy cọc gỗ lim cao cắm trên ụ bùn, cùng chúc về một phía như đón thuyền giặc,
+ * chân cọc thẫm nước, mũi bịt sắt. Vật cản là hình tròn bán kính `r` của luật.
+ */
+function cocBachDang(p: ShapeBuilder, x: number, z: number, r: number, rand: () => number): void {
+  p.sphere(r * 0.75, C.earthDark, x, 0, z, [1, 0.16, 1], 10);
+  const huong = rand() * Math.PI * 2;
+  const n = 5 + Math.floor(rand() * 3);
+  for (let i = 0; i < n; i++) {
+    const a = (i / n) * Math.PI * 2 + rand() * 0.6;
+    const d = r * (0.15 + rand() * 0.45);
+    const bx = x + Math.cos(a) * d;
+    const bz = z + Math.sin(a) * d;
+    const h = 0.95 + rand() * 0.5;
+    const lean = 0.18 + rand() * 0.14;
+    // Cọc dựng theo trục y, nghiêng `lean` về hướng `huong` (xoay quanh trục vuông góc với hướng ấy).
+    const dx = Math.cos(huong) * Math.sin(lean);
+    const dz = Math.sin(huong) * Math.sin(lean);
+    const dy = Math.cos(lean);
+    const rot: [number, number, number] = [Math.sin(huong) * lean, 0, -Math.cos(huong) * lean];
+    const go = rand() < 0.35 ? C.wood : C.woodDark;
+    p.cyl(0.055, 0.07, h, go, bx + (dx * h) / 2, (dy * h) / 2, bz + (dz * h) / 2, rot, 6);
+    // Chân cọc thẫm nước, mũi sắt nhọn.
+    p.cyl(0.075, 0.075, 0.16, 0x3a2e24, bx + dx * 0.08, dy * 0.08, bz + dz * 0.08, rot, 6);
+    p.cone(0.06, 0.2, C.hanIron, bx + dx * (h + 0.1), dy * (h + 0.1), bz + dz * (h + 0.1), rot, 5);
+  }
+}
+
 function vatCan(bc: DaBoCuc): THREE.Group {
   const g = new THREE.Group();
   const rand = seeded(bc.id * 7919 + 3);
@@ -208,6 +238,7 @@ function vatCan(bc: DaBoCuc): THREE.Group {
     const ve: DaCan = c.ve;
     if (ve === 'cay') cay.push({ x: c.x, z: c.z, kind: 'tree', seed: bc.id * 1000 + i });
     else if (ve === 'ao') ao.push(c);
+    else if (ve === 'coc') cocBachDang(p, c.x, c.z, c.r, rand);
     else VE[ve]?.(p, { k: 'tron', x: c.x, z: c.z, r: c.r }, rand, them);
   });
   const parts = [...(p.empty ? [] : [p.geometry()]), ...them];

@@ -758,8 +758,8 @@ function poseRooster(b: B, a: Act): void {
 
 // ---------- Thú và người cưỡi trong trận ----------
 
-export type BeastKind = 'voi' | 'chienXa' | 'daiTuong' | 'kyBinh' | 'trieuDa' | 'maVien' | 'lucDan' | 'tranBaTien' | 'duongTuHuc' | 'hoTinh' | 'gaTrang' | 'lonRung' | 'baoGam' | 'gauNgua' | 'voiRung' | 'trauRung' | 'soiDo' | 'teGiac';
-const KINDS: readonly FighterKind[] = ['voi', 'chienXa', 'daiTuong', 'kyBinh', 'trieuDa', 'maVien', 'lucDan', 'tranBaTien', 'duongTuHuc', 'hoTinh', 'gaTrang', 'lonRung', 'baoGam', 'gauNgua', 'voiRung', 'trauRung', 'soiDo', 'teGiac'];
+export type BeastKind = 'voi' | 'chienXa' | 'daiTuong' | 'kyBinh' | 'trieuDa' | 'maVien' | 'lucDan' | 'tranBaTien' | 'duongTuHuc' | 'hoangThao' | 'hoTinh' | 'gaTrang' | 'lonRung' | 'baoGam' | 'gauNgua' | 'voiRung' | 'trauRung' | 'soiDo' | 'teGiac';
+const KINDS: readonly FighterKind[] = ['voi', 'chienXa', 'daiTuong', 'kyBinh', 'trieuDa', 'maVien', 'lucDan', 'tranBaTien', 'duongTuHuc', 'hoangThao', 'hoTinh', 'gaTrang', 'lonRung', 'baoGam', 'gauNgua', 'voiRung', 'trauRung', 'soiDo', 'teGiac'];
 export const isBeast = (k: FighterKind): k is BeastKind => KINDS.includes(k);
 
 interface Spec {
@@ -846,6 +846,19 @@ const SPECS: Record<BeastKind, Spec> = {
     (r) => {
       drawHorse(r, C.horseGrey, C.duongQuan);
       r.on('qHead').plain.box(0.08, 0.2, 0.3, C.hanIron, 0, 1.33, 0.72, [0.35, 0, 0]);
+    },
+    poseHorse,
+  ),
+  // Lưu Hoằng Tháo cưỡi ngựa trắng bờm xám, yên tím than, tấm che trán vàng.
+  hoangThao: riderSpec(
+    HORSE,
+    'qBody',
+    [0, 0.92, -0.08],
+    'hoangThao',
+    'ride',
+    (r) => {
+      drawHorse(r, C.horseWhite, C.namHan, C.horseWhiteMane);
+      r.on('qHead').plain.box(0.08, 0.2, 0.3, C.gold, 0, 1.33, 0.72, [0.35, 0, 0]);
     },
     poseHorse,
   ),
