@@ -10,7 +10,7 @@ import { HUMAN, beginPose, featherCrown, hairCap, headband, humanBody, humanHead
 import { Clay, ellipsoid } from './nan';
 import { armor, bun, chestDisc, diadem, hairDown, necklace, pauldrons } from './nanDo';
 import { clayPiece, figure, type Piece } from './nanNguoi';
-import { bearBody, boarBody, buffaloBody, dholeBody, otterBody, rhinoBody, elephantBody, elephantDrape, horseBody, horseDrape, leopardBody, roosterBody, tigerBody, turtleBody, turtleDrum } from './nanThu';
+import { bearBody, boarBody, buffaloBody, deerBody, dholeBody, gaurBody, otterBody, rhinoBody, elephantBody, elephantDrape, horseBody, horseDrape, leopardBody, roosterBody, tigerBody, turtleBody, turtleDrum } from './nanThu';
 import { C } from './palette';
 import { RigBuilder, bakeRig, moveBones, resetBones, skinRig, type Act, type BoneDef, type Bones, type Poser, type RigShape, type RigSlot, type RigSlots } from './rig';
 import { drawRider, poseRider, riderBones, riderHasSkill, type RiderKind } from './soldier';
@@ -659,6 +659,18 @@ const DHOLE: Defs = {
   qTail2: { parent: 'qTail', at: [0, 0.42, -0.52] },
 };
 
+/** Khung nai: cùng tên xương với trâu rừng (dùng chung tư thế húc), chân dài, cổ cao. */
+const DEER: Defs = {
+  qBody: { parent: 'base', at: [0, 0.78, 0] },
+  qFL: { parent: 'qBody', at: [-0.09, 0.72, 0.24] },
+  qFR: { parent: 'qBody', at: [0.09, 0.72, 0.24] },
+  qBL: { parent: 'qBody', at: [-0.09, 0.72, -0.26] },
+  qBR: { parent: 'qBody', at: [0.09, 0.72, -0.26] },
+  qHead: { parent: 'qBody', at: [0, 0.9, 0.28] },
+  qTail: { parent: 'qBody', at: [0, 0.86, -0.36] },
+  qTail2: { parent: 'qTail', at: [0, 0.8, -0.41] },
+};
+
 /** Khung rái cá: cùng tên xương với sói đỏ (dùng chung tư thế vồ), thấp, mình dài, đuôi to. */
 const OTTER: Defs = {
   qBody: { parent: 'base', at: [0, 0.32, 0] },
@@ -770,8 +782,8 @@ function poseRooster(b: B, a: Act): void {
 
 // ---------- Thú và người cưỡi trong trận ----------
 
-export type BeastKind = 'voi' | 'chienXa' | 'daiTuong' | 'kyBinh' | 'trieuDa' | 'maVien' | 'lucDan' | 'tranBaTien' | 'duongTuHuc' | 'hoangThao' | 'quachQuy' | 'hoTinh' | 'gaTrang' | 'lonRung' | 'baoGam' | 'gauNgua' | 'voiRung' | 'trauRung' | 'soiDo' | 'teGiac' | 'raiCa' | 'ruaBien';
-const KINDS: readonly FighterKind[] = ['voi', 'chienXa', 'daiTuong', 'kyBinh', 'trieuDa', 'maVien', 'lucDan', 'tranBaTien', 'duongTuHuc', 'hoangThao', 'quachQuy', 'hoTinh', 'gaTrang', 'lonRung', 'baoGam', 'gauNgua', 'voiRung', 'trauRung', 'soiDo', 'teGiac', 'raiCa', 'ruaBien'];
+export type BeastKind = 'voi' | 'chienXa' | 'daiTuong' | 'kyBinh' | 'trieuDa' | 'maVien' | 'lucDan' | 'tranBaTien' | 'duongTuHuc' | 'hoangThao' | 'quachQuy' | 'hoTinh' | 'gaTrang' | 'lonRung' | 'baoGam' | 'gauNgua' | 'voiRung' | 'trauRung' | 'soiDo' | 'teGiac' | 'raiCa' | 'ruaBien' | 'naiRung' | 'boTot';
+const KINDS: readonly FighterKind[] = ['voi', 'chienXa', 'daiTuong', 'kyBinh', 'trieuDa', 'maVien', 'lucDan', 'tranBaTien', 'duongTuHuc', 'hoangThao', 'quachQuy', 'hoTinh', 'gaTrang', 'lonRung', 'baoGam', 'gauNgua', 'voiRung', 'trauRung', 'soiDo', 'teGiac', 'raiCa', 'ruaBien', 'naiRung', 'boTot'];
 export const isBeast = (k: FighterKind): k is BeastKind => KINDS.includes(k);
 
 /** Khung rùa: Rùa Vàng và rùa biển. Gốc ở đáy mai, đầu hướng +z. */
@@ -910,6 +922,8 @@ const SPECS: Record<BeastKind, Spec> = {
   teGiac: { defs: { ...BASE, ...RHINO }, draw: rhinoBody, pose: poseBuffalo },
   raiCa: { defs: { ...BASE, ...OTTER }, draw: otterBody, pose: poseTiger },
   ruaBien: { defs: TURTLE, draw: drawRuaBien, pose: poseRuaBien },
+  naiRung: { defs: { ...BASE, ...DEER }, draw: deerBody, pose: poseBuffalo },
+  boTot: { defs: { ...BASE, ...BUFFALO }, draw: gaurBody, pose: poseBuffalo },
   gaTrang: { defs: { ...BASE, ...ROOSTER }, draw: drawRooster, pose: poseRooster },
 };
 

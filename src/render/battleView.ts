@@ -185,6 +185,8 @@ const SCALE: Partial<Record<FighterKind, number>> = {
   teGiac: 0.8,
   raiCa: 0.8,
   ruaBien: 0.7,
+  naiRung: 0.8,
+  boTot: 0.8,
   tranGam: 0.9,
   ranHo: 0.85,
   cuaDa: 0.8,

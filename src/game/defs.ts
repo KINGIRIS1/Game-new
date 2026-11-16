@@ -1494,7 +1494,10 @@ export type EnemyType =
   | 'linhTong'
   | 'noTong'
   | 'giapTong'
-  | 'quachQuy';
+  | 'quachQuy'
+  // Thú bờ sông Như Nguyệt (map dã ngoại 10): nai rừng, bò tót.
+  | 'naiRung'
+  | 'boTot';
 export const UNIT_TYPES: UnitType[] = ['giao', 'cung', 'voi', 'no'];
 
 export interface FighterStats {
@@ -1521,7 +1524,7 @@ export interface UnitDef extends FighterStats {
 }
 
 /** Quân nặng của giặc: giáo binh và lính nỏ khắc chế. */
-const HEAVY: EnemyType[] = ['chienXa', 'caSau', 'hoTinh', 'kyBinh', 'linhRiu', 'giapHan', 'giapNgo', 'voiRung', 'giapLuong', 'trauRung', 'giapDuong', 'teGiac', 'riuNamHan', 'ruaBien', 'giapTong'];
+const HEAVY: EnemyType[] = ['chienXa', 'caSau', 'hoTinh', 'kyBinh', 'linhRiu', 'giapHan', 'giapNgo', 'voiRung', 'giapLuong', 'trauRung', 'giapDuong', 'teGiac', 'riuNamHan', 'ruaBien', 'giapTong', 'boTot'];
 
 /**
  * Quân ta: giáo binh thắng quân nặng (chiến xa, cá sấu, hổ tinh, kỵ binh, lính rìu, giáp sĩ Hán), cung thủ thắng
@@ -1630,6 +1633,8 @@ export const ENEMIES: Record<EnemyType, FighterStats> = {
   noTong: { hp: 60, dmg: 13, range: 4.2, speed: 1.3, cooldown: 1.5 },
   giapTong: { hp: 330, dmg: 26, range: 0.9, speed: 1.5, cooldown: 1.4, strongVs: ['cung'] },
   quachQuy: { hp: 2000, dmg: 36, range: 1.3, speed: 1.4, cooldown: 1.2 },
+  naiRung: { hp: 95, dmg: 13, range: 0.9, speed: 2.2, cooldown: 0.9 },
+  boTot: { hp: 230, dmg: 19, range: 1.0, speed: 1.1, cooldown: 1.5 },
 };
 
 /**
@@ -1937,6 +1942,8 @@ export const ENEMY_ROWS: Record<EnemyType, Row> = {
   giapTong: 'trung',
   noTong: 'hau',
   quachQuy: 'hau',
+  naiRung: 'tien',
+  boTot: 'trung',
 };
 
 /**
@@ -2718,7 +2725,7 @@ export const DA_MAP: Record<DaMapId, DaMapDef> = {
     cap: [91, 100],
     cong: 90,
     terrain: 'benSong',
-    quai: ['raiCa', 'ruaBien', 'linhTong', 'noTong', 'giapTong'],
+    quai: ['naiRung', 'boTot', 'linhTong', 'noTong', 'giapTong'],
     boss: 'quachQuy',
     can: { tre: 5, cay: 3, lau: 2, da: 2, ao: 2 },
     thuong: { gao: 30, voOc: 20, datDa: 15, sat: 7, go: 7 },

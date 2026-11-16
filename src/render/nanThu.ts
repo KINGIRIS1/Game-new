@@ -625,6 +625,113 @@ export function dholeBody(r: Rig): void {
   figure(r as unknown as HumanRig, 'soiDo', dholePieces);
 }
 
+// ---------- Nai rừng ----------
+
+/**
+ * Nai rừng: chân dài mảnh, lông nâu vàng, bụng, mông, đuôi trắng, cổ dài, tai to, gạc phân nhánh màu sừng. Nặn theo
+ * khung `DEER` (beasts.ts; cùng tên xương với trâu rừng, dùng chung tư thế húc).
+ */
+function deerPieces(detail: number): Piece[] {
+  const clay = new Clay(C.deer);
+  clay.add('qBody', ellipsoid([0, 0.8, -0.02], [0.15, 0.16, 0.34]), { k: 0 });
+  clay.add('qBody', ellipsoid([0, 0.85, 0.2], [0.14, 0.17, 0.15]), { k: 0.08 });
+  for (const [b, x, z] of [
+    ['qFL', -0.09, 0.24],
+    ['qFR', 0.09, 0.24],
+    ['qBL', -0.09, -0.26],
+    ['qBR', 0.09, -0.26],
+  ] as [string, number, number][]) {
+    clay.add(b, cone([x, 0.74, z], [x, 0.06, z + 0.02], 0.05, 0.026), { k: 0.04 });
+    clay.add(b, ellipsoid([x, 0.03, z + 0.02], [0.03, 0.03, 0.04]), { k: 0.01 });
+  }
+  clay.add('qHead', cone([0, 0.9, 0.28], [0, 1.12, 0.44], 0.085, 0.065), { k: 0.05 });
+  clay.add('qHead', ellipsoid([0, 1.16, 0.48], [0.08, 0.08, 0.11]), { k: 0.04 });
+  clay.add('qHead', cone([0, 1.13, 0.54], [0, 1.08, 0.66], 0.06, 0.035), { k: 0.03 });
+  for (const s of [-1, 1]) clay.add('qHead', ellipsoid([s * 0.1, 1.23, 0.44], [0.055, 0.025, 0.03], [0, 0, s * -0.4]), { k: 0.015 });
+  // Gạc: cành chính vươn lên rồi ngả sau, một nhánh chĩa trước, đầu chẻ đôi.
+  const gac: Sdf[] = [];
+  for (const s of [-1, 1]) {
+    gac.push(cone([s * 0.04, 1.22, 0.47], [s * 0.13, 1.42, 0.42], 0.028, 0.022));
+    gac.push(cone([s * 0.13, 1.42, 0.42], [s * 0.17, 1.6, 0.34], 0.022, 0.01));
+    gac.push(cone([s * 0.09, 1.33, 0.45], [s * 0.08, 1.44, 0.56], 0.018, 0.008));
+    gac.push(cone([s * 0.15, 1.5, 0.39], [s * 0.24, 1.58, 0.42], 0.017, 0.007));
+  }
+  for (const g of gac) clay.add('qHead', g, { k: 0.008 });
+  clay.add('qTail', ellipsoid([0, 0.85, -0.38], [0.04, 0.07, 0.04]), { k: 0.02 });
+  clay.add('qTail2', ellipsoid([0, 0.8, -0.41], [0.03, 0.04, 0.03]), { k: 0.01 });
+  const f = clay.dist;
+  const paints: Paint[] = [];
+  paints.push(clay.layer('qBody', ellipsoid([0, 0.66, 0.0], [0.12, 0.07, 0.3]), C.cream));
+  paints.push(clay.layer('qBody', ellipsoid([0, 0.82, -0.36], [0.1, 0.1, 0.06]), C.cream));
+  paints.push(clay.layer('qHead', ellipsoid([0, 1.0, 0.38], [0.07, 0.06, 0.07]), C.cream));
+  paints.push(clay.layer('qTail', ellipsoid([0, 0.84, -0.4], [0.05, 0.08, 0.05]), C.cream));
+  paints.push(clay.layer('qTail2', ellipsoid([0, 0.8, -0.41], [0.04, 0.05, 0.04]), C.cream));
+  paints.push(clay.layer('qHead', (x, y, z) => Math.min(...gac.map((g) => g(x, y, z))) - 0.004, C.deerAntler));
+  paints.push(clay.layer('qHead', sphere([0, 1.09, 0.665], 0.022), C.ink));
+  for (const b of ['qFL', 'qFR', 'qBL', 'qBR']) paints.push(clay.layer(b, (_x, y) => y - 0.06, C.ink));
+  for (const s of [-1, 1]) paints.push(...eyePaints(clay, 'qHead', f, [s * 0.06, 1.18, 0.54], [s * 0.6, 0.15, 0.8], 0.018));
+  return [clayPiece(clay.build({ kind: 'nets', min: [-0.3, -0.01, -0.5], max: [0.3, 1.66, 0.74], cell: 0.011 / detail, target: Math.round(2000 * detail) }, paints))];
+}
+
+export function deerBody(r: Rig): void {
+  figure(r as unknown as HumanRig, 'naiRung', deerPieces);
+}
+
+// ---------- Bò tót ----------
+
+/**
+ * Bò tót: mình to đen nâu, u vai gồ cao, bốn chân trắng như đi vớ, trán xám nhạt, sừng ngắn cong lên màu ngà đầu
+ * sẫm. Nặn theo khung trâu rừng `BUFFALO` (beasts.ts), húc như trâu.
+ */
+function gaurPieces(detail: number): Piece[] {
+  const clay = new Clay(C.gaur);
+  clay.add('qBody', ellipsoid([0, 0.66, -0.02], [0.28, 0.28, 0.48]), { k: 0 });
+  clay.add('qBody', ellipsoid([0, 0.74, 0.24], [0.27, 0.28, 0.24]), { k: 0.1 });
+  clay.add('qBody', ellipsoid([0, 0.94, 0.16], [0.17, 0.16, 0.24]), { k: 0.12 });
+  clay.add('qBody', ellipsoid([0, 0.64, -0.32], [0.26, 0.26, 0.22]), { k: 0.1 });
+  for (const [b, x, z] of [
+    ['qFL', -0.17, 0.3],
+    ['qFR', 0.17, 0.3],
+    ['qBL', -0.17, -0.32],
+    ['qBR', 0.17, -0.32],
+  ] as [string, number, number][]) {
+    clay.add(b, cone([x, 0.56, z], [x, 0.08, z + 0.02], 0.09, 0.06), { k: 0.05 });
+    clay.add(b, ellipsoid([x, 0.045, z + 0.03], [0.065, 0.045, 0.075]), { k: 0.02 });
+  }
+  clay.add('qHead', ellipsoid([0, 0.66, 0.58], [0.15, 0.15, 0.17]), { k: 0.06 });
+  clay.add('qHead', cone([0, 0.62, 0.66], [0, 0.52, 0.8], 0.12, 0.1), { k: 0.05 });
+  clay.add('qHead', ellipsoid([0, 0.51, 0.82], [0.11, 0.08, 0.06]), { k: 0.03 });
+  const sung: Sdf[] = [];
+  for (const s of [-1, 1]) {
+    clay.add('qHead', ellipsoid([s * 0.2, 0.66, 0.54], [0.08, 0.035, 0.05]), { k: 0.02 });
+    sung.push(cone([s * 0.1, 0.76, 0.56], [s * 0.25, 0.82, 0.55], 0.05, 0.038));
+    sung.push(cone([s * 0.25, 0.82, 0.55], [s * 0.28, 0.97, 0.5], 0.038, 0.01));
+  }
+  for (const g of sung) clay.add('qHead', g, { k: 0.015 });
+  clay.add('qTail', cone([0, 0.72, -0.5], [0, 0.36, -0.58], 0.03, 0.02), { k: 0.02 });
+  clay.add('qTail2', ellipsoid([0, 0.33, -0.59], [0.035, 0.06, 0.035]), { k: 0.01 });
+  const f = clay.dist;
+  const paints: Paint[] = [];
+  // Màu sừng chỉ trên phần nhô khỏi đầu, chóp sẫm.
+  const sungF = (x: number, y: number, z: number) => Math.min(...sung.map((g) => g(x, y, z)));
+  paints.push(clay.layer('qHead', (x, y, z) => Math.max(sungF(x, y, z) - 0.006, 0.15 - Math.abs(x)), C.buffaloHorn));
+  paints.push(clay.layer('qHead', (x, y, z) => Math.max(sungF(x, y, z) - 0.006, 0.9 - y), C.ink));
+  paints.push(clay.layer('qHead', ellipsoid([0, 0.76, 0.6], [0.11, 0.06, 0.1]), C.gaurBrow));
+  paints.push(clay.layer('qHead', ellipsoid([0, 0.52, 0.82], [0.12, 0.1, 0.08]), C.gaurBrow));
+  for (const s of [-1, 1]) paints.push(clay.layer('qHead', sphere([s * 0.04, 0.52, 0.875], 0.016), C.ink, 2));
+  for (const b of ['qFL', 'qFR', 'qBL', 'qBR']) {
+    paints.push(clay.layer(b, (_x, y) => y - 0.3, C.gaurSock));
+    paints.push(clay.layer(b, (_x, y) => y - 0.07, C.ink));
+  }
+  paints.push(clay.layer('qTail2', ellipsoid([0, 0.33, -0.59], [0.05, 0.07, 0.05]), C.ink));
+  for (const s of [-1, 1]) paints.push(...eyePaints(clay, 'qHead', f, [s * 0.13, 0.68, 0.66], [s * 0.6, 0.1, 0.8], 0.022));
+  return [clayPiece(clay.build({ kind: 'nets', min: [-0.42, -0.01, -0.68], max: [0.42, 1.12, 0.92], cell: 0.013 / detail, target: Math.round(2400 * detail) }, paints))];
+}
+
+export function gaurBody(r: Rig): void {
+  figure(r as unknown as HumanRig, 'boTot', gaurPieces);
+}
+
 // ---------- Rái cá ----------
 
 /**

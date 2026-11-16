@@ -122,6 +122,12 @@ export const C = {
   tongDark: 0x2e2f33,
   tongRed: 0x9e2a24,
   horseRed: 0x9a4a2a,
+  // Thú bờ sông Như Nguyệt: nai lông nâu vàng gạc màu sừng, bò tót đen nâu chân trắng trán xám.
+  deer: 0xa0703e,
+  deerAntler: 0xc9b48a,
+  gaur: 0x2f2420,
+  gaurSock: 0xe6dcc2,
+  gaurBrow: 0x8a7f6c,
   // Thú bãi bồi Bạch Đằng: rái cá lông nâu bóng, rùa biển mai nâu ô liu da xám xanh.
   otter: 0x6e4a2c,
   otterDark: 0x3c2716,
