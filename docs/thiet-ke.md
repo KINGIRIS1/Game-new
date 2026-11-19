@@ -3948,6 +3948,78 @@ Kỹ năng (dự kiến):
 4. Năm kỹ năng, chỉ số, năm bộ đồ và tên món như trên.
 5. Làm mỗi tướng một PR, Bà Triệu trước.
 
+## Kế hoạch: nuôi thần thú (chủ dự án yêu cầu, chờ duyệt số và danh sách thú)
+
+Chủ dự án yêu cầu: lên kế hoạch nuôi thần thú. Như các kế hoạch trước, được chỉnh số ±20% theo test; làm xong phần nào thì ghi số cuối cùng của phần ấy.
+
+**Hiện trạng** (khảo sát code):
+- Chưa có thần thú. Có sẵn dáng Rùa Vàng (`makeRuaVang` ở `beasts.ts`), ngựa sắt (trong `makeGiong` ở `heroes.ts`), gà trắng, chim Lạc tĩnh (`lacBird` ở `buildings.ts`), rồng tĩnh ở Đền Rồng Tiên, thân rắn `serpentBody` (`nanQuai.ts`).
+- Dã ngoại đội tối đa 3 tướng (`datDoi`, `Battle.heroThem`); tướng dã ngoại về khi hạ boss, không lên bản lưu (`tuongDaVe`). Bản lưu hiện 35.
+
+### Đã chốt (chủ dự án chọn)
+
+- Thần thú là **thú trong truyện**.
+- **Chỉ đánh ở dã ngoại**: phó bản, thử thách, đồn, giữ kinh đô, Đấu thành không đổi, nên chuẩn cân bằng và máy chủ giữ nguyên.
+- Nuôi bằng **cho ăn**; thần thú **đi lại, bay trong kinh đô** (chỉ để nhìn).
+- **Mở khi dã ngoại mở**.
+
+### Năm thần thú (đề xuất)
+
+| Thú | Về khi | Vai trên map | Kỹ năng (tự dùng) | Ở kinh đô | Món ăn ưa |
+|---|---|---|---|---|---|
+| Chim Lạc | dã ngoại mở | bay, bắn xa | Lượn trống đồng: bổ nhào một vùng nhỏ | bay vòng trên Điện | cá |
+| Ngựa sắt | hạ đại tướng Ân (map 1) lần đầu | đánh gần | Phun lửa: vùng hình nón trước mặt | phi dọc đường đi | sắt |
+| Gà chín cựa (lễ vật Sơn Tinh) | hạ Thủy Tinh (map 2) lần đầu | nhanh, đánh liên hồi | Chín cựa: mổ liền 3 đòn | mổ thóc cạnh ruộng | gạo |
+| Rùa Vàng | hạ gà trắng nghìn năm (map 3) lần đầu | đỡ đòn | Mai thần: cả đội bớt 30% đòn nhận vài giây | bò, bơi ở sông hay Hồ Kim Quy | vỏ ốc |
+| Rồng (giống Lạc Long Quân) | hạ Triệu Đà (map 4) lần đầu | bay, đánh vùng, mạnh nhất | Phun nước: vùng lớn | bay uốn quanh kinh đô | cá và vỏ ốc |
+
+- Thú về xét như tướng dã ngoại (`daNgoai.boss[map − 1] > 0`), không lưu; Lạc hầu báo một lần, đoạn thoại ngắn.
+- Mỗi lần mang **một thần thú** theo đội, không chiếm chỗ tướng.
+
+### Nuôi
+
+- Mỗi thú một cấp riêng 1–50 và thanh kinh nghiệm. Mỗi bữa trả món ăn ưa (giá tăng theo cấp, chừng `30 × cấp`), được kinh nghiệm thú.
+- **Bữa hồi theo giờ**: một bữa mỗi 15 phút chơi, tích tối đa 4, lúc vắng vẫn hồi; để người chơi quay lại đều, không đổ hết kho một lúc.
+- Ba dáng theo cấp: **non** (1–9, nhỏ), **lớn** (10–29), **thần** (30 trở lên, có hào quang).
+- Mỗi cấp +4% máu và sức đánh; thú gốc chừng 40–60% một tướng; cấp chung dã ngoại cũng cộng.
+- Đánh quái không cho thú kinh nghiệm, chỉ cho ăn mới lên cấp.
+
+### Trận trên map
+
+- Thú là người phe ta có cờ `thu`: đi theo tướng đầu, đánh mục tiêu của tướng đầu hay quái gần nhất; ngã thì nằm chờ như tướng, cả đội ngã thì về trại cùng.
+- Kỹ năng tự dùng khi hồi xong và có quái trong tầm, không thêm nút.
+- Treo máy (`tiSuc`) cộng sức thú.
+
+### Kinh đô (chỉ để nhìn, không luật nào đọc tới)
+
+- Mọi thú đã về hiện ra: chim Lạc, rồng bay theo đường cong trên Điện; ngựa sắt, gà, rùa đi theo đường đi hay ô trống gần Điện, không đè công trình; rùa xuống sông hay Hồ Kim Quy nếu có.
+- Chạm thú mở bảng Thần thú. Có trận, đang xem bãi chiến thì ẩn.
+
+### Giao diện
+
+- Bảng Thần thú: chip 🐉 trong bảng Dã ngoại, hay chạm thú ở kinh đô. Mỗi thú: ảnh, cấp, thanh kinh nghiệm, bữa còn (đếm ngược bữa sau), nút Cho ăn (kèm giá), nút Mang theo.
+- Thanh trên map dã ngoại thêm máu thú.
+
+### Code
+
+- `src/game/thanThu.ts` mới: thú đã về, cho ăn, bữa hồi, cấp, dựng thú vào trận; số ở `defs.ts` (`THAN_THU`, `THAN_THU_AN`, `THAN_THU_BUA`); chữ ở `vi.ts` mục `thanThu`.
+- `GameState.thanThu` (cấp, kinh nghiệm mỗi thú; bữa tích, mốc bữa; thú mang theo): **bản lưu 36**.
+- `battle.ts`: `Battle.thu` tùy chọn (trận cũ, Đấu thành ra y hệt), nhánh kỹ năng mới. `daNgoaiTran.ts`: thêm thú vào trận, thú đi theo đội. `daNgoai.ts`: treo máy cộng thú.
+- Hình `src/render/thanThu.ts` mới: chim Lạc có xương vỗ cánh, ngựa sắt không người cưỡi, gà chín cựa từ gà trắng đổi màu thêm cựa, Rùa Vàng dùng sẵn, rồng có xương từ thân rắn thêm sừng, râu, vuốt; ba cỡ theo dáng, hào quang dáng thần; nặn sẵn trong worker.
+- `world.ts`: thú bay, đi trong kinh đô, chạm thú. `src/ui/thanThu.ts` mới: bảng.
+
+### Test
+
+- `thanThu.test.ts`: thú về đúng boss, một lần; cho ăn trừ đúng của, thiếu của hay hết bữa thì chặn; bữa hồi 15 phút, trần 4, lúc vắng cũng hồi; lên cấp, trần 50, đổi dáng ở cấp 10, 30; thú chỉ có ở dã ngoại; kỹ năng đúng số; nâng bản lưu 35 lên 36.
+- `daNgoai.test.ts`: treo máy có thú vẫn trong khoảng ×0,5–1,3 so với đánh thật. Trận cũ ra y hệt (`tatDinh.test.ts`, đối chiếu Node, Deno, Chromium). Người chơi mô phỏng không nuôi thú nên nhịp lên Điện không đổi; rà kinh tế chỗ tiêu mới.
+
+### Thứ tự làm
+
+1. **PR 0**: tài liệu này (PR nháp, chờ duyệt).
+2. **PR 1**: luật: thú về, cho ăn, bữa hồi, cấp, thú trong trận dã ngoại, treo máy, bản lưu 36.
+3. **PR 2**: hình năm thú ba dáng, vẽ trong trận, nhóm chụp `thanThu`.
+4. **PR 3**: thú đi lại, bay trong kinh đô; bảng Thần thú; chụp kiểm tra.
+
 ## Nhịp chơi và lưu game
 
 - Nhịp chơi lai: mỗi lần mở game là một phiên ra quyết định ngắn.
