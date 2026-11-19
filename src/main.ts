@@ -98,6 +98,7 @@ import { formatClock, formatXay, vi } from './text/vi';
 import { Hud, buildingName, type HudAction, type HudXemDao, type WallShape } from './ui/hud';
 import { khoNanTk, luuSau, moKhoNan } from './render/nanKho';
 import { KHO_PHIEN_BAN, moSanWorker, nanTruoc, prewarmJobs } from './render/nanTruoc';
+import { napMoHinh } from './render/moHinh';
 import { ManVao } from './ui/manVao';
 import { preloadThumbs } from './ui/xayDung';
 import {
@@ -267,6 +268,8 @@ async function start(): Promise<void> {
   const hudRoot = document.querySelector<HTMLElement>('#hud')!;
 
   moSanWorker();
+  // Mô hình Meshy của tướng (`render/moHinh.ts`) nạp song song với lúc dựng cảnh.
+  void napMoHinh('giong');
   let state: GameState = loadFromStorage(localStorage) ?? createInitialState(Date.now());
   setMuted(state.settings.muted);
   // Worker nặn sẵn nhân vật của chương đang chơi, song song với việc dựng cảnh, để quân mới ra trận khỏi khựng hình.

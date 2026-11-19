@@ -30,6 +30,8 @@ try {
   await page.goto(url + 'package.json');
   const { cot, hang } = await page.evaluate(
     async ([nhom, huong]) => {
+      // Mô hình Meshy (render/moHinh.ts) nạp trước, để nhân vật dựng ra bản Meshy chứ không phải bản code tạm.
+      await (await import('/src/render/moHinh.ts')).napMoHinh('giong');
       const m = await import('/scripts/nhanVat.ts');
       return { cot: m.TU_THE.map(([t]) => t), hang: m.chup(nhom, huong) };
     },

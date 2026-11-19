@@ -6,6 +6,8 @@ import { dongGoiLuat } from './scripts/luat.mjs';
 // bản game và máy chủ dựng từ cùng một commit thì cùng mã. Chạy test thì không đóng gói (mã 'thu').
 export default defineConfig(async ({ mode }) => ({
   base: './',
+  // Mô hình Meshy (src/assets/mo-hinh/*.glb) là tài nguyên: nạp bằng địa chỉ có dấu băm.
+  assetsInclude: ['**/*.glb'],
   build: { target: 'es2022', chunkSizeWarningLimit: 800 },
   define: { __LUAT_MA__: JSON.stringify(mode === 'test' ? 'thu' : (await dongGoiLuat()).ma) },
 }));

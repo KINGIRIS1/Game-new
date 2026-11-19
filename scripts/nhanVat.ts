@@ -271,6 +271,10 @@ export const NHOM: Record<string, Entry[]> = {
     { ten: 'Lê Chân: búp lá', tao: () => makeNuTuong('leChan', { glow: true }), co: 1.75, cach: 1.15, cot: NU_COT.slice(0, 1) },
     { ten: 'Bát Nàn: búp lá', tao: () => makeNuTuong('batNan', { glow: true }), co: 1.75, cach: 1.15, cot: NU_COT.slice(0, 1) },
   ],
+  giong: [
+    { ten: 'Gióng đứng chầu (mô hình Meshy)', tao: () => makeGiong('trangSi', { onFoot: true }), co: 1.25, cach: 1.3, cao: 420 },
+    { ten: 'Tráng sĩ Gióng (mô hình Meshy, roi sắt)', tao: () => makeGiong('trangSi'), co: 1.7, cach: 1.8, cao: 420 },
+  ],
   tuong: [
     { ten: 'Gióng lên ba', tao: () => makeGiong('be'), co: 0.7 },
     { ten: 'Gióng thiếu niên', tao: () => makeGiong('thieuNien'), co: 0.9 },

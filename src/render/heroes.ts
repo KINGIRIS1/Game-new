@@ -55,6 +55,8 @@ import {
 import { clayPiece, figure, prim, rigid, segs, type Piece } from './nanNguoi';
 import { horseBody, horseDrape, type HorseShape } from './nanThu';
 import { C } from './palette';
+import { coMoHinh, ganMoHinh, moHinhSan, napMoHinh, type Loaded, type NguoiCode } from './moHinh';
+import { disposeModel } from './shapes';
 import { bakeAnh, batAnh } from './anhVuKhi';
 import { RigBuilder, bakeRig, moveBones, skinRig, type Act, type BoneDef, type Bones, type Poser, type RigShape } from './rig';
 import { ToonModel, inkThin } from './toon';
@@ -793,7 +795,7 @@ function poseTeen(b: B, a: Act): void {
  * roi sắt (hay cây tre khi roi đã gãy), lửa phun ra từ mõm ngựa. `glow`: Phù Đổng Thiên Vương hiển linh, có hào quang.
  * `onFoot`: tráng sĩ xuống ngựa, đứng chầu trong sân Điện (tướng đứng trong sân không cưỡi thú).
  */
-export function makeGiong(look: GiongLook, opts: { bamboo?: boolean; glow?: boolean; onFoot?: boolean; anh?: boolean } = {}): THREE.Group {
+export function makeGiong(look: GiongLook, opts: GiongOpts = {}): THREE.Group {
   if (look === 'be') {
     const r = new RigBuilder(CHILD);
     drawChild(r);
@@ -806,19 +808,72 @@ export function makeGiong(look: GiongLook, opts: { bamboo?: boolean; glow?: bool
     const { group, bones } = skinRig(r.build());
     return finish(group, (a) => poseTeen(bones, a));
   }
+  const l = coMoHinh() ? moHinhSan('giong') : null;
+  if (l) return giongMeshy(opts, l);
+  const code = giongTrangSi(opts, true);
+  if (l === null) return code;
+  // Mô hình chưa nạp xong: hiện bản dựng bằng code, nạp xong thì thay tại chỗ.
+  const g = new THREE.Group();
+  g.add(code);
+  let pose = code.userData.pose as Poser;
+  g.userData.pose = ((a) => pose(a)) satisfies Poser;
+  void napMoHinh('giong').then((m) => {
+    if (!m) return;
+    const alt = giongMeshy(opts, m);
+    g.remove(code);
+    disposeModel(code);
+    g.add(alt);
+    pose = alt.userData.pose as Poser;
+  });
+  return g;
+}
+
+/**
+ * Tráng sĩ Gióng mô hình Meshy (`moHinh.ts`): ngựa sắt, lửa, roi sắt hay khóm tre, hào quang vẫn dựng bằng code như
+ * cũ (`giongTrangSi` không vẽ thân người), thân Gióng là mô hình Meshy chép góc từ bộ xương người code, nên mọi động
+ * tác cũ (đứng chầu, cưỡi ngựa, quật roi, quét tre, thắng, ngã) giữ nguyên.
+ */
+function giongMeshy(opts: GiongOpts, l: Loaded): THREE.Group {
+  const g = giongTrangSi(opts, false);
+  const bones = g.userData.bones as Human;
+  const chep = ganMoHinh(l, bones as unknown as NguoiCode, !opts.onFoot);
+  const pose = g.userData.pose as Poser;
+  g.userData.pose = ((a) => {
+    pose(a);
+    chep();
+  }) satisfies Poser;
+  (g.userData.pose as Poser)({ act: 'stand' });
+  g.userData.meshy = 'giong';
+  return g;
+}
+
+interface GiongOpts {
+  bamboo?: boolean;
+  glow?: boolean;
+  onFoot?: boolean;
+  anh?: boolean;
+}
+
+/** Mô hình Meshy cao hơn thân người code (mào lông chim): hào quang nâng lên theo. */
+const HALO_MESHY = 0.3;
+
+/** Tráng sĩ Gióng dựng bằng code, đứng chầu hay cưỡi ngựa sắt. `than`: vẽ thân người (không thì chỉ vẽ vũ khí). */
+function giongTrangSi(opts: GiongOpts, than: boolean): THREE.Group {
+  const rider = (h: HumanRig) => (than ? drawGiongRider(h, opts.bamboo ?? false) : h.vuKhi(() => h.local('hand', GRIP_R, null, (s) => giongWeapon(s, opts.bamboo ?? false))));
+  const haloUp = than ? 0 : HALO_MESHY;
   if (opts.onFoot) {
     const r = new RigBuilder({ ...BASE, ...bigHuman('base', [0, 0, 0], K_GIONG) });
     r.ghiAnh = !!opts.anh;
-    drawBig(r, [0, 0, 0], K_GIONG, (h) => drawGiongRider(h, opts.bamboo ?? false));
+    drawBig(r, [0, 0, 0], K_GIONG, rider);
     const shape = r.build();
     const { group, bones } = skinRig(shape);
-    if (opts.glow) addHalo(group, 'lua', 1.72, -0.44);
+    if (opts.glow) addHalo(group, 'lua', 1.72 + haloUp, -0.44);
     return anhNeu(finish(group, (a) => poseGiongStand(bones as unknown as Human, a)), shape, 'giong', opts.anh);
   }
   const r = new RigBuilder({ ...BASE, ...ironHorse(K_HORSE), ...bigHuman('qBody', GIONG_AT, K_GIONG) });
   r.ghiAnh = !!opts.anh;
   drawIronHorse(r, K_HORSE);
-  drawBig(r, GIONG_AT, K_GIONG, (h) => drawGiongRider(h, opts.bamboo ?? false));
+  drawBig(r, GIONG_AT, K_GIONG, rider);
   const shape = r.build();
   const { group, bones } = skinRig(shape);
   // Luồng lửa phun nhiều tầng từ mõm ngựa sắt, gắn vào đầu ngựa để theo đầu ngựa gật.
@@ -839,7 +894,7 @@ export function makeGiong(look: GiongLook, opts: { bamboo?: boolean; glow?: bool
     flameRoot.add(flame);
     flames.push(flame);
   }
-  if (opts.glow) addHalo(group, 'lua', 2.5, -0.44);
+  if (opts.glow) addHalo(group, 'lua', 2.5 + haloUp, -0.44);
   const out = finish(group, (a) => {
     poseGiongRider(bones as unknown as Human, a);
     const e = a.act === 'fight' && a.strike !== undefined ? Math.sin(Math.PI * a.strike) : 0;
@@ -849,6 +904,7 @@ export function makeGiong(look: GiongLook, opts: { bamboo?: boolean; glow?: bool
   });
   return anhNeu(out, shape, 'giong', opts.anh);
 }
+
 
 // ---------- Sơn Tinh ----------
 
