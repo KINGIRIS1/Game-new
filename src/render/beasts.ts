@@ -10,7 +10,7 @@ import { HUMAN, beginPose, featherCrown, hairCap, headband, humanBody, humanHead
 import { Clay, ellipsoid } from './nan';
 import { armor, bun, chestDisc, diadem, hairDown, necklace, pauldrons } from './nanDo';
 import { clayPiece, figure, type Piece } from './nanNguoi';
-import { bearBody, boarBody, buffaloBody, deerBody, dholeBody, gaurBody, otterBody, rhinoBody, elephantBody, elephantDrape, horseBody, horseDrape, leopardBody, roosterBody, tigerBody, turtleBody, turtleDrum } from './nanThu';
+import { GA_CUU, bearBody, boarBody, buffaloBody, deerBody, dholeBody, gaurBody, otterBody, rhinoBody, elephantBody, elephantDrape, horseBody, horseDrape, leopardBody, roosterBody, tigerBody, turtleBody, turtleDrum } from './nanThu';
 import { C } from './palette';
 import { RigBuilder, bakeRig, moveBones, resetBones, skinRig, type Act, type BoneDef, type Bones, type Poser, type RigShape, type RigSlot, type RigSlots } from './rig';
 import { drawRider, poseRider, riderBones, riderHasSkill, type RiderKind } from './soldier';
@@ -1142,6 +1142,23 @@ export function makeRuaVang(): THREE.Group {
   pose({ act: 'stand' });
   group.userData.pose = pose;
   return group;
+}
+
+/**
+ * Rùa Vàng thần thú (dã ngoại, đi lại trong kinh đô): dáng Rùa Vàng, đi thì bò chèo bốn chân như rùa biển, đánh thì
+ * vươn cổ đớp.
+ */
+export function makeRuaThan(): THREE.Group {
+  return rigged({ defs: TURTLE, draw: (r) => drawTurtle(r), pose: poseRuaBien }, 0);
+}
+
+/** Gà chín cựa (thần thú, lễ vật Sơn Tinh): gà trống lông đỏ son, cánh vàng, chín cựa vàng, mắt vàng rực. */
+export function makeGaCuu(): THREE.Group {
+  const draw = (r: Rig) => {
+    roosterBody(r, GA_CUU);
+    for (const s of [-1, 1]) r.on('qHead').glow.sphere(0.04, C.ember, s * 0.13, 1.64, 0.56, [1, 1, 0.6], 6);
+  };
+  return rigged({ defs: { ...BASE, ...ROOSTER }, draw, pose: poseRooster }, 0);
 }
 
 /** Rùa Vàng bản tĩnh, cho công trình. */

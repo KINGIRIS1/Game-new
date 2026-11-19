@@ -12,6 +12,7 @@ import { initialTrangBi, roiDo, type RoiDo, type TrangBiState } from './trangBi'
 import { chapterOf } from './manVao';
 import { advanceDao, advanceGiacDao, chanThuyen, daoArmy, daoGiuDuoc, donOf, initialDao, luaHieu, nguTruongBonus, type DaoState } from './dao';
 import { initialDaNgoai, treoVang, type DaNgoaiState, type DaThuong } from './daNgoai';
+import { hoiBua, type ThanThuState } from './thanThu';
 import { advanceXay, initialXay, isBusy, nextXayEvent, pendingBuilding, pendingBuildings, pendingCount, pendingOf, type XayState } from './xay';
 import { inChapter4 } from './chuong4';
 import { chuong5Won, inChapter5, initialHaiBa, maVienCame } from './chuong5';
@@ -394,6 +395,8 @@ export interface GameState {
   relaid?: { refund: Cost; dropped: number; dien?: boolean; trai?: boolean };
   /** Đấu thành trực tuyến (`dauThat.ts`): chỉ có khi đã bấm Tham gia. Trường tùy chọn nên không lên phiên bản lưu. */
   dauThanh?: DauThanhState;
+  /** Thần thú (`thanThu.ts`): cấp, bữa, thú đi theo đội dã ngoại. Trường tùy chọn nên không lên phiên bản lưu. */
+  thanThu?: ThanThuState;
 }
 
 export type FailReason =
@@ -495,6 +498,9 @@ export type FailReason =
   | 'daChuaMo'
   | 'daDoiSai'
   | 'daChuaDuCap'
+  | 'thuChuaVe'
+  | 'thuHetBua'
+  | 'thuDaTran'
   | 'daHoiDu'
   | 'khongCoDo'
   | 'doDaKhoa'
@@ -2136,6 +2142,7 @@ export function tick(state: GameState, ms: number, busy = false): Resources {
   updateTet(state);
   updateCayDa(state);
   updateBenKia(state);
+  hoiBua(state, ms);
   return gained;
 }
 
@@ -2166,6 +2173,8 @@ export function applyOffline(state: GameState, now: number): { ms: number; gaine
   advanceDao(state, away);
   // Đội ở dã ngoại đánh quái tiếp (treo máy), tối đa `DA_TREO.tran`.
   const da = treoVang(state, away);
+  // Bữa của thần thú hồi suốt quãng vắng.
+  hoiBua(state, away);
   state.lastSeen = now;
   return { ms: cap, gained, built: state.xay.seq - seq, da };
 }

@@ -28,6 +28,9 @@ import { DaNgoaiCanh } from './daNgoai';
 import type { DaMapId } from '../game/defs';
 import type { Diem } from '../game/daNgoaiMap';
 import { tuongDau } from '../game/daNgoaiTran';
+import { capThu, dangThu, thuCo } from '../game/thanThu';
+import { THAN_THU, type ThanThuId } from '../game/defs';
+import { makeThanThu, quayHao } from './thanThu';
 import { BattleView } from './battleView';
 import { IsoCamera, type CamBounds } from './camera';
 import { DOOR_OPEN, banhChung, banhGiay } from './buildings';
@@ -702,6 +705,11 @@ export class World {
   private tetKey = '';
   /** Rùa Vàng bơi chậm trên sông sau khi đã hiện lên diệt yêu tinh. */
   private turtle?: THREE.Group;
+  /**
+   * Thần thú ở kinh đô (chỉ để nhìn): thú bay lượn vòng trên Điện; thú đi dạo từng ô trên đường đi hay ô trống gần Điện,
+   * tới ô thì có lúc dừng (gà mổ thóc). `tu`, `toi` là ô đang đi từ, đi tới; `k` là phần đường đã đi.
+   */
+  private thanThu = new Map<ThanThuId, { obj: THREE.Group; dang: number; tu: [number, number]; toi: [number, number]; k: number; nghi: number; seed: number }>();
   /** Cấp Điện và danh sách khoảnh đã mở lúc dựng đất, rừng lần cuối. */
   private landKey = '';
   private wallKey = '';
@@ -1269,6 +1277,7 @@ export class World {
     this.syncCourt(state);
     this.syncHaiBa(state);
     this.syncTurtle(state);
+    this.syncThanThu(state);
     this.syncTet(state);
     this.syncWallWalk(state);
 
@@ -3145,6 +3154,132 @@ export class World {
     }
   }
 
+  /** Dựng, gỡ thần thú theo các thú đã về và dáng theo cấp. */
+  private syncThanThu(state: GameState): void {
+    const co = new Set(thuCo(state));
+    for (const [k, v] of this.thanThu) {
+      if (co.has(k) && v.dang === dangThu(capThu(state, k))) continue;
+      this.scene.remove(v.obj);
+      disposeModel(v.obj);
+      this.thanThu.delete(k);
+    }
+    const dien = state.buildings.find((b) => b.type === 'dien');
+    for (const k of co) {
+      if (this.thanThu.has(k)) continue;
+      const dang = dangThu(capThu(state, k));
+      const obj = makeThanThu(k, dang);
+      obj.scale.setScalar(0.7);
+      this.scene.add(obj);
+      const seed = THAN_THU[k].ve * 7919 + 17;
+      const start = this.choThu(state, dien, seed);
+      this.thanThu.set(k, { obj, dang, tu: start, toi: start, k: 1, nghi: 0, seed });
+    }
+  }
+
+  /** Ô đi được của thú: trong lưới, đất đã mở, không sông, trống hay là đường đi. */
+  private thuDiDuoc(state: GameState, x: number, z: number): boolean {
+    if (!inGrid(x, z) || isRiver(x, z) || !openMask(state)[z * GRID + x]) return false;
+    const id = occupancy(state)[z * GRID + x];
+    if (!id) return true;
+    const b = state.buildings.find((o) => o.id === id);
+    return !!b && isRoad(b.type);
+  }
+
+  /** Ô trống gần cổng trước Điện để thú bắt đầu đi dạo (mỗi thú một chỗ theo hạt giống). */
+  private choThu(state: GameState, dien: Building | undefined, seed: number): [number, number] {
+    const cx = dien ? dien.x + Math.floor(BUILDINGS.dien.w / 2) : DIEN_HOME + 5;
+    const cz = dien ? dien.z + BUILDINGS.dien.d : DIEN_HOME + 10;
+    for (let r = 0; r < 12; r++) {
+      for (let i = 0; i < 8 * (r + 1); i++) {
+        const a = ((i + seed) / (8 * (r + 1))) * Math.PI * 2;
+        const x = Math.round(cx + Math.cos(a) * r);
+        const z = Math.round(cz + Math.sin(a) * r);
+        if (this.thuDiDuoc(state, x, z)) return [x, z];
+      }
+    }
+    return [cx, cz];
+  }
+
+  /** Ô kế tiếp thú đi tới: ô kề đi được, ưu tiên đường đi, không đi xa Điện quá 16 ô, tránh quay đầu. */
+  private oKe(state: GameState, v: { tu: [number, number]; toi: [number, number]; seed: number }, n: number): [number, number] {
+    const dien = state.buildings.find((b) => b.type === 'dien');
+    const cx = dien ? dien.x + BUILDINGS.dien.w / 2 : DIEN_HOME + 5;
+    const cz = dien ? dien.z + BUILDINGS.dien.d / 2 : DIEN_HOME + 5;
+    const [x, z] = v.toi;
+    const ke = (
+      [
+        [x + 1, z],
+        [x - 1, z],
+        [x, z + 1],
+        [x, z - 1],
+      ] as [number, number][]
+    ).filter(([a, b]) => this.thuDiDuoc(state, a, b) && Math.hypot(a + 0.5 - cx, b + 0.5 - cz) < 16 && Math.abs(this.groundY(a, b) - this.groundY(x, z)) < 0.6);
+    if (!ke.length) return v.toi;
+    const occ = occupancy(state);
+    const duong = ke.filter(([a, b]) => occ[b * GRID + a]);
+    const tien = (l: [number, number][]) => (l.length > 1 ? l.filter(([a, b]) => a !== v.tu[0] || b !== v.tu[1]) : l);
+    const rand = (Math.sin(n * 12.9898 + v.seed * 78.233) * 43758.5453) % 1;
+    const pool = duong.length && Math.abs(rand) < 0.75 ? tien(duong) : tien(ke);
+    return pool[Math.floor(Math.abs(rand * 997)) % pool.length];
+  }
+
+  /** Thú đi lại, bay lượn mỗi khung; có trận giữ kinh đô thì ẩn. */
+  private updateThanThu(dt: number, t: number): void {
+    const state = this.state;
+    if (!state || !this.thanThu.size) return;
+    const dien = state.buildings.find((b) => b.type === 'dien');
+    const cx = wx(dien ? dien.x : DIEN_HOME) + BUILDINGS.dien.w / 2;
+    const cz = wz(dien ? dien.z : DIEN_HOME) + BUILDINGS.dien.d / 2;
+    const base = dien ? this.groundY(dien.x, dien.z) : 0;
+    for (const [k, v] of this.thanThu) {
+      v.obj.visible = !this.drillOut;
+      if (!v.obj.visible) continue;
+      const pose = v.obj.userData.pose as Poser | undefined;
+      quayHao(v.obj, t);
+      if (THAN_THU[k].bay) {
+        // Chim Lạc lượn vòng gần, rồng lượn vòng rộng và cao hơn, ngược chiều.
+        const rong = k === 'thuRong';
+        const R = rong ? 13 : 8.5;
+        const w = rong ? -0.11 : 0.2;
+        const a = t * w + v.seed;
+        v.obj.position.set(cx + Math.cos(a) * R, base + (rong ? 6 : 4.2) + Math.sin(t * 0.9 + v.seed) * 0.4, cz + Math.sin(a) * R);
+        v.obj.rotation.y = Math.atan2(-Math.sin(a) * w, Math.cos(a) * w);
+        pose?.({ act: 'walk', phase: t * (rong ? 7 : 9), stride: 0.6, time: t });
+        continue;
+      }
+      const toc = k === 'thuRua' ? 0.45 : k === 'thuGa' ? 0.9 : 1.3;
+      if (v.nghi > 0) {
+        v.nghi -= dt;
+        // Gà dừng thì mổ thóc, thú khác đứng nghỉ.
+        pose?.(k === 'thuGa' ? { act: 'fight', strike: (t * 1.6) % 1, time: t } : { act: 'stand', time: t });
+      } else {
+        v.k += dt * toc;
+        if (v.k >= 1) {
+          const n = Math.floor(t * 10) + v.seed;
+          v.tu = v.toi;
+          v.toi = this.oKe(state, v, n);
+          v.k = 0;
+          if (v.toi[0] === v.tu[0] && v.toi[1] === v.tu[1]) v.k = 1;
+          // Có lúc dừng lại một chút.
+          const r = Math.abs((Math.sin(n * 3.7 + v.seed) * 1e4) % 1);
+          if (r < (k === 'thuGa' ? 0.35 : 0.15)) v.nghi = 0.8 + r * 4;
+        }
+        pose?.({ act: 'walk', phase: t * (k === 'thuRua' ? 4 : 10), stride: 0.5, time: t });
+      }
+      const px = v.tu[0] + (v.toi[0] - v.tu[0]) * Math.min(v.k, 1) + 0.5;
+      const pz = v.tu[1] + (v.toi[1] - v.tu[1]) * Math.min(v.k, 1) + 0.5;
+      v.obj.position.set(wx(px), this.surfaceY(px, pz), wz(pz));
+      if (v.toi[0] !== v.tu[0] || v.toi[1] !== v.tu[1]) v.obj.rotation.y = Math.atan2(v.toi[0] - v.tu[0], v.toi[1] - v.tu[1]);
+    }
+  }
+
+  /** Thần thú dưới vị trí chạm. */
+  pickThanThu(clientX: number, clientY: number): ThanThuId | null {
+    const ray = this.view.setRay(clientX, clientY);
+    for (const [k, v] of this.thanThu) if (v.obj.visible && ray.intersectObject(v.obj, true).length) return k;
+    return null;
+  }
+
   /** Người chơi chạm vào tướng (ở doanh trại hay trước Điện): Gióng, Sơn Tinh, An Dương Vương hay Cao Lỗ. */
   pickHero(clientX: number, clientY: number): 'giong' | 'son' | 'adv' | 'caoLo' | null {
     const ray = this.view.setRay(clientX, clientY);
@@ -3887,6 +4022,7 @@ export class World {
       (this.turtle.userData.pose as Poser | undefined)?.({ act: 'walk', phase: t * 2.6 });
     }
 
+    this.updateThanThu(dt, t);
     this.updateStorm(dt);
     this.updateDen(t);
     this.updateFog(dt);

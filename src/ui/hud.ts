@@ -124,6 +124,8 @@ import { doMo, monO } from '../game/trangBi';
 import { bossCho, canLen, daMo, type DaThuong } from '../game/daNgoai';
 import { tuongDau } from '../game/daNgoaiTran';
 import { choTen, daMapHtml, daNgoaiHtml, expPct, miniSvg } from './daNgoai';
+import { thanThuHtml, thanThuMapHtml } from './thanThu';
+import type { ThanThuId } from '../game/defs';
 import type { ODo } from '../game/defs';
 import { sonHtml } from './son';
 import { blessingHtml, tetHtml } from './tet';
@@ -193,6 +195,9 @@ export type HudAction =
   | { kind: 'daVao' }
   | { kind: 'daVe' }
   | { kind: 'daTuDanh' }
+  /** Thần thú (`ui/thanThu.ts`): cho ăn một bữa, chọn thú đi theo đội. */
+  | { kind: 'thuAn'; thu: ThanThuId }
+  | { kind: 'thuChon'; thu: ThanThuId }
   | { kind: 'chooseBuild'; type: BuildingType }
   | { kind: 'chooseRaise' }
   /** Công cụ dọn: chạm ô đường hay món trang trí để dọn đi. */
@@ -379,7 +384,7 @@ interface CampaignView {
   chapter: MapChapter;
   stage: number | null;
   /** Thẻ màn, bảng xếp quân (màn thường hay thử thách, theo `pick.challenge`), bảng Huân công, bảng Đấu thành. */
-  step: 'stage' | 'army' | 'huan' | 'dau' | 'daNgoai';
+  step: 'stage' | 'army' | 'huan' | 'dau' | 'daNgoai' | 'thanThu';
   pick: ArmyPick;
   /** Bảng Đấu thành (giữ lại lựa chọn khi chuyển qua lại các bảng). */
   dau?: DauView;
@@ -742,6 +747,9 @@ export class Hud {
       case 'daVe':
       case 'daTuDanh':
         return this.onAction({ kind: act });
+      case 'thuAn':
+      case 'thuChon':
+        return this.onAction({ kind: act, thu: el.dataset.thu as ThanThuId });
       case 'forgeGear':
         return this.onAction({ kind: 'forgeGear', gear: el.dataset.gear as GearId });
       case 'setResolution':
@@ -758,6 +766,7 @@ export class Hud {
       case 'prepareChallenge':
       case 'openHuan':
       case 'openDaNgoai':
+      case 'openThanThu':
       case 'backToStage':
       case 'armyDelta':
       case 'armyRow':
@@ -2202,6 +2211,8 @@ export class Hud {
       camp.step = camp.step === 'huan' ? 'stage' : 'huan';
     } else if (act === 'openDaNgoai') {
       camp.step = camp.step === 'daNgoai' ? 'stage' : 'daNgoai';
+    } else if (act === 'openThanThu') {
+      camp.step = camp.step === 'thanThu' ? 'stage' : 'thanThu';
     } else if (act === 'backToStage') {
       camp.step = 'stage';
     } else if (act === 'armyDelta') {
@@ -2240,6 +2251,13 @@ export class Hud {
     if ((act === 'openDau' || act === 'dauMode') && camp.step === 'dau' && camp.dau?.mode === 'that') this.onAction({ kind: 'dauOpened' });
   }
 
+  /** Mở thẳng bảng Thần thú (chạm thú đi lại trong kinh đô). */
+  showThanThu(state: GameState): void {
+    this.showCampaign(state);
+    this.camp!.step = 'thanThu';
+    this.refreshCampaign(state, true);
+  }
+
   /** Mở thẳng bảng Đấu thành (nút Đánh lại, Đánh tiếp sau trận), ở thẻ và bước chọn. */
   showDau(state: GameState, step: DauView['step'] = 'target', mode?: DauView['mode']): DauView {
     this.showCampaign(state);
@@ -2267,6 +2285,7 @@ export class Hud {
       panel = dauHtml(state, camp.dau);
     } else if (camp.step === 'huan') panel = huanHtml(state);
     else if (camp.step === 'daNgoai') panel = daNgoaiHtml(state);
+    else if (camp.step === 'thanThu') panel = thanThuHtml(state);
     else if (camp.stage) panel = camp.step === 'army' ? armyHtml(state, camp.pick, camp.stage, camp.pick.challenge) : stageHtml(state, camp.stage);
     const now = mapChapterNow(state);
     const tabs =
@@ -2287,11 +2306,22 @@ export class Hud {
     const da = daMo(state)
       ? `<button class="huan-chip da-chip ${camp.step === 'daNgoai' ? 'on' : ''}" data-act="openDaNgoai" aria-label="${vi.daNgoai.title}">${vi.daNgoai.chip}</button>`
       : '';
+    // Chip Thần thú: mở cùng dã ngoại (chim Lạc về khi có tướng đầu tiên).
+    const thu = daMo(state)
+      ? `<button class="huan-chip thu-chip ${camp.step === 'thanThu' ? 'on' : ''}" data-act="openThanThu" aria-label="${vi.thanThu.title}">${vi.thanThu.chip}</button>`
+      : '';
     const map =
-      camp.step === 'dau' && camp.dau ? dauMapHtml(state, camp.dau) : camp.step === 'daNgoai' ? daMapHtml(state) : mapHtml(state, camp.stage, camp.chapter);
-    const head = camp.step === 'dau' ? `🏯 ${vi.dauThanh.title}` : camp.step === 'daNgoai' ? `🌿 ${vi.daNgoai.title}` : `⚔️ ${title}`;
-    const own = camp.step === 'dau' || camp.step === 'daNgoai';
-    const html = `<div class="camp-head"><h2>${head}</h2>${own ? '' : tabs}<div class="camp-chips">${huan}${da}${dau}</div>
+      camp.step === 'dau' && camp.dau
+        ? dauMapHtml(state, camp.dau)
+        : camp.step === 'daNgoai'
+          ? daMapHtml(state)
+          : camp.step === 'thanThu'
+            ? thanThuMapHtml(state)
+            : mapHtml(state, camp.stage, camp.chapter);
+    const head =
+      camp.step === 'dau' ? `🏯 ${vi.dauThanh.title}` : camp.step === 'daNgoai' ? `🌿 ${vi.daNgoai.title}` : camp.step === 'thanThu' ? `🐉 ${vi.thanThu.title}` : `⚔️ ${title}`;
+    const own = camp.step === 'dau' || camp.step === 'daNgoai' || camp.step === 'thanThu';
+    const html = `<div class="camp-head"><h2>${head}</h2>${own ? '' : tabs}<div class="camp-chips">${huan}${da}${thu}${dau}</div>
         <button class="close" data-act="closeCampaign" aria-label="${vi.ui.close}">✕</button></div>
       <div class="camp-main"><div class="camp-map">${map}</div><div class="camp-panel">${panel}</div></div>`;
     if (html !== this.campHtml || force) {
@@ -2375,12 +2405,21 @@ export class Hud {
     const show = setups.length >= (b.da ? 1 : 2);
     heroHp.hidden = !show;
     if (show) {
-      const hpKey = `${b.id}:${setups.map((h) => h.kind).join(',')}`;
+      const hpKey = `${b.id}:${setups.map((h) => h.kind).join(',')}:${b.thu?.kind ?? ''}`;
       if (heroHp.dataset.key !== hpKey) {
         heroHp.dataset.key = hpKey;
-        heroHp.innerHTML = setups
-          .map((h) => `<span class="hh" data-hero="${h.kind}"><em>${vi.ui.tuongIcons[h.kind]}</em><b>${vi.ui.heroNames[h.kind]}</b><i><u></u></i></span>`)
-          .join('');
+        heroHp.innerHTML =
+          setups.map((h) => `<span class="hh" data-hero="${h.kind}"><em>${vi.ui.tuongIcons[h.kind]}</em><b>${vi.ui.heroNames[h.kind]}</b><i><u></u></i></span>`).join('') +
+          (b.thu ? `<span class="hh thu" data-hero="${b.thu.kind}"><em>${vi.thanThu.icon[b.thu.kind]}</em><b>${vi.thanThu.ten[b.thu.kind]}</b><i><u></u></i></span>` : '');
+      }
+      if (b.thu) {
+        // Thần thú đi theo đội dã ngoại: thanh máu sau các tướng.
+        const f = b.fighters.find((x) => x.kind === b.thu!.kind);
+        const el = heroHp.querySelector<HTMLElement>(`[data-hero="${b.thu.kind}"]`)!;
+        const down = !f || f.state === 'gone' || f.hp <= 0;
+        el.classList.toggle('down', down);
+        el.querySelector<HTMLElement>('u')!.style.width = `${f && !down ? Math.round((100 * f.hp) / f.maxHp) : 0}%`;
+        el.querySelector('em')!.textContent = down ? '💤' : vi.thanThu.icon[b.thu.kind];
       }
       for (const h of setups) {
         const f = b.fighters.find((x) => x.kind === h.kind);

@@ -4,6 +4,7 @@ import './style.css';
 import { play, setMuted, stopRally, unlockAudio } from './audio/sfx';
 import { skillReady, startFieldBattle, stepField, useSkill, type Battle, type HeroKind } from './game/battle';
 import { canLen, capNhatDa, chonMap, daMo, datDoi, doiNay, moMap, quaCong, tichTreo, vaoDa, veKinhDo, type DaThuong } from './game/daNgoai';
+import { choAn, chonThu, thuCo } from './game/thanThu';
 import { chamMap, datTuDanh, stepDa, tuongDau } from './game/daNgoaiTran';
 import { boCuc } from './game/daNgoaiMap';
 import { attackFrom, beginPvp, canPractice, decodeSnapshot, encodeSnapshot, lootPvp, makeSnapshot, pushInput, scorePvp, stepPvp, validateArmy, type PvpRun } from './game/dauThanh';
@@ -404,6 +405,14 @@ async function start(): Promise<void> {
     }
   };
 
+  /** Thần thú vừa về (chim Lạc khi dã ngoại mở, các con sau khi hạ boss map 1–4): Lạc hầu báo một lần mỗi con. */
+  const showThuHint = () => {
+    const moi = thuCo(state).find((k) => !state.hinted.includes(`thanThu_${k}`));
+    if (!moi) return;
+    state.hinted = [...state.hinted, `thanThu_${moi}`];
+    hud.toast(moi === 'thuLac' ? vi.thanThu.hint : vi.thanThu.hintVe[moi], false, 9000);
+  };
+
   /** Lần đầu có công trình làm ra chưa đủ vì xa kho: Lạc hầu gợi ý một lần việc gánh hàng, trải đường. */
   const showGanhHint = () => {
     if (!needsGanhHint(state)) return;
@@ -455,6 +464,7 @@ async function start(): Promise<void> {
     showCayDaHint();
     showDoHint();
     showDaHint();
+    showThuHint();
     showGanhHint();
     seenBai();
     save();
@@ -1049,6 +1059,13 @@ async function start(): Promise<void> {
     }
     // Trên bãi chiến chỉ xem, không chọn gì; đang hành quân, đang Đấu thành cũng vậy.
     if (world.inField || marching || pvp) return;
+    // Chạm thần thú đang đi lại, bay trong kinh đô: bảng Thần thú.
+    if (mode.kind === 'view' && world.pickThanThu(cx, cy)) {
+      play('tap');
+      select(null);
+      hud.showThanThu(state);
+      return;
+    }
     const hero: string | null = mode.kind === 'view' ? world.pickHero(cx, cy) : null;
     if (hero) {
       play('tap');
@@ -2205,6 +2222,23 @@ async function start(): Promise<void> {
         play('tap');
         commit();
         return;
+
+      case 'thuAn': {
+        const r = choAn(state, a.thu);
+        if (!r.ok) return fail(r.reason);
+        play(r.value.len ? 'claim' : 'tap');
+        hud.toast(r.value.len ? vi.thanThu.lenCap(vi.thanThu.ten[a.thu], r.value.cap) : vi.thanThu.an(vi.thanThu.ten[a.thu]));
+        commit();
+        return;
+      }
+
+      case 'thuChon': {
+        const r = chonThu(state, a.thu);
+        if (!r.ok) return fail(r.reason);
+        play('tap');
+        commit();
+        return;
+      }
 
       case 'daTuDanh': {
         const on = !(daB?.da?.tuDanh ?? state.daNgoai.tuDanh);

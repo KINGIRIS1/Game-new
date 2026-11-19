@@ -821,9 +821,25 @@ export function rhinoBody(r: Rig): void {
 // ---------- Gà trắng ----------
 
 /** Gà trống trắng khổng lồ nặn theo khung `ROOSTER`: ức phồng, cổ cao, đầu mào đỏ, cánh, đuôi lông cong, chân vàng. */
-function roosterPieces(detail: number): Piece[] {
+/** Màu gà: thân, cánh, lông đuôi xen, chân; `cuu` là gà chín cựa (thêm cựa, đủ chín cái). */
+export interface RoosterLook {
+  body: number;
+  wing: number;
+  tail: number;
+  tailAlt: number;
+  leg: number;
+  cuu?: boolean;
+}
+
+/** Gà trắng nghìn năm. */
+const GA_TRANG: RoosterLook = { body: C.rooster, wing: C.cream, tail: C.rooster, tailAlt: C.cream, leg: C.bronzeLight };
+
+/** Gà chín cựa (lễ vật Sơn Tinh): lông đỏ son, cánh vàng, đuôi xanh đen xen vàng, chân vàng chín cựa. */
+export const GA_CUU: RoosterLook = { body: 0xc4462b, wing: C.gold, tail: 0x1f3d34, tailAlt: C.gold, leg: C.gold, cuu: true };
+
+function roosterPieces(detail: number, look: RoosterLook = GA_TRANG): Piece[] {
   const out: Piece[] = [];
-  const clay = new Clay(C.rooster);
+  const clay = new Clay(look.body);
   clay.add('qBody', ellipsoid([0, 0.88, -0.04], [0.38, 0.37, 0.5]), { k: 0 });
   clay.add('qBody', ellipsoid([0, 0.94, 0.24], [0.32, 0.33, 0.3]), { k: 0.1 });
   clay.add('qNeck', cone([0, 1.1, 0.24], [0, 1.5, 0.4], 0.22, 0.16), { k: 0.08 });
@@ -846,7 +862,7 @@ function roosterPieces(detail: number): Piece[] {
     ['qWingL', -1],
     ['qWingR', 1],
   ] as const) {
-    paints.push(clay.layer(b, ellipsoid([s * 0.36, 0.92, -0.06], [0.08, 0.2, 0.31], [0.25, 0, s * 0.08]), C.cream));
+    paints.push(clay.layer(b, ellipsoid([s * 0.36, 0.92, -0.06], [0.08, 0.2, 0.31], [0.25, 0, s * 0.08]), look.wing));
   }
   for (const s of [-1, 1]) {
     const p = hit(f, [s * 0.5, 1.64, 0.5], [-s, 0, -0.2]) ?? [s * 0.15, 1.64, 0.52];
@@ -858,7 +874,7 @@ function roosterPieces(detail: number): Piece[] {
   for (let i = 0; i < 5; i++) comb.add('qHead', ellipsoid([0, 1.8 + Math.sin((i / 4) * Math.PI) * 0.08, 0.27 + i * 0.075], [0.04, 0.09 + (i === 2 ? 0.03 : 0), 0.06]), { k: 0.03 });
   out.push(clayPiece(comb.build({ kind: 'nets', min: [-0.08, 1.66, 0.14], max: [0.08, 2.05, 0.66], cell: 0.012 / detail, target: Math.round(300 * detail) })));
   // Đuôi: các lông liềm cong vồng ra sau, trắng xen kem.
-  const tail = new Clay(C.rooster);
+  const tail = new Clay(look.tail);
   const tailPaint: Paint[] = [];
   for (let i = 0; i < 6; i++) {
     const a = -0.6 + i * 0.24;
@@ -878,11 +894,11 @@ function roosterPieces(detail: number): Piece[] {
       parts.push(flat);
       tail.add('qTail', flat, { k: 0.02 });
     }
-    if (i % 2) tailPaint.push(tail.layer('qTail', (x, y, z) => Math.min(...parts.map((q) => q(x, y, z))) - 0.006, C.cream));
+    if (i % 2) tailPaint.push(tail.layer('qTail', (x, y, z) => Math.min(...parts.map((q) => q(x, y, z))) - 0.006, look.tailAlt));
   }
   out.push(clayPiece(tail.build({ kind: 'nets', min: [-0.42, 0.85, -1.12], max: [0.42, 1.68, -0.3], cell: 0.014 / detail, target: Math.round(900 * detail) }, tailPaint)));
   // Chân vàng: cẳng, ba ngón trước, ngón sau, cựa.
-  const legs = new Clay(C.bronzeLight);
+  const legs = new Clay(look.leg);
   for (const [b, s] of [
     ['qBL', -1],
     ['qBR', 1],
@@ -892,13 +908,16 @@ function roosterPieces(detail: number): Piece[] {
     for (const a of [-0.5, 0, 0.5]) legs.add(b, cone([x, 0.03, 0.0], [x + Math.sin(a) * 0.17, 0.015, Math.cos(a) * 0.17], 0.03, 0.012), { k: 0.015 });
     legs.add(b, cone([x, 0.03, 0], [x, 0.015, -0.1], 0.025, 0.01), { k: 0.015 });
     legs.add(b, cone([x, 0.18, -0.03], [x, 0.14, -0.14], 0.026, 0.004), { k: 0.012 });
+    // Gà chín cựa: chân trái năm cựa, chân phải bốn cựa, xếp dọc cẳng.
+    if (look.cuu) for (let i = 1; i < (s < 0 ? 5 : 4); i++) legs.add(b, cone([x, 0.18 + i * 0.075, -0.035], [x + s * 0.03, 0.15 + i * 0.075, -0.13], 0.022, 0.004), { k: 0.01 });
   }
   out.push(clayPiece(legs.build({ kind: 'nets', min: [-0.36, -0.01, -0.2], max: [0.36, 0.6, 0.22], cell: 0.01 / detail, target: Math.round(500 * detail) })));
   return out;
 }
 
-export function roosterBody(r: Rig): void {
-  figure(r as unknown as HumanRig, 'rooster', roosterPieces);
+export function roosterBody(r: Rig, look?: RoosterLook): void {
+  if (look?.cuu) figure(r as unknown as HumanRig, 'gaCuu', (d) => roosterPieces(d, look));
+  else figure(r as unknown as HumanRig, 'rooster', roosterPieces);
 }
 
 // ---------- Rùa Vàng ----------

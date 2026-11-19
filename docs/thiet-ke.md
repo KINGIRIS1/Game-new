@@ -3948,7 +3948,7 @@ Kỹ năng (dự kiến):
 4. Năm kỹ năng, chỉ số, năm bộ đồ và tên món như trên.
 5. Làm mỗi tướng một PR, Bà Triệu trước.
 
-## Kế hoạch: nuôi thần thú (chủ dự án yêu cầu, chờ duyệt số và danh sách thú)
+## Kế hoạch: nuôi thần thú (chủ dự án yêu cầu, đã duyệt "làm hết 1 lượt", đã làm)
 
 Chủ dự án yêu cầu: lên kế hoạch nuôi thần thú. Như các kế hoạch trước, được chỉnh số ±20% theo test; làm xong phần nào thì ghi số cuối cùng của phần ấy.
 
@@ -3963,7 +3963,16 @@ Chủ dự án yêu cầu: lên kế hoạch nuôi thần thú. Như các kế h
 - Nuôi bằng **cho ăn**; thần thú **đi lại, bay trong kinh đô** (chỉ để nhìn).
 - **Mở khi dã ngoại mở**.
 
-### Năm thần thú (đề xuất)
+### Đã làm (số cuối, khác đề xuất ở các chỗ sau)
+
+- **Không lên bản lưu**: `GameState.thanThu` là trường tùy chọn như `dauThanh` (`isThanThuState` ở `thanThu.ts`; sai dạng thì bỏ riêng phần ấy, `thuNay` tạo mới). Thay cho bản lưu 36 dự kiến.
+- Cá không vào kho, nên chim Lạc ăn gạo và vỏ ốc (15 mỗi thứ × cấp); rồng ăn vỏ ốc và gạo (20 mỗi thứ × cấp); ngựa sắt sắt 30, gà gạo 30, Rùa Vàng vỏ ốc 30 (× cấp) (`THAN_THU` ở `defs.ts`).
+- Kỹ năng thú chỉ tự dùng khi Tự đánh bật, như kỹ năng tướng (`THAN_THU_KY`; `kyThu` ở `daNgoaiTran.ts`). Treo máy cộng sức thú, đòn thường nhân `DA_TREO.kyThu` = 1,5 cho gồm kỹ năng.
+- Lên cấp sau `1 + floor(cấp / 5)` bữa: tới cấp 50 chừng 270 bữa (`THAN_THU_NUOI`).
+- Thú về: Lạc hầu báo một lần mỗi con bằng dòng tin (`hinted` `thanThu_<id>`), không có đoạn truyện riêng.
+- Dáng: ngựa sắt là ngựa của Gióng yên để trống (`makeNguaSat` ở `heroes.ts`), gà chín cựa là đất nặn gà trắng đổi màu, thêm cựa (`GA_CUU`, `RoosterLook` ở `nanThu.ts`, `makeGaCuu`), Rùa Vàng bò như rùa biển (`makeRuaThan` ở `beasts.ts`); chim Lạc, rồng ghép khối gắn xương ở `render/thanThu.ts`. Chưa nặn sẵn trong worker (dã ngoại chưa nặn sẵn), lần đầu vào map nặn ở luồng chính rồi cất kho.
+
+### Năm thần thú
 
 | Thú | Về khi | Vai trên map | Kỹ năng (tự dùng) | Ở kinh đô | Món ăn ưa |
 |---|---|---|---|---|---|
