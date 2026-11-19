@@ -521,7 +521,7 @@ export const MON_VE: Record<MonId, VeMon> = {
 
   // Bộ Dạ Trạch (Triệu Quang Phục, tướng dã ngoại map 7).
   // Giáo cầm ở hình tướng ngắn hơn chút cho vừa khung tướng cao (Gióng).
-  'daTrach-vuKhi': { cho: 'tay', cam: 'dung', mac: tayPhai((s) => giaoDaTrach(s, 1.2)), rieng: toon((m) => giaoDaTrach(m)), xoay: [0, 0, -Math.PI / 4] },
+  'daTrach-vuKhi': { cho: 'tay', cam: 'dung', mac: tayPhai((s) => giaoDaTrach(s, 1.05)), rieng: toon((m) => giaoDaTrach(m)), xoay: [0, 0, -Math.PI / 4] },
   'daTrach-giap': { cho: 'than', mac: aoLauSay, rieng: tren(aoLauSay, true), xoay: [0, 0.45, 0] },
   'daTrach-phucSuc': { cho: 'thu', rieng: toon(thuyenDocMoc), xoay: [0.35, 0.95, 0] },
   // Móng rồng xòe ngón theo chiều trước sau cho gọn bên vai ở hình tướng.
@@ -534,7 +534,7 @@ export const MON_VE: Record<MonId, VeMon> = {
   'vanAn-baoVat': { cho: 'bay', rieng: toon(anHacDe), xoay: [0.35, 1.15, 0] },
 
   // Bộ Bạch Đằng (Ngô Quyền, tướng dã ngoại map 9).
-  'bachDang-vuKhi': { cho: 'tay', cam: 'dung', mac: tayPhai((s) => giaoBachDang(s, 1.2, 0.3)), rieng: toon((m) => giaoBachDang(m, 2.0, 0.3)), xoay: [0, 0, -Math.PI / 4] },
+  'bachDang-vuKhi': { cho: 'tay', cam: 'dung', mac: tayPhai((s) => giaoBachDang(s, 1.1, 0.3)), rieng: toon((m) => giaoBachDang(m, 1.6, 0.3)), xoay: [0, 0, -Math.PI / 4] },
   'bachDang-giap': { cho: 'than', mac: giapSatBachDang, rieng: tren(giapSatBachDang, true), xoay: [0, 0.45, 0] },
   'bachDang-phucSuc': { cho: 'thu', rieng: bakeNguaChien, xoay: [0, 0.9, 0] },
   'bachDang-baoVat': { cho: 'bay', rieng: toon(cocLim), xoay: [0.15, 0.4, -0.3] },
