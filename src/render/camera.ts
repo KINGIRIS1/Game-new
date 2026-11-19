@@ -1,10 +1,13 @@
 // Camera isometric nhìn chéo từ trên xuống: một ngón kéo để di chuyển, hai ngón chụm để phóng to,
-// hai ngón vặn theo vòng tròn (hay nút ⟳) để xoay cảnh theo nấc 90°: có 4 hướng nhìn chéo.
+// hai ngón vặn theo vòng tròn (hay nút ⟳) để xoay cảnh theo nấc 45°: có 8 hướng nhìn (4 hướng chéo, 4 hướng thẳng cạnh lưới).
 // Chế độ vẽ (`drawMode`, lúc trải đường): một ngón kéo để vẽ dải ô (`onDraw`), hai ngón vẫn kéo, phóng, xoay cảnh.
 
 import * as THREE from 'three';
 
 const AZIMUTH = Math.PI / 4;
+/** Số hướng nhìn, và góc một nấc xoay. */
+const STEPS = 8;
+const STEP = (Math.PI * 2) / STEPS;
 const ELEVATION = THREE.MathUtils.degToRad(38);
 const DISTANCE = 70;
 /** Thu nhỏ hết cỡ thì thấy trọn kinh đô 45×45 ở khổ điện thoại dọc. */
@@ -12,10 +15,10 @@ const MIN_ZOOM = 0.28;
 const MAX_ZOOM = 3;
 const TAP_SLOP_PX = 10;
 const TAP_MAX_MS = 600;
-/** Xoay cảnh: mỗi nấc 90°, chuyển mượt trong chừng này giây. */
-const TURN_S = 0.35;
-/** Hai ngón vặn quá góc này (radian, khoảng 35°) thì xoay một nấc. */
-const TWIST_SNAP = THREE.MathUtils.degToRad(35);
+/** Xoay cảnh: mỗi nấc 45°, chuyển mượt trong chừng này giây. */
+const TURN_S = 0.3;
+/** Hai ngón vặn quá góc này (radian, khoảng 25°) thì xoay một nấc. */
+const TWIST_SNAP = THREE.MathUtils.degToRad(25);
 
 /**
  * Giới hạn tâm nhìn: vuông `min`..`max` theo cả x, z; `sea` nới ra biển phía đông nam tới `maxX`, `maxZ`, nhưng ra quá
@@ -51,7 +54,7 @@ export class IsoCamera {
   private width = 1;
   private height = 1;
   private readonly offset = new THREE.Vector3();
-  /** Góc phương vị đang nhìn (radian), và hướng nhìn đích theo nấc 90° (0–3). */
+  /** Góc phương vị đang nhìn (radian), và hướng nhìn đích theo nấc 45° (0–7). */
   private azimuth = AZIMUTH;
   private quarter = 0;
   /** Đang xoay dở: từ góc nào tới góc nào, đã được bao lâu. */
@@ -125,27 +128,27 @@ export class IsoCamera {
     cam.updateMatrixWorld();
   }
 
-  /** Hướng nhìn hiện tại theo nấc 90°: 0 là hướng mặc định (nhìn từ phía đông nam), 1–3 là xoay thêm từng nấc. */
+  /** Hướng nhìn hiện tại theo nấc 45°: 0 là hướng mặc định (nhìn từ phía đông nam), 1–7 là xoay thêm từng nấc. */
   get facing(): number {
     return this.quarter;
   }
 
   /**
-   * Xoay cảnh một nấc 90° quanh tâm nhìn, giữ nguyên tâm và độ phóng. `dir` 1: cảnh quay theo chiều kim đồng hồ
+   * Xoay cảnh một nấc 45° quanh tâm nhìn, giữ nguyên tâm và độ phóng. `dir` 1: cảnh quay theo chiều kim đồng hồ
    * trên màn hình (nút ⟳), −1: ngược chiều. Chuyển mượt, xem `tick`.
    */
   rotate(dir: 1 | -1): void {
-    this.quarter = (this.quarter + dir + 4) % 4;
+    this.quarter = (this.quarter + dir + STEPS) % STEPS;
     const from = this.azimuth;
     // Góc phương vị tăng thì cảnh quay theo chiều kim đồng hồ trên màn hình.
-    const to = (this.turn ? this.turn.to : this.azimuth) + dir * (Math.PI / 2);
+    const to = (this.turn ? this.turn.to : this.azimuth) + dir * STEP;
     this.turn = { from, to, t: 0 };
   }
 
-  /** Đặt ngay hướng nhìn (0–3), không chuyển mượt. */
+  /** Đặt ngay hướng nhìn (0–7), không chuyển mượt. */
   setFacing(quarter: number): void {
-    this.quarter = ((quarter % 4) + 4) % 4;
-    this.azimuth = AZIMUTH + this.quarter * (Math.PI / 2);
+    this.quarter = ((quarter % STEPS) + STEPS) % STEPS;
+    this.azimuth = AZIMUTH + this.quarter * STEP;
     this.turn = null;
     this.apply();
   }
@@ -160,7 +163,7 @@ export class IsoCamera {
     this.azimuth = tr.from + (tr.to - tr.from) * ease;
     if (tr.t >= TURN_S) {
       // Giữ góc gọn trong một vòng để khỏi trôi số sau nhiều lần xoay.
-      this.azimuth = AZIMUTH + this.quarter * (Math.PI / 2);
+      this.azimuth = AZIMUTH + this.quarter * STEP;
       this.turn = null;
     }
     this.apply();

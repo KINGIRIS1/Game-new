@@ -931,8 +931,8 @@ Cả bốn cần dân làm, mở sau truyện Lang Liêu, cần Điện cấp 3.
 Chủ dự án đã chọn qua bốn câu hỏi: Thủy Tinh có cả hai phép (xem mục Thủy quái), xoay cảnh 4 hướng, dời công trình mất phí, áp mẫu thì dời và dựng đủ.
 
 **Xoay cảnh**
-- Có nút ⟳ trên màn hình kinh đô. Mỗi lần bấm, góc nhìn xoay 90°, có 4 hướng nhìn chéo, chuyển mượt.
-- Vuốt hai ngón theo vòng tròn cũng xoay theo nấc 90°, không xoay tự do, để hình vẽ luôn đúng góc đẹp và lưới ô không xiên.
+- Có nút ⟳ trên màn hình kinh đô. Mỗi lần bấm, góc nhìn xoay 45°, có 8 hướng nhìn (4 hướng chéo như cũ, xen 4 hướng nhìn thẳng cạnh lưới), chuyển mượt. Chủ dự án chọn thêm 4 hướng thẳng sau khi đã có 4 hướng chéo.
+- Vuốt hai ngón theo vòng tròn cũng xoay theo nấc 45°, không xoay tự do, để hình vẽ luôn đúng góc và lưới ô không xiên lệch.
 - Bãi chiến phó bản không xoay.
 
 **Dời công trình**
