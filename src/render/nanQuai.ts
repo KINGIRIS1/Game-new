@@ -225,9 +225,23 @@ function dragonPieces(o: { body: readonly (readonly [number, number, number, num
   // Đầu to hơn mình: mọi chỗ trên đầu nhân `K`.
   const K = 1.25;
   const at = (d: V3): V3 => add3(h, [d[0] * K, d[1] * K, d[2] * K]);
-  // Cổ cong ngửa lên tới đầu.
-  clay.add('qNeck', cone(pts[0], o.neck, rs[0], rs[0] * 0.8), { k: 0.05 });
-  clay.add('qNeck', cone(o.neck, at([0, -0.03, -0.08]), rs[0] * 0.8, rs[0] * 0.7), { k: 0.05 });
+  // Cổ cong mềm: đường cong bậc hai nối tiếp hướng mình ở ngực (`pts[0]` ra khỏi `pts[1]`) lên tới gáy, thon dần;
+  // trọng số pha dần từ xương cổ sang xương đầu dọc đường cong.
+  const huong = unit3(sub3(pts[0], pts[1]));
+  const c1 = add3(pts[0], [huong[0] * 0.22, huong[1] * 0.22, huong[2] * 0.22]);
+  const gay = at([0, -0.02, -0.1]);
+  const bez = (u: number): V3 => {
+    const a = (1 - u) * (1 - u);
+    const b = 2 * u * (1 - u);
+    const c = u * u;
+    return [a * pts[0][0] + b * c1[0] + c * gay[0], a * pts[0][1] + b * c1[1] + c * gay[1], a * pts[0][2] + b * c1[2] + c * gay[2]];
+  };
+  const NC = 6;
+  for (let k = 0; k < NC; k++) {
+    const u0 = k / NC;
+    const u1 = (k + 1) / NC;
+    clay.add('qNeck', cone(bez(u0), bez(u1), rs[0] * (1 - 0.35 * u0), rs[0] * (1 - 0.35 * u1)), { k: 0.04, to: { bone: 'qHead', a: bez(0.3), b: gay } });
+  }
   // Đầu to: sọ, mõm dài, mũi cuộn, u mày, hàm dưới há.
   clay.add('qHead', ellipsoid(h, [0.14, 0.125, 0.16]), { k: 0.05 });
   clay.add('qHead', ellipsoid(at([0, -0.005, 0.2]), [0.094, 0.075, 0.21], [0.1, 0, 0]), { k: 0.05 });
@@ -294,7 +308,11 @@ function dragonPieces(o: { body: readonly (readonly [number, number, number, num
       paints.push(clay.layer(`d${i}`, (x, y, z) => Math.max(Math.abs(dot3([x - m[0], y - m[1], z - m[2]], ax)) - 0.006, y - (m[1] - rr * 0.35), Math.hypot(x - m[0], y - m[1], z - m[2]) - rr * 1.4), M.bellyLine));
     }
   }
-  paints.push(clay.layer('qNeck', ellipsoid(add3(o.neck, [0, -0.05, 0.04]), [0.1, 0.1, 0.22], [-0.7, 0, 0]), M.belly));
+  for (let k = 0; k <= NC; k++) {
+    const p = bez(k / NC);
+    const r = rs[0] * (1 - 0.35 * (k / NC));
+    paints.push(clay.layer('qNeck', ellipsoid([p[0], p[1] - r * 0.4, p[2] + r * 0.45], [r * 0.75, r * 0.55, r * 0.55]), M.belly));
+  }
   paints.push(clay.layer('qHead', ellipsoid(at([0, -0.13, 0.14]), [0.06, 0.03, 0.17], [-0.2, 0, 0]), M.belly));
   // Miệng đỏ, mắt lửa có viền sẫm.
   paints.push(clay.layer('qHead', ellipsoid(at([0, -0.075, 0.24]), [0.094, 0.044, 0.19], [-0.12, 0, 0]), M.mouth));

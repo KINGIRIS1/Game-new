@@ -81,12 +81,13 @@ function poseLac(b: B, a: Act): void {
  */
 const RONG_MINH: [number, number, number, number][] = Array.from({ length: 17 }, (_, i) => [
   0.2 * Math.sin(i * 0.5 + 0.4),
-  1.0 + 0.38 * Math.sin(i * 0.75),
+  // Pha 2,6: ngực đang ngóc lên, cổ nối tiếp đà ấy lên đầu, khỏi bẻ gắt.
+  1.0 + 0.38 * Math.sin(i * 0.75 + 2.6),
   0.3 - i * 0.27,
   0.14 * (1 - i / 18) + 0.03,
 ]);
-const RONG_CO: V3 = [0, 1.28, 0.52];
-const RONG_DAU: V3 = [0, 1.48, 0.68];
+const RONG_CO: V3 = [0.02, 1.38, 0.47];
+const RONG_DAU: V3 = [0, 1.56, 0.7];
 const RONG_SAU = 6;
 const RONG_CHAN: V3[] = (() => {
   const [fx, fy, fz] = RONG_MINH[1];
