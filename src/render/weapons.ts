@@ -606,46 +606,105 @@ export function guomNuiNua(s: Parts): void {
   tuaLua(p, -0.12, C.red, 0.028, 0.12, 4);
 }
 
+/** Cỡ cờ Lạc: cán dài `len`, tay nắm cách đuôi `grip`; lá cờ dài `w`, cao `h`. */
+const CO_LAC = { len: 1.5, grip: 0.25, w: 0.66, h: 0.42 } as const;
+
+/** Sóng của lá cờ Lạc ở chỗ t (0 mép cán, 1 đuôi cờ): lệch ngang x và rủ xuống y. Biên độ tăng dần ra đuôi. */
+function songCo(t: number): [number, number] {
+  return [Math.sin(t * 6.8) * 0.034 * Math.min(1, t * 1.6 + 0.1), -t * t * 0.07];
+}
+
+/** Uốn hình (đã ở đúng chỗ trong khung cờ, z ≤ 0 bay ra sau) theo sóng của lá cờ rồi thêm vào `p`. */
+function theoSong(p: ShapeBuilder, g: THREE.BufferGeometry, color: number): void {
+  const pos = g.getAttribute('position');
+  for (let i = 0; i < pos.count; i++) {
+    const [dx, dy] = songCo(-pos.getZ(i) / CO_LAC.w);
+    pos.setXYZ(i, pos.getX(i) + dx, pos.getY(i) + dy, pos.getZ(i));
+  }
+  g.computeVertexNormals();
+  p.add(g, color, 0, 0, 0);
+}
+
+/** Hộp vải mỏng `day` × `h` × `w` chia `n` khúc theo chiều dài, mép trước ở z0, giữa ở độ cao y, uốn theo sóng. */
+function vaiBay(p: ShapeBuilder, w: number, h: number, day: number, color: number, y: number, z0: number, n = 14): void {
+  const g = new THREE.BoxGeometry(day, h, w, 1, 2, n);
+  g.translate(0, y, z0 - w / 2);
+  theoSong(p, g, color);
+}
+
+/** Chim Lạc dang cánh nhìn ngang, mỏ dài chĩa về trước (+u), mào, đuôi xòe: đường viền (u, v), dài chừng 0,34. */
+const CHIM_LAC: Pt[] = [
+  [0.17, 0.045],
+  [0.05, 0.03],
+  [0.035, 0.065],
+  [0.05, 0.11],
+  [0.012, 0.085],
+  [-0.01, 0.045],
+  [-0.04, 0.05],
+  [-0.03, 0.14],
+  [-0.075, 0.16],
+  [-0.075, 0.07],
+  [-0.1, 0.04],
+  [-0.17, 0.075],
+  [-0.14, 0.01],
+  [-0.18, -0.035],
+  [-0.1, -0.025],
+  [-0.06, -0.05],
+  [-0.045, -0.015],
+  [0.02, -0.02],
+  [0.05, 0.012],
+];
+
 /**
- * Cờ hiệu đỏ của Trưng Nhị: cán tre dài 1,5 (gốc ở chỗ tay nắm, cách đuôi 0,25), chóp đồng hình mũi giáo, tua vàng;
- * lá cờ đỏ dài chừng 0,7 × 0,5 bay về phía −z, ba khúc lệch nhau cho ra dáng cờ bay, viền dải hoa văn vàng, giữa
- * thêu chim Lạc vàng dang cánh, mỏ dài chĩa lên, đuôi cờ xẻ hai tua.
+ * Cờ hiệu đỏ của Trưng Nhị: cán tre dài 1,5 (gốc ở chỗ tay nắm, cách đuôi 0,25) bịt đồng, quấn dây chỗ nắm; chóp
+ * mũi giáo đồng hình lá, tua vàng nhiều sợi. Lá cờ đỏ 0,66 × 0,42 bay về −z, lượn sóng và rủ dần ra đuôi, viền trên
+ * dưới dải vàng hoa văn, dải vàng dọc cán buộc ba nút dây; giữa cờ thêu chim Lạc vàng (hai mặt) trong vòng mặt trời
+ * hai vành, đuôi cờ xẻ nheo hai tua. Hoa văn thêu uốn theo sóng của lá cờ.
  */
 export function coLac(s: Parts): void {
   const p = s.plain;
-  const len = 1.5;
-  const top = len - 0.25;
-  p.cyl(0.02, 0.022, len, C.woodDark, 0, len / 2 - 0.25, 0, undefined, 6);
-  p.cyl(0.026, 0.026, 0.04, C.bronze, 0, top, 0, undefined, 6);
-  p.cone(0.035, 0.14, C.bronze, 0, top + 0.09, 0, undefined, 5);
-  p.cone(0.04, 0.12, C.gold, 0, top - 0.06, 0, [Math.PI, 0, 0], 6);
-  // Lá cờ ba khúc, khúc ngoài rủ thấp dần.
-  const fy = top - 0.32;
-  const h = 0.48;
-  const segs = 3;
-  const w = 0.72 / segs;
-  for (let i = 0; i < segs; i++) {
-    const z = -0.02 - w * (i + 0.5);
-    const y = fy - i * 0.025;
-    const rx = i % 2 ? 0.04 : -0.04;
-    p.box(0.018, h - i * 0.03, w + 0.01, C.red, Math.sin(i * 1.7) * 0.02, y, z, [rx, (i % 2 ? 1 : -1) * 0.12, 0]);
-    s.band.box(0.022, 0.05, w + 0.01, C.gold, Math.sin(i * 1.7) * 0.02, y + (h - i * 0.03) / 2 - 0.025, z, [rx, (i % 2 ? 1 : -1) * 0.12, 0]);
-    s.band.box(0.022, 0.05, w + 0.01, C.gold, Math.sin(i * 1.7) * 0.02, y - (h - i * 0.03) / 2 + 0.025, z, [rx, (i % 2 ? 1 : -1) * 0.12, 0]);
+  const { len, grip, w, h } = CO_LAC;
+  const top = len - grip;
+  p.cyl(0.019, 0.022, len, C.woodDark, 0, len / 2 - grip, 0, undefined, 7);
+  for (const y of [0.25, 0.6]) p.cyl(0.024, 0.024, 0.016, C.thatchDark, 0, y, 0, undefined, 7);
+  chuoi(p, -0.07, 0.09, 0.022, C.woodDark, C.gold, 3);
+  p.cyl(0.026, 0.02, 0.05, C.bronzeDark, 0, -grip + 0.02, 0, undefined, 7);
+  p.cyl(0.026, 0.022, 0.06, C.bronze, 0, top + 0.02, 0, undefined, 7);
+  luoiDet(p, doiXung([[0.014, top + 0.05], ...cong([0.014, top + 0.05], [0.05, top + 0.09], [0.03, top + 0.16], 3), [0, top + 0.22]]), 0.018, C.bronze, false);
+  tuaLua(p, top - 0.005, C.gold, 0.036, 0.12, 5);
+  const cy = top - 0.1 - h / 2;
+  const z0 = -0.02;
+  vaiBay(p, w, h, 0.014, C.red, cy, z0);
+  for (const sy of [-1, 1]) vaiBay(s.band, w, 0.045, 0.02, C.gold, cy + sy * (h / 2 - 0.022), z0);
+  vaiBay(s.band, 0.035, h, 0.02, C.gold, cy, z0, 2);
+  for (const dy of [-0.13, 0, 0.13]) p.add(new THREE.TorusGeometry(0.026, 0.008, 5, 10), C.gold, 0, cy + dy, -0.005, [0, Math.PI / 2, 0]);
+  // Đuôi nheo hai tua xẻ: tiếp lá cờ, uốn cùng sóng.
+  const ze = z0 - w + 0.005;
+  for (const k of [-1, 1]) {
+    const sh = new THREE.Shape([[0, k * 0.02], [0, k * (h / 2)], [-0.15, k * (h / 2 - 0.04) - 0.03], [-0.1, k * 0.1 - 0.02]].map(([u, v]) => new THREE.Vector2(u, v)));
+    const g = new THREE.ExtrudeGeometry(sh, { depth: 0.012, bevelEnabled: false });
+    g.translate(0, 0, -0.006);
+    g.rotateY(-Math.PI / 2);
+    g.translate(0, cy, ze);
+    theoSong(p, g, C.red);
   }
-  // Đuôi cờ xẻ hai tua.
-  for (const k of [-1, 1]) p.box(0.016, 0.1, 0.16, C.red, 0.02, fy - 0.06 + k * 0.13, -0.8, [k * 0.2, 0.1, 0]);
-  // Chim Lạc vàng thêu giữa lá cờ (hai mặt): thân thon, cổ vươn, mỏ dài, mào, cánh dang, đuôi xòe.
+  // Mặt trời hai vành và chim Lạc vàng giữa cờ, hai mặt.
+  const zc = z0 - w * 0.46;
   for (const sx of [-1, 1]) {
-    const x = sx * 0.014;
-    const cz = -0.3;
-    const cy = fy;
-    p.sphere(0.05, C.gold, x, cy, cz, [0.3, 0.75, 1.5], 6);
-    p.box(0.01, 0.12, 0.026, C.gold, x, cy + 0.08, cz + 0.06, [-0.5, 0, 0]);
-    p.cone(0.016, 0.16, C.gold, x, cy + 0.12, cz + 0.17, [Math.PI / 2 - 0.3, 0, 0], 4);
-    p.box(0.01, 0.07, 0.016, C.gold, x, cy + 0.17, cz + 0.06, [0.6, 0, 0]);
-    p.box(0.01, 0.05, 0.2, C.gold, x, cy + 0.06, cz - 0.02, [-0.9, 0, 0]);
-    p.box(0.01, 0.05, 0.18, C.gold, x, cy - 0.04, cz - 0.04, [0.6, 0, 0]);
-    p.box(0.01, 0.1, 0.06, C.gold, x, cy - 0.04, cz - 0.15, [0.3, 0, 0]);
+    const x = sx * 0.012;
+    for (const [r, t] of [[0.13, 0.008], [0.158, 0.006]] as const) {
+      const g = new THREE.TorusGeometry(r, t, 4, 28);
+      g.scale(1, 1, 0.4);
+      g.rotateY(Math.PI / 2);
+      g.translate(x, cy, zc);
+      theoSong(p, g, C.gold);
+    }
+    const sh = new THREE.Shape(CHIM_LAC.map(([u, v]) => new THREE.Vector2(u * 0.85, v * 0.85 - 0.03)));
+    const g = new THREE.ExtrudeGeometry(sh, { depth: 0.006, bevelEnabled: false });
+    g.translate(0, 0, -0.003);
+    g.rotateY(-Math.PI / 2);
+    g.translate(x, cy, zc);
+    theoSong(p, g, C.gold);
   }
 }
 

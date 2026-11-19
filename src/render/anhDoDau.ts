@@ -34,7 +34,7 @@ export const ANH_DO_DAU: Record<string, string> = {
   'tanVien-giap': 'd4eaebbd',
   'tanVien-phucSuc': '827bd29d',
   'tanVien-vuKhi': '00533dba',
-  'trungNhi-baoVat': '51b58c2a',
+  'trungNhi-baoVat': '0a34df2e',
   'trungNhi-giap': 'f3bfff83',
   'trungNhi-phucSuc': '6d7a5520',
   'trungNhi-vuKhi': '62464e51',
