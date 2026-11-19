@@ -36,6 +36,7 @@ import { chapterOf } from './manVao';
 import { roll } from './ngauNhien';
 import { tuongSetup } from './son';
 import { tuongDaVe } from './tuongDa';
+import { thuSetup } from './thanThu';
 import { doCua, doMo, roiDo, type Mon } from './trangBi';
 
 const ok = <T>(value: T): Result<T> => ({ ok: true, value });
@@ -239,7 +240,7 @@ export function moMap(s: GameState): Battle {
   const heroes = doiNay(s)
     .map((k) => tuongSetup(s, k))
     .filter((h) => h !== null);
-  return taoTranDa({ id: s.nextBattleId++, map: d.map, heroes, cap: d.cap, cho: d.cho, tuDanh: d.tuDanh, boss: bossCo(s, d.map) });
+  return taoTranDa({ id: s.nextBattleId++, map: d.map, heroes, cap: d.cap, cho: d.cho, tuDanh: d.tuDanh, boss: bossCo(s, d.map), thu: thuSetup(s, capBonus(d.cap)) });
 }
 
 /**
@@ -304,6 +305,13 @@ export function tiSuc(s: GameState, khu: number): number {
     const g = doCua(s, k);
     dps += (st.dmg * (1 + bonus + (g?.danh ?? 0)) * (1 + (g?.toc ?? 0)) * (1 + HERO_CLEAVE.share * 0.6)) / st.cooldown;
     hp += (st.hp * FIELD.hpMul * (1 + bonus + (g?.mau ?? 0))) / (1 - (g?.giap ?? 0));
+  }
+  // Thần thú đi theo đội: sức đòn thường và kỹ năng (tính gọn như một phần đòn thường).
+  const thu = thuSetup(s, bonus);
+  if (thu) {
+    const st = statsOf(thu.kind);
+    dps += (st.dmg * (1 + bonus) * thu.manh * DA_TREO.kyThu) / st.cooldown;
+    hp += thu.hp;
   }
   const kind = DA_MAP[d.map].quai[khu];
   const [lo, hi] = capKhu(d.map, khu);

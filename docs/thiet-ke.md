@@ -20,6 +20,7 @@ Tài liệu này ghi lại các quyết định đã chốt với chủ dự án
   - người chibi đầu to, **đội mũ lông chim** như hình người trên mặt trống đồng;
   - **Miện lá** của Vua Hùng và các tướng nam (chủ dự án đưa ảnh mẫu: miện vàng có quạt lá cách điệu, rồi chốt mẫu 3 trong ba mẫu miện Vua Hùng; `mien` ở `nanDo.ts`, dáng chung `MIEN` ở `heroes.ts`): thay mũ lông chim bằng quạt lá kim loại dựng trên vành miện, ôm vòng trước trán. Dưới cùng là **vòng sắt**, trên đó là vành miện có hoa văn. Lá nhỏ, ít xòe: lá giữa cao nhất, chóp nhọn; lá bên thấp dần, vát chéo; lòng lá khảm sẫm có nan ngang (lá giữa thêm sống dọc). Trước trán chỉ **nửa mặt trời trống đồng** mọc trên vành. Vua có chóp ba bậc trên lá giữa và tai xoắn hai bên thái dương. **Không có chỏm mũ, để lộ tóc** (tướng thì búi tóc). Mỗi người một chất: Vua Hùng vàng ròng, lòng lá đồng sẫm, vành vàng cao, tóc bạc như râu; An Dương Vương vàng khảm đỏ son; Sơn Tinh đồng khảm xanh rừng, nan ngọc, giữ hai sừng vàng; Cao Lỗ đồng, thấp hơn, không chóp; Gióng sắt khảm đỏ son, nan vàng, dựng trên mũ sắt (Gióng giữ mũ sắt); Lạc tướng (đứng chầu, đánh trống) ba lá đồng khảm đỏ, vành đỏ. Lính, dân, Thủy Tinh và tượng Lạc Long Quân vẫn mũ lông chim;
   - **Búp lá** của Hai Bà, bốn nữ tướng và tượng Âu Cơ (chủ dự án đưa ảnh mẫu thứ hai; `bupLa` ở `heroes.ts`, cũng dựng bằng `mien`): vòng sắt, vành hoa văn có ngọc, diềm răng cưa trên vành, rồi một búp lá hẹp, cao, gần đứng thẳng, chụm trước trán, lá giữa cao nhất, lòng lá có sống dọc. Hai Bà và Âu Cơ: vàng, bảy lá, có chóp bậc (Trưng Trắc lòng đỏ thắm, Trưng Nhị lòng đỏ son, Âu Cơ lòng hồng phấn). Nữ tướng: đồng, năm lá, lòng lá màu áo từng người. Tóc giữ như cũ (xõa, búi cài trâm);
+  - **Không dùng linh vật hộ thân quanh tướng**: đã thử rồng cuốn quanh người tướng nam và ba chim Lạc bay quanh tướng nữ (PR #96, đóng không gộp); chủ dự án không duyệt vì rối mắt. Tướng chỉ giữ dáng, đồ mặc, miện lá, búp lá như trên; đừng đề xuất lại linh vật cuốn hay bay quanh người tướng;
   - **mỗi loại công trình một dáng riêng**, để không loại nào trông như bản to nhỏ của loại khác:
     - Điện Vua Hùng là nhà sàn mái thuyền lớn;
     - nhà sàn có mái tròn hình mai rùa, kiểu nhà thứ hai trên trống đồng;
@@ -2952,6 +2953,7 @@ Chủ dự án yêu cầu lập phương án PvP giữa các người chơi: **c
    - **Mạng** (`src/mang/`): không dùng thư viện Supabase, chỉ hai đường Auth (đăng ký ẩn danh, làm mới phiên) và một đường hàm, gửi `x-region: ap-southeast-1` (máy chủ cho phép header này qua CORS). Phần gọi mạng (chừng 3 KB) chỉ nạp khi mở bảng Đấu thành hay khi mở game đã tham gia. Bản game mang mã luật `LUAT_MA` như máy chủ: `vite.config.ts` gọi `dongGoiLuat` của `scripts/luat.mjs` (`__LUAT_MA__`); `deploy.yml` đăng game sau job `server` để bản game mới gặp máy chủ mới (máy chủ hỏng thì vẫn đăng: chơi một mình không cần máy chủ, Đấu thật báo tải lại trang khi mã lệch).
    - **Kiểm**: `dauThat.test.ts` (trừ của, nhận kết quả, mỗi trận một lần, bản lưu); test Deno thêm bản chụp gửi kèm `danh`, trừ kho bản chụp, CORS `x-region`; `node scripts/doi-chieu-trinh-duyet.mjs [webkit] [chromium] [firefox]` đánh sáu trận cố định trong trình duyệt, so với Node (GitHub Actions chạy WebKit); `scripts/thu-may-chu.mjs` thêm kiểm CORS hàm và Auth, gửi kèm bản chụp, một trận giữa hai người thử (khóa, khiên, cướp của). Đã chạy cả luồng trên Chromium với Supabase giả ở máy: tham gia, tìm, đánh, kết quả, bị đánh, đồng bộ lại không trừ hai lần, tải lại trang vẫn tham gia, rời.
    - **Đo**: WebKit 26.6 (Safari) và Chromium đánh sáu trận cố định ra y hệt Node (WebKit chừng 3,9 giây cả sáu trận, Node 4,1 giây). Máy chủ thật: CORS cho hàm và Auth qua; trận giữa hai người thử (Điện 7, đủ 3 phút) 2 sao, cướp hơn 18 nghìn, máy chủ đánh lại 1,1 giây, khớp với tự đánh lại, người giữ thành có khiên; cả lần gọi `xong` từ máy GitHub ở Mỹ 3–7,7 giây. Còn nên đo trận của kinh đô người chơi thật (giới hạn 2 giây CPU) khi có người chơi.
+   - **Bước WebKit trong CI** (`deploy.yml`): cài WebKit (cần thư viện hệ thống qua apt) giới hạn 6 phút, tách khỏi bước so trận. Trên PR, không cài được là hỏng: chưa thử trên WebKit thì chưa gộp. Khi đẩy lên `main` hay Run workflow, không cài được thì chỉ cảnh báo, bỏ bước so trận rồi vẫn triển khai máy chủ và đăng game, vì mã đã qua bước này ở PR. Cài được mà trận lệch thì ở đâu cũng hỏng. Lý do: sau PR #93, máy CI của GitHub không phân giải được tên máy chủ gói Ubuntu, apt chờ từng gói trong 185 gói và lần chạy trên `main` treo hai lần, game không được đăng. Job `build` cũng có giới hạn 25 phút.
    - **Sửa sau PR 5: máy chủ hết CPU**. Lần chạy trên `main` sau khi gộp bản sửa bản chụp, `xong` của trận Điện 7 đủ 3 phút bị Supabase ngắt (`546 WORKER_RESOURCE_LIMIT`). Giới hạn 2 giây CPU tính dồn theo máy chạy hàm (isolate), không theo từng lần gọi: một máy chạy hàm nhận nhiều lần gọi, dùng quá nửa (1 giây) thì thôi nhận lần mới, quá 2 giây thì bị ngắt giữa chừng. Vậy mỗi lần đánh lại phải dưới 1 giây mới chắc, mà trận nặng mất 1,2–1,4 giây. Sửa ở `battle.ts`, luật không đổi, sáu trận cố định và mười trận nặng ra y hệt từng chữ số:
      - **Mục lục công trình** (`buildingIndex`, `blockerAt`): trước đây mỗi lính mỗi bước dò cả dãy công trình hai lần (tìm đích theo id, tìm vật chắn ở ô sắp bước tới), chiếm quá nửa thời gian trận. Nay tra theo id và theo ô; mục lục dựng lại khi dãy công trình đổi (`buildingsKey`), mỗi bước kiểm một lần.
      - **Đường lưu sẵn** (`CostEntry.paths`): dãy công trình chưa đổi thì cùng ô xuất phát, cùng đích ra đúng đường đã tìm, khỏi chạy A* lại (lính đứng phá một đoạn thành cứ 2 giây tìm đường một lần). Số lần chạy A* trong trận Điện 7 từ 1359 còn 213.
@@ -3947,6 +3949,99 @@ Kỹ năng (dự kiến):
 3. Về khi hạ boss map lần đầu.
 4. Năm kỹ năng, chỉ số, năm bộ đồ và tên món như trên.
 5. Làm mỗi tướng một PR, Bà Triệu trước.
+
+## Kế hoạch: nuôi thần thú (chủ dự án yêu cầu, đã duyệt "làm hết 1 lượt", đã làm)
+
+Chủ dự án yêu cầu: lên kế hoạch nuôi thần thú. Như các kế hoạch trước, được chỉnh số ±20% theo test; làm xong phần nào thì ghi số cuối cùng của phần ấy.
+
+**Hiện trạng** (khảo sát code):
+- Chưa có thần thú. Có sẵn dáng Rùa Vàng (`makeRuaVang` ở `beasts.ts`), ngựa sắt (trong `makeGiong` ở `heroes.ts`), gà trắng, chim Lạc tĩnh (`lacBird` ở `buildings.ts`), rồng tĩnh ở Đền Rồng Tiên, thân rắn `serpentBody` (`nanQuai.ts`).
+- Dã ngoại đội tối đa 3 tướng (`datDoi`, `Battle.heroThem`); tướng dã ngoại về khi hạ boss, không lên bản lưu (`tuongDaVe`). Bản lưu hiện 35.
+
+### Đã chốt (chủ dự án chọn)
+
+- Thần thú là **thú trong truyện**.
+- **Chỉ đánh ở dã ngoại**: phó bản, thử thách, đồn, giữ kinh đô, Đấu thành không đổi, nên chuẩn cân bằng và máy chủ giữ nguyên.
+- Nuôi bằng **cho ăn**; thần thú **đi lại, bay trong kinh đô** (chỉ để nhìn).
+- **Mở khi dã ngoại mở**.
+
+### Đã làm (số cuối, khác đề xuất ở các chỗ sau)
+
+- **Không lên bản lưu**: `GameState.thanThu` là trường tùy chọn như `dauThanh` (`isThanThuState` ở `thanThu.ts`; sai dạng thì bỏ riêng phần ấy, `thuNay` tạo mới). Thay cho bản lưu 36 dự kiến.
+- Cá không vào kho, nên chim Lạc ăn gạo và vỏ ốc (15 mỗi thứ × cấp); rồng ăn vỏ ốc và gạo (20 mỗi thứ × cấp); ngựa sắt sắt 30, gà gạo 30, Rùa Vàng vỏ ốc 30 (× cấp) (`THAN_THU` ở `defs.ts`).
+- Kỹ năng thú chỉ tự dùng khi Tự đánh bật, như kỹ năng tướng (`THAN_THU_KY`; `kyThu` ở `daNgoaiTran.ts`). Treo máy cộng sức thú, đòn thường nhân `DA_TREO.kyThu` = 1,5 cho gồm kỹ năng.
+- Lên cấp sau `1 + floor(cấp / 5)` bữa: tới cấp 50 chừng 270 bữa (`THAN_THU_NUOI`).
+- Thú về: Lạc hầu báo một lần mỗi con bằng dòng tin (`hinted` `thanThu_<id>`), không có đoạn truyện riêng.
+- Dáng (vẽ lại sau khi chủ dự án chê "xấu quá", chọn nặn liền khối, to hơn, bay cao hơn): ngựa sắt là ngựa của Gióng yên để trống (`makeNguaSat` ở `heroes.ts`); Rùa Vàng bò như rùa biển (`makeRuaThan` ở `beasts.ts`); gà chín cựa nặn từ đất nặn gà, lông đỏ son, bờm cổ vàng óng phủ vai, ức đỏ sẫm, dải cánh nâu, đuôi lông liềm xanh đen dài cong, mào to, tích dài, chín cựa vàng (`GA_CUU`, `RoosterLook` ở `nanThu.ts`; gà trắng nghìn năm giữ y như cũ); chim Lạc nặn liền khối như trên mặt trống đồng: mình thon trắng ngà, cổ dài, mỏ dài nhọn, mào ba lông đỏ, cánh đồng lông xếp lớp có vòng tròn đồng tâm và vạch song song, đuôi năm lông đỏ vàng (`lacBody` ở `nanThu.ts`); rồng nặn liền khối mười đốt uốn sóng: bụng vàng, vòng vảy sẫm, vây lưng đỏ răng cưa, đầu mõm dài hàm hé, sừng hươu vàng, bờm đỏ, râu vàng, bốn chân vuốt vàng, đuôi xòe lửa (`dragonBody`, `RONG_MAU` ở `nanQuai.ts`). Khung xương, tư thế của chim Lạc, rồng ở `render/thanThu.ts`.
+- Dáng lần ba (chủ dự án chê gà, rùa, rồng vẫn xấu: rồng như thằn lằn, cá sấu, màu xanh lá không hợp, ít chi tiết, bay cứng; gà tròn như quả bóng, màu loang lổ, đuôi xấu; rùa mai tròn như cái bát, đầu như mèo, vàng một màu):
+  - Rồng theo kiểu rồng thời Lý: mình vàng kim mảnh dài như rắn, mười bảy đốt uốn nhiều khúc tròn chữ S, thuôn về đuôi; vòng vảy đồng sẫm, bụng ngà; đầu nhỏ thanh, mõm dài, mũi cuộn, hàm hé; mào lửa đỏ năm dải vắt dài ra sau; sừng nhỏ; râu vàng dài cuộn; ngọc lửa trước miệng; vây lưng đỏ liền như lửa; bốn chân nhỏ mảnh ba vuốt; đuôi xòe lửa lớn. Bay thì sóng chạy dọc mình rõ hơn (`RONG_MAU`, `dragonPieces` ở `nanQuai.ts`; `RONG_MINH`, `poseRong` ở `render/thanThu.ts`).
+  - Gà chín cựa theo dáng gà chọi Việt: đứng thẳng, ức ưỡn, cổ cao, đùi dài, cẳng vàng dài chín cựa (trái năm, phải bốn), mào nụ, mặt đỏ; bờm cổ vàng cam liền một mảng phủ vai và yên lưng, mình đỏ sẫm, ức và dải cánh xanh đen; đuôi chín lông liềm dài vồng lên rồi rủ cong, xanh đen xen xanh ngọc (`GA_CHOI`, `gaChoiBody` ở `nanThu.ts`; khung `GA_CHOI_DEFS` ở `beasts.ts`). Gà trắng nghìn năm giữ y như cũ.
+  - Rùa Vàng thần thú: mai dẹt dài vàng kim chia múi lục giác bằng rãnh đồng sẫm, vành mai vàng nhạt có vạch; cổ dài, đầu rùa thật mỏ khoằm ngà, râu vàng dưới cằm; da xanh ngọc có đốm sẫm; chân chèo trước dài; ngọc sáng trên đỉnh mai, quầng sáng dáng thần (`RUA_THAN`, `ruaThanBody` ở `nanThu.ts`; khung `RUA_THAN_DEFS`, `makeRuaThan` ở `beasts.ts`). Rùa Vàng trong truyện (`makeRuaVang`) giữ y như cũ.
+- Dáng lần bốn (chủ dự án: chân rồng kỳ, gà nên hơi giống phượng hoàng, rùa gần giống Quy trong tứ linh):
+  - Chân rồng mảnh vươn như đang vồ: bắp tay chĩa ra ngoài, khuỷu gập, chân trước vươn tới, chân sau duỗi ra sau; bốn vuốt xòe quặp và một ngón sau; chùm lửa đỏ ở khuỷu.
+  - Gà chín cựa thêm nét phượng: mào ba lông dài mút tròn có mắt lông; cánh năm lông dài xòe mút vàng, xanh ngọc; năm dải lông phượng đỏ xen vàng thướt tha kéo ra sau, mút xòe tròn có mắt lông vàng tâm xanh (khóa nặn `thanThu:gaPhuong`).
+  - Rùa Vàng thần thú thành Long Quy: đầu rồng (mõm dài, mũi cuộn, u mày, hàm há, răng nanh, mắt lửa), sừng nhỏ nằm rạp ra sau (không dựng như tai), bờm lửa đỏ vắt dọc cổ, chòm râu cằm, râu vàng dài cuộn từ mép mõm, chùm lửa ở khuỷu chân, đuôi xòe như mây lửa (khóa nặn `thanThu:longQuy`).
+- Dáng lần năm của rồng (theo ảnh mẫu chủ dự án gửi: rồng vàng mình tròn phủ vảy, đầu to sừng hươu, bờm vàng, vây lửa): mình vàng kim to tròn hơn, phủ vảy cá xếp so le, bụng ngà có đốt ngang; đầu to (mọi chỗ trên đầu nhân 1,25): mõm dài, mũi cuộn, má phồng, u mày, hàm há miệng đỏ, răng nanh, mắt lửa; sừng hươu chẻ nhánh màu ngà; bờm chín dải vàng mút cam bay ra sau, chòm râu cằm; râu vàng dài nặn liền vào đất (không dựng bằng ống); vây lưng như lửa vàng mút cam; chân khỏe, túm lông vàng ở khuỷu, năm vuốt ngà xòe; đuôi năm dải lửa dài. Bỏ ngọc lửa (khóa nặn `thanThu:rongVang`).
+- Cổ rồng (chủ dự án: cổ không mềm mại): ngực ngóc lên (pha 2,6 của đường sóng `RONG_MINH`), cổ là đường cong bậc hai nối tiếp hướng mình ở ngực lên tới gáy, sáu khúc thon dần, trọng số pha dần từ xương cổ sang xương đầu; hết chỗ bẻ gắt, cục phồng dưới hàm.
+- Nặn rồng: râu, sừng, mỗi bộ vuốt, mỗi túm lông khuỷu, bờm nặn riêng trong hộp nhỏ quanh chỗ ấy; vây, lông dẹt giữ cầu bao (`keepBound` ở `nan.ts`), cho rồng nặn chừng ba giây thay vì mười hai. Thần thú đã về được nặn sẵn trong worker lúc mở game (việc `thu` của `prewarmJobs`, trước cả quân), nên vào kinh đô, vào map không đứng hình.
+- Cỡ ba dáng 0,85 / 1,15 / 1,5 (`DANG_CO`). Dáng thần: thú đi đất có quầng sáng mờ dưới chân, thú bay có đốm sáng bay quanh mình. Ở kinh đô chim Lạc bay cao 7 ô lượn vòng 9 ô quanh Điện, rồng bay cao 9 ô vòng 14 ô; ở dã ngoại thú bay bay trên đầu tướng cưỡi voi. Chưa nặn sẵn trong worker (dã ngoại chưa nặn sẵn), lần đầu vào map nặn ở luồng chính rồi cất kho.
+
+### Năm thần thú
+
+| Thú | Về khi | Vai trên map | Kỹ năng (tự dùng) | Ở kinh đô | Món ăn ưa |
+|---|---|---|---|---|---|
+| Chim Lạc | dã ngoại mở | bay, bắn xa | Lượn trống đồng: bổ nhào một vùng nhỏ | bay vòng trên Điện | cá |
+| Ngựa sắt | hạ đại tướng Ân (map 1) lần đầu | đánh gần | Phun lửa: vùng hình nón trước mặt | phi dọc đường đi | sắt |
+| Gà chín cựa (lễ vật Sơn Tinh) | hạ Thủy Tinh (map 2) lần đầu | nhanh, đánh liên hồi | Chín cựa: mổ liền 3 đòn | mổ thóc cạnh ruộng | gạo |
+| Rùa Vàng | hạ gà trắng nghìn năm (map 3) lần đầu | đỡ đòn | Mai thần: cả đội bớt 30% đòn nhận vài giây | bò, bơi ở sông hay Hồ Kim Quy | vỏ ốc |
+| Rồng (giống Lạc Long Quân) | hạ Triệu Đà (map 4) lần đầu | bay, đánh vùng, mạnh nhất | Phun nước: vùng lớn | bay uốn quanh kinh đô | cá và vỏ ốc |
+
+- Thú về xét như tướng dã ngoại (`daNgoai.boss[map − 1] > 0`), không lưu; Lạc hầu báo một lần, đoạn thoại ngắn.
+- Mỗi lần mang **một thần thú** theo đội, không chiếm chỗ tướng.
+
+### Nuôi
+
+- Mỗi thú một cấp riêng 1–50 và thanh kinh nghiệm. Mỗi bữa trả món ăn ưa (giá tăng theo cấp, chừng `30 × cấp`), được kinh nghiệm thú.
+- **Bữa hồi theo giờ**: một bữa mỗi 15 phút chơi, tích tối đa 4, lúc vắng vẫn hồi; để người chơi quay lại đều, không đổ hết kho một lúc.
+- Ba dáng theo cấp: **non** (1–9, nhỏ), **lớn** (10–29), **thần** (30 trở lên, có hào quang).
+- Mỗi cấp +4% máu và sức đánh; thú gốc chừng 40–60% một tướng; cấp chung dã ngoại cũng cộng.
+- Đánh quái không cho thú kinh nghiệm, chỉ cho ăn mới lên cấp.
+
+### Trận trên map
+
+- Thú là người phe ta có cờ `thu`: đi theo tướng đầu, đánh mục tiêu của tướng đầu hay quái gần nhất; ngã thì nằm chờ như tướng, cả đội ngã thì về trại cùng.
+- Kỹ năng tự dùng khi hồi xong và có quái trong tầm, không thêm nút.
+- Treo máy (`tiSuc`) cộng sức thú.
+
+### Kinh đô (chỉ để nhìn, không luật nào đọc tới)
+
+- Mọi thú đã về hiện ra: chim Lạc, rồng bay theo đường cong trên Điện; ngựa sắt, gà, rùa đi theo đường đi hay ô trống gần Điện, không đè công trình; rùa xuống sông hay Hồ Kim Quy nếu có.
+- Chạm thú mở bảng Thần thú. Có trận, đang xem bãi chiến thì ẩn.
+
+### Giao diện
+
+- Bảng Thần thú: chip 🐉 trong bảng Dã ngoại, hay chạm thú ở kinh đô. Mỗi thú: ảnh, cấp, thanh kinh nghiệm, bữa còn (đếm ngược bữa sau), nút Cho ăn (kèm giá), nút Mang theo.
+- Thanh trên map dã ngoại thêm máu thú.
+
+### Code
+
+- `src/game/thanThu.ts` mới: thú đã về, cho ăn, bữa hồi, cấp, dựng thú vào trận; số ở `defs.ts` (`THAN_THU`, `THAN_THU_AN`, `THAN_THU_BUA`); chữ ở `vi.ts` mục `thanThu`.
+- `GameState.thanThu` (cấp, kinh nghiệm mỗi thú; bữa tích, mốc bữa; thú mang theo): **bản lưu 36**.
+- `battle.ts`: `Battle.thu` tùy chọn (trận cũ, Đấu thành ra y hệt), nhánh kỹ năng mới. `daNgoaiTran.ts`: thêm thú vào trận, thú đi theo đội. `daNgoai.ts`: treo máy cộng thú.
+- Hình `src/render/thanThu.ts` mới: chim Lạc có xương vỗ cánh, ngựa sắt không người cưỡi, gà chín cựa từ gà trắng đổi màu thêm cựa, Rùa Vàng dùng sẵn, rồng có xương từ thân rắn thêm sừng, râu, vuốt; ba cỡ theo dáng, hào quang dáng thần; nặn sẵn trong worker.
+- `world.ts`: thú bay, đi trong kinh đô, chạm thú. `src/ui/thanThu.ts` mới: bảng.
+
+### Test
+
+- `thanThu.test.ts`: thú về đúng boss, một lần; cho ăn trừ đúng của, thiếu của hay hết bữa thì chặn; bữa hồi 15 phút, trần 4, lúc vắng cũng hồi; lên cấp, trần 50, đổi dáng ở cấp 10, 30; thú chỉ có ở dã ngoại; kỹ năng đúng số; nâng bản lưu 35 lên 36.
+- `daNgoai.test.ts`: treo máy có thú vẫn trong khoảng ×0,5–1,3 so với đánh thật. Trận cũ ra y hệt (`tatDinh.test.ts`, đối chiếu Node, Deno, Chromium). Người chơi mô phỏng không nuôi thú nên nhịp lên Điện không đổi; rà kinh tế chỗ tiêu mới.
+
+### Thứ tự làm
+
+1. **PR 0**: tài liệu này (PR nháp, chờ duyệt).
+2. **PR 1**: luật: thú về, cho ăn, bữa hồi, cấp, thú trong trận dã ngoại, treo máy, bản lưu 36.
+3. **PR 2**: hình năm thú ba dáng, vẽ trong trận, nhóm chụp `thanThu`.
+4. **PR 3**: thú đi lại, bay trong kinh đô; bảng Thần thú; chụp kiểm tra.
 
 ## Nhịp chơi và lưu game
 

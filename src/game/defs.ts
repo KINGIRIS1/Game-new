@@ -1794,6 +1794,58 @@ export const LY_THUONG_KIET: FighterStats = { hp: 600, dmg: 20, range: 1.2, spee
  * nao núng, đánh yếu đi `yeu` phần trong `t` giây.
  */
 export const NAM_QUOC = { tam: 6, hoi: 0.2, yeu: 0.3, t: 6 };
+
+// ---------- Thần thú (docs/thiet-ke.md mục Kế hoạch: nuôi thần thú) ----------
+
+/** Năm thần thú trong truyện: chỉ đánh ở dã ngoại, mỗi lần một con đi theo đội. */
+export const THAN_THU_IDS = ['thuLac', 'thuNgua', 'thuGa', 'thuRua', 'thuRong'] as const;
+export type ThanThuId = (typeof THAN_THU_IDS)[number];
+
+/**
+ * Một thần thú: chỉ số gốc ở cấp 1 (chừng nửa một tướng), về khi hạ boss map `ve` lần đầu (0 là có ngay khi dã ngoại
+ * mở), món ăn ưa (mỗi bữa trả `an × cấp`), bay hay đi, kỹ năng tự dùng.
+ */
+export interface ThanThuDef extends FighterStats {
+  ve: number;
+  an: Cost;
+  bay: boolean;
+}
+
+export const THAN_THU: Record<ThanThuId, ThanThuDef> = {
+  // Chim Lạc: bay, bắn lông vũ từ xa. Cá không vào kho nên chim ăn gạo và tôm tép (vỏ ốc).
+  thuLac: { hp: 240, dmg: 12, range: 4, speed: 2.4, cooldown: 1.0, ve: 0, an: { gao: 15, voOc: 15 }, bay: true },
+  // Ngựa sắt: đánh gần, phun lửa.
+  thuNgua: { hp: 320, dmg: 13, range: 1.0, speed: 2.4, cooldown: 0.9, ve: 1, an: { sat: 30 }, bay: false },
+  // Gà chín cựa (lễ vật Sơn Tinh): nhanh, mổ liên hồi.
+  thuGa: { hp: 260, dmg: 7, range: 0.9, speed: 2.2, cooldown: 0.5, ve: 2, an: { gao: 30 }, bay: false },
+  // Rùa Vàng: đỡ đòn, che đội.
+  thuRua: { hp: 520, dmg: 9, range: 1.0, speed: 1.5, cooldown: 1.1, ve: 3, an: { voOc: 30 }, bay: false },
+  // Rồng (giống Lạc Long Quân): bay, phun nước, mạnh nhất.
+  thuRong: { hp: 420, dmg: 16, range: 1.6, speed: 2.2, cooldown: 1.0, ve: 4, an: { voOc: 20, gao: 20 }, bay: true },
+};
+
+/**
+ * Nuôi thần thú: một bữa hồi mỗi `buaMs` (cả lúc vắng), tích tối đa `buaMax`; cấp tối đa `tran`; lên cấp sau
+ * `1 + floor(cấp / 5)` bữa; mỗi cấp thêm `moiCap` máu và sức đánh; dáng lớn từ cấp `dang[0]`, dáng thần từ `dang[1]`.
+ */
+export const THAN_THU_NUOI = { buaMs: 15 * 60_000, buaMax: 4, tran: 50, moiCap: 0.04, dang: [10, 30] as const };
+
+/**
+ * Kỹ năng thần thú (tự dùng khi hồi xong và có quái trong `tam` ô; sát thương nhân cấp như đòn thường):
+ * - Chim Lạc bổ nhào xuống quái gần nhất, `dmg` cho mọi quái trong `r` ô quanh nó.
+ * - Ngựa sắt phun lửa: dải dài `len`, rộng `rong`, `dmg` mỗi quái, ngựa lao tới `lao` ô.
+ * - Gà chín cựa mổ liền `don` đòn vào quái đang đánh, mỗi đòn gấp `he` đòn thường.
+ * - Rùa Vàng che cả đội `giay` giây (bớt đòn như Rùa Vàng của An Dương Vương) khi có người dưới `mau` phần máu.
+ * - Rồng phun nước: dải dài `len`, rộng `rong`, `dmg` mỗi quái, quái bị đẩy lùi `day` ô và đi chậm `cham` giây.
+ */
+export const THAN_THU_KY = {
+  thuLac: { hoi: 10, tam: 6, dmg: 60, r: 1.6 },
+  thuNgua: { hoi: 12, tam: 4, dmg: 70, len: 4, rong: 1.6, lao: 1.2 },
+  thuGa: { hoi: 8, tam: 1.5, don: 3, he: 1.6 },
+  thuRua: { hoi: 16, tam: 6, giay: 4, mau: 0.7 },
+  thuRong: { hoi: 14, tam: 5, dmg: 90, len: 5, rong: 2, day: 1, cham: 2 },
+} as const;
+
 /**
  * Nghĩa binh: không luyện, không chiếm chỗ doanh trại, không ăn gạo, không chết thật. Không được cộng binh khí, huân
  * công, Đền; không thuộc vòng khắc chế.
@@ -2839,9 +2891,10 @@ export const DA_BOSS_MS = 30 * 60_000;
 /**
  * Treo máy (không xem map mà đội đang đứng trong một khu quái, Tự đánh bật): số quái hạ mỗi phút tính bằng công thức
  * (`nhipTreo`): `goc` con mỗi phút khi sức đội (sát thương mỗi giây × máu) gấp `moc` lần sức một con quái khu; yếu hơn
- * thì chậm theo căn bậc hai, chậm nhất `san` phần. Lúc tắt game tính tối đa `tran` ms.
+ * thì chậm theo căn bậc hai, chậm nhất `san` phần. Lúc tắt game tính tối đa `tran` ms. Thần thú: đòn thường nhân
+ * `kyThu` cho gồm cả kỹ năng.
  */
-export const DA_TREO = { goc: 12, moc: 40, san: 0.1, tran: 8 * 3_600_000 };
+export const DA_TREO = { goc: 12, moc: 40, san: 0.1, tran: 8 * 3_600_000, kyThu: 1.5 };
 
 /**
  * Tướng trên map: hồi `hoi` phần máu mỗi giây khi `yen` giây không bị đánh; ngã thì `day` giây không bị đuổi mới đứng

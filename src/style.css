@@ -3675,3 +3675,76 @@ body.man-vao-on #hud > * {
   position: absolute; right: -4px; bottom: -4px; padding: 0 4px; border-radius: 8px;
   background: var(--ink, #2b2118); color: #fff8e8; font-size: 11px; font-style: normal; font-weight: 700; line-height: 16px;
 }
+
+/* Thần thú (ui/thanThu.ts): thẻ mỗi thú, thú đang theo đội ở nửa trái. */
+.thu-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 6px 0;
+}
+.thu-card {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  padding: 6px 8px;
+  border-radius: 10px;
+  border: 1.5px solid var(--line);
+  background: var(--paper);
+}
+.thu-card > div {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  flex: 1;
+  min-width: 0;
+}
+.thu-card em {
+  font-style: normal;
+  font-size: 26px;
+  line-height: 1.2;
+}
+.thu-card small {
+  color: var(--ink-soft);
+}
+.thu-card.on {
+  border-color: var(--green);
+  background: #e3efcf;
+}
+.thu-card.khoa {
+  opacity: 0.55;
+}
+.thu-btns {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+}
+.thu-theo {
+  font-size: 12px;
+  color: var(--green);
+  font-weight: 600;
+}
+.thu-big {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  height: 100%;
+  min-height: 160px;
+  text-align: center;
+  padding: 10px;
+}
+.thu-big em {
+  font-style: normal;
+  font-size: 72px;
+  line-height: 1;
+  filter: drop-shadow(0 4px 6px rgba(0, 0, 0, 0.25));
+}
+.thu-big.d2 em {
+  filter: drop-shadow(0 0 12px #ffd04d);
+}
+.thu-big b {
+  font-size: 18px;
+}

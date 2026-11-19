@@ -56,7 +56,7 @@ import { clayPiece, figure, prim, rigid, segs, type Piece } from './nanNguoi';
 import { horseBody, horseDrape, type HorseShape } from './nanThu';
 import { C } from './palette';
 import { bakeAnh, batAnh } from './anhVuKhi';
-import { RigBuilder, bakeRig, moveBones, skinRig, type Act, type BoneDef, type Bones, type Poser, type RigShape } from './rig';
+import { RigBuilder, bakeRig, moveBones, resetBones, skinRig, type Act, type BoneDef, type Bones, type Poser, type RigShape } from './rig';
 import { ToonModel, inkThin } from './toon';
 import {
   CO_NU,
@@ -69,6 +69,9 @@ import {
   coNuCan,
   coNuLa,
   crossbowParts,
+  cong,
+  luoiDet,
+  tuaLua,
   doanKiem,
   drumShield,
   guomDong,
@@ -489,6 +492,21 @@ function poseIronHorse(b: B, a: Act, e: number): void {
   }
 }
 
+/** Ngựa sắt thần thú (dã ngoại, đi lại trong kinh đô): ngựa sắt của Gióng, yên để trống chờ chủ. */
+export function makeNguaSat(): THREE.Group {
+  const r = new RigBuilder({ ...BASE, ...ironHorse(1) }, 0.75);
+  drawIronHorse(r);
+  const { group, bones } = skinRig(r.build());
+  const pose: Poser = (a) => {
+    resetBones(bones);
+    poseIronHorse(bones, a, a.act === 'fight' ? strikeCurve(a.strike, 0.3, 0.5) : 0);
+  };
+  pose({ act: 'stand' });
+  group.userData.pose = pose;
+  group.userData.fall = 'side';
+  return group;
+}
+
 /** Tượng ngựa sắt bản tĩnh, cho Đền Phù Đổng. */
 export function bakeIronHorse(): THREE.Group {
   const r = new RigBuilder({ ...BASE, ...ironHorse(1) });
@@ -556,8 +574,14 @@ export function giongWeapon(s: Parts, bamboo: boolean): void {
       p.cyl(rSeg + 0.011, rSeg + 0.011, 0.03, C.gold, 0, y + step * 0.88, 0, undefined, 10);
     }
     const topY = 0.14 + joints * step;
-    p.sphere(0.056, C.bronzeLight, 0, topY + 0.03, 0, [1, 1.2, 1], 10);
-    p.cone(0.036, 0.12, IRON_LIGHT, 0, topY + 0.12, 0, undefined, 6);
+    // Đầu roi búp sen đồng: đài vàng, năm cánh đồng ôm búp, chóp sắt nhọn.
+    p.cyl(0.05, 0.034, 0.04, C.gold, 0, topY + 0.01, 0, undefined, 10);
+    p.sphere(0.05, C.bronzeLight, 0, topY + 0.075, 0, [1, 1.35, 1], 10);
+    for (let i = 0; i < 5; i++) {
+      const a = (i / 5) * Math.PI * 2;
+      p.add(new THREE.ConeGeometry(0.03, 0.12, 4), C.bronze, Math.cos(a) * 0.038, topY + 0.07, Math.sin(a) * 0.038, [Math.sin(a) * 0.32, -a, -Math.cos(a) * 0.32], [1, 1, 0.4]);
+    }
+    p.cone(0.026, 0.1, IRON_LIGHT, 0, topY + 0.17, 0, undefined, 6);
   }
 }
 
@@ -861,32 +885,44 @@ export function makeGiong(look: GiongLook, opts: { bamboo?: boolean; glow?: bool
 const K_SON = 1.45;
 const JADE = 0x5fd89a;
 
-/** Quyền trượng Sơn Thần: cán gỗ cổ thụ bịt đồng, bệ đồng nâng khối đá thiêng 3 đỉnh núi Tản Viên có mạch ngọc sáng và lá rừng. */
+/**
+ * Quyền trượng Sơn Thần: cán gỗ cổ thụ xoắn mắt gỗ, ba đai đồng, đốc bịt đồng; bệ đồng hoa văn nâng bốn vuốt vàng ôm
+ * khối đá thiêng ba đỉnh núi Tản Viên (đá đẽo nhiều mặt), giữa khối có mạch ngọc sáng, lá rừng mọc quanh cổ trượng.
+ * Đầu trượng cao ngang đầu người cầm.
+ */
 export function sonStaff(s: Parts): void {
   const p = s.plain;
-  // Đốc gậy bịt đồng
-  p.cyl(0.032, 0.024, 0.1, C.bronzeDark, 0, -0.22, 0, undefined, 7);
-  p.sphere(0.036, C.gold, 0, -0.28, 0, [1, 1, 1], 7);
-  // Cán gỗ cổ thụ có các đốt mắt gỗ
-  p.cyl(0.032, 0.038, 1.28, C.woodDark, 0, 0.42, 0, undefined, 7);
-  for (const y of [0.15, 0.52, 0.85]) {
-    p.cyl(0.04, 0.04, 0.03, C.bronze, 0, y, 0, undefined, 8);
+  p.cyl(0.03, 0.022, 0.08, C.bronzeDark, 0, -0.2, 0, undefined, 8);
+  p.sphere(0.032, C.gold, 0, -0.25, 0, [1, 1, 1], 7);
+  p.cyl(0.03, 0.036, 1.0, C.woodDark, 0, 0.3, 0, undefined, 8);
+  // Mắt gỗ sần trên cán.
+  for (const [y, a] of [[0.05, 0.4], [0.38, 2.5], [0.62, 4.4]] as const) p.sphere(0.022, C.wood, Math.cos(a) * 0.03, y, Math.sin(a) * 0.03, [1, 1.4, 1], 6);
+  for (const y of [-0.05, 0.25, 0.55]) p.cyl(0.038, 0.038, 0.026, C.bronze, 0, y, 0, undefined, 9);
+  chuoiGo(p);
+  // Bệ đồng, bốn vuốt vàng ôm đá.
+  s.band.cyl(0.062, 0.044, 0.08, C.bronze, 0, 0.83, 0, undefined, 10);
+  p.cyl(0.07, 0.062, 0.026, C.gold, 0, 0.88, 0, undefined, 10);
+  for (let i = 0; i < 4; i++) {
+    const a = (i / 4) * Math.PI * 2 + Math.PI / 4;
+    p.cone(0.016, 0.11, C.gold, Math.cos(a) * 0.06, 0.94, Math.sin(a) * 0.06, [Math.sin(a) * 0.45, 0, -Math.cos(a) * 0.45], 5);
   }
-  // Bệ đồng Đông Sơn trên đầu trượng
-  s.band.cyl(0.068, 0.048, 0.09, C.bronze, 0, 1.05, 0, undefined, 10);
-  p.cyl(0.076, 0.068, 0.03, C.gold, 0, 1.1, 0, undefined, 10);
-  // Khối Linh Thạch 3 đỉnh Tản Viên + tinh thể ngọc lục bảo ở tâm
-  p.sphere(0.088, C.rockDark, 0, 1.19, 0, [1.05, 1.15, 0.95], 8);
-  p.cone(0.065, 0.16, C.rock, 0, 1.29, 0, undefined, 6);
-  for (const side of [-1, 1]) {
-    p.cone(0.048, 0.13, C.rock, side * 0.065, 1.24, 0, [0, 0, -side * 0.35], 5);
+  // Đá thiêng nhiều mặt: khối giữa, ba đỉnh núi.
+  p.add(new THREE.IcosahedronGeometry(0.085, 0), C.rockDark, 0, 0.97, 0, [0.3, 0.5, 0], [1.05, 1.0, 0.9]);
+  p.add(new THREE.ConeGeometry(0.06, 0.17, 5), C.rock, 0, 1.08, 0, [0.05, 0.4, 0.05]);
+  for (const side of [-1, 1]) p.add(new THREE.ConeGeometry(0.045, 0.12, 5), C.rock, side * 0.062, 1.03, 0.005, [0, 0.9, -side * 0.38]);
+  p.cone(0.022, 0.04, C.cream, 0, 1.155, 0, undefined, 5);
+  s.glow.sphere(0.028, JADE, 0, 0.98, 0.07, [0.8, 1.25, 0.55], 6);
+  s.glow.sphere(0.016, JADE, 0.05, 1.0, 0.055, [0.8, 1.2, 0.6], 5);
+  // Lá rừng dẹt quanh cổ trượng.
+  for (let i = 0; i < 6; i++) {
+    const a = (i / 6) * Math.PI * 2;
+    p.add(new THREE.ConeGeometry(0.03, 0.13, 4), C.leaf[i % 4], Math.cos(a) * 0.07, 0.88, Math.sin(a) * 0.07, [Math.sin(a) * 0.9, 0, -Math.cos(a) * 0.9], [1, 1, 0.35]);
   }
-  s.glow.sphere(0.032, JADE, 0, 1.2, 0.072, [0.8, 1.2, 0.6], 6);
-  // Chồi lá rừng mọc quanh cổ trượng
-  for (let i = 0; i < 5; i++) {
-    const a = (i / 5) * Math.PI * 2;
-    p.cone(0.028, 0.12, C.leaf[i % 4], Math.cos(a) * 0.07, 1.12, Math.sin(a) * 0.07, [Math.sin(a) * 0.5, 0, -Math.cos(a) * 0.7], 4);
-  }
+}
+
+/** Chỗ tay nắm trượng quấn dây mây. */
+function chuoiGo(p: Parts['plain']): void {
+  for (let i = 0; i < 4; i++) p.cyl(0.039, 0.039, 0.014, C.thatchDark, 0, -0.08 + i * 0.045, 0, [0.22, 0, 0], 8);
 }
 
 /** Sơn Tinh, chúa vùng non cao: giáp đồng chạm trống đồng, vai đắp đá núi Ba Vì, váy thổ cẩm và lá rừng, mũ Sơn Vương. */
@@ -1142,23 +1178,40 @@ export function bakeThuyTinh(): THREE.Group {
 
 const K_ADV = 1.45;
 
-/** Rìu chiến hoàng gia (Việt đồng lưỡi xéo Đông Sơn): cán gỗ mun bịt vàng, tua đỏ, họng rìu khắc hoa văn, lưỡi đồng vàng cong vút. */
-function royalAxe(s: Parts): void {
+/**
+ * Rìu chiến hoàng gia (Việt đồng lưỡi xéo Đông Sơn): cán gỗ mun bịt vàng, hai đai vàng, tua đỏ; họng rìu khắc hoa văn
+ * trống đồng; lưỡi đồng xéo hình mũi hài, mũi trên vểnh, gót dưới cong quặp, lưỡi sắc mài vàng, giữa bản rìu đúc mặt
+ * trời nhiều tia và hai chim Lạc; đỉnh cán quả cầu vàng. Lưỡi trong mặt y–z, hướng +z.
+ */
+export function royalAxe(s: Parts): void {
   const p = s.plain;
-  p.sphere(0.036, C.gold, 0, -0.18, 0, [1, 1, 1], 7);
-  p.cyl(0.024, 0.026, 0.98, C.woodDark, 0, 0.34, 0, undefined, 7);
-  for (const y of [0.08, 0.48]) {
-    p.cyl(0.031, 0.031, 0.028, C.gold, 0, y, 0, undefined, 8);
+  p.sphere(0.034, C.gold, 0, -0.17, 0, [1, 1, 1], 7);
+  p.cyl(0.023, 0.026, 0.94, C.woodDark, 0, 0.32, 0, undefined, 8);
+  for (const y of [0.08, 0.46]) p.cyl(0.03, 0.03, 0.026, C.gold, 0, y, 0, undefined, 8);
+  tuaLua(p, 0.62, C.red, 0.042, 0.13, 5);
+  s.band.cyl(0.036, 0.034, 0.15, C.bronze, 0, 0.72, 0, undefined, 10);
+  const c = 0.72;
+  const blade: [number, number][] = [
+    [0.03, c + 0.06],
+    ...cong([0.03, c + 0.06], [0.12, c + 0.07], [0.22, c + 0.17], 4),
+    ...cong([0.22, c + 0.17], [0.27, c + 0.06], [0.25, c - 0.08], 5),
+    ...cong([0.25, c - 0.08], [0.23, c - 0.18], [0.15, c - 0.24], 4),
+    ...cong([0.15, c - 0.24], [0.13, c - 0.12], [0.03, c - 0.06], 4),
+  ];
+  luoiDet(p, blade, 0.03, C.bronze, true, 0, 0, 0, 0.008);
+  // Lưỡi sắc mài vàng theo mép trước.
+  luoiDet(p, [...cong([0.215, c + 0.15], [0.262, c + 0.06], [0.243, c - 0.08], 5), ...cong([0.243, c - 0.08], [0.225, c - 0.17], [0.16, c - 0.215], 3), ...cong([0.18, c - 0.17], [0.215, c - 0.07], [0.2, c + 0.12], 5)], 0.036, C.gold, true, 0, 0, 0, 0.002);
+  // Mặt trời đúc nổi giữa bản rìu (hai mặt), hai chim Lạc bay quanh.
+  for (const sx of [-1, 1]) {
+    p.cyl(0.032, 0.032, 0.008, C.gold, sx * 0.016, c - 0.02, 0.13, [0, 0, Math.PI / 2], 10);
+    for (let i = 0; i < 8; i++) {
+      const a = (i / 8) * Math.PI * 2;
+      p.box(0.006, 0.012, 0.026, C.gold, sx * 0.016, c - 0.02 + Math.sin(a) * 0.046, 0.13 + Math.cos(a) * 0.046, [-a, 0, 0]);
+    }
+    for (const [dy, dz] of [[0.09, 0.08], [-0.13, 0.12]] as const) p.box(0.006, 0.014, 0.05, C.bronzeDark, sx * 0.017, c + dy, dz, [0.3, 0, 0]);
   }
-  // Tua lụa đỏ dưới cổ rìu
-  p.cone(0.048, 0.13, C.red, 0, 0.64, -0.02, [Math.PI - 0.25, 0, 0], 7);
-  // Họng rìu khắc hoa văn trống đồng & lưỡi rìu xéo hình thuyền Đông Sơn
-  s.band.cyl(0.038, 0.036, 0.14, C.bronze, 0, 0.75, 0, undefined, 10);
-  p.box(0.042, 0.25, 0.24, C.bronze, 0, 0.77, 0.11, [0.35, 0, 0]);
-  p.box(0.046, 0.28, 0.055, C.gold, 0, 0.78, 0.22, [0.35, 0, 0]);
-  p.cone(0.035, 0.14, C.gold, 0, 0.92, 0.19, [0.6, 0, 0], 4);
-  // Đỉnh cán rìu đính quả cầu đồng vàng
-  p.sphere(0.042, C.gold, 0, 0.87, 0, [1, 1.1, 1], 8);
+  p.sphere(0.04, C.gold, 0, 0.83, 0, [1, 1.1, 1], 8);
+  p.cone(0.02, 0.05, C.gold, 0, 0.88, 0, undefined, 6);
 }
 
 /** An Dương Vương: hoàng bào đỏ son, giáp đồng vàng chạm mặt trống đồng, giáp vai Kim Quy, miện lá vàng khảm đỏ son của vua Âu Lạc. */
@@ -1219,7 +1272,7 @@ function drawAdv(h: HumanRig, crossbow: boolean, thay: ThayDo = {}): void {
       }
     });
     if (!thay.tay) h.vuKhi(() => h.local('hand', GRIP_R, null, (s) => crossbowParts(s, true, 1.15 / K_ADV)));
-  } else if (!thay.tay) h.vuKhi(() => h.local('hand', GRIP_R, null, royalAxe));
+  } else if (!thay.tay) h.vuKhi(() => h.local('hand', GRIP_R, [0, Math.PI / 2, 0], royalAxe));
 }
 
 /**
@@ -1882,7 +1935,7 @@ function drawTrieuQuangPhuc(h: HumanRig, thay: ThayDo = {}): void {
   bun(h, { color: C.hair, at: [0, 0.985, -0.01], size: 0.08, tie: C.tqp });
   if (!thay.dau) mienTqp(h);
   // Hình tướng ở túi đồ: giáo ngắn hơn cho vừa khung.
-  if (!thay.tay) h.vuKhi(() => h.local('hand', GRIP_R, null, (s) => giaoDaTrach(s, thay.hinh ? 1.2 : 1.5)));
+  if (!thay.tay) h.vuKhi(() => h.local('hand', GRIP_R, null, (s) => giaoDaTrach(s, thay.hinh ? 1.05 : 1.25)));
 }
 
 /**
@@ -2002,7 +2055,7 @@ function drawMaiThucLoan(h: HumanRig, thay: ThayDo = {}): void {
   bun(h, { color: C.hair, at: [0, 0.985, -0.01], size: 0.085, tie: C.red });
   if (!thay.dau) mienMtl(h);
   // Hình tướng ở túi đồ: đao ngắn hơn cho vừa khung.
-  if (!thay.tay) h.vuKhi(() => h.local('hand', GRIP_R, null, (s) => daoVanAn(s, thay.hinh ? 1.0 : 1.5)));
+  if (!thay.tay) h.vuKhi(() => h.local('hand', GRIP_R, null, (s) => daoVanAn(s, thay.hinh ? 0.95 : 1.25)));
 }
 
 /**
@@ -2127,7 +2180,7 @@ function drawNgoQuyen(h: HumanRig, thay: ThayDo = {}): void {
   bun(h, { color: C.hair, at: [0, 0.985, -0.01], size: 0.08, tie: C.red });
   if (!thay.dau) mienNq(h);
   // Giáo dài cầm gần giữa cán; hình tướng ở túi đồ: giáo ngắn cho vừa khung.
-  if (!thay.tay) h.vuKhi(() => h.local('hand', GRIP_R, null, (s) => (thay.hinh ? giaoBachDang(s, 1.2, 0.3) : giaoBachDang(s, thay.dung ? 1.7 : 2.0, thay.dung ? 0.3 : 0.6))));
+  if (!thay.tay) h.vuKhi(() => h.local('hand', GRIP_R, null, (s) => (thay.hinh ? giaoBachDang(s, 1.1, 0.3) : giaoBachDang(s, thay.dung ? 1.45 : 1.7, thay.dung ? 0.3 : 0.5))));
 }
 
 /**

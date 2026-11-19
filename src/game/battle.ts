@@ -57,6 +57,7 @@ import {
   SON,
   SWIMMERS,
   NGHIA_BINH,
+  THAN_THU,
   NU_TUONG_BONUS,
   HAT_MON_NGHIA_BINH,
   TOWER,
@@ -99,6 +100,7 @@ import {
   type BuildingType,
   type ChallengeKind,
   type EnemyType,
+  type ThanThuId,
   type FighterStats,
   type HuanBranch,
   type NuTuongId,
@@ -134,7 +136,9 @@ export type RaidSide = 'bac' | 'tay' | 'nam' | 'dong' | 'namXa' | 'dongXa';
  */
 export type HeroKind = 'giong' | 'sonTinh' | 'anDuong' | 'caoLo' | 'trungTrac' | 'trungNhi' | 'baTrieu' | 'trieuQuangPhuc' | 'maiThucLoan' | 'ngoQuyen' | 'lyThuongKiet';
 /** Lính thường, giặc, tướng, hoặc nghĩa binh (Hiệu triệu của Trưng Nhị gọi ra). */
-export type FighterKind = UnitType | EnemyType | HeroKind | 'nghiaBinh';
+export type FighterKind = UnitType | EnemyType | HeroKind | 'nghiaBinh' | ThanThuId;
+/** Thần thú (chỉ ở dã ngoại, `thanThu.ts`): ngã thì nằm chờ như tướng, không chết. */
+export const isThanThu = (k: FighterKind): k is ThanThuId => k in THAN_THU;
 export const HERO_KINDS: HeroKind[] = ['giong', 'sonTinh', 'anDuong', 'caoLo', 'trungTrac', 'trungNhi', 'baTrieu', 'trieuQuangPhuc', 'maiThucLoan', 'ngoQuyen', 'lyThuongKiet'];
 /** Tướng của truyện: ra phó bản, giữ kinh đô, giữ thành trong Đấu thành (tướng dã ngoại chỉ đánh ở dã ngoại). */
 export const HERO_TRUYEN: HeroKind[] = ['giong', 'sonTinh', 'anDuong', 'caoLo', 'trungTrac', 'trungNhi'];
@@ -342,6 +346,8 @@ export interface Battle {
   hero2?: (HeroSetup & { down: boolean }) | null;
   /** Tướng thứ ba trở đi (dã ngoại: đội tối đa `DA_TUONG.max` tướng). Trận khác không có. */
   heroThem?: (HeroSetup & { down: boolean })[];
+  /** Thần thú đi theo đội dã ngoại: loại và cấp (dáng theo cấp). Trận khác không có. */
+  thu?: { kind: ThanThuId; cap: number };
   /** Map dã ngoại (`daNgoaiTran.ts`): bố cục, lệnh đi, tự đánh, quái đã hạ chờ tính thưởng. Trận khác không có. */
   da?: DaTran;
   /** Phần cộng thêm vào máu và sát thương quân ta (Đền Phù Đổng). */
@@ -464,6 +470,8 @@ export const statsOf = (k: FighterKind): FighterStats =>
                 ? LY_THUONG_KIET
               : k === 'nghiaBinh'
                 ? NGHIA_BINH
+                : k in THAN_THU
+                ? THAN_THU[k as ThanThuId]
                 : k in UNITS
             ? UNITS[k as UnitType]
             : ENEMIES[k as EnemyType];
@@ -1778,8 +1786,8 @@ export function damageFighter(battle: Battle, attacker: { kind?: FighterKind; dm
   // Giáp của tướng mặc đồ (quân ta, hay tướng giữ thành trong Đấu thành): chịu ít sát thương hơn.
   const armor = 1 - (target.trangBi?.giap ?? 0);
   target.hp -= attacker.dmg * bonus * shield * fury * armor;
-  if (isHero(target.kind)) {
-    // Tướng không chết: hết sức thì rút khỏi trận, nghỉ một lúc.
+  if (isHero(target.kind) || isThanThu(target.kind)) {
+    // Tướng (và thần thú) không chết: hết sức thì rút khỏi trận, nghỉ một lúc.
     if (target.hp <= 0 && target.state !== 'gone') {
       target.hp = 0;
       target.state = 'gone';

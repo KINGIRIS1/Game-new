@@ -5,7 +5,7 @@
 
 import * as THREE from 'three';
 import type { HumanRig } from './body';
-import { Clay, cone, decal, ellipsoid, hit, radiusAt, slab, sphere, type Paint, type Sdf, type V3 } from './nan';
+import { Clay, cone, decal, ellipsoid, hit, keepBound, radiusAt, slab, sphere, type Paint, type Sdf, type V3 } from './nan';
 import { rigid } from './nanNguoi';
 import { clayPiece, figure, type Piece } from './nanNguoi';
 import { C } from './palette';
@@ -821,9 +821,29 @@ export function rhinoBody(r: Rig): void {
 // ---------- Gà trắng ----------
 
 /** Gà trống trắng khổng lồ nặn theo khung `ROOSTER`: ức phồng, cổ cao, đầu mào đỏ, cánh, đuôi lông cong, chân vàng. */
-function roosterPieces(detail: number): Piece[] {
+/** Màu gà: thân, cánh, lông đuôi xen, chân; `cuu` là gà chín cựa (thêm cựa, đủ chín cái). */
+export interface RoosterLook {
+  body: number;
+  wing: number;
+  tail: number;
+  tailAlt: number;
+  leg: number;
+  cuu?: boolean;
+  /** Bờm cổ phủ vai, ức, dải lông cánh (gà chín cựa). */
+  hackle?: number;
+  breast?: number;
+  wingBar?: number;
+}
+
+/** Gà trắng nghìn năm. */
+const GA_TRANG: RoosterLook = { body: C.rooster, wing: C.cream, tail: C.rooster, tailAlt: C.cream, leg: C.bronzeLight };
+
+/** Gà chín cựa (lễ vật Sơn Tinh): lông đỏ son, cánh vàng, đuôi xanh đen xen vàng, chân vàng chín cựa. */
+export const GA_CUU: RoosterLook = { body: 0xc4462b, wing: 0xd98a2b, tail: 0x183a35, tailAlt: 0x2e6b5c, leg: C.gold, cuu: true, hackle: 0xf2b838, breast: 0x7d2418, wingBar: 0x5b2a16 };
+
+function roosterPieces(detail: number, look: RoosterLook = GA_TRANG): Piece[] {
   const out: Piece[] = [];
-  const clay = new Clay(C.rooster);
+  const clay = new Clay(look.body);
   clay.add('qBody', ellipsoid([0, 0.88, -0.04], [0.38, 0.37, 0.5]), { k: 0 });
   clay.add('qBody', ellipsoid([0, 0.94, 0.24], [0.32, 0.33, 0.3]), { k: 0.1 });
   clay.add('qNeck', cone([0, 1.1, 0.24], [0, 1.5, 0.4], 0.22, 0.16), { k: 0.08 });
@@ -846,8 +866,15 @@ function roosterPieces(detail: number): Piece[] {
     ['qWingL', -1],
     ['qWingR', 1],
   ] as const) {
-    paints.push(clay.layer(b, ellipsoid([s * 0.36, 0.92, -0.06], [0.08, 0.2, 0.31], [0.25, 0, s * 0.08]), C.cream));
+    paints.push(clay.layer(b, ellipsoid([s * 0.36, 0.92, -0.06], [0.08, 0.2, 0.31], [0.25, 0, s * 0.08]), look.wing));
   }
+  if (look.breast) paints.push(clay.layer('qBody', ellipsoid([0, 0.84, 0.3], [0.3, 0.3, 0.2]), look.breast));
+  if (look.hackle) {
+    // Bờm cổ vàng óng phủ xuống vai, mép dưới răng cưa.
+    paints.push(clay.layer('qNeck', (x, y, z) => Math.max(ellipsoid([0, 1.32, 0.3], [0.26, 0.32, 0.26])(x, y, z), 1.0 + 0.04 * Math.sin(x * 40) - y), look.hackle));
+    paints.push(clay.layer('qBody', (x, y, z) => Math.max(ellipsoid([0, 1.12, 0.12], [0.32, 0.16, 0.3])(x, y, z), 1.04 + 0.04 * Math.sin(x * 40 + z * 30) - y), look.hackle));
+  }
+  if (look.wingBar) for (const [b, s] of [['qWingL', -1], ['qWingR', 1]] as const) paints.push(clay.layer(b, ellipsoid([s * 0.37, 0.76, -0.08], [0.08, 0.07, 0.3], [0.25, 0, s * 0.08]), look.wingBar));
   for (const s of [-1, 1]) {
     const p = hit(f, [s * 0.5, 1.64, 0.5], [-s, 0, -0.2]) ?? [s * 0.15, 1.64, 0.52];
     paints.push(clay.layer('qHead', sphere(p, 0.04), C.comb, 2), clay.layer('qHead', sphere(p, 0.022), C.ink, 2));
@@ -855,19 +882,24 @@ function roosterPieces(detail: number): Piece[] {
   out.push(clayPiece(clay.build({ kind: 'nets', min: [-0.5, 0.42, -0.6], max: [0.5, 1.85, 0.8], cell: 0.015 / detail, target: Math.round(2400 * detail) }, paints)));
   // Mào đỏ răng cưa trên đỉnh đầu.
   const comb = new Clay(C.comb);
-  for (let i = 0; i < 5; i++) comb.add('qHead', ellipsoid([0, 1.8 + Math.sin((i / 4) * Math.PI) * 0.08, 0.27 + i * 0.075], [0.04, 0.09 + (i === 2 ? 0.03 : 0), 0.06]), { k: 0.03 });
-  out.push(clayPiece(comb.build({ kind: 'nets', min: [-0.08, 1.66, 0.14], max: [0.08, 2.05, 0.66], cell: 0.012 / detail, target: Math.round(300 * detail) })));
+  const cm = look.cuu ? 1.3 : 1;
+  for (let i = 0; i < 5; i++) comb.add('qHead', ellipsoid([0, 1.8 + (Math.sin((i / 4) * Math.PI) * 0.08 + 0.02 * (cm - 1)) * cm, 0.27 + i * 0.075], [0.04, (0.09 + (i === 2 ? 0.03 : 0)) * cm, 0.06]), { k: 0.03 });
+  // Gà chín cựa: tích đỏ dài dưới mỏ.
+  if (look.cuu) comb.add('qHead', ellipsoid([0, 1.4, 0.6], [0.05, 0.12, 0.04]), { k: 0.02 });
+  out.push(clayPiece(comb.build({ kind: 'nets', min: [-0.08, look.cuu ? 1.25 : 1.66, 0.14], max: [0.08, 2.12, 0.7], cell: 0.012 / detail, target: Math.round(300 * detail * cm) })));
   // Đuôi: các lông liềm cong vồng ra sau, trắng xen kem.
-  const tail = new Clay(C.rooster);
+  const tail = new Clay(look.tail);
   const tailPaint: Paint[] = [];
   for (let i = 0; i < 6; i++) {
     const a = -0.6 + i * 0.24;
     const sx = Math.sin(a) * 0.2;
+    // Gà chín cựa: lông liềm dài, cong vồng cao hơn.
+    const L = look.cuu ? 1.3 : 1;
     const pts: V3[] = [
       [sx * 0.4, 1.0, -0.42],
-      [sx * 0.9, 1.35 + 0.05 * Math.cos(a), -0.55],
-      [sx * 1.3, 1.5 + 0.08 * Math.cos(a), -0.8],
-      [sx * 1.5, 1.32, -1.0],
+      [sx * 0.9, 1.0 + (0.35 + 0.05 * Math.cos(a)) * L, -0.42 - 0.13 * L],
+      [sx * 1.3, 1.0 + (0.5 + 0.08 * Math.cos(a)) * L, -0.42 - 0.38 * L],
+      [sx * 1.5, 1.0 + 0.32 * L, -0.42 - 0.58 * L],
     ];
     const rs = [0.07, 0.065, 0.05, 0.015];
     const parts: Sdf[] = [];
@@ -878,11 +910,11 @@ function roosterPieces(detail: number): Piece[] {
       parts.push(flat);
       tail.add('qTail', flat, { k: 0.02 });
     }
-    if (i % 2) tailPaint.push(tail.layer('qTail', (x, y, z) => Math.min(...parts.map((q) => q(x, y, z))) - 0.006, C.cream));
+    if (i % 2) tailPaint.push(tail.layer('qTail', (x, y, z) => Math.min(...parts.map((q) => q(x, y, z))) - 0.006, look.tailAlt));
   }
-  out.push(clayPiece(tail.build({ kind: 'nets', min: [-0.42, 0.85, -1.12], max: [0.42, 1.68, -0.3], cell: 0.014 / detail, target: Math.round(900 * detail) }, tailPaint)));
+  out.push(clayPiece(tail.build({ kind: 'nets', min: [-0.42, 0.85, look.cuu ? -1.3 : -1.12], max: [0.42, look.cuu ? 1.85 : 1.68, -0.3], cell: 0.014 / detail, target: Math.round(900 * detail) }, tailPaint)));
   // Chân vàng: cẳng, ba ngón trước, ngón sau, cựa.
-  const legs = new Clay(C.bronzeLight);
+  const legs = new Clay(look.leg);
   for (const [b, s] of [
     ['qBL', -1],
     ['qBR', 1],
@@ -892,13 +924,436 @@ function roosterPieces(detail: number): Piece[] {
     for (const a of [-0.5, 0, 0.5]) legs.add(b, cone([x, 0.03, 0.0], [x + Math.sin(a) * 0.17, 0.015, Math.cos(a) * 0.17], 0.03, 0.012), { k: 0.015 });
     legs.add(b, cone([x, 0.03, 0], [x, 0.015, -0.1], 0.025, 0.01), { k: 0.015 });
     legs.add(b, cone([x, 0.18, -0.03], [x, 0.14, -0.14], 0.026, 0.004), { k: 0.012 });
+    // Gà chín cựa: chân trái năm cựa, chân phải bốn cựa, xếp dọc cẳng.
+    if (look.cuu) for (let i = 1; i < (s < 0 ? 5 : 4); i++) legs.add(b, cone([x, 0.16 + i * 0.075, -0.035], [x + s * 0.05, 0.12 + i * 0.075, -0.17], 0.026, 0.003), { k: 0.008 });
   }
   out.push(clayPiece(legs.build({ kind: 'nets', min: [-0.36, -0.01, -0.2], max: [0.36, 0.6, 0.22], cell: 0.01 / detail, target: Math.round(500 * detail) })));
   return out;
 }
 
-export function roosterBody(r: Rig): void {
-  figure(r as unknown as HumanRig, 'rooster', roosterPieces);
+export function roosterBody(r: Rig, look?: RoosterLook): void {
+  if (look?.cuu) figure(r as unknown as HumanRig, 'gaCuu', (d) => roosterPieces(d, look));
+  else figure(r as unknown as HumanRig, 'rooster', roosterPieces);
+}
+
+// ---------- Chim Lạc (thần thú) ----------
+
+/** Mảnh dẹt theo trục y quanh mặt phẳng y = `cy` (lông cánh, lông đuôi). */
+function flatY(f: Sdf, cy: number, k: number): Sdf {
+  return keepBound((x, y, z) => f(x, cy + (y - cy) / k, z) * k, f, 0.02);
+}
+
+/** Mảnh dẹt theo trục x quanh mặt phẳng x = `cx` (lông mào). */
+function flatX(f: Sdf, cx: number, k: number): Sdf {
+  return keepBound((x, y, z) => f(cx + (x - cx) / k, y, z) * k, f, 0.02);
+}
+
+/**
+ * Chim Lạc như trên mặt trống đồng: mình thon dài trắng ngà, cổ dài cong, đầu nhỏ, mỏ dài thẳng nhọn màu đồng, mào ba
+ * lông đỏ vút ra sau; cánh đồng sải rộng, phần trong có vòng tròn đồng tâm và vạch song song kiểu trống đồng, phần ngoài
+ * sáu lông dài xếp lớp mút vàng; đuôi năm lông dài xòe đỏ xen vàng; chân dài thu về sau. Khớp theo khung `LAC` ở
+ * `thanThu.ts`: thân `qBody`, cổ `qNeck`, đầu `qHead`, cánh trong `qWingL/R`, cánh ngoài `qWingL2/R2`, đuôi `qTail`.
+ */
+function lacPieces(detail: number): Piece[] {
+  const out: Piece[] = [];
+  const body = new Clay(C.cream);
+  body.add('qBody', ellipsoid([0, 0.92, -0.02], [0.17, 0.15, 0.36], [0.08, 0, 0]), { k: 0 });
+  body.add('qBody', ellipsoid([0, 0.9, 0.18], [0.15, 0.15, 0.17]), { k: 0.08 });
+  body.add('qNeck', cone([0, 0.97, 0.24], [0, 1.18, 0.4], 0.1, 0.065), { k: 0.06 });
+  body.add('qNeck', cone([0, 1.18, 0.4], [0, 1.33, 0.52], 0.065, 0.055), { k: 0.05 });
+  body.add('qHead', ellipsoid([0, 1.37, 0.57], [0.075, 0.07, 0.095]), { k: 0.04 });
+  const f = body.dist;
+  const paints: Paint[] = [];
+  // Ức vàng nhạt, vạch đồng dọc lưng, mắt.
+  paints.push(body.layer('qBody', ellipsoid([0, 0.84, 0.2], [0.13, 0.11, 0.15]), C.ember));
+  for (let i = 0; i < 4; i++) paints.push(body.layer('qBody', (x, y, z) => Math.max(Math.abs(z - (0.16 - i * 0.11)) - 0.018, Math.abs(x) - 0.06, 1.0 - y), C.bronze));
+  for (const s of [-1, 1]) paints.push(...eyePaints(body, 'qHead', f, [s * 0.06, 1.39, 0.61], [s, 0.2, 0.3], 0.018));
+  out.push(clayPiece(body.build({ kind: 'nets', min: [-0.25, 0.7, -0.45], max: [0.25, 1.5, 0.7], cell: 0.012 / detail, target: Math.round(1500 * detail) }, paints)));
+
+  // Mỏ dài nhọn, chân dài thu về sau.
+  const beak = new Clay(C.bronzeDark);
+  beak.add('qHead', cone([0, 1.36, 0.63], [0, 1.31, 1.02], 0.032, 0.004), { k: 0.01 });
+  for (const s of [-1, 1]) {
+    beak.add('qBody', cone([s * 0.06, 0.82, -0.18], [s * 0.07, 0.77, -0.62], 0.022, 0.016), { k: 0.01 });
+    beak.add('qBody', cone([s * 0.07, 0.77, -0.62], [s * 0.07, 0.72, -0.74], 0.03, 0.006), { k: 0.008 });
+  }
+  out.push(clayPiece(beak.build({ kind: 'nets', min: [-0.15, 0.65, -0.8], max: [0.15, 1.42, 1.06], cell: 0.008 / detail, target: Math.round(400 * detail) })));
+
+  // Mào ba lông đỏ dẹt, vút cao ra sau, mút vàng.
+  const crest = new Clay(C.red);
+  const tipPaint: Paint[] = [];
+  for (const [x, up, back] of [
+    [0, 0.34, -0.3],
+    [-0.035, 0.26, -0.34],
+    [0.035, 0.26, -0.34],
+  ] as const) {
+    const root: V3 = [x, 1.43, 0.55];
+    const tip: V3 = [x * 2.2, 1.43 + up, 0.55 + back];
+    const feather = flatX(cone(root, tip, 0.04, 0.012), x, 0.35);
+    crest.add('qHead', feather, { k: 0.01 });
+    tipPaint.push(crest.layer('qHead', sphere(tip, 0.07), C.gold));
+  }
+  out.push(clayPiece(crest.build({ kind: 'nets', min: [-0.12, 1.36, 0.1], max: [0.12, 1.85, 0.62], cell: 0.008 / detail, target: Math.round(400 * detail) }, tipPaint)));
+
+  // Cánh: phần trong ôm vai, phần ngoài sáu lông dài xếp lớp; hoa văn trống đồng trên mặt cánh.
+  const wing = new Clay(C.bronze);
+  const wpaint: Paint[] = [];
+  for (const [b, b2, s] of [
+    ['qWingL', 'qWingL2', -1],
+    ['qWingR', 'qWingR2', 1],
+  ] as const) {
+    wing.add(b, flatY(ellipsoid([s * 0.42, 1.0, 0.02], [0.3, 0.1, 0.2]), 1.0, 0.35), { k: 0.03, apart: b });
+    for (let i = 0; i < 6; i++) {
+      const z0 = 0.14 - i * 0.065;
+      const len = 0.42 - Math.abs(i - 1.5) * 0.03;
+      const root: V3 = [s * 0.64, 1.0, z0];
+      const tip: V3 = [s * (0.64 + len), 1.0 - i * 0.006, z0 - 0.06 - i * 0.05];
+      wing.add(b2, flatY(cone(root, tip, 0.055, 0.02), 1.0, 0.28), { k: 0.02, apart: b });
+      wpaint.push(wing.layer(b2, sphere(tip, 0.13), i % 2 ? C.gold : C.ember));
+    }
+    // Lông bao trắng ngà dọc mép trước cánh.
+    wpaint.push(wing.layer(b, ellipsoid([s * 0.44, 1.02, 0.17], [0.3, 0.06, 0.06]), C.cream));
+    // Vòng tròn đồng tâm và vạch song song trên mặt cánh trong.
+    const c: V3 = [s * 0.42, 1.03, -0.02];
+    for (const rr of [0.05, 0.1]) wpaint.push(wing.layer(b, (x, y, z) => Math.max(Math.abs(Math.hypot(x - c[0], z - c[2]) - rr) - 0.011, 1.0 - y), C.bronzeDark));
+    wpaint.push(wing.layer(b, (x, y, z) => Math.max(Math.hypot(x - c[0], z - c[2]) - 0.022, 1.0 - y), C.bronzeDark));
+    for (let k = 0; k < 3; k++) wpaint.push(wing.layer(b, (x, y, z) => Math.max(Math.abs(z - (-0.12 - k * 0.035)) - 0.008, Math.abs(x - s * 0.42) - 0.2, 1.0 - y), C.bronzeDark));
+  }
+  out.push(clayPiece(wing.build({ kind: 'nets', min: [-1.15, 0.9, -0.55], max: [1.15, 1.1, 0.3], cell: 0.01 / detail, target: Math.round(1800 * detail) }, wpaint)));
+
+  // Đuôi: năm lông dài dẹt xòe ra sau, đỏ xen vàng, mút đồng sẫm.
+  const tail = new Clay(C.gold);
+  const tpaint: Paint[] = [];
+  for (let i = -2; i <= 2; i++) {
+    const root: V3 = [i * 0.03, 0.92, -0.34];
+    const tip: V3 = [i * 0.14, 0.93 - Math.abs(i) * 0.02, -0.95 + Math.abs(i) * 0.08];
+    const feather = flatY(cone(root, tip, 0.04, 0.03), 0.92, 0.3);
+    tail.add('qTail', feather, { k: 0.015 });
+    if (i % 2) tpaint.push(tail.layer('qTail', (x, y, z) => feather(x, y, z) - 0.006, C.red));
+    tpaint.push(tail.layer('qTail', sphere(tip, 0.06), C.bronzeDark));
+  }
+  out.push(clayPiece(tail.build({ kind: 'nets', min: [-0.4, 0.85, -1.05], max: [0.4, 1.0, -0.25], cell: 0.009 / detail, target: Math.round(700 * detail) }, tpaint)));
+  return out;
+}
+
+export function lacBody(r: Rig): void {
+  figure(r as unknown as HumanRig, 'thanThu:lac', lacPieces);
+}
+
+// ---------- Gà chín cựa (thần thú): dáng gà chọi ----------
+
+/** Màu gà chín cựa: mình đỏ sẫm, bờm cổ vàng cam óng phủ vai và yên lưng, ức và dải cánh xanh đen, đuôi xanh đen bóng. */
+export const GA_CHOI = { body: 0x8e2418, hackle: 0xe8962a, hackleTip: 0xf6c04a, dark: 0x1c3a30, face: 0xc8362a, tail: 0x15332d, tailAlt: 0x2f7a62, leg: C.gold, plume: 0xc8362a, plumeAlt: 0xf2b838, wingTip: 0x2f7a62 };
+
+/**
+ * Gà chín cựa theo dáng gà chọi Việt: đứng thẳng, ức ưỡn, cổ cao, đùi dài, cẳng vàng dài có chín cựa (trái năm, phải
+ * bốn), mào nụ nhỏ, mặt đỏ; bờm cổ vàng cam liền một mảng óng xuống vai, mình đỏ sẫm, ức và dải cánh xanh đen; đuôi
+ * chín lông liềm dài vồng lên rồi rủ cong xuống. Khớp theo khung `GA_CHOI` ở `beasts.ts`.
+ */
+function gaChoiPieces(detail: number): Piece[] {
+  const M = GA_CHOI;
+  const out: Piece[] = [];
+  const clay = new Clay(M.body);
+  // Mình dốc ngược: lưng thấp sau, ức cao trước ưỡn ra.
+  clay.add('qBody', cone([0, 0.96, -0.24], [0, 1.1, 0.1], 0.17, 0.2), { k: 0 });
+  clay.add('qBody', sphere([0, 1.08, 0.14], 0.19), { k: 0.08 });
+  // Đùi dài phủ lông.
+  for (const [b, s] of [
+    ['qBL', -1],
+    ['qBR', 1],
+  ] as const)
+    clay.add(b, cone([s * 0.11, 0.98, 0.0], [s * 0.12, 0.66, 0.04], 0.095, 0.05), { k: 0.06 });
+  // Cổ cao, bờm cổ đầy.
+  clay.add('qNeck', cone([0, 1.16, 0.18], [0, 1.58, 0.28], 0.125, 0.075), { k: 0.06 });
+  clay.add('qNeck', ellipsoid([0, 1.3, 0.15], [0.1, 0.17, 0.11]), { k: 0.05 });
+  // Đầu nhỏ, mỏ khoằm.
+  clay.add('qHead', ellipsoid([0, 1.65, 0.33], [0.075, 0.075, 0.1]), { k: 0.04 });
+  clay.add('qHead', cone([0, 1.645, 0.41], [0, 1.6, 0.51], 0.032, 0.006), { k: 0.012 });
+  // Cánh áp sát mình.
+  for (const [b, s] of [
+    ['qWingL', -1],
+    ['qWingR', 1],
+  ] as const) {
+    clay.add(b, flatX(cone([s * 0.18, 1.12, 0.1], [s * 0.19, 0.94, -0.32], 0.13, 0.04), s * 0.18, 0.38), { k: 0.03, apart: b });
+    // Lông cánh dài kiểu phượng: năm lông xòe ra sau, hơi vểnh.
+    for (let k = 0; k < 5; k++) {
+      const root: V3 = [s * 0.2, 1.08 - k * 0.025, -0.12 + k * 0.03];
+      const tip: V3 = [s * (0.27 + k * 0.015), 1.2 - k * 0.07, -0.62 + k * 0.06];
+      clay.add(b, flatX(cone(root, tip, 0.05, 0.008), s * (0.21 + k * 0.01), 0.3), { k: 0.008, apart: b });
+    }
+  }
+  const f = clay.dist;
+  const paints: Paint[] = [];
+  // Bờm cổ vàng cam óng một mảng, mép dưới răng cưa phủ vai; yên lưng cùng màu.
+  const coGa = cone([0, 1.1, 0.12], [0, 1.6, 0.28], 0.1, 0.07);
+  paints.push(clay.layer('qNeck', (x, y, z) => Math.max(1.12 + 0.035 * Math.sin(x * 50 + z * 20) - y, coGa(x, y, z) - 0.07), M.hackle));
+  paints.push(clay.layer('qNeck', (x, y, z) => Math.max(1.4 - y, ellipsoid([0, 1.45, 0.24], [0.12, 0.16, 0.12])(x, y, z)), M.hackleTip));
+  paints.push(clay.layer('qBody', (x, y, z) => Math.max(ellipsoid([0, 1.06, -0.2], [0.16, 0.14, 0.18])(x, y, z), 1.0 + 0.03 * Math.sin(x * 50) - y), M.hackle));
+  // Mặt đỏ, mỏ vàng.
+  paints.push(clay.layer('qHead', ellipsoid([0, 1.64, 0.35], [0.08, 0.06, 0.07]), M.face));
+  paints.push(clay.layer('qHead', (_x, _y, z) => 0.41 - z, C.bronzeLight));
+  // Ức, dải cánh xanh đen.
+  paints.push(clay.layer('qBody', ellipsoid([0, 1.0, 0.22], [0.18, 0.2, 0.14]), M.dark));
+  for (const [b, s] of [
+    ['qWingL', -1],
+    ['qWingR', 1],
+  ] as const)
+    paints.push(clay.layer(b, (x, y, z) => Math.max(Math.abs(y - 1.0 - 0.15 * z) - 0.035, 0.17 - s * x, -z - 0.28), M.dark));
+  for (const [b, s] of [
+    ['qWingL', -1],
+    ['qWingR', 1],
+  ] as const) {
+    paints.push(clay.layer(b, (x, _y, z) => Math.max(-0.3 - z, 0.19 - s * x), M.hackleTip));
+    paints.push(clay.layer(b, (x, _y, z) => Math.max(-0.46 - z, 0.19 - s * x), M.wingTip));
+  }
+  for (const s of [-1, 1]) {
+    const p = hit(f, [s * 0.4, 1.67, 0.34], [-s, 0, 0]) ?? [s * 0.07, 1.67, 0.34];
+    paints.push(clay.layer('qHead', sphere(p, 0.022), C.gold, 2), clay.layer('qHead', sphere(p, 0.011), C.ink, 2));
+  }
+  out.push(clayPiece(clay.build({ kind: 'nets', min: [-0.4, 0.55, -0.7], max: [0.4, 1.8, 0.6], cell: 0.011 / detail, target: Math.round(3000 * detail) }, paints)));
+  // Mào nụ nhỏ, tích ngắn.
+  const comb = new Clay(C.comb);
+  for (let i = 0; i < 3; i++) comb.add('qHead', ellipsoid([0, 1.725, 0.29 + i * 0.05], [0.03, 0.03, 0.035]), { k: 0.02 });
+  comb.add('qHead', ellipsoid([0, 1.565, 0.4], [0.025, 0.04, 0.025]), { k: 0.015 });
+  out.push(clayPiece(comb.build({ kind: 'nets', min: [-0.06, 1.5, 0.22], max: [0.06, 1.78, 0.46], cell: 0.008 / detail, target: Math.round(300 * detail) })));
+  // Mào phượng: ba lông dài mảnh vút ra sau, mút xòe tròn vàng có mắt lông.
+  const crest = new Clay(M.plume);
+  const crestPaint: Paint[] = [];
+  for (const s of [-1, 0, 1]) {
+    const root: V3 = [s * 0.015, 1.71, 0.27];
+    const mid: V3 = [s * 0.04, 1.86 - Math.abs(s) * 0.03, 0.14];
+    const tip: V3 = [s * 0.07, 1.9 - Math.abs(s) * 0.05, -0.02];
+    crest.add('qHead', cone(root, mid, 0.012, 0.008), { k: 0.004 });
+    crest.add('qHead', cone(mid, tip, 0.008, 0.006), { k: 0.004 });
+    crest.add('qHead', flatX(sphere(tip, 0.035), tip[0], 0.4), { k: 0.006 });
+    crestPaint.push(crest.layer('qHead', sphere(tip, 0.04), M.plumeAlt), crest.layer('qHead', sphere(tip, 0.018), M.wingTip));
+  }
+  out.push(clayPiece(crest.build({ kind: 'nets', min: [-0.14, 1.66, -0.08], max: [0.14, 1.97, 0.32], cell: 0.006 / detail, target: Math.round(500 * detail) }, crestPaint)));
+  // Đuôi: chín lông liềm dẹt dài vồng lên rồi rủ cong xuống, xanh đen xen xanh ngọc bóng.
+  const tail = new Clay(M.tail);
+  const tailPaint: Paint[] = [];
+  for (let i = 0; i < 7; i++) {
+    const a = -0.75 + i * 0.25;
+    const sx = Math.sin(a) * 0.26;
+    const L = 0.85 + 0.25 * Math.cos(a * 1.5);
+    const pts: V3[] = [
+      [sx * 0.3, 1.08, -0.3],
+      [sx, 1.08 + 0.26 * L, -0.3 - 0.16 * L],
+      [sx * 1.4, 1.08 + 0.34 * L, -0.3 - 0.42 * L],
+      [sx * 1.7, 1.08 + 0.12 * L, -0.3 - 0.66 * L],
+      [sx * 1.85, 1.08 - 0.22 * L, -0.3 - 0.74 * L],
+    ];
+    const rs = [0.045, 0.045, 0.04, 0.026, 0.006];
+    const parts: Sdf[] = [];
+    for (let k = 0; k < 4; k++) {
+      const seg = flatX(cone(pts[k], pts[k + 1], rs[k], rs[k + 1]), sx, 0.3);
+      parts.push(seg);
+      tail.add('qTail', seg, { k: 0.006 });
+    }
+    if (i % 2) tailPaint.push(tail.layer('qTail', (x, y, z) => Math.min(...parts.map((q) => q(x, y, z))) - 0.005, M.tailAlt));
+  }
+  out.push(clayPiece(tail.build({ kind: 'nets', min: [-0.65, 0.7, -1.25], max: [0.65, 1.6, -0.22], cell: 0.009 / detail, target: Math.round(1400 * detail) }, tailPaint)));
+  // Dải lông phượng: năm dải dài thướt tha kéo ra sau, mút cuộn lên có mắt lông vàng tâm xanh, đỏ xen vàng.
+  const plume = new Clay(M.plume);
+  const plumePaint: Paint[] = [];
+  for (let i = 0; i < 5; i++) {
+    const a = -0.6 + i * 0.3;
+    const sx = Math.sin(a) * 0.55;
+    const L = 1 - Math.abs(a) * 0.35;
+    const pts: V3[] = [
+      [sx * 0.25, 1.08, -0.3],
+      [sx * 0.7, 1.0, -0.3 - 0.45 * L],
+      [sx, 0.78, -0.3 - 0.9 * L],
+      [sx * 1.15, 0.52, -0.3 - 1.25 * L],
+      [sx * 1.2, 0.5, -0.3 - 1.45 * L],
+    ];
+    const rs = [0.02, 0.03, 0.035, 0.03, 0.02];
+    const parts: Sdf[] = [];
+    for (let k = 0; k < 4; k++) {
+      const seg = flatX(cone(pts[k], pts[k + 1], rs[k], rs[k + 1]), pts[k][0], 0.3);
+      parts.push(seg);
+      plume.add('qTail', seg, { k: 0.008 });
+    }
+    // Mút cuộn lên, xòe tròn.
+    const eyeC: V3 = [pts[4][0], 0.6, pts[4][2] + 0.03];
+    plume.add('qTail', flatX(sphere(eyeC, 0.075), eyeC[0], 0.3), { k: 0.02 });
+    if (i % 2) plumePaint.push(plume.layer('qTail', (x, y, z) => Math.min(...parts.map((q) => q(x, y, z))) - 0.005, M.plumeAlt));
+    plumePaint.push(plume.layer('qTail', sphere(eyeC, 0.075), M.plumeAlt), plume.layer('qTail', sphere(eyeC, 0.045), M.wingTip), plume.layer('qTail', sphere(eyeC, 0.02), C.ink));
+  }
+  out.push(clayPiece(plume.build({ kind: 'nets', min: [-0.8, 0.35, -2.0], max: [0.8, 1.2, -0.22], cell: 0.009 / detail, target: Math.round(1600 * detail) }, plumePaint)));
+  // Cẳng vàng dài, ba ngón trước, ngón sau, chín cựa.
+  const legs = new Clay(M.leg);
+  for (const [b, s] of [
+    ['qBL', -1],
+    ['qBR', 1],
+  ] as const) {
+    const x = s * 0.12;
+    legs.add(b, cone([x, 0.7, 0.04], [x, 0.04, 0.02], 0.035, 0.03), { k: 0 });
+    for (const a of [-0.45, 0, 0.45]) legs.add(b, cone([x, 0.025, 0.02], [x + Math.sin(a) * 0.14, 0.012, 0.02 + Math.cos(a) * 0.14], 0.022, 0.009), { k: 0.012 });
+    legs.add(b, cone([x, 0.025, 0.02], [x, 0.012, -0.08], 0.02, 0.008), { k: 0.012 });
+    for (let i = 0; i < (s < 0 ? 5 : 4); i++) legs.add(b, cone([x, 0.12 + i * 0.07, 0.0], [x + s * 0.04, 0.09 + i * 0.07, -0.1], 0.018, 0.002), { k: 0.006 });
+  }
+  out.push(clayPiece(legs.build({ kind: 'nets', min: [-0.3, -0.01, -0.16], max: [0.3, 0.74, 0.2], cell: 0.008 / detail, target: Math.round(600 * detail) })));
+  return out;
+}
+
+export function gaChoiBody(r: Rig): void {
+  figure(r as unknown as HumanRig, 'thanThu:gaPhuong', gaChoiPieces);
+}
+
+// ---------- Rùa Vàng thần thú ----------
+
+/** Màu Rùa Vàng thần thú: mai vàng kim, vành mai vàng nhạt, rãnh múi đồng sẫm, da xanh ngọc, mỏ ngà. */
+export const RUA_THAN = { shell: 0xe0a92a, rim: 0xf4d06a, groove: 0x5e3e12, skin: 0x4f9a7c, skinDark: 0x2f6b55, belly: 0xf0dc9a, beak: 0xe8cf8a, mane: 0xc8362a, maneTip: 0xf2b838, horn: 0xf7dc7a };
+
+/** Mai dẹt dài của Rùa Vàng thần thú, cắt phẳng đáy. */
+function ruaThanShell(): Sdf {
+  const dome = ellipsoid([0, 0.05, -0.02], [0.5, 0.26, 0.78]);
+  const rim = ellipsoid([0, 0.07, 0], [0.56, 0.055, 0.84]);
+  return (x, y, z) => Math.max(Math.min(dome(x, y, z), rim(x, y, z)), -y);
+}
+
+/** Tâm các múi mai: năm múi sống lưng, bốn cặp múi sườn (xz). */
+const MUI: readonly (readonly [number, number])[] = [
+  ...[-0.52, -0.26, 0, 0.26, 0.52].map((z) => [0, z] as const),
+  ...[-0.39, -0.13, 0.13, 0.39].flatMap((z) => [
+    [-0.3, z] as const,
+    [0.3, z] as const,
+  ]),
+];
+
+/**
+ * Rùa Vàng thần thú (Kim Quy) nặn theo khung `RUA_THAN` ở `beasts.ts`: mai dẹt dài vàng kim chia múi lục giác bằng
+ * rãnh đồng sẫm, vành mai vàng nhạt có vạch; cổ dài, đầu rùa thật mỏ khoằm, da xanh ngọc có đốm sẫm; chân chèo trước
+ * dài, chân sau ngắn, đuôi.
+ */
+function ruaThanPieces(detail: number): Piece[] {
+  const M = RUA_THAN;
+  const out: Piece[] = [];
+  const shell = new Clay(M.shell);
+  const sf = ruaThanShell();
+  shell.add('qBody', sf, { k: 0 });
+  const paints: Paint[] = [];
+  const rho = (x: number, z: number) => Math.hypot(x / 0.5, z / 0.78);
+  // Vành mai vàng nhạt, vạch chia múi vành.
+  paints.push(shell.layer('qBody', (x, _y, z) => 0.9 - rho(x, z), M.rim));
+  for (let i = 0; i < 22; i++) {
+    const a = (i / 22) * Math.PI * 2;
+    paints.push(shell.layer('qBody', (x, _y, z) => Math.max(Math.abs(Math.cos(a) * x - Math.sin(a) * z) - 0.008, 0.9 - rho(x, z), -(Math.sin(a) * x + Math.cos(a) * z)), M.groove));
+  }
+  paints.push(shell.layer('qBody', (x, _y, z) => Math.abs(rho(x, z) - 0.9) - 0.014, M.groove));
+  // Rãnh múi lục giác: chỗ hai tâm múi gần nhất cách đều.
+  paints.push(
+    shell.layer('qBody', (x, _y, z) => {
+      let d1 = 9;
+      let d2 = 9;
+      for (const [cx, cz] of MUI) {
+        const d = Math.hypot((x - cx) * 1.1, z - cz);
+        if (d < d1) [d1, d2] = [d, d1];
+        else if (d < d2) d2 = d;
+      }
+      return Math.max(d2 - d1 - 0.065, rho(x, z) - 0.9);
+    }, M.groove),
+  );
+  paints.push(shell.layer('qBody', (_x, y) => y - 0.045, M.belly));
+  out.push(clayPiece(shell.build({ kind: 'nets', min: [-0.62, -0.02, -0.9], max: [0.62, 0.36, 0.9], cell: 0.012 / detail, target: Math.round(2600 * detail) }, paints)));
+
+  const clay = new Clay(M.skin);
+  // Cổ dài ngóc lên, đầu rồng (Long Quy): sọ, mõm dài, mũi cuộn, u mày, hàm dưới há.
+  clay.add('qNeck', cone([0, 0.11, 0.6], [0, 0.3, 0.97], 0.11, 0.085), { k: 0 });
+  clay.add('qHead', ellipsoid([0, 0.34, 1.0], [0.1, 0.085, 0.12]), { k: 0.05 });
+  clay.add('qHead', ellipsoid([0, 0.33, 1.13], [0.065, 0.05, 0.12], [0.1, 0, 0]), { k: 0.04 });
+  clay.add('qHead', sphere([0, 0.35, 1.24], 0.045), { k: 0.03 });
+  for (const s of [-1, 1]) {
+    clay.add('qHead', ellipsoid([s * 0.055, 0.405, 1.03], [0.04, 0.025, 0.055]), { k: 0.02 });
+    clay.add('qHead', sphere([s * 0.03, 0.375, 1.26], 0.025), { k: 0.015 });
+  }
+  clay.add('qHead', ellipsoid([0, 0.255, 1.1], [0.055, 0.025, 0.12], [-0.3, 0, 0]), { k: 0.015 });
+  clay.sub('qHead', ellipsoid([0, 0.29, 1.19], [0.07, 0.016, 0.1], [-0.15, 0, 0]), 0.008);
+  for (const [b, s, front] of [
+    ['qFL', -1, true],
+    ['qFR', 1, true],
+    ['qBL', -1, false],
+    ['qBR', 1, false],
+  ] as const) {
+    if (front) {
+      clay.add(b, cone([s * 0.36, 0.08, 0.42], [s * 0.56, 0.07, 0.48], 0.09, 0.07), { k: 0.03 });
+      clay.add(b, flatY(cone([s * 0.52, 0.065, 0.48], [s * 1.0, 0.05, 0.26], 0.13, 0.025), 0.06, 0.25), { k: 0.04 });
+    } else {
+      clay.add(b, cone([s * 0.32, 0.07, -0.5], [s * 0.44, 0.06, -0.6], 0.08, 0.06), { k: 0.03 });
+      clay.add(b, flatY(cone([s * 0.42, 0.055, -0.6], [s * 0.64, 0.045, -0.8], 0.1, 0.03), 0.05, 0.3), { k: 0.04 });
+    }
+  }
+  clay.add('qTail', cone([0, 0.07, -0.76], [0, 0.07, -0.95], 0.06, 0.03), { k: 0.02 });
+  const f = clay.dist;
+  const sp: Paint[] = [];
+  // Vảy sẫm trên sống mũi, đỉnh đầu, sống cổ; vạch chân chèo.
+  sp.push(clay.layer('qHead', (x, y, z) => Math.max(0.4 - y, Math.abs(((x * 30 + z * 22) % 1) - 0.5) - 0.12), M.skinDark));
+  sp.push(clay.layer('qNeck', (x, y, z) => Math.max(0.2 + (z - 0.6) * 0.3 - y, Math.abs(((z * 25) % 1) - 0.5) - 0.15, Math.abs(x) - 0.06), M.skinDark));
+  for (const s of [-1, 1]) {
+    for (let k = 0; k < 4; k++) {
+      const c: V3 = [s * (0.62 + k * 0.1), 0.06, 0.45 - k * 0.05];
+      sp.push(clay.layer(s < 0 ? 'qFL' : 'qFR', sphere(c, 0.03), M.skinDark));
+    }
+  }
+  // Cằm, hàm dưới ngà; mắt lửa có mày sẫm.
+  sp.push(clay.layer('qHead', ellipsoid([0, 0.25, 1.1], [0.06, 0.03, 0.13]), M.belly));
+  for (const s of [-1, 1]) {
+    const p = hit(f, [s * 0.4, 0.37, 1.06], [-s, 0, 0]) ?? [s * 0.08, 0.37, 1.06];
+    sp.push(clay.layer('qHead', ellipsoid([s * 0.06, 0.4, 1.04], [0.035, 0.012, 0.05]), M.groove));
+    sp.push(clay.layer('qHead', sphere(p, 0.024), C.ember, 2), clay.layer('qHead', sphere(p, 0.011), C.ink, 2));
+  }
+  out.push(clayPiece(clay.build({ kind: 'nets', min: [-1.1, -0.01, -1.08], max: [1.1, 0.5, 1.32], cell: 0.012 / detail, target: Math.round(2200 * detail) }, sp)));
+  // Bờm lửa đỏ vắt ra sau dọc cổ, chòm râu cằm, chùm lửa ở khuỷu chân, đuôi xòe như mây lửa.
+  const mane = new Clay(M.mane);
+  const mp: Paint[] = [];
+  for (let i = 0; i < 5; i++) {
+    const sx = (i - 2) * 0.035;
+    const root: V3 = [sx, 0.4, 0.98];
+    const mid: V3 = [sx * 1.6, 0.45 - Math.abs(sx), 0.84];
+    const tip: V3 = [sx * 2.2, 0.38 - Math.abs(sx) * 1.5, 0.68];
+    mane.add('qHead', cone(root, mid, 0.03, 0.02), { k: 0.012 });
+    mane.add('qHead', cone(mid, tip, 0.02, 0.003), { k: 0.01 });
+    mp.push(mane.layer('qHead', sphere(tip, 0.08), M.maneTip));
+  }
+  mane.add('qHead', cone([0, 0.24, 1.04], [0, 0.13, 0.96], 0.03, 0.004), { k: 0.01 });
+  for (const [b, x, z, dz] of [
+    ['qFL', -0.5, 0.46, -1],
+    ['qFR', 0.5, 0.46, -1],
+    ['qBL', -0.42, -0.56, -1],
+    ['qBR', 0.42, -0.56, -1],
+  ] as const) {
+    const root: V3 = [x, 0.1, z];
+    const tip: V3 = [x * 1.15, 0.2, z + dz * 0.2];
+    mane.add(b, cone(root, tip, 0.035, 0.003), { k: 0.01 });
+    mp.push(mane.layer(b, sphere(tip, 0.07), M.maneTip));
+  }
+  for (const [dx, dy, l] of [
+    [0, 0.14, 0.3],
+    [-0.13, 0.08, 0.26],
+    [0.13, 0.08, 0.26],
+    [-0.07, 0.0, 0.3],
+    [0.07, 0.0, 0.3],
+  ] as const) {
+    const root: V3 = [0, 0.08, -0.9];
+    const tip: V3 = [dx, 0.08 + dy, -0.9 - l];
+    mane.add('qTail', cone(root, tip, 0.05, 0.004), { k: 0.015 });
+    mp.push(mane.layer('qTail', sphere(tip, 0.13), M.maneTip));
+  }
+  out.push(clayPiece(mane.build({ kind: 'nets', min: [-0.7, 0.0, -1.3], max: [0.7, 0.52, 1.1], cell: 0.009 / detail, target: Math.round(1400 * detail) }, mp)));
+  // Sừng nhỏ nằm rạp ra sau, răng nanh.
+  const horn = new Clay(M.horn);
+  for (const s of [-1, 1]) {
+    horn.add('qHead', cone([s * 0.05, 0.41, 1.0], [s * 0.08, 0.45, 0.88], 0.016, 0.01), { k: 0.006 });
+    horn.add('qHead', cone([s * 0.08, 0.45, 0.88], [s * 0.09, 0.49, 0.8], 0.01, 0.002), { k: 0.005 });
+    horn.add('qHead', cone([s * 0.035, 0.31, 1.22], [s * 0.035, 0.27, 1.22], 0.009, 0.002), { k: 0.004 });
+  }
+  out.push(clayPiece(horn.build({ kind: 'nets', min: [-0.12, 0.24, 0.76], max: [0.12, 0.52, 1.26], cell: 0.005 / detail, target: Math.round(300 * detail) })));
+  return out;
+}
+
+export function ruaThanBody(r: Rig): void {
+  figure(r as unknown as HumanRig, 'thanThu:longQuy', ruaThanPieces);
 }
 
 // ---------- Rùa Vàng ----------
