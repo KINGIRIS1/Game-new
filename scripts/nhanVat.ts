@@ -11,6 +11,7 @@ import {
   makeAnDuong,
   makeBaTrieu,
   makeTrieuQuangPhuc,
+  makeMaiThucLoan,
   makeCaoLo,
   makeDrummer,
   makeGiong,
@@ -377,6 +378,10 @@ export const NHOM: Record<string, Entry[]> = {
     { ten: 'Triệu Quang Phục ngày ẩn đêm ra', tao: () => makeTrieuQuangPhuc(), co: 1.8, cach: 1.3, cot: CHEM_COT },
     { ten: 'Triệu Quang Phục thắng trận', tao: theoCot(() => makeTrieuQuangPhuc(), 'win'), co: 1.8, cach: 1.3, cot: CHEM_COT },
     { ten: 'Triệu Quang Phục (đủ bộ Dạ Trạch)', tao: () => makeTrieuQuangPhuc({ anh: true }), co: 1.8, cach: 1.3, cot: ANH_COT },
+    { ten: 'Mai Thúc Loan', tao: () => makeMaiThucLoan(), co: 1.9, cach: 1.4 },
+    { ten: 'Mai Thúc Loan hắc đế dấy binh', tao: () => makeMaiThucLoan(), co: 1.9, cach: 1.4, cot: CHEM_COT },
+    { ten: 'Mai Thúc Loan thắng trận', tao: theoCot(() => makeMaiThucLoan(), 'win'), co: 1.9, cach: 1.4, cot: CHEM_COT },
+    { ten: 'Mai Thúc Loan (đủ bộ Vạn An)', tao: () => makeMaiThucLoan({ anh: true }), co: 1.9, cach: 1.4, cot: ANH_COT },
   ],
   anh: [
     { ten: 'Tráng sĩ Gióng (roi sắt, đủ bộ Phù Đổng)', tao: () => makeGiong('trangSi', { anh: true }), co: 1.9, cach: 1.7, cot: ANH_COT },

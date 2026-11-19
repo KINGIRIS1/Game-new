@@ -72,6 +72,7 @@ import {
   doanKiem,
   drumShield,
   guomDong,
+  daoVanAn,
   giaoDaTrach,
   guomNuiNua,
   hornTrumpet,
@@ -1942,6 +1943,122 @@ export function makeTrieuQuangPhuc(opts: { anh?: boolean } = {}): THREE.Group {
   return anhNeu(finish(group, (a) => poseTrieuQuangPhuc(bones as unknown as Human, a)), shape, 'trieuQuangPhuc', opts.anh);
 }
 
+// ---------- Mai Thúc Loan (tướng dã ngoại, map 8 Núi Vệ) ----------
+
+/** Cỡ thân Mai Thúc Loan: vạm vỡ, cao to nhất các tướng đi bộ. */
+const K_MTL = 1.45;
+
+/**
+ * Giáp da trâu của Mai Thúc Loan: giáp lá da trâu nâu ba hàng viền đồng, hộ tâm mặt trống đồng, đinh đồng, váy giáp da
+ * hai hàng, giáp vai da trâu dày.
+ */
+export function giapDaTrau(h: HumanRig): void {
+  skirtArmor(h, { color: C.daTrau, trim: C.daTrauDark, rows: 2, to: 0.22, panels: [0, Math.PI], half: 0.5 });
+  armor(h, { color: C.daTrau, trim: C.bronze, rows: 3, y0: 0.39, y1: 0.6, thick: 0.016 });
+  chestDisc(h, { color: C.gold, drum: true, r: 0.07, rim: C.bronzeDark, thick: 0.022 });
+  studs(h, { color: C.bronzeLight, at: [-0.12, -0.085, 0.085, 0.12].map((x): [number, number] => [x, 0.45]), thick: 0.02 });
+  pauldrons(h, { color: C.daTrau, trim: C.bronze, size: 1.15 });
+}
+
+/** Áo bào đen của Mai Hắc Đế: áo choàng đen buông từ vai xuống gần gót, viền vàng, khuy đồng hai vai. */
+export function aoBaoDen(h: HumanRig): void {
+  cloak(h, { color: C.hacDe, trim: C.gold, hem: 0.08, flare: 0.14, clasp: C.gold });
+}
+
+/**
+ * Miện lá của Mai Thúc Loan: cùng dáng miện lá các tướng nam, điểm nhấn riêng của "Hắc Đế": lá sơn đen khảm đỏ son,
+ * nan vàng, chóp đỏ; mặt trời trống đồng vàng viền đỏ trước trán; vành miện vàng.
+ */
+function mienMtl(h: HumanRig): void {
+  diadem(h, { color: IRON_DARK, y: 0.8, h: 0.026, puff: 0.014 });
+  diadem(h, { color: C.gold, pattern: true, y: 0.824, h: 0.043, puff: 0.01 });
+  mien(h, { ...MIEN, color: C.hacDe, inlay: C.red, bar: C.gold, disc: C.gold, discRim: C.red, curls: C.gold, finial: C.red, h: 0.27, w: 0.085, y: 0.852, discR: 0.09 });
+}
+
+/** Mai Thúc Loan: da đen sạm, vạm vỡ, râu rậm; áo đen, giáp da trâu, áo bào đen, miện lá đen khảm đỏ, đại đao Vạn An. */
+function drawMaiThucLoan(h: HumanRig, thay: ThayDo = {}): void {
+  humanBody(h, {
+    skin: C.daSam,
+    cloth: C.hacDe,
+    pattern: true,
+    flaps: true,
+    top: C.hacDeLight,
+    belt: C.gold,
+    armband: C.gold,
+    greaves: C.daTrauDark,
+    greavesTrim: C.bronze,
+    bracer: C.daTrauDark,
+    bracerTrim: C.gold,
+  });
+  buckle(h, { color: C.gold, gem: C.red });
+  if (!thay.than) giapDaTrau(h);
+  if (!thay.lung) aoBaoDen(h);
+  humanHead(h, { skin: C.daSam, brows: true, mustache: C.hair, beard: C.hair, beardLen: 0.16 });
+  hairCap(h);
+  bun(h, { color: C.hair, at: [0, 0.985, -0.01], size: 0.085, tie: C.red });
+  if (!thay.dau) mienMtl(h);
+  // Hình tướng ở túi đồ: đao ngắn hơn cho vừa khung.
+  if (!thay.tay) h.vuKhi(() => h.local('hand', GRIP_R, null, (s) => daoVanAn(s, thay.hinh ? 1.2 : 1.5)));
+}
+
+/**
+ * Mai Thúc Loan: nghỉ thì dựng đao bên phải; đi thì cầm đao dựng nghiêng về trước; đánh thì giơ đao quá đầu bổ xuống.
+ * `skill` (Hắc Đế dấy binh): dang chân, giơ cao đao lên trời, tay trái nắm đấm vung lên, ngửa đầu hô; rồi đứng lại.
+ * `win`: giơ đao lên trời.
+ */
+function poseMaiThucLoan(b: Human, a: Act): void {
+  beginPose(b, a.time);
+  const t = a.time ?? 0;
+  if (a.act === 'walk') walkCycle(b, a.phase ?? 0, (a.stride ?? 0.5) * 0.75);
+  const sw = a.act === 'walk' ? Math.sin(a.phase ?? 0) : 0;
+  b.armL.rotation.set(-0.2 - 0.25 * sw, 0, -0.25);
+  if (a.act === 'walk') {
+    b.armR.rotation.x = -0.2 + 0.15 * sw;
+    b.hand.rotation.set(0.3, 0, -0.08);
+  } else b.hand.rotation.set(0.06 + 0.02 * Math.sin(t * 1.3), 0, -0.08);
+  if (a.act === 'dead') {
+    fallPose(b, a.fall ?? 1);
+    b.hand.rotation.x = -0.9;
+  } else if (a.skill !== undefined) {
+    const k = a.skill;
+    const up = smooth(k, 0, 0.2) * (1 - smooth(k, 0.82, 1));
+    const shout = Math.sin(Math.PI * smooth(k, 0.2, 0.8));
+    stance(b, lerp(0, 0.35, up), lerp(0, 0.35, up));
+    b.chest.rotation.set(-0.18 * up, 0, 0);
+    b.head.rotation.set(-0.3 * up - 0.05 * shout, 0, 0);
+    b.armR.rotation.set(lerp(0, -2.95, up), 0, lerp(0.2, 0.25, up));
+    b.hand.rotation.set(lerp(0.06, -0.2, up), 0, 0);
+    b.armL.rotation.set(lerp(-0.2, -2.4 - 0.25 * shout, up), 0, lerp(-0.25, -0.6, up));
+  } else if (a.win !== undefined) {
+    const w = a.win;
+    b.armR.rotation.set(lerp(0, -2.9, w), 0, lerp(0.2, 0.3, w));
+    b.hand.rotation.set(lerp(0.06, -0.15, w), 0, 0);
+    b.armL.rotation.set(lerp(-0.2, -2.5, w), 0, lerp(-0.25, -0.5, w));
+    b.chest.rotation.x = -0.1 * w;
+  } else if (a.act === 'fight') {
+    // Thủ: giơ cao đao quá đầu, lưỡi ngả ra sau. Bổ: vụt xuống trước mặt, lao người tới.
+    const e = strikeCurve(a.strike, 0.3, 0.5);
+    stance(b, lerp(0.25, 0.5, e), lerp(0.25, 0.4, e));
+    b.hips.position.z += 0.05 * e;
+    b.chest.rotation.set(lerp(-0.08, 0.45, e), lerp(0.25, -0.25, e), 0);
+    b.head.rotation.set(lerp(0.05, -0.3, e), -b.chest.rotation.y, 0);
+    b.armR.rotation.set(lerp(-3.0, -1.0, e), 0, lerp(0.15, 0.05, e));
+    b.hand.rotation.set(lerp(-0.9, 1.9, e), 0, 0);
+    b.armL.rotation.set(lerp(-0.6, -0.2, e), 0, -0.3);
+  }
+  gripHands(b, ARM * K_MTL);
+}
+
+/** Mai Thúc Loan đi bộ cầm đại đao Vạn An (ở sân Điện cũng đứng chầu như thế). */
+export function makeMaiThucLoan(opts: { anh?: boolean } = {}): THREE.Group {
+  const r = new RigBuilder({ ...BASE, ...bigHuman('base', [0, 0, 0], K_MTL) });
+  r.ghiAnh = !!opts.anh;
+  drawBig(r, [0, 0, 0], K_MTL, drawMaiThucLoan);
+  const shape = r.build();
+  const { group, bones } = skinRig(shape);
+  return anhNeu(finish(group, (a) => poseMaiThucLoan(bones as unknown as Human, a)), shape, 'maiThucLoan', opts.anh);
+}
+
 // ---------- Lạc tướng đánh trống trận ----------
 
 /** Dùi trống lúc nghỉ, lúc giơ cao lấy đà, và lúc nện xuống mặt trống (góc chúc xuống, radian). */
@@ -2382,10 +2499,10 @@ export function makeNuTuong(kind: NuTuongId, opts: { glow?: boolean } = {}): THR
 export type TheCamTuong = 'dung' | 'kiem' | 'no' | 'cung';
 
 /** Thế cầm vũ khí của chính tướng (khi chưa mặc vũ khí khác). */
-export const CAM_GOC: Record<HeroKind, TheCamTuong> = { giong: 'dung', sonTinh: 'dung', anDuong: 'no', caoLo: 'no', trungTrac: 'kiem', trungNhi: 'cung', baTrieu: 'kiem', trieuQuangPhuc: 'dung' };
+export const CAM_GOC: Record<HeroKind, TheCamTuong> = { giong: 'dung', sonTinh: 'dung', anDuong: 'no', caoLo: 'no', trungTrac: 'kiem', trungNhi: 'cung', baTrieu: 'kiem', trieuQuangPhuc: 'dung', maiThucLoan: 'dung' };
 
 /** Cỡ thân người từng tướng khi đứng (Hai Bà đứng cùng cỡ Lạc tướng như ở sân Điện). */
-const K_DUNG: Record<HeroKind, number> = { giong: K_GIONG, sonTinh: K_SON, anDuong: K_ADV, caoLo: K_CAO, trungTrac: K_LAC, trungNhi: K_LAC, baTrieu: K_LAC, trieuQuangPhuc: K_TQP };
+const K_DUNG: Record<HeroKind, number> = { giong: K_GIONG, sonTinh: K_SON, anDuong: K_ADV, caoLo: K_CAO, trungTrac: K_LAC, trungNhi: K_LAC, baTrieu: K_LAC, trieuQuangPhuc: K_TQP, maiThucLoan: K_MTL };
 
 /** Tư thế đứng chân dung theo thế cầm vũ khí, như các tướng đứng chầu trong sân Điện. */
 function poseChanDung(b: Human, cam: TheCamTuong, k: number): void {
@@ -2429,6 +2546,7 @@ export function bakeTuongDung(kind: HeroKind, thay: ThayDo, cam: TheCamTuong, th
     else if (kind === 'trungTrac') drawTrungTrac(h, t);
     else if (kind === 'baTrieu') drawBaTrieu(h, t);
     else if (kind === 'trieuQuangPhuc') drawTrieuQuangPhuc(h, t);
+    else if (kind === 'maiThucLoan') drawMaiThucLoan(h, t);
     else drawTrungNhi(h, t);
     them(h, k);
   });

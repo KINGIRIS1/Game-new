@@ -266,7 +266,7 @@ export function datTuDanh(b: Battle, on: boolean): void {
 // ---------- Bước trận ----------
 
 /** Tầm tự dùng kỹ năng: có quái trong chừng này ô quanh tướng làm kỹ năng. */
-const TAM_KY: Partial<Record<SkillId, number>> = { phunLua: 5, nhoTre: 2.5, bocDoi: 7, doiNon: 3, noThan: 7, lienChau: 8, voiXung: 5, hieuTrieu: 5, chemCaKinh: 6, ngayAn: 4 };
+const TAM_KY: Partial<Record<SkillId, number>> = { phunLua: 5, nhoTre: 2.5, bocDoi: 7, doiNon: 3, noThan: 7, lienChau: 8, voiXung: 5, hieuTrieu: 5, chemCaKinh: 6, ngayAn: 4, hacDe: 3 };
 
 /** Chạy trận dã ngoại thêm `dt` giây (không có thắng thua). */
 export function stepDa(b: Battle, dt: number): void {
@@ -280,6 +280,7 @@ export function stepDa(b: Battle, dt: number): void {
     f.swing = Math.max(0, f.swing - dt);
     if (f.slow) f.slow = Math.max(0, f.slow - dt);
     if (f.an) f.an = Math.max(0, f.an - dt);
+    if (f.hang) f.hang = Math.max(0, f.hang - dt);
   }
   hoiSinh(b, bc);
   const heroes = tuongCon(b);

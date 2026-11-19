@@ -34,4 +34,8 @@ export const ANH_DO_DAU: Record<string, string> = {
   'trungTrac-giap': '728a1b7a',
   'trungTrac-phucSuc': 'df4d48dd',
   'trungTrac-vuKhi': '2baeb675',
+  'vanAn-baoVat': '0a87934e',
+  'vanAn-giap': 'b6aeba7e',
+  'vanAn-phucSuc': 'b297f003',
+  'vanAn-vuKhi': '8505f504',
 };

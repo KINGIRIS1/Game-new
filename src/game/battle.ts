@@ -68,6 +68,8 @@ import {
   CA_KINH,
   NGAY_AN,
   TRIEU_QUANG_PHUC,
+  MAI_THUC_LOAN,
+  HAC_DE,
   TT_SUMMON,
   TT_WAVE,
   UNITS,
@@ -126,10 +128,10 @@ export type RaidSide = 'bac' | 'tay' | 'nam' | 'dong' | 'namXa' | 'dongXa';
  * Tướng ra trận cùng quân ta: Thánh Gióng, Sơn Tinh, An Dương Vương, Cao Lỗ, hay Hai Bà Trưng (chương 5). Mỗi trận một
  * tướng, riêng Hai Bà: mỗi bà một voi, cùng ra một trận.
  */
-export type HeroKind = 'giong' | 'sonTinh' | 'anDuong' | 'caoLo' | 'trungTrac' | 'trungNhi' | 'baTrieu' | 'trieuQuangPhuc';
+export type HeroKind = 'giong' | 'sonTinh' | 'anDuong' | 'caoLo' | 'trungTrac' | 'trungNhi' | 'baTrieu' | 'trieuQuangPhuc' | 'maiThucLoan';
 /** Lính thường, giặc, tướng, hoặc nghĩa binh (Hiệu triệu của Trưng Nhị gọi ra). */
 export type FighterKind = UnitType | EnemyType | HeroKind | 'nghiaBinh';
-export const HERO_KINDS: HeroKind[] = ['giong', 'sonTinh', 'anDuong', 'caoLo', 'trungTrac', 'trungNhi', 'baTrieu', 'trieuQuangPhuc'];
+export const HERO_KINDS: HeroKind[] = ['giong', 'sonTinh', 'anDuong', 'caoLo', 'trungTrac', 'trungNhi', 'baTrieu', 'trieuQuangPhuc', 'maiThucLoan'];
 /** Tướng của truyện: ra phó bản, giữ kinh đô, giữ thành trong Đấu thành (tướng dã ngoại chỉ đánh ở dã ngoại). */
 export const HERO_TRUYEN: HeroKind[] = ['giong', 'sonTinh', 'anDuong', 'caoLo', 'trungTrac', 'trungNhi'];
 export const isHero = (k: FighterKind): k is HeroKind => (HERO_KINDS as FighterKind[]).includes(k);
@@ -221,6 +223,9 @@ export interface Fighter {
   an?: number;
   /** Ngày ẩn đêm ra: đòn thường đầu tiên sau khi hết ẩn mạnh gấp chừng này lần (đánh xong thì bỏ). */
   phuc?: number;
+  /** Hắc Đế dấy binh: còn bao nhiêu giây được thêm sức đánh, và thêm bao nhiêu phần (`hangV`). */
+  hang?: number;
+  hangV?: number;
 }
 
 export interface BattleEvent {
@@ -263,7 +268,9 @@ export interface BattleEvent {
     /** Chém cá kình: voi Bà Triệu lao từ (x, z) tới (tx, tz), Bà chém kẻ đứng ở đó. */
     | 'chem'
     /** Ngày ẩn đêm ra: Triệu Quang Phục ở (x, z) cho cả đội lặn vào đầm `len` giây. */
-    | 'an';
+    | 'an'
+    /** Hắc Đế dấy binh: Mai Thúc Loan ở (x, z) phất cờ đen hô quân `len` giây, giặc trong vòng `r` ô quay sang ông. */
+    | 'hacDe';
   x: number;
   z: number;
   tx?: number;
@@ -433,6 +440,8 @@ export const statsOf = (k: FighterKind): FighterStats =>
                 ? BA_TRIEU
               : k === 'trieuQuangPhuc'
                 ? TRIEU_QUANG_PHUC
+              : k === 'maiThucLoan'
+                ? MAI_THUC_LOAN
               : k === 'nghiaBinh'
                 ? NGHIA_BINH
                 : k in UNITS
@@ -597,6 +606,7 @@ export function heroSkills(hero: HeroSetup): SkillId[] {
   if (hero.kind === 'trungNhi') return hero.hieuTrieu ? ['hieuTrieu'] : [];
   if (hero.kind === 'baTrieu') return ['chemCaKinh'];
   if (hero.kind === 'trieuQuangPhuc') return ['ngayAn'];
+  if (hero.kind === 'maiThucLoan') return ['hacDe'];
   return hero.bamboo ? ['phunLua', 'nhoTre'] : ['phunLua'];
 }
 
@@ -1780,7 +1790,9 @@ export function strike(battle: Battle, f: Fighter, foe: Fighter): void {
   // Ngày ẩn đêm ra: hết ẩn rồi thì đòn đầu tiên mạnh gấp bội (còn đang ẩn thì đánh như thường).
   const phuc = f.phuc && !((f.an ?? 0) > 0) ? f.phuc : 1;
   if (phuc !== 1) f.phuc = undefined;
-  const dmg = st.dmg * mult * (f.manh ?? 1) * phuc;
+  // Hắc Đế dấy binh: cả đội đánh mạnh hơn trong một lúc.
+  const hang = (f.hang ?? 0) > 0 ? 1 + (f.hangV ?? 0) : 1;
+  const dmg = st.dmg * mult * (f.manh ?? 1) * phuc * hang;
   damageFighter(battle, { kind: f.kind, dmg }, foe);
   if (isHero(f.kind)) {
     // Đòn của tướng quét cả giặc đứng quanh.
@@ -3170,6 +3182,26 @@ export function useSkill(battle: Battle, skill: SkillId): boolean {
     }
     hero.swing = 0.3;
     emit(battle, { kind: 'an', x: hero.x, z: hero.z, len: an });
+  } else if (skill === 'hacDe') {
+    // Hắc Đế dấy binh: Mai Thúc Loan phất cờ đen hô quân, cả đội đánh mạnh hơn; giặc quanh ông xúm vào đánh ông.
+    const t = bo4 ? BO_BON.hacDe.t : HAC_DE.t;
+    const v = bo4 ? BO_BON.hacDe.danh : HAC_DE.danh;
+    for (const o of battle.fighters) {
+      if (o.side !== 'ta' || !isAlive(o) || o.state === 'dead') continue;
+      o.hang = t;
+      o.hangV = v;
+    }
+    const tam = HAC_DE.tam * g;
+    for (const o of battle.fighters) {
+      if (o.side === 'ta' || !isAlive(o) || o.state === 'dead' || !o.nha || dist(o.x - hero.x, o.z - hero.z) > tam) continue;
+      // Quái dã ngoại đang về chỗ mọc thì thôi.
+      if (o.nha.trang !== 've') {
+        o.nha.trang = 'duoi';
+        o.nha.duoi = hero.id;
+      }
+    }
+    hero.swing = 0.3;
+    emit(battle, { kind: 'hacDe', x: hero.x, z: hero.z, len: t, r: HAC_DE.tam });
   } else {
     // Dời non: đá mọc lên dưới chân mọi kẻ địch quanh Sơn Tinh, giữ chân chúng vài giây.
     for (const o of battle.fighters) {

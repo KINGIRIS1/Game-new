@@ -192,6 +192,13 @@ export const C = {
   lauSay: 0xc9b77a,
   lauSayDark: 0x8f7c4c,
   suongDam: 0xb9cdbb,
+  // Mai Thúc Loan (Mai Hắc Đế): da đen sạm, áo bào đen, giáp da trâu; vòng hô quân đỏ sẫm.
+  daSam: 0x8f5c3c,
+  hacDe: 0x26222b,
+  hacDeLight: 0x3d3745,
+  daTrau: 0x7a4e2c,
+  daTrauDark: 0x553419,
+  hoQuan: 0xc0392b,
   aoNau: 0x7a5434,
   khanNau: 0x4d3423,
   quanPhuc: 0x25222a,

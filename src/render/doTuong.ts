@@ -10,12 +10,12 @@ import * as THREE from 'three';
 import { BO_DO, O_DO, type BoDo, type ODo } from '../game/defs';
 import { bakeVoiTran } from './beasts';
 import { GRIP_L, GRIP_R, HUMAN, type HumanRig } from './body';
-import { CAO_QUIVER, MIEN, VOI_TRANG, aoLauSay, baoTenDong, bakeIronHorse, giapVayDong, giongWeapon, mongRong, sonStaff, type TheCamTuong } from './heroes';
+import { CAO_QUIVER, MIEN, VOI_TRANG, aoBaoDen, aoLauSay, baoTenDong, bakeIronHorse, giapDaTrau, giapVayDong, giongWeapon, mongRong, sonStaff, type TheCamTuong } from './heroes';
 import { armor, chestDisc, cloak, diadem, mien, pauldrons, shoulderRocks, skirtArmor, studs } from './nanDo';
 import { C } from './palette';
 import { RigBuilder, bakeRig } from './rig';
 import { ToonModel, inkThin } from './toon';
-import { IRON, IRON_DARK, LEATHER, arrow, bow, coLac, crossbowParts, giaoDaTrach, guomDong, guomNuiNua, hornTrumpet, repeatingCrossbow, type Parts } from './weapons';
+import { IRON, IRON_DARK, LEATHER, arrow, bow, coLac, crossbowParts, daoVanAn, giaoDaTrach, guomDong, guomNuiNua, hornTrumpet, repeatingCrossbow, type Parts } from './weapons';
 
 export type MonId = `${BoDo}-${ODo}`;
 export const monId = (bo: BoDo, o: ODo): MonId => `${bo}-${o}`;
@@ -88,6 +88,33 @@ export function sungTe(m: Parts): void {
   p.sphere(0.016, C.red, 0, 0.065, -0.06, [1, 1, 1], 6);
   p.cone(0.02, 0.11, C.red, 0.01, 0.0, -0.075, [Math.PI + 0.25, 0, 0.1], 6);
   p.cone(0.016, 0.09, C.red, -0.012, 0.01, -0.07, [Math.PI + 0.1, 0, -0.12], 6);
+}
+
+/**
+ * Ấn Hắc Đế của Mai Thúc Loan: khối ngọc đen vuông, mặt dưới son đỏ, viền vàng quanh thân ấn; núm ấn hình con trâu
+ * vàng nằm (ông thuở nhỏ chăn trâu); dây thao đỏ buộc ở núm, tua buông. Đáy ở y = 0, đầu trâu hướng +z.
+ */
+export function anHacDe(m: Parts): void {
+  const p = m.plain;
+  p.box(0.3, 0.03, 0.3, C.red, 0, 0.015, 0);
+  p.box(0.28, 0.17, 0.28, C.hacDe, 0, 0.115, 0);
+  m.band.box(0.29, 0.035, 0.29, C.gold, 0, 0.17, 0);
+  p.box(0.25, 0.02, 0.25, C.hacDeLight, 0, 0.2, 0);
+  // Núm trâu vàng nằm: mình dài, lưng gù, đầu nhô ra trước, sừng cong lưỡi liềm, chân xếp dưới bụng.
+  const y = 0.25;
+  p.sphere(0.065, C.gold, 0, y, -0.02, [0.85, 0.7, 1.45], 10);
+  p.sphere(0.045, C.gold, 0, y + 0.035, -0.04, [0.9, 0.7, 1], 8);
+  p.sphere(0.04, C.gold, 0, y + 0.005, 0.1, [0.85, 0.8, 1.05], 8);
+  p.sphere(0.026, C.goldDark, 0, y - 0.012, 0.135, [1, 0.75, 0.8], 7);
+  p.add(new THREE.TorusGeometry(0.048, 0.01, 5, 14, Math.PI), C.goldDark, 0, y + 0.03, 0.095, [-0.35, 0, 0]);
+  for (const sd of [-1, 1]) {
+    p.sphere(0.018, C.gold, sd * 0.05, y - 0.035, 0.05, [1, 0.6, 1.4], 6);
+    p.sphere(0.018, C.gold, sd * 0.05, y - 0.035, -0.08, [1, 0.6, 1.4], 6);
+  }
+  p.cone(0.008, 0.06, C.goldDark, 0, y + 0.01, -0.12, [-2.2, 0, 0], 4);
+  // Dây thao đỏ, tua buông xuống bên thân ấn.
+  p.add(new THREE.TorusGeometry(0.03, 0.008, 5, 14), C.red, 0, y + 0.04, -0.08, [0, Math.PI / 2, 0]);
+  p.cone(0.022, 0.12, C.red, 0.1, 0.18, -0.15, [Math.PI + 0.3, 0, 0.2], 6);
 }
 
 /**
@@ -446,6 +473,12 @@ export const MON_VE: Record<MonId, VeMon> = {
   'daTrach-phucSuc': { cho: 'thu', rieng: toon(thuyenDocMoc), xoay: [0.35, 0.95, 0] },
   // Móng rồng xòe ngón theo chiều trước sau cho gọn bên vai ở hình tướng.
   'daTrach-baoVat': { cho: 'bay', rieng: quay(toon((m) => mongRong(m, 2, 0.12)), Math.PI / 2), xoay: [0.2, 0.6 - Math.PI / 2, 0] },
+
+  // Bộ Vạn An (Mai Thúc Loan, tướng dã ngoại map 8).
+  'vanAn-vuKhi': { cho: 'tay', cam: 'dung', mac: tayPhai((s) => daoVanAn(s, 1.2)), rieng: toon((m) => daoVanAn(m)), xoay: [0, 1.2, -Math.PI / 4] },
+  'vanAn-giap': { cho: 'than', mac: giapDaTrau, rieng: tren(giapDaTrau, true), xoay: [0, 0.45, 0] },
+  'vanAn-phucSuc': { cho: 'lung', mac: aoBaoDen, rieng: tren(aoBaoDen, true), xoay: [0, Math.PI - 0.6, 0] },
+  'vanAn-baoVat': { cho: 'bay', rieng: toon(anHacDe), xoay: [0.35, 1.15, 0] },
 };
 
 /** Mô hình đứng riêng của món, đặt theo góc chụp ảnh (`xoay`). */

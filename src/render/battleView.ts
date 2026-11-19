@@ -6,7 +6,7 @@ import { heroSetups, type Battle, type Fighter, type FighterKind } from '../game
 import { FIRE, HIEU_TRIEU, HILL, LIEN_CHAU, MA_VIEN_VOLLEY, RALLY_BEAT, ROCKS, SKILLS, SMASH, SWIMMERS, TT_WAVE, type NuTuongId, type UnitType } from '../game/defs';
 import { isBeast, makeBeast, makeRuaVang } from './beasts';
 import { isMonster, makeMonster } from './monsters';
-import { makeAnDuong, makeBaTrieu, makeCaoLo, makeGiong, makeNuTuong, makeSonTinh, makeThuyTinh, makeTrieuQuangPhuc, makeTrungNhi, makeTrungTrac } from './heroes';
+import { makeAnDuong, makeBaTrieu, makeCaoLo, makeGiong, makeNuTuong, makeSonTinh, makeMaiThucLoan, makeThuyTinh, makeTrieuQuangPhuc, makeTrungNhi, makeTrungTrac } from './heroes';
 import { LAU_THUYEN_SINK, makeEnemyBoat, makeFighter, makeMountain } from './models';
 import { C } from './palette';
 import type { Poser } from './rig';
@@ -51,6 +51,8 @@ interface FighterView {
   order?: THREE.Mesh;
   /** Ngày ẩn đêm ra: sương đầm và lau sậy phủ quanh người đang ẩn; đã phủ được bao lâu. */
   suong?: { group: THREE.Group; mat: THREE.MeshBasicMaterial; age: number };
+  /** Hắc Đế dấy binh: vòng đỏ sẫm dưới chân người đang được thêm sức đánh. */
+  hang?: THREE.Mesh;
 }
 
 /** Vòng núi đá Dời non quanh Sơn Tinh: từng mỏm trồi vụt lên lần lượt, đứng một lúc rồi lún xuống. */
@@ -200,6 +202,7 @@ const SCALE: Partial<Record<FighterKind, number>> = {
   trungNhi: 0.75,
   baTrieu: 0.75,
   trieuQuangPhuc: 0.8,
+  maiThucLoan: 0.8,
   toDinh: 1,
 };
 /** Thứ đi dưới nước: lâu thuyền, lính còn trên thuyền, thủy quái. Qua ô cầu thì đi dưới gầm, không lên mặt cầu. */
@@ -348,6 +351,8 @@ const puffGeo = new THREE.SphereGeometry(0.3, 10, 8);
 /** Lau sậy mọc quanh chân người đang ẩn (Ngày ẩn đêm ra). */
 const reedGeo = new THREE.ConeGeometry(0.035, 0.9, 4);
 const reedMat = new THREE.MeshBasicMaterial({ color: C.lauSay });
+/** Vòng đỏ sẫm dưới chân người đang được Hắc Đế dấy binh thêm sức đánh. */
+const hangMat = new THREE.MeshBasicMaterial({ color: C.hoQuan, transparent: true, opacity: 0.7, depthWrite: false });
 const arrowGeo = new THREE.BoxGeometry(0.03, 0.03, 0.45);
 const arrowMat = new THREE.MeshBasicMaterial({ color: C.arrow });
 /** Tên đồng của Cao Lỗ (đòn thường và Nỏ liên châu). */
@@ -677,6 +682,8 @@ export class BattleView {
             ? makeBaTrieu({ anh })
             : f.kind === 'trieuQuangPhuc'
             ? makeTrieuQuangPhuc({ anh })
+            : f.kind === 'maiThucLoan'
+            ? makeMaiThucLoan({ anh })
             : f.kind === 'trungTrac'
             ? makeTrungTrac({ glow, anh })
             : f.kind === 'trungNhi'
@@ -714,6 +721,7 @@ export class BattleView {
       this.syncAura(view, f.side === 'ta' && f.state !== 'dead' && battle.rally > 0 && !battle.outcome);
       this.syncTeam(view, battle.mode === 'pvp' && f.state !== 'dead' ? f.side : null);
       this.syncShell(view, f.side === 'ta' && f.state !== 'dead' && battle.shield > 0 && !battle.outcome);
+      this.syncHang(view, f.state !== 'dead' && (f.hang ?? 0) > 0 && !battle.outcome);
       this.syncOrder(view, f.kind === 'no' && f.state !== 'dead' && (battle.lenh ?? 0) > 0 && !battle.outcome);
       if (f.kind === 'lauThuyen') {
         this.poseShip(view, f, base, dt);
@@ -1410,6 +1418,43 @@ export class BattleView {
     view.obj.position.y -= 0.14 * this.scale * fade;
   }
 
+  /**
+   * Hắc Đế dấy binh: Mai Thúc Loan giơ đao hô quân, vòng đỏ sẫm loang ra tới tầm kéo giặc (`r` ô), khói đen cuộn lên
+   * dọc mép vòng; người được thêm sức đánh có vòng đỏ dưới chân (`syncHang`).
+   */
+  private hacDe(battle: Battle, x: number, z: number, r: number): void {
+    const { x: ox, z: oz } = this.offset;
+    const hero = battle.fighters.find((f) => f.kind === 'maiThucLoan');
+    const view = hero && this.fighters.get(hero.id);
+    if (view) view.cast = CAST_TIME;
+    const ring = new THREE.Mesh(ringGeo, new THREE.MeshBasicMaterial({ color: C.hoQuan, transparent: true, depthWrite: false }));
+    ring.position.set(x + ox, this.heightAt(x, z) + 0.08, z + oz);
+    ring.renderOrder = 3;
+    this.root.add(ring);
+    this.rings.push({ mesh: ring, age: 0, size: r * this.geo });
+    const rr = r * this.geo;
+    for (let i = 0; i < 10; i++) {
+      const a = (i / 10) * Math.PI * 2;
+      const px = x + Math.cos(a) * rr;
+      const pz = z + Math.sin(a) * rr;
+      this.addPuff(px + ox, this.heightAt(px, pz) + 0.3, pz + oz, i % 2 ? C.hacDe : C.hoQuan, 0.15 + 0.02 * i, 1.0, 1.8);
+    }
+  }
+
+  /** Thêm hay bỏ vòng đỏ sẫm Hắc Đế dấy binh dưới chân một người, vòng đập theo nhịp hô. */
+  private syncHang(view: FighterView, on: boolean): void {
+    if (on && !view.hang) {
+      view.hang = new THREE.Mesh(auraGeo, hangMat);
+      view.hang.position.y = 0.05;
+      view.hang.renderOrder = 2;
+      view.obj.add(view.hang);
+    } else if (!on && view.hang) {
+      view.hang.removeFromParent();
+      view.hang = undefined;
+    }
+    if (view.hang) view.hang.scale.setScalar(1.1 + 0.12 * Math.sin(this.time * 6));
+  }
+
   /** Thêm hay bỏ vòng sáng mai rùa dưới chân một người lính ta. */
   private syncShell(view: FighterView, on: boolean): void {
     if (on && !view.shell) {
@@ -1600,6 +1645,7 @@ export class BattleView {
       if (e.kind === 'call') this.hieuTrieu(battle, e.x, e.z, e.n);
       if (e.kind === 'chem' && e.tx !== undefined && e.tz !== undefined) this.chemCaKinh(battle, e.x, e.z, e.tx, e.tz);
       if (e.kind === 'an') this.ngayAn(battle, e.x, e.z);
+      if (e.kind === 'hacDe') this.hacDe(battle, e.x, e.z, e.r ?? 3);
       if (e.kind === 'escape') {
         // Tô Định chạy thoát khỏi bãi: bụi tung ở mép bãi phía giặc.
         for (let i = 0; i < 6; i++) this.addPuff(e.x + (i - 2.5) * 0.35 + ox, this.heightAt(e.x, e.z) + 0.25, e.z + oz, C.earth, i * 0.05, 0.9, 1.8);

@@ -446,6 +446,27 @@ export function giaoDaTrach(s: Parts, len = 1.5): void {
 }
 
 /**
+ * Đại đao Vạn An của Mai Thúc Loan: cán gỗ sơn đen dài 1,5, ba đai vàng, đuôi cán bịt sắt; khâu vàng, tua đỏ buông
+ * dưới khâu; lưỡi sắt to bản cong như trăng non, sống lưỡi vàng, mũi vểnh. Tay nắm cách đuôi cán 0,3; lưỡi sắc hướng +z.
+ */
+export function daoVanAn(s: Parts, len = 1.5): void {
+  const p = s.plain;
+  const top = len - 0.3;
+  p.cyl(0.023, 0.026, len, C.hacDe, 0, len / 2 - 0.3, 0, undefined, 6);
+  for (const y of [-0.1, 0.35, 0.8]) if (y < top - 0.1) p.cyl(0.03, 0.03, 0.03, C.gold, 0, y, 0, undefined, 6);
+  p.cone(0.028, 0.12, IRON, 0, -0.36, 0, [Math.PI, 0, 0], 5);
+  s.band.cyl(0.04, 0.044, 0.07, C.gold, 0, top + 0.02, 0, undefined, 8);
+  p.cone(0.06, 0.16, C.red, 0, top - 0.09, 0, [Math.PI, 0, 0], 7);
+  // Lưỡi: bụng lưỡi phình cong ra trước, mũi vểnh ngược lên sau; sống vàng chạy dọc lưng lưỡi.
+  p.box(0.026, 0.34, 0.15, IRON, 0, top + 0.23, 0.075);
+  p.sphere(0.1, IRON, 0, top + 0.27, 0.15, [0.13, 1.85, 0.6], 8);
+  p.box(0.024, 0.2, 0.13, IRON, 0, top + 0.47, 0.05, [-0.4, 0, 0]);
+  p.cone(0.05, 0.14, IRON, 0, top + 0.61, 0.0, [-0.6, 0, 0], 4);
+  p.box(0.034, 0.4, 0.026, C.gold, 0, top + 0.25, -0.005);
+  p.box(0.012, 0.3, 0.012, IRON_LIGHT, 0.014, top + 0.27, 0.2);
+}
+
+/**
  * Gươm Núi Nưa của Bà Triệu: lưỡi sắt thẳng dài 0,72 có gờ sống sáng, mũi nhọn; chắn tay vàng hai cánh vểnh như cánh
  * chim, chuôi quấn dây xanh ngọc, đốc tròn vàng, tua đỏ buông ở đốc. Lưỡi sắc hướng +z.
  */

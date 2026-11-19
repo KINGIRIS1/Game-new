@@ -11,7 +11,7 @@ import { mergeVertices } from 'three/addons/utils/BufferGeometryUtils.js';
 import type { HeroKind } from '../game/battle';
 import { bakeRig, type Act, type Bones, type Poser, type RigShape } from './rig';
 
-/** Màu ánh theo bộ của tướng: lửa Phù Đổng, ngọc Tản Viên, vàng Cổ Loa, đồng Cao Lỗ, đỏ son Trưng Trắc, vàng Trưng Nhị, trắng ngà Núi Nưa, xanh đầm Dạ Trạch. */
+/** Màu ánh theo bộ của tướng: lửa Phù Đổng, ngọc Tản Viên, vàng Cổ Loa, đồng Cao Lỗ, đỏ son Trưng Trắc, vàng Trưng Nhị, trắng ngà Núi Nưa, xanh đầm Dạ Trạch, đen ánh tím Vạn An. */
 export const ANH_MAU: Record<HeroKind, number> = {
   giong: 0xff9a3c,
   sonTinh: 0x6cf2a8,
@@ -23,6 +23,8 @@ export const ANH_MAU: Record<HeroKind, number> = {
   baTrieu: 0xfff4d6,
   // Triệu Quang Phục: xanh đầm Dạ Trạch.
   trieuQuangPhuc: 0x8fe0b0,
+  // Mai Thúc Loan: đen ánh tím Vạn An.
+  maiThucLoan: 0xb48cff,
 };
 
 /** Lớp trong ôm sát vũ khí; lớp ngoài là quầng (tọa độ mô hình, tướng cao chừng 1,6–2,5). */
