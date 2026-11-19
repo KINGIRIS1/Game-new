@@ -351,8 +351,11 @@ function clothes(base: BodyBase, look: BodyLook): Paint[] {
   const { clay, zone } = base;
   const out: Paint[] = [];
   const layer = (f: Sdf, color: number, fine = 0) => out.push(clay.layer('hips', f, color, fine));
-  const legs = look.legs ?? C.skin;
-  if (legs !== C.skin) {
+  // Da khác màu thường: tô cả thân trước, đồ mặc tô đè lên sau.
+  const skin = look.skin ?? C.skin;
+  if (skin !== C.skin) layer(() => -1, skin);
+  const legs = look.legs ?? skin;
+  if (legs !== skin) {
     layer(zone.legs, legs);
     // Giày vải đen.
     layer((x, y, z) => Math.max(zone.legs(x, y, z), y - 0.048), C.ink);
@@ -629,13 +632,13 @@ function facePaints(base: HeadBase, face: FaceLook, detail: number): Paint[] {
  * Tai: vành tròn dẹt áp vào bên đầu, lòng tai sẫm hơn. Làm mảnh riêng có viền mực, vì nặn liền vào đầu thì tai chìm
  * mất khi nhìn nghiêng (lưới quanh đầu thưa).
  */
-function earGeometry(side: number, detail: number): THREE.BufferGeometry {
+function earGeometry(side: number, detail: number, da: number = C.skin): THREE.BufferGeometry {
   const g = new THREE.SphereGeometry(1, segs(10, detail, 8), segs(8, detail, 6));
   g.deleteAttribute('uv');
   const p = g.getAttribute('position');
   const col = new Float32Array(p.count * 3);
-  const skin = new THREE.Color(C.skin);
-  const inner = new THREE.Color(EAR);
+  const skin = new THREE.Color(da);
+  const inner = new THREE.Color(da === C.skin ? EAR : new THREE.Color(da).multiplyScalar(0.8).getHex());
   const c = new THREE.Color();
   for (let i = 0; i < p.count; i++) {
     // Lòng tai: phần ngoài cùng, quanh giữa.
@@ -829,8 +832,11 @@ function sculptHead(plan: HeadPlan, detail: number): Piece[] {
   const base = headBase(plan.hair !== undefined);
   const paints = facePaints(base, plan.face, detail);
   if (base.hair && plan.hair !== undefined) paints.unshift(base.clay.layer('head', base.hair, plan.hair));
+  // Da khác màu thường: tô cả đầu trước, tóc và nét mặt tô đè lên sau.
+  const skin = plan.face.skin ?? C.skin;
+  if (skin !== C.skin) paints.unshift(base.clay.layer('head', () => -1, skin));
   const mesh = base.clay.build({ kind: 'radial', c: [0, 0.75, 0], detail: Math.max(3, Math.round(5 * detail)), rmax: 0.34, front: 0.35 }, paints);
-  const out: Piece[] = [clayPiece(mesh), ...[-1, 1].map((side) => rigid(earGeometry(side, detail), 'head'))];
+  const out: Piece[] = [clayPiece(mesh), ...[-1, 1].map((side) => rigid(earGeometry(side, detail, skin), 'head'))];
   const { face } = plan;
   if (face.mustache !== undefined) out.push(mustachePiece(face.mustache, detail));
   if (face.beard !== undefined) out.push(beardPiece(face.beard, detail, face.beardLen ?? 0.17, !!face.beardSplit));

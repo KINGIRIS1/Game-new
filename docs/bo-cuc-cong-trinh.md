@@ -26,12 +26,12 @@ Từ bản lưu 20 Điện móng 10×10 (chủ dự án yêu cầu; xem mục Đ
 . 2 . . . . . d T T T T d . . . . . 2 .
 . v v . . . . . . . . . . . . . . v v .
 . v v . . . . . V V V V . . . . . v v .
-. . . t . t . . V V V V . . t . t . . .
+. . . t . t . . V V V V . . t . t . u .
 . . . . . . . . V V V V . . . . . . . .
-. . . t . t . . m , , . . . t . t . . .
+. u . t . t . . m , , . . . t . t . u .
 . . . . . . . . . , , . . . . . . . . .
 . D . t . t . . . , , . . . t . t . D .
-. . . . . . . . . , , . . . . . . . . .
+. . . u . . . . . , , . . . . . . . . .
 . L L . . t . . . , , . . . t . . L L .
 . L L . e . . . l , , l . . . . . L L .
 . . . . . . . G G G G G G . . . . . . .
@@ -40,6 +40,7 @@ Từ bản lưu 20 Điện móng 10×10 (chủ dự án yêu cầu; xem mục Đ
 - `7`, `H`, `c`, `C`, `N`, `T`, `d`: khối cung điện (cột chim Lạc, nhà chính, hai chái, nền, thềm, đôi đỉnh đồng), vẽ theo bản 5×5 ở dưới, phóng 1,5 lần; chỗ chữ trên đây chỉ là chỗ chừng của khối sau khi phóng.
 - `V` cấp 1, bệ ngai: Vua Hùng ngồi ngai vàng ở mọi cấp. Cấp 1–3 ụ đất trải chiếu; cấp 4 bệ đá ba bậc, thảm đỏ; cấp 6 mép bậc viền vàng; cấp 9 mặt bậc chạm hoa văn. Ngai cấp 3 có lọng (cấp 6 lọng vàng), cấp 5 đôi quạt lông chim, cấp 7 chim Lạc trên tựa ngai.
 - `t` cấp 1, 14 chỗ tướng đứng chầu, hai cột mỗi bên (cột trong cách lối giữa 2,25 ô, cột ngoài 3,25 ô). Lạc tướng, Gióng hai bên ngai; Sơn Tinh, An Dương Vương hàng hai, Hai Bà Trưng cột ngoài hàng hai; Cao Lỗ hàng ba bên phải; còn lại để dành cho các chương sau. Tướng đứng trong sân không cưỡi thú.
+- `u` cấp 1, bốn chỗ đứng chầu nới thêm cho tướng dã ngoại, đánh số từ trên xuống, trái sang: 14 ngoài cùng hàng ngai bên phải, cạnh Bà Triệu (Lý Thường Kiệt); 15, 16 ngoài cùng hàng ba (Mai Thúc Loan trái, Triệu Quang Phục phải); 17 cột ngoài giữa hàng ba và hàng gần cổng bên trái (Ngô Quyền). Chỗ đối xứng với 17 bên phải nằm ngay sau lầu trống đồng (nhìn từ góc camera mặc định) nên không dùng.
 - `,` cấp 1, lối đi từ bệ ngai ra cổng (cấp 4: lát đá; cấp 6: viền vàng).
 - `m` cấp 1, chỗ bày mâm bánh ngày Tết, trước bệ ngai.
 - `e` cấp 1, chỗ cây nêu ngày Tết, dây cờ căng tới hai cột cờ `2`.

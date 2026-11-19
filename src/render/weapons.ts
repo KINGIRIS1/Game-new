@@ -429,6 +429,82 @@ export function guomDong(s: Parts): void {
 }
 
 /**
+ * Giáo Dạ Trạch của Triệu Quang Phục: cán tre sẫm có đốt, quấn lau sậy chỗ tay nắm; họng đồng, mũi sắt hình lá dài có
+ * gờ sống sáng; tua xanh đầm buông ở cổ giáo. Gốc ở chỗ tay nắm, mũi hướng +y.
+ */
+export function giaoDaTrach(s: Parts, len = 1.5): void {
+  const p = s.plain;
+  const top = len - 0.3;
+  p.cyl(0.019, 0.019, len, C.woodDark, 0, len / 2 - 0.3, 0, undefined, 6);
+  for (const y of [-0.2, 0.32, 0.72]) p.cyl(0.023, 0.023, 0.02, C.lauSayDark, 0, y, 0, undefined, 6);
+  p.cyl(0.025, 0.025, 0.16, C.lauSay, 0, 0.02, 0, undefined, 6);
+  p.cyl(0.025, 0.021, 0.08, C.bronzeDark, 0, top + 0.03, 0, undefined, 6);
+  s.band.cyl(0.028, 0.028, 0.035, C.bronze, 0, top + 0.015, 0, undefined, 8);
+  p.sphere(0.07, IRON, 0, top + 0.25, 0, [1, 3.2, 0.3], 8);
+  p.box(0.012, 0.36, 0.036, IRON_LIGHT, 0, top + 0.25, 0);
+  p.cone(0.05, 0.14, C.tqp, 0, top - 0.04, 0, [Math.PI, 0, 0], 8);
+}
+
+/**
+ * Giáo dài Bạch Đằng của Ngô Quyền: cán gỗ lim dài `len`, đai bạc, đuôi cán bịt sắt nhọn; khâu sắt, tua đỏ dưới khâu;
+ * lưỡi sắt dài hình lá, sống lưỡi bạc, hai ngạnh nhỏ ở chân lưỡi. Tay nắm cách đuôi cán `grip` (giáo dài cầm gần giữa).
+ */
+export function giaoBachDang(s: Parts, len = 2.0, grip = 0.6): void {
+  const p = s.plain;
+  const top = len - grip;
+  p.cyl(0.02, 0.022, len, C.goLim, 0, len / 2 - grip, 0, undefined, 6);
+  for (let y = -grip + 0.25; y < top - 0.15; y += 0.42) p.cyl(0.025, 0.025, 0.022, C.songBac, 0, y, 0, undefined, 6);
+  p.cone(0.026, 0.12, IRON, 0, -grip - 0.05, 0, [Math.PI, 0, 0], 5);
+  p.cyl(0.026, 0.024, 0.07, IRON_DARK, 0, top + 0.03, 0, undefined, 6);
+  s.band.cyl(0.03, 0.03, 0.03, C.bachDang, 0, top + 0.01, 0, undefined, 8);
+  p.cone(0.055, 0.15, C.red, 0, top - 0.06, 0, [Math.PI, 0, 0], 7);
+  // Hai ngạnh nhỏ chân lưỡi, lưỡi lá dài, sống bạc.
+  for (const sd of [-1, 1]) p.cone(0.014, 0.07, IRON, sd * 0.035, top + 0.08, 0, [0, 0, -sd * 0.9], 4);
+  p.sphere(0.06, IRON, 0, top + 0.27, 0, [1, 3.8, 0.3], 8);
+  p.box(0.011, 0.4, 0.032, C.songBac, 0, top + 0.27, 0);
+}
+
+/**
+ * Kiếm Như Nguyệt của Lý Thường Kiệt: lưỡi thép thẳng hai lưỡi, gờ sống sáng, mũi nhọn; chắn tay đồng vàng hai đầu cuộn
+ * vân mây; chuôi quấn dây đỏ, núm vàng, tua đỏ. Gốc ở chỗ tay nắm, mũi hướng +y.
+ */
+export function kiemNhuNguyet(s: Parts): void {
+  const p = s.plain;
+  const len = 0.72;
+  p.box(0.018, len, 0.062, IRON, 0, 0.09 + len / 2, 0);
+  p.box(0.022, len * 0.96, 0.012, C.songBac, 0, 0.09 + len * 0.48, 0);
+  p.cone(0.044, 0.12, IRON, 0, 0.09 + len + 0.05, 0, [0, Math.PI / 4, 0], 4);
+  s.band.box(0.03, 0.06, 0.07, C.gold, 0, 0.095, 0);
+  p.box(0.17, 0.032, 0.05, C.gold, 0, 0.065, 0);
+  for (const sd of [-1, 1]) p.sphere(0.024, C.gold, sd * 0.09, 0.075, 0, [1, 1.2, 0.8], 6);
+  p.cyl(0.02, 0.022, 0.13, C.nhuNguyet, 0, -0.01, 0, undefined, 6);
+  for (const y of [-0.05, 0, 0.04]) p.cyl(0.024, 0.024, 0.012, C.nhuNguyetDark, 0, y, 0, undefined, 6);
+  p.sphere(0.032, C.gold, 0, -0.085, 0, [1, 1, 1], 7);
+  p.cone(0.028, 0.12, C.nhuNguyet, 0, -0.15, 0, [Math.PI, 0, 0], 6);
+}
+
+/**
+ * Đại đao Vạn An của Mai Thúc Loan: cán gỗ sơn đen dài 1,5, ba đai vàng, đuôi cán bịt sắt; khâu vàng, tua đỏ buông
+ * dưới khâu; lưỡi sắt to bản cong như trăng non, sống lưỡi vàng, mũi vểnh. Tay nắm cách đuôi cán 0,3; lưỡi sắc hướng +z.
+ */
+export function daoVanAn(s: Parts, len = 1.5): void {
+  const p = s.plain;
+  const top = len - 0.3;
+  p.cyl(0.023, 0.026, len, C.hacDe, 0, len / 2 - 0.3, 0, undefined, 6);
+  for (const y of [-0.1, 0.35, 0.8]) if (y < top - 0.1) p.cyl(0.03, 0.03, 0.03, C.gold, 0, y, 0, undefined, 6);
+  p.cone(0.028, 0.12, IRON, 0, -0.36, 0, [Math.PI, 0, 0], 5);
+  s.band.cyl(0.04, 0.044, 0.07, C.gold, 0, top + 0.02, 0, undefined, 8);
+  p.cone(0.06, 0.16, C.red, 0, top - 0.09, 0, [Math.PI, 0, 0], 7);
+  // Lưỡi: bụng lưỡi phình cong ra trước, mũi vểnh ngược lên sau; sống vàng chạy dọc lưng lưỡi.
+  p.box(0.026, 0.34, 0.15, IRON, 0, top + 0.23, 0.075);
+  p.sphere(0.1, IRON, 0, top + 0.27, 0.15, [0.13, 1.85, 0.6], 8);
+  p.box(0.024, 0.2, 0.13, IRON, 0, top + 0.47, 0.05, [-0.4, 0, 0]);
+  p.cone(0.05, 0.14, IRON, 0, top + 0.61, 0.0, [-0.6, 0, 0], 4);
+  p.box(0.034, 0.4, 0.026, C.gold, 0, top + 0.25, -0.005);
+  p.box(0.012, 0.3, 0.012, IRON_LIGHT, 0.014, top + 0.27, 0.2);
+}
+
+/**
  * Gươm Núi Nưa của Bà Triệu: lưỡi sắt thẳng dài 0,72 có gờ sống sáng, mũi nhọn; chắn tay vàng hai cánh vểnh như cánh
  * chim, chuôi quấn dây xanh ngọc, đốc tròn vàng, tua đỏ buông ở đốc. Lưỡi sắc hướng +z.
  */
