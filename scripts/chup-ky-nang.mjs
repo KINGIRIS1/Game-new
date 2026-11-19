@@ -2,7 +2,7 @@
 // Chụp hiệu ứng kỹ năng tướng ngoài bãi theo từng mốc giây sau khi bấm, không cần state game (dựng thẳng `Battlefield`
 // trong trang, trận chạy theo bước cố định nên lần nào cũng y nhau). Ảnh là một dải ngang: chup/ky-<kỹ năng>.png.
 // Cách dùng: node scripts/chup-ky-nang.mjs <kỹ năng> [kỹ năng ...] [--man <số màn>] [--truoc <giây trận chạy trước khi
-//            bấm, mặc định 3>] [--moc 0.2,0.5,0.9,1.4] [--phong <hệ số phóng, mặc định 2.2>] [--co 360x360] [--kieu 1|2|3] (kiểu Bốc đồi, `bocDoi.ts`)
+//            bấm, mặc định 3>] [--moc 0.2,0.5,0.9,1.4] [--phong <hệ số phóng, mặc định 2.2>] [--co 360x360]
 // Kỹ năng: trongTran, phunLua, nhoTre, bocDoi, doiNon, noThan, ruaVang, lienChau, lenhBan, voiXung, hieuTrieu,
 // chemCaKinh.
 
@@ -24,7 +24,6 @@ for (let i = 0; i < argv.length; i++) {
   else if (a === '--truoc') opts.truoc = Number(argv[++i]);
   else if (a === '--moc') opts.moc = argv[++i].split(',').map(Number);
   else if (a === '--phong') opts.phong = Number(argv[++i]);
-  else if (a === '--kieu') opts.kieu = Number(argv[++i]);
   else if (a === '--co') [opts.w, opts.h] = argv[++i].split('x').map(Number);
   else opts.ky.push(a);
 }
@@ -43,10 +42,10 @@ try {
   await mkdir(path.join(ROOT, 'chup'), { recursive: true });
   for (const ky of opts.ky) {
     const anh = await page.evaluate(
-      async ({ ky, o }) => (await import('/scripts/kyNang.ts')).chupKyNang(ky, o.man, o.truoc, o.moc, o.w, o.h, o.phong, o.kieu),
+      async ({ ky, o }) => (await import('/scripts/kyNang.ts')).chupKyNang(ky, o.man, o.truoc, o.moc, o.w, o.h, o.phong),
       { ky, o: opts },
     );
-    const ten = `ky-${ky}${opts.kieu ? `-kieu${opts.kieu}` : ''}.png`;
+    const ten = `ky-${ky}.png`;
     const out = path.join(ROOT, 'chup', ten);
     await writeFile(out, Buffer.from(anh.url.split(',')[1], 'base64'));
     console.log(`Đã chụp chup/${ten} (${anh.calls} lệnh vẽ, ${anh.triangles} tam giác)`);

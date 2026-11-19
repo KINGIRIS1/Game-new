@@ -1794,7 +1794,7 @@ export class BattleView {
         g.position.y = ground - bury + bounce - 1.6 * (g.scale.y || 1) * sink * sink;
       }
       h.doi.tick(h.age, dt, roi);
-      if (h.age >= (h.doi.tan ? HILL_FALL + 0.85 : HILL_LIFE)) {
+      if (h.age >= (h.doi.tan ? HILL_FALL + h.doi.tanSau : HILL_LIFE)) {
         this.root.remove(g);
         disposeModel(g);
         h.doi.drop?.();
