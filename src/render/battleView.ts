@@ -12,8 +12,9 @@ import { C } from './palette';
 import type { Poser } from './rig';
 import { ShapeBuilder, disposeModel, seeded } from './shapes';
 import { isSoldier, makeSoldier } from './soldier';
-import { ToonModel, drumWaveTex, inkThin, outlineOf, toon } from './toon';
+import { drumWaveTex, inkThin, outlineOf, toon } from './toon';
 import { HieuUng } from './hieuUng';
+import { taoDoi, type DoiRoi } from './bocDoi';
 
 interface FighterView {
   obj: THREE.Group;
@@ -85,11 +86,10 @@ interface DrumWave {
   age: number;
 }
 
-/** Quả đồi Sơn Tinh ném xuống: rơi từ trên cao, đập xuống đất rồi lún dần. */
+/** Quả đồi Sơn Tinh ném xuống: rơi từ trên cao, đập xuống đất rồi lún dần hay tan (`bocDoi.ts`). */
 interface Hill {
-  group: THREE.Group;
+  doi: DoiRoi;
   age: number;
-  landed: boolean;
 }
 
 /** Vệt đất cháy sém có than hồng, nằm đúng dải bị đốt. Mỗi thứ vẽ một lần (InstancedMesh). */
@@ -310,39 +310,6 @@ function surgeModel(width: number, h: number, seed: number): THREE.Group {
   const mesh = b.mesh(toon);
   g.add(mesh, outlineOf(mesh.geometry, inkThin));
   return g;
-}
-
-/**
- * Quả đồi Sơn Tinh nhấc lên ném: một mỏm đất bứt khỏi núi, mặt trên vòm cỏ có cây tròn tán và tảng đá, mặt dưới là
- * khối đất đá lởm chởm nhọn xuống, giữa có vỉa đá. Rộng vừa vùng bị đánh trúng; gốc ở mũi nhọn dưới đáy.
- */
-function hillModel(): THREE.Group {
-  const m = new ToonModel(inkThin);
-  const R = HILL.radius;
-  // Khối đất dưới: chóp ngược nhiều tầng.
-  m.plain.cone(R * 0.9, 1.5, C.earth, 0, 0.75, 0, [Math.PI, 0, 0], 8);
-  m.plain.cone(R * 0.55, 0.9, 0x7d5a36, R * 0.25, 0.75, -R * 0.15, [Math.PI, 0, 0], 6);
-  m.plain.cyl(R * 0.92, R * 0.88, 0.3, C.rockDark, 0, 1.5, 0, undefined, 9);
-  // Vòm cỏ trên.
-  m.plain.sphere(R * 0.9, 0x7fa048, 0, 1.6, 0, [1, 0.42, 1], 12);
-  // Cây tròn tán và đá trên vòm.
-  const trees: [number, number, number][] = [
-    [0.2, 0.1, 1],
-    [-0.45, 0.35, 0.8],
-    [0.5, -0.4, 0.7],
-    [-0.2, -0.55, 0.65],
-  ];
-  trees.forEach(([tx, tz, k0], i) => {
-    const k = k0 * 1.4;
-    // Chân cây theo mặt vòm cỏ (vòm cao 0,42 R, thấp dần ra mép).
-    const y = 1.6 + 0.42 * R * Math.sqrt(Math.max(0, 1 - (tx * tx + tz * tz) / 0.81)) - 0.05;
-    m.plain.cyl(0.07 * k, 0.1 * k, 0.5 * k, 0x6b4a2a, tx * R, y + 0.25 * k, tz * R, undefined, 5);
-    m.plain.sphere(0.36 * k, C.leaf[i % 4], tx * R, y + 0.6 * k, tz * R, [1, 0.9, 1], 8);
-    m.plain.sphere(0.24 * k, C.leaf[(i + 1) % 4], tx * R + 0.15 * k, y + 0.8 * k, tz * R - 0.1 * k, [1, 0.9, 1], 7);
-  });
-  m.plain.sphere(0.32, C.rock, -0.6 * R, 1.85, -0.1 * R, [1, 0.7, 1], 6);
-  m.plain.sphere(0.22, C.rockDark, 0.62 * R, 1.8, 0.25 * R, [1, 0.7, 1], 5);
-  return m.group();
 }
 
 /** Ba mỏm đá nhọn mọc lên quanh chân một tên giặc. */
@@ -600,7 +567,11 @@ export class BattleView {
     this.puffs.length = 0;
     for (const s of this.scorches) this.dropScorch(s);
     this.scorches.length = 0;
-    for (const h of this.hills) this.root.remove(h.group);
+    for (const h of this.hills) {
+      this.root.remove(h.doi.group);
+      disposeModel(h.doi.group);
+      h.doi.drop?.();
+    }
     this.hills.length = 0;
     for (const w of this.waves) this.dropWave(w);
     this.waves.length = 0;
@@ -1606,31 +1577,15 @@ export class BattleView {
         this.hu.tia(this.at(e.x, e.z, 0.6 * sc), { mau: C.fxXanh, n: 14, toc: 7, len: 0.3, day: 0.09, up: 0.8, delay: hit, life: 0.8 });
       }
       if (e.kind === 'hill' && e.tx !== undefined && e.tz !== undefined) {
-        const group = hillModel();
-        // Đồi to theo vùng đánh của luật (đủ bốn món bộ Tản Viên thì rộng hơn); bụi lúc rơi theo cỡ đồi.
-        group.scale.multiplyScalar((this.geo * (e.r ?? HILL.radius)) / HILL.radius);
-        group.position.set(e.tx + ox, this.heightAt(e.tx, e.tz) + 7, e.tz + oz);
-        group.rotation.y = e.seq;
-        this.root.add(group);
-        this.hills.push({ group, age: 0, landed: false });
-        // Vòng ngắm đỏ co lại chỗ đồi sắp rơi; đồi chạm đất thì sóng đất, lóe, đá tóe, bụi tung thành vòng.
-        const sc = this.scale;
+        // Đồi to theo vùng đánh của luật (đủ bốn món bộ Tản Viên thì rộng hơn).
         const R = (e.r ?? HILL.radius) * this.geo;
-        const c = this.at(e.tx, e.tz);
-        this.hu.soc(c, { mau: C.red, r: R * 1.1, thu: true, life: HILL_FALL, loi: false });
-        this.hu.soc(c, { mau: C.fxVang, r: R * 1.6, delay: HILL_FALL, life: 0.6 });
-        this.hu.loe(this.at(e.tx, e.tz, 0.6 * sc), { mau: C.fxVang, size: 3 * sc, delay: HILL_FALL, life: 0.35 });
-        this.hu.tia(this.at(e.tx, e.tz, 0.5), { mau: C.fxVang, n: 22, toc: 9, len: 0.5, up: 1, delay: HILL_FALL, life: 0.6 });
-        for (let i = 0; i < 10; i++) {
-          const a = (i / 10) * Math.PI * 2;
-          this.hu.bui(this.at(e.tx + Math.cos(a) * R * 0.6, e.tz + Math.sin(a) * R * 0.6, 0.3), {
-            mau: C.fxBui,
-            size: 1.3 * sc,
-            delay: HILL_FALL,
-            life: 1,
-            bay: new THREE.Vector3(Math.cos(a) * 1.4, 0, Math.sin(a) * 1.4),
-          });
-        }
+        const doi = taoDoi({ hu: this.hu, at: (dx, dz, dy = 0) => this.at(e.tx! + dx, e.tz! + dz, dy), R, sc: this.scale, seed: e.seq });
+        doi.group.scale.multiplyScalar(R / HILL.radius);
+        doi.group.position.set(e.tx + ox, this.heightAt(e.tx, e.tz) + 7, e.tz + oz);
+        doi.group.rotation.y = e.seq;
+        this.root.add(doi.group);
+        this.hills.push({ doi, age: 0 });
+        doi.noRa(HILL_FALL);
       }
       if (e.kind === 'drown') {
         for (let i = 0; i < 6; i++) {
@@ -1821,26 +1776,28 @@ export class BattleView {
     }
     for (let i = this.hills.length - 1; i >= 0; i--) {
       const h = this.hills[i];
+      const g = h.doi.group;
       h.age += dt;
-      const { x, z } = h.group.position;
+      const { x, z } = g.position;
       const ground = this.heightAt(x - this.offset.x, z - this.offset.z);
-      // Khối đất dưới đáy cắm ngập xuống đất khi đồi đập xuống, chỉ còn vòm cỏ trên mặt.
-      const bury = 1.45 * (h.group.scale.y || 1);
-      if (h.age < HILL_FALL) {
+      // Gốc mô hình cắm xuống dưới mặt đất khi đồi đập xuống.
+      const bury = h.doi.bury * (g.scale.y || 1);
+      const roi = h.age < HILL_FALL;
+      if (roi) {
         const k = h.age / HILL_FALL;
-        h.group.position.y = ground - bury * k * k + 7 * (1 - k * k);
-        h.group.rotation.z = 0.25 * (1 - k);
+        g.position.y = ground - bury * k * k + 7 * (1 - k * k);
       } else {
-        h.landed = true;
-        h.group.rotation.z = 0;
-        // Đập xuống nảy nhẹ, nằm lại một lúc rồi lún dần xuống đất.
+        // Đập xuống nảy nhẹ, nằm lại một lúc rồi lún dần xuống đất (bóng núi thần thì tan tại chỗ).
         const t = h.age - HILL_FALL;
-        const bounce = t < 0.25 ? Math.sin((t / 0.25) * Math.PI) * 0.18 : 0;
-        const sink = Math.max(0, (h.age - 1.2) / (HILL_LIFE - 1.2));
-        h.group.position.y = ground - bury + bounce - 1.4 * (h.group.scale.y || 1) * sink * sink;
+        const bounce = t < 0.25 && !h.doi.tan ? Math.sin((t / 0.25) * Math.PI) * 0.18 : 0;
+        const sink = h.doi.tan ? 0 : Math.max(0, (h.age - 1.2) / (HILL_LIFE - 1.2));
+        g.position.y = ground - bury + bounce - 1.6 * (g.scale.y || 1) * sink * sink;
       }
-      if (h.age >= HILL_LIFE) {
-        this.root.remove(h.group);
+      h.doi.tick(h.age, dt, roi);
+      if (h.age >= (h.doi.tan ? HILL_FALL + 0.85 : HILL_LIFE)) {
+        this.root.remove(g);
+        disposeModel(g);
+        h.doi.drop?.();
         this.hills.splice(i, 1);
       }
     }
