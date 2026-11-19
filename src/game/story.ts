@@ -43,6 +43,10 @@ const STORY_ORDER: StoryId[] = [
   'songHat',
   'hetTruyen5',
   'baTrieu',
+  'trieuQuangPhuc',
+  'maiThucLoan',
+  'ngoQuyen',
+  'lyThuongKiet',
 ];
 const STORY_WHEN: Record<StoryId, (s: GameState) => boolean> = {
   mo: () => true,
@@ -89,6 +93,14 @@ const STORY_WHEN: Record<StoryId, (s: GameState) => boolean> = {
   hetTruyen5: chuong5Won,
   // Hạ boss map 6 dã ngoại lần đầu: Bà Triệu về theo đội dã ngoại.
   baTrieu: (s) => tuongDaVe(s, 'baTrieu'),
+  // Hạ boss map 7 lần đầu: Triệu Quang Phục về.
+  trieuQuangPhuc: (s) => tuongDaVe(s, 'trieuQuangPhuc'),
+  // Hạ boss map 8 lần đầu: Mai Thúc Loan về.
+  maiThucLoan: (s) => tuongDaVe(s, 'maiThucLoan'),
+  // Hạ boss map 9 lần đầu: Ngô Quyền về.
+  ngoQuyen: (s) => tuongDaVe(s, 'ngoQuyen'),
+  // Hạ boss map 10 lần đầu: Lý Thường Kiệt về.
+  lyThuongKiet: (s) => tuongDaVe(s, 'lyThuongKiet'),
 };
 
 /** Đoạn truyện đến lúc kể mà người chơi chưa xem, theo đúng thứ tự. */

@@ -1,4 +1,4 @@
-// 24 món trang bị của sáu bộ tướng (trangBi.ts), dựng bằng code theo nét Đông Sơn như mọi đồ trong game. Mỗi món có:
+// Món trang bị của các bộ tướng (trangBi.ts), dựng bằng code theo nét Đông Sơn như mọi đồ trong game. Mỗi món có:
 // - `rieng`: mô hình đứng riêng: ảnh món vẽ sẵn (anhDo.ts) dùng mô hình này; thú cưỡi, bảo vật cũng dùng nó trong hình
 //   tướng mặc đồ (hinhTuong.ts);
 // - `mac`: cách mặc lên thân người (tọa độ thân người thường `HUMAN` như mọi đồ mặc ở nanDo.ts): vũ khí cầm tay, giáp
@@ -10,12 +10,12 @@ import * as THREE from 'three';
 import { BO_DO, O_DO, type BoDo, type ODo } from '../game/defs';
 import { bakeVoiTran } from './beasts';
 import { GRIP_L, GRIP_R, HUMAN, type HumanRig } from './body';
-import { CAO_QUIVER, MIEN, VOI_TRANG, baoTenDong, bakeIronHorse, giapVayDong, giongWeapon, sonStaff, type TheCamTuong } from './heroes';
+import { CAO_QUIVER, MIEN, VOI_TRANG, aoBaoDen, aoLauSay, baoTenDong, bakeIronHorse, bakeNguaChien, aoChoangDo, giapDaTrau, giapSatBachDang, giapTru, giapVayDong, giongWeapon, mongRong, sonStaff, type TheCamTuong } from './heroes';
 import { armor, chestDisc, cloak, diadem, mien, pauldrons, shoulderRocks, skirtArmor, studs } from './nanDo';
 import { C } from './palette';
 import { RigBuilder, bakeRig } from './rig';
 import { ToonModel, inkThin } from './toon';
-import { IRON, IRON_DARK, LEATHER, arrow, bow, coLac, crossbowParts, guomDong, guomNuiNua, hornTrumpet, repeatingCrossbow, type Parts } from './weapons';
+import { IRON, IRON_DARK, LEATHER, arrow, bow, coLac, crossbowParts, daoVanAn, giaoBachDang, giaoDaTrach, kiemNhuNguyet, guomDong, guomNuiNua, hornTrumpet, repeatingCrossbow, type Parts } from './weapons';
 
 export type MonId = `${BoDo}-${ODo}`;
 export const monId = (bo: BoDo, o: ODo): MonId => `${bo}-${o}`;
@@ -88,6 +88,107 @@ export function sungTe(m: Parts): void {
   p.sphere(0.016, C.red, 0, 0.065, -0.06, [1, 1, 1], 6);
   p.cone(0.02, 0.11, C.red, 0.01, 0.0, -0.075, [Math.PI + 0.25, 0, 0.1], 6);
   p.cone(0.016, 0.09, C.red, -0.012, 0.01, -0.07, [Math.PI + 0.1, 0, -0.12], 6);
+}
+
+/**
+ * Ấn Hắc Đế của Mai Thúc Loan: khối ngọc đen vuông, mặt dưới son đỏ, viền vàng quanh thân ấn; núm ấn hình con trâu
+ * vàng nằm (ông thuở nhỏ chăn trâu); dây thao đỏ buộc ở núm, tua buông. Đáy ở y = 0, đầu trâu hướng +z.
+ */
+export function anHacDe(m: Parts): void {
+  const p = m.plain;
+  p.box(0.3, 0.03, 0.3, C.red, 0, 0.015, 0);
+  p.box(0.28, 0.17, 0.28, C.hacDe, 0, 0.115, 0);
+  m.band.box(0.29, 0.035, 0.29, C.gold, 0, 0.17, 0);
+  p.box(0.25, 0.02, 0.25, C.hacDeLight, 0, 0.2, 0);
+  // Núm trâu vàng nằm: mình dài, lưng gù, đầu nhô ra trước, sừng cong lưỡi liềm, chân xếp dưới bụng.
+  const y = 0.25;
+  p.sphere(0.065, C.gold, 0, y, -0.02, [0.85, 0.7, 1.45], 10);
+  p.sphere(0.045, C.gold, 0, y + 0.035, -0.04, [0.9, 0.7, 1], 8);
+  p.sphere(0.04, C.gold, 0, y + 0.005, 0.1, [0.85, 0.8, 1.05], 8);
+  p.sphere(0.026, C.goldDark, 0, y - 0.012, 0.135, [1, 0.75, 0.8], 7);
+  p.add(new THREE.TorusGeometry(0.048, 0.01, 5, 14, Math.PI), C.goldDark, 0, y + 0.03, 0.095, [-0.35, 0, 0]);
+  for (const sd of [-1, 1]) {
+    p.sphere(0.018, C.gold, sd * 0.05, y - 0.035, 0.05, [1, 0.6, 1.4], 6);
+    p.sphere(0.018, C.gold, sd * 0.05, y - 0.035, -0.08, [1, 0.6, 1.4], 6);
+  }
+  p.cone(0.008, 0.06, C.goldDark, 0, y + 0.01, -0.12, [-2.2, 0, 0], 4);
+  // Dây thao đỏ, tua buông xuống bên thân ấn.
+  p.add(new THREE.TorusGeometry(0.03, 0.008, 5, 14), C.red, 0, y + 0.04, -0.08, [0, Math.PI / 2, 0]);
+  p.cone(0.022, 0.12, C.red, 0.1, 0.18, -0.15, [Math.PI + 0.3, 0, 0.2], 6);
+}
+
+/**
+ * Cọc lim bịt sắt Bạch Đằng của Ngô Quyền: cọc gỗ lim đỏ sẫm, thân đẽo sáu cạnh, chân cọc thẫm nước; hai đai sắt; mũi
+ * vạt nhọn bịt sắt sáng; dây thừng quấn giữa thân, tua đỏ; chân cọc có vòng sóng bạc cuộn quanh. Đáy ở y = 0.
+ */
+export function cocLim(m: Parts): void {
+  const p = m.plain;
+  const H = 0.62;
+  p.cyl(0.045, 0.055, H, C.goLim, 0, H / 2, 0, undefined, 6);
+  p.cyl(0.058, 0.058, 0.14, C.goLimDark, 0, 0.07, 0, undefined, 6);
+  for (const y of [0.24, 0.47]) m.band.cyl(0.052, 0.052, 0.035, IRON_DARK, 0, y, 0, undefined, 8);
+  p.cyl(0.05, 0.045, 0.05, IRON, 0, H + 0.02, 0, undefined, 6);
+  p.cone(0.05, 0.2, IRON, 0, H + 0.14, 0, undefined, 6);
+  p.box(0.012, 0.18, 0.06, C.songBac, 0, H + 0.12, 0);
+  // Dây thừng quấn, tua đỏ.
+  for (const y of [0.33, 0.36, 0.39]) p.add(new THREE.TorusGeometry(0.053, 0.008, 4, 12), 0xb08a58, 0, y, 0, [Math.PI / 2, 0, 0]);
+  p.cone(0.022, 0.12, C.red, 0.06, 0.3, 0.02, [Math.PI + 0.25, 0, 0.3], 6);
+  // Sóng bạc cuộn quanh chân cọc.
+  p.add(new THREE.TorusGeometry(0.12, 0.016, 5, 20, Math.PI * 1.6), C.songBac, 0, 0.04, 0, [Math.PI / 2, 0, 0]);
+  p.add(new THREE.TorusGeometry(0.16, 0.012, 5, 20, Math.PI * 1.2), C.bachDangLight, 0, 0.02, 0, [Math.PI / 2, 0, 2]);
+  for (let i = 0; i < 4; i++) {
+    const a = (i / 4) * Math.PI * 2 + 0.4;
+    p.add(new THREE.TorusGeometry(0.03, 0.01, 4, 10, Math.PI * 1.3), C.songBac, Math.cos(a) * 0.15, 0.05, Math.sin(a) * 0.15, [0, -a, 0]);
+  }
+}
+
+/**
+ * Cuộn thơ thần Nam quốc sơn hà của Lý Thường Kiệt: cuộn giấy ngà mở ra dựng đứng, trục trên trục dưới gỗ son bịt núm
+ * vàng, bốn cột chữ son viết dọc (bốn câu thơ), dấu ấn đỏ góc dưới, viền vàng hai mép; dây treo đỏ. Đáy ở y = 0.
+ */
+export function cuonThoThan(m: Parts): void {
+  const p = m.plain;
+  const W = 0.3;
+  const H = 0.42;
+  const y0 = 0.05;
+  p.box(W, H, 0.012, C.giayTho, 0, y0 + H / 2, 0);
+  for (const sd of [-1, 1]) p.box(0.012, H, 0.016, C.gold, sd * (W / 2 - 0.004), y0 + H / 2, 0);
+  for (const y of [y0, y0 + H]) {
+    p.cyl(0.02, 0.02, W + 0.06, C.nhuNguyetDark, 0, y, 0, [0, 0, Math.PI / 2], 8);
+    for (const sd of [-1, 1]) p.sphere(0.022, C.gold, sd * (W / 2 + 0.045), y, 0, [1, 1, 1], 7);
+  }
+  // Bốn cột chữ: mỗi cột bảy nét ngang ngắn so le như chữ viết dọc.
+  for (let c = 0; c < 4; c++) {
+    const x = 0.09 - c * 0.06;
+    for (let i = 0; i < 7; i++) {
+      const w = 0.024 + ((c * 7 + i) % 3) * 0.006;
+      p.box(w, 0.016, 0.006, C.nhuNguyetDark, x + (((i + c) % 2) - 0.5) * 0.004, y0 + H - 0.05 - i * 0.047, 0.008);
+    }
+  }
+  p.box(0.032, 0.032, 0.006, C.nhuNguyet, -0.105, y0 + 0.05, 0.008);
+  // Dây treo đỏ từ hai đầu trục trên.
+  p.add(new THREE.TorusGeometry(0.08, 0.006, 4, 12, Math.PI), C.nhuNguyet, 0, y0 + H + 0.005, 0);
+}
+
+/**
+ * Thuyền độc mộc của Triệu Quang Phục: thân khoét từ một khúc gỗ, hai đầu thon, mũi vểnh, lòng thuyền sẫm, mép gỗ sáng; mũi
+ * chạm đầu chim Lạc, một mái chèo gác ngang, bó lau sậy dưới lòng. Đáy ở y = 0, mũi hướng +z.
+ */
+export function thuyenDocMoc(m: Parts): void {
+  const p = m.plain;
+  const L = 1.5;
+  p.sphere(0.2, GO_GIA, 0, 0.13, 0, [1, 0.65, L / 0.4], 12);
+  p.box(0.26, 0.03, L * 0.7, 0x3a2616, 0, 0.255, 0);
+  for (const sd of [-1, 1]) p.box(0.03, 0.03, L * 0.72, 0x9a6b3e, sd * 0.14, 0.26, 0);
+  // Mũi vểnh, đầu chim Lạc mỏ dài.
+  p.cone(0.06, 0.28, GO_GIA, 0, 0.3, L / 2 - 0.05, [-0.9, 0, 0], 6);
+  p.sphere(0.05, 0x9a6b3e, 0, 0.42, L / 2 + 0.06, [1, 1, 1.2], 7);
+  p.cone(0.016, 0.14, C.goldDark, 0, 0.43, L / 2 + 0.16, [Math.PI / 2, 0, 0], 5);
+  // Mái chèo gác ngang, bó lau sậy.
+  p.box(0.7, 0.025, 0.025, C.woodLight, 0.08, 0.3, -0.1, [0, 0.35, 0]);
+  p.box(0.06, 0.012, 0.2, C.woodLight, 0.42, 0.3, -0.23, [0, 0.35, 0]);
+  for (let i = 0; i < 5; i++) p.cyl(0.012, 0.012, 0.7, C.lauSay, -0.06 + i * 0.025, 0.28, 0.2, [Math.PI / 2, 0, 0.05 * (i - 2)], 4);
+  p.cyl(0.03, 0.03, 0.02, C.tqp, 0, 0.28, 0.2, [Math.PI / 2, 0, 0], 6);
 }
 
 /**
@@ -308,6 +409,17 @@ function tren(draw: (h: HumanRig) => void, stand: boolean): () => THREE.Group {
   };
 }
 
+/** Mô hình `rieng` xoay quanh trục đứng một góc. */
+function quay(rieng: () => THREE.Group, y: number): () => THREE.Group {
+  return () => {
+    const g = rieng();
+    g.rotation.y = y;
+    const root = new THREE.Group();
+    root.add(g);
+    return root;
+  };
+}
+
 /** Cầm tay phải (thân người cỡ `k`), dựng như vũ khí của tướng (`r.local('hand', GRIP_R, …)`). */
 function tayPhai(draw: (s: Parts, k: number) => void): (h: HumanRig, k: number) => void {
   return (h, k) => h.local('hand', GRIP_R, null, (s) => draw(s, k));
@@ -406,6 +518,32 @@ export const MON_VE: Record<MonId, VeMon> = {
   'nuiNua-giap': { cho: 'than', mac: giapVayDong, rieng: tren(giapVayDong, true), xoay: [0, 0.45, 0] },
   'nuiNua-phucSuc': { cho: 'thu', rieng: () => bakeVoiTran(VOI_TRANG), xoay: [0, 1.25, 0] },
   'nuiNua-baoVat': { cho: 'bay', rieng: toon(tramVang), xoay: [0.5, 0.4, -0.9] },
+
+  // Bộ Dạ Trạch (Triệu Quang Phục, tướng dã ngoại map 7).
+  // Giáo cầm ở hình tướng ngắn hơn chút cho vừa khung tướng cao (Gióng).
+  'daTrach-vuKhi': { cho: 'tay', cam: 'dung', mac: tayPhai((s) => giaoDaTrach(s, 1.2)), rieng: toon((m) => giaoDaTrach(m)), xoay: [0, 0, -Math.PI / 4] },
+  'daTrach-giap': { cho: 'than', mac: aoLauSay, rieng: tren(aoLauSay, true), xoay: [0, 0.45, 0] },
+  'daTrach-phucSuc': { cho: 'thu', rieng: toon(thuyenDocMoc), xoay: [0.35, 0.95, 0] },
+  // Móng rồng xòe ngón theo chiều trước sau cho gọn bên vai ở hình tướng.
+  'daTrach-baoVat': { cho: 'bay', rieng: quay(toon((m) => mongRong(m, 2, 0.12)), Math.PI / 2), xoay: [0.2, 0.6 - Math.PI / 2, 0] },
+
+  // Bộ Vạn An (Mai Thúc Loan, tướng dã ngoại map 8).
+  'vanAn-vuKhi': { cho: 'tay', cam: 'dung', mac: tayPhai((s) => daoVanAn(s, 1.0)), rieng: toon((m) => daoVanAn(m)), xoay: [0, 1.2, -Math.PI / 4] },
+  'vanAn-giap': { cho: 'than', mac: giapDaTrau, rieng: tren(giapDaTrau, true), xoay: [0, 0.45, 0] },
+  'vanAn-phucSuc': { cho: 'lung', mac: aoBaoDen, rieng: tren(aoBaoDen, true), xoay: [0, Math.PI - 0.6, 0] },
+  'vanAn-baoVat': { cho: 'bay', rieng: toon(anHacDe), xoay: [0.35, 1.15, 0] },
+
+  // Bộ Bạch Đằng (Ngô Quyền, tướng dã ngoại map 9).
+  'bachDang-vuKhi': { cho: 'tay', cam: 'dung', mac: tayPhai((s) => giaoBachDang(s, 1.2, 0.3)), rieng: toon((m) => giaoBachDang(m, 2.0, 0.3)), xoay: [0, 0, -Math.PI / 4] },
+  'bachDang-giap': { cho: 'than', mac: giapSatBachDang, rieng: tren(giapSatBachDang, true), xoay: [0, 0.45, 0] },
+  'bachDang-phucSuc': { cho: 'thu', rieng: bakeNguaChien, xoay: [0, 0.9, 0] },
+  'bachDang-baoVat': { cho: 'bay', rieng: toon(cocLim), xoay: [0.15, 0.4, -0.3] },
+
+  // Bộ Như Nguyệt (Lý Thường Kiệt, tướng dã ngoại map 10).
+  'nhuNguyet-vuKhi': { cho: 'tay', cam: 'kiem', mac: tayPhai(kiemNhuNguyet), rieng: toon(kiemNhuNguyet), xoay: [0, 1.2, -Math.PI / 4] },
+  'nhuNguyet-giap': { cho: 'than', mac: giapTru, rieng: tren(giapTru, true), xoay: [0, 0.45, 0] },
+  'nhuNguyet-phucSuc': { cho: 'lung', mac: aoChoangDo, rieng: tren(aoChoangDo, true), xoay: [0, Math.PI - 0.6, 0] },
+  'nhuNguyet-baoVat': { cho: 'bay', rieng: toon(cuonThoThan), xoay: [0.1, 0.35, 0] },
 };
 
 /** Mô hình đứng riêng của món, đặt theo góc chụp ảnh (`xoay`). */

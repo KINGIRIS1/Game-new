@@ -2,6 +2,10 @@
 // game dùng làm ?v= cho trình duyệt tải ảnh mới khi ảnh đổi; anhDo.test.ts so với mô hình hiện tại.
 
 export const ANH_DO_DAU: Record<string, string> = {
+  'bachDang-baoVat': '1866e9fa',
+  'bachDang-giap': 'dffe412b',
+  'bachDang-phucSuc': '7cf14981',
+  'bachDang-vuKhi': 'f17b054b',
   'caoLo-baoVat': '41b0d7e7',
   'caoLo-giap': 'a9d6b189',
   'caoLo-phucSuc': '9a0e6b55',
@@ -10,6 +14,14 @@ export const ANH_DO_DAU: Record<string, string> = {
   'coLoa-giap': 'efe20541',
   'coLoa-phucSuc': '9d254856',
   'coLoa-vuKhi': 'b9bebcf5',
+  'daTrach-baoVat': 'c4615ed3',
+  'daTrach-giap': 'eb8c1bc7',
+  'daTrach-phucSuc': '31552d46',
+  'daTrach-vuKhi': 'd2e4eedc',
+  'nhuNguyet-baoVat': '3ad51785',
+  'nhuNguyet-giap': '031fac03',
+  'nhuNguyet-phucSuc': '9f588f5a',
+  'nhuNguyet-vuKhi': '850aa121',
   'nuiNua-baoVat': '4e7c2628',
   'nuiNua-giap': '3cfd5925',
   'nuiNua-phucSuc': '71df23ba',
@@ -30,4 +42,8 @@ export const ANH_DO_DAU: Record<string, string> = {
   'trungTrac-giap': '728a1b7a',
   'trungTrac-phucSuc': 'df4d48dd',
   'trungTrac-vuKhi': '2baeb675',
+  'vanAn-baoVat': '0a87934e',
+  'vanAn-giap': 'b6aeba7e',
+  'vanAn-phucSuc': 'b297f003',
+  'vanAn-vuKhi': '8505f504',
 };

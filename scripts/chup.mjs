@@ -59,6 +59,12 @@ const DAO_GIAC = `M.playChapters({ s, last: 10 }); for (let i = 0; i < 5 * 3600;
 
 /** Bà Triệu đã về: boss map 6 đã bị hạ một lần (giờ mọc lại đã qua). */
 const BA_TRIEU = `s.daNgoai.boss[5] = 1; s.hinted.push('daNgoai6', 'daNgoai7', 'daNgoai8', 'daNgoai9', 'daNgoai10');`;
+/** Triệu Quang Phục đã về: boss map 7 đã bị hạ một lần (Bà Triệu cũng đã về). */
+const TQP = `${BA_TRIEU} s.daNgoai.boss[6] = 1;`;
+/** Mai Thúc Loan đã về: boss map 8 đã bị hạ một lần (Bà Triệu, Triệu Quang Phục cũng đã về). */
+const MTL = `${TQP} s.daNgoai.boss[7] = 1;`;
+const NQ = `${MTL} s.daNgoai.boss[8] = 1;`;
+const LTK = `${NQ} s.daNgoai.boss[9] = 1;`;
 const CHUONG5 = (cleared) => `M.playChapters({ s, last: 8 });${CO_QUAN}
   for (const b of s.buildings) if (b.type === 'doanhTrai') b.level = D.BUILDINGS.doanhTrai.maxLevel;
   const cho5 = G.troopCap(s);
@@ -517,6 +523,94 @@ d.camera(cx, cz, 2.6);`,
     truoc: `${CHUONG5(35)}\n${BA_TRIEU}\nfor (let id = S.pendingStory(s); id && id !== 'baTrieu'; id = S.pendingStory(s)) S.markStory(s, id);`,
     giuTruyen: true,
     sau: `document.querySelector('[data-act=storyNext]').click(); document.querySelector('[data-act=storyNext]').click();`,
+  },
+  'tqp': {
+    mo: 'Triệu Quang Phục đã về, đội Triệu Quang Phục, Bà Triệu, Trưng Trắc ra map 7 khu 3, sau 4 giây bấm Ngày ẩn đêm ra, chụp lúc cả đội ẩn',
+    truoc: `${CHUONG5(35)}\n${TQP}\ns.daNgoai.doi = ['trieuQuangPhuc', 'baTrieu', 'trungTrac'];`,
+    sau: `d.daNgoai(7, 2); await new Promise((r) => setTimeout(r, 4000)); d.skill('ngayAn'); await new Promise((r) => setTimeout(r, 1200));`,
+    doi: 300,
+  },
+  'tqp-tui': {
+    mo: 'Triệu Quang Phục đã về, mặc đủ bộ Dạ Trạch: bảng tướng, thẻ Túi đồ của Triệu Quang Phục',
+    truoc: `${CHUONG5(35)}\n${TQP}\nconst T = await import('/src/game/trangBi.ts'); const co = new Set(); for (let q = 0; co.size < 4; q++) { const m = T.rutMon(q, 'daBoss', 5, ['daTrach'], [0, 0, 0, 100]); if (co.has(m.o)) continue; co.add(m.o); s.trangBi.kho.push({ ...m, cuong: 6, id: s.trangBi.nextId++, tuong: 'trieuQuangPhuc' }); }`,
+    sau: `d.tuong('trieuQuangPhuc');`,
+  },
+  'tqp-truyen': {
+    mo: 'Vừa hạ Trần Bá Tiên lần đầu: đoạn truyện Triệu Quang Phục về, thẻ thứ ba (lời Lý Nam Đế)',
+    truoc: `${CHUONG5(35)}\n${TQP}\nfor (let id = S.pendingStory(s); id && id !== 'trieuQuangPhuc'; id = S.pendingStory(s)) S.markStory(s, id);`,
+    giuTruyen: true,
+    sau: `document.querySelector('[data-act=storyNext]').click(); document.querySelector('[data-act=storyNext]').click();`,
+  },
+  'tqp-dien': {
+    mo: 'Kinh đô chương 5, Bà Triệu và Triệu Quang Phục đã về: nhìn sân chầu Điện, Triệu Quang Phục đứng chỗ 0',
+    truoc: `${CHUONG5(35)}\n${TQP}`,
+    sau: `const b = s.buildings.find((x) => x.type === 'dien'); const { courtSlot } = await import('/src/game/../render/congTrinh/dien.ts'); const c = courtSlot('trieuQuangPhuc'); const R = await import('/src/game/map.ts'); const t = R.turnLocal(b.rot, c.x, c.z); d.camera(b.x + 5 + t.x, b.z + 5 + t.z, 4.2);`,
+  },
+  'mtl': {
+    mo: 'Mai Thúc Loan đã về, đội Mai Thúc Loan, Triệu Quang Phục, Bà Triệu ra map 8 khu 3, sau 4 giây bấm Hắc Đế dấy binh',
+    truoc: `${CHUONG5(35)}\n${MTL}\ns.daNgoai.doi = ['maiThucLoan', 'trieuQuangPhuc', 'baTrieu'];`,
+    sau: `d.daNgoai(8, 2); await new Promise((r) => setTimeout(r, 4000)); d.skill('hacDe'); await new Promise((r) => setTimeout(r, 700));`,
+    doi: 300,
+  },
+  'mtl-tui': {
+    mo: 'Mai Thúc Loan đã về, mặc đủ bộ Vạn An: bảng tướng, thẻ Túi đồ của Mai Thúc Loan',
+    truoc: `${CHUONG5(35)}\n${MTL}\nconst T = await import('/src/game/trangBi.ts'); const co = new Set(); for (let q = 0; co.size < 4; q++) { const m = T.rutMon(q, 'daBoss', 5, ['vanAn'], [0, 0, 0, 100]); if (co.has(m.o)) continue; co.add(m.o); s.trangBi.kho.push({ ...m, cuong: 6, id: s.trangBi.nextId++, tuong: 'maiThucLoan' }); }`,
+    sau: `d.tuong('maiThucLoan');`,
+  },
+  'mtl-truyen': {
+    mo: 'Vừa hạ Dương Tư Húc lần đầu: đoạn truyện Mai Thúc Loan về, thẻ thứ ba (lời Mai Thúc Loan)',
+    truoc: `${CHUONG5(35)}\n${MTL}\nfor (let id = S.pendingStory(s); id && id !== 'maiThucLoan'; id = S.pendingStory(s)) S.markStory(s, id);`,
+    giuTruyen: true,
+    sau: `document.querySelector('[data-act=storyNext]').click(); document.querySelector('[data-act=storyNext]').click();`,
+  },
+  'nq': {
+    mo: 'Ngô Quyền đã về, đội Ngô Quyền, Mai Thúc Loan, Bà Triệu ra map 9 khu 3, sau 4 giây bấm Cọc Bạch Đằng',
+    truoc: `${CHUONG5(35)}\n${NQ}\ns.daNgoai.doi = ['ngoQuyen', 'maiThucLoan', 'baTrieu'];`,
+    sau: `d.daNgoai(9, 2); await new Promise((r) => setTimeout(r, 4000)); d.skill('cocBachDang'); await new Promise((r) => setTimeout(r, 900));`,
+    doi: 300,
+  },
+  'nq-tui': {
+    mo: 'Ngô Quyền đã về, mặc đủ bộ Bạch Đằng: bảng tướng, thẻ Túi đồ của Ngô Quyền',
+    truoc: `${CHUONG5(35)}\n${NQ}\nconst T = await import('/src/game/trangBi.ts'); const co = new Set(); for (let q = 0; co.size < 4; q++) { const m = T.rutMon(q, 'daBoss', 5, ['bachDang'], [0, 0, 0, 100]); if (co.has(m.o)) continue; co.add(m.o); s.trangBi.kho.push({ ...m, cuong: 6, id: s.trangBi.nextId++, tuong: 'ngoQuyen' }); }`,
+    sau: `d.tuong('ngoQuyen');`,
+  },
+  'nq-truyen': {
+    mo: 'Vừa hạ Lưu Hoằng Tháo lần đầu: đoạn truyện Ngô Quyền về, thẻ thứ ba (lời Ngô Quyền)',
+    truoc: `${CHUONG5(35)}\n${NQ}\nfor (let id = S.pendingStory(s); id && id !== 'ngoQuyen'; id = S.pendingStory(s)) S.markStory(s, id);`,
+    giuTruyen: true,
+    sau: `document.querySelector('[data-act=storyNext]').click(); document.querySelector('[data-act=storyNext]').click();`,
+  },
+  'nq-dien': {
+    mo: 'Kinh đô chương 5, bốn tướng dã ngoại đã về: nhìn sân chầu Điện từ phía cổng, Ngô Quyền ở chỗ 17 (cột ngoài bên trái, gần cổng)',
+    truoc: `${CHUONG5(35)}\n${NQ}`,
+    sau: `const b = s.buildings.find((x) => x.type === 'dien'); const { courtSlot } = await import('/src/render/congTrinh/dien.ts'); const c = courtSlot('ngoQuyen'); const R = await import('/src/game/map.ts'); const t = R.turnLocal(b.rot, c.x, c.z); d.camera(b.x + 5 + t.x, b.z + 5 + t.z, 4.2);`,
+  },
+  'ltk': {
+    mo: 'Lý Thường Kiệt đã về, đội Lý Thường Kiệt, Ngô Quyền, Mai Thúc Loan ra map 10 khu 3, sau 4 giây bấm Nam quốc sơn hà',
+    truoc: `${CHUONG5(35)}\n${LTK}\ns.daNgoai.doi = ['lyThuongKiet', 'ngoQuyen', 'maiThucLoan'];`,
+    sau: `d.daNgoai(10, 2); await new Promise((r) => setTimeout(r, 4000)); d.skill('namQuoc'); await new Promise((r) => setTimeout(r, 700));`,
+    doi: 300,
+  },
+  'ltk-tui': {
+    mo: 'Lý Thường Kiệt đã về, mặc đủ bộ Như Nguyệt: bảng tướng, thẻ Túi đồ của Lý Thường Kiệt',
+    truoc: `${CHUONG5(35)}\n${LTK}\nconst T = await import('/src/game/trangBi.ts'); const co = new Set(); for (let q = 0; co.size < 4; q++) { const m = T.rutMon(q, 'daBoss', 5, ['nhuNguyet'], [0, 0, 0, 100]); if (co.has(m.o)) continue; co.add(m.o); s.trangBi.kho.push({ ...m, cuong: 6, id: s.trangBi.nextId++, tuong: 'lyThuongKiet' }); }`,
+    sau: `d.tuong('lyThuongKiet');`,
+  },
+  'ltk-truyen': {
+    mo: 'Vừa hạ Quách Quỳ lần đầu: đoạn truyện Lý Thường Kiệt về, thẻ thứ tư (bài thơ Nam quốc sơn hà)',
+    truoc: `${CHUONG5(35)}\n${LTK}\nfor (let id = S.pendingStory(s); id && id !== 'lyThuongKiet'; id = S.pendingStory(s)) S.markStory(s, id);`,
+    giuTruyen: true,
+    sau: `for (let i = 0; i < 3; i++) document.querySelector('[data-act=storyNext]').click();`,
+  },
+  'ltk-dien': {
+    mo: 'Kinh đô chương 5, năm tướng dã ngoại đã về: nhìn sân chầu Điện, Lý Thường Kiệt ở chỗ 14 (ngoài cùng hàng ngai bên phải, cạnh Bà Triệu)',
+    truoc: `${CHUONG5(35)}\n${LTK}`,
+    sau: `const b = s.buildings.find((x) => x.type === 'dien'); const { courtSlot } = await import('/src/render/congTrinh/dien.ts'); const c = courtSlot('lyThuongKiet'); const R = await import('/src/game/map.ts'); const t = R.turnLocal(b.rot, c.x, c.z); d.camera(b.x + 5 + t.x, b.z + 5 + t.z, 4.2);`,
+  },
+  'dien-da': {
+    mo: 'Kinh đô chương 5, năm tướng dã ngoại đã về: nhìn cả sân chầu Điện từ phía cổng',
+    truoc: `${CHUONG5(35)}\n${LTK}`,
+    sau: `const b = s.buildings.find((x) => x.type === 'dien'); d.camera(b.x + 5, b.z + 6.5, 5.5);`,
   },
   'ba-trieu-dien': {
     mo: 'Kinh đô chương 5, Bà Triệu đã về: nhìn sân chầu Điện, Bà Triệu đứng hàng gần cổng bên trái',
