@@ -1776,32 +1776,51 @@ export function makeBaTrieu(opts: { onFoot?: boolean; anh?: boolean } = {}): THR
 /** Cỡ thân Triệu Quang Phục: cao ngang Cao Lỗ, đi bộ. */
 const K_TQP = 1.35;
 
+/** Ngọc rồng: ngọc trắng xanh trong móng rồng. */
+const NGOC_RONG = 0xdff3e4;
+
+/** Khối trụ nối điểm `a` tới điểm `b` (bán kính đầu `ra`, cuối `rb`). */
+function noi(p: Parts['plain'], a: V3, b: V3, ra: number, rb: number, color: number): void {
+  const va = new THREE.Vector3(...a);
+  const vb = new THREE.Vector3(...b);
+  const dir = vb.clone().sub(va);
+  const e = new THREE.Euler().setFromQuaternion(new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 1, 0), dir.clone().normalize()));
+  const mid = va.add(vb).multiplyScalar(0.5);
+  p.cyl(rb, ra, dir.length(), color, mid.x, mid.y, mid.z, [e.x, e.y, e.z], 7);
+}
+
 /**
- * Móng rồng Chử Đồng Tử trao cho Triệu Quang Phục: cổ móng vàng vảy, ba ngón vàng xòe ra, vuốt ngà cong về trước, một
- * cựa sau. Gốc ở giữa cổ móng, ngón hướng +y, vuốt cong về +z; `co` là cổ móng dài thêm xuống dưới.
+ * Móng rồng Chử Đồng Tử trao cho Triệu Quang Phục, vẽ theo lối chạm vàng: cổ móng vàng hoa văn, ba ngón vàng tròn
+ * mập ôm lấy viên ngọc rồng trắng xanh, đầu ngón bịt móng vàng sẫm cụp vào ngọc (không vuốt nhọn). Gốc ở giữa cổ móng,
+ * ngọc ở trên; `co` là cổ móng dài thêm xuống dưới (bảo vật đặt đứng).
  */
 export function mongRong(m: Parts, k = 1, co = 0): void {
   const p = m.plain;
-  // Bảo vật: cổ móng dài thêm `co`, vảy vàng sẫm từng khoanh.
   if (co > 0) {
-    p.cyl(0.036 * k, 0.03 * k, co * k, C.gold, 0, -co * k * 0.5, 0, undefined, 8);
-    for (let y = 0.03; y < co; y += 0.035) p.cyl(0.038 * k, 0.038 * k, 0.01 * k, C.goldDark, 0, -y * k, 0, undefined, 8);
+    p.cyl(0.04 * k, 0.034 * k, co * k, C.gold, 0, -co * k * 0.5, 0, undefined, 10);
+    for (let y = 0.03; y < co; y += 0.04) p.cyl(0.043 * k, 0.043 * k, 0.012 * k, C.goldDark, 0, -y * k, 0, undefined, 10);
   }
-  m.band.cyl(0.034 * k, 0.04 * k, 0.05 * k, C.gold, 0, 0.025 * k, 0, undefined, 8);
-  p.cyl(0.043 * k, 0.043 * k, 0.014 * k, C.goldDark, 0, 0, 0, undefined, 8);
-  p.sphere(0.046 * k, C.gold, 0, 0.075 * k, 0.005 * k, [1, 0.75, 0.85], 8);
-  for (const i of [-1, 0, 1]) {
-    const a = i * 0.62;
-    const sx = Math.sin(a);
-    const cy = Math.cos(a);
-    // Hai đốt ngón vàng thon dài xòe ra, gập dần về trước; vuốt ngà nhọn cong hẳn về trước.
-    p.cyl(0.013 * k, 0.018 * k, 0.09 * k, C.gold, sx * 0.075 * k, 0.08 * k + cy * 0.05 * k, 0.01 * k, [0.2, 0, -a], 6);
-    p.sphere(0.015 * k, C.goldDark, sx * 0.115 * k, 0.08 * k + cy * 0.095 * k, 0.02 * k, [1, 1, 1], 6);
-    p.cyl(0.01 * k, 0.014 * k, 0.07 * k, C.gold, sx * 0.135 * k, 0.08 * k + cy * 0.125 * k, 0.045 * k, [0.75, 0, -a], 6);
-    p.cone(0.012 * k, 0.1 * k, C.cream, sx * 0.15 * k, 0.08 * k + cy * 0.14 * k, 0.1 * k, [1.45, 0, -a], 6);
+  m.band.cyl(0.042 * k, 0.046 * k, 0.05 * k, C.gold, 0, 0.025 * k, 0, undefined, 10);
+  p.cyl(0.05 * k, 0.05 * k, 0.014 * k, C.goldDark, 0, 0.003 * k, 0, undefined, 10);
+  p.sphere(0.05 * k, C.gold, 0, 0.06 * k, 0, [1, 0.6, 1], 10);
+  // Ngọc rồng giữa ba ngón.
+  const ny = 0.135 * k;
+  p.sphere(0.052 * k, NGOC_RONG, 0, ny, 0, [1, 1, 1], 12);
+  for (let i = 0; i < 3; i++) {
+    const a = (i / 3) * Math.PI * 2 + Math.PI / 6;
+    const dx = Math.sin(a);
+    const dz = Math.cos(a);
+    const at = (r: number, y: number): V3 => [dx * r * k, y * k, dz * r * k];
+    // Ngón mập hai đốt: ra ngoài ôm quanh hông ngọc, rồi cụp vào trên đỉnh ngọc.
+    const g0 = at(0.035, 0.065);
+    const g1 = at(0.07, 0.12);
+    const g2 = at(0.045, 0.18);
+    noi(p, g0, g1, 0.022 * k, 0.019 * k, C.gold);
+    p.sphere(0.02 * k, C.gold, ...g1, [1, 1, 1], 8);
+    noi(p, g1, g2, 0.018 * k, 0.015 * k, C.gold);
+    // Móng tròn vàng sẫm ở đầu ngón, cụp vào ngọc.
+    p.sphere(0.016 * k, C.goldDark, ...at(0.035, 0.19), [1, 0.8, 1], 7);
   }
-  // Cựa sau.
-  p.cone(0.012 * k, 0.06 * k, C.cream, 0, 0.07 * k, -0.06 * k, [-1.9, 0, 0], 6);
 }
 
 /**
@@ -1815,10 +1834,11 @@ export function aoLauSay(h: HumanRig): void {
   cloak(h, { color: C.lauSay, trim: C.lauSayDark, hem: 0.2, flare: 0.1 });
 }
 
-/** Mũ đâu mâu: mũ trụ đồng vành hoa văn, sống mũ, che gáy; móng rồng cài trước trán. */
+/** Mũ đâu mâu: mũ trụ đồng vành xanh đầm hoa văn, sống mũ vàng, che gáy, chóp cắm tua đỏ; móng rồng ôm ngọc cài trước trán. */
 function dauMau(h: HumanRig): void {
-  helmet(h, { color: C.bronzeDark, rim: 0.83, lift: 0.07, puff: 0.01, band: C.tqpDark, bandH: 0.035, bandPattern: true, ridge: C.gold, neck: 0.08, guard: C.bronzeDark, guardTrim: C.gold, top: { kind: 'spike', color: C.gold, h: 0.12 } });
-  h.local('head', [0, 0.95, 0.14], [-0.2, 0, 0], (s) => mongRong(s, 1.3));
+  helmet(h, { color: C.bronze, rim: 0.83, lift: 0.05, puff: 0.01, band: C.tqp, bandH: 0.04, bandPattern: true, ridge: C.gold, neck: 0.08, guard: C.bronze, guardTrim: C.gold, top: { kind: 'tube', color: C.gold }, tuft: { color: C.red, len: 0.14, lean: 0.35, r: 0.025 } });
+  // Móng rồng nhỏ ôm ngọc cài giữa vành mũ trước trán.
+  h.local('head', [0, 0.86, 0.165], [0.35, 0, 0], (s) => mongRong(s, 0.75));
 }
 
 /**

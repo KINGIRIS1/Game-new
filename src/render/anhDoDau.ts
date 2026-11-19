@@ -10,7 +10,7 @@ export const ANH_DO_DAU: Record<string, string> = {
   'coLoa-giap': 'efe20541',
   'coLoa-phucSuc': '9d254856',
   'coLoa-vuKhi': 'b9bebcf5',
-  'daTrach-baoVat': '331a2264',
+  'daTrach-baoVat': 'c4615ed3',
   'daTrach-giap': 'eb8c1bc7',
   'daTrach-phucSuc': '31552d46',
   'daTrach-vuKhi': 'd2e4eedc',
