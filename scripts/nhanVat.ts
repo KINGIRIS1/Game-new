@@ -32,6 +32,20 @@ import type { Human } from '../src/render/body';
 import { makeEnemyBoat, makeLauThuyen } from '../src/render/models';
 import { makeSoldier } from '../src/render/soldier';
 import { makeThanThu } from '../src/render/thanThu';
+import { ToonModel } from '../src/render/toon';
+import type { Parts } from '../src/render/weapons';
+import {
+  coLac,
+  crossbowParts,
+  daoVanAn,
+  giaoBachDang,
+  giaoDaTrach,
+  guomDong,
+  guomNuiNua,
+  kiemNhuNguyet,
+  repeatingCrossbow,
+} from '../src/render/weapons';
+import { giongWeapon, royalAxe, sonStaff } from '../src/render/heroes';
 
 interface Entry {
   ten: string;
@@ -181,7 +195,59 @@ const GANH: [string, Act][] = [
   ['Đi (bước phải)', { act: 'walk', phase: Math.PI / 2, stride: 0.42 }],
 ];
 
+/** Vũ khí các tướng đứng rời, mỗi món phóng theo cỡ người của tướng cầm, nhìn ngang mặt lưỡi; người đứng cạnh để so cỡ. */
+const VU_KHI: [string, number, (s: Parts) => void, number?][] = [
+  ['Roi sắt Gióng', 1.5, (s) => giongWeapon(s, false)],
+  ['Tre Gióng', 1.5, (s) => giongWeapon(s, true)],
+  ['Trượng Sơn Tinh', 1.45, sonStaff],
+  ['Rìu An Dương Vương', 1.45, royalAxe],
+  ['Giáo Dạ Trạch', 1.35, (s) => giaoDaTrach(s), Math.PI / 2],
+  ['Đao Vạn An', 1.45, (s) => daoVanAn(s)],
+  ['Giáo Bạch Đằng', 1.35, (s) => giaoBachDang(s), Math.PI / 2],
+  ['Gươm đồng Trưng Trắc', 1.4, guomDong],
+  ['Gươm Núi Nưa', 1.4, guomNuiNua],
+  ['Kiếm Như Nguyệt', 1.38, kiemNhuNguyet],
+  ['Nỏ thần', 1, (s) => crossbowParts(s, true, 1.15)],
+  ['Nỏ liên châu', 1, (s) => repeatingCrossbow(s, 1.05)],
+  ['Cờ Lạc Trưng Nhị', 1.4, coLac],
+];
+function vuKhiRoi(ds: typeof VU_KHI, gap: number, y = 0.3): () => THREE.Group {
+  return () => {
+    const g = new THREE.Group();
+    ds.forEach(([, k, ve, xoay], i) => {
+      const m = new ToonModel();
+      ve(m);
+      const w = m.group();
+      w.scale.setScalar(k);
+      w.rotation.y = xoay ?? 0;
+      w.position.set(0, y * k, -(i - (ds.length - 1) / 2) * gap);
+      g.add(w);
+    });
+    return g;
+  };
+}
+const VK_COT: [string, Act][] = [
+  ['Đứng', { act: 'stand' }],
+  ['Thủ', { act: 'fight' }],
+  ['Ra đòn', { act: 'fight', strike: 0.12 }],
+  ['Đòn tới', { act: 'fight', strike: 0.3 }],
+];
+
 export const NHOM: Record<string, Entry[]> = {
+  vuKhi: [
+    { ten: 'Vũ khí cán dài', tao: vuKhiRoi(VU_KHI.slice(0, 7), 0.6), co: 1.45, cach: 1.3, cao: 640, xoay: -Math.PI / 2 + 0.6, cot: MOT_COT },
+    { ten: 'Gươm, kiếm', tao: vuKhiRoi(VU_KHI.slice(7, 10), 0.4, 0.15), co: 0.55, cach: 0.5, cao: 560, xoay: -Math.PI / 2 + 0.6, cot: MOT_COT },
+    { ten: 'Nỏ, cờ', tao: vuKhiRoi(VU_KHI.slice(10), 0.9), co: 1.2, cach: 1, cao: 480, xoay: -Math.PI / 2 + 0.6, cot: MOT_COT },
+    { ten: 'Gióng', tao: () => makeGiong('trangSi'), co: 1.9, cach: 1.7, cao: 420, cot: VK_COT },
+    { ten: 'Sơn Tinh', tao: () => makeSonTinh(), co: 1.3, cach: 1.1, cao: 360, cot: VK_COT },
+    { ten: 'An Dương Vương (rìu)', tao: () => makeAnDuong(), co: 1.3, cach: 1.1, cao: 360, cot: VK_COT },
+    { ten: 'Trưng Trắc đứng', tao: () => makeTrungTrac({ onFoot: true }), co: 1.3, cach: 1.1, cao: 360, cot: VK_COT },
+    { ten: 'Bà Triệu đứng', tao: () => makeBaTrieu({ onFoot: true }), co: 1.3, cach: 1.1, cao: 360, cot: VK_COT },
+    { ten: 'Triệu Quang Phục', tao: () => makeTrieuQuangPhuc(), co: 1.6, cach: 1.3, cao: 380, cot: VK_COT },
+    { ten: 'Mai Thúc Loan', tao: () => makeMaiThucLoan(), co: 1.7, cach: 1.4, cao: 380, cot: VK_COT },
+    { ten: 'Ngô Quyền', tao: () => makeNgoQuyen(), co: 2.3, cach: 2.1, cao: 420, cot: VK_COT },
+    { ten: 'Lý Thường Kiệt', tao: () => makeLyThuongKiet(), co: 1.6, cach: 1.3, cao: 380, cot: VK_COT },
+  ],
   linh: [
     { ten: 'Giáo binh bậc 2', tao: () => makeSoldier('giao', 2) },
     { ten: 'Giáo binh bậc 3', tao: () => makeSoldier('giao', 3) },
