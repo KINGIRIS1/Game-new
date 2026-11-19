@@ -932,7 +932,7 @@ Chủ dự án đã chọn qua bốn câu hỏi: Thủy Tinh có cả hai phép 
 
 **Xoay cảnh**
 - Có nút ⟳ trên màn hình kinh đô. Mỗi lần bấm, góc nhìn xoay 45°, có 8 hướng nhìn (4 hướng chéo như cũ, xen 4 hướng nhìn thẳng cạnh lưới), chuyển mượt. Chủ dự án chọn thêm 4 hướng thẳng sau khi đã có 4 hướng chéo.
-- Vuốt hai ngón theo vòng tròn cũng xoay theo nấc 45°, không xoay tự do, để hình vẽ luôn đúng góc và lưới ô không xiên lệch.
+- Vặn hai ngón theo vòng tròn thì cảnh xoay tự do theo tay (vặn quá chừng 8° mới bắt đầu xoay, để chụm phóng không lỡ xoay); thả tay thì cảnh hít về nấc 45° gần nhất, nên lúc đứng yên vẫn là một trong 8 hướng, lưới ô không xiên lệch. Chủ dự án chọn kiểu này sau khi thử 8 hướng.
 - Bãi chiến phó bản không xoay.
 
 **Dời công trình**
