@@ -4,7 +4,7 @@
 // Cách dùng: node scripts/chup-ky-nang.mjs <kỹ năng> [kỹ năng ...] [--man <số màn>] [--truoc <giây trận chạy trước khi
 //            bấm, mặc định 3>] [--moc 0.2,0.5,0.9,1.4] [--phong <hệ số phóng, mặc định 2.2>] [--co 360x360]
 // Kỹ năng: trongTran, phunLua, nhoTre, bocDoi, doiNon, noThan, ruaVang, lienChau, lenhBan, voiXung, hieuTrieu,
-// chemCaKinh.
+// chemCaKinh, ngayAn, hacDe, cocBachDang, namQuoc.
 
 import { createRequire } from 'node:module';
 import { mkdir, writeFile } from 'node:fs/promises';

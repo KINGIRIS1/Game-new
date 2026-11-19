@@ -317,8 +317,8 @@ const puffGeo = new THREE.SphereGeometry(0.3, 10, 8);
 const reedGeo = new THREE.ConeGeometry(0.035, 0.9, 4);
 const reedMat = new THREE.MeshBasicMaterial({ color: C.lauSay });
 /** Vòng đỏ sẫm dưới chân người đang được Hắc Đế dấy binh thêm sức đánh. */
-const hangMat = new THREE.MeshBasicMaterial({ color: C.hoQuan, transparent: true, opacity: 0.7, depthWrite: false });
-const naoMat = new THREE.MeshBasicMaterial({ color: 0x8a7aa8, transparent: true, opacity: 0.6, depthWrite: false });
+const hangMat = new THREE.MeshBasicMaterial({ color: C.fxDo, transparent: true, opacity: 0.55, depthWrite: false, blending: THREE.AdditiveBlending, toneMapped: false });
+const naoMat = new THREE.MeshBasicMaterial({ color: C.fxTim, transparent: true, opacity: 0.55, depthWrite: false, blending: THREE.AdditiveBlending, toneMapped: false });
 /** Bốn chữ thơ thần bay lên khi Lý Thường Kiệt ngâm Nam quốc sơn hà. */
 const CHU_THO = ['Nam', 'quốc', 'sơn', 'hà'];
 const chuTex = new Map<string, THREE.Texture>();
@@ -1038,16 +1038,19 @@ export class BattleView {
     group.add(cracks);
     this.root.add(group);
     this.crags.push({ group, spikes, cracks, crackMat, age: 0, hold: len, life: len + 0.6, op: 0.4 });
-    const ring = new THREE.Mesh(ringGeo, new THREE.MeshBasicMaterial({ color: C.bachDangLight, transparent: true, depthWrite: false }));
-    ring.position.set(tx + ox, this.heightAt(tx, tz) + 0.08, tz + oz);
-    ring.renderOrder = 3;
-    this.root.add(ring);
-    this.rings.push({ mesh: ring, age: 0, size: rr });
-    for (let i = 0; i < 12; i++) {
-      const a = (i / 12) * Math.PI * 2;
-      const px = tx + Math.cos(a) * rr * 0.8;
-      const pz = tz + Math.sin(a) * rr * 0.8;
-      this.addPuff(px + ox, this.heightAt(px, pz) + 0.2, pz + oz, i % 2 ? C.songBac : C.bachDangLight, 0.05 + (i / 12) * 0.2, 0.8, 1.5);
+    const s = this.scale;
+    // Ông chỉ giáo: dải mũi tên nước từ ông tới bãi, sóng nước bạc và hoa văn loang ra, nước tóe ở chân từng cọc.
+    if (hero) this.hu.duong(this.at(hero.x, hero.z, 0.1), this.at(tx, tz, 0.1), { mau: C.fxNuoc, rong: 0.7 * s, life: 0.6 });
+    this.hu.soc(this.at(tx, tz), { mau: C.fxNuoc, r: rr * 1.1, life: 0.7 });
+    this.hu.vong(this.at(tx, tz), { mau: C.fxNuoc, r: rr, delay: 0.05, life: 1.4 });
+    spikes.forEach((sp, i) => {
+      if (i % 2) return;
+      const p = sp.obj.position;
+      this.hu.tia(this.at(tx + p.x, tz + p.z, 0.15), { mau: C.fxTrang, n: 4, toc: 4, len: 0.3, up: 1.8, delay: sp.delay, life: 0.45 });
+    });
+    for (let i = 0; i < 8; i++) {
+      const a = (i / 8) * Math.PI * 2;
+      this.hu.bui(this.at(tx + Math.cos(a) * rr * 0.8, tz + Math.sin(a) * rr * 0.8, 0.2), { mau: C.songBac, size: 1.1 * s, delay: 0.05 + (i / 8) * 0.2, life: 0.8 });
     }
   }
 
@@ -1451,22 +1454,22 @@ export class BattleView {
    * từng người vẽ ở `syncSuong`, theo `Fighter.an` của luật).
    */
   private ngayAn(battle: Battle, x: number, z: number): void {
-    const { x: ox, z: oz } = this.offset;
     const hero = battle.fighters.find((f) => f.kind === 'trieuQuangPhuc');
     const view = hero && this.fighters.get(hero.id);
     if (view) view.cast = CAST_TIME;
+    const s = this.scale;
+    const R = 3 * this.geo;
+    // Ông khom người ra hiệu: hoa văn sương xanh ngọc nở dưới chân, sóng sương loang ra, sương đầm cuộn ra phủ đội,
+    // đom đóm đầm lầy bay lên.
+    this.hu.loe(this.at(x, z, 0.6 * s), { mau: C.fxSuong, size: 2 * s, life: 0.4 });
+    this.hu.soc(this.at(x, z), { mau: C.fxSuong, r: R * 1.1, life: 0.8, sang: 0.7 });
+    this.hu.vong(this.at(x, z), { mau: C.fxSuong, r: R, delay: 0.05, life: 1.6 });
     for (let i = 0; i < 10; i++) {
       const a = (i / 10) * Math.PI * 2;
-      const r = 0.6 + (i % 3) * 0.45;
-      const px = x + Math.cos(a) * r;
-      const pz = z + Math.sin(a) * r;
-      this.addPuff(px + ox, this.heightAt(px, pz) + 0.3, pz + oz, C.suongDam, 0.05 * (i % 4), 1.4, 2.6);
+      const bay = new THREE.Vector3(Math.cos(a) * R * 0.7, 0, Math.sin(a) * R * 0.7);
+      this.hu.bui(this.at(x + Math.cos(a) * 0.4, z + Math.sin(a) * 0.4, 0.3), { mau: C.suongDam, size: 2.2 * s, bay, delay: 0.03 * (i % 4), life: 1.3 });
     }
-    const ring = new THREE.Mesh(ringGeo, new THREE.MeshBasicMaterial({ color: C.suongDam, transparent: true, depthWrite: false }));
-    ring.position.set(x + ox, this.heightAt(x, z) + 0.08, z + oz);
-    ring.renderOrder = 3;
-    this.root.add(ring);
-    this.rings.push({ mesh: ring, age: 0, size: 3 * this.geo });
+    this.hu.hat(this.at(x, z), { mau: C.fxSuong, n: 26, r: R, h: 1.4 * s, size: 0.7, delay: 0.1, life: 2.2 });
   }
 
   /**
@@ -1477,11 +1480,12 @@ export class BattleView {
     if (an > 0 && !view.suong) {
       const mat = new THREE.MeshBasicMaterial({ color: C.suongDam, transparent: true, opacity: 0, depthWrite: false });
       const group = new THREE.Group();
-      for (let i = 0; i < 7; i++) {
-        const a = (i / 7) * Math.PI * 2;
+      // Sương mỏng vờn quanh chân (không trùm kín người), lau sậy mọc quanh.
+      for (let i = 0; i < 4; i++) {
+        const a = (i / 4) * Math.PI * 2 + 0.4;
         const m = new THREE.Mesh(puffGeo, mat);
-        m.position.set(Math.cos(a) * 0.42, 0.35 + (i % 3) * 0.32, Math.sin(a) * 0.42);
-        m.scale.setScalar(1.3 + (i % 2) * 0.4);
+        m.position.set(Math.cos(a) * 0.45, 0.18 + (i % 2) * 0.12, Math.sin(a) * 0.45);
+        m.scale.set(1.5, 0.7, 1.5);
         m.renderOrder = 4;
         group.add(m);
       }
@@ -1504,7 +1508,7 @@ export class BattleView {
     if (!sg) return;
     sg.age += dt;
     const fade = Math.min(1, sg.age / 0.35) * Math.min(1, an / 0.5);
-    sg.mat.opacity = 0.62 * fade * (0.9 + 0.1 * Math.sin(this.time * 3));
+    sg.mat.opacity = 0.38 * fade * (0.85 + 0.15 * Math.sin(this.time * 3));
     sg.group.rotation.y = this.time * 0.4;
     sg.group.scale.setScalar(0.6 + 0.4 * fade);
     view.obj.position.y -= 0.14 * this.scale * fade;
@@ -1515,21 +1519,27 @@ export class BattleView {
    * dọc mép vòng; người được thêm sức đánh có vòng đỏ dưới chân (`syncHang`).
    */
   private hacDe(battle: Battle, x: number, z: number, r: number): void {
-    const { x: ox, z: oz } = this.offset;
     const hero = battle.fighters.find((f) => f.kind === 'maiThucLoan');
     const view = hero && this.fighters.get(hero.id);
     if (view) view.cast = CAST_TIME;
-    const ring = new THREE.Mesh(ringGeo, new THREE.MeshBasicMaterial({ color: C.hoQuan, transparent: true, depthWrite: false }));
-    ring.position.set(x + ox, this.heightAt(x, z) + 0.08, z + oz);
-    ring.renderOrder = 3;
-    this.root.add(ring);
-    this.rings.push({ mesh: ring, age: 0, size: r * this.geo });
+    const s = this.scale;
     const rr = r * this.geo;
-    for (let i = 0; i < 10; i++) {
-      const a = (i / 10) * Math.PI * 2;
-      const px = x + Math.cos(a) * rr;
-      const pz = z + Math.sin(a) * rr;
-      this.addPuff(px + ox, this.heightAt(px, pz) + 0.3, pz + oz, i % 2 ? C.hacDe : C.hoQuan, 0.15 + 0.02 * i, 1.0, 1.8);
+    // Ông giơ đao hô: cột sáng đỏ máu, sóng đỏ loang tới tầm kéo giặc, hoa văn đỏ, khói đen cuộn lên dọc mép,
+    // than hồng tóe; mỗi người ta bừng đỏ lần lượt theo khoảng cách.
+    this.hu.cot(this.at(x, z), { mau: C.fxDo, r: 0.45 * s, h: 4 * s, life: 0.9, sang: 0.8 });
+    this.hu.loe(this.at(x, z, 1.2 * s), { mau: C.fxDo, size: 2.6 * s, life: 0.45 });
+    this.hu.soc(this.at(x, z), { mau: C.fxDo, r: rr, life: 0.7 });
+    this.hu.vong(this.at(x, z), { mau: C.fxDo, r: rr * 0.95, delay: 0.05, life: 1.5 });
+    this.hu.tia(this.at(x, z, 0.6 * s), { mau: C.fxLua, n: 20, toc: 7, len: 0.4, up: 1.3, life: 0.7 });
+    for (let i = 0; i < 12; i++) {
+      const a = (i / 12) * Math.PI * 2;
+      const bay = new THREE.Vector3(Math.cos(a) * 0.5, 0.6, Math.sin(a) * 0.5);
+      this.hu.bui(this.at(x + Math.cos(a) * rr, z + Math.sin(a) * rr, 0.3), { mau: i % 2 ? C.hacDe : C.hacDeLight, size: 0.95 * s, bay, delay: 0.12 + 0.02 * i, life: 1.2 });
+    }
+    for (const f of battle.fighters) {
+      if (f.side !== 'ta' || f.state === 'dead' || f === hero) continue;
+      const delay = 0.1 + Math.min(0.5, Math.hypot(f.x - x, f.z - z) * 0.05);
+      this.hu.loe(this.at(f.x, f.z, 0.8 * s), { mau: C.fxDo, size: 0.9 * s, delay, life: 0.35 });
     }
   }
 
@@ -1544,7 +1554,7 @@ export class BattleView {
       view.hang.removeFromParent();
       view.hang = undefined;
     }
-    if (view.hang) view.hang.scale.setScalar(1.1 + 0.12 * Math.sin(this.time * 6));
+    if (view.hang) view.hang.scale.setScalar(0.95 + 0.1 * Math.sin(this.time * 6));
   }
 
   /** Thêm hay bỏ vòng xám tím dưới chân giặc đang nao núng (Nam quốc sơn hà), vòng chập chờn. */
@@ -1570,11 +1580,16 @@ export class BattleView {
     const hero = battle.fighters.find((f) => f.kind === 'lyThuongKiet');
     const view = hero && this.fighters.get(hero.id);
     if (view) view.cast = CAST_TIME;
-    const ring = new THREE.Mesh(ringGeo, new THREE.MeshBasicMaterial({ color: C.nhuNguyet, transparent: true, depthWrite: false }));
-    ring.position.set(x + ox, this.heightAt(x, z) + 0.08, z + oz);
-    ring.renderOrder = 3;
-    this.root.add(ring);
-    this.rings.push({ mesh: ring, age: 0, size: r * this.geo });
+    const s = this.scale;
+    const rr = r * this.geo;
+    // Ông ngâm thơ: cột sáng vàng, sóng vàng và hoa văn trống đồng loang tới tầm thơ, hạt vàng bay quanh cột chữ.
+    this.hu.cot(this.at(x, z), { mau: C.fxVang, r: 0.3 * s, h: 4.2 * s, life: 0.8, sang: 0.5 });
+    this.hu.loe(this.at(x, z, 1.4 * s), { mau: C.fxVang, size: 2.4 * s, life: 0.5 });
+    this.hu.soc(this.at(x, z), { mau: C.fxVang, r: rr, life: 0.8, sang: 0.55 });
+    this.hu.soc(this.at(x, z), { mau: C.fxDo, r: rr * 0.9, delay: 0.12, life: 0.7, loi: false });
+    // Hoa văn màu vàng sẫm: cộng sáng trên vùng rộng thì màu tươi sẽ lóa cả bãi.
+    this.hu.vong(this.at(x, z), { mau: 0x8a6a22, r: rr * 0.9, delay: 0.05, life: 1.6 });
+    this.hu.hat(this.at(x, z), { mau: C.fxVang, n: 18, r: 0.9 * s, h: 3.2 * s, size: 0.8, delay: 0.1, life: 2 });
     CHU_THO.forEach((chu, i) => {
       const tex = chuThoTex(chu);
       if (!tex) return;
@@ -1587,8 +1602,11 @@ export class BattleView {
       this.chuTho.push({ sp, age: -0.25 * i });
     });
     for (const f of battle.fighters) {
-      if (f.side !== 'ta' || f.state === 'dead' || Math.hypot(f.x - x, f.z - z) > r * this.geo) continue;
-      this.addPuff(f.x + ox, this.heightAt(f.x, f.z) + 0.5, f.z + oz, C.heal, 0.1, 0.8, 1.2);
+      if (f.state === 'dead' || Math.hypot(f.x - x, f.z - z) > rr) continue;
+      const delay = 0.15 + Math.hypot(f.x - x, f.z - z) * 0.04;
+      // Quân ta hồi máu: hạt xanh bay lên; giặc nao núng: lóe tím.
+      if (f.side === 'ta') this.hu.hat(this.at(f.x, f.z), { mau: C.fxXanh, n: 4, r: 0.3 * s, h: 1.3 * s, size: 0.6, delay, life: 1 });
+      else this.hu.loe(this.at(f.x, f.z, 0.9 * s), { mau: C.fxTim, size: 0.9 * s, delay, life: 0.4 });
     }
   }
 

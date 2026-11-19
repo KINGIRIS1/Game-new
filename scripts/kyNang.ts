@@ -23,6 +23,10 @@ const CHU: Record<SkillId, { heroes: HeroKind[]; man: number }> = {
   voiXung: { heroes: ['trungTrac', 'trungNhi'], man: 34 },
   hieuTrieu: { heroes: ['trungTrac', 'trungNhi'], man: 34 },
   chemCaKinh: { heroes: ['baTrieu'], man: 34 },
+  ngayAn: { heroes: ['trieuQuangPhuc'], man: 34 },
+  hacDe: { heroes: ['maiThucLoan'], man: 34 },
+  cocBachDang: { heroes: ['ngoQuyen'], man: 34 },
+  namQuoc: { heroes: ['lyThuongKiet'], man: 34 },
 };
 
 function fieldPoint(x: number, z: number): THREE.Vector3 {
