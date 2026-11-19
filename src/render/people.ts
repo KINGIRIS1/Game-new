@@ -391,18 +391,43 @@ function poseWorker(b: Human, job: Job, sitting: boolean, a: Act): void {
 
 /**
  * Một người dân làm nghề `job`, cao khoảng 1 ô. `sitting`: ngồi xếp bằng trên chiếu (thân hạ thấp,
- * hai ống chân bắt chéo trước bụng), không đeo gùi.
+ * hai ống chân bắt chéo trước bụng), không đeo gùi. Dân không đổ bóng (vẫn nhận bóng) cho nhẹ máy: kinh đô Điện 8 có
+ * cả trăm dân, mỗi người không cắt theo khung nhìn nên lượt vẽ bóng nắng vẽ trọn cả trăm người mỗi khung. `shadow`:
+ * vẫn đổ bóng, cho dân đi giữa bãi trống ngoài bãi chiến.
  */
-export function makeWorker(job: Job, sitting = false): THREE.Group {
+export function makeWorker(job: Job, sitting = false, shadow = false): THREE.Group {
   const r = new RigBuilder(HUMAN, DETAIL);
   drawWorker(r, job, sitting);
   const { group, bones } = skinRig(r.build());
+  if (!shadow) group.traverse((o) => (o.castShadow = false));
   const pose: Poser = (a) => poseWorker(bones, job, sitting, a);
   pose({ act: 'stand' });
   group.userData.pose = pose;
   group.userData.job = job;
   return group;
 }
+
+/**
+ * Một người trong đoàn dân rút về núi ở Cấm Khê (màn 40, `syncRetreat` ở battlefield.ts): dân theo nghề (`ganh`: gánh
+ * đòn gánh; `dat`: dắt con trâu đi ngay sau bằng dây thừng), hay trâu.
+ */
+export type DanRut = { job: Job; ganh?: boolean; dat?: boolean } | 'trau';
+
+/** Đoàn dân rút, từ người đi đầu; lính gác đi cuối đoàn. Worker nặn sẵn dáng của đoàn (nanSan.ts). */
+export const DAN_RUT: readonly DanRut[] = [
+  { job: 'thoXe', ganh: true },
+  { job: 'phuNu' },
+  { job: 'nong', dat: true },
+  'trau',
+  { job: 'giuKho' },
+  { job: 'phuNu' },
+  { job: 'thoXe', ganh: true },
+  { job: 'buon' },
+  { job: 'nong', dat: true },
+  'trau',
+  { job: 'phuNu' },
+  { job: 'linhGac' },
+];
 
 /** Người lái đò: khố đỏ hoa văn, hình xăm sóng nước, mũ lông chim 5 nhánh, mái chèo gỗ lớn chạm khắc. */
 export function makeRower(): THREE.Group {

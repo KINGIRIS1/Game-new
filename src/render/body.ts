@@ -32,6 +32,8 @@ export const GRIP_L = HUMAN.handL.at;
 const HAND = new THREE.Vector3(0, HUMAN.hand.at[1] - HUMAN.armR.at[1], 0);
 
 export interface BodyLook {
+  /** Màu da (mặc định `C.skin`): Mai Thúc Loan da đen sạm. */
+  skin?: number;
   /** Ống chân: mặc định chân trần; quân Triệu mặc quần. */
   legs?: number;
   /** Khố (hay váy). */
@@ -84,6 +86,8 @@ export function humanBody(r: HumanRig, look: BodyLook): void {
 }
 
 export interface FaceLook {
+  /** Màu da mặt, tai (mặc định `C.skin`). */
+  skin?: number;
   /** Mày xếch: giặc, tướng. */
   brows?: boolean;
   /** Màu mày (mặc định mực đen; lão tướng mày bạc). */

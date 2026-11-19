@@ -43,6 +43,29 @@ const CO_QUAN = `
 `;
 const KINH_DO = `M.playChapters({ s, until: (m) => m.at5 >= 0 });`;
 /** Kinh đô Điện 8 vừa sang chương 5 (đã thắng tới màn `cleared`), có doanh trại và quân, đã xem hết truyện tới lúc ấy. */
+/**
+ * Điện 10 sau truyện (người chơi mô phỏng chơi thêm 5 giờ: hai đồn đảo lên cấp, có thuyền chiến), chương 5 đã thắng
+ * màn 37 (Mã Viện sang), đồn Hoàng Sa có 30 chỗ quân đóng; giặc kinh đô không tới để khỏi che cảnh.
+ */
+const DAO_GIAC = `M.playChapters({ s, last: 10 }); for (let i = 0; i < 5 * 3600; i++) M.playSecond(s);
+  s.questIndex = Math.max(s.questIndex, D.CH5_QUEST_START); s.campaign.cleared = Math.max(s.campaign.cleared, 37);
+  s.dao.hoangSa.linh = { giao: 9, cung: 8, voi: 3, no: 2 }; s.dao.hoangSa.muon = { ...s.dao.hoangSa.linh };
+  s.raid.nextAt = Number.MAX_SAFE_INTEGER; s.raid.phase = 'idle'; s.raid.battle = null;
+  for (let id; (id = S.pendingStory(s)); ) S.markStory(s, id);
+  for (let t; (t = G.nextHint(s)); ) G.markHinted(s, t);
+  s.hinted = [...s.hinted, 'dao:mo', 'dao:maVien'];
+  const Nu = await import('/src/game/nuTuong.ts');
+  for (let n; (n = Nu.nextNuHint(s)); ) Nu.markNuHinted(s, n);
+`;
+
+/** Bà Triệu đã về: boss map 6 đã bị hạ một lần (giờ mọc lại đã qua). */
+const BA_TRIEU = `s.daNgoai.boss[5] = 1; s.hinted.push('daNgoai6', 'daNgoai7', 'daNgoai8', 'daNgoai9', 'daNgoai10');`;
+/** Triệu Quang Phục đã về: boss map 7 đã bị hạ một lần (Bà Triệu cũng đã về). */
+const TQP = `${BA_TRIEU} s.daNgoai.boss[6] = 1;`;
+/** Mai Thúc Loan đã về: boss map 8 đã bị hạ một lần (Bà Triệu, Triệu Quang Phục cũng đã về). */
+const MTL = `${TQP} s.daNgoai.boss[7] = 1;`;
+const NQ = `${MTL} s.daNgoai.boss[8] = 1;`;
+const LTK = `${NQ} s.daNgoai.boss[9] = 1;`;
 const CHUONG5 = (cleared) => `M.playChapters({ s, last: 8 });${CO_QUAN}
   for (const b of s.buildings) if (b.type === 'doanhTrai') b.level = D.BUILDINGS.doanhTrai.maxLevel;
   const cho5 = G.troopCap(s);
@@ -144,6 +167,118 @@ const NHIN_CONG = `const c = s.buildings.find((b) => b.type === 'congDe'); d.cam
 /** Đủ quân mẫu một trận (38 chỗ) để đánh thử Đấu thành. */
 const DU_QUAN = `s.troops = { giao: 14, cung: 12, voi: 4, no: 0 };`;
 
+/**
+ * Dời ruộng đầu tiên ra chỗ xa nơi nhận nhất mà hệ số gánh còn trên 70% (mở thêm đất cho có chỗ), rồi trải đường đất
+ * nửa tuyến gánh phía nơi nhận.
+ */
+const RUONG_XA = `s.khoanh = K.squareKhoanh(K.AREA[6]);
+const r = s.buildings.find((b) => b.type === 'ruong');
+let best = null, bk = 2;
+for (let z = 10; z < 52; z++) for (let x = 10; x < 52; x++) {
+  if (!G.canMove(s, r.id, x, z).ok) continue;
+  const ox = r.x, oz = r.z; r.x = x; r.z = z;
+  const k = G.outputIn(s, r).gao / G.outputOf(r).gao;
+  r.x = ox; r.z = oz;
+  if (k < bk && k > 0.7) { bk = k; best = { x, z }; }
+}
+r.x = best.x; r.z = best.z;
+const V = await import('/src/game/vanChuyen.ts');
+const t = V.duongGanh(s, r).tuyen;
+for (const i of t.slice(Math.floor(t.length / 2))) G.placeLine(s, 'duongDat', [{ x: i % 76, z: Math.floor(i / 76) }]);`;
+
+/**
+ * Nhìn gần người đang gánh thóc của ruộng đã dời (`RUONG_XA`): tua đồng hồ cảnh (`seaTime`) tới lúc người ấy gánh
+ * hàng ở quãng giữa đường (cách hai đầu tuyến từ 5 ô), rồi đặt camera vào chỗ người ấy.
+ */
+const NHIN_GANH = `const V = await import('/src/game/vanChuyen.ts');
+const r = s.buildings.filter((b) => b.type === 'ruong').sort((a, b) => V.heSoGanh(s, a) - V.heSoGanh(s, b))[0];
+const t = V.duongGanh(s, r).tuyen;
+const o = (i) => ({ x: (i % 76) + 0.5, z: Math.floor(i / 76) + 0.5 });
+const [a, b] = [o(t[0]), o(t[t.length - 1])];
+const frame = () => new Promise((ok) => requestAnimationFrame(() => requestAnimationFrame(ok)));
+let p = null;
+for (let k = 0; k < 240 && !p; k++) {
+  d.seaTime(k * 0.5);
+  await frame();
+  const q = d.ganh().find((g) => g.id === r.id)?.ra.find((x) => x.mang && !x.dung);
+  if (q && Math.hypot(q.x - a.x, q.z - a.z) > 5 && Math.hypot(q.x - b.x, q.z - b.z) > 5) p = q;
+}
+if (!p) throw new Error('Không thấy người gánh của ruộng xa ở giữa đường');
+d.camera(p.x, p.z, 3);`;
+
+/**
+ * Tua đồng hồ cảnh (`seaTime`) qua 80 giây, tìm lúc có người đang mang hàng ở xa hai đầu tuyến nhất của chỗ thỏa
+ * `chon` (biểu thức trên mỗi mục `d.ganh()`, tên `g`), tua về lúc ấy rồi đặt camera vào người ấy (độ phóng `zoom`).
+ */
+const NHIN_DI = (chon, zoom = 3) => `const frame = () => new Promise((ok) => requestAnimationFrame(() => requestAnimationFrame(ok)));
+const tim = () => {
+  let best = null;
+  for (const g of d.ganh()) {
+    if (!(${chon})) continue;
+    for (const x of g.ra) {
+      if (!x.coHang || x.dung) continue;
+      const m = Math.min(Math.hypot(x.x - g.a.x, x.z - g.a.z), Math.hypot(x.x - g.b.x, x.z - g.b.z));
+      if (!best || m > best.m) best = { ...x, m };
+    }
+  }
+  return best;
+};
+let p = null, at = 0;
+for (let k = 0; k < 100; k++) {
+  d.seaTime(k * 0.8);
+  await frame();
+  const q = tim();
+  if (q && (!p || q.m > p.m)) { p = q; at = k * 0.8; }
+}
+if (!p) throw new Error('Không thấy người mang hàng: ' + JSON.stringify(d.ganh().filter((g) => ${chon}).map((g) => ({ id: g.id, hang: g.hang, D: g.D, n: g.n }))));
+d.seaTime(at);
+await frame();
+p = tim() ?? p;
+d.camera(p.x, p.z, ${zoom});`;
+
+/** Mở thêm đất, dựng nhà sàn mới ở chỗ xa Điện, kho chừng 16–26 ô (kéo dài việc dựng cho khỏi xong trước khi chụp). */
+const NHA_XA = `s.khoanh = K.squareKhoanh(K.AREA[6]);
+s.resources = { gao: 9e5, voOc: 9e5, datDa: 9e5, sat: 9e5, go: 9e5 };
+const Xa = await import('/src/game/xay.ts');
+Xa.advanceXay(s, 1e13);
+const V = await import('/src/game/vanChuyen.ts');
+let best = null, bd = 0;
+for (let z = 4; z < 52; z++) for (let x = 4; x < 52; x++) {
+  if (!Xa.canStartBuild(s, 'nhaSan', x, z).ok) continue;
+  const g = V.duongTu(s, { type: 'nhaSan', x, z }, 'kho');
+  if (g && g.d > bd && g.d < 26) { bd = g.d; best = { x, z }; }
+}
+const r = Xa.startBuild(s, 'nhaSan', best.x, best.z);
+if (!r.ok) throw new Error(r.reason);
+for (const v of s.xay.viec) for (const o of v.o) o.ms *= 400;`;
+
+/**
+ * Mở thêm đất, coi như đã kết chương 1 (có Hội Tết), dựng bếp gói bánh xa Điện chừng 12–22 ô và ruộng nếp, vườn đậu lá
+ * dong, chuồng lợn gần Điện (nguyên liệu gánh về Điện, kho), đủ người làm.
+ */
+const BEP_XA = `s.khoanh = K.squareKhoanh(K.AREA[6]);
+s.giong.ascended = true;
+s.resources = { gao: 9e5, voOc: 9e5, datDa: 9e5, sat: 9e5, go: 9e5 };
+s.dan += 40;
+const V = await import('/src/game/vanChuyen.ts');
+const dien = s.buildings.find((b) => b.type === 'dien');
+let best = null, bd = 0;
+for (let z = 4; z < 52; z++) for (let x = 4; x < 52; x++) {
+  if (!G.canPlace(s, 'bep', x, z).ok) continue;
+  const g = V.duongTu(s, { type: 'bep', x, z }, 'dien');
+  if (g && g.d > bd && g.d < 22) { bd = g.d; best = { x, z }; }
+}
+const put = (t, x, z) => { const r = G.place(s, t, x, z); if (!r.ok) throw new Error(t + ': ' + r.reason); r.value.workers = G.slotsOf(r.value); return r.value; };
+put('bep', best.x, best.z);
+for (const t of ['ruongNep', 'vuon', 'chuongLon']) { const p = G.findSpot(s, t, { x: dien.x + 5, z: dien.z + 5 }); put(t, p.x, p.z); }`;
+
+/** Nhìn về phía ruộng xa nhất (`RUONG_XA`) rồi bấm Xây kho thóc: bóng kho hiện gần đó, tô vùng gánh hàng đủ 100%. */
+const VUNG_KHO = `const V = await import('/src/game/vanChuyen.ts');
+const r = s.buildings.filter((b) => b.type === 'ruong').sort((a, b) => V.heSoGanh(s, a) - V.heSoGanh(s, b))[0];
+d.camera(r.x + 3, r.z + 1, 0.9);
+await new Promise((ok) => requestAnimationFrame(() => requestAnimationFrame(ok)));
+d.build('kho');`;
+
 export const CANH = {
   'man-vao': {
     mo: 'Màn hình vào game của bản lưu chương 1 (Điện cấp 5), vắng 3 giờ',
@@ -156,6 +291,40 @@ export const CANH = {
   dau: { mo: 'Vừa vào game, đã đóng đoạn truyện mở đầu', truoc: '' },
   truyen: { mo: 'Vừa vào game, đang hiện đoạn truyện mở đầu', truoc: '', giuTruyen: true },
   'kinh-do': { mo: 'Kinh đô chương 1 lúc vừa lên Điện cấp 5 (người chơi mô phỏng chơi chừng một giờ)', truoc: KINH_DO },
+  'ganh-hang': {
+    mo: 'Như kinh-do, một ruộng dời ra bìa đất xa kho, nửa đường về có trải đường đất: dân thay phiên gánh thóc về (nhìn giữa tuyến)',
+    truoc: `${KINH_DO}\n${RUONG_XA}`,
+    sau: NHIN_GANH,
+    doi: 600,
+  },
+  'ganh-vung': {
+    mo: 'Như ganh-hang (một ruộng ở xa kho), đang đặt kho thóc gần ruộng ấy: vùng gánh đủ 100% có sẵn tô nhạt, phần kho mới phủ thêm tô xanh',
+    truoc: `${KINH_DO}\n${RUONG_XA}`,
+    sau: VUNG_KHO,
+  },
+  'ganh-vung-chon': {
+    mo: 'Như kinh-do, chạm chọn kho thóc: vùng riêng của kho tô xanh, phần còn lại của vùng gánh đủ 100% tô nhạt',
+    truoc: KINH_DO,
+    sau: `d.select(s.buildings.find((b) => b.type === 'kho').id);`,
+  },
+  'vac-lieu': {
+    mo: 'Như kinh-do, dựng nhà sàn mới ở xa Điện, kho: hai thợ giàn giáo thay phiên vác bó tre từ kho về (nhìn giữa tuyến)',
+    truoc: `${KINH_DO}\n${NHA_XA}`,
+    sau: NHIN_DI(`g.type === 'xay'`, 3.4),
+    doi: 600,
+  },
+  'bep-gui': {
+    mo: 'Như kinh-do, đã kết chương 1, bếp ở xa, nguyên liệu Tết gánh về Điện: người bếp gùi nguyên liệu từ Điện về (nhìn giữa tuyến)',
+    truoc: `${KINH_DO}\n${BEP_XA}`,
+    sau: NHIN_DI(`g.hang === 'gui'`, 3.4),
+    doi: 600,
+  },
+  'tet-mam': {
+    mo: 'Như bep-gui, Tết đang mở, gác bếp có bánh: người bếp đội mâm bánh lên Điện (nhìn giữa tuyến)',
+    truoc: `${KINH_DO}\n${BEP_XA}\ns.tet.nextAt = s.clock + 1e9; s.tet.openUntil = s.clock + 1e9; s.tet.banh = { chung: 12, giay: 12 };`,
+    sau: NHIN_DI(`g.hang === 'mam'`, 3.4),
+    doi: 600,
+  },
   chuong2: {
     mo: 'Kinh đô chương 2, mười phút sau khi vào chương',
     truoc: `M.playChapters({ s, until: (m, sec) => m.enter2 >= 0 && sec >= m.enter2 + 600 });`,
@@ -164,11 +333,47 @@ export const CANH = {
   dien8: { mo: 'Kinh đô chương 4 lúc lên Điện cấp 8', truoc: `M.playChapters({ s, last: 8 });` },
   'mau-phong-chau': {
     mo: 'Kinh đô chương 1, Điện cấp 5, đã áp mẫu Phong Châu',
-    truoc: `${KINH_DO}\ns.resources = { gao: 1e6, voOc: 1e6, datDa: 1e6, sat: 1e6, go: 1e6 }; s.khoanh = [...new Set([...s.khoanh, ...X.frameKhoanh(G.dienLevel(s))])].sort((a, b) => a - b); const r = X.applyMau(s, 'phongChau'); if (!r.ok) throw new Error(r.reason);`,
+    truoc: `${KINH_DO}\ns.resources = { gao: 1e6, voOc: 1e6, datDa: 1e6, sat: 1e6, go: 1e6 }; (await import('/src/game/xay.ts')).advanceXay(s, 1e13); s.khoanh = [...new Set([...s.khoanh, ...X.frameKhoanh(G.dienLevel(s), 'phongChau')])].sort((a, b) => a - b); const r = X.applyMau(s, 'phongChau'); if (!r.ok) throw new Error(r.reason);`,
   },
   'mau-co-loa': {
     mo: 'Kinh đô chương 3, Điện cấp 7, đã áp mẫu Cổ Loa',
-    truoc: `M.playChapters({ s });\ns.resources = { gao: 1e6, voOc: 1e6, datDa: 1e6, sat: 1e6, go: 1e6 }; s.khoanh = [...new Set([...s.khoanh, ...X.frameKhoanh(G.dienLevel(s))])].sort((a, b) => a - b); const r = X.applyMau(s, 'coLoa'); if (!r.ok) throw new Error(r.reason);`,
+    truoc: `M.playChapters({ s });\ns.resources = { gao: 1e6, voOc: 1e6, datDa: 1e6, sat: 1e6, go: 1e6 }; (await import('/src/game/xay.ts')).advanceXay(s, 1e13); s.khoanh = [...new Set([...s.khoanh, ...X.frameKhoanh(G.dienLevel(s), 'coLoa')])].sort((a, b) => a - b); const r = X.applyMau(s, 'coLoa'); if (!r.ok) throw new Error(r.reason);`,
+  },
+  'ganh-cong': {
+    mo: 'Như mau-co-loa, nhìn vào một cổng thành có tuyến gánh hàng đi qua: dân gánh qua cổng, không trèo qua tường',
+    truoc: `M.playChapters({ s });\ns.resources = { gao: 1e6, voOc: 1e6, datDa: 1e6, sat: 1e6, go: 1e6 }; (await import('/src/game/xay.ts')).advanceXay(s, 1e13); s.khoanh = [...new Set([...s.khoanh, ...X.frameKhoanh(G.dienLevel(s), 'coLoa')])].sort((a, b) => a - b); const r = X.applyMau(s, 'coLoa'); if (!r.ok) throw new Error(r.reason);\nfor (const b of s.buildings) if (G.slotsOf(b) > 0) b.workers = G.slotsOf(b); s.dan += 200;`,
+    sau: `const V = await import('/src/game/vanChuyen.ts');
+const { GRID } = await import('/src/game/map.ts');
+const gates = s.buildings.filter((b) => b.type === 'congThanh');
+let pick = null;
+for (const b of s.buildings) {
+  const g = V.duongGanh(s, b);
+  if (!g || !g.tuyen.length || !b.workers) continue;
+  const gt = gates.find((c) => g.tuyen.includes(c.z * GRID + c.x));
+  if (gt && (!pick || g.d > pick.d)) pick = { id: b.id, gt, d: g.d };
+}
+if (!pick) throw new Error('Không có tuyến gánh nào qua cổng');
+const frame = () => new Promise((ok) => requestAnimationFrame(() => requestAnimationFrame(ok)));
+const cx = pick.gt.x + 0.5, cz = pick.gt.z + 0.5;
+let best = Infinity, at = 0;
+for (let k = 0; k < 150; k++) {
+  d.seaTime(k * 0.45);
+  await frame();
+  for (const g of d.ganh()) {
+    if (g.id !== pick.id) continue;
+    for (const x of g.ra) {
+      if (x.dung || !x.coHang) continue;
+      // Người vừa qua cổng vào phía trong (phía camera): mái lầu cổng không che.
+      const m = Math.abs(Math.hypot(x.x - cx, x.z - cz) - 1.2) + (x.x + x.z > cx + cz ? 0 : 5);
+      if (m < best) { best = m; at = k * 0.45; }
+    }
+  }
+}
+if (best > 1) throw new Error('Không thấy người gánh vừa qua cổng: ' + best.toFixed(1));
+d.seaTime(at);
+await frame();
+d.camera(cx, cz, 2.6);`,
+    doi: 600,
   },
   tran: {
     mo: 'Giặc đánh kinh đô chương 1, chụp sau 4 giây giao chiến',
@@ -274,11 +479,225 @@ export const CANH = {
     doi: 3000,
     gio: 'dem',
   },
+  'da-ngoai': {
+    mo: 'Chương 5 (đã thắng màn 35): bảng Dã ngoại ở bản đồ phó bản (cấp chung, đội, năm map, treo máy)',
+    truoc: `${CHUONG5(35)}\ns.daNgoai.cap = 12; s.daNgoai.exp = 900; s.daNgoai.xa = 2; s.daNgoai.doi = ['trungTrac', 'trungNhi', 'caoLo'];`,
+    sau: `document.querySelector('[data-act=openCampaign]').click(); document.querySelector('[data-act=openDaNgoai]').click();`,
+  },
+  'da-ngoai-tran': {
+    mo: 'Như da-ngoai, đội ba tướng ra map 1 (Rừng Phong Châu) đứng ở mép khu 2, Tự đánh, chụp sau 6 giây',
+    truoc: `${CHUONG5(35)}\ns.daNgoai.doi = ['trungTrac', 'trungNhi', 'caoLo'];`,
+    sau: `d.daNgoai(1, 1);`,
+    doi: 6000,
+  },
+  'da-ngoai-5': {
+    mo: 'Như da-ngoai-tran, ở map 5 (Rừng Mê Linh) khu 1 (báo gấm), chụp sau 6 giây',
+    truoc: `${CHUONG5(35)}\ns.daNgoai.doi = ['trungTrac', 'trungNhi', 'caoLo'];`,
+    sau: `d.daNgoai(5, 0);`,
+    doi: 6000,
+  },
+  'da-ngoai-6': {
+    mo: 'Như da-ngoai-tran, ở map 6 (Núi Nưa) khu 3 (lính giáo Ngô), chụp sau 6 giây',
+    truoc: `${CHUONG5(35)}\ns.daNgoai.doi = ['trungTrac', 'trungNhi', 'caoLo'];\ns.hinted.push('daNgoai6', 'daNgoai7', 'daNgoai8', 'daNgoai9', 'daNgoai10');`,
+    sau: `d.daNgoai(6, 2);`,
+    doi: 6000,
+  },
+  'da-ngoai-6-boss': {
+    mo: 'Như da-ngoai-boss, map 6 (Núi Nưa), đội đứng sát khu boss (Lục Dận), chụp sau 3 giây',
+    truoc: `${CHUONG5(35)}\ns.daNgoai.doi = ['trungTrac', 'trungNhi', 'caoLo'];\ns.hinted.push('daNgoai6', 'daNgoai7', 'daNgoai8', 'daNgoai9', 'daNgoai10');`,
+    sau: `d.daNgoai(6, 4, 60);`,
+    doi: 3000,
+  },
+  'ba-trieu': {
+    mo: 'Bà Triệu đã về (đã hạ Lục Dận), đội Bà Triệu, Hai Bà ra map 6 khu 3, sau 4 giây bấm Chém cá kình, chụp lúc voi lao',
+    truoc: `${CHUONG5(35)}\n${BA_TRIEU}\ns.daNgoai.doi = ['baTrieu', 'trungTrac', 'trungNhi'];`,
+    sau: `d.daNgoai(6, 2); await new Promise((r) => setTimeout(r, 4000)); d.skill('chemCaKinh');`,
+    doi: 600,
+  },
+  'ba-trieu-tui': {
+    mo: 'Bà Triệu đã về, mặc đủ bộ Núi Nưa: bảng tướng, thẻ Túi đồ của Bà Triệu',
+    truoc: `${CHUONG5(35)}\n${BA_TRIEU}\nconst T = await import('/src/game/trangBi.ts'); const co = new Set(); for (let q = 0; co.size < 4; q++) { const m = T.rutMon(q, 'daBoss', 5, ['nuiNua'], [0, 0, 0, 100]); if (co.has(m.o)) continue; co.add(m.o); s.trangBi.kho.push({ ...m, cuong: 6, id: s.trangBi.nextId++, tuong: 'baTrieu' }); }`,
+    sau: `d.tuong('baTrieu');`,
+  },
+  'ba-trieu-truyen': {
+    mo: 'Vừa hạ Lục Dận lần đầu: đoạn truyện Bà Triệu về, thẻ thứ ba (lời Bà Triệu)',
+    truoc: `${CHUONG5(35)}\n${BA_TRIEU}\nfor (let id = S.pendingStory(s); id && id !== 'baTrieu'; id = S.pendingStory(s)) S.markStory(s, id);`,
+    giuTruyen: true,
+    sau: `document.querySelector('[data-act=storyNext]').click(); document.querySelector('[data-act=storyNext]').click();`,
+  },
+  'tqp': {
+    mo: 'Triệu Quang Phục đã về, đội Triệu Quang Phục, Bà Triệu, Trưng Trắc ra map 7 khu 3, sau 4 giây bấm Ngày ẩn đêm ra, chụp lúc cả đội ẩn',
+    truoc: `${CHUONG5(35)}\n${TQP}\ns.daNgoai.doi = ['trieuQuangPhuc', 'baTrieu', 'trungTrac'];`,
+    sau: `d.daNgoai(7, 2); await new Promise((r) => setTimeout(r, 4000)); d.skill('ngayAn'); await new Promise((r) => setTimeout(r, 1200));`,
+    doi: 300,
+  },
+  'tqp-tui': {
+    mo: 'Triệu Quang Phục đã về, mặc đủ bộ Dạ Trạch: bảng tướng, thẻ Túi đồ của Triệu Quang Phục',
+    truoc: `${CHUONG5(35)}\n${TQP}\nconst T = await import('/src/game/trangBi.ts'); const co = new Set(); for (let q = 0; co.size < 4; q++) { const m = T.rutMon(q, 'daBoss', 5, ['daTrach'], [0, 0, 0, 100]); if (co.has(m.o)) continue; co.add(m.o); s.trangBi.kho.push({ ...m, cuong: 6, id: s.trangBi.nextId++, tuong: 'trieuQuangPhuc' }); }`,
+    sau: `d.tuong('trieuQuangPhuc');`,
+  },
+  'tqp-truyen': {
+    mo: 'Vừa hạ Trần Bá Tiên lần đầu: đoạn truyện Triệu Quang Phục về, thẻ thứ ba (lời Lý Nam Đế)',
+    truoc: `${CHUONG5(35)}\n${TQP}\nfor (let id = S.pendingStory(s); id && id !== 'trieuQuangPhuc'; id = S.pendingStory(s)) S.markStory(s, id);`,
+    giuTruyen: true,
+    sau: `document.querySelector('[data-act=storyNext]').click(); document.querySelector('[data-act=storyNext]').click();`,
+  },
+  'tqp-dien': {
+    mo: 'Kinh đô chương 5, Bà Triệu và Triệu Quang Phục đã về: nhìn sân chầu Điện, Triệu Quang Phục đứng chỗ 0',
+    truoc: `${CHUONG5(35)}\n${TQP}`,
+    sau: `const b = s.buildings.find((x) => x.type === 'dien'); const { courtSlot } = await import('/src/game/../render/congTrinh/dien.ts'); const c = courtSlot('trieuQuangPhuc'); const R = await import('/src/game/map.ts'); const t = R.turnLocal(b.rot, c.x, c.z); d.camera(b.x + 5 + t.x, b.z + 5 + t.z, 4.2);`,
+  },
+  'mtl': {
+    mo: 'Mai Thúc Loan đã về, đội Mai Thúc Loan, Triệu Quang Phục, Bà Triệu ra map 8 khu 3, sau 4 giây bấm Hắc Đế dấy binh',
+    truoc: `${CHUONG5(35)}\n${MTL}\ns.daNgoai.doi = ['maiThucLoan', 'trieuQuangPhuc', 'baTrieu'];`,
+    sau: `d.daNgoai(8, 2); await new Promise((r) => setTimeout(r, 4000)); d.skill('hacDe'); await new Promise((r) => setTimeout(r, 700));`,
+    doi: 300,
+  },
+  'mtl-tui': {
+    mo: 'Mai Thúc Loan đã về, mặc đủ bộ Vạn An: bảng tướng, thẻ Túi đồ của Mai Thúc Loan',
+    truoc: `${CHUONG5(35)}\n${MTL}\nconst T = await import('/src/game/trangBi.ts'); const co = new Set(); for (let q = 0; co.size < 4; q++) { const m = T.rutMon(q, 'daBoss', 5, ['vanAn'], [0, 0, 0, 100]); if (co.has(m.o)) continue; co.add(m.o); s.trangBi.kho.push({ ...m, cuong: 6, id: s.trangBi.nextId++, tuong: 'maiThucLoan' }); }`,
+    sau: `d.tuong('maiThucLoan');`,
+  },
+  'mtl-truyen': {
+    mo: 'Vừa hạ Dương Tư Húc lần đầu: đoạn truyện Mai Thúc Loan về, thẻ thứ ba (lời Mai Thúc Loan)',
+    truoc: `${CHUONG5(35)}\n${MTL}\nfor (let id = S.pendingStory(s); id && id !== 'maiThucLoan'; id = S.pendingStory(s)) S.markStory(s, id);`,
+    giuTruyen: true,
+    sau: `document.querySelector('[data-act=storyNext]').click(); document.querySelector('[data-act=storyNext]').click();`,
+  },
+  'nq': {
+    mo: 'Ngô Quyền đã về, đội Ngô Quyền, Mai Thúc Loan, Bà Triệu ra map 9 khu 3, sau 4 giây bấm Cọc Bạch Đằng',
+    truoc: `${CHUONG5(35)}\n${NQ}\ns.daNgoai.doi = ['ngoQuyen', 'maiThucLoan', 'baTrieu'];`,
+    sau: `d.daNgoai(9, 2); await new Promise((r) => setTimeout(r, 4000)); d.skill('cocBachDang'); await new Promise((r) => setTimeout(r, 900));`,
+    doi: 300,
+  },
+  'nq-tui': {
+    mo: 'Ngô Quyền đã về, mặc đủ bộ Bạch Đằng: bảng tướng, thẻ Túi đồ của Ngô Quyền',
+    truoc: `${CHUONG5(35)}\n${NQ}\nconst T = await import('/src/game/trangBi.ts'); const co = new Set(); for (let q = 0; co.size < 4; q++) { const m = T.rutMon(q, 'daBoss', 5, ['bachDang'], [0, 0, 0, 100]); if (co.has(m.o)) continue; co.add(m.o); s.trangBi.kho.push({ ...m, cuong: 6, id: s.trangBi.nextId++, tuong: 'ngoQuyen' }); }`,
+    sau: `d.tuong('ngoQuyen');`,
+  },
+  'nq-truyen': {
+    mo: 'Vừa hạ Lưu Hoằng Tháo lần đầu: đoạn truyện Ngô Quyền về, thẻ thứ ba (lời Ngô Quyền)',
+    truoc: `${CHUONG5(35)}\n${NQ}\nfor (let id = S.pendingStory(s); id && id !== 'ngoQuyen'; id = S.pendingStory(s)) S.markStory(s, id);`,
+    giuTruyen: true,
+    sau: `document.querySelector('[data-act=storyNext]').click(); document.querySelector('[data-act=storyNext]').click();`,
+  },
+  'nq-dien': {
+    mo: 'Kinh đô chương 5, bốn tướng dã ngoại đã về: nhìn sân chầu Điện từ phía cổng, Ngô Quyền ở chỗ 17 (cột ngoài bên trái, gần cổng)',
+    truoc: `${CHUONG5(35)}\n${NQ}`,
+    sau: `const b = s.buildings.find((x) => x.type === 'dien'); const { courtSlot } = await import('/src/render/congTrinh/dien.ts'); const c = courtSlot('ngoQuyen'); const R = await import('/src/game/map.ts'); const t = R.turnLocal(b.rot, c.x, c.z); d.camera(b.x + 5 + t.x, b.z + 5 + t.z, 4.2);`,
+  },
+  'ltk': {
+    mo: 'Lý Thường Kiệt đã về, đội Lý Thường Kiệt, Ngô Quyền, Mai Thúc Loan ra map 10 khu 3, sau 4 giây bấm Nam quốc sơn hà',
+    truoc: `${CHUONG5(35)}\n${LTK}\ns.daNgoai.doi = ['lyThuongKiet', 'ngoQuyen', 'maiThucLoan'];`,
+    sau: `d.daNgoai(10, 2); await new Promise((r) => setTimeout(r, 4000)); d.skill('namQuoc'); await new Promise((r) => setTimeout(r, 700));`,
+    doi: 300,
+  },
+  'ltk-tui': {
+    mo: 'Lý Thường Kiệt đã về, mặc đủ bộ Như Nguyệt: bảng tướng, thẻ Túi đồ của Lý Thường Kiệt',
+    truoc: `${CHUONG5(35)}\n${LTK}\nconst T = await import('/src/game/trangBi.ts'); const co = new Set(); for (let q = 0; co.size < 4; q++) { const m = T.rutMon(q, 'daBoss', 5, ['nhuNguyet'], [0, 0, 0, 100]); if (co.has(m.o)) continue; co.add(m.o); s.trangBi.kho.push({ ...m, cuong: 6, id: s.trangBi.nextId++, tuong: 'lyThuongKiet' }); }`,
+    sau: `d.tuong('lyThuongKiet');`,
+  },
+  'ltk-truyen': {
+    mo: 'Vừa hạ Quách Quỳ lần đầu: đoạn truyện Lý Thường Kiệt về, thẻ thứ tư (bài thơ Nam quốc sơn hà)',
+    truoc: `${CHUONG5(35)}\n${LTK}\nfor (let id = S.pendingStory(s); id && id !== 'lyThuongKiet'; id = S.pendingStory(s)) S.markStory(s, id);`,
+    giuTruyen: true,
+    sau: `for (let i = 0; i < 3; i++) document.querySelector('[data-act=storyNext]').click();`,
+  },
+  'ltk-dien': {
+    mo: 'Kinh đô chương 5, năm tướng dã ngoại đã về: nhìn sân chầu Điện, Lý Thường Kiệt ở chỗ 14 (ngoài cùng hàng ngai bên phải, cạnh Bà Triệu)',
+    truoc: `${CHUONG5(35)}\n${LTK}`,
+    sau: `const b = s.buildings.find((x) => x.type === 'dien'); const { courtSlot } = await import('/src/render/congTrinh/dien.ts'); const c = courtSlot('lyThuongKiet'); const R = await import('/src/game/map.ts'); const t = R.turnLocal(b.rot, c.x, c.z); d.camera(b.x + 5 + t.x, b.z + 5 + t.z, 4.2);`,
+  },
+  'dien-da': {
+    mo: 'Kinh đô chương 5, năm tướng dã ngoại đã về: nhìn cả sân chầu Điện từ phía cổng',
+    truoc: `${CHUONG5(35)}\n${LTK}`,
+    sau: `const b = s.buildings.find((x) => x.type === 'dien'); d.camera(b.x + 5, b.z + 6.5, 5.5);`,
+  },
+  'ba-trieu-dien': {
+    mo: 'Kinh đô chương 5, Bà Triệu đã về: nhìn sân chầu Điện, Bà Triệu đứng hàng gần cổng bên trái',
+    truoc: `${CHUONG5(35)}\n${BA_TRIEU}`,
+    sau: `const b = s.buildings.find((x) => x.type === 'dien'); const { courtSlot } = await import('/src/render/congTrinh/dien.ts'); const c = courtSlot('baTrieu'); const R = await import('/src/game/map.ts'); const t = R.turnLocal(b.rot, c.x, c.z); d.camera(b.x + 5 + t.x, b.z + 5 + t.z, 4.2);`,
+  },
+  'da-ngoai-7': {
+    mo: 'Như da-ngoai-tran, ở map 7 (Đầm Dạ Trạch) khu 3 (lính khiên Lương), chụp sau 6 giây',
+    truoc: `${CHUONG5(35)}\ns.daNgoai.doi = ['trungTrac', 'trungNhi', 'caoLo'];\ns.hinted.push('daNgoai6', 'daNgoai7', 'daNgoai8', 'daNgoai9', 'daNgoai10');`,
+    sau: `d.daNgoai(7, 2);`,
+    doi: 6000,
+  },
+  'da-ngoai-7-boss': {
+    mo: 'Như da-ngoai-boss, map 7 (Đầm Dạ Trạch), đội đứng sát khu boss (Trần Bá Tiên), chụp sau 3 giây',
+    truoc: `${CHUONG5(35)}\ns.daNgoai.doi = ['trungTrac', 'trungNhi', 'caoLo'];\ns.hinted.push('daNgoai6', 'daNgoai7', 'daNgoai8', 'daNgoai9', 'daNgoai10');`,
+    sau: `d.daNgoai(7, 4, 70);`,
+    doi: 3000,
+  },
+  'da-ngoai-8': {
+    mo: 'Như da-ngoai-tran, ở map 8 (Núi Vệ) khu 3 (lính giáo Đường), chụp sau 6 giây',
+    truoc: `${CHUONG5(35)}\ns.daNgoai.doi = ['trungTrac', 'trungNhi', 'caoLo'];\ns.hinted.push('daNgoai6', 'daNgoai7', 'daNgoai8', 'daNgoai9', 'daNgoai10');`,
+    sau: `d.daNgoai(8, 2);`,
+    doi: 6000,
+  },
+  'da-ngoai-8-boss': {
+    mo: 'Như da-ngoai-boss, map 8 (Núi Vệ), đội đứng sát khu boss (Dương Tư Húc), chụp sau 3 giây',
+    truoc: `${CHUONG5(35)}\ns.daNgoai.doi = ['trungTrac', 'trungNhi', 'caoLo'];\ns.hinted.push('daNgoai6', 'daNgoai7', 'daNgoai8', 'daNgoai9', 'daNgoai10');`,
+    sau: `d.daNgoai(8, 4, 80);`,
+    doi: 3000,
+  },
+  'da-ngoai-9': {
+    mo: 'Như da-ngoai-tran, ở map 9 (Bạch Đằng) khu 3 (lính thủy Nam Hán), chụp sau 6 giây',
+    truoc: `${CHUONG5(35)}\ns.daNgoai.doi = ['trungTrac', 'trungNhi', 'caoLo'];\ns.hinted.push('daNgoai6', 'daNgoai7', 'daNgoai8', 'daNgoai9', 'daNgoai10');`,
+    sau: `d.daNgoai(9, 2);`,
+    doi: 6000,
+  },
+  'da-ngoai-9-boss': {
+    mo: 'Như da-ngoai-boss, map 9 (Bạch Đằng), đội đứng sát khu boss (Lưu Hoằng Tháo), chụp sau 3 giây',
+    truoc: `${CHUONG5(35)}\ns.daNgoai.doi = ['trungTrac', 'trungNhi', 'caoLo'];\ns.hinted.push('daNgoai6', 'daNgoai7', 'daNgoai8', 'daNgoai9', 'daNgoai10');`,
+    sau: `d.daNgoai(9, 4, 90);`,
+    doi: 3000,
+  },
+  'da-ngoai-10': {
+    mo: 'Như da-ngoai-tran, ở map 10 (sông Như Nguyệt) khu 3 (lính thương Tống), chụp sau 6 giây',
+    truoc: `${CHUONG5(35)}\ns.daNgoai.doi = ['trungTrac', 'trungNhi', 'caoLo'];\ns.hinted.push('daNgoai6', 'daNgoai7', 'daNgoai8', 'daNgoai9', 'daNgoai10');`,
+    sau: `d.daNgoai(10, 2);`,
+    doi: 6000,
+  },
+  'da-ngoai-10-boss': {
+    mo: 'Như da-ngoai-boss, map 10 (sông Như Nguyệt), đội đứng sát khu boss (Quách Quỳ), chụp sau 3 giây',
+    truoc: `${CHUONG5(35)}\ns.daNgoai.doi = ['trungTrac', 'trungNhi', 'caoLo'];\ns.hinted.push('daNgoai6', 'daNgoai7', 'daNgoai8', 'daNgoai9', 'daNgoai10');`,
+    sau: `d.daNgoai(10, 4, 100);`,
+    doi: 3000,
+  },
+  'da-ngoai-boss': {
+    mo: 'Như da-ngoai-tran, map 3 (Đồi Thất Diệu, đêm), đội đứng sát khu boss (gà trắng), chụp sau 3 giây',
+    truoc: `${CHUONG5(35)}\ns.daNgoai.doi = ['trungTrac', 'trungNhi', 'caoLo'];`,
+    sau: `d.daNgoai(3, 4, 30);`,
+    doi: 3000,
+  },
   'pho-ban-5': {
     mo: 'Hai Bà Trưng đánh màn 36 (thành Luy Lâu, có Tô Định) ngoài bãi, chụp sau 4 giây',
     truoc: CHUONG5(35),
     sau: `const r = d.march(36); if (!r.ok) throw new Error('Không đánh màn 36 được: ' + r.reason);`,
     doi: 4000,
+  },
+  'dao-bang': {
+    mo: 'Điện 10, Mã Viện đã sang, đồn Hoàng Sa có quân, vừa giữ được một đợt giặc: bảng quần đảo, phần Giặc đánh đảo',
+    truoc: DAO_GIAC,
+    sau: `d.daoTran('hoangSa'); d.quanDao('hoangSa'); const cuon = setInterval(() => document.querySelector('.sheet-body')?.scrollTo(0, 99999), 200); setTimeout(() => clearInterval(cuon), 6000);`,
+  },
+  'dao-tran': {
+    mo: 'Như dao-bang, đang xem lại trận giặc đánh đảo Hoàng Sa (chụp sau 8 giây)',
+    truoc: DAO_GIAC,
+    sau: `d.daoTran('hoangSa'); d.xemDao('hoangSa');`,
+    doi: 8000,
+  },
+  'dao-bao': {
+    mo: 'Như dao-bang, thuyền giặc Hán áp sát đảo Hoàng Sa (còn 2 phút): dòng tin, lửa hiệu đồn cháy',
+    truoc: `${DAO_GIAC} s.dao.hoangSa.sau = s.clock + 120_000;`,
+    sau: `d.camera(100, 70, 1.3);`,
+  },
+  'dao-hu': {
+    mo: 'Như dao-bang, đồn Hoàng Sa thất thủ: đồn hư bốc khói, dòng tin báo, bảng quần đảo có nút Sửa đồn',
+    truoc: `${DAO_GIAC} s.dao.hoangSa.linh = { giao: 2, cung: 0, voi: 0, no: 0 };`,
+    sau: `d.daoTran('hoangSa'); d.camera(100, 70, 1.3);`,
   },
 };
 
@@ -306,6 +725,7 @@ Tùy chọn:
   --dpr <số>              Mật độ điểm ảnh (mặc định 2, như điện thoại thật)
   --gio <buổi | số | that>  Giờ trong ngày ở kinh đô: ngay, chieu, dem, rang, hay phần của ngày (0 tới 1); that thì
                           theo đồng hồ chơi. Mặc định cảnh nào ghim giờ nấy, không ghi thì ban ngày (ảnh cũ không đổi)
+  --loat <số>,<ms>        Chụp một loạt <số> ảnh, mỗi ảnh cách <ms> (xem hiệu ứng kỹ năng theo từng lúc); ảnh thêm đuôi -1, -2...
   --url <địa chỉ>         Dùng server Vite đang chạy (npm run dev) thay vì tự bật
   --giup                  Hiện hướng dẫn này
 
@@ -337,6 +757,7 @@ function docThamSo(argv) {
     else if (a === '--dpr') opts.dpr = Number(next());
     else if (a === '--url') opts.url = next();
     else if (a === '--gio') opts.gio = next();
+    else if (a === '--loat') opts.loat = next().split(',').map(Number);
     else if (a.startsWith('--')) throw new Error(`Không hiểu tùy chọn ${a}`);
     else opts.canh.push(a);
   }
@@ -460,7 +881,13 @@ async function chupMotCanh(browser, url, tenCanh, khung, opts) {
   try {
     await dungCanh(page, url, tenCanh, opts);
     const file = path.join(opts.ra, `${opts.ten ?? tenCanh}-${khung}.png`);
-    await page.screenshot({ path: file });
+    if (opts.loat) {
+      const [n, ms] = opts.loat;
+      for (let i = 1; i <= n; i++) {
+        await page.screenshot({ path: file.replace(/\.png$/, `-${i}.png`) });
+        if (i < n) await page.waitForTimeout(ms);
+      }
+    } else await page.screenshot({ path: file });
     const info = await page.evaluate(() => window.__debug.renderInfo());
     return { file, info, loi };
   } catch (e) {

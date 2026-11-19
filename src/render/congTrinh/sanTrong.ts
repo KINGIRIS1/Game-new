@@ -130,8 +130,12 @@ function lacPosts(m: ToonModel): void {
   }
 }
 
-/** Hai bát lửa đồng hai bên lối: chân đá, ba chân đồng, bát đồng dải hoa văn, than hồng và lửa. */
-function fireBowls(m: ToonModel): void {
+/**
+ * Hai bát lửa đồng hai bên lối: chân đá, ba chân đồng, bát đồng dải hoa văn, than hồng và lửa. Ngọn lửa là khối riêng
+ * (`userData.flame`): World cho lập lòe, ban đêm thắp quầng sáng (`syncDuoc`), vũng sáng nằm trên mặt sân
+ * (`userData.flameDat`: độ cao mặt sân dưới bát).
+ */
+function fireBowls(m: ToonModel, extras: THREE.Object3D[]): void {
   const p = m.plain;
   for (const l of SAN_TRONG_LOT.groups('L')) {
     p.cyl(0.2, 0.23, 0.08, STONE_DARK, l.x, 0.08, l.z, undefined, 10);
@@ -142,8 +146,12 @@ function fireBowls(m: ToonModel): void {
     p.sphere(0.16, C.bronze, l.x, 0.45, l.z, [1, 0.62, 1], 10);
     m.band.cyl(0.165, 0.165, 0.06, C.bronzeLight, l.x, 0.52, l.z, undefined, 12);
     p.cyl(0.14, 0.14, 0.02, C.woodDark, l.x, 0.55, l.z, undefined, 10);
-    m.glow.cone(0.1, 0.24, C.fire, l.x, 0.67, l.z, undefined, 7);
     m.glow.cone(0.055, 0.16, C.ember, l.x, 0.63, l.z, undefined, 6);
+    const lua = new THREE.Mesh(new THREE.ConeGeometry(0.1, 0.24, 7), new THREE.MeshBasicMaterial({ color: C.fire }));
+    lua.position.set(l.x, 0.67, l.z);
+    lua.userData.flame = true;
+    lua.userData.flameDat = 0.02;
+    extras.push(lua);
   }
 }
 
@@ -163,12 +171,15 @@ function malletRack(p: ShapeBuilder): void {
 
 export function makeSanTrong(): THREE.Group {
   const m = new ToonModel();
+  const extras: THREE.Object3D[] = [];
   ground(m);
   bronzeDrum(m);
   lacPosts(m);
-  fireBowls(m);
+  fireBowls(m, extras);
   malletRack(m.plain);
-  return m.group();
+  const g = m.group();
+  for (const o of extras) g.add(o);
+  return g;
 }
 
 export const SAN_TRONG: CongTrinh = { tiles: 3, make: makeSanTrong, spots: () => [], view: { half: 2.4, lookY: 0.8, px: 110 } };

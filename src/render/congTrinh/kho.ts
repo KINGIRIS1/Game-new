@@ -13,7 +13,7 @@ export const KHO_LOT = new Lot(3, [
   'VVV444',
   'VVV...',
   '.T.sss',
-  '66.sss',
+  '66bsss',
   '66,sss',
 ]);
 
@@ -44,6 +44,17 @@ export function makeKho(level: number): THREE.Group {
   // Lối vào: ba phiến đá kê từ mép trước vào sân.
   const path = L.zone(',');
   for (let i = 0; i < 3; i++) p.box(0.34, 0.04, 0.24, i % 2 ? C.rockDark : C.rock, path.x, 0.06, path.z + 0.12 - i * 0.34, [0, 0.15 * (i - 1), 0]);
+  // Chỗ nhận hàng sát lối vào: dân gánh hàng về đổ lại đây, hai bao thóc buộc dây, một thúng vun đầy.
+  const nhan = L.zone('b');
+  for (const [dx, dz, ry] of [
+    [-0.07, -0.08, 0.3],
+    [0.08, 0.02, -0.4],
+  ]) {
+    p.sphere(0.1, 0xd4b882, nhan.x + dx, 0.15, nhan.z + dz, [0.9, 1.15, 0.8], 7);
+    p.cyl(0.035, 0.045, 0.06, 0xc4a872, nhan.x + dx, 0.27, nhan.z + dz, [0, ry, 0], 6);
+    p.cyl(0.04, 0.04, 0.015, C.woodDark, nhan.x + dx, 0.255, nhan.z + dz, undefined, 6);
+  }
+  basket(m, nhan.x - 0.02, nhan.z + 0.16);
 
   // Vựa chính góc sau bên trái trên nền đất đắp kè đá: to hơn vựa cũ chừng 15–30%; cấp 5 to nhất, có chóp đồng.
   const V = L.zone('V');

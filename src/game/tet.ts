@@ -17,6 +17,7 @@ import {
   type BuildingType,
 } from './defs';
 import { dienLevel, phuSaBonus, slotsOf, type Building, type GameState, type Result } from './game';
+import { heSoMap } from './vanChuyen';
 
 export type Banh = 'chung' | 'giay';
 export const BANH_IDS: Banh[] = ['chung', 'giay'];
@@ -59,7 +60,8 @@ function share(b: Building, table: number[]): number {
 
 /** Ruộng nếp được bồi phù sa thì ra thêm nếp như ruộng lúa ra thêm gạo (`phuSaBonus`). */
 function sumOf(state: GameState, type: BuildingType, table: number[]): number {
-  return state.buildings.filter((b) => b.type === type).reduce((n, b) => n + share(b, table) * (1 + phuSaBonus(b)), 0);
+  const ganh = heSoMap(state);
+  return state.buildings.filter((b) => b.type === type).reduce((n, b) => n + share(b, table) * (1 + phuSaBonus(b)) * ganh(b), 0);
 }
 
 export interface Bake {

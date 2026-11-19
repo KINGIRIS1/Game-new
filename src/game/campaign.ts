@@ -6,19 +6,20 @@
 // Chọn lính mang theo, xếp hàng theo binh chủng, xuất quân; lính chết thì mất, thắng thì có thưởng.
 
 import { retreatField, startFieldBattle, stepField, type HeroKind } from './battle';
-import { stageBai } from './baiChien';
+import { baiById, stageBai } from './baiChien';
 import { finishCamp } from './benKia';
 import { CH4_LAST, LAY_TRAO_AT, LENH_BAN_AT, caoLoJoined, caoLoResting } from './caoLo';
 import { inChapter4 } from './chuong4';
 import { CH5_LAST, MA_VIEN_AT, haiBaSetups, inChapter5 } from './chuong5';
 import { CH3_LAST, KIM_QUY_AT, advJoined, advResting, inChapter3 } from './coLoa';
 import { armySpace, fieldCap } from './doanhTrai';
-import { REPLAY_SHARE, RESOURCE_IDS, STAGES, UNIT_TYPES, type Chapter, type Cost, type NuTuongId, type Row, type StageDef, type UnitType } from './defs';
+import { REPLAY_SHARE, RESOURCE_IDS, STAGES, UNIT_TYPES, type Chapter, type Cost, type NguonDo, type NuTuongId, type Row, type StageDef, type UnitType } from './defs';
 import { BATTLE_STEP, countOf, dienLevel, gain, scheduleThuyHan, troopBonus, type FailReason, type GameState, type Result, type StageResult } from './game';
 import { giongReady, giongResting } from './giong';
 import { heroesFor, inChapter2, restAfter, sonJoined, sonOnly, sonResting, winGift } from './son';
 import { challengeField, challengeOf, challengeOpen, huanTiers, winChallenge } from './thuThach';
 import { phoTuongCheck, phoTuongOf, rememberPhoTuong } from './nuTuong';
+import { roiDo } from './trangBi';
 
 /** Thắng màn này lần đầu thì roi sắt gãy. */
 export const WHIP_BREAKS_AT = 6;
@@ -253,6 +254,10 @@ function finishStage(state: GameState): void {
   // Chương 5: thắng màn 37 thì biết Mã Viện sang, thủy quân Hán kéo tới đánh kinh đô; giữ được Cấm Khê thì kết chương.
   if (first && battle.wave === MA_VIEN_AT) scheduleThuyHan(state);
   if (first && battle.wave === CH5_LAST) battle.hatWin = true;
+  // Thắng thì có khi rơi đồ cho tướng (`trangBi.ts`): thắng lần đầu chắc rơi, đánh lại có khi rơi; cấp đồ, bộ theo
+  // chương của màn.
+  const nguon: NguonDo = challenge ? (huan > 0 ? 'thuDau' : 'thuLai') : first ? 'manDau' : 'manLai';
+  const roi = won ? roiDo(state, nguon, stageDef(battle.wave)!.chapter) : null;
   const result: StageResult = {
     stage: battle.wave,
     outcome,
@@ -263,6 +268,7 @@ function finishStage(state: GameState): void {
     reward,
     ...(gift ? { gift } : {}),
     ...(challenge ? { challenge: { kind: challenge, huan } } : {}),
+    ...(roi ? { do: roi } : {}),
   };
   state.campaign.lastResult = result;
 }
@@ -288,4 +294,21 @@ export function leaveBattlefield(state: GameState): void {
   if (battle && !battle.outcome) return;
   state.campaign.battle = null;
   state.campaign.lastResult = null;
+}
+
+// ---------- Lạc hầu nhắc bãi có vật cản ----------
+
+/**
+ * Khóa trong `hinted`: đã đánh trận ngoài bãi có vật cản đầu tiên. Tới lúc ấy thẻ màn, thẻ đồn có bãi vật cản kèm lời
+ * Lạc hầu nhắc (quân đi vòng, lội chậm, tên bắn qua); đánh rồi thì thôi nhắc.
+ */
+export const BAI_HINT = 'baiChien';
+
+/** Đang đánh ngoài bãi có vật cản (phó bản, thử thách hay đồn giặc) mà chưa ghi là đã đánh trận như thế. */
+export function needsBaiHint(s: GameState): boolean {
+  return !!baiById(s.campaign.battle?.bai) && !s.hinted.includes(BAI_HINT);
+}
+
+export function markBaiHinted(s: GameState): void {
+  if (!s.hinted.includes(BAI_HINT)) s.hinted = [...s.hinted, BAI_HINT];
 }

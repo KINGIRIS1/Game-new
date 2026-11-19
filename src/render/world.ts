@@ -2,26 +2,35 @@
 // trời ngày đêm (`troi.ts`), đêm yêu tinh, cảnh Tết (cây nêu, dây cờ, mâm bánh, người gói bánh) và các hiệu ứng khi đặt công trình.
 
 import * as THREE from 'three';
-import { BUILDINGS, FIELD, NGAY_MS, NU_TUONG_IDS, UNITS, XAY_O_MS, isBridge, isRoad, type BuildingType, type NuTuongId, type Terrain, type TuongId, type UnitType } from '../game/defs';
+import { BUILDINGS, FIELD, NGAY_MS, NU_TUONG_IDS, TUONG_DA_IDS, UNITS, UNIT_TYPES, XAY_O_MS, isBridge, isRoad, type BuildingType, type NuTuongId, type Terrain, type TuongId, type UnitType } from '../game/defs';
 import { raidSpawnBand, type Battle, type RaidSide } from '../game/battle';
 import { caoLoAtDien } from '../game/caoLo';
 import { HAI_BA_KINDS, haiBaJoined, type HaiBaKind } from '../game/chuong5';
 import { advLook, inChapter3, ruaVangCame, type AdvLook } from '../game/coLoa';
 import { inChapter4 } from '../game/chuong4';
-import { doanhCount, gateToward, generals, heroPost } from '../game/doanhTrai';
+import { doanhCount, gateToward, generals, heroPost, tuongJoined } from '../game/doanhTrai';
 import { nuTuongList } from '../game/nuTuong';
-import { dienLevel, occupancy, stairWall, upcomingBoats, type Building, type GameState } from '../game/game';
+import { dienLevel, occupancy, stairWall, upcomingBoats, upgradeCostOf, type Building, type GameState } from '../game/game';
 import { giongLook, type GiongLook } from '../game/giong';
 import { KHOANH_N, khoanhOf, khoanhOrigin, openMask, openStart, openable } from '../game/khoanh';
 import { FAR_PLOTS, benKiaOpen, bridgeEnds, bridgeTo, plotAt, plotOf, plotOrigin, poiAt, poiPlots, type Dat } from '../game/benKia';
 import { DIEN_HOME, FAR_FOREST, FOREST_BAND, GRID, KHOANH, RIVER_END, RIVER_START, baseHeights, farBankOf, inGrid, isNearBank, isRiver, riverDistance, riverFacing, rotAngle, turnLocal } from '../game/map';
-import { BAI_CAT, BIEN_DIEN, CUA_BIEN, QUAN_DAO, RIVER_MID, benDock, bienDo, isSea, riverOf, seaIndex, seaRoute, type QuanDaoId, type SeaRoute } from '../game/bien';
+import { BAI_CAT, BIEN_DIEN, CUA_BIEN, QUAN_DAO, RIVER_MID, benDock, bienDo, daoBen, donDaoCong, donDaoHuong, isSea, quanDao, riverOf, seaIndex, seaRoute, warRoute, type QuanDao, type QuanDaoId, type SeaRoute } from '../game/bien';
+import { DAO_IDS, baoDao, benOf, giuBien, tripMs } from '../game/dao';
+import { armySpace } from '../game/doanhTrai';
 import { sonLook, type SonLook } from '../game/son';
 import { floodHits } from '../game/terrain';
 import { tetOpen } from '../game/tet';
 import { gioBuoi, troiLuc, type Buoi, type TroiLuc } from '../game/ngayDem';
 import { isBusy, itemProgress, pendingBuildings, pendingOf } from '../game/xay';
 import { Battlefield, CAM_KHE } from './battlefield';
+import { DaNgoaiCanh } from './daNgoai';
+import type { DaMapId } from '../game/defs';
+import type { Diem } from '../game/daNgoaiMap';
+import { tuongDau } from '../game/daNgoaiTran';
+import { capThu, dangThu, thuCo } from '../game/thanThu';
+import { THAN_THU, type ThanThuId } from '../game/defs';
+import { makeThanThu, quayHao } from './thanThu';
 import { BattleView } from './battleView';
 import { IsoCamera, type CamBounds } from './camera';
 import { DOOR_OPEN, banhChung, banhGiay } from './buildings';
@@ -36,9 +45,11 @@ import { buildDecor, disposeDecor, isBatchedDecor, type DecorSpot } from './deco
 import { buildWild, disposeWild, wildSpots } from './oTrong';
 import { buildCayDaBatch, disposeCayDaBatch, makeCayDa, type CayDaPlace } from './cayDa';
 import { bridgeDeckY, cloudPuffs, poiMarker, type BridgeBanks } from './benKia';
-import { SHORE_LAND, SeaLife, animateSea, buildSea, buildSeaMist, islandAt, shoreCap } from './bien';
+import { DON_DAO_Y, SHORE_LAND, SeaLife, animateSea, buildSea, buildSeaMist, daoMatY, donDaoSpot, islandAt, shoreCap } from './bien';
+import { CAU_STEP, donGac, makeDonDao } from './congTrinh/donDao';
+import { makeThuyenChien, type LinhCho } from './thuyenChien';
 import { makeSoldier } from './soldier';
-import { makeAnDuong, makeCaoLo, makeGiong, makeLacTuong, makeNuTuong, makeSonTinh, makeTrungNhi, makeTrungTrac } from './heroes';
+import { makeAnDuong, makeBaTrieu, makeCaoLo, makeMaiThucLoan, makeNgoQuyen, makeLyThuongKiet, makeTrieuQuangPhuc, makeGiong, makeLacTuong, makeNuTuong, makeSonTinh, makeTrungNhi, makeTrungTrac } from './heroes';
 
 /** Người đứng chầu là nữ tướng (chương 5), không phải tướng chỉ huy. */
 const isNuTuong = (t: TuongId | NuTuongId): t is NuTuongId => (NU_TUONG_IDS as string[]).includes(t);
@@ -72,13 +83,19 @@ import {
   type WallSpot,
 } from './models';
 import { makeWorker, type Job } from './people';
+import { HANG_OF, chuyenGanh, coHang, duongNguoi, tuyenGanh, tuyenXay, vatLieu, viTri, viecBep, type ChieuGanh, type DuongNguoi, type Hang, type TuyenGanh, type ViTri } from './ganhHang';
+import { ganhLen, tayGanh } from './doGanh';
+import type { Human } from './body';
+import type { Lot } from './lot';
+import { RUONG_LOT } from './congTrinh/ruong';
+import { VUON_LOT } from './congTrinh/vuon';
 import { C } from './palette';
 import { NEN_MARGIN, NenDat, RAMP } from './nenDat';
 import type { Poser } from './rig';
 import { ShapeBuilder, disposeInstances, disposeModel, seeded } from './shapes';
 import { ToonModel, inkThin, outlineOf, toon } from './toon';
 import { SANG_NGAY, TroiMau, apMauToi, doSang, phaThoiTiet, phaTroi, toiTheoTroi } from './troi';
-import { DuocLayer, QuangDong, duocCho, type DuocSpot } from './duoc';
+import { DUOC_LOTS, DuocLayer, QuangDong, duocCho, type DuocSpot } from './duoc';
 
 /**
  * Ô (HALF, HALF) nằm ở gốc tọa độ cảnh. Giữ như tâm lưới 55×55 cũ (khi sông còn ở mép lưới) để camera, ánh nắng,
@@ -131,6 +148,11 @@ export type Resolution = keyof typeof RESOLUTIONS;
 const LITE_ZOOM = 1;
 /** Nhịp lính tập trong sân doanh trại: số lần đổi tư thế mỗi giây. */
 const DRILL_BEAT = 1.4;
+/**
+ * Bán kính quả cầu bao một người dân (đơn vị thế giới, tâm cao chừng nửa người), để xét dân có trong khung nhìn không
+ * (`workerInView`). Người cao chừng 0,9; cầu rộng dư cho cuốc giơ quá đầu, đồ gánh, người đi mang hàng.
+ */
+const WORKER_RADIUS = 1.2;
 
 /** Đất, nước và ô lưới dùng chất liệu Lambert đơn giản, công trình và cây mới dùng tô màu hoạt hình. */
 const groundMaterial = new THREE.MeshLambertMaterial({ vertexColors: true });
@@ -272,6 +294,57 @@ interface WorkerView {
   obj: THREE.Group;
   spot: Spot;
   phase: number;
+  /** Đang đi gánh hàng: người đã ra khỏi mô hình công trình, đứng thẳng trong cảnh (`updateGanh`). */
+  out?: boolean;
+  /** Cỡ người trong mô hình công trình, để trả lại khi về. */
+  home?: number;
+}
+
+/** Người làm đang đi gánh: đường riêng của người ấy và đồ gánh trên vai. */
+interface GanhRa {
+  path: DuongNguoi;
+  load: THREE.Group;
+  /** Chỗ khung vừa rồi (cho `ganhInfo`). */
+  at?: ViTri;
+}
+
+/** Tuyến gánh của một công trình (hay giàn giáo) đang vẽ (`syncGanh`) và những người đang đi. */
+interface GanhView {
+  key: string;
+  tuyen: TuyenGanh;
+  seed: number;
+  hang: Hang;
+  /** Mang hàng lượt đi (`di`) hay lượt về (`ve`: thợ vác vật liệu, người bếp gùi nguyên liệu). */
+  chieu: ChieuGanh;
+  ra: Map<WorkerView, GanhRa>;
+}
+
+/** Số liệu người đi gánh của một chỗ (`World.ganhInfo`). */
+interface GanhInfo {
+  id: number;
+  type: BuildingType | 'xay';
+  hang: Hang;
+  chieu: ChieuGanh;
+  D: number;
+  n: number;
+  /** Hai đầu tuyến: lối ra của chỗ ấy và lối vào nơi nhận (tọa độ lưới). */
+  a: { x: number; z: number };
+  b: { x: number; z: number };
+  ra: { x: number; z: number; mang: boolean; dung: boolean; coHang: boolean; visible: boolean }[];
+}
+
+/** Việc gánh mới của một chỗ: tuyến, hàng, chiều. */
+interface ViecGanh {
+  tuyen: TuyenGanh;
+  hang: Hang;
+  chieu: ChieuGanh;
+}
+
+/** Chỗ có người đi gánh: công trình, hay giàn giáo quanh công trình đang xây. */
+interface ChoGanh {
+  group: THREE.Group;
+  people: WorkerView[];
+  ganh?: GanhView;
 }
 
 interface BuildingView {
@@ -298,6 +371,8 @@ interface BuildingView {
   baseScale: number;
   /** Công trình đang dựng mới (chưa vào kinh đô): mô hình mọc dần theo tiến độ (`update`). */
   dung: boolean;
+  /** Người làm thay phiên gánh hàng về nơi nhận (`syncGanh`, `updateGanh`). */
+  ganh?: GanhView;
 }
 
 /** Giàn giáo quanh công trình đang dựng hay đang nâng cấp, có vài thợ làm. */
@@ -306,6 +381,8 @@ interface SiteView {
   /** Chỗ và cỡ móng đang vẽ: đổi thì dựng lại. */
   key: string;
   people: WorkerView[];
+  /** Hai thợ thay phiên vác vật liệu từ kho, Điện gần nhất về (`syncGanh`). */
+  ganh?: GanhView;
 }
 
 /** Loại tường vẽ theo lô (lũy, đê, thành): đang đắp thì vẽ cọc mốc trên ô, không dựng giàn giáo. */
@@ -329,6 +406,9 @@ const NEU_H = 4.2;
 /** Hai Bà trên voi trận ở sân doanh trại: voi to hơn người đứng (Cao Lỗ 0,9) mà vẫn vừa sân trại. */
 const HAI_BA_SCALE = 0.65;
 const KHANH = 0xa8502e;
+
+/** Bản vẽ ô con của công trình gánh hàng và nơi nhận: người gánh ra, vào đúng lối đi (`loiRa` ở ganhHang.ts). */
+const GANH_LOTS: Partial<Record<BuildingType, Lot>> = { ...DUOC_LOTS, ruong: RUONG_LOT, vuon: VUON_LOT, dien: DIEN_LOT };
 
 /** Công trình cần người làm: hiện đúng số người đang làm. */
 const WORKED: BuildingType[] = ['ruong', 'ben', 'baiDa', 'loRen', 'xuongMoc', 'langChai', 'benKhoi', 'ruongNep', 'vuon', 'chuongLon', 'bep'];
@@ -400,6 +480,27 @@ function gateTurn(state: GameState, b: { x: number; z: number }, walls: Set<numb
  * Thuyền khơi của một bến thuyền khơi: đường đi (ô) và lịch một chuyến. Chuyến lặp mãi theo đồng hồ cảnh: neo ở bến,
  * xuôi sông ra biển, đánh cá một vòng quanh quần đảo, về bến. Chỉ để nhìn: cá và vỏ ốc tính đều mỗi phút (`game.ts`).
  */
+/**
+ * Thuyền chiến của một bến thuyền khơi (`dao.ts`): đường từ chỗ neo cạnh bến ra tới đầu cầu ván đồn đảo (thế giới),
+ * quãng cộng dồn, một lượt dài bao lâu (ms), còn bao lâu (ms, đếm lùi theo khung hình, mỗi lần đồng bộ lấy lại từ
+ * state), đang về hay đi.
+ */
+interface WarBoat {
+  obj: THREE.Group;
+  /** Đổi bến hay đổi lính đang chở thì dựng lại. */
+  key: string;
+  pts: THREE.Vector2[];
+  acc: number[];
+  total: number;
+  left: number;
+  ve: boolean;
+  /** Đang chạy chuyến; không thì neo cạnh bến thuyền khơi, mũi xuôi dòng (`dockHeading`). */
+  trip: boolean;
+  dockHeading: number;
+  /** Hướng mũi lúc này: xoay dần về hướng đi cho khỏi giật khi rời bến. */
+  heading: number;
+}
+
 interface SeaBoat {
   obj: THREE.Group;
   key: string;
@@ -415,6 +516,27 @@ interface SeaBoat {
 
 /** Thuyền khơi: neo ở bến chừng này giây, chạy chừng này ô mỗi giây, kéo lưới chậm hơn khi đánh cá quanh đảo. */
 const SEA_DOCK_S = 24;
+/** Thuyền chiến dừng cách đầu cầu ván đồn đảo chừng này ô (thế giới): mũi thuyền vừa chạm đầu cầu. */
+const WAR_BOAT_BOW = 2.1;
+/** Thuyền chiến neo xa bờ hơn chỗ thuyền khơi neo chừng này ô: mái chèo khỏi chạm thuyền khơi. */
+const WAR_BOAT_NEO = 2;
+
+/**
+ * Cầu ván từ cổng đồn đảo quần đảo `q` ra bến ván: dài bao nhiêu ô, mặt đất dưới cầu từng quãng `CAU_STEP` so với mặt
+ * sân đồn (null là nước), để mô hình đồn dựng cọc cầu chạm đất và mặt cầu không lẫn vào bờ.
+ */
+function cauVanOf(q: QuanDao): { len: number; mat: (number | null)[] } {
+  const c = donDaoCong(q);
+  const b = daoBen(q);
+  const h = donDaoHuong(q);
+  const len = Math.hypot(b.x - c.x, b.z - c.z);
+  const mat: (number | null)[] = [];
+  for (let t = CAU_STEP / 2; t < len + CAU_STEP / 2; t += CAU_STEP) {
+    const y = daoMatY(q, c.x + h.x * t, c.z + h.z * t);
+    mat.push(y === null ? null : y - DON_DAO_Y);
+  }
+  return { len, mat };
+}
 /** Đoàn thuyền thủy binh Triệu từ biển kéo vào đi chừng này ô mỗi giây (60 giây báo đủ đi từ khơi tới đầu sông xa nhất). */
 const FLEET_SPEED = 2;
 /** Một thuyền trong đoàn thủy binh đang tới: đường từ khơi tới chỗ hiện ra (tọa độ thế giới), dài bao nhiêu. */
@@ -426,6 +548,19 @@ interface FleetBoat {
 }
 const SEA_SPEED = 2.2;
 const SEA_FISH_SPEED = 1.5;
+
+/** Khói xám bốc lên từ công trình hư (vòng khói chạy ở vòng vẽ: `puffSmoke`). */
+function khoiHu(color: number = C.smoke): THREE.Group {
+  const smoke = new THREE.Group();
+  smoke.userData.smoke = true;
+  const mat = new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.5, depthWrite: false });
+  for (let i = 0; i < 4; i++) {
+    const puff = new THREE.Mesh(new THREE.SphereGeometry(0.22, 7, 5), mat);
+    puff.userData.phase = i / 4;
+    smoke.add(puff);
+  }
+  return smoke;
+}
 
 export class World {
   readonly renderer: THREE.WebGLRenderer;
@@ -450,6 +585,8 @@ export class World {
   private readonly chunkPick = new InstancedBoxes(KHOANH * KHOANH);
   /** Dải ô đang kéo thả khi trải đường: xanh ô trải được, đỏ ô không. */
   private readonly linePick = new InstancedBoxes(GRID);
+  /** Vùng gánh hàng đủ 100% khi đặt công trình, chọn kho (`setGanhZone`). */
+  private readonly ganhZone = new InstancedBoxes(GRID * GRID);
   private chunkPicked = -1;
   private floodKey = '';
   private riverWater?: THREE.Object3D;
@@ -517,8 +654,15 @@ export class World {
   private readonly ripples = new InstancedBoxes(RIPPLES);
   private readonly buildingsRoot = new THREE.Group();
   private readonly views = new Map<number, BuildingView>();
+  /** Khung nhìn của camera, lấy lại mỗi khung để chỉ dân trong tầm nhìn mới hiện và cử động (`workerInView`). */
+  private readonly viewFrustum = new THREE.Frustum();
+  private readonly frustumMat = new THREE.Matrix4();
+  private readonly workerBall = new THREE.Sphere(new THREE.Vector3(), WORKER_RADIUS);
   /** Có giặc (trinh sát đã báo hay đang đánh): cửa cổng thành đóng lại; lúc yên thì mở. */
   private gatesShut = false;
+  /** Đang có trận trên kinh đô (giữ kinh đô, Đấu thành): dân thôi gánh hàng, về chỗ làm. */
+  private cityFight = false;
+  private readonly ganhTmp = new THREE.Vector3();
   /** Đang có trận giữ kinh đô: lính tập trong sân doanh trại đã ra trận, sân để trống. */
   private drillOut = false;
   /** Thuyền trên sông: thuyền xuôi sông Thao (`home` là 'z') tới ngã ba thì rẽ sang sông Đà. */
@@ -532,6 +676,10 @@ export class World {
   private readonly raidView = new BattleView(this.scene, { x: -HALF, z: -HALF }, 1, (x, z, wet, wall) => this.fighterY(x, z, wet, wall));
   /** Bãi chiến phó bản, dựng khi cần lần đầu. */
   private field?: Battlefield;
+  /** Map dã ngoại đang xem (`showDaNgoai`). */
+  private da?: DaNgoaiCanh;
+  /** Nắng có đổ bóng không (Cài đặt Bóng đổ, `setBongDo`). */
+  private bongDo = true;
   /** Đang xem bãi chiến: chỗ camera nhìn kinh đô trước đó, để trả về sau trận. */
   private cityCam: { target: THREE.Vector3; zoom: number; bounds: CamBounds; facing: number } | null = null;
   private readonly warning: THREE.Mesh;
@@ -557,6 +705,11 @@ export class World {
   private tetKey = '';
   /** Rùa Vàng bơi chậm trên sông sau khi đã hiện lên diệt yêu tinh. */
   private turtle?: THREE.Group;
+  /**
+   * Thần thú ở kinh đô (chỉ để nhìn): thú bay lượn vòng trên Điện; thú đi dạo từng ô trên đường đi hay ô trống gần Điện,
+   * tới ô thì có lúc dừng (gà mổ thóc). `tu`, `toi` là ô đang đi từ, đi tới; `k` là phần đường đã đi.
+   */
+  private thanThu = new Map<ThanThuId, { obj: THREE.Group; dang: number; tu: [number, number]; toi: [number, number]; k: number; nghi: number; seed: number }>();
   /** Cấp Điện và danh sách khoảnh đã mở lúc dựng đất, rừng lần cuối. */
   private landKey = '';
   private wallKey = '';
@@ -592,6 +745,9 @@ export class World {
   private readonly seaLife: SeaLife;
   /** Thuyền khơi của từng bến thuyền khơi: neo trước bến, xuôi sông ra biển đánh cá quanh đảo rồi về. */
   private readonly seaBoats = new Map<number, SeaBoat>();
+  /** Đồn đảo (hình tạm: đồn biên phóng to) theo cấp, và thuyền chiến đang chở quân. */
+  private readonly daoForts = new Map<QuanDaoId, { obj: THREE.Group; key: string }>();
+  private readonly warBoats = new Map<QuanDaoId, WarBoat>();
   /** Đoàn thuyền thủy binh Triệu, thủy quân Hán (cả lâu thuyền) từ biển kéo vào trong lúc trinh sát báo (`upcomingBoats`), dựng lại theo đợt. */
   private fleet: { key: string; boats: FleetBoat[] } | null = null;
   /**
@@ -612,6 +768,8 @@ export class World {
     this.view = new IsoCamera(canvas);
     this.view.onUserMove = () => {
       this.panGoal = null;
+      // Map dã ngoại: người chơi tự kéo cảnh thì camera thôi bám đội (chạm đất, bật Tự đánh thì bám lại).
+      this.daFollow = false;
     };
     this.view.target.set(wx(DIEN_HOME) + BUILDINGS.dien.w / 2, 0, wz(DIEN_HOME) + BUILDINGS.dien.d / 2);
 
@@ -649,6 +807,13 @@ export class World {
     this.linePick.mesh.receiveShadow = false;
     this.linePick.mesh.renderOrder = 2;
     this.scene.add(this.linePick.mesh);
+    const zoneMat = this.ganhZone.mesh.material as THREE.MeshLambertMaterial;
+    zoneMat.transparent = true;
+    zoneMat.opacity = 0.42;
+    zoneMat.depthWrite = false;
+    this.ganhZone.mesh.receiveShadow = false;
+    this.ganhZone.mesh.renderOrder = 2;
+    this.scene.add(this.ganhZone.mesh);
     this.rain = new THREE.InstancedMesh(
       new THREE.BoxGeometry(0.025, 0.55, 0.025),
       toiTheoTroi(new THREE.MeshBasicMaterial({ color: C.rain, transparent: true, opacity: 0.55, depthWrite: false })),
@@ -928,7 +1093,7 @@ export class World {
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, RESOLUTIONS[this.res]));
     this.renderer.setSize(w, h, false);
     this.view.setSize(w, h);
-    if (this.inField) this.fitField();
+    if (this.inField && !this.da) this.fitField();
   }
 
   /** Xóa mọi thứ đã vẽ theo state cũ, dùng khi nạp mã lưu hoặc chơi lại. */
@@ -1098,9 +1263,11 @@ export class World {
       }
     }
     this.syncSites(state, pend);
+    this.syncGanh(state, pend);
 
     this.syncMerchant(state);
     this.syncSeaBoats(state);
+    this.syncDao(state);
     this.syncFleet(state);
     this.syncSeaMist(dienLevel(state) < BIEN_DIEN);
     this.syncGiong(state);
@@ -1110,6 +1277,7 @@ export class World {
     this.syncCourt(state);
     this.syncHaiBa(state);
     this.syncTurtle(state);
+    this.syncThanThu(state);
     this.syncTet(state);
     this.syncWallWalk(state);
 
@@ -1194,7 +1362,10 @@ export class World {
    */
   private syncDuoc(): void {
     const views = [...this.views.entries()].filter(([, v]) => !v.damaged && !v.dung);
-    const key = views.map(([id, v]) => `${id}:${v.type}:${v.level}:${v.x}:${v.z}:${v.group.rotation.y.toFixed(2)}:${v.group.position.y.toFixed(2)}`).join(',');
+    const forts = [...this.daoForts.entries()];
+    const key =
+      views.map(([id, v]) => `${id}:${v.type}:${v.level}:${v.x}:${v.z}:${v.group.rotation.y.toFixed(2)}:${v.group.position.y.toFixed(2)}`).join(',') +
+      `|${forts.map(([id, f]) => `${id}:${f.key}`).join(',')}`;
     if (key === this.duocKey) return;
     this.duocKey = key;
     const spots: DuocSpot[] = [];
@@ -1212,9 +1383,24 @@ export class World {
       g.traverse((o) => {
         if (!o.userData.flame) return;
         o.getWorldPosition(p);
-        spots.push({ x: p.x, y: p.y, z: p.z, kind: 'lua', seed: hash01(id * 13 + i++) });
+        const spot: DuocSpot = { x: p.x, y: p.y, z: p.z, kind: 'lua', seed: hash01(id * 13 + i++) };
+        // Bát lửa đặt cao: vũng sáng nằm trên mặt đất dưới bát.
+        if (typeof o.userData.flameDat === 'number') spot.dat = o.parent!.localToWorld(p.set(o.position.x, o.userData.flameDat, o.position.z)).y;
+        spots.push(spot);
       });
     }
+    // Đuốc cổng, đuốc đầu cầu ván, lửa hiệu đồn đảo (ngoài lưới, không qua `views`).
+    forts.forEach(([id, f], n) => {
+      f.obj.updateWorldMatrix(true, true);
+      let i = 0;
+      for (const o of f.obj.children) {
+        if (!o.userData.flame) continue;
+        o.getWorldPosition(p);
+        const spot: DuocSpot = { x: p.x, y: p.y, z: p.z, kind: 'lua', seed: hash01(9000 + n * 101 + id.length * 7 + i++) };
+        if (typeof o.userData.flameDat === 'number') spot.dat = f.obj.localToWorld(p.set(o.position.x, o.userData.flameDat, o.position.z)).y;
+        spots.push(spot);
+      }
+    });
     this.duoc.set(spots);
   }
 
@@ -1419,6 +1605,24 @@ export class World {
     this.floodPreview.end();
   }
 
+  /**
+   * Tô vùng gánh hàng đủ 100% (`vungGanh` ở game/vanChuyen.ts): ô 1 là vùng có sẵn, ô 2 là vùng của nơi đang đặt hay
+   * đang chọn (màu sáng hơn). Null thì thôi tô.
+   */
+  setGanhZone(vung: Uint8Array | null): void {
+    this.ganhZone.begin();
+    if (vung) {
+      for (let i = 0; i < vung.length; i++) {
+        const v = vung[i];
+        if (!v) continue;
+        const x = i % GRID;
+        const z = (i - x) / GRID;
+        this.ganhZone.add(0.96, 0.03, 0.96, v === 2 ? C.ganhVungMoi : C.ganhVung, wx(x) + 0.5, this.groundY(x, z) + 0.035, wz(z) + 0.5);
+      }
+    }
+    this.ganhZone.end();
+  }
+
   /** Thuyền buôn lớn neo cạnh bến đầu tiên trong lúc đang đậu. */
   private syncMerchant(state: GameState): void {
     // Thuyền buôn ghé bến bên này trước; chỉ có bến bên kia thì ghé bến ấy.
@@ -1593,6 +1797,144 @@ export class World {
   }
 
   /**
+   * Đồn đảo và thuyền chiến theo state (`dao.ts`). Đồn dựng lại khi đổi cấp, đổi số lính gác, bậc binh khí, lửa hiệu
+   * cháy, tắt (đồn giữ biển lúc thủy quân Hán sắp tới, hay giặc áp sát đảo: `baoDao`) hay đồn hư (bốc khói, không đốt
+   * lửa hiệu). Thuyền neo cạnh bến thuyền khơi khi rảnh, chạy theo chuyến khi
+   * chở quân (chỗ trên đường lấy lại từ thời gian còn lại), dựng lại khi lính đang chở đổi. Gọi mỗi lần đồng bộ cảnh và
+   * đều đặn lúc chơi (chuyến mới bắt đầu trong `tick`, không qua thao tác nào).
+   */
+  syncDao(state: GameState): void {
+    const thuyHan = state.raid.foe === 'thuyHan' && state.raid.phase !== 'idle';
+    let forts = false;
+    for (const id of DAO_IDS) {
+      const d = state.dao[id];
+      const q = quanDao(id);
+      const gac = donGac(armySpace(d.linh));
+      const lit = !d.hu && ((thuyHan && giuBien(state, id) > 0) || baoDao(state, id) !== null);
+      const key = d.cap > 0 ? `${d.cap}:${gac}:${state.arms.giao}:${state.arms.cung}:${lit ? 1 : 0}:${d.hu ? 1 : 0}` : '';
+      const old = this.daoForts.get(id);
+      if ((old?.key ?? '') !== key) {
+        forts = true;
+        if (old) {
+          this.scene.remove(old.obj);
+          disposeModel(old.obj);
+          this.daoForts.delete(id);
+        }
+        if (key) {
+          const obj = makeDonDao(d.cap, { gac, tierGiao: state.arms.giao, tierCung: state.arms.cung, lit, cau: cauVanOf(q) });
+          if (d.hu) {
+            // Đồn hư: ba cột khói xám bốc lên trong sân đồn, như công trình hư trong kinh đô
+            // (đồn rộng nên khói to hơn, đứng so le cho thấy được từ mọi hướng camera).
+            for (const [x, z, k] of [[-1.6, 1.2, 2.6], [1.8, -0.8, 2.2], [0.4, 2.6, 1.8]]) {
+              // Khói sẫm hơn khói công trình hư: nền cát trắng làm khói xám nhạt chìm mất.
+              const smoke = khoiHu(C.smokeDao);
+              smoke.position.set(x, 0.6, z);
+              smoke.scale.setScalar(k);
+              obj.add(smoke);
+            }
+          }
+          obj.position.copy(donDaoSpot(q, HALF));
+          // Cổng (mặt trước +z) quay về bến ván.
+          const h = donDaoHuong(q);
+          obj.rotation.y = Math.atan2(h.x, h.z);
+          this.scene.add(obj);
+          this.daoForts.set(id, { obj, key });
+        }
+      }
+      const ben = benOf(state, id);
+      const c = d.chuyen;
+      const cho: LinhCho[] = [];
+      if (c) for (const k of UNIT_TYPES) for (let i = 0; i < c.cho[k] && cho.length < 6; i++) cho.push({ kind: k === 'voi' ? 'giao' : k, tier: state.arms[k === 'voi' ? 'giao' : k] });
+      const bkey = d.thuyen && ben ? `${ben.id}:${ben.x}:${ben.z}:${cho.map((l) => l.kind + l.tier).join(',')}` : '';
+      let boat = this.warBoats.get(id);
+      if ((boat?.key ?? '') !== bkey) {
+        if (boat) {
+          this.scene.remove(boat.obj);
+          disposeModel(boat.obj);
+          this.warBoats.delete(id);
+        }
+        boat = undefined;
+        if (ben && bkey) {
+          const pts = warRoute(ben, seaIndex(state, ben)).path.map((p) => new THREE.Vector2(wx(p.x), wz(p.z)));
+          // Neo ngoài thuyền khơi, xa bờ hơn một quãng; về tới đảo thì mũi vừa chạm đầu cầu ván.
+          pts[0] = pts[0].clone().lerp(pts[1], Math.min(0.8, WAR_BOAT_NEO / Math.max(0.01, pts[0].distanceTo(pts[1]))));
+          const n = pts.length;
+          const last = pts[n - 2].distanceTo(pts[n - 1]);
+          pts[n - 1] = pts[n - 1].clone().lerp(pts[n - 2], Math.min(last - 0.1, WAR_BOAT_BOW) / last);
+          const acc = [0];
+          for (let i = 1; i < pts.length; i++) acc.push(acc[i - 1] + pts[i].distanceTo(pts[i - 1]));
+          const obj = makeThuyenChien(cho);
+          obj.rotation.order = 'YXZ';
+          obj.scale.setScalar(SEA_BOAT_SCALE);
+          this.scene.add(obj);
+          const dockHeading = riverOf(ben) === 'thao' ? -Math.PI / 2 : 0;
+          boat = { obj, key: bkey, pts, acc, total: 1, left: 0, ve: false, trip: false, dockHeading, heading: dockHeading };
+          this.warBoats.set(id, boat);
+        }
+      }
+      if (boat) {
+        boat.trip = !!c;
+        boat.total = Math.max(1, tripMs(state, id));
+        boat.left = c ? c.con : 0;
+        boat.ve = c ? c.ve : false;
+      }
+    }
+    if (forts) this.syncDuoc();
+  }
+
+  /** Cụm khói (`userData.smoke`) bốc lên, tan dần; khói không nhận đèn nên tối theo trời, không thì sáng trắng giữa đêm. */
+  private puffSmoke(group: THREE.Object3D, t: number): void {
+    for (const puff of group.children) {
+      // Lấy phần lẻ dương: đồng hồ cảnh có lúc âm (ảnh chụp thử), `%` của số âm ra âm thì khói chui xuống đất.
+      const x = t * 0.35 + (puff.userData.phase as number);
+      const k = x - Math.floor(x);
+      puff.position.set(Math.sin(k * 6 + puff.id) * 0.2, k * 1.6, Math.cos(k * 5) * 0.15);
+      puff.scale.setScalar(0.6 + k * 1.2);
+      const mat = (puff as THREE.Mesh).material as THREE.MeshBasicMaterial;
+      mat.opacity = 0.5 * (1 - k);
+      const goc = (mat.userData.mauGoc ??= mat.color.clone()) as THREE.Color;
+      mat.color.copy(goc).multiply(this.troi.unlit);
+    }
+  }
+
+  /** Thuyền chiến chạy theo thời gian còn lại của chuyến: đi thì từ bến ra đảo, về thì ngược lại; rảnh thì neo ở bến. */
+  private moveWarBoat(b: WarBoat, t: number, dt: number): void {
+    const o = b.obj;
+    let p = b.pts[0];
+    let goal = b.dockHeading;
+    if (b.trip) {
+      b.left = Math.max(0, b.left - dt * 1000);
+      const len = b.acc[b.acc.length - 1];
+      const f = 1 - b.left / b.total;
+      const at = (d: number): THREE.Vector2 => {
+        const e = Math.min(len, Math.max(0, d));
+        let i = 1;
+        while (i < b.acc.length - 1 && b.acc[i] < e) i++;
+        const u = (e - b.acc[i - 1]) / Math.max(1e-6, b.acc[i] - b.acc[i - 1]);
+        return b.pts[i - 1].clone().lerp(b.pts[i], Math.min(1, Math.max(0, u)));
+      };
+      const d = (b.ve ? 1 - f : f) * len;
+      p = at(d);
+      const dir = b.ve ? -1 : 1;
+      const ahead = at(d + 0.9 * dir);
+      const behind = at(d - 0.9 * dir);
+      if (ahead.distanceToSquared(behind) > 1e-6) goal = Math.atan2(-(ahead.y - behind.y), ahead.x - behind.x);
+      else goal = b.heading;
+    }
+    let turn = goal - b.heading;
+    turn = Math.atan2(Math.sin(turn), Math.cos(turn));
+    b.heading += turn * (1 - Math.exp(-dt * 2.5));
+    o.position.x = p.x;
+    o.position.z = p.y;
+    o.rotation.y = b.heading;
+    const swell = isSea(p.x + HALF, p.y + HALF) ? 1 : 0.35;
+    o.position.y = WATER_Y - 0.02 + Math.sin(t * 1.3) * 0.05 * swell;
+    o.rotation.x = Math.sin(t * 0.9) * 0.05 * swell;
+    o.rotation.z = Math.sin(t * 1.1) * 0.04 * swell;
+    (o.userData.row as ((t: number, moving: boolean) => void) | undefined)?.(t, b.trip && b.left > 0);
+  }
+
+  /**
    * Thuyền khơi ở đâu lúc `t`: một chuyến gồm neo ở bến, xuôi sông qua cửa biển ra ngư trường, kéo lưới một vòng quanh
    * quần đảo, rồi đi ngược đường cũ về bến. Mũi thuyền theo hướng đi (nhìn trước, sau một quãng ngắn cho mượt khi rẽ).
    */
@@ -1659,6 +2001,22 @@ export class World {
     this.time = t;
   }
 
+  /**
+   * Bật, tắt bóng đổ (Cài đặt, lưu riêng từng máy). Tắt thì nắng thôi đổ bóng ở kinh đô lẫn bãi chiến, bỏ hẳn lượt vẽ
+   * bóng mỗi khung cho máy yếu. Đổi `castShadow` của đèn nắng (không đổi `shadowMap.enabled`): three.js thấy đèn đổi
+   * thì tự dựng lại shader của mọi chất liệu nhận đèn.
+   */
+  setBongDo(on: boolean): void {
+    this.bongDo = on;
+    this.lights.sun.castShadow = on;
+    this.field?.setShadows(on);
+    this.da?.setShadows(on);
+  }
+
+  get bongDoOn(): boolean {
+    return this.bongDo;
+  }
+
   /** Bật, tắt ngày đêm (Cài đặt, lưu riêng từng máy). Tắt thì trời luôn ban ngày; đổi thì trời chuyển dần. */
   setNgayDem(on: boolean, snap = false): void {
     this.ngayDem = on;
@@ -1692,6 +2050,7 @@ export class World {
 
   /** Gỡ mô hình một công trình (dựng lại vì đổi cấp, đổi dân, hư; hay đã dỡ): trả hình và khung xương người làm. */
   private dropView(v: BuildingView): void {
+    this.veHetGanh(v, true);
     this.buildingsRoot.remove(v.group);
     disposeModel(v.group);
   }
@@ -1766,14 +2125,7 @@ export class World {
         group.rotation.z = 0.12;
         group.scale.y *= 0.85;
       }
-      const smoke = new THREE.Group();
-      smoke.userData.smoke = true;
-      const mat = new THREE.MeshBasicMaterial({ color: C.smoke, transparent: true, opacity: 0.5, depthWrite: false });
-      for (let i = 0; i < 4; i++) {
-        const puff = new THREE.Mesh(new THREE.SphereGeometry(0.22, 7, 5), mat);
-        puff.userData.phase = i / 4;
-        smoke.add(puff);
-      }
+      const smoke = khoiHu();
       smoke.position.y = 1.2;
       // Đền Rồng Tiên: khói bốc trên nóc đền chính (lùi về sau móng), cuộn to hợp với đền lớn.
       if (b.type === 'denRongTien') {
@@ -1795,6 +2147,7 @@ export class World {
   }
 
   private dropSite(site: SiteView): void {
+    this.veHetGanh(site, true);
     this.buildingsRoot.remove(site.group);
     disposeModel(site.group);
   }
@@ -2593,6 +2946,8 @@ export class World {
     if (dien) {
       // Nữ tướng đã theo về đứng chầu hàng sau Hai Bà, kể cả khi đang ở doanh trại.
       for (const n of nuTuongList(state)) want.set(n, this.courtSpot(dien, n));
+      // Tướng dã ngoại đã về đứng chầu trong sân.
+      for (const t of TUONG_DA_IDS) if (tuongJoined(state, t)) want.set(t, this.courtSpot(dien, t));
       for (const t of generals(state)) {
         const ghost =
           (t === 'giong' && !giongLook(state)) ||
@@ -2621,7 +2976,17 @@ export class World {
               ? makeAnDuong({ crossbow: true, glow: true })
               : t === 'caoLo'
                 ? makeCaoLo({ glow: true })
-                : makeLacTuong();
+                : t === 'baTrieu'
+                  ? makeBaTrieu({ onFoot: true })
+                  : t === 'trieuQuangPhuc'
+                    ? makeTrieuQuangPhuc()
+                    : t === 'maiThucLoan'
+                      ? makeMaiThucLoan()
+                      : t === 'ngoQuyen'
+                        ? makeNgoQuyen({ onFoot: true })
+                        : t === 'lyThuongKiet'
+                          ? makeLyThuongKiet()
+                          : makeLacTuong();
       obj.scale.setScalar(t === 'sonTinh' ? 0.95 : 0.9);
       obj.position.set(spot.x, spot.y, spot.z);
       obj.rotation.y = spot.ry;
@@ -2797,6 +3162,132 @@ export class World {
     }
   }
 
+  /** Dựng, gỡ thần thú theo các thú đã về và dáng theo cấp. */
+  private syncThanThu(state: GameState): void {
+    const co = new Set(thuCo(state));
+    for (const [k, v] of this.thanThu) {
+      if (co.has(k) && v.dang === dangThu(capThu(state, k))) continue;
+      this.scene.remove(v.obj);
+      disposeModel(v.obj);
+      this.thanThu.delete(k);
+    }
+    const dien = state.buildings.find((b) => b.type === 'dien');
+    for (const k of co) {
+      if (this.thanThu.has(k)) continue;
+      const dang = dangThu(capThu(state, k));
+      const obj = makeThanThu(k, dang);
+      obj.scale.setScalar(THAN_THU[k].bay ? 0.9 : 0.8);
+      this.scene.add(obj);
+      const seed = THAN_THU[k].ve * 7919 + 17;
+      const start = this.choThu(state, dien, seed);
+      this.thanThu.set(k, { obj, dang, tu: start, toi: start, k: 1, nghi: 0, seed });
+    }
+  }
+
+  /** Ô đi được của thú: trong lưới, đất đã mở, không sông, trống hay là đường đi. */
+  private thuDiDuoc(state: GameState, x: number, z: number): boolean {
+    if (!inGrid(x, z) || isRiver(x, z) || !openMask(state)[z * GRID + x]) return false;
+    const id = occupancy(state)[z * GRID + x];
+    if (!id) return true;
+    const b = state.buildings.find((o) => o.id === id);
+    return !!b && isRoad(b.type);
+  }
+
+  /** Ô trống gần cổng trước Điện để thú bắt đầu đi dạo (mỗi thú một chỗ theo hạt giống). */
+  private choThu(state: GameState, dien: Building | undefined, seed: number): [number, number] {
+    const cx = dien ? dien.x + Math.floor(BUILDINGS.dien.w / 2) : DIEN_HOME + 5;
+    const cz = dien ? dien.z + BUILDINGS.dien.d : DIEN_HOME + 10;
+    for (let r = 0; r < 12; r++) {
+      for (let i = 0; i < 8 * (r + 1); i++) {
+        const a = ((i + seed) / (8 * (r + 1))) * Math.PI * 2;
+        const x = Math.round(cx + Math.cos(a) * r);
+        const z = Math.round(cz + Math.sin(a) * r);
+        if (this.thuDiDuoc(state, x, z)) return [x, z];
+      }
+    }
+    return [cx, cz];
+  }
+
+  /** Ô kế tiếp thú đi tới: ô kề đi được, ưu tiên đường đi, không đi xa Điện quá 16 ô, tránh quay đầu. */
+  private oKe(state: GameState, v: { tu: [number, number]; toi: [number, number]; seed: number }, n: number): [number, number] {
+    const dien = state.buildings.find((b) => b.type === 'dien');
+    const cx = dien ? dien.x + BUILDINGS.dien.w / 2 : DIEN_HOME + 5;
+    const cz = dien ? dien.z + BUILDINGS.dien.d / 2 : DIEN_HOME + 5;
+    const [x, z] = v.toi;
+    const ke = (
+      [
+        [x + 1, z],
+        [x - 1, z],
+        [x, z + 1],
+        [x, z - 1],
+      ] as [number, number][]
+    ).filter(([a, b]) => this.thuDiDuoc(state, a, b) && Math.hypot(a + 0.5 - cx, b + 0.5 - cz) < 16 && Math.abs(this.groundY(a, b) - this.groundY(x, z)) < 0.6);
+    if (!ke.length) return v.toi;
+    const occ = occupancy(state);
+    const duong = ke.filter(([a, b]) => occ[b * GRID + a]);
+    const tien = (l: [number, number][]) => (l.length > 1 ? l.filter(([a, b]) => a !== v.tu[0] || b !== v.tu[1]) : l);
+    const rand = (Math.sin(n * 12.9898 + v.seed * 78.233) * 43758.5453) % 1;
+    const pool = duong.length && Math.abs(rand) < 0.75 ? tien(duong) : tien(ke);
+    return pool[Math.floor(Math.abs(rand * 997)) % pool.length];
+  }
+
+  /** Thú đi lại, bay lượn mỗi khung; có trận giữ kinh đô thì ẩn. */
+  private updateThanThu(dt: number, t: number): void {
+    const state = this.state;
+    if (!state || !this.thanThu.size) return;
+    const dien = state.buildings.find((b) => b.type === 'dien');
+    const cx = wx(dien ? dien.x : DIEN_HOME) + BUILDINGS.dien.w / 2;
+    const cz = wz(dien ? dien.z : DIEN_HOME) + BUILDINGS.dien.d / 2;
+    const base = dien ? this.groundY(dien.x, dien.z) : 0;
+    for (const [k, v] of this.thanThu) {
+      v.obj.visible = !this.drillOut;
+      if (!v.obj.visible) continue;
+      const pose = v.obj.userData.pose as Poser | undefined;
+      quayHao(v.obj, t);
+      if (THAN_THU[k].bay) {
+        // Chim Lạc lượn vòng gần, rồng lượn vòng rộng và cao hơn, ngược chiều.
+        const rong = k === 'thuRong';
+        const R = rong ? 14 : 9;
+        const w = rong ? -0.11 : 0.2;
+        const a = t * w + v.seed;
+        v.obj.position.set(cx + Math.cos(a) * R, base + (rong ? 9 : 7) + Math.sin(t * 0.9 + v.seed) * 0.5, cz + Math.sin(a) * R);
+        v.obj.rotation.y = Math.atan2(-Math.sin(a) * w, Math.cos(a) * w);
+        pose?.({ act: 'walk', phase: t * (rong ? 7 : 9), stride: 0.6, time: t });
+        continue;
+      }
+      const toc = k === 'thuRua' ? 0.45 : k === 'thuGa' ? 0.9 : 1.3;
+      if (v.nghi > 0) {
+        v.nghi -= dt;
+        // Gà dừng thì mổ thóc, thú khác đứng nghỉ.
+        pose?.(k === 'thuGa' ? { act: 'fight', strike: (t * 1.6) % 1, time: t } : { act: 'stand', time: t });
+      } else {
+        v.k += dt * toc;
+        if (v.k >= 1) {
+          const n = Math.floor(t * 10) + v.seed;
+          v.tu = v.toi;
+          v.toi = this.oKe(state, v, n);
+          v.k = 0;
+          if (v.toi[0] === v.tu[0] && v.toi[1] === v.tu[1]) v.k = 1;
+          // Có lúc dừng lại một chút.
+          const r = Math.abs((Math.sin(n * 3.7 + v.seed) * 1e4) % 1);
+          if (r < (k === 'thuGa' ? 0.35 : 0.15)) v.nghi = 0.8 + r * 4;
+        }
+        pose?.({ act: 'walk', phase: t * (k === 'thuRua' ? 4 : 10), stride: 0.5, time: t });
+      }
+      const px = v.tu[0] + (v.toi[0] - v.tu[0]) * Math.min(v.k, 1) + 0.5;
+      const pz = v.tu[1] + (v.toi[1] - v.tu[1]) * Math.min(v.k, 1) + 0.5;
+      v.obj.position.set(wx(px), this.surfaceY(px, pz), wz(pz));
+      if (v.toi[0] !== v.tu[0] || v.toi[1] !== v.tu[1]) v.obj.rotation.y = Math.atan2(v.toi[0] - v.tu[0], v.toi[1] - v.tu[1]);
+    }
+  }
+
+  /** Thần thú dưới vị trí chạm. */
+  pickThanThu(clientX: number, clientY: number): ThanThuId | null {
+    const ray = this.view.setRay(clientX, clientY);
+    for (const [k, v] of this.thanThu) if (v.obj.visible && ray.intersectObject(v.obj, true).length) return k;
+    return null;
+  }
+
   /** Người chơi chạm vào tướng (ở doanh trại hay trước Điện): Gióng, Sơn Tinh, An Dương Vương hay Cao Lỗ. */
   pickHero(clientX: number, clientY: number): 'giong' | 'son' | 'adv' | 'caoLo' | null {
     const ray = this.view.setRay(clientX, clientY);
@@ -2888,6 +3379,165 @@ export class World {
   }
 
   /** Động tác theo nghề (people.ts): cúi bổ cuốc, bổ đá, quai búa, đi qua đi lại mang hàng, đứng gác nhìn quanh. */
+  /**
+   * Tuyến gánh của từng công trình đang vẽ theo luật (`tuyenGanh`), việc của người bếp (`viecBep`: gùi nguyên liệu từ
+   * kho, mùa Tết đội mâm bánh lên Điện) và thợ vác vật liệu ở giàn giáo (`tuyenXay`). Tuyến đổi (dựng, dỡ, dời công
+   * trình, trải đường, kho hư, Tết mở) thì người đang đi về chỗ làm rồi đi lại theo tuyến mới.
+   */
+  private syncGanh(state: GameState, pend: Building[]): void {
+    const byId = new Map(state.buildings.map((b) => [b.id, b]));
+    for (const [id, v] of this.views) {
+      const b = v.dung || v.damaged || !v.people.length ? undefined : byId.get(id);
+      let viec: ViecGanh | null = null;
+      if (b?.type === 'bep') viec = viecBep(state, b, GANH_LOTS);
+      else if (b && HANG_OF[b.type]) {
+        const tuyen = tuyenGanh(state, b, GANH_LOTS);
+        viec = tuyen && { tuyen, hang: HANG_OF[b.type]!, chieu: 'di' };
+      }
+      this.datGanh(v, id, viec);
+    }
+    // Giàn giáo: vật liệu theo giá đã trả cho phần việc (dựng mới, nâng cấp, hay đóng thuyền chiến ở bến thuyền khơi).
+    const moi = new Map(pend.map((b) => [b.id, b]));
+    for (const [id, site] of this.sites) {
+      const b = moi.get(id) ?? byId.get(id);
+      const tuyen = b && site.people.length ? tuyenXay(state, b, GANH_LOTS) : null;
+      const cost = b ? (pendingOf(state, id)?.gia ?? (moi.has(id) ? BUILDINGS[b.type].buildCost : upgradeCostOf(b))) : undefined;
+      this.datGanh(site, id, tuyen && { tuyen, hang: vatLieu(cost), chieu: 've' });
+    }
+  }
+
+  /** Giao việc gánh `viec` cho chỗ `v` (mã `id`); việc đổi thì người đang đi về chỗ làm trước. */
+  private datGanh(v: ChoGanh, id: number, viec: ViecGanh | null): void {
+    const t = viec?.tuyen;
+    const key = t && viec ? `${viec.hang}:${viec.chieu}:${t.noi}:${t.D.toFixed(2)}:${t.pts.map((p) => `${p.x.toFixed(2)},${p.z.toFixed(2)}`).join(';')}` : '';
+    if ((v.ganh?.key ?? '') === key) return;
+    this.veHetGanh(v, false);
+    v.ganh = t && viec ? { key, tuyen: t, seed: hash01(id * 31 + 7), hang: viec.hang, chieu: viec.chieu, ra: new Map() } : undefined;
+  }
+
+  /** Số liệu người đi gánh cho `window.__debug.ganh()`: mỗi chỗ có tuyến (công trình, giàn giáo `xay`), ai đang đi, ở đâu. */
+  ganhInfo(): GanhInfo[] {
+    const out: GanhInfo[] = [];
+    const one = (id: number, type: BuildingType | 'xay', v: ChoGanh) => {
+      const g = v.ganh;
+      if (!g) return;
+      const ra = [...g.ra.entries()].map(([w, r]) => ({
+        x: w.obj.position.x + HALF,
+        z: w.obj.position.z + HALF,
+        mang: !!r.at?.mang,
+        dung: !!r.at?.dung,
+        coHang: !!r.at && coHang(g.chieu, r.at),
+        visible: w.obj.visible,
+      }));
+      const pts = g.tuyen.pts;
+      out.push({ id, type, hang: g.hang, chieu: g.chieu, D: g.tuyen.D, n: v.people.length, a: pts[0], b: pts[pts.length - 1], ra });
+    };
+    for (const [id, v] of this.views) one(id, v.type, v);
+    for (const [id, v] of this.sites) one(id, 'xay', v);
+    return out;
+  }
+
+  /** Mọi người đang đi gánh của chỗ `v` về chỗ làm; `drop`: chỗ ấy sắp gỡ, gỡ luôn người đang ở ngoài. */
+  private veHetGanh(v: ChoGanh, drop: boolean): void {
+    const g = v.ganh;
+    if (!g) return;
+    for (const w of [...g.ra.keys()]) {
+      if (!drop) {
+        this.veNha(v, w);
+        continue;
+      }
+      // Người ở ngoài không còn là con của mô hình công trình: gỡ riêng (cả đồ gánh trên người).
+      this.scene.remove(w.obj);
+      disposeModel(w.obj);
+      w.out = false;
+    }
+    g.ra.clear();
+  }
+
+  /** Người làm `w` rời chỗ đứng, ra cảnh đi gánh: cùng chỗ, cùng cỡ như đang đứng trong mô hình, đồ gánh lên người. */
+  private raDuong(v: ChoGanh, g: GanhView, w: WorkerView): GanhRa {
+    const p = w.obj.getWorldPosition(this.ganhTmp);
+    const path = duongNguoi(g.tuyen, { x: p.x + HALF, z: p.z + HALF });
+    w.home = w.obj.scale.x;
+    const scale = w.obj.scale.x * v.group.scale.x;
+    v.group.remove(w.obj);
+    this.scene.add(w.obj);
+    w.obj.scale.setScalar(scale);
+    w.out = true;
+    const out = { path, load: ganhLen(w.obj.userData.bones as Human, g.hang) };
+    g.ra.set(w, out);
+    return out;
+  }
+
+  /** Người đi gánh về lại chỗ đứng làm trong mô hình công trình (hay giàn giáo), bỏ đồ gánh. */
+  private veNha(v: ChoGanh, w: WorkerView): void {
+    const out = v.ganh?.ra.get(w);
+    if (out) {
+      out.load.parent?.remove(out.load);
+      disposeModel(out.load);
+      v.ganh!.ra.delete(w);
+    }
+    this.scene.remove(w.obj);
+    v.group.add(w.obj);
+    w.obj.position.set(w.spot.x, w.spot.y, w.spot.z);
+    w.obj.rotation.y = w.spot.ry;
+    w.obj.scale.setScalar(w.home ?? w.obj.scale.x);
+    w.obj.visible = true;
+    w.out = false;
+  }
+
+  /**
+   * Dân gánh hàng mỗi khung theo lịch thay phiên (`chuyenGanh`): ai tới lượt thì rời chỗ làm đi theo tuyến, gánh hàng
+   * tới nơi nhận, đứng đổ hàng, đi tay không về (thợ vác vật liệu, người bếp gùi nguyên liệu thì ngược lại: đi tay
+   * không, lấy hàng rồi mang về). Có trận trên kinh đô, giặc sắp tới hay đang xem bãi chiến thì mọi người ở chỗ làm.
+   * Người ở ngoài cảnh tự cắt theo khung nhìn như người đứng trên công trình.
+   */
+  private updateGanh(t: number): void {
+    const stop = this.cityFight || this.gatesShut || this.inField;
+    for (const v of this.views.values()) this.buocGanh(v, t, stop);
+    for (const v of this.sites.values()) this.buocGanh(v, t, stop);
+  }
+
+  private buocGanh(v: ChoGanh, t: number, stop: boolean): void {
+    const g = v.ganh;
+    if (!g) return;
+    const ball = this.workerBall;
+    const want = new Map<WorkerView, number>();
+    if (!stop) for (const r of chuyenGanh(v.people.length, g.tuyen.D, t, g.seed)) want.set(v.people[r.who], r.s);
+    for (const w of [...g.ra.keys()]) if (!want.has(w)) this.veNha(v, w);
+    for (const [w, s] of want) {
+      const out = g.ra.get(w) ?? this.raDuong(v, g, w);
+      const at = viTri(out.path, s, g.tuyen.D);
+      out.at = at;
+      const o = w.obj;
+      o.position.set(wx(at.x), this.walkY(at.x, at.z), wz(at.z));
+      o.rotation.y = at.ry;
+      const co = coHang(g.chieu, at);
+      out.load.visible = co;
+      ball.center.copy(o.position);
+      ball.center.y += WORKER_RADIUS / 2;
+      o.visible = this.viewFrustum.intersectsSphere(ball);
+      if (!o.visible) continue;
+      // Đứng đổ hàng, lấy hàng thì đứng yên; đi thì bước theo quãng đường đã đi cho chân khỏi trượt.
+      (o.userData.pose as Poser | undefined)?.({ act: 'walk', phase: at.dung ? 0 : at.quang * 11, stride: at.dung ? 0 : 0.42, time: t + w.phase });
+      if (co) tayGanh(o.userData.bones as Human, g.hang);
+    }
+  }
+
+  /**
+   * Dân `w` đứng trên công trình (hay giàn giáo) `group` có trong khung nhìn khung này thì hiện, trả true; ngoài khung
+   * thì ẩn. `group` là con trực tiếp của `buildingsRoot` (không dời, không xoay) nên ma trận của nó là ma trận thế giới,
+   * và đã `updateMatrix` trước khi gọi (công trình vừa dựng chưa qua lần vẽ nào, đang nảy hay mọc thì cỡ đổi mỗi khung).
+   */
+  private workerInView(w: WorkerView, group: THREE.Object3D): boolean {
+    const ball = this.workerBall;
+    ball.center.copy(w.obj.position).applyMatrix4(group.matrix);
+    ball.center.y += WORKER_RADIUS / 2;
+    const seen = this.viewFrustum.intersectsSphere(ball);
+    w.obj.visible = seen;
+    return seen;
+  }
+
   private animateWorker(w: WorkerView, t: number): void {
     const { obj, spot, phase } = w;
     const pose = obj.userData.pose as Poser | undefined;
@@ -2940,8 +3590,8 @@ export class World {
   }
 
   /**
-   * Xoay cảnh kinh đô một nấc 90° quanh tâm nhìn (1: theo chiều kim đồng hồ, −1: ngược lại).
-   * Ở bãi chiến thì không xoay. Trả về hướng nhìn mới (0–3).
+   * Xoay cảnh kinh đô một nấc 45° quanh tâm nhìn (1: theo chiều kim đồng hồ, −1: ngược lại).
+   * Ở bãi chiến thì không xoay. Trả về hướng nhìn mới (0–7).
    */
   rotateView(dir: 1 | -1): number {
     if (!this.inField) {
@@ -2974,6 +3624,7 @@ export class World {
 
   /** Vẽ lính hai bên của trận giữ kinh đô; null khi không có trận. */
   updateBattle(battle: Battle | null, dt: number): void {
+    this.cityFight = !!battle;
     this.raidView.update(battle, dt);
   }
 
@@ -2981,12 +3632,18 @@ export class World {
     return this.cityCam !== null;
   }
 
-  /** Sang bãi chiến với nền `terrain` và bố cục vật cản `bai` (`baiChien.ts`), hoặc về lại kinh đô khi `terrain` là null. */
-  showField(terrain: Terrain | null, bai: string | null = null): void {
+  /**
+   * Sang bãi chiến với nền `terrain` và bố cục vật cản `bai` (`baiChien.ts`), hoặc về lại kinh đô khi `terrain` là null.
+   * Nền đảo dựng đồn đảo cấp `donCap` sau lưng quân ta.
+   */
+  showField(terrain: Terrain | null, bai: string | null = null, donCap?: number): void {
     const v = this.view;
     if (terrain) {
-      this.field ??= new Battlefield();
-      this.field.setTerrain(terrain, bai);
+      if (!this.field) {
+        this.field = new Battlefield();
+        this.field.setShadows(this.bongDo);
+      }
+      this.field.setTerrain(terrain, bai, donCap);
       if (!this.cityCam) this.cityCam = { target: v.target.clone(), zoom: v.zoom, bounds: { ...v.bounds }, facing: v.facing };
       this.panGoal = null;
       // Bãi chiến vẽ cho hướng nhìn mặc định: quân ta ở dưới, giặc ở trên.
@@ -3026,10 +3683,90 @@ export class World {
     v.zoomToFit(FIELD.w + 1.5, FIELD.d * 0.62 + 3);
   }
 
+  /** Đang xem map dã ngoại. */
+  get inDa(): boolean {
+    return !!this.da;
+  }
+
+  /**
+   * Sang map dã ngoại `map` (dựng cảnh, đổi map thì dựng lại), hay về lại kinh đô khi `map` là null. Camera nhìn gần
+   * quanh đội, kéo được khắp map.
+   */
+  showDaNgoai(map: DaMapId | null, tuongDauCho?: Diem | null): void {
+    const v = this.view;
+    if (map) {
+      if (this.da?.map !== map) {
+        this.da?.dispose();
+        this.da = new DaNgoaiCanh(map);
+        this.da.setShadows(this.bongDo);
+      }
+      if (!this.cityCam) this.cityCam = { target: v.target.clone(), zoom: v.zoom, bounds: { ...v.bounds }, facing: v.facing };
+      this.panGoal = null;
+      v.setFacing(0);
+      // Map 80×80 xoay 45° quanh tâm: camera chỉ kéo tới chừng mép map.
+      v.bounds = { min: -46, max: 46 };
+      v.zoom = 1.1;
+      // Hiện ra ngay chỗ đội đứng, không trôi từ kinh đô tới.
+      const lead = tuongDauCho;
+      if (lead) v.target.copy(this.da.toScene(lead.x, lead.z));
+      v.apply();
+      this.daFollow = true;
+      return;
+    }
+    if (this.da) {
+      this.da.dispose();
+      this.da = undefined;
+    }
+    if (!this.cityCam) return;
+    v.bounds = this.cityCam.bounds;
+    v.target.copy(this.cityCam.target);
+    v.zoom = this.cityCam.zoom;
+    v.setFacing(this.cityCam.facing);
+    this.cityCam = null;
+  }
+
+  /** Camera đi theo đội (chạm đất, tự đánh); kéo cảnh (`onUserMove`) thì thôi theo tới khi `followDa`. */
+  private daFollow = true;
+  followDa(): void {
+    this.daFollow = true;
+  }
+
+  /** Vẽ trận trên map dã ngoại; camera trôi theo tướng đầu. */
+  updateDa(battle: Battle | null, dt: number): void {
+    const da = this.da;
+    if (!da) return;
+    const v = this.view;
+    const lead = battle ? tuongDau(battle) : undefined;
+    if (lead && this.daFollow) {
+      const p = da.toScene(lead.x, lead.z);
+      const k = Math.min(1, dt * 3);
+      v.target.x += (p.x - v.target.x) * k;
+      v.target.z += (p.z - v.target.z) * k;
+      v.apply();
+    }
+    da.update(battle, dt, v.target, v.zoom);
+  }
+
+  /** Điểm trên map dã ngoại ở chỗ chạm, hay null. */
+  pickDa(clientX: number, clientY: number): Diem | null {
+    if (!this.da) return null;
+    const p = this.view.groundPoint(clientX, clientY);
+    return p ? this.da.fromScene(p) : null;
+  }
+
+  /** Điểm màn hình (px) của điểm (x, z) trên map dã ngoại, để giao diện đặt chữ nổi. */
+  daScreenAt(x: number, z: number, lift = 1.6): { x: number; y: number } | null {
+    if (!this.da) return null;
+    const p = this.da.toScene(x, z).setY(lift).project(this.view.camera);
+    if (p.z > 1) return null;
+    const r = this.renderer.domElement.getBoundingClientRect();
+    return { x: r.left + ((p.x + 1) / 2) * r.width, y: r.top + ((1 - p.y) / 2) * r.height };
+  }
+
   /** Vẽ trận ngoài bãi đang diễn ra. Cảnh kết chương có điểm nhìn riêng (Rùa Vàng ở biển) thì camera lướt tới đó. */
   updateField(battle: Battle | null, dt: number): void {
     this.field?.update(battle, dt);
-    const focus = this.inField ? this.field?.focus() : null;
+    const focus = this.inField && !this.da ? this.field?.focus() : null;
     if (!focus) return;
     const v = this.view;
     v.bounds = { min: -30, max: 30 };
@@ -3169,12 +3906,21 @@ export class World {
       if (this.view.target.distanceTo(this.panGoal) < 0.01 || (dt > 0 && this.view.target.distanceTo(before) < 1e-4)) this.panGoal = null;
     }
 
-    for (const site of this.sites.values()) for (const w of site.people) this.animateWorker(w, t);
+    // Dân ngoài khung nhìn thì ẩn, khỏi vẽ và khỏi tính tư thế. Nhân vật có xương không tự cắt theo khung nhìn
+    // (`frustumCulled = false` ở `rig.ts`), nên không xét ở đây thì cả trăm dân kinh đô đều vẽ mỗi khung.
+    const cam = this.view.camera;
+    cam.updateMatrixWorld();
+    this.viewFrustum.setFromProjectionMatrix(this.frustumMat.multiplyMatrices(cam.projectionMatrix, cam.matrixWorldInverse));
+    for (const site of this.sites.values()) {
+      site.group.updateMatrix();
+      for (const w of site.people) if (!w.out && this.workerInView(w, site.group)) this.animateWorker(w, t);
+    }
     // Lính tập trong sân doanh trại đổi tư thế theo nhịp hô "một, hai"; thu nhỏ (`LITE_ZOOM`) thì đứng yên; có trận giữ
     // kinh đô thì đã ra trận (−1: không nhóm nào hiện). Đồng hồ cảnh có lúc âm (chụp thử tua giờ) nên lấy số dư dương.
     const beat = this.drillOut ? -1 : this.view.zoom < LITE_ZOOM ? 0 : ((Math.floor(t * DRILL_BEAT) % 2) + 2) % 2;
     for (const v of this.views.values()) {
-      for (const w of v.people) this.animateWorker(w, t);
+      if (v.people.length) v.group.updateMatrix();
+      for (const w of v.people) if (!w.out && this.workerInView(w, v.group)) this.animateWorker(w, t);
       if (v.dung) this.growView(v);
       if (v.popAge > 0) {
         v.popAge += dt;
@@ -3202,20 +3948,11 @@ export class World {
           const goal = v.group.userData.mo ? (child.userData.phai as number) : 0;
           child.position.y += (goal - child.position.y) * (1 - Math.exp(-dt * 2.5));
         }
-        if (child.userData.smoke) {
-          for (const puff of child.children) {
-            const k = (t * 0.35 + (puff.userData.phase as number)) % 1;
-            puff.position.set(Math.sin(k * 6 + puff.id) * 0.2, k * 1.6, Math.cos(k * 5) * 0.15);
-            puff.scale.setScalar(0.6 + k * 1.2);
-            const mat = (puff as THREE.Mesh).material as THREE.MeshBasicMaterial;
-            mat.opacity = 0.5 * (1 - k);
-            // Khói không nhận đèn: tối theo trời, không thì sáng trắng giữa đêm.
-            const goc = (mat.userData.mauGoc ??= mat.color.clone()) as THREE.Color;
-            mat.color.copy(goc).multiply(this.troi.unlit);
-          }
-        }
+        if (child.userData.smoke) this.puffSmoke(child, t);
       }
     }
+
+    this.updateGanh(t);
 
     if (this.merchantBoat) {
       this.merchantBoat.position.y = WATER_Y - 0.02 + Math.sin(t * 1.2) * 0.04;
@@ -3228,6 +3965,14 @@ export class World {
       if (!this.seaMist) this.seaLife.update(t, dt, this.view.target);
       this.updateSeaMist(dt);
       for (const boat of this.seaBoats.values()) this.moveSeaBoat(boat, t);
+      for (const boat of this.warBoats.values()) this.moveWarBoat(boat, t, dt);
+      // Đuốc, lửa hiệu đồn đảo lập lòe, khói lửa hiệu bốc lên.
+      for (const f of this.daoForts.values()) {
+        for (const child of f.obj.children) {
+          if (child.userData.flame) child.scale.y = 0.75 + 0.35 * Math.abs(Math.sin(t * 9 + child.id));
+          if (child.userData.smoke) this.puffSmoke(child, t);
+        }
+      }
       this.moveFleet(t);
     }
 
@@ -3285,6 +4030,7 @@ export class World {
       (this.turtle.userData.pose as Poser | undefined)?.({ act: 'walk', phase: t * 2.6 });
     }
 
+    this.updateThanThu(dt, t);
     this.updateStorm(dt);
     this.updateDen(t);
     this.updateFog(dt);
@@ -3345,7 +4091,7 @@ export class World {
       (this.selection.material as THREE.LineBasicMaterial).opacity = 0.6 + Math.sin(t * 5) * 0.4;
     }
 
-    this.renderer.render(this.inField && this.field ? this.field.scene : this.scene, this.view.camera);
+    this.renderer.render(this.da ? this.da.scene : this.inField && this.field ? this.field.scene : this.scene, this.view.camera);
   }
 
   /**
@@ -3443,7 +4189,7 @@ export class World {
     apMauToi(tr.unlit);
     // Ô báo ngập, khoảnh đang chọn, dải tường đang kéo là chỉ dẫn: ban đêm bù sáng cho dễ thấy (ban ngày giữ đúng 1).
     const bu = Math.min(2.5, SANG_NGAY / doSang(this.troiNen));
-    for (const m of [this.floodPreview, this.chunkPick, this.linePick]) (m.mesh.material as THREE.MeshLambertMaterial).color.setScalar(bu);
+    for (const m of [this.floodPreview, this.chunkPick, this.linePick, this.ganhZone]) (m.mesh.material as THREE.MeshLambertMaterial).color.setScalar(bu);
     this.toiGio = w.dem + 0.5 * (w.chieu + w.rang);
     this.toi = Math.max(this.toiGio, n);
     this.rain.visible = !this.inField && k > 0.05;

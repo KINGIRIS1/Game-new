@@ -3,6 +3,7 @@
 
 import * as THREE from 'three';
 import { C } from './palette';
+import type { ShapeBuilder } from './shapes';
 import type { ToonModel } from './toon';
 
 /** Các phần chất liệu để vẽ: ToonModel hay một xương của RigBuilder đều dùng được. */
@@ -11,10 +12,67 @@ export type Parts = Pick<ToonModel, 'plain' | 'band' | 'drum' | 'glow'>;
 /** Sắt ánh thép xanh cho sáng hơn bóng đổ; viền và đồ trang sức bằng đồng như đồ Đông Sơn. */
 export const IRON = 0x7b8a9c;
 export const IRON_DARK = 0x4d5868;
+/** Gờ sống sáng của lưỡi sắt. */
+const IRON_LIGHT = 0x9aa9bc;
 /** Da thuộc làm bao tên. */
 export const LEATHER = 0x8a5a33;
 /** Sừng làm cung (cung sừng): vàng ngà. */
 export const HORN = 0xe6d6a8;
+
+type Pt = [number, number];
+
+/** Đường cong bậc hai từ `a` qua điểm kéo `c` tới `b`, `n` đoạn (không lấy điểm đầu). */
+export function cong(a: Pt, c: Pt, b: Pt, n = 5): Pt[] {
+  const out: Pt[] = [];
+  for (let i = 1; i <= n; i++) {
+    const t = i / n;
+    const m = 1 - t;
+    out.push([m * m * a[0] + 2 * m * t * c[0] + t * t * b[0], m * m * a[1] + 2 * m * t * c[1] + t * t * b[1]]);
+  }
+  return out;
+}
+
+/** Viền đối xứng hai bên trục v: `nua` là nửa bên phải (u ≥ 0) từ chân lên mũi, nửa trái soi gương lại. */
+export function doiXung(nua: Pt[]): Pt[] {
+  const trai = nua
+    .slice()
+    .reverse()
+    .filter(([u]) => u > 1e-6)
+    .map(([u, v]) => [-u, v] as Pt);
+  return [...nua, ...trai];
+}
+
+/**
+ * Lưỡi dẹt dựng từ đường viền `pts` (u ngang, v dọc theo +y), mài vát hai mặt: mặt lưỡi đúng đường viền, sống giữa bề
+ * dày `day`, cạnh lưỡi nhô ra `sac` thành mép sắc bắt sáng. `yz`: mặt lưỡi nằm trong mặt y–z (u theo +z, dày theo x,
+ * như kiếm, đao); không thì nằm trong mặt x–y (u theo +x, dày theo z, như mũi giáo).
+ */
+export function luoiDet(p: ShapeBuilder, pts: Pt[], day: number, color: number, yz: boolean, x = 0, y = 0, z = 0, sac = 0.007): void {
+  const sh = new THREE.Shape(pts.map(([u, v]) => new THREE.Vector2(u, v)));
+  const lop = day * 0.42;
+  const loi = Math.max(0.002, day - 2 * lop);
+  const g = new THREE.ExtrudeGeometry(sh, { depth: loi, bevelEnabled: true, bevelThickness: lop, bevelSize: sac, bevelSegments: 1, curveSegments: 2 });
+  g.translate(0, 0, -loi / 2);
+  p.add(g, color, x, y, z, yz ? [0, -Math.PI / 2, 0] : [0, 0, 0]);
+}
+
+/** Tua lụa nhiều sợi buông quanh cán ở độ cao `y`: một nón tua và `n` sợi dải dẹt rủ xuống xòe ra. */
+export function tuaLua(p: ShapeBuilder, y: number, color: number, r = 0.05, len = 0.15, n = 5): void {
+  p.cone(r * 0.75, len * 0.55, color, 0, y - len * 0.25, 0, [Math.PI, 0, 0], 8);
+  for (let i = 0; i < n; i++) {
+    const a = (i / n) * Math.PI * 2 + 0.3;
+    p.box(0.016, len, 0.008, color, Math.cos(a) * r * 0.55, y - len * 0.55, Math.sin(a) * r * 0.55, [Math.sin(a) * 0.28, -a, -Math.cos(a) * 0.28]);
+  }
+}
+
+/** Chuôi quấn dây: lõi trụ màu `color`, `n` vòng dây sẫm `day` nổi chéo. Chuôi từ y0 lên y1. */
+function chuoi(p: ShapeBuilder, y0: number, y1: number, r: number, color: number, day: number, n = 4): void {
+  p.cyl(r, r * 1.08, y1 - y0, color, 0, (y0 + y1) / 2, 0, undefined, 8);
+  for (let i = 0; i < n; i++) {
+    const y = y0 + ((i + 0.5) / n) * (y1 - y0);
+    p.cyl(r + 0.004, r + 0.004, 0.012, day, 0, y, 0, [0.25, 0, 0], 8);
+  }
+}
 
 /** Giáo dài 1,3, tay nắm cách đuôi 0,25. Bậc 0 mũi đồng có tua đỏ chiến binh; bậc 1 lưỡi sắt to hơn; bậc 2 thêm dải lụa cờ đỏ. */
 export function spear(s: Parts, tier = 0, len = 1.3): void {
@@ -409,63 +467,244 @@ export function giaoTre(s: Parts): void {
 }
 
 /**
- * Gươm đồng của Trưng Trắc: lưỡi đồng hình lá dài 0,62, gờ sống sáng, chắn tay vàng, chuôi quấn dây đỏ, đốc tròn vàng,
- * tua đỏ buông ở đốc. Lưỡi sắc hướng +z.
+ * Gươm đồng Đông Sơn của Trưng Trắc: lưỡi đồng hình lá dài 0,46, chân lưỡi loe, eo thắt rồi phình nhẹ tới mũi, gờ sống
+ * sáng, hai rãnh máu; chắn tay vàng hình trăng khuyết hai sừng vểnh về phía lưỡi; chuôi quấn dây đỏ; đốc là mặt trống
+ * đồng nhỏ, tua đỏ buông ở đốc. Lưỡi trong mặt y–z, sắc hướng ±z; gốc ở chỗ tay nắm.
  */
 export function guomDong(s: Parts): void {
   const p = s.plain;
-  const len = 0.62;
-  // Lưỡi thon dần về mũi, phình nhẹ ở giữa như lưỡi kiếm Đông Sơn.
-  p.box(0.022, len * 0.75, 0.07, C.bronze, 0, 0.08 + len * 0.375, 0);
-  p.sphere(0.05, C.bronze, 0, 0.08 + len * 0.78, 0, [0.44, 2.2, 1], 8);
-  p.box(0.026, len * 0.95, 0.014, C.bronzeLight, 0, 0.08 + len * 0.47, 0);
-  s.band.box(0.03, 0.09, 0.075, C.gold, 0, 0.12, 0);
-  p.box(0.15, 0.035, 0.06, C.gold, 0, 0.065, 0);
-  p.cyl(0.02, 0.022, 0.12, C.red, 0, -0.01, 0, undefined, 6);
-  p.sphere(0.034, C.gold, 0, -0.085, 0, [1, 1, 1], 7);
-  p.cone(0.03, 0.12, C.red, 0, -0.15, 0, [Math.PI, 0, 0], 6);
+  const v0 = 0.085;
+  const L = 0.46;
+  luoiDet(p, doiXung([[0.04, v0], [0.046, v0 + 0.04], ...cong([0.046, v0 + 0.04], [0.026, v0 + 0.12], [0.03, v0 + 0.2], 3), ...cong([0.03, v0 + 0.2], [0.04, v0 + 0.34], [0, v0 + L], 5)]), 0.018, C.bronze, true);
+  luoiDet(p, doiXung([[0.008, v0], [0.007, v0 + L * 0.8], [0, v0 + L * 0.92]]), 0.024, C.bronzeLight, true, 0, 0, 0, 0.002);
+  for (const sd of [-1, 1]) p.box(0.021, L * 0.5, 0.005, C.bronzeDark, 0, v0 + L * 0.42, sd * 0.017);
+  // Chắn tay trăng khuyết vàng, hai sừng vểnh lên.
+  luoiDet(p, [[-0.075, 0.105], ...cong([-0.075, 0.105], [-0.05, 0.055], [0, 0.058], 3), ...cong([0, 0.058], [0.05, 0.055], [0.075, 0.105], 3), [0.06, 0.1], ...cong([0.06, 0.1], [0, 0.07], [-0.06, 0.1], 3)], 0.034, C.gold, true);
+  s.band.box(0.03, 0.03, 0.06, C.gold, 0, 0.085, 0);
+  chuoi(p, -0.07, 0.06, 0.02, C.red, C.woodDark);
+  s.drum.cyl(0.042, 0.042, 0.014, 0xffffff, 0, -0.085, 0, undefined, 12);
+  p.cyl(0.046, 0.04, 0.016, C.gold, 0, -0.095, 0, undefined, 12);
+  tuaLua(p, -0.105, C.red, 0.03, 0.12, 4);
 }
 
 /**
- * Cờ hiệu đỏ của Trưng Nhị: cán tre dài 1,5 (gốc ở chỗ tay nắm, cách đuôi 0,25), chóp đồng hình mũi giáo, tua vàng;
- * lá cờ đỏ dài chừng 0,7 × 0,5 bay về phía −z, ba khúc lệch nhau cho ra dáng cờ bay, viền dải hoa văn vàng, giữa
- * thêu chim Lạc vàng dang cánh, mỏ dài chĩa lên, đuôi cờ xẻ hai tua.
+ * Giáo Dạ Trạch của Triệu Quang Phục: cán tre sẫm có đốt dài `len`, tay nắm cách đuôi 0,25, quấn lau sậy chỗ tay
+ * nắm, đuôi bịt đồng; họng đồng hai đai, mũi sắt hình lá dài có gờ sống sáng; tua xanh đầm nhiều sợi ở cổ giáo.
+ */
+export function giaoDaTrach(s: Parts, len = 1.25): void {
+  const p = s.plain;
+  const grip = 0.25;
+  const top = len - grip;
+  p.cyl(0.018, 0.02, len, C.woodDark, 0, len / 2 - grip, 0, undefined, 7);
+  for (let y = -grip + 0.32; y < top - 0.12; y += 0.3) p.cyl(0.023, 0.023, 0.018, C.lauSayDark, 0, y, 0, undefined, 7);
+  chuoi(p, -0.07, 0.09, 0.022, C.lauSay, C.lauSayDark, 4);
+  p.cone(0.022, 0.06, C.bronzeDark, 0, -grip - 0.025, 0, [Math.PI, 0, 0], 6);
+  p.cyl(0.024, 0.02, 0.09, C.bronzeDark, 0, top + 0.035, 0, undefined, 7);
+  for (const y of [top + 0.005, top + 0.065]) s.band.cyl(0.027, 0.027, 0.02, C.bronze, 0, y, 0, undefined, 8);
+  const b0 = top + 0.075;
+  luoiDet(p, doiXung([[0.018, b0], ...cong([0.018, b0], [0.06, b0 + 0.06], [0.045, b0 + 0.15], 4), ...cong([0.045, b0 + 0.15], [0.03, b0 + 0.24], [0, b0 + 0.3], 4)]), 0.022, IRON, false);
+  luoiDet(p, doiXung([[0.008, b0], [0.007, b0 + 0.24], [0, b0 + 0.28]]), 0.03, IRON_LIGHT, false, 0, 0, 0, 0.002);
+  tuaLua(p, top - 0.01, C.tqp, 0.045, 0.15, 6);
+}
+
+/**
+ * Giáo dài Bạch Đằng của Ngô Quyền: cán gỗ lim dài `len`, đai bạc, đuôi cán bịt sắt nhọn; khâu sắt viền xanh sóng,
+ * tua đỏ nhiều sợi; lưỡi sắt dài hình lá có hai ngạnh móc ở chân lưỡi (như cọc Bạch Đằng), sống lưỡi bạc.
+ * Tay nắm cách đuôi cán `grip` (giáo dài cầm gần giữa).
+ */
+export function giaoBachDang(s: Parts, len = 1.7, grip = 0.5): void {
+  const p = s.plain;
+  const top = len - grip;
+  p.cyl(0.019, 0.021, len, C.goLim, 0, len / 2 - grip, 0, undefined, 7);
+  for (let y = -grip + 0.25; y < top - 0.15; y += 0.38) p.cyl(0.024, 0.024, 0.02, C.songBac, 0, y, 0, undefined, 7);
+  chuoi(p, -0.08, 0.08, 0.022, C.goLimDark, C.bachDang, 3);
+  p.cone(0.022, 0.1, IRON, 0, -grip - 0.045, 0, [Math.PI, 0, 0], 6);
+  p.cyl(0.025, 0.022, 0.09, IRON_DARK, 0, top + 0.035, 0, undefined, 7);
+  s.band.cyl(0.029, 0.029, 0.03, C.bachDang, 0, top + 0.02, 0, undefined, 8);
+  tuaLua(p, top - 0.02, C.red, 0.048, 0.16, 6);
+  const b0 = top + 0.075;
+  // Lưỡi lá dài, hai ngạnh móc chĩa xuống ở chân lưỡi.
+  luoiDet(
+    p,
+    doiXung([[0.016, b0], [0.07, b0 - 0.035], [0.05, b0 + 0.02], ...cong([0.05, b0 + 0.02], [0.05, b0 + 0.15], [0.034, b0 + 0.24], 4), ...cong([0.034, b0 + 0.24], [0.022, b0 + 0.31], [0, b0 + 0.36], 3)]),
+    0.022,
+    IRON,
+    false,
+  );
+  luoiDet(p, doiXung([[0.008, b0], [0.007, b0 + 0.3], [0, b0 + 0.34]]), 0.03, C.songBac, false, 0, 0, 0, 0.002);
+}
+
+/**
+ * Kiếm Như Nguyệt của Lý Thường Kiệt: lưỡi thép thẳng hai lưỡi dài 0,44, gờ sống sáng, mũi nhọn; chắn tay đồng vàng hai
+ * đầu cuộn vân mây; chuôi quấn dây đỏ, núm vàng hình hoa sen, tua đỏ. Lưỡi trong mặt y–z, gốc ở chỗ tay nắm.
+ */
+export function kiemNhuNguyet(s: Parts): void {
+  const p = s.plain;
+  const v0 = 0.09;
+  const L = 0.44;
+  luoiDet(p, doiXung([[0.028, v0], [0.023, v0 + L - 0.075], [0, v0 + L]]), 0.016, IRON, true);
+  luoiDet(p, doiXung([[0.007, v0], [0.006, v0 + L - 0.08], [0, v0 + L - 0.02]]), 0.022, C.songBac, true, 0, 0, 0, 0.002);
+  // Chắn tay vân mây: thanh cong, hai đầu cuộn tròn.
+  luoiDet(p, [...cong([-0.07, 0.075], [0, 0.04], [0.07, 0.075], 6), ...cong([0.07, 0.095], [0, 0.07], [-0.07, 0.095], 6)], 0.036, C.gold, true);
+  for (const sd of [-1, 1]) p.add(new THREE.TorusGeometry(0.018, 0.008, 5, 10), C.gold, 0, 0.098, sd * 0.078, [0, Math.PI / 2, 0]);
+  s.band.box(0.032, 0.03, 0.055, C.gold, 0, 0.09, 0);
+  chuoi(p, -0.07, 0.06, 0.019, C.nhuNguyet, C.nhuNguyetDark);
+  for (let i = 0; i < 6; i++) {
+    const a = (i / 6) * Math.PI * 2;
+    p.sphere(0.016, C.gold, Math.cos(a) * 0.016, -0.09, Math.sin(a) * 0.016, [1, 1.3, 1], 5);
+  }
+  p.sphere(0.018, C.gold, 0, -0.1, 0, [1, 1, 1], 6);
+  tuaLua(p, -0.11, C.nhuNguyet, 0.028, 0.12, 4);
+}
+
+/**
+ * Đại đao Vạn An của Mai Thúc Loan: cán gỗ sơn đen dài `len`, ba đai vàng, đuôi cán bịt sắt; khâu vàng hình miệng
+ * rồng ngậm lưỡi, tua đỏ nhiều sợi; lưỡi sắt to bản cong như trăng non, bụng lưỡi phình ra trước, mũi vểnh ngược về
+ * sau, sống lưỡi viền vàng có một gai móc. Tay nắm cách đuôi cán 0,3; lưỡi trong mặt y–z, sắc hướng +z.
+ */
+export function daoVanAn(s: Parts, len = 1.25): void {
+  const p = s.plain;
+  const top = len - 0.3;
+  p.cyl(0.022, 0.025, len, C.hacDe, 0, len / 2 - 0.3, 0, undefined, 7);
+  for (const y of [-0.1, 0.3, 0.68]) if (y < top - 0.1) p.cyl(0.029, 0.029, 0.026, C.gold, 0, y, 0, undefined, 7);
+  p.cone(0.026, 0.11, IRON, 0, -0.35, 0, [Math.PI, 0, 0], 6);
+  tuaLua(p, top - 0.02, C.red, 0.05, 0.16, 6);
+  // Khâu miệng rồng: bầu vàng, hàm trên vươn ra trước ngậm chân lưỡi, hai mắt đỏ.
+  s.band.cyl(0.036, 0.04, 0.07, C.gold, 0, top + 0.025, 0, undefined, 8);
+  p.sphere(0.042, C.gold, 0, top + 0.08, 0.012, [0.9, 0.8, 1.3], 8);
+  for (const sd of [-1, 1]) p.sphere(0.011, C.red, sd * 0.034, top + 0.09, 0.03, [1, 1, 1], 5);
+  const b = top + 0.07;
+  const edge: Pt[] = [[0.03, b], ...cong([0.03, b], [0.14, b + 0.12], [0.12, b + 0.3], 6), ...cong([0.12, b + 0.3], [0.1, b + 0.45], [-0.02, b + 0.56], 6)];
+  const back: Pt[] = [[-0.035, b + 0.44], ...cong([-0.035, b + 0.44], [-0.02, b + 0.36], [-0.03, b + 0.3], 3), [-0.075, b + 0.27], [-0.03, b + 0.24], [-0.03, b]];
+  luoiDet(p, [...edge, ...back], 0.022, IRON, true, 0, 0, 0, 0.009);
+  // Sống lưỡi vàng dọc lưng, gờ sáng chạy theo bụng lưỡi.
+  luoiDet(p, [[-0.032, b + 0.02], [-0.014, b + 0.02], [-0.014, b + 0.42], [-0.032, b + 0.44]], 0.03, C.gold, true, 0, 0, 0, 0.002);
+  luoiDet(p, [...cong([0.06, b + 0.08], [0.11, b + 0.2], [0.095, b + 0.33], 5), ...cong([0.075, b + 0.32], [0.085, b + 0.2], [0.045, b + 0.1], 5)], 0.026, IRON_LIGHT, true, 0, 0, 0, 0.002);
+}
+
+/**
+ * Gươm Núi Nưa của Bà Triệu: lưỡi sắt thẳng dài 0,52, mũi vát, gờ sống sáng; chắn tay vàng hai cánh vểnh như cánh
+ * chim, giữa khảm ngọc xanh; chuôi quấn dây xanh ngọc, đốc vàng hình búp, tua đỏ. Lưỡi trong mặt y–z.
+ */
+export function guomNuiNua(s: Parts): void {
+  const p = s.plain;
+  const v0 = 0.09;
+  const L = 0.52;
+  luoiDet(p, doiXung([[0.03, v0], [0.028, v0 + L * 0.82], ...cong([0.028, v0 + L * 0.82], [0.024, v0 + L * 0.94], [0, v0 + L], 3)]), 0.017, IRON, true);
+  luoiDet(p, doiXung([[0.007, v0], [0.006, v0 + L * 0.85], [0, v0 + L * 0.95]]), 0.023, IRON_LIGHT, true, 0, 0, 0, 0.002);
+  // Chắn tay cánh chim.
+  for (const sd of [-1, 1]) {
+    const w: Pt[] = [[0, 0.06], ...cong([0, 0.06], [0.06, 0.05], [0.1, 0.13], 4), [0.075, 0.115], ...cong([0.075, 0.115], [0.05, 0.085], [0, 0.098], 3)];
+    luoiDet(p, w.map(([u, v]) => [u * sd, v] as Pt), 0.03, C.gold, true);
+  }
+  s.band.box(0.034, 0.05, 0.05, C.gold, 0, 0.08, 0);
+  p.sphere(0.016, C.baTrieu, 0.018, 0.08, 0, [0.6, 1, 1], 6);
+  p.sphere(0.016, C.baTrieu, -0.018, 0.08, 0, [0.6, 1, 1], 6);
+  chuoi(p, -0.075, 0.06, 0.019, C.baTrieu, C.baTrieuDark);
+  p.sphere(0.032, C.gold, 0, -0.095, 0, [1, 1.25, 1], 8);
+  p.cone(0.016, 0.04, C.gold, 0, -0.135, 0, [Math.PI, 0, 0], 6);
+  tuaLua(p, -0.12, C.red, 0.028, 0.12, 4);
+}
+
+/** Cỡ cờ Lạc: cán dài `len`, tay nắm cách đuôi `grip`; lá cờ dài `w`, cao `h`. */
+const CO_LAC = { len: 1.5, grip: 0.25, w: 0.66, h: 0.42 } as const;
+
+/** Sóng của lá cờ Lạc ở chỗ t (0 mép cán, 1 đuôi cờ): lệch ngang x và rủ xuống y. Biên độ tăng dần ra đuôi. */
+function songCo(t: number): [number, number] {
+  return [Math.sin(t * 6.8) * 0.034 * Math.min(1, t * 1.6 + 0.1), -t * t * 0.07];
+}
+
+/** Uốn hình (đã ở đúng chỗ trong khung cờ, z ≤ 0 bay ra sau) theo sóng của lá cờ rồi thêm vào `p`. */
+function theoSong(p: ShapeBuilder, g: THREE.BufferGeometry, color: number): void {
+  const pos = g.getAttribute('position');
+  for (let i = 0; i < pos.count; i++) {
+    const [dx, dy] = songCo(-pos.getZ(i) / CO_LAC.w);
+    pos.setXYZ(i, pos.getX(i) + dx, pos.getY(i) + dy, pos.getZ(i));
+  }
+  g.computeVertexNormals();
+  p.add(g, color, 0, 0, 0);
+}
+
+/** Hộp vải mỏng `day` × `h` × `w` chia `n` khúc theo chiều dài, mép trước ở z0, giữa ở độ cao y, uốn theo sóng. */
+function vaiBay(p: ShapeBuilder, w: number, h: number, day: number, color: number, y: number, z0: number, n = 14): void {
+  const g = new THREE.BoxGeometry(day, h, w, 1, 2, n);
+  g.translate(0, y, z0 - w / 2);
+  theoSong(p, g, color);
+}
+
+/** Chim Lạc dang cánh nhìn ngang, mỏ dài chĩa về trước (+u), mào, đuôi xòe: đường viền (u, v), dài chừng 0,34. */
+const CHIM_LAC: Pt[] = [
+  [0.17, 0.045],
+  [0.05, 0.03],
+  [0.035, 0.065],
+  [0.05, 0.11],
+  [0.012, 0.085],
+  [-0.01, 0.045],
+  [-0.04, 0.05],
+  [-0.03, 0.14],
+  [-0.075, 0.16],
+  [-0.075, 0.07],
+  [-0.1, 0.04],
+  [-0.17, 0.075],
+  [-0.14, 0.01],
+  [-0.18, -0.035],
+  [-0.1, -0.025],
+  [-0.06, -0.05],
+  [-0.045, -0.015],
+  [0.02, -0.02],
+  [0.05, 0.012],
+];
+
+/**
+ * Cờ hiệu đỏ của Trưng Nhị: cán tre dài 1,5 (gốc ở chỗ tay nắm, cách đuôi 0,25) bịt đồng, quấn dây chỗ nắm; chóp
+ * mũi giáo đồng hình lá, tua vàng nhiều sợi. Lá cờ đỏ 0,66 × 0,42 bay về −z, lượn sóng và rủ dần ra đuôi, viền trên
+ * dưới dải vàng hoa văn, dải vàng dọc cán buộc ba nút dây; giữa cờ thêu chim Lạc vàng (hai mặt) trong vòng mặt trời
+ * hai vành, đuôi cờ xẻ nheo hai tua. Hoa văn thêu uốn theo sóng của lá cờ.
  */
 export function coLac(s: Parts): void {
   const p = s.plain;
-  const len = 1.5;
-  const top = len - 0.25;
-  p.cyl(0.02, 0.022, len, C.woodDark, 0, len / 2 - 0.25, 0, undefined, 6);
-  p.cyl(0.026, 0.026, 0.04, C.bronze, 0, top, 0, undefined, 6);
-  p.cone(0.035, 0.14, C.bronze, 0, top + 0.09, 0, undefined, 5);
-  p.cone(0.04, 0.12, C.gold, 0, top - 0.06, 0, [Math.PI, 0, 0], 6);
-  // Lá cờ ba khúc, khúc ngoài rủ thấp dần.
-  const fy = top - 0.32;
-  const h = 0.48;
-  const segs = 3;
-  const w = 0.72 / segs;
-  for (let i = 0; i < segs; i++) {
-    const z = -0.02 - w * (i + 0.5);
-    const y = fy - i * 0.025;
-    const rx = i % 2 ? 0.04 : -0.04;
-    p.box(0.018, h - i * 0.03, w + 0.01, C.red, Math.sin(i * 1.7) * 0.02, y, z, [rx, (i % 2 ? 1 : -1) * 0.12, 0]);
-    s.band.box(0.022, 0.05, w + 0.01, C.gold, Math.sin(i * 1.7) * 0.02, y + (h - i * 0.03) / 2 - 0.025, z, [rx, (i % 2 ? 1 : -1) * 0.12, 0]);
-    s.band.box(0.022, 0.05, w + 0.01, C.gold, Math.sin(i * 1.7) * 0.02, y - (h - i * 0.03) / 2 + 0.025, z, [rx, (i % 2 ? 1 : -1) * 0.12, 0]);
+  const { len, grip, w, h } = CO_LAC;
+  const top = len - grip;
+  p.cyl(0.019, 0.022, len, C.woodDark, 0, len / 2 - grip, 0, undefined, 7);
+  for (const y of [0.25, 0.6]) p.cyl(0.024, 0.024, 0.016, C.thatchDark, 0, y, 0, undefined, 7);
+  chuoi(p, -0.07, 0.09, 0.022, C.woodDark, C.gold, 3);
+  p.cyl(0.026, 0.02, 0.05, C.bronzeDark, 0, -grip + 0.02, 0, undefined, 7);
+  p.cyl(0.026, 0.022, 0.06, C.bronze, 0, top + 0.02, 0, undefined, 7);
+  luoiDet(p, doiXung([[0.014, top + 0.05], ...cong([0.014, top + 0.05], [0.05, top + 0.09], [0.03, top + 0.16], 3), [0, top + 0.22]]), 0.018, C.bronze, false);
+  tuaLua(p, top - 0.005, C.gold, 0.036, 0.12, 5);
+  const cy = top - 0.1 - h / 2;
+  const z0 = -0.02;
+  vaiBay(p, w, h, 0.014, C.red, cy, z0);
+  for (const sy of [-1, 1]) vaiBay(s.band, w, 0.045, 0.02, C.gold, cy + sy * (h / 2 - 0.022), z0);
+  vaiBay(s.band, 0.035, h, 0.02, C.gold, cy, z0, 2);
+  for (const dy of [-0.13, 0, 0.13]) p.add(new THREE.TorusGeometry(0.026, 0.008, 5, 10), C.gold, 0, cy + dy, -0.005, [0, Math.PI / 2, 0]);
+  // Đuôi nheo hai tua xẻ: tiếp lá cờ, uốn cùng sóng.
+  const ze = z0 - w + 0.005;
+  for (const k of [-1, 1]) {
+    const sh = new THREE.Shape([[0, k * 0.02], [0, k * (h / 2)], [-0.15, k * (h / 2 - 0.04) - 0.03], [-0.1, k * 0.1 - 0.02]].map(([u, v]) => new THREE.Vector2(u, v)));
+    const g = new THREE.ExtrudeGeometry(sh, { depth: 0.012, bevelEnabled: false });
+    g.translate(0, 0, -0.006);
+    g.rotateY(-Math.PI / 2);
+    g.translate(0, cy, ze);
+    theoSong(p, g, C.red);
   }
-  // Đuôi cờ xẻ hai tua.
-  for (const k of [-1, 1]) p.box(0.016, 0.1, 0.16, C.red, 0.02, fy - 0.06 + k * 0.13, -0.8, [k * 0.2, 0.1, 0]);
-  // Chim Lạc vàng thêu giữa lá cờ (hai mặt): thân thon, cổ vươn, mỏ dài, mào, cánh dang, đuôi xòe.
+  // Mặt trời hai vành và chim Lạc vàng giữa cờ, hai mặt.
+  const zc = z0 - w * 0.46;
   for (const sx of [-1, 1]) {
-    const x = sx * 0.014;
-    const cz = -0.3;
-    const cy = fy;
-    p.sphere(0.05, C.gold, x, cy, cz, [0.3, 0.75, 1.5], 6);
-    p.box(0.01, 0.12, 0.026, C.gold, x, cy + 0.08, cz + 0.06, [-0.5, 0, 0]);
-    p.cone(0.016, 0.16, C.gold, x, cy + 0.12, cz + 0.17, [Math.PI / 2 - 0.3, 0, 0], 4);
-    p.box(0.01, 0.07, 0.016, C.gold, x, cy + 0.17, cz + 0.06, [0.6, 0, 0]);
-    p.box(0.01, 0.05, 0.2, C.gold, x, cy + 0.06, cz - 0.02, [-0.9, 0, 0]);
-    p.box(0.01, 0.05, 0.18, C.gold, x, cy - 0.04, cz - 0.04, [0.6, 0, 0]);
-    p.box(0.01, 0.1, 0.06, C.gold, x, cy - 0.04, cz - 0.15, [0.3, 0, 0]);
+    const x = sx * 0.012;
+    for (const [r, t] of [[0.13, 0.008], [0.158, 0.006]] as const) {
+      const g = new THREE.TorusGeometry(r, t, 4, 28);
+      g.scale(1, 1, 0.4);
+      g.rotateY(Math.PI / 2);
+      g.translate(x, cy, zc);
+      theoSong(p, g, C.gold);
+    }
+    const sh = new THREE.Shape(CHIM_LAC.map(([u, v]) => new THREE.Vector2(u * 0.85, v * 0.85 - 0.03)));
+    const g = new THREE.ExtrudeGeometry(sh, { depth: 0.006, bevelEnabled: false });
+    g.translate(0, 0, -0.003);
+    g.rotateY(-Math.PI / 2);
+    g.translate(x, cy, zc);
+    theoSong(p, g, C.gold);
   }
 }
 

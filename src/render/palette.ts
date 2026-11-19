@@ -35,6 +35,14 @@ export const C = {
   iron: 0x4a4744,
   fire: 0xff8a2a,
   ember: 0xffd04d,
+  /** Hào quang tướng hiển linh (`heroes.ts`): Sơn Tinh ngọc bích, núi, tuyết mây; An Dương Vương mai rùa vàng; Cao Lỗ đồng; Hai Bà đỏ. */
+  haoNgoc: 0x7fe0b0,
+  haoNui: 0x4fbf86,
+  haoTuyet: 0xf4fbf6,
+  haoVang: 0xffc93c,
+  haoVangSam: 0xe0962a,
+  haoDong: 0xf0a850,
+  haoDo: 0xff5a3c,
   earth: 0xa77e4e,
   earthDark: 0x8a6440,
   enemyCloth: 0x3b3330,
@@ -42,6 +50,8 @@ export const C = {
   elephant: 0x8f8a86,
   horse: 0x7a5232,
   smoke: 0x5f5a55,
+  /** Khói đồn đảo hư: sẫm hơn `smoke` cho nổi trên nền cát trắng. */
+  smokeDao: 0x2e2a27,
   arrow: 0x3a2a1a,
   // Chương 2: Sơn Tinh, Thủy Tinh và thủy quái.
   shrimp: 0xd8673a,
@@ -59,6 +69,9 @@ export const C = {
   floodDeep: 0x6c7a5c,
   /** Nước êm vào sau đê qua cống mở, chở phù sa. */
   silt: 0xa07a4c,
+  /** Tô vùng gánh hàng đủ 100%: vùng có sẵn, và vùng của nơi đang đặt, đang chọn. */
+  ganhVung: 0xeef0a8,
+  ganhVungMoi: 0x8ee05a,
   siltDeep: 0x8e6a40,
   rain: 0xc8d8e0,
   storm: 0x9ea6a2,
@@ -72,6 +85,15 @@ export const C = {
   demonDark: 0x4c6158,
   tiger: 0xd9862e,
   tigerBelly: 0xf3e0b8,
+  // Quái dã ngoại: lợn rừng, báo gấm, rắn hổ mang chúa, cua đá.
+  boar: 0x5d4a3a,
+  boarDark: 0x35281f,
+  boarSnout: 0xb08474,
+  leopard: 0xd9a440,
+  cobra: 0x4d5a2c,
+  cobraBand: 0xd6c788,
+  crab: 0x7a6250,
+  crabDark: 0x3f3128,
   rooster: 0xf6f2e6,
   comb: 0xd8322a,
   trieuCloth: 0x2b2a30,
@@ -81,6 +103,53 @@ export const C = {
   hanRedDark: 0x8e2a1c,
   hanIron: 0x8a9096,
   hanIronDark: 0x5a6066,
+  // Quân Ngô (map dã ngoại Núi Nưa): áo xanh chàm, khác quân Hán đỏ son.
+  ngo: 0x2f5c7e,
+  ngoDark: 0x1d3a54,
+  // Thú rừng Núi Nưa: gấu ngựa lông đen mõm nâu nhạt, voi rừng da xám nâu.
+  // Quân Lương (map dã ngoại Đầm Dạ Trạch): áo vàng đất, giáp da nâu sẫm.
+  luong: 0xb98a3c,
+  luongDark: 0x6e4a24,
+  // Quân Đường (map dã ngoại Núi Vệ): áo lục sẫm, giáp sắt sáng có hộ tâm.
+  duongQuan: 0x3e6a4c,
+  duongQuanDark: 0x24402e,
+  // Thủy quân Nam Hán (map dã ngoại Bạch Đằng): áo tím than, viền đỏ sẫm.
+  namHan: 0x4b3a5e,
+  namHanDark: 0x2b2036,
+  namHanRed: 0x8c2f2f,
+  // Quân Tống (map dã ngoại sông Như Nguyệt): áo xám tro, giáp da đen, khăn đỏ thẫm; ngựa hồng của Quách Quỳ.
+  tong: 0x8a8d90,
+  tongDark: 0x2e2f33,
+  tongRed: 0x9e2a24,
+  horseRed: 0x9a4a2a,
+  // Thú bờ sông Như Nguyệt: nai lông nâu vàng gạc màu sừng, bò tót đen nâu chân trắng trán xám.
+  deer: 0xa0703e,
+  deerAntler: 0xc9b48a,
+  gaur: 0x2f2420,
+  gaurSock: 0xe6dcc2,
+  gaurBrow: 0x8a7f6c,
+  // Thú bãi bồi Bạch Đằng: rái cá lông nâu bóng, rùa biển mai nâu ô liu da xám xanh.
+  otter: 0x6e4a2c,
+  otterDark: 0x3c2716,
+  seaTurtle: 0x8a7c42,
+  seaTurtleDark: 0x352c14,
+  seaTurtleSkin: 0x87958a,
+  // Ngựa xám đốm của Dương Tư Húc.
+  horseGrey: 0x8e8a84,
+  // Thú rừng Núi Vệ: sói đỏ lông đỏ gạch, tê giác da xám nâu.
+  dhole: 0xb4552a,
+  dholeDark: 0x6a2e16,
+  rhino: 0x7d7670,
+  rhinoDark: 0x5c5650,
+  // Thú đầm Dạ Trạch: trăn gấm vàng nâu hoa nâu sẫm; trâu rừng đen xám, sừng màu ngà xám.
+  python: 0xb08a4a,
+  pythonSpot: 0x5a3e22,
+  buffalo: 0x403d3e,
+  buffaloMuzzle: 0x6a6462,
+  buffaloHorn: 0xcfc6b0,
+  bear: 0x2b2725,
+  bearMuzzle: 0xc89a6c,
+  voiRung: 0x857a6e,
   // Khăn, cờ đen quân Hán; mái ngói đen và thân gỗ nâu sẫm của lâu thuyền, thuyền Hán; giáp đồng đỏ và ngựa trắng
   // của Mã Viện.
   hanBlack: 0x2e2a28,
@@ -113,6 +182,35 @@ export const C = {
   trungRed: 0xbc1f2e,
   trungYellow: 0xe9b43a,
   trungYellowDark: 0xb98420,
+  // Tướng dã ngoại: Bà Triệu áo xanh ngọc núi Nưa, voi trắng một ngà.
+  baTrieu: 0x1f6e63,
+  baTrieuDark: 0x154d45,
+  voiTrang: 0xe4ddcf,
+  // Triệu Quang Phục: áo xanh đầm Dạ Trạch, áo lau sậy vàng úa, sương đầm khi cả đội ẩn.
+  tqp: 0x2f5b46,
+  tqpDark: 0x1f3d30,
+  lauSay: 0xc9b77a,
+  lauSayDark: 0x8f7c4c,
+  suongDam: 0xb9cdbb,
+  // Mai Thúc Loan (Mai Hắc Đế): da đen sạm, áo bào đen, giáp da trâu; vòng hô quân đỏ sẫm.
+  daSam: 0x8f5c3c,
+  hacDe: 0x26222b,
+  hacDeLight: 0x3d3745,
+  daTrau: 0x7a4e2c,
+  daTrauDark: 0x553419,
+  hoQuan: 0xc0392b,
+  // Ngô Quyền (Bạch Đằng): xanh biển cửa sông, sóng bạc, gỗ lim.
+  bachDang: 0x245a86,
+  bachDangLight: 0x3f80b4,
+  bachDangDark: 0x173a5a,
+  songBac: 0xe4eff5,
+  goLim: 0x6e3b26,
+  goLimDark: 0x4a2617,
+  // Lý Thường Kiệt (Như Nguyệt): đỏ son, lụa ngà, giấy cuộn thơ.
+  nhuNguyet: 0xb8352b,
+  nhuNguyetDark: 0x7a2420,
+  luaNga: 0xe6d6b2,
+  giayTho: 0xf1e6c8,
   aoNau: 0x7a5434,
   khanNau: 0x4d3423,
   quanPhuc: 0x25222a,
@@ -120,6 +218,20 @@ export const C = {
   cornDry: 0xc9b062,
   // Vòng sáng Hiệu triệu: xanh lá loang dưới chân quân ta được hồi máu.
   heal: 0x7fd88a,
+  // Hiệu ứng kỹ năng tướng (`hieuUng.ts`): lửa va chạm, ánh vàng, lõi trắng, ánh xanh hồi máu, bụi đất sáng, vệt chém.
+  fxLua: 0xff6a20,
+  fxVang: 0xffcf4a,
+  fxTrang: 0xfff4dc,
+  fxXanh: 0x6cf08c,
+  fxBui: 0xc9a36c,
+  fxVet: 0x3a2818,
+  // Dời non: phiến đá linh màu hổ phách (khác bóng núi xanh của Bốc đồi).
+  fxHo: 0xffa23a,
+  /** Ngày ẩn đêm ra: sương đầm xanh ngọc; Hắc Đế dấy binh: đỏ máu; Cọc Bạch Đằng: nước bạc; giặc nao núng: tím. */
+  fxSuong: 0x7fe8d2,
+  fxDo: 0xff3b2a,
+  fxNuoc: 0x5cc0ff,
+  fxTim: 0xa58cff,
   // Bốn nữ tướng của Hai Bà, mỗi người một màu áo (khác áo đỏ thắm, áo vàng của Hai Bà, khác cả nền cỏ): Lê Chân lam
   // biển, Thánh Thiên lục lá, Bát Nàn tím hoa cà, Phùng Thị Chính hồng sen; địu con vải chàm.
   nuLam: 0x2f6fbf,

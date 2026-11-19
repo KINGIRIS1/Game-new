@@ -39,6 +39,8 @@ export interface DuocSpot {
   z: number;
   kind: DuocKind;
   seed: number;
+  /** Lửa sẵn có đặt cao (bát lửa): độ cao mặt đất dưới lửa, vũng sáng nằm ở đó thay vì ngay dưới tâm lửa. */
+  dat?: number;
 }
 
 /** Cán đuốc cao chừng này (ô); ngọn lửa ở đầu cán. Người làm cao chừng 0,5 ô. */
@@ -352,9 +354,9 @@ export class DuocLayer {
       tmpM.compose(tmpP.set(s.x, s.y + top, s.z), tmpQ.identity(), tmpS.setScalar(s.kind === 'cot' ? 0.62 : 0.5));
       halos.setMatrixAt(i, tmpM);
       halos.setColorAt(i, tmpC.setRGB(s.seed, 0, 0));
-      // Vũng sáng nằm trên đất dưới chân đuốc (lửa sẵn có: dưới tâm lửa, nhỏ hơn).
-      const ground = s.kind === 'cot' ? s.y + 0.015 : s.y - 0.3;
-      tmpM.compose(tmpP.set(s.x, ground, s.z), tmpQ.identity(), tmpS.setScalar(s.kind === 'cot' ? 0.85 : 0.55));
+      // Vũng sáng nằm trên đất dưới chân đuốc (lửa sẵn có: dưới tâm lửa, nhỏ hơn; bát lửa: trên mặt đất dưới bát).
+      const ground = s.kind === 'cot' ? s.y + 0.015 : (s.dat ?? s.y - 0.3);
+      tmpM.compose(tmpP.set(s.x, ground, s.z), tmpQ.identity(), tmpS.setScalar(s.kind === 'cot' ? 0.85 : s.dat !== undefined ? 0.7 : 0.55));
       pools.setMatrixAt(i, tmpM);
       pools.setColorAt(i, tmpC.setRGB(s.seed, 0, 0));
     });

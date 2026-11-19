@@ -2,17 +2,32 @@
 
 import './style.css';
 import { play, setMuted, stopRally, unlockAudio } from './audio/sfx';
-import { skillReady, useSkill, type HeroKind } from './game/battle';
-import { attackFrom, beginPvp, canPractice, lootPvp, pushInput, scorePvp, stepPvp, validateArmy, type PvpRun } from './game/dauThanh';
-import { leaveBattlefield, retreat, startStage, unitAllowed } from './game/campaign';
+import { skillReady, startFieldBattle, stepField, useSkill, type Battle, type HeroKind } from './game/battle';
+import { canLen, capNhatDa, chonMap, daMo, datDoi, doiNay, moMap, quaCong, tichTreo, vaoDa, veKinhDo, type DaThuong } from './game/daNgoai';
+import { choAn, chonThu, thuCo } from './game/thanThu';
+import { chamMap, datTuDanh, stepDa, tuongDau } from './game/daNgoaiTran';
+import { boCuc } from './game/daNgoaiMap';
+import { attackFrom, beginPvp, canPractice, decodeSnapshot, encodeSnapshot, lootPvp, makeSnapshot, pushInput, scorePvp, stepPvp, validateArmy, type PvpRun } from './game/dauThanh';
+import { chayXemLai, newDauThanh, nhanKetQua, nhanTranCu, setHoSo, truBiDanh, type BiDanh, type DaNhan, type KetQuaMay, type MayTom, type TranTom } from './game/dauThat';
+import { kiemTen } from './game/mayChu';
+import { coMayChu, ghiMayBiet, mayBiet, nhanGoogle, taiKhoanMay, uidMay, type GoogleVe } from './mang/cauHinh';
+import { leaveBattlefield, markBaiHinted, needsBaiHint, retreat, startStage, unitAllowed } from './game/campaign';
 import { forgeArms } from './game/binhKhi';
+import { cuongHoa, khoaDo, macDo, monO, phanGiai, phanGiaiLoat, thaoDo } from './game/trangBi';
+import { HinhTuong, type MacTuong } from './render/hinhTuong';
+import { monTen, preloadMon } from './ui/trangBi';
 import { autoGuard, fieldCap, fitArmy, setGuard } from './game/doanhTrai';
 import { markNuHinted, nextNuHint } from './game/nuTuong';
 import { forgeNoThan, inChapter3, wallRings } from './game/coLoa';
-import { offer } from './game/tet';
+import { offer, tetOpen } from './game/tet';
+import { ganhPreview, giapDuong, markGanhHinted, needsGanhHint, vungGanh } from './game/vanChuyen';
 import { startMau } from './game/mau';
-import { advanceXay, askQuiz, canStartBuild, cancelJob, conLai, startBuild, startUpgrade, startWallUpgrade, startWalls, thoRanh, thoRanhSau, traLoi, viecOf, xayMs, type CongViec } from './game/xay';
-import { CAU_DO_IDS } from './text/cauDo';
+import { advanceXay, askQuiz, canStartBuild, cancelJob, conLai, startBuild, startDon, startThuyen, startUpgrade, startWallUpgrade, startWalls, thoRanh, thoRanhSau, traLoi, viecOf, xayMs, type CongViec } from './game/xay';
+import { danhDao, markDaoHinted, nextDaoHint, setDaoLinh, setupDao, suaDon } from './game/dao';
+import { CAU_DO, CAU_DO_IDS } from './text/cauDo';
+
+/** Câu đố sử thời kỳ Biển đảo, hỏi trước khi thợ đóng thuyền chiến, xây đồn đảo. */
+const CAU_BIEN_DAO = CAU_DO.filter((c) => c.ky === 'bienDao').map((c) => c.id);
 import { jobDoneText } from './ui/xay';
 import { inChapter4, mergeTowers } from './game/chuong4';
 import { feedGiong, forgeGear } from './game/giong';
@@ -20,12 +35,13 @@ import { inChapter2, offerGift } from './game/son';
 import { buyHuan } from './game/thuThach';
 import { markStory, pendingStory } from './game/story';
 import { footprintTop } from './game/terrain';
-import { BUILDINGS, QUIZ_TURNS, RESOURCE_IDS, STAGES, UNIT_TYPES, U_NO, isBridge, isDecor, isRoad, type BuildingType, type Cost, type NuTuongId, type ResourceId, type Row, type SkillId, type UnitType } from './game/defs';
+import { BUILDINGS, DA_MAP, DA_MAP_IDS, O_DO, QUIZ_TURNS, RESOURCE_IDS, STAGES, UNIT_TYPES, U_NO, isBridge, isDecor, isRoad, type BuildingType, type Cost, type DaMapId, type NuTuongId, type ResourceId, type Row, type SkillId, type UnitType } from './game/defs';
 import { CAMPS, benKiaOpen, bridgeSnap, campHero, campTier, canStartCamp, joinVillage, plotAt, poiAt, sendScout, setGarrison, startCamp } from './game/benKia';
 import type { QuanDaoId } from './game/bien';
 import type { Buoi } from './game/ngayDem';
 import { fmt } from './ui/format';
 import {
+  BATTLE_STEP,
   canAfford,
   dienLevel,
   placeUNo,
@@ -80,13 +96,47 @@ import { chapterOf, tomTat } from './game/manVao';
 import { TitleDrift } from './render/camera';
 import { HALF, RESOLUTIONS, World, type Resolution } from './render/world';
 import { formatClock, formatXay, vi } from './text/vi';
-import { Hud, buildingName, type HudAction, type WallShape } from './ui/hud';
+import { Hud, buildingName, type HudAction, type HudXemDao, type WallShape } from './ui/hud';
 import { khoNanTk, luuSau, moKhoNan } from './render/nanKho';
 import { DoLag, luatMoiGiay, tomLag, uoc60 } from './render/doLag';
 import { KHO_PHIEN_BAN, moSanWorker, nanConLai, nanTruoc, prewarmJobs } from './render/nanTruoc';
 import { ManVao } from './ui/manVao';
 import { preloadThumbs } from './ui/xayDung';
-import { dauResultHtml, targetSnapshot } from './ui/dauThanh';
+import {
+  dauAttackedHtml,
+  dauError,
+  dauJoined,
+  dauRealResultHtml,
+  dauReplayResultHtml,
+  dauResultHtml,
+  dauTaiKhoan,
+  foeName,
+  googleError,
+  foeOf,
+  lichOf,
+  lucText,
+  replayNames,
+  targetSnapshot,
+  type DauView,
+} from './ui/dauThanh';
+
+/** Trận Đấu thật đang đánh: trận máy chủ mở, đối thủ là kinh đô máy không, kết quả máy chủ (khi đã gửi). */
+/** Trận Đấu thành đang xem lại (PR 6): trận, vai của mình trong trận, tốc độ xem, có mở từ bảng Đấu thành không. */
+interface DauXem {
+  tran: TranTom;
+  vai: 'danh' | 'giu';
+  speed: number;
+  panel: boolean;
+}
+
+interface DauReal {
+  tran: string;
+  bot: boolean;
+  sending: boolean;
+  ket?: KetQuaMay;
+  nhan?: DaNhan | null;
+  fail?: { ma: string; chiTiet?: string };
+}
 
 /**
  * Chạm từng ô để dựng lũy, gài bẫy, đắp đê, đắp thành Cổ Loa, trải đường, đặt đồ trang trí một ô, dựng ụ nỏ
@@ -117,6 +167,8 @@ const AUTOSAVE_MS = 10_000;
 const RESOLUTION_KEY = 'thoi-dai-van-lang/resolution';
 /** Ngày đêm bật hay tắt (luôn ban ngày), lưu riêng trên từng máy như độ nét. */
 const NGAY_DEM_KEY = 'thoi-dai-van-lang/ngay-dem';
+/** Bóng đổ bật hay tắt (máy yếu tắt cho nhẹ), lưu riêng trên từng máy như độ nét. */
+const BONG_DO_KEY = 'thoi-dai-van-lang/bong-do';
 /** Cách kéo đắp tường lần trước (dải thẳng hay khung chữ nhật), lưu riêng trên từng máy. */
 const WALL_SHAPE_KEY = 'thoi-dai-van-lang/wall-shape';
 
@@ -161,6 +213,22 @@ function loadNgayDem(): boolean {
   }
 }
 
+function loadBongDo(): boolean {
+  try {
+    return localStorage.getItem(BONG_DO_KEY) !== 'tat';
+  } catch {
+    return true;
+  }
+}
+
+function saveBongDo(on: boolean): void {
+  try {
+    localStorage.setItem(BONG_DO_KEY, on ? 'bat' : 'tat');
+  } catch {
+    // Không lưu được thì lần sau bóng đổ bật như mặc định.
+  }
+}
+
 function saveNgayDem(on: boolean): void {
   try {
     localStorage.setItem(NGAY_DEM_KEY, on ? 'bat' : 'tat');
@@ -172,7 +240,31 @@ function saveNgayDem(on: boolean): void {
 /** Chờ trình duyệt vẽ xong một khung, để màn hình vào game kịp hiện trước khi dựng cảnh 3D (việc nặng, chạy liền một mạch). */
 const nextPaint = () => new Promise<void>((done) => requestAnimationFrame(() => setTimeout(done, 0)));
 
+/**
+ * Hỏi máy chủ cho khối tài khoản: đã bật đăng nhập Google chưa, và bản lưu trên mây của người đang đăng nhập Google ở
+ * máy này (không kèm mã lưu; chưa đăng nhập Google thì `undefined`). `hong`: chưa hỏi được bản lưu trên mây.
+ */
+async function hoiMay(): Promise<{ coGoogle: boolean; may: MayTom | null | undefined; hong: boolean }> {
+  const m = await import('./mang/mayChu');
+  const google = !!taiKhoanMay()?.google;
+  const [coGoogle, may] = await Promise.all([
+    m.coGoogle(),
+    google
+      ? m.taiMay(true).then(
+          (r) => r.may,
+          () => undefined,
+        )
+      : undefined,
+  ]);
+  return { coGoogle, may, hong: google && may === undefined };
+}
+
 async function start(): Promise<void> {
+  // Vừa từ trang Google về (gắn Google hay đăng nhập): cất phiên trước khi game đọc phiên ở máy này.
+  const googleVe = nhanGoogle();
+  // Hỏi máy chủ về tài khoản ngay từ đầu, song song với lúc dựng cảnh, cho màn hình vào game có sẵn câu trả lời.
+  const hoiSom = coMayChu() ? hoiMay() : null;
+  hoiSom?.catch(() => undefined);
   const canvas = document.querySelector<HTMLCanvasElement>('#scene')!;
   const hudRoot = document.querySelector<HTMLElement>('#hud')!;
 
@@ -185,15 +277,18 @@ async function start(): Promise<void> {
   let prewarmKey = '';
   const prewarm = () => {
     const sea = dienLevel(state) >= 8;
-    const key = `${chapterOf(state)}|${Object.values(state.arms).join()}|${sea}`;
+    const thu = thuCo(state);
+    const key = `${chapterOf(state)}|${Object.values(state.arms).join()}|${sea}|${thu.join()}`;
     if (key === prewarmKey) return;
     prewarmKey = key;
-    nanTruoc(prewarmJobs(chapterOf(state), state.arms, sea));
+    nanTruoc(prewarmJobs(chapterOf(state), state.arms, sea, thu));
   };
 
   // Màn hình vào game hiện ngay; nút Chơi tiếp chỉ bấm được khi cảnh đã dựng xong (`manVao.ready`).
   const manVao = new ManVao(document.body, state.settings.muted, {
     enter: () => enter(),
+    google: (khac) => void googleTuManVao(khac),
+    load: () => void taiTuManVao(),
     mute: () => {
       state.settings.muted = !state.settings.muted;
       setMuted(state.settings.muted);
@@ -215,11 +310,24 @@ async function start(): Promise<void> {
   }
   world.setResolution(loadResolution());
   world.setNgayDem(loadNgayDem(), true);
+  world.setBongDo(loadBongDo());
 
   let mode: Mode = { kind: 'view', selected: null };
   let saveWarned = false;
 
   const hud = new Hud(hudRoot, handle, () => state);
+  // Hình tướng mặc đồ, ảnh bán thân cho bảng tướng: vẽ lúc cần bằng renderer của cảnh, xong thì dựng lại bảng.
+  const hinhTuong = new HinhTuong(world.renderer);
+  hinhTuong.onReady = () => hud.refreshTuong(state);
+  const macOf = (hero: HeroKind): MacTuong => {
+    const mac: MacTuong = {};
+    for (const o of O_DO) {
+      const m = monO(state, hero, o);
+      if (m) mac[o] = `${m.bo}-${m.o}`;
+    }
+    return mac;
+  };
+  hud.anhTuong = { hinh: (hero) => hinhTuong.get(hero, macOf(hero)), ban: (hero) => hinhTuong.ban(hero, macOf(hero)) };
 
   const save = () => {
     if (!saveToStorage(localStorage, state) && !saveWarned) {
@@ -254,11 +362,64 @@ async function start(): Promise<void> {
     hud.toast(vi.nuTuong.hint[nu], false, 8000);
   };
 
+  /** Đóng đảo: Lạc hầu gợi ý một lần khi có bến thuyền khơi cấp 3, một lần khi Mã Viện sang mà đã có đồn đảo. */
+  const showDaoHint = () => {
+    const k = nextDaoHint(state);
+    if (!k) return;
+    markDaoHinted(state, k);
+    hud.toast(vi.bien.hint[k], false, 8000);
+  };
+
+  /** Trận ngoài bãi đầu tiên có vật cản: thẻ màn, thẻ đồn thôi kèm lời Lạc hầu nhắc về vật cản. */
+  const seenBai = () => {
+    if (needsBaiHint(state)) markBaiHinted(state);
+  };
+
   /** Cây dại, tảng đá đầu tiên mọc: Lạc hầu gợi ý một lần cách dọn. */
   const showCayDaHint = () => {
     if (!state.cayDa.list.length || state.hinted.includes('cayDa')) return;
     state.hinted = [...state.hinted, 'cayDa'];
     hud.toast(vi.ui.cayDaHint, false, 8000);
+  };
+
+  /** Lần đầu có món đồ: Lạc hầu gợi ý một lần việc mặc đồ cho tướng. */
+  const showDoHint = () => {
+    if (!state.trangBi.kho.length || state.hinted.includes('trangBi')) return;
+    state.hinted = [...state.hinted, 'trangBi'];
+    hud.toast(vi.trangBi.hint, false, 8000);
+  };
+
+  /** Dã ngoại vừa mở (có tướng đầu tiên về): Lạc hầu báo một lần chỗ vào (chip 🌿 ở bản đồ phó bản). */
+  const showDaHint = () => {
+    if (!daMo(state)) return;
+    if (!state.hinted.includes('daNgoai')) {
+      state.hinted = [...state.hinted, 'daNgoai'];
+      hud.toast(vi.daNgoai.hint, false, 8000);
+    } else {
+      // Đủ cấp sang map mới (Núi Nưa, Đầm Dạ Trạch, Núi Vệ): báo một lần map cao nhất vừa đủ cấp; các map thấp hơn
+      // coi như đã báo (lên cấp nhanh thì khỏi báo map đã qua).
+      const moi = DA_MAP_IDS.filter((id) => vi.daNgoai.hintMap[id] && state.daNgoai.cap >= DA_MAP[id].cong);
+      const cao = moi[moi.length - 1];
+      if (cao && !state.hinted.includes(`daNgoai${cao}`)) {
+        state.hinted = [...state.hinted, ...moi.map((id) => `daNgoai${id}`).filter((k) => !state.hinted.includes(k))];
+        hud.toast(vi.daNgoai.hintMap[cao]!, false, 9000);
+      }
+    }
+  };
+
+  /** Thần thú vừa về (chim Lạc khi dã ngoại mở, các con sau khi hạ boss map 1–4): Lạc hầu báo một lần mỗi con. */
+  const showThuHint = () => {
+    const moi = thuCo(state).find((k) => !state.hinted.includes(`thanThu_${k}`));
+    if (!moi) return;
+    state.hinted = [...state.hinted, `thanThu_${moi}`];
+    hud.toast(moi === 'thuLac' ? vi.thanThu.hint : vi.thanThu.hintVe[moi], false, 9000);
+  };
+
+  /** Lần đầu có công trình làm ra chưa đủ vì xa kho: Lạc hầu gợi ý một lần việc gánh hàng, trải đường. */
+  const showGanhHint = () => {
+    if (!needsGanhHint(state)) return;
+    markGanhHinted(state);
+    hud.toast(vi.ui.ganhHint, false, 8000);
   };
 
   /** Chạm vào cây dại, tảng đá ở (x, z): dân dọn, được chút gạo hay đất đá. */
@@ -295,13 +456,23 @@ async function start(): Promise<void> {
   };
 
   /** Gọi sau mọi thao tác: lưu, vẽ lại cảnh và giao diện. */
+  /** Bóng công trình đang ở chỗ đặt được: vùng gánh hàng tô cả phần nơi nhận mới phủ thêm. */
+  let zoneAt = false;
+
   const commit = () => {
     showHint();
     showNuHint();
+    showDaoHint();
     showCayDaHint();
+    showDoHint();
+    showDaHint();
+    showThuHint();
+    showGanhHint();
+    seenBai();
     save();
     world.sync(scene());
     refreshFloodPreview();
+    refreshGanhZone();
     refreshUi();
   };
 
@@ -315,8 +486,8 @@ async function start(): Promise<void> {
       .map((r) => `${vi.resources[r].icon} +${cost[r]}`)
       .join('  ');
 
-  const showOfflineIfLong = (ms: number, gained: ReturnType<typeof applyOffline>['gained'], built = 0) => {
-    if (ms >= OFFLINE_NOTICE_MS && (built > 0 || RESOURCE_IDS.some((r) => gained[r] >= 1))) hud.showOffline(ms, gained, built);
+  const showOfflineIfLong = (ms: number, gained: ReturnType<typeof applyOffline>['gained'], built = 0, da?: DaThuong) => {
+    if (ms >= OFFLINE_NOTICE_MS && (built > 0 || !!da?.giet || RESOURCE_IDS.some((r) => gained[r] >= 1))) hud.showOffline(ms, gained, built, da, state.daNgoai.cap);
   };
 
   // ---------- Chế độ đặt công trình ----------
@@ -339,8 +510,26 @@ async function start(): Promise<void> {
         ? canMove(state, mode.moving, mode.x, mode.z)
         : canStartBuild(state, mode.type, mode.x, mode.z);
     world.setGhost(mode.type, mode.x, mode.z, check.ok, footprintTop(state, mode.type, mode.x, mode.z), mode.rot);
-    hud.setPlaceValid(check.ok, check.ok ? undefined : vi.reasons[check.reason]);
+    const ganh = check.ok ? ganhPreview(state, mode.type, mode.x, mode.z, mode.moving) : null;
+    // Nhắc khi đặt (không chặn): gánh về được bao nhiêu phần, và công trình chưa giáp đường.
+    const notes: string[] = [];
+    if (ganh !== null) notes.push(vi.ui.ganhPlace(Math.round(ganh * 100)));
+    if (check.ok && giapDuong(state, mode.type, mode.x, mode.z) === false) notes.push(vi.ui.noRoad);
+    hud.setPlaceValid(check.ok, check.ok ? undefined : vi.reasons[check.reason], notes.length ? notes.join(' · ') : undefined);
+    zoneAt = check.ok;
+    refreshGanhZone();
   };
+
+  /**
+   * Tô vùng gánh hàng đủ 100% (`vungGanh`): khi đặt, dời công trình có người gánh hàng hay nơi nhận (kho, bếp, Điện),
+   * và khi chọn kho, Điện, bếp.
+   */
+  function refreshGanhZone(): void {
+    let vung: Uint8Array | null = null;
+    if (mode.kind === 'place') vung = vungGanh(state, zoneAt ? { type: mode.type, x: mode.x, z: mode.z, skip: mode.moving } : { type: mode.type, skip: mode.moving });
+    else if (mode.kind === 'view' && mode.selected !== null) vung = vungGanh(state, { id: mode.selected });
+    world.setGanhZone(vung);
+  }
 
   /**
    * Tô vùng sẽ ngập ở mùa lũ tới (xanh là nước tràn, vàng là nước vào qua cống mở): khi đắp đê, đắp đất, đặt cống,
@@ -371,6 +560,7 @@ async function start(): Promise<void> {
     world.showGrid(false);
     hud.setMode('view');
     refreshFloodPreview();
+    refreshGanhZone();
   };
 
   const select = (id: number | null) => {
@@ -387,25 +577,497 @@ async function start(): Promise<void> {
       hud.closeSheet();
     }
     refreshFloodPreview();
+    refreshGanhZone();
   };
 
   /**
    * Trận Đấu thành đang đánh thử (không nằm trong state, không lưu): trận, tên kinh đô bị đánh, camera trước trận để
    * về lại đúng chỗ, lúc trận xong (để bảng kết quả hiện trễ một chút cho kịp thấy đòn cuối).
    */
-  let pvp: { run: PvpRun; name: string; cam: { x: number; z: number; zoom: number }; doneAt: number; shown: boolean } | null = null;
+  let pvp: {
+    run: PvpRun;
+    name: string;
+    cam: { x: number; z: number; zoom: number };
+    doneAt: number;
+    shown: boolean;
+    real?: DauReal;
+    /** Đang xem lại một trận đã xong (PR 6): trận, vai của mình, tốc độ xem, có mở từ bảng Đấu thành không. */
+    xem?: DauXem;
+  } | null = null;
+  /**
+   * Đang xem lại trận giặc đánh đảo (trận dựng lại từ trận đã ghi, không nằm trong state): chạy theo khung hình ở tốc độ
+   * xem, trọn bước `BATTLE_STEP` (`du`: phần lẻ chưa đủ một bước).
+   */
+  let xemDao: (HudXemDao & { du: number }) | null = null;
+  /** Thôi xem lại trận đảo: về kinh đô. */
+  const thoiXemDao = () => {
+    if (!xemDao) return;
+    xemDao = null;
+    hud.setXemDao(null);
+    world.showField(null);
+    refreshUi();
+  };
   /** Cảnh đang vẽ: kinh đô bị đánh khi đang Đấu thành, không thì kinh đô của mình. */
   function scene(): GameState {
     return pvp?.run.def ?? state;
   }
 
+  // ---------- Đấu thật (máy chủ Đấu thành, PR 5) ----------
+  // Lớp gọi mạng chỉ nạp khi cần: mở bảng Đấu thành, hay mở game khi đã tham gia. Mọi lỗi mạng chỉ báo một dòng.
+
+  const mang = () => import('./mang/mayChu');
+
+  /** Lỗi gọi máy chủ ra mã cho bảng (lỗi lạ trong máy khách cũng coi là lỗi máy chủ). */
+  const loiOf = (e: unknown): { ma: string; chiTiet?: string } =>
+    e && typeof e === 'object' && 'ma' in e && typeof (e as { ma: unknown }).ma === 'string'
+      ? { ma: (e as { ma: string }).ma, chiTiet: (e as { chiTiet?: string }).chiTiet }
+      : (console.error(e), { ma: 'mayChu' });
+
+  /** Máy chủ không còn người chơi này (đã rời ở chỗ khác, phiên mất): bỏ phần Đấu thành, bảng hiện Tham gia. */
+  const dropJoin = (ma: string) => {
+    if (ma !== 'chuaThamGia' && ma !== 'chuaDangNhap') return false;
+    delete state.dauThanh;
+    commit();
+    return true;
+  };
+
+  /** Bảng Đấu thành đang mở thì dựng lại (sau mỗi lần máy chủ trả lời). */
+  const refreshDau = () => hud.dauView() && hud.refreshCampaign(state, true);
+
+  /** Lỗi một việc gọi máy chủ từ bảng Cài đặt: báo một dòng. */
+  const mayLoi = (e: unknown) => {
+    play('error');
+    hud.toast(dauError(loiOf(e)), true);
+  };
+
+  /** Chạy một việc gọi máy chủ từ bảng Đấu thành: khóa nút, hiện chữ chờ, ghi lỗi vào bảng. */
+  const dauBusy = async (view: DauView, busy: NonNullable<DauView['that']['busy']>, job: () => Promise<void>) => {
+    if (view.that.busy) return;
+    view.that.busy = busy;
+    view.that.loi = null;
+    refreshDau();
+    try {
+      await job();
+    } catch (e) {
+      const loi = loiOf(e);
+      if (!dropJoin(loi.ma)) view.that.loi = loi;
+      play('error');
+    } finally {
+      view.that.busy = null;
+      refreshDau();
+    }
+  };
+
+  /** Lần tải bản chụp gần nhất (giờ máy), để tải lại mười phút một lần. */
+  let snapAt = 0;
+  const SNAP_MS = 10 * 60_000;
+  /** Bảng Bị đánh chờ hiện (đang đánh hay đang mở bảng khác). */
+  let attackedQueue: { bi: BiDanh[]; cu: { tran: TranTom; nhan: DaNhan }[] } | null = null;
+  let syncing: Promise<void> | null = null;
+  let syncFailShown = false;
+
+  const showAttacked = () => {
+    if (!attackedQueue || pvp || hud.modalOpen || hud.storyOpen) return;
+    hud.showDauAttacked(dauAttackedHtml(state, attackedQueue.bi, attackedQueue.cu));
+    attackedQueue = null;
+    play('error');
+  };
+
+  /**
+   * Đồng bộ với máy chủ (mở game, mười phút một lần, mở bảng Đấu thật): gửi lại trận đánh dở, hỏi hồ sơ và các trận,
+   * trừ của các trận bị đánh, nhận kết quả các trận đánh dở, rồi tải bản chụp kinh đô (mười phút một lần).
+   */
+  const dongBo = (opts: { snap?: boolean; quiet?: boolean } = {}): Promise<void> => {
+    if (!coMayChu() || !dauJoined(state) || pvp) return Promise.resolve();
+    syncing ??= (async () => {
+      const m = await mang();
+      const d = state.dauThanh!;
+      if (d.dangDanh) {
+        // Trận đánh dở (thoát giữa trận, mất mạng lúc gửi): gửi các lần bấm đã có; kết quả nhận ở dưới cùng các trận cũ.
+        await m.xong(d.dangDanh.tran, d.dangDanh.bam).catch((e) => {
+          if (loiOf(e).ma !== 'khongCoTran') throw e;
+        });
+        delete d.dangDanh;
+      }
+      const t = await m.toi();
+      if (state.dauThanh !== d) return;
+      setHoSo(d, t.toi);
+      const bi = truBiDanh(state, t.biDanh);
+      const cu = nhanTranCu(state, t.daDanh);
+      const view = hud.dauView();
+      if (view) view.that.lich = lichOf(t.biDanh, t.daDanh);
+      commit();
+      if (bi.length || cu.length) {
+        attackedQueue = { bi: [...(attackedQueue?.bi ?? []), ...bi], cu: [...(attackedQueue?.cu ?? []), ...cu] };
+        if (bi.length && !opts.quiet) hud.toast(vi.dauThanh.syncNew(bi.length), true);
+        showAttacked();
+      }
+      if (opts.snap !== false && Date.now() - snapAt >= SNAP_MS) {
+        snapAt = Date.now();
+        await m.taiBanChup(encodeSnapshot(makeSnapshot(state)));
+        // Đã gắn Google: cùng nhịp mười phút, lưu game lên mây.
+        await luuLenMay({ quiet: true });
+      }
+    })()
+      .catch((e) => {
+        const loi = loiOf(e);
+        if (dropJoin(loi.ma)) return;
+        if (!syncFailShown && !opts.quiet) hud.toast(loi.ma === 'capNhat' ? vi.dauThanh.errors.capNhat : vi.dauThanh.syncFail, true);
+        syncFailShown = true;
+        const view = hud.dauView();
+        if (view) view.that.loi = loi;
+      })
+      .finally(() => {
+        syncing = null;
+        refreshDau();
+      });
+    return syncing;
+  };
+
+  /** Gửi các lần bấm trận thật lên máy chủ, nhận kết quả (quân mất, của cướp), hiện bảng kết quả. */
+  const sendReal = async () => {
+    const real = pvp?.real;
+    if (!real || real.sending) return;
+    real.sending = true;
+    real.fail = undefined;
+    showReal();
+    try {
+      const m = await mang();
+      const r = await m.xong(real.tran, pvp!.run.inputs);
+      real.ket = r.ketQua;
+      real.nhan = nhanKetQua(state, real.tran, r.ketQua);
+      if (state.dauThanh && r.toi) setHoSo(state.dauThanh, r.toi);
+      play(r.ketQua.sao ? 'upgrade' : 'error');
+      commit();
+    } catch (e) {
+      real.fail = loiOf(e);
+      play('error');
+    } finally {
+      real.sending = false;
+      showReal();
+    }
+  };
+
+  /** Bảng kết quả trận thật theo lúc này: chờ máy chủ, chưa gửi được, hay kết quả. */
+  const showReal = () => {
+    const real = pvp?.real;
+    if (!real || !pvp!.shown) return;
+    const base = { name: pvp!.name, bot: real.bot };
+    if (real.ket) hud.showDauResult(dauRealResultHtml({ ...base, ket: real.ket, nhan: real.nhan ?? null }));
+    else if (real.fail && !real.sending) hud.showDauResult(dauRealResultHtml({ ...base, fail: real.fail }));
+    else hud.showDauResult(dauRealResultHtml({ ...base, wait: true }));
+  };
+
+  // ---------- PR 6: tài khoản Google, bản lưu trên mây ----------
+
+  const tk = dauTaiKhoan;
+
+  /** Bản lưu trên mây có khác bản máy này biết không: máy khác đã lưu sau, máy này vừa đăng nhập, hay vừa đổi bản lưu. */
+  const xetLech = () => {
+    const acc = taiKhoanMay();
+    tk.lech = !!acc?.google && !!tk.may && mayBiet(acc.uid)?.ban !== tk.may.ban;
+  };
+
+  /** Màn hình vào game, khối tài khoản: việc đang làm, dòng báo, lỗi lần gọi máy chủ vừa rồi. */
+  const mv: { ban: 'google' | 'tai' | null; bao: string | null; loi: string | null } = { ban: null, bao: null, loi: null };
+
+  /** Khối tài khoản của màn hình vào game theo lúc này (máy chủ chưa bật Google và máy chưa đăng nhập thì không hiện). */
+  const veManVao = () => {
+    if (!manVao.open) return;
+    const acc = taiKhoanMay();
+    if (!acc?.google && !tk.coGoogle) return manVao.setTk(null);
+    const lech = acc?.google && tk.lech && tk.may ? { dien: tk.may.dien, luc: lucText(tk.may.luc) } : null;
+    const cloud = !acc?.google || lech ? null : tk.may ? vi.dauThanh.cloudAt(tk.may.dien, lucText(tk.may.luc)) : tk.may === null ? vi.manVao.cloudNone : null;
+    manVao.setTk({
+      google: acc?.google ? { email: acc.email } : null,
+      lech,
+      bao: mv.bao ?? cloud,
+      loi: mv.loi ?? (tk.loiGoogle ? googleError(tk.loiGoogle) : null),
+      khac: tk.loiGoogle === 'identity_already_exists',
+      ban: mv.ban,
+    });
+  };
+
+  /** Vẽ lại mọi chỗ hiện tài khoản: bảng Đấu thành, mục Tài khoản Google của Cài đặt, màn hình vào game. */
+  const veTaiKhoan = () => {
+    refreshDau();
+    hud.refreshMaySettings(state);
+    veManVao();
+  };
+
+  /**
+   * Hỏi máy chủ có bật đăng nhập Google không và bản lưu trên mây của người đang đăng nhập Google (`hoiMay`), cho màn
+   * hình vào game, mục Tài khoản Google của Cài đặt và khối Tài khoản của bảng Đấu thành. Không quá một lần mỗi phút,
+   * trừ khi `force`. `som`: câu hỏi đã gửi từ lúc mở trang.
+   */
+  const hoiTaiKhoan = async (force = false, som?: ReturnType<typeof hoiMay>): Promise<void> => {
+    if (!coMayChu() || (!force && Date.now() - tk.hoiLuc < 60_000)) return;
+    tk.hoiLuc = Date.now();
+    try {
+      const r = await (som ?? hoiMay());
+      tk.coGoogle = r.coGoogle;
+      if (r.may !== undefined) tk.may = r.may;
+      // Chưa hỏi được bản lưu trên mây: lần sau hỏi lại ngay.
+      if (r.hong) tk.hoiLuc = 0;
+      xetLech();
+    } catch {
+      // Chưa hỏi được: lần mở bảng sau hỏi lại.
+      tk.hoiLuc = 0;
+    }
+    veTaiKhoan();
+  };
+
+  /**
+   * Sang trang Google (màn hình vào game, Cài đặt, bảng Đấu thành). Đã tham gia Đấu thành ở máy này bằng người dùng ẩn
+   * danh thì gắn Google vào chính người dùng ấy (giữ tên, chiến công). Còn lại (máy mới, chưa tham gia) thì đăng nhập:
+   * tài khoản Google chưa có người dùng thì Supabase lập mới. `khac`: đăng nhập thẳng vào tài khoản Google đã có kinh
+   * đô khác, bỏ người dùng ẩn danh ở máy này.
+   */
+  const diGoogle = async (khac = false): Promise<void> => {
+    // Sắp rời trang: lưu game trước, về lại thì trang tải lại từ bản lưu.
+    save();
+    const m = await mang();
+    if (!khac && dauJoined(state) && !taiKhoanMay()?.google) await m.ganGoogle();
+    else m.vaoGoogle();
+  };
+
+  /** Màn hình vào game: bấm Đăng nhập Google. */
+  const googleTuManVao = async (khac: boolean): Promise<void> => {
+    if (mv.ban) return;
+    mv.ban = 'google';
+    mv.loi = null;
+    veManVao();
+    try {
+      await diGoogle(khac);
+      // Trang đang chuyển sang Google. Lỡ không chuyển (người chơi bấm quay lại) thì vài giây sau nút bấm lại được.
+      setTimeout(() => {
+        mv.ban = null;
+        veManVao();
+      }, 4000);
+    } catch (e) {
+      mv.ban = null;
+      mv.loi = dauError(loiOf(e));
+      veManVao();
+    }
+  };
+
+  /** Màn hình vào game: tải bản lưu trên mây về máy này, thẻ tóm tắt và kinh đô phía sau đổi theo. */
+  const taiTuManVao = async (): Promise<void> => {
+    if (mv.ban) return;
+    mv.ban = 'tai';
+    mv.loi = null;
+    mv.bao = null;
+    veManVao();
+    try {
+      await taiTuMay();
+      mv.bao = vi.manVao.cloudLoaded;
+      manVao.update(tomTat(state, Date.now()));
+    } catch (e) {
+      mv.loi = dauError(loiOf(e));
+    } finally {
+      mv.ban = null;
+      veManVao();
+    }
+  };
+
+  /** Tải bản lưu trên mây của người đang đăng nhập Google về máy này, thay bản lưu đang có. */
+  const taiTuMay = async (): Promise<void> => {
+    const acc = taiKhoanMay();
+    if (!acc) throw { ma: 'chuaDangNhap' };
+    const m = await mang();
+    const r = await m.taiMay();
+    if (!r.may?.ma) throw { ma: 'khongCoBanLuu' };
+    const loaded = fromCode(r.may.ma);
+    if (!loaded) throw { ma: 'maLuuHong' };
+    ghiMayBiet({ uid: acc.uid, ban: r.may.ban, luc: r.may.luc });
+    tk.may = { ban: r.may.ban, dien: r.may.dien, luc: r.may.luc };
+    tk.lech = false;
+    applyLoaded(loaded, vi.dauThanh.cloudLoaded, true);
+    veTaiKhoan();
+    // Bản lưu vừa tải là của người đang đăng nhập: hỏi máy chủ các trận từ lúc lưu, tải bản chụp (còn ở màn hình vào
+    // game thì để lúc vào game hỏi).
+    if (!entered) return;
+    snapAt = 0;
+    void dongBo({ quiet: true });
+  };
+
+  /**
+   * Lưu game lên mây: chỉ khi máy này đã đăng nhập Google. Bản trên mây khác bản máy này biết (máy khác đã lưu sau, máy
+   * này vừa đăng nhập vào tài khoản đã có bản lưu, vừa chơi lại từ đầu hay nhập mã lưu) thì dừng, chờ người chơi chọn
+   * tải về hay ghi đè (`de`); máy chủ cũng từ chối theo số bản. `quiet`: lần lưu tự động, lỗi không báo.
+   */
+  const luuLenMay = (opts: { de?: boolean; quiet?: boolean } = {}): Promise<void> => {
+    // Lần lượt từng lần lưu: hai lần chạy chồng nhau (vừa gắn Google xong và lần đồng bộ lúc mở game) sẽ cùng gửi một
+    // số bản, lần sau bị máy chủ báo lệch nhầm.
+    const job = luuHang.then(() => luuMotLan(opts));
+    luuHang = job.catch(() => undefined);
+    return job;
+  };
+  let luuHang: Promise<void> = Promise.resolve();
+  const luuMotLan = async (opts: { de?: boolean; quiet?: boolean }): Promise<void> => {
+    const acc = taiKhoanMay();
+    if (!coMayChu() || !acc?.google || (tk.lech && !opts.de)) return;
+    const m = await mang();
+    try {
+      const dien = dienLevel(state);
+      const r = await m.luuMay(toCode(state), dien, mayBiet(acc.uid)?.ban ?? 0, opts.de);
+      ghiMayBiet({ uid: acc.uid, ban: r.ban, luc: r.luc });
+      tk.may = { ban: r.ban, dien, luc: r.luc };
+      tk.lech = false;
+      if (!opts.quiet) hud.toast(vi.dauThanh.cloudSaved);
+    } catch (e) {
+      if (loiOf(e).ma !== 'lechMay') {
+        if (opts.quiet) return;
+        throw e;
+      }
+      tk.lech = true;
+      tk.may = (await m.taiMay(true).catch(() => null))?.may ?? tk.may;
+      if (opts.quiet && entered) hud.toast(vi.dauThanh.cloudDiffToast, true);
+    } finally {
+      veTaiKhoan();
+    }
+  };
+
+  /**
+   * Việc với máy chủ lúc vào game và mười phút một lần. Đã tham gia Đấu thành: đồng bộ (trận bị đánh, bản chụp, rồi lưu
+   * lên mây nếu đã gắn Google). Chưa tham gia mà đã gắn Google: chỉ lưu lên mây.
+   */
+  const dinhKy = (): Promise<void> => (dauJoined(state) ? dongBo() : luuLenMay({ quiet: true }));
+
+  /**
+   * Google vừa trả người chơi về trang game (gọi khi màn hình vào game đã có câu trả lời của máy chủ): kết quả hiện ở
+   * khối tài khoản của màn hình ấy, lỗi thì còn ghi ở Cài đặt và bảng Đấu thành. Tài khoản chưa có bản lưu trên mây thì
+   * lưu ngay bản ở máy này lên; có bản khác thì người chơi chọn tải về (ngay ở màn hình vào game) hay ghi đè (Cài đặt).
+   */
+  const sauGoogle = async (ve: GoogleVe): Promise<void> => {
+    if ('loi' in ve) tk.loiGoogle = ve.loi;
+    else if (tk.may === null) {
+      await luuLenMay({ quiet: true });
+      if (!tk.lech && mayBiet(taiKhoanMay()?.uid ?? null)) mv.bao = vi.manVao.cloudSaved;
+    }
+    veTaiKhoan();
+  };
+
   /** Quân đang hành quân qua cầu tới đồn giặc: chừng ba giây rồi mới sang bãi chiến. */
   let marching: { plot: number; army: Record<UnitType, number>; rows: Record<UnitType, Row>; nu: NuTuongId | null; at: number } | null = null;
   const MARCH_MS = 3200;
 
+  // ---------- Dã ngoại ----------
+
+  /** Trận trên map dã ngoại đang xem (không nằm trong state: mở map thì dựng lại); null là đang ở kinh đô. */
+  let daB: Battle | null = null;
+  /** Thời gian chưa chạy của trận dã ngoại: trận chạy từng bước cố định `DA_DT`. */
+  let daAcc = 0;
+  const DA_DT = 0.05;
+
+  /** Ra map dã ngoại (hay xem lại đội đang treo máy): dựng trận ở chỗ đội đứng. */
+  const moDa = () => {
+    const r = vaoDa(state);
+    if (!r.ok) return fail(r.reason);
+    if (mode.kind !== 'view') exitMode();
+    select(null);
+    hud.closeCampaign();
+    hud.closeSheet();
+    hienDa();
+    play('tap');
+    save();
+  };
+  const hienDa = () => {
+    // Camera còn đang lướt từ màn hình vào game về kinh đô thì thôi, để camera map đứng ngay chỗ đội.
+    drift.done = true;
+    daB = moMap(state);
+    daAcc = 0;
+    world.showDaNgoai(state.daNgoai.map, tuongDau(daB) ?? null);
+    hud.setDa(daB);
+  };
+  /** Thôi xem map: về xem kinh đô (đội ở lại treo máy), hay gọi đội về luôn (`goiVe`). */
+  const roiDa = (goiVe: boolean) => {
+    if (daB) capNhatDa(state, daB);
+    daB = null;
+    world.showDaNgoai(null);
+    hud.setDa(null);
+    if (goiVe) veKinhDo(state);
+    commit();
+  };
+  /** Chữ nổi ở điểm (x, z) trên map. */
+  const daNoi = (text: string, x: number, z: number, tone: 'exp' | 'len' | 'mon', lift = 1.8) => {
+    const p = world.daScreenAt(x, z, lift);
+    if (p) hud.daFloat(text, p.x, p.y, tone);
+  };
+  /** Chạy trận dã ngoại theo khung hình: tính thưởng, chữ nổi, lên cấp, đồ rơi, cả đội ngã, qua cổng. */
+  const stepDaNgoai = (dt: number) => {
+    if (!daB) return;
+    daAcc += dt;
+    while (daB && daAcc >= DA_DT) {
+      daAcc -= DA_DT;
+      const da = daB.da!;
+      const ngaTruoc = da.nga;
+      stepDa(daB, DA_DT);
+      const giet = da.giet.map((g) => ({ ...g }));
+      const r = capNhatDa(state, daB);
+      const th = r.thuong;
+      if (th.giet) {
+        const g = giet[giet.length - 1];
+        daNoi(vi.daNgoai.expFloat(Math.round(th.exp)), g.x, g.z, 'exp');
+        for (const b of giet) if (b.boss) {
+          play('claim');
+          hud.toast(vi.daNgoai.bossHa(vi.enemies[b.kind]));
+        }
+      }
+      const lead = tuongDau(daB);
+      if (th.len && lead) {
+        play('upgrade');
+        daNoi(vi.daNgoai.lenCap(state.daNgoai.cap), lead.x, lead.z, 'len', 2.6);
+        hud.toast(vi.daNgoai.lenCap(state.daNgoai.cap));
+      }
+      for (const m of th.mon) {
+        play('claim');
+        const g = giet[giet.length - 1];
+        daNoi(vi.daNgoai.monFloat(monTen(m)), g?.x ?? lead?.x ?? 0, g?.z ?? lead?.z ?? 0, 'mon', 2.4);
+        hud.toast(`${vi.trangBi.roi}: ${monTen(m)}`);
+      }
+      if (th.satDo && lead) daNoi(vi.daNgoai.satFloat(th.satDo), lead.x, lead.z, 'mon', 2.4);
+      if (th.len || th.mon.length || th.boss) save();
+      if (ngaTruoc === null && da.nga !== null) hud.toast(vi.daNgoai.caDoiNga, true);
+      if (r.chuaDuCap) {
+        play('error');
+        hud.toast(vi.daNgoai.chuaDuCap(r.chuaDuCap), true);
+      }
+      if (r.sang !== null) {
+        const q = quaCong(state, r.sang);
+        if (!q.ok) fail(q.reason);
+        else if (q.value === 'kinhDo') {
+          hud.toast(vi.daNgoai.toKinhDo);
+          roiDa(false);
+        } else {
+          hud.toast(vi.daNgoai.toCong(vi.daNgoai.maps[q.value]));
+          hienDa();
+          save();
+        }
+      }
+    }
+  };
+
   world.view.onTap = (cx, cy) => {
+    // Map dã ngoại: chạm đất để đi, chạm quái để đánh, chạm cổng để sang map kề.
+    if (world.inDa) {
+      const p = daB ? world.pickDa(cx, cy) : null;
+      if (!daB || !p) return;
+      if (chamMap(daB, p.x, p.z)) {
+        play('tap');
+        world.followDa();
+      }
+      return;
+    }
     // Trên bãi chiến chỉ xem, không chọn gì; đang hành quân, đang Đấu thành cũng vậy.
     if (world.inField || marching || pvp) return;
+    // Chạm thần thú đang đi lại, bay trong kinh đô: bảng Thần thú.
+    if (mode.kind === 'view' && world.pickThanThu(cx, cy)) {
+      play('tap');
+      select(null);
+      hud.showThanThu(state);
+      return;
+    }
     const hero: string | null = mode.kind === 'view' ? world.pickHero(cx, cy) : null;
     if (hero) {
       play('tap');
@@ -626,6 +1288,29 @@ async function start(): Promise<void> {
   };
 
   // ---------- Thao tác từ giao diện ----------
+
+  /** Bản lưu ở máy này vừa đổi hẳn (chơi lại từ đầu, nhập mã lưu): quên số bản trên mây máy này biết. */
+  function quenMay(): void {
+    ghiMayBiet(null);
+    xetLech();
+    hud.refreshMaySettings(state);
+  }
+
+  /**
+   * Thay bản lưu đang chơi bằng bản vừa đọc được (mã lưu, tệp lưu, bản lưu trên mây `tuMay`). Bản không phải từ mây thì
+   * máy này coi như chưa biết bản trên mây: lần lưu lên mây sau phải hỏi người chơi, không lặng lẽ ghi đè.
+   */
+  function applyLoaded(loaded: GameState, toast: string, tuMay = false): void {
+    state = loaded;
+    state.lastSeen = Date.now();
+    if (!tuMay) quenMay();
+    showRelaid();
+    setMuted(state.settings.muted);
+    world.resetAll();
+    hud.closeSheet();
+    hud.toast(toast);
+    commit();
+  }
 
   function handle(a: HudAction): void {
     switch (a.kind) {
@@ -927,6 +1612,72 @@ async function start(): Promise<void> {
         hud.showCaoLo(state);
         return;
 
+      case 'openTuong':
+        if (mode.kind !== 'view') exitMode();
+        select(null);
+        play('tap');
+        hud.showTuong(state, a.hero);
+        return;
+
+      case 'macDo': {
+        const m = state.trangBi.kho.find((x) => x.id === a.id);
+        const r = macDo(state, a.id, a.hero);
+        if (!r.ok || !m) return fail(r.ok ? 'khongCoDo' : r.reason);
+        play('tap');
+        hud.toast(vi.trangBi.macToast(monTen(m), vi.ui.heroNames[a.hero]));
+        hud.tuongChanged(state);
+        commit();
+        return;
+      }
+
+      case 'thaoDo': {
+        const m = state.trangBi.kho.find((x) => x.id === a.id);
+        const r = thaoDo(state, a.id);
+        if (!r.ok || !m) return fail(r.ok ? 'khongCoDo' : r.reason);
+        play('tap');
+        hud.toast(vi.trangBi.thaoToast(monTen(m)));
+        hud.tuongChanged(state);
+        commit();
+        return;
+      }
+
+      case 'cuongHoa': {
+        const m = state.trangBi.kho.find((x) => x.id === a.id);
+        const r = cuongHoa(state, a.id);
+        if (!r.ok || !m) return fail(r.ok ? 'khongCoDo' : r.reason);
+        play('upgrade');
+        hud.toast(vi.trangBi.cuongToast(monTen(m), r.value));
+        commit();
+        return;
+      }
+
+      case 'khoaDo': {
+        const r = khoaDo(state, a.id);
+        if (!r.ok) return fail(r.reason);
+        play('tap');
+        commit();
+        return;
+      }
+
+      case 'phanGiai': {
+        const r = phanGiai(state, a.id);
+        if (!r.ok) return fail(r.reason);
+        play('upgrade');
+        hud.toast(vi.trangBi.phanGiaiToast(`${vi.resources.sat.icon} ${r.value}`));
+        hud.tuongChanged(state);
+        commit();
+        return;
+      }
+
+      case 'phanGiaiLoat': {
+        const r = phanGiaiLoat(state, 2);
+        play('upgrade');
+        hud.toast(vi.trangBi.loatToast(r.n, `${vi.resources.sat.icon} ${r.sat}`));
+        hud.tuongChanged(state);
+        commit();
+        return;
+      }
+
       case 'openEnding':
         if (hud.storyOpen || hud.modalOpen) return;
         play('tap');
@@ -1029,7 +1780,10 @@ async function start(): Promise<void> {
 
       case 'askQuiz': {
         // Lạc hầu đố sử: hỏi câu đang dở, hay bốc câu mới (ghi vào việc ngay để mở lại vẫn là câu ấy).
-        const r = askQuiz(state, a.id, CAU_DO_IDS);
+        // Đóng thuyền chiến, xây đồn đảo: bốc câu thời kỳ Biển đảo trước, hết câu mới bốc thời kỳ khác.
+        const job = viecOf(state).find((j) => j.id === a.id);
+        const bien = job?.o.some((p) => p.dao || p.thuyen) ? CAU_BIEN_DAO.filter((c) => !state.xay.daHoi.includes(c)) : [];
+        const r = askQuiz(state, a.id, bien.length ? bien : CAU_DO_IDS);
         if (!r.ok) {
           hud.closeQuiz();
           return fail(r.reason);
@@ -1099,7 +1853,9 @@ async function start(): Promise<void> {
       case 'openSettings':
         if (mode.kind !== 'view') exitMode();
         select(null);
-        hud.showSettings(state, world.resolution, world.ngayDemOn);
+        hud.showSettings(state, world.resolution, world.ngayDemOn, world.bongDoOn);
+        // Mục Tài khoản Google: hỏi máy chủ có bật Google không, bản lưu trên mây ra sao.
+        void hoiTaiKhoan();
         return;
 
       case 'toggleMute':
@@ -1107,19 +1863,25 @@ async function start(): Promise<void> {
         setMuted(state.settings.muted);
         if (state.settings.muted) stopRally();
         save();
-        hud.showSettings(state, world.resolution, world.ngayDemOn);
+        hud.showSettings(state, world.resolution, world.ngayDemOn, world.bongDoOn);
         return;
 
       case 'setResolution':
         world.setResolution(a.resolution);
         saveResolution(a.resolution);
-        hud.showSettings(state, a.resolution, world.ngayDemOn);
+        hud.showSettings(state, a.resolution, world.ngayDemOn, world.bongDoOn);
         return;
 
       case 'setNgayDem':
         world.setNgayDem(a.on);
         saveNgayDem(a.on);
-        hud.showSettings(state, world.resolution, a.on);
+        hud.showSettings(state, world.resolution, a.on, world.bongDoOn);
+        return;
+
+      case 'setBongDo':
+        world.setBongDo(a.on);
+        saveBongDo(a.on);
+        hud.showSettings(state, world.resolution, world.ngayDemOn, a.on);
         return;
 
       case 'copyCode': {
@@ -1172,20 +1934,14 @@ async function start(): Promise<void> {
           hud.toast(a.file ? vi.ui.fileBad : vi.ui.importBad, true);
           return;
         }
-        state = loaded;
-        state.lastSeen = Date.now();
-        showRelaid();
-        setMuted(state.settings.muted);
-        world.resetAll();
-        hud.closeSheet();
-        hud.toast(a.file ? vi.ui.fileLoaded : vi.ui.imported);
-        commit();
+        applyLoaded(loaded, a.file ? vi.ui.fileLoaded : vi.ui.imported);
         return;
       }
 
       case 'reset':
         if (!window.confirm(vi.ui.resetConfirm)) return;
         state = createInitialState(Date.now());
+        quenMay();
         setMuted(false);
         world.resetAll();
         hud.closeSheet();
@@ -1308,6 +2064,68 @@ async function start(): Promise<void> {
         world.panToIsland(a.id);
         return;
 
+      case 'buildThuyen': {
+        const r = startThuyen(state, a.dao);
+        if (!r.ok) return fail(r.reason);
+        play('place');
+        hud.toast(vi.bien.thuyenStarted(formatClock(conLai(state, r.value))));
+        commit();
+        return;
+      }
+
+      case 'buildDon': {
+        const cap = state.dao[a.dao].cap;
+        const r = startDon(state, a.dao);
+        if (!r.ok) return fail(r.reason);
+        play('place');
+        const time = formatClock(conLai(state, r.value));
+        hud.toast(cap ? vi.ui.nangStarted(vi.bien.donName(a.dao), cap + 1, time) : vi.ui.xayStarted(vi.bien.donName(a.dao), time));
+        commit();
+        return;
+      }
+
+      case 'daoLinh': {
+        const r = setDaoLinh(state, a.dao, a.unit, state.dao[a.dao].muon[a.unit] + a.delta);
+        if (!r.ok) return fail(r.reason);
+        play('tap');
+        commit();
+        return;
+      }
+
+      case 'openQuanDao':
+        play('tap');
+        select(null);
+        hud.showQuanDao(state, a.dao);
+        return;
+
+      case 'suaDon': {
+        const r = suaDon(state, a.dao);
+        if (!r.ok) return fail(r.reason);
+        play('place');
+        hud.toast(vi.bien.suaDone(vi.bien.donName(a.dao)));
+        commit();
+        return;
+      }
+
+      case 'xemDao': {
+        const t = state.dao[a.dao].tran;
+        if (!t) return;
+        if (pvp || xemDao || marching || world.inField || state.campaign.battle || state.raid.phase !== 'idle') {
+          hud.toast(vi.bien.xemBusy, true);
+          return;
+        }
+        play('tap');
+        if (mode.kind !== 'view') exitMode();
+        select(null);
+        hud.closeSheet();
+        hud.closeCampaign();
+        const setup = setupDao(a.dao, t);
+        xemDao = { battle: startFieldBattle(setup), dao: a.dao, dot: t.dot, speed: 1, du: 0 };
+        world.showField('dao', setup.bai ?? null, t.cap);
+        hud.setXemDao(xemDao);
+        return;
+      }
+
       case 'openBarracks': {
         const barracks = state.buildings.find((b) => b.type === 'doanhTrai');
         if (barracks) {
@@ -1355,17 +2173,85 @@ async function start(): Promise<void> {
 
       case 'useSkill': {
         if (pvp) {
-          // Đấu thành: ghi lần bấm, áp ở đầu bước trận kế tiếp (đánh lại ra y hệt).
-          if (!skillReady(pvp.run.battle, a.skill)) return;
+          // Đấu thành: ghi lần bấm, áp ở đầu bước trận kế tiếp (đánh lại ra y hệt). Xem lại thì không bấm được.
+          if (pvp.xem || !skillReady(pvp.run.battle, a.skill)) return;
           pushInput(pvp.run, a.skill);
           play(a.skill === 'trongTran' ? 'trongTran' : 'claim');
           navigator.vibrate?.(a.skill === 'trongTran' ? 30 : 60);
+          return;
+        }
+        if (daB) {
+          // Map dã ngoại: trận không nằm trong state, không phải vẽ lại kinh đô.
+          if (!useSkill(daB, a.skill)) return;
+          play('claim');
+          navigator.vibrate?.(60);
           return;
         }
         const battle = state.campaign.battle ?? (state.raid.phase === 'battle' ? state.raid.battle : null);
         if (!battle || !useSkill(battle, a.skill)) return;
         play(a.skill === 'trongTran' ? 'trongTran' : 'claim');
         navigator.vibrate?.(a.skill === 'trongTran' ? 30 : 60);
+        commit();
+        return;
+      }
+
+      case 'daDoi': {
+        // Chạm chip tướng: thêm vào đội hay bỏ ra (đội còn ít nhất một tướng).
+        const doi = doiNay(state);
+        const next = doi.includes(a.hero) ? doi.filter((k) => k !== a.hero) : [...doi, a.hero];
+        if (!next.length) return;
+        const r = datDoi(state, next);
+        if (!r.ok) return fail(r.reason);
+        play('tap');
+        commit();
+        return;
+      }
+
+      case 'daMap': {
+        const r = chonMap(state, a.map);
+        if (!r.ok) return fail(r.reason);
+        play('tap');
+        commit();
+        return;
+      }
+
+      case 'daVao':
+        moDa();
+        return;
+
+      case 'daVe':
+        veKinhDo(state);
+        play('tap');
+        commit();
+        return;
+
+      case 'thuAn': {
+        const r = choAn(state, a.thu);
+        if (!r.ok) return fail(r.reason);
+        play(r.value.len ? 'claim' : 'tap');
+        hud.toast(r.value.len ? vi.thanThu.lenCap(vi.thanThu.ten[a.thu], r.value.cap) : vi.thanThu.an(vi.thanThu.ten[a.thu]));
+        commit();
+        return;
+      }
+
+      case 'thuChon': {
+        const r = chonThu(state, a.thu);
+        if (!r.ok) return fail(r.reason);
+        play('tap');
+        commit();
+        return;
+      }
+
+      case 'daTuDanh': {
+        const on = !(daB?.da?.tuDanh ?? state.daNgoai.tuDanh);
+        state.daNgoai.tuDanh = on;
+        play('tap');
+        if (daB) {
+          datTuDanh(daB, on);
+          hud.updateField(state);
+          if (on) world.followDa();
+          return;
+        }
         commit();
         return;
       }
@@ -1401,6 +2287,22 @@ async function start(): Promise<void> {
         return;
 
       case 'retreat':
+        if (daB) {
+          // Map dã ngoại: nút cờ là nút xem kinh đô, đội ở lại treo máy.
+          play('tap');
+          roiDa(false);
+          return;
+        }
+        if (xemDao) {
+          play('tap');
+          thoiXemDao();
+          return;
+        }
+        if (pvp?.xem) {
+          // Đang xem lại: nút cờ là nút thoát.
+          handle({ kind: 'dauHome' });
+          return;
+        }
         if (pvp) {
           pushInput(pvp.run, 'rut');
           play('tap');
@@ -1421,25 +2323,247 @@ async function start(): Promise<void> {
         const snap = targetSnapshot(state, a.target);
         // Đánh thử: hạt giống theo giờ, mỗi lần đánh lại mỗi khác (đánh thật thì máy chủ cấp hạt giống).
         const run = beginPvp(snap, attackFrom(state, a.army, a.side, Date.now() % 2_147_483_647));
-        const t = world.view.target;
-        pvp = { run, name: a.target ? vi.dauThanh.bot(a.target) : vi.dauThanh.own, cam: { x: t.x, z: t.z, zoom: world.view.zoom }, doneAt: 0, shown: false };
-        if (mode.kind !== 'view') exitMode();
-        select(null);
-        hud.closeCampaign();
-        world.resetAll();
-        world.sync(run.def);
-        world.lookAtEdge(a.side);
-        hud.setPvp({ battle: run.battle, def: run.def, name: pvp.name });
-        play('claim');
-        navigator.vibrate?.(40);
+        enterPvp(run, a.target ? vi.dauThanh.bot(a.target) : vi.dauThanh.own, a.side);
         return;
       }
 
       case 'dauHome':
       case 'dauAgain':
+      case 'dauMore': {
+        // Xem lại mở từ bảng Đấu thành thì về lại bảng ấy.
+        const backToPanel = a.kind === 'dauMore' || (a.kind === 'dauHome' && !!pvp?.xem?.panel);
         leavePvp();
         play('tap');
-        if (a.kind === 'dauAgain') hud.showDau(state);
+        if (a.kind === 'dauAgain') hud.showDau(state, 'target', 'thu');
+        if (backToPanel) {
+          hud.showDau(state, 'target', 'that');
+          void dongBo({ snap: false, quiet: true });
+        }
+        return;
+      }
+
+      case 'dauRank': {
+        const view = hud.dauView();
+        if (!view) return;
+        play('tap');
+        void dauBusy(view, 'rank', async () => {
+          const m = await mang();
+          view.that.hang = await m.xepHang();
+        });
+        return;
+      }
+
+      case 'dauReplay': {
+        // Xem lại một trận đã xong: lấy bản chụp, quân, các lần bấm từ máy chủ rồi cho trận chạy lại ở đây.
+        if (!a.tran || (pvp && !pvp.xem)) return;
+        if (world.inField || marching || state.raid.phase === 'battle') {
+          play('error');
+          hud.toast(vi.dauThanh.reasons[state.raid.phase === 'battle' ? 'dangCoGiac' : 'dangDanhPhoBan'], true);
+          return;
+        }
+        play('tap');
+        const view = hud.dauView();
+        const panel = pvp?.xem ? pvp.xem.panel : !!view;
+        const job = async () => {
+          const m = await mang();
+          const d = await m.xemLai(a.tran);
+          const run = chayXemLai(d);
+          if (!run || (pvp && !pvp.xem)) throw { ma: 'mayChu' };
+          if (pvp) leavePvp(true);
+          hud.closeDauAttacked();
+          enterPvp(run, replayNames(d.tran, d.vai).def, run.attack.side, undefined, { tran: d.tran, vai: d.vai, speed: 1, panel });
+        };
+        if (view) void dauBusy(view, 'replay', job);
+        else
+          void job().catch((e) => {
+            play('error');
+            hud.toast(vi.dauThanh.replayFail(dauError(loiOf(e))), true);
+          });
+        return;
+      }
+
+      case 'dauSpeed':
+        if (xemDao) {
+          xemDao.speed = xemDao.speed === 1 ? 2 : xemDao.speed === 2 ? 4 : 1;
+          play('tap');
+          hud.setXemDao(xemDao);
+          return;
+        }
+        if (!pvp?.xem) return;
+        pvp.xem.speed = pvp.xem.speed === 1 ? 2 : pvp.xem.speed === 2 ? 4 : 1;
+        play('tap');
+        showPvpBar();
+        return;
+
+      case 'dauGoogle':
+      case 'dauGoogleIn': {
+        const view = hud.dauView();
+        if (!view) return;
+        play('tap');
+        void dauBusy(view, 'google', () => diGoogle(a.kind === 'dauGoogleIn'));
+        return;
+      }
+
+      case 'dauSave': {
+        const view = hud.dauView();
+        if (!view) return;
+        play('tap');
+        void dauBusy(view, 'save', () => luuLenMay({ de: a.de }));
+        return;
+      }
+
+      case 'dauLoad': {
+        // Tải bản lưu trên mây về máy này (đã bấm hai lần ở bảng): thay bản lưu đang có.
+        const view = hud.dauView();
+        if (!view || pvp) return;
+        play('tap');
+        void dauBusy(view, 'load', async () => {
+          await taiTuMay();
+          view.that.ten = state.dauThanh?.ten ?? '';
+        });
+        return;
+      }
+
+      // Bảng Cài đặt, mục Tài khoản Google (người chơi ngay từ màn hình vào game gắn Google ở đây).
+      case 'mayGoogle':
+      case 'mayGoogleIn':
+        play('tap');
+        void diGoogle(a.kind === 'mayGoogleIn').catch(mayLoi);
+        return;
+
+      case 'maySave':
+        play('tap');
+        void luuLenMay({ de: a.de }).catch(mayLoi);
+        return;
+
+      case 'mayLoad':
+        if (pvp) return;
+        play('tap');
+        void taiTuMay().catch(mayLoi);
+        return;
+
+      case 'mayOut':
+        // Đăng xuất Google ở máy này: bản lưu ở máy và trên mây vẫn còn; Đấu thành ở máy này về lại lúc chưa tham gia.
+        if (pvp) return;
+        play('tap');
+        void mang()
+          .then(async (m) => {
+            await m.dangXuat();
+            tk.may = undefined;
+            tk.lech = false;
+            tk.loiGoogle = null;
+            tk.hoiLuc = 0;
+            hud.toast(vi.dauThanh.googleOutDone);
+            refreshUi();
+            veTaiKhoan();
+          })
+          .catch(mayLoi);
+        return;
+
+      case 'dauJoin': {
+        const view = hud.dauView();
+        if (!view) return;
+        const ten = kiemTen(a.ten);
+        if ('loi' in ten) {
+          view.that.loi = { ma: 'ten', chiTiet: ten.loi };
+          play('error');
+          refreshDau();
+          return;
+        }
+        play('tap');
+        void dauBusy(view, 'join', async () => {
+          const m = await mang();
+          await m.thamGia(ten.ten, encodeSnapshot(makeSnapshot(state)));
+          snapAt = Date.now();
+          const t = await m.toi();
+          const uid = uidMay();
+          if (!uid) throw { ma: 'dangNhap' };
+          state.dauThanh = newDauThanh(uid, t.toi, t.biDanh, t.daDanh);
+          view.that.lich = lichOf(t.biDanh, t.daDanh);
+          view.that.ten = t.toi.ten;
+          play('claim');
+          hud.toast(vi.dauThanh.joined(t.toi.ten));
+          commit();
+          // Vừa tham gia: hỏi luôn máy chủ có bật Google không, để khối Tài khoản hiện nút Gắn Google.
+          void hoiTaiKhoan(true);
+        });
+        return;
+      }
+
+      case 'dauFind': {
+        const view = hud.dauView();
+        if (!view) return;
+        play('tap');
+        void dauBusy(view, 'find', async () => {
+          const m = await mang();
+          const r = await m.tim(view.that.bo);
+          const foe = foeOf(r.doiThu);
+          if (!foe) throw { ma: 'mayChu' };
+          if (!foe.may && !view.that.bo.includes(foe.id)) view.that.bo.push(foe.id);
+          view.that.foe = foe;
+          view.step = 'target';
+        });
+        return;
+      }
+
+      case 'dauThat': {
+        const view = hud.dauView();
+        const foe = view?.that.foe;
+        if (!view || !foe) return;
+        const why = canPractice(state) ?? validateArmy(state, a.army);
+        if (why) {
+          play('error');
+          hud.toast(vi.dauThanh.reasons[why], true);
+          return;
+        }
+        void dauBusy(view, 'attack', async () => {
+          const m = await mang();
+          // Gửi kèm bản chụp mới: máy chủ dựng quân đánh theo quân đang có lúc này.
+          const r = await m.danh(foe.id, a.army, a.side, encodeSnapshot(makeSnapshot(state)));
+          snapAt = Date.now();
+          const snap = decodeSnapshot(r.banChup);
+          if (!snap || !state.dauThanh || pvp) throw { ma: 'mayChu' };
+          state.dauThanh.dangDanh = { tran: r.tran, bam: [] };
+          if (!foe.may) state.dauThanh.khienDen = null;
+          commit();
+          enterPvp(beginPvp(snap, r.quan), foeName(foe), a.side, { tran: r.tran, bot: foe.may, sending: false });
+        });
+        return;
+      }
+
+      case 'dauRetry':
+        play('tap');
+        void sendReal();
+        return;
+
+      case 'dauLeave': {
+        const view = hud.dauView();
+        if (!view) return;
+        play('tap');
+        void dauBusy(view, 'leave', async () => {
+          const m = await mang();
+          await m.roi();
+          delete state.dauThanh;
+          view.that.foe = null;
+          view.that.lich = [];
+          hud.toast(vi.dauThanh.left);
+          commit();
+        });
+        return;
+      }
+
+      case 'dauReload':
+        location.reload();
+        return;
+
+      case 'dauAttackedOk':
+        hud.closeDauAttacked();
+        play('tap');
+        return;
+
+      case 'dauOpened':
+        void dongBo({ snap: false, quiet: true });
+        void hoiTaiKhoan();
         return;
 
       case 'leaveField':
@@ -1493,16 +2617,60 @@ async function start(): Promise<void> {
     showHint();
     commit();
     watchXay(true);
-    showOfflineIfLong(offline.ms, offline.gained, offline.built);
+    showOfflineIfLong(offline.ms, offline.gained, offline.built, offline.da);
     if (state.raid.lastResult) hud.showRaidResult(state, state.raid.lastResult);
     preloadThumbs();
+    preloadMon();
+    // Đã tham gia Đấu thành: hỏi máy chủ các trận bị đánh lúc vắng, tải bản chụp; đã gắn Google: lưu game lên mây.
+    // Rồi mười phút một lần.
+    void dinhKy();
+    setInterval(() => {
+      if (document.visibilityState === 'visible') void dinhKy();
+    }, SNAP_MS);
   };
 
-  /** Về kinh đô sau trận Đấu thành: vẽ lại kinh đô của mình, camera về chỗ cũ. Đánh thử nên quân, của không đổi. */
-  const leavePvp = () => {
+  /** Vào trận Đấu thành (đánh thử hay đánh thật): cảnh đổi sang kinh đô bị đánh, camera lướt tới phía tràn vào. */
+  const enterPvp = (run: PvpRun, name: string, side: 'bac' | 'tay', real?: DauReal, xem?: DauXem) => {
+    const t = world.view.target;
+    // Xem lại lần nữa (vừa rời trận xem lại trước): giữ chỗ camera của kinh đô, không lấy chỗ đang nhìn kinh đô kia.
+    pvp = { run, name, cam: xemCam ?? { x: t.x, z: t.z, zoom: world.view.zoom }, doneAt: 0, shown: false, real, xem };
+    xemCam = null;
+    if (mode.kind !== 'view') exitMode();
+    select(null);
+    hud.closeCampaign();
+    world.resetAll();
+    world.sync(run.def);
+    world.lookAtEdge(side);
+    showPvpBar();
+    play('claim');
+    navigator.vibrate?.(40);
+  };
+
+  /** Thanh trận Đấu thành theo trận đang chạy (xem lại thì kèm tên hai bên và tốc độ xem). */
+  const showPvpBar = () => {
+    if (!pvp) return;
+    const x = pvp.xem;
+    hud.setPvp({ battle: pvp.run.battle, def: pvp.run.def, name: pvp.name, ...(x ? { xem: { ...replayNames(x.tran, x.vai), speed: x.speed } } : {}) });
+  };
+  /** Chỗ camera ở kinh đô của mình, giữ qua lúc đổi từ trận xem lại này sang lần xem lại kế. */
+  let xemCam: { x: number; z: number; zoom: number } | null = null;
+
+  /**
+   * Về kinh đô sau trận Đấu thành: vẽ lại kinh đô của mình, camera về chỗ cũ. Đánh thử thì quân, của không đổi; đánh
+   * thật thì kết quả máy chủ đã áp (chưa gửi được thì lần đồng bộ sau gửi lại).
+   */
+  const leavePvp = (again = false) => {
     if (!pvp) return;
     const cam = pvp.cam;
     pvp = null;
+    if (again) {
+      // Sắp vào ngay trận xem lại kế: chỉ dọn trận cũ, chưa vẽ lại kinh đô của mình.
+      xemCam = cam;
+      hud.setPvp(null);
+      hud.closeDauResult();
+      world.updateBattle(null, 0);
+      return;
+    }
     hud.setPvp(null);
     hud.closeDauResult();
     world.updateBattle(null, 0);
@@ -1512,6 +2680,7 @@ async function start(): Promise<void> {
     world.view.zoom = cam.zoom;
     world.view.apply();
     refreshUi();
+    showAttacked();
   };
 
   /** Trận Đấu thành xong thì hiện bảng kết quả (sao, phần trăm phá, quân ngã, của cướp được nếu đánh thật). */
@@ -1520,11 +2689,18 @@ async function start(): Promise<void> {
     if (!pvp.doneAt) {
       pvp.doneAt = now + 900;
       stopRally();
-      const score = scorePvp(pvp.run.def);
-      play(score.stars ? 'upgrade' : 'error');
+      const real = pvp.real;
+      if (real) {
+        // Trận thật: ghi các lần bấm vào bản lưu (mất mạng thì lần sau gửi lại), gửi ngay cho máy chủ đánh lại.
+        if (state.dauThanh?.dangDanh?.tran === real.tran) state.dauThanh.dangDanh.bam = pvp.run.inputs.map((i) => ({ ...i }));
+        save();
+        void sendReal();
+      } else if (!pvp.xem) play(scorePvp(pvp.run.def).stars ? 'upgrade' : 'error');
     }
     if (now < pvp.doneAt) return;
     pvp.shown = true;
+    if (pvp.xem) return hud.showDauResult(dauReplayResultHtml(pvp.xem.tran, pvp.xem.vai));
+    if (pvp.real) return showReal();
     const score = scorePvp(pvp.run.def);
     hud.showDauResult(dauResultHtml(score, pvp.run.battle.lost, lootPvp(pvp.run.snap, score, dienLevel(state))));
   };
@@ -1565,7 +2741,7 @@ async function start(): Promise<void> {
       hud.closeCampaign();
       const don = battle.camp !== undefined ? campTier(battle.camp) : null;
       world.showField(don ? CAMPS[don].terrain : STAGES[battle.wave - 1].terrain, battle.bai ?? null);
-    } else if (!battle && world.inField) {
+    } else if (!battle && world.inField && !world.inDa && !xemDao) {
       world.showField(null);
       hud.closeStageResult();
     }
@@ -1611,12 +2787,16 @@ async function start(): Promise<void> {
   });
   document.addEventListener('visibilitychange', () => {
     if (document.visibilityState === 'hidden') save();
+    // Quay lại sau lâu: hỏi máy chủ ngay (lần tải bản chụp vẫn mười phút một lần).
+    else if (entered && Date.now() - snapAt >= SNAP_MS) void dongBo();
   });
   window.addEventListener('pagehide', save);
 
   let prev = performance.now();
   let lastUi = 0;
   let lastCayKey = '';
+  /** Tết đang mở (lần xét trước): mở, đóng thì vẽ lại cảnh Tết và việc người bếp. */
+  let lastTet = false;
   let lastKnown = state.benKia.known.length;
   let lastSave = prev;
   const lag = new DoLag();
@@ -1638,17 +2818,24 @@ async function start(): Promise<void> {
     const gap = wall - state.lastSeen;
     if (gap > GAP_AS_OFFLINE_MS) {
       const off = applyOffline(state, wall);
-      showOfflineIfLong(off.ms, off.gained, off.built);
+      showOfflineIfLong(off.ms, off.gained, off.built, off.da);
       commit();
       watchXay(true);
     } else {
-      // Đang Đấu thành: kinh tế vẫn chạy, đồng hồ giặc đứng lại.
-      tick(state, gap * tocDo, !!pvp);
+      // Đang Đấu thành, xem lại trận đảo, xem map dã ngoại: kinh tế vẫn chạy, đồng hồ giặc đứng lại.
+      tick(state, gap * tocDo, !!pvp || !!xemDao || !!daB);
       lag.troi(gap * tocDo);
+      // Đội ở dã ngoại mà không xem map: treo máy (lúc tắt game thì `applyOffline` tính).
+      if (!daB) tichTreo(state, gap * tocDo);
       state.lastSeen = wall;
     }
+    // Xem lại trận đảo: chạy theo khung hình ở tốc độ xem, trọn bước như lúc trận tự đánh.
+    if (xemDao && !xemDao.battle.outcome) {
+      xemDao.du += dt * xemDao.speed;
+      while (xemDao.du >= BATTLE_STEP && !stepField(xemDao.battle, BATTLE_STEP)) xemDao.du -= BATTLE_STEP;
+    }
     // Trận Đấu thành chạy theo khung hình (đã chặn 0,1 giây), chỉ trọn bước; ẩn tab thì trận dừng.
-    if (pvp) stepPvp(pvp.run, dt * 1000 * tocDo);
+    if (pvp) stepPvp(pvp.run, dt * 1000 * (pvp.xem?.speed ?? 1) * tocDo);
 
     if (marching && now >= marching.at) {
       // Hành quân xong: sang bãi chiến đánh đồn.
@@ -1663,7 +2850,9 @@ async function start(): Promise<void> {
     world.updateFlood(scene());
     world.updateBattle(pvp ? pvp.run.battle : state.raid.battle, dt);
     watchCampaign();
-    world.updateField(state.campaign.battle, dt);
+    world.updateField(xemDao?.battle ?? state.campaign.battle, dt);
+    stepDaNgoai(dt);
+    world.updateDa(daB, dt);
     world.update(dt);
     lag.cat('canh');
     hud.xayLabels.update(state, (x, z, lift) => (world.inField ? null : world.screenAt(x, z, lift)));
@@ -1681,6 +2870,11 @@ async function start(): Promise<void> {
         world.sync(scene());
         showCayDaHint();
       }
+      // Tết mở, đóng: cảnh Tết trước Điện và việc của người bếp (đội mâm bánh lên Điện) đổi ngay, không chờ thao tác sau.
+      if (tetOpen(state) !== lastTet) {
+        lastTet = !lastTet;
+        world.sync(scene());
+      }
       // Trinh sát về tới nơi: đất bên kia hiện ra thêm.
       if (state.benKia.known.length !== lastKnown) {
         if (state.benKia.known.length > lastKnown && !state.benKia.scouts.length) hud.toast(vi.benKia.scoutBack);
@@ -1688,6 +2882,8 @@ async function start(): Promise<void> {
         world.sync(scene());
       }
       watchXay();
+      // Thuyền chiến đi chuyến mới, tới đảo, về bến ngay trong `tick`: vẽ theo.
+      world.syncDao(state);
       refreshUi();
       watchStory();
       prewarm();
@@ -1702,15 +2898,25 @@ async function start(): Promise<void> {
     requestAnimationFrame(frame);
   };
   requestAnimationFrame(frame);
+  // Chờ máy chủ trả lời về tài khoản (hỏi từ lúc mở trang, song song với dựng cảnh) rồi mới mở màn hình vào game, để
+  // khối tài khoản không hiện ra muộn làm xô nút dưới ngón tay. Quá 1,2 giây thì thôi chờ, khối ấy hiện ra sau.
+  const hoiDau = hoiSom ? hoiTaiKhoan(true, hoiSom) : Promise.resolve();
+  await Promise.race([hoiDau, new Promise((done) => setTimeout(done, 1200))]);
   manVao.ready(tomTat(state, Date.now()));
+  veManVao();
+  if (googleVe) void hoiDau.then(() => sauGoogle(googleVe));
 
   // Cho phép kiểm thử tự động đọc trạng thái và tìm vị trí ô trên màn hình.
   (window as unknown as { __debug?: object }).__debug = {
     state: () => state,
     /** Bấm qua màn hình vào game, như người chơi bấm Chơi tiếp. */
     enter: () => enter(),
+    /** Hiện bảng chào lúc vào lại game với phần thưởng dã ngoại `da` (để chụp thử). */
+    offline: (ms: number, da?: DaThuong) => hud.showOffline(ms, { gao: 0, voOc: 0, datDa: 0, sat: 0, go: 0 }, 0, da, state.daNgoai.cap),
     tileToScreen: (x: number, z: number) => world.tileToScreen(x, z),
     renderInfo: () => ({ ...world.renderer.info.render }),
+    /** Dân gánh hàng: công trình nào có tuyến, ai đang đi, ở ô nào (ganhHang.ts). */
+    ganh: () => world.ganhInfo(),
     rotate: (dir: 1 | -1) => world.rotateView(dir),
     camera: (x: number, z: number, zoom: number) => {
       // Đặt camera tay thì thôi lướt về chỗ cũ (máy chụp chạy chậm, lướt chưa xong sẽ kéo camera đi mất).
@@ -1733,13 +2939,23 @@ async function start(): Promise<void> {
       return !!pvp;
     },
     /** Mở bảng Đấu thành ở bước chọn kinh đô (`army`: bước chọn quân), để chụp thử. */
-    dauPanel: (army = false) => hud.showDau(state, army ? 'army' : 'target'),
+    dauPanel: (army = false) => {
+      const view = hud.showDau(state, army ? 'army' : 'target');
+      // Như bấm chip Đấu thành: hỏi máy chủ hồ sơ, trận gần đây, tài khoản.
+      if (view.mode === 'that') handle({ kind: 'dauOpened' });
+      return view;
+    },
     /** Đấu thành: cho trận đang đánh chạy hết (bảng kết quả hiện ngay sau đó). */
     dauFinish: () => {
       if (pvp) stepPvp(pvp.run, 400_000);
     },
     /** Trận Đấu thành đang đánh (để chụp thử quay camera về quân). */
     dauBattle: () => pvp?.run.battle ?? null,
+    /** Đấu thật: hỏi máy chủ ngay (trận bị đánh, trận đánh dở, tải bản chụp). */
+    dauSync: () => {
+      snapAt = 0;
+      return dongBo();
+    },
     advance: (ms: number) => {
       tick(state, ms);
       commit();
@@ -1766,6 +2982,8 @@ async function start(): Promise<void> {
     select: (id: number | null) => select(id),
     /** Chọn công trình trong bảng Xây dựng như bấm nút Xây (đặt, trải, đắp tường). */
     build: (type: BuildingType) => handle({ kind: 'chooseBuild', type }),
+    /** Mở bảng tướng (trang bị, chỉ số, kho đồ) của tướng `hero`, như bấm nút Trang bị. */
+    tuong: (hero?: HeroKind) => handle({ kind: 'openTuong', hero }),
     /** Mở bảng Đất bên kia sông của khoảnh bên kia `id`, như khi chạm vào đất ấy. */
     benKia: (id: number) => {
       select(null);
@@ -1793,6 +3011,34 @@ async function start(): Promise<void> {
     },
     /** Mở bảng quần đảo `id` như khi chạm vào đảo. */
     quanDao: (id: QuanDaoId) => hud.showQuanDao(state, id),
+    /**
+     * Ra map dã ngoại `map`, đội đứng ở mép khu `khu` (−1 là trại), cấp chung `cap` (bỏ trống thì cấp đầu của khu):
+     * chụp thử map. Trả trận để đọc.
+     */
+    daNgoai: (map: DaMapId = 1, khu = 0, cap?: number) => {
+      const d = state.daNgoai;
+      d.cap = cap ?? DA_MAP[map].cap[0] + Math.max(0, khu) * 2;
+      d.exp = Math.round(canLen(d.cap) * 0.4);
+      d.xa = Math.max(d.xa, map);
+      d.map = map;
+      const bc = boCuc(map);
+      const k = khu >= 0 ? bc.khu[khu] : null;
+      d.cho = k ? { x: k.x + (bc.trai.x - k.x) * (k.r * 0.5) / Math.hypot(bc.trai.x - k.x, bc.trai.z - k.z), z: k.z + (bc.trai.z - k.z) * (k.r * 0.5) / Math.hypot(bc.trai.x - k.x, bc.trai.z - k.z) } : null;
+      moDa();
+      return daB;
+    },
+    /** Điểm màn hình của điểm (x, z) trên map dã ngoại đang xem (để kiểm hướng bản đồ nhỏ). */
+    daManHinh: (x: number, z: number) => world.daScreenAt(x, z, 0),
+    /** Rời map dã ngoại (về xem kinh đô, đội ở lại). */
+    daRoi: () => roiDa(false),
+    /** Giặc đánh đảo `id` ngay (đánh trọn trận như khi tới giờ), để chụp thử bảng, dòng tin, xem lại trận. */
+    daoTran: (id: QuanDaoId) => {
+      const t = danhDao(state, id);
+      commit();
+      return t;
+    },
+    /** Xem lại trận gần nhất của đảo `id` như bấm nút Xem lại trận. */
+    xemDao: (id: QuanDaoId) => handle({ kind: 'xemDao', dao: id }),
     /** Đặt đồng hồ cảnh (giây): thuyền khơi, cá voi, cá heo theo đồng hồ này, để chụp thử thuyền đang ở biển. */
     seaTime: (t: number) => world.seekTime(t),
     /**

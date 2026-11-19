@@ -4,7 +4,7 @@
 import * as THREE from 'three';
 import type { FighterKind } from '../game/battle';
 import { beginPose, fallPose, gripHands, lerp, stance, strikeCurve, walkCycle, type Human, type HumanBone } from './body';
-import { monsterBody, serpentBody } from './nanQuai';
+import { cobraBody, crabBody, monsterBody, pythonBody, serpentBody } from './nanQuai';
 import { C } from './palette';
 import { RigBuilder, bakeRig, resetBones, skinRig, type Act, type BoneDef, type Bones, type Poser } from './rig';
 
@@ -221,6 +221,135 @@ function poseSerpent(b: B, a: Act): void {
   }
 }
 
+// ---------- Rắn hổ mang chúa (quái dã ngoại) ----------
+
+/** Các khúc mình rắn hổ mang: khoanh dưới đất ở đuôi, nửa trước dựng đứng. */
+const COBRA_BODY: [number, number, number, number][] = [
+  [0.3, 0.08, -0.55, 0.09],
+  [-0.15, 0.08, -0.6, 0.1],
+  [-0.3, 0.08, -0.25, 0.1],
+  [-0.05, 0.12, 0.0, 0.1],
+  [0, 0.45, 0.05, 0.09],
+  [0, 0.85, 0.12, 0.08],
+];
+const COBRA: Defs = {
+  ...BASE,
+  ...Object.fromEntries(COBRA_BODY.map(([x, y, z], i) => [`s${i}`, { parent: i ? `s${i - 1}` : 'base', at: [x, y, z] as [number, number, number] }])),
+  head: { parent: 's5', at: [0, 1.0, 0.14] },
+};
+
+function drawCobra(r: Rig): void {
+  cobraBody(r, COBRA_BODY);
+  // Lưỡi chẻ đỏ thè ra trước miệng.
+  r.on('head').plain.cone(0.008, 0.12, C.red, 0, 1.15, 0.36, [Math.PI / 2, 0, 0], 3);
+}
+
+// ---------- Trăn gấm (quái dã ngoại Đầm Dạ Trạch) ----------
+
+/** Các khúc mình trăn: bò sát đất thành hình chữ S, cổ ngóc lên một chút. */
+const PYTHON_BODY: [number, number, number, number][] = [
+  [0.25, 0.09, -0.75, 0.08],
+  [-0.15, 0.11, -0.55, 0.11],
+  [-0.25, 0.12, -0.15, 0.13],
+  [0.1, 0.13, 0.05, 0.13],
+  [0.15, 0.16, 0.35, 0.11],
+  [0, 0.24, 0.55, 0.09],
+];
+const PYTHON: Defs = {
+  ...BASE,
+  ...Object.fromEntries(PYTHON_BODY.map(([x, y, z], i) => [`s${i}`, { parent: i ? `s${i - 1}` : 'base', at: [x, y, z] as [number, number, number] }])),
+  head: { parent: 's5', at: [0, 0.28, 0.7] },
+};
+
+function drawPython(r: Rig): void {
+  pythonBody(r, PYTHON_BODY);
+  // Lưỡi chẻ đỏ thè ra trước miệng.
+  r.on('head').plain.cone(0.008, 0.1, C.red, 0, 0.27, 0.92, [Math.PI / 2, 0, 0], 3);
+}
+
+/** Trăn trườn uốn mình sát đất; đánh thì rụt cổ lấy đà rồi lao đầu tới đớp; ngã thì nằm duỗi. */
+function posePython(b: B, a: Act): void {
+  resetBones(b);
+  const t = a.time ?? 0;
+  const walk = a.act === 'walk';
+  const ph = walk ? (a.phase ?? 0) * 0.7 : t * 0.9;
+  for (let i = 0; i < 6; i++) b[`s${i}`].rotation.y = (walk ? 0.2 : 0.04) * Math.sin(ph - i * 0.9);
+  if (a.act === 'fight') {
+    const e = strikeCurve(a.strike, 0.2, 0.4);
+    b.s4.rotation.x = lerp(-0.35, 0.15, e);
+    b.s5.rotation.x = lerp(-0.4, 0.2, e);
+    b.s4.position.z += 0.12 * e;
+    b.head.rotation.x = lerp(0.2, 0.05, e);
+  } else if (a.act === 'dead') {
+    const f = a.fall ?? 1;
+    for (let i = 0; i < 6; i++) b[`s${i}`].rotation.y *= 1 - f;
+  } else {
+    b.s5.rotation.x = -0.12 - 0.05 * Math.sin(t * 1.3);
+  }
+}
+
+/** Rắn hổ mang lắc lư nửa mình dựng đứng; mổ thì vươn cổ lao xuống trước; đi thì trườn uốn khúc. */
+function poseCobra(b: B, a: Act): void {
+  resetBones(b);
+  const t = a.time ?? 0;
+  const walk = a.act === 'walk';
+  const ph = walk ? (a.phase ?? 0) * 0.8 : t * 1.4;
+  for (let i = 0; i < 4; i++) b[`s${i}`].rotation.y = (walk ? 0.25 : 0.06) * Math.sin(ph - i * 0.9);
+  b.s4.rotation.z = 0.08 * Math.sin(ph * 0.8);
+  b.s5.rotation.z = -0.06 * Math.sin(ph * 0.8);
+  if (a.act === 'fight') {
+    const e = strikeCurve(a.strike, 0.15, 0.35);
+    b.s4.rotation.x = lerp(-0.15, 0.45, e);
+    b.s5.rotation.x = lerp(-0.2, 0.5, e);
+    b.head.rotation.x = lerp(0.05, 0.2, e);
+  } else if (a.act === 'dead') {
+    const f = a.fall ?? 1;
+    b.s4.rotation.x = 0.9 * f;
+    b.s5.rotation.x = 0.6 * f;
+  }
+}
+
+// ---------- Cua đá (quái dã ngoại) ----------
+
+const CRAB: Defs = {
+  ...BASE,
+  qBody: { parent: 'base', at: [0, 0.38, 0] },
+  clawL: { parent: 'qBody', at: [-0.3, 0.36, 0.2] },
+  clawR: { parent: 'qBody', at: [0.3, 0.36, 0.2] },
+  legL: { parent: 'qBody', at: [-0.3, 0.36, 0] },
+  legR: { parent: 'qBody', at: [0.3, 0.36, 0] },
+};
+
+function drawCrab(r: Rig): void {
+  crabBody(r);
+}
+
+/** Cua đá nhấp nhô trên tám chân, đi thì lạch bạch hai bên so le; kẹp thì giơ càng lên rồi bập xuống. */
+function poseCrab(b: B, a: Act): void {
+  resetBones(b);
+  const t = a.time ?? 0;
+  if (a.act === 'walk') {
+    const ph = (a.phase ?? 0) * 1.3;
+    b.legL.rotation.z = 0.25 * Math.sin(ph);
+    b.legR.rotation.z = 0.25 * Math.sin(ph + Math.PI);
+    b.qBody.position.y += 0.03 * Math.abs(Math.sin(ph));
+    b.qBody.rotation.z = 0.06 * Math.sin(ph);
+  } else if (a.act === 'fight') {
+    const e = strikeCurve(a.strike, 0.25, 0.45);
+    b.clawL.rotation.x = -0.9 * (1 - e) + 0.3 * e;
+    b.clawR.rotation.x = -1.1 * (1 - e) + 0.4 * e;
+  } else if (a.act === 'dead') {
+    const f = a.fall ?? 1;
+    b.legL.rotation.z = -0.5 * f;
+    b.legR.rotation.z = 0.5 * f;
+    b.clawL.rotation.x = b.clawR.rotation.x = 0.3 * f;
+  } else {
+    b.clawL.rotation.x = -0.2 + 0.1 * Math.sin(t * 2);
+    b.clawR.rotation.x = -0.25 + 0.1 * Math.sin(t * 2 + 1);
+    b.qBody.position.y += 0.01 * Math.sin(t * 1.5);
+  }
+}
+
 // ---------- Quỷ núi ----------
 
 /** Khung người to, chân ngắn, tay dài: cùng tên khớp với thân người thường để dùng chung các tư thế. */
@@ -332,8 +461,8 @@ function poseGhost(b: B, a: Act): void {
 
 // ---------- Trong trận ----------
 
-export type MonsterKind = 'tomBinh' | 'caPhun' | 'caSau' | 'thuongLuong' | 'quyNui' | 'maTroi';
-const KINDS: readonly FighterKind[] = ['tomBinh', 'caPhun', 'caSau', 'thuongLuong', 'quyNui', 'maTroi'];
+export type MonsterKind = 'tomBinh' | 'caPhun' | 'caSau' | 'thuongLuong' | 'quyNui' | 'maTroi' | 'ranHo' | 'cuaDa' | 'tranGam';
+const KINDS: readonly FighterKind[] = ['tomBinh', 'caPhun', 'caSau', 'thuongLuong', 'quyNui', 'maTroi', 'ranHo', 'cuaDa', 'tranGam'];
 export const isMonster = (k: FighterKind): k is MonsterKind => KINDS.includes(k);
 
 interface Spec {
@@ -355,6 +484,9 @@ const SPECS: Record<MonsterKind, Spec> = {
     pose: (b, a) => poseDemon(b as unknown as Human, a),
   },
   maTroi: { defs: GHOST, draw: drawGhost, pose: poseGhost, fall: 'none' },
+  ranHo: { defs: COBRA, draw: drawCobra, pose: poseCobra, fall: 'side' },
+  cuaDa: { defs: CRAB, draw: drawCrab, pose: poseCrab, fall: 'none' },
+  tranGam: { defs: PYTHON, draw: drawPython, pose: posePython, fall: 'none' },
 };
 
 /** Quái đông trên màn hình (mùa lũ, đêm yêu tinh): bớt độ chi tiết như lính. */

@@ -1,35 +1,45 @@
-// Canh Đấu thành (PR 2, chưa có máy chủ): bản chụp kinh đô và mã bản chụp, kiểm bản chụp sửa tay, kinh đô máy, trận
+// Canh Đấu thành (PR 2, chưa có máy chủ): bản chụp kinh đô và mã bản chụp, kiểm bản chụp sửa tay (cả món đồ của tướng:
+// máy chủ kiểm món, tự tính chỉ số, tướng giữ thành mặc đồ), kinh đô máy, trận
 // Đấu thành (quân ta đánh thành, lính giữ thành, tháp bắn quân ta), tất định và đánh lại từ đầu vào ghi sẵn, sao,
 // của cướp, chiến công, và cân bằng: cùng cấp Điện, đủ quân mẫu thì được 1–2 sao, nửa quân thì 0 sao.
 
 import { describe, expect, it } from 'vitest';
-import { skillReady, type HeroSetup, type PvpAttack } from './battle';
-import { BUILDINGS, DAU_THANH, GUARD_CAP, SKILL_IDS, UNITS, type SkillId } from './defs';
+import { isHero, skillReady, type HeroKind, type HeroSetup, type PvpAttack } from './battle';
+import { BUILDINGS, CUONG_HOA_TRAN, DAU_THANH, GUARD_CAP, SKILL_IDS, UNITS, type BoDo, type Chapter, type SkillId } from './defs';
 import { armySpace, type Army } from './doanhTrai';
 import {
   beginPvp,
   botSnapshot,
   canPractice,
+  cleanInputs,
   decodeSnapshot,
   defenderState,
+  defenseOf,
   encodeSnapshot,
+  ganDoChup,
   lootCap,
   lootPvp,
   makeSnapshot,
   pushInput,
+  PVP_MAX_INPUTS,
+  replayPvp,
   scorePvp,
   simulatePvp,
   stepPvp,
   trophyDelta,
+  tuongChup,
   validateArmy,
   validateSnapshot,
   type PvpRun,
   type Snapshot,
 } from './dauThanh';
-import { createInitialState, place, tick } from './game';
+import { createInitialState, dienLevel, place, storageCap, tick, type Building } from './game';
+import { playChapters } from './moPhong';
+import { nhanBanChup } from './mayChu';
 import { HALF_ARMY, HALF_ARMY4, REACTION_S, SAMPLE_ARMY, SAMPLE_ARMY4, SEEDS } from './testkit';
-import { RIVER_START } from './map';
+import { GRID, RIVER_START, farBankOf, isRiver } from './map';
 import { DIEN, edge, setDien } from './testmap';
+import { HERO_STATS, rutMon, tinhDo, type MonGoc } from './trangBi';
 
 /** Tướng của người đánh thành ở cấp Điện `dien`: Gióng có Nhổ tre ở Điện 5, Sơn Tinh ở Điện 6, An Dương Vương ở Điện 7, Cao Lỗ từ Điện 8. */
 function heroAt(dien: number): HeroSetup[] {
@@ -96,6 +106,49 @@ describe('bản chụp kinh đô', () => {
     expect(def.resources).toEqual(s.resources);
   });
 
+  it('của vượt sức chứa (thưởng, hoàn của, dỡ kho) chỉ chụp tới sức chứa; kho bên kia sông không tính: máy chủ vẫn nhận', () => {
+    const s = capital();
+    const cap = storageCap(s);
+    s.resources = { gao: cap * 3, voOc: cap + 1, datDa: cap, sat: 12.5, go: 0 };
+    let snap = makeSnapshot(s);
+    expect(validateSnapshot(snap)).toBeNull();
+    expect(snap.resources).toEqual({ gao: cap, voOc: cap, datDa: cap, sat: 12.5, go: 0 });
+    expect(nhanBanChup(encodeSnapshot(snap))).not.toHaveProperty('loi');
+    // Kho bên kia sông: không vào bản chụp, sức chứa trong bản chụp không tính kho ấy.
+    let far = -1;
+    for (let i = 0; i < GRID * GRID && far < 0; i++) if (farBankOf(i % GRID, Math.floor(i / GRID)) !== null && !isRiver(i % GRID, Math.floor(i / GRID))) far = i;
+    s.buildings.push({ id: s.nextId++, type: 'kho', x: far % GRID, z: Math.floor(far / GRID), level: 5, workers: 0 } as Building);
+    expect(storageCap(s)).toBeGreaterThan(cap);
+    s.resources.gao = storageCap(s);
+    snap = makeSnapshot(s);
+    expect([snap.cap, snap.resources.gao]).toEqual([cap, cap]);
+    expect(validateSnapshot(snap)).toBeNull();
+  });
+
+  it('người chơi mô phỏng từ Điện 5 tới Điện 10: bản chụp lúc nào cũng hợp luật, kể cả khi của vượt sức chứa', () => {
+    const s = createInitialState(0);
+    const loi = new Set<string>();
+    let lan = 0;
+    playChapters({
+      s,
+      last: 10,
+      maxSec: 20 * 3600,
+      until: (_m, sec) => {
+        if (sec % 300 !== 0 || dienLevel(s) < DAU_THANH.unlockDien) return false;
+        lan++;
+        const over = { ...s, resources: { gao: s.resources.gao * 3 + 1e5, voOc: s.resources.voOc * 3, datDa: 1e6, sat: 1e6, go: 1e6 } };
+        for (const st of [s, over]) {
+          const why = validateSnapshot(makeSnapshot(st));
+          if (why) loi.add(`Điện ${dienLevel(s)}: ${why}`);
+        }
+        return false;
+      },
+    });
+    expect(dienLevel(s)).toBe(10);
+    expect(lan).toBeGreaterThan(50);
+    expect([...loi]).toEqual([]);
+  }, 120_000);
+
   it('bản chụp sửa tay bị từ chối: thừa công trình, cấp vượt Điện, chồng ô, quá lính giữ thành, quá binh khí, của quá kho', () => {
     const good = botSnapshot(6);
     expect(validateSnapshot(good)).toBeNull();
@@ -126,6 +179,108 @@ describe('bản chụp kinh đô', () => {
   });
 });
 
+describe('đồ của tướng trong Đấu thành', () => {
+  const HAI_BA: HeroSetup[] = [
+    { kind: 'trungTrac', bamboo: false, glow: false, non: false },
+    { kind: 'trungNhi', bamboo: false, glow: false, non: false, hieuTrieu: true },
+  ];
+
+  /** Bốn món bộ `bo` rút thật ở thử thách chương 5 (mỗi ô một món), cường hóa tới trần của phẩm. */
+  function monThat(bo: BoDo, from = 0): MonGoc[] {
+    const out = new Map<string, MonGoc>();
+    for (let seq = from; out.size < 4; seq++) {
+      // Từ phẩm Quý (hai chỉ số phụ trở lên) để thử được luật chỉ số phụ, trần phẩm.
+      const m = rutMon(seq, 'thuDau', 5, [bo]);
+      if (m && m.pham >= 3 && !out.has(m.o)) out.set(m.o, { ...m, cuong: CUONG_HOA_TRAN[m.pham] });
+    }
+    return [...out.values()];
+  }
+
+  /** Kinh đô máy Điện 10, Hai Bà giữ thành mặc đủ bộ mình. */
+  function coDo(): Snapshot {
+    const snap = botSnapshot(10);
+    snap.heroes = HAI_BA.map((h) => ({ ...h }));
+    snap.trangBi = { trungTrac: monThat('trungTrac'), trungNhi: monThat('trungNhi', 50) };
+    return snap;
+  }
+
+  it('món rút thật hợp luật; máy chủ nhận, mã lại chỉ giữ phần làm nên chỉ số', () => {
+    const snap = coDo();
+    expect(validateSnapshot(snap)).toBeNull();
+    const extra = JSON.parse(JSON.stringify(snap)) as Snapshot;
+    Object.assign(extra.trangBi!.trungTrac![0], { id: 7, tuong: 'trungTrac', khoa: true });
+    const got = nhanBanChup(encodeSnapshot(extra));
+    if ('loi' in got) throw new Error(got.loi);
+    expect(decodeSnapshot(got.ma)!.trangBi).toEqual(snap.trangBi);
+  });
+
+  it('món sửa tay bị từ chối', () => {
+    const good = coDo();
+    const bad = (edit: (s: Snapshot) => void) => {
+      const s: Snapshot = JSON.parse(JSON.stringify(good));
+      edit(s);
+      return validateSnapshot(s);
+    };
+    const mon = (s: Snapshot, i = 0) => s.trangBi!.trungTrac![i];
+    const giap = (s: Snapshot) => s.trangBi!.trungTrac!.find((m) => m.o === 'giap')!;
+    // Tướng mang sẵn số đồ (không qua món).
+    expect(bad((s) => (s.heroes[0].trangBi = { mau: 50, danh: 50, toc: 0, uy: 0, giap: 0, hoi: 0 }))).toMatch(/chỉ số đồ/);
+    // Món của tướng không giữ thành.
+    expect(bad((s) => (s.trangBi!.giong = monThat('phuDong')))).toMatch(/không giữ thành/);
+    // Hai món một ô, quá bốn món.
+    expect(bad((s) => (s.trangBi!.trungTrac![1] = { ...mon(s, 0) }))).toMatch(/cùng ô/);
+    expect(bad((s) => s.trangBi!.trungTrac!.push({ ...mon(s) }))).toBe('sai dạng');
+    // Cấp đồ quá chương của bản chụp; bộ chương sau ở chương trước.
+    expect(bad((s) => ((s.chapter = 4), (s.trangBi = { trungTrac: monThat('trungTrac').map((m) => ({ ...m, cap: 4 })) })))).toMatch(/bộ trungTrac chưa rơi/);
+    expect(bad((s) => (s.chapter = 4))).toMatch(/cấp 5 quá chương 4/);
+    expect(bad((s) => (mon(s).cap = 6 as Chapter))).toMatch(/sai dạng/);
+    // Phẩm quá trần của cấp đồ (chương 1 tới Tốt), chỉ số chính sai ô, chỉ số phụ thừa, trùng, nấc quá.
+    expect(bad((s) => Object.assign(mon(s), { cap: 1 }))).toMatch(/phẩm/);
+    expect(bad((s) => (mon(s).chinh = mon(s).o === 'vuKhi' ? 'mau' : 'danh'))).toMatch(/chỉ số chính/);
+    expect(bad((s) => mon(s).phu.push({ k: 'uy', nac: 1 }))).not.toBeNull();
+    expect(bad((s) => (giap(s).phu[1] = { ...giap(s).phu[0] }))).toMatch(/trùng/);
+    expect(bad((s) => (mon(s).phu[0].nac = 99))).toMatch(/phụ sai/);
+    expect(bad((s) => (mon(s).phu[0].k = mon(s).chinh))).toMatch(/trùng/);
+    // Cường hóa quá trần, số lạ.
+    expect(bad((s) => (mon(s).cuong += 1))).toMatch(/cường hóa/);
+    expect(bad((s) => (mon(s).cuong = 1.5))).toMatch(/sai dạng/);
+    expect(bad((s) => ((mon(s) as unknown as Record<string, unknown>).o = 'nhan'))).toMatch(/sai dạng/);
+  });
+
+  it('chỉ số đồ tính lại từ món, không tin số ghi sẵn', () => {
+    const snap = coDo();
+    const want = snap.heroes.map((h) => tinhDo(h.kind, snap.trangBi![h.kind]!));
+    expect(want.every((d) => d.bo4)).toBe(true);
+    expect(defenseOf(snap).heroes.map((h) => h.trangBi)).toEqual(want);
+    expect(tuongChup(snap).map((h) => h.trangBi)).toEqual(want);
+    // Bản chụp lỡ ghi số giả (đã lưu từ trước khi kiểm): bỏ số giả, tính lại; không món thì không đồ.
+    const fake = { mau: 99, danh: 99, toc: 0, uy: 0, giap: 0.99, hoi: 0 };
+    snap.heroes[0].trangBi = fake;
+    snap.heroes[1].trangBi = fake;
+    delete snap.trangBi!.trungNhi;
+    const got = defenseOf(snap).heroes;
+    expect(got[0].trangBi).toEqual(want[0]);
+    expect(got[1]).not.toHaveProperty('trangBi');
+    expect(ganDoChup(snap.heroes[1], undefined)).not.toHaveProperty('trangBi');
+  });
+
+  it('tướng giữ thành mặc đồ: thêm máu; sức đánh, tốc đánh, giáp theo đồ của chính người ấy (`Fighter.trangBi`)', () => {
+    const attack = attackAt(botSnapshot(10), SAMPLE_ARMY4, 3);
+    const tuong = (snap: Snapshot) => beginPvp(snap, attack).battle.fighters.filter((f) => f.side === 'giac' && isHero(f.kind));
+    const khong = coDo();
+    delete khong.trangBi;
+    const co = tuong(coDo());
+    const tran = tuong(khong);
+    expect(co.map((f) => f.kind)).toEqual(['trungTrac', 'trungNhi']);
+    co.forEach((f, i) => {
+      const kind = f.kind as HeroKind;
+      expect(f.trangBi).toEqual(tinhDo(kind, coDo().trangBi![kind]!));
+      expect(f.maxHp - tran[i].maxHp).toBeCloseTo(HERO_STATS[kind].hp * f.trangBi!.mau * DAU_THANH.hpMul[9], 6);
+      expect(tran[i].trangBi).toBeUndefined();
+    });
+  });
+});
+
 describe('trận Đấu thành', () => {
   it('tất định: đánh lại từ đầu vào ghi sẵn ra y hệt, dù lúc đánh chạy theo khung hình lẻ', () => {
     const snap = botSnapshot(5);
@@ -135,6 +290,28 @@ describe('trận Đấu thành', () => {
     expect(live.inputs.length).toBeGreaterThan(0);
     expect(JSON.stringify(replay.battle)).toBe(JSON.stringify(live.battle));
     expect(JSON.stringify(replay.def.buildings)).toBe(JSON.stringify(live.def.buildings));
+  }, 30000);
+
+  it('xem lại (PR 6): chạy theo khung hình với các lần bấm đã ghi ra y hệt trận gốc, không ghi thêm lần bấm', () => {
+    const snap = botSnapshot(5);
+    const attack = attackAt(snap, SAMPLE_ARMY, 11);
+    const live = fight(snap, attack);
+    const saved = JSON.parse(JSON.stringify(live.inputs));
+    // Máy chủ trả các lần bấm kèm rác người đánh gửi lên: lọc như lúc đánh lại.
+    const replay = replayPvp(snap, attack, [...saved, null, 'x', { s: -1, k: 'trongTran' }, { s: 5, k: 'bay' }, { s: 1.5, k: 'rut' }]);
+    expect(replay.inputs).toEqual(saved);
+    let frames = 0;
+    // Khung hình lẻ, lúc nhanh gấp bốn: vẫn chỉ chạy trọn bước.
+    while (!stepPvp(replay, frames++ % 3 ? 1000 / 60 : 4000 / 60)) {
+      pushInput(replay, 'trongTran');
+      if (frames > 200_000) throw new Error('trận xem lại không xong');
+    }
+    expect(replay.inputs).toEqual(saved);
+    expect(replay.step).toBe(live.step);
+    expect(JSON.stringify(replay.battle)).toBe(JSON.stringify(live.battle));
+    expect(JSON.stringify(replay.def.buildings)).toBe(JSON.stringify(live.def.buildings));
+    expect(cleanInputs('x')).toEqual([]);
+    expect(cleanInputs(Array.from({ length: PVP_MAX_INPUTS + 50 }, (_, s) => ({ s, k: 'rut' }))).length).toBe(PVP_MAX_INPUTS);
   }, 30000);
 
   it('tháp bắn quân ta, lính giữ thành đánh quân ta, quân ta phá công trình; không cướp của trong trận', () => {

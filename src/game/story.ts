@@ -10,6 +10,7 @@ import { advJoined, inChapter3, ruaVangCame } from './coLoa';
 import type { GameState, StoryId } from './game';
 import { giongAppeared, giongReady } from './giong';
 import { inChapter2, sonJoined } from './son';
+import { tuongDaVe } from './tuongDa';
 
 const STORY_ORDER: StoryId[] = [
   'mo',
@@ -41,6 +42,11 @@ const STORY_ORDER: StoryId[] = [
   'langBac',
   'songHat',
   'hetTruyen5',
+  'baTrieu',
+  'trieuQuangPhuc',
+  'maiThucLoan',
+  'ngoQuyen',
+  'lyThuongKiet',
 ];
 const STORY_WHEN: Record<StoryId, (s: GameState) => boolean> = {
   mo: () => true,
@@ -85,6 +91,16 @@ const STORY_WHEN: Record<StoryId, (s: GameState) => boolean> = {
   // Thắng màn 40: giữ Cấm Khê cho dân rút về núi, Hai Bà gieo mình xuống sông Hát. Sau đó là màn hình Hết truyện mới.
   songHat: chuong5Won,
   hetTruyen5: chuong5Won,
+  // Hạ boss map 6 dã ngoại lần đầu: Bà Triệu về theo đội dã ngoại.
+  baTrieu: (s) => tuongDaVe(s, 'baTrieu'),
+  // Hạ boss map 7 lần đầu: Triệu Quang Phục về.
+  trieuQuangPhuc: (s) => tuongDaVe(s, 'trieuQuangPhuc'),
+  // Hạ boss map 8 lần đầu: Mai Thúc Loan về.
+  maiThucLoan: (s) => tuongDaVe(s, 'maiThucLoan'),
+  // Hạ boss map 9 lần đầu: Ngô Quyền về.
+  ngoQuyen: (s) => tuongDaVe(s, 'ngoQuyen'),
+  // Hạ boss map 10 lần đầu: Lý Thường Kiệt về.
+  lyThuongKiet: (s) => tuongDaVe(s, 'lyThuongKiet'),
 };
 
 /** Đoạn truyện đến lúc kể mà người chơi chưa xem, theo đúng thứ tự. */

@@ -3,7 +3,7 @@
 
 import { BUILDINGS, type BuildingType } from '../game/defs';
 import { dienLevel, unlocked, type GameState } from '../game/game';
-import { canStartMau, frameStart, mauSlots, mauUnlocked, planMau, MAU_IDS, type MauId } from '../game/mau';
+import { canStartMau, frameStart, mauDuong, mauSlots, mauUnlocked, planMau, MAU_IDS, type MauId } from '../game/mau';
 import { xayMs } from '../game/xay';
 import { realMs } from './xay';
 import { isOpen, khoanhOf, openStart } from '../game/khoanh';
@@ -18,6 +18,10 @@ const MINI = { land: '#b9c47e', wild: '#93a165', river: '#3f7f9a' };
 /** Màu ô trên bản đồ thu nhỏ theo loại công trình. */
 const TILE: Partial<Record<BuildingType, string>> = {
   dien: '#b0392b',
+  duongDat: '#d2b783',
+  duongSoi: '#cfc6ad',
+  duongDa: '#aaa49a',
+  duongGach: '#b5654a',
   ruong: '#c9b04a',
   ruongNep: '#e4d7a0',
   ben: '#3f7f9a',
@@ -53,12 +57,12 @@ const miniCache = new Map<string, string>();
 
 /**
  * Bản đồ thu nhỏ của mẫu ở cấp Điện hiện tại, từ bìa khung mẫu hay đất đã mở (xa hơn thì lấy) tới sông: ô rừng chưa
- * phát vẽ mờ, chỗ của mẫu nằm trong rừng cũng mờ, sông xanh ở hai cạnh. Vẽ lên canvas một lần cho mỗi mẫu, mỗi cấp
+ * phát vẽ mờ, chỗ của mẫu nằm trong rừng cũng mờ, đường của mẫu màu đường đất, sông xanh ở hai cạnh. Vẽ lên canvas một lần cho mỗi mẫu, mỗi cấp
  * Điện và mỗi bộ khoảnh đã mở.
  */
 function miniMap(state: GameState, id: MauId): string {
   const level = dienLevel(state);
-  const x0 = Math.max(0, Math.min(frameStart(level), openStart(state)) - 1);
+  const x0 = Math.max(0, Math.min(frameStart(level, id), openStart(state)) - 1);
   // Cổng thành đã mở thì chỗ cổng trong mẫu tô màu cổng, chưa mở thì vẫn là tường.
   const gate = unlocked(state, BUILDINGS.congThanh.unlock) && level >= BUILDINGS.congThanh.minDien;
   const key = `${id}:${level}:${gate ? 1 : 0}:${state.khoanh.join(',')}`;
@@ -76,6 +80,11 @@ function miniMap(state: GameState, id: MauId): string {
         g.fillStyle = tx >= RIVER_START || tz >= RIVER_START ? MINI.river : isOpen(state, tx, tz) ? MINI.land : MINI.wild;
         g.fillRect(x * px, z * px, px, px);
       }
+    }
+    g.fillStyle = TILE.duongDat!;
+    for (const r of mauDuong(id, level)) {
+      g.globalAlpha = isOpen(state, r.x, r.z) ? 1 : 0.45;
+      g.fillRect((r.x - x0) * px, (r.z - x0) * px, px, px);
     }
     for (const s of mauSlots(id, level)) {
       const def = BUILDINGS[s.type];
@@ -124,9 +133,13 @@ export function capitalMiniMap(state: GameState): string {
   return url;
 }
 
-/** Số khoảnh rừng chưa phát mà mẫu ở cấp Điện hiện tại có chỗ đặt công trình trong đó. */
+/** Số khoảnh rừng chưa phát mà mẫu ở cấp Điện hiện tại có chỗ đặt công trình, trải đường trong đó. */
 function wildKhoanh(state: GameState, id: MauId): number {
   const wild = new Set<number>();
+  for (const r of mauDuong(id, dienLevel(state))) {
+    const k = khoanhOf(r.x, r.z);
+    if (k >= 0 && !isOpen(state, r.x, r.z)) wild.add(k);
+  }
   for (const s of mauSlots(id, dienLevel(state))) {
     const def = BUILDINGS[s.type];
     for (let dx = 0; dx < def.w; dx++) {
@@ -155,7 +168,7 @@ export function mauItems(state: GameState, armed: MauId | null): { items: BuildI
     const time = ms > 0 ? ` · ${vi.ui.xayTime(formatXay(realMs(state, ms)))}` : '';
     return {
       ...base,
-      meta: vi.ui.mauPlan(plan.moves.length, plan.builds.length, plan.removes.length, plan.uNos.length) + time,
+      meta: vi.ui.mauPlan(plan.moves.length, plan.builds.length, plan.removes.length, plan.uNos.length, plan.duong.length) + time,
       cost: Object.keys(plan.cost).length ? costHtml(state, plan.cost) : '',
       why: check.ok ? '' : vi.reasons[check.reason],
       go: armed === id ? vi.ui.mauConfirm : vi.ui.mauApply,
