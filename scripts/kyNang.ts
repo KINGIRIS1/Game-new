@@ -8,6 +8,7 @@ import { startFieldBattle, stepField, useSkill, type HeroSetup } from '../src/ga
 import { FIELD, STAGES, type HeroKind, type SkillId } from '../src/game/defs';
 import { Battlefield } from '../src/render/battlefield';
 import { IsoCamera } from '../src/render/camera';
+import { datKieuNon, type KieuNon } from '../src/render/doiNon';
 
 /** Tướng làm kỹ năng và màn mặc định để chụp. */
 const CHU: Record<SkillId, { heroes: HeroKind[]; man: number }> = {
@@ -41,7 +42,8 @@ export interface Dai {
  * Chụp kỹ năng `skill`: trận chạy `truoc` giây rồi bấm, chụp ở các mốc `moc` (giây sau khi bấm), mỗi khung `w`×`h`
  * điểm, phóng `zoom` lần so với vừa khít bãi, nhìn vào giữa tướng và đám giặc.
  */
-export function chupKyNang(skill: SkillId, man: number | undefined, truoc: number, moc: number[], w: number, h: number, zoom: number): Dai {
+export function chupKyNang(skill: SkillId, man: number | undefined, truoc: number, moc: number[], w: number, h: number, zoom: number, kieu?: KieuNon): Dai {
+  if (kieu) datKieuNon(kieu);
   const chu = CHU[skill];
   const stage = man ?? chu.man;
   const def = STAGES[stage - 1];

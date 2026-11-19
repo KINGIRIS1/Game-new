@@ -15,6 +15,7 @@ import { isSoldier, makeSoldier } from './soldier';
 import { drumWaveTex, inkThin, outlineOf, toon } from './toon';
 import { HieuUng } from './hieuUng';
 import { taoDoi, type DoiRoi } from './bocDoi';
+import { daGiu, dungNon, type NonDung } from './doiNon';
 
 interface FighterView {
   obj: THREE.Group;
@@ -26,7 +27,7 @@ interface FighterView {
   /** Gióng đang phi ngựa dọc đường lao (Phun lửa), tọa độ trận. */
   dash?: { fromX: number; fromZ: number; toX: number; toZ: number; age: number };
   /** Đá Dời non mọc quanh chân tên giặc đang bị giữ chân. */
-  rocks?: { group: THREE.Group; age: number };
+  rocks?: { stone: ReturnType<typeof daGiu>; age: number };
   /** Núi Tản Viên dâng lên dưới chân Sơn Tinh khi Thủy Tinh rút quân; Rùa Vàng nâng An Dương Vương khi Triệu Đà thua chạy. */
   peak?: THREE.Group;
   /** Vòng sáng đồng dưới chân lính ta khi có Trống trận, đập theo nhịp trống. */
@@ -51,15 +52,6 @@ interface FighterView {
   horn?: number;
   /** Vòng sáng Lệnh bắn dưới chân lính nỏ. */
   order?: THREE.Mesh;
-}
-
-/** Vòng núi đá Dời non quanh Sơn Tinh: từng mỏm trồi vụt lên lần lượt, đứng một lúc rồi lún xuống. */
-interface Crag {
-  group: THREE.Group;
-  spikes: { obj: THREE.Group; h: number; delay: number }[];
-  cracks: THREE.Group;
-  crackMat: THREE.MeshBasicMaterial;
-  age: number;
 }
 
 /** Bức tường sóng Thủy Tinh hô lên, chạy dọc dải bị quét rồi đổ sụp. */
@@ -209,10 +201,6 @@ const auraGeo = new THREE.RingGeometry(0.3, 0.46, 24).rotateX(-Math.PI / 2);
 const auraMat = new THREE.MeshBasicMaterial({ color: C.ember, transparent: true, opacity: 0.6, depthWrite: false });
 const waterBallGeo = new THREE.SphereGeometry(0.09, 8, 6);
 const waterBallMat = new THREE.MeshBasicMaterial({ color: 0x9fd4e8 });
-/** Dời non: núi đá trồi lên trong chừng này giây (lần lượt từng mỏm), đứng tới giây CRAG_HOLD, lún hẳn ở CRAG_LIFE. */
-const CRAG_RISE = 0.18;
-const CRAG_HOLD = 1.25;
-const CRAG_LIFE = 1.9;
 /** Sóng Thủy Tinh chạy hết dải trong chừng này giây, rồi đổ sụp tới SURGE_LIFE. */
 const SURGE_RUN = 0.6;
 const SURGE_LIFE = 1.0;
@@ -248,37 +236,6 @@ const foamMat = new THREE.MeshBasicMaterial({ color: C.foam });
 const whirlGeo = new THREE.RingGeometry(0.25, 0.42, 20, 1, 0, Math.PI * 1.5).rotateX(-Math.PI / 2);
 
 /**
- * Một mỏm núi Dời non: cụm phiến đá nhọn nhiều mặt (phiến chính cao, hai phiến phụ chĩa xiên), sườn sẫm, chóp sáng,
- * lưng phủ rêu, chân có đá vụn; có viền mực. Gốc ở chân.
- */
-function cragSpike(h: number, r: number, rand: () => number): THREE.Group {
-  const b = new ShapeBuilder(false, true);
-  const seg = 5;
-  // Phiến chính: thân sẫm, nửa trên sáng hơn, chóp gần trắng.
-  b.cyl(r * 0.42, r, h * 0.6, C.rockDark, 0, h * 0.3, 0, undefined, seg);
-  b.cyl(r * 0.1, r * 0.42, h * 0.4, C.rock, 0, h * 0.8, 0, undefined, seg);
-  b.cone(r * 0.1, h * 0.08, 0xd8d0c0, 0, h * 1.04, 0, undefined, seg);
-  // Rêu bám một bên sườn.
-  b.cyl(r * 0.5, r * 0.78, h * 0.12, C.mountainCloak, 0, h * 0.42, 0, undefined, seg);
-  // Hai phiến phụ chĩa xiên ra.
-  for (const side of [-1, 1]) {
-    const hh = h * (0.4 + rand() * 0.2);
-    const tilt = 0.35 + rand() * 0.2;
-    b.cyl(r * 0.08, r * 0.5, hh, rand() < 0.5 ? C.rock : C.rockDark, side * r * 0.75, hh * 0.45, (rand() - 0.5) * r * 0.6, [0, 0, -side * tilt], seg);
-  }
-  // Đá vụn quanh chân.
-  for (let i = 0; i < 4; i++) {
-    const a = rand() * Math.PI * 2;
-    const rr = r * (0.22 + rand() * 0.18);
-    b.sphere(rr, i % 2 ? C.rock : C.rockDark, Math.cos(a) * r * 1.15, rr * 0.5, Math.sin(a) * r * 1.15, [1, 0.7, 1], 5);
-  }
-  const g = new THREE.Group();
-  const mesh = b.mesh(toon);
-  g.add(mesh, outlineOf(mesh.geometry, inkThin));
-  return g;
-}
-
-/**
  * Bức tường sóng: mặt cắt là con sóng đang vỡ (mặt trước lõm, mép sóng cuộn chúi về trước, lưng sóng thoải),
  * kéo dài theo bề ngang `width` (trục x), sóng chạy theo +z. Bọt trắng to nhỏ so le trên mép cuộn và chân sóng.
  */
@@ -312,20 +269,6 @@ function surgeModel(width: number, h: number, seed: number): THREE.Group {
   return g;
 }
 
-/** Ba mỏm đá nhọn mọc lên quanh chân một tên giặc. */
-function rockSpikes(seed: number): THREE.Group {
-  const b = new ShapeBuilder(false, true);
-  const rand = seeded(seed);
-  for (let i = 0; i < 4; i++) {
-    const a = (i / 4) * Math.PI * 2 + rand();
-    const h = 0.55 + rand() * 0.35;
-    b.cone(0.16, h, i % 2 ? C.rock : C.rockDark, Math.cos(a) * 0.32, h / 2, Math.sin(a) * 0.32, [Math.sin(a) * 0.25, 0, -Math.cos(a) * 0.25], 5);
-  }
-  const g = new THREE.Group();
-  const mesh = b.mesh(toon);
-  g.add(mesh, outlineOf(mesh.geometry, inkThin));
-  return g;
-}
 const puffGeo = new THREE.SphereGeometry(0.3, 10, 8);
 const arrowGeo = new THREE.BoxGeometry(0.03, 0.03, 0.45);
 const arrowMat = new THREE.MeshBasicMaterial({ color: C.arrow });
@@ -368,8 +311,6 @@ const SMASH_TIME = 0.9;
 /** Cao Lỗ thổi tù và (Lệnh bắn) trong chừng này giây. */
 const HORN_TIME = 1.1;
 const { lerp, smoothstep } = THREE.MathUtils;
-const fxVangColor = new THREE.Color(C.fxVang);
-const crackDark = new THREE.Color(0x2a2018);
 
 export class BattleView {
   private readonly fighters = new Map<number, FighterView>();
@@ -381,7 +322,7 @@ export class BattleView {
   private readonly scorches: Scorch[] = [];
   private readonly hills: Hill[] = [];
   private readonly waves: DrumWave[] = [];
-  private readonly crags: Crag[] = [];
+  private readonly nons: NonDung[] = [];
   private readonly surges: Surge[] = [];
   private readonly whirls: Whirl[] = [];
   /** Nhịp trống đã tỏa sóng gần nhất của Trống trận đang đánh, −1 khi không có. */
@@ -575,8 +516,11 @@ export class BattleView {
     this.hills.length = 0;
     for (const w of this.waves) this.dropWave(w);
     this.waves.length = 0;
-    for (const c of this.crags) this.dropCrag(c);
-    this.crags.length = 0;
+    for (const n of this.nons) {
+      n.group.removeFromParent();
+      n.drop();
+    }
+    this.nons.length = 0;
     for (const w of this.surges) this.root.remove(w.group);
     this.surges.length = 0;
     for (const w of this.whirls) this.root.remove(w.group);
@@ -937,81 +881,26 @@ export class BattleView {
     const hero = battle.fighters.find((f) => f.kind === 'sonTinh');
     const view = hero && this.fighters.get(hero.id);
     if (view) view.cast = CAST_TIME;
-    const rand = seeded(seq * 131 + 17);
-    const group = new THREE.Group();
-    group.position.set(x + ox, 0, z + oz);
-    const spikes: Crag['spikes'] = [];
-    const add = (n: number, r: number, hMin: number, hMax: number, size: number, delay0: number): void => {
-      for (let i = 0; i < n; i++) {
-        const a = (i / n) * Math.PI * 2 + rand() * 0.3 + (r < (ROCKS.radius * this.geo) ? 0.3 : 0);
-        const px = Math.cos(a) * r;
-        const pz = Math.sin(a) * r;
-        const h = (hMin + rand() * (hMax - hMin)) * this.scale;
-        const obj = cragSpike(h, size * this.scale * (0.85 + rand() * 0.3), rand);
-        obj.position.set(px, this.heightAt(x + px, z + pz) - h, pz);
-        // Mỏm đá chĩa hơi ra ngoài vòng.
-        obj.rotation.set(Math.sin(a) * 0.18, rand() * Math.PI, -Math.cos(a) * 0.18);
-        group.add(obj);
-        spikes.push({ obj, h, delay: delay0 + (i / n) * 0.12 });
-      }
-    };
-    add(11, (ROCKS.radius * this.geo), 1.0, 1.6, 0.42, 0.04);
-    add(7, (ROCKS.radius * this.geo) * 0.62, 0.55, 0.9, 0.28, 0);
-    // Đất nứt: những đường nứt sẫm tỏa từ chân Sơn Tinh ra tới vòng đá.
-    // Đường nứt rực ánh vàng như mạch núi bừng sáng, nguội dần thành vết nứt sẫm.
-    const crackMat = new THREE.MeshBasicMaterial({ color: C.fxVang, transparent: true, opacity: 1, depthWrite: false, toneMapped: false });
-    const cracks = new THREE.Group();
-    for (let i = 0; i < 9; i++) {
-      const a = (i / 9) * Math.PI * 2 + rand() * 0.4;
-      let cx = 0;
-      let cz = 0;
-      let dir = a;
-      for (let seg = 0; seg < 3; seg++) {
-        const len = ((ROCKS.radius * this.geo) / 3) * (0.8 + rand() * 0.4);
-        dir += (rand() - 0.5) * 0.6;
-        const mesh = new THREE.Mesh(new THREE.BoxGeometry(0.13 - seg * 0.03, 0.01, len), crackMat);
-        mesh.position.set(cx + Math.cos(dir) * len * 0.5, this.heightAt(x + cx, z + cz) + 0.04, cz + Math.sin(dir) * len * 0.5);
-        mesh.rotation.y = Math.atan2(Math.cos(dir), Math.sin(dir));
-        mesh.renderOrder = 2;
-        cracks.add(mesh);
-        cx += Math.cos(dir) * len;
-        cz += Math.sin(dir) * len;
-      }
-    }
-    group.add(cracks);
-    this.root.add(group);
-    this.crags.push({ group, spikes, cracks, crackMat, age: 0 });
-    // Bụi đất tung ở chân từng mỏm đá lớn.
-    for (let i = 0; i < 12; i++) {
-      const a = (i / 12) * Math.PI * 2;
-      const px = x + Math.cos(a) * (ROCKS.radius * this.geo);
-      const pz = z + Math.sin(a) * (ROCKS.radius * this.geo);
-      this.addPuff(px + ox, this.heightAt(px, pz) + 0.2, pz + oz, i % 3 ? C.earth : C.rock, 0.05 + (i / 12) * 0.12, 0.9, 1.8);
-    }
-    // Sơn Tinh dậm đất: sóng vàng loang tới vòng đá, lóe ở chân, tia tóe ở từng mỏm, bụi cuộn; giặc bị giữ chân choáng.
     const s = this.scale;
     const R = ROCKS.radius * this.geo;
-    const c = this.at(x, z);
-    this.hu.loe(this.at(x, z, 0.8 * s), { mau: C.fxVang, size: 2.8 * s, life: 0.4 });
-    this.hu.soc(c, { mau: C.fxVang, r: R * 1.1, life: 0.6 });
-    this.hu.soc(c, { mau: C.mountainCloak, r: R * 0.7, delay: 0.08, life: 0.5, loi: false });
-    for (let i = 0; i < 8; i++) {
-      const a = (i / 8) * Math.PI * 2;
-      const p = this.at(x + Math.cos(a) * R, z + Math.sin(a) * R, 0.6 * s);
-      this.hu.tia(p, { mau: C.fxVang, n: 5, toc: 6, len: 0.4, up: 1.2, delay: 0.06 + (i / 8) * 0.12, life: 0.5 });
-      this.hu.bui(this.at(x + Math.cos(a) * R, z + Math.sin(a) * R, 0.3), { mau: C.fxBui, size: 1.3 * s, delay: 0.08 + (i / 8) * 0.12, life: 1, bay: new THREE.Vector3(Math.cos(a), 0, Math.sin(a)) });
-    }
+    const dich = battle.fighters.filter((f) => f.side === 'giac' && f.stun && f.stun > 0 && f.state !== 'dead').map((f) => ({ dx: f.x - x, dz: f.z - z }));
+    const non = dungNon({
+      hu: this.hu,
+      at: (dx, dz, dy = 0) => this.at(x + dx, z + dz, dy),
+      cao: (dx, dz) => this.heightAt(x + dx, z + dz),
+      R,
+      sc: s,
+      seed: seq,
+      dich,
+    });
+    non.group.position.set(x + ox, 0, z + oz);
+    this.root.add(non.group);
+    this.nons.push(non);
     for (const f of battle.fighters) {
       if (f.side !== 'giac' || !f.stun || f.stun <= 0 || f.state === 'dead') continue;
       const v = this.fighters.get(f.id);
       if (v) this.hu.choang(v.obj, { mau: C.fxVang, cao: 1.75 * s, delay: 0.2, life: f.stun - 0.2 });
     }
-  }
-
-  private dropCrag(c: Crag): void {
-    this.root.remove(c.group);
-    c.cracks.children.forEach((m) => (m as THREE.Mesh).geometry.dispose());
-    c.crackMat.dispose();
   }
 
   /**
@@ -1483,18 +1372,17 @@ export class BattleView {
   /** Đá Dời non: mọc nhanh lên quanh chân khi bị giữ chân, lún xuống khi hết. */
   private syncRocks(view: FighterView, stun: number, id: number, dt: number): void {
     if (stun > 0 && !view.rocks) {
-      const group = rockSpikes(id * 31 + 7);
-      group.scale.set(1, 0.01, 1);
-      view.obj.add(group);
-      view.rocks = { group, age: 0 };
+      const stone = daGiu(id * 31 + 7);
+      view.obj.add(stone.group);
+      view.rocks = { stone, age: 0 };
     }
     if (!view.rocks) return;
     const r = view.rocks;
     r.age += dt;
-    // Mọc vụt lên trong 0,2 giây, lún dần trong 0,3 giây cuối.
-    r.group.scale.set(1, Math.max(0.01, Math.min(r.age / 0.2, 1) * Math.min(1, stun / 0.3)), 1);
+    r.stone.tick(r.age, stun);
     if (stun <= 0) {
-      r.group.removeFromParent();
+      r.stone.group.removeFromParent();
+      r.stone.drop();
       view.rocks = undefined;
     }
   }
@@ -1594,8 +1482,8 @@ export class BattleView {
         }
       }
       // Trống trận vẽ bằng sóng trống theo từng nhịp (xem syncRally), không cần vòng ở đây.
-      if (e.kind === 'smash' || e.kind === 'rocks') {
-        const color = e.kind === 'rocks' ? C.rock : C.bamboo;
+      if (e.kind === 'smash') {
+        const color = C.bamboo;
         const mesh = new THREE.Mesh(ringGeo, new THREE.MeshBasicMaterial({ color, transparent: true, depthWrite: false }));
         mesh.position.set(e.x + ox, this.heightAt(e.x, e.z) + 0.08, e.z + oz);
         mesh.renderOrder = 3;
@@ -1707,24 +1595,12 @@ export class BattleView {
 
   private animate(dt: number): void {
     this.hu.update(dt);
-    for (let i = this.crags.length - 1; i >= 0; i--) {
-      const c = this.crags[i];
-      c.age += dt;
-      const sink = smoothstep(c.age, CRAG_HOLD, CRAG_LIFE);
-      for (const sp of c.spikes) {
-        // Trồi vụt lên, vượt đà một chút rồi đứng lại; về cuối thì lún xuống.
-        const k = Math.min(Math.max((c.age - sp.delay) / CRAG_RISE, 0), 1);
-        const back = 1 + 2.2 * (k - 1) ** 3 + 1.2 * (k - 1) ** 2;
-        const ground = sp.obj.userData.ground ?? (sp.obj.userData.ground = sp.obj.position.y + sp.h);
-        sp.obj.position.y = (ground as number) - sp.h + sp.h * back - sp.h * 1.05 * sink;
-      }
-      // Nứt rực vàng lúc đầu, nguội dần sang nâu sẫm rồi mờ.
-      c.crackMat.color.lerpColors(fxVangColor, crackDark, smoothstep(c.age, 0.2, 0.9));
-      c.crackMat.opacity = 0.9 * (1 - smoothstep(c.age, CRAG_HOLD * 0.8, CRAG_LIFE));
-      if (c.age >= CRAG_LIFE) {
-        this.dropCrag(c);
-        this.crags.splice(i, 1);
-      }
+    for (let i = this.nons.length - 1; i >= 0; i--) {
+      const n = this.nons[i];
+      if (n.tick(dt)) continue;
+      n.group.removeFromParent();
+      n.drop();
+      this.nons.splice(i, 1);
     }
     for (let i = this.surges.length - 1; i >= 0; i--) {
       const w = this.surges[i];

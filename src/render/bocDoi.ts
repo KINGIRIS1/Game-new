@@ -39,7 +39,7 @@ interface Chua {
 const TAN = 0.6;
 
 /** Hình nón một đỉnh núi, có màu đỉnh theo độ cao: chân gần như tắt (cộng sáng nên màu đen là trong suốt). */
-function dinh(r: number, h: number, x: number, z: number, chan: number): THREE.BufferGeometry {
+export function dinh(r: number, h: number, x: number, z: number, chan: number): THREE.BufferGeometry {
   const g = new THREE.ConeGeometry(r, h, 7, 4, true).translate(x, h / 2, z);
   const pos = g.getAttribute('position');
   const col: number[] = [];
