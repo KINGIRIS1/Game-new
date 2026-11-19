@@ -20,6 +20,13 @@ function bounded(f: Sdf, c: V3, r: number): Sdf {
   return f;
 }
 
+/** Cho `f` mượn cầu bao của `from` (nới thêm `pad`): dùng khi `f` chỉ bóp dẹt `from` (lông, vây), vẫn nằm trong cầu cũ. */
+export function keepBound(f: Sdf, from: Sdf, pad = 0): Sdf {
+  const b = bounds.get(from);
+  if (b) bounds.set(f, [b[0], b[1], b[2], b[3] + pad]);
+  return f;
+}
+
 // ---------- Hình cơ bản ----------
 
 /** Ma trận xoay ngược (3×3, theo hàng) của góc Euler như THREE.Euler; null nếu không xoay. */

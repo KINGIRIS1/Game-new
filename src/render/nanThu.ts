@@ -5,7 +5,7 @@
 
 import * as THREE from 'three';
 import type { HumanRig } from './body';
-import { Clay, cone, decal, ellipsoid, hit, radiusAt, slab, sphere, type Paint, type Sdf, type V3 } from './nan';
+import { Clay, cone, decal, ellipsoid, hit, keepBound, radiusAt, slab, sphere, type Paint, type Sdf, type V3 } from './nan';
 import { rigid } from './nanNguoi';
 import { clayPiece, figure, type Piece } from './nanNguoi';
 import { C } from './palette';
@@ -940,12 +940,12 @@ export function roosterBody(r: Rig, look?: RoosterLook): void {
 
 /** Mảnh dẹt theo trục y quanh mặt phẳng y = `cy` (lông cánh, lông đuôi). */
 function flatY(f: Sdf, cy: number, k: number): Sdf {
-  return (x, y, z) => f(x, cy + (y - cy) / k, z) * k;
+  return keepBound((x, y, z) => f(x, cy + (y - cy) / k, z) * k, f, 0.02);
 }
 
 /** Mảnh dẹt theo trục x quanh mặt phẳng x = `cx` (lông mào). */
 function flatX(f: Sdf, cx: number, k: number): Sdf {
-  return (x, y, z) => f(cx + (x - cx) / k, y, z) * k;
+  return keepBound((x, y, z) => f(cx + (x - cx) / k, y, z) * k, f, 0.02);
 }
 
 /**

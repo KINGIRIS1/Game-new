@@ -4,7 +4,7 @@
 
 import * as THREE from 'three';
 import type { HumanRig } from './body';
-import { Clay, cone, ellipsoid, hit, sphere, type Paint, type Sdf, type V3 } from './nan';
+import { Clay, cone, ellipsoid, hit, keepBound, sphere, type Paint, type Sdf, type V3 } from './nan';
 import { clayPiece, figure, type Piece } from './nanNguoi';
 import { C } from './palette';
 import type { RigBuilder } from './rig';
@@ -172,18 +172,44 @@ function serpentPieces(body: readonly (readonly [number, number, number, number]
 
 /** Mảnh dẹt theo bề ngang quanh mặt phẳng x = `cx` (vây lưng, lông bờm). */
 function flatX(f: Sdf, cx: number, k: number): Sdf {
-  return (x, y, z) => f(cx + (x - cx) / k, y, z) * k;
+  return keepBound((x, y, z) => f(cx + (x - cx) / k, y, z) * k, f, 0.02);
 }
 
-/** Rồng vàng thời Lý: mình vàng kim, vòng vảy đồng sẫm, bụng ngà, vây và bờm đỏ son, sừng, vuốt đồng sáng. */
-export const RONG_MAU = { body: 0xe8b830, dark: 0x9a6a1c, belly: 0xf6e7b8, fin: 0xc8362a, horn: 0xf7dc7a };
+/** Như `flatY` mà giữ cầu bao (túm lông khuỷu chân rồng). */
+function flatYB(f: Sdf, cy: number, k: number): Sdf {
+  return keepBound(flatY(f, cy, k), f, 0.02);
+}
 
 /**
- * Rồng (giống Lạc Long Quân, thần thú) theo dáng rồng thời Lý: mình mảnh dài như rắn uốn nhiều khúc tròn chữ S, thuôn
- * dần về đuôi, từ ngực (`body[0]`) ra đuôi (`body[n−1]`), mỗi đốt một xương `d{i}` pha sang đốt sau (`to`) cho mình uốn
- * mềm; mình vàng kim, bụng ngà, vòng vảy đồng sẫm; đầu nhỏ thanh, mõm dài cong, mũi cuộn, hàm dưới hé, mào lửa đỏ vắt
- * dài ra sau, sừng nhỏ; vây lưng đỏ liền như lửa dọc sống; bốn chân nhỏ mảnh ba vuốt; đuôi xòe lửa. `neck`, `head` là
- * chỗ xương cổ và đầu; `legs` là chỗ bốn chân (trước trái, trước phải, sau trái, sau phải).
+ * Rồng vàng (theo ảnh mẫu chủ dự án gửi): mình vàng kim phủ vảy cá, bụng ngà có đốt, vây lưng và bờm vàng như lửa mút
+ * cam, sừng hươu chẻ nhánh, miệng há đỏ, vuốt ngà.
+ */
+export const RONG_MAU = {
+  body: 0xf3c04a,
+  scale: 0xd99a2c,
+  belly: 0xfaebc0,
+  bellyLine: 0xd9b56a,
+  fin: 0xfbe07a,
+  finTip: 0xf07a2a,
+  horn: 0xfbe39a,
+  mouth: 0xb8302a,
+};
+
+const sub3 = (a: V3, b: V3): V3 => [a[0] - b[0], a[1] - b[1], a[2] - b[2]];
+const dot3 = (a: V3, b: V3) => a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
+const unit3 = (a: V3): V3 => {
+  const l = Math.hypot(a[0], a[1], a[2]) || 1;
+  return [a[0] / l, a[1] / l, a[2] / l];
+};
+const cross3 = (a: V3, b: V3): V3 => [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]];
+
+/**
+ * Rồng (giống Lạc Long Quân, thần thú): mình dài tròn như rắn, uốn nhiều khúc chữ S, thuôn dần về đuôi, từ ngực
+ * (`body[0]`) ra đuôi (`body[n−1]`), mỗi đốt một xương `d{i}` pha sang đốt sau (`to`) cho mình uốn mềm; mình phủ vảy cá
+ * xếp so le, bụng ngà có đốt ngang; đầu to, mõm dài, mũi cuộn, u mày, hàm dưới há, miệng đỏ, răng; sừng hươu chẻ nhánh;
+ * bờm vàng bay ra sau, chòm râu cằm; vây lưng như lửa vàng mút cam; bốn chân khỏe, khuỷu có túm lông, năm vuốt ngà
+ * xòe; đuôi có chùm lửa dài. `neck`, `head` là chỗ xương cổ và đầu; `legs` là chỗ bốn chân (trước trái, trước phải,
+ * sau trái, sau phải).
  */
 function dragonPieces(o: { body: readonly (readonly [number, number, number, number])[]; neck: V3; head: V3; legs: readonly V3[] }, detail: number): Piece[] {
   const M = RONG_MAU;
@@ -193,136 +219,202 @@ function dragonPieces(o: { body: readonly (readonly [number, number, number, num
   const clay = new Clay(M.body);
   for (let i = 0; i < n - 1; i++) {
     const to = i + 1 < n - 1 ? { bone: `d${i + 1}`, a: pts[i], b: pts[i + 1] } : undefined;
-    clay.add(`d${i}`, cone(pts[i], pts[i + 1], rs[i], rs[i + 1]), { k: 0.04, ...(to ? { to } : {}) });
+    clay.add(`d${i}`, cone(pts[i], pts[i + 1], rs[i], rs[i + 1]), { k: 0.05, ...(to ? { to } : {}) });
   }
   const h = o.head;
-  // Cổ cong ngửa lên, thon dần tới đầu.
-  clay.add('qNeck', cone(pts[0], o.neck, rs[0], rs[0] * 0.85), { k: 0.04 });
-  clay.add('qNeck', cone(o.neck, add3(h, [0, -0.02, -0.06]), rs[0] * 0.85, rs[0] * 0.7), { k: 0.04 });
-  // Đầu nhỏ thanh: sọ, mõm dài hơi cong xuống, mũi cuộn tròn, u mày, hàm dưới hé.
-  clay.add('qHead', ellipsoid(h, [0.085, 0.075, 0.1]), { k: 0.04 });
-  clay.add('qHead', ellipsoid(add3(h, [0, -0.015, 0.14]), [0.058, 0.048, 0.13], [0.12, 0, 0]), { k: 0.04 });
-  clay.add('qHead', sphere(add3(h, [0, 0.015, 0.27]), 0.04), { k: 0.025 });
+  // Đầu to hơn mình: mọi chỗ trên đầu nhân `K`.
+  const K = 1.25;
+  const at = (d: V3): V3 => add3(h, [d[0] * K, d[1] * K, d[2] * K]);
+  // Cổ cong ngửa lên tới đầu.
+  clay.add('qNeck', cone(pts[0], o.neck, rs[0], rs[0] * 0.8), { k: 0.05 });
+  clay.add('qNeck', cone(o.neck, at([0, -0.03, -0.08]), rs[0] * 0.8, rs[0] * 0.7), { k: 0.05 });
+  // Đầu to: sọ, mõm dài, mũi cuộn, u mày, hàm dưới há.
+  clay.add('qHead', ellipsoid(h, [0.14, 0.125, 0.16]), { k: 0.05 });
+  clay.add('qHead', ellipsoid(at([0, -0.005, 0.2]), [0.094, 0.075, 0.21], [0.1, 0, 0]), { k: 0.05 });
+  clay.add('qHead', sphere(at([0, 0.02, 0.36]), 0.07), { k: 0.04 });
   for (const s of [-1, 1]) {
-    clay.add('qHead', ellipsoid(add3(h, [s * 0.05, 0.06, 0.04]), [0.035, 0.022, 0.05]), { k: 0.02 });
-    clay.add('qHead', sphere(add3(h, [s * 0.028, 0.04, 0.29]), 0.022), { k: 0.015 });
+    clay.add('qHead', ellipsoid(at([s * 0.065, 0.08, 0.06]), [0.062, 0.037, 0.087]), { k: 0.025 });
+    clay.add('qHead', sphere(at([s * 0.035, 0.05, 0.38]), 0.035), { k: 0.02 });
+    // Má phồng.
+    clay.add('qHead', ellipsoid(at([s * 0.08, -0.03, 0.02]), [0.062, 0.075, 0.087]), { k: 0.04 });
   }
-  clay.add('qHead', ellipsoid(add3(h, [0, -0.075, 0.13]), [0.045, 0.02, 0.12], [-0.28, 0, 0]), { k: 0.015 });
-  clay.sub('qHead', ellipsoid(add3(h, [0, -0.05, 0.22]), [0.06, 0.014, 0.1], [-0.15, 0, 0]), 0.008);
-  // Bốn chân mảnh vươn như đang vồ: bắp tay chĩa ra ngoài, khuỷu gập, cẳng vươn (chân trước vươn tới, chân sau duỗi ra sau).
+  clay.add('qHead', cone(at([0, -0.06, 0.0]), at([0, -0.13, 0.3]), 0.075, 0.037), { k: 0.03 });
+  clay.sub('qHead', ellipsoid(at([0, -0.07, 0.26]), [0.087, 0.037, 0.19], [-0.12, 0, 0]), 0.01);
+  // Bốn chân khỏe vươn như đang vồ: chân trước vươn tới, chân sau duỗi ra sau.
   const chan = o.legs.map((l, i) => {
     const s = i % 2 ? 1 : -1;
     const dz = i < 2 ? 1 : -1;
-    const elbow = add3(l, [s * 0.15, -0.04, dz * 0.06]);
-    const wrist = add3(elbow, [s * 0.04, -0.12, dz * 0.14]);
+    const elbow = add3(l, [s * 0.17, -0.06, dz * 0.04]);
+    const wrist = add3(elbow, [s * 0.04, -0.13, dz * 0.14]);
     return { b: ['qFL', 'qFR', 'qBL', 'qBR'][i], s, dz, l, elbow, wrist };
   });
   for (const c of chan) {
-    clay.add(c.b, cone(c.l, c.elbow, 0.036, 0.022), { k: 0.02 });
-    clay.add(c.b, cone(c.elbow, c.wrist, 0.02, 0.016), { k: 0.01 });
-    clay.add(c.b, sphere(c.wrist, 0.022), { k: 0.01 });
+    clay.add(c.b, cone(c.l, c.elbow, 0.06, 0.036), { k: 0.03 });
+    clay.add(c.b, cone(c.elbow, c.wrist, 0.034, 0.026), { k: 0.015 });
+    clay.add(c.b, ellipsoid(c.wrist, [0.035, 0.022, 0.035]), { k: 0.012 });
   }
   const f = clay.dist;
   const paints: Paint[] = [];
-  // Bụng ngà chạy dọc mặt dưới, lên tới cổ và hàm dưới.
+  // Vảy cá: mỗi đốt một khung (dọc mình, ngang, lên), vảy xếp so le, mép vảy lượn về đuôi; chừa bụng.
+  const S = 0.1;
+  for (let i = 0; i < n - 1; i++) {
+    const a0 = pts[i];
+    const d = sub3(pts[i + 1], a0);
+    const L = Math.hypot(d[0], d[1], d[2]);
+    const ax = unit3(d);
+    const side = unit3(cross3(ax, [0, 1, 0]));
+    const up = cross3(side, ax);
+    const rr = Math.max(rs[i], rs[i + 1]);
+    paints.push(
+      clay.layer(`d${i}`, (x, y, z) => {
+        const w: V3 = [x - a0[0], y - a0[1], z - a0[2]];
+        const al = dot3(w, ax);
+        const px = dot3(w, side);
+        const py = dot3(w, up);
+        const v = Math.atan2(px, py) * rr;
+        const row = Math.floor(al / S);
+        const off = row % 2 ? S / 2 : 0;
+        const cx = Math.round((v - off) / S) * S + off;
+        const cy = (row + 1) * S;
+        const dd = Math.hypot(v - cx, al - cy);
+        return Math.max(Math.abs(dd - 0.62 * S) - 0.008, -al, al - L, -py - rr * 0.25, Math.hypot(px, py) - rr * 1.5);
+      }, M.scale),
+    );
+  }
+  // Bụng ngà có đốt ngang, lên tới cổ và hàm dưới.
   for (let i = 0; i < n; i++) {
     const [x, y, z] = pts[i];
-    paints.push(clay.layer(`d${Math.min(i, n - 2)}`, ellipsoid([x, y - rs[i] * 0.6, z], [rs[i] * 0.8, rs[i] * 0.55, 0.2]), M.belly));
+    paints.push(clay.layer(`d${Math.min(i, n - 2)}`, ellipsoid([x, y - rs[i] * 0.62, z], [rs[i] * 0.8, rs[i] * 0.55, 0.19]), M.belly));
   }
-  paints.push(clay.layer('qNeck', ellipsoid(add3(o.neck, [0, -0.04, 0.03]), [0.08, 0.08, 0.2], [-0.7, 0, 0]), M.belly));
-  paints.push(clay.layer('qHead', ellipsoid(add3(h, [0, -0.08, 0.12]), [0.05, 0.025, 0.13]), M.belly));
-  // Vảy: hai vòng đồng sẫm mỗi đốt, chừa bụng.
   for (let i = 0; i < n - 1; i++) {
-    for (const t of [0.3, 0.75]) {
+    for (const t of [0.25, 0.75]) {
       const m = lerp3(pts[i], pts[i + 1], t);
       const rr = rs[i] + (rs[i + 1] - rs[i]) * t;
-      const d = [pts[i + 1][0] - pts[i][0], pts[i + 1][1] - pts[i][1], pts[i + 1][2] - pts[i][2]];
-      const l = Math.hypot(d[0], d[1], d[2]);
-      paints.push(
-        clay.layer(`d${i}`, (x, y, z) => {
-          const along = ((x - m[0]) * d[0] + (y - m[1]) * d[1] + (z - m[2]) * d[2]) / l;
-          return Math.max(Math.abs(along) - 0.02, Math.hypot(x - m[0], y - m[1], z - m[2]) - rr * 1.4, m[1] - rr * 0.15 - y);
-        }, M.dark),
-      );
+      const ax = unit3(sub3(pts[i + 1], pts[i]));
+      paints.push(clay.layer(`d${i}`, (x, y, z) => Math.max(Math.abs(dot3([x - m[0], y - m[1], z - m[2]], ax)) - 0.006, y - (m[1] - rr * 0.35), Math.hypot(x - m[0], y - m[1], z - m[2]) - rr * 1.4), M.bellyLine));
     }
   }
-  // Mắt lửa có viền sẫm, vạch mày sẫm.
+  paints.push(clay.layer('qNeck', ellipsoid(add3(o.neck, [0, -0.05, 0.04]), [0.1, 0.1, 0.22], [-0.7, 0, 0]), M.belly));
+  paints.push(clay.layer('qHead', ellipsoid(at([0, -0.13, 0.14]), [0.06, 0.03, 0.17], [-0.2, 0, 0]), M.belly));
+  // Miệng đỏ, mắt lửa có viền sẫm.
+  paints.push(clay.layer('qHead', ellipsoid(at([0, -0.075, 0.24]), [0.094, 0.044, 0.19], [-0.12, 0, 0]), M.mouth));
   for (const s of [-1, 1]) {
-    paints.push(clay.layer('qHead', ellipsoid(add3(h, [s * 0.06, 0.055, 0.05]), [0.03, 0.012, 0.05]), M.dark));
-    paints.push(...eye(clay, 'qHead', f, add3(h, [s * 0.06, 0.03, 0.07]), [s * 0.7, 0.3, 0.6], 0.022, C.ember));
+    paints.push(clay.layer('qHead', ellipsoid(at([s * 0.075, 0.07, 0.07]), [0.04, 0.014, 0.06]), M.scale));
+    paints.push(...eye(clay, 'qHead', f, at([s * 0.08, 0.045, 0.09]), [s * 0.7, 0.3, 0.6], 0.034, C.ember));
   }
-  const out: Piece[] = [build(clay, [-0.7, 0.2, -4.4], [0.7, 2.0, 1.4], 0.011, 3600, detail, paints)];
+  const out: Piece[] = [build(clay, [-0.8, 0.1, -4.6], [0.8, 2.2, 1.5], 0.013, 6000, detail, paints)];
 
-  // Vây lưng đỏ liền như ngọn lửa dọc sống, mào lửa vắt dài sau đầu, chùm đuôi lửa.
+  // Vây lưng như lửa vàng mút cam, bờm vàng bay ra sau, chòm râu cằm, túm lông khuỷu, chùm lửa đuôi.
   const fin = new Clay(M.fin);
   const finPaint: Paint[] = [];
   for (let i = 0; i < n - 1; i++) {
     for (const t of [0.15, 0.6]) {
       const p = lerp3(pts[i], pts[i + 1], t);
       const rr = rs[i] + (rs[i + 1] - rs[i]) * t;
-      const tall = 0.07 + rr * 1.3;
-      fin.add(`d${i}`, flatX(cone([p[0], p[1] + rr * 0.6, p[2] + 0.04], [p[0], p[1] + rr + tall, p[2] - 0.1], rr * 0.55, 0.004), p[0], 0.3), { k: 0.012 });
+      const tip: V3 = [p[0], p[1] + rr + 0.06 + rr * 0.9, p[2] - 0.12];
+      fin.add(`d${i}`, flatX(cone([p[0], p[1] + rr * 0.6, p[2] + 0.04], tip, rr * 0.5, 0.004), p[0], 0.3), { k: 0.012 });
+      finPaint.push(fin.layer(`d${i}`, sphere(tip, 0.04 + rr * 0.4), M.finTip));
     }
   }
-  // Mào: năm dải lửa dài cong vắt ra sau, lượn sóng.
-  for (let i = 0; i < 5; i++) {
-    const s = (i - 2) * 0.03;
-    const root = add3(h, [s, 0.07, -0.02]);
-    const mid = add3(root, [s * 2, 0.1 + 0.03 * Math.cos(i), -0.22]);
-    const tip = add3(mid, [s * 2.5, -0.02 + 0.05 * Math.sin(i * 1.7), -0.28]);
-    fin.add('qHead', cone(root, mid, 0.03, 0.02), { k: 0.012 });
-    fin.add('qHead', cone(mid, tip, 0.02, 0.003), { k: 0.01 });
-    finPaint.push(fin.layer('qHead', sphere(tip, 0.1), C.ember));
+  const mane = new Clay(M.fin);
+  const manePaint: Paint[] = [];
+  // Bờm: chín dải vàng từ sau đầu, hai má vắt ra sau dọc cổ.
+  for (let i = 0; i < 9; i++) {
+    const s = (i - 4) / 4;
+    const root = at([s * 0.09, 0.05 - Math.abs(s) * 0.08, -0.06]);
+    const mid = add3(root, [s * 0.12, 0.07 - Math.abs(s) * 0.05, -0.25]);
+    const tip = add3(mid, [s * 0.12, -0.04 + 0.05 * Math.sin(i * 1.7), -0.3]);
+    mane.add('qHead', cone(root, mid, 0.042, 0.026), { k: 0.012 });
+    mane.add('qHead', cone(mid, tip, 0.022, 0.003), { k: 0.01 });
+    manePaint.push(mane.layer('qHead', sphere(tip, 0.1), M.finTip));
   }
-  // Chùm lửa đỏ ở khuỷu chân, vắt ra sau.
+  // Chòm râu cằm.
+  for (const s of [-1, 0, 1]) {
+    const root = at([s * 0.025, -0.14, 0.18]);
+    const tip = add3(root, [s * 0.03, -0.14, -0.06]);
+    mane.add('qHead', cone(root, tip, 0.02, 0.003), { k: 0.008 });
+  }
+  out.push(build(mane, at([-0.45, -0.45, -0.8]), at([0.45, 0.45, 0.2]), 0.009, 1400, detail, manePaint));
   for (const c of chan) {
+    const tuft = new Clay(M.fin);
+    const tp: Paint[] = [];
     for (const [dy, dl] of [
-      [0.04, 0.26],
-      [-0.01, 0.2],
+      [0.04, 0.22],
+      [-0.02, 0.17],
     ] as const) {
-      const tip = add3(c.elbow, [c.s * 0.05, dy + 0.04, -0.06 - dl]);
-      fin.add(c.b, flatY(cone(c.elbow, tip, 0.04, 0.003), c.elbow[1] + dy * 0.5, 0.4), { k: 0.01 });
-      finPaint.push(fin.layer(c.b, sphere(tip, 0.05), C.ember));
+      const tip = add3(c.elbow, [c.s * 0.05, dy + 0.03, -0.06 - dl]);
+      tuft.add(c.b, flatYB(cone(c.elbow, tip, 0.04, 0.003), c.elbow[1] + dy * 0.5, 0.4), { k: 0.01 });
+      tp.push(tuft.layer(c.b, sphere(tip, 0.06), M.finTip));
     }
+    out.push(build(tuft, add3(c.elbow, [-0.2, -0.15, -0.4]), add3(c.elbow, [0.2, 0.2, 0.1]), 0.008, 300, detail, tp));
   }
   const tail = pts[n - 1];
-  for (const [dx, dy] of [
-    [0, 0.12],
-    [-0.12, 0.03],
-    [0.12, 0.03],
-    [-0.06, -0.08],
-    [0.06, -0.08],
+  for (const [dx, dy, l] of [
+    [0, 0.2, 0.75],
+    [-0.12, 0.08, 0.6],
+    [0.12, 0.08, 0.6],
+    [-0.07, -0.06, 0.5],
+    [0.07, -0.06, 0.5],
   ] as const) {
-    const tip = add3(tail, [dx * 1.6, dy * 1.6 + 0.08, -0.75]);
-    fin.add(`d${n - 2}`, flatX(cone(tail, tip, 0.07, 0.004), tail[0] + dx * 0.5, 0.35), { k: 0.015 });
-    finPaint.push(fin.layer(`d${n - 2}`, sphere(tip, 0.2), C.ember));
+    const mid = add3(tail, [dx * 0.6, dy * 0.4 + 0.06, -l * 0.5]);
+    const tip = add3(tail, [dx * 1.4, dy + 0.12, -l]);
+    fin.add(`d${n - 2}`, flatX(cone(tail, mid, 0.07, 0.04), tail[0] + dx * 0.3, 0.35), { k: 0.015 });
+    fin.add(`d${n - 2}`, flatX(cone(mid, tip, 0.04, 0.003), mid[0], 0.35), { k: 0.012 });
+    finPaint.push(fin.layer(`d${n - 2}`, sphere(tip, 0.18), M.finTip));
   }
-  out.push(build(fin, [-0.8, 0.1, -5.2], [0.7, 2.3, 1.2], 0.009, 2000, detail, finPaint));
+  out.push(build(fin, [-0.9, 0.0, -5.5], [0.9, 2.5, 1.0], 0.015, 2000, detail, finPaint));
 
-  // Sừng nhỏ cong ra sau, vuốt ba ngón.
+  // Sừng hươu chẻ nhánh, răng, vuốt ngà.
   const horn = new Clay(M.horn);
   for (const s of [-1, 1]) {
-    const root = add3(h, [s * 0.045, 0.07, -0.03]);
-    const mid = add3(root, [s * 0.04, 0.08, -0.08]);
-    horn.add('qHead', cone(root, mid, 0.018, 0.012), { k: 0.008 });
-    horn.add('qHead', cone(mid, add3(mid, [s * 0.01, 0.02, -0.1]), 0.012, 0.003), { k: 0.006 });
-  }
-  // Vuốt: bốn ngón xòe cong quặp xuống, một ngón sau.
-  for (const c of chan) {
-    for (const a of [-0.75, -0.25, 0.25, 0.75]) {
-      const k1 = add3(c.wrist, [Math.sin(a) * 0.07, -0.005, c.dz * Math.cos(a) * 0.07]);
-      const k2 = add3(k1, [Math.sin(a) * 0.04, -0.06, c.dz * Math.cos(a) * 0.03]);
-      horn.add(c.b, cone(c.wrist, k1, 0.014, 0.01), { k: 0.004 });
-      horn.add(c.b, cone(k1, k2, 0.01, 0.002), { k: 0.003 });
+    const root = at([s * 0.05, 0.09, -0.02]);
+    const mid = add3(root, [s * 0.05, 0.17, -0.12]);
+    const tip = add3(mid, [s * 0.03, 0.08, -0.16]);
+    horn.add('qHead', cone(root, mid, 0.022, 0.015), { k: 0.008 });
+    horn.add('qHead', cone(mid, tip, 0.015, 0.003), { k: 0.006 });
+    for (const [t, d] of [
+      [0.5, [s * 0.02, 0.09, 0.05]],
+      [1, [s * 0.03, 0.1, 0.02]],
+    ] as const) {
+      const b0 = lerp3(root, mid, t);
+      horn.add('qHead', cone(b0, add3(b0, d as V3), 0.011, 0.002), { k: 0.005 });
     }
-    horn.add(c.b, cone(c.wrist, add3(c.wrist, [-c.s * 0.03, -0.02, -c.dz * 0.03]), 0.009, 0.0015), { k: 0.003 });
+    for (const z of [0.18, 0.26]) horn.add('qHead', cone(at([s * 0.045, -0.05, z]), at([s * 0.045, -0.09, z]), 0.01, 0.002), { k: 0.004 });
   }
-  out.push(build(horn, [-0.7, 0.2, -2.0], [0.7, 2.0, 1.2], 0.006, 600, detail));
+  // Râu: hai sợi dài từ mép mũi lượn ra hai bên, vắt ra sau.
+  for (const s of [-1, 1]) {
+    let p = at([s * 0.05, 0.03, 0.37]);
+    for (const [dx, dy, dz] of [
+      [0.035, -0.01, -0.03],
+      [0.04, -0.04, -0.1],
+      [0.03, -0.07, -0.16],
+      [0.02, -0.05, -0.2],
+      [0.02, 0.0, -0.2],
+      [0.01, 0.04, -0.16],
+      [0.0, 0.05, -0.1],
+    ] as const) {
+      const q = add3(p, [s * dx * K, dy * K, dz * K]);
+      horn.add('qHead', cone(p, q, 0.009, 0.007), { k: 0.003 });
+      p = q;
+    }
+  }
+  for (const c of chan) {
+    const claw = new Clay(M.horn);
+    for (const a of [-0.85, -0.3, 0.3, 0.85]) {
+      const k1 = add3(c.wrist, [Math.sin(a) * 0.08, -0.005, c.dz * Math.cos(a) * 0.08]);
+      const k2 = add3(k1, [Math.sin(a) * 0.04, -0.06, c.dz * Math.cos(a) * 0.03]);
+      claw.add(c.b, cone(c.wrist, k1, 0.016, 0.011), { k: 0.004 });
+      claw.add(c.b, cone(k1, k2, 0.011, 0.002), { k: 0.003 });
+    }
+    claw.add(c.b, cone(c.wrist, add3(c.wrist, [-c.s * 0.04, -0.03, -c.dz * 0.04]), 0.011, 0.002), { k: 0.003 });
+    out.push(build(claw, add3(c.wrist, [-0.18, -0.15, -0.18]), add3(c.wrist, [0.18, 0.06, 0.18]), 0.006, 300, detail));
+  }
+  out.push(build(horn, at([-0.4, -0.4, -0.9]), at([0.4, 0.5, 0.5]), 0.006, 1000, detail));
   return out;
 }
 
 export function dragonBody(r: Rig, o: Parameters<typeof dragonPieces>[0]): void {
-  figure(r as unknown as HumanRig, 'thanThu:rongLy', (d) => dragonPieces(o, d));
+  figure(r as unknown as HumanRig, 'thanThu:rongVang', (d) => dragonPieces(o, d));
 }
 
 // ---------- Quỷ núi ----------

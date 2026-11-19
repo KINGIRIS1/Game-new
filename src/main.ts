@@ -276,10 +276,11 @@ async function start(): Promise<void> {
   let prewarmKey = '';
   const prewarm = () => {
     const sea = dienLevel(state) >= 8;
-    const key = `${chapterOf(state)}|${Object.values(state.arms).join()}|${sea}`;
+    const thu = thuCo(state);
+    const key = `${chapterOf(state)}|${Object.values(state.arms).join()}|${sea}|${thu.join()}`;
     if (key === prewarmKey) return;
     prewarmKey = key;
-    nanTruoc(prewarmJobs(chapterOf(state), state.arms, sea));
+    nanTruoc(prewarmJobs(chapterOf(state), state.arms, sea, thu));
   };
 
   // Màn hình vào game hiện ngay; nút Chơi tiếp chỉ bấm được khi cảnh đã dựng xong (`manVao.ready`).

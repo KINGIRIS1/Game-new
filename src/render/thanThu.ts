@@ -5,15 +5,15 @@
 //
 // Ba dáng theo cấp (`dangThu` ở `game/thanThu.ts`): non nhỏ, lớn, thần to hẳn và có hào quang (thú đi đất: quầng sáng
 // dưới chân; thú bay: đốm sáng bay quanh mình). Gốc mô hình ở mặt đất dưới thú, đầu hướng +z. Thú bay
-// (`THAN_THU[k].bay`) ghi `userData.bay` là độ cao bay (theo cỡ mô hình).
+// (`BAY`, khớp `THAN_THU[k].bay` ở `defs.ts`; worker nặn sẵn không nạp `defs.ts`) ghi `userData.bay` là độ cao bay (theo cỡ mô hình).
 
 import * as THREE from 'three';
-import { THAN_THU, type ThanThuId } from '../game/defs';
+import type { ThanThuId } from '../game/defs';
 import { lerp, strikeCurve } from './body';
 import { makeGaCuu, makeRuaThan } from './beasts';
 import { makeNguaSat } from './heroes';
 import { lacBody } from './nanThu';
-import { RONG_MAU, dragonBody } from './nanQuai';
+import { dragonBody } from './nanQuai';
 import { C } from './palette';
 import { RigBuilder, resetBones, skinRig, type Act, type BoneDef, type Bones, type Poser } from './rig';
 
@@ -80,22 +80,22 @@ function poseLac(b: B, a: Act): void {
  * lên xuống và lượn hai bên, thuôn dần về đuôi.
  */
 const RONG_MINH: [number, number, number, number][] = Array.from({ length: 17 }, (_, i) => [
-  0.18 * Math.sin(i * 0.5 + 0.4),
-  1.0 + 0.32 * Math.sin(i * 0.8),
-  0.3 - i * 0.26,
-  0.1 * (1 - i / 18) + 0.028,
+  0.2 * Math.sin(i * 0.5 + 0.4),
+  1.0 + 0.38 * Math.sin(i * 0.75),
+  0.3 - i * 0.27,
+  0.14 * (1 - i / 18) + 0.03,
 ]);
-const RONG_CO: V3 = [0, 1.22, 0.5];
-const RONG_DAU: V3 = [0, 1.34, 0.64];
+const RONG_CO: V3 = [0, 1.28, 0.52];
+const RONG_DAU: V3 = [0, 1.48, 0.68];
 const RONG_SAU = 6;
 const RONG_CHAN: V3[] = (() => {
   const [fx, fy, fz] = RONG_MINH[1];
   const [bx, by, bz] = RONG_MINH[RONG_SAU];
   return [
-    [fx - 0.09, fy - 0.05, fz],
-    [fx + 0.09, fy - 0.05, fz],
-    [bx - 0.08, by - 0.05, bz],
-    [bx + 0.08, by - 0.05, bz],
+    [fx - 0.12, fy - 0.06, fz],
+    [fx + 0.12, fy - 0.06, fz],
+    [bx - 0.1, by - 0.06, bz],
+    [bx + 0.1, by - 0.06, bz],
   ];
 })();
 
@@ -111,33 +111,9 @@ const RONG: Defs = (() => {
   return d;
 })();
 
-/** Rồng nặn liền khối (`dragonBody`), thêm hai sợi râu vàng dài cuộn ra sau và ngọc lửa trước miệng. */
+/** Rồng nặn liền khối (`dragonBody`, cả râu). */
 function drawRong(r: RigBuilder<string>): void {
   dragonBody(r, { body: RONG_MINH, neck: RONG_CO, head: RONG_DAU, legs: RONG_CHAN });
-  const head = r.on('qHead');
-  const [hx, hy, hz] = RONG_DAU;
-  for (const s of [-1, 1]) {
-    // Râu: ba đoạn cong từ mép mõm ra sau.
-    let p: V3 = [hx + s * 0.04, hy + 0.01, hz + 0.27];
-    for (const [dx, dy, dz] of [
-      [0.07, 0.03, -0.02],
-      [0.09, 0.0, -0.1],
-      [0.06, -0.05, -0.18],
-      [0.0, -0.06, -0.2],
-      [-0.04, -0.01, -0.18],
-      [-0.03, 0.05, -0.12],
-      [0.01, 0.06, -0.06],
-    ] as const) {
-      const q: V3 = [p[0] + s * dx, p[1] + dy, p[2] + dz];
-      const len = Math.hypot(q[0] - p[0], q[1] - p[1], q[2] - p[2]);
-      const mid: V3 = [(p[0] + q[0]) / 2, (p[1] + q[1]) / 2, (p[2] + q[2]) / 2];
-      const dir = new THREE.Vector3(q[0] - p[0], q[1] - p[1], q[2] - p[2]).normalize();
-      const e = new THREE.Euler().setFromQuaternion(new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 1, 0), dir));
-      head.plain.cyl(0.006, 0.009, len, RONG_MAU.horn, mid[0], mid[1], mid[2], [e.x, e.y, e.z], 4);
-      p = q;
-    }
-  }
-  head.glow.sphere(0.03, C.ember, hx, hy + 0.04, hz + 0.42, [1, 1, 1], 8);
 }
 
 /** Rồng luôn bay, mình uốn sóng chạy dọc từ ngực ra đuôi (đi thì uốn nhanh); đánh thì vươn cổ phun; chân bơi trong mây. */
@@ -246,8 +222,8 @@ export function makeThanThu(kind: ThanThuId, dang: 0 | 1 | 2): THREE.Group {
   g.add(inner);
   g.userData.pose = inner.userData.pose;
   g.userData.fall = inner.userData.fall;
-  const bay = THAN_THU[kind].bay;
-  if (bay) g.userData.bay = (BAY[kind] ?? 1) * k;
+  const bay = BAY[kind];
+  if (bay) g.userData.bay = bay * k;
   if (dang === 2) {
     if (bay) g.add(domSang(HAO[kind], (kind === 'thuRong' ? 1.0 : 0.8) * k, 1.0 * k));
     else g.add(quangChan(HAO[kind], 0.9 * k));

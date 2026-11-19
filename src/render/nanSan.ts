@@ -2,7 +2,7 @@
 // (nanSan.worker.ts) nên chỉ nạp mã nhân vật, không nạp cảnh hay luật chơi; danh sách việc lập ở nanTruoc.ts.
 
 import type { FighterKind } from '../game/battle';
-import type { NuTuongId } from '../game/defs';
+import type { NuTuongId, ThanThuId } from '../game/defs';
 import { isBeast, makeBeast, makeRoyalHorse, makeRuaVang } from './beasts';
 import { makeDolphin, makeWhale } from './caBien';
 import { makeDrummer, makeNuTuong } from './heroes';
@@ -11,6 +11,7 @@ import { makeFighter } from './models';
 import { isMonster, makeMonster } from './monsters';
 import { DAN_RUT, makeRower, makeWorker } from './people';
 import { isSoldier, makeSoldier } from './soldier';
+import { makeThanThu } from './thanThu';
 
 /**
  * Nhân vật trong cảnh bãi chiến mà không đánh trận (battlefield.ts): không phải người đánh nên việc `danh` không nặn
@@ -40,7 +41,8 @@ export type Job =
   | readonly ['danh', FighterKind, number]
   | readonly ['nu', NuTuongId]
   | readonly ['ca', 'whale' | 'dolphin']
-  | readonly ['canh', CanhId];
+  | readonly ['canh', CanhId]
+  | readonly ['thu', ThanThuId];
 
 /**
  * Worker làm xong một việc: các dáng mới nặn, và mọi dáng việc ấy cần (kể cả dáng đã nặn ở việc trước; null nếu việc
@@ -54,6 +56,7 @@ export interface JobDone {
 
 export function runJob(j: Job): void {
   if (j[0] === 'nu') makeNuTuong(j[1]);
+  else if (j[0] === 'thu') makeThanThu(j[1], 0);
   else if (j[0] === 'ca') (j[1] === 'whale' ? makeWhale : makeDolphin)();
   else if (j[0] === 'canh') CANH[j[1]]();
   else {
