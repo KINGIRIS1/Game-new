@@ -218,6 +218,20 @@ export const C = {
   cornDry: 0xc9b062,
   // Vòng sáng Hiệu triệu: xanh lá loang dưới chân quân ta được hồi máu.
   heal: 0x7fd88a,
+  // Hiệu ứng kỹ năng tướng (`hieuUng.ts`): lửa va chạm, ánh vàng, lõi trắng, ánh xanh hồi máu, bụi đất sáng, vệt chém.
+  fxLua: 0xff6a20,
+  fxVang: 0xffcf4a,
+  fxTrang: 0xfff4dc,
+  fxXanh: 0x6cf08c,
+  fxBui: 0xc9a36c,
+  fxVet: 0x3a2818,
+  // Dời non: phiến đá linh màu hổ phách (khác bóng núi xanh của Bốc đồi).
+  fxHo: 0xffa23a,
+  /** Ngày ẩn đêm ra: sương đầm xanh ngọc; Hắc Đế dấy binh: đỏ máu; Cọc Bạch Đằng: nước bạc; giặc nao núng: tím. */
+  fxSuong: 0x7fe8d2,
+  fxDo: 0xff3b2a,
+  fxNuoc: 0x5cc0ff,
+  fxTim: 0xa58cff,
   // Bốn nữ tướng của Hai Bà, mỗi người một màu áo (khác áo đỏ thắm, áo vàng của Hai Bà, khác cả nền cỏ): Lê Chân lam
   // biển, Thánh Thiên lục lá, Bát Nàn tím hoa cà, Phùng Thị Chính hồng sen; địu con vải chàm.
   nuLam: 0x2f6fbf,

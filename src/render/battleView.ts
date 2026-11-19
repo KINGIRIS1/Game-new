@@ -3,7 +3,7 @@
 
 import * as THREE from 'three';
 import { heroSetups, isThanThu, type Battle, type Fighter, type FighterKind } from '../game/battle';
-import { FIRE, HIEU_TRIEU, HILL, LIEN_CHAU, MA_VIEN_VOLLEY, RALLY_BEAT, ROCKS, SKILLS, SMASH, SWIMMERS, TT_WAVE, type NuTuongId, type UnitType } from '../game/defs';
+import { FIRE, HIEU_TRIEU, HILL, VOI_XUNG, LIEN_CHAU, MA_VIEN_VOLLEY, RALLY_BEAT, ROCKS, SKILLS, SMASH, SWIMMERS, TT_WAVE, type NuTuongId, type UnitType } from '../game/defs';
 import { isBeast, makeBeast, makeRuaVang } from './beasts';
 import { makeThanThu, quayHao } from './thanThu';
 import { dangThu } from '../game/thanThu';
@@ -14,7 +14,10 @@ import { C } from './palette';
 import type { Poser } from './rig';
 import { ShapeBuilder, disposeModel, seeded } from './shapes';
 import { isSoldier, makeSoldier } from './soldier';
-import { ToonModel, drumWaveTex, inkThin, outlineOf, toon } from './toon';
+import { drumWaveTex, inkThin, outlineOf, toon } from './toon';
+import { HieuUng } from './hieuUng';
+import { taoDoi, type DoiRoi } from './bocDoi';
+import { daGiu, dungNon, type NonDung } from './doiNon';
 import { IRON, IRON_DARK } from './weapons';
 
 interface FighterView {
@@ -27,7 +30,7 @@ interface FighterView {
   /** Gióng đang phi ngựa dọc đường lao (Phun lửa), tọa độ trận. */
   dash?: { fromX: number; fromZ: number; toX: number; toZ: number; age: number };
   /** Đá Dời non mọc quanh chân tên giặc đang bị giữ chân. */
-  rocks?: { group: THREE.Group; age: number };
+  rocks?: { stone: ReturnType<typeof daGiu>; age: number };
   /** Núi Tản Viên dâng lên dưới chân Sơn Tinh khi Thủy Tinh rút quân; Rùa Vàng nâng An Dương Vương khi Triệu Đà thua chạy. */
   peak?: THREE.Group;
   /** Vòng sáng đồng dưới chân lính ta khi có Trống trận, đập theo nhịp trống. */
@@ -91,30 +94,15 @@ interface Whirl {
   age: number;
 }
 
-/** Rùa Vàng trồi lên cạnh An Dương Vương khi che chở quân ta, rồi lặn dần. */
-interface Turtle {
-  group: THREE.Group;
-  base: number;
-  age: number;
-}
-
 /** Sóng trống: hoa văn mặt trống đồng loang ra trên mặt đất mỗi nhịp trống. */
 interface DrumWave {
   mesh: THREE.Mesh;
   age: number;
 }
 
-/** Quả đồi Sơn Tinh ném xuống: rơi từ trên cao, đập xuống đất rồi lún dần. */
+/** Quả đồi Sơn Tinh ném xuống: rơi từ trên cao, đập xuống đất rồi lún dần hay tan (`bocDoi.ts`). */
 interface Hill {
-  group: THREE.Group;
-  age: number;
-  landed: boolean;
-}
-
-/** Luồng lửa phun từ mõm ngựa sắt, gắn vào Gióng nên đi theo khi phi. */
-interface Jet {
-  group: THREE.Group;
-  tongues: THREE.Object3D[];
+  doi: DoiRoi;
   age: number;
 }
 
@@ -127,12 +115,6 @@ interface Scorch {
   embers: THREE.InstancedMesh;
   /** Chỗ từng hòn than trong dải và nhịp lập lòe riêng. */
   spots: { x: number; z: number; phase: number }[];
-  age: number;
-}
-
-/** Ngọn lửa nhỏ cháy trên người tên giặc trúng lửa. */
-interface Burn {
-  group: THREE.Group;
   age: number;
 }
 
@@ -229,8 +211,6 @@ const NU_SCALE = 0.95;
 /** Nỏ thần: mũi tên vàng bay vút lên trong chừng này giây, rồi hóa mưa tên rơi xuống từng tên giặc. */
 const VOLLEY_RISE = 0.3;
 const VOLLEY_AIM = 0.9;
-/** Rùa Vàng trồi lên, nằm lại, rồi lặn hẳn sau chừng này giây. */
-const TURTLE_LIFE = 2.8;
 const boltGeo = new THREE.BoxGeometry(0.07, 0.07, 0.75);
 const goldMat = new THREE.MeshBasicMaterial({ color: C.ember });
 const skyBoltGeo = new THREE.BoxGeometry(0.1, 0.1, 1.1);
@@ -293,7 +273,6 @@ const foamDotGeo = new THREE.SphereGeometry(0.07, 6, 5);
 const foamMat = new THREE.MeshBasicMaterial({ color: C.foam });
 const whirlGeo = new THREE.RingGeometry(0.25, 0.42, 20, 1, 0, Math.PI * 1.5).rotateX(-Math.PI / 2);
 
-/** Một mỏm núi đá Dời non: khối đá nhọn nhiều mặt, đỉnh sáng màu, có viền mực. Gốc ở chân. */
 /** Cọc Bạch Đằng: cọc gỗ lim cao `h`, chân thẫm nước, đai sắt, mũi bịt sắt nhọn (gốc ở chân cọc). */
 function cocSpike(h: number, r: number): THREE.Group {
   const b = new ShapeBuilder(false, true);
@@ -301,17 +280,6 @@ function cocSpike(h: number, r: number): THREE.Group {
   b.cyl(r * 1.05, r * 1.05, h * 0.22, C.goLimDark, 0, h * 0.11, 0, undefined, 6);
   b.cyl(r * 0.9, r * 0.9, 0.04, IRON_DARK, 0, h * 0.78, 0, undefined, 6);
   b.cone(r * 0.85, h * 0.3, IRON, 0, h + h * 0.15, 0, undefined, 5);
-  const g = new THREE.Group();
-  const mesh = b.mesh(toon);
-  g.add(mesh, outlineOf(mesh.geometry, inkThin));
-  return g;
-}
-
-function cragSpike(h: number, r: number, rand: () => number): THREE.Group {
-  const b = new ShapeBuilder(false, true);
-  b.cone(r, h, rand() < 0.5 ? C.rock : C.rockDark, 0, h / 2, 0, undefined, 5);
-  b.cone(r * 0.55, h * 0.45, C.rock, r * 0.35, h * 0.22, -r * 0.2, [0.25, 0, -0.2], 5);
-  b.cone(r * 0.32, h * 0.3, 0xb8b0a0, 0, h * 0.86, 0, undefined, 5);
   const g = new THREE.Group();
   const mesh = b.mesh(toon);
   g.add(mesh, outlineOf(mesh.geometry, inkThin));
@@ -352,40 +320,13 @@ function surgeModel(width: number, h: number, seed: number): THREE.Group {
   return g;
 }
 
-/** Quả đồi nhỏ có cây: Sơn Tinh nhấc bổng lên ném vào giặc. Rộng vừa vùng bị đánh trúng. */
-function hillModel(): THREE.Group {
-  const m = new ToonModel(inkThin);
-  m.plain.cone(HILL.radius * 0.95, 1.6, C.mountainCloak, 0, 0.8, 0, undefined, 9);
-  m.plain.cone(HILL.radius * 0.5, 0.7, C.rock, 0.3, 0.35, 0.4, undefined, 6);
-  m.plain.cone(0.45, 0.5, C.rock, 0, 1.45, 0, undefined, 6);
-  for (let i = 0; i < 5; i++) {
-    const a = (i / 5) * Math.PI * 2;
-    m.plain.cone(0.22, 0.5, C.leaf[i % 4], Math.cos(a) * 1.0, 0.9, Math.sin(a) * 1.0, undefined, 5);
-  }
-  return m.group();
-}
-
-/** Ba mỏm đá nhọn mọc lên quanh chân một tên giặc. */
-function rockSpikes(seed: number): THREE.Group {
-  const b = new ShapeBuilder(false, true);
-  const rand = seeded(seed);
-  for (let i = 0; i < 4; i++) {
-    const a = (i / 4) * Math.PI * 2 + rand();
-    const h = 0.55 + rand() * 0.35;
-    b.cone(0.16, h, i % 2 ? C.rock : C.rockDark, Math.cos(a) * 0.32, h / 2, Math.sin(a) * 0.32, [Math.sin(a) * 0.25, 0, -Math.cos(a) * 0.25], 5);
-  }
-  const g = new THREE.Group();
-  const mesh = b.mesh(toon);
-  g.add(mesh, outlineOf(mesh.geometry, inkThin));
-  return g;
-}
 const puffGeo = new THREE.SphereGeometry(0.3, 10, 8);
 /** Lau sậy mọc quanh chân người đang ẩn (Ngày ẩn đêm ra). */
 const reedGeo = new THREE.ConeGeometry(0.035, 0.9, 4);
 const reedMat = new THREE.MeshBasicMaterial({ color: C.lauSay });
 /** Vòng đỏ sẫm dưới chân người đang được Hắc Đế dấy binh thêm sức đánh. */
-const hangMat = new THREE.MeshBasicMaterial({ color: C.hoQuan, transparent: true, opacity: 0.7, depthWrite: false });
-const naoMat = new THREE.MeshBasicMaterial({ color: 0x8a7aa8, transparent: true, opacity: 0.6, depthWrite: false });
+const hangMat = new THREE.MeshBasicMaterial({ color: C.fxDo, transparent: true, opacity: 0.55, depthWrite: false, blending: THREE.AdditiveBlending, toneMapped: false });
+const naoMat = new THREE.MeshBasicMaterial({ color: C.fxTim, transparent: true, opacity: 0.55, depthWrite: false, blending: THREE.AdditiveBlending, toneMapped: false });
 /** Bốn chữ thơ thần bay lên khi Lý Thường Kiệt ngâm Nam quốc sơn hà. */
 const CHU_THO = ['Nam', 'quốc', 'sơn', 'hà'];
 const chuTex = new Map<string, THREE.Texture>();
@@ -440,42 +381,6 @@ const BURN_LIFE = 2;
 // Lửa và than hồng không nhận ánh sáng nên luôn rực, kể cả khi nằm trong bóng.
 const flameMats = [C.fire, C.ember, 0xfff0a0].map((color) => new THREE.MeshBasicMaterial({ color }));
 
-/**
- * Một lưỡi lửa hình giọt: nhọn ở gốc, phình to nhất ở khoảng một phần ba, vuốt nhọn ở ngọn.
- * Gốc ở tâm, ngọn chĩa theo +z (hoặc +y nếu `up`).
- */
-function tongueGeometry(r: number, len: number, up = false): THREE.BufferGeometry {
-  const profile: THREE.Vector2[] = [];
-  for (let i = 0; i <= 8; i++) {
-    const t = i / 8;
-    profile.push(new THREE.Vector2(r * Math.sin(Math.PI * t ** 0.65), t * len));
-  }
-  const geo = new THREE.LatheGeometry(profile, 7);
-  return up ? geo : geo.rotateX(Math.PI / 2);
-}
-/** Các lưỡi lửa của luồng phun: bán kính, độ dài, màu (đỏ cam, vàng cam, vàng nhạt), xòe ngang, chếch lên. */
-const jetShapes = [
-  [0.36, 4.2, 0, 0, -0.12],
-  [0.28, 3.3, 1, 0.24, -0.2],
-  [0.28, 3.4, 1, -0.24, -0.2],
-  [0.2, 2.4, 2, 0.08, -0.3],
-  [0.2, 2.2, 2, -0.1, -0.05],
-  [0.22, 2.7, 0, 0.42, -0.1],
-  [0.22, 2.6, 0, -0.42, -0.1],
-  [0.18, 2, 1, 0, -0.45],
-].map(([r, len, color, yaw, pitch]) => {
-  const geo = tongueGeometry(r, len);
-  return { geo, outline: outlineOf(geo, inkThin).geometry, color, yaw, pitch };
-});
-/** Lửa cháy trên người giặc: một ngọn trên đầu, hai ngọn trên vai (vị trí trong khung mô hình lính). */
-const burnShapes = [
-  [0.2, 0.75, 0, 0, 0.82],
-  [0.13, 0.5, 0, -0.2, 0.42],
-  [0.13, 0.5, 1, 0.2, 0.42],
-].map(([r, len, color, x, y]) => {
-  const geo = tongueGeometry(r, len, true);
-  return { geo, outline: outlineOf(geo, inkThin).geometry, color, x, y };
-});
 const scorchGeo = new THREE.CircleGeometry(1, 12).rotateX(-Math.PI / 2);
 const emberGeo = new THREE.OctahedronGeometry(0.07, 0);
 const EMBERS = 16;
@@ -483,15 +388,6 @@ const tmpMatrix = new THREE.Matrix4();
 const tmpPos = new THREE.Vector3();
 const tmpScale = new THREE.Vector3();
 const noTurn = new THREE.Quaternion();
-
-/** Một lưỡi lửa có viền mực từ hình đã dựng sẵn. */
-function tongue(shape: { geo: THREE.BufferGeometry; outline: THREE.BufferGeometry; color: number }): THREE.Mesh {
-  const mesh = new THREE.Mesh(shape.geo, flameMats[shape.color]);
-  const ink = new THREE.Mesh(shape.outline, inkThin);
-  ink.castShadow = false;
-  mesh.add(ink);
-  return mesh;
-}
 
 /** Nhổ tre: thời gian cả động tác, từ lấy đà tới giơ tre lên lại. */
 const SMASH_TIME = 0.9;
@@ -506,12 +402,10 @@ export class BattleView {
   private readonly arrows: Arrow[] = [];
   private readonly rings: Ring[] = [];
   private readonly puffs: Puff[] = [];
-  private readonly jets: Jet[] = [];
   private readonly scorches: Scorch[] = [];
-  private readonly burns: Burn[] = [];
   private readonly hills: Hill[] = [];
   private readonly waves: DrumWave[] = [];
-  private readonly turtles: Turtle[] = [];
+  private readonly nons: NonDung[] = [];
   private readonly crags: Crag[] = [];
   /** Chữ thơ Nam quốc sơn hà đang bay. */
   private readonly chuTho: { sp: THREE.Sprite; age: number }[] = [];
@@ -535,7 +429,17 @@ export class BattleView {
     private readonly scale = 1,
     private readonly heightAt: (x: number, z: number, wet?: boolean, wall?: boolean) => number = () => 0,
     private readonly drumAt?: { x: number; z: number },
-  ) {}
+  ) {
+    this.hu = new HieuUng(root);
+  }
+
+  /** Hiệu ứng kỹ năng tướng dùng chung (sóng, lóe, tia, cột sáng, vệt chém...). */
+  private readonly hu: HieuUng;
+
+  /** Điểm (x, z) của trận ra tọa độ trong nhóm, nhấc lên `dy` khỏi mặt đất. */
+  private at(x: number, z: number, dy = 0): THREE.Vector3 {
+    return new THREE.Vector3(x + this.offset.x, this.heightAt(x, z) + dy, z + this.offset.z);
+  }
 
   /** Gọi mỗi khung hình với trận đang diễn ra, hoặc null khi không có trận. */
   /** Hệ số hình học của trận đang vẽ (`Battle.geo`): ở kinh đô, vùng kỹ năng rộng hơn theo độ giãn của kinh đô. */
@@ -634,6 +538,26 @@ export class BattleView {
     mesh.renderOrder = 3;
     this.root.add(mesh);
     this.waves.push({ mesh, age: 0 });
+    // Mỗi nhịp một sóng đồng sáng từ mặt trống; nhịp đầu bừng cột sáng, tia đồng tóe lên.
+    const s = this.scale;
+    const c = this.at(at.x, at.z);
+    this.hu.soc(c, { mau: C.fxVang, r: 3.2 * s, life: 0.5 });
+    // Quân ta cũng thấy nhịp trống: vòng đồng mảnh bừng quanh giữa đám quân ta.
+    const allies = battle.fighters.filter((f) => f.side === 'ta' && f.state !== 'dead' && f.state !== 'gone');
+    if (allies.length && this.drumAt) {
+      const mx = allies.reduce((n, f) => n + f.x, 0) / allies.length;
+      const mz = allies.reduce((n, f) => n + f.z, 0) / allies.length;
+      this.hu.soc(this.at(mx, mz), { mau: C.fxVang, r: 4.5 * s * this.geo, life: 0.45, loi: false });
+    }
+    if (beat === 0) {
+      this.hu.cot(c, { mau: C.fxVang, r: 0.6 * s, h: 4 * s, life: 0.9, sang: 0.7 });
+      this.hu.loe(this.at(at.x, at.z, 1 * s), { mau: C.fxVang, size: 2.6 * s, life: 0.4 });
+      this.hu.tia(this.at(at.x, at.z, 0.8 * s), { mau: C.fxVang, n: 18, toc: 8, len: 0.5, up: 1, life: 0.6 });
+      for (const f of battle.fighters) {
+        if (f.side !== 'ta' || f.state === 'dead' || f.state === 'gone' || f.kind === 'lauThuyen') continue;
+        this.hu.hat(this.at(f.x, f.z), { mau: C.fxVang, n: 2, r: 0.25, h: 1.6 * s, size: 0.2, delay: 0.1 + (f.id % 6) * 0.04, life: 0.8 });
+      }
+    }
   }
 
   private clear(): void {
@@ -644,10 +568,8 @@ export class BattleView {
     }
     for (const b of this.boats) this.root.remove(b);
     this.boats.length = 0;
-    // Lưỡi lửa dùng hình dựng sẵn cho mọi trận: gỡ khỏi lính trước khi giải phóng hình của lính.
-    for (const fx of [...this.jets, ...this.burns]) fx.group.removeFromParent();
-    this.jets.length = 0;
-    this.burns.length = 0;
+    // Hiệu ứng gắn trên người (lửa cháy, sao choáng) gỡ trước khi giải phóng hình của lính.
+    this.hu.clear();
     for (const v of this.fighters.values()) {
       this.root.remove(v.obj);
       if (v.peak) this.root.remove(v.peak);
@@ -672,12 +594,19 @@ export class BattleView {
     this.puffs.length = 0;
     for (const s of this.scorches) this.dropScorch(s);
     this.scorches.length = 0;
-    for (const h of this.hills) this.root.remove(h.group);
+    for (const h of this.hills) {
+      this.root.remove(h.doi.group);
+      disposeModel(h.doi.group);
+      h.doi.drop?.();
+    }
     this.hills.length = 0;
     for (const w of this.waves) this.dropWave(w);
     this.waves.length = 0;
-    for (const t of this.turtles) this.root.remove(t.group);
-    this.turtles.length = 0;
+    for (const n of this.nons) {
+      n.group.removeFromParent();
+      n.drop();
+    }
+    this.nons.length = 0;
     for (const c of this.crags) this.dropCrag(c);
     this.crags.length = 0;
     for (const c of this.chuTho) {
@@ -689,6 +618,7 @@ export class BattleView {
     this.surges.length = 0;
     for (const w of this.whirls) this.root.remove(w.group);
     this.whirls.length = 0;
+    this.hu.clear();
     this.rallyBeat = -1;
     this.lastSeq = 0;
   }
@@ -1063,55 +993,23 @@ export class BattleView {
     const hero = battle.fighters.find((f) => f.kind === 'sonTinh');
     const view = hero && this.fighters.get(hero.id);
     if (view) view.cast = CAST_TIME;
-    const rand = seeded(seq * 131 + 17);
-    const group = new THREE.Group();
-    group.position.set(x + ox, 0, z + oz);
-    const spikes: Crag['spikes'] = [];
-    const add = (n: number, r: number, hMin: number, hMax: number, size: number, delay0: number): void => {
-      for (let i = 0; i < n; i++) {
-        const a = (i / n) * Math.PI * 2 + rand() * 0.3 + (r < (ROCKS.radius * this.geo) ? 0.3 : 0);
-        const px = Math.cos(a) * r;
-        const pz = Math.sin(a) * r;
-        const h = (hMin + rand() * (hMax - hMin)) * this.scale;
-        const obj = cragSpike(h, size * this.scale * (0.85 + rand() * 0.3), rand);
-        obj.position.set(px, this.heightAt(x + px, z + pz) - h, pz);
-        // Mỏm đá chĩa hơi ra ngoài vòng.
-        obj.rotation.set(Math.sin(a) * 0.18, rand() * Math.PI, -Math.cos(a) * 0.18);
-        group.add(obj);
-        spikes.push({ obj, h, delay: delay0 + (i / n) * 0.12 });
-      }
-    };
-    add(11, (ROCKS.radius * this.geo), 1.0, 1.6, 0.42, 0.04);
-    add(7, (ROCKS.radius * this.geo) * 0.62, 0.55, 0.9, 0.28, 0);
-    // Đất nứt: những đường nứt sẫm tỏa từ chân Sơn Tinh ra tới vòng đá.
-    const crackMat = new THREE.MeshBasicMaterial({ color: 0x2a2018, transparent: true, opacity: 0.7, depthWrite: false });
-    const cracks = new THREE.Group();
-    for (let i = 0; i < 9; i++) {
-      const a = (i / 9) * Math.PI * 2 + rand() * 0.4;
-      let cx = 0;
-      let cz = 0;
-      let dir = a;
-      for (let seg = 0; seg < 3; seg++) {
-        const len = ((ROCKS.radius * this.geo) / 3) * (0.8 + rand() * 0.4);
-        dir += (rand() - 0.5) * 0.6;
-        const mesh = new THREE.Mesh(new THREE.BoxGeometry(0.09 - seg * 0.02, 0.01, len), crackMat);
-        mesh.position.set(cx + Math.cos(dir) * len * 0.5, this.heightAt(x + cx, z + cz) + 0.04, cz + Math.sin(dir) * len * 0.5);
-        mesh.rotation.y = Math.atan2(Math.cos(dir), Math.sin(dir));
-        mesh.renderOrder = 2;
-        cracks.add(mesh);
-        cx += Math.cos(dir) * len;
-        cz += Math.sin(dir) * len;
-      }
-    }
-    group.add(cracks);
-    this.root.add(group);
-    this.crags.push({ group, spikes, cracks, crackMat, age: 0 });
-    // Bụi đất tung ở chân từng mỏm đá lớn.
-    for (let i = 0; i < 12; i++) {
-      const a = (i / 12) * Math.PI * 2;
-      const px = x + Math.cos(a) * (ROCKS.radius * this.geo);
-      const pz = z + Math.sin(a) * (ROCKS.radius * this.geo);
-      this.addPuff(px + ox, this.heightAt(px, pz) + 0.2, pz + oz, i % 3 ? C.earth : C.rock, 0.05 + (i / 12) * 0.12, 0.9, 1.8);
+    const s = this.scale;
+    const R = ROCKS.radius * this.geo;
+    const non = dungNon({
+      hu: this.hu,
+      at: (dx, dz, dy = 0) => this.at(x + dx, z + dz, dy),
+      cao: (dx, dz) => this.heightAt(x + dx, z + dz),
+      R,
+      sc: s,
+      seed: seq,
+    });
+    non.group.position.set(x + ox, 0, z + oz);
+    this.root.add(non.group);
+    this.nons.push(non);
+    for (const f of battle.fighters) {
+      if (f.side !== 'giac' || !f.stun || f.stun <= 0 || f.state === 'dead') continue;
+      const v = this.fighters.get(f.id);
+      if (v) this.hu.choang(v.obj, { mau: C.fxVang, cao: 1.75 * s, delay: 0.2, life: f.stun - 0.2 });
     }
   }
 
@@ -1155,16 +1053,19 @@ export class BattleView {
     group.add(cracks);
     this.root.add(group);
     this.crags.push({ group, spikes, cracks, crackMat, age: 0, hold: len, life: len + 0.6, op: 0.4 });
-    const ring = new THREE.Mesh(ringGeo, new THREE.MeshBasicMaterial({ color: C.bachDangLight, transparent: true, depthWrite: false }));
-    ring.position.set(tx + ox, this.heightAt(tx, tz) + 0.08, tz + oz);
-    ring.renderOrder = 3;
-    this.root.add(ring);
-    this.rings.push({ mesh: ring, age: 0, size: rr });
-    for (let i = 0; i < 12; i++) {
-      const a = (i / 12) * Math.PI * 2;
-      const px = tx + Math.cos(a) * rr * 0.8;
-      const pz = tz + Math.sin(a) * rr * 0.8;
-      this.addPuff(px + ox, this.heightAt(px, pz) + 0.2, pz + oz, i % 2 ? C.songBac : C.bachDangLight, 0.05 + (i / 12) * 0.2, 0.8, 1.5);
+    const s = this.scale;
+    // Ông chỉ giáo: dải mũi tên nước từ ông tới bãi, sóng nước bạc và hoa văn loang ra, nước tóe ở chân từng cọc.
+    if (hero) this.hu.duong(this.at(hero.x, hero.z, 0.1), this.at(tx, tz, 0.1), { mau: C.fxNuoc, rong: 0.7 * s, life: 0.6 });
+    this.hu.soc(this.at(tx, tz), { mau: C.fxNuoc, r: rr * 1.1, life: 0.7 });
+    this.hu.vong(this.at(tx, tz), { mau: C.fxNuoc, r: rr, delay: 0.05, life: 1.4 });
+    spikes.forEach((sp, i) => {
+      if (i % 2) return;
+      const p = sp.obj.position;
+      this.hu.tia(this.at(tx + p.x, tz + p.z, 0.15), { mau: C.fxTrang, n: 4, toc: 4, len: 0.3, up: 1.8, delay: sp.delay, life: 0.45 });
+    });
+    for (let i = 0; i < 8; i++) {
+      const a = (i / 8) * Math.PI * 2;
+      this.hu.bui(this.at(tx + Math.cos(a) * rr * 0.8, tz + Math.sin(a) * rr * 0.8, 0.2), { mau: C.songBac, size: 1.1 * s, delay: 0.05 + (i / 8) * 0.2, life: 0.8 });
     }
   }
 
@@ -1334,6 +1235,11 @@ export class BattleView {
       this.arrows.push({ mesh: up, from, to: top, age: 0, dur: RAIN_RISE, arc: 0 });
     }
     const r = radius * this.geo;
+    const s = this.scale;
+    // Vòng ngắm đồng co vào vùng tên sắp rơi; tên cắm hết thì sóng đồng bừng lên.
+    this.hu.soc(this.at(tx, tz), { mau: C.red, r: r * 1.05, thu: true, life: RAIN_RISE + 0.3, loi: false });
+    this.hu.loe(this.at(x, z, 1.4 * s), { mau: C.fxVang, size: 1.6 * s, life: 0.3 });
+    this.hu.soc(this.at(tx, tz), { mau: C.bronzeLight, r: r * 1.1, delay: RAIN_RISE + 0.45, life: 0.6 });
     for (let i = 0; i < RAIN_ARROWS; i++) {
       const a = rand() * Math.PI * 2;
       const d = Math.sqrt(rand()) * r;
@@ -1348,6 +1254,11 @@ export class BattleView {
       this.root.add(mesh);
       this.arrows.push({ mesh, from: start, to, age: 0, dur: 0.3, delay: RAIN_RISE + rand() * 0.35, arc: 0 });
       if (i % 3 === 0) this.addPuff(px + ox, h + 0.15, pz + oz, C.earth, RAIN_RISE + 0.3 + rand() * 0.35, 0.6, 1.2);
+      const land = (this.arrows[this.arrows.length - 1].delay ?? 0) + 0.3;
+      if (i % 2 === 0) {
+        this.hu.loe(to, { mau: C.fxVang, size: 1 * s, delay: land, life: 0.25 });
+        this.hu.tia(to, { mau: C.fxVang, n: 4, toc: 5, len: 0.3, up: 1, delay: land, life: 0.35 });
+      }
     }
     // Vòng sóng đồng loang ra từ giữa vùng trúng.
     const mesh = new THREE.Mesh(ringGeo, new THREE.MeshBasicMaterial({ color: C.bronzeLight, transparent: true, depthWrite: false }));
@@ -1362,23 +1273,54 @@ export class BattleView {
    * Giặc bị hất, choáng thì luật trận đã đặt chỗ; phần vẽ chỉ cho voi lao tới đó.
    */
   private voiXung(battle: Battle, x: number, z: number, tx: number, tz: number): void {
-    const { x: ox, z: oz } = this.offset;
     const hero = battle.fighters.find((f) => f.kind === 'trungTrac');
     const view = hero && this.fighters.get(hero.id);
     if (view) {
       view.dash = { fromX: x, fromZ: z, toX: tx, toZ: tz, age: 0 };
       view.cast = undefined;
     }
-    for (let i = 0; i <= 8; i++) {
-      const k = i / 8;
-      const px = lerp(x, tx, k);
-      const pz = lerp(z, tz, k);
-      const delay = BA_CAST_TIME * (0.28 + 0.67 * THREE.MathUtils.smoothstep(k, 0, 1));
-      for (const side of [-0.45, 0.45]) {
-        const sx = (tz - z) * side * 0.2;
-        const sz = -(tx - x) * side * 0.2;
-        this.addPuff(px + sx + ox, this.heightAt(px, pz) + 0.2, pz + sz + oz, C.earth, delay, 0.8, 1.8);
+    const s = this.scale;
+    const T = BA_CAST_TIME;
+    const from = this.at(x, z);
+    const to = this.at(tx, tz);
+    const len = Math.hypot(tx - x, tz - z) || 1;
+    const yaw = Math.atan2(-(tz - z), tx - x);
+    // Báo đường lao: dải mũi tên đỏ son chạy dồn về chỗ voi sẽ tới.
+    this.hu.duong(from, to, { mau: C.trungRed, rong: VOI_XUNG.width * this.geo, life: T * 0.95 });
+    // Voi chồm lên rống: sóng vàng nhỏ dưới chân, lóe sáng.
+    this.hu.soc(from, { mau: C.trungYellow, r: 1.8 * s, delay: 0.15, life: 0.55 });
+    this.hu.loe(this.at(x, z, 1.4 * s), { mau: C.fxVang, size: 2 * s, delay: 0.15, life: 0.35 });
+    // Bụi cuộn hai bên theo bước voi, vệt gió ngược chiều lao.
+    const px = -(tz - z) / len;
+    const pz = (tx - x) / len;
+    for (let i = 0; i <= 10; i++) {
+      const k = i / 10;
+      const delay = T * (0.28 + 0.67 * smoothstep(k, 0, 1));
+      const cx = lerp(x, tx, k);
+      const cz = lerp(z, tz, k);
+      for (const side of [-1, 1]) {
+        const p = this.at(cx + px * side * 0.35, cz + pz * side * 0.35, 0.25);
+        this.hu.bui(p, { mau: C.fxBui, size: 1.1 * s, delay, life: 0.85, bay: new THREE.Vector3(px * side * 0.7, 0, pz * side * 0.7) });
       }
+      if (i % 2 === 0) this.hu.tia(this.at(cx, cz, 0.9 * s), { mau: C.fxTrang, n: 5, toc: 7, len: 1, day: 0.04, yaw: yaw + Math.PI, xoe: 0.5, up: 0.05, delay, life: 0.3 });
+    }
+    // Va chạm ở cuối đường: sóng lửa, lóe, tia tóe, vòng bụi.
+    const hit = T * 0.95;
+    this.hu.soc(to, { mau: C.fxLua, r: 2.8 * s, delay: hit, life: 0.6 });
+    this.hu.soc(to, { mau: C.fxVang, r: 1.6 * s, delay: hit + 0.06, life: 0.45, loi: false });
+    this.hu.loe(this.at(tx, tz, 0.8 * s), { mau: C.fxVang, size: 3.2 * s, delay: hit, life: 0.4 });
+    this.hu.tia(this.at(tx, tz, 0.5 * s), { mau: C.fxVang, n: 26, toc: 10, len: 0.6, up: 0.9, delay: hit, life: 0.6 });
+    for (let i = 0; i < 8; i++) {
+      const a = (i / 8) * Math.PI * 2;
+      this.hu.bui(this.at(tx, tz, 0.3), { mau: C.fxBui, size: 1.2 * s, delay: hit, life: 0.9, bay: new THREE.Vector3(Math.cos(a) * 1.6, 0, Math.sin(a) * 1.6) });
+    }
+    // Giặc bị hất, choáng (luật đã đặt): sao vàng xoay trên đầu tới hết choáng.
+    for (const f of battle.fighters) {
+      if (f.side !== 'giac' || !f.stun || f.stun <= 0 || f.state === 'dead') continue;
+      const v = this.fighters.get(f.id);
+      if (!v) continue;
+      this.hu.loe(this.at(f.x, f.z, 0.8 * s), { mau: C.fxTrang, size: 1.2 * s, delay: hit + 0.05, life: 0.3 });
+      this.hu.choang(v.obj, { mau: C.fxVang, cao: 1.75 * s, delay: hit, life: Math.max(0.3, f.stun - hit) });
     }
   }
 
@@ -1387,7 +1329,6 @@ export class BattleView {
    * chém xuống thì vòng sáng ngà loang ở chỗ kẻ bị chém, tia sáng tóe ra. Luật trận đã đặt chỗ; phần vẽ cho voi lao.
    */
   private chemCaKinh(battle: Battle, x: number, z: number, tx: number, tz: number): void {
-    const { x: ox, z: oz } = this.offset;
     const hero = battle.fighters.find((f) => f.kind === 'baTrieu');
     const view = hero && this.fighters.get(hero.id);
     // Chỗ voi dừng: luật đã đặt Bà ở đó.
@@ -1397,21 +1338,29 @@ export class BattleView {
       view.dash = { fromX: x, fromZ: z, toX: ex, toZ: ez, age: 0 };
       view.cast = undefined;
     }
-    for (let i = 0; i <= 5; i++) {
-      const k = i / 5;
-      const delay = BA_CAST_TIME * lerp(CHEM_RUN[0], CHEM_RUN[1], k);
-      this.addPuff(lerp(x, ex, k) + ox, this.heightAt(lerp(x, ex, k), lerp(z, ez, k)) + 0.2, lerp(z, ez, k) + oz, C.earth, delay, 0.7, 1.6);
+    const s = this.scale;
+    const T = BA_CAST_TIME;
+    const hit = T * 0.7;
+    const yaw = Math.atan2(-(tz - z), tx - x);
+    const tgt = this.at(tx, tz);
+    // Vòng ngắm đỏ co dần vào kẻ sắp bị chém.
+    this.hu.soc(tgt, { mau: C.red, r: 1.6 * s, thu: true, life: hit, loi: false });
+    // Voi trắng lao: bụi cuộn theo bước, vệt gió.
+    for (let i = 0; i <= 6; i++) {
+      const k = i / 6;
+      const delay = T * lerp(CHEM_RUN[0], CHEM_RUN[1], k);
+      const cx = lerp(x, ex, k);
+      const cz = lerp(z, ez, k);
+      this.hu.bui(this.at(cx, cz, 0.25), { mau: C.fxBui, size: 1 * s, delay, life: 0.8 });
+      this.hu.tia(this.at(cx, cz, 0.9 * s), { mau: C.fxTrang, n: 4, toc: 7, len: 1, day: 0.04, yaw: yaw + Math.PI, xoe: 0.5, up: 0.05, delay, life: 0.3 });
     }
-    const hit = BA_CAST_TIME * 0.7;
-    const ring = new THREE.Mesh(ringGeo, new THREE.MeshBasicMaterial({ color: C.voiTrang, transparent: true, depthWrite: false, opacity: 0 }));
-    ring.position.set(tx + ox, this.heightAt(tx, tz) + 0.08, tz + oz);
-    ring.renderOrder = 3;
-    this.root.add(ring);
-    this.rings.push({ mesh: ring, age: -hit, size: 2.5 * this.geo });
-    for (let i = 0; i < 6; i++) {
-      const a = (i / 6) * Math.PI * 2;
-      this.addPuff(tx + Math.cos(a) * 0.5 + ox, this.heightAt(tx, tz) + 0.5, tz + Math.sin(a) * 0.5 + oz, i % 2 ? C.gold : C.voiTrang, hit, 0.6, 1.4);
-    }
+    // Nhát chém: hai vệt trăng lưỡi liềm (một quét ngang, một chém chéo), lóe trắng, tia vàng, sóng trắng, vết chém trên đất.
+    this.hu.chem(this.at(tx, tz, 0.7 * s), { mau: C.fxVang, r: 1.7 * s, yaw, nam: true, nghieng: 0, quet: 2.2, delay: hit, life: 0.4 });
+    this.hu.chem(this.at(tx, tz, 1 * s), { mau: C.fxTrang, r: 1.9 * s, yaw: yaw + Math.PI / 2, nghieng: 1.1, quet: 1.8, delay: hit + 0.05, life: 0.42 });
+    this.hu.loe(this.at(tx, tz, 0.9 * s), { mau: C.fxTrang, size: 3.6 * s, delay: hit + 0.04, life: 0.35 });
+    this.hu.tia(this.at(tx, tz, 0.8 * s), { mau: C.fxVang, n: 28, toc: 11, len: 0.7, up: 0.6, delay: hit + 0.04, life: 0.55 });
+    this.hu.soc(tgt, { mau: C.fxTrang, r: 2.6 * s * this.geo, delay: hit + 0.04, life: 0.55 });
+    this.hu.vet(tgt, { mau: C.fxVet, dai: 2.8 * s, yaw: yaw + Math.PI / 2 + 0.5, delay: hit + 0.05, life: 1.8 });
   }
 
   /**
@@ -1420,19 +1369,36 @@ export class BattleView {
    */
   /** `count`: số nghĩa binh tối đa của luật (đủ bốn món bộ Trưng Nhị thì nhiều hơn). */
   private hieuTrieu(battle: Battle, x: number, z: number, count = HIEU_TRIEU.count): void {
-    const { x: ox, z: oz } = this.offset;
     const hero = battle.fighters.find((f) => f.kind === 'trungNhi');
     const view = hero && this.fighters.get(hero.id);
     if (view) view.cast = BA_CAST_TIME;
-    const mesh = new THREE.Mesh(ringGeo, new THREE.MeshBasicMaterial({ color: C.heal, transparent: true, depthWrite: false }));
-    mesh.position.set(x + ox, this.heightAt(x, z) + 0.08, z + oz);
-    mesh.renderOrder = 3;
-    this.root.add(mesh);
-    this.rings.push({ mesh, age: 0, size: HIEU_TRIEU.radius * this.geo });
+    const s = this.scale;
+    const R = HIEU_TRIEU.radius * this.geo;
+    const c = this.at(x, z);
+    // Hoa văn mặt trống đồng xanh nở ra đúng vùng hồi máu, cột sáng ở chỗ Trưng Nhị phất cờ.
+    this.hu.vong(c, { mau: C.heal, r: R, delay: 0.1, life: 1.9 });
+    this.hu.soc(c, { mau: C.fxXanh, r: R, delay: 0.35, life: 0.8 });
+    this.hu.soc(c, { mau: C.fxVang, r: R * 0.7, delay: 0.6, life: 0.7, loi: false });
+    this.hu.cot(c, { mau: C.fxXanh, r: 0.55 * s, h: 4.5 * s, delay: 0.2, life: 1, sang: 0.6 });
+    this.hu.loe(this.at(x, z, 2.2 * s), { mau: C.fxVang, size: 2.6 * s, delay: 0.3, life: 0.5 });
+    this.hu.hat(c, { mau: C.fxXanh, n: 26, r: R, h: 2.4 * s, delay: 0.3, life: 1.6 });
+    // Quân ta trong vùng được hồi máu: cột sáng mảnh và hạt sáng bốc lên ở từng người.
+    const healed = battle.fighters.filter((f) => f.side === 'ta' && f.state !== 'dead' && f.state !== 'gone' && f.kind !== 'nghiaBinh' && Math.hypot(f.x - x, f.z - z) <= R);
+    healed.forEach((f, i) => {
+      const p = this.at(f.x, f.z);
+      const delay = 0.45 + (i % 8) * 0.04;
+      this.hu.cot(p, { mau: C.fxXanh, r: 0.22 * s, h: 1.3 * s, delay, life: 0.7, sang: 0.55 });
+      this.hu.hat(p, { mau: 0xd8ffd0, n: 4, r: 0.3, h: 1.9 * s, size: 0.22, delay, life: 1 });
+    });
+    // Nghĩa binh chạy ra: bụi tung và lóe vàng ở chỗ từng người.
     const fresh = battle.fighters
       .filter((f) => f.kind === 'nghiaBinh' && f.state !== 'dead' && f.state !== 'gone' && !this.fighters.has(f.id))
       .slice(0, count);
-    fresh.forEach((f, i) => this.addPuff(f.x + ox, this.heightAt(f.x, f.z) + 0.2, f.z + oz, C.earth, 0.3 + i * 0.05, 0.7, 1.4));
+    fresh.forEach((f, i) => {
+      const delay = 0.3 + i * 0.05;
+      this.hu.bui(this.at(f.x, f.z, 0.25), { mau: C.fxBui, size: 1.1 * s, delay, life: 0.8 });
+      this.hu.loe(this.at(f.x, f.z, 0.8 * s), { mau: C.fxVang, size: 1.3 * s, delay, life: 0.35 });
+    });
   }
 
   /** Lệnh bắn: Cao Lỗ nâng tù và lên thổi, một vòng sóng đỏ đồng loang ra từ chỗ ngài đứng. */
@@ -1483,6 +1449,19 @@ export class BattleView {
     mesh.renderOrder = 3;
     this.root.add(mesh);
     this.rings.push({ mesh, age: 0 });
+    // Tiếng tù và: ba sóng đỏ son nối nhau loang ra, hoa văn trống đồng đỏ; lính nỏ nhận lệnh bừng cột sáng đỏ.
+    const s = this.scale;
+    const c = this.at(x, z);
+    this.hu.vong(c, { mau: C.red, r: 3.2 * s, delay: 0.25, life: 1.4 });
+    for (let i = 0; i < 3; i++) this.hu.soc(c, { mau: i % 2 ? C.fxVang : C.trungRed, r: (3 + i) * s, delay: 0.3 + i * 0.22, life: 0.55, loi: i === 0 });
+    this.hu.loe(this.at(x, z, 1.5 * s), { mau: C.fxLua, size: 2.2 * s, delay: 0.3, life: 0.4 });
+    for (const f of battle.fighters) {
+      if (f.side !== 'ta' || f.kind !== 'no' || f.state === 'dead' || f.state === 'gone') continue;
+      const p = this.at(f.x, f.z);
+      const delay = 0.45 + Math.hypot(f.x - x, f.z - z) * 0.06;
+      this.hu.cot(p, { mau: C.fxLua, r: 0.25 * s, h: 1.5 * s, delay, life: 0.7, sang: 0.7 });
+      this.hu.loe(this.at(f.x, f.z, 0.9 * s), { mau: C.fxVang, size: 1 * s, delay, life: 0.3 });
+    }
   }
 
   /**
@@ -1490,22 +1469,22 @@ export class BattleView {
    * từng người vẽ ở `syncSuong`, theo `Fighter.an` của luật).
    */
   private ngayAn(battle: Battle, x: number, z: number): void {
-    const { x: ox, z: oz } = this.offset;
     const hero = battle.fighters.find((f) => f.kind === 'trieuQuangPhuc');
     const view = hero && this.fighters.get(hero.id);
     if (view) view.cast = CAST_TIME;
+    const s = this.scale;
+    const R = 3 * this.geo;
+    // Ông khom người ra hiệu: hoa văn sương xanh ngọc nở dưới chân, sóng sương loang ra, sương đầm cuộn ra phủ đội,
+    // đom đóm đầm lầy bay lên.
+    this.hu.loe(this.at(x, z, 0.6 * s), { mau: C.fxSuong, size: 2 * s, life: 0.4 });
+    this.hu.soc(this.at(x, z), { mau: C.fxSuong, r: R * 1.1, life: 0.8, sang: 0.7 });
+    this.hu.vong(this.at(x, z), { mau: C.fxSuong, r: R, delay: 0.05, life: 1.6 });
     for (let i = 0; i < 10; i++) {
       const a = (i / 10) * Math.PI * 2;
-      const r = 0.6 + (i % 3) * 0.45;
-      const px = x + Math.cos(a) * r;
-      const pz = z + Math.sin(a) * r;
-      this.addPuff(px + ox, this.heightAt(px, pz) + 0.3, pz + oz, C.suongDam, 0.05 * (i % 4), 1.4, 2.6);
+      const bay = new THREE.Vector3(Math.cos(a) * R * 0.7, 0, Math.sin(a) * R * 0.7);
+      this.hu.bui(this.at(x + Math.cos(a) * 0.4, z + Math.sin(a) * 0.4, 0.3), { mau: C.suongDam, size: 2.2 * s, bay, delay: 0.03 * (i % 4), life: 1.3 });
     }
-    const ring = new THREE.Mesh(ringGeo, new THREE.MeshBasicMaterial({ color: C.suongDam, transparent: true, depthWrite: false }));
-    ring.position.set(x + ox, this.heightAt(x, z) + 0.08, z + oz);
-    ring.renderOrder = 3;
-    this.root.add(ring);
-    this.rings.push({ mesh: ring, age: 0, size: 3 * this.geo });
+    this.hu.hat(this.at(x, z), { mau: C.fxSuong, n: 26, r: R, h: 1.4 * s, size: 0.7, delay: 0.1, life: 2.2 });
   }
 
   /**
@@ -1516,11 +1495,12 @@ export class BattleView {
     if (an > 0 && !view.suong) {
       const mat = new THREE.MeshBasicMaterial({ color: C.suongDam, transparent: true, opacity: 0, depthWrite: false });
       const group = new THREE.Group();
-      for (let i = 0; i < 7; i++) {
-        const a = (i / 7) * Math.PI * 2;
+      // Sương mỏng vờn quanh chân (không trùm kín người), lau sậy mọc quanh.
+      for (let i = 0; i < 4; i++) {
+        const a = (i / 4) * Math.PI * 2 + 0.4;
         const m = new THREE.Mesh(puffGeo, mat);
-        m.position.set(Math.cos(a) * 0.42, 0.35 + (i % 3) * 0.32, Math.sin(a) * 0.42);
-        m.scale.setScalar(1.3 + (i % 2) * 0.4);
+        m.position.set(Math.cos(a) * 0.45, 0.18 + (i % 2) * 0.12, Math.sin(a) * 0.45);
+        m.scale.set(1.5, 0.7, 1.5);
         m.renderOrder = 4;
         group.add(m);
       }
@@ -1543,7 +1523,7 @@ export class BattleView {
     if (!sg) return;
     sg.age += dt;
     const fade = Math.min(1, sg.age / 0.35) * Math.min(1, an / 0.5);
-    sg.mat.opacity = 0.62 * fade * (0.9 + 0.1 * Math.sin(this.time * 3));
+    sg.mat.opacity = 0.38 * fade * (0.85 + 0.15 * Math.sin(this.time * 3));
     sg.group.rotation.y = this.time * 0.4;
     sg.group.scale.setScalar(0.6 + 0.4 * fade);
     view.obj.position.y -= 0.14 * this.scale * fade;
@@ -1554,21 +1534,27 @@ export class BattleView {
    * dọc mép vòng; người được thêm sức đánh có vòng đỏ dưới chân (`syncHang`).
    */
   private hacDe(battle: Battle, x: number, z: number, r: number): void {
-    const { x: ox, z: oz } = this.offset;
     const hero = battle.fighters.find((f) => f.kind === 'maiThucLoan');
     const view = hero && this.fighters.get(hero.id);
     if (view) view.cast = CAST_TIME;
-    const ring = new THREE.Mesh(ringGeo, new THREE.MeshBasicMaterial({ color: C.hoQuan, transparent: true, depthWrite: false }));
-    ring.position.set(x + ox, this.heightAt(x, z) + 0.08, z + oz);
-    ring.renderOrder = 3;
-    this.root.add(ring);
-    this.rings.push({ mesh: ring, age: 0, size: r * this.geo });
+    const s = this.scale;
     const rr = r * this.geo;
-    for (let i = 0; i < 10; i++) {
-      const a = (i / 10) * Math.PI * 2;
-      const px = x + Math.cos(a) * rr;
-      const pz = z + Math.sin(a) * rr;
-      this.addPuff(px + ox, this.heightAt(px, pz) + 0.3, pz + oz, i % 2 ? C.hacDe : C.hoQuan, 0.15 + 0.02 * i, 1.0, 1.8);
+    // Ông giơ đao hô: cột sáng đỏ máu, sóng đỏ loang tới tầm kéo giặc, hoa văn đỏ, khói đen cuộn lên dọc mép,
+    // than hồng tóe; mỗi người ta bừng đỏ lần lượt theo khoảng cách.
+    this.hu.cot(this.at(x, z), { mau: C.fxDo, r: 0.45 * s, h: 4 * s, life: 0.9, sang: 0.8 });
+    this.hu.loe(this.at(x, z, 1.2 * s), { mau: C.fxDo, size: 2.6 * s, life: 0.45 });
+    this.hu.soc(this.at(x, z), { mau: C.fxDo, r: rr, life: 0.7 });
+    this.hu.vong(this.at(x, z), { mau: C.fxDo, r: rr * 0.95, delay: 0.05, life: 1.5 });
+    this.hu.tia(this.at(x, z, 0.6 * s), { mau: C.fxLua, n: 20, toc: 7, len: 0.4, up: 1.3, life: 0.7 });
+    for (let i = 0; i < 12; i++) {
+      const a = (i / 12) * Math.PI * 2;
+      const bay = new THREE.Vector3(Math.cos(a) * 0.5, 0.6, Math.sin(a) * 0.5);
+      this.hu.bui(this.at(x + Math.cos(a) * rr, z + Math.sin(a) * rr, 0.3), { mau: i % 2 ? C.hacDe : C.hacDeLight, size: 0.95 * s, bay, delay: 0.12 + 0.02 * i, life: 1.2 });
+    }
+    for (const f of battle.fighters) {
+      if (f.side !== 'ta' || f.state === 'dead' || f === hero) continue;
+      const delay = 0.1 + Math.min(0.5, Math.hypot(f.x - x, f.z - z) * 0.05);
+      this.hu.loe(this.at(f.x, f.z, 0.8 * s), { mau: C.fxDo, size: 0.9 * s, delay, life: 0.35 });
     }
   }
 
@@ -1583,7 +1569,7 @@ export class BattleView {
       view.hang.removeFromParent();
       view.hang = undefined;
     }
-    if (view.hang) view.hang.scale.setScalar(1.1 + 0.12 * Math.sin(this.time * 6));
+    if (view.hang) view.hang.scale.setScalar(0.95 + 0.1 * Math.sin(this.time * 6));
   }
 
   /** Thêm hay bỏ vòng xám tím dưới chân giặc đang nao núng (Nam quốc sơn hà), vòng chập chờn. */
@@ -1609,11 +1595,16 @@ export class BattleView {
     const hero = battle.fighters.find((f) => f.kind === 'lyThuongKiet');
     const view = hero && this.fighters.get(hero.id);
     if (view) view.cast = CAST_TIME;
-    const ring = new THREE.Mesh(ringGeo, new THREE.MeshBasicMaterial({ color: C.nhuNguyet, transparent: true, depthWrite: false }));
-    ring.position.set(x + ox, this.heightAt(x, z) + 0.08, z + oz);
-    ring.renderOrder = 3;
-    this.root.add(ring);
-    this.rings.push({ mesh: ring, age: 0, size: r * this.geo });
+    const s = this.scale;
+    const rr = r * this.geo;
+    // Ông ngâm thơ: cột sáng vàng, sóng vàng và hoa văn trống đồng loang tới tầm thơ, hạt vàng bay quanh cột chữ.
+    this.hu.cot(this.at(x, z), { mau: C.fxVang, r: 0.3 * s, h: 4.2 * s, life: 0.8, sang: 0.5 });
+    this.hu.loe(this.at(x, z, 1.4 * s), { mau: C.fxVang, size: 2.4 * s, life: 0.5 });
+    this.hu.soc(this.at(x, z), { mau: C.fxVang, r: rr, life: 0.8, sang: 0.55 });
+    this.hu.soc(this.at(x, z), { mau: C.fxDo, r: rr * 0.9, delay: 0.12, life: 0.7, loi: false });
+    // Hoa văn màu vàng sẫm: cộng sáng trên vùng rộng thì màu tươi sẽ lóa cả bãi.
+    this.hu.vong(this.at(x, z), { mau: 0x8a6a22, r: rr * 0.9, delay: 0.05, life: 1.6 });
+    this.hu.hat(this.at(x, z), { mau: C.fxVang, n: 18, r: 0.9 * s, h: 3.2 * s, size: 0.8, delay: 0.1, life: 2 });
     CHU_THO.forEach((chu, i) => {
       const tex = chuThoTex(chu);
       if (!tex) return;
@@ -1626,8 +1617,11 @@ export class BattleView {
       this.chuTho.push({ sp, age: -0.25 * i });
     });
     for (const f of battle.fighters) {
-      if (f.side !== 'ta' || f.state === 'dead' || Math.hypot(f.x - x, f.z - z) > r * this.geo) continue;
-      this.addPuff(f.x + ox, this.heightAt(f.x, f.z) + 0.5, f.z + oz, C.heal, 0.1, 0.8, 1.2);
+      if (f.state === 'dead' || Math.hypot(f.x - x, f.z - z) > rr) continue;
+      const delay = 0.15 + Math.hypot(f.x - x, f.z - z) * 0.04;
+      // Quân ta hồi máu: hạt xanh bay lên; giặc nao núng: lóe tím.
+      if (f.side === 'ta') this.hu.hat(this.at(f.x, f.z), { mau: C.fxXanh, n: 4, r: 0.3 * s, h: 1.3 * s, size: 0.6, delay, life: 1 });
+      else this.hu.loe(this.at(f.x, f.z, 0.9 * s), { mau: C.fxTim, size: 0.9 * s, delay, life: 0.4 });
     }
   }
 
@@ -1661,6 +1655,12 @@ export class BattleView {
     rise.position.copy(from);
     this.root.add(rise);
     this.arrows.push({ mesh: rise, from, to: top, age: 0, dur: VOLLEY_RISE, arc: 0 });
+    // Tia sáng vàng phóng thẳng lên trời từ nỏ thần, nổ thành quầng sáng trên cao rồi mới tỏa mưa tên.
+    const s = this.scale;
+    this.hu.cot(this.at(x, z, 1.4 * s), { mau: C.fxVang, r: 0.22 * s, h: 7, life: 0.6 });
+    this.hu.loe(this.at(x, z, 1.6 * s), { mau: C.fxVang, size: 2 * s, life: 0.3 });
+    this.hu.loe(top, { mau: C.fxVang, size: 4.5 * s, delay: VOLLEY_RISE, life: 0.45 });
+    this.hu.tia(top, { mau: C.fxVang, n: 24, toc: 10, len: 0.6, up: -0.3, delay: VOLLEY_RISE, life: 0.5 });
     const rand = seeded(seq * 131 + 7);
     for (const f of battle.fighters) {
       if (f.side === 'ta' || f.state === 'dead' || f.state === 'gone') continue;
@@ -1671,30 +1671,30 @@ export class BattleView {
       mesh.position.copy(start);
       mesh.visible = false;
       this.root.add(mesh);
-      this.arrows.push({ mesh, from: start, to, age: 0, dur: 0.28, delay: VOLLEY_RISE + rand() * 0.3, arc: 0, flash: true });
+      const delay = VOLLEY_RISE + rand() * 0.3;
+      this.arrows.push({ mesh, from: start, to, age: 0, dur: 0.28, delay, arc: 0, flash: true });
+      // Chỗ mỗi mũi tên vàng cắm: sóng vàng nhỏ, lóe, tia tóe.
+      this.hu.soc(this.at(f.x, f.z), { mau: C.fxVang, r: 1 * s, delay: delay + 0.28, life: 0.4 });
+      this.hu.loe(to, { mau: C.fxVang, size: 1.4 * s, delay: delay + 0.28, life: 0.3 });
+      this.hu.tia(to, { mau: C.fxVang, n: 6, toc: 6, len: 0.35, up: 0.9, delay: delay + 0.28, life: 0.4 });
     }
   }
 
-  /** Rùa Vàng trồi lên cạnh An Dương Vương, kèm vòng sáng vàng lục loang ra. */
+  /**
+   * Rùa Vàng che chở: vòm mai rùa vàng lưới lục giác nở lên trùm quanh An Dương Vương, sóng vàng loang ra, hạt sáng bay
+   * lên khắp quân ta (mỗi lính ta có vòng mai rùa dưới chân suốt lúc được che, xem `syncShell`).
+   */
   private riseTurtle(battle: Battle, x: number, z: number): void {
-    const { x: ox, z: oz } = this.offset;
-    const hero = battle.fighters.find((f) => f.kind === 'anDuong');
-    const face = hero?.face ?? 0;
-    // Trồi lên bên cạnh, hơi lùi về sau tướng.
-    const tx = x + Math.cos(face) * 1.4 - Math.sin(face) * 0.6;
-    const tz = z - Math.sin(face) * 1.4 - Math.cos(face) * 0.6;
-    const group = makeRuaVang();
-    group.scale.setScalar(1.3 * this.scale);
-    group.rotation.y = face;
-    const base = this.heightAt(tx, tz);
-    group.position.set(tx + ox, base - 1, tz + oz);
-    this.root.add(group);
-    this.turtles.push({ group, base, age: 0 });
-    const mesh = new THREE.Mesh(ringGeo, new THREE.MeshBasicMaterial({ color: 0xd8e060, transparent: true, depthWrite: false }));
-    mesh.position.set(x + ox, this.heightAt(x, z) + 0.08, z + oz);
-    mesh.renderOrder = 3;
-    this.root.add(mesh);
-    this.rings.push({ mesh, age: 0 });
+    const s = this.scale;
+    const c = this.at(x, z);
+    this.hu.khien(c, { mau: C.fxVang, r: 3 * s * this.geo, life: 2.2 });
+    this.hu.soc(c, { mau: 0xd8e060, r: 4 * s * this.geo, life: 0.7 });
+    this.hu.loe(this.at(x, z, 1.4 * s), { mau: C.fxVang, size: 3 * s, life: 0.45 });
+    this.hu.tia(this.at(x, z, 0.4), { mau: C.fxVang, n: 20, toc: 7, len: 0.35, up: 1.3, life: 0.7 });
+    for (const f of battle.fighters) {
+      if (f.side !== 'ta' || f.state === 'dead' || f.state === 'gone' || f.kind === 'anDuong') continue;
+      this.hu.hat(this.at(f.x, f.z), { mau: 0xe8f080, n: 3, r: 0.3, h: 1.7 * s, size: 0.22, delay: 0.3 + (f.id % 8) * 0.04, life: 1 });
+    }
   }
 
   private dropWave(w: DrumWave): void {
@@ -1705,18 +1705,17 @@ export class BattleView {
   /** Đá Dời non: mọc nhanh lên quanh chân khi bị giữ chân, lún xuống khi hết. */
   private syncRocks(view: FighterView, stun: number, id: number, dt: number): void {
     if (stun > 0 && !view.rocks) {
-      const group = rockSpikes(id * 31 + 7);
-      group.scale.set(1, 0.01, 1);
-      view.obj.add(group);
-      view.rocks = { group, age: 0 };
+      const stone = daGiu(id * 31 + 7);
+      view.obj.add(stone.group);
+      view.rocks = { stone, age: 0 };
     }
     if (!view.rocks) return;
     const r = view.rocks;
     r.age += dt;
-    // Mọc vụt lên trong 0,2 giây, lún dần trong 0,3 giây cuối.
-    r.group.scale.set(1, Math.max(0.01, Math.min(r.age / 0.2, 1) * Math.min(1, stun / 0.3)), 1);
+    r.stone.tick(r.age, stun);
     if (stun <= 0) {
-      r.group.removeFromParent();
+      r.stone.group.removeFromParent();
+      r.stone.drop();
       view.rocks = undefined;
     }
   }
@@ -1783,15 +1782,31 @@ export class BattleView {
         const hero = battle.fighters.find((f) => f.kind === 'giong');
         const view = hero && this.fighters.get(hero.id);
         if (view) view.smash = SMASH_TIME;
+        // Bụi tre quét một vòng: hai vệt quét ngang xanh vàng, sóng đất, lá tre và tia tóe ra.
+        const sc = this.scale;
+        const R = (e.r ?? SMASH.radius) * this.geo;
+        const face = hero?.face ?? 0;
+        const hit = SMASH_TIME * 0.38;
+        for (const [k, mau] of [
+          [0, C.fxVang],
+          [Math.PI, C.fxTrang],
+        ] as const) {
+          this.hu.chem(this.at(e.x, e.z, 0.6 * sc), { mau, r: R * 0.85, yaw: face + k, nam: true, quet: 3.2, delay: hit - 0.08, life: 0.45 });
+        }
+        this.hu.soc(this.at(e.x, e.z), { mau: C.bamboo, r: R * 1.1, delay: hit, life: 0.6 });
+        this.hu.tia(this.at(e.x, e.z, 0.6 * sc), { mau: C.fxVang, n: 22, toc: 9, len: 0.5, up: 0.5, delay: hit, life: 0.55 });
+        this.hu.tia(this.at(e.x, e.z, 0.6 * sc), { mau: C.fxXanh, n: 14, toc: 7, len: 0.3, day: 0.09, up: 0.8, delay: hit, life: 0.8 });
       }
       if (e.kind === 'hill' && e.tx !== undefined && e.tz !== undefined) {
-        const group = hillModel();
-        // Đồi to theo vùng đánh của luật (đủ bốn món bộ Tản Viên thì rộng hơn); bụi lúc rơi theo cỡ đồi.
-        group.scale.multiplyScalar((this.geo * (e.r ?? HILL.radius)) / HILL.radius);
-        group.position.set(e.tx + ox, this.heightAt(e.tx, e.tz) + 7, e.tz + oz);
-        group.rotation.y = e.seq;
-        this.root.add(group);
-        this.hills.push({ group, age: 0, landed: false });
+        // Đồi to theo vùng đánh của luật (đủ bốn món bộ Tản Viên thì rộng hơn).
+        const R = (e.r ?? HILL.radius) * this.geo;
+        const doi = taoDoi({ hu: this.hu, at: (dx, dz, dy = 0) => this.at(e.tx! + dx, e.tz! + dz, dy), R, sc: this.scale, seed: e.seq });
+        doi.group.scale.multiplyScalar(R / HILL.radius);
+        doi.group.position.set(e.tx + ox, this.heightAt(e.tx, e.tz) + 7, e.tz + oz);
+        doi.group.rotation.y = e.seq;
+        this.root.add(doi.group);
+        this.hills.push({ doi, age: 0 });
+        doi.noRa(HILL_FALL);
       }
       if (e.kind === 'drown') {
         for (let i = 0; i < 6; i++) {
@@ -1800,8 +1815,8 @@ export class BattleView {
         }
       }
       // Trống trận vẽ bằng sóng trống theo từng nhịp (xem syncRally), không cần vòng ở đây.
-      if (e.kind === 'smash' || e.kind === 'rocks') {
-        const color = e.kind === 'rocks' ? C.rock : C.bamboo;
+      if (e.kind === 'smash') {
+        const color = C.bamboo;
         const mesh = new THREE.Mesh(ringGeo, new THREE.MeshBasicMaterial({ color, transparent: true, depthWrite: false }));
         mesh.position.set(e.x + ox, this.heightAt(e.x, e.z) + 0.08, e.z + oz);
         mesh.renderOrder = 3;
@@ -1850,18 +1865,8 @@ export class BattleView {
       view.dash = { fromX: x, fromZ: z, toX: tx, toZ: tz, age: 0 };
       view.obj.position.set(x + ox, 0, z + oz);
       view.obj.rotation.y = face;
-      const group = new THREE.Group();
-      // Mõm ngựa sắt trong khung của mô hình Gióng.
-      group.position.set(0, 1.22, 1.02);
-      const tongues = jetShapes.map((shape) => {
-        const t = tongue(shape);
-        t.rotation.set(shape.pitch, shape.yaw, 0);
-        group.add(t);
-        return t;
-      });
-      group.scale.setScalar(0.01);
-      view.obj.add(group);
-      this.jets.push({ group, tongues, age: 0 });
+      // Luồng lửa phun từ mõm ngựa sắt (trong khung mô hình Gióng) suốt lúc phi.
+      this.hu.phun(view.obj, new THREE.Vector3(0, 1.22, 1.02), { mau: C.fxLua, life: JET_LIFE, toc: 12, size: 0.8 * this.scale, rate: 150 });
     }
 
     // Vệt đất cháy sém dọc dải bị đốt, vị trí từng vệt và than lấy theo hạt giống của sự kiện.
@@ -1885,6 +1890,21 @@ export class BattleView {
     this.root.add(group);
     this.scorches.push({ group, mat, blobs, embers, spots, age: 0 });
 
+    // Ánh lửa dọc dải đốt theo bước ngựa phi: quầng lửa, than tóe lên, khói sẫm; đầu dải bừng sóng lửa.
+    const sc = this.scale;
+    const L = length * this.geo;
+    this.hu.soc(this.at(x, z), { mau: C.fxLua, r: 1.8 * sc, life: 0.45 });
+    for (let i = 0; i <= 7; i++) {
+      const d = (L * i) / 7;
+      const px = x + dx * d;
+      const pz = z + dz * d;
+      const delay = (DASH_TIME * i) / 7;
+      this.hu.loe(this.at(px, pz, 0.5 * sc), { mau: C.fxLua, size: 2.4 * sc, delay, life: 0.5 });
+      this.hu.tia(this.at(px, pz, 0.3), { mau: C.fxVang, n: 6, toc: 5, len: 0.35, up: 1.4, delay: delay + 0.05, life: 0.7 });
+      if (i % 2 === 1) this.hu.bui(this.at(px, pz, 0.8), { mau: 0x9a908a, size: 1 * sc, delay: delay + 0.2, life: 1.1 });
+    }
+    this.hu.soc(this.at(x + dx * L, z + dz * L), { mau: C.fxLua, r: 2.2 * sc, delay: DASH_TIME, life: 0.55 });
+
     // Giặc đứng trong dải lửa (cùng phép đo với luật trận) bốc cháy một lúc.
     for (const f of battle.fighters) {
       if (f.side === 'ta') continue;
@@ -1892,14 +1912,7 @@ export class BattleView {
       const across = Math.abs((f.x - x) * dz - (f.z - z) * dx);
       const target = this.fighters.get(f.id);
       if (!target || along < -0.3 || along > length * this.geo || across > (FIRE.width * this.geo) / 2) continue;
-      const fire = new THREE.Group();
-      for (const shape of burnShapes) {
-        const t = tongue(shape);
-        t.position.set(shape.x, shape.y, 0);
-        fire.add(t);
-      }
-      target.obj.add(fire);
-      this.burns.push({ group: fire, age: 0 });
+      this.hu.chay(target.obj, { mau: C.fxLua, cao: 1.1 * this.scale, size: 0.6 * this.scale, delay: Math.max(0, along / Math.max(length * this.geo, 0.1)) * DASH_TIME, life: BURN_LIFE });
     }
   }
 
@@ -1919,6 +1932,14 @@ export class BattleView {
   }
 
   private animate(dt: number): void {
+    this.hu.update(dt);
+    for (let i = this.nons.length - 1; i >= 0; i--) {
+      const n = this.nons[i];
+      if (n.tick(dt)) continue;
+      n.group.removeFromParent();
+      n.drop();
+      this.nons.splice(i, 1);
+    }
     for (let i = this.chuTho.length - 1; i >= 0; i--) {
       const c = this.chuTho[i];
       c.age += dt;
@@ -2001,54 +2022,29 @@ export class BattleView {
     }
     for (let i = this.hills.length - 1; i >= 0; i--) {
       const h = this.hills[i];
+      const g = h.doi.group;
       h.age += dt;
-      const { x, z } = h.group.position;
+      const { x, z } = g.position;
       const ground = this.heightAt(x - this.offset.x, z - this.offset.z);
-      if (h.age < HILL_FALL) {
+      // Gốc mô hình cắm xuống dưới mặt đất khi đồi đập xuống.
+      const bury = h.doi.bury * (g.scale.y || 1);
+      const roi = h.age < HILL_FALL;
+      if (roi) {
         const k = h.age / HILL_FALL;
-        h.group.position.y = ground + 7 * (1 - k * k);
+        g.position.y = ground - bury * k * k + 7 * (1 - k * k);
       } else {
-        if (!h.landed) {
-          h.landed = true;
-          // Đồi đập xuống: bụi đất tung lên quanh chân đồi.
-          for (let n = 0; n < 10; n++) {
-            const a = (n / 10) * Math.PI * 2;
-            const r = HILL.radius * (h.group.scale.x || 1);
-            this.addPuff(x + Math.cos(a) * r, ground + 0.2, z + Math.sin(a) * r, C.earth, 0, 0.8, 1.8);
-          }
-        }
-        // Nằm lại một lúc rồi lún dần xuống đất.
-        const sink = Math.max(0, (h.age - 1.2) / (HILL_LIFE - 1.2));
-        h.group.position.y = ground - 1.8 * sink * sink;
+        // Đập xuống nảy nhẹ, nằm lại một lúc rồi lún dần xuống đất (bóng núi thần thì tan tại chỗ).
+        const t = h.age - HILL_FALL;
+        const bounce = t < 0.25 && !h.doi.tan ? Math.sin((t / 0.25) * Math.PI) * 0.18 : 0;
+        const sink = h.doi.tan ? 0 : Math.max(0, (h.age - 1.2) / (HILL_LIFE - 1.2));
+        g.position.y = ground - bury + bounce - 1.6 * (g.scale.y || 1) * sink * sink;
       }
-      if (h.age >= HILL_LIFE) {
-        this.root.remove(h.group);
+      h.doi.tick(h.age, dt, roi);
+      if (h.age >= (h.doi.tan ? HILL_FALL + h.doi.tanSau : HILL_LIFE)) {
+        this.root.remove(g);
+        disposeModel(g);
+        h.doi.drop?.();
         this.hills.splice(i, 1);
-      }
-    }
-    for (let i = this.jets.length - 1; i >= 0; i--) {
-      const j = this.jets[i];
-      j.age += dt;
-      // Bùng lên rất nhanh, giữ suốt lúc phi, rồi co lại tắt.
-      const size = j.age < 0.08 ? j.age / 0.08 : j.age < DASH_TIME ? 1 : 1 - (j.age - DASH_TIME) / (JET_LIFE - DASH_TIME);
-      j.group.scale.setScalar(Math.max(size, 0.01));
-      j.tongues.forEach((t, k) => {
-        const flick = 0.8 + 0.35 * Math.abs(Math.sin(this.time * 22 + k * 1.7));
-        t.scale.set(0.9 + 0.2 * Math.sin(this.time * 31 + k), 0.9 + 0.2 * Math.cos(this.time * 27 + k), flick);
-      });
-      if (j.age >= JET_LIFE) {
-        j.group.removeFromParent();
-        this.jets.splice(i, 1);
-      }
-    }
-    for (let i = this.burns.length - 1; i >= 0; i--) {
-      const b = this.burns[i];
-      b.age += dt;
-      const fade = Math.min(1, (BURN_LIFE - b.age) / 0.4);
-      b.group.children.forEach((t, k) => t.scale.set(fade, fade * (0.7 + 0.5 * Math.abs(Math.sin(this.time * 18 + k * 2))), fade));
-      if (b.age >= BURN_LIFE || !b.group.parent) {
-        b.group.removeFromParent();
-        this.burns.splice(i, 1);
       }
     }
     for (let i = this.scorches.length - 1; i >= 0; i--) {
@@ -2097,19 +2093,6 @@ export class BattleView {
         if (a.flash) this.addPuff(a.to.x, a.to.y, a.to.z, C.ember, 0, 0.35, 0.9);
         this.root.remove(a.mesh);
         this.arrows.splice(i, 1);
-      }
-    }
-    for (let i = this.turtles.length - 1; i >= 0; i--) {
-      const tu = this.turtles[i];
-      tu.age += dt;
-      // Trồi vụt lên, nằm lại nhấp nhô, rồi lặn dần xuống đất.
-      const up = smoothstep(tu.age, 0, 0.5);
-      const down = smoothstep(tu.age, TURTLE_LIFE - 0.8, TURTLE_LIFE);
-      tu.group.position.y = tu.base - 1 + up * 1 - down * 1.3 + (up - down > 0.5 ? Math.sin(this.time * 3) * 0.05 : 0);
-      (tu.group.userData.pose as Poser | undefined)?.({ act: 'stand', time: this.time });
-      if (tu.age >= TURTLE_LIFE) {
-        this.root.remove(tu.group);
-        this.turtles.splice(i, 1);
       }
     }
     for (let i = this.rings.length - 1; i >= 0; i--) {

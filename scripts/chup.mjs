@@ -724,6 +724,7 @@ Tùy chọn:
   --dpr <số>              Mật độ điểm ảnh (mặc định 2, như điện thoại thật)
   --gio <buổi | số | that>  Giờ trong ngày ở kinh đô: ngay, chieu, dem, rang, hay phần của ngày (0 tới 1); that thì
                           theo đồng hồ chơi. Mặc định cảnh nào ghim giờ nấy, không ghi thì ban ngày (ảnh cũ không đổi)
+  --loat <số>,<ms>        Chụp một loạt <số> ảnh, mỗi ảnh cách <ms> (xem hiệu ứng kỹ năng theo từng lúc); ảnh thêm đuôi -1, -2...
   --url <địa chỉ>         Dùng server Vite đang chạy (npm run dev) thay vì tự bật
   --giup                  Hiện hướng dẫn này
 
@@ -755,6 +756,7 @@ function docThamSo(argv) {
     else if (a === '--dpr') opts.dpr = Number(next());
     else if (a === '--url') opts.url = next();
     else if (a === '--gio') opts.gio = next();
+    else if (a === '--loat') opts.loat = next().split(',').map(Number);
     else if (a.startsWith('--')) throw new Error(`Không hiểu tùy chọn ${a}`);
     else opts.canh.push(a);
   }
@@ -856,7 +858,13 @@ async function chupMotCanh(browser, url, tenCanh, khung, opts) {
     }
 
     const file = path.join(opts.ra, `${opts.ten ?? tenCanh}-${khung}.png`);
-    await page.screenshot({ path: file });
+    if (opts.loat) {
+      const [n, ms] = opts.loat;
+      for (let i = 1; i <= n; i++) {
+        await page.screenshot({ path: file.replace(/\.png$/, `-${i}.png`) });
+        if (i < n) await page.waitForTimeout(ms);
+      }
+    } else await page.screenshot({ path: file });
     const info = await page.evaluate(() => window.__debug.renderInfo());
     return { file, info, loi };
   } catch (e) {
