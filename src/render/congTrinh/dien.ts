@@ -23,12 +23,12 @@ export const DIEN_LOT = new Lot(10, [
   '.2.....dTTTTd.....2.',
   '.vv..............vv.',
   '.vv.....VVVV.....vv.',
-  '...t.t..VVVV..t.t...',
+  '...t.t..VVVV..t.t.u.',
   '........VVVV........',
-  '...t.t..m,,...t.t...',
+  '.u.t.t..m,,...t.t.u.',
   '.........,,.........',
   '.D.t.t...,,...t.t.D.',
-  '.........,,.........',
+  '...u.....,,.........',
   '.LL..t...,,...t..LL.',
   '.LL.e...l,,l.....LL.',
   '.......GGGGGG.......',
@@ -67,9 +67,12 @@ export const bannerHeight = (level: number) => (level >= 6 ? 3.2 : 2.9);
  * (phải); Cao Lỗ sau An Dương Vương. Hai Bà Trưng đứng cột ngoài hàng hai (Trưng Trắc 4, Trưng Nhị 7), ngang Sơn Tinh
  * và An Dương Vương: chỗ 0 và 3 sát đôi voi đá góc sau sân (cấp 5) nên người đứng đó lẫn vào voi. Bốn nữ tướng đứng
  * hàng sau Hai Bà: Lê Chân sau Trưng Trắc (8), Thánh Thiên sau Trưng Nhị (11), Bát Nàn sau Sơn Tinh (9), Phùng Thị
- * Chính sau Cao Lỗ (13). Bà Triệu (tướng dã ngoại) đứng chỗ 3, ngoài cùng hàng ngai cạnh voi đá (người cưỡi voi trắng);
- * chỗ 12 sát cổng bị mái cổng che, chỗ 0 bị Sơn Tinh trên mỏm đá che khi nhìn từ góc mặc định. Tướng đứng trong sân không
- * cưỡi thú.
+ * Chính sau Cao Lỗ (13). Tướng dã ngoại: Bà Triệu chỗ 3, ngoài cùng hàng ngai cạnh voi đá (người cưỡi voi trắng). Chỗ 12
+ * sát cổng bị mái cổng che, chỗ 0 bị Sơn Tinh trên mỏm đá che, nên sân nới thêm hai chỗ ngoài cùng hàng ba (ô `u` của
+ * bản vẽ), thêm một chỗ cột ngoài giữa hàng ba và hàng gần cổng bên trái, một chỗ ngoài cùng hàng ngai bên phải cạnh Bà
+ * Triệu (chỗ cột ngoài gần cổng bên phải nằm ngay sau lầu trống đồng nên bị che). Ô `u` đọc từ trên xuống, trái sang
+ * như ô `t`, nên số chỗ: 14 hàng ngai phải (Lý Thường Kiệt), 15 hàng ba trái (Mai Thúc Loan), 16 hàng ba phải (Triệu
+ * Quang Phục), 17 giữa hàng ba và hàng gần cổng bên trái (Ngô Quyền). Tướng đứng trong sân không cưỡi thú.
  */
 const COURT_SLOT: Record<TuongId | NuTuongId, number> = {
   lacTuong: 1,
@@ -84,11 +87,17 @@ const COURT_SLOT: Record<TuongId | NuTuongId, number> = {
   batNan: 9,
   phungThiChinh: 13,
   baTrieu: 3,
+  trieuQuangPhuc: 16,
+  maiThucLoan: 15,
+  ngoQuyen: 17,
+  lyThuongKiet: 14,
 };
 
 /** Chỗ tướng `t` đứng chầu (tọa độ móng Điện) và hướng mặt: quay vào lối giữa, chếch ra phía cổng cho dễ thấy mặt. */
 export function courtSlot(t: TuongId | NuTuongId): { x: number; z: number; ry: number } {
-  const c = DIEN_LOT.cells('t')[COURT_SLOT[t]];
+  const n = COURT_SLOT[t];
+  const t14 = DIEN_LOT.cells('t');
+  const c = n < t14.length ? t14[n] : DIEN_LOT.cells('u')[n - t14.length];
   return { x: c.x, z: c.z, ry: c.x < 0 ? 0.85 : -0.85 };
 }
 

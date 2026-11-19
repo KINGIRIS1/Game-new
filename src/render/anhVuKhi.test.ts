@@ -20,6 +20,10 @@ async function dung(kind: HeroKind, anh: boolean): Promise<THREE.Group> {
   if (kind === 'caoLo') return h.makeCaoLo({ anh });
   if (kind === 'trungTrac') return h.makeTrungTrac({ anh });
   if (kind === 'baTrieu') return h.makeBaTrieu({ anh });
+  if (kind === 'trieuQuangPhuc') return h.makeTrieuQuangPhuc({ anh });
+  if (kind === 'maiThucLoan') return h.makeMaiThucLoan({ anh });
+  if (kind === 'ngoQuyen') return h.makeNgoQuyen({ anh });
+  if (kind === 'lyThuongKiet') return h.makeLyThuongKiet({ anh });
   return h.makeTrungNhi({ anh });
 }
 

@@ -1164,10 +1164,10 @@ export type TuongId = 'lacTuong' | 'giong' | 'sonTinh' | 'anDuong' | 'caoLo' | '
  * Tướng của dã ngoại (`docs/thiet-ke.md` mục Kế hoạch: năm tướng mới): về khi hạ boss map của mình lần đầu, chỉ đánh ở
  * dã ngoại; không nhận doanh, không ra phó bản, thử thách, đồn, giữ kinh đô, Đấu thành.
  */
-export type TuongDaId = 'baTrieu';
-export const TUONG_DA_IDS: TuongDaId[] = ['baTrieu'];
+export type TuongDaId = 'baTrieu' | 'trieuQuangPhuc' | 'maiThucLoan' | 'ngoQuyen' | 'lyThuongKiet';
+export const TUONG_DA_IDS: TuongDaId[] = ['baTrieu', 'trieuQuangPhuc', 'maiThucLoan', 'ngoQuyen', 'lyThuongKiet'];
 /** Map dã ngoại mà hạ boss lần đầu thì tướng ấy về. */
-export const TUONG_DA_MAP: Record<TuongDaId, number> = { baTrieu: 6 };
+export const TUONG_DA_MAP: Record<TuongDaId, number> = { baTrieu: 6, trieuQuangPhuc: 7, maiThucLoan: 8, ngoQuyen: 9, lyThuongKiet: 10 };
 /** Các tướng của truyện (mỗi tướng một doanh trong doanh trại); tướng dã ngoại ở `TUONG_DA_IDS`. */
 export const TUONG_IDS: TuongId[] = ['lacTuong', 'giong', 'sonTinh', 'anDuong', 'caoLo', 'trungTrac', 'trungNhi'];
 /** Số doanh tối đa trong doanh trại (bằng năm trại của thời mỗi tướng một trại): chỗ quân không quá 5 × 38. */
@@ -1766,6 +1766,34 @@ export const BA_TRIEU: FighterStats = { hp: 680, dmg: 23, range: 1.2, speed: 1.7
  * nhát `dmg`, kẻ ấy choáng `stun` giây (0 là không choáng).
  */
 export const CA_KINH = { dmg: 260, tam: 6, stun: 0 };
+/** Triệu Quang Phục đi bộ cầm giáo, đánh gần, nhanh (map 7 Đầm Dạ Trạch). */
+export const TRIEU_QUANG_PHUC: FighterStats = { hp: 560, dmg: 21, range: 1.1, speed: 2.3, cooldown: 0.8 };
+/**
+ * Ngày ẩn đêm ra (Triệu Quang Phục): cả đội lặn vào đầm `an` giây, giặc không nhắm được (quái đang đuổi mất dấu, đứng
+ * lại); ẩn xong, đòn thường đầu tiên của mỗi người mạnh gấp `phuc`.
+ */
+export const NGAY_AN = { an: 4, phuc: 2.5 };
+/** Mai Thúc Loan (Mai Hắc Đế) vạm vỡ cầm đại đao, đỡ đòn, máu dày (map 8 Núi Vệ). */
+export const MAI_THUC_LOAN: FighterStats = { hp: 820, dmg: 19, range: 1.1, speed: 1.8, cooldown: 1.1 };
+/**
+ * Hắc Đế dấy binh (Mai Thúc Loan): cả đội thêm `danh` phần sức đánh trong `t` giây; giặc trong `tam` ô quanh ông
+ * quay sang đánh ông.
+ */
+export const HAC_DE = { danh: 0.3, t: 8, tam: 3 };
+/** Ngô Quyền giáp sắt cầm giáo dài, đánh gần mà với xa hơn (map 9 Bạch Đằng). */
+export const NGO_QUYEN: FighterStats = { hp: 640, dmg: 21, range: 1.8, speed: 1.9, cooldown: 1.0 };
+/**
+ * Cọc Bạch Đằng (Ngô Quyền): cắm bãi cọc bán kính `r` ô ở chỗ giặc đứng đông nhất, đứng `t` giây; giặc trong bãi đi
+ * chậm (như sóng Thủy Tinh, `TT_WAVE.slow`), mất `dps` máu mỗi giây (thuyền, lâu thuyền `thuyen`).
+ */
+export const COC_BACH_DANG = { r: 2.5, t: 6, dps: 25, thuyen: 50 };
+/** Lý Thường Kiệt giáp trụ, áo choàng đỏ, cầm kiếm, đeo cuộn thơ; đánh gần, giữ đội (map 10 sông Như Nguyệt). */
+export const LY_THUONG_KIET: FighterStats = { hp: 600, dmg: 20, range: 1.2, speed: 1.9, cooldown: 1.0 };
+/**
+ * Nam quốc sơn hà (Lý Thường Kiệt): ngâm thơ, quân ta trong `tam` ô quanh ông hồi `hoi` phần máu; giặc trong `tam` ô
+ * nao núng, đánh yếu đi `yeu` phần trong `t` giây.
+ */
+export const NAM_QUOC = { tam: 6, hoi: 0.2, yeu: 0.3, t: 6 };
 /**
  * Nghĩa binh: không luyện, không chiếm chỗ doanh trại, không ăn gạo, không chết thật. Không được cộng binh khí, huân
  * công, Đền; không thuộc vòng khắc chế.
@@ -2196,8 +2224,8 @@ export const HUAN_COST = [3, 5, 8, 8];
 export const HUAN_BONUS = 0.04;
 
 /** Kỹ năng bấm tay trong trận: Trống trận của Lạc tướng, hai kỹ năng của mỗi tướng Gióng, Sơn Tinh, An Dương Vương, Cao Lỗ. */
-export type SkillId = 'trongTran' | 'phunLua' | 'nhoTre' | 'bocDoi' | 'doiNon' | 'noThan' | 'ruaVang' | 'lienChau' | 'lenhBan' | 'voiXung' | 'hieuTrieu' | 'chemCaKinh';
-export const SKILL_IDS: SkillId[] = ['trongTran', 'phunLua', 'nhoTre', 'bocDoi', 'doiNon', 'noThan', 'ruaVang', 'lienChau', 'lenhBan', 'voiXung', 'hieuTrieu', 'chemCaKinh'];
+export type SkillId = 'trongTran' | 'phunLua' | 'nhoTre' | 'bocDoi' | 'doiNon' | 'noThan' | 'ruaVang' | 'lienChau' | 'lenhBan' | 'voiXung' | 'hieuTrieu' | 'chemCaKinh' | 'ngayAn' | 'hacDe' | 'cocBachDang' | 'namQuoc';
+export const SKILL_IDS: SkillId[] = ['trongTran', 'phunLua', 'nhoTre', 'bocDoi', 'doiNon', 'noThan', 'ruaVang', 'lienChau', 'lenhBan', 'voiXung', 'hieuTrieu', 'chemCaKinh', 'ngayAn', 'hacDe', 'cocBachDang', 'namQuoc'];
 export const SKILLS: Record<SkillId, { cooldown: number; duration: number }> = {
   trongTran: { cooldown: 20, duration: 6 },
   phunLua: { cooldown: 15, duration: 0 },
@@ -2211,6 +2239,10 @@ export const SKILLS: Record<SkillId, { cooldown: number; duration: number }> = {
   voiXung: { cooldown: 12, duration: 0 },
   hieuTrieu: { cooldown: 25, duration: 0 },
   chemCaKinh: { cooldown: 14, duration: 0 },
+  ngayAn: { cooldown: 18, duration: 4 },
+  hacDe: { cooldown: 16, duration: 8 },
+  cocBachDang: { cooldown: 14, duration: 6 },
+  namQuoc: { cooldown: 18, duration: 6 },
 };
 /** Trống trận thúc quân: quân ta đánh mạnh hơn và chạy nhanh hơn trong một lúc. */
 export const RALLY = { dmg: 1.5, speed: 1.3 };
@@ -2503,10 +2535,10 @@ export const DAU_THANH = {
 export type ODo = 'vuKhi' | 'giap' | 'phucSuc' | 'baoVat';
 export const O_DO: ODo[] = ['vuKhi', 'giap', 'phucSuc', 'baoVat'];
 /** Mỗi tướng một bộ: sáu bộ của tướng truyện, rồi bộ của tướng dã ngoại (`BO_DA`). */
-export type BoDo = 'phuDong' | 'tanVien' | 'coLoa' | 'caoLo' | 'trungTrac' | 'trungNhi' | 'nuiNua';
-export const BO_DO: BoDo[] = ['phuDong', 'tanVien', 'coLoa', 'caoLo', 'trungTrac', 'trungNhi', 'nuiNua'];
+export type BoDo = 'phuDong' | 'tanVien' | 'coLoa' | 'caoLo' | 'trungTrac' | 'trungNhi' | 'nuiNua' | 'daTrach' | 'vanAn' | 'bachDang' | 'nhuNguyet';
+export const BO_DO: BoDo[] = ['phuDong', 'tanVien', 'coLoa', 'caoLo', 'trungTrac', 'trungNhi', 'nuiNua', 'daTrach', 'vanAn', 'bachDang', 'nhuNguyet'];
 /** Bộ của tướng dã ngoại: chỉ rơi ở map của tướng ấy (khi tướng đã về), không rơi ở phó bản, đồn, giữ kinh đô. */
-export const BO_DA: BoDo[] = ['nuiNua'];
+export const BO_DA: BoDo[] = ['nuiNua', 'daTrach', 'vanAn', 'bachDang', 'nhuNguyet'];
 /** Sáu chỉ số tướng: máu, sức đánh, tốc đánh, uy lực kỹ năng, giáp, hồi kỹ năng. */
 export type ChiSo = 'mau' | 'danh' | 'toc' | 'uy' | 'giap' | 'hoi';
 export const CHI_SO: ChiSo[] = ['mau', 'danh', 'toc', 'uy', 'giap', 'hoi'];
@@ -2523,6 +2555,10 @@ export const BO_CUA: Record<BoDo, Exclude<TuongId, 'lacTuong'>> = {
   trungTrac: 'trungTrac',
   trungNhi: 'trungNhi',
   nuiNua: 'baTrieu',
+  daTrach: 'trieuQuangPhuc',
+  vanAn: 'maiThucLoan',
+  bachDang: 'ngoQuyen',
+  nhuNguyet: 'lyThuongKiet',
 };
 /** Phó bản, thử thách rơi bộ của chương màn ấy (chương 5: một trong hai bộ của Hai Bà). */
 export const BO_CHUONG: Record<Chapter, BoDo[]> = { 1: ['phuDong'], 2: ['tanVien'], 3: ['coLoa'], 4: ['caoLo'], 5: ['trungTrac', 'trungNhi'] };
@@ -2585,10 +2621,14 @@ export const BO_HAI: Record<BoDo, { k: ChiSo; v: number }> = {
   trungTrac: { k: 'giap', v: 0.08 },
   trungNhi: { k: 'hoi', v: 0.08 },
   nuiNua: { k: 'mau', v: 0.1 },
+  daTrach: { k: 'toc', v: 0.08 },
+  vanAn: { k: 'giap', v: 0.08 },
+  bachDang: { k: 'uy', v: 0.1 },
+  nhuNguyet: { k: 'hoi', v: 0.08 },
 };
 /**
  * Hiệu ứng bốn món: đúng tướng của bộ mặc đủ bốn món bộ mình thì kỹ năng mạnh hơn (số thay cho số gốc của kỹ năng ở
- * `FIRE`, `SMASH`, `HILL`, `ROCKS`, `NO_THAN`, `KIM_QUY`, `LIEN_CHAU`, `SKILLS.lenhBan`, `VOI_XUNG`, `HIEU_TRIEU`).
+ * `FIRE`, `SMASH`, `HILL`, `ROCKS`, `NO_THAN`, `KIM_QUY`, `LIEN_CHAU`, `SKILLS.lenhBan`, `VOI_XUNG`, `HIEU_TRIEU`, `CA_KINH`, `NGAY_AN`, `HAC_DE`, `COC_BACH_DANG`, `NAM_QUOC`).
  */
 export const BO_BON = {
   phunLua: { length: 9 },
@@ -2602,6 +2642,10 @@ export const BO_BON = {
   voiXung: { length: 6.5, stun: 2.2 },
   hieuTrieu: { count: 6, heal: 0.2 },
   chemCaKinh: { dmg: 330, stun: 1 },
+  ngayAn: { an: 5, phuc: 3 },
+  hacDe: { danh: 0.4, t: 10 },
+  cocBachDang: { r: 3.2, t: 8 },
+  namQuoc: { hoi: 0.25, yeu: 0.4 },
 };
 
 // ---------- Dã ngoại (`daNgoai.ts`, `daNgoaiMap.ts`, `daNgoaiTran.ts`; docs/thiet-ke.md mục Kế hoạch: dã ngoại) ----------
