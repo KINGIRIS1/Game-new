@@ -152,6 +152,36 @@ const saoTex = () =>
     g.fill();
   });
 
+/** Mai rùa: lưới lục giác sáng ở cạnh, trong ô sáng nhạt, mép dưới sáng đậm (vòm che chở của Rùa Vàng). */
+const maiTex = () => {
+  const t = canvasTex('mai', 256, 256, (g, w, h) => {
+    const lin = g.createLinearGradient(0, h, 0, 0);
+    lin.addColorStop(0, 'rgba(255,255,255,0.35)');
+    lin.addColorStop(0.4, 'rgba(255,255,255,0.04)');
+    lin.addColorStop(1, 'rgba(255,255,255,0.1)');
+    g.fillStyle = lin;
+    g.fillRect(0, 0, w, h);
+    g.strokeStyle = 'rgba(255,255,255,1)';
+    g.lineWidth = 5;
+    const r = w / 8;
+    const dx = r * Math.sqrt(3);
+    for (let row = -1; row < h / (r * 1.5) + 1; row++) {
+      for (let col = -1; col < w / dx + 1; col++) {
+        const cx = col * dx + (row % 2 ? dx / 2 : 0);
+        const cy = row * r * 1.5;
+        g.beginPath();
+        for (let i = 0; i <= 6; i++) {
+          const a = (i / 6) * Math.PI * 2 + Math.PI / 6;
+          g.lineTo(cx + Math.cos(a) * r * 0.92, cy + Math.sin(a) * r * 0.92);
+        }
+        g.stroke();
+      }
+    }
+  });
+  t.wrapS = t.wrapT = THREE.RepeatWrapping;
+  return t;
+};
+
 /** Bụi cuộn kiểu hoạt hình: đĩa đặc, mép mềm, vành sẫm hơn một chút. */
 const buiTex = () =>
   canvasTex('bui', 128, 128, (g, w) => {
@@ -182,6 +212,11 @@ const discGeo = new THREE.CircleGeometry(1, 48).rotateX(-Math.PI / 2);
 const cotGeo = new THREE.CylinderGeometry(1, 1, 1, 24, 1, true).translate(0, 0.5, 0);
 const planeGeo = new THREE.PlaneGeometry(1, 1).rotateX(-Math.PI / 2);
 const sparkGeo = new THREE.BoxGeometry(1, 1, 1);
+/** Vòm nửa cầu (mai rùa che chở), gốc ở tâm đáy. */
+const vomGeo = new THREE.SphereGeometry(1, 32, 12, 0, Math.PI * 2, 0, Math.PI / 2);
+/** Màu lửa theo tuổi hạt: trắng vàng ở mõm, vàng cam, cam đỏ, đỏ sẫm rồi tàn. */
+const LUA_MAU = [0xfff3b0, 0xffd04a, 0xffa030, 0xff7020, 0xe84a18, 0xb83214, 0x7a2a1a, 0x4a2a20];
+const LUA_SANG = [0.55, 0.7, 0.75, 0.7, 0.6, 0.45, 0.28, 0.1];
 const Z = new THREE.Vector3(0, 0, 1);
 
 /** Trăng lưỡi liềm bán kính 1 trong mặt XY, cung `arc` radian quanh trục +x, dày nhất gần đầu. */
@@ -268,7 +303,7 @@ export class HieuUng {
   }
 
   /** Sóng xung kích loang trên mặt đất tới bán kính `r`; `thu` thì co từ `r` vào (vòng ngắm). */
-  soc(p: V3, o: Chung & { r: number; thu?: boolean; loi?: boolean }): void {
+  soc(p: V3, o: Chung & { r: number; thu?: boolean; loi?: boolean; sang?: number }): void {
     const g = new THREE.Group();
     g.position.copy(p);
     g.position.y += 0.07;
@@ -287,8 +322,8 @@ export class HieuUng {
         const s = o.thu ? o.r * (1 - 0.65 * easeOut(k)) : o.r * (0.15 + 0.85 * easeOut(k));
         g.scale.setScalar(s);
         const f = o.thu ? Math.min(1, k * 5) * (k > 0.85 ? (1 - k) / 0.15 : 1) : (1 - k) ** 1.4;
-        m1.opacity = 0.95 * f;
-        m2.opacity = f;
+        m1.opacity = 0.95 * f * (o.sang ?? 1);
+        m2.opacity = f * (o.sang ?? 1);
       },
       () => {
         m1.dispose();
@@ -584,6 +619,165 @@ export class HieuUng {
       },
       () => m.dispose(),
       obj,
+    );
+  }
+
+  /**
+   * Lửa phun liên tục từ điểm `local` trong khung của `src` (mõm ngựa sắt), phun theo trục +z của `src`, suốt `life`
+   * giây: hạt lửa cộng sáng bay ra, nở to, đổi màu từ trắng vàng sang đỏ rồi tàn; hạt đã ra khỏi mõm ở lại cảnh nên
+   * thành luồng dài phía sau khi ngựa phi.
+   */
+  phun(src: THREE.Object3D, local: V3, o: Chung & { toc?: number; size?: number; rate?: number }): void {
+    const g = new THREE.Group();
+    const mats = LUA_MAU.map((c) => spriteMat(c, glowTex(), true));
+    const parts: { s: THREE.Sprite; p: THREE.Vector3; v: THREE.Vector3; age: number; life: number; size: number }[] = [];
+    const life = o.life ?? 0.75;
+    const rate = o.rate ?? 90;
+    const toc = o.toc ?? 9;
+    const size = o.size ?? 1;
+    let carry = 0;
+    const inv = new THREE.Matrix4();
+    const tmpD = new THREE.Vector3();
+    this.push(
+      g,
+      o,
+      life + 0.6,
+      (k, dt) => {
+        const t = k * (life + 0.6);
+        this.root.updateWorldMatrix(true, false);
+        inv.copy(this.root.matrixWorld).invert();
+        if (t < life && src.parent) {
+          src.updateWorldMatrix(true, false);
+          const from = src.localToWorld(local.clone()).applyMatrix4(inv);
+          tmpD.set(0, 0, 1).transformDirection(src.matrixWorld).transformDirection(inv);
+          carry += rate * dt;
+          for (; carry >= 1; carry--) {
+            const v = tmpD.clone().multiplyScalar(toc * (0.75 + this.rand() * 0.5));
+            v.x += (this.rand() - 0.5) * toc * 0.4;
+            v.z += (this.rand() - 0.5) * toc * 0.4;
+            v.y += (this.rand() - 0.4) * toc * 0.2;
+            const s = new THREE.Sprite(mats[0]);
+            s.renderOrder = 6;
+            g.add(s);
+            parts.push({ s, p: from.clone(), v, age: 0, life: 0.35 + this.rand() * 0.25, size: size * (0.8 + this.rand() * 0.5) });
+          }
+        }
+        for (let i = parts.length - 1; i >= 0; i--) {
+          const q = parts[i];
+          q.age += dt;
+          const a = q.age / q.life;
+          if (a >= 1) {
+            q.s.removeFromParent();
+            parts.splice(i, 1);
+            continue;
+          }
+          q.v.multiplyScalar(Math.exp(-3 * dt));
+          q.v.y += 2.5 * dt;
+          q.p.addScaledVector(q.v, dt);
+          q.s.position.copy(q.p);
+          const b = Math.min(LUA_MAU.length - 1, Math.floor(a * LUA_MAU.length));
+          q.s.material = mats[b];
+          mats[b].opacity = LUA_SANG[b];
+          q.s.scale.setScalar(q.size * (0.25 + 1.1 * Math.sqrt(a)));
+        }
+      },
+      () => mats.forEach((m) => m.dispose()),
+    );
+  }
+
+  /** Lửa cháy trên người trúng lửa: ngọn lửa nhỏ bốc lên liên tục trong `life` giây, gắn vào mô hình nên đi theo. */
+  chay(obj: THREE.Object3D, o: Chung & { cao: number; size?: number }): void {
+    const g = new THREE.Group();
+    const s0 = obj.scale.x || 1;
+    g.scale.setScalar(1 / s0);
+    const mats = LUA_MAU.map((c) => spriteMat(c, glowTex(), true));
+    const parts: { s: THREE.Sprite; x: number; z: number; y: number; age: number; life: number }[] = [];
+    const life = o.life ?? 2;
+    const size = o.size ?? 0.5;
+    let carry = 0;
+    this.push(
+      g,
+      o,
+      life,
+      (k, dt) => {
+        if (k < 0.9) {
+          carry += 30 * dt;
+          for (; carry >= 1; carry--) {
+            const s = new THREE.Sprite(mats[0]);
+            s.renderOrder = 6;
+            g.add(s);
+            parts.push({ s, x: (this.rand() - 0.5) * 0.4, z: (this.rand() - 0.5) * 0.4, y: o.cao * (0.2 + this.rand() * 0.5), age: 0, life: 0.3 + this.rand() * 0.25 });
+          }
+        }
+        const fade = Math.min(1, (1 - k) * 5);
+        for (let i = parts.length - 1; i >= 0; i--) {
+          const q = parts[i];
+          q.age += dt;
+          const a = q.age / q.life;
+          if (a >= 1) {
+            q.s.removeFromParent();
+            parts.splice(i, 1);
+            continue;
+          }
+          q.s.position.set(q.x * (1 - a), q.y + a * o.cao * 0.6, q.z * (1 - a));
+          const b = Math.min(LUA_MAU.length - 1, Math.floor(a * LUA_MAU.length));
+          q.s.material = mats[b];
+          mats[b].opacity = LUA_SANG[b] * fade;
+          q.s.scale.setScalar(size * (1 - 0.6 * a) * fade);
+        }
+      },
+      () => mats.forEach((m) => m.dispose()),
+      obj,
+    );
+  }
+
+  /**
+   * Vòm mai rùa vàng che chở bán kính `r`: nở lên từ đất, lưới lục giác trôi chậm, đứng một lúc rồi tan; dưới đất có
+   * vòng lục giác sáng.
+   */
+  khien(p: V3, o: Chung & { r: number }): void {
+    const g = new THREE.Group();
+    g.position.copy(p);
+    const t1 = maiTex().clone();
+    t1.needsUpdate = true;
+    t1.repeat.set(4, 1.5);
+    const m1 = mat(o.mau, t1, true);
+    m1.side = THREE.FrontSide;
+    const m2 = mat(o.mau, t1, true);
+    m2.side = THREE.BackSide;
+    const dome = new THREE.Mesh(vomGeo, m1);
+    const back = new THREE.Mesh(vomGeo, m2);
+    dome.renderOrder = 6;
+    back.renderOrder = 5;
+    const t2 = maiTex().clone();
+    t2.needsUpdate = true;
+    t2.repeat.set(3, 3);
+    const m3 = mat(o.mau, t2, true);
+    const floor = new THREE.Mesh(discGeo, m3);
+    floor.position.y = 0.07;
+    floor.renderOrder = 4;
+    g.add(back, dome, floor);
+    this.push(
+      g,
+      o,
+      2,
+      (k, dt) => {
+        const up = easeOut(Math.min(1, k * 4));
+        g.scale.set(o.r * (0.6 + 0.4 * up), o.r * 0.75 * up, o.r * (0.6 + 0.4 * up));
+        floor.scale.set(1, 1, 1);
+        t1.offset.y -= dt * 0.15;
+        t1.offset.x += dt * 0.05;
+        const f = Math.min(1, k * 5) * Math.min(1, (1 - k) * 3.5);
+        const pulse = 0.85 + 0.15 * Math.sin(k * 20);
+        m1.opacity = 0.32 * f * pulse;
+        m2.opacity = 0.12 * f;
+        m3.opacity = 0.22 * f;
+      },
+      () => {
+        [m1, m2, m3].forEach((m) => m.dispose());
+        t1.dispose();
+        t2.dispose();
+      },
     );
   }
 

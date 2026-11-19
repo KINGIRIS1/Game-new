@@ -93,7 +93,10 @@ export function chupKyNang(skill: SkillId, man: number | undefined, truoc: numbe
   // Nhìn cố định vào chỗ tướng và giặc gần nhất lúc bấm, để các khung so được với nhau.
   const owner = battle.fighters.find((f) => f.side === 'ta' && (chu.heroes as string[]).includes(f.kind));
   const foe = owner && battle.fighters.filter((f) => f.side === 'giac' && f.hp > 0).sort((a, b) => Math.hypot(a.x - owner.x, a.z - owner.z) - Math.hypot(b.x - owner.x, b.z - owner.z))[0];
-  const look = owner ? fieldPoint((owner.x + (foe?.x ?? owner.x)) / 2, (owner.z + (foe?.z ?? owner.z)) / 2) : new THREE.Vector3();
+  // Không có tướng (Trống trận): nhìn vào giữa quân ta.
+  const ta = battle.fighters.filter((f) => f.side === 'ta' && f.hp > 0);
+  const mid = { x: ta.reduce((n, f) => n + f.x, 0) / (ta.length || 1), z: ta.reduce((n, f) => n + f.z, 0) / (ta.length || 1) };
+  const look = owner ? fieldPoint((owner.x + (foe?.x ?? owner.x)) / 2, (owner.z + (foe?.z ?? owner.z)) / 2) : fieldPoint(mid.x, mid.z);
   cam.target.copy(look);
   cam.apply();
   moc.forEach((m, i) => {
