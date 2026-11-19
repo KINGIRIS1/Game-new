@@ -3447,8 +3447,8 @@ export class World {
   }
 
   /**
-   * Xoay cảnh kinh đô một nấc 90° quanh tâm nhìn (1: theo chiều kim đồng hồ, −1: ngược lại).
-   * Ở bãi chiến thì không xoay. Trả về hướng nhìn mới (0–3).
+   * Xoay cảnh kinh đô một nấc 45° quanh tâm nhìn (1: theo chiều kim đồng hồ, −1: ngược lại).
+   * Ở bãi chiến thì không xoay. Trả về hướng nhìn mới (0–7).
    */
   rotateView(dir: 1 | -1): number {
     if (!this.inField) {
