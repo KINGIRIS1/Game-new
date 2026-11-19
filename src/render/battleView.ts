@@ -2,9 +2,11 @@
 // và trận ngoài bãi (trong cảnh bãi chiến). Tọa độ trận cộng `offset` thành tọa độ trong nhóm.
 
 import * as THREE from 'three';
-import { heroSetups, type Battle, type Fighter, type FighterKind } from '../game/battle';
+import { heroSetups, isThanThu, type Battle, type Fighter, type FighterKind } from '../game/battle';
 import { FIRE, HIEU_TRIEU, HILL, LIEN_CHAU, MA_VIEN_VOLLEY, RALLY_BEAT, ROCKS, SKILLS, SMASH, SWIMMERS, TT_WAVE, type NuTuongId, type UnitType } from '../game/defs';
 import { isBeast, makeBeast, makeRuaVang } from './beasts';
+import { makeThanThu, quayHao } from './thanThu';
+import { dangThu } from '../game/thanThu';
 import { isMonster, makeMonster } from './monsters';
 import { makeAnDuong, makeBaTrieu, makeCaoLo, makeGiong, makeNuTuong, makeSonTinh, makeMaiThucLoan, makeNgoQuyen, makeLyThuongKiet, makeThuyTinh, makeTrieuQuangPhuc, makeTrungNhi, makeTrungTrac } from './heroes';
 import { LAU_THUYEN_SINK, makeEnemyBoat, makeFighter, makeMountain } from './models';
@@ -166,6 +168,12 @@ interface Ring {
 }
 
 const SCALE: Partial<Record<FighterKind, number>> = {
+  // Thần thú: cỡ theo dáng đã tính trong mô hình (`makeThanThu`).
+  thuLac: 0.72,
+  thuNgua: 0.72,
+  thuGa: 0.8,
+  thuRua: 0.72,
+  thuRong: 0.72,
   // Lâu thuyền dựng đúng cỡ ô kinh đô (dài chừng 4 ô); Mã Viện trên ngựa nhỉnh hơn Triệu Đà.
   lauThuyen: 1,
   maVien: 0.9,
@@ -766,6 +774,8 @@ export class BattleView {
                     ? makeBeast(f.kind, f.side === 'ta' ? (battle.arms?.[f.kind as UnitType] ?? 0) : 0)
                     : isMonster(f.kind)
                       ? makeMonster(f.kind)
+                      : isThanThu(f.kind)
+                        ? makeThanThu(f.kind, dangThu(battle.thu?.cap ?? 1))
                       : makeFighter(f.kind, f.side === 'ta' ? (battle.arms?.[f.kind as UnitType] ?? 0) : 0);
         // Lâu thuyền không phóng theo cỡ lính của trận.
         obj.scale.setScalar(f.kind === 'lauThuyen' ? SCALE.lauThuyen! : (SCALE[f.kind] ?? 0.8) * this.scale);
@@ -964,6 +974,11 @@ export class BattleView {
         );
       } else obj.position.y = base + (moving ? Math.abs(Math.sin(this.time * (wading ? 5 : 10) + f.id)) * hop : 0);
       this.syncWet(view, f.side === 'ta' && wading && !battle.outcome);
+      if (obj.userData.bay) {
+        // Thần thú bay: lơ lửng trên đầu quân, nhấp nhô theo nhịp cánh.
+        obj.position.y += obj.userData.bay * (SCALE[f.kind] ?? 0.8) * this.scale + 0.08 * Math.sin(this.time * 2.2 + f.id);
+        quayHao(obj, this.time);
+      } else if (isThanThu(f.kind)) quayHao(obj, this.time);
       this.syncSuong(view, battle.outcome ? 0 : (f.an ?? 0), dt);
       if (view.cast && view.cast > 0) {
         view.cast = Math.max(0, view.cast - dt);
@@ -1163,9 +1178,9 @@ export class BattleView {
    * Hô mưa gọi gió: Thủy Tinh giơ đinh ba, mây đen và mưa xiên quất xuống quanh mình, một bức tường sóng
    * bề ngang đúng dải bị quét (TT_WAVE.width) chạy từ chỗ Thủy Tinh tới cuối dải rồi đổ sụp, bọt tung dọc đường.
    */
-  private surge(battle: Battle, x: number, z: number, tx: number, tz: number, seq: number): void {
+  private surge(battle: Battle, x: number, z: number, tx: number, tz: number, seq: number, by: FighterKind = 'thuyTinh'): void {
     const { x: ox, z: oz } = this.offset;
-    const tt = battle.fighters.find((f) => f.kind === 'thuyTinh');
+    const tt = by === 'thuyTinh' ? battle.fighters.find((f) => f.kind === 'thuyTinh') : undefined;
     const view = tt && this.fighters.get(tt.id);
     if (view) view.cast = CAST_TIME;
     const face = Math.atan2(tx - x, tz - z);
@@ -1761,10 +1776,10 @@ export class BattleView {
         for (let i = 0; i < 7; i++) this.addPuff(1 + i * 1.2 + ox, this.heightAt(1 + i * 1.2, e.z) + 0.2, e.z + oz, C.earth, i * 0.06, 0.9, 2);
       }
       if (e.kind === 'rocks') this.raiseCrags(battle, e.x, e.z, e.seq);
-      if (e.kind === 'wave' && e.tx !== undefined && e.tz !== undefined) this.surge(battle, e.x, e.z, e.tx, e.tz, e.seq);
+      if (e.kind === 'wave' && e.tx !== undefined && e.tz !== undefined) this.surge(battle, e.x, e.z, e.tx, e.tz, e.seq, e.by);
       if (e.kind === 'summon') this.summon(battle, e.x, e.z);
       if (e.kind === 'shield') this.riseTurtle(battle, e.x, e.z);
-      if (e.kind === 'smash') {
+      if (e.kind === 'smash' && !e.by) {
         const hero = battle.fighters.find((f) => f.kind === 'giong');
         const view = hero && this.fighters.get(hero.id);
         if (view) view.smash = SMASH_TIME;
@@ -1793,7 +1808,7 @@ export class BattleView {
         this.root.add(mesh);
         this.rings.push({ mesh, age: 0 });
       }
-      if (e.kind === 'fire' && e.tx !== undefined && e.tz !== undefined) this.breatheFire(battle, e.seq, e.x, e.z, e.tx, e.tz, e.len);
+      if (e.kind === 'fire' && e.tx !== undefined && e.tz !== undefined) this.breatheFire(battle, e.seq, e.x, e.z, e.tx, e.tz, e.len, e.by);
       if (e.kind === 'smash') {
         const r = (1.6 * (e.r ?? SMASH.radius)) / SMASH.radius;
         for (let i = 0; i < 8; i++) {
@@ -1822,9 +1837,10 @@ export class BattleView {
    * dài đúng dải bị đốt, và giặc trong dải bốc cháy. Luật trận đã đặt Gióng ở chỗ mới; phần vẽ cho phi tới đó.
    */
   /** `length`: độ dài dải lửa của luật (đủ bốn món bộ Phù Đổng thì dài hơn). */
-  private breatheFire(battle: Battle, seq: number, x: number, z: number, tx: number, tz: number, length = FIRE.length): void {
+  private breatheFire(battle: Battle, seq: number, x: number, z: number, tx: number, tz: number, length = FIRE.length, by: FighterKind = 'giong'): void {
     const { x: ox, z: oz } = this.offset;
-    const hero = battle.fighters.find((f) => f.kind === 'giong');
+    // Ngựa sắt của Gióng, hay ngựa sắt thần thú (dã ngoại).
+    const hero = battle.fighters.find((f) => f.kind === by);
     const view = hero && this.fighters.get(hero.id);
     const len = Math.hypot(tx - x, tz - z);
     const face = len > 0.01 ? Math.atan2(tx - x, tz - z) : (hero?.face ?? 0);

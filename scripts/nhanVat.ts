@@ -31,6 +31,7 @@ import type { Hang } from '../src/render/ganhHang';
 import type { Human } from '../src/render/body';
 import { makeEnemyBoat, makeLauThuyen } from '../src/render/models';
 import { makeSoldier } from '../src/render/soldier';
+import { makeThanThu } from '../src/render/thanThu';
 
 interface Entry {
   ten: string;
@@ -394,6 +395,16 @@ export const NHOM: Record<string, Entry[]> = {
     { ten: 'Lý Thường Kiệt thắng trận', tao: theoCot(() => makeLyThuongKiet(), 'win'), co: 1.8, cach: 1.3, cot: CHEM_COT },
     { ten: 'Lý Thường Kiệt (đủ bộ Như Nguyệt)', tao: () => makeLyThuongKiet({ anh: true }), co: 1.8, cach: 1.3, cot: ANH_COT },
   ],
+  thanThu: [
+    { ten: 'Chim Lạc (dáng lớn)', tao: () => makeThanThu('thuLac', 1), co: 2.0, cach: 2.2 },
+    { ten: 'Chim Lạc (dáng thần)', tao: () => makeThanThu('thuLac', 2), co: 2.5, cach: 2.8 },
+    { ten: 'Ngựa sắt (dáng thần)', tao: () => makeThanThu('thuNgua', 2), co: 2.0, cach: 1.9 },
+    { ten: 'Gà chín cựa (dáng lớn)', tao: () => makeThanThu('thuGa', 1), co: 1.3, cach: 1.3 },
+    { ten: 'Rùa Vàng (dáng thần)', tao: () => makeThanThu('thuRua', 2), co: 1.5, cach: 2.2 },
+    { ten: 'Rồng (dáng thần)', tao: () => makeThanThu('thuRong', 2), co: 3.0, cach: 3.6 },
+  ],
+  // Riêng rồng, cách rộng cho nhìn ngang (`--huong 1.57` hay `-1.57`) khỏi chồng lên nhau.
+  rong: [{ ten: 'Rồng (dáng thần)', tao: () => makeThanThu('thuRong', 2), co: 2.0, cach: 11, cao: 520 }],
   anh: [
     { ten: 'Tráng sĩ Gióng (roi sắt, đủ bộ Phù Đổng)', tao: () => makeGiong('trangSi', { anh: true }), co: 1.9, cach: 1.7, cot: ANH_COT },
     { ten: 'Sơn Tinh (đủ bộ Tản Viên)', tao: () => makeSonTinh({ anh: true }), co: 1.3, cach: 1.1, cot: ANH_COT },

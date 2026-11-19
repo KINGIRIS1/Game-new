@@ -56,7 +56,7 @@ import { clayPiece, figure, prim, rigid, segs, type Piece } from './nanNguoi';
 import { horseBody, horseDrape, type HorseShape } from './nanThu';
 import { C } from './palette';
 import { bakeAnh, batAnh } from './anhVuKhi';
-import { RigBuilder, bakeRig, moveBones, skinRig, type Act, type BoneDef, type Bones, type Poser, type RigShape } from './rig';
+import { RigBuilder, bakeRig, moveBones, resetBones, skinRig, type Act, type BoneDef, type Bones, type Poser, type RigShape } from './rig';
 import { ToonModel, inkThin } from './toon';
 import {
   CO_NU,
@@ -487,6 +487,21 @@ function poseIronHorse(b: B, a: Act, e: number): void {
     b.qFR.rotation.x = -0.18 * e;
     b.qTail.rotation.z = 0.14 * Math.sin(t * 2.4);
   }
+}
+
+/** Ngựa sắt thần thú (dã ngoại, đi lại trong kinh đô): ngựa sắt của Gióng, yên để trống chờ chủ. */
+export function makeNguaSat(): THREE.Group {
+  const r = new RigBuilder({ ...BASE, ...ironHorse(1) }, 0.75);
+  drawIronHorse(r);
+  const { group, bones } = skinRig(r.build());
+  const pose: Poser = (a) => {
+    resetBones(bones);
+    poseIronHorse(bones, a, a.act === 'fight' ? strikeCurve(a.strike, 0.3, 0.5) : 0);
+  };
+  pose({ act: 'stand' });
+  group.userData.pose = pose;
+  group.userData.fall = 'side';
+  return group;
 }
 
 /** Tượng ngựa sắt bản tĩnh, cho Đền Phù Đổng. */

@@ -7,6 +7,7 @@
 // kinh đô lớn theo mẫu (`xepLai.ts`).
 
 import { isDauThanhState } from './dauThat';
+import { isThanThuState } from './thanThu';
 import { deflateSync, inflateSync } from 'fflate';
 import {
   ARMS,
@@ -77,6 +78,8 @@ export function deserialize(json: string): GameState | undefined {
   if (!isGameState(upgraded)) return undefined;
   // Đấu thành trực tuyến sai dạng thì bỏ (coi như chưa tham gia), không bỏ cả bản lưu.
   if (upgraded.dauThanh !== undefined && !isDauThanhState(upgraded.dauThanh)) delete upgraded.dauThanh;
+  // Thần thú sai dạng thì nuôi lại từ đầu (`thuNay` tạo mới), không bỏ cả bản lưu.
+  if (upgraded.thanThu !== undefined && !isThanThuState(upgraded.thanThu)) delete upgraded.thanThu;
   lowerRiverBed(upgraded);
   cleanXay(upgraded);
   return upgraded;

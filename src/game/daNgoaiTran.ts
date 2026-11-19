@@ -11,9 +11,12 @@ import {
   addHero,
   advanceClock,
   bodyRadius,
+  damageFighter,
+  emit,
   dist,
   isAlive,
   isHero,
+  isThanThu,
   moveToward,
   newBattle,
   newFighter,
@@ -28,7 +31,7 @@ import {
   type Fighter,
   type HeroSetup,
 } from './battle';
-import { DA_CAP, DA_KHU, DA_MAP, DA_QUAI, DA_TUONG, ENEMIES, FIELD, type DaMapId, type EnemyType, type SkillId } from './defs';
+import { DA_CAP, DA_KHU, DA_MAP, DA_QUAI, DA_TUONG, ENEMIES, FIELD, THAN_THU, THAN_THU_KY, type DaMapId, type EnemyType, type SkillId, type ThanThuId } from './defs';
 import { boCuc, khuTai, timDuong, truotCan, type DaBoCuc, type Diem } from './daNgoaiMap';
 import { roll } from './ngauNhien';
 
@@ -87,6 +90,8 @@ export interface DaTran {
   boss: boolean;
   /** Tự đánh đang dừng nghỉ hồi sức (máu đội thấp, không có quái đuổi). */
   nghi?: boolean;
+  /** Thần thú: giây còn lại tới lúc dùng được kỹ năng. */
+  thuCd?: number;
 }
 
 /** Thông số dựng trận dã ngoại. */
@@ -101,6 +106,8 @@ export interface DaSetup {
   tuDanh: boolean;
   /** Boss đã mọc lại chưa. */
   boss: boolean;
+  /** Thần thú đi theo đội (`thanThu.ts`, `thuSetup`): máu đã nhân cấp chung và cấp thú; `manh` nhân sức đánh. */
+  thu?: { kind: ThanThuId; cap: number; hp: number; manh: number } | null;
 }
 
 /** Phần cộng máu, sức đánh của cấp chung. */
@@ -124,6 +131,11 @@ export function sucQuai(kind: EnemyType, cap: number, khu: number): { hp: number
     hp: DA_QUAI.hp * (1 + DA_QUAI.hpLen * (cap - 1)) * dangHp * he * boss.hp,
     dmg: DA_QUAI.dmg * (1 + DA_QUAI.dmgLen * (cap - 1)) * dangDmg * Math.sqrt(he) * boss.dmg,
   };
+}
+
+/** Chỗ thần thú đứng: sau lưng tướng đầu. */
+function choThu(lead: Fighter): Diem {
+  return { x: lead.x - Math.sin(lead.face) * 2.2, z: lead.z - Math.cos(lead.face) * 2.2 };
 }
 
 /** Chỗ tướng thứ `i` đứng quanh tướng đầu (sau lưng, hai bên), theo hướng nhìn của tướng đầu. */
@@ -167,6 +179,15 @@ export function taoTranDa(setup: DaSetup): Battle {
     const p = choDoiHinh(lead, i);
     addHero(b, h, p.x, p.z, FIELD.hpMul);
   });
+  if (setup.thu) {
+    // Thần thú đứng sau lưng tướng đầu.
+    const p = choThu(lead);
+    const f = newFighter(b, 'ta', setup.thu.kind, p.x, p.z, setup.thu.hp);
+    f.manh = setup.thu.manh;
+    b.fighters.push(f);
+    b.thu = { kind: setup.thu.kind, cap: setup.thu.cap };
+    b.da.thuCd = THAN_THU_KY[setup.thu.kind].hoi / 2;
+  }
   for (const f of b.fighters) {
     f.face = Math.PI;
     truotCan(bc, bodyRadius(f.kind), f);
@@ -295,6 +316,7 @@ export function stepDa(b: Battle, dt: number): void {
   for (const f of b.fighters) {
     if (!isAlive(f) || f.state === 'dead') continue;
     if (f.side === 'giac' && f.nha) buocQuai(b, bc, f, dt);
+    else if (f.side === 'ta' && isThanThu(f.kind)) buocThu(b, bc, f, dt, lead);
     else if (f.side === 'ta' && !isHero(f.kind)) buocQuan(b, bc, f, dt, lead);
   }
   tachRa(b, bc);
@@ -432,6 +454,103 @@ function tuKyNang(b: Battle): void {
     const gan = b.fighters.some((f) => quaiSong(f) && f.nha?.trang !== 've' && dist(f.x - owner.x, f.z - owner.z) <= tam);
     if (gan) useSkill(b, skill);
   }
+}
+
+/**
+ * Thần thú: đánh quái đội đang nhắm (hay quái đang đuổi đội gần mình), không có thì theo sau lưng tướng đầu; đội đang
+ * đi theo lệnh thì chỉ theo. Bật Tự đánh thì kỹ năng tự dùng khi hồi xong và có quái trong tầm, như kỹ năng tướng.
+ */
+function buocThu(b: Battle, bc: DaBoCuc, f: Fighter, dt: number, lead: Fighter | undefined): void {
+  const da = b.da!;
+  if (f.state === 'gone') return;
+  da.thuCd = Math.max(0, (da.thuCd ?? 0) - dt);
+  if (stunned(f, dt)) return;
+  const byId = (id: number | null) => (id === null ? null : (b.fighters.find((o) => o.id === id && quaiSong(o)) ?? null));
+  const foe = da.duong ? null : (byId(da.muc) ?? (da.tuDanh ? byId(da.tuMuc) : null) ?? quaiDuoiGan(b, f, 6));
+  if (foe) {
+    if (da.tuDanh && (da.thuCd ?? 0) <= 0 && kyThu(b, bc, f, foe)) da.thuCd = THAN_THU_KY[f.kind as ThanThuId].hoi;
+    danh(bc, b, f, foe, dt);
+    return;
+  }
+  if (!lead) {
+    f.state = 'fight';
+    return;
+  }
+  const q = choThu(lead);
+  if (dist(q.x - f.x, q.z - f.z) > 0.5) {
+    f.state = 'move';
+    diToi(bc, f, q.x, q.z, dt, 1.15);
+  } else {
+    f.state = 'fight';
+    f.face = lead.face;
+  }
+}
+
+/** Sức một đòn kỹ năng thú: nhân cấp thú và cấp chung như đòn thường. */
+const sucKy = (b: Battle, f: Fighter, dmg: number) => dmg * (1 + b.bonus) * (f.manh ?? 1);
+
+/** Quái trong dải từ `f` theo hướng (dx, dz): dài `len`, rộng `rong`. */
+function trongDai(b: Battle, f: Fighter, dx: number, dz: number, len: number, rong: number): Fighter[] {
+  return b.fighters.filter((o) => {
+    if (!quaiSong(o)) return false;
+    const along = (o.x - f.x) * dx + (o.z - f.z) * dz;
+    const across = Math.abs((o.x - f.x) * dz - (o.z - f.z) * dx);
+    return along >= -0.3 && along <= len && across <= rong / 2;
+  });
+}
+
+/** Thú dùng kỹ năng nhắm `foe` nếu tới tầm. Trả đã dùng chưa. */
+function kyThu(b: Battle, bc: DaBoCuc, f: Fighter, foe: Fighter): boolean {
+  const kind = f.kind as ThanThuId;
+  const d = dist(foe.x - f.x, foe.z - f.z);
+  const dx = d > 1e-6 ? (foe.x - f.x) / d : 0;
+  const dz = d > 1e-6 ? (foe.z - f.z) / d : 1;
+  if (kind === 'thuRua') {
+    // Mai thần: che cả đội khi có người yếu máu.
+    const k = THAN_THU_KY.thuRua;
+    const yeu = b.fighters.some((o) => o.side === 'ta' && isAlive(o) && o.state !== 'gone' && o.hp < o.maxHp * k.mau);
+    if (!yeu || d > k.tam) return false;
+    b.shield = Math.max(b.shield, k.giay);
+    emit(b, { kind: 'shield', x: f.x, z: f.z, by: kind });
+    return true;
+  }
+  if (d > THAN_THU_KY[kind].tam) return false;
+  f.face = Math.atan2(dx, dz);
+  f.swing = 0.4;
+  if (kind === 'thuLac') {
+    // Bổ nhào xuống quái, quật mọi quái quanh đó.
+    const k = THAN_THU_KY.thuLac;
+    for (const o of b.fighters) if (quaiSong(o) && dist(o.x - foe.x, o.z - foe.z) <= k.r) damageFighter(b, { kind, dmg: sucKy(b, f, k.dmg) }, o);
+    emit(b, { kind: 'smash', x: foe.x, z: foe.z, r: k.r, by: kind });
+  } else if (kind === 'thuNgua') {
+    // Phun lửa: lao tới một quãng, đốt quái trong dải lửa.
+    const k = THAN_THU_KY.thuNgua;
+    for (const o of trongDai(b, f, dx, dz, k.len, k.rong)) damageFighter(b, { kind, dmg: sucKy(b, f, k.dmg) }, o);
+    const fromX = f.x;
+    const fromZ = f.z;
+    f.x += dx * k.lao;
+    f.z += dz * k.lao;
+    truotCan(bc, bodyRadius(kind), f);
+    emit(b, { kind: 'fire', x: fromX, z: fromZ, tx: f.x, tz: f.z, len: k.len, by: kind });
+  } else if (kind === 'thuGa') {
+    // Chín cựa: mổ liền mấy đòn vào quái đang đánh.
+    const k = THAN_THU_KY.thuGa;
+    for (let i = 0; i < k.don && quaiSong(foe); i++) damageFighter(b, { kind, dmg: sucKy(b, f, THAN_THU.thuGa.dmg * k.he) }, foe);
+    emit(b, { kind: 'smash', x: foe.x, z: foe.z, r: 0.6, by: kind });
+  } else if (kind === 'thuRong') {
+    // Phun nước: dải nước quét quái, đẩy lùi, làm chậm.
+    const k = THAN_THU_KY.thuRong;
+    for (const o of trongDai(b, f, dx, dz, k.len, k.rong)) {
+      damageFighter(b, { kind, dmg: sucKy(b, f, k.dmg) }, o);
+      if (!quaiSong(o) || o.nha?.khu === -1) continue;
+      o.x += dx * k.day;
+      o.z += dz * k.day;
+      truotCan(bc, bodyRadius(o.kind), o);
+      o.slow = k.cham;
+    }
+    emit(b, { kind: 'wave', x: f.x, z: f.z, tx: f.x + dx * k.len, tz: f.z + dz * k.len, by: kind });
+  }
+  return true;
 }
 
 /** Nghĩa binh (Hiệu triệu): đánh quái gần, không có thì theo tướng đầu. */
@@ -582,6 +701,7 @@ function hoiSinh(b: Battle, bc: DaBoCuc): void {
   const da = b.da!;
   const all = b.fighters.filter((f) => f.side === 'ta' && isHero(f.kind));
   if (!all.length) return;
+  const thu = b.fighters.find((f) => f.side === 'ta' && isThanThu(f.kind));
   const up = all.filter((f) => f.state !== 'gone');
   if (!up.length) {
     da.nga ??= b.t;
@@ -594,6 +714,7 @@ function hoiSinh(b: Battle, bc: DaBoCuc): void {
     for (const f of b.fighters) if (f.nha && f.nha.trang === 'duoi') (f.nha.trang = 've'), (f.nha.duoi = null);
     const lead = { x: bc.trai.x, z: bc.trai.z, face: Math.PI } as Fighter;
     all.forEach((f, i) => dungDay(b, bc, f, choDoiHinh(lead, i), 1));
+    if (thu) dungDay(b, bc, thu, choThu(lead), 1);
     return;
   }
   if (b.t - da.yenTu < DA_TUONG.day) return;
@@ -601,6 +722,7 @@ function hoiSinh(b: Battle, bc: DaBoCuc): void {
   all.forEach((f, i) => {
     if (f.state === 'gone') dungDay(b, bc, f, choDoiHinh(lead, i), 0.5);
   });
+  if (thu?.state === 'gone') dungDay(b, bc, thu, choThu(lead), 0.5);
 }
 
 function dungDay(b: Battle, bc: DaBoCuc, f: Fighter, at: Diem, mau: number): void {
@@ -619,7 +741,7 @@ function dungDay(b: Battle, bc: DaBoCuc, f: Fighter, at: Diem, mau: number): voi
 function hoiMau(b: Battle, dt: number): void {
   const da = b.da!;
   for (const f of b.fighters) {
-    if (f.side !== 'ta' || !isHero(f.kind) || f.state === 'gone') continue;
+    if (f.side !== 'ta' || !(isHero(f.kind) || isThanThu(f.kind)) || f.state === 'gone') continue;
     const cu = da.mau[f.id] ?? f.hp;
     if (f.hp < cu - 1e-6) da.biDanh[f.id] = b.t;
     if (b.t - (da.biDanh[f.id] ?? -Infinity) >= DA_TUONG.yen) f.hp = Math.min(f.maxHp, f.hp + f.maxHp * DA_TUONG.hoi * dt);

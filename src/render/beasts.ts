@@ -10,7 +10,7 @@ import { HUMAN, beginPose, featherCrown, hairCap, headband, humanBody, humanHead
 import { Clay, ellipsoid } from './nan';
 import { armor, bun, chestDisc, diadem, hairDown, necklace, pauldrons } from './nanDo';
 import { clayPiece, figure, type Piece } from './nanNguoi';
-import { bearBody, boarBody, buffaloBody, deerBody, dholeBody, gaurBody, otterBody, rhinoBody, elephantBody, elephantDrape, horseBody, horseDrape, leopardBody, roosterBody, tigerBody, turtleBody, turtleDrum } from './nanThu';
+import { gaChoiBody, ruaThanBody, bearBody, boarBody, buffaloBody, deerBody, dholeBody, gaurBody, otterBody, rhinoBody, elephantBody, elephantDrape, horseBody, horseDrape, leopardBody, roosterBody, tigerBody, turtleBody, turtleDrum } from './nanThu';
 import { C } from './palette';
 import { RigBuilder, bakeRig, moveBones, resetBones, skinRig, type Act, type BoneDef, type Bones, type Poser, type RigShape, type RigSlot, type RigSlots } from './rig';
 import { drawRider, poseRider, riderBones, riderHasSkill, type RiderKind } from './soldier';
@@ -1142,6 +1142,68 @@ export function makeRuaVang(): THREE.Group {
   pose({ act: 'stand' });
   group.userData.pose = pose;
   return group;
+}
+
+/** Khung Rùa Vàng thần thú: mai dẹt dài, cổ dài vươn trước, đầu thấp như rùa thật. Gốc ở đáy mai, đầu hướng +z. */
+const RUA_THAN_DEFS: Defs = {
+  ...BASE,
+  qBody: { parent: 'base', at: [0, 0.05, 0] },
+  qNeck: { parent: 'qBody', at: [0, 0.14, 0.64] },
+  qHead: { parent: 'qNeck', at: [0, 0.3, 0.97] },
+  qFL: { parent: 'qBody', at: [-0.38, 0.08, 0.42] },
+  qFR: { parent: 'qBody', at: [0.38, 0.08, 0.42] },
+  qBL: { parent: 'qBody', at: [-0.34, 0.07, -0.5] },
+  qBR: { parent: 'qBody', at: [0.34, 0.07, -0.5] },
+  qTail: { parent: 'qBody', at: [0, 0.07, -0.76] },
+};
+
+/**
+ * Rùa Vàng thần thú (dã ngoại, đi lại trong kinh đô): Quy trong tứ linh (Long Quy), mai dẹt dài vàng kim chia múi đồng
+ * sẫm, da xanh ngọc, đầu rồng có bờm lửa, sừng rạp, râu vàng dài cuộn, đuôi xòe mây lửa, ngọc sáng trên đỉnh mai; đi thì bò chèo bốn chân như rùa biển, đánh thì vươn cổ đớp.
+ */
+export function makeRuaThan(): THREE.Group {
+  const draw = (r: Rig) => {
+    ruaThanBody(r);
+    const head = r.on('qHead');
+    // Râu rồng vàng dài từ mép mõm cuộn ra sau.
+    for (const s of [-1, 1]) {
+      let p = new THREE.Vector3(s * 0.04, 0.34, 1.25);
+      for (const [dx, dy, dz] of [
+        [0.07, 0.02, -0.03],
+        [0.08, -0.02, -0.1],
+        [0.05, -0.06, -0.14],
+        [0.0, -0.05, -0.14],
+        [-0.03, 0.0, -0.1],
+      ] as const) {
+        const q = p.clone().add(new THREE.Vector3(s * dx, dy, dz));
+        const d = q.clone().sub(p);
+        const e = new THREE.Euler().setFromQuaternion(new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 1, 0), d.clone().normalize()));
+        const m = p.clone().add(q).multiplyScalar(0.5);
+        head.plain.cyl(0.005, 0.008, d.length(), C.gold, m.x, m.y, m.z, [e.x, e.y, e.z], 4);
+        p = q;
+      }
+    }
+    r.on('qBody').glow.sphere(0.045, 0xffe878, 0, 0.32, -0.02, [1, 0.6, 1], 8);
+  };
+  return rigged({ defs: RUA_THAN_DEFS, draw, pose: poseRuaBien }, 0);
+}
+
+/** Khung gà chọi: đứng thẳng, đùi dài, cổ cao. */
+const GA_CHOI_DEFS: Defs = {
+  ...BASE,
+  qBody: { parent: 'base', at: [0, 0.85, 0] },
+  qBL: { parent: 'qBody', at: [-0.12, 0.72, 0.02] },
+  qBR: { parent: 'qBody', at: [0.12, 0.72, 0.02] },
+  qNeck: { parent: 'qBody', at: [0, 1.18, 0.2] },
+  qHead: { parent: 'qNeck', at: [0, 1.6, 0.3] },
+  qTail: { parent: 'qBody', at: [0, 1.08, -0.3] },
+  qWingL: { parent: 'qBody', at: [-0.19, 1.1, 0.06] },
+  qWingR: { parent: 'qBody', at: [0.19, 1.1, 0.06] },
+};
+
+/** Gà chín cựa (thần thú, lễ vật Sơn Tinh): gà chọi đứng thẳng ức ưỡn, bờm vàng cam, đuôi lông liềm rủ, chín cựa vàng. */
+export function makeGaCuu(): THREE.Group {
+  return rigged({ defs: GA_CHOI_DEFS, draw: (r) => gaChoiBody(r), pose: poseRooster }, 0);
 }
 
 /** Rùa Vàng bản tĩnh, cho công trình. */
