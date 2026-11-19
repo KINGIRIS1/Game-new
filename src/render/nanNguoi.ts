@@ -125,8 +125,11 @@ export function figureCount(): number {
   return figures.size;
 }
 
-/** Số dáng phải nặn và tổng thời gian nặn ở luồng này (số liệu chụp thử: kho, worker đỡ được bao nhiêu). */
-export const sculptStats = { lan: 0, ms: 0 };
+/**
+ * Số dáng phải nặn, tổng thời gian nặn ở luồng này và tên các dáng ấy (tối đa 100 tên gần nhất; số liệu chụp thử, đo
+ * lag: kho, worker đỡ được bao nhiêu, dáng nào chưa được nặn sẵn).
+ */
+export const sculptStats = { lan: 0, ms: 0, ten: [] as string[] };
 
 /** Các dáng đã dùng tới từ lần hỏi trước. */
 export function takeTouched(): string[] {
@@ -150,6 +153,8 @@ export function figure(r: HumanRig, key: string, make: (detail: number) => Piece
       pieces = make(r.detail);
       sculptStats.lan++;
       sculptStats.ms += performance.now() - t0;
+      sculptStats.ten.push(k);
+      if (sculptStats.ten.length > 100) sculptStats.ten.shift();
     }
     figures.set(k, pieces);
   }
