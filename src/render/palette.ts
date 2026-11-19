@@ -200,6 +200,8 @@ export const C = {
   fxXanh: 0x6cf08c,
   fxBui: 0xc9a36c,
   fxVet: 0x3a2818,
+  // Dời non: phiến đá linh màu hổ phách (khác bóng núi xanh của Bốc đồi).
+  fxHo: 0xffa23a,
   // Bốn nữ tướng của Hai Bà, mỗi người một màu áo (khác áo đỏ thắm, áo vàng của Hai Bà, khác cả nền cỏ): Lê Chân lam
   // biển, Thánh Thiên lục lá, Bát Nàn tím hoa cà, Phùng Thị Chính hồng sen; địu con vải chàm.
   nuLam: 0x2f6fbf,

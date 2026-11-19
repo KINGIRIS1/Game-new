@@ -883,7 +883,6 @@ export class BattleView {
     if (view) view.cast = CAST_TIME;
     const s = this.scale;
     const R = ROCKS.radius * this.geo;
-    const dich = battle.fighters.filter((f) => f.side === 'giac' && f.stun && f.stun > 0 && f.state !== 'dead').map((f) => ({ dx: f.x - x, dz: f.z - z }));
     const non = dungNon({
       hu: this.hu,
       at: (dx, dz, dy = 0) => this.at(x + dx, z + dz, dy),
@@ -891,7 +890,6 @@ export class BattleView {
       R,
       sc: s,
       seed: seq,
-      dich,
     });
     non.group.position.set(x + ox, 0, z + oz);
     this.root.add(non.group);
