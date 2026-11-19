@@ -9,6 +9,11 @@ import { makeBeast, makeRoyalHorse, makeRuaVang } from '../src/render/beasts';
 import type { NuTuongId } from '../src/game/defs';
 import {
   makeAnDuong,
+  makeBaTrieu,
+  makeTrieuQuangPhuc,
+  makeMaiThucLoan,
+  makeNgoQuyen,
+  makeLyThuongKiet,
   makeCaoLo,
   makeDrummer,
   makeGiong,
@@ -20,9 +25,27 @@ import {
   makeTrungTrac,
 } from '../src/render/heroes';
 import { makeMonster } from '../src/render/monsters';
-import { makeRower, makeWorker } from '../src/render/people';
+import { makeRower, makeWorker, type Job } from '../src/render/people';
+import { ganhLen, tayGanh } from '../src/render/doGanh';
+import type { Hang } from '../src/render/ganhHang';
+import type { Human } from '../src/render/body';
 import { makeEnemyBoat, makeLauThuyen } from '../src/render/models';
 import { makeSoldier } from '../src/render/soldier';
+import { makeThanThu } from '../src/render/thanThu';
+import { ToonModel } from '../src/render/toon';
+import type { Parts } from '../src/render/weapons';
+import {
+  coLac,
+  crossbowParts,
+  daoVanAn,
+  giaoBachDang,
+  giaoDaTrach,
+  guomDong,
+  guomNuiNua,
+  kiemNhuNguyet,
+  repeatingCrossbow,
+} from '../src/render/weapons';
+import { giongWeapon, royalAxe, sonStaff } from '../src/render/heroes';
 
 interface Entry {
   ten: string;
@@ -119,6 +142,19 @@ const NU_COT: [string, Act][] = [
 ];
 const NU_IDS: NuTuongId[] = ['leChan', 'thanhThien', 'batNan', 'phungThiChinh'];
 
+/** Vũ khí ánh lên (tướng mặc đủ bốn món bộ mình): vỏ sáng chập chờn, đốm lấp lánh theo `time`; đánh; ngã thì tắt. */
+/** Cột kỹ năng của tướng dã ngoại (như nhóm `ky_nang`). */
+const CHEM_COT: [string, Act][] = [0, 0.1, 0.2, 0.35, 0.5, 0.65, 0.72, 0.85, 1].map((k) => [`${k}`, { act: 'fight', skill: k, time: k }]);
+
+const ANH_COT: [string, Act][] = [
+  ['Đứng (t=0)', { act: 'stand', time: 0 }],
+  ['Đứng (t=0,5)', { act: 'stand', time: 0.5 }],
+  ['Đứng (t=1,1)', { act: 'stand', time: 1.1 }],
+  ['Thủ', { act: 'fight', time: 1.6 }],
+  ['Đòn tới', { act: 'fight', strike: 0.3, time: 2.1 }],
+  ['Ngã', { act: 'dead', fall: 0.6 }],
+];
+
 /**
  * Một hàng nhân vật đứng cạnh nhau cách `gap`, thẳng hàng ngang ảnh (với hướng chụp mặc định −0,6, xoay thêm `xoay`
  * như trường `xoay` của mục). Tư thế của hàng đặt cho từng người.
@@ -138,7 +174,89 @@ function motHang(tao: (() => THREE.Group)[], gap: number, xoay = 0): () => THREE
   };
 }
 
+/** Người làm đi gánh hàng (dân gánh hàng về kho, thợ vác vật liệu, người bếp): đồ mang gắn xương, tay giữ đồ sau tư thế. */
+function ganhNguoi(job: Job, hang: Hang): THREE.Group {
+  const g = makeWorker(job);
+  const bones = g.userData.bones as Human;
+  ganhLen(bones, hang);
+  const pose = g.userData.pose as Poser;
+  g.userData.pose = (a: Act) => {
+    pose(a);
+    tayGanh(bones, hang);
+  };
+  return g;
+}
+
+/** Nhóm `ganh`: đứng đổ hàng, rồi bước đi. */
+const GANH: [string, Act][] = [
+  ['Đứng', { act: 'walk', phase: 0, stride: 0 }],
+  ['Đi (bước trái)', { act: 'walk', phase: -Math.PI / 2, stride: 0.42 }],
+  ['Đi (giữa bước)', { act: 'walk', phase: 0, stride: 0.42 }],
+  ['Đi (bước phải)', { act: 'walk', phase: Math.PI / 2, stride: 0.42 }],
+];
+
+/** Vũ khí các tướng đứng rời, mỗi món phóng theo cỡ người của tướng cầm, nhìn ngang mặt lưỡi; người đứng cạnh để so cỡ. */
+const VU_KHI: [string, number, (s: Parts) => void, number?][] = [
+  ['Roi sắt Gióng', 1.5, (s) => giongWeapon(s, false)],
+  ['Tre Gióng', 1.5, (s) => giongWeapon(s, true)],
+  ['Trượng Sơn Tinh', 1.45, sonStaff],
+  ['Rìu An Dương Vương', 1.45, royalAxe],
+  ['Giáo Dạ Trạch', 1.35, (s) => giaoDaTrach(s), Math.PI / 2],
+  ['Đao Vạn An', 1.45, (s) => daoVanAn(s)],
+  ['Giáo Bạch Đằng', 1.35, (s) => giaoBachDang(s), Math.PI / 2],
+  ['Gươm đồng Trưng Trắc', 1.4, guomDong],
+  ['Gươm Núi Nưa', 1.4, guomNuiNua],
+  ['Kiếm Như Nguyệt', 1.38, kiemNhuNguyet],
+  ['Nỏ thần', 1, (s) => crossbowParts(s, true, 1.15)],
+  ['Nỏ liên châu', 1, (s) => repeatingCrossbow(s, 1.05)],
+  ['Cờ Lạc Trưng Nhị', 1.4, coLac],
+];
+function vuKhiRoi(ds: typeof VU_KHI, gap: number, y = 0.3): () => THREE.Group {
+  return () => {
+    const g = new THREE.Group();
+    ds.forEach(([, k, ve, xoay], i) => {
+      const m = new ToonModel();
+      ve(m);
+      const w = m.group();
+      w.scale.setScalar(k);
+      w.rotation.y = xoay ?? 0;
+      w.position.set(0, y * k, -(i - (ds.length - 1) / 2) * gap);
+      g.add(w);
+    });
+    return g;
+  };
+}
+const VK_COT: [string, Act][] = [
+  ['Đứng', { act: 'stand' }],
+  ['Thủ', { act: 'fight' }],
+  ['Ra đòn', { act: 'fight', strike: 0.12 }],
+  ['Đòn tới', { act: 'fight', strike: 0.3 }],
+];
+
 export const NHOM: Record<string, Entry[]> = {
+  vuKhi: [
+    { ten: 'Vũ khí cán dài', tao: vuKhiRoi(VU_KHI.slice(0, 7), 0.6), co: 1.45, cach: 1.3, cao: 640, xoay: -Math.PI / 2 + 0.6, cot: MOT_COT },
+    { ten: 'Gươm, kiếm', tao: vuKhiRoi(VU_KHI.slice(7, 10), 0.4, 0.15), co: 0.55, cach: 0.5, cao: 560, xoay: -Math.PI / 2 + 0.6, cot: MOT_COT },
+    { ten: 'Nỏ, cờ', tao: vuKhiRoi(VU_KHI.slice(10), 0.9), co: 1.2, cach: 1, cao: 480, xoay: -Math.PI / 2 + 0.6, cot: MOT_COT },
+    { ten: 'Cờ Lạc (gần)', tao: vuKhiRoi(VU_KHI.slice(12), 1, -0.45), co: 0.6, cach: 0.5, cao: 560, xoay: -Math.PI / 2 + 0.6 - 0.5, cot: MOT_COT },
+    {
+      ten: 'Trưng Nhị phất cờ (Hiệu triệu)',
+      tao: () => makeTrungNhi(),
+      co: 2.3,
+      cach: 2.1,
+      cao: 420,
+      cot: [['Đứng', { act: 'stand' }], ['Phất 0,2', { act: 'fight', skill: 0.2 }], ['Phất 0,5', { act: 'fight', skill: 0.5 }], ['Phất 0,8', { act: 'fight', skill: 0.8 }]],
+    },
+    { ten: 'Gióng', tao: () => makeGiong('trangSi'), co: 1.9, cach: 1.7, cao: 420, cot: VK_COT },
+    { ten: 'Sơn Tinh', tao: () => makeSonTinh(), co: 1.3, cach: 1.1, cao: 360, cot: VK_COT },
+    { ten: 'An Dương Vương (rìu)', tao: () => makeAnDuong(), co: 1.3, cach: 1.1, cao: 360, cot: VK_COT },
+    { ten: 'Trưng Trắc đứng', tao: () => makeTrungTrac({ onFoot: true }), co: 1.3, cach: 1.1, cao: 360, cot: VK_COT },
+    { ten: 'Bà Triệu đứng', tao: () => makeBaTrieu({ onFoot: true }), co: 1.3, cach: 1.1, cao: 360, cot: VK_COT },
+    { ten: 'Triệu Quang Phục', tao: () => makeTrieuQuangPhuc(), co: 1.6, cach: 1.3, cao: 380, cot: VK_COT },
+    { ten: 'Mai Thúc Loan', tao: () => makeMaiThucLoan(), co: 1.7, cach: 1.4, cao: 380, cot: VK_COT },
+    { ten: 'Ngô Quyền', tao: () => makeNgoQuyen(), co: 2.3, cach: 2.1, cao: 420, cot: VK_COT },
+    { ten: 'Lý Thường Kiệt', tao: () => makeLyThuongKiet(), co: 1.6, cach: 1.3, cao: 380, cot: VK_COT },
+  ],
   linh: [
     { ten: 'Giáo binh bậc 2', tao: () => makeSoldier('giao', 2) },
     { ten: 'Giáo binh bậc 3', tao: () => makeSoldier('giao', 3) },
@@ -159,6 +277,21 @@ export const NHOM: Record<string, Entry[]> = {
     { ten: 'Lính kích Hán', tao: () => makeSoldier('linhHan') },
     { ten: 'Nỏ thủ Hán', tao: () => makeSoldier('noHan') },
     { ten: 'Giáp sĩ Hán', tao: () => makeSoldier('giapHan') },
+    { ten: 'Lính giáo Ngô', tao: () => makeSoldier('linhNgo') },
+    { ten: 'Nỏ thủ Ngô', tao: () => makeSoldier('noNgo') },
+    { ten: 'Giáp sĩ Ngô', tao: () => makeSoldier('giapNgo') },
+    { ten: 'Lính khiên Lương', tao: () => makeSoldier('linhLuong') },
+    { ten: 'Nỏ thủ Lương', tao: () => makeSoldier('noLuong') },
+    { ten: 'Giáp sĩ Lương', tao: () => makeSoldier('giapLuong') },
+    { ten: 'Lính giáo Đường', tao: () => makeSoldier('linhDuong') },
+    { ten: 'Nỏ thủ Đường', tao: () => makeSoldier('noDuong') },
+    { ten: 'Giáp sĩ Đường', tao: () => makeSoldier('giapDuong') },
+    { ten: 'Lính thủy Nam Hán', tao: () => makeSoldier('linhNamHan') },
+    { ten: 'Cung thuyền Nam Hán', tao: () => makeSoldier('cungNamHan') },
+    { ten: 'Lính rìu Nam Hán', tao: () => makeSoldier('riuNamHan') },
+    { ten: 'Lính thương Tống', tao: () => makeSoldier('linhTong') },
+    { ten: 'Nỏ thủ Tống', tao: () => makeSoldier('noTong') },
+    { ten: 'Giáp sĩ Tống', tao: () => makeSoldier('giapTong') },
     { ten: 'Nghĩa binh', tao: () => makeSoldier('nghiaBinh') },
     { ten: 'Tô Định', tao: () => makeSoldier('toDinh'), co: 0.9, cach: 0.85 },
     { ten: 'Tô Định bỏ chạy', tao: boChay(() => makeSoldier('toDinh')), co: 0.9, cach: 0.85 },
@@ -172,10 +305,32 @@ export const NHOM: Record<string, Entry[]> = {
     { ten: 'Kỵ binh Triệu', tao: () => makeBeast('kyBinh'), co: 1.4, cach: 1.3 },
     { ten: 'Triệu Đà', tao: () => makeBeast('trieuDa'), co: 1.4, cach: 1.3 },
     { ten: 'Mã Viện', tao: () => makeBeast('maVien'), co: 1.5, cach: 1.4 },
+    { ten: 'Lục Dận', tao: () => makeBeast('lucDan'), co: 1.5, cach: 1.4 },
+    { ten: 'Trần Bá Tiên', tao: () => makeBeast('tranBaTien'), co: 1.5, cach: 1.4 },
+    { ten: 'Dương Tư Húc', tao: () => makeBeast('duongTuHuc'), co: 1.5, cach: 1.4 },
+    { ten: 'Lưu Hoằng Tháo', tao: () => makeBeast('hoangThao'), co: 1.5, cach: 1.4 },
+    { ten: 'Quách Quỳ', tao: () => makeBeast('quachQuy'), co: 1.5, cach: 1.4 },
     { ten: 'Hổ tinh', tao: () => makeBeast('hoTinh'), co: 1.0, cach: 1.3 },
     { ten: 'Gà trắng', tao: () => makeBeast('gaTrang'), co: 1.3, cach: 1.3 },
     { ten: 'Rùa Vàng', tao: () => makeRuaVang(), co: 0.9, cach: 1.7 },
     { ten: 'Ngựa vua (An Dương Vương, Mỵ Châu)', tao: () => makeRoyalHorse(), co: 1.5, cach: 1.6 },
+  ],
+  // Quái dã ngoại (map dã ngoại): node scripts/chup-nhan-vat.mjs daNgoai
+  daNgoai: [
+    { ten: 'Lợn rừng', tao: () => makeBeast('lonRung'), co: 0.8, cach: 1.2 },
+    { ten: 'Báo gấm', tao: () => makeBeast('baoGam'), co: 1.0, cach: 1.3 },
+    { ten: 'Gấu ngựa', tao: () => makeBeast('gauNgua'), co: 1.0, cach: 1.2 },
+    { ten: 'Voi rừng', tao: () => makeBeast('voiRung'), co: 1.5, cach: 1.5 },
+    { ten: 'Trâu rừng', tao: () => makeBeast('trauRung'), co: 1.1, cach: 1.4 },
+    { ten: 'Trăn gấm', tao: () => makeMonster('tranGam'), co: 1.0, cach: 1.3 },
+    { ten: 'Sói đỏ', tao: () => makeBeast('soiDo'), co: 0.8, cach: 1.1 },
+    { ten: 'Tê giác', tao: () => makeBeast('teGiac'), co: 1.1, cach: 1.4 },
+    { ten: 'Rái cá', tao: () => makeBeast('raiCa'), co: 0.7, cach: 1.0 },
+    { ten: 'Rùa biển', tao: () => makeBeast('ruaBien'), co: 0.9, cach: 1.8 },
+    { ten: 'Nai rừng', tao: () => makeBeast('naiRung'), co: 1.0, cach: 1.2 },
+    { ten: 'Bò tót', tao: () => makeBeast('boTot'), co: 1.1, cach: 1.4 },
+    { ten: 'Rắn hổ mang chúa', tao: () => makeMonster('ranHo'), co: 1.0, cach: 1.1 },
+    { ten: 'Cua đá', tao: () => makeMonster('cuaDa'), co: 0.9, cach: 1.3 },
   ],
   quai: [
     { ten: 'Tôm binh', tao: () => makeMonster('tomBinh'), co: 0.9 },
@@ -185,11 +340,22 @@ export const NHOM: Record<string, Entry[]> = {
     { ten: 'Quỷ núi', tao: () => makeMonster('quyNui'), co: 1.0, cach: 0.9 },
     { ten: 'Ma trơi', tao: () => makeMonster('maTroi') },
   ],
+  hao: [
+    { ten: 'Phù Đổng Thiên Vương: mặt trời lửa', tao: () => makeGiong('trangSi', { bamboo: true, glow: true, onFoot: true }), co: 1.6, cach: 1.25 },
+    { ten: 'Sơn Tinh: núi mây', tao: () => makeSonTinh({ glow: true }), co: 1.4, cach: 1.2 },
+    { ten: 'An Dương Vương: mai Rùa Vàng', tao: () => makeAnDuong({ crossbow: true, glow: true }), co: 1.4, cach: 1.2 },
+    { ten: 'Cao Lỗ: vòng tên nỏ', tao: () => makeCaoLo({ glow: true }), co: 1.4, cach: 1.2 },
+    { ten: 'Trưng Trắc: trống đồng đỏ', tao: () => makeTrungTrac({ glow: true, onFoot: true }), co: 1.6, cach: 1.25 },
+    { ten: 'Trưng Nhị: trống đồng vàng', tao: () => makeTrungNhi({ glow: true, onFoot: true }), co: 1.6, cach: 1.25 },
+    { ten: 'Trưng Trắc cưỡi voi (hiển linh)', tao: () => makeTrungTrac({ glow: true }), co: 2.3, cach: 2.1 },
+    { ten: 'Lê Chân: búp lá', tao: () => makeNuTuong('leChan', { glow: true }), co: 1.75, cach: 1.15, cot: NU_COT.slice(0, 1) },
+    { ten: 'Bát Nàn: búp lá', tao: () => makeNuTuong('batNan', { glow: true }), co: 1.75, cach: 1.15, cot: NU_COT.slice(0, 1) },
+  ],
   tuong: [
     { ten: 'Gióng lên ba', tao: () => makeGiong('be'), co: 0.7 },
     { ten: 'Gióng thiếu niên', tao: () => makeGiong('thieuNien'), co: 0.9 },
-    { ten: 'Tráng sĩ Gióng (roi sắt)', tao: () => makeGiong('trangSi'), co: 1.6, cach: 1.4 },
-    { ten: 'Tráng sĩ Gióng (tre, hiển linh)', tao: () => makeGiong('trangSi', { bamboo: true, glow: true }), co: 1.8, cach: 1.4 },
+    { ten: 'Tráng sĩ Gióng (roi sắt)', tao: () => makeGiong('trangSi'), co: 1.9, cach: 1.7 },
+    { ten: 'Tráng sĩ Gióng (tre, hiển linh)', tao: () => makeGiong('trangSi', { bamboo: true, glow: true }), co: 2.1, cach: 1.7 },
     { ten: 'Sơn Tinh', tao: () => makeSonTinh(), co: 1.3, cach: 1.1 },
     { ten: 'Sơn Tinh trên mỏm đá', tao: () => makeSonTinh({ rock: true }), co: 1.4, cach: 1.3 },
     { ten: 'Thủy Tinh', tao: () => makeThuyTinh(), co: 1.3, cach: 1.2 },
@@ -201,7 +367,7 @@ export const NHOM: Record<string, Entry[]> = {
     { ten: 'Trưng Nhị', tao: () => makeTrungNhi(), co: 2.3, cach: 2.1 },
     { ten: 'Trưng Trắc (hiển linh)', tao: () => makeTrungTrac({ glow: true }), co: 2.3, cach: 2.1 },
     { ten: 'Lạc tướng đứng chầu (sân Điện)', tao: () => makeLacTuong(), co: 1.25, cach: 1.1 },
-    { ten: 'Gióng đứng chầu (sân Điện, hiển linh)', tao: () => makeGiong('trangSi', { bamboo: true, glow: true, onFoot: true }), co: 1.4, cach: 1.1 },
+    { ten: 'Gióng đứng chầu (sân Điện, hiển linh)', tao: () => makeGiong('trangSi', { bamboo: true, glow: true, onFoot: true }), co: 1.6, cach: 1.25 },
     { ten: 'Lê Chân (nỏ sau lưng, kiếm ngắn)', tao: () => makeNuTuong('leChan'), co: 1.9, cach: 1.15, cao: 300, cot: NU_COT },
     { ten: 'Thánh Thiên (cung, bao tên sau lưng)', tao: () => makeNuTuong('thanhThien'), co: 1.9, cach: 1.15, cao: 300, cot: NU_COT },
     { ten: 'Bát Nàn (giáo)', tao: () => makeNuTuong('batNan'), co: 1.9, cach: 1.15, cao: 300, cot: NU_COT },
@@ -233,7 +399,7 @@ export const NHOM: Record<string, Entry[]> = {
     },
   ],
   ky_nang: [
-    { ten: 'Kỹ năng (cột: 0, 0,1 … 1)', tao: () => makeGiong('trangSi'), co: 1.6, cach: 1.4 },
+    { ten: 'Kỹ năng (cột: 0, 0,1 … 1)', tao: () => makeGiong('trangSi'), co: 1.9, cach: 1.7 },
     { ten: 'Sơn Tinh dời non', tao: () => makeSonTinh(), co: 1.3, cach: 1.1 },
     { ten: 'Thủy Tinh hô mưa', tao: () => makeThuyTinh(), co: 1.3, cach: 1.2 },
     { ten: 'An Dương Vương nỏ thần', tao: () => makeAnDuong({ crossbow: true }), co: 1.3, cach: 1.1 },
@@ -270,6 +436,57 @@ export const NHOM: Record<string, Entry[]> = {
     { ten: 'Lạc hầu', tao: () => makeWorker('lacHau') },
     { ten: 'Lính gác', tao: () => makeWorker('linhGac') },
     { ten: 'Người lái đò', tao: () => makeRower() },
+  ],
+  ganh: [
+    { ten: 'Nông dân gánh thóc', tao: () => ganhNguoi('nong', 'thoc'), cot: GANH },
+    { ten: 'Thợ đá gánh đá', tao: () => ganhNguoi('thoDa', 'da'), cot: GANH },
+    { ten: 'Thợ mộc vác bó gỗ', tao: () => ganhNguoi('thoMoc', 'go'), cot: GANH },
+    { ten: 'Thợ vác bó tre (công trình đang xây)', tao: () => ganhNguoi('thoMoc', 'tre'), cot: GANH },
+    { ten: 'Thợ đá vác sắt (công trình đang xây)', tao: () => ganhNguoi('thoDa', 'sat'), cot: GANH },
+    { ten: 'Người bếp gùi nguyên liệu Tết', tao: () => ganhNguoi('phuNu', 'gui'), cot: GANH },
+    { ten: 'Người bếp đội mâm bánh', tao: () => ganhNguoi('phuNu', 'mam'), cot: GANH },
+  ],
+  tuongDa: [
+    { ten: 'Bà Triệu cưỡi voi trắng một ngà', tao: () => makeBaTrieu(), co: 2.3, cach: 2.1 },
+    { ten: 'Bà Triệu chém cá kình', tao: () => makeBaTrieu(), co: 2.4, cach: 2.1, cot: CHEM_COT },
+    { ten: 'Bà Triệu thắng trận', tao: theoCot(() => makeBaTrieu(), 'win'), co: 2.4, cach: 2.1, cot: CHEM_COT },
+    { ten: 'Bà Triệu đứng chầu (sân Điện)', tao: () => makeBaTrieu({ onFoot: true }), co: 1.6, cach: 1.25 },
+    { ten: 'Bà Triệu (đủ bộ Núi Nưa)', tao: () => makeBaTrieu({ anh: true }), co: 2.3, cach: 2.1, cot: ANH_COT },
+    { ten: 'Triệu Quang Phục', tao: () => makeTrieuQuangPhuc(), co: 1.8, cach: 1.3 },
+    { ten: 'Triệu Quang Phục ngày ẩn đêm ra', tao: () => makeTrieuQuangPhuc(), co: 1.8, cach: 1.3, cot: CHEM_COT },
+    { ten: 'Triệu Quang Phục thắng trận', tao: theoCot(() => makeTrieuQuangPhuc(), 'win'), co: 1.8, cach: 1.3, cot: CHEM_COT },
+    { ten: 'Triệu Quang Phục (đủ bộ Dạ Trạch)', tao: () => makeTrieuQuangPhuc({ anh: true }), co: 1.8, cach: 1.3, cot: ANH_COT },
+    { ten: 'Mai Thúc Loan', tao: () => makeMaiThucLoan(), co: 1.9, cach: 1.4 },
+    { ten: 'Mai Thúc Loan hắc đế dấy binh', tao: () => makeMaiThucLoan(), co: 1.9, cach: 1.4, cot: CHEM_COT },
+    { ten: 'Mai Thúc Loan thắng trận', tao: theoCot(() => makeMaiThucLoan(), 'win'), co: 1.9, cach: 1.4, cot: CHEM_COT },
+    { ten: 'Mai Thúc Loan (đủ bộ Vạn An)', tao: () => makeMaiThucLoan({ anh: true }), co: 1.9, cach: 1.4, cot: ANH_COT },
+    { ten: 'Ngô Quyền cưỡi ngựa chiến', tao: () => makeNgoQuyen(), co: 2.3, cach: 2.1 },
+    { ten: 'Ngô Quyền cọc Bạch Đằng', tao: () => makeNgoQuyen(), co: 2.4, cach: 2.1, cot: CHEM_COT },
+    { ten: 'Ngô Quyền thắng trận', tao: theoCot(() => makeNgoQuyen(), 'win'), co: 2.4, cach: 2.1, cot: CHEM_COT },
+    { ten: 'Ngô Quyền đứng chầu (sân Điện)', tao: () => makeNgoQuyen({ onFoot: true }), co: 1.8, cach: 1.3 },
+    { ten: 'Ngô Quyền (đủ bộ Bạch Đằng)', tao: () => makeNgoQuyen({ anh: true }), co: 2.3, cach: 2.1, cot: ANH_COT },
+    { ten: 'Lý Thường Kiệt', tao: () => makeLyThuongKiet(), co: 1.8, cach: 1.3 },
+    { ten: 'Lý Thường Kiệt nam quốc sơn hà', tao: () => makeLyThuongKiet(), co: 1.8, cach: 1.3, cot: CHEM_COT },
+    { ten: 'Lý Thường Kiệt thắng trận', tao: theoCot(() => makeLyThuongKiet(), 'win'), co: 1.8, cach: 1.3, cot: CHEM_COT },
+    { ten: 'Lý Thường Kiệt (đủ bộ Như Nguyệt)', tao: () => makeLyThuongKiet({ anh: true }), co: 1.8, cach: 1.3, cot: ANH_COT },
+  ],
+  thanThu: [
+    { ten: 'Chim Lạc (dáng lớn)', tao: () => makeThanThu('thuLac', 1), co: 2.0, cach: 2.2 },
+    { ten: 'Chim Lạc (dáng thần)', tao: () => makeThanThu('thuLac', 2), co: 2.5, cach: 2.8 },
+    { ten: 'Ngựa sắt (dáng thần)', tao: () => makeThanThu('thuNgua', 2), co: 2.0, cach: 1.9 },
+    { ten: 'Gà chín cựa (dáng lớn)', tao: () => makeThanThu('thuGa', 1), co: 1.3, cach: 1.3 },
+    { ten: 'Rùa Vàng (dáng thần)', tao: () => makeThanThu('thuRua', 2), co: 1.5, cach: 2.2 },
+    { ten: 'Rồng (dáng thần)', tao: () => makeThanThu('thuRong', 2), co: 3.0, cach: 3.6 },
+  ],
+  // Riêng rồng, cách rộng cho nhìn ngang (`--huong 1.57` hay `-1.57`) khỏi chồng lên nhau.
+  rong: [{ ten: 'Rồng (dáng thần)', tao: () => makeThanThu('thuRong', 2), co: 2.0, cach: 11, cao: 520 }],
+  anh: [
+    { ten: 'Tráng sĩ Gióng (roi sắt, đủ bộ Phù Đổng)', tao: () => makeGiong('trangSi', { anh: true }), co: 1.9, cach: 1.7, cot: ANH_COT },
+    { ten: 'Sơn Tinh (đủ bộ Tản Viên)', tao: () => makeSonTinh({ anh: true }), co: 1.3, cach: 1.1, cot: ANH_COT },
+    { ten: 'An Dương Vương (đủ bộ Cổ Loa)', tao: () => makeAnDuong({ crossbow: true, anh: true }), co: 1.3, cach: 1.1, cot: ANH_COT },
+    { ten: 'Cao Lỗ (đủ bộ Cao Lỗ)', tao: () => makeCaoLo({ anh: true }), co: 1.25, cach: 1.1, cot: ANH_COT },
+    { ten: 'Trưng Trắc (đủ bộ Trưng Trắc)', tao: () => makeTrungTrac({ anh: true }), co: 2.3, cach: 2.1, cot: ANH_COT },
+    { ten: 'Trưng Nhị (đủ bộ Trưng Nhị)', tao: () => makeTrungNhi({ anh: true }), co: 2.3, cach: 2.1, cot: ANH_COT },
   ],
 };
 

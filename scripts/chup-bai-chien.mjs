@@ -9,7 +9,8 @@
 //            [--chay <giây>] (cho trận chạy thêm rồi mới chụp: lính đi vòng vật cản) [--luoi] (vẽ đè ô bị chặn đỏ,
 //            ô làm chậm xanh)
 // Nền: rung, benSong, lang, don, nui, doi, ngap, tanVien, thatDieu, coLoa, cuaSong, moDa, benKia, hatMon, luyLau,
-// langBac, camKhe. Không ghi --man thì lấy màn 25; nền camKhe nên ghi --man 40 cho có thanh cầm cự và dân rút.
+// langBac, camKhe, dao. Không ghi --man thì lấy màn 25; nền camKhe nên ghi --man 40 cho có thanh cầm cự và dân rút; nền
+// dao nên ghi --man 37 cho có quân Hán.
 
 import { createRequire } from 'node:module';
 import { mkdir, writeFile } from 'node:fs/promises';

@@ -1,7 +1,8 @@
 // Vật cản giữa bãi chiến phó bản (`src/game/baiChien.ts`): mảng cỏ chỗ vật cản đứng (mặt bãi lõm vào, viền sẫm như
 // mép bãi), mặt nước nông có sen, bãi bùn có lau, và mô hình từng dáng (khóm tre, đá, đá nhọn, rào tre, rào cọc, cụm
 // chông, đống rơm, thuyền mắc cạn, đó cá, xe củi đổ, khúc gỗ, giếng, bụi sim, cây chết, lũy đất, nhà sàn, nhà cháy, ruộng
-// ngô, khóm lau, đoạn thành đất nện vỡ). Hình đọc cùng bố cục với luật đi, nên lính đi vòng đúng chỗ thấy vật cản.
+// ngô, khóm lau, đoạn thành đất nện vỡ, khóm phong ba, đá san hô). Hình đọc cùng bố cục với luật đi, nên lính đi vòng
+// đúng chỗ thấy vật cản.
 // Tọa độ theo bãi như `Relief.field()` ở `battlefield.ts`: x từ 0 tới `FIELD.w`, z 0 là cuối bãi phía giặc.
 
 import * as THREE from 'three';
@@ -646,8 +647,55 @@ const thanh: Ve = (p, h, rand) => {
   }
 };
 
+/** Màu đá san hô: trắng ngà, chỗ sẫm, nhánh san hô hồng. */
+const SAN_HO = { rock: 0xe6dcc6, dark: 0xb8aa8a, pink: 0xe2a08e };
+
+/** Khóm phong ba trên đảo: vài cây thân thấp ngả theo gió biển, tán lá dày xanh thẫm, cỏ muống biển dưới chân. */
+const phongBa: Ve = (p, h, rand) => {
+  const { r } = khung(p, h);
+  const n = r < 0.9 ? 2 : 3;
+  for (let i = 0; i < n; i++) {
+    const a = (i / n) * Math.PI * 2 + rand() * 0.8;
+    const d = i ? r * (0.45 + rand() * 0.1) : r * 0.1;
+    const x = Math.cos(a) * d;
+    const z = Math.sin(a) * d;
+    const s = r * (0.85 + rand() * 0.3) * (i ? 0.85 : 1.1);
+    // Thân ngả về một phía (gió biển thổi từ phía giặc).
+    p.cyl(0.05 * s, 0.09 * s, 0.6 * s, C.trunk, x, 0.27 * s, z + 0.08 * s, [0.38, 0, (rand() - 0.5) * 0.3], 6);
+    for (let k = 0; k < 3; k++) {
+      const b = rand() * Math.PI * 2;
+      p.sphere((0.24 + rand() * 0.1) * s, k % 2 ? C.leaf[2] : C.leaf[0], x + Math.cos(b) * 0.16 * s, (0.62 + rand() * 0.14) * s, z + 0.24 * s + Math.sin(b) * 0.12 * s, [1.3, 0.72, 1.15], 8);
+    }
+  }
+  for (let i = 0; i < 6; i++) {
+    const a = (i / 6) * Math.PI * 2 + rand();
+    p.sphere(r * 0.2, C.leaf[(i + 1) % 4], Math.cos(a) * r * 0.7, 0.05, Math.sin(a) * r * 0.7, [1.4, 0.4, 1.1], 6);
+  }
+};
+
+/** Tảng đá san hô dạt lên bãi: khối trắng ngà rỗ, vài hòn nhỏ, nhánh san hô hồng nhô lên. */
+const sanHo: Ve = (p, h, rand) => {
+  const { r } = khung(p, h);
+  p.add(new THREE.DodecahedronGeometry(r * 0.78, 0), SAN_HO.rock, 0, r * 0.14, 0, [rand(), rand() * 6, rand() * 0.4], [1.05, 0.62, 0.95]);
+  for (let i = 0; i < 4; i++) {
+    const a = (i / 4) * Math.PI * 2 + rand();
+    const sz = r * (0.2 + rand() * 0.12);
+    p.add(new THREE.DodecahedronGeometry(sz, 0), i % 2 ? SAN_HO.dark : SAN_HO.rock, Math.cos(a) * r * 0.74, sz * 0.3, Math.sin(a) * r * 0.74, [rand(), rand() * 6, rand()], [1, 0.7, 1]);
+  }
+  // Nhánh san hô: chạc nhỏ trên lưng tảng đá.
+  for (let i = 0; i < 3; i++) {
+    const a = rand() * Math.PI * 2;
+    const x = Math.cos(a) * r * 0.3;
+    const z = Math.sin(a) * r * 0.3;
+    const y = r * 0.55;
+    p.cyl(0.025, 0.035, 0.22, SAN_HO.pink, x, y + 0.1, z, [(rand() - 0.5) * 0.6, 0, (rand() - 0.5) * 0.6], 5);
+    p.cyl(0.018, 0.025, 0.14, SAN_HO.pink, x + 0.05, y + 0.18, z, [0, 0, -0.6], 5);
+    p.cyl(0.018, 0.025, 0.14, SAN_HO.pink, x - 0.05, y + 0.16, z, [0, 0, 0.6], 5);
+  }
+};
+
 /** Mỗi dáng vật cản nhỏ vẽ thế nào (gộp chung một lưới). */
-export const VE: Partial<Record<DangCan, Ve>> = { tre, da, daNhon, rao, coc, rom, chum, xeCui, go, gieng, sim, cayChet, luy, nhaChay, ngo, lau, thanh };
+export const VE: Partial<Record<DangCan, Ve>> = { tre, da, daNhon, rao, coc, rom, chum, xeCui, go, gieng, sim, cayChet, luy, nhaChay, ngo, lau, thanh, phongBa, sanHo };
 
 /** Màu sen: lá, hoa, cánh nhạt. */
 const SEN = { leaf: [0x4f7f34, 0x5f9040, 0x46722e], flower: 0xf0a0b8, light: 0xf8d0dc };

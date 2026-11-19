@@ -7,7 +7,7 @@
 
 import { deflateSync, inflateSync } from 'fflate';
 import {
-  HERO_KINDS,
+  HERO_TRUYEN,
   isScored,
   retreatField,
   startPvp,
@@ -29,10 +29,12 @@ import {
   CH5_QUEST_START,
   DAU_THANH,
   DIEN_CHAPTER,
+  DOANH_MAX,
   GUARD_CAP,
   HUAN_BRANCHES,
   HUAN_COST,
   LAU_NO_TOWERS,
+  O_DO,
   RESOURCE_IDS,
   SKILL_IDS,
   TEMPLE_BONUS,
@@ -70,6 +72,7 @@ import { nuForUnit } from './nuTuong';
 import { fromBase64, toBase64 } from './save';
 import { heroesFor } from './son';
 import { huanTiers } from './thuThach';
+import { chupMon, kiemMon, monDangMac, tinhDo, type MonGoc } from './trangBi';
 
 // ---------- Bản chụp kinh đô ----------
 
@@ -97,8 +100,18 @@ export interface Snapshot {
   cap: number;
   /** Lính giữ thành, theo chỉ số công trình trong `buildings`. */
   guards: PvpGuard[];
-  /** Tướng giữ thành (đứng trước Điện, không dùng kỹ năng). */
+  /**
+   * Quân của người chơi (giữ kinh đô và dự trữ). Máy chủ dùng khi chính người này đi đánh thành: quân mang đi không
+   * quá chừng này. Không có doanh trại thì không mang quân nào.
+   */
+  troops: Record<UnitType, number>;
+  /** Tướng giữ thành (đứng trước Điện, không dùng kỹ năng). Không mang chỉ số đồ: xem `trangBi`. */
   heroes: HeroSetup[];
+  /**
+   * Món tướng giữ thành đang mặc. Máy chủ kiểm từng món (`kiemMon`) rồi tự tính chỉ số đồ (`tuongChup`), không tin số
+   * gửi lên. Bản chụp cũ không có trường này: tướng không đồ.
+   */
+  trangBi?: Partial<Record<HeroKind, MonGoc[]>>;
   bonus: number;
   arms: Record<UnitType, number>;
   huan: Record<HuanBranch, number>;
@@ -112,10 +125,37 @@ const snapped = (b: Pick<Building, 'type' | 'x' | 'z'>) => !isDecor(b.type) && !
 /** Nhiệm vụ đầu của từng chương (để kinh đô dựng lại ở đúng chương). */
 const QUEST_OF: Record<Chapter, number> = { 1: 0, 2: CH2_QUEST_START, 3: CH3_QUEST_START, 4: CH4_QUEST_START, 5: CH5_QUEST_START };
 
-/** Tướng giữ thành: như tướng ra trận giữ kinh đô ở chương hiện tại, kể cả tướng đang nghỉ (bản chụp dùng lâu). */
+/**
+ * Tướng giữ thành: như tướng ra trận giữ kinh đô ở chương hiện tại, kể cả tướng đang nghỉ (bản chụp dùng lâu). Bỏ
+ * phần chỉ số đồ: bản chụp mang món đang mặc thay cho số (`Snapshot.trangBi`).
+ */
 function defendHeroes(state: GameState): HeroSetup[] {
   const rested = { ...state, clock: Number.MAX_SAFE_INTEGER };
-  return heroesFor(rested, chapterOf(state)).map((h) => ({ ...h }));
+  return heroesFor(rested, chapterOf(state)).map((h) => ganDoChup(h, undefined));
+}
+
+/**
+ * Tướng vào trận Đấu thành: bỏ phần chỉ số đồ có sẵn (không tin số gửi lên), tính lại từ món `mon` (`tinhDo`). Không
+ * món nào thì tướng không đồ.
+ */
+export function ganDoChup(h: HeroSetup, mon: readonly MonGoc[] | undefined): HeroSetup {
+  const out = { ...h };
+  delete out.trangBi;
+  if (mon?.length) out.trangBi = tinhDo(h.kind, mon);
+  return out;
+}
+
+/** Tướng của bản chụp, gắn đồ tính lại từ món trong bản chụp: tướng giữ thành, hay tướng đi đánh của người đánh. */
+export const tuongChup = (snap: Snapshot): HeroSetup[] => snap.heroes.map((h) => ganDoChup(h, snap.trangBi?.[h.kind]));
+
+/** Món đang mặc của các tướng `heroes` (chỉ tướng có mặc), để đưa vào bản chụp. */
+function monChup(state: GameState, heroes: HeroSetup[]): Snapshot['trangBi'] {
+  const out: Partial<Record<HeroKind, MonGoc[]>> = {};
+  for (const h of heroes) {
+    const worn = monDangMac(state, h.kind);
+    if (worn.length) out[h.kind] = worn.map(chupMon);
+  }
+  return Object.keys(out).length ? out : undefined;
 }
 
 /** Chụp kinh đô của người chơi. */
@@ -140,6 +180,14 @@ export function makeSnapshot(state: GameState): Snapshot {
   for (let i = 0; i < GRID * GRID; i++) {
     if (state.heights[i] !== base[i] && farBankOf(i % GRID, Math.floor(i / GRID)) === null) heights.push(i, state.heights[i]);
   }
+  // Sức chứa tính theo công trình bờ bên này, đúng như máy chủ tính lại từ bản chụp (kho bên kia sông không chụp).
+  // Của trong kho được phép vượt sức chứa (thưởng nhiệm vụ, hoàn của khi hủy việc xây, dỡ kho): chỉ chụp tới sức
+  // chứa, phần vượt không ai cướp được.
+  const cap = storageCap({ ...state, buildings: keep });
+  const resources = { gao: 0, voOc: 0, datDa: 0, sat: 0, go: 0 };
+  for (const r of RESOURCE_IDS) resources[r] = Math.max(0, Math.min(cap, state.resources[r]));
+  const heroes = defendHeroes(state);
+  const trangBi = monChup(state, heroes);
   return {
     v: 1,
     dien: dienLevel(state),
@@ -154,10 +202,12 @@ export function makeSnapshot(state: GameState): Snapshot {
     })),
     heights,
     khoanh: [...state.khoanh],
-    resources: { ...state.resources },
-    cap: storageCap(state),
+    resources,
+    cap,
     guards,
-    heroes: defendHeroes(state),
+    troops: barracks ? { ...state.troops } : { giao: 0, cung: 0, voi: 0, no: 0 },
+    heroes,
+    ...(trangBi ? { trangBi } : {}),
     bonus: troopBonus(state),
     arms: { ...state.arms },
     huan: huanTiers(state) as Record<HuanBranch, number>,
@@ -192,7 +242,7 @@ export function defenseOf(snap: Snapshot): PvpDefense {
     hpMul: DAU_THANH.hpMul[snap.dien - 1],
     siege: DAU_THANH.siege[snap.dien - 1],
     guards: snap.guards.map((g) => ({ ...g })),
-    heroes: snap.heroes.map((h) => ({ ...h })),
+    heroes: tuongChup(snap),
     bonus: snap.bonus,
     arms: { ...snap.arms },
     huan: { ...snap.huan },
@@ -246,14 +296,41 @@ function isSnapshotShape(v: unknown): v is Snapshot {
     if (!isObj(g) || !isInt(g.at, 0, 1999) || !UNIT_TYPES.includes(g.kind as UnitType) || !isInt(g.n, 0, 999)) return false;
     if (g.nu !== undefined && g.nu !== true) return false;
   }
-  if (!Array.isArray(v.heroes) || v.heroes.length > 2 || !v.heroes.every((h) => isObj(h) && HERO_KINDS.includes(h.kind as HeroKind))) return false;
+  if (!isRecordOf(v.troops, UNIT_TYPES, (x) => isInt(x, 0, 9999))) return false;
+  if (!Array.isArray(v.heroes) || v.heroes.length > 2 || !v.heroes.every((h) => isObj(h) && HERO_TRUYEN.includes(h.kind as HeroKind))) return false;
+  if (v.trangBi !== undefined) {
+    // Bảng món theo tướng, mỗi tướng tối đa bốn món (từng món kiểm ở `validateSnapshot`).
+    if (!isObj(v.trangBi)) return false;
+    for (const [kind, list] of Object.entries(v.trangBi)) {
+      if (!HERO_TRUYEN.includes(kind as HeroKind) || !Array.isArray(list) || list.length > O_DO.length || !list.every(isObj)) return false;
+    }
+  }
   if (!isNum(v.bonus, 0, 1) || typeof v.crossbows !== 'boolean' || typeof v.walls !== 'boolean') return false;
   return isRecordOf(v.arms, UNIT_TYPES, (x) => isInt(x, 0, 9)) && isRecordOf(v.huan, HUAN_BRANCHES, (x) => isInt(x, 0, 9));
 }
 
 /**
+ * Đồ của tướng trong bản chụp hợp luật không: tướng không mang sẵn chỉ số đồ, tướng có món phải là tướng giữ thành,
+ * mỗi ô một món, từng món có thể là món rơi thật tới chương của bản chụp (`kiemMon`).
+ */
+function kiemDoChup(snap: Snapshot): string | null {
+  if (snap.heroes.some((h) => 'trangBi' in h)) return 'tướng mang sẵn chỉ số đồ';
+  for (const [kind, list] of Object.entries(snap.trangBi ?? {}) as [HeroKind, MonGoc[]][]) {
+    if (!snap.heroes.some((h) => h.kind === kind)) return `${kind} không giữ thành mà có đồ`;
+    const o = new Set<string>();
+    for (const m of list) {
+      const why = kiemMon(m, snap.chapter);
+      if (why) return `${kind}: ${why}`;
+      if (o.has(m.o)) return `${kind}: hai món cùng ô ${m.o}`;
+      o.add(m.o);
+    }
+  }
+  return null;
+}
+
+/**
  * Bản chụp có hợp luật không (chống bản chụp sửa tay): số công trình mỗi loại, cấp so với cấp Điện, chỗ đặt không
- * chồng nhau, đúng một Điện, ụ nỏ, lính giữ thành, binh khí, huân công, Đền, của so với sức chứa kho.
+ * chồng nhau, đúng một Điện, ụ nỏ, lính giữ thành, binh khí, huân công, Đền, đồ của tướng, của so với sức chứa kho.
  * Trả về lý do sai đầu tiên (để test và nhật ký), hay null nếu hợp luật.
  */
 export function validateSnapshot(snap: Snapshot): string | null {
@@ -281,16 +358,24 @@ export function validateSnapshot(snap: Snapshot): string | null {
   if ((count.get('choiCanh') ?? 0) + LAU_NO_TOWERS * (count.get('lauNo') ?? 0) > (BUILDINGS.choiCanh.limit[lv] ?? 0)) return 'quá số chòi canh';
   if (snap.buildings.filter((b) => b.uNo).length > (U_NO.limit[lv] ?? 0)) return 'quá số ụ nỏ';
   let space = 0;
+  const guarded = { giao: 0, cung: 0, voi: 0, no: 0 };
   for (const g of snap.guards) {
     if (snap.buildings[g.at]?.type !== 'doanhTrai') return 'lính giữ thành không ở doanh trại';
     space += g.n * UNITS[g.kind].space;
+    guarded[g.kind] += g.n;
   }
   if (space > (GUARD_CAP[lv] ?? 0)) return 'quá số lính giữ thành';
+  if (UNIT_TYPES.some((k) => guarded[k] > snap.troops[k])) return 'lính giữ thành nhiều hơn quân đang có';
+  // Sức chứa doanh trại nhân số doanh nhiều nhất (`capOf`): bản chụp không biết bao nhiêu tướng đã về.
+  const room = snap.buildings.reduce((n, b) => n + (b.type === 'doanhTrai' ? (BUILDINGS.doanhTrai.troopCap![b.level - 1] ?? 0) * DOANH_MAX : 0), 0);
+  if (armySpace(snap.troops) > room) return 'quá sức chứa doanh trại';
   if (UNIT_TYPES.some((k) => snap.arms[k] > ARMS.length)) return 'binh khí quá bậc';
   if (HUAN_BRANCHES.some((k) => snap.huan[k] > HUAN_COST.length)) return 'huân công quá bậc';
   if (snap.bonus > TEMPLE_BONUS + TET_TROI_BONUS + 1e-9) return 'Đền cộng quá mức';
   if (snap.crossbows && !count.get('denCoLoa')) return 'không có Đền Cổ Loa';
   if (snap.walls && !count.get('hoKimQuy')) return 'không có Hồ Kim Quy';
+  const doLoi = kiemDoChup(snap);
+  if (doLoi) return doLoi;
   const cap = storageCap(defenderState(snap));
   if (snap.cap > cap + 1e-9 || RESOURCE_IDS.some((r) => snap.resources[r] > cap + 1e-9)) return 'của quá sức chứa kho';
   return null;
@@ -361,10 +446,11 @@ export function botSnapshot(dien: number): Snapshot {
     chapter,
     buildings,
     heights: [],
-    khoanh: frameKhoanh(dien),
+    khoanh: frameKhoanh(dien, botMau(dien)),
     resources: { gao: 0, voOc: 0, datDa: 0, sat: 0, go: 0 },
     cap: 0,
     guards,
+    troops: { ...army },
     heroes: [],
     bonus: has('denPhuDong') ? TEMPLE_BONUS : 0,
     arms: { giao: arms, cung: arms, voi: arms, no: arms },
@@ -397,9 +483,11 @@ export interface PvpRun {
   /** Thời gian dồn lại chưa đủ một bước (giây). */
   acc: number;
   done: boolean;
+  /** Trận xem lại (PR 6): các lần bấm đã có sẵn, không ghi thêm. */
+  replay?: true;
 }
 
-/** Quân đánh thành của người chơi: quân chọn, tướng, Đền, binh khí, huân công như phó bản. */
+/** Quân đánh thành của người chơi: quân chọn, tướng (mặc đồ đang mặc), Đền, binh khí, huân công như phó bản. */
 export function attackFrom(state: GameState, army: Army, side: 'bac' | 'tay', seed: number): PvpAttack {
   return {
     army: { ...army },
@@ -418,9 +506,32 @@ export function beginPvp(snap: Snapshot, attack: PvpAttack): PvpRun {
   return { snap, attack, def, battle, inputs: [], step: 0, acc: 0, done: false };
 }
 
+/** Số lần bấm nhiều nhất một trận (máy chủ bỏ phần thừa, nên máy khách cũng không ghi quá). */
+export const PVP_MAX_INPUTS = 600;
+
 /** Ghi một lần bấm: áp ở đầu bước kế tiếp. */
 export function pushInput(run: PvpRun, k: PvpInput['k']): void {
-  if (!run.done) run.inputs.push({ s: run.step, k });
+  if (!run.done && !run.replay && run.inputs.length < PVP_MAX_INPUTS) run.inputs.push({ s: run.step, k });
+}
+
+/** Bước lớn nhất một lần bấm được ghi (trận dài nhất chừng 3600 bước). */
+const INPUT_MAX_STEP = 10_000;
+
+/**
+ * Lọc các lần bấm nhận từ ngoài (máy khách gửi lên máy chủ, hay máy chủ trả về để xem lại): đúng dạng, đúng kỹ năng,
+ * bước không quá giới hạn, không quá `PVP_MAX_INPUTS` lần. Máy chủ đánh lại và máy khách xem lại cùng lọc như nhau.
+ */
+export function cleanInputs(raw: unknown): PvpInput[] {
+  if (!Array.isArray(raw)) return [];
+  const out: PvpInput[] = [];
+  for (const i of raw.slice(0, PVP_MAX_INPUTS)) {
+    if (!i || typeof i !== 'object') continue;
+    const { s, k } = i as Record<string, unknown>;
+    if (!Number.isInteger(s) || (s as number) < 0 || (s as number) > INPUT_MAX_STEP) continue;
+    if (k !== 'rut' && !(SKILL_IDS as unknown[]).includes(k)) continue;
+    out.push({ s: s as number, k: k as PvpInput['k'] });
+  }
+  return out;
 }
 
 /** Chạy đúng một bước: áp các lần bấm của bước này rồi chạy trận thêm `BATTLE_STEP`. */
@@ -452,6 +563,17 @@ export function simulatePvp(snap: Snapshot, attack: PvpAttack, inputs: PvpInput[
   const run = beginPvp(snap, attack);
   run.inputs = inputs.map((i) => ({ ...i })).filter((i) => i.k === 'rut' || SKILL_IDS.includes(i.k));
   while (!run.done && run.step < MAX_STEPS) stepOnce(run);
+  return run;
+}
+
+/**
+ * Trận xem lại (PR 6): cùng bản chụp, quân đánh thành và các lần bấm đã ghi như `simulatePvp`, nhưng chạy theo thời
+ * gian thật bằng `stepPvp` để người chơi nhìn; tới bước nào thì lần bấm của bước ấy tự áp. Ra y hệt trận gốc.
+ */
+export function replayPvp(snap: Snapshot, attack: PvpAttack, inputs: unknown): PvpRun {
+  const run = beginPvp(snap, attack);
+  run.inputs = cleanInputs(inputs);
+  run.replay = true;
   return run;
 }
 

@@ -2,7 +2,7 @@
 // điểm lạ và vùng đồn bên kia; cầu (đặt, đầu cầu, đi qua, lũ cuốn, vòng thành hở), trinh sát, đoạn truyện.
 
 import { describe, expect, it } from 'vitest';
-import { findPath, startBattle, stepBattle } from './battle';
+import { heSoGanh } from './vanChuyen';import { findPath, startBattle, stepBattle } from './battle';
 import {
   BANKS,
   CAMP1_ARMY,
@@ -643,7 +643,8 @@ describe('đất bên kia được gì: đặc sản, bản làng, của chôn',
     if (!r.ok) throw new Error(r.reason);
     r.value.workers = 99;
     expect(dacSanOf(r.value)).toBe('phuSa');
-    expect(outputIn(s, r.value).gao).toBeCloseTo(outputOf(r.value).gao! * (1 + DAC_SAN_BONUS), 6);
+    // Ruộng bên kia sông xa kho: dân gánh qua cầu về, phần mất vì đường xa nhân thêm (`vanChuyen.ts`).
+    expect(outputIn(s, r.value).gao).toBeCloseTo(outputOf(r.value).gao! * (1 + DAC_SAN_BONUS) * heSoGanh(s, r.value), 6);
     // Bãi đất đá trên phù sa: không hợp nghề.
     const bai = place(s, 'baiDa', o.x + 1, o.z + 1 - 1);
     expect(bai.ok && dacSanOf(bai.value)).toBe(false);
@@ -662,12 +663,13 @@ describe('đất bên kia được gì: đặc sản, bản làng, của chôn',
     expect(joinVillage(s, lang).ok).toBe(true);
     const bridge = s.buildings.find((b) => b.type === 'cauSongDa')!;
     const before = productionPerMinute(s).gao;
+    const ganh = heSoGanh(s, r.value);
     bridge.damaged = true;
     expect(cutOff(s, r.value)).toBe(true);
     expect(outputIn(s, r.value)).toEqual({});
     const after = productionPerMinute(s).gao;
     const bonus = 1 + templeBonus(s);
-    expect(after).toBeCloseTo(before - outputOf(r.value).gao! * (1 + DAC_SAN_BONUS) * bonus, 4);
+    expect(after).toBeCloseTo(before - outputOf(r.value).gao! * (1 + DAC_SAN_BONUS) * ganh * bonus, 4);
     expect(after).toBeGreaterThanOrEqual(villageOutput(s, lang).gao! * bonus - 1e-6);
     // Công trình bên này không bị ảnh hưởng.
     expect(cutOff(s, s.buildings.find((b) => b.type === 'dien')!)).toBe(false);

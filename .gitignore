@@ -5,3 +5,8 @@ dist/
 chup/
 .claude/worktrees/
 meshy_output/
+# Luật máy chủ đóng gói (node scripts/luat.mjs)
+supabase/functions/dau-thanh/luat.js
+# Supabase CLI
+supabase/.temp/
+supabase/.branches/

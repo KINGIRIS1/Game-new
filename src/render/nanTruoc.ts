@@ -2,7 +2,7 @@
 // đứng lại. Lúc mở game, một worker nặn sẵn các nhân vật của chương đang chơi, gửi về cho nanNguoi.ts dùng lại.
 
 import type { FighterKind } from '../game/battle';
-import { NU_TUONG, STAGES, UNITS, stageEnemies, type NuTuongId, type UnitType } from '../game/defs';
+import { NU_TUONG, STAGES, UNITS, stageEnemies, type NuTuongId, type ThanThuId, type UnitType } from '../game/defs';
 import { demViec, ghiViec, luuSau, viecCan } from './nanKho';
 import { addFigures, hasFigure } from './nanNguoi';
 import type { CanhId, Job, JobDone } from './nanSan';
@@ -14,18 +14,18 @@ import workerUrl from './nanSan.worker.ts?worker&url';
  */
 export const KHO_PHIEN_BAN: string | null = import.meta.env.DEV ? null : `1|${workerUrl.split('/').pop()}`;
 
-/** Tướng theo chương. */
-const HEROES: Record<number, FighterKind[]> = { 1: ['giong'], 2: ['sonTinh'], 3: ['anDuong'], 4: ['caoLo'], 5: ['trungTrac', 'trungNhi'] };
+/** Tướng theo chương (tướng dã ngoại đánh ở map 6–10, cấp đồ của map là chương 5). */
+const HEROES: Record<number, FighterKind[]> = { 1: ['giong'], 2: ['sonTinh'], 3: ['anDuong'], 4: ['caoLo'], 5: ['trungTrac', 'trungNhi', 'baTrieu', 'trieuQuangPhuc', 'maiThucLoan', 'ngoQuyen', 'lyThuongKiet'] };
 /** Cảnh màn cầm cự theo chương: Mộ Dạ (màn 32), Cấm Khê (màn 40). */
 const HOLD_SCENES: Record<number, CanhId[]> = { 4: ['moDa'], 5: ['camKhe'] };
 
 /**
- * Việc nặn sẵn theo thứ tự cần trước: quân ta (đúng bậc binh khí), giặc (cả các đợt kéo tới sau) và tướng của chương
+ * Việc nặn sẵn theo thứ tự cần trước: thần thú đã về (`thu`, đi lại trong kinh đô), quân ta (đúng bậc binh khí), giặc (cả các đợt kéo tới sau) và tướng của chương
  * đang chơi, nhân vật cảnh mọi bãi chiến (người đánh trống, người lái đò), cảnh màn cầm cự của chương, rồi giặc, tướng
  * và cảnh màn cầm cự các chương trước (vẫn đánh kinh đô: lũ, đêm yêu tinh, quân Triệu; phó bản cũ đánh lại được), cá
  * ngoài biển khi Điện đã ra tới biển.
  */
-export function prewarmJobs(chapter: number, arms: Record<UnitType, number>, sea: boolean): Job[] {
+export function prewarmJobs(chapter: number, arms: Record<UnitType, number>, sea: boolean, thu: readonly ThanThuId[] = []): Job[] {
   const jobs: Job[] = [];
   const seen = new Set<string>();
   const add = (j: Job) => {
@@ -34,6 +34,8 @@ export function prewarmJobs(chapter: number, arms: Record<UnitType, number>, sea
     seen.add(k);
     jobs.push(j);
   };
+  // Thần thú đi lại trong kinh đô ngay lúc vào game: nặn trước.
+  for (const id of thu) add(['thu', id]);
   for (const u of Object.keys(UNITS) as UnitType[]) if (u !== 'no' || chapter >= 4) add(['danh', u, arms[u] ?? 0]);
   for (let ch = chapter; ch >= 1; ch--) {
     for (const st of STAGES) if (st.chapter === ch) for (const k of Object.keys(stageEnemies(st)) as FighterKind[]) add(['danh', k, 0]);
@@ -83,6 +85,10 @@ const makeWorker = () =>
 
 /** Worker mở sẵn lúc tải trang (`moSanWorker`), chờ việc. */
 let san: Worker | null = null;
+/** Số việc đã giao worker mà chưa xong (đo lag chờ về 0 rồi mới đo, khỏi bị worker giành máy). */
+let conNan = 0;
+
+export const nanConLai = (): number => conNan;
 
 /**
  * Mở sẵn worker ngay khi tải trang, trước khi đọc kho và dựng cảnh: worker cần luồng chính rảnh một chút mới khởi động
@@ -123,12 +129,21 @@ export function nanTruoc(jobs: readonly Job[]): void {
     return;
   }
   const w = worker;
+  let con = todo.length;
+  conNan += con;
+  const het = () => {
+    conNan -= con;
+    con = 0;
+    w.terminate();
+  };
   w.onmessage = (e: MessageEvent<JobDone | null>) => {
-    if (!e.data) return w.terminate();
+    if (!e.data) return het();
+    con--;
+    conNan--;
     addFigures(e.data.figs);
     ghiViec(e.data.job, e.data.keys);
     luuSau();
   };
-  w.onerror = () => w.terminate();
+  w.onerror = het;
   w.postMessage(todo);
 }

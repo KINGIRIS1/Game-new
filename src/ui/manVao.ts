@@ -1,4 +1,5 @@
-// Màn hình vào game: mặt trống đồng có chim Lạc bay vòng, tên game, tóm tắt bản lưu, nút vào kinh đô.
+// Màn hình vào game: mặt trống đồng có chim Lạc bay vòng, tên game, tóm tắt bản lưu, nút vào kinh đô, và tài khoản
+// Google (đăng nhập ngay từ đây, hay chơi ngay rồi gắn Google sau trong Cài đặt).
 // Hiện ngay khi mở trang, trong lúc dựng cảnh 3D; dựng xong thì cảnh kinh đô hiện ra sau lớp chữ và nút mới bấm được.
 
 import type { TomTat } from '../game/manVao';
@@ -122,9 +123,54 @@ function cardHtml(t: TomTat | null): string {
   </div>`;
 }
 
+/**
+ * Tài khoản Google ở màn hình vào game (`main.ts` lập từ phiên ở máy này và câu trả lời của máy chủ). Chỉ có khi máy
+ * chủ đã bật đăng nhập Google, hay máy này đã đăng nhập Google.
+ */
+export interface ManVaoTk {
+  /** Đã đăng nhập Google ở máy này (kèm email để hiện cho chính người chơi), hay null. */
+  google: { email: string | null } | null;
+  /** Bản lưu trên mây khác với bản ở máy này: cấp Điện và lúc lưu (chữ đã xếp sẵn). */
+  lech: { dien: number; luc: string } | null;
+  /** Dòng báo: vừa tải về, vừa lưu lên, tài khoản chưa có bản lưu. */
+  bao: string | null;
+  /** Lỗi của lần qua trang Google hay lần gọi máy chủ vừa rồi. */
+  loi: string | null;
+  /** Lỗi là tài khoản Google ấy đã có kinh đô khác: thêm nút đăng nhập thẳng vào tài khoản ấy. */
+  khac: boolean;
+  /** Đang mở trang Google, hay đang tải bản lưu về (các nút khóa lại). */
+  ban: 'google' | 'tai' | null;
+}
+
+/** Nhãn nút vào game. */
+const playLabel = (t: TomTat | null): string => (t ? (t.moi ? vi.manVao.start : vi.manVao.continue) : vi.manVao.loading);
+
+/**
+ * Khối tài khoản Google. Chưa đăng nhập: nút Đăng nhập Google và lời nhắc chơi ngay thì gắn sau trong Cài đặt. Đã đăng
+ * nhập: email, và nếu bản trên mây khác bản ở máy này thì nút tải về (`armed`: đã bấm một lần, chờ bấm lần nữa; game
+ * mới thì nút tải về là nút chính).
+ */
+export function tkHtml(t: TomTat, tk: ManVaoTk, armed: boolean): string {
+  const m = vi.manVao;
+  const off = tk.ban ? 'disabled' : '';
+  const loi = tk.loi ? `<p class="mv-why">${esc(tk.loi)}</p>` : '';
+  if (!tk.google) {
+    const khac = tk.khac ? `<button class="btn ghost mv-google" data-act="googleIn" ${off}>${esc(m.googleOther)}</button>` : '';
+    return `<div class="mv-tk">${loi}
+      <button class="btn ghost mv-google" data-act="google" ${off}>${esc(tk.ban === 'google' ? m.googleOpening : m.googleIn)}</button>${khac}
+      <p class="mv-note">${esc(t.moi ? m.googleNoteNew : m.googleNote)}</p></div>`;
+  }
+  const lech = tk.lech
+    ? `<p class="mv-note">${esc(m.cloudDiff(tk.lech.dien, tk.lech.luc))}</p>${armed ? `<p class="mv-why">${esc(m.cloudLoadConfirm)}</p>` : ''}
+      <button class="btn ${armed ? '' : t.moi ? 'bronze' : 'ghost'} mv-google" data-act="load" ${off}>${esc(tk.ban === 'tai' ? m.cloudLoading : m.cloudLoad)}</button>`
+    : '';
+  return `<div class="mv-tk"><p class="mv-as">${esc(m.googleAs(tk.google.email))}</p>${loi}${tk.bao ? `<p class="mv-note">${esc(tk.bao)}</p>` : ''}${lech}</div>`;
+}
+
 export function manVaoHtml(t: TomTat | null, muted: boolean): string {
   const m = vi.manVao;
-  const label = t ? (t.moi ? m.start : m.continue) : m.loading;
+  // Khối tài khoản nằm dưới nút vào game; khi bản trên mây khác bản ở máy này thì lên trên nút, cho người chơi thấy
+  // trước khi bấm Bắt đầu hay Chơi tiếp (`ManVao.setTk` điền vào một trong hai chỗ).
   return `<div class="mv-veil"></div>
     <button class="mv-sound" data-act="mute" aria-label="${esc(muted ? m.soundOff : m.soundOn)}">${soundIcon(muted)}</button>
     <div class="mv-head">
@@ -134,7 +180,9 @@ export function manVaoHtml(t: TomTat | null, muted: boolean): string {
     </div>
     <div class="mv-foot">
       <div class="mv-card-slot">${cardHtml(t)}</div>
-      <button class="btn bronze mv-play" data-act="enter" ${t ? '' : 'disabled'}>${esc(label)}</button>
+      <div class="mv-tk-slot" data-cho="tren"></div>
+      <button class="btn bronze mv-play" data-act="enter" ${t ? '' : 'disabled'}>${esc(playLabel(t))}</button>
+      <div class="mv-tk-slot" data-cho="duoi"></div>
     </div>`;
 }
 
@@ -149,11 +197,21 @@ export class ManVao {
   private muted: boolean;
   private tomTat: TomTat | null = null;
   private closed = false;
+  private tk: ManVaoTk | null = null;
+  /** Đã bấm Tải về máy này một lần (bản lưu đang có ở máy sẽ bị thay nên phải bấm lần nữa). */
+  private armed = false;
 
   constructor(
     parent: HTMLElement,
     muted: boolean,
-    private readonly on: { enter: () => void; mute: () => boolean },
+    private readonly on: {
+      enter: () => void;
+      mute: () => boolean;
+      /** Bấm Đăng nhập Google; `khac`: đăng nhập thẳng vào tài khoản đã có kinh đô khác. */
+      google: (khac: boolean) => void;
+      /** Tải bản lưu trên mây về máy này. */
+      load: () => void;
+    },
   ) {
     this.muted = muted;
     this.el = document.createElement('div');
@@ -170,6 +228,17 @@ export class ManVao {
         btn.setAttribute('aria-label', this.muted ? vi.manVao.soundOff : vi.manVao.soundOn);
       } else if (btn.dataset.act === 'enter' && this.tomTat) {
         this.on.enter();
+      } else if (btn.dataset.act === 'google' || btn.dataset.act === 'googleIn') {
+        this.on.google(btn.dataset.act === 'googleIn');
+      } else if (btn.dataset.act === 'load' && this.tomTat) {
+        // Game mới thì chưa có gì để mất: tải luôn. Đã có kinh đô ở máy này thì bấm hai lần.
+        if (!this.tomTat.moi && !this.armed) {
+          this.armed = true;
+          this.renderTk();
+        } else {
+          this.armed = false;
+          this.on.load();
+        }
       }
     });
     document.body.classList.add('man-vao-on');
@@ -184,12 +253,44 @@ export class ManVao {
     this.el.innerHTML = manVaoHtml(this.tomTat, this.muted);
   }
 
+  /** Điền khối tài khoản vào chỗ trên hay dưới nút vào game; phần còn lại của màn hình giữ nguyên. */
+  private renderTk(): void {
+    const html = this.tomTat && this.tk ? tkHtml(this.tomTat, this.tk, this.armed) : '';
+    const tren = !!this.tk?.google && !!this.tk.lech;
+    for (const slot of this.el.querySelectorAll<HTMLElement>('.mv-tk-slot')) slot.innerHTML = (slot.dataset.cho === 'tren') === tren ? html : '';
+    // Game mới mà trên mây đã có kinh đô: tải về mới là việc chính, nút Bắt đầu nhường màu cho nút tải về.
+    const nhuong = tren && !!this.tomTat?.moi;
+    const play = this.el.querySelector<HTMLElement>('.mv-play');
+    play?.classList.toggle('bronze', !nhuong);
+    play?.classList.toggle('ghost', nhuong);
+  }
+
   /** Cảnh đã dựng xong: vén lớp phủ cho thấy kinh đô, hiện tóm tắt bản lưu, cho bấm nút. */
   ready(t: TomTat): void {
     this.tomTat = t;
     this.render();
+    this.renderTk();
     // Để trình duyệt vẽ lớp phủ đặc một khung rồi mới mờ đi, cho kinh đô hiện ra từ từ.
     requestAnimationFrame(() => this.el.classList.add('ready'));
+  }
+
+  /** Tài khoản Google đổi (máy chủ vừa trả lời, vừa bấm nút); null thì không hiện gì. */
+  setTk(tk: ManVaoTk | null): void {
+    if (this.closed) return;
+    if (!tk?.lech) this.armed = false;
+    this.tk = tk;
+    this.renderTk();
+  }
+
+  /** Bản lưu ở máy này vừa đổi (tải bản trên mây về): thẻ tóm tắt và nhãn nút theo bản mới. */
+  update(t: TomTat): void {
+    if (this.closed || !this.tomTat) return;
+    this.tomTat = t;
+    const slot = this.el.querySelector<HTMLElement>('.mv-card-slot');
+    if (slot) slot.innerHTML = cardHtml(t);
+    const play = this.el.querySelector<HTMLElement>('.mv-play');
+    if (play) play.textContent = playLabel(t);
+    this.renderTk();
   }
 
   /** Mờ dần rồi gỡ khỏi trang; khung giao diện chính hiện lại cùng lúc. */
