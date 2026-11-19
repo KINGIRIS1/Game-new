@@ -1834,15 +1834,28 @@ export function aoLauSay(h: HumanRig): void {
   cloak(h, { color: C.lauSay, trim: C.lauSayDark, hem: 0.2, flare: 0.1 });
 }
 
-/** Mũ đâu mâu: mũ trụ đồng vành xanh đầm hoa văn, sống mũ vàng, che gáy, chóp cắm tua đỏ; móng rồng ôm ngọc cài trước trán. */
-function dauMau(h: HumanRig): void {
-  helmet(h, { color: C.bronze, rim: 0.83, lift: 0.05, puff: 0.01, band: C.tqp, bandH: 0.04, bandPattern: true, ridge: C.gold, neck: 0.08, guard: C.bronze, guardTrim: C.gold, top: { kind: 'tube', color: C.gold }, tuft: { color: C.red, len: 0.14, lean: 0.35, r: 0.025 } });
-  // Móng rồng nhỏ ôm ngọc cài giữa vành mũ trước trán.
-  h.local('head', [0, 0.86, 0.165], [0.35, 0, 0], (s) => mongRong(s, 0.75));
+/** Bạc của trăng khuyết trên miện Triệu Quang Phục. */
+const TRANG_BAC = 0xe3e9ee;
+
+/**
+ * Miện lá của Triệu Quang Phục: cùng dáng miện lá các tướng nam (vòng sắt, vành đồng hoa văn, quạt năm lá đồng, tai xoắn),
+ * điểm nhấn riêng theo "ngày ẩn đêm ra": giữa trán là trăng khuyết bạc ôm một ngôi sao vàng thay cho mặt trời trống
+ * đồng; lòng lá khảm xanh đầm, chóp lá giữa bạc; sau gáy buộc khăn xanh đầm, hai dải bay ra sau.
+ */
+function mienTqp(h: HumanRig): void {
+  diadem(h, { color: IRON_DARK, y: 0.8, h: 0.026, puff: 0.014 });
+  diadem(h, { color: C.bronze, pattern: true, y: 0.824, h: 0.043, puff: 0.01 });
+  mien(h, { ...MIEN, color: C.bronze, inlay: C.tqp, bar: C.bronzeLight, curls: C.bronze, finial: TRANG_BAC, h: 0.25, w: 0.08, y: 0.852 });
+  h.local('head', [0, 0.875, 0.205], [-0.35, 0, 0], (s) => {
+    // Trăng khuyết: cung tròn hở phía trên, hai mũi vểnh lên; ngôi sao vàng giữa lòng trăng.
+    s.plain.add(new THREE.TorusGeometry(0.062, 0.02, 6, 20, Math.PI * 1.25), TRANG_BAC, 0, 0, 0, [0, 0, Math.PI * 0.875]);
+    s.plain.sphere(0.022, C.gold, 0, 0.01, 0.006, [1, 1, 0.6], 6);
+  });
+  for (const sd of [-1, 1]) streamer(h, { from: [sd * 0.05, 0.86, -0.15], dir: [sd * 0.3, -1, -0.45], len: 0.3, width: 0.065, color: C.tqp, bone: 'head' });
 }
 
 /**
- * Triệu Quang Phục: áo xanh đầm Dạ Trạch, áo lau sậy, râu ngắn, mũ đâu mâu cài móng rồng, giáo Dạ Trạch.
+ * Triệu Quang Phục: áo xanh đầm Dạ Trạch, áo lau sậy, râu ngắn, miện lá của tướng, giáo Dạ Trạch.
  */
 function drawTrieuQuangPhuc(h: HumanRig, thay: ThayDo = {}): void {
   humanBody(h, {
@@ -1861,7 +1874,8 @@ function drawTrieuQuangPhuc(h: HumanRig, thay: ThayDo = {}): void {
   if (!thay.than) aoLauSay(h);
   humanHead(h, { brows: true, mustache: C.hair, beard: C.hair, beardLen: 0.1 });
   hairCap(h);
-  if (!thay.dau) dauMau(h);
+  bun(h, { color: C.hair, at: [0, 0.985, -0.01], size: 0.08, tie: C.tqp });
+  if (!thay.dau) mienTqp(h);
   // Hình tướng ở túi đồ: giáo ngắn hơn cho vừa khung.
   if (!thay.tay) h.vuKhi(() => h.local('hand', GRIP_R, null, (s) => giaoDaTrach(s, thay.hinh ? 1.2 : 1.5)));
 }
