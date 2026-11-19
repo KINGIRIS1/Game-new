@@ -1998,7 +1998,7 @@ function drawMaiThucLoan(h: HumanRig, thay: ThayDo = {}): void {
   bun(h, { color: C.hair, at: [0, 0.985, -0.01], size: 0.085, tie: C.red });
   if (!thay.dau) mienMtl(h);
   // Hình tướng ở túi đồ: đao ngắn hơn cho vừa khung.
-  if (!thay.tay) h.vuKhi(() => h.local('hand', GRIP_R, null, (s) => daoVanAn(s, thay.hinh ? 1.2 : 1.5)));
+  if (!thay.tay) h.vuKhi(() => h.local('hand', GRIP_R, null, (s) => daoVanAn(s, thay.hinh ? 1.0 : 1.5)));
 }
 
 /**

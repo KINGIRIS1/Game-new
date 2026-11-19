@@ -475,7 +475,7 @@ export const MON_VE: Record<MonId, VeMon> = {
   'daTrach-baoVat': { cho: 'bay', rieng: quay(toon((m) => mongRong(m, 2, 0.12)), Math.PI / 2), xoay: [0.2, 0.6 - Math.PI / 2, 0] },
 
   // Bộ Vạn An (Mai Thúc Loan, tướng dã ngoại map 8).
-  'vanAn-vuKhi': { cho: 'tay', cam: 'dung', mac: tayPhai((s) => daoVanAn(s, 1.2)), rieng: toon((m) => daoVanAn(m)), xoay: [0, 1.2, -Math.PI / 4] },
+  'vanAn-vuKhi': { cho: 'tay', cam: 'dung', mac: tayPhai((s) => daoVanAn(s, 1.0)), rieng: toon((m) => daoVanAn(m)), xoay: [0, 1.2, -Math.PI / 4] },
   'vanAn-giap': { cho: 'than', mac: giapDaTrau, rieng: tren(giapDaTrau, true), xoay: [0, 0.45, 0] },
   'vanAn-phucSuc': { cho: 'lung', mac: aoBaoDen, rieng: tren(aoBaoDen, true), xoay: [0, Math.PI - 0.6, 0] },
   'vanAn-baoVat': { cho: 'bay', rieng: toon(anHacDe), xoay: [0.35, 1.15, 0] },
