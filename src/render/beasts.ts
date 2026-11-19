@@ -1149,7 +1149,7 @@ const RUA_THAN_DEFS: Defs = {
   ...BASE,
   qBody: { parent: 'base', at: [0, 0.05, 0] },
   qNeck: { parent: 'qBody', at: [0, 0.14, 0.64] },
-  qHead: { parent: 'qNeck', at: [0, 0.27, 0.97] },
+  qHead: { parent: 'qNeck', at: [0, 0.3, 0.97] },
   qFL: { parent: 'qBody', at: [-0.38, 0.08, 0.42] },
   qFR: { parent: 'qBody', at: [0.38, 0.08, 0.42] },
   qBL: { parent: 'qBody', at: [-0.34, 0.07, -0.5] },
@@ -1158,14 +1158,31 @@ const RUA_THAN_DEFS: Defs = {
 };
 
 /**
- * Rùa Vàng thần thú (dã ngoại, đi lại trong kinh đô): Kim Quy mai dẹt dài vàng kim chia múi đồng sẫm, da xanh ngọc,
- * đầu rùa thật có râu vàng dưới cằm, ngọc sáng trên đỉnh mai; đi thì bò chèo bốn chân như rùa biển, đánh thì vươn cổ đớp.
+ * Rùa Vàng thần thú (dã ngoại, đi lại trong kinh đô): Quy trong tứ linh (Long Quy), mai dẹt dài vàng kim chia múi đồng
+ * sẫm, da xanh ngọc, đầu rồng có bờm lửa, sừng rạp, râu vàng dài cuộn, đuôi xòe mây lửa, ngọc sáng trên đỉnh mai; đi thì bò chèo bốn chân như rùa biển, đánh thì vươn cổ đớp.
  */
 export function makeRuaThan(): THREE.Group {
   const draw = (r: Rig) => {
     ruaThanBody(r);
     const head = r.on('qHead');
-    for (const s of [-1, 1]) head.plain.cyl(0.004, 0.009, 0.14, C.gold, s * 0.035, 0.17, 1.08, [0.35, 0, s * 0.25], 4);
+    // Râu rồng vàng dài từ mép mõm cuộn ra sau.
+    for (const s of [-1, 1]) {
+      let p = new THREE.Vector3(s * 0.04, 0.34, 1.25);
+      for (const [dx, dy, dz] of [
+        [0.07, 0.02, -0.03],
+        [0.08, -0.02, -0.1],
+        [0.05, -0.06, -0.14],
+        [0.0, -0.05, -0.14],
+        [-0.03, 0.0, -0.1],
+      ] as const) {
+        const q = p.clone().add(new THREE.Vector3(s * dx, dy, dz));
+        const d = q.clone().sub(p);
+        const e = new THREE.Euler().setFromQuaternion(new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 1, 0), d.clone().normalize()));
+        const m = p.clone().add(q).multiplyScalar(0.5);
+        head.plain.cyl(0.005, 0.008, d.length(), C.gold, m.x, m.y, m.z, [e.x, e.y, e.z], 4);
+        p = q;
+      }
+    }
     r.on('qBody').glow.sphere(0.045, 0xffe878, 0, 0.32, -0.02, [1, 0.6, 1], 8);
   };
   return rigged({ defs: RUA_THAN_DEFS, draw, pose: poseRuaBien }, 0);

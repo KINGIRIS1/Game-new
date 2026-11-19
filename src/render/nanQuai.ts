@@ -209,15 +209,19 @@ function dragonPieces(o: { body: readonly (readonly [number, number, number, num
   }
   clay.add('qHead', ellipsoid(add3(h, [0, -0.075, 0.13]), [0.045, 0.02, 0.12], [-0.28, 0, 0]), { k: 0.015 });
   clay.sub('qHead', ellipsoid(add3(h, [0, -0.05, 0.22]), [0.06, 0.014, 0.1], [-0.15, 0, 0]), 0.008);
-  // Bốn chân nhỏ mảnh: đùi, cẳng co về sau.
-  o.legs.forEach((l, i) => {
-    const b = ['qFL', 'qFR', 'qBL', 'qBR'][i];
+  // Bốn chân mảnh vươn như đang vồ: bắp tay chĩa ra ngoài, khuỷu gập, cẳng vươn (chân trước vươn tới, chân sau duỗi ra sau).
+  const chan = o.legs.map((l, i) => {
     const s = i % 2 ? 1 : -1;
-    const knee = add3(l, [s * 0.07, -0.1, 0.05]);
-    const foot = add3(l, [s * 0.09, -0.2, -0.03]);
-    clay.add(b, cone(l, knee, 0.04, 0.028), { k: 0.03 });
-    clay.add(b, cone(knee, foot, 0.028, 0.022), { k: 0.02 });
+    const dz = i < 2 ? 1 : -1;
+    const elbow = add3(l, [s * 0.15, -0.04, dz * 0.06]);
+    const wrist = add3(elbow, [s * 0.04, -0.12, dz * 0.14]);
+    return { b: ['qFL', 'qFR', 'qBL', 'qBR'][i], s, dz, l, elbow, wrist };
   });
+  for (const c of chan) {
+    clay.add(c.b, cone(c.l, c.elbow, 0.036, 0.022), { k: 0.02 });
+    clay.add(c.b, cone(c.elbow, c.wrist, 0.02, 0.016), { k: 0.01 });
+    clay.add(c.b, sphere(c.wrist, 0.022), { k: 0.01 });
+  }
   const f = clay.dist;
   const paints: Paint[] = [];
   // Bụng ngà chạy dọc mặt dưới, lên tới cổ và hàm dưới.
@@ -270,6 +274,17 @@ function dragonPieces(o: { body: readonly (readonly [number, number, number, num
     fin.add('qHead', cone(mid, tip, 0.02, 0.003), { k: 0.01 });
     finPaint.push(fin.layer('qHead', sphere(tip, 0.1), C.ember));
   }
+  // Chùm lửa đỏ ở khuỷu chân, vắt ra sau.
+  for (const c of chan) {
+    for (const [dy, dl] of [
+      [0.04, 0.26],
+      [-0.01, 0.2],
+    ] as const) {
+      const tip = add3(c.elbow, [c.s * 0.05, dy + 0.04, -0.06 - dl]);
+      fin.add(c.b, flatY(cone(c.elbow, tip, 0.04, 0.003), c.elbow[1] + dy * 0.5, 0.4), { k: 0.01 });
+      finPaint.push(fin.layer(c.b, sphere(tip, 0.05), C.ember));
+    }
+  }
   const tail = pts[n - 1];
   for (const [dx, dy] of [
     [0, 0.12],
@@ -292,12 +307,16 @@ function dragonPieces(o: { body: readonly (readonly [number, number, number, num
     horn.add('qHead', cone(root, mid, 0.018, 0.012), { k: 0.008 });
     horn.add('qHead', cone(mid, add3(mid, [s * 0.01, 0.02, -0.1]), 0.012, 0.003), { k: 0.006 });
   }
-  o.legs.forEach((l, i) => {
-    const b = ['qFL', 'qFR', 'qBL', 'qBR'][i];
-    const s = i % 2 ? 1 : -1;
-    const foot = add3(l, [s * 0.09, -0.2, -0.03]);
-    for (const a of [-0.6, 0, 0.6]) horn.add(b, cone(foot, add3(foot, [Math.sin(a) * 0.06 + s * 0.01, -0.03, Math.cos(a) * 0.065]), 0.012, 0.002), { k: 0.006 });
-  });
+  // Vuốt: bốn ngón xòe cong quặp xuống, một ngón sau.
+  for (const c of chan) {
+    for (const a of [-0.75, -0.25, 0.25, 0.75]) {
+      const k1 = add3(c.wrist, [Math.sin(a) * 0.07, -0.005, c.dz * Math.cos(a) * 0.07]);
+      const k2 = add3(k1, [Math.sin(a) * 0.04, -0.06, c.dz * Math.cos(a) * 0.03]);
+      horn.add(c.b, cone(c.wrist, k1, 0.014, 0.01), { k: 0.004 });
+      horn.add(c.b, cone(k1, k2, 0.01, 0.002), { k: 0.003 });
+    }
+    horn.add(c.b, cone(c.wrist, add3(c.wrist, [-c.s * 0.03, -0.02, -c.dz * 0.03]), 0.009, 0.0015), { k: 0.003 });
+  }
   out.push(build(horn, [-0.7, 0.2, -2.0], [0.7, 2.0, 1.2], 0.006, 600, detail));
   return out;
 }
