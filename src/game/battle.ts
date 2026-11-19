@@ -70,6 +70,8 @@ import {
   TRIEU_QUANG_PHUC,
   MAI_THUC_LOAN,
   HAC_DE,
+  NGO_QUYEN,
+  COC_BACH_DANG,
   TT_SUMMON,
   TT_WAVE,
   UNITS,
@@ -128,10 +130,10 @@ export type RaidSide = 'bac' | 'tay' | 'nam' | 'dong' | 'namXa' | 'dongXa';
  * Tướng ra trận cùng quân ta: Thánh Gióng, Sơn Tinh, An Dương Vương, Cao Lỗ, hay Hai Bà Trưng (chương 5). Mỗi trận một
  * tướng, riêng Hai Bà: mỗi bà một voi, cùng ra một trận.
  */
-export type HeroKind = 'giong' | 'sonTinh' | 'anDuong' | 'caoLo' | 'trungTrac' | 'trungNhi' | 'baTrieu' | 'trieuQuangPhuc' | 'maiThucLoan';
+export type HeroKind = 'giong' | 'sonTinh' | 'anDuong' | 'caoLo' | 'trungTrac' | 'trungNhi' | 'baTrieu' | 'trieuQuangPhuc' | 'maiThucLoan' | 'ngoQuyen';
 /** Lính thường, giặc, tướng, hoặc nghĩa binh (Hiệu triệu của Trưng Nhị gọi ra). */
 export type FighterKind = UnitType | EnemyType | HeroKind | 'nghiaBinh';
-export const HERO_KINDS: HeroKind[] = ['giong', 'sonTinh', 'anDuong', 'caoLo', 'trungTrac', 'trungNhi', 'baTrieu', 'trieuQuangPhuc', 'maiThucLoan'];
+export const HERO_KINDS: HeroKind[] = ['giong', 'sonTinh', 'anDuong', 'caoLo', 'trungTrac', 'trungNhi', 'baTrieu', 'trieuQuangPhuc', 'maiThucLoan', 'ngoQuyen'];
 /** Tướng của truyện: ra phó bản, giữ kinh đô, giữ thành trong Đấu thành (tướng dã ngoại chỉ đánh ở dã ngoại). */
 export const HERO_TRUYEN: HeroKind[] = ['giong', 'sonTinh', 'anDuong', 'caoLo', 'trungTrac', 'trungNhi'];
 export const isHero = (k: FighterKind): k is HeroKind => (HERO_KINDS as FighterKind[]).includes(k);
@@ -270,7 +272,9 @@ export interface BattleEvent {
     /** Ngày ẩn đêm ra: Triệu Quang Phục ở (x, z) cho cả đội lặn vào đầm `len` giây. */
     | 'an'
     /** Hắc Đế dấy binh: Mai Thúc Loan ở (x, z) phất cờ đen hô quân `len` giây, giặc trong vòng `r` ô quay sang ông. */
-    | 'hacDe';
+    | 'hacDe'
+    /** Cọc Bạch Đằng: Ngô Quyền cắm bãi cọc bán kính `r` ô ở (tx, tz), đứng `len` giây. */
+    | 'coc';
   x: number;
   z: number;
   tx?: number;
@@ -355,6 +359,11 @@ export interface Battle {
   waveCount?: number;
   /** Giây còn lại của Lệnh bắn: lính nỏ (và khi giữ kinh đô cả ụ nỏ, lầu nỏ) bắn nhanh hơn. */
   lenh?: number;
+  /**
+   * Bãi cọc Bạch Đằng đang đứng: tâm (x, z), bán kính `r` (đã nhân hệ số hình học), còn `t` giây, giặc trong bãi mất
+   * `dps` máu mỗi giây (thuyền `thuyen`; đã nhân uy lực lúc cắm).
+   */
+  coc?: { x: number; z: number; r: number; t: number; dps: number; thuyen: number }[];
   /** Ai đánh kinh đô (trận ngoài bãi để 'an'). Yêu tinh nhắm phá thành Cổ Loa trước tiên. */
   foe: Foe;
   /** Giây còn lại của Rùa Vàng che chở quân ta. */
@@ -442,6 +451,8 @@ export const statsOf = (k: FighterKind): FighterStats =>
                 ? TRIEU_QUANG_PHUC
               : k === 'maiThucLoan'
                 ? MAI_THUC_LOAN
+              : k === 'ngoQuyen'
+                ? NGO_QUYEN
               : k === 'nghiaBinh'
                 ? NGHIA_BINH
                 : k in UNITS
@@ -607,6 +618,7 @@ export function heroSkills(hero: HeroSetup): SkillId[] {
   if (hero.kind === 'baTrieu') return ['chemCaKinh'];
   if (hero.kind === 'trieuQuangPhuc') return ['ngayAn'];
   if (hero.kind === 'maiThucLoan') return ['hacDe'];
+  if (hero.kind === 'ngoQuyen') return ['cocBachDang'];
   return hero.bamboo ? ['phunLua', 'nhoTre'] : ['phunLua'];
 }
 
@@ -2973,6 +2985,23 @@ export function skillReady(battle: Battle, skill: SkillId): boolean {
   return !!skillOwner(battle, skill) && battle.fighters.some((f) => f.side === 'giac' && isAlive(f) && f.kind !== 'lauThuyen');
 }
 
+/**
+ * Bãi cọc Bạch Đằng đứng thêm `dt` giây: giặc trong bãi đi chậm (`TT_WAVE.slow`) và mất máu; hết giờ thì cọc thụt
+ * xuống. Cọc đâm cả thuyền, lâu thuyền (thuyền mất máu gấp đôi).
+ */
+export function stepCoc(battle: Battle, dt: number): void {
+  if (!battle.coc?.length) return;
+  for (const c of battle.coc) {
+    for (const o of battle.fighters) {
+      if (o.side === 'ta' || !isAlive(o) || o.state === 'dead' || dist(o.x - c.x, o.z - c.z) > c.r) continue;
+      o.slow = Math.max(o.slow ?? 0, 0.1);
+      damageFighter(battle, { dmg: (o.ship || o.kind === 'lauThuyen' ? c.thuyen : c.dps) * dt }, o);
+    }
+    c.t -= dt;
+  }
+  battle.coc = battle.coc.filter((c) => c.t > 0);
+}
+
 /** Bấm kỹ năng. Trả về false khi kỹ năng chưa hồi, không có trong trận này, hoặc trận đã xong. */
 export function useSkill(battle: Battle, skill: SkillId): boolean {
   if (!skillReady(battle, skill)) return false;
@@ -3202,6 +3231,17 @@ export function useSkill(battle: Battle, skill: SkillId): boolean {
     }
     hero.swing = 0.3;
     emit(battle, { kind: 'hacDe', x: hero.x, z: hero.z, len: t, r: HAC_DE.tam });
+  } else if (skill === 'cocBachDang') {
+    // Cọc Bạch Đằng: Ngô Quyền cắm bãi cọc gỗ lim bịt sắt ở chỗ giặc đứng đông nhất; giặc trong bãi đi chậm, mất máu.
+    const r = bo4 ? BO_BON.cocBachDang.r : COC_BACH_DANG.r;
+    const t = bo4 ? BO_BON.cocBachDang.t : COC_BACH_DANG.t;
+    const at = densest(battle, r * g, 'giac', hero) ?? nearestEnemyOf(battle, hero);
+    if (at) {
+      (battle.coc ??= []).push({ x: at.x, z: at.z, r: r * g, t, dps: COC_BACH_DANG.dps * scale, thuyen: COC_BACH_DANG.thuyen * scale });
+      hero.face = Math.atan2(at.x - hero.x, at.z - hero.z);
+      emit(battle, { kind: 'coc', x: hero.x, z: hero.z, tx: at.x, tz: at.z, len: t, r });
+    }
+    hero.swing = 0.3;
   } else {
     // Dời non: đá mọc lên dưới chân mọi kẻ địch quanh Sơn Tinh, giữ chân chúng vài giây.
     for (const o of battle.fighters) {

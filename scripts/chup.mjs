@@ -63,6 +63,7 @@ const BA_TRIEU = `s.daNgoai.boss[5] = 1; s.hinted.push('daNgoai6', 'daNgoai7', '
 const TQP = `${BA_TRIEU} s.daNgoai.boss[6] = 1;`;
 /** Mai Thúc Loan đã về: boss map 8 đã bị hạ một lần (Bà Triệu, Triệu Quang Phục cũng đã về). */
 const MTL = `${TQP} s.daNgoai.boss[7] = 1;`;
+const NQ = `${MTL} s.daNgoai.boss[8] = 1;`;
 const CHUONG5 = (cleared) => `M.playChapters({ s, last: 8 });${CO_QUAN}
   for (const b of s.buildings) if (b.type === 'doanhTrai') b.level = D.BUILDINGS.doanhTrai.maxLevel;
   const cho5 = G.troopCap(s);
@@ -560,6 +561,28 @@ d.camera(cx, cz, 2.6);`,
     truoc: `${CHUONG5(35)}\n${MTL}\nfor (let id = S.pendingStory(s); id && id !== 'maiThucLoan'; id = S.pendingStory(s)) S.markStory(s, id);`,
     giuTruyen: true,
     sau: `document.querySelector('[data-act=storyNext]').click(); document.querySelector('[data-act=storyNext]').click();`,
+  },
+  'nq': {
+    mo: 'Ngô Quyền đã về, đội Ngô Quyền, Mai Thúc Loan, Bà Triệu ra map 9 khu 3, sau 4 giây bấm Cọc Bạch Đằng',
+    truoc: `${CHUONG5(35)}\n${NQ}\ns.daNgoai.doi = ['ngoQuyen', 'maiThucLoan', 'baTrieu'];`,
+    sau: `d.daNgoai(9, 2); await new Promise((r) => setTimeout(r, 4000)); d.skill('cocBachDang'); await new Promise((r) => setTimeout(r, 900));`,
+    doi: 300,
+  },
+  'nq-tui': {
+    mo: 'Ngô Quyền đã về, mặc đủ bộ Bạch Đằng: bảng tướng, thẻ Túi đồ của Ngô Quyền',
+    truoc: `${CHUONG5(35)}\n${NQ}\nconst T = await import('/src/game/trangBi.ts'); const co = new Set(); for (let q = 0; co.size < 4; q++) { const m = T.rutMon(q, 'daBoss', 5, ['bachDang'], [0, 0, 0, 100]); if (co.has(m.o)) continue; co.add(m.o); s.trangBi.kho.push({ ...m, cuong: 6, id: s.trangBi.nextId++, tuong: 'ngoQuyen' }); }`,
+    sau: `d.tuong('ngoQuyen');`,
+  },
+  'nq-truyen': {
+    mo: 'Vừa hạ Lưu Hoằng Tháo lần đầu: đoạn truyện Ngô Quyền về, thẻ thứ ba (lời Ngô Quyền)',
+    truoc: `${CHUONG5(35)}\n${NQ}\nfor (let id = S.pendingStory(s); id && id !== 'ngoQuyen'; id = S.pendingStory(s)) S.markStory(s, id);`,
+    giuTruyen: true,
+    sau: `document.querySelector('[data-act=storyNext]').click(); document.querySelector('[data-act=storyNext]').click();`,
+  },
+  'nq-dien': {
+    mo: 'Kinh đô chương 5, bốn tướng dã ngoại đã về: nhìn sân chầu Điện từ phía cổng, Ngô Quyền ở chỗ 16 (cột ngoài bên trái, gần cổng)',
+    truoc: `${CHUONG5(35)}\n${NQ}`,
+    sau: `const b = s.buildings.find((x) => x.type === 'dien'); const { courtSlot } = await import('/src/render/congTrinh/dien.ts'); const c = courtSlot('ngoQuyen'); const R = await import('/src/game/map.ts'); const t = R.turnLocal(b.rot, c.x, c.z); d.camera(b.x + 5 + t.x, b.z + 5 + t.z, 4.2);`,
   },
   'dien-da': {
     mo: 'Kinh đô chương 5, ba tướng dã ngoại đã về: nhìn sân chầu Điện từ phía cổng, hai chỗ mới ngoài cùng hàng ba',

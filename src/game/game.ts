@@ -315,7 +315,9 @@ export type StoryId =
   /** Hạ Trần Bá Tiên ở map 7 lần đầu: Triệu Quang Phục về (Lý Nam Đế trao binh quyền). */
   | 'trieuQuangPhuc'
   /** Hạ Dương Tư Húc ở map 8 lần đầu: Mai Thúc Loan về. */
-  | 'maiThucLoan';
+  | 'maiThucLoan'
+  /** Hạ Lưu Hoằng Tháo ở map 9 lần đầu: Ngô Quyền về. */
+  | 'ngoQuyen';
 
 /** Một lời mời đổi hàng của thuyền buôn: đưa `give`, nhận `get`. */
 export interface Offer {

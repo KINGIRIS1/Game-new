@@ -446,6 +446,25 @@ export function giaoDaTrach(s: Parts, len = 1.5): void {
 }
 
 /**
+ * Giáo dài Bạch Đằng của Ngô Quyền: cán gỗ lim dài `len`, đai bạc, đuôi cán bịt sắt nhọn; khâu sắt, tua đỏ dưới khâu;
+ * lưỡi sắt dài hình lá, sống lưỡi bạc, hai ngạnh nhỏ ở chân lưỡi. Tay nắm cách đuôi cán `grip` (giáo dài cầm gần giữa).
+ */
+export function giaoBachDang(s: Parts, len = 2.0, grip = 0.6): void {
+  const p = s.plain;
+  const top = len - grip;
+  p.cyl(0.02, 0.022, len, C.goLim, 0, len / 2 - grip, 0, undefined, 6);
+  for (let y = -grip + 0.25; y < top - 0.15; y += 0.42) p.cyl(0.025, 0.025, 0.022, C.songBac, 0, y, 0, undefined, 6);
+  p.cone(0.026, 0.12, IRON, 0, -grip - 0.05, 0, [Math.PI, 0, 0], 5);
+  p.cyl(0.026, 0.024, 0.07, IRON_DARK, 0, top + 0.03, 0, undefined, 6);
+  s.band.cyl(0.03, 0.03, 0.03, C.bachDang, 0, top + 0.01, 0, undefined, 8);
+  p.cone(0.055, 0.15, C.red, 0, top - 0.06, 0, [Math.PI, 0, 0], 7);
+  // Hai ngạnh nhỏ chân lưỡi, lưỡi lá dài, sống bạc.
+  for (const sd of [-1, 1]) p.cone(0.014, 0.07, IRON, sd * 0.035, top + 0.08, 0, [0, 0, -sd * 0.9], 4);
+  p.sphere(0.06, IRON, 0, top + 0.27, 0, [1, 3.8, 0.3], 8);
+  p.box(0.011, 0.4, 0.032, C.songBac, 0, top + 0.27, 0);
+}
+
+/**
  * Đại đao Vạn An của Mai Thúc Loan: cán gỗ sơn đen dài 1,5, ba đai vàng, đuôi cán bịt sắt; khâu vàng, tua đỏ buông
  * dưới khâu; lưỡi sắt to bản cong như trăng non, sống lưỡi vàng, mũi vểnh. Tay nắm cách đuôi cán 0,3; lưỡi sắc hướng +z.
  */

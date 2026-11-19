@@ -199,6 +199,13 @@ export const C = {
   daTrau: 0x7a4e2c,
   daTrauDark: 0x553419,
   hoQuan: 0xc0392b,
+  // Ngô Quyền (Bạch Đằng): xanh biển cửa sông, sóng bạc, gỗ lim.
+  bachDang: 0x245a86,
+  bachDangLight: 0x3f80b4,
+  bachDangDark: 0x173a5a,
+  songBac: 0xe4eff5,
+  goLim: 0x6e3b26,
+  goLimDark: 0x4a2617,
   aoNau: 0x7a5434,
   khanNau: 0x4d3423,
   quanPhuc: 0x25222a,

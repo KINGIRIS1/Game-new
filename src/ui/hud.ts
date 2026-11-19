@@ -1954,6 +1954,7 @@ export class Hud {
       baTrieu: () => vi.ui.tuongDaDesc,
       trieuQuangPhuc: () => vi.ui.tuongDaDesc,
       maiThucLoan: () => vi.ui.tuongDaDesc,
+      ngoQuyen: () => vi.ui.tuongDaDesc,
     };
     const open: Partial<Record<TuongId, string>> = { giong: 'openGiong', sonTinh: 'openSon', anDuong: 'openAdv', caoLo: 'openCaoLo' };
     const rows = generals(state).map((t, i) => {

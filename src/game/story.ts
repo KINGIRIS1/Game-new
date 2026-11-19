@@ -45,6 +45,7 @@ const STORY_ORDER: StoryId[] = [
   'baTrieu',
   'trieuQuangPhuc',
   'maiThucLoan',
+  'ngoQuyen',
 ];
 const STORY_WHEN: Record<StoryId, (s: GameState) => boolean> = {
   mo: () => true,
@@ -95,6 +96,8 @@ const STORY_WHEN: Record<StoryId, (s: GameState) => boolean> = {
   trieuQuangPhuc: (s) => tuongDaVe(s, 'trieuQuangPhuc'),
   // Hạ boss map 8 lần đầu: Mai Thúc Loan về.
   maiThucLoan: (s) => tuongDaVe(s, 'maiThucLoan'),
+  // Hạ boss map 9 lần đầu: Ngô Quyền về.
+  ngoQuyen: (s) => tuongDaVe(s, 'ngoQuyen'),
 };
 
 /** Đoạn truyện đến lúc kể mà người chơi chưa xem, theo đúng thứ tự. */

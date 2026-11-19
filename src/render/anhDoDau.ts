@@ -2,6 +2,10 @@
 // game dùng làm ?v= cho trình duyệt tải ảnh mới khi ảnh đổi; anhDo.test.ts so với mô hình hiện tại.
 
 export const ANH_DO_DAU: Record<string, string> = {
+  'bachDang-baoVat': '1866e9fa',
+  'bachDang-giap': 'dffe412b',
+  'bachDang-phucSuc': '7cf14981',
+  'bachDang-vuKhi': 'f17b054b',
   'caoLo-baoVat': '41b0d7e7',
   'caoLo-giap': 'a9d6b189',
   'caoLo-phucSuc': '9a0e6b55',

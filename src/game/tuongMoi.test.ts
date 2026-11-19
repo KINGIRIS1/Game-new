@@ -3,11 +3,12 @@
 // phó bản, không giữ thành trong Đấu thành), đứng chầu trong sân; Chém cá kình nhắm kẻ nhiều máu nhất, đủ bốn món bộ
 // Núi Nưa thì mạnh hơn và choáng; bộ Núi Nưa chỉ rơi ở map 6 khi Bà đã về, máy chủ nhận ở chương 5. PR 2 là Triệu
 // Quang Phục (map 7): Ngày ẩn đêm ra cho cả đội ẩn, quái mất dấu, hết ẩn thì đòn đầu mạnh gấp bội; bộ Dạ Trạch. PR 3
-// là Mai Thúc Loan (map 8): Hắc Đế dấy binh cho cả đội thêm sức đánh, quái quanh ông quay sang ông; bộ Vạn An.
+// là Mai Thúc Loan (map 8): Hắc Đế dấy binh cho cả đội thêm sức đánh, quái quanh ông quay sang ông; bộ Vạn An. PR 4 là
+// Ngô Quyền (map 9): Cọc Bạch Đằng cắm bãi cọc ở chỗ quái đông nhất, quái trong bãi đi chậm, mất máu từng giây; bộ Bạch Đằng.
 
 import { describe, expect, it } from 'vitest';
-import { HERO_KINDS, isAlive, strike, useSkill, type Battle } from './battle';
-import { BO_DO, CA_KINH, DA_BOSS_MS, DOANH_MAX, GIFT_IDS, HAC_DE, NGAY_AN, ROI_DO, type BoDo, type Chapter } from './defs';
+import { HERO_KINDS, isAlive, stepCoc, strike, useSkill, type Battle } from './battle';
+import { BO_DO, CA_KINH, COC_BACH_DANG, DA_BOSS_MS, DOANH_MAX, GIFT_IDS, HAC_DE, NGAY_AN, ROI_DO, type BoDo, type Chapter } from './defs';
 import { capNhatDa, datDoi, moMap, tuongCo } from './daNgoai';
 import { boCuc } from './daNgoaiMap';
 import { stepDa } from './daNgoaiTran';
@@ -488,3 +489,144 @@ describe('bộ Vạn An', () => {
     expect(tinhDo('maiThucLoan', hai).giap - tinhDo('giong', hai).giap).toBeCloseTo(0.08, 6);
   });
 });
+
+/** Hạ boss map 9 (Lưu Hoằng Tháo) như trận thật báo về. */
+function haBoss9(s: GameState): void {
+  s.daNgoai.map = 9;
+  s.daNgoai.cap = 90;
+  datDoi(s, ['giong']);
+  const b = moMap(s);
+  b.da!.giet.push({ kind: 'hoangThao', cap: 92, khu: -1, boss: true, x: 0, z: 0 });
+  capNhatDa(s, b);
+}
+
+/** Map 9, đội Ngô Quyền và Gióng, đứng giữa khu `k`. */
+function tranNq(s: GameState, k = 0): Battle {
+  s.daNgoai.map = 9;
+  s.daNgoai.tuDanh = false;
+  const kh = boCuc(9).khu[k];
+  s.daNgoai.cho = { x: kh.x, z: kh.z };
+  expect(datDoi(s, ['ngoQuyen', 'giong']).ok).toBe(true);
+  return moMap(s);
+}
+
+describe('Ngô Quyền về khi hạ boss map 9', () => {
+  it('hạ Lưu Hoằng Tháo lần đầu thì về, kể truyện một lần; chỉ đánh ở dã ngoại', () => {
+    const s = base();
+    haBoss8(s);
+    expect(tuongJoined(s, 'ngoQuyen')).toBe(false);
+    expect(datDoi(s, ['ngoQuyen']).ok).toBe(false);
+    haBoss9(s);
+    expect(tuongJoined(s, 'ngoQuyen')).toBe(true);
+    expect(tuongCo(s)).toContain('ngoQuyen');
+    for (let id = pendingStory(s); id && id !== 'ngoQuyen'; id = pendingStory(s)) markStory(s, id);
+    expect(pendingStory(s)).toBe('ngoQuyen');
+    markStory(s, 'ngoQuyen');
+    expect(pendingStory(s)).toBeNull();
+    expect(generals(s)).not.toContain('ngoQuyen');
+    for (const ch of CHUONG) expect(heroesFor(s, ch).map((h) => h.kind)).not.toContain('ngoQuyen');
+    const sua = { ...makeSnapshot(s), heroes: [{ kind: 'ngoQuyen' as const, bamboo: false, glow: false, non: false }] };
+    expect(validateSnapshot(sua)).not.toBeNull();
+  });
+});
+
+describe('Cọc Bạch Đằng', () => {
+  /** Ba con quái đứng chụm một chỗ, một con đứng lẻ; tất cả máu rất dày, đứng yên. */
+  function dat(bo4 = false) {
+    const s = base();
+    haBoss9(s);
+    const b = tranNq(s);
+    if (bo4) b.hero!.trangBi = { ...tinhDo('ngoQuyen', []), bo4: true };
+    const nq = b.fighters.find((f) => f.kind === 'ngoQuyen')!;
+    const quai = b.fighters.filter((f) => f.side === 'giac' && isAlive(f) && f.nha);
+    for (const q of quai) {
+      q.x = nq.x + 40;
+      q.z = nq.z;
+    }
+    const [a, c, d, le] = quai;
+    for (const [q, dx] of [[a, 3], [c, 3.4], [d, 3.8]] as const) {
+      q.x = nq.x + dx;
+      q.z = nq.z + 2;
+    }
+    le.x = nq.x - 3;
+    le.z = nq.z;
+    for (const q of quai) q.hp = q.maxHp = 1e6;
+    return { b, nq, chum: [a, c, d], le };
+  }
+
+  it('cắm ở chỗ quái đông nhất; quái trong bãi đi chậm, mất máu theo giây; quái ngoài bãi không sao; hết 6 giây thì thôi', () => {
+    const { b, chum, le } = dat();
+    expect(useSkill(b, 'cocBachDang')).toBe(true);
+    const coc = b.coc![0];
+    expect(dist2(coc, chum[1])).toBeLessThan(0.5);
+    expect(coc.t).toBe(COC_BACH_DANG.t);
+    expect(coc.thuyen / coc.dps).toBeCloseTo(COC_BACH_DANG.thuyen / COC_BACH_DANG.dps, 6);
+    expect(b.events.some((e) => e.kind === 'coc')).toBe(true);
+    const truoc = chum.map((q) => q.hp);
+    for (let t = 0; t < 1 - 1e-9; t += 0.05) stepCoc(b, 0.05);
+    chum.forEach((q, i) => {
+      expect(truoc[i] - q.hp).toBeCloseTo(coc.dps, 3);
+      expect(q.slow ?? 0).toBeGreaterThan(0);
+    });
+    expect(le.hp).toBe(le.maxHp);
+    expect(le.slow ?? 0).toBe(0);
+    // Thuyền mất máu gấp đôi.
+    const thuyen = chum[0];
+    thuyen.ship = { ox: 0, oz: 0, tx: thuyen.x, tz: thuyen.z, delay: 0 };
+    const h0 = thuyen.hp;
+    stepCoc(b, 0.5);
+    expect(h0 - thuyen.hp).toBeCloseTo(coc.thuyen * 0.5, 3);
+    for (let t = 0; t < COC_BACH_DANG.t; t += 0.05) stepCoc(b, 0.05);
+    expect(b.coc).toEqual([]);
+  });
+
+  it('đủ bốn món bộ Bạch Đằng: bãi cọc 2,5 → 3,2 ô, 6 → 8 giây', () => {
+    const thuong = dat();
+    useSkill(thuong.b, 'cocBachDang');
+    const du = dat(true);
+    useSkill(du.b, 'cocBachDang');
+    expect(du.b.coc![0].t).toBe(8);
+    expect(du.b.coc![0].r / thuong.b.coc![0].r).toBeCloseTo(3.2 / 2.5, 6);
+  });
+
+  it('Tự đánh tự dùng Cọc Bạch Đằng khi có quái gần, vẫn hạ được quái', () => {
+    const s = base();
+    haBoss9(s);
+    const b = tranNq(s);
+    b.da!.tuDanh = true;
+    for (const f of b.fighters) if (f.side === 'ta') f.hp = f.maxHp = 1e6;
+    const giet = b.da!.giet.length;
+    chay(b, 30);
+    expect(b.skillCd.cocBachDang ?? 0).toBeGreaterThan(0);
+    expect(b.da!.giet.length).toBeGreaterThan(giet);
+  });
+});
+
+describe('bộ Bạch Đằng', () => {
+  it('chỉ rơi ở map 9 sau khi Ngô Quyền về; máy chủ nhận ở chương 5; hai món thêm uy lực khi ông mặc', () => {
+    const s = base();
+    const rut = () => {
+      const bo = new Set<BoDo>();
+      s.trangBi.kho.length = 0;
+      s.daNgoai.map = 9;
+      datDoi(s, ['giong']);
+      for (let i = 0; i < 200; i++) {
+        const b = moMap(s);
+        b.da!.giet.push({ kind: 'raiCa', cap: 85, khu: 0, boss: false, x: 0, z: 0 });
+        capNhatDa(s, b);
+      }
+      for (const m of s.trangBi.kho) bo.add(m.bo);
+      return bo;
+    };
+    expect(rut().has('bachDang')).toBe(false);
+    haBoss9(s);
+    expect([...rut()]).toEqual(['bachDang']);
+    for (const ch of CHUONG) expect(boRoi(s, 'giu', ch)).not.toContain('bachDang');
+    const m = rutMon(5, 'daBoss', 5, ['bachDang'], [0, 0, 0, 100])!;
+    expect(kiemMon(m, 5)).toBeNull();
+    const hai = (['vuKhi', 'giap'] as const).map((o) => ({ ...m, o, chinh: o === 'vuKhi' ? 'danh' : 'mau' }) as typeof m);
+    expect(tinhDo('ngoQuyen', hai).uy - tinhDo('giong', hai).uy).toBeCloseTo(0.1, 6);
+  });
+});
+
+const dist2 = (a: { x: number; z: number }, b: { x: number; z: number }) => Math.hypot(a.x - b.x, a.z - b.z);

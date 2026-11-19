@@ -6,13 +6,14 @@ import { heroSetups, type Battle, type Fighter, type FighterKind } from '../game
 import { FIRE, HIEU_TRIEU, HILL, LIEN_CHAU, MA_VIEN_VOLLEY, RALLY_BEAT, ROCKS, SKILLS, SMASH, SWIMMERS, TT_WAVE, type NuTuongId, type UnitType } from '../game/defs';
 import { isBeast, makeBeast, makeRuaVang } from './beasts';
 import { isMonster, makeMonster } from './monsters';
-import { makeAnDuong, makeBaTrieu, makeCaoLo, makeGiong, makeNuTuong, makeSonTinh, makeMaiThucLoan, makeThuyTinh, makeTrieuQuangPhuc, makeTrungNhi, makeTrungTrac } from './heroes';
+import { makeAnDuong, makeBaTrieu, makeCaoLo, makeGiong, makeNuTuong, makeSonTinh, makeMaiThucLoan, makeNgoQuyen, makeThuyTinh, makeTrieuQuangPhuc, makeTrungNhi, makeTrungTrac } from './heroes';
 import { LAU_THUYEN_SINK, makeEnemyBoat, makeFighter, makeMountain } from './models';
 import { C } from './palette';
 import type { Poser } from './rig';
 import { ShapeBuilder, disposeModel, seeded } from './shapes';
 import { isSoldier, makeSoldier } from './soldier';
 import { ToonModel, drumWaveTex, inkThin, outlineOf, toon } from './toon';
+import { IRON, IRON_DARK } from './weapons';
 
 interface FighterView {
   obj: THREE.Group;
@@ -62,6 +63,10 @@ interface Crag {
   cracks: THREE.Group;
   crackMat: THREE.MeshBasicMaterial;
   age: number;
+  /** Đứng tới giây `hold`, lún hẳn ở `life` (không có thì như Dời non, `CRAG_HOLD`, `CRAG_LIFE`); vết đất đậm `op`. */
+  hold?: number;
+  life?: number;
+  op?: number;
 }
 
 /** Bức tường sóng Thủy Tinh hô lên, chạy dọc dải bị quét rồi đổ sụp. */
@@ -203,6 +208,7 @@ const SCALE: Partial<Record<FighterKind, number>> = {
   baTrieu: 0.75,
   trieuQuangPhuc: 0.8,
   maiThucLoan: 0.8,
+  ngoQuyen: 0.8,
   toDinh: 1,
 };
 /** Thứ đi dưới nước: lâu thuyền, lính còn trên thuyền, thủy quái. Qua ô cầu thì đi dưới gầm, không lên mặt cầu. */
@@ -275,6 +281,19 @@ const foamMat = new THREE.MeshBasicMaterial({ color: C.foam });
 const whirlGeo = new THREE.RingGeometry(0.25, 0.42, 20, 1, 0, Math.PI * 1.5).rotateX(-Math.PI / 2);
 
 /** Một mỏm núi đá Dời non: khối đá nhọn nhiều mặt, đỉnh sáng màu, có viền mực. Gốc ở chân. */
+/** Cọc Bạch Đằng: cọc gỗ lim cao `h`, chân thẫm nước, đai sắt, mũi bịt sắt nhọn (gốc ở chân cọc). */
+function cocSpike(h: number, r: number): THREE.Group {
+  const b = new ShapeBuilder(false, true);
+  b.cyl(r * 0.8, r, h, C.goLim, 0, h / 2, 0, undefined, 6);
+  b.cyl(r * 1.05, r * 1.05, h * 0.22, C.goLimDark, 0, h * 0.11, 0, undefined, 6);
+  b.cyl(r * 0.9, r * 0.9, 0.04, IRON_DARK, 0, h * 0.78, 0, undefined, 6);
+  b.cone(r * 0.85, h * 0.3, IRON, 0, h + h * 0.15, 0, undefined, 5);
+  const g = new THREE.Group();
+  const mesh = b.mesh(toon);
+  g.add(mesh, outlineOf(mesh.geometry, inkThin));
+  return g;
+}
+
 function cragSpike(h: number, r: number, rand: () => number): THREE.Group {
   const b = new ShapeBuilder(false, true);
   b.cone(r, h, rand() < 0.5 ? C.rock : C.rockDark, 0, h / 2, 0, undefined, 5);
@@ -684,6 +703,8 @@ export class BattleView {
             ? makeTrieuQuangPhuc({ anh })
             : f.kind === 'maiThucLoan'
             ? makeMaiThucLoan({ anh })
+            : f.kind === 'ngoQuyen'
+            ? makeNgoQuyen({ anh })
             : f.kind === 'trungTrac'
             ? makeTrungTrac({ glow, anh })
             : f.kind === 'trungNhi'
@@ -1034,6 +1055,59 @@ export class BattleView {
       const px = x + Math.cos(a) * (ROCKS.radius * this.geo);
       const pz = z + Math.sin(a) * (ROCKS.radius * this.geo);
       this.addPuff(px + ox, this.heightAt(px, pz) + 0.2, pz + oz, i % 3 ? C.earth : C.rock, 0.05 + (i / 12) * 0.12, 0.9, 1.8);
+    }
+  }
+
+  /**
+   * Cọc Bạch Đằng: Ngô Quyền chỉ giáo về chỗ giặc đông nhất (tx, tz); bãi cọc gỗ lim đầu bịt sắt trồi lên lần lượt
+   * trong vòng `r` ô, nền bãi sẫm nước, sóng bạc tung ở chân cọc; đứng `len` giây rồi thụt xuống.
+   */
+  private cocBachDang(battle: Battle, tx: number, tz: number, len: number, r: number, seq: number): void {
+    const { x: ox, z: oz } = this.offset;
+    const hero = battle.fighters.find((f) => f.kind === 'ngoQuyen');
+    const view = hero && this.fighters.get(hero.id);
+    if (view) view.cast = CAST_TIME;
+    const rand = seeded(seq * 131 + 29);
+    const rr = r * this.geo;
+    const group = new THREE.Group();
+    group.position.set(tx + ox, 0, tz + oz);
+    const spikes: Crag['spikes'] = [];
+    const n = Math.round(10 + rr * 4);
+    for (let i = 0; i < n; i++) {
+      // Rải đều trong vòng (vòng ngoài dày hơn), cọc chĩa xiên ra ngoài như hàng cọc đón thuyền.
+      const a = i * 2.39996 + rand() * 0.4;
+      const d = rr * Math.sqrt((i + 0.5) / n) * (0.9 + rand() * 0.1);
+      const px = Math.cos(a) * d;
+      const pz = Math.sin(a) * d;
+      const h = (0.55 + rand() * 0.35) * this.scale;
+      const obj = cocSpike(h, 0.06 * this.scale);
+      obj.position.set(px, this.heightAt(tx + px, tz + pz) - h, pz);
+      const lean = 0.25 + rand() * 0.15;
+      obj.rotation.set(Math.sin(a) * lean, 0, -Math.cos(a) * lean);
+      group.add(obj);
+      spikes.push({ obj, h, delay: (d / Math.max(rr, 0.1)) * 0.25 + rand() * 0.05 });
+    }
+    // Nền bãi cọc: mặt nước sẫm loang trên đất, thấy rõ chỗ giặc đi chậm.
+    const crackMat = new THREE.MeshBasicMaterial({ color: C.bachDangDark, transparent: true, opacity: 0.4, depthWrite: false });
+    const cracks = new THREE.Group();
+    const disc = new THREE.Mesh(new THREE.CircleGeometry(rr, 28), crackMat);
+    disc.rotation.x = -Math.PI / 2;
+    disc.position.y = this.heightAt(tx, tz) + 0.05;
+    disc.renderOrder = 2;
+    cracks.add(disc);
+    group.add(cracks);
+    this.root.add(group);
+    this.crags.push({ group, spikes, cracks, crackMat, age: 0, hold: len, life: len + 0.6, op: 0.4 });
+    const ring = new THREE.Mesh(ringGeo, new THREE.MeshBasicMaterial({ color: C.bachDangLight, transparent: true, depthWrite: false }));
+    ring.position.set(tx + ox, this.heightAt(tx, tz) + 0.08, tz + oz);
+    ring.renderOrder = 3;
+    this.root.add(ring);
+    this.rings.push({ mesh: ring, age: 0, size: rr });
+    for (let i = 0; i < 12; i++) {
+      const a = (i / 12) * Math.PI * 2;
+      const px = tx + Math.cos(a) * rr * 0.8;
+      const pz = tz + Math.sin(a) * rr * 0.8;
+      this.addPuff(px + ox, this.heightAt(px, pz) + 0.2, pz + oz, i % 2 ? C.songBac : C.bachDangLight, 0.05 + (i / 12) * 0.2, 0.8, 1.5);
     }
   }
 
@@ -1646,6 +1720,7 @@ export class BattleView {
       if (e.kind === 'chem' && e.tx !== undefined && e.tz !== undefined) this.chemCaKinh(battle, e.x, e.z, e.tx, e.tz);
       if (e.kind === 'an') this.ngayAn(battle, e.x, e.z);
       if (e.kind === 'hacDe') this.hacDe(battle, e.x, e.z, e.r ?? 3);
+      if (e.kind === 'coc' && e.tx !== undefined && e.tz !== undefined) this.cocBachDang(battle, e.tx, e.tz, e.len ?? 6, e.r ?? 2.5, e.seq);
       if (e.kind === 'escape') {
         // Tô Định chạy thoát khỏi bãi: bụi tung ở mép bãi phía giặc.
         for (let i = 0; i < 6; i++) this.addPuff(e.x + (i - 2.5) * 0.35 + ox, this.heightAt(e.x, e.z) + 0.25, e.z + oz, C.earth, i * 0.05, 0.9, 1.8);
@@ -1743,7 +1818,9 @@ export class BattleView {
     for (let i = this.crags.length - 1; i >= 0; i--) {
       const c = this.crags[i];
       c.age += dt;
-      const sink = smoothstep(c.age, CRAG_HOLD, CRAG_LIFE);
+      const hold = c.hold ?? CRAG_HOLD;
+      const life = c.life ?? CRAG_LIFE;
+      const sink = smoothstep(c.age, hold, life);
       for (const sp of c.spikes) {
         // Trồi vụt lên, vượt đà một chút rồi đứng lại; về cuối thì lún xuống.
         const k = Math.min(Math.max((c.age - sp.delay) / CRAG_RISE, 0), 1);
@@ -1751,8 +1828,8 @@ export class BattleView {
         const ground = sp.obj.userData.ground ?? (sp.obj.userData.ground = sp.obj.position.y + sp.h);
         sp.obj.position.y = (ground as number) - sp.h + sp.h * back - sp.h * 1.05 * sink;
       }
-      c.crackMat.opacity = 0.7 * (1 - smoothstep(c.age, CRAG_HOLD * 0.8, CRAG_LIFE));
-      if (c.age >= CRAG_LIFE) {
+      c.crackMat.opacity = (c.op ?? 0.7) * (1 - smoothstep(c.age, hold * 0.8, life));
+      if (c.age >= life) {
         this.dropCrag(c);
         this.crags.splice(i, 1);
       }

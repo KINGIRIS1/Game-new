@@ -38,6 +38,7 @@ import {
   BA_TRIEU,
   TRIEU_QUANG_PHUC,
   MAI_THUC_LOAN,
+  NGO_QUYEN,
   type BoDo,
   type Chapter,
   type ChiSo,
@@ -116,6 +117,7 @@ export const HERO_STATS: Record<HeroKind, FighterStats> = {
   baTrieu: BA_TRIEU,
   trieuQuangPhuc: TRIEU_QUANG_PHUC,
   maiThucLoan: MAI_THUC_LOAN,
+  ngoQuyen: NGO_QUYEN,
 };
 
 const khongDo = (): ChiSoDo => ({ mau: 0, danh: 0, toc: 0, uy: 0, giap: 0, hoi: 0 });
@@ -428,7 +430,7 @@ export function thaoDo(s: GameState, id: number): Result {
 
 const isObj = (v: unknown): v is Record<string, unknown> => typeof v === 'object' && v !== null && !Array.isArray(v);
 const isInt = (v: unknown, lo: number, hi: number): v is number => Number.isInteger(v) && (v as number) >= lo && (v as number) <= hi;
-const HERO_KINDS: HeroKind[] = ['giong', 'sonTinh', 'anDuong', 'caoLo', 'trungTrac', 'trungNhi', 'baTrieu', 'trieuQuangPhuc', 'maiThucLoan'];
+const HERO_KINDS: HeroKind[] = ['giong', 'sonTinh', 'anDuong', 'caoLo', 'trungTrac', 'trungNhi', 'baTrieu', 'trieuQuangPhuc', 'maiThucLoan', 'ngoQuyen'];
 
 /** Một món đồ đúng dạng và đúng luật (phẩm, cấp đồ, chỉ số, nấc rút, nấc cường hóa trong khoảng). */
 export function isMon(v: unknown): v is Mon {

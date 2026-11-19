@@ -28,7 +28,7 @@ export const DIEN_LOT = new Lot(10, [
   '.u.t.t..m,,...t.t.u.',
   '.........,,.........',
   '.D.t.t...,,...t.t.D.',
-  '.........,,.........',
+  '...u.....,,.....u...',
   '.LL..t...,,...t..LL.',
   '.LL.e...l,,l.....LL.',
   '.......GGGGGG.......',
@@ -69,7 +69,8 @@ export const bannerHeight = (level: number) => (level >= 6 ? 3.2 : 2.9);
  * hàng sau Hai Bà: Lê Chân sau Trưng Trắc (8), Thánh Thiên sau Trưng Nhị (11), Bát Nàn sau Sơn Tinh (9), Phùng Thị
  * Chính sau Cao Lỗ (13). Tướng dã ngoại: Bà Triệu chỗ 3, ngoài cùng hàng ngai cạnh voi đá (người cưỡi voi trắng). Chỗ 12
  * sát cổng bị mái cổng che, chỗ 0 bị Sơn Tinh trên mỏm đá che, nên sân nới thêm hai chỗ ngoài cùng hàng ba (ô `u` của
- * bản vẽ, số 14 bên trái, 15 bên phải): Mai Thúc Loan 14, Triệu Quang Phục 15. Tướng đứng trong sân không cưỡi thú.
+ * bản vẽ, số 14 bên trái, 15 bên phải): Mai Thúc Loan 14, Triệu Quang Phục 15; rồi hai chỗ cột ngoài giữa hàng ba và
+ * hàng gần cổng (ô `u`, 16 trái, 17 phải): Ngô Quyền 16. Tướng đứng trong sân không cưỡi thú.
  */
 const COURT_SLOT: Record<TuongId | NuTuongId, number> = {
   lacTuong: 1,
@@ -86,6 +87,7 @@ const COURT_SLOT: Record<TuongId | NuTuongId, number> = {
   baTrieu: 3,
   trieuQuangPhuc: 15,
   maiThucLoan: 14,
+  ngoQuyen: 16,
 };
 
 /** Chỗ tướng `t` đứng chầu (tọa độ móng Điện) và hướng mặt: quay vào lối giữa, chếch ra phía cổng cho dễ thấy mặt. */

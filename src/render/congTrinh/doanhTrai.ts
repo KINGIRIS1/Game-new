@@ -60,6 +60,7 @@ const CO: Record<TuongId, number> = {
   baTrieu: C.baTrieu,
   trieuQuangPhuc: C.tqp,
   maiThucLoan: C.hacDe,
+  ngoQuyen: C.bachDang,
 };
 
 /** Bốn mặt trại theo thứ tự cổng của `gates` (trước, sau, trái, phải): góc xoay đưa +z về phía ngoài mặt ấy. */

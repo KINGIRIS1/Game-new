@@ -36,7 +36,8 @@ type Speaker =
   | 'baTrieu'
   | 'trieuQuangPhuc'
   | 'lyNamDe'
-  | 'maiThucLoan';
+  | 'maiThucLoan'
+  | 'ngoQuyen';
 
 export const vi = {
   gameTitle: 'Thời đại Văn Lang',
@@ -726,6 +727,7 @@ export const vi = {
     chemCaKinh: { name: 'Chém cá kình', icon: '⚔️', desc: 'Voi trắng của Bà Triệu lao tới kẻ địch nhiều máu nhất quanh mình, Bà vung gươm chém một nhát thật mạnh.' },
     ngayAn: { name: 'Ngày ẩn đêm ra', icon: '🌫️', desc: 'Triệu Quang Phục đưa cả đội lặn vào đầm lau sậy: giặc mất dấu một lúc; ra khỏi đầm thì đòn đầu tiên của mỗi người mạnh gấp bội.' },
     hacDe: { name: 'Hắc Đế dấy binh', icon: '🏴', desc: 'Mai Thúc Loan phất cờ đen hô quân: cả đội đánh mạnh hơn một lúc, giặc quanh ông xúm vào đánh ông.' },
+    cocBachDang: { name: 'Cọc Bạch Đằng', icon: '🪵', desc: 'Ngô Quyền cắm bãi cọc gỗ lim bịt sắt ở chỗ giặc đứng đông nhất: giặc trong bãi đi chậm và mất máu từng giây; thuyền giặc mất máu gấp đôi.' },
   } satisfies Record<SkillId, { name: string; icon: string; desc: string }>,
 
   gear: {
@@ -781,6 +783,7 @@ export const vi = {
     trieuQuangPhuc: { name: 'Triệu Quang Phục', icon: '🐉' },
     lyNamDe: { name: 'Lý Nam Đế', icon: '🏯' },
     maiThucLoan: { name: 'Mai Thúc Loan', icon: '🐃' },
+    ngoQuyen: { name: 'Ngô Quyền', icon: '🌊' },
   } satisfies Record<Speaker, { name: string; icon: string }>,
 
   /**
@@ -1112,7 +1115,7 @@ export const vi = {
         { who: 'ke', text: 'Nhà Lương sai Trần Bá Tiên sang đánh. Lý Nam Đế thua trận, lui về động Khuất Lạo, gọi tướng Triệu Quang Phục tới.' },
         { who: 'lyNamDe', text: 'Ta nay ốm yếu, không cầm quân được nữa. Tướng quân nhận lấy binh quyền, giữ cho được nước Vạn Xuân.' },
         { who: 'trieuQuangPhuc', text: 'Đầm Dạ Trạch lau sậy mênh mông, giặc vào thì lạc lối. Quân ta ngày ẩn đêm ra, đánh cho giặc không biết đâu mà đỡ.' },
-        { who: 'ke', text: 'Tương truyền Chử Đồng Tử cưỡi rồng hiện về, trao cho ông một móng rồng cài lên mũ đâu mâu. Năm 550, ông phá tan quân Lương, xưng Triệu Việt Vương.' },
+        { who: 'ke', text: 'Tương truyền Chử Đồng Tử cưỡi rồng hiện về, trao cho ông một móng rồng cài lên miện. Năm 550, ông phá tan quân Lương, xưng Triệu Việt Vương.' },
         { who: 'lacHau', text: 'Tâu bệ hạ, Triệu Quang Phục về theo đội dã ngoại. Ông có Ngày ẩn đêm ra: cả đội lặn vào đầm, giặc mất dấu; ra khỏi đầm thì đòn đầu mạnh gấp bội. Ông chỉ đánh ở dã ngoại.' },
       ],
     },
@@ -1124,6 +1127,17 @@ export const vi = {
         { who: 'maiThucLoan', text: 'Anh em phu gánh vải ơi! Gánh cống cho giặc thì chết dọc đường, chi bằng ta quăng gánh đứng dậy đánh giặc!' },
         { who: 'ke', text: 'Năm 713, ông dấy binh, xưng Hoàng đế, dân gọi là Mai Hắc Đế, đắp thành Vạn An dưới chân núi Vệ. Nhà Đường sai Dương Tư Húc đem quân sang đánh.' },
         { who: 'lacHau', text: 'Tâu bệ hạ, Mai Thúc Loan về theo đội dã ngoại. Ông có Hắc Đế dấy binh: cả đội đánh mạnh hơn một lúc, giặc quanh ông xúm vào đánh ông. Ông chỉ đánh ở dã ngoại.' },
+      ],
+    },
+    ngoQuyen: {
+      title: 'Ngô Quyền',
+      lines: [
+        { who: 'ke', text: 'Năm 938, Kiều Công Tiễn giết Dương Đình Nghệ rồi cầu cứu nhà Nam Hán. Vua Nam Hán sai con là thái tử Lưu Hoằng Tháo đem thủy quân sang.' },
+        { who: 'ke', text: 'Ngô Quyền, con rể Dương Đình Nghệ, đem quân giết Kiều Công Tiễn, rồi bàn kế đánh giặc với các tướng.' },
+        { who: 'ngoQuyen', text: 'Hoằng Tháo đem quân từ xa đến, quân lính còn mỏi mệt. Bọn chúng có lợi ở thuyền; ta đóng cọc lớn vạt nhọn đầu bịt sắt ngầm ở cửa biển, thuyền giặc theo nước triều lên vào trong hàng cọc thì không chiếc nào ra thoát.' },
+        { who: 'ke', text: 'Nước triều lên, quân ta ra khiêu chiến rồi giả thua chạy. Giặc đuổi vào sông Bạch Đằng. Nước triều rút, thuyền giặc mắc cọc vỡ tan, Hoằng Tháo tử trận.' },
+        { who: 'ke', text: 'Năm 939, Ngô Quyền xưng vương, đóng đô ở Cổ Loa, mở đầu thời độc lập lâu dài.' },
+        { who: 'lacHau', text: 'Tâu bệ hạ, Ngô Quyền về theo đội dã ngoại. Ông có Cọc Bạch Đằng: cắm bãi cọc ở chỗ giặc đông nhất, giặc trong bãi đi chậm và mất máu; thuyền mất gấp đôi. Ông chỉ đánh ở dã ngoại.' },
       ],
     },
   } satisfies Record<StoryId, { title: string; lines: { who: Speaker; text: string }[] }>,
@@ -1139,7 +1153,7 @@ export const vi = {
       phucSuc: { icon: '🪶', name: 'Phục sức' },
       baoVat: { icon: '💎', name: 'Bảo vật' },
     } satisfies Record<ODo, { icon: string; name: string }>,
-    bo: { phuDong: 'Phù Đổng', tanVien: 'Tản Viên', coLoa: 'Cổ Loa', caoLo: 'Cao Lỗ', trungTrac: 'Trưng Trắc', trungNhi: 'Trưng Nhị', nuiNua: 'Núi Nưa', daTrach: 'Dạ Trạch', vanAn: 'Vạn An' } satisfies Record<BoDo, string>,
+    bo: { phuDong: 'Phù Đổng', tanVien: 'Tản Viên', coLoa: 'Cổ Loa', caoLo: 'Cao Lỗ', trungTrac: 'Trưng Trắc', trungNhi: 'Trưng Nhị', nuiNua: 'Núi Nưa', daTrach: 'Dạ Trạch', vanAn: 'Vạn An', bachDang: 'Bạch Đằng' } satisfies Record<BoDo, string>,
     mon: {
       phuDong: { vuKhi: 'Roi sắt', giap: 'Giáp sắt', phucSuc: 'Ngựa sắt', baoVat: 'Tre đằng ngà' },
       tanVien: { vuKhi: 'Gậy thần', giap: 'Giáp đồng hoa văn', phucSuc: 'Áo choàng lá rừng', baoVat: 'Đá thiêng Tản Viên' },
@@ -1150,6 +1164,7 @@ export const vi = {
       nuiNua: { vuKhi: 'Gươm Núi Nưa', giap: 'Áo giáp vảy đồng', phucSuc: 'Voi trắng một ngà', baoVat: 'Trâm vàng' },
       daTrach: { vuKhi: 'Giáo Dạ Trạch', giap: 'Áo lau sậy', phucSuc: 'Thuyền độc mộc', baoVat: 'Móng rồng' },
       vanAn: { vuKhi: 'Đại đao', giap: 'Giáp da trâu', phucSuc: 'Áo bào đen', baoVat: 'Ấn Hắc Đế' },
+      bachDang: { vuKhi: 'Giáo dài', giap: 'Giáp sắt', phucSuc: 'Ngựa chiến', baoVat: 'Cọc lim bịt sắt' },
     } satisfies Record<BoDo, Record<ODo, string>>,
     pham: ['', 'Thường', 'Tốt', 'Quý', 'Huyền thoại'],
     chiSo: {
@@ -1171,6 +1186,7 @@ export const vi = {
       nuiNua: 'Chém cá kình 260 → 330 sát thương, thêm choáng 1 giây',
       daTrach: 'Ngày ẩn đêm ra ẩn 4 → 5 giây, đòn đầu ×2,5 → ×3',
       vanAn: 'Hắc Đế dấy binh +30% → +40% sức đánh, 8 → 10 giây',
+      bachDang: 'Cọc Bạch Đằng bãi cọc 2,5 → 3,2 ô, 6 → 8 giây',
     } satisfies Record<BoDo, string>,
     boOf: (bo: string) => `Bộ ${bo}`,
     boCua: (bo: string, tuong: string) => `Bộ ${bo} (của ${tuong})`,
@@ -1974,8 +1990,8 @@ export const vi = {
     generalsHint: 'Mỗi tướng đã về là một doanh trong trại, thêm chỗ quân theo cấp trại (tối đa 5 doanh). Giữ kinh đô, tướng ra trận cùng quân từ cổng trại gần giặc.',
     doanhOf: (i: number) => `doanh thứ ${i}`,
     doanhNone: 'ở trại, ngoài năm doanh (không thêm chỗ)',
-    tuongNames: { lacTuong: 'Lạc tướng', giong: 'Thánh Gióng', sonTinh: 'Sơn Tinh', anDuong: 'An Dương Vương', caoLo: 'Cao Lỗ', trungTrac: 'Trưng Trắc', trungNhi: 'Trưng Nhị', baTrieu: 'Bà Triệu', trieuQuangPhuc: 'Triệu Quang Phục', maiThucLoan: 'Mai Thúc Loan' } satisfies Record<TuongId, string>,
-    tuongIcons: { lacTuong: '🥁', giong: '🐎', sonTinh: '⛰️', anDuong: '🏹', caoLo: '🎯', trungTrac: '🐘', trungNhi: '🚩', baTrieu: '🗡️', trieuQuangPhuc: '🐉', maiThucLoan: '🐃' } satisfies Record<TuongId, string>,
+    tuongNames: { lacTuong: 'Lạc tướng', giong: 'Thánh Gióng', sonTinh: 'Sơn Tinh', anDuong: 'An Dương Vương', caoLo: 'Cao Lỗ', trungTrac: 'Trưng Trắc', trungNhi: 'Trưng Nhị', baTrieu: 'Bà Triệu', trieuQuangPhuc: 'Triệu Quang Phục', maiThucLoan: 'Mai Thúc Loan', ngoQuyen: 'Ngô Quyền' } satisfies Record<TuongId, string>,
+    tuongIcons: { lacTuong: '🥁', giong: '🐎', sonTinh: '⛰️', anDuong: '🏹', caoLo: '🎯', trungTrac: '🐘', trungNhi: '🚩', baTrieu: '🗡️', trieuQuangPhuc: '🐉', maiThucLoan: '🐃', ngoQuyen: '🌊' } satisfies Record<TuongId, string>,
     guardInfo: (used: number, cap: number) => `Giữ kinh đô: ${used}/${cap} chỗ (theo cấp Điện)`,
     guardAutoNote: 'Đang bố trí tự động: mọi lính giữ kinh đô cho tới đủ chỗ, giữ tỉ lệ binh chủng. Bấm − + để tự bố trí.',
     guardManualNote: 'Lính chết được quân dự trữ bù vào.',
@@ -2213,7 +2229,7 @@ export const vi = {
     campaignTitle3: 'Giữ thành Cổ Loa',
     campaignHint3: 'Ba màn đầu lên núi Thất Diệu diệt yêu tinh. Từ màn 20, An Dương Vương cầm nỏ thần cùng ra trận đánh quân Triệu Đà.',
     advWinTitle: 'Triệu Đà thua chạy!',
-    heroNames: { giong: 'Gióng', sonTinh: 'Sơn Tinh', anDuong: 'An Dương Vương', caoLo: 'Cao Lỗ', trungTrac: 'Trưng Trắc', trungNhi: 'Trưng Nhị', baTrieu: 'Bà Triệu', trieuQuangPhuc: 'Triệu Quang Phục', maiThucLoan: 'Mai Thúc Loan' } satisfies Record<HeroKind, string>,
+    heroNames: { giong: 'Gióng', sonTinh: 'Sơn Tinh', anDuong: 'An Dương Vương', caoLo: 'Cao Lỗ', trungTrac: 'Trưng Trắc', trungNhi: 'Trưng Nhị', baTrieu: 'Bà Triệu', trieuQuangPhuc: 'Triệu Quang Phục', maiThucLoan: 'Mai Thúc Loan', ngoQuyen: 'Ngô Quyền' } satisfies Record<HeroKind, string>,
     campaignTitle4: 'Đường ra biển',
     campaignHint4: 'Màn 25 An Dương Vương cầm nỏ dẹp cướp sông. Từ màn 26, Cao Lỗ cầm quân. Màn 32 cầm chân giặc cho vua ra biển.',
     campaignTitle5: 'Từ Hát Môn tới Cấm Khê',
