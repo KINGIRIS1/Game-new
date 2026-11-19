@@ -1,6 +1,6 @@
 // Thần thú (docs/thiet-ke.md mục Kế hoạch: nuôi thần thú): năm thú có khung xương, dùng chung cho trận dã ngoại
 // (`battleView.ts`) và kinh đô (`world.ts`: thú đi lại, bay trong thành). Ngựa sắt, Rùa Vàng dùng dáng truyện sẵn có
-// (`heroes.ts`, `beasts.ts`); gà chín cựa nặn từ đất nặn gà (`GA_CUU` ở `nanThu.ts`); chim Lạc (`lacBody` ở
+// (`heroes.ts`, `beasts.ts`); gà chín cựa nặn từ đất nặn gà (`gaChoiBody` ở `nanThu.ts`, dáng gà chọi), Rùa Vàng mai dẹt (`ruaThanBody`); chim Lạc (`lacBody` ở
 // `nanThu.ts`) và rồng (`dragonBody` ở `nanQuai.ts`) nặn liền khối, khung xương và tư thế ở đây.
 //
 // Ba dáng theo cấp (`dangThu` ở `game/thanThu.ts`): non nhỏ, lớn, thần to hẳn và có hào quang (thú đi đất: quầng sáng
@@ -75,62 +75,69 @@ function poseLac(b: B, a: Act): void {
 
 // ---------- Rồng ----------
 
-/** Các đốt mình rồng từ ngực ra đuôi: (x, y, z, bán kính), uốn sóng lên xuống và hơi ngoằn ngoèo hai bên. */
-const RONG_MINH: [number, number, number, number][] = Array.from({ length: 11 }, (_, i) => [
-  0.12 * Math.sin(i * 0.7 + 1),
-  1.0 + 0.2 * Math.sin(i * 0.9),
-  0.3 - i * 0.33,
-  0.19 * (1 - i / 12) + 0.025,
+/**
+ * Các đốt mình rồng thời Lý từ ngực ra đuôi: (x, y, z, bán kính). Mình mảnh dài như rắn, uốn nhiều khúc tròn chữ S
+ * lên xuống và lượn hai bên, thuôn dần về đuôi.
+ */
+const RONG_MINH: [number, number, number, number][] = Array.from({ length: 17 }, (_, i) => [
+  0.18 * Math.sin(i * 0.5 + 0.4),
+  1.0 + 0.32 * Math.sin(i * 0.8),
+  0.3 - i * 0.26,
+  0.1 * (1 - i / 18) + 0.028,
 ]);
-const RONG_CO: V3 = [0, 1.25, 0.62];
-const RONG_DAU: V3 = [0, 1.42, 0.88];
+const RONG_CO: V3 = [0, 1.22, 0.5];
+const RONG_DAU: V3 = [0, 1.34, 0.64];
+const RONG_SAU = 6;
 const RONG_CHAN: V3[] = (() => {
-  const [fx, fy, fz] = RONG_MINH[0];
-  const [bx, by, bz] = RONG_MINH[3];
+  const [fx, fy, fz] = RONG_MINH[1];
+  const [bx, by, bz] = RONG_MINH[RONG_SAU];
   return [
-    [fx - 0.13, fy - 0.1, fz + 0.05],
-    [fx + 0.13, fy - 0.1, fz + 0.05],
-    [bx - 0.11, by - 0.08, bz],
-    [bx + 0.11, by - 0.08, bz],
+    [fx - 0.09, fy - 0.05, fz],
+    [fx + 0.09, fy - 0.05, fz],
+    [bx - 0.08, by - 0.05, bz],
+    [bx + 0.08, by - 0.05, bz],
   ];
 })();
 
 const RONG: Defs = (() => {
   const d: Defs = { base: { parent: null, at: [0, 0, 0] } };
   RONG_MINH.slice(0, -1).forEach(([x, y, z], i) => (d[`d${i}`] = { parent: i ? `d${i - 1}` : 'base', at: [x, y, z] }));
-  d.qNeck = { parent: 'd0', at: [RONG_MINH[0][0], RONG_MINH[0][1] + 0.05, RONG_MINH[0][2] + 0.1] };
+  d.qNeck = { parent: 'd0', at: [RONG_MINH[0][0], RONG_MINH[0][1] + 0.04, RONG_MINH[0][2] + 0.06] };
   d.qHead = { parent: 'qNeck', at: RONG_CO };
-  d.qFL = { parent: 'd0', at: RONG_CHAN[0] };
-  d.qFR = { parent: 'd0', at: RONG_CHAN[1] };
-  d.qBL = { parent: 'd3', at: RONG_CHAN[2] };
-  d.qBR = { parent: 'd3', at: RONG_CHAN[3] };
+  d.qFL = { parent: 'd1', at: RONG_CHAN[0] };
+  d.qFR = { parent: 'd1', at: RONG_CHAN[1] };
+  d.qBL = { parent: `d${RONG_SAU}`, at: RONG_CHAN[2] };
+  d.qBR = { parent: `d${RONG_SAU}`, at: RONG_CHAN[3] };
   return d;
 })();
 
-/** Rồng nặn liền khối (`dragonBody`), thêm hai sợi râu vàng dài uốn ra sau và ngọc lửa trên trán. */
+/** Rồng nặn liền khối (`dragonBody`), thêm hai sợi râu vàng dài cuộn ra sau và ngọc lửa trước miệng. */
 function drawRong(r: RigBuilder<string>): void {
   dragonBody(r, { body: RONG_MINH, neck: RONG_CO, head: RONG_DAU, legs: RONG_CHAN });
   const head = r.on('qHead');
   const [hx, hy, hz] = RONG_DAU;
   for (const s of [-1, 1]) {
     // Râu: ba đoạn cong từ mép mõm ra sau.
-    let p: V3 = [hx + s * 0.06, hy + 0.0, hz + 0.33];
+    let p: V3 = [hx + s * 0.04, hy + 0.01, hz + 0.27];
     for (const [dx, dy, dz] of [
-      [0.08, 0.05, -0.06],
-      [0.07, 0.08, -0.18],
-      [0.03, 0.06, -0.26],
-      [0.0, 0.02, -0.24],
+      [0.07, 0.03, -0.02],
+      [0.09, 0.0, -0.1],
+      [0.06, -0.05, -0.18],
+      [0.0, -0.06, -0.2],
+      [-0.04, -0.01, -0.18],
+      [-0.03, 0.05, -0.12],
+      [0.01, 0.06, -0.06],
     ] as const) {
       const q: V3 = [p[0] + s * dx, p[1] + dy, p[2] + dz];
       const len = Math.hypot(q[0] - p[0], q[1] - p[1], q[2] - p[2]);
       const mid: V3 = [(p[0] + q[0]) / 2, (p[1] + q[1]) / 2, (p[2] + q[2]) / 2];
       const dir = new THREE.Vector3(q[0] - p[0], q[1] - p[1], q[2] - p[2]).normalize();
       const e = new THREE.Euler().setFromQuaternion(new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 1, 0), dir));
-      head.plain.cyl(0.007, 0.01, len, RONG_MAU.horn, mid[0], mid[1], mid[2], [e.x, e.y, e.z], 4);
+      head.plain.cyl(0.006, 0.009, len, RONG_MAU.horn, mid[0], mid[1], mid[2], [e.x, e.y, e.z], 4);
       p = q;
     }
   }
-  head.glow.sphere(0.035, C.ember, hx, hy + 0.14, hz + 0.12, [1, 1, 1], 8);
+  head.glow.sphere(0.03, C.ember, hx, hy + 0.04, hz + 0.42, [1, 1, 1], 8);
 }
 
 /** Rồng luôn bay, mình uốn sóng chạy dọc từ ngực ra đuôi (đi thì uốn nhanh); đánh thì vươn cổ phun; chân bơi trong mây. */
@@ -148,8 +155,8 @@ function poseRong(b: B, a: Act): void {
   const ph = fly ? (a.phase ?? 0) * 0.5 : t * 1.8;
   const amp = fly ? 1 : 0.6;
   for (let i = 0; i < n; i++) {
-    b[`d${i}`].rotation.x = 0.07 * amp * Math.sin(ph - i * 0.75);
-    b[`d${i}`].rotation.y = 0.06 * amp * Math.sin(ph * 0.7 - i * 0.6);
+    b[`d${i}`].rotation.x = 0.11 * amp * Math.sin(ph - i * 0.8);
+    b[`d${i}`].rotation.y = 0.08 * amp * Math.sin(ph * 0.7 - i * 0.5);
   }
   b.qNeck.rotation.x = -0.12 * amp * Math.sin(ph + 0.6);
   b.qHead.rotation.x = 0.06 * Math.sin(t * 1.3);
@@ -184,10 +191,10 @@ function rig(defs: Defs, draw: (r: RigBuilder<string>) => void, pose: (b: B, a: 
 const BAY: Partial<Record<ThanThuId, number>> = { thuLac: 1.7, thuRong: 1.5 };
 
 /** Cỡ riêng mỗi thú so với dáng (gà, rùa vốn nặn to theo quái nên thu bớt). */
-const CO: Record<ThanThuId, number> = { thuLac: 1, thuNgua: 1, thuGa: 0.7, thuRua: 0.85, thuRong: 1 };
+const CO: Record<ThanThuId, number> = { thuLac: 1, thuNgua: 1, thuGa: 0.8, thuRua: 0.85, thuRong: 1 };
 
 /** Màu hào quang dáng thần mỗi thú. */
-const HAO: Record<ThanThuId, number> = { thuLac: C.ember, thuNgua: C.fire, thuGa: C.ember, thuRua: C.gold, thuRong: 0x9fe8d0 };
+const HAO: Record<ThanThuId, number> = { thuLac: C.ember, thuNgua: C.fire, thuGa: C.ember, thuRua: C.gold, thuRong: 0xffd870 };
 
 /** Quầng sáng mờ dưới chân thú đi đất dáng thần. */
 function quangChan(color: number, r: number): THREE.Mesh {
