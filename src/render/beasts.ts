@@ -12,7 +12,7 @@ import { armor, bun, chestDisc, diadem, hairDown, necklace, pauldrons } from './
 import { clayPiece, figure, type Piece } from './nanNguoi';
 import { gaChoiBody, ruaThanBody, bearBody, boarBody, buffaloBody, deerBody, dholeBody, gaurBody, otterBody, rhinoBody, elephantBody, elephantDrape, horseBody, horseDrape, leopardBody, roosterBody, tigerBody, turtleBody, turtleDrum } from './nanThu';
 import { C } from './palette';
-import { RigBuilder, bakeRig, moveBones, resetBones, skinRig, type Act, type BoneDef, type Bones, type Poser, type RigShape, type RigSlot, type RigSlots } from './rig';
+import { RigBuilder, bakeRig, moveBones, resetBones, shapeFor, skinRig, type Act, type BoneDef, type Bones, type Poser, type RigShape, type RigSlot, type RigSlots } from './rig';
 import { drawRider, poseRider, riderBones, riderHasSkill, type RiderKind } from './soldier';
 import { IRON, IRON_DARK, coLac } from './weapons';
 
@@ -953,8 +953,8 @@ function shapeOf(spec: Spec, tier: number) {
   return r.build();
 }
 
-function rigged(spec: Spec, tier: number): THREE.Group {
-  const { group, bones } = skinRig(shapeOf(spec, tier));
+function rigged(key: string, spec: Spec, tier: number): THREE.Group {
+  const { group, bones } = skinRig(shapeFor(`thu:${key}:${tier}`, () => shapeOf(spec, tier)));
   const pose: Poser = (a) => spec.pose(bones, a);
   pose({ act: 'stand' });
   group.userData.pose = pose;
@@ -965,7 +965,7 @@ function rigged(spec: Spec, tier: number): THREE.Group {
 
 /** Thú có xương cho trận đánh. `tier`: bậc giáp voi đã rèn. */
 export function makeBeast(kind: BeastKind, tier = 0): THREE.Group {
-  return rigged(SPECS[kind], tier);
+  return rigged(kind, SPECS[kind], tier);
 }
 
 /** Thú bản tĩnh ở một tư thế, cho công trình. */
@@ -1185,7 +1185,7 @@ export function makeRuaThan(): THREE.Group {
     }
     r.on('qBody').glow.sphere(0.045, 0xffe878, 0, 0.32, -0.02, [1, 0.6, 1], 8);
   };
-  return rigged({ defs: RUA_THAN_DEFS, draw, pose: poseRuaBien }, 0);
+  return rigged('ruaThan', { defs: RUA_THAN_DEFS, draw, pose: poseRuaBien }, 0);
 }
 
 /** Khung gà chọi: đứng thẳng, đùi dài, cổ cao. */
@@ -1203,7 +1203,7 @@ const GA_CHOI_DEFS: Defs = {
 
 /** Gà chín cựa (thần thú, lễ vật Sơn Tinh): gà chọi đứng thẳng ức ưỡn, bờm vàng cam, đuôi lông liềm rủ, chín cựa vàng. */
 export function makeGaCuu(): THREE.Group {
-  return rigged({ defs: GA_CHOI_DEFS, draw: (r) => gaChoiBody(r), pose: poseRooster }, 0);
+  return rigged('gaCuu', { defs: GA_CHOI_DEFS, draw: (r) => gaChoiBody(r), pose: poseRooster }, 0);
 }
 
 /** Rùa Vàng bản tĩnh, cho công trình. */

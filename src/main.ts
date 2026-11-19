@@ -2,7 +2,7 @@
 
 import './style.css';
 import { play, setMuted, stopRally, unlockAudio } from './audio/sfx';
-import { skillReady, startFieldBattle, stepField, useSkill, type Battle, type HeroKind } from './game/battle';
+import { skillReady, startFieldBattle, stepField, useSkill, type Battle, type HeroKind, type FighterKind } from './game/battle';
 import { canLen, capNhatDa, chonMap, daMo, datDoi, doiNay, moMap, quaCong, tichTreo, vaoDa, veKinhDo, type DaThuong } from './game/daNgoai';
 import { choAn, chonThu, thuCo } from './game/thanThu';
 import { chamMap, datTuDanh, stepDa, tuongDau } from './game/daNgoaiTran';
@@ -17,7 +17,7 @@ import { cuongHoa, khoaDo, macDo, monO, phanGiai, phanGiaiLoat, thaoDo } from '.
 import { HinhTuong, type MacTuong } from './render/hinhTuong';
 import { monTen, preloadMon } from './ui/trangBi';
 import { autoGuard, fieldCap, fitArmy, setGuard } from './game/doanhTrai';
-import { markNuHinted, nextNuHint } from './game/nuTuong';
+import { markNuHinted, nextNuHint, nuTuongList } from './game/nuTuong';
 import { forgeNoThan, inChapter3, wallRings } from './game/coLoa';
 import { offer, tetOpen } from './game/tet';
 import { ganhPreview, giapDuong, markGanhHinted, needsGanhHint, vungGanh } from './game/vanChuyen';
@@ -35,8 +35,9 @@ import { inChapter2, offerGift } from './game/son';
 import { buyHuan } from './game/thuThach';
 import { markStory, pendingStory } from './game/story';
 import { footprintTop } from './game/terrain';
-import { BUILDINGS, DA_MAP, DA_MAP_IDS, O_DO, QUIZ_TURNS, RESOURCE_IDS, STAGES, UNIT_TYPES, U_NO, isBridge, isDecor, isRoad, type BuildingType, type Cost, type DaMapId, type NuTuongId, type ResourceId, type Row, type SkillId, type UnitType } from './game/defs';
+import { BUILDINGS, DA_MAP, DA_MAP_IDS, O_DO, QUIZ_TURNS, RESOURCE_IDS, STAGES, UNIT_TYPES, U_NO, isBridge, isDecor, isRoad, type BuildingType, type Cost, type DaMapId, type NuTuongId, type ResourceId, type Row, type SkillId, type UnitType, stageEnemies } from './game/defs';
 import { CAMPS, benKiaOpen, bridgeSnap, campHero, campTier, canStartCamp, joinVillage, plotAt, poiAt, sendScout, setGarrison, startCamp } from './game/benKia';
+import { baiOf, stageBai } from './game/baiChien';
 import type { QuanDaoId } from './game/bien';
 import type { Buoi } from './game/ngayDem';
 import { fmt } from './ui/format';
@@ -99,7 +100,7 @@ import { formatClock, formatXay, vi } from './text/vi';
 import { Hud, buildingName, type HudAction, type HudXemDao, type WallShape } from './ui/hud';
 import { khoNanTk, luuSau, moKhoNan } from './render/nanKho';
 import { DoLag, luatMoiGiay, tomLag, uoc60 } from './render/doLag';
-import { KHO_PHIEN_BAN, moSanWorker, nanConLai, nanTruoc, prewarmJobs } from './render/nanTruoc';
+import { KHO_PHIEN_BAN, moSanWorker, nanConLai, nanTruoc, prewarmJobs, fieldJobs } from './render/nanTruoc';
 import { ManVao } from './ui/manVao';
 import { preloadThumbs } from './ui/xayDung';
 import {
@@ -1433,6 +1434,19 @@ async function start(): Promise<void> {
         play('tap');
         world.rotateView(1);
         return;
+
+      case 'prepareField': {
+        // Nền, bố cục bãi và giặc như `startStage`, `startCamp` sẽ dựng.
+        const tier = a.plot !== undefined ? campTier(a.plot) : null;
+        const camp = tier ? CAMPS[tier] : null;
+        const def = !camp && a.stage ? STAGES[a.stage - 1] : null;
+        const f = camp ?? def;
+        if (!f) return;
+        const bai = camp ? baiOf(camp.terrain, camp.chapter) : stageBai(a.stage!);
+        const enemies = Object.keys(camp ? camp.enemies : stageEnemies(def!)) as FighterKind[];
+        world.prepareField(f.terrain, bai, fieldJobs(f.chapter, state.arms, enemies, nuTuongList(state)));
+        return;
+      }
 
       case 'marchCamp': {
         const check = canStartCamp(state, a.plot);

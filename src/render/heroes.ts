@@ -56,7 +56,7 @@ import { clayPiece, figure, prim, rigid, segs, type Piece } from './nanNguoi';
 import { horseBody, horseDrape, type HorseShape } from './nanThu';
 import { C } from './palette';
 import { bakeAnh, batAnh } from './anhVuKhi';
-import { RigBuilder, bakeRig, moveBones, resetBones, skinRig, type Act, type BoneDef, type Bones, type Poser, type RigShape } from './rig';
+import { RigBuilder, bakeRig, moveBones, resetBones, shapeFor, skinRig, type Act, type BoneDef, type Bones, type Poser, type RigShape } from './rig';
 import { ToonModel, inkThin } from './toon';
 import {
   CO_NU,
@@ -825,15 +825,23 @@ function poseTeen(b: B, a: Act): void {
  */
 export function makeGiong(look: GiongLook, opts: { bamboo?: boolean; glow?: boolean; onFoot?: boolean; anh?: boolean } = {}): THREE.Group {
   if (look === 'be') {
-    const r = new RigBuilder(CHILD);
-    drawChild(r);
-    const { group, bones } = skinRig(r.build());
+    const { group, bones } = skinRig(
+      shapeFor('giong:be', () => {
+        const r = new RigBuilder(CHILD);
+        drawChild(r);
+        return r.build();
+      }),
+    );
     return finish(group, (a) => poseChild(bones, a));
   }
   if (look === 'thieuNien') {
-    const r = new RigBuilder({ ...BASE, ...bigHuman('base', [0, 0, 0], K_TEEN) });
-    drawTeen(r);
-    const { group, bones } = skinRig(r.build());
+    const { group, bones } = skinRig(
+      shapeFor('giong:thieuNien', () => {
+        const r = new RigBuilder({ ...BASE, ...bigHuman('base', [0, 0, 0], K_TEEN) });
+        drawTeen(r);
+        return r.build();
+      }),
+    );
     return finish(group, (a) => poseTeen(bones, a));
   }
   if (opts.onFoot) {
@@ -1161,9 +1169,13 @@ const THUY_DEFS = (): Defs => ({ ...BASE, ...bigHuman('base', THUY_AT, K_THUY) }
 
 /** Thủy Tinh có xương, cho trận đánh. */
 export function makeThuyTinh(): THREE.Group {
-  const r = new RigBuilder(THUY_DEFS());
-  drawThuy(r);
-  const { group, bones } = skinRig(r.build());
+  const { group, bones } = skinRig(
+    shapeFor('thuyTinh', () => {
+      const r = new RigBuilder(THUY_DEFS());
+      drawThuy(r);
+      return r.build();
+    }),
+  );
   return finish(group, (a) => poseThuy(bones as unknown as Human, a));
 }
 
@@ -2545,9 +2557,13 @@ function poseLacTuong(b: Human, a: Act): void {
 
 /** Lạc tướng đứng chầu trong sân Điện (ở bãi chiến thì là người đánh trống, `makeDrummer`). */
 export function makeLacTuong(): THREE.Group {
-  const r = new RigBuilder({ ...BASE, ...bigHuman('base', [0, 0, 0], K_LAC) });
-  drawBig(r, [0, 0, 0], K_LAC, drawLacTuong);
-  const { group, bones } = skinRig(r.build());
+  const { group, bones } = skinRig(
+    shapeFor('lacTuong', () => {
+      const r = new RigBuilder({ ...BASE, ...bigHuman('base', [0, 0, 0], K_LAC) });
+      drawBig(r, [0, 0, 0], K_LAC, drawLacTuong);
+      return r.build();
+    }),
+  );
   return finish(group, (a) => poseLacTuong(bones as unknown as Human, a));
 }
 

@@ -284,11 +284,96 @@ export function disposeModel(obj: THREE.Object3D): void {
   });
 }
 
+/**
+ * Gộp đỉnh trùng y như `mergeVertices` của three.js (cùng cách làm tròn theo `tolerance`, cùng thứ tự đỉnh, cùng chỉ
+ * số), mà nhanh hơn nhiều lần: khóa mỗi đỉnh là dãy số nguyên băm thành số, không ghép chuỗi. Hình có thuộc tính đan
+ * xen, chuẩn hóa hay morph thì để three.js làm. `shapes.test.ts` canh ra y hệt.
+ */
+export function weld(geometry: THREE.BufferGeometry, tolerance = 1e-4): THREE.BufferGeometry {
+  const names = Object.keys(geometry.attributes);
+  const attrs = names.map((n) => geometry.getAttribute(n));
+  if (Object.keys(geometry.morphAttributes).length || attrs.some((a) => !(a instanceof THREE.BufferAttribute) || a.normalized)) {
+    return mergeVertices(geometry, tolerance);
+  }
+  // Cùng công thức với three.js để số làm tròn ra y hệt.
+  tolerance = Math.max(tolerance, Number.EPSILON);
+  const exponent = Math.log10(1 / tolerance);
+  const hashMultiplier = Math.pow(10, exponent);
+  const hashAdditive = tolerance * 0.5 * hashMultiplier;
+  const index = geometry.getIndex();
+  const count = index ? index.count : geometry.getAttribute('position').count;
+  const sizes = attrs.map((a) => a.itemSize);
+  const width = sizes.reduce((s, n) => s + n, 0);
+  const arrays = attrs.map((a) => a.array as ArrayLike<number>);
+  const key = new Float64Array(width);
+  let keys = new Float64Array(Math.max(16, count) * width);
+  /** Đỉnh mới đầu tiên của mỗi giá trị băm; đỉnh mới cùng băm nối nhau qua `next`. */
+  const first = new Map<number, number>();
+  let next = new Int32Array(Math.max(16, count));
+  const source: number[] = [];
+  const out = new Uint32Array(count);
+  for (let i = 0; i < count; i++) {
+    const v = index ? index.getX(i) : i;
+    let h = 0;
+    let c = 0;
+    for (let a = 0; a < arrays.length; a++) {
+      const arr = arrays[a];
+      const n = sizes[a];
+      for (let k = 0; k < n; k++) {
+        const q = Math.trunc(arr[v * n + k] * hashMultiplier + hashAdditive);
+        key[c++] = q;
+        h = (Math.imul(h, 0x01000193) ^ (q | 0)) | 0;
+      }
+    }
+    let found = -1;
+    for (let j = first.get(h) ?? -1; j >= 0; j = next[j]) {
+      let same = true;
+      for (let k = 0, o = j * width; k < width; k++) {
+        if (keys[o + k] !== key[k]) {
+          same = false;
+          break;
+        }
+      }
+      if (same) {
+        found = j;
+        break;
+      }
+    }
+    if (found < 0) {
+      found = source.length;
+      if ((found + 1) * width > keys.length) {
+        const grown = new Float64Array(keys.length * 2);
+        grown.set(keys);
+        keys = grown;
+        const grownNext = new Int32Array(next.length * 2);
+        grownNext.set(next);
+        next = grownNext;
+      }
+      keys.set(key, found * width);
+      next[found] = first.get(h) ?? -1;
+      first.set(h, found);
+      source.push(v);
+    }
+    out[i] = found;
+  }
+  const result = new THREE.BufferGeometry();
+  attrs.forEach((a, n) => {
+    const size = sizes[n];
+    const src = arrays[n];
+    const dst = new (a.array.constructor as new (n: number) => THREE.TypedArray)(source.length * size);
+    for (let i = 0; i < source.length; i++) for (let k = 0; k < size; k++) dst[i * size + k] = src[source[i] * size + k];
+    result.setAttribute(names[n], new THREE.BufferAttribute(dst, size, a.normalized));
+  });
+  result.setIndex(new THREE.BufferAttribute(source.length - 1 >= 65535 ? out : new Uint16Array(out), 1));
+  for (const g of geometry.groups) result.addGroup(g.start, g.count, g.materialIndex);
+  return result;
+}
+
 /** Geometry chỉ còn vị trí, gộp đỉnh trùng và có pháp tuyến mượt, dùng để đẩy viền mực ra ngoài. */
 export function smoothForOutline(geo: THREE.BufferGeometry): THREE.BufferGeometry {
   const g = new THREE.BufferGeometry();
   g.setAttribute('position', geo.getAttribute('position').clone());
-  const merged = mergeVertices(g, 1e-3);
+  const merged = weld(g, 1e-3);
   merged.computeVertexNormals();
   return merged;
 }
