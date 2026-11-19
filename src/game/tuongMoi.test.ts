@@ -5,10 +5,11 @@
 // Quang Phục (map 7): Ngày ẩn đêm ra cho cả đội ẩn, quái mất dấu, hết ẩn thì đòn đầu mạnh gấp bội; bộ Dạ Trạch. PR 3
 // là Mai Thúc Loan (map 8): Hắc Đế dấy binh cho cả đội thêm sức đánh, quái quanh ông quay sang ông; bộ Vạn An. PR 4 là
 // Ngô Quyền (map 9): Cọc Bạch Đằng cắm bãi cọc ở chỗ quái đông nhất, quái trong bãi đi chậm, mất máu từng giây; bộ Bạch Đằng.
+// PR 5 là Lý Thường Kiệt (map 10): Nam quốc sơn hà cho quân ta quanh ông hồi máu, quái quanh ông đánh yếu đi; bộ Như Nguyệt.
 
 import { describe, expect, it } from 'vitest';
 import { HERO_KINDS, isAlive, stepCoc, strike, useSkill, type Battle } from './battle';
-import { BO_DO, CA_KINH, COC_BACH_DANG, DA_BOSS_MS, DOANH_MAX, GIFT_IDS, HAC_DE, NGAY_AN, ROI_DO, type BoDo, type Chapter } from './defs';
+import { BO_DO, CA_KINH, COC_BACH_DANG, NAM_QUOC, DA_BOSS_MS, DOANH_MAX, GIFT_IDS, HAC_DE, NGAY_AN, ROI_DO, type BoDo, type Chapter } from './defs';
 import { capNhatDa, datDoi, moMap, tuongCo } from './daNgoai';
 import { boCuc } from './daNgoaiMap';
 import { stepDa } from './daNgoaiTran';
@@ -626,6 +627,135 @@ describe('bộ Bạch Đằng', () => {
     expect(kiemMon(m, 5)).toBeNull();
     const hai = (['vuKhi', 'giap'] as const).map((o) => ({ ...m, o, chinh: o === 'vuKhi' ? 'danh' : 'mau' }) as typeof m);
     expect(tinhDo('ngoQuyen', hai).uy - tinhDo('giong', hai).uy).toBeCloseTo(0.1, 6);
+  });
+});
+
+/** Hạ boss map 10 (Quách Quỳ) như trận thật báo về. */
+function haBoss10(s: GameState): void {
+  s.daNgoai.map = 10;
+  s.daNgoai.cap = 100;
+  datDoi(s, ['giong']);
+  const b = moMap(s);
+  b.da!.giet.push({ kind: 'quachQuy', cap: 102, khu: -1, boss: true, x: 0, z: 0 });
+  capNhatDa(s, b);
+}
+
+/** Map 10, đội Lý Thường Kiệt và Gióng, đứng giữa khu `k`. */
+function tranLtk(s: GameState, k = 0): Battle {
+  s.daNgoai.map = 10;
+  s.daNgoai.tuDanh = false;
+  const kh = boCuc(10).khu[k];
+  s.daNgoai.cho = { x: kh.x, z: kh.z };
+  expect(datDoi(s, ['lyThuongKiet', 'giong']).ok).toBe(true);
+  return moMap(s);
+}
+
+describe('Lý Thường Kiệt về khi hạ boss map 10', () => {
+  it('hạ Quách Quỳ lần đầu thì về, kể truyện một lần; chỉ đánh ở dã ngoại', () => {
+    const s = base();
+    haBoss9(s);
+    expect(tuongJoined(s, 'lyThuongKiet')).toBe(false);
+    expect(datDoi(s, ['lyThuongKiet']).ok).toBe(false);
+    haBoss10(s);
+    expect(tuongJoined(s, 'lyThuongKiet')).toBe(true);
+    expect(tuongCo(s)).toContain('lyThuongKiet');
+    for (let id = pendingStory(s); id && id !== 'lyThuongKiet'; id = pendingStory(s)) markStory(s, id);
+    expect(pendingStory(s)).toBe('lyThuongKiet');
+    markStory(s, 'lyThuongKiet');
+    expect(pendingStory(s)).toBeNull();
+    expect(generals(s)).not.toContain('lyThuongKiet');
+    for (const ch of CHUONG) expect(heroesFor(s, ch).map((h) => h.kind)).not.toContain('lyThuongKiet');
+    const sua = { ...makeSnapshot(s), heroes: [{ kind: 'lyThuongKiet' as const, bamboo: false, glow: false, non: false }] };
+    expect(validateSnapshot(sua)).not.toBeNull();
+  });
+});
+
+describe('Nam quốc sơn hà', () => {
+  function dat(bo4 = false) {
+    const s = base();
+    haBoss10(s);
+    const b = tranLtk(s);
+    if (bo4) b.hero!.trangBi = { ...tinhDo('lyThuongKiet', []), bo4: true };
+    const ltk = b.fighters.find((f) => f.kind === 'lyThuongKiet')!;
+    const giong = b.fighters.find((f) => f.kind === 'giong')!;
+    const quai = b.fighters.filter((f) => f.side === 'giac' && isAlive(f) && f.nha);
+    for (const q of quai) {
+      q.x = ltk.x + 40;
+      q.z = ltk.z;
+    }
+    const [gan, xa] = quai;
+    gan.x = ltk.x + 2;
+    gan.z = ltk.z;
+    xa.x = ltk.x + NAM_QUOC.tam + 3;
+    xa.z = ltk.z;
+    giong.x = ltk.x - 1;
+    giong.z = ltk.z;
+    giong.hp = giong.maxHp * 0.5;
+    return { b, ltk, giong, gan, xa };
+  }
+
+  it('quân ta trong 6 ô hồi 20% máu; quái trong 6 ô đánh yếu đi 30% trong 6 giây (đủ bộ Như Nguyệt: 25%, 40%)', () => {
+    for (const bo4 of [false, true]) {
+      const { b, giong, gan, xa } = dat(bo4);
+      const don = (q: typeof gan) => {
+        const h = giong.hp;
+        strike(b, q, giong);
+        const mat = h - giong.hp;
+        giong.hp = h;
+        return mat;
+      };
+      const thuong = don(gan);
+      const thuongXa = don(xa);
+      const mau = giong.hp;
+      expect(useSkill(b, 'namQuoc')).toBe(true);
+      expect(b.events.some((e) => e.kind === 'tho')).toBe(true);
+      expect((giong.hp - mau) / giong.maxHp).toBeCloseTo(bo4 ? 0.25 : NAM_QUOC.hoi, 6);
+      expect(gan.nao).toBe(NAM_QUOC.t);
+      expect(xa.nao ?? 0).toBe(0);
+      expect(don(gan) / thuong).toBeCloseTo(1 - (bo4 ? 0.4 : NAM_QUOC.yeu), 6);
+      expect(don(xa)).toBeCloseTo(thuongXa, 6);
+      for (let t = 0; t < NAM_QUOC.t + 0.2; t += 0.05) stepDa(b, 0.05);
+      expect(gan.nao ?? 0).toBe(0);
+    }
+  });
+
+  it('Tự đánh tự dùng Nam quốc sơn hà khi có quái gần, vẫn hạ được quái', () => {
+    const s = base();
+    haBoss10(s);
+    const b = tranLtk(s);
+    b.da!.tuDanh = true;
+    for (const f of b.fighters) if (f.side === 'ta') f.hp = f.maxHp = 1e6;
+    const giet = b.da!.giet.length;
+    chay(b, 30);
+    expect(b.skillCd.namQuoc ?? 0).toBeGreaterThan(0);
+    expect(b.da!.giet.length).toBeGreaterThan(giet);
+  });
+});
+
+describe('bộ Như Nguyệt', () => {
+  it('chỉ rơi ở map 10 sau khi Lý Thường Kiệt về; máy chủ nhận ở chương 5; hai món thêm hồi kỹ năng khi ông mặc', () => {
+    const s = base();
+    const rut = () => {
+      const bo = new Set<BoDo>();
+      s.trangBi.kho.length = 0;
+      s.daNgoai.map = 10;
+      datDoi(s, ['giong']);
+      for (let i = 0; i < 200; i++) {
+        const b = moMap(s);
+        b.da!.giet.push({ kind: 'naiRung', cap: 95, khu: 0, boss: false, x: 0, z: 0 });
+        capNhatDa(s, b);
+      }
+      for (const m of s.trangBi.kho) bo.add(m.bo);
+      return bo;
+    };
+    expect(rut().has('nhuNguyet')).toBe(false);
+    haBoss10(s);
+    expect([...rut()]).toEqual(['nhuNguyet']);
+    for (const ch of CHUONG) expect(boRoi(s, 'giu', ch)).not.toContain('nhuNguyet');
+    const m = rutMon(5, 'daBoss', 5, ['nhuNguyet'], [0, 0, 0, 100])!;
+    expect(kiemMon(m, 5)).toBeNull();
+    const hai = (['vuKhi', 'giap'] as const).map((o) => ({ ...m, o, chinh: o === 'vuKhi' ? 'danh' : 'mau' }) as typeof m);
+    expect(tinhDo('lyThuongKiet', hai).hoi - tinhDo('giong', hai).hoi).toBeCloseTo(0.08, 6);
   });
 });
 

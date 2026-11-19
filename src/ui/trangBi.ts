@@ -117,6 +117,7 @@ const HERO_SKILLS: Record<HeroKind, SkillId[]> = {
   trieuQuangPhuc: ['ngayAn'],
   maiThucLoan: ['hacDe'],
   ngoQuyen: ['cocBachDang'],
+  lyThuongKiet: ['namQuoc'],
 };
 
 /** Bộ của tướng `kind`. */

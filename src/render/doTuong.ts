@@ -10,12 +10,12 @@ import * as THREE from 'three';
 import { BO_DO, O_DO, type BoDo, type ODo } from '../game/defs';
 import { bakeVoiTran } from './beasts';
 import { GRIP_L, GRIP_R, HUMAN, type HumanRig } from './body';
-import { CAO_QUIVER, MIEN, VOI_TRANG, aoBaoDen, aoLauSay, baoTenDong, bakeIronHorse, bakeNguaChien, giapDaTrau, giapSatBachDang, giapVayDong, giongWeapon, mongRong, sonStaff, type TheCamTuong } from './heroes';
+import { CAO_QUIVER, MIEN, VOI_TRANG, aoBaoDen, aoLauSay, baoTenDong, bakeIronHorse, bakeNguaChien, aoChoangDo, giapDaTrau, giapSatBachDang, giapTru, giapVayDong, giongWeapon, mongRong, sonStaff, type TheCamTuong } from './heroes';
 import { armor, chestDisc, cloak, diadem, mien, pauldrons, shoulderRocks, skirtArmor, studs } from './nanDo';
 import { C } from './palette';
 import { RigBuilder, bakeRig } from './rig';
 import { ToonModel, inkThin } from './toon';
-import { IRON, IRON_DARK, LEATHER, arrow, bow, coLac, crossbowParts, daoVanAn, giaoBachDang, giaoDaTrach, guomDong, guomNuiNua, hornTrumpet, repeatingCrossbow, type Parts } from './weapons';
+import { IRON, IRON_DARK, LEATHER, arrow, bow, coLac, crossbowParts, daoVanAn, giaoBachDang, giaoDaTrach, kiemNhuNguyet, guomDong, guomNuiNua, hornTrumpet, repeatingCrossbow, type Parts } from './weapons';
 
 export type MonId = `${BoDo}-${ODo}`;
 export const monId = (bo: BoDo, o: ODo): MonId => `${bo}-${o}`;
@@ -140,6 +140,34 @@ export function cocLim(m: Parts): void {
     const a = (i / 4) * Math.PI * 2 + 0.4;
     p.add(new THREE.TorusGeometry(0.03, 0.01, 4, 10, Math.PI * 1.3), C.songBac, Math.cos(a) * 0.15, 0.05, Math.sin(a) * 0.15, [0, -a, 0]);
   }
+}
+
+/**
+ * Cuộn thơ thần Nam quốc sơn hà của Lý Thường Kiệt: cuộn giấy ngà mở ra dựng đứng, trục trên trục dưới gỗ son bịt núm
+ * vàng, bốn cột chữ son viết dọc (bốn câu thơ), dấu ấn đỏ góc dưới, viền vàng hai mép; dây treo đỏ. Đáy ở y = 0.
+ */
+export function cuonThoThan(m: Parts): void {
+  const p = m.plain;
+  const W = 0.3;
+  const H = 0.42;
+  const y0 = 0.05;
+  p.box(W, H, 0.012, C.giayTho, 0, y0 + H / 2, 0);
+  for (const sd of [-1, 1]) p.box(0.012, H, 0.016, C.gold, sd * (W / 2 - 0.004), y0 + H / 2, 0);
+  for (const y of [y0, y0 + H]) {
+    p.cyl(0.02, 0.02, W + 0.06, C.nhuNguyetDark, 0, y, 0, [0, 0, Math.PI / 2], 8);
+    for (const sd of [-1, 1]) p.sphere(0.022, C.gold, sd * (W / 2 + 0.045), y, 0, [1, 1, 1], 7);
+  }
+  // Bốn cột chữ: mỗi cột bảy nét ngang ngắn so le như chữ viết dọc.
+  for (let c = 0; c < 4; c++) {
+    const x = 0.09 - c * 0.06;
+    for (let i = 0; i < 7; i++) {
+      const w = 0.024 + ((c * 7 + i) % 3) * 0.006;
+      p.box(w, 0.016, 0.006, C.nhuNguyetDark, x + (((i + c) % 2) - 0.5) * 0.004, y0 + H - 0.05 - i * 0.047, 0.008);
+    }
+  }
+  p.box(0.032, 0.032, 0.006, C.nhuNguyet, -0.105, y0 + 0.05, 0.008);
+  // Dây treo đỏ từ hai đầu trục trên.
+  p.add(new THREE.TorusGeometry(0.08, 0.006, 4, 12, Math.PI), C.nhuNguyet, 0, y0 + H + 0.005, 0);
 }
 
 /**
@@ -510,6 +538,12 @@ export const MON_VE: Record<MonId, VeMon> = {
   'bachDang-giap': { cho: 'than', mac: giapSatBachDang, rieng: tren(giapSatBachDang, true), xoay: [0, 0.45, 0] },
   'bachDang-phucSuc': { cho: 'thu', rieng: bakeNguaChien, xoay: [0, 0.9, 0] },
   'bachDang-baoVat': { cho: 'bay', rieng: toon(cocLim), xoay: [0.15, 0.4, -0.3] },
+
+  // Bộ Như Nguyệt (Lý Thường Kiệt, tướng dã ngoại map 10).
+  'nhuNguyet-vuKhi': { cho: 'tay', cam: 'kiem', mac: tayPhai(kiemNhuNguyet), rieng: toon(kiemNhuNguyet), xoay: [0, 1.2, -Math.PI / 4] },
+  'nhuNguyet-giap': { cho: 'than', mac: giapTru, rieng: tren(giapTru, true), xoay: [0, 0.45, 0] },
+  'nhuNguyet-phucSuc': { cho: 'lung', mac: aoChoangDo, rieng: tren(aoChoangDo, true), xoay: [0, Math.PI - 0.6, 0] },
+  'nhuNguyet-baoVat': { cho: 'bay', rieng: toon(cuonThoThan), xoay: [0.1, 0.35, 0] },
 };
 
 /** Mô hình đứng riêng của món, đặt theo góc chụp ảnh (`xoay`). */

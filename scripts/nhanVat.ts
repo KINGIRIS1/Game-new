@@ -13,6 +13,7 @@ import {
   makeTrieuQuangPhuc,
   makeMaiThucLoan,
   makeNgoQuyen,
+  makeLyThuongKiet,
   makeCaoLo,
   makeDrummer,
   makeGiong,
@@ -388,6 +389,10 @@ export const NHOM: Record<string, Entry[]> = {
     { ten: 'Ngô Quyền thắng trận', tao: theoCot(() => makeNgoQuyen(), 'win'), co: 2.4, cach: 2.1, cot: CHEM_COT },
     { ten: 'Ngô Quyền đứng chầu (sân Điện)', tao: () => makeNgoQuyen({ onFoot: true }), co: 1.8, cach: 1.3 },
     { ten: 'Ngô Quyền (đủ bộ Bạch Đằng)', tao: () => makeNgoQuyen({ anh: true }), co: 2.3, cach: 2.1, cot: ANH_COT },
+    { ten: 'Lý Thường Kiệt', tao: () => makeLyThuongKiet(), co: 1.8, cach: 1.3 },
+    { ten: 'Lý Thường Kiệt nam quốc sơn hà', tao: () => makeLyThuongKiet(), co: 1.8, cach: 1.3, cot: CHEM_COT },
+    { ten: 'Lý Thường Kiệt thắng trận', tao: theoCot(() => makeLyThuongKiet(), 'win'), co: 1.8, cach: 1.3, cot: CHEM_COT },
+    { ten: 'Lý Thường Kiệt (đủ bộ Như Nguyệt)', tao: () => makeLyThuongKiet({ anh: true }), co: 1.8, cach: 1.3, cot: ANH_COT },
   ],
   anh: [
     { ten: 'Tráng sĩ Gióng (roi sắt, đủ bộ Phù Đổng)', tao: () => makeGiong('trangSi', { anh: true }), co: 1.9, cach: 1.7, cot: ANH_COT },

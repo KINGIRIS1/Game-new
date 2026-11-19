@@ -317,7 +317,9 @@ export type StoryId =
   /** Hạ Dương Tư Húc ở map 8 lần đầu: Mai Thúc Loan về. */
   | 'maiThucLoan'
   /** Hạ Lưu Hoằng Tháo ở map 9 lần đầu: Ngô Quyền về. */
-  | 'ngoQuyen';
+  | 'ngoQuyen'
+  /** Hạ Quách Quỳ ở map 10 lần đầu: Lý Thường Kiệt về. */
+  | 'lyThuongKiet';
 
 /** Một lời mời đổi hàng của thuyền buôn: đưa `give`, nhận `get`. */
 export interface Offer {

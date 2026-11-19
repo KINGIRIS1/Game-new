@@ -206,6 +206,11 @@ export const C = {
   songBac: 0xe4eff5,
   goLim: 0x6e3b26,
   goLimDark: 0x4a2617,
+  // Lý Thường Kiệt (Như Nguyệt): đỏ son, lụa ngà, giấy cuộn thơ.
+  nhuNguyet: 0xb8352b,
+  nhuNguyetDark: 0x7a2420,
+  luaNga: 0xe6d6b2,
+  giayTho: 0xf1e6c8,
   aoNau: 0x7a5434,
   khanNau: 0x4d3423,
   quanPhuc: 0x25222a,

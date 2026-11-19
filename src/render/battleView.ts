@@ -6,7 +6,7 @@ import { heroSetups, type Battle, type Fighter, type FighterKind } from '../game
 import { FIRE, HIEU_TRIEU, HILL, LIEN_CHAU, MA_VIEN_VOLLEY, RALLY_BEAT, ROCKS, SKILLS, SMASH, SWIMMERS, TT_WAVE, type NuTuongId, type UnitType } from '../game/defs';
 import { isBeast, makeBeast, makeRuaVang } from './beasts';
 import { isMonster, makeMonster } from './monsters';
-import { makeAnDuong, makeBaTrieu, makeCaoLo, makeGiong, makeNuTuong, makeSonTinh, makeMaiThucLoan, makeNgoQuyen, makeThuyTinh, makeTrieuQuangPhuc, makeTrungNhi, makeTrungTrac } from './heroes';
+import { makeAnDuong, makeBaTrieu, makeCaoLo, makeGiong, makeNuTuong, makeSonTinh, makeMaiThucLoan, makeNgoQuyen, makeLyThuongKiet, makeThuyTinh, makeTrieuQuangPhuc, makeTrungNhi, makeTrungTrac } from './heroes';
 import { LAU_THUYEN_SINK, makeEnemyBoat, makeFighter, makeMountain } from './models';
 import { C } from './palette';
 import type { Poser } from './rig';
@@ -54,6 +54,8 @@ interface FighterView {
   suong?: { group: THREE.Group; mat: THREE.MeshBasicMaterial; age: number };
   /** Hắc Đế dấy binh: vòng đỏ sẫm dưới chân người đang được thêm sức đánh. */
   hang?: THREE.Mesh;
+  /** Vòng xám tím dưới chân giặc đang nao núng (Nam quốc sơn hà). */
+  nao?: THREE.Mesh;
 }
 
 /** Vòng núi đá Dời non quanh Sơn Tinh: từng mỏm trồi vụt lên lần lượt, đứng một lúc rồi lún xuống. */
@@ -209,6 +211,7 @@ const SCALE: Partial<Record<FighterKind, number>> = {
   trieuQuangPhuc: 0.8,
   maiThucLoan: 0.8,
   ngoQuyen: 0.8,
+  lyThuongKiet: 0.8,
   toDinh: 1,
 };
 /** Thứ đi dưới nước: lâu thuyền, lính còn trên thuyền, thủy quái. Qua ô cầu thì đi dưới gầm, không lên mặt cầu. */
@@ -246,6 +249,8 @@ const waterBallMat = new THREE.MeshBasicMaterial({ color: 0x9fd4e8 });
 const CRAG_RISE = 0.18;
 const CRAG_HOLD = 1.25;
 const CRAG_LIFE = 1.9;
+/** Chữ thơ Nam quốc sơn hà bay lên rồi tan trong chừng này giây. */
+const CHU_THO_LIFE = 2.2;
 /** Sóng Thủy Tinh chạy hết dải trong chừng này giây, rồi đổ sụp tới SURGE_LIFE. */
 const SURGE_RUN = 0.6;
 const SURGE_LIFE = 1.0;
@@ -372,6 +377,33 @@ const reedGeo = new THREE.ConeGeometry(0.035, 0.9, 4);
 const reedMat = new THREE.MeshBasicMaterial({ color: C.lauSay });
 /** Vòng đỏ sẫm dưới chân người đang được Hắc Đế dấy binh thêm sức đánh. */
 const hangMat = new THREE.MeshBasicMaterial({ color: C.hoQuan, transparent: true, opacity: 0.7, depthWrite: false });
+const naoMat = new THREE.MeshBasicMaterial({ color: 0x8a7aa8, transparent: true, opacity: 0.6, depthWrite: false });
+/** Bốn chữ thơ thần bay lên khi Lý Thường Kiệt ngâm Nam quốc sơn hà. */
+const CHU_THO = ['Nam', 'quốc', 'sơn', 'hà'];
+const chuTex = new Map<string, THREE.Texture>();
+/** Ảnh một chữ thơ: chữ vàng viền son trên nền trong suốt (vẽ một lần, dùng lại). */
+function chuThoTex(chu: string): THREE.Texture | null {
+  const cu = chuTex.get(chu);
+  if (cu) return cu;
+  if (typeof document === 'undefined') return null;
+  const cv = document.createElement('canvas');
+  cv.width = 256;
+  cv.height = 128;
+  const g = cv.getContext('2d');
+  if (!g) return null;
+  g.font = 'bold 84px serif';
+  g.textAlign = 'center';
+  g.textBaseline = 'middle';
+  g.lineWidth = 12;
+  g.strokeStyle = '#7a2420';
+  g.strokeText(chu, 128, 66);
+  g.fillStyle = '#f3c74e';
+  g.fillText(chu, 128, 66);
+  const tex = new THREE.CanvasTexture(cv);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  chuTex.set(chu, tex);
+  return tex;
+}
 const arrowGeo = new THREE.BoxGeometry(0.03, 0.03, 0.45);
 const arrowMat = new THREE.MeshBasicMaterial({ color: C.arrow });
 /** Tên đồng của Cao Lỗ (đòn thường và Nỏ liên châu). */
@@ -473,6 +505,8 @@ export class BattleView {
   private readonly waves: DrumWave[] = [];
   private readonly turtles: Turtle[] = [];
   private readonly crags: Crag[] = [];
+  /** Chữ thơ Nam quốc sơn hà đang bay. */
+  private readonly chuTho: { sp: THREE.Sprite; age: number }[] = [];
   private readonly surges: Surge[] = [];
   private readonly whirls: Whirl[] = [];
   /** Nhịp trống đã tỏa sóng gần nhất của Trống trận đang đánh, −1 khi không có. */
@@ -638,6 +672,11 @@ export class BattleView {
     this.turtles.length = 0;
     for (const c of this.crags) this.dropCrag(c);
     this.crags.length = 0;
+    for (const c of this.chuTho) {
+      this.root.remove(c.sp);
+      (c.sp.material as THREE.Material).dispose();
+    }
+    this.chuTho.length = 0;
     for (const w of this.surges) this.root.remove(w.group);
     this.surges.length = 0;
     for (const w of this.whirls) this.root.remove(w.group);
@@ -705,6 +744,8 @@ export class BattleView {
             ? makeMaiThucLoan({ anh })
             : f.kind === 'ngoQuyen'
             ? makeNgoQuyen({ anh })
+            : f.kind === 'lyThuongKiet'
+            ? makeLyThuongKiet({ anh })
             : f.kind === 'trungTrac'
             ? makeTrungTrac({ glow, anh })
             : f.kind === 'trungNhi'
@@ -743,6 +784,7 @@ export class BattleView {
       this.syncTeam(view, battle.mode === 'pvp' && f.state !== 'dead' ? f.side : null);
       this.syncShell(view, f.side === 'ta' && f.state !== 'dead' && battle.shield > 0 && !battle.outcome);
       this.syncHang(view, f.state !== 'dead' && (f.hang ?? 0) > 0 && !battle.outcome);
+      this.syncNao(view, f.state !== 'dead' && (f.nao ?? 0) > 0 && !battle.outcome);
       this.syncOrder(view, f.kind === 'no' && f.state !== 'dead' && (battle.lenh ?? 0) > 0 && !battle.outcome);
       if (f.kind === 'lauThuyen') {
         this.poseShip(view, f, base, dt);
@@ -1529,6 +1571,51 @@ export class BattleView {
     if (view.hang) view.hang.scale.setScalar(1.1 + 0.12 * Math.sin(this.time * 6));
   }
 
+  /** Thêm hay bỏ vòng xám tím dưới chân giặc đang nao núng (Nam quốc sơn hà), vòng chập chờn. */
+  private syncNao(view: FighterView, on: boolean): void {
+    if (on && !view.nao) {
+      view.nao = new THREE.Mesh(auraGeo, naoMat);
+      view.nao.position.y = 0.05;
+      view.nao.renderOrder = 2;
+      view.obj.add(view.nao);
+    } else if (!on && view.nao) {
+      view.nao.removeFromParent();
+      view.nao = undefined;
+    }
+    if (view.nao) view.nao.scale.setScalar(1.0 + 0.08 * Math.sin(this.time * 3));
+  }
+
+  /**
+   * Nam quốc sơn hà: Lý Thường Kiệt ngâm thơ, vòng đỏ son loang tới tầm thơ (`r` ô), bốn chữ "Nam quốc sơn hà" vàng bay
+   * lên thành cột trên đầu ông rồi tan; quân ta trong vòng hồi máu (đốm xanh); giặc nao núng có vòng xám tím dưới chân (`syncNao`).
+   */
+  private namQuoc(battle: Battle, x: number, z: number, r: number): void {
+    const { x: ox, z: oz } = this.offset;
+    const hero = battle.fighters.find((f) => f.kind === 'lyThuongKiet');
+    const view = hero && this.fighters.get(hero.id);
+    if (view) view.cast = CAST_TIME;
+    const ring = new THREE.Mesh(ringGeo, new THREE.MeshBasicMaterial({ color: C.nhuNguyet, transparent: true, depthWrite: false }));
+    ring.position.set(x + ox, this.heightAt(x, z) + 0.08, z + oz);
+    ring.renderOrder = 3;
+    this.root.add(ring);
+    this.rings.push({ mesh: ring, age: 0, size: r * this.geo });
+    CHU_THO.forEach((chu, i) => {
+      const tex = chuThoTex(chu);
+      if (!tex) return;
+      const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, transparent: true, depthWrite: false, opacity: 0 }));
+      // Bốn chữ xếp một cột trên đầu ông như cột chữ trên cuộn thơ, đọc từ trên xuống, hiện ra lần lượt.
+      sp.position.set(x + ox, this.heightAt(x, z) + (3.0 - 0.5 * i) * this.scale, z + oz);
+      sp.scale.set(1.3 * this.scale, 0.65 * this.scale, 1);
+      sp.renderOrder = 5;
+      this.root.add(sp);
+      this.chuTho.push({ sp, age: -0.25 * i });
+    });
+    for (const f of battle.fighters) {
+      if (f.side !== 'ta' || f.state === 'dead' || Math.hypot(f.x - x, f.z - z) > r * this.geo) continue;
+      this.addPuff(f.x + ox, this.heightAt(f.x, f.z) + 0.5, f.z + oz, C.heal, 0.1, 0.8, 1.2);
+    }
+  }
+
   /** Thêm hay bỏ vòng sáng mai rùa dưới chân một người lính ta. */
   private syncShell(view: FighterView, on: boolean): void {
     if (on && !view.shell) {
@@ -1720,6 +1807,7 @@ export class BattleView {
       if (e.kind === 'chem' && e.tx !== undefined && e.tz !== undefined) this.chemCaKinh(battle, e.x, e.z, e.tx, e.tz);
       if (e.kind === 'an') this.ngayAn(battle, e.x, e.z);
       if (e.kind === 'hacDe') this.hacDe(battle, e.x, e.z, e.r ?? 3);
+      if (e.kind === 'tho') this.namQuoc(battle, e.x, e.z, e.r ?? 6);
       if (e.kind === 'coc' && e.tx !== undefined && e.tz !== undefined) this.cocBachDang(battle, e.tx, e.tz, e.len ?? 6, e.r ?? 2.5, e.seq);
       if (e.kind === 'escape') {
         // Tô Định chạy thoát khỏi bãi: bụi tung ở mép bãi phía giặc.
@@ -1815,6 +1903,19 @@ export class BattleView {
   }
 
   private animate(dt: number): void {
+    for (let i = this.chuTho.length - 1; i >= 0; i--) {
+      const c = this.chuTho[i];
+      c.age += dt;
+      if (c.age < 0) continue;
+      const k = c.age / CHU_THO_LIFE;
+      c.sp.position.y += dt * 0.5;
+      (c.sp.material as THREE.SpriteMaterial).opacity = Math.min(1, k * 5) * (1 - smoothstep(k, 0.6, 1));
+      if (k >= 1) {
+        this.root.remove(c.sp);
+        (c.sp.material as THREE.Material).dispose();
+        this.chuTho.splice(i, 1);
+      }
+    }
     for (let i = this.crags.length - 1; i >= 0; i--) {
       const c = this.crags[i];
       c.age += dt;

@@ -75,6 +75,7 @@ import {
   daoVanAn,
   giaoBachDang,
   giaoDaTrach,
+  kiemNhuNguyet,
   guomNuiNua,
   hornTrumpet,
   quiver,
@@ -2251,6 +2252,145 @@ export function makeNgoQuyen(opts: { onFoot?: boolean; anh?: boolean } = {}): TH
   return anhNeu(out, shape, 'ngoQuyen', opts.anh);
 }
 
+// ---------- Lý Thường Kiệt (tướng dã ngoại, map 10 sông Như Nguyệt) ----------
+
+/** Cỡ thân Lý Thường Kiệt: như Cao Lỗ, đi bộ. */
+const K_LTK = 1.38;
+
+/**
+ * Cuộn thơ thần: ống giấy ngà cuộn tròn nằm ngang dài `len`, hai trục gỗ son bịt núm vàng, dây đỏ buộc giữa có tua.
+ * Tâm ở giữa cuộn, trục theo x.
+ */
+export function cuonTho(m: Parts, len = 0.3, r = 0.04): void {
+  const p = m.plain;
+  p.cyl(r, r, len, C.giayTho, 0, 0, 0, [0, 0, Math.PI / 2], 10);
+  for (const sd of [-1, 1]) {
+    p.cyl(r * 1.25, r * 1.25, 0.018, C.nhuNguyetDark, sd * (len / 2 + 0.006), 0, 0, [0, 0, Math.PI / 2], 10);
+    p.sphere(r * 0.7, C.gold, sd * (len / 2 + 0.03), 0, 0, [1, 1, 1], 7);
+  }
+  m.band.cyl(r * 1.08, r * 1.08, 0.03, C.nhuNguyet, 0, 0, 0, [0, 0, Math.PI / 2], 10);
+  p.cone(r * 0.45, r * 2.6, C.nhuNguyet, 0.012, -r * 1.8, r * 0.6, [Math.PI + 0.2, 0, 0.15], 6);
+}
+
+/**
+ * Giáp trụ của Lý Thường Kiệt: giáp vảy đồng vàng bốn hàng viền đỏ son, hộ tâm vàng mặt trống đồng viền đỏ, váy giáp đồng
+ * hai hàng, giáp vai đồng hai lớp viền vàng.
+ */
+export function giapTru(h: HumanRig): void {
+  skirtArmor(h, { color: C.bronze, trim: C.nhuNguyet, rows: 2, to: 0.23, panels: [0, Math.PI], half: 0.5 });
+  armor(h, { color: C.bronze, trim: C.nhuNguyet, rows: 4, scales: true, y0: 0.39, y1: 0.6, thick: 0.016 });
+  chestDisc(h, { color: C.gold, drum: true, r: 0.072, rim: C.nhuNguyet, thick: 0.022 });
+  pauldrons(h, { color: C.bronze, trim: C.gold, layers: 2, size: 1.05 });
+}
+
+/** Áo choàng đỏ của Lý Thường Kiệt: đỏ son buông từ vai gần tới gót, viền vàng hoa văn, khuy vàng hai vai. */
+export function aoChoangDo(h: HumanRig): void {
+  cloak(h, { color: C.nhuNguyet, trim: C.gold, hem: 0.06, flare: 0.16, clasp: C.gold });
+}
+
+/**
+ * Miện lá của Lý Thường Kiệt: cùng dáng miện lá các tướng nam; điểm nhấn riêng theo bài thơ thần: lá sơn đỏ son khảm
+ * vàng, nan vàng, chóp vàng; thay mặt trời trống đồng là cuộn thư giấy ngà nằm ngang trước trán, hai đầu trục vàng, dây son buộc giữa.
+ */
+function mienLtk(h: HumanRig): void {
+  diadem(h, { color: IRON_DARK, y: 0.8, h: 0.026, puff: 0.014 });
+  diadem(h, { color: C.gold, pattern: true, y: 0.824, h: 0.043, puff: 0.01 });
+  mien(h, { ...MIEN, color: C.nhuNguyet, inlay: C.gold, bar: C.goldDark, curls: C.gold, finial: C.gold, h: 0.26, w: 0.082, y: 0.852 });
+  h.local('head', [0, 0.862, 0.222], [-0.3, 0, 0], (s) => {
+    const p = s.plain;
+    // Cuộn thư: thân giấy ngà, hai đầu trục vàng, dây son buộc giữa.
+    p.cyl(0.025, 0.025, 0.12, C.giayTho, 0, 0, 0, [0, 0, Math.PI / 2], 12);
+    for (const sd of [-1, 1]) {
+      p.cyl(0.032, 0.032, 0.014, C.gold, sd * 0.064, 0, 0, [0, 0, Math.PI / 2], 12);
+      p.sphere(0.016, C.gold, sd * 0.08, 0, 0, [1, 1, 1], 7);
+    }
+    s.band.cyl(0.028, 0.028, 0.022, C.nhuNguyet, 0, 0, 0, [0, 0, Math.PI / 2], 12);
+  });
+}
+
+/** Lý Thường Kiệt: áo lụa ngà, giáp trụ đồng, áo choàng đỏ, râu dài, miện lá đỏ son, kiếm, cuộn thơ đeo bên hông trái. */
+function drawLyThuongKiet(h: HumanRig, thay: ThayDo = {}): void {
+  humanBody(h, {
+    cloth: C.luaNga,
+    pattern: true,
+    flaps: true,
+    top: C.nhuNguyetDark,
+    belt: C.nhuNguyet,
+    armband: C.gold,
+    greaves: C.bronzeDark,
+    greavesTrim: C.gold,
+    bracer: C.bronzeDark,
+    bracerTrim: C.gold,
+  });
+  buckle(h, { color: C.gold, gem: C.nhuNguyet });
+  if (!thay.than) giapTru(h);
+  if (!thay.lung) aoChoangDo(h);
+  humanHead(h, { brows: true, mustache: C.hair, beard: C.hair, beardLen: 0.2 });
+  hairCap(h);
+  bun(h, { color: C.hair, at: [0, 0.985, -0.01], size: 0.08, tie: C.gold });
+  if (!thay.dau) mienLtk(h);
+  // Cuộn thơ đeo chéo bên hông trái.
+  if (!thay.hinh) h.local('hips', [-0.2, 0.3, 0.02], [0, 0.3, 1.2], (s) => cuonTho(s, 0.22, 0.032));
+  if (!thay.tay) h.vuKhi(() => h.local('hand', GRIP_R, null, kiemNhuNguyet));
+}
+
+/**
+ * Lý Thường Kiệt: nghỉ, đi thì kiếm chúc mũi xuống bên phải; đánh thì vung kiếm từ trên vai phải chém chéo
+ * xuống. `skill` (Nam quốc sơn hà): đứng thẳng, ngực ưỡn, ngửa đầu, tay trái đưa ra trước mở lòng bàn tay như ngâm thơ,
+ * kiếm dựng trước ngực; rồi đứng lại. `win`: giơ kiếm lên trời.
+ */
+function poseLyThuongKiet(b: Human, a: Act): void {
+  beginPose(b, a.time);
+  const t = a.time ?? 0;
+  if (a.act === 'walk') walkCycle(b, a.phase ?? 0, (a.stride ?? 0.5) * 0.85);
+  const sw = a.act === 'walk' ? Math.sin(a.phase ?? 0) : 0;
+  b.armL.rotation.set(-0.15 - 0.25 * sw, 0, -0.2);
+  b.armR.rotation.set(-0.25 + 0.2 * sw, 0, 0.2);
+  // Kiếm chúc mũi xuống chếch ra trước bên phải.
+  b.hand.rotation.set(2.3 + 0.02 * Math.sin(t * 1.3), 0, -0.15);
+  if (a.act === 'dead') {
+    fallPose(b, a.fall ?? 1);
+    b.hand.rotation.x = -0.9;
+  } else if (a.skill !== undefined) {
+    const k = a.skill;
+    const up = smooth(k, 0, 0.2) * (1 - smooth(k, 0.85, 1));
+    const ngam = Math.sin(Math.PI * smooth(k, 0.2, 0.85));
+    b.chest.rotation.set(-0.15 * up, 0, 0);
+    b.head.rotation.set(-0.25 * up - 0.05 * ngam, 0, 0);
+    b.armL.rotation.set(lerp(-0.15, -1.45 - 0.15 * ngam, up), 0, lerp(-0.2, -0.45, up));
+    b.handL.rotation.set(lerp(0, -0.6, up), 0, 0);
+    b.armR.rotation.set(lerp(-0.3, -0.75, up), 0, lerp(0.18, -0.15, up));
+    b.hand.rotation.set(lerp(2.3, 0.75, up), 0, 0);
+  } else if (a.win !== undefined) {
+    const w = a.win;
+    b.armR.rotation.set(lerp(-0.3, -2.95, w), 0, lerp(0.18, 0.25, w));
+    b.hand.rotation.set(lerp(2.3, -0.1, w), 0, 0);
+    b.armL.rotation.set(lerp(-0.15, -0.5, w), 0, -0.35);
+    b.chest.rotation.x = -0.12 * w;
+  } else if (a.act === 'fight') {
+    // Thủ: kiếm giơ chếch trên vai phải. Chém: vụt chéo xuống trước mặt, người xoay theo.
+    const e = strikeCurve(a.strike, 0.3, 0.5);
+    stance(b, lerp(0.3, 0.5, e), lerp(0.28, 0.4, e));
+    b.hips.position.z += 0.05 * e;
+    b.chest.rotation.set(lerp(-0.05, 0.35, e), lerp(0.35, -0.35, e), 0);
+    b.head.rotation.set(lerp(0.05, -0.25, e), -b.chest.rotation.y, 0);
+    b.armR.rotation.set(lerp(-2.6, -0.9, e), lerp(0, -0.3, e), lerp(0.45, -0.1, e));
+    b.hand.rotation.set(lerp(-0.6, 1.4, e), 0, 0);
+    b.armL.rotation.set(lerp(-0.6, -0.3, e), 0, -0.35);
+  }
+  gripHands(b, ARM * K_LTK);
+}
+
+/** Lý Thường Kiệt đi bộ cầm kiếm (ở sân Điện cũng đứng chầu như thế). */
+export function makeLyThuongKiet(opts: { anh?: boolean } = {}): THREE.Group {
+  const r = new RigBuilder({ ...BASE, ...bigHuman('base', [0, 0, 0], K_LTK) });
+  r.ghiAnh = !!opts.anh;
+  drawBig(r, [0, 0, 0], K_LTK, drawLyThuongKiet);
+  const shape = r.build();
+  const { group, bones } = skinRig(shape);
+  return anhNeu(finish(group, (a) => poseLyThuongKiet(bones as unknown as Human, a)), shape, 'lyThuongKiet', opts.anh);
+}
+
 // ---------- Lạc tướng đánh trống trận ----------
 
 /** Dùi trống lúc nghỉ, lúc giơ cao lấy đà, và lúc nện xuống mặt trống (góc chúc xuống, radian). */
@@ -2691,10 +2831,10 @@ export function makeNuTuong(kind: NuTuongId, opts: { glow?: boolean } = {}): THR
 export type TheCamTuong = 'dung' | 'kiem' | 'no' | 'cung';
 
 /** Thế cầm vũ khí của chính tướng (khi chưa mặc vũ khí khác). */
-export const CAM_GOC: Record<HeroKind, TheCamTuong> = { giong: 'dung', sonTinh: 'dung', anDuong: 'no', caoLo: 'no', trungTrac: 'kiem', trungNhi: 'cung', baTrieu: 'kiem', trieuQuangPhuc: 'dung', maiThucLoan: 'dung', ngoQuyen: 'dung' };
+export const CAM_GOC: Record<HeroKind, TheCamTuong> = { giong: 'dung', sonTinh: 'dung', anDuong: 'no', caoLo: 'no', trungTrac: 'kiem', trungNhi: 'cung', baTrieu: 'kiem', trieuQuangPhuc: 'dung', maiThucLoan: 'dung', ngoQuyen: 'dung', lyThuongKiet: 'kiem' };
 
 /** Cỡ thân người từng tướng khi đứng (Hai Bà đứng cùng cỡ Lạc tướng như ở sân Điện). */
-const K_DUNG: Record<HeroKind, number> = { giong: K_GIONG, sonTinh: K_SON, anDuong: K_ADV, caoLo: K_CAO, trungTrac: K_LAC, trungNhi: K_LAC, baTrieu: K_LAC, trieuQuangPhuc: K_TQP, maiThucLoan: K_MTL, ngoQuyen: K_NQ };
+const K_DUNG: Record<HeroKind, number> = { giong: K_GIONG, sonTinh: K_SON, anDuong: K_ADV, caoLo: K_CAO, trungTrac: K_LAC, trungNhi: K_LAC, baTrieu: K_LAC, trieuQuangPhuc: K_TQP, maiThucLoan: K_MTL, ngoQuyen: K_NQ, lyThuongKiet: K_LTK };
 
 /** Tư thế đứng chân dung theo thế cầm vũ khí, như các tướng đứng chầu trong sân Điện. */
 function poseChanDung(b: Human, cam: TheCamTuong, k: number): void {
@@ -2740,6 +2880,7 @@ export function bakeTuongDung(kind: HeroKind, thay: ThayDo, cam: TheCamTuong, th
     else if (kind === 'trieuQuangPhuc') drawTrieuQuangPhuc(h, t);
     else if (kind === 'maiThucLoan') drawMaiThucLoan(h, t);
     else if (kind === 'ngoQuyen') drawNgoQuyen(h, t);
+    else if (kind === 'lyThuongKiet') drawLyThuongKiet(h, t);
     else drawTrungNhi(h, t);
     them(h, k);
   });

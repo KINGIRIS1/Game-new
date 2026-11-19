@@ -465,6 +465,25 @@ export function giaoBachDang(s: Parts, len = 2.0, grip = 0.6): void {
 }
 
 /**
+ * Kiếm Như Nguyệt của Lý Thường Kiệt: lưỡi thép thẳng hai lưỡi, gờ sống sáng, mũi nhọn; chắn tay đồng vàng hai đầu cuộn
+ * vân mây; chuôi quấn dây đỏ, núm vàng, tua đỏ. Gốc ở chỗ tay nắm, mũi hướng +y.
+ */
+export function kiemNhuNguyet(s: Parts): void {
+  const p = s.plain;
+  const len = 0.72;
+  p.box(0.018, len, 0.062, IRON, 0, 0.09 + len / 2, 0);
+  p.box(0.022, len * 0.96, 0.012, C.songBac, 0, 0.09 + len * 0.48, 0);
+  p.cone(0.044, 0.12, IRON, 0, 0.09 + len + 0.05, 0, [0, Math.PI / 4, 0], 4);
+  s.band.box(0.03, 0.06, 0.07, C.gold, 0, 0.095, 0);
+  p.box(0.17, 0.032, 0.05, C.gold, 0, 0.065, 0);
+  for (const sd of [-1, 1]) p.sphere(0.024, C.gold, sd * 0.09, 0.075, 0, [1, 1.2, 0.8], 6);
+  p.cyl(0.02, 0.022, 0.13, C.nhuNguyet, 0, -0.01, 0, undefined, 6);
+  for (const y of [-0.05, 0, 0.04]) p.cyl(0.024, 0.024, 0.012, C.nhuNguyetDark, 0, y, 0, undefined, 6);
+  p.sphere(0.032, C.gold, 0, -0.085, 0, [1, 1, 1], 7);
+  p.cone(0.028, 0.12, C.nhuNguyet, 0, -0.15, 0, [Math.PI, 0, 0], 6);
+}
+
+/**
  * Đại đao Vạn An của Mai Thúc Loan: cán gỗ sơn đen dài 1,5, ba đai vàng, đuôi cán bịt sắt; khâu vàng, tua đỏ buông
  * dưới khâu; lưỡi sắt to bản cong như trăng non, sống lưỡi vàng, mũi vểnh. Tay nắm cách đuôi cán 0,3; lưỡi sắc hướng +z.
  */
