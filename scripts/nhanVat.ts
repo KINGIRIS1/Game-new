@@ -375,11 +375,12 @@ export const NHOM: Record<string, Entry[]> = {
     { ten: 'Bà Triệu (đủ bộ Núi Nưa)', tao: () => makeBaTrieu({ anh: true }), co: 2.3, cach: 2.1, cot: ANH_COT },
   ],
   thanThu: [
-    { ten: 'Chim Lạc (dáng lớn)', tao: () => makeThanThu('thuLac', 1), co: 1.5, cach: 1.6 },
-    { ten: 'Ngựa sắt (dáng lớn)', tao: () => makeThanThu('thuNgua', 1), co: 1.2, cach: 1.3 },
-    { ten: 'Gà chín cựa (dáng lớn)', tao: () => makeThanThu('thuGa', 1), co: 1.0, cach: 1.0 },
-    { ten: 'Rùa Vàng (dáng lớn)', tao: () => makeThanThu('thuRua', 1), co: 0.9, cach: 1.2 },
-    { ten: 'Rồng (dáng thần)', tao: () => makeThanThu('thuRong', 2), co: 1.6, cach: 2.2 },
+    { ten: 'Chim Lạc (dáng lớn)', tao: () => makeThanThu('thuLac', 1), co: 2.0, cach: 2.2 },
+    { ten: 'Chim Lạc (dáng thần)', tao: () => makeThanThu('thuLac', 2), co: 2.5, cach: 2.8 },
+    { ten: 'Ngựa sắt (dáng thần)', tao: () => makeThanThu('thuNgua', 2), co: 2.0, cach: 1.9 },
+    { ten: 'Gà chín cựa (dáng lớn)', tao: () => makeThanThu('thuGa', 1), co: 1.3, cach: 1.3 },
+    { ten: 'Rùa Vàng (dáng thần)', tao: () => makeThanThu('thuRua', 2), co: 1.5, cach: 2.2 },
+    { ten: 'Rồng (dáng thần)', tao: () => makeThanThu('thuRong', 2), co: 3.0, cach: 3.6 },
   ],
   anh: [
     { ten: 'Tráng sĩ Gióng (roi sắt, đủ bộ Phù Đổng)', tao: () => makeGiong('trangSi', { anh: true }), co: 1.9, cach: 1.7, cot: ANH_COT },

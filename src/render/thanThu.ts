@@ -1,23 +1,28 @@
 // Thần thú (docs/thiet-ke.md mục Kế hoạch: nuôi thần thú): năm thú có khung xương, dùng chung cho trận dã ngoại
-// (`battleView.ts`) và kinh đô (`world.ts`: thú đi lại, bay trong thành). Ngựa sắt, gà chín cựa, Rùa Vàng dựng từ dáng
-// sẵn có (`heroes.ts`, `beasts.ts`); chim Lạc và rồng dựng ở đây bằng khối ghép gắn xương.
+// (`battleView.ts`) và kinh đô (`world.ts`: thú đi lại, bay trong thành). Ngựa sắt, Rùa Vàng dùng dáng truyện sẵn có
+// (`heroes.ts`, `beasts.ts`); gà chín cựa nặn từ đất nặn gà (`GA_CUU` ở `nanThu.ts`); chim Lạc (`lacBody` ở
+// `nanThu.ts`) và rồng (`dragonBody` ở `nanQuai.ts`) nặn liền khối, khung xương và tư thế ở đây.
 //
-// Ba dáng theo cấp (`dangThu` ở `game/thanThu.ts`): non nhỏ, lớn, thần to hơn và có quầng hào quang. Gốc mô hình ở
-// mặt đất dưới thú, đầu hướng +z. Thú bay (`THAN_THU[k].bay`) ghi `userData.bay` là độ cao bay (theo cỡ mô hình).
+// Ba dáng theo cấp (`dangThu` ở `game/thanThu.ts`): non nhỏ, lớn, thần to hẳn và có hào quang (thú đi đất: quầng sáng
+// dưới chân; thú bay: đốm sáng bay quanh mình). Gốc mô hình ở mặt đất dưới thú, đầu hướng +z. Thú bay
+// (`THAN_THU[k].bay`) ghi `userData.bay` là độ cao bay (theo cỡ mô hình).
 
 import * as THREE from 'three';
 import { THAN_THU, type ThanThuId } from '../game/defs';
 import { lerp, strikeCurve } from './body';
 import { makeGaCuu, makeRuaThan } from './beasts';
 import { makeNguaSat } from './heroes';
+import { lacBody } from './nanThu';
+import { RONG_MAU, dragonBody } from './nanQuai';
 import { C } from './palette';
 import { RigBuilder, resetBones, skinRig, type Act, type BoneDef, type Bones, type Poser } from './rig';
 
 type Defs = Record<string, BoneDef<string>>;
 type B = Bones<string>;
+type V3 = [number, number, number];
 
 /** Cỡ mỗi dáng (non, lớn, thần). */
-export const DANG_CO = [0.7, 0.88, 1.08] as const;
+export const DANG_CO = [0.85, 1.15, 1.5] as const;
 
 /** Độ chi tiết như thú trong trận. */
 const DETAIL = 0.75;
@@ -29,57 +34,12 @@ const LAC: Defs = {
   qBody: { parent: 'base', at: [0, 0.9, 0] },
   qNeck: { parent: 'qBody', at: [0, 1.0, 0.26] },
   qHead: { parent: 'qNeck', at: [0, 1.34, 0.54] },
-  qWingL: { parent: 'qBody', at: [-0.16, 1.0, 0.04] },
-  qWingR: { parent: 'qBody', at: [0.16, 1.0, 0.04] },
-  qWingL2: { parent: 'qWingL', at: [-0.68, 1.0, 0.0] },
-  qWingR2: { parent: 'qWingR', at: [0.68, 1.0, 0.0] },
+  qWingL: { parent: 'qBody', at: [-0.14, 1.0, 0.04] },
+  qWingR: { parent: 'qBody', at: [0.14, 1.0, 0.04] },
+  qWingL2: { parent: 'qWingL', at: [-0.64, 1.0, 0.04] },
+  qWingR2: { parent: 'qWingR', at: [0.64, 1.0, 0.04] },
   qTail: { parent: 'qBody', at: [0, 0.92, -0.32] },
 };
-
-/**
- * Chim Lạc như trên mặt trống đồng: mình thon trắng ngà, cổ dài, mỏ dài thẳng, mào lông đỏ vắt ra sau, cánh đồng
- * sải rộng mút lông vàng, đuôi xòe lông đỏ vàng, chân dài thu về sau khi bay, mắt sáng.
- */
-function drawLac(r: RigBuilder<string>): void {
-  const body = r.on('qBody');
-  body.plain.sphere(0.24, C.cream, 0, 0.92, 0.02, [1, 0.82, 1.65], 12);
-  body.plain.sphere(0.15, C.gold, 0, 0.86, 0.2, [1, 0.8, 1.1], 10);
-  // Vạch hoa văn đồng dọc lưng.
-  for (let i = 0; i < 4; i++) body.band.box(0.03, 0.03, 0.09, C.bronze, 0, 1.11, 0.16 - i * 0.12);
-  // Chân dài thu về sau.
-  for (const s of [-1, 1]) {
-    body.plain.cyl(0.018, 0.018, 0.55, C.bronzeDark, s * 0.07, 0.8, -0.42, [Math.PI / 2 - 0.25, 0, 0], 5);
-    body.plain.cone(0.03, 0.08, C.bronzeDark, s * 0.07, 0.73, -0.72, [-Math.PI / 2, 0, 0], 5);
-  }
-  r.on('qNeck').plain.cyl(0.06, 0.09, 0.44, C.cream, 0, 1.15, 0.39, [0.67, 0, 0], 8);
-  const head = r.on('qHead');
-  head.plain.sphere(0.1, C.cream, 0, 1.36, 0.57, [1, 1, 1.1], 10);
-  head.plain.cone(0.035, 0.44, C.bronzeDark, 0, 1.34, 0.88, [Math.PI / 2, 0, 0], 6);
-  for (const s of [-1, 1]) head.glow.sphere(0.022, C.ember, s * 0.07, 1.39, 0.62, [1, 1, 1], 6);
-  // Mào: ba lông dài vắt ra sau, mút vàng.
-  for (const [a, x] of [
-    [0, 0],
-    [0.25, -0.04],
-    [-0.25, 0.04],
-  ] as const) {
-    head.plain.box(0.022, 0.022, 0.22, C.red, x, 1.47, 0.47, [0.7, a, 0]);
-    head.glow.sphere(0.022, C.gold, x - Math.sin(a) * 0.1, 1.53, 0.38, [1, 1, 1.4], 6);
-  }
-  // Cánh: phần trong đồng, phần ngoài lông sải dài vàng xen đồng sáng.
-  for (const [b, b2, s] of [
-    ['qWingL', 'qWingL2', -1],
-    ['qWingR', 'qWingR2', 1],
-  ] as const) {
-    const w = r.on(b);
-    w.plain.box(0.56, 0.045, 0.34, C.bronze, s * 0.44, 1.0, 0.02);
-    w.band.box(0.5, 0.05, 0.08, C.cream, s * 0.44, 1.015, 0.15);
-    const w2 = r.on(b2);
-    for (let i = 0; i < 5; i++) w2.plain.box(0.56, 0.03, 0.085, i % 2 ? C.gold : C.bronzeLight, s * (0.96 + i * 0.02), 1.0, 0.13 - i * 0.075, [0, s * -0.12 * i, 0]);
-  }
-  // Đuôi xòe năm lông dài.
-  const tail = r.on('qTail');
-  for (let i = -2; i <= 2; i++) tail.plain.box(0.065, 0.022, 0.5, i % 2 ? C.red : C.gold, i * 0.05, 0.9, -0.58, [-0.05, i * 0.22, 0]);
-}
 
 /** Chim Lạc luôn bay: đi thì vỗ cánh mạnh, đứng thì liệng chậm; đánh thì chúc đầu bổ xuống, cánh vút lên. */
 function poseLac(b: B, a: Act): void {
@@ -94,15 +54,16 @@ function poseLac(b: B, a: Act): void {
   }
   const fly = a.act === 'walk';
   const ph = fly ? (a.phase ?? 0) * 0.9 : t * 3.2;
-  const amp = fly ? 0.75 : 0.4;
+  const amp = fly ? 0.7 : 0.35;
   const flap = Math.sin(ph);
   b.qWingL.rotation.z = -amp * flap;
   b.qWingR.rotation.z = amp * flap;
-  b.qWingL2.rotation.z = -0.45 * amp * Math.sin(ph - 0.8);
-  b.qWingR2.rotation.z = 0.45 * amp * Math.sin(ph - 0.8);
+  // Cánh ngoài theo sau một nhịp, cong mềm như cánh thật.
+  b.qWingL2.rotation.z = -0.5 * amp * Math.sin(ph - 0.9);
+  b.qWingR2.rotation.z = 0.5 * amp * Math.sin(ph - 0.9);
   b.qBody.position.y -= 0.05 * flap;
   b.qTail.rotation.x = 0.08 * Math.sin(ph + 1);
-  b.qNeck.rotation.x = 0.05 * Math.sin(t * 1.4);
+  b.qNeck.rotation.x = 0.05 * Math.sin(t * 1.4) + 0.04 * flap;
   if (a.act === 'fight') {
     const e = strikeCurve(a.strike, 0.25, 0.45);
     b.qBody.rotation.x = 0.45 * e;
@@ -114,106 +75,97 @@ function poseLac(b: B, a: Act): void {
 
 // ---------- Rồng ----------
 
-/** Số đốt mình rồng (sau ngực), mỗi đốt một xương. */
-const DOT = 6;
+/** Các đốt mình rồng từ ngực ra đuôi: (x, y, z, bán kính), uốn sóng lên xuống và hơi ngoằn ngoèo hai bên. */
+const RONG_MINH: [number, number, number, number][] = Array.from({ length: 11 }, (_, i) => [
+  0.12 * Math.sin(i * 0.7 + 1),
+  1.0 + 0.2 * Math.sin(i * 0.9),
+  0.3 - i * 0.33,
+  0.19 * (1 - i / 12) + 0.025,
+]);
+const RONG_CO: V3 = [0, 1.25, 0.62];
+const RONG_DAU: V3 = [0, 1.42, 0.88];
+const RONG_CHAN: V3[] = (() => {
+  const [fx, fy, fz] = RONG_MINH[0];
+  const [bx, by, bz] = RONG_MINH[3];
+  return [
+    [fx - 0.13, fy - 0.1, fz + 0.05],
+    [fx + 0.13, fy - 0.1, fz + 0.05],
+    [bx - 0.11, by - 0.08, bz],
+    [bx + 0.11, by - 0.08, bz],
+  ];
+})();
+
 const RONG: Defs = (() => {
-  const d: Defs = {
-    base: { parent: null, at: [0, 0, 0] },
-    qBody: { parent: 'base', at: [0, 0.9, 0.35] },
-    qNeck: { parent: 'qBody', at: [0, 1.0, 0.55] },
-    qHead: { parent: 'qNeck', at: [0, 1.25, 0.85] },
-    qFL: { parent: 'qBody', at: [-0.16, 0.82, 0.38] },
-    qFR: { parent: 'qBody', at: [0.16, 0.82, 0.38] },
-  };
-  for (let i = 0; i < DOT; i++) d[`s${i}`] = { parent: i ? `s${i - 1}` : 'qBody', at: [0, 0.9, 0.15 - i * 0.36] };
-  d.qBL = { parent: 's1', at: [-0.13, 0.82, -0.2] };
-  d.qBR = { parent: 's1', at: [0.13, 0.82, -0.2] };
+  const d: Defs = { base: { parent: null, at: [0, 0, 0] } };
+  RONG_MINH.slice(0, -1).forEach(([x, y, z], i) => (d[`d${i}`] = { parent: i ? `d${i - 1}` : 'base', at: [x, y, z] }));
+  d.qNeck = { parent: 'd0', at: [RONG_MINH[0][0], RONG_MINH[0][1] + 0.05, RONG_MINH[0][2] + 0.1] };
+  d.qHead = { parent: 'qNeck', at: RONG_CO };
+  d.qFL = { parent: 'd0', at: RONG_CHAN[0] };
+  d.qFR = { parent: 'd0', at: RONG_CHAN[1] };
+  d.qBL = { parent: 'd3', at: RONG_CHAN[2] };
+  d.qBR = { parent: 'd3', at: RONG_CHAN[3] };
   return d;
 })();
 
-/** Xanh ngọc của mình rồng, sẫm của vảy. */
-const RONG_XANH = 0x2f9a72;
-const RONG_SAM = 0x1d6b4f;
-
-/**
- * Rồng Lạc Long Quân: mình dài uốn khúc xanh ngọc, bụng vàng, vây lưng đỏ, đầu có sừng vàng, râu vàng dài, bờm đỏ,
- * mắt sáng; bốn chân ngắn vuốt vàng.
- */
+/** Rồng nặn liền khối (`dragonBody`), thêm hai sợi râu vàng dài uốn ra sau và ngọc lửa trên trán. */
 function drawRong(r: RigBuilder<string>): void {
-  const chest = r.on('qBody');
-  chest.plain.sphere(0.22, RONG_XANH, 0, 0.92, 0.35, [1, 0.95, 1.3], 12);
-  chest.plain.sphere(0.15, C.gold, 0, 0.82, 0.42, [1, 0.7, 1.1], 10);
-  for (let i = 0; i < DOT; i++) {
-    const z = 0.15 - i * 0.36;
-    const rr = 0.2 * (1 - i / (DOT + 1.5));
-    const p = r.on(`s${i}`);
-    p.plain.sphere(rr, i % 2 ? RONG_SAM : RONG_XANH, 0, 0.9, z, [1, 0.92, 1.5], 10);
-    p.plain.sphere(rr * 0.72, C.gold, 0, 0.9 - rr * 0.45, z, [1, 0.6, 1.4], 8);
-    p.plain.cone(rr * 0.5, rr * 1.3, C.red, 0, 0.9 + rr * 1.1, z, [-0.4, 0, 0], 5);
-    // Ống mình nối sang đốt trước, cho mình rồng liền một dải.
-    p.plain.cyl(rr * 0.9, rr * 0.95, 0.36, RONG_XANH, 0, 0.9, z + 0.18, [Math.PI / 2, 0, 0], 9);
-    if (i === DOT - 1) {
-      // Chùm đuôi lửa vàng đỏ.
-      p.plain.cone(0.07, 0.42, C.red, 0, 0.92, z - 0.3, [-Math.PI / 2, 0, 0], 6);
-      p.glow.cone(0.05, 0.3, C.ember, 0, 0.96, z - 0.26, [-Math.PI / 2 - 0.3, 0, 0], 5);
+  dragonBody(r, { body: RONG_MINH, neck: RONG_CO, head: RONG_DAU, legs: RONG_CHAN });
+  const head = r.on('qHead');
+  const [hx, hy, hz] = RONG_DAU;
+  for (const s of [-1, 1]) {
+    // Râu: ba đoạn cong từ mép mõm ra sau.
+    let p: V3 = [hx + s * 0.06, hy + 0.0, hz + 0.33];
+    for (const [dx, dy, dz] of [
+      [0.08, 0.05, -0.06],
+      [0.07, 0.08, -0.18],
+      [0.03, 0.06, -0.26],
+      [0.0, 0.02, -0.24],
+    ] as const) {
+      const q: V3 = [p[0] + s * dx, p[1] + dy, p[2] + dz];
+      const len = Math.hypot(q[0] - p[0], q[1] - p[1], q[2] - p[2]);
+      const mid: V3 = [(p[0] + q[0]) / 2, (p[1] + q[1]) / 2, (p[2] + q[2]) / 2];
+      const dir = new THREE.Vector3(q[0] - p[0], q[1] - p[1], q[2] - p[2]).normalize();
+      const e = new THREE.Euler().setFromQuaternion(new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 1, 0), dir));
+      head.plain.cyl(0.007, 0.01, len, RONG_MAU.horn, mid[0], mid[1], mid[2], [e.x, e.y, e.z], 4);
+      p = q;
     }
   }
-  r.on('qNeck').plain.cyl(0.11, 0.16, 0.4, RONG_XANH, 0, 1.08, 0.66, [0.85, 0, 0], 10);
-  const head = r.on('qHead');
-  const h = head.plain;
-  h.sphere(0.16, RONG_XANH, 0, 1.28, 0.9, [1, 0.85, 1.2], 12);
-  h.box(0.2, 0.1, 0.3, RONG_XANH, 0, 1.22, 1.1);
-  h.box(0.17, 0.05, 0.26, C.gold, 0, 1.15, 1.1);
-  h.sphere(0.04, RONG_SAM, 0, 1.25, 1.26, [1.4, 0.8, 1], 6);
-  for (const s of [-1, 1]) {
-    head.glow.sphere(0.035, C.ember, s * 0.1, 1.35, 1.0, [1, 0.8, 1], 6);
-    // Sừng vàng vút ra sau.
-    h.cone(0.035, 0.36, C.gold, s * 0.08, 1.48, 0.78, [-1.0, 0, s * 0.3], 6);
-    // Râu vàng dài.
-    h.cyl(0.012, 0.012, 0.55, C.gold, s * 0.12, 1.18, 1.05, [1.2, 0, s * 0.6], 4);
-    // Bờm đỏ.
-    for (let i = 0; i < 3; i++) h.cone(0.05, 0.22, C.red, s * 0.1, 1.32 - i * 0.05, 0.76 - i * 0.07, [-1.6, 0, s * 0.7], 5);
-  }
-  for (const k of ['qFL', 'qFR', 'qBL', 'qBR'] as const) {
-    const s = k.endsWith('L') ? -1 : 1;
-    const at = RONG[k].at;
-    const p = r.on(k).plain;
-    p.cyl(0.05, 0.04, 0.3, RONG_SAM, at[0] + s * 0.05, at[1] - 0.13, at[2], [0, 0, s * 0.4], 6);
-    for (const dz of [-0.04, 0, 0.04]) p.cone(0.018, 0.08, C.gold, at[0] + s * 0.11, at[1] - 0.28, at[2] + dz + 0.04, [Math.PI / 2, 0, 0], 4);
-  }
+  head.glow.sphere(0.035, C.ember, hx, hy + 0.14, hz + 0.12, [1, 1, 1], 8);
 }
 
-/** Rồng luôn bay, mình uốn sóng (đi thì uốn nhanh); đánh thì vươn cổ phun; chân bơi trong mây. */
+/** Rồng luôn bay, mình uốn sóng chạy dọc từ ngực ra đuôi (đi thì uốn nhanh); đánh thì vươn cổ phun; chân bơi trong mây. */
 function poseRong(b: B, a: Act): void {
   resetBones(b);
   const t = a.time ?? 0;
+  const n = RONG_MINH.length - 1;
   if (a.act === 'dead') {
     const f = a.fall ?? 1;
     b.qNeck.rotation.x = 0.5 * f;
-    for (let i = 0; i < DOT; i++) b[`s${i}`].rotation.x = -0.08 * f;
+    for (let i = 0; i < n; i++) b[`d${i}`].rotation.x = 0.05 * f;
     return;
   }
   const fly = a.act === 'walk';
-  const ph = fly ? (a.phase ?? 0) * 0.55 : t * 2;
-  const amp = fly ? 0.2 : 0.12;
-  for (let i = 0; i < DOT; i++) {
-    b[`s${i}`].rotation.y = amp * Math.sin(ph - i * 0.9);
-    b[`s${i}`].rotation.x = 0.25 * amp * Math.cos(ph - i * 0.9);
+  const ph = fly ? (a.phase ?? 0) * 0.5 : t * 1.8;
+  const amp = fly ? 1 : 0.6;
+  for (let i = 0; i < n; i++) {
+    b[`d${i}`].rotation.x = 0.07 * amp * Math.sin(ph - i * 0.75);
+    b[`d${i}`].rotation.y = 0.06 * amp * Math.sin(ph * 0.7 - i * 0.6);
   }
-  b.qNeck.rotation.y = -0.5 * amp * Math.sin(ph + 0.9);
-  b.qBody.position.y += 0.05 * Math.sin(ph);
+  b.qNeck.rotation.x = -0.12 * amp * Math.sin(ph + 0.6);
+  b.qHead.rotation.x = 0.06 * Math.sin(t * 1.3);
+  b.d0.position.y += 0.05 * Math.sin(ph);
   for (const [k, d] of [
     ['qFL', 0],
     ['qFR', Math.PI],
     ['qBL', Math.PI],
     ['qBR', 0],
   ] as const)
-    b[k].rotation.x = 0.4 * Math.sin(ph * 1.5 + d);
+    b[k].rotation.x = 0.45 * Math.sin(ph * 1.5 + d);
   if (a.act === 'fight') {
     const e = strikeCurve(a.strike, 0.25, 0.45);
-    b.qNeck.rotation.x = -0.35 * e;
-    b.qHead.rotation.x = 0.25 * e;
-    b.qBody.position.z += 0.1 * e;
+    b.qNeck.rotation.x = lerp(b.qNeck.rotation.x, -0.4, e);
+    b.qHead.rotation.x = 0.3 * e;
+    b.d0.position.z += 0.12 * e;
   }
 }
 
@@ -228,20 +180,42 @@ function rig(defs: Defs, draw: (r: RigBuilder<string>) => void, pose: (b: B, a: 
   return group;
 }
 
-/** Độ cao bay của thú bay (ở cỡ mô hình 1). */
-const BAY: Partial<Record<ThanThuId, number>> = { thuLac: 1.1, thuRong: 0.9 };
+/** Độ cao bay của thú bay (ở cỡ mô hình 1): cao hơn đầu tướng cưỡi voi. */
+const BAY: Partial<Record<ThanThuId, number>> = { thuLac: 1.7, thuRong: 1.5 };
 
-/** Quầng hào quang dáng thần: vòng sáng vàng dưới chân (hay dưới bụng thú bay). */
-function haoQuang(): THREE.Mesh {
+/** Cỡ riêng mỗi thú so với dáng (gà, rùa vốn nặn to theo quái nên thu bớt). */
+const CO: Record<ThanThuId, number> = { thuLac: 1, thuNgua: 1, thuGa: 0.7, thuRua: 0.85, thuRong: 1 };
+
+/** Màu hào quang dáng thần mỗi thú. */
+const HAO: Record<ThanThuId, number> = { thuLac: C.ember, thuNgua: C.fire, thuGa: C.ember, thuRua: C.gold, thuRong: 0x9fe8d0 };
+
+/** Quầng sáng mờ dưới chân thú đi đất dáng thần. */
+function quangChan(color: number, r: number): THREE.Mesh {
   const ring = new THREE.Mesh(
-    new THREE.RingGeometry(0.55, 0.78, 28),
-    new THREE.MeshBasicMaterial({ color: C.ember, transparent: true, opacity: 0.55, depthWrite: false, side: THREE.DoubleSide }),
+    new THREE.RingGeometry(r * 0.55, r, 32),
+    new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.32, depthWrite: false, side: THREE.DoubleSide }),
   );
   ring.rotation.x = -Math.PI / 2;
   ring.position.y = 0.04;
   ring.renderOrder = 3;
-  ring.userData.hao = true;
+  ring.userData.hao = 'quang';
   return ring;
+}
+
+/** Đốm sáng bay quanh mình thú bay dáng thần. */
+function domSang(color: number, r: number, y: number): THREE.Group {
+  const g = new THREE.Group();
+  const geo = new THREE.SphereGeometry(0.045, 6, 4);
+  const mat = new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.85, depthWrite: false });
+  for (let i = 0; i < 7; i++) {
+    const m = new THREE.Mesh(geo, mat);
+    const a = (i / 7) * Math.PI * 2;
+    m.position.set(Math.cos(a) * r, y + 0.25 * Math.sin(a * 3), Math.sin(a) * r);
+    m.scale.setScalar(0.6 + 0.4 * ((i * 37) % 5) / 4);
+    g.add(m);
+  }
+  g.userData.hao = 'dom';
+  return g;
 }
 
 /**
@@ -257,24 +231,30 @@ export function makeThanThu(kind: ThanThuId, dang: 0 | 1 | 2): THREE.Group {
         : kind === 'thuRua'
           ? makeRuaThan()
           : kind === 'thuLac'
-            ? rig(LAC, drawLac, poseLac)
+            ? rig(LAC, (r) => lacBody(r), poseLac)
             : rig(RONG, drawRong, poseRong);
-  const k = DANG_CO[dang] * (kind === 'thuGa' ? 0.7 : kind === 'thuRua' ? 0.75 : 1);
+  const k = DANG_CO[dang] * CO[kind];
   inner.scale.setScalar(k);
   const g = new THREE.Group();
   g.add(inner);
   g.userData.pose = inner.userData.pose;
   g.userData.fall = inner.userData.fall;
-  if (THAN_THU[kind].bay) g.userData.bay = (BAY[kind] ?? 1) * k;
+  const bay = THAN_THU[kind].bay;
+  if (bay) g.userData.bay = (BAY[kind] ?? 1) * k;
   if (dang === 2) {
-    const hao = haoQuang();
-    hao.scale.setScalar(k * (kind === 'thuRong' ? 1.25 : 1.1));
-    g.add(hao);
+    if (bay) g.add(domSang(HAO[kind], (kind === 'thuRong' ? 1.0 : 0.8) * k, 1.0 * k));
+    else g.add(quangChan(HAO[kind], 0.9 * k));
   }
   return g;
 }
 
-/** Xoay quầng hào quang dáng thần theo thời gian. */
+/** Hào quang dáng thần chuyển động theo thời gian: quầng chân xoay, đốm sáng bay vòng. */
 export function quayHao(g: THREE.Object3D, time: number): void {
-  for (const c of g.children) if (c.userData.hao) c.rotation.z = time * 0.8;
+  for (const c of g.children) {
+    if (c.userData.hao === 'quang') c.rotation.z = time * 0.8;
+    else if (c.userData.hao === 'dom') {
+      c.rotation.y = time * 1.4;
+      c.position.y = 0.08 * Math.sin(time * 2);
+    }
+  }
 }

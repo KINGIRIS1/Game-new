@@ -158,11 +158,11 @@ interface Ring {
 
 const SCALE: Partial<Record<FighterKind, number>> = {
   // Thần thú: cỡ theo dáng đã tính trong mô hình (`makeThanThu`).
-  thuLac: 0.85,
-  thuNgua: 0.8,
-  thuGa: 0.9,
-  thuRua: 0.8,
-  thuRong: 0.9,
+  thuLac: 0.72,
+  thuNgua: 0.72,
+  thuGa: 0.8,
+  thuRua: 0.72,
+  thuRong: 0.72,
   // Lâu thuyền dựng đúng cỡ ô kinh đô (dài chừng 4 ô); Mã Viện trên ngựa nhỉnh hơn Triệu Đà.
   lauThuyen: 1,
   maVien: 0.9,

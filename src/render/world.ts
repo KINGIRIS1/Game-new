@@ -3168,7 +3168,7 @@ export class World {
       if (this.thanThu.has(k)) continue;
       const dang = dangThu(capThu(state, k));
       const obj = makeThanThu(k, dang);
-      obj.scale.setScalar(0.7);
+      obj.scale.setScalar(THAN_THU[k].bay ? 0.9 : 0.8);
       this.scene.add(obj);
       const seed = THAN_THU[k].ve * 7919 + 17;
       const start = this.choThu(state, dien, seed);
@@ -3239,10 +3239,10 @@ export class World {
       if (THAN_THU[k].bay) {
         // Chim Lạc lượn vòng gần, rồng lượn vòng rộng và cao hơn, ngược chiều.
         const rong = k === 'thuRong';
-        const R = rong ? 13 : 8.5;
+        const R = rong ? 14 : 9;
         const w = rong ? -0.11 : 0.2;
         const a = t * w + v.seed;
-        v.obj.position.set(cx + Math.cos(a) * R, base + (rong ? 6 : 4.2) + Math.sin(t * 0.9 + v.seed) * 0.4, cz + Math.sin(a) * R);
+        v.obj.position.set(cx + Math.cos(a) * R, base + (rong ? 9 : 7) + Math.sin(t * 0.9 + v.seed) * 0.5, cz + Math.sin(a) * R);
         v.obj.rotation.y = Math.atan2(-Math.sin(a) * w, Math.cos(a) * w);
         pose?.({ act: 'walk', phase: t * (rong ? 7 : 9), stride: 0.6, time: t });
         continue;
