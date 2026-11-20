@@ -4231,25 +4231,30 @@ body.man-vao-on #hud > * {
   color: #fff;
 }
 
-/* Màn hình ngang/rộng: Bảng Xây dựng dàn ngang 3 cột dưới đáy để thấy toàn cảnh kinh đô 3D phía trên */
-@media (min-width: 760px) {
+/* Màn rộng (cầm ngang): bảng Xây dựng dàn ba cột dưới đáy (thẻ nhóm, ảnh lớn, lưới ảnh nhỏ có nút sang trang) để
+   vẫn thấy kinh đô phía trên. Cùng điều kiện với `Hud.buildGrid` (số cột, hàng của một trang). */
+@media (min-width: 600px) and (min-aspect-ratio: 4/5) {
   .sheet.build {
-    max-height: 286px;
+    max-height: min(300px, calc(100vh - 24px - var(--safe-top) - var(--safe-bottom)));
   }
 
   .sheet.build .sheet-body {
     display: grid;
-    grid-template-columns: 148px 340px 1fr;
-    grid-template-rows: auto auto;
-    gap: 8px 14px;
+    grid-template-columns: 132px minmax(0, 1.1fr) minmax(0, 1fr);
+    grid-template-rows: auto auto 1fr auto auto;
+    grid-template-areas:
+      'tabs note note'
+      'tabs stage grid'
+      'tabs stage .'
+      'tabs stage pager'
+      'tabs foot foot';
+    gap: 0 14px;
     align-items: start;
     padding: 10px 16px 12px;
-    overflow-y: auto;
   }
 
   .sheet.build .build-tabs {
-    grid-column: 1;
-    grid-row: 1 / 3;
+    grid-area: tabs;
     flex-direction: column;
     gap: 6px;
     margin: 0;
@@ -4257,38 +4262,31 @@ body.man-vao-on #hud > * {
 
   .sheet.build .build-tabs .tab {
     flex: none;
-    padding: 9px 10px;
+    padding: 9px 8px;
   }
 
-  .sheet.build .build-detail {
-    grid-column: 2;
-    grid-row: 1 / 3;
+  .sheet.build .build-tabs + .muted {
+    grid-area: note;
+    margin: 0 2px 8px;
+  }
+
+  .sheet.build .xd-stage {
+    grid-area: stage;
+    position: static;
     margin: 0;
-    padding: 10px;
   }
 
-  .sheet.build .build-hero {
-    width: 96px;
-    height: 96px;
+  .sheet.build .xd-grid {
+    grid-area: grid;
   }
 
-  .sheet.build .build-grid {
-    grid-column: 3;
-    grid-row: 1;
-    margin: 0;
-    grid-template-columns: repeat(6, 1fr);
-    gap: 6px;
+  .sheet.build .xd-pager {
+    grid-area: pager;
   }
 
-  .sheet.build .build-cell .thumb {
-    width: 46px;
-    height: 46px;
-  }
-
-  .sheet.build .build-pager {
-    grid-column: 3;
-    grid-row: 2;
-    margin: 0;
+  .sheet.build .xd-foot {
+    grid-area: foot;
+    margin-top: 8px;
   }
 }
 
@@ -4312,12 +4310,39 @@ body.man-vao-on #hud > * {
   }
   .tho-chip {
     left: 70px;
-    top: calc(56px + var(--safe-top));
+    top: calc(62px + var(--safe-top));
   }
+  /* Bề ngang hẹp không đủ cho sáu tài nguyên, dân và cài đặt khi chừa chỗ cột Dock: thanh trải trọn bề ngang, các ô
+     co lại như dải cũ, cột Dock xuống dưới thanh. */
   .topbar {
-    left: 70px;
+    left: 6px;
     right: 6px;
     max-width: none;
+    padding: 5px 6px;
+    gap: 4px;
+  }
+  .topbar .res-strip {
+    gap: 2px;
+  }
+  .topbar .res {
+    flex: 1 1 0;
+    min-width: 0;
+    padding: 3px 1px;
+    gap: 1px;
+    background: none;
+    border-radius: 0;
+  }
+  .topbar .res + .res {
+    border-left: 1px solid rgba(31, 122, 99, 0.2);
+  }
+  .dock,
+  #hud.sheet-open .dock {
+    top: calc(62px + var(--safe-top));
+  }
+  .top-area {
+    left: 70px;
+    right: 6px;
+    top: calc(106px + var(--safe-top));
   }
   .sheet,
   .sheet.tall,
@@ -4325,5 +4350,108 @@ body.man-vao-on #hud > * {
   .ticker {
     left: 70px;
     right: 6px;
+  }
+}
+
+/* Màn thấp (cầm ngang): cột Dock gọn lại cho vừa chiều cao, vẫn thiếu chỗ thì cuộn. */
+@media (max-height: 520px) {
+  .dock,
+  #hud.sheet-open .dock {
+    max-height: calc(100vh - 24px - var(--safe-top) - var(--safe-bottom));
+    overflow-y: auto;
+    scrollbar-width: none;
+    padding: 6px 5px;
+    gap: 2px;
+  }
+  .dock .tab {
+    padding: 4px 2px;
+    gap: 1px;
+  }
+  .dock .tab .ic {
+    font-size: 19px;
+  }
+  .dock .tab .lb {
+    font-size: 10px;
+  }
+  .dock .tab.main .ic {
+    width: 38px;
+    height: 38px;
+    font-size: 18px;
+  }
+  .dock .rotate {
+    width: 34px;
+    height: 34px;
+    font-size: 16px;
+  }
+  .dock .badge {
+    top: -3px;
+  }
+}
+
+/* Thẻ biên niên sử: chương và trạng thái chiếm trọn hàng, chữ dài thì xuống dòng thay vì bị cắt. */
+.mv-ch-head,
+.mv-stat-box span {
+  text-transform: uppercase;
+}
+
+.mv-stat-box.wide {
+  grid-column: 1 / -1;
+}
+
+.mv-stat-box.wide b {
+  white-space: normal;
+}
+
+/* Bình phong luôn đủ chỗ: nội dung cao hơn màn thì cuộn được từ đầu (không bị cắt mất phần trên). */
+.mv-sidebar {
+  justify-content: safe center;
+}
+
+/* Màn rộng mà thấp (điện thoại cầm ngang): bình phong chia hai cột, trống đồng và tên game bên trái, thẻ và nút bên
+   phải, cho cả nút Chơi tiếp nằm trọn trong màn. */
+@media (min-width: 721px) and (max-height: 520px) {
+  .mv-sidebar {
+    width: min(660px, 76vw);
+    display: grid;
+    grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
+    grid-template-rows: auto 1fr auto;
+    align-items: center;
+    justify-items: center;
+    gap: 6px 22px;
+    padding: calc(10px + var(--safe-top)) 22px calc(10px + var(--safe-bottom));
+  }
+  .mv-ornament {
+    grid-column: 1 / -1;
+  }
+  .mv-head {
+    grid-column: 1;
+  }
+  .mv-foot {
+    grid-column: 2;
+    gap: 8px;
+  }
+  .mv-logo {
+    width: min(30vh, 120px);
+  }
+  .mv-title span {
+    font-size: 38px;
+  }
+  .mv-card {
+    padding: 8px 11px;
+  }
+  .mv-ch-head {
+    margin-bottom: 6px;
+  }
+  .mv-stats-grid {
+    gap: 6px;
+  }
+  .mv-stat-box {
+    padding: 4px 8px;
+  }
+  .mv-play.bronze {
+    padding: 11px 16px;
+  }
+  .mv-showcase {
+    display: none;
   }
 }

@@ -1438,6 +1438,16 @@ export const vi = {
       return days >= 1 ? `Vắng ${days} ngày` : `Vắng ${formatDuration(ms)}`;
     },
     newGame: 'Kinh đô mới, chờ người dựng nước',
+    // Thẻ tóm tắt bản lưu kiểu biên niên sử và hai thẻ giới thiệu bên phải (màn rộng).
+    bienNien: 'Biên niên sử kinh đô',
+    oChuong: 'Chương sử',
+    oDien: 'Điện Vua Hùng',
+    oDan: 'Bách tính',
+    oTrangThai: 'Trạng thái',
+    chuongTen: '⚔️ Năm chương sử',
+    chuongTa: 'Thánh Gióng · Sơn Tinh · An Dương Vương · Mỵ Châu · Hai Bà Trưng',
+    tuongTen: '🐉 Thần thú và danh tướng',
+    tuongTa: (tuong: number, thu: number) => `${tuong} tướng lịch sử · ${thu} thần thú · Biển đảo Hoàng Sa, Trường Sa`,
     soundOn: 'Đang bật tiếng, chạm để tắt',
     soundOff: 'Đang tắt tiếng, chạm để bật',
     // Tài khoản Google ở màn hình vào game (chỉ hiện khi máy chủ đã bật đăng nhập Google).
