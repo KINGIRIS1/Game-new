@@ -119,7 +119,7 @@ import { armsHtml } from './binhKhi';
 import { advHtml, caoLoHtml } from './coLoa';
 import { buildingName, costHtml, esc, fmt, fmtShort, skillIconImg } from './format';
 import { endingHtml, giongHtml, isEnding, storyHtml } from './giong';
-import { gomRoiHtml, newTuongUi, roiHtml, tuongHtml, tuongMo, type AnhTuong, type TuongTab, type TuongUi } from './trangBi';
+import { gomRoiHtml, newTuongUi, roiHtml, tuongHtml, tuongMo, type AnhTuong, type TuiChe, type TuongTab, type TuongUi } from './trangBi';
 import { doMo, monO } from '../game/trangBi';
 import { bossCho, canLen, daMo, type DaThuong } from '../game/daNgoai';
 import { tuongDau } from '../game/daNgoaiTran';
@@ -214,7 +214,8 @@ export type HudAction =
   | { kind: 'cuongHoa'; id: number }
   | { kind: 'khoaDo'; id: number }
   | { kind: 'phanGiai'; id: number }
-  | { kind: 'phanGiaiLoat' }
+  | { kind: 'phanGiaiNhieu'; ids: number[] }
+  | { kind: 'macManhNhat'; hero: HeroKind }
   /** Mở lại màn hình Hết truyện từ bảng Lạc hầu. */
   | { kind: 'openEnding' }
   | { kind: 'forgeNoThan' }
@@ -578,7 +579,7 @@ export class Hud {
         this.sheetEl.querySelector('.sheet-body')?.scrollTo(0, 0);
         return;
       case 'tuongHero':
-        this.tuongUi = { ...newTuongUi(el.dataset.hero as HeroKind), tab: this.tuongUi.tab };
+        this.tuongUi = { ...newTuongUi(el.dataset.hero as HeroKind), tab: this.tuongUi.tab, che: this.tuongUi.che };
         return this.refreshSheet(this.getState());
       case 'tuongTab':
         this.tuongUi = { ...this.tuongUi, tab: el.dataset.tab as TuongTab, mon: null, page: 0, armed: null };
@@ -622,12 +623,37 @@ export class Hud {
           return this.refreshSheet(this.getState());
         }
         return this.onAction({ kind: 'phanGiai', id });
-      case 'phanGiaiLoat':
-        if (this.tuongUi.armed !== 'loat') {
-          this.tuongUi = { ...this.tuongUi, armed: 'loat' };
+      case 'tuongChe':
+        this.tuongUi = { ...this.tuongUi, tab: 'do', che: el.dataset.che as TuiChe, mon: null, chon: [], armed: null };
+        return this.refreshSheet(this.getState());
+      case 'chonMon': {
+        // Chế độ phân giải: chạm món để đánh dấu hay bỏ dấu.
+        const chon = this.tuongUi.chon.includes(id) ? this.tuongUi.chon.filter((x) => x !== id) : [...this.tuongUi.chon, id];
+        this.tuongUi = { ...this.tuongUi, chon, armed: null };
+        return this.refreshSheet(this.getState());
+      }
+      case 'chonPham': {
+        // Đánh dấu mọi món phẩm ấy phân giải được trong ô đang lọc; đã đánh dấu hết thì bỏ dấu cả nhóm.
+        const p = Number(el.dataset.pham);
+        const ids = this.getState()
+          .trangBi.kho.filter((m) => m.pham === p && !m.khoa && !m.tuong && (!this.tuongUi.o || m.o === this.tuongUi.o))
+          .map((m) => m.id);
+        const het = ids.every((x) => this.tuongUi.chon.includes(x));
+        const chon = het ? this.tuongUi.chon.filter((x) => !ids.includes(x)) : [...new Set([...this.tuongUi.chon, ...ids])];
+        this.tuongUi = { ...this.tuongUi, chon, armed: null };
+        return this.refreshSheet(this.getState());
+      }
+      case 'boChon':
+        this.tuongUi = { ...this.tuongUi, chon: [], armed: null };
+        return this.refreshSheet(this.getState());
+      case 'phanGiaiChon':
+        if (this.tuongUi.armed !== 'chon') {
+          this.tuongUi = { ...this.tuongUi, armed: 'chon' };
           return this.refreshSheet(this.getState());
         }
-        return this.onAction({ kind: 'phanGiaiLoat' });
+        return this.onAction({ kind: 'phanGiaiNhieu', ids: this.tuongUi.chon });
+      case 'macManhNhat':
+        return this.onAction({ kind: 'macManhNhat', hero: this.tuongUi.hero });
       case 'togglePop': {
         const p = el.dataset.pop as NonNullable<typeof this.pop>;
         return this.setPop(this.pop === p ? null : p);
@@ -1303,7 +1329,7 @@ export class Hud {
   /** Bảng tướng của tướng `hero` (không ghi thì tướng đang xem lần trước, hay tướng đầu đã về). */
   showTuong(state: GameState, hero?: HeroKind): void {
     const kind = tuongMo(state, hero ?? this.tuongUi.hero);
-    if (this.sheet?.kind !== 'tuong' || kind !== this.tuongUi.hero) this.tuongUi = { ...newTuongUi(kind), tab: this.tuongUi.tab };
+    if (this.sheet?.kind !== 'tuong' || kind !== this.tuongUi.hero) this.tuongUi = { ...newTuongUi(kind), tab: this.tuongUi.tab, che: this.tuongUi.che };
     this.sheet = { kind: 'tuong' };
     this.refreshSheet(state);
   }
@@ -1311,6 +1337,7 @@ export class Hud {
   /** Bảng tướng vừa đổi món (mặc, tháo, phân giải): bỏ dấu chờ phân giải; món vừa mất thì bỏ chọn. */
   tuongChanged(state: GameState): void {
     this.tuongUi.armed = null;
+    this.tuongUi.chon = this.tuongUi.chon.filter((id) => state.trangBi.kho.some((m) => m.id === id));
     if (this.tuongUi.mon !== null && !state.trangBi.kho.some((m) => m.id === this.tuongUi.mon)) this.tuongUi.mon = null;
   }
 
@@ -1511,7 +1538,7 @@ export class Hud {
       body = caoLoHtml(state) + this.tuongBtn(state, 'caoLo');
     } else if (this.sheet.kind === 'tuong') {
       title = `⚜️ ${vi.trangBi.title}`;
-      body = tuongHtml(state, this.tuongUi, this.anhTuong) + this.truyenLinks(state);
+      body = tuongHtml(state, this.tuongUi, this.anhTuong, this.truyenLinks(state));
     } else if (this.sheet.kind === 'khoanh') {
       // Đã phát xong thì đóng bảng.
       if (state.khoanh.includes(this.sheet.id)) return this.closeSheet();
@@ -1551,6 +1578,8 @@ export class Hud {
     const opening = !this.sheetEl.classList.contains('open');
     this.sheetEl.classList.toggle('build', this.sheet.kind === 'build');
     this.sheetEl.classList.toggle('tall', this.sheet.kind === 'build' || this.sheet.kind === 'tuong' || this.barracksOpen(state));
+    // Bảng tướng phủ cả màn hình (thẻ tướng, túi đồ, thanh nút dưới; màn ngang ba cột).
+    this.sheetEl.classList.toggle('tg-full', this.sheet.kind === 'tuong' && doMo(state));
     this.sheetEl.classList.add('open');
     this.root.classList.add('sheet-open');
     // Thẻ Lạc hầu, danh sách tướng nằm đúng chỗ bảng: mở bảng thì đóng chúng.

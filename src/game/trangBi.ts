@@ -397,6 +397,77 @@ export function phanGiaiLoat(s: GameState, phamMax: PhamDo): { n: number; sat: n
   return { n: list.length, sat };
 }
 
+/**
+ * Phân giải các món người chơi đánh dấu (`ids`): món khóa, món đang mặc, món không còn thì bỏ qua. Trả về số món đã
+ * phân giải và số sắt.
+ */
+export function phanGiaiNhieu(s: GameState, ids: readonly number[]): { n: number; sat: number } {
+  const chon = new Set(ids);
+  const list = s.trangBi.kho.filter((m) => chon.has(m.id) && !m.khoa && !m.tuong);
+  const sat = list.reduce((sum, m) => sum + satPhanGiai(m), 0);
+  s.trangBi.kho = s.trangBi.kho.filter((m) => !list.includes(m));
+  if (sat > 0) gain(s, { sat });
+  return { n: list.length, sat };
+}
+
+/**
+ * Bộ đồ có Lực chiến cao nhất cho tướng `kind`, chỉ chọn trong món chưa ai mặc và món tướng này đang mặc (không lấy đồ
+ * của tướng khác). Thử thay từng ô bằng từng món hợp ô, giữ cách thay làm Lực chiến tăng nhiều nhất, lặp tới khi không
+ * thay được nữa (để tính cả hiệu ứng bộ). Trả về các món nên mặc, mỗi ô tối đa một món.
+ */
+export function boManhNhat(s: GameState, kind: HeroKind): Mon[] {
+  const cand = s.trangBi.kho.filter((m) => !m.tuong || m.tuong === kind);
+  const lcOf = (worn: Mon[]) => chiSoTu(s, kind, tinhDo(kind, worn)).lucChien;
+  /** Thay từng ô một tới khi không tăng được nữa. */
+  const leo = (start: Mon[]): { worn: Mon[]; lc: number } => {
+    let worn = start;
+    let lc = lcOf(worn);
+    for (let lap = 0; lap < 8; lap++) {
+      let best: Mon[] | null = null;
+      for (const m of cand) {
+        if (worn.includes(m)) continue;
+        const thu = [...worn.filter((x) => x.o !== m.o), m];
+        const v = lcOf(thu);
+        if (v > lc) {
+          lc = v;
+          best = thu;
+        }
+      }
+      if (!best) break;
+      worn = best;
+    }
+    return { worn, lc };
+  };
+  // Hiệu ứng bộ chỉ có khi đủ hai, bốn món bộ của chính tướng này, nên thay từng món một có khi kẹt: leo thêm từ chỗ
+  // mặc toàn món bộ mình tốt nhất mỗi ô, lấy kết quả cao hơn.
+  const boMinh = O_DO.flatMap((o) => {
+    const list = cand.filter((m) => m.o === o && BO_CUA[m.bo] === kind);
+    return list.length ? [list.reduce((a, b) => (lcOf([b]) > lcOf([a]) ? b : a))] : [];
+  });
+  const a = leo(monDangMac(s, kind));
+  if (boMinh.length < 2) return a.worn;
+  const b = leo(boMinh);
+  return b.lc > a.lc ? b.worn : a.worn;
+}
+
+/** Lực chiến của tướng `kind` lúc này và nếu mặc bộ mạnh nhất (`boManhNhat`). */
+export function lucChienManhNhat(s: GameState, kind: HeroKind): { now: number; best: number } {
+  return { now: chiSoTuong(s, kind).lucChien, best: chiSoTu(s, kind, tinhDo(kind, boManhNhat(s, kind))).lucChien };
+}
+
+/** Tướng `kind` mặc bộ mạnh nhất (`boManhNhat`). Trả về số món vừa mặc thêm (0: đã mạnh nhất rồi). */
+export function macManhNhat(s: GameState, kind: HeroKind): Result<number> {
+  if (!tuongJoined(s, kind)) return fail('tuongChuaCo');
+  const bo = boManhNhat(s, kind);
+  let n = 0;
+  for (const m of bo) {
+    if (m.tuong === kind) continue;
+    macDo(s, m.id, kind);
+    n++;
+  }
+  return ok(n);
+}
+
 /** Khóa hay mở khóa món `id`. Trả về đã khóa chưa. */
 export function khoaDo(s: GameState, id: number): Result<boolean> {
   const m = monById(s, id);

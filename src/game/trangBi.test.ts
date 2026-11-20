@@ -54,10 +54,14 @@ import {
   isTrangBiState,
   khoaDo,
   kiemMon,
+  boManhNhat,
+  lucChienManhNhat,
   lucChienVoi,
   macDo,
+  macManhNhat,
   phanGiai,
   phanGiaiLoat,
+  phanGiaiNhieu,
   roiDo,
   rutMon,
   satPhanGiai,
@@ -251,6 +255,61 @@ describe('mặc, tháo, cường hóa, phân giải', () => {
     s.resources.sat = 0;
     expect(phanGiaiLoat(s, 2)).toEqual({ n: 2, sat: satPhanGiai(thuong) + satPhanGiai(tot) });
     expect(s.trangBi.kho).toEqual([khoa, mac, quy]);
+  });
+
+  it('phân giải các món đã chọn, bỏ qua món khóa, món đang mặc', () => {
+    const s = base();
+    const a = them(s, { pham: 1, phu: [] });
+    const b = them(s, { pham: 4 });
+    const khoa = them(s, { pham: 1, phu: [], khoa: true });
+    const mac = them(s, { o: 'giap', chinh: 'mau', tuong: 'giong' });
+    const giu = them(s, { pham: 2, phu: [{ k: 'mau', nac: 1 }] });
+    s.resources.sat = 0;
+    expect(phanGiaiNhieu(s, [a.id, b.id, khoa.id, mac.id, 999])).toEqual({ n: 2, sat: satPhanGiai(a) + satPhanGiai(b) });
+    expect(s.resources.sat).toBe(satPhanGiai(a) + satPhanGiai(b));
+    expect(s.trangBi.kho).toEqual([khoa, mac, giu]);
+  });
+
+  it('mặc mạnh nhất chọn món Lực chiến cao nhất mỗi ô, không lấy đồ tướng khác đang mặc', () => {
+    const s = voiSon(base());
+    const yeu = them(s, { pham: 1, phu: [], tuong: 'giong' });
+    const manh = them(s, { pham: 4, cuong: 3 });
+    const giap = them(s, { o: 'giap', chinh: 'mau', pham: 3, phu: [{ k: 'giap', nac: 3 }] });
+    const cuaSon = them(s, { o: 'baoVat', chinh: 'uy', pham: 4, tuong: 'sonTinh' });
+    const truoc = chiSoTuong(s, 'giong').lucChien;
+    const du = lucChienManhNhat(s, 'giong');
+    expect(du.now).toBe(truoc);
+    expect(du.best).toBeGreaterThan(truoc);
+    expect(macManhNhat(s, 'giong')).toEqual({ ok: true, value: 2 });
+    expect(manh.tuong).toBe('giong');
+    expect(giap.tuong).toBe('giong');
+    expect(yeu.tuong).toBeUndefined();
+    expect(cuaSon.tuong).toBe('sonTinh');
+    expect(chiSoTuong(s, 'giong').lucChien).toBe(du.best);
+    // Đã mạnh nhất rồi thì không mặc thêm gì.
+    expect(macManhNhat(s, 'giong')).toEqual({ ok: true, value: 0 });
+    expect(macManhNhat(s, 'anDuong')).toEqual({ ok: false, reason: 'tuongChuaCo' });
+  });
+
+  it('mặc mạnh nhất tính cả hiệu ứng bộ: hai món bộ mình hơn hai món lẻ cộng lại', () => {
+    const s = base();
+    // Hai món bộ Phù Đổng có thêm hiệu ứng hai món; món bộ Tản Viên có thêm chỉ số phụ. Mặc mạnh nhất phải ra bộ tốt nhất.
+    them(s, { o: 'vuKhi', bo: 'phuDong', pham: 3, chinh: 'danh', phu: [] });
+    them(s, { o: 'giap', bo: 'phuDong', pham: 3, chinh: 'mau', phu: [] });
+    them(s, { o: 'vuKhi', bo: 'tanVien', pham: 3, chinh: 'danh', phu: [{ k: 'toc', nac: 1 }] });
+    them(s, { o: 'giap', bo: 'tanVien', pham: 3, chinh: 'mau', phu: [{ k: 'giap', nac: 1 }] });
+    macManhNhat(s, 'giong');
+    const bo = boManhNhat(s, 'giong');
+    const lcBo = chiSoTuong(s, 'giong').lucChien;
+    // Không bộ nào khác của bốn món này cho Lực chiến cao hơn.
+    for (const a of s.trangBi.kho.filter((m) => m.o === 'vuKhi'))
+      for (const b of s.trangBi.kho.filter((m) => m.o === 'giap')) {
+        for (const m of s.trangBi.kho) delete m.tuong;
+        macDo(s, a.id, 'giong');
+        macDo(s, b.id, 'giong');
+        expect(chiSoTuong(s, 'giong').lucChien).toBeLessThanOrEqual(lcBo);
+      }
+    expect(bo.length).toBe(2);
   });
 });
 

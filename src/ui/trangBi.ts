@@ -16,10 +16,10 @@ import {
   doMo,
   giaCuongHoa,
   HERO_STATS,
+  lucChienManhNhat,
   lucChienVoi,
   monDangMac,
   monO,
-  phanGiaiDuoc,
   phuOf,
   satPhanGiai,
   type Mon,
@@ -41,13 +41,20 @@ export interface TuongUi {
   /** Món đang chọn. */
   mon: number | null;
   page: number;
-  /** Nút phân giải đang chờ bấm lần nữa: `mon` cho món đang chọn, `loat` cho phân giải hàng loạt. */
-  armed: 'mon' | 'loat' | null;
+  /** Chế độ túi đồ: chạm món để xem và mặc, để cường hóa, hay để đánh dấu phân giải. */
+  che: TuiChe;
+  /** Các món đang đánh dấu để phân giải (chế độ `phan`). */
+  chon: number[];
+  /** Nút phân giải đang chờ bấm lần nữa: `mon` cho món đang chọn, `chon` cho các món đã đánh dấu. */
+  armed: 'mon' | 'chon' | null;
 }
 
-export const newTuongUi = (hero: HeroKind): TuongUi => ({ hero, tab: 'do', o: null, mon: null, page: 0, armed: null });
+export type TuiChe = 'mac' | 'cuong' | 'phan';
+export const TUI_CHE: TuiChe[] = ['mac', 'cuong', 'phan'];
 
-/** Số món mỗi trang lưới đồ (ba hàng năm ô trên điện thoại). */
+export const newTuongUi = (hero: HeroKind): TuongUi => ({ hero, tab: 'do', o: null, mon: null, page: 0, che: 'mac', chon: [], armed: null });
+
+/** Số món mỗi trang lưới đồ (ba hàng năm ô). */
 export const DO_PER_PAGE = 15;
 
 /**
@@ -142,23 +149,33 @@ function chiSoLine(k: ChiSo, v: number, main = false): string {
   return `<div class="do-stat ${main ? 'main' : ''}"><span>${c.icon} ${c.name}</span><b>${pct(v)}</b></div>`;
 }
 
-/** Ô vuông một món: ảnh món, khung màu phẩm, nấc cường hóa, tướng đang mặc, đã khóa. */
-function monTile(m: Mon, on: boolean): string {
-  return `<button class="do-tile pham-${m.pham} ${on ? 'on' : ''}" data-act="pickMon" data-id="${m.id}" aria-label="${esc(monTen(m))}">
+/**
+ * Ô vuông một món: ảnh món, khung màu phẩm, nấc cường hóa, tướng đang mặc, đã khóa. Chế độ phân giải: chạm để đánh
+ * dấu, món khóa hay đang mặc thì mờ; chế độ cường hóa: dấu ▲ khi cường hóa được ngay.
+ */
+function monTile(s: GameState, m: Mon, ui: TuongUi): string {
+  const phan = ui.che === 'phan';
+  const khongPhan = phan && (!!m.khoa || !!m.tuong);
+  const danhDau = phan && ui.chon.includes(m.id);
+  const on = !phan && m.id === ui.mon;
+  const len = ui.che === 'cuong' && canCuongHoa(s, m.id).ok;
+  return `<button class="do-tile pham-${m.pham} ${on ? 'on' : ''} ${danhDau ? 'chon' : ''} ${khongPhan ? 'mo' : ''}" data-act="${phan ? 'chonMon' : 'pickMon'}" data-id="${m.id}" aria-label="${esc(monTen(m))}" ${khongPhan ? 'disabled' : ''} ${phan ? `aria-pressed="${danhDau}"` : ''}>
     ${monImg(m)}
     ${m.cuong ? `<i class="cuong">+${m.cuong}</i>` : ''}
     ${m.tuong ? `<i class="who">${vi.ui.tuongIcons[m.tuong]}</i>` : ''}
     ${m.khoa ? '<i class="lock">🔒</i>' : ''}
+    ${len ? '<i class="len">▲</i>' : ''}
+    ${danhDau ? '<i class="ck">✓</i>' : ''}
   </button>`;
 }
 
 /** Lưới món, chia trang. */
-function monGrid(list: Mon[], ui: TuongUi): string {
+function monGrid(s: GameState, list: Mon[], ui: TuongUi): string {
   const pages = pageCount(list.length, DO_PER_PAGE);
   const page = Math.min(Math.max(0, ui.page), pages - 1);
   const tiles = list
     .slice(page * DO_PER_PAGE, page * DO_PER_PAGE + DO_PER_PAGE)
-    .map((m) => monTile(m, m.id === ui.mon))
+    .map((m) => monTile(s, m, ui))
     .join('');
   const pager =
     pages > 1
@@ -242,56 +259,131 @@ function dollSlot(s: GameState, ui: TuongUi, o: ODo): string {
   </button>`;
 }
 
-/** Khung hình nhân: nền đồng có mặt trời trống đồng, hình tướng mặc đồ giữa, Vũ khí, Phục sức trái, Giáp, Bảo vật phải. */
-function dollHtml(s: GameState, ui: TuongUi, anh: AnhTuong | null): string {
+/** Các món trong túi theo ô đang lọc: lọc một ô thì món tướng này mặc đứng đầu rồi theo Lực chiến khi mặc. */
+function tuiList(s: GameState, ui: TuongUi): Mon[] {
+  const kind = ui.hero;
+  if (ui.o)
+    return s.trangBi.kho
+      .filter((m) => m.o === ui.o)
+      .map((m) => ({ m, lc: m.tuong === kind ? Infinity : lucChienVoi(s, kind, m) }))
+      .sort((a, b) => b.lc - a.lc || b.m.id - a.m.id)
+      .map((x) => x.m);
+  return [...s.trangBi.kho].sort((a, b) => b.pham - a.pham || b.cap - a.cap || b.cuong - a.cuong || b.id - a.id);
+}
+
+/** Món đang chọn (chế độ mặc, cường hóa): món người chơi chạm, hay món đang mặc ở ô đang lọc. */
+function monChon(s: GameState, ui: TuongUi, list: Mon[]): Mon | undefined {
+  return list.find((m) => m.id === ui.mon) ?? (ui.o ? (monO(s, ui.hero, ui.o) ?? list[0]) : undefined);
+}
+
+/** Thẻ tướng: hình tướng mặc đồ trên nền mặt trời trống đồng, tên, Lực chiến dưới chân. */
+function cardHtml(s: GameState, ui: TuongUi, anh: AnhTuong | null): string {
   const t = vi.trangBi;
   const src = anh?.hinh(ui.hero) ?? null;
   const fig = src ? `<img class="do-fig" src="${src}" alt="${vi.ui.heroNames[ui.hero]}" draggable="false">` : `<div class="do-fig wait"><span>${t.dangVe}</span></div>`;
-  return `<div class="do-doll">
-    ${MAT_TROI}
-    <div class="do-col">${dollSlot(s, ui, 'vuKhi')}${dollSlot(s, ui, 'phucSuc')}</div>
-    <div class="do-mid">${fig}</div>
-    <div class="do-col">${dollSlot(s, ui, 'giap')}${dollSlot(s, ui, 'baoVat')}</div>
-    <div class="do-plate"><span>${vi.ui.heroNames[ui.hero]}</span><span>${t.lucChien} <b>${chiSoTuong(s, ui.hero).lucChien}</b></span></div>
+  return `<div class="tg-card">${MAT_TROI}${fig}<div class="tg-ten"><b>${vi.ui.heroNames[ui.hero]}</b><small>${t.lucChien} <span>${chiSoTuong(s, ui.hero).lucChien}</span></small></div></div>`;
+}
+
+/** Cạnh thẻ tướng: sáu chỉ số gọn, kỹ năng, nút xem chi tiết chỉ số (hay quay về túi đồ). */
+function sideHtml(s: GameState, ui: TuongUi): string {
+  const t = vi.trangBi;
+  const c = chiSoTuong(s, ui.hero);
+  const val: Record<ChiSo, string> = {
+    mau: `${Math.round(c.mau)}`,
+    danh: so(c.danh),
+    toc: pct(c.do.toc),
+    uy: `×${so(c.uy, 2)}`,
+    giap: pct(c.giap, false),
+    hoi: pct(c.hoi, false),
+  };
+  const rows = (Object.keys(val) as ChiSo[]).map((k) => `<div title="${t.chiSo[k].name}"><span>${t.chiSo[k].icon}</span><b>${val[k]}</b></div>`).join('');
+  const sk = HERO_SKILLS[ui.hero].map((k) => `<span class="tg-sk">${skillIconImg(k)}<small>${vi.skills[k].name}</small></span>`).join('');
+  const cs = ui.tab === 'chiSo';
+  return `<div class="tg-side">
+    <div class="tg-stats">${rows}</div>
+    <div class="tg-sks">${sk}</div>
+    <button class="btn small ghost" data-act="tuongTab" data-tab="${cs ? 'do' : 'chiSo'}">${cs ? t.veTui : t.chiTiet}</button>
   </div>`;
 }
 
-/** Túi đồ: lọc theo ô, lưới ảnh món, thẻ món đang chọn, phân giải hàng loạt. */
-function tuiHtml(s: GameState, ui: TuongUi): string {
+/** Bốn ô đồ đang mặc (chạm để lọc túi theo ô) và dòng bộ gọn. */
+function eqHtml(s: GameState, ui: TuongUi): string {
   const t = vi.trangBi;
-  const kind = ui.hero;
+  const bo = boCuaTuong(ui.hero);
+  const n = boDem(ui.hero, monDangMac(s, ui.hero));
+  return `<div class="tg-eq">${O_DO.map((o) => dollSlot(s, ui, o)).join('')}</div>
+    <div class="tg-bo ${n >= 2 ? 'on' : ''}">${n >= 4 ? '✓' : n >= 2 ? '◐' : '○'} ${t.boOf(t.bo[bo])} ${t.boDem(n)}</div>`;
+}
+
+/** Thẻ chế độ túi và chip lọc ô. */
+function tuiHead(s: GameState, ui: TuongUi): string {
+  const t = vi.trangBi;
+  const che = TUI_CHE.map(
+    (k) => `<button class="tg-che ${k} ${ui.che === k ? 'on' : ''}" data-act="tuongChe" data-che="${k}" aria-pressed="${ui.che === k}">${t.che[k]}</button>`,
+  ).join('');
   const chips = ([null, ...O_DO] as const)
     .map(
       (o) =>
         `<button class="do-chip ${ui.o === o ? 'on' : ''}" data-act="khoLoc" data-o="${o ?? 'all'}" aria-label="${o ? t.o[o].name : t.tatCa}">${o ? oSvg(o, 'do-sil sm') : t.tatCa}</button>`,
     )
     .join('');
-  let list: Mon[];
-  if (ui.o) {
-    // Lọc một ô: món tướng này đang mặc đứng đầu, rồi theo Lực chiến khi mặc.
-    list = s.trangBi.kho
-      .filter((m) => m.o === ui.o)
-      .map((m) => ({ m, lc: m.tuong === kind ? Infinity : lucChienVoi(s, kind, m) }))
-      .sort((a, b) => b.lc - a.lc || b.m.id - a.m.id)
-      .map((x) => x.m);
-  } else list = [...s.trangBi.kho].sort((a, b) => b.pham - a.pham || b.cap - a.cap || b.cuong - a.cuong || b.id - a.id);
-  const sel = list.find((m) => m.id === ui.mon) ?? (ui.o ? (monO(s, kind, ui.o) ?? list[0]) : undefined);
-  const loat = phanGiaiDuoc(s, 2);
-  const loatSat = loat.reduce((sum, m) => sum + satPhanGiai(m), 0);
-  const bulk = loat.length
-    ? `<div class="actions"><button class="btn small ${ui.armed === 'loat' ? 'red' : 'ghost'}" data-act="phanGiaiLoat">${
-        ui.armed === 'loat' ? t.loatHoi(loat.length) : `${t.loat(loat.length)} · ${vi.resources.sat.icon} ${loatSat}`
-      }</button></div><p class="muted">${t.loatNote}</p>`
-    : '';
-  const empty = ui.o ? `${t.khongCoMon} ${t.nguon}` : `${t.khoRong} ${t.nguon}`;
-  return `<div class="do-tui-head"><b>${t.tui}</b><span class="muted">${t.khoCount(s.trangBi.kho.length, KHO_DO_MAX)}</span></div>
-    <div class="do-chips">${chips}</div>
-    ${list.length ? `${monGrid(list, { ...ui, mon: sel?.id ?? null })}${sel ? monDetail(s, sel, ui) : `<p class="muted">${t.chamMon}</p>`}` : `<p class="muted">${empty}</p>`}
-    ${bulk}`;
+  return `<div class="tg-ches">${che}</div><div class="do-chips">${chips}<span class="tg-dem">${t.khoCount(s.trangBi.kho.length, KHO_DO_MAX)}</span></div>`;
 }
 
-function doTab(s: GameState, ui: TuongUi, anh: AnhTuong | null): string {
-  return `${dollHtml(s, ui, anh)}${boLine(s, ui.hero)}${tuiHtml(s, ui)}`;
+/** Chọn nhanh theo phẩm ở chế độ phân giải: chạm một phẩm thì đánh dấu (hay bỏ dấu) mọi món phẩm ấy phân giải được. */
+function chonNhanh(ui: TuongUi, list: Mon[]): string {
+  const t = vi.trangBi;
+  const phams = [1, 2, 3, 4].filter((p) => list.some((m) => m.pham === p && !m.khoa && !m.tuong));
+  if (!phams.length) return '';
+  const het = (p: number) => list.filter((m) => m.pham === p && !m.khoa && !m.tuong).every((m) => ui.chon.includes(m.id));
+  return `<div class="tg-nhanh"><span>${t.chonNhanh}</span>${phams
+    .map((p) => `<button class="do-chip pham-txt-${p} ${het(p) ? 'on' : ''}" data-act="chonPham" data-pham="${p}">${t.pham[p]}</button>`)
+    .join('')}${ui.chon.length ? `<button class="do-chip" data-act="boChon">${t.boChon}</button>` : ''}</div>`;
+}
+
+/** Túi đồ theo chế độ: lưới món, và ở chế độ mặc là thẻ món đang chọn. */
+function tuiHtml(s: GameState, ui: TuongUi): string {
+  const t = vi.trangBi;
+  const list = tuiList(s, ui);
+  if (!list.length) return `${tuiHead(s, ui)}<p class="muted">${ui.o ? t.khongCoMon : t.khoRong} ${t.nguon}</p>`;
+  const sel = ui.che === 'phan' ? undefined : monChon(s, ui, list);
+  const grid = monGrid(s, list, { ...ui, mon: sel?.id ?? null });
+  const nhanh = ui.che === 'phan' ? chonNhanh(ui, list) : '';
+  const note = ui.che === 'mac' ? (sel ? monDetail(s, sel, ui) : `<p class="muted">${t.chamMon}</p>`) : `<p class="muted">${t.cheNote[ui.che]}</p>`;
+  return `${tuiHead(s, ui)}${nhanh}${grid}${note}`;
+}
+
+/** Thanh dưới: nút Mặc mạnh nhất, và theo chế độ là nút cường hóa món đang chọn hay phân giải các món đã đánh dấu. */
+function trayHtml(s: GameState, ui: TuongUi): string {
+  const t = vi.trangBi;
+  const lc = lucChienManhNhat(s, ui.hero);
+  const tang = lc.best - lc.now;
+  const manh = `<button class="btn tg-manh" data-act="macManhNhat" ${tang > 0 ? '' : 'disabled'}>⚡ ${t.macManhNhat}<small>${tang > 0 ? t.lcTang(tang) : t.daManhNhat}</small></button>`;
+  let them = '';
+  let dong = '';
+  if (ui.che === 'cuong') {
+    const m = ui.mon !== null ? s.trangBi.kho.find((x) => x.id === ui.mon) : ui.o ? monO(s, ui.hero, ui.o) : undefined;
+    const cost = m ? giaCuongHoa(m) : null;
+    const check = m ? canCuongHoa(s, m.id) : null;
+    if (!m) dong = `<span>${t.chamCuong}</span>`;
+    else {
+      dong = `<span><b class="pham-txt-${m.pham}">${esc(monTen(m))}</b> +${m.cuong}${cost ? ` → +${m.cuong + 1}` : ''}</span>${
+        cost ? `<span class="tg-gia">${costHtml(s, cost)}</span>` : `<span>✓ ${t.cuongToiDa}</span>`
+      }`;
+      if (cost)
+        them = `<button class="btn bronze" data-act="cuongHoa" data-id="${m.id}" ${check?.ok ? '' : 'disabled'}>🔨 ${t.cuongHoa} +${m.cuong + 1}${
+          check && !check.ok && check.reason !== 'thieuTaiNguyen' ? `<small>${vi.reasons[check.reason]}</small>` : ''
+        }</button>`;
+    }
+  } else if (ui.che === 'phan') {
+    const list = s.trangBi.kho.filter((m) => ui.chon.includes(m.id) && !m.khoa && !m.tuong);
+    const sat = list.reduce((sum, m) => sum + satPhanGiai(m), 0);
+    dong = `<span>${list.length ? t.daChon(list.length) : t.chamPhan}</span>${list.length ? `<b class="tg-sat">${vi.resources.sat.icon} +${sat}</b>` : ''}`;
+    them = `<button class="btn ${ui.armed === 'chon' ? 'red' : 'ghost'} tg-phan" data-act="phanGiaiChon" ${list.length ? '' : 'disabled'}>♻ ${
+      ui.armed === 'chon' ? t.chonHoi(list.length) : t.phanGiaiN(list.length)
+    }</button>`;
+  }
+  return `<div class="tg-tray ${them ? 'hai' : ''}">${dong ? `<div class="tg-dong">${dong}</div>` : ''}${manh}${them}</div>`;
 }
 
 function chiSoTab(s: GameState, kind: HeroKind): string {
@@ -335,10 +427,14 @@ function banHtml(kind: HeroKind, anh: AnhTuong | null): string {
   return src ? `<img class="do-ban" src="${src}" alt="" draggable="false">` : `<span class="do-ban ic">${vi.ui.tuongIcons[kind]}</span>`;
 }
 
-/** Nội dung bảng tướng. */
-export function tuongHtml(s: GameState, ui: TuongUi, anh: AnhTuong | null = null): string {
+/**
+ * Nội dung bảng tướng (bảng phủ cả màn hình): hàng tướng, thẻ tướng và chỉ số, bốn ô đồ, túi đồ ba chế độ (mặc,
+ * cường hóa, phân giải) hay chi tiết chỉ số, thanh nút dưới. Màn dọc xếp chồng; màn ngang ba cột (CSS `.tg`).
+ * `them`: phần hud thêm (lối sang bảng truyện từng tướng), nằm cuối phần chi tiết chỉ số.
+ */
+export function tuongHtml(s: GameState, ui: TuongUi, anh: AnhTuong | null = null, them = ''): string {
   const t = vi.trangBi;
-  if (!doMo(s)) return `<p>${t.chuaMo}</p><p class="muted">${t.nguon}</p>`;
+  if (!doMo(s)) return `<p>${t.chuaMo}</p><p class="muted">${t.nguon}</p>${them}`;
   const heroes = tuongDo(s);
   const chips = heroes
     .map(
@@ -346,14 +442,17 @@ export function tuongHtml(s: GameState, ui: TuongUi, anh: AnhTuong | null = null
         `<button class="do-hero ${k === ui.hero ? 'on' : ''}" data-act="tuongHero" data-hero="${k}">${banHtml(k, anh)}<span class="nm">${vi.ui.heroNames[k]}</span><small>${chiSoTuong(s, k).lucChien}</small></button>`,
     )
     .join('');
-  const tabs = (Object.keys(t.tabs) as TuongTab[])
-    .map((k) => `<button class="tab ${k === ui.tab ? 'on' : ''}" data-act="tuongTab" data-tab="${k}">${t.tabs[k]}${k === 'do' ? `<i class="tab-mark">${s.trangBi.kho.length}</i>` : ''}</button>`)
-    .join('');
-  const body = ui.tab === 'chiSo' ? chiSoTab(s, ui.hero) : doTab(s, ui, anh);
-  // Cấp chung dã ngoại (chỉ có tác dụng ở dã ngoại): dải mỏng dưới hàng chip tướng.
-  return `<div class="do-heroes">${chips}</div>${capBarHtml(s)}
-    <div class="build-tabs barracks-tabs">${tabs}</div>
-    <div class="do-body">${body}</div>`;
+  const main =
+    ui.tab === 'chiSo'
+      ? `<div class="tg-cs">${chiSoTab(s, ui.hero)}${boLine(s, ui.hero)}${capBarHtml(s)}${them}</div>`
+      : tuiHtml(s, ui);
+  return `<div class="tg">
+    <div class="do-heroes tg-heroes">${chips}</div>
+    <div class="tg-hero">${cardHtml(s, ui, anh)}${sideHtml(s, ui)}</div>
+    <div class="tg-eqs">${eqHtml(s, ui)}</div>
+    <div class="tg-tui">${main}</div>
+    ${trayHtml(s, ui)}
+  </div>`;
 }
 
 /** Dòng ở thẻ màn phó bản: thắng màn này rơi đồ bộ nào, phẩm cao nhất, chắc rơi hay có khi rơi. */
