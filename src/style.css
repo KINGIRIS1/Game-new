@@ -60,8 +60,7 @@ body {
 #hud > .raid-skills,
 #hud > .dock-pop,
 #hud > .xay-labels,
-#hud > .da-floats,
-#hud > .da-mini {
+#hud > .da-floats {
   pointer-events: none;
 }
 
@@ -3599,14 +3598,12 @@ body.man-vao-on #hud > * {
 .da-mini {
   display: none;
 }
+/* Bản đồ nhỏ nằm trong khung trên, ngay dưới thẻ tên map, sát phải: không đè lên thẻ tên. */
 #hud.in-da .da-mini {
   display: flex;
   flex-direction: column;
   align-items: center;
-  position: absolute;
-  right: 8px;
-  top: calc(var(--band-h) + 112px);
-  z-index: 2;
+  align-self: flex-end;
   width: 104px;
   padding: 3px;
   border-radius: 12px;
@@ -3677,7 +3674,8 @@ body.man-vao-on #hud > * {
   font-weight: 600;
 }
 
-/* Trên map dã ngoại: hàng đầu nút xem kinh đô và Tự đánh, dưới là nút kỹ năng ba tướng (nhỏ hơn cho gọn). */
+/* Trên map dã ngoại: hàng đầu nút xem kinh đô và Tự đánh, dưới là đội: mỗi tướng một thẻ (ảnh, thanh máu, tên),
+   nút kỹ năng của tướng ấy ngay dưới ảnh. */
 #hud.in-da .fieldbar [data-act='daTuDanh'] {
   order: -1;
 }
@@ -3686,12 +3684,226 @@ body.man-vao-on #hud > * {
 }
 #hud.in-da .fieldbar .skills {
   flex-basis: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
   gap: 6px;
 }
-#hud.in-da .fieldbar .skills .btn {
-  font-size: 13.5px;
-  padding: 8px 11px;
+.da-tg {
+  flex: 0 0 auto;
+  min-width: 80px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  padding: 5px 4px 6px;
+  border-radius: 12px;
+  background: rgba(247, 236, 212, 0.92);
+  border: 1.5px solid var(--bronze);
+  box-shadow: var(--shadow);
 }
+.da-av {
+  position: relative;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  overflow: hidden;
+  display: grid;
+  place-items: center;
+  background: radial-gradient(circle at 50% 40%, #f6e2b4, #d9b97a);
+  border: 2px solid var(--bronze-dark);
+}
+.da-av img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.da-av em {
+  font-style: normal;
+  font-size: 26px;
+}
+.da-tg .da-hp {
+  width: 100%;
+  height: 6px;
+  border-radius: 3px;
+  background: var(--paper-2);
+  border: 1px solid var(--bronze);
+  overflow: hidden;
+}
+.da-tg .da-hp u {
+  display: block;
+  height: 100%;
+  background: linear-gradient(90deg, #a8322a, #d8643c);
+  transition: width 0.2s;
+}
+.da-tg b {
+  max-width: 92px;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--ink);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.da-sks {
+  display: flex;
+  gap: 4px;
+}
+.da-sks:empty {
+  display: none;
+}
+.btn.skill.da-sk {
+  position: relative;
+  width: 38px;
+  height: 38px;
+  padding: 0;
+  display: grid;
+  place-items: center;
+  border-radius: 10px;
+}
+.btn.skill.da-sk .sk-ic {
+  width: 28px;
+  height: 28px;
+}
+.btn.skill.da-sk .sk-cd {
+  font-weight: 800;
+  font-size: 13px;
+  color: #fff;
+  background: rgba(40, 28, 18, 0.55);
+  border-radius: inherit;
+}
+.btn.skill.da-sk.cooling .sk-name {
+  visibility: visible;
+}
+.da-tg.down {
+  opacity: 0.55;
+}
+.da-tg.down .da-av::after {
+  content: '💤';
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  font-size: 22px;
+  background: rgba(40, 28, 18, 0.45);
+}
+/* Map dã ngoại: thẻ tên map, cấp chung lên trên cùng; dải tài nguyên xuống ngay dưới (cầm dọc), bỏ cấp Điện và số dân
+   (chỉ dùng ở kinh đô); bản đồ nhỏ dưới dải tài nguyên. Thẻ tên cao cố định cho dải tài nguyên đặt ngay dưới. */
+#hud.in-da .topbar .dien-level,
+#hud.in-da .topbar .dan-btn {
+  display: none;
+}
+#hud.in-da .top-area {
+  top: calc(10px + var(--safe-top));
+}
+#hud.in-da .field-top {
+  box-sizing: border-box;
+  height: 60px;
+  justify-content: center;
+  padding: 4px 12px;
+}
+#hud.in-da .field-top .hold-bar {
+  height: 10px;
+  flex: none;
+}
+#hud.in-da .field-top .hold-bar em {
+  font-size: 11px;
+  top: -3px;
+}
+#hud.in-da .topbar {
+  top: calc(76px + var(--safe-top));
+}
+#hud.in-da .da-mini {
+  margin-top: 54px;
+}
+
+/* Map dã ngoại cầm ngang (màn thấp): thẻ tên map gọn một góc trái, bản đồ nhỏ góc phải, đội tướng và hai nút một
+   hàng ở đáy với thẻ nhỏ hơn, chừa giữa màn cho map. */
+@media (max-height: 520px) {
+  #hud.in-da.in-field .top-area {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: flex-start;
+    left: 12px;
+  }
+  /* Cầm ngang: thẻ tên map góc trái cùng hàng với dải tài nguyên góc phải. */
+  #hud.in-da .topbar {
+    top: calc(10px + var(--safe-top));
+    max-width: calc(100vw - min(320px, 36vw) - 40px);
+  }
+  #hud.in-da .field-top {
+    max-width: min(320px, 36vw);
+    height: 52px;
+    padding: 3px 10px;
+    font-size: 12px;
+    gap: 1px;
+  }
+  #hud.in-da .field-top b,
+  #hud.in-da .field-top span {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  #hud.in-da .field-top .hold-bar {
+    height: 9px;
+  }
+  #hud.in-da .da-mini {
+    margin-top: 52px;
+    width: 78px;
+    padding: 2px;
+  }
+  #hud.in-da .da-mini svg {
+    width: 72px;
+    height: 72px;
+  }
+  #hud.in-da .da-mini small {
+    font-size: 10px;
+  }
+  #hud.in-da .fieldbar {
+    flex-wrap: nowrap;
+    align-items: flex-end;
+    bottom: calc(8px + var(--safe-bottom));
+    gap: 6px;
+  }
+  #hud.in-da .fieldbar .skills {
+    flex-basis: auto;
+    gap: 5px;
+  }
+  #hud.in-da .da-tg {
+    min-width: 66px;
+    padding: 3px 3px 4px;
+    gap: 2px;
+    border-radius: 10px;
+  }
+  #hud.in-da .da-av {
+    width: 34px;
+    height: 34px;
+  }
+  #hud.in-da .da-av em {
+    font-size: 19px;
+  }
+  #hud.in-da .da-tg .da-hp {
+    height: 5px;
+  }
+  #hud.in-da .da-tg b {
+    font-size: 10px;
+    max-width: 80px;
+  }
+  #hud.in-da .btn.skill.da-sk {
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+  }
+  #hud.in-da .btn.skill.da-sk .sk-ic {
+    width: 24px;
+    height: 24px;
+  }
+  #hud.in-da .fieldbar > .btn {
+    padding: 7px 10px;
+    font-size: 13px;
+  }
+}
+
 /* Hàng đầu: tên bảng và nút ✕; hàng hai các chip (Huân công, Dã ngoại, Đấu thành); hàng ba thẻ chương. */
 .camp-chips {
   order: 2;
