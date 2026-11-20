@@ -2,6 +2,8 @@
 // Google (đăng nhập ngay từ đây, hay chơi ngay rồi gắn Google sau trong Cài đặt).
 // Hiện ngay khi mở trang, trong lúc dựng cảnh 3D; dựng xong thì cảnh kinh đô hiện ra sau lớp chữ và nút mới bấm được.
 
+import { HERO_KINDS } from '../game/battle';
+import { NU_TUONG_IDS, THAN_THU_IDS } from '../game/defs';
 import type { TomTat } from '../game/manVao';
 import { vi } from '../text/vi';
 import { esc, fmt } from './format';
@@ -114,12 +116,12 @@ function cardHtml(t: TomTat | null): string {
     : `${esc(m.chapter(t.chapter))} · ${esc(m.chapterNames[t.chapter])}`;
   const stateText = t.moi ? `✨ ${esc(m.newGame)}` : `🕰️ ${esc(m.vang(t.vang))}`;
   return `<div class="mv-card ${t.moi ? 'new' : ''}">
-    <div class="mv-ch-head">📜 BIÊN NIÊN SỬ KINH ĐÔ</div>
+    <div class="mv-ch-head">📜 ${esc(m.bienNien)}</div>
     <div class="mv-stats-grid">
-      <div class="mv-stat-box"><span>CHƯƠNG SỬ</span><b>${chapText}</b></div>
-      <div class="mv-stat-box"><span>ĐIỆN VUA HÙNG</span><b>${vi.buildings.dien.icon} ${esc(m.dien(t.dien))}</b></div>
-      <div class="mv-stat-box"><span>BÁCH TÍNH</span><b>👥 ${esc(m.dan(fmt(t.dan)))}</b></div>
-      <div class="mv-stat-box"><span>TRẠNG THÁI</span><b>${stateText}</b></div>
+      <div class="mv-stat-box wide"><span>${esc(m.oChuong)}</span><b>${chapText}</b></div>
+      <div class="mv-stat-box"><span>${esc(m.oDien)}</span><b>${vi.buildings.dien.icon} ${esc(m.dien(t.dien))}</b></div>
+      <div class="mv-stat-box"><span>${esc(m.oDan)}</span><b>👥 ${esc(m.dan(fmt(t.dan)))}</b></div>
+      <div class="mv-stat-box wide"><span>${esc(m.oTrangThai)}</span><b>${stateText}</b></div>
     </div>
   </div>`;
 }
@@ -190,12 +192,12 @@ export function manVaoHtml(t: TomTat | null, muted: boolean): string {
     <button class="mv-sound" data-act="mute" aria-label="${esc(muted ? m.soundOff : m.soundOn)}">${soundIcon(muted)}</button>
     <div class="mv-showcase" aria-hidden="true">
       <div class="mv-feature">
-        <b>⚔️ Ngũ Đại Chương Sử</b>
-        <span>Thánh Gióng · Sơn Tinh · Cổ Loa · Cao Lỗ · Hai Bà Trưng</span>
+        <b>${esc(m.chuongTen)}</b>
+        <span>${esc(m.chuongTa)}</span>
       </div>
       <div class="mv-feature">
-        <b>🐉 Thần Thú & Danh Tướng</b>
-        <span>16 Tướng lịch sử · 5 Thần thú · Biển đảo Hoàng Sa - Trường Sa</span>
+        <b>${esc(m.tuongTen)}</b>
+        <span>${esc(m.tuongTa(HERO_KINDS.length + NU_TUONG_IDS.length, THAN_THU_IDS.length))}</span>
       </div>
     </div>`;
 }

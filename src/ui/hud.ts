@@ -1570,12 +1570,20 @@ export class Hud {
 
   /**
    * Cỡ một trang lưới ảnh nhỏ trong bảng Xây dựng, cho ảnh lớn, nút Xây và cả trang vừa bảng mà không phải cuộn:
-   * điện thoại dọc 2 hàng (5 cột, màn hẹp như màn ngoài Fold5 thì 4); bảng bên phải màn rộng 4 cột, số hàng theo
-   * chiều cao màn.
+   * điện thoại dọc 2 hàng (5 cột, màn hẹp như màn ngoài Fold5 thì 4); màn rộng thì số cột, hàng theo cỡ cột lưới
+   * của ngăn kéo dưới đáy.
    */
   private static buildGrid(): { cols: number; rows: number } {
     const side = window.matchMedia('(min-width: 600px) and (min-aspect-ratio: 4/5)').matches;
-    if (side) return { cols: 4, rows: Math.min(8, Math.max(1, Math.floor((window.innerHeight - 430) / 78))) };
+    if (side) {
+      // Màn rộng: bảng là ngăn kéo dưới đáy chia ba cột (thẻ nhóm 132px, ảnh lớn, lưới), cao tối đa 300px
+      // (`.sheet.build` trong style.css); lưới là cột thứ ba, ô rộng chừng 64px.
+      const gridW = (window.innerWidth - 112 - 32 - 132 - 28) / 2.1;
+      const cols = Math.max(3, Math.min(8, Math.floor(gridW / 64)));
+      const cell = gridW / cols;
+      const room = Math.min(300, window.innerHeight - 24) - 50 - 22 - 42;
+      return { cols, rows: Math.max(1, Math.min(4, Math.floor(room / (cell * 0.75 + 22)))) };
+    }
     return { cols: window.innerWidth >= 370 ? 5 : 4, rows: 2 };
   }
 
