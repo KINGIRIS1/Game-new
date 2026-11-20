@@ -3677,7 +3677,8 @@ body.man-vao-on #hud > * {
   font-weight: 600;
 }
 
-/* Trên map dã ngoại: hàng đầu nút xem kinh đô và Tự đánh, dưới là nút kỹ năng ba tướng (nhỏ hơn cho gọn). */
+/* Trên map dã ngoại: hàng đầu nút xem kinh đô và Tự đánh, dưới là đội: mỗi tướng một thẻ (ảnh, thanh máu, tên),
+   nút kỹ năng của tướng ấy ngay dưới ảnh. */
 #hud.in-da .fieldbar [data-act='daTuDanh'] {
   order: -1;
 }
@@ -3686,11 +3687,108 @@ body.man-vao-on #hud > * {
 }
 #hud.in-da .fieldbar .skills {
   flex-basis: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
   gap: 6px;
 }
-#hud.in-da .fieldbar .skills .btn {
-  font-size: 13.5px;
-  padding: 8px 11px;
+.da-tg {
+  flex: 0 0 auto;
+  min-width: 80px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  padding: 5px 4px 6px;
+  border-radius: 12px;
+  background: rgba(247, 236, 212, 0.92);
+  border: 1.5px solid var(--bronze);
+  box-shadow: var(--shadow);
+}
+.da-av {
+  position: relative;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  overflow: hidden;
+  display: grid;
+  place-items: center;
+  background: radial-gradient(circle at 50% 40%, #f6e2b4, #d9b97a);
+  border: 2px solid var(--bronze-dark);
+}
+.da-av img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.da-av em {
+  font-style: normal;
+  font-size: 26px;
+}
+.da-tg .da-hp {
+  width: 100%;
+  height: 6px;
+  border-radius: 3px;
+  background: var(--paper-2);
+  border: 1px solid var(--bronze);
+  overflow: hidden;
+}
+.da-tg .da-hp u {
+  display: block;
+  height: 100%;
+  background: linear-gradient(90deg, #a8322a, #d8643c);
+  transition: width 0.2s;
+}
+.da-tg b {
+  max-width: 92px;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--ink);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.da-sks {
+  display: flex;
+  gap: 4px;
+}
+.da-sks:empty {
+  display: none;
+}
+.btn.skill.da-sk {
+  position: relative;
+  width: 38px;
+  height: 38px;
+  padding: 0;
+  display: grid;
+  place-items: center;
+  border-radius: 10px;
+}
+.btn.skill.da-sk .sk-ic {
+  width: 28px;
+  height: 28px;
+}
+.btn.skill.da-sk .sk-cd {
+  font-weight: 800;
+  font-size: 13px;
+  color: #fff;
+  background: rgba(40, 28, 18, 0.55);
+  border-radius: inherit;
+}
+.btn.skill.da-sk.cooling .sk-name {
+  visibility: visible;
+}
+.da-tg.down {
+  opacity: 0.55;
+}
+.da-tg.down .da-av::after {
+  content: '💤';
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  font-size: 22px;
+  background: rgba(40, 28, 18, 0.45);
 }
 /* Hàng đầu: tên bảng và nút ✕; hàng hai các chip (Huân công, Dã ngoại, Đấu thành); hàng ba thẻ chương. */
 .camp-chips {
