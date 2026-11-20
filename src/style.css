@@ -4455,3 +4455,125 @@ body.man-vao-on #hud > * {
     display: none;
   }
 }
+
+/* ==========================================================================
+   NÚT CHỨC NĂNG CHẠM NỔI BỘ ĐỒNG THAU (`ui/nutNoi.ts`): hình đồng đúc nổi, không nền, chấm số đỏ son viền vàng.
+   ========================================================================== */
+
+.nut-noi {
+  display: block;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  user-select: none;
+  -webkit-user-drag: none;
+}
+
+.dock .tab .ic,
+.dock .tab.main .ic {
+  width: 42px;
+  height: 42px;
+  margin: 0;
+  padding: 0;
+  font-size: 0;
+  background: none;
+  border: none;
+  border-radius: 0;
+  box-shadow: none;
+  transition: transform 0.12s ease;
+}
+
+.dock .tab.main .ic {
+  width: 54px;
+  height: 54px;
+}
+
+.dock .tab.main:active .ic,
+.dock .tab:active .ic {
+  transform: translateY(2px) scale(0.95);
+  box-shadow: none;
+}
+
+/* Thẻ đang mở: hình đồng ánh vàng lên. */
+.dock .tab.on .nut-noi {
+  filter: drop-shadow(0 0 5px rgba(255, 214, 120, 0.95));
+}
+
+.dock .tab:disabled .nut-noi {
+  filter: grayscale(0.7);
+}
+
+/* Chấm số: nâu đồng sẫm viền vàng; việc gấp (có thưởng, tướng sẵn sàng) thì đỏ son. */
+.dock .badge {
+  top: -5px;
+  left: 56%;
+  min-width: 18px;
+  padding: 0 5px;
+  border: 1.5px solid #f3cf7a;
+  background: radial-gradient(circle at 35% 30%, #7a5420, #4a2c08 75%);
+  color: #ffe9b0;
+  font-family: 'Noto Serif', Georgia, serif;
+  font-size: 11px;
+  font-weight: 900;
+  line-height: 1.45;
+  text-align: center;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.45);
+}
+
+.dock .badge.hot {
+  background: radial-gradient(circle at 35% 30%, #d9574a, #8c2318 70%);
+}
+
+/* Nút xoay góc nhìn và cài đặt: chỉ hình đồng, không khung tròn. */
+.icon-btn.rotate,
+.topbar .icon-btn[data-act='openSettings'] {
+  padding: 2px;
+  background: none;
+  border: none;
+  box-shadow: none;
+}
+
+.dock .rotate {
+  width: 42px;
+  height: 42px;
+}
+
+.topbar .icon-btn[data-act='openSettings'] {
+  width: 36px;
+  height: 36px;
+}
+
+.icon-btn.rotate:active .nut-noi,
+.topbar .icon-btn[data-act='openSettings']:active .nut-noi {
+  transform: translateY(2px) scale(0.95);
+}
+
+@media (max-width: 599px) {
+  .dock .tab .ic {
+    width: 36px;
+    height: 36px;
+  }
+  .dock .tab.main .ic {
+    width: 46px;
+    height: 46px;
+  }
+  .dock .rotate {
+    width: 38px;
+    height: 38px;
+  }
+}
+
+@media (max-height: 520px) {
+  .dock .tab .ic {
+    width: 30px;
+    height: 30px;
+  }
+  .dock .tab.main .ic {
+    width: 38px;
+    height: 38px;
+  }
+  .dock .rotate {
+    width: 32px;
+    height: 32px;
+  }
+}
