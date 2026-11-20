@@ -3787,29 +3787,68 @@ body.man-vao-on #hud > * {
   font-size: 22px;
   background: rgba(40, 28, 18, 0.45);
 }
+/* Map dã ngoại: thẻ tên map, cấp chung lên trên cùng; dải tài nguyên xuống ngay dưới (cầm dọc), bỏ cấp Điện và số dân
+   (chỉ dùng ở kinh đô); bản đồ nhỏ dưới dải tài nguyên. Thẻ tên cao cố định cho dải tài nguyên đặt ngay dưới. */
+#hud.in-da .topbar .dien-level,
+#hud.in-da .topbar .dan-btn {
+  display: none;
+}
+#hud.in-da .top-area {
+  top: calc(10px + var(--safe-top));
+}
+#hud.in-da .field-top {
+  box-sizing: border-box;
+  height: 60px;
+  justify-content: center;
+  padding: 4px 12px;
+}
+#hud.in-da .field-top .hold-bar {
+  height: 10px;
+  flex: none;
+}
+#hud.in-da .field-top .hold-bar em {
+  font-size: 11px;
+  top: -3px;
+}
+#hud.in-da .topbar {
+  top: calc(76px + var(--safe-top));
+}
+#hud.in-da .da-mini {
+  margin-top: 54px;
+}
+
 /* Map dã ngoại cầm ngang (màn thấp): thẻ tên map gọn một góc trái, bản đồ nhỏ góc phải, đội tướng và hai nút một
    hàng ở đáy với thẻ nhỏ hơn, chừa giữa màn cho map. */
 @media (max-height: 520px) {
-  #hud.in-da .top-area {
+  #hud.in-da.in-field .top-area {
     flex-direction: row;
     justify-content: space-between;
     align-items: flex-start;
     left: 12px;
   }
+  /* Cầm ngang: thẻ tên map góc trái cùng hàng với dải tài nguyên góc phải. */
+  #hud.in-da .topbar {
+    top: calc(10px + var(--safe-top));
+    max-width: calc(100vw - min(320px, 36vw) - 40px);
+  }
   #hud.in-da .field-top {
-    max-width: min(320px, 42vw);
-    padding: 4px 10px;
+    max-width: min(320px, 36vw);
+    height: 52px;
+    padding: 3px 10px;
     font-size: 12px;
     gap: 1px;
+  }
+  #hud.in-da .field-top b,
+  #hud.in-da .field-top span {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
   #hud.in-da .field-top .hold-bar {
     height: 9px;
   }
-  #hud.in-da .field-top .hold-bar em {
-    font-size: 11px;
-    top: -3px;
-  }
   #hud.in-da .da-mini {
+    margin-top: 52px;
     width: 78px;
     padding: 2px;
   }
