@@ -13,7 +13,7 @@ import { kiemTen } from './game/mayChu';
 import { coMayChu, ghiMayBiet, mayBiet, nhanGoogle, taiKhoanMay, uidMay, type GoogleVe } from './mang/cauHinh';
 import { leaveBattlefield, markBaiHinted, needsBaiHint, retreat, startStage, unitAllowed } from './game/campaign';
 import { forgeArms } from './game/binhKhi';
-import { cuongHoa, khoaDo, macDo, monO, phanGiai, phanGiaiLoat, thaoDo } from './game/trangBi';
+import { chiSoTuong, cuongHoa, khoaDo, macDo, macManhNhat, monO, phanGiai, phanGiaiNhieu, thaoDo } from './game/trangBi';
 import { HinhTuong, type MacTuong } from './render/hinhTuong';
 import { monTen, preloadMon } from './ui/trangBi';
 import { autoGuard, fieldCap, fitArmy, setGuard } from './game/doanhTrai';
@@ -1683,8 +1683,18 @@ async function start(): Promise<void> {
         return;
       }
 
-      case 'phanGiaiLoat': {
-        const r = phanGiaiLoat(state, 2);
+      case 'macManhNhat': {
+        const r = macManhNhat(state, a.hero);
+        if (!r.ok) return fail(r.reason);
+        play(r.value ? 'upgrade' : 'tap');
+        hud.toast(vi.trangBi.manhToast(vi.ui.heroNames[a.hero], r.value, chiSoTuong(state, a.hero).lucChien));
+        hud.tuongChanged(state);
+        commit();
+        return;
+      }
+
+      case 'phanGiaiNhieu': {
+        const r = phanGiaiNhieu(state, a.ids);
         play('upgrade');
         hud.toast(vi.trangBi.loatToast(r.n, `${vi.resources.sat.icon} ${r.sat}`));
         hud.tuongChanged(state);
