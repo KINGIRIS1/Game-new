@@ -17,7 +17,7 @@ import { nuJoined, nuTuongList, phoTuongOf } from '../game/nuTuong';
 import { giftOfStage, heroFor, heroesFor, restingHero } from '../game/son';
 import { challengeEnemies, challengeOf, challengeOpen, challengeWon, huanNextCost, huanReward } from '../game/thuThach';
 import { vi } from '../text/vi';
-import { costHtml, esc } from './format';
+import { costHtml, esc, skillIconImg } from './format';
 import { roiHtml, roiNoteHtml } from './trangBi';
 
 /** Lựa chọn trên bảng xếp quân: số lính mang theo, hàng đứng của từng binh chủng, tướng ra trận. */
@@ -402,13 +402,15 @@ function heroPickHtml(state: GameState, stage: number, challenge: boolean, hero:
       const check = stageHeroCheck(state, stage, k, challenge);
       const sel = hero?.kind === k;
       const note = check.ok
-        ? heroSkills(stageHero(state, stage, challenge, k)!).map((sk) => `${vi.skills[sk].icon} ${vi.skills[sk].name}`).join(' · ')
-        : check.reason === 'sonKietSuc' || check.reason === 'giongKietSuc'
-          ? vi.ui.heroResting
-          : vi.reasons[check.reason];
+        ? heroSkills(stageHero(state, stage, challenge, k)!).map((sk) => `${skillIconImg(sk, 'sk-ic-sm')} ${esc(vi.skills[sk].name)}`).join(' · ')
+        : esc(
+            check.reason === 'sonKietSuc' || check.reason === 'giongKietSuc'
+              ? vi.ui.heroResting
+              : vi.reasons[check.reason],
+          );
       return `<button class="hero-opt ${sel ? 'sel' : ''}" data-act="armyHero" data-hero="${k}" aria-pressed="${sel}" ${check.ok ? '' : 'disabled'}>
         <span class="unit-icon">${heroIcon(k)}</span>
-        <span class="unit-info"><b>${heroName(state, k)}</b><small>${esc(note)}</small></span>
+        <span class="unit-info"><b>${heroName(state, k)}</b><small>${note}</small></span>
       </button>`;
     })
     .join('');

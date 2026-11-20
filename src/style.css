@@ -2170,6 +2170,45 @@ textarea {
   position: relative;
 }
 
+.sk-ic,
+.sk-ic-lg,
+.sk-ic-sm {
+  display: inline-block;
+  vertical-align: middle;
+  object-fit: cover;
+  border-radius: 5px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.45);
+  flex-shrink: 0;
+}
+
+.sk-ic {
+  width: 24px;
+  height: 24px;
+}
+
+.btn.skill.small .sk-ic {
+  width: 20px;
+  height: 20px;
+}
+
+.sk-ic-lg {
+  width: 38px;
+  height: 38px;
+  border-radius: 7px;
+}
+
+.sk-ic-sm {
+  width: 17px;
+  height: 17px;
+  border-radius: 4px;
+}
+
+.btn.skill .sk-name {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
 /* Đang hồi: số giây đè lên chỗ tên, tên ẩn mà vẫn giữ chỗ cho nút khỏi đổi cỡ. */
 .btn.skill .sk-cd {
   position: absolute;
@@ -2177,6 +2216,11 @@ textarea {
   display: none;
   align-items: center;
   justify-content: center;
+  gap: 5px;
+}
+
+.btn.skill .sk-sec {
+  font-style: normal;
 }
 
 .btn.skill.cooling .sk-cd {
@@ -2285,9 +2329,15 @@ textarea {
 .skill-row {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 4px;
   padding: 6px 0;
   border-bottom: 1px dashed var(--paper-2);
+}
+
+.skill-row > b {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
 }
 
 /* ---------- Hộp thoại truyện ---------- */

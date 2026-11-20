@@ -1,8 +1,18 @@
 // Định dạng chữ và số dùng chung cho các phần giao diện.
 
-import { RESOURCE_IDS, isBridge, type Cost } from '../game/defs';
+import { RESOURCE_IDS, isBridge, type Cost, type SkillId } from '../game/defs';
 import type { Building, GameState } from '../game/game';
 import { vi } from '../text/vi';
+
+/** Đường dẫn ảnh biểu tượng kỹ năng tướng vẽ bằng AI trong `public/anh-ky-nang/`. */
+export function skillIconUrl(k: SkillId): string {
+  return `${import.meta.env.BASE_URL}anh-ky-nang/${k}.webp`;
+}
+
+/** Thẻ `<img>` biểu tượng kỹ năng tướng vẽ bằng AI. */
+export function skillIconImg(k: SkillId, cls = 'sk-ic'): string {
+  return `<img class="${cls}" src="${skillIconUrl(k)}" alt="" draggable="false" decoding="async">`;
+}
 
 export const esc = (s: string) => s.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]!);
 export const fmt = (n: number) => Math.floor(n).toLocaleString('vi-VN');

@@ -27,7 +27,7 @@ import {
 import { ANH_DO_DAU } from '../render/anhDoDau';
 import { vi } from '../text/vi';
 import { capBarHtml } from './daNgoai';
-import { costHtml, esc } from './format';
+import { costHtml, esc, skillIconImg } from './format';
 import { pageCount } from './xayDung';
 
 export type TuongTab = 'do' | 'chiSo';
@@ -317,7 +317,7 @@ function chiSoTab(s: GameState, kind: HeroKind): string {
       const cd = SKILLS[k].cooldown;
       const now = cd * (1 - c.hoi);
       const hoi = c.hoi > 0 ? t.hoiGiay(so(cd), so(now)) : t.hoiGoc(so(cd));
-      return `<div class="unit-row"><span class="unit-icon">${vi.skills[k].icon}</span><span class="unit-info"><b>${vi.skills[k].name}</b><small>${hoi}</small></span></div>`;
+      return `<div class="unit-row"><span class="unit-icon">${skillIconImg(k, 'sk-ic-lg')}</span><span class="unit-info"><b>${vi.skills[k].name}</b><small>${hoi}</small></span></div>`;
     })
     .join('');
   return `<div class="do-lc">${t.lucChien} <b>${c.lucChien}</b></div>

@@ -117,7 +117,7 @@ import { XayLabels, fillXay, hetThoHtml, jobHtml, jobName, pendingHtml, quizHtml
 import { armyHtml, defaultPick, huanHtml, mapHtml, nextRow, pickNu, stageHtml, stageResultHtml, stepPick, type ArmyPick, type MapChapter } from './campaign';
 import { armsHtml } from './binhKhi';
 import { advHtml, caoLoHtml } from './coLoa';
-import { buildingName, costHtml, esc, fmt, fmtShort } from './format';
+import { buildingName, costHtml, esc, fmt, fmtShort, skillIconImg } from './format';
 import { endingHtml, giongHtml, isEnding, storyHtml } from './giong';
 import { gomRoiHtml, newTuongUi, roiHtml, tuongHtml, tuongMo, type AnhTuong, type TuongTab, type TuongUi } from './trangBi';
 import { doMo, monO } from '../game/trangBi';
@@ -370,7 +370,7 @@ function canShareFile(): boolean {
  * không hẹp lại rồi rộng ra làm cả hàng nút nhảy dòng.
  */
 function skillButton(b: Battle, k: SkillId, small = false): string {
-  return `<button class="btn bronze skill ${small ? 'small' : ''}" data-act="useSkill" data-skill="${k}" title="${vi.skills[k].desc}" ${skillReady(b, k) ? '' : 'disabled'}><span class="sk-name">${vi.skills[k].icon} ${vi.skills[k].name}</span><span class="sk-cd"></span></button>`;
+  return `<button class="btn bronze skill ${small ? 'small' : ''}" data-act="useSkill" data-skill="${k}" title="${vi.skills[k].desc}" ${skillReady(b, k) ? '' : 'disabled'}><span class="sk-name">${skillIconImg(k)} ${vi.skills[k].name}</span><span class="sk-cd">${skillIconImg(k)} <i class="sk-sec"></i></span></button>`;
 }
 
 /** Đổi trạng thái và số giây hồi trên nút kỹ năng đã dựng. */
@@ -378,8 +378,8 @@ function syncSkill(btn: HTMLButtonElement, b: Battle, k: SkillId): void {
   const cd = b.outcome ? 0 : Math.ceil(b.skillCd[k] ?? 0);
   btn.disabled = !skillReady(b, k);
   btn.classList.toggle('cooling', cd > 0);
-  const tail = btn.querySelector('.sk-cd');
-  if (tail) tail.textContent = cd > 0 ? `${vi.skills[k].icon} ${cd}s` : '';
+  const tail = btn.querySelector('.sk-sec');
+  if (tail) tail.textContent = cd > 0 ? `${cd}s` : '';
 }
 
 /** Bản đồ phó bản đang mở: chương nào, màn đang xem, đang xem thẻ màn hay đang xếp quân. */
@@ -1062,7 +1062,7 @@ export class Hud {
     const skillKey = b ? `${b.id}:${b.skills.join(',')}:${b.hero?.layTrao ? 1 : 0}` : '';
     if (skillKey !== this.raidSkillKey) {
       this.raidSkillKey = skillKey;
-      const stolen = b?.hero?.layTrao ? `<button class="btn bronze skill small" disabled>${vi.skills.noThan.icon} ${vi.ui.layTrao}</button>` : '';
+      const stolen = b?.hero?.layTrao ? `<button class="btn bronze skill small" disabled>${skillIconImg('noThan')} ${vi.ui.layTrao}</button>` : '';
       this.raidSkills.innerHTML = b ? stolen + b.skills.map((k) => skillButton(b, k, true)).join('') : '';
     }
     if (b) {

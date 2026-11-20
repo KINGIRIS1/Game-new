@@ -5,12 +5,12 @@ import { GEAR, GEAR_IDS, GIONG_FEED, type SkillId } from '../game/defs';
 import type { GameState, StoryId } from '../game/game';
 import { canFeed, canForge, giongLook, giongReady, giongResting, nextFeedCost } from '../game/giong';
 import { vi } from '../text/vi';
-import { costHtml, esc } from './format';
+import { costHtml, esc, skillIconImg } from './format';
 
 function skillsHtml(state: GameState): string {
   if (!giongReady(state)) return '';
   const list: SkillId[] = state.giong.whipBroken ? ['phunLua', 'nhoTre'] : ['phunLua'];
-  const rows = list.map((k) => `<div class="skill-row"><b>${vi.skills[k].icon} ${vi.skills[k].name}</b><span class="muted">${vi.skills[k].desc}</span></div>`).join('');
+  const rows = list.map((k) => `<div class="skill-row"><b>${skillIconImg(k)} ${vi.skills[k].name}</b><span class="muted">${vi.skills[k].desc}</span></div>`).join('');
   return `<h3>${vi.ui.skillsTitle}</h3>${rows}${state.giong.whipBroken ? `<p class="muted">${vi.ui.whipBroken}</p>` : ''}`;
 }
 

@@ -6,12 +6,12 @@ import { GIFTS, GIFT_IDS } from '../game/defs';
 import type { GameState } from '../game/game';
 import { canOffer, giftCount, sonJoined, sonLook, sonResting, sonSetup } from '../game/son';
 import { vi } from '../text/vi';
-import { costHtml, esc } from './format';
+import { costHtml, esc, skillIconImg } from './format';
 
 function skillsHtml(state: GameState): string {
   if (!sonJoined(state)) return '';
   const list = heroSkills({ kind: 'sonTinh', bamboo: false, glow: false, non: state.son.non });
-  const rows = list.map((k) => `<div class="skill-row"><b>${vi.skills[k].icon} ${vi.skills[k].name}</b><span class="muted">${vi.skills[k].desc}</span></div>`).join('');
+  const rows = list.map((k) => `<div class="skill-row"><b>${skillIconImg(k)} ${vi.skills[k].name}</b><span class="muted">${vi.skills[k].desc}</span></div>`).join('');
   return `<h3>${vi.ui.skillsTitle}</h3>${rows}`;
 }
 

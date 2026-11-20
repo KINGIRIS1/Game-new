@@ -8,12 +8,12 @@ import { advJoined, advLook, advResting, canForgeNoThan, noThanSteps } from '../
 import { NO_THAN_FORGE, RINGS_NEEDED } from '../game/defs';
 import type { GameState } from '../game/game';
 import { vi } from '../text/vi';
-import { costHtml } from './format';
+import { costHtml, skillIconImg } from './format';
 
 function skillsHtml(state: GameState): string {
   if (!advJoined(state)) return '';
   const list = heroSkills({ kind: 'anDuong', bamboo: false, glow: false, non: false, kimQuy: state.adv.kimQuy });
-  const rows = list.map((k) => `<div class="skill-row"><b>${vi.skills[k].icon} ${vi.skills[k].name}</b><span class="muted">${vi.skills[k].desc}</span></div>`).join('');
+  const rows = list.map((k) => `<div class="skill-row"><b>${skillIconImg(k)} ${vi.skills[k].name}</b><span class="muted">${vi.skills[k].desc}</span></div>`).join('');
   return `<h3>${vi.ui.skillsTitle}</h3>${rows}`;
 }
 
@@ -56,7 +56,7 @@ export function caoLoHtml(state: GameState): string {
   let status: string = vi.ui.caoLoWaiting;
   if (caoLoJoined(state)) status = caoLoResting(state) ? vi.ui.caoLoResting(Math.ceil((state.caoLo.restUntil - state.clock) / 1000)) : vi.ui.caoLoReady;
   const list = heroSkills({ kind: 'caoLo', bamboo: false, glow: false, non: false, lenhBan: state.caoLo.lenhBan });
-  const rows = list.map((k) => `<div class="skill-row"><b>${vi.skills[k].icon} ${vi.skills[k].name}</b><span class="muted">${vi.skills[k].desc}</span></div>`).join('');
+  const rows = list.map((k) => `<div class="skill-row"><b>${skillIconImg(k)} ${vi.skills[k].name}</b><span class="muted">${vi.skills[k].desc}</span></div>`).join('');
   const more = state.caoLo.lenhBan ? '' : `<p class="muted">${vi.ui.caoLoLenhBan}</p>`;
   return `<div class="info giong"><div class="giong-head"><span class="big">🎯</span><b>${vi.ui.caoLo}</b></div>
     <p class="muted">${status}</p><h3>${vi.ui.skillsTitle}</h3>${rows}${more}</div>`;
