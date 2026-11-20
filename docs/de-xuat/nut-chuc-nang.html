@@ -1,0 +1,184 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Nút chức năng chạm nổi</title>
+<!-- Đề xuất ba bộ nút chức năng kiểu chạm nổi (không nền, chấm số đỏ), hoa văn Đông Sơn. Mở thẳng bằng trình duyệt. -->
+<style>
+  :root { --ink: #3a2a1a; }
+  body {
+    margin: 0;
+    font-family: 'Be Vietnam Pro', 'Segoe UI', sans-serif;
+    color: #fff;
+    background: linear-gradient(160deg, #8fa65a, #6f8a3e 45%, #a8945f);
+    background-size: cover;
+    min-height: 100vh;
+  }
+  h1 { margin: 0; padding: 18px 20px 4px; font-size: 22px; text-shadow: 0 2px 6px rgba(0,0,0,.6); }
+  section { margin: 14px 12px; padding: 12px 10px 16px; border-radius: 18px; background: rgba(20, 14, 8, .18); }
+  h2 { margin: 0 6px 2px; font-size: 18px; text-shadow: 0 2px 6px rgba(0,0,0,.7); }
+  p.ta { margin: 0 6px 10px; font-size: 13px; text-shadow: 0 1px 4px rgba(0,0,0,.8); opacity: .95; }
+  .hang { display: flex; flex-wrap: wrap; justify-content: center; align-items: flex-end; gap: 4px 6px; }
+  .nut { position: relative; width: 84px; display: flex; flex-direction: column; align-items: center; }
+  .nut svg { width: 76px; height: 76px; overflow: visible; }
+  .nut.chinh svg { width: 96px; height: 96px; }
+  .nut b { margin-top: -2px; font-size: 12px; font-weight: 800; letter-spacing: .02em; text-shadow: 0 1px 3px rgba(0,0,0,.9), 0 0 6px rgba(0,0,0,.5); }
+  .so {
+    position: absolute; top: -2px; right: 6px; min-width: 26px; height: 26px; padding: 0 5px; box-sizing: border-box;
+    border-radius: 13px; display: flex; align-items: center; justify-content: center;
+    font: 900 16px/1 'Noto Serif', Georgia, serif;
+  }
+  .ngà .so { background: radial-gradient(circle at 35% 30%, #e8453a, #b5170f 70%); color: #fff; box-shadow: 0 2px 4px rgba(0,0,0,.45), inset 0 -2px 0 rgba(0,0,0,.25); }
+  .dong .so { background: radial-gradient(circle at 35% 30%, #d9574a, #8c2318 70%); color: #ffe9b0; border: 1.5px solid #f3cf7a; box-shadow: 0 2px 4px rgba(0,0,0,.5); }
+  .son .so { background: radial-gradient(circle at 35% 30%, #fff1c2, #e0ad49 60%, #a36d16); color: #6b140c; box-shadow: 0 2px 4px rgba(0,0,0,.5); }
+  .doc { display: flex; gap: 14px; justify-content: center; margin-top: 12px; }
+  .cot { display: flex; flex-direction: column; align-items: center; gap: 0; padding: 6px 2px; }
+  .cot .nut { width: 70px; }
+  .cot .nut svg { width: 56px; height: 56px; }
+  .cot .nut.chinh svg { width: 66px; height: 66px; }
+  .cot .nut b { font-size: 11px; }
+  .cot .so { min-width: 22px; height: 22px; font-size: 13px; right: 4px; }
+</style>
+</head>
+<body>
+<h1>Đề xuất nút chức năng chạm nổi</h1>
+<svg width="0" height="0" style="position:absolute">
+  <defs>
+    <!-- Ngà khắc: trắng ngà như mẫu, bóng nổi mềm -->
+    <linearGradient id="g-nga" x1="0" y1="0" x2="0.3" y2="1">
+      <stop offset="0" stop-color="#fffaf0" /><stop offset=".55" stop-color="#efe3cb" /><stop offset="1" stop-color="#cdb893" />
+    </linearGradient>
+    <!-- Đồng thau: vàng đồng trống Ngọc Lũ -->
+    <linearGradient id="g-dong" x1="0" y1="0" x2="0.3" y2="1">
+      <stop offset="0" stop-color="#fbe6a6" /><stop offset=".45" stop-color="#d9a84a" /><stop offset="1" stop-color="#8a5a14" />
+    </linearGradient>
+    <!-- Sơn mài: đỏ son, viền vàng -->
+    <linearGradient id="g-son" x1="0" y1="0" x2="0.3" y2="1">
+      <stop offset="0" stop-color="#c9382a" /><stop offset=".5" stop-color="#8c2318" /><stop offset="1" stop-color="#4e0f09" />
+    </linearGradient>
+
+    <filter id="f-nga" x="-30%" y="-30%" width="160%" height="170%">
+      <feGaussianBlur in="SourceAlpha" stdDeviation="2.2" result="b" />
+      <feSpecularLighting in="b" surfaceScale="4" specularConstant=".9" specularExponent="16" lighting-color="#ffffff" result="s">
+        <fePointLight x="-40" y="-60" z="140" />
+      </feSpecularLighting>
+      <feComposite in="s" in2="SourceAlpha" operator="in" result="s2" />
+      <feComposite in="SourceGraphic" in2="s2" operator="arithmetic" k2="1" k3=".55" result="lit" />
+      <feGaussianBlur in="SourceAlpha" stdDeviation="3" result="sb" />
+      <feOffset in="sb" dx="1" dy="4" result="so" />
+      <feFlood flood-color="#2a1a08" flood-opacity=".55" />
+      <feComposite in2="so" operator="in" result="sh" />
+      <feMerge><feMergeNode in="sh" /><feMergeNode in="lit" /></feMerge>
+    </filter>
+    <filter id="f-dong" x="-30%" y="-30%" width="160%" height="170%">
+      <feGaussianBlur in="SourceAlpha" stdDeviation="2" result="b" />
+      <feSpecularLighting in="b" surfaceScale="5" specularConstant="1.1" specularExponent="22" lighting-color="#fff2c4" result="s">
+        <fePointLight x="-40" y="-60" z="130" />
+      </feSpecularLighting>
+      <feComposite in="s" in2="SourceAlpha" operator="in" result="s2" />
+      <feComposite in="SourceGraphic" in2="s2" operator="arithmetic" k2="1" k3=".7" result="lit" />
+      <feMorphology in="SourceAlpha" operator="dilate" radius="1.6" result="d" />
+      <feFlood flood-color="#4a2c08" />
+      <feComposite in2="d" operator="in" result="vien" />
+      <feGaussianBlur in="SourceAlpha" stdDeviation="3" result="sb" />
+      <feOffset in="sb" dx="1" dy="4" result="so" />
+      <feFlood flood-color="#1a0e04" flood-opacity=".6" />
+      <feComposite in2="so" operator="in" result="sh" />
+      <feMerge><feMergeNode in="sh" /><feMergeNode in="vien" /><feMergeNode in="lit" /></feMerge>
+    </filter>
+    <filter id="f-son" x="-30%" y="-30%" width="160%" height="170%">
+      <feGaussianBlur in="SourceAlpha" stdDeviation="1.8" result="b" />
+      <feSpecularLighting in="b" surfaceScale="4" specularConstant="1" specularExponent="30" lighting-color="#ffd9c4" result="s">
+        <fePointLight x="-40" y="-60" z="120" />
+      </feSpecularLighting>
+      <feComposite in="s" in2="SourceAlpha" operator="in" result="s2" />
+      <feComposite in="SourceGraphic" in2="s2" operator="arithmetic" k2="1" k3=".6" result="lit" />
+      <feMorphology in="SourceAlpha" operator="dilate" radius="3" result="d" />
+      <feFlood flood-color="#e8b954" />
+      <feComposite in2="d" operator="in" result="vang" />
+      <feMorphology in="SourceAlpha" operator="dilate" radius="4.4" result="d2" />
+      <feFlood flood-color="#3a0c06" />
+      <feComposite in2="d2" operator="in" result="den" />
+      <feGaussianBlur in="d2" stdDeviation="3" result="sb" />
+      <feOffset in="sb" dx="1" dy="4" result="so" />
+      <feFlood flood-color="#120402" flood-opacity=".6" />
+      <feComposite in2="so" operator="in" result="sh" />
+      <feMerge><feMergeNode in="sh" /><feMergeNode in="den" /><feMergeNode in="vang" /><feMergeNode in="lit" /></feMerge>
+    </filter>
+  </defs>
+</svg>
+
+<section class="ngà" data-bo="nga">
+  <h2>Bộ 1 · Ngà khắc</h2>
+  <p class="ta">Trắng ngà chạm nổi như mẫu, chấm số đỏ. Sáng, nhẹ, nổi trên cỏ xanh; nét khắc màu nâu đất.</p>
+</section>
+<section class="dong" data-bo="dong">
+  <h2>Bộ 2 · Đồng thau trống đồng</h2>
+  <p class="ta">Vàng đồng như mặt trống Ngọc Lũ, viền nâu đồng cũ, chấm số đỏ son viền vàng. Hợp nhất với "Nét Đông Sơn".</p>
+</section>
+<section class="son" data-bo="son">
+  <h2>Bộ 3 · Sơn mài đỏ son</h2>
+  <p class="ta">Đỏ son viền vàng kim như màn vào game (bình phong), nét khắc vàng, chấm số vàng chữ đỏ. Đậm, sang, dễ thấy cả ban đêm.</p>
+</section>
+
+<script>
+  // Mỗi nút một dáng (khung 100×100). {F}: màu thân, {E}: nét khắc, {L}: vệt sáng nét khắc.
+  const khac = (d, w = 3) => `<path d="${d}" fill="none" stroke="{L}" stroke-width="${w}" stroke-linecap="round" transform="translate(.8 1)"/><path d="${d}" fill="none" stroke="{E}" stroke-width="${w}" stroke-linecap="round"/>`;
+  const giao = (goc) => `<g transform="rotate(${goc} 50 50)">
+      <path d="M50 4 C59 15 59 27 50 38 C41 27 41 15 50 4Z"/><rect x="46" y="37" width="8" height="7" rx="2"/>
+      <rect x="47.5" y="43" width="5" height="52" rx="2.5"/></g>`;
+  const long = (goc, dai) => `<path transform="rotate(${goc} 50 78)" d="M50 78 C43 ${78 - dai * .45} 45 ${78 - dai * .85} 50 ${78 - dai} C55 ${78 - dai * .85} 57 ${78 - dai * .45} 50 78Z"/>`;
+  const sao = (n, r1, r2, cx = 50, cy = 50) => {
+    const p = [];
+    for (let i = 0; i < n * 2; i++) {
+      const a = (i / (n * 2)) * Math.PI * 2 - Math.PI / 2, r = i % 2 ? r2 : r1;
+      p.push(`${(cx + r * Math.cos(a)).toFixed(1)},${(cy + r * Math.sin(a)).toFixed(1)}`);
+    }
+    return p.join(' ');
+  };
+  const NUT = [
+    { ten: 'Quân', so: '6/8', hinh: `<g fill="{F}">${giao(42)}${giao(-42)}<circle cx="50" cy="52" r="24"/></g>
+        ${khac('M50 33 A19 19 0 1 1 49.9 33')}<polygon points="${sao(8, 9, 3.5, 50, 52)}" fill="{E}"/>` },
+    { ten: 'Phó bản', hinh: `<g fill="{F}"><path d="M4 88 L32 40 L45 60 L62 28 L96 88Z"/><rect x="60.5" y="6" width="3.5" height="26" rx="1.5"/>
+        <path d="M64 7 L90 12 L83 18 L90 24 L64 22Z"/><rect x="2" y="84" width="96" height="9" rx="4.5"/></g>
+        ${khac('M62 30 L55 50 L60 60 M32 42 L28 58')}${khac('M66 14.5 L80 16', 2.5)}` },
+    { ten: 'Xây dựng', chinh: true, hinh: `<g fill="{F}"><path d="M-2 12 Q50 52 102 12 L88 54 L12 54Z"/><rect x="24" y="52" width="52" height="12"/>
+        <rect x="12" y="62" width="76" height="7" rx="3"/>${[18, 34, 61, 77].map((x) => `<rect x="${x}" y="68" width="6" height="26" rx="2"/>`).join('')}
+        <path d="M-2 12 L-7 3 L5 10Z"/><path d="M102 12 L107 3 L95 10Z"/></g>
+        ${[26, 38, 50, 62, 74].map((x) => `<circle cx="${x}" cy="${44 - Math.abs(50 - x) * .12}" r="3.6" fill="none" stroke="{E}" stroke-width="2.2"/>`).join('')}
+        ${khac('M14 54 L86 54', 2.4)}${khac('M42 54 L42 64 M58 54 L58 64', 2.4)}` },
+    { ten: 'Tướng', so: '2', hinh: `<g fill="{F}">${[-64, -42, -21, 0, 21, 42, 64].map((g) => long(g, 74 - Math.abs(g) * .35)).join('')}
+        <path d="M18 74 Q50 60 82 74 L82 86 Q50 74 18 86Z"/></g>
+        ${[-42, -21, 0, 21, 42].map((g) => `<path transform="rotate(${g} 50 78)" d="M50 72 L50 ${30 + Math.abs(g) * .3}" stroke="{E}" stroke-width="2" fill="none"/>`).join('')}
+        <circle cx="50" cy="74" r="7" fill="{F}" stroke="{E}" stroke-width="2.4"/>${khac('M22 80 Q50 68 78 80', 2)}` },
+    { ten: 'Lạc hầu', so: '!', hinh: `<g fill="{F}"><rect x="20" y="18" width="60" height="64"/><rect x="12" y="10" width="76" height="14" rx="7"/>
+        <rect x="12" y="76" width="76" height="14" rx="7"/></g>
+        ${khac('M29 36 L71 36 M29 46 L66 46 M29 56 L71 56 M29 66 L54 66', 2.6)}<rect x="60" y="61" width="10" height="10" rx="1.5" fill="{E}"/>
+        ${khac('M14 17 L86 17 M14 83 L86 83', 2)}` },
+    { ten: 'Xoay', hinh: `<g fill="none" stroke="{F}" stroke-width="13" stroke-linecap="round"><path d="M22 42 A30 30 0 0 1 74 30"/><path d="M78 58 A30 30 0 0 1 26 70"/></g>
+        <g fill="{F}"><polygon points="68,14 92,34 64,42"/><polygon points="32,86 8,66 36,58"/></g>
+        ${khac('M26 41 A26 26 0 0 1 70 32', 2)}${khac('M74 59 A26 26 0 0 1 30 68', 2)}` },
+    { ten: 'Cài đặt', hinh: `<g fill="{F}"><circle cx="50" cy="50" r="42"/></g>
+        ${khac('M50 14 A36 36 0 1 1 49.9 14', 2.4)}${khac('M50 22 A28 28 0 1 1 49.9 22', 2)}
+        ${Array.from({ length: 28 }, (_, i) => { const a = i / 28 * Math.PI * 2; return `<line x1="${(50 + 30 * Math.cos(a)).toFixed(1)}" y1="${(50 + 30 * Math.sin(a)).toFixed(1)}" x2="${(50 + 34 * Math.cos(a)).toFixed(1)}" y2="${(50 + 34 * Math.sin(a)).toFixed(1)}" stroke="{E}" stroke-width="1.6"/>`; }).join('')}
+        <polygon points="${sao(14, 24, 8)}" fill="{F}" stroke="{E}" stroke-width="1.8" stroke-linejoin="round"/><circle cx="50" cy="50" r="5" fill="{E}"/>` },
+  ];
+  const MAU = {
+    nga: { F: 'url(#g-nga)', E: '#a8916a', L: '#fffaf0' },
+    dong: { F: 'url(#g-dong)', E: '#5a3b14', L: '#fff0b8' },
+    son: { F: 'url(#g-son)', E: '#e8b954', L: '#4e0f09' },
+  };
+  const ve = (bo, n) => {
+    const m = MAU[bo];
+    const h = n.hinh.replace(/\{(F|E|L)\}/g, (_, k) => m[k]);
+    return `<div class="nut ${n.chinh ? 'chinh' : ''}"><svg viewBox="-6 -4 112 112"><g filter="url(#f-${bo})">${h}</g></svg>
+      ${n.so ? `<i class="so">${n.so}</i>` : ''}<b>${n.ten}</b></div>`;
+  };
+  for (const sec of document.querySelectorAll('section')) {
+    const bo = sec.dataset.bo;
+    sec.insertAdjacentHTML('beforeend', `<div class="hang">${NUT.map((n) => ve(bo, n)).join('')}</div>`);
+  }
+</script>
+</body>
+</html>
