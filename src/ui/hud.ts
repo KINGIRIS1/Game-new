@@ -489,6 +489,7 @@ export class Hud {
       <div class="top-area">
         <div class="res-drop" hidden></div>
         <div class="field-top"><b></b><span></span><div class="hold-bar" hidden><i></i><em>🐎</em></div><div class="hero-hp" hidden></div></div>
+        <div class="da-mini" hidden></div>
       </div>
       <div class="hint" hidden></div>
       <div class="dock-pop"></div>
@@ -503,7 +504,6 @@ export class Hud {
         <button class="btn small bronze" data-act="dauSpeed" title="${vi.dauThanh.replaySpeedTitle}" hidden></button>
       </footer>
       <div class="xay-labels"></div>
-      <div class="da-mini" hidden></div>
       <div class="da-floats"></div>
       <aside class="sheet" aria-live="polite"></aside>
       <section class="campaign" hidden></section>

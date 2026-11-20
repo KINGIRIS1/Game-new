@@ -60,8 +60,7 @@ body {
 #hud > .raid-skills,
 #hud > .dock-pop,
 #hud > .xay-labels,
-#hud > .da-floats,
-#hud > .da-mini {
+#hud > .da-floats {
   pointer-events: none;
 }
 
@@ -3599,14 +3598,12 @@ body.man-vao-on #hud > * {
 .da-mini {
   display: none;
 }
+/* Bản đồ nhỏ nằm trong khung trên, ngay dưới thẻ tên map, sát phải: không đè lên thẻ tên. */
 #hud.in-da .da-mini {
   display: flex;
   flex-direction: column;
   align-items: center;
-  position: absolute;
-  right: 8px;
-  top: calc(var(--band-h) + 112px);
-  z-index: 2;
+  align-self: flex-end;
   width: 104px;
   padding: 3px;
   border-radius: 12px;
@@ -3790,6 +3787,84 @@ body.man-vao-on #hud > * {
   font-size: 22px;
   background: rgba(40, 28, 18, 0.45);
 }
+/* Map dã ngoại cầm ngang (màn thấp): thẻ tên map gọn một góc trái, bản đồ nhỏ góc phải, đội tướng và hai nút một
+   hàng ở đáy với thẻ nhỏ hơn, chừa giữa màn cho map. */
+@media (max-height: 520px) {
+  #hud.in-da .top-area {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: flex-start;
+    left: 12px;
+  }
+  #hud.in-da .field-top {
+    max-width: min(320px, 42vw);
+    padding: 4px 10px;
+    font-size: 12px;
+    gap: 1px;
+  }
+  #hud.in-da .field-top .hold-bar {
+    height: 9px;
+  }
+  #hud.in-da .field-top .hold-bar em {
+    font-size: 11px;
+    top: -3px;
+  }
+  #hud.in-da .da-mini {
+    width: 78px;
+    padding: 2px;
+  }
+  #hud.in-da .da-mini svg {
+    width: 72px;
+    height: 72px;
+  }
+  #hud.in-da .da-mini small {
+    font-size: 10px;
+  }
+  #hud.in-da .fieldbar {
+    flex-wrap: nowrap;
+    align-items: flex-end;
+    bottom: calc(8px + var(--safe-bottom));
+    gap: 6px;
+  }
+  #hud.in-da .fieldbar .skills {
+    flex-basis: auto;
+    gap: 5px;
+  }
+  #hud.in-da .da-tg {
+    min-width: 66px;
+    padding: 3px 3px 4px;
+    gap: 2px;
+    border-radius: 10px;
+  }
+  #hud.in-da .da-av {
+    width: 34px;
+    height: 34px;
+  }
+  #hud.in-da .da-av em {
+    font-size: 19px;
+  }
+  #hud.in-da .da-tg .da-hp {
+    height: 5px;
+  }
+  #hud.in-da .da-tg b {
+    font-size: 10px;
+    max-width: 80px;
+  }
+  #hud.in-da .btn.skill.da-sk {
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+  }
+  #hud.in-da .btn.skill.da-sk .sk-ic {
+    width: 24px;
+    height: 24px;
+  }
+  #hud.in-da .fieldbar > .btn {
+    padding: 7px 10px;
+    font-size: 13px;
+  }
+}
+
 /* Hàng đầu: tên bảng và nút ✕; hàng hai các chip (Huân công, Dã ngoại, Đấu thành); hàng ba thẻ chương. */
 .camp-chips {
   order: 2;
