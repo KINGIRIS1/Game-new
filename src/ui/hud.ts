@@ -137,6 +137,7 @@ import { baoDao, buildingThuyen, canThuyen, daoGiuBien, chanThuyen } from '../ga
 import { fillDao, quanDaoHtml } from './bien';
 import { farBankOf } from '../game/map';
 import { mauItems } from './mau';
+import { nutNoi } from './nutNoi';
 import { goLabel, pageCount, pageOf, pickOf, thumbUrl, xayDungHtml, type BuildItem } from './xayDung';
 import type { MauId } from '../game/mau';
 
@@ -915,7 +916,7 @@ export class Hud {
           <span class="more"></span>
         </button>
         <button class="dan-btn" data-act="danInfo">👥<b></b><i></i></button>
-        <button class="icon-btn" data-act="openSettings" aria-label="${vi.ui.settings}">⚙️</button>`;
+        <button class="icon-btn" data-act="openSettings" aria-label="${vi.ui.settings}">${nutNoi('caiDat')}</button>`;
     }
     const store = storageCap(state);
     this.topbar.querySelector('.dien-level b')!.textContent = String(dienLevel(state));
@@ -1158,13 +1159,13 @@ export class Hud {
         <span class="ic">${o.icon}${o.badge ? `<i class="badge ${o.hot ? 'hot' : ''}">${o.badge}</i>` : ''}</span><span class="lb">${o.label}</span></button>`;
     // Xây dựng nổi tròn ở giữa: việc làm nhiều nhất, ngón cái với tới dễ nhất.
     const dock =
-      tab({ act: 'openBarracks', icon: '⚔️', label: vi.ui.tabArmy, on: this.barracksOpen(state), off: !cap, badge: cap ? `${troopSpace(state)}/${cap}` : '', title: cap ? vi.ui.troopSpace(troopSpace(state), cap) : '' }) +
-      tab({ act: 'openCampaign', icon: '🗺️', label: vi.ui.campaign, on: this.camp !== null, off: countOf(state, 'doanhTrai') === 0 }) +
-      tab({ act: 'openBuild', icon: '🔨', label: vi.ui.build, on: this.sheet?.kind === 'build', main: true }) +
+      tab({ act: 'openBarracks', icon: nutNoi('quan'), label: vi.ui.tabArmy, on: this.barracksOpen(state), off: !cap, badge: cap ? `${troopSpace(state)}/${cap}` : '', title: cap ? vi.ui.troopSpace(troopSpace(state), cap) : '' }) +
+      tab({ act: 'openCampaign', icon: nutNoi('phoBan'), label: vi.ui.campaign, on: this.camp !== null, off: countOf(state, 'doanhTrai') === 0 }) +
+      tab({ act: 'openBuild', icon: nutNoi('xayDung'), label: vi.ui.build, on: this.sheet?.kind === 'build', main: true }) +
       // Trang bị đã mở thì thẻ Tướng mở thẳng bảng tướng (trang bị, chỉ số); chưa mở thì danh sách tướng bật lên trên dock.
-      tab({ act: 'tabTuong', icon: '🎖️', label: vi.ui.tabHeroes, on: this.pop === 'heroes' || this.sheet?.kind === 'tuong', off: !heroes.length && !doMo(state), badge: heroes.some((h) => h.mark === '⚔️') ? '⚔️' : '', hot: true }) +
-      tab({ act: 'togglePop', pop: 'quest', icon: '📜', label: vi.ui.lacHau, on: this.pop === 'quest', badge: done ? '!' : progress ? `${progress.have}/${progress.need}` : '', hot: done }) +
-      `<button class="icon-btn rotate" data-act="rotateView" aria-label="${vi.ui.rotate}" title="${vi.ui.rotate}">⟳</button>`;
+      tab({ act: 'tabTuong', icon: nutNoi('tuong'), label: vi.ui.tabHeroes, on: this.pop === 'heroes' || this.sheet?.kind === 'tuong', off: !heroes.length && !doMo(state), badge: heroes.some((h) => h.mark === '⚔️') ? '⚔️' : '', hot: true }) +
+      tab({ act: 'togglePop', pop: 'quest', icon: nutNoi('lacHau'), label: vi.ui.lacHau, on: this.pop === 'quest', badge: done ? '!' : progress ? `${progress.have}/${progress.need}` : '', hot: done }) +
+      `<button class="icon-btn rotate" data-act="rotateView" aria-label="${vi.ui.rotate}" title="${vi.ui.rotate}">${nutNoi('xoay')}</button>`;
     if (dock !== this.dockHtml) {
       this.dockHtml = dock;
       this.dock.innerHTML = dock;
@@ -1217,7 +1218,7 @@ export class Hud {
       this.updateQuest(state);
     }
     // Nút xoay cảnh ở mọi chế độ: lúc đặt, dời, dựng lũy là lúc cần xoay nhất.
-    const rotate = `<button class="icon-btn rotate" data-act="rotateView" aria-label="${vi.ui.rotate}" title="${vi.ui.rotate}">⟳</button>`;
+    const rotate = `<button class="icon-btn rotate" data-act="rotateView" aria-label="${vi.ui.rotate}" title="${vi.ui.rotate}">${nutNoi('xoay')}</button>`;
     this.bottombar.classList.remove('crowded');
     if (mode === 'view') {
       this.bottombar.innerHTML = '';
