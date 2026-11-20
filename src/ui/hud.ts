@@ -1,7 +1,7 @@
 // Giao diện HTML đặt đè lên cảnh 3D: thanh tài nguyên, nhiệm vụ, bảng xây dựng, bảng công trình, cài đặt,
 // bản đồ phó bản và các nút trong trận.
 
-import { enemiesLeft, alliesLeft, heroSetups, holdProgress, skillReady, wavesArrived, type Battle, type HeroKind } from '../game/battle';
+import { enemiesLeft, alliesLeft, heroSetups, heroSkills, holdProgress, skillReady, wavesArrived, type Battle, type HeroKind } from '../game/battle';
 import { advJoined, advLook, advResting, inChapter3, ruaVangCame, wallRings } from '../game/coLoa';
 import {
   BUILDINGS,
@@ -374,6 +374,12 @@ function skillButton(b: Battle, k: SkillId, small = false): string {
   return `<button class="btn bronze skill ${small ? 'small' : ''}" data-act="useSkill" data-skill="${k}" title="${vi.skills[k].desc}" ${skillReady(b, k) ? '' : 'disabled'}><span class="sk-name">${skillIconImg(k)} ${vi.skills[k].name}</span><span class="sk-cd">${skillIconImg(k)} <i class="sk-sec"></i></span></button>`;
 }
 
+/** Nút kỹ năng gọn dưới thẻ tướng dã ngoại: chỉ ảnh kỹ năng, đang hồi thì số giây đè lên ảnh. */
+function daSkillButton(b: Battle, k: SkillId): string {
+  const t = vi.skills[k];
+  return `<button class="btn bronze skill da-sk" data-act="useSkill" data-skill="${k}" title="${t.name}: ${t.desc}" aria-label="${t.name}" ${skillReady(b, k) ? '' : 'disabled'}><span class="sk-name">${skillIconImg(k)}</span><span class="sk-cd"><i class="sk-sec"></i></span></button>`;
+}
+
 /** Đổi trạng thái và số giây hồi trên nút kỹ năng đã dựng. */
 function syncSkill(btn: HTMLButtonElement, b: Battle, k: SkillId): void {
   const cd = b.outcome ? 0 : Math.ceil(b.skillCd[k] ?? 0);
@@ -484,6 +490,7 @@ export class Hud {
       <div class="top-area">
         <div class="res-drop" hidden></div>
         <div class="field-top"><b></b><span></span><div class="hold-bar" hidden><i></i><em>🐎</em></div><div class="hero-hp" hidden></div></div>
+        <div class="da-mini" hidden></div>
       </div>
       <div class="hint" hidden></div>
       <div class="dock-pop"></div>
@@ -498,7 +505,6 @@ export class Hud {
         <button class="btn small bronze" data-act="dauSpeed" title="${vi.dauThanh.replaySpeedTitle}" hidden></button>
       </footer>
       <div class="xay-labels"></div>
-      <div class="da-mini" hidden></div>
       <div class="da-floats"></div>
       <aside class="sheet" aria-live="polite"></aside>
       <section class="campaign" hidden></section>
@@ -2448,7 +2454,8 @@ export class Hud {
     // Nhiều tướng cùng ra trận (Hai Bà, đội dã ngoại): mỗi tướng một thanh máu, tướng ngã hay kiệt sức thì thanh mờ.
     const heroHp = this.fieldTop.querySelector<HTMLElement>('.hero-hp')!;
     const setups = heroSetups(b);
-    const show = setups.length >= (b.da ? 1 : 2);
+    // Map dã ngoại: thanh máu nằm trên thẻ từng tướng ở đáy màn hình (`syncDaDoi`), không ở dải trên.
+    const show = !b.da && setups.length >= 2;
     heroHp.hidden = !show;
     if (show) {
       const hpKey = `${b.id}:${setups.map((h) => h.kind).join(',')}:${b.thu?.kind ?? ''}`;
@@ -2491,10 +2498,13 @@ export class Hud {
       flag.textContent = flagText;
       flag.title = xem ? vi.dauThanh.replayExit : b.da ? vi.daNgoai.veXemTitle : vi.ui.retreat;
     }
-    const key = `${b.id}:${b.skills.join(',')}`;
-    if (key !== this.skillKey) {
-      this.skillKey = key;
-      box.innerHTML = b.skills.map((k) => skillButton(b, k)).join('');
+    if (b.da) this.syncDaDoi(b, box);
+    else {
+      const key = `${b.id}:${b.skills.join(',')}`;
+      if (key !== this.skillKey) {
+        this.skillKey = key;
+        box.innerHTML = b.skills.map((k) => skillButton(b, k)).join('');
+      }
     }
     for (const btn of box.querySelectorAll<HTMLButtonElement>('[data-skill]')) {
       const k = btn.dataset.skill as SkillId;
@@ -2502,6 +2512,61 @@ export class Hud {
       btn.classList.toggle('active', (k === 'trongTran' && b.rally > 0) || (k === 'ruaVang' && b.shield > 0) || (k === 'lenhBan' && (b.lenh ?? 0) > 0));
     }
     flag.disabled = !!b.outcome && !xem;
+  }
+
+  /**
+   * Đội dã ngoại ở đáy màn hình: mỗi tướng một thẻ (ảnh bán thân, thanh máu, tên), nút kỹ năng của tướng ấy ngay dưới
+   * ảnh; thần thú đi theo một thẻ không có nút. Ảnh bán thân chưa vẽ xong thì tạm biểu tượng, vẽ xong thì dựng lại.
+   */
+  private daBanAnh = { id: -1, anh: new Map<HeroKind, string>() };
+
+  /** Ảnh bán thân tướng cho thẻ đội dã ngoại, nhớ theo trận cho khỏi hỏi lại mỗi khung. */
+  private daBan(b: Battle, kind: HeroKind): string | null {
+    const c = this.daBanAnh;
+    if (c.id !== b.id) {
+      c.id = b.id;
+      c.anh.clear();
+    }
+    const got = c.anh.get(kind);
+    if (got) return got;
+    const src = this.anhTuong?.ban(kind) ?? null;
+    if (src) c.anh.set(kind, src);
+    return src;
+  }
+
+  private syncDaDoi(b: Battle, box: HTMLElement): void {
+    const setups = heroSetups(b);
+    const owned = new Set<SkillId>();
+    const cards = setups.map((h) => {
+      const sk = heroSkills(h).filter((k) => b.skills.includes(k));
+      sk.forEach((k) => owned.add(k));
+      return { kind: h.kind, sk, src: this.daBan(b, h.kind) };
+    });
+    const rest = b.skills.filter((k) => !owned.has(k));
+    const key = `da:${b.id}:${b.skills.join(',')}:${cards.map((c) => `${c.kind}${c.src ? '+' : ''}`).join(',')}:${b.thu?.kind ?? ''}`;
+    if (key !== this.skillKey) {
+      this.skillKey = key;
+      const av = (inner: string) => `<span class="da-av">${inner}</span><i class="da-hp"><u></u></i>`;
+      box.innerHTML =
+        cards
+          .map(
+            (c) =>
+              `<div class="da-tg" data-hero="${c.kind}">${av(c.src ? `<img src="${c.src}" alt="" draggable="false">` : `<em>${vi.ui.tuongIcons[c.kind]}</em>`)}<b>${vi.ui.heroNames[c.kind]}</b><span class="da-sks">${c.sk.map((k) => daSkillButton(b, k)).join('')}</span></div>`,
+          )
+          .join('') +
+        (b.thu ? `<div class="da-tg thu" data-hero="${b.thu.kind}">${av(`<em>${vi.thanThu.icon[b.thu.kind]}</em>`)}<b>${vi.thanThu.ten[b.thu.kind]}</b></div>` : '') +
+        rest.map((k) => skillButton(b, k)).join('');
+    }
+    // Máu từng thẻ: tướng ngã (hay thú ngã) thì thẻ mờ, ảnh phủ 💤.
+    const thuKind = b.thu?.kind;
+    for (const el of box.querySelectorAll<HTMLElement>('.da-tg')) {
+      const kind = el.dataset.hero!;
+      const f = b.fighters.find((x) => x.kind === kind);
+      const h = setups.find((x) => x.kind === kind);
+      const down = !f || f.state === 'gone' || f.hp <= 0 || (kind !== thuKind && !!h?.down);
+      el.classList.toggle('down', down);
+      el.querySelector<HTMLElement>('u')!.style.width = `${f && !down ? Math.round((100 * f.hp) / f.maxHp) : 0}%`;
+    }
   }
 
   /** Bản đồ nhỏ góc màn hình trên map dã ngoại: dựng lại khi đổi map hay boss mọc, hạ; chấm đội dời mỗi lần. */
