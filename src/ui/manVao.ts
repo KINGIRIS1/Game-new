@@ -105,20 +105,21 @@ function soundIcon(muted: boolean): string {
   return muted ? '🔇' : '🔊';
 }
 
-/** Thẻ tóm tắt bản lưu; `null` khi còn đang dựng cảnh. */
+/** Thẻ tóm tắt bản lưu kiểu Biên Niên Sử Kinh Đô (Bản 1); `null` khi còn đang dựng cảnh. */
 function cardHtml(t: TomTat | null): string {
   if (!t) return '';
   const m = vi.manVao;
-  if (t.moi) return `<div class="mv-card new">${esc(m.newGame)}</div>`;
-  const chap = t.hetTruyen
+  const chapText = t.hetTruyen
     ? `🥁 ${esc(m.hetTruyen)}`
-    : `${esc(m.chapter(t.chapter))} · <b>${esc(m.chapterNames[t.chapter])}</b>`;
-  return `<div class="mv-card">
-    <div class="mv-chap">${chap}</div>
-    <div class="mv-stats">
-      <span>${vi.buildings.dien.icon} ${esc(m.dien(t.dien))}</span>
-      <span>👥 ${esc(m.dan(fmt(t.dan)))}</span>
-      <span>🕰️ ${esc(m.vang(t.vang))}</span>
+    : `${esc(m.chapter(t.chapter))} · ${esc(m.chapterNames[t.chapter])}`;
+  const stateText = t.moi ? `✨ ${esc(m.newGame)}` : `🕰️ ${esc(m.vang(t.vang))}`;
+  return `<div class="mv-card ${t.moi ? 'new' : ''}">
+    <div class="mv-ch-head">📜 BIÊN NIÊN SỬ KINH ĐÔ</div>
+    <div class="mv-stats-grid">
+      <div class="mv-stat-box"><span>CHƯƠNG SỬ</span><b>${chapText}</b></div>
+      <div class="mv-stat-box"><span>ĐIỆN VUA HÙNG</span><b>${vi.buildings.dien.icon} ${esc(m.dien(t.dien))}</b></div>
+      <div class="mv-stat-box"><span>BÁCH TÍNH</span><b>👥 ${esc(m.dan(fmt(t.dan)))}</b></div>
+      <div class="mv-stat-box"><span>TRẠNG THÁI</span><b>${stateText}</b></div>
     </div>
   </div>`;
 }
@@ -169,20 +170,33 @@ export function tkHtml(t: TomTat, tk: ManVaoTk, armed: boolean): string {
 
 export function manVaoHtml(t: TomTat | null, muted: boolean): string {
   const m = vi.manVao;
-  // Khối tài khoản nằm dưới nút vào game; khi bản trên mây khác bản ở máy này thì lên trên nút, cho người chơi thấy
-  // trước khi bấm Bắt đầu hay Chơi tiếp (`ManVao.setTk` điền vào một trong hai chỗ).
+  // Bố cục Bản 1: Bình phong chiếu thư sơn mài dọc bên trái + cảnh 3D kinh đô mở thoáng bên phải kèm thẻ điểm nhấn.
   return `<div class="mv-veil"></div>
-    <button class="mv-sound" data-act="mute" aria-label="${esc(muted ? m.soundOff : m.soundOn)}">${soundIcon(muted)}</button>
-    <div class="mv-head">
-      <div class="mv-logo">${trongDongSvg()}</div>
-      <h1 class="mv-title"><small>${esc(m.titleSmall)}</small><span>${esc(m.titleBig)}</span></h1>
-      <p class="mv-tagline">${esc(m.tagline)}</p>
+    <div class="mv-sidebar">
+      <div class="mv-ornament">❖ ══════ ❖ ══════ ❖</div>
+      <div class="mv-head">
+        <div class="mv-logo">${trongDongSvg()}</div>
+        <h1 class="mv-title"><small>${esc(m.titleSmall)}</small><span>${esc(m.titleBig)}</span></h1>
+        <p class="mv-tagline">${esc(m.tagline)}</p>
+      </div>
+      <div class="mv-foot">
+        <div class="mv-card-slot">${cardHtml(t)}</div>
+        <div class="mv-tk-slot" data-cho="tren"></div>
+        <button class="btn bronze mv-play" data-act="enter" ${t ? '' : 'disabled'}>${esc(playLabel(t))}</button>
+        <div class="mv-tk-slot" data-cho="duoi"></div>
+      </div>
+      <div class="mv-ornament">❖ ══════ ❖ ══════ ❖</div>
     </div>
-    <div class="mv-foot">
-      <div class="mv-card-slot">${cardHtml(t)}</div>
-      <div class="mv-tk-slot" data-cho="tren"></div>
-      <button class="btn bronze mv-play" data-act="enter" ${t ? '' : 'disabled'}>${esc(playLabel(t))}</button>
-      <div class="mv-tk-slot" data-cho="duoi"></div>
+    <button class="mv-sound" data-act="mute" aria-label="${esc(muted ? m.soundOff : m.soundOn)}">${soundIcon(muted)}</button>
+    <div class="mv-showcase" aria-hidden="true">
+      <div class="mv-feature">
+        <b>⚔️ Ngũ Đại Chương Sử</b>
+        <span>Thánh Gióng · Sơn Tinh · Cổ Loa · Cao Lỗ · Hai Bà Trưng</span>
+      </div>
+      <div class="mv-feature">
+        <b>🐉 Thần Thú & Danh Tướng</b>
+        <span>16 Tướng lịch sử · 5 Thần thú · Biển đảo Hoàng Sa - Trường Sa</span>
+      </div>
     </div>`;
 }
 

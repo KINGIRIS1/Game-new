@@ -3798,3 +3798,532 @@ body.man-vao-on #hud > * {
 .thu-big b {
   font-size: 18px;
 }
+
+/* ==========================================================================
+   MÀN HÌNH VÀO GAME (BẢN 1: BÌNH PHONG CHIẾU THƯ SƠN MÀI BÊN TRÁI)
+   ========================================================================== */
+
+.man-vao {
+  background: linear-gradient(
+    90deg,
+    rgba(16, 10, 6, 0.96) 0%,
+    rgba(22, 14, 9, 0.88) 34%,
+    rgba(0, 0, 0, 0.14) 55%,
+    rgba(0, 0, 0, 0) 100%
+  );
+  flex-direction: row;
+  justify-content: space-between;
+  align-items: stretch;
+  padding: 0;
+}
+
+.mv-sidebar {
+  width: min(430px, 100vw);
+  background: linear-gradient(180deg, #1f130c 0%, #140c07 100%);
+  border-right: 3px solid #e0ad49;
+  box-shadow:
+    12px 0 36px rgba(0, 0, 0, 0.75),
+    inset -2px 0 0 #8c2318;
+  padding: calc(18px + var(--safe-top)) 28px calc(18px + var(--safe-bottom));
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  color: #f7ead0;
+  overflow-y: auto;
+  z-index: 2;
+}
+
+.mv-ornament {
+  color: #c8963a;
+  font-size: 12.5px;
+  letter-spacing: 3px;
+  opacity: 0.85;
+  text-align: center;
+}
+
+.mv-logo {
+  width: min(38vw, 24vh, 156px);
+  padding: 5px;
+  background: radial-gradient(circle, #f3cf7a, #9e6b18);
+  box-shadow:
+    0 0 0 3px #8c2318,
+    0 0 28px rgba(232, 185, 84, 0.45);
+}
+
+.mv-title small {
+  font-size: 12.5px;
+  letter-spacing: 0.36em;
+  margin-right: -0.36em;
+  color: #e8b954;
+  text-shadow: 0 2px 6px rgba(0, 0, 0, 0.9);
+}
+
+.mv-title span {
+  font-size: clamp(36px, 9vw, 50px);
+  font-weight: 900;
+  letter-spacing: 0.05em;
+  background: linear-gradient(180deg, #fff7d6 0%, #f0be52 55%, #b37718 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  filter: drop-shadow(0 3px 6px rgba(0, 0, 0, 0.85));
+  text-shadow: none;
+}
+
+.mv-tagline {
+  background: rgba(255, 232, 180, 0.08);
+  border: 1px solid rgba(224, 173, 73, 0.38);
+  color: #dec6a0;
+  font-style: normal;
+  font-size: 12.5px;
+  padding: 5px 14px;
+}
+
+.mv-foot {
+  width: 100%;
+  gap: 10px;
+}
+
+.mv-card {
+  background: rgba(255, 232, 180, 0.06);
+  border: 1.5px solid rgba(224, 173, 73, 0.48);
+  border-radius: 14px;
+  padding: 11px 13px;
+  text-align: left;
+  color: #f7ead0;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.45);
+}
+
+.mv-card.new {
+  font-style: normal;
+  color: #f7ead0;
+}
+
+.mv-ch-head {
+  font-size: 11px;
+  font-weight: 800;
+  color: #f3cf7a;
+  letter-spacing: 0.1em;
+  margin-bottom: 8px;
+  border-bottom: 1px dashed rgba(224, 173, 73, 0.32);
+  padding-bottom: 5px;
+}
+
+.mv-stats-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.mv-stat-box {
+  background: rgba(0, 0, 0, 0.35);
+  border-radius: 9px;
+  padding: 6px 9px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.mv-stat-box span {
+  font-size: 9.5px;
+  color: #b99e76;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+.mv-stat-box b {
+  font-size: 12.5px;
+  color: #fff2d6;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.mv-play.bronze {
+  background: linear-gradient(180deg, #d63828 0%, #961d12 100%);
+  border: 2px solid #f3cf7a;
+  color: #fff7df;
+  box-shadow:
+    0 4px 0 #570d06,
+    0 10px 24px rgba(0, 0, 0, 0.55);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-size: 17px;
+  padding: 13px 18px;
+  border-radius: 14px;
+}
+
+.mv-tk-slot[data-cho='tren'] .mv-tk {
+  background: rgba(36, 22, 14, 0.95);
+  border-color: #e0ad49;
+}
+
+.mv-google.btn.ghost {
+  background: rgba(255, 232, 180, 0.1);
+  border-color: rgba(224, 173, 73, 0.45);
+  color: #f3e2c3;
+  box-shadow: 0 2px 0 rgba(0, 0, 0, 0.4);
+}
+
+.mv-note {
+  color: #c7b08c;
+}
+
+.mv-as {
+  color: #ffe49c;
+}
+
+.mv-why {
+  color: #ff8577;
+}
+
+.mv-sound {
+  background: rgba(24, 15, 10, 0.9);
+  border: 1.5px solid #e0ad49;
+  color: #ffe49c;
+  z-index: 3;
+}
+
+.mv-showcase {
+  align-self: flex-end;
+  margin: 24px;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 12px;
+  z-index: 2;
+}
+
+.mv-feature {
+  background: rgba(24, 15, 10, 0.88);
+  backdrop-filter: blur(8px);
+  border: 1.5px solid #e0ad49;
+  border-radius: 12px;
+  padding: 10px 15px;
+  color: #f7ead0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.55);
+}
+
+.mv-feature b {
+  color: #f3cf7a;
+  font-size: 13px;
+}
+
+.mv-feature span {
+  color: #d6c09d;
+  font-size: 12px;
+}
+
+@media (max-width: 720px) {
+  .mv-showcase {
+    display: none;
+  }
+  .mv-sidebar {
+    width: min(390px, 92vw);
+    margin: auto;
+    border: 2px solid #e0ad49;
+    border-radius: 20px;
+    max-height: 92vh;
+    padding: 16px 18px;
+  }
+}
+
+/* ==========================================================================
+   KHUNG HUD KINH ĐÔ (BẢN 2: CỘT DOCK DỌC BÊN TRÁI + NGĂN KÉO TOÀN CẢNH ĐÁY)
+   ========================================================================== */
+
+.topbar {
+  top: calc(10px + var(--safe-top));
+  left: auto;
+  right: 14px;
+  width: auto;
+  max-width: calc(100vw - 110px);
+  height: 44px;
+  padding: 5px 12px;
+  gap: 8px;
+  border-radius: 16px;
+  background: rgba(251, 245, 230, 0.95);
+  border: 2px solid #1f7a63;
+  box-shadow: 0 8px 24px rgba(17, 56, 44, 0.25);
+}
+
+.topbar .res-strip {
+  gap: 4px;
+}
+
+.topbar .res {
+  flex: none;
+  padding: 3px 9px;
+  gap: 4px;
+  border-radius: 999px;
+  background: rgba(31, 122, 99, 0.07);
+}
+
+.topbar .res + .res {
+  border-left: none;
+}
+
+.topbar::after {
+  display: none;
+}
+
+.dien-level {
+  background: linear-gradient(180deg, #268c72, #175e4b);
+  border-color: #d9a441;
+  border-radius: 10px;
+  padding: 4px 10px;
+}
+
+.tho-chip {
+  top: calc(12px + var(--safe-top));
+  left: 98px;
+  background: rgba(251, 245, 230, 0.95);
+  border: 2px solid #1f7a63;
+  color: #145443;
+  padding: 5px 12px;
+  font-size: 13px;
+}
+
+.top-area {
+  top: calc(60px + var(--safe-top));
+  left: 98px;
+  right: 14px;
+  align-items: flex-end;
+}
+
+#hud.in-field .top-area {
+  left: 12px;
+  align-items: center;
+}
+
+/* Cột điều khiển dọc bên trái (Left Vertical Command Rail) */
+.dock,
+#hud.sheet-open .dock {
+  top: calc(12px + var(--safe-top));
+  bottom: auto;
+  left: 12px;
+  right: auto;
+  transform: none;
+  width: 74px;
+  height: auto;
+  flex-direction: column;
+  padding: 10px 6px;
+  gap: 8px;
+  border-radius: 22px;
+  background: rgba(251, 245, 230, 0.96);
+  border: 2.5px solid #1f7a63;
+  box-shadow: 0 12px 30px rgba(17, 56, 44, 0.28);
+}
+
+.dock .tab {
+  padding: 9px 4px;
+  border-radius: 14px;
+  flex: none;
+}
+
+.dock .tab.on {
+  background: rgba(31, 122, 99, 0.15);
+  color: #145443;
+}
+
+.dock .tab.on::before {
+  top: 20%;
+  bottom: 20%;
+  left: 0;
+  right: auto;
+  width: 4px;
+  height: auto;
+  background: #1f7a63;
+  border-radius: 0 4px 4px 0;
+}
+
+.dock .tab.main .ic {
+  margin-top: 0;
+  width: 46px;
+  height: 46px;
+  background: linear-gradient(135deg, #289478, #145443);
+  border: 2px solid #d9a441;
+  box-shadow: 0 4px 10px rgba(20, 84, 67, 0.35);
+  font-size: 22px;
+}
+
+.dock .tab.main .lb {
+  color: #145443;
+}
+
+.dock .rotate {
+  position: static;
+  margin: 2px auto 0;
+  width: 40px;
+  height: 40px;
+  border-color: #1f7a63;
+}
+
+#hud.sheet-open .dock .rotate {
+  display: inline-flex;
+}
+
+.dock-pop {
+  left: 98px;
+  right: 14px;
+  bottom: calc(16px + var(--safe-bottom));
+  justify-content: flex-start;
+}
+
+.ticker {
+  left: 98px;
+  right: 14px;
+  width: auto;
+  transform: none;
+  bottom: calc(14px + var(--safe-bottom));
+  justify-content: flex-start;
+}
+
+/* Bảng trượt biến thành Ngăn Kéo Toàn Cảnh Dưới Đáy (Bottom Panoramic Drawer) */
+.sheet,
+.sheet.tall {
+  top: auto;
+  left: 98px;
+  right: 14px;
+  bottom: calc(12px + var(--safe-bottom));
+  width: auto;
+  max-height: min(62vh, 460px);
+  border-radius: 22px;
+  background: rgba(251, 245, 230, 0.97);
+  border: 2.5px solid #1f7a63;
+  box-shadow: 0 14px 36px rgba(17, 56, 44, 0.35);
+  transform: translateY(115%);
+}
+
+.sheet.open {
+  transform: none;
+}
+
+.sheet-head {
+  padding: 9px 18px;
+  background: linear-gradient(90deg, #1f7a63, #145443);
+  color: #fff;
+  border-bottom: none;
+  border-radius: 19px 19px 0 0;
+}
+
+.sheet-head h2 {
+  color: #fff;
+}
+
+.sheet-head .close {
+  background: rgba(255, 255, 255, 0.2);
+  color: #fff;
+}
+
+.sheet-body {
+  padding: 12px 16px 16px;
+}
+
+.build-tabs .tab.on {
+  background: #1f7a63;
+  border-color: #145443;
+  color: #fff;
+}
+
+/* Màn hình ngang/rộng: Bảng Xây dựng dàn ngang 3 cột dưới đáy để thấy toàn cảnh kinh đô 3D phía trên */
+@media (min-width: 760px) {
+  .sheet.build {
+    max-height: 286px;
+  }
+
+  .sheet.build .sheet-body {
+    display: grid;
+    grid-template-columns: 148px 340px 1fr;
+    grid-template-rows: auto auto;
+    gap: 8px 14px;
+    align-items: start;
+    padding: 10px 16px 12px;
+    overflow-y: auto;
+  }
+
+  .sheet.build .build-tabs {
+    grid-column: 1;
+    grid-row: 1 / 3;
+    flex-direction: column;
+    gap: 6px;
+    margin: 0;
+  }
+
+  .sheet.build .build-tabs .tab {
+    flex: none;
+    padding: 9px 10px;
+  }
+
+  .sheet.build .build-detail {
+    grid-column: 2;
+    grid-row: 1 / 3;
+    margin: 0;
+    padding: 10px;
+  }
+
+  .sheet.build .build-hero {
+    width: 96px;
+    height: 96px;
+  }
+
+  .sheet.build .build-grid {
+    grid-column: 3;
+    grid-row: 1;
+    margin: 0;
+    grid-template-columns: repeat(6, 1fr);
+    gap: 6px;
+  }
+
+  .sheet.build .build-cell .thumb {
+    width: 46px;
+    height: 46px;
+  }
+
+  .sheet.build .build-pager {
+    grid-column: 3;
+    grid-row: 2;
+    margin: 0;
+  }
+}
+
+/* Màn hình điện thoại hẹp (< 600px): thu gọn cột Dock dọc để dành chỗ cho bảng */
+@media (max-width: 599px) {
+  .dock,
+  #hud.sheet-open .dock {
+    width: 58px;
+    left: 6px;
+    padding: 8px 4px;
+    gap: 6px;
+    border-radius: 16px;
+  }
+  .dock .tab .lb {
+    font-size: 9.5px;
+  }
+  .dock .tab.main .ic {
+    width: 38px;
+    height: 38px;
+    font-size: 19px;
+  }
+  .tho-chip {
+    left: 70px;
+    top: calc(56px + var(--safe-top));
+  }
+  .topbar {
+    left: 70px;
+    right: 6px;
+    max-width: none;
+  }
+  .sheet,
+  .sheet.tall,
+  .dock-pop,
+  .ticker {
+    left: 70px;
+    right: 6px;
+  }
+}
