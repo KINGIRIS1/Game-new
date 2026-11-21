@@ -10,6 +10,10 @@ export type NutNoi =
   | 'lacHau'
   | 'xoay'
   | 'caiDat'
+  // Cột nút bên phải màn hình chính.
+  | 'daNgoai'
+  | 'thanThu'
+  | 'dauThanh'
   // Vòng nút quanh công trình (`ui/vongNut.ts`).
   | 'thongTin'
   | 'nangCap'
@@ -179,6 +183,28 @@ const HINH: Record<NutNoi, () => string> = {
     <path d="M58 26 Q40 14 24 24 Q42 22 56 30Z"/><path d="M58 26 Q76 12 90 22 Q74 22 60 30Z"/><path d="M58 26 Q62 8 74 4 Q64 16 60 28Z"/></g>` +
     khac('M6 84 Q18 78 30 84 Q42 90 54 84 Q66 78 78 84 Q88 88 96 84', 3) +
     khac('M14 94 Q26 88 38 94 Q50 100 62 94 Q74 88 86 94', 2.4),
+  // Dã ngoại: cây đa tán tròn trên gò, rễ phụ buông xuống.
+  daNgoai: () =>
+    `<g fill="${F}"><circle cx="50" cy="34" r="24"/><circle cx="26" cy="46" r="17"/><circle cx="74" cy="46" r="17"/>
+    <path d="M44 50 L42 82 L58 82 L56 50Z"/><path d="M6 92 Q50 74 94 92Z"/></g>` +
+    khac('M50 50 L50 80 M44 60 L36 54 M56 58 L66 52', 2.4) +
+    khac('M24 58 L24 74 M76 58 L76 72', 2) +
+    khac('M38 28 Q50 20 62 28', 2),
+  // Thần thú: chim Lạc mỏ dài, mào cong, cánh xòe như trên mặt trống đồng.
+  thanThu: () =>
+    `<g fill="${F}"><path d="M6 30 L40 44 Q50 34 60 44 Q70 52 66 64 L92 92 L60 74 Q44 80 34 66 Q20 58 34 48Z"/>
+    <path d="M40 44 Q36 22 54 8 Q50 24 52 38Z"/><path d="M44 58 Q24 76 6 74 Q22 62 34 52Z"/></g>` +
+    `<circle cx="48" cy="44" r="3.4" fill="${E}"/>` +
+    khac('M42 60 Q54 66 64 62 M44 66 Q56 72 66 70', 2.2) +
+    khac('M18 66 L30 58', 2),
+  // Đấu thành: cổng thành có lầu mái cong, răng cưa trên tường, cửa vòm.
+  dauThanh: () =>
+    `<g fill="${F}"><path d="M4 92 L4 48 L14 48 L14 54 L24 54 L24 48 L34 48 L34 92Z"/><path d="M66 92 L66 48 L76 48 L76 54 L86 54 L86 48 L96 48 L96 92Z"/>
+    <rect x="30" y="40" width="40" height="52"/><path d="M18 40 Q50 52 82 40 L72 22 L28 22Z"/><path d="M18 40 L10 32 L22 36Z"/><path d="M82 40 L90 32 L78 36Z"/>
+    <rect x="46" y="8" width="8" height="14" rx="2"/></g>` +
+    `<path d="M40 92 L40 70 A10 10 0 0 1 60 70 L60 92Z" fill="${E}"/>` +
+    khac('M30 50 L70 50', 2.2) +
+    khac('M10 66 L28 66 M72 66 L90 66', 2),
   // Cài đặt: mặt trống đồng, sao mười bốn cánh giữa các vành.
   caiDat: () =>
     `<g fill="${F}"><circle cx="50" cy="50" r="42"/></g>` +

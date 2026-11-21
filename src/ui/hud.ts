@@ -299,7 +299,7 @@ export type HudAction =
   | { kind: 'placeUNo'; id: number }
   | { kind: 'repairUNo'; id: number }
   | { kind: 'dismissRaid' }
-  | { kind: 'openCampaign' }
+  | { kind: 'openCampaign'; step?: CampStepRieng }
   | { kind: 'march'; stage: number; army: Record<UnitType, number>; rows: Record<UnitType, Row>; challenge: boolean; hero: HeroKind | null; nu: NuTuongId | null }
   | { kind: 'buyHuan'; branch: HuanBranch }
   | { kind: 'useSkill'; skill: SkillId }
@@ -404,6 +404,9 @@ function syncSkill(btn: HTMLButtonElement, b: Battle, k: SkillId): void {
   if (tail) tail.textContent = cd > 0 ? `${cd}s` : '';
 }
 
+/** Bảng mở thẳng từ cột nút bên phải màn hình chính (thay chỗ bản đồ phó bản). */
+export type CampStepRieng = 'daNgoai' | 'thanThu' | 'dau';
+
 /** Bản đồ phó bản đang mở: chương nào, màn đang xem, đang xem thẻ màn hay đang xếp quân. */
 interface CampaignView {
   chapter: MapChapter;
@@ -456,6 +459,9 @@ export class Hud {
   private readonly dockPop: HTMLElement;
   /** Dock năm thẻ ở đáy: Quân, Phó bản, Xây dựng, Tướng, Lạc hầu. */
   private readonly dock: HTMLElement;
+  /** Cột nút bên phải: Dã ngoại, Thần thú, Đấu thành (mở thẳng bảng của mỗi việc). */
+  private readonly rail: HTMLElement;
+  private railHtml = '';
   /** Thanh Hủy, Đặt thay chỗ dock khi đang đặt, dời, trải, ghép. */
   private readonly bottombar: HTMLElement;
   private readonly hint: HTMLElement;
@@ -513,6 +519,7 @@ export class Hud {
       <div class="raid-skills"></div>
       <div class="ticker"></div>
       <nav class="dock" aria-label="${vi.ui.dockLabel}"></nav>
+      <nav class="dock dock-phai" aria-label="${vi.ui.railLabel}"></nav>
       <footer class="bottombar"></footer>
       <footer class="fieldbar">
         <button class="btn ghost small" data-act="retreat" title="${vi.ui.retreat}">🏳️</button>
@@ -540,6 +547,7 @@ export class Hud {
     this.ticker = root.querySelector('.ticker')!;
     this.dockPop = root.querySelector('.dock-pop')!;
     this.dock = root.querySelector('.dock')!;
+    this.rail = root.querySelector('.dock-phai')!;
     this.bottombar = root.querySelector('.bottombar')!;
     this.hint = root.querySelector('.hint')!;
     this.sheetEl = root.querySelector('.sheet')!;
@@ -707,6 +715,14 @@ export class Hud {
         if (this.sheet?.kind === 'tuong') return this.onAction({ kind: 'closeSheet' });
         return this.onAction({ kind: 'openTuong' });
       }
+      case 'goDaNgoai':
+      case 'goThanThu':
+      case 'goDau': {
+        // Cột nút bên phải: mở thẳng bảng của việc ấy; chạm lại nút đang sáng thì đóng.
+        const step: CampStepRieng = act === 'goDaNgoai' ? 'daNgoai' : act === 'goThanThu' ? 'thanThu' : 'dau';
+        if (this.camp?.step === step) return this.closeCampaign();
+        return this.onAction({ kind: 'openCampaign', step });
+      }
       case 'openBarracks':
         if (this.barracksOpen(this.getState())) return this.onAction({ kind: 'closeSheet' });
         return this.onAction({ kind: 'openBarracks' });
@@ -833,14 +849,11 @@ export class Hud {
       case 'prepareStage':
       case 'prepareChallenge':
       case 'openHuan':
-      case 'openDaNgoai':
-      case 'openThanThu':
       case 'backToStage':
       case 'armyDelta':
       case 'armyRow':
       case 'armyHero':
       case 'armyNu':
-      case 'openDau':
       case 'dauMode':
       case 'dauTarget':
       case 'dauSide':
@@ -1202,6 +1215,19 @@ export class Hud {
       this.dock.innerHTML = dock;
     }
     this.dock.classList.toggle('quest-ready', done);
+    // Cột bên phải: Dã ngoại, Thần thú mở khi có tướng đầu tiên về; Đấu thành khi có doanh trại (như thẻ Phó bản).
+    const step = this.camp?.step;
+    const rail =
+      (daMo(state)
+        ? tab({ act: 'goDaNgoai', icon: nutNoi('daNgoai'), label: vi.daNgoai.title, on: step === 'daNgoai' }) +
+          tab({ act: 'goThanThu', icon: nutNoi('thanThu'), label: vi.thanThu.title, on: step === 'thanThu' })
+        : '') +
+      (countOf(state, 'doanhTrai') > 0 ? tab({ act: 'goDau', icon: nutNoi('dauThanh'), label: vi.dauThanh.title, on: step === 'dau' }) : '');
+    if (rail !== this.railHtml) {
+      this.railHtml = rail;
+      this.rail.innerHTML = rail;
+      this.rail.hidden = !rail;
+    }
 
     let pop = '';
     if (this.pop === 'quest') {
@@ -2272,12 +2298,14 @@ export class Hud {
     return this.camp !== null;
   }
 
-  showCampaign(state: GameState): void {
+  /** Mở bản đồ phó bản; `step` thì mở thẳng bảng Dã ngoại, Thần thú hay Đấu thành (cột nút bên phải). */
+  showCampaign(state: GameState, step?: CampStepRieng): void {
     this.closeSheet();
     // Mở ở chương có màn kế tiếp chưa thắng, hay chương mới nhất nếu đã thắng hết.
     const now = mapChapterNow(state);
     const chapter = ([1, 2, 3, 4] as const).find((c) => c <= now && this.nextStage(state, c) !== null) ?? now;
-    this.camp = { chapter, stage: this.nextStage(state, chapter), step: 'stage', pick: defaultPick(state) };
+    this.camp = { chapter, stage: this.nextStage(state, chapter), step: step ?? 'stage', pick: defaultPick(state) };
+    if (step === 'dau') this.camp.dau = newDauView(state);
     this.campaignEl.hidden = false;
     this.pop = null;
     this.refreshCampaign(state, true);
@@ -2318,10 +2346,6 @@ export class Hud {
       this.onAction({ kind: 'prepareField', stage: camp.stage });
     } else if (act === 'openHuan') {
       camp.step = camp.step === 'huan' ? 'stage' : 'huan';
-    } else if (act === 'openDaNgoai') {
-      camp.step = camp.step === 'daNgoai' ? 'stage' : 'daNgoai';
-    } else if (act === 'openThanThu') {
-      camp.step = camp.step === 'thanThu' ? 'stage' : 'thanThu';
     } else if (act === 'backToStage') {
       camp.step = 'stage';
     } else if (act === 'armyDelta') {
@@ -2334,9 +2358,6 @@ export class Hud {
       if (stageHeroCheck(state, camp.stage, hero, camp.pick.challenge).ok) camp.pick.hero = hero;
     } else if (act === 'armyNu') {
       pickNu(state, camp.pick, el.dataset.nu);
-    } else if (act === 'openDau') {
-      camp.step = camp.step === 'dau' ? 'stage' : 'dau';
-      camp.dau ??= newDauView(state);
     } else if (camp.dau && act === 'dauMode') {
       camp.dau.mode = el.dataset.mode === 'thu' ? 'thu' : 'that';
       camp.dau.step = 'target';
@@ -2357,14 +2378,12 @@ export class Hud {
     }
     this.refreshCampaign(state);
     // Vừa mở thẻ Đấu thật: main.ts hỏi máy chủ hồ sơ, trận gần đây.
-    if ((act === 'openDau' || act === 'dauMode') && camp.step === 'dau' && camp.dau?.mode === 'that') this.onAction({ kind: 'dauOpened' });
+    if (act === 'dauMode' && camp.step === 'dau' && camp.dau?.mode === 'that') this.onAction({ kind: 'dauOpened' });
   }
 
   /** Mở thẳng bảng Thần thú (chạm thú đi lại trong kinh đô). */
   showThanThu(state: GameState): void {
-    this.showCampaign(state);
-    this.camp!.step = 'thanThu';
-    this.refreshCampaign(state, true);
+    this.showCampaign(state, 'thanThu');
   }
 
   /** Mở thẳng bảng Đấu thành (nút Đánh lại, Đánh tiếp sau trận), ở thẻ và bước chọn. */
@@ -2409,16 +2428,7 @@ export class Hud {
     const huan = state.campaign.cleared > 0
       ? `<button class="huan-chip ${camp.step === 'huan' ? 'on' : ''}" data-act="openHuan" aria-label="${vi.ui.huanTitle}">${vi.ui.huanChip(state.thuThach.huan)}</button>`
       : '';
-    // Chip Đấu thành: đánh thử kinh đô người khác (bảng ghi lý do khi chưa đánh được).
-    const dau = `<button class="huan-chip dau-chip ${camp.step === 'dau' ? 'on' : ''}" data-act="openDau" aria-label="${vi.dauThanh.title}">${vi.dauThanh.chip}</button>`;
-    // Chip Dã ngoại: mở khi có tướng đầu tiên về.
-    const da = daMo(state)
-      ? `<button class="huan-chip da-chip ${camp.step === 'daNgoai' ? 'on' : ''}" data-act="openDaNgoai" aria-label="${vi.daNgoai.title}">${vi.daNgoai.chip}</button>`
-      : '';
-    // Chip Thần thú: mở cùng dã ngoại (chim Lạc về khi có tướng đầu tiên).
-    const thu = daMo(state)
-      ? `<button class="huan-chip thu-chip ${camp.step === 'thanThu' ? 'on' : ''}" data-act="openThanThu" aria-label="${vi.thanThu.title}">${vi.thanThu.chip}</button>`
-      : '';
+    // Dã ngoại, Thần thú, Đấu thành mở từ cột nút bên phải màn hình chính (`updateQuest`), không còn chip ở đây.
     const map =
       camp.step === 'dau' && camp.dau
         ? dauMapHtml(state, camp.dau)
@@ -2430,7 +2440,7 @@ export class Hud {
     const head =
       camp.step === 'dau' ? `🏯 ${vi.dauThanh.title}` : camp.step === 'daNgoai' ? `🌿 ${vi.daNgoai.title}` : camp.step === 'thanThu' ? `🐉 ${vi.thanThu.title}` : `⚔️ ${title}`;
     const own = camp.step === 'dau' || camp.step === 'daNgoai' || camp.step === 'thanThu';
-    const html = `<div class="camp-head"><h2>${head}</h2>${own ? '' : tabs}<div class="camp-chips">${huan}${da}${thu}${dau}</div>
+    const html = `<div class="camp-head"><h2>${head}</h2>${own ? '' : tabs}${own ? '' : `<div class="camp-chips">${huan}</div>`}
         <button class="close" data-act="closeCampaign" aria-label="${vi.ui.close}">✕</button></div>
       <div class="camp-main"><div class="camp-map">${map}</div><div class="camp-panel">${panel}</div></div>`;
     if (html !== this.campHtml || force) {

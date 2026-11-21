@@ -1,4 +1,4 @@
-// Giao diện dã ngoại (docs/thiet-ke.md mục Kế hoạch: dã ngoại): bảng ở bản đồ phó bản (chip 🌿: cấp chung, chọn đội,
+// Giao diện dã ngoại (docs/thiet-ke.md mục Kế hoạch: dã ngoại): bảng mở từ nút Dã ngoại ở cột nút bên phải màn hình chính (cấp chung, chọn đội,
 // năm map, treo máy, ra map hay gọi đội về), bản đồ nhỏ của map (dùng ở bảng và góc màn hình khi đang trên map), dải
 // cấp chung ở bảng tướng.
 

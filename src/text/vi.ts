@@ -1517,7 +1517,7 @@ export const vi = {
     dangTheo: '✓ Đang theo đội',
     lenCap: (ten: string, cap: number) => `${ten} lên ${cap}!`,
     an: (ten: string) => `${ten} ăn ngon lành`,
-    hint: 'Lạc hầu tâu: chim Lạc trên mặt trống đồng đã bay về kinh đô! Chim theo đội ra dã ngoại; cho ăn ở chip 🐉 Thần thú để chim lớn lên.',
+    hint: 'Lạc hầu tâu: chim Lạc trên mặt trống đồng đã bay về kinh đô! Chim theo đội ra dã ngoại; cho ăn ở nút Thần thú bên phải màn hình để chim lớn lên.',
     hintVe: {
       thuNgua: 'Lạc hầu tâu: đánh tan đại tướng Ân, ngựa sắt của Gióng đã tìm về, yên vẫn để trống chờ chủ!',
       thuGa: 'Lạc hầu tâu: Thủy Tinh rút đi, gà chín cựa trong lễ vật Sơn Tinh đã về kinh đô!',
@@ -1530,7 +1530,7 @@ export const vi = {
     title: 'Dã ngoại',
     intro: 'Dẫn tối đa ba tướng ra mười map mở đánh quái: được kinh nghiệm, của và đồ. Cấp chung dùng cho mọi tướng, chỉ có tác dụng ở dã ngoại.',
     locked: 'Dã ngoại mở khi có tướng đầu tiên về.',
-    hint: '📜 Lạc hầu: Tâu bệ hạ, đã có tướng về, có thể dẫn tướng ra dã ngoại đánh quái lấy kinh nghiệm, của và đồ. Mở bản đồ phó bản, chạm chip 🌿 Dã ngoại.',
+    hint: '📜 Lạc hầu: Tâu bệ hạ, đã có tướng về, có thể dẫn tướng ra dã ngoại đánh quái lấy kinh nghiệm, của và đồ. Chạm nút Dã ngoại bên phải màn hình.',
     maps: {
       1: 'Rừng Phong Châu',
       2: 'Đầm Tản Viên',
@@ -1830,8 +1830,7 @@ export const vi = {
         'Chạm Mặc mạnh nhất để tướng tự mặc món tốt nhất đang có. Cường hóa đồ ở lò rèn.',
       ],
       daNgoai: [
-        'Tâu bệ hạ, tướng có thể ra dã ngoại đánh quái lấy kinh nghiệm, của và đồ. Chạm thẻ Phó bản.',
-        'Chạm chip 🌿 Dã ngoại.',
+        'Tâu bệ hạ, tướng có thể ra dã ngoại đánh quái lấy kinh nghiệm, của và đồ. Chạm nút Dã ngoại bên phải màn hình.',
         'Chọn tướng đi trong đội ở đây. Cấp chung chỉ cộng sức khi ở dã ngoại.',
         'Chạm Ra dã ngoại. Rời map thì đội vẫn treo máy đánh quái, lúc vắng cũng được của.',
       ],
@@ -1842,14 +1841,12 @@ export const vi = {
         'Chạm chip 🎖 để dùng huân công mua bậc: quân ta thêm máu, thêm sức ở mọi trận.',
       ],
       thanThu: [
-        'Tâu bệ hạ, thần thú đã về theo bệ hạ. Chạm thẻ Phó bản.',
-        'Chạm chip 🐉 Thần thú.',
+        'Tâu bệ hạ, thần thú đã về theo bệ hạ. Chạm nút Thần thú bên phải màn hình.',
         'Cho thú ăn để thú lên cấp, đổi dáng. Bữa ăn hồi dần theo giờ, cả lúc vắng.',
         'Chọn một con theo đội ra dã ngoại: thú đánh cùng tướng, có kỹ năng riêng.',
       ],
       dauThanh: [
-        'Tâu bệ hạ, có thể đem quân đánh kinh đô khác. Chạm thẻ Phó bản.',
-        'Chạm chip 🏯 Đấu thành.',
+        'Tâu bệ hạ, có thể đem quân đánh kinh đô khác. Chạm nút Đấu thành bên phải màn hình.',
         'Chạm Đánh thử để tập đánh kinh đô của mình hay kinh đô máy, không mất gì.',
         'Quen tay thì sang Đấu thật: đánh kinh đô người khác, cướp của. Kinh đô mình cũng bị đánh, nên giữ lính giữ kinh đô cho đủ.',
       ],
@@ -1885,6 +1882,7 @@ export const vi = {
     build: 'Xây dựng',
     // Khung chính: dải tài nguyên trên cùng, dock năm thẻ ở đáy, dòng tin trên dock.
     dockLabel: 'Việc chính',
+    railLabel: 'Dã ngoại, Thần thú, Đấu thành',
     tabArmy: 'Quân',
     tabHeroes: 'Tướng',
     resDetail: 'Xem kho và thu chi mỗi phút',

@@ -29,8 +29,7 @@ export const BUOC: Record<HuongDanId, Buoc[]> = {
   ],
   trangBi: [{ cho: '[data-act=tabTuong]' }, { cho: '.tg [data-act=tuongO]', xem: true }, { cho: '[data-act=macManhNhat]' }],
   daNgoai: [
-    { cho: '[data-act=openCampaign]' },
-    { cho: '[data-act=openDaNgoai]' },
+    { cho: '[data-act=goDaNgoai]' },
     { cho: '.da-heroes', xem: true },
     { cho: '[data-act=daVao]' },
   ],
@@ -41,14 +40,12 @@ export const BUOC: Record<HuongDanId, Buoc[]> = {
     { cho: '[data-act=openHuan]' },
   ],
   thanThu: [
-    { cho: '[data-act=openCampaign]' },
-    { cho: '[data-act=openThanThu]' },
+    { cho: '[data-act=goThanThu]' },
     { cho: '[data-act=thuAn]', xem: true },
     { cho: '[data-act=thuChon]', xem: true },
   ],
   dauThanh: [
-    { cho: '[data-act=openCampaign]' },
-    { cho: '[data-act=openDau]' },
+    { cho: '[data-act=goDau]' },
     { cho: '[data-act=dauMode][data-mode=thu]', coThe: true },
     { cho: null },
   ],

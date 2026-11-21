@@ -56,6 +56,14 @@ export const newTuongUi = (hero: HeroKind): TuongUi => ({ hero, tab: 'do', o: nu
 
 /** Số món mỗi trang lưới đồ (ba hàng năm ô). */
 export const DO_PER_PAGE = 15;
+/** Màn máy tính (khớp `@media` bảng tướng màn rộng ở style.css): lưới rộng hơn, mỗi trang bốn hàng mười ô. */
+const DO_PER_PAGE_PC = 40;
+const PC_MEDIA = '(min-width: 1100px) and (min-height: 620px)';
+
+/** Số món mỗi trang theo khổ màn hình đang mở. */
+function doPerPage(): number {
+  return typeof window !== 'undefined' && window.matchMedia?.(PC_MEDIA).matches ? DO_PER_PAGE_PC : DO_PER_PAGE;
+}
 
 /**
  * Ảnh tướng vẽ lúc chơi (main.ts dựng từ `render/hinhTuong.ts`): hình đứng mặc đồ cho khung hình nhân, ảnh bán thân
@@ -171,10 +179,11 @@ function monTile(s: GameState, m: Mon, ui: TuongUi): string {
 
 /** Lưới món, chia trang. */
 function monGrid(s: GameState, list: Mon[], ui: TuongUi): string {
-  const pages = pageCount(list.length, DO_PER_PAGE);
+  const per = doPerPage();
+  const pages = pageCount(list.length, per);
   const page = Math.min(Math.max(0, ui.page), pages - 1);
   const tiles = list
-    .slice(page * DO_PER_PAGE, page * DO_PER_PAGE + DO_PER_PAGE)
+    .slice(page * per, page * per + per)
     .map((m) => monTile(s, m, ui))
     .join('');
   const pager =
