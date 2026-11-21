@@ -4210,7 +4210,7 @@ export class World {
 
     // Biển Đông: sóng vỗ bờ, cá voi, cá heo, thuyền khơi đi về.
     if (!this.inField) {
-      this.nui.update(t);
+      this.nui.update(t, this.view.camera);
       animateSea(this.sea, t, this.view.zoom);
       // Biển còn mây mù thì chưa thấy cá voi, cá heo.
       if (!this.seaMist) this.seaLife.update(t, dt, this.view.target);
