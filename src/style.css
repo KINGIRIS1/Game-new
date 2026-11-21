@@ -2922,6 +2922,129 @@ body.man-vao-on #hud > * {
   display: none;
 }
 
+/* Vòng nút quanh công trình đang chọn (`ui/vongNut.ts`): lớp phủ không chặn chạm, chỉ nút và thẻ nhận chạm. */
+#hud > .vong-nut {
+  position: absolute;
+  inset: 0;
+  /* clip, không hidden: lớp này không được thành khung cuộn (trình duyệt cuộn nút vào khung thì vòng lệch chỗ). */
+  overflow: clip;
+  pointer-events: none;
+}
+
+#hud > .vong-nut[hidden],
+#hud.in-field > .vong-nut {
+  display: none;
+}
+
+.vn-ring {
+  position: absolute;
+  left: 0;
+  top: 0;
+  will-change: transform;
+}
+
+.vn-nut {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 54px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  pointer-events: auto;
+  animation: vn-no 0.16s ease-out;
+}
+
+.vn-hinh {
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 50% 42%, rgba(58, 42, 26, 0.7), rgba(58, 42, 26, 0.45) 70%, transparent 72%);
+}
+
+.vn-hinh .nut-noi {
+  filter: drop-shadow(0 2px 3px rgba(20, 10, 2, 0.5));
+}
+
+.vn-nhan {
+  margin-top: -3px;
+  font-size: 11px;
+  font-weight: 800;
+  line-height: 1.1;
+  color: #fff4d6;
+  white-space: nowrap;
+  text-shadow:
+    0 1px 2px rgba(20, 10, 2, 0.95),
+    0 0 5px rgba(20, 10, 2, 0.8);
+}
+
+.vn-nut:active .vn-hinh {
+  transform: translateY(2px) scale(0.94);
+}
+
+.vn-nut.on .nut-noi {
+  filter: drop-shadow(0 0 6px rgba(255, 214, 120, 0.95));
+}
+
+.vn-nut.on .vn-nhan {
+  color: #ffd877;
+}
+
+.vn-nut.kem .nut-noi,
+.vn-nut:disabled .nut-noi {
+  filter: grayscale(0.8) brightness(0.85);
+}
+
+.vn-nut:disabled {
+  opacity: 0.7;
+}
+
+@keyframes vn-no {
+  from {
+    opacity: 0;
+    scale: 0.5;
+  }
+}
+
+.vn-the {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: min(270px, calc(100vw - 16px));
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  background: var(--paper);
+  border: 1.5px solid var(--bronze);
+  border-radius: 12px;
+  box-shadow: 0 6px 18px rgba(58, 42, 26, 0.35);
+  font-size: 13.5px;
+  pointer-events: auto;
+}
+
+.vn-the[hidden] {
+  display: none;
+}
+
+.vn-the p {
+  margin: 0;
+}
+
+.vn-the .btn-pair {
+  display: flex;
+  gap: 8px;
+  margin-top: 2px;
+}
+
+.vn-the .btn-pair > .btn {
+  flex: 1;
+}
+
 /* Đố sử: Lạc hầu hỏi, bốn nút đáp án; trả lời xong tô đúng sai, hiện lời giảng. */
 .modal.quiz {
   position: relative;
