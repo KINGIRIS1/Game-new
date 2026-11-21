@@ -1,5 +1,7 @@
 // Điểm khởi động: nạp game, nối luật chơi với cảnh 3D và giao diện, chạy vòng lặp.
 
+import { initHuongDan, markHuongDan, nextHuongDan, type HuongDanId } from './game/huongDan';
+import { ChiTay, huongDanBat, luuHuongDan } from './ui/huongDan';
 import './style.css';
 import { play, setMuted, stopRally, unlockAudio } from './audio/sfx';
 import { skillReady, startFieldBattle, stepField, useSkill, type Battle, type HeroKind, type FighterKind } from './game/battle';
@@ -317,6 +319,17 @@ async function start(): Promise<void> {
   let saveWarned = false;
 
   const hud = new Hud(hudRoot, handle, () => state);
+  const chiTay = new ChiTay(
+    document.body,
+    () => state,
+    (type) => {
+      const b = state.buildings.find((x) => x.type === type);
+      if (!b) return false;
+      if (mode.kind !== 'view') exitMode();
+      select(b.id);
+      return true;
+    },
+  );
   // Hình tướng mặc đồ, ảnh bán thân cho bảng tướng: vẽ lúc cần bằng renderer của cảnh, xong thì dựng lại bảng.
   const hinhTuong = new HinhTuong(world.renderer);
   hinhTuong.onReady = () => hud.refreshTuong(state);
@@ -342,6 +355,7 @@ async function start(): Promise<void> {
     hud.updateBanners(state);
     hud.updateQuest(state);
     hud.refreshSheet(state);
+    hud.refreshVong(state);
     hud.refreshCampaign(state);
     hud.updateField(state);
   };
@@ -368,7 +382,8 @@ async function start(): Promise<void> {
     const k = nextDaoHint(state);
     if (!k) return;
     markDaoHinted(state, k);
-    hud.toast(vi.bien.hint[k], false, 8000);
+    // Bật chỉ tay thì lời mở đảo đã có ở hướng dẫn Đóng đảo (`huongDan.ts`).
+    if (k !== 'mo' || !huongDanBat()) hud.toast(vi.bien.hint[k], false, 8000);
   };
 
   /** Trận ngoài bãi đầu tiên có vật cản: thẻ màn, thẻ đồn thôi kèm lời Lạc hầu nhắc về vật cản. */
@@ -395,7 +410,8 @@ async function start(): Promise<void> {
     if (!daMo(state)) return;
     if (!state.hinted.includes('daNgoai')) {
       state.hinted = [...state.hinted, 'daNgoai'];
-      hud.toast(vi.daNgoai.hint, false, 8000);
+      // Bật chỉ tay thì Lạc hầu chỉ từng bước (`huongDan.ts`), khỏi báo thêm dòng này.
+      if (!huongDanBat()) hud.toast(vi.daNgoai.hint, false, 8000);
     } else {
       // Đủ cấp sang map mới (Núi Nưa, Đầm Dạ Trạch, Núi Vệ): báo một lần map cao nhất vừa đủ cấp; các map thấp hơn
       // coi như đã báo (lên cấp nhanh thì khỏi báo map đã qua).
@@ -413,7 +429,8 @@ async function start(): Promise<void> {
     const moi = thuCo(state).find((k) => !state.hinted.includes(`thanThu_${k}`));
     if (!moi) return;
     state.hinted = [...state.hinted, `thanThu_${moi}`];
-    hud.toast(moi === 'thuLac' ? vi.thanThu.hint : vi.thanThu.hintVe[moi], false, 9000);
+    // Chim Lạc là thú đầu tiên: bật chỉ tay thì đã có hướng dẫn Thần thú (`huongDan.ts`).
+    if (moi !== 'thuLac' || !huongDanBat()) hud.toast(moi === 'thuLac' ? vi.thanThu.hint : vi.thanThu.hintVe[moi], false, 9000);
   };
 
   /** Lần đầu có công trình làm ra chưa đủ vì xa kho: Lạc hầu gợi ý một lần việc gánh hàng, trải đường. */
@@ -573,7 +590,8 @@ async function start(): Promise<void> {
     world.setSelection(b ?? null);
     world.setChunkSelection(null);
     if (b) {
-      hud.showBuilding(state, b.id);
+      // Vòng nút quanh công trình; bảng đầy đủ mở bằng nút ℹ️ (`openInfo`).
+      hud.showVong(state, b.id);
       const c = hud.freeCenter();
       world.focusOn(b, c.x, c.y);
     } else {
@@ -1051,6 +1069,10 @@ async function start(): Promise<void> {
     }
   };
 
+  /** Chỗ (trên mặt đất) lần chạm chọn công trình gần nhất, cho việc chạm lại để chọn công trình bị che phía sau. */
+  let lastPick: { x: number; z: number } | null = null;
+  /** Chạm lại cách chỗ cũ (trên mặt đất) không quá chừng này ô thì coi là chạm lại đúng chỗ. */
+  const PICK_AGAIN_R = 0.6;
   world.view.onTap = (cx, cy) => {
     // Map dã ngoại: chạm đất để đi, chạm quái để đánh, chạm cổng để sang map kề.
     if (world.inDa) {
@@ -1156,8 +1178,21 @@ async function start(): Promise<void> {
       commit();
       return;
     }
-    const id =
-      world.pickBuildingId(cx, cy) ?? (tile ? (buildingAt(state, tile.x, tile.z) ?? pendingAt(state, tile.x, tile.z))?.id : undefined) ?? null;
+    // Các công trình dưới chỗ chạm, cái nhìn thấy trước đứng đầu; công trình có móng ở ô đất chạm thêm vào cuối.
+    const ids = world.pickBuildingIds(cx, cy);
+    const ground = tile ? (buildingAt(state, tile.x, tile.z) ?? pendingAt(state, tile.x, tile.z))?.id : undefined;
+    if (ground !== undefined && !ids.includes(ground)) ids.push(ground);
+    let id: number | null = ids[0] ?? null;
+    // Chạm lại đúng chỗ vào công trình đang chọn mà dưới tia còn công trình khác: chọn cái kế, để lấy được nhà
+    // bị mái nhà trước che. Camera trực giao chỉ trượt khi chọn nên cùng chỗ trên công trình vẫn ra cùng danh sách.
+    // So chỗ chạm trên mặt đất (không đổi khi camera trượt), không so chỗ trên màn hình.
+    const at = world.view.groundPoint(cx, cy);
+    const again = !!lastPick && !!at && Math.hypot(at.x - lastPick.x, at.z - lastPick.z) < PICK_AGAIN_R;
+    if (again && mode.kind === 'view' && mode.selected !== null && ids.length > 1) {
+      const i = ids.indexOf(mode.selected);
+      if (i >= 0) id = ids[(i + 1) % ids.length];
+    }
+    lastPick = id !== null && at ? { x: at.x, z: at.z } : null;
     if (mode.kind === 'merge') {
       if (id === null) return;
       const r = mergeTowers(state, mode.from, id);
@@ -1904,6 +1939,15 @@ async function start(): Promise<void> {
         hud.showSettings(state, world.resolution, a.on, world.bongDoOn);
         return;
 
+      case 'setHuongDan':
+        luuHuongDan(a.on);
+        hud.showSettings(state, world.resolution, world.ngayDemOn, world.bongDoOn);
+        return;
+
+      case 'xemHuongDan':
+        moHuongDan(a.id);
+        return;
+
       case 'setBongDo':
         world.setBongDo(a.on);
         saveBongDo(a.on);
@@ -2171,6 +2215,17 @@ async function start(): Promise<void> {
       case 'closeSheet':
         select(null);
         return;
+
+      case 'openInfo': {
+        // Nút ℹ️ của vòng nút: bảng công trình đầy đủ như trước, camera đưa công trình lên phần không bị bảng che.
+        const b = occupant(state, a.id);
+        if (!b) return select(null);
+        play('tap');
+        hud.showBuilding(state, b.id);
+        const c = hud.freeCenter();
+        world.focusOn(b, c.x, c.y);
+        return;
+      }
 
       case 'openCampaign':
         if (mode.kind !== 'view') exitMode();
@@ -2803,6 +2858,32 @@ async function start(): Promise<void> {
     hud.showStory(id);
   };
 
+  /**
+   * Tính năng lớn vừa mở: Lạc hầu chỉ tay từng bước (`huongDan.ts`). Truyện đi trước; không chỉ khi đang đánh, có
+   * hộp thoại, đang đặt công trình hay đã tắt ở Cài đặt.
+   */
+  const watchHuongDan = () => {
+    initHuongDan(state);
+    if (!entered || chiTay.dangChi || !huongDanBat()) return;
+    if (hud.storyOpen || hud.modalOpen || state.campaign.battle || state.raid.phase === 'battle' || pvp || mode.kind !== 'view') return;
+    if (pendingStory(state)) return;
+    const id = nextHuongDan(state);
+    if (!id) return;
+    // Đánh dấu ngay lúc bắt đầu: bỏ qua giữa chừng hay tải lại trang thì không chỉ lại (xem lại ở Sổ hướng dẫn).
+    markHuongDan(state, id);
+    save();
+    moHuongDan(id);
+  };
+
+  /** Chỉ tay mục `id` từ bước đầu: đóng bảng, ô đang mở cho dock trống. */
+  const moHuongDan = (id: HuongDanId) => {
+    if (mode.kind !== 'view') exitMode();
+    select(null);
+    hud.closeCampaign();
+    hud.closeSheet();
+    chiTay.start(id);
+  };
+
   window.addEventListener('pointerdown', unlockAudio, { passive: true });
   window.addEventListener('resize', () => world.resize());
   window.addEventListener('keydown', (e) => {
@@ -2882,6 +2963,7 @@ async function start(): Promise<void> {
     world.update(dt);
     lag.cat('canh');
     hud.xayLabels.update(state, (x, z, lift) => (world.inField ? null : world.screenAt(x, z, lift)));
+    hud.updateVong(state, (x, z, lift) => (world.inField || pvp ? null : world.screenAt(x, z, lift)));
     watchRaid();
     watchPvp(now);
     lag.cat('khac');
@@ -2912,6 +2994,7 @@ async function start(): Promise<void> {
       world.syncDao(state);
       refreshUi();
       watchStory();
+      watchHuongDan();
       prewarm();
       luuSau();
       lag.cat('nhip');
@@ -2935,11 +3018,16 @@ async function start(): Promise<void> {
   // Cho phép kiểm thử tự động đọc trạng thái và tìm vị trí ô trên màn hình.
   (window as unknown as { __debug?: object }).__debug = {
     state: () => state,
+    /** Chạy chỉ tay mục `id` ngay (để chụp thử). */
+    huongDan: (id: HuongDanId) => moHuongDan(id),
     /** Bấm qua màn hình vào game, như người chơi bấm Chơi tiếp. */
     enter: () => enter(),
     /** Hiện bảng chào lúc vào lại game với phần thưởng dã ngoại `da` (để chụp thử). */
     offline: (ms: number, da?: DaThuong) => hud.showOffline(ms, { gao: 0, voOc: 0, datDa: 0, sat: 0, go: 0 }, 0, da, state.daNgoai.cap),
     tileToScreen: (x: number, z: number) => world.tileToScreen(x, z),
+    /** Các công trình dưới chỗ chạm (cái nhìn thấy trước đứng đầu) và công trình đang chọn: thử chạm lại chọn nhà bị che. */
+    pickIds: (x: number, y: number) => world.pickBuildingIds(x, y),
+    selected: () => (mode.kind === 'view' ? mode.selected : null),
     renderInfo: () => ({ ...world.renderer.info.render }),
     /** Dân gánh hàng: công trình nào có tuyến, ai đang đi, ở ô nào (ganhHang.ts). */
     ganh: () => world.ganhInfo(),
@@ -2947,6 +3035,8 @@ async function start(): Promise<void> {
     camera: (x: number, z: number, zoom: number) => {
       // Đặt camera tay thì thôi lướt về chỗ cũ (máy chụp chạy chậm, lướt chưa xong sẽ kéo camera đi mất).
       drift.done = true;
+      // Thôi cả lướt tới công trình vừa chọn (`focusOn`), không thì camera trôi khỏi chỗ vừa đặt.
+      world.view.onUserMove?.();
       world.view.target.set(x - HALF, 0, z - HALF);
       world.view.zoom = zoom;
       world.view.apply();
@@ -3006,6 +3096,11 @@ async function start(): Promise<void> {
     },
     /** Mở bảng công trình `id` như khi chạm vào nó (chụp thử bảng của công trình bị công trình khác che). */
     select: (id: number | null) => select(id),
+    /** Mở bảng công trình đầy đủ (như bấm nút ℹ️ của vòng nút). */
+    info: (id: number) => {
+      select(id);
+      handle({ kind: 'openInfo', id });
+    },
     /** Chọn công trình trong bảng Xây dựng như bấm nút Xây (đặt, trải, đắp tường). */
     build: (type: BuildingType) => handle({ kind: 'chooseBuild', type }),
     /** Mở bảng tướng (trang bị, chỉ số, kho đồ) của tướng `hero`, như bấm nút Trang bị. */

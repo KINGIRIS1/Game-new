@@ -30,13 +30,18 @@ describe('mô hình vừa móng kinh đô lớn', () => {
     }
   }, 30000);
 
-  it('công trình vẽ trên móng mới: bản vẽ đúng cỡ móng, mô hình không phóng', async () => {
+  it('công trình vẽ trên móng mới: bản vẽ đúng cỡ móng, chỉ co vào trong chừa viền cỏ VIEN_MONG mỗi bên', async () => {
     const { BUILDINGS } = await import('../game/defs');
-    const { CONG_TRINH, lotModel } = await import('./congTrinh/index');
+    const { CONG_TRINH, VIEN_MONG, lotModel, vienK } = await import('./congTrinh/index');
     for (const [type, ct] of Object.entries(CONG_TRINH) as [keyof typeof BUILDINGS, NonNullable<(typeof CONG_TRINH)[keyof typeof BUILDINGS]>][]) {
       expect(BUILDINGS[type].w, type).toBe(BUILDINGS[type].d);
       expect(ct.tiles, type).toBe(BUILDINGS[type].w);
-      expect(lotModel(type, 1).scale.x, type).toBe(1);
+      const k = vienK(type);
+      expect(lotModel(type, 1).scale.x, type).toBeCloseTo(k, 9);
+      expect(lotModel(type, 1).userData.foot, type).toBeCloseTo(k, 9);
+      // Loại co thì chừa đúng VIEN_MONG mỗi bên; loại sát sông, Điện, doanh trại giữ trọn móng.
+      if (['ben', 'langChai', 'benKhoi', 'dien', 'doanhTrai', 'sanTrong'].includes(type)) expect(k, type).toBe(1);
+      else expect(BUILDINGS[type].w * (1 - k), type).toBeCloseTo(2 * VIEN_MONG, 9);
     }
   });
 

@@ -324,6 +324,45 @@ export const CANH = {
     truoc: `${KINH_DO}\n${RUONG_XA}`,
     sau: VUNG_KHO,
   },
+  'vong-nut': {
+    mo: 'Như kinh-do, chạm chọn Điện: vòng nút quanh Điện (Thông tin, Nâng cấp, Dời, Xoay)',
+    truoc: KINH_DO,
+    sau: `d.select(s.buildings.find((b) => b.type === 'dien').id);`,
+    doi: 2500,
+  },
+  'vong-nut-nang': {
+    mo: 'Như vong-nut, bấm nút Nâng cấp của vòng: thẻ xác nhận (giá, thời gian xây, lý do chưa nâng được, Thôi, Đồng ý)',
+    truoc: KINH_DO,
+    sau: `d.select(s.buildings.find((b) => b.type === 'dien').id);`,
+    doi: 2500,
+    truocKhiChup: `document.querySelector('.vn-nut[data-the=nang]').click();`,
+  },
+  'vong-nut-luy': {
+    mo: 'Như kinh-do, có một đoạn lũy hư: vòng nút của lũy (Sửa, Đắp, Dời, Dỡ) và thẻ xác nhận Dỡ',
+    truoc: `${KINH_DO}\nconst l = G.place(s, 'luy', s.buildings[0].x - 3, s.buildings[0].z + 2); if (l.ok) l.value.damaged = true;`,
+    sau: `d.select(s.buildings.find((b) => b.type === 'luy').id);`,
+    doi: 2500,
+    truocKhiChup: `document.querySelector('.vn-nut[data-the=do]').click();`,
+  },
+  'vong-nut-trai': {
+    mo: 'Như kinh-do có doanh trại, chạm chọn doanh trại: vòng có Quân, Giữ thành, Tướng (mở bảng đúng thẻ)',
+    truoc: `${KINH_DO}\n${CO_QUAN}`,
+    sau: `d.select(s.buildings.find((b) => b.type === 'doanhTrai').id);`,
+    doi: 2500,
+  },
+  'vong-nut-ren': {
+    mo: 'Như kinh-do sang chương 2, chạm lò rèn rồi bấm nút Rèn: bảng lò rèn cuộn tới mục rèn binh khí',
+    truoc: `${KINH_DO}\ns.questIndex = Math.max(s.questIndex, D.CH2_QUEST_START);`,
+    sau: `d.select(s.buildings.find((b) => b.type === 'loRen').id);`,
+    doi: 2500,
+    truocKhiChup: `document.querySelector('.vn-nut[data-cuon]').click();`,
+  },
+  'vong-nut-dien5': {
+    mo: 'Kinh đô chương 5 (Điện 8), Điện đang hư, đang Tết: vòng đủ 7 nút (Sửa, Nâng cấp, Tết, tướng, Dời, Xoay)',
+    truoc: `${CHUONG5(33)}\ns.story.seen.push('langLieu'); s.buildings.find((b) => b.type === 'dien').damaged = true;`,
+    sau: `d.select(s.buildings.find((b) => b.type === 'dien').id);`,
+    doi: 3000,
+  },
   'ganh-vung-chon': {
     mo: 'Như kinh-do, chạm chọn kho thóc: vùng riêng của kho tô xanh, phần còn lại của vùng gánh đủ 100% tô nhạt',
     truoc: KINH_DO,
@@ -739,7 +778,7 @@ Tùy chọn:
                           Mã có sẵn d (window.__debug), s (state), G (game.ts), M (moPhong.ts),
                           D (defs.ts), C (campaign.ts), S (story.ts), X (mau.ts), K (khoanh.ts), B (benKia.ts)
   --cam x,z,zoom          Đặt camera nhìn vào ô (x, z)
-  --cham <x,z | loại>     Chạm một ô, hoặc công trình đầu tiên thuộc loại đó (vd: dien, ruong) để mở bảng
+  --cham <x,z | loại>     Chạm một ô, hoặc công trình đầu tiên thuộc loại đó (vd: dien, ruong): hiện vòng nút; thêm --bam "[data-act=openInfo]" để mở bảng
   --bam "<bộ chọn>"       Bấm một phần tử giao diện (CSS, hoặc text=Chữ trên nút)
   --doi <ms>              Chờ thêm trước khi chụp (mặc định 1200, cảnh trận chờ lâu hơn)
   --ten <tên>             Tên ảnh (mặc định: tên cảnh)

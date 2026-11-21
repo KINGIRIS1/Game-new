@@ -2,7 +2,29 @@
 // Sơn đúc nổi màu đồng, viền nâu đồng cũ, nét khắc nâu sẫm. Mỗi hình là một SVG trọn vẹn (màu, bộ lọc nổi khối) dựng
 // một lần thành ảnh data URI, nên trình duyệt chỉ vẽ bộ lọc một lần rồi dùng lại như ảnh thường.
 
-export type NutNoi = 'quan' | 'phoBan' | 'xayDung' | 'tuong' | 'lacHau' | 'xoay' | 'caiDat';
+export type NutNoi =
+  | 'quan'
+  | 'phoBan'
+  | 'xayDung'
+  | 'tuong'
+  | 'lacHau'
+  | 'xoay'
+  | 'caiDat'
+  // Vòng nút quanh công trình (`ui/vongNut.ts`).
+  | 'thongTin'
+  | 'nangCap'
+  | 'doi'
+  | 'sua'
+  | 'do'
+  | 'doSu'
+  | 'cong'
+  | 'giu'
+  | 'luyen'
+  | 'ren'
+  | 'tet'
+  | 'uNo'
+  | 'ghep'
+  | 'dao';
 
 /** Màu thân (dải đồng), nét khắc, vệt sáng nét khắc. */
 const F = 'url(#g)';
@@ -74,6 +96,89 @@ const HINH: Record<NutNoi, () => string> = {
     <g fill="${F}"><polygon points="68,14 92,34 64,42"/><polygon points="32,86 8,66 36,58"/></g>` +
     khac('M26 41 A26 26 0 0 1 70 32', 2) +
     khac('M74 59 A26 26 0 0 1 30 68', 2),
+  // Thông tin: mặt trống nhỏ, giữa khắc chữ i.
+  thongTin: () =>
+    `<g fill="${F}"><circle cx="50" cy="50" r="40"/></g>` +
+    khac('M50 16 A34 34 0 1 1 49.9 16', 2.2) +
+    `<circle cx="50" cy="31" r="6.5" fill="${E}"/><rect x="44" y="43" width="12" height="32" rx="4" fill="${E}"/>` +
+    `<rect x="39" y="71" width="22" height="6" rx="3" fill="${E}"/>`,
+  // Nâng cấp: mũi giáo đồng chỉ lên trên hai nấc chữ V.
+  nangCap: () =>
+    `<g fill="${F}"><path d="M50 4 C64 18 66 32 50 46 C34 32 36 18 50 4Z"/>
+    <path d="M14 70 L50 44 L86 70 L86 84 L50 58 L14 84Z"/><path d="M22 92 L50 72 L78 92 L78 100 L50 82 L22 100Z"/></g>` +
+    khac('M50 12 L50 38', 2.4),
+  // Dời: mũi tên hai đầu nằm ngang trên một tấm ván.
+  doi: () =>
+    `<g fill="${F}"><polygon points="4,50 30,24 30,40 70,40 70,24 96,50 70,76 70,60 30,60 30,76"/></g>` +
+    khac('M24 50 L76 50', 2.4) +
+    khac('M40 46 L40 54 M50 46 L50 54 M60 46 L60 54', 2),
+  // Sửa: búa đồng cán gỗ đặt chéo.
+  sua: () =>
+    `<g fill="${F}" transform="rotate(-40 50 50)"><rect x="44" y="34" width="12" height="62" rx="5"/>
+    <path d="M18 16 L82 16 Q88 26 82 36 L18 36 Q10 26 18 16Z"/></g>` +
+    `<g transform="rotate(-40 50 50)">${khac('M24 26 L76 26', 2.2)}${khac('M50 44 L50 88', 2)}</g>`,
+  // Dỡ: rìu đồng lưỡi xòe như rìu Đông Sơn.
+  do: () =>
+    `<g fill="${F}" transform="rotate(30 50 50)"><rect x="46" y="10" width="9" height="86" rx="4"/>
+    <path d="M52 16 L78 10 Q96 34 78 60 L52 52Z"/></g>` +
+    `<g transform="rotate(30 50 50)">${khac('M60 22 Q74 34 62 48', 2.2)}</g>`,
+  // Đố sử: cuộn thư mở, giữa khắc dấu hỏi.
+  doSu: () =>
+    `<g fill="${F}"><rect x="20" y="18" width="60" height="64"/><rect x="12" y="10" width="76" height="14" rx="7"/>
+    <rect x="12" y="76" width="76" height="14" rx="7"/></g>` +
+    khac('M38 38 Q38 28 50 28 Q62 28 62 38 Q62 46 50 50 L50 58', 4) +
+    `<circle cx="50" cy="67" r="4" fill="${E}"/>`,
+  // Cống đê: cửa cống có ván phai và sóng nước.
+  cong: () =>
+    `<g fill="${F}"><rect x="10" y="14" width="16" height="72" rx="3"/><rect x="74" y="14" width="16" height="72" rx="3"/>
+    <rect x="6" y="8" width="88" height="12" rx="4"/><rect x="28" y="24" width="44" height="30" rx="2"/></g>` +
+    khac('M30 34 L70 34 M30 44 L70 44', 2) +
+    khac('M28 66 Q36 60 44 66 Q52 72 60 66 Q68 60 74 66 M28 78 Q36 72 44 78 Q52 84 60 78 Q68 72 74 78', 3),
+  // Giữ thành: đoạn tường thành có răng cưa, lầu canh mái cong ở giữa.
+  giu: () =>
+    `<g fill="${F}"><rect x="6" y="56" width="88" height="34" rx="2"/>
+    ${[6, 24, 64, 82].map((x) => `<rect x="${x}" y="46" width="12" height="12"/>`).join('')}
+    <rect x="36" y="30" width="28" height="28"/><path d="M26 32 Q50 8 74 32 L66 34 Q50 20 34 34Z"/></g>` +
+    khac('M42 90 L42 74 Q50 64 58 74 L58 90', 2.6) +
+    khac('M10 68 L32 68 M68 68 L90 68', 2),
+  // Luyện quân: bia tập tròn, ngọn giáo cắm chéo vào hồng tâm.
+  luyen: () =>
+    `<g fill="${F}"><circle cx="42" cy="58" r="34"/></g>` +
+    khac('M42 32 A26 26 0 1 1 41.9 32', 2.2) +
+    khac('M42 46 A12 12 0 1 1 41.9 46', 2.2) +
+    `<g fill="${F}" transform="rotate(45 42 58)"><rect x="38.5" y="-6" width="7" height="58" rx="3"/>
+    <path d="M42 -22 C50 -14 50 -6 42 0 C34 -6 34 -14 42 -22Z"/></g>`,
+  // Rèn: búa đồng giơ trên cái đe.
+  ren: () =>
+    `<g fill="${F}"><path d="M10 62 L90 62 L90 70 Q74 72 70 80 L70 88 L84 88 L84 96 L16 96 L16 88 L30 88 L30 80 Q26 72 10 70Z"/>
+    <g transform="rotate(-35 50 34)"><rect x="46" y="20" width="8" height="40" rx="3"/><rect x="30" y="8" width="40" height="16" rx="4"/></g></g>` +
+    khac('M16 66 L84 66', 2) +
+    `<g fill="${L}"><circle cx="70" cy="50" r="2.6"/><circle cx="78" cy="42" r="2"/><circle cx="64" cy="40" r="1.8"/></g>`,
+  // Hội Tết: cây nêu cao, ngọn có tua lá, khánh đồng treo, đế bánh chưng vuông.
+  tet: () =>
+    `<g fill="${F}"><rect x="46" y="10" width="7" height="70" rx="3"/>
+    <path d="M50 8 Q30 4 18 16 Q34 14 50 16Z"/><path d="M50 8 Q70 4 82 16 Q66 14 50 16Z"/>
+    <path d="M38 40 L62 40 L56 50 L44 50Z"/><rect x="26" y="74" width="48" height="22" rx="2"/></g>` +
+    khac('M50 50 L50 58', 2) +
+    khac('M26 85 L74 85 M50 74 L50 96', 2.2),
+  // Ụ nỏ: cây nỏ đồng nằm ngang, mũi tên đặt sẵn.
+  uNo: () =>
+    `<g fill="${F}"><path d="M8 40 Q50 6 92 40 L86 46 Q50 18 14 46Z"/><rect x="44" y="20" width="12" height="74" rx="4"/>
+    <path d="M50 4 L58 18 L42 18Z"/></g>` +
+    khac('M14 44 L50 60 L86 44', 2) +
+    khac('M50 22 L50 88', 2),
+  // Ghép: hai chòi canh nối nhau bằng một sàn.
+  ghep: () =>
+    `<g fill="${F}">${[22, 78].map((x) => `<rect x="${x - 9}" y="38" width="18" height="56" rx="2"/><path d="M${x - 17} 40 L${x} 18 L${x + 17} 40Z"/>`).join('')}
+    <rect x="26" y="52" width="48" height="10" rx="2"/></g>` +
+    khac('M36 57 L64 57', 2.2) +
+    khac('M44 50 L50 57 L44 64 M56 50 L50 57 L56 64', 2),
+  // Ra đảo: đảo cát có cây dừa, sóng quanh.
+  dao: () =>
+    `<g fill="${F}"><path d="M14 74 Q50 54 86 74Z"/><path d="M48 72 Q46 46 56 26 L60 28 Q52 48 54 72Z"/>
+    <path d="M58 26 Q40 14 24 24 Q42 22 56 30Z"/><path d="M58 26 Q76 12 90 22 Q74 22 60 30Z"/><path d="M58 26 Q62 8 74 4 Q64 16 60 28Z"/></g>` +
+    khac('M6 84 Q18 78 30 84 Q42 90 54 84 Q66 78 78 84 Q88 88 96 84', 3) +
+    khac('M14 94 Q26 88 38 94 Q50 100 62 94 Q74 88 86 94', 2.4),
   // Cài đặt: mặt trống đồng, sao mười bốn cánh giữa các vành.
   caiDat: () =>
     `<g fill="${F}"><circle cx="50" cy="50" r="42"/></g>` +

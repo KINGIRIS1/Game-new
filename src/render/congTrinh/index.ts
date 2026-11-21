@@ -57,9 +57,25 @@ export const CONG_TRINH: Partial<Record<BuildingType, CongTrinh>> = {
   nhaThuoc: NHA_THUOC,
 };
 
+/** Viền cỏ chừa quanh mô hình công trình vẽ trên móng mới, mỗi bên (ô đất): nhà kề nhau không liền thành một khối. */
+export const VIEN_MONG = 0.2;
+
+/**
+ * Không co vào trong móng: bến, làng chài, bến thuyền khơi (cầu tàu, thuyền neo phải chạm sông); Điện, doanh trại
+ * (móng lớn đã có tường, rào rõ ranh; chỗ tướng đứng chầu, đài tướng tính theo tọa độ móng ngoài mô hình); sân trống đồng.
+ */
+const KHONG_CO: ReadonlySet<BuildingType> = new Set<BuildingType>(['ben', 'langChai', 'benKhoi', 'dien', 'doanhTrai', 'sanTrong']);
+
+/** Hệ số co mô hình công trình vẽ trên móng mới cho chừa `VIEN_MONG` mỗi bên (1 với loại không co). */
+export function vienK(type: BuildingType): number {
+  if (!CONG_TRINH[type] || KHONG_CO.has(type)) return 1;
+  const w = BUILDINGS[type].w;
+  return (w - 2 * VIEN_MONG) / w;
+}
+
 /**
  * Mô hình công trình loại `type` ở cấp `level`, đặt vừa móng kinh đô lớn. Loại đã vẽ trên móng mới (`CONG_TRINH`)
- * thì dựng thẳng, không phóng. Loại còn vẽ theo móng cũ (bốn đền đầu, ruộng nếp, chòi canh, lầu nỏ,
+ * thì dựng thẳng, co vào trong chừa viền cỏ `VIEN_MONG` (trừ loại sát sông, Điện, doanh trại). Loại còn vẽ theo móng cũ (bốn đền đầu, ruộng nếp, chòi canh, lầu nỏ,
  * đường và đồ trang trí) thì phóng theo móng và chừa viền cỏ (`footScale`). `userData.foot` ghi hệ số đã phóng.
  * `opts`: dáng theo trạng thái (ruộng lúa, ruộng nếp đã bồi phù sa; doanh trại; bậc binh khí của nơi ở).
  */
@@ -86,7 +102,8 @@ export function lotModel(type: BuildingType, level: number, opts: LotOpts = {}):
   if (moi) {
     const g = moi.make(level, opts);
     // Móng đã nới mà bản vẽ chưa vẽ lại thì tạm phóng bản vẽ cũ cho vừa móng mới (hiện mọi loại đã vẽ đúng móng).
-    const k = BUILDINGS[type].w / moi.tiles;
+    // Co vào trong móng chừa viền cỏ (`vienK`); người làm chia `foot` nên vẫn giữ cỡ thật.
+    const k = (BUILDINGS[type].w / moi.tiles) * vienK(type);
     if (k !== 1) g.scale.multiplyScalar(k);
     g.userData.foot = k;
     return g;
