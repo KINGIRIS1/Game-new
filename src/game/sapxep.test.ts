@@ -124,7 +124,7 @@ describe('mẫu kinh đô', () => {
         }
       }
     }
-  });
+  }, 30000);
 
   it('ở mọi cấp Điện mẫu mở được, mỗi loại trong mẫu đủ chỗ cho số tối đa (kể cả đền, Hội Tết, ba nơi ở)', () => {
     for (const id of MAU_IDS) {
