@@ -39,6 +39,8 @@ import { PERSON_SCALE, type LinhTap, type LotOpts } from './congTrinh/chung';
 import { BEP_TET_SEAT } from './congTrinh/bep';
 import { DIEN_LOT, bannerHeight, courtSlot } from './congTrinh/dien';
 import { doanhTraiHeroSpot, linhTapCount } from './congTrinh/doanhTrai';
+import { soChong } from './congTrinh/nhaThuoc';
+import { soThuong } from '../game/nhaThuoc';
 import type { Swim } from './congTrinh/hoKimQuy';
 import { CONG_TRINH, lotModel } from './congTrinh/index';
 import { makeRuaVang } from './beasts';
@@ -84,7 +86,7 @@ import {
   type WallSpot,
 } from './models';
 import { makeWorker, type Job } from './people';
-import { HANG_OF, chuyenGanh, coHang, duongNguoi, tuyenGanh, tuyenXay, vatLieu, viTri, viecBep, type ChieuGanh, type DuongNguoi, type Hang, type TuyenGanh, type ViTri } from './ganhHang';
+import { HANG_OF, chuyenGanh, coHang, duongNguoi, tuyenGanh, tuyenHai, tuyenXay, vatLieu, viTri, viecBep, type ChieuGanh, type DuongNguoi, type Hang, type TuyenGanh, type ViTri } from './ganhHang';
 import { ganhLen, tayGanh } from './doGanh';
 import type { Human } from './body';
 import type { Lot } from './lot';
@@ -317,6 +319,8 @@ interface GanhView {
   hang: Hang;
   /** Mang hàng lượt đi (`di`) hay lượt về (`ve`: thợ vác vật liệu, người bếp gùi nguyên liệu). */
   chieu: ChieuGanh;
+  /** Bỏ qua chừng này người đầu (nhà thuốc: lang y ở nhà, chỉ hai người hái thuốc đi). */
+  bo: number;
   ra: Map<WorkerView, GanhRa>;
 }
 
@@ -334,11 +338,12 @@ interface GanhInfo {
   ra: { x: number; z: number; mang: boolean; dung: boolean; coHang: boolean; visible: boolean }[];
 }
 
-/** Việc gánh mới của một chỗ: tuyến, hàng, chiều. */
+/** Việc gánh mới của một chỗ: tuyến, hàng, chiều; `bo`: số người đầu ở lại chỗ làm. */
 interface ViecGanh {
   tuyen: TuyenGanh;
   hang: Hang;
   chieu: ChieuGanh;
+  bo?: number;
 }
 
 /** Chỗ có người đi gánh: công trình, hay giàn giáo quanh công trình đang xây. */
@@ -422,6 +427,8 @@ function peopleCount(b: Building, spots: number): number {
   if (b.type === 'doanhTrai') return spots;
   // Nhà thợ hồ: thợ đóng gạch, thợ cả, thêm người nhào đất, nện tường theo cấp.
   if (b.type === 'thoHo') return Math.min(b.level >= 3 ? 4 : b.level >= 2 ? 3 : 2, spots);
+  // Nhà thuốc nam: lang y và hai người hái thuốc.
+  if (b.type === 'nhaThuoc') return Math.min(3, spots);
   return Math.min(1, spots);
 }
 
@@ -436,6 +443,7 @@ const LINH_TAP: LinhTap[] = ['giao', 'cung', 'no'];
 function campOpts(state: GameState, type: BuildingType, level: number): LotOpts | undefined {
   const unit = HOME_UNIT[type];
   if (unit) return { tier: state.arms[unit] ?? 0 };
+  if (type === 'nhaThuoc') return { thuong: Math.min(soChong(level), soThuong(state)) };
   if (type !== 'doanhTrai') return undefined;
   const have = LINH_TAP.map((k) => Math.max(0, state.troops[k] ?? 0));
   const total = have.reduce((a, b) => a + b, 0);
@@ -452,7 +460,7 @@ function campOpts(state: GameState, type: BuildingType, level: number): LotOpts 
 const HOME_UNIT: Partial<Record<BuildingType, UnitType>> = Object.fromEntries((Object.keys(UNITS) as UnitType[]).map((k) => [UNITS[k].home, k]));
 
 /** Khóa so dáng doanh trại, nơi ở đang vẽ với state (`campOpts`); loại không theo state thì rỗng. */
-const campKey = (o: LotOpts | undefined): string => (o ? `${o.doanh?.join(',')}|${o.linh?.map((l) => l.kind + l.tier).join(',')}|${o.no ? 1 : 0}|${o.tier ?? ''}` : '');
+const campKey = (o: LotOpts | undefined): string => (o ? `${o.doanh?.join(',')}|${o.linh?.map((l) => l.kind + l.tier).join(',')}|${o.no ? 1 : 0}|${o.tier ?? ''}|${o.thuong ?? ''}` : '');
 
 /** Đoạn tường mà cổng thành, cống đê nối vào: cổng, cống xoay theo những đoạn này. */
 const GATE_WALLS: BuildingType[] = ['luy', 'de', 'thanh', 'congThanh', 'congDe'];
@@ -3393,7 +3401,11 @@ export class World {
       const b = v.dung || v.damaged || !v.people.length ? undefined : byId.get(id);
       let viec: ViecGanh | null = null;
       if (b?.type === 'bep') viec = viecBep(state, b, GANH_LOTS);
-      else if (b && HANG_OF[b.type]) {
+      else if (b?.type === 'nhaThuoc') {
+        // Hai người hái thuốc thay phiên lên bìa rừng, chỗ cây dại hái lá, gùi đầy về; lang y ở nhà giã thuốc.
+        const tuyen = v.people.length > 1 ? tuyenHai(state, b, GANH_LOTS) : null;
+        viec = tuyen && { tuyen, hang: 'thuoc', chieu: 've', bo: 1 };
+      } else if (b && HANG_OF[b.type]) {
         const tuyen = tuyenGanh(state, b, GANH_LOTS);
         viec = tuyen && { tuyen, hang: HANG_OF[b.type]!, chieu: 'di' };
       }
@@ -3412,10 +3424,10 @@ export class World {
   /** Giao việc gánh `viec` cho chỗ `v` (mã `id`); việc đổi thì người đang đi về chỗ làm trước. */
   private datGanh(v: ChoGanh, id: number, viec: ViecGanh | null): void {
     const t = viec?.tuyen;
-    const key = t && viec ? `${viec.hang}:${viec.chieu}:${t.noi}:${t.D.toFixed(2)}:${t.pts.map((p) => `${p.x.toFixed(2)},${p.z.toFixed(2)}`).join(';')}` : '';
+    const key = t && viec ? `${viec.hang}:${viec.chieu}:${viec.bo ?? 0}:${t.noi}:${t.D.toFixed(2)}:${t.pts.map((p) => `${p.x.toFixed(2)},${p.z.toFixed(2)}`).join(';')}` : '';
     if ((v.ganh?.key ?? '') === key) return;
     this.veHetGanh(v, false);
-    v.ganh = t && viec ? { key, tuyen: t, seed: hash01(id * 31 + 7), hang: viec.hang, chieu: viec.chieu, ra: new Map() } : undefined;
+    v.ganh = t && viec ? { key, tuyen: t, seed: hash01(id * 31 + 7), hang: viec.hang, chieu: viec.chieu, bo: viec.bo ?? 0, ra: new Map() } : undefined;
   }
 
   /** Số liệu người đi gánh cho `window.__debug.ganh()`: mỗi chỗ có tuyến (công trình, giàn giáo `xay`), ai đang đi, ở đâu. */
@@ -3433,7 +3445,7 @@ export class World {
         visible: w.obj.visible,
       }));
       const pts = g.tuyen.pts;
-      out.push({ id, type, hang: g.hang, chieu: g.chieu, D: g.tuyen.D, n: v.people.length, a: pts[0], b: pts[pts.length - 1], ra });
+      out.push({ id, type, hang: g.hang, chieu: g.chieu, D: g.tuyen.D, n: v.people.length - g.bo, a: pts[0], b: pts[pts.length - 1], ra });
     };
     for (const [id, v] of this.views) one(id, v.type, v);
     for (const [id, v] of this.sites) one(id, 'xay', v);
@@ -3506,7 +3518,10 @@ export class World {
     if (!g) return;
     const ball = this.workerBall;
     const want = new Map<WorkerView, number>();
-    if (!stop) for (const r of chuyenGanh(v.people.length, g.tuyen.D, t, g.seed)) want.set(v.people[r.who], r.s);
+    const ai = g.bo ? v.people.slice(g.bo) : v.people;
+    // Người hái thuốc không lên rừng lúc trời tối.
+    const nghi = stop || (g.hang === 'thuoc' && this.toiGio > 0.55);
+    if (!nghi) for (const r of chuyenGanh(ai.length, g.tuyen.D, t, g.seed)) want.set(ai[r.who], r.s);
     for (const w of [...g.ra.keys()]) if (!want.has(w)) this.veNha(v, w);
     for (const [w, s] of want) {
       const out = g.ra.get(w) ?? this.raDuong(v, g, w);
@@ -3521,6 +3536,11 @@ export class World {
       ball.center.y += WORKER_RADIUS / 2;
       o.visible = this.viewFrustum.intersectsSphere(ball);
       if (!o.visible) continue;
+      // Người hái thuốc tới chỗ hái thì cúi hái lá (động tác làm việc của nghề).
+      if (at.dung && g.hang === 'thuoc') {
+        (o.userData.pose as Poser | undefined)?.({ act: 'stand', time: t + w.phase });
+        continue;
+      }
       // Đứng đổ hàng, lấy hàng thì đứng yên; đi thì bước theo quãng đường đã đi cho chân khỏi trượt.
       (o.userData.pose as Poser | undefined)?.({ act: 'walk', phase: at.dung ? 0 : at.quang * 11, stride: at.dung ? 0 : 0.42, time: t + w.phase });
       if (co) tayGanh(o.userData.bones as Human, g.hang);

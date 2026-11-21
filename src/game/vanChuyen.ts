@@ -362,6 +362,35 @@ export function duongTu(state: GameState, foot: Pick<Building, 'type' | 'x' | 'z
   return r;
 }
 
+/** Người hái thuốc đi xa nhất chừng này (chi phí ô) tìm chỗ hái; xa hơn thì chỉ hái ở vườn nhà thuốc. */
+export const HAI_XA = 90;
+
+/**
+ * Tuyến người hái thuốc từ nhà thuốc `b` tới chỗ hái gần nhất: ô đi được sát rừng chưa phát (bìa rừng) hay ô có cây
+ * dại mọc. Chỉ để vẽ (không luật nào đọc). Ô trên tuyến từ ô sát nhà thuốc tới chỗ hái; `noi` là id của `b`. Null khi
+ * không có chỗ hái trong `HAI_XA`.
+ */
+export function duongHai(state: GameState, b: Pick<Building, 'id' | 'type' | 'x' | 'z'>): DuongGanh | null {
+  const g = info(state);
+  const t = truong(g.cost, [b], HAI_XA);
+  const mask = g.mask;
+  const cay = new Set(state.cayDa.list.filter((c) => c.kind === 'cay').map((c) => c.z * GRID + c.x));
+  const rung = (x: number, z: number) => inGrid(x, z) && !mask[z * GRID + x] && !isRiver(x, z);
+  let best = -1;
+  for (let i = 0; i < t.xa.length; i++) {
+    const d = t.xa[i];
+    if (!(d > 0) || d === Infinity || (best >= 0 && d >= t.xa[best])) continue;
+    const x = i % GRID;
+    const z = (i - x) / GRID;
+    if (cay.has(i) || rung(x + 1, z) || rung(x - 1, z) || rung(x, z + 1) || rung(x, z - 1)) best = i;
+  }
+  if (best < 0) return null;
+  const tuyen: number[] = [];
+  for (let c = best, guard = 0; c >= 0 && t.xa[c] > 0 && guard < GRID * GRID; c = t.ve[c], guard++) tuyen.push(c);
+  tuyen.reverse();
+  return { d: t.xa[best], heSo: 1, noi: b.id, tuyen };
+}
+
 /**
  * Kinh đô y như `state` nhưng bỏ công trình `skip` (đang dời): móng cũ không chắn đường. Ghi nhớ một mục, cho bóng
  * công trình nhích từng ô khi dời khỏi phải dựng lại lưới mỗi lần.

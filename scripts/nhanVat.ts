@@ -430,6 +430,8 @@ export const NHOM: Record<string, Entry[]> = {
     { ten: 'Thợ xẻ', tao: () => makeWorker('thoXe') },
     { ten: 'Thợ mộc', tao: () => makeWorker('thoMoc') },
     { ten: 'Ngư dân', tao: () => makeWorker('nguDan') },
+    { ten: 'Lang y giã thuốc', tao: () => makeWorker('langY') },
+    { ten: 'Người hái thuốc', tao: () => makeWorker('haiThuoc') },
     { ten: 'Người giữ kho', tao: () => makeWorker('giuKho') },
     { ten: 'Phụ nữ', tao: () => makeWorker('phuNu') },
     { ten: 'Phụ nữ ngồi gói bánh', tao: () => makeWorker('phuNu', true) },
@@ -445,6 +447,7 @@ export const NHOM: Record<string, Entry[]> = {
     { ten: 'Thợ đá vác sắt (công trình đang xây)', tao: () => ganhNguoi('thoDa', 'sat'), cot: GANH },
     { ten: 'Người bếp gùi nguyên liệu Tết', tao: () => ganhNguoi('phuNu', 'gui'), cot: GANH },
     { ten: 'Người bếp đội mâm bánh', tao: () => ganhNguoi('phuNu', 'mam'), cot: GANH },
+    { ten: 'Người hái thuốc gùi lá về', tao: () => ganhNguoi('haiThuoc', 'thuoc'), cot: GANH },
   ],
   tuongDa: [
     { ten: 'Bà Triệu cưỡi voi trắng một ngà', tao: () => makeBaTrieu(), co: 2.3, cach: 2.1 },

@@ -312,6 +312,11 @@ export const vi = {
       icon: '🔨',
       desc: 'Lán của một tốp thợ hồ: đóng gạch, nện đất, dựng giàn tre. Mỗi nhà thêm một tốp thợ để dựng, nâng công trình cùng lúc; nhà lên cấp thì tốp ấy làm nhanh hơn.',
     },
+    nhaThuoc: {
+      name: 'Nhà thuốc nam',
+      icon: '🌿',
+      desc: 'Lang y bốc thuốc nam, có người lên rừng hái lá. Sau mỗi trận, lính ngã được khiêng về một phần, nằm chữa dần rồi về doanh trại. Nhà lên cấp thì cứu được nhiều hơn, chữa nhanh hơn, thêm giường. Thương binh vẫn ăn gạo.',
+    },
   } satisfies Record<BuildingType, { name: string; icon: string; desc: string }>,
 
   reasons: {
@@ -1975,6 +1980,8 @@ export const vi = {
         '📜 Lạc hầu: Tâu bệ hạ, nước lũ tuy dữ nhưng chở phù sa. Xin dựng cống trên đê: mùa lũ mở cống cho nước vào ruộng thì lúa tốt tới mùa sau. Có điều nước không chừa nhà cửa, chỗ nước vào chỉ nên có ruộng.',
       thoHo:
         '📜 Lạc hầu: Tâu bệ hạ, dựng nhà, nâng nhà đều phải chờ thợ làm. Điện có sẵn một tốp thợ; xin dựng nhà thợ hồ để có thêm tốp, nhiều việc làm cùng lúc. Việc lâu thì bệ hạ hỏi thần mấy câu sử nước nhà, đáp đúng thì thợ hăng hái làm mau.',
+      nhaThuoc:
+        '📜 Lạc hầu: Tâu bệ hạ, lính ta ngã ở trận có người chỉ bị thương. Xin dựng nhà thuốc nam: lang y khiêng họ về, đắp lá thuốc, ít lâu lại cầm giáo được.',
       hoKimQuy:
         '📜 Lạc hầu: Tâu bệ hạ, thần Kim Quy đã hiện lên. Xin đào hồ lớn cho thần trú ngụ: hồ còn thì thần giữ cho lũy, thành, cổng thành chắc thêm ba phần.',
       denRongTien:
@@ -2064,6 +2071,21 @@ export const vi = {
     get: 'Nhận',
     troops: 'Quân',
     troopSpace: (used: number, cap: number) => `Quân trong doanh trại: ${used}/${cap} chỗ`,
+    /** Nhà thuốc nam (`ui/nhaThuoc.ts`). */
+    thuocCuu: 'Cứu quân ngã',
+    thuocCuuRow: (pct: number) => `${pct}% số lính ngã mỗi trận (trừ trận đảo)`,
+    thuocGiuong: 'Giường',
+    thuocGiuongRow: (used: number, cap: number) => `${used}/${cap} chỗ quân`,
+    thuocNam: 'Thương binh',
+    thuocNone: 'Không ai nằm chữa',
+    thuocNext: 'Người kế tiếp khỏi sau',
+    thuocCho: 'Đã chữa khỏi, chờ doanh trại có chỗ',
+    thuocHu: 'Nhà thuốc hư: không cứu, không chữa tới khi sửa',
+    thuocNextLevel: (pct: number, giuong: number, giay: number) => `cứu ${pct}%, ${giuong} giường, ${giay} giây một chỗ quân`,
+    thuocHint: 'Thương binh không chiếm chỗ quân, không ra trận, vẫn ăn gạo. Giường đầy thì lính ngã mất như cũ.',
+    thuocKhieng: '🌿 Được khiêng về nhà thuốc',
+    thuocDangChua: (n: number) => `🌿 Đang chữa ở nhà thuốc: ${n} người`,
+    offlineChua: (n: number) => `🌿 Lang y đã chữa khỏi ${n} thương binh.`,
     troopSpaceAll: (used: number, cap: number, doanh: number) =>
       doanh > 1 ? `Quân trong doanh trại (${doanh} doanh): ${used}/${cap} chỗ` : `Quân trong doanh trại: ${used}/${cap} chỗ`,
     barracksCap: (cap: number, per: number, doanh: number) => `Doanh trại giữ ${cap} chỗ: ${doanh} doanh, mỗi doanh ${per} chỗ`,

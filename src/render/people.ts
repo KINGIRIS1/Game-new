@@ -27,7 +27,7 @@ import { spear, type Parts } from './weapons';
 /** Dân làng đông và nhỏ trên màn hình: bớt số mặt cho nhẹ máy (xem `ShapeBuilder.detail`). */
 const DETAIL = 0.6;
 
-export type Job = 'nong' | 'buon' | 'thoDa' | 'thoRen' | 'giuKho' | 'phuNu' | 'lacHau' | 'linhGac' | 'thoXe' | 'thoMoc' | 'nguDan';
+export type Job = 'nong' | 'buon' | 'thoDa' | 'thoRen' | 'giuKho' | 'phuNu' | 'lacHau' | 'linhGac' | 'thoXe' | 'thoMoc' | 'nguDan' | 'langY' | 'haiThuoc';
 
 interface Look {
   cloth: number;
@@ -59,6 +59,10 @@ const LOOKS: Record<Job, Look> = {
   thoMoc: { cloth: 0x5a4030, pattern: false, hair: 'khanTho', headColor: 0xc49a62, wristband: 0x5a3f28 },
   // Ngư dân: nón lá, khố chàm bạc màu nước sông, cầm chài, giỏ cá bên hông.
   nguDan: { cloth: 0x4f6a78, pattern: false, hair: 'nonLa', wristband: 0x5a483a },
+  // Lang y nhà thuốc nam: áo dài nâu sồng, khăn xếp nâu, cầm chày giã thuốc.
+  langY: { cloth: 0x6a4a2e, shirt: 0x7a5a38, skirt: true, hair: 'khanTho', headColor: 0x5a3f28 },
+  // Người hái thuốc: nón lá, áo nâu đất, gùi tre sau lưng, dao quắm phát lá.
+  haiThuoc: { cloth: 0x6f5636, shirt: 0x8a6c44, hair: 'nonLa', wristband: 0x5a483a },
 };
 
 function hair(r: HumanRig, look: Look): void {
@@ -173,7 +177,22 @@ function royalStaff(s: Parts): void {
   s.plain.box(0.14, 0.025, 0.06, C.gold, 0, 0.78, 0);
 }
 
+/** Chày giã thuốc của lang y: chày gỗ tròn, đầu chày to. */
+function pestle(s: Parts): void {
+  s.plain.cyl(0.022, 0.022, 0.42, C.wood, 0, 0.12, 0, undefined, 6);
+  s.plain.cyl(0.04, 0.035, 0.1, C.woodDark, 0, -0.1, 0, undefined, 7);
+}
+
+/** Dao quắm phát lá của người hái thuốc: cán gỗ ngắn, lưỡi sắt cong như mỏ quạ. */
+function billhook(s: Parts): void {
+  s.plain.cyl(0.017, 0.017, 0.2, C.woodDark, 0, 0.05, 0, undefined, 6);
+  s.plain.box(0.016, 0.18, 0.05, C.iron, 0, 0.23, 0.02);
+  s.plain.box(0.016, 0.05, 0.07, C.iron, 0, 0.31, 0.06, [0.5, 0, 0]);
+}
+
 const TOOLS: Partial<Record<Job, (s: Parts) => void>> = {
+  langY: pestle,
+  haiThuoc: billhook,
   nong: hoe,
   buon: scaleTool,
   thoDa: pick,
@@ -276,6 +295,16 @@ function drawWorker(r: HumanRig, job: Job, sitting: boolean): void {
       chest.plain.box(0.2, 0.006, 0.1, 0x3d6828, -0.06, 0.265, 0.26, [0, 0.4, 0]);
     }
   }
+  if (job === 'haiThuoc') {
+    // Gùi tre sau lưng có bó lá thuốc thò lên miệng gùi.
+    basket(r, { color: C.thatch, dark: C.thatchDark, at: [0, 0.55, -0.205], r0: 0.09, r1: 0.13, h: 0.3, bulge: 0.08, tilt: [0.15, 0, 0] });
+    for (const [dx, dz] of [[-0.04, -0.17], [0.04, -0.19], [0, -0.22]] as const) chest.plain.sphere(0.04, 0x5f8f3a, dx, 0.72, dz, [1, 1.3, 0.6], 6);
+  }
+  if (job === 'langY') {
+    // Túi thuốc vải chàm bên hông, chuỗi hạt gỗ trước ngực.
+    sack(r, { color: C.indigo, at: [0.165, 0.37, 0.03], size: [0.05, 0.06, 0.04], neck: 0.025, tie: C.woodDark, bone: 'hips' });
+    necklace(r, { color: C.woodDark, r: 0.08, y: 0.56, z: 0.05, tilt: 0.35, thick: 0.012 });
+  }
   if (job === 'lacHau') {
     // Chuỗi ngọc bích quý phái trước ngực, mặt ngọc vàng; dải lụa đỏ thắm buông từ thắt lưng, khóa vàng.
     necklace(r, { color: 0x3a7d65, r: 0.08, y: 0.56, z: 0.05, tilt: 0.35, thick: 0.013 });
@@ -298,7 +327,7 @@ function holdLoad(b: Human, job: Job, sw = 0): void {
     b.armL.rotation.set(-2.7, 0, -0.35);
     b.armR.rotation.set(-2.7, 0, 0.35);
   }
-  if (job === 'phuNu') {
+  if (job === 'phuNu' || job === 'haiThuoc') {
     // Hai tay nắm quai gùi.
     b.armL.rotation.set(-0.35 - 0.15 * sw, 0, -0.1);
     b.armR.rotation.set(-0.35 + 0.15 * sw, 0, 0.1);
@@ -357,6 +386,24 @@ function work(b: Human, job: Job, t: number): void {
       b.armR.rotation.set(lerp(-2.2, -0.9, u), 0, 0.1);
       b.hand.rotation.set(lerp(-0.3, 1.2, u), 0, 0);
       b.armL.rotation.set(-0.8, 0.3, 0);
+      break;
+    }
+    case 'langY': {
+      // Giã thuốc: hai tay cầm chày giã xuống cối trước chân.
+      const u = Math.abs(Math.sin(t * 2.4));
+      b.chest.rotation.x = lerp(0.1, 0.35, u);
+      b.armR.rotation.set(lerp(-1.9, -0.9, u), 0, 0.15);
+      b.armL.rotation.set(lerp(-1.9, -0.9, u), 0, -0.15);
+      b.hand.rotation.set(lerp(0.9, 1.4, u), 0, 0);
+      break;
+    }
+    case 'haiThuoc': {
+      // Hái lá: cúi thấp, tay phải đưa dao quắm phát lá, tay trái vơ lá.
+      const u = 0.5 + 0.5 * Math.sin(t * 2.2);
+      b.chest.rotation.x = 0.55 + 0.1 * u;
+      b.armR.rotation.set(lerp(-1.4, -0.6, u), 0, lerp(0.4, 0.1, u));
+      b.armL.rotation.set(lerp(-0.7, -1.2, u), 0.2, -0.15);
+      b.head.rotation.x = -0.2;
       break;
     }
     case 'lacHau':
