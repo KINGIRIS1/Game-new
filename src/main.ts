@@ -342,6 +342,7 @@ async function start(): Promise<void> {
     hud.updateBanners(state);
     hud.updateQuest(state);
     hud.refreshSheet(state);
+    hud.refreshVong(state);
     hud.refreshCampaign(state);
     hud.updateField(state);
   };
@@ -571,7 +572,8 @@ async function start(): Promise<void> {
     world.setSelection(b ?? null);
     world.setChunkSelection(null);
     if (b) {
-      hud.showBuilding(state, b.id);
+      // Vòng nút quanh công trình; bảng đầy đủ mở bằng nút ℹ️ (`openInfo`).
+      hud.showVong(state, b.id);
       const c = hud.freeCenter();
       world.focusOn(b, c.x, c.y);
     } else {
@@ -2170,6 +2172,17 @@ async function start(): Promise<void> {
         select(null);
         return;
 
+      case 'openInfo': {
+        // Nút ℹ️ của vòng nút: bảng công trình đầy đủ như trước, camera đưa công trình lên phần không bị bảng che.
+        const b = occupant(state, a.id);
+        if (!b) return select(null);
+        play('tap');
+        hud.showBuilding(state, b.id);
+        const c = hud.freeCenter();
+        world.focusOn(b, c.x, c.y);
+        return;
+      }
+
       case 'openCampaign':
         if (mode.kind !== 'view') exitMode();
         select(null);
@@ -2880,6 +2893,7 @@ async function start(): Promise<void> {
     world.update(dt);
     lag.cat('canh');
     hud.xayLabels.update(state, (x, z, lift) => (world.inField ? null : world.screenAt(x, z, lift)));
+    hud.updateVong(state, (x, z, lift) => (world.inField || pvp ? null : world.screenAt(x, z, lift)));
     watchRaid();
     watchPvp(now);
     lag.cat('khac');
@@ -3004,6 +3018,11 @@ async function start(): Promise<void> {
     },
     /** Mở bảng công trình `id` như khi chạm vào nó (chụp thử bảng của công trình bị công trình khác che). */
     select: (id: number | null) => select(id),
+    /** Mở bảng công trình đầy đủ (như bấm nút ℹ️ của vòng nút). */
+    info: (id: number) => {
+      select(id);
+      handle({ kind: 'openInfo', id });
+    },
     /** Chọn công trình trong bảng Xây dựng như bấm nút Xây (đặt, trải, đắp tường). */
     build: (type: BuildingType) => handle({ kind: 'chooseBuild', type }),
     /** Mở bảng tướng (trang bị, chỉ số, kho đồ) của tướng `hero`, như bấm nút Trang bị. */

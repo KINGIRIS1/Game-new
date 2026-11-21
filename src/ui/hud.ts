@@ -66,7 +66,6 @@ import {
   currentQuest,
   canRaiseBuilding,
   dienLevel,
-  dienNeededFor,
   findBuilding,
   fishIn,
   fishPerMinute,
@@ -112,7 +111,7 @@ import { tetOpen, tetStarted, type Banh } from '../game/tet';
 import { dichOf, duongGanh } from '../game/vanChuyen';
 import type { Resolution } from '../render/world';
 import { formatClock, formatDuration, formatXay, vi } from '../text/vi';
-import { canStartUpgrade, conLai, isBusy, pendingBuilding, planWallUpgrade, soTho, thoRanh, thoRanhSau, viecOf, wallComponent, xayMs } from '../game/xay';
+import { conLai, pendingBuilding, soTho, thoRanh, thoRanhSau, viecOf, xayMs } from '../game/xay';
 import { XayLabels, fillXay, hetThoHtml, jobHtml, jobName, pendingHtml, quizHtml, realMs, thoHtml, type QuizResult } from './xay';
 import { armyHtml, defaultPick, huanHtml, mapHtml, nextRow, pickNu, stageHtml, stageResultHtml, stepPick, type ArmyPick, type MapChapter } from './campaign';
 import { armsHtml } from './binhKhi';
@@ -138,6 +137,7 @@ import { fillDao, quanDaoHtml } from './bien';
 import { farBankOf } from '../game/map';
 import { mauItems } from './mau';
 import { nutNoi } from './nutNoi';
+import { VongNut, doLabel, nangInfo, type Project } from './vongNut';
 import { goLabel, pageCount, pageOf, pickOf, thumbUrl, xayDungHtml, type BuildItem } from './xayDung';
 import type { MauId } from '../game/mau';
 
@@ -301,6 +301,7 @@ export type HudAction =
   | { kind: 'wallUpgradeAll'; id: number }
   | { kind: 'openTho' }
   | { kind: 'askQuiz'; id: number }
+  | { kind: 'openInfo'; id: number }
   | { kind: 'answerQuiz'; id: number; dung: boolean; pick: number }
   /** Đấu thành: đánh thử kinh đô `target` (0 là kinh đô của mình, số khác là kinh đô máy Điện ấy). */
   | { kind: 'dauThanh'; target: DauTarget; side: 'bac' | 'tay'; army: Record<UnitType, number> }
@@ -431,6 +432,7 @@ export class Hud {
   private readonly thoChip: HTMLElement;
   /** Nhãn đếm giờ nổi trên chỗ đang xây (`main.ts` gọi mỗi khung). */
   readonly xayLabels: XayLabels;
+  private readonly vong: VongNut;
   /** Bảng kho và thu chi mỗi phút, thả xuống dưới dải tài nguyên. */
   private readonly resDrop: HTMLElement;
   /** Nút kỹ năng khi giặc đánh kinh đô, ngay trên dòng tin. */
@@ -506,6 +508,7 @@ export class Hud {
         <button class="btn small bronze" data-act="dauSpeed" title="${vi.dauThanh.replaySpeedTitle}" hidden></button>
       </footer>
       <div class="xay-labels"></div>
+      <div class="vong-nut"></div>
       <div class="da-floats"></div>
       <aside class="sheet" aria-live="polite"></aside>
       <section class="campaign" hidden></section>
@@ -518,6 +521,7 @@ export class Hud {
     this.topbar = root.querySelector('.topbar')!;
     this.thoChip = root.querySelector('.tho-chip')!;
     this.xayLabels = new XayLabels(root.querySelector('.xay-labels')!);
+    this.vong = new VongNut(root.querySelector('.vong-nut')!);
     this.resDrop = root.querySelector('.res-drop')!;
     this.raidSkills = root.querySelector('.raid-skills')!;
     this.ticker = root.querySelector('.ticker')!;
@@ -572,7 +576,13 @@ export class Hud {
     if (!el || (el as HTMLButtonElement).disabled) return;
     const act = el.dataset.act!;
     const id = Number(el.dataset.id);
+    // Bấm một nút làm việc trên vòng thì thẻ xác nhận đóng lại.
+    if (act !== 'vongThe' && el.closest('.vong-nut')) this.vong.the = null;
     switch (act) {
+      case 'vongThe':
+        return this.vong.toggle(this.getState(), (el.dataset.the as 'nang' | 'do' | undefined) ?? null);
+      case 'openInfo':
+        return this.onAction({ kind: 'openInfo', id });
       case 'pickBuild':
         this.buildPick = el.dataset.key ?? null;
         this.mauArmed = null;
@@ -1285,6 +1295,7 @@ export class Hud {
   }
 
   showBuilding(state: GameState, id: number): void {
+    this.vong.hide();
     this.sheet = { kind: 'building', id };
     this.refreshSheet(state);
   }
@@ -1468,7 +1479,42 @@ export class Hud {
     this.refreshSheet(state, true);
   }
 
+  /** Chạm công trình: vòng nút quanh công trình thay cho bảng (bảng mở bằng nút ℹ️). */
+  showVong(state: GameState, id: number): void {
+    this.closeSheet();
+    this.vong.show(state, id);
+  }
+
+  /** Dựng lại nút của vòng theo state (đủ của, đang có việc xây...). */
+  refreshVong(state: GameState): void {
+    this.vong.refresh(state);
+  }
+
+  /** Đặt vòng nút theo chỗ công trình trên màn hình, mỗi khung. */
+  updateVong(state: GameState, project: Project): void {
+    const an = !!this.sheet || this.mode !== 'view' || (this.pop !== null && this.pop !== 'res');
+    this.vong.update(state, project, an ? null : this.vungTrong());
+  }
+
+  /**
+   * Phần màn hình không bị dải tài nguyên, dock, dòng tin che (chưa tính bảng trượt). Dock nằm ngang ở đáy hay dựng
+   * cột bên trái tùy khổ màn hình.
+   */
+  private vungTrong(): { left: number; top: number; right: number; bottom: number } {
+    const h = window.innerHeight;
+    const top = this.topbar.getBoundingClientRect().bottom;
+    const d = this.dock.getBoundingClientRect();
+    let left = 0;
+    let bottom = h;
+    if (d.height > d.width) left = d.right;
+    else bottom = d.top;
+    const t = this.ticker.getBoundingClientRect();
+    if (t.height > 0 && t.top > h / 2) bottom = Math.min(bottom, t.top);
+    return { left, top, right: window.innerWidth, bottom };
+  }
+
   closeSheet(): void {
+    this.vong.hide();
     const was = this.sheet !== null;
     this.sheet = null;
     this.donPick = null;
@@ -1486,7 +1532,10 @@ export class Hud {
     const h = window.innerHeight;
     const top = this.topbar.offsetHeight;
     const dock = this.dock.offsetHeight;
-    if (!this.sheet) return { x: w / 2, y: (top + h - dock) / 2 };
+    if (!this.sheet) {
+      const v = this.vungTrong();
+      return { x: (v.left + v.right) / 2, y: (v.top + v.bottom) / 2 };
+    }
     const sideBySide = window.matchMedia('(min-width: 600px) and (min-aspect-ratio: 4/5)').matches;
     if (sideBySide) return { x: (w - this.sheetEl.offsetWidth - 10) / 2, y: (top + h - dock) / 2 };
     // Bảng nằm ngay trên dock (offsetHeight không tính phần đang trượt lên).
@@ -1894,37 +1943,16 @@ export class Hud {
           : moveBtn,
       );
     }
-    const cost = upgradeCostOf(b);
-    if (isBusy(state, b.id)) {
-      // Đang có thợ nâng cấp hay đắp loại khác: không nâng chồng, khối việc ở đầu bảng.
-    } else if (cost) {
-      const check = canStartUpgrade(state, b.id);
-      const label =
-        b.type === 'luy' ? `🧱 Đắp ${vi.ui.wallEarth.toLowerCase()}` : b.type === 'de' ? `🪨 ${vi.ui.dikeStone}` : `⬆ ${vi.ui.upgradeTo(b.level + 1)}`;
-      const ms = xayMs(b.type, b.level + 1);
-      const time = ms > 0 ? ` · ${vi.ui.xayTime(formatXay(realMs(state, ms)))}` : '';
-      actions.push(`<button class="btn" data-act="upgrade" data-id="${b.id}" ${check.ok ? '' : 'disabled'}>
-        ${label} · ${costHtml(state, cost)}${time}</button>`);
-      if (!check.ok) {
-        const why =
-          check.reason === 'chuaDuCapDien'
-            ? `Cần Điện cấp ${dienNeededFor(b.type, b.level + 1)}`
-            : check.reason === 'hetTho'
-              ? hetThoHtml(state)
-              : vi.reasons[check.reason];
-        actions.push(`<div class="why">${why}</div>`);
+    const nang = nangInfo(state, b);
+    if (nang) {
+      actions.push(`<button class="btn" data-act="upgrade" data-id="${b.id}" ${nang.ok ? '' : 'disabled'}>
+        ${nang.label} · ${nang.costHtml}${nang.time ? ` · ${nang.time}` : ''}</button>`);
+      if (!nang.ok) actions.push(`<div class="why">${nang.why}</div>`);
+      if (nang.doan) {
+        actions.push(`<button class="btn ghost" data-act="wallUpgradeAll" data-id="${b.id}" ${nang.doan.ok ? '' : 'disabled'}>
+          ${nang.doan.label} · ${nang.doan.costHtml}${nang.doan.time ? ` · ${nang.doan.time}` : ''}</button>`);
       }
-      // Lũy, đê: nâng cả đoạn liền cùng loại cùng cấp một lượt.
-      const run = wallComponent(state, b.id).length;
-      if (run > 1) {
-        const plan = planWallUpgrade(state, b.id);
-        const n = plan.ok ? plan.value.ids.length : run;
-        const wcost = plan.ok ? plan.value.cost : cost;
-        const wtime = plan.ok ? ` · ${vi.ui.xayTime(formatXay(realMs(state, plan.value.ms)))}` : '';
-        actions.push(`<button class="btn ghost" data-act="wallUpgradeAll" data-id="${b.id}" ${plan.ok ? '' : 'disabled'}>
-          ${vi.ui.wallUpgradeAll(label, n)} · ${costHtml(state, wcost)}${wtime}</button>`);
-      }
-    } else if (def.maxLevel > 1) {
+    } else if (!upgradeCostOf(b) && def.maxLevel > 1) {
       actions.push(`<div class="muted" style="text-align:center">${vi.ui.maxLevel}</div>`);
     }
     if (inChapter2(state)) {
@@ -1934,20 +1962,7 @@ export class Hud {
           ⛰️ ${vi.ui.raiseGround} · ${costHtml(state, raiseCostOf(state, b))}</button>`);
       }
     }
-    if (def.removable) {
-      const label = isDecor(b.type)
-        ? vi.ui.removeDecor
-        : b.type === 'de'
-          ? vi.ui.removeDike
-          : b.type === 'thanh'
-            ? vi.ui.removeCitadel
-            : b.type === 'congThanh'
-              ? vi.ui.removeGate
-              : b.type === 'congDe'
-                ? vi.ui.removeCong
-                : vi.ui.remove;
-      actions.push(`<button class="btn ghost" data-act="removeWall" data-id="${b.id}">${label}</button>`);
-    }
+    if (def.removable) actions.push(`<button class="btn ghost" data-act="removeWall" data-id="${b.id}">${doLabel(b)}</button>`);
 
     const job = jobHtml(state, b.id, this.cancelArmed);
     const info = `<div class="info"><p>${esc(vi.buildings[b.type].desc)}</p>${job}${rows.join('')}<div class="actions">${actions.join('')}</div></div>`;
