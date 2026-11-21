@@ -137,7 +137,7 @@ import { fillDao, quanDaoHtml } from './bien';
 import { farBankOf } from '../game/map';
 import { mauItems } from './mau';
 import { nutNoi } from './nutNoi';
-import { VongNut, doLabel, nangInfo, type Project } from './vongNut';
+import { TET_TYPES, VongNut, doLabel, nangInfo, type Project, type TheVong } from './vongNut';
 import { goLabel, pageCount, pageOf, pickOf, thumbUrl, xayDungHtml, type BuildItem } from './xayDung';
 import type { MauId } from '../game/mau';
 
@@ -158,7 +158,6 @@ const BUILD_GROUPS: { key: keyof typeof vi.ui.buildGroups; types: BuildingType[]
   { key: 'mau', types: [] },
 ];
 /** Bốn công trình làm bánh của Hội Tết: chỉ hiện trong bảng Xây dựng khi đã mở (sau kết chương 1). */
-const TET_TYPES: BuildingType[] = ['ruongNep', 'vuon', 'chuongLon', 'bep'];
 /** Công trình chỉ hiện trong bảng Xây dựng khi đã sang chương có nó. */
 const CHAPTER_OF: Partial<Record<string, number>> = { chuong2: 2, ketChuong2: 2, chuong3: 3, ruaVang: 3, ketChuong3: 3, chuong4: 4, ketChuong4: 4, chuong5: 5, ketChuong5: 5 };
 
@@ -580,8 +579,11 @@ export class Hud {
     if (act !== 'vongThe' && el.closest('.vong-nut')) this.vong.the = null;
     switch (act) {
       case 'vongThe':
-        return this.vong.toggle(this.getState(), (el.dataset.the as 'nang' | 'do' | undefined) ?? null);
+        return this.vong.toggle(this.getState(), (el.dataset.the as TheVong | undefined) ?? null);
       case 'openInfo':
+        // Nút riêng của vòng mở bảng đúng thẻ doanh trại, hay cuộn tới đúng mục (rèn binh khí, luyện quân).
+        if (el.dataset.tab) this.barracksTab = el.dataset.tab as BarracksTab;
+        this.cuonToi = el.dataset.cuon ?? null;
         return this.onAction({ kind: 'openInfo', id });
       case 'pickBuild':
         this.buildPick = el.dataset.key ?? null;
@@ -1388,6 +1390,8 @@ export class Hud {
   private buildPage: number | null = null;
   /** Thẻ đang xem trong bảng doanh trại; nhớ cho lần mở sau. */
   private barracksTab: BarracksTab = 'quan';
+  /** Mở bảng công trình từ nút riêng của vòng nút: chỗ cần cuộn tới (bộ chọn CSS), cuộn một lần rồi bỏ. */
+  private cuonToi: string | null = null;
   /** Chỗ đang xem trong bảng tướng. */
   private tuongUi: TuongUi = newTuongUi('giong');
   /** Ảnh tướng vẽ lúc chơi cho bảng tướng (main.ts gắn vào khi đã có cảnh 3D). */
@@ -1634,6 +1638,11 @@ export class Hud {
     }
     fillXay(this.sheetEl, state);
     fillDao(this.sheetEl, state);
+    if (this.cuonToi && this.sheet.kind === 'building') {
+      const el = this.sheetEl.querySelector(this.cuonToi)?.closest('.unit-row');
+      el?.scrollIntoView({ block: 'center' });
+      this.cuonToi = null;
+    }
     const opening = !this.sheetEl.classList.contains('open');
     this.sheetEl.classList.toggle('build', this.sheet.kind === 'build');
     this.sheetEl.classList.toggle('tall', this.sheet.kind === 'build' || this.sheet.kind === 'tuong' || this.barracksOpen(state));

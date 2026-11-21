@@ -3,9 +3,11 @@
 
 import { describe, expect, it } from 'vitest';
 import { createInitialState, findBuilding, place, type GameState } from '../game/game';
+import { CH2_QUEST_START, CH4_QUEST_START, type BuildingType } from '../game/defs';
+import { placeAnywhere } from '../game/moPhong';
 import { edge, setDien } from '../game/testmap';
 import { startBuild, startUpgrade } from '../game/xay';
-import { VONG_MAX, nutCua, theHtml } from './vongNut';
+import { VONG_MAX, nutCua, nutRieng, theHtml } from './vongNut';
 import hud from './hud.ts?raw';
 import main from '../main.ts?raw';
 
@@ -21,12 +23,14 @@ const dien = (s: GameState) => s.buildings.find((b) => b.type === 'dien')!;
 const acts = (s: GameState, id: number) => nutCua(s, id).map((n) => n.act);
 
 describe('vòng nút quanh công trình', () => {
-  it('Điện: ℹ️ đầu vòng, nâng cấp mở thẻ, dời, xoay; không có nút dỡ', () => {
+  it('Điện: ℹ️ đầu vòng, nâng cấp mở thẻ, Gióng, dời, xoay; không có nút dỡ', () => {
     const s = city(3);
     const nut = nutCua(s, dien(s).id);
     expect(nut[0]).toMatchObject({ act: 'openInfo', hinh: 'thongTin' });
     expect(nut.find((n) => n.hinh === 'nangCap')).toMatchObject({ act: 'vongThe', the: 'nang', kem: false });
-    expect(acts(s, dien(s).id)).toEqual(['openInfo', 'vongThe', 'startMove', 'rotateBuilding']);
+    expect(acts(s, dien(s).id)).toEqual(['openInfo', 'vongThe', 'openGiong', 'startMove', 'rotateBuilding']);
+    s.story.seen.push('langLieu');
+    expect(acts(s, dien(s).id)).toContain('openTet');
   });
 
   it('công trình hư có nút sửa; đang có trận thì sửa, dời khóa', () => {
@@ -45,7 +49,7 @@ describe('vòng nút quanh công trình', () => {
     const d = dien(s);
     const r = startUpgrade(s, d.id);
     expect(r.ok && r.value).toBeTruthy();
-    expect(nutCua(s, d.id).map((n) => n.hinh)).toEqual(['thongTin', 'doSu', 'doi', 'xoay']);
+    expect(nutCua(s, d.id).map((n) => n.hinh)).toEqual(['thongTin', 'doSu', 'tuong', 'doi', 'xoay']);
     expect(nutCua(s, d.id)[1].id).toBe(r.ok && r.value ? r.value.id : -1);
   });
 
@@ -87,7 +91,55 @@ describe('vòng nút quanh công trình', () => {
       b.damaged = true;
       expect(nutCua(s, b.id).length).toBeLessThanOrEqual(VONG_MAX);
     }
-    const all = new Set(s.buildings.flatMap((b) => acts(s, b.id)).concat('toggleCong', 'askQuiz'));
+    const all = new Set(s.buildings.flatMap((b) => acts(s, b.id)).concat('toggleCong', 'askQuiz', 'openTet', 'openGiong', 'openSon', 'openAdv', 'openCaoLo', 'repairUNo', 'placeUNo', 'startMerge', 'seeIsland', 'openQuanDao'));
     for (const a of all) expect(hud.includes(`case '${a}'`) || main.includes(`case '${a}'`), a).toBe(true);
+  });
+});
+
+describe('vòng nút: nút riêng từng loại', () => {
+  /** Kinh đô Điện `dien`, đã tới chương `q` (số nhiệm vụ), có sẵn một công trình loại `type`. */
+  function co(type: BuildingType, dien = 8, q = 0): { s: GameState; id: number } {
+    const s = city(dien);
+    s.questIndex = q;
+    if (!placeAnywhere(s, type)) throw new Error(`không đặt được ${type}`);
+    return { s, id: s.buildings.find((b) => b.type === type)!.id };
+  }
+
+  it('doanh trại: Quân, Giữ thành, Tướng mở bảng đúng thẻ', () => {
+    const { s, id } = co('doanhTrai');
+    const tab = nutCua(s, id).filter((n) => n.data?.tab).map((n) => [n.act, n.data!.tab]);
+    expect(tab).toEqual([['openInfo', 'quan'], ['openInfo', 'giu'], ['openInfo', 'tuong']]);
+  });
+
+  it('nơi ở có Luyện, cuộn tới hàng luyện', () => {
+    const { s } = co('doanhTrai');
+    expect(placeAnywhere(s, 'traiGiao')).toBe(true);
+    const id = s.buildings.find((b) => b.type === 'traiGiao')!.id;
+    expect(nutCua(s, id).find((n) => n.hinh === 'luyen')).toMatchObject({ act: 'openInfo', data: { cuon: '[data-act=train]' } });
+  });
+
+  it('lò rèn: Rèn chỉ từ chương 2', () => {
+    const a = co('loRen', 8, 0);
+    expect(nutRieng(a.s, findBuilding(a.s, a.id)!).some((n) => n.hinh === 'ren')).toBe(false);
+    const b = co('loRen', 8, CH2_QUEST_START);
+    expect(nutCua(b.s, b.id).find((n) => n.hinh === 'ren')).toMatchObject({ act: 'openInfo', data: { cuon: '[data-act=forgeArms]' } });
+  });
+
+  it('thành chương 4 chưa có ụ: nút Ụ nỏ mở thẻ có nút đặt ụ', () => {
+    const { s, id } = co('thanh', 8, CH4_QUEST_START);
+    expect(nutCua(s, id).find((n) => n.hinh === 'uNo')).toMatchObject({ act: 'vongThe', the: 'uNo' });
+    expect(theHtml(s, findBuilding(s, id)!, 'uNo')).toContain('data-act="placeUNo"');
+  });
+
+  it('nút riêng không đẩy Dời ra khỏi vòng', () => {
+    const s = city(8);
+    s.questIndex = CH4_QUEST_START + 20;
+    s.campaign.cleared = 40;
+    s.story.seen.push('langLieu');
+    const d = dien(s);
+    d.damaged = true;
+    const nut = nutCua(s, d.id);
+    expect(nut.length).toBe(VONG_MAX);
+    expect(nut.map((n) => n.act)).toEqual(expect.arrayContaining(['openInfo', 'repair', 'startMove', 'rotateBuilding']));
   });
 });

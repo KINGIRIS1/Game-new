@@ -2,18 +2,29 @@
 // nó hiện thành vòng tròn ngay tại chỗ công trình trên màn hình; nút ℹ️ mở bảng đầy đủ như cũ. Nút mang `data-act`,
 // `data-id` như nút trong bảng, nên `Hud.onClick` và `main.ts` xử lý y như bấm trong bảng.
 
-import { BUILDINGS, isDecor } from '../game/defs';
+import { seaIndex, seaRoute } from '../game/bien';
+import { caoLoJoined } from '../game/caoLo';
+import { inChapter4, mergeCost, mergeable } from '../game/chuong4';
+import { advLook } from '../game/coLoa';
+import { BUILDINGS, DON_DAO, UNITS, UNIT_TYPES, U_NO, isDecor, type BuildingType } from '../game/defs';
 import {
   canAfford,
+  canPlaceUNo,
   canRotateType,
+  dienLevel,
   dienNeededFor,
   findBuilding,
   moveCost,
   repairCost,
+  uNoRepairCost,
   upgradeCostOf,
   type Building,
   type GameState,
 } from '../game/game';
+import { giongAppeared } from '../game/giong';
+import { farBankOf } from '../game/map';
+import { inChapter2, sonLook } from '../game/son';
+import { tetStarted } from '../game/tet';
 import { canStartUpgrade, isBusy, jobOf, pendingBuilding, planWallUpgrade, wallComponent, xayMs } from '../game/xay';
 import { formatXay, vi } from '../text/vi';
 import { buildingName, costHtml, esc } from './format';
@@ -29,10 +40,15 @@ export interface NutVong {
   khoa?: boolean;
   kem?: boolean;
   the?: TheVong;
+  /** Thêm `data-*` cho nút: thẻ doanh trại (`tab`), quần đảo (`dao`), chỗ cuộn tới khi mở bảng (`cuon`). */
+  data?: Record<string, string>;
 }
 
-/** Thẻ xác nhận cạnh vòng: nâng cấp, dỡ. */
-export type TheVong = 'nang' | 'do';
+/** Thẻ xác nhận cạnh vòng: nâng cấp, dỡ, đặt ụ nỏ. */
+export type TheVong = 'nang' | 'do' | 'uNo';
+
+/** Bốn công trình làm nguyên liệu, bánh Tết. */
+export const TET_TYPES: BuildingType[] = ['ruongNep', 'vuon', 'chuongLon', 'bep'];
 
 /** Vòng có tối đa chừng này nút (cả ℹ️); nhiều hơn thì vòng chật, chữ đè nhau. */
 export const VONG_MAX = 7;
@@ -110,11 +126,55 @@ export function nutCua(state: GameState, id: number): NutVong[] {
   const nang = nangInfo(state, b);
   if (nang) out.push({ act: 'vongThe', id, hinh: 'nangCap', nhan: t.nang, the: 'nang', kem: !nang.ok && !nang.doan?.ok });
   out.push(...quizNut(state, id));
+  // Dời, Xoay, Dỡ luôn có chỗ; nút riêng của loại chỉ lấp phần còn trống (thừa thì vẫn có trong bảng ℹ️).
+  const cuoi: NutVong[] = [{ act: 'startMove', id, hinh: 'doi', nhan: t.doi, khoa: state.raid.phase !== 'idle' || !canAfford(state, moveCost(b)) }];
+  if (canRotateType(b.type)) cuoi.push({ act: 'rotateBuilding', id, hinh: 'xoay', nhan: t.xoay });
+  if (def.removable) cuoi.push({ act: 'vongThe', id, hinh: 'do', nhan: t.do, the: 'do' });
+  const rieng = nutRieng(state, b).slice(0, Math.max(0, VONG_MAX - out.length - cuoi.length));
+  return [...out, ...rieng, ...cuoi].slice(0, VONG_MAX);
+}
+
+/** Nút riêng của từng loại công trình, theo đúng điều kiện hiện nút ấy trong bảng công trình (`Hud.buildingHtml`). */
+export function nutRieng(state: GameState, b: Building): NutVong[] {
+  const t = vi.ui.vong;
+  const id = b.id;
+  const out: NutVong[] = [];
+  const info = (hinh: NutNoi, nhan: string, data?: Record<string, string>): NutVong => ({ act: 'openInfo', id, hinh, nhan, data });
   if (b.type === 'congDe' && !b.damaged) out.push({ act: 'toggleCong', id, hinh: 'cong', nhan: b.mo ? t.congDong : t.congMo });
-  out.push({ act: 'startMove', id, hinh: 'doi', nhan: t.doi, khoa: state.raid.phase !== 'idle' || !canAfford(state, moveCost(b)) });
-  if (canRotateType(b.type)) out.push({ act: 'rotateBuilding', id, hinh: 'xoay', nhan: t.xoay });
-  if (def.removable) out.push({ act: 'vongThe', id, hinh: 'do', nhan: t.do, the: 'do' });
-  return out.slice(0, VONG_MAX);
+  if (b.type === 'doanhTrai') {
+    out.push(info('quan', t.quan, { tab: 'quan' }), info('giu', t.giu, { tab: 'giu' }), info('tuong', t.tuong, { tab: 'tuong' }));
+  }
+  if (UNIT_TYPES.some((k) => UNITS[k].home === b.type)) out.push(info('luyen', t.luyen, { cuon: '[data-act=train]' }));
+  if (b.type === 'loRen' && inChapter2(state)) out.push(info('ren', t.ren, { cuon: '[data-act=forgeArms]' }));
+  if (b.type === 'dien' && tetStarted(state)) out.push({ act: 'openTet', id, hinh: 'tet', nhan: t.tet });
+  if ((b.type === 'loRen' || b.type === 'dien') && giongAppeared(state) && !state.giong.ascended) {
+    out.push({ act: 'openGiong', id, hinh: 'tuong', nhan: t.giong });
+  }
+  if (b.type === 'dien') {
+    if (sonLook(state)) out.push({ act: 'openSon', id, hinh: 'tuong', nhan: t.son });
+    if (advLook(state)) out.push({ act: 'openAdv', id, hinh: 'tuong', nhan: t.adv });
+    if (caoLoJoined(state)) out.push({ act: 'openCaoLo', id, hinh: 'tuong', nhan: t.caoLo });
+  }
+  if (TET_TYPES.includes(b.type)) out.push({ act: 'openTet', id, hinh: 'tet', nhan: t.tet });
+  if (b.type === 'thanh' && b.uNo === 'hu') {
+    // Sửa thành trước rồi mới sửa được ụ trên mặt thành.
+    const khoa = !!b.damaged || state.raid.phase === 'battle' || !canAfford(state, uNoRepairCost());
+    out.push({ act: 'repairUNo', id, hinh: 'uNo', nhan: t.uNoSua, khoa });
+  }
+  if (b.type === 'thanh' && !b.uNo && inChapter4(state)) {
+    out.push({ act: 'vongThe', id, hinh: 'uNo', nhan: t.uNo, the: 'uNo', kem: !canPlaceUNo(state, b.x, b.z).ok });
+  }
+  if (mergeable(b) && dienLevel(state) >= BUILDINGS.lauNo.minDien) {
+    const pair = state.buildings.some((o) => o.id !== b.id && mergeable(o));
+    out.push({ act: 'startMerge', id, hinh: 'ghep', nhan: t.ghep, khoa: !pair || state.raid.phase !== 'idle' || !canAfford(state, mergeCost()) });
+  }
+  if (b.type === 'benKhoi') {
+    const dao = seaRoute(b, seaIndex(state, b)).quanDao;
+    out.push({ act: 'seeIsland', id, hinh: 'dao', nhan: t.dao, data: { dao } });
+    if (dienLevel(state) >= DON_DAO.minDien) out.push({ act: 'openQuanDao', id, hinh: 'phoBan', nhan: t.donDao, data: { dao } });
+  }
+  if (b.type === 'donBien' && farBankOf(b.x, b.z)) out.push(info('quan', t.linhDong));
+  return out;
 }
 
 /** Nút đố sử khi công trình đang có việc xây còn lượt hỏi. */
@@ -126,7 +186,7 @@ function quizNut(state: GameState, id: number): NutVong[] {
 
 /** Một nút của vòng (chỗ đứng do `VongNut.update` đặt). */
 function nutHtml(n: NutVong, mo: TheVong | null): string {
-  const the = n.the ? ` data-the="${n.the}"` : '';
+  const the = (n.the ? ` data-the="${n.the}"` : '') + Object.entries(n.data ?? {}).map(([k, v]) => ` data-${k}="${esc(v)}"`).join('');
   const cls = `vn-nut${n.kem ? ' kem' : ''}${n.the && n.the === mo ? ' on' : ''}`;
   return `<button class="${cls}" data-act="${n.act}" data-id="${n.id}"${the} aria-label="${esc(n.nhan)}" ${n.khoa ? 'disabled' : ''}>
     <span class="vn-hinh">${nutNoi(n.hinh)}</span><span class="vn-nhan">${esc(n.nhan)}</span></button>`;
@@ -136,6 +196,12 @@ function nutHtml(n: NutVong, mo: TheVong | null): string {
 export function theHtml(state: GameState, b: Building, the: TheVong): string {
   const t = vi.ui.vong;
   const thoi = `<button class="btn ghost small" data-act="vongThe" data-id="${b.id}">${t.thoi}</button>`;
+  if (the === 'uNo') {
+    const check = canPlaceUNo(state, b.x, b.z);
+    const why = check.ok ? '' : `<div class="why">${vi.reasons[check.reason]}</div>`;
+    return `<b>${esc(buildingName(b))} · 🎯 ${vi.ui.uNo}</b><div>${costHtml(state, U_NO.cost)}</div><p class="muted">${vi.ui.uNoDesc}</p>${why}
+      <div class="btn-pair">${thoi}<button class="btn small" data-act="placeUNo" data-id="${b.id}" ${check.ok ? '' : 'disabled'}>${t.dongY}</button></div>`;
+  }
   if (the === 'do') {
     return `<b>${esc(buildingName(b))}</b><p class="muted">${t.doHoi}</p>
       <div class="btn-pair">${thoi}<button class="btn small" data-act="removeWall" data-id="${b.id}">${doLabel(b)}</button></div>`;
@@ -224,7 +290,9 @@ export class VongNut {
     const b = findBuilding(state, this.id) ?? pendingBuilding(state, this.id);
     const def = b && BUILDINGS[b.type];
     const at = b && def ? project(b.x + def.w / 2, b.z + def.d / 2, Math.min(0.4 + 0.15 * Math.max(def.w, def.d), 1.6)) : null;
-    if (!vung || !b || !def || !at) {
+    // Công trình đã ra ngoài màn hình (kéo cảnh đi, hay camera tới chỗ khác) thì ẩn, không kẹp vòng ở mép.
+    const ngoai = !at || at.x < 0 || at.y < 0 || at.x > window.innerWidth || at.y > window.innerHeight;
+    if (!vung || !b || !def || !at || ngoai) {
       this.root.hidden = true;
       return;
     }

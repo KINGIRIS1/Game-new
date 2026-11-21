@@ -322,6 +322,25 @@ export const CANH = {
     doi: 2500,
     truocKhiChup: `document.querySelector('.vn-nut[data-the=do]').click();`,
   },
+  'vong-nut-trai': {
+    mo: 'Như kinh-do có doanh trại, chạm chọn doanh trại: vòng có Quân, Giữ thành, Tướng (mở bảng đúng thẻ)',
+    truoc: `${KINH_DO}\n${CO_QUAN}`,
+    sau: `d.select(s.buildings.find((b) => b.type === 'doanhTrai').id);`,
+    doi: 2500,
+  },
+  'vong-nut-ren': {
+    mo: 'Như kinh-do sang chương 2, chạm lò rèn rồi bấm nút Rèn: bảng lò rèn cuộn tới mục rèn binh khí',
+    truoc: `${KINH_DO}\ns.questIndex = Math.max(s.questIndex, D.CH2_QUEST_START);`,
+    sau: `d.select(s.buildings.find((b) => b.type === 'loRen').id);`,
+    doi: 2500,
+    truocKhiChup: `document.querySelector('.vn-nut[data-cuon]').click();`,
+  },
+  'vong-nut-dien5': {
+    mo: 'Kinh đô chương 5 (Điện 8), Điện đang hư, đang Tết: vòng đủ 7 nút (Sửa, Nâng cấp, Tết, tướng, Dời, Xoay)',
+    truoc: `${CHUONG5(33)}\ns.story.seen.push('langLieu'); s.buildings.find((b) => b.type === 'dien').damaged = true;`,
+    sau: `d.select(s.buildings.find((b) => b.type === 'dien').id);`,
+    doi: 3000,
+  },
   'ganh-vung-chon': {
     mo: 'Như kinh-do, chạm chọn kho thóc: vùng riêng của kho tô xanh, phần còn lại của vùng gánh đủ 100% tô nhạt',
     truoc: KINH_DO,
