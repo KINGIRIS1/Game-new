@@ -6,15 +6,26 @@ import { THAN_THU, THAN_THU_IDS, THAN_THU_NUOI, type ThanThuId } from '../game/d
 import { canAfford, type GameState } from '../game/game';
 import { buaCho, buaLen, capThu, dangThu, giaBua, heThu, thuDiTheo, thuNay, thuVe } from '../game/thanThu';
 import { formatDuration, vi } from '../text/vi';
+import { THU_DONG } from '../render/anhThu';
+import { ANH_THU_DAU } from '../render/anhThuDau';
 import { costHtml } from './format';
 
 const t = () => vi.thanThu;
+
+/**
+ * Ảnh động thần thú vẽ sẵn (`render/anhThu.ts`, `node scripts/anh-thu.mjs`): dải khung lật bằng CSS (`.thu-anh`).
+ * `dung` thì đứng yên và xám (thú chưa về, thú ngã).
+ */
+export function thuAnh(id: ThanThuId, dung = false): string {
+  const url = `${import.meta.env.BASE_URL}anh-thu/${id}.webp?v=${ANH_THU_DAU[id] ?? ''}`;
+  return `<i class="thu-anh${dung ? ' dung' : ''}" style="background-image:url('${url}');animation-duration:${THU_DONG[id].giay}s" role="img" aria-label="${vi.thanThu.ten[id]}"></i>`;
+}
 
 /** Thẻ một thú. */
 function theThu(s: GameState, id: ThanThuId, theo: ThanThuId | null): string {
   const T = t();
   if (!thuVe(s, id)) {
-    return `<div class="thu-card khoa"><em>${T.icon[id]}</em><div><b>${T.ten[id]}</b><small>${T.khoa(THAN_THU[id].ve)}</small></div></div>`;
+    return `<div class="thu-card khoa">${thuAnh(id, true)}<div><b>${T.ten[id]}</b><small>${T.khoa(THAN_THU[id].ve)}</small></div></div>`;
   }
   const cap = capThu(s, id);
   const tran = cap >= THAN_THU_NUOI.tran;
@@ -27,7 +38,7 @@ function theThu(s: GameState, id: ThanThuId, theo: ThanThuId | null): string {
     ? `<button class="btn small ghost" disabled>${T.tran}</button>`
     : `<button class="btn small bronze" data-act="thuAn" data-thu="${id}" ${bua < 1 || !canAfford(s, gia) ? 'disabled' : ''}>${T.choAn} ${costHtml(s, gia)}</button>`;
   const mang = id === theo ? `<span class="thu-theo">${T.dangTheo}</span>` : `<button class="btn small ghost" data-act="thuChon" data-thu="${id}">${T.mangTheo}</button>`;
-  return `<div class="thu-card ${id === theo ? 'on' : ''}"><em>${T.icon[id]}</em><div>
+  return `<div class="thu-card ${id === theo ? 'on' : ''}">${thuAnh(id)}<div>
     <b>${T.ten[id]} <small>· ${T.cap(cap)} · ${T.dang[dangThu(cap)]}</small></b>
     <small>${T.vai[id]} · ${T.suc(Math.round((heThu(cap) - 1) * 100))}</small>
     <span class="da-exp"><i style="width:${pct.toFixed(1)}%"></i></span><small>${tran ? T.tran : T.buaLen(da, can)}</small>
@@ -54,5 +65,5 @@ export function thanThuMapHtml(s: GameState): string {
   const theo = thuDiTheo(s);
   if (!theo) return `<div class="thu-big"><em>🐉</em></div>`;
   const cap = capThu(s, theo);
-  return `<div class="thu-big d${dangThu(cap)}"><em>${T.icon[theo]}</em><b>${T.ten[theo]}</b><small>${T.cap(cap)} · ${T.dang[dangThu(cap)]}</small><p class="muted small">${T.ky[theo]}</p></div>`;
+  return `<div class="thu-big d${dangThu(cap)}">${thuAnh(theo)}<b>${T.ten[theo]}</b><small>${T.cap(cap)} · ${T.dang[dangThu(cap)]}</small><p class="muted small">${T.ky[theo]}</p></div>`;
 }

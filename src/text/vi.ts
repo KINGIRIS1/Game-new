@@ -1494,7 +1494,6 @@ export const vi = {
     intro: 'Thú thần trong truyện theo bệ hạ: mỗi lần một con đi cùng đội dã ngoại. Cho ăn đủ bữa thì lớn lên, mạnh thêm; ở kinh đô thú đi lại, bay lượn quanh Điện.',
     note: 'Thần thú chỉ ra trận ở dã ngoại; bật Tự đánh thì thú tự dùng kỹ năng. Bữa hồi cả lúc bệ hạ vắng.',
     ten: { thuLac: 'Chim Lạc', thuNgua: 'Ngựa sắt', thuGa: 'Gà chín cựa', thuRua: 'Rùa Vàng', thuRong: 'Rồng' } as Record<string, string>,
-    icon: { thuLac: '🕊️', thuNgua: '🐎', thuGa: '🐓', thuRua: '🐢', thuRong: '🐉' } as Record<string, string>,
     vai: { thuLac: 'Bay, bắn xa', thuNgua: 'Đánh gần', thuGa: 'Nhanh, đánh liên hồi', thuRua: 'Đỡ đòn, che đội', thuRong: 'Bay, đánh vùng' } as Record<string, string>,
     ky: {
       thuLac: 'Lượn trống đồng: bổ nhào xuống quái, quật cả quái quanh đó.',
