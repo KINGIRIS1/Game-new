@@ -357,7 +357,7 @@ describe('cầu qua sông', () => {
     expect(findPath(s, from.x, from.z, kho.value)).toBeNull();
   });
 
-  it('lũ cuốn cầu phao tre ở bậc 2, cầu gỗ ở bậc 3, cầu gỗ lớn không sợ lũ', () => {
+  it('lũ cuốn cầu cọc gỗ ở bậc 2, cầu trụ đá ở bậc 3, cầu lớn mái ngói không sợ lũ', () => {
     const s = rich(7);
     const b = bridgeTo(s, freeRiverPlot('nam', 7));
     const wet = floodMap(s, 3);

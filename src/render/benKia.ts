@@ -1,4 +1,4 @@
-// Hình vẽ vùng đất bên kia sông: cầu qua sông ba cấp, mây mù phủ khoảnh chưa dò, dấu điểm lạ (đồn giặc, bản làng,
+// Hình vẽ vùng đất bên kia sông: cầu qua sông ba cấp (và cầu phao tre của bãi chiến), mây mù phủ khoảnh chưa dò, dấu điểm lạ (đồn giặc, bản làng,
 // đặc sản đất, của chôn) trên khoảnh đã dò. World gọi ở `createView` (cầu, qua `lotModel`), `syncFog`, `syncPois`.
 
 import * as THREE from 'three';
@@ -37,10 +37,10 @@ export interface BridgeBanks {
 }
 const FLAT_BANKS: BridgeBanks = { near: 0, far: 0 };
 
-/** Cầu cấp 2, 3 vồng lên giữa sông chừng này. */
-const riseOf = (level: number) => (level >= 3 ? 0.5 : 0.28);
+/** Cầu vồng lên giữa sông chừng này theo cấp. */
+const riseOf = (level: number) => (level >= 3 ? 0.5 : level === 2 ? 0.34 : 0.22);
 
-/** Đáy ván mặt cầu gỗ (cấp 2, 3) ở `z` dọc cầu: nối mặt hai bờ, vồng lên giữa sông; hai đầu nằm đúng mặt bờ. */
+/** Đáy ván mặt cầu ở `z` dọc cầu: nối mặt hai bờ, vồng lên giữa sông; hai đầu nằm đúng mặt bờ. */
 function archY(level: number, z: number, banks: BridgeBanks): number {
   const t = THREE.MathUtils.clamp((z + HALF_SPAN) / SPAN, 0, 1);
   const vault = Math.abs(z) < HALF_SPAN ? riseOf(level) * (1 - (z / HALF_SPAN) ** 2) : 0;
@@ -65,62 +65,73 @@ export function bridgeDeckY(level: number, z: number, banks: BridgeBanks = FLAT_
   const bank = z < 0 ? banks.near : banks.far;
   const a = Math.abs(z);
   if (a >= HALF_SPAN + SEAT) return bank;
-  if (a >= HALF_SPAN) return bank + (level >= 2 ? PLANK : RAMP);
-  if (level >= 2) return archY(level, z, banks) + PLANK;
-  const r = rampOf(z < 0 ? -1 : 1, bank);
-  const u = THREE.MathUtils.clamp((a - (HALF_SPAN - r.run)) / r.run, 0, 1);
-  return RAFT_TOP + (bank + RAMP - RAFT_TOP) * u;
+  if (a >= HALF_SPAN) return bank + PLANK;
+  return archY(level, z, banks) + PLANK;
 }
 
 /**
- * Cầu qua sông, vẽ dọc theo trục z (dài 7 ô vắt qua sông, rộng 2 ô), đầu bên này ở −z, gốc ở mặt bãi bậc 0. Cấp 1 cầu
- * phao tre: bảy bè tre kết dây mây nổi trên mặt nước, nhấp nhô theo sóng, ván dốc từ mặt hai bờ xuống bè, cọc buộc dây.
- * Cấp 2 cầu gỗ: mặt ván gỗ vồng nhẹ trên hàng cột, lan can hai bên. Cấp 3 cầu gỗ lớn: vồng cao hơn, lan can sơn đỏ, lầu
- * canh mái ngói ở đầu cầu bên này. Đầu cầu gác lên mặt bờ (`banks`, bờ đắp cao thì leo lên tới mặt bờ), không lửng ở
- * mép sông.
+ * Cầu phao tre (chỉ ở bãi chiến đánh đồn bên kia sông, `battlefield.ts`): bảy bè tre kết dây mây nổi trên mặt nước,
+ * nhấp nhô theo sóng, ván dốc từ mặt hai bờ xuống bè, cọc buộc dây. Vẽ dọc trục z, gốc ở mặt bãi bậc 0.
+ */
+export function makeCauPhao(banks: BridgeBanks = FLAT_BANKS): THREE.Group {
+  const out = new THREE.Group();
+  const len = SPAN;
+  const half = HALF_SPAN;
+  const bankOf = (s: number) => (s < 0 ? banks.near : banks.far);
+  const raft = new ToonModel();
+  const p = raft.plain;
+  // Mỗi ô sông một bè tre, cây tre nằm ngang, hai đòn tre dọc ghìm bè.
+  for (let k = 0; k < len; k++) {
+    const z0 = -half + 0.5 + k;
+    for (let i = 0; i < 9; i++) p.cyl(0.05, 0.05, 1.5, i % 2 ? C.bamboo : 0x8fae55, 0, 0, z0 - 0.4 + i * 0.1, [0, 0, Math.PI / 2], 6);
+    for (const x of [-0.5, 0.5]) p.cyl(0.04, 0.04, 0.92, C.thatchDark, x, 0.05, z0, [Math.PI / 2, 0, 0], 5);
+  }
+  // Dây mây làm tay vịn, buộc vào cọc trên bè.
+  for (const x of [-0.72, 0.72]) {
+    for (let k = 0; k <= len; k++) p.cyl(0.03, 0.035, 0.45, C.woodDark, x, 0.2, -half + 0.1 + (k * (len - 0.2)) / len, undefined, 5);
+    p.cyl(0.015, 0.015, len - 0.1, C.thatchDark, x, 0.38, 0, [Math.PI / 2, 0, 0], 4);
+  }
+  const g = raft.group();
+  g.position.y = RAFT_Y;
+  // Các phần có `dock` nhấp nhô theo sóng.
+  g.userData.dock = g.position.y;
+  out.add(g);
+  // Ván dốc từ mép bờ xuống mặt bè, ván nằm trên mặt bờ nối vào đất, cọc buộc trên bờ.
+  const banksM = new ToonModel();
+  for (const s of [-1, 1] as const) {
+    const bank = bankOf(s);
+    const r = rampOf(s, bank);
+    const tilt = Math.atan2(r.drop, r.run);
+    // Xoay quanh trục x một góc dương thì đầu +z chúc xuống: đầu bên kia (s = 1) phải ngóc lên phía bờ.
+    banksM.plain.box(1.2, RAMP, Math.hypot(r.run, r.drop) + 0.04, C.woodLight, 0, (bank + RAFT_TOP + RAMP) / 2, (r.edgeZ + r.raftZ) / 2, [-s * tilt, 0, 0]);
+    banksM.plain.box(1.2, RAMP, SEAT, C.woodLight, 0, bank + RAMP / 2, s * (half + SEAT / 2));
+    for (const x of [-0.75, 0.75]) banksM.plain.cyl(0.05, 0.06, 0.5, C.woodDark, x, bank + 0.15, s * (half + 0.15), undefined, 6);
+  }
+  out.add(banksM.group());
+  return out;
+}
+
+/** Đáy lòng sông dưới cầu (chân trụ, chân cọc cắm xuống tới đây). */
+const BED_Y = RIVER_Y - 0.5;
+
+/**
+ * Cầu qua sông, vẽ dọc theo trục z (dài 7 ô vắt qua sông, rộng 2 ô), đầu bên này ở −z, gốc ở mặt bãi bậc 0. Ba cấp
+ * đều là cầu gỗ vồng trên hai dầm gỗ to (diorama bước 6, `docs/thiet-ke.md` mục Kế hoạch: địa hình diorama):
+ * - cấp 1: mặt ván hẹp, ba vì cọc gỗ đóng xuống lòng sông có xà mũ, lan can tre một thanh;
+ * - cấp 2: rộng hơn, dầm to hơn, hai trụ đá xếp tầng có mũ đá, lan can gỗ hai thanh;
+ * - cấp 3: rộng nhất, vồng cao, trụ đá có mũi rẽ nước hai phía, lan can sơn đỏ núm đồng, mái che ngói ở hai đầu cầu.
+ * Đầu cầu gác lên mặt bờ (`banks`, bờ đắp cao thì leo lên tới mặt bờ), không lửng ở mép sông.
  */
 export function makeBridge(level: number, banks: BridgeBanks = FLAT_BANKS): THREE.Group {
   const out = new THREE.Group();
   const len = SPAN;
   const half = HALF_SPAN;
   const bankOf = (s: number) => (s < 0 ? banks.near : banks.far);
-  if (level <= 1) {
-    const raft = new ToonModel();
-    const p = raft.plain;
-    // Mỗi ô sông một bè tre, cây tre nằm ngang, hai đòn tre dọc ghìm bè.
-    for (let k = 0; k < len; k++) {
-      const z0 = -half + 0.5 + k;
-      for (let i = 0; i < 9; i++) p.cyl(0.05, 0.05, 1.5, i % 2 ? C.bamboo : 0x8fae55, 0, 0, z0 - 0.4 + i * 0.1, [0, 0, Math.PI / 2], 6);
-      for (const x of [-0.5, 0.5]) p.cyl(0.04, 0.04, 0.92, C.thatchDark, x, 0.05, z0, [Math.PI / 2, 0, 0], 5);
-    }
-    // Dây mây làm tay vịn, buộc vào cọc trên bè.
-    for (const x of [-0.72, 0.72]) {
-      for (let k = 0; k <= len; k++) p.cyl(0.03, 0.035, 0.45, C.woodDark, x, 0.2, -half + 0.1 + (k * (len - 0.2)) / len, undefined, 5);
-      p.cyl(0.015, 0.015, len - 0.1, C.thatchDark, x, 0.38, 0, [Math.PI / 2, 0, 0], 4);
-    }
-    const g = raft.group();
-    g.position.y = RAFT_Y;
-    // World cho các phần có `dock` nhấp nhô theo sóng.
-    g.userData.dock = g.position.y;
-    out.add(g);
-    // Ván dốc từ mép bờ xuống mặt bè, ván nằm trên mặt bờ nối vào đất, cọc buộc trên bờ.
-    const banksM = new ToonModel();
-    for (const s of [-1, 1] as const) {
-      const bank = bankOf(s);
-      const r = rampOf(s, bank);
-      const tilt = Math.atan2(r.drop, r.run);
-      // Xoay quanh trục x một góc dương thì đầu +z chúc xuống: đầu bên kia (s = 1) phải ngóc lên phía bờ.
-      banksM.plain.box(1.2, RAMP, Math.hypot(r.run, r.drop) + 0.04, C.woodLight, 0, (bank + RAFT_TOP + RAMP) / 2, (r.edgeZ + r.raftZ) / 2, [-s * tilt, 0, 0]);
-      banksM.plain.box(1.2, RAMP, SEAT, C.woodLight, 0, bank + RAMP / 2, s * (half + SEAT / 2));
-      for (const x of [-0.75, 0.75]) banksM.plain.cyl(0.05, 0.06, 0.5, C.woodDark, x, bank + 0.15, s * (half + 0.15), undefined, 6);
-    }
-    out.add(banksM.group());
-    return out;
-  }
   const big = level >= 3;
+  const stone = level >= 2;
   const m = new ToonModel();
   const p = m.plain;
-  const width = big ? 1.55 : 1.35;
+  const width = big ? 1.6 : stone ? 1.45 : 1.25;
   /** Tâm ván mặt cầu ở `z`. */
   const deckY = (z: number) => archY(level, z, banks) + PLANK / 2;
   /** Độ dốc mặt cầu ở `z` (tăng bao nhiêu mỗi ô đi về phía +z). */
@@ -137,37 +148,71 @@ export function makeBridge(level: number, banks: BridgeBanks = FLAT_BANKS): THRE
     p.box(width, PLANK, SEAT + 0.02, C.wood, 0, bank + PLANK / 2, s * (half + SEAT / 2));
     p.box(width + 0.16, 0.1, 0.14, C.woodDark, 0, bank + 0.05, s * (half + SEAT + 0.07));
   }
-  // Hàng cột gỗ cắm xuống lòng sông, có xà ngang đỡ mặt cầu.
-  for (let k = 1; k < len; k++) {
-    const z = -half + k;
-    for (const x of [-width / 2 + 0.08, width / 2 - 0.08]) p.cyl(0.06, 0.07, deckY(z) - RIVER_Y + 0.25, C.woodDark, x, (deckY(z) + RIVER_Y - 0.25) / 2, z, undefined, 6);
-    p.box(width + 0.1, 0.08, 0.1, C.woodDark, 0, deckY(z) - 0.08, z);
+  // Hai dầm gỗ to dọc dưới mặt ván, theo vồng cầu, từng đoạn.
+  const beam = big ? 0.2 : stone ? 0.17 : 0.13;
+  const beamX = width / 2 - 0.2;
+  /** Đáy dầm ở `z`. */
+  const beamBot = (z: number) => deckY(z) - PLANK / 2 - beam * 1.2;
+  const segs = len * 2;
+  for (let i = 0; i < segs; i++) {
+    const z0 = -half + (i * len) / segs;
+    const z1 = -half + ((i + 1) * len) / segs;
+    const zm = (z0 + z1) / 2;
+    for (const x of [-beamX, beamX]) p.box(beam, beam * 1.2, z1 - z0 + 0.03, C.woodDark, x, deckY(zm) - PLANK / 2 - beam * 0.6, zm, [-Math.atan(slopeAt(zm)), 0, 0]);
   }
-  // Lan can hai bên: cột lan can và tay vịn; cầu lớn sơn đỏ.
-  const rail = big ? C.red : C.woodDark;
+  // Trụ đỡ dầm: cấp 1 vì cọc gỗ, cấp 2, 3 trụ đá xếp tầng.
+  const piers = stone ? [-len / 6, len / 6] : [-len / 4, 0, len / 4];
+  for (const z of piers) {
+    const top = beamBot(z);
+    if (!stone) {
+      for (const x of [-beamX, beamX]) p.cyl(0.07, 0.08, top - BED_Y, C.woodDark, x, (top + BED_Y) / 2, z, undefined, 6);
+      p.box(width - 0.1, 0.1, 0.16, C.woodDark, 0, top - 0.05, z);
+      continue;
+    }
+    // Ba tầng đá, tầng dưới to nhất, xen hai sắc đá; mũ đá trên cùng đỡ dầm.
+    const w = width + (big ? 0.35 : 0.2);
+    const d = big ? 0.75 : 0.6;
+    const layers = 3;
+    const h = (top - 0.08 - BED_Y) / layers;
+    for (let k = 0; k < layers; k++) {
+      const shrink = 1 - k * 0.06;
+      p.box(w * shrink, h + 0.01, d * shrink, k % 2 ? C.rockDark : C.rock, 0, BED_Y + h * (k + 0.5), z);
+    }
+    p.box(w + 0.06, 0.08, d + 0.06, C.rockDark, 0, top - 0.04, z);
+    if (big) {
+      // Mũi rẽ nước hai phía dòng chảy (dòng chảy ngang cầu, theo trục x).
+      for (const sx of [-1, 1]) p.box(d * 0.72, top - 0.1 - BED_Y, d * 0.72, C.rock, sx * (w / 2), (top - 0.1 + BED_Y) / 2, z, [0, Math.PI / 4, 0]);
+    }
+  }
+  // Lan can hai bên: cấp 1 tre một thanh, cấp 2 gỗ hai thanh, cấp 3 sơn đỏ hai thanh, núm đồng.
+  const rail = big ? C.red : stone ? C.woodDark : C.bamboo;
   const posts = len * 2;
+  const bars = stone ? [0.2, 0.37] : [0.33];
   for (const s of [-1, 1]) {
     const x = s * (width / 2 - 0.04);
     for (let i = 0; i <= posts; i++) {
       const z = -half + 0.1 + (i * (len - 0.2)) / posts;
       p.cyl(0.03, 0.03, 0.34, rail, x, deckY(z) + 0.2, z, undefined, 5);
+      if (big) m.band.sphere(0.04, C.gold, x, deckY(z) + 0.4, z, [1, 1, 1], 6);
     }
     for (let i = 0; i < posts; i++) {
       const z0 = -half + 0.1 + (i * (len - 0.2)) / posts;
       const z1 = -half + 0.1 + ((i + 1) * (len - 0.2)) / posts;
       const zm = (z0 + z1) / 2;
       const slope = Math.atan((deckY(z0) - deckY(z1)) / (z1 - z0));
-      m.band.box(0.06, 0.05, z1 - z0 + 0.02, rail, x, deckY(zm) + 0.37, zm, [slope, 0, 0]);
+      for (const y of bars) (big ? m.band : p).box(0.05, 0.045, z1 - z0 + 0.02, rail, x, deckY(zm) + y, zm, [slope, 0, 0]);
     }
   }
   if (big) {
-    // Lầu canh đầu cầu bên này: bốn cột đỏ, mái ngói như công trình cấp 7, mặt cầu chạy qua dưới lầu.
-    const z0 = -half + 0.45;
-    const y0 = deckY(z0);
-    for (const dx of [-1, 1]) for (const dz of [-0.3, 0.3]) p.cyl(0.05, 0.06, 0.95, C.red, dx * (width / 2 - 0.02), y0 + 0.47, z0 + dz, undefined, 6);
-    p.box(width + 0.12, 0.1, 0.75, C.woodDark, 0, y0 + 0.97, z0);
-    boatRoof(m, roofFor(7), { length: width + 0.6, width: 1.0, lift: 0.22, drop: 0.3, thickness: 0.06 }, 0, y0 + 1.25, z0);
-    m.band.box(0.5, 0.18, 0.04, C.gold, 0, y0 + 0.82, z0 - 0.38);
+    // Mái che ở hai đầu cầu: bốn cột đỏ, mái ngói như công trình cấp 7, mặt cầu chạy qua dưới mái; biển đồng phía ngoài.
+    for (const s of [-1, 1] as const) {
+      const z0 = s * (half - 0.45);
+      const y0 = deckY(z0);
+      for (const dx of [-1, 1]) for (const dz of [-0.3, 0.3]) p.cyl(0.05, 0.06, 0.95, C.red, dx * (width / 2 - 0.02), y0 + 0.47, z0 + dz, undefined, 6);
+      p.box(width + 0.12, 0.1, 0.75, C.woodDark, 0, y0 + 0.97, z0);
+      boatRoof(m, roofFor(7), { length: width + 0.6, width: 1.0, lift: 0.22, drop: 0.3, thickness: 0.06 }, 0, y0 + 1.25, z0);
+      m.band.box(0.5, 0.18, 0.04, C.gold, 0, y0 + 0.82, z0 + s * 0.38);
+    }
   }
   out.add(m.group());
   return out;

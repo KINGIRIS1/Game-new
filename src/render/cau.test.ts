@@ -22,7 +22,7 @@ function vertices(g: THREE.Object3D): THREE.Vector3[] {
 
 /** Cầu dài 7 ô sông, đầu bên này ở −z. */
 const HALF = 3.5;
-/** Mặt bờ: bờ bậc 0, hai bờ đắp cao lệch nhau (đơn vị thế giới, mỗi bậc 0,3). */
+/** Mặt bờ: bờ bậc 0, hai bờ đắp cao lệch nhau (đơn vị thế giới). */
 const BANKS = [
   { near: 0, far: 0 },
   { near: 0.6, far: 0.3 },
@@ -53,15 +53,14 @@ describe('cầu qua sông gác lên bờ', () => {
     }
   });
 
-  it('mặt cầu cho người đi khớp hình vẽ: trên bè, trên ván gác bờ, trên mặt cầu gỗ', async () => {
+  it('mặt cầu cho người đi khớp hình vẽ: trên ván gác bờ, trên mặt cầu gỗ', async () => {
     const { bridgeDeckY } = await import('./benKia');
     const banks = { near: 0.6, far: 0.3 };
-    // Cầu phao: giữa sông đi trên bè (mặt nước −0,28), hai đầu lên tới mặt bờ.
-    expect(bridgeDeckY(1, 0, banks)).toBeCloseTo(-0.15, 2);
-    expect(bridgeDeckY(1, -HALF - 0.1, banks)).toBeCloseTo(0.65, 2);
-    expect(bridgeDeckY(1, HALF + 0.1, banks)).toBeCloseTo(0.35, 2);
-    // Cầu gỗ: hai đầu ngang mặt bờ, giữa vồng lên cao hơn cả hai bờ.
-    for (const level of [2, 3]) {
+    // Ván gác bờ ngay ngoài mép sông.
+    expect(bridgeDeckY(1, -HALF - 0.1, banks)).toBeCloseTo(0.67, 2);
+    expect(bridgeDeckY(1, HALF + 0.1, banks)).toBeCloseTo(0.37, 2);
+    // Cầu gỗ cả ba cấp: hai đầu ngang mặt bờ, giữa vồng lên cao hơn cả hai bờ.
+    for (const level of [1, 2, 3]) {
       expect(bridgeDeckY(level, -HALF + 0.01, banks)).toBeCloseTo(0.67, 1);
       expect(bridgeDeckY(level, HALF - 0.01, banks)).toBeCloseTo(0.37, 1);
       expect(bridgeDeckY(level, 0, banks)).toBeGreaterThan(0.6);
@@ -71,6 +70,20 @@ describe('cầu qua sông gác lên bờ', () => {
       for (let z = -HALF - 0.6; z < HALF + 0.6; z += 0.05) {
         expect(Math.abs(bridgeDeckY(level, z + 0.05, banks) - bridgeDeckY(level, z, banks)), `cấp ${level} ở ${z.toFixed(2)}`).toBeLessThan(0.1);
       }
+    }
+  });
+});
+
+describe('cầu ba cấp vẽ lại', () => {
+  it('giữa cầu có ván đúng mặt cầu cho người đi; trụ cắm xuống lòng sông', async () => {
+    const { makeBridge, bridgeDeckY } = await import('./benKia');
+    for (let level = 1; level <= 3; level++) {
+      const pts = vertices(makeBridge(level));
+      // Có phần chìm dưới mặt nước (cọc, trụ đá cắm xuống lòng sông).
+      expect(Math.min(...pts.map((p) => p.y)), `cấp ${level}`).toBeLessThan(-0.5);
+      // Giữa cầu: có ván ở đúng mặt cầu cho người đi.
+      const top = bridgeDeckY(level, 0);
+      expect(pts.some((p) => Math.abs(p.z) < 0.15 && Math.abs(p.y - top) < 0.02), `cấp ${level}`).toBe(true);
     }
   });
 });
