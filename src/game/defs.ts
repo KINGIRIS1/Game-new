@@ -1194,6 +1194,16 @@ export const U_NO = {
 export const isDecor = (type: BuildingType): boolean => BUILDINGS[type].decor !== undefined;
 export const isRoad = (type: BuildingType): boolean => BUILDINGS[type].decor === 'duong';
 
+/** Loại phẳng: ruộng, vườn đứng liền bờ nhau vẫn không rối mắt, nên được kề cạnh nhau không chừa hẻm. */
+const PHANG: ReadonlySet<BuildingType> = new Set<BuildingType>(['ruong', 'ruongNep', 'vuon']);
+
+/**
+ * Hai công trình kề cạnh nhau có phải chừa hẻm một ô không (mục Mẫu kinh đô: hẻm giữa các nhà): chỉ khi cả hai là
+ * công trình nhiều ô không phải đồ trang trí, và không phải cả hai đều là loại phẳng. Kề góc chéo thì không tính.
+ */
+export const canHem = (a: BuildingType, b: BuildingType): boolean =>
+  BUILDINGS[a].w > 1 && BUILDINGS[b].w > 1 && !isDecor(a) && !isDecor(b) && !(PHANG.has(a) && PHANG.has(b));
+
 // ---------- Doanh trại, tướng, bố trí quân ----------
 
 /**

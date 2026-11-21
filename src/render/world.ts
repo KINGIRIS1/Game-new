@@ -3901,7 +3901,7 @@ export class World {
   }
 
   /** Bóng mờ của công trình sắp đặt ở mặt đất bậc `h`, xoay `rot` nấc 90°, viền xanh nếu đặt được, đỏ nếu không. */
-  setGhost(type: BuildingType | null, x = 0, z = 0, valid = true, h = 0, rot = 0): void {
+  setGhost(type: BuildingType | null, x = 0, z = 0, valid = true, h = 0, rot = 0, sat = false): void {
     if (!type) {
       this.dropGhost();
       this.footprint.visible = false;
@@ -3945,7 +3945,8 @@ export class World {
     this.footprint.visible = true;
     this.footprint.scale.set(def.w, 1, def.d);
     this.footprint.position.set(wx(x) + def.w / 2, y + 0.03, wz(z) + def.d / 2);
-    (this.footprint.material as THREE.MeshBasicMaterial).color.set(valid ? 0x4caf50 : 0xe53935);
+    // Đặt được mà sát cạnh nhà khác thì tô vàng (nên chừa hẻm một ô), không đặt được thì đỏ.
+    (this.footprint.material as THREE.MeshBasicMaterial).color.set(!valid ? 0xe53935 : sat ? C.satNha : 0x4caf50);
   }
 
   /** Tô dải ô đang kéo thả trải đường: xanh ô trải được, đỏ ô không; null để tắt. */

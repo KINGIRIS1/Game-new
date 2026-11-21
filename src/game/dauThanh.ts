@@ -415,7 +415,7 @@ export function botSnapshot(dien: number): Snapshot {
   const buildings: SnapBuilding[] = [];
   let gates = 0;
   let uNo = 0;
-  for (const slot of mauSlots(botMau(dien), dien)) {
+  for (const slot of mauSlots(botMau(dien), dien, true)) {
     let type = slot.type;
     if (slot.cong && chapter >= 3 && gates < (BUILDINGS.congThanh.limit[lv] ?? 0)) {
       type = 'congThanh';

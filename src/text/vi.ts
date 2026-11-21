@@ -2123,6 +2123,7 @@ export const vi = {
     ganhPlace: (pct: number) => `🧺 Gánh về: ${pct}%`,
     /** Thanh đặt công trình: công trình nhiều ô chưa giáp ô đường nào. */
     noRoad: '🛤️ Chưa giáp đường',
+    satNha: '↔️ Sát nhà bên, nên chừa hẻm 1 ô',
     ganhHint:
       '📜 Lạc hầu: Tâu bệ hạ, dân phải gánh của làm ra về Điện hay kho thóc. Công trình ở xa thì dân mất công đi lại, làm ra ít hơn. Bệ hạ trải đường đi cho dân đi nhanh, hay dựng thêm kho thóc gần đó.',
     /** Bảng làng chài. */

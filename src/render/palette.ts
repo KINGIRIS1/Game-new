@@ -72,6 +72,8 @@ export const C = {
   /** Tô vùng gánh hàng đủ 100%: vùng có sẵn, và vùng của nơi đang đặt, đang chọn. */
   ganhVung: 0xeef0a8,
   ganhVungMoi: 0x8ee05a,
+  /** Bóng móng đặt công trình sát cạnh nhà khác (nên chừa hẻm một ô): vàng, đặt được nhưng nhắc. */
+  satNha: 0xf2c230,
   siltDeep: 0x8e6a40,
   rain: 0xc8d8e0,
   storm: 0x9ea6a2,

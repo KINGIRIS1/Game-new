@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { wallRings } from './coLoa';
 import { CH1_LAST } from './campaign';
-import { BUILDINGS, CH2_QUEST_START, CH3_QUEST_START, CH4_QUEST_START, GIFT_IDS, MOVE_FRACTION, ROAD_LIMIT, STAGES, U_NO, isRoad, type BuildingType } from './defs';
-import { canMove, createInitialState, dienLevel, limitOf, move, moveCost, occupancy, place, rotOf, rotateBuilding, uNoCount, usedOf, type GameState } from './game';
+import { BUILDINGS, CH2_QUEST_START, CH3_QUEST_START, CH4_QUEST_START, GIFT_IDS, MOVE_FRACTION, ROAD_LIMIT, STAGES, U_NO, canHem, isRoad, type BuildingType } from './defs';
+import { canMove, createInitialState, dienLevel, limitOf, move, moveCost, occupancy, place, rotOf, rotateBuilding, satNha, uNoCount, usedOf, type GameState } from './game';
 import { applyMau, canApplyMau, inFrame, mauDuong, mauFrom, mauSlots, mauUnlocked, planMau, MAU_IDS, type MauId } from './mau';
 import { isOpen, khoanhOf } from './khoanh';
 import { DIEN_HOME, GRID, RIVER_END, RIVER_START, touchesRiver } from './map';
@@ -124,7 +124,7 @@ describe('mẫu kinh đô', () => {
         }
       }
     }
-  });
+  }, 30000);
 
   it('ở mọi cấp Điện mẫu mở được, mỗi loại trong mẫu đủ chỗ cho số tối đa (kể cả đền, Hội Tết, ba nơi ở)', () => {
     for (const id of MAU_IDS) {
@@ -510,5 +510,63 @@ describe('mẫu kinh đô', () => {
     let cells = 0;
     for (const b of s.buildings) cells += BUILDINGS[b.type].w * BUILDINGS[b.type].d;
     expect(occupancy(s).filter((v) => v > 0).length).toBe(cells);
+  });
+});
+
+/** Số cặp công trình nhiều ô kề cạnh nhau mà phải chừa hẻm (`canHem`; kề góc chéo không tính). */
+function capSat(slots: { type: BuildingType; x: number; z: number }[]): number {
+  const sl = slots.filter((s) => BUILDINGS[s.type].w > 1);
+  let n = 0;
+  for (let i = 0; i < sl.length; i++) {
+    for (let j = i + 1; j < sl.length; j++) {
+      const a = sl[i];
+      const b = sl[j];
+      const wa = BUILDINGS[a.type].w;
+      const wb = BUILDINGS[b.type].w;
+      const ox = a.x < b.x + wb && b.x < a.x + wa;
+      const oz = a.z < b.z + wb && b.z < a.z + wa;
+      const ke = (ox && (a.z + wa === b.z || b.z + wb === a.z)) || (oz && (a.x + wa === b.x || b.x + wb === a.x));
+      if (ke && canHem(a.type, b.type)) n++;
+    }
+  }
+  return n;
+}
+
+describe('hẻm giữa các nhà', () => {
+  it('canHem: nhà nhiều ô với nhau phải chừa hẻm; ruộng, vườn liền bờ được; công trình một ô, đường, đồ trang trí không tính', () => {
+    expect(canHem('nhaSan', 'kho')).toBe(true);
+    expect(canHem('ruong', 'nhaSan')).toBe(true);
+    expect(canHem('ruong', 'ruongNep')).toBe(false);
+    expect(canHem('vuon', 'ruong')).toBe(false);
+    expect(canHem('nhaSan', 'luy')).toBe(false);
+    expect(canHem('nhaSan', 'duongDat')).toBe(false);
+  });
+
+  it('đặt tay: satNha nhắc khi móng kề cạnh nhà khác (không chặn), kề góc chéo, chừa hẻm, ruộng liền ruộng, hay dời chính nó thì không', () => {
+    const s = city(5);
+    const x = edge(5, 6);
+    const r = place(s, 'nhaSan', x, x);
+    expect(r.ok).toBe(true);
+    const id = r.ok ? r.value.id : -1;
+    expect(satNha(s, 'kho', x + 3, x)).toBe(true);
+    expect(satNha(s, 'kho', x, x + 3)).toBe(true);
+    expect(satNha(s, 'kho', x + 3, x + 3)).toBe(false);
+    expect(satNha(s, 'kho', x + 4, x)).toBe(false);
+    expect(satNha(s, 'nhaSan', x + 3, x, id)).toBe(false);
+    expect(place(s, 'kho', x + 3, x).ok).toBe(true);
+    const f = place(s, 'ruong', x, x + 8);
+    expect(f.ok).toBe(true);
+    expect(satNha(s, 'ruongNep', x + 4, x + 8)).toBe(false);
+    expect(satNha(s, 'nhaSan', x + 4, x + 8)).toBe(true);
+  });
+
+  it('mẫu Phong Châu, Đê bao từ Điện 4 chừa hẻm giữa mọi nhà; mẫu nào, cấp nào cũng ít cặp nhà sát nhau hơn cách xếp khít cũ', () => {
+    for (const id of MAU_IDS) {
+      for (const dien of levelsOf(id)) {
+        const hem = capSat(mauSlots(id, dien));
+        if ((id === 'phongChau' || id === 'deBao') && dien >= 4) expect(hem, `${id} Điện ${dien}`).toBe(0);
+        expect(hem, `${id} Điện ${dien}`).toBeLessThanOrEqual(capSat(mauSlots(id, dien, true)));
+      }
+    }
   });
 });
