@@ -2504,7 +2504,7 @@ export const vi = {
       nghiaLinh: {
         icon: '⛰️',
         name: 'Đồi Nghĩa Lĩnh',
-        desc: 'Kinh đô bậc thang trên đồi: Điện đắp lên đỉnh đồi (bậc 3), công trình quanh Điện bậc 2, xa hơn bậc 1; ruộng xếp sát bờ sông giữ nguyên đất trong đê bao, mở cống là được phù sa.',
+        desc: 'Kinh đô bậc thang trên đồi: Điện đắp lên đỉnh đồi (bậc 4), công trình quanh Điện bậc 3, xa hơn bậc 2, ngoài cùng bậc 1; ruộng xếp sát bờ sông giữ nguyên đất trong đê bao, mở cống là được phù sa.',
         lock: 'Mở khi vào chương 2: Sơn Tinh, Thủy Tinh.',
       },
       coLoa: {
