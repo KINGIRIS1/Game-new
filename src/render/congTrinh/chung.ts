@@ -33,7 +33,12 @@ export const YARD = 0xcfb07a;
 
 /** Sân phủ cả móng `tiles` ô, mép thấp cho thấy ranh móng. */
 export function yard(m: ToonModel, tiles: number, color: number = YARD): void {
-  m.plain.box(tiles - 0.06, 0.05, tiles - 0.06, color, 0, 0.025, 0);
+  const s = tiles - 0.06;
+  m.plain.box(s, 0.05, s, color, 0, 0.025, 0);
+  // Bờ đá kê thấp quanh mép sân: hai nhà đứng gần nhau vẫn thấy rõ ranh từng móng.
+  const t = 0.07;
+  for (const sz of [-1, 1]) m.plain.box(s, 0.07, t, C.rockDark, 0, 0.035, sz * (s / 2 - t / 2));
+  for (const sx of [-1, 1]) m.plain.box(t, 0.07, s - 2 * t, C.rockDark, sx * (s / 2 - t / 2), 0.035, 0);
 }
 
 /** Hàng rào cột chạm quanh mép móng, đầu cột bọc đồng, chừa cổng rộng `gate` giữa mặt trước. */
