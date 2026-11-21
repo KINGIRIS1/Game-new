@@ -47,7 +47,10 @@ export interface NenInput {
   top: (x: number, z: number) => number | null;
   /** Đáy sông: mép đất giáp sông dốc xuống tới đây (dưới mặt nước). */
   riverY: number;
-  /** Ô giữ phẳng trọn ô, giữ mép ở mặt mình (chỉ hỏi ô trong lưới): ô thường thấp hơn bên cạnh dốc lên, sông thì dựng vách. */
+  /**
+   * Ô giữ phẳng trọn ô, giữ mép ở mặt mình: cao hơn ô bên cạnh hay giáp sông thì dựng vách. Hỏi cả ô ngoài lưới (trừ ô
+   * có mặt đất riêng `outside`).
+   */
   flat: (x: number, z: number) => boolean;
   /** Màu của ô (x, z) (có thể ngoài lưới). */
   colors: (x: number, z: number, out: TileColors) => void;
@@ -241,7 +244,7 @@ export class NenDat {
     const top = own !== undefined ? own : input.top(Math.min(Math.max(x, 0), G - 1), Math.min(Math.max(z, 0), G - 1));
     this.river[f] = top === null ? 1 : 0;
     this.ty[f] = top ?? input.riverY;
-    this.flat[f] = top !== null && x >= 0 && z >= 0 && x < G && z < G && input.flat(x, z) ? 1 : 0;
+    this.flat[f] = top !== null && own === undefined && input.flat(x, z) ? 1 : 0;
     this.colDone[f] = 0;
   }
 

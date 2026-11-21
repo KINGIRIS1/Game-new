@@ -96,6 +96,7 @@ import { C } from './palette';
 import { NEN_MARGIN, NenDat, RAMP } from './nenDat';
 import { keKieu, keTexture } from './ke';
 import { buildNuiPhong, type NuiPhong } from './nuiPhong';
+import { buildGhenh } from './ghenh';
 import type { Poser } from './rig';
 import { ShapeBuilder, disposeInstances, disposeModel, seeded } from './shapes';
 import { ToonModel, inkThin, outlineOf, toon } from './toon';
@@ -170,6 +171,11 @@ const keSongMaterial = new THREE.MeshLambertMaterial({ vertexColors: true });
 
 /** Màu pha cho đất đặc sản bên kia sông đã về tay ta. */
 const DAT_TINT: Record<Dat, number> = { phuSa: 0x6e5034, nuiDa: 0x8d887c, moSat: 0x9a4a2a };
+
+/** Ô (x, z) (cả ngoài lưới, theo ô mép gần nhất) là sông không. */
+const riverAt = (x: number, z: number) => isRiver(clampTile(x), clampTile(z));
+/** Ô đất (x, z) giáp sông bốn phía: bờ sông kè đá. */
+const bankTile = (x: number, z: number) => !riverAt(x, z) && (riverAt(x + 1, z) || riverAt(x - 1, z) || riverAt(x, z + 1) || riverAt(x, z - 1));
 
 /** Đặc sản đất của ô (x, z) bên kia sông, nếu có. */
 /** Số giả ngẫu nhiên 0..1 cố định theo `n` (đuốc thắp so le). */
@@ -805,6 +811,7 @@ export class World {
     this.scene.add(this.staticTerrain(edge));
     this.nui = buildNuiPhong(wx, wz, (x, z) => topY(edge[clampTile(z) * GRID + clampTile(x)]), groundMaterial);
     this.scene.add(this.nui.group);
+    this.scene.add(buildGhenh(wx, wz, WATER_Y, groundMaterial));
     this.outer = this.outerForest(edge);
     this.scene.add(this.outer);
     this.sea = buildSea(HALF);
@@ -2397,7 +2404,8 @@ export class World {
           return cap < 0 ? null : topY(Math.min(level(x, z), cap));
         },
         riverY: WATER_Y - 0.14,
-        flat: (x, z) => this.landFlat.has(z * GRID + x),
+        // Ô giữ phẳng (móng, đường, đầu cầu), và mọi ô đất giáp sông: bờ sông dựng vách kè đá (diorama bước 4).
+        flat: (x, z) => (inGrid(x, z) && this.landFlat.has(z * GRID + x)) || bankTile(x, z),
         colors: (x, z, out) => {
           const open = inGrid(x, z) && this.landMask[z * GRID + x] === 1;
           const palette = open ? C.grass : C.grassLocked;
