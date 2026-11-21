@@ -1789,6 +1789,36 @@ export const vi = {
     } satisfies Record<PvpFail, string>,
   },
 
+  huongDan: {
+    lacHau: 'Lạc hầu:',
+    soBuoc: (i: number, n: number) => `Bước ${i}/${n}`,
+    tiep: 'Tiếp',
+    xong: 'Xong',
+    boQua: 'Bỏ qua',
+    so: 'Sổ hướng dẫn: chạm để xem lại',
+    caiDat: 'Hướng dẫn chỉ tay',
+    caiDatHint: 'Khi mở tính năng mới, Lạc hầu khoanh sáng nút cần bấm, chỉ từng bước. Xem lại ở ô Lạc hầu.',
+    ten: { phoBan: '⚔️ Phó bản', trangBi: '🎖️ Trang bị tướng', daNgoai: '🌿 Dã ngoại' } as Record<string, string>,
+    buoc: {
+      phoBan: [
+        'Tâu bệ hạ, doanh trại đã dựng: quân ta có thể ra trận. Chạm thẻ Phó bản.',
+        'Đây là bản đồ các trận. Chạm màn đang sáng để xem giặc.',
+        'Chạm Chuẩn bị để chọn lính mang theo.',
+        'Thêm bớt lính, đặt hàng trước hàng sau rồi chạm Xuất quân. Thắng thì được của và mở màn sau.',
+      ],
+      trangBi: [
+        'Tâu bệ hạ, tướng đã về: đánh thắng sẽ rơi đồ cho tướng mặc. Chạm thẻ Tướng.',
+        'Mỗi tướng bốn ô đồ. Chạm một ô thì túi đồ chỉ hiện món hợp ô ấy; đủ bốn món đúng bộ thì có hiệu ứng bộ.',
+        'Chạm Mặc mạnh nhất để tướng tự mặc món tốt nhất đang có. Cường hóa đồ ở lò rèn.',
+      ],
+      daNgoai: [
+        'Tâu bệ hạ, tướng có thể ra dã ngoại đánh quái lấy kinh nghiệm, của và đồ. Chạm thẻ Phó bản.',
+        'Chạm chip 🌿 Dã ngoại.',
+        'Chọn tướng đi trong đội ở đây. Cấp chung chỉ cộng sức khi ở dã ngoại.',
+        'Chạm Ra dã ngoại. Rời map thì đội vẫn treo máy đánh quái, lúc vắng cũng được của.',
+      ],
+    } as Record<string, string[]>,
+  },
   ui: {
     lacHau: 'Lạc hầu',
     build: 'Xây dựng',

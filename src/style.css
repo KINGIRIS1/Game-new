@@ -4835,6 +4835,8 @@ body.man-vao-on #hud > * {
 
 .dock .tab:disabled .nut-noi {
   filter: grayscale(0.8) brightness(0.85);
+}
+
 /* ---------- Bảng tướng phủ cả màn hình (ui/trangBi.ts `tuongHtml`) ----------
    Màn dọc: hàng tướng, thẻ tướng cạnh chỉ số, bốn ô đồ, túi đồ ba chế độ (cuộn riêng), thanh nút dưới.
    Màn ngang: ba cột: tướng dọc, thẻ tướng và ô đồ, túi đồ với thanh nút. Để cuối tệp cho đè luật `.sheet` phía trên. */
@@ -5026,4 +5028,75 @@ body.man-vao-on #hud > * {
   .tg .do-grid { grid-template-columns: repeat(auto-fill, minmax(50px, 1fr)); }
   .tg-tray { padding-top: 6px; }
   .tg-tray .btn { min-height: 40px; }
+}
+
+/* Hướng dẫn chỉ tay (ui/huongDan.ts): khung sáng quanh nút cần bấm, phần còn lại tối đi; khung nói của Lạc hầu. */
+.chi-tay {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  pointer-events: none;
+}
+.chi-tay[hidden],
+.chi-tay [hidden] {
+  display: none;
+}
+.chi-lo {
+  position: fixed;
+  border-radius: 14px;
+  border: 3px solid #f1c35a;
+  box-shadow: 0 0 0 9999px rgba(30, 20, 10, 0.62), 0 0 18px 4px rgba(241, 195, 90, 0.8);
+  animation: chi-nhip 1.2s ease-in-out infinite;
+  transition: left 0.15s ease, top 0.15s ease, width 0.15s ease, height 0.15s ease;
+}
+@keyframes chi-nhip {
+  50% {
+    border-color: #fff1c4;
+    box-shadow: 0 0 0 9999px rgba(30, 20, 10, 0.62), 0 0 26px 8px rgba(241, 195, 90, 0.95);
+  }
+}
+.chi-noi {
+  position: fixed;
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(340px, calc(100vw - 32px));
+  padding: 12px 14px 10px;
+  border-radius: 14px;
+  background: var(--paper);
+  border: 2px solid var(--bronze);
+  box-shadow: var(--shadow);
+  color: var(--ink);
+  font-size: 14px;
+  line-height: 1.45;
+  pointer-events: auto;
+}
+.chi-noi p {
+  margin: 0 0 8px;
+}
+.chi-noi b {
+  color: var(--bronze-dark);
+}
+.chi-foot {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  justify-content: flex-end;
+}
+.chi-foot small {
+  margin-right: auto;
+  color: var(--ink-soft);
+}
+.so-hd {
+  margin-top: 10px;
+  padding-top: 8px;
+  border-top: 1px dashed var(--line);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+}
+.so-hd span {
+  width: 100%;
+  font-size: 12px;
+  color: var(--ink-soft);
 }

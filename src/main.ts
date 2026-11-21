@@ -1,5 +1,7 @@
 // Điểm khởi động: nạp game, nối luật chơi với cảnh 3D và giao diện, chạy vòng lặp.
 
+import { initHuongDan, markHuongDan, nextHuongDan, type HuongDanId } from './game/huongDan';
+import { ChiTay, huongDanBat, luuHuongDan } from './ui/huongDan';
 import './style.css';
 import { play, setMuted, stopRally, unlockAudio } from './audio/sfx';
 import { skillReady, startFieldBattle, stepField, useSkill, type Battle, type HeroKind, type FighterKind } from './game/battle';
@@ -317,6 +319,7 @@ async function start(): Promise<void> {
   let saveWarned = false;
 
   const hud = new Hud(hudRoot, handle, () => state);
+  const chiTay = new ChiTay(document.body, () => state);
   // Hình tướng mặc đồ, ảnh bán thân cho bảng tướng: vẽ lúc cần bằng renderer của cảnh, xong thì dựng lại bảng.
   const hinhTuong = new HinhTuong(world.renderer);
   hinhTuong.onReady = () => hud.refreshTuong(state);
@@ -395,7 +398,8 @@ async function start(): Promise<void> {
     if (!daMo(state)) return;
     if (!state.hinted.includes('daNgoai')) {
       state.hinted = [...state.hinted, 'daNgoai'];
-      hud.toast(vi.daNgoai.hint, false, 8000);
+      // Bật chỉ tay thì Lạc hầu chỉ từng bước (`huongDan.ts`), khỏi báo thêm dòng này.
+      if (!huongDanBat()) hud.toast(vi.daNgoai.hint, false, 8000);
     } else {
       // Đủ cấp sang map mới (Núi Nưa, Đầm Dạ Trạch, Núi Vệ): báo một lần map cao nhất vừa đủ cấp; các map thấp hơn
       // coi như đã báo (lên cấp nhanh thì khỏi báo map đã qua).
@@ -1902,6 +1906,15 @@ async function start(): Promise<void> {
         hud.showSettings(state, world.resolution, a.on, world.bongDoOn);
         return;
 
+      case 'setHuongDan':
+        luuHuongDan(a.on);
+        hud.showSettings(state, world.resolution, world.ngayDemOn, world.bongDoOn);
+        return;
+
+      case 'xemHuongDan':
+        moHuongDan(a.id);
+        return;
+
       case 'setBongDo':
         world.setBongDo(a.on);
         saveBongDo(a.on);
@@ -2801,6 +2814,32 @@ async function start(): Promise<void> {
     hud.showStory(id);
   };
 
+  /**
+   * Tính năng lớn vừa mở: Lạc hầu chỉ tay từng bước (`huongDan.ts`). Truyện đi trước; không chỉ khi đang đánh, có
+   * hộp thoại, đang đặt công trình hay đã tắt ở Cài đặt.
+   */
+  const watchHuongDan = () => {
+    initHuongDan(state);
+    if (!entered || chiTay.dangChi || !huongDanBat()) return;
+    if (hud.storyOpen || hud.modalOpen || state.campaign.battle || state.raid.phase === 'battle' || pvp || mode.kind !== 'view') return;
+    if (pendingStory(state)) return;
+    const id = nextHuongDan(state);
+    if (!id) return;
+    // Đánh dấu ngay lúc bắt đầu: bỏ qua giữa chừng hay tải lại trang thì không chỉ lại (xem lại ở Sổ hướng dẫn).
+    markHuongDan(state, id);
+    save();
+    moHuongDan(id);
+  };
+
+  /** Chỉ tay mục `id` từ bước đầu: đóng bảng, ô đang mở cho dock trống. */
+  const moHuongDan = (id: HuongDanId) => {
+    if (mode.kind !== 'view') exitMode();
+    select(null);
+    hud.closeCampaign();
+    hud.closeSheet();
+    chiTay.start(id);
+  };
+
   window.addEventListener('pointerdown', unlockAudio, { passive: true });
   window.addEventListener('resize', () => world.resize());
   window.addEventListener('keydown', (e) => {
@@ -2910,6 +2949,7 @@ async function start(): Promise<void> {
       world.syncDao(state);
       refreshUi();
       watchStory();
+      watchHuongDan();
       prewarm();
       luuSau();
       lag.cat('nhip');
@@ -2933,6 +2973,8 @@ async function start(): Promise<void> {
   // Cho phép kiểm thử tự động đọc trạng thái và tìm vị trí ô trên màn hình.
   (window as unknown as { __debug?: object }).__debug = {
     state: () => state,
+    /** Chạy chỉ tay mục `id` ngay (để chụp thử). */
+    huongDan: (id: HuongDanId) => moHuongDan(id),
     /** Bấm qua màn hình vào game, như người chơi bấm Chơi tiếp. */
     enter: () => enter(),
     /** Hiện bảng chào lúc vào lại game với phần thưởng dã ngoại `da` (để chụp thử). */
