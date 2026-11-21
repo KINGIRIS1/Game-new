@@ -219,10 +219,11 @@ describe('độ khó khi có cổng', () => {
 });
 
 describe('mẫu kinh đô có cổng thành', () => {
-  it('chỗ cổng: Phong Châu hai cổng trên lũy; Cổ Loa, Cổ Loa giữ sông hai cổng trên vòng ngoài, hai trên vòng giữa; Đê bao không có', () => {
+  it('chỗ cổng: Phong Châu hai cổng trên lũy; Cổ Loa, Cổ Loa giữ sông hai cổng trên vòng ngoài, hai trên vòng giữa; Đê bao, Nghĩa Lĩnh không có', () => {
     const want: Record<string, number[]> = {
       phongChau: [0, 0, 0, 0, 2, 2, 2, 2],
       deBao: [0, 0, 0, 0, 0, 0, 0, 0],
+      nghiaLinh: [0, 0, 0, 0, 0, 0, 0, 0],
       coLoa: [0, 0, 0, 0, 4, 4, 4, 4],
       coLoaSong: [0, 0, 0, 0, 4, 4, 4, 4],
     };
