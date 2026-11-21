@@ -9,10 +9,10 @@ import * as THREE from 'three';
  * ấy. Hai ô kề nhau vì thế dùng chung đỉnh mép y hệt, không hở kẽ.
  *
  * Ô giữ phẳng (`flat`: ô dưới móng công trình, đầu cầu, ô có đường đi, lũy, đê) không có dốc: phẳng tới tận mép, để
- * nền công trình, đầu cầu không chìa ra lơ lửng trên dốc. Ô ấy giữ đỉnh mép ở mặt của mình: đỉnh mép thuộc ô giữ phẳng
- * (hay ô sông, coi như giữ phẳng ở đáy sông) lấy mặt thấp nhất trong các ô giữ phẳng chung đỉnh, không tính ô thường.
- * Ô thường thấp hơn bên cạnh vì thế dốc lên tới mép ô giữ phẳng (dốc nằm trong ô thấp, như chân nền đắp); ô giữ
- * phẳng thấp hơn hay sông bên cạnh thì ô giữ phẳng dựng vách đất đứng xuống.
+ * nền công trình, đầu cầu không chìa ra lơ lửng trên dốc. Đỉnh mép nào cũng lấy mặt thấp nhất trong các ô chung đỉnh,
+ * nên ô thường thấp hơn ô giữ phẳng bên cạnh cũng phẳng tới mép, còn ô giữ phẳng cao hơn bên cạnh (hay giáp sông) dựng
+ * vách đứng xuống: vách xuống đất là kè theo cấp Điện, vách xuống sông là kè bờ (`ke.ts`, diorama bước 2). Ô thường
+ * cao hơn ô giữ phẳng bên cạnh thì dốc xuống tới mép ô ấy như dốc tự nhiên; dốc tự nhiên có đá lộ rải rác.
  *
  * Nền chia mảnh `CHUNK` × `CHUNK` ô, mỗi mảnh một mesh: đổi vài ô (đặt đường, đắp đất) chỉ dựng lại mảnh chứa ô ấy,
  * mảnh ngoài khung nhìn không vẽ.
@@ -26,6 +26,12 @@ export const EARTH = 0.45;
 export const NEN_MARGIN = 14;
 /** Cạnh mỗi mảnh nền (ô). */
 const CHUNK = 26;
+/** Màu đá lộ trên mặt dốc tự nhiên (pha theo nhiễu `stoneNoise`). */
+const STONE = new THREE.Color(0x9c9081);
+/** Đá lộ ở chỗ nhiễu đá vượt ngưỡng này trên mặt dốc. */
+const STONE_AT = 0.68;
+/** Ảnh kè rộng 1 ô, cao chừng này ô (khớp `KE_CAO` ở `ke.ts`): mép trên ảnh là mép trên vách. */
+const KE_V = 2;
 
 /** Màu một ô: cỏ loang giữa `lo` và `hi` theo nhiễu (`grassNoise`), dốc pha đất từ `earthFoot` (chân) tới `earthTop`. */
 export interface TileColors {
@@ -81,6 +87,8 @@ function valueNoise(seed: number, cell: number): (x: number, z: number) => numbe
 
 const broad = valueNoise(911, 6);
 const fine = valueNoise(377, 1.6);
+/** Nhiễu đá lộ: đốm nhỏ rải rác trên dốc cỏ. */
+const stoneNoise = valueNoise(5113, 0.7);
 
 /** Nhiễu màu cỏ 0..1 tại điểm (px, pz) tính theo ô: loang mảng to, lấm tấm mảng nhỏ, liền qua mép ô. */
 export function grassNoise(px: number, pz: number): number {
@@ -124,13 +132,16 @@ export class NenDat {
   /** Nhiễu cỏ từng đỉnh lưới con, tính một lần. */
   private readonly noise: Float32Array;
   private readonly meshes: (THREE.Mesh | null)[];
+  /** Chất liệu: một cái cho cả nền, hay ba cái [mặt đất, kè vách đứng, kè bờ sông] (mỗi mảnh ba nhóm tam giác). */
+  private readonly mats: THREE.Material | THREE.Material[];
   private readonly tc: TileColors = { lo: new THREE.Color(), hi: new THREE.Color(), earthTop: new THREE.Color(), earthFoot: new THREE.Color() };
   private readonly sample = new Float32Array(16);
 
   constructor(
     private readonly input: NenInput,
-    private readonly material: THREE.Material,
+    material: THREE.Material | THREE.Material[],
   ) {
+    this.mats = material;
     const M = input.margin ?? NEN_MARGIN;
     this.G = input.grid;
     this.LO = -M;
@@ -234,12 +245,9 @@ export class NenDat {
     this.colDone[f] = 0;
   }
 
-  /**
-   * Độ cao chung các đỉnh lưới con trong khoảng [a0, a1] × [b0, b1]: mặt thấp nhất trong các ô giữ phẳng (kể cả sông)
-   * chứa đỉnh ấy; không ô nào giữ phẳng thì mặt thấp nhất trong các ô chứa đỉnh.
-   */
+  /** Độ cao chung các đỉnh lưới con trong khoảng [a0, a1] × [b0, b1]: mặt thấp nhất trong các ô chứa đỉnh ấy. */
   private computeH(a0: number, b0: number, a1: number, b1: number): void {
-    const { T, N, ty, H, flat, river } = this;
+    const { T, N, ty, H } = this;
     for (let b = b0; b <= b1; b++) {
       const j = Math.min(Math.floor(b / 3), T - 1);
       const j2 = b % 3 === 0 && b > 0 && b < N - 1 ? j - 1 : j;
@@ -247,13 +255,8 @@ export class NenDat {
         const i = Math.min(Math.floor(a / 3), T - 1);
         const i2 = a % 3 === 0 && a > 0 && a < N - 1 ? i - 1 : i;
         let low = Infinity;
-        let held = Infinity;
-        for (let q = 0; q < 4; q++) {
-          const t = (q < 2 ? j : j2) * T + (q % 2 ? i2 : i);
-          low = Math.min(low, ty[t]);
-          if (flat[t] || river[t]) held = Math.min(held, ty[t]);
-        }
-        H[b * N + a] = held < Infinity ? held : low;
+        for (let q = 0; q < 4; q++) low = Math.min(low, ty[(q < 2 ? j : j2) * T + (q % 2 ? i2 : i)]);
+        H[b * N + a] = low;
       }
     }
   }
@@ -364,8 +367,10 @@ export class NenDat {
     }
     const fx0 = (c % this.chunks) * CHUNK;
     const fz0 = Math.floor(c / this.chunks) * CHUNK;
-    // Tam giác: chín số tọa độ (theo ô), loại (0 mặt đất, 1 vách đứng), ô khung và đỉnh lưới con (vách: −1).
+    // Tam giác: chín số tọa độ (theo ô), loại (0 mặt đất, 1 vách đứng xuống đất, 2 vách đứng xuống sông), ô khung,
+    // mặt ô của vách (để tính tọa độ ảnh kè từ mép trên) và đỉnh lưới con (vách: −1).
     const pos: number[] = [];
+    const wtop: number[] = [];
     const kind: number[] = [];
     const tile: number[] = [];
     const lat: number[] = [];
@@ -381,6 +386,7 @@ export class NenDat {
       pos.push(x0, y0, z0, x1, y1, z1, x2, y2, z2);
       kind.push(k);
       tile.push(ct);
+      wtop.push(this.ty[ct]);
     };
     const surf = (i0: number, j0: number, i1: number, j1: number, i2: number, j2: number) => {
       tri(0, cx + OFF[i0], h[j0 * 4 + i0], cz + OFF[j0], cx + OFF[i1], h[j1 * 4 + i1], cz + OFF[j1], cx + OFF[i2], h[j2 * 4 + i2], cz + OFF[j2]);
@@ -438,14 +444,15 @@ export class NenDat {
             const x1 = cx + OFF[i1];
             const z1 = cz + OFF[j1];
             // Đầu nào vách không cao hơn ô bên cạnh thì vách ở đoạn ấy chỉ là một tam giác.
+            const wk = wet ? 2 : 1;
             if (top0 - bot0 > 1e-6) {
-              if (outward) tri(1, x0, top0, z0, x0, bot0, z0, x1, bot1, z1);
-              else tri(1, x0, top0, z0, x1, bot1, z1, x0, bot0, z0);
+              if (outward) tri(wk, x0, top0, z0, x0, bot0, z0, x1, bot1, z1);
+              else tri(wk, x0, top0, z0, x1, bot1, z1, x0, bot0, z0);
               lat.push(-1, -1, -1);
             }
             if (top1 - bot1 > 1e-6) {
-              if (outward) tri(1, x0, top0, z0, x1, bot1, z1, x1, top1, z1);
-              else tri(1, x0, top0, z0, x1, top1, z1, x1, bot1, z1);
+              if (outward) tri(wk, x0, top0, z0, x1, bot1, z1, x1, top1, z1);
+              else tri(wk, x0, top0, z0, x1, top1, z1, x1, bot1, z1);
               lat.push(-1, -1, -1);
             }
           }
@@ -458,11 +465,21 @@ export class NenDat {
     const position = new Float32Array(count * 9);
     const normal = new Float32Array(count * 9);
     const color = new Float32Array(count * 9);
+    const uv = new Float32Array(count * 6);
+    // Mặt đất trước, rồi vách xuống đất, vách xuống sông: mỗi loại một nhóm tam giác liền nhau (một chất liệu).
+    const many = Array.isArray(this.mats);
+    const slot = new Int32Array(count);
+    const groups = [0, 0, 0];
+    for (let f = 0; f < count; f++) groups[many ? kind[f] : 0]++;
+    const start = [0, groups[0], groups[0] + groups[1]];
+    const next = start.slice();
+    for (let f = 0; f < count; f++) slot[f] = next[many ? kind[f] : 0]++;
     const smooth = new Map<number, THREE.Vector3>();
     const col = this.col;
     const origin = input.origin;
     for (let f = 0; f < count; f++) {
       const o = f * 9;
+      const q = slot[f] * 9;
       // Pháp tuyến mặt: (v2 − v1) × (v0 − v1), như three.js tính mặt trước.
       const ux = pos[o] - pos[o + 3];
       const uy = pos[o + 1] - pos[o + 4];
@@ -474,16 +491,22 @@ export class NenDat {
       const cyn = vz * ux - vx * uz;
       const czn = vx * uy - vy * ux;
       const len = Math.hypot(cxn, cyn, czn) || 1;
-      const wall = kind[f] === 1;
+      const wall = kind[f] !== 0;
       const sloped = wall || cyn / len < 0.999;
       const tcO = this.colors(tile[f]);
       const lo = Math.min(pos[o + 1], pos[o + 4], pos[o + 7]);
       const hi = Math.max(pos[o + 1], pos[o + 4], pos[o + 7]);
       for (let k = 0; k < 3; k++) {
-        const v = o + k * 3;
-        const px = pos[v];
-        const py = pos[v + 1];
-        const pz = pos[v + 2];
+        const src = o + k * 3;
+        const v = q + k * 3;
+        const px = pos[src];
+        const py = pos[src + 1];
+        const pz = pos[src + 2];
+        if (wall) {
+          // Ảnh kè: u chạy dọc mép (mép vách nằm trên một trục nên x + z là đủ), v từ mép trên ô xuống.
+          uv[slot[f] * 6 + k * 2] = px + pz;
+          uv[slot[f] * 6 + k * 2 + 1] = 1 - (wtop[f] - py) / KE_V;
+        }
         position[v] = px + origin;
         position[v + 1] = py;
         position[v + 2] = pz + origin;
@@ -511,7 +534,11 @@ export class NenDat {
           g = col[tcO + 1] + (col[tcO + 4] - col[tcO + 1]) * t;
           bl = col[tcO + 2] + (col[tcO + 5] - col[tcO + 2]) * t;
         }
-        if (sloped) {
+        if (wall && many) {
+          // Kè có ảnh riêng: màu đỉnh chỉ tối dần xuống chân vách (nhân với ảnh).
+          const shade = 0.72 + 0.28 * (hi > lo ? (py - lo) / (hi - lo) : 1);
+          r = g = bl = shade;
+        } else if (sloped) {
           // Mép trên dốc sáng hơn chân dốc; dốc vừa lẫn cỏ, vách đứng của ô giữ phẳng toàn đất.
           const u = hi > lo ? (py - lo) / (hi - lo) : 1;
           const er = col[tcO + 9] + (col[tcO + 6] - col[tcO + 9]) * u;
@@ -521,6 +548,16 @@ export class NenDat {
           r += (er - r) * mix;
           g += (eg - g) * mix;
           bl += (eb - bl) * mix;
+          // Đá lộ rải rác trên dốc tự nhiên.
+          if (!wall) {
+            const sn = stoneNoise(px, pz);
+            if (sn > STONE_AT) {
+              const a = Math.min(1, (sn - STONE_AT) * 9) * Math.min(1, (1 - ny) * 3);
+              r += (STONE.r - r) * a;
+              g += (STONE.g - g) * a;
+              bl += (STONE.b - bl) * a;
+            }
+          }
         }
         color[v] = r;
         color[v + 1] = g;
@@ -531,9 +568,13 @@ export class NenDat {
     geometry.setAttribute('position', new THREE.BufferAttribute(position, 3));
     geometry.setAttribute('normal', new THREE.BufferAttribute(normal, 3));
     geometry.setAttribute('color', new THREE.BufferAttribute(color, 3));
+    if (many) {
+      geometry.setAttribute('uv', new THREE.BufferAttribute(uv, 2));
+      for (let k = 0; k < 3; k++) if (groups[k]) geometry.addGroup(start[k] * 3, groups[k] * 3, k);
+    }
     geometry.computeBoundingSphere();
     geometry.computeBoundingBox();
-    const mesh = new THREE.Mesh(geometry, this.material);
+    const mesh = new THREE.Mesh(geometry, this.mats);
     mesh.receiveShadow = true;
     mesh.castShadow = false;
     this.meshes[c] = mesh;

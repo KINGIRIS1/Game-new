@@ -208,24 +208,24 @@ describe('nền đất bờ vát', () => {
       }
     });
 
-    it('ô thường thấp hơn bên cạnh dốc lên tới mép ô giữ phẳng, giữa ô vẫn đúng mặt ô', () => {
-      // Ô (3, 1) bậc 1 dốc lên mép nam giáp ô giữ phẳng bậc 2 (3, 2): nửa dải dốc cao nửa bậc.
+    it('ô thường thấp hơn ô giữ phẳng bên cạnh thì phẳng trọn tới mép (ô giữ phẳng dựng vách kè xuống)', () => {
+      // Ô (3, 1) bậc 1 giáp ô giữ phẳng bậc 2 (3, 2) ở mép nam: không dốc lên, phẳng tới mép.
       expect(fn.heightAt(3.5, 1.5)).toBeCloseTo(LEVEL, 5);
-      expect(fn.heightAt(3.5, 1 + (1 - RAMP / 2))).toBeCloseTo(1.5 * LEVEL, 5);
-      expect(fn.heightAt(3.5, 1.9999)).toBeCloseTo(2 * LEVEL, 3);
+      expect(fn.heightAt(3.5, 1 + (1 - RAMP / 2))).toBeCloseTo(LEVEL, 5);
+      expect(fn.heightAt(3.5, 1.9999)).toBeCloseTo(LEVEL, 3);
       // Không giữ phẳng thì dốc nằm trong ô cao (3, 2), ô (3, 1) phẳng trọn ô.
       expect(nen.heightAt(3.5, 1 + (1 - RAMP / 2))).toBeCloseTo(LEVEL, 5);
       // Ô thường cùng bậc (4, 2) giáp ô giữ phẳng (3, 2): mép chung phẳng ngang.
       expect(fn.heightAt(4.01, 2.5)).toBeCloseTo(2 * LEVEL, 5);
     });
 
-    it('mép cao hơn ô giữ phẳng bên cạnh, hay sông, thì có vách đứng màu đất quay ra ngoài, mặt đất vẫn kín', () => {
+    it('mép cao hơn ô bên cạnh, hay sông, thì có vách đứng màu đất quay ra ngoài, mặt đất vẫn kín', () => {
       const walls = ft.filter((t) => Math.abs(t.n.y) < 1e-4);
       // Vách phía tây ô (3, 2) xuống ô giữ phẳng bậc 1 (2, 2), vách phía nam ô (2, 6) xuống đáy sông.
       expect(walls.some((t) => t.p.every((v) => Math.abs(v.x - 3) < 1e-6) && t.n.x < -0.99)).toBe(true);
       expect(walls.some((t) => t.p.every((v) => Math.abs(v.z - 7) < 1e-6) && t.n.z > 0.99)).toBe(true);
-      // Mép bắc ô (3, 2) giáp ô thường (3, 1) dốc lên: không có vách giữa hai đỉnh mép phía đông.
-      expect(walls.some((t) => t.p.every((v) => Math.abs(v.z - 2) < 1e-6 && v.x > 3 + RAMP - 1e-6))).toBe(false);
+      // Mép bắc ô (3, 2) giáp ô thường thấp hơn (3, 1): cũng dựng vách quay ra bắc.
+      expect(walls.some((t) => t.p.every((v) => Math.abs(v.z - 2) < 1e-6 && v.x > 3 + RAMP - 1e-6) && t.n.z < -0.99)).toBe(true);
       // Mặt đất kín, trừ bìa ngoài cùng của nền và mép sông (chân dốc, chân vách xuống đáy sông).
       const inside = (q: THREE.Vector3) => q.x > -2 + 1e-4 && q.x < G + 2 - 1e-4 && q.z > -2 + 1e-4 && q.z < 7 - 1e-4;
       expect(openPoints(ft, inside)).toEqual([]);
