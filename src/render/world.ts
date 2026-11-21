@@ -597,6 +597,10 @@ export class World {
   /** Đất đã mở và ô giữ phẳng lúc dựng đất lần cuối (nền đọc lúc dựng lại). */
   private landMask: Uint8Array = new Uint8Array(GRID * GRID);
   private landFlat = new Set<number>();
+  /** Ô đường, đồ trang trí một ô: giữ phẳng mềm, nằm trong dốc thoải quanh móng cao thì dốc theo (`NenInput.soft`). */
+  private landSoft = new Set<number>();
+  /** Tăng mỗi lần nền dựng lại (đồ trang trí đặt theo mặt dốc phải đặt lại). */
+  private landVer = 0;
   /** Dấu từng ô lúc dựng đất lần cuối (bậc, đất mở, giữ phẳng): so để biết ô nào đổi. */
   private landSig?: Int32Array;
   /** Các ô giữ phẳng (có đồ một ô) lúc dựng đất lần cuối: đổi thì dựng lại đất. */
@@ -1580,7 +1584,7 @@ export class World {
    */
   private syncDecor(state: GameState): void {
     const small = state.buildings.filter((b) => isBatchedDecor(b.type));
-    const key = small.map((b) => `${b.id}:${b.type}:${b.x}:${b.z}:${this.heights[b.z * GRID + b.x]}`).join(',');
+    const key = `${this.landVer}|` + small.map((b) => `${b.id}:${b.type}:${b.x}:${b.z}:${this.heights[b.z * GRID + b.x]}`).join(',');
     if (key === this.decorKey) return;
     this.decorKey = key;
     if (this.decor) {
@@ -1591,6 +1595,16 @@ export class World {
     for (const b of small) if (isRoad(b.type)) roadAt.set(b.z * GRID + b.x, b.type);
     const spots: DecorSpot[] = small.map((b) => {
       const spot: DecorSpot = { type: b.type, x: wx(b.x) + 0.5, y: this.groundY(b.x, b.z), z: wz(b.z) + 0.5, seed: b.x * 92821 + b.z * 68917 };
+      // Ô nằm trong dốc thoải: đặt theo mặt dốc, đường nghiêng theo dốc.
+      const e = 0.4;
+      const h00 = this.surfaceY(b.x + 0.5 - e, b.z + 0.5 - e);
+      const h10 = this.surfaceY(b.x + 0.5 + e, b.z + 0.5 - e);
+      const h01 = this.surfaceY(b.x + 0.5 - e, b.z + 0.5 + e);
+      const h11 = this.surfaceY(b.x + 0.5 + e, b.z + 0.5 + e);
+      if (Math.max(h00, h10, h01, h11) - Math.min(h00, h10, h01, h11) > 1e-3) {
+        spot.y = (h00 + h10 + h01 + h11) / 4;
+        if (isRoad(b.type)) spot.n = new THREE.Vector3(-((h10 + h11 - h00 - h01) / (4 * e)), 1, -((h01 + h11 - h00 - h10) / (4 * e))).normalize();
+      }
       if (isRoad(b.type)) {
         const same = (dx: number, dz: number) => roadAt.get((b.z + dz) * GRID + b.x + dx) === b.type;
         spot.open = [!same(0, 1), !same(0, -1), !same(1, 0), !same(-1, 0)];
@@ -2375,8 +2389,11 @@ export class World {
   private rebuildLand(state: GameState): void {
     this.landMask = openMask(state);
     this.landFlat = new Set(flatTiles(state));
+    this.landSoft = new Set(state.buildings.filter((b) => isBatchedDecor(b.type)).map((b) => b.z * GRID + b.x));
     const sig = new Int32Array(GRID * GRID);
-    for (let i = 0; i < sig.length; i++) sig[i] = ((this.heights[i] ?? 0) + 1) | (this.landMask[i] << 4) | ((this.landFlat.has(i) ? 1 : 0) << 5);
+    for (let i = 0; i < sig.length; i++)
+      sig[i] = ((this.heights[i] ?? 0) + 1) | (this.landMask[i] << 4) | ((this.landFlat.has(i) ? 1 : 0) << 5) | ((this.landSoft.has(i) ? 1 : 0) << 6);
+    this.landVer++;
     if (!this.land) {
       this.land = this.makeLand();
       this.scene.add(this.land.root);
@@ -2406,6 +2423,10 @@ export class World {
         riverY: WATER_Y - 0.14,
         // Ô giữ phẳng (móng, đường, đầu cầu), và mọi ô đất giáp sông: bờ sông dựng vách kè đá (diorama bước 4).
         flat: (x, z) => (inGrid(x, z) && this.landFlat.has(z * GRID + x)) || bankTile(x, z),
+        // Đường, đồ trang trí một ô nằm trong dốc thoải thì dốc theo; móng đắp cao có đất quanh dốc thoải xuống mỗi ô
+        // một bậc thay cho vách kè (chủ dự án yêu cầu: có lối lên xuống Điện đắp cao).
+        soft: (x, z) => inGrid(x, z) && this.landSoft.has(z * GRID + x) && !bankTile(x, z),
+        doc: LEVEL_H,
         colors: (x, z, out) => {
           const open = inGrid(x, z) && this.landMask[z * GRID + x] === 1;
           const palette = open ? C.grass : C.grassLocked;

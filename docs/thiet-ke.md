@@ -4119,6 +4119,13 @@ Chủ dự án gửi ảnh mẫu kiểu sa bàn (thành trên gò đá nhiều t
    - Bậc riêng (`BAC_NGHIA_LINH`, `bacNghiaLinh`): Điện bậc 4 (cao nhất được, `MAX_HEIGHT`), công trình cách móng Điện tới 6 ô bậc 3, tới 14 ô bậc 2, xa hơn bậc 1; ruộng giữ nguyên đất (bậc thấp nhất, sát sông, mở cống thì được phù sa). Không công trình nào cao bằng Điện.
    - Nút "Đắp bậc thang" bật tắt như bốn mẫu kia; tắt thì chỉ dời, xếp như trên, không đắp.
    - Test (`sapxep.test.ts`): ở Điện 6, 8, 10 Điện đúng bậc 4 và cao nhất, công trình đúng bậc theo khoảng cách, ruộng không đắp, có ruộng cách sông không quá một dải bến và đê, giá đắp khớp, áp lần nữa không còn gì đắp; các test chung của mẫu (mọi công trình có lối gánh, đường thẳng, cổng) chạy cả mẫu này.
+6c. **Dốc thoải thay vách kè quanh móng cao** (chủ dự án yêu cầu sau mẫu Nghĩa Lĩnh: "Điện chính cao không có chỗ lên xuống; tạo dốc thoải như bờ biển đối với các vùng có độ cao khác nhau thay vì bậc thang"; đã làm, đổi quyết định ở bước 2 "móng cao hơn đất quanh thì dựng vách kè"):
+   - Chỉ đổi hình vẽ, luật không đổi (bậc đất, lũ vẫn theo `state.heights`).
+   - Quanh mỗi móng (ô dưới công trình, kể cả lũy, đê, thành), đất thấp hơn được vẽ đắp lên thành dốc thoải: mỗi ô ra xa móng hạ một bậc (`NenInput.doc` = `LEVEL_H`, ô chéo hạ √2 bậc), tới khi gặp mặt đất thật (`computeDoc` ở `nenDat.ts`). Đỉnh mép giáp móng lấy mặt móng (đất dốc lên tới mép móng, không vách); đỉnh giữa các ô trong dốc lấy trung bình mặt dốc; phần giữa ô trong dốc nội suy Coons từ bốn mép cho mặt dốc liền, không thành bậc.
+   - Đường đi, đồ trang trí một ô là ô giữ phẳng mềm (`NenInput.soft`): nằm trong dốc thì dốc theo, tấm đường nghiêng theo mặt dốc (`DecorSpot.n`, `Placement.n`); ngoài dốc thì giữ phẳng như cũ.
+   - Vách kè chỉ còn ở chỗ hai móng sát nhau khác độ cao (không có đất giữa để dốc) và ở bờ sông (`bankTile`).
+   - Test (`nenDat.test.ts`): móng cao không có vách xuống đất, đất giáp mép lên tới mặt móng và thấp dần ra xa, đường trong dốc dốc theo, đường xa móng giữ phẳng, mặt đất kín, `heightAt` khớp hình, dựng lại từng phần y như dựng mới.
+
 
 6. **Cầu** (đã làm): làm lại ba cấp cho giống ảnh: cầu gỗ dầm to, lan can, trụ đá; cấp 3 thêm mái che đầu cầu. Cả ba cấp là cầu gỗ vồng trên hai dầm to (`makeBridge` ở `render/benKia.ts`): cấp 1 ba vì cọc gỗ, lan can tre; cấp 2 hai trụ đá xếp tầng, lan can gỗ hai thanh; cấp 3 trụ đá có mũi rẽ nước, lan can đỏ núm đồng, mái ngói ở hai đầu cầu. Cầu phao tre cũ chỉ còn ở bãi chiến đánh đồn (`makeCauPhao`, bãi chiến giữ nguyên). Mặt cầu cho người đi (`bridgeDeckY`) cấp nào cũng theo vồng cầu.
 

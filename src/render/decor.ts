@@ -46,6 +46,8 @@ export interface DecorSpot {
   seed: number;
   /** Ô đường: mép +z, −z, +x, −x không giáp ô đường cùng loại thì có viền. */
   open?: [boolean, boolean, boolean, boolean];
+  /** Pháp tuyến mặt đất khi ô nằm trên dốc thoải: đường nghiêng theo. */
+  n?: THREE.Vector3;
 }
 
 /** Đường và đồ trang trí một ô vẽ theo lô; cây đa, ao làng, sân trống đồng mỗi cái một mô hình. */
@@ -318,7 +320,7 @@ export function buildDecor(spots: DecorSpot[]): THREE.Object3D {
     const k = road || s.type === 'gieng' || s.type === 'co' ? 1 : 0.88 + rand() * 0.2;
     const at = (list: Placement[], map: Map<string, number>, key: string, r = ry, sc = k) => {
       const i = map.get(key);
-      if (i !== undefined) list.push({ t: i, x: s.x, y: s.y, z: s.z, s: sc, ry: r });
+      if (i !== undefined) list.push({ t: i, x: s.x, y: s.y, z: s.z, s: sc, ry: r, n: s.n });
     };
     at(flat, t.flatOf, `${s.type}:${v}`);
     at(body, t.bodyOf, `${s.type}:${v}`);

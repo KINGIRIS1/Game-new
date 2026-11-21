@@ -177,8 +177,11 @@ export interface Placement {
   z: number;
   s: number;
   ry: number;
+  /** Nghiêng theo pháp tuyến này (đồ nằm trên dốc), sau khi xoay quanh trục đứng. */
+  n?: THREE.Vector3;
 }
 
+const tmpTilt = new THREE.Quaternion();
 const tmpMatrix = new THREE.Matrix4();
 const tmpQuat = new THREE.Quaternion();
 const tmpAt = new THREE.Vector3();
@@ -188,6 +191,7 @@ const UP = new THREE.Vector3(0, 1, 0);
 /** Ma trận đặt một bản sao: dời tới chỗ, xoay quanh trục đứng, phóng đều. */
 function placementMatrix(p: Placement): THREE.Matrix4 {
   tmpQuat.setFromAxisAngle(UP, p.ry);
+  if (p.n) tmpQuat.premultiply(tmpTilt.setFromUnitVectors(UP, p.n));
   return tmpMatrix.compose(tmpAt.set(p.x, p.y ?? 0, p.z), tmpQuat, tmpSize.setScalar(p.s));
 }
 
