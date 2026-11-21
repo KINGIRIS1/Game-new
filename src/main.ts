@@ -319,7 +319,17 @@ async function start(): Promise<void> {
   let saveWarned = false;
 
   const hud = new Hud(hudRoot, handle, () => state);
-  const chiTay = new ChiTay(document.body, () => state);
+  const chiTay = new ChiTay(
+    document.body,
+    () => state,
+    (type) => {
+      const b = state.buildings.find((x) => x.type === type);
+      if (!b) return false;
+      if (mode.kind !== 'view') exitMode();
+      select(b.id);
+      return true;
+    },
+  );
   // Hình tướng mặc đồ, ảnh bán thân cho bảng tướng: vẽ lúc cần bằng renderer của cảnh, xong thì dựng lại bảng.
   const hinhTuong = new HinhTuong(world.renderer);
   hinhTuong.onReady = () => hud.refreshTuong(state);
@@ -371,7 +381,8 @@ async function start(): Promise<void> {
     const k = nextDaoHint(state);
     if (!k) return;
     markDaoHinted(state, k);
-    hud.toast(vi.bien.hint[k], false, 8000);
+    // Bật chỉ tay thì lời mở đảo đã có ở hướng dẫn Đóng đảo (`huongDan.ts`).
+    if (k !== 'mo' || !huongDanBat()) hud.toast(vi.bien.hint[k], false, 8000);
   };
 
   /** Trận ngoài bãi đầu tiên có vật cản: thẻ màn, thẻ đồn thôi kèm lời Lạc hầu nhắc về vật cản. */
@@ -417,7 +428,8 @@ async function start(): Promise<void> {
     const moi = thuCo(state).find((k) => !state.hinted.includes(`thanThu_${k}`));
     if (!moi) return;
     state.hinted = [...state.hinted, `thanThu_${moi}`];
-    hud.toast(moi === 'thuLac' ? vi.thanThu.hint : vi.thanThu.hintVe[moi], false, 9000);
+    // Chim Lạc là thú đầu tiên: bật chỉ tay thì đã có hướng dẫn Thần thú (`huongDan.ts`).
+    if (moi !== 'thuLac' || !huongDanBat()) hud.toast(moi === 'thuLac' ? vi.thanThu.hint : vi.thanThu.hintVe[moi], false, 9000);
   };
 
   /** Lần đầu có công trình làm ra chưa đủ vì xa kho: Lạc hầu gợi ý một lần việc gánh hàng, trải đường. */

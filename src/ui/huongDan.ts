@@ -1,17 +1,23 @@
 // Hướng dẫn chỉ tay (docs/thiet-ke.md mục Lạc hầu và bản lưu: hướng dẫn chỉ tay): làm tối màn hình, khoanh sáng nút
 // cần bấm, Lạc hầu nói một hai câu; bấm đúng nút thì sang bước sau. Mục nào tới lúc do luật lo (`game/huongDan.ts`).
 
+import type { BuildingType } from '../game/defs';
 import type { GameState } from '../game/game';
 import type { HuongDanId } from '../game/huongDan';
 import { vi } from '../text/vi';
 
 /**
- * Một bước. `cho`: bộ chọn nút cần bấm (theo `data-act` sẵn có). `xem`: chỉ khoanh cho thấy, bấm Tiếp mới sang bước
- * sau (khoanh một vùng, hay nút bấm vào sẽ đổi điều người chơi đã chọn).
+ * Một bước. `cho`: bộ chọn nút cần bấm (theo `data-act` sẵn có); `null` là bước chỉ có lời, khung nói nằm giữa màn
+ * hình, bấm Tiếp. `xem`: chỉ khoanh cho thấy, bấm Tiếp mới sang bước sau (khoanh một vùng, hay nút bấm vào sẽ tiêu
+ * của, đổi điều người chơi đã chọn). `chon`: trước bước, tự mở bảng công trình loại ấy (công trình trên cảnh 3D không
+ * khoanh được); kinh đô chưa có loại ấy thì bỏ qua bước.
  */
 export interface Buoc {
-  cho: string | ((s: GameState) => string);
+  cho: string | null | ((s: GameState) => string);
   xem?: boolean;
+  chon?: BuildingType;
+  /** Nút có thể không có (vd. bản game chưa nối máy chủ thì không có thẻ Đấu thật, Đánh thử): không thấy thì bỏ qua bước. */
+  coThe?: boolean;
 }
 
 export const BUOC: Record<HuongDanId, Buoc[]> = {
@@ -28,10 +34,37 @@ export const BUOC: Record<HuongDanId, Buoc[]> = {
     { cho: '.da-heroes', xem: true },
     { cho: '[data-act=daVao]' },
   ],
+  thuThach: [
+    { cho: '[data-act=openCampaign]' },
+    { cho: '[data-act=pickStage][data-id="1"]' },
+    { cho: '[data-act=prepareChallenge]', xem: true },
+    { cho: '[data-act=openHuan]' },
+  ],
+  thanThu: [
+    { cho: '[data-act=openCampaign]' },
+    { cho: '[data-act=openThanThu]' },
+    { cho: '[data-act=thuAn]', xem: true },
+    { cho: '[data-act=thuChon]', xem: true },
+  ],
+  dauThanh: [
+    { cho: '[data-act=openCampaign]' },
+    { cho: '[data-act=openDau]' },
+    { cho: '[data-act=dauMode][data-mode=thu]', coThe: true },
+    { cho: null },
+  ],
+  mauKinhDo: [{ cho: '[data-act=openBuild]' }, { cho: '[data-act=buildTab][data-tab=mau]' }, { cho: '[data-act=applyMau]', xem: true }],
+  benKia: [{ cho: '[data-act=openBuild]' }, { cho: null }, { cho: null }],
+  congDe: [{ cho: '[data-act=openBuild]' }, { cho: null }],
+  tet: [{ cho: '[data-act=openTet]' }, { cho: '[data-act=offerBanh]', xem: true }],
+  binhKhi: [{ cho: '[data-act=forgeArms]', xem: true, chon: 'loRen' }],
+  // Chưa có thuyền thì bảng bến có nút đóng thuyền, có rồi thì nút mở quần đảo: khoanh nút nào đang có.
+  dongDao: [{ cho: '[data-act=buildThuyen], [data-act=openQuanDao]', xem: true, chon: 'benKhoi' }, { cho: null }],
 };
 
 /** Chờ nút của bước hiện ra tối đa chừng này (bảng trượt mở có hoạt ảnh); quá thì thôi, không kẹt người chơi. */
 const CHO_MS = 4000;
+/** Bước `coThe`: chờ chừng này không thấy nút thì sang bước sau. */
+const CHO_CO_THE_MS = 1200;
 
 const HD_KEY = 'thoi-dai-van-lang/huong-dan';
 
@@ -70,10 +103,17 @@ export class ChiTay {
   private nut: HTMLElement | null = null;
   private tu = 0;
   private raf = 0;
+  /** Đang có hộp thoại (vắng mặt, kết quả trận, truyện) đè lên: tạm ẩn, cho chạm qua, đóng hộp thoại thì chỉ tiếp. */
+  private nhuong = false;
 
+  /**
+   * `chon`: mở bảng công trình đầu tiên loại `type`, trả về có mở được không (main.ts lo, vì phải đóng chế độ đang
+   * dở và chọn trên cảnh).
+   */
   constructor(
     root: HTMLElement,
     private getState: () => GameState,
+    private chon: (type: BuildingType) => boolean,
   ) {
     this.el = document.createElement('div');
     this.el.className = 'chi-tay';
@@ -110,6 +150,7 @@ export class ChiTay {
 
   stop(): void {
     this.id = null;
+    this.nhuong = false;
     this.nut = null;
     this.el.hidden = true;
     cancelAnimationFrame(this.raf);
@@ -120,6 +161,20 @@ export class ChiTay {
     this.tu = performance.now();
     this.lo.hidden = true;
     this.noi.hidden = true;
+    this.noi.classList.remove('giua');
+    const b = BUOC[this.id!][this.buoc];
+    // Bảng công trình mở chậm một nhịp sau khi bấm bước trước: mở ngay, không có công trình thì sang bước sau.
+    if (b.chon && !this.chon(b.chon)) return this.next();
+    if (b.cho === null) this.veLoi();
+  }
+
+  /** Bước chỉ có lời: khung nói giữa màn hình, không khoanh nút nào. */
+  private veLoi(): void {
+    this.veNoi(null);
+    this.noi.classList.add('giua');
+    this.noi.style.top = '';
+    this.noi.style.bottom = '';
+    this.noi.hidden = false;
   }
 
   private next(): void {
@@ -129,13 +184,13 @@ export class ChiTay {
     this.batDau();
   }
 
-  private sel(): string {
+  private sel(): string | null {
     const b = BUOC[this.id!][this.buoc];
     return typeof b.cho === 'function' ? b.cho(this.getState()) : b.cho;
   }
 
   private chan = (e: Event): void => {
-    if (!this.id) return;
+    if (!this.id || this.nhuong) return;
     const t = e.target as Node | null;
     if (t && this.noi.contains(t)) return;
     const b = BUOC[this.id][this.buoc];
@@ -153,18 +208,32 @@ export class ChiTay {
   private loop = (): void => {
     if (!this.id) return;
     this.raf = requestAnimationFrame(this.loop);
-    const nut = timNut(this.sel());
+    this.nhuong = !!document.querySelector('.modal-back');
+    this.el.hidden = this.nhuong;
+    if (this.nhuong) {
+      this.tu = performance.now();
+      return;
+    }
+    const sel = this.sel();
+    if (sel === null) return;
+    const nut = timNut(sel);
     if (!nut) {
       this.nut = null;
       this.lo.hidden = true;
       this.noi.hidden = true;
-      if (performance.now() - this.tu > CHO_MS) this.stop();
+      const coThe = BUOC[this.id][this.buoc].coThe;
+      if (performance.now() - this.tu > (coThe ? CHO_CO_THE_MS : CHO_MS)) {
+        if (coThe) this.next();
+        else this.stop();
+      }
       return;
     }
     this.tu = performance.now();
     if (nut !== this.nut) {
       this.nut = nut;
       this.veNoi(nut);
+      // Nút nằm ngoài chỗ đang cuộn của bảng thì cuộn tới.
+      nut.scrollIntoView({ block: 'nearest' });
     }
     const r = nut.getBoundingClientRect();
     const pad = 6;
@@ -183,13 +252,13 @@ export class ChiTay {
     this.noi.style.bottom = duoi ? '' : `${Math.min(vh - r.top + 14, vh - this.noi.offsetHeight - 8)}px`;
   };
 
-  private veNoi(nut: HTMLElement): void {
+  private veNoi(nut: HTMLElement | null): void {
     const id = this.id!;
     const T = vi.huongDan;
     const n = BUOC[id].length;
     const b = BUOC[id][this.buoc];
     // Nút đang khóa thì không bấm được: cho bấm Tiếp thay.
-    const tiep = b.xem || (nut as HTMLButtonElement).disabled;
+    const tiep = !nut || b.xem || (nut as HTMLButtonElement).disabled;
     this.noi.innerHTML = `<p><b>📜 ${T.lacHau}</b> ${T.buoc[id][this.buoc]}</p>
       <div class="chi-foot"><small>${T.soBuoc(this.buoc + 1, n)}</small>
         <button class="btn small ghost" data-chi="bo">${T.boQua}</button>

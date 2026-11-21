@@ -1822,7 +1822,11 @@ Móng 1×1, 3 cấp, cần Điện 5, có từ chương 3 (cùng thành Cổ Loa
   - Truyện đi trước; không chỉ khi đang đánh, có hộp thoại, đang đặt công trình. Cùng mở một lúc thì chỉ lần lượt theo thứ tự `HUONG_DAN`.
   - Bản lưu có trước khi có hướng dẫn: lần xét đầu (khóa `hd:init`) đánh dấu im lặng mọi mục đã mở sẵn, khỏi dội nhiều mục một lúc.
   - Sổ hướng dẫn trong ô Lạc hầu: các mục đã mở, chạm để xem lại. Cài đặt có nút bật tắt Hướng dẫn chỉ tay, lưu từng máy; tắt thì Dã ngoại lại báo dòng như cũ.
-  - Đợt 1 (PR 1): Phó bản (có doanh trại), Trang bị tướng, Dã ngoại. Đợt 2: thử thách và huân công, rèn binh khí, Hội Tết, thần thú, Đấu thành, bên kia sông, cống đê, mẫu kinh đô, đóng đảo; bỏ các dòng báo trùng.
+  - Đợt 1: Phó bản (có doanh trại), Trang bị tướng, Dã ngoại.
+  - Đợt 2 (đã làm): Thử thách (thắng màn 1), Thần thú (thú đầu tiên về), Đấu thành (hết chương 1: chip Đấu thành vốn luôn hiện, nên chọn mốc người chơi đã quen đánh trận), Mẫu kinh đô (Điện 5), Bên kia sông (Điện 4), Cống đê (chương 2), Hội Tết (khi Tết mở), Rèn binh khí (lò rèn cấp 6), Đóng đảo (bến thuyền khơi ra được quần đảo). Thứ tự chỉ theo nhịp chơi ở `HUONG_DAN`.
+  - Ba kiểu bước thêm ở đợt 2: tự mở bảng công trình (`chon`, vì công trình trên cảnh 3D không khoanh được; kinh đô chưa có thì bỏ bước), bước chỉ có lời (khung nói giữa màn hình, bấm Tiếp), bước có thể không có nút (`coThe`, vd. bản game chưa nối máy chủ thì không có thẻ Đánh thử: bỏ qua sau 1,2 giây).
+  - Hộp thoại (vắng mặt, kết quả trận, truyện) bật lên giữa lúc chỉ thì lớp chỉ tay tạm ẩn, cho chạm qua; đóng hộp thoại thì chỉ tiếp.
+  - Bật chỉ tay thì bỏ dòng báo trùng: Dã ngoại mở, chim Lạc về, đảo mở (`dao:mo`). Tắt thì các dòng ấy hiện như cũ.
 - **Bản lưu phiên bản 16** (đã làm): bản lưu cũ có 0 gỗ, chưa gợi ý gì; trận đang dở hay vừa xong chưa bị cướp gỗ. Chương 4 phần 3 và phần 4 gộp trước, lấy phiên bản 14, 15, nên gỗ lấy 16.
 
 ### Thứ tự làm

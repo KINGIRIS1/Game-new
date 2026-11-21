@@ -10,6 +10,8 @@ import { vi } from '../text/vi';
 import { BUOC } from '../ui/huongDan';
 import { setDien } from './testmap';
 import { findSpot } from './game';
+import { BUILDINGS } from './defs';
+import { playChapters } from './moPhong';
 
 function coTrai() {
   const s = createInitialState(0);
@@ -68,7 +70,9 @@ describe('hướng dẫn chỉ tay', () => {
       expect(vi.huongDan.ten[id], id).toBeTruthy();
       expect(vi.huongDan.buoc[id], id).toHaveLength(BUOC[id].length);
       for (const b of BUOC[id]) {
+        if (b.chon) expect(BUILDINGS[b.chon], `${id}: ${b.chon}`).toBeTruthy();
         const sel = typeof b.cho === 'function' ? b.cho(s) : b.cho;
+        if (sel === null) continue;
         for (const m of sel.matchAll(/data-act=(\w+)/g)) {
           // Nút dựng thẳng (`data-act="…"`), qua hàm dựng thẻ dock (`act: '…'`) hay chọn theo điều kiện (`'…'`).
           const co = ui.includes(`data-act="${m[1]}"`) || ui.includes(`'${m[1]}'`);
@@ -78,4 +82,25 @@ describe('hướng dẫn chỉ tay', () => {
       }
     }
   });
+
+  it('người chơi mô phỏng chơi tới Điện 7: các mục kinh đô lần lượt tới lúc, mỗi lần một mục', () => {
+    const s = createInitialState(0);
+    initHuongDan(s);
+    const da: string[] = [];
+    playChapters({
+      s,
+      until: (_m, sec) => {
+        if (sec % 60 === 0) {
+          const id = nextHuongDan(s);
+          if (id) {
+            markHuongDan(s, id);
+            da.push(id);
+          }
+        }
+        return false;
+      },
+    });
+    expect(new Set(da).size).toBe(da.length);
+    for (const id of ['mauKinhDo', 'benKia', 'congDe'] as const) expect(da, id).toContain(id);
+  }, 120_000);
 });
