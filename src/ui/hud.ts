@@ -140,6 +140,16 @@ import { nutNoi } from './nutNoi';
 import { TET_TYPES, VongNut, doLabel, nangInfo, type Project, type TheVong } from './vongNut';
 import { goLabel, pageCount, pageOf, pickOf, thumbUrl, xayDungHtml, type BuildItem } from './xayDung';
 import type { MauId } from '../game/mau';
+import { huongDanDaMo, type HuongDanId } from '../game/huongDan';
+import { huongDanBat } from './huongDan';
+
+/** Sổ hướng dẫn trong ô Lạc hầu: các mục chỉ tay đã mở, chạm để xem lại. */
+function soHuongDan(s: GameState): string {
+  const ids = huongDanDaMo(s);
+  if (!ids.length) return '';
+  const btns = ids.map((id) => `<button class="btn small ghost" data-act="xemHuongDan" data-id="${id}">${vi.huongDan.ten[id]}</button>`).join('');
+  return `<div class="so-hd"><span>${vi.huongDan.so}</span>${btns}</div>`;
+}
 
 /** Dòng báo thường hiện chừng này mili giây. */
 const TOAST_MS = 2600;
@@ -249,6 +259,8 @@ export type HudAction =
   | { kind: 'toggleMute' }
   | { kind: 'setResolution'; resolution: Resolution }
   | { kind: 'setNgayDem'; on: boolean }
+  | { kind: 'setHuongDan'; on: boolean }
+  | { kind: 'xemHuongDan'; id: HuongDanId }
   | { kind: 'setBongDo'; on: boolean }
   | { kind: 'copyCode' }
   | { kind: 'saveFile' }
@@ -805,6 +817,11 @@ export class Hud {
         return this.onAction({ kind: 'setResolution', resolution: el.dataset.resolution as Resolution });
       case 'setNgayDem':
         return this.onAction({ kind: 'setNgayDem', on: el.dataset.on === '1' });
+      case 'setHuongDan':
+        return this.onAction({ kind: 'setHuongDan', on: el.dataset.on === '1' });
+      case 'xemHuongDan':
+        this.setPop(null);
+        return this.onAction({ kind: 'xemHuongDan', id: el.dataset.id as HuongDanId });
       case 'setBongDo':
         return this.onAction({ kind: 'setBongDo', on: el.dataset.on === '1' });
       case 'storyNext':
@@ -1189,14 +1206,14 @@ export class Hud {
       if (!quest || !progress) {
         // Hết truyện rồi thì mở lại được màn hình Hết truyện.
         const ending = state.story.seen.includes('hetTruyen') ? `<div class="quest-foot"><button class="btn small ghost" data-act="openEnding">${vi.ui.endingOpen}</button></div>` : '';
-        pop = `<div class="pop-card quest-card"><h4>📜 ${vi.ui.lacHau}</h4><p>${esc(vi.quests.allDone)}</p>${ending}</div>`;
+        pop = `<div class="pop-card quest-card"><h4>📜 ${vi.ui.lacHau}</h4><p>${esc(vi.quests.allDone)}</p>${ending}${soHuongDan(state)}</div>`;
       } else {
         pop = `<div class="pop-card quest-card ${done ? 'ready' : ''}"><h4>📜 ${vi.ui.lacHau}</h4><p>${esc(vi.quests[quest.id])}</p>
           <div class="quest-foot">
             <span class="progress">${progress.have}/${progress.need}</span>
             <span class="reward">${vi.ui.reward}: ${costHtml(null, quest.reward)}</span>
             ${done ? `<button class="btn small bronze" data-act="claimQuest">${vi.ui.claim}</button>` : ''}
-          </div></div>`;
+          </div>${soHuongDan(state)}</div>`;
       }
     } else if (this.pop === 'heroes') {
       // Chỉ hiện khi trang bị chưa mở (đã mở thì thẻ Tướng mở thẳng bảng tướng).
@@ -2204,6 +2221,10 @@ export class Hud {
     const ngayDemBtns = ([true, false] as const)
       .map((on) => `<button class="btn small ${on === ngayDem ? 'bronze' : 'ghost'}" data-act="setNgayDem" data-on="${on ? 1 : 0}">${on ? vi.ui.ngayDemOn : vi.ui.ngayDemOff}</button>`)
       .join('');
+    const hd = huongDanBat();
+    const hdBtns = ([true, false] as const)
+      .map((on) => `<button class="btn small ${on === hd ? 'bronze' : 'ghost'}" data-act="setHuongDan" data-on="${on ? 1 : 0}">${on ? vi.ui.on : vi.ui.off}</button>`)
+      .join('');
     const bongBtns = ([true, false] as const)
       .map((on) => `<button class="btn small ${on === bongDo ? 'bronze' : 'ghost'}" data-act="setBongDo" data-on="${on ? 1 : 0}">${on ? vi.ui.bongDoOn : vi.ui.bongDoOff}</button>`)
       .join('');
@@ -2216,6 +2237,8 @@ export class Hud {
       <p class="muted">${vi.ui.ngayDemHint}</p>
       <div class="setting-row"><span>${vi.ui.bongDo}</span><div class="choices">${bongBtns}</div></div>
       <p class="muted">${vi.ui.bongDoHint}</p>
+      <div class="setting-row"><span>${vi.huongDan.caiDat}</span><div class="choices">${hdBtns}</div></div>
+      <p class="muted">${vi.huongDan.caiDatHint}</p>
       <div class="may-settings">${cloudSettingsHtml(state, this.mayHoi)}</div>
       <h3 class="setting-title">${vi.ui.backupTitle}</h3>
       <div class="setting-row"><span>${vi.ui.saveFile}</span><div class="choices">
