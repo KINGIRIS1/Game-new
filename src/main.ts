@@ -1049,6 +1049,10 @@ async function start(): Promise<void> {
     }
   };
 
+  /** Chỗ (trên mặt đất) lần chạm chọn công trình gần nhất, cho việc chạm lại để chọn công trình bị che phía sau. */
+  let lastPick: { x: number; z: number } | null = null;
+  /** Chạm lại cách chỗ cũ (trên mặt đất) không quá chừng này ô thì coi là chạm lại đúng chỗ. */
+  const PICK_AGAIN_R = 0.6;
   world.view.onTap = (cx, cy) => {
     // Map dã ngoại: chạm đất để đi, chạm quái để đánh, chạm cổng để sang map kề.
     if (world.inDa) {
@@ -1154,8 +1158,21 @@ async function start(): Promise<void> {
       commit();
       return;
     }
-    const id =
-      world.pickBuildingId(cx, cy) ?? (tile ? (buildingAt(state, tile.x, tile.z) ?? pendingAt(state, tile.x, tile.z))?.id : undefined) ?? null;
+    // Các công trình dưới chỗ chạm, cái nhìn thấy trước đứng đầu; công trình có móng ở ô đất chạm thêm vào cuối.
+    const ids = world.pickBuildingIds(cx, cy);
+    const ground = tile ? (buildingAt(state, tile.x, tile.z) ?? pendingAt(state, tile.x, tile.z))?.id : undefined;
+    if (ground !== undefined && !ids.includes(ground)) ids.push(ground);
+    let id: number | null = ids[0] ?? null;
+    // Chạm lại đúng chỗ vào công trình đang chọn mà dưới tia còn công trình khác: chọn cái kế, để lấy được nhà
+    // bị mái nhà trước che. Camera trực giao chỉ trượt khi chọn nên cùng chỗ trên công trình vẫn ra cùng danh sách.
+    // So chỗ chạm trên mặt đất (không đổi khi camera trượt), không so chỗ trên màn hình.
+    const at = world.view.groundPoint(cx, cy);
+    const again = !!lastPick && !!at && Math.hypot(at.x - lastPick.x, at.z - lastPick.z) < PICK_AGAIN_R;
+    if (again && mode.kind === 'view' && mode.selected !== null && ids.length > 1) {
+      const i = ids.indexOf(mode.selected);
+      if (i >= 0) id = ids[(i + 1) % ids.length];
+    }
+    lastPick = id !== null && at ? { x: at.x, z: at.z } : null;
     if (mode.kind === 'merge') {
       if (id === null) return;
       const r = mergeTowers(state, mode.from, id);
@@ -2938,6 +2955,9 @@ async function start(): Promise<void> {
     /** Hiện bảng chào lúc vào lại game với phần thưởng dã ngoại `da` (để chụp thử). */
     offline: (ms: number, da?: DaThuong) => hud.showOffline(ms, { gao: 0, voOc: 0, datDa: 0, sat: 0, go: 0 }, 0, da, state.daNgoai.cap),
     tileToScreen: (x: number, z: number) => world.tileToScreen(x, z),
+    /** Các công trình dưới chỗ chạm (cái nhìn thấy trước đứng đầu) và công trình đang chọn: thử chạm lại chọn nhà bị che. */
+    pickIds: (x: number, y: number) => world.pickBuildingIds(x, y),
+    selected: () => (mode.kind === 'view' ? mode.selected : null),
     renderInfo: () => ({ ...world.renderer.info.render }),
     /** Dân gánh hàng: công trình nào có tuyến, ai đang đi, ở ô nào (ganhHang.ts). */
     ganh: () => world.ganhInfo(),
@@ -2945,6 +2965,8 @@ async function start(): Promise<void> {
     camera: (x: number, z: number, zoom: number) => {
       // Đặt camera tay thì thôi lướt về chỗ cũ (máy chụp chạy chậm, lướt chưa xong sẽ kéo camera đi mất).
       drift.done = true;
+      // Thôi cả lướt tới công trình vừa chọn (`focusOn`), không thì camera trôi khỏi chỗ vừa đặt.
+      world.view.onUserMove?.();
       world.view.target.set(x - HALF, 0, z - HALF);
       world.view.zoom = zoom;
       world.view.apply();
