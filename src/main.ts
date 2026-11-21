@@ -60,6 +60,7 @@ import {
   placeLine,
   planLine,
   rotOf,
+  satNha,
   rotateBuilding,
   clearDecorAt,
   findSpot,
@@ -510,12 +511,15 @@ async function start(): Promise<void> {
       : mode.moving !== undefined
         ? canMove(state, mode.moving, mode.x, mode.z)
         : canStartBuild(state, mode.type, mode.x, mode.z);
-    world.setGhost(mode.type, mode.x, mode.z, check.ok, footprintTop(state, mode.type, mode.x, mode.z), mode.rot);
+    // Sát cạnh nhà khác: vẫn đặt được, bóng móng tô vàng và nhắc chừa hẻm một ô cho kinh đô thoáng, dễ bấm.
+    const sat = check.ok && satNha(state, mode.type, mode.x, mode.z, mode.moving);
+    world.setGhost(mode.type, mode.x, mode.z, check.ok, footprintTop(state, mode.type, mode.x, mode.z), mode.rot, sat);
     const ganh = check.ok ? ganhPreview(state, mode.type, mode.x, mode.z, mode.moving) : null;
-    // Nhắc khi đặt (không chặn): gánh về được bao nhiêu phần, và công trình chưa giáp đường.
+    // Nhắc khi đặt (không chặn): gánh về được bao nhiêu phần, công trình chưa giáp đường, sát nhà khác.
     const notes: string[] = [];
     if (ganh !== null) notes.push(vi.ui.ganhPlace(Math.round(ganh * 100)));
     if (check.ok && giapDuong(state, mode.type, mode.x, mode.z) === false) notes.push(vi.ui.noRoad);
+    if (sat) notes.push(vi.ui.satNha);
     hud.setPlaceValid(check.ok, check.ok ? undefined : vi.reasons[check.reason], notes.length ? notes.join(' · ') : undefined);
     zoneAt = check.ok;
     refreshGanhZone();

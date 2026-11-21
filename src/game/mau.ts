@@ -4,7 +4,7 @@
 // phần mẫu có mà mình chưa có (trong giới hạn theo cấp Điện). Phải đủ tài nguyên để dựng phần thiếu và trả phí
 // dời thì mới áp được.
 
-import { BUILDINGS, STAGES, U_NO, isDecor, isRoad, type BuildingType, type Cost, RESOURCE_IDS } from './defs';
+import { BUILDINGS, STAGES, U_NO, canHem, isDecor, isRoad, type BuildingType, type Cost, RESOURCE_IDS } from './defs';
 import { CH1_LAST } from './campaign';
 import { inChapter4 } from './chuong4';
 import { inChapter3 } from './coLoa';
@@ -166,6 +166,8 @@ class Draft {
   constructor(
     readonly level: number,
     side: number,
+    /** Phạt mỗi ô viền sát nhà khác (`sat`); 0 là xếp khít như trước khi có hẻm (thưởng cả ô viền là nhà). */
+    readonly hem = HEM,
   ) {
     this.lo = RIVER_START - side;
     for (let z = 0; z < GRID; z++) {
@@ -292,14 +294,38 @@ class Draft {
     return false;
   }
 
-  /** Số ô viền (không tính góc chéo) không còn trống: móng sát nhà khác, đường, tường thì xếp thành dãy khít. */
+  /** Các ô viền cạnh (không tính góc chéo) của móng cạnh `w` ở (x, z). */
+  private edge(x: number, z: number, w: number): [number, number][] {
+    const out: [number, number][] = [];
+    for (let k = 0; k < w; k++) out.push([x + k, z - 1], [x + k, z + w], [x - 1, z + k], [x + w, z + k]);
+    return out;
+  }
+
+  /** Nhà nhiều ô đứng trên ô (x, z), nếu có. */
+  private nhaAt(x: number, z: number): Slot | undefined {
+    if (!inGrid(x, z)) return undefined;
+    const o = this.slotOf(z * GRID + x);
+    return o && BUILDINGS[o.type].w > 1 ? o : undefined;
+  }
+
+  /**
+   * Số ô viền (không tính góc chéo) không còn trống mà không phải nhà nhiều ô: móng sát đường, tường thì xếp thành dãy
+   * dọc phố. Nhà sát nhà không thưởng (xem `sat`), trừ khi xếp khít (`hem` 0).
+   */
   contact(x: number, z: number, w: number): number {
     let n = 0;
-    for (let k = 0; k < w; k++) {
-      if (this.at(x + k, z - 1) !== FREE) n++;
-      if (this.at(x + k, z + w) !== FREE) n++;
-      if (this.at(x - 1, z + k) !== FREE) n++;
-      if (this.at(x + w, z + k) !== FREE) n++;
+    for (const [cx, cz] of this.edge(x, z, w)) if (this.at(cx, cz) !== FREE && (!this.hem || !this.nhaAt(cx, cz))) n++;
+    return n;
+  }
+
+  /** Số ô viền cạnh của móng `type` ở (x, z) là nhà nhiều ô phải chừa hẻm với nó (`canHem`): mẫu phạt nặng (`HEM`). */
+  sat(type: BuildingType, x: number, z: number): number {
+    const w = BUILDINGS[type].w;
+    if (w <= 1 || !this.hem) return 0;
+    let n = 0;
+    for (const [cx, cz] of this.edge(x, z, w)) {
+      const o = this.nhaAt(cx, cz);
+      if (o && canHem(type, o.type)) n++;
     }
     return n;
   }
@@ -548,8 +574,18 @@ const zone = (d: Draft, f: Foot, rings: number) => Math.abs(d.ringsAround(f.x, f
 
 /** Phạt điểm chỗ dựng một mình lệch khỏi đường chéo: mẫu đứng đối xứng qua đường chéo từ góc rừng tới ngã ba sông. */
 const ASYM = 8;
-/** Thưởng điểm cho mỗi ô viền không còn trống (`Draft.contact`): nhà xếp khít thành dãy, không chừa kẽ hở. */
+/** Thưởng điểm cho mỗi ô viền là đường, tường (`Draft.contact`): nhà xếp thành dãy dọc phố. */
 const CONTACT = 0.6;
+/**
+ * Phạt điểm mỗi ô viền sát nhà nhiều ô khác (`Draft.sat`): giữa hai nhà chừa hẻm một ô cho kinh đô thoáng, dễ bấm.
+ * Phạt nặng hơn mọi điểm chấm chỗ thường, nhẹ hơn phạt sai vòng thành (`OFF_ZONE`): hết chỗ thoáng mới xếp sát.
+ */
+const HEM = 20;
+/**
+ * Các mức phạt sát nhà thử lần lượt (`veMau`): chừa hẻm hết cỡ, không đủ chỗ thì nhẹ tay hơn, cuối cùng xếp khít như
+ * trước. Đất mẫu đo cho dãy nhà khít (vòng thành Cổ Loa, khung theo bìa đất) nên có cấp không chừa hẻm hết được.
+ */
+const HEM_BAC = [HEM, 4, 1, 0];
 
 function footAt(d: Draft, x: number, z: number, w: number): Foot {
   const cx = x + w / 2;
@@ -575,7 +611,7 @@ function placeSingle(d: Draft, type: BuildingType, score: Score): boolean {
   for (let z = d.lo; z + w - 1 <= LAST; z++) {
     for (let x = d.lo; x + w - 1 <= LAST; x++) {
       if (!d.fits(type, x, z)) continue;
-      const s = (x === z ? 0 : ASYM) + score(footAt(d, x, z, w), d) - CONTACT * d.contact(x, z, w);
+      const s = (x === z ? 0 : ASYM) + score(footAt(d, x, z, w), d) - CONTACT * d.contact(x, z, w) + d.hem * d.sat(type, x, z);
       if (s < bestScore) {
         bestScore = s;
         best = { x, z };
@@ -599,7 +635,9 @@ function placePair(d: Draft, a: BuildingType, b: BuildingType, score: Score): bo
     for (let x = z + w; x + w - 1 <= LAST; x++) {
       if (!d.fits(a, x, z) || !d.fits(b, z, x)) continue;
       const s =
-        (score(footAt(d, x, z, w), d) + score(footAt(d, z, x, w), d)) / 2 - (CONTACT * (d.contact(x, z, w) + d.contact(z, x, w))) / 2;
+        (score(footAt(d, x, z, w), d) + score(footAt(d, z, x, w), d)) / 2 -
+        (CONTACT * (d.contact(x, z, w) + d.contact(z, x, w))) / 2 +
+        (d.hem * (d.sat(a, x, z) + d.sat(b, z, x))) / 2;
       if (s < bestScore) {
         bestScore = s;
         best = { x, z };
@@ -1156,9 +1194,9 @@ export interface MauVe {
 }
 
 /** Dựng mẫu `id` ở cấp Điện `level` trên khung cạnh `side` theo cách `v`. */
-function drawWith(id: MauId, level: number, side: number, v: Variant): { d: Draft; thieu: number } {
+function drawWith(id: MauId, level: number, side: number, v: Variant, hem: number): { d: Draft; thieu: number } {
   const recipe = RECIPES[id];
-  const d = new Draft(level, side);
+  const d = new Draft(level, side, hem);
   d.put('dien', DIEN_HOME, DIEN_HOME);
   recipe.walls(d, v);
   for (const job of recipe.jobs) placeJob(d, job);
@@ -1168,16 +1206,20 @@ function drawWith(id: MauId, level: number, side: number, v: Variant): { d: Draf
 }
 
 /**
- * Dựng mẫu `id` ở cấp Điện `level` trên khung cạnh `side` (mặc định `MAU_KHUNG`): thử các cách dựng khung theo thứ
- * tự ưu tiên, lấy cách đầu tiên xếp đủ mọi công trình (không có thì cách thiếu ít nhất).
+ * Dựng mẫu `id` ở cấp Điện `level` trên khung cạnh `side` (mặc định `MAU_KHUNG`): thử từng mức chừa hẻm (`hems`,
+ * mặc định `HEM_BAC`), mỗi mức các cách dựng khung theo thứ tự ưu tiên, lấy cách đầu tiên xếp đủ mọi công trình
+ * (không có thì cách thiếu ít nhất).
  */
-export function veMau(id: MauId, level: number, side = khungOf(id, level)): MauVe {
+export function veMau(id: MauId, level: number, side = khungOf(id, level), hems: readonly number[] = HEM_BAC): MauVe {
   let best: { d: Draft; thieu: number } | null = null;
-  search: for (const group of RECIPES[id].variants(level)) {
-    for (const v of group) {
-      const r = drawWith(id, level, side, v);
-      if (!best || r.thieu < best.thieu) best = r;
-      if (!best.thieu) break search;
+  // Mức chừa hẻm trước, rồi mới tới cách dựng: thà đổi cách dựng khung còn hơn xếp nhà sát nhau.
+  search: for (const hem of hems) {
+    for (const group of RECIPES[id].variants(level)) {
+      for (const v of group) {
+        const r = drawWith(id, level, side, v, hem);
+        if (!best || r.thieu < best.thieu) best = r;
+        if (!best.thieu) break search;
+      }
     }
   }
   const d = best!.d;
@@ -1192,20 +1234,23 @@ export function mauFrom(id: MauId, type: BuildingType): number {
   return 0;
 }
 
-function drawn(id: MauId, level: number): MauVe {
+function drawn(id: MauId, level: number, khit = false): MauVe {
   const lv = Math.min(Math.max(Math.round(level), 1), BUILDINGS.dien.maxLevel);
-  const key = `${id}:${lv}`;
+  const key = `${id}:${lv}:${khit ? 1 : 0}`;
   let ve = DRAWN.get(key);
   if (!ve) {
-    ve = veMau(id, lv);
+    ve = veMau(id, lv, undefined, khit ? [0] : HEM_BAC);
     DRAWN.set(key, ve);
   }
   return ve;
 }
 
-/** Mọi chỗ trong mẫu `id` ở cấp Điện `level` (cả Điện), đều trong khung dựng mẫu ở cấp ấy. */
-export function mauSlots(id: MauId, level: number): Slot[] {
-  return drawn(id, level).slots;
+/**
+ * Mọi chỗ trong mẫu `id` ở cấp Điện `level` (cả Điện), đều trong khung dựng mẫu ở cấp ấy. `khit`: xếp khít như trước
+ * khi có hẻm (kinh đô máy Đấu thành giữ bố cục cũ cho cân bằng sao không đổi).
+ */
+export function mauSlots(id: MauId, level: number, khit = false): Slot[] {
+  return drawn(id, level, khit).slots;
 }
 
 /** Ô đường của mẫu `id` ở cấp Điện `level`: đoạn thẳng theo hàng, cột nối mọi công trình nhiều ô, gần Điện trước. */
@@ -1432,7 +1477,12 @@ export function planMau(state: GameState, id: MauId): MauPlan {
     }
   }
   if (!plan.stuck.length) {
-    plan.duong = laneRoads(state, lane, paved, used);
+    // Đường cũ vướng mẫu sẽ bị dỡ: trả lại chỗ trong giới hạn đường, không thì áp xong vẫn còn đường chưa trải.
+    const go = plan.removes.filter((rid) => {
+      const b = state.buildings.find((o) => o.id === rid);
+      return !!b && isRoad(b.type);
+    }).length;
+    plan.duong = laneRoads(state, lane, paved, used, go);
     for (let i = 0; i < plan.duong.length; i++) addCost(plan.cost, BUILDINGS[DUONG_MAU].buildCost);
   }
   return plan;
@@ -1443,12 +1493,12 @@ const DUONG_MAU: BuildingType = 'duongDat';
 
 /**
  * Đường mẫu sẽ trải: các ô đường của mẫu (`lane`) chưa có đường (`paved`), chưa có gì đứng (`used`, sau khi áp), gần
- * Điện trước, không quá giới hạn đường theo cấp Điện.
+ * Điện trước, không quá giới hạn đường theo cấp Điện (cộng `go` ô đường cũ kế hoạch sẽ dỡ).
  */
-function laneRoads(state: GameState, lane: Uint8Array, paved: Set<number>, used: Uint8Array): { x: number; z: number }[] {
+function laneRoads(state: GameState, lane: Uint8Array, paved: Set<number>, used: Uint8Array, go = 0): { x: number; z: number }[] {
   const def = BUILDINGS[DUONG_MAU];
   if (!def.buildable || !unlocked(state, def.unlock) || dienLevel(state) < def.minDien) return [];
-  const room = limitOf(state, DUONG_MAU) - usedOf(state, DUONG_MAU);
+  const room = limitOf(state, DUONG_MAU) - usedOf(state, DUONG_MAU) + go;
   if (room <= 0) return [];
   const out: { x: number; z: number }[] = [];
   for (let i = 0; i < lane.length; i++) if (lane[i] && !paved.has(i) && !used[i]) out.push({ x: i % GRID, z: Math.floor(i / GRID) });

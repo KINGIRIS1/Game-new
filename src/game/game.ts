@@ -43,6 +43,7 @@ import {
   MAX_HEIGHT,
   floodLevel,
   isBridge,
+  canHem,
   isDecor,
   isRoad,
   isWalkWall,
@@ -1266,6 +1267,26 @@ function ringFree(state: GameState, grid: Int32Array, x: number, z: number, w: n
     }
   }
   return true;
+}
+
+/**
+ * Móng `type` ở (x, z) kề cạnh (không tính góc chéo) một công trình phải chừa hẻm với nó (`canHem`, mục Mẫu kinh đô:
+ * hẻm giữa các nhà), bỏ qua công trình `skip` (đang dời). Chỉ để nhắc khi đặt tay, không chặn.
+ */
+export function satNha(state: GameState, type: BuildingType, x: number, z: number, skip?: number): boolean {
+  const def = BUILDINGS[type];
+  if (def.w <= 1) return false;
+  const grid = occupancy(state);
+  const ke = (tx: number, tz: number) => {
+    if (!inGrid(tx, tz)) return false;
+    const id = grid[tz * GRID + tx];
+    if (!id || id === skip) return false;
+    const o = occupant(state, id);
+    return !!o && canHem(type, o.type);
+  };
+  for (let k = 0; k < def.w; k++) if (ke(x + k, z - 1) || ke(x + k, z + def.d)) return true;
+  for (let k = 0; k < def.d; k++) if (ke(x - 1, z + k) || ke(x + def.w, z + k)) return true;
+  return false;
 }
 
 const spotOrder = new Map<string, Int32Array>();
