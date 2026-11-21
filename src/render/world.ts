@@ -109,6 +109,8 @@ const FAR = RIVER_END - HALF;
 const BOAT_LANE = FAR - 0.9;
 /** Thuyền buôn ghé đậu cách bờ chừng này ô (tâm thuyền), ngoài thuyền neo của bến, trong luồng thuyền. */
 const MERCHANT_OUT = 3.5;
+/** Công trình chắn công trình đang chọn chỉ tính khi tia chạm nó cao hơn mặt đất chừng này (ruộng, sân, rào thấp không che). */
+const LOW = 0.45;
 /** Số gợn sóng trên mặt sông: chừng 20 gợn mỗi ô bề rộng sông. */
 const RIPPLES = 20 * (RIVER_END - RIVER_START);
 /** Mặt nước nằm thấp hơn mặt đất. */
@@ -676,7 +678,6 @@ export class World {
   private readonly footprint: THREE.Mesh;
   private readonly selection: THREE.LineLoop;
   private readonly selFrame: THREE.Mesh;
-  private readonly selFill: THREE.Mesh;
   /** Id công trình đang chọn (để làm mờ công trình đứng chắn trước nó). */
   private selId: number | null = null;
   private fadeWait = 0;
@@ -855,20 +856,14 @@ export class World {
     this.selection = new THREE.LineLoop(ring, new THREE.LineBasicMaterial({ color: 0xffd54a, transparent: true }));
     this.selection.visible = false;
     this.scene.add(this.selection);
-    // Viền dày và lớp tô mờ trên móng công trình đang chọn: nhà xếp sát nhau vẫn thấy rõ móng nào đang chọn.
+    // Khung dày vẽ đè lên trên (không bị sân đất nện, mái che): nhà xếp sát nhau vẫn thấy rõ móng nào đang chọn.
     this.selFrame = new THREE.Mesh(
       new THREE.BufferGeometry(),
-      new THREE.MeshBasicMaterial({ color: 0xffd54a, transparent: true, depthWrite: false, depthTest: false }),
+      new THREE.MeshBasicMaterial({ color: 0xffe066, transparent: true, depthWrite: false, depthTest: false }),
     );
     this.selFrame.renderOrder = 3;
     this.selFrame.visible = false;
-    this.selFill = new THREE.Mesh(
-      new THREE.PlaneGeometry(1, 1).rotateX(-Math.PI / 2),
-      new THREE.MeshBasicMaterial({ color: 0xffd54a, transparent: true, opacity: 0.18, depthWrite: false }),
-    );
-    this.selFill.renderOrder = 2;
-    this.selFill.visible = false;
-    this.scene.add(this.selFrame, this.selFill);
+    this.scene.add(this.selFrame);
 
     this.warning = new THREE.Mesh(
       new THREE.PlaneGeometry(1, 1).rotateX(-Math.PI / 2),
@@ -3982,7 +3977,6 @@ export class World {
     if (!b) {
       this.selection.visible = false;
       this.selFrame.visible = false;
-      this.selFill.visible = false;
       this.unfadeAll();
       return;
     }
@@ -3993,19 +3987,17 @@ export class World {
     this.selection.visible = true;
     this.selection.scale.set(def.w + 0.15, 1, def.d + 0.15);
     this.selection.position.set(cx, y, cz);
-    // Khung dày đều 0,14 ô ôm mép móng (dựng lại mỗi lần chọn: khung co giãn thì cạnh dày mỏng không đều).
+    // Khung dày đều 0,18 ô ôm mép móng (dựng lại mỗi lần chọn: khung co giãn thì cạnh dày mỏng không đều).
     const hw = def.w / 2 + 0.1;
     const hd = def.d / 2 + 0.1;
-    const t = 0.14;
+    const t = 0.18;
     const shape = new THREE.Shape([new THREE.Vector2(-hw, -hd), new THREE.Vector2(hw, -hd), new THREE.Vector2(hw, hd), new THREE.Vector2(-hw, hd)]);
     shape.holes.push(new THREE.Path([new THREE.Vector2(-hw + t, -hd + t), new THREE.Vector2(-hw + t, hd - t), new THREE.Vector2(hw - t, hd - t), new THREE.Vector2(hw - t, -hd + t)]));
     this.selFrame.geometry.dispose();
-    this.selFrame.geometry = new THREE.ShapeGeometry(shape).rotateX(Math.PI / 2);
+    // Xoay −90° quanh trục x cho mặt hướng lên trời (khung đối xứng nên lật trục z không sao).
+    this.selFrame.geometry = new THREE.ShapeGeometry(shape).rotateX(-Math.PI / 2);
     this.selFrame.position.set(cx, y + 0.02, cz);
     this.selFrame.visible = true;
-    this.selFill.scale.set(def.w, 1, def.d);
-    this.selFill.position.set(cx, y + 0.01, cz);
-    this.selFill.visible = true;
   }
 
   /**
@@ -4022,17 +4014,17 @@ export class World {
     const x0 = wx(v.x);
     const z0 = wz(v.z);
     const y = this.groundY(v.x, v.z);
+    // Điểm đích: giữa thân và gần nóc công trình đang chọn, ở tâm và bốn góc thu vào. Vật thấp (ruộng, sân, rào)
+    // không che thân nhà nên không tính: chỉ tính chỗ tia chạm cao hơn mặt đất `LOW`.
     const box = new THREE.Box3().setFromObject(v.group);
-    const mid = Math.max(y + 0.3, (box.min.y + box.max.y) / 2);
-    const e = 0.25;
-    const goals = [
-      new THREE.Vector3(x0 + def.w / 2, y + 0.2, z0 + def.d / 2),
-      new THREE.Vector3(x0 + def.w / 2, mid, z0 + def.d / 2),
-      new THREE.Vector3(x0 + e, y + 0.2, z0 + e),
-      new THREE.Vector3(x0 + def.w - e, y + 0.2, z0 + e),
-      new THREE.Vector3(x0 + e, y + 0.2, z0 + def.d - e),
-      new THREE.Vector3(x0 + def.w - e, y + 0.2, z0 + def.d - e),
-    ];
+    const hi = Math.max(y + 0.5, box.max.y - 0.2);
+    const mid = (y + hi) / 2;
+    const e = Math.min(def.w, def.d) * 0.25;
+    const goals: THREE.Vector3[] = [];
+    for (const gy of [mid, hi]) {
+      goals.push(new THREE.Vector3(x0 + def.w / 2, gy, z0 + def.d / 2));
+      for (const [ax, az] of [[e, e], [def.w - e, e], [e, def.d - e], [def.w - e, def.d - e]]) goals.push(new THREE.Vector3(x0 + ax, gy, z0 + az));
+    }
     const cam = this.view.camera;
     const ray = new THREE.Raycaster();
     const block = new Set<number>();
@@ -4052,7 +4044,7 @@ export class World {
         const p = ray.ray.intersectBox(b, tmp);
         if (!p || p.distanceTo(from) >= far) continue;
         ray.far = far;
-        if (ray.intersectObject(o.group, true).length) block.add(id);
+        if (ray.intersectObject(o.group, true).some((h) => h.point.y > y + LOW)) block.add(id);
       }
     }
     for (const id of [...this.faded.keys()]) if (!block.has(id)) this.unfade(id);
@@ -4071,6 +4063,8 @@ export class World {
       // Chất liệu tô hoạt hình, viền mực dùng shader riêng: clone() không chép hai hàm này.
       c.onBeforeCompile = m.onBeforeCompile;
       c.customProgramCacheKey = m.customProgramCacheKey;
+      // Viền mực (mặt sau phóng ra) mờ đi thì thành bóng đen sẫm: ẩn hẳn, chỉ để mặt màu mờ.
+      if (m.side === THREE.BackSide) c.visible = false;
       c.transparent = true;
       c.opacity = 0.3 * m.opacity;
       c.depthWrite = false;
@@ -4297,7 +4291,7 @@ export class World {
 
     if (this.selection.visible) {
       (this.selection.material as THREE.LineBasicMaterial).opacity = 0.6 + Math.sin(t * 5) * 0.4;
-      (this.selFrame.material as THREE.MeshBasicMaterial).opacity = 0.65 + Math.sin(t * 5) * 0.3;
+      (this.selFrame.material as THREE.MeshBasicMaterial).opacity = 0.85 + Math.sin(t * 5) * 0.15;
     }
     // Công trình đứng chắn công trình đang chọn: xét lại bốn lần mỗi giây (camera trôi, công trình dựng lại).
     if (this.selId !== null || this.faded.size) {

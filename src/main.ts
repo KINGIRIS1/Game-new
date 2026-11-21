@@ -1049,9 +1049,10 @@ async function start(): Promise<void> {
     }
   };
 
-  /** Lúc chạm chọn công trình gần nhất, cho việc chạm lại để chọn công trình bị che phía sau. */
-  let lastPick: { t: number; x: number; z: number } | null = null;
-  const PICK_AGAIN_MS = 3000;
+  /** Chỗ (trên mặt đất) lần chạm chọn công trình gần nhất, cho việc chạm lại để chọn công trình bị che phía sau. */
+  let lastPick: { x: number; z: number } | null = null;
+  /** Chạm lại cách chỗ cũ (trên mặt đất) không quá chừng này ô thì coi là chạm lại đúng chỗ. */
+  const PICK_AGAIN_R = 0.6;
   world.view.onTap = (cx, cy) => {
     // Map dã ngoại: chạm đất để đi, chạm quái để đánh, chạm cổng để sang map kề.
     if (world.inDa) {
@@ -1162,17 +1163,16 @@ async function start(): Promise<void> {
     const ground = tile ? (buildingAt(state, tile.x, tile.z) ?? pendingAt(state, tile.x, tile.z))?.id : undefined;
     if (ground !== undefined && !ids.includes(ground)) ids.push(ground);
     let id: number | null = ids[0] ?? null;
-    // Chạm lại vào công trình vừa chọn (trong ít giây) mà dưới tia còn công trình khác: chọn cái kế, để lấy được nhà
+    // Chạm lại đúng chỗ vào công trình đang chọn mà dưới tia còn công trình khác: chọn cái kế, để lấy được nhà
     // bị mái nhà trước che. Camera trực giao chỉ trượt khi chọn nên cùng chỗ trên công trình vẫn ra cùng danh sách.
     // So chỗ chạm trên mặt đất (không đổi khi camera trượt), không so chỗ trên màn hình.
-    const now = performance.now();
     const at = world.view.groundPoint(cx, cy);
-    const again = !!lastPick && !!at && now - lastPick.t < PICK_AGAIN_MS && Math.hypot(at.x - lastPick.x, at.z - lastPick.z) < 0.6;
+    const again = !!lastPick && !!at && Math.hypot(at.x - lastPick.x, at.z - lastPick.z) < PICK_AGAIN_R;
     if (again && mode.kind === 'view' && mode.selected !== null && ids.length > 1) {
       const i = ids.indexOf(mode.selected);
       if (i >= 0) id = ids[(i + 1) % ids.length];
     }
-    lastPick = id !== null && at ? { t: now, x: at.x, z: at.z } : null;
+    lastPick = id !== null && at ? { x: at.x, z: at.z } : null;
     if (mode.kind === 'merge') {
       if (id === null) return;
       const r = mergeTowers(state, mode.from, id);
@@ -2965,6 +2965,8 @@ async function start(): Promise<void> {
     camera: (x: number, z: number, zoom: number) => {
       // Đặt camera tay thì thôi lướt về chỗ cũ (máy chụp chạy chậm, lướt chưa xong sẽ kéo camera đi mất).
       drift.done = true;
+      // Thôi cả lướt tới công trình vừa chọn (`focusOn`), không thì camera trôi khỏi chỗ vừa đặt.
+      world.view.onUserMove?.();
       world.view.target.set(x - HALF, 0, z - HALF);
       world.view.zoom = zoom;
       world.view.apply();

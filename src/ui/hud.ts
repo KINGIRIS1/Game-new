@@ -1485,12 +1485,18 @@ export class Hud {
     const w = window.innerWidth;
     const h = window.innerHeight;
     const top = this.topbar.offsetHeight;
-    const dock = this.dock.offsetHeight;
-    if (!this.sheet) return { x: w / 2, y: (top + h - dock) / 2 };
+    // Dock là cột dọc bên trái (chiếm bề ngang) hay thanh ngang dưới đáy (chiếm bề cao). Đo bằng offset* (không tính
+    // phần đang trượt). Trước đây coi dock luôn là thanh đáy: cột dọc cao gần trọn màn nên tâm rơi ra ngoài màn hình.
+    const dw = this.dock.offsetWidth;
+    const dh = this.dock.offsetHeight;
+    const rail = dh > dw;
+    const left = rail ? this.dock.offsetLeft + dw : 0;
+    const bottom = rail ? h : h - dh;
+    if (!this.sheet) return { x: (left + w) / 2, y: (top + bottom) / 2 };
     const sideBySide = window.matchMedia('(min-width: 600px) and (min-aspect-ratio: 4/5)').matches;
-    if (sideBySide) return { x: (w - this.sheetEl.offsetWidth - 10) / 2, y: (top + h - dock) / 2 };
-    // Bảng nằm ngay trên dock (offsetHeight không tính phần đang trượt lên).
-    return { x: w / 2, y: (top + h - dock - this.sheetEl.offsetHeight) / 2 };
+    if (sideBySide) return { x: (left + w - this.sheetEl.offsetWidth - 10) / 2, y: (top + bottom) / 2 };
+    // Mép trên bảng lúc đã trượt lên hẳn (offsetTop không tính phần đang trượt).
+    return { x: (left + w) / 2, y: (top + Math.min(bottom, this.sheetEl.offsetTop)) / 2 };
   }
 
   /** Vẽ lại bảng đang mở. Bỏ qua nếu nội dung không đổi để không làm mất lần chạm của người chơi. */
