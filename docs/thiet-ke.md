@@ -2943,7 +2943,7 @@ Chủ dự án yêu cầu lập phương án PvP giữa các người chơi: **c
    - Đang đánh thử thì đồng hồ giặc đứng lại (`tick(state, ms, busy)`), như khi đang đánh phó bản.
    - **Bậc lên thành** (có sau khi làm PR 1–3): kinh đô bị đánh có bậc lên thành thì cung thủ, lính nỏ giữ thành cũng lên mặt thành bắn xuống như khi giữ kinh đô, mỗi người một ô; Trống trận của người đánh không làm họ leo nhanh. Quân đánh thành không lên mặt thành. Kinh đô máy theo mẫu kinh đô nên chưa có bậc.
 4. **PR 3: đánh thử ngoài mạng** (đã làm):
-   - Chip **🏯 Đấu thành** trên đầu bản đồ phó bản (cạnh chip huân công) mở bảng Đấu thành thay chỗ thẻ màn: bản đồ thu nhỏ kinh đô chọn đánh (bên trái hay trên), chọn kinh đô (của mình, hay kinh đô máy kém một cấp, cùng cấp, hơn một cấp Điện, từ Điện 5), của cướp được nhiều nhất, luật ba sao, hướng tràn vào (bắc, tây); bước sau chọn quân (không quá số chỗ một trận phó bản), ghi tướng đi cùng. Chưa đủ Điện 5, chưa có doanh trại, đang có giặc thì ghi lý do.
+   - Nút **Đấu thành** ở cột nút bên phải màn hình chính (dưới dải tài nguyên, cùng Dã ngoại, Thần thú) mở thẳng bảng Đấu thành: bản đồ thu nhỏ kinh đô chọn đánh (bên trái hay trên), chọn kinh đô (của mình, hay kinh đô máy kém một cấp, cùng cấp, hơn một cấp Điện, từ Điện 5), của cướp được nhiều nhất, luật ba sao, hướng tràn vào (bắc, tây); bước sau chọn quân (không quá số chỗ một trận phó bản), ghi tướng đi cùng. Chưa đủ Điện 5, chưa có doanh trại, đang có giặc thì ghi lý do.
    - Bấm Đánh: cảnh đổi sang kinh đô bị đánh (dựng từ bản chụp), camera lướt tới bìa rừng phía tràn vào. Thanh trận như ngoài bãi: tên kinh đô, phần trăm phá, sao, giây còn lại, nút kỹ năng, Trống trận, Rút quân. Lần bấm ghi theo bước, áp ở đầu bước trận kế tiếp.
    - Vòng màu dưới chân để biết phe (hai bên cùng là lính ta): đồng nhạt cho quân đánh thành, đỏ son cho quân giữ thành.
    - Bảng kết quả: sao, phần trăm phá, phá được Điện chưa, quân ngã, của cướp được nếu đánh thật; nút Đánh lại, Về kinh đô. Đánh thử nên **quân ngã không mất, kho không thêm gì, không tính chiến công** (đề xuất 1 "lính tử trận mất thật" áp khi đánh thật ở PR 5). Về kinh đô thì cảnh và camera về như trước trận.
@@ -3734,7 +3734,7 @@ Chủ dự án yêu cầu: thêm dã ngoại để đánh quái kiếm thêm tà
 - Tướng hồi 4% máu mỗi giây khi 4 giây không bị đánh; ngã thì 3 giây yên mới đứng dậy với nửa máu; cả đội ngã thì 3 giây sau về trại đủ máu (`DA_TUONG`). Tự đánh dừng nghỉ khi máu đội dưới 40% mà không có quái đuổi, hồi tới 90% mới đánh tiếp (Tự đánh không ngừng thì tướng không bao giờ hồi máu). Kỹ năng vùng chỉ tính quái quanh tướng 9 ô.
 - Treo máy: số quái hạ mỗi phút = `12 × min(1, max(0,1; √(sức đội / 40)))`, sức đội là (sát thương mỗi giây × máu) của đội chia cho của một con quái khu (`tiSuc`, `nhipTreo`, `DA_TREO`); boss không tính. Test canh treo ra trong khoảng ×0,5–1,3 so với đánh thật cùng khu.
 - Ở kinh đô chọn map ra được (như đi xe ngựa tới trại): chỉ map đã tới bằng cổng và đủ cấp (`chonMap`).
-- Giao diện: chip 🌿 Dã ngoại trên bản đồ phó bản mở bảng (cấp chung, chọn đội, năm map có giờ boss, treo máy, Ra dã ngoại hay Xem đội, Gọi đội về, Tự đánh); nửa trái là bản đồ map (khu có số, trại, cổng, khu boss mờ khi boss chưa mọc). Trên map: thanh trên ghi map, khu và cấp quái khu, cấp và thanh kinh nghiệm, máu từng tướng; bản đồ nhỏ góc phải có chấm đội và giờ boss; chữ nổi kinh nghiệm, lên cấp, đồ rơi; nút 🏯 xem kinh đô (đội ở lại treo máy), nút Tự đánh, nút kỹ năng. Kéo cảnh thì camera thôi bám đội, chạm đất hay bật Tự đánh thì bám lại. Đang xem map thì giặc không tới kinh đô (như Đấu thành). Bảng "Bệ hạ đã trở lại" thêm dòng dã ngoại và các món rơi (gộp món cùng tên, cùng phẩm, cùng cấp thành một ô ảnh kèm số lượng ×n, phẩm cao trước, không kể từng món; `gomRoiHtml` ở `ui/trangBi.ts`); Lạc hầu báo một lần khi dã ngoại mở.
+- Giao diện: nút Dã ngoại ở cột nút bên phải màn hình chính mở thẳng bảng (cấp chung, chọn đội, năm map có giờ boss, treo máy, Ra dã ngoại hay Xem đội, Gọi đội về, Tự đánh); nửa trái là bản đồ map (khu có số, trại, cổng, khu boss mờ khi boss chưa mọc). Trên map: thanh trên ghi map, khu và cấp quái khu, cấp và thanh kinh nghiệm, máu từng tướng; bản đồ nhỏ góc phải có chấm đội và giờ boss; chữ nổi kinh nghiệm, lên cấp, đồ rơi; nút 🏯 xem kinh đô (đội ở lại treo máy), nút Tự đánh, nút kỹ năng. Kéo cảnh thì camera thôi bám đội, chạm đất hay bật Tự đánh thì bám lại. Đang xem map thì giặc không tới kinh đô (như Đấu thành). Bảng "Bệ hạ đã trở lại" thêm dòng dã ngoại và các món rơi (gộp món cùng tên, cùng phẩm, cùng cấp thành một ô ảnh kèm số lượng ×n, phẩm cao trước, không kể từng món; `gomRoiHtml` ở `ui/trangBi.ts`); Lạc hầu báo một lần khi dã ngoại mở.
 
 ### Mười map
 
@@ -3847,7 +3847,7 @@ Phòng tuyến sông Như Nguyệt, nơi Lý Thường Kiệt đắp lũy tre ch
 
 ### Giao diện, hình
 
-- Lối vào: chip 🌿 Dã ngoại cạnh 🎖 Huân công, 🏯 Đấu thành trên bản đồ phó bản; bảng chọn đội rồi vào trại map đang đứng.
+- Lối vào: nút Dã ngoại ở cột nút bên phải màn hình chính (cùng Thần thú, Đấu thành; nút đồng chạm nổi như cột Dock bên trái); bảng chọn đội rồi vào trại map đang đứng.
 - Trên map: thanh cấp và kinh nghiệm, tên map, khu và cấp quái khu; bản đồ nhỏ góc trên (khu, cổng, trại, boss còn hay đang chờ mọc); máu ba tướng; nút kỹ năng từng tướng, nút Tự đánh, nút Về kinh đô.
 - Cổng: chạm cổng thì sang map kề, chưa đủ cấp thì báo cấp cần.
 - Cảnh 3D mới cho map mở (`src/render/daNgoai/`): đất, rừng, nước, vật cản dùng lại dáng của bãi chiến và rừng kinh đô; camera đi theo đội; nhân vật vẽ bằng `battleView.ts` như trận; quái ngoài khung nhìn không vẽ.
@@ -4048,7 +4048,7 @@ Chủ dự án yêu cầu: lên kế hoạch nuôi thần thú. Như các kế h
 
 ### Giao diện
 
-- Bảng Thần thú: chip 🐉 trong bảng Dã ngoại, hay chạm thú ở kinh đô. Mỗi thú: ảnh, cấp, thanh kinh nghiệm, bữa còn (đếm ngược bữa sau), nút Cho ăn (kèm giá), nút Mang theo.
+- Bảng Thần thú: nút Thần thú ở cột nút bên phải màn hình chính, hay chạm thú ở kinh đô. Mỗi thú: ảnh, cấp, thanh kinh nghiệm, bữa còn (đếm ngược bữa sau), nút Cho ăn (kèm giá), nút Mang theo.
 - Thanh trên map dã ngoại thêm máu thú.
 
 ### Code

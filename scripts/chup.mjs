@@ -19,6 +19,10 @@ export const KHUNG = {
   fold: { width: 344, height: 882 },
   ngang: { width: 844, height: 390 },
   bang: { width: 820, height: 1180 },
+  /** Máy tính, cửa sổ trình duyệt to. */
+  pc: { width: 1600, height: 820 },
+  /** Màn máy tính phổ biến 1920×1080 trừ thanh trình duyệt. */
+  pc2: { width: 1913, height: 910 },
 };
 
 // Mã dựng cảnh chạy trong trang, có sẵn các biến:
@@ -449,7 +453,7 @@ d.camera(cx, cz, 2.6);`,
     doi: 3000,
   },
   'dau-thanh': {
-    mo: 'Bảng Đấu thành (chip 🏯 trên bản đồ phó bản), bước chọn kinh đô để đánh thử',
+    mo: 'Bảng Đấu thành (nút Đấu thành ở cột bên phải), bước chọn kinh đô để đánh thử',
     truoc: KINH_DO + CO_QUAN + DU_QUAN,
     sau: `d.dauPanel();`,
     doi: 800,
@@ -543,7 +547,7 @@ d.camera(cx, cz, 2.6);`,
   'da-ngoai': {
     mo: 'Chương 5 (đã thắng màn 35): bảng Dã ngoại ở bản đồ phó bản (cấp chung, đội, năm map, treo máy)',
     truoc: `${CHUONG5(35)}\ns.daNgoai.cap = 12; s.daNgoai.exp = 900; s.daNgoai.xa = 2; s.daNgoai.doi = ['trungTrac', 'trungNhi', 'caoLo'];`,
-    sau: `document.querySelector('[data-act=openCampaign]').click(); document.querySelector('[data-act=openDaNgoai]').click();`,
+    sau: `document.querySelector('[data-act=goDaNgoai]').click();`,
   },
   'da-ngoai-tran': {
     mo: 'Như da-ngoai, đội ba tướng ra map 1 (Rừng Phong Châu) đứng ở mép khu 2, Tự đánh, chụp sau 6 giây',
@@ -656,6 +660,11 @@ d.camera(cx, cz, 2.6);`,
   'ltk-tui': {
     mo: 'Lý Thường Kiệt đã về, mặc đủ bộ Như Nguyệt: bảng tướng, thẻ Túi đồ của Lý Thường Kiệt',
     truoc: `${CHUONG5(35)}\n${LTK}\nconst T = await import('/src/game/trangBi.ts'); const co = new Set(); for (let q = 0; co.size < 4; q++) { const m = T.rutMon(q, 'daBoss', 5, ['nhuNguyet'], [0, 0, 0, 100]); if (co.has(m.o)) continue; co.add(m.o); s.trangBi.kho.push({ ...m, cuong: 6, id: s.trangBi.nextId++, tuong: 'lyThuongKiet' }); }`,
+    sau: `d.tuong('lyThuongKiet');`,
+  },
+  'tui-day': {
+    mo: 'Như ltk-tui, túi có thêm 60 món (đủ cho nhiều trang): xem lưới đồ ở khổ máy tính',
+    truoc: `${CHUONG5(35)}\n${LTK}\nconst T = await import('/src/game/trangBi.ts'); const co = new Set(); for (let q = 0; co.size < 4; q++) { const m = T.rutMon(q, 'daBoss', 5, ['nhuNguyet'], [0, 0, 0, 100]); if (co.has(m.o)) continue; co.add(m.o); s.trangBi.kho.push({ ...m, cuong: 6, id: s.trangBi.nextId++, tuong: 'lyThuongKiet' }); } for (let q = 100, n = 0; n < 60; q++) { const m = T.rutMon(q, 'daBoss', 5, ['nhuNguyet', 'bachDang', 'vanAn'], [10, 30, 40, 20]); if (!m) continue; n++; s.trangBi.kho.push({ ...m, id: s.trangBi.nextId++ }); }`,
     sau: `d.tuong('lyThuongKiet');`,
   },
   'ltk-truyen': {
@@ -772,7 +781,7 @@ ${Object.entries(CANH)
   .join('\n')}
 
 Tùy chọn:
-  --khung doc,fold,ngang,bang  Khổ màn hình, cách nhau dấu phẩy (mặc định: doc = 390×844; fold = 344×882)
+  --khung doc,fold,ngang,bang,pc,pc2Khổ màn hình, cách nhau dấu phẩy (mặc định: doc = 390×844; fold = 344×882)
   --truoc "<mã>"          Chạy thêm trong trang trước khi tải lại, để dựng state
   --sau "<mã>"            Chạy thêm trong trang sau khi tải lại, để bấm trận, kỹ năng...
                           Mã có sẵn d (window.__debug), s (state), G (game.ts), M (moPhong.ts),

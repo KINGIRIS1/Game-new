@@ -1,4 +1,4 @@
-// Bảng Đấu thành (mở bằng chip 🏯 trên đầu bản đồ phó bản), hai thẻ:
+// Bảng Đấu thành (mở bằng nút Đấu thành ở cột nút bên phải màn hình chính), hai thẻ:
 // - Đấu thật (có máy chủ): tham gia (đặt tên), hồ sơ, tìm đối thủ, chọn hướng và quân rồi đánh; trận gần đây; rời.
 // - Đánh thử: chọn kinh đô của mình hay kinh đô máy, hướng tràn vào, quân mang theo; quân ngã không mất.
 // Bảng kết quả sau trận, bảng Bị đánh khi mở game. Gọi máy chủ ở main.ts (src/mang/), bảng này chỉ dựng HTML.

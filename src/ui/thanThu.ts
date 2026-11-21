@@ -1,4 +1,4 @@
-// Giao diện thần thú (docs/thiet-ke.md mục Kế hoạch: nuôi thần thú): bảng ở bản đồ phó bản (chip 🐉, hay chạm thú
+// Giao diện thần thú (docs/thiet-ke.md mục Kế hoạch: nuôi thần thú): bảng mở từ nút Thần thú ở cột nút bên phải màn hình chính (hay chạm thú
 // đang đi lại trong kinh đô): mỗi thú một thẻ (cấp, dáng, thanh bữa, giá bữa, nút Cho ăn, Mang theo); nửa trái là thú
 // đang mang theo và số bữa.
 

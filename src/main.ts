@@ -406,7 +406,7 @@ async function start(): Promise<void> {
     hud.toast(vi.trangBi.hint, false, 8000);
   };
 
-  /** Dã ngoại vừa mở (có tướng đầu tiên về): Lạc hầu báo một lần chỗ vào (chip 🌿 ở bản đồ phó bản). */
+  /** Dã ngoại vừa mở (có tướng đầu tiên về): Lạc hầu báo một lần chỗ vào (nút Dã ngoại ở cột bên phải). */
   const showDaHint = () => {
     if (!daMo(state)) return;
     if (!state.hinted.includes('daNgoai')) {
@@ -2235,7 +2235,9 @@ async function start(): Promise<void> {
         if (mode.kind !== 'view') exitMode();
         select(null);
         play('tap');
-        hud.showCampaign(state);
+        hud.showCampaign(state, a.step);
+        // Vừa mở bảng Đấu thành ở thẻ Đấu thật: hỏi máy chủ hồ sơ, trận gần đây.
+        if (hud.dauView()?.mode === 'that') handle({ kind: 'dauOpened' });
         return;
 
       case 'march': {
