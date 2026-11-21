@@ -4089,6 +4089,31 @@ Học từ Thronewake (nhà Herbalist cứu 40–55% quân ngã). Trước đây
 - Hai người hái thuốc thay phiên rời vườn lên chỗ hái gần nhất (ô sát rừng chưa phát hay ô có cây dại, trong `HAI_XA` ô; `duongHai` ở `vanChuyen.ts`, `tuyenHai` ở `render/ganhHang.ts`), cúi hái `HAI_S` giây rồi gùi đầy lá về; mỗi lúc một người đi. Có trận, giặc sắp tới, ban đêm thì ở nhà.
 - Lạc hầu gợi ý một lần khi mở (`NEW_HINTS`). Mẫu kinh đô chừa một chỗ từ Điện 4.
 
+## Kế hoạch: địa hình diorama cho kinh đô (chủ dự án đã duyệt, chưa làm)
+
+Chủ dự án gửi ảnh mẫu kiểu sa bàn (thành trên gò đá nhiều tầng, tường kè đá, sông có thác, cầu gỗ, ruộng cao thấp, làng dưới chân, núi làm phông). Chốt qua buổi hỏi đáp:
+
+- **Lấy bố cục và cảm giác, không lấy kiến trúc** (như doanh trại: ảnh mẫu là thành Nhật, game giữ nét Đông Sơn). Không thành nhiều tầng kiểu Nhật, không anh đào (thay bằng hoa gạo, hoa đào Bắc), không núi tuyết (thay bằng núi đá vôi xanh mờ kiểu Ba Vì, Tản Viên).
+- **Chỉ kinh đô** (lưới 76×76 hai bờ). Bãi chiến, dã ngoại, biển, đảo giữ nguyên.
+- **Địa hình tự nhiên không đổi luật**: `state.heights`, `baseHeights()`, lũ (`floodMap`, `floodHits`) giữ y như cũ, không nâng bản lưu, kinh đô cũ đứng nguyên. Phần mới là cách vẽ, trừ mẫu kinh đô đắp bậc (bước 5).
+- **Không làm khung sa bàn** (camera kéo ra tới biển và quần đảo). Không làm ruộng bậc thang trang trí ngoài lưới.
+- **Máy yếu**: mỗi bước đo lag (skill `do-lag`) trước và sau; ở cảnh Điện 8 lệnh vẽ và tam giác tăng không quá 15%. Mọi thứ mới có bản nhẹ dưới `LITE_ZOOM`.
+
+### Các bước (mỗi bước một PR, xong bước này mới sang bước sau; mỗi PR có ảnh chụp kiểm tra, số đo lag, sửa tài liệu này)
+
+1. **Độ cao vẽ mỗi bậc**: `LEVEL_H` (`world.ts`) từ 0,3 lên khoảng 0,5 cho ra dáng đồi; mọi thứ đứng trên đất (công trình, lính, cầu `bridgeBanks`, nước lũ, thuyền) nâng theo. Chụp ba mức 0,4, 0,5, 0,6 để chủ dự án chốt.
+2. **Kè đá**: vách đứng (mép móng công trình, chỗ đắp nền, chỗ đắp đất) vẽ thành tường kè thay màu đất trơn (`nenDat.ts`); dốc tự nhiên vẫn là dốc cỏ, có đá lộ rải rác. Kè đổi theo cấp Điện như mái: cấp 1–3 đất nện cọc tre, 4–6 đá hộc xếp khan, 7–8 đá xanh đẽo vuông, 9–10 đá xanh có diềm đồng hoa văn.
+3. **Núi phông nền, thác**: dãy núi đá vôi xanh mờ có mây vắt ngang ở phía bắc và tây sau rừng ngoài lưới (đông nam là biển); vẽ nhẹ: ít mặt, không đổ bóng, không viền mực. Thác chính đổ từ núi xuống đầu nguồn sông Thao ngoài lưới phía bắc; một hai suối nhỏ có thác từ núi phía tây chảy vào rừng ngoài lưới. Chỉ để nhìn.
+4. **Bờ sông**: bờ kè đá; ghềnh đá lô nhô giữa lòng sông, ngoài ba ô sát bờ mà thuyền và thủy quái đi. Hình dòng sông (thẳng, rộng 7 ô) là luật, không uốn.
+5. **Mẫu kinh đô đắp bậc thang** (đổi luật, tốn thêm đất đá):
+   - Cả bốn mẫu. Ruộng (lúa, nếp) xếp thành dãy từ bờ sông lùi vào trong: dãy sát sông giữ bậc 0 để vẫn được nước êm bồi phù sa, mỗi dãy vào trong cao thêm một bậc, tối đa bậc 2; chỗ đất tự nhiên đã đủ cao thì không đắp. Ruộng cao không được phù sa nhưng an toàn khi lũ to.
+   - Điện đắp lên bậc 3, các công trình quanh Điện bậc 2, ruộng bậc 0–2 xuống tới sông: ba tầng như thành trên gò (đổi quyết định cũ "Điện chỉ trông như trên đồi").
+   - Giá: đúng giá đắp nền công trình hiện có (`raiseBuildingCost`), cộng vào giá áp mẫu; bảng mẫu ghi riêng dòng "Đắp nền".
+   - Chương 1 (chưa mở đắp đất) áp mẫu không đắp. Từ chương 2 bảng mẫu có lựa chọn "Đắp bậc thang" bật hay tắt; tắt thì không tốn thêm, bật mà thiếu đất đá thì nút Áp mẫu báo thiếu như thường.
+   - Kè đá (bước 2) tự hiện ở chỗ chênh nên ra dáng bậc thang.
+   - Test (`sapxep.test.ts`): ruộng sát sông vẫn bậc 0 và vẫn được phù sa; giá đắp khớp tổng đắp nền từng công trình; chương 1 hay tắt đắp thì độ cao không đổi; bốn mẫu đủ ba tầng. Người chơi mô phỏng không áp mẫu nên nhịp cân bằng không đổi.
+6. **Cầu**: làm lại ba cấp cho giống ảnh: cầu gỗ dầm to, lan can, trụ đá; cấp 3 thêm mái che đầu cầu.
+
 ## Nhịp chơi và lưu game
 
 - Nhịp chơi lai: mỗi lần mở game là một phiên ra quyết định ngắn.
