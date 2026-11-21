@@ -13,6 +13,7 @@ import { chapterOf } from './manVao';
 import { advanceDao, advanceGiacDao, chanThuyen, daoArmy, daoGiuDuoc, donOf, initialDao, luaHieu, nguTruongBonus, type DaoState } from './dao';
 import { initialDaNgoai, treoVang, type DaNgoaiState, type DaThuong } from './daNgoai';
 import { hoiBua, type ThanThuState } from './thanThu';
+import { hoiThuong, initialThuong, truQuanNga, type ThuongState } from './nhaThuoc';
 import { advanceXay, initialXay, isBusy, nextXayEvent, pendingBuilding, pendingBuildings, pendingCount, pendingOf, type XayState } from './xay';
 import { inChapter4 } from './chuong4';
 import { chuong5Won, inChapter5, initialHaiBa, maVienCame } from './chuong5';
@@ -136,6 +137,8 @@ export interface RaidResult {
   foe: Foe;
   /** Món đồ rơi ra sau trận thắng (`trangBi.ts`). */
   do?: RoiDo;
+  /** Lính ngã được khiêng về nhà thuốc nam (`nhaThuoc.ts`). */
+  thuong?: Record<UnitType, number>;
 }
 
 export type { Foe };
@@ -197,6 +200,8 @@ export interface StageResult {
   camp?: number;
   /** Món đồ rơi ra sau trận thắng (`trangBi.ts`). */
   do?: RoiDo;
+  /** Lính ngã được khiêng về nhà thuốc nam (`nhaThuoc.ts`). */
+  thuong?: Record<UnitType, number>;
 }
 
 export interface CampaignState {
@@ -343,9 +348,10 @@ export interface Merchant {
  * 15: thử thách, huân công; 16: gỗ, tài nguyên thứ năm, và gợi ý của Lạc hầu về công trình mới; 17: cây, đá mọc trên
  * ô trống; 18: lưới nới qua sông, 76×76; 20: Điện 10×10; 21: chương 5, quân Hán; 22: Hai Bà Trưng; 23: thủy quân Hán,
  * lâu thuyền; 24: nữ tướng, thử thách màn 33–40; 25: thời gian xây, tốp thợ, nhà thợ hồ, đố sử; 26: một doanh trại lớn;
- * 27: trang bị tướng; 28: đóng đảo; 29: giặc đánh đảo; 30: dã ngoại, cấp chung của tướng).
+ * 27: trang bị tướng; 28: đóng đảo; 29: giặc đánh đảo; 30: dã ngoại, cấp chung của tướng; 36: nhà thuốc nam, thương
+ * binh).
  */
-export const SAVE_VERSION = 35;
+export const SAVE_VERSION = 36;
 
 export interface GameState {
   version: typeof SAVE_VERSION;
@@ -367,6 +373,8 @@ export interface GameState {
   merchant: Merchant;
   /** Số lính mỗi loại đang có (lính không tính vào dân). */
   troops: Record<UnitType, number>;
+  /** Thương binh nằm ở nhà thuốc nam (`nhaThuoc.ts`): không tính chỗ quân, không ra trận, vẫn ăn gạo. */
+  thuong: ThuongState;
   /** Binh khí đã rèn ở lò rèn cho từng binh chủng: 0, 1 hay 2 bậc. */
   arms: Record<UnitType, number>;
   raid: RaidState;
@@ -577,6 +585,7 @@ export function createInitialState(now: number): GameState {
     clock: 0,
     merchant: { nextAt: MERCHANT_FIRST_MS, visit: null, seq: 0 },
     troops: { giao: 0, cung: 0, voi: 0, no: 0 },
+    thuong: initialThuong(),
     arms: { giao: 0, cung: 0, voi: 0, no: 0 },
     raid: initialRaid(),
     campaign: initialCampaign(),
@@ -661,7 +670,8 @@ export function foodPerMinute(state: GameState): number {
   let total = state.dan * GAO_PER_DAN;
   // Lính đóng đảo (và đang trên thuyền chiến) vẫn ăn gạo kinh đô gửi ra.
   const away = state.dao ? daoArmy(state) : null;
-  for (const k of UNIT_TYPES) total += (state.troops[k] + (away?.[k] ?? 0)) * UNITS[k].upkeep;
+  // Thương binh ở nhà thuốc cũng ăn.
+  for (const k of UNIT_TYPES) total += (state.troops[k] + (away?.[k] ?? 0) + state.thuong.linh[k]) * UNITS[k].upkeep;
   return total;
 }
 
@@ -1798,8 +1808,8 @@ function foeChapter(state: GameState, foe: Foe): Chapter {
 function finishRaid(state: GameState): void {
   const raid = state.raid;
   const battle = raid.battle!;
-  // Lính ta còn sống trở về doanh trại, lính tử trận mất hẳn.
-  for (const k of UNIT_TYPES) state.troops[k] = Math.max(0, state.troops[k] - battle.lost[k]);
+  // Lính ta còn sống trở về doanh trại; lính ngã thì nhà thuốc nam khiêng về một phần, còn lại mất hẳn.
+  const thuong = truQuanNga(state, battle.lost);
   const stolenAny = RESOURCE_IDS.some((r) => battle.stolen[r] > 0);
   const won = battle.killed === battle.total && !stolenAny;
   const flood = battle.floodTo > 0;
@@ -1814,6 +1824,7 @@ function finishRaid(state: GameState): void {
     wrecked: [...battle.wrecked],
     drowned: [...battle.drowned],
     stolen: { ...battle.stolen },
+    ...(thuong ? { thuong } : {}),
   };
   if (won) {
     raid.won += 1;
@@ -2151,6 +2162,7 @@ export function tick(state: GameState, ms: number, busy = false): Resources {
   updateCayDa(state);
   updateBenKia(state);
   hoiBua(state, ms);
+  hoiThuong(state, ms);
   return gained;
 }
 
@@ -2160,7 +2172,7 @@ export function tick(state: GameState, ms: number, busy = false): Resources {
  * phần việc xong, để công trình xong giữa chừng làm ra từ lúc xong. Trả số ms đã tính sản xuất, của làm ra và số phần
  * việc xây đã xong.
  */
-export function applyOffline(state: GameState, now: number): { ms: number; gained: Resources; built: number; da: DaThuong } {
+export function applyOffline(state: GameState, now: number): { ms: number; gained: Resources; built: number; da: DaThuong; chua: Record<UnitType, number> } {
   const away = Math.max(now - state.lastSeen, 0);
   const cap = Math.min(away, OFFLINE_CAP_MS);
   const gained: Resources = { gao: 0, voOc: 0, datDa: 0, sat: 0, go: 0 };
@@ -2183,6 +2195,8 @@ export function applyOffline(state: GameState, now: number): { ms: number; gaine
   const da = treoVang(state, away);
   // Bữa của thần thú hồi suốt quãng vắng.
   hoiBua(state, away);
+  // Lang y chữa thương binh suốt quãng vắng.
+  const chua = hoiThuong(state, away);
   state.lastSeen = now;
-  return { ms: cap, gained, built: state.xay.seq - seq, da };
+  return { ms: cap, gained, built: state.xay.seq - seq, da, chua };
 }

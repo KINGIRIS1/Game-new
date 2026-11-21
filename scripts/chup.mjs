@@ -256,6 +256,17 @@ for (const v of s.xay.viec) for (const o of v.o) o.ms *= 400;`;
  * Mở thêm đất, coi như đã kết chương 1 (có Hội Tết), dựng bếp gói bánh xa Điện chừng 12–22 ô và ruộng nếp, vườn đậu lá
  * dong, chuồng lợn gần Điện (nguyên liệu gánh về Điện, kho), đủ người làm.
  */
+/** Dựng nhà thuốc nam cấp 5 gần Điện, năm thương binh nằm chữa. */
+const NHA_THUOC = `s.khoanh = K.squareKhoanh(K.AREA[6]);
+s.resources = { gao: 9e5, voOc: 9e5, datDa: 9e5, sat: 9e5, go: 9e5 };
+{ const dien = s.buildings.find((b) => b.type === 'dien');
+  const p = G.findSpot(s, 'nhaThuoc', { x: dien.x + 5, z: dien.z + 5 }) ?? G.findSpot(s, 'nhaThuoc');
+  if (!p) throw new Error('không có chỗ nhà thuốc');
+  const r = G.place(s, 'nhaThuoc', p.x, p.z);
+  if (!r.ok) throw new Error(r.reason);
+  r.value.level = 5;
+  s.thuong = { linh: { giao: 3, cung: 2, voi: 0, no: 0 }, ms: 0 }; }`;
+
 const BEP_XA = `s.khoanh = K.squareKhoanh(K.AREA[6]);
 s.giong.ascended = true;
 s.resources = { gao: 9e5, voOc: 9e5, datDa: 9e5, sat: 9e5, go: 9e5 };
@@ -296,6 +307,17 @@ export const CANH = {
     truoc: `${KINH_DO}\n${RUONG_XA}`,
     sau: NHIN_GANH,
     doi: 600,
+  },
+  'hai-thuoc': {
+    mo: 'Như kinh-do, có nhà thuốc nam gần Điện, năm thương binh nằm chữa: hai người hái thuốc thay phiên lên bìa rừng hái lá, gùi đầy về (nhìn giữa tuyến)',
+    truoc: `${KINH_DO}\n${NHA_THUOC}`,
+    sau: NHIN_DI(`g.hang === 'thuoc'`, 3.4),
+    doi: 600,
+  },
+  'nha-thuoc': {
+    mo: 'Như hai-thuoc, chạm chọn nhà thuốc: bảng có tỉ lệ cứu, giường, thương binh, đếm ngược người kế tiếp khỏi',
+    truoc: `${KINH_DO}\n${NHA_THUOC}`,
+    sau: `d.select(s.buildings.find((b) => b.type === 'nhaThuoc').id);`,
   },
   'ganh-vung': {
     mo: 'Như ganh-hang (một ruộng ở xa kho), đang đặt kho thóc gần ruộng ấy: vùng gánh đủ 100% có sẵn tô nhạt, phần kho mới phủ thêm tô xanh',

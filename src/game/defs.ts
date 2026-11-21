@@ -75,7 +75,9 @@ export type BuildingType =
   // Bậc lên thành: lối cho cung thủ, lính nỏ lên mặt thành đất, thành Cổ Loa mà bắn xuống khi giữ kinh đô.
   | 'bacThanh'
   // Đền Rồng Tiên thờ Lạc Long Quân và Âu Cơ (Điện 10, chương 5): đền còn nguyên thì của từ nước, từ núi làm ra thêm.
-  | 'denRongTien';
+  | 'denRongTien'
+  // Nhà thuốc nam (Điện 4): lang y cứu một phần quân ngã sau trận, thương binh nằm chữa dần rồi về doanh trại.
+  | 'nhaThuoc';
 
 /**
  * Mốc mở khóa theo cốt truyện: sau kết chương 1, khi vào chương 2, sau kết chương 2, khi vào chương 3, khi Rùa Vàng
@@ -173,6 +175,7 @@ export const BUILD_MENU: BuildingType[] = [
   'traiCung',
   'chuongVoi',
   'traiNo',
+  'nhaThuoc',
   'choiCanh',
   'bayChong',
   'denPhuDong',
@@ -1027,6 +1030,45 @@ export const BUILDINGS: Record<BuildingType, BuildingDef> = {
     buildable: true,
     removable: false,
   },
+  // Nhà thuốc nam: lang y cứu một phần quân ngã sau mỗi trận (trừ trận đảo), chữa dần theo giờ (`nhaThuoc.ts`).
+  nhaThuoc: {
+    type: 'nhaThuoc',
+    w: 4,
+    d: 4,
+    maxLevel: 10,
+    buildCost: { gao: 200, voOc: 150, datDa: 120 },
+    upgradeCost: [
+      {},
+      {},
+      { gao: 150, voOc: 120, datDa: 80 },
+      { gao: 300, voOc: 240, datDa: 160 },
+      { gao: 600, voOc: 480, datDa: 320, sat: 40 },
+      { gao: 1200, voOc: 960, datDa: 640, sat: 80 },
+      { gao: 2400, voOc: 1900, datDa: 1300, sat: 160 },
+      { gao: 4800, voOc: 3800, datDa: 2600, sat: 320 },
+      { gao: 9600, voOc: 7600, datDa: 5200, sat: 640 },
+      { gao: 12000, voOc: 9800, datDa: 6700, sat: 820 },
+      { gao: 19000, voOc: 15600, datDa: 10700, sat: 1300 },
+    ],
+    production: [{}, {}, {}, {}, {}, {}, {}, {}, {}, {}],
+    hp: [240, 270, 300, 330, 360, 400, 440, 490, 540, 600],
+    limit: [0, 0, 0, 1, 1, 1, 1, 1, 1, 1],
+    minDien: 4,
+    buildable: true,
+    removable: false,
+  },
+};
+
+/**
+ * Nhà thuốc nam (`nhaThuoc.ts`), theo cấp nhà (chỉ số 0 là cấp 1): phần quân ngã được khiêng về (`cuu`), số giường
+ * tính bằng chỗ quân (`giuong`), thời gian chữa khỏi một chỗ quân (`chuaMs`; voi chiến 3 chỗ thì lâu gấp ba).
+ */
+export const NHA_THUOC = {
+  cuu: [0.3, 0.33, 0.36, 0.39, 0.42, 0.45, 0.48, 0.5, 0.53, 0.55],
+  giuong: [8, 12, 16, 22, 28, 34, 40, 48, 56, 64],
+  chuaMs: [30_000, 27_000, 24_000, 21_000, 18_000, 16_000, 14_000, 12_000, 10_000, 8_000],
+  /** Thứ tự chữa: lính ít chỗ trước, để voi chiến không chặn cả hàng khi doanh trại gần đầy. */
+  thuTu: ['giao', 'cung', 'no', 'voi'] as UnitType[],
 };
 
 const PHUT = 60_000;
@@ -2430,7 +2472,7 @@ export const QUEST_INSERTED_V4 = 11;
  * Công trình mới thêm sau khi đã có người chơi: lần đầu mở được thì Lạc hầu nói một câu gợi ý (một lần, ghi ở
  * `GameState.hinted`). Thêm loại vào đây không phải nâng bản lưu.
  */
-export const NEW_HINTS: BuildingType[] = ['thoHo', 'xuongMoc', 'langChai', 'congThanh', 'hoKimQuy', 'benKhoi', 'congDe', 'bacThanh', 'denRongTien'];
+export const NEW_HINTS: BuildingType[] = ['thoHo', 'xuongMoc', 'langChai', 'nhaThuoc', 'congThanh', 'hoKimQuy', 'benKhoi', 'congDe', 'bacThanh', 'denRongTien'];
 
 /**
  * Cá mỗi phút của một làng chài đủ người, theo cấp (chỉ số 0 là cấp 1). Cá không tích trữ: dân và lính ăn cá trước,

@@ -189,6 +189,7 @@ Lúc đầu mỗi cấp Điện chỉ cho phát tới một số khoảnh (lư�
 | Cổng thành | 1×1 | Có từ chương 3, Điện 5. Cửa trong vòng tường: giặc dồn về cổng, lính trên lầu cổng bắn (xem mục Kế hoạch: cổng thành, xưởng mộc, làng chài) |
 | Bậc lên thành | 1×1 | Có từ Điện 3. Dựng sát mặt trong một đoạn thành đất hay thành Cổ Loa: khi giữ kinh đô cung thủ, lính nỏ theo bậc lên nóc thành bắn xuống (xem mục Bậc lên thành, lối đi trên nóc thành) |
 | Nhà thợ hồ | 3×3 | Thêm một tốp thợ xây; nhà lên cấp thì tốp ấy làm nhanh hơn (xem mục Thời gian xây, tốp thợ, đố sử) |
+| Nhà thuốc nam | 4×4 | Có từ Điện 4, một nhà. Sau mỗi trận (trừ trận đảo) cứu 30% → 55% số lính ngã, thương binh nằm chữa dần rồi về doanh trại (xem mục Kế hoạch: Nhà thuốc nam) |
 | Hồ Kim Quy | 8×8 | Có khi Rùa Vàng hiện lên (thắng màn 19). Lũy, thành đất, thành Cổ Loa, cổng thành thêm 30% máu (xem mục Hồ Kim Quy) |
 | Đền Cổ Loa | 4×4 | Có sau khi kết chương 3. Chòi canh bắn mạnh gấp rưỡi, xa thêm 1 ô |
 | Đền Rồng Tiên | 8×8 | Thờ Lạc Long Quân và Âu Cơ. Có ở chương 5, Điện cấp 10. Vỏ ốc, cá, đất đá, sắt, gỗ làm ra thêm 20% (xem mục Đền Rồng Tiên) |
@@ -4070,6 +4071,24 @@ Chủ dự án yêu cầu: lên kế hoạch nuôi thần thú. Như các kế h
 3. **PR 2**: hình năm thú ba dáng, vẽ trong trận, nhóm chụp `thanThu`.
 4. **PR 3**: thú đi lại, bay trong kinh đô; bảng Thần thú; chụp kiểm tra.
 
+## Kế hoạch: Nhà thuốc nam (chủ dự án đã duyệt, đã làm)
+
+Học từ Thronewake (nhà Herbalist cứu 40–55% quân ngã). Trước đây lính ngã ở mọi trận là mất hẳn. Chủ dự án chốt ba điều: cứu ở **mọi trận trừ trận đảo**; thương binh **chữa dần theo giờ, cả lúc vắng**; **mở ở Điện 4, cấp nhà 1 → 10 cứu 30% → 55%**. Thêm hai người đi hái thuốc (chỉ để nhìn).
+
+### Luật (`src/game/nhaThuoc.ts`, bản lưu 36)
+
+- Công trình `nhaThuoc` 4×4, 10 cấp, mở ở Điện 4, mỗi kinh đô một nhà (`BUILDINGS.nhaThuoc`), số ở `NHA_THUOC` (`defs.ts`): phần cứu `cuu` 30% → 55%, giường `giuong` 8 → 64 chỗ quân, thời gian chữa một chỗ quân `chuaMs` 30 → 8 giây (voi chiến 3 chỗ thì lâu gấp ba).
+- Trận xong (giữ kinh đô `finishRaid`, phó bản và thử thách `finishStage`, đánh đồn `finishCamp`, Đấu thành đánh thật `nhanKetQua`): trừ quân ngã rồi khiêng về nhà thuốc `floor(ngã × tỉ lệ)` mỗi binh chủng theo nhà còn nguyên cấp cao nhất, không quá số giường còn trống; phần thừa mất như cũ (`truQuanNga`, `nhanThuong`). Kết quả trận ghi `thuong`. Trận đảo không đổi (thua là chết hết). Máy chủ Đấu thành không đổi: chỉ máy khách khiêng về.
+- Thương binh (`state.thuong`) không chiếm chỗ quân, không ra trận, vẫn ăn gạo (`foodPerMinute`). Chữa từng người theo thứ tự giáo binh, cung thủ, lính nỏ, voi chiến (`hoiThuong`, gọi trong `tick` và cả quãng vắng ở `applyOffline`); khỏi thì về doanh trại nếu còn chỗ, hết chỗ thì nằm chờ. Nhà hư thì không cứu, không chữa tới khi sửa.
+- Người chơi mô phỏng không dựng nhà thuốc nên nhịp cân bằng và chuẩn độ khó không đổi.
+
+### Giao diện, hình
+
+- Bảng nhà thuốc (`ui/nhaThuoc.ts`): tỉ lệ cứu, giường, thương binh, đếm ngược người kế tiếp khỏi (thay tại chỗ), chờ chỗ doanh trại, cấp sau. Bảng kết quả trận có dòng "Được khiêng về nhà thuốc"; bảng lúc vắng báo số người chữa khỏi; bảng nơi ở có dòng "Đang chữa".
+- Hình (`render/congTrinh/nhaThuoc.ts`, bản vẽ ở `docs/bo-cuc-cong-trinh.md`): nhà sàn lang y, giàn phơi lá, lán chõng có thương binh nằm theo số đang chữa, cối giã thuốc, vườn thuốc, lò sắc thuốc. Ba người: lang y giã thuốc, hai người hái thuốc.
+- Hai người hái thuốc thay phiên rời vườn lên chỗ hái gần nhất (ô sát rừng chưa phát hay ô có cây dại, trong `HAI_XA` ô; `duongHai` ở `vanChuyen.ts`, `tuyenHai` ở `render/ganhHang.ts`), cúi hái `HAI_S` giây rồi gùi đầy lá về; mỗi lúc một người đi. Có trận, giặc sắp tới, ban đêm thì ở nhà.
+- Lạc hầu gợi ý một lần khi mở (`NEW_HINTS`). Mẫu kinh đô chừa một chỗ từ Điện 4.
+
 ## Nhịp chơi và lưu game
 
 - Nhịp chơi lai: mỗi lần mở game là một phiên ra quyết định ngắn.
@@ -4125,4 +4144,5 @@ Chủ dự án yêu cầu: lên kế hoạch nuôi thần thú. Như các kế h
 24. **Trang bị rơi ngẫu nhiên và sáu chỉ số tướng** (chủ dự án đã duyệt; xem Kế hoạch cùng tên): đồ rơi ở phó bản, thử thách, đồn, giữ kinh đô; mỗi tướng một bộ mang tên truyền thuyết, ai mặc cũng được, hiệu ứng bộ khi đúng tướng mặc; sáu chỉ số và Lực chiến; cường hóa bằng tài nguyên, phân giải ra sắt; bảng tướng kiểu túi đồ game nhập vai (hình tướng mặc đồ, ảnh món vẽ sẵn), mặc đủ bộ mình thì vũ khí ánh lên; Đấu thành tính đồ (máy chủ kiểm món, tự tính chỉ số). PR 1 luật và bảng, PR 2 Đấu thành, PR 3 hình (đã làm cả ba, cùng PR #100).
 25. **Điện 10 điều quân ra đóng đảo** (chủ dự án đã duyệt; đã làm PR 1–3: luật, giao diện, hình đồn đảo và thuyền chiến, giặc đánh đảo; xem Kế hoạch cùng tên): thuyền chiến đóng ở bến thuyền khơi cấp 3 chở quân ra đồn Hoàng Sa, đồn Trường Sa; đảo có quân giữ thì ngư trường làm ra thêm, báo sớm và chặn đánh thủy quân Hán; giặc Hán đánh đảo, quân đảo tự đánh, xem lại được.
 26. **Dã ngoại** (chủ dự án yêu cầu, đã làm; xem Kế hoạch cùng tên): mười map (map 6 Núi Nưa, map 7 Đầm Dạ Trạch, map 8 Núi Vệ, map 9 Bạch Đằng, map 10 sông Như Nguyệt thêm sau) mở kiểu Võ Lâm 2 nối nhau bằng cổng mở theo cấp, mỗi map năm khu quái phân theo cấp và một boss tự đánh; chạm để đi, nút Tự đánh; tự chọn tối đa 3 tướng, chỉ tướng đi; cấp chung cho mọi tướng chỉ có tác dụng trong dã ngoại; treo máy tối đa 8 giờ, không khóa tướng.
-27. **Để sau**: nhạc nền.
+27. **Nhà thuốc nam** (chủ dự án đã duyệt, đã làm; xem Kế hoạch cùng tên): cứu một phần lính ngã sau mỗi trận, chữa dần theo giờ; hai người đi hái thuốc.
+28. **Để sau**: nhạc nền.

@@ -1043,6 +1043,7 @@ const RECIPES: Record<MauId, Recipe> = {
       ['denPhuDong', byAxis],
       ['traiGiao', byBarracks],
       [['traiCung', 'chuongVoi'], byBarracks],
+      ['nhaThuoc', byBarracks, 4],
       ['ruong', byRiver],
       ['ruongNep', byRiver],
       ['loRen', byBarracks],
@@ -1068,6 +1069,7 @@ const RECIPES: Record<MauId, Recipe> = {
       [['denPhuDong', 'denTanVien'], byAxis],
       ['traiGiao', byBarracks],
       [['traiCung', 'chuongVoi'], byBarracks],
+      ['nhaThuoc', byBarracks, 4],
       ['ruong', byRiver],
       ['ruongNep', byRiver],
       ['loRen', byBarracks],
@@ -1104,6 +1106,7 @@ const RECIPES: Record<MauId, Recipe> = {
       [['denPhuDong', 'denTanVien'], inRings(0, byBarracks)],
       ['traiGiao', inRings(0, byBarracks)],
       [['traiCung', 'chuongVoi'], inRings(0, byBarracks)],
+      ['nhaThuoc', inRings(1, byDien), 4],
       ['ruongNep', inRings(0, byRiver)],
       ['ruong', inRings(0, byRiver)],
       ['baiDa', inRings(0, byHill)],
@@ -1139,6 +1142,7 @@ const RECIPES: Record<MauId, Recipe> = {
       ['denHatMon', inRings(0, byAxis), 9],
       ['traiGiao', inRings(0, byBarracks)],
       [['traiCung', 'chuongVoi'], inRings(0, byBarracks)],
+      ['nhaThuoc', inRings(1, byDien), 4],
       ['traiNo', inRings(0, byBarracks)],
       ['ruong', inRings(0, byRiver)],
       ['ruongNep', inRings(0, byRiver)],
@@ -1432,7 +1436,7 @@ export function planMau(state: GameState, id: MauId): MauPlan {
     }
   }
   if (!plan.stuck.length) {
-    plan.duong = laneRoads(state, lane, paved, used);
+    plan.duong = laneRoads(state, lane, paved, used, plan.removes);
     for (let i = 0; i < plan.duong.length; i++) addCost(plan.cost, BUILDINGS[DUONG_MAU].buildCost);
   }
   return plan;
@@ -1443,12 +1447,14 @@ const DUONG_MAU: BuildingType = 'duongDat';
 
 /**
  * Đường mẫu sẽ trải: các ô đường của mẫu (`lane`) chưa có đường (`paved`), chưa có gì đứng (`used`, sau khi áp), gần
- * Điện trước, không quá giới hạn đường theo cấp Điện.
+ * Điện trước, không quá giới hạn đường theo cấp Điện (ô đường kế hoạch dỡ đi `removes` trả lại chỗ trong giới hạn).
  */
-function laneRoads(state: GameState, lane: Uint8Array, paved: Set<number>, used: Uint8Array): { x: number; z: number }[] {
+function laneRoads(state: GameState, lane: Uint8Array, paved: Set<number>, used: Uint8Array, removes: number[] = []): { x: number; z: number }[] {
   const def = BUILDINGS[DUONG_MAU];
   if (!def.buildable || !unlocked(state, def.unlock) || dienLevel(state) < def.minDien) return [];
-  const room = limitOf(state, DUONG_MAU) - usedOf(state, DUONG_MAU);
+  const gone = new Set(removes);
+  const freed = state.buildings.filter((b) => gone.has(b.id) && isRoad(b.type)).length;
+  const room = limitOf(state, DUONG_MAU) - usedOf(state, DUONG_MAU) + freed;
   if (room <= 0) return [];
   const out: { x: number; z: number }[] = [];
   for (let i = 0; i < lane.length; i++) if (lane[i] && !paved.has(i) && !used[i]) out.push({ x: i % GRID, z: Math.floor(i / GRID) });

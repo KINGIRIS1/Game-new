@@ -112,6 +112,8 @@ import { dichOf, duongGanh } from '../game/vanChuyen';
 import type { Resolution } from '../render/world';
 import { formatClock, formatDuration, formatXay, vi } from '../text/vi';
 import { conLai, pendingBuilding, soTho, thoRanh, thoRanhSau, viecOf, xayMs } from '../game/xay';
+import { fillThuoc, khiengHtml, linhHtml, nhaThuocHtml } from './nhaThuoc';
+import { soThuong } from '../game/nhaThuoc';
 import { XayLabels, fillXay, hetThoHtml, jobHtml, jobName, pendingHtml, quizHtml, realMs, thoHtml, type QuizResult } from './xay';
 import { armyHtml, defaultPick, huanHtml, mapHtml, nextRow, pickNu, stageHtml, stageResultHtml, stepPick, type ArmyPick, type MapChapter } from './campaign';
 import { armsHtml } from './binhKhi';
@@ -1655,6 +1657,7 @@ export class Hud {
     }
     fillXay(this.sheetEl, state);
     fillDao(this.sheetEl, state);
+    fillThuoc(this.sheetEl, state);
     if (this.cuonToi && this.sheet.kind === 'building') {
       const el = this.sheetEl.querySelector(this.cuonToi)?.closest('.unit-row');
       el?.scrollIntoView({ block: 'center' });
@@ -1837,6 +1840,7 @@ export class Hud {
       rows.push(`<div class="stat"><span>${vi.ui.phuSa}</span><span>${vi.ui.phuSaRow(Math.round(PHU_SA_BONUS * 100))}</span></div>`);
     }
     if (b.type === 'congDe') rows.push(this.congHtml(state, b));
+    if (b.type === 'nhaThuoc') rows.push(nhaThuocHtml(state, b));
     if (b.type === 'congThanh') {
       const shot = (lv: number) => vi.ui.gateShot(CONG_THANH.dmg[lv - 1], CONG_THANH.targets[lv - 1]);
       rows.push(`<div class="stat"><span>${vi.ui.gateGuard}</span><span>${shot(b.level)}</span></div>`);
@@ -2034,7 +2038,9 @@ export class Hud {
 
   /** Số chỗ quân đang dùng trên tổng chỗ của mọi doanh trại. */
   private troopSpaceHtml(state: GameState): string {
-    return `<div class="stat"><span>${vi.ui.troopSpaceAll(troopSpace(state), troopCap(state), doanhCount(state))}</span></div>`;
+    const n = soThuong(state);
+    const thuong = n ? `<div class="stat"><span>${vi.ui.thuocDangChua(n)}</span><span>${linhHtml(state.thuong.linh)}</span></div>` : '';
+    return `<div class="stat"><span>${vi.ui.troopSpaceAll(troopSpace(state), troopCap(state), doanhCount(state))}</span></div>${thuong}`;
   }
 
   /**
@@ -2765,7 +2771,7 @@ export class Hud {
     setTimeout(() => el.remove(), ms);
   }
 
-  showOffline(ms: number, gained: Resources, built = 0, da?: DaThuong, cap = 1): void {
+  showOffline(ms: number, gained: Resources, built = 0, da?: DaThuong, cap = 1, chua = 0): void {
     const back = document.createElement('div');
     back.className = 'modal-back';
     const gains = RESOURCE_IDS.filter((r) => gained[r] >= 1)
@@ -2775,6 +2781,7 @@ export class Hud {
       <div>${vi.ui.offlineBody(formatDuration(ms))}</div>
       <div class="gains">${gains}</div>
       ${built ? `<div>${vi.ui.offlineBuilt(built)}</div>` : ''}
+      ${chua ? `<div>${vi.ui.offlineChua(chua)}</div>` : ''}
       ${da?.giet ? `<div class="da-off">${vi.daNgoai.offline(da.giet, Math.round(da.exp))}${da.len ? ` ${vi.daNgoai.offlineLen(cap)}` : ''}${da.mon.length ? ` ${vi.daNgoai.offlineMon(da.mon.length)}` : ''}</div>${gomRoiHtml(da.mon)}` : ''}
       <button class="btn bronze">${vi.ui.ok}</button></div>`;
     back.querySelector('button')!.addEventListener('click', () => back.remove());
@@ -2808,6 +2815,7 @@ export class Hud {
         ${flood ? `<div>${vi.ui.floodPeak(Math.round(r.flood * 10) / 10)}</div>` : ''}
         <div>${vi.ui.raidKilled(r.killed, r.total)}</div>
         <div>${vi.ui.raidLostTroops}: ${lost}</div>
+        ${khiengHtml(r.thuong)}
         <div>${vi.ui.raidStolen}: ${stolen}</div>
         <div>${vi.ui.raidWrecked(r.wrecked.length)}</div>
         ${flood ? `<div>${vi.ui.floodDrowned(r.drowned.length)}</div>` : ''}

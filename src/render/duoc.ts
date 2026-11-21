@@ -21,6 +21,7 @@ import { LANG_CHAI_LOT } from './congTrinh/langChai';
 import { LO_REN_LOT } from './congTrinh/loRen';
 import { NHA_SAN_LOT } from './congTrinh/nhaSan';
 import { THO_HO_LOT } from './congTrinh/thoHo';
+import { NHA_THUOC_LOT } from './congTrinh/nhaThuoc';
 import { TRAI_CUNG_LOT } from './congTrinh/traiCung';
 import { TRAI_GIAO_LOT } from './congTrinh/traiGiao';
 import { TRAI_NO_LOT } from './congTrinh/traiNo';
@@ -67,6 +68,7 @@ export const DUOC_LOTS: Partial<Record<BuildingType, Lot>> = {
   langChai: LANG_CHAI_LOT,
   loRen: LO_REN_LOT,
   nhaSan: NHA_SAN_LOT,
+  nhaThuoc: NHA_THUOC_LOT,
   thoHo: THO_HO_LOT,
   traiCung: TRAI_CUNG_LOT,
   traiGiao: TRAI_GIAO_LOT,

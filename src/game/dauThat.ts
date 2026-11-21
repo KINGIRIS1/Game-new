@@ -9,6 +9,7 @@ import { RESOURCE_IDS, UNIT_TYPES, type Resources, type UnitType } from './defs'
 import { decodeSnapshot, replayPvp, type PvpInput, type PvpRun } from './dauThanh';
 import { gain, type GameState } from './game';
 import { type KetQua } from './mayChu';
+import { truQuanNga } from './nhaThuoc';
 
 /** Đấu thành trực tuyến trong bản lưu: chỉ có khi đã bấm Tham gia. */
 export interface DauThanhState {
@@ -161,10 +162,12 @@ export function truBiDanh(state: GameState, list: TranTom[]): BiDanh[] {
   return out;
 }
 
-/** Kết quả áp vào kinh đô người đánh: của thật vào kho (kho đầy thì bỏ phí), quân mất thật. */
+/** Kết quả áp vào kinh đô người đánh: của thật vào kho (kho đầy thì bỏ phí), quân ngã thật. */
 export interface DaNhan {
   duoc: Resources;
   mat: Record<UnitType, number>;
+  /** Lính ngã được khiêng về nhà thuốc nam (`nhaThuoc.ts`; chỉ ở máy khách, máy chủ không biết). */
+  thuong?: Record<UnitType, number>;
 }
 
 /**
@@ -178,17 +181,15 @@ export function nhanKetQua(state: GameState, tran: string, ket: KetQuaMay): DaNh
   if (d.daNhan.includes(tran)) return null;
   nho(d.daNhan, tran, NHO_NHAN);
   const mat = zeroArmy();
-  for (const k of UNIT_TYPES) {
-    mat[k] = Math.min(num(ket.mat?.[k]), state.troops[k]);
-    state.troops[k] -= mat[k];
-  }
+  for (const k of UNIT_TYPES) mat[k] = Math.min(num(ket.mat?.[k]), state.troops[k]);
+  const thuong = truQuanNga(state, mat);
   const before = { ...state.resources };
   const cuop = zeroRes();
   for (const r of RESOURCE_IDS) cuop[r] = num(ket.cuop?.[r]);
   gain(state, cuop);
   const duoc = zeroRes();
   for (const r of RESOURCE_IDS) duoc[r] = Math.max(0, Math.floor(state.resources[r] - before[r]));
-  return { duoc, mat };
+  return thuong ? { duoc, mat, thuong } : { duoc, mat };
 }
 
 /** Nhận kết quả các trận mình đánh đã xong mà chưa nhận (thoát giữa trận, mất mạng lúc gửi). */

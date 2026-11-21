@@ -504,8 +504,10 @@ async function start(): Promise<void> {
       .map((r) => `${vi.resources[r].icon} +${cost[r]}`)
       .join('  ');
 
-  const showOfflineIfLong = (ms: number, gained: ReturnType<typeof applyOffline>['gained'], built = 0, da?: DaThuong) => {
-    if (ms >= OFFLINE_NOTICE_MS && (built > 0 || !!da?.giet || RESOURCE_IDS.some((r) => gained[r] >= 1))) hud.showOffline(ms, gained, built, da, state.daNgoai.cap);
+  const showOfflineIfLong = (ms: number, gained: ReturnType<typeof applyOffline>['gained'], built = 0, da?: DaThuong, chua?: Record<UnitType, number>) => {
+    // Số thương binh lang y chữa khỏi lúc vắng.
+    const khoi = chua ? UNIT_TYPES.reduce((n, k) => n + chua[k], 0) : 0;
+    if (ms >= OFFLINE_NOTICE_MS && (built > 0 || khoi > 0 || !!da?.giet || RESOURCE_IDS.some((r) => gained[r] >= 1))) hud.showOffline(ms, gained, built, da, state.daNgoai.cap, khoi);
   };
 
   // ---------- Chế độ đặt công trình ----------
@@ -2696,7 +2698,7 @@ async function start(): Promise<void> {
     showHint();
     commit();
     watchXay(true);
-    showOfflineIfLong(offline.ms, offline.gained, offline.built, offline.da);
+    showOfflineIfLong(offline.ms, offline.gained, offline.built, offline.da, offline.chua);
     if (state.raid.lastResult) hud.showRaidResult(state, state.raid.lastResult);
     preloadThumbs();
     preloadMon();
@@ -2923,7 +2925,7 @@ async function start(): Promise<void> {
     const gap = wall - state.lastSeen;
     if (gap > GAP_AS_OFFLINE_MS) {
       const off = applyOffline(state, wall);
-      showOfflineIfLong(off.ms, off.gained, off.built, off.da);
+      showOfflineIfLong(off.ms, off.gained, off.built, off.da, off.chua);
       commit();
       watchXay(true);
     } else {

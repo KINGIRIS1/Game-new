@@ -670,6 +670,31 @@ K K , , T T
 - Người làm: thợ đóng gạch ở sân, thợ cả dưới lán; cấp 2 thêm người giẫm đất trong hố nhào, cấp 3 thêm thợ nện tường.
 - Đã vẽ (`src/render/congTrinh/thoHo.ts`).
 
+### Nhà thuốc nam: 4×4
+
+Đi kèm mục **Kế hoạch: Nhà thuốc nam** trong `docs/thiet-ke.md`. Nhà sàn lang y mái thuyền ở sau bên trái, giàn phơi lá thuốc góc sau bên phải; giữa là lán chõng cho thương binh nằm và cối giã thuốc; phía trước vườn thuốc nam bên trái, lò sắc thuốc bên phải, lối giữa.
+
+```
+L L L L L L P P
+L L L L L L P P
+L L L L L L P P
+C C C C , , G G
+C C C C , , G G
+V V V . , , O O
+V V V . , , . .
+V V V . , , . .
+```
+
+- `L` cấp 1, nhà sàn lang y mái thuyền theo cấp, thang tre, gầm sàn có kệ ống thuốc, chum sành, bó lá khô treo (cấp 6: biển gỗ đỏ hình chiếc lá trước hiên; cấp 6–8 cột cao dần; cấp 10: chim Lạc trên hai cột trước).
+- `P` cấp 1, giàn phơi tre, nong lá thuốc: một tầng, cấp 3 hai tầng, cấp 5 ba tầng.
+- `C` cấp 1, lán chõng: mái một mái che nửa sau, vách phên sau; chõng tre hai hàng, cấp 1 hai chõng, thêm dần tới sáu; chõng có thương binh nằm (áo nâu, băng trắng, đắp chăn lá) theo số đang chữa, bát thuốc cạnh chõng.
+- `G` cấp 1, cối đá giã thuốc, chày gỗ, mẹt lá.
+- `V` cấp 1, vườn thuốc nam: hai luống khóm lá, cấp 4 ba luống, cấp 7 rào tre thấp.
+- `O` cấp 1, lò sắc thuốc: bếp ba ông đầu rau, ấm đất trên lửa, củi.
+- `,` cấp 1, lối đất vào sân.
+- Ba người: lang y giã thuốc bên `G`, hai người hái thuốc ở `V`, thay phiên lên bìa rừng, chỗ cây dại hái lá (World).
+- Đã vẽ (`src/render/congTrinh/nhaThuoc.ts`).
+
 ## Hồ Kim Quy: 8×8 (chủ dự án yêu cầu, đã vẽ)
 
 Bản vẽ đi kèm mục **Hồ Kim Quy** trong `docs/thiet-ke.md`. Một cấp, chưa có dáng cũ. Móng 8×8 vẽ thành 16×16 ký tự. Mặt trước (cổng, cầu) quay về +z; cây cao đứng góc sau.
