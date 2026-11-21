@@ -153,22 +153,25 @@ function wildKhoanh(state: GameState, id: MauId): number {
 }
 
 /** Các mục của thẻ Mẫu kinh đô và mẫu nên chọn sẵn (mẫu mới mở nhất). `armed`: mẫu vừa bấm Áp lần đầu. */
-export function mauItems(state: GameState, armed: MauId | null): { items: BuildItem[]; prefer: MauId } {
+export function mauItems(state: GameState, armed: MauId | null, bac = true): { items: BuildItem[]; prefer: MauId } {
   let prefer: MauId = 'phongChau';
   const items = MAU_IDS.map((id): BuildItem => {
     const t = vi.ui.mau[id];
     const base = { key: id, act: 'applyMau' as const, attrs: `data-mau="${id}"`, pic: miniMap(state, id), square: true, icon: t.icon, name: t.name };
     if (!mauUnlocked(state, id)) return { ...base, meta: '', why: t.lock, go: vi.ui.mauApply, note: t.desc };
     prefer = id;
-    const plan = planMau(state, id);
-    const check = canStartMau(state, id);
+    const plan = planMau(state, id, bac);
+    const check = canStartMau(state, id, bac);
     const wild = wildKhoanh(state, id);
     // Phần dựng thêm giao cả cho một tốp, làm lần lượt.
     const ms = plan.builds.reduce((n, s) => n + xayMs(s.type, 1), 0);
     const time = ms > 0 ? ` · ${vi.ui.xayTime(formatXay(realMs(state, ms)))}` : '';
     return {
       ...base,
-      meta: vi.ui.mauPlan(plan.moves.length, plan.builds.length, plan.removes.length, plan.uNos.length, plan.duong.length) + time,
+      meta:
+        vi.ui.mauPlan(plan.moves.length, plan.builds.length, plan.removes.length, plan.uNos.length, plan.duong.length, plan.dap.length) +
+        time +
+        (plan.dap.length ? `<br>${vi.ui.mauDapCost(costHtml(state, plan.dapCost))}` : ''),
       cost: Object.keys(plan.cost).length ? costHtml(state, plan.cost) : '',
       why: check.ok ? '' : vi.reasons[check.reason],
       go: armed === id ? vi.ui.mauConfirm : vi.ui.mauApply,

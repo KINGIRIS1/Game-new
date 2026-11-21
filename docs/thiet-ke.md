@@ -998,11 +998,12 @@ Chủ dự án đã chọn qua bốn câu hỏi: Thủy Tinh có cả hai phép 
 - Giá áp mẫu bằng giá dựng phần thêm cộng 10% giá dựng mỗi công trình phải dời. Phải đủ tài nguyên mới áp được. Đang có giặc thì không áp được.
 - Mẫu kinh đô là thẻ thứ tư trong bảng Xây dựng, bày như công trình (chủ dự án yêu cầu tách khỏi thẻ Công trình): ảnh lớn là bản đồ thu nhỏ của mẫu đang chọn, dưới là lưới bốn bản đồ nhỏ để chọn (mẫu chưa mở thì xám, ghi chương mở). Mẫu đang chọn có:
   - bản đồ thu nhỏ của mẫu ở cấp Điện hiện tại, vẽ từ bìa đất tới sông; rừng chưa phát vẽ mờ ở mép;
-  - số công trình sẽ dời, dựng thêm, dỡ đi;
-  - tổng giá;
+  - số công trình sẽ dời, dựng thêm, dỡ đi, đắp nền;
+  - dòng "Đắp nền" (giá đắp bậc thang riêng) và tổng giá;
   - nút Áp mẫu. Bấm hai lần mới áp, cho khỏi lỡ tay;
   - lời tả mẫu, số khoảnh rừng chưa phát mà mẫu có chỗ trong đó.
 - Mở thẻ lần đầu thì chọn sẵn mẫu mới mở nhất. Lời giải thích cách áp mẫu nằm cuối thẻ.
+- **Đắp bậc thang** (từ chương 2; diorama bước 5, xem mục Kế hoạch: địa hình diorama): đầu thẻ có nút bật tắt, mặc định bật, nhớ trong lúc chơi (không lưu). Bật thì áp mẫu đắp nền theo ba tầng: Điện bậc 3, công trình quanh Điện bậc 2, ruộng chia dãy theo khoảng cách tới sông, dãy gần sông nhất giữ nguyên, mỗi dãy vào trong cao thêm một bậc tới bậc 2 (`bacThang`, `BAC_THANG` ở `mau.ts`). Chỗ đất (đã san móng) đủ cao thì không đắp, không hạ chỗ nào. Không đắp tường, cầu, công trình một ô, đường, trang trí, loại phải sát sông. Giá đúng giá đắp nền (`raiseBuildingCost`) từ nền lúc san móng lên tới bậc ấy, cộng vào giá áp mẫu; thiếu đất đá thì báo thiếu như thường. Đắp xong ngay như san móng lúc dời, kể cả móng nhà đang chờ thợ.
 - Test (`sapxep.test.ts`) canh các việc sau:
   - ở mọi cấp Điện, mẫu nằm trọn trong vùng đã khai phá, không chồng nhau, không lấn sông, bến sát sông, lũy/đê/thành/bẫy/chòi không quá số tối đa;
   - ở mọi cấp Điện mẫu mở được, mỗi loại đủ đúng số tối đa;
@@ -2059,15 +2060,15 @@ Chủ dự án yêu cầu: khám phá vùng đất mới bên kia sông để m�
 
   | Cấp | Tên | Cần | Giá (nháp) | Máu | Lũ |
   |---|---|---|---|---|---|
-  | 1 | Cầu phao tre | Điện 4 | 400 gạo, 300 vỏ ốc, 200 đất đá | 600 | lũ từ bậc 2 thì cuốn trôi (hư) |
-  | 2 | Cầu gỗ | Điện 6 | 1400 vỏ ốc, 1000 đất đá, 800 gỗ, 250 sắt | 1500 | chịu tới bậc 2, bậc 3 thì hư |
-  | 3 | Cầu gỗ lớn có lầu đầu cầu | Điện 7 | 2400 vỏ ốc, 2000 đất đá, 1500 gỗ, 500 sắt | 2600 | không sợ lũ |
+  | 1 | Cầu cọc gỗ (trước là cầu phao tre) | Điện 4 | 400 gạo, 300 vỏ ốc, 200 đất đá | 600 | lũ từ bậc 2 thì cuốn trôi (hư) |
+  | 2 | Cầu trụ đá (trước là cầu gỗ) | Điện 6 | 1400 vỏ ốc, 1000 đất đá, 800 gỗ, 250 sắt | 1500 | chịu tới bậc 2, bậc 3 thì hư |
+  | 3 | Cầu lớn mái ngói (trước là cầu gỗ lớn có lầu đầu cầu) | Điện 7 | 2400 vỏ ốc, 2000 đất đá, 1500 gỗ, 500 sắt | 2600 | không sợ lũ |
 
 - Quân ta, giặc trên bộ và người làm đi qua cầu như đi trên đất; quân ta đuổi giặc sang bờ bên kia thì đi vòng qua cầu, không lội sông. Cầu hư thì không ai qua được. Sửa cầu tốn 30% giá như công trình khác. Giặc không nhắm phá cầu. Thuyền đi dưới gầm cầu.
 - Cầu bị lũ cuốn thì phải sửa, nhưng không tính là để mất mùa lũ.
 - **Chỗ có cầu thì sông không còn là hào kín**: đếm vòng thành coi ô cầu là đi được. Vòng thành dựa vào bờ sông mà hở ở đầu cầu thì không tính nữa. Mẫu Cổ Loa có vòng kín quanh Điện, không chạm sông, nên không đổi.
 - Áp mẫu kinh đô chừa ô đầu cầu bên này.
-- **Hai đầu cầu gác lên mặt bờ**: cầu phao có ván dốc từ bè lên bờ, cầu gỗ có ván gác và xà chặn nằm trên đất bờ; bờ đầu cầu đắp cao thì đầu cầu lên theo, cầu gỗ vồng giữa sông cao hơn cả hai bờ. Người trinh sát, quân hành quân, lính hai bên trong trận giữ kinh đô đi trên mặt cầu đúng như hình vẽ; thuyền, thủy quái qua chỗ cầu thì đi dưới gầm.
+- **Hai đầu cầu gác lên mặt bờ**: cầu có ván gác và xà chặn nằm trên đất bờ; bờ đầu cầu đắp cao thì đầu cầu lên theo, cầu vồng giữa sông cao hơn cả hai bờ. Người trinh sát, quân hành quân, lính hai bên trong trận giữ kinh đô đi trên mặt cầu đúng như hình vẽ; thuyền, thủy quái qua chỗ cầu thì đi dưới gầm.
 - Cầu không đắp nền được. Bản lưu cũ đã lỡ đắp nền cầu thì khi tải, lòng sông dưới cầu hạ lại như cũ và hoàn đủ số đất đá đã tiêu.
 
 ### Sương mù và trinh sát
@@ -2143,7 +2144,7 @@ j\i  0  1  2  3  4  5  6  7  8  9
 
 - Bờ bên kia là đất bậc thang như bên này, rừng phủ chỗ chưa mở, thưa hơn bên này một chút và không đổ bóng cho nhẹ máy.
 - Sương mù: mây cuộn màu kem như giấy, viền mực, xoắn như hoa văn mây trên trống đồng; dò xong thì tan trong chừng 1 giây.
-- Cầu phao tre: bè tre kết dây mây. Cầu gỗ: cột gỗ, lan can. Cấp 3: có lầu canh mái ngói ở đầu cầu bên này.
+- (Đã vẽ lại ở diorama bước 6.) Cấp 1 cầu cọc gỗ lan can tre; cấp 2 trụ đá, lan can gỗ; cấp 3 trụ đá có mũi rẽ nước, lan can đỏ, mái ngói ở hai đầu cầu. Cầu phao tre chỉ còn ở bãi chiến đánh đồn.
 - Đồn giặc theo bậc, rào cọc nhọn, lều, lửa trại, vài lính gác đứng yên. Bản làng: hai ba nhà sàn nhỏ, cờ trắng; về theo thì cắm cờ đỏ. Đặc sản: phù sa đất nâu thẫm có lau, núi đá xám lộ, mỏ sắt đá đỏ gỉ. Của chôn: gò đất lóe ánh đồng.
 
 ### Bản lưu
@@ -4088,6 +4089,32 @@ Học từ Thronewake (nhà Herbalist cứu 40–55% quân ngã). Trước đây
 - Hình (`render/congTrinh/nhaThuoc.ts`, bản vẽ ở `docs/bo-cuc-cong-trinh.md`): nhà sàn lang y, giàn phơi lá, lán chõng có thương binh nằm theo số đang chữa, cối giã thuốc, vườn thuốc, lò sắc thuốc. Ba người: lang y giã thuốc, hai người hái thuốc.
 - Hai người hái thuốc thay phiên rời vườn lên chỗ hái gần nhất (ô sát rừng chưa phát hay ô có cây dại, trong `HAI_XA` ô; `duongHai` ở `vanChuyen.ts`, `tuyenHai` ở `render/ganhHang.ts`), cúi hái `HAI_S` giây rồi gùi đầy lá về; mỗi lúc một người đi. Có trận, giặc sắp tới, ban đêm thì ở nhà.
 - Lạc hầu gợi ý một lần khi mở (`NEW_HINTS`). Mẫu kinh đô chừa một chỗ từ Điện 4.
+
+## Kế hoạch: địa hình diorama cho kinh đô (chủ dự án đã duyệt, đã làm cả sáu bước)
+
+Chủ dự án gửi ảnh mẫu kiểu sa bàn (thành trên gò đá nhiều tầng, tường kè đá, sông có thác, cầu gỗ, ruộng cao thấp, làng dưới chân, núi làm phông). Chốt qua buổi hỏi đáp:
+
+- **Lấy bố cục và cảm giác, không lấy kiến trúc** (như doanh trại: ảnh mẫu là thành Nhật, game giữ nét Đông Sơn). Không thành nhiều tầng kiểu Nhật, không anh đào (thay bằng hoa gạo, hoa đào Bắc), không núi tuyết (thay bằng núi đá vôi xanh mờ kiểu Ba Vì, Tản Viên).
+- **Chỉ kinh đô** (lưới 76×76 hai bờ). Bãi chiến, dã ngoại, biển, đảo giữ nguyên.
+- **Địa hình tự nhiên không đổi luật**: `state.heights`, `baseHeights()`, lũ (`floodMap`, `floodHits`) giữ y như cũ, không nâng bản lưu, kinh đô cũ đứng nguyên. Phần mới là cách vẽ, trừ mẫu kinh đô đắp bậc (bước 5).
+- **Không làm khung sa bàn** (camera kéo ra tới biển và quần đảo). Không làm ruộng bậc thang trang trí ngoài lưới.
+- **Máy yếu**: mỗi bước đo lag (skill `do-lag`) trước và sau; ở cảnh Điện 8 lệnh vẽ và tam giác tăng không quá 15%. Mọi thứ mới có bản nhẹ dưới `LITE_ZOOM`.
+
+### Các bước (mỗi bước một PR, xong bước này mới sang bước sau; mỗi PR có ảnh chụp kiểm tra, số đo lag, sửa tài liệu này)
+
+1. **Độ cao vẽ mỗi bậc** (đã làm): `LEVEL_H` (`world.ts`) từ 0,3 lên 0,5 cho ra dáng đồi; mọi thứ đứng trên đất (công trình, lính, cầu `bridgeBanks`, nước lũ, thuyền) nâng theo vì cùng lấy `topY`. Đã chụp ba mức 0,4, 0,5, 0,6 gửi chủ dự án; chọn 0,5, chủ dự án muốn đổi thì chỉ sửa một hằng số. Thần thú chỉ bước sang ô chênh dưới hai bậc (`2 * LEVEL_H`), bậc lên thành cao ít nhất một bậc.
+2. **Kè đá** (đã làm): vách đứng (mép móng công trình, chỗ đắp nền, chỗ đắp đất) vẽ thành tường kè thay màu đất trơn (`nenDat.ts`); dốc tự nhiên vẫn là dốc cỏ, có đá lộ rải rác. Kè đổi theo cấp Điện như mái: cấp 1–3 đất nện cọc tre, 4–6 đá hộc xếp khan, 7–8 đá xanh đẽo vuông, 9–10 đá xanh có diềm đồng hoa văn. Cách làm: nền đất (`nenDat.ts`) lấy mỗi đỉnh mép ở mặt thấp nhất các ô chung đỉnh, nên ô giữ phẳng (móng công trình, đường, đầu cầu) cao hơn xung quanh dựng vách đứng thay vì để ô thấp bên cạnh dốc lên; vách là một nhóm tam giác riêng của mảnh nền, chất liệu có ảnh kè vẽ canvas (`ke.ts`: `keKieu`, `keTexture`), World đổi ảnh khi Điện lên cấp. Vách xuống sông là nhóm thứ ba, kè bờ đá hộc ở mọi cấp. Dốc tự nhiên pha đốm đá lộ theo nhiễu. Thêm chừng 6 lệnh vẽ, tam giác như cũ.
+3. **Núi phông nền, thác** (đã làm): dãy núi đá vôi xanh mờ có mây vắt ngang ở phía bắc và tây sau rừng ngoài lưới (đông nam là biển); vẽ nhẹ: ít mặt, không đổ bóng, không viền mực. Thác chính đổ từ núi xuống đầu nguồn sông Thao ngoài lưới phía bắc; một hai suối nhỏ có thác từ núi phía tây chảy vào rừng ngoài lưới. Chỉ để nhìn. Cách làm: `nuiPhong.ts` (`buildNuiPhong`, World dựng một lần, `update` cho nước thác chảy): núi đá vôi thân tròn méo vách đứng, ba hàng, hàng sau pha màu mờ; khối núi có thác vắt ngang sông Thao cách bìa lưới 15 ô cho camera kéo ra còn thấy; suối phía tây dừng trong rừng ngoài lưới. Ba lệnh vẽ (núi và suối dùng chất liệu đất, mây và bọt nước, thác), không đổ bóng, không viền mực, chừng 6 nghìn tam giác.
+4. **Bờ sông** (đã làm): bờ kè đá; ghềnh đá lô nhô giữa lòng sông, ngoài ba ô sát bờ mà thuyền và thủy quái đi. Hình dòng sông (thẳng, rộng 7 ô) là luật, không uốn. Cách làm: mọi ô đất giáp sông (cả ngoài lưới) giữ phẳng trong nền đất nên dựng vách xuống sông, vẽ kè đá hộc (`bankTile` ở `world.ts`). Thuyền khơi, thuyền chiến đi giữa dòng trong lưới, nên ghềnh chỉ ở ô giữa lòng sông khúc thượng nguồn ngoài lưới (sông Thao phía bắc, sông Đà phía tây), một lệnh vẽ (`ghenh.ts`, `buildGhenh`).
+5. **Mẫu kinh đô đắp bậc thang** (đã làm; đổi luật, tốn thêm đất đá; xem mục Mẫu kinh đô):
+   - Cả bốn mẫu. Ruộng (lúa, nếp) xếp thành dãy từ bờ sông lùi vào trong: dãy sát sông giữ bậc 0 để vẫn được nước êm bồi phù sa, mỗi dãy vào trong cao thêm một bậc, tối đa bậc 2; chỗ đất tự nhiên đã đủ cao thì không đắp. Ruộng cao không được phù sa nhưng an toàn khi lũ to.
+   - Điện đắp lên bậc 3, các công trình quanh Điện bậc 2, ruộng bậc 0–2 xuống tới sông: ba tầng như thành trên gò (đổi quyết định cũ "Điện chỉ trông như trên đồi").
+   - Giá: đúng giá đắp nền công trình hiện có (`raiseBuildingCost`), cộng vào giá áp mẫu; bảng mẫu ghi riêng dòng "Đắp nền".
+   - Chương 1 (chưa mở đắp đất) áp mẫu không đắp. Từ chương 2 bảng mẫu có lựa chọn "Đắp bậc thang" bật hay tắt; tắt thì không tốn thêm, bật mà thiếu đất đá thì nút Áp mẫu báo thiếu như thường.
+   - Kè đá (bước 2) tự hiện ở chỗ chênh nên ra dáng bậc thang.
+   - Đã làm theo đúng các ý trên. Ruộng sát sông móng rộng 5 ô nên lúc san móng đã lên bậc 1 (ô thứ tư từ sông là bậc 1 tự nhiên), như trước khi có bậc thang: dãy gần sông nhất giữ đúng nền ấy, lũ bậc 2 qua cống vẫn bồi.
+   - Test (`sapxep.test.ts`): ruộng sát sông vẫn bậc 0 và vẫn được phù sa; giá đắp khớp tổng đắp nền từng công trình; chương 1 hay tắt đắp thì độ cao không đổi; bốn mẫu đủ ba tầng. Người chơi mô phỏng không áp mẫu nên nhịp cân bằng không đổi.
+6. **Cầu** (đã làm): làm lại ba cấp cho giống ảnh: cầu gỗ dầm to, lan can, trụ đá; cấp 3 thêm mái che đầu cầu. Cả ba cấp là cầu gỗ vồng trên hai dầm to (`makeBridge` ở `render/benKia.ts`): cấp 1 ba vì cọc gỗ, lan can tre; cấp 2 hai trụ đá xếp tầng, lan can gỗ hai thanh; cấp 3 trụ đá có mũi rẽ nước, lan can đỏ núm đồng, mái ngói ở hai đầu cầu. Cầu phao tre cũ chỉ còn ở bãi chiến đánh đồn (`makeCauPhao`, bãi chiến giữ nguyên). Mặt cầu cho người đi (`bridgeDeckY`) cấp nào cũng theo vồng cầu.
 
 ## Nhịp chơi và lưu game
 

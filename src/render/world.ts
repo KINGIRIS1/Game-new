@@ -94,6 +94,9 @@ import { RUONG_LOT } from './congTrinh/ruong';
 import { VUON_LOT } from './congTrinh/vuon';
 import { C } from './palette';
 import { NEN_MARGIN, NenDat, RAMP } from './nenDat';
+import { keKieu, keTexture } from './ke';
+import { buildNuiPhong, type NuiPhong } from './nuiPhong';
+import { buildGhenh } from './ghenh';
 import type { Poser } from './rig';
 import { ShapeBuilder, disposeInstances, disposeModel, seeded } from './shapes';
 import { ToonModel, inkThin, outlineOf, toon } from './toon';
@@ -118,7 +121,7 @@ const RIPPLES = 20 * (RIVER_END - RIVER_START);
 /** Mặt nước nằm thấp hơn mặt đất. */
 const WATER_Y = -0.28;
 /** Mỗi bậc đất cao chừng này (đơn vị thế giới). Mặt ô bậc h nằm ở h * LEVEL_H. */
-export const LEVEL_H = 0.3;
+export const LEVEL_H = 0.5;
 const topY = (h: number) => Math.max(h, 0) * LEVEL_H;
 /** Dấu mặt bờ hai đầu cầu (`BridgeBanks`), để biết lúc nào phải dựng lại cầu; công trình khác là chuỗi rỗng. */
 const bankKey = (b?: BridgeBanks) => (b ? `${b.near.toFixed(3)},${b.far.toFixed(3)}` : '');
@@ -161,9 +164,18 @@ const WORKER_RADIUS = 1.2;
 
 /** Đất, nước và ô lưới dùng chất liệu Lambert đơn giản, công trình và cây mới dùng tô màu hoạt hình. */
 const groundMaterial = new THREE.MeshLambertMaterial({ vertexColors: true });
+/** Kè ở vách đứng của nền (mép móng, chỗ đắp nền): ảnh đổi theo cấp Điện (`keKieu`). */
+const keMaterial = new THREE.MeshLambertMaterial({ vertexColors: true });
+/** Kè bờ sông: đá hộc xếp khan ở mọi cấp. */
+const keSongMaterial = new THREE.MeshLambertMaterial({ vertexColors: true });
 
 /** Màu pha cho đất đặc sản bên kia sông đã về tay ta. */
 const DAT_TINT: Record<Dat, number> = { phuSa: 0x6e5034, nuiDa: 0x8d887c, moSat: 0x9a4a2a };
+
+/** Ô (x, z) (cả ngoài lưới, theo ô mép gần nhất) là sông không. */
+const riverAt = (x: number, z: number) => isRiver(clampTile(x), clampTile(z));
+/** Ô đất (x, z) giáp sông bốn phía: bờ sông kè đá. */
+const bankTile = (x: number, z: number) => !riverAt(x, z) && (riverAt(x + 1, z) || riverAt(x - 1, z) || riverAt(x, z + 1) || riverAt(x, z - 1));
 
 /** Đặc sản đất của ô (x, z) bên kia sông, nếu có. */
 /** Số giả ngẫu nhiên 0..1 cố định theo `n` (đuốc thắp so le). */
@@ -756,6 +768,8 @@ export class World {
   private readonly batched: boolean;
   /** Rừng bao ngoài lưới, dựng một lần. */
   private readonly outer: THREE.Object3D;
+  /** Núi đá vôi phông nền phía bắc, phía tây, mây, thác (`nuiPhong.ts`), dựng một lần. */
+  private readonly nui: NuiPhong;
   /** Rừng đang hiện bản thấp (độ phóng dưới `LITE_ZOOM`). */
   private forestLite = false;
   /** Biển Đông phía đông: mặt biển, bãi cát, hai quần đảo (`render/bien.ts`), dựng một lần. */
@@ -795,6 +809,9 @@ export class World {
     this.lights = addSunLights(this.scene, 24, 2048);
     const edge = baseHeights();
     this.scene.add(this.staticTerrain(edge));
+    this.nui = buildNuiPhong(wx, wz, (x, z) => topY(edge[clampTile(z) * GRID + clampTile(x)]), groundMaterial);
+    this.scene.add(this.nui.group);
+    this.scene.add(buildGhenh(wx, wz, WATER_Y, groundMaterial));
     this.outer = this.outerForest(edge);
     this.scene.add(this.outer);
     this.sea = buildSea(HALF);
@@ -1210,6 +1227,15 @@ export class World {
     this.state = state;
     const level = dienLevel(state);
     this.placeWisps(state);
+    const ke = keTexture(keKieu(level));
+    if (keMaterial.map !== ke) {
+      keMaterial.map = ke;
+      keMaterial.needsUpdate = true;
+    }
+    if (!keSongMaterial.map) {
+      keSongMaterial.map = keTexture(1);
+      keSongMaterial.needsUpdate = true;
+    }
     const heightsChanged = state.heights.length !== this.heights.length || state.heights.some((h, i) => h !== this.heights[i]);
     if (heightsChanged) {
       this.heights = [...state.heights];
@@ -2261,7 +2287,7 @@ export class World {
     const wall = this.state ? stairWall(this.state, b.x, b.z) : undefined;
     const base = this.groundY(b.x, b.z);
     if (!wall) return { rise: EARTH_WALL_TOP, turn: 0, base, key: `bac:${base}` };
-    const rise = Math.max(0.3, this.groundY(wall.x, wall.z) + (wall.type === 'thanh' ? CITADEL_TOP : EARTH_WALL_TOP) - base);
+    const rise = Math.max(LEVEL_H, this.groundY(wall.x, wall.z) + (wall.type === 'thanh' ? CITADEL_TOP : EARTH_WALL_TOP) - base);
     const turn = Math.atan2(wall.x - b.x, wall.z - b.z);
     return { rise, turn, base, key: `bac:${rise.toFixed(3)}:${turn.toFixed(3)}:${base}` };
   }
@@ -2343,7 +2369,7 @@ export class World {
 
   /**
    * Đất trong lưới dựng liền một khối (`nenDat.ts`): giữa ô phẳng, mép ô cao dốc thoai thoải xuống ô thấp, mặt dốc
-   * pha màu đất; ô dưới móng công trình, đầu cầu giữ phẳng trọn ô (`flatTiles`), ô thấp quanh đó dốc lên tới mép. Màu cỏ loang theo nhiễu liền qua mép ô, đất đã mở
+   * pha màu đất; ô dưới móng công trình, đầu cầu giữ phẳng trọn ô (`flatTiles`), cao hơn xung quanh thì dựng vách kè (`ke.ts`). Màu cỏ loang theo nhiễu liền qua mép ô, đất đã mở
    * sáng hơn rừng, bậc cao sáng màu hơn một chút. Nền nới ra ngoài lưới `NEN_MARGIN` ô cho liền với rừng bao ngoài.
    */
   private rebuildLand(state: GameState): void {
@@ -2378,7 +2404,8 @@ export class World {
           return cap < 0 ? null : topY(Math.min(level(x, z), cap));
         },
         riverY: WATER_Y - 0.14,
-        flat: (x, z) => this.landFlat.has(z * GRID + x),
+        // Ô giữ phẳng (móng, đường, đầu cầu), và mọi ô đất giáp sông: bờ sông dựng vách kè đá (diorama bước 4).
+        flat: (x, z) => (inGrid(x, z) && this.landFlat.has(z * GRID + x)) || bankTile(x, z),
         colors: (x, z, out) => {
           const open = inGrid(x, z) && this.landMask[z * GRID + x] === 1;
           const palette = open ? C.grass : C.grassLocked;
@@ -2407,7 +2434,7 @@ export class World {
           return cap < 0 ? null : topY(Math.min(level(x, z), cap));
         },
       },
-      groundMaterial,
+      [groundMaterial, keMaterial, keSongMaterial],
     );
   }
 
@@ -3251,7 +3278,7 @@ export class World {
         [x, z + 1],
         [x, z - 1],
       ] as [number, number][]
-    ).filter(([a, b]) => this.thuDiDuoc(state, a, b) && Math.hypot(a + 0.5 - cx, b + 0.5 - cz) < 16 && Math.abs(this.groundY(a, b) - this.groundY(x, z)) < 0.6);
+    ).filter(([a, b]) => this.thuDiDuoc(state, a, b) && Math.hypot(a + 0.5 - cx, b + 0.5 - cz) < 16 && Math.abs(this.groundY(a, b) - this.groundY(x, z)) < 2 * LEVEL_H);
     if (!ke.length) return v.toi;
     const occ = occupancy(state);
     const duong = ke.filter(([a, b]) => occ[b * GRID + a]);
@@ -4183,6 +4210,7 @@ export class World {
 
     // Biển Đông: sóng vỗ bờ, cá voi, cá heo, thuyền khơi đi về.
     if (!this.inField) {
+      this.nui.update(t);
       animateSea(this.sea, t, this.view.zoom);
       // Biển còn mây mù thì chưa thấy cá voi, cá heo.
       if (!this.seaMist) this.seaLife.update(t, dt, this.view.target);

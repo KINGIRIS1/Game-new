@@ -227,8 +227,8 @@ function decorDef(type: BuildingType, size: number, cost: Cost, limit: number[],
 }
 
 /**
- * Cầu qua sông: một cầu mỗi sông, có từ Điện cấp 4 (`BEN_KIA_DIEN`), vắt qua 7 ô sông. Cấp 1 cầu phao tre, cấp 2 cầu
- * gỗ (Điện 6), cấp 3 cầu gỗ lớn có lầu đầu cầu (Điện 7). Không dời, không dỡ được.
+ * Cầu qua sông: một cầu mỗi sông, có từ Điện cấp 4 (`BEN_KIA_DIEN`), vắt qua 7 ô sông. Cấp 1 cầu cọc gỗ, cấp 2 cầu
+ * trụ đá (Điện 6), cấp 3 cầu lớn mái ngói hai đầu (Điện 7). Không dời, không dỡ được.
  */
 function bridgeDef(type: 'cauSongDa' | 'cauSongThao', w: number, d: number): BuildingDef {
   return {
@@ -1134,8 +1134,8 @@ export const isBridge = (type: BuildingType): type is 'cauSongDa' | 'cauSongThao
 /** Điện cấp này thì bắc được cầu sang bên kia sông, và Lạc hầu kể đoạn "Bên kia sông". */
 export const BEN_KIA_DIEN = 4;
 /**
- * Cầu bị lũ cuốn (hư) khi nước dâng tới bậc này, theo cấp cầu: cầu phao tre ở bậc 2, cầu gỗ ở bậc 3, cầu gỗ lớn
- * không sợ lũ.
+ * Cầu bị lũ cuốn (hư) khi nước dâng tới bậc này, theo cấp cầu: cầu cọc gỗ ở bậc 2, cầu trụ đá ở bậc 3, cầu lớn
+ * mái ngói không sợ lũ.
  */
 export const BRIDGE_FLOOD = [2, 3, Infinity];
 /** Sai trinh sát dò một khoảnh bên kia sông: giá, thời gian đi (đồng hồ chơi). */

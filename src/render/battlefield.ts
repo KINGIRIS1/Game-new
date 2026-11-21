@@ -21,7 +21,7 @@ import { buildForest, makeBoat, makeEnemyBoat, makeEnemyFlag, makeLauThuyen, mak
 import { makeNhaSan, makeRuong } from './buildings';
 import { makeDonDao } from './congTrinh/donDao';
 import { palm, phongBa } from './bien';
-import { makeBridge } from './benKia';
+import { makeCauPhao } from './benKia';
 import { C } from './palette';
 import { cornTemplates, reedTemplates } from './lauSay';
 import { DAN_RUT as RETREAT, makeWorker, type DanRut as Walker } from './people';
@@ -895,7 +895,7 @@ function buildDecor(t: Terrain, bai?: Bai, donCap = 2): THREE.Group {
     g.add(waterSurface(relief), ...shoreLines(relief));
     if (t === 'benKia') {
       // Cầu phao tre vừa bắc qua sông sau lưng quân ta; lau sậy dọc hai bờ, chừa chỗ đầu cầu.
-      const bridge = makeBridge(1);
+      const bridge = makeCauPhao();
       bridge.position.set(BEN_KIA_BRIDGE_X, 0, FIELD.d + 7.8);
       g.add(bridge);
       // Chừa chỗ đầu cầu và chỗ Lạc tướng đánh trống.

@@ -285,12 +285,12 @@ export const vi = {
     cauSongDa: {
       name: 'Cầu sông Đà',
       icon: '🌉',
-      desc: 'Cầu bắc qua sông Đà sang bờ nam. Bắc xong thì khoảnh đất đầu cầu bên kia mở ra; quân, trinh sát và dân qua cầu. Cầu phao tre bị lũ bậc 2 cuốn trôi, cầu gỗ chịu tới bậc 2, cầu gỗ lớn không sợ lũ. Mỗi sông một cầu, không dời được.',
+      desc: 'Cầu bắc qua sông Đà sang bờ nam. Bắc xong thì khoảnh đất đầu cầu bên kia mở ra; quân, trinh sát và dân qua cầu. Cầu cọc gỗ bị lũ bậc 2 cuốn trôi, cầu trụ đá chịu tới bậc 2, cầu lớn mái ngói không sợ lũ. Mỗi sông một cầu, không dời được.',
     },
     cauSongThao: {
       name: 'Cầu sông Thao',
       icon: '🌉',
-      desc: 'Cầu bắc qua sông Thao sang bờ đông. Bắc xong thì khoảnh đất đầu cầu bên kia mở ra; quân, trinh sát và dân qua cầu. Cầu phao tre bị lũ bậc 2 cuốn trôi, cầu gỗ chịu tới bậc 2, cầu gỗ lớn không sợ lũ. Mỗi sông một cầu, không dời được.',
+      desc: 'Cầu bắc qua sông Thao sang bờ đông. Bắc xong thì khoảnh đất đầu cầu bên kia mở ra; quân, trinh sát và dân qua cầu. Cầu cọc gỗ bị lũ bậc 2 cuốn trôi, cầu trụ đá chịu tới bậc 2, cầu lớn mái ngói không sợ lũ. Mỗi sông một cầu, không dời được.',
     },
     banLang: {
       name: 'Bản làng',
@@ -2024,7 +2024,7 @@ export const vi = {
     quizClose: 'Đóng',
     quizGone: 'Việc xây này đã xong hay đã hủy',
     /** Tên cầu theo cấp, ghép với tên sông. */
-    bridgeName: (level: number, song: string) => `${['Cầu phao tre', 'Cầu gỗ', 'Cầu gỗ lớn'][Math.min(Math.max(level, 1), 3) - 1]} ${song}`,
+    bridgeName: (level: number, song: string) => `${['Cầu cọc gỗ', 'Cầu trụ đá', 'Cầu lớn mái ngói'][Math.min(Math.max(level, 1), 3) - 1]} ${song}`,
     songDa: 'sông Đà',
     songThao: 'sông Thao',
     bridgeFloodLabel: 'Sức chịu lũ',
@@ -2514,9 +2514,10 @@ export const vi = {
         lock: 'Mở khi vào chương 4: Mỵ Châu, Trọng Thủy.',
       },
     },
-    mauPlan: (moves: number, builds: number, removes: number, uNos = 0, duong = 0) =>
+    mauPlan: (moves: number, builds: number, removes: number, uNos = 0, duong = 0, dap = 0) =>
       [
         moves ? `Dời ${moves} công trình` : '',
+        dap ? `đắp nền ${dap} công trình` : '',
         builds ? `dựng thêm ${builds}` : '',
         uNos ? `dựng ${uNos} ụ nỏ` : '',
         removes ? `dỡ ${removes} đoạn thừa` : '',
@@ -2525,6 +2526,12 @@ export const vi = {
         .filter(Boolean)
         .join(', ') || 'Đã xếp đúng theo mẫu',
     mauApply: '🗺️ Áp mẫu',
+    /** Nút bật tắt đắp bậc thang ở thẻ Mẫu kinh đô (từ chương 2). */
+    mauBac: (on: boolean) => (on ? '⛰️ Đắp bậc thang: bật' : '⛰️ Đắp bậc thang: tắt'),
+    mauBacHint:
+      'Điện lên bậc 3, quanh Điện bậc 2, ruộng cao dần tới bậc 2 (dãy sát sông giữ nguyên để còn phù sa). Tốn đất đá như đắp nền.',
+    /** Dòng giá đắp nền riêng trong mục mẫu. */
+    mauDapCost: (cost: string) => `Đắp nền: ${cost}`,
     mauConfirm: '⚠️ Bấm lần nữa để áp',
     mauDone: (name: string) => `Đã xếp kinh đô theo mẫu ${name}`,
     move: 'Dời',

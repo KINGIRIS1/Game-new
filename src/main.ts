@@ -1544,7 +1544,7 @@ async function start(): Promise<void> {
         }
         hud.mauArmed = null;
         // Dời ngay; phần dựng thêm giao cả cho một tốp thợ, làm lần lượt.
-        const r = startMau(state, a.mau);
+        const r = startMau(state, a.mau, hud.mauBac);
         if (!r.ok) {
           hud.refreshSheet(state);
           return fail(r.reason);
