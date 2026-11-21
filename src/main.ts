@@ -1,5 +1,7 @@
 // Điểm khởi động: nạp game, nối luật chơi với cảnh 3D và giao diện, chạy vòng lặp.
 
+import { initHuongDan, markHuongDan, nextHuongDan, type HuongDanId } from './game/huongDan';
+import { ChiTay, huongDanBat, luuHuongDan } from './ui/huongDan';
 import './style.css';
 import { play, setMuted, stopRally, unlockAudio } from './audio/sfx';
 import { skillReady, startFieldBattle, stepField, useSkill, type Battle, type HeroKind, type FighterKind } from './game/battle';
@@ -318,6 +320,17 @@ async function start(): Promise<void> {
   let saveWarned = false;
 
   const hud = new Hud(hudRoot, handle, () => state);
+  const chiTay = new ChiTay(
+    document.body,
+    () => state,
+    (type) => {
+      const b = state.buildings.find((x) => x.type === type);
+      if (!b) return false;
+      if (mode.kind !== 'view') exitMode();
+      select(b.id);
+      return true;
+    },
+  );
   // Hình tướng mặc đồ, ảnh bán thân cho bảng tướng: vẽ lúc cần bằng renderer của cảnh, xong thì dựng lại bảng.
   const hinhTuong = new HinhTuong(world.renderer);
   hinhTuong.onReady = () => hud.refreshTuong(state);
@@ -343,6 +356,7 @@ async function start(): Promise<void> {
     hud.updateBanners(state);
     hud.updateQuest(state);
     hud.refreshSheet(state);
+    hud.refreshVong(state);
     hud.refreshCampaign(state);
     hud.updateField(state);
   };
@@ -369,7 +383,8 @@ async function start(): Promise<void> {
     const k = nextDaoHint(state);
     if (!k) return;
     markDaoHinted(state, k);
-    hud.toast(vi.bien.hint[k], false, 8000);
+    // Bật chỉ tay thì lời mở đảo đã có ở hướng dẫn Đóng đảo (`huongDan.ts`).
+    if (k !== 'mo' || !huongDanBat()) hud.toast(vi.bien.hint[k], false, 8000);
   };
 
   /** Trận ngoài bãi đầu tiên có vật cản: thẻ màn, thẻ đồn thôi kèm lời Lạc hầu nhắc về vật cản. */
@@ -396,7 +411,8 @@ async function start(): Promise<void> {
     if (!daMo(state)) return;
     if (!state.hinted.includes('daNgoai')) {
       state.hinted = [...state.hinted, 'daNgoai'];
-      hud.toast(vi.daNgoai.hint, false, 8000);
+      // Bật chỉ tay thì Lạc hầu chỉ từng bước (`huongDan.ts`), khỏi báo thêm dòng này.
+      if (!huongDanBat()) hud.toast(vi.daNgoai.hint, false, 8000);
     } else {
       // Đủ cấp sang map mới (Núi Nưa, Đầm Dạ Trạch, Núi Vệ): báo một lần map cao nhất vừa đủ cấp; các map thấp hơn
       // coi như đã báo (lên cấp nhanh thì khỏi báo map đã qua).
@@ -414,7 +430,8 @@ async function start(): Promise<void> {
     const moi = thuCo(state).find((k) => !state.hinted.includes(`thanThu_${k}`));
     if (!moi) return;
     state.hinted = [...state.hinted, `thanThu_${moi}`];
-    hud.toast(moi === 'thuLac' ? vi.thanThu.hint : vi.thanThu.hintVe[moi], false, 9000);
+    // Chim Lạc là thú đầu tiên: bật chỉ tay thì đã có hướng dẫn Thần thú (`huongDan.ts`).
+    if (moi !== 'thuLac' || !huongDanBat()) hud.toast(moi === 'thuLac' ? vi.thanThu.hint : vi.thanThu.hintVe[moi], false, 9000);
   };
 
   /** Lần đầu có công trình làm ra chưa đủ vì xa kho: Lạc hầu gợi ý một lần việc gánh hàng, trải đường. */
@@ -488,8 +505,10 @@ async function start(): Promise<void> {
       .map((r) => `${vi.resources[r].icon} +${cost[r]}`)
       .join('  ');
 
-  const showOfflineIfLong = (ms: number, gained: ReturnType<typeof applyOffline>['gained'], built = 0, da?: DaThuong) => {
-    if (ms >= OFFLINE_NOTICE_MS && (built > 0 || !!da?.giet || RESOURCE_IDS.some((r) => gained[r] >= 1))) hud.showOffline(ms, gained, built, da, state.daNgoai.cap);
+  const showOfflineIfLong = (ms: number, gained: ReturnType<typeof applyOffline>['gained'], built = 0, da?: DaThuong, chua?: Record<UnitType, number>) => {
+    // Số thương binh lang y chữa khỏi lúc vắng.
+    const khoi = chua ? UNIT_TYPES.reduce((n, k) => n + chua[k], 0) : 0;
+    if (ms >= OFFLINE_NOTICE_MS && (built > 0 || khoi > 0 || !!da?.giet || RESOURCE_IDS.some((r) => gained[r] >= 1))) hud.showOffline(ms, gained, built, da, state.daNgoai.cap, khoi);
   };
 
   // ---------- Chế độ đặt công trình ----------
@@ -575,7 +594,8 @@ async function start(): Promise<void> {
     world.setSelection(b ?? null);
     world.setChunkSelection(null);
     if (b) {
-      hud.showBuilding(state, b.id);
+      // Vòng nút quanh công trình; bảng đầy đủ mở bằng nút ℹ️ (`openInfo`).
+      hud.showVong(state, b.id);
       const c = hud.freeCenter();
       world.focusOn(b, c.x, c.y);
     } else {
@@ -1923,6 +1943,15 @@ async function start(): Promise<void> {
         hud.showSettings(state, world.resolution, a.on, world.bongDoOn);
         return;
 
+      case 'setHuongDan':
+        luuHuongDan(a.on);
+        hud.showSettings(state, world.resolution, world.ngayDemOn, world.bongDoOn);
+        return;
+
+      case 'xemHuongDan':
+        moHuongDan(a.id);
+        return;
+
       case 'setBongDo':
         world.setBongDo(a.on);
         saveBongDo(a.on);
@@ -2190,6 +2219,17 @@ async function start(): Promise<void> {
       case 'closeSheet':
         select(null);
         return;
+
+      case 'openInfo': {
+        // Nút ℹ️ của vòng nút: bảng công trình đầy đủ như trước, camera đưa công trình lên phần không bị bảng che.
+        const b = occupant(state, a.id);
+        if (!b) return select(null);
+        play('tap');
+        hud.showBuilding(state, b.id);
+        const c = hud.freeCenter();
+        world.focusOn(b, c.x, c.y);
+        return;
+      }
 
       case 'openCampaign':
         if (mode.kind !== 'view') exitMode();
@@ -2662,7 +2702,7 @@ async function start(): Promise<void> {
     showHint();
     commit();
     watchXay(true);
-    showOfflineIfLong(offline.ms, offline.gained, offline.built, offline.da);
+    showOfflineIfLong(offline.ms, offline.gained, offline.built, offline.da, offline.chua);
     if (state.raid.lastResult) hud.showRaidResult(state, state.raid.lastResult);
     preloadThumbs();
     preloadMon();
@@ -2822,6 +2862,32 @@ async function start(): Promise<void> {
     hud.showStory(id);
   };
 
+  /**
+   * Tính năng lớn vừa mở: Lạc hầu chỉ tay từng bước (`huongDan.ts`). Truyện đi trước; không chỉ khi đang đánh, có
+   * hộp thoại, đang đặt công trình hay đã tắt ở Cài đặt.
+   */
+  const watchHuongDan = () => {
+    initHuongDan(state);
+    if (!entered || chiTay.dangChi || !huongDanBat()) return;
+    if (hud.storyOpen || hud.modalOpen || state.campaign.battle || state.raid.phase === 'battle' || pvp || mode.kind !== 'view') return;
+    if (pendingStory(state)) return;
+    const id = nextHuongDan(state);
+    if (!id) return;
+    // Đánh dấu ngay lúc bắt đầu: bỏ qua giữa chừng hay tải lại trang thì không chỉ lại (xem lại ở Sổ hướng dẫn).
+    markHuongDan(state, id);
+    save();
+    moHuongDan(id);
+  };
+
+  /** Chỉ tay mục `id` từ bước đầu: đóng bảng, ô đang mở cho dock trống. */
+  const moHuongDan = (id: HuongDanId) => {
+    if (mode.kind !== 'view') exitMode();
+    select(null);
+    hud.closeCampaign();
+    hud.closeSheet();
+    chiTay.start(id);
+  };
+
   window.addEventListener('pointerdown', unlockAudio, { passive: true });
   window.addEventListener('resize', () => world.resize());
   window.addEventListener('keydown', (e) => {
@@ -2863,7 +2929,7 @@ async function start(): Promise<void> {
     const gap = wall - state.lastSeen;
     if (gap > GAP_AS_OFFLINE_MS) {
       const off = applyOffline(state, wall);
-      showOfflineIfLong(off.ms, off.gained, off.built, off.da);
+      showOfflineIfLong(off.ms, off.gained, off.built, off.da, off.chua);
       commit();
       watchXay(true);
     } else {
@@ -2901,6 +2967,7 @@ async function start(): Promise<void> {
     world.update(dt);
     lag.cat('canh');
     hud.xayLabels.update(state, (x, z, lift) => (world.inField ? null : world.screenAt(x, z, lift)));
+    hud.updateVong(state, (x, z, lift) => (world.inField || pvp ? null : world.screenAt(x, z, lift)));
     watchRaid();
     watchPvp(now);
     lag.cat('khac');
@@ -2931,6 +2998,7 @@ async function start(): Promise<void> {
       world.syncDao(state);
       refreshUi();
       watchStory();
+      watchHuongDan();
       prewarm();
       luuSau();
       lag.cat('nhip');
@@ -2954,6 +3022,8 @@ async function start(): Promise<void> {
   // Cho phép kiểm thử tự động đọc trạng thái và tìm vị trí ô trên màn hình.
   (window as unknown as { __debug?: object }).__debug = {
     state: () => state,
+    /** Chạy chỉ tay mục `id` ngay (để chụp thử). */
+    huongDan: (id: HuongDanId) => moHuongDan(id),
     /** Bấm qua màn hình vào game, như người chơi bấm Chơi tiếp. */
     enter: () => enter(),
     /** Hiện bảng chào lúc vào lại game với phần thưởng dã ngoại `da` (để chụp thử). */
@@ -3030,6 +3100,11 @@ async function start(): Promise<void> {
     },
     /** Mở bảng công trình `id` như khi chạm vào nó (chụp thử bảng của công trình bị công trình khác che). */
     select: (id: number | null) => select(id),
+    /** Mở bảng công trình đầy đủ (như bấm nút ℹ️ của vòng nút). */
+    info: (id: number) => {
+      select(id);
+      handle({ kind: 'openInfo', id });
+    },
     /** Chọn công trình trong bảng Xây dựng như bấm nút Xây (đặt, trải, đắp tường). */
     build: (type: BuildingType) => handle({ kind: 'chooseBuild', type }),
     /** Mở bảng tướng (trang bị, chỉ số, kho đồ) của tướng `hero`, như bấm nút Trang bị. */

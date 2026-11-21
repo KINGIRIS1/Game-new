@@ -17,6 +17,7 @@ import { coMayChu, taiKhoanMay, uidMay } from '../mang/cauHinh';
 import { vi } from '../text/vi';
 import { esc, fmt } from './format';
 import { capitalMiniMap } from './mau';
+import { khiengHtml } from './nhaThuoc';
 
 /** Kinh đô để đánh thử: 0 là kinh đô của mình, số khác là kinh đô máy ở cấp Điện ấy. */
 export type DauTarget = number;
@@ -471,6 +472,7 @@ export function dauRealResultHtml(r: { name: string; bot: boolean } & ({ wait: t
       <div>${vi.dauThanh.resultPct(Math.floor(k.pct * 100))}</div>
       <div>${k.dien ? vi.dauThanh.resultDien : vi.dauThanh.resultNoDien}</div>
       <div>${vi.dauThanh.resultFallenReal}: ${armyLine(lost)}</div>
+      ${'nhan' in r ? khiengHtml(r.nhan?.thuong) : ''}
       <div>${vi.dauThanh.resultLootReal}: ${r.bot ? vi.dauThanh.resultBot : resHtml(got)}</div>
       <div>🏅 ${vi.dauThanh.resultCups(k.chienCong.atk)}</div>
     </div>
@@ -498,7 +500,7 @@ export function dauAttackedHtml(state: GameState, biDanh: BiDanh[], cu: { tran: 
       const k = t.ketQua!;
       return `<li><span><b>${vi.dauThanh.recoveredRow(t.may ? vi.dauThanh.histBot : esc(t.tenGiu))}</b>
         <small>${vi.dauThanh.histScore(k.sao, Math.floor(k.pct * 100))} · ${vi.dauThanh.attackedCups(k.chienCong.atk)}</small>
-        <small>${vi.dauThanh.resultFallenReal}: ${armyLine(nhan.mat)} · ${vi.dauThanh.recoveredGot}: ${resHtml(nhan.duoc)}</small></span></li>`;
+        <small>${vi.dauThanh.resultFallenReal}: ${armyLine(nhan.mat)} · ${vi.dauThanh.recoveredGot}: ${resHtml(nhan.duoc)}</small>${nhan.thuong ? `<small>${khiengHtml(nhan.thuong)}</small>` : ''}</span></li>`;
     })
     .join('');
   const left = state.dauThanh?.khienDen ? state.dauThanh.khienDen - Date.now() : 0;

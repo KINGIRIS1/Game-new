@@ -12,7 +12,7 @@ import { C } from './palette';
 import { ToonModel, inkThin } from './toon';
 
 /** Hàng gánh đòn hai thúng. */
-type Thung = Exclude<Hang, 'go' | 'tre' | 'gui' | 'mam'>;
+type Thung = Exclude<Hang, 'go' | 'tre' | 'gui' | 'mam' | 'thuoc'>;
 
 /** Màu hàng vun trên miệng thúng. */
 const MAU: Record<Thung, number> = {
@@ -128,6 +128,29 @@ export function guiDay(): THREE.Group {
 /** Chỗ gắn nguyên liệu trên xương ngực: ngay miệng gùi sau lưng. */
 export const GUI_AT = new THREE.Vector3(0, 0.32, -0.22);
 
+/**
+ * Lá thuốc hái đầy gùi của người hái thuốc: ngọn lá xanh, lá vàng nhô cao khỏi miệng gùi, vài cành có hoa. Gắn xương
+ * ngực ở `LA_THUOC_AT` (người hái thuốc vốn đeo gùi không).
+ */
+export function laThuoc(): THREE.Group {
+  const m = new ToonModel(inkThin);
+  const p = m.plain;
+  p.sphere(0.12, 0x4f7f30, 0, 0, 0, [1, 0.55, 1], 8);
+  for (const [x, z, a, c] of [
+    [-0.06, 0.0, -0.4, 0x5f8f3a],
+    [0.0, -0.03, 0.05, 0x6f9f44],
+    [0.06, 0.0, 0.42, 0x8f9a4a],
+    [0.0, 0.04, -0.1, 0x4f7f30],
+  ] as const) {
+    p.box(0.07, 0.22, 0.012, c, x, 0.1, z, [-0.2, 0, a]);
+  }
+  p.sphere(0.022, 0xe8d36a, -0.05, 0.2, 0.0);
+  p.sphere(0.02, 0xf0efe0, 0.05, 0.19, -0.02);
+  return m.group();
+}
+
+export const LA_THUOC_AT = new THREE.Vector3(0, 0.34, -0.21);
+
 /** Mâm gỗ tròn đội đầu, bày bánh chưng, bánh giầy (mùa Tết đem lên Điện). Gắn xương đầu ở `MAM_AT`. */
 export function mamDoi(): THREE.Group {
   const m = new ToonModel(inkThin);
@@ -153,6 +176,9 @@ export function ganhLen(bones: Human, hang: Hang): THREE.Group {
   } else if (hang === 'gui') {
     load = guiDay();
     load.position.copy(GUI_AT);
+  } else if (hang === 'thuoc') {
+    load = laThuoc();
+    load.position.copy(LA_THUOC_AT);
   } else if (hang === 'mam') {
     load = mamDoi();
     load.position.copy(MAM_AT);
@@ -172,7 +198,7 @@ export function ganhLen(bones: Human, hang: Hang): THREE.Group {
  * trên đầu. Gùi thì không đổi: dáng người bếp vốn nắm quai gùi.
  */
 export function tayGanh(bones: Human, hang: Hang): void {
-  if (hang === 'gui') return;
+  if (hang === 'gui' || hang === 'thuoc') return;
   if (hang === 'go' || hang === 'tre') bones.armL.rotation.set(0, 0, -2.6);
   else if (hang === 'mam') bones.armR.rotation.set(0, 0, 2.75);
   else bones.armR.rotation.set(-1.75, 0, 0.3);

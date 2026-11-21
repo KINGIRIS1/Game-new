@@ -106,7 +106,7 @@ describe('bậc lên thành', () => {
 
   it('Lạc hầu gợi ý một lần khi đã có đoạn thành đất hay thành Cổ Loa', () => {
     const s = ch3(5);
-    for (const t of ['thoHo', 'xuongMoc', 'langChai', 'congThanh', 'congDe'] as const) markHinted(s, t);
+    for (const t of ['thoHo', 'xuongMoc', 'langChai', 'nhaThuoc', 'congThanh', 'congDe'] as const) markHinted(s, t);
     expect(place(s, 'luy', DIEN, AT).ok).toBe(true);
     expect(nextHint(s)).toBeNull();
     s.buildings.find((b) => b.type === 'luy')!.level = 2;

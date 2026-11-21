@@ -175,6 +175,7 @@ describe('cổng thành', () => {
     markHinted(s, 'thoHo');
     markHinted(s, 'xuongMoc');
     markHinted(s, 'langChai');
+    markHinted(s, 'nhaThuoc');
     expect(nextHint(s)).toBe('congThanh');
     s.questIndex = 0;
     expect(nextHint(s)).toBeNull();

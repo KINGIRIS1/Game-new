@@ -50,6 +50,7 @@ import { initialTrangBi, isTrangBiState } from './trangBi';
 import { footprintTop, levelFootprint } from './terrain';
 import { AREA, KHOANH_N, START_KHOANH, V11_AREA, squareKhoanh } from './khoanh';
 import { gopDoanhTrai, growDien, isLegacyLayout, legacyBaseHeights, levelLegacyFootprints, relayLegacy } from './xepLai';
+import { initialThuong, isThuongState } from './nhaThuoc';
 
 export { SAVE_VERSION };
 
@@ -155,6 +156,7 @@ function migrate(raw: unknown): unknown {
   if (isObj(v) && v.version === 32) v = migrate32to33(v);
   if (isObj(v) && v.version === 33) v = migrate33to34(v);
   if (isObj(v) && v.version === 34) v = migrate34to35(v);
+  if (isObj(v) && v.version === 35) v = migrate35to36(v);
   return v;
 }
 
@@ -595,6 +597,13 @@ function migrate34to35(s: Raw): Raw {
   return s;
 }
 
+/** Phiên bản 35 → 36 (nhà thuốc nam): chưa có thương binh nào. */
+function migrate35to36(s: Raw): Raw {
+  s.version = 36;
+  s.thuong = initialThuong();
+  return s;
+}
+
 const isBanh = (v: unknown, test: (x: unknown) => boolean): boolean => isObj(v) && test(v.chung) && test(v.giay);
 const isBool = (x: unknown) => typeof x === 'boolean';
 
@@ -709,6 +718,7 @@ function isGameState(v: unknown): v is GameState {
   if (!isBanh(tet.banh, isNum) || !isBanh(tet.offered, isBool) || !isBanh(tet.blessing, isBool)) return false;
   const troops = v.troops;
   if (!isObj(troops) || !UNIT_TYPES.every((k) => isNum(troops[k]) && troops[k] >= 0)) return false;
+  if (!isThuongState(v.thuong)) return false;
   const arms = v.arms;
   if (!isObj(arms) || !UNIT_TYPES.every((k) => isNum(arms[k]) && arms[k] >= 0 && arms[k] <= ARMS.length)) return false;
   const raid = v.raid;

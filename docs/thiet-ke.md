@@ -69,6 +69,18 @@ Tài liệu này ghi lại các quyết định đã chốt với chủ dự án
   - **Dòng tin** ngay trên dock gom mọi tin: giặc sắp tới, đang đánh, thiếu gạo, Tết, thuyền buôn, trinh sát đang đi. Tin gấp (giặc, đói) lên trước; nhiều tin thì nút "1/3 ›" lật từng tin; có tin mới thì về tin gấp nhất. Giặc đánh kinh đô thì nút kỹ năng hiện ngay trên dòng tin.
   - **Bảng trượt** mở ngay trên dock, cao tối đa 54% màn hình để còn thấy kinh đô (bảng Xây dựng, bảng doanh trại 62% cho khỏi cuộn). Màn rộng (cầm ngang, màn trong Fold5) thì bảng cao trọn mép phải, dock dồn sang phần còn lại bên trái.
   - Đang đặt, dời, trải, ghép công trình: dock và dòng tin ẩn, thanh dưới chỉ còn Hủy, Đặt và nút xoay cảnh; công trình xoay được thì thêm nút ↻ Xoay (xem mục Xoay công trình). Ngoài bãi chiến: dock và dòng tin ẩn, dải tài nguyên vẫn còn.
+- **Vòng nút quanh công trình** (chủ dự án yêu cầu; PR 1, 2 đã làm): chạm một công trình thì không mở bảng trượt ngay mà hiện một vòng nút tròn đồng nổi (bộ Đồng thau như dock, nhãn chữ nhỏ dưới mỗi nút) ngay tại chỗ công trình, vòng chạy theo công trình khi kéo cảnh và kẹp trong phần màn hình không bị dải tài nguyên, dock, dòng tin che. Tối đa 7 nút.
+  - Nút **ℹ️ Thông tin** luôn ở đỉnh vòng, mở bảng công trình đầy đủ như trước (doanh trại nhiều thẻ, rèn binh khí, Tết, chia dân làm…). Các nút khác xếp đều theo chiều kim đồng hồ: Sửa (khi hư), Nâng cấp (hay Đắp với lũy, đê), Đố sử (khi đang có việc xây còn lượt hỏi), Đóng/Mở cống (cống đê), Dời, Xoay (loại xoay được), Dỡ (loại dỡ được).
+  - **Nâng cấp** không nâng ngay mà mở thẻ nhỏ xác nhận dưới vòng: cấp mới, giá (thiếu tô đỏ), thời gian xây, lý do chưa nâng được, nút Thôi và ✓ Đồng ý; lũy, đê liền đoạn có thêm nút nâng cả đoạn. Chưa nâng được thì nút trên vòng mờ đi nhưng vẫn bấm được để đọc lý do. **Dỡ** cũng hỏi lại trước khi dỡ (dỡ không hoàn của).
+  - Công trình đang dựng mới chỉ có ℹ️ (khối việc, nút hủy) và Đố sử. Đang có bảng, ô bật lên, đang đặt, dời công trình hay ở bãi chiến thì vòng ẩn; chạm chỗ trống thì vòng tắt.
+  - Nút riêng từng loại (PR 2), mỗi nút một hình đồng, nằm giữa Đố sử và Dời; chỉ lấp chỗ còn trống trong 7 nút (Dời, Xoay, Dỡ luôn còn; nút riêng thừa vẫn có trong bảng ℹ️), hiện theo đúng điều kiện như nút ấy trong bảng:
+    - Doanh trại: **Quân**, **Giữ thành**, **Tướng**, mở bảng doanh trại đúng thẻ.
+    - Trại giáo, trại cung, chuồng voi, trại nỏ: **Luyện**, mở bảng và cuộn tới hàng luyện. Lò rèn (từ chương 2): **Rèn**, mở bảng và cuộn tới mục rèn binh khí.
+    - Điện: **Hội Tết** (khi Tết đã mở), rồi các tướng theo thứ tự truyện: Gióng, Sơn Tinh, An Dương, Cao Lỗ (mở bảng tướng như nút trong bảng Điện). Lò rèn cũng có nút Gióng. Bốn công trình Tết: **Hội Tết**.
+    - Thành (chương 4, chưa có ụ): **Ụ nỏ** mở thẻ xác nhận giá, lý do chưa đặt được, ✓ Đồng ý; ụ hư thì **Sửa ụ**. Chòi canh cấp 8 ghép được: **Ghép**.
+    - Bến thuyền khơi: **Ra đảo** (camera ra quần đảo của bến), từ Điện 10 thêm **Đồn đảo**. Đồn biên: **Lính đóng** (mở bảng).
+    - Cống đê: **Đóng cống**/**Mở cống**.
+  - Công trình ra ngoài màn hình (kéo cảnh đi, camera ra đảo) thì vòng ẩn, không kẹp ở mép.
 - **Màn hình vào game**: hiện mỗi lần mở game (tải trang), trước khi vào kinh đô.
   - Trên cùng là mặt trống đồng Đông Sơn làm biểu tượng: ngôi sao 14 cánh ở giữa, các vòng vạch, vòng tròn chấm giữa, răng cưa, và sáu chim Lạc bay ngược chiều kim đồng hồ (vòng chim xoay chậm). Dưới là tên game ("Thời đại" chữ nhỏ giãn, "Văn Lang" chữ to) và một dòng giới thiệu. Không có dòng tên các nhân vật.
   - Dưới cùng là thẻ tóm tắt bản lưu (chương đang chơi và tên truyện của chương, hay "Đã hết truyện"; cấp Điện; số dân; đã vắng bao lâu) và nút **Chơi tiếp**. Chưa xem đoạn truyện mở đầu thì coi là game mới: thẻ ghi "Kinh đô mới, chờ người dựng nước", nút là **Bắt đầu**. Góc trên có nút bật, tắt tiếng.
@@ -177,6 +189,7 @@ Lúc đầu mỗi cấp Điện chỉ cho phát tới một số khoảnh (lư�
 | Cổng thành | 1×1 | Có từ chương 3, Điện 5. Cửa trong vòng tường: giặc dồn về cổng, lính trên lầu cổng bắn (xem mục Kế hoạch: cổng thành, xưởng mộc, làng chài) |
 | Bậc lên thành | 1×1 | Có từ Điện 3. Dựng sát mặt trong một đoạn thành đất hay thành Cổ Loa: khi giữ kinh đô cung thủ, lính nỏ theo bậc lên nóc thành bắn xuống (xem mục Bậc lên thành, lối đi trên nóc thành) |
 | Nhà thợ hồ | 3×3 | Thêm một tốp thợ xây; nhà lên cấp thì tốp ấy làm nhanh hơn (xem mục Thời gian xây, tốp thợ, đố sử) |
+| Nhà thuốc nam | 4×4 | Có từ Điện 4, một nhà. Sau mỗi trận (trừ trận đảo) cứu 30% → 55% số lính ngã, thương binh nằm chữa dần rồi về doanh trại (xem mục Kế hoạch: Nhà thuốc nam) |
 | Hồ Kim Quy | 8×8 | Có khi Rùa Vàng hiện lên (thắng màn 19). Lũy, thành đất, thành Cổ Loa, cổng thành thêm 30% máu (xem mục Hồ Kim Quy) |
 | Đền Cổ Loa | 4×4 | Có sau khi kết chương 3. Chòi canh bắn mạnh gấp rưỡi, xa thêm 1 ô |
 | Đền Rồng Tiên | 8×8 | Thờ Lạc Long Quân và Âu Cơ. Có ở chương 5, Điện cấp 10. Vỏ ốc, cá, đất đá, sắt, gỗ làm ra thêm 20% (xem mục Đền Rồng Tiên) |
@@ -1817,6 +1830,16 @@ Móng 1×1, 3 cấp, cần Điện 5, có từ chương 3 (cùng thành Cổ Loa
 - Không thêm nhiệm vụ Lạc hầu, để khỏi dời số thứ tự nhiệm vụ của người đang chơi. Lần đầu mở mỗi công trình, Lạc hầu nói một câu gợi ý, như gợi ý lần đầu được phát rừng.
   - Đã làm: dòng báo "📜 Lạc hầu: …" hiện 8 giây (dòng báo thường 2,6 giây), bo góc vừa phải cho lời nhiều dòng. Công trình đã gợi ý ghi trong bản lưu (`hinted`); danh sách công trình cần gợi ý là `NEW_HINTS` ở `defs.ts`, làng chài và cổng thành nối thêm vào đó mà không phải nâng bản lưu.
   - Người đã qua Điện 2 thì thấy lời gợi ý xưởng mộc ngay khi mở game.
+- **Hướng dẫn chỉ tay** (chủ dự án chốt 2026-11-21): tính năng lớn vừa mở thì Lạc hầu chỉ tay từng bước thay vì chỉ một dòng báo: màn hình tối đi, nút cần bấm được khoanh sáng nhấp nháy, khung nói của Lạc hầu (một hai câu, "Bước 2/4", nút Bỏ qua) nằm trên hay dưới nút. Bấm đúng nút mới sang bước sau; chạm chỗ khác không có tác dụng. Bước chỉ để xem (khoanh một vùng) hay nút đang khóa thì có nút Tiếp. Nút không hiện ra trong 4 giây thì thôi, không kẹt người chơi.
+  - Luật ở `game/huongDan.ts` (`HUONG_DAN`: mục nào mở khi nào, dùng lại hàm mở sẵn có), bước và nút ở `ui/huongDan.ts` (`BUOC`, lớp `ChiTay`). Đã chỉ ghi khóa `hd:<id>` vào `hinted`, đánh dấu ngay lúc bắt đầu (bỏ qua hay tải lại trang thì không chỉ lại). Bản lưu không đổi phiên bản.
+  - Truyện đi trước; không chỉ khi đang đánh, có hộp thoại, đang đặt công trình. Cùng mở một lúc thì chỉ lần lượt theo thứ tự `HUONG_DAN`.
+  - Bản lưu có trước khi có hướng dẫn: lần xét đầu (khóa `hd:init`) đánh dấu im lặng mọi mục đã mở sẵn, khỏi dội nhiều mục một lúc.
+  - Sổ hướng dẫn trong ô Lạc hầu: các mục đã mở, chạm để xem lại. Cài đặt có nút bật tắt Hướng dẫn chỉ tay, lưu từng máy; tắt thì Dã ngoại lại báo dòng như cũ.
+  - Đợt 1: Phó bản (có doanh trại), Trang bị tướng, Dã ngoại.
+  - Đợt 2 (đã làm): Thử thách (thắng màn 1), Thần thú (thú đầu tiên về), Đấu thành (hết chương 1: chip Đấu thành vốn luôn hiện, nên chọn mốc người chơi đã quen đánh trận), Mẫu kinh đô (Điện 5), Bên kia sông (Điện 4), Cống đê (chương 2), Hội Tết (khi Tết mở), Rèn binh khí (lò rèn cấp 6), Đóng đảo (bến thuyền khơi ra được quần đảo). Thứ tự chỉ theo nhịp chơi ở `HUONG_DAN`.
+  - Ba kiểu bước thêm ở đợt 2: tự mở bảng công trình (`chon`, vì công trình trên cảnh 3D không khoanh được; kinh đô chưa có thì bỏ bước), bước chỉ có lời (khung nói giữa màn hình, bấm Tiếp), bước có thể không có nút (`coThe`, vd. bản game chưa nối máy chủ thì không có thẻ Đánh thử: bỏ qua sau 1,2 giây).
+  - Hộp thoại (vắng mặt, kết quả trận, truyện) bật lên giữa lúc chỉ thì lớp chỉ tay tạm ẩn, cho chạm qua; đóng hộp thoại thì chỉ tiếp.
+  - Bật chỉ tay thì bỏ dòng báo trùng: Dã ngoại mở, chim Lạc về, đảo mở (`dao:mo`). Tắt thì các dòng ấy hiện như cũ.
 - **Bản lưu phiên bản 16** (đã làm): bản lưu cũ có 0 gỗ, chưa gợi ý gì; trận đang dở hay vừa xong chưa bị cướp gỗ. Chương 4 phần 3 và phần 4 gộp trước, lấy phiên bản 14, 15, nên gỗ lấy 16.
 
 ### Thứ tự làm
@@ -4048,6 +4071,24 @@ Chủ dự án yêu cầu: lên kế hoạch nuôi thần thú. Như các kế h
 3. **PR 2**: hình năm thú ba dáng, vẽ trong trận, nhóm chụp `thanThu`.
 4. **PR 3**: thú đi lại, bay trong kinh đô; bảng Thần thú; chụp kiểm tra.
 
+## Kế hoạch: Nhà thuốc nam (chủ dự án đã duyệt, đã làm)
+
+Học từ Thronewake (nhà Herbalist cứu 40–55% quân ngã). Trước đây lính ngã ở mọi trận là mất hẳn. Chủ dự án chốt ba điều: cứu ở **mọi trận trừ trận đảo**; thương binh **chữa dần theo giờ, cả lúc vắng**; **mở ở Điện 4, cấp nhà 1 → 10 cứu 30% → 55%**. Thêm hai người đi hái thuốc (chỉ để nhìn).
+
+### Luật (`src/game/nhaThuoc.ts`, bản lưu 36)
+
+- Công trình `nhaThuoc` 4×4, 10 cấp, mở ở Điện 4, mỗi kinh đô một nhà (`BUILDINGS.nhaThuoc`), số ở `NHA_THUOC` (`defs.ts`): phần cứu `cuu` 30% → 55%, giường `giuong` 8 → 64 chỗ quân, thời gian chữa một chỗ quân `chuaMs` 30 → 8 giây (voi chiến 3 chỗ thì lâu gấp ba).
+- Trận xong (giữ kinh đô `finishRaid`, phó bản và thử thách `finishStage`, đánh đồn `finishCamp`, Đấu thành đánh thật `nhanKetQua`): trừ quân ngã rồi khiêng về nhà thuốc `floor(ngã × tỉ lệ)` mỗi binh chủng theo nhà còn nguyên cấp cao nhất, không quá số giường còn trống; phần thừa mất như cũ (`truQuanNga`, `nhanThuong`). Kết quả trận ghi `thuong`. Trận đảo không đổi (thua là chết hết). Máy chủ Đấu thành không đổi: chỉ máy khách khiêng về.
+- Thương binh (`state.thuong`) không chiếm chỗ quân, không ra trận, vẫn ăn gạo (`foodPerMinute`). Chữa từng người theo thứ tự giáo binh, cung thủ, lính nỏ, voi chiến (`hoiThuong`, gọi trong `tick` và cả quãng vắng ở `applyOffline`); khỏi thì về doanh trại nếu còn chỗ, hết chỗ thì nằm chờ. Nhà hư thì không cứu, không chữa tới khi sửa.
+- Người chơi mô phỏng không dựng nhà thuốc nên nhịp cân bằng và chuẩn độ khó không đổi.
+
+### Giao diện, hình
+
+- Bảng nhà thuốc (`ui/nhaThuoc.ts`): tỉ lệ cứu, giường, thương binh, đếm ngược người kế tiếp khỏi (thay tại chỗ), chờ chỗ doanh trại, cấp sau. Bảng kết quả trận có dòng "Được khiêng về nhà thuốc"; bảng lúc vắng báo số người chữa khỏi; bảng nơi ở có dòng "Đang chữa".
+- Hình (`render/congTrinh/nhaThuoc.ts`, bản vẽ ở `docs/bo-cuc-cong-trinh.md`): nhà sàn lang y, giàn phơi lá, lán chõng có thương binh nằm theo số đang chữa, cối giã thuốc, vườn thuốc, lò sắc thuốc. Ba người: lang y giã thuốc, hai người hái thuốc.
+- Hai người hái thuốc thay phiên rời vườn lên chỗ hái gần nhất (ô sát rừng chưa phát hay ô có cây dại, trong `HAI_XA` ô; `duongHai` ở `vanChuyen.ts`, `tuyenHai` ở `render/ganhHang.ts`), cúi hái `HAI_S` giây rồi gùi đầy lá về; mỗi lúc một người đi. Có trận, giặc sắp tới, ban đêm thì ở nhà.
+- Lạc hầu gợi ý một lần khi mở (`NEW_HINTS`). Mẫu kinh đô chừa một chỗ từ Điện 4.
+
 ## Nhịp chơi và lưu game
 
 - Nhịp chơi lai: mỗi lần mở game là một phiên ra quyết định ngắn.
@@ -4103,4 +4144,5 @@ Chủ dự án yêu cầu: lên kế hoạch nuôi thần thú. Như các kế h
 24. **Trang bị rơi ngẫu nhiên và sáu chỉ số tướng** (chủ dự án đã duyệt; xem Kế hoạch cùng tên): đồ rơi ở phó bản, thử thách, đồn, giữ kinh đô; mỗi tướng một bộ mang tên truyền thuyết, ai mặc cũng được, hiệu ứng bộ khi đúng tướng mặc; sáu chỉ số và Lực chiến; cường hóa bằng tài nguyên, phân giải ra sắt; bảng tướng kiểu túi đồ game nhập vai (hình tướng mặc đồ, ảnh món vẽ sẵn), mặc đủ bộ mình thì vũ khí ánh lên; Đấu thành tính đồ (máy chủ kiểm món, tự tính chỉ số). PR 1 luật và bảng, PR 2 Đấu thành, PR 3 hình (đã làm cả ba, cùng PR #100).
 25. **Điện 10 điều quân ra đóng đảo** (chủ dự án đã duyệt; đã làm PR 1–3: luật, giao diện, hình đồn đảo và thuyền chiến, giặc đánh đảo; xem Kế hoạch cùng tên): thuyền chiến đóng ở bến thuyền khơi cấp 3 chở quân ra đồn Hoàng Sa, đồn Trường Sa; đảo có quân giữ thì ngư trường làm ra thêm, báo sớm và chặn đánh thủy quân Hán; giặc Hán đánh đảo, quân đảo tự đánh, xem lại được.
 26. **Dã ngoại** (chủ dự án yêu cầu, đã làm; xem Kế hoạch cùng tên): mười map (map 6 Núi Nưa, map 7 Đầm Dạ Trạch, map 8 Núi Vệ, map 9 Bạch Đằng, map 10 sông Như Nguyệt thêm sau) mở kiểu Võ Lâm 2 nối nhau bằng cổng mở theo cấp, mỗi map năm khu quái phân theo cấp và một boss tự đánh; chạm để đi, nút Tự đánh; tự chọn tối đa 3 tướng, chỉ tướng đi; cấp chung cho mọi tướng chỉ có tác dụng trong dã ngoại; treo máy tối đa 8 giờ, không khóa tướng.
-27. **Để sau**: nhạc nền.
+27. **Nhà thuốc nam** (chủ dự án đã duyệt, đã làm; xem Kế hoạch cùng tên): cứu một phần lính ngã sau mỗi trận, chữa dần theo giờ; hai người đi hái thuốc.
+28. **Để sau**: nhạc nền.

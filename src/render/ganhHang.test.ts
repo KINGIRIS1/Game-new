@@ -11,7 +11,7 @@ import { GRID } from '../game/map';
 import { DIEN, edge, setDien, size } from '../game/testmap';
 import { duongGanh, duongTu } from '../game/vanChuyen';
 import { pendingBuildings, startBuild } from '../game/xay';
-import { DO_HANG_S, HAI_LUOT, LAM_S, chuyenGanh, coHang, duongNguoi, loiRa, tuyenGanh, tuyenXay, vatLieu, viTri, viecBep, type TuyenGanh } from './ganhHang';
+import { DO_HANG_S, HAI_LUOT, HAI_S, LAM_S, chuyenGanh, coHang, duongNguoi, loiRa, tuyenGanh, tuyenHai, tuyenXay, vatLieu, viTri, viecBep, type TuyenGanh } from './ganhHang';
 import type { Lot } from './lot';
 
 // Bản vẽ ô con nằm trong tệp mô hình, mà phần vẽ tạo canvas khi nạp module: giả lập `document` như `duoc.test.ts`.
@@ -264,5 +264,52 @@ describe('thợ vác vật liệu, người bếp', () => {
     bep.damaged = true;
     s.tet.banh.chung = 4;
     expect(viecBep(s, bep, LOTS)).toBe(null);
+  });
+});
+
+describe('người hái thuốc', () => {
+  it('đi từ lối nhà thuốc tới chỗ hái sát rừng chưa phát hay cây dại, không xuyên móng công trình', async () => {
+    const { NHA_THUOC_LOT } = await import('./congTrinh/nhaThuoc');
+    const { duongHai } = await import('../game/vanChuyen');
+    const { openMask } = await import('../game/khoanh');
+    const { isRiver } = await import('../game/map');
+    const s = capital();
+    const b = put(s, 'nhaThuoc', DIEN - 6, DIEN - 6);
+    const g = duongHai(s, b)!;
+    expect(g).not.toBeNull();
+    const t = tuyenHai(s, b, { nhaThuoc: NHA_THUOC_LOT })!;
+    expect(t.pts.length).toBe(g.tuyen.length + 1);
+    const occ = occupancy(s);
+    for (const i of g.tuyen) expect(occ[i]).toBe(0);
+    const last = g.tuyen[g.tuyen.length - 1];
+    const x = last % GRID;
+    const z = (last - x) / GRID;
+    const mask = openMask(s);
+    const rung = (a: number, c: number) => a >= 0 && c >= 0 && a < GRID && c < GRID && !mask[c * GRID + a] && !isRiver(a, c);
+    const cay = s.cayDa.list.some((c) => c.kind === 'cay' && c.x === x && c.z === z);
+    expect(cay || rung(x + 1, z) || rung(x - 1, z) || rung(x, z + 1) || rung(x, z - 1)).toBe(true);
+    // Đứng hái đủ lâu ở chỗ hái.
+    const p = duongNguoi(t, { x: b.x + 1, z: b.z + 3 });
+    const giua = viTri(p, t.D, t.D);
+    expect(giua.dung).toBe(true);
+    expect(t.D - Math.min(p.di, t.D - DO_HANG_S / 2)).toBeGreaterThanOrEqual(HAI_S / 2);
+  });
+
+  it('hai người thay phiên: mỗi lúc chỉ một người đi, ai cũng có lượt', () => {
+    const D = 12;
+    const ai = new Set<number>();
+    for (let t = 0; t < 200; t += 0.5) {
+      const ra = chuyenGanh(2, D, t, 0.3);
+      expect(ra.length).toBeLessThanOrEqual(1);
+      for (const r of ra) ai.add(r.who);
+    }
+    expect([...ai].sort()).toEqual([0, 1]);
+  });
+
+  it('nhà thuốc hư thì không ai đi hái', () => {
+    const s = capital();
+    const b = put(s, 'nhaThuoc', DIEN - 6, DIEN - 6);
+    b.damaged = true;
+    expect(tuyenHai(s, b)).toBeNull();
   });
 });

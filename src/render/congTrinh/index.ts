@@ -20,6 +20,7 @@ import { KHO } from './kho';
 import { LANG_CHAI } from './langChai';
 import { LO_REN } from './loRen';
 import { NHA_SAN } from './nhaSan';
+import { NHA_THUOC } from './nhaThuoc';
 import { RUONG } from './ruong';
 import { SAN_TRONG } from './sanTrong';
 import { TRAI_CUNG } from './traiCung';
@@ -53,6 +54,7 @@ export const CONG_TRINH: Partial<Record<BuildingType, CongTrinh>> = {
   denRongTien: DEN_RONG_TIEN,
   sanTrong: SAN_TRONG,
   thoHo: THO_HO,
+  nhaThuoc: NHA_THUOC,
 };
 
 /** Viền cỏ chừa quanh mô hình công trình vẽ trên móng mới, mỗi bên (ô đất): nhà kề nhau không liền thành một khối. */

@@ -40,6 +40,7 @@ import { phoTuongCheck, phoTuongOf, rememberPhoTuong } from './nuTuong';
 import { openMask } from './khoanh';
 import { FAR_FOREST, FOREST_BAND, GRID, KHOANH, RIVER_END, RIVER_START, farBankOf } from './map';
 import { roiDo } from './trangBi';
+import { truQuanNga } from './nhaThuoc';
 
 const ok = <T>(value: T): Result<T> => ({ ok: true, value });
 const fail = (reason: FailReason): Result<never> => ({ ok: false, reason });
@@ -507,7 +508,7 @@ export function startCamp(
 export function finishCamp(state: GameState, battle: Battle): void {
   const id = battle.camp!;
   const outcome = battle.outcome ?? 'lose';
-  for (const k of UNIT_TYPES) state.troops[k] = Math.max(0, state.troops[k] - battle.lost[k]);
+  const thuong = truQuanNga(state, battle.lost);
   const won = outcome === 'win' && hasCamp(state, id);
   const reward = won ? { ...CAMPS[campTier(id)!].reward } : {};
   if (won) {
@@ -530,6 +531,7 @@ export function finishCamp(state: GameState, battle: Battle): void {
     lost: { ...battle.lost },
     reward,
     ...(roi ? { do: roi } : {}),
+    ...(thuong ? { thuong } : {}),
   };
 }
 

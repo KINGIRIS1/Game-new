@@ -8,7 +8,7 @@ import { BUILDINGS, GANH_BEP, type BuildingType, type Cost } from '../game/defs'
 import type { Building, GameState } from '../game/game';
 import { GRID, riverFacing, rotAngle } from '../game/map';
 import { tetOpen } from '../game/tet';
-import { chiPhiO, duongGanh, duongTu, ganhType, type DuongGanh } from '../game/vanChuyen';
+import { chiPhiO, duongGanh, duongHai, duongTu, ganhType, type DuongGanh } from '../game/vanChuyen';
 import { CELL, type Lot } from './lot';
 
 /**
@@ -16,7 +16,7 @@ import { CELL, type Lot } from './lot';
  * tới công trình đang xây (gỗ, đá, sắt, bó tre `tre`), nguyên liệu Tết người bếp gùi từ kho về (`gui`), mâm bánh mùa
  * Tết đội lên Điện (`mam`).
  */
-export type Hang = 'thoc' | 'rau' | 'oc' | 'da' | 'sat' | 'ca' | 'la' | 'thit' | 'go' | 'tre' | 'gui' | 'mam';
+export type Hang = 'thoc' | 'rau' | 'oc' | 'da' | 'sat' | 'ca' | 'la' | 'thit' | 'go' | 'tre' | 'gui' | 'mam' | 'thuoc';
 
 /**
  * Chiều mang hàng: `di` gánh hàng tới nơi nhận rồi đi tay không về (của làm ra, mâm bánh); `ve` đi tay không tới nơi
@@ -149,6 +149,29 @@ function tuyenTheo(state: GameState, b: Pick<Building, 'type' | 'x' | 'z' | 'rot
   }
   const di = giay.reduce((a, c) => a + c, 0);
   return { pts, giay, D: di + LEAD_O * GIAY_MOI_O + DO_HANG_S / 2, noi: g.noi };
+}
+
+/** Người hái thuốc cúi hái ở chỗ hái chừng này giây rồi mới gùi lá về. */
+export const HAI_S = 8;
+
+/**
+ * Tuyến người hái thuốc của nhà thuốc `b`: ra lối của bản vẽ, theo đường đất tới chỗ hái gần nhất (bìa rừng, cây dại;
+ * `duongHai` ở game/vanChuyen.ts), đứng hái `HAI_S` giây rồi về. Null khi không có chỗ hái (chỉ hái ở vườn nhà).
+ */
+export function tuyenHai(state: GameState, b: Building, lots: Partial<Record<BuildingType, Lot>> = {}): TuyenGanh | null {
+  if (b.type !== 'nhaThuoc' || b.damaged) return null;
+  const g = duongHai(state, b);
+  if (!g || !g.tuyen.length) return null;
+  const tiles = g.tuyen.map(tam);
+  const pts: Diem[] = [loiRa(b, tiles[0], lots[b.type]), ...tiles];
+  const giay: number[] = [];
+  for (let k = 0; k + 1 < pts.length; k++) {
+    const len = Math.hypot(pts[k + 1].x - pts[k].x, pts[k + 1].z - pts[k].z);
+    const cost = chiPhiO(state, g.tuyen[k]);
+    giay.push(len * (Number.isFinite(cost) ? cost : 1) * GIAY_MOI_O);
+  }
+  const di = giay.reduce((a, c) => a + c, 0);
+  return { pts, giay, D: di + LEAD_O * GIAY_MOI_O + HAI_S / 2, noi: b.id };
 }
 
 /** Vật liệu thợ vác tới công trình đang xây theo giá phần việc: thứ nhiều nhất trong gỗ, đất đá, sắt; không có thì tre. */

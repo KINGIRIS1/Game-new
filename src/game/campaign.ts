@@ -20,6 +20,7 @@ import { heroesFor, inChapter2, restAfter, sonJoined, sonOnly, sonResting, winGi
 import { challengeField, challengeOf, challengeOpen, huanTiers, winChallenge } from './thuThach';
 import { phoTuongCheck, phoTuongOf, rememberPhoTuong } from './nuTuong';
 import { roiDo } from './trangBi';
+import { truQuanNga } from './nhaThuoc';
 
 /** Thắng màn này lần đầu thì roi sắt gãy. */
 export const WHIP_BREAKS_AT = 6;
@@ -212,7 +213,7 @@ function finishStage(state: GameState): void {
   // Trận đánh đồn bên kia sông có cách ghi riêng.
   if (battle.camp !== undefined) return finishCamp(state, battle);
   const outcome = battle.outcome ?? 'lose';
-  for (const k of UNIT_TYPES) state.troops[k] = Math.max(0, state.troops[k] - battle.lost[k]);
+  const thuong = truQuanNga(state, battle.lost);
   const won = outcome === 'win';
   // Thử thách không cho của cải, không mở màn mới, không kể truyện: chỉ cho huân công lần đầu thắng.
   const challenge = battle.challenge;
@@ -269,6 +270,7 @@ function finishStage(state: GameState): void {
     ...(gift ? { gift } : {}),
     ...(challenge ? { challenge: { kind: challenge, huan } } : {}),
     ...(roi ? { do: roi } : {}),
+    ...(thuong ? { thuong } : {}),
   };
   state.campaign.lastResult = result;
 }

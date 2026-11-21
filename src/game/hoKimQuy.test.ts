@@ -33,7 +33,7 @@ function ch3(cleared = YEU_LAST, level = 7): GameState {
   s.dan = 60;
   // Đã qua chương 2: Sơn Tinh đủ lễ vật, mùa lũ đã tới.
   for (const g of GIFT_IDS) s.son.gifts[g] = true;
-  for (const t of ['xuongMoc', 'langChai', 'congThanh'] as const) markHinted(s, t);
+  for (const t of ['xuongMoc', 'langChai', 'nhaThuoc', 'congThanh'] as const) markHinted(s, t);
   return s;
 }
 

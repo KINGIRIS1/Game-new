@@ -19,6 +19,7 @@ import { challengeEnemies, challengeOf, challengeOpen, challengeWon, huanNextCos
 import { vi } from '../text/vi';
 import { costHtml, esc, skillIconImg } from './format';
 import { roiHtml, roiNoteHtml } from './trangBi';
+import { khiengHtml } from './nhaThuoc';
 
 /** Lựa chọn trên bảng xếp quân: số lính mang theo, hàng đứng của từng binh chủng, tướng ra trận. */
 export interface ArmyPick {
@@ -541,6 +542,7 @@ export function stageResultHtml(r: StageResult): string {
       ${don && won ? `<div>${vi.benKia.campCleared}</div>` : ''}
       <div>${vi.ui.raidKilled(r.killed, r.total)}</div>
       <div>${vi.ui.raidLostTroops}: ${lost}</div>
+      ${khiengHtml(r.thuong)}
       ${won && !r.challenge ? `<div>${don ? vi.benKia.campReward : r.first ? vi.ui.firstReward : vi.ui.replayReward}: ${costHtml(null, r.reward)}</div>` : ''}
       ${won && r.challenge ? `<div>${r.challenge.huan ? vi.ui.huanGot(r.challenge.huan) : vi.ui.huanAgain}</div>` : ''}
       ${r.gift ? `<div>${vi.ui.giftWon}: ${vi.gifts[r.gift].icon} ${esc(vi.gifts[r.gift].name)}</div>` : ''}

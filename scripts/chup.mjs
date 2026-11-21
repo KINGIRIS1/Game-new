@@ -256,6 +256,17 @@ for (const v of s.xay.viec) for (const o of v.o) o.ms *= 400;`;
  * Mở thêm đất, coi như đã kết chương 1 (có Hội Tết), dựng bếp gói bánh xa Điện chừng 12–22 ô và ruộng nếp, vườn đậu lá
  * dong, chuồng lợn gần Điện (nguyên liệu gánh về Điện, kho), đủ người làm.
  */
+/** Dựng nhà thuốc nam cấp 5 gần Điện, năm thương binh nằm chữa. */
+const NHA_THUOC = `s.khoanh = K.squareKhoanh(K.AREA[6]);
+s.resources = { gao: 9e5, voOc: 9e5, datDa: 9e5, sat: 9e5, go: 9e5 };
+{ const dien = s.buildings.find((b) => b.type === 'dien');
+  const p = G.findSpot(s, 'nhaThuoc', { x: dien.x + 5, z: dien.z + 5 }) ?? G.findSpot(s, 'nhaThuoc');
+  if (!p) throw new Error('không có chỗ nhà thuốc');
+  const r = G.place(s, 'nhaThuoc', p.x, p.z);
+  if (!r.ok) throw new Error(r.reason);
+  r.value.level = 5;
+  s.thuong = { linh: { giao: 3, cung: 2, voi: 0, no: 0 }, ms: 0 }; }`;
+
 const BEP_XA = `s.khoanh = K.squareKhoanh(K.AREA[6]);
 s.giong.ascended = true;
 s.resources = { gao: 9e5, voOc: 9e5, datDa: 9e5, sat: 9e5, go: 9e5 };
@@ -297,10 +308,60 @@ export const CANH = {
     sau: NHIN_GANH,
     doi: 600,
   },
+  'hai-thuoc': {
+    mo: 'Như kinh-do, có nhà thuốc nam gần Điện, năm thương binh nằm chữa: hai người hái thuốc thay phiên lên bìa rừng hái lá, gùi đầy về (nhìn giữa tuyến)',
+    truoc: `${KINH_DO}\n${NHA_THUOC}`,
+    sau: NHIN_DI(`g.hang === 'thuoc'`, 3.4),
+    doi: 600,
+  },
+  'nha-thuoc': {
+    mo: 'Như hai-thuoc, chạm chọn nhà thuốc: bảng có tỉ lệ cứu, giường, thương binh, đếm ngược người kế tiếp khỏi',
+    truoc: `${KINH_DO}\n${NHA_THUOC}`,
+    sau: `d.select(s.buildings.find((b) => b.type === 'nhaThuoc').id);`,
+  },
   'ganh-vung': {
     mo: 'Như ganh-hang (một ruộng ở xa kho), đang đặt kho thóc gần ruộng ấy: vùng gánh đủ 100% có sẵn tô nhạt, phần kho mới phủ thêm tô xanh',
     truoc: `${KINH_DO}\n${RUONG_XA}`,
     sau: VUNG_KHO,
+  },
+  'vong-nut': {
+    mo: 'Như kinh-do, chạm chọn Điện: vòng nút quanh Điện (Thông tin, Nâng cấp, Dời, Xoay)',
+    truoc: KINH_DO,
+    sau: `d.select(s.buildings.find((b) => b.type === 'dien').id);`,
+    doi: 2500,
+  },
+  'vong-nut-nang': {
+    mo: 'Như vong-nut, bấm nút Nâng cấp của vòng: thẻ xác nhận (giá, thời gian xây, lý do chưa nâng được, Thôi, Đồng ý)',
+    truoc: KINH_DO,
+    sau: `d.select(s.buildings.find((b) => b.type === 'dien').id);`,
+    doi: 2500,
+    truocKhiChup: `document.querySelector('.vn-nut[data-the=nang]').click();`,
+  },
+  'vong-nut-luy': {
+    mo: 'Như kinh-do, có một đoạn lũy hư: vòng nút của lũy (Sửa, Đắp, Dời, Dỡ) và thẻ xác nhận Dỡ',
+    truoc: `${KINH_DO}\nconst l = G.place(s, 'luy', s.buildings[0].x - 3, s.buildings[0].z + 2); if (l.ok) l.value.damaged = true;`,
+    sau: `d.select(s.buildings.find((b) => b.type === 'luy').id);`,
+    doi: 2500,
+    truocKhiChup: `document.querySelector('.vn-nut[data-the=do]').click();`,
+  },
+  'vong-nut-trai': {
+    mo: 'Như kinh-do có doanh trại, chạm chọn doanh trại: vòng có Quân, Giữ thành, Tướng (mở bảng đúng thẻ)',
+    truoc: `${KINH_DO}\n${CO_QUAN}`,
+    sau: `d.select(s.buildings.find((b) => b.type === 'doanhTrai').id);`,
+    doi: 2500,
+  },
+  'vong-nut-ren': {
+    mo: 'Như kinh-do sang chương 2, chạm lò rèn rồi bấm nút Rèn: bảng lò rèn cuộn tới mục rèn binh khí',
+    truoc: `${KINH_DO}\ns.questIndex = Math.max(s.questIndex, D.CH2_QUEST_START);`,
+    sau: `d.select(s.buildings.find((b) => b.type === 'loRen').id);`,
+    doi: 2500,
+    truocKhiChup: `document.querySelector('.vn-nut[data-cuon]').click();`,
+  },
+  'vong-nut-dien5': {
+    mo: 'Kinh đô chương 5 (Điện 8), Điện đang hư, đang Tết: vòng đủ 7 nút (Sửa, Nâng cấp, Tết, tướng, Dời, Xoay)',
+    truoc: `${CHUONG5(33)}\ns.story.seen.push('langLieu'); s.buildings.find((b) => b.type === 'dien').damaged = true;`,
+    sau: `d.select(s.buildings.find((b) => b.type === 'dien').id);`,
+    doi: 3000,
   },
   'ganh-vung-chon': {
     mo: 'Như kinh-do, chạm chọn kho thóc: vùng riêng của kho tô xanh, phần còn lại của vùng gánh đủ 100% tô nhạt',
@@ -717,7 +778,7 @@ Tùy chọn:
                           Mã có sẵn d (window.__debug), s (state), G (game.ts), M (moPhong.ts),
                           D (defs.ts), C (campaign.ts), S (story.ts), X (mau.ts), K (khoanh.ts), B (benKia.ts)
   --cam x,z,zoom          Đặt camera nhìn vào ô (x, z)
-  --cham <x,z | loại>     Chạm một ô, hoặc công trình đầu tiên thuộc loại đó (vd: dien, ruong) để mở bảng
+  --cham <x,z | loại>     Chạm một ô, hoặc công trình đầu tiên thuộc loại đó (vd: dien, ruong): hiện vòng nút; thêm --bam "[data-act=openInfo]" để mở bảng
   --bam "<bộ chọn>"       Bấm một phần tử giao diện (CSS, hoặc text=Chữ trên nút)
   --doi <ms>              Chờ thêm trước khi chụp (mặc định 1200, cảnh trận chờ lâu hơn)
   --ten <tên>             Tên ảnh (mặc định: tên cảnh)
