@@ -2514,9 +2514,10 @@ export const vi = {
         lock: 'Mở khi vào chương 4: Mỵ Châu, Trọng Thủy.',
       },
     },
-    mauPlan: (moves: number, builds: number, removes: number, uNos = 0, duong = 0) =>
+    mauPlan: (moves: number, builds: number, removes: number, uNos = 0, duong = 0, dap = 0) =>
       [
         moves ? `Dời ${moves} công trình` : '',
+        dap ? `đắp nền ${dap} công trình` : '',
         builds ? `dựng thêm ${builds}` : '',
         uNos ? `dựng ${uNos} ụ nỏ` : '',
         removes ? `dỡ ${removes} đoạn thừa` : '',
@@ -2525,6 +2526,12 @@ export const vi = {
         .filter(Boolean)
         .join(', ') || 'Đã xếp đúng theo mẫu',
     mauApply: '🗺️ Áp mẫu',
+    /** Nút bật tắt đắp bậc thang ở thẻ Mẫu kinh đô (từ chương 2). */
+    mauBac: (on: boolean) => (on ? '⛰️ Đắp bậc thang: bật' : '⛰️ Đắp bậc thang: tắt'),
+    mauBacHint:
+      'Điện lên bậc 3, quanh Điện bậc 2, ruộng cao dần tới bậc 2 (dãy sát sông giữ nguyên để còn phù sa). Tốn đất đá như đắp nền.',
+    /** Dòng giá đắp nền riêng trong mục mẫu. */
+    mauDapCost: (cost: string) => `Đắp nền: ${cost}`,
     mauConfirm: '⚠️ Bấm lần nữa để áp',
     mauDone: (name: string) => `Đã xếp kinh đô theo mẫu ${name}`,
     move: 'Dời',

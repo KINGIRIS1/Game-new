@@ -1,13 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import { wallRings } from './coLoa';
 import { CH1_LAST } from './campaign';
-import { BUILDINGS, CH2_QUEST_START, CH3_QUEST_START, CH4_QUEST_START, GIFT_IDS, MOVE_FRACTION, ROAD_LIMIT, STAGES, U_NO, canHem, isRoad, type BuildingType } from './defs';
-import { canMove, createInitialState, dienLevel, limitOf, move, moveCost, occupancy, place, rotOf, rotateBuilding, satNha, uNoCount, usedOf, type GameState } from './game';
-import { applyMau, canApplyMau, inFrame, mauDuong, mauFrom, mauSlots, mauUnlocked, planMau, MAU_IDS, type MauId } from './mau';
+import { BUILDINGS, CH2_QUEST_START, raiseBuildingCost, CH3_QUEST_START, CH4_QUEST_START, GIFT_IDS, MOVE_FRACTION, ROAD_LIMIT, STAGES, U_NO, canHem, isRoad, type BuildingType } from './defs';
+import { NO_RAISE, canMove, createInitialState, dienLevel, limitOf, move, moveCost, occupancy, place, rotOf, rotateBuilding, satNha, uNoCount, usedOf, type GameState } from './game';
+import { BAC_THANG, applyMau, bacThangMo, canApplyMau, inFrame, mauDuong, mauFrom, mauSlots, mauUnlocked, planMau, MAU_IDS, type MauId } from './mau';
 import { isOpen, khoanhOf } from './khoanh';
 import { DIEN_HOME, GRID, RIVER_END, RIVER_START, touchesRiver } from './map';
 import { DIEN_END, bank, edge, setDien } from './testmap';
-import { floodMap } from './terrain';
+import { floodHits, floodMap, groundOf } from './terrain';
 
 /** Kinh đô giàu của, đã qua kết chương 1, ở chương `chapter`, Điện cấp `dien`. */
 function city(dien: number, chapter: 1 | 2 | 3 | 4 = 1): GameState {
@@ -568,5 +568,95 @@ describe('hẻm giữa các nhà', () => {
         expect(hem, `${id} Điện ${dien}`).toBeLessThanOrEqual(capSat(mauSlots(id, dien, true)));
       }
     }
+  });
+});
+
+describe('mẫu kinh đô đắp bậc thang', () => {
+  const laRuong = (t: BuildingType) => t === 'ruong' || t === 'ruongNep';
+  /** Ô từ móng tới sông bờ bên này. */
+  const toSong = (b: { type: BuildingType; x: number; z: number }) => Math.min(RIVER_START - (b.x + BUILDINGS[b.type].w), RIVER_START - (b.z + BUILDINGS[b.type].d));
+  /** Áp mẫu `id` hai lần trên hai bản sao: tắt và bật đắp bậc thang. */
+  const both = (id: MauId, dien: number) => {
+    const off = city(dien, chapterFor(id, dien));
+    const on = structuredClone(off);
+    const plan = planMau(on, id);
+    const before = on.resources.datDa;
+    expect(applyMau(off, id, false).ok).toBe(true);
+    expect(applyMau(on, id).ok, `${id} Điện ${dien}`).toBe(true);
+    return { off, on, plan, spent: before - on.resources.datDa };
+  };
+
+  it('chương 1 chưa đắp đất: áp mẫu không đắp, độ cao như tắt đắp', () => {
+    const s = city(5, 1);
+    expect(bacThangMo(s)).toBe(false);
+    const plan = planMau(s, 'phongChau');
+    expect(plan.dap).toEqual([]);
+    expect(plan.dapCost).toEqual({});
+    const off = structuredClone(s);
+    applyMau(s, 'phongChau');
+    applyMau(off, 'phongChau', false);
+    expect(s.heights).toEqual(off.heights);
+  });
+
+  it('từ chương 2 tắt đắp thì không tốn thêm, độ cao như cũ', () => {
+    const s = city(6, 2);
+    expect(bacThangMo(s)).toBe(true);
+    const on = planMau(s, 'phongChau');
+    const off = planMau(s, 'phongChau', false);
+    expect(on.dap.length).toBeGreaterThan(0);
+    expect(off.dap).toEqual([]);
+    expect((on.cost.datDa ?? 0) - (off.cost.datDa ?? 0)).toBe(on.dapCost.datDa);
+  });
+
+  it('bốn mẫu đủ ba tầng: Điện bậc 3, công trình quanh Điện bậc 2, ruộng thấp hơn; giá đắp khớp tổng đắp nền từng công trình', () => {
+    for (const id of MAU_IDS) {
+      const { off, on, plan, spent } = both(id, 8);
+      const dien = on.buildings.find((b) => b.type === 'dien')!;
+      expect(groundOf(on, dien)).toBeGreaterThanOrEqual(BAC_THANG.dien);
+      let dap = 0;
+      for (const b of on.buildings) {
+        const a = off.buildings.find((o) => o.id === b.id)!;
+        const def = BUILDINGS[b.type];
+        const ha = groundOf(off, a);
+        const hb = groundOf(on, b);
+        // Cùng chỗ như khi tắt đắp; chỉ đắp lên, không hạ.
+        expect({ x: b.x, z: b.z }).toEqual({ x: a.x, z: a.z });
+        expect(hb).toBeGreaterThanOrEqual(ha);
+        for (let k = ha; k < hb; k++) dap += raiseBuildingCost(def.w, def.d, k).datDa ?? 0;
+        const tang = !NO_RAISE.includes(b.type) && !def.nearRiver && !isRoad(b.type) && def.w > 1 && !def.decor;
+        if (tang && b.type !== 'dien' && !laRuong(b.type)) expect(hb, `${id}: ${b.type} ${b.x},${b.z}`).toBeGreaterThanOrEqual(BAC_THANG.quanh);
+        if (laRuong(b.type)) expect(hb).toBeLessThanOrEqual(Math.max(ha, BAC_THANG.ruong));
+      }
+      expect(plan.dapCost.datDa).toBe(dap);
+      expect(spent).toBe(plan.cost.datDa);
+      // Ruộng thấp hơn công trình quanh Điện: có ruộng dưới bậc 2.
+      const ruong = on.buildings.filter((b) => laRuong(b.type));
+      expect(ruong.length, id).toBeGreaterThan(0);
+      expect(Math.min(...ruong.map((b) => groundOf(on, b))), id).toBeLessThan(BAC_THANG.quanh);
+      // Áp lần nữa thì không còn gì phải đắp.
+      expect(planMau(on, id).dap).toEqual([]);
+    }
+  });
+
+  it('dãy ruộng gần sông nhất không đắp, vẫn được nước êm qua cống bồi phù sa', () => {
+    for (const id of MAU_IDS) {
+      for (const dien of levelsOf(id).filter((d) => d >= 6)) {
+        const { off, on } = both(id, dien);
+        const ruong = on.buildings.filter((b) => laRuong(b.type));
+        if (!ruong.length) continue;
+        const gan = Math.min(...ruong.map(toSong));
+        for (const b of ruong.filter((r) => toSong(r) === gan)) expect(groundOf(on, b), `${id} Điện ${dien}`).toBe(groundOf(off, off.buildings.find((o) => o.id === b.id)!));
+      }
+    }
+    // Đê bao: mở một cống trên dải đê, lũ bậc 2 vào qua cống bồi dãy ruộng gần sông.
+    const { on } = both('deBao', 6);
+    const de = on.buildings.filter((b) => b.type === 'de');
+    const ruong = on.buildings.filter((b) => laRuong(b.type));
+    const gan = Math.min(...ruong.map(toSong));
+    const cong = de.map((d) => place(on, 'congDe', d.x, d.z)).find((r) => r.ok);
+    if (!cong?.ok) throw new Error('không đặt được cống');
+    cong.value.mo = true;
+    const boi = floodHits(on, 2).boi;
+    expect(boi.some((b) => toSong(b) === gan)).toBe(true);
   });
 });

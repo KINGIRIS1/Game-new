@@ -998,11 +998,12 @@ Chủ dự án đã chọn qua bốn câu hỏi: Thủy Tinh có cả hai phép 
 - Giá áp mẫu bằng giá dựng phần thêm cộng 10% giá dựng mỗi công trình phải dời. Phải đủ tài nguyên mới áp được. Đang có giặc thì không áp được.
 - Mẫu kinh đô là thẻ thứ tư trong bảng Xây dựng, bày như công trình (chủ dự án yêu cầu tách khỏi thẻ Công trình): ảnh lớn là bản đồ thu nhỏ của mẫu đang chọn, dưới là lưới bốn bản đồ nhỏ để chọn (mẫu chưa mở thì xám, ghi chương mở). Mẫu đang chọn có:
   - bản đồ thu nhỏ của mẫu ở cấp Điện hiện tại, vẽ từ bìa đất tới sông; rừng chưa phát vẽ mờ ở mép;
-  - số công trình sẽ dời, dựng thêm, dỡ đi;
-  - tổng giá;
+  - số công trình sẽ dời, dựng thêm, dỡ đi, đắp nền;
+  - dòng "Đắp nền" (giá đắp bậc thang riêng) và tổng giá;
   - nút Áp mẫu. Bấm hai lần mới áp, cho khỏi lỡ tay;
   - lời tả mẫu, số khoảnh rừng chưa phát mà mẫu có chỗ trong đó.
 - Mở thẻ lần đầu thì chọn sẵn mẫu mới mở nhất. Lời giải thích cách áp mẫu nằm cuối thẻ.
+- **Đắp bậc thang** (từ chương 2; diorama bước 5, xem mục Kế hoạch: địa hình diorama): đầu thẻ có nút bật tắt, mặc định bật, nhớ trong lúc chơi (không lưu). Bật thì áp mẫu đắp nền theo ba tầng: Điện bậc 3, công trình quanh Điện bậc 2, ruộng chia dãy theo khoảng cách tới sông, dãy gần sông nhất giữ nguyên, mỗi dãy vào trong cao thêm một bậc tới bậc 2 (`bacThang`, `BAC_THANG` ở `mau.ts`). Chỗ đất (đã san móng) đủ cao thì không đắp, không hạ chỗ nào. Không đắp tường, cầu, công trình một ô, đường, trang trí, loại phải sát sông. Giá đúng giá đắp nền (`raiseBuildingCost`) từ nền lúc san móng lên tới bậc ấy, cộng vào giá áp mẫu; thiếu đất đá thì báo thiếu như thường. Đắp xong ngay như san móng lúc dời, kể cả móng nhà đang chờ thợ.
 - Test (`sapxep.test.ts`) canh các việc sau:
   - ở mọi cấp Điện, mẫu nằm trọn trong vùng đã khai phá, không chồng nhau, không lấn sông, bến sát sông, lũy/đê/thành/bẫy/chòi không quá số tối đa;
   - ở mọi cấp Điện mẫu mở được, mỗi loại đủ đúng số tối đa;
@@ -4105,12 +4106,13 @@ Chủ dự án gửi ảnh mẫu kiểu sa bàn (thành trên gò đá nhiều t
 2. **Kè đá** (đã làm): vách đứng (mép móng công trình, chỗ đắp nền, chỗ đắp đất) vẽ thành tường kè thay màu đất trơn (`nenDat.ts`); dốc tự nhiên vẫn là dốc cỏ, có đá lộ rải rác. Kè đổi theo cấp Điện như mái: cấp 1–3 đất nện cọc tre, 4–6 đá hộc xếp khan, 7–8 đá xanh đẽo vuông, 9–10 đá xanh có diềm đồng hoa văn. Cách làm: nền đất (`nenDat.ts`) lấy mỗi đỉnh mép ở mặt thấp nhất các ô chung đỉnh, nên ô giữ phẳng (móng công trình, đường, đầu cầu) cao hơn xung quanh dựng vách đứng thay vì để ô thấp bên cạnh dốc lên; vách là một nhóm tam giác riêng của mảnh nền, chất liệu có ảnh kè vẽ canvas (`ke.ts`: `keKieu`, `keTexture`), World đổi ảnh khi Điện lên cấp. Vách xuống sông là nhóm thứ ba, kè bờ đá hộc ở mọi cấp. Dốc tự nhiên pha đốm đá lộ theo nhiễu. Thêm chừng 6 lệnh vẽ, tam giác như cũ.
 3. **Núi phông nền, thác** (đã làm): dãy núi đá vôi xanh mờ có mây vắt ngang ở phía bắc và tây sau rừng ngoài lưới (đông nam là biển); vẽ nhẹ: ít mặt, không đổ bóng, không viền mực. Thác chính đổ từ núi xuống đầu nguồn sông Thao ngoài lưới phía bắc; một hai suối nhỏ có thác từ núi phía tây chảy vào rừng ngoài lưới. Chỉ để nhìn. Cách làm: `nuiPhong.ts` (`buildNuiPhong`, World dựng một lần, `update` cho nước thác chảy): núi đá vôi thân tròn méo vách đứng, ba hàng, hàng sau pha màu mờ; khối núi có thác vắt ngang sông Thao cách bìa lưới 15 ô cho camera kéo ra còn thấy; suối phía tây dừng trong rừng ngoài lưới. Ba lệnh vẽ (núi và suối dùng chất liệu đất, mây và bọt nước, thác), không đổ bóng, không viền mực, chừng 6 nghìn tam giác.
 4. **Bờ sông** (đã làm): bờ kè đá; ghềnh đá lô nhô giữa lòng sông, ngoài ba ô sát bờ mà thuyền và thủy quái đi. Hình dòng sông (thẳng, rộng 7 ô) là luật, không uốn. Cách làm: mọi ô đất giáp sông (cả ngoài lưới) giữ phẳng trong nền đất nên dựng vách xuống sông, vẽ kè đá hộc (`bankTile` ở `world.ts`). Thuyền khơi, thuyền chiến đi giữa dòng trong lưới, nên ghềnh chỉ ở ô giữa lòng sông khúc thượng nguồn ngoài lưới (sông Thao phía bắc, sông Đà phía tây), một lệnh vẽ (`ghenh.ts`, `buildGhenh`).
-5. **Mẫu kinh đô đắp bậc thang** (đổi luật, tốn thêm đất đá):
+5. **Mẫu kinh đô đắp bậc thang** (đã làm; đổi luật, tốn thêm đất đá; xem mục Mẫu kinh đô):
    - Cả bốn mẫu. Ruộng (lúa, nếp) xếp thành dãy từ bờ sông lùi vào trong: dãy sát sông giữ bậc 0 để vẫn được nước êm bồi phù sa, mỗi dãy vào trong cao thêm một bậc, tối đa bậc 2; chỗ đất tự nhiên đã đủ cao thì không đắp. Ruộng cao không được phù sa nhưng an toàn khi lũ to.
    - Điện đắp lên bậc 3, các công trình quanh Điện bậc 2, ruộng bậc 0–2 xuống tới sông: ba tầng như thành trên gò (đổi quyết định cũ "Điện chỉ trông như trên đồi").
    - Giá: đúng giá đắp nền công trình hiện có (`raiseBuildingCost`), cộng vào giá áp mẫu; bảng mẫu ghi riêng dòng "Đắp nền".
    - Chương 1 (chưa mở đắp đất) áp mẫu không đắp. Từ chương 2 bảng mẫu có lựa chọn "Đắp bậc thang" bật hay tắt; tắt thì không tốn thêm, bật mà thiếu đất đá thì nút Áp mẫu báo thiếu như thường.
    - Kè đá (bước 2) tự hiện ở chỗ chênh nên ra dáng bậc thang.
+   - Đã làm theo đúng các ý trên. Ruộng sát sông móng rộng 5 ô nên lúc san móng đã lên bậc 1 (ô thứ tư từ sông là bậc 1 tự nhiên), như trước khi có bậc thang: dãy gần sông nhất giữ đúng nền ấy, lũ bậc 2 qua cống vẫn bồi.
    - Test (`sapxep.test.ts`): ruộng sát sông vẫn bậc 0 và vẫn được phù sa; giá đắp khớp tổng đắp nền từng công trình; chương 1 hay tắt đắp thì độ cao không đổi; bốn mẫu đủ ba tầng. Người chơi mô phỏng không áp mẫu nên nhịp cân bằng không đổi.
 6. **Cầu**: làm lại ba cấp cho giống ảnh: cầu gỗ dầm to, lan can, trụ đá; cấp 3 thêm mái che đầu cầu.
 

@@ -138,6 +138,7 @@ import { baoDao, buildingThuyen, canThuyen, daoGiuBien, chanThuyen } from '../ga
 import { fillDao, quanDaoHtml } from './bien';
 import { farBankOf } from '../game/map';
 import { mauItems } from './mau';
+import { bacThangMo } from '../game/mau';
 import { nutNoi } from './nutNoi';
 import { TET_TYPES, VongNut, doLabel, nangInfo, type Project, type TheVong } from './vongNut';
 import { goLabel, pageCount, pageOf, pickOf, thumbUrl, xayDungHtml, type BuildItem } from './xayDung';
@@ -728,6 +729,11 @@ export class Hud {
         return this.onAction({ kind: 'openBarracks' });
       case 'chooseBuild':
         return this.onAction({ kind: 'chooseBuild', type: el.dataset.type as BuildingType });
+      case 'mauBac':
+        this.mauBac = !this.mauBac;
+        this.mauArmed = null;
+        this.refreshSheet(this.getState());
+        return;
       case 'buildTab':
         this.buildTab = el.dataset.tab as typeof this.buildTab;
         this.buildPick = null;
@@ -1420,6 +1426,8 @@ export class Hud {
 
   /** Mẫu vừa bấm Áp lần đầu (chờ bấm lần nữa cho chắc). */
   mauArmed: MauId | null = null;
+  /** Áp mẫu có đắp bậc thang không (thẻ Mẫu kinh đô, từ chương 2; mặc định bật). */
+  mauBac = true;
   /** Việc xây vừa bấm Hủy lần đầu (chờ bấm lần nữa cho chắc). */
   private cancelArmed: number | null = null;
   /** Đã bấm Tải bản trên mây về một lần ở bảng Cài đặt (bấm lần nữa mới thay bản lưu ở máy này). */
@@ -1808,8 +1816,12 @@ export class Hud {
     ).join('');
     const group = BUILD_GROUPS.find((g) => g.key === this.buildTab)!;
     if (group.key === 'mau') {
-      const { items, prefer } = mauItems(state, this.mauArmed);
-      return { tabs: `<div class="build-tabs">${tabs}</div>`, note: '', items, prefer, foot: `<p class="muted xd-foot">${vi.ui.mauHint}</p>` };
+      const { items, prefer } = mauItems(state, this.mauArmed, this.mauBac);
+      // Từ chương 2 (mở đắp đất) có nút bật tắt đắp bậc thang.
+      const bac = bacThangMo(state)
+        ? `<p class="muted mau-bac"><button class="btn ghost" data-act="mauBac">${vi.ui.mauBac(this.mauBac)}</button> ${vi.ui.mauBacHint}</p>`
+        : '';
+      return { tabs: `<div class="build-tabs">${tabs}</div>`, note: bac, items, prefer, foot: `<p class="muted xd-foot">${vi.ui.mauHint}</p>` };
     }
     const cards = shownOf(group.types).map(card);
     const note =
