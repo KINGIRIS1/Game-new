@@ -118,7 +118,7 @@ const RIPPLES = 20 * (RIVER_END - RIVER_START);
 /** Mặt nước nằm thấp hơn mặt đất. */
 const WATER_Y = -0.28;
 /** Mỗi bậc đất cao chừng này (đơn vị thế giới). Mặt ô bậc h nằm ở h * LEVEL_H. */
-export const LEVEL_H = 0.3;
+export const LEVEL_H = 0.5;
 const topY = (h: number) => Math.max(h, 0) * LEVEL_H;
 /** Dấu mặt bờ hai đầu cầu (`BridgeBanks`), để biết lúc nào phải dựng lại cầu; công trình khác là chuỗi rỗng. */
 const bankKey = (b?: BridgeBanks) => (b ? `${b.near.toFixed(3)},${b.far.toFixed(3)}` : '');
@@ -2261,7 +2261,7 @@ export class World {
     const wall = this.state ? stairWall(this.state, b.x, b.z) : undefined;
     const base = this.groundY(b.x, b.z);
     if (!wall) return { rise: EARTH_WALL_TOP, turn: 0, base, key: `bac:${base}` };
-    const rise = Math.max(0.3, this.groundY(wall.x, wall.z) + (wall.type === 'thanh' ? CITADEL_TOP : EARTH_WALL_TOP) - base);
+    const rise = Math.max(LEVEL_H, this.groundY(wall.x, wall.z) + (wall.type === 'thanh' ? CITADEL_TOP : EARTH_WALL_TOP) - base);
     const turn = Math.atan2(wall.x - b.x, wall.z - b.z);
     return { rise, turn, base, key: `bac:${rise.toFixed(3)}:${turn.toFixed(3)}:${base}` };
   }
@@ -3251,7 +3251,7 @@ export class World {
         [x, z + 1],
         [x, z - 1],
       ] as [number, number][]
-    ).filter(([a, b]) => this.thuDiDuoc(state, a, b) && Math.hypot(a + 0.5 - cx, b + 0.5 - cz) < 16 && Math.abs(this.groundY(a, b) - this.groundY(x, z)) < 0.6);
+    ).filter(([a, b]) => this.thuDiDuoc(state, a, b) && Math.hypot(a + 0.5 - cx, b + 0.5 - cz) < 16 && Math.abs(this.groundY(a, b) - this.groundY(x, z)) < 2 * LEVEL_H);
     if (!ke.length) return v.toi;
     const occ = occupancy(state);
     const duong = ke.filter(([a, b]) => occ[b * GRID + a]);

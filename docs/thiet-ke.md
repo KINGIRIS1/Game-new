@@ -4089,7 +4089,7 @@ Học từ Thronewake (nhà Herbalist cứu 40–55% quân ngã). Trước đây
 - Hai người hái thuốc thay phiên rời vườn lên chỗ hái gần nhất (ô sát rừng chưa phát hay ô có cây dại, trong `HAI_XA` ô; `duongHai` ở `vanChuyen.ts`, `tuyenHai` ở `render/ganhHang.ts`), cúi hái `HAI_S` giây rồi gùi đầy lá về; mỗi lúc một người đi. Có trận, giặc sắp tới, ban đêm thì ở nhà.
 - Lạc hầu gợi ý một lần khi mở (`NEW_HINTS`). Mẫu kinh đô chừa một chỗ từ Điện 4.
 
-## Kế hoạch: địa hình diorama cho kinh đô (chủ dự án đã duyệt, chưa làm)
+## Kế hoạch: địa hình diorama cho kinh đô (chủ dự án đã duyệt, đang làm)
 
 Chủ dự án gửi ảnh mẫu kiểu sa bàn (thành trên gò đá nhiều tầng, tường kè đá, sông có thác, cầu gỗ, ruộng cao thấp, làng dưới chân, núi làm phông). Chốt qua buổi hỏi đáp:
 
@@ -4101,7 +4101,7 @@ Chủ dự án gửi ảnh mẫu kiểu sa bàn (thành trên gò đá nhiều t
 
 ### Các bước (mỗi bước một PR, xong bước này mới sang bước sau; mỗi PR có ảnh chụp kiểm tra, số đo lag, sửa tài liệu này)
 
-1. **Độ cao vẽ mỗi bậc**: `LEVEL_H` (`world.ts`) từ 0,3 lên khoảng 0,5 cho ra dáng đồi; mọi thứ đứng trên đất (công trình, lính, cầu `bridgeBanks`, nước lũ, thuyền) nâng theo. Chụp ba mức 0,4, 0,5, 0,6 để chủ dự án chốt.
+1. **Độ cao vẽ mỗi bậc** (đã làm): `LEVEL_H` (`world.ts`) từ 0,3 lên 0,5 cho ra dáng đồi; mọi thứ đứng trên đất (công trình, lính, cầu `bridgeBanks`, nước lũ, thuyền) nâng theo vì cùng lấy `topY`. Đã chụp ba mức 0,4, 0,5, 0,6 gửi chủ dự án; chọn 0,5, chủ dự án muốn đổi thì chỉ sửa một hằng số. Thần thú chỉ bước sang ô chênh dưới hai bậc (`2 * LEVEL_H`), bậc lên thành cao ít nhất một bậc.
 2. **Kè đá**: vách đứng (mép móng công trình, chỗ đắp nền, chỗ đắp đất) vẽ thành tường kè thay màu đất trơn (`nenDat.ts`); dốc tự nhiên vẫn là dốc cỏ, có đá lộ rải rác. Kè đổi theo cấp Điện như mái: cấp 1–3 đất nện cọc tre, 4–6 đá hộc xếp khan, 7–8 đá xanh đẽo vuông, 9–10 đá xanh có diềm đồng hoa văn.
 3. **Núi phông nền, thác**: dãy núi đá vôi xanh mờ có mây vắt ngang ở phía bắc và tây sau rừng ngoài lưới (đông nam là biển); vẽ nhẹ: ít mặt, không đổ bóng, không viền mực. Thác chính đổ từ núi xuống đầu nguồn sông Thao ngoài lưới phía bắc; một hai suối nhỏ có thác từ núi phía tây chảy vào rừng ngoài lưới. Chỉ để nhìn.
 4. **Bờ sông**: bờ kè đá; ghềnh đá lô nhô giữa lòng sông, ngoài ba ô sát bờ mà thuyền và thủy quái đi. Hình dòng sông (thẳng, rộng 7 ô) là luật, không uốn.
