@@ -549,6 +549,11 @@ d.camera(cx, cz, 2.6);`,
     truoc: `${CHUONG5(35)}\ns.daNgoai.cap = 12; s.daNgoai.exp = 900; s.daNgoai.xa = 2; s.daNgoai.doi = ['trungTrac', 'trungNhi', 'caoLo'];`,
     sau: `document.querySelector('[data-act=goDaNgoai]').click();`,
   },
+  'than-thu': {
+    mo: 'Như da-ngoai, đã hạ boss map 1–4 (đủ năm thần thú), ngựa sắt dáng thần đi theo: bảng Thần thú có ảnh động từng thú',
+    truoc: `${CHUONG5(35)}\ns.daNgoai.boss[0] = s.daNgoai.boss[1] = s.daNgoai.boss[2] = s.daNgoai.boss[3] = 1; s.thanThu = { cap: { thuLac: 5, thuNgua: 32, thuGa: 12, thuRua: 1, thuRong: 1 }, exp: { thuLac: 0, thuNgua: 0, thuGa: 0, thuRua: 0, thuRong: 0 }, bua: 3, buaMs: 0, chon: 'thuNgua' };`,
+    sau: `document.querySelector('[data-act=goThanThu]').click();`,
+  },
   'da-ngoai-tran': {
     mo: 'Như da-ngoai, đội ba tướng ra map 1 (Rừng Phong Châu) đứng ở mép khu 2, Tự đánh, chụp sau 6 giây',
     truoc: `${CHUONG5(35)}\ns.daNgoai.doi = ['trungTrac', 'trungNhi', 'caoLo'];`,

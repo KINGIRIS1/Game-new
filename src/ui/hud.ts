@@ -125,7 +125,7 @@ import { doMo, monO } from '../game/trangBi';
 import { bossCho, canLen, daMo, type DaThuong } from '../game/daNgoai';
 import { tuongDau } from '../game/daNgoaiTran';
 import { choTen, daMapHtml, daNgoaiHtml, expPct, miniSvg } from './daNgoai';
-import { thanThuHtml, thanThuMapHtml } from './thanThu';
+import { thanThuHtml, thanThuMapHtml, thuAnh } from './thanThu';
 import type { ThanThuId } from '../game/defs';
 import type { ODo } from '../game/defs';
 import { sonHtml } from './son';
@@ -2530,7 +2530,7 @@ export class Hud {
         heroHp.dataset.key = hpKey;
         heroHp.innerHTML =
           setups.map((h) => `<span class="hh" data-hero="${h.kind}"><em>${vi.ui.tuongIcons[h.kind]}</em><b>${vi.ui.heroNames[h.kind]}</b><i><u></u></i></span>`).join('') +
-          (b.thu ? `<span class="hh thu" data-hero="${b.thu.kind}"><em>${vi.thanThu.icon[b.thu.kind]}</em><b>${vi.thanThu.ten[b.thu.kind]}</b><i><u></u></i></span>` : '');
+          (b.thu ? `<span class="hh thu" data-hero="${b.thu.kind}">${thuAnh(b.thu.kind)}<b>${vi.thanThu.ten[b.thu.kind]}</b><i><u></u></i></span>` : '');
       }
       if (b.thu) {
         // Thần thú đi theo đội dã ngoại: thanh máu sau các tướng.
@@ -2539,7 +2539,7 @@ export class Hud {
         const down = !f || f.state === 'gone' || f.hp <= 0;
         el.classList.toggle('down', down);
         el.querySelector<HTMLElement>('u')!.style.width = `${f && !down ? Math.round((100 * f.hp) / f.maxHp) : 0}%`;
-        el.querySelector('em')!.textContent = down ? '💤' : vi.thanThu.icon[b.thu.kind];
+        el.querySelector('.thu-anh')!.classList.toggle('dung', down);
       }
       for (const h of setups) {
         const f = b.fighters.find((x) => x.kind === h.kind);
@@ -2621,7 +2621,7 @@ export class Hud {
               `<div class="da-tg" data-hero="${c.kind}">${av(c.src ? `<img src="${c.src}" alt="" draggable="false">` : `<em>${vi.ui.tuongIcons[c.kind]}</em>`)}<b>${vi.ui.heroNames[c.kind]}</b><span class="da-sks">${c.sk.map((k) => daSkillButton(b, k)).join('')}</span></div>`,
           )
           .join('') +
-        (b.thu ? `<div class="da-tg thu" data-hero="${b.thu.kind}">${av(`<em>${vi.thanThu.icon[b.thu.kind]}</em>`)}<b>${vi.thanThu.ten[b.thu.kind]}</b></div>` : '') +
+        (b.thu ? `<div class="da-tg thu" data-hero="${b.thu.kind}">${av(thuAnh(b.thu.kind))}<b>${vi.thanThu.ten[b.thu.kind]}</b></div>` : '') +
         rest.map((k) => skillButton(b, k)).join('');
     }
     // Máu từng thẻ: tướng ngã (hay thú ngã) thì thẻ mờ, ảnh phủ 💤.
