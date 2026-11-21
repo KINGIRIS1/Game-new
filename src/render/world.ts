@@ -122,6 +122,8 @@ const RIPPLES = 20 * (RIVER_END - RIVER_START);
 const WATER_Y = -0.28;
 /** Mỗi bậc đất cao chừng này (đơn vị thế giới). Mặt ô bậc h nằm ở h * LEVEL_H. */
 export const LEVEL_H = 0.5;
+/** Số lượt làm mượt mặt đất (`NenInput.doc`): mỗi bậc chênh trải thành sườn thoải chừng 4–5 ô. */
+const LAND_MUOT = 4;
 const topY = (h: number) => Math.max(h, 0) * LEVEL_H;
 /** Dấu mặt bờ hai đầu cầu (`BridgeBanks`), để biết lúc nào phải dựng lại cầu; công trình khác là chuỗi rỗng. */
 const bankKey = (b?: BridgeBanks) => (b ? `${b.near.toFixed(3)},${b.far.toFixed(3)}` : '');
@@ -1187,6 +1189,8 @@ export class World {
 
   /** Mặt đất (tọa độ thế giới) giữa ô (x, z): phần phẳng của ô, nơi đặt công trình. */
   private groundY(x: number, z: number): number {
+    // Nền đã dựng thì lấy đúng mặt đã vẽ ở giữa ô (ô trên sườn thoải không còn ở đúng bậc của nó).
+    if (this.land && inGrid(x, z) && !isRiver(x, z)) return this.land.heightAt(x + 0.5, z + 0.5);
     const h = this.heights[z * GRID + x];
     return h === undefined ? 0 : topY(shoreLevel(x, z, h));
   }
@@ -2393,14 +2397,15 @@ export class World {
     const sig = new Int32Array(GRID * GRID);
     for (let i = 0; i < sig.length; i++)
       sig[i] = ((this.heights[i] ?? 0) + 1) | (this.landMask[i] << 4) | ((this.landFlat.has(i) ? 1 : 0) << 5) | ((this.landSoft.has(i) ? 1 : 0) << 6);
-    this.landVer++;
     if (!this.land) {
       this.land = this.makeLand();
       this.scene.add(this.land.root);
+      this.landVer++;
     } else {
       const changed: number[] = [];
       for (let i = 0; i < sig.length; i++) if (sig[i] !== this.landSig?.[i]) changed.push(i);
       this.land.update(changed);
+      if (changed.length) this.landVer++;
     }
     this.landSig = sig;
   }
@@ -2423,10 +2428,10 @@ export class World {
         riverY: WATER_Y - 0.14,
         // Ô giữ phẳng (móng, đường, đầu cầu), và mọi ô đất giáp sông: bờ sông dựng vách kè đá (diorama bước 4).
         flat: (x, z) => (inGrid(x, z) && this.landFlat.has(z * GRID + x)) || bankTile(x, z),
-        // Đường, đồ trang trí một ô nằm trong dốc thoải thì dốc theo; móng đắp cao có đất quanh dốc thoải xuống mỗi ô
-        // một bậc thay cho vách kè (chủ dự án yêu cầu: có lối lên xuống Điện đắp cao).
+        // Đường, đồ trang trí một ô nằm trên sườn thoải thì dốc theo; mặt đất làm mượt `LAND_MUOT` lượt: chỗ chênh bậc
+        // thành sườn thoải vài ô, móng là thềm phẳng trên sườn (chủ dự án chọn đồi liền khối thay bậc thang, vách kè).
         soft: (x, z) => inGrid(x, z) && this.landSoft.has(z * GRID + x) && !bankTile(x, z),
-        doc: LEVEL_H,
+        doc: LAND_MUOT,
         colors: (x, z, out) => {
           const open = inGrid(x, z) && this.landMask[z * GRID + x] === 1;
           const palette = open ? C.grass : C.grassLocked;

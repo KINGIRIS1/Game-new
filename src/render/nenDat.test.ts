@@ -246,23 +246,31 @@ describe('nền đất bờ vát', () => {
     });
   });
 
-  describe('dốc thoải quanh móng cao (doc)', () => {
+  describe('mặt đất làm mượt (doc): sườn thoải, móng là thềm phẳng', () => {
     // Ô (1, 1) bậc 4 và gò (3..4, 2..3) bậc 2 là móng; ô (2, 1) là đường (giữ phẳng mềm).
     const flats = new Set(['1,1', '3,2', '4,2', '3,3', '4,3', '2,1']);
-    const inp = { ...input(flats), soft: (x: number, z: number) => x === 2 && z === 1, doc: LEVEL };
+    const inp = { ...input(flats), soft: (x: number, z: number) => x === 2 && z === 1, doc: 4 };
     const dn = buildNen(inp);
     const dt = triangles(dn.geometry);
 
-    it('móng cao không dựng vách xuống đất quanh nó: đất dốc thoải lên tới mép móng, mỗi ô hạ một bậc', () => {
+    it('móng cao không dựng vách xuống đất quanh nó: đất lên tới mép móng rồi thấp dần ra xa, móng vẫn phẳng', () => {
       const walls = dt.filter((t) => Math.abs(t.n.y) < 1e-4 && t.p.every((v) => v.z < 7 - 1e-6));
       expect(walls).toEqual([]);
-      // Mép tây ô bậc 4 (x = 1): đất giáp mép lên tới mặt móng.
+      // Móng phẳng trọn ô.
+      for (const [u, v] of [[0.02, 0.02], [0.5, 0.5], [0.98, 0.98]]) expect(dn.heightAt(1 + u, 1 + v)).toBeCloseTo(4 * LEVEL, 5);
+      // Mép tây ô bậc 4 (x = 1): đất giáp mép lên tới mặt móng, ra xa thì thấp dần.
       expect(dn.heightAt(0.9999, 1.5)).toBeCloseTo(4 * LEVEL, 3);
-      // Ra xa dần thì thấp dần, không dưới mặt đất của ô.
       expect(dn.heightAt(0.5, 1.5)).toBeLessThan(4 * LEVEL);
-      expect(dn.heightAt(0.5, 1.5)).toBeGreaterThan(2 * LEVEL);
-      // Đường (2, 1) nằm trong dốc: thôi giữ phẳng, dốc theo từ móng bậc 4 xuống.
+      expect(dn.heightAt(0.5, 1.5)).toBeGreaterThan(dn.heightAt(-0.5, 1.5));
+      // Đường (2, 1) nằm trên sườn: thôi giữ phẳng, dốc theo từ móng bậc 4 xuống.
       expect(dn.heightAt(2.05, 1.5)).toBeGreaterThan(dn.heightAt(2.95, 1.5) + 0.1);
+    });
+
+    it('sườn thoải: không chỗ nào trên đất thường dốc quá một bậc mỗi ô, trừ ô kẹt giữa hai móng', () => {
+      // Ô (6, 4) ở xa mọi móng: quanh nó mặt đất chỉ chênh rất ít.
+      const far = dt.filter((t) => t.p.every((v) => v.x >= 5.5 && v.x <= 7.5 && v.z >= 3.5 && v.z <= 5.5));
+      expect(far.length).toBeGreaterThan(0);
+      for (const t of far) expect(t.n.y).toBeGreaterThan(Math.cos(Math.atan(LEVEL)));
     });
 
     it('mặt đất vẫn kín và heightAt khớp hình đã vẽ', () => {
@@ -279,8 +287,9 @@ describe('nền đất bờ vát', () => {
       }
     });
 
-    it('đường ở xa móng, không nằm trong dốc, vẫn giữ phẳng như cũ', () => {
-      const far = buildNen({ ...input(new Set(['6,5'])), soft: () => true, doc: LEVEL });
+    it('đường trên đất bằng, xa chỗ chênh bậc, vẫn giữ phẳng như cũ', () => {
+      const bang = (): number | null => 1;
+      const far = buildNen({ ...input(new Set(['6,5']), bang), soft: () => true, doc: 4 });
       expect(far.heightAt(6.5, 5.5)).toBeCloseTo(LEVEL, 5);
       expect(far.heightAt(6.01, 5.5)).toBeCloseTo(LEVEL, 5);
     });
@@ -296,10 +305,10 @@ describe('nền đất bờ vát', () => {
       grid: W,
       top: (x, z) => (heights[z * W + x] < 0 ? null : heights[z * W + x] * LEVEL),
       riverY: RIVER_Y,
-      flat: (x, z) => flats.has(z * W + x),
+      flat: (x, z) => x >= 0 && z >= 0 && x < W && z < W && flats.has(z * W + x),
       // Như World: đường giữ phẳng mềm, có dốc thoải quanh móng cao.
       soft: (x, z) => (x + z) % 3 === 0,
-      doc: LEVEL,
+      doc: 4,
       colors: (_x, _z, out) => {
         out.lo.setHex(0x88aa44);
         out.hi.setHex(0x99bb55);
@@ -327,7 +336,7 @@ describe('nền đất bờ vát', () => {
         const c = m.geometry.getAttribute('color');
         for (let i = 0; i < p.count; i += 3) {
           const row: string[] = [];
-          for (let k = i; k < i + 3; k++) row.push([p.getX(k), p.getY(k), p.getZ(k), nn.getX(k), nn.getY(k), nn.getZ(k), c.getX(k), c.getY(k), c.getZ(k)].map((v) => v.toFixed(4)).join(','));
+          for (let k = i; k < i + 3; k++) row.push([p.getX(k), p.getY(k), p.getZ(k), nn.getX(k), nn.getY(k), nn.getZ(k), c.getX(k), c.getY(k), c.getZ(k)].map((v) => v.toFixed(3)).join(','));
           out.push(row.join('|'));
         }
       }

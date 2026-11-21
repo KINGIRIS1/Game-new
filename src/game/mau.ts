@@ -4,7 +4,7 @@
 // phần mẫu có mà mình chưa có (trong giới hạn theo cấp Điện). Phải đủ tài nguyên để dựng phần thiếu và trả phí
 // dời thì mới áp được.
 
-import { BUILDINGS, MAX_HEIGHT, STAGES, U_NO, canHem, isDecor, isRoad, raiseBuildingCost, type BuildingType, type Cost, RESOURCE_IDS } from './defs';
+import { BUILDINGS, MAX_HEIGHT, STAGES, U_NO, canHem, isDecor, isRoad, raiseBuildingCost, raiseTileCost, type BuildingType, type Cost, RESOURCE_IDS } from './defs';
 import { CH1_LAST } from './campaign';
 import { inChapter4 } from './chuong4';
 import { inChapter3 } from './coLoa';
@@ -170,6 +170,8 @@ class Draft {
     side: number,
     /** Phạt mỗi ô viền sát nhà khác (`sat`); 0 là xếp khít như trước khi có hẻm (thưởng cả ô viền là nhà). */
     readonly hem = HEM,
+    /** Hẻm giữa hai nhà rộng chừng này ô (mẫu đồi Nghĩa Lĩnh giãn 2 ô cho sườn đồi giữa các thềm nhà). */
+    readonly rong = 1,
   ) {
     this.lo = RIVER_START - side;
     for (let z = 0; z < GRID; z++) {
@@ -328,6 +330,20 @@ class Draft {
     for (const [cx, cz] of this.edge(x, z, w)) {
       const o = this.nhaAt(cx, cz);
       if (o && canHem(type, o.type)) n++;
+    }
+    // Hẻm rộng hơn một ô: nhà cách đúng một ô cũng bị phạt (nhẹ bằng nửa sát vách).
+    for (let k = 2; k <= this.rong; k++) {
+      for (let i = 0; i < w; i++) {
+        for (const [cx, cz] of [
+          [x + i, z - k],
+          [x + i, z + w - 1 + k],
+          [x - k, z + i],
+          [x + w - 1 + k, z + i],
+        ]) {
+          const o = this.nhaAt(cx, cz);
+          if (o && canHem(type, o.type)) n += 0.5;
+        }
+      }
     }
     return n;
   }
@@ -1007,6 +1023,8 @@ interface Recipe {
   towers: (d: Draft) => void;
   /** Các cách dựng khung để thử, theo thứ tự ưu tiên (chia nhóm theo cỡ vòng thành). */
   variants: (level: number) => Variant[][];
+  /** Hẻm giữa hai nhà rộng chừng này ô (`Draft.rong`; mặc định 1). */
+  rong?: number;
 }
 
 /** Gần sông (trong đê nếu có đê), gần Điện trước. */
@@ -1125,6 +1143,7 @@ const RECIPES: Record<MauId, Recipe> = {
   // Kinh đô Nghĩa Lĩnh (đồi bậc thang): như Đê bao, nhưng ruộng xếp trước tiên vào dải sát sông trong đê; áp mẫu đắp
   // Điện lên đỉnh đồi, công trình thấp dần theo khoảng cách tới Điện, ruộng giữ sát mặt nước (`BAC_NGHIA_LINH`).
   nghiaLinh: {
+    rong: 2,
     walls: deBao,
     towers: deTowers,
     variants: plain,
@@ -1227,9 +1246,9 @@ export interface MauVe {
 }
 
 /** Dựng mẫu `id` ở cấp Điện `level` trên khung cạnh `side` theo cách `v`. */
-function drawWith(id: MauId, level: number, side: number, v: Variant, hem: number): { d: Draft; thieu: number } {
+function drawWith(id: MauId, level: number, side: number, v: Variant, hem: number, hep = false): { d: Draft; thieu: number } {
   const recipe = RECIPES[id];
-  const d = new Draft(level, side, hem);
+  const d = new Draft(level, side, hem, hep ? 1 : recipe.rong);
   d.put('dien', DIEN_HOME, DIEN_HOME);
   recipe.walls(d, v);
   for (const job of recipe.jobs) placeJob(d, job);
@@ -1243,13 +1262,13 @@ function drawWith(id: MauId, level: number, side: number, v: Variant, hem: numbe
  * mặc định `HEM_BAC`), mỗi mức các cách dựng khung theo thứ tự ưu tiên, lấy cách đầu tiên xếp đủ mọi công trình
  * (không có thì cách thiếu ít nhất).
  */
-export function veMau(id: MauId, level: number, side = khungOf(id, level), hems: readonly number[] = HEM_BAC): MauVe {
+export function veMau(id: MauId, level: number, side = khungOf(id, level), hems: readonly number[] = HEM_BAC, hep = false): MauVe {
   let best: { d: Draft; thieu: number } | null = null;
   // Mức chừa hẻm trước, rồi mới tới cách dựng: thà đổi cách dựng khung còn hơn xếp nhà sát nhau.
   search: for (const hem of hems) {
     for (const group of RECIPES[id].variants(level)) {
       for (const v of group) {
-        const r = drawWith(id, level, side, v, hem);
+        const r = drawWith(id, level, side, v, hem, hep);
         if (!best || r.thieu < best.thieu) best = r;
         if (!best.thieu) break search;
       }
@@ -1267,12 +1286,13 @@ export function mauFrom(id: MauId, type: BuildingType): number {
   return 0;
 }
 
-function drawn(id: MauId, level: number, khit = false): MauVe {
+/** `hep`: mẫu giãn hẻm rộng (`Recipe.rong`) dựng lại với hẻm một ô như các mẫu khác (khi đất đã mở không đủ cho bản giãn). */
+function drawn(id: MauId, level: number, khit = false, hep = false): MauVe {
   const lv = Math.min(Math.max(Math.round(level), 1), BUILDINGS.dien.maxLevel);
-  const key = `${id}:${lv}:${khit ? 1 : 0}`;
+  const key = `${id}:${lv}:${khit ? 1 : 0}:${hep ? 1 : 0}`;
   let ve = DRAWN.get(key);
   if (!ve) {
-    ve = veMau(id, lv, undefined, khit ? [0] : HEM_BAC);
+    ve = veMau(id, lv, undefined, khit ? [0] : HEM_BAC, hep);
     DRAWN.set(key, ve);
   }
   return ve;
@@ -1339,6 +1359,8 @@ export interface MauPlan {
    */
   dap: { type: BuildingType; x: number; z: number; h: number }[];
   dapCost: Cost;
+  /** Mẫu Nghĩa Lĩnh: ô đất trống, ô đường sẽ đắp lên bậc `h` cho quả đồi liền khối (giá đã ở `dapCost`). */
+  doi: { x: number; z: number; h: number }[];
 }
 
 /** Bậc Điện, bậc công trình quanh Điện, bậc cao nhất của ruộng khi áp mẫu đắp bậc thang. */
@@ -1346,20 +1368,33 @@ export const BAC_THANG = { dien: 3, quanh: 2, ruong: 2 } as const;
 const laRuong = (t: BuildingType) => t === 'ruong' || t === 'ruongNep';
 
 /**
- * Bậc thang của mẫu Nghĩa Lĩnh: Điện trên đỉnh đồi (`dien`); công trình cách móng Điện tới `ganO` ô ở bậc `gan`, tới
- * `giuaO` ô ở bậc `giua`, xa hơn ở bậc `xa`; ruộng giữ nguyên đất (sát sông, nước êm qua cống bồi phù sa).
+ * Đồi liền khối của mẫu Nghĩa Lĩnh (chủ dự án chọn "đồi liền khối"): cả vùng quanh Điện đắp thành một quả đồi theo
+ * đường đồng mức, cao nhất ở Điện (`dien`), mỗi vành ra xa thấp một bậc (`vanh`: cách móng Điện tới chừng này ô là
+ * bậc 4, 3, 2; xa hơn bậc 1), và thấp dần xuống sông (`song`: cách bờ dưới chừng này ô là đất nguyên, rồi bậc 1, 2, 3).
+ * Công trình đứng trên thềm phẳng đúng bậc của chỗ nó đứng (không cao bằng Điện), ruộng giữ nguyên đất. Ô trống, ô đường
+ * trong vùng cũng được đắp, giá `gia` phần giá đắp ô thường (đắp cả mảng, không phải từng ô).
  */
-export const BAC_NGHIA_LINH = { dien: 4, gan: 3, giua: 2, xa: 1, ganO: 6, giuaO: 14 } as const;
+export const BAC_NGHIA_LINH = { dien: 4, vanh: [2, 8, 15], song: [BUILDINGS.ben.w + 2, BUILDINGS.ben.w + 4, BUILDINGS.ben.w + 6, BUILDINGS.ben.w + 8], gia: 0.25 } as const;
 
-/** Bậc của công trình loại `type` góc móng (x, z) trong mẫu Nghĩa Lĩnh. */
-export function bacNghiaLinh(type: BuildingType, x: number, z: number): number {
+/** Bậc của quả đồi Nghĩa Lĩnh ở ô (x, z) bờ bên này. */
+export function doiNghiaLinh(x: number, z: number): number {
   const B = BAC_NGHIA_LINH;
-  if (type === 'dien') return B.dien;
+  const gap = (a: number) => Math.max(0, DIEN_HOME - 1 - a, a - (DIEN_END + 1));
+  const g = Math.max(gap(x), gap(z));
+  const r = Math.min(LAST - x, LAST - z);
+  const quanh = B.dien - B.vanh.filter((v) => g > v).length;
+  const song = B.song.filter((v) => r >= v).length;
+  return Math.min(quanh, song);
+}
+
+/** Bậc của công trình loại `type` góc móng (x, z) trong mẫu Nghĩa Lĩnh: bậc đồi cao nhất dưới móng, dưới Điện một bậc. */
+export function bacNghiaLinh(type: BuildingType, x: number, z: number): number {
+  if (type === 'dien') return BAC_NGHIA_LINH.dien;
   if (laRuong(type)) return 0;
   const def = BUILDINGS[type];
-  const gap = (a: number, w: number) => Math.max(0, DIEN_HOME - (a + w), a - (DIEN_END + 1));
-  const cach = Math.max(gap(x, def.w), gap(z, def.d));
-  return cach <= B.ganO ? B.gan : cach <= B.giuaO ? B.giua : B.xa;
+  let h = 0;
+  for (let dx = 0; dx < def.w; dx++) for (let dz = 0; dz < def.d; dz++) h = Math.max(h, doiNghiaLinh(x + dx, z + dz));
+  return Math.min(h, BAC_NGHIA_LINH.dien - 1);
 }
 
 /** Mẫu có đắp bậc thang được không: từ chương 2 (mở đắp đất). */
@@ -1396,6 +1431,7 @@ export function bacThang(state: GameState, list: { type: BuildingType; x: number
 /** Đắp nền theo kế hoạch đắp bậc thang (của đã trả cùng kế hoạch). */
 function apBacThang(state: GameState, plan: MauPlan): void {
   for (const d of plan.dap) levelFootprint(state, d, d.h);
+  for (const d of plan.doi) state.heights[d.z * GRID + d.x] = d.h;
 }
 
 const addCost = (a: Cost, b: Cost) => {
@@ -1407,6 +1443,16 @@ const addCost = (a: Cost, b: Cost) => {
  * `bacThang`).
  */
 export function planMau(state: GameState, id: MauId, bac = true): MauPlan {
+  const plan = planVoi(state, id, bac, false);
+  // Mẫu giãn hẻm rộng mà đất đã mở không đủ chỗ: xếp theo bản hẻm một ô.
+  if (plan.stuck.length && (RECIPES[id].rong ?? 1) > 1) {
+    const hep = planVoi(state, id, bac, true);
+    if (!hep.stuck.length) return hep;
+  }
+  return plan;
+}
+
+function planVoi(state: GameState, id: MauId, bac: boolean, hep: boolean): MauPlan {
   const level = dienLevel(state);
   const dien = state.buildings.find((b) => b.type === 'dien')!;
   // Mẫu vẽ cho Điện ở (DIEN_HOME, DIEN_HOME), mặt trước quay ra sông: Điện đã dời hay xoay thì áp mẫu đưa về chỗ ấy.
@@ -1436,7 +1482,7 @@ export function planMau(state: GameState, id: MauId, bac = true): MauPlan {
   };
   mark('dien', DIEN_HOME, DIEN_HOME);
 
-  const plan: MauPlan = { moves: [], builds: [], removes: [], cost: {}, stuck: [], uNos: [], turnDien: !!dien.rot, duong: [], dap: [], dapCost: {} };
+  const plan: MauPlan = { moves: [], builds: [], removes: [], cost: {}, stuck: [], uNos: [], turnDien: !!dien.rot, duong: [], dap: [], dapCost: {}, doi: [] };
   if (dien.x !== DIEN_HOME || dien.z !== DIEN_HOME) {
     plan.moves.push({ id: dien.id, x: DIEN_HOME, z: DIEN_HOME });
     addCost(plan.cost, moveCost(dien));
@@ -1445,7 +1491,7 @@ export function planMau(state: GameState, id: MauId, bac = true): MauPlan {
   // vẫn là đoạn tường, vòng tường không hở.
   const gate = BUILDINGS.congThanh;
   let gates = unlocked(state, gate.unlock) && level >= gate.minDien ? limitOf(state, 'congThanh') : 0;
-  const slots: Slot[] = mauSlots(id, level)
+  const slots: Slot[] = drawn(id, level, false, hep).slots
     .filter((s) => s.type !== 'dien' && fits(s.type, s.x, s.z))
     .map((s) => (s.cong && gates-- > 0 ? { type: 'congThanh' as const, x: s.x, z: s.z } : s));
   // Doanh trại xếp trước nơi ở riêng của các binh chủng, vì nơi ở cần doanh trại.
@@ -1531,7 +1577,7 @@ export function planMau(state: GameState, id: MauId, bac = true): MauPlan {
   // Ô đường của mẫu (trên đất đã mở, ngoài đầu cầu): công trình không có chỗ trong mẫu không đứng đè lên; ô đường đang có
   // trên đó thì giữ (loại đường nào cũng được).
   const lane = new Uint8Array(GRID * GRID);
-  for (const r of mauDuong(id, level)) if (isNearBank(r.x, r.z) && isOpen(state, r.x, r.z) && !heads.has(r.z * GRID + r.x)) lane[r.z * GRID + r.x] = 1;
+  for (const r of drawn(id, level, false, hep).duong) if (isNearBank(r.x, r.z) && isOpen(state, r.x, r.z) && !heads.has(r.z * GRID + r.x)) lane[r.z * GRID + r.x] = 1;
   const clear = (type: BuildingType, x: number, z: number) => {
     if (!free(type, x, z)) return false;
     const def = BUILDINGS[type];
@@ -1589,7 +1635,28 @@ export function planMau(state: GameState, id: MauId, bac = true): MauPlan {
       const t = bacThang(state, list, id);
       plan.dap = t.dap;
       plan.dapCost = t.cost;
-      addCost(plan.cost, t.cost);
+      if (id === 'nghiaLinh') {
+        // Đồi liền khối: đắp cả ô trống, ô đường trong khung mẫu lên bậc đồi (không đắp ô dưới móng, tường, ruộng).
+        const busy = new Uint8Array(GRID * GRID);
+        for (const b of list) {
+          if (isDecor(b.type) && BUILDINGS[b.type].w === 1) continue;
+          const def = BUILDINGS[b.type];
+          for (let dx = 0; dx < def.w; dx++) for (let dz = 0; dz < def.d; dz++) if (inGrid(b.x + dx, b.z + dz)) busy[(b.z + dz) * GRID + b.x + dx] = 1;
+        }
+        let gia = 0;
+        for (let z = frameStart(level, id); z <= LAST; z++) {
+          for (let x = frameStart(level, id); x <= LAST; x++) {
+            if (busy[z * GRID + x] || !isOpen(state, x, z) || heads.has(z * GRID + x)) continue;
+            const h0 = Math.max(state.heights[z * GRID + x] ?? 0, 0);
+            const h = Math.min(doiNghiaLinh(x, z), MAX_HEIGHT);
+            if (h <= h0) continue;
+            plan.doi.push({ x, z, h });
+            for (let k = h0; k < h; k++) gia += (raiseTileCost(k).datDa ?? 0) * BAC_NGHIA_LINH.gia;
+          }
+        }
+        if (gia) addCost(plan.dapCost, { datDa: Math.round(gia / 5) * 5 });
+      }
+      addCost(plan.cost, plan.dapCost);
     }
   }
   return plan;
@@ -1645,7 +1712,7 @@ export function canApplyMau(state: GameState, id: MauId, bac = true): Result<Mau
   const plan = planMau(state, id, bac);
   if (plan.removes.some((r) => isBusy(state, r))) return { ok: false, reason: 'dangXay' };
   if (plan.stuck.length) return { ok: false, reason: 'khongDuCho' };
-  if (!plan.moves.length && !plan.builds.length && !plan.removes.length && !plan.uNos.length && !plan.turnDien && !plan.duong.length && !plan.dap.length) return { ok: false, reason: 'daTheoMau' };
+  if (!plan.moves.length && !plan.builds.length && !plan.removes.length && !plan.uNos.length && !plan.turnDien && !plan.duong.length && !plan.dap.length && !plan.doi.length) return { ok: false, reason: 'daTheoMau' };
   if (!canAfford(state, plan.cost)) return { ok: false, reason: 'thieuTaiNguyen' };
   return { ok: true, value: plan };
 }

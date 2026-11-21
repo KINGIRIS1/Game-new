@@ -58,8 +58,8 @@ export interface NenInput {
    */
   soft?: (x: number, z: number) => boolean;
   /**
-   * Dốc thoải quanh móng cao (diorama: thay vách kè quanh móng đắp cao): mỗi ô ra xa móng, đất hạ được chừng này
-   * (tọa độ thế giới); đất quanh móng thấp hơn mức ấy thì được vẽ đắp lên thành dốc. Không có thì như cũ (vách đứng).
+   * Số lượt làm mượt mặt đất (diorama: đồi liền khối thay bậc thang, vách kè): chỗ chênh bậc trải thành sườn thoải,
+   * móng là thềm phẳng trên sườn (`computeDoc`). Không có (hay 0) thì như cũ: bờ vát trong ô cao, móng cao dựng vách.
    */
   doc?: number;
   /** Màu của ô (x, z) (có thể ngoài lưới). */
@@ -138,7 +138,7 @@ export class NenDat {
   private readonly ty: Float32Array;
   private readonly river: Uint8Array;
   private readonly flat: Uint8Array;
-  /** Ô móng cứng (giữ phẳng, không theo dốc), ô giữ phẳng mềm, mặt dốc thoải (−∞ nếu không ở trong dốc). */
+  /** Ô móng cứng (giữ phẳng, không theo dốc), ô giữ phẳng mềm, mặt đất đã làm mượt (`computeDoc`). */
   private readonly hard: Uint8Array;
   private readonly soft: Uint8Array;
   private readonly doc: Float32Array;
@@ -171,7 +171,7 @@ export class NenDat {
     this.flat = new Uint8Array(TT);
     this.hard = new Uint8Array(TT);
     this.soft = new Uint8Array(TT);
-    this.doc = new Float32Array(TT).fill(-Infinity);
+    this.doc = new Float32Array(TT);
     this.col = new Float32Array(TT * 12);
     this.colDone = new Uint8Array(TT);
     this.H = new Float32Array(this.N * this.N);
@@ -246,46 +246,60 @@ export class NenDat {
   }
 
   /**
-   * Dốc thoải quanh móng cứng (`NenInput.doc`): mỗi ô đất không phải móng cứng nhận mặt cao nhất của móng quanh nó trừ
-   * `doc` mỗi ô ra xa (ô chéo xa hơn), chỉ giữ chỗ cao hơn mặt ô (`doc[f]`, −∞ là không ở trong dốc). Ô giữ phẳng mềm
-   * nằm trong dốc thì thôi giữ phẳng.
+   * Mặt đất làm mượt (`NenInput.doc` lượt): mỗi lượt, mỗi ô đất không phải móng cứng lấy trung bình mặt của nó và tám ô
+   * quanh (bỏ ô sông; móng cứng giữ nguyên mặt mình), nên chỗ chênh bậc trải thành sườn thoải vài ô, móng là thềm phẳng
+   * trên sườn. `doc[f]` là mặt đã làm mượt. Ô giữ phẳng mềm chỉ giữ phẳng khi nó và các ô quanh đều ngang mặt nó.
    */
   private computeDoc(): void {
     const { T, ty, river, hard, soft, flat, doc } = this;
-    doc.fill(-Infinity);
-    const step = this.input.doc;
-    if (step) {
-      const g = new Float32Array(T * T).fill(-Infinity);
-      for (let f = 0; f < T * T; f++) if (hard[f] && !river[f]) g[f] = ty[f];
-      const diag = step * Math.SQRT2;
-      for (let pass = 0, changed = true; changed && pass < 24; pass++) {
-        changed = false;
-        for (let f = 0; f < T * T; f++) {
-          if (hard[f] || river[f]) continue;
-          const fx = f % T;
-          const fz = (f - fx) / T;
-          let m = g[f];
+    doc.set(ty);
+    const K = this.input.doc ?? 0;
+    let cur = new Float32Array(doc);
+    let nxt = new Float32Array(T * T);
+    for (let pass = 0; pass < K; pass++) {
+      for (let fz = 0; fz < T; fz++) {
+        for (let fx = 0; fx < T; fx++) {
+          const f = fz * T + fx;
+          if (hard[f] || river[f]) {
+            nxt[f] = cur[f];
+            continue;
+          }
+          let sum = 0;
+          let n = 0;
           for (let dz = -1; dz <= 1; dz++) {
-            const nz = fz + dz;
-            if (nz < 0 || nz >= T) continue;
+            const nz = Math.min(Math.max(fz + dz, 0), T - 1);
             for (let dx = -1; dx <= 1; dx++) {
-              const nx = fx + dx;
-              if ((!dx && !dz) || nx < 0 || nx >= T) continue;
-              const n = nz * T + nx;
-              if (river[n]) continue;
-              const v = g[n] - (dx && dz ? diag : step);
-              if (v > m) m = v;
+              const g = nz * T + Math.min(Math.max(fx + dx, 0), T - 1);
+              if (river[g]) continue;
+              sum += cur[g];
+              n++;
             }
           }
-          if (m > g[f] + 1e-6) {
-            g[f] = m;
-            changed = true;
+          nxt[f] = sum / n;
+        }
+      }
+      const t = cur;
+      cur = nxt;
+      nxt = t;
+    }
+    doc.set(cur);
+    for (let f = 0; f < T * T; f++) {
+      let level = soft[f] === 1;
+      if (level) {
+        const fx = f % T;
+        const fz = (f - fx) / T;
+        for (let dz = -1; dz <= 1 && level; dz++) {
+          for (let dx = -1; dx <= 1 && level; dx++) {
+            const nx = fx + dx;
+            const nz = fz + dz;
+            if (nx < 0 || nz < 0 || nx >= T || nz >= T) continue;
+            const g = nz * T + nx;
+            if (!river[g] && Math.abs(doc[g] - ty[f]) > 1e-4) level = false;
           }
         }
       }
-      for (let f = 0; f < T * T; f++) if (!hard[f] && !river[f] && g[f] > ty[f] - 1e-6) doc[f] = g[f];
+      flat[f] = hard[f] || level ? 1 : 0;
     }
-    for (let f = 0; f < T * T; f++) flat[f] = hard[f] || (soft[f] && doc[f] === -Infinity) ? 1 : 0;
   }
 
   /** Mặt đất đúng như đã vẽ ở điểm (px, pz) tính theo ô (trong ô sông là đáy sông). */
@@ -354,7 +368,6 @@ export class NenDat {
         let wet = false;
         let sum = 0;
         let n = 0;
-        let sloped = false;
         for (let q = 0; q < 4; q++) {
           const f = q4[q];
           // Cùng một ô đếm một lần (đỉnh giữa mép, giữa ô).
@@ -363,13 +376,11 @@ export class NenDat {
           if (river[f]) wet = true;
           else if (flat[f]) lowF = Math.min(lowF, ty[f]);
           else {
-            const d = doc[f] > ty[f] ? doc[f] : ty[f];
-            if (doc[f] > -Infinity) sloped = true;
-            sum += d;
+            sum += doc[f];
             n++;
           }
         }
-        H[b * N + a] = wet || !this.input.doc ? low : lowF < Infinity ? lowF : sloped ? sum / n : low;
+        H[b * N + a] = wet || !this.input.doc ? low : lowF < Infinity ? lowF : sum / n;
       }
     }
     // Phần giữa ô trong dốc: nội suy Coons từ bốn mép (mép đã tính ở trên).
@@ -382,9 +393,7 @@ export class NenDat {
         const f = fz * T + fx;
         if (river[f] || flat[f]) continue;
         const at = (i: number, k: number) => H[(3 * fz + k) * N + 3 * fx + i];
-        let up = false;
-        for (let k = 0; k < 4 && !up; k++) up = at(k, 0) > ty[f] + 1e-6 || at(k, 3) > ty[f] + 1e-6 || at(0, k) > ty[f] + 1e-6 || at(3, k) > ty[f] + 1e-6;
-        if (!up) continue;
+        if (!this.input.doc) continue;
         const c00 = at(0, 0);
         const c30 = at(3, 0);
         const c03 = at(0, 3);
