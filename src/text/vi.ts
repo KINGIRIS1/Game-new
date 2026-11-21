@@ -2501,6 +2501,12 @@ export const vi = {
         desc: 'Đê liền dải dọc hai bờ sông tới bìa đất, bến nằm ngoài đê, chòi canh sát đê; doanh trại ở góc đê gần ngã ba sông; ruộng, đền và ruộng nếp trong đê.',
         lock: 'Mở khi vào chương 2: Sơn Tinh, Thủy Tinh.',
       },
+      nghiaLinh: {
+        icon: '⛰️',
+        name: 'Đồi Nghĩa Lĩnh',
+        desc: 'Kinh đô bậc thang trên đồi: Điện đắp lên đỉnh đồi (bậc 4), công trình quanh Điện bậc 3, xa hơn bậc 2, ngoài cùng bậc 1; ruộng xếp sát bờ sông giữ nguyên đất trong đê bao, mở cống là được phù sa.',
+        lock: 'Mở khi vào chương 2: Sơn Tinh, Thủy Tinh.',
+      },
       coLoa: {
         icon: '🐚',
         name: 'Thành Cổ Loa',

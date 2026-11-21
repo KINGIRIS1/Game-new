@@ -3,9 +3,9 @@ import { wallRings } from './coLoa';
 import { CH1_LAST } from './campaign';
 import { BUILDINGS, CH2_QUEST_START, raiseBuildingCost, CH3_QUEST_START, CH4_QUEST_START, GIFT_IDS, MOVE_FRACTION, ROAD_LIMIT, STAGES, U_NO, canHem, isRoad, type BuildingType } from './defs';
 import { NO_RAISE, canMove, createInitialState, dienLevel, limitOf, move, moveCost, occupancy, place, rotOf, rotateBuilding, satNha, uNoCount, usedOf, type GameState } from './game';
-import { BAC_THANG, applyMau, bacThangMo, canApplyMau, inFrame, mauDuong, mauFrom, mauSlots, mauUnlocked, planMau, MAU_IDS, type MauId } from './mau';
+import { BAC_NGHIA_LINH, BAC_THANG, applyMau, bacNghiaLinh, bacThangMo, canApplyMau, inFrame, mauDuong, mauFrom, mauSlots, mauUnlocked, planMau, MAU_IDS, type MauId } from './mau';
 import { isOpen, khoanhOf } from './khoanh';
-import { DIEN_HOME, GRID, RIVER_END, RIVER_START, touchesRiver } from './map';
+import { DIEN_HOME, GRID, RIVER_END, RIVER_START, isNearBank, touchesRiver } from './map';
 import { DIEN_END, bank, edge, setDien } from './testmap';
 import { floodHits, floodMap, groundOf } from './terrain';
 
@@ -90,7 +90,7 @@ describe('dời công trình', () => {
  * Điện 7 cần chương 3, Điện 8 cần chương 4.
  */
 const chapterFor = (id: MauId, dien: number): 1 | 2 | 3 | 4 =>
-  id === 'coLoaSong' || dien >= 8 ? 4 : id === 'coLoa' || dien >= 7 ? 3 : id === 'deBao' || dien >= 6 ? 2 : 1;
+  id === 'coLoaSong' || dien >= 8 ? 4 : id === 'coLoa' || dien >= 7 ? 3 : id === 'deBao' || id === 'nghiaLinh' || dien >= 6 ? 2 : 1;
 /** Cấp Điện mẫu mở được trong game: Phong Châu từ đầu; Đê bao, Cổ Loa mở theo truyện, khi Điện đã cấp 5 (màn 8 cần Điện 5). */
 const levelsOf = (id: MauId): number[] => {
   const from = id === 'phongChau' ? 1 : STAGES[CH1_LAST - 1].minDien;
@@ -196,7 +196,7 @@ describe('mẫu kinh đô', () => {
     expect(MAU_IDS.filter((id) => mauUnlocked(s, id))).toEqual(['phongChau']);
     expect(canApplyMau(s, 'deBao')).toEqual({ ok: false, reason: 'canChuong2' });
     s.questIndex = CH3_QUEST_START;
-    expect(MAU_IDS.filter((id) => mauUnlocked(s, id))).toEqual(['phongChau', 'deBao', 'coLoa']);
+    expect(MAU_IDS.filter((id) => mauUnlocked(s, id))).toEqual(['phongChau', 'deBao', 'nghiaLinh', 'coLoa']);
     expect(canApplyMau(s, 'coLoaSong')).toEqual({ ok: false, reason: 'canChuong4' });
     s.questIndex = CH4_QUEST_START;
     expect(MAU_IDS.filter((id) => mauUnlocked(s, id))).toEqual(MAU_IDS);
@@ -608,8 +608,47 @@ describe('mẫu kinh đô đắp bậc thang', () => {
     expect((on.cost.datDa ?? 0) - (off.cost.datDa ?? 0)).toBe(on.dapCost.datDa);
   });
 
+  it('mẫu Nghĩa Lĩnh: Điện cao nhất trên đỉnh đồi, công trình thấp dần theo khoảng cách tới Điện, ruộng sát sông giữ nguyên đất', () => {
+    for (const lv of [6, 8, 10]) {
+      const { off, on, plan, spent } = both('nghiaLinh', lv);
+      const dien = on.buildings.find((b) => b.type === 'dien')!;
+      const top = groundOf(on, dien);
+      expect(top).toBe(BAC_NGHIA_LINH.dien);
+      let dap = 0;
+      for (const b of on.buildings) {
+        const a = off.buildings.find((o) => o.id === b.id)!;
+        const def = BUILDINGS[b.type];
+        const ha = groundOf(off, a);
+        const hb = groundOf(on, b);
+        for (let k = ha; k < hb; k++) dap += raiseBuildingCost(def.w, def.d, k).datDa ?? 0;
+        if (b.type === 'dien') continue;
+        const tang = !NO_RAISE.includes(b.type) && !def.nearRiver && !isRoad(b.type) && def.w > 1 && !def.decor;
+        if (tang) expect(hb, `${lv}: ${b.type} ${b.x},${b.z}`).toBeGreaterThanOrEqual(bacNghiaLinh(b.type, b.x, b.z));
+        // Không gì cao bằng Điện.
+        expect(hb, `${lv}: ${b.type}`).toBeLessThan(top);
+        if (laRuong(b.type)) expect(hb, `${lv}: ruộng ${b.x},${b.z}`).toBe(ha);
+      }
+      expect(plan.dapCost.datDa).toBe(dap);
+      expect(spent).toBe(plan.cost.datDa);
+      // Ruộng sát sông: mọi ruộng gần sông hơn công trình đắp xa Điện nhất trung bình, có ruộng cách sông không quá
+      // một đê và một dải bến.
+      const toSong = (b: { type: BuildingType; x: number; z: number }) =>
+        Math.min(RIVER_START - (b.x + BUILDINGS[b.type].w), RIVER_START - (b.z + BUILDINGS[b.type].d));
+      const ruong = on.buildings.filter((b) => laRuong(b.type) && isNearBank(b.x, b.z));
+      expect(ruong.length).toBeGreaterThan(0);
+      expect(Math.min(...ruong.map(toSong)), String(lv)).toBeLessThanOrEqual(BUILDINGS.ben.w + 2);
+      // Gần Điện cao hơn xa Điện: bậc trung bình công trình sát Điện hơn bậc trung bình công trình ở bìa.
+      const tang = on.buildings.filter((b) => b.type !== 'dien' && !laRuong(b.type) && BUILDINGS[b.type].w > 1 && !BUILDINGS[b.type].decor && !NO_RAISE.includes(b.type) && !BUILDINGS[b.type].nearRiver);
+      const gan = tang.filter((b) => bacNghiaLinh(b.type, b.x, b.z) === BAC_NGHIA_LINH.gan);
+      const xa = tang.filter((b) => bacNghiaLinh(b.type, b.x, b.z) < BAC_NGHIA_LINH.gan);
+      expect(gan.length).toBeGreaterThan(0);
+      expect(xa.length).toBeGreaterThan(0);
+      expect(planMau(on, 'nghiaLinh').dap).toEqual([]);
+    }
+  });
+
   it('bốn mẫu đủ ba tầng: Điện bậc 3, công trình quanh Điện bậc 2, ruộng thấp hơn; giá đắp khớp tổng đắp nền từng công trình', () => {
-    for (const id of MAU_IDS) {
+    for (const id of MAU_IDS.filter((m) => m !== 'nghiaLinh')) {
       const { off, on, plan, spent } = both(id, 8);
       const dien = on.buildings.find((b) => b.type === 'dien')!;
       expect(groundOf(on, dien)).toBeGreaterThanOrEqual(BAC_THANG.dien);
