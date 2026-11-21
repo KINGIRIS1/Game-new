@@ -95,6 +95,7 @@ import { VUON_LOT } from './congTrinh/vuon';
 import { C } from './palette';
 import { NEN_MARGIN, NenDat, RAMP } from './nenDat';
 import { keKieu, keTexture } from './ke';
+import { buildNuiPhong, type NuiPhong } from './nuiPhong';
 import type { Poser } from './rig';
 import { ShapeBuilder, disposeInstances, disposeModel, seeded } from './shapes';
 import { ToonModel, inkThin, outlineOf, toon } from './toon';
@@ -761,6 +762,8 @@ export class World {
   private readonly batched: boolean;
   /** Rừng bao ngoài lưới, dựng một lần. */
   private readonly outer: THREE.Object3D;
+  /** Núi đá vôi phông nền phía bắc, phía tây, mây, thác (`nuiPhong.ts`), dựng một lần. */
+  private readonly nui: NuiPhong;
   /** Rừng đang hiện bản thấp (độ phóng dưới `LITE_ZOOM`). */
   private forestLite = false;
   /** Biển Đông phía đông: mặt biển, bãi cát, hai quần đảo (`render/bien.ts`), dựng một lần. */
@@ -800,6 +803,8 @@ export class World {
     this.lights = addSunLights(this.scene, 24, 2048);
     const edge = baseHeights();
     this.scene.add(this.staticTerrain(edge));
+    this.nui = buildNuiPhong(wx, wz, (x, z) => topY(edge[clampTile(z) * GRID + clampTile(x)]), groundMaterial);
+    this.scene.add(this.nui.group);
     this.outer = this.outerForest(edge);
     this.scene.add(this.outer);
     this.sea = buildSea(HALF);
@@ -4197,6 +4202,7 @@ export class World {
 
     // Biển Đông: sóng vỗ bờ, cá voi, cá heo, thuyền khơi đi về.
     if (!this.inField) {
+      this.nui.update(t);
       animateSea(this.sea, t, this.view.zoom);
       // Biển còn mây mù thì chưa thấy cá voi, cá heo.
       if (!this.seaMist) this.seaLife.update(t, dt, this.view.target);
