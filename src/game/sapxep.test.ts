@@ -624,8 +624,9 @@ describe('mẫu kinh đô đắp bậc thang', () => {
         if (tang) for (let k = ha; k < hb; k++) dap += raiseBuildingCost(def.w, def.d, k).datDa ?? 0;
         if (b.type === 'dien') continue;
         if (tang) expect(hb, `${lv}: ${b.type} ${b.x},${b.z}`).toBeGreaterThanOrEqual(bacNghiaLinh(b.type, b.x, b.z));
-        // Không công trình nào cao bằng Điện; ruộng không đắp.
-        if (tang) expect(hb, `${lv}: ${b.type}`).toBeLessThan(top);
+        // Không công trình nào cao hơn Điện (đất tự nhiên sẵn cao thì bằng, mẫu không hạ đất); ruộng không đắp.
+        if (tang) expect(hb, `${lv}: ${b.type}`).toBeLessThanOrEqual(top);
+        if (tang && hb > ha) expect(hb, `${lv}: ${b.type} đắp`).toBeLessThan(top);
         if (laRuong(b.type)) expect(hb, `${lv}: ruộng ${b.x},${b.z}`).toBe(ha);
       }
       // Ô trống, ô đường trong vùng đắp lên đúng bậc đồi, giá bằng một phần giá đắp ô thường.
