@@ -122,8 +122,8 @@ const RIPPLES = 20 * (RIVER_END - RIVER_START);
 const WATER_Y = -0.28;
 /** Mỗi bậc đất cao chừng này (đơn vị thế giới). Mặt ô bậc h nằm ở h * LEVEL_H. */
 export const LEVEL_H = 0.5;
-/** Số lượt làm mượt mặt đất (`NenInput.doc`): mỗi bậc chênh trải thành sườn thoải chừng 4–5 ô. */
-const LAND_MUOT = 4;
+/** Số lượt làm mượt mặt đất (`NenInput.doc`): mỗi bậc chênh trải thành sườn thoải chừng 1–2 ô (4 lượt thì đồi thoải tới mức không nhìn ra). */
+const LAND_MUOT = 1;
 const topY = (h: number) => Math.max(h, 0) * LEVEL_H;
 /** Dấu mặt bờ hai đầu cầu (`BridgeBanks`), để biết lúc nào phải dựng lại cầu; công trình khác là chuỗi rỗng. */
 const bankKey = (b?: BridgeBanks) => (b ? `${b.near.toFixed(3)},${b.far.toFixed(3)}` : '');

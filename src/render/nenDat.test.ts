@@ -165,18 +165,21 @@ describe('nền đất bờ vát', () => {
     const geo = nen.geometry;
     const n = geo.getAttribute('normal');
     const c = geo.getAttribute('color');
+    const p = geo.getAttribute('position');
     const grass = new THREE.Color(0x88aa44);
+    // Đất cao sáng dần lên (`CAO_SANG` ở `nenDat.ts`).
+    const cao = (o: number) => 1 + Math.max(0, p.getY(o)) * 0.08;
     let slopes = 0;
     tris.forEach((t, i) => {
       for (let k = 0; k < 3; k++) {
         const o = i * 3 + k;
         if (t.n.y > 0.999) {
           expect(n.getY(o)).toBeCloseTo(1, 5);
-          expect(c.getX(o)).toBeCloseTo(grass.r, 5);
-          expect(c.getY(o)).toBeCloseTo(grass.g, 5);
+          expect(c.getX(o)).toBeCloseTo(grass.r * cao(o), 5);
+          expect(c.getY(o)).toBeCloseTo(grass.g * cao(o), 5);
         } else {
           slopes++;
-          expect(c.getX(o)).toBeGreaterThan(grass.r);
+          expect(c.getX(o)).toBeGreaterThan(grass.r * cao(o));
         }
       }
     });
