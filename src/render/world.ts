@@ -44,7 +44,7 @@ import { soThuong } from '../game/nhaThuoc';
 import type { Swim } from './congTrinh/hoKimQuy';
 import { CONG_TRINH, lotModel } from './congTrinh/index';
 import { makeRuaVang } from './beasts';
-import { buildDecor, disposeDecor, isBatchedDecor, type DecorSpot } from './decor';
+import { buildDecor, buildRoadDrape, disposeDecor, isBatchedDecor, type DecorSpot } from './decor';
 import { buildWild, disposeWild, wildSpots } from './oTrong';
 import { buildCayDaBatch, disposeCayDaBatch, makeCayDa, type CayDaPlace } from './cayDa';
 import { bridgeDeckY, cloudPuffs, poiMarker, type BridgeBanks } from './benKia';
@@ -763,6 +763,8 @@ export class World {
   private dikeKey = '';
   private citadelKey = '';
   private decorKey = '';
+  /** Mặt đường của các ô đường nằm trên sườn dốc. */
+  private decorDoc: THREE.Mesh | null = null;
   /** Đèn đuốc ban đêm (`duoc.ts`): đuốc cắm ở công trình, đèn thuyền, đom đóm quanh ruộng. */
   private readonly duoc = new DuocLayer();
   private duocKey = '';
@@ -1639,24 +1641,33 @@ export class World {
     }
     const roadAt = new Map<number, BuildingType>();
     for (const b of small) if (isRoad(b.type)) roadAt.set(b.z * GRID + b.x, b.type);
-    const spots: DecorSpot[] = small.map((b) => {
+    // Ô đường trên sườn dốc: mặt đường ôm theo mặt đất (`buildRoadDrape`), không đặt tấm phẳng nghiêng (gãy khúc ở góc).
+    const doc: { type: BuildingType; x: number; z: number }[] = [];
+    const spots: DecorSpot[] = [];
+    for (const b of small) {
       const spot: DecorSpot = { type: b.type, x: wx(b.x) + 0.5, y: this.groundY(b.x, b.z), z: wz(b.z) + 0.5, seed: b.x * 92821 + b.z * 68917 };
-      // Ô nằm trong dốc thoải: đặt theo mặt dốc, đường nghiêng theo dốc.
-      const e = 0.4;
-      const h00 = this.surfaceY(b.x + 0.5 - e, b.z + 0.5 - e);
-      const h10 = this.surfaceY(b.x + 0.5 + e, b.z + 0.5 - e);
-      const h01 = this.surfaceY(b.x + 0.5 - e, b.z + 0.5 + e);
-      const h11 = this.surfaceY(b.x + 0.5 + e, b.z + 0.5 + e);
-      if (Math.max(h00, h10, h01, h11) - Math.min(h00, h10, h01, h11) > 1e-3) {
-        spot.y = (h00 + h10 + h01 + h11) / 4;
-        if (isRoad(b.type)) spot.n = new THREE.Vector3(-((h10 + h11 - h00 - h01) / (4 * e)), 1, -((h01 + h11 - h00 - h10) / (4 * e))).normalize();
+      const e = 0.5;
+      const hs = [-e, 0, e].flatMap((dx) => [-e, 0, e].map((dz) => this.surfaceY(b.x + 0.5 + dx, b.z + 0.5 + dz)));
+      if (Math.max(...hs) - Math.min(...hs) > 1e-3) {
+        if (isRoad(b.type)) {
+          doc.push({ type: b.type, x: wx(b.x), z: wz(b.z) });
+          continue;
+        }
+        // Đồ trang trí một ô trên dốc: đặt theo mặt dốc giữa ô.
+        spot.y = this.surfaceY(b.x + 0.5, b.z + 0.5);
       }
       if (isRoad(b.type)) {
         const same = (dx: number, dz: number) => roadAt.get((b.z + dz) * GRID + b.x + dx) === b.type;
         spot.open = [!same(0, 1), !same(0, -1), !same(1, 0), !same(-1, 0)];
       }
-      return spot;
-    });
+      spots.push(spot);
+    }
+    if (this.decorDoc) {
+      this.scene.remove(this.decorDoc);
+      disposeModel(this.decorDoc);
+    }
+    this.decorDoc = buildRoadDrape(doc, [0, RAMP / 2, RAMP, 0.5, 1 - RAMP, 1 - RAMP / 2, 1], (x, z) => this.surfaceY(x + HALF, z + HALF));
+    if (this.decorDoc) this.scene.add(this.decorDoc);
     this.decor = buildDecor(spots);
     this.scene.add(this.decor);
   }

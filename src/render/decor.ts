@@ -100,6 +100,40 @@ function roadTop(b: ShapeBuilder, type: RoadType, v: number): void {
   }
 }
 
+/** Mặt đường nổi trên mặt đất chừng này (bằng mặt nền ô đường phẳng). */
+const DUONG_DAY = 0.05;
+
+/**
+ * Ô đường nằm trên sườn dốc: mặt đường ôm theo mặt đất (lưới con theo các mốc `cuts` trong ô, cao độ lấy ở `y`), các ô
+ * kề nhau liền mép, không gãy khúc như tấm phẳng đặt nghiêng. `tiles`: góc ô (tọa độ cảnh) và loại đường.
+ */
+export function buildRoadDrape(tiles: { type: BuildingType; x: number; z: number }[], cuts: readonly number[], y: (x: number, z: number) => number): THREE.Mesh | null {
+  if (!tiles.length) return null;
+  const n = cuts.length;
+  const pos: number[] = [];
+  const col: number[] = [];
+  const c = new THREE.Color();
+  for (const t of tiles) {
+    c.set(t.type === 'duongDat' ? DIRT : t.type === 'duongSoi' ? GRAVEL : t.type === 'duongDa' ? MORTAR : BRICK_MORTAR);
+    const p = (i: number, j: number) => [t.x + cuts[i], y(t.x + cuts[i], t.z + cuts[j]) + DUONG_DAY, t.z + cuts[j]];
+    for (let j = 0; j < n - 1; j++) {
+      for (let i = 0; i < n - 1; i++) {
+        for (const [a, b] of [[i, j], [i, j + 1], [i + 1, j + 1], [i, j], [i + 1, j + 1], [i + 1, j]]) {
+          pos.push(...p(a, b));
+          col.push(c.r, c.g, c.b);
+        }
+      }
+    }
+  }
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+  geo.setAttribute('color', new THREE.Float32BufferAttribute(col, 3));
+  geo.computeVertexNormals();
+  const mesh = new THREE.Mesh(geo, toon);
+  mesh.receiveShadow = true;
+  return mesh;
+}
+
 /** Viền một mép ô đường (vẽ cho mép +z, xoay theo mép): bờ đất có cỏ, viền sỏi to, bó vỉa đá, gạch dựng nghiêng. */
 function roadEdge(b: ShapeBuilder, type: RoadType): void {
   if (type === 'duongDat') {
