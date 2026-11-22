@@ -161,25 +161,23 @@ describe('nền đất bờ vát', () => {
     }
   });
 
-  it('mặt phẳng màu cỏ, mặt dốc pha màu đất, pháp tuyến dốc làm mượt mà mặt phẳng vẫn hướng thẳng lên', () => {
+  it('mặt phẳng màu cỏ, sườn thoải cũng màu cỏ, pháp tuyến dốc làm mượt mà mặt phẳng vẫn hướng thẳng lên', () => {
     const geo = nen.geometry;
     const n = geo.getAttribute('normal');
     const c = geo.getAttribute('color');
-    const p = geo.getAttribute('position');
     const grass = new THREE.Color(0x88aa44);
-    // Đất cao sáng dần lên (`CAO_SANG` ở `nenDat.ts`).
-    const cao = (o: number) => 1 + Math.max(0, p.getY(o)) * 0.08;
     let slopes = 0;
     tris.forEach((t, i) => {
       for (let k = 0; k < 3; k++) {
         const o = i * 3 + k;
         if (t.n.y > 0.999) {
           expect(n.getY(o)).toBeCloseTo(1, 5);
-          expect(c.getX(o)).toBeCloseTo(grass.r * cao(o), 5);
-          expect(c.getY(o)).toBeCloseTo(grass.g * cao(o), 5);
+          expect(c.getX(o)).toBeCloseTo(grass.r, 5);
+          expect(c.getY(o)).toBeCloseTo(grass.g, 5);
         } else {
           slopes++;
-          expect(c.getX(o)).toBeGreaterThan(grass.r * cao(o));
+          // Sườn thoải giữ màu cỏ (đồng màu), chỉ lẫn đốm đá lộ; vách đứng thì toàn đất.
+          expect(c.getX(o)).toBeGreaterThanOrEqual(grass.r - 1e-6);
         }
       }
     });

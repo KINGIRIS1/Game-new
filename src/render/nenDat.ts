@@ -21,11 +21,7 @@ import * as THREE from 'three';
 /** Bề rộng dải dốc ở mép ô cao (phần ô). */
 export const RAMP = 0.3;
 /** Mặt dốc pha màu đất bao nhiêu (1: toàn đất, 0: toàn cỏ); vách đứng của ô giữ phẳng thì toàn đất. */
-export const EARTH = 0.7;
-/** Sườn dốc bao nhiêu (tang góc dốc nhân số này, tới 1) thì pha đủ màu đất. */
-const DOC_DAT = 4;
-/** Mặt đất sáng thêm chừng này mỗi đơn vị độ cao. */
-const CAO_SANG = 0.08;
+export const EARTH = 0.45;
 /** Nền dựng nới ra ngoài lưới chừng này ô mỗi phía (ô ngoài lưới mang bậc của ô mép gần nhất). */
 export const NEN_MARGIN = 14;
 /** Cạnh mỗi mảnh nền (ô). */
@@ -697,8 +693,8 @@ export class NenDat {
           const er = col[tcO + 9] + (col[tcO + 6] - col[tcO + 9]) * u;
           const eg = col[tcO + 10] + (col[tcO + 7] - col[tcO + 10]) * u;
           const eb = col[tcO + 11] + (col[tcO + 8] - col[tcO + 11]) * u;
-          // Pha đất theo độ dốc (tang góc dốc): sườn thoải của đồi cũng ngả màu đất cho thấy rõ chỗ lên xuống.
-          const mix = wall ? 1 : EARTH * Math.min(1, (Math.sqrt(Math.max(0, 1 - ny * ny)) / Math.max(ny, 0.05)) * DOC_DAT);
+          // Sườn thoải giữ màu cỏ cho đồng màu (chủ dự án: không cần màu nâu đất); chỉ vách đứng mới toàn đất.
+          const mix = wall ? 1 : 0;
           r += (er - r) * mix;
           g += (eg - g) * mix;
           bl += (eb - bl) * mix;
@@ -713,11 +709,9 @@ export class NenDat {
             }
           }
         }
-        // Đất cao sáng dần lên: nhìn từ xa vẫn thấy quả đồi.
-        const cao = wall && many ? 1 : 1 + Math.max(0, py) * CAO_SANG;
-        color[v] = r * cao;
-        color[v + 1] = g * cao;
-        color[v + 2] = bl * cao;
+        color[v] = r;
+        color[v + 1] = g;
+        color[v + 2] = bl;
       }
     }
     const geometry = new THREE.BufferGeometry();

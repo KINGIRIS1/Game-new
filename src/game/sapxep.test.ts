@@ -645,7 +645,7 @@ describe('mẫu kinh đô đắp bậc thang', () => {
       for (const d of plan.doi) {
         for (const [dx, dz] of [[1, 0], [0, 1]]) expect(Math.abs(doiNghiaLinh(d.x + dx, d.z + dz) - doiNghiaLinh(d.x, d.z))).toBeLessThanOrEqual(1);
       }
-      expect(doiNghiaLinh(DIEN_HOME - 1, DIEN_HOME + 2)).toBe(BAC_NGHIA_LINH.dien);
+      expect(doiNghiaLinh(DIEN_HOME - 1, DIEN_HOME + 2)).toBe(BAC_NGHIA_LINH.dien - 1);
       expect(doiNghiaLinh(RIVER_START - 1, DIEN_HOME)).toBe(0);
       // Ruộng sát sông: có ruộng cách sông không quá một đê và một dải bến.
       const toSong = (b: { type: BuildingType; x: number; z: number }) =>

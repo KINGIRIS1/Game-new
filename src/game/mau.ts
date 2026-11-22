@@ -1370,11 +1370,12 @@ const laRuong = (t: BuildingType) => t === 'ruong' || t === 'ruongNep';
 /**
  * Đồi liền khối của mẫu Nghĩa Lĩnh (chủ dự án chọn "đồi liền khối"): cả vùng quanh Điện đắp thành một quả đồi theo
  * đường đồng mức, cao nhất ở Điện (`dien`), mỗi vành ra xa thấp một bậc (`vanh`: cách móng Điện tới chừng này ô là
- * bậc 4, 3, 2; xa hơn bậc 1), và thấp dần xuống sông (`song`: cách bờ dưới chừng này ô là đất nguyên, rồi bậc 1, 2, 3).
+ * bậc 4, 3, 2; xa hơn bậc 1; số đầu −1: chỉ móng Điện bậc 4, đất sát Điện đã thấp hơn một bậc cho Điện nổi lên, cổng có
+ * bậc tam cấp), và thấp dần xuống sông (`song`: cách bờ dưới chừng này ô là đất nguyên, rồi bậc 1, 2, 3).
  * Công trình đứng trên thềm phẳng đúng bậc của chỗ nó đứng (không cao bằng Điện), ruộng giữ nguyên đất. Ô trống, ô đường
  * trong vùng cũng được đắp, giá `gia` phần giá đắp ô thường (đắp cả mảng, không phải từng ô).
  */
-export const BAC_NGHIA_LINH = { dien: 4, vanh: [2, 8, 15], song: [BUILDINGS.ben.w + 2, BUILDINGS.ben.w + 4, BUILDINGS.ben.w + 6, BUILDINGS.ben.w + 8], gia: 0.25 } as const;
+export const BAC_NGHIA_LINH = { dien: 4, vanh: [-1, 6, 13], song: [BUILDINGS.ben.w + 2, BUILDINGS.ben.w + 4, BUILDINGS.ben.w + 6, BUILDINGS.ben.w + 8], gia: 0.25 } as const;
 
 /** Bậc của quả đồi Nghĩa Lĩnh ở ô (x, z) bờ bên này. */
 export function doiNghiaLinh(x: number, z: number): number {

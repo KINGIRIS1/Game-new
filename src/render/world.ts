@@ -101,6 +101,7 @@ import type { Poser } from './rig';
 import { ShapeBuilder, disposeInstances, disposeModel, seeded } from './shapes';
 import { ToonModel, inkThin, outlineOf, toon } from './toon';
 import { SANG_NGAY, TroiMau, apMauToi, doSang, phaThoiTiet, phaTroi, toiTheoTroi } from './troi';
+import { buildTamCap, tamCapCho, TAM_CAP_DAI, TAM_CAP_MIN, type TamCap } from './tamCap';
 import { DUOC_LOTS, DuocLayer, QuangDong, duocCho, type DuocSpot } from './duoc';
 
 /**
@@ -121,7 +122,7 @@ const RIPPLES = 20 * (RIVER_END - RIVER_START);
 /** Mặt nước nằm thấp hơn mặt đất. */
 const WATER_Y = -0.28;
 /** Mỗi bậc đất cao chừng này (đơn vị thế giới). Mặt ô bậc h nằm ở h * LEVEL_H. */
-export const LEVEL_H = 0.5;
+export const LEVEL_H = 0.8;
 /** Số lượt làm mượt mặt đất (`NenInput.doc`): mỗi bậc chênh trải thành sườn thoải chừng 1–2 ô (4 lượt thì đồi thoải tới mức không nhìn ra). */
 const LAND_MUOT = 1;
 const topY = (h: number) => Math.max(h, 0) * LEVEL_H;
@@ -765,6 +766,9 @@ export class World {
   /** Đèn đuốc ban đêm (`duoc.ts`): đuốc cắm ở công trình, đèn thuyền, đom đóm quanh ruộng. */
   private readonly duoc = new DuocLayer();
   private duocKey = '';
+  /** Bậc tam cấp trước cổng công trình đứng cao hơn đất quanh (`tamCap.ts`). */
+  private tamCap: THREE.Group | null = null;
+  private tamCapKey = '';
   private readonly denThuyen = new QuangDong(64, 0xffb45a, 0.42, 0.5, 0.9);
   private readonly domDom = new QuangDong(72, 0xd6ff70, 0.1, 0.55, 1.2);
   private readonly denTmp = new THREE.Vector3();
@@ -1415,6 +1419,44 @@ export class World {
     this.syncFog(state);
     this.syncPois(state);
     this.syncDuoc();
+    this.syncTamCap();
+  }
+
+  /**
+   * Bậc tam cấp trước cổng: công trình nào mặt đất phía ngoài cổng thấp hơn móng thì có ba bậc đá đi xuống. Dựng lại khi
+   * công trình hay mặt đất đổi.
+   */
+  private syncTamCap(): void {
+    const views = [...this.views.entries()].filter(([, v]) => !v.dung);
+    const key = `${this.landVer}|` + views.map(([id, v]) => `${id}:${v.type}:${v.level}:${v.x}:${v.z}:${v.group.rotation.y.toFixed(2)}:${v.group.position.y.toFixed(2)}`).join(',');
+    if (key === this.tamCapKey) return;
+    this.tamCapKey = key;
+    if (this.tamCap) {
+      this.scene.remove(this.tamCap);
+      disposeModel(this.tamCap);
+      this.tamCap = null;
+    }
+    const list: TamCap[] = [];
+    for (const [, v] of views) {
+      const g = v.group;
+      const cos = Math.cos(g.rotation.y);
+      const sin = Math.sin(g.rotation.y);
+      for (const c of tamCapCho(v.type, v.level, GANH_LOTS[v.type])) {
+        // Xoay quanh trục đứng như `Object3D.rotation.y`.
+        const x = g.position.x + c.x * cos + c.z * sin;
+        const z = g.position.z - c.x * sin + c.z * cos;
+        const dx = c.ox * cos + c.oz * sin;
+        const dz = -c.ox * sin + c.oz * cos;
+        const ex = x + dx * TAM_CAP_DAI + HALF;
+        const ez = z + dz * TAM_CAP_DAI + HALF;
+        if (ex < 0 || ez < 0 || ex >= GRID || ez >= GRID || isRiver(Math.floor(ex), Math.floor(ez))) continue;
+        const ha = g.position.y - this.surfaceY(ex, ez);
+        if (ha < TAM_CAP_MIN) continue;
+        list.push({ x, y: g.position.y, z, dx, dz, w: c.w, ha });
+      }
+    }
+    this.tamCap = buildTamCap(list);
+    if (this.tamCap) this.scene.add(this.tamCap);
   }
 
   /**
