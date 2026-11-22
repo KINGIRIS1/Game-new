@@ -3047,6 +3047,11 @@ async function start(): Promise<void> {
       world.view.zoom = zoom;
       world.view.apply();
     },
+    /** Như `camera` nhưng bỏ giới hạn tâm nhìn (chụp thử cảnh ngoài lưới: núi, thác); tải lại trang thì về như cũ. */
+    nhinXa: (x: number, z: number, zoom: number) => {
+      world.view.bounds = { min: -200, max: 200 };
+      (window as unknown as { __debug: { camera: (x: number, z: number, zoom: number) => void } }).__debug.camera(x, z, zoom);
+    },
     resync: () => {
       world.resetAll();
       world.sync(scene());

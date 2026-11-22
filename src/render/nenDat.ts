@@ -52,6 +52,16 @@ export interface NenInput {
    * có mặt đất riêng `outside`).
    */
   flat: (x: number, z: number) => boolean;
+  /**
+   * Ô giữ phẳng mềm (đường đi, đồ trang trí một ô): phẳng như `flat` khi không ở trong dốc thoải quanh móng cao, nằm
+   * trong dốc thì dốc theo (`doc`). Chỉ có nghĩa khi `flat` cũng trả đúng ở ô ấy.
+   */
+  soft?: (x: number, z: number) => boolean;
+  /**
+   * Số lượt làm mượt mặt đất (diorama: đồi liền khối thay bậc thang, vách kè): chỗ chênh bậc trải thành sườn thoải,
+   * móng là thềm phẳng trên sườn (`computeDoc`). Không có (hay 0) thì như cũ: bờ vát trong ô cao, móng cao dựng vách.
+   */
+  doc?: number;
   /** Màu của ô (x, z) (có thể ngoài lưới). */
   colors: (x: number, z: number, out: TileColors) => void;
   /** Tọa độ thế giới của điểm lưới 0 (ô 0 bắt đầu ở đây). */
@@ -128,6 +138,10 @@ export class NenDat {
   private readonly ty: Float32Array;
   private readonly river: Uint8Array;
   private readonly flat: Uint8Array;
+  /** Ô móng cứng (giữ phẳng, không theo dốc), ô giữ phẳng mềm, mặt đất đã làm mượt (`computeDoc`). */
+  private readonly hard: Uint8Array;
+  private readonly soft: Uint8Array;
+  private readonly doc: Float32Array;
   private readonly col: Float32Array;
   private readonly colDone: Uint8Array;
   /** Độ cao chung từng đỉnh lưới con, chỉ số b · N + a. */
@@ -155,12 +169,16 @@ export class NenDat {
     this.ty = new Float32Array(TT);
     this.river = new Uint8Array(TT);
     this.flat = new Uint8Array(TT);
+    this.hard = new Uint8Array(TT);
+    this.soft = new Uint8Array(TT);
+    this.doc = new Float32Array(TT);
     this.col = new Float32Array(TT * 12);
     this.colDone = new Uint8Array(TT);
     this.H = new Float32Array(this.N * this.N);
     this.noise = new Float32Array(this.N * this.N).fill(NaN);
     this.meshes = new Array<THREE.Mesh | null>(this.chunks * this.chunks).fill(null);
     for (let f = 0; f < TT; f++) this.readTile(f);
+    this.computeDoc();
     this.computeH(0, 0, this.N - 1, this.N - 1);
     for (let c = 0; c < this.meshes.length; c++) this.buildChunk(c);
   }
@@ -203,8 +221,85 @@ export class NenDat {
       }
     }
     if (a1 < 0) return;
-    this.computeH(a0, b0, a1, b1);
+    // Dốc thoải lan ra quanh móng: ô nào đổi mặt dốc hay đổi giữ phẳng thì cũng dựng lại.
+    const oldDoc = this.doc.slice();
+    const oldFlat = this.flat.slice();
+    this.computeDoc();
+    for (let f = 0; f < T * T; f++) {
+      if (oldDoc[f] === this.doc[f] && oldFlat[f] === this.flat[f]) continue;
+      const fx = f % T;
+      const fz = Math.floor(f / T);
+      a0 = Math.min(a0, 3 * fx);
+      b0 = Math.min(b0, 3 * fz);
+      a1 = Math.max(a1, 3 * fx + 3);
+      b1 = Math.max(b1, 3 * fz + 3);
+      for (let dz = -1; dz <= 1; dz++) {
+        for (let dx = -1; dx <= 1; dx++) {
+          const ex = fx + dx;
+          const ez = fz + dz;
+          if (ex >= 0 && ez >= 0 && ex < T && ez < T) dirty.add(Math.floor(ez / CHUNK) * this.chunks + Math.floor(ex / CHUNK));
+        }
+      }
+    }
+    this.computeH(Math.max(a0 - 3, 0), Math.max(b0 - 3, 0), Math.min(a1 + 3, N - 1), Math.min(b1 + 3, N - 1));
     for (const c of dirty) this.buildChunk(c);
+  }
+
+  /**
+   * Mặt đất làm mượt (`NenInput.doc` lượt): mỗi lượt, mỗi ô đất không phải móng cứng lấy trung bình mặt của nó và tám ô
+   * quanh (bỏ ô sông; móng cứng giữ nguyên mặt mình), nên chỗ chênh bậc trải thành sườn thoải vài ô, móng là thềm phẳng
+   * trên sườn. `doc[f]` là mặt đã làm mượt. Ô giữ phẳng mềm chỉ giữ phẳng khi nó và các ô quanh đều ngang mặt nó.
+   */
+  private computeDoc(): void {
+    const { T, ty, river, hard, soft, flat, doc } = this;
+    doc.set(ty);
+    const K = this.input.doc ?? 0;
+    let cur = new Float32Array(doc);
+    let nxt = new Float32Array(T * T);
+    for (let pass = 0; pass < K; pass++) {
+      for (let fz = 0; fz < T; fz++) {
+        for (let fx = 0; fx < T; fx++) {
+          const f = fz * T + fx;
+          if (hard[f] || river[f]) {
+            nxt[f] = cur[f];
+            continue;
+          }
+          let sum = 0;
+          let n = 0;
+          for (let dz = -1; dz <= 1; dz++) {
+            const nz = Math.min(Math.max(fz + dz, 0), T - 1);
+            for (let dx = -1; dx <= 1; dx++) {
+              const g = nz * T + Math.min(Math.max(fx + dx, 0), T - 1);
+              if (river[g]) continue;
+              sum += cur[g];
+              n++;
+            }
+          }
+          nxt[f] = sum / n;
+        }
+      }
+      const t = cur;
+      cur = nxt;
+      nxt = t;
+    }
+    doc.set(cur);
+    for (let f = 0; f < T * T; f++) {
+      let level = soft[f] === 1;
+      if (level) {
+        const fx = f % T;
+        const fz = (f - fx) / T;
+        for (let dz = -1; dz <= 1 && level; dz++) {
+          for (let dx = -1; dx <= 1 && level; dx++) {
+            const nx = fx + dx;
+            const nz = fz + dz;
+            if (nx < 0 || nz < 0 || nx >= T || nz >= T) continue;
+            const g = nz * T + nx;
+            if (!river[g] && Math.abs(doc[g] - ty[f]) > 1e-4) level = false;
+          }
+        }
+      }
+      flat[f] = hard[f] || level ? 1 : 0;
+    }
   }
 
   /** Mặt đất đúng như đã vẽ ở điểm (px, pz) tính theo ô (trong ô sông là đáy sông). */
@@ -244,22 +339,73 @@ export class NenDat {
     const top = own !== undefined ? own : input.top(Math.min(Math.max(x, 0), G - 1), Math.min(Math.max(z, 0), G - 1));
     this.river[f] = top === null ? 1 : 0;
     this.ty[f] = top ?? input.riverY;
-    this.flat[f] = top !== null && own === undefined && input.flat(x, z) ? 1 : 0;
+    const flat = top !== null && own === undefined && input.flat(x, z);
+    const soft = flat && !!input.soft?.(x, z);
+    this.hard[f] = flat && !soft ? 1 : 0;
+    this.soft[f] = soft ? 1 : 0;
+    this.flat[f] = flat ? 1 : 0;
     this.colDone[f] = 0;
   }
 
-  /** Độ cao chung các đỉnh lưới con trong khoảng [a0, a1] × [b0, b1]: mặt thấp nhất trong các ô chứa đỉnh ấy. */
+  /**
+   * Độ cao chung các đỉnh lưới con trong khoảng [a0, a1] × [b0, b1]. Đỉnh giáp sông, hay chỉ giữa các ô thường: mặt thấp
+   * nhất trong các ô chứa đỉnh ấy. Đỉnh có ô giữ phẳng: mặt thấp nhất của các ô giữ phẳng (ô thường quanh đó dốc lên
+   * tới mép móng, hai móng khác độ cao thì móng cao dựng vách). Đỉnh giữa các ô thường có ô trong dốc thoải: trung bình
+   * mặt dốc các ô ấy. Rồi phần giữa ô thường có mép cao hơn mặt ô (ô trong dốc) nội suy từ bốn mép cho dốc liền.
+   */
   private computeH(a0: number, b0: number, a1: number, b1: number): void {
-    const { T, N, ty, H } = this;
+    const { T, N, ty, H, flat, river, doc } = this;
+    const q4 = [0, 0, 0, 0];
     for (let b = b0; b <= b1; b++) {
       const j = Math.min(Math.floor(b / 3), T - 1);
       const j2 = b % 3 === 0 && b > 0 && b < N - 1 ? j - 1 : j;
       for (let a = a0; a <= a1; a++) {
         const i = Math.min(Math.floor(a / 3), T - 1);
         const i2 = a % 3 === 0 && a > 0 && a < N - 1 ? i - 1 : i;
+        for (let q = 0; q < 4; q++) q4[q] = (q < 2 ? j : j2) * T + (q % 2 ? i2 : i);
         let low = Infinity;
-        for (let q = 0; q < 4; q++) low = Math.min(low, ty[(q < 2 ? j : j2) * T + (q % 2 ? i2 : i)]);
-        H[b * N + a] = low;
+        let lowF = Infinity;
+        let wet = false;
+        let sum = 0;
+        let n = 0;
+        for (let q = 0; q < 4; q++) {
+          const f = q4[q];
+          // Cùng một ô đếm một lần (đỉnh giữa mép, giữa ô).
+          if (q4.indexOf(f) !== q) continue;
+          low = Math.min(low, ty[f]);
+          if (river[f]) wet = true;
+          else if (flat[f]) lowF = Math.min(lowF, ty[f]);
+          else {
+            sum += doc[f];
+            n++;
+          }
+        }
+        H[b * N + a] = wet || !this.input.doc ? low : lowF < Infinity ? lowF : sum / n;
+      }
+    }
+    // Phần giữa ô trong dốc: nội suy Coons từ bốn mép (mép đã tính ở trên).
+    const fx0 = Math.ceil(a0 / 3);
+    const fz0 = Math.ceil(b0 / 3);
+    const fx1 = Math.floor(a1 / 3) - 1;
+    const fz1 = Math.floor(b1 / 3) - 1;
+    for (let fz = fz0; fz <= fz1; fz++) {
+      for (let fx = fx0; fx <= fx1; fx++) {
+        const f = fz * T + fx;
+        if (river[f] || flat[f]) continue;
+        const at = (i: number, k: number) => H[(3 * fz + k) * N + 3 * fx + i];
+        if (!this.input.doc) continue;
+        const c00 = at(0, 0);
+        const c30 = at(3, 0);
+        const c03 = at(0, 3);
+        const c33 = at(3, 3);
+        for (let k = 1; k <= 2; k++) {
+          for (let i = 1; i <= 2; i++) {
+            const u = OFF[i];
+            const v = OFF[k];
+            H[(3 * fz + k) * N + 3 * fx + i] =
+              (1 - u) * at(0, k) + u * at(3, k) + (1 - v) * at(i, 0) + v * at(i, 3) - ((1 - u) * (1 - v) * c00 + u * (1 - v) * c30 + (1 - u) * v * c03 + u * v * c33);
+          }
+        }
       }
     }
   }
@@ -547,7 +693,8 @@ export class NenDat {
           const er = col[tcO + 9] + (col[tcO + 6] - col[tcO + 9]) * u;
           const eg = col[tcO + 10] + (col[tcO + 7] - col[tcO + 10]) * u;
           const eb = col[tcO + 11] + (col[tcO + 8] - col[tcO + 11]) * u;
-          const mix = wall ? 1 : EARTH * Math.min(1, (1 - ny) * 2.2);
+          // Sườn thoải giữ màu cỏ cho đồng màu (chủ dự án: không cần màu nâu đất); chỉ vách đứng mới toàn đất.
+          const mix = wall ? 1 : 0;
           r += (er - r) * mix;
           g += (eg - g) * mix;
           bl += (eb - bl) * mix;

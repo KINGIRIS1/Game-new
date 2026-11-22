@@ -46,6 +46,8 @@ export interface DecorSpot {
   seed: number;
   /** Ô đường: mép +z, −z, +x, −x không giáp ô đường cùng loại thì có viền. */
   open?: [boolean, boolean, boolean, boolean];
+  /** Pháp tuyến mặt đất khi ô nằm trên dốc thoải: đường nghiêng theo. */
+  n?: THREE.Vector3;
 }
 
 /** Đường và đồ trang trí một ô vẽ theo lô; cây đa, ao làng, sân trống đồng mỗi cái một mô hình. */
@@ -96,6 +98,40 @@ function roadTop(b: ShapeBuilder, type: RoadType, v: number): void {
       bricks.forEach(([x, w], i) => b.box(w, 0.05, 0.215, BRICK[(row + i + v) % 3], x, 0.06, z));
     }
   }
+}
+
+/** Mặt đường nổi trên mặt đất chừng này (bằng mặt nền ô đường phẳng). */
+const DUONG_DAY = 0.05;
+
+/**
+ * Ô đường nằm trên sườn dốc: mặt đường ôm theo mặt đất (lưới con theo các mốc `cuts` trong ô, cao độ lấy ở `y`), các ô
+ * kề nhau liền mép, không gãy khúc như tấm phẳng đặt nghiêng. `tiles`: góc ô (tọa độ cảnh) và loại đường.
+ */
+export function buildRoadDrape(tiles: { type: BuildingType; x: number; z: number }[], cuts: readonly number[], y: (x: number, z: number) => number): THREE.Mesh | null {
+  if (!tiles.length) return null;
+  const n = cuts.length;
+  const pos: number[] = [];
+  const col: number[] = [];
+  const c = new THREE.Color();
+  for (const t of tiles) {
+    c.set(t.type === 'duongDat' ? DIRT : t.type === 'duongSoi' ? GRAVEL : t.type === 'duongDa' ? MORTAR : BRICK_MORTAR);
+    const p = (i: number, j: number) => [t.x + cuts[i], y(t.x + cuts[i], t.z + cuts[j]) + DUONG_DAY, t.z + cuts[j]];
+    for (let j = 0; j < n - 1; j++) {
+      for (let i = 0; i < n - 1; i++) {
+        for (const [a, b] of [[i, j], [i, j + 1], [i + 1, j + 1], [i, j], [i + 1, j + 1], [i + 1, j]]) {
+          pos.push(...p(a, b));
+          col.push(c.r, c.g, c.b);
+        }
+      }
+    }
+  }
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+  geo.setAttribute('color', new THREE.Float32BufferAttribute(col, 3));
+  geo.computeVertexNormals();
+  const mesh = new THREE.Mesh(geo, toon);
+  mesh.receiveShadow = true;
+  return mesh;
 }
 
 /** Viền một mép ô đường (vẽ cho mép +z, xoay theo mép): bờ đất có cỏ, viền sỏi to, bó vỉa đá, gạch dựng nghiêng. */
@@ -318,7 +354,7 @@ export function buildDecor(spots: DecorSpot[]): THREE.Object3D {
     const k = road || s.type === 'gieng' || s.type === 'co' ? 1 : 0.88 + rand() * 0.2;
     const at = (list: Placement[], map: Map<string, number>, key: string, r = ry, sc = k) => {
       const i = map.get(key);
-      if (i !== undefined) list.push({ t: i, x: s.x, y: s.y, z: s.z, s: sc, ry: r });
+      if (i !== undefined) list.push({ t: i, x: s.x, y: s.y, z: s.z, s: sc, ry: r, n: s.n });
     };
     at(flat, t.flatOf, `${s.type}:${v}`);
     at(body, t.bodyOf, `${s.type}:${v}`);

@@ -44,7 +44,7 @@ import { soThuong } from '../game/nhaThuoc';
 import type { Swim } from './congTrinh/hoKimQuy';
 import { CONG_TRINH, lotModel } from './congTrinh/index';
 import { makeRuaVang } from './beasts';
-import { buildDecor, disposeDecor, isBatchedDecor, type DecorSpot } from './decor';
+import { buildDecor, buildRoadDrape, disposeDecor, isBatchedDecor, type DecorSpot } from './decor';
 import { buildWild, disposeWild, wildSpots } from './oTrong';
 import { buildCayDaBatch, disposeCayDaBatch, makeCayDa, type CayDaPlace } from './cayDa';
 import { bridgeDeckY, cloudPuffs, poiMarker, type BridgeBanks } from './benKia';
@@ -101,6 +101,7 @@ import type { Poser } from './rig';
 import { ShapeBuilder, disposeInstances, disposeModel, seeded } from './shapes';
 import { ToonModel, inkThin, outlineOf, toon } from './toon';
 import { SANG_NGAY, TroiMau, apMauToi, doSang, phaThoiTiet, phaTroi, toiTheoTroi } from './troi';
+import { buildTamCap, tamCapCho, TAM_CAP_DAI, TAM_CAP_MIN, type TamCap } from './tamCap';
 import { DUOC_LOTS, DuocLayer, QuangDong, duocCho, type DuocSpot } from './duoc';
 
 /**
@@ -121,7 +122,9 @@ const RIPPLES = 20 * (RIVER_END - RIVER_START);
 /** Mặt nước nằm thấp hơn mặt đất. */
 const WATER_Y = -0.28;
 /** Mỗi bậc đất cao chừng này (đơn vị thế giới). Mặt ô bậc h nằm ở h * LEVEL_H. */
-export const LEVEL_H = 0.5;
+export const LEVEL_H = 0.8;
+/** Số lượt làm mượt mặt đất (`NenInput.doc`): mỗi bậc chênh trải thành sườn thoải chừng 1–2 ô (4 lượt thì đồi thoải tới mức không nhìn ra). */
+const LAND_MUOT = 1;
 const topY = (h: number) => Math.max(h, 0) * LEVEL_H;
 /** Dấu mặt bờ hai đầu cầu (`BridgeBanks`), để biết lúc nào phải dựng lại cầu; công trình khác là chuỗi rỗng. */
 const bankKey = (b?: BridgeBanks) => (b ? `${b.near.toFixed(3)},${b.far.toFixed(3)}` : '');
@@ -597,6 +600,10 @@ export class World {
   /** Đất đã mở và ô giữ phẳng lúc dựng đất lần cuối (nền đọc lúc dựng lại). */
   private landMask: Uint8Array = new Uint8Array(GRID * GRID);
   private landFlat = new Set<number>();
+  /** Ô đường, đồ trang trí một ô: giữ phẳng mềm, nằm trong dốc thoải quanh móng cao thì dốc theo (`NenInput.soft`). */
+  private landSoft = new Set<number>();
+  /** Tăng mỗi lần nền dựng lại (đồ trang trí đặt theo mặt dốc phải đặt lại). */
+  private landVer = 0;
   /** Dấu từng ô lúc dựng đất lần cuối (bậc, đất mở, giữ phẳng): so để biết ô nào đổi. */
   private landSig?: Int32Array;
   /** Các ô giữ phẳng (có đồ một ô) lúc dựng đất lần cuối: đổi thì dựng lại đất. */
@@ -756,9 +763,14 @@ export class World {
   private dikeKey = '';
   private citadelKey = '';
   private decorKey = '';
+  /** Mặt đường của các ô đường nằm trên sườn dốc. */
+  private decorDoc: THREE.Mesh | null = null;
   /** Đèn đuốc ban đêm (`duoc.ts`): đuốc cắm ở công trình, đèn thuyền, đom đóm quanh ruộng. */
   private readonly duoc = new DuocLayer();
   private duocKey = '';
+  /** Bậc tam cấp trước cổng công trình đứng cao hơn đất quanh (`tamCap.ts`). */
+  private tamCap: THREE.Group | null = null;
+  private tamCapKey = '';
   private readonly denThuyen = new QuangDong(64, 0xffb45a, 0.42, 0.5, 0.9);
   private readonly domDom = new QuangDong(72, 0xd6ff70, 0.1, 0.55, 1.2);
   private readonly denTmp = new THREE.Vector3();
@@ -1183,6 +1195,8 @@ export class World {
 
   /** Mặt đất (tọa độ thế giới) giữa ô (x, z): phần phẳng của ô, nơi đặt công trình. */
   private groundY(x: number, z: number): number {
+    // Nền đã dựng thì lấy đúng mặt đã vẽ ở giữa ô (ô trên sườn thoải không còn ở đúng bậc của nó).
+    if (this.land && inGrid(x, z) && !isRiver(x, z)) return this.land.heightAt(x + 0.5, z + 0.5);
     const h = this.heights[z * GRID + x];
     return h === undefined ? 0 : topY(shoreLevel(x, z, h));
   }
@@ -1407,6 +1421,44 @@ export class World {
     this.syncFog(state);
     this.syncPois(state);
     this.syncDuoc();
+    this.syncTamCap();
+  }
+
+  /**
+   * Bậc tam cấp trước cổng: công trình nào mặt đất phía ngoài cổng thấp hơn móng thì có ba bậc đá đi xuống. Dựng lại khi
+   * công trình hay mặt đất đổi.
+   */
+  private syncTamCap(): void {
+    const views = [...this.views.entries()].filter(([, v]) => !v.dung);
+    const key = `${this.landVer}|` + views.map(([id, v]) => `${id}:${v.type}:${v.level}:${v.x}:${v.z}:${v.group.rotation.y.toFixed(2)}:${v.group.position.y.toFixed(2)}`).join(',');
+    if (key === this.tamCapKey) return;
+    this.tamCapKey = key;
+    if (this.tamCap) {
+      this.scene.remove(this.tamCap);
+      disposeModel(this.tamCap);
+      this.tamCap = null;
+    }
+    const list: TamCap[] = [];
+    for (const [, v] of views) {
+      const g = v.group;
+      const cos = Math.cos(g.rotation.y);
+      const sin = Math.sin(g.rotation.y);
+      for (const c of tamCapCho(v.type, v.level, GANH_LOTS[v.type])) {
+        // Xoay quanh trục đứng như `Object3D.rotation.y`.
+        const x = g.position.x + c.x * cos + c.z * sin;
+        const z = g.position.z - c.x * sin + c.z * cos;
+        const dx = c.ox * cos + c.oz * sin;
+        const dz = -c.ox * sin + c.oz * cos;
+        const ex = x + dx * TAM_CAP_DAI + HALF;
+        const ez = z + dz * TAM_CAP_DAI + HALF;
+        if (ex < 0 || ez < 0 || ex >= GRID || ez >= GRID || isRiver(Math.floor(ex), Math.floor(ez))) continue;
+        const ha = g.position.y - this.surfaceY(ex, ez);
+        if (ha < TAM_CAP_MIN) continue;
+        list.push({ x, y: g.position.y, z, dx, dz, w: c.w, ha });
+      }
+    }
+    this.tamCap = buildTamCap(list);
+    if (this.tamCap) this.scene.add(this.tamCap);
   }
 
   /**
@@ -1580,7 +1632,7 @@ export class World {
    */
   private syncDecor(state: GameState): void {
     const small = state.buildings.filter((b) => isBatchedDecor(b.type));
-    const key = small.map((b) => `${b.id}:${b.type}:${b.x}:${b.z}:${this.heights[b.z * GRID + b.x]}`).join(',');
+    const key = `${this.landVer}|` + small.map((b) => `${b.id}:${b.type}:${b.x}:${b.z}:${this.heights[b.z * GRID + b.x]}`).join(',');
     if (key === this.decorKey) return;
     this.decorKey = key;
     if (this.decor) {
@@ -1589,14 +1641,33 @@ export class World {
     }
     const roadAt = new Map<number, BuildingType>();
     for (const b of small) if (isRoad(b.type)) roadAt.set(b.z * GRID + b.x, b.type);
-    const spots: DecorSpot[] = small.map((b) => {
+    // Ô đường trên sườn dốc: mặt đường ôm theo mặt đất (`buildRoadDrape`), không đặt tấm phẳng nghiêng (gãy khúc ở góc).
+    const doc: { type: BuildingType; x: number; z: number }[] = [];
+    const spots: DecorSpot[] = [];
+    for (const b of small) {
       const spot: DecorSpot = { type: b.type, x: wx(b.x) + 0.5, y: this.groundY(b.x, b.z), z: wz(b.z) + 0.5, seed: b.x * 92821 + b.z * 68917 };
+      const e = 0.5;
+      const hs = [-e, 0, e].flatMap((dx) => [-e, 0, e].map((dz) => this.surfaceY(b.x + 0.5 + dx, b.z + 0.5 + dz)));
+      if (Math.max(...hs) - Math.min(...hs) > 1e-3) {
+        if (isRoad(b.type)) {
+          doc.push({ type: b.type, x: wx(b.x), z: wz(b.z) });
+          continue;
+        }
+        // Đồ trang trí một ô trên dốc: đặt theo mặt dốc giữa ô.
+        spot.y = this.surfaceY(b.x + 0.5, b.z + 0.5);
+      }
       if (isRoad(b.type)) {
         const same = (dx: number, dz: number) => roadAt.get((b.z + dz) * GRID + b.x + dx) === b.type;
         spot.open = [!same(0, 1), !same(0, -1), !same(1, 0), !same(-1, 0)];
       }
-      return spot;
-    });
+      spots.push(spot);
+    }
+    if (this.decorDoc) {
+      this.scene.remove(this.decorDoc);
+      disposeModel(this.decorDoc);
+    }
+    this.decorDoc = buildRoadDrape(doc, [0, RAMP / 2, RAMP, 0.5, 1 - RAMP, 1 - RAMP / 2, 1], (x, z) => this.surfaceY(x + HALF, z + HALF));
+    if (this.decorDoc) this.scene.add(this.decorDoc);
     this.decor = buildDecor(spots);
     this.scene.add(this.decor);
   }
@@ -2375,15 +2446,19 @@ export class World {
   private rebuildLand(state: GameState): void {
     this.landMask = openMask(state);
     this.landFlat = new Set(flatTiles(state));
+    this.landSoft = new Set(state.buildings.filter((b) => isBatchedDecor(b.type)).map((b) => b.z * GRID + b.x));
     const sig = new Int32Array(GRID * GRID);
-    for (let i = 0; i < sig.length; i++) sig[i] = ((this.heights[i] ?? 0) + 1) | (this.landMask[i] << 4) | ((this.landFlat.has(i) ? 1 : 0) << 5);
+    for (let i = 0; i < sig.length; i++)
+      sig[i] = ((this.heights[i] ?? 0) + 1) | (this.landMask[i] << 4) | ((this.landFlat.has(i) ? 1 : 0) << 5) | ((this.landSoft.has(i) ? 1 : 0) << 6);
     if (!this.land) {
       this.land = this.makeLand();
       this.scene.add(this.land.root);
+      this.landVer++;
     } else {
       const changed: number[] = [];
       for (let i = 0; i < sig.length; i++) if (sig[i] !== this.landSig?.[i]) changed.push(i);
       this.land.update(changed);
+      if (changed.length) this.landVer++;
     }
     this.landSig = sig;
   }
@@ -2406,6 +2481,10 @@ export class World {
         riverY: WATER_Y - 0.14,
         // Ô giữ phẳng (móng, đường, đầu cầu), và mọi ô đất giáp sông: bờ sông dựng vách kè đá (diorama bước 4).
         flat: (x, z) => (inGrid(x, z) && this.landFlat.has(z * GRID + x)) || bankTile(x, z),
+        // Đường, đồ trang trí một ô nằm trên sườn thoải thì dốc theo; mặt đất làm mượt `LAND_MUOT` lượt: chỗ chênh bậc
+        // thành sườn thoải vài ô, móng là thềm phẳng trên sườn (chủ dự án chọn đồi liền khối thay bậc thang, vách kè).
+        soft: (x, z) => inGrid(x, z) && this.landSoft.has(z * GRID + x) && !bankTile(x, z),
+        doc: LAND_MUOT,
         colors: (x, z, out) => {
           const open = inGrid(x, z) && this.landMask[z * GRID + x] === 1;
           const palette = open ? C.grass : C.grassLocked;
@@ -4210,7 +4289,7 @@ export class World {
 
     // Biển Đông: sóng vỗ bờ, cá voi, cá heo, thuyền khơi đi về.
     if (!this.inField) {
-      this.nui.update(t);
+      this.nui.update(t, this.view.camera);
       animateSea(this.sea, t, this.view.zoom);
       // Biển còn mây mù thì chưa thấy cá voi, cá heo.
       if (!this.seaMist) this.seaLife.update(t, dt, this.view.target);
