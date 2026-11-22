@@ -28,11 +28,12 @@ const BAC = 3;
 
 /**
  * Các chỗ cổng của một công trình: Điện là cổng lầu trước sân chầu, doanh trại theo số cổng của cấp, loại khác là chỗ
- * lối đi (`,`) của bản vẽ ô con chạm mép móng. Loại sát sông, đường, đồ trang trí, tường không có.
+ * lối đi (`,`) của bản vẽ ô con chạm mép móng. Loại sát sông, ruộng, vườn, đường, đồ trang trí, tường không có.
  */
 export function tamCapCho(type: BuildingType, level: number, lot?: Lot): CongMong[] {
   const def = BUILDINGS[type];
-  if (def.nearRiver || def.decor || def.w < 2) return [];
+  // Ruộng, vườn là đất trũng, không có cổng.
+  if (def.nearRiver || def.decor || def.w < 2 || type === 'ruong' || type === 'ruongNep' || type === 'vuon') return [];
   if (type === 'dien') return [{ x: 0, z: def.d / 2, w: 3, ox: 0, oz: 1 }];
   if (type === 'doanhTrai') {
     const sides: [number, number][] = level >= GATES_LEVEL ? [[0, 1], [0, -1], [-1, 0], [1, 0]] : [[0, 1]];

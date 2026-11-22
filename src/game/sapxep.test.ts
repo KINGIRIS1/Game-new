@@ -3,7 +3,7 @@ import { wallRings } from './coLoa';
 import { CH1_LAST } from './campaign';
 import { BUILDINGS, CH2_QUEST_START, raiseBuildingCost, CH3_QUEST_START, CH4_QUEST_START, GIFT_IDS, MOVE_FRACTION, ROAD_LIMIT, STAGES, U_NO, canHem, isRoad, type BuildingType } from './defs';
 import { NO_RAISE, canMove, createInitialState, dienLevel, limitOf, move, moveCost, occupancy, place, rotOf, rotateBuilding, satNha, uNoCount, usedOf, type GameState } from './game';
-import { BAC_NGHIA_LINH, BAC_THANG, applyMau, bacNghiaLinh, bacThangMo, doiNghiaLinh, canApplyMau, inFrame, mauDuong, mauFrom, mauSlots, mauUnlocked, planMau, MAU_IDS, type MauId } from './mau';
+import { BAC_NGHIA_LINH, BAC_THANG, applyMau, bacThangMo, canApplyMau, inFrame, mauDuong, mauFrom, mauSlots, mauUnlocked, planMau, MAU_IDS, type MauId } from './mau';
 import { isOpen, khoanhOf } from './khoanh';
 import { DIEN_HOME, GRID, RIVER_END, RIVER_START, isNearBank, touchesRiver } from './map';
 import { DIEN_END, bank, edge, setDien } from './testmap';
@@ -608,12 +608,14 @@ describe('mẫu kinh đô đắp bậc thang', () => {
     expect((on.cost.datDa ?? 0) - (off.cost.datDa ?? 0)).toBe(on.dapCost.datDa);
   });
 
-  it('mẫu Nghĩa Lĩnh là đồi liền khối: Điện cao nhất, đất và công trình thấp dần ra xa và xuống sông, ruộng giữ nguyên đất', () => {
+  it('mẫu Nghĩa Lĩnh: Điện cao nhất, mỗi vòng phố một mặt bằng (nhà và đất trống ngang nhau), ruộng giữ nguyên đất', () => {
     for (const lv of [6, 8, 10]) {
       const { off, on, plan, spent } = both('nghiaLinh', lv);
       const dien = on.buildings.find((b) => b.type === 'dien')!;
       const top = groundOf(on, dien);
       expect(top).toBe(BAC_NGHIA_LINH.dien);
+      const khoi = plan.khoi!;
+      const road = new Set(on.buildings.filter((b) => isRoad(b.type)).map((b) => b.z * GRID + b.x));
       let dap = 0;
       for (const b of on.buildings) {
         const a = off.buildings.find((o) => o.id === b.id)!;
@@ -622,31 +624,40 @@ describe('mẫu kinh đô đắp bậc thang', () => {
         const hb = groundOf(on, b);
         const tang = !NO_RAISE.includes(b.type) && !def.nearRiver && !isRoad(b.type) && def.w > 1 && !def.decor;
         if (tang) for (let k = ha; k < hb; k++) dap += raiseBuildingCost(def.w, def.d, k).datDa ?? 0;
-        if (b.type === 'dien') continue;
-        if (tang) expect(hb, `${lv}: ${b.type} ${b.x},${b.z}`).toBeGreaterThanOrEqual(bacNghiaLinh(b.type, b.x, b.z));
-        // Không công trình nào cao bằng Điện; ruộng không đắp.
-        if (tang) expect(hb, `${lv}: ${b.type}`).toBeLessThan(top);
         if (laRuong(b.type)) expect(hb, `${lv}: ruộng ${b.x},${b.z}`).toBe(ha);
+        if (b.type === 'dien' || !tang || laRuong(b.type)) continue;
+        // Không công trình nào cao bằng Điện; móng phẳng đúng mặt bằng của vòng phố nó đứng.
+        expect(hb, `${lv}: ${b.type}`).toBeLessThan(top);
+        for (let dx = 0; dx < def.w; dx++) for (let dz = 0; dz < def.d; dz++) expect(on.heights[(b.z + dz) * GRID + b.x + dx], `${lv}: ${b.type} ${b.x},${b.z}`).toBe(khoi[b.z * GRID + b.x]);
       }
-      // Ô trống, ô đường trong vùng đắp lên đúng bậc đồi, giá bằng một phần giá đắp ô thường.
+      // Mọi ô mẫu đụng tới về đúng mặt bằng; hai ô đất kề nhau (không phải đường) chênh không quá một bậc, trừ mép Điện.
+      const inDien = (x: number, z: number) => x >= dien.x && z >= dien.z && x < dien.x + BUILDINGS.dien.w && z < dien.z + BUILDINGS.dien.d;
+      let bac = new Set<number>();
+      for (let i = 0; i < khoi.length; i++) {
+        if (khoi[i] < 0) continue;
+        expect(on.heights[i]).toBe(khoi[i]);
+        bac.add(khoi[i]);
+        const x = i % GRID;
+        const z = Math.floor(i / GRID);
+        for (const [dx, dz] of [[1, 0], [0, 1]]) {
+          const j = (z + dz) * GRID + x + dx;
+          if (khoi[j] < 0 || road.has(i) || road.has(j) || inDien(x, z) !== inDien(x + dx, z + dz)) continue;
+          expect(Math.abs(khoi[i] - khoi[j]), `${lv}: ${x},${z}`).toBeLessThanOrEqual(1);
+        }
+      }
+      // Đủ các mặt bằng từ bậc 1 tới Điện ở kinh đô lớn; đất sát Điện thấp hơn Điện một bậc (cổng có bậc tam cấp).
+      if (lv >= 8) expect([...bac].sort()).toEqual([1, 2, 3, 4]);
+      expect(khoi[(DIEN_HOME + 2) * GRID + DIEN_HOME - 1]).toBe(BAC_NGHIA_LINH.dien - 1);
+      // Ô trống, ô đường: đắp thì giá bằng một phần giá đắp ô thường, san xuống không tốn.
       expect(plan.doi.length).toBeGreaterThan(0);
       let doi = 0;
       for (const d of plan.doi) {
-        expect(d.h).toBe(doiNghiaLinh(d.x, d.z));
-        expect(on.heights[d.z * GRID + d.x]).toBe(d.h);
         const h0 = Math.max(off.heights[d.z * GRID + d.x] ?? 0, 0);
-        expect(h0).toBeLessThan(d.h);
+        expect(h0).not.toBe(d.h);
         for (let k = h0; k < d.h; k++) doi += (20 + 10 * k) * BAC_NGHIA_LINH.gia;
       }
       expect(plan.dapCost.datDa).toBe(dap + Math.round(doi / 5) * 5);
       expect(spent).toBe(plan.cost.datDa);
-      // Đồi thoải: hai ô trống kề nhau trong vùng đắp chênh nhau không quá một bậc; quanh Điện là bậc cao nhất, sát sông
-      // giữ nguyên đất.
-      for (const d of plan.doi) {
-        for (const [dx, dz] of [[1, 0], [0, 1]]) expect(Math.abs(doiNghiaLinh(d.x + dx, d.z + dz) - doiNghiaLinh(d.x, d.z))).toBeLessThanOrEqual(1);
-      }
-      expect(doiNghiaLinh(DIEN_HOME - 1, DIEN_HOME + 2)).toBe(BAC_NGHIA_LINH.dien - 1);
-      expect(doiNghiaLinh(RIVER_START - 1, DIEN_HOME)).toBe(0);
       // Ruộng sát sông: có ruộng cách sông không quá một đê và một dải bến.
       const toSong = (b: { type: BuildingType; x: number; z: number }) =>
         Math.min(RIVER_START - (b.x + BUILDINGS[b.type].w), RIVER_START - (b.z + BUILDINGS[b.type].d));
