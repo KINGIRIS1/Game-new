@@ -5543,9 +5543,9 @@ body.man-vao-on #hud > * {
   position: absolute;
   left: 0;
   top: 0;
-  width: 104px;
-  padding: 2px 4px 3px;
-  border-radius: 7px;
+  width: 60px;
+  padding: 2px;
+  border-radius: 5px;
   border: 1px solid #00000066;
   background: #1c1208b8;
   color: #fff4dc;
@@ -5555,20 +5555,12 @@ body.man-vao-on #hud > * {
   pointer-events: auto;
   cursor: pointer;
 }
-.loi-the-o b {
-  display: block;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  font-weight: 600;
-}
 .loi-the-o i {
   display: block;
-  height: 6px;
+  height: 5px;
   border-radius: 3px;
   background: #00000088;
   overflow: hidden;
-  margin-top: 2px;
 }
 .loi-the-o u {
   display: block;

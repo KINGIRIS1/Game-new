@@ -212,7 +212,7 @@ export class LoiTranUi {
     this.topHtml = this.chieuHtml = this.nutHtml = '';
     this.theEls.clear();
     this.the.innerHTML = b.units
-      .map((u) => `<button class="loi-the-o p${u.phe}" data-act="loiMuc" data-id="${u.id}"><b>${tenLoi(u.kind, u.phe)}</b><i><u></u></i><span class="hu"></span></button>`)
+      .map((u) => `<button class="loi-the-o p${u.phe}" data-act="loiMuc" data-id="${u.id}" title="${tenLoi(u.kind, u.phe)}" aria-label="${tenLoi(u.kind, u.phe)}"><i><u></u></i><span class="hu"></span></button>`)
       .join('');
     this.the.querySelectorAll<HTMLElement>('.loi-the-o').forEach((el) => this.theEls.set(Number(el.dataset.id), el));
   }
