@@ -4154,7 +4154,17 @@ Vua Hùng mở hội tỉ võ trước sân chầu. Các tướng so tài trư�
 **Luật lượt**
 
 - Thứ tự theo thanh hành động: tốc đánh cao thì thanh đầy trước, có thể đi nhiều lượt hơn. Màn hình có dải thứ tự lượt.
-- Mỗi tướng ba chiêu: đánh thường và hai chiêu riêng. Tướng có hai kỹ năng thì dùng cả hai (Gióng: Phun lửa, Nhổ tre; Sơn Tinh: Bốc đồi, Dời non; An Dương Vương: Nỏ thần, Rùa Vàng; Cao Lỗ: Nỏ liên châu, Lệnh bắn). Tướng một kỹ năng (Lạc tướng, Trưng Trắc, Trưng Nhị, năm tướng dã ngoại) thì chiêu thứ ba là Thủ thế dùng chung: bớt sát thương nhận một vòng. Không sáng tác kỹ năng mới.
+- Mỗi tướng ba chiêu: đánh thường và hai chiêu riêng. Tướng có hai kỹ năng thì dùng cả hai (Gióng: Phun lửa, Nhổ tre; Sơn Tinh: Bốc đồi, Dời non; An Dương Vương: Nỏ thần, Rùa Vàng; Cao Lỗ: Nỏ liên châu, Lệnh bắn). Tám tướng một kỹ năng (Lạc tướng, Trưng Trắc, Trưng Nhị, năm tướng dã ngoại) được thêm một chiêu riêng, chỉ dùng trên lôi đài (trận thời gian thực không đổi, khỏi cân lại phó bản, thử thách, dã ngoại). Không có chiêu dùng chung.
+  - Lạc tướng, Cờ lệnh: một đồng đội được ra lượt ngay.
+  - Trưng Trắc, Lời thề Hát Môn: xóa hiệu ứng xấu cả đội, tăng sức đánh hai lượt.
+  - Trưng Nhị, Tiên phong: đòn mạnh vào một địch, phá khiên của nó.
+  - Bà Triệu, Đạp sóng dữ: đánh cả ba địch, đẩy lùi thanh hành động.
+  - Triệu Quang Phục, Móng rồng: đòn xuyên giáp, bỏ qua giáp và khiên.
+  - Mai Thúc Loan, Phá ách: đánh một địch, hồi máu cho mình theo sát thương gây ra.
+  - Ngô Quyền, Triều rút: đánh cả ba; địch đang chậm hay mất máu dần chịu gấp đôi.
+  - Lý Thường Kiệt, Tiên phát chế nhân: đòn mạnh vào một địch, làm chậm thanh hành động của nó.
+  - Tám chiêu này không thêm loại hiệu ứng trạng thái nào; chỉ thêm tác dụng tức thời "xóa hiệu ứng xấu".
+  - Hình: dùng lại động tác kỹ năng sẵn có của tướng và hiệu ứng ghép từ `hieuUng.ts`, mỗi chiêu một màu, không nặn thêm.
 - Chiêu dùng số lượt chờ, không có thanh nộ. Chỉ số hồi kỹ năng của trang bị rút ngắn lượt chờ.
 - Hiệu ứng trạng thái, tối đa tám loại: choáng (Voi xung trận), chậm thanh hành động (Dời non, Cọc Bạch Đằng, rồng), mất máu dần (Cọc Bạch Đằng, ngựa sắt), yếu đòn (Nam quốc sơn hà), tăng sức đánh (Hắc Đế dấy binh, Trống trận), ẩn (Ngày ẩn đêm ra), khiêu khích (Hắc Đế dấy binh), khiên (Rùa Vàng). Hồi máu là tác dụng tức thời (Hiệu triệu, Nam quốc sơn hà).
 - Không chia hàng trước sau, chọn mục tiêu tự do; muốn che đồng đội thì dùng khiêu khích.
