@@ -4,7 +4,7 @@
 // phần mẫu có mà mình chưa có (trong giới hạn theo cấp Điện). Phải đủ tài nguyên để dựng phần thiếu và trả phí
 // dời thì mới áp được.
 
-import { BUILDINGS, MAX_HEIGHT, STAGES, U_NO, canHem, isDecor, isRoad, raiseBuildingCost, raiseTileCost, type BuildingType, type Cost, RESOURCE_IDS } from './defs';
+import { BUILDINGS, MAX_HEIGHT, STAGES, U_NO, canHem, isBridge, isDecor, isRoad, raiseBuildingCost, raiseTileCost, type BuildingType, type Cost, RESOURCE_IDS } from './defs';
 import { CH1_LAST } from './campaign';
 import { inChapter4 } from './chuong4';
 import { inChapter3 } from './coLoa';
@@ -28,7 +28,7 @@ import {
   type Result,
 } from './game';
 import { isOpen, khoanhOf } from './khoanh';
-import { DIEN_HOME, GRID, KHOANH, RIVER_START, inGrid, isNearBank, touchesRiver } from './map';
+import { DIEN_HOME, GRID, baseHeights, KHOANH, RIVER_START, inGrid, isNearBank, touchesRiver } from './map';
 import { bridgeheadCells } from './benKia';
 import { isBusy, startBatch, thoRanh, xayMs, type PhanViec } from './xay';
 
@@ -1383,8 +1383,9 @@ const VONG_PHO = 8;
  * thống nhất): khung đường mẫu `lane` là các vòng phố quanh Điện (cột, hàng có từ `VONG_PHO` ô đường); Điện bậc `dien`,
  * vòng đất sát Điện thấp hơn một bậc, mỗi lần ra ngoài qua một vòng phố lại thấp một bậc (không dưới bậc 1), ô đường
  * của vòng phố thuộc mặt bằng phía ngoài, nên chỗ chênh cao chỉ nằm dọc đường và nhà, đất trống giữa hai vòng phố ngang
- * nhau. Phía sông, ngoài vòng phố đầu tiên là vùng ruộng: giữ nguyên đất (−1). Ruộng, công trình sát sông, tường, đê
- * cũng giữ nguyên. Móng nào vắt qua hai mặt bằng thì lấy mặt cao. `list`: công trình ở chỗ sau khi áp mẫu.
+ * nhau. Phía sông, ngoài vòng phố đầu tiên là vùng ruộng: về đất tự nhiên (`baseHeights`). Tường, đê cũng về mặt bằng của chỗ nó
+ * đứng; ruộng không đắp lên, chỉ san xuống khi đang cao hơn mặt bằng; công trình sát sông và cầu giữ nguyên (−1). Móng nào vắt qua hai mặt bằng thì lấy mặt cao.
+ * `list`: công trình ở chỗ sau khi áp mẫu.
  */
 export function khoiNghiaLinh(state: GameState, start: number, list: { type: BuildingType; x: number; z: number }[], lane: Uint8Array, heads: Set<number>): Int8Array {
   const khoi = new Int8Array(GRID * GRID).fill(-1);
@@ -1403,13 +1404,18 @@ export function khoiNghiaLinh(state: GameState, start: number, list: { type: Bui
   // Số vòng phố từ ô ra tới Điện theo một trục (kể cả vòng ô ấy đang đứng); âm là phía sông.
   const qua = (a: number, vong: number[]) => (a < DIEN_HOME ? vong.filter((v) => v >= a && v < DIEN_HOME).length : a > DIEN_END ? -vong.filter((v) => v > DIEN_END && v <= a).length : 0);
   const B = BAC_NGHIA_LINH;
+  const goc = baseHeights();
   for (let z = start; z <= LAST; z++) {
     for (let x = start; x <= LAST; x++) {
       if (!isOpen(state, x, z) || heads.has(z * GRID + x)) continue;
       const cx = qua(x, cot);
       const cz = qua(z, hang);
-      // Phía sông, ngoài vòng phố sát Điện: vùng ruộng, giữ nguyên đất.
-      if (Math.min(cx, cz) < -1) continue;
+      // Phía sông, ngoài vòng phố sát Điện: vùng ruộng, về đất tự nhiên (chỗ đã đắp từ trước thì san xuống, không thì ruộng,
+      // đê đắp cao từ mẫu cũ nhô lên như bệ giữa đất đã san).
+      if (Math.min(cx, cz) < -1) {
+        khoi[z * GRID + x] = Math.max(0, goc[z * GRID + x] ?? 0);
+        continue;
+      }
       // Phía sông, từ sau đường quanh Điện tới vòng phố đầu: thấp thêm một bậc cho xuôi dần xuống ruộng.
       const gap = Math.max(DIEN_HOME - 1 - x, x - DIEN_END - 1, DIEN_HOME - 1 - z, z - DIEN_END - 1);
       const song = Math.min(cx, cz) < 0 && gap > 0 ? 1 : 0;
@@ -1420,8 +1426,11 @@ export function khoiNghiaLinh(state: GameState, start: number, list: { type: Bui
     const def = BUILDINGS[b.type];
     const o: number[] = [];
     for (let dx = 0; dx < def.w; dx++) for (let dz = 0; dz < def.d; dz++) if (inGrid(b.x + dx, b.z + dz)) o.push((b.z + dz) * GRID + b.x + dx);
-    const giu = laRuong(b.type) || def.nearRiver || NO_RAISE.includes(b.type);
-    const h = b.type === 'dien' ? B.dien : giu || o.some((i) => khoi[i] < 0) ? -1 : Math.max(...o.map((i) => khoi[i]));
+    // Công trình sát sông, cầu giữ nguyên; tường, đê cũng về mặt bằng của vòng phố như nhà.
+    const giu = def.nearRiver || isBridge(b.type);
+    let h = b.type === 'dien' ? B.dien : giu || o.some((i) => khoi[i] < 0) ? -1 : Math.max(...o.map((i) => khoi[i]));
+    // Ruộng là đất trũng: không đắp lên (vẫn được nước êm bồi phù sa), chỉ san xuống khi đang cao hơn mặt bằng.
+    if (h >= 0 && laRuong(b.type)) h = Math.min(h, Math.max(0, footprintTop(state, b.type, b.x, b.z)));
     for (const i of o) khoi[i] = h;
   }
   return khoi;
@@ -1683,7 +1692,7 @@ function planVoi(state: GameState, id: MauId, bac: boolean, hep: boolean): MauPl
         const busy = new Uint8Array(GRID * GRID);
         for (const b of list) {
           const def = BUILDINGS[b.type];
-          if (def.w === 1 && def.d === 1 && !NO_RAISE.includes(b.type)) continue;
+          if (def.w === 1 && def.d === 1) continue;
           for (let dx = 0; dx < def.w; dx++) for (let dz = 0; dz < def.d; dz++) if (inGrid(b.x + dx, b.z + dz)) busy[(b.z + dz) * GRID + b.x + dx] = 1;
         }
         let gia = 0;
