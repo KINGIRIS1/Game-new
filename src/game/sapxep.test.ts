@@ -5,7 +5,8 @@ import { BUILDINGS, CH2_QUEST_START, raiseBuildingCost, CH3_QUEST_START, CH4_QUE
 import { NO_RAISE, canMove, createInitialState, dienLevel, limitOf, move, moveCost, occupancy, place, rotOf, rotateBuilding, satNha, uNoCount, usedOf, type GameState } from './game';
 import { BAC_NGHIA_LINH, BAC_THANG, applyMau, bacThangMo, canApplyMau, inFrame, mauDuong, mauFrom, mauSlots, mauUnlocked, planMau, MAU_IDS, type MauId } from './mau';
 import { isOpen, khoanhOf } from './khoanh';
-import { DIEN_HOME, GRID, RIVER_END, RIVER_START, isNearBank, touchesRiver } from './map';
+import { DIEN_HOME, GRID, RIVER_END, RIVER_START, baseHeights, isNearBank, touchesRiver } from './map';
+import { bridgeheadCells } from './benKia';
 import { DIEN_END, bank, edge, setDien } from './testmap';
 import { floodHits, floodMap, groundOf } from './terrain';
 
@@ -707,6 +708,42 @@ describe('mẫu kinh đô đắp bậc thang', () => {
       for (let dx = 0; dx < def.w; dx++) for (let dz = 0; dz < def.d; dz++) expect(s.heights[(b.z + dz) * GRID + b.x + dx], `${b.type} ${b.x},${b.z}`).toBe(khoi[b.z * GRID + b.x]);
     }
     for (let i = 0; i < khoi.length; i++) if (khoi[i] >= 0) expect(s.heights[i]).toBe(khoi[i]);
+  });
+
+  it('bốn mẫu kia áp lên kinh đô đã đắp từ mẫu cũ: đất trống, tường, đê, công trình sát sông không còn nhô như bệ', () => {
+    const goc = baseHeights();
+    for (const id of MAU_IDS.filter((m) => m !== 'nghiaLinh')) {
+      const s = withGenerals(city(8, 4));
+      expect(applyMau(s, 'nghiaLinh').ok).toBe(true);
+      // Dấu vết mẫu cũ và người chơi tự đắp: mọi ô đất bờ bên này thấp hơn bậc 3 lên bậc 3.
+      for (let i = 0; i < s.heights.length; i++) if (isNearBank(i % GRID, Math.floor(i / GRID)) && s.heights[i] >= 0 && s.heights[i] < 3) s.heights[i] = 3;
+      s.resources = { gao: 1e7, voOc: 1e7, datDa: 1e7, sat: 1e7, go: 1e7 };
+      const r = applyMau(s, id);
+      expect(r.ok, id).toBe(true);
+      const nha = new Uint8Array(GRID * GRID);
+      for (const b of s.buildings) {
+        const def = BUILDINGS[b.type];
+        if (!isNearBank(b.x, b.z) || (def.w === 1 && def.d === 1) || b.type.startsWith('cau')) continue;
+        const h = s.heights[b.z * GRID + b.x];
+        let cao = 0;
+        for (let dx = 0; dx < def.w; dx++) {
+          for (let dz = 0; dz < def.d; dz++) {
+            const i = (b.z + dz) * GRID + b.x + dx;
+            nha[i] = 1;
+            cao = Math.max(cao, goc[i]);
+            expect(s.heights[i], `${id} ${b.type} ${b.x},${b.z}`).toBe(h);
+          }
+        }
+        // Công trình sát sông không đắp: không cao hơn đất tự nhiên dưới móng.
+        if (def.nearRiver) expect(h, `${id} ${b.type}`).toBeLessThanOrEqual(cao);
+      }
+      const heads = bridgeheadCells(s);
+      for (let i = 0; i < nha.length; i++) {
+        if (nha[i] || heads.has(i) || !isNearBank(i % GRID, Math.floor(i / GRID)) || goc[i] < 0) continue;
+        if (s.buildings.some((b) => b.type.startsWith('cau') && b.x === i % GRID && b.z === Math.floor(i / GRID))) continue;
+        expect(s.heights[i], `${id} ô ${i % GRID},${Math.floor(i / GRID)}`).toBeLessThanOrEqual(goc[i]);
+      }
+    }
   });
 
   it('dãy ruộng gần sông nhất không đắp, vẫn được nước êm qua cống bồi phù sa', () => {
