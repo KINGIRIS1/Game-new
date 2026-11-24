@@ -5,7 +5,7 @@ import { ChiTay, huongDanBat, luuHuongDan } from './ui/huongDan';
 import './style.css';
 import { LOI_DAI } from './game/defs';
 import { canDanhTang, chonThuLoi, chuongTang, datDoiLoi, doiLoi, laLoiTuong, loiNay, type LoiKind } from './game/loiDai';
-import { KIEU_CHUONG, taoNguoi } from './render/loiDai';
+import { KIEU_CHUONG, taoChau, taoNguoi } from './render/loiDai';
 import { LoiDau } from './ui/loiDaiTran';
 import { play, setMuted, stopRally, unlockAudio } from './audio/sfx';
 import { skillReady, startFieldBattle, stepField, useSkill, type Battle, type HeroKind, type FighterKind } from './game/battle';
@@ -1112,8 +1112,8 @@ async function start(): Promise<void> {
       state: () => state,
       // Mỗi chương một kiểu sân: sang tầng của chương khác thì World dựng lại cảnh.
       canh: (t) => world.showLoiDai(true, kieuTang(t))!,
-      // Tướng (kể cả bóng tướng) dùng ảnh bán thân mặc đồ của bảng tướng; Lạc tướng, võ sĩ, tướng giặc vẽ từ mô hình.
-      anh: (k) => (laLoiTuong(k) && k !== 'lacTuong' ? hinhTuong.ban(k as HeroKind, macOf(k as HeroKind)) : hinhTuong.nguoi(k, () => taoNguoi(k))),
+      // Mọi người một kiểu ảnh: vẽ từ mô hình (tướng xuống voi, xuống ngựa), cùng một khung quanh đầu.
+      anh: (k) => hinhTuong.nguoi(k, () => (laLoiTuong(k) ? taoChau(k) : taoNguoi(k))),
       screenAt: (id, cao) => world.loiScreenAt(id, cao),
       play,
       commit: () => save(),
@@ -3250,7 +3250,7 @@ async function start(): Promise<void> {
      * trận để đọc.
      */
     /** Ảnh đại diện lôi đài của một nhân vật (data URL), vẽ ngay: để chụp kiểm khung quanh đầu. */
-    loiAnh: (kind: LoiKind) => veBanNguoi(world.renderer, taoNguoi(kind)),
+    loiAnh: (kind: LoiKind) => veBanNguoi(world.renderer, laLoiTuong(kind) ? taoChau(kind) : taoNguoi(kind)),
     loiDai: (tang = 1, tuDanh = false, kieu?: 1 | 2 | 3) => {
       if (kieu) loiKieu = kieu;
       const l = loiNay(state);

@@ -360,3 +360,11 @@ describe('Lôi đài: mở, đội, thưởng, lưu', () => {
     expect(bo.loiDai).toBeUndefined();
   });
 });
+
+describe('ảnh chiêu lôi đài', () => {
+  it('đòn thường và mọi chiêu của tướng đều có ảnh vẽ trong public/anh-ky-nang', async () => {
+    const { existsSync } = await import('node:fs');
+    const ids = new Set(['danh', ...LOI_TUONG.flatMap((k) => CHIEU_TUONG[k])]);
+    for (const id of ids) expect(existsSync(`public/anh-ky-nang/${id}.webp`), id).toBe(true);
+  });
+});

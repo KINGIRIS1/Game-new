@@ -143,7 +143,7 @@ export function taoNguoi(kind: LoiKind, glow = false, anh = false): THREE.Group 
 }
 
 /** Tướng đứng chầu bên thềm (xuống voi, xuống ngựa). */
-function taoChau(kind: LoiTuong): THREE.Group {
+export function taoChau(kind: LoiTuong): THREE.Group {
   switch (kind) {
     case 'giong':
       return makeGiong('trangSi', { onFoot: true });

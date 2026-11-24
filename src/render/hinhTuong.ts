@@ -276,17 +276,32 @@ export function veBan(renderer: THREE.WebGLRenderer, hero: HeroKind, mac: MacTuo
  * Ảnh đại diện của một nhân vật có xương bất kỳ (võ sĩ, tướng giặc trên lôi đài): khung quanh xương đầu cao nhất (người
  * cưỡi thì là đầu người cưỡi); không có xương đầu thì ôm cả mô hình. Vẽ xong gỡ mô hình.
  */
-export function veBanNguoi(renderer: THREE.WebGLRenderer, root: THREE.Object3D): string {
-  (root.userData.pose as ((p: { act: string; time: number }) => void) | undefined)?.({ act: 'stand', time: 0 });
+export const BAN_DAU = { y: 0.13, half: 0.34, co: 0.18 };
+
+/**
+ * Xương đầu cao nhất của mô hình và cỡ người: quãng từ xương đầu tới xương cha (ngực) so với lính thường
+ * (`BAN_DAU.co`), nên tướng dựng to hơn lính hay ngồi trên thú vẫn ra khung đầu to bằng nhau.
+ */
+export function doDau(root: THREE.Object3D): { dau: THREE.Vector3 | null; co: number; cach: number } {
   root.updateMatrixWorld(true);
   let dau: THREE.Vector3 | null = null;
+  let cach = 0;
   root.traverse((o) => {
     if (!(o as THREE.Bone).isBone || !/head$/i.test(o.name)) return;
     const p = o.getWorldPosition(new THREE.Vector3());
-    if (!dau || p.y > dau.y) dau = p;
+    if (dau && p.y <= dau.y) return;
+    dau = p;
+    cach = o.parent ? o.parent.getWorldPosition(new THREE.Vector3()).distanceTo(p) : 0;
   });
-  const d = dau as THREE.Vector3 | null;
-  const url = veHinh(renderer, root, BAN_PX, BAN_PX, d ? { x: d.x, y: d.y + 0.1, half: 0.3 } : undefined);
+  return { dau, cach, co: cach > 0 ? Math.min(Math.max(cach / BAN_DAU.co, 1), 1.5) : 1 };
+}
+
+export function veBanNguoi(renderer: THREE.WebGLRenderer, root: THREE.Object3D): string {
+  (root.userData.pose as ((p: { act: string; time: number }) => void) | undefined)?.({ act: 'stand', time: 0 });
+  root.updateMatrixWorld(true);
+  const { dau: d, co } = doDau(root);
+  // Mọi người cùng một khung quanh xương đầu (theo cỡ xương): đầu to bằng nhau, lộ vai, đủ chỗ cho miện.
+  const url = veHinh(renderer, root, BAN_PX, BAN_PX, d ? { x: d.x, y: d.y + BAN_DAU.y * co, half: BAN_DAU.half * co } : undefined);
   root.traverse((o) => {
     if (o instanceof THREE.SkinnedMesh) o.skeleton.dispose();
   });

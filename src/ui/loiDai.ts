@@ -10,6 +10,7 @@ import { LOI_DAI, LOI_LINH, PHAM_TRAN, SKILL_IDS, THAN_THU_IDS, type SkillId, ty
 import type { GameState } from '../game/game';
 import {
   CHIEU,
+  CHIEU_MOI,
   HIEU_UNG_LOI,
   chieuDuoc,
   chuongTang,
@@ -142,9 +143,12 @@ export function loiKetQuaHtml(s: GameState, b: LoiTran, thuong: LoiThuong | null
   return `<div class="loi-kq-the ${thang ? 'thang' : 'thua'}"><h2>${thang ? `🏆 ${L.thang}` : `🏳️ ${L.thua}`}</h2><p><b>${laMoc(b.tang) ? L.tangMoc(b.tang) : L.tang(b.tang)}</b></p>${body}<div class="loi-kq-nut">${nut}</div></div>`;
 }
 
-/** Biểu tượng chiêu: ảnh kỹ năng vẽ sẵn của tướng; chiêu chỉ có trên lôi đài và đòn thường thì ô cùng khung có hình chữ. */
+/** Chiêu có ảnh vẽ trong `public/anh-ky-nang/`: kỹ năng tướng, đòn thường và tám chiêu chỉ có trên lôi đài. */
+export const CHIEU_CO_ANH: string[] = [...SKILL_IDS, 'danh', ...CHIEU_MOI];
+
+/** Biểu tượng chiêu: ảnh vẽ sẵn; chiêu của giặc (không lên nút) thì ô cùng khung có hình chữ. */
 function chieuIcon(c: string): string {
-  return (SKILL_IDS as string[]).includes(c)
+  return CHIEU_CO_ANH.includes(c)
     ? `<img class="loi-ic" src="${skillIconUrl(c as SkillId)}" alt="" draggable="false" decoding="async">`
     : `<span class="loi-ic emo">${T().chieuIcon[c]}</span>`;
 }
