@@ -362,9 +362,9 @@ describe('Lôi đài: mở, đội, thưởng, lưu', () => {
 });
 
 describe('ảnh chiêu lôi đài', () => {
-  it('đòn thường và mọi chiêu của tướng đều có ảnh vẽ trong public/anh-ky-nang', async () => {
-    const { existsSync } = await import('node:fs');
+  it('đòn thường và mọi chiêu của tướng đều có ảnh vẽ trong public/anh-ky-nang', () => {
+    const files = Object.keys(import.meta.glob('../../public/anh-ky-nang/*.webp'));
     const ids = new Set(['danh', ...LOI_TUONG.flatMap((k) => CHIEU_TUONG[k])]);
-    for (const id of ids) expect(existsSync(`public/anh-ky-nang/${id}.webp`), id).toBe(true);
+    for (const id of ids) expect(files.some((f) => f.endsWith(`/${id}.webp`)), id).toBe(true);
   });
 });
