@@ -127,7 +127,7 @@ import { tuongDau } from '../game/daNgoaiTran';
 import { choTen, daMapHtml, daNgoaiHtml, expPct, miniSvg } from './daNgoai';
 import { thanThuHtml, thanThuMapHtml, thuAnh } from './thanThu';
 import { loiDaiHtml, loiDaiMapHtml } from './loiDai';
-import { loiDaiMo, type LoiTuong } from '../game/loiDai';
+import { loiDaiMo } from '../game/loiDai';
 import type { ThanThuId } from '../game/defs';
 import type { ODo } from '../game/defs';
 import { sonHtml } from './son';
@@ -213,9 +213,7 @@ export type HudAction =
   /** Thần thú (`ui/thanThu.ts`): cho ăn một bữa, chọn thú đi theo đội. */
   | { kind: 'thuAn'; thu: ThanThuId }
   | { kind: 'thuChon'; thu: ThanThuId }
-  /** Lôi đài (`ui/loiDai.ts`): thêm bớt tướng trong đội, chọn thú mang theo, lên đài đánh tầng. */
-  | { kind: 'loiDoi'; hero: LoiTuong }
-  | { kind: 'loiThu'; thu: ThanThuId }
+  /** Lôi đài (`ui/loiDai.ts`): lên đài đánh tầng (đội và thần thú chọn trên sân, `ui/loiDaiTran.ts`). */
   | { kind: 'loiVao'; tang: number }
   | { kind: 'chooseBuild'; type: BuildingType }
   | { kind: 'chooseRaise' }
@@ -847,10 +845,6 @@ export class Hud {
       case 'loiTang':
         if (this.camp) this.camp.loiTang = id;
         return this.refreshCampaign(this.getState());
-      case 'loiDoi':
-        return this.onAction({ kind: 'loiDoi', hero: el.dataset.hero as LoiTuong });
-      case 'loiThu':
-        return this.onAction({ kind: 'loiThu', thu: el.dataset.thu as ThanThuId });
       case 'loiVao':
         return this.onAction({ kind: 'loiVao', tang: id });
       case 'forgeGear':

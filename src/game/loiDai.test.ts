@@ -31,6 +31,7 @@ import {
   taoTran,
   thuTu,
   toiLuot,
+  tranXem,
   tuChon,
   tuDanhHet,
   tuongLoi,
@@ -315,6 +316,20 @@ describe('Lôi đài: mở, đội, thưởng, lưu', () => {
     expect(moTran(s, 1).ok).toBe(true);
   });
 
+  it('xếp đội trên sân: trận xem trước dựng được cả khi đội chưa đủ ba, không ghi gì vào bản lưu', () => {
+    const s = coBaTuong();
+    datDoiLoi(s, ['sonTinh']);
+    const truoc = JSON.stringify(s);
+    const b = tranXem(s, 1);
+    expect(b.units.filter((u) => u.phe === 0).map((u) => u.kind)).toEqual(['sonTinh']);
+    expect(b.units.filter((u) => u.phe === 1)).toHaveLength(doiTang(1).doi.length);
+    expect(JSON.stringify(s)).toBe(truoc);
+    // Đủ ba thì trận xem trước y hệt trận thật.
+    datDoiLoi(s, ['sonTinh', 'giong', 'lacTuong']);
+    const that = moTran(s, 1);
+    expect(that.ok && that.value).toEqual(tranXem(s, 1));
+  });
+
   it('thắng tầng mới thì ghi tầng, được sắt và một món đồ; đánh lại không có thưởng', () => {
     const s = coBaTuong();
     const sat = s.resources.sat;
@@ -353,6 +368,11 @@ describe('Lôi đài: mở, đội, thưởng, lưu', () => {
     const lai = deserialize(serialize(s))!;
     expect(lai.loiDai).toEqual(s.loiDai);
     expect(isLoiDaiState({ ...s.loiDai, tang: 99 })).toBe(false);
+    // Tự qua màn là trường thêm sau: bản lưu cũ chưa có vẫn hợp lệ, có thì phải là đúng sai.
+    expect(isLoiDaiState({ ...s.loiDai, tuQua: true })).toBe(true);
+    expect(isLoiDaiState({ ...s.loiDai, tuQua: 1 })).toBe(false);
+    s.loiDai!.tuQua = true;
+    expect(deserialize(serialize(s))!.loiDai?.tuQua).toBe(true);
     const hong = JSON.parse(serialize(s));
     hong.loiDai.doi = ['khongCo'];
     const bo = deserialize(JSON.stringify(hong))!;

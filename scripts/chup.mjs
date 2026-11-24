@@ -560,9 +560,21 @@ d.camera(cx, cz, 2.6);`,
     sau: `document.querySelector('[data-act=goThanThu]').click();`,
   },
   'loi-dai': {
-    mo: 'Chương 5 (đã thắng màn 35), đã qua 23 tầng lôi đài: bảng Lôi đài (bản đồ 50 tầng, đội giữ đài, chọn đội, thần thú)',
+    mo: 'Chương 5 (đã thắng màn 35), đã qua 23 tầng lôi đài: bảng Lôi đài (lưới 50 tầng xếp 1 tới 50, đội giữ đài, thưởng, nút Lên đài)',
     truoc: LOI_DAI_23,
     sau: `document.querySelector('[data-act=goLoiDai]').click();`,
+  },
+  'loi-dai-xep': {
+    mo: 'Như loi-dai, bấm Lên đài tầng 24: xếp đội trên sân (chip tướng, chip thần thú, nút Bắt đầu, Tự qua màn)',
+    truoc: LOI_DAI_23,
+    sau: `d.tocDo(4); d.loiXep(24);`,
+    doi: 20000,
+  },
+  'loi-dai-xep-du': {
+    mo: 'Đủ mười hai tướng và năm thần thú, xếp đội trên sân ở tầng mốc 50 (so cỡ người cưỡi voi, cưỡi ngựa, đi bộ)',
+    truoc: `${CHUONG5(35)}\n${DU_TUONG}\ns.daNgoai.boss = s.daNgoai.boss.map(() => 1); s.loiDai = { tang: 49, doi: ['baTrieu', 'ngoQuyen', 'sonTinh'], thu: 'thuRong', tuDanh: false, nhanh: false };`,
+    sau: `d.tocDo(4); d.loiXep(50);`,
+    doi: 20000,
   },
   'loi-dai-tran': {
     mo: 'Như loi-dai, lên đài tầng 24: sân chầu, Vua Hùng trên thềm, hai đội, chờ người chơi chọn chiêu',
@@ -905,7 +917,7 @@ export async function chayMa(page, ma) {
 }
 
 export async function choGame(page) {
-  await page.waitForFunction(() => window.__debug || document.querySelector('.fatal'), null, { timeout: 30000 });
+  await page.waitForFunction(() => window.__debug || document.querySelector('.fatal'), null, { timeout: 90000 });
   const fatal = await page.locator('.fatal').count();
   if (fatal) throw new Error(`Game không chạy được: ${await page.locator('.fatal').innerText()}`);
 }

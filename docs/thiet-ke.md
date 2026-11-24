@@ -4212,6 +4212,7 @@ Vua Hùng mở hội tỉ võ trước sân chầu. Các tướng so tài trư�
 - Cảnh riêng dựng theo kiểu sân chầu (không đánh trong sân Điện thật): phía sau là thềm cao có bệ ngai, Vua Hùng ngồi ngai nhìn xuống (bản tĩnh `bakeVuaHung`, không làm động tác mới); giữa là sân lát đá rộng có mặt trống đồng khảm trên nền; hai đội đứng hai bên trái phải, đủ chỗ cho voi, ngựa; thần thú ở mép sân phía đội mình. Camera nhìn chếch từ trước vào, thấy cả vua lẫn hai đội.
 - Ba kiểu cảnh quanh sân (chủ dự án chọn giữ cả ba), đổi theo chương của tầng (`KIEU_CHUONG`: chương 1–5 là kinh thành, đỉnh núi, bến sông, kinh thành, đỉnh núi): kinh thành có nhà sàn mái cấp 10 quay mặt trước như ở kinh đô, lầu trống, cổng Nghi Môn; đỉnh núi có rừng, đá, bậc đá lên; bến sông có cây nêu, dây cờ, cầu ván, thuyền chiến. Sân lát đá rộng 19,6 × 16,4; hai đội đứng cách tâm mặt trống đồng 4,5–5,4 để không ai đứng đè lên mặt trống. Sang tầng của chương khác thì dựng lại cảnh.
 - Màn đánh (chủ dự án yêu cầu): trên đầu mỗi người chỉ có thanh máu nhỏ và hiệu ứng, không ghi tên (tên xem ở dải lượt và dòng "Lượt của…"); dải thứ tự lượt hiện hình đại diện từng người, viền xanh đội ta, đỏ đội máy. Ảnh đại diện đồng nhất: ai cũng vẽ từ mô hình, cùng một khung đầu và vai, đầu to bằng nhau (tướng xuống voi, xuống ngựa); thần thú dùng ảnh động. Nút chiêu chỉ có ảnh kỹ năng và tên, không có dòng giải thích. Đòn thường và tám chiêu chỉ có trên lôi đài có ảnh vẽ riêng cùng phong cách 16 ảnh kỹ năng tướng (vẽ bằng Meshy, lấy ảnh sẵn có làm mẫu).
+- Cỡ người đồng nhất (chủ dự án yêu cầu): mô hình tướng dựng mỗi người một hệ số, người cưỡi thú lại theo cỡ bãi chiến, nên trước đây người to người nhỏ lệch tới 1,5 lần. Trên sân mọi người phóng theo quãng xương đầu tới ngực (`coNguoi`, `NGUOI_CO`): tướng ta, bóng tướng, tướng giặc một cỡ người, thú cưỡi phóng theo người cưỡi (voi, ngựa vì thế to hơn trước); võ sĩ và lính theo hầu bằng 85% tướng; thuồng luồng, cá sấu giữ cỡ bãi chiến. Ba chỗ đứng mỗi đội cách nhau 4 ô cho voi khỏi đè nhau.
 - Tướng đã về mà không lên đài đứng chầu trên thềm, hai bên ngai (tối đa sáu người, xuống voi, xuống ngựa), nữ tướng đã theo về cầm cờ đứng hàng sau. Hai góc trước sân có trống đồng trên giá, hai bên sân có cờ đại và lư hương. Không vẽ đám đông dân.
 - Người đánh gần lao tới trước mặt đối thủ rồi lùi về; người bắn xa, người hô chiêu cho cả đội thì bước lên một bước. Vòng vàng dưới chân người tới lượt, vòng đỏ dưới chân người chọn được làm mục tiêu.
 - Dùng lại mô hình tướng có xương và hiệu ứng kỹ năng sẵn có (`hieuUng.ts`).
@@ -4219,12 +4220,14 @@ Vua Hùng mở hội tỉ võ trước sân chầu. Các tướng so tài trư�
 
 **Giao diện**
 
-- Bảng Lôi đài: nửa trái là bản đồ 50 tầng (mỗi chương một hàng mười ô, ô mốc có vương miện), nửa phải là tầng đang xem, đội giữ đài, thưởng, chọn ba tướng (số 1–3 là thứ tự đứng), chọn thần thú, nút Lên đài.
-- Màn đánh: dải trên có tầng, vòng, thứ tự lượt; thẻ máu nổi trên đầu từng người kèm hiệu ứng và số lượt còn lại; ba nút chiêu có lời tả và số lượt chờ; nút Tự đánh, ×1/×2, rời đài (bấm hai lần). Đòn thường được chọn sẵn: chạm thẳng một địch (thẻ máu hay người trên sân) là đánh. Chiêu đánh cả đội thì bấm là ra ngay.
+- Bảng Lôi đài (chủ dự án yêu cầu thu gọn): nửa trái là lưới tầng nhỏ xếp từ 1 tới 50, mỗi hàng mười tầng, tầng mốc viền vàng có vương miện nhỏ; nửa phải là tầng đang xem, đội giữ đài, thưởng, nút Lên đài. Không chọn đội ở bảng này.
+- Chọn tướng trong màn (chủ dự án yêu cầu, thay cho chọn ở bảng ngoài): bấm Lên đài là sang sân chầu ở bước xếp đội. Thanh dưới có chip ảnh mọi tướng đã về (chạm để thêm hay bớt, số 1–3 là thứ tự đứng từ trên xuống, đội còn ít nhất một người), chip thần thú đã về, nút Bắt đầu (đủ ba tướng mới bấm được). Người trên sân đổi ngay theo lựa chọn, tướng không lên đài đứng chầu trên thềm; dải trên hiện đội giữ đài. Đấu lại và Tầng kế trên bảng kết quả cũng về bước xếp đội.
+- Tự qua màn (chủ dự án yêu cầu): nút bật tắt cạnh Tự đánh, nhớ trong bản lưu. Bật thì thắng xong bảng kết quả đếm ngược 3 giây rồi tự lên tầng kế với đội đang chọn, không qua bước xếp đội; có nút Dừng, bấm nút nào trên bảng kết quả cũng thôi đếm. Thua hay hết tầng đánh được thì dừng.
+- Màn đánh: dải trên có tầng, vòng, thứ tự lượt; thẻ máu nổi trên đầu từng người kèm hiệu ứng và số lượt còn lại; ba nút chiêu có ảnh, tên và số lượt chờ; nút Tự đánh, Tự qua màn, ×1/×2, rời đài (bấm hai lần). Màn dọc xếp ba hàng: dòng lượt, hàng nút, hàng ba nút chiêu. Đòn thường được chọn sẵn: chạm thẳng một địch (thẻ máu hay người trên sân) là đánh. Chiêu đánh cả đội thì bấm là ra ngay.
 
 **Lưu**
 
-- `GameState.loiDai` là trường tùy chọn (tầng cao nhất đã qua, đội chọn lần trước, thú mang theo), không lên phiên bản lưu, sai dạng thì bỏ riêng phần ấy (như thần thú, Đấu thành).
+- `GameState.loiDai` là trường tùy chọn (tầng cao nhất đã qua, đội chọn lần trước, thú mang theo, Tự đánh, tua nhanh, Tự qua màn `tuQua` thêm sau nên bản lưu cũ chưa có vẫn hợp lệ), không lên phiên bản lưu, sai dạng thì bỏ riêng phần ấy (như thần thú, Đấu thành).
 
 **Thứ tự làm**
 

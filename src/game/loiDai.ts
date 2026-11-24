@@ -750,6 +750,8 @@ export interface LoiDaiState {
   thu: ThanThuId | null;
   tuDanh: boolean;
   nhanh: boolean;
+  /** Tự qua màn: thắng thì tự lên tầng kế với đội cũ (bản lưu cũ chưa có thì coi như tắt). */
+  tuQua?: boolean;
 }
 
 export const initialLoiDai = (): LoiDaiState => ({ tang: 0, doi: [], thu: null, tuDanh: false, nhanh: false });
@@ -829,6 +831,13 @@ export function canDanhTang(s: GameState, tang: number): Result {
   return ok(undefined);
 }
 
+/** Trận tầng `tang` dựng từ đội (có thể chưa đủ ba) và thần thú đang chọn; không ghi gì vào state. Dùng cho lúc xếp đội trên sân. */
+export function tranXem(s: GameState, tang: number): LoiTran {
+  const thu = thuLoi(s);
+  const may = doiTang(tang);
+  return taoTran(tang, doiLoi(s).map((k) => tuongVao(s, k)), may.doi, thu ? { kind: thu, cap: capThu(s, thu) } : null, may.thu);
+}
+
 /** Mở trận tầng `tang` với đội và thần thú đang chọn. */
 export function moTran(s: GameState, tang: number): Result<LoiTran> {
   const check = canDanhTang(s, tang);
@@ -836,9 +845,7 @@ export function moTran(s: GameState, tang: number): Result<LoiTran> {
   const doi = doiLoi(s);
   if (doi.length < LOI_DAI.doi) return fail('loiDoiSai');
   loiNay(s).doi = doi;
-  const thu = thuLoi(s);
-  const may = doiTang(tang);
-  return ok(taoTran(tang, doi.map((k) => tuongVao(s, k)), may.doi, thu ? { kind: thu, cap: capThu(s, thu) } : null, may.thu));
+  return ok(tranXem(s, tang));
 }
 
 export interface LoiThuong {
@@ -877,5 +884,6 @@ export function isLoiDaiState(v: unknown): v is LoiDaiState {
   if (typeof t.tang !== 'number' || !Number.isInteger(t.tang) || t.tang < 0 || t.tang > LOI_DAI.tang) return false;
   if (!Array.isArray(t.doi) || t.doi.length > LOI_DAI.doi || !t.doi.every((k) => typeof k === 'string' && laLoiTuong(k))) return false;
   if (typeof t.tuDanh !== 'boolean' || typeof t.nhanh !== 'boolean') return false;
+  if (t.tuQua !== undefined && typeof t.tuQua !== 'boolean') return false;
   return t.thu === null || THAN_THU_IDS.includes(t.thu as ThanThuId);
 }
