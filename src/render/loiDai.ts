@@ -51,18 +51,18 @@ import { TROI_NGAY } from './troi';
 /** Bố cục sân (tọa độ trong cảnh, trước khi xoay 45° cho hợp hướng camera): ngai ở phía −z, đội ta ở −x. */
 export const SAN = {
   /** Nửa bề ngang, nửa bề sâu sân lát đá. */
-  w: 7.6,
-  d: 6.8,
+  w: 9.8,
+  d: 8.2,
   /** Bán kính mặt trống đồng khảm giữa sân. */
-  trong: 2.5,
+  trong: 2.6,
   /** Thềm ngai: mép trước, độ cao mỗi bậc, số bậc. */
   themZ: -5.3,
   bac: 0.42,
   soBac: 3,
   /** Chỗ đứng: đội cách tâm sân, giãn cách giữa ba người, thú đứng xa hơn. */
-  doiX: 3.9,
-  gian: 3.2,
-  thuX: 5.7,
+  doiX: 5.4,
+  gian: 3.7,
+  thuX: 6.7,
 } as const;
 
 const THEM_Y = SAN.bac * SAN.soBac;
@@ -172,8 +172,8 @@ function dungSan(kieu: KieuSan): THREE.Group {
   p.box(90, 0.1, 90, DAT[kieu], 0, -0.07, 0);
   p.box(SAN.w * 2 + 0.5, 0.08, SAN.d * 2 + 0.5, C.rockDark, 0, -0.02, 0);
   const o = 1.3;
-  for (let ix = -6; ix < 6; ix++) {
-    for (let iz = -6; iz < 6; iz++) {
+  for (let ix = -8; ix < 8; ix++) {
+    for (let iz = -7; iz < 7; iz++) {
       const x = (ix + 0.5) * o;
       const z = (iz + 0.5) * o;
       if (Math.abs(x) > SAN.w || Math.abs(z) > SAN.d) continue;
@@ -218,9 +218,9 @@ function dungSan(kieu: KieuSan): THREE.Group {
   scaled(m, 0, SAN.themZ - 9.6, 1.9, () => palaceBlock(m, 10));
   // Cờ đại hai bên sân, trống đồng trên giá ở hai góc trước, hai trống lớn bên thềm.
   for (const sx of [-1, 1]) {
-    [-4.6, -1.6, 1.6, 4.6].forEach((z, i) => banner(m, sx * (SAN.w - 0.25) - 0.2, z, 3.6, i % 2 ? C.gold : C.red));
+    [-4.6, -1.2, 2.2, 5.6].forEach((z, i) => banner(m, sx * (SAN.w - 0.25) - 0.2, z, 3.6, i % 2 ? C.gold : C.red));
     // Trống đồng trên giá ở hai góc trước sân.
-    const dx0 = sx * (SAN.w - 1.3);
+    const dx0 = sx * 6.6;
     const dz0 = SAN.d - 0.9;
     p.box(1.3, 0.12, 0.3, C.woodDark, dx0, 0.45, dz0);
     for (const dx of [-0.52, 0.52]) p.box(0.14, 0.45, 0.16, C.red, dx0 + dx, 0.22, dz0);
@@ -239,6 +239,9 @@ function dungSan(kieu: KieuSan): THREE.Group {
   return g;
 }
 const NGAI_K = 1.7;
+
+/** Kiểu cảnh của tầng thuộc chương 1–5: kinh thành, đỉnh núi, bến sông luân phiên. */
+export const KIEU_CHUONG: KieuSan[] = [1, 2, 3, 1, 2];
 
 /** Ba kiểu cảnh quanh sân: 1 kinh thành Phong Châu, 2 đỉnh núi Nghĩa Lĩnh, 3 bến sông hội xuân. */
 export type KieuSan = 1 | 2 | 3;
@@ -318,30 +321,22 @@ function ngoaiKinhThanh(m: ToonModel): THREE.Object3D[] {
   const out: THREE.Object3D[] = [];
   const Z = SAN.d + 0.9;
   raoSan(m, 1.9);
-  scaled(m, 0, Z + 1.3, 1.9, () => nghiMon(m, 9, roofFor(9)));
+  scaled(m, 0, Z + 1.3, 1.9, () => nghiMon(m, 10, roofFor(10)));
   loiDa(m, SAN.d + 0.25, SAN.d + 13, 2.6);
   for (const sx of [-1, 1]) {
-    scaled(m, sx * (SAN.w + 0.9), Z, 2.3, () => drumTower(m, 0, 0, 0, roofFor(8), true));
+    scaled(m, sx * (SAN.w + 0.9), Z, 2.3, () => drumTower(m, 0, 0, 0, roofFor(10), true));
     scaled(m, sx * 3.4, Z + 2.4, 1.9, () => stoneElephant(m, 0, 0, 8));
     for (const z of [Z + 4.8, Z + 7.6]) banner(m, sx * 2.0 - 0.2, z, 3.2, C.red);
     royalCenser(m, sx * 2.1, 0, Z + 1.0, 2.2);
-    // Nhà sàn hai bên sân, quay mặt vào sân.
-    [-7.5, -2.2, 3.4].forEach((z, i) => {
-      const nha = lotModel(i === 1 ? 'kho' : 'nhaSan', 8);
-      nha.scale.setScalar(1.35);
-      nha.position.set(sx * (SAN.w + 4.6 + (i === 1 ? 0.6 : 0)), 0, z);
-      nha.rotation.y = -sx * Math.PI / 2;
-      out.push(nha);
-    });
-    for (const z of [9.6, 12.4]) {
-      const nha = lotModel('nhaSan', 7);
-      nha.scale.setScalar(1.35);
-      nha.position.set(sx * (5.4 + (z > 10 ? 3.2 : 0)), 0, Z + z - 4.4);
-      nha.rotation.y = -sx * Math.PI / 2;
+    // Nhà sàn của kinh đô hai bên sân và hai bên lối vào: quay mặt ra trước như ở kinh đô (mái nhìn từ mặt trước).
+    for (const [x, z] of [[SAN.w + 3.6, -6.5], [SAN.w + 3.6, -0.5], [SAN.w + 3.6, 5.5], [6.2, Z + 6.2], [11.6, Z + 4.4], [6.4, Z + 11.4]]) {
+      const nha = lotModel('nhaSan', 10);
+      nha.scale.setScalar(1.3);
+      nha.position.set(sx * x, 0, z);
       out.push(nha);
     }
   }
-  out.push(rung(11, 3.4, 0.25, (x, z) => trongSan(x, z, 7.2) || (Math.abs(x) < 11 && z > 0)));
+  out.push(rung(11, 3.4, 0.25, (x, z) => trongSan(x, z, 6.4) || (Math.abs(x) < 15 && z > 0)));
   return out;
 }
 
@@ -413,7 +408,7 @@ function ngoaiBenSong(m: ToonModel): THREE.Object3D[] {
     thuyen.rotation.y = sx * 0.28;
     out.push(thuyen);
     // Cây nêu sát bờ sông: tre cao, vòng tre, dải vải đỏ, vàng, chùm lá trên ngọn.
-    const nx = sx * 6.9;
+    const nx = sx * 7.1;
     const nz = bo - 1.3;
     p.cyl(0.07, 0.11, 6.0, C.bamboo, nx, 3.0, nz, undefined, 6);
     p.add(new THREE.TorusGeometry(0.42, 0.03, 5, 14), C.bamboo, nx, 5.3, nz);
@@ -515,8 +510,8 @@ export class LoiDaiCanh {
   /** Chỗ đứng của người `u` (hay thần thú phe `phe`). */
   private cho(phe: 0 | 1, cho: number | null): THREE.Vector3 {
     const s = phe === 0 ? -1 : 1;
-    if (cho === null) return new THREE.Vector3(s * SAN.thuX, 0, 0.4);
-    return new THREE.Vector3(s * (SAN.doiX - (cho === 1 ? 1.0 : 0)), 0, (cho - 1) * SAN.gian + 0.5);
+    if (cho === null) return new THREE.Vector3(s * SAN.thuX, 0, -1.4);
+    return new THREE.Vector3(s * (SAN.doiX - (cho === 1 ? 0.9 : 0)), 0, (cho - 1) * SAN.gian + 1.0);
   }
 
   private them(id: number, kind: LoiKind | ThanThuId, obj: THREE.Group, co: number, phe: 0 | 1, cho: number | null): void {

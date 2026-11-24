@@ -3992,8 +3992,8 @@ export class World {
   private fitLoi(): void {
     const v = this.view;
     const ngang = this.renderer.domElement.clientWidth > this.renderer.domElement.clientHeight;
-    v.zoomToFit(15.8, ngang ? 24 : 16.5);
-    const lui = ngang ? -1.2 : -0.6;
+    v.zoomToFit(ngang ? 21 : 15.8, ngang ? 27 : 18);
+    const lui = ngang ? -0.8 : 0.3;
     v.target.set(lui, 0, lui);
     v.apply();
   }

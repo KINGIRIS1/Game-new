@@ -4,7 +4,8 @@ import { initHuongDan, markHuongDan, nextHuongDan, type HuongDanId } from './gam
 import { ChiTay, huongDanBat, luuHuongDan } from './ui/huongDan';
 import './style.css';
 import { LOI_DAI } from './game/defs';
-import { canDanhTang, chonThuLoi, datDoiLoi, doiLoi, loiNay } from './game/loiDai';
+import { canDanhTang, chonThuLoi, chuongTang, datDoiLoi, doiLoi, loiNay } from './game/loiDai';
+import { KIEU_CHUONG } from './render/loiDai';
 import { LoiDau } from './ui/loiDaiTran';
 import { play, setMuted, stopRally, unlockAudio } from './audio/sfx';
 import { skillReady, startFieldBattle, stepField, useSkill, type Battle, type HeroKind, type FighterKind } from './game/battle';
@@ -1081,8 +1082,9 @@ async function start(): Promise<void> {
   /** Trận lôi đài đang đánh (không nằm trong state); null là đang ở kinh đô. */
   let loi: LoiDau | null = null;
   let loiDau: LoiDau | null = null;
-  /** Kiểu cảnh quanh sân (`window.__debug.loiDai` đổi để chụp so ba kiểu). */
-  let loiKieu: 1 | 2 | 3 = 1;
+  /** Kiểu cảnh quanh sân ép bằng `window.__debug.loiDai` (chụp thử); null thì theo chương của tầng (`KIEU_CHUONG`). */
+  let loiKieu: 1 | 2 | 3 | null = null;
+  const kieuTang = (tang: number) => loiKieu ?? KIEU_CHUONG[chuongTang(tang) - 1];
   const roiLoi = () => {
     if (!loi) return;
     loi.dong();
@@ -1101,16 +1103,15 @@ async function start(): Promise<void> {
     hud.closeCampaign();
     hud.closeSheet();
     drift.done = true;
-    const canh = world.showLoiDai(true, loiKieu)!;
     loiDau ??= new LoiDau(hud.goc, {
       state: () => state,
+      // Mỗi chương một kiểu sân: sang tầng của chương khác thì World dựng lại cảnh.
+      canh: (t) => world.showLoiDai(true, kieuTang(t))!,
       screenAt: (id, cao) => world.loiScreenAt(id, cao),
       play,
       commit: () => save(),
       roi: roiLoi,
     });
-    // Cảnh dựng lại sau mỗi lần rời đài: trỏ lớp điều khiển sang cảnh mới.
-    loiDau.datCanh(canh);
     if (!loiDau.batDau(tang)) {
       world.showLoiDai(false);
       return fail('loiTangKhoa');

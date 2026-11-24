@@ -32,6 +32,8 @@ export interface LoiDeps {
   play: (s: 'tap' | 'claim' | 'error') => void;
   /** Lưu và vẽ lại giao diện chung sau khi state đổi. */
   commit: () => void;
+  /** Sân chầu của tầng `tang` (dựng mới khi chưa có hay kiểu sân đổi theo chương). */
+  canh: (tang: number) => LoiDaiCanh;
   /** Rời đài về kinh đô. */
   roi: () => void;
 }
@@ -63,17 +65,14 @@ export class LoiDau {
     this.ui = new LoiTranUi(root, (act, el) => this.bam(act, el));
   }
 
-  /** Cảnh sân chầu đang dùng (rời đài thì cảnh bị gỡ, lần sau dựng cảnh mới). */
-  datCanh(canh: LoiDaiCanh): void {
-    this.canh = canh;
-  }
-
   /** Vào trận tầng `tang`. Trả false (kèm lý do đã báo) khi không vào được. */
   batDau(tang: number): boolean {
     const s = this.d.state();
     const r = moTran(s, tang);
     if (!r.ok) return false;
     this.b = r.value;
+    // Rời đài thì cảnh bị gỡ, sang chương khác thì đổi kiểu sân: mỗi trận hỏi lại cảnh.
+    this.canh = this.d.canh(tang);
     const l = loiNay(s);
     this.tuDanh = l.tuDanh;
     this.nhanh = l.nhanh;
