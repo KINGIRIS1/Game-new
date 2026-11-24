@@ -272,6 +272,27 @@ export function veBan(renderer: THREE.WebGLRenderer, hero: HeroKind, mac: MacTuo
   return veHinh(renderer, hinhTuongModel(hero, than), BAN_PX, BAN_PX, { y: 0.84 * k, half: 0.3 * k });
 }
 
+/**
+ * Ảnh đại diện của một nhân vật có xương bất kỳ (võ sĩ, tướng giặc trên lôi đài): khung quanh xương đầu cao nhất (người
+ * cưỡi thì là đầu người cưỡi); không có xương đầu thì ôm cả mô hình. Vẽ xong gỡ mô hình.
+ */
+export function veBanNguoi(renderer: THREE.WebGLRenderer, root: THREE.Object3D): string {
+  (root.userData.pose as ((p: { act: string; time: number }) => void) | undefined)?.({ act: 'stand', time: 0 });
+  root.updateMatrixWorld(true);
+  let dau: THREE.Vector3 | null = null;
+  root.traverse((o) => {
+    if (!(o as THREE.Bone).isBone || !/head$/i.test(o.name)) return;
+    const p = o.getWorldPosition(new THREE.Vector3());
+    if (!dau || p.y > dau.y) dau = p;
+  });
+  const d = dau as THREE.Vector3 | null;
+  const url = veHinh(renderer, root, BAN_PX, BAN_PX, d ? { x: d.x, y: d.y + 0.1, half: 0.3 } : undefined);
+  root.traverse((o) => {
+    if (o instanceof THREE.SkinnedMesh) o.skeleton.dispose();
+  });
+  return url;
+}
+
 /** Khóa nhớ ảnh: tướng và món từng ô. */
 export function hinhKey(hero: HeroKind, mac: MacTuong): string {
   return `${hero}|${O_DO.map((o) => mac[o] ?? '').join('|')}`;
@@ -299,6 +320,11 @@ export class HinhTuong {
     return this.take(`ban|${hinhKey(hero, mac)}`, () => veBan(this.renderer, hero, mac), false);
   }
 
+  /** Ảnh đại diện của nhân vật khác (khóa `key`), mô hình dựng bằng `tao` lúc tới lượt vẽ. */
+  nguoi(key: string, tao: () => THREE.Object3D): string | null {
+    return this.take(`nguoi|${key}`, () => veBanNguoi(this.renderer, tao()), false);
+  }
+
   private take(key: string, ve: () => string, first: boolean): string | null {
     const got = this.done.get(key);
     if (got !== undefined) return got || null;
@@ -321,8 +347,8 @@ export class HinhTuong {
       console.error('Không vẽ được hình tướng', e);
     }
     this.done.set(job.key, url);
-    // Giữ chừng 40 ảnh gần nhất (mỗi lần đổi món là một ảnh mới).
-    while (this.done.size > 40) this.done.delete(this.done.keys().next().value!);
+    // Giữ chừng 90 ảnh gần nhất (mỗi lần đổi món là một ảnh mới; lôi đài thêm ảnh đại diện võ sĩ, tướng giặc).
+    while (this.done.size > 90) this.done.delete(this.done.keys().next().value!);
     if (this.queue.length) this.timer = window.setTimeout(() => this.run(), 30);
     this.onReady();
   }

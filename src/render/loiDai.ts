@@ -109,7 +109,7 @@ const MAU: Partial<Record<ChieuId | ThanThuId, number>> = {
 };
 
 /** Dựng một người trên sân: tướng (có hào quang, vũ khí ánh nếu có), lính, thú, quái. */
-function taoNguoi(kind: LoiKind, glow = false, anh = false): THREE.Group {
+export function taoNguoi(kind: LoiKind, glow = false, anh = false): THREE.Group {
   switch (kind) {
     case 'lacTuong':
       return makeLacTuong();

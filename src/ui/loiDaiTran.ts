@@ -17,6 +17,7 @@ import {
   tuChon,
   tuongLoi,
   xongTran,
+  type LoiKind,
   type LoiTran,
   type LoiUnit,
 } from '../game/loiDai';
@@ -34,6 +35,8 @@ export interface LoiDeps {
   commit: () => void;
   /** Sân chầu của tầng `tang` (dựng mới khi chưa có hay kiểu sân đổi theo chương). */
   canh: (tang: number) => LoiDaiCanh;
+  /** Ảnh đại diện của người trên sân; null khi chưa vẽ xong (xong thì main gọi `lamMoi`). */
+  anh: (kind: LoiKind) => string | null;
   /** Rời đài về kinh đô. */
   roi: () => void;
 }
@@ -63,6 +66,7 @@ export class LoiDau {
     private readonly d: LoiDeps,
   ) {
     this.ui = new LoiTranUi(root, (act, el) => this.bam(act, el));
+    this.ui.anh = d.anh;
   }
 
   /** Vào trận tầng `tang`. Trả false (kèm lý do đã báo) khi không vào được. */
@@ -92,6 +96,11 @@ export class LoiDau {
 
   dong(): void {
     this.ui.dong();
+  }
+
+  /** Ảnh đại diện vừa vẽ xong: vẽ lại dải lượt. */
+  lamMoi(): void {
+    this.ban = true;
   }
 
   /** Người chơi đang cầm lượt: tướng đội ta, không bật Tự đánh, không còn phần diễn dở. */

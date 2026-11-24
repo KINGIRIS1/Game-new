@@ -4,8 +4,8 @@ import { initHuongDan, markHuongDan, nextHuongDan, type HuongDanId } from './gam
 import { ChiTay, huongDanBat, luuHuongDan } from './ui/huongDan';
 import './style.css';
 import { LOI_DAI } from './game/defs';
-import { canDanhTang, chonThuLoi, chuongTang, datDoiLoi, doiLoi, loiNay } from './game/loiDai';
-import { KIEU_CHUONG } from './render/loiDai';
+import { canDanhTang, chonThuLoi, chuongTang, datDoiLoi, doiLoi, laLoiTuong, loiNay, type LoiKind } from './game/loiDai';
+import { KIEU_CHUONG, taoNguoi } from './render/loiDai';
 import { LoiDau } from './ui/loiDaiTran';
 import { play, setMuted, stopRally, unlockAudio } from './audio/sfx';
 import { skillReady, startFieldBattle, stepField, useSkill, type Battle, type HeroKind, type FighterKind } from './game/battle';
@@ -20,7 +20,7 @@ import { coMayChu, ghiMayBiet, mayBiet, nhanGoogle, taiKhoanMay, uidMay, type Go
 import { leaveBattlefield, markBaiHinted, needsBaiHint, retreat, startStage, unitAllowed } from './game/campaign';
 import { forgeArms } from './game/binhKhi';
 import { chiSoTuong, cuongHoa, khoaDo, macDo, macManhNhat, monO, phanGiai, phanGiaiNhieu, thaoDo } from './game/trangBi';
-import { HinhTuong, type MacTuong } from './render/hinhTuong';
+import { HinhTuong, veBanNguoi, type MacTuong } from './render/hinhTuong';
 import { monTen, preloadMon } from './ui/trangBi';
 import { autoGuard, fieldCap, fitArmy, setGuard } from './game/doanhTrai';
 import { markNuHinted, nextNuHint, nuTuongList } from './game/nuTuong';
@@ -1082,6 +1082,11 @@ async function start(): Promise<void> {
   /** Trận lôi đài đang đánh (không nằm trong state); null là đang ở kinh đô. */
   let loi: LoiDau | null = null;
   let loiDau: LoiDau | null = null;
+  // Ảnh đại diện trên dải lượt vẽ xong thì vẽ lại dải.
+  hinhTuong.onReady = () => {
+    hud.refreshTuong(state);
+    loiDau?.lamMoi();
+  };
   /** Kiểu cảnh quanh sân ép bằng `window.__debug.loiDai` (chụp thử); null thì theo chương của tầng (`KIEU_CHUONG`). */
   let loiKieu: 1 | 2 | 3 | null = null;
   const kieuTang = (tang: number) => loiKieu ?? KIEU_CHUONG[chuongTang(tang) - 1];
@@ -1107,6 +1112,8 @@ async function start(): Promise<void> {
       state: () => state,
       // Mỗi chương một kiểu sân: sang tầng của chương khác thì World dựng lại cảnh.
       canh: (t) => world.showLoiDai(true, kieuTang(t))!,
+      // Tướng (kể cả bóng tướng) dùng ảnh bán thân mặc đồ của bảng tướng; Lạc tướng, võ sĩ, tướng giặc vẽ từ mô hình.
+      anh: (k) => (laLoiTuong(k) && k !== 'lacTuong' ? hinhTuong.ban(k as HeroKind, macOf(k as HeroKind)) : hinhTuong.nguoi(k, () => taoNguoi(k))),
       screenAt: (id, cao) => world.loiScreenAt(id, cao),
       play,
       commit: () => save(),
@@ -3242,6 +3249,8 @@ async function start(): Promise<void> {
      * Lên lôi đài đánh tầng `tang` (coi như đã qua các tầng trước), bật Tự đánh nếu `tuDanh`: chụp thử sân chầu. Trả
      * trận để đọc.
      */
+    /** Ảnh đại diện lôi đài của một nhân vật (data URL), vẽ ngay: để chụp kiểm khung quanh đầu. */
+    loiAnh: (kind: LoiKind) => veBanNguoi(world.renderer, taoNguoi(kind)),
     loiDai: (tang = 1, tuDanh = false, kieu?: 1 | 2 | 3) => {
       if (kieu) loiKieu = kieu;
       const l = loiNay(state);

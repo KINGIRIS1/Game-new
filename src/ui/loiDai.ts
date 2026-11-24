@@ -6,7 +6,7 @@
 // - Màn đánh (`LoiTranUi`): dải thứ tự lượt, thẻ máu nổi trên đầu từng người, ba nút chiêu, Tự đánh, tua nhanh, rời
 //   đài, bảng kết quả. Lớp này chỉ vẽ; nhịp trận do `LoiDau` (`ui/loiDaiTran.ts`) lo.
 
-import { LOI_DAI, LOI_LINH, PHAM_TRAN, THAN_THU_IDS, type Chapter, type LoiGiac, type ThanThuId } from '../game/defs';
+import { LOI_DAI, LOI_LINH, PHAM_TRAN, SKILL_IDS, THAN_THU_IDS, type SkillId, type Chapter, type LoiGiac, type ThanThuId } from '../game/defs';
 import type { GameState } from '../game/game';
 import {
   CHIEU,
@@ -34,6 +34,7 @@ import {
 import { chapterOf } from '../game/manVao';
 import { capThu, thuCo } from '../game/thanThu';
 import { vi } from '../text/vi';
+import { skillIconUrl } from './format';
 import { thuAnh } from './thanThu';
 import { roiHtml } from './trangBi';
 
@@ -141,8 +142,14 @@ export function loiKetQuaHtml(s: GameState, b: LoiTran, thuong: LoiThuong | null
   return `<div class="loi-kq-the ${thang ? 'thang' : 'thua'}"><h2>${thang ? `🏆 ${L.thang}` : `🏳️ ${L.thua}`}</h2><p><b>${laMoc(b.tang) ? L.tangMoc(b.tang) : L.tang(b.tang)}</b></p>${body}<div class="loi-kq-nut">${nut}</div></div>`;
 }
 
+/** Biểu tượng chiêu: ảnh kỹ năng vẽ sẵn của tướng; chiêu chỉ có trên lôi đài và đòn thường thì ô cùng khung có hình chữ. */
+function chieuIcon(c: string): string {
+  return (SKILL_IDS as string[]).includes(c)
+    ? `<img class="loi-ic" src="${skillIconUrl(c as SkillId)}" alt="" draggable="false" decoding="async">`
+    : `<span class="loi-ic emo">${T().chieuIcon[c]}</span>`;
+}
+
 const tenAi = (b: LoiTran, id: number): string => (id < 0 ? vi.thanThu.ten[b.thu[-1 - id]!.kind] : tenLoi(b.units[id].kind, b.units[id].phe));
-const iconAi = (b: LoiTran, id: number): string => (id < 0 ? THU_ICON[b.thu[-1 - id]!.kind] : iconLoi(b.units[id].kind));
 const pheAi = (b: LoiTran, id: number): 0 | 1 => (id < 0 ? ((-1 - id) as 0 | 1) : b.units[id].phe);
 
 /** Màn đánh: dựng một lần khi vào trận, sau đó chỉ thay phần đổi. */
@@ -159,6 +166,16 @@ export class LoiTranUi {
   private topHtml = '';
   private chieuHtml = '';
   private nutHtml = '';
+  /** Ảnh đại diện của người trên sân (main.ts vẽ từ mô hình); null là chưa vẽ xong, tạm hiện biểu tượng chữ. */
+  anh: ((kind: LoiKind) => string | null) | null = null;
+
+  /** Hình đại diện của người hay thần thú `id`: ảnh bán thân tướng, ảnh động thần thú. */
+  private av(b: LoiTran, id: number): string {
+    if (id < 0) return thuAnh(b.thu[-1 - id]!.kind);
+    const kind = b.units[id].kind;
+    const src = this.anh?.(kind) ?? null;
+    return src ? `<img src="${src}" alt="" draggable="false">` : iconLoi(kind);
+  }
 
   constructor(root: HTMLElement, onAct: (act: string, el: HTMLElement) => void) {
     this.el = document.createElement('section');
@@ -205,7 +222,7 @@ export class LoiTranUi {
   veTop(b: LoiTran): void {
     const L = T();
     const tt = thuTu(b, 8)
-      .map((id, i) => `<span class="loi-tt-o p${pheAi(b, id)} ${i === 0 && b.dang === id ? 'on' : ''}" title="${tenAi(b, id)}">${iconAi(b, id)}</span>`)
+      .map((id, i) => `<span class="loi-tt-o p${pheAi(b, id)} ${i === 0 && b.dang === id ? 'on' : ''}" title="${tenAi(b, id)}">${this.av(b, id)}</span>`)
       .join('');
     const html = `<b>${laMoc(b.tang) ? `👑 ${L.tang(b.tang)}` : L.tang(b.tang)}</b><span>${L.vong(vongNay(b), LOI_DAI.vong)}</span><div class="loi-tt">${tt}</div>`;
     if (html !== this.topHtml) {
@@ -251,15 +268,15 @@ export class LoiTranUi {
     if (b.dang !== null && !b.kq) {
       const def = u && o.chon !== null ? CHIEU[u.chieu[o.chon]] : null;
       const goi = u && def ? (def.muc === 'dich' ? ` · ${L.chonMuc}` : def.muc === 'dong' ? ` · ${L.chonDong}` : '') : '';
-      luot = `<b class="p${pheAi(b, b.dang)}">${iconAi(b, b.dang)} ${L.luotCua(tenAi(b, b.dang))}</b>${goi}`;
+      luot = `<b class="p${pheAi(b, b.dang)}">${L.luotCua(tenAi(b, b.dang))}</b>${goi}`;
     }
     if (u) {
       chieu = u.chieu
         .map((c, i) => {
           const duoc = chieuDuoc(b, u, i);
           const cho = u.cd[i] > 0 ? `<i class="cho">${L.choLuot(u.cd[i])}</i>` : '';
-          return `<button class="loi-chieu-o ${o.chon === i ? 'on' : ''} ${i ? 'ky' : ''}" data-act="loiChieu" data-id="${i}" ${duoc ? '' : 'disabled'}>
-            <em>${L.chieuIcon[c]}</em><b>${L.chieu[c]}</b><small>${L.chieuTa[c]}</small>${cho}</button>`;
+          return `<button class="loi-chieu-o ${o.chon === i ? 'on' : ''} ${i ? 'ky' : ''}" data-act="loiChieu" data-id="${i}" title="${L.chieuTa[c]}" ${duoc ? '' : 'disabled'}>
+            ${chieuIcon(c)}<b>${L.chieu[c]}</b>${cho}</button>`;
         })
         .join('');
     }

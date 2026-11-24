@@ -5504,15 +5504,25 @@ body.man-vao-on #hud > * {
   overflow: hidden;
 }
 .loi-tt-o {
-  width: 26px;
-  height: 26px;
+  width: 34px;
+  height: 34px;
   border-radius: 50%;
   display: grid;
   place-items: center;
-  font-size: 15px;
+  font-size: 17px;
   background: #2f4a2a;
   border: 2px solid #86c06c;
   flex: none;
+  overflow: hidden;
+  box-sizing: border-box;
+}
+.loi-tt-o img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.loi-tt-o .thu-anh {
+  --thu-co: 30px;
 }
 .loi-tt-o.p1 {
   background: #4a1c14;
@@ -5703,17 +5713,15 @@ body.man-vao-on #hud > * {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 6px;
-  min-height: 74px;
+  min-height: 60px;
 }
 .loi-chieu-o {
   position: relative;
-  display: grid;
-  grid-template-columns: auto 1fr;
-  grid-template-rows: auto 1fr;
-  column-gap: 6px;
+  display: flex;
+  gap: 8px;
   align-items: center;
   text-align: left;
-  padding: 6px 8px;
+  padding: 5px 8px 5px 5px;
   border-radius: 12px;
   border: 2px solid #8a5a14;
   background: linear-gradient(170deg, #5a3c12, #2f2210);
@@ -5721,24 +5729,27 @@ body.man-vao-on #hud > * {
   cursor: pointer;
   min-width: 0;
 }
-.loi-chieu-o em {
-  font-style: normal;
-  font-size: 20px;
+.loi-ic {
+  flex: none;
+  width: 46px;
+  height: 46px;
+  border-radius: 8px;
+  object-fit: cover;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
+  box-sizing: border-box;
+}
+.loi-ic.emo {
+  display: grid;
+  place-items: center;
+  font-size: 26px;
   line-height: 1;
+  border: 2px solid #c9a24a;
+  background: radial-gradient(circle at 50% 40%, #6b4a1c, #24180a);
 }
 .loi-chieu-o b {
   font-size: 13px;
-  line-height: 1.12;
-}
-.loi-chieu-o small {
-  grid-column: 1 / 3;
-  font-size: 10.5px;
-  line-height: 1.2;
-  color: #e6d3a2;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
+  line-height: 1.15;
+  min-width: 0;
 }
 .loi-chieu-o.on {
   border-color: #ffcf4a;
@@ -5812,9 +5823,6 @@ body.man-vao-on #hud > * {
     flex-direction: column;
   }
   .loi-chieu {
-    min-height: 58px;
-  }
-  .loi-chieu-o small {
-    -webkit-line-clamp: 1;
+    min-height: 56px;
   }
 }
