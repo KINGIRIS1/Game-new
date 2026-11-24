@@ -8,6 +8,7 @@
 
 import { isDauThanhState } from './dauThat';
 import { isThanThuState } from './thanThu';
+import { isLoiDaiState } from './loiDai';
 import { deflateSync, inflateSync } from 'fflate';
 import {
   ARMS,
@@ -81,6 +82,8 @@ export function deserialize(json: string): GameState | undefined {
   if (upgraded.dauThanh !== undefined && !isDauThanhState(upgraded.dauThanh)) delete upgraded.dauThanh;
   // Thần thú sai dạng thì nuôi lại từ đầu (`thuNay` tạo mới), không bỏ cả bản lưu.
   if (upgraded.thanThu !== undefined && !isThanThuState(upgraded.thanThu)) delete upgraded.thanThu;
+  // Lôi đài sai dạng thì leo lại từ đầu, không bỏ cả bản lưu.
+  if (upgraded.loiDai !== undefined && !isLoiDaiState(upgraded.loiDai)) delete upgraded.loiDai;
   lowerRiverBed(upgraded);
   cleanXay(upgraded);
   return upgraded;

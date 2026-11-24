@@ -26,6 +26,7 @@ import { isBusy, itemProgress, pendingBuildings, pendingOf } from '../game/xay';
 import { Battlefield, CAM_KHE } from './battlefield';
 import { runJob, type Job as ViecNan } from './nanSan';
 import { DaNgoaiCanh } from './daNgoai';
+import { LoiDaiCanh, type KieuSan } from './loiDai';
 import type { DaMapId } from '../game/defs';
 import type { Diem } from '../game/daNgoaiMap';
 import { tuongDau } from '../game/daNgoaiTran';
@@ -1149,7 +1150,8 @@ export class World {
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, RESOLUTIONS[this.res]));
     this.renderer.setSize(w, h, false);
     this.view.setSize(w, h);
-    if (this.inField && !this.da) this.fitField();
+    if (this.loi) this.fitLoi();
+    else if (this.inField && !this.da) this.fitField();
   }
 
   /** Xóa mọi thứ đã vẽ theo state cũ, dùng khi nạp mã lưu hoặc chơi lại. */
@@ -2135,6 +2137,7 @@ export class World {
     this.lights.sun.castShadow = on;
     this.field?.setShadows(on);
     this.da?.setShadows(on);
+    this.loi?.setShadows(on);
   }
 
   get bongDoOn(): boolean {
@@ -3942,6 +3945,68 @@ export class World {
     this.cityCam = null;
   }
 
+  /** Cảnh lôi đài đang xem (`showLoiDai`). */
+  loi?: LoiDaiCanh;
+
+  /** Đang xem lôi đài. */
+  get inLoi(): boolean {
+    return !!this.loi;
+  }
+
+  /** Sang sân lôi đài (dựng cảnh lần đầu), hay về lại kinh đô khi `on` là false. */
+  showLoiDai(on: boolean, kieu: KieuSan = 1): LoiDaiCanh | null {
+    const v = this.view;
+    if (on) {
+      if (this.loi && this.loi.kieu !== kieu) {
+        this.loi.dispose();
+        this.loi = undefined;
+      }
+      if (!this.loi) {
+        this.loi = new LoiDaiCanh(kieu);
+        this.loi.setShadows(this.bongDo);
+      }
+      if (!this.cityCam) this.cityCam = { target: v.target.clone(), zoom: v.zoom, bounds: { ...v.bounds }, facing: v.facing };
+      this.panGoal = null;
+      v.setFacing(0);
+      v.bounds = { min: -12, max: 12 };
+      this.fitLoi();
+      return this.loi;
+    }
+    if (this.loi) {
+      this.loi.dispose();
+      this.loi = undefined;
+    }
+    if (!this.cityCam) return null;
+    v.bounds = this.cityCam.bounds;
+    v.target.copy(this.cityCam.target);
+    v.zoom = this.cityCam.zoom;
+    v.setFacing(this.cityCam.facing);
+    this.cityCam = null;
+    return null;
+  }
+
+  /**
+   * Khung nhìn lôi đài: thấy cả Vua Hùng trên thềm lẫn hai đội. Màn dọc vừa khít bề ngang sân; màn ngang thu nhỏ cho
+   * vừa bề cao, lùi tâm nhìn về phía thềm vì thanh chiêu che phần dưới (cảnh xoay 45°: phía ngai là −x, −z).
+   */
+  private fitLoi(): void {
+    const v = this.view;
+    const ngang = this.renderer.domElement.clientWidth > this.renderer.domElement.clientHeight;
+    v.zoomToFit(ngang ? 21 : 15.8, ngang ? 27 : 18);
+    const lui = ngang ? -0.8 : 0.3;
+    v.target.set(lui, 0, lui);
+    v.apply();
+  }
+
+  /** Điểm màn hình (px) ở độ cao `k` lần chiều cao người `id` trên sân lôi đài (1 là đỉnh đầu). */
+  loiScreenAt(id: number, k = 1): { x: number; y: number } | null {
+    const p = this.loi?.diem(id, k);
+    if (!p) return null;
+    p.project(this.view.camera);
+    const r = this.renderer.domElement.getBoundingClientRect();
+    return { x: r.left + ((p.x + 1) / 2) * r.width, y: r.top + ((1 - p.y) / 2) * r.height };
+  }
+
   /** Camera đi theo đội (chạm đất, tự đánh); kéo cảnh (`onUserMove`) thì thôi theo tới khi `followDa`. */
   private daFollow = true;
   followDa(): void {
@@ -3983,7 +4048,7 @@ export class World {
   /** Vẽ trận ngoài bãi đang diễn ra. Cảnh kết chương có điểm nhìn riêng (Rùa Vàng ở biển) thì camera lướt tới đó. */
   updateField(battle: Battle | null, dt: number): void {
     this.field?.update(battle, dt);
-    const focus = this.inField && !this.da ? this.field?.focus() : null;
+    const focus = this.inField && !this.da && !this.loi ? this.field?.focus() : null;
     if (!focus) return;
     const v = this.view;
     v.bounds = { min: -30, max: 30 };
@@ -4430,7 +4495,7 @@ export class World {
       }
     }
 
-    this.renderer.render(this.da ? this.da.scene : this.inField && this.field ? this.field.scene : this.scene, this.view.camera);
+    this.renderer.render(this.loi ? this.loi.scene : this.da ? this.da.scene : this.inField && this.field ? this.field.scene : this.scene, this.view.camera);
   }
 
   /**

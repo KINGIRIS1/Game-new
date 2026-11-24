@@ -44,6 +44,7 @@ export const BUOC: Record<HuongDanId, Buoc[]> = {
     { cho: '[data-act=thuAn]', xem: true },
     { cho: '[data-act=thuChon]', xem: true },
   ],
+  loiDai: [{ cho: '[data-act=goLoiDai]' }, { cho: '.loi-doi', xem: true }, { cho: '[data-act=loiVao]', xem: true }],
   dauThanh: [
     { cho: '[data-act=goDau]' },
     { cho: '[data-act=dauMode][data-mode=thu]', coThe: true },

@@ -5357,3 +5357,464 @@ body.man-vao-on #hud > * {
   font-size: 13px;
   margin-right: 4px;
 }
+
+/* ---------- Lôi đài Phong Châu (ui/loiDai.ts) ---------- */
+.loi-map {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px;
+  height: 100%;
+  box-sizing: border-box;
+  justify-content: center;
+}
+.loi-map h3 {
+  margin: 0;
+}
+.loi-hang {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.loi-hang > div {
+  display: grid;
+  grid-template-columns: repeat(10, 1fr);
+  gap: 4px;
+}
+.loi-hang.khoa {
+  opacity: 0.55;
+}
+.loi-o {
+  aspect-ratio: 1;
+  min-width: 0;
+  border-radius: 8px;
+  border: 2px solid #6b4a1c;
+  background: #3a2a14;
+  color: #f4e3b4;
+  font-weight: 700;
+  font-size: 13px;
+  padding: 0;
+  cursor: pointer;
+}
+.loi-o.qua {
+  background: linear-gradient(160deg, #d9a84a, #8a5a14);
+  color: #2a1a06;
+}
+.loi-o.ke {
+  background: #a3261c;
+  border-color: #ffcf4a;
+  box-shadow: 0 0 10px #ffcf4a99;
+}
+.loi-o.khoa {
+  opacity: 0.45;
+}
+.loi-o.moc {
+  border-radius: 50%;
+}
+.loi-o.on {
+  outline: 3px solid #fff4dc;
+  outline-offset: 1px;
+}
+.loi-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 4px 0 8px;
+}
+.loi-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 9px;
+  border-radius: 999px;
+  background: #4a1c14;
+  border: 1px solid #a3261c;
+  color: #ffe9d2;
+  font-size: 13px;
+}
+.loi-chip em {
+  font-style: normal;
+}
+.loi-doi .da-hero small {
+  min-width: 1em;
+  font-weight: 700;
+  color: #ffcf4a;
+}
+.loi-thu {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.loi-thu-o {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 4px 6px;
+  border-radius: 10px;
+  border: 2px solid #6b4a1c;
+  background: #2f2210;
+  color: #f4e3b4;
+  cursor: pointer;
+}
+.loi-thu-o .thu-anh {
+  width: 48px;
+  height: 48px;
+}
+.loi-thu-o.on {
+  border-color: #ffcf4a;
+  background: #5a3c12;
+}
+
+#hud.in-loi > :not(.loi-tran):not(.toasts) {
+  display: none !important;
+}
+.loi-tran {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  color: #fff4dc;
+  font-size: 14px;
+}
+.loi-tran > * {
+  pointer-events: auto;
+}
+.loi-top {
+  position: absolute;
+  top: calc(6px + env(safe-area-inset-top));
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 5px 12px;
+  border-radius: 12px;
+  background: #1c1208cc;
+  border: 1px solid #8a5a14;
+  max-width: calc(100% - 16px);
+  box-sizing: border-box;
+}
+.loi-top > b,
+.loi-top > span {
+  white-space: nowrap;
+}
+.loi-tt {
+  display: flex;
+  gap: 3px;
+  overflow: hidden;
+}
+.loi-tt-o {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-size: 17px;
+  background: #2f4a2a;
+  border: 2px solid #86c06c;
+  flex: none;
+  overflow: hidden;
+  box-sizing: border-box;
+}
+.loi-tt-o img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.loi-tt-o .thu-anh {
+  --thu-co: 30px;
+}
+.loi-tt-o.p1 {
+  background: #4a1c14;
+  border-color: #e0604a;
+}
+.loi-tt-o.on {
+  transform: scale(1.18);
+  border-color: #ffcf4a;
+  box-shadow: 0 0 8px #ffcf4a;
+}
+.loi-the,
+.loi-noi {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+.loi-the-o {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 60px;
+  padding: 2px;
+  border-radius: 5px;
+  border: 1px solid #00000066;
+  background: #1c1208b8;
+  color: #fff4dc;
+  font-size: 11px;
+  line-height: 1.15;
+  text-align: center;
+  pointer-events: auto;
+  cursor: pointer;
+}
+.loi-the-o i {
+  display: block;
+  height: 5px;
+  border-radius: 3px;
+  background: #00000088;
+  overflow: hidden;
+}
+.loi-the-o u {
+  display: block;
+  height: 100%;
+  background: linear-gradient(#9be07c, #4c9a3a);
+  transition: width 0.25s;
+}
+.loi-the-o.p1 u {
+  background: linear-gradient(#ff8a6a, #c2301c);
+}
+.loi-the-o .hu {
+  display: flex;
+  justify-content: center;
+  gap: 1px;
+  min-height: 0;
+  font-size: 11px;
+}
+.loi-the-o .hu em {
+  font-style: normal;
+}
+.loi-the-o .hu sub {
+  font-size: 8px;
+  color: #ffcf4a;
+}
+.loi-the-o.nga {
+  opacity: 0.35;
+}
+.loi-the-o.luot {
+  border-color: #ffcf4a;
+  box-shadow: 0 0 8px #ffcf4a;
+}
+.loi-the-o.muc {
+  border-color: #ff5a44;
+  box-shadow: 0 0 10px #ff5a44;
+  animation: loi-nhay 0.8s ease-in-out infinite alternate;
+}
+.loi-the-o.p0.muc {
+  border-color: #7fe8d2;
+  box-shadow: 0 0 10px #7fe8d2;
+}
+@keyframes loi-nhay {
+  to {
+    filter: brightness(1.35);
+  }
+}
+.loi-noi-o {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  font-weight: 800;
+  font-size: 18px;
+  text-shadow: 0 1px 0 #000, 0 0 4px #000;
+  animation: loi-bay 1.1s ease-out forwards;
+  white-space: nowrap;
+}
+.loi-noi-o.mat {
+  color: #ff6a50;
+}
+.loi-noi-o.hoi {
+  color: #8cf08c;
+}
+.loi-noi-o.hu {
+  color: #ffe08a;
+  font-size: 13px;
+}
+@keyframes loi-bay {
+  from {
+    opacity: 1;
+    margin-top: 0;
+  }
+  to {
+    opacity: 0;
+    margin-top: -46px;
+  }
+}
+.loi-bao {
+  position: absolute;
+  top: 24%;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 4px 16px;
+  border-radius: 10px;
+  background: #1c1208d8;
+  border: 2px solid #86c06c;
+  font-weight: 800;
+  font-size: 18px;
+  white-space: nowrap;
+  animation: loi-bao 1.2s ease-out forwards;
+}
+.loi-bao.p1 {
+  border-color: #e0604a;
+}
+@keyframes loi-bao {
+  0% {
+    opacity: 0;
+    transform: translateX(-50%) scale(0.7);
+  }
+  15%,
+  70% {
+    opacity: 1;
+    transform: translateX(-50%) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translateX(-50%) scale(1);
+  }
+}
+.loi-bar {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  padding: 6px 8px calc(8px + env(safe-area-inset-bottom));
+  background: linear-gradient(#1c120800, #1c1208e6 28%);
+  display: grid;
+  grid-template-columns: 1fr auto;
+  grid-template-areas: 'luot nut' 'chieu chieu';
+  gap: 6px;
+  align-items: center;
+}
+.loi-luot {
+  grid-area: luot;
+  min-height: 1.3em;
+  text-shadow: 0 1px 2px #000;
+}
+.loi-luot .p1 {
+  color: #ff9a84;
+}
+.loi-luot .p0 {
+  color: #b6f09a;
+}
+.loi-nut {
+  grid-area: nut;
+  display: flex;
+  gap: 5px;
+}
+.loi-nut .hoi {
+  background: #a3261c;
+  color: #fff;
+}
+.loi-chieu {
+  grid-area: chieu;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+  min-height: 60px;
+}
+.loi-chieu-o {
+  position: relative;
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  text-align: left;
+  padding: 5px 8px 5px 5px;
+  border-radius: 12px;
+  border: 2px solid #8a5a14;
+  background: linear-gradient(170deg, #5a3c12, #2f2210);
+  color: #fff4dc;
+  cursor: pointer;
+  min-width: 0;
+}
+.loi-ic {
+  flex: none;
+  width: 46px;
+  height: 46px;
+  border-radius: 8px;
+  object-fit: cover;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
+  box-sizing: border-box;
+}
+.loi-ic.emo {
+  display: grid;
+  place-items: center;
+  font-size: 26px;
+  line-height: 1;
+  border: 2px solid #c9a24a;
+  background: radial-gradient(circle at 50% 40%, #6b4a1c, #24180a);
+}
+.loi-chieu-o b {
+  font-size: 13px;
+  line-height: 1.15;
+  min-width: 0;
+}
+.loi-chieu-o.on {
+  border-color: #ffcf4a;
+  box-shadow: 0 0 10px #ffcf4a88;
+  background: linear-gradient(170deg, #8a5a14, #4a3210);
+}
+.loi-chieu-o:disabled {
+  filter: grayscale(0.8) brightness(0.7);
+  cursor: default;
+}
+.loi-chieu-o .cho {
+  position: absolute;
+  top: -8px;
+  right: 6px;
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: #1c1208;
+  border: 1px solid #ffcf4a;
+  color: #ffcf4a;
+  font-style: normal;
+  font-size: 11px;
+}
+.loi-kq {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  background: #0008;
+}
+.loi-kq[hidden] {
+  display: none;
+}
+.loi-kq-the {
+  width: min(92%, 380px);
+  padding: 16px;
+  border-radius: 16px;
+  background: #2a1c0c;
+  border: 2px solid #d9a84a;
+  text-align: center;
+  box-shadow: 0 8px 30px #000a;
+}
+.loi-kq-the.thua {
+  border-color: #7a6a58;
+}
+.loi-kq-the h2 {
+  margin: 0 0 6px;
+}
+.loi-ban {
+  color: #ffcf4a;
+  font-weight: 700;
+  margin: 8px 0;
+}
+.loi-kq-nut {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: center;
+  margin-top: 12px;
+}
+@media (orientation: landscape) and (max-height: 520px) {
+  .loi-bar {
+    grid-template-columns: auto 1fr auto;
+    grid-template-areas: 'luot chieu nut';
+    padding-left: calc(8px + env(safe-area-inset-left));
+    padding-right: calc(8px + env(safe-area-inset-right));
+  }
+  .loi-luot {
+    max-width: 150px;
+  }
+  .loi-nut {
+    flex-direction: column;
+  }
+  .loi-chieu {
+    min-height: 56px;
+  }
+}

@@ -4132,6 +4132,107 @@ Chủ dự án gửi ảnh mẫu kiểu sa bàn (thành trên gò đá nhiều t
 
 6. **Cầu** (đã làm): làm lại ba cấp cho giống ảnh: cầu gỗ dầm to, lan can, trụ đá; cấp 3 thêm mái che đầu cầu. Cả ba cấp là cầu gỗ vồng trên hai dầm to (`makeBridge` ở `render/benKia.ts`): cấp 1 ba vì cọc gỗ, lan can tre; cấp 2 hai trụ đá xếp tầng, lan can gỗ hai thanh; cấp 3 trụ đá có mũi rẽ nước, lan can đỏ núm đồng, mái ngói ở hai đầu cầu. Cầu phao tre cũ chỉ còn ở bãi chiến đánh đồn (`makeCauPhao`, bãi chiến giữ nguyên). Mặt cầu cho người đi (`bridgeDeckY`) cấp nào cũng theo vồng cầu.
 
+## Kế hoạch: Lôi đài Phong Châu, tướng đấu theo lượt (chủ dự án đã duyệt "làm tất cả", đã làm)
+
+Vua Hùng mở hội tỉ võ trước sân chầu. Các tướng so tài trước mặt vua, bóng tướng giặc xưa hiện về thử sức. Đây là chỗ chơi thêm cho tướng, trang bị và thần thú, đánh theo lượt, không dính tới trận thời gian thực của `battle.ts`.
+
+**Hình thức**
+
+- Đấu với máy, leo 50 tầng. Mỗi chương mở 10 tầng (chương 1: tầng 1–10 … chương 5: tầng 41–50), để không vượt nhịp truyện.
+- Mở khi tướng thứ ba về (`loiDaiMo`: Lạc tướng, Gióng, Sơn Tinh, tức lúc Sơn Tinh rước Mị Nương ở chương 2). Nút Lôi đài ở cột bên phải, cạnh Dã ngoại, Thần thú, Đấu thành. Lạc hầu báo một lần, có hướng dẫn chỉ tay.
+- Đấu người thật qua máy chủ: để sau, không nằm trong đợt này.
+
+**Đội**
+
+- 3 đấu 3. Chọn trong 12 tướng đã về: 7 tướng truyện (`TUONG_IDS`, kể cả Lạc tướng) và 5 tướng dã ngoại (`TUONG_DA_IDS`). Tướng nào đã về thì dùng được ở mọi tầng đã mở.
+- Lạc tướng là tướng hỗ trợ (kỹ năng Trống trận `trongTran` sẵn có); chỉ số đánh riêng cho lôi đài ở `LAC_TUONG_LOI`. Ông không có bộ đồ nên lên đài không mặc đồ.
+- Hai Bà Trưng mỗi bà một chỗ, chọn một hay cả hai đều được. Hai Bà vẫn cưỡi voi trận, Bà Triệu cưỡi voi trắng, Ngô Quyền cưỡi ngựa.
+- Bốn nữ tướng không lên đài (đứng xem).
+- Một thần thú đi kèm, đứng ngoài mép sân: không có máu, không bị nhắm, có thanh hành động riêng, đầy thì tự ra chiêu. Người chơi chỉ chọn mang con nào. Ra chiêu trên đài không tốn bữa ăn. Chưa có thú (dã ngoại chưa mở) thì ô thú khóa, lôi đài vẫn chơi được.
+- Không làm tướng kiệt sức, không khóa tướng khỏi phó bản hay giữ kinh đô. Mỗi trận vào với máu đầy.
+
+**Luật lượt**
+
+- Thứ tự theo thanh hành động: tốc đánh cao thì thanh đầy trước, có thể đi nhiều lượt hơn (tốc là 1 chia giây nghỉ giữa hai đòn, nhân tốc đánh của đồ). Một vòng là thời gian người có tốc 1 đầy thanh. Màn hình có dải thứ tự lượt (`thuTu`).
+- Đòn thường gây sức đánh × `LOI_DAI.don`; chiêu riêng nhân thêm hệ số của chiêu (`CHIEU`) và uy lực kỹ năng; giáp và khiên bớt sát thương.
+- Mỗi tướng ba chiêu: đánh thường và hai chiêu riêng. Tướng có hai kỹ năng thì dùng cả hai (Gióng: Phun lửa, Nhổ tre; Sơn Tinh: Bốc đồi, Dời non; An Dương Vương: Nỏ thần, Rùa Vàng; Cao Lỗ: Nỏ liên châu, Lệnh bắn). Tám tướng một kỹ năng (Lạc tướng, Trưng Trắc, Trưng Nhị, năm tướng dã ngoại) được thêm một chiêu riêng, chỉ dùng trên lôi đài (trận thời gian thực không đổi, khỏi cân lại phó bản, thử thách, dã ngoại). Không có chiêu dùng chung.
+  - Lạc tướng, Cờ lệnh: một đồng đội được ra lượt ngay.
+  - Trưng Trắc, Lời thề Hát Môn: xóa hiệu ứng xấu cả đội, tăng sức đánh hai lượt.
+  - Trưng Nhị, Tiên phong: đòn mạnh vào một địch, phá khiên của nó.
+  - Bà Triệu, Đạp sóng dữ: đánh cả ba địch, đẩy lùi thanh hành động.
+  - Triệu Quang Phục, Móng rồng: đòn xuyên giáp, bỏ qua giáp và khiên.
+  - Mai Thúc Loan, Phá ách: đánh một địch, hồi máu cho mình theo sát thương gây ra.
+  - Ngô Quyền, Triều rút: đánh cả ba; địch đang chậm hay mất máu dần chịu gấp đôi.
+  - Lý Thường Kiệt, Tiên phát chế nhân: đòn mạnh vào một địch, làm chậm thanh hành động của nó.
+  - Tám chiêu này không thêm loại hiệu ứng trạng thái nào; chỉ thêm tác dụng tức thời "xóa hiệu ứng xấu".
+  - Hình: dùng lại động tác kỹ năng sẵn có của tướng và hiệu ứng ghép từ `hieuUng.ts`, mỗi chiêu một màu, không nặn thêm.
+- Chiêu dùng số lượt chờ (3–4 lượt của mình, vài chiêu đầu trận phải chờ 1 lượt), không có thanh nộ. Chỉ số hồi kỹ năng của trang bị rút ngắn lượt chờ (`choCua`, ít nhất 1 lượt).
+- Hiệu ứng trạng thái, tối đa tám loại (`HieuUngLoi`, tính theo lượt của người mang): choáng (Voi xung trận), chậm thanh hành động (Dời non, Cọc Bạch Đằng, rồng), mất máu dần (Cọc Bạch Đằng, ngựa sắt), yếu đòn (Nam quốc sơn hà), tăng sức đánh (Hắc Đế dấy binh, Trống trận), ẩn (Ngày ẩn đêm ra), khiêu khích (Hắc Đế dấy binh), khiên (Rùa Vàng). Hồi máu là tác dụng tức thời (Hiệu triệu, Nam quốc sơn hà).
+- Không chia hàng trước sau, chọn mục tiêu tự do; muốn che đồng đội thì dùng khiêu khích.
+- Không có ngẫu nhiên: không chí mạng, không trượt. Cùng đội, cùng cách bấm thì ra cùng kết quả.
+- Hạ hết ba tướng đội kia là thắng. Quá 30 vòng thì thua.
+- Người chơi chọn chiêu và mục tiêu mỗi lượt; có nút Tự đánh và tua ×2.
+
+**Chiêu thần thú**
+
+- Chim Lạc: đánh cả ba tướng địch, sát thương nhỏ.
+- Ngựa sắt: phun lửa cả ba, mất máu dần hai lượt.
+- Gà chín cựa: mổ ba đòn vào tướng địch ít máu nhất.
+- Rùa Vàng: khiên cho cả đội ta một vòng.
+- Rồng: đánh cả ba, làm chậm thanh hành động của địch.
+- Chiêu mạnh theo cấp thú (`heThu`, số ở `LOI_THU`). Thú đầy thanh sau `LOI_DAI.thuVong` vòng.
+
+**Chỉ số**
+
+- Chỉ số gốc của tướng, trang bị (sáu chỉ số, kể cả hiệu ứng bộ hai món, bốn món) và cấp chung dã ngoại.
+- Không tính huân công, phúc lành Tết, nữ tướng.
+
+**Đối thủ**
+
+- Tầng thường: bóng các tướng ta, chỉ dùng tướng của chương ấy trở về trước; bóng tướng dã ngoại chỉ ở tầng 41–50. Chương 1 mới có hai tướng nên tầng 1–9 có võ sĩ (dáng giáo binh, cung thủ) đứng thay; hai tầng đầu của chương 2–5 cũng có một võ sĩ (`doiTang`, `LOI_LINH`).
+- Tầng mốc (mỗi 10 tầng, `LOI_MOC`): tướng giặc lịch sử đã có mô hình. Tầng 10: đại tướng Ân và hai phó tướng. Tầng 20: Thủy Tinh, thuồng luồng, cá sấu. Tầng 30: Triệu Đà, Tô Định, kỵ binh Triệu. Tầng 40: Lục Dận, Trần Bá Tiên, Dương Tư Húc. Tầng 50: Mã Viện, Lưu Hoằng Tháo, Quách Quỳ. Giặc có bốn chiêu chung (chém mạnh, quét ngang, đòn choáng, hô quân; `LOI_GIAC`). Thẻ tầng mốc có một câu giới thiệu.
+- Tầng mốc từ tầng 20 trở lên, đội máy có một thú bóng (ngựa sắt, gà chín cựa, Rùa Vàng, rồng; cấp bằng nửa số tầng). Tầng thường không có.
+- Máu và sức đánh đội máy nhân hệ số từng tầng `LOI_HE`, tìm bằng mô phỏng.
+
+**Thưởng**
+
+- Thắng lần đầu mỗi tầng (`xongTran`): sắt (`satTang`) và một món trang bị theo luật rơi đồ sẵn có (`roiDo`: cấp đồ không vượt chương đang chơi; tầng thường phẩm như thắng màn lần đầu, tầng mốc phẩm như thắng thử thách lần đầu; kho đầy thì tự phân giải). Tầng 41–50 có thể rơi bộ của tướng dã ngoại đã về.
+- Không có thưởng ngày, không có thưởng lặp. Đánh lại tầng đã qua được nhưng không có thưởng, nên lôi đài không thành chỗ cày.
+- Thua không mất gì, không giới hạn lượt thử.
+
+**Chuẩn độ khó**
+
+- Người chơi thường (đúng chương, không đồ, không thú, bấm Tự đánh) thắng mọi tầng thường và thua tầng mốc.
+- Tầng mốc: có đồ hay chọn chiêu bằng tay thì thắng.
+- Người chơi có đồ trong test là mỗi tướng thêm 30% máu và sức đánh, 10% tốc đánh, 20% uy lực, 15% giáp, 15% hồi kỹ năng.
+- `loiDai.test.ts` canh cả 50 tầng.
+
+**Cảnh**
+
+- Cảnh riêng dựng theo kiểu sân chầu (không đánh trong sân Điện thật): phía sau là thềm cao có bệ ngai, Vua Hùng ngồi ngai nhìn xuống (bản tĩnh `bakeVuaHung`, không làm động tác mới); giữa là sân lát đá rộng có mặt trống đồng khảm trên nền; hai đội đứng hai bên trái phải, đủ chỗ cho voi, ngựa; thần thú ở mép sân phía đội mình. Camera nhìn chếch từ trước vào, thấy cả vua lẫn hai đội.
+- Ba kiểu cảnh quanh sân (chủ dự án chọn giữ cả ba), đổi theo chương của tầng (`KIEU_CHUONG`: chương 1–5 là kinh thành, đỉnh núi, bến sông, kinh thành, đỉnh núi): kinh thành có nhà sàn mái cấp 10 quay mặt trước như ở kinh đô, lầu trống, cổng Nghi Môn; đỉnh núi có rừng, đá, bậc đá lên; bến sông có cây nêu, dây cờ, cầu ván, thuyền chiến. Sân lát đá rộng 19,6 × 16,4; hai đội đứng cách tâm mặt trống đồng 4,5–5,4 để không ai đứng đè lên mặt trống. Sang tầng của chương khác thì dựng lại cảnh.
+- Màn đánh (chủ dự án yêu cầu): trên đầu mỗi người chỉ có thanh máu nhỏ và hiệu ứng, không ghi tên (tên xem ở dải lượt và dòng "Lượt của…"); dải thứ tự lượt hiện hình đại diện từng người, viền xanh đội ta, đỏ đội máy. Ảnh đại diện đồng nhất: ai cũng vẽ từ mô hình, cùng một khung đầu và vai, đầu to bằng nhau (tướng xuống voi, xuống ngựa); thần thú dùng ảnh động. Nút chiêu chỉ có ảnh kỹ năng và tên, không có dòng giải thích. Đòn thường và tám chiêu chỉ có trên lôi đài có ảnh vẽ riêng cùng phong cách 16 ảnh kỹ năng tướng (vẽ bằng Meshy, lấy ảnh sẵn có làm mẫu).
+- Tướng đã về mà không lên đài đứng chầu trên thềm, hai bên ngai (tối đa sáu người, xuống voi, xuống ngựa), nữ tướng đã theo về cầm cờ đứng hàng sau. Hai góc trước sân có trống đồng trên giá, hai bên sân có cờ đại và lư hương. Không vẽ đám đông dân.
+- Người đánh gần lao tới trước mặt đối thủ rồi lùi về; người bắn xa, người hô chiêu cho cả đội thì bước lên một bước. Vòng vàng dưới chân người tới lượt, vòng đỏ dưới chân người chọn được làm mục tiêu.
+- Dùng lại mô hình tướng có xương và hiệu ứng kỹ năng sẵn có (`hieuUng.ts`).
+- Thắng thì bảng kết quả ghi "Vua Hùng ban thưởng".
+
+**Giao diện**
+
+- Bảng Lôi đài: nửa trái là bản đồ 50 tầng (mỗi chương một hàng mười ô, ô mốc có vương miện), nửa phải là tầng đang xem, đội giữ đài, thưởng, chọn ba tướng (số 1–3 là thứ tự đứng), chọn thần thú, nút Lên đài.
+- Màn đánh: dải trên có tầng, vòng, thứ tự lượt; thẻ máu nổi trên đầu từng người kèm hiệu ứng và số lượt còn lại; ba nút chiêu có lời tả và số lượt chờ; nút Tự đánh, ×1/×2, rời đài (bấm hai lần). Đòn thường được chọn sẵn: chạm thẳng một địch (thẻ máu hay người trên sân) là đánh. Chiêu đánh cả đội thì bấm là ra ngay.
+
+**Lưu**
+
+- `GameState.loiDai` là trường tùy chọn (tầng cao nhất đã qua, đội chọn lần trước, thú mang theo), không lên phiên bản lưu, sai dạng thì bỏ riêng phần ấy (như thần thú, Đấu thành).
+
+**Thứ tự làm**
+
+1. Mục kế hoạch này (PR nháp chờ chủ dự án duyệt).
+2. Luật thuần `src/game/loiDai.ts` và test: lượt đánh, chiêu, hiệu ứng, thần thú, máy tự đánh, 50 tầng, thưởng, chuẩn độ khó.
+3. Cảnh sân chầu và giao diện đánh: dải thứ tự lượt, ba nút chiêu, chọn mục tiêu, Tự đánh, tua ×2.
+4. Bảng Lôi đài (chọn đội và thú, bản đồ tầng, thưởng), nút ở cột bên phải, lời Lạc hầu, hướng dẫn chỉ tay.
+
 ## Nhịp chơi và lưu game
 
 - Nhịp chơi lai: mỗi lần mở game là một phiên ra quyết định ngắn.

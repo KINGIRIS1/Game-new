@@ -82,6 +82,11 @@ const CHUONG5 = (cleared) => `M.playChapters({ s, last: 8 });${CO_QUAN}
   for (let t; (t = G.nextHint(s)); ) G.markHinted(s, t);
 `;
 
+/** Gióng, Sơn Tinh đã về (người chơi mô phỏng không nuôi Gióng, không dâng lễ vật): đủ tướng cho lôi đài. */
+const DU_TUONG = `s.giong.fed = D.GIONG_FEED.length; for (const g of D.GEAR_IDS) s.giong.gear[g] = true; for (const g of D.GIFT_IDS) s.son.gifts[g] = true;`;
+/** Chương 5 (đã thắng màn 35), đã qua 23 tầng lôi đài, có chim Lạc và ngựa sắt. */
+const LOI_DAI_23 = `${CHUONG5(35)}\n${DU_TUONG}\ns.daNgoai.boss[0] = s.daNgoai.boss[1] = 1; s.loiDai = { tang: 23, doi: ['trungTrac', 'trungNhi', 'caoLo'], thu: null, tuDanh: false, nhanh: false };`;
+
 /**
  * Kinh đô chương 2 dựng như `phuSa.test.ts`: Điện 5, đê bao cách sông 4 ô, cống đê (đang mở) trên dải đê, sau cống trên
  * đất bậc 1 có hai ruộng lúa, ruộng nếp, bãi đất đá, nhà sàn; mùa lũ tới dâng bậc 2.
@@ -553,6 +558,35 @@ d.camera(cx, cz, 2.6);`,
     mo: 'Như da-ngoai, đã hạ boss map 1–4 (đủ năm thần thú), ngựa sắt dáng thần đi theo: bảng Thần thú có ảnh động từng thú',
     truoc: `${CHUONG5(35)}\ns.daNgoai.boss[0] = s.daNgoai.boss[1] = s.daNgoai.boss[2] = s.daNgoai.boss[3] = 1; s.thanThu = { cap: { thuLac: 5, thuNgua: 32, thuGa: 12, thuRua: 1, thuRong: 1 }, exp: { thuLac: 0, thuNgua: 0, thuGa: 0, thuRua: 0, thuRong: 0 }, bua: 3, buaMs: 0, chon: 'thuNgua' };`,
     sau: `document.querySelector('[data-act=goThanThu]').click();`,
+  },
+  'loi-dai': {
+    mo: 'Chương 5 (đã thắng màn 35), đã qua 23 tầng lôi đài: bảng Lôi đài (bản đồ 50 tầng, đội giữ đài, chọn đội, thần thú)',
+    truoc: LOI_DAI_23,
+    sau: `document.querySelector('[data-act=goLoiDai]').click();`,
+  },
+  'loi-dai-tran': {
+    mo: 'Như loi-dai, lên đài tầng 24: sân chầu, Vua Hùng trên thềm, hai đội, chờ người chơi chọn chiêu',
+    truoc: LOI_DAI_23,
+    sau: `d.tocDo(4); d.loiDai(24);`,
+    doi: 20000,
+  },
+  'loi-dai-danh': {
+    mo: 'Như loi-dai-tran, bật Tự đánh, chụp sau 9 giây (giữa trận)',
+    truoc: LOI_DAI_23,
+    sau: `d.tocDo(4); d.loiDai(24, true);`,
+    doi: 14000,
+  },
+  'loi-dai-thang': {
+    mo: 'Như loi-dai, lên đài tầng 21 (dễ), Tự đánh tới hết trận: bảng kết quả Vua Hùng ban thưởng',
+    truoc: LOI_DAI_23.replace('tang: 23', 'tang: 20'),
+    sau: `d.tocDo(8); d.loiDai(21, true);`,
+    doi: 40000,
+  },
+  'loi-dai-moc': {
+    mo: 'Tầng mốc 50 (Mã Viện, Lưu Hoằng Tháo, Quách Quỳ, rồng bóng), đội có tướng dã ngoại, Tự đánh, chụp sau 7 giây',
+    truoc: `${CHUONG5(35)}\n${DU_TUONG}\ns.daNgoai.boss = s.daNgoai.boss.map(() => 1); s.loiDai = { tang: 49, doi: ['baTrieu', 'ngoQuyen', 'giong'], thu: 'thuRong', tuDanh: false, nhanh: false };`,
+    sau: `d.tocDo(4); d.loiDai(50, true);`,
+    doi: 14000,
   },
   'da-ngoai-tran': {
     mo: 'Như da-ngoai, đội ba tướng ra map 1 (Rừng Phong Châu) đứng ở mép khu 2, Tự đánh, chụp sau 6 giây',

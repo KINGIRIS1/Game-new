@@ -11,6 +11,7 @@ import { tetOpen } from './tet';
 import { thuCo } from './thanThu';
 import { challengeOpen } from './thuThach';
 import { doMo } from './trangBi';
+import { loiDaiMo } from './loiDai';
 
 export type HuongDanId =
   | 'phoBan'
@@ -18,6 +19,7 @@ export type HuongDanId =
   | 'trangBi'
   | 'daNgoai'
   | 'thanThu'
+  | 'loiDai'
   | 'dauThanh'
   | 'mauKinhDo'
   | 'benKia'
@@ -39,6 +41,7 @@ export const HUONG_DAN: { id: HuongDanId; khi: (s: GameState) => boolean }[] = [
   { id: 'trangBi', khi: doMo },
   { id: 'daNgoai', khi: daMo },
   { id: 'thanThu', khi: (s) => thuCo(s).length > 0 },
+  { id: 'loiDai', khi: loiDaiMo },
   // Chip Đấu thành lúc nào cũng hiện; chỉ khi đã quen đánh trận (hết chương 1).
   { id: 'dauThanh', khi: (s) => unlocked(s, 'ketChuong1') },
   { id: 'mauKinhDo', khi: (s) => dienLevel(s) >= MAU_DIEN },

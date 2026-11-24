@@ -115,7 +115,7 @@ export function dienSpots(level: number): LotSpot[] {
  * (chim Lạc trên mái cấp 10, `lacBird`) phải nhân vào khung đang có và trả lại khi xong, không thì phần vẽ sau mất
  * phóng (`footprint.test.ts` canh khối nhà chính cấp 10 không bị thu nhỏ).
  */
-function scaled(m: ToonModel, x: number, z: number, k: number, draw: () => void): void {
+export function scaled(m: ToonModel, x: number, z: number, k: number, draw: () => void): void {
   const frame = new THREE.Matrix4().makeTranslation(x, 0, z).multiply(new THREE.Matrix4().makeScale(k, k, k));
   const builders = [m.plain, m.band, m.drum, m.glow];
   const before = builders.map((b) => b.frame);
@@ -125,7 +125,7 @@ function scaled(m: ToonModel, x: number, z: number, k: number, draw: () => void)
 }
 
 /** Đỉnh đồng / Lư hương hoàng cung 3 chân đặt hai bên thềm chầu. */
-function royalCenser(m: ToonModel, x: number, y0: number, z: number, s = 1): void {
+export function royalCenser(m: ToonModel, x: number, y0: number, z: number, s = 1): void {
   const p = m.plain;
   p.cyl(0.14 * s, 0.16 * s, 0.05 * s, C.rockDark, x, y0 + 0.025 * s, z, undefined, 8);
   for (let i = 0; i < 3; i++) {
@@ -284,7 +284,7 @@ function gateTower(m: ToonModel, gz: number, roof: Roof): void {
  * bậc rồng, đôi đỉnh đồng, nền đá thứ hai, nhà chính và cầu thang, chim đồng trên nóc, hai chái, mái tầng hai, ba,
  * lan can, cột chim Lạc, trống đồng trên nóc.
  */
-function palaceBlock(m: ToonModel, level: number): void {
+export function palaceBlock(m: ToonModel, level: number): void {
   const p = m.plain;
   const roof = roofFor(level);
   const up = above5(level);
@@ -449,7 +449,7 @@ function palaceBlock(m: ToonModel, level: number): void {
  * Cổng Nghi Môn tứ trụ (gốc ở giữa cổng, trước khi phóng `CONG_K`): hai trụ son đai vàng, hai trụ biểu, xà, hoành phi,
  * mái thuyền (cấp 6 hai tầng mái, cấp 8 chim đồng); cấp 10 thay bằng cổng thành hai tầng.
  */
-function nghiMon(m: ToonModel, level: number, roof: Roof): void {
+export function nghiMon(m: ToonModel, level: number, roof: Roof): void {
   const p = m.plain;
   if (level >= 10) {
     gateTower(m, 0, roof);
@@ -506,7 +506,7 @@ function throneDais(m: ToonModel, v: Zone, level: number): { y: number; z: numbe
  * Ngai vàng (gốc ở giữa mặt bệ dưới ngai): chân đế son thếp vàng, đệm đỏ, tựa lưng cao gắn mặt trời trống đồng như
  * hào quang sau đầu vua, tay ngai đầu chim, bệ để chân; cấp 7 chim Lạc dang cánh trên đỉnh tựa. Trả độ cao mặt đệm.
  */
-function throne(m: ToonModel, y0: number, z: number, level: number): number {
+export function throne(m: ToonModel, y0: number, z: number, level: number): number {
   const p = m.plain;
   const seat = y0 + 0.37;
   p.box(0.82, 0.05, 0.6, C.gold, 0, y0 + 0.025, z);
@@ -534,7 +534,7 @@ function throne(m: ToonModel, y0: number, z: number, level: number): number {
 }
 
 /** Lọng che sau ngai (từ cấp 3): cán gỗ, tán son (cấp 6 tán vàng), diềm hoa văn, núm vàng. Tán cao quá mũ lông chim của vua. */
-function parasol(m: ToonModel, y0: number, z: number, level: number): void {
+export function parasol(m: ToonModel, y0: number, z: number, level: number): void {
   const p = m.plain;
   const gold = level >= 6;
   const h = 2.62;
@@ -545,7 +545,7 @@ function parasol(m: ToonModel, y0: number, z: number, level: number): void {
 }
 
 /** Đôi quạt lông chim cán dài đứng hai bên sau ngai (từ cấp 5). */
-function featherFans(m: ToonModel, y0: number, z: number): void {
+export function featherFans(m: ToonModel, y0: number, z: number): void {
   const p = m.plain;
   for (const sx of [-1, 1]) {
     const x = sx * 0.66;
@@ -557,7 +557,7 @@ function featherFans(m: ToonModel, y0: number, z: number): void {
 }
 
 /** Voi đá trên bệ, đầu quay ra cổng (từ cấp 5; cấp 8 phủ yên gấm vàng). */
-function stoneElephant(m: ToonModel, x: number, z: number, level: number): void {
+export function stoneElephant(m: ToonModel, x: number, z: number, level: number): void {
   const p = m.plain;
   p.box(0.66, 0.14, 0.98, C.rockDark, x, 0.12, z);
   p.box(0.7, 0.03, 1.02, C.rock, x, 0.2, z);

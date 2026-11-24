@@ -13,6 +13,7 @@ export type NutNoi =
   // Cột nút bên phải màn hình chính.
   | 'daNgoai'
   | 'thanThu'
+  | 'loiDai'
   | 'dauThanh'
   // Vòng nút quanh công trình (`ui/vongNut.ts`).
   | 'thongTin'
@@ -197,6 +198,14 @@ const HINH: Record<NutNoi, () => string> = {
     `<circle cx="48" cy="44" r="3.4" fill="${E}"/>` +
     khac('M42 60 Q54 66 64 62 M44 66 Q56 72 66 70', 2.2) +
     khac('M18 66 L30 58', 2),
+  // Lôi đài: trống đồng trên giá, hai dùi bắt chéo.
+  loiDai: () =>
+    `<g fill="${F}"><path d="M18 40 L82 40 L76 78 L24 78Z"/><ellipse cx="50" cy="40" rx="34" ry="11"/><rect x="14" y="78" width="72" height="9" rx="3"/>
+    <path d="M22 87 L16 98 L26 98 L30 87Z"/><path d="M78 87 L84 98 L74 98 L70 87Z"/>
+    <path d="M14 6 L20 2 L50 32 L45 36Z"/><circle cx="15" cy="5" r="6"/><path d="M86 6 L80 2 L50 32 L55 36Z"/><circle cx="85" cy="5" r="6"/></g>` +
+    khac('M22 40 A28 8 0 0 0 78 40', 2.2) +
+    khac('M24 54 L76 54 M26 66 L74 66', 2.2) +
+    `<circle cx="50" cy="40" r="4" fill="${E}"/>`,
   // Đấu thành: cổng thành có lầu mái cong, răng cưa trên tường, cửa vòm.
   dauThanh: () =>
     `<g fill="${F}"><path d="M4 92 L4 48 L14 48 L14 54 L24 54 L24 48 L34 48 L34 92Z"/><path d="M66 92 L66 48 L76 48 L76 54 L86 54 L86 48 L96 48 L96 92Z"/>

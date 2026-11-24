@@ -2954,3 +2954,83 @@ export const DA_TREO = { goc: 12, moc: 40, san: 0.1, tran: 8 * 3_600_000, kyThu:
  * mà không có quái đuổi thì dừng nghỉ, hồi tới `nghi[1]` mới đánh tiếp.
  */
 export const DA_TUONG = { hoi: 0.04, yen: 4, day: 3, tam: 9, max: 3, nghi: [0.4, 0.9] as const };
+
+// ---------- Lôi đài Phong Châu (`loiDai.ts`; `docs/thiet-ke.md` mục Kế hoạch: Lôi đài Phong Châu) ----------
+
+/**
+ * Lôi đài: `tang` tầng, mỗi chương mở `moiChuong` tầng, đội `doi` tướng, quá `vong` vòng thì thua (một vòng là thời gian
+ * người có tốc 1 đầy thanh hành động). Đòn thường gây sức đánh × `don`. Đòn đầu sau khi ẩn nhân `phuc`. Tướng mặc đủ
+ * bốn món bộ mình thì chiêu mạnh thêm `bo4`. Thần thú đầy thanh sau `thuVong` vòng. Thưởng sắt mỗi tầng: `sat[0]` +
+ * `sat[1]` × tầng, tầng mốc nhân `satMoc`.
+ */
+export const LOI_DAI = { tang: 50, moiChuong: 10, doi: 3, vong: 30, don: 4, phuc: 1.6, bo4: 0.15, thuVong: 2.2, sat: [20, 4] as const, satMoc: 3 };
+
+/** Lạc tướng trên lôi đài (ở trận thường ông chỉ đánh trống, không có chỉ số). */
+export const LAC_TUONG_LOI: FighterStats = { hp: 520, dmg: 15, range: 1, speed: 1.8, cooldown: 1.0 };
+
+/** Võ sĩ của tầng thấp (dáng giáo binh, cung thủ, lính nỏ). */
+export type LoiLinh = 'giao' | 'cung' | 'no';
+export const LOI_LINH: Record<LoiLinh, FighterStats> = {
+  giao: { hp: 420, dmg: 13, range: 1, speed: 1.6, cooldown: 1.1 },
+  cung: { hp: 320, dmg: 15, range: 4, speed: 1.6, cooldown: 1.1 },
+  no: { hp: 340, dmg: 16, range: 4, speed: 1.6, cooldown: 1.2 },
+};
+
+/** Tướng giặc xưa hiện về ở tầng mốc, và lính theo hầu. */
+export type LoiGiac =
+  | 'daiTuong' | 'phoTuong' | 'thuyTinh' | 'thuongLuong' | 'caSau' | 'trieuDa' | 'toDinh' | 'kyBinh'
+  | 'lucDan' | 'tranBaTien' | 'duongTuHuc' | 'maVien' | 'hoangThao' | 'quachQuy';
+
+/** Chiêu của giặc: chém mạnh một người, quét cả ba, đòn làm choáng, hô quân tăng sức đánh. */
+export type ChieuGiac = 'giacChem' | 'giacQuet' | 'giacChoang' | 'giacHo';
+export const LOI_GIAC: Record<LoiGiac, FighterStats & { chieu: ChieuGiac[] }> = {
+  daiTuong: { hp: 900, dmg: 20, range: 1, speed: 1.2, cooldown: 1.15, chieu: ['giacChem', 'giacHo'] },
+  phoTuong: { hp: 480, dmg: 15, range: 1, speed: 1.2, cooldown: 1.15, chieu: ['giacChem'] },
+  thuyTinh: { hp: 950, dmg: 20, range: 1, speed: 1.2, cooldown: 1.1, chieu: ['giacQuet', 'giacChoang'] },
+  thuongLuong: { hp: 560, dmg: 16, range: 1, speed: 1.3, cooldown: 1.2, chieu: ['giacChoang'] },
+  caSau: { hp: 420, dmg: 17, range: 1, speed: 2, cooldown: 1.0, chieu: ['giacChem'] },
+  trieuDa: { hp: 1000, dmg: 21, range: 1, speed: 1.3, cooldown: 1.1, chieu: ['giacChem', 'giacHo'] },
+  toDinh: { hp: 800, dmg: 19, range: 1, speed: 1.3, cooldown: 1.1, chieu: ['giacQuet'] },
+  kyBinh: { hp: 460, dmg: 17, range: 1, speed: 2.2, cooldown: 0.95, chieu: ['giacChem'] },
+  lucDan: { hp: 950, dmg: 21, range: 1, speed: 1.4, cooldown: 1.1, chieu: ['giacChem', 'giacChoang'] },
+  tranBaTien: { hp: 900, dmg: 20, range: 1, speed: 1.4, cooldown: 1.05, chieu: ['giacQuet', 'giacHo'] },
+  duongTuHuc: { hp: 900, dmg: 22, range: 1, speed: 1.4, cooldown: 1.1, chieu: ['giacChem', 'giacQuet'] },
+  maVien: { hp: 1050, dmg: 22, range: 1, speed: 1.3, cooldown: 1.1, chieu: ['giacQuet', 'giacHo'] },
+  hoangThao: { hp: 900, dmg: 21, range: 1, speed: 1.4, cooldown: 1.0, chieu: ['giacChem', 'giacChoang'] },
+  quachQuy: { hp: 950, dmg: 22, range: 1, speed: 1.4, cooldown: 1.1, chieu: ['giacChoang', 'giacQuet'] },
+};
+
+/** Đội giặc và thú bóng của năm tầng mốc (tầng 10, 20, 30, 40, 50). */
+export const LOI_MOC: { doi: [LoiGiac, LoiGiac, LoiGiac]; thu: ThanThuId | null }[] = [
+  { doi: ['phoTuong', 'daiTuong', 'phoTuong'], thu: null },
+  { doi: ['thuongLuong', 'thuyTinh', 'caSau'], thu: 'thuNgua' },
+  { doi: ['toDinh', 'trieuDa', 'kyBinh'], thu: 'thuGa' },
+  { doi: ['lucDan', 'tranBaTien', 'duongTuHuc'], thu: 'thuRua' },
+  { doi: ['hoangThao', 'maVien', 'quachQuy'], thu: 'thuRong' },
+];
+
+/**
+ * Chiêu thần thú trên lôi đài (nhân hệ số cấp thú `heThu`): chim Lạc đánh cả ba; ngựa sắt phun lửa cả ba, cháy `chay`
+ * mỗi lượt trong `luot` lượt; gà mổ `don` đòn vào người ít máu nhất; Rùa Vàng che cả đội bớt `giam` phần sát thương
+ * (tăng theo cấp tới `giamMax`); rồng đánh cả ba và đẩy lùi thanh hành động `day`.
+ */
+export const LOI_THU = {
+  thuLac: { dmg: 45 },
+  thuNgua: { dmg: 28, chay: 14, luot: 2 },
+  thuGa: { dmg: 34, don: 3 },
+  thuRua: { giam: 0.3, giamMax: 0.5, luot: 1 },
+  thuRong: { dmg: 38, day: 0.25 },
+} as const;
+
+/**
+ * Hệ số máu và sức đánh của đội máy ở từng tầng (tầng 1 đứng đầu). Tầng thường: người chơi thường (đúng chương, không
+ * đồ, không thú, bấm Tự đánh) thắng; tầng mốc: người ấy thua, có đồ thì thắng. `loiDai.test.ts` canh. Mỗi tầng một đội khác nhau nên số không tăng đều: tìm bằng mô phỏng, tầng thường
+ * bằng 62–88% ngưỡng thua của người chơi thường (tăng dần trong chương), tầng mốc ở giữa ngưỡng không đồ và có đồ.
+ */
+export const LOI_HE: number[] = [
+  1.25, 0.82, 1.38, 0.88, 0.92, 0.95, 0.99, 1.03, 1.07, 1.78,
+  0.76, 0.61, 0.67, 0.77, 0.74, 0.77, 0.88, 0.83, 0.86, 1.46,
+  0.62, 0.68, 0.85, 0.7, 0.69, 0.81, 1.01, 0.83, 0.81, 1.26,
+  0.67, 0.76, 0.67, 0.65, 0.72, 0.83, 0.77, 0.83, 0.79, 1.1,
+  0.82, 0.81, 0.67, 0.63, 0.8, 0.83, 0.7, 0.66, 0.62, 0.92,
+];
