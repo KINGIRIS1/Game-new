@@ -149,7 +149,7 @@ interface Ring {
   size?: number;
 }
 
-const SCALE: Partial<Record<FighterKind, number>> = {
+export const SCALE: Partial<Record<FighterKind, number>> = {
   // Thần thú: cỡ theo dáng đã tính trong mô hình (`makeThanThu`).
   thuLac: 0.72,
   thuNgua: 0.72,

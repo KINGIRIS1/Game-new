@@ -285,7 +285,7 @@ export const conSong = (b: LoiTran, phe: 0 | 1): LoiUnit[] => b.units.filter((u)
 const doiKia = (phe: 0 | 1): 0 | 1 => (phe === 0 ? 1 : 0);
 
 /** Số vòng đã qua (vòng đang đánh), từ 1. */
-export const vongNay = (b: LoiTran): number => Math.min(LOI_DAI.vong, Math.floor(b.tg) + 1);
+export const vongNay = (b: LoiTran): number => Math.min(LOI_DAI.vong, Math.max(1, Math.ceil(b.tg - 1e-9)));
 
 /** Tốc đầy thanh lúc này (đang chậm thì bớt). */
 const tocNay = (u: LoiUnit): number => u.toc * (1 - (u.hu.cham?.v ?? 0));
@@ -778,12 +778,11 @@ export function tangKe(s: GameState): number | null {
   return t <= tangMo(s) ? t : null;
 }
 
-/** Đội lên đài lúc này: đội đã chọn (bỏ người chưa về), thiếu thì lấy thêm tướng mới về nhất cho đủ ba. */
+/** Đội lên đài lúc này: đội người chơi đã chọn (bỏ người chưa về; có thể chưa đủ ba); chưa chọn thì đội gợi ý. */
 export function doiLoi(s: GameState): LoiTuong[] {
   const co = tuongLoi(s);
   const doi = (s.loiDai?.doi ?? []).filter((k, i, a) => co.includes(k) && a.indexOf(k) === i).slice(0, LOI_DAI.doi);
-  for (const k of doiGoiY(s)) if (doi.length < LOI_DAI.doi && !doi.includes(k)) doi.push(k);
-  return doi;
+  return doi.length ? doi : doiGoiY(s);
 }
 
 /** Đội gợi ý: ba tướng truyện mới về nhất (chưa đủ thì lấy cả tướng dã ngoại). */
@@ -835,6 +834,7 @@ export function moTran(s: GameState, tang: number): Result<LoiTran> {
   const check = canDanhTang(s, tang);
   if (!check.ok) return check;
   const doi = doiLoi(s);
+  if (doi.length < LOI_DAI.doi) return fail('loiDoiSai');
   loiNay(s).doi = doi;
   const thu = thuLoi(s);
   const may = doiTang(tang);

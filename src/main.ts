@@ -3,6 +3,9 @@
 import { initHuongDan, markHuongDan, nextHuongDan, type HuongDanId } from './game/huongDan';
 import { ChiTay, huongDanBat, luuHuongDan } from './ui/huongDan';
 import './style.css';
+import { LOI_DAI } from './game/defs';
+import { canDanhTang, chonThuLoi, datDoiLoi, doiLoi, loiNay } from './game/loiDai';
+import { LoiDau } from './ui/loiDaiTran';
 import { play, setMuted, stopRally, unlockAudio } from './audio/sfx';
 import { skillReady, startFieldBattle, stepField, useSkill, type Battle, type HeroKind, type FighterKind } from './game/battle';
 import { canLen, capNhatDa, chonMap, daMo, datDoi, doiNay, moMap, quaCong, tichTreo, vaoDa, veKinhDo, type DaThuong } from './game/daNgoai';
@@ -1073,11 +1076,59 @@ async function start(): Promise<void> {
     }
   };
 
+  // ---------- Lôi đài ----------
+
+  /** Trận lôi đài đang đánh (không nằm trong state); null là đang ở kinh đô. */
+  let loi: LoiDau | null = null;
+  let loiDau: LoiDau | null = null;
+  const roiLoi = () => {
+    if (!loi) return;
+    loi.dong();
+    loi = null;
+    world.showLoiDai(false);
+    hud.setLoi(false);
+    commit();
+  };
+  /** Lên đài đánh tầng `tang`: sang sân chầu, dựng trận. */
+  const moLoi = (tang: number) => {
+    const check = canDanhTang(state, tang);
+    if (!check.ok) return fail(check.reason);
+    if (doiLoi(state).length < LOI_DAI.doi) return fail('loiDoiSai');
+    if (mode.kind !== 'view') exitMode();
+    select(null);
+    hud.closeCampaign();
+    hud.closeSheet();
+    drift.done = true;
+    const canh = world.showLoiDai(true)!;
+    loiDau ??= new LoiDau(hud.goc, {
+      state: () => state,
+      screenAt: (id, cao) => world.loiScreenAt(id, cao),
+      play,
+      commit: () => save(),
+      roi: roiLoi,
+    });
+    // Cảnh dựng lại sau mỗi lần rời đài: trỏ lớp điều khiển sang cảnh mới.
+    loiDau.datCanh(canh);
+    if (!loiDau.batDau(tang)) {
+      world.showLoiDai(false);
+      return fail('loiTangKhoa');
+    }
+    loi = loiDau;
+    hud.setLoi(true);
+    play('tap');
+    save();
+  };
+
   /** Chỗ (trên mặt đất) lần chạm chọn công trình gần nhất, cho việc chạm lại để chọn công trình bị che phía sau. */
   let lastPick: { x: number; z: number } | null = null;
   /** Chạm lại cách chỗ cũ (trên mặt đất) không quá chừng này ô thì coi là chạm lại đúng chỗ. */
   const PICK_AGAIN_R = 0.6;
   world.view.onTap = (cx, cy) => {
+    // Lôi đài: chạm người để ra chiêu vào người ấy.
+    if (world.inLoi) {
+      loi?.tap(cx, cy);
+      return;
+    }
     // Map dã ngoại: chạm đất để đi, chạm quái để đánh, chạm cổng để sang map kề.
     if (world.inDa) {
       const p = daB ? world.pickDa(cx, cy) : null;
@@ -2329,6 +2380,30 @@ async function start(): Promise<void> {
         return;
       }
 
+      case 'loiDoi': {
+        // Chạm chip tướng: thêm vào đội hay bỏ ra (đội còn ít nhất một tướng).
+        const doi = doiLoi(state);
+        const next = doi.includes(a.hero) ? doi.filter((k) => k !== a.hero) : [...doi, a.hero];
+        if (!next.length) return;
+        const r = datDoiLoi(state, next);
+        if (!r.ok) return fail(r.reason);
+        play('tap');
+        commit();
+        return;
+      }
+
+      case 'loiThu': {
+        const r = chonThuLoi(state, a.thu);
+        if (!r.ok) return fail(r.reason);
+        play('tap');
+        commit();
+        return;
+      }
+
+      case 'loiVao':
+        moLoi(a.tang);
+        return;
+
       case 'daTuDanh': {
         const on = !(daB?.da?.tuDanh ?? state.daNgoai.tuDanh);
         state.daNgoai.tuDanh = on;
@@ -2828,7 +2903,7 @@ async function start(): Promise<void> {
       hud.closeCampaign();
       const don = battle.camp !== undefined ? campTier(battle.camp) : null;
       world.showField(don ? CAMPS[don].terrain : STAGES[battle.wave - 1].terrain, battle.bai ?? null);
-    } else if (!battle && world.inField && !world.inDa && !xemDao) {
+    } else if (!battle && world.inField && !world.inDa && !world.inLoi && !xemDao) {
       world.showField(null);
       hud.closeStageResult();
     }
@@ -2936,7 +3011,7 @@ async function start(): Promise<void> {
       watchXay(true);
     } else {
       // Đang Đấu thành, xem lại trận đảo, xem map dã ngoại: kinh tế vẫn chạy, đồng hồ giặc đứng lại.
-      tick(state, gap * tocDo, !!pvp || !!xemDao || !!daB);
+      tick(state, gap * tocDo, !!pvp || !!xemDao || !!daB || !!loi);
       lag.troi(gap * tocDo);
       // Đội ở dã ngoại mà không xem map: treo máy (lúc tắt game thì `applyOffline` tính).
       if (!daB) tichTreo(state, gap * tocDo);
@@ -2966,6 +3041,7 @@ async function start(): Promise<void> {
     world.updateField(xemDao?.battle ?? state.campaign.battle, dt);
     stepDaNgoai(dt);
     world.updateDa(daB, dt);
+    loi?.update(dt * tocDo);
     world.update(dt);
     lag.cat('canh');
     hud.xayLabels.update(state, (x, z, lift) => (world.inField ? null : world.screenAt(x, z, lift)));
@@ -3158,6 +3234,17 @@ async function start(): Promise<void> {
       d.cho = k ? { x: k.x + (bc.trai.x - k.x) * (k.r * 0.5) / Math.hypot(bc.trai.x - k.x, bc.trai.z - k.z), z: k.z + (bc.trai.z - k.z) * (k.r * 0.5) / Math.hypot(bc.trai.x - k.x, bc.trai.z - k.z) } : null;
       moDa();
       return daB;
+    },
+    /**
+     * Lên lôi đài đánh tầng `tang` (coi như đã qua các tầng trước), bật Tự đánh nếu `tuDanh`: chụp thử sân chầu. Trả
+     * trận để đọc.
+     */
+    loiDai: (tang = 1, tuDanh = false) => {
+      const l = loiNay(state);
+      l.tang = Math.max(l.tang, tang - 1);
+      l.tuDanh = tuDanh;
+      moLoi(tang);
+      return loi?.b ?? null;
     },
     /** Điểm màn hình của điểm (x, z) trên map dã ngoại đang xem (để kiểm hướng bản đồ nhỏ). */
     daManHinh: (x: number, z: number) => world.daScreenAt(x, z, 0),

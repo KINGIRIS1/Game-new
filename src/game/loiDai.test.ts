@@ -308,7 +308,11 @@ describe('Lôi đài: mở, đội, thưởng, lưu', () => {
     expect(datDoiLoi(s, ['giong', 'giong']).ok).toBe(false);
     expect(datDoiLoi(s, ['anDuong']).ok).toBe(false);
     expect(datDoiLoi(s, ['sonTinh', 'giong']).ok).toBe(true);
-    expect(doiLoi(s)).toEqual(['sonTinh', 'giong', 'lacTuong']);
+    // Đội chưa đủ ba thì chưa lên đài được.
+    expect(doiLoi(s)).toEqual(['sonTinh', 'giong']);
+    expect(moTran(s, 1).ok).toBe(false);
+    expect(datDoiLoi(s, ['sonTinh', 'giong', 'lacTuong']).ok).toBe(true);
+    expect(moTran(s, 1).ok).toBe(true);
   });
 
   it('thắng tầng mới thì ghi tầng, được sắt và một món đồ; đánh lại không có thưởng', () => {
