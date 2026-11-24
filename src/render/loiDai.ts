@@ -13,8 +13,9 @@ import { CHIEU, laLoiTuong, type ChieuId, type LoiKind, type LoiSk, type LoiTran
 import { dangThu } from '../game/thanThu';
 import { SCALE } from './battleView';
 import { isBeast, makeBeast } from './beasts';
-import { banner, drum } from './buildings';
-import { featherFans, palaceBlock, parasol, royalCenser, scaled, throne } from './congTrinh/dien';
+import { banner, birdSpread, drum, drumTower, roofFor } from './buildings';
+import { lotModel } from './congTrinh/index';
+import { featherFans, nghiMon, palaceBlock, parasol, royalCenser, scaled, stoneElephant, throne } from './congTrinh/dien';
 import {
   VUA_SEAT,
   bakeVuaHung,
@@ -35,35 +36,38 @@ import {
 } from './heroes';
 import { HieuUng } from './hieuUng';
 import { addSunLights, type SunLights } from './lights';
-import { makeFighter } from './models';
+import { buildForest, makeFighter, makeMountain, type TreeSpot } from './models';
+import { ShapeBuilder, seeded } from './shapes';
+import { makeThuyenChien } from './thuyenChien';
+import { VE } from './vatCan';
 import { isMonster, makeMonster } from './monsters';
 import { C } from './palette';
 import type { Poser } from './rig';
 import { isSoldier, makeSoldier } from './soldier';
 import { makeThanThu } from './thanThu';
-import { ToonModel } from './toon';
+import { ToonModel, inkThin, outlineOf, toon } from './toon';
 import { TROI_NGAY } from './troi';
 
 /** Bố cục sân (tọa độ trong cảnh, trước khi xoay 45° cho hợp hướng camera): ngai ở phía −z, đội ta ở −x. */
 export const SAN = {
   /** Nửa bề ngang, nửa bề sâu sân lát đá. */
-  w: 6.3,
-  d: 5.9,
+  w: 7.6,
+  d: 6.8,
   /** Bán kính mặt trống đồng khảm giữa sân. */
-  trong: 2.1,
+  trong: 2.5,
   /** Thềm ngai: mép trước, độ cao mỗi bậc, số bậc. */
-  themZ: -4.5,
+  themZ: -5.3,
   bac: 0.42,
   soBac: 3,
   /** Chỗ đứng: đội cách tâm sân, giãn cách giữa ba người, thú đứng xa hơn. */
-  doiX: 3.3,
-  gian: 3.0,
-  thuX: 4.7,
+  doiX: 3.9,
+  gian: 3.2,
+  thuX: 5.7,
 } as const;
 
 const THEM_Y = SAN.bac * SAN.soBac;
 /** Phóng người trên sân so với cỡ trong trận thường. */
-const CO = 1.4;
+const CO = 1.5;
 /** Ai đánh từ xa thì đứng tại chỗ ra đòn. */
 const BAN_XA: LoiKind[] = ['anDuong', 'caoLo', 'trungNhi', 'cung', 'no', 'lacTuong'];
 
@@ -161,15 +165,15 @@ function taoChau(kind: LoiTuong): THREE.Group {
 const coCua = (kind: LoiKind): number => (kind === 'lacTuong' ? 0.95 : (SCALE[kind as FighterKind] ?? 0.8)) * CO;
 
 /** Sân chầu: nền, thềm ngai, ngai, lọng, quạt, cung điện phía sau, cờ, trống, lư hương. */
-function dungSan(): THREE.Group {
+function dungSan(kieu: KieuSan): THREE.Group {
   const m = new ToonModel();
   const p = m.plain;
   // Đất quanh sân, sân lát đá ô so le, viền đá sẫm.
-  p.box(60, 0.1, 60, 0x86a54c, 0, -0.07, 0);
+  p.box(90, 0.1, 90, DAT[kieu], 0, -0.07, 0);
   p.box(SAN.w * 2 + 0.5, 0.08, SAN.d * 2 + 0.5, C.rockDark, 0, -0.02, 0);
   const o = 1.3;
-  for (let ix = -5; ix < 5; ix++) {
-    for (let iz = -5; iz < 5; iz++) {
+  for (let ix = -6; ix < 6; ix++) {
+    for (let iz = -6; iz < 6; iz++) {
       const x = (ix + 0.5) * o;
       const z = (iz + 0.5) * o;
       if (Math.abs(x) > SAN.w || Math.abs(z) > SAN.d) continue;
@@ -214,7 +218,7 @@ function dungSan(): THREE.Group {
   scaled(m, 0, SAN.themZ - 9.6, 1.9, () => palaceBlock(m, 10));
   // Cờ đại hai bên sân, trống đồng trên giá ở hai góc trước, hai trống lớn bên thềm.
   for (const sx of [-1, 1]) {
-    [-3.9, -1.3, 1.3, 3.9].forEach((z, i) => banner(m, sx * (SAN.w - 0.25) - 0.2, z, 3.6, i % 2 ? C.gold : C.red));
+    [-4.6, -1.6, 1.6, 4.6].forEach((z, i) => banner(m, sx * (SAN.w - 0.25) - 0.2, z, 3.6, i % 2 ? C.gold : C.red));
     // Trống đồng trên giá ở hai góc trước sân.
     const dx0 = sx * (SAN.w - 1.3);
     const dz0 = SAN.d - 0.9;
@@ -222,10 +226,12 @@ function dungSan(): THREE.Group {
     for (const dx of [-0.52, 0.52]) p.box(0.14, 0.45, 0.16, C.red, dx0 + dx, 0.22, dz0);
     drum(m, dx0, dz0, 1.7, 0.45);
   }
+  const them = (kieu === 1 ? ngoaiKinhThanh : kieu === 2 ? ngoaiNuiRung : ngoaiBenSong)(m);
   const g = m.group();
   g.traverse((x) => {
     if (x instanceof THREE.Mesh) x.receiveShadow = true;
   });
+  for (const o of them) g.add(o);
   const vua = bakeVuaHung();
   vua.scale.setScalar(NGAI_K);
   vua.position.set(0, THEM_Y + (0.37 - VUA_SEAT) * NGAI_K, ngaiZ + 0.08 * NGAI_K);
@@ -233,6 +239,220 @@ function dungSan(): THREE.Group {
   return g;
 }
 const NGAI_K = 1.7;
+
+/** Ba kiểu cảnh quanh sân: 1 kinh thành Phong Châu, 2 đỉnh núi Nghĩa Lĩnh, 3 bến sông hội xuân. */
+export type KieuSan = 1 | 2 | 3;
+const DAT: Record<KieuSan, number> = { 1: 0x8aa750, 2: 0x6f9248, 3: 0x8fae56 };
+
+const CO_MAU = [C.red, C.gold, 0x3f7f8a, 0xf2ead2, 0x6f9a3a];
+
+/** Rừng ngoài sân: gieo cây trong ô lưới, bỏ chỗ `tranh` trả true. */
+function rung(seed: number, buoc: number, tre: number, tranh: (x: number, z: number) => boolean, xa = 26): THREE.Object3D {
+  const r = seeded(seed);
+  const cay: TreeSpot[] = [];
+  for (let x = -xa; x <= xa; x += buoc) {
+    for (let z = -xa; z <= xa * 0.7; z += buoc) {
+      const px = x + (r() - 0.5) * buoc * 0.8;
+      const pz = z + (r() - 0.5) * buoc * 0.8;
+      const giu = r() > 0.2;
+      const k = r() < tre ? 'bamboo' : 'tree';
+      const sd = Math.floor(r() * 1e6);
+      if (!giu || tranh(px, pz)) continue;
+      cay.push({ x: px, z: pz, kind: k, seed: sd });
+    }
+  }
+  return buildForest(cay);
+}
+
+/** Trong sân và thềm, cung điện (kèm một dải chừa `vien` ô). */
+const trongSan = (x: number, z: number, vien: number): boolean =>
+  (Math.abs(x) < SAN.w + vien && z > SAN.themZ - 0.5 && z < SAN.d + vien) || (Math.abs(x) < 8.5 + vien && z <= SAN.themZ - 0.5 && z > SAN.themZ - 16);
+
+/** Vật cản của bãi chiến (đá, khóm tre, rơm, giếng...) dựng thành một lưới để đặt quanh sân. */
+function doVat(ve: (p: ShapeBuilder, rand: () => number, them: THREE.BufferGeometry[]) => void, seed: number): THREE.Object3D {
+  const g = new THREE.Group();
+  const p = new ShapeBuilder();
+  const them: THREE.BufferGeometry[] = [];
+  ve(p, seeded(seed), them);
+  for (const geo of [...(p.empty ? [] : [p.geometry()]), ...them]) {
+    const mesh = new THREE.Mesh(geo, toon);
+    mesh.castShadow = true;
+    g.add(mesh, outlineOf(geo, inkThin));
+  }
+  return g;
+}
+
+/** Hàng rào cột chạm quanh sân (hở chỗ cổng trước và chỗ thềm). */
+function raoSan(m: ToonModel, cong: number): void {
+  const p = m.plain;
+  const X = SAN.w + 0.9;
+  const Z = SAN.d + 0.9;
+  const cot = (x: number, z: number) => {
+    p.cyl(0.09, 0.11, 1.15, C.woodDark, x, 0.57, z, undefined, 6);
+    p.cyl(0.13, 0.13, 0.08, C.red, x, 1.12, z, undefined, 6);
+    p.sphere(0.09, C.gold, x, 1.24, z, undefined, 6);
+  };
+  for (const sx of [-1, 1]) {
+    for (let z = SAN.themZ + 0.6; z <= Z + 0.01; z += 1.3) cot(sx * X, z);
+    p.box(0.07, 0.07, Z - SAN.themZ - 0.6, C.red, sx * X, 0.8, (Z + SAN.themZ + 0.6) / 2);
+    p.box(0.07, 0.07, Z - SAN.themZ - 0.6, C.woodDark, sx * X, 0.45, (Z + SAN.themZ + 0.6) / 2);
+    for (let x = cong + 0.4; x <= X - 0.5; x += 1.3) cot(sx * x, Z);
+    const len = X - cong - 0.4;
+    p.box(len, 0.07, 0.07, C.red, sx * (cong + 0.4 + len / 2), 0.8, Z);
+    p.box(len, 0.07, 0.07, C.woodDark, sx * (cong + 0.4 + len / 2), 0.45, Z);
+  }
+}
+
+/** Lối đá từ mép trước sân đi ra. */
+function loiDa(m: ToonModel, tu: number, toi: number, rong: number): void {
+  const n = Math.round((toi - tu) / 1.3);
+  for (let i = 0; i < n; i++) m.plain.box(rong, 0.05, 1.22, i % 2 ? C.rock : C.rockDark, 0, 0.005, tu + (i + 0.5) * 1.3);
+  for (const sx of [-1, 1]) m.plain.box(0.12, 0.07, toi - tu, C.red, sx * (rong / 2 + 0.06), 0.02, (tu + toi) / 2);
+}
+
+/**
+ * Kiểu 1, kinh thành Phong Châu: sân có hàng rào cột chạm, cổng tứ trụ phía trước, hai lầu trống ở góc, voi đá chầu
+ * hai bên lối vào, nhà sàn của kinh đô hai bên, cây thưa.
+ */
+function ngoaiKinhThanh(m: ToonModel): THREE.Object3D[] {
+  const out: THREE.Object3D[] = [];
+  const Z = SAN.d + 0.9;
+  raoSan(m, 1.9);
+  scaled(m, 0, Z + 1.3, 1.9, () => nghiMon(m, 9, roofFor(9)));
+  loiDa(m, SAN.d + 0.25, SAN.d + 13, 2.6);
+  for (const sx of [-1, 1]) {
+    scaled(m, sx * (SAN.w + 0.9), Z, 2.3, () => drumTower(m, 0, 0, 0, roofFor(8), true));
+    scaled(m, sx * 3.4, Z + 2.4, 1.9, () => stoneElephant(m, 0, 0, 8));
+    for (const z of [Z + 4.8, Z + 7.6]) banner(m, sx * 2.0 - 0.2, z, 3.2, C.red);
+    royalCenser(m, sx * 2.1, 0, Z + 1.0, 2.2);
+    // Nhà sàn hai bên sân, quay mặt vào sân.
+    [-7.5, -2.2, 3.4].forEach((z, i) => {
+      const nha = lotModel(i === 1 ? 'kho' : 'nhaSan', 8);
+      nha.scale.setScalar(1.35);
+      nha.position.set(sx * (SAN.w + 4.6 + (i === 1 ? 0.6 : 0)), 0, z);
+      nha.rotation.y = -sx * Math.PI / 2;
+      out.push(nha);
+    });
+    for (const z of [9.6, 12.4]) {
+      const nha = lotModel('nhaSan', 7);
+      nha.scale.setScalar(1.35);
+      nha.position.set(sx * (5.4 + (z > 10 ? 3.2 : 0)), 0, Z + z - 4.4);
+      nha.rotation.y = -sx * Math.PI / 2;
+      out.push(nha);
+    }
+  }
+  out.push(rung(11, 3.4, 0.25, (x, z) => trongSan(x, z, 7.2) || (Math.abs(x) < 11 && z > 0)));
+  return out;
+}
+
+/**
+ * Kiểu 2, đỉnh núi Nghĩa Lĩnh: rừng già vây sát sân, núi đá phía sau và hai bên, cột đá chim Lạc ở bốn góc, tảng đá,
+ * khóm tre, bậc đá và lư hương dọc lối lên.
+ */
+function ngoaiNuiRung(m: ToonModel): THREE.Object3D[] {
+  const out: THREE.Object3D[] = [];
+  const p = m.plain;
+  const nui: [number, number, number, number, number][] = [
+    [-15, -17, 7, 13, 0x5f7f52],
+    [15, -18, 8, 15, 0x587a50],
+    [-24, -6, 8, 12, 0x6a8a5c],
+    [24, -5, 7, 11, 0x64865a],
+    [0, -30, 11, 19, 0x4f7048],
+    [-20, 9, 6, 8, 0x6f9060],
+    [21, 10, 6, 9, 0x6a8c5c],
+  ];
+  for (const [x, z, r, h, mau] of nui) {
+    const n = makeMountain(r, h, mau);
+    n.position.set(x, -0.3, z);
+    out.push(n);
+  }
+  // Cột đá chim Lạc ở bốn góc sân.
+  for (const sx of [-1, 1]) {
+    for (const z of [SAN.themZ + 0.2, SAN.d + 1.1]) {
+      const x = sx * (SAN.w + 1.1);
+      p.cyl(0.42, 0.5, 0.3, C.rockDark, x, 0.15, z, undefined, 8);
+      p.cyl(0.2, 0.26, 3.4, C.rock, x, 2.0, z, undefined, 8);
+      m.band.cyl(0.27, 0.27, 0.3, C.bronze, x, 3.2, z, undefined, 8);
+      birdSpread(m, x, 3.75, z, 1.5);
+    }
+    // Bậc đá và lư hương dọc lối lên.
+    for (const z of [SAN.d + 1.6, SAN.d + 4.4, SAN.d + 7.2]) royalCenser(m, sx * 2.2, 0, z, 2.4);
+  }
+  for (let i = 0; i < 9; i++) p.box(3.4 - (i % 2) * 0.2, 0.09, 1.1, i % 2 ? C.rock : C.rockDark, 0, 0.02, SAN.d + 0.8 + i * 1.25);
+  const da: [number, number, number][] = [[-10.2, 4.6, 1.3], [10.4, 2.2, 1.5], [-5.2, 9.8, 1.1], [5.8, 10.6, 1.4], [-10.8, -3.4, 1.2], [10.6, -4.2, 1.0], [8.2, 13.8, 1.2], [-8.6, 14.2, 1.0]];
+  out.push(
+    doVat((b, rand, them) => {
+      da.forEach(([x, z, r], i) => (i % 3 === 2 ? VE.daNhon : VE.da)?.(b, { k: 'tron', x, z, r }, rand, them));
+      for (const [x, z] of [[-9.6, 8.2], [9.4, 7.4], [-4.6, 13.6], [4.4, 14.6]]) VE.tre?.(b, { k: 'tron', x, z, r: 1.1 }, rand, them);
+    }, 23),
+  );
+  out.push(rung(29, 2.3, 0.12, (x, z) => trongSan(x, z, 1.6) || (Math.abs(x) < 2.6 && z > 0) || da.some(([dx, dz, r]) => Math.hypot(x - dx, z - dz) < r + 0.8), 30));
+  return out;
+}
+
+/**
+ * Kiểu 3, bến sông hội xuân: trước sân là bến ván ra sông, hai thuyền trống đồng đậu, cây nêu và dây cờ, khóm tre, lau
+ * sậy ven nước, đống rơm, chum vại, giếng làng.
+ */
+function ngoaiBenSong(m: ToonModel): THREE.Object3D[] {
+  const out: THREE.Object3D[] = [];
+  const p = m.plain;
+  const bo = SAN.d + 3.6;
+  // Bãi cát ven sông, mặt sông.
+  p.box(90, 0.06, 1.6, 0xd8c690, 0, -0.012, bo + 0.2);
+  p.box(90, 0.06, 40, C.water[0], 0, -0.02, bo + 21);
+  for (let i = 0; i < 14; i++) p.box(2.2 + (i % 3) * 0.9, 0.02, 0.09, 0x9fd0d2, ((i * 7.3) % 30) - 15, 0.015, bo + 2.2 + ((i * 3.1) % 11));
+  // Bến ván ra sông, cọc gỗ hai bên.
+  loiDa(m, SAN.d + 0.25, bo - 0.6, 2.6);
+  for (let i = 0; i < 6; i++) p.box(2.8, 0.1, 0.72, i % 2 ? C.wood : C.woodDark, 0, 0.16, bo - 0.3 + i * 0.78);
+  for (const sx of [-1, 1]) for (let i = 0; i < 3; i++) p.cyl(0.11, 0.12, 1.0, C.woodDark, sx * 1.5, 0.3, bo + 0.2 + i * 1.9, undefined, 6);
+  for (const sx of [-1, 1]) {
+    const thuyen = makeThuyenChien();
+    thuyen.scale.setScalar(1.45);
+    thuyen.position.set(sx * 6.4, 0.02, bo + 4.4 + (sx > 0 ? 1.8 : 0));
+    thuyen.rotation.y = sx * 0.28;
+    out.push(thuyen);
+    // Cây nêu sát bờ sông: tre cao, vòng tre, dải vải đỏ, vàng, chùm lá trên ngọn.
+    const nx = sx * 6.9;
+    const nz = bo - 1.3;
+    p.cyl(0.07, 0.11, 6.0, C.bamboo, nx, 3.0, nz, undefined, 6);
+    p.add(new THREE.TorusGeometry(0.42, 0.03, 5, 14), C.bamboo, nx, 5.3, nz);
+    for (let i = 0; i < 5; i++) m.band.box(0.07, 1.1 - i * 0.12, 0.26, i % 2 ? C.gold : C.red, nx + (i - 2) * 0.17, 4.6 - i * 0.05, nz);
+    p.cone(0.5, 0.9, 0x6f9a3a, nx, 6.3, nz, undefined, 6);
+    royalCenser(m, sx * 2.1, 0, SAN.d + 1.0, 2.2);
+    // Dây cờ đuôi nheo giăng thấp dọc bờ, từ cây nêu ra cọc tre đầu bến.
+    p.cyl(0.05, 0.07, 2.6, C.bamboo, sx * 1.9, 1.3, nz, undefined, 5);
+    for (let i = 0; i <= 10; i++) {
+      const k = i / 10;
+      const x = sx * (1.9 + k * 5.0);
+      const y = 2.5 - Math.sin(k * Math.PI) * 0.7;
+      p.box(0.5, 0.03, 0.03, C.woodDark, x, y, nz);
+      p.cone(0.2, 0.5, CO_MAU[i % CO_MAU.length], x, y - 0.27, nz, [Math.PI, 0, 0], 3);
+    }
+  }
+  out.push(
+    doVat((b, rand, them) => {
+      for (const [x, z] of [[-11.2, 5.2], [11.4, 4.4], [-12.6, -1.6], [12.4, -2.4], [-10.6, -7.4], [10.8, -8.2], [-14.6, 8.6], [14.8, 8.2]]) VE.tre?.(b, { k: 'tron', x, z, r: 1.2 }, rand, them);
+      for (const [x, z] of [[-9.8, 8.6], [-8.4, 9.4], [9.6, 9.0]]) VE.rom?.(b, { k: 'tron', x, z, r: 0.8 }, rand, them);
+      for (const [x, z] of [[9.4, 1.2], [-9.6, 1.6], [8.9, 7.6]]) VE.chum?.(b, { k: 'tron', x, z, r: 0.6 }, rand, them);
+      VE.gieng?.(b, { k: 'tron', x: -9.8, z: -3.8, r: 0.8 }, rand, them);
+      for (let i = 0; i < 16; i++) {
+        const x = (i - 7.5) * 2.6 + (i % 2) * 0.7;
+        if (Math.abs(x) < 3 || (Math.abs(Math.abs(x) - 6.4) < 2.6)) continue;
+        VE.lau?.(b, { k: 'tron', x, z: bo + 0.9 + (i % 3) * 0.4, r: 0.8 }, rand, them);
+      }
+    }, 37),
+  );
+  for (const sx of [-1, 1]) {
+    const nha = lotModel('nhaSan', 6);
+    nha.scale.setScalar(1.35);
+    nha.position.set(sx * (SAN.w + 5.4), 0, -3.2);
+    nha.rotation.y = -sx * Math.PI / 2;
+    out.push(nha);
+  }
+  out.push(rung(41, 3.0, 0.45, (x, z) => trongSan(x, z, 3.6) || z > bo - 1.6 || (Math.abs(Math.abs(x) - SAN.w - 5.4) < 3 && Math.abs(z + 3.2) < 3)));
+  return out;
+}
 
 interface NguoiView {
   obj: THREE.Group;
@@ -269,13 +489,13 @@ export class LoiDaiCanh {
   private time = 0;
   private kq: 'thang' | 'thua' | null = null;
 
-  constructor() {
+  constructor(readonly kieu: KieuSan = 1) {
     this.scene.background = new THREE.Color(TROI_NGAY.sky);
     this.lights = addSunLights(this.scene, 16, 2048);
     // Camera nhìn chéo: xoay cả sân cho thềm ngai nằm phía trên màn hình, đội ta bên trái.
     this.inner.rotation.y = Math.PI / 4;
     this.scene.add(this.inner);
-    this.inner.add(dungSan());
+    this.inner.add(dungSan(kieu));
     this.hu = new HieuUng(this.inner);
     const vong = (mau: number, r: number) => {
       const mesh = new THREE.Mesh(new THREE.RingGeometry(r * 0.82, r, 40).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ color: mau, transparent: true, opacity: 0.9, depthWrite: false }));

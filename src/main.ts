@@ -1081,6 +1081,8 @@ async function start(): Promise<void> {
   /** Trận lôi đài đang đánh (không nằm trong state); null là đang ở kinh đô. */
   let loi: LoiDau | null = null;
   let loiDau: LoiDau | null = null;
+  /** Kiểu cảnh quanh sân (`window.__debug.loiDai` đổi để chụp so ba kiểu). */
+  let loiKieu: 1 | 2 | 3 = 1;
   const roiLoi = () => {
     if (!loi) return;
     loi.dong();
@@ -1099,7 +1101,7 @@ async function start(): Promise<void> {
     hud.closeCampaign();
     hud.closeSheet();
     drift.done = true;
-    const canh = world.showLoiDai(true)!;
+    const canh = world.showLoiDai(true, loiKieu)!;
     loiDau ??= new LoiDau(hud.goc, {
       state: () => state,
       screenAt: (id, cao) => world.loiScreenAt(id, cao),
@@ -3239,7 +3241,8 @@ async function start(): Promise<void> {
      * Lên lôi đài đánh tầng `tang` (coi như đã qua các tầng trước), bật Tự đánh nếu `tuDanh`: chụp thử sân chầu. Trả
      * trận để đọc.
      */
-    loiDai: (tang = 1, tuDanh = false) => {
+    loiDai: (tang = 1, tuDanh = false, kieu?: 1 | 2 | 3) => {
+      if (kieu) loiKieu = kieu;
       const l = loiNay(state);
       l.tang = Math.max(l.tang, tang - 1);
       l.tuDanh = tuDanh;

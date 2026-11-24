@@ -449,7 +449,7 @@ export function palaceBlock(m: ToonModel, level: number): void {
  * Cổng Nghi Môn tứ trụ (gốc ở giữa cổng, trước khi phóng `CONG_K`): hai trụ son đai vàng, hai trụ biểu, xà, hoành phi,
  * mái thuyền (cấp 6 hai tầng mái, cấp 8 chim đồng); cấp 10 thay bằng cổng thành hai tầng.
  */
-function nghiMon(m: ToonModel, level: number, roof: Roof): void {
+export function nghiMon(m: ToonModel, level: number, roof: Roof): void {
   const p = m.plain;
   if (level >= 10) {
     gateTower(m, 0, roof);
@@ -557,7 +557,7 @@ export function featherFans(m: ToonModel, y0: number, z: number): void {
 }
 
 /** Voi đá trên bệ, đầu quay ra cổng (từ cấp 5; cấp 8 phủ yên gấm vàng). */
-function stoneElephant(m: ToonModel, x: number, z: number, level: number): void {
+export function stoneElephant(m: ToonModel, x: number, z: number, level: number): void {
   const p = m.plain;
   p.box(0.66, 0.14, 0.98, C.rockDark, x, 0.12, z);
   p.box(0.7, 0.03, 1.02, C.rock, x, 0.2, z);

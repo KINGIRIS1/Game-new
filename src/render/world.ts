@@ -26,7 +26,7 @@ import { isBusy, itemProgress, pendingBuildings, pendingOf } from '../game/xay';
 import { Battlefield, CAM_KHE } from './battlefield';
 import { runJob, type Job as ViecNan } from './nanSan';
 import { DaNgoaiCanh } from './daNgoai';
-import { LoiDaiCanh } from './loiDai';
+import { LoiDaiCanh, type KieuSan } from './loiDai';
 import type { DaMapId } from '../game/defs';
 import type { Diem } from '../game/daNgoaiMap';
 import { tuongDau } from '../game/daNgoaiTran';
@@ -3954,17 +3954,21 @@ export class World {
   }
 
   /** Sang sân lôi đài (dựng cảnh lần đầu), hay về lại kinh đô khi `on` là false. */
-  showLoiDai(on: boolean): LoiDaiCanh | null {
+  showLoiDai(on: boolean, kieu: KieuSan = 1): LoiDaiCanh | null {
     const v = this.view;
     if (on) {
+      if (this.loi && this.loi.kieu !== kieu) {
+        this.loi.dispose();
+        this.loi = undefined;
+      }
       if (!this.loi) {
-        this.loi = new LoiDaiCanh();
+        this.loi = new LoiDaiCanh(kieu);
         this.loi.setShadows(this.bongDo);
       }
       if (!this.cityCam) this.cityCam = { target: v.target.clone(), zoom: v.zoom, bounds: { ...v.bounds }, facing: v.facing };
       this.panGoal = null;
       v.setFacing(0);
-      v.bounds = { min: -8, max: 8 };
+      v.bounds = { min: -12, max: 12 };
       this.fitLoi();
       return this.loi;
     }
@@ -3988,8 +3992,8 @@ export class World {
   private fitLoi(): void {
     const v = this.view;
     const ngang = this.renderer.domElement.clientWidth > this.renderer.domElement.clientHeight;
-    v.zoomToFit(13.6, ngang ? 21.5 : 14.5);
-    const lui = ngang ? -1.5 : -2.0;
+    v.zoomToFit(15.8, ngang ? 24 : 16.5);
+    const lui = ngang ? -1.2 : -0.6;
     v.target.set(lui, 0, lui);
     v.apply();
   }
