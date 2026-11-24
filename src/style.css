@@ -5362,37 +5362,37 @@ body.man-vao-on #hud > * {
 .loi-map {
   display: flex;
   flex-direction: column;
+  align-items: center;
   gap: 6px;
-  padding: 10px;
+  padding: 8px;
   height: 100%;
   box-sizing: border-box;
   justify-content: center;
 }
-.loi-map h3 {
+.loi-map p {
   margin: 0;
 }
-.loi-hang {
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
+.loi-map .loi-bac {
+  color: #a3261c;
+  font-weight: 700;
+  font-size: 13px;
 }
-.loi-hang > div {
+/* Lưới tầng gọn: 1 tới 50, mỗi hàng mười tầng. */
+.loi-luoi {
   display: grid;
-  grid-template-columns: repeat(10, 1fr);
+  grid-template-columns: repeat(10, 29px);
   gap: 4px;
 }
-.loi-hang.khoa {
-  opacity: 0.55;
-}
 .loi-o {
-  aspect-ratio: 1;
-  min-width: 0;
-  border-radius: 8px;
-  border: 2px solid #6b4a1c;
+  position: relative;
+  width: 29px;
+  height: 29px;
+  border-radius: 7px;
+  border: 1.5px solid #6b4a1c;
   background: #3a2a14;
   color: #f4e3b4;
   font-weight: 700;
-  font-size: 13px;
+  font-size: 12px;
   padding: 0;
   cursor: pointer;
 }
@@ -5410,9 +5410,18 @@ body.man-vao-on #hud > * {
 }
 .loi-o.moc {
   border-radius: 50%;
+  border-color: #ffcf4a;
+}
+.loi-o.moc::after {
+  content: '👑';
+  position: absolute;
+  top: -9px;
+  right: -5px;
+  font-size: 10px;
+  line-height: 1;
 }
 .loi-o.on {
-  outline: 3px solid #fff4dc;
+  outline: 2px solid #a3261c;
   outline-offset: 1px;
 }
 .loi-chips {
@@ -5435,37 +5444,6 @@ body.man-vao-on #hud > * {
 .loi-chip em {
   font-style: normal;
 }
-.loi-doi .da-hero small {
-  min-width: 1em;
-  font-weight: 700;
-  color: #ffcf4a;
-}
-.loi-thu {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-}
-.loi-thu-o {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 2px;
-  padding: 4px 6px;
-  border-radius: 10px;
-  border: 2px solid #6b4a1c;
-  background: #2f2210;
-  color: #f4e3b4;
-  cursor: pointer;
-}
-.loi-thu-o .thu-anh {
-  width: 48px;
-  height: 48px;
-}
-.loi-thu-o.on {
-  border-color: #ffcf4a;
-  background: #5a3c12;
-}
-
 #hud.in-loi > :not(.loi-tran):not(.toasts) {
   display: none !important;
 }
@@ -5676,9 +5654,13 @@ body.man-vao-on #hud > * {
   background: linear-gradient(#1c120800, #1c1208e6 28%);
   display: grid;
   grid-template-columns: 1fr auto;
-  grid-template-areas: 'luot nut' 'chieu chieu';
+  /* Màn dọc: dòng lượt trọn bề ngang, hàng nút bên dưới (bốn nút không còn chỗ cho chữ nằm cạnh). */
+  grid-template-areas: 'luot luot' 'nut nut' 'chieu chieu';
   gap: 6px;
   align-items: center;
+}
+.loi-tran.xep .loi-bar {
+  grid-template-areas: 'luot nut' 'chieu chieu';
 }
 .loi-luot {
   grid-area: luot;
@@ -5694,7 +5676,14 @@ body.man-vao-on #hud > * {
 .loi-nut {
   grid-area: nut;
   display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
   gap: 5px;
+}
+.loi-nut .btn {
+  padding-left: 9px;
+  padding-right: 9px;
+  white-space: nowrap;
 }
 .loi-nut .hoi {
   background: #a3261c;
@@ -5764,6 +5753,102 @@ body.man-vao-on #hud > * {
   font-style: normal;
   font-size: 11px;
 }
+/* Xếp đội trên sân: chưa đánh nên ẩn thẻ máu; thanh dưới là chip tướng, chip thần thú, nút Bắt đầu. */
+.loi-tran.xep .loi-the {
+  display: none;
+}
+.loi-xep {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+.loi-xep-hang {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.loi-xep-o {
+  position: relative;
+  width: 48px;
+  height: 48px;
+  padding: 0;
+  border-radius: 50%;
+  border: 2px solid #8a7a5a;
+  background: #2f2210;
+  cursor: pointer;
+  flex: none;
+}
+.loi-xep-o .av {
+  display: grid;
+  place-items: center;
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  overflow: hidden;
+  font-size: 24px;
+  line-height: 1;
+}
+.loi-xep-o img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.loi-xep-o .thu-anh {
+  --thu-co: 42px;
+}
+.loi-xep-o.thu {
+  border-radius: 12px;
+}
+.loi-xep-o.thu .av {
+  border-radius: 10px;
+}
+.loi-xep-o.on {
+  border-color: #7fe05a;
+  box-shadow: 0 0 8px #7fe05a99;
+}
+.loi-xep-o.thu.on {
+  border-color: #ffcf4a;
+  box-shadow: 0 0 8px #ffcf4a99;
+}
+.loi-xep-o:disabled {
+  filter: grayscale(0.7) brightness(0.65);
+  cursor: default;
+}
+.loi-xep-o > i {
+  position: absolute;
+  right: -4px;
+  bottom: -4px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #2f7a1c;
+  border: 1.5px solid #fff4dc;
+  color: #fff;
+  font-style: normal;
+  font-weight: 700;
+  font-size: 11px;
+  line-height: 15px;
+  text-align: center;
+}
+.loi-xep-note {
+  color: #f4e3b4;
+  text-shadow: 0 1px 2px #000;
+  font-size: 12px;
+}
+.loi-bat-dau {
+  align-self: stretch;
+}
+.loi-qua {
+  margin: 10px 0 0;
+  color: #ffcf4a;
+  font-weight: 700;
+}
+.loi-qua .btn {
+  margin-left: 6px;
+}
 .loi-kq {
   position: absolute;
   inset: 0;
@@ -5802,7 +5887,8 @@ body.man-vao-on #hud > * {
   margin-top: 12px;
 }
 @media (orientation: landscape) and (max-height: 520px) {
-  .loi-bar {
+  .loi-bar,
+  .loi-tran.xep .loi-bar {
     grid-template-columns: auto 1fr auto;
     grid-template-areas: 'luot chieu nut';
     padding-left: calc(8px + env(safe-area-inset-left));
@@ -5816,5 +5902,26 @@ body.man-vao-on #hud > * {
   }
   .loi-chieu {
     min-height: 56px;
+  }
+  .loi-nut .btn {
+    padding-left: 12px;
+    padding-right: 12px;
+  }
+  /* Máy cầm ngang: chip xếp một hàng cuộn ngang, nút Bắt đầu nằm cuối hàng. */
+  .loi-xep {
+    flex-direction: row;
+    align-items: center;
+    overflow-x: auto;
+    padding: 6px 4px;
+  }
+  .loi-xep-hang {
+    flex-wrap: nowrap;
+  }
+  .loi-xep-note {
+    display: none;
+  }
+  .loi-bat-dau {
+    align-self: center;
+    flex: none;
   }
 }

@@ -1,10 +1,11 @@
 // Giao diện Lôi đài Phong Châu (docs/thiet-ke.md mục Kế hoạch: Lôi đài Phong Châu).
 //
-// - Bảng Lôi đài (nút Lôi đài ở cột bên phải, bước `loiDai` của bản đồ phó bản): nửa trái là bản đồ 50 tầng
-//   (`loiDaiMapHtml`), nửa phải là tầng đang chọn, đội giữ đài, thưởng, chọn ba tướng và thần thú, nút Lên đài
-//   (`loiDaiHtml`).
-// - Màn đánh (`LoiTranUi`): dải thứ tự lượt, thẻ máu nổi trên đầu từng người, ba nút chiêu, Tự đánh, tua nhanh, rời
-//   đài, bảng kết quả. Lớp này chỉ vẽ; nhịp trận do `LoiDau` (`ui/loiDaiTran.ts`) lo.
+// - Bảng Lôi đài (nút Lôi đài ở cột bên phải, bước `loiDai` của bản đồ phó bản): nửa trái là lưới 50 tầng xếp từ 1
+//   tới 50 (`loiDaiMapHtml`), nửa phải là tầng đang chọn, đội giữ đài, thưởng, nút Lên đài (`loiDaiHtml`). Đội và thần
+//   thú không chọn ở đây mà chọn trên sân.
+// - Màn đánh (`LoiTranUi`): lên đài thì xếp đội trước (`veXep`: chip tướng, chip thần thú, nút Bắt đầu), rồi dải thứ tự
+//   lượt, thẻ máu nổi trên đầu từng người, ba nút chiêu, Tự đánh, Tự qua màn, tua nhanh, rời đài, bảng kết quả. Lớp này
+//   chỉ vẽ; nhịp trận do `LoiDau` (`ui/loiDaiTran.ts`) lo.
 
 import { LOI_DAI, LOI_LINH, PHAM_TRAN, SKILL_IDS, THAN_THU_IDS, type SkillId, type Chapter, type LoiGiac, type ThanThuId } from '../game/defs';
 import type { GameState } from '../game/game';
@@ -12,10 +13,11 @@ import {
   CHIEU,
   CHIEU_MOI,
   HIEU_UNG_LOI,
+  bacLoi,
   chieuDuoc,
   chuongTang,
-  doiLoi,
   doiTang,
+  heBac,
   laLoiTuong,
   laMoc,
   loiDaiMo,
@@ -23,17 +25,16 @@ import {
   tangKe,
   tangMo,
   tangQua,
-  thuLoi,
+  tuanCon,
   thuTu,
-  tuongLoi,
   vongNay,
   type LoiKind,
   type LoiThuong,
   type LoiTran,
+  type LoiTuong,
   type LoiUnit,
 } from '../game/loiDai';
 import { chapterOf } from '../game/manVao';
-import { capThu, thuCo } from '../game/thanThu';
 import { vi } from '../text/vi';
 import { skillIconUrl } from './format';
 import { thuAnh } from './thanThu';
@@ -66,32 +67,39 @@ export function tangXem(s: GameState, chon: number | null): number {
   return tangKe(s) ?? Math.max(1, tangQua(s));
 }
 
-/** Nửa trái: bản đồ tầng, mỗi chương một hàng mười ô; ô mốc có vương miện. */
-export function loiDaiMapHtml(s: GameState, chon: number | null): string {
+/** Quãng chờ gọn: "3 ngày 5 giờ", "5 giờ 20 phút", "12 phút". */
+function conLai(ms: number): string {
+  const phut = Math.max(1, Math.ceil(ms / 60_000));
+  const ngay = Math.floor(phut / 1440);
+  const gio = Math.floor((phut % 1440) / 60);
+  if (ngay) return gio ? `${ngay} ngày ${gio} giờ` : `${ngay} ngày`;
+  return gio ? `${gio} giờ ${phut % 60} phút` : `${phut} phút`;
+}
+
+/** Nửa trái: lưới tầng gọn, xếp từ 1 tới 50, mỗi hàng mười tầng (một chương); tầng mốc viền vàng có vương miện nhỏ. */
+export function loiDaiMapHtml(s: GameState, chon: number | null, now: number): string {
   if (!loiDaiMo(s)) return `<div class="thu-big"><em>🥁</em></div>`;
+  const bac = bacLoi(s);
   const qua = tangQua(s);
   const mo = tangMo(s);
   const xem = tangXem(s, chon);
-  let rows = '';
-  for (let c = 5; c >= 1; c--) {
-    let cells = '';
-    for (let i = 1; i <= LOI_DAI.moiChuong; i++) {
-      const t = (c - 1) * LOI_DAI.moiChuong + i;
-      const cls = t <= qua ? 'qua' : t === qua + 1 && t <= mo ? 'ke' : 'khoa';
-      const duoc = t <= mo && t <= qua + 1;
-      cells += `<button class="loi-o ${cls} ${laMoc(t) ? 'moc' : ''} ${t === xem ? 'on' : ''}" data-act="loiTang" data-id="${t}" ${duoc ? '' : 'disabled'} aria-label="${T().tang(t)}">${laMoc(t) ? '👑' : t}</button>`;
-    }
-    rows += `<div class="loi-hang ${c * LOI_DAI.moiChuong <= mo ? '' : 'khoa'}"><small>${T().chuong(c)}</small><div>${cells}</div></div>`;
+  let cells = '';
+  for (let t = 1; t <= LOI_DAI.tang; t++) {
+    const cls = t <= qua ? 'qua' : t === qua + 1 && t <= mo ? 'ke' : 'khoa';
+    const duoc = t <= mo && t <= qua + 1;
+    cells += `<button class="loi-o ${cls} ${laMoc(t) ? 'moc' : ''} ${t === xem ? 'on' : ''}" data-act="loiTang" data-id="${t}" ${duoc ? '' : 'disabled'} aria-label="${laMoc(t) ? T().tangMoc(t) : T().tang(t)}">${t}</button>`;
   }
-  return `<div class="loi-map"><h3>🥁 ${T().ten}</h3><p class="muted small">${T().daQua(qua, LOI_DAI.tang)}</p>${rows}</div>`;
+  const bacDong = bac > 0 ? `<p class="loi-bac">🔥 ${T().bac(bac, Math.round((heBac(bac) - 1) * 100))}</p>` : '';
+  return `<div class="loi-map"><p class="muted small">${T().daQua(qua, LOI_DAI.tang)} · ${T().lamMoi(conLai(tuanCon(now)))}</p>${bacDong}<div class="loi-luoi">${cells}</div></div>`;
 }
 
-/** Nửa phải: tầng đang xem, đội giữ đài, thưởng, chọn đội và thú, nút Lên đài. */
+/** Nửa phải: tầng đang xem, đội giữ đài, thưởng, nút Lên đài (đội và thần thú chọn trên sân). */
 export function loiDaiHtml(s: GameState, chon: number | null): string {
   const L = T();
   if (!loiDaiMo(s)) return `<h3>🥁 ${L.title}</h3><p>${L.locked}</p>`;
   const tang = tangXem(s, chon);
-  const may = doiTang(tang);
+  const bac = bacLoi(s);
+  const may = doiTang(tang, bac);
   const qua = tangQua(s);
   const daQua = tang <= qua;
   const chuong = Math.min(chuongTang(tang), chapterOf(s)) as Chapter;
@@ -100,47 +108,33 @@ export function loiDaiHtml(s: GameState, chon: number | null): string {
   const pham = vi.trangBi.pham[Math.min(laMoc(tang) ? 3 : 2, PHAM_TRAN[chuong])];
   const thuong = daQua
     ? `<p class="muted small">${L.thuongDa}</p>`
-    : `<div class="stat"><span>🎁 ${L.thuong}</span><b>${vi.resources.sat.icon} ${satTang(tang)} · ${L.thuongMon(pham)}</b></div>`;
-  const doi = doiLoi(s);
-  const chips = tuongLoi(s)
-    .map((k) => {
-      const i = doi.indexOf(k);
-      const full = i < 0 && doi.length >= LOI_DAI.doi;
-      return `<button class="da-hero ${i >= 0 ? 'on' : ''}" data-act="loiDoi" data-hero="${k}" ${full ? 'disabled' : ''}><em>${vi.ui.tuongIcons[k]}</em><span>${vi.ui.tuongNames[k]}</span><small>${i >= 0 ? i + 1 : ''}</small></button>`;
-    })
-    .join('');
-  const co = thuCo(s);
-  const theo = thuLoi(s);
-  const thu = co.length
-    ? `<div class="loi-thu">${THAN_THU_IDS.filter((k) => co.includes(k))
-        .map((k) => `<button class="loi-thu-o ${k === theo ? 'on' : ''}" data-act="loiThu" data-thu="${k}" title="${L.thuKy[k]}">${thuAnh(k)}<small>${vi.thanThu.ten[k]} · ${vi.thanThu.cap(capThu(s, k))}</small></button>`)
-        .join('')}</div>${theo ? `<p class="muted small">${L.thuKy[theo]}</p>` : ''}`
-    : `<p class="muted small">🔒 ${L.thuKhoa}</p>`;
+    : `<div class="stat"><span>🎁 ${L.thuong}</span><b>${vi.resources.sat.icon} ${satTang(tang, bac)} · ${L.thuongMon(pham)}</b></div>`;
   const khoa = tangKe(s) === null && qua < LOI_DAI.tang ? `<p class="muted small">🔒 ${L.khoaChuong(chapterOf(s) + 1)}</p>` : '';
   return `<h3>🥁 ${laMoc(tang) ? L.tangMoc(tang) : L.tang(tang)}</h3>
     ${laMoc(tang) ? `<p class="muted">${L.moc[tang / LOI_DAI.moiChuong - 1]}</p>` : `<p class="muted small">${L.intro}</p>`}
     <h4>${L.doiMay}</h4><div class="loi-chips">${doiMay}</div>
     ${thuong}
-    <h4>${L.doiTa}</h4><div class="da-heroes loi-doi">${chips}</div><p class="muted small">${L.doiNote}</p>
-    <h4>${L.thuTitle}</h4>${thu}
-    <div class="da-btns"><button class="btn bronze" data-act="loiVao" data-id="${tang}" ${doi.length < LOI_DAI.doi ? 'disabled' : ''}>${doi.length < LOI_DAI.doi ? L.canBa : daQua ? L.vaoLai : L.vao}</button></div>
-    ${khoa}<p class="muted small">${L.note}</p>`;
+    <div class="da-btns"><button class="btn bronze" data-act="loiVao" data-id="${tang}">${daQua ? L.vaoLai : L.vao}</button></div>
+    ${khoa}<p class="muted small">${L.note}</p><p class="muted small">${L.tuanNote(Math.round(LOI_DAI.bacHe * 100), Math.round(LOI_DAI.bacSat * 100), LOI_DAI.bacMax)}</p>`;
 }
 
-/** Bảng kết quả trận. */
-export function loiKetQuaHtml(s: GameState, b: LoiTran, thuong: LoiThuong | null): string {
+/**
+ * Bảng kết quả trận. `sau`: tầng kế đánh được (null là không có); `dem` > 0 là đang đếm ngược Tự qua màn (số giây còn
+ * lại, `LoiTranUi.demQua` thay tại chỗ).
+ */
+export function loiKetQuaHtml(b: LoiTran, thuong: LoiThuong | null, sau: number | null, dem = 0): string {
   const L = T();
   const thang = b.kq === 'thang';
-  const ke = tangKe(s);
   const body = thang
     ? thuong
       ? `<p class="loi-ban">👑 ${L.vuaBan}</p><div class="stat"><span>${vi.resources.sat.icon} ${vi.resources.sat.name}</span><b>+${thuong.sat}</b></div>${roiHtml(thuong.roi ?? undefined)}`
       : `<p class="muted">${L.khongThuong}</p>`
     : `<p class="muted">${b.tg >= LOI_DAI.vong ? `${L.thuaHet}. ` : ''}${L.thuaNote}</p>`;
+  const qua = dem > 0 ? `<p class="loi-qua">⏩ ${L.tuQuaDem(sau!)} <b class="loi-dem">${dem}</b>… <button class="btn small ghost" data-act="loiDung">${L.dung}</button></p>` : '';
   const nut =
-    (thang && ke && ke === b.tang + 1 ? `<button class="btn bronze" data-act="loiTiep">${L.tiep} · ${L.tang(ke)}</button>` : '') +
+    (thang && sau ? `<button class="btn bronze" data-act="loiTiep">${L.tiep} · ${L.tang(sau)}</button>` : '') +
     `<button class="btn ${thang ? 'ghost' : 'bronze'}" data-act="loiLai">${L.lai}</button><button class="btn ghost" data-act="loiVe">${L.ve}</button>`;
-  return `<div class="loi-kq-the ${thang ? 'thang' : 'thua'}"><h2>${thang ? `🏆 ${L.thang}` : `🏳️ ${L.thua}`}</h2><p><b>${laMoc(b.tang) ? L.tangMoc(b.tang) : L.tang(b.tang)}</b></p>${body}<div class="loi-kq-nut">${nut}</div></div>`;
+  return `<div class="loi-kq-the ${thang ? 'thang' : 'thua'}"><h2>${thang ? `🏆 ${L.thang}` : `🏳️ ${L.thua}`}</h2><p><b>${laMoc(b.tang) ? L.tangMoc(b.tang) : L.tang(b.tang)}</b></p>${body}${qua}<div class="loi-kq-nut">${nut}</div></div>`;
 }
 
 /** Chiêu có ảnh vẽ trong `public/anh-ky-nang/`: kỹ năng tướng, đòn thường và tám chiêu chỉ có trên lôi đài. */
@@ -204,8 +198,10 @@ export class LoiTranUi {
     });
   }
 
-  mo(b: LoiTran): void {
+  /** Mở màn đánh cho trận `b`; `xep` là đang xếp đội (chưa đánh: ẩn thẻ máu). */
+  mo(b: LoiTran, xep = false): void {
     this.el.hidden = false;
+    this.el.classList.toggle('xep', xep);
     this.kq.hidden = true;
     this.kq.innerHTML = '';
     this.noi.innerHTML = '';
@@ -232,6 +228,62 @@ export class LoiTranUi {
     if (html !== this.topHtml) {
       this.topHtml = html;
       this.top.innerHTML = html;
+    }
+  }
+
+  /** Dải trên lúc xếp đội: tầng, số người đã chọn, đội giữ đài. */
+  veTopXep(b: LoiTran): void {
+    const L = T();
+    const dich = b.units
+      .filter((u) => u.phe === 1)
+      .map((u) => `<span class="loi-tt-o p1" title="${tenLoi(u.kind, 1)}">${this.av(b, u.id)}</span>`)
+      .join('') + (b.thu[1] ? `<span class="loi-tt-o p1" title="${vi.thanThu.ten[b.thu[1].kind]}">${this.av(b, -2)}</span>` : '');
+    const html = `<b>${laMoc(b.tang) ? `👑 ${L.tang(b.tang)}` : L.tang(b.tang)}</b><span>${L.doiMay}</span><div class="loi-tt">${dich}</div>`;
+    if (html !== this.topHtml) {
+      this.topHtml = html;
+      this.top.innerHTML = html;
+    }
+  }
+
+  /**
+   * Thanh dưới lúc xếp đội: chip mọi tướng đã về (chạm để thêm, bớt; số là thứ tự đứng), chip thần thú, nút Bắt đầu.
+   * `co`: các tướng đã về, `doi`: đội đang chọn, `thuCo`: thần thú đã về, `thu`: con mang theo.
+   */
+  veXep(o: { co: LoiTuong[]; doi: LoiTuong[]; thuCo: ThanThuId[]; thu: ThanThuId | null; tuDanh: boolean; tuQua: boolean; nhanh: boolean }): void {
+    const L = T();
+    const du = o.doi.length >= LOI_DAI.doi;
+    const luot = `<b class="p0">${L.xepDoi(o.doi.length, LOI_DAI.doi)}</b>`;
+    if (this.luot.innerHTML !== luot) this.luot.innerHTML = luot;
+    const tuong = o.co
+      .map((k) => {
+        const i = o.doi.indexOf(k);
+        const src = this.anh?.(k) ?? null;
+        return `<button class="loi-xep-o ${i >= 0 ? 'on' : ''}" data-act="loiDoi" data-hero="${k}" title="${vi.ui.tuongNames[k]}" aria-label="${vi.ui.tuongNames[k]}" ${i < 0 && du ? 'disabled' : ''}>
+          <span class="av">${src ? `<img src="${src}" alt="" draggable="false">` : vi.ui.tuongIcons[k]}</span>${i >= 0 ? `<i>${i + 1}</i>` : ''}</button>`;
+      })
+      .join('');
+    const thu = THAN_THU_IDS.filter((k) => o.thuCo.includes(k))
+      .map((k) => `<button class="loi-xep-o thu ${k === o.thu ? 'on' : ''}" data-act="loiThu" data-thu="${k}" title="${vi.thanThu.ten[k]}: ${L.thuKy[k]}" aria-label="${vi.thanThu.ten[k]}"><span class="av">${thuAnh(k)}</span></button>`)
+      .join('');
+    const chieu = `<div class="loi-xep"><small class="loi-xep-note">${L.xepNote}</small><div class="loi-xep-hang">${tuong}</div>${thu ? `<div class="loi-xep-hang">${thu}</div>` : ''}
+      <button class="btn bronze loi-bat-dau" data-act="loiBatDau" ${du ? '' : 'disabled'}>${du ? `⚔️ ${L.batDau}` : L.canBa}</button></div>`;
+    if (chieu !== this.chieuHtml) {
+      this.chieuHtml = chieu;
+      this.chieu.innerHTML = chieu;
+    }
+    this.veNut({ tuDanh: o.tuDanh, tuQua: o.tuQua, nhanh: o.nhanh, roiHoi: false, xep: true });
+  }
+
+  /** Nút góc phải thanh dưới: Tự đánh, Tự qua màn, tua nhanh, rời đài (lúc xếp đội thì rời ngay, không hỏi lại). */
+  private veNut(o: { tuDanh: boolean; tuQua: boolean; nhanh: boolean; roiHoi: boolean; xep?: boolean }): void {
+    const L = T();
+    const nut = `<button class="btn small ${o.tuDanh ? 'bronze' : 'ghost'}" data-act="loiTuDanh">${L.tuDanh}${o.tuDanh ? ' ✓' : ''}</button>
+      <button class="btn small ${o.tuQua ? 'bronze' : 'ghost'}" data-act="loiTuQua" title="${L.tuQuaTa}">${L.tuQua}${o.tuQua ? ' ✓' : ''}</button>
+      <button class="btn small ${o.nhanh ? 'bronze' : 'ghost'}" data-act="loiNhanh">${L.nhanh(o.nhanh ? 2 : 1)}</button>
+      ${o.xep ? `<button class="btn small ghost" data-act="loiVe" title="${L.ve}">↩</button>` : `<button class="btn small ghost ${o.roiHoi ? 'hoi' : ''}" data-act="loiRoi" title="${L.roi}">${o.roiHoi ? `🏳️ ${L.roi}?` : '🏳️'}</button>`}`;
+    if (nut !== this.nutHtml) {
+      this.nutHtml = nut;
+      this.nut.innerHTML = nut;
     }
   }
 
@@ -264,7 +316,7 @@ export class LoiTranUi {
   }
 
   /** Thanh dưới: lượt của ai, ba nút chiêu của người ấy (người chơi cầm), nút Tự đánh, tua, rời đài. */
-  veBar(b: LoiTran, o: { cam: LoiUnit | null; chon: number | null; tuDanh: boolean; nhanh: boolean; roiHoi: boolean }): void {
+  veBar(b: LoiTran, o: { cam: LoiUnit | null; chon: number | null; tuDanh: boolean; tuQua: boolean; nhanh: boolean; roiHoi: boolean }): void {
     const L = T();
     const u = o.cam;
     let luot = '';
@@ -289,13 +341,7 @@ export class LoiTranUi {
       this.chieuHtml = chieu;
       this.chieu.innerHTML = chieu;
     }
-    const nut = `<button class="btn small ${o.tuDanh ? 'bronze' : 'ghost'}" data-act="loiTuDanh">${L.tuDanh}${o.tuDanh ? ' ✓' : ''}</button>
-      <button class="btn small ${o.nhanh ? 'bronze' : 'ghost'}" data-act="loiNhanh">${L.nhanh(o.nhanh ? 2 : 1)}</button>
-      <button class="btn small ghost ${o.roiHoi ? 'hoi' : ''}" data-act="loiRoi" title="${L.roi}">${o.roiHoi ? `🏳️ ${L.roi}?` : '🏳️'}</button>`;
-    if (nut !== this.nutHtml) {
-      this.nutHtml = nut;
-      this.nut.innerHTML = nut;
-    }
+    this.veNut(o);
   }
 
   /** Chữ nổi (số máu mất, hồi, hiệu ứng) ở điểm màn hình `p`. */
@@ -323,5 +369,14 @@ export class LoiTranUi {
   ketQua(html: string): void {
     this.kq.innerHTML = html;
     this.kq.hidden = false;
+  }
+
+  /** Đếm ngược Tự qua màn trên bảng kết quả: thay số giây; `n` ≤ 0 là thôi đếm (bỏ cả dòng). */
+  demQua(n: number): void {
+    const dong = this.kq.querySelector<HTMLElement>('.loi-qua');
+    if (!dong) return;
+    if (n <= 0) return dong.remove();
+    const so = dong.querySelector<HTMLElement>('.loi-dem')!;
+    if (so.textContent !== String(n)) so.textContent = String(n);
   }
 }

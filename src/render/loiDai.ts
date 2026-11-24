@@ -35,6 +35,7 @@ import {
   makeTrungTrac,
 } from './heroes';
 import { HieuUng } from './hieuUng';
+import { doDau } from './hinhTuong';
 import { addSunLights, type SunLights } from './lights';
 import { buildForest, makeFighter, makeMountain, type TreeSpot } from './models';
 import { ShapeBuilder, seeded } from './shapes';
@@ -61,7 +62,7 @@ export const SAN = {
   soBac: 3,
   /** Chỗ đứng: đội cách tâm sân, giãn cách giữa ba người, thú đứng xa hơn. */
   doiX: 5.4,
-  gian: 3.7,
+  gian: 4.0,
   thuX: 6.7,
 } as const;
 
@@ -162,7 +163,26 @@ export function taoChau(kind: LoiTuong): THREE.Group {
   }
 }
 
-const coCua = (kind: LoiKind): number => (kind === 'lacTuong' ? 0.95 : (SCALE[kind as FighterKind] ?? 0.8)) * CO;
+/**
+ * Cỡ người trên sân. Tướng dựng to hơn lính (mỗi tướng một hệ số riêng), người cưỡi thú lại theo cỡ của bãi chiến, nên
+ * lấy cỡ bãi chiến thì người to người nhỏ. Ở đây mọi người một cỡ: đo quãng xương đầu tới ngực của mô hình (`doDau`) rồi
+ * phóng cho quãng ấy bằng `NGUOI_CO`; thú cưỡi phóng theo người cưỡi. Võ sĩ, lính theo hầu nhỏ hơn tướng một chút
+ * (`PHU_CO`). Quái không có dáng người (`QUAI_CO`) giữ cỡ bãi chiến.
+ */
+const NGUOI_CO = 0.23;
+const PHU_CO = 0.85;
+const PHU: LoiKind[] = ['giao', 'cung', 'no', 'phoTuong', 'kyBinh'];
+const QUAI_CO: Partial<Record<LoiKind, number>> = { thuongLuong: 1, caSau: 0.8 };
+
+/** Cỡ phóng của mô hình `obj` (chưa phóng, chưa gắn vào cảnh) cho người loại `kind`. */
+export function coNguoi(kind: LoiKind | NuTuongId, obj: THREE.Object3D): number {
+  const quai = QUAI_CO[kind as LoiKind];
+  if (quai) return quai * CO;
+  (obj.userData.pose as Poser | undefined)?.({ act: 'stand', time: 0 });
+  const { cach } = doDau(obj);
+  if (!(cach > 0)) return (SCALE[kind as FighterKind] ?? 0.8) * CO;
+  return (NGUOI_CO / cach) * (PHU.includes(kind as LoiKind) ? PHU_CO : 1) * CO;
+}
 
 /** Sân chầu: nền, thềm ngai, ngai, lọng, quạt, cung điện phía sau, cờ, trống, lư hương. */
 function dungSan(kieu: KieuSan): THREE.Group {
@@ -548,7 +568,10 @@ export class LoiDaiCanh {
     this.kq = null;
     this.vongLuot.visible = false;
     for (const v of this.vongMuc) v.visible = false;
-    for (const u of b.units) this.them(u.id, u.kind, taoNguoi(u.kind, !!u.glow, !!u.bo4), coCua(u.kind), u.phe, u.cho);
+    for (const u of b.units) {
+      const o = taoNguoi(u.kind, !!u.glow, !!u.bo4);
+      this.them(u.id, u.kind, o, coNguoi(u.kind, o), u.phe, u.cho);
+    }
     b.thu.forEach((t, i) => {
       if (t) this.them(-1 - i, t.kind, makeThanThu(t.kind, dangThu(t.cap)), (SCALE[t.kind] ?? 0.72) * CO * 0.8, i as 0 | 1, null);
     });
@@ -556,7 +579,7 @@ export class LoiDaiCanh {
     chau.forEach((k, i) => {
       const s = i % 2 ? 1 : -1;
       const o = taoChau(k);
-      o.scale.setScalar(coCua(k) * 0.8);
+      o.scale.setScalar(coNguoi(k, o) * 0.8);
       o.position.set(s * (1.6 + Math.floor(i / 2) * 0.95), THEM_Y, SAN.themZ - 1.5);
       o.rotation.y = -s * 0.3;
       (o.userData.pose as Poser | undefined)?.({ act: 'stand', time: i });
@@ -566,7 +589,7 @@ export class LoiDaiCanh {
     nu.forEach((k, i) => {
       const s = i % 2 ? 1 : -1;
       const o = makeNuTuong(k);
-      o.scale.setScalar(0.8 * CO * 0.8);
+      o.scale.setScalar(coNguoi(k, o) * 0.8);
       o.position.set(s * (1.75 + Math.floor(i / 2) * 0.95), THEM_Y, SAN.themZ - 2.7);
       o.rotation.y = -s * 0.25;
       (o.userData.pose as Poser | undefined)?.({ act: 'stand', time: i + 3 });

@@ -560,9 +560,26 @@ d.camera(cx, cz, 2.6);`,
     sau: `document.querySelector('[data-act=goThanThu]').click();`,
   },
   'loi-dai': {
-    mo: 'Chương 5 (đã thắng màn 35), đã qua 23 tầng lôi đài: bảng Lôi đài (bản đồ 50 tầng, đội giữ đài, chọn đội, thần thú)',
+    mo: 'Chương 5 (đã thắng màn 35), đã qua 23 tầng lôi đài: bảng Lôi đài (lưới 50 tầng xếp 1 tới 50, đội giữ đài, thưởng, nút Lên đài)',
     truoc: LOI_DAI_23,
     sau: `document.querySelector('[data-act=goLoiDai]').click();`,
+  },
+  'loi-dai-bac': {
+    mo: 'Như loi-dai, tuần trước qua hết 50 tầng, vừa sang tuần mới: bảng Lôi đài ở bậc khó 3, tầng về 0, dòng tin tuần mới',
+    truoc: LOI_DAI_23.replace('tang: 23', 'tang: 50, bac: 2'),
+    sau: `d.loiTuan(); document.querySelector('[data-act=goLoiDai]').click();`,
+  },
+  'loi-dai-xep': {
+    mo: 'Như loi-dai, bấm Lên đài tầng 24: xếp đội trên sân (chip tướng, chip thần thú, nút Bắt đầu, Tự qua màn)',
+    truoc: LOI_DAI_23,
+    sau: `d.tocDo(4); d.loiXep(24);`,
+    doi: 20000,
+  },
+  'loi-dai-xep-du': {
+    mo: 'Đủ mười hai tướng và năm thần thú, xếp đội trên sân ở tầng mốc 50 (so cỡ người cưỡi voi, cưỡi ngựa, đi bộ)',
+    truoc: `${CHUONG5(35)}\n${DU_TUONG}\ns.daNgoai.boss = s.daNgoai.boss.map(() => 1); s.loiDai = { tang: 49, doi: ['baTrieu', 'ngoQuyen', 'sonTinh'], thu: 'thuRong', tuDanh: false, nhanh: false };`,
+    sau: `d.tocDo(4); d.loiXep(50);`,
+    doi: 20000,
   },
   'loi-dai-tran': {
     mo: 'Như loi-dai, lên đài tầng 24: sân chầu, Vua Hùng trên thềm, hai đội, chờ người chơi chọn chiêu',
@@ -577,9 +594,9 @@ d.camera(cx, cz, 2.6);`,
     doi: 14000,
   },
   'loi-dai-thang': {
-    mo: 'Như loi-dai, lên đài tầng 21 (dễ), Tự đánh tới hết trận: bảng kết quả Vua Hùng ban thưởng',
-    truoc: LOI_DAI_23.replace('tang: 23', 'tang: 20'),
-    sau: `d.tocDo(8); d.loiDai(21, true);`,
+    mo: 'Như loi-dai, lên đài tầng 12 (dễ, đội không đồ vẫn thắng), Tự đánh tới hết trận: bảng kết quả Vua Hùng ban thưởng',
+    truoc: LOI_DAI_23.replace('tang: 23', 'tang: 11'),
+    sau: `d.tocDo(8); d.loiDai(12, true);`,
     doi: 40000,
   },
   'loi-dai-moc': {
@@ -905,7 +922,7 @@ export async function chayMa(page, ma) {
 }
 
 export async function choGame(page) {
-  await page.waitForFunction(() => window.__debug || document.querySelector('.fatal'), null, { timeout: 30000 });
+  await page.waitForFunction(() => window.__debug || document.querySelector('.fatal'), null, { timeout: 90000 });
   const fatal = await page.locator('.fatal').count();
   if (fatal) throw new Error(`Game không chạy được: ${await page.locator('.fatal').innerText()}`);
 }

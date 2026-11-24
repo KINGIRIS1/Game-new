@@ -10,7 +10,9 @@ import {
   CHIEU_TUONG,
   HIEU_UNG_LOI,
   LOI_TUONG,
+  bacLoi,
   canDanhTang,
+  capNhatTuan,
   chieuCua,
   choCua,
   chuongTang,
@@ -19,6 +21,7 @@ import {
   doiGoiY,
   doiLoi,
   doiTang,
+  heBac,
   isLoiDaiState,
   laMoc,
   loiDaiMo,
@@ -31,6 +34,10 @@ import {
   taoTran,
   thuTu,
   toiLuot,
+  tranXem,
+  tuanCon,
+  tuanCua,
+  TUAN_MS,
   tuChon,
   tuDanhHet,
   tuongLoi,
@@ -49,12 +56,17 @@ const DOI_THUONG: Record<number, LoiTuong[]> = {
   4: ['sonTinh', 'anDuong', 'caoLo'],
   5: ['caoLo', 'trungTrac', 'trungNhi'],
 };
-/** Bộ đồ vừa phải của người chơi có đồ. */
-const DO = { mau: 0.3, danh: 0.3, toc: 0.1, uy: 0.2, giap: 0.15, hoi: 0.15 };
+/**
+ * Người chơi chuẩn theo chương `c` của tầng: đồ vừa (chừng bốn món phẩm giữa của chương, cường hóa lưng chừng) và đồ tốt
+ * (gần hết mức của chương: bốn món phẩm cao nhất, cường hóa gần kịch).
+ */
+const DO_VUA = (c: number) => ({ mau: 0.05 + 0.05 * c, danh: 0.05 + 0.05 * c, toc: 0.03 * c, uy: 0.06 * c, giap: 0.02 * c, hoi: 0.02 * c });
+const DO_TOT = (c: number) => ({ mau: 0.07 + 0.07 * c, danh: 0.07 + 0.07 * c, toc: 0.05 * c, uy: 0.08 * c, giap: 0.04 * c, hoi: 0.04 * c });
 
-function danhTang(tang: number, coDo: boolean): LoiTran {
-  const may = doiTang(tang);
-  const ta: LoiSetup[] = DOI_THUONG[chuongTang(tang)].map((kind) => ({ kind, ...(coDo ? { do: DO } : {}) }));
+function danhTang(tang: number, coDo: 'khong' | 'vua' | 'tot', bac = 0): LoiTran {
+  const may = doiTang(tang, bac);
+  const c = chuongTang(tang);
+  const ta: LoiSetup[] = DOI_THUONG[c].map((kind) => ({ kind, ...(coDo === 'khong' ? {} : { do: coDo === 'vua' ? DO_VUA(c) : DO_TOT(c) }) }));
   const b = taoTran(tang, ta, may.doi, null, may.thu);
   tuDanhHet(b);
   return b;
@@ -274,17 +286,38 @@ describe('Lôi đài: 50 tầng', () => {
     }
   });
 
-  it('người chơi thường (không đồ, không thú, Tự đánh) thắng mọi tầng thường và thua mọi tầng mốc', () => {
+  it('người chơi có đồ vừa của chương (không thú, Tự đánh) thắng mọi tầng thường và thua mọi tầng mốc', () => {
     for (let t = 1; t <= LOI_DAI.tang; t++) {
-      const b = danhTang(t, false);
+      const b = danhTang(t, 'vua');
       expect(b.kq, `tầng ${t}`).toBe(laMoc(t) ? 'thua' : 'thang');
-      // Trận không quá ngắn, không kéo tới hết giờ.
+      // Trận không kéo tới hết giờ.
       if (!laMoc(t)) expect(b.tg, `tầng ${t}`).toBeLessThan(LOI_DAI.vong / 2);
     }
   });
 
-  it('có đồ thì Tự đánh thắng cả tầng mốc', () => {
-    for (let t = 10; t <= LOI_DAI.tang; t += 10) expect(danhTang(t, true).kq, `tầng ${t}`).toBe('thang');
+  it('có đồ tốt của chương thì Tự đánh thắng cả tầng mốc', () => {
+    for (let t = 10; t <= LOI_DAI.tang; t += 10) expect(danhTang(t, 'tot').kq, `tầng ${t}`).toBe('thang');
+  });
+
+  it('không đồ thì thua tầng cuối mỗi chương và mọi tầng mốc; đội giữ đài không còn yếu hơn tướng ta', () => {
+    for (let c = 1; c <= 5; c++) {
+      expect(danhTang(c * 10 - 1, 'khong').kq, `tầng ${c * 10 - 1}`).toBe('thua');
+      expect(danhTang(c * 10, 'khong').kq, `tầng ${c * 10}`).toBe('thua');
+    }
+    // Từ chương 3, bóng tướng có ít nhất chỉ số gốc của tướng thật (hệ số từ 1 trở lên).
+    for (let t = 21; t <= LOI_DAI.tang; t++) expect(LOI_HE[t - 1], `tầng ${t}`).toBeGreaterThanOrEqual(1);
+  });
+
+  it('bậc khó: mỗi bậc đội giữ đài thêm máu và sức đánh, sắt thưởng thêm; có trần', () => {
+    expect(heBac(0)).toBe(1);
+    expect(heBac(3)).toBeCloseTo(1 + 3 * LOI_DAI.bacHe);
+    expect(heBac(99)).toBe(heBac(LOI_DAI.bacMax));
+    const a = doiTang(25, 0).doi[0];
+    const b = doiTang(25, 4).doi[0];
+    expect(b.he! / a.he!).toBeCloseTo(heBac(4));
+    expect(satTang(25, 4)).toBe(Math.round(satTang(25) * (1 + 4 * LOI_DAI.bacSat)));
+    // Đồ vừa qua được tầng thường ở bậc 0 nhưng tới bậc cao thì hết qua nổi tầng chín của chương.
+    expect(danhTang(49, 'vua', LOI_DAI.bacMax).kq).toBe('thua');
   });
 });
 
@@ -313,6 +346,20 @@ describe('Lôi đài: mở, đội, thưởng, lưu', () => {
     expect(moTran(s, 1).ok).toBe(false);
     expect(datDoiLoi(s, ['sonTinh', 'giong', 'lacTuong']).ok).toBe(true);
     expect(moTran(s, 1).ok).toBe(true);
+  });
+
+  it('xếp đội trên sân: trận xem trước dựng được cả khi đội chưa đủ ba, không ghi gì vào bản lưu', () => {
+    const s = coBaTuong();
+    datDoiLoi(s, ['sonTinh']);
+    const truoc = JSON.stringify(s);
+    const b = tranXem(s, 1);
+    expect(b.units.filter((u) => u.phe === 0).map((u) => u.kind)).toEqual(['sonTinh']);
+    expect(b.units.filter((u) => u.phe === 1)).toHaveLength(doiTang(1).doi.length);
+    expect(JSON.stringify(s)).toBe(truoc);
+    // Đủ ba thì trận xem trước y hệt trận thật.
+    datDoiLoi(s, ['sonTinh', 'giong', 'lacTuong']);
+    const that = moTran(s, 1);
+    expect(that.ok && that.value).toEqual(tranXem(s, 1));
   });
 
   it('thắng tầng mới thì ghi tầng, được sắt và một món đồ; đánh lại không có thưởng', () => {
@@ -346,6 +393,72 @@ describe('Lôi đài: mở, đội, thưởng, lưu', () => {
     expect(JSON.stringify(s)).toBe(truoc);
   });
 
+  it('trên đài không tính cấp chung dã ngoại: cấp cao hay thấp tướng vào trận như nhau', () => {
+    const s = coBaTuong();
+    const thap = tranXem(s, 1);
+    s.daNgoai.cap = 80;
+    expect(tranXem(s, 1)).toEqual(thap);
+  });
+
+  it('tuần lôi đài bắt đầu 0 giờ thứ Hai giờ Việt Nam', () => {
+    // 2026-11-23 là thứ Hai. 0 giờ giờ Việt Nam là 17 giờ Chủ nhật 22-11 giờ UTC.
+    const dau = Date.UTC(2026, 10, 22, 17, 0, 0);
+    expect(tuanCua(dau)).toBe(tuanCua(dau - 1) + 1);
+    expect(tuanCua(dau + TUAN_MS - 1)).toBe(tuanCua(dau));
+    expect(tuanCua(dau + TUAN_MS)).toBe(tuanCua(dau) + 1);
+    expect(tuanCon(dau)).toBe(TUAN_MS);
+    expect(tuanCon(dau + TUAN_MS - 60_000)).toBe(60_000);
+  });
+
+  it('sang tuần thì tầng về 0, leo lại nhận thưởng lại; bản lưu cũ chưa ghi tuần thì giữ tầng của tuần này', () => {
+    const s = coBaTuong();
+    const now = Date.UTC(2026, 10, 24, 3, 0, 0);
+    expect(capNhatTuan(s, now)).toBeNull();
+    const b = moTran(s, 1);
+    if (!b.ok) throw new Error('không mở được trận');
+    tuDanhHet(b.value);
+    expect(xongTran(s, b.value)).not.toBeNull();
+    expect(s.loiDai?.tang).toBe(1);
+    // Bản lưu cũ: chưa có `tuan`. Lần đầu chỉ ghi tuần, giữ nguyên tầng; trong tuần gọi lại không đổi gì.
+    expect(s.loiDai?.tuan).toBeUndefined();
+    expect(capNhatTuan(s, now)).toBeNull();
+    expect(s.loiDai?.tuan).toBe(tuanCua(now));
+    expect(capNhatTuan(s, now + 86_400_000)).toBeNull();
+    expect(s.loiDai?.tang).toBe(1);
+    // Sang tuần: tầng về 0, chưa qua hết 50 tầng nên bậc giữ nguyên, thắng lại tầng 1 có thưởng.
+    expect(capNhatTuan(s, now + TUAN_MS)).toEqual({ bac: 0, lenBac: false, daQua: 1 });
+    expect(s.loiDai?.tang).toBe(0);
+    const lai = moTran(s, 1);
+    if (!lai.ok) throw new Error('không mở được trận');
+    tuDanhHet(lai.value);
+    expect(xongTran(s, lai.value)?.sat).toBe(satTang(1));
+    // Đồng hồ máy lùi về tuần trước: không làm mới, không kẹt.
+    expect(capNhatTuan(s, now)).toBeNull();
+    expect(s.loiDai?.tang).toBe(1);
+  });
+
+  it('tuần nào qua hết 50 tầng thì tuần sau lên một bậc khó, tới trần thì thôi', () => {
+    const s = coBaTuong();
+    const now = Date.UTC(2026, 10, 24, 3, 0, 0);
+    s.loiDai = { tang: LOI_DAI.tang, doi: [], thu: null, tuDanh: false, nhanh: false, tuan: tuanCua(now) };
+    expect(capNhatTuan(s, now + TUAN_MS)).toEqual({ bac: 1, lenBac: true, daQua: LOI_DAI.tang });
+    expect(bacLoi(s)).toBe(1);
+    // Đội giữ đài của trận thật mạnh theo bậc, sắt thưởng theo bậc.
+    datDoiLoi(s, ['sonTinh', 'giong', 'lacTuong']);
+    const dich = (b: LoiTran) => b.units.filter((u) => u.phe === 1).map((u) => u.mauMax);
+    const bac1 = dich(tranXem(s, 1));
+    s.loiDai.bac = 0;
+    const bac0 = dich(tranXem(s, 1));
+    bac1.forEach((m, i) => expect(m / bac0[i]).toBeCloseTo(heBac(1), 1));
+    // Chưa qua hết thì giữ bậc; ở trần thì không lên nữa.
+    s.loiDai.bac = LOI_DAI.bacMax;
+    s.loiDai.tang = LOI_DAI.tang;
+    expect(capNhatTuan(s, now + 2 * TUAN_MS)).toEqual({ bac: LOI_DAI.bacMax, lenBac: false, daQua: LOI_DAI.tang });
+    expect(isLoiDaiState(s.loiDai)).toBe(true);
+    expect(isLoiDaiState({ ...s.loiDai, bac: LOI_DAI.bacMax + 1 })).toBe(false);
+    expect(isLoiDaiState({ ...s.loiDai, tuan: 1.5 })).toBe(false);
+  });
+
   it('bản lưu giữ phần lôi đài; sai dạng thì bỏ riêng phần ấy', () => {
     const s = coBaTuong();
     datDoiLoi(s, ['sonTinh', 'giong', 'lacTuong']);
@@ -353,6 +466,11 @@ describe('Lôi đài: mở, đội, thưởng, lưu', () => {
     const lai = deserialize(serialize(s))!;
     expect(lai.loiDai).toEqual(s.loiDai);
     expect(isLoiDaiState({ ...s.loiDai, tang: 99 })).toBe(false);
+    // Tự qua màn là trường thêm sau: bản lưu cũ chưa có vẫn hợp lệ, có thì phải là đúng sai.
+    expect(isLoiDaiState({ ...s.loiDai, tuQua: true })).toBe(true);
+    expect(isLoiDaiState({ ...s.loiDai, tuQua: 1 })).toBe(false);
+    s.loiDai!.tuQua = true;
+    expect(deserialize(serialize(s))!.loiDai?.tuQua).toBe(true);
     const hong = JSON.parse(serialize(s));
     hong.loiDai.doi = ['khongCo'];
     const bo = deserialize(JSON.stringify(hong))!;

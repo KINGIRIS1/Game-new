@@ -10,7 +10,6 @@
 // Phần lưu `GameState.loiDai` là trường tùy chọn (như `thanThu`), không lên phiên bản lưu.
 
 import { HERO_KINDS, type HeroKind } from './battle';
-import { capBonus } from './daNgoaiTran';
 import {
   BO_CHUONG,
   BO_CUA,
@@ -705,6 +704,8 @@ export function tuDanhHet(b: LoiTran): 'thang' | 'thua' {
 // ---------- Tầng ----------
 
 export const laMoc = (tang: number): boolean => tang % LOI_DAI.moiChuong === 0;
+/** Hệ số máu, sức đánh đội máy thêm theo bậc khó (mỗi tuần qua hết 50 tầng thì lên một bậc). */
+export const heBac = (bac: number): number => 1 + LOI_DAI.bacHe * Math.max(0, Math.min(LOI_DAI.bacMax, bac));
 export const chuongTang = (tang: number): Chapter => Math.min(5, Math.ceil(tang / LOI_DAI.moiChuong)) as Chapter;
 
 /** Tướng truyện đã có ở mỗi chương (cộng dồn). */
@@ -721,9 +722,9 @@ const VO_SI: Record<Chapter, LoiLinh[]> = { 1: ['giao', 'cung'], 2: ['giao', 'cu
  * Đội máy của tầng `tang`. Tầng mốc: tướng giặc xưa (`LOI_MOC`), từ tầng 20 có thú bóng. Tầng thường: bóng các tướng
  * ta của chương ấy trở về trước (bóng tướng dã ngoại chỉ ở tầng 41–50), tầng đầu mỗi chương có võ sĩ đứng thay.
  */
-export function doiTang(tang: number): { doi: LoiSetup[]; thu: { kind: ThanThuId; cap: number } | null } {
+export function doiTang(tang: number, bac = 0): { doi: LoiSetup[]; thu: { kind: ThanThuId; cap: number } | null } {
   const c = chuongTang(tang);
-  const he = LOI_HE[tang - 1] ?? 1;
+  const he = (LOI_HE[tang - 1] ?? 1) * heBac(bac);
   if (laMoc(tang)) {
     const m = LOI_MOC[c - 1];
     return { doi: m.doi.map((kind) => ({ kind, he })), thu: m.thu ? { kind: m.thu, cap: Math.round(tang / 2) } : null };
@@ -750,6 +751,12 @@ export interface LoiDaiState {
   thu: ThanThuId | null;
   tuDanh: boolean;
   nhanh: boolean;
+  /** Tuần (`tuanCua`) mà `tang` đang tính; sang tuần khác thì `capNhatTuan` đưa `tang` về 0. Bản lưu cũ chưa có. */
+  tuan?: number;
+  /** Bậc khó (0 tới `LOI_DAI.bacMax`): mỗi tuần qua hết 50 tầng thì tuần sau lên một bậc. Chưa có là 0. */
+  bac?: number;
+  /** Tự qua màn: thắng thì tự lên tầng kế với đội cũ (bản lưu cũ chưa có thì coi như tắt). */
+  tuQua?: boolean;
 }
 
 export const initialLoiDai = (): LoiDaiState => ({ tang: 0, doi: [], thu: null, tuDanh: false, nhanh: false });
@@ -758,6 +765,41 @@ export const initialLoiDai = (): LoiDaiState => ({ tang: 0, doi: [], thu: null, 
 export function loiNay(s: GameState): LoiDaiState {
   if (!s.loiDai) s.loiDai = initialLoiDai();
   return s.loiDai;
+}
+
+// ---------- Tuần và bậc khó ----------
+
+export const TUAN_MS = 7 * 86_400_000;
+/** Lệch cho tuần bắt đầu 0 giờ thứ Hai giờ Việt Nam (UTC+7), máy đặt múi giờ nào cũng như nhau; mốc 0 của `now` là thứ Năm. */
+const TUAN_LECH = 7 * 3_600_000 + 3 * 86_400_000;
+/** Số thứ tự tuần của thời điểm `now` (mili giây như `Date.now()`). */
+export const tuanCua = (now: number): number => Math.floor((now + TUAN_LECH) / TUAN_MS);
+/** Còn bao lâu (mili giây) tới lúc lôi đài làm mới. */
+export const tuanCon = (now: number): number => (tuanCua(now) + 1) * TUAN_MS - (now + TUAN_LECH);
+
+/** Bậc khó tuần này. */
+export const bacLoi = (s: GameState): number => Math.max(0, Math.min(LOI_DAI.bacMax, s.loiDai?.bac ?? 0));
+
+/**
+ * Sang tuần mới thì lôi đài làm mới: tầng đã qua về 0 (leo lại, nhận thưởng lại); tuần trước qua hết 50 tầng thì bậc khó
+ * lên một. Gọi lúc mở game và định kỳ khi không ở trên đài. Trả về null khi chưa sang tuần; bản lưu cũ chưa ghi tuần thì
+ * coi tầng đã qua là của tuần này. Đồng hồ máy lùi lại thì ghi tuần mới mà không làm mới (khỏi kẹt chờ).
+ */
+export function capNhatTuan(s: GameState, now: number): { bac: number; lenBac: boolean; daQua: number } | null {
+  const l = s.loiDai;
+  if (!l) return null;
+  const tuan = tuanCua(now);
+  if (l.tuan === undefined || tuan < l.tuan) {
+    l.tuan = tuan;
+    return null;
+  }
+  if (tuan === l.tuan) return null;
+  const daQua = l.tang;
+  const lenBac = daQua >= LOI_DAI.tang && bacLoi(s) < LOI_DAI.bacMax;
+  if (lenBac) l.bac = bacLoi(s) + 1;
+  l.tang = 0;
+  l.tuan = tuan;
+  return { bac: bacLoi(s), lenBac, daQua };
 }
 
 /** Các tướng đã về, lên đài được. */
@@ -813,12 +855,15 @@ export function chonThuLoi(s: GameState, id: ThanThuId): Result<void> {
   return ok(undefined);
 }
 
-/** Tướng `kind` của người chơi vào trận: chỉ số gốc, đồ đang mặc, cấp chung. Không tính huân công, phúc lành, nữ tướng. */
+/**
+ * Tướng `kind` của người chơi vào trận: chỉ số gốc và đồ đang mặc. Không tính cấp chung dã ngoại (mỗi cấp 3% máu, sức
+ * đánh, cấp cao thì một đòn hạ một người, đồ hết nghĩa), huân công, phúc lành, nữ tướng.
+ */
 export function tuongVao(s: GameState, kind: LoiTuong): LoiSetup {
   const worn = kind === 'lacTuong' ? [] : monDangMac(s, kind);
   const glow =
     kind === 'giong' ? s.giong.ascended : kind === 'sonTinh' ? s.son.won : kind === 'anDuong' ? s.adv.bien : false;
-  return { kind, ...(worn.length && kind !== 'lacTuong' ? { do: tinhDo(kind, worn) } : {}), cong: capBonus(s.daNgoai.cap), ...(glow ? { glow } : {}) };
+  return { kind, ...(worn.length && kind !== 'lacTuong' ? { do: tinhDo(kind, worn) } : {}), ...(glow ? { glow } : {}) };
 }
 
 /** Đánh tầng `tang` được không: lôi đài đã mở, tầng đã mở theo chương, và đã qua tầng trước. */
@@ -829,6 +874,13 @@ export function canDanhTang(s: GameState, tang: number): Result {
   return ok(undefined);
 }
 
+/** Trận tầng `tang` dựng từ đội (có thể chưa đủ ba) và thần thú đang chọn; không ghi gì vào state. Dùng cho lúc xếp đội trên sân. */
+export function tranXem(s: GameState, tang: number): LoiTran {
+  const thu = thuLoi(s);
+  const may = doiTang(tang, bacLoi(s));
+  return taoTran(tang, doiLoi(s).map((k) => tuongVao(s, k)), may.doi, thu ? { kind: thu, cap: capThu(s, thu) } : null, may.thu);
+}
+
 /** Mở trận tầng `tang` với đội và thần thú đang chọn. */
 export function moTran(s: GameState, tang: number): Result<LoiTran> {
   const check = canDanhTang(s, tang);
@@ -836,9 +888,7 @@ export function moTran(s: GameState, tang: number): Result<LoiTran> {
   const doi = doiLoi(s);
   if (doi.length < LOI_DAI.doi) return fail('loiDoiSai');
   loiNay(s).doi = doi;
-  const thu = thuLoi(s);
-  const may = doiTang(tang);
-  return ok(taoTran(tang, doi.map((k) => tuongVao(s, k)), may.doi, thu ? { kind: thu, cap: capThu(s, thu) } : null, may.thu));
+  return ok(tranXem(s, tang));
 }
 
 export interface LoiThuong {
@@ -846,8 +896,9 @@ export interface LoiThuong {
   roi: RoiDo | null;
 }
 
-/** Sắt thưởng của tầng `tang`. */
-export const satTang = (tang: number): number => (LOI_DAI.sat[0] + LOI_DAI.sat[1] * tang) * (laMoc(tang) ? LOI_DAI.satMoc : 1);
+/** Sắt thưởng của tầng `tang` ở bậc khó `bac`. */
+export const satTang = (tang: number, bac = 0): number =>
+  Math.round((LOI_DAI.sat[0] + LOI_DAI.sat[1] * tang) * (laMoc(tang) ? LOI_DAI.satMoc : 1) * (1 + LOI_DAI.bacSat * bac));
 
 /** Bộ đồ rơi ở tầng `tang`: bộ của chương; tầng 41–50 thêm bộ của tướng dã ngoại đã về. */
 function boTang(s: GameState, tang: number, chuong: Chapter): BoDo[] {
@@ -857,13 +908,13 @@ function boTang(s: GameState, tang: number, chuong: Chapter): BoDo[] {
 }
 
 /**
- * Trận xong: thắng tầng chưa qua thì ghi tầng và thưởng (sắt, một món đồ theo luật rơi đồ; cấp đồ không vượt chương đang
+ * Trận xong: thắng tầng chưa qua tuần này thì ghi tầng và thưởng (sắt, một món đồ theo luật rơi đồ; cấp đồ không vượt chương đang
  * chơi). Đánh lại tầng đã qua hay thua thì không có gì.
  */
 export function xongTran(s: GameState, b: LoiTran): LoiThuong | null {
   if (b.kq !== 'thang' || b.tang !== tangQua(s) + 1 || !canDanhTang(s, b.tang).ok) return null;
   loiNay(s).tang = b.tang;
-  const sat = satTang(b.tang);
+  const sat = satTang(b.tang, bacLoi(s));
   gain(s, { sat });
   const chuong = Math.min(chuongTang(b.tang), chapterOf(s)) as Chapter;
   const roi = roiDo(s, laMoc(b.tang) ? 'thuDau' : 'manDau', chuong, undefined, boTang(s, b.tang, chuong));
@@ -877,5 +928,8 @@ export function isLoiDaiState(v: unknown): v is LoiDaiState {
   if (typeof t.tang !== 'number' || !Number.isInteger(t.tang) || t.tang < 0 || t.tang > LOI_DAI.tang) return false;
   if (!Array.isArray(t.doi) || t.doi.length > LOI_DAI.doi || !t.doi.every((k) => typeof k === 'string' && laLoiTuong(k))) return false;
   if (typeof t.tuDanh !== 'boolean' || typeof t.nhanh !== 'boolean') return false;
+  if (t.tuQua !== undefined && typeof t.tuQua !== 'boolean') return false;
+  if (t.tuan !== undefined && (typeof t.tuan !== 'number' || !Number.isInteger(t.tuan))) return false;
+  if (t.bac !== undefined && (typeof t.bac !== 'number' || !Number.isInteger(t.bac) || t.bac < 0 || t.bac > LOI_DAI.bacMax)) return false;
   return t.thu === null || THAN_THU_IDS.includes(t.thu as ThanThuId);
 }

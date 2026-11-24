@@ -2961,9 +2961,10 @@ export const DA_TUONG = { hoi: 0.04, yen: 4, day: 3, tam: 9, max: 3, nghi: [0.4,
  * Lôi đài: `tang` tầng, mỗi chương mở `moiChuong` tầng, đội `doi` tướng, quá `vong` vòng thì thua (một vòng là thời gian
  * người có tốc 1 đầy thanh hành động). Đòn thường gây sức đánh × `don`. Đòn đầu sau khi ẩn nhân `phuc`. Tướng mặc đủ
  * bốn món bộ mình thì chiêu mạnh thêm `bo4`. Thần thú đầy thanh sau `thuVong` vòng. Thưởng sắt mỗi tầng: `sat[0]` +
- * `sat[1]` × tầng, tầng mốc nhân `satMoc`.
+ * `sat[1]` × tầng, tầng mốc nhân `satMoc`. Bậc khó (lên một bậc mỗi tuần qua hết 50 tầng, tối đa `bacMax`): mỗi bậc đội
+ * máy thêm `bacHe` máu và sức đánh, sắt thưởng thêm `bacSat`.
  */
-export const LOI_DAI = { tang: 50, moiChuong: 10, doi: 3, vong: 30, don: 4, phuc: 1.6, bo4: 0.15, thuVong: 2.2, sat: [20, 4] as const, satMoc: 3 };
+export const LOI_DAI = { tang: 50, moiChuong: 10, doi: 3, vong: 30, don: 4, phuc: 1.6, bo4: 0.15, thuVong: 2.2, sat: [20, 4] as const, satMoc: 3, bacHe: 0.06, bacMax: 10, bacSat: 0.1 };
 
 /** Lạc tướng trên lôi đài (ở trận thường ông chỉ đánh trống, không có chỉ số). */
 export const LAC_TUONG_LOI: FighterStats = { hp: 520, dmg: 15, range: 1, speed: 1.8, cooldown: 1.0 };
@@ -3023,14 +3024,16 @@ export const LOI_THU = {
 } as const;
 
 /**
- * Hệ số máu và sức đánh của đội máy ở từng tầng (tầng 1 đứng đầu). Tầng thường: người chơi thường (đúng chương, không
- * đồ, không thú, bấm Tự đánh) thắng; tầng mốc: người ấy thua, có đồ thì thắng. `loiDai.test.ts` canh. Mỗi tầng một đội khác nhau nên số không tăng đều: tìm bằng mô phỏng, tầng thường
- * bằng 62–88% ngưỡng thua của người chơi thường (tăng dần trong chương), tầng mốc ở giữa ngưỡng không đồ và có đồ.
+ * Hệ số máu và sức đánh của đội máy ở từng tầng (tầng 1 đứng đầu), bậc khó 0. Chuẩn (`loiDai.test.ts` canh): người chơi
+ * có đồ vừa của chương (đúng chương, không thú, bấm Tự đánh) thắng mọi tầng thường và thua tầng mốc; có đồ tốt của
+ * chương thì thắng tầng mốc. Mỗi tầng một đội khác nhau nên số không tăng đều: tìm bằng mô phỏng, tầng thường thứ i của
+ * chương bằng (62 + 3,7 × i)% ngưỡng thua của người có đồ vừa (66% ở tầng đầu, 95% ở tầng thứ chín), tầng mốc là trung
+ * bình nhân của ngưỡng thua đồ vừa và đồ tốt. Bậc khó nhân thêm `1 + LOI_DAI.bacHe × bậc` (`heBac`).
  */
 export const LOI_HE: number[] = [
-  1.25, 0.82, 1.38, 0.88, 0.92, 0.95, 0.99, 1.03, 1.07, 1.78,
-  0.76, 0.61, 0.67, 0.77, 0.74, 0.77, 0.88, 0.83, 0.86, 1.46,
-  0.62, 0.68, 0.85, 0.7, 0.69, 0.81, 1.01, 0.83, 0.81, 1.26,
-  0.67, 0.76, 0.67, 0.65, 0.72, 0.83, 0.77, 0.83, 0.79, 1.1,
-  0.82, 0.81, 0.67, 0.63, 0.8, 0.83, 0.7, 0.66, 0.62, 0.92,
+  1.73, 1.01, 1.93, 1.12, 1.18, 1.23, 1.28, 1.34, 1.39, 1.6,
+  1.02, 0.79, 0.88, 1, 0.97, 1.02, 1.14, 1.11, 1.15, 1.57,
+  1.04, 1.12, 1.15, 1.08, 1.1, 1.35, 1.39, 1.29, 1.31, 1.72,
+  1.25, 1.27, 1.32, 1.3, 1.26, 1.38, 1.37, 1.66, 1.61, 1.44,
+  1.31, 1.32, 1.18, 1.06, 1.34, 1.49, 1.41, 1, 1.11, 1.46,
 ];
