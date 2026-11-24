@@ -2473,7 +2473,7 @@ export class Hud {
           : camp.step === 'thanThu'
             ? thanThuMapHtml(state)
             : camp.step === 'loiDai'
-              ? loiDaiMapHtml(state, camp.loiTang ?? null)
+              ? loiDaiMapHtml(state, camp.loiTang ?? null, Date.now())
             : mapHtml(state, camp.stage, camp.chapter);
     const head =
       camp.step === 'dau' ? `🏯 ${vi.dauThanh.title}` : camp.step === 'daNgoai' ? `🌿 ${vi.daNgoai.title}` : camp.step === 'thanThu' ? `🐉 ${vi.thanThu.title}` : camp.step === 'loiDai' ? `🥁 ${vi.loiDai.ten}` : `⚔️ ${title}`;

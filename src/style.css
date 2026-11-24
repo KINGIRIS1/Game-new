@@ -5372,6 +5372,11 @@ body.man-vao-on #hud > * {
 .loi-map p {
   margin: 0;
 }
+.loi-map .loi-bac {
+  color: #a3261c;
+  font-weight: 700;
+  font-size: 13px;
+}
 /* Lưới tầng gọn: 1 tới 50, mỗi hàng mười tầng. */
 .loi-luoi {
   display: grid;

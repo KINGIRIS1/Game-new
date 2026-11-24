@@ -13,9 +13,11 @@ import {
   CHIEU,
   CHIEU_MOI,
   HIEU_UNG_LOI,
+  bacLoi,
   chieuDuoc,
   chuongTang,
   doiTang,
+  heBac,
   laLoiTuong,
   laMoc,
   loiDaiMo,
@@ -23,6 +25,7 @@ import {
   tangKe,
   tangMo,
   tangQua,
+  tuanCon,
   thuTu,
   vongNay,
   type LoiKind,
@@ -64,9 +67,19 @@ export function tangXem(s: GameState, chon: number | null): number {
   return tangKe(s) ?? Math.max(1, tangQua(s));
 }
 
+/** Quãng chờ gọn: "3 ngày 5 giờ", "5 giờ 20 phút", "12 phút". */
+function conLai(ms: number): string {
+  const phut = Math.max(1, Math.ceil(ms / 60_000));
+  const ngay = Math.floor(phut / 1440);
+  const gio = Math.floor((phut % 1440) / 60);
+  if (ngay) return gio ? `${ngay} ngày ${gio} giờ` : `${ngay} ngày`;
+  return gio ? `${gio} giờ ${phut % 60} phút` : `${phut} phút`;
+}
+
 /** Nửa trái: lưới tầng gọn, xếp từ 1 tới 50, mỗi hàng mười tầng (một chương); tầng mốc viền vàng có vương miện nhỏ. */
-export function loiDaiMapHtml(s: GameState, chon: number | null): string {
+export function loiDaiMapHtml(s: GameState, chon: number | null, now: number): string {
   if (!loiDaiMo(s)) return `<div class="thu-big"><em>🥁</em></div>`;
+  const bac = bacLoi(s);
   const qua = tangQua(s);
   const mo = tangMo(s);
   const xem = tangXem(s, chon);
@@ -76,7 +89,8 @@ export function loiDaiMapHtml(s: GameState, chon: number | null): string {
     const duoc = t <= mo && t <= qua + 1;
     cells += `<button class="loi-o ${cls} ${laMoc(t) ? 'moc' : ''} ${t === xem ? 'on' : ''}" data-act="loiTang" data-id="${t}" ${duoc ? '' : 'disabled'} aria-label="${laMoc(t) ? T().tangMoc(t) : T().tang(t)}">${t}</button>`;
   }
-  return `<div class="loi-map"><p class="muted small">${T().daQua(qua, LOI_DAI.tang)}</p><div class="loi-luoi">${cells}</div></div>`;
+  const bacDong = bac > 0 ? `<p class="loi-bac">🔥 ${T().bac(bac, Math.round((heBac(bac) - 1) * 100))}</p>` : '';
+  return `<div class="loi-map"><p class="muted small">${T().daQua(qua, LOI_DAI.tang)} · ${T().lamMoi(conLai(tuanCon(now)))}</p>${bacDong}<div class="loi-luoi">${cells}</div></div>`;
 }
 
 /** Nửa phải: tầng đang xem, đội giữ đài, thưởng, nút Lên đài (đội và thần thú chọn trên sân). */
@@ -84,7 +98,8 @@ export function loiDaiHtml(s: GameState, chon: number | null): string {
   const L = T();
   if (!loiDaiMo(s)) return `<h3>🥁 ${L.title}</h3><p>${L.locked}</p>`;
   const tang = tangXem(s, chon);
-  const may = doiTang(tang);
+  const bac = bacLoi(s);
+  const may = doiTang(tang, bac);
   const qua = tangQua(s);
   const daQua = tang <= qua;
   const chuong = Math.min(chuongTang(tang), chapterOf(s)) as Chapter;
@@ -93,14 +108,14 @@ export function loiDaiHtml(s: GameState, chon: number | null): string {
   const pham = vi.trangBi.pham[Math.min(laMoc(tang) ? 3 : 2, PHAM_TRAN[chuong])];
   const thuong = daQua
     ? `<p class="muted small">${L.thuongDa}</p>`
-    : `<div class="stat"><span>🎁 ${L.thuong}</span><b>${vi.resources.sat.icon} ${satTang(tang)} · ${L.thuongMon(pham)}</b></div>`;
+    : `<div class="stat"><span>🎁 ${L.thuong}</span><b>${vi.resources.sat.icon} ${satTang(tang, bac)} · ${L.thuongMon(pham)}</b></div>`;
   const khoa = tangKe(s) === null && qua < LOI_DAI.tang ? `<p class="muted small">🔒 ${L.khoaChuong(chapterOf(s) + 1)}</p>` : '';
   return `<h3>🥁 ${laMoc(tang) ? L.tangMoc(tang) : L.tang(tang)}</h3>
     ${laMoc(tang) ? `<p class="muted">${L.moc[tang / LOI_DAI.moiChuong - 1]}</p>` : `<p class="muted small">${L.intro}</p>`}
     <h4>${L.doiMay}</h4><div class="loi-chips">${doiMay}</div>
     ${thuong}
     <div class="da-btns"><button class="btn bronze" data-act="loiVao" data-id="${tang}">${daQua ? L.vaoLai : L.vao}</button></div>
-    ${khoa}<p class="muted small">${L.note}</p>`;
+    ${khoa}<p class="muted small">${L.note}</p><p class="muted small">${L.tuanNote(Math.round(LOI_DAI.bacHe * 100), Math.round(LOI_DAI.bacSat * 100), LOI_DAI.bacMax)}</p>`;
 }
 
 /**

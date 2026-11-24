@@ -4,7 +4,7 @@ import { initHuongDan, markHuongDan, nextHuongDan, type HuongDanId } from './gam
 import { ChiTay, huongDanBat, luuHuongDan } from './ui/huongDan';
 import './style.css';
 import { LOI_DAI } from './game/defs';
-import { canDanhTang, chuongTang, doiLoi, laLoiTuong, loiNay, type LoiKind } from './game/loiDai';
+import { canDanhTang, capNhatTuan, chuongTang, doiLoi, laLoiTuong, loiNay, type LoiKind } from './game/loiDai';
 import { KIEU_CHUONG, taoChau, taoNguoi } from './render/loiDai';
 import { LoiDau } from './ui/loiDaiTran';
 import { play, setMuted, stopRally, unlockAudio } from './audio/sfx';
@@ -1096,6 +1096,14 @@ async function start(): Promise<void> {
     loi = null;
     world.showLoiDai(false);
     hud.setLoi(false);
+    commit();
+  };
+  /** Sang tuần mới (0 giờ thứ Hai) thì lôi đài làm mới: báo một dòng, lưu. Đang ở trên đài thì chờ rời đài. */
+  const watchLoiTuan = () => {
+    if (loi) return;
+    const r = capNhatTuan(state, Date.now());
+    if (!r) return;
+    if (r.daQua > 0 || r.lenBac) hud.toast(r.lenBac ? vi.loiDai.tuanMoiBac(r.bac) : vi.loiDai.tuanMoi, false, 8000);
     commit();
   };
   /** Lên đài đánh tầng `tang`: sang sân chầu, dựng trận. */
@@ -3063,6 +3071,7 @@ async function start(): Promise<void> {
         world.sync(scene());
       }
       watchXay();
+      if (entered) watchLoiTuan();
       // Thuyền chiến đi chuyến mới, tới đảo, về bến ngay trong `tick`: vẽ theo.
       world.syncDao(state);
       refreshUi();
@@ -3239,6 +3248,13 @@ async function start(): Promise<void> {
       l.tuDanh = tuDanh;
       moLoi(tang, true);
       return loi?.b ?? null;
+    },
+    /** Coi như đã sang tuần mới: lôi đài làm mới ngay (tầng về 0; tuần trước qua hết 50 tầng thì lên bậc khó). */
+    loiTuan: () => {
+      const l = loiNay(state);
+      l.tuan = (l.tuan ?? 0) - 1;
+      watchLoiTuan();
+      return { tang: l.tang, bac: l.bac ?? 0 };
     },
     /** Lên đài tầng `tang` như bấm nút Lên đài: đứng ở bước xếp đội trên sân. */
     loiXep: (tang = 1, kieu?: 1 | 2 | 3) => {
