@@ -1,170 +1,70 @@
-// Kho thóc 3×3: vựa chính góc sau bên trái, vựa phụ và cót quây ba phía quanh sân phơi thóc ở trước bên phải.
+// Kho thóc 3×3: một vựa to góc sau bên trái, sân phơi thóc trước bên phải, cót thóc thấp mái tranh góc sau bên phải
+// từ cấp 5 (giản lược kiểu 2: một mái chính, xem docs/thiet-ke.md mục Giản lược công trình).
 // Bản vẽ ở docs/bo-cuc-cong-trinh.md.
 
 import type * as THREE from 'three';
-import { above5, BRICK, bird, boatRoof, coneRoof, granary, roofFor } from '../buildings';
+import { above5, BRICK, coneRoof, granary } from '../buildings';
 import { Lot } from '../lot';
 import { C } from '../palette';
 import { ToonModel } from '../toon';
-import { type CongTrinh, type LotSpot, partScale, yard } from './chung';
+import { type CongTrinh, type LotSpot, MAI_TRANH, maiGon, partScale, yard } from './chung';
 
 export const KHO_LOT = new Lot(3, [
-  'VVV444',
-  'VVV444',
-  'VVV...',
-  '.T.sss',
-  '66bsss',
-  '66,sss',
+  'VVVV66',
+  'VVVV66',
+  'VVVV..',
+  'VVV.ss',
+  '..,sss',
+  '..,sss',
 ]);
 
 /** Sân phơi đất nện vôi, sáng hơn sân. */
 const DRY_YARD = 0xe2cb98;
+/** Tâm vựa chính. */
+const VX = -0.4;
+const VZ = -0.4;
 
-/** Người giữ kho đi qua lại trên dải sân giữa vựa phụ và sân phơi. */
+/** Người giữ kho đi qua lại trên dải sân giữa vựa và cót. */
 export function khoSpots(): LotSpot[] {
-  return [{ job: 'giuKho', x: 0.6, y: 0.06, z: -0.25, ry: 0, walk: 0.45 }];
-}
-
-/** Thúng thóc vun đầy. */
-function basket(m: ToonModel, x: number, z: number): void {
-  m.plain.cyl(0.13, 0.1, 0.18, C.thatch, x, 0.14, z, undefined, 8);
-  m.plain.sphere(0.11, C.ripe, x, 0.23, z, [1, 0.5, 1], 6);
+  return [{ job: 'giuKho', x: 0.6, y: 0.06, z: -0.2, ry: 0, walk: 0.45 }];
 }
 
 export function makeKho(level: number): THREE.Group {
   const m = new ToonModel();
   const p = m.plain;
-  const L = KHO_LOT;
-  const roof = roofFor(level);
+  // Mái theo cấp, bỏ dải đồng hoa văn cấp 9; chim Lạc cấp 10 giữ.
+  const roof = maiGon(level);
   const up = above5(level);
   // Cấp 6–8: vựa trên cột cao thêm.
   const tall = 0.12 * up;
 
   yard(m, 3);
-  // Lối vào: ba phiến đá kê từ mép trước vào sân.
-  const path = L.zone(',');
-  for (let i = 0; i < 3; i++) p.box(0.34, 0.04, 0.24, i % 2 ? C.rockDark : C.rock, path.x, 0.06, path.z + 0.12 - i * 0.34, [0, 0.15 * (i - 1), 0]);
-  // Chỗ nhận hàng sát lối vào: dân gánh hàng về đổ lại đây, hai bao thóc buộc dây, một thúng vun đầy.
-  const nhan = L.zone('b');
-  for (const [dx, dz, ry] of [
-    [-0.07, -0.08, 0.3],
-    [0.08, 0.02, -0.4],
-  ]) {
-    p.sphere(0.1, 0xd4b882, nhan.x + dx, 0.15, nhan.z + dz, [0.9, 1.15, 0.8], 7);
-    p.cyl(0.035, 0.045, 0.06, 0xc4a872, nhan.x + dx, 0.27, nhan.z + dz, [0, ry, 0], 6);
-    p.cyl(0.04, 0.04, 0.015, C.woodDark, nhan.x + dx, 0.255, nhan.z + dz, undefined, 6);
-  }
-  basket(m, nhan.x - 0.02, nhan.z + 0.16);
+  const path = KHO_LOT.zone(',');
+  p.box(0.4, 0.03, path.d - 0.05, C.earth, path.x, 0.055, path.z - 0.025);
 
-  // Vựa chính góc sau bên trái trên nền đất đắp kè đá: to hơn vựa cũ chừng 15–30%; cấp 5 to nhất, có chóp đồng.
-  const V = L.zone('V');
-  const vx = V.x + 0.05;
-  const vz = V.z + 0.05;
-  const vs = 1.35 * partScale(level);
-  const mound = 0.46 * vs;
-  p.cyl(mound + 0.05, mound + 0.07, 0.06, C.rock, vx, 0.06, vz, undefined, 12);
-  p.cyl(mound, mound + 0.02, 0.1, C.earthDark, vx, 0.09, vz, undefined, 12);
-  // Cấp 9 trở lên: mái ngói hai tầng; chim Lạc (cấp 10) đậu trên chóp tầng trên.
-  granary(m, vx, vz, vs, level >= 5, level >= 9 ? { ...roof, lac: false } : roof, tall);
-  const floorY = 0.8 * vs + tall;
+  // Vựa chính trên nền đá, to dần tới cấp 5 (chóp đồng); cấp 9 trở lên mái hai tầng, chim Lạc (cấp 10) trên tầng trên.
+  const vs = 1.65 * partScale(level);
+  p.cyl(0.5 * vs, 0.53 * vs, 0.1, C.rock, VX, 0.06, VZ, undefined, 12);
+  granary(m, VX, VZ, vs, level >= 5, level >= 9 ? { ...roof, lac: false } : roof, tall);
   if (level >= 9) {
-    const neck = floorY + 1.0 * vs;
-    m.band.cyl(0.17 * vs, 0.2 * vs, 0.2 * vs, C.woodLight, vx, neck + 0.1 * vs, vz, undefined, 10);
-    coneRoof(m, roof, 0.36 * vs, 0.42 * vs, vx, neck + 0.2 * vs + 0.19 * vs, vz, 12);
+    const neck = 0.8 * vs + tall + 1.0 * vs;
+    m.band.cyl(0.17 * vs, 0.2 * vs, 0.2 * vs, C.woodLight, VX, neck + 0.1 * vs, VZ, undefined, 10);
+    coneRoof(m, roof, 0.36 * vs, 0.42 * vs, VX, neck + 0.2 * vs + 0.19 * vs, VZ, 12);
   }
-  const rimZ = vz + 0.42 * vs;
-
+  // Sân phơi thóc trước bên phải: thóc vàng trải đều; cấp 7 lát gạch.
   if (level >= 2) {
-    // Thang tre dựa vào sàn vựa, thúng thóc dưới chân thang.
-    const T = L.zone('T');
-    const z0 = T.z + 0.05;
-    const run = z0 - rimZ;
-    const len = Math.hypot(run, floorY);
-    const tilt = -Math.atan2(run, floorY);
-    for (const sx of [-0.1, 0.1]) p.cyl(0.02, 0.02, len, C.bamboo, T.x + sx, floorY / 2, (z0 + rimZ) / 2, [tilt, 0, 0], 4);
-    const rungs = 4 + up;
-    for (let i = 1; i <= rungs; i++) {
-      const t = i / (rungs + 1);
-      p.box(0.22, 0.025, 0.035, C.bamboo, T.x, t * floorY, z0 - t * run);
-    }
-    basket(m, T.x - 0.42, T.z + 0.08);
-    basket(m, T.x + 0.38, T.z + 0.05);
-    if (level >= 3) basket(m, T.x - 0.4, T.z + 0.42);
+    const w = 1.3;
+    p.box(w, 0.04, w, level >= 7 ? BRICK : DRY_YARD, 0.7, 0.06, 0.7);
+    p.box(w - 0.24, 0.03, w - 0.24, C.ripe, 0.7, 0.085, 0.7);
   }
-  if (level >= 3) {
-    // Sân phơi thóc phía trước bên phải: thóc vàng trải đều, luống cào, cào gỗ, đống thóc, nia.
-    // Cấp 7 lát gạch.
-    const s = L.zone('s');
-    const sx = s.x + 0.02;
-    const sz = s.z + 0.02;
-    if (level >= 7) {
-      const n = 4;
-      const t = 1.38 / n;
-      for (let i = 0; i < n; i++) {
-        for (let j = 0; j < n; j++) {
-          p.box(t - 0.03, 0.05, t - 0.03, (i + j) % 2 ? BRICK : 0xc0704c, sx - 0.69 + t * (i + 0.5), 0.06, sz - 0.69 + t * (j + 0.5));
-        }
-      }
-    } else p.box(1.38, 0.04, 1.38, DRY_YARD, sx, 0.06, sz);
-    const top = level >= 7 ? 0.085 : 0.08;
-    p.box(1.1, 0.03, 1.1, C.ripe, sx, top, sz);
-    for (let i = 0; i < 4; i++) p.box(1.0, 0.02, 0.03, C.thatchDark, sx, top + 0.015, sz - 0.39 + i * 0.26);
-    p.cone(0.24, 0.2, C.ripe, sx + 0.38, top + 0.1, sz - 0.38, undefined, 9);
-    // Cào gỗ nằm trên thóc.
-    p.cyl(0.014, 0.014, 0.75, C.woodDark, sx - 0.12, top + 0.04, sz + 0.12, [Math.PI / 2, 0, 0.7], 4);
-    p.box(0.3, 0.04, 0.05, C.woodDark, sx - 0.36, top + 0.04, sz + 0.41, [0, -0.7, 0]);
-    // Nia tre phơi thóc ở góc trước.
-    p.cyl(0.22, 0.2, 0.03, C.bamboo, sx + 0.42, top + 0.02, sz + 0.42, undefined, 12);
-    p.cyl(0.18, 0.18, 0.02, C.ripe, sx + 0.42, top + 0.04, sz + 0.42, undefined, 12);
-  }
-  if (level >= 4) {
-    // Vựa phụ sau bên phải; cấp 8 thành kho sàn dài mái cong, chim đồng hai đầu nóc.
-    const A = L.zone('4');
-    if (level >= 10) {
-      // Cấp 10: dải sân giữa vựa phụ và sân phơi lát gạch nối liền sân phơi.
-      for (let i = 0; i < 5; i++) p.box(0.24, 0.045, 0.44, i % 2 ? BRICK : 0xc0704c, 0.3 + i * 0.26, 0.055, -0.25);
-    }
-    if (level >= 8) {
-      // Kho sàn: sáu cột, sàn ván, vách hoa văn kín, cửa và thang trước, mái thuyền cong vút.
-      const hx = A.x + 0.1;
-      const hz = A.z;
-      const ph = 0.72;
-      for (const dx of [-0.5, 0, 0.5]) for (const dz of [-0.28, 0.28]) p.cyl(0.045, 0.055, ph, C.woodDark, hx + dx, ph / 2, hz + dz, undefined, 6);
-      p.box(1.2, 0.07, 0.72, C.wood, hx, ph, hz);
-      m.band.box(1.0, 0.5, 0.56, C.woodLight, hx, ph + 0.28, hz);
-      p.box(0.22, 0.34, 0.03, C.woodDark, hx - 0.2, ph + 0.2, hz + 0.29);
-      for (let i = 0; i < 3; i++) p.box(0.2, 0.035, 0.08, C.woodDark, hx - 0.2, ph * (1 - (i + 1) / 4), hz + 0.4 + i * 0.09);
-      const ry = ph + 0.78;
-      boatRoof(m, roof, { length: 1.3, width: 0.92, lift: 0.45, drop: 0.32, thickness: 0.06 }, hx, ry, hz);
-      if (!roof.lac) {
-        bird(m, hx + 0.47, ry + 0.4, hz, 1, 0.42);
-        bird(m, hx - 0.47, ry + 0.4, hz, -1, 0.42);
-      }
-    } else granary(m, A.x + 0.07, A.z, 0.9, false, roof, tall * 0.6);
-  }
-  if (level >= 6) {
-    // Cót thóc lớn trên vòng đá góc trước bên trái, thóc vun lên miệng cót; cấp 7, 8 cót cao thêm, thêm đai tre.
-    const c = L.zone('6');
-    const ch = 0.6 + 0.12 * (up - 1);
-    const bands = 2 + up;
-    p.cyl(0.42, 0.44, 0.08, C.rock, c.x, 0.08, c.z, undefined, 12);
-    if (level >= 10) {
-      // Cấp 10: cót thành vựa gỗ trên bốn chân thấp: vách ván ghép có hoa văn, nẹp gỗ sẫm, cửa nhỏ, mái thuyền.
-      const fy = 0.3;
-      for (const dx of [-0.26, 0.26]) for (const dz of [-0.26, 0.26]) p.cyl(0.04, 0.05, fy, C.woodDark, c.x + dx, fy / 2 + 0.08, c.z + dz, undefined, 6);
-      p.box(0.7, 0.05, 0.7, C.wood, c.x, fy + 0.1, c.z);
-      m.band.box(0.62, 0.56, 0.62, C.woodLight, c.x, fy + 0.4, c.z);
-      for (const k of [-0.31, 0.31]) {
-        p.box(0.04, 0.58, 0.04, C.woodDark, c.x + k, fy + 0.4, c.z + 0.31);
-        p.box(0.04, 0.58, 0.04, C.woodDark, c.x + k, fy + 0.4, c.z - 0.31);
-      }
-      p.box(0.18, 0.24, 0.03, C.woodDark, c.x + 0.12, fy + 0.3, c.z + 0.32);
-      boatRoof(m, roof, { length: 0.92, width: 0.86, lift: 0.22, drop: 0.28, thickness: 0.05 }, c.x, fy + 0.98, c.z);
-    } else {
-      m.band.cyl(0.37, 0.39, ch, C.thatch, c.x, 0.12 + ch / 2, c.z, undefined, 12);
-      for (let i = 0; i < bands; i++) p.cyl(0.395, 0.395, 0.035, C.bamboo, c.x, 0.22 + (i * (ch - 0.15)) / (bands - 1), c.z, undefined, 12);
-      p.sphere(0.35, C.ripe, c.x, 0.12 + ch, c.z, [1, 0.4, 1], 10);
-    }
+  // Cót thóc thấp mái tranh góc sau bên phải, cao dần ở cấp 6–8.
+  if (level >= 5) {
+    const cx = 0.95;
+    const cz = -0.95;
+    const ch = 0.5 + 0.08 * up;
+    p.cyl(0.4, 0.42, 0.08, C.rock, cx, 0.08, cz, undefined, 12);
+    m.band.cyl(0.35, 0.37, ch, C.thatch, cx, 0.12 + ch / 2, cz, undefined, 12);
+    coneRoof(m, MAI_TRANH, 0.46, 0.32, cx, 0.12 + ch + 0.14, cz, 10);
   }
   return m.group();
 }

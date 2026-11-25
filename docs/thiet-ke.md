@@ -30,7 +30,7 @@ Tài liệu này ghi lại các quyết định đã chốt với chủ dự án
     - lò rèn có lò nung hình nón to;
     - bến chợ thuyền có cầu tàu và sạp căng bạt;
     - bãi đất đá có hố và đống đá;
-  - **mỗi cấp đổi hẳn dáng**: thêm một phần lớn nhìn thấy rõ và to dần, từ khoảng 85% ở cấp 1 lên 105% ở cấp 5, rồi 110%, 115%, 120% ở cấp 6, 7, 8.
+  - **mỗi cấp đổi hẳn dáng**: thêm một phần lớn nhìn thấy rõ và to dần (công trình đã giản lược theo mục **Giản lược công trình: một mái chính** thì không thêm phần, chỉ khối chính to, cao dần và đổi mái), từ khoảng 85% ở cấp 1 lên 105% ở cấp 5, rồi 110%, 115%, 120% ở cấp 6, 7, 8.
     - Ví dụ Điện: cấp 2 thêm cờ, trống và chim đồng; cấp 3 thêm chái nhà bên; cấp 4 thêm nền đá và hàng rào; cấp 5 lợp mái hai tầng.
     - **Cấp 6, 7, 8 to mà không tràn ô**: móng giữ nguyên số ô. Cả khối phóng to nhưng tâm từng phần giữ chỗ như cấp 5 (thu tâm, `ShapeBuilder.spread`), nền và rào thu lại vừa ô; mỗi phần to ra tại chỗ. Người làm việc giữ cỡ như cấp 5. Nhà cũng cao dần (cột, sàn, mái), và mỗi cấp thêm chi tiết. Điện đã kín bốn ô nên giữ 105%, to lên bằng nền đá thứ hai dưới nhà chính, cột cao, mái rộng và vút hơn. Bến to 106%, 110%, 114%; bãi đất đá 105%, 110%, 114% so với cấp 5; chòi canh móng một ô chỉ cao lên; ruộng giữ cỡ, lúa và chòi canh ruộng cao lên.
     - **Mái theo cấp** (nhìn mái để biết cấp, chung cho mọi công trình có mái): tới cấp 5 mái tranh; cấp 6 mái tranh có sống mái và diềm mái sơn đỏ; cấp 7 mái ngói đất nung đỏ cam như ngói thành Cổ Loa; cấp 8 mái ngói, sống mái và diềm mái bọc đồng vàng; cấp 9 thêm dải đồng hoa văn trống đồng (vòng tròn tiếp tuyến) rủ dưới diềm mái; cấp 10 thêm chim Lạc đồng dang cánh ở hai đầu nóc, đầu mái vút hơn. Mái nón, mái tròn thì viền là vành diềm mái và chóp mái (cấp 9 vành đồng hoa văn quanh diềm, cấp 10 chim Lạc trên chóp). Lầu nỏ mái như chòi canh cấp 8, lên cấp 2, 3 thì mái như cấp 9, 10. Đền và bốn công trình Hội Tết giữ mái tranh.
@@ -837,7 +837,7 @@ Rèn riêng cho giáo binh, cung thủ, voi chiến. Có tác dụng ở mọi t
 - Đã vẽ: guồng nước ruộng cấp 6 quay thật; bến cấp 6 có thuyền buôn lớn neo cạnh cầu tàu nhấp nhô theo sóng; ruộng và bãi đất đá cấp 6–7 có 5 chỗ đứng cho người làm, bến và lò rèn 4 chỗ. Người làm rải khắp ruộng; thợ đá mỗi người đứng một cột theo hướng camera để khỏi che nhau.
 - Từ Điện cấp 6, tướng đứng trước Điện (Sơn Tinh lúc cầu hôn, An Dương Vương cùng cột đá thề) ra đứng hẳn bên phải nền Điện, để khỏi che lầu trống bên phải. (Nay Điện 10×10 có sân chầu: tướng đứng chầu hai bên lối giữa, ở mọi cấp; xem mục Điện Vua Hùng 10×10.)
 - Chụp ở cỡ thật trên điện thoại thì các phần thêm ở cấp 6, 7 quá nhỏ, cùng màu tranh nên khó biết cấp. Chủ dự án yêu cầu công trình cấp cao có ngoại hình rõ hơn, nên thêm **mái theo cấp** (xem mục Phong cách): cấp 6 viền đỏ, cấp 7 mái ngói, cấp 8 viền đồng vàng. Ruộng ít mái nên từ cấp 6 bờ kè đá xám; guồng nước to thêm khoảng 30%, miếu thần lúa to thêm khoảng 30%. Bãi đất đá không có mái nên từ cấp 6 có lán che bánh xe tời, mái theo cấp.
-- Chủ dự án yêu cầu thêm: không chỉ đổi màu, công trình cấp cao phải to hơn và nhiều chi tiết hơn. Nên cấp 6, 7, 8 to 110%, 115%, 120% mà không tràn ô (xem mục Phong cách), nhà cao dần theo cấp (cột nhà sàn, vựa, lán lò rèn, chòi canh, chòi canh ruộng, lúa), và mỗi cấp thêm chi tiết ghi trong hai bảng dáng. Chủ dự án đã duyệt cả mái theo cấp lẫn cỡ và chi tiết mới.
+- Chủ dự án yêu cầu thêm: không chỉ đổi màu, công trình cấp cao phải to hơn và nhiều chi tiết hơn (sau chơi thử, chủ dự án đổi lại: xem mục Giản lược công trình: một mái chính). Nên cấp 6, 7, 8 to 110%, 115%, 120% mà không tràn ô (xem mục Phong cách), nhà cao dần theo cấp (cột nhà sàn, vựa, lán lò rèn, chòi canh, chòi canh ruộng, lúa), và mỗi cấp thêm chi tiết ghi trong hai bảng dáng. Chủ dự án đã duyệt cả mái theo cấp lẫn cỡ và chi tiết mới.
 - Bản lưu lên phiên bản 8 (thêm bậc rèn của từng binh chủng).
 - Lời Lạc hầu: đoạn "Vua Hùng kén rể" thêm một câu nhắc Điện có thể lên cấp 6 và lò rèn rèn binh khí; đoạn "Cột đá thề" thêm một câu nhắc Điện cấp 7. Người đã xem các đoạn ấy thì thấy nút nâng cấp như thường.
 
@@ -1644,7 +1644,7 @@ Kinh đô lớn lúc đầu chỉ phóng mô hình cũ theo móng mới (`footSc
 - **Bản vẽ ô con**: mỗi móng chia thành ô con bằng nửa ô (3×3 thành 6×6 ô con). Bản vẽ viết ngay trong code (`Lot` ở `src/render/lot.ts`); mỗi phần đứng vào khối chữ của nó, nên bản vẽ trong tài liệu và code là một.
 - **Cao ở sau, thấp ở trước**: nhà chính, lò, núi, chòi về phía sau bên trái; sân, ruộng, chiếu, ao về phía trước bên phải, vì camera mặc định nhìn từ góc trước bên phải.
 - **Mặt trước rõ**: lối đi, cổng hay chỗ hở ở giữa cạnh trước.
-- **Lên cấp thì móng lấp dần**: cấp thấp móng còn thưa, mỗi cấp thêm một phần lớn đứng ở chỗ riêng của nó thay vì chen vào giữa. Không thu tâm ở cấp 6–8 như dáng cũ (`setSpread`, `edgeOf`): nhà chính chừa lề trong khối của nó để to dần tại chỗ.
+- **Lên cấp thì móng lấp dần** (đã bỏ với công trình giản lược, xem mục Giản lược công trình: một mái chính): cấp thấp móng còn thưa, mỗi cấp thêm một phần lớn đứng ở chỗ riêng của nó thay vì chen vào giữa. Không thu tâm ở cấp 6–8 như dáng cũ (`setSpread`, `edgeOf`): nhà chính chừa lề trong khối của nó để to dần tại chỗ.
 - Mái theo cấp, viền mực, hoa văn giữ nguyên. Chỗ đứng của người làm vẽ lại theo bản vẽ, rải khắp móng; số người giữ như cũ.
 - Sân đất nện phủ trọn móng, sáng hơn đất trồng để thấy ranh móng giữa cỏ.
 
@@ -1653,12 +1653,12 @@ Kinh đô lớn lúc đầu chỉ phóng mô hình cũ theo móng mới (`footSc
 | Công trình | Bố cục | |
 |---|---|---|
 | Điện Vua Hùng | cung điện có sân chầu: nhà chính lùi về sau, lối đá từ cổng lên thềm, lầu trống hai góc trước; thêm cổng (cấp 4) và chái trái (cấp 7) | đã vẽ |
-| Ruộng lúa | bốn thửa vuông, bờ chữ thập; cấp 1 mới khai hai thửa sau; chòi, trâu, guồng, miếu ở bốn góc; ao cò giữa bốn thửa | đã vẽ |
-| Bến chợ thuyền | ba dải ra sông: kho, chợ hai dãy sạp có lối giữa, sàn bến; lối chợ thẳng ra cầu tàu; thuyền nhỏ, thuyền buôn (cấp 6) và thuyền buôn thứ hai (cấp 8) neo theo cầu tàu | đã vẽ |
-| Nhà sàn | nếp nhà có vườn: nhà chính góc sau, nhà phụ, hiên, chum nước, vườn rau góc trước | đã vẽ |
-| Bãi đất đá | mỏ đá bên gò: hố đá bậc thang góc sau, tời, xe đá, lò gạch, cần vọt | đã vẽ |
-| Lò rèn | lò nón góc sau, lán đe phía sau, sân làm việc giữa, lò luyện thứ hai, giá binh khí, sân đúc đồng | đã vẽ |
-| Kho thóc | vựa chính, vựa phụ, cót quây ba phía quanh sân phơi thóc | đã vẽ |
+| Ruộng lúa | bốn thửa vuông, bờ chữ thập; cấp 1 mới khai hai thửa sau; chòi, trâu, guồng, miếu ở bốn góc; ao cò giữa bốn thửa | đã vẽ; đã giản lược (luống lúa, một chòi canh) |
+| Bến chợ thuyền | ba dải ra sông: kho, chợ hai dãy sạp có lối giữa, sàn bến; lối chợ thẳng ra cầu tàu; thuyền nhỏ, thuyền buôn (cấp 6) và thuyền buôn thứ hai (cấp 8) neo theo cầu tàu | đã vẽ; đã giản lược (nhà chợ mở, lối chợ, cầu tàu) |
+| Nhà sàn | nếp nhà có vườn: nhà chính góc sau, nhà phụ, hiên, chum nước, vườn rau góc trước | đã vẽ; đã giản lược (một nhà sàn to, cây cau) |
+| Bãi đất đá | mỏ đá bên gò: hố đá bậc thang góc sau, tời, xe đá, lò gạch, cần vọt | đã vẽ; đã giản lược (hố đá, lán, một chồng đá) |
+| Lò rèn | lò nón góc sau, lán đe phía sau, sân làm việc giữa, lò luyện thứ hai, giá binh khí, sân đúc đồng | đã vẽ; đã giản lược (lò nón, lán đe) |
+| Kho thóc | vựa chính, vựa phụ, cót quây ba phía quanh sân phơi thóc | đã vẽ; đã giản lược (một vựa to, sân phơi, cót) |
 | Doanh trại | nhà dài suốt phía sau, sân tập rộng giữa cho tướng đứng, đài tướng và chòi trống bên phải, rào cọc nhọn từ cấp 3; thêm nhà dài thứ hai (cấp 4) | đã vẽ |
 | Trại giáo, trại cung, chuồng voi | hai lều chữ A và sân cọc rơm; lán một mái và trường bắn ngang hai bia; mái chóp và sân voi có máng, đống cỏ | đã vẽ |
 | Ba đền | đền lùi về sau, sân có tượng, cổng nhỏ; Phù Đổng thêm bụi tre đằng ngà, ao vết chân ngựa; Tản Viên thêm suối từ núi; Cổ Loa có cổng đất nện kiểu cổng thành | chủ dự án đã vẽ lại theo sự tích (Võ miếu lửa sắt và tre đằng ngà; đền đá Tam Sơn Ba Vì và suối thác; Loa thành xoắn ốc và điện vòm mai Rùa Vàng), vẫn vẽ theo móng cũ rồi phóng theo móng |
@@ -1683,6 +1683,27 @@ Kinh đô lớn lúc đầu chỉ phóng mô hình cũ theo móng mới (`footSc
    - ba đền và ruộng nếp: chủ dự án đã vẽ lại dáng (ba đền theo sự tích, ruộng nếp chi tiết bông nếp), vẫn vẽ theo móng cũ rồi phóng theo móng;
    - vườn đậu lá dong, chuồng lợn, bếp gói bánh: vẽ lại trên trọn móng ở `congTrinh/` theo bản vẽ. Người ngồi gói bánh ngày Tết nay ngồi trên chiếu trong móng bếp (`BEP_TET_SEAT`).
    - Dáng cũ còn trong `buildings.ts` để chụp so; bỏ khi không cần so nữa.
+
+## Giản lược công trình: một mái chính (chủ dự án chọn kiểu 2, đang làm)
+
+Người chơi thử chê công trình nhiều chi tiết, rối mắt. Khảo sát ở độ phóng mặc định trên điện thoại (Điện 5, 8, 10): rối nhất là viền mực quanh vật nhỏ, ruộng lúa (mỗi khóm lúa một khối có viền), và từ cấp 7 mỗi móng 3–5 mái ngói cam cùng màu nên không thấy ranh từng công trình. Đồ lặt vặt trên sân rối ít hơn tưởng; người, hoa văn, đuốc gần như không gây rối. Chủ dự án xem ba kiểu vẽ thử (gọn sân; một mái chính; khối đồ chơi) cạnh dáng cũ và chọn **kiểu 2, một mái chính**, cho mọi công trình.
+
+### Nguyên tắc
+
+- **Một khối chính** to (nhà, vựa, hố đá, bốn thửa ruộng) chiếm phần lớn móng, lùi về sau bên trái; **tối đa một phần phụ** thấp, mái tranh hay không mái, để không tranh màu với khối chính. Sân trước để trống, có lối đi.
+- **Lên cấp**: khối chính to dần tới cấp 5, cao dần ở cấp 6–8, đổi mái theo cấp; có thể đổi dáng khối chính ở một mốc (nhà sàn cấp 7 thành nhà mái thuyền). Không thêm nhà, không thêm đồ nhỏ theo cấp.
+- **Mái theo cấp** giữ như mục Phong cách, trừ dải đồng hoa văn cấp 9 (bỏ, vì ở độ phóng mặc định chỉ là một vệt vàng); chim Lạc cấp 10 giữ.
+- **Vật nhỏ còn lại** (bậc thang, cây cau) viền mảnh; lúa không viền.
+- **Không đổi luật**: móng, số người làm, cổng, lối đi `,` trong bản vẽ ô con, thuyền neo giữ nguyên. Chỗ đứng người làm dời cho khỏi đứng trong nhà. Dáng nhận diện mỗi loại giữ (nhà sàn mái tròn hay mái thuyền, kho thân tròn mái nón, lò nón...).
+- Chưa đụng lớp cảnh (dân, cỏ hoa ô trống, cây đá, đuốc, đường); sửa công trình xong, chụp lại, còn rối mới xét ở kế hoạch riêng.
+
+### Thứ tự làm (mỗi đợt một commit trong cùng PR, có ảnh chụp kiểm tra)
+
+1. **Nguyên tắc và bốn loại đã vẽ thử** (đã làm): nhà sàn, kho thóc, bãi đất đá, ruộng lúa. Kinh đô Điện 8: 951 → 911 lệnh vẽ, 3,4 → 2,55 triệu tam giác.
+2. **Lò rèn, xưởng mộc, nhà thợ hồ, nhà thuốc nam** (đã làm). Lò rèn: lò nón và lán đe một mái. Xưởng mộc: lán mở dài, gỗ dưới lán, giá cưa. Nhà thợ hồ thành nhà tường gạch (để không giống lán xưởng mộc), đoạn tường đất nện. Nhà thuốc: nhà sàn lang y, lán chõng mái tranh (giữ chõng thương binh), luống thuốc phẳng, cối giã. Dùng chung `maiGon`, `MAI_TRANH`, `lanMo` ở `congTrinh/chung.ts`.
+3. **Vườn đậu lá dong, chuồng lợn, bếp gói bánh** (đã làm): vườn còn khóm lá dong và luống đậu phẳng không viền, cấp 3 lều phơi; chuồng lợn còn chuồng mái tranh, máng, mỗi cấp thêm một lợn lớn (bỏ rào tre, lợn con); bếp còn gian bếp mái tranh từ cấp 1 và chiếu gói bánh (bỏ củi, chồng lá dong, chõng tre, cối giã). Ruộng nếp chưa làm: chủ dự án đã tự làm lại chi tiết bông nếp, chờ chủ dự án quyết có giản lược không.
+4. **Bến chợ thuyền, làng chài, bến thuyền khơi** (đã làm; giữ chỗ thuyền neo, mặt trước ra sông): bến chợ còn nhà chợ mở (`lanMo`) phía sau, lối chợ, sàn bến, cầu tàu (bỏ sạp chợ, kho hàng, cờ, đống hàng); làng chài còn lều chài (cấp 4 nhà sàn), bờ ván, vó bè (bỏ giàn phơi cá, giá phơi lưới, chum mắm, sạp chợ cá, miếu); bến thuyền khơi còn kho hải sản sàn cao, đụn vỏ ốc, cầu tàu, cầu ván (bỏ giàn lưới, tời, chum, đá neo, chòi lửa hiệu, miếu cá Ông).
+- Giữ nguyên: Điện, doanh trại, bốn nơi ở (khảo sát không thấy rối), các đền, Hồ Kim Quy, Đền Rồng Tiên (mỗi thứ một cái, là điểm nhấn), công trình móng một ô. Chủ dự án muốn giản lược thêm loại nào thì thêm một đợt.
 
 ## Kế hoạch: cổng thành, xưởng mộc, làng chài (chủ dự án đã duyệt, đã làm)
 
@@ -2320,7 +2341,7 @@ Móng 3×3, phải sát bờ sông (bên này hay bên kia, sông Thao hay sông
 
 ### Hình ảnh
 
-- **Bến thuyền khơi** (`src/render/congTrinh/benKhoi.ts`, bản vẽ ở `docs/bo-cuc-cong-trinh.md`): kho hải sản sàn cao có cá khô treo dưới sàn, giàn phơi lưới vây, đụn vỏ ốc biển trong nong lớn, chum mắm, tời kéo thuyền, cầu tàu dọc mép sông và cầu ván chìa ra chỗ thuyền khơi neo; cấp 2 thêm chòi lửa hiệu và tấm lưới thứ hai, cờ đỏ; cấp 3 thêm miếu thờ cá Ông (vòm xương sườn cá voi trước cửa) và đụn ốc thứ hai. Mái theo cấp Điện mở cấp ấy (8, 9, 10). Năm người làm: ngư dân vá lưới, người gánh cá đi dọc cầu tàu, người giữ kho, ngư dân ở đầu cầu ván, người nhặt ốc.
+- **Bến thuyền khơi** (`src/render/congTrinh/benKhoi.ts`, bản vẽ ở `docs/bo-cuc-cong-trinh.md`; giản lược kiểu 2, mục Giản lược công trình): kho hải sản sàn cao, đụn vỏ ốc biển trong nong lớn, cầu tàu dọc mép sông và cầu ván chìa ra chỗ thuyền khơi neo; cấp 2 thêm thúng ốc, cấp 3 thêm đụn ốc thứ hai. Mái theo cấp Điện mở cấp ấy (8, 9, 10). Năm người làm: ngư dân ở sân, người gánh cá đi dọc cầu tàu, người giữ kho, ngư dân ở đầu cầu ván, người nhặt ốc.
 - **Thuyền khơi** (`makeThuyenKhoi` ở `models.ts`): thân thuyền trống đồng phóng to (dài chừng 3,1 ô), **mắt thuyền** vẽ hai bên mũi, **buồm cánh dơi** nâu có nan tre xòe (hai cột buồm ở cấp 1, 2; ba cột, buồm viền son, trống đồng nhỏ ở mũi ở cấp 3), lưới vây chất ở đuôi, thúng cá, người lái chèo lái, hai ngư dân trên sàn.
 - **Chuyến khơi** (chỉ để nhìn, World theo đồng hồ cảnh): neo trước bến 24 giây, ra giữa dòng, xuôi sông (sông Thao thì rẽ ở ngã ba), qua cửa biển, ra ngư trường, kéo lưới một vòng quanh quần đảo, rồi đi ngược đường cũ về bến. Ra biển thì chòng chành mạnh hơn. Bến hư thì thuyền nằm neo.
 - **Biển** (`src/render/bien.ts`): mặt biển, bãi cát dựng theo dải dọc bờ chéo (`coastBand`, `bienDiem`): nước nông ngọc sát bãi sẫm dần ra khơi như bãi biển Mộ Dạ, bãi cát khô phủ mép nền đất rồi cát ướt thoải xuống nước, hai bên cửa sông bãi thoải xuống lòng sông thành doi cát, sông Đà dừng đúng mép biển; dải sóng trắng vỗ bờ trôi ra vào theo hướng vào bờ, vòng sóng quanh đảo. Vũng san hô màu ngọc quanh mỗi đảo (quanh đảo chính cũng vuông bo góc).
