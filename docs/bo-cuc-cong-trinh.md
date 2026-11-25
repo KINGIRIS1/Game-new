@@ -76,34 +76,25 @@ L m m . , , . . . L
 
 ### Ruộng lúa: 3×3 → 4×4
 
-Bốn thửa vuông chia bằng bờ chữ thập. Cấp 1 mới khai hai thửa sau, hai thửa trước còn là đất cày ngập nước. Chòi, trâu, guồng, miếu đứng ở bốn góc; ao cò ở chỗ bốn thửa gặp nhau.
+Giản lược kiểu 2, một mái chính (xem mục Giản lược công trình ở `docs/thiet-ke.md`). Bốn thửa vuông chia bằng bờ chữ thập, mỗi thửa ba luống lúa dài nổi khỏi nước, không viền mực; chòi canh trên gò góc sau bên trái.
 
 ```
-C C a a b b M M
-C C a a b b M M
+C C a a b b b b
+C C a a b b b b
 a a a a b b b b
-a a a O O b b b
-c c c O O d d d
+a a a a b b b b
 c c c c d d d d
-G G c c d d S S
-G G c c , , T T
+c c c c d d d d
+c c c c d d d d
+c c c c , , d d
 ```
 
-- `a` cấp 1, thửa sau bên trái.
-- `b` cấp 1, thửa sau bên phải.
-- `,` cấp 1, lối xuống ruộng: dốc đất cắt qua bờ trước, hai bậc xuống nước.
-- `c` cấp 2, thửa trước bên trái.
-- `d` cấp 2, thửa trước bên phải.
-- `T` cấp 3, trâu đứng nghỉ trên bờ góc trước.
-- `C` cấp 4, chòi canh ruộng trên gò, sàn có lan can tre, mái nón (cấp 6: chòi cao có thang tre).
-- `S` cấp 5, bó lúa đã gặt và đụn rơm.
-- `G` cấp 6, guồng nước tre quay trên mương, máng tre từ đỉnh guồng dẫn nước vào thửa trước bên trái.
-- `M` cấp 7, miếu thần lúa trên nền đá, lư hương, chim đồng trên nóc.
-- `O` cấp 8, ao nước trong bờ đá, lá sen, đàn cò; ống tre nối từ máng guồng đổ vào ao.
-- Bờ đất quanh móng và bờ chữ thập giữa bốn thửa; cấp 6 bờ ngoài kè đá xám. Cấp 8 bờ chữ thập chừa giữa cho ao.
-- Góc nào chưa tới cấp có phần thì vẫn cấy lúa; tới cấp thì góc ấy đắp gò dựng phần. Cấp 1–2 cấy thưa (3×3 khóm mỗi thửa), từ cấp 3 cấy dày (4×4); lúa cao và chín vàng dần theo cấp.
-- Năm nông dân đứng giữa các khóm lúa, rải đủ bốn thửa; cấp 1 người thứ hai cày thửa trước.
-- Đã đổi khi vẽ: `T` và `S` đổi hàng cho nhau, trâu thấp ra mép trước, bó lúa và đụn rơm cao lùi sau một hàng, để đụn rơm không che trâu.
+- `a`, `b` cấp 1, hai thửa sau, ba luống mạ xanh.
+- `c`, `d` cấp 2, hai thửa trước (cấp 1 mới cày, nước đục).
+- `,` cấp 1, lối xuống ruộng: dốc đất cắt qua bờ trước.
+- `C` cấp 3, chòi canh trên gò, mái nón theo cấp (cấp 6–8: chòi cao lên). Luống sau cùng của thửa sau bên trái ngắn lại chừa chỗ gò.
+- Lúa cao dần theo cấp; cấp 3–4 lúa đứng cái, từ cấp 5 chín vàng; luống cạnh nhau đậm nhạt xen nhau. Bờ ngoài cấp 6 kè đá xám.
+- Năm nông dân đứng trong khe nước giữa các luống, rải đủ bốn thửa.
 
 ### Ruộng nếp: 3×3 → 4×4
 
@@ -154,51 +145,41 @@ F . , , . F
 
 ### Nhà sàn: 2×2 → 3×3
 
-Một nếp nhà có vườn: nhà chính lùi về góc sau bên trái, to hơn dáng cũ chừng 30%; nhà phụ bên phải, sân trước có hiên và chum nước, vườn rau góc trước bên trái.
+Giản lược kiểu 2, một mái chính (xem mục Giản lược công trình ở `docs/thiet-ke.md`). Một nhà sàn to lùi về sau bên trái, cây cau góc sau bên phải, sân trước để trống.
 
 ```
-H H H H Q Q
-H H H H h h
-H H H H h h
-. E E . k k
-V V . . g J
-V V , , P P
+H H H H H Q
+H H H H H .
+H H H H H .
+H H H H H .
+. . E . . .
+. . , . . .
 ```
 
-- `H` cấp 1, nhà chính mái tròn hình mai rùa (cấp 7: nhà mái thuyền nối cầu tre sang nhà phụ; cấp 8: nhà sàn dài mái thuyền vút hai đầu, chim đồng).
+- `H` cấp 1, nhà chính mái tròn hình mai rùa, to dần tới cấp 5 (chim đồng trên nóc ở cấp 5); cấp 7 thành nhà sàn dài mái thuyền, cấp 8 mái vút cao hai đầu, chim đồng hai đầu nóc (cấp 10: chim Lạc).
 - `,` cấp 1, lối vào sân.
-- `E` cấp 2, hiên trước, thang tre.
-- `J` cấp 2, chum nước.
-- `h` cấp 3, nhà phụ mái tròn.
-- `V` cấp 4, vườn rau rào tre.
-- `k` cấp 5, nhà nhỏ thứ ba, chim đồng trên nóc.
-- `Q` cấp 6, cây cau cao, buồng cau.
-- `g` cấp 6, chuồng gà tre, hai con gà ra sân.
-- `P` cấp 6, sàn phơi lúa.
+- `E` cấp 2, hiên trước, thang gỗ xuống sân.
+- `Q` cấp 4, cây cau, cao dần theo cấp.
+- Hai người ở sân trước: một bên phải thang, một góc trước bên trái.
 
 ### Bãi đất đá: 2×2 → 3×3
 
-Mỏ đá bên gò: hố đá đào sâu ở góc sau, giữa là bãi xẻ đá, đường xe đá chạy ra mặt trước.
+Giản lược kiểu 2, một mái chính (xem mục Giản lược công trình ở `docs/thiet-ke.md`). Mỏ đá bên gò: hố đá ba bậc góc sau bên trái, lán chứa đá góc sau bên phải, một chồng đá xẻ to trước bên phải, đường xe đá ra mặt trước.
 
 ```
 P P P P T T
 P P P P T T
-P P P P q q
-r r . . X X
-K K . . V V
-K K , , V V
+P P P P T T
+. . . . X X
+. . . . X X
+. . , , . .
 ```
 
-- `P` cấp 1, hố đá lộ thiên khoét vào gò: bậc đá chữ L ôm góc sau bên trái, đỉnh gò có đá tảng và cỏ, đáy hố đất (cấp 4: hố sâu ba bậc, mép hố cao, đáy sẫm, có bậc gỗ xuống; cấp 6–8: bậc đá cao dần).
-- `r` cấp 1, tảng đá vỡ, nhiều dần theo cấp; từ cấp 3 có thêm đá rơi dưới đáy hố.
-- `,` cấp 1, đường xe đá có hai vệt bánh xe.
-- `X` cấp 2, hai chồng đá xẻ vuông (cấp 6: cao thêm một khối mỗi cấp).
-- `T` cấp 3, tời gỗ chữ A: hai chân bên phải hố chụm đỉnh trên hố, tời quay tay (cấp 6: tời lớn, cột cái, cần với ra trên hố, lán mái theo cấp che bánh xe tời).
-- `V` cấp 5, xe gỗ chở đá xẻ (cấp 8: trâu đứng cạnh xe, dây buộc vào càng).
-- `K` cấp 7, lò nung gạch vòm có hoa văn, miệng lò đỏ lửa, ống khói bốc khói, chồng gạch bên cạnh (cấp 8: chồng gạch cao gấp đôi).
-- `q` cấp 8, giàn cần vọt, đá đối trọng, thúng đá thả xuống hố.
-- Năm thợ đá: hai người dưới đáy hố, một bên đá vỡ, một cạnh chồng đá xẻ, một giữa bãi.
-- Đã đổi khi vẽ: lò nung gạch `K` cần cả một ô nên chiếm hai hàng góc trước bên trái; đá vỡ `r` và chồng đá `X` còn một hàng; xe đá `V` hai hàng để trâu đứng cạnh xe.
+- `P` cấp 1, hố đá lộ thiên khoét vào gò: ba bậc đá chữ L ôm góc sau bên trái, đáy hố sẫm, mép hố (cấp 6–8: bậc đá cao dần).
+- `,` cấp 1, đường xe đá.
+- `X` cấp 1, một chồng đá xẻ to, cao dần theo cấp.
+- `T` cấp 3, lán chứa đá bốn cột, mái thuyền theo cấp, khối đá xẻ dưới lán (to dần tới cấp 5, cao dần ở cấp 6–8).
+- Năm thợ đá: hai người dưới đáy hố, một bên trái bãi, một cạnh chồng đá, một giữa bãi.
 
 ### Lò rèn: 2×2 → 3×3
 
@@ -227,25 +208,22 @@ q q , , 8 8
 
 ### Kho thóc: 2×2 → 3×3
 
-Vựa chính ở góc sau bên trái, vựa phụ và cót quây ba phía quanh một sân phơi thóc ở trước bên phải.
+Giản lược kiểu 2, một mái chính (xem mục Giản lược công trình ở `docs/thiet-ke.md`). Một vựa to góc sau bên trái, sân phơi thóc trước bên phải, cót thóc thấp mái tranh góc sau bên phải.
 
 ```
-V V V 4 4 4
-V V V 4 4 4
-V V V . . .
-. T . s s s
-6 6 b s s s
-6 6 , s s s
+V V V V 6 6
+V V V V 6 6
+V V V V . .
+V V V . s s
+. . , s s s
+. . , s s s
 ```
 
-- `V` cấp 1, vựa tròn trên cột, mái nón, đứng trên nền đất đắp kè đá (cấp 5: vựa to, chóp đồng).
-- `,` cấp 1, lối vào ba phiến đá kê.
-- `b` cấp 1, chỗ nhận hàng sát lối vào: hai bao thóc, một thúng vun đầy; dân gánh hàng về kho đổ lại đây (xem mục Dân gánh hàng về kho ở `docs/thiet-ke.md`).
-- `T` cấp 2, thang tre dựa sàn vựa, thúng thóc (cấp 3: thêm thúng).
-- `s` cấp 3, sân phơi thóc: thóc trải, luống cào, cào gỗ, đống thóc, nia (mới; cấp 7: lát gạch).
-- `4` cấp 4, vựa phụ (cấp 8: kho sàn dài mái cong, chim đồng).
-- `6` cấp 6, cót thóc lớn trên vòng đá (cấp 7: cót cao, thêm đai tre).
-- Người giữ kho đi qua lại trên dải sân giữa vựa phụ và sân phơi.
+- `V` cấp 1, vựa tròn trên cột cao, mái nón, trên nền đá, to dần tới cấp 5 (chóp đồng); cấp 6–8 cột cao dần; cấp 9 mái hai tầng (cấp 10: chim Lạc trên tầng trên).
+- `,` cấp 1, lối vào.
+- `s` cấp 2, sân phơi thóc vàng (cấp 7: lát gạch). Dân gánh hàng về kho đổ ở sân.
+- `6` cấp 5, cót thóc thấp mái tranh trên vòng đá (cấp 6–8: cao dần).
+- Người giữ kho đi qua lại trên dải sân giữa vựa và cót.
 
 ### Doanh trại: 3×3 → 4×4 → 8×8
 
@@ -861,12 +839,12 @@ Móng đã kín ở cấp 8, nên cấp 9, 10 không thêm ô con mới: mỗi l
 | Công trình | Phần | Cấp 9 | Cấp 10 |
 |---|---|---|---|
 | Điện | `H`, `G`, `V` | `H`: tầng gác giữa vách và mái, cột cái sơn đỏ in hoa văn; `V`: mặt bậc bệ ngai chạm hoa văn | `G`: cổng thành hai trụ đất nện, vòm cửa, lầu cổng hai tầng mái; `H`: trống đồng trên nóc to gấp rưỡi, bốn tượng cóc đồng |
-| Ruộng lúa | `O`, `M` | `O`: bờ ao lát đá, cầu tre cong qua ao | `M`: miếu thành đình nhỏ hai tầng mái, cây nêu |
+| Ruộng lúa | (giản lược) | chỉ mái chòi canh đổi theo cấp | chim Lạc trên chóp chòi |
 | Bến chợ thuyền | `G` | cầu tàu lát đá trên trụ đá, cột neo đồng | thuyền buôn thứ hai thành thuyền buôn lớn hai buồm |
-| Nhà sàn | `H`, `E`, `h` | `H`: lan can sàn chạm hoa văn; `E`: cầu thang gỗ to, má thang đỏ | `h`: nếp nhà sàn thứ hai mái thuyền, hiên có mái nối hai nếp |
-| Bãi đất đá | `,`, `K`, `V` | `,`: đường ray gỗ, xe goòng chở đá | `V`: trâu thứ hai cùng kéo; `K`: lò nung ngói, chồng ngói, ống khói thứ hai |
+| Nhà sàn | (giản lược) | không thêm phần | chim Lạc hai đầu nóc |
+| Bãi đất đá | (giản lược) | không thêm phần | chim Lạc trên lán |
 | Lò rèn | `8`, `7` | `8`: khuôn đúc trống lớn in hoa văn, trống vừa đúc to hơn | `7`: lò luyện thành tháp lò cao, vành gạch, khói đỏ |
-| Kho thóc | `V`, `6` | `V`: vựa chính mái hai tầng | `6`: cót thành vựa gỗ có mái; dải sân giữa lát gạch |
+| Kho thóc | `V` | `V`: vựa chính mái hai tầng | chim Lạc trên tầng mái trên |
 | Xưởng mộc | `T`, `S` | `T`: thuyền lớn có mui cói, mái chèo hai bên | `S`: lán thứ hai thành nhà sàn chạm, chim Lạc đầu cột |
 | Làng chài | `V` | giàn vó lớn: cần dài, lưới rộng, cột chống đôi, đá đối trọng | thêm thuyền đánh cá có buồm cói ngoài xa |
 | Nhà thợ hồ | `G`, `L` | `G`: hai lớp trên chồng gạch là gạch nung đỏ | `L`: chim Lạc trên đầu hai cột trước lán |
