@@ -1657,7 +1657,7 @@ Kinh đô lớn lúc đầu chỉ phóng mô hình cũ theo móng mới (`footSc
 | Bến chợ thuyền | ba dải ra sông: kho, chợ hai dãy sạp có lối giữa, sàn bến; lối chợ thẳng ra cầu tàu; thuyền nhỏ, thuyền buôn (cấp 6) và thuyền buôn thứ hai (cấp 8) neo theo cầu tàu | đã vẽ |
 | Nhà sàn | nếp nhà có vườn: nhà chính góc sau, nhà phụ, hiên, chum nước, vườn rau góc trước | đã vẽ; đã giản lược (một nhà sàn to, cây cau) |
 | Bãi đất đá | mỏ đá bên gò: hố đá bậc thang góc sau, tời, xe đá, lò gạch, cần vọt | đã vẽ; đã giản lược (hố đá, lán, một chồng đá) |
-| Lò rèn | lò nón góc sau, lán đe phía sau, sân làm việc giữa, lò luyện thứ hai, giá binh khí, sân đúc đồng | đã vẽ |
+| Lò rèn | lò nón góc sau, lán đe phía sau, sân làm việc giữa, lò luyện thứ hai, giá binh khí, sân đúc đồng | đã vẽ; đã giản lược (lò nón, lán đe) |
 | Kho thóc | vựa chính, vựa phụ, cót quây ba phía quanh sân phơi thóc | đã vẽ; đã giản lược (một vựa to, sân phơi, cót) |
 | Doanh trại | nhà dài suốt phía sau, sân tập rộng giữa cho tướng đứng, đài tướng và chòi trống bên phải, rào cọc nhọn từ cấp 3; thêm nhà dài thứ hai (cấp 4) | đã vẽ |
 | Trại giáo, trại cung, chuồng voi | hai lều chữ A và sân cọc rơm; lán một mái và trường bắn ngang hai bia; mái chóp và sân voi có máng, đống cỏ | đã vẽ |
@@ -1697,10 +1697,10 @@ Người chơi thử chê công trình nhiều chi tiết, rối mắt. Khảo s
 - **Không đổi luật**: móng, số người làm, cổng, lối đi `,` trong bản vẽ ô con, thuyền neo giữ nguyên. Chỗ đứng người làm dời cho khỏi đứng trong nhà. Dáng nhận diện mỗi loại giữ (nhà sàn mái tròn hay mái thuyền, kho thân tròn mái nón, lò nón...).
 - Chưa đụng lớp cảnh (dân, cỏ hoa ô trống, cây đá, đuốc, đường); sửa công trình xong, chụp lại, còn rối mới xét ở kế hoạch riêng.
 
-### Thứ tự làm (mỗi đợt một PR, có ảnh chụp kiểm tra)
+### Thứ tự làm (mỗi đợt một commit trong cùng PR, có ảnh chụp kiểm tra)
 
 1. **Nguyên tắc và bốn loại đã vẽ thử** (đã làm): nhà sàn, kho thóc, bãi đất đá, ruộng lúa. Kinh đô Điện 8: 951 → 911 lệnh vẽ, 3,4 → 2,55 triệu tam giác.
-2. Lò rèn, xưởng mộc, nhà thợ hồ, nhà thuốc nam.
+2. **Lò rèn, xưởng mộc, nhà thợ hồ, nhà thuốc nam** (đã làm). Lò rèn: lò nón và lán đe một mái. Xưởng mộc: lán mở dài, gỗ dưới lán, giá cưa. Nhà thợ hồ thành nhà tường gạch (để không giống lán xưởng mộc), đoạn tường đất nện. Nhà thuốc: nhà sàn lang y, lán chõng mái tranh (giữ chõng thương binh), luống thuốc phẳng, cối giã. Dùng chung `maiGon`, `MAI_TRANH`, `lanMo` ở `congTrinh/chung.ts`.
 3. Ruộng nếp, vườn đậu lá dong, chuồng lợn, bếp gói bánh.
 4. Bến chợ thuyền, làng chài, bến thuyền khơi (giữ chỗ thuyền neo, mặt trước ra sông).
 - Giữ nguyên: Điện, doanh trại, bốn nơi ở (khảo sát không thấy rối), các đền, Hồ Kim Quy, Đền Rồng Tiên (mỗi thứ một cái, là điểm nhấn), công trình móng một ô. Chủ dự án muốn giản lược thêm loại nào thì thêm một đợt.

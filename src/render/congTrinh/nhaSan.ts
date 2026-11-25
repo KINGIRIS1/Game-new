@@ -2,11 +2,11 @@
 // một mái chính, xem docs/thiet-ke.md mục Giản lược công trình). Bản vẽ ở docs/bo-cuc-cong-trinh.md.
 
 import type * as THREE from 'three';
-import { above5, arecaPalm, bird, domeHouse, roofFor, stiltHall } from '../buildings';
+import { above5, arecaPalm, bird, domeHouse, stiltHall } from '../buildings';
 import { Lot } from '../lot';
 import { C } from '../palette';
 import { ToonModel, inkThin } from '../toon';
-import { type CongTrinh, type LotSpot, partScale, yard } from './chung';
+import { type CongTrinh, type LotSpot, maiGon, partScale, yard } from './chung';
 
 export const NHA_SAN_LOT = new Lot(3, [
   'HHHHHQ',
@@ -35,7 +35,7 @@ export function makeNhaSan(level: number): THREE.Group {
   const n = new ToonModel(inkThin);
   const p = m.plain;
   // Mái theo cấp, bỏ dải đồng hoa văn cấp 9; chim Lạc cấp 10 giữ.
-  const roof = { ...roofFor(level), pattern: false };
+  const roof = maiGon(level);
   const up = above5(level);
   const s = partScale(level);
   // Cấp 6–8: cột nhà sàn cao thêm.

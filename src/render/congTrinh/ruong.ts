@@ -3,11 +3,11 @@
 // thửa sau. Bản vẽ ở docs/bo-cuc-cong-trinh.md.
 
 import * as THREE from 'three';
-import { above5, coneRoof, grown, type Roof, roofFor } from '../buildings';
+import { above5, coneRoof, grown, type Roof } from '../buildings';
 import { Lot } from '../lot';
 import { C } from '../palette';
 import { inkThick, inkThin, ToonModel } from '../toon';
-import { type CongTrinh, type LotOpts, type LotSpot, type V3 } from './chung';
+import { type CongTrinh, type LotOpts, type LotSpot, type V3, maiGon } from './chung';
 
 export const RUONG_LOT = new Lot(4, [
   'CCaabbbb',
@@ -65,7 +65,7 @@ export function makeRuong(level: number, opts: LotOpts = {}): THREE.Group {
   const lua = new ToonModel();
   const p = m.plain;
   // Mái theo cấp, bỏ dải đồng hoa văn cấp 9; chim Lạc cấp 10 giữ.
-  const roof = { ...roofFor(level), pattern: false };
+  const roof = maiGon(level);
   const lv = grown(level);
   const bank = 0.12 + lv * 0.02;
   const dyke = bank * 0.85;

@@ -3,11 +3,11 @@
 // công trình). Bản vẽ ở docs/bo-cuc-cong-trinh.md.
 
 import type * as THREE from 'three';
-import { above5, boatRoof, roofFor } from '../buildings';
+import { above5, boatRoof } from '../buildings';
 import { Lot } from '../lot';
 import { C } from '../palette';
 import { ToonModel } from '../toon';
-import { type CongTrinh, type LotSpot, yard } from './chung';
+import { type CongTrinh, type LotSpot, maiGon, yard } from './chung';
 
 export const BAI_DA_LOT = new Lot(3, [
   'PPPPTT',
@@ -49,7 +49,7 @@ export function makeBaiDa(level: number): THREE.Group {
   const m = new ToonModel();
   const p = m.plain;
   // Mái theo cấp, bỏ dải đồng hoa văn cấp 9; chim Lạc cấp 10 giữ.
-  const roof = { ...roofFor(level), pattern: false };
+  const roof = maiGon(level);
   const up = above5(level);
 
   yard(m, 3, DUST);

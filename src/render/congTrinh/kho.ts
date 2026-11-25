@@ -3,11 +3,11 @@
 // Bản vẽ ở docs/bo-cuc-cong-trinh.md.
 
 import type * as THREE from 'three';
-import { above5, BRICK, coneRoof, granary, type Roof, roofFor } from '../buildings';
+import { above5, BRICK, coneRoof, granary } from '../buildings';
 import { Lot } from '../lot';
 import { C } from '../palette';
 import { ToonModel } from '../toon';
-import { type CongTrinh, type LotSpot, partScale, yard } from './chung';
+import { type CongTrinh, type LotSpot, MAI_TRANH, maiGon, partScale, yard } from './chung';
 
 export const KHO_LOT = new Lot(3, [
   'VVVV66',
@@ -20,8 +20,6 @@ export const KHO_LOT = new Lot(3, [
 
 /** Sân phơi đất nện vôi, sáng hơn sân. */
 const DRY_YARD = 0xe2cb98;
-/** Mái tranh của cót: phần phụ không tranh màu ngói với vựa. */
-const TRANH: Roof = { main: C.thatch, dark: C.thatchDark, trim: null };
 /** Tâm vựa chính. */
 const VX = -0.4;
 const VZ = -0.4;
@@ -35,7 +33,7 @@ export function makeKho(level: number): THREE.Group {
   const m = new ToonModel();
   const p = m.plain;
   // Mái theo cấp, bỏ dải đồng hoa văn cấp 9; chim Lạc cấp 10 giữ.
-  const roof = { ...roofFor(level), pattern: false };
+  const roof = maiGon(level);
   const up = above5(level);
   // Cấp 6–8: vựa trên cột cao thêm.
   const tall = 0.12 * up;
@@ -66,7 +64,7 @@ export function makeKho(level: number): THREE.Group {
     const ch = 0.5 + 0.08 * up;
     p.cyl(0.4, 0.42, 0.08, C.rock, cx, 0.08, cz, undefined, 12);
     m.band.cyl(0.35, 0.37, ch, C.thatch, cx, 0.12 + ch / 2, cz, undefined, 12);
-    coneRoof(m, TRANH, 0.46, 0.32, cx, 0.12 + ch + 0.14, cz, 10);
+    coneRoof(m, MAI_TRANH, 0.46, 0.32, cx, 0.12 + ch + 0.14, cz, 10);
   }
   return m.group();
 }

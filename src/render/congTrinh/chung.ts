@@ -6,6 +6,7 @@
 
 import * as THREE from 'three';
 import type { TuongId } from '../../game/defs';
+import { boatRoof, type Roof, roofFor } from '../buildings';
 import type { BridgeBanks } from '../benKia';
 import type { Job } from '../people';
 import { C } from '../palette';
@@ -130,4 +131,25 @@ export function rod(b: ShapeBuilder, a: V3, c: V3, r: number, color: number, seg
   const dir = new THREE.Vector3(...c).sub(from);
   const e = new THREE.Euler().setFromQuaternion(new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 1, 0), dir.clone().normalize()));
   b.cyl(r, r, dir.length(), color, from.x + dir.x / 2, from.y + dir.y / 2, from.z + dir.z / 2, [e.x, e.y, e.z], seg);
+}
+
+/**
+ * Mái công trình giản lược (kiểu một mái chính, `docs/thiet-ke.md` mục Giản lược công trình): mái theo cấp, bỏ dải
+ * đồng hoa văn cấp 9; chim Lạc cấp 10 giữ.
+ */
+export const maiGon = (level: number): Roof => ({ ...roofFor(level), pattern: false });
+
+/** Mái tranh của phần phụ công trình giản lược: không tranh màu ngói với khối chính. */
+export const MAI_TRANH: Roof = { main: C.thatch, dark: C.thatchDark, trim: null };
+
+/**
+ * Lán mở tâm (x, z), rộng `w` theo x, sâu `d` theo z, cột cao `h`, mái thuyền theo `roof`: hai hàng cột (thêm cột giữa
+ * khi dài quá 1,6 ô), xà dọc đỡ mái.
+ */
+export function lanMo(m: ToonModel, x: number, z: number, w: number, d: number, h: number, roof: Roof, lift = 0.18, postR = 0.045): void {
+  const p = m.plain;
+  const xs = w > 1.6 ? [-w / 2, 0, w / 2] : [-w / 2, w / 2];
+  for (const dx of xs) for (const dz of [-d / 2, d / 2]) p.cyl(postR, postR * 1.2, h, C.woodDark, x + dx, h / 2, z + dz, undefined, 6);
+  for (const dz of [-d / 2, d / 2]) p.box(w + 0.08, 0.06, 0.06, C.wood, x, h, z + dz);
+  boatRoof(m, roof, { length: w + 0.32, width: d + 0.28, lift, drop: (d + 0.28) * 0.28, thickness: 0.05 }, x, h + 0.24, z);
 }
