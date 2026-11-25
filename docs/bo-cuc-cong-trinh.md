@@ -464,7 +464,7 @@ l f . , , . f l
 
 ### Vườn đậu xanh, lá dong: 2×2 → 3×3
 
-Khóm lá dong lớn góc sau bên trái, hai luống đậu dài chạy ngang, lều nong đậu góc sau bên phải.
+Giản lược kiểu 2, một mái chính (xem mục Giản lược công trình ở `docs/thiet-ke.md`). Khóm lá dong lớn góc sau bên trái, hai luống đậu dài chạy ngang móng, lối giữa hai luống; cấp 3 lều phơi đậu mái tranh góc sau bên phải.
 
 ```
 D D . L L L
@@ -472,20 +472,18 @@ D D . L L L
 d d d d d d
 . . . . . .
 e e e e e e
-J . , , . .
+. . , , . .
 ```
 
-- `D` cấp 1, khóm lá dong lá to bản (cấp 2: khóm to hơn).
-- `d` cấp 1, luống đậu xanh (cấp 2: giàn tre cho đậu leo).
-- `e` cấp 1, luống đậu thứ hai (cấp 2: giàn tre cho đậu leo).
+- `D` cấp 1, hai khóm lá dong, to dần theo cấp.
+- `d`, `e` cấp 1, hai luống đậu xanh: đất vun, dải đậu liền phía trên, không viền mực, cao dần theo cấp.
 - `,` cấp 1, lối vào.
-- `J` cấp 2, chum nước tưới.
-- `L` cấp 3, lều nhỏ, nong đậu phơi.
-- Cấp 3: rào tre quanh vườn.
+- `L` cấp 3, lều phơi bốn cột mái tranh, giá tre với hai nong đậu.
+- Hai người làm vườn: một người giữa hai luống, một người cắt lá dong.
 
 ### Chuồng lợn: 2×2 → 3×3
 
-Chuồng ở góc sau bên trái, sân rào rộng cho lợn mẹ và đàn lợn con chạy, máng gỗ bên phải, vũng bùn góc trước.
+Giản lược kiểu 2, một mái chính (xem mục Giản lược công trình ở `docs/thiet-ke.md`). Chuồng mái tranh góc sau bên trái, máng gỗ bên phải, sân trống cho lợn chạy, vũng bùn phẳng góc trước (cấp 3).
 
 ```
 C C C C . .
@@ -496,15 +494,15 @@ b b b . . .
 b b b , , .
 ```
 
-- `C` cấp 1, ổ rơm (cấp 2: chuồng mái tranh; cấp 3: chuồng sàn gỗ).
-- `m` cấp 1, máng gỗ.
-- `,` cấp 1, cổng chuồng.
-- `b` cấp 3, vũng bùn.
-- Rào tre thấp quanh sân từ cấp 1. Hai lợn ỉ (cấp 1), thêm đàn lợn con (cấp 2), bốn lợn lớn (cấp 3).
+- `C` cấp 1, chuồng bốn cột mái tranh, ổ rơm (cấp 2 mái cao hơn; cấp 3 sàn gỗ, vách ván sau, cầu dốc xuống sân).
+- `m` cấp 1, máng gỗ, một lợn chúi mõm ăn.
+- `,` cấp 1, lối vào.
+- `b` cấp 3, vũng bùn phẳng, một lợn đằm bùn.
+- Lợn lớn: cấp 1 hai con, mỗi cấp thêm một. Hai người chăn lợn: một người đổ cám bên máng, một người ở sân trước.
 
 ### Bếp gói bánh: 2×2 → 3×3
 
-Gian bếp mái cao phía sau, nồi bánh đặt ngay dưới mép trước mái cho dễ thấy, chiếu gói bánh trải rộng phía trước, cối giã bánh giầy bên phải.
+Giản lược kiểu 2, một mái chính (xem mục Giản lược công trình ở `docs/thiet-ke.md`). Gian bếp mái tranh phía sau, nồi bánh đặt ngay dưới mép trước mái cho dễ thấy, chiếu gói bánh trải rộng phía trước.
 
 ```
 M M M M l l
@@ -515,12 +513,11 @@ c c c c . .
 c c c c , ,
 ```
 
-- `l` cấp 1, chồng lá dong.
+- `M` cấp 1, gian bếp bốn cột mái tranh (cấp 2: dựng cao hơn).
 - `K` cấp 1, kiềng ba hòn, nồi đồng luộc bánh, lửa củi (cấp 3: nồi thứ hai, khói bếp).
+- `c` cấp 1, chiếu gói bánh có lá dong, bánh đã gói (cấp 2: chiếu rộng thêm; bánh nhiều dần theo cấp).
 - `,` cấp 1, lối vào.
-- `M` cấp 2, mái tranh che bếp dựng cao.
-- `c` cấp 1, chiếu gói bánh nhỏ (cấp 2: chiếu rộng thêm, chõng tre có khuôn ở đầu chiếu). Khi vẽ thật đưa chiếu xuống cấp 1, vì bếp cấp 1 đã gói bánh.
-- `G` cấp 3, cối đá, chày gỗ giã bánh giầy.
+- `l`, `G`: chỗ người xếp lá dong, người giã bánh giầy đứng (không vẽ gì).
 - Ngày Tết thêm người ngồi gói bánh trên chiếu, nay nằm trong móng.
 
 ## Công trình mới (chủ dự án đã duyệt, đã vẽ xưởng mộc, làng chài, nhà thợ hồ)

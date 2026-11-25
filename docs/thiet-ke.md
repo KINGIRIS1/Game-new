@@ -1701,7 +1701,7 @@ Người chơi thử chê công trình nhiều chi tiết, rối mắt. Khảo s
 
 1. **Nguyên tắc và bốn loại đã vẽ thử** (đã làm): nhà sàn, kho thóc, bãi đất đá, ruộng lúa. Kinh đô Điện 8: 951 → 911 lệnh vẽ, 3,4 → 2,55 triệu tam giác.
 2. **Lò rèn, xưởng mộc, nhà thợ hồ, nhà thuốc nam** (đã làm). Lò rèn: lò nón và lán đe một mái. Xưởng mộc: lán mở dài, gỗ dưới lán, giá cưa. Nhà thợ hồ thành nhà tường gạch (để không giống lán xưởng mộc), đoạn tường đất nện. Nhà thuốc: nhà sàn lang y, lán chõng mái tranh (giữ chõng thương binh), luống thuốc phẳng, cối giã. Dùng chung `maiGon`, `MAI_TRANH`, `lanMo` ở `congTrinh/chung.ts`.
-3. Ruộng nếp, vườn đậu lá dong, chuồng lợn, bếp gói bánh.
+3. **Vườn đậu lá dong, chuồng lợn, bếp gói bánh** (đã làm): vườn còn khóm lá dong và luống đậu phẳng không viền, cấp 3 lều phơi; chuồng lợn còn chuồng mái tranh, máng, mỗi cấp thêm một lợn lớn (bỏ rào tre, lợn con); bếp còn gian bếp mái tranh từ cấp 1 và chiếu gói bánh (bỏ củi, chồng lá dong, chõng tre, cối giã). Ruộng nếp chưa làm: chủ dự án đã tự làm lại chi tiết bông nếp, chờ chủ dự án quyết có giản lược không.
 4. Bến chợ thuyền, làng chài, bến thuyền khơi (giữ chỗ thuyền neo, mặt trước ra sông).
 - Giữ nguyên: Điện, doanh trại, bốn nơi ở (khảo sát không thấy rối), các đền, Hồ Kim Quy, Đền Rồng Tiên (mỗi thứ một cái, là điểm nhấn), công trình móng một ô. Chủ dự án muốn giản lược thêm loại nào thì thêm một đợt.
 
