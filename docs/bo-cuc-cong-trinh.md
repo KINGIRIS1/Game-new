@@ -121,27 +121,23 @@ c c c c c c c c
 
 ### Bến chợ thuyền: 2×2 → 3×3
 
-Ba dải từ bờ ra sông: hàng sau là kho, hàng giữa là chợ hai dãy sạp có lối giữa, hàng trước là sàn bến dọc mép nước. Lối chợ chạy thẳng ra cầu tàu. Mặt trước quay ra sông.
+Giản lược kiểu 2 (một mái chính, `docs/thiet-ke.md` mục Giản lược công trình): nhà chợ mở suốt phía sau, sân trống có lối chợ lát ván chạy thẳng ra sàn bến và cầu tàu. Mặt trước quay ra sông.
 
 ```
-K K K . W W
-K K K . W W
-S S , , s s
-S S , , s s
-F . , , . F
+K K K K K .
+K K K K K .
+. . , , . .
+. . , , . .
+. . , , . .
 = = G G = =
 ```
 
-- `S` cấp 1, sạp chợ bạt đỏ.
+- `K` cấp 1, nhà chợ mở (lán cột gỗ, `lanMo`), hai bàn hàng bày vải đỏ, vải chàm; dài dần tới cấp 5, cao dần cấp 6–8, mái theo cấp (`maiGon`).
 - `,` cấp 1, lối chợ lát ván ra cầu tàu.
 - `=` cấp 1, sàn bến gỗ dọc mép sông, cọc cắm xuống nước.
-- `G` cấp 1, đầu cầu tàu chìa ra sông (cấp 3: cầu tàu dài, có nhánh phụ chìa sang trái ở đầu cầu; cấp 6: cổng bến có mái, cờ đuôi nheo).
-- `s` cấp 2, sạp chợ bạt chàm (cấp 7: lầu chợ hai tầng mái hình thuyền, chim đồng hai đầu nóc).
-- `K` cấp 4, nhà kho ven sông trên cột thấp. Cấp 1–3 chỗ này là đống hàng chờ xuống thuyền (chum, bao, hòm).
-- `F` cấp 5, cờ hai cột.
-- `W` cấp 8, kho hàng mái cong, chim đồng hai đầu nóc.
-- Thuyền đậu dọc cầu tàu, phía bên phải cho camera thấy rõ: thuyền nhỏ sát cầu tàu (cấp 1); cấp 6 thuyền buôn lớn ghé sát cầu tàu, thuyền nhỏ dời ra ngoài; cấp 8 thuyền buôn thứ hai neo bên trái, ngoài nhánh phụ (thay cho neo giữa sông: sông chỉ rộng 3 ô, neo giữa sông thì chạm các thuyền khác).
-- Bốn người buôn: qua lại giữa hai dãy sạp, ở chân cầu tàu, sau chợ cạnh nhà kho, trước sạp đỏ.
+- `G` cấp 1, cầu tàu chìa ra sông (cấp 3: cầu tàu dài, có nhánh phụ chìa sang trái ở đầu cầu).
+- Thuyền đậu dọc cầu tàu, phía bên phải cho camera thấy rõ: thuyền nhỏ sát cầu tàu (cấp 1); cấp 6 thuyền buôn lớn ghé sát cầu tàu, thuyền nhỏ dời ra ngoài; cấp 8 thuyền buôn thứ hai neo bên trái, ngoài nhánh phụ.
+- Bốn người buôn: qua lại giữa sân, ở chân cầu tàu, sau nhà chợ, trước bàn hàng.
 
 ### Nhà sàn: 2×2 → 3×3
 
@@ -544,64 +540,44 @@ X X , . . .
 
 ### Làng chài: 3×3
 
-Mặt trước quay ra sông như bến. Lều chài góc sau bên trái, giàn phơi cá bên phải; lối giữa chạy ra bờ ván dọc mép nước; vó bè ở góc trước bên phải chìa cần ra sông.
+Giản lược kiểu 2: lều chài góc sau bên trái, lối giữa ra bờ ván dọc mép nước, vó bè góc trước bên phải chìa cần ra sông. Mặt trước quay ra sông như bến.
 
 ```
-N N N . Q Q
-N N N . P P
-G G , , P P
-G G , , M F
-L L , , V V
+N N N . . .
+N N N . . .
+. . , , . .
+. . , , . .
+. . , , V V
 = = = = V V
 ```
 
-- `N` cấp 1, lều chài mái tranh thấp, lưới treo dưới hiên (cấp 4: nhà sàn ngư dân mái thuyền, cột cao).
-- `P` cấp 1, giàn phơi cá: sào tre, cá xâu treo thành hàng, nong cá dưới chân.
+- `N` cấp 1, lều chài mái tranh thấp (cấp 4: nhà sàn ngư dân mái thuyền, cột cao dần cấp 6–8).
 - `,` cấp 1, lối đất ra bờ.
-- `=` cấp 1, bờ ván dọc mép sông, cọc cắm xuống nước.
-- `V` cấp 2, vó bè: khung tre, cần vó chìa ra sông, lưới vó vuông.
-- `L` cấp 3, giá phơi lưới.
-- `M` cấp 5, chum mắm.
-- `F` cấp 5, cờ đuôi nheo.
-- `G` cấp 7, sạp chợ cá bày thúng cá, mái theo cấp.
-- `Q` cấp 8, miếu thần sông nhỏ, bát hương, cây phướn.
-- Thuyền ngoài móng, trên sông trước bờ ván:
-  - thuyền nan có người quăng chài (cấp 1);
-  - thuyền đánh cá thứ hai (cấp 3);
-  - hàng đáy: một dãy cọc tre có lưới đáy chắn dòng (cấp 6);
-  - thuyền lưới lớn có buồm neo ngoài cùng (cấp 8).
-  - Thuyền bơi chậm quanh chỗ neo sát bờ, không ra tới luồng thuyền qua lại, không chạm bờ bên kia.
-- Ba ngư dân: một người quăng chài ở đầu cầu ván, một người kéo vó trên bè vó, một người xếp cá lên giàn phơi.
-- Đã vẽ (`src/render/congTrinh/langChai.ts`). Đã đổi khi vẽ:
-  - thêm cầu ván ngắn chìa ra nước từ bờ ván `=`, chỗ ngư dân đứng quăng chài (thay cho người vá lưới trên bờ ván) và thuyền ghé;
-  - vó `V` có bè tre ngồi kéo vó sát bờ, cần vó tre bắc qua cột chống chìa ra sông, khung vó bắt chéo, bốn dây xuống bốn góc lưới;
-  - thuyền đánh cá bơi chậm một vòng quanh chỗ neo trước bờ ván, người lái đò chèo (không đứng quăng chài trên thuyền);
-  - thuyền lưới lớn có buồm (cấp 8) dùng dáng thuyền buôn thu nhỏ.
+- `=` cấp 1, bờ ván dọc mép sông, cọc cắm xuống nước, cầu ván ngắn chìa ra nước chỗ ngư dân quăng chài.
+- `V` cấp 2, vó bè: bè tre sát bờ, cần vó chìa ra sông qua cột chống, khung vó bắt chéo, lưới vuông, bốn dây.
+- Thuyền ngoài móng, trên sông trước bờ ván: thuyền đánh cá bơi chậm quanh chỗ neo (cấp 1), chiếc thứ hai (cấp 3), thuyền lưới lớn có buồm (cấp 8). Không ra tới luồng thuyền qua lại, không chạm bờ bên kia.
+- Ba ngư dân: một người quăng chài ở đầu cầu ván, một người kéo vó trên bè vó, một người ở sân.
+- Đã vẽ (`src/render/congTrinh/langChai.ts`).
 
 ### Bến thuyền khơi: 3×3
 
-Đi kèm mục **Kế hoạch: biển Đông, bến thuyền khơi** trong `docs/thiet-ke.md`. Mặt trước quay ra sông như bến, làng chài. Kho hải sản góc sau bên trái, giàn phơi lưới vây bên trái, đụn vỏ ốc bên phải; lối giữa ra cầu tàu dọc mép nước, cầu ván chìa ra chỗ thuyền khơi neo. Ba cấp mở theo Điện 8, 9, 10 nên mái theo cấp Điện ấy.
+Đi kèm mục **Kế hoạch: biển Đông, bến thuyền khơi** trong `docs/thiet-ke.md`. Giản lược kiểu 2: kho hải sản sàn cao góc sau bên trái, đụn vỏ ốc bên phải, lối giữa ra cầu tàu dọc mép nước, cầu ván chìa ra chỗ thuyền khơi neo. Mặt trước quay ra sông như bến, làng chài. Ba cấp mở theo Điện 8, 9, 10 nên mái theo cấp Điện ấy (bỏ dải đồng cấp 9).
 
 ```
-K K K . Q Q
-K K K . Q Q
-L L , , O O
-L L , , O O
-D D , , M T
+K K K K . .
+K K K K . .
+. . , , O O
+. . , , O O
+. . , , . .
 = = = = = =
 ```
 
-- `K` cấp 1, kho hải sản: nhà sàn cao mái theo cấp, cá khô xâu treo dưới sàn, thang tre, thúng cá chân cột.
-- `L` cấp 1, giàn phơi lưới vây: hai cột cao, tấm lưới buông có hàng phao, cuộn chão (cấp 2: tấm lưới thứ hai có chì đá).
+- `K` cấp 1, kho hải sản: nhà sàn cao mái theo cấp, cột cao dần theo cấp.
 - `O` cấp 1, đụn vỏ ốc biển kem, hồng trong nong lớn (cấp 2: thúng ốc; cấp 3: đụn thứ hai cao hơn).
 - `,` cấp 1, lối đất ra cầu tàu.
-- `M` cấp 1, chum mắm cá biển.
-- `T` cấp 1, tời gỗ kéo thuyền, chão chạy ra mép nước.
-- `=` cấp 1, cầu tàu ván trên cọc dọc mép sông; cầu ván chìa ra sông tới mạn thuyền khơi, cột neo bọc đồng; cờ đuôi nheo ở đầu cầu (chàm ở cấp 1, đỏ từ cấp 2).
-- `D` cấp 1, đá neo thuyền và thúng cá; cấp 2: chòi lửa hiệu bốn chân tre, chậu đồng có lửa.
-- `Q` cấp 1, 2: cột buồm dự phòng gác trên mễ, cuộn chão; cấp 3: miếu thờ cá Ông, nền đá, vòm xương sườn cá voi trước cửa, bát hương đồng.
+- `=` cấp 1, cầu tàu ván trên cọc dọc mép sông; cầu ván chìa ra sông tới mạn thuyền khơi, cột neo bọc đồng.
 - Thuyền khơi không thuộc mô hình móng: neo dọc cầu tàu, cách mép móng một ô (`benDock` ở `game/bien.ts`), rồi ra biển (World dựng, `makeThuyenKhoi`).
-- Năm người làm: ngư dân vá lưới trước giàn `L`, người gánh cá đi dọc cầu tàu, người giữ kho trước `K`, ngư dân ở đầu cầu ván, người nhặt ốc bên `O`.
+- Năm người làm: ở sân trước kho, dọc cầu tàu, đầu cầu ván, bên đụn ốc.
 - Đã vẽ (`src/render/congTrinh/benKhoi.ts`).
 
 ### Nhà thợ hồ: 3×3
@@ -811,13 +787,13 @@ Móng đã kín ở cấp 8, nên cấp 9, 10 không thêm ô con mới: mỗi l
 |---|---|---|---|
 | Điện | `H`, `G`, `V` | `H`: tầng gác giữa vách và mái, cột cái sơn đỏ in hoa văn; `V`: mặt bậc bệ ngai chạm hoa văn | `G`: cổng thành hai trụ đất nện, vòm cửa, lầu cổng hai tầng mái; `H`: trống đồng trên nóc to gấp rưỡi, bốn tượng cóc đồng |
 | Ruộng lúa | (giản lược) | chỉ mái chòi canh đổi theo cấp | chim Lạc trên chóp chòi |
-| Bến chợ thuyền | `G` | cầu tàu lát đá trên trụ đá, cột neo đồng | thuyền buôn thứ hai thành thuyền buôn lớn hai buồm |
+| Bến chợ thuyền | `G` (giản lược) | cầu tàu lát đá trên trụ đá, cột neo đồng | thuyền buôn thứ hai thành thuyền buôn lớn hai buồm |
 | Nhà sàn | (giản lược) | không thêm phần | chim Lạc hai đầu nóc |
 | Bãi đất đá | (giản lược) | không thêm phần | chim Lạc trên lán |
 | Lò rèn | (giản lược) | không thêm phần | chim Lạc hai góc diềm lán |
 | Kho thóc | `V` | `V`: vựa chính mái hai tầng | chim Lạc trên tầng mái trên |
 | Xưởng mộc | (giản lược) | không thêm phần | chim Lạc hai đầu nóc lán |
-| Làng chài | `V` | giàn vó lớn: cần dài, lưới rộng, cột chống đôi, đá đối trọng | thêm thuyền đánh cá có buồm cói ngoài xa |
+| Làng chài | `V` (giản lược) | giàn vó lớn: cần dài, lưới rộng, cột chống đôi, đá đối trọng | thêm thuyền đánh cá có buồm cói ngoài xa |
 | Nhà thợ hồ | `L` | `L`: tường gạch nung đỏ | chim Lạc hai đầu nóc |
 
 Chòi canh (móng 1×1, không có bản vẽ): cấp 9 ụ đá ốp bốn góc chân lầu; cấp 10 tầng giữa có mái hiên và hai nỏ lớn nữa.

@@ -1654,7 +1654,7 @@ Kinh đô lớn lúc đầu chỉ phóng mô hình cũ theo móng mới (`footSc
 |---|---|---|
 | Điện Vua Hùng | cung điện có sân chầu: nhà chính lùi về sau, lối đá từ cổng lên thềm, lầu trống hai góc trước; thêm cổng (cấp 4) và chái trái (cấp 7) | đã vẽ |
 | Ruộng lúa | bốn thửa vuông, bờ chữ thập; cấp 1 mới khai hai thửa sau; chòi, trâu, guồng, miếu ở bốn góc; ao cò giữa bốn thửa | đã vẽ; đã giản lược (luống lúa, một chòi canh) |
-| Bến chợ thuyền | ba dải ra sông: kho, chợ hai dãy sạp có lối giữa, sàn bến; lối chợ thẳng ra cầu tàu; thuyền nhỏ, thuyền buôn (cấp 6) và thuyền buôn thứ hai (cấp 8) neo theo cầu tàu | đã vẽ |
+| Bến chợ thuyền | ba dải ra sông: kho, chợ hai dãy sạp có lối giữa, sàn bến; lối chợ thẳng ra cầu tàu; thuyền nhỏ, thuyền buôn (cấp 6) và thuyền buôn thứ hai (cấp 8) neo theo cầu tàu | đã vẽ; đã giản lược (nhà chợ mở, lối chợ, cầu tàu) |
 | Nhà sàn | nếp nhà có vườn: nhà chính góc sau, nhà phụ, hiên, chum nước, vườn rau góc trước | đã vẽ; đã giản lược (một nhà sàn to, cây cau) |
 | Bãi đất đá | mỏ đá bên gò: hố đá bậc thang góc sau, tời, xe đá, lò gạch, cần vọt | đã vẽ; đã giản lược (hố đá, lán, một chồng đá) |
 | Lò rèn | lò nón góc sau, lán đe phía sau, sân làm việc giữa, lò luyện thứ hai, giá binh khí, sân đúc đồng | đã vẽ; đã giản lược (lò nón, lán đe) |
@@ -1702,7 +1702,7 @@ Người chơi thử chê công trình nhiều chi tiết, rối mắt. Khảo s
 1. **Nguyên tắc và bốn loại đã vẽ thử** (đã làm): nhà sàn, kho thóc, bãi đất đá, ruộng lúa. Kinh đô Điện 8: 951 → 911 lệnh vẽ, 3,4 → 2,55 triệu tam giác.
 2. **Lò rèn, xưởng mộc, nhà thợ hồ, nhà thuốc nam** (đã làm). Lò rèn: lò nón và lán đe một mái. Xưởng mộc: lán mở dài, gỗ dưới lán, giá cưa. Nhà thợ hồ thành nhà tường gạch (để không giống lán xưởng mộc), đoạn tường đất nện. Nhà thuốc: nhà sàn lang y, lán chõng mái tranh (giữ chõng thương binh), luống thuốc phẳng, cối giã. Dùng chung `maiGon`, `MAI_TRANH`, `lanMo` ở `congTrinh/chung.ts`.
 3. **Vườn đậu lá dong, chuồng lợn, bếp gói bánh** (đã làm): vườn còn khóm lá dong và luống đậu phẳng không viền, cấp 3 lều phơi; chuồng lợn còn chuồng mái tranh, máng, mỗi cấp thêm một lợn lớn (bỏ rào tre, lợn con); bếp còn gian bếp mái tranh từ cấp 1 và chiếu gói bánh (bỏ củi, chồng lá dong, chõng tre, cối giã). Ruộng nếp chưa làm: chủ dự án đã tự làm lại chi tiết bông nếp, chờ chủ dự án quyết có giản lược không.
-4. Bến chợ thuyền, làng chài, bến thuyền khơi (giữ chỗ thuyền neo, mặt trước ra sông).
+4. **Bến chợ thuyền, làng chài, bến thuyền khơi** (đã làm; giữ chỗ thuyền neo, mặt trước ra sông): bến chợ còn nhà chợ mở (`lanMo`) phía sau, lối chợ, sàn bến, cầu tàu (bỏ sạp chợ, kho hàng, cờ, đống hàng); làng chài còn lều chài (cấp 4 nhà sàn), bờ ván, vó bè (bỏ giàn phơi cá, giá phơi lưới, chum mắm, sạp chợ cá, miếu); bến thuyền khơi còn kho hải sản sàn cao, đụn vỏ ốc, cầu tàu, cầu ván (bỏ giàn lưới, tời, chum, đá neo, chòi lửa hiệu, miếu cá Ông).
 - Giữ nguyên: Điện, doanh trại, bốn nơi ở (khảo sát không thấy rối), các đền, Hồ Kim Quy, Đền Rồng Tiên (mỗi thứ một cái, là điểm nhấn), công trình móng một ô. Chủ dự án muốn giản lược thêm loại nào thì thêm một đợt.
 
 ## Kế hoạch: cổng thành, xưởng mộc, làng chài (chủ dự án đã duyệt, đã làm)
@@ -2341,7 +2341,7 @@ Móng 3×3, phải sát bờ sông (bên này hay bên kia, sông Thao hay sông
 
 ### Hình ảnh
 
-- **Bến thuyền khơi** (`src/render/congTrinh/benKhoi.ts`, bản vẽ ở `docs/bo-cuc-cong-trinh.md`): kho hải sản sàn cao có cá khô treo dưới sàn, giàn phơi lưới vây, đụn vỏ ốc biển trong nong lớn, chum mắm, tời kéo thuyền, cầu tàu dọc mép sông và cầu ván chìa ra chỗ thuyền khơi neo; cấp 2 thêm chòi lửa hiệu và tấm lưới thứ hai, cờ đỏ; cấp 3 thêm miếu thờ cá Ông (vòm xương sườn cá voi trước cửa) và đụn ốc thứ hai. Mái theo cấp Điện mở cấp ấy (8, 9, 10). Năm người làm: ngư dân vá lưới, người gánh cá đi dọc cầu tàu, người giữ kho, ngư dân ở đầu cầu ván, người nhặt ốc.
+- **Bến thuyền khơi** (`src/render/congTrinh/benKhoi.ts`, bản vẽ ở `docs/bo-cuc-cong-trinh.md`; giản lược kiểu 2, mục Giản lược công trình): kho hải sản sàn cao, đụn vỏ ốc biển trong nong lớn, cầu tàu dọc mép sông và cầu ván chìa ra chỗ thuyền khơi neo; cấp 2 thêm thúng ốc, cấp 3 thêm đụn ốc thứ hai. Mái theo cấp Điện mở cấp ấy (8, 9, 10). Năm người làm: ngư dân ở sân, người gánh cá đi dọc cầu tàu, người giữ kho, ngư dân ở đầu cầu ván, người nhặt ốc.
 - **Thuyền khơi** (`makeThuyenKhoi` ở `models.ts`): thân thuyền trống đồng phóng to (dài chừng 3,1 ô), **mắt thuyền** vẽ hai bên mũi, **buồm cánh dơi** nâu có nan tre xòe (hai cột buồm ở cấp 1, 2; ba cột, buồm viền son, trống đồng nhỏ ở mũi ở cấp 3), lưới vây chất ở đuôi, thúng cá, người lái chèo lái, hai ngư dân trên sàn.
 - **Chuyến khơi** (chỉ để nhìn, World theo đồng hồ cảnh): neo trước bến 24 giây, ra giữa dòng, xuôi sông (sông Thao thì rẽ ở ngã ba), qua cửa biển, ra ngư trường, kéo lưới một vòng quanh quần đảo, rồi đi ngược đường cũ về bến. Ra biển thì chòng chành mạnh hơn. Bến hư thì thuyền nằm neo.
 - **Biển** (`src/render/bien.ts`): mặt biển, bãi cát dựng theo dải dọc bờ chéo (`coastBand`, `bienDiem`): nước nông ngọc sát bãi sẫm dần ra khơi như bãi biển Mộ Dạ, bãi cát khô phủ mép nền đất rồi cát ướt thoải xuống nước, hai bên cửa sông bãi thoải xuống lòng sông thành doi cát, sông Đà dừng đúng mép biển; dải sóng trắng vỗ bờ trôi ra vào theo hướng vào bờ, vòng sóng quanh đảo. Vũng san hô màu ngọc quanh mỗi đảo (quanh đảo chính cũng vuông bo góc).
