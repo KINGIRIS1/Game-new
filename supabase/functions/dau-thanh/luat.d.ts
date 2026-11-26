@@ -19,6 +19,18 @@ export declare const CAU_HINH: {
   readonly replayPerH: number;
   readonly savePerH: number;
   readonly saveMax: number;
+  readonly gopNgay: number;
+  readonly topTinh: number;
+  readonly doiChucMs: number;
+  readonly gopPerH: number;
+  readonly chonPerH: number;
+  readonly bangPerH: number;
+  readonly giacPerH: number;
+  readonly giacTranNgay: number;
+  readonly giacXongMs: number;
+  readonly giuNgay: number;
+  readonly ketGiao: number;
+  readonly muaTuan: number;
 };
 
 export type TenLoi = 'ngan' | 'dai' | 'kyTu' | 'tuc';
@@ -72,3 +84,57 @@ export declare function chonDoiThu(me: { dien: number; trophies: number }, list:
 export declare function doiChieu(): string[];
 export declare function banChupThu(dien: number): { ma: string; quan: Record<string, number> };
 export declare function bamThu(): { s: number; k: string }[];
+
+// ---------- Bản đồ Việt Nam: điểm tỉnh (PR 2) ----------
+
+export type ChucId = 'quan' | 'nong' | 'thuy' | 'thuong' | 'bien' | 'hai';
+export declare function kiemTinh(tinh: unknown): string | null;
+export declare function kiemChuc(tinh: string, chuc: unknown): { chuc: ChucId } | { loi: 'khongCoChuc' | 'chucChiGiapBien' };
+export declare function muaTinh(now: number): number;
+export declare function ngayTinh(now: number): number;
+export type LoiGop = 'banChup' | 'chucKhongGop' | 'gopSai' | 'thieuCua' | 'itQua';
+export declare function gopTinh(
+  ma: unknown,
+  chuc: unknown,
+  gop: unknown,
+): { diem: number; gop: Record<string, number>; dien: number } | { loi: LoiGop; chiTiet?: string };
+export declare function banChupGop(dien: number, kho: number): { ma: string; cap: number };
+
+// ---------- Giặc chung của tỉnh (PR 3) ----------
+export type NhomGiac = 'bac' | 'tay' | 'bien';
+export type UnitType = 'giao' | 'cung' | 'voi' | 'no';
+export interface QuanGiac {
+  army: Record<UnitType, number>;
+  rows: Record<UnitType, 'tien' | 'trung' | 'hau'>;
+}
+export type LoiGiac = 'banChup' | 'quan';
+export declare function nhanGiac(ma: unknown, army: unknown, rows: unknown): { ma: string; quan: QuanGiac; chuong: number } | { loi: LoiGiac; chiTiet?: string };
+export declare function danhGiac(
+  ma: string,
+  quan: QuanGiac,
+  nhom: NhomGiac,
+  seed: number,
+  inputs: unknown,
+  he: number,
+): { pha: number; sat: number; buoc: number; bam: number; thang: boolean; mat: Record<UnitType, number> };
+export declare function banChupGiac(dien: number): { ma: string; troops: Record<UnitType, number>; chuong: number };
+export declare function chiaDiem(diem: number, ta: string, giup: string): { ta: number; giup: number };
+export declare function daoTuan(tuan: number): { nhom: NhomGiac; tinh: string[] };
+export declare function giacDangDanh(now: number): number | null;
+export declare function giacToiLuc(tuan: number): number;
+export declare function giacRutLuc(tuan: number): number;
+export declare function heChuc(chuc: ChucId | null, nhom: NhomGiac): number;
+export declare function laTinhGiac(id: unknown, tuan: number): boolean;
+export declare function mauDao(nguoi: number): number;
+export declare function ngayTuan(tuan: number): { tu: number; den: number };
+export declare function noiDanh(ta: string, tinhGiac: readonly string[]): string[];
+export declare function thuCua(now: number): number;
+export declare function tuanTinh(now: number): number;
+
+// ---------- Mùa, Lạc tướng và Lạc hầu, quy về (PR 4) ----------
+export declare const datVanLang: readonly string[];
+export declare const chucVo: readonly string[];
+export declare const tinhIds: readonly string[];
+export declare function xepMua(
+  ds: readonly { tinh: string; diem: number; diet: boolean }[],
+): { tinh: string; hang: number | null; diem: number; diet: boolean }[];

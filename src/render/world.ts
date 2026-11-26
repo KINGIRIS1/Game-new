@@ -742,6 +742,8 @@ export class World {
   /** Cảnh Tết trước Điện và quanh bếp gói bánh, chỉ có lúc Tết mở. */
   private tetDecor?: THREE.Group;
   private tetKey = '';
+  private coTinh?: THREE.Group;
+  private coKey = '';
   /** Rùa Vàng bơi chậm trên sông sau khi đã hiện lên diệt yêu tinh. */
   private turtle?: THREE.Group;
   /**
@@ -1348,6 +1350,7 @@ export class World {
     this.syncTurtle(state);
     this.syncThanThu(state);
     this.syncTet(state);
+    this.syncCoTinh(state);
     this.syncWallWalk(state);
 
     const walls = state.buildings.filter((b) => b.type === 'luy');
@@ -3193,6 +3196,64 @@ export class World {
     }
     this.scene.add(root);
     this.tetDecor = root;
+  }
+
+  /**
+   * Cờ tỉnh (bản đồ Việt Nam PR 4) cắm trước Điện khi người chơi là Lạc tướng (cờ đỏ son) hay Lạc hầu (cờ chàm) tỉnh
+   * tuần này: cột cờ bên phải lối giữa sân chầu, đối xứng với chỗ cây nêu ngày Tết (khối `e` của bản vẽ Điện). Chỉ để
+   * nhìn; kinh đô dựng từ bản chụp Đấu thành không có.
+   */
+  private syncCoTinh(state: GameState): void {
+    const dien = state.buildings.find((b) => b.type === 'dien');
+    const dh = state.vietNam?.danhHieu;
+    const h = dien ? (this.heights[dien.z * GRID + dien.x] ?? 0) : 0;
+    const key = dien && dh ? [dien.x, dien.z, dien.rot ?? 0, h, dh.loai].join(':') : '';
+    if (key === this.coKey) return;
+    this.coKey = key;
+    if (this.coTinh) {
+      this.scene.remove(this.coTinh);
+      disposeModel(this.coTinh);
+    }
+    this.coTinh = undefined;
+    if (!key || !dien || !dh) return;
+    const e = DIEN_LOT.zone('e');
+    const p = this.dienPoint(dien, -e.x, e.z);
+    const co = this.makeCoTinh(dh.loai === 'lacTuong');
+    co.position.set(p.x, topY(h) + 0.05, p.z);
+    co.rotation.y = Math.PI / 4 + rotAngle(dien.rot);
+    this.scene.add(co);
+    this.coTinh = co;
+  }
+
+  /** Cột cờ tỉnh: chân đá, cột gỗ son, ngọn giáo đồng, lá cờ dọc viền đồng có mặt trống giữa, hai dải đuôi nheo. */
+  private makeCoTinh(vo: boolean): THREE.Group {
+    const m = new ToonModel(inkThin);
+    const p = m.plain;
+    const H = 3.6;
+    const nen = vo ? C.red : C.indigo;
+    const vien = vo ? C.bronzeLight : C.cream;
+    p.box(0.42, 0.18, 0.42, C.rock, 0, 0.09, 0);
+    p.box(0.3, 0.12, 0.3, C.rockDark, 0, 0.24, 0);
+    p.cyl(0.05, 0.065, H, C.wood, 0, H / 2 + 0.2, 0, undefined, 8);
+    p.sphere(0.08, C.bronze, 0, H + 0.22, 0, [1, 1, 1], 8);
+    p.cone(0.06, 0.32, C.bronzeLight, 0, H + 0.45, 0, undefined, 6);
+    // Thanh ngang treo cờ, lá cờ dọc chìa ra một bên cột.
+    p.cyl(0.022, 0.022, 0.9, C.wood, 0.42, H - 0.05, 0, [0, 0, Math.PI / 2], 6);
+    const w = 0.78;
+    const hc = 1.5;
+    const y0 = H - 0.08 - hc / 2;
+    p.box(w, hc, 0.035, nen, 0.45, y0, 0);
+    // Viền đồng (hay viền ngà) quanh lá cờ.
+    p.box(w + 0.06, 0.05, 0.05, vien, 0.45, y0 + hc / 2, 0);
+    p.box(w + 0.06, 0.05, 0.05, vien, 0.45, y0 - hc / 2, 0);
+    p.box(0.05, hc, 0.05, vien, 0.45 - w / 2, y0, 0);
+    p.box(0.05, hc, 0.05, vien, 0.45 + w / 2, y0, 0);
+    // Mặt trống đồng giữa lá cờ, hai mặt.
+    m.drum.cyl(0.25, 0.25, 0.05, C.bronze, 0.45, y0 + 0.12, 0, [Math.PI / 2, 0, 0], 20);
+    // Hai dải đuôi nheo dưới lá cờ.
+    m.band.box(0.12, 0.7, 0.015, vien, 0.3, y0 - hc / 2 - 0.36, 0, [0, 0, 0.08]);
+    m.band.box(0.12, 0.6, 0.015, vien, 0.6, y0 - hc / 2 - 0.31, 0, [0, 0, -0.08]);
+    return m.group();
   }
 
   /** Cây nêu: cây tre cao, ngọn còn chùm lá, vòng tre, thanh ngang treo khánh đất nung, dải vải đỏ. Mặt chính theo trục x. */

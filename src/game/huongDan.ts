@@ -12,6 +12,7 @@ import { thuCo } from './thanThu';
 import { challengeOpen } from './thuThach';
 import { doMo } from './trangBi';
 import { loiDaiMo } from './loiDai';
+import { vietNamMo } from './vietNam';
 
 export type HuongDanId =
   | 'phoBan'
@@ -26,7 +27,8 @@ export type HuongDanId =
   | 'congDe'
   | 'tet'
   | 'binhKhi'
-  | 'dongDao';
+  | 'dongDao'
+  | 'vietNam';
 
 /** Điện cấp này thì mẫu kinh đô đầu tiên (Phong Châu) áp được. */
 const MAU_DIEN = 5;
@@ -50,6 +52,7 @@ export const HUONG_DAN: { id: HuongDanId; khi: (s: GameState) => boolean }[] = [
   { id: 'tet', khi: tetOpen },
   { id: 'binhKhi', khi: (s) => s.buildings.some((b) => b.type === 'loRen' && b.level >= REN_CAP) },
   { id: 'dongDao', khi: (s) => DAO_IDS.some((id) => daoMo(s, id)) },
+  { id: 'vietNam', khi: vietNamMo },
 ];
 
 /** Khóa đánh dấu bản lưu đã qua lần xét đầu (bản lưu có trước khi có hướng dẫn chỉ tay). */

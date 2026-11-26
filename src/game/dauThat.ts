@@ -56,6 +56,8 @@ export interface HangRow {
   chienCong: number;
   dien: number;
   toi?: true;
+  /** Bản đồ Việt Nam PR 4: Lạc tướng hay Lạc hầu tỉnh tuần này (viền tên vàng). */
+  dau?: { loai: 'lacTuong' | 'lacHau'; tinh: string };
 }
 
 /** Bảng xếp hạng máy chủ trả: những người đứng đầu, hạng của mình, tổng số người chơi. */

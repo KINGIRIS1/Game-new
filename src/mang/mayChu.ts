@@ -4,10 +4,14 @@
 // Phiên đăng nhập cất ở localStorage của máy này, không vào bản lưu (mã lưu chép sang máy khác thì máy ấy chưa tham gia).
 // PR 6: gắn Google vào người dùng ẩn danh, đăng nhập Google (đi qua trang Google rồi Supabase trả về trang game,
 // `nhanGoogle` ở cauHinh.ts cất phiên), đăng xuất ở máy này, bảng xếp hạng, xem lại trận, lưu và tải bản lưu trên mây.
+// Bản đồ Việt Nam PR 2: bảng tỉnh (không cần đăng nhập), chọn tỉnh, nhận chức, góp của (đăng nhập ẩn danh nếu chưa).
 
 import type { PvpInput } from '../game/dauThanh';
 import type { HoSo, KetQuaMay, MayTom, TranTom, XemLaiTra, XepHang } from '../game/dauThat';
 import type { PvpAttack } from '../game/battle';
+import type { Resources } from '../game/defs';
+import type { BangTinh, TinhToi } from '../game/vietNam';
+import type { NhomGiac, QuanGiac } from '../game/giacChung';
 import { PHIEN_KEY, SUPABASE_KEY as KEY, SUPABASE_URL as URL_, coMayChu, datGoogleCho, docPhien, phienTuToken, type Phien } from './cauHinh';
 
 export { coMayChu };
@@ -125,7 +129,8 @@ async function phien(tao: boolean): Promise<Phien | null> {
 async function goi<T>(body: Record<string, unknown>, tao = false, lan = 0): Promise<T> {
   if (!coMayChu()) throw new LoiMay('khongCoMayChu');
   const p = body.hanh === 'ping' ? null : await phien(tao);
-  if (body.hanh !== 'ping' && !p) throw new LoiMay('chuaDangNhap', 401);
+  // Ping và bảng tỉnh không cần đăng nhập.
+  if (body.hanh !== 'ping' && body.hanh !== 'bangTinh' && !p) throw new LoiMay('chuaDangNhap', 401);
   const { status, json } = await fetchJson('/functions/v1/dau-thanh', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', apikey: KEY, 'x-region': REGION, ...(p ? { Authorization: `Bearer ${p.access}` } : {}) },
@@ -185,6 +190,38 @@ export const luuMay = (ma: string, dien: number, goc: number, de = false) =>
 
 /** Bản lưu trên mây của mình (`chiXem`: không kèm mã lưu), hay null nếu chưa có. */
 export const taiMay = (chiXem = false) => goi<{ may: (MayTom & { ma?: string }) | null }>({ hanh: 'taiMay', ...(chiXem ? { chiXem: true } : {}) });
+
+// ---------- Bản đồ Việt Nam: điểm tỉnh (PR 2) ----------
+
+/** Bảng tỉnh mùa này và phần của mình (chưa đăng nhập thì không có phần mình, không lập phiên mới). */
+export const bangTinh = () => goi<BangTinh>({ hanh: 'bangTinh' });
+
+/** Chọn tỉnh (đăng nhập ẩn danh nếu máy này chưa có phiên). */
+export const chonTinh = (tinh: string) => goi<{ toi: TinhToi }>({ hanh: 'chonTinh', tinh }, true);
+
+export const chonChuc = (chuc: string) => goi<{ toi: TinhToi }>({ hanh: 'chonChuc', chuc }, true);
+
+/** Góp của cho tỉnh kèm bản chụp kinh đô lúc này: máy chủ trả điểm, của đã nhận. */
+export const gopTinh = (gop: Partial<Resources>, banChup: string) =>
+  goi<{ diem: number; gop: Partial<Resources>; toi: TinhToi }>({ hanh: 'gop', gop, banChup }, true);
+
+/** Giặc chung (PR 3): bắt đầu trận ở tỉnh `tinh` với quân, hàng và bản chụp kinh đô lúc này. */
+export const giacDanh = (tinh: string, quan: Record<string, number>, hang: Record<string, string>, banChup: string) =>
+  goi<{ tran: string; seed: number; tinh: string; nhom: NhomGiac; he: number; quan: QuanGiac; tranNay: number }>({ hanh: 'giacDanh', tinh, quan, hang, banChup }, true);
+
+/** Kết quả trận giặc chung máy chủ đánh lại. */
+export interface GiacKetQua {
+  pha: number;
+  sat: number;
+  thang: boolean;
+  diemTa: number;
+  diemGiup: number;
+  tinh: string;
+  con: number;
+  diet: boolean;
+}
+
+export const giacXong = (tran: string, bam: unknown[]) => goi<GiacKetQua>({ hanh: 'giacXong', tran, bam }, true);
 
 // ---------- PR 6: Google ----------
 

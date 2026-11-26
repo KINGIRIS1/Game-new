@@ -57,6 +57,7 @@ export const BUOC: Record<HuongDanId, Buoc[]> = {
   binhKhi: [{ cho: '[data-act=forgeArms]', xem: true, chon: 'loRen' }],
   // Chưa có thuyền thì bảng bến có nút đóng thuyền, có rồi thì nút mở quần đảo: khoanh nút nào đang có.
   dongDao: [{ cho: '[data-act=buildThuyen], [data-act=openQuanDao]', xem: true, chon: 'benKhoi' }, { cho: null }],
+  vietNam: [{ cho: '[data-act=goVietNam]' }, { cho: '.bdv-ban-do', xem: true }, { cho: '[data-act=vnChonChuc], [data-act=vnChonTinh]', xem: true, coThe: true }],
 };
 
 /** Chờ nút của bước hiện ra tối đa chừng này (bảng trượt mở có hoạt ảnh); quá thì thôi, không kẹt người chơi. */
