@@ -432,12 +432,26 @@ describe('mẫu kinh đô', () => {
         const def = BUILDINGS[b.type];
         for (let dx = 0; dx < def.w; dx++) for (let dz = 0; dz < def.d; dz++) expect(wet[(b.z + dz) * GRID + b.x + dx], `Điện ${dien}: ${b.type} ${b.x},${b.z}`).toBe(0);
       }
-      // Vòng ngoài không co lại khi đất rộng ra, và tới Điện 8 thì đã nới ra.
-      const west = Math.min(...mauSlots('coLoa', dien).filter((x) => x.type === 'thanh').map((x) => x.x));
-      expect(west, `Điện ${dien}`).toBeLessThanOrEqual(outer);
-      outer = west;
+      // Vòng ngoài không co lại khi đất rộng ra, và tới Điện 8 thì đã nới ra (bề ngang vòng ngoài).
+      const span = (l: number) => {
+        const xs = mauSlots('coLoa', l).filter((x) => x.type === 'thanh').map((x) => x.x);
+        return Math.max(...xs) - Math.min(...xs);
+      };
+      expect(span(dien), `Điện ${dien}`).toBeGreaterThanOrEqual(outer === Infinity ? 0 : outer);
+      outer = span(dien);
     }
-    expect(outer).toBeLessThan(Math.min(...mauSlots('coLoa', 5).filter((x) => x.type === 'thanh').map((x) => x.x)));
+    expect(outer).toBeGreaterThan((() => {
+      const xs = mauSlots('coLoa', 5).filter((x) => x.type === 'thanh').map((x) => x.x);
+      return Math.max(...xs) - Math.min(...xs);
+    })());
+    // Từ Điện 7 vòng trong chừa sân trước cổng Điện: giữa mặt trước Điện và vòng trong có hai ô (`DIEN_END` là ô ngay
+    // sau mép Điện).
+    for (const id of ['coLoa', 'coLoaSong'] as const) {
+      for (const l of [7, 8, 10]) {
+        const truoc = Math.min(...mauSlots(id, l).filter((x) => x.type === 'thanh' && x.x === DIEN_HOME + 5 && x.z >= DIEN_END).map((x) => x.z));
+        expect(truoc - DIEN_END, `${id} Điện ${l}`).toBe(2);
+      }
+    }
     // Vòng trong chỉ có Điện và sân.
     const slots = mauSlots('coLoa', 8);
     const inner = Math.max(...slots.filter((x) => x.type === 'thanh' && x.z < DIEN_HOME && x.x > DIEN_HOME).map((x) => x.z));
