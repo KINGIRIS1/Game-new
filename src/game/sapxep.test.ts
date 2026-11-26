@@ -469,6 +469,14 @@ describe('mẫu kinh đô', () => {
       if (outer !== Infinity) expect(west, `Điện ${dien}`).toBe(outer);
       outer = west;
     }
+    // Vòng trong chừa sân trước cổng Điện (bậc tam cấp xuống): giữa mặt trước Điện và vòng trong có hai ô (`DIEN_END`
+    // là ô ngay sau mép Điện).
+    for (const id of ['coLoa', 'coLoaSong'] as const) {
+      for (const l of [5, 7, 8, 10]) {
+        const truoc = Math.min(...mauSlots(id, l).filter((x) => x.type === 'thanh' && x.x === DIEN_HOME + 5 && x.z >= DIEN_END).map((x) => x.z));
+        expect(truoc - DIEN_END, `${id} Điện ${l}`).toBe(2);
+      }
+    }
     // Vòng trong chỉ có Điện và sân.
     const slots = mauSlots('coLoa', 8);
     const inner = Math.max(...slots.filter((x) => x.type === 'thanh' && x.z < DIEN_HOME && x.x > DIEN_HOME).map((x) => x.z));
