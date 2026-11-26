@@ -136,11 +136,12 @@ describe('Hồ Kim Quy', () => {
     expect(floodToleranceOf('hoKimQuy')).toBeGreaterThanOrEqual(99);
   });
 
-  it('mẫu Cổ Loa chừa chỗ hồ ngoài vòng thành ngoài từ Điện 5, mẫu Cổ Loa giữ sông từ Điện 6; áp mẫu thì dựng hồ khi đã mở', () => {
-    const lakes = (id: 'phongChau' | 'deBao' | 'coLoa' | 'coLoaSong') => [5, 6, 7, 8, 9, 10].map((l) => mauSlots(id, l).filter((x) => x.type === 'hoKimQuy').length);
+  it('mẫu Cổ Loa chừa chỗ hồ ngoài vòng thành ngoài từ Điện 5, mẫu Cổ Loa giữ sông từ Điện 6, ba mẫu kia từ Điện 8; áp mẫu thì dựng hồ khi đã mở', () => {
+    const lakes = (id: 'phongChau' | 'deBao' | 'nghiaLinh' | 'coLoa' | 'coLoaSong') => [5, 6, 7, 8, 9, 10].map((l) => mauSlots(id, l).filter((x) => x.type === 'hoKimQuy').length);
     expect(lakes('coLoa')).toEqual([1, 1, 1, 1, 1, 1]);
     expect(lakes('coLoaSong')).toEqual([0, 1, 1, 1, 1, 1]);
-    expect(lakes('phongChau')).toEqual([0, 0, 0, 0, 0, 0]);
+    // Ba mẫu kia không có vòng thành, hồ là loại mẫu tự xếp (`mau` ở defs.ts: từ Điện 8).
+    for (const id of ['phongChau', 'deBao', 'nghiaLinh'] as const) expect(lakes(id), id).toEqual([0, 0, 0, 1, 1, 1]);
     const before = ch3(YEU_LAST - 1);
     expect(applyMau(before, 'coLoa').ok).toBe(true);
     expect(before.buildings.some((b) => b.type === 'hoKimQuy')).toBe(false);

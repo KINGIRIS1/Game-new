@@ -136,6 +136,29 @@ export interface BuildingDef {
    * Đường đi hay đồ trang trí: chỉ để nhìn. Giặc không nhắm, đi qua được; lũ không làm hư; áp mẫu mà vướng thì dỡ.
    */
   decor?: 'duong' | 'trangTri';
+  /**
+   * Chỗ của loại này trong mẫu kinh đô (`mau.ts`; `docs/thiet-ke.md` mục Mẫu kinh đô: mẫu tự nhận công trình). Mẫu nào
+   * cũng chừa chỗ cho mọi loại có khai báo: loại công thức mẫu chưa nhắc tới thì mẫu tự xếp theo khu khai báo ở đây,
+   * sau các loại công thức có. Thêm công trình nhiều ô mới thì khai báo ở đây là đủ (`sapxep.test.ts` canh không quên).
+   * `false`: mẫu không chừa chỗ (cầu, đồn biên bên kia sông). Công trình một ô (tường, bẫy, chòi canh) do mẫu tự lo.
+   */
+  mau?: MauKhu | false;
+}
+
+/**
+ * Khu một loại công trình đứng trong mẫu kinh đô: `dien` gần Điện, `song` dọc sông (trong đê nếu có đê), `kho` gần Điện
+ * mà rải xa các kho khác, `doi` trên đồi phía rừng, `truc` trên đường chéo từ Điện về góc rừng, `trai` quanh doanh
+ * trại, `bep` quanh bếp gói bánh.
+ */
+export interface MauKhu {
+  khu: 'dien' | 'song' | 'kho' | 'doi' | 'truc' | 'trai' | 'bep';
+  /** Mẫu Cổ Loa: số vòng thành bao quanh (0 ngoài vòng ngoài, 1 giữa vòng ngoài và vòng giữa, 2 giữa vòng giữa và vòng trong). */
+  vong: 0 | 1 | 2;
+  /**
+   * Mẫu chỉ chừa chỗ từ cấp Điện này. Không có thì theo số tối đa (loại mở theo truyện từ kết chương 1 thì từ Điện cấp màn
+   * cuối chương 1 cần). Loại mở muộn theo truyện ghi cấp Điện người chơi thường có lúc mở, đỡ chật đất ở cấp thấp.
+   */
+  tu?: number;
 }
 
 /** Dời công trình sang chỗ khác tốn chừng này phần giá dựng (làm tròn lên). Điện Vua Hùng không có giá dựng nên dời không tốn của. */
@@ -233,6 +256,7 @@ function decorDef(type: BuildingType, size: number, cost: Cost, limit: number[],
 function bridgeDef(type: 'cauSongDa' | 'cauSongThao', w: number, d: number): BuildingDef {
   return {
     type,
+    mau: false,
     w,
     d,
     maxLevel: 3,
@@ -290,6 +314,7 @@ export const BUILDINGS: Record<BuildingType, BuildingDef> = {
   },
   ruong: {
     type: 'ruong',
+    mau: { khu: 'song', vong: 0 },
     w: 4,
     d: 4,
     maxLevel: 10,
@@ -317,6 +342,7 @@ export const BUILDINGS: Record<BuildingType, BuildingDef> = {
   },
   ben: {
     type: 'ben',
+    mau: { khu: 'dien', vong: 0 },
     w: 3,
     d: 3,
     maxLevel: 10,
@@ -361,6 +387,7 @@ export const BUILDINGS: Record<BuildingType, BuildingDef> = {
   },
   nhaSan: {
     type: 'nhaSan',
+    mau: { khu: 'dien', vong: 2 },
     w: 3,
     d: 3,
     maxLevel: 10,
@@ -388,6 +415,7 @@ export const BUILDINGS: Record<BuildingType, BuildingDef> = {
   },
   baiDa: {
     type: 'baiDa',
+    mau: { khu: 'doi', vong: 0 },
     w: 3,
     d: 3,
     maxLevel: 10,
@@ -450,6 +478,7 @@ export const BUILDINGS: Record<BuildingType, BuildingDef> = {
   // Làng chài: ngư dân đánh cá ven sông. Cá không tích trữ: dân và lính ăn cá trước, thiếu mới ăn gạo (`CA_PER_MIN`).
   langChai: {
     type: 'langChai',
+    mau: { khu: 'dien', vong: 0 },
     w: 3,
     d: 3,
     maxLevel: 10,
@@ -480,6 +509,7 @@ export const BUILDINGS: Record<BuildingType, BuildingDef> = {
   // biển (đỡ gạo ăn như cá làng chài, `CA_BIEN_PER_MIN`) và vỏ ốc. Mở ở Điện 8, cấp 2 ở Điện 9, cấp 3 ở Điện 10.
   benKhoi: {
     type: 'benKhoi',
+    mau: { khu: 'dien', vong: 0 },
     w: 3,
     d: 3,
     maxLevel: 3,
@@ -498,6 +528,7 @@ export const BUILDINGS: Record<BuildingType, BuildingDef> = {
   // Xưởng mộc: thợ mộc xẻ gỗ. Gỗ dùng dựng, nâng làng chài, cổng thành; thừa thì đổi với thuyền buôn.
   xuongMoc: {
     type: 'xuongMoc',
+    mau: { khu: 'doi', vong: 0 },
     w: 3,
     d: 3,
     maxLevel: 10,
@@ -525,6 +556,7 @@ export const BUILDINGS: Record<BuildingType, BuildingDef> = {
   },
   loRen: {
     type: 'loRen',
+    mau: { khu: 'trai', vong: 1 },
     w: 3,
     d: 3,
     maxLevel: 10,
@@ -552,6 +584,7 @@ export const BUILDINGS: Record<BuildingType, BuildingDef> = {
   },
   kho: {
     type: 'kho',
+    mau: { khu: 'kho', vong: 2 },
     w: 3,
     d: 3,
     maxLevel: 10,
@@ -579,6 +612,7 @@ export const BUILDINGS: Record<BuildingType, BuildingDef> = {
   },
   doanhTrai: {
     type: 'doanhTrai',
+    mau: { khu: 'truc', vong: 0 },
     w: 8,
     d: 8,
     maxLevel: 5,
@@ -643,6 +677,7 @@ export const BUILDINGS: Record<BuildingType, BuildingDef> = {
   },
   denPhuDong: {
     type: 'denPhuDong',
+    mau: { khu: 'truc', vong: 0 },
     w: 4,
     d: 4,
     maxLevel: 1,
@@ -691,6 +726,7 @@ export const BUILDINGS: Record<BuildingType, BuildingDef> = {
   },
   denTanVien: {
     type: 'denTanVien',
+    mau: { khu: 'truc', vong: 0, tu: 6 },
     w: 4,
     d: 4,
     maxLevel: 1,
@@ -722,6 +758,7 @@ export const BUILDINGS: Record<BuildingType, BuildingDef> = {
   },
   denCoLoa: {
     type: 'denCoLoa',
+    mau: { khu: 'truc', vong: 1, tu: 8 },
     w: 4,
     d: 4,
     maxLevel: 1,
@@ -739,6 +776,7 @@ export const BUILDINGS: Record<BuildingType, BuildingDef> = {
   // (`KIM_QUY_WALLS`), như truyện thần Kim Quy giúp An Dương Vương xây thành không đổ.
   hoKimQuy: {
     type: 'hoKimQuy',
+    mau: { khu: 'doi', vong: 0, tu: 8 },
     w: 8,
     d: 8,
     maxLevel: 1,
@@ -756,6 +794,7 @@ export const BUILDINGS: Record<BuildingType, BuildingDef> = {
   // Ba cấp: cấp 2 cần Điện cấp 5, cấp 3 cần Điện cấp 6. Làm ra nguyên liệu và bánh, không làm ra tài nguyên.
   ruongNep: {
     type: 'ruongNep',
+    mau: { khu: 'song', vong: 0 },
     w: 4,
     d: 4,
     maxLevel: 3,
@@ -773,6 +812,7 @@ export const BUILDINGS: Record<BuildingType, BuildingDef> = {
   },
   vuon: {
     type: 'vuon',
+    mau: { khu: 'bep', vong: 1 },
     w: 3,
     d: 3,
     maxLevel: 3,
@@ -790,6 +830,7 @@ export const BUILDINGS: Record<BuildingType, BuildingDef> = {
   },
   chuongLon: {
     type: 'chuongLon',
+    mau: { khu: 'bep', vong: 1 },
     w: 3,
     d: 3,
     maxLevel: 3,
@@ -807,6 +848,7 @@ export const BUILDINGS: Record<BuildingType, BuildingDef> = {
   },
   bep: {
     type: 'bep',
+    mau: { khu: 'dien', vong: 2 },
     w: 3,
     d: 3,
     maxLevel: 3,
@@ -844,6 +886,7 @@ export const BUILDINGS: Record<BuildingType, BuildingDef> = {
   // Doanh trại là nơi các tướng ở, giữ tổng số chỗ quân và lo điều binh.
   traiGiao: {
     type: 'traiGiao',
+    mau: { khu: 'trai', vong: 0 },
     w: 4,
     d: 4,
     maxLevel: 1,
@@ -859,6 +902,7 @@ export const BUILDINGS: Record<BuildingType, BuildingDef> = {
   },
   traiCung: {
     type: 'traiCung',
+    mau: { khu: 'trai', vong: 0 },
     w: 4,
     d: 4,
     maxLevel: 1,
@@ -874,6 +918,7 @@ export const BUILDINGS: Record<BuildingType, BuildingDef> = {
   },
   chuongVoi: {
     type: 'chuongVoi',
+    mau: { khu: 'trai', vong: 0 },
     w: 4,
     d: 4,
     maxLevel: 1,
@@ -905,6 +950,7 @@ export const BUILDINGS: Record<BuildingType, BuildingDef> = {
   // Lính nỏ (chương 4) cũng có nơi ở riêng: Cao Lỗ tâu vua cho dân luyện nỏ.
   traiNo: {
     type: 'traiNo',
+    mau: { khu: 'trai', vong: 0, tu: 8 },
     w: 4,
     d: 4,
     maxLevel: 1,
@@ -922,6 +968,7 @@ export const BUILDINGS: Record<BuildingType, BuildingDef> = {
   // Đền Cuông thờ An Dương Vương, nơi vua theo Rùa Vàng xuống biển: đền còn nguyên thì mỗi đợt thủy binh bớt thuyền.
   denCuong: {
     type: 'denCuong',
+    mau: { khu: 'truc', vong: 0, tu: 8 },
     w: 4,
     d: 4,
     maxLevel: 1,
@@ -938,6 +985,7 @@ export const BUILDINGS: Record<BuildingType, BuildingDef> = {
   // Đền Hát Môn thờ Hai Bà, nơi Hai Bà tế cờ khởi nghĩa: đền còn nguyên thì mỗi trận giữ kinh đô có nghĩa binh ra đánh.
   denHatMon: {
     type: 'denHatMon',
+    mau: { khu: 'truc', vong: 0, tu: 10 },
     w: 4,
     d: 4,
     maxLevel: 1,
@@ -956,6 +1004,7 @@ export const BUILDINGS: Record<BuildingType, BuildingDef> = {
   // Công trình lớn 8×8 như Hồ Kim Quy, mở ở Điện 10 (chỉ có ở chương 5).
   denRongTien: {
     type: 'denRongTien',
+    mau: { khu: 'truc', vong: 0, tu: 10 },
     w: 8,
     d: 8,
     maxLevel: 1,
@@ -991,6 +1040,7 @@ export const BUILDINGS: Record<BuildingType, BuildingDef> = {
   // Đồn biên: chỉ dựng bên kia sông, mỗi bờ một. Lính đóng ở đồn ra trận từ đây khi giữ kinh đô.
   donBien: {
     type: 'donBien',
+    mau: false,
     w: 4,
     d: 4,
     maxLevel: 1,
@@ -1006,6 +1056,7 @@ export const BUILDINGS: Record<BuildingType, BuildingDef> = {
   // Nhà thợ hồ: mỗi nhà một tốp thợ (`xay.ts`), lên cấp thì tốp ấy xây nhanh hơn (`THO_TOC`).
   thoHo: {
     type: 'thoHo',
+    mau: { khu: 'dien', vong: 1 },
     w: 3,
     d: 3,
     maxLevel: 10,
@@ -1033,6 +1084,7 @@ export const BUILDINGS: Record<BuildingType, BuildingDef> = {
   // Nhà thuốc nam: lang y cứu một phần quân ngã sau mỗi trận (trừ trận đảo), chữa dần theo giờ (`nhaThuoc.ts`).
   nhaThuoc: {
     type: 'nhaThuoc',
+    mau: { khu: 'trai', vong: 1, tu: 4 },
     w: 4,
     d: 4,
     maxLevel: 10,

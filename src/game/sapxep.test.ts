@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import { wallRings } from './coLoa';
 import { CH1_LAST } from './campaign';
-import { BUILDINGS, CH2_QUEST_START, raiseBuildingCost, CH3_QUEST_START, CH4_QUEST_START, GIFT_IDS, MOVE_FRACTION, ROAD_LIMIT, STAGES, U_NO, canHem, isRoad, type BuildingType } from './defs';
+import { BUILDINGS, BUILD_MENU, CH2_QUEST_START, raiseBuildingCost, CH3_QUEST_START, CH4_QUEST_START, GIFT_IDS, MOVE_FRACTION, ROAD_LIMIT, STAGES, U_NO, canHem, isDecor, isRoad, type BuildingType } from './defs';
 import { NO_RAISE, canMove, createInitialState, dienLevel, limitOf, move, moveCost, occupancy, place, rotOf, rotateBuilding, satNha, uNoCount, usedOf, type GameState } from './game';
-import { BAC_NGHIA_LINH, BAC_THANG, applyMau, bacThangMo, canApplyMau, inFrame, mauDuong, mauFrom, mauSlots, mauUnlocked, planMau, MAU_IDS, type MauId } from './mau';
+import { BAC_NGHIA_LINH, BAC_THANG, applyMau, bacThangMo, canApplyMau, inFrame, mauDuong, mauFrom, mauSlots, mauTypes, mauUnlocked, planMau, veMau, MAU_IDS, MAU_KHUNG, type MauId } from './mau';
 import { isOpen, khoanhOf } from './khoanh';
 import { DIEN_HOME, GRID, RIVER_END, RIVER_START, baseHeights, isNearBank, touchesRiver } from './map';
 import { bridgeheadCells } from './benKia';
@@ -127,16 +127,39 @@ describe('mẫu kinh đô', () => {
     }
   }, 30000);
 
-  it('ở mọi cấp Điện mẫu mở được, mỗi loại trong mẫu đủ chỗ cho số tối đa (kể cả đền, Hội Tết, ba nơi ở)', () => {
+  it('công trình nhiều ô nào dựng được (trừ đường, đồ trang trí) cũng khai báo chỗ trong mẫu (`mau` ở defs.ts), cả thẻ Công trình', () => {
+    const quen = (Object.keys(BUILDINGS) as BuildingType[]).filter((t) => {
+      const def = BUILDINGS[t];
+      return def.buildable && !isDecor(t) && def.w * def.d > 1 && def.mau === undefined;
+    });
+    expect(quen).toEqual([]);
+    for (const t of mauTypes()) expect(BUILD_MENU, t).toContain(t);
+  });
+
+  it('khung thử trước không đủ chỗ thì mẫu tự nới thêm khoảnh, vẫn xếp đủ (đổi số tối đa không phải sửa MAU_KHUNG)', () => {
+    expect(veMau('phongChau', 5).side).toBe(MAU_KHUNG.phongChau[4]);
+    const cu = BUILDINGS.ruong.limit[4];
+    BUILDINGS.ruong.limit[4] = cu + 30;
+    try {
+      const v = veMau('phongChau', 5);
+      expect(v.thieu).toBe(0);
+      expect(v.side).toBeGreaterThan(MAU_KHUNG.phongChau[4]);
+      expect(v.slots.filter((x) => x.type === 'ruong').length).toBe(cu + 30);
+    } finally {
+      BUILDINGS.ruong.limit[4] = cu;
+    }
+  });
+
+  it('ở mọi cấp Điện mẫu mở được, mẫu nào cũng đủ chỗ cho số tối đa của mọi loại có khai báo (kể cả loại công thức mẫu không nhắc)', () => {
     for (const id of MAU_IDS) {
-      const types = [...new Set(mauSlots(id, 8).map((x) => x.type))].filter((t) => t !== 'dien' && !SEGMENT_TYPES.includes(t));
-      expect(types).toEqual(expect.arrayContaining(['doanhTrai', 'traiGiao', 'traiCung', 'chuongVoi', 'ruongNep', 'vuon', 'chuongLon', 'bep', 'denPhuDong']));
+      const types = mauTypes();
+      expect(types).toEqual(expect.arrayContaining(['doanhTrai', 'traiGiao', 'traiCung', 'chuongVoi', 'traiNo', 'ruongNep', 'vuon', 'chuongLon', 'bep', 'denPhuDong', 'hoKimQuy', 'denRongTien']));
       for (const dien of levelsOf(id)) {
         const s = city(dien, chapterFor(id, dien));
         const slots = mauSlots(id, dien);
         for (const t of types) {
           // Đền, Hội Tết mở sau kết chương 1, mà màn cuối chương 1 cần Điện 5: dưới Điện 5 mẫu không chừa chỗ.
-          // Hồ Kim Quy (8×8): mẫu Cổ Loa giữ sông chỉ chừa chỗ từ Điện 6 (`mauFrom`).
+          // Hồ Kim Quy (8×8): mẫu Cổ Loa giữ sông chỉ chừa chỗ từ Điện 6 (`mauFrom`); loại mẫu tự xếp từ `MauKhu.tu`.
           const want = (BUILDINGS[t].unlock && dien < STAGES[CH1_LAST - 1].minDien) || dien < mauFrom(id, t) ? 0 : limitOf(s, t);
           expect(slots.filter((x) => x.type === t).length, `${id} Điện ${dien}: ${t}`).toBe(want);
         }
