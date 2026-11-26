@@ -15,6 +15,7 @@ export type NutNoi =
   | 'thanThu'
   | 'loiDai'
   | 'dauThanh'
+  | 'vietNam'
   // Vòng nút quanh công trình (`ui/vongNut.ts`).
   | 'thongTin'
   | 'nangCap'
@@ -206,6 +207,11 @@ const HINH: Record<NutNoi, () => string> = {
     khac('M22 40 A28 8 0 0 0 78 40', 2.2) +
     khac('M24 54 L76 54 M26 66 L74 66', 2.2) +
     `<circle cx="50" cy="40" r="4" fill="${E}"/>`,
+  // Bản đồ Việt Nam: dải đất hình chữ S, ngôi sao trống đồng ở giữa miền Bắc, chấm hai quần đảo ngoài biển.
+  vietNam: () =>
+    `<g fill="${F}"><polygon points="21.5,10.7 31.3,8.3 38.8,7.1 46.3,5.2 55.3,7.7 60.5,11.4 65,15.6 57.5,19.3 54.5,23.6 50,26.7 48.5,31.6 52.3,37.1 57.5,43.8 66.5,49.4 71,54.9 74,63.5 75.5,72.7 72.5,78.3 65,81.9 57.5,84.3 54.5,88.6 45.5,95.3 41,95.3 41.8,88 38.8,84.3 43.3,81.2 50,80.6 53,75.7 60.5,72.7 61.3,65.3 61.3,57.9 59,51.2 53.8,46.9 47,40.2 38,34 34.3,29.7 38.8,25.5 29,21.2 22.3,16.3"/><circle cx="84" cy="46" r="3.6"/><circle cx="90" cy="51" r="2.6"/><circle cx="86" cy="70" r="3"/><circle cx="92" cy="76" r="2.4"/><circle cx="83" cy="80" r="2.2"/></g>` +
+    `<polygon points="${sao(8, 9, 3.6, 44, 17)}" fill="${E}"/>` +
+    khac('M48 30 Q56 42 66 52 M62 60 L70 72', 2.2),
   // Đấu thành: cổng thành có lầu mái cong, răng cưa trên tường, cửa vòm.
   dauThanh: () =>
     `<g fill="${F}"><path d="M4 92 L4 48 L14 48 L14 54 L24 54 L24 48 L34 48 L34 92Z"/><path d="M66 92 L66 48 L76 48 L76 54 L86 54 L86 48 L96 48 L96 92Z"/>

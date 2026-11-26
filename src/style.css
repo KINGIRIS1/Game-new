@@ -5925,3 +5925,594 @@ body.man-vao-on #hud > * {
     flex: none;
   }
 }
+
+/* ---------- Bản đồ Việt Nam (ui/vietNam.ts) ---------- */
+.bdv-cho-ban-do {
+  width: 100%;
+  height: 100%;
+}
+
+.bdv-ban-do {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  border: 2px solid var(--ink);
+  border-radius: 14px;
+  /* Nền giấy dó: vệt sợi mờ trên màu giấy. */
+  background:
+    repeating-linear-gradient(83deg, rgba(120, 90, 50, 0.05) 0 2px, transparent 2px 9px),
+    repeating-linear-gradient(-17deg, rgba(120, 90, 50, 0.04) 0 1px, transparent 1px 13px),
+    #efe4c6;
+  box-shadow: inset 0 0 0 4px var(--paper-2), inset 0 0 24px rgba(58, 42, 26, 0.25);
+}
+
+.bdv-cho {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  text-align: center;
+  padding: 16px;
+}
+
+.bdv-svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  cursor: grab;
+  --bdv-z: 2;
+}
+
+.bdv-bien {
+  fill: #cfdcc6;
+}
+
+.bdv-song {
+  fill: none;
+  stroke: #9fb79f;
+  stroke-width: 1.6;
+  opacity: 0.55;
+}
+
+.bdv-song-nen {
+  pointer-events: none;
+}
+
+.bdv-tinh .bdv-mat {
+  stroke: var(--ink);
+  stroke-width: 1;
+  stroke-linejoin: round;
+  vector-effect: non-scaling-stroke;
+  cursor: pointer;
+}
+
+.bdv-tinh.van-lang .bdv-mat {
+  fill: #d8b46c;
+}
+
+.bdv-tinh.chua-ve .bdv-mat {
+  fill: url(#bdv-soc);
+}
+
+.bdv-soc-nen {
+  fill: #c9c4a4;
+}
+
+.bdv-soc-net {
+  stroke: #a9a27c;
+  stroke-width: 3;
+}
+
+.bdv-tinh.chon .bdv-mat {
+  stroke-width: 2.6;
+  filter: brightness(1.12);
+}
+
+.bdv-tinh.cua-ta .bdv-mat {
+  stroke: #e2a91c;
+  stroke-width: 3.4;
+  paint-order: stroke;
+}
+
+.bdv-cham {
+  fill: none;
+  stroke: var(--bronze-dark);
+  stroke-width: 3.2;
+  stroke-linecap: round;
+  vector-effect: non-scaling-stroke;
+  cursor: pointer;
+}
+
+.bdv-ten text,
+.bdv-qd text {
+  font-family: inherit;
+  text-anchor: middle;
+  dominant-baseline: middle;
+  paint-order: stroke;
+  stroke: #f3ead0;
+  stroke-linejoin: round;
+  pointer-events: none;
+}
+
+.bdv-ten text {
+  display: none;
+  font-size: calc(11px * var(--bdv-z));
+  stroke-width: calc(3px * var(--bdv-z));
+  fill: var(--ink);
+}
+
+.bdv-gan .bdv-ten text {
+  display: block;
+}
+
+.bdv-ten text.chon {
+  display: block;
+  font-weight: 700;
+}
+
+.bdv-qd .bdv-qd-ten {
+  font-size: calc(12px * var(--bdv-z));
+  stroke-width: calc(3px * var(--bdv-z));
+  font-weight: 700;
+  fill: var(--red-dark);
+}
+
+.bdv-qd .bdv-bien-ten {
+  font-size: calc(14px * var(--bdv-z));
+  stroke-width: calc(3px * var(--bdv-z));
+  font-style: italic;
+  letter-spacing: 2px;
+  fill: #5d7a63;
+  opacity: 0.8;
+}
+
+.bdv-goc {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 96px;
+  height: 96px;
+  pointer-events: none;
+  opacity: 0.5;
+}
+
+.bdv-trong circle,
+.bdv-trong path,
+.bdv-trong polygon {
+  fill: none;
+  stroke: var(--bronze-dark);
+  stroke-width: 1.4;
+}
+
+.bdv-trong polygon {
+  fill: var(--bronze);
+  opacity: 0.7;
+}
+
+.bdv-chu-thich {
+  position: absolute;
+  right: 8px;
+  top: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 5px 8px;
+  border-radius: 9px;
+  background: rgba(247, 236, 212, 0.88);
+  border: 1px solid var(--line);
+  font-size: 11px;
+  pointer-events: none;
+}
+
+.bdv-chu-thich span {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.bdv-o {
+  width: 14px;
+  height: 10px;
+  border: 1px solid var(--ink);
+  border-radius: 2px;
+}
+
+.bdv-o.van-lang {
+  background: #d8b46c;
+}
+
+.bdv-o.chua-ve {
+  background: repeating-linear-gradient(45deg, #c9c4a4 0 3px, #a9a27c 3px 4px);
+}
+
+.bdv-o.cua-ta {
+  background: #d8b46c;
+  border: 2px solid #e2a91c;
+}
+
+.bdv-chen {
+  position: absolute;
+  right: 8px;
+  bottom: 8px;
+  width: 92px;
+  height: 120px;
+  border: 1.5px solid var(--ink);
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: var(--shadow);
+  cursor: pointer;
+}
+
+.bdv-chen svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.bdv-chen-nen {
+  fill: #cfdcc6;
+}
+
+.bdv-chen .bdv-cham {
+  stroke-width: 3;
+}
+
+.bdv-chen .bdv-qd-ten {
+  font-size: 54px;
+  font-weight: 700;
+  text-anchor: middle;
+  fill: var(--red-dark);
+}
+
+.bdv-ta {
+  margin: 6px 0;
+}
+
+.bdv-the {
+  margin: 8px 0;
+  padding: 10px 12px;
+  border: 2px solid var(--line);
+  border-radius: 12px;
+  background: var(--paper-2);
+}
+
+.bdv-the.van-lang {
+  border-color: #c69a43;
+}
+
+.bdv-the h3 {
+  margin: 0 0 4px;
+}
+
+.bdv-the p {
+  margin: 4px 0;
+}
+
+.bdv-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin: 6px 0;
+}
+
+.bdv-tag {
+  padding: 2px 8px;
+  border-radius: 10px;
+  background: var(--paper);
+  border: 1px solid var(--line);
+  font-size: 12px;
+}
+
+.bdv-lg-dong .bdv-lg {
+  margin: 2px 3px 2px 0;
+  padding: 2px 8px;
+  border-radius: 10px;
+  border: 1px solid var(--line);
+  background: var(--paper);
+  font-size: 12px;
+}
+
+.bdv-dang {
+  color: var(--green);
+  font-weight: 700;
+}
+
+.bdv-chuc-khoi h4 {
+  margin: 10px 0 2px;
+}
+
+.bdv-chuc-list {
+  display: grid;
+  gap: 6px;
+  margin: 6px 0;
+}
+
+.bdv-chuc {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 10px;
+  border-radius: 10px;
+  border: 1.5px solid var(--line);
+  background: var(--paper);
+  text-align: left;
+}
+
+.bdv-chuc .ic {
+  font-size: 22px;
+}
+
+.bdv-chuc b,
+.bdv-chuc small {
+  display: block;
+}
+
+.bdv-chuc em {
+  margin-left: auto;
+  font-style: normal;
+  color: var(--green);
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.bdv-chuc.on {
+  border-color: var(--bronze);
+  box-shadow: inset 0 0 0 1px var(--bronze);
+}
+
+.bdv-chuc:disabled {
+  opacity: 0.55;
+}
+
+/* Bản đồ Việt Nam PR 2: góp sức cho tỉnh, số của tỉnh, bảng thi đua. */
+.bdv-loi {
+  color: var(--red, #b3382c);
+  margin: 6px 0;
+}
+
+.bdv-mua {
+  margin: 2px 0 6px;
+}
+
+.bdv-so {
+  font-size: 13px;
+}
+
+.bdv-gop {
+  margin: 8px 0;
+  padding: 10px 12px;
+  border: 2px solid var(--bronze);
+  border-radius: 12px;
+  background: var(--paper-2);
+}
+
+.bdv-gop h4,
+.bdv-bang h4 {
+  margin: 0 0 4px;
+}
+
+.bdv-gop p {
+  margin: 4px 0;
+}
+
+.bdv-gop-dong {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin: 6px 0;
+}
+
+.bdv-gop-res {
+  min-width: 82px;
+  font-weight: 700;
+}
+
+.bdv-gop-nut {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.bdv-gop-nut .btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  line-height: 1.15;
+}
+
+.bdv-gop-nut .btn small {
+  font-size: 11px;
+  opacity: 0.85;
+}
+
+.bdv-bang {
+  margin: 10px 0;
+}
+
+.bdv-bang ol {
+  list-style: none;
+  margin: 4px 0;
+  padding: 0;
+  display: grid;
+  gap: 3px;
+}
+
+.bdv-bang li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 8px;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  background: var(--paper);
+}
+
+.bdv-bang li.ta {
+  border-color: var(--bronze);
+  box-shadow: inset 0 0 0 1px var(--bronze);
+}
+
+.bdv-bang .hang {
+  width: 22px;
+  text-align: center;
+  font-weight: 700;
+  color: var(--bronze);
+}
+
+.bdv-bang-ten {
+  flex: 1;
+  text-align: left;
+  background: none;
+  border: 0;
+  padding: 0;
+  font: inherit;
+  color: inherit;
+}
+
+.bdv-bang-so {
+  display: flex;
+  gap: 8px;
+  align-items: baseline;
+  white-space: nowrap;
+}
+
+.bdv-bang-so small {
+  opacity: 0.75;
+}
+
+/* Bản đồ Việt Nam PR 3: giặc chung. */
+.bdv-tinh.co-giac .bdv-mat {
+  stroke: var(--red);
+  stroke-width: calc(3.4px / var(--bdv-z, 1));
+}
+
+.bdv-giac {
+  margin: 8px 0;
+  padding: 10px 12px;
+  border: 2px solid var(--red);
+  border-radius: 12px;
+  background: var(--paper-2);
+}
+
+.bdv-giac h4 {
+  margin: 0 0 4px;
+  color: var(--red-dark);
+}
+
+.bdv-giac p {
+  margin: 4px 0;
+}
+
+.bdv-giac-list {
+  list-style: none;
+  margin: 6px 0;
+  padding: 0;
+  display: grid;
+  gap: 4px;
+}
+
+.bdv-giac-list li {
+  display: grid;
+  grid-template-columns: minmax(84px, auto) 1fr auto;
+  align-items: center;
+  gap: 8px;
+}
+
+.bdv-giac-list li.diet {
+  opacity: 0.6;
+}
+
+.bdv-giac-mau {
+  height: 8px;
+  border-radius: 4px;
+  background: var(--paper);
+  border: 1px solid var(--line);
+  overflow: hidden;
+}
+
+.bdv-giac-mau i {
+  display: block;
+  height: 100%;
+  background: var(--red);
+}
+
+.bdv-giac-nut {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 6px 0;
+}
+
+.bdv-giac-the {
+  color: var(--red-dark);
+  font-weight: 700;
+}
+
+/* ---------- Bản đồ Việt Nam PR 4: kết giao, Lạc tướng và Lạc hầu, phúc lành ---------- */
+
+.bdv-ket {
+  margin: 6px 0;
+  padding: 8px 10px;
+  border: 1px dashed var(--bronze);
+  border-radius: 10px;
+  background: var(--paper);
+}
+
+.bdv-ket p {
+  margin: 0 0 4px;
+}
+
+.bdv-ket-thanh {
+  display: block;
+  height: 10px;
+  border-radius: 5px;
+  background: var(--paper-2);
+  border: 1px solid var(--line);
+  overflow: hidden;
+}
+
+.bdv-ket-thanh i {
+  display: block;
+  height: 100%;
+  background: linear-gradient(90deg, var(--bronze), #e8b830);
+}
+
+/* Tên Lạc tướng, Lạc hầu tuần này: viền vàng (cả ở bảng xếp hạng Đấu thành). */
+.ten-dau {
+  display: inline-block;
+  padding: 0 6px;
+  border: 2px solid #e8b830;
+  border-radius: 8px;
+  background: rgba(232, 184, 48, 0.16);
+  box-shadow: 0 0 6px rgba(232, 184, 48, 0.45);
+}
+
+.bdv-dau {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 6px 0 2px;
+}
+
+.bdv-dh,
+.bdv-phuc {
+  margin: 4px 0;
+  padding: 6px 10px;
+  border-radius: 10px;
+  background: rgba(232, 184, 48, 0.14);
+  border: 1px solid #e8b830;
+}
+
+.bdv-doc-quy {
+  margin: 4px 0;
+}
+
+.modal.bdv-quy h2 {
+  margin: 0 0 8px;
+  color: var(--bronze-dark);
+}

@@ -3037,3 +3037,66 @@ export const LOI_HE: number[] = [
   1.25, 1.27, 1.32, 1.3, 1.26, 1.38, 1.37, 1.66, 1.61, 1.44,
   1.31, 1.32, 1.18, 1.06, 1.34, 1.49, 1.41, 1, 1.11, 1.46,
 ];
+
+/**
+ * Bản đồ Việt Nam (docs/thiet-ke.md mục Kế hoạch: bản đồ Việt Nam, 34 tỉnh, chức Bồ chính): mở từ Điện `dien`;
+ * mùa dài `muaTuan` tuần (bắt đầu 0 giờ thứ Hai giờ Việt Nam như tuần Lôi đài), đổi tỉnh mỗi mùa một lần; đổi chức
+ * chờ `doiChucMs` kể từ lần chọn chức trước.
+ * PR 2 (máy chủ điểm tỉnh): góp của được 1 điểm cho mỗi 1% sức chứa kho lúc góp, mỗi người mỗi ngày (giờ Việt Nam)
+ * tối đa `gopNgay` điểm; điểm tỉnh mỗi mùa cộng điểm của `topTinh` người góp nhiều nhất. Giới hạn lượt gọi mỗi giờ:
+ * góp `gopPerH`, chọn tỉnh hay chức `chonPerH`, xem bảng tỉnh `bangPerH`. Điểm tỉnh giữ `giuNgay` ngày.
+ */
+export const VIET_NAM = {
+  dien: 5,
+  muaTuan: 4,
+  doiChucMs: 24 * 3_600_000,
+  gopNgay: 100,
+  topTinh: 30,
+  gopPerH: 30,
+  chonPerH: 12,
+  bangPerH: 120,
+  giuNgay: 120,
+};
+
+/**
+ * Mùa, phúc lành, quy về (bản đồ Việt Nam PR 4, `muaTinh.ts`). Hết mùa, tỉnh đã quy về xếp hạng theo điểm mùa ấy:
+ * người góp nhiều nhất cho tỉnh nào thì theo tỉnh ấy, cả mùa sau có phúc lành tỉnh (phần trăm sản lượng kinh đô: hạng
+ * 1–`hangDau` `phuc[0]`, tới hạng `hangMuoi` `phuc[1]`, tỉnh còn lại đã diệt được một đạo giặc `phuc[2]`; không tính
+ * trong Đấu thành) và thưởng một lần (`thuong`: số món đồ, huân công; ai có điểm cũng được phần cuối). Tỉnh chưa quy
+ * về dồn mọi điểm vào kết giao: đủ `ketGiao` (30 người × 7 ngày × 100 điểm) thì cả tỉnh quy về, giữ mãi.
+ */
+export const MUA_TINH = {
+  hangDau: 3,
+  hangMuoi: 10,
+  phuc: [10, 6, 3] as const,
+  thuong: [
+    { mon: 2, huan: 10 },
+    { mon: 1, huan: 6 },
+    { mon: 0, huan: 3 },
+  ] as const,
+  ketGiao: 30 * 7 * 100,
+};
+
+/**
+ * Giặc chung của tỉnh (bản đồ Việt Nam PR 3, `giacChung.ts`). Mỗi tuần một đạo vào `tinhMin`–`tinhMax` tỉnh của một
+ * nhóm (biên giới phía bắc, phía tây, giáp biển, theo lượt tuần), đánh từ thứ `tuNgay` (0 là thứ Hai) tới hết tuần.
+ * Máu mỗi tỉnh = số người đã góp ở tỉnh ấy tuần trước (ít nhất `nguoiMin`) × `mauNguoi`. Mỗi trận ngoài bãi tối đa
+ * `FIELD.maxS` giây, giặc theo chương của người đánh (màn `man`, máu nhân `hpMul`); sát thương = phần trăm máu giặc
+ * đã hạ, đúng chức (quân, biên với giặc biên giới, hải với giặc biển) nhân `heChuc`; điểm tỉnh bằng sát thương. Mỗi
+ * ngày `tranNgay` trận. Đánh giúp tỉnh láng giềng: điểm chia đôi cho hai tỉnh. Diệt đạo: người đã đánh được một món
+ * (nơi rơi `don`) và `huan` huân công. Trận gửi kết quả trong `xongMs`; giới hạn lượt mỗi giờ `danhPerH`.
+ */
+export const GIAC_CHUNG = {
+  tuNgay: 4,
+  tinhMin: 3,
+  tinhMax: 5,
+  nguoiMin: 10,
+  mauNguoi: 300,
+  man: { 1: 7, 2: 11, 3: 20, 4: 27, 5: 35 } as Record<Chapter, number>,
+  hpMul: 1.2,
+  heChuc: 1.5,
+  tranNgay: 3,
+  huan: 3,
+  xongMs: 60 * 60_000,
+  danhPerH: 20,
+};
