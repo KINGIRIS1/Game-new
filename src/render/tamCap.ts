@@ -8,9 +8,10 @@ import { outlineOf, toon } from './toon';
 
 /**
  * Bậc tam cấp trước cổng, lối vào công trình đứng cao hơn đất quanh (chủ dự án: chỗ tiếp giáp cổng làm bậc tam cấp
- * cho thấy công trình ở trên cao; rồi: bậc lẫn vào nền khi đắp cao). Chỉ để nhìn: bậc đá đi từ mặt móng xuống tới chỗ
- * gặp mặt đất phía ngoài, mỗi bậc cao chừng `BAC_CAO`, nên đắp càng cao bậc càng nhiều, càng dài; hai bên có má bậc đá
- * chạy dọc theo dốc bậc. Người đi qua lối ấy bước trên mặt bậc (`tamCapY`).
+ * cho thấy công trình ở trên cao; rồi: bậc lẫn vào nền khi đắp cao; bậc đá đẽo có thành bậc không hợp thời Văn Lang).
+ * Chỉ để nhìn: bậc đất nện đi từ mặt móng xuống tới chỗ gặp mặt đất phía ngoài, mỗi bậc cao chừng `BAC_CAO`, nên đắp
+ * càng cao bậc càng nhiều, càng dài; mũi mỗi bậc là một khúc gỗ tròn nằm ngang giữ đất, hai đầu khúc gỗ đóng cọc. Người
+ * đi qua lối ấy bước trên mặt bậc (`tamCapY`).
  */
 
 /** Một chỗ cổng trên mép móng, tọa độ móng (tâm móng là gốc, mặt trước là +z): tâm cổng, bề rộng, hướng ra ngoài. */
@@ -35,10 +36,13 @@ export const BAC_NHIEU = 12;
  * đất thì bậc cuối đứng trên một khối đá xuống tới đất.
  */
 const BAC_TRAN = 0.3;
-/** Má bậc dày, nhô cao hơn mũi bậc chừng này. */
-const MA_DAY = 0.13;
-const MA_NHO = 0.11;
-/** Thân bậc, má bậc cắm xuống dưới mặt đất thấp nhất chừng này. */
+/** Bậc cuối cao hơn mặt đất ở chân bậc quá chừng này thì không làm bậc. */
+const BAC_HANG = 0.35;
+/** Khúc gỗ mũi bậc: bán kính; cọc hai đầu: bán kính, nhô trên mặt bậc chừng này. */
+const GO_R = 0.07;
+const COC_R = 0.042;
+const COC_NHO = 0.14;
+/** Thân bậc cắm xuống dưới mặt đất thấp nhất chừng này. */
 const CHAN = 0.2;
 
 /**
@@ -103,7 +107,7 @@ export interface TamCap extends TamCapCho {
  * Xếp bậc cho một chỗ cổng: `dat(d, s)` là mặt đất ở điểm cách mép móng d ô ra ngoài, lệch ngang s ô khỏi tâm lối;
  * `xa` là lối xuống dài được bao nhiêu ô (gặp móng khác, tường, sông thì dừng). Bậc đi xuống tới chỗ gặp mặt đất (lấy
  * chỗ đất cao nhất ngang lối, để bậc cuối không chìm); lối ngắn thì bậc cao hơn, tới `BAC_TRAN`. Không có chỗ (đất ngoài
- * cổng không thấp hơn móng, lối bị chặn sát mép) thì `null`.
+ * cổng không thấp hơn móng, lối bị chặn sát mép, hay chật tới mức bậc cuối vẫn cao hơn đất quá `BAC_HANG`) thì `null`.
  */
 export function xepTamCap(c: TamCapCho, dat: (d: number, s: number) => number, xa: number): TamCap | null {
   const ngang = [-c.w / 2, 0, c.w / 2];
@@ -115,7 +119,9 @@ export function xepTamCap(c: TamCapCho, dat: (d: number, s: number) => number, x
   let n = Math.min(BAC_IT, nMax);
   while (n < nMax && c.y - cao(n * BAC_SAU) > n * BAC_CAO) n++;
   const h = Math.min((c.y - cao(n * BAC_SAU)) / n, BAC_TRAN);
-  if (h <= 0.02) return null;
+  // Lối chật quá, bậc cuối vẫn cao hơn đất nhiều (nhà đắp cao ngay sát nhà khác, ruộng): thôi không làm bậc, khỏi một
+  // khối đất dựng đứng như cột.
+  if (h <= 0.02 || c.y - n * h - cao(n * BAC_SAU) > BAC_HANG) return null;
   let low = Infinity;
   for (let k = 0; k <= 2 * n; k++) for (const s of ngang) low = Math.min(low, dat((k * BAC_SAU) / 2, s * 1.2));
   return { ...c, n, cao: h, sau: BAC_SAU, day: Math.min(low, c.y - n * h) - CHAN };
@@ -134,19 +140,16 @@ export function tamCapY(list: readonly TamCap[], px: number, pz: number): number
   return null;
 }
 
-/** Màu đá bậc theo kiểu kè (`ke.ts`): mặt bậc, mặt đứng, má bậc. */
-const MAU_DA: Record<KeKieu, [number, number, number]> = {
-  // Đất nện cọc tre: bậc đá ong.
-  0: [0xdcbb8c, 0x8a6440, 0x7f5a36],
-  // Đá hộc: đá xám vàng.
-  1: [0xd2c9b8, 0x7e7466, 0x6f655a],
-  // Đá xanh đẽo vuông, có diềm đồng.
-  2: [0xc6ced0, 0x67737b, 0x5c666e],
-  3: [0xc6ced0, 0x67737b, 0x5c666e],
+/**
+ * Màu bậc theo kiểu kè (`ke.ts`): mặt bậc đất nện, mặt đứng, khúc gỗ, cọc. Đất nện cọc tre, đá hộc: gỗ mộc; đá xanh
+ * (Điện 7 trở lên): gỗ sẫm như gỗ lim; diềm đồng (Điện 9, 10) thì đầu cọc bịt đồng.
+ */
+const MAU_BAC: Record<KeKieu, [number, number, number, number]> = {
+  0: [0xe2c48f, 0x8a6440, 0x7a4e2c, 0x5a3720],
+  1: [0xe2c48f, 0x8a6440, 0x7a4e2c, 0x5a3720],
+  2: [0xdcbb86, 0x86623e, 0x5e3b22, 0x4a2d18],
+  3: [0xdcbb86, 0x86623e, 0x5e3b22, 0x4a2d18],
 };
-/** Vạch mực dọc mũi mỗi bậc cho thấy rõ từng bậc (viền mực ngoài chỉ vẽ quanh cả khối). */
-const MUC = new THREE.Color(0x3b3129);
-const MUC_DAY = 0.035;
 
 /** Tô màu khối: mặt hướng lên một màu, mặt đứng một màu. */
 function toMau(g: THREE.BufferGeometry, tren: THREE.Color, dung: THREE.Color): void {
@@ -160,19 +163,12 @@ function toMau(g: THREE.BufferGeometry, tren: THREE.Color, dung: THREE.Color): v
   g.setAttribute('color', new THREE.BufferAttribute(col, 3));
 }
 
-/**
- * Khối dài dọc lối, tọa độ lối (x ngang, z ra ngoài): ngang [x0, x1], dọc [z0, z1], đáy `day`, mặt trên đi thẳng từ
- * `y0` ở z0 xuống `y1` ở z1.
- */
-function khoiDoc(x0: number, x1: number, z0: number, z1: number, day: number, y0: number, y1: number): THREE.BufferGeometry {
-  const g = new THREE.BoxGeometry(x1 - x0, 1, z1 - z0);
-  g.translate((x0 + x1) / 2, 0.5, (z0 + z1) / 2);
-  const p = g.getAttribute('position');
-  for (let i = 0; i < p.count; i++) {
-    const t = (p.getZ(i) - z0) / (z1 - z0);
-    p.setY(i, p.getY(i) > 0.5 ? y0 + (y1 - y0) * t : day);
-  }
-  g.computeVertexNormals();
+/** Khúc gỗ tròn ít mặt nằm dọc trục x, dài `dai`, tâm ở (0, y, z). */
+function khucGo(dai: number, r: number, y: number, z: number, mau: THREE.Color): THREE.BufferGeometry {
+  const g = new THREE.CylinderGeometry(r, r, dai, 7, 1);
+  g.rotateZ(Math.PI / 2);
+  g.translate(0, y, z);
+  toMau(g, mau, mau);
   return g;
 }
 
@@ -180,40 +176,40 @@ function khoiDoc(x0: number, x1: number, z0: number, z1: number, day: number, y0
 export function buildTamCap(list: readonly TamCap[], kieu: KeKieu = 1): THREE.Group | null {
   if (!list.length) return null;
   const geos: THREE.BufferGeometry[] = [];
-  const [hTren, hDung, hMa] = MAU_DA[kieu];
+  const [hTren, hDung, hGo, hCoc] = MAU_BAC[kieu];
   const tren = new THREE.Color(hTren);
   const dung = new THREE.Color(hDung);
-  const ma = new THREE.Color(hMa);
-  const maTren = ma.clone().lerp(tren, 0.35);
+  const go = new THREE.Color(hGo);
+  const coc = new THREE.Color(hCoc);
+  const dong = new THREE.Color(0xb88a3a);
   const m = new THREE.Matrix4();
   for (const s of list) {
     const goc = Math.atan2(s.dx, s.dz);
     m.makeRotationY(goc).setPosition(s.x, 0, s.z);
-    const dai = s.n * s.sau;
     for (let k = 0; k < s.n; k++) {
-      // Bậc k: mặt bậc thấp hơn mặt móng (k + 1) bậc, thân cắm xuống tới đáy chung.
+      // Bậc k: mặt đất nện thấp hơn mặt móng (k + 1) bậc, thân cắm xuống tới đáy chung.
       const top = s.y - (k + 1) * s.cao;
       const g = new THREE.BoxGeometry(s.w, top - s.day, s.sau);
       g.translate(0, (top + s.day) / 2, (k + 0.5) * s.sau);
       toMau(g, tren, dung);
       geos.push(g.applyMatrix4(m));
-      const muc = new THREE.BoxGeometry(s.w, MUC_DAY, MUC_DAY);
-      muc.translate(0, top - MUC_DAY / 2 + 0.004, (k + 1) * s.sau - MUC_DAY / 2 + 0.004);
-      toMau(muc, MUC, MUC);
-      geos.push(muc.applyMatrix4(m));
-    }
-    // Hai má bậc dọc theo dốc bậc, nhô hơn mũi bậc một chút, cuối má có trụ đá nhỏ.
-    for (const ben of [-1, 1]) {
-      const x0 = ben < 0 ? -s.w / 2 - MA_DAY : s.w / 2;
-      const ma1 = khoiDoc(x0, x0 + MA_DAY, 0, dai, s.day, s.y + MA_NHO, s.y - s.n * s.cao + MA_NHO);
-      toMau(ma1, maTren, ma);
-      geos.push(ma1.applyMatrix4(m));
-      const tru = new THREE.BoxGeometry(MA_DAY + 0.04, 1, MA_DAY + 0.04);
-      const yTru = s.y - s.n * s.cao + MA_NHO + 0.14;
-      tru.scale(1, yTru - s.day, 1);
-      tru.translate(x0 + MA_DAY / 2, (yTru + s.day) / 2, dai - MA_DAY / 2);
-      toMau(tru, maTren, ma);
-      geos.push(tru.applyMatrix4(m));
+      // Mũi bậc: khúc gỗ tròn nằm ngang, nửa chìm trong đất nện; hai đầu đóng cọc giữ.
+      const zMui = (k + 1) * s.sau - GO_R * 0.8;
+      geos.push(khucGo(s.w + 0.06, GO_R, top - GO_R * 0.35, zMui, go).applyMatrix4(m));
+      for (const ben of [-1, 1]) {
+        const yDinh = top + COC_NHO;
+        const c = new THREE.CylinderGeometry(COC_R, COC_R * 0.85, yDinh - s.day, 6, 1);
+        c.translate(ben * (s.w / 2 + COC_R * 0.6), (yDinh + s.day) / 2, zMui + GO_R * 0.3);
+        toMau(c, coc, coc);
+        geos.push(c.applyMatrix4(m));
+        if (kieu === 3) {
+          // Điện 9, 10: đầu cọc bịt đồng.
+          const bit = new THREE.CylinderGeometry(COC_R * 1.25, COC_R * 1.25, 0.035, 6, 1);
+          bit.translate(ben * (s.w / 2 + COC_R * 0.6), yDinh, zMui + GO_R * 0.3);
+          toMau(bit, dong, dong);
+          geos.push(bit.applyMatrix4(m));
+        }
+      }
     }
   }
   const geo = mergeGeometries(geos, false)!;

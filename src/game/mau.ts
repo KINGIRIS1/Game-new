@@ -850,6 +850,11 @@ interface Variant {
   tight?: boolean;
   t1?: number;
   t2?: number;
+  /**
+   * Cổ Loa: vòng thành như trước khi có sân trước cổng Điện (vòng trong chừa đường quanh bốn mặt Điện). Kinh đô máy Đấu
+   * thành (`khit`) giữ bố cục cũ cho cân bằng sao không đổi.
+   */
+  cu?: boolean;
 }
 
 /**
@@ -904,8 +909,10 @@ function deBao(d: Draft, v: Variant): void {
  * ngoài dày `t2` ô (5: một dãy nhà và một phố; 9: hai dãy nhà và một phố giữa).
  */
 function ringsOf(v: Variant): Ring[] {
-  const a1 = v.tight ? DIEN_HOME - 1 : DIEN_HOME - 2;
-  const b1 = v.tight ? DIEN_END + 1 : DIEN_END + 2;
+  // Chừa sân: vòng trong ôm sát mặt sau Điện (bắc, tây), lùi ra hai ô ở mặt trước và mặt đông (phía sông), cùng số
+  // đoạn thành như vòng chừa đường quanh Điện (chủ dự án: cổng Điện cần sân trước cho bậc xuống).
+  const a1 = v.tight ? DIEN_HOME - 1 : v.cu ? DIEN_HOME - 2 : DIEN_HOME - 1;
+  const b1 = v.tight ? DIEN_END + 1 : v.cu ? DIEN_END + 2 : DIEN_END + 1 + SAN_DIEN;
   const a2 = a1 - v.t1! - 1;
   const a3 = a2 - v.t2! - 1;
   return [
@@ -914,6 +921,9 @@ function ringsOf(v: Variant): Ring[] {
     { a: a3, b: b1 + 2 },
   ];
 }
+
+/** Cổ Loa: vòng trong lùi ra chừng này ô ở mặt trước, mặt đông Điện (sân trước cổng Điện). */
+const SAN_DIEN = 2;
 
 /** Số đoạn thành của các vòng. */
 const ringCost = (rings: Ring[]) => rings.reduce((n, r) => n + 4 * (r.b - r.a), 0);
@@ -944,8 +954,12 @@ function coLoaWalls(d: Draft, v: Variant): void {
     keepGate(d, GATE_AXIS, r.a);
   }
   deBaoWalls(d);
-  // Trong vòng trong: Điện và đường quanh Điện (nếu vòng trong chừa chỗ).
-  if (!v.tight) palaceRing(d);
+  // Trong vòng trong: Điện và sân trước Điện (nếu vòng trong chừa chỗ): đường sát mặt trước, mặt đông Điện.
+  if (v.cu && !v.tight) palaceRing(d);
+  else if (!v.tight) {
+    d.road(DIEN_HOME, PALACE_B, PALACE_B, PALACE_B);
+    d.road(PALACE_B, DIEN_HOME, PALACE_B, PALACE_B - 1);
+  }
   d.mark(r1.a + 1, r1.a + 1, r1.b - 1, r1.b - 1, KEEP);
   // Khu giữa vòng trong và vòng giữa, giữa vòng giữa và vòng ngoài.
   const p1 = bandRoad(r1.a, v.t1!);
@@ -1260,15 +1274,15 @@ function drawWith(id: MauId, level: number, side: number, v: Variant, hem: numbe
 /**
  * Dựng mẫu `id` ở cấp Điện `level` trên khung cạnh `side` (mặc định `MAU_KHUNG`): thử từng mức chừa hẻm (`hems`,
  * mặc định `HEM_BAC`), mỗi mức các cách dựng khung theo thứ tự ưu tiên, lấy cách đầu tiên xếp đủ mọi công trình
- * (không có thì cách thiếu ít nhất).
+ * (không có thì cách thiếu ít nhất). `cu`: vòng thành Cổ Loa như cũ (`Variant.cu`).
  */
-export function veMau(id: MauId, level: number, side = khungOf(id, level), hems: readonly number[] = HEM_BAC, hep = false): MauVe {
+export function veMau(id: MauId, level: number, side = khungOf(id, level), hems: readonly number[] = HEM_BAC, hep = false, cu = false): MauVe {
   let best: { d: Draft; thieu: number } | null = null;
   // Mức chừa hẻm trước, rồi mới tới cách dựng: thà đổi cách dựng khung còn hơn xếp nhà sát nhau.
   search: for (const hem of hems) {
     for (const group of RECIPES[id].variants(level)) {
       for (const v of group) {
-        const r = drawWith(id, level, side, v, hem, hep);
+        const r = drawWith(id, level, side, cu ? { ...v, cu } : v, hem, hep);
         if (!best || r.thieu < best.thieu) best = r;
         if (!best.thieu) break search;
       }
@@ -1292,7 +1306,7 @@ function drawn(id: MauId, level: number, khit = false, hep = false): MauVe {
   const key = `${id}:${lv}:${khit ? 1 : 0}:${hep ? 1 : 0}`;
   let ve = DRAWN.get(key);
   if (!ve) {
-    ve = veMau(id, lv, undefined, khit ? [0] : HEM_BAC, hep);
+    ve = veMau(id, lv, undefined, khit ? [0] : HEM_BAC, hep, khit);
     DRAWN.set(key, ve);
   }
   return ve;

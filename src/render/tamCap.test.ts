@@ -45,6 +45,8 @@ describe('bậc tam cấp', () => {
   it('không làm bậc khi đất ngoài cổng ngang móng, hay lối bị chặn sát mép', () => {
     expect(xepTamCap(CHO, () => CHO.y - TAM_CAP_MIN / 2, 4)).toBeNull();
     expect(xepTamCap(CHO, dat(0.4, 0.5, 0.4), BAC_SAU * 1.5)).toBeNull();
+    // Đắp rất cao mà lối chỉ dài một ô: bậc cuối còn treo cao trên đất, thôi không làm bậc.
+    expect(xepTamCap({ ...CHO, y: 3 }, (d) => Math.max(0.4, 3 - 0.6 - 1.4 * d), 1)).toBeNull();
   });
 
   it('người đi trên lối bước trên mặt bậc, ngoài lối thì không', () => {
