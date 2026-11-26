@@ -22,6 +22,7 @@ import {
   type GameState,
 } from '../game/game';
 import { giongAppeared } from '../game/giong';
+import { canCat, catDuocLoai } from '../game/khoCat';
 import { farBankOf } from '../game/map';
 import { inChapter2, sonLook } from '../game/son';
 import { tetStarted } from '../game/tet';
@@ -44,8 +45,8 @@ export interface NutVong {
   data?: Record<string, string>;
 }
 
-/** Thẻ xác nhận cạnh vòng: nâng cấp, dỡ, đặt ụ nỏ. */
-export type TheVong = 'nang' | 'do' | 'uNo';
+/** Thẻ xác nhận cạnh vòng: nâng cấp, dỡ, đặt ụ nỏ, cất vào kho. */
+export type TheVong = 'nang' | 'do' | 'uNo' | 'cat';
 
 /** Bốn công trình làm nguyên liệu, bánh Tết. */
 export const TET_TYPES: BuildingType[] = ['ruongNep', 'vuon', 'chuongLon', 'bep'];
@@ -130,6 +131,7 @@ export function nutCua(state: GameState, id: number): NutVong[] {
   const cuoi: NutVong[] = [{ act: 'startMove', id, hinh: 'doi', nhan: t.doi, khoa: state.raid.phase !== 'idle' || !canAfford(state, moveCost(b)) }];
   if (canRotateType(b.type)) cuoi.push({ act: 'rotateBuilding', id, hinh: 'xoay', nhan: t.xoay });
   if (def.removable) cuoi.push({ act: 'vongThe', id, hinh: 'do', nhan: t.do, the: 'do' });
+  else if (catDuocLoai(b.type)) cuoi.push({ act: 'vongThe', id, hinh: 'cat', nhan: t.cat, the: 'cat', kem: !canCat(state, id).ok });
   const rieng = nutRieng(state, b).slice(0, Math.max(0, VONG_MAX - out.length - cuoi.length));
   return [...out, ...rieng, ...cuoi].slice(0, VONG_MAX);
 }
@@ -201,6 +203,12 @@ export function theHtml(state: GameState, b: Building, the: TheVong): string {
     const why = check.ok ? '' : `<div class="why">${vi.reasons[check.reason]}</div>`;
     return `<b>${esc(buildingName(b))} · 🎯 ${vi.ui.uNo}</b><div>${costHtml(state, U_NO.cost)}</div><p class="muted">${vi.ui.uNoDesc}</p>${why}
       <div class="btn-pair">${thoi}<button class="btn small" data-act="placeUNo" data-id="${b.id}" ${check.ok ? '' : 'disabled'}>${t.dongY}</button></div>`;
+  }
+  if (the === 'cat') {
+    const check = canCat(state, b.id);
+    const why = check.ok ? '' : `<div class="why">${vi.reasons[check.reason]}</div>`;
+    return `<b>${esc(buildingName(b))}</b><p class="muted">${t.catHoi}</p>${why}
+      <div class="btn-pair">${thoi}<button class="btn small" data-act="catCongTrinh" data-id="${b.id}" ${check.ok ? '' : 'disabled'}>${vi.ui.catBtn}</button></div>`;
   }
   if (the === 'do') {
     return `<b>${esc(buildingName(b))}</b><p class="muted">${t.doHoi}</p>

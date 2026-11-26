@@ -48,6 +48,10 @@ const TILE: Partial<Record<BuildingType, string>> = {
   denCoLoa: '#c8a020',
   hoKimQuy: '#2f9ab8',
   denRongTien: '#3f8f6a',
+  denCuong: '#b8862f',
+  denHatMon: '#9a4f8a',
+  thoHo: '#7f6a4a',
+  nhaThuoc: '#5f8a4a',
   vuon: '#4f9a42',
   chuongLon: '#3a3330',
   bep: '#c45a2a',
@@ -57,7 +61,7 @@ const miniCache = new Map<string, string>();
 
 /**
  * Bản đồ thu nhỏ của mẫu ở cấp Điện hiện tại, từ bìa khung mẫu hay đất đã mở (xa hơn thì lấy) tới sông: ô rừng chưa
- * phát vẽ mờ, chỗ của mẫu nằm trong rừng cũng mờ, đường của mẫu màu đường đất, sông xanh ở hai cạnh. Vẽ lên canvas một lần cho mỗi mẫu, mỗi cấp
+ * phát vẽ mờ, chỗ của mẫu nằm trong rừng cũng mờ, đường của mẫu màu đường đất (trong thành Cổ Loa màu gạch), sông xanh ở hai cạnh. Vẽ lên canvas một lần cho mỗi mẫu, mỗi cấp
  * Điện và mỗi bộ khoảnh đã mở.
  */
 function miniMap(state: GameState, id: MauId): string {
@@ -81,8 +85,8 @@ function miniMap(state: GameState, id: MauId): string {
         g.fillRect(x * px, z * px, px, px);
       }
     }
-    g.fillStyle = TILE.duongDat!;
     for (const r of mauDuong(id, level)) {
+      g.fillStyle = (r.gach ? TILE.duongGach : TILE.duongDat)!;
       g.globalAlpha = isOpen(state, r.x, r.z) ? 1 : 0.45;
       g.fillRect((r.x - x0) * px, (r.z - x0) * px, px, px);
     }
@@ -153,30 +157,31 @@ function wildKhoanh(state: GameState, id: MauId): number {
 }
 
 /** Các mục của thẻ Mẫu kinh đô và mẫu nên chọn sẵn (mẫu mới mở nhất). `armed`: mẫu vừa bấm Áp lần đầu. */
-export function mauItems(state: GameState, armed: MauId | null, bac = true): { items: BuildItem[]; prefer: MauId } {
+export function mauItems(state: GameState, armed: MauId | null, bac = true, cat = true): { items: BuildItem[]; prefer: MauId } {
   let prefer: MauId = 'phongChau';
   const items = MAU_IDS.map((id): BuildItem => {
     const t = vi.ui.mau[id];
     const base = { key: id, act: 'applyMau' as const, attrs: `data-mau="${id}"`, pic: miniMap(state, id), square: true, icon: t.icon, name: t.name };
-    if (!mauUnlocked(state, id)) return { ...base, meta: '', why: t.lock, go: vi.ui.mauApply, note: t.desc };
+    if (!mauUnlocked(state, id)) return { ...base, meta: '', why: t.lock, go: vi.ui.mauApply, note: `<p>${t.desc}</p>` };
     prefer = id;
-    const plan = planMau(state, id, bac);
-    const check = canStartMau(state, id, bac);
+    const plan = planMau(state, id, bac, cat);
+    const check = canStartMau(state, id, bac, cat);
     const wild = wildKhoanh(state, id);
     // Phần dựng thêm giao cả cho một tốp, làm lần lượt.
     const ms = plan.builds.reduce((n, s) => n + xayMs(s.type, 1), 0);
     const time = ms > 0 ? ` · ${vi.ui.xayTime(formatXay(realMs(state, ms)))}` : '';
+    // Việc mẫu sẽ làm và lời tả để dưới lưới ảnh nhỏ: ảnh lớn chỉ còn tên, giá, nút Áp mẫu nên nút luôn thấy ngay.
+    const viec =
+      vi.ui.mauPlan(plan.moves.length, plan.builds.length, plan.removes.length, plan.uNos.length, plan.duong.length, plan.dap.length, plan.layRa.length, plan.cat.length) + time;
+    const dap = plan.dap.length ? `<p>${vi.ui.mauDapCost(costHtml(state, plan.dapCost))}</p>` : '';
     return {
       ...base,
-      meta:
-        vi.ui.mauPlan(plan.moves.length, plan.builds.length, plan.removes.length, plan.uNos.length, plan.duong.length, plan.dap.length) +
-        time +
-        (plan.dap.length ? `<br>${vi.ui.mauDapCost(costHtml(state, plan.dapCost))}` : ''),
+      meta: '',
       cost: Object.keys(plan.cost).length ? costHtml(state, plan.cost) : '',
       why: check.ok ? '' : vi.reasons[check.reason],
       go: armed === id ? vi.ui.mauConfirm : vi.ui.mauApply,
       armed: armed === id,
-      note: wild ? `${t.desc} ${vi.ui.mauKhoanh(wild)}` : t.desc,
+      note: `<p class="xd-viec">${viec}</p>${dap}<p>${wild ? `${t.desc} ${vi.ui.mauKhoanh(wild)}` : t.desc}</p>`,
     };
   });
   return { items, prefer };

@@ -296,6 +296,52 @@ describe('nền đất bờ vát', () => {
     });
   });
 
+  describe('bệ nền: móng đắp cao hơn đất bên cạnh đứng trên bệ kè thấp', () => {
+    // Như trên: ô (1, 1) bậc 4 và gò (3..4, 2..3) bậc 2 là móng có bệ; ô (5, 5) bậc 1 là móng có bệ trên đất bằng.
+    const BE = 0.25;
+    const flats = new Set(['1,1', '3,2', '4,2', '3,3', '4,3', '5,5']);
+    const inp: NenInput = { ...input(flats), doc: 1, be: { o: (x, z) => flats.has(`${x},${z}`), cao: (chenh) => Math.min(chenh, BE) } };
+    const bn = buildNen(inp);
+    const bt = triangles(bn.geometry);
+    const ke = (x0: number, x1: number, z0: number, z1: number) =>
+      bt.filter((t) => Math.abs(t.n.y) < 1e-4 && t.p.every((v) => v.x >= x0 - 1e-6 && v.x <= x1 + 1e-6 && v.z >= z0 - 1e-6 && v.z <= z1 + 1e-6));
+
+    it('đất giáp mép móng cao dừng ở chân bệ, thấp hơn mặt móng đúng một bệ, rồi dốc thoải ra xa', () => {
+      expect(bn.heightAt(1.5, 1.5)).toBeCloseTo(4 * LEVEL, 5);
+      expect(bn.heightAt(0.9999, 1.5)).toBeCloseTo(4 * LEVEL - BE, 3);
+      expect(bn.heightAt(0.5, 1.5)).toBeLessThan(4 * LEVEL - BE);
+      expect(bn.heightAt(0.5, 1.5)).toBeGreaterThan(bn.heightAt(-0.5, 1.5));
+      // Vách kè đứng quanh móng, cao đúng một bệ.
+      const west = ke(1, 1, 1, 2);
+      expect(west.length).toBeGreaterThan(0);
+      for (const t of west) for (const v of t.p) expect(v.y).toBeGreaterThanOrEqual(4 * LEVEL - BE - 1e-5);
+    });
+
+    it('móng ngang đất bên cạnh thì không có bệ: đất lên tới mép như cũ', () => {
+      expect(bn.heightAt(5.9999, 5.5)).toBeCloseTo(LEVEL, 5);
+      expect(ke(5, 6, 5, 6)).toEqual([]);
+    });
+
+    it('không có `be` thì y như cũ', () => {
+      const cu = buildNen({ ...input(flats), doc: 1 });
+      expect(cu.heightAt(0.9999, 1.5)).toBeCloseTo(4 * LEVEL, 3);
+    });
+
+    it('mặt đất vẫn kín và heightAt khớp hình đã vẽ', () => {
+      const inside = (q: THREE.Vector3) => q.x > -2 + 1e-4 && q.x < G + 2 - 1e-4 && q.z > -2 + 1e-4 && q.z < 7 - 1e-4;
+      expect(openPoints(bt, inside)).toEqual([]);
+      const ray = new THREE.Raycaster();
+      const mesh = new THREE.Mesh(bn.geometry, new THREE.MeshBasicMaterial({ side: THREE.DoubleSide }));
+      for (let i = 0; i < 300; i++) {
+        const px = 0.05 + ((i * 37) % 97) / 97 * 6.9;
+        const pz = 0.05 + ((i * 61) % 89) / 89 * 6.8;
+        ray.set(new THREE.Vector3(px, 10, pz), new THREE.Vector3(0, -1, 0));
+        const hit = ray.intersectObject(mesh)[0];
+        expect(bn.heightAt(px, pz)).toBeCloseTo(hit.point.y, 4);
+      }
+    });
+  });
+
   it('đổi vài ô rồi dựng lại từng phần thì y như dựng mới từ đầu, kể cả ô sát mép mảnh và mép lưới', () => {
     // Lưới 60×60, dải ngoài 2 ô: khung 64 ô, chia mảnh 26 ô (ô khung 24..27 nằm sát mép hai mảnh).
     const W = 60;
@@ -307,9 +353,10 @@ describe('nền đất bờ vát', () => {
       top: (x, z) => (heights[z * W + x] < 0 ? null : heights[z * W + x] * LEVEL),
       riverY: RIVER_Y,
       flat: (x, z) => x >= 0 && z >= 0 && x < W && z < W && flats.has(z * W + x),
-      // Như World: đường giữ phẳng mềm, có dốc thoải quanh móng cao.
+      // Như World: đường giữ phẳng mềm, có dốc thoải quanh móng cao, móng có bệ.
       soft: (x, z) => (x + z) % 3 === 0,
       doc: 4,
+      be: { o: (x, z) => x >= 0 && z >= 0 && x < W && z < W && flats.has(z * W + x), cao: (c) => Math.min(c, 0.2) },
       colors: (_x, _z, out) => {
         out.lo.setHex(0x88aa44);
         out.hi.setHex(0x99bb55);

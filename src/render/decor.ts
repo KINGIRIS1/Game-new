@@ -116,8 +116,11 @@ export function buildRoadDrape(tiles: { type: BuildingType; x: number; z: number
   for (const t of tiles) {
     c.set(t.type === 'duongDat' ? DIRT : t.type === 'duongSoi' ? GRAVEL : t.type === 'duongDa' ? MORTAR : BRICK_MORTAR);
     const p = (i: number, j: number) => [t.x + cuts[i], y(t.x + cuts[i], t.z + cuts[j]) + DUONG_DAY, t.z + cuts[j]];
+    // Đường gạch trên sườn: mỗi mảnh con một màu gạch xen nhau (không có màu vữa xám), nhìn vẫn ra mặt gạch.
+    const gach = t.type === 'duongGach';
     for (let j = 0; j < n - 1; j++) {
       for (let i = 0; i < n - 1; i++) {
+        if (gach) c.set(BRICK[(((i + 2 * j + Math.round(t.x + t.z)) % 3) + 3) % 3]);
         for (const [a, b] of [[i, j], [i, j + 1], [i + 1, j + 1], [i, j], [i + 1, j + 1], [i + 1, j]]) {
           pos.push(...p(a, b));
           col.push(c.r, c.g, c.b);

@@ -46,6 +46,8 @@ const CO_QUAN = `
   s.troops = { giao: Math.floor(cho / 2), cung: Math.floor(cho / 3), voi: 0, no: 0 };
 `;
 const KINH_DO = `M.playChapters({ s, until: (m) => m.at5 >= 0 });`;
+/** Cất hai nhà sàn và một bãi đất đá vào kho cất công trình (`khoCat.ts`). */
+const CAT_BA = `{ const K = await import('/src/game/khoCat.ts'); for (const t of ['nhaSan', 'nhaSan', 'baiDa']) { const b = s.buildings.find((o) => o.type === t && !s.khoCat.includes(o)); const r = K.catCongTrinh(s, b.id); if (!r.ok) throw new Error(r.reason); } }`;
 /** Kinh đô Điện 8 vừa sang chương 5 (đã thắng tới màn `cleared`), có doanh trại và quân, đã xem hết truyện tới lúc ấy. */
 /**
  * Điện 10 sau truyện (người chơi mô phỏng chơi thêm 5 giờ: hai đồn đảo lên cấp, có thuyền chiến), chương 5 đã thắng
@@ -358,6 +360,28 @@ export const CANH = {
     doi: 2500,
     truocKhiChup: `document.querySelector('.vn-nut[data-the=do]').click();`,
   },
+  'vong-nut-cat': {
+    mo: 'Như kinh-do, chạm chọn một nhà sàn: vòng có nút Cất (rương đồng) và thẻ xác nhận cất vào kho',
+    truoc: KINH_DO,
+    sau: `d.select(s.buildings.find((b) => b.type === 'nhaSan').id);`,
+    doi: 2500,
+    truocKhiChup: `document.querySelector('.vn-nut[data-the=cat]').click();`,
+  },
+  'kho-cat': {
+    mo: 'Như kinh-do, đã cất hai nhà sàn và một bãi đất đá: bảng Xây dựng, thẻ Kho cất (đồ gộp theo loại, cấp; nút Đặt lại)',
+    truoc: `${KINH_DO}\n${CAT_BA}`,
+    sau: `document.querySelector('[data-act=openBuild]').click(); document.querySelector('[data-act=buildTab][data-tab=cat]').click();`,
+  },
+  'dat-lai': {
+    mo: 'Như kho-cat, bấm Đặt lại nhà sàn: bóng công trình hiện ở chỗ trống, thanh dưới có nút Đặt ở đây',
+    truoc: `${KINH_DO}\n${CAT_BA}`,
+    sau: `document.querySelector('[data-act=openBuild]').click(); document.querySelector('[data-act=buildTab][data-tab=cat]').click(); document.querySelector('.xd-info [data-act=chooseCat]').click();`,
+  },
+  'mau-kho-cat': {
+    mo: 'Như kho-cat, thẻ Mẫu kinh đô: việc mẫu sẽ làm có dòng lấy công trình từ kho cất, nút bật tắt cất công trình thừa',
+    truoc: `${KINH_DO}\n${CAT_BA}`,
+    sau: `document.querySelector('[data-act=openBuild]').click(); document.querySelector('[data-act=buildTab][data-tab=mau]').click();`,
+  },
   'vong-nut-trai': {
     mo: 'Như kinh-do có doanh trại, chạm chọn doanh trại: vòng có Quân, Giữ thành, Tướng (mở bảng đúng thẻ)',
     truoc: `${KINH_DO}\n${CO_QUAN}`,
@@ -580,24 +604,39 @@ d.camera(cx, cz, 2.6);`,
     sau: `d.vietNam('23');`,
   },
   'viet-nam-gop': {
-    mo: 'Như viet-nam-chon, máy chủ tỉnh (giả) trả bảng mùa này: Phú Thọ Bồ chính nông, phần góp gạo (còn 64/100 điểm hôm nay), số của tỉnh, bảng thi đua',
+    mo: 'Như viet-nam-chon, máy chủ tỉnh (giả) trả bảng mùa này, thẻ Bệ hạ: Phú Thọ Bồ chính nông, phần góp gạo (còn 64/100 điểm hôm nay), số của tỉnh, bảng thi đua',
     truoc: `${KINH_DO}\ns.hinted.push('hd:vietNam'); s.resources.gao = 9000; s.vietNam = { tinh: '12', mua: 0, chuc: 'nong', chucLuc: Date.now() - 3600000 };`,
-    sau: `d.vietNam('12'); d.vnMay({ mua: 4, ngay: 0, toi: { tinh: '12', chuc: 'nong', mua: 4, chucLuc: Date.now() - 3600000, diemMua: 212, diemNgay: 36 }, bang: [{ tinh: '01', diem: 4210, nguoi: 41, gop: 33 }, { tinh: '12', diem: 2875, nguoi: 22, gop: 19 }, { tinh: '04', diem: 1960, nguoi: 15, gop: 12 }, { tinh: '17', diem: 860, nguoi: 9, gop: 6 }, { tinh: '23', diem: 340, nguoi: 4, gop: 3 }] });`,
+    sau: `d.vietNam('12'); d.vnMay({ mua: 4, ngay: 0, toi: { tinh: '12', chuc: 'nong', mua: 4, chucLuc: Date.now() - 3600000, diemMua: 212, diemNgay: 36 }, bang: [{ tinh: '01', diem: 4210, nguoi: 41, gop: 33 }, { tinh: '12', diem: 2875, nguoi: 22, gop: 19 }, { tinh: '04', diem: 1960, nguoi: 15, gop: 12 }, { tinh: '17', diem: 860, nguoi: 9, gop: 6 }, { tinh: '23', diem: 340, nguoi: 4, gop: 3 }] }); document.querySelector('[data-act=vnTab][data-tab=ta]').click();`,
   },
   'viet-nam-giac': {
-    mo: 'Máy chủ tỉnh (giả): đạo giặc tuần này đang đánh, mình ở tỉnh đầu của đạo, Bồ chính quân; máu từng tỉnh, nút Đánh, còn 2/3 trận; tỉnh có giặc viền đỏ trên bản đồ',
+    mo: 'Máy chủ tỉnh (giả), thẻ Giặc: đạo giặc tuần này đang đánh, mình ở tỉnh đầu của đạo, Bồ chính quân; máu từng tỉnh, nút Đánh, còn 2/3 trận; tỉnh có giặc viền đỏ trên bản đồ',
     truoc: `${KINH_DO}\ns.hinted.push('hd:vietNam');`,
-    sau: `const g = d.giacNay(); const ta = g.tinh[0]; d.vietNam(ta); d.vnMay({ mua: 4, ngay: 0, toi: { tinh: ta, chuc: 'quan', mua: 4, chucLuc: Date.now() - 3600000, diemMua: 140, diemNgay: 0 }, bang: [{ tinh: ta, diem: 1875, nguoi: 22, gop: 19 }], giac: { tuan: g.tuan, nhom: g.nhom, dao: g.tinh.map((t, i) => ({ tinh: t, mau: 3600, con: i === 1 ? 0 : 3600 - 700 * (i + 1), diet: i === 1 ? Date.now() : null })), tranNay: 1, thuong: [] } });`,
+    sau: `const g = d.giacNay(); const ta = g.tinh[0]; d.vietNam(ta); d.vnMay({ mua: 4, ngay: 0, toi: { tinh: ta, chuc: 'quan', mua: 4, chucLuc: Date.now() - 3600000, diemMua: 140, diemNgay: 0 }, bang: [{ tinh: ta, diem: 1875, nguoi: 22, gop: 19 }], giac: { tuan: g.tuan, nhom: g.nhom, dao: g.tinh.map((t, i) => ({ tinh: t, mau: 3600, con: i === 1 ? 0 : 3600 - 700 * (i + 1), diet: i === 1 ? Date.now() : null })), tranNay: 1, thuong: [] } }); document.querySelector('[data-act=vnTab][data-tab=giac]').click();`,
   },
   'viet-nam-giac-sap': {
     mo: 'Như viet-nam-giac, trước thứ Sáu: báo đạo giặc sắp tới các tỉnh nào, thẻ tỉnh ghi sắp có giặc',
     truoc: `${KINH_DO}\ns.hinted.push('hd:vietNam');`,
-    sau: `const g = d.giacNay(); const ta = g.tinh[0]; d.vietNam(ta); d.vnMay({ mua: 4, ngay: 0, toi: { tinh: ta, chuc: 'nong', mua: 4, chucLuc: Date.now() - 3600000, diemMua: 40, diemNgay: 0 }, bang: [], giac: { tuan: g.tuan, nhom: g.nhom, dao: [], tranNay: 0, thuong: [] } });`,
+    sau: `const g = d.giacNay(); const ta = g.tinh[0]; d.vietNam(ta); d.vnMay({ mua: 4, ngay: 0, toi: { tinh: ta, chuc: 'nong', mua: 4, chucLuc: Date.now() - 3600000, diemMua: 40, diemNgay: 0 }, bang: [], giac: { tuan: g.tuan, nhom: g.nhom, dao: [], tranNay: 0, thuong: [] } }); document.querySelector('[data-act=vnTab][data-tab=giac]').click();`,
   },
   'viet-nam-mua': {
     mo: 'Bản đồ Việt Nam PR 4: Phú Thọ Bồ chính nông, Lạc hầu tỉnh tuần này, phúc lành +10%; Đà Nẵng đã quy về (tô như đất Văn Lang); thẻ Phú Thọ có Lạc tướng, Lạc hầu; bảng mùa vừa qua',
     truoc: `${KINH_DO}\n${VN_MUA}`,
     sau: `d.vietNam('12'); d.vnMay(${VN_BANG});`,
+  },
+  'viet-nam-ta': {
+    mo: 'Như viet-nam-mua, thẻ Bệ hạ: tỉnh, chức, danh hiệu, phúc lành, phần góp, chức Bồ chính',
+    truoc: `${KINH_DO}\n${VN_MUA}`,
+    sau: `d.vietNam('12'); d.vnMay(${VN_BANG}); document.querySelector('[data-act=vnTab][data-tab=ta]').click();`,
+  },
+  'viet-nam-dua': {
+    mo: 'Như viet-nam-mua, thẻ Thi đua: bảng tỉnh mùa này, mùa vừa qua',
+    truoc: `${KINH_DO}\n${VN_MUA}`,
+    sau: `d.vietNam('12'); d.vnMay(${VN_BANG}); document.querySelector('[data-act=vnTab][data-tab=dua]').click();`,
+  },
+  'viet-nam-luat': {
+    mo: 'Như viet-nam-mua, bấm nút Luật: thẻ Tỉnh hiện lời giải thích luật',
+    truoc: `${KINH_DO}\n${VN_MUA}`,
+    sau: `d.vietNam('12'); d.vnMay(${VN_BANG}); document.querySelector('[data-act=vnLuat]').click();`,
   },
   'viet-nam-ket': {
     mo: 'Như viet-nam-mua, chạm Quảng Ngãi (chưa quy về): thanh kết giao 60%',

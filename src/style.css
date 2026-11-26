@@ -1171,18 +1171,34 @@ button {
 }
 
 /* Lời tả dài (mẫu kinh đô) chạy trọn bề ngang dưới ảnh lớn. */
+/* Ghi chú của mục đang chọn (việc mẫu kinh đô sẽ làm, lời tả mẫu) dưới lưới ảnh nhỏ. */
 .xd-note {
-  grid-column: 1 / -1;
-  margin: 0;
+  margin: 10px 2px 0;
   font-size: 12px;
   line-height: 1.35;
   color: var(--ink-soft);
+}
+.xd-note p {
+  margin: 0 0 4px;
+}
+.xd-note p:last-child {
+  margin-bottom: 0;
+}
+.xd-note .xd-viec {
+  color: var(--ink);
+  font-weight: 600;
 }
 
 .xd-foot {
   margin: 10px 2px 0;
   font-size: 12px;
   line-height: 1.35;
+}
+.xd-foot p {
+  margin: 0 0 4px;
+}
+.xd-foot p:last-child {
+  margin-bottom: 0;
 }
 
 .cost {
@@ -4618,13 +4634,14 @@ body.man-vao-on #hud > * {
   .sheet.build .sheet-body {
     display: grid;
     grid-template-columns: 132px minmax(0, 1.1fr) minmax(0, 1fr);
-    grid-template-rows: auto auto 1fr auto auto;
+    grid-template-rows: auto auto 1fr auto auto auto;
     grid-template-areas:
       'tabs note note'
       'tabs stage grid'
       'tabs stage .'
       'tabs stage pager'
-      'tabs foot foot';
+      'tabs stage more'
+      'tabs stage foot';
     gap: 0 14px;
     align-items: start;
     padding: 10px 16px 12px;
@@ -4642,7 +4659,8 @@ body.man-vao-on #hud > * {
     padding: 9px 8px;
   }
 
-  .sheet.build .build-tabs + .muted {
+  .sheet.build .build-tabs + .muted,
+  .sheet.build .build-tabs + .mau-bac {
     grid-area: note;
     margin: 0 2px 8px;
   }
@@ -4661,6 +4679,12 @@ body.man-vao-on #hud > * {
     grid-area: pager;
   }
 
+  .sheet.build .xd-note {
+    grid-area: more;
+  }
+
+  /* Lời nhắc cuối bảng (thẻ Mẫu kinh đô) ở cột phải dưới lưới ảnh nhỏ: ảnh lớn cao hơn phần hàng của nó nên tràn xuống
+     dưới, để chung cột thì ảnh lớn đè lên chữ. */
   .sheet.build .xd-foot {
     grid-area: foot;
     margin-top: 8px;
@@ -5348,14 +5372,14 @@ body.man-vao-on #hud > * {
 
 /* Nút bật tắt đắp bậc thang ở đầu thẻ Mẫu kinh đô (từ chương 2). */
 .mau-bac {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
   margin: 0 2px 8px;
-  font-size: 12px;
-  line-height: 1.35;
 }
 .mau-bac .btn {
   padding: 4px 10px;
   font-size: 13px;
-  margin-right: 4px;
 }
 
 /* ---------- Lôi đài Phong Châu (ui/loiDai.ts) ---------- */
@@ -6170,6 +6194,137 @@ body.man-vao-on #hud > * {
 
 .bdv-ta {
   margin: 6px 0;
+}
+
+/* Bảng bên chia thẻ: khổ dọc thẻ nằm ngang trên đầu; máy cầm ngang, máy tính là cột biểu tượng dọc bên trái. */
+.bdv-khung {
+  display: flex;
+  flex-direction: column;
+}
+
+.bdv-tabs {
+  position: sticky;
+  top: -10px;
+  z-index: 2;
+  display: flex;
+  gap: 4px;
+  margin: -10px -14px 0;
+  padding: 8px 10px 6px;
+  background: var(--paper);
+  border-bottom: 1px solid var(--line);
+}
+
+.bdv-tab {
+  position: relative;
+  flex: 1 1 0;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+  padding: 4px 2px 3px;
+  border: 1.5px solid transparent;
+  border-radius: 10px;
+  background: none;
+  color: var(--ink-soft);
+  font: inherit;
+  font-size: 11px;
+  line-height: 1.2;
+  cursor: pointer;
+}
+
+.bdv-tab .nut-noi {
+  width: 30px;
+  height: 30px;
+  opacity: 0.72;
+}
+
+.bdv-tab.on {
+  background: var(--paper-2);
+  border-color: var(--bronze);
+  color: var(--ink);
+  font-weight: 700;
+}
+
+.bdv-tab.on .nut-noi {
+  opacity: 1;
+}
+
+.bdv-luat-nut {
+  flex: 0 0 48px;
+}
+
+.bdv-cham-do {
+  position: absolute;
+  top: 3px;
+  right: calc(50% - 20px);
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--red);
+  box-shadow: 0 0 0 2px var(--paper);
+}
+
+.bdv-noi {
+  min-width: 0;
+}
+
+.bdv-noi:not(.luat) .bdv-luat {
+  display: none;
+}
+
+@media (min-width: 600px) and (min-aspect-ratio: 4/5) {
+  .camp-panel:has(.bdv-khung) {
+    width: 390px;
+  }
+
+  .bdv-khung {
+    flex-direction: row;
+    align-items: flex-start;
+    gap: 10px;
+  }
+
+  .bdv-tabs {
+    top: 0;
+    flex-direction: column;
+    flex: 0 0 52px;
+    margin: 0;
+    padding: 0 6px 0 0;
+    border-bottom: none;
+    border-right: 1px solid var(--line);
+  }
+
+  .bdv-tab,
+  .bdv-luat-nut {
+    flex: none;
+  }
+
+  .bdv-luat-nut {
+    margin-top: 6px;
+  }
+
+  .bdv-noi {
+    flex: 1;
+  }
+}
+
+@media (min-width: 1100px) and (min-height: 620px) {
+  .camp-panel:has(.bdv-khung) {
+    width: 460px;
+  }
+
+  .bdv-tabs {
+    flex-basis: 60px;
+  }
+
+  .bdv-tab {
+    font-size: 12px;
+  }
+
+  .bdv-tab .nut-noi {
+    width: 36px;
+    height: 36px;
+  }
 }
 
 .bdv-the {

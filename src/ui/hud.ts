@@ -128,7 +128,7 @@ import { choTen, daMapHtml, daNgoaiHtml, expPct, miniSvg } from './daNgoai';
 import { thanThuHtml, thanThuMapHtml, thuAnh } from './thanThu';
 import { loiDaiHtml, loiDaiMapHtml } from './loiDai';
 import { loiDaiMo } from '../game/loiDai';
-import { BanDoVN, quyVeHtml, tinhCoGiac, vietNamHtml, type VnMay } from './vietNam';
+import { BanDoVN, quyVeHtml, tinhCoGiac, vietNamHtml, type VnMay, type VnTab } from './vietNam';
 import { phanHa } from '../game/giacChung';
 import { vietNamMo } from '../game/vietNam';
 import type { ThanThuId } from '../game/defs';
@@ -144,6 +144,7 @@ import { fillDao, quanDaoHtml } from './bien';
 import { farBankOf } from '../game/map';
 import { mauItems } from './mau';
 import { bacThangMo } from '../game/mau';
+import { canCat, catDuocLoai, nhomCat } from '../game/khoCat';
 import { nutNoi } from './nutNoi';
 import { TET_TYPES, VongNut, doLabel, nangInfo, type Project, type TheVong } from './vongNut';
 import { goLabel, pageCount, pageOf, pickOf, thumbUrl, xayDungHtml, type BuildItem } from './xayDung';
@@ -174,6 +175,7 @@ const BUILD_GROUPS: { key: keyof typeof vi.ui.buildGroups; types: BuildingType[]
   { key: 'duong', types: ROAD_TYPES },
   { key: 'trangTri', types: DECOR_TYPES },
   { key: 'mau', types: [] },
+  { key: 'cat', types: [] },
 ];
 /** Bốn công trình làm bánh của Hội Tết: chỉ hiện trong bảng Xây dựng khi đã mở (sau kết chương 1). */
 /** Công trình chỉ hiện trong bảng Xây dựng khi đã sang chương có nó. */
@@ -250,6 +252,10 @@ export type HudAction =
   | { kind: 'forgeArms'; unit: UnitType }
   | { kind: 'openTet' }
   | { kind: 'startMove'; id: number }
+  /** Cất công trình vào kho cất công trình (`khoCat.ts`). */
+  | { kind: 'catCongTrinh'; id: number }
+  /** Chọn công trình đang cất trong kho để đặt lại (vào chế độ đặt). */
+  | { kind: 'chooseCat'; id: number }
   /** Xoay bóng công trình đang đặt, dời một nấc 90°. */
   | { kind: 'rotatePlace' }
   /** Xoay công trình đã dựng tại chỗ một nấc 90° (nút trong bảng công trình). */
@@ -431,6 +437,9 @@ interface CampaignView {
   step: 'stage' | 'army' | 'huan' | 'dau' | 'daNgoai' | 'thanThu' | 'loiDai' | 'vietNam';
   /** Bảng Bản đồ Việt Nam: tỉnh đang xem (thẻ tỉnh ở bảng bên). */
   vnChon?: string | null;
+  /** Thẻ đang mở của bảng bản đồ Việt Nam, và có hiện lời giải thích luật không. */
+  vnTab?: VnTab;
+  vnLuat?: boolean;
   pick: ArmyPick;
   /** Bảng Lôi đài: tầng đang xem (null là tầng kế phải đánh). */
   loiTang?: number | null;
@@ -583,6 +592,7 @@ export class Hud {
     this.banDoVN.onChon = (id) => {
       if (this.camp?.step !== 'vietNam') return;
       this.camp.vnChon = id;
+      this.camp.vnTab = 'tinh';
       this.refreshCampaign(this.getState());
     };
     this.bottombar = root.querySelector('.bottombar')!;
@@ -773,6 +783,11 @@ export class Hud {
         this.mauArmed = null;
         this.refreshSheet(this.getState());
         return;
+      case 'mauCat':
+        this.mauCat = !this.mauCat;
+        this.mauArmed = null;
+        this.refreshSheet(this.getState());
+        return;
       case 'buildTab':
         this.buildTab = el.dataset.tab as typeof this.buildTab;
         this.buildPick = null;
@@ -792,6 +807,8 @@ export class Hud {
       case 'startMerge':
       case 'rotateBuilding':
       case 'wallUpgradeAll':
+      case 'catCongTrinh':
+      case 'chooseCat':
         return this.onAction({ kind: act, id });
       case 'askQuiz':
         return this.onAction({ kind: 'askQuiz', id });
@@ -875,9 +892,20 @@ export class Hud {
       case 'thuChon':
         return this.onAction({ kind: act, thu: el.dataset.thu as ThanThuId });
       case 'vnXem':
-        if (this.camp) this.camp.vnChon = el.dataset.tinh ?? null;
+        if (this.camp) {
+          this.camp.vnChon = el.dataset.tinh ?? null;
+          this.camp.vnTab = 'tinh';
+        }
+        return this.refreshCampaign(this.getState());
+      case 'vnTab':
+        if (this.camp) this.camp.vnTab = (el.dataset.tab as VnTab | undefined) ?? 'tinh';
+        return this.refreshCampaign(this.getState());
+      case 'vnLuat':
+        if (this.camp) this.camp.vnLuat = !this.camp.vnLuat;
         return this.refreshCampaign(this.getState());
       case 'vnChonTinh':
+        // Chọn xong thì sang thẻ Bệ hạ để nhận chức Bồ chính.
+        if (this.camp) this.camp.vnTab = 'ta';
         return this.onAction({ kind: 'vnChonTinh', tinh: el.dataset.tinh ?? '' });
       case 'vnChonChuc':
         return this.onAction({ kind: 'vnChonChuc', chuc: el.dataset.chuc ?? '' });
@@ -1338,7 +1366,7 @@ export class Hud {
    * Đổi chế độ thanh dưới. `turnable`: công trình đang đặt, dời xoay được, hiện nút ↻ Xoay. `shape`: đang đắp tường,
    * hiện nút đổi kéo dải thẳng hay khung chữ nhật.
    */
-  setMode(mode: HudMode, placeValid = true, hint?: string, turnable = false, shape?: WallShape): void {
+  setMode(mode: HudMode, placeValid = true, hint?: string, turnable = false, shape?: WallShape, placeLabel?: string): void {
     this.mode = mode;
     this.turnable = turnable;
     this.root.classList.toggle('placing', mode !== 'view');
@@ -1355,7 +1383,7 @@ export class Hud {
       this.bottombar.innerHTML = '';
       this.hint.hidden = true;
     } else if (mode === 'place' || mode === 'move') {
-      const label = mode === 'move' ? vi.ui.moveHere : vi.ui.place;
+      const label = placeLabel ?? (mode === 'move' ? vi.ui.moveHere : vi.ui.place);
       // Nút xoay công trình chữ rõ "Xoay", khác nút tròn ⟳ xoay cảnh.
       const turn = turnable
         ? `<button class="btn bronze turn" data-act="rotatePlace" aria-label="${vi.ui.turnTitle}" title="${vi.ui.turnTitle}">↻ ${vi.ui.turn}</button>`
@@ -1496,6 +1524,11 @@ export class Hud {
   mauArmed: MauId | null = null;
   /** Áp mẫu có đắp bậc thang không (thẻ Mẫu kinh đô, từ chương 2; mặc định bật). */
   mauBac = true;
+  /**
+   * Áp mẫu cất công trình không có chỗ trong mẫu mà vướng mẫu vào kho cất không (thẻ Mẫu kinh đô; mặc định bật, tắt thì
+   * dời tới chỗ trống gần nhất).
+   */
+  mauCat = true;
   /** Việc xây vừa bấm Hủy lần đầu (chờ bấm lần nữa cho chắc). */
   private cancelArmed: number | null = null;
   /** Đã bấm Tải bản trên mây về một lần ở bảng Cài đặt (bấm lần nữa mới thay bản lưu ở máy này). */
@@ -1877,19 +1910,51 @@ export class Hud {
       meta: vi.ui.clearDecorDesc,
       go: goLabel('chooseClear', false, false),
     };
-    // Bốn nhóm thẻ chọn ở đầu bảng; mỗi lần chỉ hiện một nhóm cho khỏi cuộn dài trên điện thoại.
-    const tabs = BUILD_GROUPS.map(
-      ({ key }) =>
-        `<button class="tab ${key === this.buildTab ? 'on' : ''}" data-act="buildTab" data-tab="${key}">${vi.ui.buildGroups[key]}</button>`,
-    ).join('');
+    // Các nhóm thẻ chọn ở đầu bảng; mỗi lần chỉ hiện một nhóm cho khỏi cuộn dài trên điện thoại. Thẻ Kho cất chỉ hiện
+    // khi trong kho có đồ (hay đang xem thẻ ấy).
+    const catN = state.khoCat.length;
+    const tabs = BUILD_GROUPS.filter(({ key }) => key !== 'cat' || catN > 0 || this.buildTab === 'cat')
+      .map(
+        ({ key }) =>
+          `<button class="tab ${key === this.buildTab ? 'on' : ''}" data-act="buildTab" data-tab="${key}">${vi.ui.buildGroups[key]}${key === 'cat' && catN ? ` (${catN})` : ''}</button>`,
+      )
+      .join('');
     const group = BUILD_GROUPS.find((g) => g.key === this.buildTab)!;
     if (group.key === 'mau') {
-      const { items, prefer } = mauItems(state, this.mauArmed, this.mauBac);
-      // Từ chương 2 (mở đắp đất) có nút bật tắt đắp bậc thang.
-      const bac = bacThangMo(state)
-        ? `<p class="muted mau-bac"><button class="btn ghost" data-act="mauBac">${vi.ui.mauBac(this.mauBac)}</button> ${vi.ui.mauBacHint}</p>`
-        : '';
-      return { tabs: `<div class="build-tabs">${tabs}</div>`, note: bac, items, prefer, foot: `<p class="muted xd-foot">${vi.ui.mauHint}</p>` };
+      const { items, prefer } = mauItems(state, this.mauArmed, this.mauBac, this.mauCat);
+      // Nút bật tắt cất công trình thừa, và từ chương 2 (mở đắp đất) đắp bậc thang: chung một hàng cho bảng khỏi phải
+      // cuộn, lời giải thích để cuối bảng.
+      const bac = bacThangMo(state);
+      const nut = [
+        bac ? `<button class="btn ghost" data-act="mauBac">${vi.ui.mauBac(this.mauBac)}</button>` : '',
+        `<button class="btn ghost" data-act="mauCat">${vi.ui.mauCat(this.mauCat)}</button>`,
+      ].join('');
+      // Các lời nhắc gộp một khối: khổ ngang đặt cả khối vào ô `foot` của lưới bảng (nhiều khối cùng ô thì chồng lên nhau).
+      const hints = [bac ? vi.ui.mauBacHint : '', vi.ui.mauCatHint, vi.ui.mauHint].filter(Boolean).map((t) => `<p>${t}</p>`).join('');
+      const foot = `<div class="muted xd-foot">${hints}</div>`;
+      return { tabs: `<div class="build-tabs">${tabs}</div>`, note: `<p class="mau-bac">${nut}</p>`, items, prefer, foot };
+    }
+    if (group.key === 'cat') {
+      const items = nhomCat(state).map((g): BuildItem => {
+        const def = BUILDINGS[g.type];
+        const cost = moveCost({ type: g.type });
+        const why = state.raid.phase !== 'idle' ? vi.reasons.dangCoGiac : !canAfford(state, cost) ? vi.reasons.thieuTaiNguyen : '';
+        return {
+          key: `cat:${g.type}:${g.level}:${g.damaged ? 1 : 0}`,
+          act: 'chooseCat',
+          attrs: `data-id="${g.ids[0]}"`,
+          pic: thumbUrl(g.type),
+          icon: vi.buildings[g.type].icon,
+          name: buildingName(g),
+          meta: vi.ui.catMeta(g.ids.length, def.w, def.d, g.damaged),
+          cost: costHtml(state, cost),
+          why,
+          desc: vi.ui.catDesc,
+          go: vi.ui.datLai,
+        };
+      });
+      const note = items.length ? '' : `<p class="muted">${vi.ui.catTrong}</p>`;
+      return { tabs: `<div class="build-tabs">${tabs}</div>`, note, items };
     }
     const cards = shownOf(group.types).map(card);
     const note =
@@ -2102,6 +2167,10 @@ export class Hud {
       }
     }
     if (def.removable) actions.push(`<button class="btn ghost" data-act="removeWall" data-id="${b.id}">${doLabel(b)}</button>`);
+    else if (catDuocLoai(b.type)) {
+      const cat = canCat(state, b.id);
+      actions.push(`<button class="btn ghost" data-act="catCongTrinh" data-id="${b.id}" ${cat.ok ? '' : 'disabled'}>${vi.ui.catBtn}</button>`);
+    }
 
     const job = jobHtml(state, b.id, this.cancelArmed);
     const info = `<div class="info"><p>${esc(vi.buildings[b.type].desc)}</p>${job}${rows.join('')}<div class="actions">${actions.join('')}</div></div>`;
@@ -2478,6 +2547,7 @@ export class Hud {
   xemTinh(state: GameState, tinh: string): void {
     if (this.camp?.step !== 'vietNam') return;
     this.camp.vnChon = tinh;
+    this.camp.vnTab = 'tinh';
     this.refreshCampaign(state);
   }
 
@@ -2520,7 +2590,7 @@ export class Hud {
     else if (camp.step === 'daNgoai') panel = daNgoaiHtml(state);
     else if (camp.step === 'thanThu') panel = thanThuHtml(state);
     else if (camp.step === 'loiDai') panel = loiDaiHtml(state, camp.loiTang ?? null);
-    else if (camp.step === 'vietNam') panel = vietNamHtml(state, camp.vnChon ?? null, Date.now(), this.vnMay);
+    else if (camp.step === 'vietNam') panel = vietNamHtml(state, camp.vnChon ?? null, Date.now(), this.vnMay, camp.vnTab, camp.vnLuat);
     else if (camp.stage) panel = camp.step === 'army' ? armyHtml(state, camp.pick, camp.stage, camp.pick.challenge) : stageHtml(state, camp.stage);
     const now = mapChapterNow(state);
     const tabs =
