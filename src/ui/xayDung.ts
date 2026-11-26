@@ -85,8 +85,8 @@ export function pageOf(items: BuildItem[], pick: string | null, per: number): nu
 }
 
 /**
- * Ảnh lớn và thông tin của mục `pick`, lưới ảnh nhỏ của cả nhóm (chỉ trang `pg.page` khi có `pg`, kèm nút sang trang),
- * ghi chú của mục `pick`, rồi `foot` (ghi chú cuối bảng).
+ * Ảnh lớn và thông tin của mục `pick`; cột phải `.xd-ben` gồm lưới ảnh nhỏ của cả nhóm (chỉ trang `pg.page` khi có
+ * `pg`, kèm nút sang trang), ghi chú của mục `pick`, rồi `foot` (ghi chú cuối bảng).
  */
 export function xayDungHtml(items: BuildItem[], pick: string | null, foot = '', pg?: BuildPage): string {
   const it = items.find((i) => i.key === pick);
@@ -113,10 +113,10 @@ export function xayDungHtml(items: BuildItem[], pick: string | null, foot = '', 
         ${pic(m)}<span class="xd-name">${m.name}</span></button>`,
     )
     .join('');
-  // Nhóm toàn ảnh vuông (bốn mẫu kinh đô) thì lưới bốn cột cho ảnh to hơn.
+  // Nhóm toàn ảnh vuông (các mẫu kinh đô): ảnh nhỏ vuông, cùng số cột như các nhóm khác.
   const square = items.length > 0 && items.every((i) => i.square);
-  const cols = pg && !square ? `style="--cols:${pg.cols}"` : '';
-  // Nút sang trang để hai bên mép, giữa chừa trống: nút Xây dựng tròn trên dock lồi lên đúng chỗ giữa.
+  const cols = pg ? `style="--cols:${pg.cols}"` : '';
+  // Nút sang trang hai bên mép: trái là ‹ và chấm trang, phải là số trang và ›.
   const pager =
     pages > 1
       ? `<div class="xd-pager">
@@ -128,7 +128,8 @@ export function xayDungHtml(items: BuildItem[], pick: string | null, foot = '', 
       </div>`
       : '';
   const note = it?.note ? `<div class="xd-note">${it.note}</div>` : '';
-  return `${stage}<div class="xd-grid ${square ? 'square' : ''} ${pg ? 'paged' : ''}" ${cols}>${minis}</div>${pager}${note}${foot}`;
+  // Cột phải (lưới ảnh nhỏ, nút sang trang, ghi chú) gói một khối tự cuộn: cao hơn bảng cũng không kéo ô ảnh lớn dài ra.
+  return `${stage}<div class="xd-ben"><div class="xd-grid ${square ? 'square' : ''} ${pg ? 'paged' : ''}" ${cols}>${minis}</div>${pager}${note}${foot}</div>`;
 }
 
 /** Chữ trên nút Xây theo việc của mục. */

@@ -1,6 +1,6 @@
 ---
 name: chup-kiem-tra
-description: "Chụp kiểm tra: chạy game ở khổ điện thoại, chụp ảnh rồi nhìn tận mắt. Dùng sau khi sửa src/render/ hoặc src/ui/ (dáng công trình, cảnh, bảng, nút, chữ hiển thị), trước khi commit; hoặc khi cần ảnh để gửi chủ dự án."
+description: "Chụp kiểm tra: chạy game ở khổ điện thoại cầm ngang, chụp ảnh rồi nhìn tận mắt. Dùng sau khi sửa src/render/ hoặc src/ui/ (dáng công trình, cảnh, bảng, nút, chữ hiển thị), trước khi commit; hoặc khi cần ảnh để gửi chủ dự án."
 ---
 
 # Chụp kiểm tra
@@ -12,7 +12,7 @@ Vitest chỉ canh luật chơi. Một thay đổi người chơi nhìn thấy ch
 1. **Chọn cảnh cho thấy chỗ vừa sửa.** `node scripts/chup.mjs --giup` liệt kê các cảnh có sẵn và tùy chọn. Lấy cảnh gần nhất rồi chỉnh:
    - `--cham <loại công trình>` (vd. `dien`, `loRen`) để mở bảng công trình, `--bam "text=Phó bản"` để bấm nút, `--cam x,z,zoom` để nhìn một chỗ.
    - Chưa có cảnh nào gần: dựng thêm bằng `--truoc` (sửa state rồi tải lại trang) và `--sau` (thao tác sau khi tải lại). Xem phần tham khảo.
-   - Sửa bảng, nút, chữ: chụp `--khung doc,ngang`. Khổ ngang rơi vào `@media (min-width: 600px)` nên bố cục khác.
+   - Game chỉ chơi màn hình ngang; khổ mặc định là `fold` (màn ngoài Fold5 cầm ngang 882×344, thấp nhất). Sửa bảng, nút, chữ: chụp `--khung fold,pc`. Màn thấp (`max-height: 520px`) và máy tính (`min-width: 1100px`) có luật riêng nên bố cục khác.
 2. **Chụp**, ví dụ `node scripts/chup.mjs kinh-do --cham loRen --ten lo-ren`. Mỗi khung mất chừng 15–30 giây.
 3. **Đọc các dòng `!` ở cuối output**: đó là lỗi JavaScript trong trang. Có lỗi thì sửa trước.
 4. **Mở từng ảnh bằng Read** và so với điều vừa sửa: chỗ sửa có hiện ra đúng không; có bị bảng che, tràn khung, chữ bị cắt hay đè nhau không; màu và dáng có hợp phong cách "Nét Đông Sơn" không.

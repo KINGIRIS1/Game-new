@@ -118,6 +118,7 @@ import { khoNanTk, luuSau, moKhoNan } from './render/nanKho';
 import { DoLag, luatMoiGiay, tomLag, uoc60 } from './render/doLag';
 import { KHO_PHIEN_BAN, moSanWorker, nanConLai, nanTruoc, prewarmJobs, fieldJobs } from './render/nanTruoc';
 import { ManVao } from './ui/manVao';
+import { dungXoayNgang } from './ui/xoayNgang';
 import { preloadThumbs } from './ui/xayDung';
 import {
   dauAttackedHtml,
@@ -287,6 +288,8 @@ async function start(): Promise<void> {
   hoiSom?.catch(() => undefined);
   const canvas = document.querySelector<HTMLCanvasElement>('#scene')!;
   const hudRoot = document.querySelector<HTMLElement>('#hud')!;
+  // Chỉ chơi màn hình ngang: cầm dọc thì phủ kín màn, nhắc xoay.
+  dungXoayNgang();
 
   moSanWorker();
   let state: GameState = loadFromStorage(localStorage) ?? createInitialState(Date.now());

@@ -1656,18 +1656,12 @@ export class Hud {
     this.vong.update(state, project, an ? null : this.vungTrong());
   }
 
-  /**
-   * Phần màn hình không bị dải tài nguyên, dock, dòng tin che (chưa tính bảng trượt). Dock nằm ngang ở đáy hay dựng
-   * cột bên trái tùy khổ màn hình.
-   */
+  /** Phần màn hình không bị dải tài nguyên, cột Dock bên trái, dòng tin che (chưa tính bảng trượt). */
   private vungTrong(): { left: number; top: number; right: number; bottom: number } {
     const h = window.innerHeight;
     const top = this.topbar.getBoundingClientRect().bottom;
-    const d = this.dock.getBoundingClientRect();
-    let left = 0;
+    const left = this.dock.getBoundingClientRect().right;
     let bottom = h;
-    if (d.height > d.width) left = d.right;
-    else bottom = d.top;
     const t = this.ticker.getBoundingClientRect();
     if (t.height > 0 && t.top > h / 2) bottom = Math.min(bottom, t.top);
     return { left, top, right: window.innerWidth, bottom };
@@ -1690,19 +1684,12 @@ export class Hud {
   freeCenter(): { x: number; y: number } {
     const w = window.innerWidth;
     const h = window.innerHeight;
-    const top = this.topbar.offsetHeight;
-    // Dock là cột dọc bên trái (chiếm bề ngang) hay thanh ngang dưới đáy (chiếm bề cao). Đo bằng offset* (không tính
-    // phần đang trượt). Trước đây coi dock luôn là thanh đáy: cột dọc cao gần trọn màn nên tâm rơi ra ngoài màn hình.
-    const dw = this.dock.offsetWidth;
-    const dh = this.dock.offsetHeight;
-    const rail = dh > dw;
-    const left = rail ? this.dock.offsetLeft + dw : 0;
-    const bottom = rail ? h : h - dh;
-    if (!this.sheet) return { x: (left + w) / 2, y: (top + bottom) / 2 };
-    const sideBySide = window.matchMedia('(min-width: 600px) and (min-aspect-ratio: 4/5)').matches;
-    if (sideBySide) return { x: (left + w - this.sheetEl.offsetWidth - 10) / 2, y: (top + bottom) / 2 };
-    // Mép trên bảng lúc đã trượt lên hẳn (offsetTop không tính phần đang trượt).
-    return { x: (left + w) / 2, y: (top + Math.min(bottom, this.sheetEl.offsetTop)) / 2 };
+    const top = this.topbar.offsetTop + this.topbar.offsetHeight;
+    // Cột Dock bên trái chiếm bề ngang; đo bằng offset* (không tính phần đang trượt).
+    const left = this.dock.offsetLeft + this.dock.offsetWidth;
+    if (!this.sheet) return { x: (left + w) / 2, y: (top + h) / 2 };
+    // Bảng là ngăn kéo dưới đáy: lấy mép trên bảng lúc đã trượt lên hẳn (offsetTop không tính phần đang trượt).
+    return { x: (left + w) / 2, y: (top + Math.min(h, this.sheetEl.offsetTop)) / 2 };
   }
 
   /** Vẽ lại bảng đang mở. Bỏ qua nếu nội dung không đổi để không làm mất lần chạm của người chơi. */
@@ -1803,7 +1790,7 @@ export class Hud {
     const opening = !this.sheetEl.classList.contains('open');
     this.sheetEl.classList.toggle('build', this.sheet.kind === 'build');
     this.sheetEl.classList.toggle('tall', this.sheet.kind === 'build' || this.sheet.kind === 'tuong' || this.barracksOpen(state));
-    // Bảng tướng phủ cả màn hình (thẻ tướng, túi đồ, thanh nút dưới; màn ngang ba cột).
+    // Bảng tướng phủ cả màn hình (ba cột: tướng, thẻ tướng và ô đồ, túi đồ với thanh nút dưới).
     this.sheetEl.classList.toggle('tg-full', this.sheet.kind === 'tuong' && doMo(state));
     this.sheetEl.classList.add('open');
     this.root.classList.add('sheet-open');
@@ -1815,7 +1802,8 @@ export class Hud {
   private buildMenuHtml(state: GameState): string {
     const { tabs, note, items, prefer, foot } = this.buildMenuData(state);
     this.buildPick = pickOf(items, this.buildPick, prefer);
-    const { cols, rows } = Hud.buildGrid();
+    // Dòng ghi chú đầu bảng (lời nhắc một dòng, hay hàng nút của thẻ Mẫu kinh đô) ăn bớt chiều cao của lưới.
+    const { cols, rows } = Hud.buildGrid(!note ? 0 : note.includes('mau-bac') ? 44 : 26);
     const per = cols * rows;
     const page = Math.min(this.buildPage ?? pageOf(items, this.buildPick, per), pageCount(items.length, per) - 1);
     this.buildPage = page;
@@ -1823,22 +1811,17 @@ export class Hud {
   }
 
   /**
-   * Cỡ một trang lưới ảnh nhỏ trong bảng Xây dựng, cho ảnh lớn, nút Xây và cả trang vừa bảng mà không phải cuộn:
-   * điện thoại dọc 2 hàng (5 cột, màn hẹp như màn ngoài Fold5 thì 4); màn rộng thì số cột, hàng theo cỡ cột lưới
-   * của ngăn kéo dưới đáy.
+   * Cỡ một trang lưới ảnh nhỏ trong bảng Xây dựng, cho ảnh lớn, nút Xây và cả trang vừa bảng mà không phải cuộn: số
+   * cột, hàng theo cỡ cột lưới của ngăn kéo dưới đáy; `noteH` là chiều cao dòng ghi chú đầu bảng (điểm CSS).
    */
-  private static buildGrid(): { cols: number; rows: number } {
-    const side = window.matchMedia('(min-width: 600px) and (min-aspect-ratio: 4/5)').matches;
-    if (side) {
-      // Màn rộng: bảng là ngăn kéo dưới đáy chia ba cột (thẻ nhóm 132px, ảnh lớn, lưới), cao tối đa 300px
-      // (`.sheet.build` trong style.css); lưới là cột thứ ba, ô rộng chừng 64px.
-      const gridW = (window.innerWidth - 112 - 32 - 132 - 28) / 2.1;
-      const cols = Math.max(3, Math.min(8, Math.floor(gridW / 64)));
-      const cell = gridW / cols;
-      const room = Math.min(300, window.innerHeight - 24) - 50 - 22 - 42;
-      return { cols, rows: Math.max(1, Math.min(4, Math.floor(room / (cell * 0.75 + 22)))) };
-    }
-    return { cols: window.innerWidth >= 370 ? 5 : 4, rows: 2 };
+  private static buildGrid(noteH = 0): { cols: number; rows: number } {
+    // Bảng là ngăn kéo dưới đáy chia ba cột (thẻ nhóm 132px, ảnh lớn, lưới), cao 300px, màn thấp thì chừa dải tài
+    // nguyên phía trên (`.sheet.build` trong style.css); lưới là cột thứ ba, ô rộng chừng 64px.
+    const gridW = (window.innerWidth - 112 - 32 - 132 - 28) / 2.1;
+    const cols = Math.max(3, Math.min(8, Math.floor(gridW / 64)));
+    const cell = gridW / cols;
+    const room = Math.min(300, window.innerHeight - 78) - 50 - 22 - 42 - noteH;
+    return { cols, rows: Math.max(1, Math.min(4, Math.floor(room / (cell * 0.75 + 22)))) };
   }
 
   /**
@@ -1931,7 +1914,7 @@ export class Hud {
         bac ? `<button class="btn ghost" data-act="mauBac">${vi.ui.mauBac(this.mauBac)}</button>` : '',
         `<button class="btn ghost" data-act="mauCat">${vi.ui.mauCat(this.mauCat)}</button>`,
       ].join('');
-      // Các lời nhắc gộp một khối: khổ ngang đặt cả khối vào ô `foot` của lưới bảng (nhiều khối cùng ô thì chồng lên nhau).
+      // Các lời nhắc gộp một khối, đặt vào ô `foot` của lưới bảng (nhiều khối cùng ô thì chồng lên nhau).
       const hints = [bac ? vi.ui.mauBacHint : '', vi.ui.mauCatHint, vi.ui.mauHint].filter(Boolean).map((t) => `<p>${t}</p>`).join('');
       const foot = `<div class="muted xd-foot">${hints}</div>`;
       return { tabs: `<div class="build-tabs">${tabs}</div>`, note: `<p class="mau-bac">${nut}</p>`, items, prefer, foot };

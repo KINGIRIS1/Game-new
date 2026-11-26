@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // Chụp bãi chiến phó bản theo nền, ở khổ điện thoại, không cần state game (dựng thẳng `Battlefield` trong trang).
 // Có quân hai bên dàn trận như lúc vừa xuất quân để so cỡ. Ảnh vào chup/bai-<nền>-<khung>.png.
-// Cách dùng: node scripts/chup-bai-chien.mjs <nền> [nền ...] [--man <số màn lấy quân giặc>] [--khung doc,fold,ngang]
+// Cách dùng: node scripts/chup-bai-chien.mjs <nền> [nền ...] [--man <số màn lấy quân giặc>] [--khung fold,ngang]
 //            [--lui <hệ số>] (lùi camera xa: 0.5 là thấy gấp đôi, 3 là phóng gần gấp ba) [--moc] (vẽ đường ngựa, chỗ
 //            Rùa Vàng của Mộ Dạ) [--tien <0..1>] (màn cầm cự: thanh đã chạy tới đây) [--thang | --thua] (kết cục; thắng
 //            màn kết chương thì camera lùi theo cảnh kết) [--rong] (khung nhìn rộng của Cấm Khê) [--nhin x,z] (nhìn
@@ -22,9 +22,9 @@ const require = createRequire(import.meta.url);
 const { chromium } = require('playwright');
 const { createServer } = await import(require.resolve('vite', { paths: [ROOT] }));
 
-const KHUNG = { doc: [390, 844], fold: [344, 882], ngang: [844, 390] };
+const KHUNG = { fold: [882, 344], ngang: [844, 390] };
 const argv = process.argv.slice(2);
-const opts = { nen: [], man: 25, khung: ['doc'], lui: 1, moc: false, tuy: {}, duoi: '' };
+const opts = { nen: [], man: 25, khung: ['fold'], lui: 1, moc: false, tuy: {}, duoi: '' };
 for (let i = 0; i < argv.length; i++) {
   const a = argv[i];
   if (a === '--man') opts.man = Number(argv[++i]);
