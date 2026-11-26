@@ -53,6 +53,7 @@ import { footprintTop, levelFootprint } from './terrain';
 import { AREA, KHOANH_N, START_KHOANH, V11_AREA, squareKhoanh } from './khoanh';
 import { gopDoanhTrai, growDien, isLegacyLayout, legacyBaseHeights, levelLegacyFootprints, relayLegacy } from './xepLai';
 import { initialThuong, isThuongState } from './nhaThuoc';
+import { catDuocLoai } from './khoCat';
 
 export { SAVE_VERSION };
 
@@ -115,6 +116,9 @@ const isNum = (v: unknown): v is number => typeof v === 'number' && Number.isFin
 /** Nâng dần bản lưu cũ lên phiên bản hiện tại. */
 function migrate(raw: unknown): unknown {
   let v = raw;
+  // Bản lưu cũ chưa có kho cất công trình (bản lưu 37); các bước nâng xếp lại kinh đô theo mẫu đọc tới kho nên có sẵn
+  // kho trống từ đầu.
+  if (isObj(v) && isNum(v.version) && v.version < 37 && !Array.isArray(v.khoCat)) v.khoCat = [];
   // Kinh đô nhỏ (trước phiên bản 11) dựng lại theo mẫu với Điện 10×10 ngay ở bước 10 → 11; từ phiên bản 11 tới 19
   // Điện còn 5×5, tới bước 19 → 20 mới nới móng.
   const grow = isObj(v) && isNum(v.version) && v.version >= 11 && v.version < 20;
@@ -163,6 +167,7 @@ function migrate(raw: unknown): unknown {
   if (isObj(v) && v.version === 33) v = migrate33to34(v);
   if (isObj(v) && v.version === 34) v = migrate34to35(v);
   if (isObj(v) && v.version === 35) v = migrate35to36(v);
+  if (isObj(v) && v.version === 36) v = migrate36to37(v);
   return v;
 }
 
@@ -610,6 +615,13 @@ function migrate35to36(s: Raw): Raw {
   return s;
 }
 
+/** Phiên bản 36 → 37: thêm kho cất công trình (`khoCat.ts`), lúc đầu trống. */
+function migrate36to37(s: Raw): Raw {
+  s.version = 37;
+  s.khoCat = [];
+  return s;
+}
+
 const isBanh = (v: unknown, test: (x: unknown) => boolean): boolean => isObj(v) && test(v.chung) && test(v.giay);
 const isBool = (x: unknown) => typeof x === 'boolean';
 
@@ -740,6 +752,13 @@ function isGameState(v: unknown): v is GameState {
   const res = v.resources;
   if (!isObj(res) || !RESOURCE_IDS.every((r) => isNum(res[r]))) return false;
   if (!isValidBuildings(v.buildings) || !buildingsInGrid(v.buildings as GameState['buildings'])) return false;
+  // Kho cất công trình: công trình hợp lệ, loại cất được, mã không trùng công trình đang ở kinh đô hay trong kho.
+  if (!Array.isArray(v.khoCat) || !v.khoCat.every((b: Raw) => isValidBuilding(b) && catDuocLoai(b.type as BuildingType))) return false;
+  const ids = new Set((v.buildings as Raw[]).map((b) => b.id));
+  for (const b of v.khoCat as Raw[]) {
+    if (ids.has(b.id)) return false;
+    ids.add(b.id);
+  }
   const m = v.merchant;
   if (!isObj(m) || !isNum(m.nextAt) || !isNum(m.seq) || !(m.visit === null || isObj(m.visit))) return false;
   const settings = v.settings;

@@ -30,7 +30,8 @@ export type NutNoi =
   | 'tet'
   | 'uNo'
   | 'ghep'
-  | 'dao';
+  | 'dao'
+  | 'cat';
 
 /** Màu thân (dải đồng), nét khắc, vệt sáng nét khắc. */
 const F = 'url(#g)';
@@ -118,6 +119,13 @@ const HINH: Record<NutNoi, () => string> = {
     `<g fill="${F}"><polygon points="4,50 30,24 30,40 70,40 70,24 96,50 70,76 70,60 30,60 30,76"/></g>` +
     khac('M24 50 L76 50', 2.4) +
     khac('M40 46 L40 54 M50 46 L50 54 M60 46 L60 54', 2),
+  // Cất vào kho: rương đồng nắp vồng, khóa giữa, đai hai bên.
+  cat: () =>
+    `<g fill="${F}"><path d="M12 42 Q50 16 88 42 L88 48 L12 48Z"/><rect x="12" y="51" width="76" height="36" rx="4"/>
+    <rect x="43" y="40" width="14" height="22" rx="3"/></g>` +
+    khac('M14 49.5 L86 49.5', 2.4) +
+    khac('M24 56 L24 82 M76 56 L76 82', 2.2) +
+    `<circle cx="50" cy="54" r="3.2" fill="${E}"/>`,
   // Sửa: búa đồng cán gỗ đặt chéo.
   sua: () =>
     `<g fill="${F}" transform="rotate(-40 50 50)"><rect x="44" y="34" width="12" height="62" rx="5"/>

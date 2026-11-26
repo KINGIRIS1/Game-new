@@ -330,6 +330,8 @@ export const vi = {
     capToiDa: 'Đã đạt cấp tối đa',
     khongTheXay: 'Không thể xây công trình này',
     khongTheDo: 'Không thể dỡ công trình này',
+    khongCatDuoc: 'Công trình này không cất vào kho được',
+    khongCoTrongKho: 'Không còn công trình này trong kho cất',
     khongTimThay: 'Không tìm thấy công trình',
     chuaXong: 'Nhiệm vụ chưa xong',
     thieuDan: 'Không còn dân rảnh, hãy dựng thêm nhà sàn',
@@ -2342,7 +2344,7 @@ export const vi = {
     decorHint: 'Chạm vào từng ô đất để đặt',
     clearHint: 'Chạm vào ô đường hay món trang trí để dọn đi',
     cleared: (name: string) => `Đã dọn ${name}`,
-    buildGroups: { congTrinh: 'Công trình', duong: 'Đường đi', trangTri: 'Trang trí', mau: 'Mẫu kinh đô' },
+    buildGroups: { congTrinh: 'Công trình', duong: 'Đường đi', trangTri: 'Trang trí', mau: 'Mẫu kinh đô', cat: 'Kho cất' },
     /** Nút dưới ảnh lớn trong bảng Xây dựng, theo việc của mục đang chọn. */
     buildGo: {
       build: '🔨 Xây',
@@ -2878,7 +2880,7 @@ export const vi = {
     huanOnUnit: (n: number) => `Huân công bậc ${n}`,
     challengesWon: 'Thử thách đã thắng',
     rotate: 'Xoay cảnh 90°',
-    mauHint: 'Mỗi chương mở một mẫu. Mẫu giãn theo cấp Điện: nâng Điện thì mẫu rộng ra, áp lại để lũy, đê, thành ra tới bìa mới và công trình mới có chỗ. Chỗ của mẫu nằm trong khoảnh rừng chưa phát thì bỏ qua: phát thêm rừng rồi áp lại. Áp mẫu thì mọi công trình được dời vào chỗ trong mẫu (mỗi cái mất 10% giá dựng), phần mẫu có mà mình chưa có được dựng thêm (trong giới hạn theo cấp Điện), đoạn lũy, đê, thành, bẫy thừa bị dỡ. Phải đủ tài nguyên mới áp được.',
+    mauHint: 'Mỗi chương mở một mẫu. Mẫu giãn theo cấp Điện: nâng Điện thì mẫu rộng ra, áp lại để lũy, đê, thành ra tới bìa mới và công trình mới có chỗ. Chỗ của mẫu nằm trong khoảnh rừng chưa phát thì bỏ qua: phát thêm rừng rồi áp lại. Áp mẫu thì mọi công trình được dời vào chỗ trong mẫu (mỗi cái mất 10% giá dựng), công trình đang cất trong kho được đặt vào chỗ trống của mẫu trước, phần mẫu có mà mình chưa có được dựng thêm (trong giới hạn theo cấp Điện), đoạn lũy, đê, thành, bẫy thừa bị dỡ; công trình thừa so với mẫu mà vướng mẫu thì cất vào kho (hay dời tới chỗ trống nếu tắt cất công trình thừa). Phải đủ tài nguyên mới áp được.',
     mau: {
       phongChau: {
         icon: '🏯',
@@ -2911,9 +2913,11 @@ export const vi = {
         lock: 'Mở khi vào chương 4: Mỵ Châu, Trọng Thủy.',
       },
     },
-    mauPlan: (moves: number, builds: number, removes: number, uNos = 0, duong = 0, dap = 0) =>
+    mauPlan: (moves: number, builds: number, removes: number, uNos = 0, duong = 0, dap = 0, layRa = 0, cat = 0) =>
       [
         moves ? `Dời ${moves} công trình` : '',
+        layRa ? `lấy ${layRa} công trình từ kho cất` : '',
+        cat ? `cất ${cat} công trình thừa vào kho` : '',
         dap ? `đắp nền ${dap} công trình` : '',
         builds ? `dựng thêm ${builds}` : '',
         uNos ? `dựng ${uNos} ụ nỏ` : '',
@@ -2935,6 +2939,18 @@ export const vi = {
     moveHere: 'Dời tới đây',
     moveHint: 'Chạm ô đất để chọn chỗ mới, rồi bấm Dời tới đây. Nền đất cũ ở lại chỗ cũ.',
     moved: (name: string) => `Đã dời ${name.toLowerCase()}`,
+    /** Kho cất công trình (`khoCat.ts`): nút trong bảng công trình, thẻ Kho cất của bảng Xây dựng, dòng báo. */
+    catBtn: '📦 Cất vào kho',
+    catDone: (name: string) => `Đã cất ${name.toLowerCase()} vào kho`,
+    datLaiHere: 'Đặt ở đây',
+    datLai: '📦 Đặt lại',
+    datLaiDone: (name: string) => `Đã đặt lại ${name.toLowerCase()}`,
+    catMeta: (n: number, w: number, d: number, hu: boolean) => `${w}×${d} ô · còn ${n} cái trong kho${hu ? ' · đang hư' : ''}`,
+    catDesc: 'Đặt lại giữ nguyên cấp, xong ngay, tốn như dời. Đang cất thì không làm ra gì, vẫn tính vào số tối đa.',
+    catTrong: 'Kho cất đang trống. Chạm một công trình rồi bấm 📦 Cất để cất nó vào đây.',
+    /** Nút bật tắt ở thẻ Mẫu kinh đô: công trình không có chỗ trong mẫu mà vướng mẫu thì cất vào kho hay tìm chỗ trống. */
+    mauCat: (on: boolean) => (on ? '📦 Cất công trình thừa: bật' : '📦 Cất công trình thừa: tắt'),
+    mauCatHint: 'Công trình thừa so với mẫu mà vướng mẫu thì cất vào kho cho gọn; tắt thì dời tới chỗ trống gần nhất.',
     /** Nút xoay công trình (khác nút ⟳ xoay cảnh). */
     turn: 'Xoay',
     /** Trang của lưới ảnh nhỏ trong bảng Xây dựng. */
@@ -2973,6 +2989,8 @@ export const vi = {
       dongY: '✓ Đồng ý',
       thoi: 'Thôi',
       doHoi: 'Dỡ đi thì không hoàn lại của. Dỡ chứ?',
+      cat: 'Cất',
+      catHoi: 'Cất vào kho thì công trình thôi làm việc, giữ nguyên cấp. Đặt lại lúc nào cũng được, tốn như dời.',
     },
     turned: (name: string) => `Đã xoay ${name.toLowerCase()}`,
     merge: 'Ghép thành lầu nỏ',

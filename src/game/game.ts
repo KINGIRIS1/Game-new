@@ -355,7 +355,7 @@ export interface Merchant {
  * 27: trang bị tướng; 28: đóng đảo; 29: giặc đánh đảo; 30: dã ngoại, cấp chung của tướng; 36: nhà thuốc nam, thương
  * binh).
  */
-export const SAVE_VERSION = 36;
+export const SAVE_VERSION = 37;
 
 export interface GameState {
   version: typeof SAVE_VERSION;
@@ -365,6 +365,11 @@ export interface GameState {
   /** Thời gian đã tích cho người dân tiếp theo. */
   danProgress: number;
   buildings: Building[];
+  /**
+   * Kho cất công trình (`khoCat.ts`, bản lưu 37): công trình đã cất khỏi kinh đô, giữ nguyên cấp, hư hỏng, hướng xoay.
+   * Không làm gì, không chiếm ô, vẫn tính vào số tối đa (`usedOf`); đặt lại tốn như dời.
+   */
+  khoCat: Building[];
   /** Độ cao từng ô (GRID×GRID, chỉ số z * GRID + x), sông là -1. Móng công trình luôn phẳng. */
   heights: number[];
   nextId: number;
@@ -444,6 +449,8 @@ export type FailReason =
   | 'capToiDa'
   | 'khongTheXay'
   | 'khongTheDo'
+  | 'khongCatDuoc'
+  | 'khongCoTrongKho'
   | 'khongTimThay'
   | 'chuaXong'
   | 'thieuDan'
@@ -596,6 +603,7 @@ export function createInitialState(now: number): GameState {
     dan: START_DAN,
     danProgress: 0,
     buildings: [dien],
+    khoCat: [],
     heights: baseHeights(),
     nextId: 2,
     questIndex: 0,
@@ -650,13 +658,21 @@ export function limitOf(state: GameState, type: BuildingType): number {
   return BUILDINGS[type].limit[dienLevel(state) - 1];
 }
 
+/** Số công trình loại `type` đang cất trong kho cất công trình (`khoCat.ts`). */
+export function catCount(state: GameState, type: BuildingType): number {
+  let n = 0;
+  for (const b of state.khoCat) if (b.type === type) n++;
+  return n;
+}
+
 /**
- * Số chỗ đã dùng trong giới hạn `limitOf`: tính cả công trình đang dựng và đoạn tường đang đổi sang loại này; mỗi lầu
- * nỏ tính là hai chòi canh; bốn loại đường chung một giới hạn.
+ * Số chỗ đã dùng trong giới hạn `limitOf`: tính cả công trình đang dựng, đoạn tường đang đổi sang loại này và công
+ * trình đang cất trong kho; mỗi lầu nỏ tính là hai chòi canh; bốn loại đường chung một giới hạn.
  */
 export function usedOf(state: GameState, type: BuildingType): number {
   if (isRoad(type)) return ROAD_TYPES.reduce((n, t) => n + countOf(state, t), 0);
-  return countOf(state, type) + pendingCount(state, type) + (type === 'choiCanh' ? LAU_NO_TOWERS * countOf(state, 'lauNo') : 0);
+  const lau = type === 'choiCanh' ? LAU_NO_TOWERS * (countOf(state, 'lauNo') + catCount(state, 'lauNo')) : 0;
+  return countOf(state, type) + pendingCount(state, type) + catCount(state, type) + lau;
 }
 
 export function findBuilding(state: GameState, id: number): Building | undefined {
@@ -1001,6 +1017,11 @@ export function canPlace(state: GameState, type: BuildingType, x: number, z: num
   if (why) return fail(why);
   if (!canAfford(state, def.buildCost)) return fail('thieuTaiNguyen');
   return ok(undefined);
+}
+
+/** Chỗ đặt loại `type` ở góc móng (x, z) có được không (như `canPlace` mà không xét số tối đa, mốc mở, giá). */
+export function choDat(state: GameState, type: BuildingType, x: number, z: number): FailReason | null {
+  return fitsAt(state, type, x, z, occupancy(state));
 }
 
 /**

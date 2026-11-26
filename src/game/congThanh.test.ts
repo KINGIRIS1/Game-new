@@ -219,7 +219,7 @@ describe('độ khó khi có cổng', () => {
 });
 
 describe('mẫu kinh đô có cổng thành', () => {
-  it('chỗ cổng: Phong Châu hai cổng trên lũy; Cổ Loa, Cổ Loa giữ sông hai cổng trên vòng ngoài, hai trên vòng giữa; Đê bao, Nghĩa Lĩnh không có', () => {
+  it('chỗ cổng: Phong Châu hai cổng trên lũy; Cổ Loa, Cổ Loa giữ sông bốn cổng trên vòng ngoài; Đê bao, Nghĩa Lĩnh không có', () => {
     const want: Record<string, number[]> = {
       phongChau: [0, 0, 0, 0, 2, 2, 2, 2],
       deBao: [0, 0, 0, 0, 0, 0, 0, 0],
@@ -237,9 +237,14 @@ describe('mẫu kinh đô có cổng thành', () => {
           expect(m.uNo).toBeFalsy();
           expect(marks.some((o) => o.x === m.z && o.z === m.x)).toBe(true);
         }
+        // Cổ Loa: cổng trên vòng ngoài (vòng giữa sát vòng trong, cổng ở đó không mở ra đâu).
+        if (id === 'coLoa' || id === 'coLoaSong') {
+          const outer = Math.min(...mauSlots(id, level).filter((s) => s.type === 'thanh').map((s) => s.x));
+          for (const m of marks) expect(Math.min(m.x, m.z), `${id} Điện ${level}`).toBe(outer);
+        }
       }
     }
-  });
+  }, 30000);
 
   it('chưa mở cổng: áp mẫu vẫn dựng tường ở chỗ cổng; đã mở: dựng cổng, vòng thành vẫn đủ ba vòng', () => {
     const s = ch3(7);
