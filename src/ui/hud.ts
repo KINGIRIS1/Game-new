@@ -286,6 +286,7 @@ export type HudAction =
   | { kind: 'setHuongDan'; on: boolean }
   | { kind: 'xemHuongDan'; id: HuongDanId }
   | { kind: 'setBongDo'; on: boolean }
+  | { kind: 'setSaBan'; on: boolean }
   | { kind: 'copyCode' }
   | { kind: 'saveFile' }
   | { kind: 'shareFile' }
@@ -376,7 +377,7 @@ type BarracksTab = 'quan' | 'giu' | 'tuong' | 'trai';
 type Sheet =
   | { kind: 'build' }
   | { kind: 'building'; id: number }
-  | { kind: 'settings'; resolution: Resolution; ngayDem: boolean; bongDo: boolean }
+  | { kind: 'settings'; resolution: Resolution; ngayDem: boolean; bongDo: boolean; saBan: boolean }
   | { kind: 'merchant' }
   | { kind: 'giong' }
   | { kind: 'son' }
@@ -927,6 +928,8 @@ export class Hud {
         return this.onAction({ kind: 'xemHuongDan', id: el.dataset.id as HuongDanId });
       case 'setBongDo':
         return this.onAction({ kind: 'setBongDo', on: el.dataset.on === '1' });
+      case 'setSaBan':
+        return this.onAction({ kind: 'setSaBan', on: el.dataset.on === '1' });
       case 'storyNext':
         return this.storyNext();
       case 'campChapter':
@@ -1616,8 +1619,8 @@ export class Hud {
     this.refreshSheet(state);
   }
 
-  showSettings(state: GameState, resolution: Resolution, ngayDem: boolean, bongDo: boolean): void {
-    this.sheet = { kind: 'settings', resolution, ngayDem, bongDo };
+  showSettings(state: GameState, resolution: Resolution, ngayDem: boolean, bongDo: boolean, saBan: boolean): void {
+    this.sheet = { kind: 'settings', resolution, ngayDem, bongDo, saBan };
     this.mayHoi = null;
     this.refreshSheet(state, true);
   }
@@ -1758,7 +1761,7 @@ export class Hud {
       body = tetHtml(state);
     } else {
       title = `⚙️ ${vi.ui.settings}`;
-      body = this.settingsHtml(state, this.sheet.resolution, this.sheet.ngayDem, this.sheet.bongDo);
+      body = this.settingsHtml(state, this.sheet.resolution, this.sheet.ngayDem, this.sheet.bongDo, this.sheet.saBan);
     }
     const html = `<div class="sheet-head"><h2>${title}</h2><button class="close" data-act="closeSheet" aria-label="${vi.ui.close}">✕</button></div>
       <div class="sheet-body">${body}</div>`;
@@ -2380,7 +2383,7 @@ export class Hud {
     return `<p class="muted">${vi.ui.merchantHint} (${secs}s)</p><div class="offers">${rows}</div>`;
   }
 
-  private settingsHtml(state: GameState, resolution: Resolution, ngayDem: boolean, bongDo: boolean): string {
+  private settingsHtml(state: GameState, resolution: Resolution, ngayDem: boolean, bongDo: boolean, saBan: boolean): string {
     const levels = (Object.keys(vi.resolutions) as Resolution[])
       .map((r) => `<button class="btn small ${r === resolution ? 'bronze' : 'ghost'}" data-act="setResolution" data-resolution="${r}">${vi.resolutions[r]}</button>`)
       .join('');
@@ -2394,6 +2397,9 @@ export class Hud {
     const bongBtns = ([true, false] as const)
       .map((on) => `<button class="btn small ${on === bongDo ? 'bronze' : 'ghost'}" data-act="setBongDo" data-on="${on ? 1 : 0}">${on ? vi.ui.bongDoOn : vi.ui.bongDoOff}</button>`)
       .join('');
+    const saBanBtns = ([true, false] as const)
+      .map((on) => `<button class="btn small ${on === saBan ? 'bronze' : 'ghost'}" data-act="setSaBan" data-on="${on ? 1 : 0}">${on ? vi.ui.on : vi.ui.off}</button>`)
+      .join('');
     return `
       <div class="setting-row"><span>${vi.ui.sound}</span>
         <button class="btn small ghost" data-act="toggleMute">${state.settings.muted ? '🔇 ' + vi.ui.off : '🔊 ' + vi.ui.on}</button></div>
@@ -2403,6 +2409,8 @@ export class Hud {
       <p class="muted">${vi.ui.ngayDemHint}</p>
       <div class="setting-row"><span>${vi.ui.bongDo}</span><div class="choices">${bongBtns}</div></div>
       <p class="muted">${vi.ui.bongDoHint}</p>
+      <div class="setting-row"><span>${vi.ui.saBan}</span><div class="choices">${saBanBtns}</div></div>
+      <p class="muted">${vi.ui.saBanHint}</p>
       <div class="setting-row"><span>${vi.huongDan.caiDat}</span><div class="choices">${hdBtns}</div></div>
       <p class="muted">${vi.huongDan.caiDatHint}</p>
       <div class="may-settings">${cloudSettingsHtml(state, this.mayHoi)}</div>

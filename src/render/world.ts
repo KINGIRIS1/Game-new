@@ -58,6 +58,7 @@ import { makeAnDuong, makeBaTrieu, makeCaoLo, makeMaiThucLoan, makeNgoQuyen, mak
 /** Người đứng chầu là nữ tướng (chương 5), không phải tướng chỉ huy. */
 const isNuTuong = (t: TuongId | NuTuongId): t is NuTuongId => (NU_TUONG_IDS as string[]).includes(t);
 import { addSunLights, type SunLights } from './lights';
+import { SaBan, banKinh } from './saBan';
 import {
   buildCitadel,
   buildWallTops,
@@ -742,6 +743,8 @@ export class World {
   private da?: DaNgoaiCanh;
   /** Nắng có đổ bóng không (Cài đặt Bóng đổ, `setBongDo`). */
   private bongDo = true;
+  /** Hiệu ứng sa bàn ở kinh đô (Cài đặt Sa bàn, `setSaBan`): dựng khi bật, gỡ khi tắt. */
+  private saBan: SaBan | null = null;
   /** Đang xem bãi chiến: chỗ camera nhìn kinh đô trước đó, để trả về sau trận. */
   private cityCam: { target: THREE.Vector3; zoom: number; bounds: CamBounds; facing: number } | null = null;
   private readonly warning: THREE.Mesh;
@@ -1178,6 +1181,7 @@ export class World {
     // Đặt lại mỗi lần đổi cỡ: mở hay gập Fold5, phóng to trang đều có thể đổi devicePixelRatio.
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, RESOLUTIONS[this.res]));
     this.renderer.setSize(w, h, false);
+    this.saBan?.resize(this.renderer);
     this.view.setSize(w, h);
     if (this.loi) this.fitLoi();
     else if (this.inField && !this.da) this.fitField();
@@ -2238,6 +2242,23 @@ export class World {
 
   get ngayDemOn(): boolean {
     return this.ngayDem;
+  }
+
+  /**
+   * Bật, tắt hiệu ứng sa bàn (Cài đặt, lưu riêng từng máy): kinh đô giữa màn hình nét, mép trên, mép dưới mờ dần như
+   * sa bàn thu nhỏ (`saBan.ts`). Chỉ ở kinh đô; bãi chiến, dã ngoại, Lôi đài vẽ như cũ.
+   */
+  setSaBan(on: boolean): void {
+    if (on === !!this.saBan) return;
+    if (on) this.saBan = new SaBan(this.renderer);
+    else {
+      this.saBan?.dispose();
+      this.saBan = null;
+    }
+  }
+
+  get saBanOn(): boolean {
+    return !!this.saBan;
   }
 
   /** Ghim giờ trong ngày để chụp thử: tên buổi, phần của ngày (0 tới 1), hay `null` để theo lại đồng hồ chơi. */
@@ -4655,7 +4676,9 @@ export class World {
       }
     }
 
-    this.renderer.render(this.loi ? this.loi.scene : this.da ? this.da.scene : this.inField && this.field ? this.field.scene : this.scene, this.view.camera);
+    const scene = this.loi ? this.loi.scene : this.da ? this.da.scene : this.inField && this.field ? this.field.scene : this.scene;
+    if (this.saBan && scene === this.scene) this.saBan.render(this.renderer, scene, this.view.camera, banKinh(this.view.zoom, this.renderer.getPixelRatio()));
+    else this.renderer.render(scene, this.view.camera);
   }
 
   /**

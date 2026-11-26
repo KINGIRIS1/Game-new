@@ -2632,6 +2632,8 @@ export const vi = {
     bongDoOn: 'Bật',
     bongDoOff: 'Tắt',
     bongDoHint: 'Tắt bóng đổ thì nhà cửa, cây cối, quân lính không còn bóng dưới chân, nhưng máy phải vẽ ít hơn hẳn nên chạy mượt hơn, đỡ nóng. Hợp với máy yếu. Lựa chọn này chỉ lưu trên máy này.',
+    saBan: 'Sa bàn',
+    saBanHint: 'Giữa màn hình nét, mép trên và mép dưới mờ dần, kinh đô trông như sa bàn thu nhỏ. Kéo cảnh ra xa thì mờ rõ hơn. Chỉ để nhìn, máy phải vẽ thêm một chút. Lựa chọn này chỉ lưu trên máy này.',
     on: 'Bật',
     off: 'Tắt',
     backupTitle: 'Sao lưu, chuyển máy',

@@ -189,6 +189,8 @@ const RESOLUTION_KEY = 'thoi-dai-van-lang/resolution';
 const NGAY_DEM_KEY = 'thoi-dai-van-lang/ngay-dem';
 /** Bóng đổ bật hay tắt (máy yếu tắt cho nhẹ), lưu riêng trên từng máy như độ nét. */
 const BONG_DO_KEY = 'thoi-dai-van-lang/bong-do';
+/** Hiệu ứng sa bàn ở kinh đô bật hay tắt (mặc định tắt), lưu riêng trên từng máy như độ nét. */
+const SA_BAN_KEY = 'thoi-dai-van-lang/sa-ban';
 /** Cách kéo đắp tường lần trước (dải thẳng hay khung chữ nhật), lưu riêng trên từng máy. */
 const WALL_SHAPE_KEY = 'thoi-dai-van-lang/wall-shape';
 
@@ -246,6 +248,22 @@ function saveBongDo(on: boolean): void {
     localStorage.setItem(BONG_DO_KEY, on ? 'bat' : 'tat');
   } catch {
     // Không lưu được thì lần sau bóng đổ bật như mặc định.
+  }
+}
+
+function loadSaBan(): boolean {
+  try {
+    return localStorage.getItem(SA_BAN_KEY) === 'bat';
+  } catch {
+    return false;
+  }
+}
+
+function saveSaBan(on: boolean): void {
+  try {
+    localStorage.setItem(SA_BAN_KEY, on ? 'bat' : 'tat');
+  } catch {
+    // Không lưu được thì lần sau sa bàn tắt như mặc định.
   }
 }
 
@@ -331,6 +349,7 @@ async function start(): Promise<void> {
   world.setResolution(loadResolution());
   world.setNgayDem(loadNgayDem(), true);
   world.setBongDo(loadBongDo());
+  world.setSaBan(loadSaBan());
 
   let mode: Mode = { kind: 'view', selected: null };
   let saveWarned = false;
@@ -2204,7 +2223,7 @@ async function start(): Promise<void> {
       case 'openSettings':
         if (mode.kind !== 'view') exitMode();
         select(null);
-        hud.showSettings(state, world.resolution, world.ngayDemOn, world.bongDoOn);
+        hud.showSettings(state, world.resolution, world.ngayDemOn, world.bongDoOn, world.saBanOn);
         // Mục Tài khoản Google: hỏi máy chủ có bật Google không, bản lưu trên mây ra sao.
         void hoiTaiKhoan();
         return;
@@ -2214,24 +2233,24 @@ async function start(): Promise<void> {
         setMuted(state.settings.muted);
         if (state.settings.muted) stopRally();
         save();
-        hud.showSettings(state, world.resolution, world.ngayDemOn, world.bongDoOn);
+        hud.showSettings(state, world.resolution, world.ngayDemOn, world.bongDoOn, world.saBanOn);
         return;
 
       case 'setResolution':
         world.setResolution(a.resolution);
         saveResolution(a.resolution);
-        hud.showSettings(state, a.resolution, world.ngayDemOn, world.bongDoOn);
+        hud.showSettings(state, a.resolution, world.ngayDemOn, world.bongDoOn, world.saBanOn);
         return;
 
       case 'setNgayDem':
         world.setNgayDem(a.on);
         saveNgayDem(a.on);
-        hud.showSettings(state, world.resolution, a.on, world.bongDoOn);
+        hud.showSettings(state, world.resolution, a.on, world.bongDoOn, world.saBanOn);
         return;
 
       case 'setHuongDan':
         luuHuongDan(a.on);
-        hud.showSettings(state, world.resolution, world.ngayDemOn, world.bongDoOn);
+        hud.showSettings(state, world.resolution, world.ngayDemOn, world.bongDoOn, world.saBanOn);
         return;
 
       case 'xemHuongDan':
@@ -2241,7 +2260,13 @@ async function start(): Promise<void> {
       case 'setBongDo':
         world.setBongDo(a.on);
         saveBongDo(a.on);
-        hud.showSettings(state, world.resolution, world.ngayDemOn, a.on);
+        hud.showSettings(state, world.resolution, world.ngayDemOn, a.on, world.saBanOn);
+        return;
+
+      case 'setSaBan':
+        world.setSaBan(a.on);
+        saveSaBan(a.on);
+        hud.showSettings(state, world.resolution, world.ngayDemOn, world.bongDoOn, a.on);
         return;
 
       case 'copyCode': {
@@ -3673,6 +3698,8 @@ async function start(): Promise<void> {
     gio: (g: Buoi | number | null) => world.setGio(g),
     /** Trời lúc này: trọng số bốn buổi, độ tối, giờ đang ghim, ngày đêm có bật không. */
     troi: () => world.troiInfo(),
+    /** Bật, tắt hiệu ứng sa bàn (như Cài đặt, không lưu), để chụp thử. */
+    saBan: (on: boolean) => world.setSaBan(on),
     /** Cho cá voi (`whale`) hay đàn cá heo (`dolphins`) nổi lên ngay gần chỗ camera nhìn. */
     seaLife: (kind: 'whale' | 'dolphins') => world.showSeaLife(kind),
     khoNan: () => khoNanTk(),
