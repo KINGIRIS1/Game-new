@@ -294,7 +294,7 @@ function rankHtml(view: DauView): string {
     ? h.bang
         .map(
           (r) =>
-            `<li class="${r.toi ? 'me' : ''}"><i>${r.hang}</i><b>${esc(r.ten)}${r.toi ? ` <small>${vi.dauThanh.rankYou}</small>` : ''}</b><small>${vi.dauThanh.rankRow(r.chienCong, r.dien)}</small></li>`,
+            `<li class="${r.toi ? 'me' : ''}"><i>${r.hang}</i><b>${r.dau ? `<span class="ten-dau" title="${esc(vi.vietNam.danhHieu(r.dau.loai, vi.vietNam.tinh[r.dau.tinh] ?? r.dau.tinh))}">${esc(r.ten)}</span>` : esc(r.ten)}${r.toi ? ` <small>${vi.dauThanh.rankYou}</small>` : ''}</b><small>${r.dau ? `${vi.vietNam.danhHieu(r.dau.loai, vi.vietNam.tinh[r.dau.tinh] ?? r.dau.tinh)} · ` : ''}${vi.dauThanh.rankRow(r.chienCong, r.dien)}</small></li>`,
         )
         .join('')
     : '';

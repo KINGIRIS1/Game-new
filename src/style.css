@@ -6452,3 +6452,67 @@ body.man-vao-on #hud > * {
   color: var(--red-dark);
   font-weight: 700;
 }
+
+/* ---------- Bản đồ Việt Nam PR 4: kết giao, Lạc tướng và Lạc hầu, phúc lành ---------- */
+
+.bdv-ket {
+  margin: 6px 0;
+  padding: 8px 10px;
+  border: 1px dashed var(--bronze);
+  border-radius: 10px;
+  background: var(--paper);
+}
+
+.bdv-ket p {
+  margin: 0 0 4px;
+}
+
+.bdv-ket-thanh {
+  display: block;
+  height: 10px;
+  border-radius: 5px;
+  background: var(--paper-2);
+  border: 1px solid var(--line);
+  overflow: hidden;
+}
+
+.bdv-ket-thanh i {
+  display: block;
+  height: 100%;
+  background: linear-gradient(90deg, var(--bronze), #e8b830);
+}
+
+/* Tên Lạc tướng, Lạc hầu tuần này: viền vàng (cả ở bảng xếp hạng Đấu thành). */
+.ten-dau {
+  display: inline-block;
+  padding: 0 6px;
+  border: 2px solid #e8b830;
+  border-radius: 8px;
+  background: rgba(232, 184, 48, 0.16);
+  box-shadow: 0 0 6px rgba(232, 184, 48, 0.45);
+}
+
+.bdv-dau {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 6px 0 2px;
+}
+
+.bdv-dh,
+.bdv-phuc {
+  margin: 4px 0;
+  padding: 6px 10px;
+  border-radius: 10px;
+  background: rgba(232, 184, 48, 0.14);
+  border: 1px solid #e8b830;
+}
+
+.bdv-doc-quy {
+  margin: 4px 0;
+}
+
+.modal.bdv-quy h2 {
+  margin: 0 0 8px;
+  color: var(--bronze-dark);
+}

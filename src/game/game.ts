@@ -25,6 +25,7 @@ import { bake, datBonus, initialTet, troiBonus, updateTet, type TetState } from 
 import { floodHits, footprintTop, groundOf, levelFootprint, tileHeight, type FloodHits } from './terrain';
 import {
   BUILDINGS,
+  MUA_TINH,
   CA_BIEN_PER_MIN,
   CA_PER_MIN,
   CH3_QUEST_START,
@@ -710,7 +711,7 @@ export function fishOf(b: Building): number {
 export function fishPerMinute(state: GameState): number {
   const ganh = heSoMap(state);
   const fish = state.buildings.reduce((sum, b) => sum + fishIn(state, b, ganh(b)), 0);
-  return fish * (1 + templeBonus(state) + datBonus(state) + rongTienBonus(state));
+  return fish * (1 + templeBonus(state) + datBonus(state) + phucTinhBonus(state) + rongTienBonus(state));
 }
 
 /**
@@ -837,6 +838,14 @@ export function outputOf(b: Building): Cost {
 }
 
 /** Phần cộng thêm của Đền Phù Đổng, khi đền đã dựng và còn nguyên. */
+/**
+ * Phúc lành tỉnh (bản đồ Việt Nam PR 4, `muaTinh.ts`): phần sản lượng kinh đô thêm cả mùa sau theo hạng tỉnh mùa
+ * trước. Chỉ ở phần lưu của người chơi; kinh đô dựng từ bản chụp Đấu thành không có, người chơi mô phỏng không có.
+ */
+export function phucTinhBonus(state: GameState): number {
+  return Math.min(MUA_TINH.phuc[0], Math.max(0, state.vietNam?.phuc?.pct ?? 0)) / 100;
+}
+
 export function templeBonus(state: GameState): number {
   return state.buildings.some((b) => b.type === 'denPhuDong' && !b.damaged) ? TEMPLE_BONUS : 0;
 }
@@ -884,7 +893,7 @@ export function productionPerMinute(state: GameState): Resources {
     const out = outputIn(state, b, ganh(b));
     for (const r of RESOURCE_IDS) total[r] += out[r] ?? 0;
   }
-  const bonus = 1 + templeBonus(state) + datBonus(state);
+  const bonus = 1 + templeBonus(state) + datBonus(state) + phucTinhBonus(state);
   const rongTien = rongTienBonus(state);
   for (const r of RESOURCE_IDS) total[r] *= bonus + (RONG_TIEN_RES.includes(r) ? rongTien : 0);
   return total;

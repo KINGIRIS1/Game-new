@@ -3059,6 +3059,25 @@ export const VIET_NAM = {
 };
 
 /**
+ * Mùa, phúc lành, quy về (bản đồ Việt Nam PR 4, `muaTinh.ts`). Hết mùa, tỉnh đã quy về xếp hạng theo điểm mùa ấy:
+ * người góp nhiều nhất cho tỉnh nào thì theo tỉnh ấy, cả mùa sau có phúc lành tỉnh (phần trăm sản lượng kinh đô: hạng
+ * 1–`hangDau` `phuc[0]`, tới hạng `hangMuoi` `phuc[1]`, tỉnh còn lại đã diệt được một đạo giặc `phuc[2]`; không tính
+ * trong Đấu thành) và thưởng một lần (`thuong`: số món đồ, huân công; ai có điểm cũng được phần cuối). Tỉnh chưa quy
+ * về dồn mọi điểm vào kết giao: đủ `ketGiao` (30 người × 7 ngày × 100 điểm) thì cả tỉnh quy về, giữ mãi.
+ */
+export const MUA_TINH = {
+  hangDau: 3,
+  hangMuoi: 10,
+  phuc: [10, 6, 3] as const,
+  thuong: [
+    { mon: 2, huan: 10 },
+    { mon: 1, huan: 6 },
+    { mon: 0, huan: 3 },
+  ] as const,
+  ketGiao: 30 * 7 * 100,
+};
+
+/**
  * Giặc chung của tỉnh (bản đồ Việt Nam PR 3, `giacChung.ts`). Mỗi tuần một đạo vào `tinhMin`–`tinhMax` tỉnh của một
  * nhóm (biên giới phía bắc, phía tây, giáp biển, theo lượt tuần), đánh từ thứ `tuNgay` (0 là thứ Hai) tới hết tuần.
  * Máu mỗi tỉnh = số người đã góp ở tỉnh ấy tuần trước (ít nhất `nguoiMin`) × `mauNguoi`. Mỗi trận ngoài bãi tối đa

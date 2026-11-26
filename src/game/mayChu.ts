@@ -5,7 +5,7 @@
 // Máy khách cũng dùng được (kiểm tên trước khi gửi, dựng trận từ quân máy chủ trả về).
 
 import { type HeroKind, type PvpAttack } from './battle';
-import { DAU_THANH, FIELD_CAP, GIAC_CHUNG, RESOURCE_IDS, SKILL_IDS, UNIT_TYPES, VIET_NAM, type ResourceId, type Resources, type UnitType } from './defs';
+import { DAU_THANH, FIELD_CAP, GIAC_CHUNG, MUA_TINH, RESOURCE_IDS, SKILL_IDS, UNIT_TYPES, VIET_NAM, type ResourceId, type Resources, type UnitType } from './defs';
 import { armySpace, type Army } from './doanhTrai';
 import {
   botSnapshot,
@@ -27,7 +27,8 @@ import { BO_CUA, BO_DO, CHI_SO, CUONG_HOA_TRAN, O_CHINH, O_DO, PHAM_TRAN, PHU_NA
 import { chupMon, type MonGoc } from './trangBi';
 import { storageCap } from './game';
 import { tuanCua } from './loiDai';
-import { CHUC_GOP, chucCo, diemGop, laChuc, laTinh, muaCua, ngayCua, type ChucId, type TinhId } from './vietNam';
+import { CHUC_GOP, CHUC_VO, DAT_VAN_LANG, TINH_IDS, chucCo, diemGop, laChuc, laTinh, muaCua, ngayCua, type ChucId, type TinhId } from './vietNam';
+import { xepMua } from './muaTinh';
 import {
   chiaDiem,
   daoTuan,
@@ -77,6 +78,9 @@ export const CAU_HINH = {
   giacTranNgay: GIAC_CHUNG.tranNgay,
   giacXongMs: GIAC_CHUNG.xongMs,
   giuNgay: VIET_NAM.giuNgay,
+  // PR 4: mùa, quy về.
+  ketGiao: MUA_TINH.ketGiao,
+  muaTuan: VIET_NAM.muaTuan,
 } as const;
 
 // ---------- Tên người chơi ----------
@@ -485,3 +489,12 @@ export { chiaDiem, daoTuan, giacDangDanh, giacRutLuc, giacToiLuc, heChuc, laTinh
 
 /** Số tuần (từ 0 giờ thứ Hai giờ Việt Nam) của `now`. */
 export const tuanTinh = (now: number): number => tuanCua(now);
+
+// ---------- Mùa, Lạc tướng và Lạc hầu, quy về (PR 4) ----------
+
+/** 18 tỉnh đất Văn Lang (đã quy về từ đầu) và ba chức bên võ (Lạc tướng chọn trong bên võ, Lạc hầu trong bên văn). */
+export const datVanLang: readonly string[] = DAT_VAN_LANG;
+/** Mã 34 tỉnh, xếp bắc vào nam. */
+export const tinhIds: readonly string[] = TINH_IDS;
+export const chucVo: readonly string[] = CHUC_VO;
+export { xepMua };

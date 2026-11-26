@@ -4269,7 +4269,7 @@ Vua Hùng mở hội tỉ võ trước sân chầu. Các tướng so tài trư�
 3. Cảnh sân chầu và giao diện đánh: dải thứ tự lượt, ba nút chiêu, chọn mục tiêu, Tự đánh, tua ×2.
 4. Bảng Lôi đài (chọn đội và thú, bản đồ tầng, thưởng), nút ở cột bên phải, lời Lạc hầu, hướng dẫn chỉ tay.
 
-## Kế hoạch: bản đồ Việt Nam, 34 tỉnh, chức Bồ chính (chủ dự án đã duyệt, đã làm PR 1, 2, 3)
+## Kế hoạch: bản đồ Việt Nam, 34 tỉnh, chức Bồ chính (chủ dự án đã duyệt, đã làm PR 1–4)
 
 Chủ dự án nêu ý: map tổng thể Việt Nam, 34 map theo 34 tỉnh, hình giống tỉnh, ghép lại thành nước Việt Nam; mỗi người chơi chọn một tỉnh, nhận một vị trí làm việc theo ngành nghề trong game, mỗi vị trí một nhiệm vụ riêng. Qua bốn vòng hỏi đáp, chủ dự án chốt các điều dưới đây. Mọi con số là đề xuất ban đầu; duyệt xong thì như các kế hoạch trước, cho chỉnh ±20% theo test; làm xong phần nào thì ghi số cuối cùng của phần ấy.
 
@@ -4353,6 +4353,14 @@ Chủ dự án nêu ý: map tổng thể Việt Nam, 34 map theo 34 tỉnh, hìn
 - Quân ngã trong trận mất thật như phó bản, nhà thuốc khiêng về một phần (`truQuanNga`). Trận đánh xong mà chưa gửi được thì giữ ở `VietNamState.cho`, lần sau mở bảng gửi lại.
 - Diệt đạo: ai đã đánh đạo ấy (sát thương lớn hơn 0) được 3 huân công và một món đồ (nơi rơi như dẹp đồn). Máy chủ trả các đạo đã diệt trong hai tuần gần đây mình có đánh; máy khách nhận mỗi đạo một lần (`VietNamState.nhan`).
 - Bảng: phần Giặc chung (đạo sắp tới, hay máu từng tỉnh, nút Đánh ở tỉnh mình hay Sang giúp láng giềng, số trận còn hôm nay, nhãn ×1,5 đúng chức), thẻ tỉnh ghi giặc, tỉnh có giặc viền đỏ trên bản đồ; thanh trận ghi phần trăm máu giặc đã hạ; bảng kết quả trận.
+
+**PR 4 đã làm** (mùa, phúc lành, Lạc tướng và Lạc hầu, quy về; số cuối cùng ở `MUA_TINH` của `defs.ts`, luật ở `muaTinh.ts`):
+
+- Bảng mới ở `supabase/migrations/20261126140000_mua_tinh.sql`: `tinh_quy` (kết giao, lúc và ngày quy về của tỉnh chưa quy về), `mua_ket` (kết quả cuối mùa, mỗi tỉnh một dòng), `tinh_dau` (Lạc tướng, Lạc hầu mỗi tuần, mỗi tỉnh hai dòng). Hai bảng sau xếp một lần khi có người hỏi bảng tỉnh ở mùa sau, tuần sau (khóa theo mùa, tuần để hai người hỏi cùng lúc không xếp hai lần). RLS như các bảng tỉnh; `don_viet_nam()` dọn `tinh_dau` quá 10 tuần, `mua_ket` quá một năm, tỉnh đã quy về giữ mãi.
+- **Kết giao, quy về**: mọi điểm góp ở tỉnh chưa quy về (góp của, đánh giặc chung, cả phần chia khi sang giúp) dồn vào kết giao, cộng dồn qua mọi mùa (không theo trần 30 người). Đủ **21 000 điểm** (30 người × 7 ngày × 100 điểm) thì cả tỉnh quy về với mọi người chơi, giữ mãi. Điểm của ngày quy về đã dồn vào kết giao nên tỉnh chỉ vào bảng thi đua từ ngày sau. Thẻ tỉnh chưa quy về có thanh Kết giao; tỉnh đã quy về tô như đất Văn Lang, thẻ có nút đọc lại chuyện quy về. Máy biết tỉnh nào vừa quy về thì Lạc hầu tâu một đoạn truyện ngắn của tỉnh ấy (`vi.vietNam.quyVe`: giao thương, kết nghĩa, cùng giữ biển; nhắc đền tháp Chăm, chùa Khmer, cồng chiêng, nhà rông, nhà dài Tây Nguyên, người Sa Huỳnh, đất Phù Nam); lần đầu máy biết danh sách thì chỉ ghi lại, không kể một loạt truyện cũ.
+- **Cuối mùa**: tỉnh đã quy về xếp hạng theo điểm mùa (cộng 30 người nhiều nhất, như bảng thi đua), ngang điểm thì bắc vào nam, 0 điểm không có hạng (`xepMua`). Người chơi theo tỉnh mình góp nhiều điểm nhất mùa ấy. **Phúc lành tỉnh** cả mùa sau đúng như đã duyệt: hạng 1–3 +10%, hạng 4–10 +6%, tỉnh khác đã diệt được ít nhất một đạo giặc trong mùa +3% (cả tỉnh chưa quy về). Cộng vào sản lượng và cá ở `productionPerMinute`, `fishPerMinute` (`phucTinhBonus`, trần 10%); kinh đô dựng từ bản chụp Đấu thành, người chơi mô phỏng không có. **Thưởng một lần** khi mở bảng ở mùa mới (`nhanMua`): hạng 1–3 hai món đồ và 10 huân công, hạng 4–10 một món và 6 huân công, còn lại 3 huân công (phải có góp điểm); đồ rơi như dẹp đồn. Hết mùa thì phúc lành hết (`capNhatMua`, cả trước khi tính lúc vắng).
+- **Lạc tướng, Lạc hầu**: mỗi tuần chọn theo điểm tuần trước, trong những người đang ở tỉnh ấy và giữ chức bên võ (quân, biên, hải) hay bên văn (nông, thủy, thương); đổi chức giữa tuần không đổi danh hiệu tuần ấy. Tên lấy ở Đấu thành (chưa tham gia thì "một người chưa ghi tên"). Thẻ tỉnh ghi hai người, tên viền vàng; bảng xếp hạng Đấu thành viền vàng tên người đang là Lạc tướng, Lạc hầu kèm danh hiệu ("Lạc tướng tỉnh Phú Thọ"); người giữ danh hiệu có cờ tỉnh cắm bên phải lối giữa sân chầu Điện (đối xứng chỗ cây nêu ngày Tết): Lạc tướng cờ đỏ son viền đồng, Lạc hầu cờ chàm viền ngà, giữa cờ mặt trống đồng. Chỉ để nhìn.
+- Bảng Việt Nam thêm phần Mùa vừa qua (ba tỉnh đứng đầu, kết quả của mình, luật phúc lành), dòng phúc lành đang có, dòng danh hiệu; bảng Hết mùa khi nhận thưởng.
 
 Sau bốn PR: map 3D từng tỉnh (dựng theo kiểu map dã ngoại, viền theo hình tỉnh) là kế hoạch riêng.
 

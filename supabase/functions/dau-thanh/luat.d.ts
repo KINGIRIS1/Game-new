@@ -29,6 +29,8 @@ export declare const CAU_HINH: {
   readonly giacTranNgay: number;
   readonly giacXongMs: number;
   readonly giuNgay: number;
+  readonly ketGiao: number;
+  readonly muaTuan: number;
 };
 
 export type TenLoi = 'ngan' | 'dai' | 'kyTu' | 'tuc';
@@ -128,3 +130,11 @@ export declare function ngayTuan(tuan: number): { tu: number; den: number };
 export declare function noiDanh(ta: string, tinhGiac: readonly string[]): string[];
 export declare function thuCua(now: number): number;
 export declare function tuanTinh(now: number): number;
+
+// ---------- Mùa, Lạc tướng và Lạc hầu, quy về (PR 4) ----------
+export declare const datVanLang: readonly string[];
+export declare const chucVo: readonly string[];
+export declare const tinhIds: readonly string[];
+export declare function xepMua(
+  ds: readonly { tinh: string; diem: number; diet: boolean }[],
+): { tinh: string; hang: number | null; diem: number; diet: boolean }[];

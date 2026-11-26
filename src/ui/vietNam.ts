@@ -15,12 +15,14 @@ import {
 } from '../game/vietNam';
 import { vi } from '../text/vi';
 import { VIET_NAM } from '../game/defs';
-import { CHUC_GOP, TINH_IDS, capGop, diemToiDa, hangTinh, luongGop, type BangTinh } from '../game/vietNam';
+import { CHUC_GOP, TINH_IDS, soMua, capGop, diemToiDa, hangTinh, luongGop, type BangTinh } from '../game/vietNam';
 import { daoTuan, giacRutLuc, giacToiLuc, heChuc, noiDanh, type GiacBang } from '../game/giacChung';
 import { GIAC_CHUNG, UNIT_TYPES, type UnitType } from '../game/defs';
 import { armySpace, fieldCap, fitArmy } from '../game/doanhTrai';
 import { dauError } from './dauThanh';
-import { fmt } from './format';
+import { daQuy, phanKet, quyCua, type MuaDong } from '../game/muaTinh';
+import { MUA_TINH } from '../game/defs';
+import { esc, fmt } from './format';
 
 const T = vi.vietNam;
 const NS = 'http://www.w3.org/2000/svg';
@@ -361,12 +363,13 @@ export class BanDoVN {
     this.capNhatCuoi = () => this.capNhat(state, chon, giac);
     if (!this.hinh) return;
     const ta = state.vietNam?.tinh ?? null;
-    const key = `${ta}|${chon}|${giac.join(',')}`;
+    const quy = quyCua(state);
+    const key = `${ta}|${chon}|${giac.join(',')}|${quy.join(',')}`;
     if (key === this.lop) return;
     this.lop = key;
     for (const [id, g] of this.tinh) {
-      g.classList.toggle('van-lang', laTinh(id) && laDatVanLang(id));
-      g.classList.toggle('chua-ve', laTinh(id) && !laDatVanLang(id));
+      g.classList.toggle('van-lang', laTinh(id) && daQuy(id, quy));
+      g.classList.toggle('chua-ve', laTinh(id) && !daQuy(id, quy));
       g.classList.toggle('cua-ta', id === ta);
       g.classList.toggle('chon', id === chon);
       g.classList.toggle('co-giac', giac.includes(id));
@@ -425,13 +428,15 @@ export function vietNamHtml(state: GameState, chon: string | null, now: number, 
   const ten = (id: string) => T.tinh[id] ?? id;
   let html = `<p class="muted">${T.intro}</p>`;
   html += `<p class="bdv-ta">${ta ? `🏯 ${T.tinhCuaTa(`<b>${ten(ta)}</b>`)}${v?.chuc ? ` · ${T.chuc[v.chuc].icon} ${T.chuc[v.chuc].ten}` : ''}` : T.chuaChon}</p>`;
+  if (v?.danhHieu) html += `<p class="bdv-dh">${T.toiDau(T.danhHieu(v.danhHieu.loai, ten(v.danhHieu.tinh)))}</p>`;
+  if (v?.phuc && v.phuc.pct > 0) html += `<p class="bdv-phuc">${T.phucNay(v.phuc.pct, ten(v.phuc.tinh))}</p>`;
   html += mayHtml(state, may, now);
   if (may.bang?.giac) html += giacHtml(state, may.bang.giac, now, !!may.dangDanh);
   const xem = chon && laTinh(chon) ? chon : ta;
   if (xem) html += theTinh(state, xem, now, may);
   if (ta) html += chucHtml(state, ta, now);
-  if (may.bang) html += bangHtml(may.bang, ta);
-  html += `<p class="muted bdv-sap"><small>${T.sapCo}</small></p>`;
+  if (may.bang) html += bangHtml(may.bang, ta, quyCua(state));
+  if (may.bang?.truoc) html += muaHtml(may.bang.truoc, may.bang.toi?.truoc ?? null);
   html += `<p class="muted bdv-nguon"><small>${T.nguonTitle}: ${T.nguon}</small></p>`;
   return html;
 }
@@ -444,7 +449,7 @@ function mayHtml(state: GameState, may: VnMay, now: number): string {
   const v = state.vietNam;
   const toi = may.bang.toi;
   const loi = may.loi ? `<p class="bdv-loi">⚠️ ${vnLoi(may.loi)}</p>` : '';
-  const mua = `<p class="muted bdv-mua"><small>${T.muaNay(may.bang.mua, Math.ceil(muaCon(now) / 86_400_000))}</small></p>`;
+  const mua = `<p class="muted bdv-mua"><small>${T.muaNay(soMua(may.bang.mua), Math.ceil(muaCon(now) / 86_400_000))}</small></p>`;
   if (!v?.tinh || !v.chuc || !toi || toi.tinh !== v.tinh) return loi + mua;
   const res = CHUC_GOP[v.chuc];
   if (!res.length) return `${loi}<div class="bdv-gop"><h4>${T.gopTitle}</h4><p class="muted">${T.quanChuaGop}</p></div>${mua}`;
@@ -473,9 +478,9 @@ function mayHtml(state: GameState, may: VnMay, now: number): string {
 }
 
 /** Bảng tỉnh mùa này: tỉnh đã quy về xếp theo điểm, 10 tỉnh đầu và tỉnh của mình. */
-function bangHtml(bang: BangTinh, ta: string | null): string {
-  const xep = hangTinh(bang.bang);
-  const dong = TINH_IDS.filter(laDatVanLang).map((id) => xep.find((d) => d.tinh === id) ?? { tinh: id, diem: 0, nguoi: 0, gop: 0 });
+function bangHtml(bang: BangTinh, ta: string | null, quy: readonly string[]): string {
+  const xep = hangTinh(bang.bang, quy);
+  const dong = TINH_IDS.filter((id) => daQuy(id, quy)).map((id) => xep.find((d) => d.tinh === id) ?? { tinh: id, diem: 0, nguoi: 0, gop: 0 });
   const day = [...xep, ...dong.filter((d) => !xep.includes(d))];
   const hien = day.slice(0, 10);
   const hangTa = ta ? day.findIndex((d) => d.tinh === ta) : -1;
@@ -489,13 +494,45 @@ function bangHtml(bang: BangTinh, ta: string | null): string {
   return `<div class="bdv-bang"><h4>${T.bangTitle}</h4><ol>${li}</ol><p class="muted"><small>${T.bangLuat}</small></p></div>`;
 }
 
+/** Mùa vừa qua: ba tỉnh đứng đầu, kết quả của mình, luật phúc lành. */
+function muaHtml(truoc: { mua: number; xep: MuaDong[] }, toi: { tinh: string; hang: number | null; diem: number } | null): string {
+  const dau = truoc.xep
+    .filter((d) => d.hang !== null && d.hang <= MUA_TINH.hangDau)
+    .sort((a, b) => a.hang! - b.hang!)
+    .map((d) => `<li><span class="hang">${['🥇', '🥈', '🥉'][d.hang! - 1]}</span><button class="bdv-bang-ten" data-act="vnXem" data-tinh="${d.tinh}">${T.tinh[d.tinh]}</button><span class="bdv-bang-so">⭐ ${fmt(d.diem)}</span></li>`)
+    .join('');
+  const cua = toi ? T.muaToi(T.tinh[toi.tinh] ?? toi.tinh, toi.hang, fmt(toi.diem)) : T.muaChuaGop;
+  return `<div class="bdv-bang bdv-mua-truoc"><h4>${T.muaTitle(soMua(truoc.mua))}</h4>
+    ${dau ? `<p class="muted"><small>${T.muaTop}</small></p><ol>${dau}</ol>` : ''}
+    <p>${cua}</p>
+    <p class="muted"><small>${T.phucLuat}</small></p></div>`;
+}
+
+/** Bảng hết mùa (nhận một lần): tỉnh, hạng, phúc lành cả mùa này, thưởng. */
+export function ketMuaHtml(r: { mua: number; tinh: string; hang: number | null; pct: number; huan: number; mon: number }): string {
+  return `<div class="modal dau-result"><h2>${T.ketMuaTitle(soMua(r.mua - 1))}</h2>
+    <div class="result-rows"><div>${T.ketMuaTinh(T.tinh[r.tinh] ?? r.tinh, r.hang)}</div><div>${T.ketMuaPhuc(r.pct)}</div>
+    ${r.huan || r.mon ? `<div>${T.ketMuaThuong(r.huan, r.mon)}</div>` : ''}</div>
+    <div class="actions"><button class="btn bronze" data-act="vnTheDong">${T.ketMuaDong}</button></div></div>`;
+}
+
+/** Đoạn truyện tỉnh quy về (Lạc hầu tâu), một hay nhiều tỉnh cùng lúc. */
+export function quyVeHtml(ids: readonly string[]): string {
+  const the = ids
+    .map((id) => `<h2>${T.quyTitle(T.tinh[id] ?? id)}</h2><div class="speaker lacHau"><span class="avatar">${vi.speakers.lacHau.icon}</span><b>${vi.speakers.lacHau.name}</b></div><p class="line">${T.quyVe[id] ?? ''}</p>`)
+    .join('');
+  return `<div class="modal story bdv-quy">${the}<div class="story-foot"><span></span><button class="btn bronze" data-act="vnTheDong">${T.quyDong}</button></div></div>`;
+}
+
 function theTinh(state: GameState, id: TinhId, now: number, may: VnMay): string {
   const v = state.vietNam;
   const xua = T.xuaCua[id];
   const lg = langGieng(id)
     .map((b) => `<button class="chip bdv-lg" data-act="vnXem" data-tinh="${b}">${T.tinh[b]}</button>`)
     .join('');
-  const tags = [laDatVanLang(id) ? T.trangThai.vanLang : T.trangThai.chuaVe, giapBien(id) ? T.giapBien : '', giapBienGioi(id) ? T.bienGioi : '']
+  const quy = quyCua(state);
+  const trang = laDatVanLang(id) ? T.trangThai.vanLang : daQuy(id, quy) ? T.trangThai.daQuy : T.trangThai.chuaVe;
+  const tags = [trang, giapBien(id) ? T.giapBien : '', giapBienGioi(id) ? T.bienGioi : '']
     .filter(Boolean)
     .map((t) => `<span class="bdv-tag">${t}</span>`)
     .join('');
@@ -504,12 +541,14 @@ function theTinh(state: GameState, id: TinhId, now: number, may: VnMay): string 
   if (v?.tinh === id) nut = `<p class="bdv-dang">${T.dangO}</p>`;
   else if (doiTinhDuoc(state, now)) nut = `<button class="btn bronze" data-act="vnChonTinh" data-tinh="${id}">${T.chon}</button>`;
   else nut = `<p class="muted">${T.doiTinhSau(Math.ceil(muaCon(now) / 86_400_000))}</p>`;
-  return `<div class="bdv-the ${laDatVanLang(id) ? 'van-lang' : 'chua-ve'}">
+  return `<div class="bdv-the ${daQuy(id, quy) ? 'van-lang' : 'chua-ve'}">
     <h3>${T.tinh[id]}</h3>
     <p class="bdv-xua"><b>${T.xua}:</b> ${xua ? `${xua.ten}${xua.dia ? ` · ${xua.dia}` : ''}` : T.khongXua}</p>
     ${xua ? `<p class="muted bdv-ghi"><small>${T.xuaGhi[xua.loai]}</small></p>` : ''}
     <div class="bdv-tags">${tags}</div>
-    ${soTinh(id, may)}
+    ${soTinh(id, may, quy)}
+    ${dauThe(id, may)}
+    ${!laDatVanLang(id) && daQuy(id, quy) ? `<button class="btn small ghost bdv-doc-quy" data-act="vnQuyKe" data-tinh="${id}">${T.docQuy}</button>` : ''}
     ${giacThe(id, may)}
     ${qd ? `<p class="bdv-qd-the">🏝️ ${qd}</p>` : ''}
     <p class="bdv-lg-dong"><b>${T.langGieng}:</b> ${lg}</p>
@@ -609,10 +648,25 @@ export const giacChoHtml = (tinh: string): string =>
   `<div class="modal dau-result"><h2>${T.kqTitle(T.tinh[tinh] ?? tinh)}</h2><p class="muted">⏳ ${T.dangGui}</p></div>`;
 
 /** Số của tỉnh mùa này trên thẻ: điểm (tỉnh chưa quy về: điểm kết giao), số người chọn, số người đã góp. */
-function soTinh(id: TinhId, may: VnMay): string {
+function soTinh(id: TinhId, may: VnMay, quy: readonly string[]): string {
   if (!may.bang) return '';
-  const d = may.bang.bang.find((x) => x.tinh === id) ?? { diem: 0, nguoi: 0, gop: 0 };
-  return `<p class="bdv-so">${laDatVanLang(id) ? T.diemTinh(d.diem) : T.diemKetGiao(d.diem)} · ${T.nguoiTinh(d.nguoi, d.gop)}</p>`;
+  const d = may.bang.bang.find((x) => x.tinh === id) ?? { diem: 0, nguoi: 0, gop: 0, ket: 0 };
+  const so = `<p class="bdv-so">${daQuy(id, quy) ? `${T.diemTinh(d.diem)} · ` : ''}${T.nguoiTinh(d.nguoi, d.gop)}</p>`;
+  if (daQuy(id, quy)) return so;
+  // Tỉnh chưa quy về: thanh kết giao.
+  const ket = d.ket ?? 0;
+  const pct = Math.floor(phanKet(ket) * 100);
+  return `${so}<div class="bdv-ket"><p>${T.ketGiao(pct, fmt(ket), fmt(MUA_TINH.ketGiao))}</p><span class="bdv-ket-thanh"><i style="width:${pct}%"></i></span>
+    <p class="muted"><small>${T.ketLuat}</small></p></div>`;
+}
+
+/** Lạc tướng, Lạc hầu tuần này của tỉnh (tên viền vàng). */
+function dauThe(id: TinhId, may: VnMay): string {
+  const dau = may.bang?.dau;
+  if (!dau) return '';
+  const cua = dau.filter((d) => d.tinh === id).sort((a, b) => (a.loai === b.loai ? 0 : a.loai === 'lacTuong' ? -1 : 1));
+  if (!cua.length) return `<p class="muted bdv-dau">${T.dauChuaCo}</p>`;
+  return `<p class="bdv-dau">${cua.map((d) => `<span class="ten-dau">${T.dauThe(d.loai, d.ten === null ? null : esc(d.ten))}</span>`).join(' ')}</p><p class="muted"><small>${T.dauLuat}</small></p>`;
 }
 
 function chucHtml(state: GameState, tinh: TinhId, now: number): string {

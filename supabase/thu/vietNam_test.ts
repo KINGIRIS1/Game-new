@@ -132,7 +132,8 @@ Deno.test({
         bang.sort((a, b) => (a.tinh < b.tinh ? -1 : 1)),
         [
           { tinh: '12', diem: top30, nguoi: 34, gop: 33 },
-          { tinh: '21', diem: 10, nguoi: 1, gop: 1 },
+          // Đà Nẵng chưa quy về: điểm dồn vào kết giao, chưa lên bảng xếp hạng (PR 4).
+          { tinh: '21', diem: 0, nguoi: 1, gop: 1, ket: 10 },
         ],
       );
 

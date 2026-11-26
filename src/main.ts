@@ -11,11 +11,12 @@ import { play, setMuted, stopRally, unlockAudio } from './audio/sfx';
 import { skillReady, startFieldBattle, stepField, useSkill, type Battle, type HeroKind, type FighterKind } from './game/battle';
 import { canLen, capNhatDa, chonMap, daMo, datDoi, doiNay, moMap, quaCong, tichTreo, vaoDa, veKinhDo, type DaThuong } from './game/daNgoai';
 import { choAn, chonThu, thuCo } from './game/thanThu';
-import { capGop, chonChuc, chonTinh, luongGop, theoMay, vietNamMo, type BangTinh, type TinhToi } from './game/vietNam';
+import { capGop, chonChuc, chonTinh, luongGop, muaCua, theoMay, vietNamMo, type BangTinh, type TinhToi } from './game/vietNam';
 import { NEN_GIAC, beginGiac, daoTuan, khoaThuong, phanHa, pushGiac, setupGiac, stepGiac, type GiacBang, type GiacRun, type NhomGiac } from './game/giacChung';
 import { nhanGiac } from './game/mayChu';
 import type { GiacKetQua } from './mang/mayChu';
-import { giacChoHtml, giacKetQuaHtml, vnLoi } from './ui/vietNam';
+import { giacChoHtml, giacKetQuaHtml, ketMuaHtml, quyVeHtml, vnLoi } from './ui/vietNam';
+import { capNhatMua, nhanMua, nhanQuy, type MuaToi } from './game/muaTinh';
 import { chamMap, datTuDanh, stepDa, tuongDau } from './game/daNgoaiTran';
 import { boCuc } from './game/daNgoaiMap';
 import { attackFrom, beginPvp, canPractice, decodeSnapshot, encodeSnapshot, lootPvp, makeSnapshot, pushInput, scorePvp, stepPvp, validateArmy, type PvpRun } from './game/dauThanh';
@@ -703,11 +704,20 @@ async function start(): Promise<void> {
         if (v.chuc) await m.chonChuc(v.chuc).catch(() => undefined);
         bang = await m.bangTinh();
       }
+      const coCu = state.vietNam?.danhHieu ? JSON.stringify(state.vietNam.danhHieu) : '';
       if (bang.toi) theoMay(state, bang.toi);
       may.bang = bang;
       may.loi = null;
       nhanThuongGiac(bang.giac);
+      nhanThuongMua(bang.toi?.truoc);
+      const moi = bang.quy && vietNamMo(state) ? nhanQuy(state, bang.quy) : [];
+      if (moi.length) {
+        play('claim');
+        hud.showVnThe(quyVeHtml(moi));
+      }
       commit();
+      // Cờ tỉnh trước Điện theo danh hiệu tuần này.
+      if ((state.vietNam?.danhHieu ? JSON.stringify(state.vietNam.danhHieu) : '') !== coCu) world.sync(scene());
     } catch (e) {
       may.loi = loiOf(e);
     } finally {
@@ -752,6 +762,23 @@ async function start(): Promise<void> {
       hud.toast(vi.vietNam.thuong(vi.vietNam.tinh[t.tinh] ?? t.tinh, GIAC_CHUNG.huan, !!r));
     }
     v.nhan = nhan.slice(-20);
+  };
+
+  /** Hết mùa: mỗi mùa một lần ghi phúc lành tỉnh cả mùa này, trao thưởng (huân công, đồ), báo bảng hết mùa. */
+  const nhanThuongMua = (t: MuaToi | null | undefined) => {
+    const r = nhanMua(state, t, Date.now());
+    if (!r) return;
+    state.thuThach.huan += r.huan;
+    for (let i = 0; i < r.mon; i++) roiDo(state, 'don', chapterOf(state));
+    play('claim');
+    hud.showVnThe(ketMuaHtml(r));
+  };
+
+  /** Hết mùa thì phúc lành tỉnh hết, hết tuần thì danh hiệu hết (cờ trước Điện cũng gỡ). */
+  const watchVnMua = (now: number) => {
+    if (!capNhatMua(state, now)) return;
+    commit();
+    world.sync(scene());
   };
 
   /** Thôi trận giặc chung: về kinh đô. */
@@ -3050,6 +3077,8 @@ async function start(): Promise<void> {
     play('vaoGame');
     manVao.close();
     drift.release();
+    // Phúc lành tỉnh đã hết mùa thì không tính cho lúc vắng.
+    capNhatMua(state, Date.now());
     const offline = applyOffline(state, Date.now());
     showRelaid();
     showHint();
@@ -3281,6 +3310,7 @@ async function start(): Promise<void> {
     const wall = Date.now();
     const gap = wall - state.lastSeen;
     if (gap > GAP_AS_OFFLINE_MS) {
+      capNhatMua(state, wall);
       const off = applyOffline(state, wall);
       showOfflineIfLong(off.ms, off.gained, off.built, off.da, off.chua);
       commit();
@@ -3352,6 +3382,7 @@ async function start(): Promise<void> {
       }
       watchXay();
       if (entered) watchLoiTuan();
+      if (entered) watchVnMua(wall);
       // Thuyền chiến đi chuyến mới, tới đảo, về bến ngay trong `tick`: vẽ theo.
       world.syncDao(state);
       refreshUi();
@@ -3483,6 +3514,11 @@ async function start(): Promise<void> {
       Object.assign(hud.vnMay, { co: true, bang, loi: null, dangTai: false });
       if (bang.toi) theoMay(state, bang.toi);
       hud.refreshCampaign(state);
+    },
+    /** Bảng tỉnh quy về (`ids`) hay bảng hết mùa (`mua`: kết quả mẫu) như khi máy chủ báo, để chụp thử. */
+    vnThe: (ids: string[] | null, mua?: { tinh: string; hang: number | null; pct: number; huan: number; mon: number }) => {
+      if (ids) hud.showVnThe(quyVeHtml(ids));
+      if (mua) hud.showVnThe(ketMuaHtml({ mua: muaCua(Date.now()), ...mua }));
     },
     /** Đạo giặc tuần này (để cảnh chụp giả bảng tỉnh có giặc). */
     giacNay: () => {

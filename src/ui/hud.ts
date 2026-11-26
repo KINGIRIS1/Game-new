@@ -128,7 +128,7 @@ import { choTen, daMapHtml, daNgoaiHtml, expPct, miniSvg } from './daNgoai';
 import { thanThuHtml, thanThuMapHtml, thuAnh } from './thanThu';
 import { loiDaiHtml, loiDaiMapHtml } from './loiDai';
 import { loiDaiMo } from '../game/loiDai';
-import { BanDoVN, tinhCoGiac, vietNamHtml, type VnMay } from './vietNam';
+import { BanDoVN, quyVeHtml, tinhCoGiac, vietNamHtml, type VnMay } from './vietNam';
 import { phanHa } from '../game/giacChung';
 import { vietNamMo } from '../game/vietNam';
 import type { ThanThuId } from '../game/defs';
@@ -889,6 +889,12 @@ export class Hud {
         return this.onAction({ kind: 'vnGiac', tinh: el.dataset.tinh ?? '' });
       case 'vnGiacDong':
         this.closeDauResult();
+        return;
+      case 'vnTheDong':
+        this.closeVnThe();
+        return;
+      case 'vnQuyKe':
+        this.showVnThe(quyVeHtml([el.dataset.tinh ?? '']));
         return;
       case 'loiTang':
         if (this.camp) this.camp.loiTang = id;
@@ -2817,6 +2823,19 @@ export class Hud {
 
   closeDauResult(): void {
     this.root.querySelector('.modal-back.dau')?.remove();
+  }
+
+  /** Bảng của bản đồ Việt Nam đè lên trên (hết mùa, tỉnh quy về): nhiều bảng cùng lúc thì xếp chồng, đóng từng cái. */
+  showVnThe(html: string): void {
+    const back = document.createElement('div');
+    back.className = 'modal-back stage bdv-noi';
+    back.innerHTML = html;
+    this.root.appendChild(back);
+  }
+
+  closeVnThe(): void {
+    const all = this.root.querySelectorAll('.modal-back.bdv-noi');
+    all[all.length - 1]?.remove();
   }
 
   /** Bảng Bị đánh (kinh đô bị người khác đánh khi vắng, trận đánh dở vừa nhận kết quả). */

@@ -19,6 +19,7 @@ import { TUAN_MS, tuanCon, tuanCua } from './loiDai';
 import { LANG_GIENG_HINH } from './vietNamHinh';
 import { snapCap, type PvpInput } from './dauThanh';
 import type { GiacBang } from './giacChung';
+import type { DanhHieu, DauTinh, MuaDong, MuaToi, PhucTinh } from './muaTinh';
 
 const ok = <T>(value: T): Result<T> => ({ ok: true, value });
 const fail = (reason: FailReason): Result<never> => ({ ok: false, reason });
@@ -79,12 +80,23 @@ export interface VietNamState {
   nhan?: string[];
   /** PR 3: trận giặc chung đã đánh xong mà chưa gửi được kết quả lên máy chủ (gửi lại lần sau mở bảng). */
   cho?: { tran: string; bam: PvpInput[] };
+  /** PR 4: tỉnh đã quy về máy chủ báo lần gần nhất (ngoài đất Văn Lang), để tô bản đồ và biết tỉnh nào vừa quy về. */
+  quy?: TinhId[];
+  /** PR 4: phúc lành tỉnh của mùa đang chơi (`nhanMua`), hết mùa thì bỏ (`capNhatMua`). */
+  phuc?: PhucTinh;
+  /** PR 4: Lạc tướng hay Lạc hầu tỉnh tuần này (máy chủ báo), hết tuần thì bỏ. */
+  danhHieu?: DanhHieu;
 }
 
 /** Mùa thứ mấy (4 tuần một mùa, mỗi mùa bắt đầu 0 giờ thứ Hai giờ Việt Nam). */
 export const muaCua = (now: number): number => Math.floor(tuanCua(now) / VIET_NAM.muaTuan);
 /** Còn bao lâu (ms) tới mùa sau. */
 export const muaCon = (now: number): number => tuanCon(now) + (VIET_NAM.muaTuan - 1 - (tuanCua(now) % VIET_NAM.muaTuan)) * TUAN_MS;
+
+/** Mùa đầu của bản đồ Việt Nam (mùa có thứ Hai 23/11/2026): người chơi thấy mùa ấy là Mùa 1. */
+export const MUA_DAU = muaCua(Date.UTC(2026, 10, 22, 17));
+/** Số mùa người chơi thấy (từ 1). */
+export const soMua = (mua: number): number => Math.max(1, mua - MUA_DAU + 1);
 
 /** Mở từ Điện cấp 5. */
 export const vietNamMo = (s: GameState): boolean => dienLevel(s) >= VIET_NAM.dien;
@@ -155,7 +167,24 @@ export function isVietNamState(v: unknown): v is VietNamState {
     const c = t.cho as Record<string, unknown> | null;
     if (!c || typeof c !== 'object' || typeof c.tran !== 'string' || !Array.isArray(c.bam)) return false;
   }
+  if (!kiemMuaLuu(t)) return false;
   return t.chucLuc === undefined || (typeof t.chucLuc === 'number' && Number.isFinite(t.chucLuc));
+}
+
+const laSo = (v: unknown): v is number => typeof v === 'number' && Number.isInteger(v);
+
+/** Kiểm phần lưu của PR 4: tỉnh đã quy về, phúc lành, danh hiệu. */
+function kiemMuaLuu(t: Record<string, unknown>): boolean {
+  if (t.quy !== undefined && (!Array.isArray(t.quy) || !t.quy.every(laTinh))) return false;
+  if (t.phuc !== undefined) {
+    const p = t.phuc as Record<string, unknown> | null;
+    if (!p || typeof p !== 'object' || !laSo(p.mua) || !laSo(p.pct) || !laTinh(p.tinh) || (p.hang !== null && !laSo(p.hang))) return false;
+  }
+  if (t.danhHieu !== undefined) {
+    const d = t.danhHieu as Record<string, unknown> | null;
+    if (!d || typeof d !== 'object' || !laSo(d.tuan) || (d.loai !== 'lacTuong' && d.loai !== 'lacHau') || !laTinh(d.tinh)) return false;
+  }
+  return true;
 }
 
 // ---------- PR 2: góp điểm tỉnh ----------
@@ -201,6 +230,10 @@ export interface TinhToi {
   chucLuc: number | null;
   diemMua: number;
   diemNgay: number;
+  /** PR 4: kết quả mùa trước của mình (tỉnh mình góp nhiều nhất), hay null nếu mùa trước chưa góp. */
+  truoc?: MuaToi | null;
+  /** PR 4: Lạc tướng hay Lạc hầu tỉnh tuần này. */
+  danhHieu?: DanhHieu | null;
 }
 
 /** Một tỉnh trên bảng mùa này: điểm (cộng `VIET_NAM.topTinh` người góp nhiều nhất), số người đã chọn, số người đã góp. */
@@ -209,6 +242,8 @@ export interface TinhDong {
   diem: number;
   nguoi: number;
   gop: number;
+  /** PR 4: điểm kết giao đã góp (tỉnh chưa quy về). */
+  ket?: number;
 }
 
 /** Máy chủ trả cho bảng tỉnh. */
@@ -219,27 +254,32 @@ export interface BangTinh {
   bang: TinhDong[];
   /** PR 3: giặc chung tuần này (máy chủ cũ chưa có thì không có). */
   giac?: GiacBang;
+  /** PR 4: tỉnh đã quy về (ngoài đất Văn Lang). */
+  quy?: TinhId[];
+  /** PR 4: Lạc tướng, Lạc hầu tuần này của các tỉnh. */
+  dau?: DauTinh[];
+  /** PR 4: xếp hạng mùa trước. */
+  truoc?: { mua: number; xep: MuaDong[] };
 }
 
-/** Chép tỉnh, chức máy chủ giữ về phần lưu (máy chủ là gốc khi có mạng). */
+/** Chép tỉnh, chức (và danh hiệu tuần này) máy chủ giữ về phần lưu (máy chủ là gốc khi có mạng). */
 export function theoMay(s: GameState, toi: TinhToi | null): void {
   if (!toi) return;
-  const cu = s.vietNam;
-  s.vietNam = {
-    tinh: toi.tinh,
-    mua: toi.mua,
-    chuc: toi.chuc,
-    ...(toi.chucLuc !== null ? { chucLuc: toi.chucLuc } : {}),
-    ...(cu?.nhan ? { nhan: cu.nhan } : {}),
-    ...(cu?.cho ? { cho: cu.cho } : {}),
-  };
+  const v: VietNamState = { ...s.vietNam, tinh: toi.tinh, mua: toi.mua, chuc: toi.chuc };
+  if (toi.chucLuc !== null) v.chucLuc = toi.chucLuc;
+  else delete v.chucLuc;
+  if (toi.danhHieu) v.danhHieu = toi.danhHieu;
+  else if (toi.danhHieu === null) delete v.danhHieu;
+  s.vietNam = v;
 }
 
 /**
- * Bảng xếp hạng tỉnh mùa này: chỉ tỉnh đã quy về (PR 2: đất Văn Lang), điểm cao trước, ngang điểm thì theo thứ tự bắc
- * vào nam. Tỉnh chưa quy về dồn điểm vào kết giao (PR 4), không lên bảng.
+ * Bảng xếp hạng tỉnh mùa này: chỉ tỉnh đã quy về (đất Văn Lang và tỉnh trong `quy`), điểm cao trước, ngang điểm thì
+ * theo thứ tự bắc vào nam. Tỉnh chưa quy về dồn điểm vào kết giao (PR 4), không lên bảng.
  */
-export function hangTinh(bang: readonly TinhDong[]): TinhDong[] {
+export function hangTinh(bang: readonly TinhDong[], quy: readonly string[] = []): TinhDong[] {
   const thu = (id: TinhId) => TINH_IDS.indexOf(id);
-  return bang.filter((d) => laTinh(d.tinh) && laDatVanLang(d.tinh)).sort((a, b) => b.diem - a.diem || thu(a.tinh) - thu(b.tinh));
+  return bang
+    .filter((d) => laTinh(d.tinh) && (laDatVanLang(d.tinh) || quy.includes(d.tinh)))
+    .sort((a, b) => b.diem - a.diem || thu(a.tinh) - thu(b.tinh));
 }

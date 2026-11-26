@@ -171,6 +171,11 @@ const XAY_SAU = `
 `;
 
 /** Nhìn vào cống và ruộng sau cống. */
+/** Bản đồ Việt Nam PR 4: tuần, mùa lúc chụp; Phú Thọ Bồ chính nông, Lạc hầu tuần này, phúc lành +10%, Đà Nẵng đã quy về. */
+const VN_MUA = `const tuan = Math.floor((Date.now() + 7 * 3600000 + 3 * 86400000) / 604800000);
+s.hinted.push('hd:vietNam'); s.resources.gao = 9000;
+s.vietNam = { tinh: '12', mua: Math.floor(tuan / 4), chuc: 'nong', chucLuc: Date.now() - 3600000, quy: ['21'], phuc: { mua: Math.floor(tuan / 4), pct: 10, tinh: '12', hang: 2 }, danhHieu: { tuan, loai: 'lacHau', tinh: '12' } };`;
+const VN_BANG = `{ mua: 4, ngay: 0, toi: { tinh: '12', chuc: 'nong', mua: 4, chucLuc: Date.now() - 3600000, diemMua: 212, diemNgay: 36, truoc: { mua: 3, tinh: '12', cua: 180, hang: 2, diem: 3120, diet: false } }, bang: [{ tinh: '01', diem: 4210, nguoi: 41, gop: 33 }, { tinh: '12', diem: 2875, nguoi: 22, gop: 19 }, { tinh: '21', diem: 1240, nguoi: 18, gop: 14 }, { tinh: '04', diem: 960, nguoi: 15, gop: 12 }, { tinh: '22', diem: 0, nguoi: 9, gop: 7, ket: 12600 }, { tinh: '23', diem: 0, nguoi: 4, gop: 3, ket: 2300 }], quy: ['21'], dau: [{ tinh: '12', loai: 'lacTuong', ten: 'Thánh Gióng' }, { tinh: '12', loai: 'lacHau', ten: 'Đại ka' }, { tinh: '22', loai: 'lacHau', ten: null }], truoc: { mua: 3, xep: [{ tinh: '01', hang: 1, diem: 4380, diet: true }, { tinh: '12', hang: 2, diem: 3120, diet: false }, { tinh: '04', hang: 3, diem: 2210, diet: false }, { tinh: '22', hang: null, diem: 0, diet: true }] } }`;
 const NHIN_CONG = `const c = s.buildings.find((b) => b.type === 'congDe'); d.camera(c.x + 4, c.z - 5, 1.1);`;
 
 /** Đủ quân mẫu một trận (38 chỗ) để đánh thử Đấu thành. */
@@ -588,6 +593,36 @@ d.camera(cx, cz, 2.6);`,
     mo: 'Như viet-nam-giac, trước thứ Sáu: báo đạo giặc sắp tới các tỉnh nào, thẻ tỉnh ghi sắp có giặc',
     truoc: `${KINH_DO}\ns.hinted.push('hd:vietNam');`,
     sau: `const g = d.giacNay(); const ta = g.tinh[0]; d.vietNam(ta); d.vnMay({ mua: 4, ngay: 0, toi: { tinh: ta, chuc: 'nong', mua: 4, chucLuc: Date.now() - 3600000, diemMua: 40, diemNgay: 0 }, bang: [], giac: { tuan: g.tuan, nhom: g.nhom, dao: [], tranNay: 0, thuong: [] } });`,
+  },
+  'viet-nam-mua': {
+    mo: 'Bản đồ Việt Nam PR 4: Phú Thọ Bồ chính nông, Lạc hầu tỉnh tuần này, phúc lành +10%; Đà Nẵng đã quy về (tô như đất Văn Lang); thẻ Phú Thọ có Lạc tướng, Lạc hầu; bảng mùa vừa qua',
+    truoc: `${KINH_DO}\n${VN_MUA}`,
+    sau: `d.vietNam('12'); d.vnMay(${VN_BANG});`,
+  },
+  'viet-nam-ket': {
+    mo: 'Như viet-nam-mua, chạm Quảng Ngãi (chưa quy về): thanh kết giao 60%',
+    truoc: `${KINH_DO}\n${VN_MUA}`,
+    sau: `d.vietNam('22', 2.2); d.vnMay(${VN_BANG});`,
+  },
+  'viet-nam-quy': {
+    mo: 'Như viet-nam-mua, máy chủ báo Đà Nẵng vừa quy về: đoạn truyện ngắn Lạc hầu tâu',
+    truoc: `${KINH_DO}\n${VN_MUA}`,
+    sau: `d.vietNam('21', 2.2); d.vnMay(${VN_BANG}); d.vnThe(['21']);`,
+  },
+  'viet-nam-het-mua': {
+    mo: 'Như viet-nam-mua, vừa sang mùa mới: bảng hết mùa (Phú Thọ hạng 2, phúc lành +10%, thưởng 10 huân công, 2 món đồ)',
+    truoc: `${KINH_DO}\n${VN_MUA}`,
+    sau: `d.vietNam('12'); d.vnMay(${VN_BANG}); d.vnThe(null, { tinh: '12', hang: 2, pct: 10, huan: 10, mon: 2 });`,
+  },
+  'co-tinh': {
+    mo: 'Kinh đô Điện cấp 5, bệ hạ là Lạc tướng tỉnh Phú Thọ tuần này: cờ tỉnh đỏ son cắm bên phải lối giữa sân chầu',
+    truoc: `${KINH_DO}\n${VN_MUA.replace("'lacHau'", "'lacTuong'")}`,
+    truocKhiChup: `const b = s.buildings.find((b) => b.type === 'dien'); d.camera(b.x + 6, b.z + 8, 2.4);`,
+  },
+  'co-tinh-hau': {
+    mo: 'Như co-tinh, Lạc hầu: cờ chàm viền ngà',
+    truoc: `${KINH_DO}\n${VN_MUA}`,
+    truocKhiChup: `const b = s.buildings.find((b) => b.type === 'dien'); d.camera(b.x + 6, b.z + 8, 2.4);`,
   },
   'giac-tran': {
     mo: 'Chương 5: đánh thử giặc chung (không qua máy chủ) ở Phú Thọ, nền núi biên giới phía bắc, Hai Bà và quân trong trại, chụp sau 6 giây: thanh trận ghi phần trăm máu giặc đã hạ',
