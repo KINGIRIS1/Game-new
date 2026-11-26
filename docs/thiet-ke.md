@@ -76,7 +76,7 @@ Tài liệu này ghi lại các quyết định đã chốt với chủ dự án
   - **Nâng cấp** không nâng ngay mà mở thẻ nhỏ xác nhận dưới vòng: cấp mới, giá (thiếu tô đỏ), thời gian xây, lý do chưa nâng được, nút Thôi và ✓ Đồng ý; lũy, đê liền đoạn có thêm nút nâng cả đoạn. Chưa nâng được thì nút trên vòng mờ đi nhưng vẫn bấm được để đọc lý do. **Dỡ** cũng hỏi lại trước khi dỡ (dỡ không hoàn của).
   - Công trình đang dựng mới chỉ có ℹ️ (khối việc, nút hủy) và Đố sử. Đang có bảng, ô bật lên, đang đặt, dời công trình hay ở bãi chiến thì vòng ẩn; chạm chỗ trống thì vòng tắt.
   - Nút riêng từng loại (PR 2), mỗi nút một hình đồng, nằm giữa Đố sử và Dời; chỉ lấp chỗ còn trống trong 7 nút (Dời, Xoay, Dỡ luôn còn; nút riêng thừa vẫn có trong bảng ℹ️), hiện theo đúng điều kiện như nút ấy trong bảng:
-    - Doanh trại: **Quân**, **Giữ thành**, **Tướng**, mở bảng doanh trại đúng thẻ.
+    - Doanh trại: **Luyện quân**, **Giữ thành**, **Tướng**, mở bảng doanh trại đúng thẻ.
     - Trại giáo, trại cung, chuồng voi, trại nỏ: **Luyện**, mở bảng và cuộn tới hàng luyện. Lò rèn (từ chương 2): **Rèn**, mở bảng và cuộn tới mục rèn binh khí.
     - Điện: **Hội Tết** (khi Tết đã mở), rồi các tướng theo thứ tự truyện: Gióng, Sơn Tinh, An Dương, Cao Lỗ (mở bảng tướng như nút trong bảng Điện). Lò rèn cũng có nút Gióng. Bốn công trình Tết: **Hội Tết**.
     - Thành (chương 4, chưa có ụ): **Ụ nỏ** mở thẻ xác nhận giá, lý do chưa đặt được, ✓ Đồng ý; ụ hư thì **Sửa ụ**. Chòi canh cấp 8 ghép được: **Ghép**.
@@ -179,7 +179,7 @@ Lúc đầu mỗi cấp Điện chỉ cho phát tới một số khoảnh (lư�
 | Bến thuyền khơi | 3×3 | Thuyền đánh cá lớn ra biển Đông: cá biển (ăn thay gạo) và vỏ ốc. Phải sát bờ sông, cần Điện cấp 8 (xem mục Kế hoạch: biển Đông, bến thuyền khơi) |
 | Kho thóc | 3×3 | Tăng sức chứa tài nguyên, cũng là mục tiêu của giặc |
 | Doanh trại | 8×8 | Đại doanh của cả kinh đô (chỉ một trại): các tướng ở, lính tập, quân và tướng giữ kinh đô ra từ cổng gần giặc. Mỗi tướng đã về một doanh, chỗ quân theo cấp trại nhân số doanh, tối đa 5 doanh (xem mục Kế hoạch: một doanh trại lớn). Cấp 1 cho dựng trại giáo, cấp 2 trại cung, cấp 3 chuồng voi |
-| Trại giáo, trại cung, chuồng voi, trại nỏ | 4×4 | Nơi ở riêng của giáo binh, cung thủ, voi chiến, lính nỏ (trại nỏ từ chương 4). Luyện mỗi binh chủng ở nơi ở của nó (xem mục Doanh trại và nơi ở riêng) |
+| Trại giáo, trại cung, chuồng voi, trại nỏ | 4×4 | Nơi ở riêng của giáo binh, cung thủ, voi chiến, lính nỏ (trại nỏ từ chương 4). Có nơi ở mới luyện được binh chủng ấy; bấm Luyện ở nơi ở hay ngay trong doanh trại (xem mục Doanh trại và nơi ở riêng) |
 | Lũy tre → Thành đất | 1×1 | Tường. Lũy tre rẻ, có từ đầu. Thành đất chắc hơn, tốn đất đá, mở khóa khi Điện lên cấp |
 | Chòi canh | 1×1 | Cung thủ tự bắn giặc |
 | Bẫy chông tre | 1×1 | Gây sát thương cho giặc giẫm vào |
@@ -205,7 +205,7 @@ Giá đắp nền tính theo lõi móng (bỏ viền cỏ một ô), nên giữ 
   - **giáo binh** thắng quân nặng (chiến xa);
   - **voi chiến** thắng cung thủ Ân;
   - **cung thủ** thắng lính giáo Ân.
-- Luyện quân tốn tiền tuyển và gạo ăn hằng phút. Lính tách riêng khỏi dân làng (xem mục Giữ kinh đô). Mỗi binh chủng luyện ở nơi ở riêng; doanh trại càng cao càng điều được nhiều quân. Luyện xong ngay.
+- Luyện quân tốn tiền tuyển và gạo ăn hằng phút. Lính tách riêng khỏi dân làng (xem mục Giữ kinh đô). Mỗi binh chủng cần nơi ở riêng mới luyện được; nút Luyện có ở cả nơi ở lẫn thẻ Luyện quân của doanh trại. Doanh trại càng cao càng điều được nhiều quân. Luyện xong ngay.
 - **Giặc Ân**: lính giáo (cung thủ ta khắc chế), cung thủ (voi chiến ta khắc chế), **chiến xa** (giáo binh ta khắc chế). Cuối mỗi phần có tướng giặc làm trùm.
 - Trận đánh **tự động** trong 20–40 giây trên bãi chiến 3D, lính chibi có động tác đơn giản. Người chơi chỉ bấm kỹ năng của tướng.
 - Trước trận phó bản: xem trước quân giặc, chọn số lính mỗi loại trong giới hạn chỗ mang ra phó bản (38 từ Điện 5), xếp vào 3 hàng (tiền quân, trung quân, hậu quân).
@@ -281,7 +281,7 @@ Chủ dự án đổi: doanh trại là nơi các tướng ở; mỗi binh chủ
   - Gióng đã thành tráng sĩ, Sơn Tinh đã rước Mị Nương thì đứng giữa sân doanh trại. Gióng lúc nhỏ vẫn ở sân chầu Điện cho dân nuôi; Sơn Tinh lúc cầu hôn vẫn đứng trên mỏm đá trong sân chầu. An Dương Vương đứng chầu trong sân Điện cạnh cột đá thề. Chưa có doanh trại thì tướng đứng chầu trong sân Điện, không cưỡi thú (xem mục Điện Vua Hùng 10×10);
   - khi giữ kinh đô, tướng ra trận cùng quân từ sân trước doanh trại (chưa có doanh trại thì từ trước Điện). Có nhiều doanh trại thì tướng ở và ra trận từ trại mình chỉ huy. Vì thế nên đặt doanh trại gần chỗ giặc hay lũ tới: test mùa lũ bậc 3 đặt doanh trại trong đê, gần phía sông như mẫu Đê bao; doanh trại ở góc rừng xa sông thì thủy quái kịp phá đê.
 - **Bảng doanh trại**: dòng số chỗ quân trên cùng, dưới là bốn thẻ (chủ dự án yêu cầu chia thẻ cho khỏi cuộn xuống mới bố trí được; bảng nhớ thẻ đang xem, cao 62% màn như bảng Xây dựng):
-  - **Quân**: mỗi binh chủng số lính, nút tới nơi ở, hoặc nút dựng nơi ở kèm giá khi chưa có (nút xuống hàng dưới tên binh chủng); lịch đợt giặc và nút Nghênh chiến ngay;
+  - **Luyện quân** (trước gọi là Quân): mỗi binh chủng số lính, binh khí đã rèn và nút Luyện kèm giá, luyện ngay tại đây khỏi phải đi tới nơi ở (chủ dự án yêu cầu; vẫn cần nơi ở còn nguyên như cũ), dưới tên có lối nhỏ tới nơi ở (để sửa khi hư); chưa có nơi ở thì nút dựng nơi ở kèm giá (nút xuống hàng dưới tên binh chủng); lịch đợt giặc và nút Nghênh chiến ngay;
   - **Giữ kinh đô**: bố trí giữ kinh đô (xem mục Nhiều doanh trại);
   - **Tướng**: tướng chỉ huy (Lạc tướng cầm quân mọi trận; Gióng, Sơn Tinh, An Dương Vương, Cao Lỗ khi đã cùng ra trận, kèm trạng thái sẵn sàng, kiệt sức bao lâu hay hiển linh, nút Giao trại này và nút Xem mở bảng tướng); thẻ có dấu đỏ "!" khi trại chưa có tướng chỉ huy;
   - **Trại**: lời tả, cấp, số chỗ trại này giữ, nút Dời, Xoay, Nâng cấp, Đắp nền; thẻ có dấu ⬆ khi nâng cấp được.

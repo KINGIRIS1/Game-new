@@ -144,7 +144,7 @@ export function nutRieng(state: GameState, b: Building): NutVong[] {
   const info = (hinh: NutNoi, nhan: string, data?: Record<string, string>): NutVong => ({ act: 'openInfo', id, hinh, nhan, data });
   if (b.type === 'congDe' && !b.damaged) out.push({ act: 'toggleCong', id, hinh: 'cong', nhan: b.mo ? t.congDong : t.congMo });
   if (b.type === 'doanhTrai') {
-    out.push(info('quan', t.quan, { tab: 'quan' }), info('giu', t.giu, { tab: 'giu' }), info('tuong', t.tuong, { tab: 'tuong' }));
+    out.push(info('luyen', t.quan, { tab: 'quan' }), info('giu', t.giu, { tab: 'giu' }), info('tuong', t.tuong, { tab: 'tuong' }));
   }
   if (UNIT_TYPES.some((k) => UNITS[k].home === b.type)) out.push(info('luyen', t.luyen, { cuon: '[data-act=train]' }));
   if (b.type === 'loRen' && inChapter2(state)) out.push(info('ren', t.ren, { cuon: '[data-act=forgeArms]' }));

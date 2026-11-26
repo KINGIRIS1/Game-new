@@ -2174,15 +2174,22 @@ export class Hud {
     return rows.join('');
   }
 
-  /** Một dòng binh chủng ở nơi ở riêng: số lính, binh khí đã rèn, nút Luyện kèm giá. */
-  private unitRowHtml(state: GameState, k: UnitType): string {
+  /**
+   * Một dòng binh chủng: số lính, binh khí đã rèn, nút Luyện kèm giá. Ở bảng nơi ở thì kèm lời tả binh chủng; ở thẻ
+   * Luyện quân của doanh trại (`noiO`) thì thay bằng lối tới nơi ở cho gọn (sửa nơi ở hư, xem sân tập).
+   */
+  private unitRowHtml(state: GameState, k: UnitType, noiO?: Building): string {
     const def = UNITS[k];
     const check = canTrain(state, k);
     const why = check.ok ? '' : vi.reasons[check.reason];
+    const type = def.home;
+    const sub = noiO
+      ? `<button class="noi-o" data-act="selectBuilding" data-id="${noiO.id}">${vi.buildings[type].icon} ${vi.ui.homeLink(vi.buildings[type].name)} ›</button>`
+      : `<small>${vi.units[k].desc}</small>`;
     return `<div class="unit-row">
         <span class="unit-icon">${vi.units[k].icon}</span>
-        <span class="unit-info"><b>${vi.units[k].name}</b> × ${state.troops[k]}
-          <small>${vi.units[k].desc}</small>
+        <span class="unit-info"><span><b>${vi.units[k].name}</b> × ${state.troops[k]}</span>
+          ${sub}
           ${state.arms[k] ? `<small>⚔️ ${vi.ui.armsOnUnit(state.arms[k])}</small>` : ''}
           ${state.thuThach.bac[k] ? `<small>🎖 ${vi.ui.huanOnUnit(state.thuThach.bac[k])}</small>` : ''}
           ${why ? `<small class="lack">${why}</small>` : ''}</span>
@@ -2315,27 +2322,24 @@ export class Hud {
       <div class="barracks-body">${body}</div>`;
   }
 
-  /** Thẻ Quân của doanh trại: mỗi binh chủng một dòng (số lính, nút tới nơi ở hay dựng nơi ở), lịch đợt giặc. */
+  /**
+   * Thẻ Luyện quân của doanh trại: mỗi binh chủng một dòng. Có nơi ở thì luyện ngay tại đây (nút Luyện kèm giá, lối tới
+   * nơi ở); chưa có thì nút dựng nơi ở. Dưới cùng là lịch đợt giặc.
+   */
   private troopsHtml(state: GameState): string {
     const homes = UNIT_TYPES.filter((k) => k !== 'no' || inChapter4(state) || state.troops.no > 0).map((k) => {
-      const type = UNITS[k].home;
       const home = homeOf(state, k);
+      if (home) return this.unitRowHtml(state, k, home);
+      const type = UNITS[k].home;
       const name = vi.buildings[type].name;
-      let act: string;
-      if (home) {
-        act = `<button class="btn small ghost" data-act="selectBuilding" data-id="${home.id}">${vi.buildings[type].icon} ${name} ›</button>`;
-      } else {
-        const blocker = Hud.placeBlocker(state, type);
-        act = `<button class="btn small" data-act="chooseBuild" data-type="${type}" ${blocker ? 'disabled' : ''}>${vi.ui.buildHome(name)}<br>${costHtml(state, BUILDINGS[type].buildCost)}</button>`;
-      }
-      const why = home ? (home.damaged ? vi.reasons.noiOHu : '') : (Hud.placeBlocker(state, type) ?? '');
+      const blocker = Hud.placeBlocker(state, type);
       // Chưa có nơi ở: nút Dựng kèm giá dài, xuống hàng dưới tên binh chủng cho chữ khỏi bị bóp hẹp.
-      return `<div class="unit-row ${home ? '' : 'wrap'}">
+      return `<div class="unit-row wrap">
         <span class="unit-icon">${vi.units[k].icon}</span>
-        <span class="unit-info"><b>${vi.units[k].name}</b> × ${state.troops[k]}
-          <small>${vi.ui.trainAt(name)}</small>
-          ${why ? `<small class="lack">${why}</small>` : ''}</span>
-        ${act}
+        <span class="unit-info"><span><b>${vi.units[k].name}</b> × ${state.troops[k]}</span>
+          <small>${vi.ui.needHome(name)}</small>
+          ${blocker ? `<small class="lack">${blocker}</small>` : ''}</span>
+        <button class="btn small" data-act="chooseBuild" data-type="${type}" ${blocker ? 'disabled' : ''}>${vi.ui.buildHome(name)}<br>${costHtml(state, BUILDINGS[type].buildCost)}</button>
       </div>`;
     }).join('');
     const raid = state.raid;

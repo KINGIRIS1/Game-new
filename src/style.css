@@ -1037,6 +1037,20 @@ button {
   color: var(--ink-soft);
 }
 
+/* Lối tới nơi ở của binh chủng ở thẻ Luyện quân của doanh trại: chữ đồng gạch chân, không thành nút to. */
+.unit-info .noi-o {
+  align-self: flex-start;
+  padding: 2px 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  font-size: 12px;
+  color: var(--bronze-dark);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  cursor: pointer;
+}
+
 .unit-row .btn {
   font-size: 12px;
   line-height: 1.25;
