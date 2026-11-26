@@ -1184,6 +1184,12 @@ button {
   font-size: 12px;
   line-height: 1.35;
 }
+.xd-foot p {
+  margin: 0 0 4px;
+}
+.xd-foot p:last-child {
+  margin-bottom: 0;
+}
 
 .cost {
   display: inline-flex;
@@ -4642,7 +4648,8 @@ body.man-vao-on #hud > * {
     padding: 9px 8px;
   }
 
-  .sheet.build .build-tabs + .muted {
+  .sheet.build .build-tabs + .muted,
+  .sheet.build .build-tabs + .mau-bac {
     grid-area: note;
     margin: 0 2px 8px;
   }

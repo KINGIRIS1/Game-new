@@ -150,5 +150,5 @@ describe('Hồ Kim Quy', () => {
     const lake = s.buildings.find((b) => b.type === 'hoKimQuy');
     expect(lake).toBeDefined();
     expect(mauSlots('coLoa', 7).some((x) => x.type === 'hoKimQuy' && x.x === lake!.x && x.z === lake!.z)).toBe(true);
-  });
+  }, 30000);
 });

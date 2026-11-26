@@ -1859,7 +1859,9 @@ export class Hud {
         bac ? `<button class="btn ghost" data-act="mauBac">${vi.ui.mauBac(this.mauBac)}</button>` : '',
         `<button class="btn ghost" data-act="mauCat">${vi.ui.mauCat(this.mauCat)}</button>`,
       ].join('');
-      const foot = [bac ? vi.ui.mauBacHint : '', vi.ui.mauCatHint, vi.ui.mauHint].filter(Boolean).map((t) => `<p class="muted xd-foot">${t}</p>`).join('');
+      // Các lời nhắc gộp một khối: khổ ngang đặt cả khối vào ô `foot` của lưới bảng (nhiều khối cùng ô thì chồng lên nhau).
+      const hints = [bac ? vi.ui.mauBacHint : '', vi.ui.mauCatHint, vi.ui.mauHint].filter(Boolean).map((t) => `<p>${t}</p>`).join('');
+      const foot = `<div class="muted xd-foot">${hints}</div>`;
       return { tabs: `<div class="build-tabs">${tabs}</div>`, note: `<p class="mau-bac">${nut}</p>`, items, prefer, foot };
     }
     if (group.key === 'cat') {

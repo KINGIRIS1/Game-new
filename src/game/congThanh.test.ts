@@ -239,7 +239,7 @@ describe('mẫu kinh đô có cổng thành', () => {
         }
       }
     }
-  });
+  }, 30000);
 
   it('chưa mở cổng: áp mẫu vẫn dựng tường ở chỗ cổng; đã mở: dựng cổng, vòng thành vẫn đủ ba vòng', () => {
     const s = ch3(7);

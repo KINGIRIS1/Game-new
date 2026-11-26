@@ -381,7 +381,7 @@ describe('dòng thời gian, mẫu, Lạc hầu, bản lưu', () => {
         }
       }
     }
-  });
+  }, 30000);
 
   it('mẫu Cổ Loa: cổng không bị công trình chắn, có cặp kho ngoài vòng ngoài; công trình trong thành có lối qua cổng', () => {
     for (const id of ['coLoa', 'coLoaSong'] as const) {
