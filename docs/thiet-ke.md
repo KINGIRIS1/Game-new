@@ -4089,7 +4089,7 @@ Học từ Thronewake (nhà Herbalist cứu 40–55% quân ngã). Trước đây
 - Hai người hái thuốc thay phiên rời vườn lên chỗ hái gần nhất (ô sát rừng chưa phát hay ô có cây dại, trong `HAI_XA` ô; `duongHai` ở `vanChuyen.ts`, `tuyenHai` ở `render/ganhHang.ts`), cúi hái `HAI_S` giây rồi gùi đầy lá về; mỗi lúc một người đi. Có trận, giặc sắp tới, ban đêm thì ở nhà.
 - Lạc hầu gợi ý một lần khi mở (`NEW_HINTS`). Mẫu kinh đô chừa một chỗ từ Điện 4.
 
-## Kế hoạch: bản đồ Việt Nam, 34 tỉnh, chức Bồ chính (chủ dự án đã chốt hướng, chờ duyệt kế hoạch)
+## Kế hoạch: bản đồ Việt Nam, 34 tỉnh, chức Bồ chính (chủ dự án đã duyệt)
 
 Chủ dự án nêu ý: map tổng thể Việt Nam, 34 map theo 34 tỉnh, hình giống tỉnh, ghép lại thành nước Việt Nam; mỗi người chơi chọn một tỉnh, nhận một vị trí làm việc theo ngành nghề trong game, mỗi vị trí một nhiệm vụ riêng. Qua bốn vòng hỏi đáp, chủ dự án chốt các điều dưới đây. Mọi con số là đề xuất ban đầu; duyệt xong thì như các kế hoạch trước, cho chỉnh ±20% theo test; làm xong phần nào thì ghi số cuối cùng của phần ấy.
 
@@ -4122,7 +4122,7 @@ Chủ dự án nêu ý: map tổng thể Việt Nam, 34 map theo 34 tỉnh, hìn
 - **Bảng xếp hạng tỉnh** cộng điểm của **30 người góp nhiều nhất** mỗi tỉnh.
 - **Mùa 4 tuần**: hết mùa điểm tính lại; thưởng đồ, huân công và **phúc lành tỉnh** (tối đa +10% cho kinh đô, không tính trong Đấu thành).
 
-### Đề xuất chờ duyệt
+### Con số ban đầu (chủ dự án đã duyệt)
 
 - **Cách góp điểm** (mỗi chức một việc chính; ai cũng đánh được giặc chung, đúng chức thì nhân hệ số):
   - Bồ chính quân: sát thương vào giặc chung ×1,5.
@@ -4204,5 +4204,5 @@ Sau bốn PR: map 3D từng tỉnh (dựng theo kiểu map dã ngoại, viền t
 25. **Điện 10 điều quân ra đóng đảo** (chủ dự án đã duyệt; đã làm PR 1–3: luật, giao diện, hình đồn đảo và thuyền chiến, giặc đánh đảo; xem Kế hoạch cùng tên): thuyền chiến đóng ở bến thuyền khơi cấp 3 chở quân ra đồn Hoàng Sa, đồn Trường Sa; đảo có quân giữ thì ngư trường làm ra thêm, báo sớm và chặn đánh thủy quân Hán; giặc Hán đánh đảo, quân đảo tự đánh, xem lại được.
 26. **Dã ngoại** (chủ dự án yêu cầu, đã làm; xem Kế hoạch cùng tên): mười map (map 6 Núi Nưa, map 7 Đầm Dạ Trạch, map 8 Núi Vệ, map 9 Bạch Đằng, map 10 sông Như Nguyệt thêm sau) mở kiểu Võ Lâm 2 nối nhau bằng cổng mở theo cấp, mỗi map năm khu quái phân theo cấp và một boss tự đánh; chạm để đi, nút Tự đánh; tự chọn tối đa 3 tướng, chỉ tướng đi; cấp chung cho mọi tướng chỉ có tác dụng trong dã ngoại; treo máy tối đa 8 giờ, không khóa tướng.
 27. **Nhà thuốc nam** (chủ dự án đã duyệt, đã làm; xem Kế hoạch cùng tên): cứu một phần lính ngã sau mỗi trận, chữa dần theo giờ; hai người đi hái thuốc.
-28. **Bản đồ Việt Nam** (chủ dự án đã chốt hướng, chờ duyệt kế hoạch; xem Kế hoạch cùng tên): 34 tỉnh ghép thành nước, mỗi người chơi chọn tỉnh và giữ một chức Bồ chính, cùng chống giặc chung, thi đua theo mùa, đưa các tỉnh phía Nam về bằng kết giao.
+28. **Bản đồ Việt Nam** (chủ dự án đã duyệt, chưa làm; xem Kế hoạch cùng tên): 34 tỉnh ghép thành nước, mỗi người chơi chọn tỉnh và giữ một chức Bồ chính, cùng chống giặc chung, thi đua theo mùa, đưa các tỉnh phía Nam về bằng kết giao.
 29. **Để sau**: nhạc nền.
