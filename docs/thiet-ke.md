@@ -4269,6 +4269,65 @@ Vua Hùng mở hội tỉ võ trước sân chầu. Các tướng so tài trư�
 3. Cảnh sân chầu và giao diện đánh: dải thứ tự lượt, ba nút chiêu, chọn mục tiêu, Tự đánh, tua ×2.
 4. Bảng Lôi đài (chọn đội và thú, bản đồ tầng, thưởng), nút ở cột bên phải, lời Lạc hầu, hướng dẫn chỉ tay.
 
+## Kế hoạch: bản đồ Việt Nam, 34 tỉnh, chức Bồ chính (chủ dự án đã duyệt)
+
+Chủ dự án nêu ý: map tổng thể Việt Nam, 34 map theo 34 tỉnh, hình giống tỉnh, ghép lại thành nước Việt Nam; mỗi người chơi chọn một tỉnh, nhận một vị trí làm việc theo ngành nghề trong game, mỗi vị trí một nhiệm vụ riêng. Qua bốn vòng hỏi đáp, chủ dự án chốt các điều dưới đây. Mọi con số là đề xuất ban đầu; duyệt xong thì như các kế hoạch trước, cho chỉnh ±20% theo test; làm xong phần nào thì ghi số cuối cùng của phần ấy.
+
+### Đã chốt
+
+- **Tầng chơi chung gắn trên game hiện có**, không thay lối chơi: kinh đô, tướng, trang bị, Đấu thành giữ nguyên. Đây cũng là phần "bản đồ thế giới" game còn thiếu (`docs/nghien-cuu/map-game-tuong-tu.md`).
+- **Hình 34 tỉnh, thành hiện nay** (Nghị quyết 202/2025/QH15), mỗi tỉnh kèm tên vùng đất xưa. Bản đồ luôn có **Hoàng Sa** (đặc khu thuộc Đà Nẵng) và **Trường Sa** (đặc khu thuộc Khánh Hòa); không dùng tên gọi của nước khác, không vẽ "đường chín đoạn" (Luật Đo đạc và bản đồ 2018, Nghị định 18/2020/NĐ-CP).
+- **Nhiều người chơi thật, không cùng lúc** (như Đấu thành): mỗi người góp phần vào tỉnh mình, máy chủ Supabase cộng dồn. Cần mạng để góp; không mạng thì vẫn xem bản đồ, kinh đô chơi bình thường.
+- **Mở từ Điện 5**, nút mới ở cột bên phải (cùng Dã ngoại, Thần thú, Đấu thành).
+- **Tự chọn tỉnh nào cũng được**; đổi tỉnh mỗi mùa một lần.
+- **18 tỉnh từ Hà Tĩnh trở ra** là đất Văn Lang từ đầu: Hà Nội, Hải Phòng, Cao Bằng, Điện Biên, Lai Châu, Sơn La, Lạng Sơn, Quảng Ninh, Tuyên Quang, Lào Cai, Thái Nguyên, Phú Thọ, Bắc Ninh, Hưng Yên, Ninh Bình, Thanh Hóa, Nghệ An, Hà Tĩnh. **16 tỉnh, thành từ Quảng Trị trở vào** bắt đầu "chưa quy về"; chọn được ngay từ đầu.
+- **Quy về bằng kết giao**: giao thương, kết nghĩa với bản làng, cùng chống giặc biển. Không có nhiệm vụ đánh chiếm; lời trong game trân trọng văn hóa Chăm, Khmer, các dân tộc Tây Nguyên. Tỉnh đã quy về thì giữ mãi.
+- **Các tỉnh cùng chống giặc ngoại xâm và thi đua**, tỉnh không đánh tỉnh.
+- **Người chơi vẫn là vua ở kinh đô mình**, đồng thời giữ một chức trong tỉnh. Sáu chức thường tự chọn, không giới hạn số người; hai chức đứng đầu tỉnh cho người góp nhiều nhất tuần:
+
+| Chức | Lo việc | Dựa trên |
+|---|---|---|
+| Bồ chính quân | Đánh giặc chung của tỉnh | Bãi chiến, phó bản |
+| Bồ chính nông | Ruộng, gạo nuôi quân tỉnh | Ruộng, kho |
+| Bồ chính thủy | Đê, chống lũ cho tỉnh | Đê, cống, đất đá |
+| Bồ chính thương | Thuyền buôn, chở hàng giữa các tỉnh | Bến, thuyền buôn |
+| Bồ chính biên | Trinh sát, đồn ải biên | Bên kia sông, đồn giặc |
+| Bồ chính hải | Giữ biển đảo (chỉ tỉnh giáp biển) | Bến thuyền khơi, đồn đảo |
+| **Lạc tướng** (đứng đầu, võ) | Người góp nhiều nhất bên võ (quân, biên, hải) | |
+| **Lạc hầu** (đứng đầu, văn) | Người góp nhiều nhất bên văn (nông, thủy, thương) | |
+
+  Lạc hầu, Lạc tướng, Bồ chính là danh xưng có trong sử (Giao Châu ngoại vực ký qua Thủy kinh chú, Lĩnh Nam chích quái, Đại Việt sử ký toàn thư: "tướng văn gọi là Lạc hầu, tướng võ gọi là Lạc tướng... quan hữu ty gọi là Bồ chính"). Sử không có chức riêng cho ruộng, đê, buôn, biên, biển: ghép "Bồ chính + việc" là tên đặt cho game, ghi rõ ở bảng chức. Viết "Bồ chính" theo Toàn thư, không viết "Bố chính" (chức đời Lê, Nguyễn).
+- **Nhiệm vụ của chức làm ngay trong kinh đô mình** (bước đầu); map 3D từng tỉnh để bước sau.
+- **Chống gian lận**: điểm tỉnh chỉ tính từ thứ máy chủ kiểm được (trận máy chủ đánh lại như Đấu thành, của góp kèm bản chụp hợp luật), có trần mỗi ngày.
+- **Bảng xếp hạng tỉnh** cộng điểm của **30 người góp nhiều nhất** mỗi tỉnh.
+- **Mùa 4 tuần**: hết mùa điểm tính lại; thưởng đồ, huân công và **phúc lành tỉnh** (tối đa +10% cho kinh đô, không tính trong Đấu thành).
+
+### Con số ban đầu (chủ dự án đã duyệt)
+
+- **Cách góp điểm** (mỗi chức một việc chính; ai cũng đánh được giặc chung, đúng chức thì nhân hệ số):
+  - Bồ chính quân: sát thương vào giặc chung ×1,5.
+  - Bồ chính nông: góp gạo; Bồ chính thủy: góp đất đá (đắp đê tỉnh); Bồ chính thương: góp vỏ ốc và gỗ (thuyền buôn liên tỉnh); Bồ chính biên: góp sắt và đánh đạo giặc vào tỉnh biên giới ×1,5; Bồ chính hải: góp gỗ, sắt (thuyền giữ biển) và đánh giặc biển ×1,5.
+  - Của góp trừ ở kinh đô. Máy chủ nhận kèm bản chụp (`makeSnapshot`, `validateSnapshot`): kho phải có đủ của trước khi trừ, không quá sức chứa; sai thì không nhận.
+  - Trần mỗi người mỗi ngày: góp của tối đa **100 điểm** (1 điểm cho 1% sức chứa kho lúc góp, để Điện thấp, Điện cao góp ngang nhau); trận giặc chung tính điểm tối đa **3 trận**.
+- **Giặc chung**: mỗi tuần một đạo vào 3–5 tỉnh (biên giới phía bắc, phía tây hay giáp biển, theo lượt), đánh trong **3 ngày**. Máu chung = số người đã góp ở tỉnh ấy tuần trước × hệ số (tối thiểu như 10 người). Mỗi trận là trận ngoài bãi 90 giây như phó bản, quân giặc theo chương cao nhất người đánh đã qua, máy chủ đánh lại tính sát thương. Tỉnh không bị đánh thì **gửi quân sang tỉnh láng giềng** (láng giềng tính từ hình tỉnh chung cạnh), điểm chia đôi cho hai tỉnh. Diệt hết đạo giặc thì mọi người đã đánh được đồ và huân công.
+- **Quy về**: tỉnh chưa quy về có thanh **Kết giao 0 → 100%**, mọi điểm góp ở tỉnh ấy đổ vào thanh (không đổ vào bảng xếp hạng tới khi quy về). Mức cần đề xuất bằng 30 người × 7 ngày × 100 điểm. Đủ thì cả tỉnh quy về với mọi người chơi trên máy chủ, có đoạn truyện ngắn của tỉnh ấy.
+- **Đổi tỉnh**: chỉ khi mùa mới bắt đầu (hay người mới chọn lần đầu). **Đổi chức**: chờ 24 giờ.
+- **Lạc tướng, Lạc hầu**: chọn lại mỗi tuần; được danh hiệu ("Lạc tướng tỉnh Phú Thọ"), viền tên vàng ở bảng xếp hạng, cờ tỉnh cắm trước Điện. Chỉ để nhìn, không thêm sức mạnh.
+- **Phúc lành tỉnh** cả mùa sau: hạng 1–3 **+10%** sản lượng kinh đô, hạng 4–10 **+6%**, tỉnh còn lại đã diệt được ít nhất một đạo giặc **+3%**. Người chơi mô phỏng không có phúc lành tỉnh nên nhịp cân bằng không đổi.
+- **Tên vùng xưa**: đất Văn Lang dùng tên 15 bộ theo Toàn thư (Văn Lang, Giao Chỉ, Chu Diên, Vũ Ninh, Phúc Lộc, Việt Thường, Ninh Hải, Dương Tuyền, Lục Hải, Vũ Định, Hoài Hoan, Cửu Chân, Bình Văn, Tân Hưng, Cửu Đức) cùng địa danh truyện (Phong Châu, Cổ Loa, Mê Linh, Dạ Trạch); phía Nam dùng tên vùng Chăm Pa, Phù Nam (như Amaravati, Vijaya, Kauthara, Panduranga, Óc Eo). Gán tỉnh nào tên nào phải tra nguồn ở PR 1; vị trí 15 bộ chỉ là phỏng đoán của sử gia đời sau, chỗ nào không chắc thì ghi "theo truyền thuyết" hay chỉ ghi tên tỉnh.
+
+### Cách làm (bốn PR)
+
+1. **Bản đồ 2D, chọn tỉnh, chọn chức** (chỉ máy khách):
+   - Hình tỉnh lấy từ Free-GIS-Data (`Vietnam Administrative Divisions (Post-2025)/Provinces.geojson`: có Hoàng Sa trong Đà Nẵng, Trường Sa trong Khánh Hòa; sửa đối tượng mã 31 ghi nhầm "Lạng Sơn" thành Đồng Tháp). Script `scripts/ban-do.mjs` rút gọn ra `public/ban-do/34-tinh.json` (TopoJSON, vài trăm KB), tính láng giềng, giáp biển, giáp biên giới; ghi nguồn ở Cài đặt và trong repo. Giấy phép nguồn chưa rõ (chỉ yêu cầu ghi nguồn): có nguồn chính thức rõ giấy phép thì thay.
+   - `src/game/vietNam.ts`: danh sách 34 tỉnh (mã, tên, tên xưa, đất Văn Lang hay chưa, láng giềng, giáp biển), chức, luật chọn tỉnh, chọn chức. `GameState.vietNam` tùy chọn, không lên phiên bản lưu (như `dauThanh`). `vietNam.test.ts` canh đủ 34 tỉnh, Hoàng Sa và Trường Sa thuộc đúng tỉnh, 18/16 tỉnh, Bồ chính hải chỉ ở tỉnh giáp biển.
+   - `src/ui/vietNam.ts`: bản đồ SVG kiểu Đông Sơn (viền mực, nền giấy dó, hoa văn trống đồng góc), tô theo trạng thái (đất Văn Lang, chưa quy về, đang có giặc), tỉnh mình viền vàng; chạm tỉnh hiện thẻ (tên nay, tên xưa, số người, điểm, giặc); kéo, phóng bằng hai ngón; khung chèn hai quần đảo khi thu nhỏ. Chụp kiểm tra cảnh `viet-nam`.
+2. **Máy chủ điểm tỉnh**: bảng `tinh_nguoi` (người, tỉnh, chức, giờ đổi), `tinh_diem` (mùa, tỉnh, người, ngày, điểm), lệnh `chonTinh`, `chonChuc`, `gop`, `bangTinh` ở `xuLy.ts`; luật ở `mayChu.ts` (kiểm bản chụp, trần ngày, top 30). Test Deno như Đấu thành.
+3. **Giặc chung**: bảng `giac_chung`, lịch tuần, trận ngoài bãi tất định máy chủ đánh lại, thanh máu chung, gửi quân sang láng giềng, thưởng khi diệt.
+4. **Mùa, phúc lành, quy về**: mùa 4 tuần, xếp hạng cuối mùa, phúc lành tỉnh (cộng ở `productionPerMinute`, không vào bản chụp Đấu thành), Lạc tướng và Lạc hầu mỗi tuần, thanh Kết giao và đoạn truyện quy về.
+
+Sau bốn PR: map 3D từng tỉnh (dựng theo kiểu map dã ngoại, viền theo hình tỉnh) là kế hoạch riêng.
+
 ## Nhịp chơi và lưu game
 
 - Nhịp chơi lai: mỗi lần mở game là một phiên ra quyết định ngắn.
@@ -4325,4 +4384,5 @@ Vua Hùng mở hội tỉ võ trước sân chầu. Các tướng so tài trư�
 25. **Điện 10 điều quân ra đóng đảo** (chủ dự án đã duyệt; đã làm PR 1–3: luật, giao diện, hình đồn đảo và thuyền chiến, giặc đánh đảo; xem Kế hoạch cùng tên): thuyền chiến đóng ở bến thuyền khơi cấp 3 chở quân ra đồn Hoàng Sa, đồn Trường Sa; đảo có quân giữ thì ngư trường làm ra thêm, báo sớm và chặn đánh thủy quân Hán; giặc Hán đánh đảo, quân đảo tự đánh, xem lại được.
 26. **Dã ngoại** (chủ dự án yêu cầu, đã làm; xem Kế hoạch cùng tên): mười map (map 6 Núi Nưa, map 7 Đầm Dạ Trạch, map 8 Núi Vệ, map 9 Bạch Đằng, map 10 sông Như Nguyệt thêm sau) mở kiểu Võ Lâm 2 nối nhau bằng cổng mở theo cấp, mỗi map năm khu quái phân theo cấp và một boss tự đánh; chạm để đi, nút Tự đánh; tự chọn tối đa 3 tướng, chỉ tướng đi; cấp chung cho mọi tướng chỉ có tác dụng trong dã ngoại; treo máy tối đa 8 giờ, không khóa tướng.
 27. **Nhà thuốc nam** (chủ dự án đã duyệt, đã làm; xem Kế hoạch cùng tên): cứu một phần lính ngã sau mỗi trận, chữa dần theo giờ; hai người đi hái thuốc.
-28. **Để sau**: nhạc nền.
+28. **Bản đồ Việt Nam** (chủ dự án đã duyệt, chưa làm; xem Kế hoạch cùng tên): 34 tỉnh ghép thành nước, mỗi người chơi chọn tỉnh và giữ một chức Bồ chính, cùng chống giặc chung, thi đua theo mùa, đưa các tỉnh phía Nam về bằng kết giao.
+29. **Để sau**: nhạc nền.
