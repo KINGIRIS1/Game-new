@@ -1721,6 +1721,8 @@ export class Hud {
       } else {
         if (!b) return this.closeSheet();
         title = `${vi.buildings[b.type].icon} ${buildingName(b)}`;
+        // Doanh trại: số chỗ quân nằm trên đầu bảng, nhường chỗ cho các thẻ.
+        if (b.type === 'doanhTrai') title += ` <small class="head-chip">${vi.ui.troopChip(troopSpace(state), troopCap(state), doanhCount(state))}</small>`;
         body = this.buildingHtml(state, b.id);
       }
     } else if (this.sheet.kind === 'tho') {
@@ -2185,8 +2187,10 @@ export class Hud {
     const check = canTrain(state, k);
     const why = check.ok ? '' : vi.reasons[check.reason];
     const type = def.home;
+    // Nơi ở hư: lối tới nơi ở báo hư luôn (đỏ), khỏi thêm dòng lý do dài.
+    const hu = !!noiO?.damaged;
     const sub = noiO
-      ? `<button class="noi-o" data-act="selectBuilding" data-id="${noiO.id}">${vi.buildings[type].icon} ${vi.ui.homeLink(vi.buildings[type].name)} ›</button>`
+      ? `<button class="noi-o ${hu ? 'lack' : ''}" data-act="selectBuilding" data-id="${noiO.id}">${vi.buildings[type].icon} ${(hu ? vi.ui.homeHu : vi.ui.homeLink)(vi.buildings[type].name)} ›</button>`
       : `<small>${vi.units[k].desc}</small>`;
     return `<div class="unit-row">
         <span class="unit-icon">${vi.units[k].icon}</span>
@@ -2194,7 +2198,7 @@ export class Hud {
           ${sub}
           ${state.arms[k] ? `<small>⚔️ ${vi.ui.armsOnUnit(state.arms[k])}</small>` : ''}
           ${state.thuThach.bac[k] ? `<small>🎖 ${vi.ui.huanOnUnit(state.thuThach.bac[k])}</small>` : ''}
-          ${why ? `<small class="lack">${why}</small>` : ''}</span>
+          ${why && !(hu && !check.ok && check.reason === 'noiOHu') ? `<small class="lack">${why}</small>` : ''}</span>
         <button class="btn small" data-act="train" data-unit="${k}" ${check.ok ? '' : 'disabled'}>${vi.ui.train}<br>${costHtml(state, def.cost)}</button>
       </div>`;
   }
@@ -2207,9 +2211,13 @@ export class Hud {
 
   /** Số chỗ quân đang dùng trên tổng chỗ của mọi doanh trại. */
   private troopSpaceHtml(state: GameState): string {
+    return `<div class="stat"><span>${vi.ui.troopSpaceAll(troopSpace(state), troopCap(state), doanhCount(state))}</span></div>${this.thuongHtml(state)}`;
+  }
+
+  /** Dòng thương binh đang nằm chữa ở nhà thuốc (không có thì trống). */
+  private thuongHtml(state: GameState): string {
     const n = soThuong(state);
-    const thuong = n ? `<div class="stat"><span>${vi.ui.thuocDangChua(n)}</span><span>${linhHtml(state.thuong.linh)}</span></div>` : '';
-    return `<div class="stat"><span>${vi.ui.troopSpaceAll(troopSpace(state), troopCap(state), doanhCount(state))}</span></div>${thuong}`;
+    return n ? `<div class="stat"><span>${vi.ui.thuocDangChua(n)}</span><span>${linhHtml(state.thuong.linh)}</span></div>` : '';
   }
 
   /**
@@ -2322,7 +2330,7 @@ export class Hud {
       tab === 'giu' ? this.guardHtml(state) : tab === 'tuong' ? this.generalsHtml(state) : tab === 'trai' ? info : this.troopsHtml(state);
     return `<div class="trai-khung">
       <div class="build-tabs barracks-tabs">${tabs}</div>
-      <div class="trai-noi">${this.troopSpaceHtml(state)}${repair ? `<div class="actions top">${repair}</div>` : ''}
+      <div class="trai-noi">${this.thuongHtml(state)}${repair ? `<div class="actions top">${repair}</div>` : ''}
         <div class="barracks-body">${body}</div></div>
     </div>`;
   }
@@ -2338,13 +2346,13 @@ export class Hud {
       const type = UNITS[k].home;
       const name = vi.buildings[type].name;
       const blocker = Hud.placeBlocker(state, type);
-      // Chưa có nơi ở: nút Dựng kèm giá dài, xuống hàng dưới tên binh chủng cho chữ khỏi bị bóp hẹp.
+      // Chưa có nơi ở: nút Dựng kèm giá một hàng, trọn bề ngang ô dưới tên binh chủng (nút đã nói phải dựng nơi ở mới
+      // luyện được).
       return `<div class="unit-row wrap">
         <span class="unit-icon">${vi.units[k].icon}</span>
         <span class="unit-info"><span><b>${vi.units[k].name}</b> × ${state.troops[k]}</span>
-          <small>${vi.ui.needHome(name)}</small>
           ${blocker ? `<small class="lack">${blocker}</small>` : ''}</span>
-        <button class="btn small" data-act="chooseBuild" data-type="${type}" ${blocker ? 'disabled' : ''}>${vi.ui.buildHome(name)}<br>${costHtml(state, BUILDINGS[type].buildCost)}</button>
+        <button class="btn small" data-act="chooseBuild" data-type="${type}" ${blocker ? 'disabled' : ''}>${vi.ui.buildHome(name)} · ${costHtml(state, BUILDINGS[type].buildCost)}</button>
       </div>`;
     }).join('');
     const raid = state.raid;

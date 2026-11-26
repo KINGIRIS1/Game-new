@@ -651,6 +651,18 @@ button {
   grid-template-columns: repeat(auto-fill, minmax(max(260px, calc((100% - 16px) / 3)), 1fr));
 }
 
+/* Số chỗ quân trên đầu bảng doanh trại (cạnh tên bảng). */
+.sheet-head .head-chip {
+  margin-left: 10px;
+  padding: 2px 10px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.18);
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+  vertical-align: 2px;
+}
+
 /* Lịch đợt giặc và nút gọi giặc sớm chung một hàng. */
 .trai-giac {
   display: flex;
@@ -1109,6 +1121,11 @@ button {
   text-decoration: underline;
   text-underline-offset: 2px;
   cursor: pointer;
+}
+
+/* Nơi ở đang hư: lối tới nơi ở đỏ, báo hư luôn. */
+.unit-info .noi-o.lack {
+  color: var(--red);
 }
 
 .unit-row .btn {

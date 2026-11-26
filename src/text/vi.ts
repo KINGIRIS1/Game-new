@@ -2574,6 +2574,7 @@ export const vi = {
     thuocKhieng: '🌿 Được khiêng về nhà thuốc',
     thuocDangChua: (n: number) => `🌿 Đang chữa ở nhà thuốc: ${n} người`,
     offlineChua: (n: number) => `🌿 Lang y đã chữa khỏi ${n} thương binh.`,
+    troopChip: (used: number, cap: number, doanh: number) => (doanh > 1 ? `Quân ${used}/${cap} chỗ · ${doanh} doanh` : `Quân ${used}/${cap} chỗ`),
     troopSpaceAll: (used: number, cap: number, doanh: number) =>
       doanh > 1 ? `Quân trong doanh trại (${doanh} doanh): ${used}/${cap} chỗ` : `Quân trong doanh trại: ${used}/${cap} chỗ`,
     barracksCap: (cap: number, per: number, doanh: number) => `Doanh trại giữ ${cap} chỗ: ${doanh} doanh, mỗi doanh ${per} chỗ`,
@@ -2607,7 +2608,7 @@ export const vi = {
     caoLoAtDien: 'đứng trước Điện',
     haiBaDesc: 'cưỡi voi trên đài tướng',
     homeLink: (name: string) => `Ở ${name.toLowerCase()}`,
-    needHome: (name: string) => `Dựng ${name.toLowerCase()} cho lính ở rồi mới luyện được`,
+    homeHu: (name: string) => `${name} đang hư, chạm để sửa`,
     buildHome: (name: string) => `Dựng ${name.toLowerCase()}`,
     needBarracks: (lv: number) => (lv <= 1 ? 'Cần doanh trại' : `Cần doanh trại cấp ${lv}`),
     trained: (name: string) => `Đã luyện một ${name.toLowerCase()}`,
