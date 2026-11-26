@@ -5710,24 +5710,27 @@ body.man-vao-on #hud > * {
 /* Bảng bên chia thẻ: khổ dọc thẻ nằm ngang trên đầu; máy cầm ngang, máy tính là cột biểu tượng dọc bên trái. */
 .bdv-khung {
   display: flex;
-  flex-direction: column;
+  align-items: flex-start;
+  gap: 10px;
 }
 
+/* Bốn thẻ xếp dọc bên trái bảng bên. */
 .bdv-tabs {
   position: sticky;
-  top: -10px;
+  top: 0;
   z-index: 2;
   display: flex;
+  flex-direction: column;
+  flex: 0 0 52px;
   gap: 4px;
-  margin: -10px -14px 0;
-  padding: 8px 10px 6px;
+  padding: 0 6px 0 0;
   background: var(--paper);
-  border-bottom: 1px solid var(--line);
+  border-right: 1px solid var(--line);
 }
 
 .bdv-tab {
   position: relative;
-  flex: 1 1 0;
+  flex: none;
   min-width: 0;
   display: flex;
   flex-direction: column;
@@ -5762,7 +5765,8 @@ body.man-vao-on #hud > * {
 }
 
 .bdv-luat-nut {
-  flex: 0 0 48px;
+  flex: none;
+  margin-top: 6px;
 }
 
 .bdv-cham-do {
@@ -5777,6 +5781,7 @@ body.man-vao-on #hud > * {
 }
 
 .bdv-noi {
+  flex: 1;
   min-width: 0;
 }
 
@@ -5784,39 +5789,8 @@ body.man-vao-on #hud > * {
   display: none;
 }
 
-@media (min-width: 600px) and (min-aspect-ratio: 4/5) {
-  .camp-panel:has(.bdv-khung) {
-    width: 390px;
-  }
-
-  .bdv-khung {
-    flex-direction: row;
-    align-items: flex-start;
-    gap: 10px;
-  }
-
-  .bdv-tabs {
-    top: 0;
-    flex-direction: column;
-    flex: 0 0 52px;
-    margin: 0;
-    padding: 0 6px 0 0;
-    border-bottom: none;
-    border-right: 1px solid var(--line);
-  }
-
-  .bdv-tab,
-  .bdv-luat-nut {
-    flex: none;
-  }
-
-  .bdv-luat-nut {
-    margin-top: 6px;
-  }
-
-  .bdv-noi {
-    flex: 1;
-  }
+.camp-panel:has(.bdv-khung) {
+  width: 390px;
 }
 
 @media (min-width: 1100px) and (min-height: 620px) {
