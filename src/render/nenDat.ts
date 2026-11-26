@@ -62,6 +62,13 @@ export interface NenInput {
    * móng là thềm phẳng trên sườn (`computeDoc`). Không có (hay 0) thì như cũ: bờ vát trong ô cao, móng cao dựng vách.
    */
   doc?: number;
+  /**
+   * Bệ nền (chủ dự án: bậc tam cấp lẫn vào nền khi đắp cao), chỉ có nghĩa khi có `doc`. Ô móng cứng có bệ (`o`) cao hơn
+   * đất thường chung đỉnh thì đất ấy dừng dưới mặt móng một đoạn `cao(chênh)` (chênh: mặt móng trừ mặt thấp nhất của ô
+   * đất thường chung đỉnh), thành vách kè thấp quanh móng; dốc thoải bắt đầu từ chân bệ. Không có thì như cũ: đất lên
+   * tới mép móng.
+   */
+  be?: { o: (x: number, z: number) => boolean; cao: (chenh: number) => number };
   /** Màu của ô (x, z) (có thể ngoài lưới). */
   colors: (x: number, z: number, out: TileColors) => void;
   /** Tọa độ thế giới của điểm lưới 0 (ô 0 bắt đầu ở đây). */
@@ -141,6 +148,8 @@ export class NenDat {
   /** Ô móng cứng (giữ phẳng, không theo dốc), ô giữ phẳng mềm, mặt đất đã làm mượt (`computeDoc`). */
   private readonly hard: Uint8Array;
   private readonly soft: Uint8Array;
+  /** Ô móng cứng có bệ nền (`NenInput.be`). */
+  private readonly be: Uint8Array;
   private readonly doc: Float32Array;
   private readonly col: Float32Array;
   private readonly colDone: Uint8Array;
@@ -171,6 +180,7 @@ export class NenDat {
     this.flat = new Uint8Array(TT);
     this.hard = new Uint8Array(TT);
     this.soft = new Uint8Array(TT);
+    this.be = new Uint8Array(TT);
     this.doc = new Float32Array(TT);
     this.col = new Float32Array(TT * 12);
     this.colDone = new Uint8Array(TT);
@@ -343,6 +353,7 @@ export class NenDat {
     const soft = flat && !!input.soft?.(x, z);
     this.hard[f] = flat && !soft ? 1 : 0;
     this.soft[f] = soft ? 1 : 0;
+    this.be[f] = flat && !soft && !!input.be?.o(x, z) ? 1 : 0;
     this.flat[f] = flat ? 1 : 0;
     this.colDone[f] = 0;
   }
@@ -350,11 +361,12 @@ export class NenDat {
   /**
    * Độ cao chung các đỉnh lưới con trong khoảng [a0, a1] × [b0, b1]. Đỉnh giáp sông, hay chỉ giữa các ô thường: mặt thấp
    * nhất trong các ô chứa đỉnh ấy. Đỉnh có ô giữ phẳng: mặt thấp nhất của các ô giữ phẳng (ô thường quanh đó dốc lên
-   * tới mép móng, hai móng khác độ cao thì móng cao dựng vách). Đỉnh giữa các ô thường có ô trong dốc thoải: trung bình
-   * mặt dốc các ô ấy. Rồi phần giữa ô thường có mép cao hơn mặt ô (ô trong dốc) nội suy từ bốn mép cho dốc liền.
+   * tới mép móng, hai móng khác độ cao thì móng cao dựng vách; móng có bệ cao hơn đất thường chung đỉnh thì đất dừng ở
+   * chân bệ, `NenInput.be`). Đỉnh giữa các ô thường có ô trong dốc thoải: trung bình mặt dốc các ô ấy. Rồi phần giữa ô thường có mép cao hơn mặt ô (ô trong dốc) nội suy từ bốn mép cho dốc liền.
    */
   private computeH(a0: number, b0: number, a1: number, b1: number): void {
-    const { T, N, ty, H, flat, river, doc } = this;
+    const { T, N, ty, H, flat, river, doc, be } = this;
+    const beCao = this.input.doc ? this.input.be?.cao : undefined;
     const q4 = [0, 0, 0, 0];
     for (let b = b0; b <= b1; b++) {
       const j = Math.min(Math.floor(b / 3), T - 1);
@@ -365,6 +377,8 @@ export class NenDat {
         for (let q = 0; q < 4; q++) q4[q] = (q < 2 ? j : j2) * T + (q % 2 ? i2 : i);
         let low = Infinity;
         let lowF = Infinity;
+        let lowG = Infinity;
+        let coBe = false;
         let wet = false;
         let sum = 0;
         let n = 0;
@@ -374,13 +388,20 @@ export class NenDat {
           if (q4.indexOf(f) !== q) continue;
           low = Math.min(low, ty[f]);
           if (river[f]) wet = true;
-          else if (flat[f]) lowF = Math.min(lowF, ty[f]);
-          else {
+          else if (flat[f]) {
+            if (ty[f] < lowF) coBe = false;
+            if (ty[f] <= lowF) coBe ||= be[f] === 1;
+            lowF = Math.min(lowF, ty[f]);
+          } else {
             sum += doc[f];
             n++;
+            lowG = Math.min(lowG, ty[f]);
           }
         }
-        H[b * N + a] = wet || !this.input.doc ? low : lowF < Infinity ? lowF : sum / n;
+        let y = wet || !this.input.doc ? low : lowF < Infinity ? lowF : sum / n;
+        // Bệ nền: móng cao hơn đất thường chung đỉnh thì đất dừng ở chân bệ (không thấp hơn mặt dốc vốn có ở đỉnh ấy).
+        if (!wet && beCao && coBe && n && lowF - lowG > 1e-4) y = Math.max(lowF - beCao(lowF - lowG), Math.min(lowF, sum / n));
+        H[b * N + a] = y;
       }
     }
     // Phần giữa ô trong dốc: nội suy Coons từ bốn mép (mép đã tính ở trên).
