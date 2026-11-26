@@ -1785,7 +1785,8 @@ export class Hud {
   private buildMenuHtml(state: GameState): string {
     const { tabs, note, items, prefer, foot } = this.buildMenuData(state);
     this.buildPick = pickOf(items, this.buildPick, prefer);
-    const { cols, rows } = Hud.buildGrid();
+    // Dòng ghi chú đầu bảng (lời nhắc một dòng, hay hàng nút của thẻ Mẫu kinh đô) ăn bớt chiều cao của lưới.
+    const { cols, rows } = Hud.buildGrid(!note ? 0 : note.includes('mau-bac') ? 44 : 26);
     const per = cols * rows;
     const page = Math.min(this.buildPage ?? pageOf(items, this.buildPick, per), pageCount(items.length, per) - 1);
     this.buildPage = page;
@@ -1794,15 +1795,15 @@ export class Hud {
 
   /**
    * Cỡ một trang lưới ảnh nhỏ trong bảng Xây dựng, cho ảnh lớn, nút Xây và cả trang vừa bảng mà không phải cuộn: số
-   * cột, hàng theo cỡ cột lưới của ngăn kéo dưới đáy.
+   * cột, hàng theo cỡ cột lưới của ngăn kéo dưới đáy; `noteH` là chiều cao dòng ghi chú đầu bảng (điểm CSS).
    */
-  private static buildGrid(): { cols: number; rows: number } {
-    // Bảng là ngăn kéo dưới đáy chia ba cột (thẻ nhóm 132px, ảnh lớn, lưới), cao tối đa 300px (`.sheet.build` trong
-    // style.css); lưới là cột thứ ba, ô rộng chừng 64px.
+  private static buildGrid(noteH = 0): { cols: number; rows: number } {
+    // Bảng là ngăn kéo dưới đáy chia ba cột (thẻ nhóm 132px, ảnh lớn, lưới), cao 300px, màn thấp thì chừa dải tài
+    // nguyên phía trên (`.sheet.build` trong style.css); lưới là cột thứ ba, ô rộng chừng 64px.
     const gridW = (window.innerWidth - 112 - 32 - 132 - 28) / 2.1;
     const cols = Math.max(3, Math.min(8, Math.floor(gridW / 64)));
     const cell = gridW / cols;
-    const room = Math.min(300, window.innerHeight - 24) - 50 - 22 - 42;
+    const room = Math.min(300, window.innerHeight - 78) - 50 - 22 - 42 - noteH;
     return { cols, rows: Math.max(1, Math.min(4, Math.floor(room / (cell * 0.75 + 22)))) };
   }
 

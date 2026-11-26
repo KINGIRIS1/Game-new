@@ -832,7 +832,7 @@ button {
 }
 
 .xd-grid.square {
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(var(--cols, 4), minmax(0, 1fr));
 }
 
 /* Ghi chú của mục đang chọn (việc mẫu kinh đô sẽ làm, lời tả mẫu) dưới lưới ảnh nhỏ. */
@@ -4203,30 +4203,35 @@ body.man-vao-on #hud > * {
   color: #fff;
 }
 
-/* Bảng Xây dựng dàn ba cột dưới đáy (thẻ nhóm, ảnh lớn, lưới ảnh nhỏ có nút sang trang) để
-   vẫn thấy kinh đô phía trên. Cùng điều kiện với `Hud.buildGrid` (số cột, hàng của một trang). */
+/* Bảng Xây dựng dàn ba cột dưới đáy (thẻ nhóm, ảnh lớn, lưới ảnh nhỏ có nút sang trang) để vẫn thấy kinh đô phía
+   trên. Cao cố định, không lấn dải tài nguyên (cùng số với `Hud.buildGrid` tính số cột, hàng của một trang); ô ảnh
+   lớn vừa trọn chiều cao bảng. */
 .sheet.build {
-  max-height: min(300px, calc(100vh - 24px - var(--safe-top) - var(--safe-bottom)));
+  height: min(300px, calc(100vh - 78px - var(--safe-top) - var(--safe-bottom)));
+  max-height: none;
 }
 
 .sheet.build .sheet-body {
+  flex: 1;
+  min-height: 0;
   display: grid;
   grid-template-columns: 132px minmax(0, 1.1fr) minmax(0, 1fr);
-  grid-template-rows: auto auto 1fr auto auto auto;
+  grid-template-rows: auto minmax(0, 1fr);
   grid-template-areas:
     'tabs note note'
-    'tabs stage grid'
-    'tabs stage .'
-    'tabs stage pager'
-    'tabs stage more'
-    'tabs stage foot';
+    'tabs stage ben';
   gap: 0 14px;
   align-items: start;
   padding: 10px 16px 12px;
 }
 
+/* Thẻ nhóm: cột trái; nhiều thẻ hơn chiều cao bảng (màn thấp, có thẻ Kho cất) thì cuộn riêng. */
 .sheet.build .build-tabs {
   grid-area: tabs;
+  align-self: stretch;
+  min-height: 0;
+  overflow-y: auto;
+  scrollbar-width: none;
   flex-direction: column;
   gap: 6px;
   margin: 0;
@@ -4243,29 +4248,70 @@ body.man-vao-on #hud > * {
   margin: 0 2px 8px;
 }
 
+/* Ô trưng bày cao đúng phần bảng còn lại: ảnh co theo chiều cao (không quá 46% bề ngang), lời tả cắt bớt dòng, nút
+   Xây luôn ở đáy, không tràn xuống dưới mép bảng. */
 .sheet.build .xd-stage {
   grid-area: stage;
   position: static;
   margin: 0;
+  align-self: stretch;
+  min-height: 0;
+  display: flex;
+  overflow: hidden;
+}
+
+.sheet.build .xd-pic {
+  flex: none;
+  align-self: center;
+  height: 100%;
+  max-width: 46%;
+}
+
+.sheet.build .xd-info {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.sheet.build .xd-desc {
+  flex: 0 1 auto;
+  min-height: 0;
+  -webkit-line-clamp: 3;
+}
+
+.sheet.build .xd-info .btn {
+  flex: none;
+}
+
+/* Cột phải: lưới ảnh nhỏ, nút sang trang bám đáy, rồi ghi chú của mục đang chọn và lời nhắc cuối bảng (thẻ Mẫu kinh
+   đô); cao hơn bảng thì cuộn riêng cột này. */
+.sheet.build .xd-ben {
+  grid-area: ben;
+  align-self: stretch;
+  min-height: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
 }
 
 .sheet.build .xd-grid {
-  grid-area: grid;
+  flex: none;
 }
 
 .sheet.build .xd-pager {
-  grid-area: pager;
+  margin-top: auto;
+  padding-top: 8px;
 }
 
-.sheet.build .xd-note {
-  grid-area: more;
-}
-
-/* Lời nhắc cuối bảng (thẻ Mẫu kinh đô) ở cột phải dưới lưới ảnh nhỏ: ảnh lớn cao hơn phần hàng của nó nên tràn xuống
-   dưới, để chung cột thì ảnh lớn đè lên chữ. */
 .sheet.build .xd-foot {
-  grid-area: foot;
   margin-top: 8px;
+}
+
+/* Màn thấp: lời tả hai dòng cho vừa ô trưng bày. */
+@media (max-height: 520px) {
+  .sheet.build .xd-desc {
+    -webkit-line-clamp: 2;
+  }
 }
 
 /* Màn thấp (điện thoại): cột Dock gọn lại cho vừa chiều cao, vẫn thiếu chỗ thì cuộn. */
