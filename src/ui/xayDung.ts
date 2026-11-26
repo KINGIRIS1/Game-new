@@ -19,7 +19,7 @@ export interface BuildItem {
   square?: boolean;
   icon: string;
   name: string;
-  /** Dòng phụ: cỡ móng · đã có, hay việc mẫu sẽ làm. */
+  /** Dòng phụ dưới tên: cỡ móng · đã có. Rỗng thì không có dòng. */
   meta: string;
   desc?: string;
   cost?: string;
@@ -29,7 +29,10 @@ export interface BuildItem {
   go: string;
   /** Nút chính màu đồng (đang chờ bấm lần nữa). */
   armed?: boolean;
-  /** Ghi chú dài dưới ảnh lớn, trọn bề ngang (lời tả mẫu kinh đô). */
+  /**
+   * Ghi chú dài của mục (việc mẫu kinh đô sẽ làm, lời tả mẫu), đặt dưới lưới ảnh nhỏ chứ không trong ảnh lớn: ảnh lớn
+   * giữ gọn để nút chính luôn thấy ngay, khỏi phải cuộn.
+   */
   note?: string;
 }
 
@@ -83,7 +86,7 @@ export function pageOf(items: BuildItem[], pick: string | null, per: number): nu
 
 /**
  * Ảnh lớn và thông tin của mục `pick`, lưới ảnh nhỏ của cả nhóm (chỉ trang `pg.page` khi có `pg`, kèm nút sang trang),
- * rồi `foot` (ghi chú cuối bảng).
+ * ghi chú của mục `pick`, rồi `foot` (ghi chú cuối bảng).
  */
 export function xayDungHtml(items: BuildItem[], pick: string | null, foot = '', pg?: BuildPage): string {
   const it = items.find((i) => i.key === pick);
@@ -92,13 +95,12 @@ export function xayDungHtml(items: BuildItem[], pick: string | null, foot = '', 
       <div class="xd-pic">${pic(it)}</div>
       <div class="xd-info">
         <h3>${it.name}</h3>
-        <p class="xd-meta">${it.meta}</p>
+        ${it.meta ? `<p class="xd-meta">${it.meta}</p>` : ''}
         ${it.desc ? `<p class="xd-desc">${it.desc}</p>` : ''}
         ${it.cost ?? ''}
         ${it.why ? `<p class="xd-why">${it.why}</p>` : ''}
         <button class="btn ${it.armed ? 'bronze' : ''}" data-act="${it.act}" ${it.attrs ?? ''} ${it.why ? 'disabled' : ''}>${it.go}</button>
       </div>
-      ${it.note ? `<p class="xd-note">${it.note}</p>` : ''}
     </div>`
     : '';
   const per = pg ? pg.cols * pg.rows : items.length;
@@ -125,7 +127,8 @@ export function xayDungHtml(items: BuildItem[], pick: string | null, foot = '', 
         <button class="xd-pg" data-act="buildPage" data-page="${page + 1}" ${page < pages - 1 ? '' : 'disabled'} aria-label="${vi.ui.pageNext}">›</button>
       </div>`
       : '';
-  return `${stage}<div class="xd-grid ${square ? 'square' : ''} ${pg ? 'paged' : ''}" ${cols}>${minis}</div>${pager}${foot}`;
+  const note = it?.note ? `<div class="xd-note">${it.note}</div>` : '';
+  return `${stage}<div class="xd-grid ${square ? 'square' : ''} ${pg ? 'paged' : ''}" ${cols}>${minis}</div>${pager}${note}${foot}`;
 }
 
 /** Chữ trên nút Xây theo việc của mục. */

@@ -162,7 +162,7 @@ export function mauItems(state: GameState, armed: MauId | null, bac = true, cat 
   const items = MAU_IDS.map((id): BuildItem => {
     const t = vi.ui.mau[id];
     const base = { key: id, act: 'applyMau' as const, attrs: `data-mau="${id}"`, pic: miniMap(state, id), square: true, icon: t.icon, name: t.name };
-    if (!mauUnlocked(state, id)) return { ...base, meta: '', why: t.lock, go: vi.ui.mauApply, note: t.desc };
+    if (!mauUnlocked(state, id)) return { ...base, meta: '', why: t.lock, go: vi.ui.mauApply, note: `<p>${t.desc}</p>` };
     prefer = id;
     const plan = planMau(state, id, bac, cat);
     const check = canStartMau(state, id, bac, cat);
@@ -170,17 +170,18 @@ export function mauItems(state: GameState, armed: MauId | null, bac = true, cat 
     // Phần dựng thêm giao cả cho một tốp, làm lần lượt.
     const ms = plan.builds.reduce((n, s) => n + xayMs(s.type, 1), 0);
     const time = ms > 0 ? ` · ${vi.ui.xayTime(formatXay(realMs(state, ms)))}` : '';
+    // Việc mẫu sẽ làm và lời tả để dưới lưới ảnh nhỏ: ảnh lớn chỉ còn tên, giá, nút Áp mẫu nên nút luôn thấy ngay.
+    const viec =
+      vi.ui.mauPlan(plan.moves.length, plan.builds.length, plan.removes.length, plan.uNos.length, plan.duong.length, plan.dap.length, plan.layRa.length, plan.cat.length) + time;
+    const dap = plan.dap.length ? `<p>${vi.ui.mauDapCost(costHtml(state, plan.dapCost))}</p>` : '';
     return {
       ...base,
-      meta:
-        vi.ui.mauPlan(plan.moves.length, plan.builds.length, plan.removes.length, plan.uNos.length, plan.duong.length, plan.dap.length, plan.layRa.length, plan.cat.length) +
-        time +
-        (plan.dap.length ? `<br>${vi.ui.mauDapCost(costHtml(state, plan.dapCost))}` : ''),
+      meta: '',
       cost: Object.keys(plan.cost).length ? costHtml(state, plan.cost) : '',
       why: check.ok ? '' : vi.reasons[check.reason],
       go: armed === id ? vi.ui.mauConfirm : vi.ui.mauApply,
       armed: armed === id,
-      note: wild ? `${t.desc} ${vi.ui.mauKhoanh(wild)}` : t.desc,
+      note: `<p class="xd-viec">${viec}</p>${dap}<p>${wild ? `${t.desc} ${vi.ui.mauKhoanh(wild)}` : t.desc}</p>`,
     };
   });
   return { items, prefer };
