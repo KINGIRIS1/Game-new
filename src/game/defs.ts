@@ -3057,3 +3057,27 @@ export const VIET_NAM = {
   bangPerH: 120,
   giuNgay: 120,
 };
+
+/**
+ * Giặc chung của tỉnh (bản đồ Việt Nam PR 3, `giacChung.ts`). Mỗi tuần một đạo vào `tinhMin`–`tinhMax` tỉnh của một
+ * nhóm (biên giới phía bắc, phía tây, giáp biển, theo lượt tuần), đánh từ thứ `tuNgay` (0 là thứ Hai) tới hết tuần.
+ * Máu mỗi tỉnh = số người đã góp ở tỉnh ấy tuần trước (ít nhất `nguoiMin`) × `mauNguoi`. Mỗi trận ngoài bãi tối đa
+ * `FIELD.maxS` giây, giặc theo chương của người đánh (màn `man`, máu nhân `hpMul`); sát thương = phần trăm máu giặc
+ * đã hạ, đúng chức (quân, biên với giặc biên giới, hải với giặc biển) nhân `heChuc`; điểm tỉnh bằng sát thương. Mỗi
+ * ngày `tranNgay` trận. Đánh giúp tỉnh láng giềng: điểm chia đôi cho hai tỉnh. Diệt đạo: người đã đánh được một món
+ * (nơi rơi `don`) và `huan` huân công. Trận gửi kết quả trong `xongMs`; giới hạn lượt mỗi giờ `danhPerH`.
+ */
+export const GIAC_CHUNG = {
+  tuNgay: 4,
+  tinhMin: 3,
+  tinhMax: 5,
+  nguoiMin: 10,
+  mauNguoi: 300,
+  man: { 1: 7, 2: 11, 3: 20, 4: 27, 5: 35 } as Record<Chapter, number>,
+  hpMul: 1.2,
+  heChuc: 1.5,
+  tranNgay: 3,
+  huan: 3,
+  xongMs: 60 * 60_000,
+  danhPerH: 20,
+};

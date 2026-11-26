@@ -128,7 +128,8 @@ import { choTen, daMapHtml, daNgoaiHtml, expPct, miniSvg } from './daNgoai';
 import { thanThuHtml, thanThuMapHtml, thuAnh } from './thanThu';
 import { loiDaiHtml, loiDaiMapHtml } from './loiDai';
 import { loiDaiMo } from '../game/loiDai';
-import { BanDoVN, vietNamHtml, type VnMay } from './vietNam';
+import { BanDoVN, tinhCoGiac, vietNamHtml, type VnMay } from './vietNam';
+import { phanHa } from '../game/giacChung';
 import { vietNamMo } from '../game/vietNam';
 import type { ThanThuId } from '../game/defs';
 import type { ODo } from '../game/defs';
@@ -221,6 +222,8 @@ export type HudAction =
   /** PR 2: góp `diem` điểm bằng của `res` cho tỉnh; hỏi lại máy chủ bảng tỉnh. */
   | { kind: 'vnGop'; res: ResourceId; diem: number }
   | { kind: 'vnTai' }
+  /** PR 3: xuất quân đánh giặc chung ở tỉnh `tinh`. */
+  | { kind: 'vnGiac'; tinh: string }
   /** Lôi đài (`ui/loiDai.ts`): lên đài đánh tầng (đội và thần thú chọn trên sân, `ui/loiDaiTran.ts`). */
   | { kind: 'loiVao'; tang: number }
   | { kind: 'chooseBuild'; type: BuildingType }
@@ -444,6 +447,13 @@ export interface HudPvp {
   xem?: { atk: string; def: string; speed: number };
 }
 
+/** Đang đánh giặc chung của tỉnh (bản đồ Việt Nam PR 3): trận, tỉnh, hệ số chức. Trận không nằm trong state. */
+export interface HudGiac {
+  battle: Battle;
+  tinh: string;
+  he: number;
+}
+
 /** Đang xem lại trận giặc đánh đảo (trận dựng lại từ trận đã ghi, không nằm trong state): quần đảo, đợt, tốc độ xem. */
 export interface HudXemDao {
   battle: Battle;
@@ -515,6 +525,7 @@ export class Hud {
   /** Trận Đấu thành đang đánh, để thanh trận và nút kỹ năng dùng thay cho trận phó bản. */
   private pvp: HudPvp | null = null;
   private xemDao: HudXemDao | null = null;
+  private giac: HudGiac | null = null;
   /** Trận trên map dã ngoại đang xem (`setDa`). */
   private daB: Battle | null = null;
   /** Bản đồ nhỏ góc màn hình và chữ nổi khi đang trên map dã ngoại. */
@@ -874,6 +885,11 @@ export class Hud {
         return this.onAction({ kind: 'vnGop', res: el.dataset.res as ResourceId, diem: Number(el.dataset.diem) || 0 });
       case 'vnTai':
         return this.onAction({ kind: 'vnTai' });
+      case 'vnGiac':
+        return this.onAction({ kind: 'vnGiac', tinh: el.dataset.tinh ?? '' });
+      case 'vnGiacDong':
+        this.closeDauResult();
+        return;
       case 'loiTang':
         if (this.camp) this.camp.loiTang = id;
         return this.refreshCampaign(this.getState());
@@ -2543,13 +2559,14 @@ export class Hud {
       }
       if (camp.step === 'vietNam') this.banDoVN.gan(this.campaignEl.querySelector('.bdv-cho-ban-do'));
     }
-    if (camp.step === 'vietNam') this.banDoVN.capNhat(state, camp.vnChon ?? null);
+    if (camp.step === 'vietNam') this.banDoVN.capNhat(state, camp.vnChon ?? null, tinhCoGiac(this.vnMay));
   }
 
   /** Thanh trên và nút dưới khi đang đánh ngoài bãi (hay đang trên map dã ngoại). Nút kỹ năng chỉ đổi chữ tại chỗ để không nuốt lần chạm. */
   updateField(state: GameState): void {
     const dao = this.pvp ? null : this.xemDao;
-    const b = this.pvp?.battle ?? this.daB ?? dao?.battle ?? state.campaign.battle;
+    const giac = this.pvp || dao ? null : this.giac;
+    const b = this.pvp?.battle ?? this.daB ?? dao?.battle ?? giac?.battle ?? state.campaign.battle;
     this.root.classList.toggle('in-field', !!b);
     this.root.classList.toggle('in-da', !!b?.da);
     const tuDanh = this.fieldBar.querySelector<HTMLButtonElement>('[data-act="daTuDanh"]')!;
@@ -2575,6 +2592,12 @@ export class Hud {
       tuDanh.classList.toggle('bronze', da.tuDanh);
       tuDanh.classList.toggle('ghost', !da.tuDanh);
       this.syncDaMini(state, b);
+    } else if (giac) {
+      // Giặc chung của tỉnh: tên tỉnh; phần trăm máu giặc đã hạ, quân còn, giây còn lại.
+      const secs = Math.max(0, Math.ceil(FIELD.maxS - b.t));
+      this.fieldTop.querySelector('b')!.textContent = vi.vietNam.giacBanner(vi.vietNam.tinh[giac.tinh] ?? giac.tinh);
+      this.fieldTop.querySelector('span')!.textContent = vi.vietNam.giacStatus(Math.round(phanHa(b) * 100), alliesLeft(b), secs, giac.he > 1);
+      bar.hidden = true;
     } else if (this.pvp) {
       // Đấu thành: tên kinh đô bị đánh; phần trăm phá, sao, giây còn lại.
       const score = scorePvp(this.pvp.def);
@@ -2769,6 +2792,12 @@ export class Hud {
   /** Đang xem lại trận đảo (hay đã thôi, null): thanh trận dùng trận này. */
   setXemDao(x: HudXemDao | null): void {
     this.xemDao = x;
+    this.updateField(this.getState());
+  }
+
+  /** Đang đánh giặc chung (hay đã xong, null): thanh trận dùng trận này. */
+  setGiac(g: HudGiac | null): void {
+    this.giac = g;
     this.updateField(this.getState());
   }
 

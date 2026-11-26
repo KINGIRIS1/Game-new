@@ -6384,3 +6384,71 @@ body.man-vao-on #hud > * {
 .bdv-bang-so small {
   opacity: 0.75;
 }
+
+/* Bản đồ Việt Nam PR 3: giặc chung. */
+.bdv-tinh.co-giac .bdv-mat {
+  stroke: var(--red);
+  stroke-width: calc(3.4px / var(--bdv-z, 1));
+}
+
+.bdv-giac {
+  margin: 8px 0;
+  padding: 10px 12px;
+  border: 2px solid var(--red);
+  border-radius: 12px;
+  background: var(--paper-2);
+}
+
+.bdv-giac h4 {
+  margin: 0 0 4px;
+  color: var(--red-dark);
+}
+
+.bdv-giac p {
+  margin: 4px 0;
+}
+
+.bdv-giac-list {
+  list-style: none;
+  margin: 6px 0;
+  padding: 0;
+  display: grid;
+  gap: 4px;
+}
+
+.bdv-giac-list li {
+  display: grid;
+  grid-template-columns: minmax(84px, auto) 1fr auto;
+  align-items: center;
+  gap: 8px;
+}
+
+.bdv-giac-list li.diet {
+  opacity: 0.6;
+}
+
+.bdv-giac-mau {
+  height: 8px;
+  border-radius: 4px;
+  background: var(--paper);
+  border: 1px solid var(--line);
+  overflow: hidden;
+}
+
+.bdv-giac-mau i {
+  display: block;
+  height: 100%;
+  background: var(--red);
+}
+
+.bdv-giac-nut {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 6px 0;
+}
+
+.bdv-giac-the {
+  color: var(--red-dark);
+  font-weight: 700;
+}

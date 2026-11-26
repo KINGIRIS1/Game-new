@@ -5,7 +5,7 @@
 // Máy khách cũng dùng được (kiểm tên trước khi gửi, dựng trận từ quân máy chủ trả về).
 
 import { type HeroKind, type PvpAttack } from './battle';
-import { DAU_THANH, FIELD_CAP, RESOURCE_IDS, SKILL_IDS, UNIT_TYPES, VIET_NAM, type ResourceId, type Resources, type UnitType } from './defs';
+import { DAU_THANH, FIELD_CAP, GIAC_CHUNG, RESOURCE_IDS, SKILL_IDS, UNIT_TYPES, VIET_NAM, type ResourceId, type Resources, type UnitType } from './defs';
 import { armySpace, type Army } from './doanhTrai';
 import {
   botSnapshot,
@@ -26,7 +26,28 @@ import {
 import { BO_CUA, BO_DO, CHI_SO, CUONG_HOA_TRAN, O_CHINH, O_DO, PHAM_TRAN, PHU_NAC_MAX, type BoDo, type Chapter } from './defs';
 import { chupMon, type MonGoc } from './trangBi';
 import { storageCap } from './game';
+import { tuanCua } from './loiDai';
 import { CHUC_GOP, chucCo, diemGop, laChuc, laTinh, muaCua, ngayCua, type ChucId, type TinhId } from './vietNam';
+import {
+  chiaDiem,
+  daoTuan,
+  giacDangDanh,
+  giacRutLuc,
+  giacToiLuc,
+  heChuc,
+  kiemQuanGiac,
+  laTinhGiac,
+  mauDao,
+  ngayTuan,
+  noiDanh,
+  phanHa,
+  satThuong,
+  setupGiac,
+  simulateGiac,
+  thuCua,
+  type NhomGiac,
+  type QuanGiac,
+} from './giacChung';
 
 /** Số liệu máy chủ dùng (khóa, khiên, giới hạn lượt gọi, ghép trận, giữ dữ liệu). */
 export const CAU_HINH = {
@@ -52,6 +73,9 @@ export const CAU_HINH = {
   gopPerH: VIET_NAM.gopPerH,
   chonPerH: VIET_NAM.chonPerH,
   bangPerH: VIET_NAM.bangPerH,
+  giacPerH: GIAC_CHUNG.danhPerH,
+  giacTranNgay: GIAC_CHUNG.tranNgay,
+  giacXongMs: GIAC_CHUNG.xongMs,
   giuNgay: VIET_NAM.giuNgay,
 } as const;
 
@@ -416,3 +440,48 @@ export function banChupGop(dien: number, kho: number): { ma: string; cap: number
   for (const r of RESOURCE_IDS) snap.resources[r] = Math.min(cap, kho);
   return { ma: encodeSnapshot(snap), cap };
 }
+
+// ---------- Giặc chung của tỉnh (PR 3) ----------
+
+export type LoiGiac = 'banChup' | 'quan';
+
+/**
+ * Nhận trận giặc chung lúc bắt đầu: bản chụp kinh đô người đánh (kiểm như Đấu thành) và quân mang đi (`kiemQuanGiac`).
+ * Trả mã bản chụp đã chuẩn hóa (máy chủ cất để đánh lại) và quân đã kiểm.
+ */
+export function nhanGiac(ma: unknown, army: unknown, rows: unknown): { ma: string; quan: QuanGiac; chuong: number } | { loi: LoiGiac; chiTiet?: string } {
+  const nhan = nhanBanChup(ma);
+  if ('loi' in nhan) return { loi: 'banChup', chiTiet: nhan.loi };
+  const snap = docMa(nhan.ma);
+  const q = kiemQuanGiac(snap, army, rows);
+  if ('loi' in q) return { loi: 'quan', chiTiet: q.loi };
+  return { ma: nhan.ma, quan: q.quan, chuong: snap.chapter };
+}
+
+/**
+ * Đánh lại trận giặc chung: cùng bản chụp, quân, nhóm đạo, hạt giống như lúc bắt đầu, các lần bấm máy khách gửi lên.
+ * Trả phần máu giặc đã hạ, sát thương (đã nhân hệ số chức `he`), số bước, số lần bấm nhận, quân ngã.
+ */
+export function danhGiac(
+  ma: string,
+  quan: QuanGiac,
+  nhom: NhomGiac,
+  seed: number,
+  inputs: unknown,
+  he: number,
+): { pha: number; sat: number; buoc: number; bam: number; thang: boolean; mat: Record<UnitType, number> } {
+  const run = simulateGiac(setupGiac(docMa(ma), quan, nhom, seed), inputs);
+  const pha = phanHa(run.battle);
+  return { pha, sat: satThuong(pha, he), buoc: run.step, bam: run.inputs.length, thang: run.battle.outcome === 'win', mat: { ...run.battle.lost } };
+}
+
+/** Bản chụp để thử trận giặc chung (test Deno): kinh đô máy Điện `dien` kèm quân của nó. */
+export function banChupGiac(dien: number): { ma: string; troops: Record<UnitType, number>; chuong: number } {
+  const snap = botSnapshot(dien);
+  return { ma: encodeSnapshot(snap), troops: { ...snap.troops }, chuong: snap.chapter };
+}
+
+export { chiaDiem, daoTuan, giacDangDanh, giacRutLuc, giacToiLuc, heChuc, laTinhGiac, mauDao, ngayTuan, noiDanh, thuCua };
+
+/** Số tuần (từ 0 giờ thứ Hai giờ Việt Nam) của `now`. */
+export const tuanTinh = (now: number): number => tuanCua(now);

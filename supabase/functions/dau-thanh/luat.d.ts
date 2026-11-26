@@ -25,6 +25,9 @@ export declare const CAU_HINH: {
   readonly gopPerH: number;
   readonly chonPerH: number;
   readonly bangPerH: number;
+  readonly giacPerH: number;
+  readonly giacTranNgay: number;
+  readonly giacXongMs: number;
   readonly giuNgay: number;
 };
 
@@ -94,3 +97,34 @@ export declare function gopTinh(
   gop: unknown,
 ): { diem: number; gop: Record<string, number>; dien: number } | { loi: LoiGop; chiTiet?: string };
 export declare function banChupGop(dien: number, kho: number): { ma: string; cap: number };
+
+// ---------- Giặc chung của tỉnh (PR 3) ----------
+export type NhomGiac = 'bac' | 'tay' | 'bien';
+export type UnitType = 'giao' | 'cung' | 'voi' | 'no';
+export interface QuanGiac {
+  army: Record<UnitType, number>;
+  rows: Record<UnitType, 'tien' | 'trung' | 'hau'>;
+}
+export type LoiGiac = 'banChup' | 'quan';
+export declare function nhanGiac(ma: unknown, army: unknown, rows: unknown): { ma: string; quan: QuanGiac; chuong: number } | { loi: LoiGiac; chiTiet?: string };
+export declare function danhGiac(
+  ma: string,
+  quan: QuanGiac,
+  nhom: NhomGiac,
+  seed: number,
+  inputs: unknown,
+  he: number,
+): { pha: number; sat: number; buoc: number; bam: number; thang: boolean; mat: Record<UnitType, number> };
+export declare function banChupGiac(dien: number): { ma: string; troops: Record<UnitType, number>; chuong: number };
+export declare function chiaDiem(diem: number, ta: string, giup: string): { ta: number; giup: number };
+export declare function daoTuan(tuan: number): { nhom: NhomGiac; tinh: string[] };
+export declare function giacDangDanh(now: number): number | null;
+export declare function giacToiLuc(tuan: number): number;
+export declare function giacRutLuc(tuan: number): number;
+export declare function heChuc(chuc: ChucId | null, nhom: NhomGiac): number;
+export declare function laTinhGiac(id: unknown, tuan: number): boolean;
+export declare function mauDao(nguoi: number): number;
+export declare function ngayTuan(tuan: number): { tu: number; den: number };
+export declare function noiDanh(ta: string, tinhGiac: readonly string[]): string[];
+export declare function thuCua(now: number): number;
+export declare function tuanTinh(now: number): number;

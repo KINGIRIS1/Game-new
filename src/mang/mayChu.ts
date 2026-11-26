@@ -11,6 +11,7 @@ import type { HoSo, KetQuaMay, MayTom, TranTom, XemLaiTra, XepHang } from '../ga
 import type { PvpAttack } from '../game/battle';
 import type { Resources } from '../game/defs';
 import type { BangTinh, TinhToi } from '../game/vietNam';
+import type { NhomGiac, QuanGiac } from '../game/giacChung';
 import { PHIEN_KEY, SUPABASE_KEY as KEY, SUPABASE_URL as URL_, coMayChu, datGoogleCho, docPhien, phienTuToken, type Phien } from './cauHinh';
 
 export { coMayChu };
@@ -203,6 +204,24 @@ export const chonChuc = (chuc: string) => goi<{ toi: TinhToi }>({ hanh: 'chonChu
 /** Góp của cho tỉnh kèm bản chụp kinh đô lúc này: máy chủ trả điểm, của đã nhận. */
 export const gopTinh = (gop: Partial<Resources>, banChup: string) =>
   goi<{ diem: number; gop: Partial<Resources>; toi: TinhToi }>({ hanh: 'gop', gop, banChup }, true);
+
+/** Giặc chung (PR 3): bắt đầu trận ở tỉnh `tinh` với quân, hàng và bản chụp kinh đô lúc này. */
+export const giacDanh = (tinh: string, quan: Record<string, number>, hang: Record<string, string>, banChup: string) =>
+  goi<{ tran: string; seed: number; tinh: string; nhom: NhomGiac; he: number; quan: QuanGiac; tranNay: number }>({ hanh: 'giacDanh', tinh, quan, hang, banChup }, true);
+
+/** Kết quả trận giặc chung máy chủ đánh lại. */
+export interface GiacKetQua {
+  pha: number;
+  sat: number;
+  thang: boolean;
+  diemTa: number;
+  diemGiup: number;
+  tinh: string;
+  con: number;
+  diet: boolean;
+}
+
+export const giacXong = (tran: string, bam: unknown[]) => goi<GiacKetQua>({ hanh: 'giacXong', tran, bam }, true);
 
 // ---------- PR 6: Google ----------
 

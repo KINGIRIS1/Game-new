@@ -24,14 +24,31 @@
 //   chonChuc { chuc }            nhận chức Bồ chính (đổi chức chờ 24 giờ)
 //   gop { gop, banChup }         góp của cho tỉnh kèm bản chụp kinh đô lúc góp: kho phải có đủ, đúng loại của chức;
 //                                điểm theo phần trăm sức chứa kho, trần mỗi ngày (giờ Việt Nam)
+// Giặc chung của tỉnh (PR 3; bảng tỉnh trả thêm `giac`: đạo giặc tuần này, máu từng tỉnh, số trận hôm nay, đạo đã
+// diệt mình có đánh):
+//   giacDanh { tinh, quan, hang, banChup }
+//                                bắt đầu trận ở tỉnh mình (hay tỉnh láng giềng khi tỉnh mình không có giặc), giặc đang
+//                                đánh, chưa quá số trận mỗi ngày: cất bản chụp, quân; trả hạt giống, hệ số chức
+//   giacXong { tran, bam }       gửi các lần bấm: máy chủ đánh lại, trừ máu đạo, ghi điểm tỉnh (giúp láng giềng thì
+//                                chia đôi); quá giờ thì như rút quân ở bước đầu
 // Kết quả trận chỉ do máy chủ tính (`danhLai` trong luat.js, đóng gói từ src/game/mayChu.ts).
 
 import postgres from 'npm:postgres@3.4.9';
 import {
   CAU_HINH,
   LUAT_MA,
+  chiaDiem,
   chonDoiThu,
+  danhGiac,
   danhLai,
+  daoTuan,
+  giacDangDanh,
+  heChuc,
+  mauDao,
+  ngayTuan,
+  nhanGiac,
+  noiDanh,
+  tuanTinh,
   gopTinh,
   kiemChuc,
   kiemTen,
@@ -45,6 +62,7 @@ import {
   type ChucId,
   type KetQua,
   type QuanDanh,
+  type QuanGiac,
 } from './luat.js';
 
 type Sql = postgres.Sql;
@@ -491,7 +509,7 @@ export function taoXuLy(env: MoiTruong): (req: Request) => Promise<Response> {
     const ngay = ngayTinh(now);
     const [d] = await sql<{ diem_mua: number; diem_ngay: number }[]>`
       select
-        coalesce(sum(diem) filter (where mua = ${mua} and tinh = ${r.tinh}), 0)::int as diem_mua,
+        coalesce(sum(diem + danh) filter (where mua = ${mua} and tinh = ${r.tinh}), 0)::int as diem_mua,
         coalesce(sum(diem) filter (where ngay = ${ngay}), 0)::int as diem_ngay
       from public.tinh_diem where nguoi = ${me} and (mua = ${mua} or ngay = ${ngay})`;
     return { tinh: r.tinh, chuc: r.chuc, mua: r.mua, chucLuc: r.chuc_luc?.getTime() ?? null, diemMua: d.diem_mua, diemNgay: d.diem_ngay };
@@ -502,7 +520,7 @@ export function taoXuLy(env: MoiTruong): (req: Request) => Promise<Response> {
     const mua = muaTinh(now);
     const diem = await sql<{ tinh: string; diem: number; gop: number }[]>`
       with moi as (
-        select tinh, nguoi, sum(diem) as d from public.tinh_diem where mua = ${mua} group by tinh, nguoi
+        select tinh, nguoi, sum(diem + danh) as d from public.tinh_diem where mua = ${mua} group by tinh, nguoi
       ), xep as (
         select tinh, d, row_number() over (partition by tinh order by d desc, nguoi) as hang from moi
       )
@@ -513,7 +531,141 @@ export function taoXuLy(env: MoiTruong): (req: Request) => Promise<Response> {
     const dong = (tinh: string) => bang.get(tinh) ?? bang.set(tinh, { tinh, diem: 0, nguoi: 0, gop: 0 }).get(tinh)!;
     for (const r of diem) Object.assign(dong(r.tinh), { diem: r.diem, gop: r.gop });
     for (const r of nguoi) dong(r.tinh).nguoi = r.n;
-    return { ok: true, mua, ngay: ngayTinh(now), toi: me ? await toiTinh(me, now) : null, bang: [...bang.values()] };
+    return { ok: true, mua, ngay: ngayTinh(now), toi: me ? await toiTinh(me, now) : null, bang: [...bang.values()], giac: await giacBang(me, now) };
+  }
+
+  // ---------- Giặc chung (PR 3) ----------
+
+  interface GiacRow {
+    tinh: string;
+    mau: number;
+    con: number;
+    diet: Date | null;
+  }
+
+  /** Số người đã góp (điểm góp của, không tính trận) ở tỉnh `tinh` trong tuần `tuan`. */
+  async function nguoiGop(tinh: string, tuan: number): Promise<number> {
+    const { tu, den } = ngayTuan(tuan);
+    const [{ n }] = await sql<{ n: number }[]>`
+      select count(distinct nguoi)::int as n from public.tinh_diem where tinh = ${tinh} and ngay >= ${tu} and ngay < ${den} and diem > 0`;
+    return n;
+  }
+
+  /** Đạo giặc tuần `tuan` ở mọi tỉnh bị đánh: tạo dòng còn thiếu (máu theo số người đã góp tuần trước). */
+  async function daoGiac(tuan: number): Promise<GiacRow[]> {
+    const tinh = daoTuan(tuan).tinh;
+    let rows = await sql<GiacRow[]>`select tinh, mau, con, diet from public.giac_chung where tuan = ${tuan}`;
+    const thieu = tinh.filter((t) => !rows.some((r) => r.tinh === t));
+    if (thieu.length) {
+      for (const t of thieu) {
+        const mau = mauDao(await nguoiGop(t, tuan - 1));
+        await sql`insert into public.giac_chung (tuan, tinh, mau, con) values (${tuan}, ${t}, ${mau}, ${mau}) on conflict do nothing`;
+      }
+      rows = await sql<GiacRow[]>`select tinh, mau, con, diet from public.giac_chung where tuan = ${tuan}`;
+    }
+    return tinh.map((t) => rows.find((r) => r.tinh === t)!).filter(Boolean);
+  }
+
+  /** Phần giặc chung của bảng tỉnh: đạo tuần này (máu khi giặc đang đánh), số trận hôm nay, đạo đã diệt mình có đánh. */
+  async function giacBang(me: string | null, now: number) {
+    const tuan = tuanTinh(now);
+    const dang = giacDangDanh(now) !== null;
+    const dao = dang ? (await daoGiac(tuan)).map((r) => ({ tinh: r.tinh, mau: r.mau, con: r.con, diet: r.diet?.getTime() ?? null })) : [];
+    let tranNay = 0;
+    let thuong: { tuan: number; tinh: string }[] = [];
+    if (me) {
+      [{ n: tranNay }] = await sql<{ n: number }[]>`select count(*)::int as n from public.giac_tran where nguoi = ${me} and ngay = ${ngayTinh(now)}`;
+      thuong = await sql<{ tuan: number; tinh: string }[]>`
+        select distinct t.tuan, t.tinh from public.giac_tran t
+        join public.giac_chung g on g.tuan = t.tuan and g.tinh = t.tinh
+        where t.nguoi = ${me} and t.xong and t.sat > 0 and g.diet is not null and t.tuan >= ${tuan - 2}
+        order by t.tuan, t.tinh`;
+    }
+    return { tuan, nhom: daoTuan(tuan).nhom, dao, tranNay, thuong: thuong.map((r) => ({ tuan: r.tuan, tinh: r.tinh })) };
+  }
+
+  async function giacDanh(me: string, body: Record<string, unknown>, now: number) {
+    const tuan = giacDangDanh(now);
+    if (tuan === null) throw new Loi('giacChuaToi', 409);
+    const [r] = await sql<TinhRow[]>`select tinh, mua, chuc, chuc_luc from public.tinh_nguoi where nguoi = ${me}`;
+    if (!r) throw new Loi('chuaChonTinh', 409);
+    const dao = daoTuan(tuan);
+    const tinh = typeof body.tinh === 'string' ? body.tinh : '';
+    if (!noiDanh(r.tinh, dao.tinh).includes(tinh)) throw new Loi('khongDanhDuoc', 409);
+    // Đếm lượt trước khi kiểm bản chụp (kiểm tốn CPU).
+    await demLuot(me, 'giacDanh', CAU_HINH.giacPerH, now);
+    const g = nhanGiac(body.banChup, body.quan, body.hang);
+    if ('loi' in g) throw new Loi(g.loi, 400, g.chiTiet);
+    const ngay = ngayTinh(now);
+    const he = heChuc(r.chuc, dao.nhom);
+    const seed = Math.floor(ngauNhien() * 2 ** 31);
+    await daoGiac(tuan);
+    const id = await sql.begin(async (tx) => {
+      // Khóa dòng tỉnh của mình: hai trận bắt đầu cùng lúc không vượt số trận mỗi ngày.
+      await tx`select 1 from public.tinh_nguoi where nguoi = ${me} for update`;
+      const [{ n }] = await tx<{ n: number }[]>`select count(*)::int as n from public.giac_tran where nguoi = ${me} and ngay = ${ngay}`;
+      if (n >= CAU_HINH.giacTranNgay) throw new Loi('hetTran', 409);
+      const [d] = await tx<{ con: number }[]>`select con from public.giac_chung where tuan = ${tuan} and tinh = ${tinh}`;
+      if (!d || d.con <= 0) throw new Loi('daDiet', 409);
+      const [{ id }] = await tx<{ id: string }[]>`
+        insert into public.giac_tran (nguoi, tuan, tinh, tinh_ta, ngay, he, seed, ban_chup, quan, bat_dau)
+        values (${me}, ${tuan}, ${tinh}, ${r.tinh}, ${ngay}, ${he}, ${seed}, ${g.ma}, ${tx.json(g.quan as never)}, ${luc(now)})
+        returning id::text as id`;
+      return { id, n: n + 1 };
+    });
+    return { ok: true, tran: id.id, seed, tinh, nhom: dao.nhom, he, quan: g.quan, tranNay: id.n };
+  }
+
+  interface GiacTranRow {
+    id: string;
+    nguoi: string;
+    tuan: number;
+    tinh: string;
+    tinh_ta: string;
+    he: number;
+    seed: number;
+    ban_chup: string;
+    quan: QuanGiac;
+    bat_dau: Date;
+    xong: boolean;
+    ket_qua: Record<string, unknown> | null;
+  }
+
+  async function giacXong(me: string, body: Record<string, unknown>, now: number) {
+    const id = typeof body.tran === 'string' && /^[0-9]{1,18}$/.test(body.tran) ? body.tran : null;
+    if (!id) throw new Loi('khongCoTran', 404);
+    const [t] = await sql<GiacTranRow[]>`
+      select id::text as id, nguoi, tuan, tinh, tinh_ta, he, seed::float8 as seed, ban_chup, quan, bat_dau, xong, ket_qua
+      from public.giac_tran where id = ${id} and nguoi = ${me}`;
+    if (!t) throw new Loi('khongCoTran', 404);
+    if (t.xong) return { ok: true, ...t.ket_qua };
+    // Gửi quá giờ: như rút quân ở bước đầu (khỏi để dành trận thử lần bấm).
+    const bam = now - t.bat_dau.getTime() > CAU_HINH.giacXongMs ? [{ s: 0, k: 'rut' }] : body.bam;
+    const kq = danhGiac(t.ban_chup, t.quan, daoTuan(t.tuan).nhom, Number(t.seed), bam, t.he);
+    const chia = chiaDiem(kq.sat, t.tinh_ta, t.tinh);
+    const ngay = ngayTinh(now);
+    const mua = muaTinh(now);
+    const ket = await sql.begin(async (tx) => {
+      const [lai] = await tx<{ xong: boolean; ket_qua: Record<string, unknown> | null }[]>`select xong, ket_qua from public.giac_tran where id = ${id} for update`;
+      if (lai.xong) return lai.ket_qua ?? {};
+      const [d] = await tx<{ con: number; diet: Date | null }[]>`select con, diet from public.giac_chung where tuan = ${t.tuan} and tinh = ${t.tinh} for update`;
+      const con = Math.max(0, (d?.con ?? 0) - kq.sat);
+      const diet = d && d.con > 0 && con === 0;
+      if (d) await tx`update public.giac_chung set con = ${con}, diet = ${diet ? luc(now) : d.diet} where tuan = ${t.tuan} and tinh = ${t.tinh}`;
+      for (const [tinh, diem] of [
+        [t.tinh_ta, chia.ta],
+        [t.tinh, chia.giup],
+      ] as const) {
+        if (diem <= 0) continue;
+        await tx`
+          insert into public.tinh_diem (mua, tinh, nguoi, ngay, danh) values (${mua}, ${tinh}, ${me}, ${ngay}, ${diem})
+          on conflict (mua, tinh, nguoi, ngay) do update set danh = public.tinh_diem.danh + excluded.danh`;
+      }
+      const ket = { pha: kq.pha, sat: kq.sat, thang: kq.thang, mat: kq.mat, buoc: kq.buoc, diemTa: chia.ta, diemGiup: chia.giup, tinh: t.tinh, con, diet: !!diet };
+      await tx`update public.giac_tran set xong = true, sat = ${kq.sat}, ket_qua = ${tx.json(ket as never)}, ban_chup = '' where id = ${id}`;
+      return ket;
+    });
+    return { ok: true, ...ket };
   }
 
   async function chonTinh(me: string, body: Record<string, unknown>, now: number) {
@@ -627,6 +779,10 @@ export function taoXuLy(env: MoiTruong): (req: Request) => Promise<Response> {
           return tra(await chonChuc(me, body, now));
         case 'gop':
           return tra(await gop(me, body, now));
+        case 'giacDanh':
+          return tra(await giacDanh(me, body, now));
+        case 'giacXong':
+          return tra(await giacXong(me, body, now));
       }
       throw new Loi('saiLenh');
     } catch (e) {

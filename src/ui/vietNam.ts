@@ -16,6 +16,9 @@ import {
 import { vi } from '../text/vi';
 import { VIET_NAM } from '../game/defs';
 import { CHUC_GOP, TINH_IDS, capGop, diemToiDa, hangTinh, luongGop, type BangTinh } from '../game/vietNam';
+import { daoTuan, giacRutLuc, giacToiLuc, heChuc, noiDanh, type GiacBang } from '../game/giacChung';
+import { GIAC_CHUNG, UNIT_TYPES, type UnitType } from '../game/defs';
+import { armySpace, fieldCap, fitArmy } from '../game/doanhTrai';
 import { dauError } from './dauThanh';
 import { fmt } from './format';
 
@@ -354,11 +357,11 @@ export class BanDoVN {
   }
 
   /** Tô theo state: đất Văn Lang, chưa quy về, tỉnh của ta, tỉnh đang xem. Chỉ đổi lớp khi có gì đổi. */
-  capNhat(state: GameState, chon: string | null): void {
-    this.capNhatCuoi = () => this.capNhat(state, chon);
+  capNhat(state: GameState, chon: string | null, giac: readonly string[] = []): void {
+    this.capNhatCuoi = () => this.capNhat(state, chon, giac);
     if (!this.hinh) return;
     const ta = state.vietNam?.tinh ?? null;
-    const key = `${ta}|${chon}`;
+    const key = `${ta}|${chon}|${giac.join(',')}`;
     if (key === this.lop) return;
     this.lop = key;
     for (const [id, g] of this.tinh) {
@@ -366,6 +369,7 @@ export class BanDoVN {
       g.classList.toggle('chua-ve', laTinh(id) && !laDatVanLang(id));
       g.classList.toggle('cua-ta', id === ta);
       g.classList.toggle('chon', id === chon);
+      g.classList.toggle('co-giac', giac.includes(id));
       // Tỉnh đang xem, tỉnh của ta vẽ sau cùng cho viền không bị tỉnh bên cạnh đè.
       if (id === chon || id === ta) g.parentElement?.appendChild(g);
     }
@@ -403,6 +407,8 @@ export interface VnMay {
   dangTai: boolean;
   loi: { ma: string; chiTiet?: string } | null;
   dangGop: boolean;
+  /** PR 3: đang hỏi máy chủ bắt đầu trận giặc chung. */
+  dangDanh?: boolean;
 }
 
 /** Lỗi máy chủ điểm tỉnh ra một dòng: mã riêng của tỉnh trước, còn lại như lỗi Đấu thành. */
@@ -420,6 +426,7 @@ export function vietNamHtml(state: GameState, chon: string | null, now: number, 
   let html = `<p class="muted">${T.intro}</p>`;
   html += `<p class="bdv-ta">${ta ? `🏯 ${T.tinhCuaTa(`<b>${ten(ta)}</b>`)}${v?.chuc ? ` · ${T.chuc[v.chuc].icon} ${T.chuc[v.chuc].ten}` : ''}` : T.chuaChon}</p>`;
   html += mayHtml(state, may, now);
+  if (may.bang?.giac) html += giacHtml(state, may.bang.giac, now, !!may.dangDanh);
   const xem = chon && laTinh(chon) ? chon : ta;
   if (xem) html += theTinh(state, xem, now, may);
   if (ta) html += chucHtml(state, ta, now);
@@ -503,12 +510,103 @@ function theTinh(state: GameState, id: TinhId, now: number, may: VnMay): string 
     ${xua ? `<p class="muted bdv-ghi"><small>${T.xuaGhi[xua.loai]}</small></p>` : ''}
     <div class="bdv-tags">${tags}</div>
     ${soTinh(id, may)}
+    ${giacThe(id, may)}
     ${qd ? `<p class="bdv-qd-the">🏝️ ${qd}</p>` : ''}
     <p class="bdv-lg-dong"><b>${T.langGieng}:</b> ${lg}</p>
     ${nut}
     <p class="muted"><small>${T.doiTinhLuat}</small></p>
   </div>`;
 }
+
+/** Tỉnh có giặc tuần này (đang đánh, chưa diệt; trước thứ Sáu là tỉnh sắp bị đánh), để tô trên bản đồ. */
+export function tinhCoGiac(may: VnMay): string[] {
+  const g = may.bang?.giac;
+  if (!g) return [];
+  if (g.dao.length) return g.dao.filter((d) => d.con > 0).map((d) => d.tinh);
+  return [...daoTuan(g.tuan).tinh];
+}
+
+/** Dòng giặc trên thẻ tỉnh: đang đánh (máu còn), đã diệt, hay sắp tới. */
+function giacThe(id: TinhId, may: VnMay): string {
+  const g = may.bang?.giac;
+  if (!g) return '';
+  const d = g.dao.find((x) => x.tinh === id);
+  if (d) return `<p class="bdv-giac-the">${d.con > 0 ? T.giacTheTinh(d.con, d.mau) : T.giacTheDiet}</p>`;
+  if (!g.dao.length && daoTuan(g.tuan).tinh.includes(id)) return `<p class="bdv-giac-the">${T.giacTheSap}</p>`;
+  return '';
+}
+
+/**
+ * Phần giặc chung: đạo tuần này (nhóm, tỉnh), trước thứ Sáu là lời báo sắp tới; khi đang đánh thì máu từng tỉnh và nút
+ * xuất quân ở tỉnh mình (hay tỉnh láng giềng khi tỉnh mình không có giặc), số trận còn hôm nay.
+ */
+function giacHtml(state: GameState, g: GiacBang, now: number, dangDanh: boolean): string {
+  const lich = daoTuan(g.tuan);
+  const nhom = T.nhom[lich.nhom];
+  const ten = (id: string) => T.tinh[id] ?? id;
+  let html = `<div class="bdv-giac"><h4>${T.giacTitle}</h4>`;
+  if (!g.dao.length) {
+    const ngay = Math.max(0, Math.ceil((giacToiLuc(g.tuan) - now) / 86_400_000));
+    html += `<p>${T.giacSap(nhom, lich.tinh.map(ten).join(', '), ngay)}</p>`;
+  } else {
+    html += `<p>${T.giacDang(nhom, Math.max(0, Math.ceil((giacRutLuc(g.tuan) - now) / 3_600_000)))}</p><ul class="bdv-giac-list">`;
+    for (const d of g.dao) {
+      const pct = d.mau > 0 ? Math.round((100 * d.con) / d.mau) : 0;
+      html += `<li class="${d.con > 0 ? '' : 'diet'}"><button class="bdv-bang-ten" data-act="vnXem" data-tinh="${d.tinh}">${ten(d.tinh)}</button>
+        <span class="bdv-giac-mau"><i style="width:${pct}%"></i></span><small>${d.con > 0 ? T.giacMau(d.con, d.mau) : T.giacDiet}</small></li>`;
+    }
+    html += '</ul>';
+    const ta = state.vietNam?.tinh ?? null;
+    if (!ta) html += `<p class="muted">${T.chuaTinhGiac}</p>`;
+    else {
+      const noi = noiDanh(ta, lich.tinh).filter((id) => (g.dao.find((d) => d.tinh === id)?.con ?? 0) > 0);
+      const con = Math.max(0, GIAC_CHUNG.tranNgay - g.tranNay);
+      const coQuan = armySpace(fitArmy(state.troops, fieldCap(state))) > 0;
+      if (!noi.length) html += `<p class="muted">${T.khongNoi}</p>`;
+      else {
+        const he = heChuc(state.vietNam?.chuc ?? null, lich.nhom) > 1 ? ` <span class="bdv-tag">${T.heChuc}</span>` : '';
+        html += `<p class="bdv-giac-so">${con ? T.tranNay(con, GIAC_CHUNG.tranNgay) : T.hetTran}${he}</p><div class="bdv-giac-nut">`;
+        html += noi
+          .map((id) => `<button class="btn ${id === ta ? 'bronze' : 'ghost'}" data-act="vnGiac" data-tinh="${id}" ${con && coQuan && !dangDanh ? '' : 'disabled'}>${id === ta ? T.danhO(ten(id)) : T.giupO(ten(id))}</button>`)
+          .join('');
+        html += '</div>';
+        if (!coQuan) html += `<p class="muted">${T.khongQuan}</p>`;
+      }
+    }
+  }
+  return `${html}<p class="muted"><small>${T.giacLuat}</small></p></div>`;
+}
+
+/** Bảng kết quả trận giặc chung (máy chủ đã đánh lại; `kq` null là chưa gửi được). */
+export function giacKetQuaHtml(
+  tinh: string,
+  pha: number,
+  lost: Partial<Record<UnitType, number>>,
+  kq: { sat: number; diemTa: number; diemGiup: number; con: number; diet: boolean } | null,
+  he: number,
+  ta: string,
+): string {
+  const ten = (id: string) => T.tinh[id] ?? id;
+  const mat = UNIT_TYPES.filter((k) => (lost[k] ?? 0) > 0)
+    .map((k) => `${vi.units[k].icon} ${lost[k]}`)
+    .join(' · ');
+  const rows = [`<div>${T.kqPha(Math.round(pha * 100))}</div>`];
+  if (kq) {
+    rows.push(`<div>${T.kqSat(kq.sat, he > 1)}</div>`);
+    if (kq.diemTa > 0) rows.push(`<div>${T.kqDiem(kq.diemTa, ten(ta))}</div>`);
+    if (kq.diemGiup > 0) rows.push(`<div>${T.kqGiup(kq.diemGiup, ten(tinh))}</div>`);
+    rows.push(`<div>${kq.diet ? T.kqDiet : T.kqCon(kq.con)}</div>`);
+  }
+  rows.push(`<div>${mat ? T.kqMat(mat) : T.kqKhongMat}</div>`);
+  return `<div class="modal dau-result"><h2>${T.kqTitle(ten(tinh))}</h2>
+    <div class="result-rows">${rows.join('')}</div>
+    ${kq ? '' : `<p class="why">${T.kqChuaGui}</p>`}
+    <div class="actions"><button class="btn bronze" data-act="vnGiacDong">${T.kqDong}</button></div></div>`;
+}
+
+/** Bảng chờ máy chủ đánh lại trận giặc chung. */
+export const giacChoHtml = (tinh: string): string =>
+  `<div class="modal dau-result"><h2>${T.kqTitle(T.tinh[tinh] ?? tinh)}</h2><p class="muted">⏳ ${T.dangGui}</p></div>`;
 
 /** Số của tỉnh mùa này trên thẻ: điểm (tỉnh chưa quy về: điểm kết giao), số người chọn, số người đã góp. */
 function soTinh(id: TinhId, may: VnMay): string {

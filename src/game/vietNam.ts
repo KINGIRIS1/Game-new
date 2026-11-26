@@ -17,7 +17,8 @@ import { VIET_NAM, type ResourceId } from './defs';
 import { dienLevel, type FailReason, type GameState, type Result } from './game';
 import { TUAN_MS, tuanCon, tuanCua } from './loiDai';
 import { LANG_GIENG_HINH } from './vietNamHinh';
-import { snapCap } from './dauThanh';
+import { snapCap, type PvpInput } from './dauThanh';
+import type { GiacBang } from './giacChung';
 
 const ok = <T>(value: T): Result<T> => ({ ok: true, value });
 const fail = (reason: FailReason): Result<never> => ({ ok: false, reason });
@@ -74,6 +75,10 @@ export interface VietNamState {
   chuc: ChucId | null;
   /** Lúc nhận chức gần nhất (ms): đổi chức phải chờ `VIET_NAM.doiChucMs`. */
   chucLuc?: number;
+  /** PR 3: đạo giặc đã diệt đã nhận thưởng (`khoaThuong`), giữ vài khóa gần nhất. */
+  nhan?: string[];
+  /** PR 3: trận giặc chung đã đánh xong mà chưa gửi được kết quả lên máy chủ (gửi lại lần sau mở bảng). */
+  cho?: { tran: string; bam: PvpInput[] };
 }
 
 /** Mùa thứ mấy (4 tuần một mùa, mỗi mùa bắt đầu 0 giờ thứ Hai giờ Việt Nam). */
@@ -145,6 +150,11 @@ export function isVietNamState(v: unknown): v is VietNamState {
   if (t.chuc !== null && t.tinh === null) return false;
   if (t.tinh !== null && t.chuc !== null && !chucCo(t.tinh as TinhId).includes(t.chuc as ChucId)) return false;
   if (t.mua !== undefined && (typeof t.mua !== 'number' || !Number.isInteger(t.mua))) return false;
+  if (t.nhan !== undefined && (!Array.isArray(t.nhan) || t.nhan.some((k) => typeof k !== 'string'))) return false;
+  if (t.cho !== undefined) {
+    const c = t.cho as Record<string, unknown> | null;
+    if (!c || typeof c !== 'object' || typeof c.tran !== 'string' || !Array.isArray(c.bam)) return false;
+  }
   return t.chucLuc === undefined || (typeof t.chucLuc === 'number' && Number.isFinite(t.chucLuc));
 }
 
@@ -207,12 +217,22 @@ export interface BangTinh {
   ngay: number;
   toi: TinhToi | null;
   bang: TinhDong[];
+  /** PR 3: giặc chung tuần này (máy chủ cũ chưa có thì không có). */
+  giac?: GiacBang;
 }
 
 /** Chép tỉnh, chức máy chủ giữ về phần lưu (máy chủ là gốc khi có mạng). */
 export function theoMay(s: GameState, toi: TinhToi | null): void {
   if (!toi) return;
-  s.vietNam = { tinh: toi.tinh, mua: toi.mua, chuc: toi.chuc, ...(toi.chucLuc !== null ? { chucLuc: toi.chucLuc } : {}) };
+  const cu = s.vietNam;
+  s.vietNam = {
+    tinh: toi.tinh,
+    mua: toi.mua,
+    chuc: toi.chuc,
+    ...(toi.chucLuc !== null ? { chucLuc: toi.chucLuc } : {}),
+    ...(cu?.nhan ? { nhan: cu.nhan } : {}),
+    ...(cu?.cho ? { cho: cu.cho } : {}),
+  };
 }
 
 /**

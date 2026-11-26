@@ -4,7 +4,7 @@ import { initHuongDan, markHuongDan, nextHuongDan, type HuongDanId } from './gam
 import { ChiTay, huongDanBat, luuHuongDan } from './ui/huongDan';
 import './style.css';
 import { LOI_DAI } from './game/defs';
-import { canDanhTang, capNhatTuan, chuongTang, doiLoi, laLoiTuong, loiNay, type LoiKind } from './game/loiDai';
+import { canDanhTang, capNhatTuan, chuongTang, doiLoi, laLoiTuong, loiNay, tuanCua, type LoiKind } from './game/loiDai';
 import { KIEU_CHUONG, taoChau, taoNguoi } from './render/loiDai';
 import { LoiDau } from './ui/loiDaiTran';
 import { play, setMuted, stopRally, unlockAudio } from './audio/sfx';
@@ -12,7 +12,10 @@ import { skillReady, startFieldBattle, stepField, useSkill, type Battle, type He
 import { canLen, capNhatDa, chonMap, daMo, datDoi, doiNay, moMap, quaCong, tichTreo, vaoDa, veKinhDo, type DaThuong } from './game/daNgoai';
 import { choAn, chonThu, thuCo } from './game/thanThu';
 import { capGop, chonChuc, chonTinh, luongGop, theoMay, vietNamMo, type BangTinh, type TinhToi } from './game/vietNam';
-import { vnLoi } from './ui/vietNam';
+import { NEN_GIAC, beginGiac, daoTuan, khoaThuong, phanHa, pushGiac, setupGiac, stepGiac, type GiacBang, type GiacRun, type NhomGiac } from './game/giacChung';
+import { nhanGiac } from './game/mayChu';
+import type { GiacKetQua } from './mang/mayChu';
+import { giacChoHtml, giacKetQuaHtml, vnLoi } from './ui/vietNam';
 import { chamMap, datTuDanh, stepDa, tuongDau } from './game/daNgoaiTran';
 import { boCuc } from './game/daNgoaiMap';
 import { attackFrom, beginPvp, canPractice, decodeSnapshot, encodeSnapshot, lootPvp, makeSnapshot, pushInput, scorePvp, stepPvp, validateArmy, type PvpRun } from './game/dauThanh';
@@ -21,10 +24,11 @@ import { kiemTen } from './game/mayChu';
 import { coMayChu, ghiMayBiet, mayBiet, nhanGoogle, taiKhoanMay, uidMay, type GoogleVe } from './mang/cauHinh';
 import { leaveBattlefield, markBaiHinted, needsBaiHint, retreat, startStage, unitAllowed } from './game/campaign';
 import { forgeArms } from './game/binhKhi';
-import { chiSoTuong, cuongHoa, khoaDo, macDo, macManhNhat, monO, phanGiai, phanGiaiNhieu, thaoDo } from './game/trangBi';
+import { chiSoTuong, cuongHoa, khoaDo, macDo, macManhNhat, monO, phanGiai, phanGiaiNhieu, roiDo, thaoDo } from './game/trangBi';
+import { truQuanNga } from './game/nhaThuoc';
 import { HinhTuong, veBanNguoi, type MacTuong } from './render/hinhTuong';
 import { monTen, preloadMon } from './ui/trangBi';
-import { autoGuard, fieldCap, fitArmy, setGuard } from './game/doanhTrai';
+import { armySpace, autoGuard, fieldCap, fitArmy, setGuard } from './game/doanhTrai';
 import { markNuHinted, nextNuHint, nuTuongList } from './game/nuTuong';
 import { forgeNoThan, inChapter3, wallRings } from './game/coLoa';
 import { offer, tetOpen } from './game/tet';
@@ -43,7 +47,7 @@ import { inChapter2, offerGift } from './game/son';
 import { buyHuan } from './game/thuThach';
 import { markStory, pendingStory } from './game/story';
 import { footprintTop } from './game/terrain';
-import { BUILDINGS, DA_MAP, DA_MAP_IDS, O_DO, QUIZ_TURNS, RESOURCE_IDS, STAGES, UNIT_TYPES, U_NO, isBridge, isDecor, isRoad, type BuildingType, type Cost, type DaMapId, type NuTuongId, type ResourceId, type Row, type SkillId, type UnitType, stageEnemies } from './game/defs';
+import { BUILDINGS, DA_MAP, DA_MAP_IDS, GIAC_CHUNG, O_DO, QUIZ_TURNS, RESOURCE_IDS, STAGES, UNIT_TYPES, U_NO, isBridge, isDecor, isRoad, type BuildingType, type Cost, type DaMapId, type NuTuongId, type ResourceId, type Row, type SkillId, type UnitType, stageEnemies } from './game/defs';
 import { CAMPS, benKiaOpen, bridgeSnap, campHero, campTier, canStartCamp, joinVillage, plotAt, poiAt, sendScout, setGarrison, startCamp } from './game/benKia';
 import { baiOf, stageBai } from './game/baiChien';
 import type { QuanDaoId } from './game/bien';
@@ -631,6 +635,11 @@ async function start(): Promise<void> {
    * xem, trọn bước `BATTLE_STEP` (`du`: phần lẻ chưa đủ một bước).
    */
   let xemDao: (HudXemDao & { du: number }) | null = null;
+  /**
+   * Trận giặc chung đang đánh (bản đồ Việt Nam PR 3; không nằm trong state): trận chạy trọn bước, lần bấm ghi theo bước
+   * để máy chủ đánh lại; trận ở tỉnh nào, hệ số chức, tỉnh của mình, lúc trận xong (bảng kết quả hiện trễ một chút).
+   */
+  let giac: { run: GiacRun; tran: string; tinh: string; he: number; ta: string; doneAt: number; shown: boolean } | null = null;
   /** Thôi xem lại trận đảo: về kinh đô. */
   const thoiXemDao = () => {
     if (!xemDao) return;
@@ -686,6 +695,7 @@ async function start(): Promise<void> {
     may.dangTai = true;
     try {
       const m = await mang();
+      if (state.vietNam?.cho) await guiGiac().catch(() => undefined);
       let bang = await m.bangTinh();
       const v = state.vietNam;
       if (!bang.toi && v?.tinh && vietNamMo(state)) {
@@ -696,6 +706,7 @@ async function start(): Promise<void> {
       if (bang.toi) theoMay(state, bang.toi);
       may.bang = bang;
       may.loi = null;
+      nhanThuongGiac(bang.giac);
       commit();
     } catch (e) {
       may.loi = loiOf(e);
@@ -703,6 +714,85 @@ async function start(): Promise<void> {
       may.dangTai = false;
       if (hud.campStep() === 'vietNam') hud.refreshCampaign(state);
     }
+  };
+
+  /**
+   * Gửi kết quả trận giặc chung còn chờ (`VietNamState.cho`): máy chủ đánh lại, trả sát thương, điểm. Mất mạng thì giữ
+   * để gửi lại; máy chủ không nhận (trận không còn, quá giờ) thì bỏ.
+   */
+  const guiGiac = async (): Promise<GiacKetQua | null> => {
+    const cho = state.vietNam?.cho;
+    if (!cho) return null;
+    try {
+      const kq = await (await mang()).giacXong(cho.tran, cho.bam);
+      if (state.vietNam?.cho?.tran === cho.tran) delete state.vietNam.cho;
+      commit();
+      return kq;
+    } catch (e) {
+      if (loiOf(e).ma !== 'mang' && state.vietNam?.cho?.tran === cho.tran) {
+        delete state.vietNam.cho;
+        commit();
+      }
+      throw e;
+    }
+  };
+
+  /** Đạo giặc đã diệt mà mình có đánh: mỗi đạo nhận một lần huân công và một món đồ. */
+  const nhanThuongGiac = (g: GiacBang | undefined) => {
+    const v = state.vietNam;
+    if (!g?.thuong.length || !v) return;
+    const nhan = v.nhan ?? [];
+    for (const t of g.thuong) {
+      const k = khoaThuong(t);
+      if (nhan.includes(k)) continue;
+      nhan.push(k);
+      state.thuThach.huan += GIAC_CHUNG.huan;
+      const r = roiDo(state, 'don', chapterOf(state));
+      play('claim');
+      hud.toast(vi.vietNam.thuong(vi.vietNam.tinh[t.tinh] ?? t.tinh, GIAC_CHUNG.huan, !!r));
+    }
+    v.nhan = nhan.slice(-20);
+  };
+
+  /** Thôi trận giặc chung: về kinh đô. */
+  const thoiGiac = () => {
+    giac = null;
+    hud.setGiac(null);
+    world.showField(null);
+    refreshUi();
+  };
+
+  /**
+   * Trận giặc chung xong: quân ngã mất thật như phó bản (nhà thuốc khiêng về một phần), ghi trận chờ gửi rồi gửi máy chủ
+   * đánh lại; hiện bảng kết quả, hỏi lại bảng tỉnh.
+   */
+  const watchGiac = (now: number) => {
+    if (!giac || !giac.run.done || giac.shown) return;
+    if (!giac.doneAt) {
+      giac.doneAt = now + 900;
+      play(phanHa(giac.run.battle) > 0 ? 'upgrade' : 'error');
+      return;
+    }
+    if (now < giac.doneAt) return;
+    giac.shown = true;
+    const g = giac;
+    const b = g.run.battle;
+    truQuanNga(state, b.lost);
+    if (state.vietNam) state.vietNam.cho = { tran: g.tran, bam: g.run.inputs.map((i) => ({ ...i })) };
+    commit();
+    hud.showDauResult(giacChoHtml(g.tinh));
+    void (async () => {
+      let kq: GiacKetQua | null = null;
+      try {
+        kq = await guiGiac();
+      } catch {
+        kq = null;
+      }
+      hud.closeDauResult();
+      hud.showDauResult(giacKetQuaHtml(g.tinh, phanHa(b), b.lost, kq, g.he, g.ta));
+      thoiGiac();
+      void taiTinh();
+    })();
   };
 
   /** Chọn tỉnh, chức qua máy chủ: được thì theo máy chủ; mất mạng thì làm ở máy này (`diaPhuong`). */
@@ -2388,6 +2478,14 @@ async function start(): Promise<void> {
       }
 
       case 'useSkill': {
+        if (giac) {
+          // Giặc chung: ghi lần bấm như Đấu thành, máy chủ đánh lại.
+          if (!skillReady(giac.run.battle, a.skill)) return;
+          pushGiac(giac.run, a.skill);
+          play(a.skill === 'trongTran' ? 'trongTran' : 'claim');
+          navigator.vibrate?.(a.skill === 'trongTran' ? 30 : 60);
+          return;
+        }
         if (pvp) {
           // Đấu thành: ghi lần bấm, áp ở đầu bước trận kế tiếp (đánh lại ra y hệt). Xem lại thì không bấm được.
           if (pvp.xem || !skillReady(pvp.run.battle, a.skill)) return;
@@ -2491,6 +2589,54 @@ async function start(): Promise<void> {
         void taiTinh();
         return;
 
+      case 'vnGiac': {
+        if (!coMayChu() || hud.vnMay.dangDanh) return;
+        if (pvp || xemDao || giac || daB || loi || marching || world.inField || state.campaign.battle || state.raid.phase !== 'idle') {
+          hud.toast(vi.vietNam.giacBusy, true);
+          return;
+        }
+        const army = fitArmy(state.troops, fieldCap(state));
+        if (armySpace(army) <= 0) {
+          hud.toast(vi.vietNam.khongQuan, true);
+          return;
+        }
+        const rows = { ...state.campaign.rows };
+        const ma = encodeSnapshot(makeSnapshot(state));
+        // Kiểm và chuẩn hóa bản chụp y như máy chủ, để trận dựng ở đây khớp trận máy chủ đánh lại.
+        const chuan = nhanGiac(ma, army, rows);
+        if ('loi' in chuan) {
+          play('error');
+          hud.toast(vnLoi({ ma: chuan.loi, chiTiet: chuan.chiTiet }), true);
+          return;
+        }
+        hud.vnMay.dangDanh = true;
+        hud.refreshCampaign(state);
+        void (async () => {
+          try {
+            const m = await mang();
+            const r = await m.giacDanh(a.tinh, army, rows, ma);
+            if (hud.vnMay.bang?.giac) hud.vnMay.bang.giac.tranNay = r.tranNay;
+            if (pvp || xemDao || giac || daB || loi || world.inField || state.campaign.battle || state.raid.phase !== 'idle') return;
+            const setup = setupGiac(decodeSnapshot(chuan.ma)!, r.quan, r.nhom, r.seed);
+            play('claim');
+            if (mode.kind !== 'view') exitMode();
+            select(null);
+            hud.closeSheet();
+            hud.closeCampaign();
+            giac = { run: beginGiac(setup), tran: r.tran, tinh: r.tinh, he: r.he, ta: state.vietNam?.tinh ?? r.tinh, doneAt: 0, shown: false };
+            world.showField(NEN_GIAC[r.nhom], setup.bai ?? null);
+            hud.setGiac({ battle: giac.run.battle, tinh: r.tinh, he: r.he });
+          } catch (e) {
+            play('error');
+            hud.toast(vnLoi(loiOf(e)), true);
+          } finally {
+            hud.vnMay.dangDanh = false;
+            if (hud.campStep() === 'vietNam') hud.refreshCampaign(state);
+          }
+        })();
+        return;
+      }
+
       case 'vnGop': {
         const may = hud.vnMay;
         if (!coMayChu() || may.dangGop || !(a.diem >= 1)) return;
@@ -2583,6 +2729,11 @@ async function start(): Promise<void> {
         if (xemDao) {
           play('tap');
           thoiXemDao();
+          return;
+        }
+        if (giac) {
+          pushGiac(giac.run, 'rut');
+          play('tap');
           return;
         }
         if (pvp?.xem) {
@@ -3028,7 +3179,7 @@ async function start(): Promise<void> {
       hud.closeCampaign();
       const don = battle.camp !== undefined ? campTier(battle.camp) : null;
       world.showField(don ? CAMPS[don].terrain : STAGES[battle.wave - 1].terrain, battle.bai ?? null);
-    } else if (!battle && world.inField && !world.inDa && !world.inLoi && !xemDao) {
+    } else if (!battle && world.inField && !world.inDa && !world.inLoi && !xemDao && !giac) {
       world.showField(null);
       hud.closeStageResult();
     }
@@ -3136,7 +3287,7 @@ async function start(): Promise<void> {
       watchXay(true);
     } else {
       // Đang Đấu thành, xem lại trận đảo, xem map dã ngoại: kinh tế vẫn chạy, đồng hồ giặc đứng lại.
-      tick(state, gap * tocDo, !!pvp || !!xemDao || !!daB || !!loi);
+      tick(state, gap * tocDo, !!pvp || !!xemDao || !!giac || !!daB || !!loi);
       lag.troi(gap * tocDo);
       // Đội ở dã ngoại mà không xem map: treo máy (lúc tắt game thì `applyOffline` tính).
       if (!daB) tichTreo(state, gap * tocDo);
@@ -3149,6 +3300,8 @@ async function start(): Promise<void> {
     }
     // Trận Đấu thành chạy theo khung hình (đã chặn 0,1 giây), chỉ trọn bước; ẩn tab thì trận dừng.
     if (pvp) stepPvp(pvp.run, dt * 1000 * (pvp.xem?.speed ?? 1) * tocDo);
+    // Trận giặc chung: cũng chỉ trọn bước, như Đấu thành.
+    if (giac) stepGiac(giac.run, dt * 1000 * tocDo);
 
     if (marching && now >= marching.at) {
       // Hành quân xong: sang bãi chiến đánh đồn.
@@ -3163,7 +3316,7 @@ async function start(): Promise<void> {
     world.updateFlood(scene());
     world.updateBattle(pvp ? pvp.run.battle : state.raid.battle, dt);
     watchCampaign();
-    world.updateField(xemDao?.battle ?? state.campaign.battle, dt);
+    world.updateField(xemDao?.battle ?? giac?.run.battle ?? state.campaign.battle, dt);
     stepDaNgoai(dt);
     world.updateDa(daB, dt);
     loi?.update(dt * tocDo);
@@ -3173,6 +3326,7 @@ async function start(): Promise<void> {
     hud.updateVong(state, (x, z, lift) => (world.inField || pvp ? null : world.screenAt(x, z, lift)));
     watchRaid();
     watchPvp(now);
+    watchGiac(now);
     lag.cat('khac');
     if (now - lastUi > 250) {
       lastUi = now;
@@ -3330,6 +3484,25 @@ async function start(): Promise<void> {
       if (bang.toi) theoMay(state, bang.toi);
       hud.refreshCampaign(state);
     },
+    /** Đạo giặc tuần này (để cảnh chụp giả bảng tỉnh có giặc). */
+    giacNay: () => {
+      const tuan = tuanCua(Date.now());
+      return { tuan, ...daoTuan(tuan) };
+    },
+    /** Đánh thử giặc chung ở tỉnh `tinh` không qua máy chủ (chụp thử thanh trận; trận xong không gửi gì). */
+    giacThu: (tinh = '12', nhom: NhomGiac = 'bac') => {
+      const snap = decodeSnapshot(encodeSnapshot(makeSnapshot(state)))!;
+      const setup = setupGiac(snap, { army: fitArmy(state.troops, fieldCap(state)), rows: { ...state.campaign.rows } }, nhom, 1);
+      hud.closeCampaign();
+      giac = { run: beginGiac(setup), tran: 'thu', tinh, he: 1.5, ta: tinh, doneAt: 0, shown: true };
+      world.showField(NEN_GIAC[nhom], setup.bai ?? null);
+      hud.setGiac({ battle: giac.run.battle, tinh, he: 1.5 });
+    },
+    /** Bảng kết quả trận giặc chung mẫu (chụp thử). */
+    giacKq: (giup = false) =>
+      hud.showDauResult(
+        giacKetQuaHtml(giup ? '08' : '12', 0.82, { giao: 3, cung: 1 }, { sat: 123, diemTa: giup ? 61 : 123, diemGiup: giup ? 62 : 0, con: 2877, diet: false }, 1.5, '12'),
+      ),
     /** Mở bảng Đất bên kia sông của khoảnh bên kia `id`, như khi chạm vào đất ấy. */
     benKia: (id: number) => {
       select(null);

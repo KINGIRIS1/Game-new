@@ -579,6 +579,27 @@ d.camera(cx, cz, 2.6);`,
     truoc: `${KINH_DO}\ns.hinted.push('hd:vietNam'); s.resources.gao = 9000; s.vietNam = { tinh: '12', mua: 0, chuc: 'nong', chucLuc: Date.now() - 3600000 };`,
     sau: `d.vietNam('12'); d.vnMay({ mua: 4, ngay: 0, toi: { tinh: '12', chuc: 'nong', mua: 4, chucLuc: Date.now() - 3600000, diemMua: 212, diemNgay: 36 }, bang: [{ tinh: '01', diem: 4210, nguoi: 41, gop: 33 }, { tinh: '12', diem: 2875, nguoi: 22, gop: 19 }, { tinh: '04', diem: 1960, nguoi: 15, gop: 12 }, { tinh: '17', diem: 860, nguoi: 9, gop: 6 }, { tinh: '23', diem: 340, nguoi: 4, gop: 3 }] });`,
   },
+  'viet-nam-giac': {
+    mo: 'Máy chủ tỉnh (giả): đạo giặc tuần này đang đánh, mình ở tỉnh đầu của đạo, Bồ chính quân; máu từng tỉnh, nút Đánh, còn 2/3 trận; tỉnh có giặc viền đỏ trên bản đồ',
+    truoc: `${KINH_DO}\ns.hinted.push('hd:vietNam');`,
+    sau: `const g = d.giacNay(); const ta = g.tinh[0]; d.vietNam(ta); d.vnMay({ mua: 4, ngay: 0, toi: { tinh: ta, chuc: 'quan', mua: 4, chucLuc: Date.now() - 3600000, diemMua: 140, diemNgay: 0 }, bang: [{ tinh: ta, diem: 1875, nguoi: 22, gop: 19 }], giac: { tuan: g.tuan, nhom: g.nhom, dao: g.tinh.map((t, i) => ({ tinh: t, mau: 3600, con: i === 1 ? 0 : 3600 - 700 * (i + 1), diet: i === 1 ? Date.now() : null })), tranNay: 1, thuong: [] } });`,
+  },
+  'viet-nam-giac-sap': {
+    mo: 'Như viet-nam-giac, trước thứ Sáu: báo đạo giặc sắp tới các tỉnh nào, thẻ tỉnh ghi sắp có giặc',
+    truoc: `${KINH_DO}\ns.hinted.push('hd:vietNam');`,
+    sau: `const g = d.giacNay(); const ta = g.tinh[0]; d.vietNam(ta); d.vnMay({ mua: 4, ngay: 0, toi: { tinh: ta, chuc: 'nong', mua: 4, chucLuc: Date.now() - 3600000, diemMua: 40, diemNgay: 0 }, bang: [], giac: { tuan: g.tuan, nhom: g.nhom, dao: [], tranNay: 0, thuong: [] } });`,
+  },
+  'giac-tran': {
+    mo: 'Chương 5: đánh thử giặc chung (không qua máy chủ) ở Phú Thọ, nền núi biên giới phía bắc, Hai Bà và quân trong trại, chụp sau 6 giây: thanh trận ghi phần trăm máu giặc đã hạ',
+    truoc: CHUONG5(35),
+    sau: `d.giacThu('12', 'bac');`,
+    doi: 6000,
+  },
+  'giac-kq': {
+    mo: 'Bảng kết quả trận giặc chung (mẫu): sát thương, điểm tỉnh, máu đạo còn, quân ngã',
+    truoc: KINH_DO,
+    sau: `d.giacKq(true);`,
+  },
   'loi-dai': {
     mo: 'Chương 5 (đã thắng màn 35), đã qua 23 tầng lôi đài: bảng Lôi đài (lưới 50 tầng xếp 1 tới 50, đội giữ đài, thưởng, nút Lên đài)',
     truoc: LOI_DAI_23,
