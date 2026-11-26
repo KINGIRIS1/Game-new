@@ -128,6 +128,8 @@ import { choTen, daMapHtml, daNgoaiHtml, expPct, miniSvg } from './daNgoai';
 import { thanThuHtml, thanThuMapHtml, thuAnh } from './thanThu';
 import { loiDaiHtml, loiDaiMapHtml } from './loiDai';
 import { loiDaiMo } from '../game/loiDai';
+import { BanDoVN, vietNamHtml } from './vietNam';
+import { vietNamMo } from '../game/vietNam';
 import type { ThanThuId } from '../game/defs';
 import type { ODo } from '../game/defs';
 import { sonHtml } from './son';
@@ -213,6 +215,9 @@ export type HudAction =
   /** Thần thú (`ui/thanThu.ts`): cho ăn một bữa, chọn thú đi theo đội. */
   | { kind: 'thuAn'; thu: ThanThuId }
   | { kind: 'thuChon'; thu: ThanThuId }
+  /** Bản đồ Việt Nam (`ui/vietNam.ts`): chọn tỉnh, nhận chức Bồ chính. */
+  | { kind: 'vnChonTinh'; tinh: string }
+  | { kind: 'vnChonChuc'; chuc: string }
   /** Lôi đài (`ui/loiDai.ts`): lên đài đánh tầng (đội và thần thú chọn trên sân, `ui/loiDaiTran.ts`). */
   | { kind: 'loiVao'; tang: number }
   | { kind: 'chooseBuild'; type: BuildingType }
@@ -410,14 +415,16 @@ function syncSkill(btn: HTMLButtonElement, b: Battle, k: SkillId): void {
 }
 
 /** Bảng mở thẳng từ cột nút bên phải màn hình chính (thay chỗ bản đồ phó bản). */
-export type CampStepRieng = 'daNgoai' | 'thanThu' | 'loiDai' | 'dau';
+export type CampStepRieng = 'daNgoai' | 'thanThu' | 'loiDai' | 'dau' | 'vietNam';
 
 /** Bản đồ phó bản đang mở: chương nào, màn đang xem, đang xem thẻ màn hay đang xếp quân. */
 interface CampaignView {
   chapter: MapChapter;
   stage: number | null;
   /** Thẻ màn, bảng xếp quân (màn thường hay thử thách, theo `pick.challenge`), bảng Huân công, bảng Đấu thành. */
-  step: 'stage' | 'army' | 'huan' | 'dau' | 'daNgoai' | 'thanThu' | 'loiDai';
+  step: 'stage' | 'army' | 'huan' | 'dau' | 'daNgoai' | 'thanThu' | 'loiDai' | 'vietNam';
+  /** Bảng Bản đồ Việt Nam: tỉnh đang xem (thẻ tỉnh ở bảng bên). */
+  vnChon?: string | null;
   pick: ArmyPick;
   /** Bảng Lôi đài: tầng đang xem (null là tầng kế phải đánh). */
   loiTang?: number | null;
@@ -468,6 +475,8 @@ export class Hud {
   private readonly dock: HTMLElement;
   /** Cột nút bên phải: Dã ngoại, Thần thú, Đấu thành (mở thẳng bảng của mỗi việc). */
   private readonly rail: HTMLElement;
+  /** Bản đồ Việt Nam: dựng một lần, gắn lại mỗi khi bảng vẽ lại (giữ chỗ kéo, phóng). */
+  readonly banDoVN = new BanDoVN();
   private railHtml = '';
   /** Thanh Hủy, Đặt thay chỗ dock khi đang đặt, dời, trải, ghép. */
   private readonly bottombar: HTMLElement;
@@ -555,6 +564,11 @@ export class Hud {
     this.dockPop = root.querySelector('.dock-pop')!;
     this.dock = root.querySelector('.dock')!;
     this.rail = root.querySelector('.dock-phai')!;
+    this.banDoVN.onChon = (id) => {
+      if (this.camp?.step !== 'vietNam') return;
+      this.camp.vnChon = id;
+      this.refreshCampaign(this.getState());
+    };
     this.bottombar = root.querySelector('.bottombar')!;
     this.hint = root.querySelector('.hint')!;
     this.sheetEl = root.querySelector('.sheet')!;
@@ -725,9 +739,11 @@ export class Hud {
       case 'goDaNgoai':
       case 'goThanThu':
       case 'goLoiDai':
+      case 'goVietNam':
       case 'goDau': {
         // Cột nút bên phải: mở thẳng bảng của việc ấy; chạm lại nút đang sáng thì đóng.
-        const step: CampStepRieng = act === 'goDaNgoai' ? 'daNgoai' : act === 'goThanThu' ? 'thanThu' : act === 'goLoiDai' ? 'loiDai' : 'dau';
+        const step: CampStepRieng =
+          act === 'goDaNgoai' ? 'daNgoai' : act === 'goThanThu' ? 'thanThu' : act === 'goLoiDai' ? 'loiDai' : act === 'goVietNam' ? 'vietNam' : 'dau';
         if (this.camp?.step === step) return this.closeCampaign();
         return this.onAction({ kind: 'openCampaign', step });
       }
@@ -842,6 +858,13 @@ export class Hud {
       case 'thuAn':
       case 'thuChon':
         return this.onAction({ kind: act, thu: el.dataset.thu as ThanThuId });
+      case 'vnXem':
+        if (this.camp) this.camp.vnChon = el.dataset.tinh ?? null;
+        return this.refreshCampaign(this.getState());
+      case 'vnChonTinh':
+        return this.onAction({ kind: 'vnChonTinh', tinh: el.dataset.tinh ?? '' });
+      case 'vnChonChuc':
+        return this.onAction({ kind: 'vnChonChuc', chuc: el.dataset.chuc ?? '' });
       case 'loiTang':
         if (this.camp) this.camp.loiTang = id;
         return this.refreshCampaign(this.getState());
@@ -1241,6 +1264,7 @@ export class Hud {
           tab({ act: 'goThanThu', icon: nutNoi('thanThu'), label: vi.thanThu.title, on: step === 'thanThu' })
         : '') +
       (loiDaiMo(state) ? tab({ act: 'goLoiDai', icon: nutNoi('loiDai'), label: vi.loiDai.title, on: step === 'loiDai' }) : '') +
+      (vietNamMo(state) ? tab({ act: 'goVietNam', icon: nutNoi('vietNam'), label: vi.vietNam.nut, on: step === 'vietNam', title: vi.vietNam.title }) : '') +
       (countOf(state, 'doanhTrai') > 0 ? tab({ act: 'goDau', icon: nutNoi('dauThanh'), label: vi.dauThanh.title, on: step === 'dau' }) : '');
     if (rail !== this.railHtml) {
       this.railHtml = rail;
@@ -2314,7 +2338,8 @@ export class Hud {
       <textarea id="import-box" placeholder="TDVL2:..."></textarea>
       <button class="btn small ghost" data-act="importCode">📥 ${vi.ui.importSave}</button>
       <div class="actions"><button class="btn ghost" data-act="reset">🔄 ${vi.ui.reset}</button></div>
-      <p class="muted" style="text-align:center;margin-top:14px">${vi.gameTitle} · bản thử 0.5</p>`;
+      <p class="muted" style="text-align:center;margin-top:14px">${vi.gameTitle} · bản thử 0.5</p>
+      <p class="muted" style="text-align:center"><small>${vi.vietNam.nguonTitle}: ${vi.vietNam.nguon}</small></p>`;
   }
 
   // ---------- Phó bản ----------
@@ -2331,6 +2356,8 @@ export class Hud {
     const chapter = ([1, 2, 3, 4] as const).find((c) => c <= now && this.nextStage(state, c) !== null) ?? now;
     this.camp = { chapter, stage: this.nextStage(state, chapter), step: step ?? 'stage', pick: defaultPick(state) };
     if (step === 'dau') this.camp.dau = newDauView(state);
+    // Bản đồ Việt Nam: xem tỉnh của mình, chưa chọn thì xem Phú Thọ (đất Phong Châu, kinh đô Văn Lang).
+    if (step === 'vietNam') this.camp.vnChon = state.vietNam?.tinh ?? '12';
     this.campaignEl.hidden = false;
     this.pop = null;
     this.refreshCampaign(state, true);
@@ -2416,6 +2443,13 @@ export class Hud {
     return this.root;
   }
 
+  /** Bảng Bản đồ Việt Nam đang mở: xem thẻ tỉnh `tinh` (để chụp thử). */
+  xemTinh(state: GameState, tinh: string): void {
+    if (this.camp?.step !== 'vietNam') return;
+    this.camp.vnChon = tinh;
+    this.refreshCampaign(state);
+  }
+
   /** Mở thẳng bảng Thần thú (chạm thú đi lại trong kinh đô). */
   showThanThu(state: GameState): void {
     this.showCampaign(state, 'thanThu');
@@ -2450,6 +2484,7 @@ export class Hud {
     else if (camp.step === 'daNgoai') panel = daNgoaiHtml(state);
     else if (camp.step === 'thanThu') panel = thanThuHtml(state);
     else if (camp.step === 'loiDai') panel = loiDaiHtml(state, camp.loiTang ?? null);
+    else if (camp.step === 'vietNam') panel = vietNamHtml(state, camp.vnChon ?? null, Date.now());
     else if (camp.stage) panel = camp.step === 'army' ? armyHtml(state, camp.pick, camp.stage, camp.pick.challenge) : stageHtml(state, camp.stage);
     const now = mapChapterNow(state);
     const tabs =
@@ -2474,10 +2509,12 @@ export class Hud {
             ? thanThuMapHtml(state)
             : camp.step === 'loiDai'
               ? loiDaiMapHtml(state, camp.loiTang ?? null, Date.now())
+            : camp.step === 'vietNam'
+              ? '<div class="bdv-cho-ban-do"></div>'
             : mapHtml(state, camp.stage, camp.chapter);
     const head =
-      camp.step === 'dau' ? `🏯 ${vi.dauThanh.title}` : camp.step === 'daNgoai' ? `🌿 ${vi.daNgoai.title}` : camp.step === 'thanThu' ? `🐉 ${vi.thanThu.title}` : camp.step === 'loiDai' ? `🥁 ${vi.loiDai.ten}` : `⚔️ ${title}`;
-    const own = camp.step === 'dau' || camp.step === 'daNgoai' || camp.step === 'thanThu' || camp.step === 'loiDai';
+      camp.step === 'dau' ? `🏯 ${vi.dauThanh.title}` : camp.step === 'daNgoai' ? `🌿 ${vi.daNgoai.title}` : camp.step === 'thanThu' ? `🐉 ${vi.thanThu.title}` : camp.step === 'loiDai' ? `🥁 ${vi.loiDai.ten}` : camp.step === 'vietNam' ? `🗺️ ${vi.vietNam.title}` : `⚔️ ${title}`;
+    const own = camp.step === 'dau' || camp.step === 'daNgoai' || camp.step === 'thanThu' || camp.step === 'loiDai' || camp.step === 'vietNam';
     const html = `<div class="camp-head"><h2>${head}</h2>${own ? '' : tabs}${own ? '' : `<div class="camp-chips">${huan}</div>`}
         <button class="close" data-act="closeCampaign" aria-label="${vi.ui.close}">✕</button></div>
       <div class="camp-main"><div class="camp-map">${map}</div><div class="camp-panel">${panel}</div></div>`;
@@ -2490,7 +2527,9 @@ export class Hud {
         ten.value = camp.dau.that.ten;
         if (typing) ten.focus();
       }
+      if (camp.step === 'vietNam') this.banDoVN.gan(this.campaignEl.querySelector('.bdv-cho-ban-do'));
     }
+    if (camp.step === 'vietNam') this.banDoVN.capNhat(state, camp.vnChon ?? null);
   }
 
   /** Thanh trên và nút dưới khi đang đánh ngoài bãi (hay đang trên map dã ngoại). Nút kỹ năng chỉ đổi chữ tại chỗ để không nuốt lần chạm. */

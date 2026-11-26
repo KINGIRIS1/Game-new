@@ -4269,7 +4269,7 @@ Vua Hùng mở hội tỉ võ trước sân chầu. Các tướng so tài trư�
 3. Cảnh sân chầu và giao diện đánh: dải thứ tự lượt, ba nút chiêu, chọn mục tiêu, Tự đánh, tua ×2.
 4. Bảng Lôi đài (chọn đội và thú, bản đồ tầng, thưởng), nút ở cột bên phải, lời Lạc hầu, hướng dẫn chỉ tay.
 
-## Kế hoạch: bản đồ Việt Nam, 34 tỉnh, chức Bồ chính (chủ dự án đã duyệt)
+## Kế hoạch: bản đồ Việt Nam, 34 tỉnh, chức Bồ chính (chủ dự án đã duyệt, đã làm PR 1)
 
 Chủ dự án nêu ý: map tổng thể Việt Nam, 34 map theo 34 tỉnh, hình giống tỉnh, ghép lại thành nước Việt Nam; mỗi người chơi chọn một tỉnh, nhận một vị trí làm việc theo ngành nghề trong game, mỗi vị trí một nhiệm vụ riêng. Qua bốn vòng hỏi đáp, chủ dự án chốt các điều dưới đây. Mọi con số là đề xuất ban đầu; duyệt xong thì như các kế hoạch trước, cho chỉnh ±20% theo test; làm xong phần nào thì ghi số cuối cùng của phần ấy.
 
@@ -4325,6 +4325,15 @@ Chủ dự án nêu ý: map tổng thể Việt Nam, 34 map theo 34 tỉnh, hìn
 2. **Máy chủ điểm tỉnh**: bảng `tinh_nguoi` (người, tỉnh, chức, giờ đổi), `tinh_diem` (mùa, tỉnh, người, ngày, điểm), lệnh `chonTinh`, `chonChuc`, `gop`, `bangTinh` ở `xuLy.ts`; luật ở `mayChu.ts` (kiểm bản chụp, trần ngày, top 30). Test Deno như Đấu thành.
 3. **Giặc chung**: bảng `giac_chung`, lịch tuần, trận ngoài bãi tất định máy chủ đánh lại, thanh máu chung, gửi quân sang láng giềng, thưởng khi diệt.
 4. **Mùa, phúc lành, quy về**: mùa 4 tuần, xếp hạng cuối mùa, phúc lành tỉnh (cộng ở `productionPerMinute`, không vào bản chụp Đấu thành), Lạc tướng và Lạc hầu mỗi tuần, thanh Kết giao và đoạn truyện quy về.
+
+**PR 1 đã làm** (bản đồ 2D, chọn tỉnh, chọn chức; số cuối cùng):
+
+- Hình tỉnh: `scripts/ban-do.mjs` rút gọn ra `public/ban-do/34-tinh.json` 160 KB (giữ 8% điểm, lượng tử 20 000 nấc, bỏ đảo dưới 2 km² trừ đảo trong hai quần đảo nên còn Bạch Long Vĩ, Cồn Cỏ, Lý Sơn, Phú Quý, Phú Quốc, Thổ Chu). Tệp 34 tỉnh của nguồn thiếu Côn Đảo: lấy các đảo dưới 9,5° Bắc của Bà Rịa - Vũng Tàu trong tệp 63 tỉnh cùng repo, gộp vào TP. Hồ Chí Minh. Nguồn ghi ở `public/ban-do/NGUON.md`, trường `nguon` của tệp và Cài đặt.
+- Láng giềng tính từ cạnh chung dài từ 1 km trên topology đầy đủ (trước khi rút gọn), ghi vào `src/game/vietNamHinh.ts` cùng độ dài viền ngoài và số đảo. Hình không phân biệt bờ biển với biên giới đất liền, nên giáp biển (21 tỉnh) và biên giới (22 tỉnh) ghi tay ở `vietNam.ts`; test canh tỉnh có viền ngoài thì thuộc ít nhất một trong hai, tỉnh có đảo thì giáp biển. Tây Ninh (có Long An) và Đồng Nai không giáp biển.
+- `VIET_NAM` (`defs.ts`): mở từ Điện 5; mùa 4 tuần, bắt đầu 0 giờ thứ Hai giờ Việt Nam như tuần Lôi đài (`muaCua`, `muaCon`); đổi chức chờ 24 giờ. Mỗi mùa đổi tỉnh một lần; sang tỉnh không giáp biển mà đang là Bồ chính hải thì mất chức, nhận chức khác ngay.
+- Tên vùng xưa (tra nguồn): đất Văn Lang theo tên bộ của Toàn thư và chỗ của bộ theo Khâm định Việt sử thông giám cương mục, Việt Nam sử lược (Phú Thọ: bộ Văn Lang, Phong Châu; Hà Nội: Giao Chỉ, Chu Diên, Phúc Lộc, thành Cổ Loa, Mê Linh; Hưng Yên: Giao Chỉ, đầm Dạ Trạch theo truyền thuyết; Ninh Bình: Giao Chỉ; Bắc Ninh: Vũ Ninh; Quảng Ninh: Ninh Hải; Hải Phòng: Dương Tuyền; Lạng Sơn: Lục Hải; Thái Nguyên, Cao Bằng: Vũ Định; Tuyên Quang: Tân Hưng; Thanh Hóa: Cửu Chân; Nghệ An: Hoài Hoan; Hà Tĩnh: Cửu Đức). Bình Văn chưa rõ chỗ nên không gán; Lào Cai, Lai Châu, Điện Biên, Sơn La chỉ ghi tên tỉnh. Quảng Trị: Việt Thường (theo truyền thuyết; có sách đặt ở Hà Tĩnh). Chăm Pa: Đà Nẵng Amaravati, Gia Lai Vijaya (Bình Định), Khánh Hòa Kauthara (Nha Trang), Lâm Đồng Panduranga (Bình Thuận); Huế, Quảng Ngãi, Đắk Lắk chỉ ghi "đất Chăm Pa" (Indrapura chưa thống nhất chỗ). Phù Nam: An Giang (Óc Eo), Đồng Tháp (Gò Tháp), Tây Ninh (Bình Tả), Cần Thơ, Vĩnh Long, Cà Mau, TP. Hồ Chí Minh; Đồng Nai chỉ ghi tên tỉnh. Thẻ tỉnh ghi kèm lời nguồn (`vi.vietNam.xuaGhi`).
+- Bản đồ chiếu đơn giản (kinh độ co theo vĩ độ 16°), mở ra thấy cả nước và hai quần đảo; tô đất Văn Lang màu đồng nhạt, chưa quy về sọc chéo, tỉnh mình viền vàng; chấm đảo trong quần đảo giữ cỡ khi phóng; tên tỉnh hiện khi phóng từ 1,7 lần; phóng tới 14 lần; phóng to mà quần đảo ra ngoài khung thì khung chèn góc phải dưới vẽ lại hai quần đảo (chạm để về cả nước). Chưa có số người, điểm, giặc trên thẻ tỉnh (PR 2, 3).
+- Hướng dẫn chỉ tay mục `vietNam` khi Điện lên cấp 5.
 
 Sau bốn PR: map 3D từng tỉnh (dựng theo kiểu map dã ngoại, viền theo hình tỉnh) là kế hoạch riêng.
 
@@ -4384,5 +4393,5 @@ Sau bốn PR: map 3D từng tỉnh (dựng theo kiểu map dã ngoại, viền t
 25. **Điện 10 điều quân ra đóng đảo** (chủ dự án đã duyệt; đã làm PR 1–3: luật, giao diện, hình đồn đảo và thuyền chiến, giặc đánh đảo; xem Kế hoạch cùng tên): thuyền chiến đóng ở bến thuyền khơi cấp 3 chở quân ra đồn Hoàng Sa, đồn Trường Sa; đảo có quân giữ thì ngư trường làm ra thêm, báo sớm và chặn đánh thủy quân Hán; giặc Hán đánh đảo, quân đảo tự đánh, xem lại được.
 26. **Dã ngoại** (chủ dự án yêu cầu, đã làm; xem Kế hoạch cùng tên): mười map (map 6 Núi Nưa, map 7 Đầm Dạ Trạch, map 8 Núi Vệ, map 9 Bạch Đằng, map 10 sông Như Nguyệt thêm sau) mở kiểu Võ Lâm 2 nối nhau bằng cổng mở theo cấp, mỗi map năm khu quái phân theo cấp và một boss tự đánh; chạm để đi, nút Tự đánh; tự chọn tối đa 3 tướng, chỉ tướng đi; cấp chung cho mọi tướng chỉ có tác dụng trong dã ngoại; treo máy tối đa 8 giờ, không khóa tướng.
 27. **Nhà thuốc nam** (chủ dự án đã duyệt, đã làm; xem Kế hoạch cùng tên): cứu một phần lính ngã sau mỗi trận, chữa dần theo giờ; hai người đi hái thuốc.
-28. **Bản đồ Việt Nam** (chủ dự án đã duyệt, chưa làm; xem Kế hoạch cùng tên): 34 tỉnh ghép thành nước, mỗi người chơi chọn tỉnh và giữ một chức Bồ chính, cùng chống giặc chung, thi đua theo mùa, đưa các tỉnh phía Nam về bằng kết giao.
+28. **Bản đồ Việt Nam** (chủ dự án đã duyệt, đã làm PR 1: bản đồ 2D, chọn tỉnh, chọn chức; xem Kế hoạch cùng tên): 34 tỉnh ghép thành nước, mỗi người chơi chọn tỉnh và giữ một chức Bồ chính, cùng chống giặc chung, thi đua theo mùa, đưa các tỉnh phía Nam về bằng kết giao.
 29. **Để sau**: nhạc nền.

@@ -9,6 +9,7 @@
 import { isDauThanhState } from './dauThat';
 import { isThanThuState } from './thanThu';
 import { isLoiDaiState } from './loiDai';
+import { isVietNamState } from './vietNam';
 import { deflateSync, inflateSync } from 'fflate';
 import {
   ARMS,
@@ -84,6 +85,8 @@ export function deserialize(json: string): GameState | undefined {
   if (upgraded.thanThu !== undefined && !isThanThuState(upgraded.thanThu)) delete upgraded.thanThu;
   // Lôi đài sai dạng thì leo lại từ đầu, không bỏ cả bản lưu.
   if (upgraded.loiDai !== undefined && !isLoiDaiState(upgraded.loiDai)) delete upgraded.loiDai;
+  // Bản đồ Việt Nam sai dạng thì coi như chưa chọn tỉnh, không bỏ cả bản lưu.
+  if (upgraded.vietNam !== undefined && !isVietNamState(upgraded.vietNam)) delete upgraded.vietNam;
   lowerRiverBed(upgraded);
   cleanXay(upgraded);
   return upgraded;

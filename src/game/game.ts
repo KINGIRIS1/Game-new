@@ -14,6 +14,7 @@ import { advanceDao, advanceGiacDao, chanThuyen, daoArmy, daoGiuDuoc, donOf, ini
 import { initialDaNgoai, treoVang, type DaNgoaiState, type DaThuong } from './daNgoai';
 import { hoiBua, type ThanThuState } from './thanThu';
 import type { LoiDaiState } from './loiDai';
+import type { VietNamState } from './vietNam';
 import { hoiThuong, initialThuong, truQuanNga, type ThuongState } from './nhaThuoc';
 import { advanceXay, initialXay, isBusy, nextXayEvent, pendingBuilding, pendingBuildings, pendingCount, pendingOf, type XayState } from './xay';
 import { inChapter4 } from './chuong4';
@@ -417,11 +418,20 @@ export interface GameState {
   thanThu?: ThanThuState;
   /** Lôi đài Phong Châu (`loiDai.ts`): tầng đã qua, đội, thú mang theo. Trường tùy chọn nên không lên phiên bản lưu. */
   loiDai?: LoiDaiState;
+  /** Bản đồ Việt Nam (`vietNam.ts`): tỉnh đã chọn, chức Bồ chính. Trường tùy chọn nên không lên phiên bản lưu. */
+  vietNam?: VietNamState;
 }
 
 export type FailReason =
   | 'loiChuaMo'
   | 'loiTangKhoa'
+  | 'vnChuaMo'
+  | 'vnKhongCoTinh'
+  | 'vnDoiTinhMuaSau'
+  | 'vnChuaChonTinh'
+  | 'vnKhongCoChuc'
+  | 'vnChucChiGiapBien'
+  | 'vnDoiChucCho'
   | 'loiDoiSai'
   | 'thieuTaiNguyen'
   | 'chuaDuCapDien'

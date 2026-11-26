@@ -559,6 +559,21 @@ d.camera(cx, cz, 2.6);`,
     truoc: `${CHUONG5(35)}\ns.daNgoai.boss[0] = s.daNgoai.boss[1] = s.daNgoai.boss[2] = s.daNgoai.boss[3] = 1; s.thanThu = { cap: { thuLac: 5, thuNgua: 32, thuGa: 12, thuRua: 1, thuRong: 1 }, exp: { thuLac: 0, thuNgua: 0, thuGa: 0, thuRua: 0, thuRong: 0 }, bua: 3, buaMs: 0, chon: 'thuNgua' };`,
     sau: `document.querySelector('[data-act=goThanThu]').click();`,
   },
+  'viet-nam': {
+    mo: 'Kinh đô Điện 5, chưa chọn tỉnh: bảng Bản đồ Việt Nam cả nước (34 tỉnh, Hoàng Sa, Trường Sa), thẻ Phú Thọ',
+    truoc: `${KINH_DO}\ns.hinted.push('hd:vietNam');`,
+    sau: `document.querySelector('[data-act=goVietNam]').click();`,
+  },
+  'viet-nam-chon': {
+    mo: 'Như viet-nam, đã chọn Phú Thọ và nhận Bồ chính quân: phóng gần miền Bắc (tên tỉnh, viền vàng tỉnh mình, khung chèn hai quần đảo)',
+    truoc: `${KINH_DO}\ns.hinted.push('hd:vietNam'); s.vietNam = { tinh: '12', mua: 0, chuc: 'quan', chucLuc: Date.now() - 3600000 };`,
+    sau: `d.vietNam('12', 3.2);`,
+  },
+  'viet-nam-nam': {
+    mo: 'Như viet-nam, xem thẻ Khánh Hòa (chưa quy về, Kauthara, Trường Sa)',
+    truoc: `${KINH_DO}\ns.hinted.push('hd:vietNam'); s.vietNam = { tinh: '23', mua: 0, chuc: 'hai', chucLuc: 0 };`,
+    sau: `d.vietNam('23');`,
+  },
   'loi-dai': {
     mo: 'Chương 5 (đã thắng màn 35), đã qua 23 tầng lôi đài: bảng Lôi đài (lưới 50 tầng xếp 1 tới 50, đội giữ đài, thưởng, nút Lên đài)',
     truoc: LOI_DAI_23,

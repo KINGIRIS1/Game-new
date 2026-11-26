@@ -11,6 +11,7 @@ import { play, setMuted, stopRally, unlockAudio } from './audio/sfx';
 import { skillReady, startFieldBattle, stepField, useSkill, type Battle, type HeroKind, type FighterKind } from './game/battle';
 import { canLen, capNhatDa, chonMap, daMo, datDoi, doiNay, moMap, quaCong, tichTreo, vaoDa, veKinhDo, type DaThuong } from './game/daNgoai';
 import { choAn, chonThu, thuCo } from './game/thanThu';
+import { chonChuc, chonTinh } from './game/vietNam';
 import { chamMap, datTuDanh, stepDa, tuongDau } from './game/daNgoaiTran';
 import { boCuc } from './game/daNgoaiMap';
 import { attackFrom, beginPvp, canPractice, decodeSnapshot, encodeSnapshot, lootPvp, makeSnapshot, pushInput, scorePvp, stepPvp, validateArmy, type PvpRun } from './game/dauThanh';
@@ -2399,6 +2400,24 @@ async function start(): Promise<void> {
         return;
       }
 
+      case 'vnChonTinh': {
+        const r = chonTinh(state, a.tinh, Date.now());
+        if (!r.ok) return fail(r.reason);
+        play('tap');
+        hud.toast(vi.vietNam.daChonTinh(vi.vietNam.tinh[a.tinh] ?? a.tinh));
+        commit();
+        return;
+      }
+
+      case 'vnChonChuc': {
+        const r = chonChuc(state, a.chuc, Date.now());
+        if (!r.ok) return fail(r.reason);
+        play('tap');
+        hud.toast(vi.vietNam.daNhanChuc(vi.vietNam.chuc[a.chuc]?.ten ?? a.chuc));
+        commit();
+        return;
+      }
+
       case 'loiVao':
         moLoi(a.tang);
         return;
@@ -3192,6 +3211,12 @@ async function start(): Promise<void> {
     build: (type: BuildingType) => handle({ kind: 'chooseBuild', type }),
     /** Mở bảng tướng (trang bị, chỉ số, kho đồ) của tướng `hero`, như bấm nút Trang bị. */
     tuong: (hero?: HeroKind) => handle({ kind: 'openTuong', hero }),
+    /** Mở bảng Bản đồ Việt Nam như bấm nút Việt Nam; có `tinh` thì xem tỉnh ấy, có `k` thì phóng tới tỉnh ấy. */
+    vietNam: (tinh?: string, k?: number) => {
+      hud.showCampaign(state, 'vietNam');
+      if (tinh) hud.xemTinh(state, tinh);
+      if (tinh && k) setTimeout(() => hud.banDoVN.phongToi(tinh, k), 300);
+    },
     /** Mở bảng Đất bên kia sông của khoảnh bên kia `id`, như khi chạm vào đất ấy. */
     benKia: (id: number) => {
       select(null);

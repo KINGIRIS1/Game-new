@@ -5925,3 +5925,345 @@ body.man-vao-on #hud > * {
     flex: none;
   }
 }
+
+/* ---------- Bản đồ Việt Nam (ui/vietNam.ts) ---------- */
+.bdv-cho-ban-do {
+  width: 100%;
+  height: 100%;
+}
+
+.bdv-ban-do {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  border: 2px solid var(--ink);
+  border-radius: 14px;
+  /* Nền giấy dó: vệt sợi mờ trên màu giấy. */
+  background:
+    repeating-linear-gradient(83deg, rgba(120, 90, 50, 0.05) 0 2px, transparent 2px 9px),
+    repeating-linear-gradient(-17deg, rgba(120, 90, 50, 0.04) 0 1px, transparent 1px 13px),
+    #efe4c6;
+  box-shadow: inset 0 0 0 4px var(--paper-2), inset 0 0 24px rgba(58, 42, 26, 0.25);
+}
+
+.bdv-cho {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  text-align: center;
+  padding: 16px;
+}
+
+.bdv-svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  cursor: grab;
+  --bdv-z: 2;
+}
+
+.bdv-bien {
+  fill: #cfdcc6;
+}
+
+.bdv-song {
+  fill: none;
+  stroke: #9fb79f;
+  stroke-width: 1.6;
+  opacity: 0.55;
+}
+
+.bdv-song-nen {
+  pointer-events: none;
+}
+
+.bdv-tinh .bdv-mat {
+  stroke: var(--ink);
+  stroke-width: 1;
+  stroke-linejoin: round;
+  vector-effect: non-scaling-stroke;
+  cursor: pointer;
+}
+
+.bdv-tinh.van-lang .bdv-mat {
+  fill: #d8b46c;
+}
+
+.bdv-tinh.chua-ve .bdv-mat {
+  fill: url(#bdv-soc);
+}
+
+.bdv-soc-nen {
+  fill: #c9c4a4;
+}
+
+.bdv-soc-net {
+  stroke: #a9a27c;
+  stroke-width: 3;
+}
+
+.bdv-tinh.chon .bdv-mat {
+  stroke-width: 2.6;
+  filter: brightness(1.12);
+}
+
+.bdv-tinh.cua-ta .bdv-mat {
+  stroke: #e2a91c;
+  stroke-width: 3.4;
+  paint-order: stroke;
+}
+
+.bdv-cham {
+  fill: none;
+  stroke: var(--bronze-dark);
+  stroke-width: 3.2;
+  stroke-linecap: round;
+  vector-effect: non-scaling-stroke;
+  cursor: pointer;
+}
+
+.bdv-ten text,
+.bdv-qd text {
+  font-family: inherit;
+  text-anchor: middle;
+  dominant-baseline: middle;
+  paint-order: stroke;
+  stroke: #f3ead0;
+  stroke-linejoin: round;
+  pointer-events: none;
+}
+
+.bdv-ten text {
+  display: none;
+  font-size: calc(11px * var(--bdv-z));
+  stroke-width: calc(3px * var(--bdv-z));
+  fill: var(--ink);
+}
+
+.bdv-gan .bdv-ten text {
+  display: block;
+}
+
+.bdv-ten text.chon {
+  display: block;
+  font-weight: 700;
+}
+
+.bdv-qd .bdv-qd-ten {
+  font-size: calc(12px * var(--bdv-z));
+  stroke-width: calc(3px * var(--bdv-z));
+  font-weight: 700;
+  fill: var(--red-dark);
+}
+
+.bdv-qd .bdv-bien-ten {
+  font-size: calc(14px * var(--bdv-z));
+  stroke-width: calc(3px * var(--bdv-z));
+  font-style: italic;
+  letter-spacing: 2px;
+  fill: #5d7a63;
+  opacity: 0.8;
+}
+
+.bdv-goc {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 96px;
+  height: 96px;
+  pointer-events: none;
+  opacity: 0.5;
+}
+
+.bdv-trong circle,
+.bdv-trong path,
+.bdv-trong polygon {
+  fill: none;
+  stroke: var(--bronze-dark);
+  stroke-width: 1.4;
+}
+
+.bdv-trong polygon {
+  fill: var(--bronze);
+  opacity: 0.7;
+}
+
+.bdv-chu-thich {
+  position: absolute;
+  right: 8px;
+  top: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 5px 8px;
+  border-radius: 9px;
+  background: rgba(247, 236, 212, 0.88);
+  border: 1px solid var(--line);
+  font-size: 11px;
+  pointer-events: none;
+}
+
+.bdv-chu-thich span {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.bdv-o {
+  width: 14px;
+  height: 10px;
+  border: 1px solid var(--ink);
+  border-radius: 2px;
+}
+
+.bdv-o.van-lang {
+  background: #d8b46c;
+}
+
+.bdv-o.chua-ve {
+  background: repeating-linear-gradient(45deg, #c9c4a4 0 3px, #a9a27c 3px 4px);
+}
+
+.bdv-o.cua-ta {
+  background: #d8b46c;
+  border: 2px solid #e2a91c;
+}
+
+.bdv-chen {
+  position: absolute;
+  right: 8px;
+  bottom: 8px;
+  width: 92px;
+  height: 120px;
+  border: 1.5px solid var(--ink);
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: var(--shadow);
+  cursor: pointer;
+}
+
+.bdv-chen svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.bdv-chen-nen {
+  fill: #cfdcc6;
+}
+
+.bdv-chen .bdv-cham {
+  stroke-width: 3;
+}
+
+.bdv-chen .bdv-qd-ten {
+  font-size: 54px;
+  font-weight: 700;
+  text-anchor: middle;
+  fill: var(--red-dark);
+}
+
+.bdv-ta {
+  margin: 6px 0;
+}
+
+.bdv-the {
+  margin: 8px 0;
+  padding: 10px 12px;
+  border: 2px solid var(--line);
+  border-radius: 12px;
+  background: var(--paper-2);
+}
+
+.bdv-the.van-lang {
+  border-color: #c69a43;
+}
+
+.bdv-the h3 {
+  margin: 0 0 4px;
+}
+
+.bdv-the p {
+  margin: 4px 0;
+}
+
+.bdv-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin: 6px 0;
+}
+
+.bdv-tag {
+  padding: 2px 8px;
+  border-radius: 10px;
+  background: var(--paper);
+  border: 1px solid var(--line);
+  font-size: 12px;
+}
+
+.bdv-lg-dong .bdv-lg {
+  margin: 2px 3px 2px 0;
+  padding: 2px 8px;
+  border-radius: 10px;
+  border: 1px solid var(--line);
+  background: var(--paper);
+  font-size: 12px;
+}
+
+.bdv-dang {
+  color: var(--green);
+  font-weight: 700;
+}
+
+.bdv-chuc-khoi h4 {
+  margin: 10px 0 2px;
+}
+
+.bdv-chuc-list {
+  display: grid;
+  gap: 6px;
+  margin: 6px 0;
+}
+
+.bdv-chuc {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 10px;
+  border-radius: 10px;
+  border: 1.5px solid var(--line);
+  background: var(--paper);
+  text-align: left;
+}
+
+.bdv-chuc .ic {
+  font-size: 22px;
+}
+
+.bdv-chuc b,
+.bdv-chuc small {
+  display: block;
+}
+
+.bdv-chuc em {
+  margin-left: auto;
+  font-style: normal;
+  color: var(--green);
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.bdv-chuc.on {
+  border-color: var(--bronze);
+  box-shadow: inset 0 0 0 1px var(--bronze);
+}
+
+.bdv-chuc:disabled {
+  opacity: 0.55;
+}

@@ -3037,3 +3037,10 @@ export const LOI_HE: number[] = [
   1.25, 1.27, 1.32, 1.3, 1.26, 1.38, 1.37, 1.66, 1.61, 1.44,
   1.31, 1.32, 1.18, 1.06, 1.34, 1.49, 1.41, 1, 1.11, 1.46,
 ];
+
+/**
+ * Bản đồ Việt Nam (docs/thiet-ke.md mục Kế hoạch: bản đồ Việt Nam, 34 tỉnh, chức Bồ chính; PR 1): mở từ Điện `dien`;
+ * mùa dài `muaTuan` tuần (bắt đầu 0 giờ thứ Hai giờ Việt Nam như tuần Lôi đài), đổi tỉnh mỗi mùa một lần; đổi chức
+ * chờ `doiChucMs` kể từ lần chọn chức trước.
+ */
+export const VIET_NAM = { dien: 5, muaTuan: 4, doiChucMs: 24 * 3_600_000 };
