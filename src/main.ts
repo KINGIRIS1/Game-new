@@ -28,6 +28,7 @@ import { forgeNoThan, inChapter3, wallRings } from './game/coLoa';
 import { offer, tetOpen } from './game/tet';
 import { ganhPreview, giapDuong, markGanhHinted, needsGanhHint, vungGanh } from './game/vanChuyen';
 import { startMau } from './game/mau';
+import { canDatLai, catCongTrinh, catOf, datLai } from './game/khoCat';
 import { advanceXay, askQuiz, canStartBuild, cancelJob, conLai, startBuild, startDon, startThuyen, startUpgrade, startWallUpgrade, startWalls, thoRanh, thoRanhSau, traLoi, viecOf, xayMs, type CongViec } from './game/xay';
 import { danhDao, markDaoHinted, nextDaoHint, setDaoLinh, setupDao, suaDon } from './game/dao';
 import { CAU_DO, CAU_DO_IDS } from './text/cauDo';
@@ -160,8 +161,11 @@ const isDragged = (type: PaintType) => isWall(type) || isRoad(type as BuildingTy
 
 type Mode =
   | { kind: 'view'; selected: number | null }
-  /** Đặt mới hay dời (`moving`): góc móng (x, z), hướng xoay `rot` (số nấc 90°, chỉ loại xoay được). */
-  | { kind: 'place'; type: BuildingType; x: number; z: number; rot: number; moving?: number }
+  /**
+   * Đặt mới, dời (`moving`) hay đặt lại công trình đang cất trong kho (`tuKho`): góc móng (x, z), hướng xoay `rot` (số
+   * nấc 90°, chỉ loại xoay được).
+   */
+  | { kind: 'place'; type: BuildingType; x: number; z: number; rot: number; moving?: number; tuKho?: number }
   | { kind: 'paint'; type: PaintType }
   /** Đang chọn chòi canh thứ hai để ghép với chòi `from` thành lầu nỏ. */
   | { kind: 'merge'; from: number };
@@ -533,7 +537,9 @@ async function start(): Promise<void> {
       ? { ok: true as const }
       : mode.moving !== undefined
         ? canMove(state, mode.moving, mode.x, mode.z)
-        : canStartBuild(state, mode.type, mode.x, mode.z);
+        : mode.tuKho !== undefined
+          ? canDatLai(state, mode.tuKho, mode.x, mode.z)
+          : canStartBuild(state, mode.type, mode.x, mode.z);
     // Sát cạnh nhà khác: vẫn đặt được, bóng móng tô vàng và nhắc chừa hẻm một ô cho kinh đô thoáng, dễ bấm.
     const sat = check.ok && satNha(state, mode.type, mode.x, mode.z, mode.moving);
     world.setGhost(mode.type, mode.x, mode.z, check.ok, footprintTop(state, mode.type, mode.x, mode.z), mode.rot, sat);
@@ -1489,6 +1495,16 @@ async function start(): Promise<void> {
           world.pop(m.value.id);
           return;
         }
+        if (mode.tuKho !== undefined) {
+          const m = datLai(state, mode.tuKho, mode.x, mode.z, mode.rot);
+          if (!m.ok) return fail(m.reason);
+          play('place');
+          hud.toast(vi.ui.datLaiDone(buildingName(m.value)));
+          exitMode();
+          commit();
+          world.pop(m.value.id);
+          return;
+        }
         if (xayMs(mode.type, 1) > 0) {
           // Giao một tốp thợ dựng: công trình vào kinh đô khi xong.
           const s = startBuild(state, mode.type, mode.x, mode.z, mode.rot);
@@ -1614,7 +1630,7 @@ async function start(): Promise<void> {
         }
         hud.mauArmed = null;
         // Dời ngay; phần dựng thêm giao cả cho một tốp thợ, làm lần lượt.
-        const r = startMau(state, a.mau, hud.mauBac);
+        const r = startMau(state, a.mau, hud.mauBac, hud.mauCat);
         if (!r.ok) {
           hud.refreshSheet(state);
           return fail(r.reason);
@@ -1973,6 +1989,31 @@ async function start(): Promise<void> {
         play('tap');
         select(null);
         commit();
+        return;
+      }
+
+      case 'catCongTrinh': {
+        const r = catCongTrinh(state, a.id);
+        if (!r.ok) return fail(r.reason);
+        play('tap');
+        hud.toast(vi.ui.catDone(buildingName(r.value)));
+        hud.closeSheet();
+        select(null);
+        commit();
+        return;
+      }
+
+      case 'chooseCat': {
+        // Đặt lại công trình đang cất: như dời, bóng công trình hiện ở chỗ trống gần tâm màn hình.
+        const b = catOf(state, a.id);
+        if (!b) return fail('khongCoTrongKho');
+        if (state.raid.phase !== 'idle') return fail('dangCoGiac');
+        hud.closeSheet();
+        world.showGrid(true);
+        play('tap');
+        mode = { kind: 'place', type: b.type, rot: rotOf(b), tuKho: b.id, ...nearestSpot(b.type) };
+        hud.setMode('place', true, undefined, canRotateType(b.type), undefined, vi.ui.datLaiHere);
+        updateGhost();
         return;
       }
 

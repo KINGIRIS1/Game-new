@@ -1451,7 +1451,8 @@ export interface MauPlan {
   layRa: { id: number; x: number; z: number }[];
   /**
    * Công trình không có chỗ trong mẫu mà vướng chỗ, đường của mẫu, sẽ cất vào kho: khi bật cất công trình thừa
-   * (`catThua`), hay khi không còn chỗ trống nào cho nó. Không tốn gì.
+   * (`catThua`) và nó thừa thật (nhiều hơn số chỗ của loại ấy trong cả mẫu, kể cả chỗ còn trong rừng), hay khi không
+   * còn chỗ trống nào cho nó. Không tốn gì.
    */
   cat: number[];
   /** Ụ nỏ sẽ dựng thêm trên đoạn thành ở các ô này (mẫu Cổ Loa giữ sông), trong giới hạn theo cấp Điện. */
@@ -1630,11 +1631,8 @@ const addCost = (a: Cost, b: Cost) => {
 
 /**
  * Lên kế hoạch áp mẫu `id` cho kinh đô hiện tại, chưa đổi gì. `bac`: đắp bậc thang (chỉ khi `bacThangMo`, xem
- * `bacThang`).
- */
-/**
- * Kế hoạch áp mẫu `id`. `bac`: đắp bậc thang (từ chương 2). `catThua`: công trình không có chỗ trong mẫu mà vướng mẫu
- * thì cất vào kho cất công trình (không thì tìm chỗ trống gần nhất; hết chỗ mới cất).
+ * `bacThang`). `catThua`: công trình thừa thật so với mẫu mà vướng mẫu thì cất vào kho cất công trình (không thì tìm
+ * chỗ trống gần nhất; hết chỗ mới cất).
  */
 export function planMau(state: GameState, id: MauId, bac = true, catThua = true): MauPlan {
   const plan = planVoi(state, id, bac, catThua, false);
@@ -1689,6 +1687,13 @@ function planVoi(state: GameState, id: MauId, bac: boolean, catThua: boolean, he
   const slots: Slot[] = ve.slots
     .filter((s) => s.type !== 'dien' && fits(s.type, s.x, s.z))
     .map((s) => (s.cong && gates-- > 0 ? { type: 'congThanh' as const, x: s.x, z: s.z } : s));
+  // Số công trình mỗi loại thừa thật so với mẫu: bên này sông nhiều hơn số chỗ của loại ấy trong cả mẫu (kể cả chỗ còn
+  // trong rừng chưa phát; loại mẫu chưa chừa chỗ ở cấp này thì cả số). Cất công trình thừa chỉ cất chừng ấy cái; cái có
+  // chỗ trong mẫu mà chỗ ấy còn trong rừng thì dời tới chỗ trống như cũ.
+  const slotKey = (t: BuildingType): BuildingType => (t === 'lauNo' ? 'choiCanh' : t === 'congDe' ? 'de' : t);
+  const thua = new Map<BuildingType, number>();
+  for (const s of ve.slots) if (s.type !== 'dien') thua.set(s.type, (thua.get(s.type) ?? 0) - 1);
+  for (const b of state.buildings) if (b.type !== 'dien' && isNearBank(b.x, b.z)) thua.set(slotKey(b.type), (thua.get(slotKey(b.type)) ?? 0) + 1);
   // Doanh trại xếp trước nơi ở riêng của các binh chủng, vì nơi ở cần doanh trại.
   const types = [...new Set(slots.map((s) => s.type))].sort((a, b) => Number(b === 'doanhTrai') - Number(a === 'doanhTrai'));
   let barracks = barracksLevel(state);
@@ -1797,10 +1802,13 @@ function planVoi(state: GameState, id: MauId, bac: boolean, catThua: boolean, he
     else if (dropIfBlocked(b.type)) plan.removes.push(b.id);
     else blocked.push(b);
   }
-  // Công trình vướng mẫu: cất vào kho nếu bật cất công trình thừa, không thì tìm chỗ trống gần nhất, hết chỗ mới cất.
+  // Công trình vướng mẫu: thừa thật thì cất vào kho nếu bật cất công trình thừa, không thì tìm chỗ trống gần nhất, hết
+  // chỗ mới cất.
   const catDuoc = (b: Building) => catDuocLoai(b.type) && !isBusy(state, b.id);
   for (const b of blocked) {
-    if (catThua && catDuoc(b)) {
+    const k = slotKey(b.type);
+    if (catThua && catDuoc(b) && (thua.get(k) ?? 0) > 0) {
+      thua.set(k, thua.get(k)! - 1);
       plan.cat.push(b.id);
       continue;
     }

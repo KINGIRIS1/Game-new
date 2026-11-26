@@ -10,7 +10,7 @@ import { vi } from '../text/vi';
 export interface BuildItem {
   key: string;
   /** `data-act` của nút chính dưới ảnh lớn. */
-  act: 'chooseBuild' | 'chooseUNo' | 'chooseRaise' | 'chooseClear' | 'applyMau';
+  act: 'chooseBuild' | 'chooseUNo' | 'chooseRaise' | 'chooseClear' | 'applyMau' | 'chooseCat';
   /** Thuộc tính thêm cho nút chính, vd `data-type="ruong"`. */
   attrs?: string;
   /** Địa chỉ ảnh; null thì hiện icon. */
@@ -129,7 +129,7 @@ export function xayDungHtml(items: BuildItem[], pick: string | null, foot = '', 
 }
 
 /** Chữ trên nút Xây theo việc của mục. */
-export function goLabel(act: Exclude<BuildItem['act'], 'applyMau'>, road: boolean, decor: boolean): string {
+export function goLabel(act: Exclude<BuildItem['act'], 'applyMau' | 'chooseCat'>, road: boolean, decor: boolean): string {
   const g = vi.ui.buildGo;
   if (act === 'chooseBuild') return road ? g.road : decor ? g.decor : g.build;
   return g[act];

@@ -6,6 +6,7 @@ import { BUILDINGS, CH2_QUEST_START, CH3_QUEST_START, CH4_QUEST_START, MOVE_FRAC
 import { canPlace, createInitialState, findBuilding, freeDan, limitOf, occupancy, place, productionPerMinute, usedOf, type Building, type GameState } from './game';
 import { canCat, catCongTrinh, catDuocLoai, canDatLai, datLai, nhomCat } from './khoCat';
 import { applyMau, mauSlots, planMau } from './mau';
+import { playChapters } from './moPhong';
 import { deserialize, serialize } from './save';
 import { DIEN, DIEN_END, edge, setDien } from './testmap';
 import { startUpgrade } from './xay';
@@ -149,6 +150,16 @@ describe('kho cất công trình', () => {
     expect(s.khoCat.map((b) => b.id).sort()).toEqual([den.id, ho.id].sort());
     expect(s.khoCat.find((b) => b.id === ho.id)!.level).toBe(2);
     expect(s.buildings.some((b) => b.type === 'doanhTrai' && b.x === slot('doanhTrai').x && b.z === slot('doanhTrai').z)).toBe(true);
+  });
+
+  it('công trình có chỗ trong mẫu mà chỗ ấy còn trong rừng chưa phát thì không cất, dời tới chỗ trống như cũ', () => {
+    // Kinh đô người chơi mô phỏng lúc lên Điện 5: đất đã mở nhỏ hơn khung mẫu.
+    const s = createInitialState(0);
+    playChapters({ s, until: (m) => m.at5 >= 0 });
+    const plan = planMau(s, 'phongChau');
+    expect(plan.stuck).toEqual([]);
+    expect(plan.cat).toEqual([]);
+    expect(plan.moves.length).toBeGreaterThan(0);
   });
 
   it('bản lưu 37: kho cất lưu rồi mở lại được; bản lưu 36 lên 37 có kho trống; kho sai thì bị từ chối', () => {

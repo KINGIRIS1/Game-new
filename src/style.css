@@ -5348,14 +5348,14 @@ body.man-vao-on #hud > * {
 
 /* Nút bật tắt đắp bậc thang ở đầu thẻ Mẫu kinh đô (từ chương 2). */
 .mau-bac {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
   margin: 0 2px 8px;
-  font-size: 12px;
-  line-height: 1.35;
 }
 .mau-bac .btn {
   padding: 4px 10px;
   font-size: 13px;
-  margin-right: 4px;
 }
 
 /* ---------- Lôi đài Phong Châu (ui/loiDai.ts) ---------- */

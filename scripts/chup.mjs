@@ -46,6 +46,8 @@ const CO_QUAN = `
   s.troops = { giao: Math.floor(cho / 2), cung: Math.floor(cho / 3), voi: 0, no: 0 };
 `;
 const KINH_DO = `M.playChapters({ s, until: (m) => m.at5 >= 0 });`;
+/** Cất hai nhà sàn và một bãi đất đá vào kho cất công trình (`khoCat.ts`). */
+const CAT_BA = `{ const K = await import('/src/game/khoCat.ts'); for (const t of ['nhaSan', 'nhaSan', 'baiDa']) { const b = s.buildings.find((o) => o.type === t && !s.khoCat.includes(o)); const r = K.catCongTrinh(s, b.id); if (!r.ok) throw new Error(r.reason); } }`;
 /** Kinh đô Điện 8 vừa sang chương 5 (đã thắng tới màn `cleared`), có doanh trại và quân, đã xem hết truyện tới lúc ấy. */
 /**
  * Điện 10 sau truyện (người chơi mô phỏng chơi thêm 5 giờ: hai đồn đảo lên cấp, có thuyền chiến), chương 5 đã thắng
@@ -352,6 +354,28 @@ export const CANH = {
     sau: `d.select(s.buildings.find((b) => b.type === 'luy').id);`,
     doi: 2500,
     truocKhiChup: `document.querySelector('.vn-nut[data-the=do]').click();`,
+  },
+  'vong-nut-cat': {
+    mo: 'Như kinh-do, chạm chọn một nhà sàn: vòng có nút Cất (rương đồng) và thẻ xác nhận cất vào kho',
+    truoc: KINH_DO,
+    sau: `d.select(s.buildings.find((b) => b.type === 'nhaSan').id);`,
+    doi: 2500,
+    truocKhiChup: `document.querySelector('.vn-nut[data-the=cat]').click();`,
+  },
+  'kho-cat': {
+    mo: 'Như kinh-do, đã cất hai nhà sàn và một bãi đất đá: bảng Xây dựng, thẻ Kho cất (đồ gộp theo loại, cấp; nút Đặt lại)',
+    truoc: `${KINH_DO}\n${CAT_BA}`,
+    sau: `document.querySelector('[data-act=openBuild]').click(); document.querySelector('[data-act=buildTab][data-tab=cat]').click();`,
+  },
+  'dat-lai': {
+    mo: 'Như kho-cat, bấm Đặt lại nhà sàn: bóng công trình hiện ở chỗ trống, thanh dưới có nút Đặt ở đây',
+    truoc: `${KINH_DO}\n${CAT_BA}`,
+    sau: `document.querySelector('[data-act=openBuild]').click(); document.querySelector('[data-act=buildTab][data-tab=cat]').click(); document.querySelector('.xd-info [data-act=chooseCat]').click();`,
+  },
+  'mau-kho-cat': {
+    mo: 'Như kho-cat, thẻ Mẫu kinh đô: việc mẫu sẽ làm có dòng lấy công trình từ kho cất, nút bật tắt cất công trình thừa',
+    truoc: `${KINH_DO}\n${CAT_BA}`,
+    sau: `document.querySelector('[data-act=openBuild]').click(); document.querySelector('[data-act=buildTab][data-tab=mau]').click();`,
   },
   'vong-nut-trai': {
     mo: 'Như kinh-do có doanh trại, chạm chọn doanh trại: vòng có Quân, Giữ thành, Tướng (mở bảng đúng thẻ)',
