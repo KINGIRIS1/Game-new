@@ -248,7 +248,7 @@ describe('mẫu kinh đô', () => {
     for (const b of s.buildings) {
       if (!isRoad(b.type)) expect(slots.some((x) => x.type === b.type && x.x === b.x && x.z === b.z), `${b.type} ${b.x},${b.z}`).toBe(true);
     }
-    expect(s.buildings.filter((b) => isRoad(b.type)).map((b) => ({ x: b.x, z: b.z }))).toEqual(plan.duong);
+    expect(s.buildings.filter((b) => isRoad(b.type)).map((b) => ({ x: b.x, z: b.z }))).toEqual(plan.duong.map((r) => ({ x: r.x, z: r.z })));
     const grid = occupancy(s);
     let cells = 0;
     for (const b of s.buildings) cells += BUILDINGS[b.type].w * BUILDINGS[b.type].d;
@@ -331,7 +331,7 @@ describe('mẫu kinh đô', () => {
     }
   });
 
-  it('áp mẫu trải đường của mẫu (đường đất, xong ngay), giữ đường đang có trên đường mẫu, áp lần hai không còn gì', () => {
+  it('áp mẫu trải đường của mẫu (đường đất, trong thành Cổ Loa lát gạch; xong ngay), giữ đường đang có trên đường mẫu, áp lần hai không còn gì', () => {
     const cases: [MauId, 1 | 2 | 3 | 4, number][] = [
       ['phongChau', 1, 3],
       ['phongChau', 1, 5],
@@ -342,14 +342,23 @@ describe('mẫu kinh đô', () => {
     ];
     for (const [id, chapter, dien] of cases) {
       const s = withGenerals(city(dien, chapter));
-      // Một ô đường lát đá đang nằm đúng đường mẫu: giữ nguyên, không trải đè.
-      const keep = mauDuong(id, dien)[0];
+      // Một ô đường lát đá đang nằm đúng đường mẫu (đường đất): giữ nguyên, không trải đè.
+      const keep = mauDuong(id, dien).find((r) => !r.gach)!;
       expect(place(s, 'duongDa', keep.x, keep.z).ok, `${id} Điện ${dien}`).toBe(true);
+      // Mẫu Cổ Loa: một ô đường lát đá trong vòng thành ngoài thì dỡ đi, lát lại bằng gạch.
+      const lai = mauDuong(id, dien).find((r) => r.gach);
+      if (lai) expect(place(s, 'duongDa', lai.x, lai.z).ok, `${id} Điện ${dien}`).toBe(true);
       const plan = planMau(s, id);
       expect(applyMau(s, id).ok, `${id} Điện ${dien}`).toBe(true);
       const roads = s.buildings.filter((b) => isRoad(b.type));
       expect(roads.length).toBe(plan.duong.length + 1);
       expect(roads.find((b) => b.x === keep.x && b.z === keep.z)?.type).toBe('duongDa');
+      if (lai) expect(roads.find((b) => b.x === lai.x && b.z === lai.z)?.type).toBe('duongGach');
+      // Trong thành Cổ Loa đường gạch, ngoài thành đường đất (trừ ô giữ nguyên).
+      for (const r of mauDuong(id, dien)) {
+        const b = roads.find((o) => o.x === r.x && o.z === r.z);
+        if (b && b !== roads.find((o) => o.x === keep.x && o.z === keep.z)) expect(b.type, `${id} Điện ${dien} ${r.x},${r.z}`).toBe(r.gach ? 'duongGach' : 'duongDat');
+      }
       expect(roads.length).toBeLessThanOrEqual(ROAD_LIMIT[dien - 1]);
       for (const b of roads) expect(isOpen(s, b.x, b.z)).toBe(true);
       // Đường mẫu trên đất đã mở đều đã trải.
@@ -443,7 +452,7 @@ describe('mẫu kinh đô', () => {
     }
   });
 
-  it('mẫu Cổ Loa: ba vòng thành kín quanh Điện ở mọi cấp Điện từ 5, vòng ngoài nới ra theo đất; đê bao giữ được lũ bậc 3', () => {
+  it('mẫu Cổ Loa: ba vòng thành kín quanh Điện ở mọi cấp Điện từ 5, vòng ngoài một cỡ; đê bao giữ được lũ bậc 3', () => {
     let outer = Infinity;
     for (const dien of levelsOf('coLoa')) {
       const s = city(dien, 3);
@@ -455,16 +464,52 @@ describe('mẫu kinh đô', () => {
         const def = BUILDINGS[b.type];
         for (let dx = 0; dx < def.w; dx++) for (let dz = 0; dz < def.d; dz++) expect(wet[(b.z + dz) * GRID + b.x + dx], `Điện ${dien}: ${b.type} ${b.x},${b.z}`).toBe(0);
       }
-      // Vòng ngoài không co lại khi đất rộng ra, và tới Điện 8 thì đã nới ra.
+      // Vòng ngoài một cỡ ở mọi cấp Điện (áp lại khi lên cấp không phải đắp lại thành).
       const west = Math.min(...mauSlots('coLoa', dien).filter((x) => x.type === 'thanh').map((x) => x.x));
-      expect(west, `Điện ${dien}`).toBeLessThanOrEqual(outer);
+      if (outer !== Infinity) expect(west, `Điện ${dien}`).toBe(outer);
       outer = west;
     }
-    expect(outer).toBeLessThan(Math.min(...mauSlots('coLoa', 5).filter((x) => x.type === 'thanh').map((x) => x.x)));
     // Vòng trong chỉ có Điện và sân.
     const slots = mauSlots('coLoa', 8);
     const inner = Math.max(...slots.filter((x) => x.type === 'thanh' && x.z < DIEN_HOME && x.x > DIEN_HOME).map((x) => x.z));
     for (const x of slots) if (x.type !== 'dien' && x.type !== 'thanh') expect(x.x > inner && x.z > inner && x.x < DIEN_END + 2 && x.z < DIEN_END + 2, `${x.type} ${x.x},${x.z}`).toBe(false);
+  });
+
+  it('mẫu Cổ Loa, Cổ Loa giữ sông: thành cách nhà trong thành 2 ô, ngoài thành 1 ô; mọi ô trống trong vòng ngoài lát gạch, ngoài thành không', () => {
+    for (const id of ['coLoa', 'coLoaSong'] as const) {
+      for (const dien of levelsOf(id)) {
+        const slots = mauSlots(id, dien);
+        const thanh = slots.filter((x) => x.type === 'thanh');
+        const a = Math.min(...thanh.map((x) => x.x));
+        const b = Math.max(...thanh.map((x) => x.x));
+        const trong = (x: number, z: number) => x > a && z > a && x < b && z < b;
+        const wall = new Uint8Array(GRID * GRID);
+        for (const x of thanh) wall[x.z * GRID + x.x] = 1;
+        // Khoảng cách tám hướng ngắn nhất từ móng tới đoạn thành.
+        const xa = (x0: number, z0: number, w: number) => {
+          let best = Infinity;
+          for (const t of thanh) {
+            const dx = Math.max(x0 - t.x, 0, t.x - (x0 + w - 1));
+            const dz = Math.max(z0 - t.z, 0, t.z - (z0 + w - 1));
+            best = Math.min(best, Math.max(dx, dz));
+          }
+          return best;
+        };
+        const nha = new Uint8Array(GRID * GRID);
+        for (const x of slots) {
+          const w = BUILDINGS[x.type].w;
+          for (let dx = 0; dx < w; dx++) for (let dz = 0; dz < w; dz++) nha[(x.z + dz) * GRID + x.x + dx] = 1;
+          if (w === 1) continue;
+          // Hai ô trống giữa nhà (cả Điện) và thành trong vòng ngoài, một ô ngoài vòng ngoài.
+          expect(xa(x.x, x.z, w), `${id} Điện ${dien} ${x.type} ${x.x},${x.z}`).toBeGreaterThanOrEqual(trong(x.x, x.z) ? 3 : 2);
+        }
+        const gach = new Set(mauDuong(id, dien).filter((r) => r.gach).map((r) => r.z * GRID + r.x));
+        for (let z = a + 1; z < b; z++) for (let x = a + 1; x < b; x++) if (!nha[z * GRID + x]) expect(gach.has(z * GRID + x), `${id} Điện ${dien} ${x},${z}`).toBe(true);
+        for (const i of gach) expect(trong(i % GRID, Math.floor(i / GRID))).toBe(true);
+        expect(thanh.length).toBeLessThanOrEqual(BUILDINGS.thanh.limit[dien - 1]);
+        expect(mauDuong(id, dien).length).toBeLessThanOrEqual(ROAD_LIMIT[dien - 1]);
+      }
+    }
   });
 
   it('mẫu Cổ Loa giữ sông: ba vòng thành và đê bao giữ lũ bậc 3; 16 ụ nỏ trên vòng ngoài chia đều bốn mặt; lầu nỏ vào chỗ dành riêng; có trại nỏ, Đền Cuông', () => {

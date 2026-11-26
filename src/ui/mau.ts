@@ -61,7 +61,7 @@ const miniCache = new Map<string, string>();
 
 /**
  * Bản đồ thu nhỏ của mẫu ở cấp Điện hiện tại, từ bìa khung mẫu hay đất đã mở (xa hơn thì lấy) tới sông: ô rừng chưa
- * phát vẽ mờ, chỗ của mẫu nằm trong rừng cũng mờ, đường của mẫu màu đường đất, sông xanh ở hai cạnh. Vẽ lên canvas một lần cho mỗi mẫu, mỗi cấp
+ * phát vẽ mờ, chỗ của mẫu nằm trong rừng cũng mờ, đường của mẫu màu đường đất (trong thành Cổ Loa màu gạch), sông xanh ở hai cạnh. Vẽ lên canvas một lần cho mỗi mẫu, mỗi cấp
  * Điện và mỗi bộ khoảnh đã mở.
  */
 function miniMap(state: GameState, id: MauId): string {
@@ -85,8 +85,8 @@ function miniMap(state: GameState, id: MauId): string {
         g.fillRect(x * px, z * px, px, px);
       }
     }
-    g.fillStyle = TILE.duongDat!;
     for (const r of mauDuong(id, level)) {
+      g.fillStyle = (r.gach ? TILE.duongGach : TILE.duongDat)!;
       g.globalAlpha = isOpen(state, r.x, r.z) ? 1 : 0.45;
       g.fillRect((r.x - x0) * px, (r.z - x0) * px, px, px);
     }

@@ -152,8 +152,11 @@ export interface BuildingDef {
  */
 export interface MauKhu {
   khu: 'dien' | 'song' | 'kho' | 'doi' | 'truc' | 'trai' | 'bep';
-  /** Mẫu Cổ Loa: số vòng thành bao quanh (0 ngoài vòng ngoài, 1 giữa vòng ngoài và vòng giữa, 2 giữa vòng giữa và vòng trong). */
-  vong: 0 | 1 | 2;
+  /**
+   * Mẫu Cổ Loa: số vòng thành bao quanh (0 ngoài vòng ngoài, 1 trong vòng ngoài). Vòng giữa đứng sát vòng trong quanh
+   * Điện (thành cách nhà một khe), nên không có khu nhà trong hai vòng.
+   */
+  vong: 0 | 1;
   /**
    * Mẫu chỉ chừa chỗ từ cấp Điện này. Không có thì theo số tối đa (loại mở theo truyện từ kết chương 1 thì từ Điện cấp màn
    * cuối chương 1 cần). Loại mở muộn theo truyện ghi cấp Điện người chơi thường có lúc mở, đỡ chật đất ở cấp thấp.
@@ -174,7 +177,9 @@ export const DIEN_CHAPTER: Partial<Record<number, 2 | 3 | 4 | 5>> = { 6: 2, 7: 3
  * Tổng số ô đường (cả bốn loại) được trải, theo cấp Điện: đủ cho đường của mẫu kinh đô nhiều đường nhất ở cấp ấy
  * (`mauDuong` ở `mau.ts`, mọi công trình giáp đường), dư chừng một phần mười cho đường tự trải.
  */
-export const ROAD_LIMIT = [90, 130, 140, 220, 320, 330, 470, 470, 480, 480];
+// Từ Điện 5 đủ cho mẫu Cổ Loa lát gạch mọi ô trong vòng thành ngoài, cộng đường đất ngoài thành (555 ô ở Điện 5, tới
+// 654 ở Điện 10), dư chừng một phần mười cho đường tự trải.
+export const ROAD_LIMIT = [90, 130, 140, 220, 620, 700, 700, 700, 720, 720];
 export const ROAD_TYPES: BuildingType[] = ['duongDat', 'duongSoi', 'duongDa', 'duongGach'];
 export const DECOR_TYPES: BuildingType[] = ['cayDa', 'gieng', 'ao', 'sanTrong', 'hoa', 'co', 'cau', 'rom'];
 /**
@@ -387,7 +392,7 @@ export const BUILDINGS: Record<BuildingType, BuildingDef> = {
   },
   nhaSan: {
     type: 'nhaSan',
-    mau: { khu: 'dien', vong: 2 },
+    mau: { khu: 'dien', vong: 1 },
     w: 3,
     d: 3,
     maxLevel: 10,
@@ -584,7 +589,7 @@ export const BUILDINGS: Record<BuildingType, BuildingDef> = {
   },
   kho: {
     type: 'kho',
-    mau: { khu: 'kho', vong: 2 },
+    mau: { khu: 'kho', vong: 1 },
     w: 3,
     d: 3,
     maxLevel: 10,
@@ -750,7 +755,8 @@ export const BUILDINGS: Record<BuildingType, BuildingDef> = {
     upgradeCost: [{}, {}],
     production: [{}],
     hp: [1000],
-    limit: [220, 220, 220, 220, 220, 230, 240, 240, 250, 260],
+    // Ba vòng thành mẫu Cổ Loa (cách nhà một khe 2 ô) cần 236 đoạn ở mọi cấp Điện.
+    limit: [240, 240, 240, 240, 240, 240, 240, 240, 250, 260],
     minDien: 1,
     buildable: true,
     removable: true,
@@ -848,7 +854,7 @@ export const BUILDINGS: Record<BuildingType, BuildingDef> = {
   },
   bep: {
     type: 'bep',
-    mau: { khu: 'dien', vong: 2 },
+    mau: { khu: 'dien', vong: 1 },
     w: 3,
     d: 3,
     maxLevel: 3,

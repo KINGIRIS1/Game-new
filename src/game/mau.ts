@@ -162,6 +162,14 @@ const ROAD = 4;
 const OFF_ZONE = 100;
 
 /**
+ * Mẫu Cổ Loa: số ô để trống giữa vòng thành và công trình (cả Điện), hai bên thành (chủ dự án chốt: thành rời xa nhà
+ * chừng 2 ô). Trong vòng thành ngoài, khe ấy và mọi ô trống khác lát gạch (`Draft.latGach`); ngoài vòng ngoài thì chừa
+ * trống.
+ */
+const KHE_THANH = 2;
+const KHE_NGOAI = 1;
+
+/**
  * Loại có mốc mở theo truyện (đền, Hội Tết, đê, thành) chỉ dựng được sau kết chương 1, mà màn cuối chương 1
  * cần Điện cấp này: dưới cấp này mẫu không chừa chỗ cho chúng, đỡ chật đất.
  */
@@ -198,6 +206,8 @@ class Draft {
   readonly owner = new Int16Array(GRID * GRID);
   readonly slots: Slot[] = [];
   rings: Ring[] = [];
+  /** Mẫu Cổ Loa: ô đường lát gạch (trong vòng thành ngoài, `latGach`); còn lại là đường đất. */
+  readonly gach = new Uint8Array(GRID * GRID);
   /** Bảng cộng dồn ô không trống (`busy`) và ô không trống mà không phải bãi ngoài đê (`hard`), tính lại khi đổi. */
   private busy: Int32Array | null = null;
   private hard: Int32Array | null = null;
@@ -258,6 +268,45 @@ class Draft {
   /** Đánh dấu `v` (chừa trống hay bãi ngoài đê) cho các ô còn trống trong hình chữ nhật (x0, z0)–(x1, z1). */
   mark(x0: number, z0: number, x1: number, z1: number, v: number): void {
     for (let z = z0; z <= z1; z++) for (let x = x0; x <= x1; x++) if (this.at(x, z) === FREE) this.set(z * GRID + x, v);
+  }
+
+  /** Ô (x, z) nằm trong vòng thành ngoài cùng (không kể chính vòng ấy); mẫu không có vòng thành thì không. */
+  trongThanh(x: number, z: number): boolean {
+    const r = this.rings[this.rings.length - 1];
+    return !!r && x > r.a && z > r.a && x < r.b && z < r.b;
+  }
+
+  /**
+   * Chừa khe `k` ô quanh mọi đoạn thành (kể cả cổng), tám hướng: trong vòng thành ngoài là đường (sẽ lát gạch), ngoài
+   * thì chừa trống. Công trình không đứng trong khe nên thành rời xa nhà chừng ấy ô.
+   */
+  kheThanh(k: number): void {
+    for (const s of this.slots) {
+      if (s.type !== 'thanh') continue;
+      for (let dz = -k; dz <= k; dz++) {
+        for (let dx = -k; dx <= k; dx++) {
+          const x = s.x + dx;
+          const z = s.z + dz;
+          const c = this.at(x, z);
+          const trong = this.trongThanh(x, z);
+          if (!trong && Math.max(Math.abs(dx), Math.abs(dz)) > KHE_NGOAI) continue;
+          if (c === FREE || c === KEEP) this.set(z * GRID + x, trong ? ROAD : KEEP);
+        }
+      }
+    }
+  }
+
+  /** Lát gạch mọi ô trong vòng thành ngoài chưa có công trình, tường: ô trống, ô chừa trống, ô đường. */
+  latGach(): void {
+    for (let z = 0; z < GRID; z++) {
+      for (let x = 0; x < GRID; x++) {
+        if (!this.trongThanh(x, z)) continue;
+        const i = z * GRID + x;
+        const c = this.cell[i];
+        if (c === FREE || c === KEEP) this.set(i, ROAD);
+        if (this.cell[i] === ROAD) this.gach[i] = 1;
+      }
+    }
   }
 
   /** Trải đường thẳng từ ô (x0, z0) tới ô (x1, z1) (cùng hàng hay cùng cột) trên các ô trống hay chừa trống. */
@@ -880,13 +929,9 @@ function keepGate(d: Draft, x: number, at: number): void {
 /** Chỗ trong mẫu ở ô (x, z), nếu có. */
 const slotAt = (d: Draft, x: number, z: number) => d.slotOf(z * GRID + x);
 
-/** Một cách dựng khung: cách chia dải lô, và (mẫu Cổ Loa) cỡ vòng thành. */
+/** Một cách dựng khung: cách chia dải lô. */
 interface Variant {
   split: Split;
-  /** Cổ Loa: vòng trong ôm sát Điện (`tight`) hay chừa đường quanh Điện; bề dày khu giữa vòng trong và vòng giữa, giữa vòng giữa và vòng ngoài. */
-  tight?: boolean;
-  t1?: number;
-  t2?: number;
 }
 
 /**
@@ -935,16 +980,20 @@ function deBao(d: Draft, v: Variant): void {
   streets(d, PALACE_A, d.lo + 1, CHAN_DE, v.split);
 }
 
+/** Bề dày khu nhà giữa vòng giữa và vòng ngoài phía rừng: một dãy nhà tới 4×4, cộng khe hai bên thành. */
+const KHU_THANH = 2 * KHE_THANH + 4;
+
 /**
- * Ba vòng thành Cổ Loa quanh Điện theo cách dựng `v`. Phía sông (đông, nam) ba vòng đứng sát nhau. Vòng trong ôm sát
- * Điện, hay chừa đường quanh Điện; phía rừng, khu giữa vòng trong và vòng giữa dày `t1` ô, khu giữa vòng giữa và vòng
- * ngoài dày `t2` ô (5: một dãy nhà và một phố; 9: hai dãy nhà và một phố giữa).
+ * Ba vòng thành Cổ Loa quanh Điện. Vòng trong cách Điện một khe (`KHE_THANH`), vòng giữa đứng sát vòng trong (thành
+ * hai lớp quanh Điện); phía sông (đông, nam) cả ba vòng đứng sát nhau; phía rừng, khu nhà giữa vòng giữa và vòng ngoài
+ * dày `KHU_THANH` ô. Thành cách nhà một khe thì vòng thành to ra, nên không còn khu nhà giữa vòng trong và vòng giữa,
+ * khu nhà chỉ một dãy: đủ đất ngoài vòng ngoài cho nhà 8×8, ruộng, và vòng ngoài một cỡ ở mọi cấp Điện.
  */
-function ringsOf(v: Variant): Ring[] {
-  const a1 = v.tight ? DIEN_HOME - 1 : DIEN_HOME - 2;
-  const b1 = v.tight ? DIEN_END + 1 : DIEN_END + 2;
-  const a2 = a1 - v.t1! - 1;
-  const a3 = a2 - v.t2! - 1;
+function ringsOf(): Ring[] {
+  const a1 = DIEN_HOME - 1 - KHE_THANH;
+  const b1 = DIEN_END + 1 + KHE_THANH;
+  const a2 = a1 - 1;
+  const a3 = a2 - KHU_THANH - 1;
   return [
     { a: a1, b: b1 },
     { a: a2, b: b1 + 1 },
@@ -952,19 +1001,14 @@ function ringsOf(v: Variant): Ring[] {
   ];
 }
 
-/** Số đoạn thành của các vòng. */
-const ringCost = (rings: Ring[]) => rings.reduce((n, r) => n + 4 * (r.b - r.a), 0);
-
-/** Phố trong khu dày `t` ô giữa vòng thành `wall` (phía Điện) và vòng ngoài nó: sát vòng ngoài (5) hay giữa khu (9). */
-const bandRoad = (wall: number, t: number) => (t >= 9 ? wall - 5 : wall - t);
-
 /**
  * Cổ Loa: đê bao như mẫu Đê bao; ba vòng thành kín quanh Điện (`ringsOf`); cổng trên vòng ngoài và vòng giữa ở hai
- * trục giữa Điện, đoạn trục nối cổng với phố trong khu; phố trong từng khu giữa hai vòng; ngoài vòng ngoài một phố sát
- * chân thành (cổng ngoài mở ra phố này), các phố chữ L ra tới bìa rừng, tới đường chân đê.
+ * trục giữa Điện; khe `KHE_THANH` ô hai bên mọi đoạn thành (trong thành là đường, sau lát gạch cả; nhà trong khu giữa
+ * hai vòng giáp khe); ngoài vòng ngoài một phố sát chân thành (cổng ngoài mở ra phố này), các phố chữ L ra tới bìa
+ * rừng, tới đường chân đê.
  */
 function coLoaWalls(d: Draft, v: Variant): void {
-  d.rings = ringsOf(v);
+  d.rings = ringsOf();
   for (const { a, b } of d.rings) {
     for (let k = a; k <= b; k++) {
       d.segment('thanh', k, a);
@@ -973,33 +1017,26 @@ function coLoaWalls(d: Draft, v: Variant): void {
       d.segment('thanh', b, k);
     }
   }
-  const [r1, r2, r3] = d.rings;
-  // Cổng thành: trên vòng ngoài và (đủ bốn cổng) vòng giữa, ở trục giữa Điện.
+  const [r1, , r3] = d.rings;
+  // Cổng thành trên vòng ngoài, mặt bắc và mặt tây: ở trục giữa Điện; đủ bốn cổng thì thêm một cặp giữa trục và phía
+  // sông (vòng giữa sát vòng trong, cổng ở vòng giữa không mở ra đâu).
   const want = wantOf('congThanh', d.level);
-  for (const r of want >= 4 ? [r3, r2] : want > 0 ? [r3] : []) {
-    for (const s of [slotAt(d, GATE_AXIS, r.a), slotAt(d, r.a, GATE_AXIS)]) if (s) s.cong = true;
-    keepGate(d, GATE_AXIS, r.a);
+  const cong = Math.round((GATE_AXIS + r3.b) / 2);
+  for (const x of want >= 4 ? [GATE_AXIS, cong] : want > 0 ? [GATE_AXIS] : []) {
+    for (const s of [slotAt(d, x, r3.a), slotAt(d, r3.a, x)]) if (s) s.cong = true;
+    keepGate(d, x, r3.a);
   }
   deBaoWalls(d);
-  // Trong vòng trong: Điện và đường quanh Điện (nếu vòng trong chừa chỗ).
-  if (!v.tight) palaceRing(d);
-  d.mark(r1.a + 1, r1.a + 1, r1.b - 1, r1.b - 1, KEEP);
-  // Khu giữa vòng trong và vòng giữa, giữa vòng giữa và vòng ngoài.
-  const p1 = bandRoad(r1.a, v.t1!);
-  d.ell(p1, r1.b);
-  d.road(GATE_AXIS, r2.a + 1, GATE_AXIS, r1.a - 1);
-  d.road(r2.a + 1, GATE_AXIS, r1.a - 1, GATE_AXIS);
-  const p2 = bandRoad(r2.a, v.t2!);
-  d.ell(p2, r2.b);
-  d.road(GATE_AXIS, r3.a + 1, GATE_AXIS, r2.a - 1);
-  d.road(r3.a + 1, GATE_AXIS, r2.a - 1, GATE_AXIS);
+  // Khe hai bên thành; trong vòng trong chỉ có Điện và sân (khe quanh Điện).
+  d.kheThanh(KHE_THANH);
+  d.road(r1.a + 1, r1.a + 1, r1.b - 1, r1.b - 1);
   // Ngoài vòng ngoài.
   const outer = r3.a - 1;
   d.ell(outer, CHAN_DE);
   streets(d, outer, d.lo + 1, CHAN_DE, v.split);
 }
 
-/** Chòi canh mẫu Đê bao, Cổ Loa: ngay trong đê dọc hai bờ (số lẻ thì một chòi ở góc rừng). */
+/** Chòi canh mẫu Đê bao, Nghĩa Lĩnh: ngay trong đê dọc hai bờ (số lẻ thì một chòi ở góc rừng). */
 function deTowers(d: Draft): void {
   towersAlong(d, wantOf('choiCanh', d.level), CHAN_DE - 1, d.lo + 2, CHAN_DE - 2, d.lo + 2);
 }
@@ -1011,8 +1048,8 @@ function luyTowers(d: Draft): void {
 
 /**
  * Cổ Loa giữ sông: ụ nỏ trên vòng thành ngoài, chia đều bốn mặt (bắc, tây phía rừng; hai mặt phía sông), né cổng.
- * Chòi canh: ba chỗ dành cho lầu nỏ (hai ở phía sông giữa vòng ngoài và đường chân đê, một ở góc bắc tây), còn lại
- * rải ở mặt bắc và mặt tây gần bìa rừng.
+ * Chòi canh: ba chỗ dành cho lầu nỏ (hai ở phía sông ngay ngoài góc vòng ngoài, một ở góc bắc tây), còn lại rải ở
+ * mặt bắc và mặt tây gần bìa rừng.
  */
 function coLoaSongMarks(d: Draft): void {
   const outer = d.rings[d.rings.length - 1];
@@ -1027,30 +1064,65 @@ function coLoaSongMarks(d: Draft): void {
     }
   };
   for (const p of spread(per, outer.a + 2, outer.b - 1)) {
-    const q = p === GATE_AXIS ? p + 1 : p;
+    // Né cổng (cổng ở mặt bắc, mặt tây; mặt phía sông dùng cùng chỗ cho đối xứng).
+    const q = slotAt(d, p, outer.a)?.cong ? p + 1 : p;
     mark(q, outer.a);
     mark(outer.a, q);
     mark(q, outer.b);
     mark(outer.b, q);
   }
+  // Hai chỗ lầu nỏ giữ sông, dành trước khi xếp nhà: ngay ngoài góc vòng ngoài phía sông (phía sông ba vòng thành đứng
+  // sát đường chân đê, không còn chỗ), lầu nỏ bắn tới thuyền giặc trên sông.
+  const want = wantOf('choiCanh', d.level);
+  for (const [x, z] of [
+    [outer.a - KHE_THANH, outer.b],
+    [outer.b, outer.a - KHE_THANH],
+  ].slice(0, Math.min(2, want))) {
+    lauAt(d, x, z);
+  }
 }
 
-function coLoaSongTowers(d: Draft): void {
-  const lo = d.lo;
-  const want = wantOf('choiCanh', d.level);
+/** Đặt chòi canh ở ô trống gần ô (x, z) nhất, đánh dấu là chỗ dành cho lầu nỏ. */
+function lauAt(d: Draft, x: number, z: number): void {
+  const i = freeNear(d, x, z);
+  if (i < 0) return;
+  d.put('choiCanh', i % GRID, Math.floor(i / GRID));
+  d.slots[d.slots.length - 1].lau = true;
+}
+
+/** Chòi canh mẫu Cổ Loa: rải ở mặt bắc và mặt tây gần bìa rừng (phía sông thành đứng sát đường chân đê). */
+function coLoaTowers(d: Draft): void {
   const outer = d.rings[d.rings.length - 1];
-  const lau: [number, number][] = [
-    [DIEN_END - 2, outer.b + 1],
-    [outer.b + 1, DIEN_END - 2],
-    [lo + 2, lo + 2],
-  ];
-  for (const [x, z] of lau.slice(0, Math.min(3, want))) {
-    const i = freeNear(d, x, z);
-    if (i < 0) continue;
-    d.put('choiCanh', i % GRID, Math.floor(i / GRID));
-    d.slots[d.slots.length - 1].lau = true;
+  const want = wantOf('choiCanh', d.level);
+  towersAlong(d, want - d.count('choiCanh'), d.lo + 2, d.lo + 5, outer.b, d.lo + 2);
+  // Điện cao, nhà kín dải bìa rừng thì có chỗ không còn ô trống gần: chòi thiếu đặt vào ô trống ngoài vòng ngoài xa các
+  // chòi đã có nhất (gần bìa rừng hơn thì hơn).
+  const towers = d.slots.filter((s) => s.type === 'choiCanh');
+  while (towers.length < want) {
+    let best = -1;
+    let bestScore = -Infinity;
+    for (let z = d.lo + 1; z < outer.b; z++) {
+      for (let x = d.lo + 1; x < outer.b; x++) {
+        if ((x >= outer.a && z >= outer.a) || d.at(x, z) !== FREE) continue;
+        let far = GRID;
+        for (const t of towers) far = Math.min(far, Math.max(Math.abs(t.x - x), Math.abs(t.z - z)));
+        const s = far - Math.min(x, z) / GRID;
+        if (s > bestScore) {
+          bestScore = s;
+          best = z * GRID + x;
+        }
+      }
+    }
+    if (best < 0) break;
+    d.put('choiCanh', best % GRID, Math.floor(best / GRID));
+    towers.push(d.slots[d.slots.length - 1]);
   }
-  towersAlong(d, want - d.count('choiCanh'), lo + 2, lo + 5, outer.b, lo + 2);
+}
+
+/** Cổ Loa giữ sông: chỗ lầu nỏ thứ ba ở góc rừng (hai chỗ phía sông đã dành khi dựng thành), rồi chòi canh như Cổ Loa. */
+function coLoaSongTowers(d: Draft): void {
+  if (wantOf('choiCanh', d.level) >= 3) lauAt(d, d.lo + 2, d.lo + 2);
+  coLoaTowers(d);
 }
 
 /** Mỗi mẫu: dựng tường và khung đường theo vùng đất và cách dựng, rồi xếp công trình, rồi chòi canh. */
@@ -1058,7 +1130,7 @@ interface Recipe {
   walls: (d: Draft, v: Variant) => void;
   jobs: Job[];
   towers: (d: Draft) => void;
-  /** Các cách dựng khung để thử, theo thứ tự ưu tiên (chia nhóm theo cỡ vòng thành). */
+  /** Các cách dựng khung để thử, theo thứ tự ưu tiên, chia nhóm. */
   variants: (level: number) => Variant[][];
   /** Hẻm giữa hai nhà rộng chừng này ô (`Draft.rong`; mặc định 1). */
   rong?: number;
@@ -1101,28 +1173,6 @@ const inRings =
 
 const SPLITS: Split[] = ['in', 'out', 'even', 'wide'];
 const plain = () => [SPLITS.map((split): Variant => ({ split }))];
-
-/**
- * Cách dựng vòng thành Cổ Loa ở cấp Điện `level`, trong số đoạn thành tối đa: chừa đường quanh Điện trước, khu giữa
- * các vòng hẹp trước (đất ngoài thành rộng cho nhà 8×8, ruộng).
- */
-function coLoaVariants(level: number): Variant[][] {
-  const max = BUILDINGS.thanh.limit[level - 1] ?? 0;
-  const out: Variant[][] = [];
-  for (const [t1, t2] of [
-    [5, 5],
-    [9, 5],
-    [5, 9],
-    [9, 9],
-  ]) {
-    for (const tight of [false, true]) {
-      const v = { tight, t1, t2 };
-      if (ringCost(ringsOf({ split: 'in', ...v })) > max) continue;
-      out.push(SPLITS.map((split) => ({ split, ...v })));
-    }
-  }
-  return out;
-}
 
 const RECIPES: Record<MauId, Recipe> = {
   // Kinh đô Phong Châu: bến và ruộng dọc sông; doanh trại, đền Phù Đổng trên trục từ Điện về góc rừng, nơi ở của binh
@@ -1207,13 +1257,14 @@ const RECIPES: Record<MauId, Recipe> = {
       ['xuongMoc', byHill],
     ],
   },
-  // Thành Cổ Loa: ba vòng thành kín quanh Điện; vòng trong chỉ có Điện; nhà sàn, kho, bếp, lò rèn, vườn, chuồng lợn,
-  // đền Cổ Loa giữa các vòng; doanh trại, Hồ Kim Quy, đền, ruộng, nơi ở, bãi đá ngoài vòng ngoài; đê bao ngoài cùng.
+  // Thành Cổ Loa: ba vòng thành kín quanh Điện, cách nhà một khe, trong vòng ngoài lát gạch hết; vòng trong, vòng giữa
+  // sát nhau, trong chỉ có Điện và sân; nhà sàn, kho, bếp, lò rèn, vườn, chuồng lợn, đền Cổ Loa giữa vòng giữa và vòng
+  // ngoài; doanh trại, Hồ Kim Quy, đền, ruộng, nơi ở, bãi đá ngoài vòng ngoài; đê bao ngoài cùng.
   coLoa: {
     vong: true,
     walls: coLoaWalls,
-    towers: deTowers,
-    variants: coLoaVariants,
+    towers: coLoaTowers,
+    variants: plain,
     jobs: [
       ['doanhTrai', inRings(0, byAxis)],
       ['hoKimQuy', inRings(0, byHill)],
@@ -1223,9 +1274,9 @@ const RECIPES: Record<MauId, Recipe> = {
       // Một cặp kho ngoài vòng ngoài, gần bến: bến, ruộng ngoài thành khỏi đi vòng tới cổng (tường chắn dân gánh).
       ['kho', inRings(0, byBen), 5, 2],
       ['denCoLoa', inRings(1, byAxis)],
-      ['nhaSan', inRings(2, byDien)],
-      ['kho', inRings(2, byKho)],
-      ['bep', inRings(2, byDien)],
+      ['nhaSan', inRings(1, byDien)],
+      ['kho', inRings(1, byKho)],
+      ['bep', inRings(1, byDien)],
       ['loRen', inRings(1, byDien)],
       [['vuon', 'chuongLon'], inRings(1, byKitchen)],
       ['thoHo', inRings(1, byDien)],
@@ -1248,7 +1299,7 @@ const RECIPES: Record<MauId, Recipe> = {
       coLoaSongMarks(d);
     },
     towers: coLoaSongTowers,
-    variants: coLoaVariants,
+    variants: plain,
     jobs: [
       ['doanhTrai', inRings(0, byAxis)],
       ['hoKimQuy', inRings(0, byAxis), 6],
@@ -1258,9 +1309,9 @@ const RECIPES: Record<MauId, Recipe> = {
       ['benKhoi', byDien],
       ['kho', inRings(0, byBen), 5, 2],
       ['denCoLoa', inRings(1, byAxis)],
-      ['nhaSan', inRings(2, byDien)],
-      ['kho', inRings(2, byKho)],
-      ['bep', inRings(2, byDien)],
+      ['nhaSan', inRings(1, byDien)],
+      ['kho', inRings(1, byKho)],
+      ['bep', inRings(1, byDien)],
       ['loRen', inRings(1, byDien)],
       [['vuon', 'chuongLon'], inRings(1, byKitchen)],
       ['thoHo', inRings(1, byDien)],
@@ -1334,7 +1385,8 @@ function jobsOf(id: MauId): Job[] {
  */
 export interface MauVe {
   slots: Slot[];
-  duong: { x: number; z: number }[];
+  /** Ô đường của mẫu; `gach`: trong vòng thành ngoài Cổ Loa, lát gạch. */
+  duong: { x: number; z: number; gach?: boolean }[];
   thieu: number;
   side: number;
 }
@@ -1349,6 +1401,7 @@ function drawWith(id: MauId, level: number, side: number, v: Variant, hem: numbe
   for (const job of jobs) placeJob(d, job);
   recipe.towers(d);
   d.prune();
+  d.latGach();
   return { d, thieu: shortfall(d, jobs) };
 }
 
@@ -1375,7 +1428,8 @@ export function veMau(id: MauId, level: number, side?: number, hems: readonly nu
     }
   }
   const d = best!.d;
-  return { slots: d.slots, duong: d.roadCells().map((i) => ({ x: i % GRID, z: Math.floor(i / GRID) })), thieu: best!.thieu, side: best!.side };
+  const duong = d.roadCells().map((i) => ({ x: i % GRID, z: Math.floor(i / GRID), ...(d.gach[i] ? { gach: true } : {}) }));
+  return { slots: d.slots, duong, thieu: best!.thieu, side: best!.side };
 }
 
 const DRAWN = new Map<string, MauVe>();
@@ -1407,7 +1461,7 @@ export function mauSlots(id: MauId, level: number, khit = false): Slot[] {
 }
 
 /** Ô đường của mẫu `id` ở cấp Điện `level`: đoạn thẳng theo hàng, cột nối mọi công trình nhiều ô, gần Điện trước. */
-export function mauDuong(id: MauId, level: number): { x: number; z: number }[] {
+export function mauDuong(id: MauId, level: number): { x: number; z: number; gach?: boolean }[] {
   return drawn(id, level).duong;
 }
 
@@ -1460,10 +1514,10 @@ export interface MauPlan {
   /** Điện đang xoay: áp mẫu quay Điện về hướng của mẫu (mặt trước ra sông). */
   turnDien: boolean;
   /**
-   * Ô sẽ trải đường đất nối công trình làm ra hàng ở xa với kho, Điện (`traiDuong`), cho người gánh đi nhanh. Đường xong
+   * Ô sẽ trải đường của mẫu (đường đất; trong vòng thành ngoài Cổ Loa lát gạch), cho người gánh đi nhanh. Đường xong
    * ngay như khi tự trải, không vào việc của tốp thợ.
    */
-  duong: { x: number; z: number }[];
+  duong: { x: number; z: number; type: BuildingType }[];
   /**
    * Đắp bậc thang (từ chương 2, khi bật): nền công trình sẽ đắp lên bậc `h` (chỗ sau khi áp mẫu), giá đắp nền ở
    * `dapCost` (đã cộng vào `cost`). Điện bậc 3, công trình quanh Điện bậc 2, ruộng bậc 0–2 theo dãy từ sông vào.
@@ -1783,8 +1837,10 @@ function planVoi(state: GameState, id: MauId, bac: boolean, catThua: boolean, he
   const inMau = new Set(types);
   // Ô đường của mẫu (trên đất đã mở, ngoài đầu cầu): công trình không có chỗ trong mẫu không đứng đè lên; ô đường đang có
   // trên đó thì giữ (loại đường nào cũng được).
+  // Ô lát gạch của mẫu (trong vòng thành ngoài Cổ Loa) là 2 khi đã mở đường gạch (chương 3), không thì trải đường đất.
   const lane = new Uint8Array(GRID * GRID);
-  for (const r of ve.duong) if (isNearBank(r.x, r.z) && isOpen(state, r.x, r.z) && !heads.has(r.z * GRID + r.x)) lane[r.z * GRID + r.x] = 1;
+  const gach = coTheTrai(state, DUONG_GACH);
+  for (const r of ve.duong) if (isNearBank(r.x, r.z) && isOpen(state, r.x, r.z) && !heads.has(r.z * GRID + r.x)) lane[r.z * GRID + r.x] = r.gach && gach ? 2 : 1;
   const clear = (type: BuildingType, x: number, z: number) => {
     if (!free(type, x, z)) return false;
     const def = BUILDINGS[type];
@@ -1796,8 +1852,12 @@ function planVoi(state: GameState, id: MauId, bac: boolean, catThua: boolean, he
   for (const b of leftovers) {
     if (SEGMENTS.includes(b.type) && inMau.has(b.type)) plan.removes.push(b.id);
     else if (isRoad(b.type) && lane[b.z * GRID + b.x] && free(b.type, b.x, b.z)) {
-      mark(b.type, b.x, b.z);
-      paved.add(b.z * GRID + b.x);
+      // Ô phải lát gạch mà đang là đường loại khác: dỡ đi, lát lại bằng gạch.
+      if (lane[b.z * GRID + b.x] === 2 && b.type !== DUONG_GACH) plan.removes.push(b.id);
+      else {
+        mark(b.type, b.x, b.z);
+        paved.add(b.z * GRID + b.x);
+      }
     } else if (clear(b.type, b.x, b.z)) mark(b.type, b.x, b.z);
     else if (dropIfBlocked(b.type)) plan.removes.push(b.id);
     else blocked.push(b);
@@ -1840,7 +1900,7 @@ function planVoi(state: GameState, id: MauId, bac: boolean, catThua: boolean, he
   }
   if (!plan.stuck.length) {
     plan.duong = laneRoads(state, lane, paved, used, plan.removes);
-    for (let i = 0; i < plan.duong.length; i++) addCost(plan.cost, BUILDINGS[DUONG_MAU].buildCost);
+    for (const r of plan.duong) addCost(plan.cost, BUILDINGS[r.type].buildCost);
     if (bac && bacThangMo(state)) {
       // Chỗ sau khi áp: công trình đang có (đã dời thì chỗ mới), trừ phần dỡ, phần cất vào kho; cộng đồ lấy ra từ kho và
       // phần dựng thêm.
@@ -1884,27 +1944,37 @@ function planVoi(state: GameState, id: MauId, bac: boolean, catThua: boolean, he
 
 /** Loại đường mẫu trải: đường đất, rẻ nhất, mở từ Điện 1. */
 const DUONG_MAU: BuildingType = 'duongDat';
+/** Mẫu Cổ Loa lát gạch mọi ô trong vòng thành ngoài (đường gạch mở ở chương 3, cùng lúc mẫu Cổ Loa). */
+const DUONG_GACH: BuildingType = 'duongGach';
+
+/** Loại `type` đã dựng được (mở theo truyện, đủ cấp Điện). */
+const coTheTrai = (state: GameState, type: BuildingType) => {
+  const def = BUILDINGS[type];
+  return def.buildable && unlocked(state, def.unlock) && dienLevel(state) >= def.minDien;
+};
 
 /**
- * Đường mẫu sẽ trải: các ô đường của mẫu (`lane`) chưa có đường (`paved`), chưa có gì đứng (`used`, sau khi áp), gần
- * Điện trước, không quá giới hạn đường theo cấp Điện (ô đường kế hoạch dỡ đi `removes` trả lại chỗ trong giới hạn).
+ * Đường mẫu sẽ trải: các ô đường của mẫu (`lane`: 1 đường đất, 2 lát gạch) chưa có đường (`paved`), chưa có gì đứng
+ * (`used`, sau khi áp), gần Điện trước, không quá giới hạn đường theo cấp Điện (bốn loại đường chung một giới hạn; ô đường
+ * kế hoạch dỡ đi `removes` trả lại chỗ trong giới hạn).
  */
-function laneRoads(state: GameState, lane: Uint8Array, paved: Set<number>, used: Uint8Array, removes: number[] = []): { x: number; z: number }[] {
-  const def = BUILDINGS[DUONG_MAU];
-  if (!def.buildable || !unlocked(state, def.unlock) || dienLevel(state) < def.minDien) return [];
+function laneRoads(state: GameState, lane: Uint8Array, paved: Set<number>, used: Uint8Array, removes: number[] = []): { x: number; z: number; type: BuildingType }[] {
+  if (!coTheTrai(state, DUONG_MAU)) return [];
   const gone = new Set(removes);
   const freed = state.buildings.filter((b) => gone.has(b.id) && isRoad(b.type)).length;
   const room = limitOf(state, DUONG_MAU) - usedOf(state, DUONG_MAU) + freed;
   if (room <= 0) return [];
-  const out: { x: number; z: number }[] = [];
-  for (let i = 0; i < lane.length; i++) if (lane[i] && !paved.has(i) && !used[i]) out.push({ x: i % GRID, z: Math.floor(i / GRID) });
+  const out: { x: number; z: number; type: BuildingType }[] = [];
+  for (let i = 0; i < lane.length; i++) {
+    if (lane[i] && !paved.has(i) && !used[i]) out.push({ x: i % GRID, z: Math.floor(i / GRID), type: lane[i] === 2 ? DUONG_GACH : DUONG_MAU });
+  }
   const d = (r: { x: number; z: number }) => Math.hypot(r.x + 0.5 - DIEN_C, r.z + 0.5 - DIEN_C);
   return out.sort((p, q) => d(p) - d(q) || p.z - q.z || p.x - q.x).slice(0, room);
 }
 
 /** Trải các ô đường của kế hoạch áp mẫu (của đã trả cùng kế hoạch). */
 function layDuong(state: GameState, plan: MauPlan): void {
-  for (const d of plan.duong) state.buildings.push(newBuilding(state, DUONG_MAU, d.x, d.z));
+  for (const d of plan.duong) state.buildings.push(newBuilding(state, d.type, d.x, d.z));
 }
 
 /** Chỗ trống gần công trình `b` nhất (theo khoảng cách ô) mà vẫn trong vùng và không vướng mẫu. */

@@ -403,12 +403,13 @@ describe('dòng thời gian, mẫu, Lạc hầu, bản lưu', () => {
             expect(o ? BUILDINGS[o.type].w : 0, `${id} Điện ${dien} cổng ${g.x},${g.z}`).toBeLessThanOrEqual(1);
           }
         }
-        // Từ Điện có hai vòng thành tách nhau (Điện 7), một cặp kho ngoài vòng ngoài; công trình trong thành có lối.
+        // Từ Điện 7: một cặp kho ngoài vòng ngoài gần bến (khu nhà trong thành kín thì có thể thêm kho ngoài thành);
+        // công trình trong thành có lối.
         if (dien < 7) continue;
         const thanh = s.buildings.filter((b) => b.type === 'thanh' || b.type === 'congThanh');
         const lo = Math.min(...thanh.map((b) => b.x));
         const outside = s.buildings.filter((b) => b.type === 'kho' && (b.x < lo || b.z < lo));
-        expect(outside.length, `${id} Điện ${dien}`).toBe(2);
+        expect(outside.length, `${id} Điện ${dien}`).toBeGreaterThanOrEqual(2);
         for (const b of s.buildings.filter((o) => ganhType(o.type) && o.x > lo && o.z > lo)) {
           expect(Number.isFinite(duongGanh(s, b)!.d), `${id} Điện ${dien} ${b.type} ${b.x},${b.z}`).toBe(true);
         }
