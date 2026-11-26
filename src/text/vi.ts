@@ -1586,7 +1586,7 @@ export const vi = {
       '32': 'An Giang', '33': 'Cần Thơ', '34': 'Cà Mau', '79': 'TP. Hồ Chí Minh',
     } as Record<string, string>,
     /**
-     * Tên vùng xưa. Đất Văn Lang: tên bộ theo Đại Việt sử ký toàn thư, chỗ của bộ theo các sử gia đời sau (Khâm định
+     * Tên vùng xưa (tạm dùng, chủ dự án sẽ tra và chỉnh lại). Đất Văn Lang: tên bộ theo Đại Việt sử ký toàn thư, chỗ của bộ theo các sử gia đời sau (Khâm định
      * Việt sử thông giám cương mục, Việt Nam sử lược), chỉ là phỏng đoán; bộ Bình Văn chưa rõ ở đâu nên không gán.
      * Phía Nam: vùng Chăm Pa (Amaravati, Vijaya, Kauthara, Panduranga), đất Phù Nam (di tích Óc Eo, Gò Tháp, Bình Tả).
      * Tỉnh không chắc thì không ghi (chỉ có tên tỉnh). `dia` là địa danh trong truyện; `loai` chọn lời ghi nguồn.
