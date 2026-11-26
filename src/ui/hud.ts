@@ -1790,6 +1790,8 @@ export class Hud {
     const opening = !this.sheetEl.classList.contains('open');
     this.sheetEl.classList.toggle('build', this.sheet.kind === 'build');
     this.sheetEl.classList.toggle('tall', this.sheet.kind === 'build' || this.sheet.kind === 'tuong' || this.barracksOpen(state));
+    // Bảng doanh trại: thẻ cột trái, nội dung cuộn riêng; màn thấp thì cao như bảng Xây dựng.
+    this.sheetEl.classList.toggle('trai', this.barracksOpen(state));
     // Bảng tướng phủ cả màn hình (ba cột: tướng, thẻ tướng và ô đồ, túi đồ với thanh nút dưới).
     this.sheetEl.classList.toggle('tg-full', this.sheet.kind === 'tuong' && doMo(state));
     this.sheetEl.classList.add('open');
@@ -2296,8 +2298,9 @@ export class Hud {
   }
 
   /**
-   * Bảng doanh trại chia thẻ cho khỏi cuộn dài: Quân (binh chủng, nơi ở, lịch giặc), Giữ kinh đô (bố trí), Tướng
-   * (tướng chỉ huy), Trại (lời tả, cấp, nâng cấp, dời, xoay: `info`). Dòng chỗ quân và nút sửa (`repair`) ở trên các thẻ.
+   * Bảng doanh trại chia thẻ cho khỏi cuộn dài: Luyện quân (binh chủng, nơi ở, lịch giặc), Giữ kinh đô (bố trí), Tướng
+   * (tướng chỉ huy), Trại (lời tả, cấp, nâng cấp, dời, xoay: `info`). Thẻ xếp cột dọc bên trái như bảng Xây dựng; bên
+   * phải là dòng chỗ quân, nút sửa (`repair`) và nội dung thẻ, cuộn riêng (`.trai-khung` ở `style.css`).
    */
   private barracksHtml(state: GameState, b: Building, info: string, repair: string): string {
     const tab = this.barracksTab;
@@ -2317,9 +2320,11 @@ export class Hud {
       .join('');
     const body =
       tab === 'giu' ? this.guardHtml(state) : tab === 'tuong' ? this.generalsHtml(state) : tab === 'trai' ? info : this.troopsHtml(state);
-    return `${this.troopSpaceHtml(state)}${repair ? `<div class="actions top">${repair}</div>` : ''}
+    return `<div class="trai-khung">
       <div class="build-tabs barracks-tabs">${tabs}</div>
-      <div class="barracks-body">${body}</div>`;
+      <div class="trai-noi">${this.troopSpaceHtml(state)}${repair ? `<div class="actions top">${repair}</div>` : ''}
+        <div class="barracks-body">${body}</div></div>
+    </div>`;
   }
 
   /**
@@ -2364,8 +2369,9 @@ export class Hud {
         call = vi.ui.callRaid;
       }
     }
-    return `<div class="units">${homes}</div>
-      ${next ? `<p class="muted">${next}</p>` : ''}${call ? `<button class="btn ghost small" data-act="callRaid">${call}</button>` : ''}`;
+    // Lịch đợt giặc và nút gọi giặc sớm chung một hàng cho đỡ tốn chiều cao.
+    const giac = next || call ? `<div class="trai-giac">${next ? `<p class="muted">${next}</p>` : ''}${call ? `<button class="btn ghost small" data-act="callRaid">${call}</button>` : ''}</div>` : '';
+    return `<div class="units">${homes}</div>${giac}`;
   }
 
   private merchantHtml(state: GameState): string {

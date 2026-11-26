@@ -603,6 +603,66 @@ button {
   white-space: nowrap;
 }
 
+/* Bảng doanh trại (`Hud.barracksHtml`): thẻ xếp cột dọc bên trái như bảng Xây dựng, bên phải là dòng chỗ quân và nội
+   dung thẻ, cuộn riêng. Dòng binh chủng, tướng xếp lưới (hai cột ở màn thấp, tối đa ba cột) vì màn ngang thừa bề
+   ngang mà thiếu chiều cao. */
+.sheet.trai .sheet-body {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  overflow: hidden;
+  padding: 10px 14px 12px;
+}
+
+.trai-khung {
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  gap: 12px;
+}
+
+.trai-khung .barracks-tabs {
+  flex: none;
+  width: 118px;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0;
+}
+
+.trai-khung .barracks-tabs .tab {
+  flex: none;
+  padding: 9px 8px;
+  white-space: normal;
+}
+
+.trai-noi {
+  flex: 1;
+  min-width: 0;
+  overflow-y: auto;
+}
+
+.trai-noi > .stat:first-child {
+  padding-top: 0;
+}
+
+.trai-noi .units {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(max(260px, calc((100% - 16px) / 3)), 1fr));
+}
+
+/* Lịch đợt giặc và nút gọi giặc sớm chung một hàng. */
+.trai-giac {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 10px;
+}
+
+.trai-giac .muted {
+  margin: 0;
+}
+
 .tab-mark {
   position: absolute;
   top: -7px;
@@ -4325,6 +4385,42 @@ body.man-vao-on #hud > * {
 @media (max-height: 520px) {
   .sheet.build .xd-desc {
     -webkit-line-clamp: 2;
+  }
+}
+
+/* Màn thấp: bảng doanh trại cao như bảng Xây dựng, đầu bảng và dòng binh chủng gọn lại, cho thẻ Luyện quân thấy đủ
+   các binh chủng không phải cuộn. */
+@media (max-height: 520px) {
+  .sheet.trai {
+    height: min(300px, calc(100vh - 78px - var(--safe-top) - var(--safe-bottom)));
+    max-height: none;
+  }
+  .sheet.trai .sheet-head {
+    padding: 5px 14px;
+  }
+  .sheet.trai .sheet-head .close {
+    width: 30px;
+    height: 30px;
+    font-size: 16px;
+  }
+  .sheet.trai .sheet-body {
+    padding: 8px 12px 8px;
+  }
+  .trai-khung .barracks-tabs .tab {
+    padding: 7px 6px;
+  }
+  .trai-noi > .stat {
+    padding: 0 0 4px;
+  }
+  .trai-noi .units {
+    gap: 6px;
+    margin: 6px 0;
+  }
+  .trai-noi .unit-row {
+    padding: 5px 8px;
+  }
+  .trai-noi .unit-icon {
+    font-size: 22px;
   }
 }
 
