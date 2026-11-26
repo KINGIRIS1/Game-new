@@ -4630,7 +4630,7 @@ body.man-vao-on #hud > * {
       'tabs stage grid'
       'tabs stage .'
       'tabs stage pager'
-      'tabs foot foot';
+      'tabs stage foot';
     gap: 0 14px;
     align-items: start;
     padding: 10px 16px 12px;
@@ -4668,6 +4668,8 @@ body.man-vao-on #hud > * {
     grid-area: pager;
   }
 
+  /* Lời nhắc cuối bảng (thẻ Mẫu kinh đô) ở cột phải dưới lưới ảnh nhỏ: ảnh lớn cao hơn phần hàng của nó nên tràn xuống
+     dưới, để chung cột thì ảnh lớn đè lên chữ. */
   .sheet.build .xd-foot {
     grid-area: foot;
     margin-top: 8px;
