@@ -177,6 +177,19 @@ const XAY_SAU = `
 const VN_MUA = `const tuan = Math.floor((Date.now() + 7 * 3600000 + 3 * 86400000) / 604800000);
 s.hinted.push('hd:vietNam'); s.resources.gao = 9000;
 s.vietNam = { tinh: '12', mua: Math.floor(tuan / 4), chuc: 'nong', chucLuc: Date.now() - 3600000, quy: ['21'], phuc: { mua: Math.floor(tuan / 4), pct: 10, tinh: '12', hang: 2 }, danhHieu: { tuan, loai: 'lacHau', tinh: '12' } };`;
+/** Chạm tỉnh `id` trên bản đồ Việt Nam như ngón tay (chạm xuống, nhấc lên tại chỗ), chờ bản đồ tải xong. */
+const chamTinh = (id) => `{
+  let p = null;
+  for (let i = 0; i < 100 && !p; i++) {
+    p = document.querySelector('.bdv-tinh[data-tinh="${id}"] .bdv-mat');
+    if (!p) await new Promise((r) => setTimeout(r, 100));
+  }
+  const r = p.getBoundingClientRect();
+  const o = { bubbles: true, pointerId: 7, clientX: r.x + r.width / 2, clientY: r.y + r.height / 2, isPrimary: true };
+  p.dispatchEvent(new PointerEvent('pointerdown', o));
+  p.dispatchEvent(new PointerEvent('pointerup', o));
+}`;
+
 const VN_BANG = `{ mua: 4, ngay: 0, toi: { tinh: '12', chuc: 'nong', mua: 4, chucLuc: Date.now() - 3600000, diemMua: 212, diemNgay: 36, truoc: { mua: 3, tinh: '12', cua: 180, hang: 2, diem: 3120, diet: false } }, bang: [{ tinh: '01', diem: 4210, nguoi: 41, gop: 33 }, { tinh: '12', diem: 2875, nguoi: 22, gop: 19 }, { tinh: '21', diem: 1240, nguoi: 18, gop: 14 }, { tinh: '04', diem: 960, nguoi: 15, gop: 12 }, { tinh: '22', diem: 0, nguoi: 9, gop: 7, ket: 12600 }, { tinh: '23', diem: 0, nguoi: 4, gop: 3, ket: 2300 }], quy: ['21'], dau: [{ tinh: '12', loai: 'lacTuong', ten: 'Thánh Gióng' }, { tinh: '12', loai: 'lacHau', ten: 'Đại ka' }, { tinh: '22', loai: 'lacHau', ten: null }], truoc: { mua: 3, xep: [{ tinh: '01', hang: 1, diem: 4380, diet: true }, { tinh: '12', hang: 2, diem: 3120, diet: false }, { tinh: '04', hang: 3, diem: 2210, diet: false }, { tinh: '22', hang: null, diem: 0, diet: true }] } }`;
 const NHIN_CONG = `const c = s.buildings.find((b) => b.type === 'congDe'); d.camera(c.x + 4, c.z - 5, 1.1);`;
 
@@ -637,6 +650,16 @@ d.camera(cx, cz, 2.6);`,
     mo: 'Như viet-nam-mua, bấm nút Luật: thẻ Tỉnh hiện lời giải thích luật',
     truoc: `${KINH_DO}\n${VN_MUA}`,
     sau: `d.vietNam('12'); d.vnMay(${VN_BANG}); document.querySelector('[data-act=vnLuat]').click();`,
+  },
+  'viet-nam-cham': {
+    mo: 'Như viet-nam-mua, chạm Quảng Ngãi trên bản đồ: bản đồ lướt và phóng cho tỉnh vừa khung, thẻ Tỉnh có thanh kết giao',
+    truoc: `${KINH_DO}\n${VN_MUA}`,
+    sau: `d.vietNam('12'); d.vnMay(${VN_BANG}); ${chamTinh('22')}`,
+  },
+  'viet-nam-cham-nho': {
+    mo: 'Như viet-nam-mua, ở thẻ Thi đua chạm tên Hà Nội: phóng sát tỉnh nhỏ',
+    truoc: `${KINH_DO}\n${VN_MUA}`,
+    sau: `d.vietNam('12'); d.vnMay(${VN_BANG}); document.querySelector('[data-act=vnTab][data-tab=dua]').click(); document.querySelector('[data-act=vnXem][data-tinh="01"]').click();`,
   },
   'viet-nam-ket': {
     mo: 'Như viet-nam-mua, chạm Quảng Ngãi (chưa quy về): thanh kết giao 60%',

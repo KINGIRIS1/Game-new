@@ -222,10 +222,14 @@ export class BanDoVN {
     this.nghe();
     this.datView(1, 0, 0);
     if (this.choPhong) this.phongToi(...this.choPhong);
+    else if (this.choVua) this.phongVua(this.choVua, undefined, 0);
     this.choPhong = null;
+    this.choVua = null;
   }
 
   private choPhong: [string, number] | null = null;
+  /** Tỉnh chạm tên khi bản đồ chưa tải xong: phóng vừa tỉnh ấy khi tải xong. */
+  private choVua: string | null = null;
 
   /** Khung chèn: hai quần đảo vẽ nhỏ ở góc (khi phóng to mà quần đảo ra ngoài khung). */
   private chenHtml(hinh: HinhTinh[]): string {
@@ -309,6 +313,8 @@ export class BanDoVN {
       } catch {
         // Lần chạm giả (chụp thử) không bắt được con trỏ: vẫn kéo, chọn như thường.
       }
+      cancelAnimationFrame(this.bay);
+      this.bay = 0;
       this.ngon.set(e.pointerId, { x: e.clientX, y: e.clientY });
       if (this.ngon.size === 1) {
         const t = (e.target as Element).closest('[data-tinh]');
@@ -353,6 +359,8 @@ export class BanDoVN {
       'wheel',
       (e) => {
         e.preventDefault();
+        cancelAnimationFrame(this.bay);
+        this.bay = 0;
         phongQuanh(e.clientX, e.clientY, this.k * Math.exp(-e.deltaY * 0.0015));
       },
       { passive: false },
@@ -385,6 +393,62 @@ export class BanDoVN {
   /** Về khung cả nước (để chụp thử). */
   veCaNuoc(): void {
     if (this.hinh) this.datView(1, 0, 0);
+  }
+
+  /** Lượt lướt phóng đang chạy (`phongVua`); kéo, phóng tay thì dừng. */
+  private bay = 0;
+
+  /**
+   * Lướt và phóng cho tỉnh `id` vừa khung nhìn (chạm tỉnh trên bản đồ hay tên tỉnh trong bảng). Chỉ tính phần đất liền
+   * và đảo lớn của tỉnh: bỏ hai quần đảo, đảo nhỏ xa bờ (Côn Đảo) để tỉnh không bé tí giữa biển.
+   */
+  phongVua(id: string, lap = 0.62, ms = 420): void {
+    if (!this.hinh) {
+      this.choVua = id;
+      return;
+    }
+    const h = this.hinh.find((x) => x.id === id);
+    if (!h) return;
+    const dat = h.manh.filter((m) => !laQuanDao(m[0]));
+    if (!dat.length) return;
+    const lon = Math.max(...dat.map((m) => dienTich(m[0])));
+    let x0 = Infinity, x1 = -Infinity, y0 = Infinity, y1 = -Infinity;
+    for (const m of dat) {
+      if (dienTich(m[0]) < lon * 0.03) continue;
+      for (const [lo, la] of m[0]) {
+        x0 = Math.min(x0, px(lo));
+        x1 = Math.max(x1, px(lo));
+        y0 = Math.min(y0, py(la));
+        y1 = Math.max(y1, py(la));
+      }
+    }
+    const r = this.khungNhin();
+    const k = Math.min(K_MAX, Math.max(1.2, lap * Math.min((r.x1 - r.x0) / Math.max(1, x1 - x0), (r.y1 - r.y0) / Math.max(1, y1 - y0))));
+    this.bayToi(k, (x0 + x1) / 2, (y0 + y1) / 2, ms);
+  }
+
+  /** Lướt tới độ phóng `k`, tâm khung nhìn ở điểm bản đồ (`mx`, `my`): phóng theo cấp số nhân, tâm đi thẳng, chậm dần. */
+  private bayToi(k: number, mx: number, my: number, ms: number): void {
+    cancelAnimationFrame(this.bay);
+    const k0 = this.k;
+    const m0x = (W / 2 - this.tx) / k0, m0y = (H / 2 - this.ty) / k0;
+    const dat = (t: number) => {
+      const kk = k0 * Math.pow(k / k0, t);
+      const cx = m0x + (mx - m0x) * t, cy = m0y + (my - m0y) * t;
+      this.datView(kk, W / 2 - cx * kk, H / 2 - cy * kk);
+    };
+    if (ms <= 0 || matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      this.bay = 0;
+      dat(1);
+      return;
+    }
+    const dau = performance.now();
+    const buoc = (now: number) => {
+      const t = Math.min(1, (now - dau) / ms);
+      dat(1 - Math.pow(1 - t, 3));
+      this.bay = t < 1 ? requestAnimationFrame(buoc) : 0;
+    };
+    this.bay = requestAnimationFrame(buoc);
   }
 
   /** Phóng tới tỉnh `id` (để chụp thử); bản đồ chưa tải xong thì phóng khi tải xong. */

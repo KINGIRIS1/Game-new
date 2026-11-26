@@ -593,6 +593,7 @@ export class Hud {
       if (this.camp?.step !== 'vietNam') return;
       this.camp.vnChon = id;
       this.camp.vnTab = 'tinh';
+      this.banDoVN.phongVua(id);
       this.refreshCampaign(this.getState());
     };
     this.bottombar = root.querySelector('.bottombar')!;
@@ -895,6 +896,7 @@ export class Hud {
         if (this.camp) {
           this.camp.vnChon = el.dataset.tinh ?? null;
           this.camp.vnTab = 'tinh';
+          if (this.camp.vnChon) this.banDoVN.phongVua(this.camp.vnChon);
         }
         return this.refreshCampaign(this.getState());
       case 'vnTab':
