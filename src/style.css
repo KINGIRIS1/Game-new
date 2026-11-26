@@ -651,6 +651,17 @@ button {
   grid-template-columns: repeat(auto-fill, minmax(max(260px, calc((100% - 16px) / 3)), 1fr));
 }
 
+/* Nút Dựng nơi ở (chưa có nơi ở): tên và giá một hàng, giá nhỏ lại cho vừa ô lưới. */
+.trai-noi .unit-row.wrap > .btn {
+  padding: 6px 8px;
+  white-space: nowrap;
+}
+
+.trai-noi .unit-row.wrap > .btn .cost {
+  gap: 5px;
+  font-size: 11px;
+}
+
 /* Số chỗ quân trên đầu bảng doanh trại (cạnh tên bảng). */
 .sheet-head .head-chip {
   margin-left: 10px;
@@ -4431,7 +4442,10 @@ body.man-vao-on #hud > * {
   }
   .trai-noi .units {
     gap: 6px;
-    margin: 6px 0;
+    margin: 4px 0 6px;
+  }
+  .trai-giac .btn.small {
+    padding: 4px 10px;
   }
   .trai-noi .unit-row {
     padding: 5px 8px;
