@@ -19,6 +19,13 @@ export declare const CAU_HINH: {
   readonly replayPerH: number;
   readonly savePerH: number;
   readonly saveMax: number;
+  readonly gopNgay: number;
+  readonly topTinh: number;
+  readonly doiChucMs: number;
+  readonly gopPerH: number;
+  readonly chonPerH: number;
+  readonly bangPerH: number;
+  readonly giuNgay: number;
 };
 
 export type TenLoi = 'ngan' | 'dai' | 'kyTu' | 'tuc';
@@ -72,3 +79,18 @@ export declare function chonDoiThu(me: { dien: number; trophies: number }, list:
 export declare function doiChieu(): string[];
 export declare function banChupThu(dien: number): { ma: string; quan: Record<string, number> };
 export declare function bamThu(): { s: number; k: string }[];
+
+// ---------- Bản đồ Việt Nam: điểm tỉnh (PR 2) ----------
+
+export type ChucId = 'quan' | 'nong' | 'thuy' | 'thuong' | 'bien' | 'hai';
+export declare function kiemTinh(tinh: unknown): string | null;
+export declare function kiemChuc(tinh: string, chuc: unknown): { chuc: ChucId } | { loi: 'khongCoChuc' | 'chucChiGiapBien' };
+export declare function muaTinh(now: number): number;
+export declare function ngayTinh(now: number): number;
+export type LoiGop = 'banChup' | 'chucKhongGop' | 'gopSai' | 'thieuCua' | 'itQua';
+export declare function gopTinh(
+  ma: unknown,
+  chuc: unknown,
+  gop: unknown,
+): { diem: number; gop: Record<string, number>; dien: number } | { loi: LoiGop; chiTiet?: string };
+export declare function banChupGop(dien: number, kho: number): { ma: string; cap: number };

@@ -14,6 +14,10 @@ import {
   type TinhId,
 } from '../game/vietNam';
 import { vi } from '../text/vi';
+import { VIET_NAM } from '../game/defs';
+import { CHUC_GOP, TINH_IDS, capGop, diemToiDa, hangTinh, luongGop, type BangTinh } from '../game/vietNam';
+import { dauError } from './dauThanh';
+import { fmt } from './format';
 
 const T = vi.vietNam;
 const NS = 'http://www.w3.org/2000/svg';
@@ -389,22 +393,96 @@ export class BanDoVN {
   }
 }
 
-/** Bảng bên: tỉnh của ta, thẻ tỉnh đang xem, chức Bồ chính. */
-export function vietNamHtml(state: GameState, chon: string | null, now: number): string {
+/**
+ * Máy chủ điểm tỉnh (PR 2) cho bảng: bảng tỉnh mùa này máy chủ trả, đang hỏi, lỗi lần hỏi gần nhất, đang góp. `co`:
+ * bản game này có nối máy chủ (không có thì chỉ chọn tỉnh, chức ở máy này như PR 1).
+ */
+export interface VnMay {
+  co: boolean;
+  bang: BangTinh | null;
+  dangTai: boolean;
+  loi: { ma: string; chiTiet?: string } | null;
+  dangGop: boolean;
+}
+
+/** Lỗi máy chủ điểm tỉnh ra một dòng: mã riêng của tỉnh trước, còn lại như lỗi Đấu thành. */
+export function vnLoi(loi: { ma: string; chiTiet?: string }): string {
+  const t = T.loiMay[loi.ma];
+  if (t) return t;
+  return dauError(loi);
+}
+
+/** Bảng bên: tỉnh của ta, phần góp, thẻ tỉnh đang xem, chức Bồ chính, bảng tỉnh mùa này. */
+export function vietNamHtml(state: GameState, chon: string | null, now: number, may: VnMay): string {
   const v = state.vietNam;
   const ta = v?.tinh ?? null;
   const ten = (id: string) => T.tinh[id] ?? id;
   let html = `<p class="muted">${T.intro}</p>`;
-  html += `<p class="bdv-ta">${ta ? `🏯 ${T.tinhCuaTa(`<b>${ten(ta)}</b>`)}` : T.chuaChon}</p>`;
+  html += `<p class="bdv-ta">${ta ? `🏯 ${T.tinhCuaTa(`<b>${ten(ta)}</b>`)}${v?.chuc ? ` · ${T.chuc[v.chuc].icon} ${T.chuc[v.chuc].ten}` : ''}` : T.chuaChon}</p>`;
+  html += mayHtml(state, may, now);
   const xem = chon && laTinh(chon) ? chon : ta;
-  if (xem) html += theTinh(state, xem, now);
+  if (xem) html += theTinh(state, xem, now, may);
   if (ta) html += chucHtml(state, ta, now);
-  html += `<p class="muted bdv-sap">${T.sapCo}</p>`;
+  if (may.bang) html += bangHtml(may.bang, ta);
+  html += `<p class="muted bdv-sap"><small>${T.sapCo}</small></p>`;
   html += `<p class="muted bdv-nguon"><small>${T.nguonTitle}: ${T.nguon}</small></p>`;
   return html;
 }
 
-function theTinh(state: GameState, id: TinhId, now: number): string {
+/** Trạng thái máy chủ và phần góp của mình (chức có của để góp). */
+function mayHtml(state: GameState, may: VnMay, now: number): string {
+  if (!may.co) return `<p class="muted bdv-sap">${T.khongMay}</p>`;
+  if (may.loi && !may.bang) return `<p class="bdv-loi">⚠️ ${vnLoi(may.loi)} <button class="btn small ghost" data-act="vnTai">${T.thuLai}</button></p>`;
+  if (!may.bang) return `<p class="muted">⏳ ${T.dangTai}</p>`;
+  const v = state.vietNam;
+  const toi = may.bang.toi;
+  const loi = may.loi ? `<p class="bdv-loi">⚠️ ${vnLoi(may.loi)}</p>` : '';
+  const mua = `<p class="muted bdv-mua"><small>${T.muaNay(may.bang.mua, Math.ceil(muaCon(now) / 86_400_000))}</small></p>`;
+  if (!v?.tinh || !v.chuc || !toi || toi.tinh !== v.tinh) return loi + mua;
+  const res = CHUC_GOP[v.chuc];
+  if (!res.length) return `${loi}<div class="bdv-gop"><h4>${T.gopTitle}</h4><p class="muted">${T.quanChuaGop}</p></div>${mua}`;
+  const con = Math.max(0, VIET_NAM.gopNgay - toi.diemNgay);
+  const cap = capGop(state);
+  const dong = res
+    .map((r) => {
+      const R = vi.resources[r];
+      const toiDa = diemToiDa(state, r, con);
+      const nut = [...new Set([10, 25, toiDa])]
+        .filter((d) => d >= 1)
+        .sort((a, b) => a - b)
+        .map((d) => {
+          const du = d <= toiDa;
+          return `<button class="btn small ${d === toiDa ? 'bronze' : 'ghost'}" data-act="vnGop" data-res="${r}" data-diem="${d}" ${du && !may.dangGop ? '' : 'disabled'}>
+            ${d === toiDa && d !== 10 && d !== 25 ? T.gopHet(d) : T.gopDiem(d)}<small>${R.icon} ${fmt(luongGop(d, cap))}</small></button>`;
+        })
+        .join('');
+      return `<div class="bdv-gop-dong"><span class="bdv-gop-res">${R.icon} ${R.name}</span><span class="bdv-gop-nut">${nut || `<small class="muted">${con ? T.thieuCua : T.hetNgay}</small>`}</span></div>`;
+    })
+    .join('');
+  return `${loi}<div class="bdv-gop"><h4>${T.gopTitle}</h4>
+    <p class="bdv-gop-so">${T.gopSo(con, VIET_NAM.gopNgay, toi.diemMua)}</p>
+    ${dong}
+    <p class="muted"><small>${T.gopLuat}</small></p></div>${mua}`;
+}
+
+/** Bảng tỉnh mùa này: tỉnh đã quy về xếp theo điểm, 10 tỉnh đầu và tỉnh của mình. */
+function bangHtml(bang: BangTinh, ta: string | null): string {
+  const xep = hangTinh(bang.bang);
+  const dong = TINH_IDS.filter(laDatVanLang).map((id) => xep.find((d) => d.tinh === id) ?? { tinh: id, diem: 0, nguoi: 0, gop: 0 });
+  const day = [...xep, ...dong.filter((d) => !xep.includes(d))];
+  const hien = day.slice(0, 10);
+  const hangTa = ta ? day.findIndex((d) => d.tinh === ta) : -1;
+  if (hangTa >= 10) hien.push(day[hangTa]);
+  const li = hien
+    .map((d) => {
+      const hang = day.indexOf(d) + 1;
+      return `<li class="${d.tinh === ta ? 'ta' : ''}"><span class="hang">${hang}</span><button class="bdv-bang-ten" data-act="vnXem" data-tinh="${d.tinh}">${T.tinh[d.tinh]}</button><span class="bdv-bang-so">⭐ ${fmt(d.diem)}<small>👥 ${d.nguoi}</small></span></li>`;
+    })
+    .join('');
+  return `<div class="bdv-bang"><h4>${T.bangTitle}</h4><ol>${li}</ol><p class="muted"><small>${T.bangLuat}</small></p></div>`;
+}
+
+function theTinh(state: GameState, id: TinhId, now: number, may: VnMay): string {
   const v = state.vietNam;
   const xua = T.xuaCua[id];
   const lg = langGieng(id)
@@ -424,11 +502,19 @@ function theTinh(state: GameState, id: TinhId, now: number): string {
     <p class="bdv-xua"><b>${T.xua}:</b> ${xua ? `${xua.ten}${xua.dia ? ` · ${xua.dia}` : ''}` : T.khongXua}</p>
     ${xua ? `<p class="muted bdv-ghi"><small>${T.xuaGhi[xua.loai]}</small></p>` : ''}
     <div class="bdv-tags">${tags}</div>
+    ${soTinh(id, may)}
     ${qd ? `<p class="bdv-qd-the">🏝️ ${qd}</p>` : ''}
     <p class="bdv-lg-dong"><b>${T.langGieng}:</b> ${lg}</p>
     ${nut}
     <p class="muted"><small>${T.doiTinhLuat}</small></p>
   </div>`;
+}
+
+/** Số của tỉnh mùa này trên thẻ: điểm (tỉnh chưa quy về: điểm kết giao), số người chọn, số người đã góp. */
+function soTinh(id: TinhId, may: VnMay): string {
+  if (!may.bang) return '';
+  const d = may.bang.bang.find((x) => x.tinh === id) ?? { diem: 0, nguoi: 0, gop: 0 };
+  return `<p class="bdv-so">${laDatVanLang(id) ? T.diemTinh(d.diem) : T.diemKetGiao(d.diem)} · ${T.nguoiTinh(d.nguoi, d.gop)}</p>`;
 }
 
 function chucHtml(state: GameState, tinh: TinhId, now: number): string {

@@ -5,10 +5,11 @@
 // Máy khách cũng dùng được (kiểm tên trước khi gửi, dựng trận từ quân máy chủ trả về).
 
 import { type HeroKind, type PvpAttack } from './battle';
-import { DAU_THANH, FIELD_CAP, RESOURCE_IDS, SKILL_IDS, UNIT_TYPES, type Resources, type UnitType } from './defs';
+import { DAU_THANH, FIELD_CAP, RESOURCE_IDS, SKILL_IDS, UNIT_TYPES, VIET_NAM, type ResourceId, type Resources, type UnitType } from './defs';
 import { armySpace, type Army } from './doanhTrai';
 import {
   botSnapshot,
+  defenderState,
   cleanInputs,
   decodeSnapshot,
   encodeSnapshot,
@@ -24,6 +25,8 @@ import {
 } from './dauThanh';
 import { BO_CUA, BO_DO, CHI_SO, CUONG_HOA_TRAN, O_CHINH, O_DO, PHAM_TRAN, PHU_NAC_MAX, type BoDo, type Chapter } from './defs';
 import { chupMon, type MonGoc } from './trangBi';
+import { storageCap } from './game';
+import { CHUC_GOP, chucCo, diemGop, laChuc, laTinh, muaCua, ngayCua, type ChucId, type TinhId } from './vietNam';
 
 /** Số liệu máy chủ dùng (khóa, khiên, giới hạn lượt gọi, ghép trận, giữ dữ liệu). */
 export const CAU_HINH = {
@@ -42,6 +45,14 @@ export const CAU_HINH = {
   replayPerH: DAU_THANH.replayPerH,
   savePerH: DAU_THANH.savePerH,
   saveMax: DAU_THANH.saveMax,
+  // Bản đồ Việt Nam (PR 2: máy chủ điểm tỉnh).
+  gopNgay: VIET_NAM.gopNgay,
+  topTinh: VIET_NAM.topTinh,
+  doiChucMs: VIET_NAM.doiChucMs,
+  gopPerH: VIET_NAM.gopPerH,
+  chonPerH: VIET_NAM.chonPerH,
+  bangPerH: VIET_NAM.bangPerH,
+  giuNgay: VIET_NAM.giuNgay,
 } as const;
 
 // ---------- Tên người chơi ----------
@@ -343,4 +354,65 @@ export function doiChieu(): string[] {
     out.push(`Điện ${dien} ${quan.side}: ${score.stars} sao, ${Math.round(score.pct * 100)}%, ${run.step} bước, ngã ${JSON.stringify(run.battle.lost)}, dấu ${bam32(JSON.stringify([people, houses]))}`);
   }
   return out;
+}
+
+// ---------- Bản đồ Việt Nam: điểm tỉnh (PR 2) ----------
+
+/** Mã tỉnh hợp lệ hay null. */
+export function kiemTinh(tinh: unknown): TinhId | null {
+  return laTinh(tinh) ? tinh : null;
+}
+
+/** Chức `chuc` ở tỉnh `tinh`: không có chức ấy, hay chức hải ở tỉnh không giáp biển thì báo lỗi. */
+export function kiemChuc(tinh: string, chuc: unknown): { chuc: ChucId } | { loi: 'khongCoChuc' | 'chucChiGiapBien' } {
+  if (!laTinh(tinh) || !laChuc(chuc)) return { loi: 'khongCoChuc' };
+  return chucCo(tinh).includes(chuc) ? { chuc } : { loi: 'chucChiGiapBien' };
+}
+
+/** Mùa (4 tuần, từ 0 giờ thứ Hai giờ Việt Nam) và ngày (giờ Việt Nam) của thời điểm `now`, như máy khách tính. */
+export function muaTinh(now: number): number {
+  return muaCua(now);
+}
+export function ngayTinh(now: number): number {
+  return ngayCua(now);
+}
+
+export type LoiGop = 'banChup' | 'chucKhongGop' | 'gopSai' | 'thieuCua' | 'itQua';
+
+/**
+ * Nhận một lần góp của cho tỉnh: bản chụp kinh đô lúc góp (`ma`, kiểm như bản chụp Đấu thành) phải có đủ của trước
+ * khi trừ; chỉ góp loại của chức `chuc` lo (`CHUC_GOP`). Điểm mỗi loại là phần trăm sức chứa kho làm tròn xuống, sức
+ * chứa máy chủ tự tính từ công trình trong bản chụp (không tin số gửi lên). Trả điểm, của đã góp (số nguyên) và cấp
+ * Điện.
+ */
+export function gopTinh(ma: unknown, chuc: unknown, gop: unknown): { diem: number; gop: Partial<Resources>; dien: number } | { loi: LoiGop; chiTiet?: string } {
+  if (!laChuc(chuc) || !CHUC_GOP[chuc].length) return { loi: 'chucKhongGop' };
+  const nhan = nhanBanChup(ma);
+  if ('loi' in nhan) return { loi: 'banChup', chiTiet: nhan.loi };
+  const snap = docMa(nhan.ma);
+  const cap = storageCap(defenderState(snap));
+  if (!gop || typeof gop !== 'object' || Array.isArray(gop)) return { loi: 'gopSai' };
+  const out: Partial<Resources> = {};
+  let diem = 0;
+  for (const [k, v] of Object.entries(gop as Record<string, unknown>)) {
+    if (!(CHUC_GOP[chuc] as readonly string[]).includes(k)) return { loi: 'gopSai', chiTiet: k };
+    if (typeof v !== 'number' || !Number.isInteger(v) || v <= 0) return { loi: 'gopSai', chiTiet: k };
+    const r = k as ResourceId;
+    if (snap.resources[r] < v) return { loi: 'thieuCua', chiTiet: r };
+    out[r] = v;
+    diem += diemGop(v, cap);
+  }
+  if (diem < 1) return { loi: 'itQua' };
+  return { diem, gop: out, dien: snap.dien };
+}
+
+/**
+ * Bản chụp để thử lệnh góp (test Deno, scripts/thu-may-chu.mjs): kinh đô máy Điện `dien`, mỗi loại của `kho` (không
+ * quá sức chứa), kèm sức chứa kho máy chủ tính để test biết trước điểm.
+ */
+export function banChupGop(dien: number, kho: number): { ma: string; cap: number } {
+  const snap = botSnapshot(dien);
+  const cap = storageCap(defenderState(snap));
+  for (const r of RESOURCE_IDS) snap.resources[r] = Math.min(cap, kho);
+  return { ma: encodeSnapshot(snap), cap };
 }

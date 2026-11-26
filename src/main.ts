@@ -11,7 +11,8 @@ import { play, setMuted, stopRally, unlockAudio } from './audio/sfx';
 import { skillReady, startFieldBattle, stepField, useSkill, type Battle, type HeroKind, type FighterKind } from './game/battle';
 import { canLen, capNhatDa, chonMap, daMo, datDoi, doiNay, moMap, quaCong, tichTreo, vaoDa, veKinhDo, type DaThuong } from './game/daNgoai';
 import { choAn, chonThu, thuCo } from './game/thanThu';
-import { chonChuc, chonTinh } from './game/vietNam';
+import { capGop, chonChuc, chonTinh, luongGop, theoMay, vietNamMo, type BangTinh, type TinhToi } from './game/vietNam';
+import { vnLoi } from './ui/vietNam';
 import { chamMap, datTuDanh, stepDa, tuongDau } from './game/daNgoaiTran';
 import { boCuc } from './game/daNgoaiMap';
 import { attackFrom, beginPvp, canPractice, decodeSnapshot, encodeSnapshot, lootPvp, makeSnapshot, pushInput, scorePvp, stepPvp, validateArmy, type PvpRun } from './game/dauThanh';
@@ -95,6 +96,7 @@ import {
   tick,
   type FailReason,
   type GameState,
+  type Result,
   type StageResult,
 } from './game/game';
 import { isOpen, khoanhOf, khoanhWood, openKhoanh, openable } from './game/khoanh';
@@ -668,6 +670,61 @@ async function start(): Promise<void> {
   const mayLoi = (e: unknown) => {
     play('error');
     hud.toast(dauError(loiOf(e)), true);
+  };
+
+  // ---------- Bản đồ Việt Nam: máy chủ điểm tỉnh (PR 2) ----------
+
+  hud.vnMay.co = coMayChu();
+
+  /**
+   * Hỏi máy chủ bảng tỉnh mùa này. Máy chủ đã có tỉnh, chức của mình thì theo máy chủ; chưa có mà máy này đã chọn
+   * (chọn lúc chưa có máy chủ tỉnh hay lúc mất mạng) thì gửi lên.
+   */
+  const taiTinh = async (): Promise<void> => {
+    const may = hud.vnMay;
+    if (!coMayChu() || may.dangTai) return;
+    may.dangTai = true;
+    try {
+      const m = await mang();
+      let bang = await m.bangTinh();
+      const v = state.vietNam;
+      if (!bang.toi && v?.tinh && vietNamMo(state)) {
+        await m.chonTinh(v.tinh);
+        if (v.chuc) await m.chonChuc(v.chuc).catch(() => undefined);
+        bang = await m.bangTinh();
+      }
+      if (bang.toi) theoMay(state, bang.toi);
+      may.bang = bang;
+      may.loi = null;
+      commit();
+    } catch (e) {
+      may.loi = loiOf(e);
+    } finally {
+      may.dangTai = false;
+      if (hud.campStep() === 'vietNam') hud.refreshCampaign(state);
+    }
+  };
+
+  /** Chọn tỉnh, chức qua máy chủ: được thì theo máy chủ; mất mạng thì làm ở máy này (`diaPhuong`). */
+  const vnGui = async (goi: () => Promise<{ toi: TinhToi }>, xong: () => void, diaPhuong: () => Result<void>) => {
+    try {
+      const r = await goi();
+      theoMay(state, r.toi);
+      if (hud.vnMay.bang) hud.vnMay.bang.toi = r.toi;
+      xong();
+      void taiTinh();
+    } catch (e) {
+      const loi = loiOf(e);
+      if (loi.ma !== 'mang') {
+        play('error');
+        hud.toast(vnLoi(loi), true);
+        return;
+      }
+      const r = diaPhuong();
+      if (!r.ok) return fail(r.reason);
+      xong();
+      hud.toast(vi.vietNam.offline, true);
+    }
   };
 
   /** Chạy một việc gọi máy chủ từ bảng Đấu thành: khóa nút, hiện chữ chờ, ghi lỗi vào bảng. */
@@ -2307,6 +2364,7 @@ async function start(): Promise<void> {
         select(null);
         play('tap');
         hud.showCampaign(state, a.step);
+        if (a.step === 'vietNam') void taiTinh();
         // Vừa mở bảng Đấu thành ở thẻ Đấu thật: hỏi máy chủ hồ sơ, trận gần đây.
         if (hud.dauView()?.mode === 'that') handle({ kind: 'dauOpened' });
         return;
@@ -2401,20 +2459,69 @@ async function start(): Promise<void> {
       }
 
       case 'vnChonTinh': {
+        if (!vietNamMo(state)) return fail('vnChuaMo');
+        const xong = () => {
+          play('tap');
+          hud.toast(vi.vietNam.daChonTinh(vi.vietNam.tinh[a.tinh] ?? a.tinh));
+          commit();
+        };
+        // Có máy chủ: máy chủ quyết (luật mùa tính trên máy chủ); mất mạng thì ghi ở máy này như PR 1.
+        if (coMayChu()) return void vnGui(() => mang().then((m) => m.chonTinh(a.tinh)), xong, () => chonTinh(state, a.tinh, Date.now()));
         const r = chonTinh(state, a.tinh, Date.now());
         if (!r.ok) return fail(r.reason);
-        play('tap');
-        hud.toast(vi.vietNam.daChonTinh(vi.vietNam.tinh[a.tinh] ?? a.tinh));
-        commit();
+        xong();
         return;
       }
 
       case 'vnChonChuc': {
+        if (!vietNamMo(state)) return fail('vnChuaMo');
+        const xong = () => {
+          play('tap');
+          hud.toast(vi.vietNam.daNhanChuc(vi.vietNam.chuc[a.chuc]?.ten ?? a.chuc));
+          commit();
+        };
+        if (coMayChu()) return void vnGui(() => mang().then((m) => m.chonChuc(a.chuc)), xong, () => chonChuc(state, a.chuc, Date.now()));
         const r = chonChuc(state, a.chuc, Date.now());
         if (!r.ok) return fail(r.reason);
-        play('tap');
-        hud.toast(vi.vietNam.daNhanChuc(vi.vietNam.chuc[a.chuc]?.ten ?? a.chuc));
-        commit();
+        xong();
+        return;
+      }
+
+      case 'vnTai':
+        void taiTinh();
+        return;
+
+      case 'vnGop': {
+        const may = hud.vnMay;
+        if (!coMayChu() || may.dangGop || !(a.diem >= 1)) return;
+        const luong = luongGop(a.diem, capGop(state));
+        if (state.resources[a.res] < luong) return fail('thieuTaiNguyen');
+        may.dangGop = true;
+        hud.refreshCampaign(state);
+        void (async () => {
+          try {
+            const m = await mang();
+            const r = await m.gopTinh({ [a.res]: luong }, encodeSnapshot(makeSnapshot(state)));
+            // Máy chủ đã nhận: trừ đúng của máy chủ ghi (không âm, kho có thể vừa tiêu bớt lúc chờ).
+            const cua: string[] = [];
+            for (const k of Object.keys(r.gop) as ResourceId[]) {
+              const n = r.gop[k] ?? 0;
+              state.resources[k] = Math.max(0, state.resources[k] - n);
+              cua.push(`${vi.resources[k].icon} ${fmt(n)}`);
+            }
+            if (may.bang) may.bang.toi = r.toi;
+            play('claim');
+            hud.toast(vi.vietNam.daGop(r.diem, cua.join(', ')));
+            commit();
+            void taiTinh();
+          } catch (e) {
+            play('error');
+            hud.toast(vnLoi(loiOf(e)), true);
+          } finally {
+            may.dangGop = false;
+            hud.refreshCampaign(state);
+          }
+        })();
         return;
       }
 
@@ -3216,6 +3323,12 @@ async function start(): Promise<void> {
       hud.showCampaign(state, 'vietNam');
       if (tinh) hud.xemTinh(state, tinh);
       if (tinh && k) setTimeout(() => hud.banDoVN.phongToi(tinh, k), 300);
+    },
+    /** Giả máy chủ tỉnh trả bảng `bang` (chụp thử phần góp, bảng thi đua khi máy này không có máy chủ). */
+    vnMay: (bang: BangTinh) => {
+      Object.assign(hud.vnMay, { co: true, bang, loi: null, dangTai: false });
+      if (bang.toi) theoMay(state, bang.toi);
+      hud.refreshCampaign(state);
     },
     /** Mở bảng Đất bên kia sông của khoảnh bên kia `id`, như khi chạm vào đất ấy. */
     benKia: (id: number) => {

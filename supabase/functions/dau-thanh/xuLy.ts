@@ -17,10 +17,35 @@
 //   luuMay { ma, dien, goc, de? } lưu game lên mây (người đã gắn Google); `goc` là số bản máy này biết, lệch thì máy
 //                                khác đã lưu bản mới hơn (`de`: ghi đè)
 //   taiMay { chiXem? }           bản lưu trên mây của mình (`chiXem`: chỉ số bản, lúc lưu, cấp Điện)
+// Bản đồ Việt Nam (PR 2: máy chủ điểm tỉnh; không cần tham gia Đấu thành, chỉ cần đăng nhập, kể cả ẩn danh):
+//   bangTinh                     bảng tỉnh mùa này (điểm cộng 30 người góp nhiều nhất, số người, số người góp),
+//                                tỉnh, chức, điểm của mình; không đăng nhập cũng xem được bảng (không có phần mình)
+//   chonTinh { tinh }            chọn tỉnh (mỗi mùa đổi một lần; sang tỉnh không giáp biển thì mất Bồ chính hải)
+//   chonChuc { chuc }            nhận chức Bồ chính (đổi chức chờ 24 giờ)
+//   gop { gop, banChup }         góp của cho tỉnh kèm bản chụp kinh đô lúc góp: kho phải có đủ, đúng loại của chức;
+//                                điểm theo phần trăm sức chứa kho, trần mỗi ngày (giờ Việt Nam)
 // Kết quả trận chỉ do máy chủ tính (`danhLai` trong luat.js, đóng gói từ src/game/mayChu.ts).
 
 import postgres from 'npm:postgres@3.4.9';
-import { CAU_HINH, LUAT_MA, chonDoiThu, danhLai, kiemTen, kinhDoMay, nhanBanChup, quanDanh, truCua, type KetQua, type QuanDanh } from './luat.js';
+import {
+  CAU_HINH,
+  LUAT_MA,
+  chonDoiThu,
+  danhLai,
+  gopTinh,
+  kiemChuc,
+  kiemTen,
+  kiemTinh,
+  kinhDoMay,
+  muaTinh,
+  ngayTinh,
+  nhanBanChup,
+  quanDanh,
+  truCua,
+  type ChucId,
+  type KetQua,
+  type QuanDanh,
+} from './luat.js';
 
 type Sql = postgres.Sql;
 type Tx = postgres.TransactionSql;
@@ -249,6 +274,7 @@ export function taoXuLy(env: MoiTruong): (req: Request) => Promise<Response> {
 
   async function ping() {
     await sql`select public.don_dau_thanh()`;
+    await sql`select public.don_viet_nam()`;
     const [{ n }] = await sql<{ n: number }[]>`select count(*)::int as n from public.nguoi_choi`;
     return { ok: true, luat: LUAT_MA, nguoi: n };
   }
@@ -448,6 +474,105 @@ export function taoXuLy(env: MoiTruong): (req: Request) => Promise<Response> {
     return { ok: true, may: { ban: r.ban, dien: r.dien, luc: r.luc.getTime(), ...(body.chiXem === true ? {} : { ma: r.ma }) } };
   }
 
+  // ---------- Bản đồ Việt Nam: điểm tỉnh (PR 2) ----------
+
+  interface TinhRow {
+    tinh: string;
+    mua: number;
+    chuc: ChucId | null;
+    chuc_luc: Date | null;
+  }
+
+  /** Tỉnh, chức, điểm mình đã góp cho tỉnh mình mùa này và điểm đã góp hôm nay (mọi tỉnh), hay null nếu chưa chọn tỉnh. */
+  async function toiTinh(me: string, now: number) {
+    const [r] = await sql<TinhRow[]>`select tinh, mua, chuc, chuc_luc from public.tinh_nguoi where nguoi = ${me}`;
+    if (!r) return null;
+    const mua = muaTinh(now);
+    const ngay = ngayTinh(now);
+    const [d] = await sql<{ diem_mua: number; diem_ngay: number }[]>`
+      select
+        coalesce(sum(diem) filter (where mua = ${mua} and tinh = ${r.tinh}), 0)::int as diem_mua,
+        coalesce(sum(diem) filter (where ngay = ${ngay}), 0)::int as diem_ngay
+      from public.tinh_diem where nguoi = ${me} and (mua = ${mua} or ngay = ${ngay})`;
+    return { tinh: r.tinh, chuc: r.chuc, mua: r.mua, chucLuc: r.chuc_luc?.getTime() ?? null, diemMua: d.diem_mua, diemNgay: d.diem_ngay };
+  }
+
+  async function bangTinh(me: string | null, now: number) {
+    if (me) await demLuot(me, 'bangTinh', CAU_HINH.bangPerH, now);
+    const mua = muaTinh(now);
+    const diem = await sql<{ tinh: string; diem: number; gop: number }[]>`
+      with moi as (
+        select tinh, nguoi, sum(diem) as d from public.tinh_diem where mua = ${mua} group by tinh, nguoi
+      ), xep as (
+        select tinh, d, row_number() over (partition by tinh order by d desc, nguoi) as hang from moi
+      )
+      select tinh, coalesce(sum(d) filter (where hang <= ${CAU_HINH.topTinh}), 0)::int as diem, count(*)::int as gop
+      from xep group by tinh`;
+    const nguoi = await sql<{ tinh: string; n: number }[]>`select tinh, count(*)::int as n from public.tinh_nguoi group by tinh`;
+    const bang = new Map<string, { tinh: string; diem: number; nguoi: number; gop: number }>();
+    const dong = (tinh: string) => bang.get(tinh) ?? bang.set(tinh, { tinh, diem: 0, nguoi: 0, gop: 0 }).get(tinh)!;
+    for (const r of diem) Object.assign(dong(r.tinh), { diem: r.diem, gop: r.gop });
+    for (const r of nguoi) dong(r.tinh).nguoi = r.n;
+    return { ok: true, mua, ngay: ngayTinh(now), toi: me ? await toiTinh(me, now) : null, bang: [...bang.values()] };
+  }
+
+  async function chonTinh(me: string, body: Record<string, unknown>, now: number) {
+    const tinh = kiemTinh(body.tinh);
+    if (!tinh) throw new Loi('khongCoTinh');
+    await demLuot(me, 'chonTinh', CAU_HINH.chonPerH, now);
+    const mua = muaTinh(now);
+    await sql.begin(async (tx) => {
+      const [r] = await tx<TinhRow[]>`select tinh, mua, chuc, chuc_luc from public.tinh_nguoi where nguoi = ${me} for update`;
+      if (r?.tinh === tinh) return;
+      // Mỗi mùa đổi tỉnh một lần (chọn lần đầu thì được ngay).
+      if (r && r.mua === mua) throw new Loi('doiTinhMuaSau', 409);
+      // Sang tỉnh không có chức đang giữ (Bồ chính hải ở tỉnh không giáp biển) thì mất chức, nhận chức khác ngay.
+      const giu = r?.chuc && 'chuc' in kiemChuc(tinh, r.chuc);
+      await tx`
+        insert into public.tinh_nguoi (nguoi, tinh, mua, chuc, chuc_luc, luc)
+        values (${me}, ${tinh}, ${mua}, ${giu ? r!.chuc : null}, ${giu ? r!.chuc_luc : null}, ${luc(now)})
+        on conflict (nguoi) do update set tinh = excluded.tinh, mua = excluded.mua, chuc = excluded.chuc, chuc_luc = excluded.chuc_luc, luc = excluded.luc`;
+    });
+    return { ok: true, toi: await toiTinh(me, now) };
+  }
+
+  async function chonChuc(me: string, body: Record<string, unknown>, now: number) {
+    await demLuot(me, 'chonChuc', CAU_HINH.chonPerH, now);
+    await sql.begin(async (tx) => {
+      const [r] = await tx<TinhRow[]>`select tinh, mua, chuc, chuc_luc from public.tinh_nguoi where nguoi = ${me} for update`;
+      if (!r) throw new Loi('chuaChonTinh', 409);
+      const c = kiemChuc(r.tinh, body.chuc);
+      if ('loi' in c) throw new Loi(c.loi);
+      if (r.chuc === c.chuc) return;
+      const het = r.chuc && r.chuc_luc ? r.chuc_luc.getTime() + CAU_HINH.doiChucMs : 0;
+      if (het > now) throw new Loi('doiChucCho', 409, String(het - now));
+      await tx`update public.tinh_nguoi set chuc = ${c.chuc}, chuc_luc = ${luc(now)} where nguoi = ${me}`;
+    });
+    return { ok: true, toi: await toiTinh(me, now) };
+  }
+
+  async function gop(me: string, body: Record<string, unknown>, now: number) {
+    const [r] = await sql<TinhRow[]>`select tinh, mua, chuc, chuc_luc from public.tinh_nguoi where nguoi = ${me}`;
+    if (!r) throw new Loi('chuaChonTinh', 409);
+    if (!r.chuc) throw new Loi('chuaCoChuc', 409);
+    // Đếm lượt trước khi kiểm bản chụp (kiểm tốn CPU).
+    await demLuot(me, 'gop', CAU_HINH.gopPerH, now);
+    const g = gopTinh(body.banChup, r.chuc, body.gop);
+    if ('loi' in g) throw new Loi(g.loi, 400, g.chiTiet);
+    const mua = muaTinh(now);
+    const ngay = ngayTinh(now);
+    await sql.begin(async (tx) => {
+      // Khóa dòng tỉnh của mình: hai lần góp cùng lúc không vượt trần ngày.
+      await tx`select 1 from public.tinh_nguoi where nguoi = ${me} for update`;
+      const [{ n }] = await tx<{ n: number }[]>`select coalesce(sum(diem), 0)::int as n from public.tinh_diem where nguoi = ${me} and ngay = ${ngay}`;
+      if (n + g.diem > CAU_HINH.gopNgay) throw new Loi('tranNgay', 409, String(Math.max(0, CAU_HINH.gopNgay - n)));
+      await tx`
+        insert into public.tinh_diem (mua, tinh, nguoi, ngay, diem) values (${mua}, ${r.tinh}, ${me}, ${ngay}, ${g.diem})
+        on conflict (mua, tinh, nguoi, ngay) do update set diem = public.tinh_diem.diem + excluded.diem`;
+    });
+    return { ok: true, diem: g.diem, gop: g.gop, toi: await toiTinh(me, now) };
+  }
+
   // ---------- Vào ----------
 
   return async (req: Request): Promise<Response> => {
@@ -468,6 +593,8 @@ export function taoXuLy(env: MoiTruong): (req: Request) => Promise<Response> {
       if (body.hanh === 'ping') return tra(await ping());
       if (body.luat !== LUAT_MA) throw new Loi('capNhat', 409, LUAT_MA);
       const nguoiGoi = await env.nguoiDung(req);
+      // Bảng tỉnh là dữ liệu chung: chưa đăng nhập (chưa chọn tỉnh) cũng xem được.
+      if (body.hanh === 'bangTinh') return tra(await bangTinh(nguoiGoi?.id ?? null, bayGio()));
       if (!nguoiGoi) throw new Loi('chuaDangNhap', 401);
       const me = nguoiGoi.id;
       const now = bayGio();
@@ -494,6 +621,12 @@ export function taoXuLy(env: MoiTruong): (req: Request) => Promise<Response> {
           return tra(await luuMay(nguoiGoi, body, now));
         case 'taiMay':
           return tra(await taiMay(me, body, now));
+        case 'chonTinh':
+          return tra(await chonTinh(me, body, now));
+        case 'chonChuc':
+          return tra(await chonChuc(me, body, now));
+        case 'gop':
+          return tra(await gop(me, body, now));
       }
       throw new Loi('saiLenh');
     } catch (e) {

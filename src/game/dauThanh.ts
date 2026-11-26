@@ -122,6 +122,9 @@ export interface Snapshot {
 /** Công trình đưa vào bản chụp: bờ bên này, không phải đường đi, trang trí hay cầu. */
 const snapped = (b: Pick<Building, 'type' | 'x' | 'z'>) => !isDecor(b.type) && !isBridge(b.type) && farBankOf(b.x, b.z) === null;
 
+/** Sức chứa kho tính theo công trình bờ bên này: đúng như máy chủ tính lại từ bản chụp (`makeSnapshot`, góp tỉnh). */
+export const snapCap = (state: GameState): number => storageCap({ ...state, buildings: state.buildings.filter(snapped) });
+
 /** Nhiệm vụ đầu của từng chương (để kinh đô dựng lại ở đúng chương). */
 const QUEST_OF: Record<Chapter, number> = { 1: 0, 2: CH2_QUEST_START, 3: CH3_QUEST_START, 4: CH4_QUEST_START, 5: CH5_QUEST_START };
 
@@ -183,7 +186,7 @@ export function makeSnapshot(state: GameState): Snapshot {
   // Sức chứa tính theo công trình bờ bên này, đúng như máy chủ tính lại từ bản chụp (kho bên kia sông không chụp).
   // Của trong kho được phép vượt sức chứa (thưởng nhiệm vụ, hoàn của khi hủy việc xây, dỡ kho): chỉ chụp tới sức
   // chứa, phần vượt không ai cướp được.
-  const cap = storageCap({ ...state, buildings: keep });
+  const cap = snapCap(state);
   const resources = { gao: 0, voOc: 0, datDa: 0, sat: 0, go: 0 };
   for (const r of RESOURCE_IDS) resources[r] = Math.max(0, Math.min(cap, state.resources[r]));
   const heroes = defendHeroes(state);

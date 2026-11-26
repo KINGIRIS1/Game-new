@@ -574,6 +574,11 @@ d.camera(cx, cz, 2.6);`,
     truoc: `${KINH_DO}\ns.hinted.push('hd:vietNam'); s.vietNam = { tinh: '23', mua: 0, chuc: 'hai', chucLuc: 0 };`,
     sau: `d.vietNam('23');`,
   },
+  'viet-nam-gop': {
+    mo: 'Như viet-nam-chon, máy chủ tỉnh (giả) trả bảng mùa này: Phú Thọ Bồ chính nông, phần góp gạo (còn 64/100 điểm hôm nay), số của tỉnh, bảng thi đua',
+    truoc: `${KINH_DO}\ns.hinted.push('hd:vietNam'); s.resources.gao = 9000; s.vietNam = { tinh: '12', mua: 0, chuc: 'nong', chucLuc: Date.now() - 3600000 };`,
+    sau: `d.vietNam('12'); d.vnMay({ mua: 4, ngay: 0, toi: { tinh: '12', chuc: 'nong', mua: 4, chucLuc: Date.now() - 3600000, diemMua: 212, diemNgay: 36 }, bang: [{ tinh: '01', diem: 4210, nguoi: 41, gop: 33 }, { tinh: '12', diem: 2875, nguoi: 22, gop: 19 }, { tinh: '04', diem: 1960, nguoi: 15, gop: 12 }, { tinh: '17', diem: 860, nguoi: 9, gop: 6 }, { tinh: '23', diem: 340, nguoi: 4, gop: 3 }] });`,
+  },
   'loi-dai': {
     mo: 'Chương 5 (đã thắng màn 35), đã qua 23 tầng lôi đài: bảng Lôi đài (lưới 50 tầng xếp 1 tới 50, đội giữ đài, thưởng, nút Lên đài)',
     truoc: LOI_DAI_23,

@@ -128,7 +128,7 @@ import { choTen, daMapHtml, daNgoaiHtml, expPct, miniSvg } from './daNgoai';
 import { thanThuHtml, thanThuMapHtml, thuAnh } from './thanThu';
 import { loiDaiHtml, loiDaiMapHtml } from './loiDai';
 import { loiDaiMo } from '../game/loiDai';
-import { BanDoVN, vietNamHtml } from './vietNam';
+import { BanDoVN, vietNamHtml, type VnMay } from './vietNam';
 import { vietNamMo } from '../game/vietNam';
 import type { ThanThuId } from '../game/defs';
 import type { ODo } from '../game/defs';
@@ -218,6 +218,9 @@ export type HudAction =
   /** Bản đồ Việt Nam (`ui/vietNam.ts`): chọn tỉnh, nhận chức Bồ chính. */
   | { kind: 'vnChonTinh'; tinh: string }
   | { kind: 'vnChonChuc'; chuc: string }
+  /** PR 2: góp `diem` điểm bằng của `res` cho tỉnh; hỏi lại máy chủ bảng tỉnh. */
+  | { kind: 'vnGop'; res: ResourceId; diem: number }
+  | { kind: 'vnTai' }
   /** Lôi đài (`ui/loiDai.ts`): lên đài đánh tầng (đội và thần thú chọn trên sân, `ui/loiDaiTran.ts`). */
   | { kind: 'loiVao'; tang: number }
   | { kind: 'chooseBuild'; type: BuildingType }
@@ -477,6 +480,8 @@ export class Hud {
   private readonly rail: HTMLElement;
   /** Bản đồ Việt Nam: dựng một lần, gắn lại mỗi khi bảng vẽ lại (giữ chỗ kéo, phóng). */
   readonly banDoVN = new BanDoVN();
+  /** Máy chủ điểm tỉnh (PR 2): `main.ts` ghi vào rồi gọi `refreshCampaign`. */
+  readonly vnMay: VnMay = { co: false, bang: null, dangTai: false, loi: null, dangGop: false };
   private railHtml = '';
   /** Thanh Hủy, Đặt thay chỗ dock khi đang đặt, dời, trải, ghép. */
   private readonly bottombar: HTMLElement;
@@ -865,6 +870,10 @@ export class Hud {
         return this.onAction({ kind: 'vnChonTinh', tinh: el.dataset.tinh ?? '' });
       case 'vnChonChuc':
         return this.onAction({ kind: 'vnChonChuc', chuc: el.dataset.chuc ?? '' });
+      case 'vnGop':
+        return this.onAction({ kind: 'vnGop', res: el.dataset.res as ResourceId, diem: Number(el.dataset.diem) || 0 });
+      case 'vnTai':
+        return this.onAction({ kind: 'vnTai' });
       case 'loiTang':
         if (this.camp) this.camp.loiTang = id;
         return this.refreshCampaign(this.getState());
@@ -2467,6 +2476,11 @@ export class Hud {
   }
 
   /** Bảng Đấu thành đang mở (để main.ts ghi kết quả máy chủ vào), hay null. */
+  /** Bảng phó bản đang mở ở bước nào (đóng thì `null`). */
+  campStep(): CampaignView['step'] | null {
+    return this.camp?.step ?? null;
+  }
+
   dauView(): DauView | null {
     return this.camp?.step === 'dau' ? (this.camp.dau ?? null) : null;
   }
@@ -2484,7 +2498,7 @@ export class Hud {
     else if (camp.step === 'daNgoai') panel = daNgoaiHtml(state);
     else if (camp.step === 'thanThu') panel = thanThuHtml(state);
     else if (camp.step === 'loiDai') panel = loiDaiHtml(state, camp.loiTang ?? null);
-    else if (camp.step === 'vietNam') panel = vietNamHtml(state, camp.vnChon ?? null, Date.now());
+    else if (camp.step === 'vietNam') panel = vietNamHtml(state, camp.vnChon ?? null, Date.now(), this.vnMay);
     else if (camp.stage) panel = camp.step === 'army' ? armyHtml(state, camp.pick, camp.stage, camp.pick.challenge) : stageHtml(state, camp.stage);
     const now = mapChapterNow(state);
     const tabs =

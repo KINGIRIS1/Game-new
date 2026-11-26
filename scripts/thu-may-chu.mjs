@@ -170,6 +170,16 @@ try {
   const snap = await rest('ban_chup?select=ma&limit=1');
   if (snap.status === 200 && Array.isArray(snap.body) && snap.body.length) fail('Data API cho đọc bản chụp');
   console.log(`Data API: thấy ${tran.body.length} trận của mình, bản chụp bị chặn (${snap.status}).`);
+
+  // Bản đồ Việt Nam (PR 2): bảng tỉnh đọc được không cần đăng nhập; không chọn tỉnh, góp ở máy chủ thật cho bảng
+  // của người chơi thật khỏi có người thử. Bảng tỉnh qua Data API bị chặn.
+  const bang = await goi({ hanh: 'bangTinh' }, null);
+  if (!Number.isInteger(bang.mua) || !Array.isArray(bang.bang) || bang.toi !== null) fail(`bangTinh: ${JSON.stringify(bang).slice(0, 300)}`);
+  for (const bangSql of ['tinh_nguoi', 'tinh_diem']) {
+    const r = await rest(`${bangSql}?select=*&limit=1`);
+    if (r.status === 200 && Array.isArray(r.body) && r.body.length) fail(`Data API cho đọc ${bangSql}`);
+  }
+  console.log(`Bảng tỉnh: mùa ${bang.mua}, ${bang.bang.length} tỉnh có người; Data API không đọc được bảng tỉnh.`);
 } finally {
   // 4. Rời Đấu thành để người chơi thật không gặp người thử.
   await goi({ hanh: 'roi' });

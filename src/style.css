@@ -6267,3 +6267,120 @@ body.man-vao-on #hud > * {
 .bdv-chuc:disabled {
   opacity: 0.55;
 }
+
+/* Bản đồ Việt Nam PR 2: góp sức cho tỉnh, số của tỉnh, bảng thi đua. */
+.bdv-loi {
+  color: var(--red, #b3382c);
+  margin: 6px 0;
+}
+
+.bdv-mua {
+  margin: 2px 0 6px;
+}
+
+.bdv-so {
+  font-size: 13px;
+}
+
+.bdv-gop {
+  margin: 8px 0;
+  padding: 10px 12px;
+  border: 2px solid var(--bronze);
+  border-radius: 12px;
+  background: var(--paper-2);
+}
+
+.bdv-gop h4,
+.bdv-bang h4 {
+  margin: 0 0 4px;
+}
+
+.bdv-gop p {
+  margin: 4px 0;
+}
+
+.bdv-gop-dong {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin: 6px 0;
+}
+
+.bdv-gop-res {
+  min-width: 82px;
+  font-weight: 700;
+}
+
+.bdv-gop-nut {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.bdv-gop-nut .btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  line-height: 1.15;
+}
+
+.bdv-gop-nut .btn small {
+  font-size: 11px;
+  opacity: 0.85;
+}
+
+.bdv-bang {
+  margin: 10px 0;
+}
+
+.bdv-bang ol {
+  list-style: none;
+  margin: 4px 0;
+  padding: 0;
+  display: grid;
+  gap: 3px;
+}
+
+.bdv-bang li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 8px;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  background: var(--paper);
+}
+
+.bdv-bang li.ta {
+  border-color: var(--bronze);
+  box-shadow: inset 0 0 0 1px var(--bronze);
+}
+
+.bdv-bang .hang {
+  width: 22px;
+  text-align: center;
+  font-weight: 700;
+  color: var(--bronze);
+}
+
+.bdv-bang-ten {
+  flex: 1;
+  text-align: left;
+  background: none;
+  border: 0;
+  padding: 0;
+  font: inherit;
+  color: inherit;
+}
+
+.bdv-bang-so {
+  display: flex;
+  gap: 8px;
+  align-items: baseline;
+  white-space: nowrap;
+}
+
+.bdv-bang-so small {
+  opacity: 0.75;
+}

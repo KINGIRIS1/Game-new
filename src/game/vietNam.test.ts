@@ -15,6 +15,10 @@ import {
 } from './vietNam';
 import { LANG_GIENG_HINH, SO_DAO, VIEN_NGOAI_KM } from './vietNamHinh';
 import { vi } from '../text/vi';
+import { defenderState, encodeSnapshot, makeSnapshot } from './dauThanh';
+import { storageCap } from './game';
+import { gopTinh, kiemChuc, kiemTinh, muaTinh, ngayTinh } from './mayChu';
+import { CHUC_GOP, capGop, diemGop, diemToiDa, hangTinh, luongGop, ngayCua, theoMay } from './vietNam';
 
 const topo = Object.values(import.meta.glob('../../public/ban-do/34-tinh.json', { eager: true, import: 'default' }))[0] as Topo;
 const hinh = giaiTopo(topo);
@@ -204,5 +208,71 @@ describe('bản lưu', () => {
   it('tệp hình ghi nguồn, dưới 300 KB', () => {
     expect(topo.nguon).toContain('Free-GIS-Data');
     expect(JSON.stringify(topo).length).toBeLessThan(300_000);
+  });
+});
+
+describe('PR 2: góp điểm tỉnh (máy khách tính khớp máy chủ)', () => {
+  it('của mỗi chức; điểm theo phần trăm sức chứa, lượng tính ngược ra đúng điểm', () => {
+    expect(CHUC_GOP.quan).toEqual([]);
+    expect(CHUC_GOP.nong).toEqual(['gao']);
+    expect(CHUC_GOP.thuong).toEqual(['voOc', 'go']);
+    expect(CHUC_GOP.hai).toEqual(['go', 'sat']);
+    for (const cap of [100, 1234, 20_000, 987_654]) {
+      for (const d of [1, 7, 10, 25, 100]) expect(diemGop(luongGop(d, cap), cap)).toBe(d);
+      expect(diemGop(luongGop(10, cap) - 1, cap)).toBe(9);
+    }
+  });
+
+  it('ngày theo giờ Việt Nam: 0 giờ sáng giờ Việt Nam là 17 giờ UTC hôm trước', () => {
+    const nua = Date.UTC(2026, 10, 25, 17);
+    expect(ngayCua(nua)).toBe(ngayCua(nua - 1) + 1);
+    expect(ngayCua(nua + 23 * GIO)).toBe(ngayCua(nua));
+  });
+
+  it('máy chủ (gopTinh) cho đúng số điểm máy khách tính từ kinh đô thật, kho bên kia sông không tính', () => {
+    const s = base();
+    s.resources = { gao: 9000, voOc: 9000, datDa: 9000, sat: 9000, go: 9000 };
+    const cap = capGop(s);
+    expect(cap).toBe(storageCap(defenderState(makeSnapshot(s))));
+    const ma = encodeSnapshot(makeSnapshot(s));
+    const gao = luongGop(10, cap);
+    expect(gopTinh(ma, 'nong', { gao })).toEqual({ diem: 10, gop: { gao }, dien: 5 });
+    expect(gopTinh(ma, 'thuong', { voOc: luongGop(3, cap), go: luongGop(4, cap) })).toMatchObject({ diem: 7 });
+    expect(gopTinh(ma, 'quan', { gao })).toEqual({ loi: 'chucKhongGop' });
+    expect(gopTinh(ma, 'nong', { sat: gao })).toEqual({ loi: 'gopSai', chiTiet: 'sat' });
+    expect(gopTinh(ma, 'nong', { gao: 9001 })).toEqual({ loi: 'thieuCua', chiTiet: 'gao' });
+    expect(gopTinh(ma, 'nong', { gao: 1 })).toEqual({ loi: 'itQua' });
+    expect(gopTinh('TDVS1:hong', 'nong', { gao })).toMatchObject({ loi: 'banChup' });
+    // Góp tối đa: không quá phần còn của ngày, không quá của đang có.
+    expect(diemToiDa(s, 'gao', 100)).toBe(Math.min(100, diemGop(Math.min(cap, 9000), cap)));
+    expect(diemToiDa(s, 'gao', 3)).toBe(3);
+    s.resources.gao = 0;
+    expect(diemToiDa(s, 'gao', 100)).toBe(0);
+  });
+
+  it('máy chủ kiểm tỉnh, chức như máy khách; chép tỉnh, chức máy chủ giữ về phần lưu', () => {
+    expect(kiemTinh('21')).toBe('21');
+    expect(kiemTinh('99')).toBeNull();
+    expect(kiemChuc('12', 'hai')).toEqual({ loi: 'chucChiGiapBien' });
+    expect(kiemChuc('21', 'hai')).toEqual({ chuc: 'hai' });
+    expect(kiemChuc('21', 'tuong')).toEqual({ loi: 'khongCoChuc' });
+    expect(muaTinh(T0)).toBe(muaCua(T0));
+    expect(ngayTinh(T0)).toBe(ngayCua(T0));
+    const s = base();
+    theoMay(s, null);
+    expect(s.vietNam).toBeUndefined();
+    theoMay(s, { tinh: '21', chuc: 'hai', mua: 3, chucLuc: 5, diemMua: 0, diemNgay: 0 });
+    expect(s.vietNam).toEqual({ tinh: '21', mua: 3, chuc: 'hai', chucLuc: 5 });
+    expect(isVietNamState(s.vietNam)).toBe(true);
+  });
+
+  it('bảng xếp hạng tỉnh chỉ có tỉnh đã quy về, điểm cao trước', () => {
+    const bang = hangTinh([
+      { tinh: '21', diem: 999, nguoi: 1, gop: 1 },
+      { tinh: '01', diem: 10, nguoi: 2, gop: 2 },
+      { tinh: '12', diem: 50, nguoi: 3, gop: 3 },
+      { tinh: '07', diem: 10, nguoi: 1, gop: 1 },
+    ]);
+    expect(bang.map((d) => d.tinh)).toEqual(['12', '07', '01']);
   });
 });

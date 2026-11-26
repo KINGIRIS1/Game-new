@@ -1,4 +1,5 @@
-// Bản đồ Việt Nam, 34 tỉnh, chức Bồ chính (docs/thiet-ke.md mục Kế hoạch cùng tên; PR 1: chỉ máy khách).
+// Bản đồ Việt Nam, 34 tỉnh, chức Bồ chính (docs/thiet-ke.md mục Kế hoạch cùng tên; PR 1 máy khách, PR 2 máy chủ
+// điểm tỉnh: luật góp dùng chung cho máy khách và máy chủ, `gopTinh` ở `mayChu.ts`).
 //
 // Tầng chơi chung gắn trên game hiện có: người chơi chọn một tỉnh trong 34 tỉnh, thành hiện nay (Nghị quyết
 // 202/2025/QH15) và giữ một chức Bồ chính ở tỉnh ấy, vẫn là vua ở kinh đô mình. 18 tỉnh từ Hà Tĩnh trở ra là đất Văn
@@ -6,13 +7,17 @@
 // Hình tỉnh ở `public/ban-do/34-tinh.json` (`scripts/ban-do.mjs`), láng giềng tính từ hình ở `vietNamHinh.ts`.
 // Tên tỉnh, tên vùng xưa ở `vi.vietNam` (`src/text/vi.ts`).
 //
+// PR 2: có máy chủ thì tỉnh, chức do máy chủ giữ (`theoMay` chép về máy); góp của (`CHUC_GOP`) được điểm theo phần
+// trăm sức chứa kho (`diemGop`, `luongGop`), trần mỗi ngày `VIET_NAM.gopNgay`; bảng tỉnh (`BangTinh`, `hangTinh`).
+//
 // Phần lưu `GameState.vietNam` là trường tùy chọn (như `dauThanh`), không lên phiên bản lưu: chưa có là chưa chọn
 // tỉnh; sai dạng thì bỏ riêng phần ấy (`isVietNamState` ở `save.ts`).
 
-import { VIET_NAM } from './defs';
+import { VIET_NAM, type ResourceId } from './defs';
 import { dienLevel, type FailReason, type GameState, type Result } from './game';
 import { TUAN_MS, tuanCon, tuanCua } from './loiDai';
 import { LANG_GIENG_HINH } from './vietNamHinh';
+import { snapCap } from './dauThanh';
 
 const ok = <T>(value: T): Result<T> => ({ ok: true, value });
 const fail = (reason: FailReason): Result<never> => ({ ok: false, reason });
@@ -141,4 +146,80 @@ export function isVietNamState(v: unknown): v is VietNamState {
   if (t.tinh !== null && t.chuc !== null && !chucCo(t.tinh as TinhId).includes(t.chuc as ChucId)) return false;
   if (t.mua !== undefined && (typeof t.mua !== 'number' || !Number.isInteger(t.mua))) return false;
   return t.chucLuc === undefined || (typeof t.chucLuc === 'number' && Number.isFinite(t.chucLuc));
+}
+
+// ---------- PR 2: góp điểm tỉnh ----------
+
+/** Của mỗi chức góp. Bồ chính quân góp bằng đánh giặc chung (PR 3), nên chưa góp của. */
+export const CHUC_GOP: Readonly<Record<ChucId, readonly ResourceId[]>> = {
+  quan: [],
+  nong: ['gao'],
+  thuy: ['datDa'],
+  thuong: ['voOc', 'go'],
+  bien: ['sat'],
+  hai: ['go', 'sat'],
+};
+
+const NGAY_MS = 86_400_000;
+/** Ngày thứ mấy theo giờ Việt Nam (UTC+7): trần góp mỗi ngày tính lại lúc 0 giờ. */
+export const ngayCua = (now: number): number => Math.floor((now + 7 * 3_600_000) / NGAY_MS);
+
+/** Điểm của `luong` của góp khi kho chứa `cap`: 1 điểm mỗi 1% sức chứa, làm tròn xuống. */
+export const diemGop = (luong: number, cap: number): number => (cap > 0 ? Math.floor((luong * 100) / cap) : 0);
+/** Lượng của ít nhất để được `diem` điểm khi kho chứa `cap` (`diemGop(luongGop(d, cap), cap) === d` khi cap ≥ 100). */
+export const luongGop = (diem: number, cap: number): number => Math.ceil((diem * cap) / 100);
+
+/** Sức chứa kho để tính điểm góp: đúng như máy chủ tính từ bản chụp (kho bên kia sông không tính). */
+export const capGop = (s: GameState): number => snapCap(s);
+
+/**
+ * Góp được bao nhiêu điểm bằng của `r` lúc này: không quá phần còn của hôm nay (`conNgay`) và của đang có (tính tới
+ * sức chứa, như bản chụp).
+ */
+export function diemToiDa(s: GameState, r: ResourceId, conNgay: number): number {
+  const cap = capGop(s);
+  return Math.max(0, Math.min(conNgay, diemGop(Math.min(cap, Math.floor(s.resources[r])), cap)));
+}
+
+/** Tỉnh, chức của mình máy chủ giữ, và điểm mình đã góp mùa này, hôm nay. */
+export interface TinhToi {
+  tinh: TinhId;
+  chuc: ChucId | null;
+  /** Mùa lúc chọn tỉnh. */
+  mua: number;
+  /** Lúc nhận chức (ms), hay null. */
+  chucLuc: number | null;
+  diemMua: number;
+  diemNgay: number;
+}
+
+/** Một tỉnh trên bảng mùa này: điểm (cộng `VIET_NAM.topTinh` người góp nhiều nhất), số người đã chọn, số người đã góp. */
+export interface TinhDong {
+  tinh: TinhId;
+  diem: number;
+  nguoi: number;
+  gop: number;
+}
+
+/** Máy chủ trả cho bảng tỉnh. */
+export interface BangTinh {
+  mua: number;
+  ngay: number;
+  toi: TinhToi | null;
+  bang: TinhDong[];
+}
+
+/** Chép tỉnh, chức máy chủ giữ về phần lưu (máy chủ là gốc khi có mạng). */
+export function theoMay(s: GameState, toi: TinhToi | null): void {
+  if (!toi) return;
+  s.vietNam = { tinh: toi.tinh, mua: toi.mua, chuc: toi.chuc, ...(toi.chucLuc !== null ? { chucLuc: toi.chucLuc } : {}) };
+}
+
+/**
+ * Bảng xếp hạng tỉnh mùa này: chỉ tỉnh đã quy về (PR 2: đất Văn Lang), điểm cao trước, ngang điểm thì theo thứ tự bắc
+ * vào nam. Tỉnh chưa quy về dồn điểm vào kết giao (PR 4), không lên bảng.
+ */
+export function hangTinh(bang: readonly TinhDong[]): TinhDong[] {
+  const thu = (id: TinhId) => TINH_IDS.indexOf(id);
+  return bang.filter((d) => laTinh(d.tinh) && laDatVanLang(d.tinh)).sort((a, b) => b.diem - a.diem || thu(a.tinh) - thu(b.tinh));
 }

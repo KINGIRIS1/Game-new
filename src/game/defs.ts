@@ -3039,8 +3039,21 @@ export const LOI_HE: number[] = [
 ];
 
 /**
- * Bản đồ Việt Nam (docs/thiet-ke.md mục Kế hoạch: bản đồ Việt Nam, 34 tỉnh, chức Bồ chính; PR 1): mở từ Điện `dien`;
+ * Bản đồ Việt Nam (docs/thiet-ke.md mục Kế hoạch: bản đồ Việt Nam, 34 tỉnh, chức Bồ chính): mở từ Điện `dien`;
  * mùa dài `muaTuan` tuần (bắt đầu 0 giờ thứ Hai giờ Việt Nam như tuần Lôi đài), đổi tỉnh mỗi mùa một lần; đổi chức
  * chờ `doiChucMs` kể từ lần chọn chức trước.
+ * PR 2 (máy chủ điểm tỉnh): góp của được 1 điểm cho mỗi 1% sức chứa kho lúc góp, mỗi người mỗi ngày (giờ Việt Nam)
+ * tối đa `gopNgay` điểm; điểm tỉnh mỗi mùa cộng điểm của `topTinh` người góp nhiều nhất. Giới hạn lượt gọi mỗi giờ:
+ * góp `gopPerH`, chọn tỉnh hay chức `chonPerH`, xem bảng tỉnh `bangPerH`. Điểm tỉnh giữ `giuNgay` ngày.
  */
-export const VIET_NAM = { dien: 5, muaTuan: 4, doiChucMs: 24 * 3_600_000 };
+export const VIET_NAM = {
+  dien: 5,
+  muaTuan: 4,
+  doiChucMs: 24 * 3_600_000,
+  gopNgay: 100,
+  topTinh: 30,
+  gopPerH: 30,
+  chonPerH: 12,
+  bangPerH: 120,
+  giuNgay: 120,
+};
