@@ -67,7 +67,7 @@ import {
 } from './game';
 import { chapterOf } from './manVao';
 import { GRID, baseHeights, farBankOf, inGrid } from './map';
-import { frameKhoanh, mauSlots, type MauId } from './mau';
+import { kinhDoMayCoDinh, khoanhTu } from './kinhDoMay';
 import { nuForUnit } from './nuTuong';
 import { fromBase64, toBase64 } from './save';
 import { heroesFor } from './son';
@@ -387,11 +387,8 @@ export function validateSnapshot(snap: Snapshot): string | null {
 const BOT_MIX: Army = { giao: 14, cung: 12, voi: 4, no: 0 };
 const BOT_MIX8: Army = { giao: 11, cung: 10, voi: 3, no: 4 };
 
-/** Mẫu kinh đô máy theo cấp Điện. */
-const botMau = (dien: number): MauId => (dien <= 5 ? 'phongChau' : dien === 6 ? 'deBao' : dien === 7 ? 'coLoa' : 'coLoaSong');
-
 /** Chương ứng với cấp Điện (Điện 6 mở ở chương 2, Điện 7 chương 3, Điện 8 chương 4, Điện 10 chương 5). */
-function chapterAt(dien: number): Chapter {
+export function chapterAt(dien: number): Chapter {
   let ch: Chapter = 1;
   for (let lv = 1; lv <= dien; lv++) ch = (DIEN_CHAPTER[lv] ?? ch) as Chapter;
   return ch;
@@ -405,29 +402,20 @@ function topLevel(type: BuildingType, dien: number): number {
 }
 
 /**
- * Kinh đô máy Điện `dien`: dựng theo mẫu kinh đô của chương ứng cấp ấy (`mauSlots`), mọi công trình ở cấp cao nhất
- * cấp Điện cho, cổng thành ở chỗ cổng của mẫu (từ chương 3), ụ nỏ trên thành (từ Điện 8), lính giữ thành đủ
- * `GUARD_CAP` chia đều các doanh trại, binh khí theo cấp lò rèn, của bằng `DAU_THANH.botStock` sức chứa kho.
+ * Kinh đô máy Điện `dien`: công trình đã chụp cố định (`kinhDoMayCoDinh` ở `kinhDoMay.ts`, chụp từ mẫu kinh đô của
+ * chương ứng cấp ấy, nên sửa mẫu không đổi kinh đô máy), mọi công trình ở cấp cao nhất cấp Điện cho, cổng thành và ụ
+ * nỏ như lúc chụp, lính giữ thành đủ `GUARD_CAP` chia đều các doanh trại, binh khí theo cấp lò rèn, của bằng
+ * `DAU_THANH.botStock` sức chứa kho.
  */
 export function botSnapshot(dien: number): Snapshot {
   const chapter = chapterAt(dien);
   const lv = dien - 1;
-  const buildings: SnapBuilding[] = [];
-  let gates = 0;
-  let uNo = 0;
-  for (const slot of mauSlots(botMau(dien), dien, true)) {
-    let type = slot.type;
-    if (slot.cong && chapter >= 3 && gates < (BUILDINGS.congThanh.limit[lv] ?? 0)) {
-      type = 'congThanh';
-      gates++;
-    }
-    const b: SnapBuilding = { type, x: slot.x, z: slot.z, level: type === 'dien' ? dien : topLevel(type, dien) };
-    if (slot.uNo && type === 'thanh' && dien >= 8 && uNo < (U_NO.limit[lv] ?? 0)) {
-      b.uNo = 'ok';
-      uNo++;
-    }
-    buildings.push(b);
-  }
+  const chup = kinhDoMayCoDinh(dien);
+  const buildings: SnapBuilding[] = chup.buildings.map((c) => {
+    const b: SnapBuilding = { type: c.type, x: c.x, z: c.z, level: c.type === 'dien' ? dien : topLevel(c.type, dien) };
+    if (c.uNo) b.uNo = 'ok';
+    return b;
+  });
   const barracks = buildings.flatMap((b, i) => (b.type === 'doanhTrai' ? [i] : []));
   const mix = dien >= 8 ? BOT_MIX8 : BOT_MIX;
   const army = fitArmy({ giao: mix.giao * 4, cung: mix.cung * 4, voi: mix.voi * 4, no: mix.no * 4 }, GUARD_CAP[lv] ?? 0);
@@ -446,7 +434,7 @@ export function botSnapshot(dien: number): Snapshot {
     chapter,
     buildings,
     heights: [],
-    khoanh: frameKhoanh(dien, botMau(dien)),
+    khoanh: khoanhTu(chup.lo),
     resources: { gao: 0, voOc: 0, datDa: 0, sat: 0, go: 0 },
     cap: 0,
     guards,

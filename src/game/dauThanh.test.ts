@@ -34,6 +34,8 @@ import {
   type Snapshot,
 } from './dauThanh';
 import { createInitialState, dienLevel, place, storageCap, tick, type Building } from './game';
+import { giaiMaKinhDo, maHoaKinhDo } from './kinhDoMay';
+import { KINH_DO_MAY_MA } from './kinhDoMayMa';
 import { playChapters } from './moPhong';
 import { nhanBanChup } from './mayChu';
 import { HALF_ARMY, HALF_ARMY4, REACTION_S, SAMPLE_ARMY, SAMPLE_ARMY4, SEEDS } from './testkit';
@@ -175,6 +177,31 @@ describe('bản chụp kinh đô', () => {
       expect(space, `Điện ${dien}`).toBeGreaterThan(GUARD_CAP[dien - 1] - 3);
       expect(snap.buildings.some((b) => b.type === 'choiCanh'), `Điện ${dien}`).toBe(true);
       expect(snap.buildings.some((b) => b.type === 'kho'), `Điện ${dien}`).toBe(true);
+    }
+  });
+});
+
+describe('kinh đô máy chụp cố định', () => {
+  it('mã kinh đô máy giải ra rồi mã lại y hệt; công trình không chồng nhau, nằm trên đất đã mở bên này sông', () => {
+    for (let dien = 1; dien <= 10; dien++) {
+      const ma = KINH_DO_MAY_MA[dien - 1];
+      const k = giaiMaKinhDo(ma);
+      expect(maHoaKinhDo(k), `Điện ${dien}`).toBe(ma);
+      expect(k.buildings[0]).toMatchObject({ type: 'dien' });
+      const seen = new Set<number>();
+      for (const b of k.buildings) {
+        const def = BUILDINGS[b.type];
+        for (let dx = 0; dx < def.w; dx++) {
+          for (let dz = 0; dz < def.d; dz++) {
+            const x = b.x + dx;
+            const z = b.z + dz;
+            expect(x >= k.lo && z >= k.lo && x < RIVER_START && z < RIVER_START, `Điện ${dien}: ${b.type} ${b.x},${b.z}`).toBe(true);
+            expect(seen.has(z * GRID + x), `Điện ${dien}: ${b.type} ${b.x},${b.z}`).toBe(false);
+            seen.add(z * GRID + x);
+          }
+        }
+      }
+      expect(botSnapshot(dien).buildings.map((b) => `${b.type}:${b.x}:${b.z}`)).toEqual(k.buildings.map((b) => `${b.type}:${b.x}:${b.z}`));
     }
   });
 });
