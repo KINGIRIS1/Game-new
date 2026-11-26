@@ -2608,7 +2608,7 @@ export const vi = {
     caoLoAtDien: 'đứng trước Điện',
     haiBaDesc: 'cưỡi voi trên đài tướng',
     homeLink: (name: string) => `Ở ${name.toLowerCase()}`,
-    homeHu: (name: string) => `${name} đang hư, chạm để sửa`,
+    homeHu: (name: string) => `${name} hư · sửa`,
     buildHome: (name: string) => `Dựng ${name.toLowerCase()}`,
     needBarracks: (lv: number) => (lv <= 1 ? 'Cần doanh trại' : `Cần doanh trại cấp ${lv}`),
     trained: (name: string) => `Đã luyện một ${name.toLowerCase()}`,

@@ -1129,6 +1129,7 @@ button {
   font: inherit;
   font-size: 12px;
   color: var(--bronze-dark);
+  text-align: left;
   text-decoration: underline;
   text-underline-offset: 2px;
   cursor: pointer;
