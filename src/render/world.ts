@@ -4146,15 +4146,13 @@ export class World {
   }
 
   /**
-   * Khung nhìn lôi đài: thấy cả Vua Hùng trên thềm lẫn hai đội. Màn dọc vừa khít bề ngang sân; màn ngang thu nhỏ cho
-   * vừa bề cao, lùi tâm nhìn về phía thềm vì thanh chiêu che phần dưới (cảnh xoay 45°: phía ngai là −x, −z).
+   * Khung nhìn lôi đài: thấy cả Vua Hùng trên thềm lẫn hai đội, thu nhỏ cho vừa bề cao, lùi tâm nhìn về phía thềm vì
+   * thanh chiêu che phần dưới (cảnh xoay 45°: phía ngai là −x, −z).
    */
   private fitLoi(): void {
     const v = this.view;
-    const ngang = this.renderer.domElement.clientWidth > this.renderer.domElement.clientHeight;
-    v.zoomToFit(ngang ? 21 : 15.8, ngang ? 27 : 18);
-    const lui = ngang ? -0.8 : 0.3;
-    v.target.set(lui, 0, lui);
+    v.zoomToFit(21, 27);
+    v.target.set(-0.8, 0, -0.8);
     v.apply();
   }
 

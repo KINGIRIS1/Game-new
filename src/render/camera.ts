@@ -11,7 +11,7 @@ const STEPS = 8;
 const STEP = (Math.PI * 2) / STEPS;
 const ELEVATION = THREE.MathUtils.degToRad(38);
 const DISTANCE = 70;
-/** Thu nhỏ hết cỡ thì thấy trọn kinh đô 45×45 ở khổ điện thoại dọc. */
+/** Độ phóng nhỏ nhất (thu nhỏ hết cỡ). */
 const MIN_ZOOM = 0.28;
 const MAX_ZOOM = 3;
 const TAP_SLOP_PX = 10;

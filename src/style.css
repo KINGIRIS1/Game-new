@@ -12,9 +12,6 @@
   --shadow: 0 6px 18px rgba(58, 42, 26, 0.25);
   --safe-top: env(safe-area-inset-top, 0px);
   --safe-bottom: env(safe-area-inset-bottom, 0px);
-  /* Dải tài nguyên trên cùng và dock dưới cùng (chưa tính phần tai thỏ, thanh vuốt). */
-  --band-h: calc(44px + var(--safe-top));
-  --dock-h: 62px;
 }
 
 * {
@@ -43,12 +40,6 @@ body {
   touch-action: none;
 }
 
-#hud {
-  position: fixed;
-  inset: 0;
-  pointer-events: none;
-}
-
 #hud > * {
   pointer-events: auto;
 }
@@ -73,59 +64,7 @@ button {
   touch-action: manipulation;
 }
 
-/* ---------- Dải tài nguyên (sát mép trên) ---------- */
-
-/* Dải trải hết bề ngang: cấp Điện, tài nguyên số gọn, dân, cài đặt. Viền răng cưa như hoa văn trống đồng. */
-.topbar {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  z-index: 2;
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  height: var(--band-h);
-  padding: calc(5px + var(--safe-top)) 6px 5px;
-  background: linear-gradient(180deg, rgba(251, 243, 225, 0.97), rgba(239, 223, 189, 0.97));
-  border-bottom: 2px solid var(--bronze);
-  box-shadow: 0 3px 10px rgba(58, 42, 26, 0.25);
-}
-
-.topbar::after {
-  content: '';
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: -8px;
-  height: 6px;
-  background:
-    linear-gradient(135deg, var(--bronze) 25%, transparent 25%) -4px 0 / 8px 6px,
-    linear-gradient(225deg, var(--bronze) 25%, transparent 25%) -4px 0 / 8px 6px;
-  opacity: 0.7;
-  pointer-events: none;
-}
-
-.dien-level {
-  flex: none;
-  padding: 3px 7px;
-  border-radius: 999px;
-  background: linear-gradient(180deg, #d9a84a, var(--bronze));
-  border: 1.5px solid var(--bronze-dark);
-  color: #fff;
-  font-size: 13px;
-  font-weight: 700;
-  white-space: nowrap;
-}
-
-.res-strip {
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  align-items: center;
-  gap: 2px;
-  padding: 2px 0;
-}
+/* ---------- Dải tài nguyên (góc trên bên phải; khung ở mục KHUNG HUD KINH ĐÔ) ---------- */
 
 .res-strip.on .more {
   color: var(--red);
@@ -210,55 +149,16 @@ button {
   box-shadow: none;
 }
 
-/* Màn hẹp (màn ngoài Fold5): thu chữ, bỏ vạch ngăn và mũi tên để năm tài nguyên vừa một hàng. */
-@media (max-width: 380px) {
-  .topbar {
-    gap: 2px;
-    padding-left: 4px;
-    padding-right: 4px;
-  }
-
-  .dien-level {
-    padding: 2px 5px;
-    font-size: 12px;
-  }
-
-  .res {
-    font-size: 11.5px;
-  }
-
-  .res + .res {
-    border-left: none;
-  }
-
-  .res b,
-  .dan-btn b {
-    font-size: 11.5px;
-    letter-spacing: -0.2px;
-  }
-
-  .res-strip .more {
-    display: none;
-  }
-
-  .dan-btn {
-    padding: 2px 4px;
-    font-size: 12px;
-  }
-
-  .topbar .icon-btn {
-    width: 28px;
-    height: 28px;
-    font-size: 14px;
-  }
-}
-
-/* Màn rộng: phần tài nguyên không giãn quá, dân và cài đặt vẫn ở mép phải. */
-@media (min-width: 600px) {
-  .res-strip {
-    max-width: 560px;
-    margin-right: auto;
-  }
+/* Phần tài nguyên không giãn quá, dân và cài đặt vẫn ở mép phải. */
+.res-strip {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 2px 0;
+  max-width: 560px;
+  margin-right: auto;
 }
 
 .stat.lack span:first-child {
@@ -281,18 +181,6 @@ button {
 }
 
 /* Dưới dải tài nguyên: bảng kho thả xuống, khung báo trận ngoài bãi. */
-.top-area {
-  position: absolute;
-  top: calc(var(--band-h) + 10px);
-  left: 8px;
-  right: 8px;
-  z-index: 2;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 6px;
-  pointer-events: none;
-}
 
 .top-area > * {
   pointer-events: auto;
@@ -353,23 +241,14 @@ button {
   color: var(--red);
 }
 
-/* ---------- Dòng tin và ô bật lên trên dock ---------- */
+/* ---------- Dòng tin và ô bật lên (chỗ ở mục KHUNG HUD KINH ĐÔ) ---------- */
 
-/* Mọi tin gom một dòng ngay trên dock, tin gấp (giặc, đói) trước; nhiều tin thì lật bằng nút 1/3 ›. */
-.ticker {
-  position: absolute;
-  left: 8px;
-  right: 62px;
-  bottom: calc(var(--dock-h) + var(--safe-bottom) + 10px);
-  display: flex;
-  pointer-events: none;
-}
-
+/* Nút kỹ năng khi giặc đánh kinh đô, ngay trên dòng tin. */
 .raid-skills {
   position: absolute;
   left: 8px;
   right: 8px;
-  bottom: calc(var(--dock-h) + var(--safe-bottom) + 62px);
+  bottom: calc(124px + var(--safe-bottom));
   display: flex;
   flex-wrap: wrap;
   justify-content: center;
@@ -450,17 +329,6 @@ button {
 
 .ticker-item.bad .next {
   background: rgba(255, 255, 255, 0.18);
-}
-
-.dock-pop {
-  position: absolute;
-  left: 8px;
-  right: 8px;
-  bottom: calc(var(--dock-h) + var(--safe-bottom) + 10px);
-  z-index: 3;
-  display: flex;
-  justify-content: center;
-  pointer-events: none;
 }
 
 .dock-pop:empty {
@@ -580,23 +448,15 @@ button {
   color: #fffaf0;
 }
 
-/* ---------- Dock (đáy màn hình) ---------- */
+/* ---------- Dock (cột dọc bên trái; chỗ, cỡ ở mục KHUNG HUD KINH ĐÔ) ---------- */
 
-/* Năm thẻ cho một tay bấm: Quân, Phó bản, Xây dựng (nổi tròn ở giữa), Tướng, Lạc hầu.
-   Dock vẽ đè lên mép bảng trượt (nút Xây dựng lồi lên), nhưng dưới phó bản, hộp thoại, lời báo. */
+/* Năm thẻ: Quân, Phó bản, Xây dựng (nổi tròn ở giữa), Tướng, Lạc hầu. Dock vẽ trên bảng trượt, nhưng dưới phó bản,
+   hộp thoại, lời báo. */
 .dock {
   position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 0;
   z-index: 2;
   display: flex;
   align-items: stretch;
-  height: calc(var(--dock-h) + var(--safe-bottom));
-  padding: 0 4px var(--safe-bottom);
-  background: linear-gradient(180deg, #fbf3e1, var(--paper-2));
-  border-top: 2px solid var(--bronze);
-  box-shadow: 0 -4px 14px rgba(58, 42, 26, 0.25);
 }
 
 #hud > .campaign,
@@ -605,67 +465,14 @@ button {
   z-index: 3;
 }
 
-.dock .tab {
-  position: relative;
-  flex: 1 1 0;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 3px;
-  padding: 6px 0 4px;
-  color: var(--ink-soft);
-}
-
 .dock .tab .ic {
   position: relative;
-  font-size: 22px;
   line-height: 1;
 }
 
 .dock .tab .lb {
   font-size: 11px;
-  font-weight: 600;
   white-space: nowrap;
-}
-
-.dock .tab.on {
-  color: var(--red-dark);
-}
-
-.dock .tab.on::before {
-  content: '';
-  position: absolute;
-  top: -2px;
-  left: 20%;
-  right: 20%;
-  height: 3px;
-  border-radius: 0 0 3px 3px;
-  background: var(--red);
-}
-
-.dock .tab:disabled {
-  opacity: 0.4;
-}
-
-.dock .badge {
-  position: absolute;
-  top: -7px;
-  left: 62%;
-  padding: 0 4px;
-  border-radius: 999px;
-  background: var(--ink);
-  color: #fff;
-  font-size: 9.5px;
-  font-style: normal;
-  font-weight: 700;
-  line-height: 1.5;
-  white-space: nowrap;
-}
-
-.dock .badge.hot {
-  background: var(--red);
 }
 
 /* Có thưởng chờ nhận thì chấm đỏ ở thẻ Lạc hầu sáng lên nhịp nhàng. */
@@ -673,40 +480,13 @@ button {
   animation: glow 1.4s ease-in-out infinite;
 }
 
-.dock .tab.main .ic {
-  width: 58px;
-  height: 58px;
-  margin-top: -30px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 50%;
-  background: radial-gradient(circle at 35% 30%, #d9574a, var(--red) 65%);
-  border: 3px solid #fbf3e1;
-  box-shadow: 0 3px 0 var(--red-dark), var(--shadow);
-  font-size: 26px;
-}
-
-.dock .tab.main .lb {
-  color: var(--red-dark);
-  font-weight: 700;
-}
-
 .dock .tab.main.on::before {
   display: none;
 }
 
-.dock .tab.main:active .ic {
-  transform: translateY(2px);
-  box-shadow: 0 1px 0 var(--red-dark), var(--shadow);
-}
-
 .dock .rotate {
-  position: absolute;
   right: 10px;
   bottom: calc(100% + 10px);
-  width: 42px;
-  height: 42px;
   font-size: 19px;
 }
 
@@ -745,13 +525,6 @@ button {
   white-space: nowrap;
 }
 
-@media (max-width: 380px) {
-  .bottombar.crowded .btn {
-    font-size: 15px;
-    padding: 11px 9px;
-  }
-}
-
 #hud:not(.placing) .bottombar,
 #hud.placing .dock,
 #hud.placing .ticker,
@@ -779,21 +552,12 @@ button {
   pointer-events: none;
 }
 
-/* ---------- Bảng trượt (màn hình hẹp: từ dưới lên, ngay trên dock; màn hình rộng: bên phải) ---------- */
+/* ---------- Bảng trượt (ngăn kéo dưới đáy, chừa cột Dock bên trái; chỗ, cỡ ở mục KHUNG HUD KINH ĐÔ) ---------- */
 
 .sheet {
   position: absolute;
-  left: 0;
-  right: 0;
-  bottom: calc(var(--dock-h) + var(--safe-bottom));
-  max-height: 54%;
   display: flex;
   flex-direction: column;
-  background: var(--paper);
-  border-top: 2px solid var(--line);
-  border-radius: 18px 18px 0 0;
-  box-shadow: 0 -8px 24px rgba(58, 42, 26, 0.3);
-  transform: translateY(105%);
   /* Đóng thì trượt xuống rồi ẩn hẳn, khỏi lộ dưới dock. */
   visibility: hidden;
   transition:
@@ -801,102 +565,9 @@ button {
     visibility 0s 0.22s;
 }
 
-.sheet.open {
-  transform: none;
-  visibility: visible;
-  transition: transform 0.22s ease;
-}
-
-.sheet-head {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 12px 14px 8px;
-  border-bottom: 1px solid var(--paper-2);
-}
-
-.sheet-head h2 {
-  margin: 0;
-  font-size: 17px;
-  flex: 1;
-}
-
-.sheet-head .close {
-  width: 34px;
-  height: 34px;
-  border-radius: 50%;
-  background: var(--paper-2);
-  font-size: 18px;
-}
-
-.sheet-body {
-  overflow-y: auto;
-  /* Chừa đáy cho nút Xây dựng nổi lồi lên từ dock, khỏi che nút cuối bảng. */
-  padding: 10px 14px 40px;
-  font-size: 14px;
-  line-height: 1.4;
-}
-
-/* Bảng Xây dựng, bảng doanh trại cao hơn chút cho ảnh lớn, nút Xây và trọn một trang ảnh nhỏ vừa bảng, khỏi cuộn. Hàng cuối là nút
-   sang trang hai bên mép, giữa trống chỗ nút Xây dựng tròn lồi lên, nên bớt đệm đáy. */
-.sheet.tall {
-  max-height: 62%;
-}
-
-.sheet.build .sheet-body {
-  padding-bottom: 12px;
-}
-
-/* Màn rộng (máy cầm ngang, màn trong Fold5): bảng cao trọn mép phải, dock dồn sang phần còn lại bên trái. */
-@media (min-width: 600px) and (min-aspect-ratio: 4/5) {
-  .sheet-body {
-    padding-bottom: 16px;
-  }
-
-  .sheet {
-    left: auto;
-    top: calc(var(--band-h) + 10px);
-    right: 10px;
-    bottom: calc(10px + var(--safe-bottom));
-    width: 340px;
-    max-height: none;
-    border: 2px solid var(--line);
-    border-radius: 18px;
-    transform: translateX(115%);
-  }
-
-  /* Bảng bên phải đã cao trọn màn: bỏ giới hạn chiều cao của bảng cao (`.sheet.tall`) ở màn hẹp. */
-  .sheet.tall {
-    max-height: none;
-  }
-
-  .dock {
-    left: 50%;
-    right: auto;
-    width: min(560px, 100%);
-    transform: translateX(-50%);
-    border: 2px solid var(--bronze);
-    border-bottom: none;
-    border-radius: 18px 18px 0 0;
-  }
-
-  #hud.sheet-open .dock {
-    left: calc((100% - 350px) / 2);
-    width: min(480px, calc(100% - 370px));
-  }
-
-  .ticker {
-    left: 50%;
-    right: auto;
-    width: min(520px, calc(100% - 140px));
-    transform: translateX(-50%);
-    justify-content: center;
-  }
-
-  #hud.sheet-open .hint,
-  #hud.sheet-open .toasts {
-    left: calc((100% - 350px) / 2);
-  }
+#hud.sheet-open .hint,
+#hud.sheet-open .toasts {
+  left: calc((100% - 350px) / 2);
 }
 
 /* ---------- Thẻ xây dựng ---------- */
@@ -918,12 +589,6 @@ button {
   font-size: 13px;
   line-height: 1.2;
   color: var(--ink-soft);
-}
-
-.build-tabs .tab.on {
-  background: var(--red);
-  border-color: var(--red);
-  color: #fff8e8;
 }
 
 /* Thẻ bảng doanh trại: dấu nhỏ góc thẻ (cấp trại, "!" khi trại chưa có tướng chỉ huy). */
@@ -1040,7 +705,7 @@ button {
   padding: 8px 10px;
 }
 
-/* Lưới ảnh nhỏ để chọn: 5 cột trên điện thoại dọc, 4 cột trên màn hẹp và trong bảng bên phải. */
+/* Lưới ảnh nhỏ để chọn (cột phải của bảng Xây dựng; chia trang thì số cột, hàng theo `Hud.buildGrid`). */
 .xd-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(62px, 1fr));
@@ -1052,7 +717,7 @@ button {
   grid-template-columns: repeat(var(--cols, 5), minmax(0, 1fr));
 }
 
-/* Nút sang trang: trái là ‹ và chấm trang, phải là số trang và ›; giữa để trống cho nút Xây dựng tròn của dock. */
+/* Nút sang trang: trái là ‹ và chấm trang, phải là số trang và ›. */
 .xd-pager {
   display: flex;
   align-items: center;
@@ -1170,7 +835,6 @@ button {
   grid-template-columns: repeat(4, 1fr);
 }
 
-/* Lời tả dài (mẫu kinh đô) chạy trọn bề ngang dưới ảnh lớn. */
 /* Ghi chú của mục đang chọn (việc mẫu kinh đô sẽ làm, lời tả mẫu) dưới lưới ảnh nhỏ. */
 .xd-note {
   margin: 10px 2px 0;
@@ -1580,20 +1244,17 @@ textarea {
 
 .camp-head h2 {
   margin: 0;
-  flex: 1;
   font-size: 17px;
   color: var(--bronze-dark);
 }
 
 /* Thẻ chương nằm riêng một hàng dưới tiêu đề, để ba chương không ép tiêu đề xuống nhiều dòng. */
+
 .camp-tabs {
   display: flex;
   gap: 6px;
   order: 3;
   flex-basis: 100%;
-}
-
-.camp-tabs {
   align-items: center;
 }
 
@@ -1798,7 +1459,7 @@ textarea {
   flex: 1;
   min-height: 0;
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
 }
 
 .camp-map {
@@ -1814,29 +1475,14 @@ textarea {
 }
 
 .camp-panel {
-  max-height: 55%;
   overflow-y: auto;
   padding: 10px 14px 14px;
   background: var(--paper);
-  border-top: 2px solid var(--line);
-  border-radius: 18px 18px 0 0;
   box-shadow: 0 -6px 18px rgba(58, 42, 26, 0.2);
   font-size: 14px;
   line-height: 1.4;
-}
-
-@media (min-width: 600px) and (min-aspect-ratio: 4/5) {
-  .camp-main {
-    flex-direction: row;
-  }
-
-  .camp-panel {
-    width: 360px;
-    max-height: none;
-    border-top: none;
-    border-left: 2px solid var(--line);
-    border-radius: 0;
-  }
+  width: 360px;
+  border-left: 2px solid var(--line);
 }
 
 .map .mtn {
@@ -2520,6 +2166,9 @@ textarea {
 
 /* Khung giao diện chính ẩn trong lúc màn hình vào game còn hiện, rồi hiện dần khi vào game. */
 #hud {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
   transition: opacity 0.45s ease;
 }
 
@@ -2537,15 +2186,7 @@ body.man-vao-on #hud > * {
   inset: 0;
   z-index: 50;
   display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-  align-items: center;
-  padding: calc(18px + var(--safe-top)) 16px calc(16px + var(--safe-bottom));
   overflow: hidden;
-  /* Giấy dó phủ trên và dưới, chừa giữa màn hình cho thấy kinh đô. */
-  background:
-    linear-gradient(180deg, rgba(247, 236, 212, 0.96) 0%, rgba(247, 236, 212, 0.78) 30%, rgba(247, 236, 212, 0) 50%),
-    linear-gradient(0deg, rgba(247, 236, 212, 0.97) 0%, rgba(247, 236, 212, 0.82) 24%, rgba(247, 236, 212, 0) 44%);
   transition: opacity 0.55s ease;
 }
 
@@ -2576,8 +2217,6 @@ body.man-vao-on #hud > * {
   width: 40px;
   height: 40px;
   border-radius: 50%;
-  background: rgba(247, 236, 212, 0.94);
-  border: 1.5px solid var(--line);
   box-shadow: var(--shadow);
   font-size: 18px;
 }
@@ -2591,12 +2230,8 @@ body.man-vao-on #hud > * {
 }
 
 .mv-logo {
-  width: min(48vw, 30vh, 210px);
   aspect-ratio: 1;
   border-radius: 50%;
-  box-shadow:
-    0 0 0 4px rgba(138, 100, 32, 0.25),
-    0 10px 28px rgba(58, 42, 26, 0.35);
   animation: mv-hien 0.8s ease-out both;
 }
 
@@ -2640,40 +2275,25 @@ body.man-vao-on #hud > * {
 }
 
 .mv-title small {
-  font-size: 15px;
   font-weight: 700;
-  letter-spacing: 0.42em;
-  /* Bù khoảng giãn chữ ở cuối dòng cho chữ đứng giữa. */
-  margin-right: -0.42em;
   text-transform: uppercase;
-  color: var(--ink-soft);
 }
 
 .mv-title span {
   margin-top: 4px;
-  font-size: clamp(40px, 13vw, 60px);
-  font-weight: 800;
-  letter-spacing: 0.02em;
 }
 
 .mv-tagline {
   margin: 8px 0 0;
-  padding: 4px 14px;
   max-width: 100%;
   border-radius: 999px;
-  background: rgba(247, 236, 212, 0.88);
-  font-size: clamp(11.5px, 3.5vw, 13px);
   text-wrap: balance;
-  font-style: italic;
-  color: var(--ink-soft);
 }
 
 .mv-foot {
-  width: min(360px, 100%);
   display: flex;
   flex-direction: column;
   align-items: stretch;
-  gap: 12px;
 }
 
 .mv-card-slot:empty {
@@ -2681,18 +2301,7 @@ body.man-vao-on #hud > * {
 }
 
 .mv-card {
-  padding: 10px 14px;
-  border-radius: 14px;
-  background: rgba(247, 236, 212, 0.95);
-  border: 1.5px solid var(--bronze);
-  box-shadow: var(--shadow);
-  text-align: center;
   animation: mv-len 0.5s ease-out both;
-}
-
-.mv-card.new {
-  font-style: italic;
-  color: var(--ink-soft);
 }
 
 .mv-chap {
@@ -2741,7 +2350,6 @@ body.man-vao-on #hud > * {
 .mv-tk-slot[data-cho='tren'] .mv-tk {
   padding: 10px 12px;
   border-radius: 14px;
-  background: rgba(247, 236, 212, 0.95);
   border: 1.5px solid var(--bronze);
   box-shadow: var(--shadow);
 }
@@ -2759,17 +2367,14 @@ body.man-vao-on #hud > * {
   font-size: 12.5px;
   line-height: 1.35;
   text-wrap: balance;
-  color: var(--ink-soft);
 }
 
 .mv-as {
-  color: var(--ink);
   font-weight: 600;
   overflow-wrap: anywhere;
 }
 
 .mv-why {
-  color: var(--red-dark);
   font-weight: 600;
 }
 
@@ -2783,30 +2388,6 @@ body.man-vao-on #hud > * {
   from {
     opacity: 0;
     transform: translateY(8px);
-  }
-}
-
-/* Điện thoại cầm ngang: biểu tượng và tên bên trái, thẻ và nút bên phải. */
-@media (orientation: landscape) and (max-height: 520px) {
-  .man-vao {
-    flex-direction: row;
-    justify-content: space-around;
-    padding: calc(12px + var(--safe-top)) 24px calc(12px + var(--safe-bottom));
-    background:
-      linear-gradient(90deg, rgba(247, 236, 212, 0.94) 0%, rgba(247, 236, 212, 0.7) 34%, rgba(247, 236, 212, 0) 52%),
-      linear-gradient(270deg, rgba(247, 236, 212, 0.96) 0%, rgba(247, 236, 212, 0.86) 38%, rgba(247, 236, 212, 0) 56%);
-  }
-
-  .mv-logo {
-    width: min(42vh, 170px);
-  }
-
-  .mv-title span {
-    font-size: 40px;
-  }
-
-  .mv-foot {
-    width: min(320px, 46vw);
   }
 }
 
@@ -2826,24 +2407,7 @@ body.man-vao-on #hud > * {
   color: var(--red-dark);
 }
 
-/* Tốp thợ: ô dưới dải tài nguyên, góc trái. Hết tốp rảnh thì đổi màu, ghi lúc sớm nhất có tốp rảnh. */
-.tho-chip {
-  position: absolute;
-  top: calc(var(--band-h) + 10px);
-  left: 8px;
-  z-index: 1;
-  padding: 3px 9px;
-  min-height: 26px;
-  border-radius: 999px;
-  border: 1.5px solid var(--bronze);
-  background: var(--paper);
-  color: var(--ink);
-  font-size: 12.5px;
-  font-weight: 700;
-  font-variant-numeric: tabular-nums;
-  box-shadow: var(--shadow);
-}
-
+/* Tốp thợ: ô cạnh cột Dock (chỗ ở mục KHUNG HUD KINH ĐÔ). Hết tốp rảnh thì đổi màu, ghi lúc sớm nhất có tốp rảnh. */
 .tho-chip[hidden],
 #hud.in-field .tho-chip {
   display: none;
@@ -3191,7 +2755,7 @@ body.man-vao-on #hud > * {
   white-space: nowrap;
 }
 
-/* Màn thấp (điện thoại xoay ngang): bốn đáp án hai cột, chữ gọn lại cho thấy cả lời giảng. */
+/* Màn thấp (điện thoại): bốn đáp án hai cột, chữ gọn lại cho thấy cả lời giảng. */
 @media (max-height: 560px) {
   .modal.quiz {
     width: min(680px, 100%);
@@ -3555,7 +3119,6 @@ body.man-vao-on #hud > * {
   color: #fff8e8;
 }
 
-
 /* ---------- Dã ngoại (ui/daNgoai.ts) ---------- */
 
 /* Chip Dã ngoại: cạnh chip huân công, nền xanh lá. */
@@ -3753,17 +3316,10 @@ body.man-vao-on #hud > * {
 }
 /* Bản đồ nhỏ nằm trong khung trên, ngay dưới thẻ tên map, sát phải: không đè lên thẻ tên. */
 #hud.in-da .da-mini {
-  display: flex;
-  flex-direction: column;
   align-items: center;
   align-self: flex-end;
-  width: 104px;
   padding: 3px;
-  border-radius: 12px;
-  background: rgba(247, 236, 212, 0.85);
-  border: 1.5px solid var(--bronze);
   box-shadow: var(--shadow);
-  pointer-events: none;
 }
 #hud.in-da .da-mini svg {
   width: 98px;
@@ -3943,7 +3499,7 @@ body.man-vao-on #hud > * {
   font-size: 22px;
   background: rgba(40, 28, 18, 0.45);
 }
-/* Map dã ngoại: thẻ tên map, cấp chung lên trên cùng; dải tài nguyên xuống ngay dưới (cầm dọc), bỏ cấp Điện và số dân
+/* Map dã ngoại: thẻ tên map, cấp chung lên trên cùng; dải tài nguyên xuống ngay dưới (màn cao), bỏ cấp Điện và số dân
    (chỉ dùng ở kinh đô); bản đồ nhỏ dưới dải tài nguyên. Thẻ tên cao cố định cho dải tài nguyên đặt ngay dưới. */
 #hud.in-da .topbar .dien-level,
 #hud.in-da .topbar .dan-btn {
@@ -3970,10 +3526,17 @@ body.man-vao-on #hud > * {
   top: calc(76px + var(--safe-top));
 }
 #hud.in-da .da-mini {
+  display: flex;
+  flex-direction: column;
+  width: 104px;
+  border-radius: 12px;
+  background: rgba(247, 236, 212, 0.85);
+  border: 1.5px solid var(--bronze);
+  pointer-events: none;
   margin-top: 54px;
 }
 
-/* Map dã ngoại cầm ngang (màn thấp): thẻ tên map gọn một góc trái, bản đồ nhỏ góc phải, đội tướng và hai nút một
+/* Map dã ngoại trên màn thấp (điện thoại): thẻ tên map gọn một góc trái, bản đồ nhỏ góc phải, đội tướng và hai nút một
    hàng ở đáy với thẻ nhỏ hơn, chừa giữa màn cho map. */
 @media (max-height: 520px) {
   #hud.in-da.in-field .top-area {
@@ -3982,7 +3545,7 @@ body.man-vao-on #hud > * {
     align-items: flex-start;
     left: 12px;
   }
-  /* Cầm ngang: thẻ tên map góc trái cùng hàng với dải tài nguyên góc phải. */
+  /* Thẻ tên map góc trái cùng hàng với dải tài nguyên góc phải. */
   #hud.in-da .topbar {
     top: calc(10px + var(--safe-top));
     max-width: calc(100vw - min(320px, 36vw) - 40px);
@@ -4431,6 +3994,10 @@ body.man-vao-on #hud > * {
    ========================================================================== */
 
 .topbar {
+  position: absolute;
+  z-index: 2;
+  display: flex;
+  align-items: center;
   top: calc(10px + var(--safe-top));
   left: auto;
   right: 14px;
@@ -4461,18 +4028,26 @@ body.man-vao-on #hud > * {
   border-left: none;
 }
 
-.topbar::after {
-  display: none;
-}
-
 .dien-level {
+  flex: none;
+  border: 1.5px solid #d9a441;
+  color: #fff;
+  font-size: 13px;
+  font-weight: 700;
+  white-space: nowrap;
   background: linear-gradient(180deg, #268c72, #175e4b);
-  border-color: #d9a441;
   border-radius: 10px;
   padding: 4px 10px;
 }
 
 .tho-chip {
+  position: absolute;
+  z-index: 1;
+  min-height: 26px;
+  border-radius: 999px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  box-shadow: var(--shadow);
   top: calc(12px + var(--safe-top));
   left: 98px;
   background: rgba(251, 245, 230, 0.95);
@@ -4483,6 +4058,12 @@ body.man-vao-on #hud > * {
 }
 
 .top-area {
+  position: absolute;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  pointer-events: none;
   top: calc(60px + var(--safe-top));
   left: 98px;
   right: 14px;
@@ -4504,56 +4085,31 @@ body.man-vao-on #hud > * {
   transform: none;
   width: 74px;
   height: auto;
-  flex-direction: column;
   padding: 10px 6px;
   gap: 8px;
   border-radius: 22px;
-  background: rgba(251, 245, 230, 0.96);
-  border: 2.5px solid #1f7a63;
-  box-shadow: 0 12px 30px rgba(17, 56, 44, 0.28);
 }
 
 .dock .tab {
+  position: relative;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  color: var(--ink-soft);
   padding: 9px 4px;
   border-radius: 14px;
   flex: none;
 }
 
 .dock .tab.on {
-  background: rgba(31, 122, 99, 0.15);
-  color: #145443;
-}
-
-.dock .tab.on::before {
-  top: 20%;
-  bottom: 20%;
-  left: 0;
-  right: auto;
-  width: 4px;
-  height: auto;
-  background: #1f7a63;
-  border-radius: 0 4px 4px 0;
-}
-
-.dock .tab.main .ic {
-  margin-top: 0;
-  width: 46px;
-  height: 46px;
-  background: linear-gradient(135deg, #289478, #145443);
-  border: 2px solid #d9a441;
-  box-shadow: 0 4px 10px rgba(20, 84, 67, 0.35);
-  font-size: 22px;
-}
-
-.dock .tab.main .lb {
   color: #145443;
 }
 
 .dock .rotate {
   position: static;
-  margin: 2px auto 0;
-  width: 40px;
-  height: 40px;
   border-color: #1f7a63;
 }
 
@@ -4562,13 +4118,21 @@ body.man-vao-on #hud > * {
 }
 
 .dock-pop {
+  position: absolute;
+  z-index: 3;
+  display: flex;
+  pointer-events: none;
   left: 98px;
   right: 14px;
   bottom: calc(16px + var(--safe-bottom));
   justify-content: flex-start;
 }
 
+/* Mọi tin gom một dòng dưới đáy, cạnh cột Dock; tin gấp (giặc, đói) trước; nhiều tin thì lật bằng nút 1/3 ›. */
 .ticker {
+  position: absolute;
+  display: flex;
+  pointer-events: none;
   left: 98px;
   right: 14px;
   width: auto;
@@ -4594,10 +4158,15 @@ body.man-vao-on #hud > * {
 }
 
 .sheet.open {
+  visibility: visible;
+  transition: transform 0.22s ease;
   transform: none;
 }
 
 .sheet-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
   padding: 9px 18px;
   background: linear-gradient(90deg, #1f7a63, #145443);
   color: #fff;
@@ -4606,15 +4175,25 @@ body.man-vao-on #hud > * {
 }
 
 .sheet-head h2 {
+  margin: 0;
+  font-size: 17px;
+  flex: 1;
   color: #fff;
 }
 
 .sheet-head .close {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  font-size: 18px;
   background: rgba(255, 255, 255, 0.2);
   color: #fff;
 }
 
 .sheet-body {
+  overflow-y: auto;
+  font-size: 14px;
+  line-height: 1.4;
   padding: 12px 16px 16px;
 }
 
@@ -4624,137 +4203,72 @@ body.man-vao-on #hud > * {
   color: #fff;
 }
 
-/* Màn rộng (cầm ngang): bảng Xây dựng dàn ba cột dưới đáy (thẻ nhóm, ảnh lớn, lưới ảnh nhỏ có nút sang trang) để
+/* Bảng Xây dựng dàn ba cột dưới đáy (thẻ nhóm, ảnh lớn, lưới ảnh nhỏ có nút sang trang) để
    vẫn thấy kinh đô phía trên. Cùng điều kiện với `Hud.buildGrid` (số cột, hàng của một trang). */
-@media (min-width: 600px) and (min-aspect-ratio: 4/5) {
-  .sheet.build {
-    max-height: min(300px, calc(100vh - 24px - var(--safe-top) - var(--safe-bottom)));
-  }
-
-  .sheet.build .sheet-body {
-    display: grid;
-    grid-template-columns: 132px minmax(0, 1.1fr) minmax(0, 1fr);
-    grid-template-rows: auto auto 1fr auto auto auto;
-    grid-template-areas:
-      'tabs note note'
-      'tabs stage grid'
-      'tabs stage .'
-      'tabs stage pager'
-      'tabs stage more'
-      'tabs stage foot';
-    gap: 0 14px;
-    align-items: start;
-    padding: 10px 16px 12px;
-  }
-
-  .sheet.build .build-tabs {
-    grid-area: tabs;
-    flex-direction: column;
-    gap: 6px;
-    margin: 0;
-  }
-
-  .sheet.build .build-tabs .tab {
-    flex: none;
-    padding: 9px 8px;
-  }
-
-  .sheet.build .build-tabs + .muted,
-  .sheet.build .build-tabs + .mau-bac {
-    grid-area: note;
-    margin: 0 2px 8px;
-  }
-
-  .sheet.build .xd-stage {
-    grid-area: stage;
-    position: static;
-    margin: 0;
-  }
-
-  .sheet.build .xd-grid {
-    grid-area: grid;
-  }
-
-  .sheet.build .xd-pager {
-    grid-area: pager;
-  }
-
-  .sheet.build .xd-note {
-    grid-area: more;
-  }
-
-  /* Lời nhắc cuối bảng (thẻ Mẫu kinh đô) ở cột phải dưới lưới ảnh nhỏ: ảnh lớn cao hơn phần hàng của nó nên tràn xuống
-     dưới, để chung cột thì ảnh lớn đè lên chữ. */
-  .sheet.build .xd-foot {
-    grid-area: foot;
-    margin-top: 8px;
-  }
+.sheet.build {
+  max-height: min(300px, calc(100vh - 24px - var(--safe-top) - var(--safe-bottom)));
 }
 
-/* Màn hình điện thoại hẹp (< 600px): thu gọn cột Dock dọc để dành chỗ cho bảng */
-@media (max-width: 599px) {
-  .dock,
-  #hud.sheet-open .dock {
-    width: 58px;
-    left: 6px;
-    padding: 8px 4px;
-    gap: 6px;
-    border-radius: 16px;
-  }
-  .dock .tab .lb {
-    font-size: 9.5px;
-  }
-  .dock .tab.main .ic {
-    width: 38px;
-    height: 38px;
-    font-size: 19px;
-  }
-  .tho-chip {
-    left: 70px;
-    top: calc(62px + var(--safe-top));
-  }
-  /* Bề ngang hẹp không đủ cho sáu tài nguyên, dân và cài đặt khi chừa chỗ cột Dock: thanh trải trọn bề ngang, các ô
-     co lại như dải cũ, cột Dock xuống dưới thanh. */
-  .topbar {
-    left: 6px;
-    right: 6px;
-    max-width: none;
-    padding: 5px 6px;
-    gap: 4px;
-  }
-  .topbar .res-strip {
-    gap: 2px;
-  }
-  .topbar .res {
-    flex: 1 1 0;
-    min-width: 0;
-    padding: 3px 1px;
-    gap: 1px;
-    background: none;
-    border-radius: 0;
-  }
-  .topbar .res + .res {
-    border-left: 1px solid rgba(31, 122, 99, 0.2);
-  }
-  .dock,
-  #hud.sheet-open .dock {
-    top: calc(62px + var(--safe-top));
-  }
-  .top-area {
-    left: 70px;
-    right: 6px;
-    top: calc(106px + var(--safe-top));
-  }
-  .sheet,
-  .sheet.tall,
-  .dock-pop,
-  .ticker {
-    left: 70px;
-    right: 6px;
-  }
+.sheet.build .sheet-body {
+  display: grid;
+  grid-template-columns: 132px minmax(0, 1.1fr) minmax(0, 1fr);
+  grid-template-rows: auto auto 1fr auto auto auto;
+  grid-template-areas:
+    'tabs note note'
+    'tabs stage grid'
+    'tabs stage .'
+    'tabs stage pager'
+    'tabs stage more'
+    'tabs stage foot';
+  gap: 0 14px;
+  align-items: start;
+  padding: 10px 16px 12px;
 }
 
-/* Màn thấp (cầm ngang): cột Dock gọn lại cho vừa chiều cao, vẫn thiếu chỗ thì cuộn. */
+.sheet.build .build-tabs {
+  grid-area: tabs;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0;
+}
+
+.sheet.build .build-tabs .tab {
+  flex: none;
+  padding: 9px 8px;
+}
+
+.sheet.build .build-tabs + .muted,
+.sheet.build .build-tabs + .mau-bac {
+  grid-area: note;
+  margin: 0 2px 8px;
+}
+
+.sheet.build .xd-stage {
+  grid-area: stage;
+  position: static;
+  margin: 0;
+}
+
+.sheet.build .xd-grid {
+  grid-area: grid;
+}
+
+.sheet.build .xd-pager {
+  grid-area: pager;
+}
+
+.sheet.build .xd-note {
+  grid-area: more;
+}
+
+/* Lời nhắc cuối bảng (thẻ Mẫu kinh đô) ở cột phải dưới lưới ảnh nhỏ: ảnh lớn cao hơn phần hàng của nó nên tràn xuống
+   dưới, để chung cột thì ảnh lớn đè lên chữ. */
+.sheet.build .xd-foot {
+  grid-area: foot;
+  margin-top: 8px;
+}
+
+/* Màn thấp (điện thoại): cột Dock gọn lại cho vừa chiều cao, vẫn thiếu chỗ thì cuộn. */
 @media (max-height: 520px) {
   .dock,
   #hud.sheet-open .dock {
@@ -4768,24 +4282,11 @@ body.man-vao-on #hud > * {
     padding: 4px 2px;
     gap: 1px;
   }
-  .dock .tab .ic {
-    font-size: 19px;
-  }
   .dock .tab .lb {
     font-size: 10px;
   }
-  .dock .tab.main .ic {
-    width: 38px;
-    height: 38px;
-    font-size: 18px;
-  }
   .dock .rotate {
-    width: 34px;
-    height: 34px;
     font-size: 16px;
-  }
-  .dock .badge {
-    top: -3px;
   }
 }
 
@@ -4808,7 +4309,7 @@ body.man-vao-on #hud > * {
   justify-content: safe center;
 }
 
-/* Màn rộng mà thấp (điện thoại cầm ngang): bình phong chia hai cột, trống đồng và tên game bên trái, thẻ và nút bên
+/* Màn rộng mà thấp (điện thoại): bình phong chia hai cột, trống đồng và tên game bên trái, thẻ và nút bên
    phải, cho cả nút Chơi tiếp nằm trọn trong màn. */
 @media (min-width: 721px) and (max-height: 520px) {
   .mv-sidebar {
@@ -4885,6 +4386,9 @@ body.man-vao-on #hud > * {
 }
 
 .dock .tab.main .ic {
+  display: flex;
+  align-items: center;
+  justify-content: center;
   width: 54px;
   height: 54px;
 }
@@ -4896,16 +4400,13 @@ body.man-vao-on #hud > * {
 }
 
 /* Thẻ đang mở: hình đồng ánh vàng lên. */
-.dock .tab.on .nut-noi {
-  filter: drop-shadow(0 0 5px rgba(255, 214, 120, 0.95));
-}
-
-.dock .tab:disabled .nut-noi {
-  filter: grayscale(0.7);
-}
 
 /* Chấm số: nâu đồng sẫm viền vàng; việc gấp (có thưởng, tướng sẵn sàng) thì đỏ son. */
 .dock .badge {
+  position: absolute;
+  border-radius: 999px;
+  font-style: normal;
+  white-space: nowrap;
   top: -5px;
   left: 56%;
   min-width: 18px;
@@ -4935,6 +4436,7 @@ body.man-vao-on #hud > * {
 }
 
 .dock .rotate {
+  margin: 2px auto 0;
   width: 42px;
   height: 42px;
 }
@@ -4947,21 +4449,6 @@ body.man-vao-on #hud > * {
 .icon-btn.rotate:active .nut-noi,
 .topbar .icon-btn[data-act='openSettings']:active .nut-noi {
   transform: translateY(2px) scale(0.95);
-}
-
-@media (max-width: 599px) {
-  .dock .tab .ic {
-    width: 36px;
-    height: 36px;
-  }
-  .dock .tab.main .ic {
-    width: 46px;
-    height: 46px;
-  }
-  .dock .rotate {
-    width: 38px;
-    height: 38px;
-  }
 }
 
 @media (max-height: 520px) {
@@ -4982,6 +4469,7 @@ body.man-vao-on #hud > * {
 /* Cột Dock không khung nền: nút đồng nằm thẳng trên cảnh như ảnh mẫu, chữ sáng có bóng mực để đọc được trên mọi nền. */
 .dock,
 #hud.sheet-open .dock {
+  flex-direction: column;
   background: none;
   border: none;
   box-shadow: none;
@@ -5027,8 +4515,8 @@ body.man-vao-on #hud > * {
 }
 
 /* ---------- Bảng tướng phủ cả màn hình (ui/trangBi.ts `tuongHtml`) ----------
-   Màn dọc: hàng tướng, thẻ tướng cạnh chỉ số, bốn ô đồ, túi đồ ba chế độ (cuộn riêng), thanh nút dưới.
-   Màn ngang: ba cột: tướng dọc, thẻ tướng và ô đồ, túi đồ với thanh nút. Để cuối tệp cho đè luật `.sheet` phía trên. */
+   Ba cột: tướng dọc; thẻ tướng, chỉ số, ô đồ; túi đồ ba chế độ (cuộn riêng) với thanh nút. Để cuối tệp cho đè luật
+   `.sheet` phía trên. */
 .sheet.tg-full {
   top: calc(var(--safe-top) + 6px);
   left: 6px;
@@ -5038,51 +4526,7 @@ body.man-vao-on #hud > * {
   max-height: none;
   z-index: 20;
 }
-.sheet.tg-full .sheet-body {
-  flex: 1;
-  min-height: 0;
-  display: flex;
-  overflow: hidden;
-  padding: 8px 10px 10px;
-}
-.tg {
-  flex: 1;
-  min-height: 0;
-  width: 100%;
-  max-width: 560px;
-  margin: 0 auto;
-  display: grid;
-  grid-template-columns: minmax(0, 1fr);
-  grid-template-rows: auto auto auto minmax(0, 1fr) auto;
-  grid-template-areas: 'heroes' 'hero' 'eqs' 'tui' 'tray';
-  gap: 8px;
-}
-.tg-heroes { grid-area: heroes; }
-.tg-hero {
-  grid-area: hero;
-  display: grid;
-  grid-template-columns: 136px minmax(0, 1fr);
-  gap: 8px;
-}
-.tg-card {
-  position: relative;
-  height: 176px;
-  border-radius: 14px;
-  border: 3px double #8a6420;
-  background: radial-gradient(ellipse at 50% 40%, #f3d48c 0%, #c89a4a 34%, #7a5427 70%, #3e2a12 100%);
-  overflow: hidden;
-  box-shadow: inset 0 0 18px rgba(40, 24, 8, 0.5);
-}
 .tg-card .do-sun { top: 42%; width: 120%; }
-.tg-card .do-fig {
-  position: absolute;
-  left: 50%;
-  bottom: 30px;
-  width: auto;
-  height: 138px;
-  max-width: none;
-  transform: translateX(-50%);
-}
 .tg-card .do-fig.wait { width: 100%; }
 .tg-ten {
   position: absolute;
@@ -5100,17 +4544,6 @@ body.man-vao-on #hud > * {
 .tg-ten small span { color: #ffd76a; font-weight: 800; font-size: 13px; }
 .tg-side { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
 .tg-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; }
-.tg-stats div {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 4px;
-  padding: 3px 6px;
-  border-radius: 8px;
-  background: #fffaf0;
-  border: 1px solid var(--line);
-  font-size: 12px;
-}
 .tg-stats b { font-variant-numeric: tabular-nums; }
 .tg-sks { display: flex; flex-wrap: wrap; gap: 6px; }
 .tg-sk { display: flex; align-items: center; gap: 4px; font-size: 11px; font-weight: 600; line-height: 1.1; }
@@ -5118,7 +4551,6 @@ body.man-vao-on #hud > * {
 .tg-side .btn { margin-top: auto; }
 .tg-eqs { grid-area: eqs; }
 .tg-eq { display: flex; justify-content: space-around; }
-.tg-eq .do-slot { width: 60px; height: 60px; }
 .tg-bo { margin-top: 2px; text-align: center; font-size: 12px; color: var(--ink-soft); }
 .tg-bo.on { color: var(--green); font-weight: 700; }
 .tg-tui {
@@ -5144,7 +4576,6 @@ body.man-vao-on #hud > * {
 .tg-dem { flex: none; margin-left: 2px; font-size: 11px; color: var(--ink-soft); white-space: nowrap; }
 .tg-nhanh { display: flex; flex-wrap: wrap; gap: 4px; align-items: center; margin-top: 6px; font-size: 12px; font-weight: 600; }
 .tg-nhanh .do-chip { flex: none; height: 28px; padding: 0 9px; }
-.tg .do-grid { grid-template-columns: repeat(5, minmax(0, 1fr)); }
 .do-tile.chon { outline: 3px solid #fff1c4; outline-offset: -1px; }
 .do-tile.mo { opacity: 0.32; }
 .do-tile .len { left: 3px; bottom: 3px; color: #7cf08a; font-weight: 900; font-size: 12px; text-shadow: 0 1px 0 #000; }
@@ -5161,14 +4592,6 @@ body.man-vao-on #hud > * {
   color: #fff;
   font-weight: 900;
 }
-.tg-tray {
-  grid-area: tray;
-  display: grid;
-  grid-template-columns: minmax(0, 1fr);
-  gap: 6px;
-  padding-top: 8px;
-  border-top: 1.5px solid var(--line);
-}
 .tg-tray.hai { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
 .tg-dong {
   grid-column: 1 / -1;
@@ -5180,7 +4603,6 @@ body.man-vao-on #hud > * {
   font-size: 12px;
 }
 .tg-sat { color: var(--red-dark); }
-.tg-tray .btn { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 46px; line-height: 1.15; }
 .tg-tray .btn small { font-size: 11px; font-weight: 600; opacity: 0.9; }
 .btn.tg-manh {
   background: linear-gradient(#ffd85a, #e0a526);
@@ -5191,32 +4613,81 @@ body.man-vao-on #hud > * {
 .btn.tg-manh:disabled { box-shadow: none; }
 .tg-cs .do-lc { margin-top: 2px; }
 
-/* Màn ngang: ba cột (tướng dọc; thẻ tướng, chỉ số, ô đồ; túi đồ và thanh nút). */
-@media (orientation: landscape) and (min-aspect-ratio: 5/4) {
-  .sheet.tg-full .sheet-head { padding-top: 6px; padding-bottom: 6px; }
-  .sheet.tg-full .sheet-body { padding: 6px 10px 8px; }
-  .tg {
-    max-width: none;
-    grid-template-columns: 70px minmax(250px, 330px) minmax(0, 1fr);
-    grid-template-rows: auto minmax(0, 1fr) auto;
-    grid-template-areas:
-      'heroes hero tui'
-      'heroes eqs tui'
-      'heroes eqs tray';
-    gap: 6px 10px;
-  }
-  .tg-heroes { flex-direction: column; overflow-x: hidden; overflow-y: auto; }
-  .tg-heroes .do-hero { width: auto; min-width: 0; padding: 4px 2px; }
-  .tg-heroes .do-hero .nm { font-size: 10px; white-space: normal; text-align: center; line-height: 1.1; }
-  .tg-hero { grid-template-columns: 118px minmax(0, 1fr); }
-  .tg-card { height: 150px; }
-  .tg-card .do-fig { height: 116px; bottom: 28px; }
-  .tg-stats div { padding: 2px 5px; font-size: 11px; }
-  .tg-sk small { display: none; }
-  .tg-eq .do-slot { width: 54px; height: 54px; }
-  .tg .do-grid { grid-template-columns: repeat(auto-fill, minmax(50px, 1fr)); }
-  .tg-tray { padding-top: 6px; }
-  .tg-tray .btn { min-height: 40px; }
+/* Ba cột (tướng dọc; thẻ tướng, chỉ số, ô đồ; túi đồ và thanh nút). */
+.sheet.tg-full .sheet-head { padding-top: 6px; padding-bottom: 6px; }
+.sheet.tg-full .sheet-body {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  overflow: hidden;
+  padding: 6px 10px 8px;
+}
+.tg {
+  flex: 1;
+  min-height: 0;
+  width: 100%;
+  margin: 0 auto;
+  display: grid;
+  max-width: none;
+  grid-template-columns: 70px minmax(250px, 330px) minmax(0, 1fr);
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  grid-template-areas:
+    'heroes hero tui'
+    'heroes eqs tui'
+    'heroes eqs tray';
+  gap: 6px 10px;
+}
+.tg-heroes { grid-area: heroes; flex-direction: column; overflow-x: hidden; overflow-y: auto; }
+.tg-heroes .do-hero { width: auto; min-width: 0; padding: 4px 2px; }
+.tg-heroes .do-hero .nm { font-size: 10px; white-space: normal; text-align: center; line-height: 1.1; }
+.tg-hero { grid-area: hero; display: grid; gap: 8px; grid-template-columns: 118px minmax(0, 1fr); }
+.tg-card {
+  position: relative;
+  border-radius: 14px;
+  border: 3px double #8a6420;
+  background: radial-gradient(ellipse at 50% 40%, #f3d48c 0%, #c89a4a 34%, #7a5427 70%, #3e2a12 100%);
+  overflow: hidden;
+  box-shadow: inset 0 0 18px rgba(40, 24, 8, 0.5);
+  height: 150px;
+}
+.tg-card .do-fig {
+  position: absolute;
+  left: 50%;
+  width: auto;
+  max-width: none;
+  transform: translateX(-50%);
+  height: 116px;
+  bottom: 28px;
+}
+.tg-stats div {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 4px;
+  border-radius: 8px;
+  background: #fffaf0;
+  border: 1px solid var(--line);
+  padding: 2px 5px;
+  font-size: 11px;
+}
+.tg-sk small { display: none; }
+.tg-eq .do-slot { width: 54px; height: 54px; }
+.tg .do-grid { grid-template-columns: repeat(auto-fill, minmax(50px, 1fr)); }
+.tg-tray {
+  grid-area: tray;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 6px;
+  border-top: 1.5px solid var(--line);
+  padding-top: 6px;
+}
+.tg-tray .btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  line-height: 1.15;
+  min-height: 40px;
 }
 
 /* Hướng dẫn chỉ tay (ui/huongDan.ts): khung sáng quanh nút cần bấm, phần còn lại tối đi; khung nói của Lạc hầu. */
@@ -5308,12 +4779,6 @@ body.man-vao-on #hud > * {
 #hud.placing .dock.dock-phai,
 #hud.in-field .dock.dock-phai {
   display: none;
-}
-@media (max-width: 599px) {
-  .dock.dock-phai {
-    top: calc(62px + var(--safe-top));
-    right: 6px;
-  }
 }
 
 /* Bảng tướng trên máy tính (màn rộng và cao): bảng gọn giữa màn hình thay vì trải hết bề ngang; thẻ tướng, chỉ số,
@@ -5678,7 +5143,7 @@ body.man-vao-on #hud > * {
   background: linear-gradient(#1c120800, #1c1208e6 28%);
   display: grid;
   grid-template-columns: 1fr auto;
-  /* Màn dọc: dòng lượt trọn bề ngang, hàng nút bên dưới (bốn nút không còn chỗ cho chữ nằm cạnh). */
+  /* Màn cao: dòng lượt trọn bề ngang, hàng nút bên dưới (bốn nút không còn chỗ cho chữ nằm cạnh). */
   grid-template-areas: 'luot luot' 'nut nut' 'chieu chieu';
   gap: 6px;
   align-items: center;
@@ -5910,7 +5375,7 @@ body.man-vao-on #hud > * {
   justify-content: center;
   margin-top: 12px;
 }
-@media (orientation: landscape) and (max-height: 520px) {
+@media (max-height: 520px) {
   .loi-bar,
   .loi-tran.xep .loi-bar {
     grid-template-columns: auto 1fr auto;
@@ -5931,7 +5396,7 @@ body.man-vao-on #hud > * {
     padding-left: 12px;
     padding-right: 12px;
   }
-  /* Máy cầm ngang: chip xếp một hàng cuộn ngang, nút Bắt đầu nằm cuối hàng. */
+  /* Màn thấp: chip xếp một hàng cuộn ngang, nút Bắt đầu nằm cuối hàng. */
   .loi-xep {
     flex-direction: row;
     align-items: center;
@@ -6539,4 +6004,91 @@ body.man-vao-on #hud > * {
 .modal.bdv-quy h2 {
   margin: 0 0 8px;
   color: var(--bronze-dark);
+}
+
+/* ---------- Xoay ngang (ui/xoayNgang.ts): game chỉ chơi màn hình ngang, cầm dọc thì lớp này phủ kín màn ---------- */
+.xoay-ngang {
+  display: none;
+}
+
+@media (orientation: portrait) {
+  .xoay-ngang {
+    position: fixed;
+    inset: 0;
+    z-index: 1000;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 14px;
+    padding: calc(24px + var(--safe-top)) 28px calc(24px + var(--safe-bottom));
+    background: radial-gradient(circle at 50% 38%, #fbf3e1 0%, var(--paper) 45%, var(--paper-2) 100%);
+    color: var(--ink);
+    text-align: center;
+    touch-action: none;
+  }
+
+  .xoay-ngang p {
+    margin: 0;
+    font-size: 19px;
+    font-weight: 800;
+    color: var(--red-dark);
+  }
+
+  .xoay-ngang small {
+    max-width: 260px;
+    font-size: 13px;
+    color: var(--ink-soft);
+  }
+
+  .xoay-ngang .btn {
+    padding: 12px 22px;
+    font-size: 16px;
+  }
+}
+
+.xn-may {
+  width: 132px;
+  height: 132px;
+  fill: none;
+  stroke: var(--bronze-dark);
+  stroke-width: 4;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.xn-may .xn-than {
+  fill: #f3dfae;
+  transform-origin: 60px 60px;
+  animation: xn-xoay 2.4s ease-in-out infinite;
+}
+
+.xn-may .xn-than circle {
+  fill: var(--bronze-dark);
+  stroke: none;
+}
+
+.xn-may .xn-mui {
+  stroke: var(--red);
+}
+
+@keyframes xn-xoay {
+  0%,
+  20% {
+    transform: rotate(0deg);
+  }
+  55%,
+  85% {
+    transform: rotate(90deg);
+  }
+  100% {
+    transform: rotate(0deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .xn-may .xn-than {
+    animation: none;
+    transform: rotate(90deg);
+  }
 }

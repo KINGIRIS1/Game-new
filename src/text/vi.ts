@@ -2272,7 +2272,13 @@ export const vi = {
   ui: {
     lacHau: 'Lạc hầu',
     build: 'Xây dựng',
-    // Khung chính: dải tài nguyên trên cùng, dock năm thẻ ở đáy, dòng tin trên dock.
+    // Game chỉ chơi màn hình ngang: lớp phủ khi cầm dọc (ui/xoayNgang.ts).
+    xoayNgang: {
+      loi: 'Xoay ngang điện thoại để chơi',
+      nut: 'Chơi toàn màn hình ngang',
+      ghi: 'Máy không tự xoay thì tắt khóa xoay màn hình.',
+    },
+    // Khung chính: dải tài nguyên góc trên, dock năm thẻ cột bên trái, dòng tin dưới đáy.
     dockLabel: 'Việc chính',
     railLabel: 'Dã ngoại, Thần thú, Đấu thành',
     tabArmy: 'Quân',

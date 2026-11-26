@@ -438,7 +438,7 @@ function banHtml(kind: HeroKind, anh: AnhTuong | null): string {
 
 /**
  * Nội dung bảng tướng (bảng phủ cả màn hình): hàng tướng, thẻ tướng và chỉ số, bốn ô đồ, túi đồ ba chế độ (mặc,
- * cường hóa, phân giải) hay chi tiết chỉ số, thanh nút dưới. Màn dọc xếp chồng; màn ngang ba cột (CSS `.tg`).
+ * cường hóa, phân giải) hay chi tiết chỉ số, thanh nút dưới; xếp ba cột (CSS `.tg`).
  * `them`: phần hud thêm (lối sang bảng truyện từng tướng), nằm cuối phần chi tiết chỉ số.
  */
 export function tuongHtml(s: GameState, ui: TuongUi, anh: AnhTuong | null = null, them = ''): string {

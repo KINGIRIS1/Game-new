@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Chụp thử game ở khổ điện thoại bằng Playwright, để nhìn tận mắt mỗi thay đổi ở src/render/ và src/ui/.
+// Chụp thử game ở khổ điện thoại cầm ngang bằng Playwright, để nhìn tận mắt mỗi thay đổi ở src/render/ và src/ui/.
 // Script tự bật Vite, mở game, dựng cảnh qua window.__debug và các module luật chơi, rồi lưu ảnh vào chup/.
 // Cách dùng: node scripts/chup.mjs --giup
 // Cảnh và cách dựng cảnh (`CANH`, `dungCanh`) dùng chung với scripts/do-lag.mjs.
@@ -12,17 +12,19 @@ import { fileURLToPath } from 'node:url';
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const require = createRequire(import.meta.url);
 
-/** Khổ màn hình (điểm CSS). Game làm cho điện thoại cầm dọc trước tiên. */
+/** Khổ màn hình (điểm CSS). Game chỉ chơi màn hình ngang. */
 export const KHUNG = {
-  doc: { width: 390, height: 844 },
-  /** Màn ngoài Samsung Galaxy Z Fold5 (máy thử chính): dài, hẹp. */
-  fold: { width: 344, height: 882 },
+  /** Màn ngoài Samsung Galaxy Z Fold5 (máy thử chính) cầm ngang: dài, thấp. */
+  fold: { width: 882, height: 344 },
   ngang: { width: 844, height: 390 },
-  bang: { width: 820, height: 1180 },
+  /** Máy tính bảng cầm ngang. */
+  bang: { width: 1180, height: 820 },
   /** Máy tính, cửa sổ trình duyệt to. */
   pc: { width: 1600, height: 820 },
   /** Màn máy tính phổ biến 1920×1080 trừ thanh trình duyệt. */
   pc2: { width: 1913, height: 910 },
+  /** Điện thoại cầm dọc: chỉ để chụp lớp phủ nhắc xoay ngang (`ui/xoayNgang.ts`). */
+  doc: { width: 390, height: 844 },
 };
 
 // Mã dựng cảnh chạy trong trang, có sẵn các biến:
@@ -927,7 +929,7 @@ d.camera(cx, cz, 2.6);`,
   },
 };
 
-const GIUP = `Chụp thử Thời đại Văn Lang ở khổ điện thoại.
+const GIUP = `Chụp thử Thời đại Văn Lang ở khổ điện thoại cầm ngang.
 
   node scripts/chup.mjs [cảnh ...] [tùy chọn]
 
@@ -937,7 +939,9 @@ ${Object.entries(CANH)
   .join('\n')}
 
 Tùy chọn:
-  --khung doc,fold,ngang,bang,pc,pc2Khổ màn hình, cách nhau dấu phẩy (mặc định: doc = 390×844; fold = 344×882)
+  --khung fold,ngang,bang,pc,pc2,doc Khổ màn hình, cách nhau dấu phẩy (mặc định: fold = 882×344, màn ngoài
+                          Fold5 cầm ngang; ngang = 844×390; bang = 1180×820; pc = 1600×820; pc2 = 1913×910;
+                          doc = 390×844 cầm dọc, chỉ thấy lớp phủ nhắc xoay ngang)
   --truoc "<mã>"          Chạy thêm trong trang trước khi tải lại, để dựng state
   --sau "<mã>"            Chạy thêm trong trang sau khi tải lại, để bấm trận, kỹ năng...
                           Mã có sẵn d (window.__debug), s (state), G (game.ts), M (moPhong.ts),
@@ -957,13 +961,13 @@ Tùy chọn:
 
 Ví dụ:
   node scripts/chup.mjs kinh-do --cham dien
-  node scripts/chup.mjs chuong2 --khung doc,ngang
+  node scripts/chup.mjs chuong2 --khung fold,pc
   node scripts/chup.mjs dau --truoc "s.resources.gao = 5000" --bam "text=Phó bản"
 
 Ảnh lưu ở chup/<tên>-<khung>.png. Lỗi JavaScript trong trang được in ra cuối cùng.`;
 
 function docThamSo(argv) {
-  const opts = { canh: [], khung: ['doc'], ra: 'chup', dpr: 2 };
+  const opts = { canh: [], khung: ['fold'], ra: 'chup', dpr: 2 };
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i];
     const next = () => {
