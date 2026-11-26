@@ -31,7 +31,11 @@ export type NutNoi =
   | 'uNo'
   | 'ghep'
   | 'dao'
-  | 'cat';
+  | 'cat'
+  // Thẻ của bảng bản đồ Việt Nam (`ui/vietNam.ts`).
+  | 'bia'
+  | 'an'
+  | 'bucThi';
 
 /** Màu thân (dải đồng), nét khắc, vệt sáng nét khắc. */
 const F = 'url(#g)';
@@ -228,6 +232,24 @@ const HINH: Record<NutNoi, () => string> = {
     `<path d="M40 92 L40 70 A10 10 0 0 1 60 70 L60 92Z" fill="${E}"/>` +
     khac('M30 50 L70 50', 2.2) +
     khac('M10 66 L28 66 M72 66 L90 66', 2),
+  // Thẻ tỉnh: bia đá đầu tròn trên bệ, sao trống đồng trên trán bia, dòng chữ khắc.
+  bia: () =>
+    `<g fill="${F}"><path d="M24 84 L24 30 Q24 8 50 8 Q76 8 76 30 L76 84Z"/><rect x="12" y="82" width="76" height="12" rx="3"/></g>` +
+    `<polygon points="${sao(8, 9, 3.6, 50, 28)}" fill="${E}"/>` +
+    khac('M34 48 L66 48 M34 58 L66 58 M34 68 L58 68', 2.6) +
+    khac('M18 88 L82 88', 2),
+  // Bệ hạ: ấn triện vuông có núm hình nghê, mặt ấn khắc khung chữ.
+  an: () =>
+    `<g fill="${F}"><rect x="14" y="52" width="72" height="40" rx="4"/><path d="M30 54 Q30 34 42 30 Q40 18 52 14 Q66 14 66 28 Q72 32 70 54Z"/></g>` +
+    `<circle cx="58" cy="24" r="3" fill="${E}"/>` +
+    khac('M24 62 L76 62 L76 84 L24 84Z', 2.4) +
+    khac('M38 68 L38 78 M50 68 L50 78 M62 68 L62 78', 2.2),
+  // Thi đua: bục ba bậc, cờ đuôi nheo cắm trên bậc cao nhất.
+  bucThi: () =>
+    `<g fill="${F}"><rect x="36" y="46" width="28" height="48"/><rect x="6" y="62" width="30" height="32"/><rect x="64" y="72" width="30" height="22"/>
+    <rect x="48" y="6" width="4" height="40" rx="1.5"/><path d="M52 7 L80 12 L72 19 L80 26 L52 23Z"/></g>` +
+    khac('M50 58 L50 82 M44 64 L50 58', 2.6) +
+    khac('M16 72 L26 72 M74 80 L84 80', 2.4),
   // Cài đặt: mặt trống đồng, sao mười bốn cánh giữa các vành.
   caiDat: () =>
     `<g fill="${F}"><circle cx="50" cy="50" r="42"/></g>` +
