@@ -179,6 +179,19 @@ const XAY_SAU = `
 const VN_MUA = `const tuan = Math.floor((Date.now() + 7 * 3600000 + 3 * 86400000) / 604800000);
 s.hinted.push('hd:vietNam'); s.resources.gao = 9000;
 s.vietNam = { tinh: '12', mua: Math.floor(tuan / 4), chuc: 'nong', chucLuc: Date.now() - 3600000, quy: ['21'], phuc: { mua: Math.floor(tuan / 4), pct: 10, tinh: '12', hang: 2 }, danhHieu: { tuan, loai: 'lacHau', tinh: '12' } };`;
+/** Chạm tỉnh `id` trên bản đồ Việt Nam như ngón tay (chạm xuống, nhấc lên tại chỗ), chờ bản đồ tải xong. */
+const chamTinh = (id) => `{
+  let p = null;
+  for (let i = 0; i < 100 && !p; i++) {
+    p = document.querySelector('.bdv-tinh[data-tinh="${id}"] .bdv-mat');
+    if (!p) await new Promise((r) => setTimeout(r, 100));
+  }
+  const r = p.getBoundingClientRect();
+  const o = { bubbles: true, pointerId: 7, clientX: r.x + r.width / 2, clientY: r.y + r.height / 2, isPrimary: true };
+  p.dispatchEvent(new PointerEvent('pointerdown', o));
+  p.dispatchEvent(new PointerEvent('pointerup', o));
+}`;
+
 const VN_BANG = `{ mua: 4, ngay: 0, toi: { tinh: '12', chuc: 'nong', mua: 4, chucLuc: Date.now() - 3600000, diemMua: 212, diemNgay: 36, truoc: { mua: 3, tinh: '12', cua: 180, hang: 2, diem: 3120, diet: false } }, bang: [{ tinh: '01', diem: 4210, nguoi: 41, gop: 33 }, { tinh: '12', diem: 2875, nguoi: 22, gop: 19 }, { tinh: '21', diem: 1240, nguoi: 18, gop: 14 }, { tinh: '04', diem: 960, nguoi: 15, gop: 12 }, { tinh: '22', diem: 0, nguoi: 9, gop: 7, ket: 12600 }, { tinh: '23', diem: 0, nguoi: 4, gop: 3, ket: 2300 }], quy: ['21'], dau: [{ tinh: '12', loai: 'lacTuong', ten: 'Thánh Gióng' }, { tinh: '12', loai: 'lacHau', ten: 'Đại ka' }, { tinh: '22', loai: 'lacHau', ten: null }], truoc: { mua: 3, xep: [{ tinh: '01', hang: 1, diem: 4380, diet: true }, { tinh: '12', hang: 2, diem: 3120, diet: false }, { tinh: '04', hang: 3, diem: 2210, diet: false }, { tinh: '22', hang: null, diem: 0, diet: true }] } }`;
 const NHIN_CONG = `const c = s.buildings.find((b) => b.type === 'congDe'); d.camera(c.x + 4, c.z - 5, 1.1);`;
 
@@ -606,24 +619,49 @@ d.camera(cx, cz, 2.6);`,
     sau: `d.vietNam('23');`,
   },
   'viet-nam-gop': {
-    mo: 'Như viet-nam-chon, máy chủ tỉnh (giả) trả bảng mùa này: Phú Thọ Bồ chính nông, phần góp gạo (còn 64/100 điểm hôm nay), số của tỉnh, bảng thi đua',
+    mo: 'Như viet-nam-chon, máy chủ tỉnh (giả) trả bảng mùa này, thẻ Bệ hạ: Phú Thọ Bồ chính nông, phần góp gạo (còn 64/100 điểm hôm nay), số của tỉnh, bảng thi đua',
     truoc: `${KINH_DO}\ns.hinted.push('hd:vietNam'); s.resources.gao = 9000; s.vietNam = { tinh: '12', mua: 0, chuc: 'nong', chucLuc: Date.now() - 3600000 };`,
-    sau: `d.vietNam('12'); d.vnMay({ mua: 4, ngay: 0, toi: { tinh: '12', chuc: 'nong', mua: 4, chucLuc: Date.now() - 3600000, diemMua: 212, diemNgay: 36 }, bang: [{ tinh: '01', diem: 4210, nguoi: 41, gop: 33 }, { tinh: '12', diem: 2875, nguoi: 22, gop: 19 }, { tinh: '04', diem: 1960, nguoi: 15, gop: 12 }, { tinh: '17', diem: 860, nguoi: 9, gop: 6 }, { tinh: '23', diem: 340, nguoi: 4, gop: 3 }] });`,
+    sau: `d.vietNam('12'); d.vnMay({ mua: 4, ngay: 0, toi: { tinh: '12', chuc: 'nong', mua: 4, chucLuc: Date.now() - 3600000, diemMua: 212, diemNgay: 36 }, bang: [{ tinh: '01', diem: 4210, nguoi: 41, gop: 33 }, { tinh: '12', diem: 2875, nguoi: 22, gop: 19 }, { tinh: '04', diem: 1960, nguoi: 15, gop: 12 }, { tinh: '17', diem: 860, nguoi: 9, gop: 6 }, { tinh: '23', diem: 340, nguoi: 4, gop: 3 }] }); document.querySelector('[data-act=vnTab][data-tab=ta]').click();`,
   },
   'viet-nam-giac': {
-    mo: 'Máy chủ tỉnh (giả): đạo giặc tuần này đang đánh, mình ở tỉnh đầu của đạo, Bồ chính quân; máu từng tỉnh, nút Đánh, còn 2/3 trận; tỉnh có giặc viền đỏ trên bản đồ',
+    mo: 'Máy chủ tỉnh (giả), thẻ Giặc: đạo giặc tuần này đang đánh, mình ở tỉnh đầu của đạo, Bồ chính quân; máu từng tỉnh, nút Đánh, còn 2/3 trận; tỉnh có giặc viền đỏ trên bản đồ',
     truoc: `${KINH_DO}\ns.hinted.push('hd:vietNam');`,
-    sau: `const g = d.giacNay(); const ta = g.tinh[0]; d.vietNam(ta); d.vnMay({ mua: 4, ngay: 0, toi: { tinh: ta, chuc: 'quan', mua: 4, chucLuc: Date.now() - 3600000, diemMua: 140, diemNgay: 0 }, bang: [{ tinh: ta, diem: 1875, nguoi: 22, gop: 19 }], giac: { tuan: g.tuan, nhom: g.nhom, dao: g.tinh.map((t, i) => ({ tinh: t, mau: 3600, con: i === 1 ? 0 : 3600 - 700 * (i + 1), diet: i === 1 ? Date.now() : null })), tranNay: 1, thuong: [] } });`,
+    sau: `const g = d.giacNay(); const ta = g.tinh[0]; d.vietNam(ta); d.vnMay({ mua: 4, ngay: 0, toi: { tinh: ta, chuc: 'quan', mua: 4, chucLuc: Date.now() - 3600000, diemMua: 140, diemNgay: 0 }, bang: [{ tinh: ta, diem: 1875, nguoi: 22, gop: 19 }], giac: { tuan: g.tuan, nhom: g.nhom, dao: g.tinh.map((t, i) => ({ tinh: t, mau: 3600, con: i === 1 ? 0 : 3600 - 700 * (i + 1), diet: i === 1 ? Date.now() : null })), tranNay: 1, thuong: [] } }); document.querySelector('[data-act=vnTab][data-tab=giac]').click();`,
   },
   'viet-nam-giac-sap': {
     mo: 'Như viet-nam-giac, trước thứ Sáu: báo đạo giặc sắp tới các tỉnh nào, thẻ tỉnh ghi sắp có giặc',
     truoc: `${KINH_DO}\ns.hinted.push('hd:vietNam');`,
-    sau: `const g = d.giacNay(); const ta = g.tinh[0]; d.vietNam(ta); d.vnMay({ mua: 4, ngay: 0, toi: { tinh: ta, chuc: 'nong', mua: 4, chucLuc: Date.now() - 3600000, diemMua: 40, diemNgay: 0 }, bang: [], giac: { tuan: g.tuan, nhom: g.nhom, dao: [], tranNay: 0, thuong: [] } });`,
+    sau: `const g = d.giacNay(); const ta = g.tinh[0]; d.vietNam(ta); d.vnMay({ mua: 4, ngay: 0, toi: { tinh: ta, chuc: 'nong', mua: 4, chucLuc: Date.now() - 3600000, diemMua: 40, diemNgay: 0 }, bang: [], giac: { tuan: g.tuan, nhom: g.nhom, dao: [], tranNay: 0, thuong: [] } }); document.querySelector('[data-act=vnTab][data-tab=giac]').click();`,
   },
   'viet-nam-mua': {
     mo: 'Bản đồ Việt Nam PR 4: Phú Thọ Bồ chính nông, Lạc hầu tỉnh tuần này, phúc lành +10%; Đà Nẵng đã quy về (tô như đất Văn Lang); thẻ Phú Thọ có Lạc tướng, Lạc hầu; bảng mùa vừa qua',
     truoc: `${KINH_DO}\n${VN_MUA}`,
     sau: `d.vietNam('12'); d.vnMay(${VN_BANG});`,
+  },
+  'viet-nam-ta': {
+    mo: 'Như viet-nam-mua, thẻ Bệ hạ: tỉnh, chức, danh hiệu, phúc lành, phần góp, chức Bồ chính',
+    truoc: `${KINH_DO}\n${VN_MUA}`,
+    sau: `d.vietNam('12'); d.vnMay(${VN_BANG}); document.querySelector('[data-act=vnTab][data-tab=ta]').click();`,
+  },
+  'viet-nam-dua': {
+    mo: 'Như viet-nam-mua, thẻ Thi đua: bảng tỉnh mùa này, mùa vừa qua',
+    truoc: `${KINH_DO}\n${VN_MUA}`,
+    sau: `d.vietNam('12'); d.vnMay(${VN_BANG}); document.querySelector('[data-act=vnTab][data-tab=dua]').click();`,
+  },
+  'viet-nam-luat': {
+    mo: 'Như viet-nam-mua, bấm nút Luật: thẻ Tỉnh hiện lời giải thích luật',
+    truoc: `${KINH_DO}\n${VN_MUA}`,
+    sau: `d.vietNam('12'); d.vnMay(${VN_BANG}); document.querySelector('[data-act=vnLuat]').click();`,
+  },
+  'viet-nam-cham': {
+    mo: 'Như viet-nam-mua, chạm Quảng Ngãi trên bản đồ: bản đồ lướt và phóng cho tỉnh vừa khung, thẻ Tỉnh có thanh kết giao',
+    truoc: `${KINH_DO}\n${VN_MUA}`,
+    sau: `d.vietNam('12'); d.vnMay(${VN_BANG}); ${chamTinh('22')}`,
+  },
+  'viet-nam-cham-nho': {
+    mo: 'Như viet-nam-mua, ở thẻ Thi đua chạm tên Hà Nội: phóng sát tỉnh nhỏ',
+    truoc: `${KINH_DO}\n${VN_MUA}`,
+    sau: `d.vietNam('12'); d.vnMay(${VN_BANG}); document.querySelector('[data-act=vnTab][data-tab=dua]').click(); document.querySelector('[data-act=vnXem][data-tinh="01"]').click();`,
   },
   'viet-nam-ket': {
     mo: 'Như viet-nam-mua, chạm Quảng Ngãi (chưa quy về): thanh kết giao 60%',

@@ -128,7 +128,7 @@ import { choTen, daMapHtml, daNgoaiHtml, expPct, miniSvg } from './daNgoai';
 import { thanThuHtml, thanThuMapHtml, thuAnh } from './thanThu';
 import { loiDaiHtml, loiDaiMapHtml } from './loiDai';
 import { loiDaiMo } from '../game/loiDai';
-import { BanDoVN, quyVeHtml, tinhCoGiac, vietNamHtml, type VnMay } from './vietNam';
+import { BanDoVN, quyVeHtml, tinhCoGiac, vietNamHtml, type VnMay, type VnTab } from './vietNam';
 import { phanHa } from '../game/giacChung';
 import { vietNamMo } from '../game/vietNam';
 import type { ThanThuId } from '../game/defs';
@@ -437,6 +437,9 @@ interface CampaignView {
   step: 'stage' | 'army' | 'huan' | 'dau' | 'daNgoai' | 'thanThu' | 'loiDai' | 'vietNam';
   /** Bảng Bản đồ Việt Nam: tỉnh đang xem (thẻ tỉnh ở bảng bên). */
   vnChon?: string | null;
+  /** Thẻ đang mở của bảng bản đồ Việt Nam, và có hiện lời giải thích luật không. */
+  vnTab?: VnTab;
+  vnLuat?: boolean;
   pick: ArmyPick;
   /** Bảng Lôi đài: tầng đang xem (null là tầng kế phải đánh). */
   loiTang?: number | null;
@@ -589,6 +592,8 @@ export class Hud {
     this.banDoVN.onChon = (id) => {
       if (this.camp?.step !== 'vietNam') return;
       this.camp.vnChon = id;
+      this.camp.vnTab = 'tinh';
+      this.banDoVN.phongVua(id);
       this.refreshCampaign(this.getState());
     };
     this.bottombar = root.querySelector('.bottombar')!;
@@ -888,9 +893,21 @@ export class Hud {
       case 'thuChon':
         return this.onAction({ kind: act, thu: el.dataset.thu as ThanThuId });
       case 'vnXem':
-        if (this.camp) this.camp.vnChon = el.dataset.tinh ?? null;
+        if (this.camp) {
+          this.camp.vnChon = el.dataset.tinh ?? null;
+          this.camp.vnTab = 'tinh';
+          if (this.camp.vnChon) this.banDoVN.phongVua(this.camp.vnChon);
+        }
+        return this.refreshCampaign(this.getState());
+      case 'vnTab':
+        if (this.camp) this.camp.vnTab = (el.dataset.tab as VnTab | undefined) ?? 'tinh';
+        return this.refreshCampaign(this.getState());
+      case 'vnLuat':
+        if (this.camp) this.camp.vnLuat = !this.camp.vnLuat;
         return this.refreshCampaign(this.getState());
       case 'vnChonTinh':
+        // Chọn xong thì sang thẻ Bệ hạ để nhận chức Bồ chính.
+        if (this.camp) this.camp.vnTab = 'ta';
         return this.onAction({ kind: 'vnChonTinh', tinh: el.dataset.tinh ?? '' });
       case 'vnChonChuc':
         return this.onAction({ kind: 'vnChonChuc', chuc: el.dataset.chuc ?? '' });
@@ -2515,6 +2532,7 @@ export class Hud {
   xemTinh(state: GameState, tinh: string): void {
     if (this.camp?.step !== 'vietNam') return;
     this.camp.vnChon = tinh;
+    this.camp.vnTab = 'tinh';
     this.refreshCampaign(state);
   }
 
@@ -2557,7 +2575,7 @@ export class Hud {
     else if (camp.step === 'daNgoai') panel = daNgoaiHtml(state);
     else if (camp.step === 'thanThu') panel = thanThuHtml(state);
     else if (camp.step === 'loiDai') panel = loiDaiHtml(state, camp.loiTang ?? null);
-    else if (camp.step === 'vietNam') panel = vietNamHtml(state, camp.vnChon ?? null, Date.now(), this.vnMay);
+    else if (camp.step === 'vietNam') panel = vietNamHtml(state, camp.vnChon ?? null, Date.now(), this.vnMay, camp.vnTab, camp.vnLuat);
     else if (camp.stage) panel = camp.step === 'army' ? armyHtml(state, camp.pick, camp.stage, camp.pick.challenge) : stageHtml(state, camp.stage);
     const now = mapChapterNow(state);
     const tabs =

@@ -5707,6 +5707,137 @@ body.man-vao-on #hud > * {
   margin: 6px 0;
 }
 
+/* Bảng bên chia thẻ: khổ dọc thẻ nằm ngang trên đầu; máy cầm ngang, máy tính là cột biểu tượng dọc bên trái. */
+.bdv-khung {
+  display: flex;
+  flex-direction: column;
+}
+
+.bdv-tabs {
+  position: sticky;
+  top: -10px;
+  z-index: 2;
+  display: flex;
+  gap: 4px;
+  margin: -10px -14px 0;
+  padding: 8px 10px 6px;
+  background: var(--paper);
+  border-bottom: 1px solid var(--line);
+}
+
+.bdv-tab {
+  position: relative;
+  flex: 1 1 0;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+  padding: 4px 2px 3px;
+  border: 1.5px solid transparent;
+  border-radius: 10px;
+  background: none;
+  color: var(--ink-soft);
+  font: inherit;
+  font-size: 11px;
+  line-height: 1.2;
+  cursor: pointer;
+}
+
+.bdv-tab .nut-noi {
+  width: 30px;
+  height: 30px;
+  opacity: 0.72;
+}
+
+.bdv-tab.on {
+  background: var(--paper-2);
+  border-color: var(--bronze);
+  color: var(--ink);
+  font-weight: 700;
+}
+
+.bdv-tab.on .nut-noi {
+  opacity: 1;
+}
+
+.bdv-luat-nut {
+  flex: 0 0 48px;
+}
+
+.bdv-cham-do {
+  position: absolute;
+  top: 3px;
+  right: calc(50% - 20px);
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--red);
+  box-shadow: 0 0 0 2px var(--paper);
+}
+
+.bdv-noi {
+  min-width: 0;
+}
+
+.bdv-noi:not(.luat) .bdv-luat {
+  display: none;
+}
+
+@media (min-width: 600px) and (min-aspect-ratio: 4/5) {
+  .camp-panel:has(.bdv-khung) {
+    width: 390px;
+  }
+
+  .bdv-khung {
+    flex-direction: row;
+    align-items: flex-start;
+    gap: 10px;
+  }
+
+  .bdv-tabs {
+    top: 0;
+    flex-direction: column;
+    flex: 0 0 52px;
+    margin: 0;
+    padding: 0 6px 0 0;
+    border-bottom: none;
+    border-right: 1px solid var(--line);
+  }
+
+  .bdv-tab,
+  .bdv-luat-nut {
+    flex: none;
+  }
+
+  .bdv-luat-nut {
+    margin-top: 6px;
+  }
+
+  .bdv-noi {
+    flex: 1;
+  }
+}
+
+@media (min-width: 1100px) and (min-height: 620px) {
+  .camp-panel:has(.bdv-khung) {
+    width: 460px;
+  }
+
+  .bdv-tabs {
+    flex-basis: 60px;
+  }
+
+  .bdv-tab {
+    font-size: 12px;
+  }
+
+  .bdv-tab .nut-noi {
+    width: 36px;
+    height: 36px;
+  }
+}
+
 .bdv-the {
   margin: 8px 0;
   padding: 10px 12px;

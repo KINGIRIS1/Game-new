@@ -23,6 +23,7 @@ import { dauError } from './dauThanh';
 import { daQuy, phanKet, quyCua, type MuaDong } from '../game/muaTinh';
 import { MUA_TINH } from '../game/defs';
 import { esc, fmt } from './format';
+import { nutNoi, type NutNoi } from './nutNoi';
 
 const T = vi.vietNam;
 const NS = 'http://www.w3.org/2000/svg';
@@ -221,10 +222,14 @@ export class BanDoVN {
     this.nghe();
     this.datView(1, 0, 0);
     if (this.choPhong) this.phongToi(...this.choPhong);
+    else if (this.choVua) this.phongVua(this.choVua, undefined, 0);
     this.choPhong = null;
+    this.choVua = null;
   }
 
   private choPhong: [string, number] | null = null;
+  /** Tỉnh chạm tên khi bản đồ chưa tải xong: phóng vừa tỉnh ấy khi tải xong. */
+  private choVua: string | null = null;
 
   /** Khung chèn: hai quần đảo vẽ nhỏ ở góc (khi phóng to mà quần đảo ra ngoài khung). */
   private chenHtml(hinh: HinhTinh[]): string {
@@ -308,6 +313,8 @@ export class BanDoVN {
       } catch {
         // Lần chạm giả (chụp thử) không bắt được con trỏ: vẫn kéo, chọn như thường.
       }
+      cancelAnimationFrame(this.bay);
+      this.bay = 0;
       this.ngon.set(e.pointerId, { x: e.clientX, y: e.clientY });
       if (this.ngon.size === 1) {
         const t = (e.target as Element).closest('[data-tinh]');
@@ -352,6 +359,8 @@ export class BanDoVN {
       'wheel',
       (e) => {
         e.preventDefault();
+        cancelAnimationFrame(this.bay);
+        this.bay = 0;
         phongQuanh(e.clientX, e.clientY, this.k * Math.exp(-e.deltaY * 0.0015));
       },
       { passive: false },
@@ -384,6 +393,62 @@ export class BanDoVN {
   /** Về khung cả nước (để chụp thử). */
   veCaNuoc(): void {
     if (this.hinh) this.datView(1, 0, 0);
+  }
+
+  /** Lượt lướt phóng đang chạy (`phongVua`); kéo, phóng tay thì dừng. */
+  private bay = 0;
+
+  /**
+   * Lướt và phóng cho tỉnh `id` vừa khung nhìn (chạm tỉnh trên bản đồ hay tên tỉnh trong bảng). Chỉ tính phần đất liền
+   * và đảo lớn của tỉnh: bỏ hai quần đảo, đảo nhỏ xa bờ (Côn Đảo) để tỉnh không bé tí giữa biển.
+   */
+  phongVua(id: string, lap = 0.62, ms = 420): void {
+    if (!this.hinh) {
+      this.choVua = id;
+      return;
+    }
+    const h = this.hinh.find((x) => x.id === id);
+    if (!h) return;
+    const dat = h.manh.filter((m) => !laQuanDao(m[0]));
+    if (!dat.length) return;
+    const lon = Math.max(...dat.map((m) => dienTich(m[0])));
+    let x0 = Infinity, x1 = -Infinity, y0 = Infinity, y1 = -Infinity;
+    for (const m of dat) {
+      if (dienTich(m[0]) < lon * 0.03) continue;
+      for (const [lo, la] of m[0]) {
+        x0 = Math.min(x0, px(lo));
+        x1 = Math.max(x1, px(lo));
+        y0 = Math.min(y0, py(la));
+        y1 = Math.max(y1, py(la));
+      }
+    }
+    const r = this.khungNhin();
+    const k = Math.min(K_MAX, Math.max(1.2, lap * Math.min((r.x1 - r.x0) / Math.max(1, x1 - x0), (r.y1 - r.y0) / Math.max(1, y1 - y0))));
+    this.bayToi(k, (x0 + x1) / 2, (y0 + y1) / 2, ms);
+  }
+
+  /** Lướt tới độ phóng `k`, tâm khung nhìn ở điểm bản đồ (`mx`, `my`): phóng theo cấp số nhân, tâm đi thẳng, chậm dần. */
+  private bayToi(k: number, mx: number, my: number, ms: number): void {
+    cancelAnimationFrame(this.bay);
+    const k0 = this.k;
+    const m0x = (W / 2 - this.tx) / k0, m0y = (H / 2 - this.ty) / k0;
+    const dat = (t: number) => {
+      const kk = k0 * Math.pow(k / k0, t);
+      const cx = m0x + (mx - m0x) * t, cy = m0y + (my - m0y) * t;
+      this.datView(kk, W / 2 - cx * kk, H / 2 - cy * kk);
+    };
+    if (ms <= 0 || matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      this.bay = 0;
+      dat(1);
+      return;
+    }
+    const dau = performance.now();
+    const buoc = (now: number) => {
+      const t = Math.min(1, (now - dau) / ms);
+      dat(1 - Math.pow(1 - t, 3));
+      this.bay = t < 1 ? requestAnimationFrame(buoc) : 0;
+    };
+    this.bay = requestAnimationFrame(buoc);
   }
 
   /** Phóng tới tỉnh `id` (để chụp thử); bản đồ chưa tải xong thì phóng khi tải xong. */
@@ -421,38 +486,83 @@ export function vnLoi(loi: { ma: string; chiTiet?: string }): string {
   return dauError(loi);
 }
 
-/** Bảng bên: tỉnh của ta, phần góp, thẻ tỉnh đang xem, chức Bồ chính, bảng tỉnh mùa này. */
-export function vietNamHtml(state: GameState, chon: string | null, now: number, may: VnMay): string {
+/** Thẻ của bảng bên: tỉnh đang xem, của bệ hạ (tỉnh, chức, góp), giặc chung, thi đua các tỉnh. */
+export type VnTab = 'tinh' | 'ta' | 'giac' | 'dua';
+const THE_HINH: Record<VnTab, NutNoi> = { tinh: 'bia', ta: 'an', giac: 'quan', dua: 'bucThi' };
+
+/** Các thẻ có lúc này: giặc chung, thi đua chỉ khi máy chủ đã trả bảng. */
+export function vnTheCo(may: VnMay): VnTab[] {
+  return ['tinh', 'ta', ...(may.bang?.giac ? (['giac'] as const) : []), ...(may.bang ? (['dua'] as const) : [])];
+}
+
+/**
+ * Bảng bên chia thẻ (khổ dọc thẻ nằm ngang trên đầu, máy cầm ngang và máy tính là cột biểu tượng dọc bên trái), để
+ * mỗi phần vừa một màn không phải kéo; lời giải thích luật ẩn tới khi bấm nút Luật (`luat`).
+ */
+export function vietNamHtml(state: GameState, chon: string | null, now: number, may: VnMay, tab: VnTab = 'tinh', luat = false): string {
+  const co = vnTheCo(may);
+  const t = co.includes(tab) ? tab : 'tinh';
+  const giacDang = !!may.bang?.giac?.dao.some((d) => d.con > 0);
+  const nut = co
+    .map(
+      (k) => `<button class="bdv-tab ${k === t ? 'on' : ''}" data-act="vnTab" data-tab="${k}" role="tab" aria-selected="${k === t}" aria-label="${T.the[k]}">
+        ${nutNoi(THE_HINH[k])}<span class="lb">${T.the[k]}</span>${k === 'giac' && giacDang ? `<i class="bdv-cham-do" title="${T.theGiacDang}"></i>` : ''}</button>`,
+    )
+    .join('');
+  const tabs = `<nav class="bdv-tabs" role="tablist">${nut}<button class="bdv-tab bdv-luat-nut ${luat ? 'on' : ''}" data-act="vnLuat" aria-pressed="${luat}" title="${T.luatTitle}">
+    ${nutNoi('thongTin')}<span class="lb">${T.luatNut}</span></button></nav>`;
+  const ta = state.vietNam?.tinh ?? null;
+  let body: string;
+  if (t === 'tinh') {
+    const xem = chon && laTinh(chon) ? chon : ta;
+    body = (xem ? theTinh(state, xem, now, may) : `<p>${T.chuaChon}</p>`) + mayTrangThai(may);
+  } else if (t === 'ta') body = taHtml(state, now, may);
+  else if (t === 'giac') body = mayTrangThai(may) + giacHtml(state, may.bang!.giac!, now, !!may.dangDanh);
+  else body = duaHtml(state, may, now);
+  return `<div class="bdv-khung" data-tab="${t}">${tabs}<div class="bdv-noi ${luat ? 'luat' : ''}">${body}</div></div>`;
+}
+
+/** Thẻ Bệ hạ: tỉnh, chức, danh hiệu, phúc lành, phần góp, chọn chức Bồ chính. */
+function taHtml(state: GameState, now: number, may: VnMay): string {
   const v = state.vietNam;
   const ta = v?.tinh ?? null;
   const ten = (id: string) => T.tinh[id] ?? id;
-  let html = `<p class="muted">${T.intro}</p>`;
+  let html = `<p class="muted ${ta ? 'bdv-luat' : ''}">${T.intro}</p>`;
   html += `<p class="bdv-ta">${ta ? `🏯 ${T.tinhCuaTa(`<b>${ten(ta)}</b>`)}${v?.chuc ? ` · ${T.chuc[v.chuc].icon} ${T.chuc[v.chuc].ten}` : ''}` : T.chuaChon}</p>`;
   if (v?.danhHieu) html += `<p class="bdv-dh">${T.toiDau(T.danhHieu(v.danhHieu.loai, ten(v.danhHieu.tinh)))}</p>`;
   if (v?.phuc && v.phuc.pct > 0) html += `<p class="bdv-phuc">${T.phucNay(v.phuc.pct, ten(v.phuc.tinh))}</p>`;
-  html += mayHtml(state, may, now);
-  if (may.bang?.giac) html += giacHtml(state, may.bang.giac, now, !!may.dangDanh);
-  const xem = chon && laTinh(chon) ? chon : ta;
-  if (xem) html += theTinh(state, xem, now, may);
+  html += mayTrangThai(may) + gopHtml(state, may, now);
   if (ta) html += chucHtml(state, ta, now);
-  if (may.bang) html += bangHtml(may.bang, ta, quyCua(state));
-  if (may.bang?.truoc) html += muaHtml(may.bang.truoc, may.bang.toi?.truoc ?? null);
-  html += `<p class="muted bdv-nguon"><small>${T.nguonTitle}: ${T.nguon}</small></p>`;
   return html;
 }
 
-/** Trạng thái máy chủ và phần góp của mình (chức có của để góp). */
-function mayHtml(state: GameState, may: VnMay, now: number): string {
+/** Thẻ Thi đua: mùa này, bảng tỉnh, mùa vừa qua, nguồn bản đồ. */
+function duaHtml(state: GameState, may: VnMay, now: number): string {
+  const v = state.vietNam;
+  const bang = may.bang!;
+  let html = mayTrangThai(may) + `<p class="muted bdv-mua"><small>${T.muaNay(soMua(bang.mua), Math.ceil(muaCon(now) / 86_400_000))}</small></p>`;
+  html += bangHtml(bang, v?.tinh ?? null, quyCua(state));
+  if (bang.truoc) html += muaHtml(bang.truoc, bang.toi?.truoc ?? null);
+  return `${html}<p class="muted bdv-nguon"><small>${T.nguonTitle}: ${T.nguon}</small></p>`;
+}
+
+/** Trạng thái máy chủ: chưa nối, đang hỏi, lỗi (có nút thử lại khi chưa có bảng). */
+function mayTrangThai(may: VnMay): string {
   if (!may.co) return `<p class="muted bdv-sap">${T.khongMay}</p>`;
   if (may.loi && !may.bang) return `<p class="bdv-loi">⚠️ ${vnLoi(may.loi)} <button class="btn small ghost" data-act="vnTai">${T.thuLai}</button></p>`;
   if (!may.bang) return `<p class="muted">⏳ ${T.dangTai}</p>`;
+  return may.loi ? `<p class="bdv-loi">⚠️ ${vnLoi(may.loi)}</p>` : '';
+}
+
+/** Phần góp của mình (chức có của để góp) và mùa này. */
+function gopHtml(state: GameState, may: VnMay, now: number): string {
+  if (!may.bang) return '';
   const v = state.vietNam;
   const toi = may.bang.toi;
-  const loi = may.loi ? `<p class="bdv-loi">⚠️ ${vnLoi(may.loi)}</p>` : '';
   const mua = `<p class="muted bdv-mua"><small>${T.muaNay(soMua(may.bang.mua), Math.ceil(muaCon(now) / 86_400_000))}</small></p>`;
-  if (!v?.tinh || !v.chuc || !toi || toi.tinh !== v.tinh) return loi + mua;
+  if (!v?.tinh || !v.chuc || !toi || toi.tinh !== v.tinh) return mua;
   const res = CHUC_GOP[v.chuc];
-  if (!res.length) return `${loi}<div class="bdv-gop"><h4>${T.gopTitle}</h4><p class="muted">${T.quanChuaGop}</p></div>${mua}`;
+  if (!res.length) return `<div class="bdv-gop"><h4>${T.gopTitle}</h4><p class="muted">${T.quanChuaGop}</p></div>${mua}`;
   const con = Math.max(0, VIET_NAM.gopNgay - toi.diemNgay);
   const cap = capGop(state);
   const dong = res
@@ -471,10 +581,10 @@ function mayHtml(state: GameState, may: VnMay, now: number): string {
       return `<div class="bdv-gop-dong"><span class="bdv-gop-res">${R.icon} ${R.name}</span><span class="bdv-gop-nut">${nut || `<small class="muted">${con ? T.thieuCua : T.hetNgay}</small>`}</span></div>`;
     })
     .join('');
-  return `${loi}<div class="bdv-gop"><h4>${T.gopTitle}</h4>
+  return `<div class="bdv-gop"><h4>${T.gopTitle}</h4>
     <p class="bdv-gop-so">${T.gopSo(con, VIET_NAM.gopNgay, toi.diemMua)}</p>
     ${dong}
-    <p class="muted"><small>${T.gopLuat}</small></p></div>${mua}`;
+    <p class="muted bdv-luat"><small>${T.gopLuat}</small></p></div>${mua}`;
 }
 
 /** Bảng tỉnh mùa này: tỉnh đã quy về xếp theo điểm, 10 tỉnh đầu và tỉnh của mình. */
@@ -491,7 +601,7 @@ function bangHtml(bang: BangTinh, ta: string | null, quy: readonly string[]): st
       return `<li class="${d.tinh === ta ? 'ta' : ''}"><span class="hang">${hang}</span><button class="bdv-bang-ten" data-act="vnXem" data-tinh="${d.tinh}">${T.tinh[d.tinh]}</button><span class="bdv-bang-so">⭐ ${fmt(d.diem)}<small>👥 ${d.nguoi}</small></span></li>`;
     })
     .join('');
-  return `<div class="bdv-bang"><h4>${T.bangTitle}</h4><ol>${li}</ol><p class="muted"><small>${T.bangLuat}</small></p></div>`;
+  return `<div class="bdv-bang"><h4>${T.bangTitle}</h4><ol>${li}</ol><p class="muted bdv-luat"><small>${T.bangLuat}</small></p></div>`;
 }
 
 /** Mùa vừa qua: ba tỉnh đứng đầu, kết quả của mình, luật phúc lành. */
@@ -505,7 +615,7 @@ function muaHtml(truoc: { mua: number; xep: MuaDong[] }, toi: { tinh: string; ha
   return `<div class="bdv-bang bdv-mua-truoc"><h4>${T.muaTitle(soMua(truoc.mua))}</h4>
     ${dau ? `<p class="muted"><small>${T.muaTop}</small></p><ol>${dau}</ol>` : ''}
     <p>${cua}</p>
-    <p class="muted"><small>${T.phucLuat}</small></p></div>`;
+    <p class="muted bdv-luat"><small>${T.phucLuat}</small></p></div>`;
 }
 
 /** Bảng hết mùa (nhận một lần): tỉnh, hạng, phúc lành cả mùa này, thưởng. */
@@ -544,7 +654,7 @@ function theTinh(state: GameState, id: TinhId, now: number, may: VnMay): string 
   return `<div class="bdv-the ${daQuy(id, quy) ? 'van-lang' : 'chua-ve'}">
     <h3>${T.tinh[id]}</h3>
     <p class="bdv-xua"><b>${T.xua}:</b> ${xua ? `${xua.ten}${xua.dia ? ` · ${xua.dia}` : ''}` : T.khongXua}</p>
-    ${xua ? `<p class="muted bdv-ghi"><small>${T.xuaGhi[xua.loai]}</small></p>` : ''}
+    ${xua ? `<p class="muted bdv-ghi bdv-luat"><small>${T.xuaGhi[xua.loai]}</small></p>` : ''}
     <div class="bdv-tags">${tags}</div>
     ${soTinh(id, may, quy)}
     ${dauThe(id, may)}
@@ -553,7 +663,7 @@ function theTinh(state: GameState, id: TinhId, now: number, may: VnMay): string 
     ${qd ? `<p class="bdv-qd-the">🏝️ ${qd}</p>` : ''}
     <p class="bdv-lg-dong"><b>${T.langGieng}:</b> ${lg}</p>
     ${nut}
-    <p class="muted"><small>${T.doiTinhLuat}</small></p>
+    <p class="muted bdv-luat"><small>${T.doiTinhLuat}</small></p>
   </div>`;
 }
 
@@ -613,7 +723,7 @@ function giacHtml(state: GameState, g: GiacBang, now: number, dangDanh: boolean)
       }
     }
   }
-  return `${html}<p class="muted"><small>${T.giacLuat}</small></p></div>`;
+  return `${html}<p class="muted bdv-luat"><small>${T.giacLuat}</small></p></div>`;
 }
 
 /** Bảng kết quả trận giặc chung (máy chủ đã đánh lại; `kq` null là chưa gửi được). */
@@ -657,7 +767,7 @@ function soTinh(id: TinhId, may: VnMay, quy: readonly string[]): string {
   const ket = d.ket ?? 0;
   const pct = Math.floor(phanKet(ket) * 100);
   return `${so}<div class="bdv-ket"><p>${T.ketGiao(pct, fmt(ket), fmt(MUA_TINH.ketGiao))}</p><span class="bdv-ket-thanh"><i style="width:${pct}%"></i></span>
-    <p class="muted"><small>${T.ketLuat}</small></p></div>`;
+    <p class="muted bdv-luat"><small>${T.ketLuat}</small></p></div>`;
 }
 
 /** Lạc tướng, Lạc hầu tuần này của tỉnh (tên viền vàng). */
@@ -666,7 +776,7 @@ function dauThe(id: TinhId, may: VnMay): string {
   if (!dau) return '';
   const cua = dau.filter((d) => d.tinh === id).sort((a, b) => (a.loai === b.loai ? 0 : a.loai === 'lacTuong' ? -1 : 1));
   if (!cua.length) return `<p class="muted bdv-dau">${T.dauChuaCo}</p>`;
-  return `<p class="bdv-dau">${cua.map((d) => `<span class="ten-dau">${T.dauThe(d.loai, d.ten === null ? null : esc(d.ten))}</span>`).join(' ')}</p><p class="muted"><small>${T.dauLuat}</small></p>`;
+  return `<p class="bdv-dau">${cua.map((d) => `<span class="ten-dau">${T.dauThe(d.loai, d.ten === null ? null : esc(d.ten))}</span>`).join(' ')}</p><p class="muted bdv-luat"><small>${T.dauLuat}</small></p>`;
 }
 
 function chucHtml(state: GameState, tinh: TinhId, now: number): string {
@@ -682,8 +792,8 @@ function chucHtml(state: GameState, tinh: TinhId, now: number): string {
     .join('');
   const gio = Math.floor(cho / 3_600_000);
   const phut = Math.ceil((cho % 3_600_000) / 60_000);
-  return `<div class="bdv-chuc-khoi"><h4>${T.chucTitle}</h4><p class="muted"><small>${T.chucLuat}</small></p>
+  return `<div class="bdv-chuc-khoi"><h4>${T.chucTitle}</h4><p class="muted bdv-luat"><small>${T.chucLuat}</small></p>
     <div class="bdv-chuc-list">${nut}</div>
     ${cho > 0 ? `<p class="muted">⏳ ${T.chucCho(gio, phut === 60 ? 59 : phut)}</p>` : ''}
-    <p class="muted"><small>${T.chucSu}</small></p></div>`;
+    <p class="muted bdv-luat"><small>${T.chucSu}</small></p></div>`;
 }

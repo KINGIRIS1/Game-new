@@ -1542,6 +1542,11 @@ export const vi = {
     locked: 'Nâng Điện Vua Hùng lên cấp 5 thì mở bản đồ Việt Nam: chọn một tỉnh, giữ một chức Bồ chính.',
     intro: 'Ba mươi tư tỉnh, thành ghép thành nước. Bệ hạ vẫn là vua ở kinh đô mình, đồng thời chọn một tỉnh và giữ một chức Bồ chính ở đó. Chạm vào tỉnh để xem; kéo, phóng bằng hai ngón.',
     chuThich: { vanLang: 'Đất Văn Lang, đã quy về', chuaVe: 'Chưa quy về', cuaTa: 'Tỉnh của bệ hạ' },
+    /** Thẻ của bảng bên (`VnTab`). */
+    the: { tinh: 'Tỉnh', ta: 'Bệ hạ', giac: 'Giặc', dua: 'Thi đua' },
+    luatNut: 'Luật',
+    luatTitle: 'Hiện, ẩn lời giải thích luật',
+    theGiacDang: 'Giặc đang đánh',
     bien: 'Biển Đông',
     hoangSa: 'Q.Đ. Hoàng Sa',
     truongSa: 'Q.Đ. Trường Sa',
