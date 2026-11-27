@@ -1,6 +1,6 @@
 #!/usr/bin/env node
-// Chụp đề xuất mẫu nhà dân mới (scripts/nhaMoi.ts): mỗi mẫu ở cấp 1, 5, 7, 10 cạnh nhà sàn hiện tại, và một xóm sáu nhà
-// ở cỡ gần như trên điện thoại. Ảnh từng khung vào docs/de-xuat/nha-moi/ (webp, cho trang đề xuat), ảnh ghép vào
+// Chụp đề xuất mẫu nhà dân mới (scripts/nhaMoi.ts): mỗi mẫu ở cấp 1, 5, 7, 10 cạnh nhà sàn hiện tại, và xóm sáu nhà
+// ở cỡ gần như trên điện thoại. Ảnh từng khung vào docs/de-xuat/nha-moi/ (webp, cho trang đề xuất), ảnh ghép vào
 // chup/nha-moi.png để xem nhanh.
 // Cách dùng: node scripts/chup-nha-moi.mjs
 
@@ -32,7 +32,7 @@ try {
   const anh = await page.evaluate(async (caps) => (await import('/scripts/nhaMoi.ts')).chupMau(caps), CAPS);
   for (const a of anh) await luu(`${a.id}-${a.cap}.webp`, a.src);
   const xom = {};
-  for (const [ten, cap, cung] of [['xom-5', 5, false], ['xom-8', 8, false], ['xom-cu-8', 8, true]]) {
+  for (const [ten, cap, cung] of [['xom-8', 8, false], ['xom-cu-8', 8, true]]) {
     xom[ten] = await page.evaluate(async ([cap, cung]) => (await import('/scripts/nhaMoi.ts')).chupXom(cap, cung), [cap, cung]);
     await luu(`${ten}.webp`, xom[ten]);
   }
@@ -50,7 +50,7 @@ try {
   await page.setContent(html);
   await page.waitForFunction(() => [...document.images].every((i) => i.complete));
   await page.screenshot({ path: path.join(ROOT, 'chup', 'nha-moi.png'), fullPage: true });
-  console.log(`Đã chụp ${anh.length + 3} ảnh vào docs/de-xuat/nha-moi/, ảnh ghép chup/nha-moi.png`);
+  console.log(`Đã chụp ${anh.length + 2} ảnh vào docs/de-xuat/nha-moi/, ảnh ghép chup/nha-moi.png`);
 } finally {
   if (loi.length) console.error(loi.join('\n'));
   await browser.close();

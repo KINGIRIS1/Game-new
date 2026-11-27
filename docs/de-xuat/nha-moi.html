@@ -3,14 +3,14 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<!-- Đề xuất bốn mẫu nhà dân mới (ảnh ở nha-moi/, dựng bằng scripts/nhaMoi.ts). Mở thẳng bằng trình duyệt. -->
+<!-- Đề xuất mẫu nhà dân mới, bản 2: chỉ dùng kiểu nhà có dẫn chứng thời Văn Lang (ảnh ở nha-moi/, dựng bằng scripts/nhaMoi.ts). Mở thẳng bằng trình duyệt. -->
 <title>Mẫu nhà dân mới</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Be+Vietnam+Pro:wght@400;500;600&display=swap">
 <style>
-  /* Bố cục: một cột đọc, mỗi mẫu nhà một khối có dải bốn cấp; màu lấy từ bảng màu của game (mực, đồng, đỏ son, cỏ). */
+  /* Bố cục: một cột đọc, mỗi mẫu nhà một khối có dải bốn cấp và hai cột "có căn cứ" / "thêm cho game"; màu lấy từ bảng màu của game (mực, đồng, đỏ son, cỏ). */
   :root {
     --nen: #eef0e2;
     --mat: #f8f8ef;
@@ -19,7 +19,7 @@
     --dong: #8a6424;
     --dong-sang: #b88a3a;
     --son: #a8322a;
-    --co: #6f8a3e;
+    --co: #4f6f2a;
     --vien: #d6d2b8;
     --khung-anh: #f2e4c4;
     --chu-tieu-de: 'Barlow Condensed', 'Arial Narrow', 'Roboto Condensed', sans-serif;
@@ -49,6 +49,8 @@
   h2 { font-size: clamp(26px, 4vw, 34px); font-weight: 600; }
   h3 { font-size: 15px; font-weight: 600; text-transform: uppercase; letter-spacing: .08em; color: var(--dong); }
   p { margin: 0; max-width: 68ch; }
+  a { color: var(--dong); text-underline-offset: 2px; }
+  a:focus-visible { outline: 2px solid var(--dong-sang); outline-offset: 2px; }
   .dau { display: grid; gap: 12px; }
   .nhan { font: 600 13px/1 var(--chu-tieu-de); letter-spacing: .14em; text-transform: uppercase; color: var(--son); }
   .lede { font-size: 17px; color: var(--muc-nhat); }
@@ -63,25 +65,24 @@
   .mau-dau p { color: var(--muc-nhat); flex: 1 1 320px; }
   .cap { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
   @media (max-width: 720px) { .cap { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
-  .ghi { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 240px), 1fr)); gap: 14px 24px; }
+  .ghi { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr)); gap: 14px 28px; }
   .ghi > div { display: grid; gap: 6px; align-content: start; min-width: 0; }
   .ghi ul { margin: 0; padding-left: 18px; display: grid; gap: 4px; }
-  .nang { font-variant-numeric: tabular-nums; }
-  .goc { opacity: .92; }
+  .ghi .co h3 { color: var(--co); }
+  .ghi .them h3 { color: var(--muc-nhat); }
   .goc .mau-dau .so { background: var(--muc-nhat); }
   table { border-collapse: collapse; font-variant-numeric: tabular-nums; min-width: 460px; width: 100%; }
-  th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--vien); }
+  th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--vien); vertical-align: top; }
   th { font: 600 13px/1.2 var(--chu-tieu-de); letter-spacing: .08em; text-transform: uppercase; color: var(--muc-nhat); }
   td.so-lieu, th.so-lieu { text-align: right; }
+  table.van { min-width: 0; }
+  table.van td:first-child { width: 55%; }
   .cuon { overflow-x: auto; }
-  .chon { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr)); gap: 16px; }
   .the { background: var(--mat); border: 1px solid var(--vien); border-radius: 8px; padding: 16px 18px; display: grid; gap: 8px; align-content: start; }
-  .the.nen-chon { border-color: var(--dong-sang); box-shadow: inset 4px 0 0 var(--dong-sang); }
-  .the h3 { color: var(--muc); text-transform: none; letter-spacing: 0; font-size: 20px; }
-  .the ul { margin: 0; padding-left: 18px; display: grid; gap: 4px; }
-  .huy { font: 600 12px/1 var(--chu-tieu-de); letter-spacing: .1em; text-transform: uppercase; color: var(--dong); }
+  .the ul, ol.nguon { margin: 0; padding-left: 20px; display: grid; gap: 6px; }
   ol.hoi { margin: 0; padding-left: 22px; display: grid; gap: 10px; max-width: 72ch; }
-  ol.hoi li::marker { font-weight: 600; color: var(--son); }
+  ol.hoi li::marker, ol.nguon li::marker { font-weight: 600; color: var(--son); }
+  sup a { text-decoration: none; font-weight: 600; font-size: 11px; }
   code { font-size: 13px; background: var(--mat); border: 1px solid var(--vien); border-radius: 4px; padding: 0 4px; }
   .chu-nho { font-size: 13px; color: var(--muc-nhat); }
 </style>
@@ -90,148 +91,204 @@
 
 <main>
   <header class="dau">
-    <span class="nhan">Đề xuất · chờ chủ dự án duyệt</span>
+    <span class="nhan">Đề xuất bản 2 · chờ chủ dự án duyệt</span>
     <h1>Mẫu nhà dân mới</h1>
-    <p class="lede">Bốn dáng nhà sàn mới, mỗi dáng một kiểu mái mà chưa công trình nào trong game dùng. Vẫn giữ Nét Đông Sơn: viền mực, hoa văn trống đồng trên mái, mái theo cấp (tranh, viền đỏ, ngói, viền đồng, chim Lạc), một mái chính như các công trình đã giản lược.</p>
+    <p class="lede">Bốn dáng nhà sàn chỉ dùng hai kiểu mái có dẫn chứng thời Văn Lang: mái võng và mái vòm khắc trên trống đồng Ngọc Lũ. Các mẫu khác nhau ở tỉ lệ nhà và ở đồ vật, cảnh sinh hoạt có trên trống đồng hay trong di vật Đông Sơn. Mỗi mẫu ghi rõ chi tiết nào có nguồn, chi tiết nào thêm cho game.</p>
   </header>
 
   <section class="dau">
-    <h2>Vì sao cần</h2>
-    <p>Điện cấp 10 cho dựng tới 9 nhà sàn, và cả 9 cùng một dáng. Từ cấp 7, nhà nào cũng thành nhà mái thuyền, đứng cạnh nhau thành một dãy giống hệt. Trộn vài dáng nhà khác nhau thì xóm có nhịp, nhìn ra được từng nhà.</p>
+    <h2>Dẫn chứng về nhà thời Văn Lang</h2>
+    <div class="cuon">
+      <table class="van">
+        <thead><tr><th>Chi tiết</th><th>Dẫn chứng</th></tr></thead>
+        <tbody>
+          <tr><td>Nhà ở phổ biến là nhà sàn, làm bằng gỗ, tre, nứa, lá</td><td>Sách Lịch sử 6, bài Đời sống cư dân Văn Lang<sup><a href="#n2">2</a></sup></td></tr>
+          <tr><td>Hai kiểu nhà sàn: mái võng (cong lõm) có đôi chim trang trí; mái vòm (cong lồi) có người bên trong, vách hoa văn vòng tròn chấm giữa</td><td>Trống đồng Ngọc Lũ, theo mô tả của Bảo tàng Lịch sử Quốc gia<sup><a href="#n1">1</a></sup></td></tr>
+          <tr><td>"Nhà sàn mái cong hình thuyền hoặc mái tròn hình mui thuyền"</td><td>Sách Lịch sử 6<sup><a href="#n2">2</a></sup></td></tr>
+          <tr><td>Nhà mái tròn có thể là kho thóc</td><td>Cách hiểu của nhà nghiên cứu, chưa chắc chắn<sup><a href="#n3">3</a></sup></td></tr>
+          <tr><td>Cảnh giã gạo bằng chày cạnh nhà</td><td>Hình khắc trên trống Ngọc Lũ<sup><a href="#n4">4</a></sup></td></tr>
+          <tr><td>Đi lại chủ yếu bằng thuyền; thuyền độc mộc</td><td>Sách Lịch sử 6<sup><a href="#n2">2</a></sup>; mộ thuyền Việt Khê (văn hóa Đông Sơn)<sup><a href="#n5">5</a></sup></td></tr>
+          <tr><td>Ngói có trang trí, lò nung ở kinh đô cuối thời kỳ</td><td>Khai quật Cổ Loa (Âu Lạc, khoảng 300 TCN)<sup><a href="#n6">6</a></sup>; game cho mái ngói từ cấp 7</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="chu-nho">Chưa tìm được dẫn chứng cho: nhà nền đất, tường đất, mái bốn dốc, góc mái vểnh, mái thẳng dựng đứng, khau cút. Nên cả bốn mẫu dưới đây đều là nhà sàn mái cong.</p>
+  </section>
+
+  <section class="dau">
+    <h2>Xóm nhà, trước và sau</h2>
     <div class="hai">
       <figure>
         <img src="nha-moi/xom-cu-8.webp" width="707" height="471" alt="Sáu nhà sàn cấp 8 cùng một dáng mái thuyền">
         <figcaption><b>Bây giờ:</b> sáu nhà sàn cấp 8, cùng một dáng.</figcaption>
       </figure>
       <figure>
-        <img src="nha-moi/xom-8.webp" width="707" height="471" alt="Sáu nhà cấp 8 trộn năm dáng: mái chùm, mái thuyền, lưỡi rìu, khau cút, mui thuyền">
+        <img src="nha-moi/xom-8.webp" width="707" height="471" alt="Sáu nhà cấp 8 trộn năm dáng nhà sàn">
         <figcaption><b>Đề xuất:</b> cùng cấp 8, trộn nhà sàn hiện tại với bốn mẫu mới.</figcaption>
       </figure>
     </div>
-    <p class="chu-nho">Ảnh chụp bằng chính bộ vẽ của game, cỡ gần như ở độ phóng mặc định trên điện thoại. Cách đặt nhà, đường đất chỉ để minh họa.</p>
+    <p class="chu-nho">Điện cấp 10 cho dựng 9 nhà sàn; từ cấp 7 nhà nào cũng thành nhà mái thuyền. Ảnh chụp bằng chính bộ vẽ của game, cỡ gần như ở độ phóng mặc định trên điện thoại.</p>
   </section>
 
   <section class="mau">
-    <div class="mau-dau"><span class="so">1</span><h2>Nhà mái lưỡi rìu</h2><p>Mái hai dốc dựng đứng, nóc dài hơn diềm nên hai đầu hồi chồm ra như lưỡi rìu xéo.</p></div>
+    <div class="mau-dau"><span class="so">1</span><h2>Nhà mui thuyền</h2><p>Nhà sàn mái vòm dài như mui thuyền, chiếc thuyền độc mộc gác ở sân.</p></div>
     <div class="cap">
-      <figure><img src="nha-moi/luoiRiu-1.webp" width="488" height="444" alt="Nhà mái lưỡi rìu cấp 1" loading="lazy"><figcaption><b>Cấp 1</b> · mái tranh</figcaption></figure>
-      <figure><img src="nha-moi/luoiRiu-5.webp" width="488" height="444" alt="Nhà mái lưỡi rìu cấp 5" loading="lazy"><figcaption><b>Cấp 5</b> · to nhất, cây cau</figcaption></figure>
-      <figure><img src="nha-moi/luoiRiu-7.webp" width="488" height="444" alt="Nhà mái lưỡi rìu cấp 7" loading="lazy"><figcaption><b>Cấp 7</b> · mái ngói</figcaption></figure>
-      <figure><img src="nha-moi/luoiRiu-10.webp" width="488" height="444" alt="Nhà mái lưỡi rìu cấp 10" loading="lazy"><figcaption><b>Cấp 10</b> · viền đồng, chim Lạc</figcaption></figure>
+      <figure><img src="nha-moi/muiThuyen-1.webp" width="479" height="435" alt="Nhà mui thuyền cấp 1" loading="lazy"><figcaption><b>Cấp 1</b> · mái tranh</figcaption></figure>
+      <figure><img src="nha-moi/muiThuyen-5.webp" width="479" height="435" alt="Nhà mui thuyền cấp 5" loading="lazy"><figcaption><b>Cấp 5</b> · to nhất</figcaption></figure>
+      <figure><img src="nha-moi/muiThuyen-7.webp" width="479" height="435" alt="Nhà mui thuyền cấp 7" loading="lazy"><figcaption><b>Cấp 7</b> · mái ngói</figcaption></figure>
+      <figure><img src="nha-moi/muiThuyen-10.webp" width="479" height="435" alt="Nhà mui thuyền cấp 10" loading="lazy"><figcaption><b>Cấp 10</b> · nan đồng, chim Lạc</figcaption></figure>
     </div>
     <div class="ghi">
-      <div><h3>Nét nhận diện</h3><ul><li>Dáng cao nhất trong bốn mẫu, mái gần như che kín vách.</li><li>Đầu hồi đan nan có hoa văn, giữa gắn mặt trống đồng nhỏ.</li><li>Thang độc mộc: một khúc gỗ khoét bậc dựng nghiêng lên hiên.</li></ul></div>
-      <div><h3>Lấy ý từ</h3><ul><li>Rìu xéo đồng Đông Sơn: lưỡi xòe rộng hai mũi.</li><li>Nếp nhà mái dựng cao của cư dân miền núi còn giữ nhà sàn cổ.</li></ul></div>
-      <div><h3>Lên cấp</h3><ul><li>Tới cấp 5 to dần, cấp 6–8 cột cao dần, mái đổi theo cấp.</li><li>Mũi nóc vút nhọn hai đầu; cấp 10 thay bằng chim Lạc đồng.</li></ul></div>
-    </div>
-  </section>
-
-  <section class="mau">
-    <div class="mau-dau"><span class="so">2</span><h2>Nhà nền đất mái chùm</h2><p>Nhà không sàn: nền đất đắp kè đá, tường đất nện, mái bốn dốc lợp tranh dày, bốn góc mái cong vểnh.</p></div>
-    <div class="cap">
-      <figure><img src="nha-moi/maiChum-1.webp" width="488" height="444" alt="Nhà nền đất mái chùm cấp 1" loading="lazy"><figcaption><b>Cấp 1</b> · mái tranh</figcaption></figure>
-      <figure><img src="nha-moi/maiChum-5.webp" width="488" height="444" alt="Nhà nền đất mái chùm cấp 5" loading="lazy"><figcaption><b>Cấp 5</b> · to nhất, cối giã gạo</figcaption></figure>
-      <figure><img src="nha-moi/maiChum-7.webp" width="488" height="444" alt="Nhà nền đất mái chùm cấp 7" loading="lazy"><figcaption><b>Cấp 7</b> · mái ngói</figcaption></figure>
-      <figure><img src="nha-moi/maiChum-10.webp" width="488" height="444" alt="Nhà nền đất mái chùm cấp 10" loading="lazy"><figcaption><b>Cấp 10</b> · viền đồng, chim Lạc</figcaption></figure>
-    </div>
-    <div class="ghi">
-      <div><h3>Nét nhận diện</h3><ul><li>Dáng thấp và bè nhất, đứng sát đất, không cột sàn.</li><li>Dải hoa văn chạy quanh đầu tường; cửa sổ chấn song.</li><li>Góc mái vểnh: mầm của đầu đao sau này.</li></ul></div>
-      <div><h3>Lấy ý từ</h3><ul><li>Nhà trệt nền đất của cư dân đồng bằng ven sông.</li><li>Cảnh giã gạo bằng chày trên mặt trống đồng Ngọc Lũ: phần phụ là cối giã và nong thóc.</li></ul></div>
-      <div><h3>Lên cấp</h3><ul><li>Cấp 6–8 nền đắp cao thêm, tường cao thêm.</li><li>Từ cấp 6 bốn sống góc và diềm mái mang màu viền theo cấp.</li></ul></div>
+      <div class="co"><h3>Có căn cứ</h3><ul>
+        <li>Mái tròn hình mui thuyền<sup><a href="#n2">2</a></sup>, nhà mái vòm trên trống Ngọc Lũ<sup><a href="#n1">1</a></sup>.</li>
+        <li>Vách hoa văn vòng tròn chấm giữa<sup><a href="#n1">1</a></sup>.</li>
+        <li>Thuyền độc mộc<sup><a href="#n5">5</a></sup>, đi lại bằng thuyền<sup><a href="#n2">2</a></sup>.</li>
+      </ul></div>
+      <div class="them"><h3>Thêm cho game</h3><ul>
+        <li>Nan tre ôm mái, suy từ cách làm mui thuyền.</li>
+        <li>Thang tre, khúc gỗ kê thuyền.</li>
+        <li>Đã bỏ ao sen của bản trước vì không có nguồn.</li>
+      </ul></div>
     </div>
   </section>
 
   <section class="mau">
-    <div class="mau-dau"><span class="so">3</span><h2>Nhà sàn bên ao</h2><p>Nhà sàn đứng nửa trên ao, mái khum như mui thuyền có nan tre ôm, cầu tre xuống sân.</p></div>
+    <div class="mau-dau"><span class="so">2</span><h2>Nhà mái võng đôi chim</h2><p>Nhà sàn thấp và dài, mái võng trùm sát sàn, hai đầu nóc vút cao, đôi chim đậu giữa nóc quay mặt vào nhau.</p></div>
     <div class="cap">
-      <figure><img src="nha-moi/benAo-1.webp" width="488" height="444" alt="Nhà sàn bên ao cấp 1" loading="lazy"><figcaption><b>Cấp 1</b> · mái tranh</figcaption></figure>
-      <figure><img src="nha-moi/benAo-5.webp" width="488" height="444" alt="Nhà sàn bên ao cấp 5" loading="lazy"><figcaption><b>Cấp 5</b> · to nhất, thuyền độc mộc</figcaption></figure>
-      <figure><img src="nha-moi/benAo-7.webp" width="488" height="444" alt="Nhà sàn bên ao cấp 7" loading="lazy"><figcaption><b>Cấp 7</b> · mái ngói</figcaption></figure>
-      <figure><img src="nha-moi/benAo-10.webp" width="488" height="444" alt="Nhà sàn bên ao cấp 10" loading="lazy"><figcaption><b>Cấp 10</b> · nan đồng, chim Lạc</figcaption></figure>
+      <figure><img src="nha-moi/maiVong-1.webp" width="479" height="435" alt="Nhà mái võng đôi chim cấp 1" loading="lazy"><figcaption><b>Cấp 1</b> · mái tranh</figcaption></figure>
+      <figure><img src="nha-moi/maiVong-5.webp" width="479" height="435" alt="Nhà mái võng đôi chim cấp 5" loading="lazy"><figcaption><b>Cấp 5</b> · to nhất</figcaption></figure>
+      <figure><img src="nha-moi/maiVong-7.webp" width="479" height="435" alt="Nhà mái võng đôi chim cấp 7" loading="lazy"><figcaption><b>Cấp 7</b> · mái ngói</figcaption></figure>
+      <figure><img src="nha-moi/maiVong-10.webp" width="479" height="435" alt="Nhà mái võng đôi chim cấp 10" loading="lazy"><figcaption><b>Cấp 10</b> · viền đồng, chim Lạc</figcaption></figure>
     </div>
     <div class="ghi">
-      <div><h3>Nét nhận diện</h3><ul><li>Mái tròn dài như ống chẻ đôi, hai đầu vểnh nhẹ.</li><li>Ao chiếm nửa móng: lá sen, hoa sen, chiếc thuyền độc mộc buộc bến.</li><li>Hai đầu mui đan nan hoa văn.</li></ul></div>
-      <div><h3>Lấy ý từ</h3><ul><li>Mui thuyền và đời sống sông nước của người Lạc Việt.</li><li>Nếp nhà vùng chiêm trũng dựng sát ao cá.</li></ul></div>
-      <div><h3>Lên cấp</h3><ul><li>Nan tre ôm mái mang màu viền theo cấp (đỏ, rồi đồng).</li><li>Ao chỉ để nhìn, không dính tới lũ hay cá.</li></ul></div>
+      <div class="co"><h3>Có căn cứ</h3><ul>
+        <li>Nhà sàn mái võng có đôi chim trang trí, trên trống Ngọc Lũ<sup><a href="#n1">1</a></sup>.</li>
+        <li>Mái cong hình thuyền<sup><a href="#n2">2</a></sup>.</li>
+      </ul></div>
+      <div class="them"><h3>Thêm cho game</h3><ul>
+        <li>Đôi chim tô màu đồng như chim trên nóc các công trình khác của game.</li>
+        <li>Hiên và thang trước nhà.</li>
+        <li>Khác nhà sàn hiện tại ở chỗ thấp, dài, mái trùm sát sàn, có đôi chim từ cấp 1.</li>
+      </ul></div>
     </div>
   </section>
 
   <section class="mau">
-    <div class="mau-dau"><span class="so">4</span><h2>Nhà sàn dài khau cút</h2><p>Nhà sàn dài nhiều gian, đầu nóc dựng khau cút đầu chim Lạc, hành lang lan can chạy suốt mặt trước.</p></div>
+    <div class="mau-dau"><span class="so">3</span><h2>Nhà giã gạo</h2><p>Nhà sàn mái võng quay đầu hồi ra trước, hai đầu nóc vút như sừng; sân trước có cối và hai chày giã gạo.</p></div>
     <div class="cap">
-      <figure><img src="nha-moi/khauCut-1.webp" width="488" height="444" alt="Nhà sàn dài khau cút cấp 1" loading="lazy"><figcaption><b>Cấp 1</b> · mái tranh</figcaption></figure>
-      <figure><img src="nha-moi/khauCut-5.webp" width="488" height="444" alt="Nhà sàn dài khau cút cấp 5" loading="lazy"><figcaption><b>Cấp 5</b> · to nhất</figcaption></figure>
-      <figure><img src="nha-moi/khauCut-7.webp" width="488" height="444" alt="Nhà sàn dài khau cút cấp 7" loading="lazy"><figcaption><b>Cấp 7</b> · mái ngói</figcaption></figure>
-      <figure><img src="nha-moi/khauCut-10.webp" width="488" height="444" alt="Nhà sàn dài khau cút cấp 10" loading="lazy"><figcaption><b>Cấp 10</b> · khau cút đồng, chim Lạc giữa nóc</figcaption></figure>
+      <figure><img src="nha-moi/giaGao-1.webp" width="479" height="435" alt="Nhà giã gạo cấp 1" loading="lazy"><figcaption><b>Cấp 1</b> · mái tranh</figcaption></figure>
+      <figure><img src="nha-moi/giaGao-5.webp" width="479" height="435" alt="Nhà giã gạo cấp 5" loading="lazy"><figcaption><b>Cấp 5</b> · to nhất, cối giã</figcaption></figure>
+      <figure><img src="nha-moi/giaGao-7.webp" width="479" height="435" alt="Nhà giã gạo cấp 7" loading="lazy"><figcaption><b>Cấp 7</b> · mái ngói</figcaption></figure>
+      <figure><img src="nha-moi/giaGao-10.webp" width="479" height="435" alt="Nhà giã gạo cấp 10" loading="lazy"><figcaption><b>Cấp 10</b> · viền đồng, chim Lạc</figcaption></figure>
     </div>
     <div class="ghi">
-      <div><h3>Nét nhận diện</h3><ul><li>Dáng dài nhất, nằm ngang suốt móng.</li><li>Hai cặp ván chéo chữ X trên đầu nóc, mỗi đầu ván là đầu chim mỏ dài.</li><li>Hai cửa, một thang giữa lên hành lang.</li></ul></div>
-      <div><h3>Lấy ý từ</h3><ul><li>Khau cút đầu hồi nhà sàn người Thái, đổi đầu ván thành chim Lạc trên trống đồng.</li><li>Nhà dài ở chung của đại gia đình.</li></ul></div>
-      <div><h3>Lên cấp</h3><ul><li>Khau cút giữ ở mọi cấp; từ cấp 6 mang màu viền theo cấp.</li><li>Cấp 10 thêm chim Lạc đồng giữa nóc.</li></ul></div>
+      <div class="co"><h3>Có căn cứ</h3><ul>
+        <li>Nhà sàn mái cong<sup><a href="#n1">1</a></sup><sup><a href="#n2">2</a></sup>.</li>
+        <li>Cảnh giã gạo bằng chày cạnh nhà, trên trống Ngọc Lũ<sup><a href="#n4">4</a></sup>.</li>
+      </ul></div>
+      <div class="them"><h3>Thêm cho game</h3><ul>
+        <li>Quay đầu hồi ra trước để dáng khác các mẫu kia.</li>
+        <li>Nong thóc phơi ở sân.</li>
+        <li>Người giã đứng cạnh cối; nếu duyệt, em làm thêm động tác giã gạo.</li>
+      </ul></div>
+    </div>
+  </section>
+
+  <section class="mau">
+    <div class="mau-dau"><span class="so">4</span><h2>Nhà có vựa thóc</h2><p>Nhà sàn mái võng vừa phải, góc sau bên phải có vựa thóc nhỏ mái vòm trên bốn cột cao.</p></div>
+    <div class="cap">
+      <figure><img src="nha-moi/vuaThoc-1.webp" width="479" height="435" alt="Nhà có vựa thóc cấp 1" loading="lazy"><figcaption><b>Cấp 1</b> · chưa có vựa</figcaption></figure>
+      <figure><img src="nha-moi/vuaThoc-5.webp" width="479" height="435" alt="Nhà có vựa thóc cấp 5" loading="lazy"><figcaption><b>Cấp 5</b> · có vựa</figcaption></figure>
+      <figure><img src="nha-moi/vuaThoc-7.webp" width="479" height="435" alt="Nhà có vựa thóc cấp 7" loading="lazy"><figcaption><b>Cấp 7</b> · mái ngói</figcaption></figure>
+      <figure><img src="nha-moi/vuaThoc-10.webp" width="479" height="435" alt="Nhà có vựa thóc cấp 10" loading="lazy"><figcaption><b>Cấp 10</b> · viền đồng, chim Lạc</figcaption></figure>
+    </div>
+    <div class="ghi">
+      <div class="co"><h3>Có căn cứ</h3><ul>
+        <li>Nhà sàn mái cong<sup><a href="#n1">1</a></sup><sup><a href="#n2">2</a></sup>.</li>
+        <li>Nhà mái tròn trên trống được cho là kho thóc<sup><a href="#n3">3</a></sup> (cách hiểu, chưa chắc chắn).</li>
+      </ul></div>
+      <div class="them"><h3>Thêm cho game</h3><ul>
+        <li>Đặt vựa nhỏ cạnh nhà ở như phần phụ.</li>
+        <li>Vựa có từ cấp 2.</li>
+        <li>Khác kho thóc của game (thân tròn, mái nón) ở chỗ nhỏ, mái vòm.</li>
+      </ul></div>
     </div>
   </section>
 
   <section class="mau goc">
-    <div class="mau-dau"><span class="so">·</span><h2>Nhà sàn hiện tại, để so</h2><p>Mái mai rùa tới cấp 6, từ cấp 7 thành nhà mái thuyền. Giữ nguyên làm kiểu thứ năm.</p></div>
+    <div class="mau-dau"><span class="so">·</span><h2>Nhà sàn hiện tại, để so</h2><p>Mái vòm tới cấp 6, từ cấp 7 thành nhà mái thuyền. Cả hai dáng đều có trên trống đồng; giữ làm kiểu thứ năm.</p></div>
     <div class="cap">
-      <figure><img src="nha-moi/nhaSan-1.webp" width="488" height="444" alt="Nhà sàn hiện tại cấp 1" loading="lazy"><figcaption><b>Cấp 1</b></figcaption></figure>
-      <figure><img src="nha-moi/nhaSan-5.webp" width="488" height="444" alt="Nhà sàn hiện tại cấp 5" loading="lazy"><figcaption><b>Cấp 5</b></figcaption></figure>
-      <figure><img src="nha-moi/nhaSan-7.webp" width="488" height="444" alt="Nhà sàn hiện tại cấp 7" loading="lazy"><figcaption><b>Cấp 7</b></figcaption></figure>
-      <figure><img src="nha-moi/nhaSan-10.webp" width="488" height="444" alt="Nhà sàn hiện tại cấp 10" loading="lazy"><figcaption><b>Cấp 10</b></figcaption></figure>
+      <figure><img src="nha-moi/nhaSan-1.webp" width="479" height="435" alt="Nhà sàn hiện tại cấp 1" loading="lazy"><figcaption><b>Cấp 1</b></figcaption></figure>
+      <figure><img src="nha-moi/nhaSan-5.webp" width="479" height="435" alt="Nhà sàn hiện tại cấp 5" loading="lazy"><figcaption><b>Cấp 5</b></figcaption></figure>
+      <figure><img src="nha-moi/nhaSan-7.webp" width="479" height="435" alt="Nhà sàn hiện tại cấp 7" loading="lazy"><figcaption><b>Cấp 7</b></figcaption></figure>
+      <figure><img src="nha-moi/nhaSan-10.webp" width="479" height="435" alt="Nhà sàn hiện tại cấp 10" loading="lazy"><figcaption><b>Cấp 10</b></figcaption></figure>
     </div>
   </section>
 
   <section class="dau">
-    <h2>Nặng máy không</h2>
-    <p>Mỗi mẫu vẫn chỉ 6 lưới (3 khối màu, mỗi khối một lớp viền mực) như nhà sàn hiện tại; nhà lưỡi rìu thêm 2 lưới cho mặt trống đồng. Số tam giác ngang hoặc ít hơn nhà sàn hiện tại, không tính người.</p>
+    <h2>Đã bỏ ở bản này</h2>
     <div class="cuon">
-      <table>
-        <thead><tr><th>Mẫu</th><th class="so-lieu">Lưới</th><th class="so-lieu">Tam giác cấp 5</th><th class="so-lieu">Tam giác cấp 10</th></tr></thead>
+      <table class="van">
+        <thead><tr><th>Mẫu bản trước</th><th>Vì sao bỏ</th></tr></thead>
         <tbody>
-          <tr><td>Nhà sàn hiện tại</td><td class="so-lieu">6</td><td class="so-lieu">2.944</td><td class="so-lieu">4.588</td></tr>
-          <tr><td>Nhà mái lưỡi rìu</td><td class="so-lieu">8</td><td class="so-lieu">1.256</td><td class="so-lieu">2.016</td></tr>
-          <tr><td>Nhà nền đất mái chùm</td><td class="so-lieu">6</td><td class="so-lieu">2.032</td><td class="so-lieu">2.720</td></tr>
-          <tr><td>Nhà sàn bên ao</td><td class="so-lieu">6</td><td class="so-lieu">4.568</td><td class="so-lieu">4.928</td></tr>
-          <tr><td>Nhà sàn dài khau cút</td><td class="so-lieu">6</td><td class="so-lieu">2.352</td><td class="so-lieu">2.912</td></tr>
+          <tr><td>Nhà mái lưỡi rìu</td><td>Mái dựng đứng lấy từ nhà mái cao miền núi đời nay; rìu xéo là đồ đồng, không phải kiểu nhà.</td></tr>
+          <tr><td>Nhà nền đất mái chùm</td><td>Không có dẫn chứng nhà nền đất, tường đất, mái bốn dốc, góc mái vểnh ở thời Văn Lang.</td></tr>
+          <tr><td>Nhà sàn dài khau cút</td><td>Khau cút là của người Thái, vào Tây Bắc khoảng thế kỷ X–XI<sup><a href="#n7">7</a></sup>, hơn 1.000 năm sau Văn Lang; trống đồng khắc mái cong, không phải mái thẳng.</td></tr>
         </tbody>
       </table>
     </div>
   </section>
 
   <section class="dau">
-    <h2>Đưa vào game thế nào</h2>
-    <div class="chon">
-      <div class="the nen-chon">
-        <span class="huy">Em đề xuất</span>
-        <h3>A. Kiểu nhà của nhà sàn</h3>
-        <ul>
-          <li>Chỉ để nhìn, luật không đổi: móng 3×3, giá, số dân, máu, số tối đa như nhà sàn.</li>
-          <li>Vòng nút và bảng nhà sàn có nút <b>Đổi kiểu</b>, miễn phí, đổi ngay.</li>
-          <li>Nhà mới dựng lần lượt nhận kiểu khác nhà vừa dựng, để xóm tự trộn; người chơi đổi lại tùy ý.</li>
-          <li>Bản lưu thêm một trường tùy chọn như hướng xoay (<code>Building.rot</code>), không lên phiên bản lưu.</li>
-          <li>Mẫu kinh đô, kinh đô máy Đấu thành, máy chủ không đổi.</li>
-        </ul>
-      </div>
-      <div class="the">
-        <span class="huy">Lớn hơn</span>
-        <h3>B. Mỗi mẫu một công trình riêng</h3>
-        <ul>
-          <li>Mỗi nhà một công dụng (ví dụ nhà bên ao nuôi cá, nhà dài khau cút thêm chỗ quân).</li>
-          <li>Phải cân lại kinh tế, thêm số tối đa, mẫu kinh đô, Lạc hầu, bản lưu mới.</li>
-          <li>Làm sau được, khi đã có kiểu nhà ở phương án A.</li>
-        </ul>
-      </div>
+    <h2>Nặng máy không</h2>
+    <p>Mỗi mẫu 6 lưới (3 khối màu, mỗi khối một lớp viền mực) như nhà sàn hiện tại. Số tam giác ngang nhà sàn hiện tại, không tính người.</p>
+    <div class="cuon">
+      <table>
+        <thead><tr><th>Mẫu</th><th class="so-lieu">Lưới</th><th class="so-lieu">Tam giác cấp 5</th><th class="so-lieu">Tam giác cấp 10</th></tr></thead>
+        <tbody>
+          <tr><td>Nhà sàn hiện tại</td><td class="so-lieu">6</td><td class="so-lieu">2.944</td><td class="so-lieu">4.588</td></tr>
+          <tr><td>Nhà mui thuyền</td><td class="so-lieu">6</td><td class="so-lieu">3.856</td><td class="so-lieu">4.216</td></tr>
+          <tr><td>Nhà mái võng đôi chim</td><td class="so-lieu">6</td><td class="so-lieu">3.740</td><td class="so-lieu">5.076</td></tr>
+          <tr><td>Nhà giã gạo</td><td class="so-lieu">6</td><td class="so-lieu">2.580</td><td class="so-lieu">3.940</td></tr>
+          <tr><td>Nhà có vựa thóc</td><td class="so-lieu">6</td><td class="so-lieu">2.736</td><td class="so-lieu">4.744</td></tr>
+        </tbody>
+      </table>
     </div>
-    <p class="chu-nho">Trống đồng chỉ khắc hai kiểu nhà (mái thuyền, mái tròn), game đã dùng cả hai cho nhà sàn và Điện. Bốn mẫu mới lấy ý từ đồ đồng Đông Sơn và nếp nhà các dân tộc còn giữ nhà sàn cổ, nên là phần sáng tạo của game, không phải phục dựng khảo cổ.</p>
+  </section>
+
+  <section class="dau">
+    <h2>Đưa vào game</h2>
+    <div class="the">
+      <ul>
+        <li>Là các kiểu nhà của nhà sàn, chỉ để nhìn: móng 3×3, giá, số dân, máu, số tối đa giữ nguyên.</li>
+        <li>Vòng nút và bảng nhà sàn có nút <b>Đổi kiểu</b>, miễn phí, đổi ngay.</li>
+        <li>Bản lưu thêm một trường tùy chọn như hướng xoay (<code>Building.rot</code>), không lên phiên bản lưu.</li>
+        <li>Mẫu kinh đô, kinh đô máy Đấu thành, máy chủ không đổi.</li>
+      </ul>
+    </div>
   </section>
 
   <section class="dau">
     <h2>Cần chủ dự án chốt</h2>
     <ol class="hoi">
-      <li>Giữ, bỏ hay sửa mẫu nào trong bốn mẫu? (ví dụ khau cút to hơn, ao nhỏ lại)</li>
-      <li>Làm theo phương án A (kiểu nhà, chỉ để nhìn) hay B (công trình riêng)?</li>
+      <li>Giữ, bỏ hay sửa mẫu nào trong bốn mẫu?</li>
       <li>Nhà mới dựng tự trộn kiểu, hay luôn ra nhà sàn hiện tại rồi người chơi tự đổi?</li>
+      <li>Có làm thêm động tác giã gạo cho người ở nhà giã gạo không?</li>
     </ol>
+  </section>
+
+  <section class="dau">
+    <h2>Nguồn</h2>
+    <ol class="nguon">
+      <li id="n1"><a href="https://baotanglichsu.vn/en/Articles/1004/19804/vietnams-national-treasure-ngoc-lu-bronze-drum.html">Bảo tàng Lịch sử Quốc gia: Bảo vật quốc gia trống đồng Ngọc Lũ</a></li>
+      <li id="n2"><a href="https://vietjack.com/giao-an-lich-su-6/bai-13-doi-song-vat-chat-va-tinh-than-cua-cu-dan-van-lang.jsp">Giáo án Lịch sử 6, bài 13: Đời sống vật chất và tinh thần của cư dân Văn Lang</a> (trang tóm tắt sách giáo khoa)</li>
+      <li id="n3"><a href="https://smarthistory.org/?p=69520">Smarthistory: Đông Sơn Drums</a></li>
+      <li id="n4"><a href="https://vietnamtourism.vn/en/index.php/news/items/11586">Tổng cục Du lịch: The most beautiful Dong Son bronze drum</a></li>
+      <li id="n5"><a href="https://baotanglichsu.vn/en/Articles/1004/75068/national-treasures-the-viet-khe-boat-shaped-coffin.html">Bảo tàng Lịch sử Quốc gia: Bảo vật quốc gia mộ thuyền Việt Khê</a></li>
+      <li id="n6"><a href="https://www.anthropology.wisc.edu/wp-content/uploads/2016/08/NCKim-Hilgers_VNs-First-City-Arch-Mag_2016.pdf">Nam C. Kim (2016), Vietnam's First City, tạp chí Archaeology</a></li>
+      <li id="n7"><a href="https://vjol.info.vn/tapchiviendantochoc/article/download/127725/104743">Tạp chí Dân tộc học: nghiên cứu về nguồn gốc người Thái ở Việt Nam</a></li>
+    </ol>
+    <p class="chu-nho">Phiên làm việc không mở được trang gốc; nội dung lấy qua bản tóm tắt của công cụ tìm kiếm. Nên mở các link trên để kiểm lại, nhất là mô tả hai kiểu nhà của Bảo tàng Lịch sử Quốc gia.</p>
   </section>
 
   <footer class="chu-nho">Mô hình dựng bằng code ở <code>scripts/nhaMoi.ts</code>, chụp bằng <code>node scripts/chup-nha-moi.mjs</code>. Game chưa dùng các mẫu này.</footer>
