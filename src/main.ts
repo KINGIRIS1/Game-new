@@ -112,6 +112,7 @@ import { fromCode, loadFromStorage, saveFileName, saveToStorage, toCode } from '
 import { chapterOf, tomTat } from './game/manVao';
 import { TitleDrift } from './render/camera';
 import { HALF, RESOLUTIONS, World, type Resolution } from './render/world';
+import { KHUNG_CHE, KHUNG_MAN_VAO, NhipKhung, docKhung, type KhungChon } from './render/nhipKhung';
 import { formatClock, formatXay, vi } from './text/vi';
 import { Hud, buildingName, type HudAction, type HudXemDao, type WallShape } from './ui/hud';
 import { khoNanTk, luuSau, moKhoNan } from './render/nanKho';
@@ -183,6 +184,8 @@ type Mode =
 const OFFLINE_NOTICE_MS = 60_000;
 /** Khoảng trống giữa hai khung hình lớn hơn mức này (máy ngủ, chuyển app) được tính là vắng mặt. */
 const GAP_AS_OFFLINE_MS = 5_000;
+/** Khung không vẽ cảnh (giao diện che kín): đo lag ghi 0 lệnh vẽ. */
+const KHONG_VE = { calls: 0, triangles: 0 } as const;
 const AUTOSAVE_MS = 10_000;
 /** Độ nét lưu riêng trên từng máy, không đi theo mã lưu: máy mạnh máy yếu tự chọn. */
 const RESOLUTION_KEY = 'thoi-dai-van-lang/resolution';
@@ -190,6 +193,8 @@ const RESOLUTION_KEY = 'thoi-dai-van-lang/resolution';
 const NGAY_DEM_KEY = 'thoi-dai-van-lang/ngay-dem';
 /** Bóng đổ bật hay tắt (máy yếu tắt cho nhẹ), lưu riêng trên từng máy như độ nét. */
 const BONG_DO_KEY = 'thoi-dai-van-lang/bong-do';
+/** Khung hình mỗi giây (30, 60 hay theo màn hình: `KHUNG_CHON`), lưu riêng trên từng máy như độ nét. */
+const KHUNG_KEY = 'thoi-dai-van-lang/khung';
 /** Cách kéo đắp tường lần trước (dải thẳng hay khung chữ nhật), lưu riêng trên từng máy. */
 const WALL_SHAPE_KEY = 'thoi-dai-van-lang/wall-shape';
 
@@ -247,6 +252,22 @@ function saveBongDo(on: boolean): void {
     localStorage.setItem(BONG_DO_KEY, on ? 'bat' : 'tat');
   } catch {
     // Không lưu được thì lần sau bóng đổ bật như mặc định.
+  }
+}
+
+function loadKhung(): KhungChon {
+  try {
+    return docKhung(localStorage.getItem(KHUNG_KEY));
+  } catch {
+    return docKhung(null);
+  }
+}
+
+function saveKhung(k: KhungChon): void {
+  try {
+    localStorage.setItem(KHUNG_KEY, String(k));
+  } catch {
+    // Không lưu được thì lần sau dùng mức mặc định.
   }
 }
 
@@ -334,6 +355,10 @@ async function start(): Promise<void> {
   world.setResolution(loadResolution());
   world.setNgayDem(loadNgayDem(), true);
   world.setBongDo(loadBongDo());
+  /** Giới hạn khung hình mỗi giây (cài đặt Khung hình); vòng lặp khung hỏi `nhipKhung` ở cuối tệp. */
+  let khung = loadKhung();
+  /** Mức cài đặt máy này đang dùng, cho bảng Cài đặt. */
+  const caiDat = () => ({ resolution: world.resolution, ngayDem: world.ngayDemOn, bongDo: world.bongDoOn, khung });
 
   let mode: Mode = { kind: 'view', selected: null };
   let saveWarned = false;
@@ -2207,7 +2232,7 @@ async function start(): Promise<void> {
       case 'openSettings':
         if (mode.kind !== 'view') exitMode();
         select(null);
-        hud.showSettings(state, world.resolution, world.ngayDemOn, world.bongDoOn);
+        hud.showSettings(state, caiDat());
         // Mục Tài khoản Google: hỏi máy chủ có bật Google không, bản lưu trên mây ra sao.
         void hoiTaiKhoan();
         return;
@@ -2217,24 +2242,24 @@ async function start(): Promise<void> {
         setMuted(state.settings.muted);
         if (state.settings.muted) stopRally();
         save();
-        hud.showSettings(state, world.resolution, world.ngayDemOn, world.bongDoOn);
+        hud.showSettings(state, caiDat());
         return;
 
       case 'setResolution':
         world.setResolution(a.resolution);
         saveResolution(a.resolution);
-        hud.showSettings(state, a.resolution, world.ngayDemOn, world.bongDoOn);
+        hud.showSettings(state, caiDat());
         return;
 
       case 'setNgayDem':
         world.setNgayDem(a.on);
         saveNgayDem(a.on);
-        hud.showSettings(state, world.resolution, a.on, world.bongDoOn);
+        hud.showSettings(state, caiDat());
         return;
 
       case 'setHuongDan':
         luuHuongDan(a.on);
-        hud.showSettings(state, world.resolution, world.ngayDemOn, world.bongDoOn);
+        hud.showSettings(state, caiDat());
         return;
 
       case 'xemHuongDan':
@@ -2244,7 +2269,13 @@ async function start(): Promise<void> {
       case 'setBongDo':
         world.setBongDo(a.on);
         saveBongDo(a.on);
-        hud.showSettings(state, world.resolution, world.ngayDemOn, a.on);
+        hud.showSettings(state, caiDat());
+        return;
+
+      case 'setKhung':
+        khung = a.khung;
+        saveKhung(a.khung);
+        hud.showSettings(state, caiDat());
         return;
 
       case 'copyCode': {
@@ -3337,15 +3368,25 @@ async function start(): Promise<void> {
   let lastKnown = state.benKia.known.length;
   let lastSave = prev;
   const lag = new DoLag();
+  const nhipKhung = new NhipKhung();
+  /** Cầm dọc: lớp nhắc xoay ngang (`xoayNgang.ts`) phủ kín màn hình. */
+  const camDoc = matchMedia('(orientation: portrait)');
   /** Hệ số thời gian chơi (`window.__debug.tocDo`): đo lag ở máy vẽ chậm cho trận trôi chậm lại để kịp đo. */
   let tocDo = 1;
   const frame = (now: number) => {
+    // Máy đỡ nóng: chạy theo cài đặt Khung hình, màn hình vào game 30 khung; giao diện che kín cảnh thì không vẽ cảnh,
+    // vòng lặp chạy thưa (`nhipKhung.ts`). Khung bỏ qua không tính gì, `dt` khung sau gồm cả quãng ấy.
+    const che = camDoc.matches || hud.cheKin;
+    if (!nhipKhung.chay(now, che ? KHUNG_CHE : entered ? khung : KHUNG_MAN_VAO)) {
+      requestAnimationFrame(frame);
+      return;
+    }
     const dt = Math.min((now - prev) / 1000, 0.1);
     prev = now;
     drift.update(dt);
     if (!entered) {
       // Đang ở màn hình vào game: chỉ vẽ cảnh, không cho thời gian trôi trong game.
-      world.update(dt);
+      world.update(dt, !che);
       requestAnimationFrame(frame);
       return;
     }
@@ -3394,7 +3435,7 @@ async function start(): Promise<void> {
     stepDaNgoai(dt);
     world.updateDa(daB, dt);
     loi?.update(dt * tocDo);
-    world.update(dt);
+    world.update(dt, !che);
     lag.cat('canh');
     hud.xayLabels.update(state, (x, z, lift) => (world.inField ? null : world.screenAt(x, z, lift)));
     hud.updateVong(state, (x, z, lift) => (world.inField || pvp ? null : world.screenAt(x, z, lift)));
@@ -3440,7 +3481,7 @@ async function start(): Promise<void> {
       lastSave = now;
       save();
     }
-    lag.xong(world.renderer.info.render);
+    lag.xong(che ? KHONG_VE : world.renderer.info.render);
     requestAnimationFrame(frame);
   };
   requestAnimationFrame(frame);

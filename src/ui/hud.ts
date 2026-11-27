@@ -110,6 +110,7 @@ import { floodToleranceOf, groundOf, hasOpenCong } from '../game/terrain';
 import { tetOpen, tetStarted, type Banh } from '../game/tet';
 import { dichOf, duongGanh } from '../game/vanChuyen';
 import type { Resolution } from '../render/world';
+import { KHUNG_CHON, type KhungChon } from '../render/nhipKhung';
 import { formatClock, formatDuration, formatXay, vi } from '../text/vi';
 import { conLai, pendingBuilding, soTho, thoRanh, thoRanhSau, viecOf, xayMs } from '../game/xay';
 import { fillThuoc, khiengHtml, linhHtml, nhaThuocHtml } from './nhaThuoc';
@@ -286,6 +287,7 @@ export type HudAction =
   | { kind: 'setHuongDan'; on: boolean }
   | { kind: 'xemHuongDan'; id: HuongDanId }
   | { kind: 'setBongDo'; on: boolean }
+  | { kind: 'setKhung'; khung: KhungChon }
   | { kind: 'copyCode' }
   | { kind: 'saveFile' }
   | { kind: 'shareFile' }
@@ -373,10 +375,19 @@ export type WallShape = 'line' | 'rect';
 /** Thẻ của bảng doanh trại: quân và nơi ở, bố trí giữ kinh đô, tướng chỉ huy, thông tin và nâng cấp trại. */
 type BarracksTab = 'quan' | 'giu' | 'tuong' | 'trai';
 
+/** Cài đặt lưu riêng từng máy (main.ts), bảng Cài đặt hiện mức đang dùng. */
+export interface CaiDatMay {
+  resolution: Resolution;
+  ngayDem: boolean;
+  bongDo: boolean;
+  /** Khung hình mỗi giây (`KHUNG_CHON` ở render/nhipKhung.ts), 0 là theo màn hình. */
+  khung: KhungChon;
+}
+
 type Sheet =
   | { kind: 'build' }
   | { kind: 'building'; id: number }
-  | { kind: 'settings'; resolution: Resolution; ngayDem: boolean; bongDo: boolean }
+  | ({ kind: 'settings' } & CaiDatMay)
   | { kind: 'merchant' }
   | { kind: 'giong' }
   | { kind: 'son' }
@@ -944,6 +955,8 @@ export class Hud {
         return this.onAction({ kind: 'xemHuongDan', id: el.dataset.id as HuongDanId });
       case 'setBongDo':
         return this.onAction({ kind: 'setBongDo', on: el.dataset.on === '1' });
+      case 'setKhung':
+        return this.onAction({ kind: 'setKhung', khung: Number(el.dataset.khung) as KhungChon });
       case 'storyNext':
         return this.storyNext();
       case 'campChapter':
@@ -1633,8 +1646,8 @@ export class Hud {
     this.refreshSheet(state);
   }
 
-  showSettings(state: GameState, resolution: Resolution, ngayDem: boolean, bongDo: boolean): void {
-    this.sheet = { kind: 'settings', resolution, ngayDem, bongDo };
+  showSettings(state: GameState, cai: CaiDatMay): void {
+    this.sheet = { kind: 'settings', ...cai };
     this.mayHoi = null;
     this.refreshSheet(state, true);
   }
@@ -1762,7 +1775,7 @@ export class Hud {
       body = tetHtml(state);
     } else {
       title = `⚙️ ${vi.ui.settings}`;
-      body = this.settingsHtml(state, this.sheet.resolution, this.sheet.ngayDem, this.sheet.bongDo);
+      body = this.settingsHtml(state, this.sheet);
     }
     const html = `<div class="sheet-head"><h2>${title}</h2><button class="close" data-act="closeSheet" aria-label="${vi.ui.close}">✕</button></div>
       <div class="sheet-body">${body}</div>`;
@@ -2380,7 +2393,10 @@ export class Hud {
     return `<p class="muted">${vi.ui.merchantHint} (${secs}s)</p><div class="offers">${rows}</div>`;
   }
 
-  private settingsHtml(state: GameState, resolution: Resolution, ngayDem: boolean, bongDo: boolean): string {
+  private settingsHtml(state: GameState, { resolution, ngayDem, bongDo, khung }: CaiDatMay): string {
+    const khungBtns = KHUNG_CHON.map(
+      (k) => `<button class="btn small ${k === khung ? 'bronze' : 'ghost'}" data-act="setKhung" data-khung="${k}">${vi.ui.khungChon[k]}</button>`,
+    ).join('');
     const levels = (Object.keys(vi.resolutions) as Resolution[])
       .map((r) => `<button class="btn small ${r === resolution ? 'bronze' : 'ghost'}" data-act="setResolution" data-resolution="${r}">${vi.resolutions[r]}</button>`)
       .join('');
@@ -2399,6 +2415,8 @@ export class Hud {
         <button class="btn small ghost" data-act="toggleMute">${state.settings.muted ? '🔇 ' + vi.ui.off : '🔊 ' + vi.ui.on}</button></div>
       <div class="setting-row"><span>${vi.ui.resolution}</span><div class="choices">${levels}</div></div>
       <p class="muted">${vi.ui.resolutionHint}</p>
+      <div class="setting-row"><span>${vi.ui.khung}</span><div class="choices">${khungBtns}</div></div>
+      <p class="muted">${vi.ui.khungHint}</p>
       <div class="setting-row"><span>${vi.ui.ngayDem}</span><div class="choices">${ngayDemBtns}</div></div>
       <p class="muted">${vi.ui.ngayDemHint}</p>
       <div class="setting-row"><span>${vi.ui.bongDo}</span><div class="choices">${bongBtns}</div></div>
@@ -2432,6 +2450,21 @@ export class Hud {
   get campaignOpen(): boolean {
     return this.camp !== null;
   }
+
+  /**
+   * Giao diện đang che kín cảnh 3D: main.ts thôi vẽ cảnh cho máy đỡ nóng. Bản đồ phó bản và các bảng mở từ cột bên
+   * phải (nền giấy đặc phủ cả màn hình), bảng tướng phủ cả màn hình ở điện thoại. Máy tính thì bảng tướng là bảng gọn
+   * giữa màn hình, còn thấy kinh đô quanh bảng, nên vẫn vẽ.
+   */
+  get cheKin(): boolean {
+    if (this.camp) return true;
+    if (this.sheet?.kind !== 'tuong' || !this.sheetEl.classList.contains('tg-full')) return false;
+    this.tuiGon ??= typeof matchMedia === 'function' ? matchMedia('(min-width: 1100px) and (min-height: 620px)') : null;
+    return !this.tuiGon?.matches;
+  }
+
+  /** Khổ máy tính của bảng tướng (cùng điều kiện với `.sheet.tg-full` trong style.css). */
+  private tuiGon: MediaQueryList | null | undefined;
 
   /** Mở bản đồ phó bản; `step` thì mở thẳng bảng Dã ngoại, Thần thú hay Đấu thành (cột nút bên phải). */
   showCampaign(state: GameState, step?: CampStepRieng): void {

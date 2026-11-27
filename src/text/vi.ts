@@ -12,6 +12,7 @@ import type { TenLoi } from '../game/mayChu';
 import type { GiongLook } from '../game/giong';
 import type { SonLook } from '../game/son';
 import type { Resolution } from '../render/world';
+import type { KhungChon } from '../render/nhipKhung';
 
 /** Người nói trong các đoạn truyện. */
 type Speaker =
@@ -2635,6 +2636,10 @@ export const vi = {
     sound: 'Âm thanh',
     resolution: 'Độ nét',
     resolutionHint: 'Độ nét thấp thì máy mát hơn và đỡ tốn pin. Lựa chọn này chỉ lưu trên máy này.',
+    khung: 'Khung hình',
+    khungChon: { 30: '30', 60: '60', 0: 'Tối đa' } satisfies Record<KhungChon, string>,
+    khungHint:
+      'Số lần vẽ lại cảnh mỗi giây. 30 thì máy mát hơn hẳn, đỡ tốn pin, cảnh động kém mượt một chút. Tối đa vẽ theo màn hình (màn 90, 120 Hz vẽ nhiều gấp rưỡi, gấp đôi) nên mượt nhất mà nóng nhất. Lựa chọn này chỉ lưu trên máy này.',
     ngayDem: 'Ngày đêm',
     ngayDemOn: 'Bật',
     ngayDemOff: 'Luôn ban ngày',

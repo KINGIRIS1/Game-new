@@ -833,7 +833,9 @@ export class World {
   private mistFade = -1;
 
   constructor(canvas: HTMLCanvasElement) {
-    this.renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' });
+    // Không xin `powerPreference: 'high-performance'` (lời xin ưu tiên sức mạnh hơn tiết kiệm điện): để trình duyệt tự
+    // chọn cho máy đỡ nóng, đỡ tốn pin. Máy tính có hai card thì có thể vẽ bằng card tích hợp.
+    this.renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
     this.renderer.shadowMap.enabled = true;
     this.renderer.shadowMap.type = THREE.PCFShadowMap;
     this.batched = this.renderer.extensions.has('WEBGL_multi_draw');
@@ -4443,7 +4445,11 @@ export class World {
     for (const id of [...this.faded.keys()]) this.unfade(id);
   }
 
-  update(dt: number): void {
+  /**
+   * Hoạt cảnh một khung rồi vẽ. `ve` false (giao diện che kín cảnh, main.ts) thì vẫn cho mọi thứ chạy theo thời gian
+   * nhưng không vẽ: khung hình cũ nằm yên dưới bảng, GPU được nghỉ.
+   */
+  update(dt: number, ve = true): void {
     this.time += dt;
     const t = this.time;
 
@@ -4653,7 +4659,7 @@ export class World {
       }
     }
 
-    this.renderer.render(this.loi ? this.loi.scene : this.da ? this.da.scene : this.inField && this.field ? this.field.scene : this.scene, this.view.camera);
+    if (ve) this.renderer.render(this.loi ? this.loi.scene : this.da ? this.da.scene : this.inField && this.field ? this.field.scene : this.scene, this.view.camera);
   }
 
   /**
