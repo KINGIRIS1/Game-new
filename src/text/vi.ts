@@ -540,8 +540,8 @@ export const vi = {
     pickHint: 'Bà đứng cầm cờ sau hàng hậu, không đánh. Binh chủng của bà được thêm 12% máu và sức đánh. Chạm lại để không mang ai.',
     boost: (icon: string, unit: string) => `${icon} ${unit} +12%`,
     noUnit: (icon: string, unit: string) => `${icon} ${unit} +12% (không mang theo)`,
-    barracksTitle: 'Nữ tướng ở trại',
-    barracksHint: 'Cả bốn nữ tướng ở doanh trại. Lính giữ kinh đô thuộc binh chủng của bà được thêm 12% máu và sức đánh.',
+    /** Dòng binh chủng ở thẻ Giữ kinh đô của doanh trại: nữ tướng ở trại cộng cho lính giữ kinh đô binh chủng ấy. */
+    guardBoost: (icon: string, name: string) => `${icon} ${name} ở trại: +12% máu, sức đánh`,
     /** Lạc hầu báo một lần khi mỗi nữ tướng theo về. */
     hint: {
       leChan:
@@ -2579,10 +2579,7 @@ export const vi = {
       doanh > 1 ? `Quân trong doanh trại (${doanh} doanh): ${used}/${cap} chỗ` : `Quân trong doanh trại: ${used}/${cap} chỗ`,
     barracksCap: (cap: number, per: number, doanh: number) => `Doanh trại giữ ${cap} chỗ: ${doanh} doanh, mỗi doanh ${per} chỗ`,
     /** Bốn thẻ của bảng doanh trại. */
-    barracksTabs: { quan: 'Luyện quân', giu: 'Giữ kinh đô', tuong: 'Tướng', trai: 'Trại' },
-    generalsHint: 'Mỗi tướng đã về là một doanh trong trại, thêm chỗ quân theo cấp trại (tối đa 5 doanh). Giữ kinh đô, tướng ra trận cùng quân từ cổng trại gần giặc.',
-    doanhOf: (i: number) => `doanh thứ ${i}`,
-    doanhNone: 'ở trại, ngoài năm doanh (không thêm chỗ)',
+    barracksTabs: { quan: 'Luyện quân', giu: 'Giữ kinh đô', trai: 'Trại' },
     tuongNames: { lacTuong: 'Lạc tướng', giong: 'Thánh Gióng', sonTinh: 'Sơn Tinh', anDuong: 'An Dương Vương', caoLo: 'Cao Lỗ', trungTrac: 'Trưng Trắc', trungNhi: 'Trưng Nhị', baTrieu: 'Bà Triệu', trieuQuangPhuc: 'Triệu Quang Phục', maiThucLoan: 'Mai Thúc Loan', ngoQuyen: 'Ngô Quyền', lyThuongKiet: 'Lý Thường Kiệt' } satisfies Record<TuongId, string>,
     tuongIcons: { lacTuong: '🥁', giong: '🐎', sonTinh: '⛰️', anDuong: '🏹', caoLo: '🎯', trungTrac: '🐘', trungNhi: '🚩', baTrieu: '🗡️', trieuQuangPhuc: '🐉', maiThucLoan: '🐃', ngoQuyen: '🌊', lyThuongKiet: '📜' } satisfies Record<TuongId, string>,
     guardInfo: (used: number, cap: number) => `Giữ kinh đô: ${used}/${cap} chỗ (theo cấp Điện)`,
@@ -2597,16 +2594,6 @@ export const vi = {
     train: 'Luyện',
     generalsTitle: 'Tướng ở doanh trại',
     lacTuong: 'Lạc tướng',
-    lacTuongDesc: 'Cầm quân mọi trận, đánh Trống trận thúc quân.',
-    tuongDaDesc: 'Theo đội dã ngoại, chỉ đánh ở dã ngoại.',
-    heroReady: 'sẵn sàng ra trận',
-    heroRest: (s: number) => `kiệt sức, nghỉ thêm ${s} giây`,
-    heroHienLinh: 'hiển linh, vẫn ra trận',
-    heroOpen: 'Xem',
-    advAtDien: 'ngự ở Điện',
-    advAtSea: 'đã xuống biển, hiển linh',
-    caoLoAtDien: 'đứng trước Điện',
-    haiBaDesc: 'cưỡi voi trên đài tướng',
     homeLink: (name: string) => `Ở ${name.toLowerCase()}`,
     homeHu: (name: string) => `${name} hư · sửa`,
     buildHome: (name: string) => `Dựng ${name.toLowerCase()}`,
@@ -2985,7 +2972,6 @@ export const vi = {
       congDong: 'Đóng cống',
       quan: 'Luyện quân',
       giu: 'Giữ thành',
-      tuong: 'Tướng',
       luyen: 'Luyện',
       ren: 'Rèn',
       tet: 'Hội Tết',

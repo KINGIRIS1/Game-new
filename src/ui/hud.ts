@@ -13,7 +13,6 @@ import {
   CONG_THANH,
   LAU_NO,
   LAU_NO_FROM_LEVEL,
-  NU_TUONG,
   PHU_SA_BONUS,
   PHU_SA_TYPES,
   DECOR_TYPES,
@@ -41,13 +40,11 @@ import {
   type GiftId,
   type Row,
   type SkillId,
-  DOANH_MAX,
   type NuTuongId,
-  type TuongId,
   type UnitType,
 } from '../game/defs';
-import { armySpace, canGuard, capOf, doanhCount, generals, guardCap, guardManual, guardPlan, guardTargets, reserve } from '../game/doanhTrai';
-import { nuTuongList } from '../game/nuTuong';
+import { armySpace, canGuard, capOf, doanhCount, guardCap, guardManual, guardPlan, guardTargets, reserve } from '../game/doanhTrai';
+import { nuForUnit } from '../game/nuTuong';
 import { scorePvp } from '../game/dauThanh';
 import { cloudSettingsHtml, dauHtml, dauMapHtml, newDauView, pickTarget, stepDauArmy, type DauTarget, type DauView, type TkHoi } from './dauThanh';
 import {
@@ -371,7 +368,7 @@ export type HudMode = 'view' | 'place' | 'move' | 'paint' | 'merge';
 export type WallShape = 'line' | 'rect';
 
 /** Thẻ của bảng doanh trại: quân và nơi ở, bố trí giữ kinh đô, tướng chỉ huy, thông tin và nâng cấp trại. */
-type BarracksTab = 'quan' | 'giu' | 'tuong' | 'trai';
+type BarracksTab = 'quan' | 'giu' | 'trai';
 
 type Sheet =
   | { kind: 'build' }
@@ -2221,55 +2218,6 @@ export class Hud {
   }
 
   /**
-   * Các tướng ở doanh trại: ai sẵn sàng ra trận, ai đang nghỉ; mỗi tướng một doanh (năm tướng đầu), mỗi doanh thêm chỗ
-   * quân theo cấp trại.
-   */
-  private generalsHtml(state: GameState): string {
-    const status = (resting: boolean, until: number, hienLinh = false) =>
-      resting ? `💤 ${vi.ui.heroRest(Math.ceil((until - state.clock) / 1000))}` : hienLinh ? vi.ui.heroHienLinh : vi.ui.heroReady;
-    const info: Record<TuongId, () => string> = {
-      lacTuong: () => vi.ui.lacTuongDesc,
-      giong: () => status(giongResting(state), state.giong.restUntil, state.giong.ascended),
-      sonTinh: () => status(sonResting(state), state.son.restUntil, state.son.won),
-      anDuong: () => `${status(advResting(state), state.adv.restUntil, state.adv.bien)} · ${state.adv.bien ? vi.ui.advAtSea : vi.ui.advAtDien}`,
-      caoLo: () => `${status(caoLoResting(state), state.caoLo.restUntil)} · ${vi.ui.caoLoAtDien}`,
-      trungTrac: () => `${status(haiBaResting(state, 'trungTrac'), state.haiBa.trungTrac)} · ${vi.ui.haiBaDesc}`,
-      trungNhi: () => `${status(haiBaResting(state, 'trungNhi'), state.haiBa.trungNhi)} · ${vi.ui.haiBaDesc}`,
-      baTrieu: () => vi.ui.tuongDaDesc,
-      trieuQuangPhuc: () => vi.ui.tuongDaDesc,
-      maiThucLoan: () => vi.ui.tuongDaDesc,
-      ngoQuyen: () => vi.ui.tuongDaDesc,
-      lyThuongKiet: () => vi.ui.tuongDaDesc,
-    };
-    const open: Partial<Record<TuongId, string>> = { giong: 'openGiong', sonTinh: 'openSon', anDuong: 'openAdv', caoLo: 'openCaoLo' };
-    const rows = generals(state).map((t, i) => {
-      const where = i < DOANH_MAX ? vi.ui.doanhOf(i + 1) : vi.ui.doanhNone;
-      const gear = t !== 'lacTuong' && doMo(state) ? `<button class="btn small" data-act="openTuong" data-hero="${t}">${vi.trangBi.open}</button>` : '';
-      const button = open[t] || gear ? `<span class="btn-col">${open[t] ? `<button class="btn small bronze" data-act="${open[t]}">${vi.ui.heroOpen}</button>` : ''}${gear}</span>` : '';
-      return `<div class="unit-row">
-        <span class="unit-icon">${vi.ui.tuongIcons[t]}</span>
-        <span class="unit-info"><b>${vi.ui.tuongNames[t]}</b><small>${where}</small><small>${info[t]()}</small></span>
-        ${button}
-      </div>`;
-    });
-    return `<p class="muted">${vi.ui.generalsHint}</p><div class="units">${rows.join('')}</div>${this.nuTuongHtml(state)}`;
-  }
-
-  /** Nữ tướng ở doanh trại (chương 5): cả bốn ở trại; lính giữ kinh đô thuộc binh chủng của bà được cộng thêm. */
-  private nuTuongHtml(state: GameState): string {
-    const list = nuTuongList(state);
-    if (!list.length) return '';
-    const rows = list.map((n) => {
-      const unit = vi.units[NU_TUONG[n].unit];
-      return `<div class="unit-row">
-        <span class="unit-icon">${vi.nuTuong.list[n].icon}</span>
-        <span class="unit-info"><b>${vi.nuTuong.list[n].name}</b><small>${vi.nuTuong.boost(unit.icon, unit.name)}</small></span>
-      </div>`;
-    });
-    return `<h4 class="sub-head">${vi.nuTuong.barracksTitle}</h4><p class="muted">${vi.nuTuong.barracksHint}</p><div class="units">${rows.join('')}</div>`;
-  }
-
-  /**
    * Bố trí giữ kinh đô: mỗi binh chủng bao nhiêu lính ra trận khi giặc, lũ đánh kinh đô (ra từ cổng trại gần giặc).
    * Cả kinh đô không quá số chỗ giữ kinh đô theo cấp Điện; lính còn lại là quân dự trữ.
    */
@@ -2285,9 +2233,12 @@ export class Hud {
       const minus = canGuard(state, k, -1);
       const plus = canGuard(state, k, 1);
       if (!plus.ok && plus.reason !== 'khongDuQuan') full.add(vi.reasons[plus.reason]);
+      // Nữ tướng ở trại lo binh chủng này (chương 5): lính giữ kinh đô của binh chủng được cộng thêm.
+      const nu = nuForUnit(state, k);
       return `<div class="unit-row army">
         <span class="unit-icon">${vi.units[k].icon}</span>
         <span class="unit-info"><b>${vi.units[k].name}</b><small>${vi.ui.haveTroops(state.troops[k])}</small>
+          ${nu ? `<small>${vi.nuTuong.guardBoost(vi.nuTuong.list[nu].icon, vi.nuTuong.list[nu].name)}</small>` : ''}
           ${short > 0 ? `<small class="lack">${vi.ui.guardShort(short)}</small>` : ''}</span>
         <button class="step" data-act="guardDelta" data-unit="${k}" data-delta="-1" ${minus.ok ? '' : 'disabled'} aria-label="Bớt một lính giữ kinh đô">−</button>
         <b class="count">${got[k]}</b>
@@ -2306,8 +2257,8 @@ export class Hud {
   }
 
   /**
-   * Bảng doanh trại chia thẻ cho khỏi cuộn dài: Luyện quân (binh chủng, nơi ở, lịch giặc), Giữ kinh đô (bố trí), Tướng
-   * (tướng chỉ huy), Trại (lời tả, cấp, nâng cấp, dời, xoay: `info`). Thẻ xếp cột dọc bên trái như bảng Xây dựng; bên
+   * Bảng doanh trại chia thẻ cho khỏi cuộn dài: Luyện quân (binh chủng, nơi ở, lịch giặc), Giữ kinh đô (bố trí), Trại
+   * (lời tả, cấp, nâng cấp, dời, xoay: `info`). Không có thẻ Tướng: các tướng đã có ở thẻ Tướng ngoài Dock. Thẻ xếp cột dọc bên trái như bảng Xây dựng; bên
    * phải là dòng chỗ quân, nút sửa (`repair`) và nội dung thẻ, cuộn riêng (`.trai-khung` ở `style.css`).
    */
   private barracksHtml(state: GameState, b: Building, info: string, repair: string): string {
@@ -2316,7 +2267,6 @@ export class Hud {
       [
         ['quan', vi.ui.barracksTabs.quan, ''],
         ['giu', vi.ui.barracksTabs.giu, ''],
-        ['tuong', vi.ui.barracksTabs.tuong, ''],
         // Nâng cấp được thì thẻ Trại có dấu ⬆.
         ['trai', vi.ui.barracksTabs.trai, upgradeCostOf(b) && canUpgrade(state, b.id).ok ? '⬆' : ''],
       ] as const
@@ -2327,7 +2277,7 @@ export class Hud {
       )
       .join('');
     const body =
-      tab === 'giu' ? this.guardHtml(state) : tab === 'tuong' ? this.generalsHtml(state) : tab === 'trai' ? info : this.troopsHtml(state);
+      tab === 'giu' ? this.guardHtml(state) : tab === 'trai' ? info : this.troopsHtml(state);
     return `<div class="trai-khung">
       <div class="build-tabs barracks-tabs">${tabs}</div>
       <div class="trai-noi">${this.thuongHtml(state)}${repair ? `<div class="actions top">${repair}</div>` : ''}

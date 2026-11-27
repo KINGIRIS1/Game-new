@@ -105,10 +105,10 @@ describe('vòng nút: nút riêng từng loại', () => {
     return { s, id: s.buildings.find((b) => b.type === type)!.id };
   }
 
-  it('doanh trại: Luyện quân, Giữ thành, Tướng mở bảng đúng thẻ', () => {
+  it('doanh trại: Luyện quân, Giữ thành mở bảng đúng thẻ (tướng đã có ở thẻ Tướng ngoài Dock)', () => {
     const { s, id } = co('doanhTrai');
     const tab = nutCua(s, id).filter((n) => n.data?.tab).map((n) => [n.act, n.data!.tab]);
-    expect(tab).toEqual([['openInfo', 'quan'], ['openInfo', 'giu'], ['openInfo', 'tuong']]);
+    expect(tab).toEqual([['openInfo', 'quan'], ['openInfo', 'giu']]);
   });
 
   it('nơi ở có Luyện, cuộn tới hàng luyện', () => {
