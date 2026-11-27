@@ -2237,8 +2237,7 @@ export class Hud {
       const nu = nuForUnit(state, k);
       return `<div class="unit-row army">
         <span class="unit-icon">${vi.units[k].icon}</span>
-        <span class="unit-info"><b>${vi.units[k].name}</b><small>${vi.ui.haveTroops(state.troops[k])}</small>
-          ${nu ? `<small>${vi.nuTuong.guardBoost(vi.nuTuong.list[nu].icon, vi.nuTuong.list[nu].name)}</small>` : ''}
+        <span class="unit-info"><b>${vi.units[k].name}</b><small>${vi.ui.haveTroops(state.troops[k])}${nu ? ` · <span title="${vi.nuTuong.guardHint(vi.nuTuong.list[nu].name)}">${vi.nuTuong.guardBoost(vi.nuTuong.list[nu].icon, vi.nuTuong.list[nu].name)}</span>` : ''}</small>
           ${short > 0 ? `<small class="lack">${vi.ui.guardShort(short)}</small>` : ''}</span>
         <button class="step" data-act="guardDelta" data-unit="${k}" data-delta="-1" ${minus.ok ? '' : 'disabled'} aria-label="Bớt một lính giữ kinh đô">−</button>
         <b class="count">${got[k]}</b>
@@ -2248,12 +2247,12 @@ export class Hud {
     const left = reserve(state);
     const spare = UNIT_TYPES.filter((k) => left[k] > 0).map((k) => `${vi.units[k].icon} ${left[k]}`).join(' · ') || vi.ui.reserveNone;
     const manual = guardManual(state);
-    return `<div class="stat"><span>${vi.ui.guardInfo(used, guardCap(state))}</span></div>
-      <p class="muted">${manual ? vi.ui.guardManualNote : vi.ui.guardAutoNote} ${vi.ui.guardGate}</p>
+    // Quân dự trữ chung hàng với số chỗ giữ kinh đô; nút Bố trí tự động chung hàng với lời giải thích, cho đỡ tốn
+    // chiều cao ở màn thấp.
+    return `<div class="stat"><span>${vi.ui.guardInfo(used, guardCap(state))}</span><span class="muted">${vi.ui.reserveLine(spare)}</span></div>
+      <div class="trai-giac"><p class="muted">${manual ? vi.ui.guardManualNote : vi.ui.guardAutoNote} <span class="trai-phu">${vi.ui.guardGate}</span></p>${manual ? `<button class="btn ghost small" data-act="guardAuto">${vi.ui.guardAuto}</button>` : ''}</div>
       ${[...full].map((t) => `<p class="why">${t}</p>`).join('')}
-      ${owned.length ? `<div class="units">${rows.join('')}</div>` : `<p class="muted">${vi.ui.noTroops}</p>`}
-      <p class="muted">${vi.ui.reserveLine(spare)}</p>
-      ${manual ? `<button class="btn ghost small" data-act="guardAuto">${vi.ui.guardAuto}</button>` : ''}`;
+      ${owned.length ? `<div class="units">${rows.join('')}</div>` : `<p class="muted">${vi.ui.noTroops}</p>`}`;
   }
 
   /**

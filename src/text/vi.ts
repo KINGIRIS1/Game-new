@@ -541,7 +541,8 @@ export const vi = {
     boost: (icon: string, unit: string) => `${icon} ${unit} +12%`,
     noUnit: (icon: string, unit: string) => `${icon} ${unit} +12% (không mang theo)`,
     /** Dòng binh chủng ở thẻ Giữ kinh đô của doanh trại: nữ tướng ở trại cộng cho lính giữ kinh đô binh chủng ấy. */
-    guardBoost: (icon: string, name: string) => `${icon} ${name} ở trại: +12% máu, sức đánh`,
+    guardBoost: (icon: string, name: string) => `${icon} ${name} +12%`,
+    guardHint: (name: string) => `${name} ở doanh trại: lính giữ kinh đô binh chủng này thêm 12% máu và sức đánh`,
     /** Lạc hầu báo một lần khi mỗi nữ tướng theo về. */
     hint: {
       leChan:

@@ -4448,6 +4448,13 @@ body.man-vao-on #hud > * {
   .trai-giac .btn.small {
     padding: 4px 10px;
   }
+  /* Lời phụ (giặc tới thì lính ra cổng nào) bỏ ở màn thấp cho các dòng binh chủng vừa bảng. */
+  .trai-noi .trai-phu {
+    display: none;
+  }
+  .trai-noi .barracks-body > .trai-giac {
+    margin: 4px 0;
+  }
   .trai-noi .unit-row {
     padding: 5px 8px;
   }
