@@ -398,7 +398,7 @@ export const CANH = {
     sau: `document.querySelector('[data-act=openBuild]').click(); document.querySelector('[data-act=buildTab][data-tab=mau]').click();`,
   },
   'vong-nut-trai': {
-    mo: 'Như kinh-do có doanh trại, chạm chọn doanh trại: vòng có Quân, Giữ thành, Tướng (mở bảng đúng thẻ)',
+    mo: 'Như kinh-do có doanh trại, chạm chọn doanh trại: vòng có Luyện quân, Giữ thành (mở bảng đúng thẻ)',
     truoc: `${KINH_DO}\n${CO_QUAN}`,
     sau: `d.select(s.buildings.find((b) => b.type === 'doanhTrai').id);`,
     doi: 2500,

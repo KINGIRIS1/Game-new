@@ -106,7 +106,7 @@ export const vi = {
     doanhTrai: {
       name: 'Doanh trại',
       icon: '⛺',
-      desc: 'Đại doanh của cả kinh đô: nơi các tướng ở, lính tập và điều binh. Mỗi tướng về thêm một doanh, nuôi thêm quân dự trữ. Giặc tới thì quân ra từ cổng gần giặc. Cấp càng cao càng giữ nhiều quân và cho dựng thêm nơi ở riêng của binh chủng mới: cấp 1 trại giáo, cấp 2 trại cung, cấp 3 chuồng voi.',
+      desc: 'Đại doanh của cả kinh đô: nơi các tướng ở, lính tập và điều binh. Luyện quân ngay ở đây. Mỗi tướng về thêm một doanh, nuôi thêm quân dự trữ. Giặc tới thì quân ra từ cổng gần giặc. Cấp càng cao càng giữ nhiều quân và cho dựng thêm nơi ở riêng của binh chủng mới: cấp 1 trại giáo, cấp 2 trại cung, cấp 3 chuồng voi.',
     },
     choiCanh: {
       name: 'Chòi canh',
@@ -191,17 +191,17 @@ export const vi = {
     traiGiao: {
       name: 'Trại giáo',
       icon: '🛡️',
-      desc: 'Nơi giáo binh ở và luyện tập. Luyện giáo binh ở đây. Lính tuyển riêng, không lấy bớt dân làng, nhưng tốn tiền tuyển và ăn gạo mỗi phút. Cần doanh trại.',
+      desc: 'Nơi giáo binh ở và luyện tập. Có trại giáo mới luyện được giáo binh, luyện ở đây hay ngay trong doanh trại. Lính tuyển riêng, không lấy bớt dân làng, nhưng tốn tiền tuyển và ăn gạo mỗi phút. Cần doanh trại.',
     },
     traiCung: {
       name: 'Trại cung',
       icon: '🎯',
-      desc: 'Nơi cung thủ ở và tập bắn. Luyện cung thủ ở đây. Cần doanh trại cấp 2.',
+      desc: 'Nơi cung thủ ở và tập bắn. Có trại cung mới luyện được cung thủ, luyện ở đây hay ngay trong doanh trại. Cần doanh trại cấp 2.',
     },
     chuongVoi: {
       name: 'Chuồng voi',
       icon: '🐘',
-      desc: 'Nơi voi chiến ở, có quản tượng chăm. Luyện voi chiến ở đây. Cần doanh trại cấp 3.',
+      desc: 'Nơi voi chiến ở, có quản tượng chăm. Có chuồng voi mới luyện được voi chiến, luyện ở đây hay ngay trong doanh trại. Cần doanh trại cấp 3.',
     },
     duongDat: {
       name: 'Đường đất nện',
@@ -266,7 +266,7 @@ export const vi = {
     traiNo: {
       name: 'Trại nỏ',
       icon: '🎯',
-      desc: 'Nơi lính nỏ ở và tập bắn, Cao Lỗ dạy dân luyện nỏ. Luyện lính nỏ ở đây. Có từ chương 4, cần doanh trại cấp 5.',
+      desc: 'Nơi lính nỏ ở và tập bắn, Cao Lỗ dạy dân luyện nỏ. Có trại nỏ mới luyện được lính nỏ, luyện ở đây hay ngay trong doanh trại. Có từ chương 4, cần doanh trại cấp 5.',
     },
     denCuong: {
       name: 'Đền Cuông',
@@ -541,8 +541,9 @@ export const vi = {
     pickHint: 'Bà đứng cầm cờ sau hàng hậu, không đánh. Binh chủng của bà được thêm 12% máu và sức đánh. Chạm lại để không mang ai.',
     boost: (icon: string, unit: string) => `${icon} ${unit} +12%`,
     noUnit: (icon: string, unit: string) => `${icon} ${unit} +12% (không mang theo)`,
-    barracksTitle: 'Nữ tướng ở trại',
-    barracksHint: 'Cả bốn nữ tướng ở doanh trại. Lính giữ kinh đô thuộc binh chủng của bà được thêm 12% máu và sức đánh.',
+    /** Dòng binh chủng ở thẻ Giữ kinh đô của doanh trại: nữ tướng ở trại cộng cho lính giữ kinh đô binh chủng ấy. */
+    guardBoost: (icon: string, name: string) => `${icon} ${name} +12%`,
+    guardHint: (name: string) => `${name} ở doanh trại: lính giữ kinh đô binh chủng này thêm 12% máu và sức đánh`,
     /** Lạc hầu báo một lần khi mỗi nữ tướng theo về. */
     hint: {
       leChan:
@@ -2575,14 +2576,12 @@ export const vi = {
     thuocKhieng: '🌿 Được khiêng về nhà thuốc',
     thuocDangChua: (n: number) => `🌿 Đang chữa ở nhà thuốc: ${n} người`,
     offlineChua: (n: number) => `🌿 Lang y đã chữa khỏi ${n} thương binh.`,
+    troopChip: (used: number, cap: number, doanh: number) => (doanh > 1 ? `Quân ${used}/${cap} chỗ · ${doanh} doanh` : `Quân ${used}/${cap} chỗ`),
     troopSpaceAll: (used: number, cap: number, doanh: number) =>
       doanh > 1 ? `Quân trong doanh trại (${doanh} doanh): ${used}/${cap} chỗ` : `Quân trong doanh trại: ${used}/${cap} chỗ`,
     barracksCap: (cap: number, per: number, doanh: number) => `Doanh trại giữ ${cap} chỗ: ${doanh} doanh, mỗi doanh ${per} chỗ`,
     /** Bốn thẻ của bảng doanh trại. */
-    barracksTabs: { quan: 'Quân', giu: 'Giữ kinh đô', tuong: 'Tướng', trai: 'Trại' },
-    generalsHint: 'Mỗi tướng đã về là một doanh trong trại, thêm chỗ quân theo cấp trại (tối đa 5 doanh). Giữ kinh đô, tướng ra trận cùng quân từ cổng trại gần giặc.',
-    doanhOf: (i: number) => `doanh thứ ${i}`,
-    doanhNone: 'ở trại, ngoài năm doanh (không thêm chỗ)',
+    barracksTabs: { quan: 'Luyện quân', giu: 'Giữ kinh đô', trai: 'Trại' },
     tuongNames: { lacTuong: 'Lạc tướng', giong: 'Thánh Gióng', sonTinh: 'Sơn Tinh', anDuong: 'An Dương Vương', caoLo: 'Cao Lỗ', trungTrac: 'Trưng Trắc', trungNhi: 'Trưng Nhị', baTrieu: 'Bà Triệu', trieuQuangPhuc: 'Triệu Quang Phục', maiThucLoan: 'Mai Thúc Loan', ngoQuyen: 'Ngô Quyền', lyThuongKiet: 'Lý Thường Kiệt' } satisfies Record<TuongId, string>,
     tuongIcons: { lacTuong: '🥁', giong: '🐎', sonTinh: '⛰️', anDuong: '🏹', caoLo: '🎯', trungTrac: '🐘', trungNhi: '🚩', baTrieu: '🗡️', trieuQuangPhuc: '🐉', maiThucLoan: '🐃', ngoQuyen: '🌊', lyThuongKiet: '📜' } satisfies Record<TuongId, string>,
     guardInfo: (used: number, cap: number) => `Giữ kinh đô: ${used}/${cap} chỗ (theo cấp Điện)`,
@@ -2597,17 +2596,8 @@ export const vi = {
     train: 'Luyện',
     generalsTitle: 'Tướng ở doanh trại',
     lacTuong: 'Lạc tướng',
-    lacTuongDesc: 'Cầm quân mọi trận, đánh Trống trận thúc quân.',
-    tuongDaDesc: 'Theo đội dã ngoại, chỉ đánh ở dã ngoại.',
-    heroReady: 'sẵn sàng ra trận',
-    heroRest: (s: number) => `kiệt sức, nghỉ thêm ${s} giây`,
-    heroHienLinh: 'hiển linh, vẫn ra trận',
-    heroOpen: 'Xem',
-    advAtDien: 'ngự ở Điện',
-    advAtSea: 'đã xuống biển, hiển linh',
-    caoLoAtDien: 'đứng trước Điện',
-    haiBaDesc: 'cưỡi voi trên đài tướng',
-    trainAt: (name: string) => `Ở và luyện tại ${name.toLowerCase()}`,
+    homeLink: (name: string) => `Ở ${name.toLowerCase()}`,
+    homeHu: (name: string) => `${name} hư · sửa`,
     buildHome: (name: string) => `Dựng ${name.toLowerCase()}`,
     needBarracks: (lv: number) => (lv <= 1 ? 'Cần doanh trại' : `Cần doanh trại cấp ${lv}`),
     trained: (name: string) => `Đã luyện một ${name.toLowerCase()}`,
@@ -2689,7 +2679,7 @@ export const vi = {
     armyHint: 'Chọn số lính mang theo và hàng đứng của từng binh chủng. Tiền quân đứng đầu, hậu quân đứng sau.',
     haveTroops: (n: number) => `Có ${n}`,
     fieldSpace: (used: number, cap: number) => `Mang theo: ${used}/${cap} chỗ (mỗi trận phó bản)`,
-    noTroops: 'Chưa có lính. Hãy luyện quân ở trại giáo, trại cung, chuồng voi.',
+    noTroops: 'Chưa có lính. Hãy luyện quân ở thẻ Luyện quân của doanh trại.',
     march: '⚔️ Xuất quân',
     giong: 'Thánh Gióng',
     giongFeedTitle: 'Góp gạo nuôi Gióng',
@@ -2986,9 +2976,8 @@ export const vi = {
       doSuCho: 'Trả lời',
       congMo: 'Mở cống',
       congDong: 'Đóng cống',
-      quan: 'Quân',
+      quan: 'Luyện quân',
       giu: 'Giữ thành',
-      tuong: 'Tướng',
       luyen: 'Luyện',
       ren: 'Rèn',
       tet: 'Hội Tết',
