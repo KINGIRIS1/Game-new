@@ -36,7 +36,7 @@ import { vi } from '../src/text/vi';
 import type { Poser } from '../src/render/rig';
 
 /** Người trong kinh đô cao chừng này lần dáng gốc (như dân ở công trình cấp 5 trong game). */
-const PERSON = 0.85 * 1.05;
+export const PERSON = 0.85 * 1.05;
 /** Mặt nước sông thấp hơn mặt đất chừng này (như world.ts). */
 const WATER_Y = -0.28;
 
@@ -136,11 +136,11 @@ function peopleCount(type: BuildingType, level: number, spots: number): number {
   return Math.min(1, spots);
 }
 
-const AZ = Math.PI / 4;
-const EL = THREE.MathUtils.degToRad(38);
+export const AZ = Math.PI / 4;
+export const EL = THREE.MathUtils.degToRad(38);
 
 /** Mặt cỏ `size` ô quanh gốc có đường kẻ ô; `riverFrom`: từ z này trở ra là sông. Móng công trình viền đen. */
-function groundPatch(size: number, lots: { x: number; z: number; tiles: number }[], riverFrom?: number): THREE.Group {
+export function groundPatch(size: number, lots: { x: number; z: number; tiles: number }[], riverFrom?: number): THREE.Group {
   const g = new THREE.Group();
   const h = size / 2;
   const landD = riverFrom === undefined ? size : riverFrom + h;
@@ -173,7 +173,7 @@ function groundPatch(size: number, lots: { x: number; z: number; tiles: number }
   return g;
 }
 
-function addPeople(group: THREE.Group, spots: LotSpot[], scale: number, spread: number): void {
+export function addPeople(group: THREE.Group, spots: LotSpot[], scale: number, spread: number): void {
   for (const p of spots) {
     const w = makeWorker(p.job);
     w.position.set(p.x * spread, p.y, p.z * spread);
@@ -238,14 +238,14 @@ function render(renderer: THREE.WebGLRenderer, scene: THREE.Scene, w: number, h:
   return (renderer.domElement as HTMLCanvasElement).toDataURL('image/png');
 }
 
-function newScene(extent: number): THREE.Scene {
+export function newScene(extent: number): THREE.Scene {
   const scene = new THREE.Scene();
   scene.background = new THREE.Color(C.sky);
   addSunLights(scene, extent, 2048);
   return scene;
 }
 
-function makeRenderer(): THREE.WebGLRenderer {
+export function makeRenderer(): THREE.WebGLRenderer {
   const canvas = document.createElement('canvas');
   document.body.appendChild(canvas);
   const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, preserveDrawingBuffer: true });
